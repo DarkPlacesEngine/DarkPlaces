@@ -4,7 +4,7 @@
 cvar_t gl_mesh_maxtriangles = {0, "gl_mesh_maxtriangles", "1024"};
 cvar_t gl_mesh_batchtriangles = {0, "gl_mesh_batchtriangles", "0"};
 cvar_t gl_mesh_transtriangles = {0, "gl_mesh_transtriangles", "16384"};
-cvar_t gl_mesh_floatcolors = {0, "gl_mesh_floatcolors", "0"};
+cvar_t gl_mesh_floatcolors = {0, "gl_mesh_floatcolors", "1"};
 cvar_t gl_mesh_drawmode = {CVAR_SAVE, "gl_mesh_drawmode", "3"};
 
 cvar_t r_render = {0, "r_render", "1"};
@@ -173,9 +173,14 @@ static void gl_backend_start(void)
 	qglGetIntegerv(GL_MAX_ELEMENTS_VERTICES, &gl_maxdrawrangeelementsvertices);
 	qglGetIntegerv(GL_MAX_ELEMENTS_INDICES, &gl_maxdrawrangeelementsindices);
 
-	Con_Printf("OpenGL Backend started with gl_mesh_maxtriangles %i, gl_mesh_transtriangles %i", gl_mesh_maxtriangles.integer, gl_mesh_transtriangles.integer);
+	Con_Printf("OpenGL Backend started with gl_mesh_maxtriangles %i, gl_mesh_transtriangles %i\n", gl_mesh_maxtriangles.integer, gl_mesh_transtriangles.integer);
 	if (qglDrawRangeElements != NULL)
-		Con_Printf(", with glDrawRangeElements (max vertices %i, max indices %i)\n", gl_maxdrawrangeelementsvertices, gl_maxdrawrangeelementsindices);
+		Con_Printf("glDrawRangeElements detected (max vertices %i, max indices %i)\n", gl_maxdrawrangeelementsvertices, gl_maxdrawrangeelementsindices);
+	if (strstr(gl_renderer, "3Dfx"))
+	{
+		Con_Printf("3Dfx driver detected, forcing gl_mesh_floatcolors to 0 to prevent crashs\n");
+		Cvar_SetValueQuick(&gl_mesh_floatcolors, 0);
+	}
 	Con_Printf("\n");
 
 	max_verts = max_meshs * 3;
