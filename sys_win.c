@@ -749,7 +749,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	if (!parms.membase)
 		Sys_Error ("Not enough memory free; check disk space\n");
 
-	Sys_PageIn (parms.membase, parms.memsize);
+//	Sys_PageIn (parms.membase, parms.memsize);
 
 	tevent = CreateEvent(NULL, FALSE, FALSE, NULL);
 
