@@ -19,8 +19,8 @@ int currentskyvert;
 void LoadSky_f(void);
 
 cvar_t r_multitexture = {"r_multitexture", "1"};
-cvar_t r_skyquality = {"r_skyquality", "2"};
-cvar_t r_mergesky = {"r_mergesky", "0"};
+cvar_t r_skyquality = {"r_skyquality", "2", true};
+cvar_t r_mergesky = {"r_mergesky", "0", true};
 
 char skyworldname[1024];
 rtexture_t *mergeskytexture;
