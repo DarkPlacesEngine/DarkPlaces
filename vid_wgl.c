@@ -40,12 +40,6 @@ BOOL (WINAPI *qwglMakeCurrent)(HDC, HGLRC);
 BOOL (WINAPI *qwglSwapIntervalEXT)(int interval);
 const char *(WINAPI *qwglGetExtensionsStringARB)(HDC hdc);
 
-static gl_extensionfunctionlist_t getextensionsstringfuncs[] =
-{
-	{"wglGetExtensionsString", (void **) &qwglGetExtensionsStringARB},
-	{NULL, NULL}
-};
-
 static gl_extensionfunctionlist_t wglfuncs[] =
 {
 	{"wglChoosePixelFormat", (void **) &qwglChoosePixelFormat},
