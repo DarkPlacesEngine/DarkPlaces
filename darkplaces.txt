@@ -60,6 +60,7 @@ Quake: Dissolution of Eternity : -rogue or rogue in executable name or path, gam
 Nehahra : -nehahra or nehahra in executable name or path, gamedirs: nehahra, id1
 GoodVsBad2 : -goodvsbad2 or gvb2 in executable name or path, gamedirs: rts
 BattleMech : -battlemech or battlemech in executable name or path, gamedirs: base
+PrydonGate : -prydon or prydon in executable name or path, gamedirs: prydon
 These games are considered officially supported, if any problems are seen,
 please make sure you are running the latest version of the game and engine,
 if you are, please report the problem.
