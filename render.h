@@ -32,14 +32,13 @@ extern void FOG_clear(void);
 extern float fog_density, fog_red, fog_green, fog_blue;
 
 // sky stuff
-extern int R_SetSkyBox(char* sky);
 extern cvar_t r_sky;
-// these are exposed because surface rendering uses them
-extern rtexture_t *solidskytexture;
-extern rtexture_t *alphaskytexture;
 extern int skyrendernow, skyrendermasked;
+extern int R_SetSkyBox(char* sky);
 extern void R_SkyStartFrame(void);
 extern void R_Sky(void);
+extern void R_ResetQuakeSky(void);
+extern void R_ResetSkyBox(void);
 
 // SHOWLMP stuff (Nehahra)
 extern void SHOWLMP_decodehide(void);
@@ -79,7 +78,7 @@ void R_FillColors(float *out, int verts, float r, float g, float b, float a);
 
 extern	int			r_framecount;
 extern	mplane_t	frustum[4];
-extern	int		c_brush_polys, c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c_bmodels, c_sprites, c_particles, c_dlights;
+extern	int		c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c_bmodels, c_sprites, c_particles, c_dlights;
 
 
 //

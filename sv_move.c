@@ -51,7 +51,7 @@ qboolean SV_CheckBottom (edict_t *ent)
 		{
 			start[0] = x ? maxs[0] : mins[0];
 			start[1] = y ? maxs[1] : mins[1];
-			if (Mod_PointInLeaf(start, sv.worldmodel)->contents != CONTENTS_SOLID)
+			if (Mod_PointContents(start, sv.worldmodel) != CONTENTS_SOLID)
 				goto realcheck;
 		}
 
@@ -138,7 +138,7 @@ qboolean SV_movestep (edict_t *ent, vec3_t move, qboolean relink)
 			if (trace.fraction == 1)
 			{
 				VectorCopy(trace.endpos, traceendpos);
-				if ( ((int)ent->v.flags & FL_SWIM) && Mod_PointInLeaf(traceendpos, sv.worldmodel)->contents == CONTENTS_EMPTY )
+				if ( ((int)ent->v.flags & FL_SWIM) && Mod_PointContents(traceendpos, sv.worldmodel) == CONTENTS_EMPTY )
 					return false;	// swim monster left water
 
 				VectorCopy (traceendpos, ent->v.origin);

@@ -259,6 +259,37 @@ static void CL_PrintEntities_f (void)
 	}
 }
 
+static const vec3_t nomodelmins = {-16, -16, -16};
+static const vec3_t nomodelmaxs = {16, 16, 16};
+void CL_BoundingBoxForEntity(entity_render_t *ent)
+{
+	if (ent->model)
+	{
+		if (ent->angles[0] || ent->angles[2])
+		{
+			// pitch or roll
+			VectorAdd(ent->origin, ent->model->rotatedmins, ent->mins);
+			VectorAdd(ent->origin, ent->model->rotatedmaxs, ent->maxs);
+		}
+		else if (ent->angles[1])
+		{
+			// yaw
+			VectorAdd(ent->origin, ent->model->yawmins, ent->mins);
+			VectorAdd(ent->origin, ent->model->yawmaxs, ent->maxs);
+		}
+		else
+		{
+			VectorAdd(ent->origin, ent->model->normalmins, ent->mins);
+			VectorAdd(ent->origin, ent->model->normalmaxs, ent->maxs);
+		}
+	}
+	else
+	{
+		VectorAdd(ent->origin, nomodelmins, ent->mins);
+		VectorAdd(ent->origin, nomodelmaxs, ent->maxs);
+	}
+}
+
 void CL_LerpUpdate(entity_t *e)
 {
 	entity_persistent_t *p;
@@ -605,34 +636,19 @@ static void CL_RelinkNetworkEntities()
 				continue;
 		}
 
-		if (ent->render.model == NULL)
+		// don't show entities with no modelindex (note: this still shows
+		// entities which have a modelindex that resolved to a NULL model)
+		if (!ent->state_current.modelindex)
 			continue;
 		if (effects & EF_NODRAW)
 			continue;
 
-		if (ent->render.angles[0] || ent->render.angles[2])
-		{
-			// pitch or roll
-			VectorAdd(ent->render.origin, ent->render.model->rotatedmins, ent->render.mins);
-			VectorAdd(ent->render.origin, ent->render.model->rotatedmaxs, ent->render.maxs);
-		}
-		else if (ent->render.angles[1])
-		{
-			// yaw
-			VectorAdd(ent->render.origin, ent->render.model->yawmins, ent->render.mins);
-			VectorAdd(ent->render.origin, ent->render.model->yawmaxs, ent->render.maxs);
-		}
-		else
-		{
-			VectorAdd(ent->render.origin, ent->render.model->normalmins, ent->render.mins);
-			VectorAdd(ent->render.origin, ent->render.model->normalmaxs, ent->render.maxs);
-		}
+		CL_BoundingBoxForEntity(&ent->render);
+		if (ent->render.model && ent->render.model->name[0] == '*' && ent->render.model->type == mod_brush)
+			cl_brushmodel_entities[cl_num_brushmodel_entities++] = &ent->render;
 
 		if (r_refdef.numentities < r_refdef.maxentities)
 			r_refdef.entities[r_refdef.numentities++] = &ent->render;
-
-		if (ent->render.model->name[0] == '*' && ent->render.model->type == mod_brush)
-			cl_brushmodel_entities[cl_num_brushmodel_entities++] = &ent->render;
 
 		if (cl_num_entities < i + 1)
 			cl_num_entities = i + 1;
@@ -746,23 +762,7 @@ static void CL_RelinkEffects()
 				ent->render.scale = 1;
 				ent->render.alpha = 1;
 
-				if (ent->render.angles[0] || ent->render.angles[2])
-				{
-					// pitch or roll
-					VectorAdd(ent->render.origin, ent->render.model->rotatedmins, ent->render.mins);
-					VectorAdd(ent->render.origin, ent->render.model->rotatedmaxs, ent->render.maxs);
-				}
-				else if (ent->render.angles[1])
-				{
-					// yaw
-					VectorAdd(ent->render.origin, ent->render.model->yawmins, ent->render.mins);
-					VectorAdd(ent->render.origin, ent->render.model->yawmaxs, ent->render.maxs);
-				}
-				else
-				{
-					VectorAdd(ent->render.origin, ent->render.model->normalmins, ent->render.mins);
-					VectorAdd(ent->render.origin, ent->render.model->normalmaxs, ent->render.maxs);
-				}
+				CL_BoundingBoxForEntity(&ent->render);
 			}
 		}
 	}
@@ -773,6 +773,7 @@ void CL_RelinkWorld (void)
 	if (cl_num_entities < 1)
 		cl_num_entities = 1;
 	cl_brushmodel_entities[cl_num_brushmodel_entities++] = &cl_entities[0].render;
+	CL_BoundingBoxForEntity(&cl_entities[0].render);
 }
 
 void CL_RelinkEntities (void)
@@ -834,7 +835,7 @@ int CL_ReadFromServer (void)
 	cl_num_entities = 0;
 	cl_num_brushmodel_entities = 0;
 
-	if (cls.state == ca_connected && cl.worldmodel)
+	if (cls.state == ca_connected && cls.signon == SIGNONS)
 	{
 		CL_RelinkEntities ();
 
@@ -876,7 +877,7 @@ void CL_SendCmd (void)
 		CL_SendMove (&cmd);
 	}
 #ifndef NOROUTINGFIX
-	else
+	else if (cls.signon == 0 && !cls.demoplayback)
 	{
 		// LordHavoc: fix for NAT routing of netquake:
 		// bounce back a clc_nop message to the newly allocated server port,
@@ -884,9 +885,21 @@ void CL_SendCmd (void)
 		// the server waits for this before sending anything
 		if (realtime > cl.sendnoptime)
 		{
-			Con_DPrintf("sending clc_nop to get server's attention\n");
 			cl.sendnoptime = realtime + 3;
-			MSG_WriteByte(&cls.message, clc_nop);
+			Con_DPrintf("sending clc_nop to get server's attention\n");
+			{
+				sizebuf_t buf;
+				qbyte data[128];
+				buf.maxsize = 128;
+				buf.cursize = 0;
+				buf.data = data;
+				MSG_WriteByte(&buf, clc_nop);
+				if (NET_SendUnreliableMessage (cls.netcon, &buf) == -1)
+				{
+					Con_Printf ("CL_SendCmd: lost server connection\n");
+					CL_Disconnect ();
+				}
+			}
 		}
 	}
 #endif
@@ -904,6 +917,8 @@ void CL_SendCmd (void)
 	if (!NET_CanSendMessage (cls.netcon))
 	{
 		Con_DPrintf ("CL_WriteToServer: can't send\n");
+		if (developer.integer)
+			SZ_HexDumpToConsole(&cls.message);
 		return;
 	}
 

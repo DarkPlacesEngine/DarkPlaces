@@ -771,18 +771,18 @@ qboolean SV_CheckWater (edict_t *ent)
 
 	ent->v.waterlevel = 0;
 	ent->v.watertype = CONTENTS_EMPTY;
-	cont = Mod_PointInLeaf(point, sv.worldmodel)->contents;
+	cont = Mod_PointContents(point, sv.worldmodel);
 	if (cont <= CONTENTS_WATER)
 	{
 		ent->v.watertype = cont;
 		ent->v.waterlevel = 1;
 		point[2] = ent->v.origin[2] + (ent->v.mins[2] + ent->v.maxs[2])*0.5;
-		cont = Mod_PointInLeaf(point, sv.worldmodel)->contents;
+		cont = Mod_PointContents(point, sv.worldmodel);
 		if (cont <= CONTENTS_WATER)
 		{
 			ent->v.waterlevel = 2;
 			point[2] = ent->v.origin[2] + ent->v.view_ofs[2];
-			cont = Mod_PointInLeaf(point, sv.worldmodel)->contents;
+			cont = Mod_PointContents(point, sv.worldmodel);
 			if (cont <= CONTENTS_WATER)
 				ent->v.waterlevel = 3;
 		}
@@ -1135,8 +1135,8 @@ SV_CheckWaterTransition
 */
 void SV_CheckWaterTransition (edict_t *ent)
 {
-	int		cont;
-	cont = Mod_PointInLeaf(ent->v.origin, sv.worldmodel)->contents;
+	int cont;
+	cont = Mod_PointContents(ent->v.origin, sv.worldmodel);
 	if (!ent->v.watertype)
 	{
 		// just spawned here
@@ -1291,7 +1291,7 @@ void SV_Physics_Step (edict_t *ent)
 	{
 		if (flags & FL_FLY)
 			fall = false;
-		else if ((flags & FL_SWIM) && Mod_PointInLeaf(ent->v.origin, sv.worldmodel)->contents != CONTENTS_EMPTY)
+		else if ((flags & FL_SWIM) && Mod_PointContents(ent->v.origin, sv.worldmodel) != CONTENTS_EMPTY)
 			fall = false;
 	}
 	if (fall && (flags & FL_ONGROUND) && ent->v.groundentity == 0)

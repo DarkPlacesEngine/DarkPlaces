@@ -324,7 +324,7 @@ void V_UpdateBlends (void)
 	float	r, g, b, a, a2;
 	int		j;
 
-	if (cl.worldmodel == NULL)
+	if (cls.signon != SIGNONS)
 	{
 		cl.cshifts[CSHIFT_DAMAGE].percent = 0;
 		cl.cshifts[CSHIFT_BONUS].percent = 0;
@@ -348,7 +348,7 @@ void V_UpdateBlends (void)
 		cl.cshifts[CSHIFT_BONUS].percent = 0;
 
 	// set contents color
-	switch (Mod_PointInLeaf (r_refdef.vieworg, cl.worldmodel)->contents)
+	switch (Mod_PointContents (r_refdef.vieworg, cl.worldmodel))
 	{
 	case CONTENTS_EMPTY:
 	case CONTENTS_SOLID:
@@ -478,7 +478,7 @@ void V_CalcRefdef (void)
 	float		bob;
 	float		side;
 
-	if (cls.state != ca_connected || !cl.worldmodel)
+	if (cls.state != ca_connected || cls.signon != SIGNONS)
 		return;
 
 	// ent is the player model (visible when out of body)

@@ -149,6 +149,11 @@ typedef enum {
 
 typedef enum {key_game, key_message, key_menu} keydest_t;
 
+// key_consoleactive bits
+// user wants console (halfscreen)
+#define KEY_CONSOLEACTIVE_USER 1
+// console forced because there's nothing else active (fullscreen)
+#define KEY_CONSOLEACTIVE_FORCED 2
 extern int key_consoleactive;
 extern keydest_t key_dest;
 extern char *keybindings[256];

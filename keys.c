@@ -703,25 +703,19 @@ void Key_Event (int key, qboolean down)
 	{
 		if (!down)
 			return;
-		if (key_consoleactive)
-			M_ToggleMenu_f ();
-		else
+		switch (key_dest)
 		{
-			switch (key_dest)
-			{
-			case key_message:
-				Key_Message (key);
-				break;
-			case key_menu:
-				M_Keydown (key);
-				break;
-			case key_game:
-			//case key_console:
-				M_ToggleMenu_f ();
-				break;
-			default:
-				Sys_Error ("Bad key_dest");
-			}
+		case key_message:
+			Key_Message (key);
+			break;
+		case key_menu:
+			M_Keydown (key);
+			break;
+		case key_game:
+			M_ToggleMenu_f ();
+			break;
+		default:
+			Sys_Error ("Bad key_dest");
 		}
 		return;
 	}

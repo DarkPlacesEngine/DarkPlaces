@@ -165,7 +165,6 @@ loc0:
 	return HULLCHECKSTATE_DONE;
 }
 
-/*
 // used if start and end are the same
 static void RecursiveHullCheckPoint (RecursiveHullCheckTraceInfo_t *t, int num)
 {
@@ -204,7 +203,6 @@ static void RecursiveHullCheckPoint (RecursiveHullCheckTraceInfo_t *t, int num)
 		}
 	}
 }
-*/
 
 void Collision_RoundUpToHullSize(const model_t *cmodel, const vec3_t inmins, const vec3_t inmaxs, vec3_t outmins, vec3_t outmaxs)
 {
@@ -378,10 +376,10 @@ void Collision_ClipTrace (trace_t *trace, const void *cent, const model_t *cmode
 		VectorCopy(endd, rhc.end);
 		VectorCopy(rhc.end, rhc.trace->endpos);
 		VectorSubtract(rhc.end, rhc.start, rhc.dist);
-		//if (DotProduct(rhc.dist, rhc.dist) > 0.00001)
+		if (rhc.dist[0] || rhc.dist[1] || rhc.dist[2])
 			RecursiveHullCheck (&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
-		//else
-		//	RecursiveHullCheckPoint (&rhc, rhc.hull->firstclipnode);
+		else
+			RecursiveHullCheckPoint (&rhc, rhc.hull->firstclipnode);
 
 		// if we hit, unrotate endpos and normal, and store the entity we hit
 		if (rhc.trace->fraction != 1)
@@ -420,10 +418,10 @@ void Collision_ClipTrace (trace_t *trace, const void *cent, const model_t *cmode
 		VectorSubtract(end, offset, rhc.end);
 		VectorCopy(rhc.end, rhc.trace->endpos);
 		VectorSubtract(rhc.end, rhc.start, rhc.dist);
-		//if (DotProduct(rhc.dist, rhc.dist) > 0.00001)
+		if (rhc.dist[0] || rhc.dist[1] || rhc.dist[2])
 			RecursiveHullCheck (&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
-		//else
-		//	RecursiveHullCheckPoint (&rhc, rhc.hull->firstclipnode);
+		else
+			RecursiveHullCheckPoint (&rhc, rhc.hull->firstclipnode);
 
 		// if we hit, store the entity we hit
 		if (rhc.trace->fraction != 1)

@@ -240,23 +240,18 @@ void PR_Profile_f (void)
 }
 
 
-/*
-============
-PR_RunError
-
-Aborts the currently executing function
-============
-*/
-void PR_RunError (char *error, ...)
+void PR_Crash(void)
 {
-	int			i;
-	va_list		argptr;
-	char		string[1024];
+	int i;
+	if (!pr_depth)
+	{
+		// kill the stack just to be sure
+		pr_depth = 0;
+		localstack_used = 0;
+		return;
+	}
 
-	va_start (argptr,error);
-	vsprintf (string,error,argptr);
-	va_end (argptr);
-
+	Con_Printf("QuakeC crash report:\n");
 	if (pr_xfunction)
 	{
 		for (i = -4;i <= 0;i++)
@@ -266,13 +261,10 @@ void PR_RunError (char *error, ...)
 	else
 		Con_Printf("null function executing??\n");
 	PR_StackTrace ();
-	Con_Printf ("%s\n", string);
 
 	// dump the stack so host_error can shutdown functions
 	pr_depth = 0;
 	localstack_used = 0;
-
-	Host_Error ("Program error");
 }
 
 /*
@@ -295,18 +287,18 @@ int PR_EnterFunction (dfunction_t *f)
 	int		i, j, c, o;
 
 	if (!f)
-		PR_RunError ("PR_EnterFunction: NULL function\n");
+		Host_Error ("PR_EnterFunction: NULL function\n");
 
 	pr_stack[pr_depth].s = pr_xstatement;
 	pr_stack[pr_depth].f = pr_xfunction;
 	pr_depth++;
 	if (pr_depth >= MAX_STACK_DEPTH)
-		PR_RunError ("stack overflow");
+		Host_Error ("stack overflow");
 
 // save off any locals that the new function steps on
 	c = f->locals;
 	if (localstack_used + c > LOCALSTACK_SIZE)
-		PR_RunError ("PR_ExecuteProgram: locals stack overflow\n");
+		Host_Error ("PR_ExecuteProgram: locals stack overflow\n");
 
 	for (i=0 ; i < c ; i++)
 		localstack[localstack_used+i] = ((int *)pr_globals)[f->parm_start + i];
@@ -340,12 +332,12 @@ int PR_LeaveFunction (void)
 		Host_Error ("prog stack underflow");
 
 	if (!pr_xfunction)
-		PR_RunError ("PR_LeaveFunction: NULL function\n");
+		Host_Error ("PR_LeaveFunction: NULL function\n");
 // restore locals from the stack
 	c = pr_xfunction->locals;
 	localstack_used -= c;
 	if (localstack_used < 0)
-		PR_RunError ("PR_ExecuteProgram: locals stack underflow\n");
+		Host_Error ("PR_ExecuteProgram: locals stack underflow\n");
 
 	for (i=0 ; i < c ; i++)
 		((int *)pr_globals)[pr_xfunction->parm_start + i] = localstack[localstack_used+i];

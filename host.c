@@ -143,12 +143,14 @@ void Host_Error (char *error, ...)
 		Sys_Error ("Host_Error: recursively entered (original error was: %s    new error is: %s)", hosterrorstring, string);
 	}
 	inerror = true;
-	
+
 	va_start (argptr,error);
 	vsprintf (hosterrorstring,error,argptr);
 	va_end (argptr);
 	Con_Printf ("Host_Error: %s\n",hosterrorstring);
-	
+
+	PR_Crash();
+
 	if (sv.active)
 		Host_ShutdownServer (false);
 
@@ -448,6 +450,9 @@ void Host_ShutdownServer(qboolean crash)
 
 	if (!sv.active)
 		return;
+
+	// print out where the crash happened, if it was caused by QC
+	PR_Crash();
 
 	sv.active = false;
 

@@ -44,6 +44,7 @@ void SZ_Clear (sizebuf_t *buf);
 void *SZ_GetSpace (sizebuf_t *buf, int length);
 void SZ_Write (sizebuf_t *buf, void *data, int length);
 void SZ_Print (sizebuf_t *buf, char *data);	// strcats onto the sizebuf
+void SZ_HexDumpToConsole(sizebuf_t *buf);
 
 //============================================================================
 #if !defined(ENDIAN_LITTLE) && !defined(ENDIAN_BIG)

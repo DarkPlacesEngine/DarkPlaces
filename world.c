@@ -34,6 +34,7 @@ cvar_t sv_useareanodes = {CVAR_NOTIFY, "sv_useareanodes", "1"};
 void SV_World_Init(void)
 {
 	Cvar_RegisterVariable(&sv_useareanodes);
+	Collision_Init ();
 }
 
 
@@ -179,8 +180,6 @@ SV_ClearWorld
 */
 void SV_ClearWorld (void)
 {
-	Collision_Init ();
-
 	memset (sv_areanodes, 0, sizeof(sv_areanodes));
 	sv_numareanodes = 0;
 	Mod_CheckLoaded(sv.worldmodel);
@@ -290,12 +289,12 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 	if (ent->v.solid == SOLID_BSP)
 	{
 		if (ent->v.modelindex < 0 || ent->v.modelindex > MAX_MODELS)
-			PR_RunError("SOLID_BSP with invalid modelindex!\n");
+			Host_Error("SOLID_BSP with invalid modelindex!\n");
 		model = sv.models[(int) ent->v.modelindex];
 		if (model != NULL)
 		{
 			if (model->type != mod_brush)
-				PR_RunError("SOLID_BSP with non-BSP model\n");
+				Host_Error("SOLID_BSP with non-BSP model\n");
 
 			if (ent->v.angles[0] || ent->v.angles[2] || ent->v.avelocity[0] || ent->v.avelocity[2])
 			{
@@ -427,10 +426,10 @@ trace_t SV_ClipMoveToEntity (edict_t *ent, vec3_t start, vec3_t mins, vec3_t max
 
 	i = ent->v.modelindex;
 	if ((unsigned int) i >= MAX_MODELS)
-		PR_RunError("SV_ClipMoveToEntity: invalid modelindex\n");
+		Host_Error("SV_ClipMoveToEntity: invalid modelindex\n");
 	model = sv.models[i];
 	if (i != 0 && model == NULL)
-		PR_RunError("SV_ClipMoveToEntity: invalid modelindex\n");
+		Host_Error("SV_ClipMoveToEntity: invalid modelindex\n");
 
 	if ((int) ent->v.solid == SOLID_BSP)
 	{

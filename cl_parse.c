@@ -388,6 +388,9 @@ void CL_ParseServerInfo (void)
 
 	Mod_ClearUsed();
 
+	// disable until we get textures for it
+	R_ResetSkyBox();
+
 // precache models
 	memset (cl.model_precache, 0, sizeof(cl.model_precache));
 	for (nummodels=1 ; ; nummodels++)
@@ -434,11 +437,10 @@ void CL_ParseServerInfo (void)
 	{
 		// LordHavoc: i == 1 means the first model is the world model
 		cl.model_precache[i] = Mod_ForName (model_precache[i], false, false, i == 1);
-
 		if (cl.model_precache[i] == NULL)
 		{
-			Host_Error("Model %s not found\n", model_precache[i]);
-			return;
+			Con_Printf("Model %s not found\n", model_precache[i]);
+			//return;
 		}
 		CL_KeepaliveMessage ();
 	}
@@ -458,20 +460,19 @@ void CL_ParseServerInfo (void)
 	ent->render.model = cl.worldmodel = cl.model_precache[1];
 	ent->render.scale = 1;
 	ent->render.alpha = 1;
-	VectorAdd(ent->render.origin, ent->render.model->normalmins, ent->render.mins);
-	VectorAdd(ent->render.origin, ent->render.model->normalmaxs, ent->render.maxs);
+	CL_BoundingBoxForEntity(&ent->render);
 	// clear entlife array
 	memset(entlife, 0, MAX_EDICTS);
 
 	cl_num_entities = 1;
 
 	R_NewMap ();
-
 	CL_CGVM_Start();
+
+	noclip_anglehack = false;		// noclip is turned off at start
 
 	Mem_CheckSentinelsGlobal();
 
-	noclip_anglehack = false;		// noclip is turned off at start
 }
 
 void CL_ValidateState(entity_state_t *s)
@@ -916,23 +917,7 @@ void CL_ParseStatic (int large)
 	VectorCopy (ent->state_baseline.origin, ent->render.origin);
 	VectorCopy (ent->state_baseline.angles, ent->render.angles);
 
-	if (ent->render.angles[0] || ent->render.angles[2])
-	{
-		// pitch or roll
-		VectorAdd(ent->render.origin, ent->render.model->rotatedmins, ent->render.mins);
-		VectorAdd(ent->render.origin, ent->render.model->rotatedmaxs, ent->render.maxs);
-	}
-	else if (ent->render.angles[1])
-	{
-		// yaw
-		VectorAdd(ent->render.origin, ent->render.model->yawmins, ent->render.mins);
-		VectorAdd(ent->render.origin, ent->render.model->yawmaxs, ent->render.maxs);
-	}
-	else
-	{
-		VectorAdd(ent->render.origin, ent->render.model->normalmins, ent->render.mins);
-		VectorAdd(ent->render.origin, ent->render.model->normalmaxs, ent->render.maxs);
-	}
+	CL_BoundingBoxForEntity(&ent->render);
 
 	// This is definitely cheating...
 	if (ent->render.model == NULL)

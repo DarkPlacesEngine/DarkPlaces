@@ -78,7 +78,8 @@ Con_ToggleConsole_f
 */
 void Con_ToggleConsole_f (void)
 {
-	key_consoleactive = !key_consoleactive;
+	// toggle the 'user wants console' bit
+	key_consoleactive ^= KEY_CONSOLEACTIVE_USER;
 	memset (con_times, 0, sizeof(con_times));
 }
 

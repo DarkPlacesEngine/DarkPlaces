@@ -10,6 +10,10 @@ void R_LerpAnimation(entity_render_t *r)
 	double sublerp, lerp, d;
 	animscene_t *scene;
 	frameblend_t *blend;
+
+	if (!r->model)
+		return;
+
 	blend = r->frameblend;
 
 	numframes = r->model->numframes;

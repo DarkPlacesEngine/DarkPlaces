@@ -35,10 +35,17 @@ cvar_t r_drawportals = {0, "r_drawportals", "0"};
 cvar_t r_testvis = {0, "r_testvis", "0"};
 cvar_t r_floatbuildlightmap = {0, "r_floatbuildlightmap", "0"};
 cvar_t r_detailtextures = {CVAR_SAVE, "r_detailtextures", "1"};
+cvar_t r_surfaceworldnode = {0, "r_surfaceworldnode", "0"};
+cvar_t r_cullsurface = {0, "r_cullsurface", "0"};
 
 static int dlightdivtable[32768];
 
-static int R_IntAddDynamicLights (msurface_t *surf)
+// variables used by R_PVSUpdate
+int r_pvsframecount = 0;
+mleaf_t *r_viewleaf = NULL;
+int r_viewleafnovis = 0;
+
+static int R_IntAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surf)
 {
 	int sdtable[256], lnum, td, maxdist, maxdist2, maxdist3, i, s, t, smax, tmax, smax3, red, green, blue, lit, dist2, impacts, impactt, subtract;
 	unsigned int *bl;
@@ -62,7 +69,7 @@ static int R_IntAddDynamicLights (msurface_t *surf)
 		if (!(surf->dlightbits[lnum >> 5] & (1 << (lnum & 31))))
 			continue;					// not lit by this light
 
-		softwareuntransform(r_dlight[lnum].origin, local);
+		Matrix4x4_Transform(matrix, r_dlight[lnum].origin, local);
 		dist = DotProduct (local, surf->plane->normal) - surf->plane->dist;
 
 		// for comparisons to minimum acceptable light
@@ -139,7 +146,7 @@ static int R_IntAddDynamicLights (msurface_t *surf)
 	return lit;
 }
 
-static int R_FloatAddDynamicLights (msurface_t *surf)
+static int R_FloatAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surf)
 {
 	int lnum, s, t, smax, tmax, smax3, lit, impacts, impactt;
 	float sdtable[256], *bl, k, dist, dist2, maxdist, maxdist2, maxdist3, td1, td, red, green, blue, impact[3], local[3], subtract;
@@ -155,7 +162,7 @@ static int R_FloatAddDynamicLights (msurface_t *surf)
 		if (!(surf->dlightbits[lnum >> 5] & (1 << (lnum & 31))))
 			continue;					// not lit by this light
 
-		softwareuntransform(r_dlight[lnum].origin, local);
+		Matrix4x4_Transform(matrix, r_dlight[lnum].origin, local);
 		dist = DotProduct (local, surf->plane->normal) - surf->plane->dist;
 
 		// for comparisons to minimum acceptable light
@@ -280,7 +287,7 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf, int d
 
 			if (surf->dlightframe == r_framecount && r_dlightmap.integer)
 			{
-				surf->cached_dlight = R_IntAddDynamicLights(surf);
+				surf->cached_dlight = R_IntAddDynamicLights(&ent->inversematrix, surf);
 				if (surf->cached_dlight)
 					c_light_polys++;
 				else if (dlightchanged)
@@ -371,7 +378,7 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf, int d
 
 		if (surf->dlightframe == r_framecount && r_dlightmap.integer)
 		{
-			surf->cached_dlight = R_FloatAddDynamicLights(surf);
+			surf->cached_dlight = R_FloatAddDynamicLights(&ent->inversematrix, surf);
 			if (surf->cached_dlight)
 				c_light_polys++;
 			else if (dlightchanged)
@@ -587,7 +594,8 @@ void R_Stain (vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, i
 	icolor[7] = ca2;
 
 	model = cl.worldmodel;
-	R_StainNode(model->nodes + model->hulls[0].firstclipnode, model, origin, radius, icolor);
+	if (model)
+		R_StainNode(model->nodes + model->hulls[0].firstclipnode, model, origin, radius, icolor);
 
 	// look for embedded bmodels
 	for (n = 0;n < cl_num_brushmodel_entities;n++)
@@ -795,7 +803,7 @@ static int RSurf_LightSeparate(const matrix4x4_t *matrix, const int *dlightbits,
 
 // note: this untransforms lights to do the checking,
 // and takes surf->mesh->vertex data
-static int RSurf_LightCheck(const int *dlightbits, surfmesh_t *mesh)
+static int RSurf_LightCheck(const matrix4x4_t *matrix, const int *dlightbits, surfmesh_t *mesh)
 {
 	int i, l;
 	rdlight_t *rd;
@@ -806,7 +814,7 @@ static int RSurf_LightCheck(const int *dlightbits, surfmesh_t *mesh)
 		if (dlightbits[l >> 5] & (1 << (l & 31)))
 		{
 			rd = &r_dlight[l];
-			softwareuntransform(rd->origin, lightorigin);
+			Matrix4x4_Transform(matrix, rd->origin, lightorigin);
 			for (i = 0, sv = mesh->vertex;i < mesh->numverts;i++, sv++)
 				if (VectorDistance2(sv->v, lightorigin) < rd->cullradius2)
 					return true;
@@ -1230,7 +1238,7 @@ static void RSurfShader_OpaqueWall_Pass_Light(const entity_render_t *ent, const 
 	m.matrix = ent->matrix;
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
-		if (RSurf_LightCheck(surf->dlightbits, mesh))
+		if (RSurf_LightCheck(&ent->inversematrix, surf->dlightbits, mesh))
 		{
 			m.numtriangles = mesh->numtriangles;
 			m.numverts = mesh->numverts;
@@ -1342,7 +1350,6 @@ static void RSurfShader_Wall_Fullbright(const entity_render_t *ent, const msurfa
 	{
 		for (surf = firstsurf;surf;surf = surf->chain)
 		{
-			c_brush_polys++;
 			Matrix4x4_Transform(&ent->matrix, surf->poly_center, center);
 			R_MeshQueue_AddTransparent(center, RSurfShader_Wall_Fullbright_Callback, ent, surf - ent->model->surfaces);
 		}
@@ -1351,7 +1358,6 @@ static void RSurfShader_Wall_Fullbright(const entity_render_t *ent, const msurfa
 	{
 		for (surf = firstsurf;surf;surf = surf->chain)
 		{
-			c_brush_polys++;
 			if (surf->currenttexture->fogtexture != NULL)
 			{
 				Matrix4x4_Transform(&ent->matrix, surf->poly_center, center);
@@ -1390,7 +1396,6 @@ static void RSurfShader_Wall_Vertex(const entity_render_t *ent, const msurface_t
 	{
 		for (surf = firstsurf;surf;surf = surf->chain)
 		{
-			c_brush_polys++;
 			Matrix4x4_Transform(&ent->matrix, surf->poly_center, center);
 			R_MeshQueue_AddTransparent(center, RSurfShader_Wall_Vertex_Callback, ent, surf - ent->model->surfaces);
 		}
@@ -1399,7 +1404,6 @@ static void RSurfShader_Wall_Vertex(const entity_render_t *ent, const msurface_t
 	{
 		for (surf = firstsurf;surf;surf = surf->chain)
 		{
-			c_brush_polys++;
 			if (surf->currenttexture->fogtexture != NULL)
 			{
 				Matrix4x4_Transform(&ent->matrix, surf->poly_center, center);
@@ -1427,7 +1431,6 @@ static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const msurface
 	{
 		for (surf = firstsurf;surf;surf = surf->chain)
 		{
-			c_brush_polys++;
 			Matrix4x4_Transform(&ent->matrix, surf->poly_center, center);
 			R_MeshQueue_AddTransparent(center, RSurfShader_Wall_Vertex_Callback, ent, surf - ent->model->surfaces);
 		}
@@ -1436,7 +1439,6 @@ static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const msurface
 	{
 		for (surf = firstsurf;surf;surf = surf->chain)
 		{
-			c_brush_polys++;
 			if (surf->currenttexture->fogtexture != NULL)
 			{
 				Matrix4x4_Transform(&ent->matrix, surf->poly_center, center);
@@ -1462,7 +1464,6 @@ static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const msurface
 			{
 				for (surf = firstsurf;surf;surf = surf->chain)
 				{
-					c_brush_polys++;
 					if (surf->currenttexture->fogtexture != NULL)
 					{
 						Matrix4x4_Transform(&ent->matrix, surf->poly_center, center);
@@ -1476,7 +1477,6 @@ static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const msurface
 			{
 				for (surf = firstsurf;surf;surf = surf->chain)
 				{
-					c_brush_polys++;
 					if (surf->currenttexture->fogtexture != NULL)
 					{
 						Matrix4x4_Transform(&ent->matrix, surf->poly_center, center);
@@ -1495,7 +1495,6 @@ static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const msurface
 		{
 			for (surf = firstsurf;surf;surf = surf->chain)
 			{
-				c_brush_polys++;
 				if (surf->currenttexture->fogtexture != NULL)
 				{
 					Matrix4x4_Transform(&ent->matrix, surf->poly_center, center);
@@ -1528,236 +1527,6 @@ static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const msurface
 	}
 }
 
-/*
-=============================================================
-
-	WORLD MODEL
-
-=============================================================
-*/
-
-static void R_SolidWorldNode (entity_render_t *ent)
-{
-	if (r_viewleaf->contents != CONTENTS_SOLID)
-	{
-		int portalstack;
-		mportal_t *p, *pstack[8192];
-		msurface_t *surf, **mark, **endmark;
-		mleaf_t *leaf;
-		// LordHavoc: portal-passage worldnode; follows portals leading
-		// outward from viewleaf, if a portal leads offscreen it is not
-		// followed, in indoor maps this can often cull a great deal of
-		// geometry away when pvs data is not present (useful with pvs as well)
-
-		leaf = r_viewleaf;
-		leaf->worldnodeframe = r_framecount;
-		portalstack = 0;
-	loc0:
-		c_leafs++;
-
-		leaf->visframe = r_framecount;
-
-		if (leaf->nummarksurfaces)
-		{
-			mark = leaf->firstmarksurface;
-			endmark = mark + leaf->nummarksurfaces;
-			do
-			{
-				surf = *mark++;
-				// make sure surfaces are only processed once
-				if (surf->worldnodeframe == r_framecount)
-					continue;
-				surf->worldnodeframe = r_framecount;
-				if (PlaneDist(r_origin, surf->plane) < surf->plane->dist)
-				{
-					if (surf->flags & SURF_PLANEBACK)
-						surf->visframe = r_framecount;
-				}
-				else
-				{
-					if (!(surf->flags & SURF_PLANEBACK))
-						surf->visframe = r_framecount;
-				}
-			}
-			while (mark < endmark);
-		}
-
-		// follow portals into other leafs
-		p = leaf->portals;
-		for (;p;p = p->next)
-		{
-			if (DotProduct(r_origin, p->plane.normal) < p->plane.dist)
-			{
-				leaf = p->past;
-				if (leaf->worldnodeframe != r_framecount)
-				{
-					leaf->worldnodeframe = r_framecount;
-					if (leaf->contents != CONTENTS_SOLID)
-					{
-						if (R_NotCulledBox(leaf->mins, leaf->maxs))
-						{
-							p->visframe = r_framecount;
-							pstack[portalstack++] = p;
-							goto loc0;
-
-	loc1:
-							p = pstack[--portalstack];
-						}
-					}
-				}
-			}
-		}
-
-		if (portalstack)
-			goto loc1;
-	}
-	else
-	{
-		mnode_t *nodestack[8192], *node = cl.worldmodel->nodes;
-		int nodestackpos = 0;
-		// LordHavoc: recursive descending worldnode; if portals are not
-		// available, this is a good last resort, can cull large amounts of
-		// geometry, but is more time consuming than portal-passage and renders
-		// things behind walls
-
-loc2:
-		if (R_NotCulledBox(node->mins, node->maxs))
-		{
-			if (node->numsurfaces)
-			{
-				msurface_t *surf = cl.worldmodel->surfaces + node->firstsurface, *surfend = surf + node->numsurfaces;
-				if (PlaneDiff (r_origin, node->plane) < 0)
-				{
-					for (;surf < surfend;surf++)
-					{
-						if (surf->flags & SURF_PLANEBACK)
-							surf->visframe = r_framecount;
-					}
-				}
-				else
-				{
-					for (;surf < surfend;surf++)
-					{
-						if (!(surf->flags & SURF_PLANEBACK))
-							surf->visframe = r_framecount;
-					}
-				}
-			}
-
-			// recurse down the children
-			if (node->children[0]->contents >= 0)
-			{
-				if (node->children[1]->contents >= 0)
-				{
-					if (nodestackpos < 8192)
-						nodestack[nodestackpos++] = node->children[1];
-					node = node->children[0];
-					goto loc2;
-				}
-				else
-					((mleaf_t *)node->children[1])->visframe = r_framecount;
-				node = node->children[0];
-				goto loc2;
-			}
-			else
-			{
-				((mleaf_t *)node->children[0])->visframe = r_framecount;
-				if (node->children[1]->contents >= 0)
-				{
-					node = node->children[1];
-					goto loc2;
-				}
-				else if (nodestackpos > 0)
-				{
-					((mleaf_t *)node->children[1])->visframe = r_framecount;
-					node = nodestack[--nodestackpos];
-					goto loc2;
-				}
-			}
-		}
-		else if (nodestackpos > 0)
-		{
-			node = nodestack[--nodestackpos];
-			goto loc2;
-		}
-	}
-}
-
-static void R_PVSWorldNode()
-{
-	int portalstack, i;
-	mportal_t *p, *pstack[8192];
-	msurface_t *surf, **mark, **endmark;
-	mleaf_t *leaf;
-	qbyte *worldvis;
-
-	worldvis = Mod_LeafPVS (r_viewleaf, cl.worldmodel);
-
-	leaf = r_viewleaf;
-	leaf->worldnodeframe = r_framecount;
-	portalstack = 0;
-loc0:
-	c_leafs++;
-
-	leaf->visframe = r_framecount;
-
-	if (leaf->nummarksurfaces)
-	{
-		mark = leaf->firstmarksurface;
-		endmark = mark + leaf->nummarksurfaces;
-		do
-		{
-			surf = *mark++;
-			// make sure surfaces are only processed once
-			if (surf->worldnodeframe == r_framecount)
-				continue;
-			surf->worldnodeframe = r_framecount;
-			if (PlaneDist(r_origin, surf->plane) < surf->plane->dist)
-			{
-				if (surf->flags & SURF_PLANEBACK)
-					surf->visframe = r_framecount;
-			}
-			else
-			{
-				if (!(surf->flags & SURF_PLANEBACK))
-					surf->visframe = r_framecount;
-			}
-		}
-		while (mark < endmark);
-	}
-
-	// follow portals into other leafs
-	for (p = leaf->portals;p;p = p->next)
-	{
-		if (DotProduct(r_origin, p->plane.normal) < p->plane.dist)
-		{
-			leaf = p->past;
-			if (leaf->worldnodeframe != r_framecount)
-			{
-				leaf->worldnodeframe = r_framecount;
-				if (leaf->contents != CONTENTS_SOLID)
-				{
-					i = (leaf - cl.worldmodel->leafs) - 1;
-					if (worldvis[i>>3] & (1<<(i&7)))
-					{
-						if (R_NotCulledBox(leaf->mins, leaf->maxs))
-						{
-							pstack[portalstack++] = p;
-							goto loc0;
-
-loc1:
-							p = pstack[--portalstack];
-						}
-					}
-				}
-			}
-		}
-	}
-
-	if (portalstack)
-		goto loc1;
-}
-
 Cshader_t Cshader_wall_vertex = {{NULL, RSurfShader_Wall_Vertex}, NULL};
 Cshader_t Cshader_wall_lightmap = {{NULL, RSurfShader_Wall_Lightmap}, NULL};
 Cshader_t Cshader_wall_fullbright = {{NULL, RSurfShader_Wall_Fullbright}, NULL};
@@ -1780,6 +1549,7 @@ void R_PrepareSurfaces(entity_render_t *ent)
 	texture_t *t;
 	model_t *model;
 	msurface_t *surf;
+	vec3_t modelorg;
 
 	for (i = 0;i < Cshader_count;i++)
 		Cshaders[i]->chain = NULL;
@@ -1788,14 +1558,25 @@ void R_PrepareSurfaces(entity_render_t *ent)
 	alttextures = ent->frame != 0;
 	texframe = (int)(cl.time * 5.0f);
 
+	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
 	for (i = 0;i < model->nummodelsurfaces;i++)
 	{
 		surf = model->modelsortedsurfaces[i];
 		if (surf->visframe == r_framecount)
 		{
-			if (surf->insertframe != r_framecount)
+			// mark any backface surfaces as not visible
+			if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
 			{
-				surf->insertframe = r_framecount;
+				if (!(surf->flags & SURF_PLANEBACK))
+					surf->visframe = -1;
+			}
+			else
+			{
+				if (surf->flags & SURF_PLANEBACK)
+					surf->visframe = -1;
+			}
+			if (surf->visframe == r_framecount)
+			{
 				c_faces++;
 				t = surf->texinfo->texture;
 				if (t->animated)
@@ -1808,18 +1589,18 @@ void R_PrepareSurfaces(entity_render_t *ent)
 				}
 				else
 					surf->currenttexture = t;
-			}
 
-			surf->chain = surf->shader->chain;
-			surf->shader->chain = surf;
+				surf->chain = surf->shader->chain;
+				surf->shader->chain = surf;
+			}
 		}
 	}
 }
 
 void R_DrawSurfaces (entity_render_t *ent, int type)
 {
-	int			i;
-	Cshader_t	*shader;
+	int i;
+	Cshader_t *shader;
 
 	for (i = 0;i < Cshader_count;i++)
 	{
@@ -1892,37 +1673,36 @@ void R_DrawPortals(entity_render_t *ent)
 	}
 }
 
-void R_SetupForBModelRendering(entity_render_t *ent)
+void R_SetupForBrushModelRendering(entity_render_t *ent)
 {
-	int			i;
-	msurface_t	*surf;
-	model_t		*model;
-	vec3_t		modelorg;
+	int i;
+	msurface_t *surf;
+	model_t *model;
+	vec3_t modelorg;
 
 	// because bmodels can be reused, we have to decide which things to render
 	// from scratch every time
-
 	model = ent->model;
-
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
 	for (i = 0;i < model->nummodelsurfaces;i++)
 	{
-		surf = model->modelsortedsurfaces[i];
-		if (((surf->flags & SURF_PLANEBACK) == 0) == (PlaneDiff(modelorg, surf->plane) >= 0))
-			surf->visframe = r_framecount;
-		else
-			surf->visframe = -1;
+		surf = model->surfaces + model->firstmodelsurface + i;
+		surf->visframe = r_framecount;
+		surf->pvsframe = -1;
 		surf->worldnodeframe = -1;
 		surf->lightframe = -1;
 		surf->dlightframe = -1;
-		surf->insertframe = -1;
 	}
+	R_PrepareSurfaces(ent);
 }
 
 void R_SurfMarkLights (entity_render_t *ent)
 {
-	int			i;
-	msurface_t	*surf;
+	int i;
+	msurface_t *surf;
+
+	if (!ent->model)
+		return;
 
 	if (r_dynamic.integer)
 		R_MarkLights(ent);
@@ -1952,6 +1732,171 @@ void R_SurfMarkLights (entity_render_t *ent)
 	}
 }
 
+void R_SurfaceWorldNode (entity_render_t *ent)
+{
+	int i;
+	msurface_t *surf;
+	model_t *model;
+	model = ent->model;
+	// FIXME: R_NotCulledBox is absolute, should be done relative
+	for (i = 0, surf = model->surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surf++)
+		if (surf->pvsframe == r_pvsframecount && (!r_cullsurface.integer || R_NotCulledBox (surf->poly_mins, surf->poly_maxs)))
+			surf->visframe = r_framecount;
+}
+
+/*
+static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
+{
+	int portalstack, i;
+	mportal_t *p, *pstack[8192];
+	msurface_t *surf, **mark, **endmark;
+	mleaf_t *leaf;
+	// LordHavoc: portal-passage worldnode with PVS;
+	// follows portals leading outward from viewleaf, does not venture
+	// offscreen or into leafs that are not visible, faster than Quake's
+	// RecursiveWorldNode
+	leaf = viewleaf;
+	leaf->worldnodeframe = r_framecount;
+	portalstack = 0;
+loc0:
+	c_leafs++;
+	if (leaf->nummarksurfaces)
+	{
+		for (c = leaf->nummarksurfaces, mark = leaf->firstmarksurface;c;c--)
+		{
+			surf = *mark++;
+			// make sure surfaces are only processed once
+			if (surf->worldnodeframe != r_framecount)
+			{
+				surf->worldnodeframe = r_framecount;
+				if (PlaneDist(r_origin, surf->plane) < surf->plane->dist)
+				{
+					if (surf->flags & SURF_PLANEBACK)
+						surf->visframe = r_framecount;
+				}
+				else
+				{
+					if (!(surf->flags & SURF_PLANEBACK))
+						surf->visframe = r_framecount;
+				}
+			}
+		}
+	}
+	// follow portals into other leafs
+	for (p = leaf->portals;p;p = p->next)
+	{
+		leaf = p->past;
+		if (leaf->worldnodeframe != r_framecount)
+		{
+			leaf->worldnodeframe = r_framecount;
+			// FIXME: R_NotCulledBox is absolute, should be done relative
+			if (leaf->pvsframe == r_pvsframecount && R_NotCulledBox(leaf->mins, leaf->maxs))
+			{
+				p->visframe = r_framecount;
+				pstack[portalstack++] = p;
+				goto loc0;
+loc1:
+				p = pstack[--portalstack];
+			}
+		}
+	}
+	if (portalstack)
+		goto loc1;
+}
+*/
+
+static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
+{
+	int c, leafstackpos;
+	mleaf_t *leaf, *leafstack[8192];
+	mportal_t *p;
+	msurface_t *surf, **mark;
+	vec3_t modelorg;
+	// LordHavoc: portal-passage worldnode with PVS;
+	// follows portals leading outward from viewleaf, does not venture
+	// offscreen or into leafs that are not visible, faster than Quake's
+	// RecursiveWorldNode
+	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+	viewleaf->worldnodeframe = r_framecount;
+	leafstack[0] = viewleaf;
+	leafstackpos = 1;
+	while (leafstackpos)
+	{
+		c_leafs++;
+		leaf = leafstack[--leafstackpos];
+		// only useful for drawing portals
+		//leaf->visframe = r_framecount;
+		// draw any surfaces bounding this leaf
+		if (leaf->nummarksurfaces)
+		{
+			for (c = leaf->nummarksurfaces, mark = leaf->firstmarksurface;c;c--)
+			{
+				surf = *mark++;
+				if (!r_cullsurface.integer || R_NotCulledBox (surf->poly_mins, surf->poly_maxs))
+					surf->visframe = r_framecount;
+			}
+		}
+		// follow portals into other leafs
+		for (p = leaf->portals;p;p = p->next)
+		{
+			leaf = p->past;
+			if (leaf->worldnodeframe != r_framecount)
+			{
+				leaf->worldnodeframe = r_framecount;
+				// FIXME: R_NotCulledBox is absolute, should be done relative
+				if (leaf->pvsframe == r_pvsframecount && R_NotCulledBox(leaf->mins, leaf->maxs))
+					leafstack[leafstackpos++] = leaf;
+			}
+		}
+	}
+}
+
+
+void R_PVSUpdate (mleaf_t *viewleaf)
+{
+	int i, j, l, c, bits;
+	mnode_t *node;
+	mleaf_t *leaf;
+	qbyte *vis;
+	msurface_t **mark;
+
+	if (r_viewleaf == viewleaf && r_viewleafnovis == r_novis.integer)
+		return;
+
+	r_pvsframecount++;
+	r_viewleaf = viewleaf;
+	r_viewleafnovis = r_novis.integer;
+
+	if (viewleaf)
+	{
+		vis = Mod_LeafPVS (viewleaf, cl.worldmodel);
+		for (j = 0;j < cl.worldmodel->numleafs;j += 8)
+		{
+			bits = *vis++;
+			if (bits)
+			{
+				l = cl.worldmodel->numleafs - j;
+				if (l > 8)
+					l = 8;
+				for (i = 0;i < l;i++)
+				{
+					if (bits & (1 << i))
+					{
+						leaf = &cl.worldmodel->leafs[j + i + 1];
+						// mark surfaces bounding this leaf as visible
+						for (c = leaf->nummarksurfaces, mark = leaf->firstmarksurface;c;c--)
+							(*mark++)->pvsframe = r_pvsframecount;
+						// mark parents as visible until we hit an already
+						// marked parent (which is usually very soon)
+						for (node = (mnode_t *)leaf;node && node->pvsframe != r_pvsframecount;node = node->parent)
+							node->pvsframe = r_pvsframecount;
+					}
+				}
+			}
+		}
+	}
+}
+
 /*
 =============
 R_DrawWorld
@@ -1961,10 +1906,15 @@ void R_DrawWorld (entity_render_t *ent)
 {
 	// there is only one instance of the world, but it can be rendered in
 	// multiple stages
-	if (r_viewleaf->contents == CONTENTS_SOLID || r_novis.integer || r_viewleaf->compressed_vis == NULL)
-		R_SolidWorldNode (ent);
+	mleaf_t *viewleaf;
+	viewleaf = Mod_PointInLeaf (r_origin, cl.worldmodel);
+	R_PVSUpdate(viewleaf);
+	if (!viewleaf)
+		return;
+	if (r_surfaceworldnode.integer || viewleaf->contents == CONTENTS_SOLID)
+		R_SurfaceWorldNode (ent);
 	else
-		R_PVSWorldNode (ent);
+		R_PortalWorldNode (ent, viewleaf);
 }
 
 /*
@@ -1974,27 +1924,17 @@ R_DrawBrushModel
 */
 void R_DrawBrushModelSky (entity_render_t *ent)
 {
-	R_SetupForBModelRendering(ent);
-
-	R_PrepareSurfaces(ent);
+	R_SetupForBrushModelRendering(ent);
 	R_DrawSurfaces(ent, SHADERSTAGE_SKY);
 }
 
 void R_DrawBrushModelNormal (entity_render_t *ent)
 {
 	c_bmodels++;
-
 	// have to flush queue because of possible lightmap reuse
 	R_Mesh_Render();
-
-	R_SetupForBModelRendering(ent);
-
+	R_SetupForBrushModelRendering(ent);
 	R_SurfMarkLights(ent);
-
-	R_PrepareSurfaces(ent);
-
-	if (!skyrendermasked)
-		R_DrawSurfaces(ent, SHADERSTAGE_SKY);
 	R_DrawSurfaces(ent, SHADERSTAGE_NORMAL);
 }
 
@@ -2008,6 +1948,10 @@ static void gl_surf_shutdown(void)
 
 static void gl_surf_newmap(void)
 {
+	// reset pvs visibility variables so it will update on first frame
+	r_pvsframecount = 1;
+	r_viewleaf = NULL;
+	r_viewleafnovis = false;
 }
 
 void GL_Surf_Init(void)
@@ -2024,6 +1968,8 @@ void GL_Surf_Init(void)
 	Cvar_RegisterVariable(&r_testvis);
 	Cvar_RegisterVariable(&r_floatbuildlightmap);
 	Cvar_RegisterVariable(&r_detailtextures);
+	Cvar_RegisterVariable(&r_surfaceworldnode);
+	Cvar_RegisterVariable(&r_cullsurface);
 
 	R_RegisterModule("GL_Surf", gl_surf_start, gl_surf_shutdown, gl_surf_newmap);
 }

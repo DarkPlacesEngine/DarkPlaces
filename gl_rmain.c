@@ -26,7 +26,7 @@ int r_framecount;
 
 mplane_t frustum[4];
 
-int c_brush_polys, c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c_bmodels, c_sprites, c_particles, c_dlights;
+int c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c_bmodels, c_sprites, c_particles, c_dlights;
 
 // true during envmap command capture
 qboolean envmap;
@@ -43,8 +43,6 @@ vec3_t vup;
 // screen size info
 //
 refdef_t r_refdef;
-
-mleaf_t *r_viewleaf, *r_oldviewleaf;
 
 // 8.8 fraction of base light value
 unsigned short d_lightstylevalue[256];
@@ -125,50 +123,6 @@ static void R_TimeRefresh_f (void)
 
 extern cvar_t r_drawportals;
 
-int R_VisibleCullBox (vec3_t mins, vec3_t maxs)
-{
-	int sides;
-	mnode_t *nodestack[8192], *node;
-	int stack = 0;
-
-	if (R_CullBox(mins, maxs))
-		return true;
-
-	node = cl.worldmodel->nodes;
-loc0:
-	if (node->contents < 0)
-	{
-		if (((mleaf_t *)node)->visframe == r_framecount)
-			return false;
-		if (!stack)
-			return true;
-		node = nodestack[--stack];
-		goto loc0;
-	}
-
-	sides = BOX_ON_PLANE_SIDE(mins, maxs, node->plane);
-
-// recurse down the contacted sides
-	if (sides & 1)
-	{
-		if (sides & 2) // 3
-		{
-			// put second child on the stack for later examination
-			nodestack[stack++] = node->children[1];
-			node = node->children[0];
-			goto loc0;
-		}
-		else // 1
-		{
-			node = node->children[0];
-			goto loc0;
-		}
-	}
-	// 2
-	node = node->children[1];
-	goto loc0;
-}
-
 vec3_t fogcolor;
 vec_t fogdensity;
 float fog_density, fog_red, fog_green, fog_blue;
@@ -248,8 +202,11 @@ void gl_main_shutdown(void)
 {
 }
 
+extern void CL_ParseEntityLump(char *entitystring);
 void gl_main_newmap(void)
 {
+	if (cl.worldmodel && cl.worldmodel->entities)
+		CL_ParseEntityLump(cl.worldmodel->entities);
 	r_framecount = 1;
 }
 
@@ -313,20 +270,9 @@ float R_FarClip_Finish(void)
 R_NewMap
 ===============
 */
-void CL_ParseEntityLump(char *entitystring);
 void R_NewMap (void)
 {
-	int i;
-
-	for (i = 0;i < 256;i++)
-		d_lightstylevalue[i] = 264;		// normal light value
-
-	r_viewleaf = NULL;
-	if (cl.worldmodel->entities)
-		CL_ParseEntityLump(cl.worldmodel->entities);
 	R_Modules_NewMap();
-
-	r_farclip = 64.0f;
 }
 
 extern void R_Textures_Init(void);
@@ -393,7 +339,8 @@ static void R_MarkEntities (void)
 	Matrix4x4_CreateIdentity(&ent->matrix);
 	Matrix4x4_CreateIdentity(&ent->inversematrix);
 
-	R_FarClip_Box(cl.worldmodel->normalmins, cl.worldmodel->normalmaxs);
+	if (cl.worldmodel)
+		R_FarClip_Box(cl.worldmodel->normalmins, cl.worldmodel->normalmaxs);
 
 	if (!r_drawentities.integer)
 		return;
@@ -417,40 +364,23 @@ static void R_MarkEntities (void)
 			VectorAdd(ent->angles, r_refdef.viewangles, ent->angles);
 		}
 
-		if (ent->angles[0] || ent->angles[2])
-		{
-			VectorMA(ent->origin, ent->scale, ent->model->rotatedmins, ent->mins);
-			VectorMA(ent->origin, ent->scale, ent->model->rotatedmaxs, ent->maxs);
-		}
-		else if (ent->angles[1])
-		{
-			VectorMA(ent->origin, ent->scale, ent->model->yawmins, ent->mins);
-			VectorMA(ent->origin, ent->scale, ent->model->yawmaxs, ent->maxs);
-		}
-		else
-		{
-			VectorMA(ent->origin, ent->scale, ent->model->normalmins, ent->mins);
-			VectorMA(ent->origin, ent->scale, ent->model->normalmaxs, ent->maxs);
-		}
-		if (R_VisibleCullBox(ent->mins, ent->maxs))
+		if (R_CullBox(ent->mins, ent->maxs))
 			continue;
 
+		ent->visframe = r_framecount;
 		VectorCopy(ent->angles, v);
-		if (ent->model->type != mod_brush)
+		if (!ent->model || ent->model->type != mod_brush)
 			v[0] = -v[0];
 		Matrix4x4_CreateFromQuakeEntity(&ent->matrix, ent->origin[0], ent->origin[1], ent->origin[2], v[0], v[1], v[2], ent->scale);
 		Matrix4x4_Invert_Simple(&ent->inversematrix, &ent->matrix);
 		R_LerpAnimation(ent);
-		ent->visframe = r_framecount;
-
-		R_FarClip_Box(ent->mins, ent->maxs);
-
 		R_UpdateEntLights(ent);
+		R_FarClip_Box(ent->mins, ent->maxs);
 	}
 }
 
 // only used if skyrendermasked, and normally returns false
-int R_DrawBModelSky (void)
+int R_DrawBrushModelsSky (void)
 {
 	int i, sky;
 	entity_render_t *ent;
@@ -462,7 +392,7 @@ int R_DrawBModelSky (void)
 	for (i = 0;i < r_refdef.numentities;i++)
 	{
 		ent = r_refdef.entities[i];
-		if (ent->visframe == r_framecount && ent->model->DrawSky)
+		if (ent->visframe == r_framecount && ent->model && ent->model->DrawSky)
 		{
 			ent->model->DrawSky(ent);
 			sky = true;
@@ -471,6 +401,7 @@ int R_DrawBModelSky (void)
 	return sky;
 }
 
+void R_DrawNoModel(entity_render_t *ent);
 void R_DrawModels (void)
 {
 	int i;
@@ -482,8 +413,16 @@ void R_DrawModels (void)
 	for (i = 0;i < r_refdef.numentities;i++)
 	{
 		ent = r_refdef.entities[i];
-		if (ent->visframe == r_framecount && ent->model->Draw)
-			ent->model->Draw(ent);
+		if (ent->visframe == r_framecount)
+		{
+			if (ent->model)
+			{
+				if (ent->model->Draw)
+					ent->model->Draw(ent);
+			}
+			else
+				R_DrawNoModel(ent);
+		}
 	}
 }
 
@@ -556,10 +495,6 @@ static void R_SetupFrame (void)
 
 	AngleVectors (r_refdef.viewangles, vpn, vright, vup);
 
-// current viewleaf
-	r_oldviewleaf = r_viewleaf;
-	r_viewleaf = Mod_PointInLeaf (r_origin, cl.worldmodel);
-
 	R_AnimateLight ();
 }
 
@@ -612,75 +547,63 @@ r_refdef must be set before the first call
 */
 void R_RenderView (void)
 {
-	entity_render_t *world = &cl_entities[0].render;
-	if (!cl.worldmodel)
+	entity_render_t *world;
+	if (!r_refdef.entities/* || !cl.worldmodel*/)
 		return; //Host_Error ("R_RenderView: NULL worldmodel");
+
+	world = &cl_entities[0].render;
 
 	// FIXME: move to client
 	R_MoveExplosions();
 	R_TimeReport("mexplosion");
 
 	R_Textures_Frame();
-
 	R_SetupFrame();
 	R_SetFrustum();
 	R_SetupFog();
 	R_SkyStartFrame();
 	R_BuildLightList();
-
-	R_FarClip_Start(r_origin, vpn, 768.0f);
-
 	R_TimeReport("setup");
 
-	R_DrawWorld(world);
-	R_TimeReport("worldnode");
-
+	R_FarClip_Start(r_origin, vpn, 768.0f);
 	R_MarkEntities();
+	r_farclip = R_FarClip_Finish() + 256.0f;
 	R_TimeReport("markentity");
 
-	R_SurfMarkLights(world);
-	R_TimeReport("marklights");
-
-	r_farclip = R_FarClip_Finish() + 256.0f;
-
 	R_Mesh_Start(r_farclip);
-
 	R_MeshQueue_BeginScene();
 
+	if (R_DrawBrushModelsSky())
+		R_TimeReport("bmodelsky");
 
-	if (skyrendermasked)
+	if (world->model)
 	{
-		if (R_DrawBModelSky())
-			R_TimeReport("bmodelsky");
-	}
-	else
-	{
-		R_DrawViewModel();
-		R_TimeReport("viewmodel");
-	}
+		R_DrawWorld(world);
+		R_TimeReport("worldnode");
 
-	R_PrepareSurfaces(world);
-	R_TimeReport("surfprep");
+		R_SurfMarkLights(world);
+		R_TimeReport("marklights");
 
-	R_DrawSurfaces(world, SHADERSTAGE_SKY);
-	R_DrawSurfaces(world, SHADERSTAGE_NORMAL);
-	R_TimeReport("surfdraw");
+		R_PrepareSurfaces(world);
+		R_TimeReport("surfprep");
 
-	if (r_drawportals.integer)
-	{
-		R_DrawPortals(world);
-		R_TimeReport("portals");
+		R_DrawSurfaces(world, SHADERSTAGE_SKY);
+		R_DrawSurfaces(world, SHADERSTAGE_NORMAL);
+		R_TimeReport("surfdraw");
+
+		if (r_drawportals.integer)
+		{
+			R_DrawPortals(world);
+			R_TimeReport("portals");
+		}
 	}
 
 	// don't let sound skip if going slow
 	if (!intimerefresh && !r_speeds.integer)
 		S_ExtraUpdate ();
 
-	if (skyrendermasked)
-	{
-		R_DrawViewModel();
-		R_TimeReport("viewmodel");
-	}
+	R_DrawViewModel();
+	R_TimeReport("viewmodel");
 
 	R_DrawModels();
 	R_TimeReport("models");
@@ -704,10 +627,129 @@ void R_RenderView (void)
 	R_TimeReport("blendview");
 
 	R_MeshQueue_Render();
-
 	R_MeshQueue_EndScene();
-
 	R_Mesh_Finish();
 	R_TimeReport("meshfinish");
+}
+
+void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, float ca)
+{
+	int i;
+	float *v, *c, f1, f2, diff[3];
+	rmeshbufferinfo_t m;
+	m.numtriangles = 12;
+	m.numverts = 8;
+	m.blendfunc1 = GL_SRC_ALPHA;
+	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+	Matrix4x4_CreateIdentity(&m.matrix);
+	if (R_Mesh_Draw_GetBuffer(&m, false))
+	{
+		m.vertex[ 0] = mins[0];m.vertex[ 1] = mins[1];m.vertex[ 2] = mins[2];
+		m.vertex[ 4] = maxs[0];m.vertex[ 5] = mins[1];m.vertex[ 6] = mins[2];
+		m.vertex[ 8] = mins[0];m.vertex[ 9] = maxs[1];m.vertex[10] = mins[2];
+		m.vertex[12] = maxs[0];m.vertex[13] = maxs[1];m.vertex[14] = mins[2];
+		m.vertex[16] = mins[0];m.vertex[17] = mins[1];m.vertex[18] = maxs[2];
+		m.vertex[20] = maxs[0];m.vertex[21] = mins[1];m.vertex[22] = maxs[2];
+		m.vertex[24] = mins[0];m.vertex[25] = maxs[1];m.vertex[26] = maxs[2];
+		m.vertex[28] = maxs[0];m.vertex[29] = maxs[1];m.vertex[30] = maxs[2];
+		m.color[ 0] = m.color[ 4] = m.color[ 8] = m.color[12] = m.color[16] = m.color[20] = m.color[24] = m.color[28] = cr * m.colorscale;
+		m.color[ 1] = m.color[ 5] = m.color[ 9] = m.color[13] = m.color[17] = m.color[21] = m.color[25] = m.color[29] = cg * m.colorscale;
+		m.color[ 2] = m.color[ 6] = m.color[10] = m.color[14] = m.color[18] = m.color[22] = m.color[26] = m.color[30] = cb * m.colorscale;
+		m.color[ 3] = m.color[ 7] = m.color[11] = m.color[15] = m.color[19] = m.color[23] = m.color[27] = m.color[31] = ca;
+		if (fogenabled)
+		{
+			for (i = 0, v = m.vertex, c = m.color;i < m.numverts;i++, v += 4, c += 4)
+			{
+				VectorSubtract(v, r_origin, diff);
+				f2 = exp(fogdensity/DotProduct(diff, diff));
+				f1 = 1 - f2;
+				f2 *= m.colorscale;
+				c[0] = c[0] * f1 + fogcolor[0] * f2;
+				c[1] = c[1] * f1 + fogcolor[1] * f2;
+				c[2] = c[2] * f1 + fogcolor[2] * f2;
+			}
+		}
+		R_Mesh_Render();
+	}
+}
+
+void R_DrawNoModelCallback(const void *calldata1, int calldata2)
+{
+	const entity_render_t *ent = calldata1;
+	int i;
+	float f1, f2, *c, diff[3];
+	rmeshbufferinfo_t m;
+	memset(&m, 0, sizeof(m));
+	if (ent->flags & EF_ADDITIVE)
+	{
+		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE;
+	}
+	else if (ent->alpha < 1)
+	{
+		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+	}
+	else
+	{
+		m.blendfunc1 = GL_ONE;
+		m.blendfunc2 = GL_ZERO;
+	}
+	m.numtriangles = 8;
+	m.numverts = 6;
+	m.matrix = ent->matrix;
+	if (R_Mesh_Draw_GetBuffer(&m, false))
+	{
+		m.index[ 0] = 5;m.index[ 1] = 2;m.index[ 2] = 0;
+		m.index[ 3] = 5;m.index[ 4] = 1;m.index[ 5] = 2;
+		m.index[ 6] = 5;m.index[ 7] = 0;m.index[ 8] = 3;
+		m.index[ 9] = 5;m.index[10] = 3;m.index[11] = 1;
+		m.index[12] = 0;m.index[13] = 2;m.index[14] = 4;
+		m.index[15] = 2;m.index[16] = 1;m.index[17] = 4;
+		m.index[18] = 3;m.index[19] = 0;m.index[20] = 4;
+		m.index[21] = 1;m.index[22] = 3;m.index[23] = 4;
+		m.vertex[ 0] = -16;m.vertex[ 1] =   0;m.vertex[ 2] =   0;
+		m.vertex[ 4] =  16;m.vertex[ 5] =   0;m.vertex[ 6] =   0;
+		m.vertex[ 8] =   0;m.vertex[ 9] = -16;m.vertex[10] =   0;
+		m.vertex[12] =   0;m.vertex[13] =  16;m.vertex[14] =   0;
+		m.vertex[16] =   0;m.vertex[17] =   0;m.vertex[18] = -16;
+		m.vertex[20] =   0;m.vertex[21] =   0;m.vertex[22] =  16;
+		m.color[ 0] = 0.00f;m.color[ 1] = 0.00f;m.color[ 2] = 0.50f;m.color[ 3] = ent->alpha;
+		m.color[ 4] = 0.00f;m.color[ 5] = 0.00f;m.color[ 6] = 0.50f;m.color[ 7] = ent->alpha;
+		m.color[ 8] = 0.00f;m.color[ 9] = 0.50f;m.color[10] = 0.00f;m.color[11] = ent->alpha;
+		m.color[12] = 0.00f;m.color[13] = 0.50f;m.color[14] = 0.00f;m.color[15] = ent->alpha;
+		m.color[16] = 0.50f;m.color[17] = 0.00f;m.color[18] = 0.00f;m.color[19] = ent->alpha;
+		m.color[20] = 0.50f;m.color[21] = 0.00f;m.color[22] = 0.00f;m.color[23] = ent->alpha;
+		if (fogenabled)
+		{
+			VectorSubtract(ent->origin, r_origin, diff);
+			f2 = exp(fogdensity/DotProduct(diff, diff));
+			f1 = 1 - f2;
+			for (i = 0, c = m.color;i < m.numverts;i++, c += 4)
+			{
+				c[0] = (c[0] * f1 + fogcolor[0] * f2) * m.colorscale;
+				c[1] = (c[1] * f1 + fogcolor[1] * f2) * m.colorscale;
+				c[2] = (c[2] * f1 + fogcolor[2] * f2) * m.colorscale;
+			}
+		}
+		else
+		{
+			for (i = 0, c = m.color;i < m.numverts;i++, c += 4)
+			{
+				c[0] *= m.colorscale;
+				c[1] *= m.colorscale;
+				c[2] *= m.colorscale;
+			}
+		}
+		R_Mesh_Render();
+	}
+}
+
+void R_DrawNoModel(entity_render_t *ent)
+{
+	//if ((ent->effects & EF_ADDITIVE) || (ent->alpha < 1))
+		R_MeshQueue_AddTransparent(ent->origin, R_DrawNoModelCallback, ent, 0);
+	//else
+	//	R_DrawNoModelCallback(ent, 0);
 }
 

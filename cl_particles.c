@@ -351,7 +351,7 @@ void CL_ParticleExplosion (vec3_t org, int smoke)
 	if (cl_stainmaps.integer)
 		R_Stain(org, 96, 80, 80, 80, 64, 176, 176, 176, 64);
 
-	i = Mod_PointInLeaf(org, cl.worldmodel)->contents;
+	i = Mod_PointContents(org, cl.worldmodel);
 	if ((i == CONTENTS_SLIME || i == CONTENTS_WATER) && cl_particles.integer && cl_particles_bubbles.integer)
 	{
 		for (i = 0;i < 128;i++)
@@ -717,7 +717,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 	// if we skip out, leave it reset
 	ent->persistent.trail_time = 0.0f;
 
-	contents = Mod_PointInLeaf(pos, cl.worldmodel)->contents;
+	contents = Mod_PointContents(pos, cl.worldmodel);
 	if (contents == CONTENTS_SKY || contents == CONTENTS_LAVA)
 		return;
 
@@ -880,7 +880,7 @@ void CL_MoveParticles (void)
 		{
 			f = p->friction * frametime;
 			if (!content)
-				content = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
+				content = Mod_PointContents(p->org, cl.worldmodel);
 			if (content != CONTENTS_EMPTY)
 				f *= 4;
 			f = 1.0f - f;
@@ -893,7 +893,7 @@ void CL_MoveParticles (void)
 			{
 			case pt_blood:
 				if (!content)
-					content = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
+					content = Mod_PointContents(p->org, cl.worldmodel);
 				a = content;
 				if (a != CONTENTS_EMPTY)
 				{
@@ -911,7 +911,7 @@ void CL_MoveParticles (void)
 				break;
 			case pt_bubble:
 				if (!content)
-					content = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
+					content = Mod_PointContents(p->org, cl.worldmodel);
 				if (content != CONTENTS_WATER && content != CONTENTS_SLIME)
 				{
 					p->die = -1;
@@ -928,7 +928,7 @@ void CL_MoveParticles (void)
 					p->vel[2] = /*lhrandom(-32, 32) +*/ p->vel2[2];
 				}
 				if (!content)
-					content = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
+					content = Mod_PointContents(p->org, cl.worldmodel);
 				a = content;
 				if (a != CONTENTS_EMPTY && a != CONTENTS_SKY)
 					p->die = -1;
@@ -1305,17 +1305,9 @@ void R_DrawParticles (void)
 
 	minparticledist = DotProduct(r_origin, vpn) + 16.0f;
 
+	// LordHavoc: only render if not too close
 	for (i = 0, p = particles;i < cl_numparticles;i++, p++)
-	{
-		// LordHavoc: only render if not too close
-		if (DotProduct(p->org, vpn) < minparticledist)
-			continue;
-
-		// LordHavoc: check if it's in a visible leaf
-		//if (Mod_PointInLeaf(p->org, cl.worldmodel)->visframe != r_framecount)
-		//	continue;
-
-		R_MeshQueue_AddTransparent(p->org, R_DrawParticleCallback, p, 0);
-	}
+		if (DotProduct(p->org, vpn) >= minparticledist)
+			R_MeshQueue_AddTransparent(p->org, R_DrawParticleCallback, p, 0);
 }
 

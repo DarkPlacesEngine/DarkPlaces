@@ -399,7 +399,7 @@ void CL_TimeDemo_f (void)
 
 	// instantly hide console and deactivate it
 	key_dest = key_game;
-	key_consoleactive = false;
+	key_consoleactive = 0;
 	scr_conlines = 0;
 	scr_con_current = 0;
 

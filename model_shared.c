@@ -251,8 +251,8 @@ void Mod_ClearAll (void)
 
 void Mod_ClearUsed(void)
 {
-	int		i;
-	model_t	*mod;
+	int i;
+	model_t *mod;
 
 	for (i = 0, mod = mod_known;i < MAX_MOD_KNOWN;i++, mod++)
 		if (mod->name[0])
@@ -261,8 +261,8 @@ void Mod_ClearUsed(void)
 
 void Mod_PurgeUnused(void)
 {
-	int		i;
-	model_t	*mod;
+	int i;
+	model_t *mod;
 
 	for (i = 0, mod = mod_known;i < MAX_MOD_KNOWN;i++, mod++)
 		if (mod->name[0])
@@ -278,8 +278,8 @@ Mod_FindName
 */
 model_t *Mod_FindName (char *name)
 {
-	int		i;
-	model_t	*mod, *freemod;
+	int i;
+	model_t *mod, *freemod;
 
 	if (!name[0])
 		Host_Error ("Mod_ForName: NULL name");
@@ -369,4 +369,3 @@ static void Mod_Flush (void)
 		if (mod_known[i].name[0])
 			Mod_UnloadModel(&mod_known[i]);
 }
-
