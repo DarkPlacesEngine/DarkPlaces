@@ -17,6 +17,9 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
+
+// OSS module, used by Linux and FreeBSD
+
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -54,7 +57,7 @@ qboolean SNDDMA_Init(void)
 	snd_inited = 0;
 
 	// open /dev/dsp, confirm capability to mmap, and get size of dma buffer
-    audio_fd = open("/dev/dsp", O_RDWR);
+    audio_fd = open("/dev/dsp", O_RDWR);  // we have to open it O_RDWR for mmap
 	if (audio_fd < 0)
 	{
 		perror("/dev/dsp");
@@ -118,7 +121,7 @@ qboolean SNDDMA_Init(void)
 		shm->format.speed = atoi(com_argv[i+1]);
 	else
 	{
-		for (i = 0;i < (int) sizeof(tryrates) / 4;i++)
+		for (i = 0;i < (int) sizeof(tryrates) / sizeof(tryrates[0]);i++)
 			if (!ioctl(audio_fd, SNDCTL_DSP_SPEED, &tryrates[i]))
 				break;
 
@@ -132,40 +135,18 @@ qboolean SNDDMA_Init(void)
 	else if ((i = COM_CheckParm("-sndmono")) != 0)
 		shm->format.channels = 1;
 // COMMANDLINEOPTION: Linux OSS Sound: -sndstereo sets sound output to stereo
-	else if ((i = COM_CheckParm("-sndstereo")) != 0)
-		shm->format.channels = 2;
-	else
+	else // if ((i = COM_CheckParm("-sndstereo")) != 0)
 		shm->format.channels = 2;
 
-	shm->samples = info.fragstotal * info.fragsize / shm->format.width;
-
-	// memory map the dma buffer
-	shm->bufferlength = info.fragstotal * info.fragsize;
-	shm->buffer = (unsigned char *) mmap(NULL, shm->bufferlength, PROT_READ|PROT_WRITE, MAP_FILE|MAP_SHARED, audio_fd, 0);
-	if (!shm->buffer || shm->buffer == (unsigned char *)-1)
-	{
-		perror("/dev/dsp");
-		Con_Print("Could not mmap /dev/dsp\n");
-		close(audio_fd);
-		return 0;
-	}
-
-	tmp = 0;
-	if (shm->format.channels == 2)
-		tmp = 1;
-
+	tmp = (shm->format.channels == 2);
 	rc = ioctl(audio_fd, SNDCTL_DSP_STEREO, &tmp);
 	if (rc < 0)
 	{
 		perror("/dev/dsp");
-		Con_Printf("Could not set /dev/dsp to stereo=%d\n", shm->format.channels);
+		Con_Printf("Could not set /dev/dsp to stereo=%d\n", tmp);
 		close(audio_fd);
 		return 0;
 	}
-	if (tmp)
-		shm->format.channels = 2;
-	else
-		shm->format.channels = 1;
 
 	rc = ioctl(audio_fd, SNDCTL_DSP_SPEED, &shm->format.speed);
 	if (rc < 0)
@@ -204,6 +185,19 @@ qboolean SNDDMA_Init(void)
 	{
 		perror("/dev/dsp");
 		Con_Printf("%d-bit sound not supported.\n", shm->format.width * 8);
+		close(audio_fd);
+		return 0;
+	}
+
+	shm->samples = info.fragstotal * info.fragsize / shm->format.width;
+
+	// memory map the dma buffer
+	shm->bufferlength = info.fragstotal * info.fragsize;
+	shm->buffer = (unsigned char *) mmap(NULL, shm->bufferlength, PROT_WRITE, MAP_FILE|MAP_SHARED, audio_fd, 0);
+	if (!shm->buffer || shm->buffer == (unsigned char *)-1)
+	{
+		perror("/dev/dsp");
+		Con_Print("Could not mmap /dev/dsp\n");
 		close(audio_fd);
 		return 0;
 	}

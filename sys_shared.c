@@ -116,6 +116,8 @@ void Sys_Shared_EarlyInit(void)
 	os = "Linux";
 #elif defined(WIN32)
 	os = "Windows";
+#elif defined(__FreeBSD__)
+	os = "FreeBSD";
 #elif defined(__NetBSD__)
 	os = "NetBSD";
 #elif defined(__OpenBSD__)
