@@ -453,11 +453,9 @@ If an entities model or origin changes from frame to frame, it must be
 relinked.  Other attributes can change without relinking.
 ==================
 */
-//int	bitcounts[16];
-
 void CL_ParseUpdate (int bits)
 {
-	int			i, modnum, num, skin, alpha, scale, glowsize, glowcolor, colormod;
+	int			i, modnum, num, alpha, scale, glowsize, glowcolor, colormod;
 	model_t		*model;
 	qboolean	forcelink;
 	entity_t	*ent;
@@ -470,10 +468,7 @@ void CL_ParseUpdate (int bits)
 	}
 
 	if (bits & U_MOREBITS)
-	{
-		i = MSG_ReadByte ();
-		bits |= (i<<8);
-	}
+		bits |= (MSG_ReadByte()<<8);
 	if (bits & U_EXTEND1 && !Nehahrademcompatibility)
 	{
 		bits |= MSG_ReadByte() << 16;
@@ -488,10 +483,6 @@ void CL_ParseUpdate (int bits)
 
 	ent = CL_EntityNum (num);
 
-//for (i=0 ; i<16 ; i++)
-//if (bits&(1<<i))
-//	bitcounts[i]++;
-
 	forcelink = ent->msgtime != cl.mtime[1]; // no previous frame to lerp from
 
 	ent->msgtime = cl.mtime[0];
@@ -500,6 +491,22 @@ void CL_ParseUpdate (int bits)
 	baseline = &ent->baseline;
 	if (bits & U_DELTA)
 		baseline = &ent->deltabaseline;
+
+	if (forcelink)
+	{
+		ent->deltabaseline.origin[0] = ent->deltabaseline.origin[1] = ent->deltabaseline.origin[2] = 0;
+		ent->deltabaseline.angles[0] = ent->deltabaseline.angles[1] = ent->deltabaseline.angles[2] = 0;
+		ent->deltabaseline.effects = 0;
+		ent->deltabaseline.modelindex = 0;
+		ent->deltabaseline.frame = 0;
+		ent->deltabaseline.colormap = 0;
+		ent->deltabaseline.skin = 0;
+		ent->deltabaseline.alpha = 255;
+		ent->deltabaseline.scale = 16;
+		ent->deltabaseline.glowsize = 0;
+		ent->deltabaseline.glowcolor = 254;
+		ent->deltabaseline.colormod = 255;
+	}
 
 	modnum = bits & U_MODEL ? MSG_ReadByte() : baseline->modelindex;
 	if (modnum >= MAX_MODELS)
@@ -531,12 +538,7 @@ void CL_ParseUpdate (int bits)
 		ent->colormap = cl.scores[i-1].colors; // color it
 	}
 
-	skin = bits & U_SKIN ? MSG_ReadByte() : baseline->skin;
-	if (skin != ent->skinnum)
-	{
-		ent->skinnum = skin;
-	}
-	ent->deltabaseline.skin = skin;
+	ent->deltabaseline.skin = ent->skinnum = bits & U_SKIN ? MSG_ReadByte() : baseline->skin;
 
 	ent->effects = ((bits & U_EFFECTS) ? MSG_ReadByte() : (baseline->effects & 0xFF));
 
@@ -661,12 +663,9 @@ void CL_ParseClientdata (int bits)
 			cl.mvelocity[0][i] = 0;
 	}
 
-// [always sent]	if (bits & SU_ITEMS)
-		i = MSG_ReadLong ();
-
+	i = MSG_ReadLong ();
 	if (cl.items != i)
 	{	// set flash times
-//		Sbar_Changed ();
 		for (j=0 ; j<32 ; j++)
 			if ( (i & (1<<j)) && !(cl.items & (1<<j)))
 				cl.item_gettime[j] = cl.time;
@@ -676,73 +675,23 @@ void CL_ParseClientdata (int bits)
 	cl.onground = (bits & SU_ONGROUND) != 0;
 	cl.inwater = (bits & SU_INWATER) != 0;
 
-	if (bits & SU_WEAPONFRAME)
-		cl.stats[STAT_WEAPONFRAME] = MSG_ReadByte ();
-	else
-		cl.stats[STAT_WEAPONFRAME] = 0;
+	cl.stats[STAT_WEAPONFRAME] = (bits & SU_WEAPONFRAME) ? MSG_ReadByte() : 0;
+	cl.stats[STAT_ARMOR] = (bits & SU_ARMOR) ? MSG_ReadByte() : 0;
+	cl.stats[STAT_WEAPON] = (bits & SU_WEAPON) ? MSG_ReadByte() : 0;
+	cl.stats[STAT_HEALTH] = MSG_ReadShort();
+	cl.stats[STAT_AMMO] = MSG_ReadByte();
 
-	if (bits & SU_ARMOR)
-		i = MSG_ReadByte ();
-	else
-		i = 0;
-	if (cl.stats[STAT_ARMOR] != i)
-	{
-		cl.stats[STAT_ARMOR] = i;
-//		Sbar_Changed ();
-	}
-
-	if (bits & SU_WEAPON)
-		i = MSG_ReadByte ();
-	else
-		i = 0;
-	if (cl.stats[STAT_WEAPON] != i)
-	{
-		cl.stats[STAT_WEAPON] = i;
-//		Sbar_Changed ();
-	}
-	
-	i = MSG_ReadShort ();
-	if (cl.stats[STAT_HEALTH] != i)
-	{
-		cl.stats[STAT_HEALTH] = i;
-//		Sbar_Changed ();
-	}
-
-	i = MSG_ReadByte ();
-	if (cl.stats[STAT_AMMO] != i)
-	{
-		cl.stats[STAT_AMMO] = i;
-//		Sbar_Changed ();
-	}
-
-	for (i=0 ; i<4 ; i++)
-	{
-		j = MSG_ReadByte ();
-		if (cl.stats[STAT_SHELLS+i] != j)
-		{
-			cl.stats[STAT_SHELLS+i] = j;
-//			Sbar_Changed ();
-		}
-	}
+	cl.stats[STAT_SHELLS] = MSG_ReadByte();
+	cl.stats[STAT_NAILS] = MSG_ReadByte();
+	cl.stats[STAT_ROCKETS] = MSG_ReadByte();
+	cl.stats[STAT_CELLS] = MSG_ReadByte();
 
 	i = MSG_ReadByte ();
 
 	if (standard_quake)
-	{
-		if (cl.stats[STAT_ACTIVEWEAPON] != i)
-		{
-			cl.stats[STAT_ACTIVEWEAPON] = i;
-//			Sbar_Changed ();
-		}
-	}
+		cl.stats[STAT_ACTIVEWEAPON] = i;
 	else
-	{
-		if (cl.stats[STAT_ACTIVEWEAPON] != (1<<i))
-		{
-			cl.stats[STAT_ACTIVEWEAPON] = (1<<i);
-//			Sbar_Changed ();
-		}
-	}
+		cl.stats[STAT_ACTIVEWEAPON] = (1<<i);
 }
 
 /*
@@ -938,7 +887,6 @@ void CL_ParseServerMessage (void)
 			break;
 		
 		case svc_updatename:
-//			Sbar_Changed ();
 			i = MSG_ReadByte ();
 			if (i >= cl.maxclients)
 				Host_Error ("CL_ParseServerMessage: svc_updatename > MAX_SCOREBOARD");
@@ -946,7 +894,6 @@ void CL_ParseServerMessage (void)
 			break;
 			
 		case svc_updatefrags:
-//			Sbar_Changed ();
 			i = MSG_ReadByte ();
 			if (i >= cl.maxclients)
 				Host_Error ("CL_ParseServerMessage: svc_updatefrags > MAX_SCOREBOARD");
@@ -954,7 +901,6 @@ void CL_ParseServerMessage (void)
 			break;			
 
 		case svc_updatecolors:
-//			Sbar_Changed ();
 			i = MSG_ReadByte ();
 			if (i >= cl.maxclients)
 				Host_Error ("CL_ParseServerMessage: svc_updatecolors > MAX_SCOREBOARD");

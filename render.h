@@ -126,10 +126,6 @@ extern vec3_t	r_origin, vpn, vright, vup;
 
 extern	struct texture_s	*r_notexture_mip;
 
-// LordHavoc: generic image loader
-byte* loadimagepixels (char* filename, qboolean complain, int matchwidth, int matchheight);
-int loadtextureimage (char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap);
-
 void R_Init (void);
 void R_InitTextures (void);
 void R_InitEfrags (void);

@@ -105,6 +105,9 @@ typedef struct client_s
 // client known data for deltas	
 	int				old_frags;
 	int				pmodel;
+
+	// delta compression state
+	float			nextfullupdate[MAX_EDICTS];
 } client_t;
 
 
