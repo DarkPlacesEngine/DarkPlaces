@@ -127,7 +127,7 @@ extern enum {
 //
 // joystick buttons
 //
-	K_JOY1 = 1024,
+	K_JOY1 = 768,
 	K_JOY2,
 	K_JOY3,
 	K_JOY4,
@@ -173,7 +173,7 @@ extern enum {
 
 typedef enum { key_game, key_message, key_menu } keydest_t;
 
-extern char *keybindings[8][256];
+extern char *keybindings[8][1024];
 extern char key_lines[32][256];
 extern int key_linepos;
 extern int edit_line;
