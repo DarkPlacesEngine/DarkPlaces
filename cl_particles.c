@@ -582,7 +582,6 @@ void CL_ParticleCube (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int color
 void CL_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorbase, int type)
 {
 	int k;
-	vec3_t vel;
 	float t, z;
 	if (!cl_particles.integer) return;
 	if (maxs[0] <= mins[0]) {t = mins[0];mins[0] = maxs[0];maxs[0] = t;}
@@ -608,21 +607,15 @@ void CL_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int color
 
 		while(count--)
 		{
-			vel[0] = dir[0] + lhrandom(-16, 16);
-			vel[1] = dir[1] + lhrandom(-16, 16);
-			vel[2] = dir[2] + lhrandom(-32, 32);
 			k = particlepalette[colorbase + (rand()&3)];
-			particle(pt_rain, PARTICLE_UPRIGHT_FACING, k, k, tex_particle, true, true, 1, 64, 64, t, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), z, vel[0], vel[1], vel[2], 0, vel[0], vel[1], vel[2], 0, 0);
+			particle(pt_rain, PARTICLE_UPRIGHT_FACING, k, k, tex_particle, true, true, 1, 64, 64, t, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), z, dir[0], dir[1], dir[2], 0, dir[0], dir[1], dir[2], 0, 0);
 		}
 		break;
 	case 1:
 		while(count--)
 		{
-			vel[0] = dir[0] + lhrandom(-16, 16);
-			vel[1] = dir[1] + lhrandom(-16, 16);
-			vel[2] = dir[2] + lhrandom(-32, 32);
 			k = particlepalette[colorbase + (rand()&3)];
-			particle(pt_snow, PARTICLE_BILLBOARD, k, k, tex_particle, false, true, 1, 1, lhrandom(64, 128), t, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), z, vel[0], vel[1], vel[2], 0, vel[0], vel[1], vel[2], 0, 0);
+			particle(pt_snow, PARTICLE_BILLBOARD, k, k, tex_particle, false, true, 1, 1, lhrandom(64, 128), t, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), z, dir[0], dir[1], dir[2], 0, dir[0], dir[1], dir[2], 0, 0);
 		}
 		break;
 	default:
@@ -962,9 +955,9 @@ void CL_MoveParticles (void)
 			if (cl.time > p->time2)
 			{
 				p->time2 = cl.time + (rand() & 3) * 0.1;
-				p->vel[0] = (rand()&63)-32 + p->vel2[0];
-				p->vel[1] = (rand()&63)-32 + p->vel2[1];
-				p->vel[2] = (rand()&63)-32 + p->vel2[2];
+				p->vel[0] = lhrandom(-32, 32) + p->vel2[0];
+				p->vel[1] = lhrandom(-32, 32) + p->vel2[1];
+				p->vel[2] = /*lhrandom(-32, 32) +*/ p->vel2[2];
 			}
 			if (!content)
 				content = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
