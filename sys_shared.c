@@ -105,6 +105,8 @@ void Sys_Shared_EarlyInit(void)
 	os = "Windows";
 #elif defined(__NetBSD__)
 	os = "NetBSD";
+#elif defined(__OpenBSD__)
+	os = "OpenBSD";
 #else
 	os = "Unknown";
 #endif

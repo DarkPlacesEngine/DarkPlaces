@@ -3,7 +3,7 @@
 #choose the compiler you want to use
 CC=gcc
 
-MAKE:=$(MAKE) -f $(.PARSEFILE)
+MAKE:=$(MAKE) -f makefile.bsd
 
 #recommended for: anyone not using ALSA 0.5
 #OBJ_BSDSOUND=snd_oss.o snd_dma.o snd_mix.o snd_mem.o
@@ -174,4 +174,10 @@ clean:
 	-$(CMD_RM) *.o
 	-$(CMD_RM) *.d
 
--include *.d
+
+##### Dependency files #####
+
+DEPEND_FILES != ls *.d
+.for i in $(DEPEND_FILES)
+.	include "$i"
+.endfor
