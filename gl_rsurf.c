@@ -753,7 +753,6 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 {
 	const entity_render_t *ent = calldata1;
 	const msurface_t *surf = ent->model->brushq1.surfaces + calldata2;
-	float colorscale;
 	rmeshstate_t m;
 	float alpha;
 	float modelorg[3];
@@ -765,7 +764,7 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 	{
 		// scrolling in texture matrix
 		Matrix4x4_CreateTranslate(&tempmatrix, sin(cl.time) * 0.025 * r_waterscroll.value, sin(cl.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
-		if (gl_textureshader && r_watershader.integer)
+		if (gl_textureshader && r_watershader.integer && !fogenabled)
 		{
 			R_Mesh_TextureMatrix(1, &tempmatrix);
 			Matrix4x4_CreateTranslate(&tempmatrix, -sin(cl.time) * 0.025 * r_waterscroll.value, -sin(cl.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
@@ -794,25 +793,19 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		GL_DepthMask(true);
 	}
-	if (gl_textureshader && r_watershader.integer)
+	if (gl_textureshader && r_watershader.integer && !fogenabled)
 	{
 		m.tex[0] = R_GetTexture(mod_shared_distorttexture);
 		m.tex[1] = R_GetTexture(texture->skin.base);
 	}
 	else
 		m.tex[0] = R_GetTexture(texture->skin.base);
-	colorscale = 1;
-	if (gl_combine.integer)
-	{
-		m.texrgbscale[0] = 4;
-		colorscale *= 0.25f;
-	}
 	GL_DepthTest(true);
 	if (fogenabled)
 		GL_ColorPointer(varray_color4f);
 	else
 		GL_Color(1, 1, 1, alpha);
-	if (gl_textureshader && r_watershader.integer)
+	if (gl_textureshader && r_watershader.integer && !fogenabled)
 	{
 		GL_ActiveTexture (0);
 		qglTexEnvi (GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_TEXTURE_2D);
@@ -832,11 +825,11 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 	if (fogenabled)
 	{
 		R_FillColors(varray_color4f, surf->mesh.num_vertices, 1, 1, 1, alpha);
-		RSurf_FogColors_Vertex3f_Color4f(surf->mesh.data_vertex3f, varray_color4f, colorscale, surf->mesh.num_vertices, modelorg);
+		RSurf_FogColors_Vertex3f_Color4f(surf->mesh.data_vertex3f, varray_color4f, 1, surf->mesh.num_vertices, modelorg);
 	}
 	R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
 
-	if (gl_textureshader && r_watershader.integer)
+	if (gl_textureshader && r_watershader.integer && !fogenabled)
 	{
 		qglDisable (GL_TEXTURE_SHADER_NV);
 		GL_ActiveTexture (0);
