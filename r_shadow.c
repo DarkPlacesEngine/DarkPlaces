@@ -122,7 +122,7 @@ extern void R_Shadow_EditLights_Init(void);
 #define SHADOWSTAGE_NONE 0
 #define SHADOWSTAGE_STENCIL 1
 #define SHADOWSTAGE_LIGHT 2
-#define SHADOWSTAGE_ERASESTENCIL 3
+#define SHADOWSTAGE_STENCILTWOSIDE 3
 
 int r_shadowstage = SHADOWSTAGE_NONE;
 int r_shadow_reloadlights = false;
@@ -179,6 +179,7 @@ cvar_t r_shadow_dlightshadows = {CVAR_SAVE, "r_shadow_dlightshadows", "1"};
 cvar_t r_shadow_showtris = {0, "r_shadow_showtris", "0"};
 cvar_t r_shadow_staticworldlights = {0, "r_shadow_staticworldlights", "1"};
 cvar_t r_shadow_cull = {0, "r_shadow_cull", "1"};
+cvar_t gl_ext_stenciltwoside = {0, "gl_ext_stenciltwoside", "1"};
 
 int c_rt_lights, c_rt_clears, c_rt_scissored;
 int c_rt_shadowmeshes, c_rt_shadowtris, c_rt_lightmeshes, c_rt_lighttris;
@@ -308,6 +309,7 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_showtris);
 	Cvar_RegisterVariable(&r_shadow_staticworldlights);
 	Cvar_RegisterVariable(&r_shadow_cull);
+	Cvar_RegisterVariable(&gl_ext_stenciltwoside);
 	if (gamemode == GAME_TENEBRAE)
 	{
 		Cvar_SetValue("r_shadow_gloss", 2);
@@ -719,6 +721,8 @@ void R_Shadow_Stage_Begin(void)
 
 	if (r_shadow_texture3d.integer && !gl_texture3d)
 		Cvar_SetValueQuick(&r_shadow_texture3d, 0);
+	if (gl_ext_stenciltwoside.integer && !gl_support_stenciltwoside)
+		Cvar_SetValueQuick(&gl_ext_stenciltwoside, 0);
 
 	if (!r_shadow_attenuation2dtexture
 	 || (!r_shadow_attenuation3dtexture && r_shadow_texture3d.integer)
@@ -778,9 +782,24 @@ void R_Shadow_Stage_ShadowVolumes(void)
 	qglDepthFunc(GL_LESS);
 	qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 	qglEnable(GL_STENCIL_TEST);
-	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-	qglStencilFunc(GL_ALWAYS, 128, 0xFF);
-	r_shadowstage = SHADOWSTAGE_STENCIL;
+	qglStencilFunc(GL_ALWAYS, 128, ~0);
+	if (gl_ext_stenciltwoside.integer)
+	{
+		r_shadowstage = SHADOWSTAGE_STENCILTWOSIDE;
+		qglEnable(GL_STENCIL_TEST_TWO_SIDE_EXT);
+        qglActiveStencilFaceEXT(GL_FRONT); // quake is backwards, this is back faces
+		qglStencilMask(~0);
+		qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
+        qglActiveStencilFaceEXT(GL_BACK); // quake is backwards, this is front faces
+		qglStencilMask(~0);
+		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
+	}
+	else
+	{
+		r_shadowstage = SHADOWSTAGE_STENCIL;
+		qglStencilMask(~0);
+		qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+	}
 	GL_Clear(GL_STENCIL_BUFFER_BIT);
 	c_rt_clears++;
 	// LordHavoc note: many shadow volumes reside entirely inside the world
@@ -807,6 +826,9 @@ void R_Shadow_Stage_LightWithoutShadows(void)
 	qglDepthFunc(GL_EQUAL);
 	qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 	qglDisable(GL_STENCIL_TEST);
+	if (gl_support_stenciltwoside)
+		qglDisable(GL_STENCIL_TEST_TWO_SIDE_EXT);
+	qglStencilMask(~0);
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 	qglStencilFunc(GL_EQUAL, 128, 0xFF);
 	r_shadowstage = SHADOWSTAGE_LIGHT;
@@ -828,6 +850,9 @@ void R_Shadow_Stage_LightWithShadows(void)
 	qglDepthFunc(GL_EQUAL);
 	qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 	qglEnable(GL_STENCIL_TEST);
+	if (gl_support_stenciltwoside)
+		qglDisable(GL_STENCIL_TEST_TWO_SIDE_EXT);
+	qglStencilMask(~0);
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 	// only draw light where this geometry was already rendered AND the
 	// stencil is 128 (values other than this mean shadow)
@@ -853,6 +878,9 @@ void R_Shadow_Stage_End(void)
 	qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 	qglDisable(GL_STENCIL_TEST);
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+	if (gl_support_stenciltwoside)
+		qglDisable(GL_STENCIL_TEST_TWO_SIDE_EXT);
+	qglStencilMask(~0);
 	qglStencilFunc(GL_ALWAYS, 128, 0xFF);
 	r_shadowstage = SHADOWSTAGE_NONE;
 }

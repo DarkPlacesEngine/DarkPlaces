@@ -40,6 +40,8 @@ int gl_support_var2 = false;
 int gl_support_anisotropy = false;
 // GL_NV_texture_shader
 int gl_textureshader = false;
+// GL_EXT_stencil_two_side
+int gl_support_stenciltwoside = false;
 
 // LordHavoc: if window is hidden, don't update screen
 int vid_hidden = true;
@@ -231,6 +233,8 @@ void (GLAPIENTRY *qglScissor)(GLint x, GLint y, GLsizei width, GLsizei height);
 
 void (GLAPIENTRY *qglPolygonOffset)(GLfloat factor, GLfloat units);
 
+void (GLAPIENTRY *qglActiveStencilFaceEXT)(GLenum);
+
 int GL_CheckExtension(const char *name, const dllfunction_t *funcs, const char *disableparm, int silent)
 {
 	int failed = false;
@@ -415,6 +419,12 @@ static dllfunction_t wglvarfuncs[] =
 	{NULL, NULL}
 };
 
+static dllfunction_t stenciltwosidefuncs[] =
+{
+	{"glActiveStencilFaceEXT", (void **) &qglActiveStencilFaceEXT},
+	{NULL, NULL}
+};
+
 
 void VID_CheckExtensions(void)
 {
@@ -426,6 +436,7 @@ void VID_CheckExtensions(void)
 	gl_support_clamptoedge = false;
 	gl_support_var = false;
 	gl_support_var2 = false;
+	gl_support_stenciltwoside = false;
 
 	if (!GL_CheckExtension("OpenGL 1.1.0", opengl110funcs, NULL, false))
 		Sys_Error("OpenGL 1.1.0 functions not found\n");
@@ -464,6 +475,8 @@ void VID_CheckExtensions(void)
 	gl_support_anisotropy = GL_CheckExtension("GL_EXT_texture_filter_anisotropic", NULL, "-noanisotropy", false);
 
 	gl_textureshader = GL_CheckExtension("GL_NV_texture_shader", NULL, "-notextureshader", false);
+
+	gl_support_stenciltwoside = GL_CheckExtension("GL_EXT_stencil_two_side", stenciltwosidefuncs, "-nostenciltwoside", false);
 
 	// we don't care if it's an extension or not, they are identical functions, so keep it simple in the rendering code
 	if (qglDrawRangeElements == NULL)
