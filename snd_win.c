@@ -42,7 +42,6 @@ typedef enum {SIS_SUCCESS, SIS_FAILURE, SIS_NOTAVAIL} sndinitstat;
 static qboolean	wavonly;
 static qboolean	dsound_init;
 static qboolean	wav_init;
-static qboolean	snd_firsttime = true, snd_isdirect, snd_iswave;
 static qboolean	primary_format_set;
 
 static int	snd_sent, snd_completed;
@@ -86,7 +85,7 @@ S_BlockSound
 void S_BlockSound (void)
 {
 	// DirectSound takes care of blocking itself
-	if (snd_iswave)
+	if (wav_init)
 	{
 		snd_blocked++;
 
@@ -104,7 +103,7 @@ S_UnblockSound
 void S_UnblockSound (void)
 {
 	// DirectSound takes care of blocking itself
-	if (snd_iswave)
+	if (wav_init)
 		snd_blocked--;
 }
 
@@ -292,13 +291,11 @@ sndinitstat SNDDMA_InitDirect (void)
 
 			if (DS_OK != pDSPBuf->lpVtbl->SetFormat (pDSPBuf, &pformat))
 			{
-				if (snd_firsttime)
-					Con_Print("Set primary sound buffer format: no\n");
+				Con_Print("Set primary sound buffer format: no\n");
 			}
 			else
 			{
-				if (snd_firsttime)
-					Con_Print("Set primary sound buffer format: yes\n");
+				Con_Print("Set primary sound buffer format: yes\n");
 
 				primary_format_set = true;
 			}
@@ -336,8 +333,7 @@ sndinitstat SNDDMA_InitDirect (void)
 			return SIS_FAILURE;
 		}
 
-		if (snd_firsttime)
-			Con_Print("Using secondary sound buffer\n");
+		Con_Print("Using secondary sound buffer\n");
 	}
 	else
 	{
@@ -361,11 +357,10 @@ sndinitstat SNDDMA_InitDirect (void)
 	// Make sure mixer is active
 	pDSBuf->lpVtbl->Play(pDSBuf, 0, 0, DSBPLAY_LOOPING);
 
-	if (snd_firsttime)
-		Con_Printf("   %d channel(s)\n"
-		               "   %d bits/sample\n"
-					   "   %d samples/sec\n",
-					   shm->format.channels, shm->format.width * 8, shm->format.speed);
+	Con_Printf("   %d channel(s)\n"
+	               "   %d bits/sample\n"
+				   "   %d samples/sec\n",
+				   shm->format.channels, shm->format.width * 8, shm->format.speed);
 
 	gSndBufSize = dsbcaps.dwBufferBytes;
 
@@ -559,30 +554,20 @@ qboolean SNDDMA_Init(void)
 	if (COM_CheckParm ("-wavonly"))
 		wavonly = true;
 
-	dsound_init = wav_init = 0;
+	dsound_init = false;
+	wav_init = false;
 
 	stat = SIS_FAILURE;	// assume DirectSound won't initialize
 
 	// Init DirectSound
 	if (!wavonly)
 	{
-		if (snd_firsttime || snd_isdirect)
-		{
-			stat = SNDDMA_InitDirect ();
+		stat = SNDDMA_InitDirect ();
 
-			if (stat == SIS_SUCCESS)
-			{
-				snd_isdirect = true;
-
-				if (snd_firsttime)
-					Con_Print("DirectSound initialized\n");
-			}
-			else
-			{
-				snd_isdirect = false;
-				Con_Print("DirectSound failed to init\n");
-			}
-		}
+		if (stat == SIS_SUCCESS)
+			Con_Print("DirectSound initialized\n");
+		else
+			Con_Print("DirectSound failed to init\n");
 	}
 
 	// if DirectSound didn't succeed in initializing, try to initialize
@@ -591,29 +576,16 @@ qboolean SNDDMA_Init(void)
 	// to have sound)
 	if (!dsound_init && (stat != SIS_NOTAVAIL))
 	{
-		if (snd_firsttime || snd_iswave)
-		{
-
-			snd_iswave = SNDDMA_InitWav ();
-
-			if (snd_iswave)
-			{
-				if (snd_firsttime)
-					Con_Print("Wave sound initialized\n");
-			}
-			else
-			{
-				Con_Print("Wave sound failed to init\n");
-			}
-		}
+		if (SNDDMA_InitWav ())
+			Con_Print("Wave sound initialized\n");
+		else
+			Con_Print("Wave sound failed to init\n");
 	}
 
-	snd_firsttime = false;
-
 	if (!dsound_init && !wav_init)
-		return 0;
+		return false;
 
-	return 1;
+	return true;
 }
 
 /*
@@ -676,6 +648,8 @@ void SNDDMA_Submit(void)
 		return;
 
 	paintpot += (paintedtime - prev_painted) * shm->format.channels * shm->format.width;
+	if (paintpot > WAV_BUFFERS * WAV_BUFFER_SIZE)
+		paintpot = WAV_BUFFERS * WAV_BUFFER_SIZE;
 	prev_painted = paintedtime;
 
 	// submit new sound blocks
@@ -714,10 +688,12 @@ void SNDDMA_Shutdown(void)
 	FreeSound ();
 }
 
-DWORD dsound_dwSize;
-DWORD dsound_dwSize2;
-DWORD *dsound_pbuf;
-DWORD *dsound_pbuf2;
+
+static DWORD dsound_dwSize;
+static DWORD dsound_dwSize2;
+static DWORD *dsound_pbuf;
+static DWORD *dsound_pbuf2;
+
 void *S_LockBuffer(void)
 {
 	int reps;
@@ -758,8 +734,10 @@ void *S_LockBuffer(void)
 		}
 		return dsound_pbuf;
 	}
-	else
+	else if (wav_init)
 		return shm->buffer;
+	else
+		return NULL;
 }
 
 void S_UnlockBuffer(void)
