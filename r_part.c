@@ -1128,7 +1128,6 @@ void R_DrawParticles (void)
 			break;
 // LordHavoc: for smoke trails
 		case pt_smoke:
-			p->vel[2] += gravity * 0.08f;
 			p->scale += frametime * 16;
 			p->alpha -= frametime * 384;
 			if (p->alpha < 16)
