@@ -312,6 +312,10 @@ SOURCE=.\r_light.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\r_lightning.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\r_modules.c
 # End Source File
 # Begin Source File
@@ -410,14 +414,13 @@ SOURCE=.\zone.c
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
-# End Group
-# Begin Group "Resource Files"
+# Begin Source File
 
-# PROP Default_Filter "ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"
-# End Group
-# End Target
-# End Project
-udio.h
+SOURCE=.\bspfile.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\cdaudio.h
 # End Source File
 # Begin Source File
 
