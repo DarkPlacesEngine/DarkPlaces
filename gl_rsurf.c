@@ -2288,11 +2288,8 @@ void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
 {
 	if (!face->num_triangles)
 		return;
-	if (face->texture->surfaceparms)
-	{
-		if (face->texture->surfaceflags & (Q3SURFACEFLAG_SKY | Q3SURFACEFLAG_NODRAW))
-			return;
-	}
+	if (face->texture->surfaceflags && (face->texture->surfaceflags & (Q3SURFACEFLAG_SKY | Q3SURFACEFLAG_NODRAW)))
+		return;
 	c_faces++;
 	if ((face->texture->surfaceparms & Q3SURFACEPARM_TRANS) || ent->alpha < 1 || (ent->effects & EF_ADDITIVE))
 	{
