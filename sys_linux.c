@@ -139,7 +139,7 @@ char *Sys_ConsoleInput(void)
 	if (cls.state == ca_dedicated)
 	{
 		static char text[256];
-		int len = 0;
+		static int len = 0;
 #ifdef WIN32
 		int c;
 
@@ -147,30 +147,30 @@ char *Sys_ConsoleInput(void)
 		while (_kbhit ())
 		{
 			c = _getch ();
-			putch (c);
 			if (c == '\r')
 			{
-				text[len] = 0;
+				text[len] = '\0';
 				putch ('\n');
 				len = 0;
 				return text;
 			}
-			if (c == 8)
+			if (c == '\b')
 			{
 				if (len)
 				{
+					putch (c);
 					putch (' ');
 					putch (c);
 					len--;
-					text[len] = 0;
 				}
 				continue;
 			}
-			text[len] = c;
-			len++;
-			text[len] = 0;
-			if (len == sizeof (text))
-				len = 0;
+			if (len < sizeof (text) - 1)
+			{
+				putch (c);
+				text[len] = c;
+				len++;
+			}
 		}
 #else
 		fd_set fdset;
