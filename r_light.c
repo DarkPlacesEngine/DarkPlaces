@@ -86,11 +86,13 @@ R_UpdateLights
 */
 void R_UpdateLights(void)
 {
-	int i, j, k;
+	float frac;
+	int i, j, k, l;
 
 // light animations
 // 'm' is normal light, 'a' is no light, 'z' is double bright
 	i = (int)(cl.time * 10);
+	frac = (cl.time * 10) - i;
 	for (j = 0;j < MAX_LIGHTSTYLES;j++)
 	{
 		if (!cl_lightstyle || !cl_lightstyle[j].length)
@@ -99,9 +101,10 @@ void R_UpdateLights(void)
 			continue;
 		}
 		k = i % cl_lightstyle[j].length;
+		l = (i-1) % cl_lightstyle[j].length;
 		k = cl_lightstyle[j].map[k] - 'a';
-		k = k*22;
-		d_lightstylevalue[j] = k;
+		l = cl_lightstyle[j].map[l] - 'a';
+		d_lightstylevalue[j] = ((k*frac)+(l*(1-frac)))*22;
 	}
 
 	r_numdlights = 0;
