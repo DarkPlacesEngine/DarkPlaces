@@ -398,7 +398,7 @@ void *dpvsimpledecode_open(char *filename, char **errorstring)
 
 									StripExtension(filename, wavename);
 									strcat(wavename, ".wav");
-									sfx = S_PrecacheSound (wavename, false, false, false);
+									sfx = S_PrecacheSound (wavename, false, false);
 									if (sfx != NULL)
 										s->sndchan = S_StartSound (-1, 0, sfx, vec3_origin, 1.0f, 0);
 									else

@@ -62,13 +62,13 @@ void S_Shutdown (void);
 void S_Update(const matrix4x4_t *listenermatrix);
 void S_ExtraUpdate (void);
 
-sfx_t *S_PrecacheSound (const char *sample, qboolean complain, qboolean stdpath, qboolean lock);
+sfx_t *S_PrecacheSound (const char *sample, qboolean complain, qboolean lock);
 void S_ServerSounds (char serversound [][MAX_QPATH], unsigned int numsounds);
 void S_UnlockSfx (sfx_t *sfx);
 
 // S_StartSound returns the channel index, or -1 if an error occurred
 int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation);
-qboolean S_LocalSound (const char *s, qboolean stdpath);
+qboolean S_LocalSound (const char *s);
 
 void S_StaticSound (sfx_t *sfx, vec3_t origin, float fvol, float attenuation);
 void S_StopSound (int entnum, int entchannel);

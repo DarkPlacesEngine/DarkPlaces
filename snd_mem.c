@@ -153,9 +153,8 @@ S_LoadSound
 */
 qboolean S_LoadSound (sfx_t *s, qboolean complain)
 {
-	char namebuffer[MAX_QPATH];
+	char namebuffer[MAX_QPATH + 16];
 	size_t len;
-	qboolean modified_name = false;
 
 	if (!shm || !shm->format.speed)
 		return false;
@@ -172,31 +171,43 @@ qboolean S_LoadSound (sfx_t *s, qboolean complain)
 		return true;
 	}
 
-	len = strlcpy (namebuffer, s->name, sizeof (namebuffer));
-	if (len >= sizeof (namebuffer))
-		return false;
+	// LordHavoc: if the sound filename does not begin with sound/, try adding it
+	if (strncasecmp(s->name, "sound/", 6))
+	{
+		len = snprintf (namebuffer, sizeof(namebuffer), "sound/%s", s->name);
+		if (len >= sizeof (namebuffer))
+		{
+			// name too long
+			Con_DPrintf("S_LoadSound: name \"%s\" is too long\n", s->name);
+			return false;
+		}
+		if (S_LoadWavFile (namebuffer, s))
+			return true;
+		if (len >= 4 && !strcasecmp (namebuffer + len - 4, ".wav"))
+			strcpy (namebuffer + len - 3, "ogg");
+		if (OGG_LoadVorbisFile (namebuffer, s))
+			return true;
+	}
 
-	// Try to load it as a WAV file
+	// LordHavoc: then try without the added sound/ as wav and ogg
+	len = snprintf (namebuffer, sizeof(namebuffer), "%s", s->name);
+	if (len >= sizeof (namebuffer))
+	{
+		// name too long
+		Con_DPrintf("S_LoadSound: name \"%s\" is too long\n", s->name);
+		return false;
+	}
 	if (S_LoadWavFile (namebuffer, s))
 		return true;
-
-	// Else, try to load it as an Ogg Vorbis file
-	if (!strcasecmp (namebuffer + len - 4, ".wav"))
-	{
+	if (len >= 4 && !strcasecmp (namebuffer + len - 4, ".wav"))
 		strcpy (namebuffer + len - 3, "ogg");
-		modified_name = true;
-	}
 	if (OGG_LoadVorbisFile (namebuffer, s))
 		return true;
 
 	// Can't load the sound!
 	s->flags |= SFXFLAG_FILEMISSING;
 	if (complain)
-	{
-		if (modified_name)
-			strcpy (namebuffer + len - 3, "wav");
-		Con_Printf("Couldn't load %s\n", namebuffer);
-	}
+		Con_Printf("S_LoadSound: Couldn't load \"%s\"\n", s->name);
 	return false;
 }
 
