@@ -844,6 +844,7 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 	}
 
 	qglGetString = GL_GetProcAddress("glGetString");
+	qwglGetExtensionsStringARB = GL_GetProcAddress("wglGetExtensionsStringARB");
 	if (qglGetString == NULL)
 	{
 		VID_Shutdown();
@@ -857,7 +858,7 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 	gl_platform = "WGL";
 	gl_platformextensions = "";
 
-	if (GL_CheckExtension("WGL_ARB_extensions_string", getextensionsstringfuncs, NULL, false))
+	if (qwglGetExtensionsStringARB)
 		gl_platformextensions = qwglGetExtensionsStringARB(hdc);
 
 	gl_videosyncavailable = GL_CheckExtension("WGL_EXT_swap_control", wglswapintervalfuncs, NULL, false);
