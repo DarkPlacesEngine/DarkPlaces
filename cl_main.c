@@ -850,7 +850,7 @@ static void CL_RelinkNetworkEntities(void)
 	ent->state_current.modelindex = cl.stats[STAT_WEAPON];
 	ent->state_current.frame = cl.stats[STAT_WEAPONFRAME];
 	ent->state_current.flags = RENDER_VIEWMODEL;
-	if (cl.stats[STAT_HEALTH] <= 0)
+	if (cl.stats[STAT_HEALTH] <= 0 || cl.intermission)
 		ent->state_current.modelindex = 0;
 	else if (cl.items & IT_INVISIBILITY)
 	{
