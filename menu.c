@@ -1108,7 +1108,7 @@ void M_DrawCheckbox (int x, int y, int on)
 }
 
 
-#define OPTIONS_ITEMS 31
+#define OPTIONS_ITEMS 32
 
 int options_cursor;
 
@@ -1758,6 +1758,7 @@ char *transfusionbindnames[][2] =
 {"+movedown",		"swim down"},
 {"+attack", 		"attack"},
 {"+button3",		"altfire"},
+{"+button4",		"use"},
 {"impulse 1",		"Pitch Fork"},
 {"impulse 2",		"Flare Gun"},
 {"impulse 3",		"Shotgun"},
