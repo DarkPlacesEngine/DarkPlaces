@@ -45,7 +45,29 @@ d darkplaces: typing ip in join game menu should show 'trying' and 'no response'
 -n darkplaces: write a readme (Antti)
 -n dpmod: make grapple off-hand (joe hill)
 -n darkplaces: add DP_SV_ROTATINGBMODEL extension to explain that MOVETYPE_PUSH/SOLID_BSP support rotation in darkplaces and a demonstration of how to use it without qc modifications (Uffe, Supajoe)
+3 darkplaces: upgrade WriteAngle/ReadAngle to be 16bit, and only use 8bit angles for EF_LOWPRECISION entity updates (Urre)
+0 darkplaces: change particle engine to not compact particles array, but keep track of highest used number, update it each frame (Tomaz)
+0 darkplaces: fix q3bsp map disappearing when noclipping outside it, and the entities still show up
+0 darkplaces: fix disappearing decals bug, it seems that when the smoke disappears so do the decals (Urre)
+3 darkplaces: make q1bsp surfaces have vertex color arrays like q3bsp to make things more consistent, note these need light styles
+4 darkplaces: figure out and fix network entity protocol bugs (sublim3)
+3 dpmod: code an alternate ending for shub being killed by normal weapons (scar3crow)
+0 darkplaces: make water and sky never cast shadows
+3 darkplaces: try two-cubemap approach to specular lighting math (Black)
+2 darkplaces: make hl maps use 0-1 brightness range instead of 0-2 overbright like quake maps, this means edits to LightPoint and BuildLightmap (KrimZon)
+2 darkplaces: figure out how monster models are disappearing in waistdeep water in e1m3 (scar3crow)
+0 darkplaces: port DarkWar polygon.c to darkplaces, as it is more optimized than winding.c
+3 darkplaces: add edge bevels in collision code, by trying all crossproduct combinations of an edge with planes from the other brush, and choosing only the ones which are valid
+2 darkplaces: move skybox/skysphere render to after sky polygons, so that they can do a depth comparison to draw only on the sky polygons, using DepthRange(1,1) and DepthFunc(GL_GREATER), note though that portal renders will need half depth range (Mercury)
+3 darkplaces: add snd_rate cvar and make it changable during game (RenegadeC)
 d darkplaces: fix 2D attenuation texturing which is all black
+0 darkplaces: make commandline parser ignore + and - if they were not directly following a space, so that + and - can be used in map names and such, also ignore if - or + is start of a number (Urre)
+0 darkplaces: Host_Name_f validate player names, stripping \r and \n
+0 darkplaces: make findradius use areagrid scans to speed up searching (Urre, Sajt)
+0 darkplaces: add cl_netlag (ping, like cl_netlocalping_* but no range) and cl_netpacketloss/sv_netpacketloss cvars (packetloss percentage, half of this each way)
+0 darkplaces: rename cl_fakelocalping_* to cl_netlocalping_* and *_fakepacketloss_* to *_netpacketloss_*
+0 darkplaces: console scrolling should not reset when new messages appear
+5 darkplaces: add qc debugger, which would have its own very simple fullscreen console, this would be called directly from the qc interpreter, not from client (painQuin)
 0 darkplaces: support GL_ATI_separate_stencil since ATI does not support GL_EXT_stencil_two_side yet (romi)
 3 darkplaces: add clientside entity prediction similar to qw based on ping, and add cl_prediction and cl_prediction_lockping
 3 darkplaces: make server send player ping times to client for scoreboard
@@ -112,7 +134,7 @@ d darkplaces: shadow volume rendering should not unlock the arrays between rende
 0 darkplaces: darkplaces-glx -path transfusion crashes, fix the crash even though it's not going to work anyway (Todd)
 0 darkplaces: delay "connect" and "playdemo" and "timedemo" until after video init to cause quicker video startup (KrimZon)
 0 darkplaces: document the TEI stuff used in Nexuiz?  check telejano site first (SeienAbunae)
-0 darkplaces: don't complain if lightning bolt models are missing in client (Electro)
+0 darkplaces: don't complain if lightning bolt models are missing in client (Electro, Sajt)
 0 darkplaces: embed a fallback conchars.tga so it can load in an empty directory with a visible console (right now it uses the checkerboard texture)
 0 darkplaces: figure out the 'inverted bumps' bug on some texture orientations (see crate tops at end of e1m1, tenebrae1 does not suffer this problem somehow) (U8Poo) 
 0 darkplaces: figure out what crashes when this sequence is done: r_speeds 1;map anything, crash (Stribbs)
@@ -124,12 +146,12 @@ d darkplaces: shadow volume rendering should not unlock the arrays between rende
 0 darkplaces: figure out why zombies are disappearing when not entirely submerged in some hipnotic maps (romi) 
 0 darkplaces: fix broken key repeat on backspace key in console (Mercury)
 0 darkplaces: fix broken mouse button display in key binding menu, it shows ??? for mouse buttons (Mercury, Tomaz)
-0 darkplaces: fix cl_nodelta 1, it's halting updates (Tomaz)
+2 darkplaces: fix cl_nodelta 1, it's halting updates (Tomaz, sublim3)
 0 darkplaces: fix disappearing viewmodel (and other models) when in an unvised q3bsp, or partially inside a wall in q3bsp
 0 darkplaces: fix loadsky;r_restart;r_restart crash, again (sajt)
 0 darkplaces: fix model lighting with r_shadow_realtime_world_lightmaps mode, it seems to be adding dlights to vertices? (Mitchell)
 0 darkplaces: fix q3bsp fogging (Sajt)
-0 darkplaces: fix q3bsp static shadow volumes (currently they are calculated as if novis)
+d darkplaces: fix q3bsp static shadow volumes (currently they are calculated as if novis)
 0 darkplaces: fix r_editlights_edit origin not working (romi)
 0 darkplaces: fix the bug causing models in an unlit map to be black when they should be fullbright (Sajt)
 0 darkplaces: fix the mouse move when console is raised, probably by ignoring the first move after console raise (mashakos)
