@@ -296,8 +296,8 @@ float r_shadow_atten1, r_shadow_atten2, r_shadow_atten5;
 #define ATTEN3DSIZE 64
 static void R_Shadow_Make3DTextures(void)
 {
-	int x, y, z, d;
-	float v[3], intensity, ilen, length, bordercolor[4];
+	int x, y, z;
+	float v[3], intensity, ilen, bordercolor[4];
 	qbyte data[ATTEN3DSIZE][ATTEN3DSIZE][ATTEN3DSIZE][4];
 	if (r_light_quality.integer != 1 || !gl_texture3d)
 		return;
@@ -331,7 +331,7 @@ static void R_Shadow_Make3DTextures(void)
 
 static void R_Shadow_MakeTextures(void)
 {
-	int x, y, z, d, side;
+	int x, y, d, side;
 	float v[3], s, t, intensity;
 	qbyte data[6][128][128][4];
 	R_FreeTexturePool(&r_shadow_texturepool);
@@ -562,7 +562,7 @@ void R_Shadow_GenTexCoords_Diffuse_Attenuation3D(float *out, int numverts, const
 void R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(float *out, int numverts, const float *vertex, const float *svectors, const float *tvectors, const float *normals, const vec3_t relativelightorigin)
 {
 	int i;
-	float lightdir[3], iradius;
+	float lightdir[3];
 	for (i = 0;i < numverts;i++, vertex += 4, svectors += 4, tvectors += 4, normals += 4, out += 4)
 	{
 		VectorSubtract(vertex, relativelightorigin, lightdir);
@@ -576,7 +576,7 @@ void R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(float *out, int numverts, const
 void R_Shadow_GenTexCoords_Specular_Attenuation3D(float *out, int numverts, const float *vertex, const float *svectors, const float *tvectors, const float *normals, const vec3_t relativelightorigin, const vec3_t relativeeyeorigin, float lightradius)
 {
 	int i;
-	float lightdir[3], eyedir[3], halfdir[3], lightdirlen, ilen, iradius;
+	float lightdir[3], eyedir[3], halfdir[3], lightdirlen, ilen;
 	iradius = 0.5f / lightradius;
 	for (i = 0;i < numverts;i++, vertex += 4, svectors += 4, tvectors += 4, normals += 4, out += 4)
 	{
@@ -597,7 +597,7 @@ void R_Shadow_GenTexCoords_Specular_Attenuation3D(float *out, int numverts, cons
 void R_Shadow_GenTexCoords_Specular_NormalCubeMap(float *out, int numverts, const float *vertex, const float *svectors, const float *tvectors, const float *normals, const vec3_t relativelightorigin, const vec3_t relativeeyeorigin)
 {
 	int i;
-	float lightdir[3], eyedir[3], halfdir[3], lightdirlen, ilen, iradius;
+	float lightdir[3], eyedir[3], halfdir[3];
 	for (i = 0;i < numverts;i++, vertex += 4, svectors += 4, tvectors += 4, normals += 4, out += 4)
 	{
 		VectorSubtract(vertex, relativelightorigin, lightdir);
