@@ -362,7 +362,7 @@ struct model_s;
 void Mod_LoadBrushModel (struct model_s *mod, void *buffer);
 void Mod_BrushInit(void);
 
-void Mod_FindNonSolidLocation(vec3_t pos, struct model_s *mod);
+void Mod_FindNonSolidLocation(vec3_t in, vec3_t out, struct model_s *mod, vec_t radius);
 mleaf_t *Mod_PointInLeaf (const float *p, struct model_s *model);
 int Mod_PointContents (const float *p, struct model_s *model);
 qbyte *Mod_LeafPVS (mleaf_t *leaf, struct model_s *model);

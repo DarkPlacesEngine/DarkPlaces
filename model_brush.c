@@ -92,20 +92,181 @@ int Mod_PointContents (const vec3_t p, model_t *model)
 	return ((mleaf_t *)node)->contents;
 }
 
-void Mod_FindNonSolidLocation(vec3_t pos, model_t *mod)
+typedef struct findnonsolidlocationinfo_s
 {
-	if (Mod_PointContents(pos, mod) != CONTENTS_SOLID) return;
-	pos[0]-=1;if (Mod_PointContents(pos, mod) != CONTENTS_SOLID) return;
-	pos[0]+=2;if (Mod_PointContents(pos, mod) != CONTENTS_SOLID) return;
-	pos[0]-=1;
-	pos[1]-=1;if (Mod_PointContents(pos, mod) != CONTENTS_SOLID) return;
-	pos[1]+=2;if (Mod_PointContents(pos, mod) != CONTENTS_SOLID) return;
-	pos[1]-=1;
-	pos[2]-=1;if (Mod_PointContents(pos, mod) != CONTENTS_SOLID) return;
-	pos[2]+=2;if (Mod_PointContents(pos, mod) != CONTENTS_SOLID) return;
-	pos[2]-=1;
+	vec3_t center;
+	vec_t radius;
+	vec3_t nudge;
+	vec_t bestdist;
+	model_t *model;
+}
+findnonsolidlocationinfo_t;
+
+#if 0
+extern cvar_t samelevel;
+#endif
+void Mod_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *info, mleaf_t *leaf)
+{
+	int i, surfnum, k, *tri, *mark;
+	float dist, f, vert[3][3], edge[3][3], facenormal[3], edgenormal[3][3], point[3];
+#if 0
+	float surfnormal[3];
+#endif
+	msurface_t *surf;
+	surfmesh_t *mesh;
+	for (surfnum = 0, mark = leaf->firstmarksurface;surfnum < leaf->nummarksurfaces;surfnum++, mark++)
+	{
+		surf = info->model->surfaces + *mark;
+		if (surf->flags & SURF_SOLIDCLIP)
+		{
+#if 0
+			VectorCopy(surf->plane->normal, surfnormal);
+			if (surf->flags & SURF_PLANEBACK)
+				VectorNegate(surfnormal, surfnormal);
+#endif
+			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+			{
+				for (k = 0;k < mesh->numtriangles;k++)
+				{
+					tri = mesh->index + k * 3;
+					VectorCopy((mesh->verts + tri[0] * 4), vert[0]);
+					VectorCopy((mesh->verts + tri[1] * 4), vert[1]);
+					VectorCopy((mesh->verts + tri[2] * 4), vert[2]);
+					VectorSubtract(vert[1], vert[0], edge[0]);
+					VectorSubtract(vert[2], vert[1], edge[1]);
+					CrossProduct(edge[1], edge[0], facenormal);
+					if (facenormal[0] || facenormal[1] || facenormal[2])
+					{
+						VectorNormalize(facenormal);
+#if 0
+						if (VectorDistance(facenormal, surfnormal) > 0.01f)
+							Con_Printf("a2! %f %f %f != %f %f %f\n", facenormal[0], facenormal[1], facenormal[2], surfnormal[0], surfnormal[1], surfnormal[2]);
+#endif
+						f = DotProduct(info->center, facenormal) - DotProduct(vert[0], facenormal);
+						if (f <= info->bestdist && f >= -info->bestdist)
+						{
+							VectorSubtract(vert[0], vert[2], edge[2]);
+							VectorNormalize(edge[0]);
+							VectorNormalize(edge[1]);
+							VectorNormalize(edge[2]);
+							CrossProduct(facenormal, edge[0], edgenormal[0]);
+							CrossProduct(facenormal, edge[1], edgenormal[1]);
+							CrossProduct(facenormal, edge[2], edgenormal[2]);
+#if 0
+							if (samelevel.integer & 1)
+								VectorNegate(edgenormal[0], edgenormal[0]);
+							if (samelevel.integer & 2)
+								VectorNegate(edgenormal[1], edgenormal[1]);
+							if (samelevel.integer & 4)
+								VectorNegate(edgenormal[2], edgenormal[2]);
+							for (i = 0;i < 3;i++)
+								if (DotProduct(vert[0], edgenormal[i]) > DotProduct(vert[i], edgenormal[i]) + 0.1f
+								 || DotProduct(vert[1], edgenormal[i]) > DotProduct(vert[i], edgenormal[i]) + 0.1f
+								 || DotProduct(vert[2], edgenormal[i]) > DotProduct(vert[i], edgenormal[i]) + 0.1f)
+									Con_Printf("a! %i : %f %f %f (%f %f %f)\n", i, edgenormal[i][0], edgenormal[i][1], edgenormal[i][2], facenormal[0], facenormal[1], facenormal[2]);
+#endif
+							// face distance
+							if (DotProduct(info->center, edgenormal[0]) < DotProduct(vert[0], edgenormal[0])
+							 && DotProduct(info->center, edgenormal[1]) < DotProduct(vert[1], edgenormal[1])
+							 && DotProduct(info->center, edgenormal[2]) < DotProduct(vert[2], edgenormal[2]))
+							{
+								// we got lucky, the center is within the face
+								dist = DotProduct(info->center, facenormal) - DotProduct(vert[0], facenormal);
+								if (dist < 0)
+								{
+									dist = -dist;
+									if (info->bestdist > dist)
+									{
+										info->bestdist = dist;
+										VectorScale(facenormal, (info->radius - -dist), info->nudge);
+									}
+								}
+								else
+								{
+									if (info->bestdist > dist)
+									{
+										info->bestdist = dist;
+										VectorScale(facenormal, (info->radius - dist), info->nudge);
+									}
+								}
+							}
+							else
+							{
+								// check which edge or vertex the center is nearest
+								for (i = 0;i < 3;i++)
+								{
+									f = DotProduct(info->center, edge[i]);
+									if (f >= DotProduct(vert[0], edge[i])
+									 && f <= DotProduct(vert[1], edge[i]))
+									{
+										// on edge
+										VectorMA(info->center, -f, edge[i], point);
+										dist = sqrt(DotProduct(point, point));
+										if (info->bestdist > dist)
+										{
+											info->bestdist = dist;
+											VectorScale(point, (info->radius / dist), info->nudge);
+										}
+										// skip both vertex checks
+										// (both are further away than this edge)
+										i++;
+									}
+									else
+									{
+										// not on edge, check first vertex of edge
+										VectorSubtract(info->center, vert[i], point);
+										dist = sqrt(DotProduct(point, point));
+										if (info->bestdist > dist)
+										{
+											info->bestdist = dist;
+											VectorScale(point, (info->radius / dist), info->nudge);
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
+void Mod_FindNonSolidLocation_r(findnonsolidlocationinfo_t *info, mnode_t *node)
+{
+	if (node->contents)
+	{
+		if (((mleaf_t *)node)->nummarksurfaces)
+			Mod_FindNonSolidLocation_r_Leaf(info, (mleaf_t *)node);
+	}
+	else
+	{
+		float f = PlaneDiff(info->center, node->plane);
+		if (f >= -info->bestdist)
+			Mod_FindNonSolidLocation_r(info, node->children[0]);
+		if (f <= info->bestdist)
+			Mod_FindNonSolidLocation_r(info, node->children[1]);
+	}
+}
+
+void Mod_FindNonSolidLocation(vec3_t in, vec3_t out, model_t *model, float radius)
+{
+	int i;
+	findnonsolidlocationinfo_t info;
+	VectorCopy(in, info.center);
+	info.radius = radius;
+	info.model = model;
+	i = 0;
+	do
+	{
+		VectorClear(info.nudge);
+		info.bestdist = radius;
+		Mod_FindNonSolidLocation_r(&info, model->nodes + model->hulls[0].firstclipnode);
+		VectorAdd(info.center, info.nudge, info.center);
+	}
+	while(info.bestdist < radius && ++i < 10);
+	VectorCopy(info.center, out);
+}
 
 /*
 ===================
