@@ -50,8 +50,6 @@ float con_times[MAX_NOTIFYLINES];
 
 int con_vislines;
 
-qboolean con_debuglog;
-
 #define MAXCMDLINE	256
 extern char key_lines[32][MAXCMDLINE];
 extern int edit_line;
@@ -63,7 +61,158 @@ qboolean con_initialized;
 
 mempool_t *console_mempool;
 
-extern void M_Menu_Main_f (void);
+
+/*
+==============================================================================
+
+LOGGING
+
+==============================================================================
+*/
+
+cvar_t log_file = {0, "log_file",""};
+cvar_t log_sync = {0, "log_sync","0"};
+qfile_t* logfile = NULL;
+
+qbyte* logqueue = NULL;
+size_t logq_ind = 0;
+size_t logq_size = 0;
+
+/*
+====================
+Log_Init
+====================
+*/
+void Log_Init (void)
+{
+	Cvar_RegisterVariable (&log_file);
+	Cvar_RegisterVariable (&log_sync);
+
+	// support for the classic Quake option
+	if (COM_CheckParm ("-condebug") != 0)
+	{
+		Cvar_SetQuick (&log_file, "qconsole.log");
+		Cvar_SetValueQuick (&log_sync, 1);
+	}
+
+	// Allocate a log queue
+	logq_size = 4;
+	logqueue = Mem_Alloc (tempmempool, logq_size);
+	logq_ind = 0;
+}
+
+
+/*
+====================
+Log_Start
+====================
+*/
+void Log_Start (void)
+{
+	if (log_file.string[0] != '\0')
+		logfile = FS_Open (log_file.string, "wt", false);
+
+	// Dump the contents of the log queue into the log file and free it
+	if (logqueue != NULL)
+	{
+		if (logfile != NULL && logq_ind != 0)
+			FS_Write (logfile, logqueue, logq_ind);
+		Mem_Free (logqueue);
+		logqueue = NULL;
+		logq_ind = 0;
+		logq_size = 0;
+	}
+}
+
+
+/*
+================
+Log_ConPrint
+================
+*/
+void Log_ConPrint (const char *msg)
+{
+	// Easy case: a log has been started
+	if (logfile != NULL)
+	{
+		FS_Print (logfile, msg);
+		if (log_sync.integer)
+			FS_Flush (logfile);
+		return;
+	}
+
+	// Until the host is completely initialized, we maintain a log queue
+	// to store the messages, since the log can't be started before
+	if (logqueue != NULL)
+	{
+		size_t remain = logq_size - logq_ind;
+		size_t len = strlen (msg);
+
+		// If we need to enlarge the log queue
+		if (len > remain)
+		{
+			unsigned int factor = ((logq_ind + len) / logq_size) + 1;
+			qbyte* newqueue;
+
+			logq_size *= factor;
+			newqueue = Mem_Alloc (tempmempool, logq_size);
+			memcpy (newqueue, logqueue, logq_ind);
+			Mem_Free (logqueue);
+			logqueue = newqueue;
+			remain = logq_size - logq_ind;
+		}
+		memcpy (&logqueue[logq_ind], msg, len);
+		logq_ind += len;
+	}
+}
+
+
+/*
+================
+Log_Print
+================
+*/
+void Log_Print (const char *logfilename, const char *msg)
+{
+	qfile_t *file;
+	file = FS_Open(logfilename, "at", true);
+	if (file)
+	{
+		FS_Print(file, msg);
+		FS_Close(file);
+	}
+}
+
+/*
+================
+Log_Printf
+================
+*/
+void Log_Printf (const char *logfilename, const char *fmt, ...)
+{
+	qfile_t *file;
+
+	file = FS_Open (logfilename, "at", true);
+	if (file != NULL)
+	{
+		va_list argptr;
+
+		va_start (argptr, fmt);
+		FS_VPrintf (file, fmt, argptr);
+		va_end (argptr);
+
+		FS_Close (file);
+	}
+}
+
+
+/*
+==============================================================================
+
+CONSOLE
+
+==============================================================================
+*/
 
 /*
 ================
@@ -187,24 +336,6 @@ void Con_CheckResize (void)
 	con_current = con_totallines - 1;
 }
 
-
-void Con_InitLogging (void)
-{
-#define MAXGAMEDIRLEN 1000
-	char temp[MAXGAMEDIRLEN+1];
-	char *t2 = "/qconsole.log";
-
-	con_debuglog = COM_CheckParm("-condebug");
-	if (con_debuglog)
-	{
-		if (strlen (fs_gamedir) < (MAXGAMEDIRLEN - strlen (t2)))
-		{
-			sprintf (temp, "%s%s", fs_gamedir, t2);
-			unlink (temp);
-		}
-	}
-}
-
 /*
 ================
 Con_Init
@@ -220,12 +351,11 @@ void Con_Init (void)
 
 	Con_Print("Console initialized.\n");
 
-//
-// register our commands
-//
+	// register our cvars
 	Cvar_RegisterVariable (&con_notifytime);
 	Cvar_RegisterVariable (&con_notify);
 
+	// register our commands
 	Cmd_AddCommand ("toggleconsole", Con_ToggleConsole_f);
 	Cmd_AddCommand ("messagemode", Con_MessageMode_f);
 	Cmd_AddCommand ("messagemode2", Con_MessageMode2_f);
@@ -336,42 +466,6 @@ void Con_PrintToHistory(const char *txt)
 	}
 }
 
-// LordHavoc: increased from 4096 to 16384
-#define	MAXPRINTMSG	16384
-
-/*
-================
-Con_LogPrint
-================
-*/
-void Con_LogPrint(const char *logfilename, const char *msg)
-{
-	qfile_t *file;
-	file = FS_Open(logfilename, "at", true);
-	if (file)
-	{
-		FS_Print(file, msg);
-		FS_Close(file);
-	}
-}
-
-/*
-================
-Con_LogPrintf
-================
-*/
-void Con_LogPrintf(const char *logfilename, const char *fmt, ...)
-{
-	va_list argptr;
-	char msg[MAXPRINTMSG];
-
-	va_start(argptr,fmt);
-	vsprintf(msg,fmt,argptr);
-	va_end(argptr);
-
-	Con_LogPrint(logfilename, msg);
-}
-
 /*
 ================
 Con_Print
@@ -385,8 +479,7 @@ void Con_Print(const char *msg)
 	Sys_Print(msg);
 
 	// log all messages to file
-	if (con_debuglog)
-		Con_LogPrint("qconsole.log", msg);
+	Log_ConPrint (msg);
 
 	if (!con_initialized)
 		return;
@@ -397,6 +490,10 @@ void Con_Print(const char *msg)
 	// write it to the scrollable buffer
 	Con_PrintToHistory(msg);
 }
+
+
+// LordHavoc: increased from 4096 to 16384
+#define	MAXPRINTMSG	16384
 
 /*
 ================

@@ -51,6 +51,7 @@ size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize);
 int FS_Flush (qfile_t* file);
 int FS_Print(qfile_t* file, const char *msg);
 int FS_Printf(qfile_t* file, const char* format, ...);
+int FS_VPrintf(qfile_t* file, const char* format, va_list ap);
 int FS_Getc (qfile_t* file);
 int FS_Seek (qfile_t* file, long offset, int whence);
 long FS_Tell (qfile_t* file);

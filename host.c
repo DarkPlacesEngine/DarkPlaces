@@ -906,6 +906,9 @@ void Host_Init (void)
 		Cbuf_InsertText(va("timedemo %s\n", com_argv[i + 1]));
 
 	Cbuf_Execute();
+
+	// We must wait for the log_file cvar to be initialized to start the log
+	Log_Start ();
 }
 
 
