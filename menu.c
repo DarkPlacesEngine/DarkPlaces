@@ -1106,7 +1106,7 @@ void M_DrawCheckbox (int x, int y, int on)
 }
 
 
-#define OPTIONS_ITEMS 29
+#define OPTIONS_ITEMS 31
 
 int options_cursor;
 
@@ -1124,64 +1124,54 @@ extern dllhandle_t jpeg_dll;
 
 void M_Menu_Options_AdjustSliders (int dir)
 {
+	int optnum;
 	S_LocalSound ("misc/menu3.wav");
 
-	switch (options_cursor)
-	{
-	case 6:
+	optnum = 6;
+	if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&scr_2dresolution, bound(0, scr_2dresolution.value + dir * 0.2, 1));
-		break;
-	case 7:
+	else if (options_cursor == optnum++)
+		Cvar_SetValueQuick (&scr_conspeed, bound(0, scr_conspeed.value + dir * 100, 1000));
+	else if (options_cursor == optnum++)
+		Cvar_SetValueQuick (&scr_conalpha, bound(0, scr_conalpha.value + dir * 0.2, 1));
+	else if (options_cursor == optnum++)
+		Cvar_SetValueQuick (&scr_conbrightness, bound(0, scr_conbrightness.value + dir * 0.2, 1));
+	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&scr_viewsize, bound(30, scr_viewsize.value + dir * 10, 120));
-		break;
-	case 8:
-		if (jpeg_dll != NULL)
-			Cvar_SetValueQuick (&scr_screenshot_jpeg, !scr_screenshot_jpeg.integer);
-		break;
-	case 9:
+	else if (options_cursor == optnum++)
+		Cvar_SetValueQuick (&scr_screenshot_jpeg, !scr_screenshot_jpeg.integer);
+	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&r_sky, !r_sky.integer);
-		break;
-	case 10:
+	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&v_overbrightbits, bound(0, v_overbrightbits.integer + dir, 4));
-		break;
-	case 11:
+	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&gl_combine, !gl_combine.integer);
-		break;
-	case 12:
+	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&gl_dither, !gl_dither.integer);
-		break;
-	case 13:
+	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&gl_delayfinish, !gl_delayfinish.integer);
-		break;
-	case 14:
+	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&slowmo, bound(0, slowmo.value + dir * 0.25, 5));
-		break;
-	case 15: // music volume
-		#ifdef _WIN32
+	else if (options_cursor == optnum++)
+#ifdef _WIN32
 		Cvar_SetValueQuick (&bgmvolume, bound(0, bgmvolume.value + dir * 1.0, 1));
-		#else
+#else
 		Cvar_SetValueQuick (&bgmvolume, bound(0, bgmvolume.value + dir * 0.1, 1));
-		#endif
-		break;
-	case 16: // sfx volume
+#endif
+	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&volume, bound(0, volume.value + dir * 0.1, 1));
-		break;
-	case 17: // static volume
+	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&snd_staticvolume, bound(0, snd_staticvolume.value + dir * 0.1, 1));
-		break;
-	case 18:
+	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&crosshair, bound(0, crosshair.integer + dir, 5));
-		break;
-	case 19:
+	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&crosshair_size, bound(1, crosshair_size.value + dir, 5));
-		break;
-	case 20: // static crosshair
+	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&crosshair_static, !crosshair_static.integer);
-		break;
-	case 21: // show framerate
+	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&showfps, !showfps.integer);
-		break;
-	case 22: // always run
+	else if (options_cursor == optnum++)
+	{
 		if (cl_forwardspeed.value > 200)
 		{
 			Cvar_SetValueQuick (&cl_forwardspeed, 200);
@@ -1192,26 +1182,19 @@ void M_Menu_Options_AdjustSliders (int dir)
 			Cvar_SetValueQuick (&cl_forwardspeed, 400);
 			Cvar_SetValueQuick (&cl_backspeed, 400);
 		}
-		break;
-	case 23: // lookspring
-		Cvar_SetValueQuick (&lookspring, !lookspring.integer);
-		break;
-	case 24: // lookstrafe
-		Cvar_SetValueQuick (&lookstrafe, !lookstrafe.integer);
-		break;
-	case 25: // mouse speed
-		Cvar_SetValueQuick (&sensitivity, bound(1, sensitivity.value + dir * 0.5, 50));
-		break;
-	case 26: // mouse look
-		Cvar_SetValueQuick (&freelook, !freelook.integer);
-		break;
-	case 27: // invert mouse
-		Cvar_SetValueQuick (&m_pitch, -m_pitch.value);
-		break;
-	case 28: // windowed mouse
-		Cvar_SetValueQuick (&vid_mouse, !vid_mouse.integer);
-		break;
 	}
+	else if (options_cursor == optnum++)
+		Cvar_SetValueQuick (&lookspring, !lookspring.integer);
+	else if (options_cursor == optnum++)
+		Cvar_SetValueQuick (&lookstrafe, !lookstrafe.integer);
+	else if (options_cursor == optnum++)
+		Cvar_SetValueQuick (&sensitivity, bound(1, sensitivity.value + dir * 0.5, 50));
+	else if (options_cursor == optnum++)
+		Cvar_SetValueQuick (&freelook, !freelook.integer);
+	else if (options_cursor == optnum++)
+		Cvar_SetValueQuick (&m_pitch, -m_pitch.value);
+	else if (options_cursor == optnum++)
+		Cvar_SetValueQuick (&vid_mouse, !vid_mouse.integer);
 }
 
 void M_Options_Draw (void)
@@ -1233,6 +1216,9 @@ void M_Options_Draw (void)
 	M_Print(16, y, "       Effects Options");y += 8;
 	M_Print(16, y, " Color Control Options");y += 8;
 	M_Print(16, y, "         2D Resolution");M_DrawSlider(220, y, scr_2dresolution.value, 0, 1);y += 8;
+	M_Print(16, y, "         Console Speed");M_DrawSlider(220, y, scr_conspeed.value, 0, 1000);y += 8;
+	M_Print(16, y, "         Console Alpha");M_DrawSlider(220, y, scr_conalpha.value, 0, 1);y += 8;
+	M_Print(16, y, "    Conback Brightness");M_DrawSlider(220, y, scr_conbrightness.value, 0, 1);y += 8;
 	M_Print(16, y, "           Screen size");M_DrawSlider(220, y, scr_viewsize.value, 30, 120);y += 8;
 	M_ItemPrint(16, y, "      JPEG screenshots", jpeg_dll != NULL);M_DrawCheckbox(220, y, scr_screenshot_jpeg.integer);y += 8;
 	M_Print(16, y, "                   Sky");M_DrawCheckbox(220, y, r_sky.integer);y += 8;
@@ -1362,71 +1348,50 @@ extern cvar_t cl_particles_blood_alpha;
 
 void M_Menu_Options_Effects_AdjustSliders (int dir)
 {
+	int optnum;
 	S_LocalSound ("misc/menu3.wav");
 
-	switch (options_effects_cursor)
-	{
-	case 0:
+	optnum = 0;
+	if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&r_modellights, bound(0, r_modellights.value + dir, 8));
-		break;
-	case 1:
+	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&r_dlightmap, !r_dlightmap.integer);
-		break;
-	case 2:
+	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&r_coronas, !r_coronas.integer);
-		break;
-	case 3:
+	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&gl_flashblend, !gl_flashblend.integer);
-		break;
-	case 4:
+	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&cl_particles, !cl_particles.integer);
-		break;
-	case 5:
+	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&cl_explosions, !cl_explosions.integer);
-		break;
-	case 6:
+	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&r_explosionclip, !r_explosionclip.integer);
-		break;
-	case 7:
+	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&cl_stainmaps, !cl_stainmaps.integer);
-		break;
-	case 8:
-		Cvar_SetValueQuick (&cl_stainmaps, !cl_decals.integer);
-		break;
-	case 9:
+	else if (options_effects_cursor == optnum++)
+		Cvar_SetValueQuick (&cl_decals, !cl_decals.integer);
+	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&r_detailtextures, !r_detailtextures.integer);
-		break;
-	case 10:
+	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&cl_particles_bulletimpacts, !cl_particles_bulletimpacts.integer);
-		break;
-	case 11:
+	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&cl_particles_smoke, !cl_particles_smoke.integer);
-		break;
-	case 12:
+	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&cl_particles_sparks, !cl_particles_sparks.integer);
-		break;
-	case 13:
+	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&cl_particles_bubbles, !cl_particles_bubbles.integer);
-		break;
-	case 14:
+	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&cl_particles_blood, !cl_particles_blood.integer);
-		break;
-	case 15:
+	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&cl_particles_blood_size, bound(2, cl_particles_blood_size.value + dir * 1, 20));
-		break;
-	case 16:
+	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&cl_particles_blood_alpha, bound(0.2, cl_particles_blood_alpha.value + dir * 0.1, 1));
-		break;
-	case 17:
+	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&r_lerpmodels, !r_lerpmodels.integer);
-		break;
-	case 18:
+	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&r_lerpsprites, !r_lerpsprites.integer);
-		break;
-	case 19:
+	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&r_waterscroll, bound(0, r_waterscroll.value + dir * 0.5, 10));
-		break;
-	}
 }
 
 void M_Options_Effects_Draw (void)
@@ -1524,86 +1489,100 @@ void M_Menu_Options_ColorControl_f (void)
 
 void M_Menu_Options_ColorControl_AdjustSliders (int dir)
 {
+	int optnum;
 	float f;
 	S_LocalSound ("misc/menu3.wav");
 
-	switch (options_colorcontrol_cursor)
-	{
-	case 1:
+	optnum = 1;
+	if (options_colorcontrol_cursor == optnum++)
 		Cvar_SetValueQuick (&v_hwgamma, !v_hwgamma.integer);
-		break;
-	case 2:
+	else if (options_colorcontrol_cursor == optnum++)
+	{
 		Cvar_SetValueQuick (&v_color_enable, 0);
 		Cvar_SetValueQuick (&v_gamma, bound(1, v_gamma.value + dir * 0.125, 5));
-		break;
-	case 3:
+	}
+	else if (options_colorcontrol_cursor == optnum++)
+	{
 		Cvar_SetValueQuick (&v_color_enable, 0);
 		Cvar_SetValueQuick (&v_contrast, bound(1, v_contrast.value + dir * 0.125, 5));
-		break;
-	case 4:
+	}
+	else if (options_colorcontrol_cursor == optnum++)
+	{
 		Cvar_SetValueQuick (&v_color_enable, 0);
 		Cvar_SetValueQuick (&v_brightness, bound(0, v_brightness.value + dir * 0.05, 0.8));
-		break;
-	case 5:
+	}
+	else if (options_colorcontrol_cursor == optnum++)
+	{
 		Cvar_SetValueQuick (&v_color_enable, !v_color_enable.integer);
-		break;
-	case 6:
+	}
+	else if (options_colorcontrol_cursor == optnum++)
+	{
 		Cvar_SetValueQuick (&v_color_enable, 1);
 		Cvar_SetValueQuick (&v_color_black_r, bound(0, v_color_black_r.value + dir * 0.0125, 0.8));
-		break;
-	case 7:
+	}
+	else if (options_colorcontrol_cursor == optnum++)
+	{
 		Cvar_SetValueQuick (&v_color_enable, 1);
 		Cvar_SetValueQuick (&v_color_black_g, bound(0, v_color_black_g.value + dir * 0.0125, 0.8));
-		break;
-	case 8:
+	}
+	else if (options_colorcontrol_cursor == optnum++)
+	{
 		Cvar_SetValueQuick (&v_color_enable, 1);
 		Cvar_SetValueQuick (&v_color_black_b, bound(0, v_color_black_b.value + dir * 0.0125, 0.8));
-		break;
-	case 9:
+	}
+	else if (options_colorcontrol_cursor == optnum++)
+	{
 		Cvar_SetValueQuick (&v_color_enable, 1);
 		f = bound(0, (v_color_black_r.value + v_color_black_g.value + v_color_black_b.value) / 3 + dir * 0.0125, 0.8);
 		Cvar_SetValueQuick (&v_color_black_r, f);
 		Cvar_SetValueQuick (&v_color_black_g, f);
 		Cvar_SetValueQuick (&v_color_black_b, f);
-		break;
-	case 10:
+	}
+	else if (options_colorcontrol_cursor == optnum++)
+	{
 		Cvar_SetValueQuick (&v_color_enable, 1);
 		Cvar_SetValueQuick (&v_color_grey_r, bound(0, v_color_grey_r.value + dir * 0.0125, 0.95));
-		break;
-	case 11:
+	}
+	else if (options_colorcontrol_cursor == optnum++)
+	{
 		Cvar_SetValueQuick (&v_color_enable, 1);
 		Cvar_SetValueQuick (&v_color_grey_g, bound(0, v_color_grey_g.value + dir * 0.0125, 0.95));
-		break;
-	case 12:
+	}
+	else if (options_colorcontrol_cursor == optnum++)
+	{
 		Cvar_SetValueQuick (&v_color_enable, 1);
 		Cvar_SetValueQuick (&v_color_grey_b, bound(0, v_color_grey_b.value + dir * 0.0125, 0.95));
-		break;
-	case 13:
+	}
+	else if (options_colorcontrol_cursor == optnum++)
+	{
 		Cvar_SetValueQuick (&v_color_enable, 1);
 		f = bound(0, (v_color_grey_r.value + v_color_grey_g.value + v_color_grey_b.value) / 3 + dir * 0.0125, 0.95);
 		Cvar_SetValueQuick (&v_color_grey_r, f);
 		Cvar_SetValueQuick (&v_color_grey_g, f);
 		Cvar_SetValueQuick (&v_color_grey_b, f);
-		break;
-	case 14:
+	}
+	else if (options_colorcontrol_cursor == optnum++)
+	{
 		Cvar_SetValueQuick (&v_color_enable, 1);
 		Cvar_SetValueQuick (&v_color_white_r, bound(1, v_color_white_r.value + dir * 0.125, 5));
-		break;
-	case 15:
+	}
+	else if (options_colorcontrol_cursor == optnum++)
+	{
 		Cvar_SetValueQuick (&v_color_enable, 1);
 		Cvar_SetValueQuick (&v_color_white_g, bound(1, v_color_white_g.value + dir * 0.125, 5));
-		break;
-	case 16:
+	}
+	else if (options_colorcontrol_cursor == optnum++)
+	{
 		Cvar_SetValueQuick (&v_color_enable, 1);
 		Cvar_SetValueQuick (&v_color_white_b, bound(1, v_color_white_b.value + dir * 0.125, 5));
-		break;
-	case 17:
+	}
+	else if (options_colorcontrol_cursor == optnum++)
+	{
 		Cvar_SetValueQuick (&v_color_enable, 1);
 		f = bound(1, (v_color_white_r.value + v_color_white_g.value + v_color_white_b.value) / 3 + dir * 0.125, 5);
 		Cvar_SetValueQuick (&v_color_white_r, f);
 		Cvar_SetValueQuick (&v_color_white_g, f);
 		Cvar_SetValueQuick (&v_color_white_b, f);
-		break;
 	}
 }
 

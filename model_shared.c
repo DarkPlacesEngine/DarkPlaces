@@ -853,8 +853,8 @@ void Mod_GetTerrainVertex3fTexCoord2fFromRGBA(const qbyte *imagepixels, int imag
 
 void Mod_GetTerrainVertexFromRGBA(const qbyte *imagepixels, int imagewidth, int imageheight, int ix, int iy, float *vertex3f, float *svector3f, float *tvector3f, float *normal3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
 {
-	float v[3], vup[3], vdown[3], vleft[3], vright[3];
-	float tc[3], tcup[3], tcdown[3], tcleft[3], tcright[3];
+	float vup[3], vdown[3], vleft[3], vright[3];
+	float tcup[3], tcdown[3], tcleft[3], tcright[3];
 	float sv[3], tv[3], nl[3];
 	Mod_GetTerrainVertex3fTexCoord2fFromRGBA(imagepixels, imagewidth, imageheight, ix, iy, vertex3f, texcoord2f, pixelstepmatrix, pixeltexturestepmatrix);
 	Mod_GetTerrainVertex3fTexCoord2fFromRGBA(imagepixels, imagewidth, imageheight, ix, iy - 1, vup, tcup, pixelstepmatrix, pixeltexturestepmatrix);

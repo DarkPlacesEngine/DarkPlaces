@@ -577,7 +577,6 @@ Draws the console with the solid background
 The typing input line at the bottom should only be drawn if typing is allowed
 ================
 */
-extern cvar_t scr_conalpha;
 extern char engineversion[40];
 void Con_DrawConsole (int lines)
 {
@@ -588,7 +587,10 @@ void Con_DrawConsole (int lines)
 		return;
 
 // draw the background
-	DrawQ_Pic(0, lines - vid.conheight, "gfx/conback", vid.conwidth, vid.conheight, 1, 1, 1, scr_conalpha.value * lines / vid.conheight, 0);
+	if (scr_conbrightness.value >= 0.01f)
+		DrawQ_Pic(0, lines - vid.conheight, "gfx/conback", vid.conwidth, vid.conheight, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, scr_conalpha.value, 0);
+	else
+		DrawQ_Fill(0, lines - vid.conheight, vid.conwidth, vid.conheight, 0, 0, 0, scr_conalpha.value, 0);
 	DrawQ_String(vid.conwidth - strlen(engineversion) * 8 - 8, lines - 8, engineversion, 0, 8, 8, 1, 0, 0, 1, 0);
 
 // draw the text
