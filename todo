@@ -2,10 +2,13 @@
 -d (Baalz) darkplaces input bug: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
 -d (Carni) darkplaces client: rain drops should splash when they hit (Tomaz, Carni)
 -d (Chillo) darkplaces client: cl_particles_size isn't working, it should affect rendering (Chillo)
+-d (FrikaC, Spike) darkplaces filesystem: make FS_Open fail to open paths that contain parent directory links (/../ and such, depending on platform) to prevent console commands from doing damage, this is similar to the FRIK_FILE qc extension checking the path (FrikaC, Spike)
 -d (Gilgamesh) darkplaces protocol: add back colormod extension (FrikaC, Uffe, Gilgamesh, Wazat)
 -d (Kinn, romi) darkplaces WGL client: default WGL input back to GDI, the DirectInput driver is malfunctioning, losing key release messages, stuttering mouse input, and lacks mouse wheel support (Wazat, Kinn)
 -d (Mabus) darkplaces loading: test zlib support with entirely pk3'd id1 data (should crash because of zlib not being setup early enough - fix this) (Mabus)
+-d (RenegadeC) darkplaces sound: make sound engine restart ambients after a restart (RenegadeC)
 -d (Toddd) darkplaces client: fix gl_flashblend, it's still drawing rtdlights even when gl_flashblend is on (Toddd)
+-d (Vermeulen) darkplaces renderer: bloom effect (Vermeulen)
 -d (Zenex) darkplaces general: make all text parsing routines support Mac newlines; \r with no \n (Zenex)
 -d (flum) darkplaces client: corona on your own muzzleflash is annoying when looking down because it can be seen, disable corona on all muzzleflashes (flum)
 -d (mashakos) darkplaces input: fix the mouse move when console is raised in glx, probably by ignoring the first move after console raise (mashakos)
@@ -68,7 +71,7 @@
 0 darkplaces protocol: fix signon error when starting prydon without +map curig2 (FrikaC)
 0 darkplaces protocol: server should send slowmo to client somehow (Vermeulen)
 0 darkplaces protocol: server should send sv_gravity to client somehow (Vermeulen)
-0 darkplaces readme: add log_file and log_sync documentation (Edward Holness)
+0 darkplaces readme: add log_file documentation (Edward Holness)
 0 darkplaces renderer bug: q3bsp alpha shaders are not being lit?  (Cheapy)
 0 darkplaces renderer bug: q3bsp ignoring EF_ADDITIVE on opaque surfaces such as Nexuiz teleporters?  (Vermeulen)
 0 darkplaces renderer: GAME_NEXUIZ: use occlusion query extension (if supported) for testing corona visibility instead of traceline - curve collisions are dragging down corona performance in some maps (Vermeulen)
@@ -212,7 +215,6 @@
 2 darkplaces collision: use larger of model box or collision box for linking into areagrid so that bullet tracing can use the model bounding box instead of the collision one?  (Urre)
 2 darkplaces console: figure out how to prevent "alias a a" - infinite loop when executed, this should be detected when executing it (Vicious)
 2 darkplaces console: review the whole set of console commands and cvars carefully and identify interactions, known interactions include sequences such as +sv_cheats 1 +map e1m1, or +maxplayers 8 +deathmatch 7 +map dpdm2, but for some reason this works with the cvar after the map command, and also if you do -window it does not affect the value saved to config, because the configs are executed again after the -window, perhaps it is not executing the commandline a second time?  apparently also -dedicated without +map does not load a map automatically in transfusion (Wazat, Willis)
-2 darkplaces filesystem: make FS_Open fail to open paths that contain parent directory links (/../ and such, depending on platform) to prevent console commands from doing damage, this is similar to the FRIK_FILE qc extension checking the path (FrikaC, Spike)
 2 darkplaces image: add scaling capabilities to Image_CopyMux
 2 darkplaces loader: add q2 sprite support sometime
 2 darkplaces loader: add support for fuhquake naming of map textures (textures/start/quake.tga style)
@@ -238,7 +240,6 @@
 2 darkplaces server: add EXT_DIMENSION_VISIBLE extension, documented at http://sourceforge.net/docman/display_doc.php?docid=24607&group_id=116842 (Spike)
 2 darkplaces server: make a DP_SV_PERCLIENTENTITYSEND extension which calls a .float customizeentityforclient() function for each client that may see the entity, the function returns TRUE if it should send, FALSE if it should not, and is fully capable of editing the entity's fields, this allows cloaked players to appear less transparent to their teammates, navigation markers to only show to their team, etc (Urre)
 2 darkplaces sound: add mapmusic command (<maps/mapname.bsp> <music/whatever.ogg> perhaps, with a blank music name it would simply remove the map from the list of overrides) to manipulate a list of per-map music overrides, mapmusic alone should print the list (Joseph Caporale, tell Static_Fiend)
-2 darkplaces sound: make sound engine restart ambients after a restart (RenegadeC)
 2 darkplaces testing: make sure Zerstoerer works (Chris Kemp, Kaotic))
 2 dpmod: write a readme for the menu progs code to get people started with it, and know what is and is not possible, what builtins do, etc (Urre)
 2 dpzoo.map: swinging doors
@@ -261,7 +262,7 @@
 3 darkplaces docs: add short and long documentation string to each cvar/command (QorpsE)
 3 darkplaces docs: write a documentation string in engine, and a command to dump documentation to a darkplaces.txt file (QorpsE)
 3 darkplaces editlights: add a custom light style string to rtlights, if empty it uses a normal server controlled light style (Stribbs)
-3 darkplaces host: add fs_reload command to allow restarting the filesystem module, this would mean that it could check for new paks and such (Mercury)
+3 darkplaces filesystem: add fs_reload command to allow restarting the filesystem module, this would mean that it could check for new paks and such (Mercury)
 3 darkplaces loader: add _color.tga support (realtime lighting would use this instead of the .tga for diffuse layer if available) (Urre)
 3 darkplaces loader: make q1bsp surfaces have vertex color arrays like q3bsp to make things more consistent, note these need light styles
 3 darkplaces loader: support dpm models (Vermeulen)
@@ -278,7 +279,6 @@
 3 darkplaces renderer: add a command to replace a texture in the running map, should only work in singleplayer; for testing only (Randi)
 3 darkplaces renderer: add antialiasing options (Zombie_13)
 3 darkplaces renderer: add stainmaps to realtime lighting mode
-3 darkplaces renderer: bloom effect (Vermeulen)
 3 darkplaces renderer: directional lighting from the q3bsp lightgrid should use diffuse and specular lighting if available (Vermeulen)
 3 darkplaces renderer: dpshaders (when supported) should have support for envmaps, and should support being lit by diffuse lighting as a fake gloss effect for normal mode (Vermeulen)
 3 darkplaces renderer: need to make a standalone minimod to test darkplaces rtlights code, which Diablo-D3 can throw at the ATI driver team to test with, 3D txtures with GL_CLAMP_TO_EDGE wrapping are broken (Diablo-D3)
@@ -420,7 +420,6 @@ d darkplaces input: key repeat should work in menus, for example scrolling quick
 d darkplaces loader q3bsp: remove snapping to integer on patch vertices (HReaper)
 d darkplaces loading: clear stainmaps on map restart/change based on cl_stainmapsclearonload cvar (John Truex)
 d darkplaces loading: fix bumpmapping, there's something quite mixed up about the svectors and tvectors (Randi)
-d darkplaces loading: make files override pak and pk3 archives, as it's really what people expect, hopefully this won't break any broken mods (Stribbs)
 d darkplaces loading: make files override pak and pk3 archives, as it's really what people expect, hopefully this won't break any broken mods (Stribbs)
 d darkplaces loading: make hl map loading halve the lightmap samples, to fit hl's 0-1 range into quake's 0-2 range (KrimZon)
 d darkplaces loading: make it only reload rtlights when current map changes, not when restarting renderer or reloading same map (Stribbs)
