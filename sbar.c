@@ -933,8 +933,8 @@ void Sbar_Draw (void)
 					Sbar_DrawWeapon(0, fade, (cl.stats[STAT_ACTIVEWEAPON] == 12));
 			}
 
-			if (!cl.islocalgame)
-				Sbar_DrawFrags ();
+			//if (!cl.islocalgame)
+			//	Sbar_DrawFrags ();
 
 			if (sb_lines > 24)
 				Sbar_DrawAlphaPic (0, 0, sb_sbar, sbar_alpha.value);
@@ -983,7 +983,7 @@ void Sbar_Draw (void)
 		}
 
 		if (vid.conwidth > 320 && cl.gametype == GAME_DEATHMATCH)
-			Sbar_MiniDeathmatchOverlay (0, 0);
+			Sbar_MiniDeathmatchOverlay (0, 17);
 	}
 	else // Quake and others
 	{
