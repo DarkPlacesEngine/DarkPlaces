@@ -37,7 +37,17 @@ int c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c_bmodels
 // true during envmap command capture
 qboolean envmap;
 
+// maximum visible distance (recalculated from world box each frame)
 float r_farclip;
+// brightness of world lightmaps and related lighting
+// (often reduced when world rtlights are enabled)
+float r_lightmapintensity;
+// whether to draw world lights realtime, dlights realtime, and their shadows
+qboolean r_rtworld;
+qboolean r_rtworldshadows;
+qboolean r_rtdlight;
+qboolean r_rtdlightshadows;
+
 
 // forces all rendering to draw triangle outlines
 int r_showtrispass;
@@ -471,30 +481,6 @@ int R_DrawBrushModelsSky (void)
 	return sky;
 }
 
-/*
-=============
-R_DrawViewModel
-=============
-*/
-/*
-void R_DrawViewModel (void)
-{
-	entity_render_t *ent;
-
-	// FIXME: move these checks to client
-	if (!r_drawviewmodel.integer || chase_active.integer || envmap || !r_drawentities.integer || cl.items & IT_INVISIBILITY || cl.stats[STAT_HEALTH] <= 0 || !cl.viewent.render.model)
-		return;
-
-	ent = &cl.viewent.render;
-	Mod_CheckLoaded(ent->model);
-	R_LerpAnimation(ent);
-	Matrix4x4_CreateFromQuakeEntity(&ent->matrix, ent->origin[0], ent->origin[1], ent->origin[2], -ent->angles[0], ent->angles[1], ent->angles[2], ent->scale);
-	Matrix4x4_Invert_Simple(&ent->inversematrix, &ent->matrix);
-	R_UpdateEntLights(ent);
-	ent->model->Draw(ent);
-}
-*/
-
 void R_DrawNoModel(entity_render_t *ent);
 void R_DrawModels(void)
 {
@@ -585,11 +571,13 @@ void R_UpdateWorld(void)
 	if (!r_refdef.entities/* || !cl.worldmodel*/)
 		return; //Host_Error ("R_RenderView: NULL worldmodel");
 
+	/*
 	if (r_shadow_realtime_world.integer && !gl_stencil)
 	{
 		Con_Print("Realtime world lighting requires 32bit color; turning off r_shadow_realtime_world, please type vid_bitsperpixel 32;vid_restart and try again\n");
 		Cvar_SetValueQuick(&r_shadow_realtime_world, 0);
 	}
+	*/
 
 	// don't allow cheats in multiplayer
 	if (!cl.islocalgame && cl.worldmodel)
@@ -627,6 +615,11 @@ void R_RenderView(void)
 	r_view_fov_y = bound(1, r_refdef.fov_y, 170);
 	r_view_matrix = r_refdef.viewentitymatrix;
 	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
+	r_rtworld = r_shadow_realtime_world.integer;
+	r_rtworldshadows = r_rtworld && r_shadow_realtime_world_shadows.integer;
+	r_rtdlight = r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer;
+	r_rtdlightshadows = r_rtdlight && (r_rtworld ? r_shadow_realtime_world_dlightshadows.integer : r_shadow_realtime_dlight_shadows.integer);
+	r_lightmapintensity = r_rtworld ? r_shadow_realtime_world_lightmaps.value : 1;
 
 	// GL is weird because it's bottom to top, r_view_y is top to bottom
 	qglViewport(r_view_x, vid.realheight - (r_view_y + r_view_height), r_view_width, r_view_height);
@@ -670,7 +663,7 @@ void R_RenderScene(void)
 	R_SetFrustum();
 
 	r_farclip = R_FarClip(r_vieworigin, r_viewforward, 768.0f) + 256.0f;
-	if (gl_stencil && (r_shadow_realtime_world.integer || (r_shadow_realtime_dlight.integer && r_shadow_realtime_dlight_shadows.integer)))
+	if (gl_stencil && (r_rtworldshadows || r_rtdlightshadows))
 		GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_view_fov_x, r_view_fov_y, 1.0f);
 	else
 		GL_SetupView_Mode_Perspective(r_view_fov_x, r_view_fov_y, 1.0f, r_farclip);

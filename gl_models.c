@@ -86,7 +86,7 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 			 || ((layer->flags & ALIASLAYER_NODRAW_IF_COLORMAPPED) && ent->colormap >= 0)
 			 || ((layer->flags & ALIASLAYER_FOG) && !fogenabled)
 			 ||  (layer->flags & ALIASLAYER_SPECULAR)
-			 || ((layer->flags & ALIASLAYER_DIFFUSE) && (r_shadow_realtime_world.integer && r_shadow_realtime_world_lightmaps.value <= 0 && r_ambient.integer <= 0 && r_fullbright.integer == 0 && !(ent->effects & EF_FULLBRIGHT))))
+			 || ((layer->flags & ALIASLAYER_DIFFUSE) && (ent->flags & RENDER_LIGHT) && r_lightmapintensity <= 0 && !(ent->flags & RENDER_TRANSPARENT) && r_ambient.integer <= 0))
 				continue;
 		}
 		if (!firstpass || (ent->effects & EF_ADDITIVE))
@@ -129,7 +129,7 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 		}
 		else
 		{
-			fullbright = !(layer->flags & ALIASLAYER_DIFFUSE) || r_fullbright.integer || (ent->effects & EF_FULLBRIGHT);
+			fullbright = !(layer->flags & ALIASLAYER_DIFFUSE) || !(ent->flags & RENDER_LIGHT);
 			if (layer->flags & (ALIASLAYER_COLORMAP_PANTS | ALIASLAYER_COLORMAP_SHIRT))
 			{
 				// 128-224 are backwards ranges
@@ -144,26 +144,23 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 			}
 			else
 				tint[0] = tint[1] = tint[2] = 1;
-			if (r_shadow_realtime_world.integer && !fullbright)
-				VectorScale(tint, r_shadow_realtime_world_lightmaps.value, tint);
+			if (!fullbright && !(ent->flags & RENDER_TRANSPARENT))
+				colorscale *= r_lightmapintensity;
 			colorscale *= ifog;
 			if (fullbright)
 				GL_Color(tint[0] * colorscale, tint[1] * colorscale, tint[2] * colorscale, ent->alpha);
-			else
+			else if (R_LightModel(ambientcolor4f, diffusecolor, diffusenormal, ent, tint[0] * colorscale, tint[1] * colorscale, tint[2] * colorscale, ent->alpha, false))
 			{
-				if (R_LightModel(ambientcolor4f, diffusecolor, diffusenormal, ent, tint[0] * colorscale, tint[1] * colorscale, tint[2] * colorscale, ent->alpha, false))
+				m.pointer_color = varray_color4f;
+				if (normal3f == NULL)
 				{
-					m.pointer_color = varray_color4f;
-					if (normal3f == NULL)
-					{
-						normal3f = varray_normal3f;
-						Mod_BuildNormals(mesh->num_vertices, mesh->num_triangles, vertex3f, mesh->data_element3i, normal3f);
-					}
-					R_LightModel_CalcVertexColors(ambientcolor4f, diffusecolor, diffusenormal, mesh->num_vertices, vertex3f, normal3f, varray_color4f);
+					normal3f = varray_normal3f;
+					Mod_BuildNormals(mesh->num_vertices, mesh->num_triangles, vertex3f, mesh->data_element3i, normal3f);
 				}
-				else
-					GL_Color(ambientcolor4f[0], ambientcolor4f[1], ambientcolor4f[2], ambientcolor4f[3]);
+				R_LightModel_CalcVertexColors(ambientcolor4f, diffusecolor, diffusenormal, mesh->num_vertices, vertex3f, normal3f, varray_color4f);
 			}
+			else
+				GL_Color(ambientcolor4f[0], ambientcolor4f[1], ambientcolor4f[2], ambientcolor4f[3]);
 		}
 		R_Mesh_State(&m);
 		GL_LockArrays(0, mesh->num_vertices);
@@ -196,7 +193,7 @@ void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightor
 	aliasmesh_t *mesh;
 	aliasskin_t *skin;
 	float projectdistance, *vertex3f;
-	if (ent->effects & EF_ADDITIVE || ent->alpha < 1)
+	if (!(ent->flags & RENDER_SHADOW))
 		return;
 	projectdistance = lightradius + ent->model->radius;// - sqrt(DotProduct(relativelightorigin, relativelightorigin));
 	if (projectdistance > 0.1)
@@ -230,9 +227,6 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 	aliaslayer_t *layer;
 	aliasskin_t *skin;
 
-	if (ent->effects & (EF_ADDITIVE | EF_FULLBRIGHT) || ent->alpha < 1)
-		return;
-
 	R_Mesh_Matrix(&ent->matrix);
 
 	fog = 0;
@@ -256,6 +250,7 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 	for (meshnum = 0, mesh = ent->model->alias.aliasdata_meshes;meshnum < ent->model->alias.aliasnum_meshes;meshnum++, mesh++)
 	{
 		skin = R_FetchAliasSkin(ent, mesh);
+		// FIXME: transparent skins need to be lit during the transparent render
 		if (skin->flags & ALIASSKIN_TRANSPARENT)
 			continue;
 		if (ent->frameblend[0].frame == 0 && ent->frameblend[0].lerp == 1)

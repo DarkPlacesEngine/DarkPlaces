@@ -2020,7 +2020,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 	int i, shadow;
 	entity_render_t *ent;
 	float f;
-	vec3_t relativelightorigin, relativeeyeorigin, lightcolor;
+	vec3_t relativelightorigin, relativeeyeorigin, lightcolor, lightcolor2;
 	rtexture_t *cubemaptexture;
 	matrix4x4_t matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz;
 	int numclusters, numsurfaces;
@@ -2103,23 +2103,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 	}
 	*/
 
-#if 1
-	shadow = rtlight->shadow && (rtlight->isstatic ? r_shadow_realtime_world_shadows.integer : (r_shadow_realtime_world.integer ? r_shadow_realtime_world_dlightshadows.integer : r_shadow_realtime_dlight_shadows.integer));
-#else
-	shadow = false;
-	if (rtlight->shadow)
-	{
-		if (rtlight->isstatic)
-			shadow = r_shadow_realtime_world_shadows.integer;
-		else
-		{
-			if (r_shadow_realtime_world.integer)
-				shadow = r_shadow_realtime_world_dlightshadows.integer;
-			else
-				shadow = r_shadow_realtime_dlight_shadows.integer;
-		}
-	}
-#endif
+	shadow = rtlight->shadow && (rtlight->isstatic ? r_rtworldshadows : r_rtdlightshadows);
 
 	if (shadow && (gl_stencil || visiblevolumes))
 	{
@@ -2208,14 +2192,17 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 			for (i = 0;i < r_refdef.numentities;i++)
 			{
 				ent = r_refdef.entities[i];
-				if (ent->visframe == r_framecount && BoxesOverlap(ent->mins, ent->maxs, cullmins, cullmaxs) && ent->model && ent->model->DrawLight && (ent->flags & RENDER_LIGHT))
+				// can't draw transparent entity lighting here because
+				// transparent meshes are deferred for later
+				if (ent->visframe == r_framecount && BoxesOverlap(ent->mins, ent->maxs, cullmins, cullmaxs) && ent->model && ent->model->DrawLight && (ent->flags & (RENDER_LIGHT | RENDER_TRANSPARENT)) == RENDER_LIGHT)
 				{
+					VectorScale(lightcolor, ent->alpha, lightcolor2);
 					Matrix4x4_Transform(&ent->inversematrix, rtlight->shadoworigin, relativelightorigin);
 					Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, relativeeyeorigin);
 					Matrix4x4_Concat(&matrix_modeltolight, &rtlight->matrix_worldtolight, &ent->matrix);
 					Matrix4x4_Concat(&matrix_modeltoattenuationxyz, &rtlight->matrix_worldtoattenuationxyz, &ent->matrix);
 					Matrix4x4_Concat(&matrix_modeltoattenuationz, &rtlight->matrix_worldtoattenuationz, &ent->matrix);
-					ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, rtlight->radius, lightcolor, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, cubemaptexture, ent->model->nummodelsurfaces, ent->model->surfacelist);
+					ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, rtlight->radius, lightcolor2, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, cubemaptexture, ent->model->nummodelsurfaces, ent->model->surfacelist);
 				}
 			}
 		}
@@ -2244,7 +2231,7 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 	}
 	else
 		R_Shadow_Stage_Begin();
-	if (r_shadow_realtime_world.integer)
+	if (r_rtworld)
 	{
 		if (r_shadow_debuglight.integer >= 0)
 		{
@@ -2256,7 +2243,7 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 			for (lnum = 0, light = r_shadow_worldlightchain;light;lnum++, light = light->next)
 				R_DrawRTLight(&light->rtlight, visiblevolumes);
 	}
-	if (r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer)
+	if (r_rtdlight)
 		for (lnum = 0, light = r_dlight;lnum < r_numdlights;lnum++, light++)
 			R_DrawRTLight(&light->rtlight, visiblevolumes);
 

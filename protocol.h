@@ -323,8 +323,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define RENDER_EXTERIORMODEL 8
 #define RENDER_LOWPRECISION 16 // send as low precision coordinates to save bandwidth
 #define RENDER_COLORMAPPED 32
-#define RENDER_SHADOW 64 // cast shadow
-#define RENDER_LIGHT 128 // receive light
+#define RENDER_SHADOW 65536 // cast shadow
+#define RENDER_LIGHT 131072 // receive light
+#define RENDER_TRANSPARENT 262144 // can't light during opaque stage
 
 // this is 80 bytes
 typedef struct
@@ -607,7 +608,7 @@ void EntityFrame4_FreeDatabase(entityframe4_database_t *d);
 // reset a database (resets compression but does not reallocate anything)
 void EntityFrame4_ResetDatabase(entityframe4_database_t *d);
 // updates database to account for a frame-received acknowledgment
-int EntityFrame4_AckFrame(entityframe4_database_t *d, int framenum);
+int EntityFrame4_AckFrame(entityframe4_database_t *d, int framenum, int servermode);
 // writes a frame to the network stream
 void EntityFrame4_WriteFrame(sizebuf_t *msg, entityframe4_database_t *d, int numstates, const entity_state_t *states);
 // reads a frame from the network stream

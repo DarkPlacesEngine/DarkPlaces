@@ -549,8 +549,6 @@ typedef struct model_s
 	int				flags;
 	// engine calculated flags, ones that can not be set in the file
 	int				flags2;
-	// LordHavoc: if true (normally only for sprites) the model/sprite/bmodel is always rendered fullbright
-	int				fullbright;
 	// number of QC accessible frame(group)s in the model
 	int				numframes;
 	// number of QC accessible skin(group)s in the model

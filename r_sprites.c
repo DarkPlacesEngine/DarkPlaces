@@ -91,7 +91,7 @@ void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 
 	R_Mesh_Matrix(&r_identitymatrix);
 
-	if ((ent->model->flags & EF_FULLBRIGHT) || (ent->effects & EF_FULLBRIGHT))
+	if (!(ent->flags & RENDER_LIGHT))
 		color[0] = color[1] = color[2] = 1;
 	else
 	{
@@ -118,7 +118,7 @@ void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 			if (ent->frameblend[i].lerp >= 0.01f)
 			{
 				frame = ent->model->sprite.sprdata_frames + ent->frameblend[i].frame;
-				R_DrawSpriteImage((ent->effects & EF_ADDITIVE) || (ent->model->flags & EF_ADDITIVE), frame, frame->texture, org, up, left, color[0] * ifog, color[1] * ifog, color[2] * ifog, ent->alpha * ent->frameblend[i].lerp);
+				R_DrawSpriteImage((ent->effects & EF_ADDITIVE), frame, frame->texture, org, up, left, color[0] * ifog, color[1] * ifog, color[2] * ifog, ent->alpha * ent->frameblend[i].lerp);
 				if (fog * ent->frameblend[i].lerp >= 0.01f)
 					R_DrawSpriteImage(true, frame, frame->fogtexture, org, up, left, fogcolor[0],fogcolor[1],fogcolor[2], fog * ent->alpha * ent->frameblend[i].lerp);
 			}
@@ -133,7 +133,7 @@ void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 
 		if (frame)
 		{
-			R_DrawSpriteImage((ent->effects & EF_ADDITIVE) || (ent->model->flags & EF_ADDITIVE), frame, frame->texture, org, up, left, color[0] * ifog, color[1] * ifog, color[2] * ifog, ent->alpha);
+			R_DrawSpriteImage((ent->effects & EF_ADDITIVE), frame, frame->texture, org, up, left, color[0] * ifog, color[1] * ifog, color[2] * ifog, ent->alpha);
 			if (fog * ent->frameblend[i].lerp >= 0.01f)
 				R_DrawSpriteImage(true, frame, frame->fogtexture, org, up, left, fogcolor[0],fogcolor[1],fogcolor[2], fog * ent->alpha);
 		}
