@@ -48,7 +48,7 @@ static localentity_t *entspawn(void)
 {
 	int i, best;
 	float bestfreetime;
-	bestfreetime = gametime + 100.0f;
+	bestfreetime = (float) (gametime + 100.0);
 	best = -1;
 	for (i = 0;i < MAX_LOCALENTITIES;i++)
 	{
