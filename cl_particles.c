@@ -173,6 +173,7 @@ float CL_TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int 
 }
 #else
 #include "cl_collision.h"
+#include "image.h"
 #endif
 
 #define MAX_PARTICLES			32768	// default max # of particles at one time
@@ -1758,11 +1759,13 @@ static void R_InitParticleTexture (void)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 #else
-	particlefonttexture = R_LoadTexture2D(particletexturepool, "particlefont", 256, 256, particletexturedata, TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
+	particlefonttexture = loadtextureimage(particletexturepool, "particles/particlefont.tga", 0, 0, false, TEXF_ALPHA | TEXF_PRECACHE);
+	if (!particlefonttexture)
+		particlefonttexture = R_LoadTexture2D(particletexturepool, "particlefont", 256, 256, particletexturedata, TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
 	for (i = 0;i < MAX_PARTICLETEXTURES;i++)
 		particletexture[i].texture = particlefonttexture;
 
-	// beam
+	// nexbeam
 	fractalnoise(&noise1[0][0], 64, 4);
 	m = 0;
 	for (y = 0;y < 64;y++)
@@ -1779,7 +1782,9 @@ static void R_InitParticleTexture (void)
 		}
 	}
 
-	particletexture[tex_beam].texture = R_LoadTexture2D(particletexturepool, "beam", 16, 64, &data2[0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
+	particletexture[tex_beam].texture = loadtextureimage(particletexturepool, "particles/nexbeam.tga", 0, 0, false, TEXF_ALPHA | TEXF_PRECACHE);
+	if (!particletexture[tex_beam].texture)
+		particletexture[tex_beam].texture = R_LoadTexture2D(particletexturepool, "nexbeam", 16, 64, &data2[0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
 	particletexture[tex_beam].s1 = 0;
 	particletexture[tex_beam].t1 = 0;
 	particletexture[tex_beam].s2 = 1;
