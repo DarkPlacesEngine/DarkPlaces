@@ -131,6 +131,7 @@ char *ENGINE_EXTENSIONS =
 "DP_SOLIDCORPSE "
 "DP_SPRITE32 "
 "DP_SV_DRAWONLYTOCLIENT "
+"DP_SV_DROPCLIENT "
 "DP_SV_EFFECT "
 "DP_SV_EXTERIORMODELTOCLIENT "
 "DP_SV_NODRAWTOCLIENT "
@@ -3479,6 +3480,21 @@ void PF_cvar_string (void)
 	G_INT(OFS_RETURN) = PR_SetString(tmp);
 }
 
+//void(entity clent) dropclient (DP_SV_DROPCLIENT)
+void PF_dropclient (void)
+{
+	int clientnum;
+	client_t *oldhostclient;
+	clientnum = G_EDICTNUM(OFS_PARM0) - 1;
+	if (clientnum < 0 || clientnum >= svs.maxclients)
+		PF_WARNING("dropclient: not a client\n");
+	if (!svs.clients[clientnum].active)
+		PF_WARNING("dropclient: that client slot is not connected\n");
+	oldhostclient = host_client;
+	host_client = svs.clients + clientnum;
+	SV_DropClient(false);
+	host_client = oldhostclient;
+}
 
 
 builtin_t pr_builtin[] =
@@ -3660,7 +3676,7 @@ PF_findflags,				// #449 entity(entity start, .float fld, float match) findflags
 PF_findchainflags,			// #450 entity(.float fld, float match) findchainflags (DP_QC_FINDCHAINFLAGS)
 PF_gettagindex,				// #451 float(entity ent, string tagname) gettagindex (DP_QC_GETTAGINFO)
 PF_gettaginfo,				// #452 vector(entity ent, float tagindex) gettaginfo (DP_QC_GETTAGINFO)
-NULL,						// #453
+PF_dropclient,				// #453 void(entity clent) dropclient (DP_SV_DROPCLIENT)
 NULL,						// #454
 NULL,						// #455
 NULL,						// #456
