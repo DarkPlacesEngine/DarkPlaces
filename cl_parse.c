@@ -941,8 +941,12 @@ void CL_ParseTempEntity(void)
 		// spike hitting wall
 		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 4);
-		// LordHavoc: changed to spark shower
-		CL_SparkShower(pos, vec3_origin, 15);
+		if (cl_particles_bulletimpacts.integer)
+		{
+			CL_SparkShower(pos, vec3_origin, 15, 1);
+			CL_Smoke(pos, vec3_origin, 15);
+			CL_BulletMark(pos);
+		}
 		if (rand() % 5)
 			S_StartSound(-1, 0, cl_sfx_tink1, pos, 1, 1);
 		else
@@ -961,7 +965,12 @@ void CL_ParseTempEntity(void)
 		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 4);
 		// LordHavoc: changed to spark shower
-		CL_SparkShower(pos, vec3_origin, 15);
+		if (cl_particles_bulletimpacts.integer)
+		{
+			CL_SparkShower(pos, vec3_origin, 15, 1);
+			CL_Smoke(pos, vec3_origin, 15);
+			CL_BulletMark(pos);
+		}
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, 0, true, 1);
 		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
@@ -983,7 +992,12 @@ void CL_ParseTempEntity(void)
 		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 4);
 		// LordHavoc: changed to dust shower
-		CL_SparkShower(pos, vec3_origin, 30);
+		if (cl_particles_bulletimpacts.integer)
+		{
+			CL_SparkShower(pos, vec3_origin, 30, 1);
+			CL_Smoke(pos, vec3_origin, 30);
+			CL_BulletMark(pos);
+		}
 		if (rand() % 5)
 			S_StartSound(-1, 0, cl_sfx_tink1, pos, 1, 1);
 		else
@@ -1002,7 +1016,12 @@ void CL_ParseTempEntity(void)
 		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 4);
 		// LordHavoc: changed to dust shower
-		CL_SparkShower(pos, vec3_origin, 30);
+		if (cl_particles_bulletimpacts.integer)
+		{
+			CL_SparkShower(pos, vec3_origin, 30, 1);
+			CL_Smoke(pos, vec3_origin, 30);
+			CL_BulletMark(pos);
+		}
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, 0, true, 1);
 		if (rand() % 5)
@@ -1037,7 +1056,7 @@ void CL_ParseTempEntity(void)
 		dir[1] = MSG_ReadChar();
 		dir[2] = MSG_ReadChar();
 		count = MSG_ReadByte();
-		CL_SparkShower(pos, dir, count);
+		CL_SparkShower(pos, dir, count, 1);
 		break;
 	case TE_PLASMABURN:
 		MSG_ReadVector(pos, cl.protocol);
@@ -1091,15 +1110,18 @@ void CL_ParseTempEntity(void)
 		// bullet hitting wall
 		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 4);
-		// LordHavoc: changed to dust shower
-		CL_SparkShower(pos, vec3_origin, 15);
+		CL_SparkShower(pos, vec3_origin, 15, 1);
+		CL_Smoke(pos, vec3_origin, 15);
+		CL_BulletMark(pos);
 		break;
 
 	case TE_GUNSHOTQUAD:
 		// quad bullet hitting wall
 		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 4);
-		CL_SparkShower(pos, vec3_origin, 15);
+		CL_SparkShower(pos, vec3_origin, 15, 1);
+		CL_Smoke(pos, vec3_origin, 15);
+		CL_BulletMark(pos);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, 0, true, 1);
 		break;

@@ -782,44 +782,51 @@ void CL_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count)
 CL_SparkShower
 ===============
 */
-void CL_SparkShower (vec3_t org, vec3_t dir, int count)
+void CL_SparkShower (vec3_t org, vec3_t dir, int count, vec_t gravityscale)
+{
+	int k;
+
+	if (!cl_particles.integer) return;
+
+	if (cl_particles_sparks.integer)
+	{
+		// sparks
+		count *= cl_particles_quality.value;
+		while(count--)
+		{
+			k = particlepalette[0x68 + (rand() & 7)];
+			particle(pt_static, PARTICLE_SPARK, k, k, tex_particle, false, PBLEND_ADD, 0.4f, 0.015f, (1.0f / cl_particles_quality.value) * lhrandom(64, 255), (1.0f / cl_particles_quality.value) * 512, 9999, gravityscale, 0, org[0], org[1], org[2], lhrandom(-64, 64) + dir[0], lhrandom(-64, 64) + dir[1], lhrandom(0, 128) + dir[2], 0, 0, 0, 0, 0, 0);
+		}
+	}
+}
+
+void CL_Smoke (vec3_t org, vec3_t dir, int count)
 {
 	vec3_t org2, org3;
 	int k;
 
+	if (!cl_particles.integer) return;
+
+	// smoke puff
+	if (cl_particles_smoke.integer)
+	{
+		k = count * 0.25 * cl_particles_quality.value;
+		while(k--)
+		{
+			org2[0] = org[0] + 0.125f * lhrandom(-count, count);
+			org2[1] = org[1] + 0.125f * lhrandom(-count, count);
+			org2[2] = org[2] + 0.125f * lhrandom(-count, count);
+			CL_TraceLine(org, org2, org3, NULL, true, NULL, SUPERCONTENTS_SOLID);
+			particle(pt_grow, PARTICLE_BILLBOARD, 0x101010, 0x202020, tex_smoke[rand()&7], true, PBLEND_ADD, 3, 3, (1.0f / cl_particles_quality.value) * 255, (1.0f / cl_particles_quality.value) * 1024, 9999, 0, 0, org3[0], org3[1], org3[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 15, 0, 0, 0, 0, 0);
+		}
+	}
+}
+
+void CL_BulletMark (vec3_t org)
+{
 	if (cl_stainmaps.integer)
 		R_Stain(org, 32, 96, 96, 96, 24, 128, 128, 128, 24);
 	CL_SpawnDecalParticleForPoint(org, 6, 3, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
-
-	if (!cl_particles.integer) return;
-
-	if (cl_particles_bulletimpacts.integer)
-	{
-		// smoke puff
-		if (cl_particles_smoke.integer)
-		{
-			k = count * 0.25 * cl_particles_quality.value;
-			while(k--)
-			{
-				org2[0] = org[0] + 0.125f * lhrandom(-count, count);
-				org2[1] = org[1] + 0.125f * lhrandom(-count, count);
-				org2[2] = org[2] + 0.125f * lhrandom(-count, count);
-				CL_TraceLine(org, org2, org3, NULL, true, NULL, SUPERCONTENTS_SOLID);
-				particle(pt_grow, PARTICLE_BILLBOARD, 0x101010, 0x202020, tex_smoke[rand()&7], true, PBLEND_ADD, 3, 3, (1.0f / cl_particles_quality.value) * 255, (1.0f / cl_particles_quality.value) * 1024, 9999, -0.2, 0, org3[0], org3[1], org3[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(0, 16), 15, 0, 0, 0, 0.2, 0);
-			}
-		}
-
-		if (cl_particles_sparks.integer)
-		{
-			// sparks
-			count *= cl_particles_quality.value;
-			while(count--)
-			{
-				k = particlepalette[0x68 + (rand() & 7)];
-				particle(pt_static, PARTICLE_SPARK, k, k, tex_particle, false, PBLEND_ADD, 0.4f, 0.015f, (1.0f / cl_particles_quality.value) * lhrandom(64, 255), (1.0f / cl_particles_quality.value) * 512, 9999, 1, 0, org[0], org[1], org[2], lhrandom(-64, 64) + dir[0], lhrandom(-64, 64) + dir[1], lhrandom(0, 128) + dir[2], 0, 0, 0, 0, 0.2, 0);
-			}
-		}
-	}
 }
 
 void CL_PlasmaBurn (vec3_t org)
