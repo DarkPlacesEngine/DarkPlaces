@@ -498,7 +498,7 @@ void DrawQ_String_Real(float x, float y, const char *string, int maxlen, float s
 	for (;len > 0 && string[len - 1] == ' ';len--);
 	if (len < 1)
 		return;
-	if (x >= vid.conwidth || y >= vid.conheight || x < (-scalex * maxlen) || y < (-scaley))
+	if (x >= vid.conwidth || y >= vid.conheight || x < (-scalex * len) || y < (-scaley))
 		return;
 	size = sizeof(*dq) + ((len + 1 + 3) & ~3);
 	if (r_refdef.drawqueuesize + size > r_refdef.maxdrawqueuesize)
