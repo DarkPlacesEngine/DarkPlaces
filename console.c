@@ -653,7 +653,10 @@ void Con_DrawNotify (void)
 		Cvar_SetValueQuick(&con_notify, 0);
 	if (con_notify.integer > MAX_NOTIFYLINES)
 		Cvar_SetValueQuick(&con_notify, MAX_NOTIFYLINES);
-	v = 0;
+	if (gamemode == GAME_TRANSFUSION)
+		v = 8;
+	else
+		v = 0;
 	for (i= con_current-con_notify.integer+1 ; i<=con_current ; i++)
 	{
 		if (i < 0)
