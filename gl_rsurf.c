@@ -1296,7 +1296,7 @@ static void R_DrawSurfaceChain(const entity_render_t *ent, const texture_t *text
 				}
 			}
 		}
-		else if (ent->effects & EF_FULLBRIGHT)
+		else if (ent->effects & EF_FULLBRIGHT || r_fullbright.integer)
 		{
 			RSurfShader_OpaqueWall_Pass_BaseTexture(ent, texture, surfchain);
 			if (r_detailtextures.integer)
