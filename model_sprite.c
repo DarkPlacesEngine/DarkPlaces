@@ -121,7 +121,7 @@ static void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette
 	}
 
 	loadmodel->animscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numframes);
-	loadmodel->sprdata_frames = Mem_Alloc(loadmodel->mempool, sizeof(mspriteframe_t) * realframes);
+	loadmodel->sprite.sprdata_frames = Mem_Alloc(loadmodel->mempool, sizeof(mspriteframe_t) * realframes);
 
 	datapointer = startframes;
 	realframes = 0;
@@ -166,13 +166,13 @@ static void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette
 			width = LittleLong (pinframe->width);
 			height = LittleLong (pinframe->height);
 
-			loadmodel->sprdata_frames[realframes].left = origin[0];
-			loadmodel->sprdata_frames[realframes].right = origin[0] + width;
-			loadmodel->sprdata_frames[realframes].up = origin[1];
-			loadmodel->sprdata_frames[realframes].down = origin[1] - height;
+			loadmodel->sprite.sprdata_frames[realframes].left = origin[0];
+			loadmodel->sprite.sprdata_frames[realframes].right = origin[0] + width;
+			loadmodel->sprite.sprdata_frames[realframes].up = origin[1];
+			loadmodel->sprite.sprdata_frames[realframes].down = origin[1] - height;
 
-			x = max(loadmodel->sprdata_frames[realframes].left * loadmodel->sprdata_frames[realframes].left, loadmodel->sprdata_frames[realframes].right * loadmodel->sprdata_frames[realframes].right);
-			y = max(loadmodel->sprdata_frames[realframes].up * loadmodel->sprdata_frames[realframes].up, loadmodel->sprdata_frames[realframes].down * loadmodel->sprdata_frames[realframes].down);
+			x = max(loadmodel->sprite.sprdata_frames[realframes].left * loadmodel->sprite.sprdata_frames[realframes].left, loadmodel->sprite.sprdata_frames[realframes].right * loadmodel->sprite.sprdata_frames[realframes].right);
+			y = max(loadmodel->sprite.sprdata_frames[realframes].up * loadmodel->sprite.sprdata_frames[realframes].up, loadmodel->sprite.sprdata_frames[realframes].down * loadmodel->sprite.sprdata_frames[realframes].down);
 			if (modelradius < x + y)
 				modelradius = x + y;
 
@@ -182,10 +182,10 @@ static void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette
 					sprintf (name, "%s_%i_%i", tempname, i, j);
 				else
 					sprintf (name, "%s_%i", tempname, i);
-				loadmodel->sprdata_frames[realframes].texture = loadtextureimagewithmask(loadmodel->texturepool, name, 0, 0, false, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE);
-				loadmodel->sprdata_frames[realframes].fogtexture = image_masktex;
+				loadmodel->sprite.sprdata_frames[realframes].texture = loadtextureimagewithmask(loadmodel->texturepool, name, 0, 0, false, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE);
+				loadmodel->sprite.sprdata_frames[realframes].fogtexture = image_masktex;
 
-				if (!loadmodel->sprdata_frames[realframes].texture)
+				if (!loadmodel->sprite.sprdata_frames[realframes].texture)
 				{
 					pixbuf = Mem_Alloc(tempmempool, width*height*4);
 					if (version == SPRITE32_VERSION)
@@ -193,7 +193,7 @@ static void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette
 					else //if (version == SPRITE_VERSION || version == SPRITEHL_VERSION)
 						Image_Copy8bitRGBA(datapointer, pixbuf, width*height, palette);
 
-					loadmodel->sprdata_frames[realframes].texture = R_LoadTexture2D (loadmodel->texturepool, name, width, height, pixbuf, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE, NULL);
+					loadmodel->sprite.sprdata_frames[realframes].texture = R_LoadTexture2D (loadmodel->texturepool, name, width, height, pixbuf, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE, NULL);
 
 					// make fog version (just alpha)
 					for (k = 0;k < width*height;k++)
@@ -206,7 +206,7 @@ static void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette
 						sprintf (name, "%s_%i_%ifog", tempname, i, j);
 					else
 						sprintf (name, "%s_%ifog", tempname, i);
-					loadmodel->sprdata_frames[realframes].fogtexture = R_LoadTexture2D (loadmodel->texturepool, name, width, height, pixbuf, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE, NULL);
+					loadmodel->sprite.sprdata_frames[realframes].fogtexture = R_LoadTexture2D (loadmodel->texturepool, name, width, height, pixbuf, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE, NULL);
 
 					Mem_Free(pixbuf);
 				}
@@ -254,7 +254,7 @@ void Mod_IDSP_Load(model_t *mod, void *buffer)
 		datapointer += sizeof(dsprite_t);
 
 		loadmodel->numframes = LittleLong (pinqsprite->numframes);
-		loadmodel->sprnum_type = LittleLong (pinqsprite->type);
+		loadmodel->sprite.sprnum_type = LittleLong (pinqsprite->type);
 		loadmodel->synctype = LittleLong (pinqsprite->synctype);
 
 		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinqsprite->version), palette_complete);
@@ -265,7 +265,7 @@ void Mod_IDSP_Load(model_t *mod, void *buffer)
 		datapointer += sizeof(dspritehl_t);
 
 		loadmodel->numframes = LittleLong (pinhlsprite->numframes);
-		loadmodel->sprnum_type = LittleLong (pinhlsprite->type);
+		loadmodel->sprite.sprnum_type = LittleLong (pinhlsprite->type);
 		loadmodel->synctype = LittleLong (pinhlsprite->synctype);
 		rendermode = pinhlsprite->rendermode;
 

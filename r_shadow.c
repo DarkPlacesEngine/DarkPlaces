@@ -145,6 +145,8 @@ cvar_t r_shadow_realtime_world = {0, "r_shadow_realtime_world", "0"};
 cvar_t r_shadow_realtime_dlight = {0, "r_shadow_realtime_dlight", "0"};
 cvar_t r_shadow_visiblevolumes = {0, "r_shadow_visiblevolumes", "0"};
 cvar_t r_shadow_gloss = {0, "r_shadow_gloss", "1"};
+cvar_t r_shadow_glossintensity = {0, "r_shadow_glossintensity", "1"};
+cvar_t r_shadow_gloss2intensity = {0, "r_shadow_gloss2intensity", "0.25"};
 cvar_t r_shadow_debuglight = {0, "r_shadow_debuglight", "-1"};
 cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1"};
 cvar_t r_shadow_bumpscale_bumpmap = {0, "r_shadow_bumpscale_bumpmap", "4"};
@@ -227,6 +229,8 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_realtime_dlight);
 	Cvar_RegisterVariable(&r_shadow_visiblevolumes);
 	Cvar_RegisterVariable(&r_shadow_gloss);
+	Cvar_RegisterVariable(&r_shadow_glossintensity);
+	Cvar_RegisterVariable(&r_shadow_gloss2intensity);
 	Cvar_RegisterVariable(&r_shadow_debuglight);
 	Cvar_RegisterVariable(&r_shadow_scissor);
 	Cvar_RegisterVariable(&r_shadow_bumpscale_bumpmap);
@@ -749,7 +753,7 @@ void R_Shadow_Stage_Begin(void)
 	if (r_shadow_texture3d.integer && !gl_texture3d)
 		Cvar_SetValueQuick(&r_shadow_texture3d, 0);
 
-	//cl.worldmodel->numlights = min(cl.worldmodel->numlights, 1);
+	//cl.worldmodel->brushq1.numlights = min(cl.worldmodel->brushq1.numlights, 1);
 	if (!r_shadow_attenuation2dtexture
 	 || (!r_shadow_attenuation3dtexture && r_shadow_texture3d.integer)
 	 || r_shadow_lightattenuationpower.value != r_shadow_attenpower
@@ -1595,16 +1599,19 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elements, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *texcoord2f, const float *relativelightorigin, const float *relativeeyeorigin, float lightradius, const float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *glosstexture, rtexture_t *bumptexture, rtexture_t *lightcubemap)
 {
 	int renders;
-	float color[3], color2[3];
+	float color[3], color2[3], colorscale;
 	rmeshstate_t m;
 	if (!gl_dot3arb || !gl_texturecubemap || !gl_combine.integer || !gl_stencil)
 		return;
-	if (!bumptexture)
-		bumptexture = r_shadow_blankbumptexture;
 	if (!glosstexture)
 		glosstexture = r_shadow_blankglosstexture;
 	if (r_shadow_gloss.integer >= 2 || (r_shadow_gloss.integer >= 1 && glosstexture != r_shadow_blankglosstexture))
 	{
+		colorscale = r_colorscale * r_shadow_glossintensity.value;
+		if (!bumptexture)
+			bumptexture = r_shadow_blankbumptexture;
+		if (glosstexture == r_shadow_blankglosstexture)
+			colorscale *= r_shadow_gloss2intensity.value;
 		GL_VertexPointer(vertex3f);
 		GL_Color(1,1,1,1);
 		if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && lightcubemap /*&& gl_support_blendsquare*/) // FIXME: detect blendsquare!
@@ -1660,7 +1667,7 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 			if (lightcubemap)
 				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltofilter);
-			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value * 0.25f, color2);
+			VectorScale(lightcolor, colorscale, color2);
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
 			{
 				color[0] = bound(0, color2[0], 1);
@@ -1714,7 +1721,7 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			qglColorMask(1,1,1,0);
 			GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 			R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltoattenuationxyz);
-			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value * 0.25f, color2);
+			VectorScale(lightcolor, colorscale, color2);
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
 			{
 				color[0] = bound(0, color2[0], 1);
@@ -1782,7 +1789,7 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 			if (lightcubemap)
 				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltofilter);
-			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value * 0.25f, color2);
+			VectorScale(lightcolor, colorscale, color2);
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
 			{
 				color[0] = bound(0, color2[0], 1);
@@ -1863,22 +1870,22 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 	if (cl.worldmodel)
 	{
 		castshadowcount++;
-		i = cl.worldmodel->PointContents(cl.worldmodel, e->origin);
+		i = CL_PointContents(e->origin);
 		if (r_shadow_portallight.integer && i != CONTENTS_SOLID && i != CONTENTS_SKY)
 		{
 			qbyte *byteleafpvs;
 			qbyte *bytesurfacepvs;
 
-			byteleafpvs = Mem_Alloc(tempmempool, cl.worldmodel->numleafs + 1);
-			bytesurfacepvs = Mem_Alloc(tempmempool, cl.worldmodel->numsurfaces);
+			byteleafpvs = Mem_Alloc(tempmempool, cl.worldmodel->brushq1.numleafs + 1);
+			bytesurfacepvs = Mem_Alloc(tempmempool, cl.worldmodel->brushq1.numsurfaces);
 
 			Portal_Visibility(cl.worldmodel, e->origin, byteleafpvs, bytesurfacepvs, NULL, 0, true, RadiusFromBoundsAndOrigin(e->mins, e->maxs, e->origin));
 
-			for (i = 0, leaf = cl.worldmodel->leafs + 1;i < cl.worldmodel->numleafs;i++, leaf++)
+			for (i = 0, leaf = cl.worldmodel->brushq1.leafs + 1;i < cl.worldmodel->brushq1.numleafs;i++, leaf++)
 				if (byteleafpvs[i+1] && BoxesOverlap(leaf->mins, leaf->maxs, e->mins, e->maxs))
 					leaf->worldnodeframe = castshadowcount;
 
-			for (i = 0, surf = cl.worldmodel->surfaces;i < cl.worldmodel->numsurfaces;i++, surf++)
+			for (i = 0, surf = cl.worldmodel->brushq1.surfaces;i < cl.worldmodel->brushq1.numsurfaces;i++, surf++)
 				if (bytesurfacepvs[i] && BoxesOverlap(surf->poly_mins, surf->poly_maxs, e->mins, e->maxs))
 					surf->castshadow = castshadowcount;
 
@@ -1887,16 +1894,16 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 		}
 		else
 		{
-			leaf = cl.worldmodel->PointInLeaf(cl.worldmodel, origin);
-			pvs = cl.worldmodel->LeafPVS(cl.worldmodel, leaf);
-			for (i = 0, leaf = cl.worldmodel->leafs + 1;i < cl.worldmodel->numleafs;i++, leaf++)
+			leaf = cl.worldmodel->brushq1.PointInLeaf(cl.worldmodel, origin);
+			pvs = cl.worldmodel->brushq1.LeafPVS(cl.worldmodel, leaf);
+			for (i = 0, leaf = cl.worldmodel->brushq1.leafs + 1;i < cl.worldmodel->brushq1.numleafs;i++, leaf++)
 			{
 				if (pvs[i >> 3] & (1 << (i & 7)) && BoxesOverlap(leaf->mins, leaf->maxs, e->mins, e->maxs))
 				{
 					leaf->worldnodeframe = castshadowcount;
 					for (j = 0, mark = leaf->firstmarksurface;j < leaf->nummarksurfaces;j++, mark++)
 					{
-						surf = cl.worldmodel->surfaces + *mark;
+						surf = cl.worldmodel->brushq1.surfaces + *mark;
 						if (surf->castshadow != castshadowcount && BoxesOverlap(surf->poly_mins, surf->poly_maxs, e->mins, e->maxs))
 							surf->castshadow = castshadowcount;
 					}
@@ -1905,11 +1912,11 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 		}
 
 		e->numleafs = 0;
-		for (i = 0, leaf = cl.worldmodel->leafs + 1;i < cl.worldmodel->numleafs;i++, leaf++)
+		for (i = 0, leaf = cl.worldmodel->brushq1.leafs + 1;i < cl.worldmodel->brushq1.numleafs;i++, leaf++)
 			if (leaf->worldnodeframe == castshadowcount)
 				e->numleafs++;
 		e->numsurfaces = 0;
-		for (i = 0, surf = cl.worldmodel->surfaces + cl.worldmodel->firstmodelsurface;i < cl.worldmodel->nummodelsurfaces;i++, surf++)
+		for (i = 0, surf = cl.worldmodel->brushq1.surfaces + cl.worldmodel->brushq1.firstmodelsurface;i < cl.worldmodel->brushq1.nummodelsurfaces;i++, surf++)
 			if (surf->castshadow == castshadowcount)
 				e->numsurfaces++;
 
@@ -1918,11 +1925,11 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 		if (e->numsurfaces)
 			e->surfaces = Mem_Alloc(r_shadow_mempool, e->numsurfaces * sizeof(msurface_t *));
 		e->numleafs = 0;
-		for (i = 0, leaf = cl.worldmodel->leafs + 1;i < cl.worldmodel->numleafs;i++, leaf++)
+		for (i = 0, leaf = cl.worldmodel->brushq1.leafs + 1;i < cl.worldmodel->brushq1.numleafs;i++, leaf++)
 			if (leaf->worldnodeframe == castshadowcount)
 				e->leafs[e->numleafs++] = leaf;
 		e->numsurfaces = 0;
-		for (i = 0, surf = cl.worldmodel->surfaces + cl.worldmodel->firstmodelsurface;i < cl.worldmodel->nummodelsurfaces;i++, surf++)
+		for (i = 0, surf = cl.worldmodel->brushq1.surfaces + cl.worldmodel->brushq1.firstmodelsurface;i < cl.worldmodel->brushq1.nummodelsurfaces;i++, surf++)
 			if (surf->castshadow == castshadowcount)
 				e->surfaces[e->numsurfaces++] = surf;
 
@@ -2253,7 +2260,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 		Con_Printf("No map loaded.\n");
 		return;
 	}
-	data = cl.worldmodel->entities;
+	data = cl.worldmodel->brush.entities;
 	if (!data)
 		return;
 	for (entnum = 0;COM_ParseToken(&data) && com_token[0] == '{';entnum++)

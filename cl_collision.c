@@ -90,3 +90,18 @@ float CL_TraceLine (const vec3_t start, const vec3_t end, vec3_t impact, vec3_t 
 	return maxfrac;
 }
 
+void CL_FindNonSolidLocation(const vec3_t in, vec3_t out, vec_t radius)
+{
+	// FIXME: check multiple brush models
+	if (cl.worldmodel && cl.worldmodel->brushq1.FindNonSolidLocation)
+		cl.worldmodel->brushq1.FindNonSolidLocation(cl.worldmodel, in, out, radius);
+}
+
+int CL_PointContents(const vec3_t p)
+{
+	// FIXME: check multiple brush models
+	if (cl.worldmodel && cl.worldmodel->brushq1.PointContents)
+		return cl.worldmodel->brushq1.PointContents(cl.worldmodel, p);
+	return CONTENTS_EMPTY;
+}
+

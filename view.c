@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // view.c -- player eye positioning
 
 #include "quakedef.h"
+#include "cl_collision.h"
 
 /*
 
@@ -397,7 +398,7 @@ void V_CalcRefdef (void)
 			cl.cshifts[CSHIFT_BONUS].percent = 0;
 
 		// set contents color
-		switch (cl.worldmodel ? cl.worldmodel->PointContents(cl.worldmodel, r_refdef.vieworg) : CONTENTS_EMPTY)
+		switch (CL_PointContents(r_refdef.vieworg))
 		{
 		case CONTENTS_EMPTY:
 		case CONTENTS_SOLID:

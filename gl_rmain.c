@@ -231,8 +231,8 @@ void gl_main_newmap(void)
 				return;
 			}
 		}
-		if (cl.worldmodel->entities)
-			CL_ParseEntityLump(cl.worldmodel->entities);
+		if (cl.worldmodel->brush.entities)
+			CL_ParseEntityLump(cl.worldmodel->brush.entities);
 	}
 }
 
@@ -404,13 +404,13 @@ int PVS_CullBox(const vec3_t mins, const vec3_t maxs)
 	if (cl.worldmodel == NULL)
 		return false;
 	stackpos = 0;
-	stack[stackpos++] = cl.worldmodel->nodes;
+	stack[stackpos++] = cl.worldmodel->brushq1.nodes;
 	while (stackpos)
 	{
 		node = stack[--stackpos];
 		if (node->contents < 0)
 		{
-			if (((mleaf_t *)node)->pvsframe == cl.worldmodel->pvsframecount)
+			if (((mleaf_t *)node)->pvsframe == cl.worldmodel->brushq1.pvsframecount)
 				return false;
 		}
 		else
@@ -434,7 +434,7 @@ int VIS_CullBox(const vec3_t mins, const vec3_t maxs)
 	if (cl.worldmodel == NULL)
 		return false;
 	stackpos = 0;
-	stack[stackpos++] = cl.worldmodel->nodes;
+	stack[stackpos++] = cl.worldmodel->brushq1.nodes;
 	while (stackpos)
 	{
 		node = stack[--stackpos];
@@ -471,13 +471,13 @@ int PVS_CullSphere(const vec3_t origin, vec_t radius)
 	if (cl.worldmodel == NULL)
 		return false;
 	stackpos = 0;
-	stack[stackpos++] = cl.worldmodel->nodes;
+	stack[stackpos++] = cl.worldmodel->brushq1.nodes;
 	while (stackpos)
 	{
 		node = stack[--stackpos];
 		if (node->contents < 0)
 		{
-			if (((mleaf_t *)node)->pvsframe == cl.worldmodel->pvsframecount)
+			if (((mleaf_t *)node)->pvsframe == cl.worldmodel->brushq1.pvsframecount)
 				return false;
 		}
 		else
@@ -502,7 +502,7 @@ int VIS_CullSphere(const vec3_t origin, vec_t radius)
 	if (cl.worldmodel == NULL)
 		return false;
 	stackpos = 0;
-	stack[stackpos++] = cl.worldmodel->nodes;
+	stack[stackpos++] = cl.worldmodel->brushq1.nodes;
 	while (stackpos)
 	{
 		node = stack[--stackpos];
@@ -659,7 +659,7 @@ int Light_CullBox(const vec3_t mins, const vec3_t maxs)
 	if (cl.worldmodel == NULL)
 		return false;
 	stackpos = 0;
-	stack[stackpos++] = cl.worldmodel->nodes;
+	stack[stackpos++] = cl.worldmodel->brushq1.nodes;
 	while (stackpos)
 	{
 		node = stack[--stackpos];
@@ -689,7 +689,7 @@ int LightAndVis_CullBox(const vec3_t mins, const vec3_t maxs)
 	if (cl.worldmodel == NULL)
 		return false;
 	stackpos = 0;
-	stack[stackpos++] = cl.worldmodel->nodes;
+	stack[stackpos++] = cl.worldmodel->brushq1.nodes;
 	while (stackpos)
 	{
 		node = stack[--stackpos];
@@ -721,7 +721,7 @@ int LightAndVis_CullPointCloud(int numpoints, const float *points)
 	if (cl.worldmodel == NULL)
 		return false;
 	stackpos = 0;
-	stack[stackpos++] = cl.worldmodel->nodes;
+	stack[stackpos++] = cl.worldmodel->brushq1.nodes;
 	while (stackpos)
 	{
 		node = stack[--stackpos];

@@ -689,11 +689,7 @@ void S_UpdateAmbientSounds (void)
 	for (ambient_channel = 0 ; ambient_channel < NUM_AMBIENTS;ambient_channel++)
 		channels[ambient_channel].sfx = NULL;
 
-	if (!snd_ambient || !cl.worldmodel || ambient_level.value <= 0)
-		return;
-
-	l = cl.worldmodel->PointInLeaf(cl.worldmodel, listener_origin);
-	if (!l)
+	if (!snd_ambient || ambient_level.value <= 0 || !cl.worldmodel || !cl.worldmodel->brushq1.PointInLeaf || (l = cl.worldmodel->brushq1.PointInLeaf(cl.worldmodel, listener_origin)) == NULL)
 		return;
 
 // calc ambient sound levels
