@@ -275,10 +275,10 @@ sfx_t *S_GetCached (const char *name)
 
 	if (!snd_initialized)
 		return NULL;
-	
+
 	if (!name)
 		Host_Error("S_IsCached: NULL\n");
-	
+
 	if (strlen(name) >= MAX_QPATH)
 		Host_Error("Sound name too long: %s", name);
 
@@ -900,7 +900,7 @@ console functions
 ===============================================================================
 */
 
-void S_Play(void)
+static void S_Play_Common(float fvol, float attenuation)
 {
 	int 	i;
 	char name[256];
@@ -910,62 +910,37 @@ void S_Play(void)
 	while (i<Cmd_Argc())
 	{
 		if (!strrchr(Cmd_Argv(i), '.'))
+			snprintf(name, sizeof(name), "%s.wav", Cmd_Argv(i));
+		else
+			strlcpy(name, Cmd_Argv(i), sizeof(name));
+		sfx = S_PrecacheSound(name, true);
+
+		// If we need to get the volume from the command line
+		if (fvol == -1.0f)
 		{
-			strcpy(name, Cmd_Argv(i));
-			strcat(name, ".wav");
+			fvol = atof(Cmd_Argv(i+1));
+			i += 2;
 		}
 		else
-			strcpy(name, Cmd_Argv(i));
-		sfx = S_PrecacheSound(name, true);
-		S_StartSound(-1, 0, sfx, listener_origin, 1.0, 1.0);
-		i++;
+			i++;
+
+		S_StartSound(-1, 0, sfx, listener_origin, fvol, attenuation);
 	}
+}
+
+void S_Play(void)
+{
+	S_Play_Common (1.0f, 1.0f);
 }
 
 void S_Play2(void)
 {
-	int 	i;
-	char name[256];
-	sfx_t	*sfx;
-
-	i = 1;
-	while (i<Cmd_Argc())
-	{
-		if (!strrchr(Cmd_Argv(i), '.'))
-		{
-			strcpy(name, Cmd_Argv(i));
-			strcat(name, ".wav");
-		}
-		else
-			strcpy(name, Cmd_Argv(i));
-		sfx = S_PrecacheSound(name, true);
-		S_StartSound(-1, 0, sfx, listener_origin, 1.0, 0.0);
-		i++;
-	}
+	S_Play_Common (1.0f, 0.0f);
 }
 
 void S_PlayVol(void)
 {
-	int i;
-	float vol;
-	char name[256];
-	sfx_t	*sfx;
-
-	i = 1;
-	while (i<Cmd_Argc())
-	{
-		if (!strrchr(Cmd_Argv(i), '.'))
-		{
-			strcpy(name, Cmd_Argv(i));
-			strcat(name, ".wav");
-		}
-		else
-			strcpy(name, Cmd_Argv(i));
-		sfx = S_PrecacheSound(name, true);
-		vol = atof(Cmd_Argv(i+1));
-		S_StartSound(-1, 0, sfx, listener_origin, vol, 1.0);
-		i+=2;
-	}
+	S_Play_Common (-1.0f, 0.0f);
 }
 
 void S_SoundList(void)
