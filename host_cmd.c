@@ -786,8 +786,9 @@ void Host_Version_f (void)
 void Host_Say(qboolean teamonly)
 {
 	client_t *save;
-	int j;
+	int j, quoted;
 	const char *p1;
+	char *p2;
 	// LordHavoc: 256 char say messages
 	unsigned char text[256];
 	qboolean fromServer = false;
@@ -814,10 +815,24 @@ void Host_Say(qboolean teamonly)
 
 // turn on color set 1
 	p1 = Cmd_Args();
+	quoted = false;
+	if (*p1 == '\"')
+	{
+		quoted = true;
+		p1++;
+	}
 	if (!fromServer)
-		snprintf (text, sizeof(text), "%c%s: %s\n", 1, host_client->name, p1);
+		snprintf (text, sizeof(text), "%c%s: %s", 1, host_client->name, p1);
 	else
-		snprintf (text, sizeof(text), "%c<%s> %s\n", 1, hostname.string, p1);
+		snprintf (text, sizeof(text), "%c<%s> %s", 1, hostname.string, p1);
+	p2 = text + strlen(text);
+	while ((const char *)p2 > (const char *)text && (p2[-1] == '\r' || p2[-1] == '\n' || (p2[-1] == '\"' && quoted)))
+	{
+		if (p2[-1] == '\"' && quoted)
+			quoted = false;
+		p2[-1] = 0;
+		p2--;
+	}
 
 	// note: save is not a valid edict if fromServer is true
 	save = host_client;
