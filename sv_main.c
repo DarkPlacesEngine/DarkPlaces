@@ -383,7 +383,7 @@ void SV_CheckForNewClients (void)
 		SV_ConnectClient (i);
 
 		net_activeconnections++;
-		NET_Heartbeat ();
+		NET_Heartbeat (1);
 	}
 }
 
@@ -1843,6 +1843,6 @@ void SV_SpawnServer (const char *server)
 			SV_SendServerinfo (host_client);
 
 	Con_DPrintf ("Server spawned.\n");
-	NET_Heartbeat ();
+	NET_Heartbeat (2);
 }
 

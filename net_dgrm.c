@@ -1211,7 +1211,7 @@ void Datagram_SearchForHosts (qboolean xmit)
 }
 
 
-static qboolean _Datagram_SearchForInetHosts (char *master)
+static qboolean _Datagram_SearchForInetHosts (const char *master)
 {
 	qboolean result = false;
 	struct qsockaddr masteraddr;
@@ -1253,7 +1253,7 @@ static qboolean _Datagram_SearchForInetHosts (char *master)
 }
 
 
-qboolean Datagram_SearchForInetHosts (char *master)
+qboolean Datagram_SearchForInetHosts (const char *master)
 {
 	qboolean result = false;
 	for (net_landriverlevel = 0; net_landriverlevel < net_numlandrivers; net_landriverlevel++)
@@ -1269,7 +1269,7 @@ qboolean Datagram_SearchForInetHosts (char *master)
 }
 
 
-static qsocket_t *_Datagram_Connect (char *host)
+static qsocket_t *_Datagram_Connect (const char *host)
 {
 	struct qsockaddr sendaddr;
 	struct qsockaddr readaddr;
@@ -1434,7 +1434,7 @@ ErrorReturn2:
 	return NULL;
 }
 
-qsocket_t *Datagram_Connect (char *host)
+qsocket_t *Datagram_Connect (const char *host)
 {
 	qsocket_t *ret = NULL;
 
@@ -1445,7 +1445,7 @@ qsocket_t *Datagram_Connect (char *host)
 	return ret;
 }
 
-static void _Datagram_Heartbeat (char *master)
+static void _Datagram_Heartbeat (const char *master)
 {
 	struct qsockaddr masteraddr;
 	int portnum;
@@ -1465,7 +1465,7 @@ static void _Datagram_Heartbeat (char *master)
 	dfunc.Send (net_message.data, net_message.cursize, &masteraddr);
 }
 
-void Datagram_Heartbeat (char *master)
+void Datagram_Heartbeat (const char *master)
 {
 	for (net_landriverlevel = 0; net_landriverlevel < net_numlandrivers; net_landriverlevel++)
 		if (net_landrivers[net_landriverlevel].initialized)

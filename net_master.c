@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+
 cvar_t sv_masters [] =
 {
 	{CVAR_SAVE, "sv_master1", ""},
@@ -28,6 +29,47 @@ cvar_t sv_masters [] =
 	{CVAR_SAVE, "sv_master3", ""},
 	{CVAR_SAVE, "sv_master4", ""}
 };
+
+static qboolean masteravailable = false;
+static double nextheartbeattime = 0;
+static unsigned int nbtries = 6;
+
+
+/*
+====================
+Master_AllowHeartbeat
+
+Allow (or not) NET_Heartbeat to proceed depending on various factors
+====================
+*/
+qboolean Master_AllowHeartbeat (int priority)
+{
+	// We try "nbtries" times to contact a master server before giving up
+	if (! masteravailable)
+	{
+		if (!nbtries || realtime < nextheartbeattime)
+			return false;
+
+		nbtries--;
+	}
+	else
+	{
+		// if it's a state change, it can wait a little bit (30 sec max for now)
+		if (priority == 1 && nextheartbeattime - realtime > 30.0)
+		{
+			nextheartbeattime = realtime + 30.0;
+			return false;
+		}
+
+		if (priority <= 1 && realtime < nextheartbeattime)
+			return false;
+	}
+
+	// send an heartbeat every 3 minutes by default (every 5 sec if we haven't yet found a master server)
+	// TODO: some cvars would be better than hardcoded values
+	nextheartbeattime = realtime + (masteravailable ? (3.0 * 60.0) : 5.0);
+	return true;
+}
 
 
 /*
@@ -37,7 +79,7 @@ Master_BuildGetServers
 Build a getservers request for a master server
 ====================
 */
-char* Master_BuildGetServers (void)
+const char* Master_BuildGetServers (void)
 {
 	static int nextmaster = 0;
 	cvar_t* sv_master;
@@ -77,7 +119,7 @@ Master_BuildHeartbeat
 Build an heartbeat for a master server
 ====================
 */
-char* Master_BuildHeartbeat (void)
+const char* Master_BuildHeartbeat (void)
 {
 	static int nextmaster = 0;
 	cvar_t* sv_master;
@@ -124,6 +166,8 @@ int Master_HandleMessage (void)
 	{
 		char response [512];
 		size_t length;
+
+		masteravailable = true;
 
 		length = snprintf (response, sizeof (response), "infoResponse\x0A"
 					"\\gamename\\%s\\modname\\%s\\sv_maxclients\\%d"

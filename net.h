@@ -191,8 +191,8 @@ typedef struct
 	int			(*Init) (void);
 	void		(*Listen) (qboolean state);
 	void		(*SearchForHosts) (qboolean xmit);
-	qboolean	(*SearchForInetHosts) (char *master);
-	qsocket_t	*(*Connect) (char *host);
+	qboolean	(*SearchForInetHosts) (const char *master);
+	qsocket_t	*(*Connect) (const char *host);
 	qsocket_t 	*(*CheckNewConnections) (void);
 	int			(*QGetMessage) (qsocket_t *sock);
 	int			(*QSendMessage) (qsocket_t *sock, sizebuf_t *data);
@@ -201,7 +201,7 @@ typedef struct
 	qboolean	(*CanSendUnreliableMessage) (qsocket_t *sock);
 	void		(*Close) (qsocket_t *sock);
 	void		(*Shutdown) (void);
-	void		(*Heartbeat) (char *host);
+	void		(*Heartbeat) (const char *host);
 	int			controlSock;
 } net_driver_t;
 
@@ -277,8 +277,8 @@ struct qsocket_s	*NET_CheckNewConnections (void);
 struct qsocket_s	*NET_Connect (char *host);
 // called by client to connect to a host.  Returns -1 if not able to
 
-void		NET_Heartbeat (void);
-// Send an heartbeat to the master server(s)
+void NET_Heartbeat (int priority);
+// Send an heartbeat to the master server(s). priority: 0 = lowest, 1 = state change, 2 = force
 
 qboolean NET_CanSendMessage (qsocket_t *sock);
 // Returns true or false if the given qsocket can currently accept a

@@ -462,7 +462,7 @@ void SV_DropClient (qboolean crash)
 		MSG_WriteByte (&client->message, 0);
 	}
 
-	NET_Heartbeat ();
+	NET_Heartbeat (1);
 }
 
 /*
@@ -490,8 +490,8 @@ void Host_ShutdownServer(qboolean crash)
 // stop all client sounds immediately
 	CL_Disconnect ();
 
-	NET_Heartbeat ();
-	NET_Heartbeat ();
+	NET_Heartbeat (2);
+	NET_Heartbeat (2);
 
 // flush any pending messages - like the score!!!
 	start = Sys_DoubleTime();
@@ -687,6 +687,9 @@ void Host_ServerFrame (void)
 
 // send all messages to the clients
 	SV_SendClientMessages ();
+
+// send an heartbeat if enough time has passed since the last one
+	NET_Heartbeat (0);
 }
 
 

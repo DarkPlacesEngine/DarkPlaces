@@ -228,7 +228,7 @@ static void NET_Port_f (void)
 
 static void NET_Heartbeat_f (void)
 {
-	NET_Heartbeat ();
+	NET_Heartbeat (2);
 }
 
 
@@ -352,7 +352,7 @@ static void Slist_Poll(void)
 
 static void InetSlist_Send(void)
 {
-	char* host;
+	const char* host;
 
 	if (!slistInProgress)
 		return;
@@ -683,9 +683,13 @@ NET_Heartbeat
 Send an heartbeat to the master server(s)
 ====================
 */
-void NET_Heartbeat (void)
+void NET_Heartbeat (int priority)
 {
-	char* host;
+	const char* host;
+
+	if (! Master_AllowHeartbeat (priority))
+		return;
+
 	while ((host = Master_BuildHeartbeat ()) != NULL)
 	{
 		for (net_driverlevel=0 ; net_driverlevel<net_numdrivers; net_driverlevel++)
