@@ -16,7 +16,6 @@
 0 darkplaces client: make server queries use a queue to avoid flooding out queries too fast (Willis)
 0 darkplaces client: rain drops should splash when they hit (Tomaz, Carni)
 0 darkplaces collision: Mod_Q3BSP_TraceBrush_RecursiveBSPNode can be optimized to take a clipflags parameter like R_Q3BSP_RecursiveworldNode (Vic)
-0 darkplaces console: add DP_CON_SET and DP_CON_SETA extensions to describe the set and seta commands
 0 darkplaces console: add a cvar which sets the start map name so that mods can set their own instead of using "start" or needing to modify the engine (Urre, Elric, Vermeulen)
 0 darkplaces console: bug: when logging using log_file and log_sync 0, setting log_file back to "" does not close the file until another message is posted?
 0 darkplaces docs: write docs about in_bind/in_bindmap in readme (shadowalker)
@@ -348,6 +347,7 @@ d darkplaces client: skybox should not be reset by r_restart (Stribbs)
 d darkplaces collision: mod_q3bsp_optimizedtraceline going through brushes? (Vermeulen)
 d darkplaces commandline: make commandline parser ignore + and - if they were not directly following a space, so that + and - can be used in map names and such, also ignore if - or + is start of a number (Urre)
 d darkplaces console: add "set" and "seta" commands (DP_CONSOLE_SET and DP_CONSOLE_SETA extensions) to create a cvar and set its value (seta makes a saved cvar) (VorteX)
+d darkplaces console: add DP_CON_SET and DP_CON_SETA extensions to describe the set and seta commands
 d darkplaces console: make typing "; quit " in messagemode NOT quit the game (jitspoe)
 d darkplaces console: redesign startup script handling to scan scripts for cvars (ignoring commands) and then init video and then run the scripts for real
 d darkplaces docs: add de-we to credits page for the great icons (de-we)
