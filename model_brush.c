@@ -1202,7 +1202,8 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 	if (loadmodel->brush.ishlbsp) // LordHavoc: load the colored lighting data straight
 	{
 		loadmodel->brushq1.lightdata = Mem_Alloc(loadmodel->mempool, l->filelen);
-		memcpy(loadmodel->brushq1.lightdata, mod_base + l->fileofs, l->filelen);
+		for (i=0; i<l->filelen; i++)
+			loadmodel->brushq1.lightdata[i] = mod_base[l->fileofs+i] >>= 1;
 	}
 	else // LordHavoc: bsp version 29 (normal white lighting)
 	{
