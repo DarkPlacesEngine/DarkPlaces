@@ -1186,7 +1186,7 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	int additive, texnum, orientation;
 	float org[3], up2[3], right2[3], v[3], right[3], up[3], fog, ifog, fogvec[3], cr, cg, cb, ca;
 	particletexture_t *tex;
-	rmeshbufferinfo_t m;
+	rmeshstate_t m;
 	const particle_t *p = calldata1;
 
 	VectorCopy(p->org, org);
@@ -1201,94 +1201,91 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 		m.blendfunc2 = GL_ONE;
 	else
 		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-	m.numtriangles = 2;
-	m.numverts = 4;
 	m.tex[0] = R_GetTexture(particlefonttexture);
 	Matrix4x4_CreateIdentity(&m.matrix);
-	if (R_Mesh_Draw_GetBuffer(&m, false))
+	R_Mesh_State(&m);
+
+	varray_element[0] = 0;
+	varray_element[1] = 1;
+	varray_element[2] = 2;
+	varray_element[3] = 0;
+	varray_element[4] = 2;
+	varray_element[5] = 3;
+	if (orientation == PARTICLE_BILLBOARD)
 	{
-		m.index[0] = 0;
-		m.index[1] = 1;
-		m.index[2] = 2;
-		m.index[3] = 0;
-		m.index[4] = 2;
-		m.index[5] = 3;
-		if (orientation == PARTICLE_BILLBOARD)
+		VectorScale(vright, p->scalex, right);
+		VectorScale(vup, p->scaley, up);
+	}
+	else if (orientation == PARTICLE_UPRIGHT_FACING)
+	{
+		v[0] = r_origin[0] - org[0];
+		v[1] = r_origin[1] - org[1];
+		v[2] = 0;
+		VectorNormalizeFast(v);
+		VectorVectors(v, right2, up2);
+		VectorScale(right2, p->scalex, right);
+		VectorScale(up2, p->scaley, up);
+	}
+	else if (orientation == PARTICLE_ORIENTED_DOUBLESIDED)
+	{
+		// double-sided
+		if (DotProduct(p->vel2, r_origin) > DotProduct(p->vel2, org))
 		{
-			VectorScale(vright, p->scalex, right);
-			VectorScale(vup, p->scaley, up);
-		}
-		else if (orientation == PARTICLE_UPRIGHT_FACING)
-		{
-			v[0] = r_origin[0] - org[0];
-			v[1] = r_origin[1] - org[1];
-			v[2] = 0;
-			VectorNormalizeFast(v);
-			VectorVectors(v, right2, up2);
-			VectorScale(right2, p->scalex, right);
-			VectorScale(up2, p->scaley, up);
-		}
-		else if (orientation == PARTICLE_ORIENTED_DOUBLESIDED)
-		{
-			// double-sided
-			if (DotProduct(p->vel2, r_origin) > DotProduct(p->vel2, org))
-			{
-				VectorNegate(p->vel2, v);
-				VectorVectors(v, right, up);
-			}
-			else
-				VectorVectors(p->vel2, right, up);
-			VectorScale(right, p->scalex, right);
-			VectorScale(up, p->scaley, up);
+			VectorNegate(p->vel2, v);
+			VectorVectors(v, right, up);
 		}
 		else
-			Host_Error("R_DrawParticles: unknown particle orientation %i\n", orientation);
-		m.vertex[0] = org[0] - right[0] - up[0];
-		m.vertex[1] = org[1] - right[1] - up[1];
-		m.vertex[2] = org[2] - right[2] - up[2];
-		m.vertex[4] = org[0] - right[0] + up[0];
-		m.vertex[5] = org[1] - right[1] + up[1];
-		m.vertex[6] = org[2] - right[2] + up[2];
-		m.vertex[8] = org[0] + right[0] + up[0];
-		m.vertex[9] = org[1] + right[1] + up[1];
-		m.vertex[10] = org[2] + right[2] + up[2];
-		m.vertex[12] = org[0] + right[0] - up[0];
-		m.vertex[13] = org[1] + right[1] - up[1];
-		m.vertex[14] = org[2] + right[2] - up[2];
-		tex = &particletexture[texnum];
-		m.texcoords[0][0] = tex->s1;
-		m.texcoords[0][1] = tex->t1;
-		m.texcoords[0][2] = tex->s1;
-		m.texcoords[0][3] = tex->t2;
-		m.texcoords[0][4] = tex->s2;
-		m.texcoords[0][5] = tex->t2;
-		m.texcoords[0][6] = tex->s2;
-		m.texcoords[0][7] = tex->t1;
-		cr = p->color[0] * (1.0f / 255.0f);
-		cg = p->color[1] * (1.0f / 255.0f);
-		cb = p->color[2] * (1.0f / 255.0f);
-		ca = p->alpha * (1.0f / 255.0f);
-		if (fogenabled)
-		{
-			VectorSubtract(org, r_origin, fogvec);
-			fog = exp(fogdensity/DotProduct(fogvec,fogvec));
-			ifog = 1 - fog;
-			cr = cr * ifog;
-			cg = cg * ifog;
-			cb = cb * ifog;
-			if (!additive)
-			{
-				cr += fogcolor[0] * fog;
-				cg += fogcolor[1] * fog;
-				cb += fogcolor[2] * fog;
-			}
-		}
-		m.color[0] = m.color[4] = m.color[8] = m.color[12] = cr * m.colorscale;
-		m.color[1] = m.color[5] = m.color[9] = m.color[13] = cg * m.colorscale;
-		m.color[2] = m.color[6] = m.color[10] = m.color[14] = cb * m.colorscale;
-		m.color[3] = m.color[7] = m.color[11] = m.color[15] = ca;
-		R_Mesh_Render();
+			VectorVectors(p->vel2, right, up);
+		VectorScale(right, p->scalex, right);
+		VectorScale(up, p->scaley, up);
 	}
+	else
+		Host_Error("R_DrawParticles: unknown particle orientation %i\n", orientation);
+	varray_vertex[0] = org[0] - right[0] - up[0];
+	varray_vertex[1] = org[1] - right[1] - up[1];
+	varray_vertex[2] = org[2] - right[2] - up[2];
+	varray_vertex[4] = org[0] - right[0] + up[0];
+	varray_vertex[5] = org[1] - right[1] + up[1];
+	varray_vertex[6] = org[2] - right[2] + up[2];
+	varray_vertex[8] = org[0] + right[0] + up[0];
+	varray_vertex[9] = org[1] + right[1] + up[1];
+	varray_vertex[10] = org[2] + right[2] + up[2];
+	varray_vertex[12] = org[0] + right[0] - up[0];
+	varray_vertex[13] = org[1] + right[1] - up[1];
+	varray_vertex[14] = org[2] + right[2] - up[2];
+	tex = &particletexture[texnum];
+	varray_texcoord[0][0] = tex->s1;
+	varray_texcoord[0][1] = tex->t1;
+	varray_texcoord[0][2] = tex->s1;
+	varray_texcoord[0][3] = tex->t2;
+	varray_texcoord[0][4] = tex->s2;
+	varray_texcoord[0][5] = tex->t2;
+	varray_texcoord[0][6] = tex->s2;
+	varray_texcoord[0][7] = tex->t1;
+	cr = p->color[0] * (1.0f / 255.0f);
+	cg = p->color[1] * (1.0f / 255.0f);
+	cb = p->color[2] * (1.0f / 255.0f);
+	ca = p->alpha * (1.0f / 255.0f);
+	if (fogenabled)
+	{
+		VectorSubtract(org, r_origin, fogvec);
+		fog = exp(fogdensity/DotProduct(fogvec,fogvec));
+		ifog = 1 - fog;
+		cr = cr * ifog;
+		cg = cg * ifog;
+		cb = cb * ifog;
+		if (!additive)
+		{
+			cr += fogcolor[0] * fog;
+			cg += fogcolor[1] * fog;
+			cb += fogcolor[2] * fog;
+		}
+	}
+	varray_color[0] = varray_color[4] = varray_color[8] = varray_color[12] = cr * mesh_colorscale;
+	varray_color[1] = varray_color[5] = varray_color[9] = varray_color[13] = cg * mesh_colorscale;
+	varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = cb * mesh_colorscale;
+	varray_color[3] = varray_color[7] = varray_color[11] = varray_color[15] = ca;
+	R_Mesh_Draw(4, 2);
 }
 
 void R_DrawParticles (void)

@@ -4,7 +4,7 @@
 
 #define MAX_TEXTUREUNITS 8
 
-extern int c_meshtris, c_meshs, c_transtris, c_transmeshs;
+extern int c_meshtris, c_meshs;
 
 typedef struct
 {
@@ -13,20 +13,21 @@ typedef struct
 	int depthdisable; // disable depth read/write entirely
 	int blendfunc1;
 	int blendfunc2;
-	int numtriangles;
-	int numverts;
+	int wantoverbright;
 	int tex[MAX_TEXTUREUNITS];
 	int texrgbscale[MAX_TEXTUREUNITS]; // used only if COMBINE is present
 	matrix4x4_t matrix; // model to world transform matrix
-
-	// output
-	int *index;
-	float *vertex;
-	float *color;
-	float colorscale;
-	float *texcoords[MAX_TEXTUREUNITS];
 }
-rmeshbufferinfo_t;
+rmeshstate_t;
+
+// overbright rendering scale for the current state
+extern float mesh_colorscale;
+extern int *varray_element;
+extern float *varray_vertex;
+extern float *varray_color;
+extern float *varray_texcoord[MAX_TEXTUREUNITS];
+extern int mesh_maxverts;
+extern int mesh_maxtris;
 
 // adds console variables and registers the render module (only call from GL_Init)
 void gl_backend_init(void);
@@ -42,15 +43,15 @@ void R_Mesh_Finish(void);
 // (only valid between R_Mesh_Start and R_Mesh_Finish)
 void R_Mesh_ClearDepth(void);
 
-// renders current batch of meshs
-// (only valid between R_Mesh_Start and R_Mesh_Finish)
-void R_Mesh_Render(void);
+// sets up the requested state
+void R_Mesh_State(const rmeshstate_t *m);
 
-// allocates space in geometry buffers, and fills in pointers to the buffers in passsed struct
-// (it is up to the caller to fill in the geometry data)
-// (make sure you scale your colors by the colorscale field)
-// (only valid between R_Mesh_Start and R_Mesh_Finish)
-int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m, int wantoverbright);
+// enlarges geometry buffers if they are too small
+#define R_Mesh_ResizeCheck(numverts, numtriangles) if ((numverts) > mesh_maxverts || (numtriangles) > mesh_maxtris) _R_Mesh_ResizeCheck(numverts, numtriangles);
+void _R_Mesh_ResizeCheck(int numverts, int numtriangles);
+
+// renders the mesh in the varray_* buffers
+void R_Mesh_Draw(int numverts, int numtriangles);
 
 // saves a section of the rendered frame to a .tga file
 qboolean SCR_ScreenShot(char *filename, int x, int y, int width, int height);
