@@ -29,6 +29,8 @@ BRUSH MODELS
 ==============================================================================
 */
 
+#define Q3PATHLENGTH 64
+
 
 //
 // in memory representation
@@ -79,8 +81,9 @@ struct msurface_s;
 
 typedef struct texture_s
 {
+	// q1bsp
 	// name
-	char name[16];
+	//char name[16];
 	// size
 	unsigned int width, height;
 	// SURF_ flags
@@ -104,6 +107,16 @@ typedef struct texture_s
 	struct texture_s *currentframe;
 	// current alpha of the texture
 	float currentalpha;
+
+	// q3bsp
+	char name[Q3PATHLENGTH];
+	char firstpasstexturename[Q3PATHLENGTH]; // used only during loading
+	int surfaceflags;
+	int supercontents;
+	int surfaceparms;
+	int textureflags;
+
+	//skinframe_t skin;
 }
 texture_t;
 
@@ -514,8 +527,6 @@ typedef struct
 #define	Q3LUMP_PVS			16 // potentially visible set; bit[clusters][clusters] (used by rendering)
 #define	Q3HEADER_LUMPS		17
 
-#define Q3PATHLENGTH 64
-
 typedef struct
 {
 	int			ident;
@@ -772,18 +783,6 @@ q3dpvs_t;
 #define Q3TEXTUREFLAG_ALPHATEST 64
 
 struct q3msurface_s;
-typedef struct q3mtexture_s
-{
-	char name[Q3PATHLENGTH];
-	char firstpasstexturename[Q3PATHLENGTH];
-	int surfaceflags;
-	int supercontents;
-	int surfaceparms;
-	int textureflags;
-
-	skinframe_t skin;
-}
-q3mtexture_t;
 
 typedef struct q3mmodel_s
 {
@@ -801,14 +800,14 @@ typedef struct q3mbrush_s
 	struct colbrushf_s *colbrushf;
 	int numbrushsides;
 	struct q3mbrushside_s *firstbrushside;
-	struct q3mtexture_s *texture;
+	struct texture_s *texture;
 }
 q3mbrush_t;
 
 typedef struct q3mbrushside_s
 {
 	struct mplane_s *plane;
-	struct q3mtexture_s *texture;
+	struct texture_s *texture;
 }
 q3mbrushside_t;
 
@@ -825,7 +824,7 @@ typedef struct q3msurface_s
 	// FIXME: collisionmarkframe should be kept in a separate array
 	// FIXME: shadowmark should be kept in a separate array
 
-	struct q3mtexture_s *texture;
+	struct texture_s *texture;
 	struct q3meffect_s *effect;
 	rtexture_t *lightmaptexture;
 	int collisionmarkframe; // don't collide twice in one trace

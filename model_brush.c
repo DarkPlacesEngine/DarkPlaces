@@ -966,31 +966,31 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 	qbyte *data, *mtdata;
 	char name[256];
 
-	loadmodel->brushq1.textures = NULL;
+	loadmodel->brush.data_textures = NULL;
 
 	// add two slots for notexture walls and notexture liquids
 	if (l->filelen)
 	{
 		m = (dmiptexlump_t *)(mod_base + l->fileofs);
 		m->nummiptex = LittleLong (m->nummiptex);
-		loadmodel->brushq1.numtextures = m->nummiptex + 2;
+		loadmodel->brush.num_textures = m->nummiptex + 2;
 	}
 	else
 	{
 		m = NULL;
-		loadmodel->brushq1.numtextures = 2;
+		loadmodel->brush.num_textures = 2;
 	}
 
-	loadmodel->brushq1.textures = Mem_Alloc(loadmodel->mempool, loadmodel->brushq1.numtextures * sizeof(texture_t));
+	loadmodel->brush.data_textures = Mem_Alloc(loadmodel->mempool, loadmodel->brush.num_textures * sizeof(texture_t));
 
 	// fill out all slots with notexture
-	for (i = 0, tx = loadmodel->brushq1.textures;i < loadmodel->brushq1.numtextures;i++, tx++)
+	for (i = 0, tx = loadmodel->brush.data_textures;i < loadmodel->brush.num_textures;i++, tx++)
 	{
 		strcpy(tx->name, "NO TEXTURE FOUND");
 		tx->width = 16;
 		tx->height = 16;
 		tx->skin.base = r_notexture;
-		if (i == loadmodel->brushq1.numtextures - 1)
+		if (i == loadmodel->brush.num_textures - 1)
 			tx->flags = SURF_DRAWTURB | SURF_LIGHTBOTHSIDES;
 		else
 			tx->flags = SURF_LIGHTMAP | SURF_SOLIDCLIP;
@@ -1038,7 +1038,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			if (name[j] >= 'A' && name[j] <= 'Z')
 				name[j] += 'a' - 'A';
 
-		tx = loadmodel->brushq1.textures + i;
+		tx = loadmodel->brush.data_textures + i;
 		strcpy(tx->name, name);
 		tx->width = mtwidth;
 		tx->height = mtheight;
@@ -1136,7 +1136,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 	// sequence the animations
 	for (i = 0;i < m->nummiptex;i++)
 	{
-		tx = loadmodel->brushq1.textures + i;
+		tx = loadmodel->brush.data_textures + i;
 		if (!tx || tx->name[0] != '+' || tx->name[1] == 0 || tx->name[2] == 0)
 			continue;
 		if (tx->anim_total[0] || tx->anim_total[1])
@@ -1148,7 +1148,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 
 		for (j = i;j < m->nummiptex;j++)
 		{
-			tx2 = loadmodel->brushq1.textures + j;
+			tx2 = loadmodel->brush.data_textures + j;
 			if (!tx2 || tx2->name[0] != '+' || strcmp(tx2->name+2, tx->name+2))
 				continue;
 
@@ -1546,25 +1546,25 @@ static void Mod_Q1BSP_LoadTexinfo(lump_t *l)
 		out->flags = LittleLong(in->flags);
 
 		out->texture = NULL;
-		if (loadmodel->brushq1.textures)
+		if (loadmodel->brush.data_textures)
 		{
-			if ((unsigned int) miptex >= (unsigned int) loadmodel->brushq1.numtextures)
-				Con_Printf("error in model \"%s\": invalid miptex index %i(of %i)\n", loadmodel->name, miptex, loadmodel->brushq1.numtextures);
+			if ((unsigned int) miptex >= (unsigned int) loadmodel->brush.num_textures)
+				Con_Printf("error in model \"%s\": invalid miptex index %i(of %i)\n", loadmodel->name, miptex, loadmodel->brush.num_textures);
 			else
-				out->texture = loadmodel->brushq1.textures + miptex;
+				out->texture = loadmodel->brush.data_textures + miptex;
 		}
 		if (out->flags & TEX_SPECIAL)
 		{
 			// if texture chosen is NULL or the shader needs a lightmap,
 			// force to notexture water shader
 			if (out->texture == NULL || out->texture->flags & SURF_LIGHTMAP)
-				out->texture = loadmodel->brushq1.textures + (loadmodel->brushq1.numtextures - 1);
+				out->texture = loadmodel->brush.data_textures + (loadmodel->brush.num_textures - 1);
 		}
 		else
 		{
 			// if texture chosen is NULL, force to notexture
 			if (out->texture == NULL)
-				out->texture = loadmodel->brushq1.textures + (loadmodel->brushq1.numtextures - 2);
+				out->texture = loadmodel->brush.data_textures + (loadmodel->brush.num_textures - 2);
 		}
 	}
 }
@@ -3672,7 +3672,7 @@ static void Mod_Q3BSP_LoadEntities(lump_t *l)
 static void Mod_Q3BSP_LoadTextures(lump_t *l)
 {
 	q3dtexture_t *in;
-	q3mtexture_t *out;
+	texture_t *out;
 	int i, count;
 	int j, c;
 	fssearch_t *search;
@@ -3690,8 +3690,8 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
-	loadmodel->brushq3.data_textures = out;
-	loadmodel->brushq3.num_textures = count;
+	loadmodel->brush.data_textures = out;
+	loadmodel->brush.num_textures = count;
 
 	for (i = 0;i < count;i++, in++, out++)
 	{
@@ -3886,7 +3886,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 							flags |= Q3SURFACEPARM_TRANS;
 						// add shader to list (shadername and flags)
 						// actually here we just poke into the texture settings
-						for (j = 0, out = loadmodel->brushq3.data_textures;j < loadmodel->brushq3.num_textures;j++, out++)
+						for (j = 0, out = loadmodel->brush.data_textures;j < loadmodel->brush.num_textures;j++, out++)
 						{
 							if (!strcasecmp(out->name, shadername))
 							{
@@ -3914,7 +3914,7 @@ parseerror:
 	}
 
 	c = 0;
-	for (j = 0, out = loadmodel->brushq3.data_textures;j < loadmodel->brushq3.num_textures;j++, out++)
+	for (j = 0, out = loadmodel->brush.data_textures;j < loadmodel->brush.num_textures;j++, out++)
 	{
 		if (out->surfaceparms == -1)
 		{
@@ -3985,9 +3985,9 @@ static void Mod_Q3BSP_LoadBrushSides(lump_t *l)
 			Host_Error("Mod_Q3BSP_LoadBrushSides: invalid planeindex %i (%i planes)\n", n, loadmodel->brush.num_planes);
 		out->plane = loadmodel->brush.data_planes + n;
 		n = LittleLong(in->textureindex);
-		if (n < 0 || n >= loadmodel->brushq3.num_textures)
-			Host_Error("Mod_Q3BSP_LoadBrushSides: invalid textureindex %i (%i textures)\n", n, loadmodel->brushq3.num_textures);
-		out->texture = loadmodel->brushq3.data_textures + n;
+		if (n < 0 || n >= loadmodel->brush.num_textures)
+			Host_Error("Mod_Q3BSP_LoadBrushSides: invalid textureindex %i (%i textures)\n", n, loadmodel->brush.num_textures);
+		out->texture = loadmodel->brush.data_textures + n;
 	}
 }
 
@@ -4019,9 +4019,9 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 		out->firstbrushside = loadmodel->brushq3.data_brushsides + n;
 		out->numbrushsides = c;
 		n = LittleLong(in->textureindex);
-		if (n < 0 || n >= loadmodel->brushq3.num_textures)
-			Host_Error("Mod_Q3BSP_LoadBrushes: invalid textureindex %i (%i textures)\n", n, loadmodel->brushq3.num_textures);
-		out->texture = loadmodel->brushq3.data_textures + n;
+		if (n < 0 || n >= loadmodel->brush.num_textures)
+			Host_Error("Mod_Q3BSP_LoadBrushes: invalid textureindex %i (%i textures)\n", n, loadmodel->brush.num_textures);
+		out->texture = loadmodel->brush.data_textures + n;
 
 		// make a list of mplane_t structs to construct a colbrush from
 		if (maxplanes < out->numbrushsides)
@@ -4195,12 +4195,12 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			}
 
 			n = LittleLong(in->textureindex);
-			if (n < 0 || n >= loadmodel->brushq3.num_textures)
+			if (n < 0 || n >= loadmodel->brush.num_textures)
 			{
-				Con_DPrintf("Mod_Q3BSP_LoadFaces: face #%i: invalid textureindex %i (%i textures)\n", i, n, loadmodel->brushq3.num_textures);
+				Con_DPrintf("Mod_Q3BSP_LoadFaces: face #%i: invalid textureindex %i (%i textures)\n", i, n, loadmodel->brush.num_textures);
 				continue;
 			}
-			out->texture = loadmodel->brushq3.data_textures + n;
+			out->texture = loadmodel->brush.data_textures + n;
 			n = LittleLong(in->effectindex);
 			if (n < -1 || n >= loadmodel->brushq3.num_effects)
 			{

@@ -868,9 +868,9 @@ void R_UpdateTextureInfo(entity_render_t *ent)
 
 	alttextures = ent->frame != 0;
 	texframe = (int)(r_refdef.time * 5.0f);
-	for (i = 0;i < ent->model->brushq1.numtextures;i++)
+	for (i = 0;i < ent->model->brush.num_textures;i++)
 	{
-		t = ent->model->brushq1.textures + i;
+		t = ent->model->brush.data_textures + i;
 		t->currentalpha = ent->alpha;
 		if (t->flags & SURF_WATERALPHA)
 			t->currentalpha *= r_wateralpha.value;
@@ -1709,7 +1709,7 @@ void R_Q3BSP_DrawFace_TransparentCallback(const void *voident, int facenumber)
 		qglEnable(GL_CULL_FACE);
 }
 
-void R_Q3BSP_DrawFaceList(entity_render_t *ent, q3mtexture_t *t, int texturenumfaces, q3msurface_t **texturefacelist)
+void R_Q3BSP_DrawFaceList(entity_render_t *ent, texture_t *t, int texturenumfaces, q3msurface_t **texturefacelist)
 {
 	int i, texturefaceindex;
 	qboolean dolightmap;
@@ -2048,7 +2048,7 @@ void R_Q3BSP_DrawFaces(entity_render_t *ent, int skyfaces)
 	int i, j, f, flagsmask, flags;
 	q3msurface_t *face;
 	model_t *model = ent->model;
-	q3mtexture_t *t;
+	texture_t *t;
 	const int maxfaces = 1024;
 	int numfaces = 0;
 	q3msurface_t *facelist[1024];
