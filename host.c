@@ -603,20 +603,23 @@ void Host_ServerFrame (void)
 	if (cls.state != ca_dedicated && svs.maxclients > 1 && ((realtime - lastservertime) < sys_ticrate.value))
 		return;
 // run the world state
-	sv.frametime = pr_global_struct->frametime = frametimetotal;
+	if (!sv.paused && (svs.maxclients > 1 || key_dest == key_game) )
+		sv.frametime = pr_global_struct->frametime = frametimetotal;
+	else
+		sv.frametime = 0;
 	frametimetotal = 0;
 	lastservertime = realtime;
 //	pr_global_struct->frametime = host_frametime;
 
 // set the time and clear the general datagram
 	SV_ClearDatagram ();
-	
+
 // check for new clients
 	SV_CheckForNewClients ();
 
 // read client messages
 	SV_RunClients ();
-	
+
 // move things around and think
 // always pause in single player if in console or menus
 	if (!sv.paused && (svs.maxclients > 1 || key_dest == key_game) )
@@ -711,8 +714,10 @@ void _Host_Frame (float time)
 // update audio
 	if (cls.signon == SIGNONS)
 	{
-		S_Update (r_origin, vpn, vright, vup);
-		CL_DecayLights ();
+		// LordHavoc: this used to use renderer variables (eww)
+		vec3_t forward, right, up;
+		AngleVectors(cl.viewangles, forward, right, up);
+		S_Update (cl_entities[cl.viewentity].render.origin, forward, right, up);
 	}
 	else
 		S_Update (vec3_origin, vec3_origin, vec3_origin, vec3_origin);
