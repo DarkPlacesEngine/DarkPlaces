@@ -590,7 +590,7 @@ void R_UpdateEntLights(entity_render_t *ent)
 	int i;
 	const mlight_t *sl;
 	vec3_t v;
-	if (r_shadow_realtime_dlight.integer || gl_flashblend.integer)
+	if (r_shadow_realtime_world.integer)
 		return;
 	VectorSubtract(ent->origin, ent->entlightsorigin, v);
 	if (ent->entlightsframe != (r_framecount - 1) || (realtime > ent->entlightstime && DotProduct(v,v) >= 1.0f))
