@@ -286,11 +286,8 @@ static void Mod_MDL_LoadFrames (qbyte* datapointer, int inverts, vec3_t scale, v
 }
 
 static skinframe_t missingskinframe;
-aliaslayer_t mod_alias_layersbuffer[16]; // 7 currently used
-void Mod_BuildAliasSkinFromSkinFrame(aliasskin_t *skin, skinframe_t *skinframe)
+static void Mod_BuildAliasSkinFromSkinFrame(texture_t *skin, skinframe_t *skinframe)
 {
-	aliaslayer_t *layer;
-
 	// hack
 	if (skinframe == NULL)
 	{
@@ -299,65 +296,10 @@ void Mod_BuildAliasSkinFromSkinFrame(aliasskin_t *skin, skinframe_t *skinframe)
 		skinframe->base = r_texture_notexture;
 	}
 
-	memset(&mod_alias_layersbuffer, 0, sizeof(mod_alias_layersbuffer));
-	layer = mod_alias_layersbuffer;
-	layer->flags = ALIASLAYER_SPECULAR;
-	layer->texture = skinframe->gloss;
-	layer->nmap = skinframe->nmap;
-	layer++;
-	if (skinframe->merged != NULL)
-	{
-		layer->flags = ALIASLAYER_DIFFUSE | ALIASLAYER_NODRAW_IF_COLORMAPPED;
-		layer->texture = skinframe->merged;
-		layer->nmap = skinframe->nmap;
-		layer++;
-	}
-	if (skinframe->base != NULL)
-	{
-		layer->flags = ALIASLAYER_DIFFUSE;
-		if (skinframe->merged != NULL)
-			layer->flags |= ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED;
-		layer->texture = skinframe->base;
-		layer->nmap = skinframe->nmap;
-		layer++;
-	}
-	if (skinframe->pants != NULL)
-	{
-		layer->flags = ALIASLAYER_DIFFUSE | ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_COLORMAP_PANTS;
-		layer->texture = skinframe->pants;
-		layer->nmap = skinframe->nmap;
-		layer++;
-	}
-	if (skinframe->shirt != NULL)
-	{
-		layer->flags = ALIASLAYER_DIFFUSE | ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_COLORMAP_SHIRT;
-		layer->texture = skinframe->shirt;
-		layer->nmap = skinframe->nmap;
-		layer++;
-	}
-
-	if (skinframe->glow != NULL)
-	{
-		layer->flags = 0;
-		layer->texture = skinframe->glow;
-		layer++;
-	}
-
-	layer->flags = ALIASLAYER_FOG | ALIASLAYER_FORCEDRAW_IF_FIRSTPASS;
-	layer->texture = skinframe->fog;
-	layer++;
-
-	skin->flags = 0;
-	// fog texture only exists if some pixels are transparent...
-	if (skinframe->fog != NULL)
-		skin->flags |= ALIASSKIN_TRANSPARENT;
-
-	skin->num_layers = layer - mod_alias_layersbuffer;
-	skin->data_layers = Mem_Alloc(loadmodel->mempool, skin->num_layers * sizeof(aliaslayer_t));
-	memcpy(skin->data_layers, mod_alias_layersbuffer, skin->num_layers * sizeof(aliaslayer_t));
+	skin->skin = *skinframe;
 }
 
-void Mod_BuildAliasSkinsFromSkinFiles(aliasskin_t *skin, skinfile_t *skinfile, char *meshname, char *shadername)
+static void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfile, char *meshname, char *shadername)
 {
 	int i;
 	skinfileitem_t *skinfileitem;
@@ -424,7 +366,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer)
 	char name[MAX_QPATH];
 	skinframe_t tempskinframe;
 	animscene_t *tempskinscenes;
-	aliasskin_t *tempaliasskins;
+	texture_t *tempaliasskins;
 	float *vertst;
 	int *vertonseam, *vertremap;
 	skinfile_t *skinfiles;
@@ -603,7 +545,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer)
 	if ((skinfiles = Mod_LoadSkinFiles()))
 	{
 		loadmodel->alias.aliasdata_meshes->num_skins = totalskins = loadmodel->numskins;
-		loadmodel->alias.aliasdata_meshes->data_skins = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasdata_meshes->num_skins * sizeof(aliasskin_t));
+		loadmodel->alias.aliasdata_meshes->data_skins = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasdata_meshes->num_skins * sizeof(texture_t));
 		Mod_BuildAliasSkinsFromSkinFiles(loadmodel->alias.aliasdata_meshes->data_skins, skinfiles, "default", "");
 		Mod_FreeSkinFiles(skinfiles);
 		loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numskins);
@@ -618,7 +560,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer)
 	else
 	{
 		loadmodel->alias.aliasdata_meshes->num_skins = totalskins;
-		loadmodel->alias.aliasdata_meshes->data_skins = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasdata_meshes->num_skins * sizeof(aliasskin_t));
+		loadmodel->alias.aliasdata_meshes->data_skins = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasdata_meshes->num_skins * sizeof(texture_t));
 		loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, loadmodel->numskins * sizeof(animscene_t));
 		totalskins = 0;
 		datapointer = startskins;
@@ -680,8 +622,8 @@ void Mod_IDP0_Load(model_t *mod, void *buffer)
 			Mem_Free(tempskinscenes);
 
 			tempaliasskins = loadmodel->alias.aliasdata_meshes->data_skins;
-			loadmodel->alias.aliasdata_meshes->data_skins = Mem_Alloc(loadmodel->mempool, (totalskins + 1) * sizeof(aliasskin_t));
-			memcpy(loadmodel->alias.aliasdata_meshes->data_skins, tempaliasskins, totalskins * sizeof(aliasskin_t));
+			loadmodel->alias.aliasdata_meshes->data_skins = Mem_Alloc(loadmodel->mempool, (totalskins + 1) * sizeof(texture_t));
+			memcpy(loadmodel->alias.aliasdata_meshes->data_skins, tempaliasskins, totalskins * sizeof(texture_t));
 			Mem_Free(tempaliasskins);
 
 			// store the info about the new skin
@@ -788,7 +730,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer)
 	if ((skinfiles = Mod_LoadSkinFiles()))
 	{
 		loadmodel->alias.aliasdata_meshes->num_skins = loadmodel->numskins;
-		loadmodel->alias.aliasdata_meshes->data_skins = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasdata_meshes->num_skins * sizeof(aliasskin_t));
+		loadmodel->alias.aliasdata_meshes->data_skins = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasdata_meshes->num_skins * sizeof(texture_t));
 		Mod_BuildAliasSkinsFromSkinFiles(loadmodel->alias.aliasdata_meshes->data_skins, skinfiles, "default", "");
 		Mod_FreeSkinFiles(skinfiles);
 	}
@@ -796,7 +738,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer)
 	{
 		// skins found (most likely not a player model)
 		loadmodel->alias.aliasdata_meshes->num_skins = loadmodel->numskins;
-		loadmodel->alias.aliasdata_meshes->data_skins = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasdata_meshes->num_skins * sizeof(aliasskin_t));
+		loadmodel->alias.aliasdata_meshes->data_skins = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasdata_meshes->num_skins * sizeof(texture_t));
 		for (i = 0;i < loadmodel->numskins;i++, inskin += MD2_SKINNAME)
 		{
 			if (Mod_LoadSkinFrame(&tempskinframe, inskin, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, true, false, true))
@@ -813,7 +755,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer)
 		// no skins (most likely a player model)
 		loadmodel->numskins = 1;
 		loadmodel->alias.aliasdata_meshes->num_skins = loadmodel->numskins;
-		loadmodel->alias.aliasdata_meshes->data_skins = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasdata_meshes->num_skins * sizeof(aliasskin_t));
+		loadmodel->alias.aliasdata_meshes->data_skins = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasdata_meshes->num_skins * sizeof(texture_t));
 		Mod_BuildAliasSkinFromSkinFrame(loadmodel->alias.aliasdata_meshes->data_skins, NULL);
 	}
 
@@ -1021,7 +963,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer)
 		mesh->num_morphframes = LittleLong(pinmesh->num_frames);
 		mesh->num_vertices = LittleLong(pinmesh->num_vertices);
 		mesh->num_triangles = LittleLong(pinmesh->num_triangles);
-		mesh->data_skins = Mem_Alloc(loadmodel->mempool, mesh->num_skins * sizeof(aliasskin_t));
+		mesh->data_skins = Mem_Alloc(loadmodel->mempool, mesh->num_skins * sizeof(texture_t));
 		mesh->data_element3i = Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
 		mesh->data_neighbor3i = Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
 		mesh->data_texcoord2f = Mem_Alloc(loadmodel->mempool, mesh->num_vertices * sizeof(float[2]));
@@ -1252,7 +1194,7 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
 		mesh = loadmodel->alias.aliasdata_meshes + i;
 		mesh->num_skins = loadmodel->numskins;
 		mesh->num_triangles = count;
-		mesh->data_skins = Mem_Alloc(loadmodel->mempool, mesh->num_skins * sizeof(aliasskin_t));
+		mesh->data_skins = Mem_Alloc(loadmodel->mempool, mesh->num_skins * sizeof(texture_t));
 		mesh->data_element3i = Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
 		mesh->data_neighbor3i = Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
 		outelements = mesh->data_element3i;
