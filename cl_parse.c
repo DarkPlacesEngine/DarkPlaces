@@ -354,7 +354,7 @@ void CL_ParseServerInfo (void)
 
 // parse signon message
 	str = MSG_ReadString ();
-	strncpy (cl.levelname, str, sizeof(cl.levelname)-1);
+	strlcpy (cl.levelname, str, sizeof(cl.levelname));
 
 // seperate the printfs so the server message can have a color
 	if (cl.protocol != PROTOCOL_NEHAHRAMOVIE) // no messages when playing the Nehahra movie
@@ -1465,8 +1465,8 @@ void CL_ParseServerMessage(void)
 				i &= 31;
 				while(count > 0)
 				{
-					sprintf(temp, "%3i:%s ", cmdlog[i], cmdlogname[i]);
-					strcat(description, temp);
+					snprintf (temp, sizeof (temp), "%3i:%s ", cmdlog[i], cmdlogname[i]);
+					strlcat (description, temp, sizeof (description));
 					count--;
 					i++;
 					i &= 31;
@@ -1550,7 +1550,7 @@ void CL_ParseServerMessage(void)
 			i = MSG_ReadByte ();
 			if (i >= MAX_LIGHTSTYLES)
 				Host_Error ("svc_lightstyle >= MAX_LIGHTSTYLES");
-			strncpy (cl_lightstyle[i].map,  MSG_ReadString(), MAX_STYLESTRING - 1);
+			strlcpy (cl_lightstyle[i].map,  MSG_ReadString(), sizeof (cl_lightstyle[i].map));
 			cl_lightstyle[i].map[MAX_STYLESTRING - 1] = 0;
 			cl_lightstyle[i].length = strlen(cl_lightstyle[i].map);
 			break;
@@ -1572,7 +1572,7 @@ void CL_ParseServerMessage(void)
 			i = MSG_ReadByte ();
 			if (i >= cl.maxclients)
 				Host_Error ("CL_ParseServerMessage: svc_updatename >= cl.maxclients");
-			strcpy (cl.scores[i].name, MSG_ReadString ());
+			strlcpy (cl.scores[i].name, MSG_ReadString (), sizeof (cl.scores[i].name));
 			break;
 
 		case svc_updatefrags:

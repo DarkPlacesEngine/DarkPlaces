@@ -3315,7 +3315,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 
 	for (i = 0;i < count;i++, in++, out++)
 	{
-		strncpy(out->name, in->name, sizeof(out->name) - 1);
+		strlcpy (out->name, in->name, sizeof (out->name));
 		out->surfaceflags = LittleLong(in->surfaceflags);
 		out->nativecontents = LittleLong(in->contents);
 		out->supercontents = Mod_Q3BSP_SuperContentsFromNativeContents(loadmodel, out->nativecontents);
@@ -3452,7 +3452,7 @@ static void Mod_Q3BSP_LoadEffects(lump_t *l)
 
 	for (i = 0;i < count;i++, in++, out++)
 	{
-		strncpy(out->shadername, in->shadername, sizeof(out->shadername) - 1);
+		strlcpy (out->shadername, in->shadername, sizeof (out->shadername));
 		n = LittleLong(in->brushindex);
 		if (n < 0 || n >= loadmodel->brushq3.num_brushes)
 			Host_Error("Mod_Q3BSP_LoadEffects: invalid brushindex %i (%i brushes)\n", n, loadmodel->brushq3.num_brushes);

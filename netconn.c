@@ -695,10 +695,10 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 			string += 13;
 			// hostcache only uses text addresses
 			LHNETADDRESS_ToString(peeraddress, cname, sizeof(cname), true);
-			if ((s = SearchInfostring(string, "gamename"     )) != NULL) strncpy(game, s, sizeof(game) - 1);else game[0] = 0;
-			if ((s = SearchInfostring(string, "modname"      )) != NULL) strncpy(mod , s, sizeof(mod ) - 1);else mod[0] = 0;
-			if ((s = SearchInfostring(string, "mapname"      )) != NULL) strncpy(map , s, sizeof(map ) - 1);else map[0] = 0;
-			if ((s = SearchInfostring(string, "hostname"     )) != NULL) strncpy(name, s, sizeof(name) - 1);else name[0] = 0;
+			if ((s = SearchInfostring(string, "gamename"     )) != NULL) strlcpy(game, s, sizeof (game));else game[0] = 0;
+			if ((s = SearchInfostring(string, "modname"      )) != NULL) strlcpy(mod , s, sizeof (mod ));else mod[0]  = 0;
+			if ((s = SearchInfostring(string, "mapname"      )) != NULL) strlcpy(map , s, sizeof (map ));else map[0]  = 0;
+			if ((s = SearchInfostring(string, "hostname"     )) != NULL) strlcpy(name, s, sizeof (name));else name[0] = 0;
 			if ((s = SearchInfostring(string, "protocol"     )) != NULL) c = atoi(s);else c = -1;
 			if ((s = SearchInfostring(string, "clients"      )) != NULL) users = atoi(s);else users = 0;
 			if ((s = SearchInfostring(string, "sv_maxclients")) != NULL) maxusers = atoi(s);else maxusers = 0;
@@ -869,7 +869,7 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 			if (developer.integer)
 				Con_Printf("Datagram_ParseConnectionless: received CCREP_REJECT from %s.\n", addressstring2);
 			Con_Printf("%s\n", data);
-			strncpy(m_return_reason, data, sizeof(m_return_reason) - 1);
+			strlcpy (m_return_reason, data, sizeof (m_return_reason));
 			break;
 #if 0
 		case CCREP_SERVER_INFO:
@@ -898,11 +898,9 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 					c = MSG_ReadByte();
 					if (c != NET_PROTOCOL_VERSION)
 					{
-						strncpy(hostcache[n].cname, hostcache[n].name, sizeof(hostcache[n].cname) - 1);
-						hostcache[n].cname[sizeof(hostcache[n].cname) - 1] = 0;
+						strlcpy (hostcache[n].cname, hostcache[n].name, sizeof (hostcache[n].cname));
 						strcpy(hostcache[n].name, "*");
-						strncat(hostcache[n].name, hostcache[n].cname, sizeof(hostcache[n].name) - 1);
-						hostcache[n].name[sizeof(hostcache[n].name) - 1] = 0;
+						strlcat (hostcache[n].name, hostcache[n].cname, sizeof(hostcache[n].name));
 					}
 					strcpy(hostcache[n].cname, cname);
 				}

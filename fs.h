@@ -64,7 +64,7 @@ qboolean FS_WriteFile (const char *filename, void *data, int len);
 // ------ Other functions ------ //
 
 void FS_StripExtension (const char *in, char *out);
-void FS_DefaultExtension (char *path, const char *extension);
+void FS_DefaultExtension (char *path, const char *extension, size_t size_path);
 
 qboolean FS_FileExists (const char *filename);		// the file can be into a package
 qboolean FS_SysFileExists (const char *filename);	// only look for files outside of packages

@@ -1002,7 +1002,7 @@ tag_torso,
 			do
 			{
 				if (words < 10)
-					strncpy(word[words++], com_token, MAX_QPATH - 1);
+					strlcpy(word[words++], com_token, sizeof (word[0]));
 				else
 					wordsoverflow = true;
 			}
@@ -1021,8 +1021,8 @@ tag_torso,
 					skinfileitem = Mem_Alloc(tempmempool, sizeof(skinfileitem_t));
 					skinfileitem->next = skinfile->items;
 					skinfile->items = skinfileitem;
-					strncpy(skinfileitem->name, word[1], sizeof(skinfileitem->name) - 1);
-					strncpy(skinfileitem->replacement, word[2], sizeof(skinfileitem->replacement) - 1);
+					strlcpy (skinfileitem->name, word[1], sizeof (skinfileitem->name));
+					strlcpy (skinfileitem->replacement, word[2], sizeof (skinfileitem->replacement));
 				}
 				else
 					Con_Printf("Mod_LoadSkinFiles: parsing error in file \"%s_%i.skin\" on line #%i: wrong number of parameters to command \"%s\", see documentation in DP_GFX_SKINFILES extension in dpextensions.qc\n", loadmodel->name, i, line, word[0]);
@@ -1032,7 +1032,7 @@ tag_torso,
 				// tag name, like "tag_weapon,"
 				Con_DPrintf("Mod_LoadSkinFiles: parsed tag #%i \"%s\"\n", numtags, word[0]);
 				memset(tags + numtags, 0, sizeof(tags[numtags]));
-				strncpy(tags[numtags].name, word[0], sizeof(tags[numtags].name) - 1);
+				strlcpy (tags[numtags].name, word[0], sizeof (tags[numtags].name));
 				numtags++;
 			}
 			else if (words == 3 && !strcmp(word[1], ","))
@@ -1042,8 +1042,8 @@ tag_torso,
 				skinfileitem = Mem_Alloc(tempmempool, sizeof(skinfileitem_t));
 				skinfileitem->next = skinfile->items;
 				skinfile->items = skinfileitem;
-				strncpy(skinfileitem->name, word[0], sizeof(skinfileitem->name) - 1);
-				strncpy(skinfileitem->replacement, word[2], sizeof(skinfileitem->replacement) - 1);
+				strlcpy (skinfileitem->name, word[0], sizeof (skinfileitem->name));
+				strlcpy (skinfileitem->replacement, word[2], sizeof (skinfileitem->replacement));
 			}
 			else
 				Con_Printf("Mod_LoadSkinFiles: parsing error in file \"%s_%i.skin\" on line #%i: does not look like tag or mesh specification, or replace command, see documentation in DP_GFX_SKINFILES extension in dpextensions.qc\n", loadmodel->name, i, line);

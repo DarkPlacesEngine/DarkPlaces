@@ -118,7 +118,7 @@ void ui_item
 		ui->item_count++;
 	}
 	memset(it, 0, sizeof(ui_item_t));
-	strncpy(it->name, itemname, 32);
+	strlcpy (it->name, itemname, sizeof (it->name));
 	it->flags = 0;
 	if (picname || string)
 	{

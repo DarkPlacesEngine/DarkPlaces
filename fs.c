@@ -547,7 +547,7 @@ pack_t *FS_LoadPackPK3 (const char *packfile)
 	// Create a package structure in memory
 	pack = Mem_Alloc (pak_mempool, sizeof (pack_t));
 	pack->ignorecase = true; // PK3 ignores case
-	strcpy (pack->filename, packfile);
+	strlcpy (pack->filename, packfile, sizeof (pack->filename));
 	pack->handle = packhandle;
 	pack->numfiles = eocd.nbentries;
 	pack->mempool = Mem_AllocPool (packfile);
@@ -688,7 +688,7 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 
 	pack = Mem_Alloc(pak_mempool, sizeof (pack_t));
 	pack->ignorecase = false; // PAK is case sensitive
-	strcpy (pack->filename, packfile);
+	strlcpy (pack->filename, packfile, sizeof (pack->filename));
 	pack->handle = packhandle;
 	pack->numfiles = numpackfiles;
 	pack->mempool = Mem_AllocPool(packfile);
@@ -706,7 +706,7 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 		size_t size;
 		packfile_t *file = &pack->files[i];
 
-		strcpy (file->name, info[i].name);
+		strlcpy (file->name, info[i].name, sizeof (file->name));
 		file->offset = LittleLong(info[i].filepos);
 		size = LittleLong (info[i].filelen);
 		file->packsize = size;
@@ -736,11 +736,11 @@ void FS_AddGameDirectory (char *dir)
 	pack_t *pak;
 	char pakfile[MAX_OSPATH];
 
-	strcpy (fs_gamedir, dir);
+	strlcpy (fs_gamedir, dir, sizeof (fs_gamedir));
 
 	// add the directory to the search path
 	search = Mem_Alloc(pak_mempool, sizeof(searchpath_t));
-	strcpy (search->filename, dir);
+	strlcpy (search->filename, dir, sizeof (search->filename));
 	search->next = fs_searchpaths;
 	fs_searchpaths = search;
 
@@ -840,19 +840,19 @@ void FS_Init (void)
 	// Overrides the system supplied base directory (under GAMENAME)
 	i = COM_CheckParm ("-basedir");
 	if (i && i < com_argc-1)
-		strcpy (fs_basedir, com_argv[i+1]);
+		strlcpy (fs_basedir, com_argv[i+1], sizeof (fs_basedir));
 
 	i = strlen (fs_basedir);
 	if (i > 0 && (fs_basedir[i-1] == '\\' || fs_basedir[i-1] == '/'))
 		fs_basedir[i-1] = 0;
 
 	// start up with GAMENAME by default (id1)
-	strcpy(com_modname, GAMENAME);
+	strlcpy (com_modname, GAMENAME, sizeof (com_modname));
 	FS_AddGameDirectory (va("%s/"GAMENAME, fs_basedir));
 	if (gamedirname[0])
 	{
 		fs_modified = true;
-		strcpy(com_modname, gamedirname);
+		strlcpy (com_modname, gamedirname, sizeof (com_modname));
 		FS_AddGameDirectory (va("%s/%s", fs_basedir, gamedirname));
 	}
 
@@ -862,7 +862,7 @@ void FS_Init (void)
 	if (i && i < com_argc-1)
 	{
 		fs_modified = true;
-		strcpy(com_modname, com_argv[i+1]);
+		strlcpy (com_modname, com_argv[i+1], sizeof (com_modname));
 		FS_AddGameDirectory (va("%s/%s", fs_basedir, com_argv[i+1]));
 	}
 
@@ -892,7 +892,7 @@ void FS_Init (void)
 					Sys_Error ("Couldn't load packfile: %s", com_argv[i]);
 			}
 			else
-				strcpy (search->filename, com_argv[i]);
+				strlcpy (search->filename, com_argv[i], sizeof (search->filename));
 			search->next = fs_searchpaths;
 			fs_searchpaths = search;
 		}
@@ -1658,7 +1658,7 @@ void FS_StripExtension (const char *in, char *out)
 FS_DefaultExtension
 ==================
 */
-void FS_DefaultExtension (char *path, const char *extension)
+void FS_DefaultExtension (char *path, const char *extension, size_t size_path)
 {
 	const char *src;
 
@@ -1673,7 +1673,7 @@ void FS_DefaultExtension (char *path, const char *extension)
 		src--;
 	}
 
-	strcat (path, extension);
+	strlcat (path, extension, size_path);
 }
 
 

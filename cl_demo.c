@@ -259,9 +259,8 @@ void CL_Record_f (void)
 		track = -1;
 
 	// get the demo name
-	strncpy (name, Cmd_Argv(1), sizeof (name) - 1);
-	name[sizeof (name) - 1] = '\0';
-	FS_DefaultExtension (name, ".dem");
+	strlcpy (name, Cmd_Argv(1), sizeof (name));
+	FS_DefaultExtension (name, ".dem", sizeof (name));
 
 	// start the map up
 	if (c > 2)
@@ -312,8 +311,8 @@ void CL_PlayDemo_f (void)
 	NetConn_ClientFrame();
 
 	// open the demo file
-	strcpy (name, Cmd_Argv(1));
-	FS_DefaultExtension (name, ".dem");
+	strlcpy (name, Cmd_Argv(1), sizeof (name));
+	FS_DefaultExtension (name, ".dem", sizeof (name));
 
 	Con_Printf ("Playing demo from %s.\n", name);
 	cls.demofile = FS_Open (name, "rb", false);

@@ -683,7 +683,7 @@ void M_ScanSaves (void)
 		str = FS_Getline (f);
 		sscanf (str, "%i\n", &version);
 		str = FS_Getline (f);
-		strncpy (m_filenames[i], str, sizeof(m_filenames[i])-1);
+		strlcpy (m_filenames[i], str, sizeof (m_filenames[i]));
 
 	// change _ back to space
 		for (j=0 ; j<SAVEGAME_COMMENT_LENGTH ; j++)
