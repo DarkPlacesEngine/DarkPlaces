@@ -751,6 +751,7 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 	HGLRC baseRC;
 	int CenterX, CenterY;
 	const char *gldrivername;
+	int depth;
 
 	if (vid_initialized)
 		Sys_Error("VID_InitMode called when video is already initialised\n");
@@ -802,11 +803,18 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 	{
 		hdc = GetDC (NULL);
 		i = GetDeviceCaps(hdc, RASTERCAPS);
+		depth = GetDeviceCaps(hdc, PLANES) * GetDeviceCaps(hdc, BITSPIXEL);
 		ReleaseDC (NULL, hdc);
 		if (i & RC_PALETTE)
 		{
 			VID_Shutdown();
 			Con_Printf ("Can't run in non-RGB mode\n");
+			return false;
+		}
+		if (bpp > depth)
+		{
+			VID_Shutdown();
+			Con_Printf ("A higher desktop depth is required to run this video mode\n");
 			return false;
 		}
 
