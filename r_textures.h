@@ -55,7 +55,7 @@ rtexture_t *R_ProceduralTexture (rtexturepool_t *rtexturepool, char *identifier,
 void R_UpdateTexture(rtexture_t *rt, byte *data);
 
 // location of the fragment in the texture (note: any parameter except rt can be NULL)
-void R_GetFragmentLocation(rtexture_t *rt, int *x, int *y, float *fx1, float *fy1, float *fx2, float *fy2);
+void R_FragmentLocation(rtexture_t *rt, int *x, int *y, float *fx1, float *fy1, float *fx2, float *fy2);
 
 // returns the renderer dependent texture slot number (call this before each use, as a texture might not have been precached, or it might change over time if it is procedural)
 int R_GetTexture (rtexture_t *rt);

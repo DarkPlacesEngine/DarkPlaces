@@ -1073,7 +1073,7 @@ void Mod_GenerateLightmappedMesh (msurface_t *surf)
 	}
 //	surf->lightmaptexture = R_LoadTexture(loadmodel->texturepool, va("lightmap%08x", lightmapnum), surf->lightmaptexturestride, (surf->extents[1]>>4)+1, NULL, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_FRAGMENT | TEXF_PRECACHE);
 //	surf->lightmaptexture = R_LoadTexture(loadmodel->texturepool, va("lightmap%08x", lightmapnum), surf->lightmaptexturestride, (surf->extents[1]>>4)+1, NULL, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_PRECACHE);
-	R_GetFragmentLocation(surf->lightmaptexture, NULL, NULL, &xbase, &ybase, &xscale, &yscale);
+	R_FragmentLocation(surf->lightmaptexture, NULL, NULL, &xbase, &ybase, &xscale, &yscale);
 	xscale = (xscale - xbase) * 16.0 / ((surf->extents[0] & ~15) + 16);
 	yscale = (yscale - ybase) * 16.0 / ((surf->extents[1] & ~15) + 16);
 

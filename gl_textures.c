@@ -1458,7 +1458,7 @@ int R_TextureHeight(rtexture_t *rt)
 	return ((gltexture_t *)rt)->height;
 }
 
-void R_GetFragmentLocation(rtexture_t *rt, int *x, int *y, float *fx1, float *fy1, float *fx2, float *fy2)
+void R_FragmentLocation(rtexture_t *rt, int *x, int *y, float *fx1, float *fy1, float *fx2, float *fy2)
 {
 	gltexture_t *glt;
 	float iwidth, iheight;
@@ -1482,7 +1482,7 @@ void R_GetFragmentLocation(rtexture_t *rt, int *x, int *y, float *fx1, float *fy
 		return;
 	}
 	if (!rt)
-		Host_Error("R_GetFragmentLocation: no texture supplied\n");
+		Host_Error("R_FragmentLocation: no texture supplied\n");
 	glt = (gltexture_t *)rt;
 	if (glt->flags & TEXF_FRAGMENT)
 	{
