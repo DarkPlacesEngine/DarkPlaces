@@ -53,6 +53,7 @@
 0 darkplaces collision: Mod_Q3BSP_TraceBrush_RecursiveBSPNode can be optimized to take a clipflags parameter like R_Q3BSP_RecursiveworldNode (Vic)
 0 darkplaces collision: mod_q3bsp_optimizedtraceline going through brushes? (Vermeulen)
 0 darkplaces commandline: make commandline parser ignore + and - if they were not directly following a space, so that + and - can be used in map names and such, also ignore if - or + is start of a number (Urre)
+0 darkplaces console: add "set" and "seta" commands (DP_CONSOLE_SET and DP_CONSOLE_SETA extensions) to create a cvar and set its value (seta makes a saved cvar) (VorteX)
 0 darkplaces console: make typing "; quit " in messagemode NOT quit the game (jitspoe)
 0 darkplaces editlights: add coronascale setting to rtlights (romi)
 0 darkplaces editlights: fix positioning of light editing display, it's not following the console properly
@@ -248,6 +249,7 @@
 2 darkplaces loader: implement r_shadow_bumpscale_basetexture support in hl maps (CheapAlert)
 2 darkplaces menu: add lan searching to the server browser and related code (Vermeulen)
 2 darkplaces menu: implement menu_clearkeyconfig and menu_keyconfig and the corresponding menu (diGGer)
+2 darkplaces physics: DP_SV_QCPHYSICS extension, calls SV_PhysicsQC function, which replaces the entire SV_Physics C function, calling all thinks and physics and everything (Urre, Sajt)
 2 darkplaces protocol: add beameffects.txt file which would describe a bunch of numbered beams usable with te_beameffect(beamnumber, start, end) call from server, should have configurable subdivide and jitter to do hl-like beams as well as railguns and such (CheapAlert, Vermeulen)
 2 darkplaces protocol: add rcon_password system similar to quakeworld server
 2 darkplaces protocol: fix cl_nodelta 1, it's halting updates after you move away from an area (Tomaz, sublim3)
@@ -292,6 +294,7 @@
 3 darkplaces loading: support md5mesh/md5anim model files (Supa)
 3 darkplaces menu: add OpenGL Extensions menu to enable/disable various features (zombie_13)
 3 darkplaces menu: rearrange menus - make Graphics Options submenu and move video and renderer stuff there, add Apply button to video section (tell Elric)
+3 darkplaces physics: DP_SV_TRACEMOVE extension, adds a qc builtin which traces an entity through the world (using origin/angles/mins/maxs/velocity/avelocity) for a specified amount of time (frametime typically), and sets trace results accordingly, this would greatly help out QC physics (Urre)
 3 darkplaces physics: add DP_SV_CRATEPHYSICS (NotoriousRay, Sajt)
 3 darkplaces protocol: add DP_ENT_COLORSHELL which puts a Q2-style colored shell on a model (Supajoe)
 3 darkplaces protocol: add a "box" effect controllable by QC somehow, for highlighting usable items (buttons and such) like in Red Faction, preferably with multiple colors supported (Mitchell)
