@@ -862,7 +862,7 @@ void FS_AddGameHierarchy (const char *dir)
 	// Add the personal game directory
 	homedir = getenv ("HOME");
 	if (homedir != NULL && homedir[0] != '\0')
-		FS_AddGameDirectory (va("%s/.darkplaces/%s", homedir, dir));
+		FS_AddGameDirectory (va("%s/.%s/%s", homedir, gameuserdirname, dir));
 }
 
 
@@ -960,15 +960,16 @@ void FS_Init (void)
 		return;
 	}
 
-	// start up with GAMENAME by default (id1)
-	FS_AddGameHierarchy (GAMENAME);
+	// add the game-specific paths
+	// gamedirname1 (typically id1)
+	FS_AddGameHierarchy (gamedirname1);
 	Cvar_SetQuick (&scr_screenshot_name, gamescreenshotname);
 
 	// add the game-specific path, if any
-	if (gamedirname[0])
+	if (gamedirname2)
 	{
 		fs_modified = true;
-		FS_AddGameHierarchy (gamedirname);
+		FS_AddGameHierarchy (gamedirname2);
 	}
 
 	// -game <gamedir>
