@@ -17,7 +17,10 @@ cvar_t scr_printspeed = {0, "scr_printspeed","8"};
 cvar_t vid_conwidth = {CVAR_SAVE, "vid_conwidth", "640"};
 cvar_t vid_conheight = {CVAR_SAVE, "vid_conheight", "480"};
 cvar_t scr_screenshot_jpeg = {CVAR_SAVE, "scr_screenshot_jpeg","0"};
+cvar_t scr_screenshot_jpeg_quality = {CVAR_SAVE, "scr_screenshot_jpeg_quality","0.9"};
 cvar_t cl_avidemo = {0, "cl_avidemo", "0"};
+
+int jpeg_supported = false;
 
 qboolean	scr_initialized;		// ready to draw
 

@@ -1112,7 +1112,7 @@ void M_DrawCheckbox (int x, int y, int on)
 }
 
 
-#define OPTIONS_ITEMS 33
+#define OPTIONS_ITEMS 34
 
 int options_cursor;
 
@@ -1149,6 +1149,8 @@ void M_Menu_Options_AdjustSliders (int dir)
 		Cvar_SetValueQuick (&scr_viewsize, bound(30, scr_viewsize.value + dir * 10, 120));
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&scr_screenshot_jpeg, !scr_screenshot_jpeg.integer);
+	else if (options_cursor == optnum++)
+		Cvar_SetValueQuick (&scr_screenshot_jpeg, bound(0, scr_screenshot_jpeg_quality.value + dir * 0.1, 1));
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&r_sky, !r_sky.integer);
 	else if (options_cursor == optnum++)
@@ -1256,8 +1258,6 @@ void M_Options_Draw (void)
 	p = Draw_CachePic("gfx/p_option.lmp");
 	M_DrawPic((320-p->width)/2, 4, "gfx/p_option.lmp");
 
-	// LordHavoc: FIXME: overbright needs to be disabled in GAME_GOODVSBAD2 but combine should not be disabled
-	// LordHavoc: perhaps it's time for Overbright Bits to die, and a r_lightmapintensity option to be added?
 	optnum = 0;
 	optcursor = options_cursor;
 	visible = (vid.conheight - 32) / 8;
@@ -1276,6 +1276,7 @@ void M_Options_Draw (void)
 	M_Options_PrintSlider(  "Conback Brightness", true, scr_conbrightness.value, 0, 1);
 	M_Options_PrintSlider(  "       Screen size", true, scr_viewsize.value, 30, 120);
 	M_Options_PrintCheckbox("  JPEG screenshots", jpeg_dll != NULL, scr_screenshot_jpeg.integer);
+	M_Options_PrintSlider(  "      JPEG quality", jpeg_dll != NULL, scr_screenshot_jpeg_quality.value, 0, 1);
 	M_Options_PrintCheckbox("               Sky", true, r_sky.integer);
 	M_Options_PrintCheckbox("   Texture Combine", true, gl_combine.integer);
 	M_Options_PrintCheckbox("         Dithering", true, gl_dither.integer);
