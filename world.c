@@ -505,6 +505,8 @@ trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins,
 	}
 	else
 		Collision_ClipTrace_Box(&trace, ent->v->mins, ent->v->maxs, starttransformed, mins, maxs, endtransformed, SUPERCONTENTS_SOLID, SUPERCONTENTS_SOLID);
+	trace.fraction = bound(0, trace.fraction, 1);
+	trace.realfraction = bound(0, trace.realfraction, 1);
 
 	if (trace.fraction < 1)
 	{
