@@ -2504,6 +2504,7 @@ void PF_te_explosion2 (void)
 	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
 	// color
 	MSG_WriteByte(&sv.datagram, G_FLOAT(OFS_PARM1));
+	MSG_WriteByte(&sv.datagram, G_FLOAT(OFS_PARM2));
 }
 
 void PF_te_lightning1 (void)
