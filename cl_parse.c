@@ -863,9 +863,17 @@ void CL_ParseServerMessage (void)
 		
 		case svc_version:
 			i = MSG_ReadLong ();
-			if (i != PROTOCOL_VERSION && i != 250)
-				Host_Error ("CL_ParseServerMessage: Server is protocol %i instead of %i\n", i, PROTOCOL_VERSION);
-			Nehahrademcompatibility = i == 250;
+			if (i != PROTOCOL_VERSION && i != DPPROTOCOL_VERSION && i != 250)
+			{
+				Host_Error ("CL_ParseServerMessage: Server is protocol %i, not %i or %i", i, DPPROTOCOL_VERSION, PROTOCOL_VERSION);
+				return;
+			}
+			Nehahrademcompatibility = false;
+			if (i == 250)
+				Nehahrademcompatibility = true;
+			if (cls.demoplayback && demo_nehahra.value)
+				Nehahrademcompatibility = true;
+			dpprotocol = i == DPPROTOCOL_VERSION;
 			break;
 			
 		case svc_disconnect:
