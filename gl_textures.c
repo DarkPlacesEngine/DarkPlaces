@@ -304,7 +304,7 @@ void R_ResampleTexture (void *indata, int inwidth, int inheight, void *outdata, 
 					out += 16;
 					row1 += 16;
 					row2 += 16;
-					j--;
+					j -= 4;
 				}
 				if (j & 2)
 				{
@@ -371,6 +371,7 @@ void R_ResampleTexture (void *indata, int inwidth, int inheight, void *outdata, 
 				out[2] = inrow[frac >> 16];frac += fracstep;
 				out[3] = inrow[frac >> 16];frac += fracstep;
 				out += 4;
+				j--;
 			}
 			if (j & 2)
 			{
