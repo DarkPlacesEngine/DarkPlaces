@@ -73,7 +73,7 @@ cvar_t bgmvolume = {CVAR_SAVE, "bgmvolume", "1"};
 cvar_t volume = {CVAR_SAVE, "volume", "0.7"};
 
 cvar_t nosound = {0, "nosound", "0"};
-cvar_t precache = {0, "precache", "1"};
+cvar_t snd_precache = {0, "snd_precache", "1"};
 cvar_t bgmbuffer = {0, "bgmbuffer", "4096"};
 cvar_t ambient_level = {0, "ambient_level", "0.3"};
 cvar_t ambient_fade = {0, "ambient_fade", "100"};
@@ -186,7 +186,7 @@ void S_Init (void)
 	Cmd_AddCommand("soundinfo", S_SoundInfo_f);
 
 	Cvar_RegisterVariable(&nosound);
-	Cvar_RegisterVariable(&precache);
+	Cvar_RegisterVariable(&snd_precache);
 	Cvar_RegisterVariable(&bgmbuffer);
 	Cvar_RegisterVariable(&ambient_level);
 	Cvar_RegisterVariable(&ambient_fade);
@@ -326,7 +326,7 @@ sfx_t *S_PrecacheSound (char *name, int complain)
 	sfx = S_FindName (name);
 
 // cache it in
-	if (precache.integer)
+	if (snd_precache.integer)
 		S_LoadSound (sfx, complain);
 
 	return sfx;
