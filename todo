@@ -4,6 +4,11 @@
 -n darkplaces: make LHNET_Read print out the names of read errors (yummyluv)
 -n darkplaces: revert noclip movement to match nq for compatibility with mods that trap movement as input (MauveBib)
 -n dpmod: make grapple off-hand (joe hill)
+0 lhfire: make a lhfire.txt and move the scripting info to it, add some more general explanation and tips
+0 darkplaces: add sv_gameplayfix_grenadebouncedownslopes cvar (default 1)
+0 darkplaces: add sv_gameplayfix_swiminbmodels cvar (default 1)
+0 darkplaces: add sv_gameplayfix_stepwhilejumping cvar (default 1), note that sv_jumpstep must also be on to enable this
+0 darkplaces: add sv_gameplayfix_noairborncorpse cvar (default 1)
 0 darkplaces: ability to disable fopen builtin access to read /, read data/, write data/, or disable fopen builtin entirely
 0 darkplaces: add DP_GFX_QUAKE3MODELTAGS, DP_GFX_SKINFILES, and any other new extensions to the wiki
 0 darkplaces: add DP_LITSUPPORT extension and document it
@@ -52,7 +57,7 @@
 0 darkplaces: figure out random crashes on map changes (Uffe, QorpsE)
 0 darkplaces: figure out what's wrong with gloss rendering vertex calculations, which may be GF2 related (QorpsE)
 0 darkplaces: figure out why monsters keep making fall pain sound after they've landed in dpmod (Cruaich)
-0 darkplaces: fix 'wall hugging' stuttering (romi)
+0 darkplaces: fix 'wall hugging' stuttering, also stuttering movement when walking over steps or monsters (romi)
 0 darkplaces: fix con_notify (should control number of lines)
 0 darkplaces: fix intermission failing to move view to intermission camera (romi, Zombie_13)
 0 darkplaces: fix key based turning being affected by slowmo - it should not be
@@ -101,7 +106,6 @@
 0 darkplaces: segfault reading memory in windows when starting a new server from menu (yummyluv)
 0 darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 0 darkplaces: shadows are not working with model tag attachments (Electro)
-0 darkplaces: stuttering movement when walking over steps or monsters (romi)
 0 darkplaces: test TecnoX and find the frikbot crash in SV_Physics (KrimZon)
 0 darkplaces: test zlib support with entirely pk3'd id1 data (should crash because of zlib not being setup early enough - fix this) (Mabus)
 0 darkplaces: the new sound engine should have a cvar for random variations of pitch on sounds like in doom (RenegadeC)
