@@ -390,9 +390,9 @@ static void R_Shadow_MakeTextures(void)
 	data[2] = 255;
 	data[3] = 255;
 	r_shadow_blankbumptexture = R_LoadTexture2D(r_shadow_texturepool, "blankbump", 1, 1, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
-	data[0] = 64;
-	data[1] = 64;
-	data[2] = 64;
+	data[0] = 255;
+	data[1] = 255;
+	data[2] = 255;
 	data[3] = 255;
 	r_shadow_blankglosstexture = R_LoadTexture2D(r_shadow_texturepool, "blankgloss", 1, 1, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
 	data[0] = 255;
@@ -1232,9 +1232,9 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 		glosstexture = r_shadow_blankglosstexture;
 	if (r_shadow_gloss.integer >= 2 || (r_shadow_gloss.integer >= 1 && glosstexture != r_shadow_blankglosstexture))
 	{
-		if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && lightcubemap)
+		if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && lightcubemap /*&& gl_support_blendsquare*/) // FIXME: detect blendsquare!
 		{
-			// 2/0/0/0/1/2 3D combine path
+			// 2/0/0/0/1/2 3D combine blendsquare path
 			m.tex[0] = R_GetTexture(bumptexture);
 			m.texcubemap[1] = R_GetTexture(r_shadow_normalscubetexture);
 			m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
@@ -1287,7 +1287,7 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			if (lightcubemap)
 				R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_worldtofilter);
 
-			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
+			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value * 0.25f, color);
 			for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
 			{
 				GL_Color(color[0], color[1], color[2], 1);
@@ -1296,9 +1296,9 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 				c_rt_lighttris += numtriangles;
 			}
 		}
-		else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && !lightcubemap)
+		else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && !lightcubemap /*&& gl_support_blendsquare*/) // FIXME: detect blendsquare!
 		{
-			// 2/0/0/0/2 3D combine path
+			// 2/0/0/0/2 3D combine blendsquare path
 			m.tex[0] = R_GetTexture(bumptexture);
 			m.texcubemap[1] = R_GetTexture(r_shadow_normalscubetexture);
 			m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
@@ -1344,7 +1344,7 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			c_rt_lightmeshes++;
 			c_rt_lighttris += numtriangles;
 
-			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
+			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value * 0.25f, color);
 			for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
 			{
 				GL_Color(color[0], color[1], color[2], 1);
@@ -1355,7 +1355,7 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 		}
 		else if (r_textureunits.integer >= 2 /*&& gl_support_blendsquare*/) // FIXME: detect blendsquare!
 		{
-			// 2/0/0/0/2/2 2D combine path
+			// 2/0/0/0/2/2 2D combine blendsquare path
 			m.tex[0] = R_GetTexture(bumptexture);
 			m.texcubemap[1] = R_GetTexture(r_shadow_normalscubetexture);
 			m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
@@ -1409,7 +1409,7 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			if (lightcubemap)
 				R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_worldtofilter);
 
-			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
+			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value * 0.25f, color);
 			for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
 			{
 				GL_Color(color[0], color[1], color[2], 1);
@@ -2035,7 +2035,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 		}
 		if (light <= 0 && islight)
 			light = 300;
-		radius = bound(15, light * r_editlights_quakelightsizescale.value / scale, 1048576);
+		radius = min(light * r_editlights_quakelightsizescale.value / scale, 1048576);
 		light = sqrt(bound(0, light, 1048576)) * (1.0f / 16.0f);
 		if (color[0] == 1 && color[1] == 1 && color[2] == 1)
 			VectorCopy(overridecolor, color);
