@@ -1710,7 +1710,7 @@ void M_Options_ColorControl_Key (int k, char ascii)
 	switch (k)
 	{
 	case K_ESCAPE:
-		M_Menu_Main_f ();
+		M_Menu_Options_f ();
 		break;
 
 	case K_ENTER:
