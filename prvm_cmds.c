@@ -97,8 +97,8 @@ string	search_getfilename(float handle, float num)
 
 string	chr(float ascii)
 
-float	etof(entity ent)
-entity	ftoe(float num)
+float	itof(intt ent)
+intt	ftoi(float num)
 		
 perhaps only : Menu : WriteMsg 
 ===============================
@@ -839,28 +839,28 @@ void VM_stof(void)
 
 /*
 ========================
-VM_etof
+VM_itof
 
-float etof(entity ent)
+float itof(intt ent)
 ========================
 */
-void VM_etof(void)
+void VM_itof(void)
 {
-	VM_SAFEPARMCOUNT(1, VM_etof);
+	VM_SAFEPARMCOUNT(1, VM_itof);
 	PRVM_G_FLOAT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
 }
 
 /*
 ========================
-VM_ftoe
+VM_itoe
 
-entity ftoe(float num)
+intt ftoi(float num)
 ========================
 */
-void VM_ftoe(void)
+void VM_ftoi(void)
 {
 	int ent;
-	VM_SAFEPARMCOUNT(1, VM_ftoe);
+	VM_SAFEPARMCOUNT(1, VM_ftoi);
 
 	ent = PRVM_G_FLOAT(OFS_PARM0);
 	if(PRVM_PROG_TO_EDICT(ent)->p.e->free)
@@ -2987,6 +2987,7 @@ void VM_M_getkeydest(void)
 VM_M_callfunction
 
 	callfunction(...,string function_name)
+Extension: pass 
 =========
 */
 mfunction_t *PRVM_ED_FindFunction (const char *name);
@@ -3341,8 +3342,8 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_search_getsize,
 	VM_search_getfilename, // 77
 	VM_chr,	
-	VM_etof,
-	VM_ftoe,// 80
+	VM_itof,
+	VM_ftoi,// 80
 	e10,			// 90
 	e10,			// 100
 	e100,			// 200

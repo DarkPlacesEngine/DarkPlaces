@@ -4118,7 +4118,7 @@ mfunction_t *PRVM_ED_FindFunction(const char *);
 // normal menu names (rest)
 #define M_F_TOGGLE		"m_toggle"
 #define M_F_SHUTDOWN	"m_shutdown"
-
+#undef NG_MENU
 static char *m_required_func[] = {
 M_F_INIT,
 M_F_KEYDOWN,
