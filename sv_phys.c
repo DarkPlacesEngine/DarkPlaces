@@ -1450,6 +1450,7 @@ void SV_Physics (void)
 					SV_AddGravity (ent);
 				SV_CheckStuck (ent);
 				SV_WalkMove (ent);
+				SV_LinkEdict (ent, true);
 			}
 			break;
 		case MOVETYPE_TOSS:

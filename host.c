@@ -520,8 +520,9 @@ Host_FilterTime
 Returns false if the time is too short to run a frame
 ===================
 */
-qboolean Host_FilterTime (float time)
+qboolean Host_FilterTime (double time)
 {
+	double timecap;
 	realtime += time;
 
 	if (slowmo.value < 0.0f)
@@ -531,8 +532,16 @@ qboolean Host_FilterTime (float time)
 	if (host_maxfps.value < host_minfps.value)
 		Cvar_SetValue("host_maxfps", host_minfps.value);
 
-	if ((!cls.timedemo) && ((realtime - oldrealtime) < (1.0 / host_maxfps.value)))
-		return false;		// framerate is too high
+	 // check if framerate is too high
+	if (!cls.timedemo)
+	{
+		timecap = sys_ticrate.value;
+		if (cls.state == ca_connected)
+			timecap = 1.0 / host_maxfps.value;
+
+		if ((realtime - oldrealtime) < timecap)
+			return false;
+	}
 
 	host_realframetime = host_frametime = realtime - oldrealtime; // LordHavoc: copy into host_realframetime as well
 	oldrealtime = realtime;
@@ -638,7 +647,11 @@ void _Host_Frame (float time)
 	
 // decide the simulation time
 	if (!Host_FilterTime (time))
-		return;			// don't run too fast, or packets will flood out
+	{
+		// if time was rejected, don't totally hog the CPU
+		Sys_Sleep();
+		return;
+	}
 		
 // get new key events
 	Sys_SendKeyEvents ();
