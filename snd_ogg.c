@@ -459,18 +459,16 @@ static const sfxbuffer_t* OGG_FetchSound (channel_t* ch, unsigned int start, uns
 	{
 		if (qov_pcm_seek (&per_ch->vf, (ogg_int64_t)start) != 0)
 			return NULL;
-
-		sb->offset = start;
 		sb->length = 0;
-		newlength = 0;
 	}
 	// Else, move forward the samples we need to keep in the sfxbuffer
 	else
 	{
 		memmove (sb->data, sb->data + (start - sb->offset) * factor, newlength * factor);
-		sb->offset = start;
 		sb->length = newlength;
 	}
+
+	sb->offset = start;
 
 	// We add exactly 1 sec of sound to the buffer:
 	// 1- to ensure we won't lose any sample during the resampling process
@@ -481,7 +479,7 @@ static const sfxbuffer_t* OGG_FetchSound (channel_t* ch, unsigned int start, uns
 					(sfx->format.speed + sb->length) * factor, buff_len);
 		return NULL;
 	}
-	newlength = per_sfx->format.speed * factor;  // 1 sec of sound before resampling
+	newlength = per_sfx->format.speed * factor;  // -> 1 sec of sound before resampling
 
 	// Decompress in the resampling_buffer
 #if BYTE_ORDER == LITTLE_ENDIAN

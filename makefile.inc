@@ -202,7 +202,7 @@ OBJ_WGL= builddate.c darkplaces.o sys_win.o vid_wgl.o conproc.o $(OBJ_WINSOUND) 
 # Link
 LDFLAGS_WINCOMMON=-lwinmm -lwsock32
 LDFLAGS_WINCL=$(LDFLAGS_WINCOMMON) -mwindows -luser32 -lgdi32 -ldxguid -ldinput -lcomctl32
-LDFLAGS_WINSV=$(LDFLAGS_WINCOMMON) -mconsole -lwinmm -lwsock32
+LDFLAGS_WINSV=$(LDFLAGS_WINCOMMON) -mconsole
 LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) `sdl-config --libs`
 EXE_WINCL=darkplaces.exe
 EXE_WINSV=darkplaces-dedicated.exe
