@@ -27,7 +27,6 @@
 -d darkplaces renderer: make gl_texture_anisotropy take effect immediately like gl_texturemode rather than needing an r_restart (-metlslime, zinx)
 -d darkplaces: add ogg music playback using optional library after adding wav music playback (-Joseph Caporale, Static_Fiend, Akuma)
 -d darkplaces: add wav music playback (-Joseph Caporale, Static_Fiend)
--d darkplaces: fix 'fall to death in wedge corner' glitch from quake (Zombie)
 -d dpmod: make grapple off-hand (joe hill)
 -f darkplaces client: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
 -f darkplaces: add crude DML model loading with animation list (ask Riot for dml library) (Mitchell)
@@ -507,6 +506,7 @@ d darkplaces: figure out why quad is creating two coronas, one at player and one
 d darkplaces: finish new udp networking code (yummyluv)
 d darkplaces: finish the partial update support in protocol.[ch] and reduce packet size to 1k to fix NAT routers (yummyluv, Vermeulen, Elric)
 d darkplaces: fix "game speed" menu option, it's too far left (Tomaz)
+d darkplaces: fix 'fall to death in wedge corner' glitch from quake (Zombie)
 d darkplaces: fix 2D attenuation texturing which is all black
 d darkplaces: fix PF_substring's mishandling of the end variable (Fuh)
 d darkplaces: fix Short format entity origins to fix shell casings sitting in floor/above floor (Tomaz)
