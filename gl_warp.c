@@ -391,12 +391,12 @@ void R_SkyDome()
 		skydomecalc(skydomeouter, 1024, 1024, 256);
 		skydomecalc(skydomeinner, 512, 512, 128);
 	}
-	speedscale = realtime*8.0/256.0;
+	speedscale = cl.time*8.0/256.0;
 	speedscale -= (int)speedscale;
 	skydome(skydomeouter, speedscale, 1.0 / 256.0);
 	glEnable (GL_BLEND);
 	glBindTexture(GL_TEXTURE_2D, alphaskytexture); // lower clouds
-	speedscale = realtime*8.0/128.0;
+	speedscale = cl.time*8.0/128.0;
 	speedscale -= (int)speedscale;
 	skydome(skydomeinner, speedscale, 1.0 / 128.0);
 	glDisable (GL_BLEND);

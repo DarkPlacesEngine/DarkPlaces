@@ -350,7 +350,9 @@ void CL_DecayLights (void)
 	{
 		if (dl->die < cl.time || !dl->radius)
 			continue;
-		
+
+		c_dlights++; // count every dlight in use
+
 		dl->radius -= time*dl->decay;
 		if (dl->radius < 0)
 			dl->radius = 0;

@@ -143,18 +143,8 @@ R_Init
 */
 void GL_Misc_Init (void)
 {	
-	Cmd_AddCommand ("timerefresh", R_TimeRefresh_f);	
 	Cmd_AddCommand ("envmap", R_Envmap_f);	
-	Cmd_AddCommand ("pointfile", R_ReadPointFile_f);	
-
-	Cvar_RegisterVariable (&r_drawentities);
-	Cvar_RegisterVariable (&r_drawviewmodel);
-	Cvar_RegisterVariable (&r_shadows);
-	Cvar_RegisterVariable (&r_wateralpha);
-	Cvar_RegisterVariable (&r_dynamic);
-	Cvar_RegisterVariable (&r_novis);
-	Cvar_RegisterVariable (&r_speeds);
-	Cvar_RegisterVariable (&r_waterripple); // LordHavoc: added waterripple
+	Cmd_AddCommand ("timerefresh", R_TimeRefresh_f);	
 
 	R_RegisterModule("GL_Misc", gl_misc_start, gl_misc_shutdown);
 }

@@ -650,6 +650,8 @@ void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, i
 	if (cull && R_CullBox (mins, maxs))
 		return;
 
+	c_models++;
+
 	leaf = Mod_PointInLeaf (org, cl.worldmodel);
 	if (leaf->dlightframe == r_dlightframecount)
 		for (i = 0;i < 8;i++)

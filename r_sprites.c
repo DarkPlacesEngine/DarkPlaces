@@ -100,6 +100,9 @@ void R_DrawSpriteModel (entity_t *e)
 
 	// don't even bother culling, because it's just a single
 	// polygon without a surface cache
+
+	c_sprites++;
+	
 	R_GetSpriteFrame (e, &oldframe, &newframe, &lerp);
 	if (lerp < 0) lerp = 0;
 	if (lerp > 1) lerp = 1;

@@ -205,6 +205,7 @@ void r_part_shutdown()
 R_InitParticles
 ===============
 */
+void R_ReadPointFile_f (void);
 void R_Particles_Init (void)
 {
 	int		i;
@@ -221,6 +222,8 @@ void R_Particles_Init (void)
 	{
 		r_numparticles = MAX_PARTICLES;
 	}
+
+	Cmd_AddCommand ("pointfile", R_ReadPointFile_f);	
 
 	Cvar_RegisterVariable (&r_particles);
 	Cvar_RegisterVariable (&r_dynamicparticles);
@@ -887,7 +890,7 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				p->texnum = smokeparticletexture[rand()&7];
 				p->scale = lhrandom(4, 6);
 				p->alpha = type == 4 ? 192 : 255;
-				p->color = 251; //(rand()&3)+68;
+				p->color = 247; //(rand()&3)+68;
 				p->type = pt_bloodcloud;
 				p->die = cl.time + 9999;
 				for (j=0 ; j<3 ; j++)
@@ -967,83 +970,36 @@ R_DrawParticles
 ===============
 */
 extern	cvar_t	sv_gravity;
-void R_CompleteLightPoint (vec3_t color, vec3_t p);
 
 void TraceLine (vec3_t start, vec3_t end, vec3_t impact);
 
-void R_DrawParticles (void)
+void R_MoveParticles (void)
 {
 	particle_t		*p;
-	int				i, r,g,b,a;
-	float			gravity, dvel, frametime, scale, scale2, minparticledist;
-	byte			*color24;
-	vec3_t			up, right, uprightangles, forward2, up2, right2, tempcolor, v;
-	int				activeparticles, maxparticle, j, k;
+	int				i, activeparticles, maxparticle, j, a;
+	vec3_t			v;
+	float			gravity, dvel, frametime;
 
 	// LordHavoc: early out condition
 	if (!numparticles)
 		return;
 
-	VectorScale (vup, 1.5, up);
-	VectorScale (vright, 1.5, right);
-
-	uprightangles[0] = 0;
-	uprightangles[1] = r_refdef.viewangles[1];
-	uprightangles[2] = 0;
-	AngleVectors (uprightangles, forward2, right2, up2);
-
 	frametime = cl.time - cl.oldtime;
 	gravity = frametime * sv_gravity.value;
 	dvel = 1+4*frametime;
 
-	minparticledist = DotProduct(r_refdef.vieworg, vpn) + 16.0f;
-
 	activeparticles = 0;
 	maxparticle = -1;
 	j = 0;
-	for (k = 0, p = particles;k < numparticles;k++, p++)
+	for (i = 0, p = particles;i < numparticles;i++, p++)
 	{
 		if (p->die < cl.time)
 		{
 			freeparticles[j++] = p;
 			continue;
 		}
-		maxparticle = k;
+		maxparticle = i;
 		activeparticles++;
-
-		// LordHavoc: only render if not too close
-		if (DotProduct(p->org, vpn) >= minparticledist)
-		{
-			color24 = (byte *) &d_8to24table[(int)p->color];
-			r = color24[0];
-			g = color24[1];
-			b = color24[2];
-			a = p->alpha;
-			if (r_dynamicparticles.value)
-			{
-				R_CompleteLightPoint(tempcolor, p->org);
-				r = (r * (int) tempcolor[0]) >> 7;
-				g = (g * (int) tempcolor[1]) >> 7;
-				b = (b * (int) tempcolor[2]) >> 7;
-			}
-			transpolybegin(p->texnum, 0, p->texnum, TPOLYTYPE_ALPHA);
-			scale = p->scale * -0.5;scale2 = p->scale * 0.5;
-			if (p->texnum == rainparticletexture) // rain streak
-			{
-				transpolyvert(p->org[0] + up2[0]*scale  + right2[0]*scale , p->org[1] + up2[1]*scale  + right2[1]*scale , p->org[2] + up2[2]*scale  + right2[2]*scale , 0,1,r,g,b,a);
-				transpolyvert(p->org[0] + up2[0]*scale2 + right2[0]*scale , p->org[1] + up2[1]*scale2 + right2[1]*scale , p->org[2] + up2[2]*scale2 + right2[2]*scale , 0,0,r,g,b,a);
-				transpolyvert(p->org[0] + up2[0]*scale2 + right2[0]*scale2, p->org[1] + up2[1]*scale2 + right2[1]*scale2, p->org[2] + up2[2]*scale2 + right2[2]*scale2, 1,0,r,g,b,a);
-				transpolyvert(p->org[0] + up2[0]*scale  + right2[0]*scale2, p->org[1] + up2[1]*scale  + right2[1]*scale2, p->org[2] + up2[2]*scale  + right2[2]*scale2, 1,1,r,g,b,a);
-			}
-			else
-			{
-				transpolyvert(p->org[0] + up[0]*scale  + right[0]*scale , p->org[1] + up[1]*scale  + right[1]*scale , p->org[2] + up[2]*scale  + right[2]*scale , 0,1,r,g,b,a);
-				transpolyvert(p->org[0] + up[0]*scale2 + right[0]*scale , p->org[1] + up[1]*scale2 + right[1]*scale , p->org[2] + up[2]*scale2 + right[2]*scale , 0,0,r,g,b,a);
-				transpolyvert(p->org[0] + up[0]*scale2 + right[0]*scale2, p->org[1] + up[1]*scale2 + right[1]*scale2, p->org[2] + up[2]*scale2 + right[2]*scale2, 1,0,r,g,b,a);
-				transpolyvert(p->org[0] + up[0]*scale  + right[0]*scale2, p->org[1] + up[1]*scale  + right[1]*scale2, p->org[2] + up[2]*scale  + right[2]*scale2, 1,1,r,g,b,a);
-			}
-			transpolyend();
-		}
 
 		VectorCopy(p->org, p->oldorg);
 		p->org[0] += p->vel[0]*frametime;
@@ -1055,14 +1011,12 @@ void R_DrawParticles (void)
 		case pt_static:
 			break;
 
+			// LordHavoc: drop-through because of shared code
 		case pt_blob:
-			for (i=0 ; i<3 ; i++)
-				p->vel[i] *= dvel;
-			break;
-
+			p->vel[2] *= dvel;
 		case pt_blob2:
-			for (i=0 ; i<2 ; i++)
-				p->vel[i] *= dvel;
+			p->vel[0] *= dvel;
+			p->vel[1] *= dvel;
 			break;
 
 		case pt_grav:
@@ -1085,19 +1039,13 @@ void R_DrawParticles (void)
 //			}
 			p->scale += frametime * 16;
 			p->alpha -= frametime * 512;
-			if (p->alpha < 1 || p->scale < 1)
-				p->die = -1;
 			break;
 		case pt_fallfadespark:
 			p->alpha -= frametime * 256;
 			p->vel[2] -= gravity;
-			if (p->alpha < 1)
-				p->die = -1;
 			break;
 		case pt_fade:
 			p->alpha -= frametime * 512;
-			if (p->alpha < 1)
-				p->die = -1;
 			break;
 		case pt_bubble:
 			a = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
@@ -1123,27 +1071,19 @@ void R_DrawParticles (void)
 				p->vel[2] += lhrandom(-32,32);
 			}
 			p->alpha -= frametime * 64;
-			if (p->alpha < 1)
-				p->die = -1;
 			break;
 // LordHavoc: for smoke trails
 		case pt_smoke:
 			p->scale += frametime * 16;
-			p->alpha -= frametime * 384;
-			if (p->alpha < 16)
-				p->die = -1;
+			p->alpha -= frametime * 256;
 			break;
 		case pt_smokecloud:
 			p->scale += frametime * 64;
-			p->alpha -= frametime * 384;
-			if (p->alpha < 16)
-				p->die = -1;
+			p->alpha -= frametime * 256;
 			break;
 		case pt_splash:
 			p->scale += frametime * 24;
 			p->alpha -= frametime * 512;
-			if (p->alpha < 1)
-				p->die = -1;
 			break;
 		case pt_rain:
 			a = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
@@ -1185,6 +1125,14 @@ void R_DrawParticles (void)
 			}
 			break;
 		}
+
+		// LordHavoc: most particles did this check anyway, consistency...
+		if (p->alpha < 1)
+			p->die = -1;
+
+		// LordHavoc: immediate removal of unnecessary particles (must be done to ensure compactor below operates properly in all cases)
+		if (p->die < cl.time)
+			freeparticles[j++] = p;
 	}
 	// fill in gaps to compact the array
 	i = 0;
@@ -1197,3 +1145,70 @@ void R_DrawParticles (void)
 	numparticles = activeparticles;
 }
 
+void R_CompleteLightPoint (vec3_t color, vec3_t p);
+
+void R_DrawParticles (void)
+{
+	particle_t		*p;
+	int				i, r,g,b,a;
+	float			scale, scale2, minparticledist;
+	byte			*color24;
+	vec3_t			up, right, uprightangles, forward2, up2, right2, tempcolor;
+
+	// LordHavoc: early out condition
+	if (!numparticles)
+		return;
+
+	c_particles += numparticles;
+
+	VectorScale (vup, 1.5, up);
+	VectorScale (vright, 1.5, right);
+
+	uprightangles[0] = 0;
+	uprightangles[1] = r_refdef.viewangles[1];
+	uprightangles[2] = 0;
+	AngleVectors (uprightangles, forward2, right2, up2);
+
+	minparticledist = DotProduct(r_refdef.vieworg, vpn) + 16.0f;
+
+	for (i = 0, p = particles;i < numparticles;i++, p++)
+	{
+		// LordHavoc: unnecessary (array was already compacted)
+//		if (p->die < cl.time)
+//			continue;
+
+		// LordHavoc: only render if not too close
+		if (DotProduct(p->org, vpn) < minparticledist)
+			continue;
+
+		color24 = (byte *) &d_8to24table[(int)p->color];
+		r = color24[0];
+		g = color24[1];
+		b = color24[2];
+		a = p->alpha;
+		if (r_dynamicparticles.value)
+		{
+			R_CompleteLightPoint(tempcolor, p->org);
+			r = (r * (int) tempcolor[0]) >> 7;
+			g = (g * (int) tempcolor[1]) >> 7;
+			b = (b * (int) tempcolor[2]) >> 7;
+		}
+		transpolybegin(p->texnum, 0, p->texnum, TPOLYTYPE_ALPHA);
+		scale = p->scale * -0.5;scale2 = p->scale * 0.5;
+		if (p->texnum == rainparticletexture) // rain streak
+		{
+			transpolyvert(p->org[0] + up2[0]*scale  + right2[0]*scale , p->org[1] + up2[1]*scale  + right2[1]*scale , p->org[2] + up2[2]*scale  + right2[2]*scale , 0,1,r,g,b,a);
+			transpolyvert(p->org[0] + up2[0]*scale2 + right2[0]*scale , p->org[1] + up2[1]*scale2 + right2[1]*scale , p->org[2] + up2[2]*scale2 + right2[2]*scale , 0,0,r,g,b,a);
+			transpolyvert(p->org[0] + up2[0]*scale2 + right2[0]*scale2, p->org[1] + up2[1]*scale2 + right2[1]*scale2, p->org[2] + up2[2]*scale2 + right2[2]*scale2, 1,0,r,g,b,a);
+			transpolyvert(p->org[0] + up2[0]*scale  + right2[0]*scale2, p->org[1] + up2[1]*scale  + right2[1]*scale2, p->org[2] + up2[2]*scale  + right2[2]*scale2, 1,1,r,g,b,a);
+		}
+		else
+		{
+			transpolyvert(p->org[0] + up[0]*scale  + right[0]*scale , p->org[1] + up[1]*scale  + right[1]*scale , p->org[2] + up[2]*scale  + right[2]*scale , 0,1,r,g,b,a);
+			transpolyvert(p->org[0] + up[0]*scale2 + right[0]*scale , p->org[1] + up[1]*scale2 + right[1]*scale , p->org[2] + up[2]*scale2 + right[2]*scale , 0,0,r,g,b,a);
+			transpolyvert(p->org[0] + up[0]*scale2 + right[0]*scale2, p->org[1] + up[1]*scale2 + right[1]*scale2, p->org[2] + up[2]*scale2 + right[2]*scale2, 1,0,r,g,b,a);
+			transpolyvert(p->org[0] + up[0]*scale  + right[0]*scale2, p->org[1] + up[1]*scale  + right[1]*scale2, p->org[2] + up[2]*scale  + right[2]*scale2, 1,1,r,g,b,a);
+		}
+		transpolyend();
+	}
+}

@@ -130,6 +130,7 @@ typedef struct msurface_s
 	int			dlightbits[8];
 
 	int			lightframe; // avoid redundent addition of dlights
+	int			worldnodeframe; // only render each surface once
 
 	int			lightmaptexturenum;
 	byte		styles[MAXLIGHTMAPS];

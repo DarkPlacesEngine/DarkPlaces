@@ -541,14 +541,14 @@ void SCR_SetUpToDrawConsole (void)
 	
 	if (scr_conlines < scr_con_current)
 	{
-		scr_con_current -= scr_conspeed.value*host_frametime;
+		scr_con_current -= scr_conspeed.value*host_realframetime;
 		if (scr_conlines > scr_con_current)
 			scr_con_current = scr_conlines;
 
 	}
 	else if (scr_conlines > scr_con_current)
 	{
-		scr_con_current += scr_conspeed.value*host_frametime;
+		scr_con_current += scr_conspeed.value*host_realframetime;
 		if (scr_conlines < scr_con_current)
 			scr_con_current = scr_conlines;
 	}
@@ -772,6 +772,7 @@ extern void SHOWLMP_drawall();
 extern cvar_t contrast;
 extern cvar_t brightness;
 extern cvar_t gl_lightmode;
+extern cvar_t r_speeds2;
 
 void GL_BrightenScreen()
 {
@@ -936,10 +937,21 @@ void SCR_UpdateScreen (void)
 		char temp[32];
 		int calc;
 		newtime = Sys_FloatTime();
-		calc = (int) (100.0 / (newtime - currtime));
-		sprintf(temp, "% 4i.%02i fps", calc / 100, calc % 100);
+		calc = (int) ((1.0 / (newtime - currtime)) + 0.5);
+		sprintf(temp, "%4i fps", calc);
 		currtime = newtime;
-		Draw_String(vid.width - (12*8), 0, temp, 9999);
+		Draw_String(vid.width - (8*8), vid.height - sb_lines - 8, temp, 9999);
+	}
+
+	if (r_speeds2.value)
+	{
+		extern char r_speeds2_string1[81], r_speeds2_string2[81], r_speeds2_string3[81], r_speeds2_string4[81], r_speeds2_string5[81], r_speeds2_string6[81];
+		Draw_String(0, vid.height - sb_lines - 48, r_speeds2_string1, 80);
+		Draw_String(0, vid.height - sb_lines - 40, r_speeds2_string2, 80);
+		Draw_String(0, vid.height - sb_lines - 32, r_speeds2_string3, 80);
+		Draw_String(0, vid.height - sb_lines - 24, r_speeds2_string4, 80);
+		Draw_String(0, vid.height - sb_lines - 16, r_speeds2_string5, 80);
+		Draw_String(0, vid.height - sb_lines -  8, r_speeds2_string6, 80);
 	}
 
 	V_UpdateBlends ();
@@ -951,7 +963,7 @@ void SCR_UpdateScreen (void)
 	if (r_speeds.value)
 	{
 		time2 = Sys_FloatTime ();
-		Con_Printf ("%3i ms  %4i wpoly %4i epoly %4i transpoly %4i lightpoly %4i BSPnodes %4i BSPleafs\n", (int)((time2-time1)*1000), c_brush_polys, c_alias_polys, currenttranspoly, c_light_polys, c_nodes, c_leafs);
+		Con_Printf ("%3i ms  %4i wpoly %4i epoly %4i transpoly %4i lightpoly %4i BSPnodes %4i BSPleafs %4i BSPfaces %4i models %4i bmodels %4i sprites %4i particles %3i dlights\n", (int)((time2-time1)*1000), c_brush_polys, c_alias_polys, currenttranspoly, c_light_polys, c_nodes, c_leafs, c_faces, c_models, c_bmodels, c_sprites, c_particles, c_dlights);
 	}
 	GL_EndRendering ();
 }

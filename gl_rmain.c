@@ -33,7 +33,7 @@ int			r_framecount;		// used for dlight push checking
 
 mplane_t	frustum[4];
 
-int			c_brush_polys, c_alias_polys, c_light_polys, c_nodes, c_leafs;
+int			c_brush_polys, c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c_bmodels, c_sprites, c_particles, c_dlights;
 
 qboolean	envmap;				// true during envmap command capture 
 
@@ -223,6 +223,10 @@ void glmain_shutdown()
 void GL_Main_Init()
 {
 	FOG_registercvars();
+	Cvar_RegisterVariable (&r_drawentities);
+	Cvar_RegisterVariable (&r_drawviewmodel);
+	Cvar_RegisterVariable (&r_shadows);
+	Cvar_RegisterVariable (&r_speeds);
 	Cvar_RegisterVariable (&r_speeds2);
 	Cvar_RegisterVariable (&contrast);
 	Cvar_RegisterVariable (&brightness);
@@ -230,6 +234,10 @@ void GL_Main_Init()
 //	Cvar_RegisterVariable (&r_dynamicwater);
 //	Cvar_RegisterVariable (&r_dynamicbothsides);
 	Cvar_RegisterVariable (&r_fullbrights);
+	Cvar_RegisterVariable (&r_wateralpha);
+	Cvar_RegisterVariable (&r_dynamic);
+	Cvar_RegisterVariable (&r_novis);
+	Cvar_RegisterVariable (&r_waterripple); // LordHavoc: added waterripple
 	if (nehahra)
 		Cvar_SetValue("r_fullbrights", 0);
 //	if (gl_vendor && strstr(gl_vendor, "3Dfx"))
@@ -484,8 +492,14 @@ void R_SetupFrame (void)
 	c_brush_polys = 0;
 	c_alias_polys = 0;
 	c_light_polys = 0;
+	c_faces = 0;
 	c_nodes = 0;
 	c_leafs = 0;
+	c_models = 0;
+	c_bmodels = 0;
+	c_sprites = 0;
+	c_particles = 0;
+	c_dlights = 0;
 
 }
 
@@ -586,10 +600,6 @@ void R_SetupGL (void)
 	glShadeModel(GL_SMOOTH);
 }
 
-void R_DrawWorld (void);
-//void R_RenderDlights (void);
-void R_DrawParticles (void);
-
 /*
 =============
 R_Clear
@@ -680,6 +690,7 @@ void GL_BlendView()
 	glEnable(GL_TEXTURE_2D);
 }
 
+/*
 #define TIMEREPORT(DESC) \
 	if (r_speeds2.value)\
 	{\
@@ -687,6 +698,14 @@ void GL_BlendView()
 		currtime = Sys_FloatTime();\
 		temptime += currtime;\
 		Con_Printf(DESC " %.4fms ", temptime * 1000.0);\
+	}
+*/
+#define TIMEREPORT(VAR) \
+	if (r_speeds2.value)\
+	{\
+		temptime = currtime;\
+		currtime = Sys_FloatTime();\
+		VAR = (int) ((currtime - temptime) * 1000000.0);\
 	}
 
 /*
@@ -700,8 +719,11 @@ extern qboolean intimerefresh;
 extern qboolean skyisvisible;
 extern void R_Sky();
 extern void UploadLightmaps();
+char r_speeds2_string1[81], r_speeds2_string2[81], r_speeds2_string3[81], r_speeds2_string4[81], r_speeds2_string5[81], r_speeds2_string6[81];
 void R_RenderView (void)
 {
+	double starttime, currtime, temptime;
+	int time_clear, time_setup, time_world, time_bmodels, time_upload, time_sky, time_wall, time_models, time_moveparticles, time_drawparticles, time_transpoly, time_blend, time_total;
 //	double currtime, temptime;
 //	if (r_norefresh.value)
 //		return;
@@ -713,47 +735,71 @@ void R_RenderView (void)
 
 	FOG_framebegin();
 
-//	if (r_speeds2.value)
-//	{
-//		currtime = Sys_FloatTime();
+	if (r_speeds2.value)
+	{
+		starttime = currtime = Sys_FloatTime();
 //		Con_Printf("render time: ");
-//	}
+	}
 	R_Clear();
-//	TIMEREPORT("R_Clear")
+	skypolyclear();
+	wallpolyclear();
+	transpolyclear();
+	skyisvisible = false;
+	TIMEREPORT(time_clear)
 
 	// render normal view
 
 	R_SetupFrame ();
 	R_SetFrustum ();
 	R_SetupGL ();
-
-	skypolyclear();
-	wallpolyclear();
-	transpolyclear();
-	skyisvisible = false;
+	TIMEREPORT(time_setup)
 
 	R_MarkLeaves ();	// done here so we know if we're in water
 	R_DrawWorld ();		// adds static entities to the list
-	if (!intimerefresh)
-		S_ExtraUpdate ();	// don't let sound get messed up if going slow
+	TIMEREPORT(time_world)
 	R_DrawEntitiesOnList1 (); // BSP models
-
-	skypolyrender(); // fogged sky polys, affects depth
-	if (skyname[0] && skyisvisible && !fogenabled)
-		R_Sky(); // does not affect depth, draws over the sky polys
+	TIMEREPORT(time_bmodels)
 
 	UploadLightmaps();
+	TIMEREPORT(time_upload)
+
+	skypolyrender(); // fogged sky polys, affects depth
+
+	if (skyname[0] && skyisvisible && !fogenabled)
+		R_Sky(); // does not affect depth, draws over the sky polys
+	TIMEREPORT(time_sky)
+
 	wallpolyrender();
+	TIMEREPORT(time_wall)
+
+//	if (!intimerefresh)
+//		S_ExtraUpdate ();	// don't let sound get messed up if going slow
 
 	R_DrawEntitiesOnList2 (); // other models
 //	R_RenderDlights ();
 	R_DrawViewModel ();
+	TIMEREPORT(time_models)
+	R_MoveParticles ();
+	TIMEREPORT(time_moveparticles)
 	R_DrawParticles ();
+	TIMEREPORT(time_drawparticles)
 
 	transpolyrender();
+	TIMEREPORT(time_transpoly)
 
 	FOG_frameend();
+
 	GL_BlendView();
-//	if (r_speeds2.value)
+	TIMEREPORT(time_blend)
+	if (r_speeds2.value)
+	{
+		time_total = (int) ((Sys_FloatTime() - starttime) * 1000000.0);
 //		Con_Printf("\n");
+		sprintf(r_speeds2_string1, "%6i walls %6i dlitwalls %7i modeltris %7i transpoly\n", c_brush_polys, c_light_polys, c_alias_polys, currenttranspoly);
+		sprintf(r_speeds2_string2, "BSP: %6i faces %6i nodes %6i leafs\n", c_faces, c_nodes, c_leafs);
+		sprintf(r_speeds2_string3, "%4i models %4i bmodels %4i sprites %5i particles %3i dlights\n", c_models, c_bmodels, c_sprites, c_particles, c_dlights);
+		sprintf(r_speeds2_string4, "%6ius clear  %6ius setup  %6ius world  %6ius bmodel %6ius upload", time_clear, time_setup, time_world, time_bmodels, time_upload);
+		sprintf(r_speeds2_string5, "%6ius sky    %6ius wall   %6ius models %6ius mpart  %6ius dpart ", time_sky, time_wall, time_models, time_moveparticles, time_drawparticles);
+		sprintf(r_speeds2_string6, "%6ius trans  %6ius blend  %6ius total  %6ius permdl", time_transpoly, time_blend, time_total, time_models / max(c_models, 1));
+	}
 }

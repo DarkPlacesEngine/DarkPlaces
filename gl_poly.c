@@ -813,7 +813,7 @@ void skypolyrender()
 		glDisable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glBindTexture(GL_TEXTURE_2D, solidskytexture); // upper clouds
-		speedscale = realtime*8;
+		speedscale = cl.time*8;
 		speedscale -= (int)speedscale & ~127 ;
 		for (i = 0,p = &skypoly[0];i < currentskypoly;i++, p++)
 		{
@@ -836,7 +836,7 @@ void skypolyrender()
 		glEnable(GL_BLEND);
 		glDepthMask(0);
 		glBindTexture(GL_TEXTURE_2D, alphaskytexture); // lower clouds
-		speedscale = realtime*16;
+		speedscale = cl.time*16;
 		speedscale -= (int)speedscale & ~127 ;
 		for (i = 0,p = &skypoly[0];i < currentskypoly;i++, p++)
 		{
