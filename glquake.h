@@ -404,7 +404,7 @@ extern void (GLAPIENTRY *qglFrustum)(GLdouble left, GLdouble right, GLdouble bot
 extern void (GLAPIENTRY *qglViewport)(GLint x, GLint y, GLsizei width, GLsizei height);
 //extern void (GLAPIENTRY *qglPushMatrix)(void);
 //extern void (GLAPIENTRY *qglPopMatrix)(void);
-//extern void (GLAPIENTRY *qglLoadIdentity)(void);
+extern void (GLAPIENTRY *qglLoadIdentity)(void);
 //extern void (GLAPIENTRY *qglLoadMatrixd)(const GLdouble *m);
 extern void (GLAPIENTRY *qglLoadMatrixf)(const GLfloat *m);
 //extern void (GLAPIENTRY *qglMultMatrixd)(const GLdouble *m);

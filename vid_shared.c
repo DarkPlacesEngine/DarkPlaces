@@ -127,7 +127,7 @@ void (GLAPIENTRY *qglFrustum)(GLdouble left, GLdouble right, GLdouble bottom, GL
 void (GLAPIENTRY *qglViewport)(GLint x, GLint y, GLsizei width, GLsizei height);
 //void (GLAPIENTRY *qglPushMatrix)(void);
 //void (GLAPIENTRY *qglPopMatrix)(void);
-//void (GLAPIENTRY *qglLoadIdentity)(void);
+void (GLAPIENTRY *qglLoadIdentity)(void);
 //void (GLAPIENTRY *qglLoadMatrixd)(const GLdouble *m);
 void (GLAPIENTRY *qglLoadMatrixf)(const GLfloat *m);
 //void (GLAPIENTRY *qglMultMatrixd)(const GLdouble *m);
@@ -269,7 +269,7 @@ static dllfunction_t opengl110funcs[] =
 	{"glViewport", (void **) &qglViewport},
 //	{"glPushMatrix", (void **) &qglPushMatrix},
 //	{"glPopMatrix", (void **) &qglPopMatrix},
-//	{"glLoadIdentity", (void **) &qglLoadIdentity},
+	{"glLoadIdentity", (void **) &qglLoadIdentity},
 //	{"glLoadMatrixd", (void **) &qglLoadMatrixd},
 	{"glLoadMatrixf", (void **) &qglLoadMatrixf},
 //	{"glMultMatrixd", (void **) &qglMultMatrixd},
