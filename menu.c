@@ -1474,7 +1474,6 @@ void M_Menu_Options_Effects_f (void)
 
 extern cvar_t r_detailtextures;
 extern cvar_t cl_particles;
-extern cvar_t cl_explosions;
 extern cvar_t cl_stainmaps;
 extern cvar_t cl_decals;
 extern cvar_t r_explosionclip;
@@ -1489,6 +1488,7 @@ extern cvar_t cl_particles_bubbles;
 extern cvar_t cl_particles_blood;
 extern cvar_t cl_particles_blood_alpha;
 extern cvar_t cl_particles_blood_bloodhack;
+extern cvar_t cl_particles_explosions_shell;
 extern cvar_t r_lightningbeam_thickness;
 extern cvar_t r_lightningbeam_scroll;
 extern cvar_t r_lightningbeam_repeatdistance;
@@ -1508,7 +1508,7 @@ void M_Menu_Options_Effects_AdjustSliders (int dir)
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&gl_flashblend, !gl_flashblend.integer);
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles, !cl_particles.integer);
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles_quality, bound(1, cl_particles_quality.value + dir * 0.5, 4));
-	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_explosions, !cl_explosions.integer);
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles_explosions_shell, !cl_particles_explosions_shell.integer);
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&r_explosionclip, !r_explosionclip.integer);
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_stainmaps, !cl_stainmaps.integer);
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_decals, !cl_decals.integer);
@@ -1559,8 +1559,8 @@ void M_Options_Effects_Draw (void)
 	M_Options_PrintCheckbox("      Use Only Coronas", true, gl_flashblend.integer);
 	M_Options_PrintCheckbox("             Particles", true, cl_particles.integer);
 	M_Options_PrintSlider(  "     Particles Quality", true, cl_particles_quality.value, 1, 4);
-	M_Options_PrintCheckbox("            Explosions", true, cl_explosions.integer);
-	M_Options_PrintCheckbox("    Explosion Clipping", true, r_explosionclip.integer);
+	M_Options_PrintCheckbox("       Explosion Shell", true, cl_particles_explosions_shell.integer);
+	M_Options_PrintCheckbox("  Explosion Shell Clip", true, r_explosionclip.integer);
 	M_Options_PrintCheckbox("             Stainmaps", true, cl_stainmaps.integer);
 	M_Options_PrintCheckbox("                Decals", true, cl_decals.integer);
 	M_Options_PrintCheckbox("      Detail Texturing", true, r_detailtextures.integer);

@@ -294,6 +294,10 @@ cvar_t cl_particles_blood = {CVAR_SAVE, "cl_particles_blood", "1"};
 cvar_t cl_particles_blood_alpha = {CVAR_SAVE, "cl_particles_blood_alpha", "0.5"};
 cvar_t cl_particles_blood_bloodhack = {CVAR_SAVE, "cl_particles_blood_bloodhack", "1"};
 cvar_t cl_particles_bulletimpacts = {CVAR_SAVE, "cl_particles_bulletimpacts", "1"};
+cvar_t cl_particles_explosions_bubbles = {CVAR_SAVE, "cl_particles_explosions_bubbles", "1"};
+cvar_t cl_particles_explosions_smoke = {CVAR_SAVE, "cl_particles_explosions_smokes", "0"};
+cvar_t cl_particles_explosions_sparks = {CVAR_SAVE, "cl_particles_explosions_sparks", "1"};
+cvar_t cl_particles_explosions_shell = {CVAR_SAVE, "cl_particles_explosions_shell", "0"};
 cvar_t cl_particles_smoke = {CVAR_SAVE, "cl_particles_smoke", "1"};
 cvar_t cl_particles_smoke_alpha = {CVAR_SAVE, "cl_particles_smoke_alpha", "0.5"};
 cvar_t cl_particles_smoke_alphafade = {CVAR_SAVE, "cl_particles_smoke_alphafade", "0.55"};
@@ -344,6 +348,10 @@ void CL_Particles_Init (void)
 	Cvar_RegisterVariable (&cl_particles_blood);
 	Cvar_RegisterVariable (&cl_particles_blood_alpha);
 	Cvar_RegisterVariable (&cl_particles_blood_bloodhack);
+	Cvar_RegisterVariable (&cl_particles_explosions_bubbles);
+	Cvar_RegisterVariable (&cl_particles_explosions_smoke);
+	Cvar_RegisterVariable (&cl_particles_explosions_sparks);
+	Cvar_RegisterVariable (&cl_particles_explosions_shell);
 	Cvar_RegisterVariable (&cl_particles_bulletimpacts);
 	Cvar_RegisterVariable (&cl_particles_smoke);
 	Cvar_RegisterVariable (&cl_particles_smoke_alpha);
@@ -650,66 +658,59 @@ void CL_ParticleExplosion (vec3_t org)
 	CL_SpawnDecalParticleForPoint(org, 40, 48, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
 
 	i = CL_PointQ1Contents(org);
-	if ((i == CONTENTS_SLIME || i == CONTENTS_WATER) && cl_particles.integer && cl_particles_bubbles.integer)
+	if (i == CONTENTS_SLIME || i == CONTENTS_WATER)
 	{
-		for (i = 0;i < 128 * cl_particles_quality.value;i++)
-			particle(pt_bubble, PARTICLE_BILLBOARD, 0x404040, 0x808080, tex_bubble, false, PBLEND_ADD, 2, 2, (1.0f / cl_particles_quality.value) * lhrandom(128, 255), (1.0f / cl_particles_quality.value) * 256, 9999, -0.25, 1.5, org[0] + lhrandom(-16, 16), org[1] + lhrandom(-16, 16), org[2] + lhrandom(-16, 16), lhrandom(-96, 96), lhrandom(-96, 96), lhrandom(-96, 96), 0, 0, 0, 0, (1.0 / 16.0), 0);
+		if (cl_particles.integer && cl_particles_bubbles.integer && cl_particles_explosions_bubbles.integer)
+			for (i = 0;i < 128 * cl_particles_quality.value;i++)
+				particle(pt_bubble, PARTICLE_BILLBOARD, 0x404040, 0x808080, tex_bubble, false, PBLEND_ADD, 2, 2, (1.0f / cl_particles_quality.value) * lhrandom(128, 255), (1.0f / cl_particles_quality.value) * 256, 9999, -0.25, 1.5, org[0] + lhrandom(-16, 16), org[1] + lhrandom(-16, 16), org[2] + lhrandom(-16, 16), lhrandom(-96, 96), lhrandom(-96, 96), lhrandom(-96, 96), 0, 0, 0, 0, (1.0 / 16.0), 0);
 	}
 	else
 	{
-		/*
 		// LordHavoc: smoke effect similar to UT2003, chews fillrate too badly up close
 		// smoke puff
-		if (cl_particles.integer && cl_particles_smoke.integer)
+		if (cl_particles.integer && cl_particles_smoke.integer && cl_particles_explosions_smoke.integer)
 		{
-			for (i = 0;i < 64;i++)
+			for (i = 0;i < 32;i++)
 			{
+				int k;
+				vec3_t v, v2;
 #ifdef WORKINGLQUAKE
-				v2[0] = lhrandom(-64, 64);
-				v2[1] = lhrandom(-64, 64);
-				v2[2] = lhrandom(-8, 24);
+				v2[0] = lhrandom(-48, 48);
+				v2[1] = lhrandom(-48, 48);
+				v2[2] = lhrandom(-48, 48);
 #else
 				for (k = 0;k < 16;k++)
 				{
-					v[0] = org[0] + lhrandom(-64, 64);
-					v[1] = org[1] + lhrandom(-64, 64);
-					v[2] = org[2] + lhrandom(-8, 24);
+					v[0] = org[0] + lhrandom(-48, 48);
+					v[1] = org[1] + lhrandom(-48, 48);
+					v[2] = org[2] + lhrandom(-48, 48);
 					if (CL_TraceLine(org, v, v2, NULL, true, NULL, SUPERCONTENTS_SOLID) >= 0.1)
 						break;
 				}
 				VectorSubtract(v2, org, v2);
 #endif
 				VectorScale(v2, 2.0f, v2);
-				particle(pt_static, PARTICLE_BILLBOARD, 0x101010, 0x202020, tex_smoke[rand()&7], true, PBLEND_ADD, 12, 12, 255, 512, 9999, 0, 0, org[0], org[1], org[2], v2[0], v2[1], v2[2], 0, 0, 0, 0, 0, 0);
+				particle(pt_static, PARTICLE_BILLBOARD, 0xFFFFFF, 0xFFFFFF, tex_smoke[rand()&7], true, PBLEND_ADD, 12, 12, 32, 64, 9999, 0, 0, org[0], org[1], org[2], v2[0], v2[1], v2[2], 0, 0, 0, 0, 0, 0);
 			}
 		}
-		*/
 
 #if 1
-		if (cl_particles.integer && cl_particles_sparks.integer)
+		if (cl_particles.integer && cl_particles_sparks.integer && cl_particles_explosions_sparks.integer)
 			for (i = 0;i < 128 * cl_particles_quality.value;i++)
 				particle(pt_static, PARTICLE_SPARK, 0x903010, 0xFFD030, tex_particle, false, PBLEND_ADD, 1.0f, 0.02f, (1.0f / cl_particles_quality.value) * lhrandom(0, 255), (1.0f / cl_particles_quality.value) * 512, 9999, 1, 0, org[0], org[1], org[2], lhrandom(-256, 256), lhrandom(-256, 256), lhrandom(-256, 256) + 80, 0, 0, 0, 0, 0.2, 0);
-	}
-
-	//if (cl_explosions.integer)
-	//	R_NewExplosion(org);
 #elif 1
-		if (cl_particles.integer && cl_particles_sparks.integer)
+		if (cl_particles.integer && cl_particles_sparks.integer && cl_particles_explosions_sparks.integer)
 			for (i = 0;i < 64 * cl_particles_quality.value;i++)
 				particle(pt_ember, PARTICLE_SPARK, 0x903010, 0xFFD030, tex_particle, false, PBLEND_ADD, 1.0f, 0.01f, (1.0f / cl_particles_quality.value) * lhrandom(0, 255), (1.0f / cl_particles_quality.value) * 256, 9999, 0.7, 0, org[0], org[1], org[2], lhrandom(-256, 256), lhrandom(-256, 256), lhrandom(-256, 256) + 80, cl.time, 0, 0, 0, 0, 0);
-	}
-
-	//if (cl_explosions.integer)
-	//	R_NewExplosion(org);
 #else
-		if (cl_particles.integer && cl_particles_sparks.integer)
+		if (cl_particles.integer && cl_particles_sparks.integer && cl_particles_explosions_sparks.integer)
 			for (i = 0;i < 256 * cl_particles_quality.value;i++)
 				particle(pt_static, PARTICLE_SPARK, 0x903010, 0xFFD030, tex_particle, false, PBLEND_ADD, 1.5f, 0.05f, (1.0f / cl_particles_quality.value) * lhrandom(0, 255), (1.0f / cl_particles_quality.value) * 512, 9999, 1, 0, org[0], org[1], org[2], lhrandom(-192, 192), lhrandom(-192, 192), lhrandom(-192, 192) + 160, 0, 0, 0, 0, 0.2, 0);
+#endif
 	}
 
-	if (cl_explosions.integer)
+	if (cl_particles_explosions_shell.integer)
 		R_NewExplosion(org);
-#endif
 }
 
 /*
@@ -745,12 +746,7 @@ CL_BlobExplosion
 */
 void CL_BlobExplosion (vec3_t org)
 {
-	if (cl_stainmaps.integer)
-		R_Stain(org, 96, 80, 80, 80, 64, 176, 176, 176, 64);
-	CL_SpawnDecalParticleForPoint(org, 40, 48, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
-
-	if (cl_explosions.integer)
-		R_NewExplosion(org);
+	CL_ParticleExplosion(org);
 }
 
 /*
