@@ -6,12 +6,20 @@
 			st++;
 			if (++profile > 10000000) // LordHavoc: increased runaway loop limit 100x
 			{
+				// LordHavoc: update profile counter for debugging reasons
+				// (identifying erroneous loops and recursion patterns)
+				pr_xfunction->profile += profile - startprofile;
+				startprofile = profile;
+				// update the statement number before we error out
 				pr_xstatement = st - pr_statements;
-				Host_Error ("runaway loop error");
+				Host_Error("runaway loop counter hit limit of %d opcodes\ntip: if having trouble identifying the problem, try typing profile now", profile);
 			}
 
 #if PRTRACE
-			PR_PrintStatement (st);
+			pr_xfunction->profile += profile - startprofile;
+			startprofile = profile;
+			pr_xstatement = st - pr_statements;
+			PR_PrintStatement(st);
 #endif
 
 			switch (st->op)
@@ -143,6 +151,8 @@
 #if PRBOUNDSCHECK
 				if (OPB->_int < 0 || OPB->_int + 4 > pr_edictareasize)
 				{
+					pr_xfunction->profile += profile - startprofile;
+					startprofile = profile;
 					pr_xstatement = st - pr_statements;
 					Host_Error("Progs attempted to write to an out of bounds edict (%i)\n", OPB->_int);
 					return;
@@ -155,6 +165,8 @@
 #if PRBOUNDSCHECK
 				if (OPB->_int < 0 || OPB->_int + 12 > pr_edictareasize)
 				{
+					pr_xfunction->profile += profile - startprofile;
+					startprofile = profile;
 					pr_xstatement = st - pr_statements;
 					Host_Error("Progs attempted to write to an out of bounds edict (%i)\n", OPB->_int);
 					return;
@@ -167,17 +179,22 @@
 				break;
 
 			case OP_ADDRESS:
-				pr_xstatement = st - pr_statements;
 #if PRBOUNDSCHECK
 				if ((unsigned int)(OPB->_int) >= (unsigned int)(progs->entityfields))
 				{
+					pr_xfunction->profile += profile - startprofile;
+					startprofile = profile;
+					pr_xstatement = st - pr_statements;
 					Host_Error("Progs attempted to address an invalid field (%i) in an edict\n", OPB->_int);
 					return;
 				}
 #endif
 				if (OPA->edict == 0 && sv.state == ss_active)
 				{
-					Host_Error ("assignment to world entity");
+					pr_xfunction->profile += profile - startprofile;
+					startprofile = profile;
+					pr_xstatement = st - pr_statements;
+					Host_Error("assignment to world entity");
 					return;
 				}
 				ed = PROG_TO_EDICT(OPA->edict);
@@ -189,10 +206,12 @@
 			case OP_LOAD_ENT:
 			case OP_LOAD_S:
 			case OP_LOAD_FNC:
-				pr_xstatement = st - pr_statements;
 #if PRBOUNDSCHECK
 				if ((unsigned int)(OPB->_int) >= (unsigned int)(progs->entityfields))
 				{
+					pr_xfunction->profile += profile - startprofile;
+					startprofile = profile;
+					pr_xstatement = st - pr_statements;
 					Host_Error("Progs attempted to read an invalid field in an edict (%i)\n", OPB->_int);
 					return;
 				}
@@ -202,10 +221,12 @@
 				break;
 
 			case OP_LOAD_V:
-				pr_xstatement = st - pr_statements;
 #if PRBOUNDSCHECK
 				if (OPB->_int < 0 || OPB->_int + 2 >= progs->entityfields)
 				{
+					pr_xfunction->profile += profile - startprofile;
+					startprofile = profile;
+					pr_xstatement = st - pr_statements;
 					Host_Error("Progs attempted to read an invalid field in an edict (%i)\n", OPB->_int);
 					return;
 				}
@@ -246,7 +267,7 @@
 				pr_xstatement = st - pr_statements;
 				pr_argc = st->op - OP_CALL0;
 				if (!OPA->function)
-					Host_Error ("NULL function");
+					Host_Error("NULL function");
 
 				newf = &pr_functions[OPA->function];
 
@@ -256,9 +277,9 @@
 					int builtinnumber = -newf->first_statement;
 					pr_xfunction->builtinsprofile++;
 					if (builtinnumber < pr_numbuiltins && pr_builtins[builtinnumber])
-						pr_builtins[builtinnumber] ();
+						pr_builtins[builtinnumber]();
 					else
-						Host_Error ("No such builtin #%i", builtinnumber);
+						Host_Error("No such builtin #%i", builtinnumber);
 				}
 				else
 					st = pr_statements + PR_EnterFunction(newf);
@@ -266,6 +287,10 @@
 
 			case OP_DONE:
 			case OP_RETURN:
+				pr_xfunction->profile += profile - startprofile;
+				startprofile = profile;
+				pr_xstatement = st - pr_statements;
+
 				pr_globals[OFS_RETURN] = pr_globals[(unsigned short) st->a];
 				pr_globals[OFS_RETURN+1] = pr_globals[(unsigned short) st->a+1];
 				pr_globals[OFS_RETURN+2] = pr_globals[(unsigned short) st->a+2];
@@ -278,6 +303,9 @@
 				break;
 
 			case OP_STATE:
+				pr_xfunction->profile += profile - startprofile;
+				startprofile = profile;
+				pr_xstatement = st - pr_statements;
 				ed = PROG_TO_EDICT(pr_global_struct->self);
 				ed->v->nextthink = pr_global_struct->time + 0.1;
 				ed->v->frame = OPA->_float;
@@ -441,6 +469,8 @@
 #if PRBOUNDSCHECK
 				if (OPB->_int < 0 || OPB->_int + 4 > pr_edictareasize)
 				{
+					pr_xfunction->profile += profile - startprofile;
+					startprofile = profile;
 					pr_xstatement = st - pr_statements;
 					Host_Error("Progs attempted to write to an out of bounds edict\n");
 					return;
@@ -453,12 +483,16 @@
 #if PRBOUNDSCHECK
 				if (OPA->edict < 0 || OPA->edict >= pr_edictareasize)
 				{
+					pr_xfunction->profile += profile - startprofile;
+					startprofile = profile;
 					pr_xstatement = st - pr_statements;
 					Host_Error("Progs attempted to read an out of bounds edict number\n");
 					return;
 				}
 				if (OPB->_int < 0 || OPB->_int >= progs->entityfields)
 				{
+					pr_xfunction->profile += profile - startprofile;
+					startprofile = profile;
 					pr_xstatement = st - pr_statements;
 					Host_Error("Progs attempted to read an invalid field in an edict\n");
 					return;
@@ -477,6 +511,8 @@
 #if PRBOUNDSCHECK
 				if (OPB->_int < 0 || OPB->_int >= pr_globaldefs)
 				{
+					pr_xfunction->profile += profile - startprofile;
+					startprofile = profile;
 					pr_xstatement = st - pr_statements;
 					Host_Error("Progs attempted to write to an invalid indexed global\n");
 					return;
@@ -488,6 +524,8 @@
 #if PRBOUNDSCHECK
 				if (OPB->_int < 0 || OPB->_int + 2 >= pr_globaldefs)
 				{
+					pr_xfunction->profile += profile - startprofile;
+					startprofile = profile;
 					pr_xstatement = st - pr_statements;
 					Host_Error("Progs attempted to write to an invalid indexed global\n");
 					return;
@@ -503,6 +541,8 @@
 #if PRBOUNDSCHECK
 				if (i < 0 || i >= pr_globaldefs)
 				{
+					pr_xfunction->profile += profile - startprofile;
+					startprofile = profile;
 					pr_xstatement = st - pr_statements;
 					Host_Error("Progs attempted to address an out of bounds global\n");
 					return;
@@ -520,6 +560,8 @@
 #if PRBOUNDSCHECK
 				if (OPA->_int < 0 || OPA->_int >= pr_globaldefs)
 				{
+					pr_xfunction->profile += profile - startprofile;
+					startprofile = profile;
 					pr_xstatement = st - pr_statements;
 					Host_Error("Progs attempted to read an invalid indexed global\n");
 					return;
@@ -532,6 +574,8 @@
 #if PRBOUNDSCHECK
 				if (OPA->_int < 0 || OPA->_int + 2 >= pr_globaldefs)
 				{
+					pr_xfunction->profile += profile - startprofile;
+					startprofile = profile;
 					pr_xstatement = st - pr_statements;
 					Host_Error("Progs attempted to read an invalid indexed global\n");
 					return;
@@ -545,6 +589,8 @@
 			case OP_BOUNDCHECK:
 				if (OPA->_int < 0 || OPA->_int >= st->b)
 				{
+					pr_xfunction->profile += profile - startprofile;
+					startprofile = profile;
 					pr_xstatement = st - pr_statements;
 					Host_Error("Progs boundcheck failed at line number %d, value is < 0 or >= %d\n", st->b, st->c);
 					return;
@@ -554,6 +600,8 @@
 */
 
 			default:
+				pr_xfunction->profile += profile - startprofile;
+				startprofile = profile;
 				pr_xstatement = st - pr_statements;
 				Host_Error ("Bad opcode %i", st->op);
 			}
