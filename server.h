@@ -52,6 +52,9 @@ typedef struct
 	// this disables extensions when using PROTOCOL_QUAKE
 	qboolean netquakecompatible;
 
+	// used for running multiple steps in one frame, etc
+	double timer;
+
 	double time;
 
 	double frametime;
