@@ -464,6 +464,151 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, trace_t *trace, const vec3
 	Mod_Q1BSP_RecursiveHullCheck(&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
 }
 
+static int Mod_Q1BSP_LightPoint_RecursiveBSPNode(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const mnode_t *node, float x, float y, float startz, float endz)
+{
+	int side, distz = endz - startz;
+	float front, back;
+	float mid;
+
+loc0:
+	if (node->contents < 0)
+		return false;		// didn't hit anything
+
+	switch (node->plane->type)
+	{
+	case PLANE_X:
+		node = node->children[x < node->plane->dist];
+		goto loc0;
+	case PLANE_Y:
+		node = node->children[y < node->plane->dist];
+		goto loc0;
+	case PLANE_Z:
+		side = startz < node->plane->dist;
+		if ((endz < node->plane->dist) == side)
+		{
+			node = node->children[side];
+			goto loc0;
+		}
+		// found an intersection
+		mid = node->plane->dist;
+		break;
+	default:
+		back = front = x * node->plane->normal[0] + y * node->plane->normal[1];
+		front += startz * node->plane->normal[2];
+		back += endz * node->plane->normal[2];
+		side = front < node->plane->dist;
+		if ((back < node->plane->dist) == side)
+		{
+			node = node->children[side];
+			goto loc0;
+		}
+		// found an intersection
+		mid = startz + distz * (front - node->plane->dist) / (front - back);
+		break;
+	}
+
+	// go down front side
+	if (node->children[side]->contents >= 0 && Mod_Q1BSP_LightPoint_RecursiveBSPNode(ambientcolor, diffusecolor, diffusenormal, node->children[side], x, y, startz, mid))
+		return true;	// hit something
+	else
+	{
+		// check for impact on this node
+		if (node->numsurfaces)
+		{
+			int i, ds, dt;
+			msurface_t *surf;
+
+			surf = cl.worldmodel->brushq1.surfaces + node->firstsurface;
+			for (i = 0;i < node->numsurfaces;i++, surf++)
+			{
+				if (!(surf->flags & SURF_LIGHTMAP))
+					continue;	// no lightmaps
+
+				ds = (int) (x * surf->texinfo->vecs[0][0] + y * surf->texinfo->vecs[0][1] + mid * surf->texinfo->vecs[0][2] + surf->texinfo->vecs[0][3]);
+				dt = (int) (x * surf->texinfo->vecs[1][0] + y * surf->texinfo->vecs[1][1] + mid * surf->texinfo->vecs[1][2] + surf->texinfo->vecs[1][3]);
+
+				if (ds < surf->texturemins[0] || dt < surf->texturemins[1])
+					continue;
+
+				ds -= surf->texturemins[0];
+				dt -= surf->texturemins[1];
+
+				if (ds > surf->extents[0] || dt > surf->extents[1])
+					continue;
+
+				if (surf->samples)
+				{
+					qbyte *lightmap;
+					int maps, line3, size3, dsfrac = ds & 15, dtfrac = dt & 15, scale = 0, r00 = 0, g00 = 0, b00 = 0, r01 = 0, g01 = 0, b01 = 0, r10 = 0, g10 = 0, b10 = 0, r11 = 0, g11 = 0, b11 = 0;
+					line3 = ((surf->extents[0]>>4)+1)*3;
+					size3 = ((surf->extents[0]>>4)+1) * ((surf->extents[1]>>4)+1)*3; // LordHavoc: *3 for colored lighting
+
+					lightmap = surf->samples + ((dt>>4) * ((surf->extents[0]>>4)+1) + (ds>>4))*3; // LordHavoc: *3 for color
+
+					for (maps = 0;maps < MAXLIGHTMAPS && surf->styles[maps] != 255;maps++)
+					{
+						scale = d_lightstylevalue[surf->styles[maps]];
+						r00 += lightmap[      0] * scale;g00 += lightmap[      1] * scale;b00 += lightmap[      2] * scale;
+						r01 += lightmap[      3] * scale;g01 += lightmap[      4] * scale;b01 += lightmap[      5] * scale;
+						r10 += lightmap[line3+0] * scale;g10 += lightmap[line3+1] * scale;b10 += lightmap[line3+2] * scale;
+						r11 += lightmap[line3+3] * scale;g11 += lightmap[line3+4] * scale;b11 += lightmap[line3+5] * scale;
+						lightmap += size3;
+					}
+
+/*
+LordHavoc: here's the readable version of the interpolation
+code, not quite as easy for the compiler to optimize...
+
+dsfrac is the X position in the lightmap pixel, * 16
+dtfrac is the Y position in the lightmap pixel, * 16
+r00 is top left corner, r01 is top right corner
+r10 is bottom left corner, r11 is bottom right corner
+g and b are the same layout.
+r0 and r1 are the top and bottom intermediate results
+
+first we interpolate the top two points, to get the top
+edge sample
+
+	r0 = (((r01-r00) * dsfrac) >> 4) + r00;
+	g0 = (((g01-g00) * dsfrac) >> 4) + g00;
+	b0 = (((b01-b00) * dsfrac) >> 4) + b00;
+
+then we interpolate the bottom two points, to get the
+bottom edge sample
+
+	r1 = (((r11-r10) * dsfrac) >> 4) + r10;
+	g1 = (((g11-g10) * dsfrac) >> 4) + g10;
+	b1 = (((b11-b10) * dsfrac) >> 4) + b10;
+
+then we interpolate the top and bottom samples to get the
+middle sample (the one which was requested)
+
+	r = (((r1-r0) * dtfrac) >> 4) + r0;
+	g = (((g1-g0) * dtfrac) >> 4) + g0;
+	b = (((b1-b0) * dtfrac) >> 4) + b0;
+*/
+
+					ambientcolor[0] += (float) ((((((((r11-r10) * dsfrac) >> 4) + r10)-((((r01-r00) * dsfrac) >> 4) + r00)) * dtfrac) >> 4) + ((((r01-r00) * dsfrac) >> 4) + r00)) * (1.0f / 32768.0f);
+					ambientcolor[1] += (float) ((((((((g11-g10) * dsfrac) >> 4) + g10)-((((g01-g00) * dsfrac) >> 4) + g00)) * dtfrac) >> 4) + ((((g01-g00) * dsfrac) >> 4) + g00)) * (1.0f / 32768.0f);
+					ambientcolor[2] += (float) ((((((((b11-b10) * dsfrac) >> 4) + b10)-((((b01-b00) * dsfrac) >> 4) + b00)) * dtfrac) >> 4) + ((((b01-b00) * dsfrac) >> 4) + b00)) * (1.0f / 32768.0f);
+				}
+				return true; // success
+			}
+		}
+
+		// go down back side
+		node = node->children[side ^ 1];
+		startz = mid;
+		distz = endz - startz;
+		goto loc0;
+	}
+}
+
+void Mod_Q1BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal)
+{
+	Mod_Q1BSP_LightPoint_RecursiveBSPNode(ambientcolor, diffusecolor, diffusenormal, cl.worldmodel->brushq1.nodes + cl.worldmodel->brushq1.hulls[0].firstclipnode, p[0], p[1], p[2], p[2] - 65536);
+}
+
 static qbyte *Mod_Q1BSP_DecompressVis(model_t *model, qbyte *in)
 {
 	static qbyte decompressed[MAX_MAP_LEAFS/8];
@@ -2879,6 +3024,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 		Host_Error("Mod_Q1BSP_Load: %s has wrong version number(%i should be %i(Quake) or 30(HalfLife))", mod->name, i, BSPVERSION);
 	mod->brushq1.ishlbsp = i == 30;
 
+	mod->brush.LightPoint = Mod_Q1BSP_LightPoint;
 	mod->brush.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
 	mod->brush.TraceBox = Mod_Q1BSP_TraceBox;
 	mod->brushq1.PointInLeaf = Mod_Q1BSP_PointInLeaf;
@@ -4227,6 +4373,14 @@ void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *node, cons
 	}
 }
 
+void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal)
+{
+	// FIXME: write this
+	ambientcolor[0] += 255;
+	ambientcolor[1] += 255;
+	ambientcolor[2] += 255;
+}
+
 void Mod_Q3BSP_TraceBox(model_t *model, trace_t *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs)
 {
 	int i;
@@ -4265,6 +4419,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 		R_ResetQuakeSky();
 	}
 
+	mod->brush.LightPoint = Mod_Q3BSP_LightPoint;
 	mod->brush.FindNonSolidLocation = Mod_Q3BSP_FindNonSolidLocation;
 	mod->brush.TraceBox = Mod_Q3BSP_TraceBox;
 	//mod->brushq1.PointInLeaf = Mod_Q1BSP_PointInLeaf;

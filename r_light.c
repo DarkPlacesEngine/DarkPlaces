@@ -432,164 +432,36 @@ LIGHT SAMPLING
 =============================================================================
 */
 
-static int RecursiveLightPoint (vec3_t color, const mnode_t *node, float x, float y, float startz, float endz)
+void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const vec3_t p, int dynamic, const mleaf_t *leaf)
 {
-	int side, distz = endz - startz;
-	float front, back;
-	float mid;
+	VectorClear(diffusecolor);
+	VectorClear(diffusenormal);
 
-loc0:
-	if (node->contents < 0)
-		return false;		// didn't hit anything
-
-	switch (node->plane->type)
+	if (!r_fullbright.integer && cl.worldmodel && cl.worldmodel->brush.LightPoint)
 	{
-	case PLANE_X:
-		node = node->children[x < node->plane->dist];
-		goto loc0;
-	case PLANE_Y:
-		node = node->children[y < node->plane->dist];
-		goto loc0;
-	case PLANE_Z:
-		side = startz < node->plane->dist;
-		if ((endz < node->plane->dist) == side)
-		{
-			node = node->children[side];
-			goto loc0;
-		}
-		// found an intersection
-		mid = node->plane->dist;
-		break;
-	default:
-		back = front = x * node->plane->normal[0] + y * node->plane->normal[1];
-		front += startz * node->plane->normal[2];
-		back += endz * node->plane->normal[2];
-		side = front < node->plane->dist;
-		if ((back < node->plane->dist) == side)
-		{
-			node = node->children[side];
-			goto loc0;
-		}
-		// found an intersection
-		mid = startz + distz * (front - node->plane->dist) / (front - back);
-		break;
+		ambientcolor[0] = ambientcolor[1] = ambientcolor[2] = r_ambient.value * (2.0f / 128.0f);
+		cl.worldmodel->brush.LightPoint(cl.worldmodel, p, ambientcolor, diffusecolor, diffusenormal);
 	}
-
-	// go down front side
-	if (node->children[side]->contents >= 0 && RecursiveLightPoint (color, node->children[side], x, y, startz, mid))
-		return true;	// hit something
 	else
-	{
-		// check for impact on this node
-		if (node->numsurfaces)
-		{
-			int i, ds, dt;
-			msurface_t *surf;
+		VectorSet(ambientcolor, 1, 1, 1);
 
-			surf = cl.worldmodel->brushq1.surfaces + node->firstsurface;
-			for (i = 0;i < node->numsurfaces;i++, surf++)
-			{
-				if (!(surf->flags & SURF_LIGHTMAP))
-					continue;	// no lightmaps
-
-				ds = (int) (x * surf->texinfo->vecs[0][0] + y * surf->texinfo->vecs[0][1] + mid * surf->texinfo->vecs[0][2] + surf->texinfo->vecs[0][3]);
-				dt = (int) (x * surf->texinfo->vecs[1][0] + y * surf->texinfo->vecs[1][1] + mid * surf->texinfo->vecs[1][2] + surf->texinfo->vecs[1][3]);
-
-				if (ds < surf->texturemins[0] || dt < surf->texturemins[1])
-					continue;
-
-				ds -= surf->texturemins[0];
-				dt -= surf->texturemins[1];
-
-				if (ds > surf->extents[0] || dt > surf->extents[1])
-					continue;
-
-				if (surf->samples)
-				{
-					qbyte *lightmap;
-					int maps, line3, size3, dsfrac = ds & 15, dtfrac = dt & 15, scale = 0, r00 = 0, g00 = 0, b00 = 0, r01 = 0, g01 = 0, b01 = 0, r10 = 0, g10 = 0, b10 = 0, r11 = 0, g11 = 0, b11 = 0;
-					line3 = ((surf->extents[0]>>4)+1)*3;
-					size3 = ((surf->extents[0]>>4)+1) * ((surf->extents[1]>>4)+1)*3; // LordHavoc: *3 for colored lighting
-
-					lightmap = surf->samples + ((dt>>4) * ((surf->extents[0]>>4)+1) + (ds>>4))*3; // LordHavoc: *3 for color
-
-					for (maps = 0;maps < MAXLIGHTMAPS && surf->styles[maps] != 255;maps++)
-					{
-						scale = d_lightstylevalue[surf->styles[maps]];
-						r00 += lightmap[      0] * scale;g00 += lightmap[      1] * scale;b00 += lightmap[      2] * scale;
-						r01 += lightmap[      3] * scale;g01 += lightmap[      4] * scale;b01 += lightmap[      5] * scale;
-						r10 += lightmap[line3+0] * scale;g10 += lightmap[line3+1] * scale;b10 += lightmap[line3+2] * scale;
-						r11 += lightmap[line3+3] * scale;g11 += lightmap[line3+4] * scale;b11 += lightmap[line3+5] * scale;
-						lightmap += size3;
-					}
-
-/*
-LordHavoc: here's the readable version of the interpolation
-code, not quite as easy for the compiler to optimize...
-
-dsfrac is the X position in the lightmap pixel, * 16
-dtfrac is the Y position in the lightmap pixel, * 16
-r00 is top left corner, r01 is top right corner
-r10 is bottom left corner, r11 is bottom right corner
-g and b are the same layout.
-r0 and r1 are the top and bottom intermediate results
-
-first we interpolate the top two points, to get the top
-edge sample
-
-	r0 = (((r01-r00) * dsfrac) >> 4) + r00;
-	g0 = (((g01-g00) * dsfrac) >> 4) + g00;
-	b0 = (((b01-b00) * dsfrac) >> 4) + b00;
-
-then we interpolate the bottom two points, to get the
-bottom edge sample
-
-	r1 = (((r11-r10) * dsfrac) >> 4) + r10;
-	g1 = (((g11-g10) * dsfrac) >> 4) + g10;
-	b1 = (((b11-b10) * dsfrac) >> 4) + b10;
-
-then we interpolate the top and bottom samples to get the
-middle sample (the one which was requested)
-
-	r = (((r1-r0) * dtfrac) >> 4) + r0;
-	g = (((g1-g0) * dtfrac) >> 4) + g0;
-	b = (((b1-b0) * dtfrac) >> 4) + b0;
-*/
-
-					color[0] += (float) ((((((((r11-r10) * dsfrac) >> 4) + r10)-((((r01-r00) * dsfrac) >> 4) + r00)) * dtfrac) >> 4) + ((((r01-r00) * dsfrac) >> 4) + r00)) * (1.0f / 32768.0f);
-					color[1] += (float) ((((((((g11-g10) * dsfrac) >> 4) + g10)-((((g01-g00) * dsfrac) >> 4) + g00)) * dtfrac) >> 4) + ((((g01-g00) * dsfrac) >> 4) + g00)) * (1.0f / 32768.0f);
-					color[2] += (float) ((((((((b11-b10) * dsfrac) >> 4) + b10)-((((b01-b00) * dsfrac) >> 4) + b00)) * dtfrac) >> 4) + ((((b01-b00) * dsfrac) >> 4) + b00)) * (1.0f / 32768.0f);
-				}
-				return true; // success
-			}
-		}
-
-		// go down back side
-		node = node->children[side ^ 1];
-		startz = mid;
-		distz = endz - startz;
-		goto loc0;
-	}
-}
-
-void R_CompleteLightPoint (vec3_t color, const vec3_t p, int dynamic, const mleaf_t *leaf)
-{
-	int i;
-	vec3_t v;
-	float f;
-	rdlight_t *rd;
-	mlight_t *sl;
+	/*
 	if (leaf == NULL && cl.worldmodel != NULL)
 		leaf = cl.worldmodel->brushq1.PointInLeaf(cl.worldmodel, p);
-	if (!leaf || leaf->contents == CONTENTS_SOLID || r_fullbright.integer || !cl.worldmodel->brushq1.lightdata)
+	if (!leaf || leaf->contents == CONTENTS_SOLID || !cl.worldmodel->brushq1.lightdata)
 	{
-		color[0] = color[1] = color[2] = 1;
+		VectorSet(ambientcolor, 1, 1, 1);
 		return;
 	}
+	*/
 
-	color[0] = color[1] = color[2] = r_ambient.value * (2.0f / 128.0f);
+	// FIXME: this .lights related stuff needs to be ported into the Mod_Q1BSP code
 	if (cl.worldmodel->brushq1.numlights)
 	{
+		int i;
+		vec3_t v;
+		float f;
+		mlight_t *sl;
 		for (i = 0;i < cl.worldmodel->brushq1.numlights;i++)
 		{
 			sl = cl.worldmodel->brushq1.lights + i;
@@ -600,25 +472,27 @@ void R_CompleteLightPoint (vec3_t color, const vec3_t p, int dynamic, const mlea
 				if (f > 0 && CL_TraceLine(p, sl->origin, NULL, NULL, 0, false, NULL) == 1)
 				{
 					f *= d_lightstylevalue[sl->style] * (1.0f / 65536.0f);
-					VectorMA(color, f, sl->light, color);
+					VectorMA(ambientcolor, f, sl->light, ambientcolor);
 				}
 			}
 		}
 	}
-	else
-		RecursiveLightPoint (color, cl.worldmodel->brushq1.nodes, p[0], p[1], p[2], p[2] - 65536);
 
 	if (dynamic)
 	{
+		int i;
+		float f, v[3];
+		rdlight_t *rd;
+		// FIXME: this really should handle dlights as diffusecolor/diffusenormal somehow
 		for (i = 0;i < r_numdlights;i++)
 		{
 			rd = r_dlight + i;
-			VectorSubtract (p, rd->origin, v);
+			VectorSubtract(p, rd->origin, v);
 			f = DotProduct(v, v);
 			if (f < rd->cullradius2 && CL_TraceLine(p, rd->origin, NULL, NULL, 0, false, NULL) == 1)
 			{
 				f = (1.0f / (f + LIGHTOFFSET)) - rd->subtract;
-				VectorMA(color, f, rd->light, color);
+				VectorMA(ambientcolor, f, rd->light, ambientcolor);
 			}
 		}
 	}
@@ -642,57 +516,39 @@ nearlight_t;
 static int nearlights;
 static nearlight_t nearlight[MAX_DLIGHTS];
 
-int R_LightModel(float *ambient4f, const entity_render_t *ent, float colorr, float colorg, float colorb, float colora, int worldcoords)
+int R_LightModel(float *ambient4f, float *diffusecolor, float *diffusenormal, const entity_render_t *ent, float colorr, float colorg, float colorb, float colora, int worldcoords)
 {
 	int i, j, maxnearlights;
 	float v[3], f, mscale, stylescale, intensity, ambientcolor[3];
 	nearlight_t *nl;
 	mlight_t *sl;
 	rdlight_t *rd;
-	mleaf_t *leaf;
 
 	nearlights = 0;
 	maxnearlights = r_modellights.integer;
+	ambient4f[0] = ambient4f[1] = ambient4f[2] = r_ambient.value * (2.0f / 128.0f);
+	VectorClear(diffusecolor);
+	VectorClear(diffusenormal);
 	if (r_fullbright.integer || (ent->effects & EF_FULLBRIGHT))
 	{
 		// highly rare
-		ambient4f[0] = colorr;
-		ambient4f[1] = colorg;
-		ambient4f[2] = colorb;
-		ambient4f[3] = colora;
-		return false;
+		VectorSet(ambient4f, 1, 1, 1);
+		maxnearlights = 0;
 	}
-	if (r_shadow_realtime_world.integer)
-	{
-		// user config choice
-		ambient4f[0] = r_ambient.value * (2.0f / 128.0f) * colorr;
-		ambient4f[1] = r_ambient.value * (2.0f / 128.0f) * colorg;
-		ambient4f[2] = r_ambient.value * (2.0f / 128.0f) * colorb;
-		ambient4f[3] = colora;
-		return false;
-	}
-	if (maxnearlights == 0)
-	{
-		// user config choice
-		R_CompleteLightPoint (ambient4f, ent->origin, true, NULL);
-		ambient4f[0] *= colorr;
-		ambient4f[1] *= colorg;
-		ambient4f[2] *= colorb;
-		ambient4f[3] = colora;
-		return false;
-	}
-	leaf = cl.worldmodel ? cl.worldmodel->brushq1.PointInLeaf(cl.worldmodel, ent->origin) : NULL;
-	if (!leaf || leaf->contents == CONTENTS_SOLID || !cl.worldmodel->brushq1.lightdata)
-		ambient4f[0] = ambient4f[1] = ambient4f[2] = 1;
+	else if (r_shadow_realtime_world.integer)
+		maxnearlights = 0;
 	else
 	{
-		ambient4f[0] = ambient4f[1] = ambient4f[2] = r_ambient.value * (2.0f / 128.0f);
-		if (!cl.worldmodel->brushq1.numlights)
-			RecursiveLightPoint (ambient4f, cl.worldmodel->brushq1.nodes, ent->origin[0], ent->origin[1], ent->origin[2], ent->origin[2] - 65536);
+		if (cl.worldmodel && cl.worldmodel->brush.LightPoint)
+			cl.worldmodel->brush.LightPoint(cl.worldmodel, ent->origin, ambient4f, diffusecolor, diffusenormal);
+		else
+			VectorSet(ambient4f, 1, 1, 1);
 	}
+
 	// scale of the model's coordinate space, to alter light attenuation to match
 	// make the mscale squared so it can scale the squared distance results
 	mscale = ent->scale * ent->scale;
+	// FIXME: no support for .lights on non-Q1BSP?
 	nl = &nearlight[0];
 	for (i = 0;i < ent->numentlights;i++)
 	{
@@ -822,18 +678,35 @@ int R_LightModel(float *ambient4f, const entity_render_t *ent, float colorr, flo
 	ambient4f[1] *= colorg;
 	ambient4f[2] *= colorb;
 	ambient4f[3] = colora;
-	return nearlights != 0;
+	diffusecolor[0] *= colorr;
+	diffusecolor[1] *= colorg;
+	diffusecolor[2] *= colorb;
+	return nearlights != 0 || DotProduct(diffusecolor, diffusecolor) > 0;
 }
 
-void R_LightModel_CalcVertexColors(const float *ambientcolor4f, int numverts, const float *vertex3f, const float *normal3f, float *color4f)
+void R_LightModel_CalcVertexColors(const float *ambientcolor4f, const float *diffusecolor, const float *diffusenormal, int numverts, const float *vertex3f, const float *normal3f, float *color4f)
 {
-	int i, j;
-	float color[4], v[3], dot, dist2, f;
+	int i, j, usediffuse;
+	float color[4], v[3], dot, dist2, f, dnormal[3];
 	nearlight_t *nl;
+	usediffuse = DotProduct(diffusecolor, diffusecolor) > 0;
+	VectorCopy(diffusenormal, dnormal);
+	if (usediffuse)
+		VectorNormalize(dnormal);
 	// directional shading code here
 	for (i = 0;i < numverts;i++, vertex3f += 3, normal3f += 3, color4f += 4)
 	{
 		VectorCopy4(ambientcolor4f, color);
+
+		// silly directional diffuse shading
+		if (usediffuse)
+		{
+			dot = DotProduct(normal3f, dnormal);
+			if (dot > 0)
+				VectorMA(color, dot, diffusecolor, color);
+		}
+
+		// pretty good lighting
 		for (j = 0, nl = &nearlight[0];j < nearlights;j++, nl++)
 		{
 			VectorSubtract(vertex3f, nl->origin, v);
@@ -881,3 +754,4 @@ void R_UpdateEntLights(entity_render_t *ent)
 	}
 	ent->entlightsframe = r_framecount;
 }
+
