@@ -9,6 +9,7 @@ cvar_t scr_fov = {CVAR_SAVE, "fov","90"};	// 1 - 170
 cvar_t scr_conspeed = {CVAR_SAVE, "scr_conspeed","900"}; // LordHavoc: quake used 300
 cvar_t scr_conalpha = {CVAR_SAVE, "scr_conalpha", "1"};
 cvar_t scr_conbrightness = {CVAR_SAVE, "scr_conbrightness", "0.2"};
+cvar_t scr_conforcewhiledisconnected = {CVAR_SAVE, "scr_conforcewhiledisconnected", "1"};
 cvar_t scr_centertime = {0, "scr_centertime","2"};
 cvar_t scr_showram = {CVAR_SAVE, "showram","1"};
 cvar_t scr_showturtle = {CVAR_SAVE, "showturtle","0"};
@@ -243,7 +244,7 @@ void SCR_SetUpToDrawConsole (void)
 {
 	Con_CheckResize ();
 
-	if (key_dest == key_game && cls.signon != SIGNONS)
+	if (key_dest == key_game && cls.signon != SIGNONS && scr_conforcewhiledisconnected.integer)
 		key_consoleactive |= KEY_CONSOLEACTIVE_FORCED;
 	else
 		key_consoleactive &= ~KEY_CONSOLEACTIVE_FORCED;
@@ -461,6 +462,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_conspeed);
 	Cvar_RegisterVariable (&scr_conalpha);
 	Cvar_RegisterVariable (&scr_conbrightness);
+	Cvar_RegisterVariable (&scr_conforcewhiledisconnected);
 	Cvar_RegisterVariable (&scr_showram);
 	Cvar_RegisterVariable (&scr_showturtle);
 	Cvar_RegisterVariable (&scr_showpause);
@@ -477,6 +479,10 @@ void CL_Screen_Init(void)
 	Cmd_AddCommand ("screenshot",SCR_ScreenShot_f);
 	Cmd_AddCommand ("envmap", R_Envmap_f);
 
+	// different default in GAME_FNIGGIUM
+	if (gamemode == GAME_FNIGGIUM)
+		Cvar_SetQuick(&scr_conforcewhiledisconnected, 0);
+	
 	scr_initialized = true;
 }
 
