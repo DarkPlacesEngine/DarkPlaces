@@ -28,12 +28,46 @@ cvar_t r_lightmodels = {CVAR_SAVE, "r_lightmodels", "1"};
 cvar_t r_vismarklights = {0, "r_vismarklights", "1"};
 cvar_t r_lightmodelhardness = {CVAR_SAVE, "r_lightmodelhardness", "0.9"};
 
+static rtexture_t *lightcorona;
+static rtexturepool_t *lighttexturepool;
+
 void r_light_start(void)
 {
+	float dx, dy;
+	int x, y, a;
+	byte pixels[32][32][4];
+	lighttexturepool = R_AllocTexturePool();
+	for (y = 0;y < 32;y++)
+	{
+		dy = (y - 15.5f) * (1.0f / 16.0f);
+		for (x = 0;x < 32;x++)
+		{
+			dx = (x - 15.5f) * (1.0f / 16.0f);
+			a = ((1.0f / (dx * dx + dy * dy + 0.2f)) - (1.0f / (1.0f + 0.2))) * 8.0f / (1.0f / (1.0f + 0.2));
+			a = bound(0, a, 255);
+			pixels[y][x][0] = 255;
+			pixels[y][x][1] = 255;
+			pixels[y][x][2] = 255;
+			pixels[y][x][3] = a;
+			/*
+			// for testing the size of the corona textures
+			if (a == 0)
+			{
+				pixels[y][x][0] = 255;
+				pixels[y][x][1] = 0;
+				pixels[y][x][2] = 0;
+				pixels[y][x][3] = 255;
+			}
+			*/
+		}
+	}
+	lightcorona = R_LoadTexture (lighttexturepool, "lightcorona", 32, 32, &pixels[0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_ALPHA);
 }
 
 void r_light_shutdown(void)
 {
+	lighttexturepool = NULL;
+	lightcorona = NULL;
 }
 
 void r_light_newmap(void)
@@ -105,6 +139,77 @@ void R_BuildLightList(void)
 		rd->ent = cd->ent;
 		r_numdlights++;
 		c_dlights++; // count every dlight in use
+	}
+}
+
+static int coronapolyindex[6] = {0, 1, 2, 0, 2, 3};
+
+void R_DrawCoronas(void)
+{
+	int i;
+	rmeshinfo_t m;
+	float tvxyz[4][4], tvst[4][2], scale, viewdist, diff[3], dist;
+	rdlight_t *rd;
+	memset(&m, 0, sizeof(m));
+	m.transparent = false;
+	m.blendfunc1 = GL_SRC_ALPHA;
+	m.blendfunc2 = GL_ONE;
+	m.depthdisable = true; // magic
+	m.numtriangles = 2;
+	m.numverts = 4;
+	m.index = coronapolyindex;
+	m.vertex = &tvxyz[0][0];
+	m.vertexstep = sizeof(float[4]);
+	m.tex[0] = R_GetTexture(lightcorona);
+	m.texcoords[0] = &tvst[0][0];
+	m.texcoordstep[0] = sizeof(float[2]);
+	tvst[0][0] = 0;
+	tvst[0][1] = 0;
+	tvst[1][0] = 0;
+	tvst[1][1] = 1;
+	tvst[2][0] = 1;
+	tvst[2][1] = 1;
+	tvst[3][0] = 1;
+	tvst[3][1] = 0;
+	viewdist = DotProduct(r_origin, vpn);
+	for (i = 0;i < r_numdlights;i++)
+	{
+		rd = r_dlight + i;
+		dist = (DotProduct(rd->origin, vpn) - viewdist);
+		if (dist >= 24.0f)
+		{
+			// trace to a point just barely closer to the eye
+			VectorSubtract(rd->origin, vpn, diff);
+			if (TraceLine(r_origin, diff, NULL, NULL, 0) == 1)
+			{
+				scale = 1.0f / 65536.0f;//64.0f / (dist * dist + 1024.0f);
+				m.cr = rd->light[0] * scale;
+				m.cg = rd->light[1] * scale;
+				m.cb = rd->light[2] * scale;
+				m.ca = 1;
+				if (fogenabled)
+				{
+					VectorSubtract(rd->origin, r_origin, diff);
+					m.ca *= 1 - exp(fogdensity/DotProduct(diff,diff));
+				}
+				// make it larger in the distance to keep a consistent size
+				//scale = 0.4f * dist;
+				scale = 256.0f;
+				tvxyz[0][0] = rd->origin[0] - vright[0] * scale - vup[0] * scale;
+				tvxyz[0][1] = rd->origin[1] - vright[1] * scale - vup[1] * scale;
+				tvxyz[0][2] = rd->origin[2] - vright[2] * scale - vup[2] * scale;
+				tvxyz[1][0] = rd->origin[0] - vright[0] * scale + vup[0] * scale;
+				tvxyz[1][1] = rd->origin[1] - vright[1] * scale + vup[1] * scale;
+				tvxyz[1][2] = rd->origin[2] - vright[2] * scale + vup[2] * scale;
+				tvxyz[2][0] = rd->origin[0] + vright[0] * scale + vup[0] * scale;
+				tvxyz[2][1] = rd->origin[1] + vright[1] * scale + vup[1] * scale;
+				tvxyz[2][2] = rd->origin[2] + vright[2] * scale + vup[2] * scale;
+				tvxyz[3][0] = rd->origin[0] + vright[0] * scale - vup[0] * scale;
+				tvxyz[3][1] = rd->origin[1] + vright[1] * scale - vup[1] * scale;
+				tvxyz[3][2] = rd->origin[2] + vright[2] * scale - vup[2] * scale;
+				R_Mesh_DrawDecal(&m);
+			}
+		}
 	}
 }
 
