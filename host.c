@@ -896,8 +896,8 @@ void Host_Init (void)
 	if (cls.state != ca_dedicated)
 	{
 		VID_Open();
-		MR_Init();
 		SCR_BeginLoadingPlaque();
+		MR_Init();
 	}
 }
 
