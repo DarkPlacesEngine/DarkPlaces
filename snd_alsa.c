@@ -254,12 +254,6 @@ qboolean SNDDMA_Init (void)
 	shm->samples = buffer_size * shm->format.channels;		// mono samples in buffer
 	shm->format.speed = rate;
 	SNDDMA_GetDMAPos ();		// sets shm->buffer
-	Sys_Printf ("%5d stereo\n", shm->format.channels - 1);
-	Sys_Printf ("%5d samples\n", shm->samples);
-	Sys_Printf ("%5d samplepos\n", shm->samplepos);
-	Sys_Printf ("%5d samplebits\n", shm->format.width * 8);
-	Sys_Printf ("%5d speed\n", shm->format.speed);
-	Sys_Printf ("0x%x dma buffer\n", (int) shm->buffer);
 
 	snd_inited = 1;
 	return true;
