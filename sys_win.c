@@ -412,7 +412,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	Sys_Shared_LateInit();
 
 	frameoldtime = Sys_DoubleTime ();
-
+	
 	/* main window message loop */
 	while (1)
 	{

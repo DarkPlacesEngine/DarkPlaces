@@ -3779,10 +3779,11 @@ void MP_Keydown (int key, char ascii)
 	// pass key
 	prog->globals[OFS_PARM0] = (float) key;
 	prog->globals[OFS_PARM1] = (float) ascii;
-	PRVM_ExecuteProgram(m_keydown, M_F_KEYDOWN"(float key) required\n");
+	PRVM_ExecuteProgram(m_keydown, M_F_KEYDOWN"(float key, float ascii) required\n");
 
 	PRVM_End;
 }
+
 void MP_Draw (void)
 {
 	PRVM_Begin;
