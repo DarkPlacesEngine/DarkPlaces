@@ -1106,92 +1106,51 @@ void Mod_GenerateWarpMesh (msurface_t *surf)
 }
 #endif
 
-void Mod_GenerateVertexLitMesh (msurface_t *surf)
+void Mod_GenerateWallMesh (msurface_t *surf, int vertexonly)
 {
-	int				i, is, it, *index, smax, tmax;
-	float			*in, s, t;
-	surfvertex_t	*out;
-	surfmesh_t		*mesh;
+	int i, iu, iv, *index, smax, tmax;
+	float *in, s, t, u, v, ubase, vbase, uscale, vscale;
+	surfmesh_t *mesh;
 
 	smax = surf->extents[0] >> 4;
 	tmax = surf->extents[1] >> 4;
-	surf->lightmaptexturestride = 0;
-	surf->lightmaptexture = NULL;
 
-	surf->mesh = mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + (surf->poly_numverts - 2) * sizeof(int[3]) + surf->poly_numverts * sizeof(surfvertex_t));
-	mesh->numverts = surf->poly_numverts;
-	mesh->numtriangles = surf->poly_numverts - 2;
-	mesh->vertex = (surfvertex_t *)(mesh + 1);
-	mesh->index = (int *)(mesh->vertex + mesh->numverts);
-	memset(mesh->vertex, 0, mesh->numverts * sizeof(surfvertex_t));
-
-	index = mesh->index;
-	for (i = 0;i < mesh->numtriangles;i++)
+	if (vertexonly)
 	{
-		*index++ = 0;
-		*index++ = i + 1;
-		*index++ = i + 2;
-	}
-
-	for (i = 0, in = surf->poly_verts, out = mesh->vertex;i < mesh->numverts;i++, in += 3, out++)
-	{
-		VectorCopy (in, out->v);
-
-		s = DotProduct (out->v, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3];
-		t = DotProduct (out->v, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3];
-
-		out->ab[0] = s * (1.0f / 16.0f);
-		out->ab[1] = t * (1.0f / 16.0f);
-
-		out->st[0] = s / surf->texinfo->texture->width;
-		out->st[1] = t / surf->texinfo->texture->height;
-
-		s = (s + 8 - surf->texturemins[0]) * (1.0 / 16.0);
-		t = (t + 8 - surf->texturemins[1]) * (1.0 / 16.0);
-
-		// lightmap coordinates
-		out->uv[0] = 0;
-		out->uv[1] = 0;
-
-		// LordHavoc: calc lightmap data offset for vertex lighting to use
-		is = (int) s;
-		it = (int) t;
-		is = bound(0, is, smax);
-		it = bound(0, it, tmax);
-		out->lightmapoffset = ((it * (smax+1) + is) * 3);
-	}
-}
-
-void Mod_GenerateLightmappedMesh (msurface_t *surf)
-{
-	int				i, is, it, *index, smax, tmax;
-	float			*in, s, t, xbase, ybase, xscale, yscale;
-	surfvertex_t	*out;
-	surfmesh_t		*mesh;
-
-	surf->flags |= SURF_LIGHTMAP;
-	smax = surf->extents[0] >> 4;
-	tmax = surf->extents[1] >> 4;
-	if (r_miplightmaps.integer)
-	{
-		surf->lightmaptexturestride = (surf->extents[0]>>4)+1;
-		surf->lightmaptexture = R_LoadTexture(loadmodel->texturepool, NULL, surf->lightmaptexturestride, (surf->extents[1]>>4)+1, NULL, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_MIPMAP | TEXF_PRECACHE);
+		surf->lightmaptexturestride = 0;
+		surf->lightmaptexture = NULL;
+		uscale = 0;
+		vscale = 0;
+		ubase = 0;
+		vbase = 0;
 	}
 	else
 	{
-		surf->lightmaptexturestride = R_CompatibleFragmentWidth((surf->extents[0]>>4)+1, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, 0);
-		surf->lightmaptexture = R_LoadTexture(loadmodel->texturepool, NULL, surf->lightmaptexturestride, (surf->extents[1]>>4)+1, NULL, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_FRAGMENT | TEXF_PRECACHE);
+		surf->flags |= SURF_LIGHTMAP;
+		if (r_miplightmaps.integer)
+		{
+			surf->lightmaptexturestride = (surf->extents[0]>>4)+1;
+			surf->lightmaptexture = R_LoadTexture(loadmodel->texturepool, NULL, surf->lightmaptexturestride, (surf->extents[1]>>4)+1, NULL, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_MIPMAP | TEXF_PRECACHE);
+		}
+		else
+		{
+			surf->lightmaptexturestride = R_CompatibleFragmentWidth((surf->extents[0]>>4)+1, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, 0);
+			surf->lightmaptexture = R_LoadTexture(loadmodel->texturepool, NULL, surf->lightmaptexturestride, (surf->extents[1]>>4)+1, NULL, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_FRAGMENT | TEXF_PRECACHE);
+		}
+		R_FragmentLocation(surf->lightmaptexture, NULL, NULL, &ubase, &vbase, &uscale, &vscale);
+		uscale = (uscale - ubase) * 16.0 / ((surf->extents[0] & ~15) + 16);
+		vscale = (vscale - vbase) * 16.0 / ((surf->extents[1] & ~15) + 16);
 	}
-	R_FragmentLocation(surf->lightmaptexture, NULL, NULL, &xbase, &ybase, &xscale, &yscale);
-	xscale = (xscale - xbase) * 16.0 / ((surf->extents[0] & ~15) + 16);
-	yscale = (yscale - ybase) * 16.0 / ((surf->extents[1] & ~15) + 16);
 
-	surf->mesh = mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + (surf->poly_numverts - 2) * sizeof(int[3]) + surf->poly_numverts * sizeof(surfvertex_t));
+	surf->mesh = mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + (surf->poly_numverts - 2) * sizeof(int[3]) + surf->poly_numverts * (4 + 2 + 2 + 2 + 1) * sizeof(float));
 	mesh->numverts = surf->poly_numverts;
 	mesh->numtriangles = surf->poly_numverts - 2;
-	mesh->vertex = (surfvertex_t *)(mesh + 1);
-	mesh->index = (int *)(mesh->vertex + mesh->numverts);
-	memset(mesh->vertex, 0, mesh->numverts * sizeof(surfvertex_t));
+	mesh->verts = (float *)(mesh + 1);
+	mesh->st = mesh->verts + mesh->numverts * 4;
+	mesh->uv = mesh->st + mesh->numverts * 2;
+	mesh->ab = mesh->uv + mesh->numverts * 2;
+	mesh->lightmapoffsets = (int *)(mesh->ab + mesh->numverts * 2);
+	mesh->index = mesh->lightmapoffsets + mesh->numverts;
 
 	index = mesh->index;
 	for (i = 0;i < mesh->numtriangles;i++)
@@ -1201,51 +1160,47 @@ void Mod_GenerateLightmappedMesh (msurface_t *surf)
 		*index++ = i + 2;
 	}
 
-	for (i = 0, in = surf->poly_verts, out = mesh->vertex;i < mesh->numverts;i++, in += 3, out++)
+	for (i = 0, in = surf->poly_verts;i < mesh->numverts;i++, in += 3)
 	{
-		VectorCopy (in, out->v);
-
-		s = DotProduct (out->v, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3];
-		t = DotProduct (out->v, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3];
-
-		out->ab[0] = s * (1.0f / 16.0f);
-		out->ab[1] = t * (1.0f / 16.0f);
-
-		out->st[0] = s / surf->texinfo->texture->width;
-		out->st[1] = t / surf->texinfo->texture->height;
-
-		s = (s + 8 - surf->texturemins[0]) * (1.0 / 16.0);
-		t = (t + 8 - surf->texturemins[1]) * (1.0 / 16.0);
-
-		// lightmap coordinates
-		out->uv[0] = s * xscale + xbase;
-		out->uv[1] = t * yscale + ybase;
-
+		s = DotProduct (in, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3];
+		t = DotProduct (in, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3];
+		u = (s + 8 - surf->texturemins[0]) * (1.0 / 16.0) * uscale + ubase;
+		v = (t + 8 - surf->texturemins[1]) * (1.0 / 16.0) * vscale + vbase;
 		// LordHavoc: calc lightmap data offset for vertex lighting to use
-		is = (int) s;
-		it = (int) t;
-		is = bound(0, is, smax);
-		it = bound(0, it, tmax);
-		out->lightmapoffset = ((it * (smax+1) + is) * 3);
+		iu = (int) u;
+		iv = (int) v;
+		iu = bound(0, iu, smax);
+		iv = bound(0, iv, tmax);
+
+		mesh->verts[i * 4 + 0] = in[0];
+		mesh->verts[i * 4 + 1] = in[1];
+		mesh->verts[i * 4 + 2] = in[2];
+		mesh->st[i * 2 + 0] = s / surf->texinfo->texture->width;
+		mesh->st[i * 2 + 1] = t / surf->texinfo->texture->height;
+		mesh->uv[i * 2 + 0] = u;
+		mesh->uv[i * 2 + 1] = v;
+		mesh->ab[i * 2 + 0] = s * (1.0f / 16.0f);
+		mesh->ab[i * 2 + 1] = t * (1.0f / 16.0f);
+		mesh->lightmapoffsets[i] = ((iv * (smax+1) + iu) * 3);
 	}
 }
 
 void Mod_GenerateVertexMesh (msurface_t *surf)
 {
-	int				i, *index;
-	float			*in, s, t;
-	surfvertex_t	*out;
-	surfmesh_t		*mesh;
+	int i, *index;
+	float *in, s, t;
+	surfmesh_t *mesh;
 
 	surf->lightmaptexturestride = 0;
 	surf->lightmaptexture = NULL;
 
-	surf->mesh = mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + (surf->poly_numverts - 2) * sizeof(int[3]) + surf->poly_numverts * sizeof(surfvertex_t));
+	surf->mesh = mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + (surf->poly_numverts - 2) * sizeof(int[3]) + surf->poly_numverts * (4 + 2 + 2) * sizeof(float));
 	mesh->numverts = surf->poly_numverts;
 	mesh->numtriangles = surf->poly_numverts - 2;
-	mesh->vertex = (surfvertex_t *)(mesh + 1);
-	mesh->index = (int *)(mesh->vertex + mesh->numverts);
-	memset(mesh->vertex, 0, mesh->numverts * sizeof(surfvertex_t));
+	mesh->verts = (float *)(mesh + 1);
+	mesh->st = mesh->verts + mesh->numverts * 4;
+	mesh->ab = mesh->st + mesh->numverts * 2;
+	mesh->index = (int *)(mesh->ab + mesh->numverts * 2);
 
 	index = mesh->index;
 	for (i = 0;i < mesh->numtriangles;i++)
@@ -1255,15 +1210,17 @@ void Mod_GenerateVertexMesh (msurface_t *surf)
 		*index++ = i + 2;
 	}
 
-	for (i = 0, in = surf->poly_verts, out = mesh->vertex;i < mesh->numverts;i++, in += 3, out++)
+	for (i = 0, in = surf->poly_verts;i < mesh->numverts;i++, in += 3)
 	{
-		VectorCopy (in, out->v);
-		s = (DotProduct (out->v, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3]);
-		t = (DotProduct (out->v, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3]);
-		out->st[0] = s / surf->texinfo->texture->width;
-		out->st[1] = t / surf->texinfo->texture->height;
-		out->ab[0] = s * (1.0f / 16.0f);
-		out->ab[1] = t * (1.0f / 16.0f);
+		s = (DotProduct (in, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3]);
+		t = (DotProduct (in, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3]);
+		mesh->verts[i * 4 + 0] = in[0];
+		mesh->verts[i * 4 + 1] = in[1];
+		mesh->verts[i * 4 + 2] = in[2];
+		mesh->st[i * 2 + 0] = s / surf->texinfo->texture->width;
+		mesh->st[i * 2 + 1] = t / surf->texinfo->texture->height;
+		mesh->ab[i * 2 + 0] = s * (1.0f / 16.0f);
+		mesh->ab[i * 2 + 1] = t * (1.0f / 16.0f);
 	}
 }
 
@@ -1301,55 +1258,6 @@ void Mod_GenerateSurfacePolygon (msurface_t *surf)
 	surf->poly_center[0] = (mins[0] + maxs[0]) * 0.5f;
 	surf->poly_center[1] = (mins[1] + maxs[1]) * 0.5f;
 	surf->poly_center[2] = (mins[2] + maxs[2]) * 0.5f;
-}
-
-static void Mod_SplitSurfMeshIfTooBig(msurface_t *s)
-{
-	int j, base, tricount, newvertexcount, *index, *vertexremap;
-	surfmesh_t *newmesh, *oldmesh, *firstmesh;
-	if (s->mesh->numtriangles > 1000)
-	{
-		vertexremap = Mem_Alloc(tempmempool, s->mesh->numverts * sizeof(int));
-		base = 0;
-		oldmesh = NULL;
-		firstmesh = NULL;
-		newmesh = NULL;
-		while (base < s->mesh->numtriangles)
-		{
-			tricount = s->mesh->numtriangles - base;
-			if (tricount > 1000)
-				tricount = 1000;
-			index = s->mesh->index + base * 3;
-			base += tricount;
-
-			newvertexcount = 0;
-			memset(vertexremap, -1, s->mesh->numverts * sizeof(int));
-			for (j = 0;j < tricount * 3;j++)
-				if (vertexremap[index[j]] < 0)
-					vertexremap[index[j]] = newvertexcount++;
-
-			newmesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + newvertexcount * sizeof(surfvertex_t) + tricount * sizeof(int[3]));
-			newmesh->chain = NULL;
-			newmesh->numverts = newvertexcount;
-			newmesh->numtriangles = tricount;
-			newmesh->vertex = (surfvertex_t *)(newmesh + 1);
-			newmesh->index = (int *)(newmesh->vertex + newvertexcount);
-			for (j = 0;j < tricount * 3;j++)
-			{
-				newmesh->index[j] = vertexremap[index[j]];
-				// yes this copies the same vertex multiple times in many cases...  but that's ok...
-				memcpy(&newmesh->vertex[newmesh->index[j]], &s->mesh->vertex[index[j]], sizeof(surfvertex_t));
-			}
-			if (oldmesh)
-				oldmesh->chain = newmesh;
-			else
-				firstmesh = newmesh;
-			oldmesh = newmesh;
-		}
-		Mem_Free(vertexremap);
-		Mem_Free(s->mesh);
-		s->mesh = firstmesh;
-	}
 }
 
 /*
@@ -1461,16 +1369,15 @@ static void Mod_LoadFaces (lump_t *l)
 				if (out->extents[0] < r_vertexsurfacesthreshold.integer && out->extents[1] < r_vertexsurfacesthreshold.integer)
 				{
 					out->shader = &Cshader_wall_vertex;
-					Mod_GenerateVertexLitMesh(out);
+					Mod_GenerateWallMesh (out, true);
 				}
 				else
 				{
 					out->shader = &Cshader_wall_lightmap;
-					Mod_GenerateLightmappedMesh(out);
+					Mod_GenerateWallMesh (out, false);
 				}
 			}
 		}
-		Mod_SplitSurfMeshIfTooBig(out);
 	}
 }
 

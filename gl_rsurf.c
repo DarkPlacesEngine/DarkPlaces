@@ -624,56 +624,16 @@ void R_Stain (vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, i
 =============================================================
 */
 
-static void RSurf_CopyXYZ(const surfvertex_t *in, float *out, int numverts)
-{
-	int i;
-	for (i = 0;i < numverts;i++, in++, out += 4)
-	{
-		VectorCopy(in->v, out);
-		out[3] = 1;
-	}
-}
-
-static void RSurf_CopyST(const surfvertex_t *in, float *out, int numverts)
-{
-	int i;
-	for (i = 0;i < numverts;i++, in++, out += 2)
-	{
-		out[0] = in->st[0];
-		out[1] = in->st[1];
-	}
-}
-
-static void RSurf_CopyUV(const surfvertex_t *in, float *out, int numverts)
-{
-	int i;
-	for (i = 0;i < numverts;i++, in++, out += 2)
-	{
-		out[0] = in->uv[0];
-		out[1] = in->uv[1];
-	}
-}
-
-static void RSurf_CopyAB(const surfvertex_t *in, float *out, int numverts)
-{
-	int i;
-	for (i = 0;i < numverts;i++, in++, out += 2)
-	{
-		out[0] = in->ab[0];
-		out[1] = in->ab[1];
-	}
-}
-
-static void RSurf_AddLightmapToVertexColors(const surfvertex_t *in, float *c, int numverts, const qbyte *samples, int size3, const qbyte *styles)
+static void RSurf_AddLightmapToVertexColors(const int *lightmapoffsets, float *c, int numverts, const qbyte *samples, int size3, const qbyte *styles)
 {
 	int i;
 	float scale;
 	const qbyte *lm;
 	if (styles[0] != 255)
 	{
-		for (i = 0;i < numverts;i++, in++, c += 4)
+		for (i = 0;i < numverts;i++, c += 4)
 		{
-			lm = samples + in->lightmapoffset;
+			lm = samples + lightmapoffsets[i];
 			scale = d_lightstylevalue[styles[0]] * (1.0f / 32768.0f);
 			VectorMA(c, scale, lm, c);
 			if (styles[1] != 255)
@@ -779,7 +739,7 @@ static int RSurf_LightSeparate(const matrix4x4_t *matrix, const int *dlightbits,
 	const float *v;
 	float *c;
 	int i, l, lit = false;
-	rdlight_t *rd;
+	const rdlight_t *rd;
 	vec3_t lightorigin;
 	for (l = 0;l < r_numdlights;l++)
 	{
@@ -803,21 +763,21 @@ static int RSurf_LightSeparate(const matrix4x4_t *matrix, const int *dlightbits,
 }
 
 // note: this untransforms lights to do the checking,
-// and takes surf->mesh->vertex data
-static int RSurf_LightCheck(const matrix4x4_t *matrix, const int *dlightbits, surfmesh_t *mesh)
+// and takes surf->mesh->verts data
+static int RSurf_LightCheck(const matrix4x4_t *matrix, const int *dlightbits, const surfmesh_t *mesh)
 {
 	int i, l;
-	rdlight_t *rd;
+	const rdlight_t *rd;
 	vec3_t lightorigin;
-	surfvertex_t *sv;
+	const float *v;
 	for (l = 0;l < r_numdlights;l++)
 	{
 		if (dlightbits[l >> 5] & (1 << (l & 31)))
 		{
 			rd = &r_dlight[l];
 			Matrix4x4_Transform(matrix, rd->origin, lightorigin);
-			for (i = 0, sv = mesh->vertex;i < mesh->numverts;i++, sv++)
-				if (VectorDistance2(sv->v, lightorigin) < rd->cullradius2)
+			for (i = 0, v = mesh->verts;i < mesh->numverts;i++, v += 4)
+				if (VectorDistance2(v, lightorigin) < rd->cullradius2)
 					return true;
 		}
 	}
@@ -827,7 +787,7 @@ static int RSurf_LightCheck(const matrix4x4_t *matrix, const int *dlightbits, su
 static void RSurfShader_Sky(const entity_render_t *ent, const msurface_t *firstsurf)
 {
 	const msurface_t *surf;
-	surfmesh_t *mesh;
+	const surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
 
 	// LordHavoc: HalfLife maps have freaky skypolys...
@@ -865,7 +825,7 @@ static void RSurfShader_Sky(const entity_render_t *ent, const msurface_t *firsts
 			if (R_Mesh_Draw_GetBuffer(&m, false))
 			{
 				memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
-				RSurf_CopyXYZ(mesh->vertex, m.vertex, m.numverts);
+				memcpy(m.vertex, mesh->verts, m.numverts * sizeof(float[4]));
 				if (skyrendermasked)
 					memset(m.color, 0, m.numverts * sizeof(float[4]));
 				else
@@ -879,9 +839,9 @@ static void RSurfShader_Sky(const entity_render_t *ent, const msurface_t *firsts
 static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 {
 	const entity_render_t *ent = calldata1;
-	msurface_t *surf = ent->model->surfaces + calldata2;
+	const msurface_t *surf = ent->model->surfaces + calldata2;
 	float f;
-	surfmesh_t *mesh;
+	const surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
 	float alpha = ent->alpha * (surf->flags & SURF_DRAWNOALPHA ? 1 : r_wateralpha.value);
 	float modelorg[3];
@@ -912,8 +872,8 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 		if (R_Mesh_Draw_GetBuffer(&m, true))
 		{
 			memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
-			RSurf_CopyXYZ(mesh->vertex, m.vertex, m.numverts);
-			RSurf_CopyST(mesh->vertex, m.texcoords[0], m.numverts);
+			memcpy(m.vertex, mesh->verts, m.numverts * sizeof(float[4]));
+			memcpy(m.texcoords[0], mesh->st, m.numverts * sizeof(float[2]));
 			f = surf->flags & SURF_DRAWFULLBRIGHT ? 1.0f : ((surf->flags & SURF_LIGHTMAP) ? 0 : 0.5f);
 			R_FillColors(m.color, m.numverts, f, f, f, alpha);
 			if (!(surf->flags & SURF_DRAWFULLBRIGHT || ent->effects & EF_FULLBRIGHT))
@@ -921,7 +881,7 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 				if (surf->dlightframe == r_framecount)
 					RSurf_LightSeparate(&ent->inversematrix, surf->dlightbits, m.numverts, m.vertex, m.color);
 				if (surf->flags & SURF_LIGHTMAP)
-					RSurf_AddLightmapToVertexColors(mesh->vertex, m.color, m.numverts, surf->samples, ((surf->extents[0]>>4)+1)*((surf->extents[1]>>4)+1)*3, surf->styles);
+					RSurf_AddLightmapToVertexColors(mesh->lightmapoffsets, m.color, m.numverts, surf->samples, ((surf->extents[0]>>4)+1)*((surf->extents[1]>>4)+1)*3, surf->styles);
 			}
 			RSurf_FogColors(m.vertex, m.color, m.colorscale, m.numverts, modelorg);
 			R_Mesh_Render();
@@ -942,9 +902,9 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 			if (R_Mesh_Draw_GetBuffer(&m, false))
 			{
 				memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
-				RSurf_CopyXYZ(mesh->vertex, m.vertex, m.numverts);
+				memcpy(m.vertex, mesh->verts, m.numverts * sizeof(float[4]));
 				if (m.tex[0])
-					RSurf_CopyST(mesh->vertex, m.texcoords[0], m.numverts);
+					memcpy(m.texcoords[0], mesh->st, m.numverts * sizeof(float[2]));
 				RSurf_FogPassColors(m.vertex, m.color, fogcolor[0], fogcolor[1], fogcolor[2], alpha, m.colorscale, m.numverts, modelorg);
 				R_Mesh_Render();
 			}
@@ -971,7 +931,7 @@ static void RSurfShader_Water(const entity_render_t *ent, const msurface_t *firs
 static void RSurfShader_Wall_Pass_BaseVertex(const entity_render_t *ent, const msurface_t *surf)
 {
 	float base;
-	surfmesh_t *mesh;
+	const surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
 	float modelorg[3];
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
@@ -1001,15 +961,15 @@ static void RSurfShader_Wall_Pass_BaseVertex(const entity_render_t *ent, const m
 		if (R_Mesh_Draw_GetBuffer(&m, true))
 		{
 			memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
-			RSurf_CopyXYZ(mesh->vertex, m.vertex, m.numverts);
-			RSurf_CopyST(mesh->vertex, m.texcoords[0], m.numverts);
+			memcpy(m.vertex, mesh->verts, m.numverts * sizeof(float[4]));
+			memcpy(m.texcoords[0], mesh->st, m.numverts * sizeof(float[2]));
 			R_FillColors(m.color, m.numverts, base, base, base, ent->alpha);
 			if (!(ent->effects & EF_FULLBRIGHT))
 			{
 				if (surf->dlightframe == r_framecount)
 					RSurf_LightSeparate(&ent->inversematrix, surf->dlightbits, m.numverts, m.vertex, m.color);
 				if (surf->flags & SURF_LIGHTMAP)
-					RSurf_AddLightmapToVertexColors(mesh->vertex, m.color, m.numverts, surf->samples, ((surf->extents[0]>>4)+1)*((surf->extents[1]>>4)+1)*3, surf->styles);
+					RSurf_AddLightmapToVertexColors(mesh->lightmapoffsets, m.color, m.numverts, surf->samples, ((surf->extents[0]>>4)+1)*((surf->extents[1]>>4)+1)*3, surf->styles);
 			}
 			RSurf_FogColors(m.vertex, m.color, m.colorscale, m.numverts, modelorg);
 			R_Mesh_Render();
@@ -1019,7 +979,7 @@ static void RSurfShader_Wall_Pass_BaseVertex(const entity_render_t *ent, const m
 
 static void RSurfShader_Wall_Pass_BaseFullbright(const entity_render_t *ent, const msurface_t *surf)
 {
-	surfmesh_t *mesh;
+	const surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
 	float modelorg[3];
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
@@ -1048,8 +1008,8 @@ static void RSurfShader_Wall_Pass_BaseFullbright(const entity_render_t *ent, con
 		if (R_Mesh_Draw_GetBuffer(&m, false))
 		{
 			memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
-			RSurf_CopyXYZ(mesh->vertex, m.vertex, m.numverts);
-			RSurf_CopyST(mesh->vertex, m.texcoords[0], m.numverts);
+			memcpy(m.vertex, mesh->verts, m.numverts * sizeof(float[4]));
+			memcpy(m.texcoords[0], mesh->st, m.numverts * sizeof(float[2]));
 			RSurf_FoggedColors(m.vertex, m.color, 1, 1, 1, ent->alpha, m.colorscale, m.numverts, modelorg);
 			R_Mesh_Render();
 		}
@@ -1058,7 +1018,7 @@ static void RSurfShader_Wall_Pass_BaseFullbright(const entity_render_t *ent, con
 
 static void RSurfShader_Wall_Pass_Glow(const entity_render_t *ent, const msurface_t *surf)
 {
-	surfmesh_t *mesh;
+	const surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
 	float modelorg[3];
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
@@ -1074,8 +1034,8 @@ static void RSurfShader_Wall_Pass_Glow(const entity_render_t *ent, const msurfac
 		if (R_Mesh_Draw_GetBuffer(&m, false))
 		{
 			memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
-			RSurf_CopyXYZ(mesh->vertex, m.vertex, m.numverts);
-			RSurf_CopyST(mesh->vertex, m.texcoords[0], m.numverts);
+			memcpy(m.vertex, mesh->verts, m.numverts * sizeof(float[4]));
+			memcpy(m.texcoords[0], mesh->st, m.numverts * sizeof(float[2]));
 			RSurf_FoggedColors(m.vertex, m.color, 1, 1, 1, ent->alpha, m.colorscale, m.numverts, modelorg);
 			R_Mesh_Render();
 		}
@@ -1084,7 +1044,7 @@ static void RSurfShader_Wall_Pass_Glow(const entity_render_t *ent, const msurfac
 
 static void RSurfShader_Wall_Pass_Fog(const entity_render_t *ent, const msurface_t *surf)
 {
-	surfmesh_t *mesh;
+	const surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
 	float modelorg[3];
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
@@ -1100,9 +1060,9 @@ static void RSurfShader_Wall_Pass_Fog(const entity_render_t *ent, const msurface
 		if (R_Mesh_Draw_GetBuffer(&m, false))
 		{
 			memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
-			RSurf_CopyXYZ(mesh->vertex, m.vertex, m.numverts);
+			memcpy(m.vertex, mesh->verts, m.numverts * sizeof(float[4]));
 			if (m.tex[0])
-				RSurf_CopyST(mesh->vertex, m.texcoords[0], m.numverts);
+				memcpy(m.texcoords[0], mesh->st, m.numverts * sizeof(float[2]));
 			RSurf_FogPassColors(m.vertex, m.color, fogcolor[0], fogcolor[1], fogcolor[2], ent->alpha, m.colorscale, m.numverts, modelorg);
 			R_Mesh_Render();
 		}
@@ -1111,10 +1071,10 @@ static void RSurfShader_Wall_Pass_Fog(const entity_render_t *ent, const msurface
 
 static void RSurfShader_OpaqueWall_Pass_TripleTexCombine(const entity_render_t *ent, const msurface_t *surf)
 {
-	surfmesh_t *mesh;
-	rmeshbufferinfo_t m;
+	const surfmesh_t *mesh;
+	static rmeshbufferinfo_t m;
 	float cl;
-	memset(&m, 0, sizeof(m));
+	//memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ZERO;
 	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
@@ -1131,12 +1091,12 @@ static void RSurfShader_OpaqueWall_Pass_TripleTexCombine(const entity_render_t *
 		if (R_Mesh_Draw_GetBuffer(&m, false))
 		{
 			memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
-			RSurf_CopyXYZ(mesh->vertex, m.vertex, m.numverts);
+			memcpy(m.vertex, mesh->verts, m.numverts * sizeof(float[4]));
+			memcpy(m.texcoords[0], mesh->st, m.numverts * sizeof(float[2]));
+			memcpy(m.texcoords[1], mesh->uv, m.numverts * sizeof(float[2]));
+			memcpy(m.texcoords[2], mesh->ab, m.numverts * sizeof(float[2]));
 			cl = (float) (1 << lightscalebit) * m.colorscale;
 			R_FillColors(m.color, m.numverts, cl, cl, cl, 1);
-			RSurf_CopyST(mesh->vertex, m.texcoords[0], m.numverts);
-			RSurf_CopyUV(mesh->vertex, m.texcoords[1], m.numverts);
-			RSurf_CopyAB(mesh->vertex, m.texcoords[2], m.numverts);
 			R_Mesh_Render();
 		}
 	}
@@ -1144,7 +1104,7 @@ static void RSurfShader_OpaqueWall_Pass_TripleTexCombine(const entity_render_t *
 
 static void RSurfShader_OpaqueWall_Pass_BaseMTex(const entity_render_t *ent, const msurface_t *surf)
 {
-	surfmesh_t *mesh;
+	const surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
 	float cl;
 	memset(&m, 0, sizeof(m));
@@ -1160,11 +1120,11 @@ static void RSurfShader_OpaqueWall_Pass_BaseMTex(const entity_render_t *ent, con
 		if (R_Mesh_Draw_GetBuffer(&m, true))
 		{
 			memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
-			RSurf_CopyXYZ(mesh->vertex, m.vertex, m.numverts);
+			memcpy(m.vertex, mesh->verts, m.numverts * sizeof(float[4]));
+			memcpy(m.texcoords[0], mesh->st, m.numverts * sizeof(float[2]));
+			memcpy(m.texcoords[1], mesh->uv, m.numverts * sizeof(float[2]));
 			cl = (float) (1 << lightscalebit) * m.colorscale;
 			R_FillColors(m.color, m.numverts, cl, cl, cl, 1);
-			RSurf_CopyST(mesh->vertex, m.texcoords[0], m.numverts);
-			RSurf_CopyUV(mesh->vertex, m.texcoords[1], m.numverts);
 			R_Mesh_Render();
 		}
 	}
@@ -1172,7 +1132,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseMTex(const entity_render_t *ent, con
 
 static void RSurfShader_OpaqueWall_Pass_BaseTexture(const entity_render_t *ent, const msurface_t *surf)
 {
-	surfmesh_t *mesh;
+	const surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
 	float cl;
 	memset(&m, 0, sizeof(m));
@@ -1187,10 +1147,10 @@ static void RSurfShader_OpaqueWall_Pass_BaseTexture(const entity_render_t *ent, 
 		if (R_Mesh_Draw_GetBuffer(&m, false))
 		{
 			memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
-			RSurf_CopyXYZ(mesh->vertex, m.vertex, m.numverts);
+			memcpy(m.vertex, mesh->verts, m.numverts * sizeof(float[4]));
+			memcpy(m.texcoords[0], mesh->st, m.numverts * sizeof(float[2]));
 			cl = m.colorscale;
 			R_FillColors(m.color, m.numverts, cl, cl, cl, 1);
-			RSurf_CopyST(mesh->vertex, m.texcoords[0], m.numverts);
 			R_Mesh_Render();
 		}
 	}
@@ -1198,7 +1158,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseTexture(const entity_render_t *ent, 
 
 static void RSurfShader_OpaqueWall_Pass_BaseLightmap(const entity_render_t *ent, const msurface_t *surf)
 {
-	surfmesh_t *mesh;
+	const surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
 	float cl;
 	memset(&m, 0, sizeof(m));
@@ -1213,10 +1173,10 @@ static void RSurfShader_OpaqueWall_Pass_BaseLightmap(const entity_render_t *ent,
 		if (R_Mesh_Draw_GetBuffer(&m, true))
 		{
 			memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
-			RSurf_CopyXYZ(mesh->vertex, m.vertex, m.numverts);
+			memcpy(m.vertex, mesh->verts, m.numverts * sizeof(float[4]));
+			memcpy(m.texcoords[0], mesh->uv, m.numverts * sizeof(float[2]));
 			cl = (float) (1 << lightscalebit) * m.colorscale;
 			R_FillColors(m.color, m.numverts, cl, cl, cl, 1);
-			RSurf_CopyUV(mesh->vertex, m.texcoords[0], m.numverts);
 			R_Mesh_Render();
 		}
 	}
@@ -1224,7 +1184,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseLightmap(const entity_render_t *ent,
 
 static void RSurfShader_OpaqueWall_Pass_Light(const entity_render_t *ent, const msurface_t *surf)
 {
-	surfmesh_t *mesh;
+	const surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
 
 	if (surf->dlightframe != r_framecount)
@@ -1246,8 +1206,8 @@ static void RSurfShader_OpaqueWall_Pass_Light(const entity_render_t *ent, const 
 			if (R_Mesh_Draw_GetBuffer(&m, true))
 			{
 				memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
-				RSurf_CopyXYZ(mesh->vertex, m.vertex, m.numverts);
-				RSurf_CopyST(mesh->vertex, m.texcoords[0], m.numverts);
+				memcpy(m.vertex, mesh->verts, m.numverts * sizeof(float[4]));
+				memcpy(m.texcoords[0], mesh->st, m.numverts * sizeof(float[2]));
 				R_FillColors(m.color, m.numverts, 0, 0, 0, 1);
 				RSurf_LightSeparate(&ent->inversematrix, surf->dlightbits, m.numverts, m.vertex, m.color);
 				RSurf_ScaleColors(m.color, m.colorscale, m.numverts);
@@ -1259,7 +1219,7 @@ static void RSurfShader_OpaqueWall_Pass_Light(const entity_render_t *ent, const 
 
 static void RSurfShader_OpaqueWall_Pass_Fog(const entity_render_t *ent, const msurface_t *surf)
 {
-	surfmesh_t *mesh;
+	const surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
 	float modelorg[3];
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
@@ -1275,9 +1235,9 @@ static void RSurfShader_OpaqueWall_Pass_Fog(const entity_render_t *ent, const ms
 		if (R_Mesh_Draw_GetBuffer(&m, false))
 		{
 			memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
-			RSurf_CopyXYZ(mesh->vertex, m.vertex, m.numverts);
+			memcpy(m.vertex, mesh->verts, m.numverts * sizeof(float[4]));
 			if (m.tex[0])
-				RSurf_CopyST(mesh->vertex, m.texcoords[0], m.numverts);
+				memcpy(m.texcoords[0], mesh->st, m.numverts * sizeof(float[2]));
 			RSurf_FogPassColors(m.vertex, m.color, fogcolor[0], fogcolor[1], fogcolor[2], 1, m.colorscale, m.numverts, modelorg);
 			R_Mesh_Render();
 		}
@@ -1286,7 +1246,7 @@ static void RSurfShader_OpaqueWall_Pass_Fog(const entity_render_t *ent, const ms
 
 static void RSurfShader_OpaqueWall_Pass_BaseDetail(const entity_render_t *ent, const msurface_t *surf)
 {
-	surfmesh_t *mesh;
+	const surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_DST_COLOR;
@@ -1300,9 +1260,9 @@ static void RSurfShader_OpaqueWall_Pass_BaseDetail(const entity_render_t *ent, c
 		if (R_Mesh_Draw_GetBuffer(&m, false))
 		{
 			memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
-			RSurf_CopyXYZ(mesh->vertex, m.vertex, m.numverts);
+			memcpy(m.vertex, mesh->verts, m.numverts * sizeof(float[4]));
+			memcpy(m.texcoords[0], mesh->ab, m.numverts * sizeof(float[2]));
 			R_FillColors(m.color, m.numverts, 1, 1, 1, 1);
-			RSurf_CopyAB(mesh->vertex, m.texcoords[0], m.numverts);
 			R_Mesh_Render();
 		}
 	}
@@ -1310,7 +1270,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseDetail(const entity_render_t *ent, c
 
 static void RSurfShader_OpaqueWall_Pass_Glow(const entity_render_t *ent, const msurface_t *surf)
 {
-	surfmesh_t *mesh;
+	const surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_SRC_ALPHA;
@@ -1324,9 +1284,9 @@ static void RSurfShader_OpaqueWall_Pass_Glow(const entity_render_t *ent, const m
 		if (R_Mesh_Draw_GetBuffer(&m, false))
 		{
 			memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
-			RSurf_CopyXYZ(mesh->vertex, m.vertex, m.numverts);
+			memcpy(m.vertex, mesh->verts, m.numverts * sizeof(float[4]));
+			memcpy(m.texcoords[0], mesh->st, m.numverts * sizeof(float[2]));
 			R_FillColors(m.color, m.numverts, m.colorscale, m.colorscale, m.colorscale, 1);
-			RSurf_CopyST(mesh->vertex, m.texcoords[0], m.numverts);
 			R_Mesh_Render();
 		}
 	}
