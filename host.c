@@ -977,14 +977,21 @@ void Host_Init (void)
 	else
 		Cbuf_InsertText("exec quake.rc\n");
 
+	Cbuf_Execute();
+	Cbuf_Execute();
+	Cbuf_Execute();
+
 	if (!sv.active && (cls.state == ca_dedicated || COM_CheckParm("-listen")))
 		Cbuf_InsertText ("startmap_dm\n");
 
 	// check for special benchmark mode
 // COMMANDLINEOPTION: Client: -benchmark <demoname> runs a timedemo and quits, results of any timedemo can be found in gamedir/benchmark.log (for example id1/benchmark.log)
 	i = COM_CheckParm("-benchmark");
-	if (i && i + 1 < com_argc)
+	if (i && i + 1 < com_argc && !sv.active)
 		Cbuf_InsertText(va("timedemo %s\n", com_argv[i + 1]));
+
+	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
+		Cbuf_InsertText("togglemenu\n");
 
 	Cbuf_Execute();
 
