@@ -831,8 +831,6 @@ void CL_ParseStatic (int large)
 	ent->render.alpha = 1;
 	ent->render.scale = 1;
 	ent->render.alpha = 1;
-	ent->render.glowsize = 0;
-	ent->render.glowcolor = 254;
 	ent->render.colormod[0] = ent->render.colormod[1] = ent->render.colormod[2] = 1;
 
 	VectorCopy (ent->state_baseline.origin, ent->render.origin);

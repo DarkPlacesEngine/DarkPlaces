@@ -46,7 +46,7 @@ unsigned int uiWheelMessage;
 qboolean	mouseactive;
 qboolean		mouseinitialized;
 static qboolean	mouseparmsvalid, mouseactivatetoggle;
-//static qboolean	mouseshowtoggle = 1;
+static qboolean	mouseshowtoggle = 1;
 static qboolean	dinput_acquired;
 
 static unsigned int		mstate_di;
@@ -188,11 +188,11 @@ IN_ShowMouse
 */
 void IN_ShowMouse (void)
 {
-//	if (!mouseshowtoggle)
-//	{
+	if (!mouseshowtoggle)
+	{
 		ShowCursor (true);
-//		mouseshowtoggle = 1;
-//	}
+		mouseshowtoggle = 1;
+	}
 }
 
 
@@ -203,11 +203,11 @@ IN_HideMouse
 */
 void IN_HideMouse (void)
 {
-//	if (mouseshowtoggle)
-//	{
+	if (mouseshowtoggle)
+	{
 		ShowCursor (false);
-//		mouseshowtoggle = 0;
-//	}
+		mouseshowtoggle = 0;
+	}
 }
 
 

@@ -441,8 +441,8 @@ void R_RocketTrail2 (vec3_t start, vec3_t end, int color, entity_t *ent);
 void CL_RelinkEntities (void)
 {
 	entity_t	*ent;
-	int			i, j;
-	float		frac, f, d, bobjrotate/*, bobjoffset*/, dlightradius;
+	int			i, j, glowcolor, effects;
+	float		frac, f, d, bobjrotate/*, bobjoffset*/, dlightradius, glowsize;
 	vec3_t		oldorg, delta, dlightcolor;
 
 // determine partial update time	
@@ -529,7 +529,7 @@ void CL_RelinkEntities (void)
 		}
 
 		ent->render.flags = ent->state_current.flags;
-		ent->render.effects = ent->state_current.effects;
+		ent->render.effects = effects = ent->state_current.effects;
 		ent->render.model = cl.model_precache[ent->state_current.modelindex];
 		ent->render.frame = ent->state_current.frame;
 		if (cl.scores == NULL || !ent->state_current.colormap)
@@ -539,8 +539,8 @@ void CL_RelinkEntities (void)
 		ent->render.skinnum = ent->state_current.skin;
 		ent->render.alpha = ent->state_current.alpha * (1.0f / 255.0f); // FIXME: interpolate?
 		ent->render.scale = ent->state_current.scale * (1.0f / 16.0f); // FIXME: interpolate?
-		ent->render.glowsize = ent->state_current.glowsize * 4.0f; // FIXME: interpolate?
-		ent->render.glowcolor = ent->state_current.glowcolor;
+		glowsize = ent->state_current.glowsize * 4.0f; // FIXME: interpolate?
+		glowcolor = ent->state_current.glowcolor;
 		ent->render.colormod[0] = (float) ((ent->state_current.colormod >> 5) & 7) * (1.0f / 7.0f);
 		ent->render.colormod[1] = (float) ((ent->state_current.colormod >> 2) & 7) * (1.0f / 7.0f);
 		ent->render.colormod[2] = (float) (ent->state_current.colormod & 3) * (1.0f / 3.0f);
@@ -551,11 +551,11 @@ void CL_RelinkEntities (void)
 		dlightcolor[2] = 0;
 
 		// LordHavoc: if the entity has no effects, don't check each
-		if (ent->render.effects)
+		if (effects)
 		{
-			if (ent->render.effects & EF_BRIGHTFIELD)
+			if (effects & EF_BRIGHTFIELD)
 				R_EntityParticles (ent);
-			if (ent->render.effects & EF_MUZZLEFLASH)
+			if (effects & EF_MUZZLEFLASH)
 			{
 				vec3_t v;
 
@@ -567,32 +567,32 @@ void CL_RelinkEntities (void)
 
 				CL_AllocDlight (NULL, v, 100, 1, 1, 1, 0, 0.1);
 			}
-			if (ent->render.effects & EF_DIMLIGHT)
+			if (effects & EF_DIMLIGHT)
 			{
 				dlightcolor[0] += 200.0f;
 				dlightcolor[1] += 200.0f;
 				dlightcolor[2] += 200.0f;
 			}
-			if (ent->render.effects & EF_BRIGHTLIGHT)
+			if (effects & EF_BRIGHTLIGHT)
 			{
 				dlightcolor[0] += 400.0f;
 				dlightcolor[1] += 400.0f;
 				dlightcolor[2] += 400.0f;
 			}
 			// LordHavoc: added EF_RED and EF_BLUE
-			if (ent->render.effects & EF_RED) // red
+			if (effects & EF_RED) // red
 			{
 				dlightcolor[0] += 200.0f;
 				dlightcolor[1] +=  20.0f;
 				dlightcolor[2] +=  20.0f;
 			}
-			if (ent->render.effects & EF_BLUE) // blue
+			if (effects & EF_BLUE) // blue
 			{
 				dlightcolor[0] +=  20.0f;
 				dlightcolor[1] +=  20.0f;
 				dlightcolor[2] += 200.0f;
 			}
-			else if (ent->render.effects & EF_FLAME)
+			else if (effects & EF_FLAME)
 			{
 				if (ent->render.model)
 				{
@@ -649,16 +649,16 @@ void CL_RelinkEntities (void)
 			}
 		}
 		// LordHavoc: customizable glow
-		if (ent->render.glowsize)
+		if (glowsize)
 		{
-			byte *tempcolor = (byte *)&d_8to24table[ent->render.glowcolor];
-			dlightcolor[0] += ent->render.glowsize * tempcolor[0] * (1.0f / 255.0f);
-			dlightcolor[1] += ent->render.glowsize * tempcolor[1] * (1.0f / 255.0f);
-			dlightcolor[2] += ent->render.glowsize * tempcolor[2] * (1.0f / 255.0f);
+			byte *tempcolor = (byte *)&d_8to24table[glowcolor];
+			dlightcolor[0] += glowsize * tempcolor[0] * (1.0f / 255.0f);
+			dlightcolor[1] += glowsize * tempcolor[1] * (1.0f / 255.0f);
+			dlightcolor[2] += glowsize * tempcolor[2] * (1.0f / 255.0f);
 		}
 		// LordHavoc: customizable trail
 		if (ent->render.flags & RENDER_GLOWTRAIL)
-			R_RocketTrail2 (oldorg, ent->render.origin, ent->render.glowcolor, ent);
+			R_RocketTrail2 (oldorg, ent->render.origin, glowcolor, ent);
 
 		if (dlightcolor[0] || dlightcolor[1] || dlightcolor[2])
 		{
@@ -672,7 +672,7 @@ void CL_RelinkEntities (void)
 
 		if (ent->render.model == NULL)
 			continue;
-		if (ent->render.effects & EF_NODRAW)
+		if (effects & EF_NODRAW)
 			continue;
 		if (cl_numvisedicts < MAX_VISEDICTS)
 			cl_visedicts[cl_numvisedicts++] = ent;
