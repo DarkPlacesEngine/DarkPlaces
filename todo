@@ -2,6 +2,7 @@
 -(Baalz) d darkplaces input bug: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
 -(Kinn) d darkplaces client: all glow trails are bright blue (Kinn)
 -(Kinn) d darkplaces renderer: fix the sometimes non-animating framegroups on sprites (Kinn) 
+-(RenegadeC) d darkplaces client: make sure the join game menu shows status on a connection attempt, such as connecting or failed (RenegadeC)
 -(fuh) d darkplaces sound: make sound precaching not allocate an sfx if the sound is not found, so it complains only once about missing sounds when you connect, rather than constantly, and also so using "play" commands for non-existent files won't eat up sfx slots (fuh)
 0 darkplaces client: add DP_LITSPRITES extension to document the fact that any sprite with a ! in its filename is lit rather than fullbright
 0 darkplaces client: add a swinging weapon motion to replace the removed forward/back movement of the weapon, should be controllable with cl_bob_* cvars (Joel Murdoch)
@@ -165,7 +166,6 @@
 1 hmap2: add .mip loading support
 1 hmap: qbsp dies from runaway allocations if a duplicate plane is found on a brush (Tomaz)
 1 lhfire: add percentage and estimated time reporting to console output (daniel_hansson@telia.com)
--(RenegadeC) d darkplaces client: make sure the join game menu shows status on a connection attempt, such as connecting or failed (RenegadeC)
 1 lhfire: get lhfire_gui build from Tomaz.
 1 lhfire: post lhfire_gui build.
 1 lhfire: prepare example scripts for release.
