@@ -90,8 +90,9 @@ static buf_texcoord_t *buf_texcoord[MAX_TEXTUREUNITS];
 
 static int currenttransmesh, currenttransvertex, currenttranstriangle;
 static buf_mesh_t *buf_transmesh;
-static buf_transtri_t *buf_transtri;
-static buf_transtri_t **buf_transtri_list;
+static buf_transtri_t *buf_sorttranstri;
+static buf_transtri_t **buf_sorttranstri_list;
+static buf_tri_t *buf_transtri;
 static buf_vertex_t *buf_transvertex;
 static buf_fcolor_t *buf_transfcolor;
 static buf_texcoord_t *buf_transtexcoord[MAX_TEXTUREUNITS];
@@ -123,8 +124,9 @@ static void gl_backend_start(void)
 	BACKENDALLOC(buf_bcolor, max_verts, buf_bcolor_t)
 
 	BACKENDALLOC(buf_transmesh, max_meshs, buf_mesh_t)
-	BACKENDALLOC(buf_transtri, max_meshs, buf_transtri_t)
-	BACKENDALLOC(buf_transtri_list, TRANSDEPTHRES, buf_transtri_t *)
+	BACKENDALLOC(buf_sorttranstri, max_meshs, buf_transtri_t)
+	BACKENDALLOC(buf_sorttranstri_list, TRANSDEPTHRES, buf_transtri_t *)
+	BACKENDALLOC(buf_transtri, max_meshs, buf_tri_t)
 	BACKENDALLOC(buf_transvertex, max_verts, buf_vertex_t)
 	BACKENDALLOC(buf_transfcolor, max_verts, buf_fcolor_t)
 
@@ -148,37 +150,6 @@ static void gl_backend_start(void)
 
 static void gl_backend_shutdown(void)
 {
-	//int i;
-	/*
-#define BACKENDFREE(var)\
-	if (var)\
-	{\
-		Mem_Free(var);\
-		var = NULL;\
-	}
-	*/
-	/*
-#define BACKENDFREE(var) var = NULL;
-
-	BACKENDFREE(buf_mesh)
-	BACKENDFREE(buf_tri)
-	BACKENDFREE(buf_vertex)
-	BACKENDFREE(buf_fcolor)
-	BACKENDFREE(buf_bcolor)
-
-	BACKENDFREE(buf_transmesh)
-	BACKENDFREE(buf_transtri)
-	BACKENDFREE(buf_transtri_list)
-	BACKENDFREE(buf_transvertex)
-	BACKENDFREE(buf_transfcolor)
-
-	for (i = 0;i < MAX_TEXTUREUNITS;i++)
-	{
-		BACKENDFREE(buf_texcoord[i])
-		BACKENDFREE(buf_transtexcoord[i])
-	}
-	*/
-
 	if (resizingbuffers)
 		Mem_EmptyPool(gl_backend_mempool);
 	else
@@ -808,7 +779,7 @@ CHECKGLERROR
 
 void R_Mesh_AddTransparent(void)
 {
-	int i, j, k;
+	int i, j, k, *index;
 	float viewdistcompare, centerscaler, dist1, dist2, dist3, center, maxdist;
 	buf_vertex_t *vert1, *vert2, *vert3;
 	buf_transtri_t *tri;
@@ -817,34 +788,32 @@ void R_Mesh_AddTransparent(void)
 	if (!currenttransmesh)
 		return;
 
-	/*
 	// convert index data to transtris for sorting
-	for (i = 0;i < currenttransmesh;i++)
+	for (j = 0;j < currenttransmesh;j++)
 	{
-		mesh = buf_transmesh + i;
-		j = mesh->firstvert;
-		index = mesh->index;
-		for (i = 0;i < mesh->numtriangles;i++)
+		mesh = buf_transmesh + j;
+		k = mesh->firsttriangle;
+		index = &buf_transtri[k].index[0];
+		for (i = 0;i < mesh->triangles;i++)
 		{
-			tri = &buf_transtri[currenttranstriangle++];
+			tri = &buf_sorttranstri[k++];
 			tri->mesh = mesh;
-			tri->index[0] = *index++ + j;
-			tri->index[1] = *index++ + j;
-			tri->index[2] = *index++ + j;
+			tri->index[0] = *index++;
+			tri->index[1] = *index++;
+			tri->index[2] = *index++;
 		}
 	}
-	*/
 
 	// map farclip to 0-4095 list range
 	centerscaler = (TRANSDEPTHRES / r_farclip) * (1.0f / 3.0f);
 	viewdistcompare = viewdist + 4.0f;
 
-	memset(buf_transtri_list, 0, TRANSDEPTHRES * sizeof(buf_transtri_t *));
+	memset(buf_sorttranstri_list, 0, TRANSDEPTHRES * sizeof(buf_transtri_t *));
 
 	k = 0;
 	for (j = 0;j < currenttranstriangle;j++)
 	{
-		tri = &buf_transtri[j];
+		tri = &buf_sorttranstri[j];
 		i = tri->mesh->firstvert;
 
 		vert1 = &buf_transvertex[tri->index[0] + i];
@@ -870,20 +839,20 @@ void R_Mesh_AddTransparent(void)
 		i = *((long *)&center) & 0x7FFFFF;
 		i = min(i, (TRANSDEPTHRES - 1));
 #endif
-		tri->next = buf_transtri_list[i];
-		buf_transtri_list[i] = tri;
+		tri->next = buf_sorttranstri_list[i];
+		buf_sorttranstri_list[i] = tri;
 		k++;
 	}
 
-	if (currentmesh + k > max_meshs || currenttriangle + k > max_batch || currentvertex + currenttransvertex > max_verts)
-		R_Mesh_Render();
+	//if (currentmesh + k > max_meshs || currenttriangle + k > max_batch || currentvertex + currenttransvertex > max_verts)
+	//	R_Mesh_Render();
 
 	for (i = 0;i < currenttransmesh;i++)
 		buf_transmesh[i].transchain = NULL;
 	transmesh = NULL;
 	for (j = 0;j < TRANSDEPTHRES;j++)
 	{
-		if ((tri = buf_transtri_list[j]))
+		if ((tri = buf_sorttranstri_list[j]))
 		{
 			for (;tri;tri = tri->next)
 			{
@@ -901,8 +870,8 @@ void R_Mesh_AddTransparent(void)
 	for (;transmesh;transmesh = transmesh->chain)
 	{
 		int numverts = transmesh->lastvert - transmesh->firstvert + 1;
-		//if (currentmesh >= max_meshs || currenttriangle + transmesh->triangles > max_batch || currentvertex + numverts > max_verts)
-		//	R_Mesh_Render();
+		if (currentmesh >= max_meshs || currenttriangle + transmesh->triangles > max_batch || currentvertex + numverts > max_verts)
+			R_Mesh_Render();
 
 		memcpy(&buf_vertex[currentvertex], &buf_transvertex[transmesh->firstvert], numverts * sizeof(buf_vertex_t));
 		memcpy(&buf_fcolor[currentvertex], &buf_transfcolor[transmesh->firstvert], numverts * sizeof(buf_fcolor_t));
@@ -933,14 +902,13 @@ void R_Mesh_AddTransparent(void)
 void R_Mesh_Draw(const rmeshinfo_t *m)
 {
 	// these are static because gcc runs out of virtual registers otherwise
-	static int i, j, *index, overbright;
+	static int i, j, overbright;
 	static float *in, scaler;
 	static float cr, cg, cb, ca;
 	static buf_mesh_t *mesh;
 	static buf_vertex_t *vert;
 	static buf_fcolor_t *fcolor;
 	static buf_texcoord_t *texcoord[MAX_TEXTUREUNITS];
-	static buf_transtri_t *tri;
 
 	if (!backendactive)
 		Sys_Error("R_Mesh_Draw: called when backend is not active\n");
@@ -1008,18 +976,9 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 		// transmesh is only for storage of transparent meshs until they
 		// are inserted into the main mesh array
 		mesh = &buf_transmesh[currenttransmesh++];
-
-		// transparent meshs are broken up into individual triangles which can
-		// be sorted by depth
-		index = m->index;
-		for (i = 0;i < m->numtriangles;i++)
-		{
-			tri = &buf_transtri[currenttranstriangle++];
-			tri->mesh = mesh;
-			tri->index[0] = *index++;
-			tri->index[1] = *index++;
-			tri->index[2] = *index++;
-		}
+		mesh->firsttriangle = currenttranstriangle;
+		memcpy(&buf_transtri[currenttranstriangle].index[0], m->index, sizeof(int[3]) * m->numtriangles);
+		currenttranstriangle += m->numtriangles;
 
 		mesh->firstvert = currenttransvertex;
 		mesh->lastvert = currenttransvertex + m->numverts - 1;
@@ -1043,10 +1002,10 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 		for (i = 0;i < backendunits;i++)
 			texcoord[i] = &buf_texcoord[i][currentvertex];
 
-		mesh = &buf_mesh[currentmesh++];
 		// opaque meshs are rendered directly
+		mesh = &buf_mesh[currentmesh++];
 		mesh->firsttriangle = currenttriangle;
-		memcpy(&buf_tri[currenttriangle].index[0], m->index, sizeof(float[3]) * m->numtriangles);
+		memcpy(&buf_tri[currenttriangle].index[0], m->index, sizeof(int[3]) * m->numtriangles);
 		currenttriangle += m->numtriangles;
 
 		mesh->firstvert = currentvertex;
@@ -1136,13 +1095,12 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 void R_Mesh_Draw_NativeOnly(const rmeshinfo_t *m)
 {
 	// these are static because gcc runs out of virtual registers otherwise
-	static int i, j, *index, overbright;
+	static int i, j, overbright;
 	static float *in, scaler;
 	static buf_mesh_t *mesh;
 	static buf_vertex_t *vert;
 	static buf_fcolor_t *fcolor;
 	static buf_texcoord_t *texcoord[MAX_TEXTUREUNITS];
-	static buf_transtri_t *tri;
 
 	if (!backendactive)
 		Sys_Error("R_Mesh_Draw: called when backend is not active\n");
@@ -1207,18 +1165,9 @@ void R_Mesh_Draw_NativeOnly(const rmeshinfo_t *m)
 		// transmesh is only for storage of transparent meshs until they
 		// are inserted into the main mesh array
 		mesh = &buf_transmesh[currenttransmesh++];
-
-		// transparent meshs are broken up into individual triangles which can
-		// be sorted by depth
-		index = m->index;
-		for (i = 0;i < m->numtriangles;i++)
-		{
-			tri = &buf_transtri[currenttranstriangle++];
-			tri->mesh = mesh;
-			tri->index[0] = *index++;
-			tri->index[1] = *index++;
-			tri->index[2] = *index++;
-		}
+		mesh->firsttriangle = currenttranstriangle;
+		memcpy(&buf_transtri[currenttranstriangle].index[0], m->index, sizeof(int[3]) * m->numtriangles);
+		currenttranstriangle += m->numtriangles;
 
 		mesh->firstvert = currenttransvertex;
 		mesh->lastvert = currenttransvertex + m->numverts - 1;
@@ -1245,7 +1194,7 @@ void R_Mesh_Draw_NativeOnly(const rmeshinfo_t *m)
 		mesh = &buf_mesh[currentmesh++];
 		// opaque meshs are rendered directly
 		mesh->firsttriangle = currenttriangle;
-		memcpy(&buf_tri[currenttriangle].index[0], m->index, sizeof(float[3]) * m->numtriangles);
+		memcpy(&buf_tri[currenttriangle].index[0], m->index, sizeof(int[3]) * m->numtriangles);
 		currenttriangle += m->numtriangles;
 
 		mesh->firstvert = currentvertex;
@@ -1316,7 +1265,6 @@ void R_Mesh_Draw_GetBuffer(volatile rmeshinfo_t *m)
 	// these are static because gcc runs out of virtual registers otherwise
 	static int i, j, *index, overbright;
 	static float *in, scaler;
-	static buf_transtri_t *tri;
 
 	if (!backendactive)
 		Sys_Error("R_Mesh_Draw: called when backend is not active\n");
@@ -1364,18 +1312,9 @@ void R_Mesh_Draw_GetBuffer(volatile rmeshinfo_t *m)
 		// transmesh is only for storage of transparent meshs until they
 		// are inserted into the main mesh array
 		mesh = &buf_transmesh[currenttransmesh++];
-
-		// transparent meshs are broken up into individual triangles which can
-		// be sorted by depth
-		index = m->index;
-		for (i = 0;i < m->numtriangles;i++)
-		{
-			tri = &buf_transtri[currenttranstriangle++];
-			tri->mesh = mesh;
-			tri->index[0] = *index++;
-			tri->index[1] = *index++;
-			tri->index[2] = *index++;
-		}
+		mesh->firsttriangle = currenttranstriangle;
+		memcpy(&buf_transtri[currenttranstriangle].index[0], m->index, sizeof(int[3]) * m->numtriangles);
+		currenttranstriangle += m->numtriangles;
 
 		mesh->firstvert = currenttransvertex;
 		mesh->lastvert = currenttransvertex + m->numverts - 1;
@@ -1399,10 +1338,10 @@ void R_Mesh_Draw_GetBuffer(volatile rmeshinfo_t *m)
 		for (i = 0;i < backendunits;i++)
 			texcoord[i] = &buf_texcoord[i][currentvertex];
 
-		mesh = &buf_mesh[currentmesh++];
 		// opaque meshs are rendered directly
+		mesh = &buf_mesh[currentmesh++];
 		mesh->firsttriangle = currenttriangle;
-		memcpy(&buf_tri[currenttriangle].index[0], m->index, sizeof(float[3]) * m->numtriangles);
+		memcpy(&buf_tri[currenttriangle].index[0], m->index, sizeof(int[3]) * m->numtriangles);
 		currenttriangle += m->numtriangles;
 
 		mesh->firstvert = currentvertex;
@@ -1486,6 +1425,7 @@ void R_Mesh_DrawPolygon(rmeshinfo_t *m, int numverts)
 	R_Mesh_Draw(m);
 }
 
+/*
 // LordHavoc: this thing is evil, but necessary because decals account for so much overhead
 void R_Mesh_DrawDecal(const rmeshinfo_t *m)
 {
@@ -1536,6 +1476,7 @@ void R_Mesh_DrawDecal(const rmeshinfo_t *m)
 		mesh->blendfunc2 = m->blendfunc2;
 		mesh->depthmask = false;
 		mesh->depthtest = true;
+		mesh->firsttriangle = currenttranstriangle;
 		mesh->triangles = 2;
 		mesh->textures[0] = m->tex[0];
 		mesh->texturergbscale[0] = overbright ? 4 : 1;
@@ -1546,22 +1487,10 @@ void R_Mesh_DrawDecal(const rmeshinfo_t *m)
 		}
 		mesh->chain = NULL;
 
-		// transparent meshs are broken up into individual triangles which can
-		// be sorted by depth
-		index = m->index;
-		tri = &buf_transtri[currenttranstriangle++];
-		tri->mesh = mesh;
-		tri->index[0] = 0;
-		tri->index[1] = 1;
-		tri->index[2] = 2;
-		tri = &buf_transtri[currenttranstriangle++];
-		tri->mesh = mesh;
-		tri->index[0] = 0;
-		tri->index[1] = 2;
-		tri->index[2] = 3;
-
+		index = &buf_transtri[currenttranstriangle].index[0];
 		mesh->firstvert = currenttransvertex;
 		mesh->lastvert = currenttransvertex + 3;
+		currenttranstriangle += 2;
 		currenttransvertex += 4;
 	}
 	else
@@ -1598,17 +1527,18 @@ void R_Mesh_DrawDecal(const rmeshinfo_t *m)
 
 		// opaque meshs are rendered directly
 		index = &buf_tri[currenttriangle].index[0];
-		index[0] = 0;
-		index[1] = 1;
-		index[2] = 2;
-		index[3] = 0;
-		index[4] = 2;
-		index[5] = 3;
 		mesh->firstvert = currentvertex;
 		mesh->lastvert = currentvertex + 3;
 		currenttriangle += 2;
 		currentvertex += 4;
 	}
+
+	index[0] = 0;
+	index[1] = 1;
+	index[2] = 2;
+	index[3] = 0;
+	index[4] = 2;
+	index[5] = 3;
 
 	// buf_vertex_t must match the size of the decal vertex array (or vice versa)
 	memcpy(vert, m->vertex, 4 * sizeof(buf_vertex_t));
@@ -1640,6 +1570,7 @@ void R_Mesh_DrawDecal(const rmeshinfo_t *m)
 	if (currenttriangle >= max_batch)
 		R_Mesh_Render();
 }
+*/
 
 /*
 ==============================================================================

@@ -12,6 +12,7 @@ typedef struct
 	int blendfunc2;
 	int numtriangles;
 	int *index;
+	int indexbase; // adjustment to add to the index values
 	int numverts;
 	float *vertex;
 	int vertexstep;
@@ -38,5 +39,7 @@ void R_Mesh_Draw(const rmeshinfo_t *m);
 void R_Mesh_AddTransparent(void);
 // ease-of-use frontend to R_Mesh_Draw, set up meshinfo, except for index and numtriangles and numverts, then call this
 void R_Mesh_DrawPolygon(rmeshinfo_t *m, int numverts);
+// same as normal, except for harsh format restrictions (vertex must be 4 float, color must be 4 float, texcoord must be 2 float, flat color not supported)
+void R_Mesh_Draw_NativeOnly(const rmeshinfo_t *m);
 // faster hardwired version of R_Mesh_Draw specifically for decals (has close ties to decal code)
-void R_Mesh_DrawDecal(const rmeshinfo_t *m);
+//void R_Mesh_DrawDecal(const rmeshinfo_t *m);
