@@ -336,30 +336,30 @@ WAV loading
 */
 
 
-qbyte *data_p;
-qbyte *iff_end;
-qbyte *last_chunk;
-qbyte *iff_data;
-int iff_chunk_len;
+static qbyte *data_p;
+static qbyte *iff_end;
+static qbyte *last_chunk;
+static qbyte *iff_data;
+static int iff_chunk_len;
 
 
 short GetLittleShort(void)
 {
-	short val = 0;
-	val = *data_p;
-	val = val + (*(data_p+1)<<8);
+	short val;
+
+	val = BuffLittleShort (data_p);
 	data_p += 2;
+
 	return val;
 }
 
 int GetLittleLong(void)
 {
 	int val = 0;
-	val = *data_p;
-	val = val + (*(data_p+1)<<8);
-	val = val + (*(data_p+2)<<16);
-	val = val + (*(data_p+3)<<24);
+
+	val = BuffLittleLong (data_p);
 	data_p += 4;
+
 	return val;
 }
 
