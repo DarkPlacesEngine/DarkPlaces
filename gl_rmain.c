@@ -509,9 +509,6 @@ static void R_BlendView(void)
 	rmeshinfo_t m;
 	float tvxyz[3][4], r;
 
-	if (!r_render.integer)
-		return;
-
 	if (r_refdef.viewblend[3] < 0.01f)
 		return;
 
