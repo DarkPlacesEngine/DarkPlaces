@@ -153,8 +153,6 @@ loc0:
 	midf = t1 / (t1 - t2);
 	t->trace->fraction = bound(0.0f, midf, 1.0);
 
-	VectorMA(t->start, t->trace->fraction, t->dist, t->trace->endpos);
-
 	return HULLCHECKSTATE_DONE;
 }
 
@@ -259,6 +257,7 @@ void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cm
 	VectorCopy(end, rhc.end);
 	VectorSubtract(rhc.end, rhc.start, rhc.dist);
 	RecursiveHullCheck(&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
+	VectorMA(rhc.start, rhc.trace->fraction, rhc.dist, rhc.trace->endpos);
 }
 
 
