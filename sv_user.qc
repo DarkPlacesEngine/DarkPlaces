@@ -1,5 +1,6 @@
 float lastclientthink, sv_maxspeed, sv_friction, sv_accelerate, sv_stopspeed;
-float sv_edgefriction, cl_rollspeed, cl_divspeed;
+float sv_edgefriction, cl_rollangle, cl_divspeed;
+.vector movement;
 
 // LordHavoc:
 // Highly optimized port of SV_ClientThink from engine code to QuakeC.
@@ -52,7 +53,12 @@ void() SV_PlayerPhysics =
 	}
 
 	// show 1/3 the pitch angle and all the roll angle
-	self.angles_z = bound(-1, self.velocity * v_right * cl_divspeed, 1) * cl_rollangle;
+	f = (self.velocity * v_right) * cl_divspeed;
+	if (f < -1)
+		f = -1;
+	if (f > 1)
+		f = 1;
+	self.angles_z = f * cl_rollangle;
 	if (!self.fixangle)
 	{
 		self.angles_x = (self.v_angle_x + self.punchangle_x) * -0.333;
