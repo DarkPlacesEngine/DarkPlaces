@@ -486,7 +486,7 @@ void Host_Loadgame_f (void)
 		return;
 	}
 
-	sprintf (sv_loadgame, "%s/%s", fs_gamedir, Cmd_Argv(1));
+	strcpy (sv_loadgame, Cmd_Argv(1));
 	FS_DefaultExtension (sv_loadgame, ".sav");
 
 	Con_Printf ("Loading game from %s...\n", sv_loadgame);
