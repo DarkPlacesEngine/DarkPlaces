@@ -490,7 +490,77 @@ static void Mod_Precache(void)
 		Con_Printf("usage: modelprecache <filename>\n");
 }
 
-int Mod_FindTriangleWithEdge(const int *elements, int numtriangles, int start, int end, int ignore)
+#if 1
+// fast way, using an edge hash
+#define TRIANGLEEDGEHASH 1024
+void Mod_BuildTriangleNeighbors(int *neighbors, const int *elements, int numtriangles)
+{
+	int i, j, p, e1, e2, *n, hashindex, count, match;
+	const int *e;
+	typedef struct edgehashentry_s
+	{
+		struct edgehashentry_s *next;
+		int triangle;
+		int element[2];
+	}
+	edgehashentry_t;
+	edgehashentry_t *edgehash[TRIANGLEEDGEHASH], *edgehashentries, edgehashentriesbuffer[TRIANGLEEDGEHASH*3], *hash;
+	memset(edgehash, 0, sizeof(edgehash));
+	edgehashentries = edgehashentriesbuffer;
+	// if there are too many triangles for the stack array, allocate larger buffer
+	if (numtriangles > TRIANGLEEDGEHASH)
+		edgehashentries = Mem_Alloc(tempmempool, numtriangles * 3 * sizeof(edgehashentry_t));
+	// find neighboring triangles
+	for (i = 0, e = elements, n = neighbors;i < numtriangles;i++, e += 3, n += 3)
+	{
+		for (j = 0, p = 2;j < 3;p = j, j++)
+		{
+			e1 = e[p];
+			e2 = e[j];
+			// this hash index works for both forward and backward edges
+			hashindex = (unsigned int)(e1 + e2) % TRIANGLEEDGEHASH;
+			hash = edgehashentries + i * 3 + j;
+			hash->next = edgehash[hashindex];
+			edgehash[hashindex] = hash;
+			hash->triangle = i;
+			hash->element[0] = e1;
+			hash->element[1] = e2;
+		}
+	}
+	for (i = 0, e = elements, n = neighbors;i < numtriangles;i++, e += 3, n += 3)
+	{
+		for (j = 0, p = 2;j < 3;p = j, j++)
+		{
+			e1 = e[p];
+			e2 = e[j];
+			// this hash index works for both forward and backward edges
+			hashindex = (unsigned int)(e1 + e2) % TRIANGLEEDGEHASH;
+			count = 0;
+			match = -1;
+			for (hash = edgehash[hashindex];hash;hash = hash->next)
+			{
+				if (hash->element[0] == e2 && hash->element[1] == e1)
+				{
+					if (hash->triangle != i)
+						match = hash->triangle;
+					count++;
+				}
+				else if ((hash->element[0] == e1 && hash->element[1] == e2))
+					count++;
+			}
+			// detect edges shared by three triangles and make them seams
+			if (count > 2)
+				match = -1;
+			n[p] = match;
+		}
+	}
+	// free the allocated buffer
+	if (edgehashentries != edgehashentriesbuffer)
+		Mem_Free(edgehashentries);
+}
+#else
+// very slow but simple way
+static int Mod_FindTriangleWithEdge(const int *elements, int numtriangles, int start, int end, int ignore)
 {
 	int i, match, count;
 	count = 0;
@@ -527,6 +597,7 @@ void Mod_BuildTriangleNeighbors(int *neighbors, const int *elements, int numtria
 		n[2] = Mod_FindTriangleWithEdge(elements, numtriangles, e[0], e[2], i);
 	}
 }
+#endif
 
 void Mod_ValidateElements(const int *elements, int numtriangles, int numverts, const char *filename, int fileline)
 {
@@ -684,7 +755,7 @@ int Mod_ShadowMesh_AddVertex(shadowmesh_t *mesh, float *vertex14f)
 	int hashindex, vnum;
 	shadowmeshvertexhash_t *hash;
 	// this uses prime numbers intentionally
-	hashindex = (int) (vertex14f[0] * 3 + vertex14f[1] * 5 + vertex14f[2] * 7) % SHADOWMESHVERTEXHASH;
+	hashindex = (unsigned int) (vertex14f[0] * 3 + vertex14f[1] * 5 + vertex14f[2] * 7) % SHADOWMESHVERTEXHASH;
 	for (hash = mesh->vertexhashtable[hashindex];hash;hash = hash->next)
 	{
 		vnum = (hash - mesh->vertexhashentries);
