@@ -173,7 +173,7 @@ void R_NewExplosion(vec3_t org)
 	fractalnoisequick(noise, EXPLOSIONGRID, 4);
 	for (i = 0;i < MAX_EXPLOSIONS;i++)
 	{
-		if (explosion[i].alpha <= 0.0f)
+		if (explosion[i].alpha <= 0.01f)
 		{
 			explosion[i].starttime = cl.time;
 			explosion[i].time = explosion[i].starttime - 0.1;
@@ -338,6 +338,11 @@ void R_MoveExplosion(explosion_t *e/*, explosiongas_t **list, explosiongas_t **l
 	frametime = cl.time - e->time;
 	e->time = cl.time;
 	e->alpha = EXPLOSIONFADESTART - (cl.time - e->starttime) * EXPLOSIONFADERATE;
+	if (e->alpha <= 0.01f)
+	{
+		e->alpha = -1;
+		return;
+	}
 	frictionscale = 1 - frametime;
 	frictionscale = bound(0, frictionscale, 1);
 	for (i = 0;i < EXPLOSIONVERTS;i++)
