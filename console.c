@@ -120,12 +120,10 @@ void Con_ClearNotify (void)
 Con_MessageMode_f
 ================
 */
-extern qboolean team_message;
-
 void Con_MessageMode_f (void)
 {
 	key_dest = key_message;
-	team_message = false;
+	chat_team = false;
 }
 
 
@@ -137,7 +135,7 @@ Con_MessageMode2_f
 void Con_MessageMode2_f (void)
 {
 	key_dest = key_message;
-	team_message = true;
+	chat_team = true;
 }
 
 
@@ -539,7 +537,7 @@ void Con_DrawNotify (void)
 		x = 0;
 
 		// LordHavoc: speedup, and other improvements
-		if (team_message)
+		if (chat_team)
 			sprintf(temptext, "say_team:%s%c", chat_buffer, (int) 10+((int)(realtime*con_cursorspeed)&1));
 		else
 			sprintf(temptext, "say:%s%c", chat_buffer, (int) 10+((int)(realtime*con_cursorspeed)&1));

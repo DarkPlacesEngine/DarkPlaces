@@ -30,7 +30,6 @@ key up events are sent even if in console mode
 char key_lines[32][MAXCMDLINE];
 int key_linepos;
 int shift_down = false;
-int key_lastpress;
 int key_insert;	// insert key toggle (for editing)
 
 int edit_line = 0;
@@ -38,8 +37,6 @@ int history_line = 0;
 
 int key_consoleactive;
 keydest_t key_dest;
-
-int key_count;			// incremented every key event
 
 char *keybindings[256];
 qboolean consolekeys[256];	// if true, can't be rebound while in console
@@ -132,10 +129,26 @@ keyname_t keynames[] =
 	{"AUX31", K_AUX31},
 	{"AUX32", K_AUX32},
 
-	{"PAUSE", K_PAUSE},
+	{"KP_HOME",			K_KP_HOME },
+	{"KP_UPARROW",		K_KP_UPARROW },
+	{"KP_PGUP",			K_KP_PGUP },
+	{"KP_LEFTARROW",	K_KP_LEFTARROW },
+	{"KP_5",			K_KP_5 },
+	{"KP_RIGHTARROW",	K_KP_RIGHTARROW },
+	{"KP_END",			K_KP_END },
+	{"KP_DOWNARROW",	K_KP_DOWNARROW },
+	{"KP_PGDN",			K_KP_PGDN },
+	{"KP_ENTER",		K_KP_ENTER },
+	{"KP_INS",			K_KP_INS },
+	{"KP_DEL",			K_KP_DEL },
+	{"KP_SLASH",		K_KP_SLASH },
+	{"KP_MINUS",		K_KP_MINUS },
+	{"KP_PLUS",			K_KP_PLUS },
 
-	{"MWHEELUP", K_MWHEELUP},
-	{"MWHEELDOWN", K_MWHEELDOWN},
+	{"MWHEELUP", K_MWHEELUP },
+	{"MWHEELDOWN", K_MWHEELDOWN },
+
+	{"PAUSE", K_PAUSE},
 
 	{"SEMICOLON", ';'},	// because a raw semicolon seperates commands
 
@@ -160,7 +173,87 @@ Interactive line editing and console scrollback
 */
 void Key_Console (int key)
 {
-	if (key == K_ENTER)
+	// LordHavoc: copied most of this from Q2 to improve keyboard handling
+	switch (key)
+	{
+	case K_KP_SLASH:
+		key = '/';
+		break;
+	case K_KP_MINUS:
+		key = '-';
+		break;
+	case K_KP_PLUS:
+		key = '+';
+		break;
+	case K_KP_HOME:
+		key = '7';
+		break;
+	case K_KP_UPARROW:
+		key = '8';
+		break;
+	case K_KP_PGUP:
+		key = '9';
+		break;
+	case K_KP_LEFTARROW:
+		key = '4';
+		break;
+	case K_KP_5:
+		key = '5';
+		break;
+	case K_KP_RIGHTARROW:
+		key = '6';
+		break;
+	case K_KP_END:
+		key = '1';
+		break;
+	case K_KP_DOWNARROW:
+		key = '2';
+		break;
+	case K_KP_PGDN:
+		key = '3';
+		break;
+	case K_KP_INS:
+		key = '0';
+		break;
+	case K_KP_DEL:
+		key = '.';
+		break;
+	}
+
+	// LordHavoc: FIXME: implement this sometime
+	#if 0
+	if ((toupper(key) == 'V' && keydown[K_CTRL]) || ((key == K_INS || key == K_KP_INS) && keydown[K_SHIFT]))
+	{
+		char *cbd;
+		if ((cbd = Sys_GetClipboardData()) != 0)
+		{
+			int i;
+			strtok(cbd, "\n\r\b");
+			i = strlen(cbd);
+			if (i + key_linepos >= MAXCMDLINE)
+				i= MAXCMDLINE - key_linepos;
+			if (i > 0)
+			{
+				cbd[i]=0;
+				strcat(key_lines[edit_line], cbd);
+				key_linepos += i;
+			}
+			free(cbd);
+		}
+		return;
+	}
+	#endif
+
+	if (key == 'l')
+	{
+		if (keydown[K_CTRL])
+		{
+			Cbuf_AddText ("clear\n");
+			return;
+		}
+	}
+
+	if (key == K_ENTER || key == K_KP_ENTER)
 	{
 		Cbuf_AddText (key_lines[edit_line]+1);	// skip the ]
 		Cbuf_AddText ("\n");
@@ -185,6 +278,7 @@ void Key_Console (int key)
 		// by EvilTypeGuy eviltypeguy@qeradiant.com
 		// Thanks to Fett, Taniwha
 		Con_CompleteCommandLine();
+		return;
 	}
 
 	// Advanced Console Editing by Radix radix@planetquake.com
@@ -192,14 +286,15 @@ void Key_Console (int key)
 
 	// left arrow will just move left one without erasing, backspace will
 	// actually erase charcter
-	if (key == K_LEFTARROW)
+	if (key == K_LEFTARROW || key == K_KP_LEFTARROW)
 	{
 		if (key_linepos > 1)
 			key_linepos--;
 		return;
 	}
 
-	if (key == K_BACKSPACE)	// delete char before cursor
+	// delete char before cursor
+	if (key == K_BACKSPACE || (key == 'h' && keydown[K_CTRL]))
 	{
 		if (key_linepos > 1)
 		{
@@ -209,7 +304,8 @@ void Key_Console (int key)
 		return;
 	}
 
-	if (key == K_DEL)		// delete char on cursor
+	// delete char on cursor
+	if (key == K_DEL || key == K_KP_DEL)
 	{
 		if ((size_t)key_linepos < strlen(key_lines[edit_line]))
 			strcpy(key_lines[edit_line] + key_linepos, key_lines[edit_line] + key_linepos + 1);
@@ -219,7 +315,7 @@ void Key_Console (int key)
 
 	// if we're at the end, get one character from previous line,
 	// otherwise just go right one
-	if (key == K_RIGHTARROW)
+	if (key == K_RIGHTARROW || key == K_KP_RIGHTARROW)
 	{
 		if (strlen(key_lines[edit_line]) == (size_t)key_linepos)
 		{
@@ -236,7 +332,7 @@ void Key_Console (int key)
 		return;
 	}
 
-	if (key == K_INS) // toggle insert mode
+	if (key == K_INS || key == K_KP_INS) // toggle insert mode
 	{
 		key_insert ^= 1;
 		return;
@@ -244,7 +340,7 @@ void Key_Console (int key)
 
 	// End Advanced Console Editing
 
-	if (key == K_UPARROW)
+	if (key == K_UPARROW || key == K_KP_UPARROW || (key == 'p' && keydown[K_CTRL]))
 	{
 		do
 		{
@@ -258,7 +354,7 @@ void Key_Console (int key)
 		return;
 	}
 
-	if (key == K_DOWNARROW)
+	if (key == K_DOWNARROW || key == K_KP_DOWNARROW || (key == 'n' && keydown[K_CTRL]))
 	{
 		if (history_line == edit_line) return;
 		do
@@ -280,7 +376,7 @@ void Key_Console (int key)
 		return;
 	}
 
-	if (key == K_PGUP || key==K_MWHEELUP)
+	if (key == K_PGUP || key == K_KP_PGUP || key == K_MWHEELUP)
 	{
 		con_backscroll += ((int) scr_conlines >> 4);
 		if (con_backscroll > con_totallines - (vid.conheight>>3) - 1)
@@ -288,7 +384,7 @@ void Key_Console (int key)
 		return;
 	}
 
-	if (key == K_PGDN || key==K_MWHEELDOWN)
+	if (key == K_PGDN || key == K_KP_PGDN || key == K_MWHEELDOWN)
 	{
 		con_backscroll -= ((int) scr_conlines >> 4);
 		if (con_backscroll < 0)
@@ -296,22 +392,21 @@ void Key_Console (int key)
 		return;
 	}
 
-	if (key == K_HOME)
+	if (key == K_HOME || key == K_KP_HOME)
 	{
 		con_backscroll = con_totallines - (vid.conheight>>3) - 1;
 		return;
 	}
 
-	if (key == K_END)
+	if (key == K_END || key == K_KP_END)
 	{
 		con_backscroll = 0;
 		return;
 	}
 
+	// non printable
 	if (key < 32 || key > 127)
-		return;	// non printable
-
-
+		return;
 
 	if (key_linepos < MAXCMDLINE-1)
 	{
@@ -342,16 +437,15 @@ void Key_Console (int key)
 //============================================================================
 
 // LordHavoc: increased messagemode length (was 32)
+qboolean chat_team = false;
 char chat_buffer[256];
-qboolean team_message = false;
+int chat_bufferlen = 0;
 
 void Key_Message (int key)
 {
-	static int chat_bufferlen = 0;
-
-	if (key == K_ENTER)
+	if (key == K_ENTER || key == K_KP_ENTER)
 	{
-		if (team_message)
+		if (chat_team)
 			Cbuf_AddText ("say_team \"");
 		else
 			Cbuf_AddText ("say \"");
@@ -372,8 +466,9 @@ void Key_Message (int key)
 		return;
 	}
 
+	// non printable
 	if (key < 32 || key > 127)
-		return;	// non printable
+		return;
 
 	if (key == K_BACKSPACE)
 	{
@@ -385,8 +480,7 @@ void Key_Message (int key)
 		return;
 	}
 
-	// LordHavoc: increased messagemode length (was 31)
-	if (chat_bufferlen == 240)
+	if (chat_bufferlen == sizeof(chat_buffer) - 1)
 		return; // all full
 
 	chat_buffer[chat_bufferlen++] = key;
@@ -458,9 +552,9 @@ Key_SetBinding
 */
 void Key_SetBinding (int keynum, char *binding)
 {
-	char	*new;
-	int		l;
-			
+	char *new;
+	int l;
+
 	if (keynum < 0 || keynum >= 256)
 		return;
 
@@ -470,13 +564,13 @@ void Key_SetBinding (int keynum, char *binding)
 		Z_Free (keybindings[keynum]);
 		keybindings[keynum] = NULL;
 	}
-			
+
 // allocate memory for new binding
-	l = strlen (binding);	
+	l = strlen (binding);
 	new = Z_Malloc (l+1);
 	strcpy (new, binding);
 	new[l] = 0;
-	keybindings[keynum] = new;	
+	keybindings[keynum] = new;
 }
 
 /*
@@ -486,7 +580,7 @@ Key_Unbind_f
 */
 void Key_Unbind_f (void)
 {
-	int		b;
+	int b;
 
 	if (Cmd_Argc() != 2)
 	{
@@ -495,7 +589,7 @@ void Key_Unbind_f (void)
 	}
 
 	b = Key_StringToKeynum (Cmd_Argv(1));
-	if (b==-1)
+	if (b == -1)
 	{
 		Con_Printf ("\"%s\" isn't a valid key\n", Cmd_Argv(1));
 		return;
@@ -506,9 +600,9 @@ void Key_Unbind_f (void)
 
 void Key_Unbindall_f (void)
 {
-	int		i;
+	int i;
 
-	for (i=0 ; i<256 ; i++)
+	for (i = 0;i < 256;i++)
 		if (keybindings[i])
 			Key_SetBinding (i, "");
 }
@@ -521,8 +615,8 @@ Key_Bind_f
 */
 void Key_Bind_f (void)
 {
-	int			i, c, b;
-	char		cmd[1024];
+	int i, c, b;
+	char cmd[1024];
 
 	c = Cmd_Argc();
 
@@ -532,7 +626,7 @@ void Key_Bind_f (void)
 		return;
 	}
 	b = Key_StringToKeynum (Cmd_Argv(1));
-	if (b==-1)
+	if (b == -1)
 	{
 		Con_Printf ("\"%s\" isn't a valid key\n", Cmd_Argv(1));
 		return;
@@ -548,7 +642,8 @@ void Key_Bind_f (void)
 	}
 
 // copy the rest of the command line
-	cmd[0] = 0;		// start out with a null string
+	// start out with a null string
+	cmd[0] = 0;
 	for (i=2 ; i< c ; i++)
 	{
 		if (i > 2)
@@ -568,12 +663,27 @@ Writes lines containing "bind key value"
 */
 void Key_WriteBindings (QFile *f)
 {
-	int		i;
+	int i;
 
-	for (i=0 ; i<256 ; i++)
-		if (keybindings[i])
-			if (*keybindings[i])
-				Qprintf (f, "bind \"%s\" \"%s\"\n", Key_KeynumToString(i), keybindings[i]);
+	for (i = 0;i < 256;i++)
+		if (keybindings[i] && *keybindings[i])
+			Qprintf (f, "bind \"%s\" \"%s\"\n", Key_KeynumToString(i), keybindings[i]);
+}
+
+
+/*
+============
+Key_Bindlist_f
+
+============
+*/
+void Key_Bindlist_f (void)
+{
+	int i;
+
+	for (i = 0;i < 256;i++)
+		if (keybindings[i] && keybindings[i][0])
+			Con_Printf ("%s \"%s\"\n", Key_KeynumToString(i), keybindings[i]);
 }
 
 
@@ -584,13 +694,13 @@ Key_Init
 */
 void Key_Init (void)
 {
-	int		i;
+	int i;
 
 	// LordHavoc: clear keybindings array so bounds checking won't freak
 	for (i = 0;i < 256;i++)
 		keybindings[i] = NULL;
 
-	for (i=0 ; i<32 ; i++)
+	for (i = 0;i < 32;i++)
 	{
 		key_lines[i][0] = ']';
 		key_lines[i][1] = 0;
@@ -600,28 +710,35 @@ void Key_Init (void)
 //
 // init ascii characters in console mode
 //
-	for (i=32 ; i<128 ; i++)
+	for (i = 32;i < 128;i++)
 		consolekeys[i] = true;
-	consolekeys[K_ENTER] = true;
+	consolekeys[K_ENTER] = true;consolekeys[K_KP_ENTER] = true;
 	consolekeys[K_TAB] = true;
-	consolekeys[K_LEFTARROW] = true;
-	consolekeys[K_RIGHTARROW] = true;
-	consolekeys[K_UPARROW] = true;
-	consolekeys[K_DOWNARROW] = true;
+	consolekeys[K_LEFTARROW] = true;consolekeys[K_KP_LEFTARROW] = true;
+	consolekeys[K_RIGHTARROW] = true;consolekeys[K_KP_RIGHTARROW] = true;
+	consolekeys[K_UPARROW] = true;consolekeys[K_KP_UPARROW] = true;
+	consolekeys[K_DOWNARROW] = true;consolekeys[K_KP_DOWNARROW] = true;
 	consolekeys[K_BACKSPACE] = true;
-	consolekeys[K_DEL] = true;
-	consolekeys[K_INS] = true;
-	consolekeys[K_PGUP] = true;
-	consolekeys[K_PGDN] = true;
+	consolekeys[K_HOME] = true;consolekeys[K_KP_HOME] = true;
+	consolekeys[K_END] = true;consolekeys[K_KP_END] = true;
+	consolekeys[K_PGUP] = true;consolekeys[K_KP_PGUP] = true;
+	consolekeys[K_PGDN] = true;consolekeys[K_KP_PGDN] = true;
 	consolekeys[K_SHIFT] = true;
+	consolekeys[K_INS] = true;consolekeys[K_KP_INS] = true;
+	consolekeys[K_DEL] = true;consolekeys[K_KP_DEL] = true;
+	consolekeys[K_KP_SLASH] = true;
+	consolekeys[K_KP_PLUS] = true;
+	consolekeys[K_KP_MINUS] = true;
+	consolekeys[K_KP_5] = true;
 	consolekeys[K_MWHEELUP] = true;
 	consolekeys[K_MWHEELDOWN] = true;
+
 	consolekeys['`'] = false;
 	consolekeys['~'] = false;
 
-	for (i=0 ; i<256 ; i++)
+	for (i = 0;i < 256;i++)
 		keyshift[i] = i;
-	for (i='a' ; i<='z' ; i++)
+	for (i = 'a';i <= 'z';i++)
 		keyshift[i] = i - 'a' + 'A';
 	keyshift['1'] = '!';
 	keyshift['2'] = '@';
@@ -655,6 +772,7 @@ void Key_Init (void)
 	Cmd_AddCommand ("bind",Key_Bind_f);
 	Cmd_AddCommand ("unbind",Key_Unbind_f);
 	Cmd_AddCommand ("unbindall",Key_Unbindall_f);
+	Cmd_AddCommand ("bindlist",Key_Bindlist_f);
 }
 
 /*
@@ -672,24 +790,24 @@ void Key_Event (int key, qboolean down)
 
 	keydown[key] = down;
 
-	if (!down)
-		key_repeats[key] = 0;
-
-	key_lastpress = key;
-	key_count++;
-	if (key_count <= 0)
-		return;		// just catching keys for Con_NotifyBox
-
-// update auto-repeat status
+	// update auto-repeat status
 	if (down)
 	{
 		key_repeats[key]++;
-		if (key != K_BACKSPACE && key != K_PAUSE && key_repeats[key] > 1)
+		if (key != K_BACKSPACE
+		 && key != K_PAUSE
+		 && key != K_PGUP
+		 && key != K_KP_PGUP
+		 && key != K_PGDN
+		 && key != K_KP_PGDN
+		 && key_repeats[key] > 1)
 			return;	// ignore most autorepeats
 
 		if (key >= 200 && !keybindings[key])
-			Con_Printf ("%s is unbound, hit F4 to set.\n", Key_KeynumToString (key) );
+			Con_Printf ("%s is unbound, hit F4 to set.\n", Key_KeynumToString (key));
 	}
+	else
+		key_repeats[key] = 0;
 
 	if (key == K_SHIFT)
 		shift_down = down;
@@ -718,7 +836,14 @@ void Key_Event (int key, qboolean down)
 		return;
 	}
 
-	// LordHavoc: hack to make toggleconsole always work
+	// console key is hardcoded, so the user can never unbind it
+	if (key == '`' || key == '~')
+	{
+		if (down)
+			Con_ToggleConsole_f ();
+		return;
+	}
+
 	if (down)
 	{
 		kb = keybindings[key];
@@ -775,15 +900,11 @@ void Key_Event (int key, qboolean down)
 		// during demo playback, most keys bring up the main menu
 		//
 		if (cls.demoplayback && down && consolekeys[key] && key_dest == key_game)
-		{
-			M_ToggleMenu_f ();
-			return;
-		}
+			key = K_ESCAPE;
 
 		//
 		// if not a consolekey, send to the interpreter no matter what mode is
 		//
-		//if ((key_dest == key_console && !consolekeys[key])
 		if ((key_consoleactive && !consolekeys[key])
 		 || (key_dest == key_menu && menubound[key])
 		 || key_dest == key_game)
@@ -792,7 +913,8 @@ void Key_Event (int key, qboolean down)
 			if (kb)
 			{
 				if (kb[0] == '+')
-				{	// button commands add keynum as a parm
+				{
+					// button commands add keynum as a parm
 					sprintf (cmd, "%s %i\n", kb, key);
 					Cbuf_AddText (cmd);
 				}
