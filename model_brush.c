@@ -597,6 +597,7 @@ void Mod_LoadTexinfo (lump_t *l)
 		{
 			out->texture = r_notexture_mip;	// checkerboard texture
 			out->flags = 0;
+			out->texture->transparent = FALSE;
 		}
 		else
 		{
@@ -607,9 +608,8 @@ void Mod_LoadTexinfo (lump_t *l)
 			{
 				out->texture = r_notexture_mip; // texture not found
 				out->flags = 0;
-			}
-			else
 				out->texture->transparent = FALSE;
+			}
 		}
 	}
 }

@@ -1650,13 +1650,16 @@ void Host_PModel_f (void)
 
 	if (Cmd_Argc () == 1)
 	{
-		Con_Printf ("usage: pmodel modelnumber\n");
+		Con_Printf ("\"pmodel\" is \"%s\"\n", cl_pmodel.string);
 		return;
 	}
 	i = atoi(Cmd_Argv(1));
 
 	if (cmd_source == src_command)
 	{
+		if (cl_pmodel.value == i)
+			return;
+		Cvar_SetValue ("_cl_pmodel", i);
 		if (cls.state == ca_connected)
 			Cmd_ForwardToServer ();
 		return;
