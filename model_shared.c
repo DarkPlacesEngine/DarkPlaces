@@ -398,7 +398,7 @@ int Mod_FindTriangleWithEdge(int *elements, int numtriangles, int start, int end
 	return -1;
 }
 
-int *Mod_BuildTriangleNeighbors(int *neighbors, int *elements, int numtriangles)
+void Mod_BuildTriangleNeighbors(int *neighbors, int *elements, int numtriangles)
 {
 	int i, *e, *n;
 	for (i = 0, e = elements, n = neighbors;i < numtriangles;i++, e += 3, n += 3)
@@ -407,5 +407,4 @@ int *Mod_BuildTriangleNeighbors(int *neighbors, int *elements, int numtriangles)
 		n[1] = Mod_FindTriangleWithEdge(elements, numtriangles, e[2], e[1]);
 		n[2] = Mod_FindTriangleWithEdge(elements, numtriangles, e[0], e[2]);
 	}
-	return neighbors;
 }

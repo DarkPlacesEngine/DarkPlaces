@@ -186,6 +186,7 @@ typedef struct model_s
 	float			*mdlmd2data_texcoords;
 	md2frame_t		*mdlmd2data_frames;
 	trivertx_t		*mdlmd2data_pose;
+	int				*mdlmd2data_triangleneighbors;
 
 	// for Zymotic models
 	void			*zymdata_header;
@@ -236,7 +237,7 @@ extern model_t *loadmodel;
 extern char loadname[32];	// for hunk tags
 
 int Mod_FindTriangleWithEdge(int *elements, int numtriangles, int start, int end);
-int *Mod_BuildTriangleNeighbors(int *neighbors, int *elements, int numtriangles);
+void Mod_BuildTriangleNeighbors(int *neighbors, int *elements, int numtriangles);
 
 #endif	// __MODEL__
 
