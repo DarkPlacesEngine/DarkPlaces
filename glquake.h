@@ -26,7 +26,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifdef _MSC_VER
 #pragma warning(disable : 4244)     // LordHavoc: MSVC++ 4 x86, double/float
 #pragma warning(disable : 4305)		// LordHavoc: MSVC++ 6 x86, double/float
-#pragma warning(disable : 4018)		// LordHavoc: MSVC++ 4 x86, signed/unsigned mismatch
 #endif
 
 
