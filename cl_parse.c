@@ -403,7 +403,7 @@ void CL_ParseServerInfo (void)
 	for (i = 1;i < nummodels;i++)
 	{
 		CL_KeepaliveMessage();
-		Mod_TouchModel(parse_model_precache[i]);
+		Mod_FindName(parse_model_precache[i]);
 	}
 	Mod_PurgeUnused();
 
