@@ -71,7 +71,7 @@ float V_CalcRoll (vec3_t angles, vec3_t velocity)
 	float	sign;
 	float	side;
 	float	value;
-	
+
 	AngleVectors (angles, NULL, right, NULL);
 	side = DotProduct (velocity, right);
 	sign = side < 0 ? -1 : 1;
@@ -224,9 +224,12 @@ V_ParseDamage
 void V_ParseDamage (void)
 {
 	int i, armor, blood;
-	vec3_t from, forward, right;
+	vec3_t from;
+	//vec3_t forward, right;
+	vec3_t localfrom;
 	entity_t *ent;
-	float side, count;
+	//float side;
+	float count;
 
 	armor = MSG_ReadByte ();
 	blood = MSG_ReadByte ();
@@ -268,19 +271,24 @@ void V_ParseDamage (void)
 // calculate view angle kicks
 //
 	ent = &cl_entities[cl.viewentity];
-
-	VectorSubtract (from, ent->render.origin, from);
-	VectorNormalize (from);
-
-	AngleVectors (ent->render.angles, forward, right, NULL);
-
-	side = DotProduct (from, right);
-	v_dmg_roll = count*side*v_kickroll.value;
-
-	side = DotProduct (from, forward);
-	v_dmg_pitch = count*side*v_kickpitch.value;
-
+	Matrix4x4_Transform(&ent->render.inversematrix, from, localfrom);
+	VectorNormalize(localfrom);
+	v_dmg_pitch = count * localfrom[0] * v_kickpitch.value;
+	v_dmg_roll = count * localfrom[1] * v_kickroll.value;
 	v_dmg_time = v_kicktime.value;
+
+	//VectorSubtract (from, ent->render.origin, from);
+	//VectorNormalize (from);
+
+	//AngleVectors (ent->render.angles, forward, right, NULL);
+
+	//side = DotProduct (from, right);
+	//v_dmg_roll = count*side*v_kickroll.value;
+
+	//side = DotProduct (from, forward);
+	//v_dmg_pitch = count*side*v_kickpitch.value;
+
+	//v_dmg_time = v_kicktime.value;
 }
 
 static cshift_t v_cshift;
@@ -463,6 +471,44 @@ static void V_AddIdle (float idle)
 	r_refdef.viewangles[YAW] += idle * sin(cl.time*v_iyaw_cycle.value) * v_iyaw_level.value;
 }
 
+#define MAXVIEWMODELS 32
+extern int numviewmodels;
+extern entity_t *viewmodels[MAXVIEWMODELS];
+void V_LinkViewEntities(void)
+{
+	int i;
+	//float v[3];
+	entity_t *ent;
+	matrix4x4_t matrix, matrix2;
+
+	if (numviewmodels <= 0)
+		return;
+
+	//Matrix4x4_CreateRotate(&matrix, 1, 0, 0, r_refdef.viewangles[0]);
+	//Matrix4x4_CreateRotate(&matrix, 0, 1, 0, r_refdef.viewangles[0]);
+	//Matrix4x4_CreateRotate(&matrix, 0, 0, 1, r_refdef.viewangles[0]);
+	Matrix4x4_CreateFromQuakeEntity(&matrix, r_refdef.vieworg[0], r_refdef.vieworg[1], r_refdef.vieworg[2], r_refdef.viewangles[0], r_refdef.viewangles[1], r_refdef.viewangles[2], 0.3);
+	for (i = 0;i < numviewmodels && r_refdef.numentities < r_refdef.maxentities;i++)
+	{
+		ent = viewmodels[i];
+		r_refdef.entities[r_refdef.numentities++] = &ent->render;
+
+		//VectorCopy(ent->render.origin, v);
+		//ent->render.origin[0] = v[0] * vpn[0] + v[1] * vright[0] + v[2] * vup[0] + r_refdef.vieworg[0];
+		//ent->render.origin[1] = v[0] * vpn[1] + v[1] * vright[1] + v[2] * vup[1] + r_refdef.vieworg[1];
+		//ent->render.origin[2] = v[0] * vpn[2] + v[1] * vright[2] + v[2] * vup[2] + r_refdef.vieworg[2];
+		//ent->render.angles[0] = ent->render.angles[0] + r_refdef.viewangles[0];
+		//ent->render.angles[1] = ent->render.angles[1] + r_refdef.viewangles[1];
+		//ent->render.angles[2] = ent->render.angles[2] + r_refdef.viewangles[2];
+		//ent->render.scale *= 0.3;
+
+		//Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, ent->render.origin[0], ent->render.origin[1], ent->render.origin[2], ent->render.angles[0], ent->render.angles[1], ent->render.angles[2], ent->render.scale);
+		matrix2 = ent->render.matrix;
+		Matrix4x4_Concat(&ent->render.matrix, &matrix, &matrix2);
+		Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
+		CL_BoundingBoxForEntity(&ent->render);
+	}
+}
 
 /*
 ==================
@@ -472,11 +518,7 @@ V_CalcRefdef
 */
 void V_CalcRefdef (void)
 {
-	entity_t	*ent, *view;
-	vec3_t		forward;
-	vec3_t		angles;
-	float		bob;
-	float		side;
+	entity_t *ent, *view;
 
 	if (cls.state != ca_connected || cls.signon != SIGNONS)
 		return;
@@ -500,14 +542,14 @@ void V_CalcRefdef (void)
 	}
 	else if (chase_active.value)
 	{
+		view->render.model = NULL;
 		r_refdef.vieworg[2] += cl.viewheight;
 		Chase_Update ();
 		V_AddIdle (v_idlescale.value);
 	}
 	else
 	{
-		side = V_CalcRoll (cl_entities[cl.viewentity].render.angles, cl.velocity);
-		r_refdef.viewangles[ROLL] += side;
+		r_refdef.viewangles[ROLL] += V_CalcRoll (cl.viewangles, cl.velocity);
 
 		if (v_dmg_time > 0)
 		{
@@ -521,16 +563,7 @@ void V_CalcRefdef (void)
 
 		V_AddIdle (v_idlescale.value);
 
-		// offsets
-		angles[PITCH] = -ent->render.angles[PITCH];	// because entity pitches are actually backward
-		angles[YAW] = ent->render.angles[YAW];
-		angles[ROLL] = ent->render.angles[ROLL];
-
-		AngleVectors (angles, forward, NULL, NULL);
-
-		bob = V_CalcBob ();
-
-		r_refdef.vieworg[2] += cl.viewheight + bob;
+		r_refdef.vieworg[2] += cl.viewheight + V_CalcBob ();
 
 		// LordHavoc: origin view kick added
 		if (!intimerefresh)
@@ -543,24 +576,28 @@ void V_CalcRefdef (void)
 		// (FIXME! this should be in cl_main.c with the other linking code, not view.c!)
 		view->state_current.modelindex = cl.stats[STAT_WEAPON];
 		view->state_current.frame = cl.stats[STAT_WEAPONFRAME];
-		VectorCopy(r_refdef.vieworg, view->render.origin);
-		//view->render.origin[0] = ent->render.origin[0] + bob * 0.4 * forward[0];
-		//view->render.origin[1] = ent->render.origin[1] + bob * 0.4 * forward[1];
-		//view->render.origin[2] = ent->render.origin[2] + bob * 0.4 * forward[2] + cl.viewheight + bob;
-		view->render.angles[PITCH] = -r_refdef.viewangles[PITCH] - v_idlescale.value * sin(cl.time*v_iyaw_cycle.value) * v_iyaw_level.value;
-		view->render.angles[YAW] = r_refdef.viewangles[YAW] - v_idlescale.value * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value;
-		view->render.angles[ROLL] = r_refdef.viewangles[ROLL] - v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value;
+		//VectorCopy(r_refdef.vieworg, view->render.origin);
+		//view->render.angles[PITCH] = r_refdef.viewangles[PITCH] + v_idlescale.value * sin(cl.time*v_iyaw_cycle.value) * v_iyaw_level.value;
+		//view->render.angles[YAW] = r_refdef.viewangles[YAW] - v_idlescale.value * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value;
+		//view->render.angles[ROLL] = r_refdef.viewangles[ROLL] - v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value;
+		//view->render.scale = 1.0 / 3.0;
+		Matrix4x4_CreateFromQuakeEntity(&view->render.matrix, r_refdef.vieworg[0], r_refdef.vieworg[1], r_refdef.vieworg[2], r_refdef.viewangles[PITCH] + v_idlescale.value * sin(cl.time*v_iyaw_cycle.value) * v_iyaw_level.value, r_refdef.viewangles[YAW] - v_idlescale.value * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value, r_refdef.viewangles[ROLL] - v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value, 0.3);
+		Matrix4x4_Invert_Simple(&view->render.inversematrix, &view->render.matrix);
+		CL_BoundingBoxForEntity(&view->render);
 		// FIXME: this setup code is somewhat evil (CL_LerpUpdate should be private?)
 		CL_LerpUpdate(view);
-		CL_BoundingBoxForEntity(&view->render);
 		view->render.colormap = -1; // no special coloring
 		view->render.alpha = ent->render.alpha; // LordHavoc: if the player is transparent, so is the gun
 		view->render.effects = ent->render.effects;
-		view->render.scale = 1.0 / 3.0;
+		AngleVectors(r_refdef.viewangles, vpn, vright, vup);
 
 		// link into render entities list
-		if (r_refdef.numentities < r_refdef.maxentities && r_drawviewmodel.integer && !chase_active.integer && !envmap && r_drawentities.integer && !(cl.items & IT_INVISIBILITY) && cl.stats[STAT_HEALTH] > 0 && view->render.model != NULL)
-			r_refdef.entities[r_refdef.numentities++] = &view->render;
+		if (r_drawviewmodel.integer && !chase_active.integer && !envmap && r_drawentities.integer && !(cl.items & IT_INVISIBILITY) && cl.stats[STAT_HEALTH] > 0)
+		{
+			if (r_refdef.numentities < r_refdef.maxentities && view->render.model != NULL)
+				r_refdef.entities[r_refdef.numentities++] = &view->render;
+			V_LinkViewEntities();
+		}
 	}
 }
 

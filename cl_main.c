@@ -264,34 +264,60 @@ static void CL_PrintEntities_f (void)
 	}
 }
 
-static const vec3_t nomodelmins = {-16, -16, -16};
-static const vec3_t nomodelmaxs = {16, 16, 16};
+//static const vec3_t nomodelmins = {-16, -16, -16};
+//static const vec3_t nomodelmaxs = {16, 16, 16};
 void CL_BoundingBoxForEntity(entity_render_t *ent)
 {
 	if (ent->model)
 	{
-		if (ent->angles[0] || ent->angles[2])
+		//if (ent->angles[0] || ent->angles[2])
+		if (ent->matrix.m[2][0] != 0 || ent->matrix.m[2][1] != 0)
 		{
 			// pitch or roll
-			VectorAdd(ent->origin, ent->model->rotatedmins, ent->mins);
-			VectorAdd(ent->origin, ent->model->rotatedmaxs, ent->maxs);
+			ent->mins[0] = ent->matrix.m[0][3] + ent->model->rotatedmins[0];
+			ent->mins[1] = ent->matrix.m[1][3] + ent->model->rotatedmins[1];
+			ent->mins[2] = ent->matrix.m[2][3] + ent->model->rotatedmins[2];
+			ent->maxs[0] = ent->matrix.m[0][3] + ent->model->rotatedmaxs[0];
+			ent->maxs[1] = ent->matrix.m[1][3] + ent->model->rotatedmaxs[1];
+			ent->maxs[2] = ent->matrix.m[2][3] + ent->model->rotatedmaxs[2];
+			//VectorAdd(ent->origin, ent->model->rotatedmins, ent->mins);
+			//VectorAdd(ent->origin, ent->model->rotatedmaxs, ent->maxs);
 		}
-		else if (ent->angles[1])
+		//else if (ent->angles[1])
+		else if (ent->matrix.m[0][1] != 0 || ent->matrix.m[1][0] != 0)
 		{
 			// yaw
-			VectorAdd(ent->origin, ent->model->yawmins, ent->mins);
-			VectorAdd(ent->origin, ent->model->yawmaxs, ent->maxs);
+			ent->mins[0] = ent->matrix.m[0][3] + ent->model->yawmins[0];
+			ent->mins[1] = ent->matrix.m[1][3] + ent->model->yawmins[1];
+			ent->mins[2] = ent->matrix.m[2][3] + ent->model->yawmins[2];
+			ent->maxs[0] = ent->matrix.m[0][3] + ent->model->yawmaxs[0];
+			ent->maxs[1] = ent->matrix.m[1][3] + ent->model->yawmaxs[1];
+			ent->maxs[2] = ent->matrix.m[2][3] + ent->model->yawmaxs[2];
+			//VectorAdd(ent->origin, ent->model->yawmins, ent->mins);
+			//VectorAdd(ent->origin, ent->model->yawmaxs, ent->maxs);
 		}
 		else
 		{
-			VectorAdd(ent->origin, ent->model->normalmins, ent->mins);
-			VectorAdd(ent->origin, ent->model->normalmaxs, ent->maxs);
+			ent->mins[0] = ent->matrix.m[0][3] + ent->model->normalmins[0];
+			ent->mins[1] = ent->matrix.m[1][3] + ent->model->normalmins[1];
+			ent->mins[2] = ent->matrix.m[2][3] + ent->model->normalmins[2];
+			ent->maxs[0] = ent->matrix.m[0][3] + ent->model->normalmaxs[0];
+			ent->maxs[1] = ent->matrix.m[1][3] + ent->model->normalmaxs[1];
+			ent->maxs[2] = ent->matrix.m[2][3] + ent->model->normalmaxs[2];
+			//VectorAdd(ent->origin, ent->model->normalmins, ent->mins);
+			//VectorAdd(ent->origin, ent->model->normalmaxs, ent->maxs);
 		}
 	}
 	else
 	{
-		VectorAdd(ent->origin, nomodelmins, ent->mins);
-		VectorAdd(ent->origin, nomodelmaxs, ent->maxs);
+		ent->mins[0] = ent->matrix.m[0][3] - 16;
+		ent->mins[1] = ent->matrix.m[1][3] - 16;
+		ent->mins[2] = ent->matrix.m[2][3] - 16;
+		ent->maxs[0] = ent->matrix.m[0][3] + 16;
+		ent->maxs[1] = ent->matrix.m[1][3] + 16;
+		ent->maxs[2] = ent->matrix.m[2][3] + 16;
+		//VectorAdd(ent->origin, nomodelmins, ent->mins);
+		//VectorAdd(ent->origin, nomodelmaxs, ent->maxs);
 	}
 }
 
@@ -457,10 +483,13 @@ void CL_DecayLights (void)
 
 void CL_RelinkWorld (void)
 {
+	entity_t *ent = &cl_entities[0];
 	if (cl_num_entities < 1)
 		cl_num_entities = 1;
-	cl_brushmodel_entities[cl_num_brushmodel_entities++] = &cl_entities[0].render;
-	CL_BoundingBoxForEntity(&cl_entities[0].render);
+	cl_brushmodel_entities[cl_num_brushmodel_entities++] = &ent->render;
+	Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, ent->render.origin[0], ent->render.origin[1], ent->render.origin[2], ent->render.angles[0], ent->render.angles[1], ent->render.angles[2], ent->render.scale);
+	Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
+	CL_BoundingBoxForEntity(&ent->render);
 }
 
 static void CL_RelinkStaticEntities(void)
@@ -479,12 +508,17 @@ CL_RelinkEntities
 ===============
 */
 extern qboolean Nehahrademcompatibility;
+#define MAXVIEWMODELS 32
+entity_t *viewmodels[MAXVIEWMODELS];
+int numviewmodels;
 static void CL_RelinkNetworkEntities(void)
 {
 	entity_t *ent;
 	int i, effects, temp;
 	float d, bobjrotate, bobjoffset, lerp;
 	vec3_t oldorg, neworg, delta, dlightcolor, v, v2, mins, maxs;
+
+	numviewmodels = 0;
 
 	bobjrotate = ANGLEMOD(100*cl.time);
 	if (cl_itembobheight.value)
@@ -545,6 +579,9 @@ static void CL_RelinkNetworkEntities(void)
 			}
 		}
 
+		if (!ent->render.model || ent->render.model->type != mod_brush)
+			ent->render.angles[0] = -ent->render.angles[0];
+
 		VectorCopy (neworg, ent->persistent.trail_origin);
 		// persistent.modelindex will be updated by CL_LerpUpdate
 		if (ent->state_current.modelindex != ent->persistent.modelindex || !ent->state_previous.active)
@@ -564,6 +601,14 @@ static void CL_RelinkNetworkEntities(void)
 		ent->render.skinnum = ent->state_current.skin;
 		ent->render.alpha = ent->state_current.alpha * (1.0f / 255.0f); // FIXME: interpolate?
 		ent->render.scale = ent->state_current.scale * (1.0f / 16.0f); // FIXME: interpolate?
+
+		if (ent->render.model && ent->render.model->flags & EF_ROTATE)
+		{
+			ent->render.angles[1] = bobjrotate;
+			ent->render.origin[2] += bobjoffset;
+		}
+
+		Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, ent->render.origin[0], ent->render.origin[1], ent->render.origin[2], ent->render.angles[0], ent->render.angles[1], ent->render.angles[2], ent->render.scale);
 
 		// update interpolation info
 		CL_LerpUpdate(ent);
@@ -659,11 +704,9 @@ static void CL_RelinkNetworkEntities(void)
 
 		if (ent->persistent.muzzleflash > 0)
 		{
-			AngleVectors (ent->render.angles, v, NULL, NULL);
-
-			v2[0] = v[0] * 18 + neworg[0];
-			v2[1] = v[1] * 18 + neworg[1];
-			v2[2] = v[2] * 18 + neworg[2] + 16;
+			v2[0] = ent->render.matrix.m[0][0] * 18 + neworg[0];
+			v2[1] = ent->render.matrix.m[0][1] * 18 + neworg[1];
+			v2[2] = ent->render.matrix.m[0][2] * 18 + neworg[2] + 16;
 			CL_TraceLine(neworg, v2, v, NULL, 0, true, NULL);
 
 			CL_AllocDlight (NULL, v, ent->persistent.muzzleflash, 1, 1, 1, 0, 0);
@@ -673,11 +716,7 @@ static void CL_RelinkNetworkEntities(void)
 		// LordHavoc: if the model has no flags, don't check each
 		if (ent->render.model && ent->render.model->flags)
 		{
-			if (ent->render.model->flags & EF_ROTATE)
-			{
-				ent->render.angles[1] = bobjrotate;
-				ent->render.origin[2] += bobjoffset;
-			}
+			// note: EF_ROTATE handled above, above matrix calculation
 			// only do trails if present in the previous frame as well
 			if (ent->state_previous.active)
 			{
@@ -751,6 +790,16 @@ static void CL_RelinkNetworkEntities(void)
 			continue;
 		if (effects & EF_NODRAW)
 			continue;
+
+		// store a list of view-relative entities for later adjustment in view code
+		if (ent->render.flags & RENDER_VIEWMODEL)
+		{
+			if (numviewmodels < MAXVIEWMODELS)
+				viewmodels[numviewmodels++] = ent;
+			continue;
+		}
+
+		Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
 
 		CL_BoundingBoxForEntity(&ent->render);
 		if (ent->render.model && ent->render.model->name[0] == '*' && ent->render.model->type == mod_brush)
@@ -840,13 +889,15 @@ static void CL_RelinkEffects(void)
 				ent->render.frame2time = e->frame2time;
 
 				// normal stuff
-				VectorCopy(e->origin, ent->render.origin);
+				//VectorCopy(e->origin, ent->render.origin);
 				ent->render.model = cl.model_precache[e->modelindex];
 				ent->render.frame = ent->render.frame2;
 				ent->render.colormap = -1; // no special coloring
-				ent->render.scale = 1;
+				//ent->render.scale = 1;
 				ent->render.alpha = 1;
 
+				Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, e->origin[0], e->origin[1], e->origin[2], 0, 0, 0, 1);
+				Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
 				CL_BoundingBoxForEntity(&ent->render);
 			}
 		}
@@ -940,12 +991,14 @@ void CL_RelinkBeams (void)
 			ent = CL_NewTempEntity ();
 			if (!ent)
 				return;
-			VectorCopy (org, ent->render.origin);
+			//VectorCopy (org, ent->render.origin);
 			ent->render.model = b->model;
 			ent->render.effects = EF_FULLBRIGHT;
-			ent->render.angles[0] = pitch;
-			ent->render.angles[1] = yaw;
-			ent->render.angles[2] = rand()%360;
+			//ent->render.angles[0] = pitch;
+			//ent->render.angles[1] = yaw;
+			//ent->render.angles[2] = rand()%360;
+			Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, org[0], org[1], org[2], pitch, yaw, lhrandom(0, 360), 1);
+			Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
 			CL_BoundingBoxForEntity(&ent->render);
 			VectorMA(org, 30, dist, org);
 			d -= 30;

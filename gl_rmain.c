@@ -511,7 +511,6 @@ int VIS_CullSphere(const vec3_t origin, vec_t radius)
 static void R_MarkEntities (void)
 {
 	int i;
-	vec3_t v;
 	entity_render_t *ent;
 
 	ent = &cl_entities[0].render;
@@ -528,26 +527,10 @@ static void R_MarkEntities (void)
 	{
 		ent = r_refdef.entities[i];
 		Mod_CheckLoaded(ent->model);
-
-		// move view-relative models to where they should be
-		if (ent->flags & RENDER_VIEWMODEL)
-		{
-			// remove flag so it will not be repeated incase RelinkEntities is not called again for a while
-			ent->flags -= RENDER_VIEWMODEL;
-			// transform origin
-			VectorCopy(ent->origin, v);
-			ent->origin[0] = v[0] * vpn[0] + v[1] * vright[0] + v[2] * vup[0] + r_origin[0];
-			ent->origin[1] = v[0] * vpn[1] + v[1] * vright[1] + v[2] * vup[1] + r_origin[1];
-			ent->origin[2] = v[0] * vpn[2] + v[1] * vright[2] + v[2] * vup[2] + r_origin[2];
-			// adjust angles
-			VectorAdd(ent->angles, r_refdef.viewangles, ent->angles);
-		}
-
-		VectorCopy(ent->angles, v);
-		if (!ent->model || ent->model->type != mod_brush)
-			v[0] = -v[0];
-		Matrix4x4_CreateFromQuakeEntity(&ent->matrix, ent->origin[0], ent->origin[1], ent->origin[2], v[0], v[1], v[2], ent->scale);
-		Matrix4x4_Invert_Simple(&ent->inversematrix, &ent->matrix);
+		// some of the renderer still relies on origin...
+		Matrix4x4_OriginFromMatrix(&ent->matrix, ent->origin);
+		// some of the renderer still relies on scale...
+		ent->scale = Matrix4x4_ScaleFromMatrix(&ent->matrix);
 		R_LerpAnimation(ent);
 		R_UpdateEntLights(ent);
 		if ((chase_active.integer || !(ent->flags & RENDER_EXTERIORMODEL))
