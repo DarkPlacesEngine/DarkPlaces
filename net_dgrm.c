@@ -81,8 +81,8 @@ struct
 	qbyte			data[MAX_DATAGRAM];
 } packetBuffer;
 
-
-//#ifdef DEBUG
+/*
+#ifdef DEBUG
 char *StrAddr (struct qsockaddr *addr)
 {
 	static char buf[34];
@@ -93,7 +93,8 @@ char *StrAddr (struct qsockaddr *addr)
 		sprintf (buf + n * 2, "%02x", *p++);
 	return buf;
 }
-//#endif
+#endif
+*/
 
 
 #ifdef BAN_TEST
@@ -318,6 +319,7 @@ int	Datagram_GetMessage (qsocket_t *sock)
 	struct qsockaddr readaddr;
 	unsigned int	sequence;
 	unsigned int	count;
+	int				temp;
 
 	if (!sock->canSend)
 		if ((net_time - sock->lastSendTime) > 1.0)
@@ -336,12 +338,25 @@ int	Datagram_GetMessage (qsocket_t *sock)
 			return -1;
 		}
 
-		if (sfunc.AddrCompare(&readaddr, &sock->addr) != 0)
+		if ((temp = sfunc.AddrCompare(&readaddr, &sock->addr)) != 0)
 		{
-			Con_DPrintf("Forged packet received\n");
-			Con_DPrintf("Expected: %s\n", StrAddr (&sock->addr));
-			Con_DPrintf("Received: %s\n", StrAddr (&readaddr));
-			continue;
+			char tempaddress1[64], tempaddress2[64];
+			if (temp == 1)
+			{
+				if (developer_networking.integer)
+				{
+					dfunc.GetNameFromAddr (&sock->addr, tempaddress1);
+					dfunc.GetNameFromAddr (&readaddr, tempaddress2);
+					Con_Printf("Packet from wrong port received but accepted (Expected: %s Received: %s)\n", tempaddress1, tempaddress2);
+				}
+			}
+			else
+			{
+				dfunc.GetNameFromAddr (&sock->addr, tempaddress1);
+				dfunc.GetNameFromAddr (&readaddr, tempaddress2);
+				Con_Printf("Forged packet received (Expected: %s Received: %s)\n", tempaddress1, tempaddress2);
+				continue;
+			}
 		}
 
 		if (length < NET_HEADERSIZE)
@@ -1284,7 +1299,6 @@ static qsocket_t *_Datagram_Connect (const char *host)
 {
 	struct qsockaddr sendaddr;
 	struct qsockaddr readaddr;
-	struct qsockaddr testaddr;
 	qsocket_t	*sock;
 	int			newsock;
 	int			ret;
@@ -1335,13 +1349,12 @@ static qsocket_t *_Datagram_Connect (const char *host)
 				// is it from the right place?
 				// we don't care if the port matches (this adds support for
 				// the NAT fix in the server inspired by faded)
-				memcpy(&testaddr, &sendaddr, sizeof(struct qsockaddr));
-				dfunc.SetSocketPort (&testaddr, dfunc.GetSocketPort(&readaddr));
-				if (sfunc.AddrCompare(&readaddr, &testaddr) != 0)
+				if (sfunc.AddrCompare(&readaddr, &sendaddr) < 0)
 				{
-					Con_Printf("wrong reply address\n");
-					Con_Printf("Expected: %s\n", StrAddr (&sendaddr));
-					Con_Printf("Received: %s\n", StrAddr (&readaddr));
+					char tempaddress1[64], tempaddress2[64];
+					dfunc.GetNameFromAddr (&sendaddr, tempaddress1);
+					dfunc.GetNameFromAddr (&readaddr, tempaddress2);
+					Con_Printf("wrong reply address (Expected: %s Received: %s)\n", tempaddress1, tempaddress2);
 					CL_UpdateScreen ();
 					CL_UpdateScreen ();
 					ret = 0;
