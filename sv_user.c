@@ -534,7 +534,7 @@ nextmsg:
 		ret = NET_GetMessage (host_client->netconnection);
 		if (ret == -1)
 		{
-			Sys_Printf ("SV_ReadClientMessage: NET_GetMessage failed\n");
+			Con_Printf ("SV_ReadClientMessage: NET_GetMessage failed\n");
 			return false;
 		}
 		if (!ret)
@@ -550,7 +550,7 @@ nextmsg:
 
 			if (msg_badread)
 			{
-				Sys_Printf ("SV_ReadClientMessage: badread\n");
+				Con_Printf ("SV_ReadClientMessage: badread\n");
 				return false;
 			}
 
@@ -571,7 +571,7 @@ nextmsg:
 				goto nextmsg;
 
 			default:
-				Sys_Printf ("SV_ReadClientMessage: unknown command char %i\n", cmd);
+				Con_Printf ("SV_ReadClientMessage: unknown command char %i\n", cmd);
 				return false;
 
 			case clc_nop:
@@ -602,7 +602,7 @@ nextmsg:
 					Cmd_ExecuteString (s, src_client);
 				}
 				else
-					Con_DPrintf("%s tried to %s\n", host_client->name, s);
+					Con_Printf("%s tried to %s\n", host_client->name, s);
 				break;
 
 			case clc_disconnect:
@@ -642,8 +642,7 @@ void SV_RunClients (void)
 
 		if (!SV_ReadClientMessage ())
 		{
-			// client misbehaved...
-			SV_DropClient (false);
+			SV_DropClient (false); // client misbehaved...
 			continue;
 		}
 

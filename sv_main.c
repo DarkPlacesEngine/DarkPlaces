@@ -1536,7 +1536,7 @@ void SV_SendClientMessages (void)
 		// changes level
 		if (host_client->message.overflowed)
 		{
-			SV_DropClient (true);
+			SV_DropClient (true); // overflowed
 			host_client->message.overflowed = false;
 			continue;
 		}
