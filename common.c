@@ -1262,8 +1262,8 @@ typedef struct
 	int             dirlen;
 } dpackheader_t;
 
-// LordHavoc: was 2048
-#define MAX_FILES_IN_PACK       4096
+// LordHavoc: was 2048, increased to 16384 and changed info[MAX_PACK_FILES] to a temporary malloc to avoid stack overflows
+#define MAX_FILES_IN_PACK       16384
 
 char    com_cachedir[MAX_OSPATH];
 char    com_gamedir[MAX_OSPATH];
@@ -1661,7 +1661,8 @@ pack_t *COM_LoadPackFile (char *packfile)
 	int                             numpackfiles;
 	pack_t                  *pack;
 	int                             packhandle;
-	dpackfile_t             info[MAX_FILES_IN_PACK];
+	// LordHavoc: changed from stack array to temporary malloc, allowing huge pack directories
+	dpackfile_t             *info;
 	unsigned short          crc;
 
 	if (Sys_FileOpenRead (packfile, &packhandle) == -1)
@@ -1686,6 +1687,7 @@ pack_t *COM_LoadPackFile (char *packfile)
 
 	newfiles = Hunk_AllocName (numpackfiles * sizeof(packfile_t), "packfile");
 
+	info = malloc(sizeof(*info)*MAX_FILES_IN_PACK);
 	Sys_FileSeek (packhandle, header.dirofs);
 	Sys_FileRead (packhandle, (void *)info, header.dirlen);
 
@@ -1705,6 +1707,7 @@ pack_t *COM_LoadPackFile (char *packfile)
 		newfiles[i].filepos = LittleLong(info[i].filepos);
 		newfiles[i].filelen = LittleLong(info[i].filelen);
 	}
+	free(info);
 
 	pack = Hunk_Alloc (sizeof (pack_t));
 	strcpy (pack->filename, packfile);
