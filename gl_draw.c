@@ -371,6 +371,7 @@ void R_DrawQueue(void)
 	int batch, batchcount, additive;
 	unsigned int color;
 	drawqueuemesh_t *mesh;
+	int arraylocked = false;
 
 	if (!r_render.integer)
 		return;
@@ -571,34 +572,34 @@ void R_DrawQueue(void)
 				qglEnableClientState(GL_COLOR_ARRAY);CHECKGLERROR
 			}
 
+			if (gl_supportslockarrays && gl_lockarrays.integer && gl_mesh_drawmode.integer > 0)
+			{
+				qglLockArraysEXT(0, mesh->numvertices);
+				CHECKGLERROR
+				arraylocked = true;
+			}
 			if (gl_mesh_drawmode.integer >= 3/* && (mesh->numvertices) <= gl_maxdrawrangeelementsvertices && (mesh->numindices) <= gl_maxdrawrangeelementsindices*/)
 			{
 				// GL 1.2 or GL 1.1 with extension
-				GL_LockArray(0, mesh->numvertices);
 				qglDrawRangeElements(GL_TRIANGLES, 0, mesh->numvertices, mesh->numindices, GL_UNSIGNED_INT, mesh->indices);
 				CHECKGLERROR
-				GL_UnlockArray();
 			}
 			else if (gl_mesh_drawmode.integer >= 2)
 			{
 				// GL 1.1
-				GL_LockArray(0, mesh->numvertices);
 				qglDrawElements(GL_TRIANGLES, mesh->numindices, GL_UNSIGNED_INT, mesh->indices);
 				CHECKGLERROR
-				GL_UnlockArray();
 			}
 			else if (gl_mesh_drawmode.integer >= 1)
 			{
 				int i;
 				// GL 1.1
 				// feed it manually using glArrayElement
-				GL_LockArray(0, mesh->numvertices);
 				qglBegin(GL_TRIANGLES);
 				for (i = 0;i < mesh->numindices;i++)
 					qglArrayElement(mesh->indices[i]);
 				qglEnd();
 				CHECKGLERROR
-				GL_UnlockArray();
 			}
 			else
 			{
@@ -615,6 +616,12 @@ void R_DrawQueue(void)
 				}
 				qglEnd();
 				CHECKGLERROR
+			}
+			if (arraylocked)
+			{
+				qglUnlockArraysEXT();
+				CHECKGLERROR
+				arraylocked = false;
 			}
 			if (gl_mesh_drawmode.integer > 0)
 			{

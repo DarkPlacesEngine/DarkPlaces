@@ -162,10 +162,6 @@ extern cvar_t r_render;
 extern cvar_t r_textureunits;
 extern cvar_t gl_dither;
 
-// FIXME: this should live in the backend only
-void GL_LockArray(int first, int count);
-void GL_UnlockArray(void);
-
 #include "gl_backend.h"
 
 #include "r_light.h"

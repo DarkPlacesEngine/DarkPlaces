@@ -45,7 +45,7 @@ typedef struct
 textypeinfo_t;
 
 static textypeinfo_t textype_qpalette       = {TEXTYPE_QPALETTE, 1, 4, GL_RGBA, 3, 1};
-static textypeinfo_t textype_rgb            = {TEXTYPE_RGB     , 3, 3, GL_RGB , 3, 3};
+static textypeinfo_t textype_rgb            = {TEXTYPE_RGB     , 3, 3, GL_RGB , 3, 1};
 static textypeinfo_t textype_rgba           = {TEXTYPE_RGBA    , 4, 4, GL_RGBA, 3, 1};
 static textypeinfo_t textype_qpalette_alpha = {TEXTYPE_QPALETTE, 1, 4, GL_RGBA, 4, 1};
 static textypeinfo_t textype_rgba_alpha     = {TEXTYPE_RGBA    , 4, 4, GL_RGBA, 4, 1};
@@ -445,6 +445,9 @@ static void r_textures_start(void)
 {
 	// deal with size limits of various drivers (3dfx in particular)
 	qglGetIntegerv(GL_MAX_TEXTURE_SIZE, &realmaxsize);
+	CHECKGLERROR
+	// LordHavoc: allow any alignment
+	qglPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	CHECKGLERROR
 
 	// use the largest scrap texture size we can (not sure if this is really a good idea)

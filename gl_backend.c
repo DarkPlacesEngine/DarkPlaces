@@ -213,28 +213,6 @@ void gl_backend_init(void)
 	R_RegisterModule("GL_Backend", gl_backend_start, gl_backend_shutdown, gl_backend_newmap);
 }
 
-int arraylocked = false;
-
-void GL_LockArray(int first, int count)
-{
-	if (!arraylocked && gl_supportslockarrays && gl_lockarrays.integer && gl_mesh_drawmode.integer > 0)
-	{
-		qglLockArraysEXT(first, count);
-		CHECKGLERROR
-		arraylocked = true;
-	}
-}
-
-void GL_UnlockArray(void)
-{
-	if (arraylocked)
-	{
-		qglUnlockArraysEXT();
-		CHECKGLERROR
-		arraylocked = false;
-	}
-}
-
 /*
 =============
 GL_SetupFrame
@@ -549,7 +527,13 @@ void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, GLuint *in
 	unsigned int i, j, in;
 	qbyte *c;
 	float *v;
-	GL_LockArray(firstvert, endvert - firstvert);
+	int arraylocked = false;
+	if (gl_supportslockarrays && gl_lockarrays.integer && gl_mesh_drawmode.integer > 0)
+	{
+		qglLockArraysEXT(firstvert, endvert - firstvert);
+		CHECKGLERROR
+		arraylocked = true;
+	}
 	if (gl_mesh_drawmode.integer >= 3/* && (endvert - firstvert) <= gl_maxdrawrangeelementsvertices && (indexcount) <= gl_maxdrawrangeelementsindices*/)
 	{
 		// GL 1.2 or GL 1.1 with extension
@@ -616,7 +600,12 @@ void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, GLuint *in
 		qglEnd();
 		CHECKGLERROR
 	}
-	GL_UnlockArray();
+	if (arraylocked)
+	{
+		qglUnlockArraysEXT();
+		CHECKGLERROR
+		arraylocked = false;
+	}
 }
 
 // enlarges geometry buffers if they are too small

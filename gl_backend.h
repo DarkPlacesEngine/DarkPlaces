@@ -4,6 +4,8 @@
 
 #define MAX_TEXTUREUNITS 8
 
+extern cvar_t gl_lockarrays;
+
 extern int c_meshtris, c_meshs;
 
 typedef struct

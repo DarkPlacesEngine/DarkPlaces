@@ -143,6 +143,8 @@ void (GLAPIENTRY *qglBindTexture)(GLenum target, GLuint texture);
 void (GLAPIENTRY *qglTexImage2D)(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
 void (GLAPIENTRY *qglTexSubImage2D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels);
 void (GLAPIENTRY *qglDeleteTextures)(GLsizei n, const GLuint *textures);
+void (GLAPIENTRY *qglPixelStoref)(GLenum pname, GLfloat param);
+void (GLAPIENTRY *qglPixelStorei)(GLenum pname, GLint param);
 
 void (GLAPIENTRY *qglDrawRangeElementsEXT)(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices);
 
@@ -257,6 +259,8 @@ static gl_extensionfunctionlist_t opengl110funcs[] =
 	{"glTexImage2D", (void **) &qglTexImage2D},
 	{"glTexSubImage2D", (void **) &qglTexSubImage2D},
 	{"glDeleteTextures", (void **) &qglDeleteTextures},
+	{"glPixelStoref", (void **) &qglPixelStoref},
+	{"glPixelStorei", (void **) &qglPixelStorei},
 	{NULL, NULL}
 };
 
