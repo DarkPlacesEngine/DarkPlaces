@@ -3229,6 +3229,7 @@ qboolean m_serverInfoMessage = false;
 double m_serverInfoMessageTime;
 
 extern cvar_t sv_public;
+extern cvar_t sv_maxrate;
 
 void M_Menu_GameOptions_f (void)
 {
@@ -3242,8 +3243,8 @@ void M_Menu_GameOptions_f (void)
 }
 
 
-int gameoptions_cursor_table[] = {40, 56, 64, 72, 80, 88, 96, 104, 132, 152, 160};
-#define	NUM_GAMEOPTIONS	11
+int gameoptions_cursor_table[] = {40, 56, 64, 72, 80, 88, 96, 104, 112, 140, 160, 168};
+#define	NUM_GAMEOPTIONS	12
 int		gameoptions_cursor;
 
 void M_GameOptions_Draw (void)
@@ -3351,24 +3352,27 @@ void M_GameOptions_Draw (void)
 	M_Print(0, 104, "    Public server");
 	M_Print(160, 104, (sv_public.integer == 0) ? "no" : "yes");
 
-	M_Print(0, 120, "      Server name");
-	M_DrawTextBox (0, 124, 38, 1);
-	M_Print(8, 132, hostname.string);
+	M_Print(0, 112, "   Server maxrate");
+	M_Print(160, 112, va("%i", sv_maxrate.integer));
+
+	M_Print(0, 128, "      Server name");
+	M_DrawTextBox (0, 132, 38, 1);
+	M_Print(8, 140, hostname.string);
 
 	g = lookupgameinfo();
 
 	if (gamemode != GAME_GOODVSBAD2)
 	{
-		M_Print(0, 152, "         Episode");
-		M_Print(160, 152, g->episodes[startepisode].description);
+		M_Print(0, 160, "         Episode");
+		M_Print(160, 160, g->episodes[startepisode].description);
 	}
 
-	M_Print(0, 160, "           Level");
-	M_Print(160, 160, g->levels[g->episodes[startepisode].firstLevel + startlevel].description);
-	M_Print(160, 168, g->levels[g->episodes[startepisode].firstLevel + startlevel].name);
+	M_Print(0, 168, "           Level");
+	M_Print(160, 168, g->levels[g->episodes[startepisode].firstLevel + startlevel].description);
+	M_Print(160, 176, g->levels[g->episodes[startepisode].firstLevel + startlevel].name);
 
 // line cursor
-	if (gameoptions_cursor == 8)
+	if (gameoptions_cursor == 9)
 		M_DrawCharacter (8 + 8 * strlen(hostname.string), gameoptions_cursor_table[gameoptions_cursor], 10+((int)(realtime*4)&1));
 	else
 		M_DrawCharacter (144, gameoptions_cursor_table[gameoptions_cursor], 12+((int)(realtime*4)&1));
@@ -3492,9 +3496,17 @@ void M_NetStart_Change (int dir)
 		break;
 
 	case 8:
+		Cvar_SetValueQuick (&sv_maxrate, sv_maxrate.integer + dir*500);
+		if (sv_maxrate.integer > NET_MAXRATE)
+			Cvar_SetValueQuick (&sv_maxrate, NET_MAXRATE);
+		if (sv_maxrate.integer < NET_MINRATE)
+			Cvar_SetValueQuick (&sv_maxrate, NET_MINRATE);
 		break;
 
 	case 9:
+		break;
+
+	case 10:
 		if (gamemode == GAME_GOODVSBAD2)
 			break;
 		startepisode += dir;
@@ -3509,7 +3521,7 @@ void M_NetStart_Change (int dir)
 		startlevel = 0;
 		break;
 
-	case 10:
+	case 11:
 		startlevel += dir;
 		g = lookupgameinfo();
 
@@ -3579,7 +3591,7 @@ void M_GameOptions_Key (int key, char ascii)
 		break;
 
 	case K_BACKSPACE:
-		if (gameoptions_cursor == 8)
+		if (gameoptions_cursor == 9)
 		{
 			l = strlen(hostname.string);
 			if (l)
@@ -3595,7 +3607,7 @@ void M_GameOptions_Key (int key, char ascii)
 	default:
 		if (ascii < 32 || ascii > 126)
 			break;
-		if (gameoptions_cursor == 8)
+		if (gameoptions_cursor == 9)
 		{
 			l = strlen(hostname.string);
 			if (l < 37)
@@ -4220,7 +4232,3 @@ void MR_Init()
 	else 
 		MR_SetRouting (FALSE);
 }
-
-
-
-
