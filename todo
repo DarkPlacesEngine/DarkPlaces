@@ -23,6 +23,7 @@
 -d darkplaces sound: dsound broken, needs to be managed as part of video system (jeremy janzen)
 -d darkplaces: add ogg music playback using optional library after adding wav music playback (-Joseph Caporale, Static_Fiend, Akuma)
 -d darkplaces: add wav music playback (-Joseph Caporale, Static_Fiend)
+-d dpmod: add rotfish to spawnmonsters code (only spawn if they land in water) (Zombie)
 -d dpmod: make grapple off-hand (joe hill)
 -d dpmod: make grunts reload less often, like every 10 shotgun shells (scar3crow)
 -f darkplaces client: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
@@ -120,13 +121,9 @@
 0 darkplaces sound: the new sound engine should have a cvar for random variations of pitch on sounds like in doom (RenegadeC)
 0 darkplaces video: add vid_vsync cvar and also to options menu (metlslime)
 0 dpmod: add a "monsterwander" cvar and default it off, this would enable the spawnwanderpath code (Zombie13)
-0 dpmod: add back nails in walls, even if only in singleplayer (Zenex)
-0 dpmod: add combo kill detection; rapid burst of kills (Sajt)
 0 dpmod: add flame thrower enforcers back (scar3crow)
 0 dpmod: add flame thrower weapon, and make its altfire drop a canister of fuel (10 fuel units?), which can be ignited to set off as a bomb about the size of a rocket blast, plus some fireballs raining down (scar3crow)
-0 dpmod: add killing spree reporting; how many kills since spawn when you die, as well as announcing when you hit certain numbers of kills (Sajt)
 0 dpmod: add q3bsp teleport target entity
-0 dpmod: add rotfish to spawnmonsters code (only spawn if they land in water) (Zombie)
 0 dpmod: crash when dog attacks you in dpdm2 deathmatch 7 with bots present (Zombie13)
 0 dpmod: figure out why the dbsg isn't selectable in deathmatch 7 mode
 0 dpmod: find a way to make deathmatch 7 get more difficult as kills increase?  (Zombie13)
@@ -666,8 +663,11 @@ d darkplaces: worked around Intel precision bug with view blends (they were not 
 d dpmaster: add a commandline option to dpmaster that remaps a server ip to another ip, so LordHavoc can make his server show up on his dpmaster
 d dpmaster: rename 'interface' variable so it compiles in MSVC, interface is a compiler keyword (Vic)
 d dpmod: add back charge-up on plasma rifle alt-fire and increase the max charge to 50 cells
+d dpmod: add back nails in walls, even if only in singleplayer (Zenex)
 d dpmod: add back tarbaby gibs (scar3crow)
+d dpmod: add combo kill detection; rapid burst of kills (Sajt)
 d dpmod: add frags for killing monsters in dpmod (scar3crow)
+d dpmod: add killing spree reporting; how many kills since spawn when you die, as well as announcing when you hit certain numbers of kills (Sajt)
 d dpmod: add support for info_player_deathmatch in singleplayer for q3 compatibility (Static_Fiend)
 d dpmod: add target_position entity for a touch of q3 compatibility on jumppads (Static_Fiend)
 d dpmod: apparently can't fire in start.bsp? (scar3crow)
