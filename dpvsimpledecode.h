@@ -34,16 +34,10 @@ unsigned int dpvsimpledecode_getwidth(void *stream);
 // returns the height of the image data
 unsigned int dpvsimpledecode_getheight(void *stream);
 
-// returns the sound sample rate of the stream
-unsigned int dpvsimpledecode_getsoundrate(void *stream);
-
 // returns the framerate of the stream
 double dpvsimpledecode_getframerate(void *stream);
 
 // decodes a video frame to the supplied output pixels
 int dpvsimpledecode_video(void *stream, void *imagedata, unsigned int Rmask, unsigned int Gmask, unsigned int Bmask, unsigned int bytesperpixel, int imagebytesperrow);
-// reads some sound
-// (note: sound is 16bit stereo native-endian, left channel first)
-int dpvsimpledecode_audio(void *stream, short *soundbuffer, int requestedlength);
 
 #endif

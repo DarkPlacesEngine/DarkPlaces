@@ -1,17 +1,7 @@
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-#include <string.h>
+#include "quakedef.h"
 #include "dpvsimpledecode.h"
-#include "wavefile.h"
 
-#define EMBEDDEDHZREAD 1
-
-#ifndef EMBEDDEDHZREAD
-#include "hz_read.h"
-#include "hz_read.c"
-#else
 #define HZREADERROR_OK 0
 #define HZREADERROR_EOF 1
 #define HZREADERROR_MALLOCFAILED 2
@@ -214,7 +204,6 @@ void hz_bitstream_read_bytes(hz_bitstream_readblocks_t *blocks, void *outdata, u
 	while (size--)
 		*out++ = hz_bitstream_read_byte(blocks);
 }
-#endif
 
 #define BLOCKSIZE 8
 
@@ -247,8 +236,8 @@ typedef struct dpvsimpledecodestream_s
 	// current video frame data (needed because of delta compression)
 	unsigned int *videopixels;
 
-	// wav file the sound is being read from
-	wavefile_t *wavefile;
+	// channel the sound file is being played on
+	int sndchan;
 }
 dpvsimpledecodestream_t;
 
@@ -405,9 +394,15 @@ void *dpvsimpledecode_open(char *filename, char **errorstring)
 								wavename = malloc(strlen(filename) + 10);
 								if (wavename)
 								{
+									sfx_t* sfx;
+
 									StripExtension(filename, wavename);
 									strcat(wavename, ".wav");
-									s->wavefile = waveopen(wavename, NULL);
+									sfx = S_PrecacheSound (wavename, false, false);
+									if (sfx != NULL)
+										s->sndchan = S_StartSound (-1, 0, sfx, vec3_origin, 1.0f, 0);
+									else
+										s->sndchan = -1;
 									free(wavename);
 								}
 								// all is well...
@@ -448,8 +443,8 @@ void dpvsimpledecode_close(void *stream)
 		return;
 	if (s->videopixels)
 		free(s->videopixels);
-	if (s->wavefile)
-		waveclose(s->wavefile);
+	if (s->sndchan != -1)
+		S_StopChannel (s->sndchan);
 	if (s->framedatablocks)
 		hz_bitstream_read_blocks_free(s->framedatablocks);
 	if (s->bitstream)
@@ -523,16 +518,6 @@ unsigned int dpvsimpledecode_getheight(void *stream)
 {
 	dpvsimpledecodestream_t *s = stream;
 	return s->info_imageheight;
-}
-
-// returns the sound sample rate of the stream
-unsigned int dpvsimpledecode_getsoundrate(void *stream)
-{
-	dpvsimpledecodestream_t *s = stream;
-	if (s->wavefile)
-		return s->wavefile->info_rate;
-	else
-		return 0;
 }
 
 // returns the framerate of the stream
@@ -676,22 +661,5 @@ int dpvsimpledecode_video(void *stream, void *imagedata, unsigned int Rmask, uns
 		return s->error;
 
 	dpvsimpledecode_convertpixels(s, imagedata, imagebytesperrow);
-	return s->error;
-}
-
-// (note: sound is 16bit stereo native-endian, left channel first)
-int dpvsimpledecode_audio(void *stream, short *soundbuffer, int requestedlength)
-{
-	int samples;
-	dpvsimpledecodestream_t *s = stream;
-	s->error = DPVSIMPLEDECODEERROR_NONE;
-	if (requestedlength)
-	{
-		samples = 0;
-		if (s->wavefile && requestedlength)
-			samples = waveread16stereo(s->wavefile, soundbuffer, requestedlength);
-		if (samples < requestedlength)
-			memset(soundbuffer + samples * 2, 0, (requestedlength - samples) * sizeof(short[2]));
-	}
 	return s->error;
 }

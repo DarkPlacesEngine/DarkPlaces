@@ -116,9 +116,9 @@ void S_SetChannelVolume (unsigned int ch_ind, float fvol);
 void S_Update(vec3_t origin, vec3_t forward, vec3_t left, vec3_t up);
 void S_ExtraUpdate (void);
 
-sfx_t *S_GetCached(const char *name);
-sfx_t *S_PrecacheSound (char *sample, int complain);
-void S_TouchSound (char *sample);
+sfx_t *S_GetCached(const char *name, qboolean stdpath);
+sfx_t *S_PrecacheSound (const char *sample, qboolean complain, qboolean stdpath);
+void S_TouchSound (const char *sample, qboolean stdpath);
 void S_ClearUsed (void);
 void S_PurgeUnused (void);
 void S_PaintChannels(int endtime);
@@ -179,8 +179,8 @@ extern cvar_t snd_streaming;
 
 extern int snd_blocked;
 
-void S_LocalSound (char *s);
-qboolean S_LoadSound (sfx_t *s, int complain);
+void S_LocalSound (const char *s, qboolean stdpath);
+qboolean S_LoadSound (sfx_t *s, qboolean complain);
 void S_UnloadSound(sfx_t *s);
 
 void SND_InitScaletable (void);

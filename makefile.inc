@@ -97,7 +97,6 @@ OBJ_COMMON= \
 	vid_shared.o \
 	view.o \
 	wad.o \
-	wavefile.o \
 	winding.o \
 	world.o \
 	zone.o

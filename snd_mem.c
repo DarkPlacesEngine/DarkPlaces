@@ -212,7 +212,7 @@ size_t ResampleSfx (const qbyte *in_data, size_t in_length, const snd_format_t* 
 S_LoadSound
 ==============
 */
-qboolean S_LoadSound (sfx_t *s, int complain)
+qboolean S_LoadSound (sfx_t *s, qboolean complain)
 {
 	char namebuffer[MAX_QPATH];
 	size_t len;
@@ -228,7 +228,7 @@ qboolean S_LoadSound (sfx_t *s, int complain)
 		return true;
 	}
 
-	len = snprintf (namebuffer, sizeof (namebuffer), "sound/%s", s->name);
+	len = strlcpy (namebuffer, s->name, sizeof (namebuffer));
 	if (len >= sizeof (namebuffer))
 		return false;
 
