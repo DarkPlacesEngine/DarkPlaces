@@ -1389,7 +1389,7 @@ void EntityFrame5_ResetDatabase(entityframe5_database_t *d)
 		d->states[i] = defaultstate;
 }
 
-void EntityFrame5_ExpandEdicts(entityframe5_database_t *d, mempool_t *mempool, int newmax)
+void EntityFrame5_ExpandEdicts(entityframe5_database_t *d, int newmax)
 {
 	if (d->maxedicts < newmax)
 	{
@@ -1401,7 +1401,7 @@ void EntityFrame5_ExpandEdicts(entityframe5_database_t *d, mempool_t *mempool, i
 		entity_state_t *oldstates = d->states;
 		qbyte *oldvisiblebits = d->visiblebits;
 		d->maxedicts = newmax;
-		data = Mem_Alloc(mempool, d->maxedicts * sizeof(int) + d->maxedicts * sizeof(qbyte) + d->maxedicts * sizeof(int) + d->maxedicts * sizeof(entity_state_t) + (d->maxedicts+7)/8 * sizeof(qbyte));
+		data = Mem_Alloc(sv_mempool, d->maxedicts * sizeof(int) + d->maxedicts * sizeof(qbyte) + d->maxedicts * sizeof(int) + d->maxedicts * sizeof(entity_state_t) + (d->maxedicts+7)/8 * sizeof(qbyte));
 		d->deltabits = (void *)data;data += d->maxedicts * sizeof(int);
 		d->priorities = (void *)data;data += d->maxedicts * sizeof(qbyte);
 		d->updateframenum = (void *)data;data += d->maxedicts * sizeof(int);
@@ -1415,7 +1415,7 @@ void EntityFrame5_ExpandEdicts(entityframe5_database_t *d, mempool_t *mempool, i
 			memcpy(d->states, oldstates, d->maxedicts * sizeof(entity_state_t));
 			memcpy(d->visiblebits, oldvisiblebits, (d->maxedicts+7)/8 * sizeof(qbyte));
 			// the previous buffers were a single allocation, so just one free
-			Mem_Free(d->deltabits);
+			Mem_Free(olddeltabits);
 		}
 	}
 }
@@ -1933,7 +1933,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 	entityframe5_packetlog_t *packetlog;
 
 	if (sv.num_edicts > d->maxedicts)
-		EntityFrame5_ExpandEdicts(d, sv_mempool, (sv.num_edicts + 255) & ~255);
+		EntityFrame5_ExpandEdicts(d, (sv.num_edicts + 255) & ~255);
 
 	framenum = d->latestframenum + 1;
 
