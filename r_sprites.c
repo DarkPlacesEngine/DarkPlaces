@@ -3,36 +3,35 @@
 
 static int R_SpriteSetup (const entity_render_t *ent, int type, float org[3], float left[3], float up[3])
 {
-	float matrix1[3][3], matrix2[3][3], matrix3[3][3];
+	float scale;
 
-	VectorCopy(ent->origin, org);
+	// nudge it toward the view to make sure it isn't in a wall
+	org[0] = ent->matrix.m[0][3] - r_viewforward[0];
+	org[1] = ent->matrix.m[1][3] - r_viewforward[1];
+	org[2] = ent->matrix.m[2][3] - r_viewforward[2];
 	switch(type)
 	{
 	case SPR_VP_PARALLEL_UPRIGHT:
 		// flames and such
 		// vertical beam sprite, faces view plane
-		VectorNegate(r_viewforward, matrix3[0]);
-		matrix3[0][2] = 0;
-		VectorNormalizeFast(matrix3[0]);
-		matrix3[1][0] = matrix3[0][1];
-		matrix3[1][1] = -matrix3[0][0];
-		matrix3[1][2] = 0;
-		matrix3[2][0] = 0;
-		matrix3[2][1] = 0;
-		matrix3[2][2] = 1;
+		scale = ent->scale / sqrt(r_viewforward[0]*r_viewforward[0]+r_viewforward[1]*r_viewforward[1]);
+		left[0] = -r_viewforward[1] * scale;
+		left[1] = r_viewforward[0] * scale;
+		left[2] = 0;
+		up[0] = 0;
+		up[1] = 0;
+		up[2] = ent->scale;
 		break;
 	case SPR_FACING_UPRIGHT:
 		// flames and such
 		// vertical beam sprite, faces viewer's origin (not the view plane)
-		VectorSubtract(ent->origin, r_vieworigin, matrix3[0]);
-		matrix3[0][2] = 0;
-		VectorNormalizeFast(matrix3[0]);
-		matrix3[1][0] = matrix3[0][1];
-		matrix3[1][1] = -matrix3[0][0];
-		matrix3[1][2] = 0;
-		matrix3[2][0] = 0;
-		matrix3[2][1] = 0;
-		matrix3[2][2] = 1;
+		scale = ent->scale / sqrt((org[0] - r_vieworigin[0])*(org[0] - r_vieworigin[0])+(org[1] - r_vieworigin[1])*(org[1] - r_vieworigin[1]));
+		left[0] = (org[1] - r_vieworigin[1]) * scale;
+		left[1] = -(org[0] - r_vieworigin[0]) * scale;
+		left[2] = 0;
+		up[0] = 0;
+		up[1] = 0;
+		up[2] = ent->scale;
 		break;
 	default:
 		Con_Printf("R_SpriteSetup: unknown sprite type %i\n", type);
@@ -40,38 +39,34 @@ static int R_SpriteSetup (const entity_render_t *ent, int type, float org[3], fl
 	case SPR_VP_PARALLEL:
 		// normal sprite
 		// faces view plane
-		VectorCopy(r_viewforward, matrix3[0]);
-		VectorCopy(r_viewleft, matrix3[1]);
-		VectorCopy(r_viewup, matrix3[2]);
+		left[0] = r_viewleft[0] * ent->scale;
+		left[1] = r_viewleft[1] * ent->scale;
+		left[2] = r_viewleft[2] * ent->scale;
+		up[0] = r_viewup[0] * ent->scale;
+		up[1] = r_viewup[1] * ent->scale;
+		up[2] = r_viewup[2] * ent->scale;
 		break;
 	case SPR_ORIENTED:
 		// bullet marks on walls
 		// ignores viewer entirely
-		AngleVectorsFLU (ent->angles, matrix3[0], matrix3[1], matrix3[2]);
-		// nudge it toward the view, so it will be infront of the wall
-		VectorSubtract(org, r_viewforward, org);
+		left[0] = ent->matrix.m[0][1];
+		left[1] = ent->matrix.m[1][1];
+		left[2] = ent->matrix.m[2][1];
+		up[0] = ent->matrix.m[0][2];
+		up[1] = ent->matrix.m[1][2];
+		up[2] = ent->matrix.m[2][2];
 		break;
 	case SPR_VP_PARALLEL_ORIENTED:
-		// I have no idea what people would use this for
+		// I have no idea what people would use this for...
 		// oriented relative to view space
 		// FIXME: test this and make sure it mimicks software
-		AngleVectorsFLU (ent->angles, matrix1[0], matrix1[1], matrix1[2]);
-		VectorCopy(r_viewforward, matrix2[0]);
-		VectorCopy(r_viewleft, matrix2[1]);
-		VectorCopy(r_viewup, matrix2[2]);
-		R_ConcatRotations (matrix1[0], matrix2[0], matrix3[0]);
+		left[0] = ent->matrix.m[0][1] * r_viewforward[0] + ent->matrix.m[1][1] * r_viewleft[0] + ent->matrix.m[2][1] * r_viewup[0];
+		left[1] = ent->matrix.m[0][1] * r_viewforward[1] + ent->matrix.m[1][1] * r_viewleft[1] + ent->matrix.m[2][1] * r_viewup[1];
+		left[2] = ent->matrix.m[0][1] * r_viewforward[2] + ent->matrix.m[1][1] * r_viewleft[2] + ent->matrix.m[2][1] * r_viewup[2];
+		up[0] = ent->matrix.m[0][2] * r_viewforward[0] + ent->matrix.m[1][2] * r_viewleft[0] + ent->matrix.m[2][2] * r_viewup[0];
+		up[1] = ent->matrix.m[0][2] * r_viewforward[1] + ent->matrix.m[1][2] * r_viewleft[1] + ent->matrix.m[2][2] * r_viewup[1];
+		up[2] = ent->matrix.m[0][2] * r_viewforward[2] + ent->matrix.m[1][2] * r_viewleft[2] + ent->matrix.m[2][2] * r_viewup[2];
 		break;
-	}
-
-	if (ent->scale != 1)
-	{
-		VectorScale(matrix3[1], ent->scale, left);
-		VectorScale(matrix3[2], ent->scale, up);
-	}
-	else
-	{
-		VectorCopy(matrix3[1], left);
-		VectorCopy(matrix3[2], up);
 	}
 	return false;
 }

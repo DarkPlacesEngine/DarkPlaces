@@ -63,6 +63,7 @@
 0 darkplaces: add sv_gameplayfix_swiminbmodels cvar (default 1)
 0 darkplaces: add svc_setanglefloat and DP_SVC_SETANGLEFLOAT extension (FrikaC, SeienAbunae)
 0 darkplaces: add te_flamejet builtin and add extension (Supajoe)
+0 darkplaces: add vid_vsync cvar and also to options menu (metlslime)
 0 darkplaces: alias layers should have a shadow volume pass so that nodraw textures don't cast a shadow (Electro)
 0 darkplaces: can't move when stuck in a monster (SeienAbunae)
 0 darkplaces: change particle() macro in cl_particles.c to have a do{}while(0) to eat the ;
@@ -89,6 +90,7 @@
 0 darkplaces: make dedicated server not load images (maybe all fail?)
 0 darkplaces: make fopen builtin check / as well as data/ when reading (writing would always go in data/)
 0 darkplaces: make fopen have the ability to disable fopen builtin access to read /, read data/, write data/, or disable fopen builtin entirely
+0 darkplaces: make gl_texture_anisotropy changes take effect immediately (by modifying all texparams accordingly, like gl_texturemode does).
 0 darkplaces: make lightning work without bolt models persent (Vermeulen)
 0 darkplaces: make memory pools have a flag to print them as temporary pools (I.E. consider them leaks if anything is in them) (Vicious)
 0 darkplaces: make server queries use a queue to avoid flooding out queries too fast (Willis)
@@ -409,4 +411,5 @@ f dpmod: make tarbabies have a self.resist_explosive = 3; like zombies (SeienAbu
 resolvedbug darkplaces: intermission: origin and angles are wrong: probably not getting them from entity correctly (resolved: rewrote view setup and fixed timerefresh and envmap command bugs in the process, and also fixed listener positioning during intermissions)
 resolvedbug darkplaces: intermission: statusbar disappears (resolved: not fixed, people seem to kind of prefer it this way)
 resolvedbug darkplaces: intermission: view model isn't disappearing (resolved: fixed)
+resolvedbug darkplaces: oriented sprites are not responding to angles properly (yummyluv)
 
