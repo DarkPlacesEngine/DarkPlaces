@@ -511,13 +511,14 @@ extern BOOL (WINAPI *qwglMakeCurrent)(HDC, HGLRC);
 extern BOOL (WINAPI *qwglSwapIntervalEXT)(int interval);
 #endif
 
+// GL_ARB_shader_objects
+extern int gl_support_shader_objects;
 #ifndef GL_PROGRAM_OBJECT_ARB
 // 1-byte character string
 typedef char GLcharARB;
 // 4-byte integer handle to a shader object or program object
 typedef int GLhandleARB;
 #endif
-
 extern void (GLAPIENTRY *qglDeleteObjectARB)(GLhandleARB obj);
 extern GLhandleARB (GLAPIENTRY *qglGetHandleARB)(GLenum pname);
 extern void (GLAPIENTRY *qglDetachObjectARB)(GLhandleARB containerObj, GLhandleARB attachedObj);
@@ -553,7 +554,7 @@ extern void (GLAPIENTRY *qglGetObjectParameterivARB)(GLhandleARB obj, GLenum pna
 extern void (GLAPIENTRY *qglGetInfoLogARB)(GLhandleARB obj, GLsizei maxLength, GLsizei *length, GLcharARB *infoLog);
 extern void (GLAPIENTRY *qglGetAttachedObjectsARB)(GLhandleARB containerObj, GLsizei maxCount, GLsizei *count, GLhandleARB *obj);
 extern GLint (GLAPIENTRY *qglGetUniformLocationARB)(GLhandleARB programObj, const GLcharARB *name);
-extern void (GLAPIENTRY *qglGetActiveUniformARB)(GLhandleARB programObj, uint index, GLsizei maxLength, GLsizei *length, GLint *size, GLenum *type, GLcharARB *name);
+extern void (GLAPIENTRY *qglGetActiveUniformARB)(GLhandleARB programObj, GLuint index, GLsizei maxLength, GLsizei *length, GLint *size, GLenum *type, GLcharARB *name);
 extern void (GLAPIENTRY *qglGetUniformfvARB)(GLhandleARB programObj, GLint location, GLfloat *params);
 extern void (GLAPIENTRY *qglGetUniformivARB)(GLhandleARB programObj, GLint location, GLint *params);
 extern void (GLAPIENTRY *qglGetShaderSourceARB)(GLhandleARB obj, GLsizei maxLength, GLsizei *length, GLcharARB *source);
@@ -596,6 +597,8 @@ extern void (GLAPIENTRY *qglGetShaderSourceARB)(GLhandleARB obj, GLsizei maxLeng
 #define GL_SAMPLER_2D_RECT_SHADOW_ARB			0x8B64
 #endif
 
+// GL_ARB_vertex_shader
+extern int gl_support_vertex_shader;
 //extern void (GLAPIENTRY *qglVertexAttrib1fARB)(GLuint index, GLfloat v0);
 //extern void (GLAPIENTRY *qglVertexAttrib1sARB)(GLuint index, GLshort v0);
 //extern void (GLAPIENTRY *qglVertexAttrib1dARB)(GLuint index, GLdouble v0);
@@ -671,6 +674,8 @@ extern GLint (GLAPIENTRY *qglGetAttribLocationARB)(GLhandleARB programObj, const
 #define GL_FLOAT_MAT4_ARB							0x8B5C
 #endif
 
+// GL_ARB_fragment_shader
+extern int gl_support_fragment_shader;
 #ifndef GL_FRAGMENT_SHADER_ARB
 #define GL_FRAGMENT_SHADER_ARB						0x8B30
 #define GL_MAX_FRAGMENT_UNIFORM_COMPONENTS_ARB		0x8B49
@@ -679,6 +684,8 @@ extern GLint (GLAPIENTRY *qglGetAttribLocationARB)(GLhandleARB programObj, const
 #define GL_FRAGMENT_SHADER_DERIVATIVE_HINT_ARB		0x8B8B
 #endif
 
+// GL_ARB_shading_language_100
+extern int gl_support_shading_language_100;
 #ifndef GL_SHADING_LANGUAGE_VERSION_ARB
 #define GL_SHADING_LANGUAGE_VERSION_ARB				0x8B8C
 #endif
