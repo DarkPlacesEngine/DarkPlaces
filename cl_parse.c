@@ -330,7 +330,7 @@ void CL_ParseServerInfo (void)
 	i = MSG_ReadLong ();
 	if (i != PROTOCOL_VERSION && i != DPPROTOCOL_VERSION1 && i != DPPROTOCOL_VERSION2 && i != DPPROTOCOL_VERSION3 && i != 250)
 	{
-		Con_Printf ("Server is protocol %i, not %i, %i, %i or %i", i, DPPROTOCOL_VERSION1, DPPROTOCOL_VERSION2, DPPROTOCOL_VERSION3, PROTOCOL_VERSION);
+		Host_Error ("Server is protocol %i, not %i, %i, %i or %i", i, DPPROTOCOL_VERSION1, DPPROTOCOL_VERSION2, DPPROTOCOL_VERSION3, PROTOCOL_VERSION);
 		return;
 	}
 	Nehahrademcompatibility = false;
