@@ -35,6 +35,14 @@
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 -n dpmod: make grapple off-hand (joe hill)
+d darkplaces: replace key system with twilight key system, note that this breaks existing mouse4 and mouse5 binds, and adds in_bindmap capability
+2 darkplaces: make the world lights check pvs bits instead of recursing a box which would tend to touch solids
+3 darkplaces: figure out why dlights are apparently disappearing in nexuiz when far away (Vermeulen)
+0 darkplaces: add r_editlights_editall command, same as _edit but affects all lights (mashakos) 
+d darkplaces: rename r_shadow_shadows to r_shadow_dlightshadows and add r_shadow_worldshadows (mashakos)
+0 darkplaces: make sure that the fragment allocator can upload a full size block that uses the entire image, this may involve width/height comparisons needing a + 1 (fuh)
+0 darkplaces: figure out why zombies are disappearing when not entirely submerged in some hipnotic maps (romi) 
+0 darkplaces: add cl_censor cvar which would replace 'swearing' with humorous messages (Deej) 
 3 darkplaces: add a sound unloader of some sort, to allow music and other one-level stuff to be unloaded
 0 dpmod: fix angled corpse bug
 0 darkplaces: add lava-steam particle puff effect for bursting lava bubbles (Zombie) 
@@ -315,7 +323,7 @@ d darkplaces: q1bsp trace bug: scrags frequently fly through ceilings - this nee
 3 darkplaces: finish DP_QC_BOTCLIENT extension docs and implement it (MauveBib, Supajoe)
 3 darkplaces: hub save support, one file indicating active map, and then for each map it saves a quake savegame (SeienAbunae)
 3 darkplaces: make a new caching system with handles (which can be purged) and give every entity a cache handle to a model instance, which contains cache handles for each mesh/array
-3 darkplaces: mod browser (and ability to switch mods) (SeienAbunae)
+3 darkplaces: mod browser (and ability to switch mods) (SeienAbunae, mashakos)
 3 darkplaces: rearrange menus - make Graphics Options submenu and move video and renderer stuff there, add Apply button to video section (tell Elric)
 3 darkplaces: scriptable particle effects (Supajoe, FrikaC, [TACO], SeienAbunae)
 3 darkplaces: skyroom needs to be added ("info_skyroom" entity sets view origin, scanned by client at load, and by server to send all entities in skyroom) (SeienAbunae)
