@@ -898,6 +898,7 @@ static void R_FindImageForTexture(gltexture_t *glt)
 	image->glformat = texinfo->glformat;
 	image->flags = (glt->flags & (TEXF_MIPMAP | TEXF_ALPHA)) | GLTEXF_UPLOAD;
 	image->bytesperpixel = texinfo->internalbytesperpixel;
+	image->sides = image->texturetype == GLTEXTURETYPE_CUBEMAP ? 6 : 1;
 	// get a texture number to use
 	qglGenTextures(1, &image->texnum);
 	*imagechainpointer = image;
