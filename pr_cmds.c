@@ -2969,30 +2969,26 @@ void PF_clientcommand (void)
 
 //float(string s) tokenize = #441; // takes apart a string into individal words (access them with argv), returns how many
 //this function originally written by KrimZon, made shorter by LordHavoc
-char **tokens = NULL;
-int    max_tokens, num_tokens = 0;
+//20040203: rewritten by LordHavoc (no longer uses allocations)
+int num_tokens = 0;
+char *tokens[256], tokenbuf[4096];
 void PF_tokenize (void)
 {
+	int pos;
 	const char *p;
-	char *str;
-	str = G_STRING(OFS_PARM0);
+	p = G_STRING(OFS_PARM0);
 
-	if (tokens != NULL)
+	num_tokens = 0;
+	pos = 0;
+	while(COM_ParseToken(&p, false))
 	{
-		int i;
-		for (i=0;i<num_tokens;i++)
-			Z_Free(tokens[i]);
-		Z_Free(tokens);
-		num_tokens = 0;
-	}
-
-	tokens = Z_Malloc(strlen(str) * sizeof(char *));
-	max_tokens = strlen(str);
-
-	for (p = str;COM_ParseToken(&p, false) && num_tokens < max_tokens;num_tokens++)
-	{
-		tokens[num_tokens] = Z_Malloc(strlen(com_token) + 1);
-		strcpy(tokens[num_tokens], com_token);
+		if (num_tokens >= (int)(sizeof(tokens)/sizeof(tokens[0])))
+			break;
+		if (pos + strlen(com_token) + 1 > sizeof(tokenbuf))
+			break;
+		tokens[num_tokens++] = tokenbuf + pos;
+		strcpy(tokenbuf + pos, com_token);
+		pos += strlen(com_token) + 1;
 	}
 
 	G_FLOAT(OFS_RETURN) = num_tokens;
