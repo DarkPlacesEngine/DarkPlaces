@@ -364,10 +364,10 @@ static void R_MarkEntities (void)
 	int i;
 	vec3_t v;
 
+	R_FarClip_Box(cl.worldmodel->normalmins, cl.worldmodel->normalmaxs);
+
 	if (!r_drawentities.integer)
 		return;
-
-	R_FarClip_Box(cl.worldmodel->normalmins, cl.worldmodel->normalmaxs);
 
 	for (i = 0;i < r_refdef.numentities;i++)
 	{
