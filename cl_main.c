@@ -837,9 +837,9 @@ void CL_LinkNetworkEntity(entity_t *e)
 		if (e->state_previous.active && e->state_previous.modelindex == e->state_current.modelindex)
 		{
 			if (e->render.flags & RENDER_GLOWTRAIL)
-				CL_RocketTrail2(e->persistent.trail_origin, origin, e->state_current.glowcolor, e);
-			else if (trailtype >= 0)
-				CL_RocketTrail(e->persistent.trail_origin, origin, trailtype, e);
+				trailtype = 9;
+			if (trailtype >= 0)
+				CL_RocketTrail(e->persistent.trail_origin, origin, trailtype, e->state_current.glowcolor, e);
 		}
 		VectorCopy(origin, e->persistent.trail_origin);
 		// note: the cl.viewentity and intermission check is to hide player

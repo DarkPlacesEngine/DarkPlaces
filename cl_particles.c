@@ -40,7 +40,6 @@ void R_Stain (vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, i
 #define CL_BlobExplosion R_BlobExplosion
 #define CL_RunParticleEffect R_RunParticleEffect
 #define CL_LavaSplash R_LavaSplash
-#define CL_RocketTrail2 R_RocketTrail2
 void R_CalcBeam_Vertex3f (float *vert, vec3_t org1, vec3_t org2, float width)
 {
 	vec3_t right1, right2, diff, normal;
@@ -1092,7 +1091,7 @@ void R_TeleportSplash (vec3_t org)
 #ifdef WORKINGLQUAKE
 void R_RocketTrail (vec3_t start, vec3_t end, int type)
 #else
-void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
+void CL_RocketTrail (vec3_t start, vec3_t end, int type, int color, entity_t *ent)
 #endif
 {
 	vec3_t vec, dir, vel, pos;
@@ -1200,7 +1199,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 						particle(pt_static, PARTICLE_BILLBOARD, 0x502030, 0x502030, tex_particle, false, PBLEND_ADD, 6, 6, qd*128, qd*384, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0, 0, 0, 0, 0, 0);
 				}
 				break;
-
+#ifndef WORKINGLQUAKE
 			case 7:	// Nehahra smoke tracer
 				dec = qd*7;
 				if (smoke)
@@ -1211,6 +1210,12 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				if (smoke)
 					particle(pt_static, PARTICLE_BILLBOARD, 0x283880, 0x283880, tex_particle, false, PBLEND_ADD, 4, 4, qd*255, qd*1024, 9999, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
 				break;
+			case 9: // glow trail
+				dec = qd*3;
+				if (smoke)
+					particle(pt_static, PARTICLE_BILLBOARD, color, color, tex_particle, false, PBLEND_ALPHA, 5, 5, qd*128, qd*320, 9999, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
+				break;
+#endif
 		}
 
 		// advance to next time and position
@@ -1220,30 +1225,6 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 #ifndef WORKINGLQUAKE
 	ent->persistent.trail_time = len;
 #endif
-}
-
-void CL_RocketTrail2 (vec3_t start, vec3_t end, int color, entity_t *ent)
-{
-	float dec, len;
-	vec3_t vec, pos;
-	if (!cl_particles.integer) return;
-	if (!cl_particles_smoke.integer) return;
-
-	VectorCopy(start, pos);
-	VectorSubtract(end, start, vec);
-#ifdef WORKINGLQUAKE
-	len = VectorNormalize(vec);
-#else
-	len = VectorNormalizeLength(vec);
-#endif
-	color = particlepalette[color];
-	dec = 3.0f / cl_particles_quality.value;
-	while (len > 0)
-	{
-		particle(pt_static, PARTICLE_BILLBOARD, color, color, tex_particle, false, PBLEND_ALPHA, 5, 5, 128 / cl_particles_quality.value, 320 / cl_particles_quality.value, 9999, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
-		len -= dec;
-		VectorMA(pos, dec, vec, pos);
-	}
 }
 
 void CL_BeamParticle (const vec3_t start, const vec3_t end, vec_t radius, float red, float green, float blue, float alpha, float lifetime)
