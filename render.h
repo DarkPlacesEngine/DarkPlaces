@@ -83,6 +83,15 @@ extern	int			r_framecount;
 extern	mplane_t	frustum[4];
 extern	int		c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c_bmodels, c_sprites, c_particles, c_dlights;
 
+// brightness of world lightmaps and related lighting
+// (often reduced when world rtlights are enabled)
+extern float r_lightmapintensity;
+// whether to draw world lights realtime, dlights realtime, and their shadows
+extern qboolean r_rtworld;
+extern qboolean r_rtworldshadows;
+extern qboolean r_rtdlight;
+extern qboolean r_rtdlightshadows;
+
 // forces all rendering to draw triangle outlines
 extern cvar_t r_showtris;
 extern int r_showtrispass;

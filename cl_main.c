@@ -513,6 +513,17 @@ void CL_LinkNetworkEntity(entity_t *e)
 		// skip inactive entities and world
 		if (!e->state_current.active || e == cl_entities)
 			return;
+		e->render.alpha = e->state_current.alpha * (1.0f / 255.0f); // FIXME: interpolate?
+		e->render.scale = e->state_current.scale * (1.0f / 16.0f); // FIXME: interpolate?
+		e->render.flags = e->state_current.flags;
+		e->render.effects = e->state_current.effects;
+		if (e->state_current.flags & RENDER_COLORMAPPED)
+			e->render.colormap = e->state_current.colormap;
+		else if (cl.scores != NULL && e->state_current.colormap)
+			e->render.colormap = cl.scores[e->state_current.colormap - 1].colors; // color it
+		else
+			e->render.colormap = -1; // no special coloring
+		e->render.skinnum = e->state_current.skin;
 		if (e->render.flags & RENDER_VIEWMODEL)
 		{
 			if (!r_drawviewmodel.integer || chase_active.integer || envmap)
@@ -535,6 +546,8 @@ void CL_LinkNetworkEntity(entity_t *e)
 			CL_LinkNetworkEntity(t);
 			// make relative to the entity
 			matrix = &t->render.matrix;
+			// some properties of the tag entity carry over
+			e->render.flags |= t->render.flags & RENDER_EXTERIORMODEL;
 			// if a valid tagindex is used, make it relative to that tag instead
 			// FIXME: use a model function to get tag info (need to handle skeletal)
 			if (e->state_current.tagentity && e->state_current.tagindex >= 1 && (model = t->render.model) && e->state_current.tagindex <= t->render.model->alias.aliasnum_tags)
@@ -555,19 +568,6 @@ void CL_LinkNetworkEntity(entity_t *e)
 				matrix = &tempmatrix;
 			}
 		}
-		e->render.alpha = e->state_current.alpha * (1.0f / 255.0f); // FIXME: interpolate?
-		e->render.scale = e->state_current.scale * (1.0f / 16.0f); // FIXME: interpolate?
-		e->render.flags = e->state_current.flags;
-		if (e - cl_entities == cl.viewentity)
-			e->render.flags |= RENDER_EXTERIORMODEL;
-		e->render.effects = e->state_current.effects;
-		if (e->state_current.flags & RENDER_COLORMAPPED)
-			e->render.colormap = e->state_current.colormap;
-		else if (cl.scores != NULL && e->state_current.colormap)
-			e->render.colormap = cl.scores[e->state_current.colormap - 1].colors; // color it
-		else
-			e->render.colormap = -1; // no special coloring
-		e->render.skinnum = e->state_current.skin;
 		// set up the render matrix
 		if (e->state_previous.active && e->state_current.modelindex == e->state_previous.modelindex)
 		{
@@ -636,6 +636,9 @@ void CL_LinkNetworkEntity(entity_t *e)
 				if (cl_itembobheight.value)
 					origin[2] += (cos(cl.time * cl_itembobspeed.value * (2.0 * M_PI)) + 1.0) * 0.5 * cl_itembobheight.value;
 			}
+			// transfer certain model flags to effects
+			if (e->render.model->flags2 & EF_FULLBRIGHT)
+				e->render.effects |= EF_FULLBRIGHT;
 		}
 
 		R_LerpAnimation(&e->render);
@@ -843,23 +846,28 @@ void CL_LinkNetworkEntity(entity_t *e)
 				CL_RocketTrail(e->persistent.trail_origin, origin, trailtype, e->state_current.glowcolor, e);
 		}
 		VectorCopy(origin, e->persistent.trail_origin);
-		// note: the cl.viewentity and intermission check is to hide player
-		// shadow during intermission and during the Nehahra movie and
-		// Nehahra cinematics
-		if (!(e->render.effects & (EF_NOSHADOW | EF_ADDITIVE))
-		 && (e->render.alpha == 1)
-		 && !(e->render.flags & RENDER_VIEWMODEL)
-		 && ((e - cl_entities) != cl.viewentity || (!cl.intermission && cl.protocol != PROTOCOL_NEHAHRAMOVIE && !cl_noplayershadow.integer)))
-			e->render.flags |= RENDER_SHADOW;
-		if (!(e->render.effects & EF_FULLBRIGHT))
+		// tenebrae's sprites are all additive mode (weird)
+		if (gamemode == GAME_TENEBRAE && e->render.model && e->render.model->type == mod_sprite)
+			e->render.effects |= EF_ADDITIVE;
+		// player model is only shown with chase_active on
+		if (e - cl_entities == cl.viewentity)
+			e->render.flags |= RENDER_EXTERIORMODEL;
+		// transparent stuff can't be lit during the opaque stage
+		if (e->render.effects & (EF_ADDITIVE) || e->render.alpha < 1)
+			e->render.flags |= RENDER_TRANSPARENT;
+		// either fullbright or lit
+		if (!(e->render.effects & EF_FULLBRIGHT) && !r_fullbright.integer)
 			e->render.flags |= RENDER_LIGHT;
+		// hide player shadow during intermission or nehahra movie
+		if (!(e->render.effects & EF_NOSHADOW)
+		 && !(e->render.flags & (RENDER_VIEWMODEL | RENDER_TRANSPARENT))
+		 && (!(e->render.flags & RENDER_EXTERIORMODEL) || (!cl.intermission && cl.protocol != PROTOCOL_NEHAHRAMOVIE && !cl_noplayershadow.integer)))
+			e->render.flags |= RENDER_SHADOW;
 		// as soon as player is known we can call V_CalcRefDef
 		if ((e - cl_entities) == cl.viewentity)
 			V_CalcRefdef();
 		if (e->render.model && e->render.model->name[0] == '*' && e->render.model->TraceBox)
 			cl_brushmodel_entities[cl_num_brushmodel_entities++] = &e->render;
-		if (gamemode == GAME_TENEBRAE && e->render.model && e->render.model->type == mod_sprite)
-			e->render.effects |= EF_ADDITIVE;
 		// don't show entities with no modelindex (note: this still shows
 		// entities which have a modelindex that resolved to a NULL model)
 		if (e->render.model && !(e->render.effects & EF_NODRAW) && r_refdef.numentities < r_refdef.maxentities)
@@ -1089,7 +1097,7 @@ void CL_RelinkBeams(void)
 				return;
 			//VectorCopy (org, ent->render.origin);
 			ent->render.model = b->model;
-			ent->render.effects = EF_FULLBRIGHT;
+			//ent->render.effects = EF_FULLBRIGHT;
 			//ent->render.angles[0] = pitch;
 			//ent->render.angles[1] = yaw;
 			//ent->render.angles[2] = rand()%360;

@@ -135,7 +135,7 @@ void R_DrawCoronas(void)
 		return;
 	R_Mesh_Matrix(&r_identitymatrix);
 	viewdist = DotProduct(r_vieworigin, r_viewforward);
-	if (r_shadow_realtime_world.integer)
+	if (r_rtworld)
 	{
 		for (lnum = 0, light = r_shadow_worldlightchain;light;light = light->next, lnum++)
 		{
@@ -372,13 +372,13 @@ int R_LightModel(float *ambient4f, float *diffusecolor, float *diffusenormal, co
 	ambient4f[0] = ambient4f[1] = ambient4f[2] = r_ambient.value * (2.0f / 128.0f);
 	VectorClear(diffusecolor);
 	VectorClear(diffusenormal);
-	if (r_fullbright.integer || (ent->effects & EF_FULLBRIGHT))
+	if (!(ent->flags & RENDER_LIGHT))
 	{
 		// highly rare
 		VectorSet(ambient4f, 1, 1, 1);
 		maxnearlights = 0;
 	}
-	else if (r_shadow_realtime_world.integer && r_shadow_realtime_world_lightmaps.value <= 0)
+	else if (r_lightmapintensity <= 0 && !(ent->flags & RENDER_TRANSPARENT))
 		maxnearlights = 0;
 	else
 	{
@@ -447,8 +447,9 @@ int R_LightModel(float *ambient4f, float *diffusecolor, float *diffusenormal, co
 			nl->offset = sl->distbias;
 		}
 	}
-	if (!r_shadow_realtime_dlight.integer)
+	if (!r_rtdlight || (ent->flags & RENDER_TRANSPARENT))
 	{
+		// FIXME: this dlighting doesn't look like rtlights
 		for (i = 0;i < r_numdlights;i++)
 		{
 			light = r_dlight + i;
@@ -558,7 +559,7 @@ void R_LightModel_CalcVertexColors(const float *ambientcolor4f, const float *dif
 		// pretty good lighting
 		for (j = 0, nl = &nearlight[0];j < nearlights;j++, nl++)
 		{
-			VectorSubtract(vertex3f, nl->origin, v);
+			VectorSubtract(nl->origin, vertex3f, v);
 			// first eliminate negative lighting (back side)
 			dot = DotProduct(normal3f, v);
 			if (dot > 0)
@@ -588,7 +589,7 @@ void R_UpdateEntLights(entity_render_t *ent)
 	int i;
 	const mlight_t *sl;
 	vec3_t v;
-	if (r_shadow_realtime_world.integer && r_shadow_realtime_world_lightmaps.value <= 0)
+	if (r_lightmapintensity <= 0 && !(ent->flags & RENDER_TRANSPARENT))
 		return;
 	VectorSubtract(ent->origin, ent->entlightsorigin, v);
 	if (ent->entlightsframe != (r_framecount - 1) || (realtime > ent->entlightstime && DotProduct(v,v) >= 1.0f))

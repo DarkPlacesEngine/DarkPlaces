@@ -55,14 +55,14 @@ static void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette
 		Host_Error ("Mod_Sprite_SharedSetup: Invalid # of frames: %d\n", loadmodel->numframes);
 
 	loadmodel->type = mod_sprite;
-	loadmodel->flags = EF_FULLBRIGHT;
+	loadmodel->flags2 = EF_FULLBRIGHT;
 
 	// LordHavoc: hack to allow sprites to be non-fullbright
 	for (i = 0;i < MAX_QPATH && loadmodel->name[i];i++)
 	{
 		if (loadmodel->name[i] == '!')
 		{
-			loadmodel->flags &= ~EF_FULLBRIGHT;
+			loadmodel->flags2 &= ~EF_FULLBRIGHT;
 			break;
 		}
 	}
@@ -275,7 +275,7 @@ void Mod_IDSP_Load(model_t *mod, void *buffer)
 				palette[i][2] = *in++;
 				palette[i][3] = 255;
 			}
-			loadmodel->flags |= EF_ADDITIVE;
+			loadmodel->flags2 |= EF_ADDITIVE;
 			break;
 		case SPRHL_INDEXALPHA:
 			for (i = 0;i < 256;i++)

@@ -810,7 +810,7 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 	}
 
 	turb = (surf->flags & SURF_DRAWTURB) && r_waterscroll.value;
-	fullbright = (ent->effects & EF_FULLBRIGHT) || (surf->flags & SURF_DRAWFULLBRIGHT) || !surf->samples;
+	fullbright = !(ent->flags & RENDER_LIGHT) || (surf->flags & SURF_DRAWFULLBRIGHT) || !surf->samples;
 	base = fullbright ? 2.0f : r_ambient.value * (1.0f / 64.0f);
 	if (surf->flags & SURF_DRAWTURB)
 		base *= 0.5f;
@@ -945,10 +945,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseCombine_TextureLightmapDetailGlow(co
 		m.tex[3] = R_GetTexture(texture->skin.glow);
 		m.texcombinergb[3] = GL_ADD;
 	}
-	if (r_shadow_realtime_world.integer)
-		GL_Color(r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, 1);
-	else
-		GL_Color(1, 1, 1, 1);
+	GL_Color(r_lightmapintensity, r_lightmapintensity, r_lightmapintensity, 1);
 
 	while((surf = *surfchain++) != NULL)
 	{
@@ -983,10 +980,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseCombine_TextureLightmapDetail(const 
 	m.texrgbscale[1] = 2;
 	m.tex[2] = R_GetTexture(texture->skin.detail);
 	m.texrgbscale[2] = 2;
-	if (r_shadow_realtime_world.integer)
-		GL_Color(r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, 1);
-	else
-		GL_Color(1, 1, 1, 1);
+	GL_Color(r_lightmapintensity, r_lightmapintensity, r_lightmapintensity, 1);
 
 	while((surf = *surfchain++) != NULL)
 	{
@@ -1018,10 +1012,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseCombine_TextureLightmap(const entity
 	m.tex[0] = R_GetTexture(texture->skin.base);
 	m.tex[1] = R_GetTexture((**surfchain).lightmaptexture);
 	m.texrgbscale[1] = 2;
-	if (r_shadow_realtime_world.integer)
-		GL_Color(r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, 1);
-	else
-		GL_Color(1, 1, 1, 1);
+	GL_Color(r_lightmapintensity, r_lightmapintensity, r_lightmapintensity, 1);
 	while((surf = *surfchain++) != NULL)
 	{
 		if (surf->visframe == r_framecount)
@@ -1048,10 +1039,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseTexture(const entity_render_t *ent, 
 	GL_DepthTest(true);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	m.tex[0] = R_GetTexture(texture->skin.base);
-	if (r_shadow_realtime_world.integer)
-		GL_Color(r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, 1);
-	else
-		GL_Color(1, 1, 1, 1);
+	GL_Color(r_lightmapintensity, r_lightmapintensity, r_lightmapintensity, 1);
 	while((surf = *surfchain++) != NULL)
 	{
 		if (surf->visframe == r_framecount)
@@ -1230,10 +1218,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseLightmapOnly(const entity_render_t *
 	GL_DepthMask(true);
 	GL_DepthTest(true);
 	m.tex[0] = R_GetTexture((**surfchain).lightmaptexture);
-	if (r_shadow_realtime_world.integer)
-		GL_Color(r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, 1);
-	else
-		GL_Color(1, 1, 1, 1);
+	GL_Color(r_lightmapintensity, r_lightmapintensity, r_lightmapintensity, 1);
 	while((surf = *surfchain++) != NULL)
 	{
 		if (surf->visframe == r_framecount)
@@ -1286,7 +1271,7 @@ void R_UpdateLightmapInfo(entity_render_t *ent)
 	model_t *model = ent->model;
 	if (!model)
 		return;
-	if (r_dynamic.integer && !r_shadow_realtime_dlight.integer)
+	if (r_dynamic.integer && !r_rtdlight)
 		R_MarkLights(ent);
 	for (i = 0;i < model->brushq1.light_styles;i++)
 	{
@@ -1378,7 +1363,7 @@ void R_DrawSurfaces(entity_render_t *ent, int flagsmask)
 				}
 				else
 				{
-					if (ent->effects & EF_FULLBRIGHT || r_fullbright.integer)
+					if (!(ent->flags & RENDER_LIGHT))
 					{
 						RSurfShader_OpaqueWall_Pass_BaseTexture(ent, texture, surfchain);
 						if (r_detailtextures.integer)
@@ -1889,7 +1874,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t 
 			else if (ent != &cl_entities[0].render || surface->visframe == r_framecount)
 			{
 				t = surface->texinfo->texture->currentframe;
-				if (t->flags & SURF_LIGHTMAP && t->rendertype == SURFRENDER_OPAQUE)
+				if (t->flags & SURF_LIGHTMAP)
 					R_Shadow_RenderLighting(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i, surface->mesh.data_vertex3f, surface->mesh.data_svector3f, surface->mesh.data_tvector3f, surface->mesh.data_normal3f, surface->mesh.data_texcoordtexture2f, relativelightorigin, relativeeyeorigin, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.base, t->skin.nmap, t->skin.gloss, lightcubemap, LIGHTING_DIFFUSE | LIGHTING_SPECULAR);
 			}
 		}
@@ -2055,10 +2040,7 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_LightmapOnly(entity_render_t *ent, q3msurf
 	GL_DepthTest(true);
 	m.tex[0] = R_GetTexture(face->lightmaptexture);
 	m.pointer_texcoord[0] = face->data_texcoordlightmap2f;
-	if (r_shadow_realtime_world.integer)
-		GL_Color(r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, 1);
-	else
-		GL_Color(1, 1, 1, 1);
+	GL_Color(r_lightmapintensity, r_lightmapintensity, r_lightmapintensity, 1);
 	m.pointer_vertex = face->data_vertex3f;
 	R_Mesh_State(&m);
 	GL_LockArrays(0, face->num_vertices);
@@ -2099,9 +2081,7 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureVertex(entity_render_t *ent, q3msur
 	GL_DepthTest(true);
 	m.tex[0] = R_GetTexture(face->texture->skin.base);
 	m.pointer_texcoord[0] = face->data_texcoordtexture2f;
-	mul = 2.0f;
-	if (r_shadow_realtime_world.integer && r_shadow_realtime_world_lightmaps.value != 1)
-		mul *= r_shadow_realtime_world_lightmaps.value;
+	mul = 2.0f * r_lightmapintensity;
 	if (mul == 2 && gl_combine.integer)
 	{
 		m.texrgbscale[0] = 2;
@@ -2136,9 +2116,7 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_VertexOnly(entity_render_t *ent, q3msurfac
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
 	GL_DepthTest(true);
-	mul = 2.0f;
-	if (r_shadow_realtime_world.integer && r_shadow_realtime_world_lightmaps.value != 1)
-		mul *= r_shadow_realtime_world_lightmaps.value;
+	mul = 2.0f * r_lightmapintensity;
 	if (mul == 1)
 		m.pointer_color = face->data_color4f;
 	else
@@ -2178,6 +2156,8 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_AddTextureAmbient(entity_render_t *ent, q3
 
 void R_Q3BSP_DrawFace_TransparentCallback(const void *voident, int facenumber)
 {
+	int i;
+	float colorscale;
 	const entity_render_t *ent = voident;
 	q3msurface_t *face = ent->model->brushq3.data_faces + facenumber;
 	rmeshstate_t m;
@@ -2191,46 +2171,19 @@ void R_Q3BSP_DrawFace_TransparentCallback(const void *voident, int facenumber)
 	GL_DepthTest(true);
 	m.tex[0] = R_GetTexture(face->texture->skin.base);
 	m.pointer_texcoord[0] = face->data_texcoordtexture2f;
-	// LordHavoc: quake3 was not able to do this; lit transparent surfaces
+	colorscale = r_lightmapintensity;
 	if (gl_combine.integer)
-	{
 		m.texrgbscale[0] = 2;
-		if (r_textureunits.integer >= 2)
-		{
-			m.tex[1] = R_GetTexture(face->lightmaptexture);
-			m.pointer_texcoord[1] = face->data_texcoordlightmap2f;
-			GL_Color(1, 1, 1, ent->alpha);
-		}
-		else
-		{
-			if (ent->alpha == 1)
-				m.pointer_color = face->data_color4f;
-			else
-			{
-				int i;
-				for (i = 0;i < face->num_vertices;i++)
-				{
-					varray_color4f[i*4+0] = face->data_color4f[i*4+0];
-					varray_color4f[i*4+1] = face->data_color4f[i*4+1];
-					varray_color4f[i*4+2] = face->data_color4f[i*4+2];
-					varray_color4f[i*4+3] = face->data_color4f[i*4+3] * ent->alpha;
-				}
-				m.pointer_color = varray_color4f;
-			}
-		}
-	}
 	else
+		colorscale *= 2.0f;
+	for (i = 0;i < face->num_vertices;i++)
 	{
-		int i;
-		for (i = 0;i < face->num_vertices;i++)
-		{
-			varray_color4f[i*4+0] = face->data_color4f[i*4+0] * 2.0f;
-			varray_color4f[i*4+1] = face->data_color4f[i*4+1] * 2.0f;
-			varray_color4f[i*4+2] = face->data_color4f[i*4+2] * 2.0f;
-			varray_color4f[i*4+3] = face->data_color4f[i*4+3] * ent->alpha;
-		}
-		m.pointer_color = varray_color4f;
+		varray_color4f[i*4+0] = face->data_color4f[i*4+0] * colorscale;
+		varray_color4f[i*4+1] = face->data_color4f[i*4+1] * colorscale;
+		varray_color4f[i*4+2] = face->data_color4f[i*4+2] * colorscale;
+		varray_color4f[i*4+3] = face->data_color4f[i*4+3] * ent->alpha;
 	}
+	m.pointer_color = varray_color4f;
 	m.pointer_vertex = face->data_vertex3f;
 	R_Mesh_State(&m);
 	qglDisable(GL_CULL_FACE);
@@ -2258,9 +2211,9 @@ void R_Q3BSP_DrawFace(entity_render_t *ent, q3msurface_t *face)
 		return;
 	}
 	R_Mesh_Matrix(&ent->matrix);
-	if (r_shadow_realtime_world.integer && r_shadow_realtime_world_lightmaps.value <= 0)
+	if (r_lightmapintensity <= 0)
 		R_Q3BSP_DrawFace_OpaqueWall_Pass_OpaqueGlow(ent, face);
-	else if ((ent->effects & EF_FULLBRIGHT) || r_fullbright.integer)
+	else if (!(ent->flags & RENDER_LIGHT))
 	{
 		R_Q3BSP_DrawFace_OpaqueWall_Pass_Texture(ent, face);
 		if (face->texture->skin.glow)

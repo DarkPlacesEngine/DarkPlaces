@@ -424,33 +424,8 @@ void CL_SendMove(usercmd_t *cmd)
 	MSG_WriteByte (&buf, in_impulse);
 	in_impulse = 0;
 
-	if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3)
-	{
-		// LordHavoc: should we ack this on receipt instead?  would waste net bandwidth though
-		if (cl.entitydatabase)
-		{
-			i = EntityFrame_MostRecentlyRecievedFrameNum(cl.entitydatabase);
-			if (i > 0)
-			{
-				MSG_WriteByte(&buf, clc_ackentities);
-				MSG_WriteLong(&buf, i);
-			}
-		}
-	}
-	else if (cl.protocol == PROTOCOL_DARKPLACES4)
-	{
-		if (cl.entitydatabase4)
-		{
-			i = cl.latestframenum;
-			if (cl_nodelta.integer)
-				i = -1;
-			if (developer_networkentities.integer >= 1)
-				Con_Printf("send clc_ackentities %i\n", i);
-			MSG_WriteByte(&buf, clc_ackentities);
-			MSG_WriteLong(&buf, i);
-		}
-	}
-	else if (cl.protocol == PROTOCOL_DARKPLACES5)
+	// FIXME: should ack latest 3 frames perhaps?
+	if (cl.latestframenum > 0)
 	{
 		i = cl.latestframenum;
 		if (cl_nodelta.integer)

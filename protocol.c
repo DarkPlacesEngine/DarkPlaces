@@ -864,7 +864,7 @@ void EntityFrame_CL_ReadFrame(void)
 	// read the frame header info
 	f->time = cl.mtime[0];
 	number = MSG_ReadLong();
-	f->framenum = MSG_ReadLong();
+	cl.latestframenum = f->framenum = MSG_ReadLong();
 	f->eye[0] = MSG_ReadFloat();
 	f->eye[1] = MSG_ReadFloat();
 	f->eye[2] = MSG_ReadFloat();
@@ -1050,7 +1050,7 @@ void EntityFrame4_ResetDatabase(entityframe4_database_t *d)
 		d->referenceentity[i] = defaultstate;
 }
 
-int EntityFrame4_AckFrame(entityframe4_database_t *d, int framenum)
+int EntityFrame4_AckFrame(entityframe4_database_t *d, int framenum, int servermode)
 {
 	int i, j, found;
 	entity_database4_commit_t *commit;
@@ -1060,6 +1060,9 @@ int EntityFrame4_AckFrame(entityframe4_database_t *d, int framenum)
 		d->referenceframenum = -1;
 		for (i = 0;i < d->maxreferenceentities;i++)
 			d->referenceentity[i] = defaultstate;
+		// if this is the server, remove commits
+			for (i = 0, commit = d->commit;i < MAX_ENTITY_HISTORY;i++, commit++)
+				commit->numentities = 0;
 		found = true;
 	}
 	else if (d->referenceframenum == framenum)
@@ -1120,7 +1123,7 @@ void EntityFrame4_CL_ReadFrame(void)
 	// read the number of the frame this refers to
 	referenceframenum = MSG_ReadLong();
 	// read the number of this frame
-	framenum = MSG_ReadLong();
+	cl.latestframenum = framenum = MSG_ReadLong();
 	// read the start number
 	enumber = (unsigned short) MSG_ReadShort();
 	if (developer_networkentities.integer >= 1)
@@ -1131,7 +1134,7 @@ void EntityFrame4_CL_ReadFrame(void)
 				Con_Printf(" %i", d->commit[i].framenum);
 		Con_Print("\n");
 	}
-	if (!EntityFrame4_AckFrame(d, referenceframenum))
+	if (!EntityFrame4_AckFrame(d, referenceframenum, false))
 	{
 		Con_Print("EntityFrame4_CL_ReadFrame: reference frame invalid (VERY BAD ERROR), this update will be skipped\n");
 		skip = true;
