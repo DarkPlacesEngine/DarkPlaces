@@ -1300,14 +1300,18 @@ void M_AdjustSliders (int dir)
 		Cvar_SetValue ("v_brightness", bound(0, v_brightness.value + dir * 0.05, 0.8));
 		break;
 	case 14: // music volume
-#ifdef _WIN32
-		Cvar_SetValue ("bgmvolume", bound(0, bgmvolume.value + dir * 1.0, 1));
-#else
-		Cvar_SetValue ("bgmvolume", bound(0, bgmvolume.value + dir * 0.1, 1));
-#endif
+		if (Cvar_FindVar("bgmvolume") != NULL)
+		{
+			#ifdef _WIN32
+			Cvar_SetValue ("bgmvolume", bound(0, bgmvolume.value + dir * 1.0, 1));
+			#else
+			Cvar_SetValue ("bgmvolume", bound(0, bgmvolume.value + dir * 0.1, 1));
+			#endif
+		}
 		break;
 	case 15: // sfx volume
-		Cvar_SetValue ("volume", bound(0, volume.value + dir * 0.1, 1));
+		if (Cvar_FindVar("volume") != NULL)
+			Cvar_SetValue ("volume", bound(0, volume.value + dir * 0.1, 1));
 		break;
 	case 16:
 		Cvar_SetValue ("crosshair", bound(0, crosshair.integer + dir, 5));
@@ -1436,6 +1440,7 @@ void M_Adjust2DResolution(int dir)
 
 void M_Options_Draw (void)
 {
+	int i;
 	float y;
 	cachepic_t	*p;
 
@@ -1458,8 +1463,10 @@ void M_Options_Draw (void)
 	M_ItemPrint(16, y, "                 Gamma", v_hwgamma.integer);M_DrawSlider(220, y, (v_gamma.value - 1) / 4);y += 8;
 	M_Print(16, y, "              Contrast");M_DrawSlider(220, y, (v_contrast.value - 0.5) / (5 - 0.5));y += 8;
 	M_Print(16, y, "            Brightness");M_DrawSlider(220, y, v_brightness.value / 0.8);y += 8;
-	M_ItemPrint(16, y, "       CD Music Volume", Cvar_FindVar("bgmvolume") != NULL);M_DrawSlider(220, y, bgmvolume.value);y += 8;
-	M_ItemPrint(16, y, "          Sound Volume", Cvar_FindVar("volume") != NULL);M_DrawSlider(220, y, volume.value);y += 8;
+	i = Cvar_FindVar("bgmvolume") != NULL;
+	M_ItemPrint(16, y, "       CD Music Volume", i);if (i) M_DrawSlider(220, y, bgmvolume.value);y += 8;
+	i = Cvar_FindVar("volume") != NULL;
+	M_ItemPrint(16, y, "          Sound Volume", i);if (i) M_DrawSlider(220, y, volume.value);y += 8;
 	M_Print(16, y, "             Crosshair");M_DrawSlider(220, y, crosshair.value / 5);y += 8;
 	M_Print(16, y, "        Crosshair Size");M_DrawSlider(220, y, (crosshair_size.value - 1) / 4);y += 8;
 	M_Print(16, y, "        Show Framerate");M_DrawCheckbox(220, y, showfps.integer);y += 8;
