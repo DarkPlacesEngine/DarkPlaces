@@ -1788,6 +1788,10 @@ static void R_InitParticleTexture (void)
 		}
 	}
 
+#if 0
+	Image_WriteTGARGBA ("particles/nexbeam.tga", 64, 64, &data2[0][0][0]);
+#endif
+
 	particletexture[tex_beam].texture = loadtextureimage(particletexturepool, "particles/nexbeam.tga", 0, 0, false, TEXF_ALPHA | TEXF_PRECACHE);
 	if (!particletexture[tex_beam].texture)
 		particletexture[tex_beam].texture = R_LoadTexture2D(particletexturepool, "nexbeam", 16, 64, &data2[0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
