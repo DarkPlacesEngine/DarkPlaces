@@ -33,7 +33,6 @@ static unsigned long myAddr;
 
 #include "net_wins.h"
 
-int winsock_initialized = 0;
 WSADATA		winsockdata;
 
 //=============================================================================
@@ -101,23 +100,18 @@ int WINS_Init (void)
 	if (COM_CheckParm ("-noudp"))
 		return -1;
 
-	if (winsock_initialized == 0)
+	r = WSAStartup (MAKEWORD(1, 1), &winsockdata);
+	if (r)
 	{
-		r = WSAStartup (MAKEWORD(1, 1), &winsockdata);
-		if (r)
-		{
-			Con_SafePrintf ("Winsock initialization failed.\n");
-			return -1;
-		}
+		Con_SafePrintf ("Winsock initialization failed.\n");
+		return -1;
 	}
-	winsock_initialized++;
 
 	// determine my name
 	if (gethostname(buff, MAXHOSTNAMELEN) == SOCKET_ERROR)
 	{
 		Con_DPrintf ("Winsock TCP/IP Initialization failed.\n");
-		if (--winsock_initialized == 0)
-			WSACleanup ();
+		WSACleanup ();
 		return -1;
 	}
 
@@ -164,8 +158,7 @@ int WINS_Init (void)
 	if ((net_controlsocket = WINS_OpenSocket (0)) == -1)
 	{
 		Con_Printf("WINS_Init: Unable to open control socket\n");
-		if (--winsock_initialized == 0)
-			WSACleanup ();
+		WSACleanup ();
 		return -1;
 	}
 
@@ -185,8 +178,7 @@ void WINS_Shutdown (void)
 {
 	WINS_Listen (false);
 	WINS_CloseSocket (net_controlsocket);
-	if (--winsock_initialized == 0)
-		WSACleanup ();
+	WSACleanup ();
 }
 
 //=============================================================================
