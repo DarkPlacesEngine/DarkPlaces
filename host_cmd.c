@@ -1532,7 +1532,7 @@ void Host_Startdemos_f (void)
 
 	if (cls.state == ca_dedicated)
 	{
-		if (!sv.active)
+		if (!sv.active && !sv_spawnmap[0])
 			Cbuf_AddText ("map start\n");
 		return;
 	}

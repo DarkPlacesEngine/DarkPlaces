@@ -39,7 +39,7 @@ void DrawQ_Clear(void);
 // draw an image
 void DrawQ_Pic(float x, float y, char *picname, float width, float height, float red, float green, float blue, float alpha, int flags);
 // draw a text string
-void DrawQ_String(float x, float y, char *string, int maxlen, float scalex, float scaley, float red, float green, float blue, float alpha, int flags);
+void DrawQ_String(float x, float y, const char *string, int maxlen, float scalex, float scaley, float red, float green, float blue, float alpha, int flags);
 // draw a filled rectangle
 void DrawQ_Fill (float x, float y, float w, float h, float red, float green, float blue, float alpha, int flags);
 // draw a triangle mesh

@@ -178,7 +178,7 @@ void M_Print (float cx, float cy, char *str)
 	DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 1, 1, 1, 0);
 }
 
-void M_PrintWhite (float cx, float cy, char *str)
+void M_PrintWhite (float cx, float cy, const char *str)
 {
 	DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 1, 1, 1, 0);
 }
@@ -2772,7 +2772,7 @@ void M_GameOptions_Draw (void)
 			M_Print (x, 146, " More than 64 players?? ");
 			M_Print (x, 154, "  First, question your  ");
 			M_Print (x, 162, "   sanity, then email   ");
-			M_Print (x, 170, " havoc@gamevisions.com  ");
+			M_Print (x, 170, "   havoc@inside3d.com   ");
 		}
 		else
 		{
@@ -2965,6 +2965,7 @@ void M_Menu_Search_f (void)
 
 void M_Search_Draw (void)
 {
+	const char* string;
 	cachepic_t	*p;
 	int x;
 
@@ -2992,7 +2993,11 @@ void M_Search_Draw (void)
 		return;
 	}
 
-	M_PrintWhite ((320/2) - ((22*8)/2), 64, "No Quake servers found");
+	if (gamemode == GAME_TRANSFUSION)
+		string = "No Transfusion servers found";
+	else
+		string = "No Quake servers found";
+	M_PrintWhite ((320/2) - ((22*8)/2), 64, string);
 	if ((realtime - searchCompleteTime) < 3.0)
 		return;
 
@@ -3022,38 +3027,7 @@ void M_Menu_InetSearch_f (void)
 
 void M_InetSearch_Draw (void)
 {
-	cachepic_t	*p;
-	int x;
-
-	p = Draw_CachePic ("gfx/p_multi.lmp");
-	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_multi.lmp");
-	x = (320/2) - ((12*8)/2) + 4;
-	M_DrawTextBox (x-8, 32, 12, 1);
-	M_Print (x, 40, "Searching...");
-
-	if(slistInProgress)
-	{
-		NET_Poll();
-		return;
-	}
-
-	if (! searchComplete)
-	{
-		searchComplete = true;
-		searchCompleteTime = realtime;
-	}
-
-	if (hostCacheCount)
-	{
-		M_Menu_ServerList_f ();
-		return;
-	}
-
-	M_PrintWhite ((320/2) - ((22*8)/2), 64, "No Quake servers found");
-	if ((realtime - searchCompleteTime) < 3.0)
-		return;
-
-	M_Menu_LanConfig_f ();
+	M_Search_Draw ();  // it's the same one, so why bother?
 }
 
 
