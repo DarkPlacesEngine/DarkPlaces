@@ -9,6 +9,11 @@ cvar_t gl_mesh_testarrayelement = {0, "gl_mesh_testarrayelement", "0"};
 cvar_t gl_mesh_testmanualfeeding = {0, "gl_mesh_testmanualfeeding", "0"};
 cvar_t gl_paranoid = {0, "gl_paranoid", "0"};
 cvar_t gl_printcheckerror = {0, "gl_printcheckerror", "0"};
+cvar_t r_stereo_separation = {0, "r_stereo_separation", "4"};
+cvar_t r_stereo_sidebyside = {0, "r_stereo_sidebyside", "0"};
+cvar_t r_stereo_redblue = {0, "r_stereo_redblue", "0"};
+cvar_t r_stereo_redcyan = {0, "r_stereo_redcyan", "0"};
+cvar_t r_stereo_redgreen = {0, "r_stereo_redgreen", "0"};
 
 cvar_t r_render = {0, "r_render", "1"};
 cvar_t r_waterwarp = {CVAR_SAVE, "r_waterwarp", "1"};
@@ -206,6 +211,11 @@ void gl_backend_init(void)
 
 	Cvar_RegisterVariable(&r_render);
 	Cvar_RegisterVariable(&r_waterwarp);
+	Cvar_RegisterVariable(&r_stereo_separation);
+	Cvar_RegisterVariable(&r_stereo_sidebyside);
+	Cvar_RegisterVariable(&r_stereo_redblue);
+	Cvar_RegisterVariable(&r_stereo_redcyan);
+	Cvar_RegisterVariable(&r_stereo_redgreen);
 	Cvar_RegisterVariable(&gl_polyblend);
 	Cvar_RegisterVariable(&gl_dither);
 	Cvar_RegisterVariable(&gl_lockarrays);
@@ -1287,13 +1297,13 @@ showtris:
 			Cvar_Set ("viewsize","30");
 		if (scr_viewsize.value > 120)
 			Cvar_Set ("viewsize","120");
-		
+
 		// bound field of view
 		if (scr_fov.value < 1)
 			Cvar_Set ("fov","1");
 		if (scr_fov.value > 170)
 			Cvar_Set ("fov","170");
-	
+
 		// intermission is always full screen
 		if (cl.intermission)
 		{
@@ -1311,12 +1321,12 @@ showtris:
 			size = scr_viewsize.value * (1.0 / 100.0);
 			size = min(size, 1);
 		}
-	
+
 		r_refdef.width = vid.realwidth * size;
 		r_refdef.height = vid.realheight * size;
 		r_refdef.x = (vid.realwidth - r_refdef.width)/2;
 		r_refdef.y = (vid.realheight - r_refdef.height)/2;
-	
+
 		// LordHavoc: viewzoom (zoom in for sniper rifles, etc)
 		r_refdef.fov_x = scr_fov.value * cl.viewzoom;
 		r_refdef.fov_y = CalcFov (r_refdef.fov_x, r_refdef.width, r_refdef.height);
@@ -1335,22 +1345,84 @@ showtris:
 			}
 		}
 
-		R_RenderView();
+		r_refdef.colormask[0] = 1;
+		r_refdef.colormask[1] = 1;
+		r_refdef.colormask[2] = 1;
 
-		if (scr_zoomwindow.integer)
+		if (r_stereo_redblue.integer || r_stereo_redcyan.integer || r_stereo_redgreen.integer)
 		{
-			float sizex = bound(10, scr_zoomwindow_viewsizex.value, 100) / 100.0;
-			float sizey = bound(10, scr_zoomwindow_viewsizey.value, 100) / 100.0;
-			r_refdef.width = vid.realwidth * sizex;
-			r_refdef.height = vid.realheight * sizey;
-			r_refdef.x = (vid.realwidth - r_refdef.width)/2;
-			r_refdef.y = 0;
-			r_refdef.fov_x = scr_zoomwindow_fov.value;
-			r_refdef.fov_y = CalcFov(r_refdef.fov_x, r_refdef.width, r_refdef.height);
+			matrix4x4_t originalmatrix = r_refdef.viewentitymatrix;
+			r_refdef.viewentitymatrix.m[0][3] = originalmatrix.m[0][3] + r_stereo_separation.value * -0.5f * r_refdef.viewentitymatrix.m[0][0];
+			r_refdef.viewentitymatrix.m[1][3] = originalmatrix.m[1][3] + r_stereo_separation.value * -0.5f * r_refdef.viewentitymatrix.m[0][1];
+			r_refdef.viewentitymatrix.m[2][3] = originalmatrix.m[2][3] + r_stereo_separation.value * -0.5f * r_refdef.viewentitymatrix.m[0][2];
+
+			r_refdef.colormask[0] = 1;
+			r_refdef.colormask[1] = 0;
+			r_refdef.colormask[2] = 0;
 
 			R_RenderView();
+
+			r_refdef.viewentitymatrix.m[0][3] = originalmatrix.m[0][3] + r_stereo_separation.value * 0.5f * r_refdef.viewentitymatrix.m[0][0];
+			r_refdef.viewentitymatrix.m[1][3] = originalmatrix.m[1][3] + r_stereo_separation.value * 0.5f * r_refdef.viewentitymatrix.m[0][1];
+			r_refdef.viewentitymatrix.m[2][3] = originalmatrix.m[2][3] + r_stereo_separation.value * 0.5f * r_refdef.viewentitymatrix.m[0][2];
+
+			r_refdef.colormask[0] = 0;
+			r_refdef.colormask[1] = r_stereo_redcyan.integer || r_stereo_redgreen.integer;
+			r_refdef.colormask[2] = r_stereo_redcyan.integer || r_stereo_redblue.integer;
+
+			R_RenderView();
+
+			r_refdef.viewentitymatrix = originalmatrix;
 		}
+		else if (r_stereo_sidebyside.integer)
+		{
+			matrix4x4_t originalmatrix = r_refdef.viewentitymatrix;
+			r_refdef.viewentitymatrix.m[0][3] = originalmatrix.m[0][3] + r_stereo_separation.value * -0.5f * r_refdef.viewentitymatrix.m[0][0];
+			r_refdef.viewentitymatrix.m[1][3] = originalmatrix.m[1][3] + r_stereo_separation.value * -0.5f * r_refdef.viewentitymatrix.m[0][1];
+			r_refdef.viewentitymatrix.m[2][3] = originalmatrix.m[2][3] + r_stereo_separation.value * -0.5f * r_refdef.viewentitymatrix.m[0][2];
+
+			r_refdef.width = vid.realwidth * size / 2.5;
+			r_refdef.height = vid.realheight * size / 2.5;
+			r_refdef.x = (vid.realwidth - r_refdef.width * 2.5) * 0.5;
+			r_refdef.y = (vid.realheight - r_refdef.height)/2;
+
+			R_RenderView();
+
+			r_refdef.viewentitymatrix.m[0][3] = originalmatrix.m[0][3] + r_stereo_separation.value * 0.5f * r_refdef.viewentitymatrix.m[0][0];
+			r_refdef.viewentitymatrix.m[1][3] = originalmatrix.m[1][3] + r_stereo_separation.value * 0.5f * r_refdef.viewentitymatrix.m[0][1];
+			r_refdef.viewentitymatrix.m[2][3] = originalmatrix.m[2][3] + r_stereo_separation.value * 0.5f * r_refdef.viewentitymatrix.m[0][2];
+
+			r_refdef.x = (vid.realwidth - r_refdef.width * 2.5) * 0.5 + r_refdef.width * 1.5;
+		
+			R_RenderView();
+
+			r_refdef.viewentitymatrix = originalmatrix;
+		}
+		else
+		{
+			R_RenderView();
+
+			if (scr_zoomwindow.integer)
+			{
+				float sizex = bound(10, scr_zoomwindow_viewsizex.value, 100) / 100.0;
+				float sizey = bound(10, scr_zoomwindow_viewsizey.value, 100) / 100.0;
+				r_refdef.width = vid.realwidth * sizex;
+				r_refdef.height = vid.realheight * sizey;
+				r_refdef.x = (vid.realwidth - r_refdef.width)/2;
+				r_refdef.y = 0;
+				r_refdef.fov_x = scr_zoomwindow_fov.value;
+				r_refdef.fov_y = CalcFov(r_refdef.fov_x, r_refdef.width, r_refdef.height);
+
+				R_RenderView();
+			}
+		}
+
+		r_refdef.colormask[0] = 1;
+		r_refdef.colormask[1] = 1;
+		r_refdef.colormask[2] = 1;
 	}
+
+	GL_ColorMask(1,1,1,1);
 
 	// draw 2D stuff
 	R_DrawQueue();

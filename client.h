@@ -754,6 +754,9 @@ typedef struct
 	// view transform
 	matrix4x4_t viewentitymatrix;
 
+	// which color components to allow (for anaglyph glasses)
+	int colormask[4];
+
 	// fullscreen color blend
 	float viewblend[4];
 

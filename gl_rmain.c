@@ -626,11 +626,13 @@ void R_RenderView(void)
 	r_view_fov_x = bound(1, r_refdef.fov_x, 170);
 	r_view_fov_y = bound(1, r_refdef.fov_y, 170);
 	r_view_matrix = r_refdef.viewentitymatrix;
+	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
 
 	// GL is weird because it's bottom to top, r_view_y is top to bottom
 	qglViewport(r_view_x, vid.realheight - (r_view_y + r_view_height), r_view_width, r_view_height);
 	GL_Scissor(r_view_x, r_view_y, r_view_width, r_view_height);
 	GL_ScissorTest(true);
+	GL_DepthMask(true);
 	R_ClearScreen();
 	R_TimeReport("setup");
 

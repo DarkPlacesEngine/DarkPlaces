@@ -919,7 +919,7 @@ void R_Shadow_Stage_LightWithoutShadows(void)
 	qglPolygonOffset(0, 0);
 	//qglDisable(GL_POLYGON_OFFSET_FILL);
 	GL_Color(1, 1, 1, 1);
-	GL_ColorMask(1, 1, 1, 1);
+	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
 	qglDepthFunc(GL_EQUAL);
 	qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 	qglEnable(GL_CULL_FACE);
@@ -944,7 +944,7 @@ void R_Shadow_Stage_LightWithShadows(void)
 	qglPolygonOffset(0, 0);
 	//qglDisable(GL_POLYGON_OFFSET_FILL);
 	GL_Color(1, 1, 1, 1);
-	GL_ColorMask(1, 1, 1, 1);
+	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
 	qglDepthFunc(GL_EQUAL);
 	qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 	qglEnable(GL_STENCIL_TEST);
@@ -970,7 +970,7 @@ void R_Shadow_Stage_End(void)
 	qglPolygonOffset(0, 0);
 	//qglDisable(GL_POLYGON_OFFSET_FILL);
 	GL_Color(1, 1, 1, 1);
-	GL_ColorMask(1, 1, 1, 1);
+	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
 	GL_Scissor(r_view_x, r_view_y, r_view_width, r_view_height);
 	qglDepthFunc(GL_LEQUAL);
 	qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
@@ -1579,7 +1579,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 			}
 			// this final code is shared
 			R_Mesh_State(&m);
-			GL_ColorMask(1,1,1,0);
+			GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 0);
 			GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 			VectorScale(lightcolor, colorscale, color2);
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
@@ -1809,7 +1809,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				}
 			}
 			R_Mesh_State(&m);
-			GL_ColorMask(1,1,1,0);
+			GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 0);
 			GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 			VectorScale(lightcolor, colorscale, color2);
 			GL_LockArrays(0, numverts);
