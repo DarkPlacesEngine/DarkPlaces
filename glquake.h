@@ -348,6 +348,12 @@ extern int gl_dot3ext;
 #define GL_SCISSOR_BOX				0x0C10
 #endif
 
+// GL_SGIS_texture_edge_clamp or GL_EXT_texture_edge_clamp
+extern int gl_support_clamptoedge;
+#ifndef GL_CLAMP_TO_EDGE
+#define GL_CLAMP_TO_EDGE 0x812F
+#endif
+
 extern void (GLAPIENTRY *qglScissor)(GLint x, GLint y, GLsizei width, GLsizei height);
 
 extern void (GLAPIENTRY *qglClearColor)(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha);
