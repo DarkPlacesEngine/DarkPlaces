@@ -939,27 +939,6 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 					}
 				}
 			}
-
-			if (R_Shadow_Stage_EraseShadowVolumes())
-			{
-				ent = &cl_entities[0].render;
-				if (wl->shadowvolume && r_staticworldlights.integer)
-					R_Shadow_DrawWorldLightShadowVolume(&ent->matrix, wl);
-				else
-					R_TestAndDrawShadowVolume(ent, wl->origin, cullradius / ent->scale, lightradius / ent->scale, clipmins, clipmaxs);
-				if (r_drawentities.integer)
-				{
-					for (i = 0;i < r_refdef.numentities;i++)
-					{
-						ent = r_refdef.entities[i];
-						if (ent->maxs[0] >= wl->mins[0] && ent->mins[0] <= wl->maxs[0]
-						 && ent->maxs[1] >= wl->mins[1] && ent->mins[1] <= wl->maxs[1]
-						 && ent->maxs[2] >= wl->mins[2] && ent->mins[2] <= wl->maxs[2]
-						 && !(ent->effects & EF_ADDITIVE) && ent->alpha == 1)
-							R_TestAndDrawShadowVolume(r_refdef.entities[i], wl->origin, cullradius / ent->scale, lightradius / ent->scale, clipmins, clipmaxs);
-					}
-				}
-			}
 		}
 	}
 	/*
@@ -1023,24 +1002,6 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 					}
 				}
 			}
-
-			R_Shadow_Stage_EraseShadowVolumes();
-			if (sl->shadowvolume && r_staticworldlights.integer)
-				R_DrawWorldLightShadowVolume(&cl_entities[0].render.matrix, sl->shadowvolume);
-			else
-				R_TestAndDrawShadowVolume(&cl_entities[0].render, sl->origin, cullradius, lightradius);
-			if (r_drawentities.integer)
-			{
-				for (i = 0;i < r_refdef.numentities;i++)
-				{
-					ent = r_refdef.entities[i];
-					if (ent->maxs[0] >= sl->mins[0] && ent->mins[0] <= sl->maxs[0]
-					&& ent->maxs[1] >= sl->mins[1] && ent->mins[1] <= sl->maxs[1]
-					&& ent->maxs[2] >= sl->mins[2] && ent->mins[2] <= sl->maxs[2]
-					&& !(ent->effects & EF_ADDITIVE) && ent->alpha == 1)
-						R_TestAndDrawShadowVolume(r_refdef.entities[i], sl->origin, cullradius, lightradius);
-				}
-			}
 		}
 	}
 	*/
@@ -1097,21 +1058,6 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 						Matrix4x4_Transform(&ent->inversematrix, rd->origin, relativelightorigin);
 						Matrix4x4_Transform(&ent->inversematrix, r_origin, relativeeyeorigin);
 						ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, lightradius / ent->scale, lightcolor);
-					}
-				}
-			}
-
-			if (R_Shadow_Stage_EraseShadowVolumes())
-			{
-				ent = &cl_entities[0].render;
-				R_TestAndDrawShadowVolume(ent, rd->origin, cullradius / ent->scale, lightradius / ent->scale, clipmins, clipmaxs);
-				if (r_drawentities.integer)
-				{
-					for (i = 0;i < r_refdef.numentities;i++)
-					{
-						ent = r_refdef.entities[i];
-						if (ent != rd->ent && !(ent->effects & EF_ADDITIVE) && ent->alpha == 1)
-							R_TestAndDrawShadowVolume(ent, rd->origin, cullradius / ent->scale, lightradius / ent->scale, clipmins, clipmaxs);
 					}
 				}
 			}

@@ -523,47 +523,28 @@ void Mod_BuildTextureVectorsAndNormals(int numverts, int numtriangles, const flo
 shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts)
 {
 	shadowmesh_t *mesh;
-#define ALLOCMESHINPIECES 0
-#if ALLOCMESHINPIECES
-	mesh = Mem_Alloc(mempool, sizeof(shadowmesh_t));
-#else
-	mesh = Mem_Alloc(mempool, sizeof(shadowmesh_t) + maxverts * sizeof(float[4]) + maxverts * sizeof(int[3]) + maxverts * sizeof(int[3]));
-#endif
+	mesh = Mem_Alloc(mempool, sizeof(shadowmesh_t) + maxverts * sizeof(float[4]) + maxverts * sizeof(int[3]) + maxverts * sizeof(int[3]) + SHADOWMESHVERTEXHASH * sizeof(shadowmeshvertexhash_t *) + maxverts * sizeof(shadowmeshvertexhash_t));
 	mesh->maxverts = maxverts;
 	mesh->maxtriangles = maxverts;
 	mesh->numverts = 0;
 	mesh->numtriangles = 0;
-#if ALLOCMESHINPIECES
-	mesh->verts = Mem_Alloc(mempool, maxverts * sizeof(float[4]));
-	mesh->elements = Mem_Alloc(mempool, maxverts * sizeof(int[3]));
-	mesh->neighbors = Mem_Alloc(mempool, maxverts * sizeof(int[3]));
-#else
 	mesh->verts = (float *)(mesh + 1);
 	mesh->elements = (int *)(mesh->verts + mesh->maxverts * 4);
 	mesh->neighbors = (int *)(mesh->elements + mesh->maxtriangles * 3);
-#endif
+	mesh->vertexhashtable = (shadowmeshvertexhash_t **)(mesh->neighbors + mesh->maxtriangles * 3);
+	mesh->vertexhashentries = (shadowmeshvertexhash_t *)(mesh->vertexhashtable + SHADOWMESHVERTEXHASH);
 	return mesh;
 }
 
 shadowmesh_t *Mod_ShadowMesh_ReAlloc(mempool_t *mempool, shadowmesh_t *oldmesh)
 {
 	shadowmesh_t *newmesh;
-#if ALLOCMESHINPIECES
-	newmesh = Mem_Alloc(mempool, sizeof(shadowmesh_t));
-#else
 	newmesh = Mem_Alloc(mempool, sizeof(shadowmesh_t) + oldmesh->numverts * sizeof(float[4]) + oldmesh->numtriangles * sizeof(int[3]) + oldmesh->numtriangles * sizeof(int[3]));
-#endif
 	newmesh->maxverts = newmesh->numverts = oldmesh->numverts;
 	newmesh->maxtriangles = newmesh->numtriangles = oldmesh->numtriangles;
-#if ALLOCMESHINPIECES
-	newmesh->verts = Mem_Alloc(mempool, newmesh->maxverts * sizeof(float[4]));
-	newmesh->elements = Mem_Alloc(mempool, newmesh->numtriangles * sizeof(int[3]));
-	newmesh->neighbors = Mem_Alloc(mempool, newmesh->numtriangles * sizeof(int[3]));
-#else
 	newmesh->verts = (float *)(newmesh + 1);
 	newmesh->elements = (int *)(newmesh->verts + newmesh->maxverts * 4);
 	newmesh->neighbors = (int *)(newmesh->elements + newmesh->maxtriangles * 3);
-#endif
 	memcpy(newmesh->verts, oldmesh->verts, newmesh->numverts * sizeof(float[4]));
 	memcpy(newmesh->elements, oldmesh->elements, newmesh->numtriangles * sizeof(int[3]));
 	memcpy(newmesh->neighbors, oldmesh->neighbors, newmesh->numtriangles * sizeof(int[3]));
@@ -572,17 +553,24 @@ shadowmesh_t *Mod_ShadowMesh_ReAlloc(mempool_t *mempool, shadowmesh_t *oldmesh)
 
 int Mod_ShadowMesh_AddVertex(shadowmesh_t *mesh, float *v)
 {
-	int j;
-	float *m, temp[3];
-	for (j = 0, m = mesh->verts;j < mesh->numverts;j++, m += 4)
+	int hashindex;
+	float *m;
+	shadowmeshvertexhash_t *hash;
+	// this uses prime numbers intentionally
+	hashindex = (int) (v[0] * 3 + v[1] * 5 + v[2] * 7) % SHADOWMESHVERTEXHASH;
+	for (hash = mesh->vertexhashtable[hashindex];hash;hash = hash->next)
 	{
-		VectorSubtract(v, m, temp);
-		if (DotProduct(temp, temp) < 0.1)
-			return j;
+		m = mesh->verts + (hash - mesh->vertexhashentries) * 4;
+		if (m[0] == v[0] && m[1] == v[1] &&  m[2] == v[2])
+			return hash - mesh->vertexhashentries;
 	}
-	mesh->numverts++;
+	hash = mesh->vertexhashentries + mesh->numverts;
+	hash->next = mesh->vertexhashtable[hashindex];
+	mesh->vertexhashtable[hashindex] = hash;
+	m = mesh->verts + (hash - mesh->vertexhashentries) * 4;
 	VectorCopy(v, m);
-	return j;
+	mesh->numverts++;
+	return mesh->numverts - 1;
 }
 
 void Mod_ShadowMesh_AddTriangle(mempool_t *mempool, shadowmesh_t *mesh, float *vert0, float *vert1, float *vert2)
@@ -658,6 +646,7 @@ shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh)
 			//Con_Printf("mesh\n");
 			//for (i = 0;i < newmesh->numtriangles;i++)
 			//	Con_Printf("tri %d %d %d\n", newmesh->elements[i * 3 + 0], newmesh->elements[i * 3 + 1], newmesh->elements[i * 3 + 2]);
+			Mod_ValidateElements(newmesh->elements, newmesh->numtriangles, newmesh->numverts, __FILE__, __LINE__);
 			Mod_BuildTriangleNeighbors(newmesh->neighbors, newmesh->elements, newmesh->numtriangles);
 		}
 		Mem_Free(mesh);
@@ -665,7 +654,10 @@ shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh)
 #else
 	shadowmesh_t *mesh;
 	for (mesh = firstmesh;mesh;mesh = mesh->next)
+	{
+		Mod_ValidateElements(mesh->elements, mesh->numtriangles, mesh->numverts, __FILE__, __LINE__);
 		Mod_BuildTriangleNeighbors(mesh->neighbors, mesh->elements, mesh->numtriangles);
+	}
 #endif
 	return firstmesh;
 }
@@ -723,11 +715,6 @@ void Mod_ShadowMesh_Free(shadowmesh_t *mesh)
 	for (;mesh;mesh = nextmesh)
 	{
 		nextmesh = mesh->next;
-#if ALLOCMESHINPIECES
-		Mem_Free(mesh->verts);
-		Mem_Free(mesh->elements);
-		Mem_Free(mesh->neighbors);
-#endif
 		Mem_Free(mesh);
 	}
 }

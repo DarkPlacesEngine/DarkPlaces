@@ -1824,6 +1824,7 @@ void R_Model_Brush_DrawShadowVolume (entity_render_t *ent, vec3_t relativelighto
 	R_Mesh_Matrix(&ent->matrix);
 	lightradius2 = lightradius * lightradius;
 	R_UpdateTextureInfo(ent);
+	projectdistance = 1000000000.0f;//lightradius + ent->model->radius;
 	for (i = 0, surf = ent->model->surfaces + ent->model->firstmodelsurface;i < ent->model->nummodelsurfaces;i++, surf++)
 	{
 		if (surf->texinfo->texture->rendertype == SURFRENDER_OPAQUE && surf->flags & SURF_SHADOWCAST)
@@ -1831,12 +1832,13 @@ void R_Model_Brush_DrawShadowVolume (entity_render_t *ent, vec3_t relativelighto
 			f = PlaneDiff(relativelightorigin, surf->plane);
 			if (surf->flags & SURF_PLANEBACK)
 				f = -f;
-			// draw shadows only for frontfaces
-			projectdistance = lightradius - f;
-			if (projectdistance >= 0.1 && projectdistance < lightradius)
+			// draw shadows only for frontfaces and only if they are close
+			if (f >= 0.1 && f < lightradius)
 			{
-				VectorSubtract(relativelightorigin, surf->poly_center, temp);
-				if (DotProduct(temp, temp) < lightradius2 - surf->poly_radius2)
+				temp[0] = bound(surf->poly_mins[0], relativelightorigin[0], surf->poly_maxs[0]) - relativelightorigin[0];
+				temp[1] = bound(surf->poly_mins[1], relativelightorigin[1], surf->poly_maxs[1]) - relativelightorigin[1];
+				temp[2] = bound(surf->poly_mins[2], relativelightorigin[2], surf->poly_maxs[2]) - relativelightorigin[2];
+				if (DotProduct(temp, temp) < lightradius2)
 				{
 					for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 					{
@@ -1893,8 +1895,10 @@ void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 		// bmodel, cull crudely to view and light
 		for (surfnum = 0, surf = ent->model->surfaces + ent->model->firstmodelsurface;surfnum < ent->model->nummodelsurfaces;surfnum++, surf++)
 		{
-			VectorSubtract(relativelightorigin, surf->poly_center, temp);
-			if (DotProduct(temp, temp) < lightradius2 - surf->poly_radius2)
+			temp[0] = bound(surf->poly_mins[0], relativelightorigin[0], surf->poly_maxs[0]) - relativelightorigin[0];
+			temp[1] = bound(surf->poly_mins[1], relativelightorigin[1], surf->poly_maxs[1]) - relativelightorigin[1];
+			temp[2] = bound(surf->poly_mins[2], relativelightorigin[2], surf->poly_maxs[2]) - relativelightorigin[2];
+			if (DotProduct(temp, temp) < lightradius2)
 			{
 				f = PlaneDiff(relativelightorigin, surf->plane);
 				if (surf->flags & SURF_PLANEBACK)
@@ -1929,8 +1933,10 @@ void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 		{
 			if (surf->visframe == r_framecount)
 			{
-				VectorSubtract(relativelightorigin, surf->poly_center, temp);
-				if (DotProduct(temp, temp) < lightradius2 - surf->poly_radius2)
+				temp[0] = bound(surf->poly_mins[0], relativelightorigin[0], surf->poly_maxs[0]) - relativelightorigin[0];
+				temp[1] = bound(surf->poly_mins[1], relativelightorigin[1], surf->poly_maxs[1]) - relativelightorigin[1];
+				temp[2] = bound(surf->poly_mins[2], relativelightorigin[2], surf->poly_maxs[2]) - relativelightorigin[2];
+				if (DotProduct(temp, temp) < lightradius2)
 				{
 					f = PlaneDiff(relativelightorigin, surf->plane);
 					if (surf->flags & SURF_PLANEBACK)
