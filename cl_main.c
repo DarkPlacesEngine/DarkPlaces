@@ -1063,11 +1063,11 @@ void R_DrawLightningBeamCallback(const void *calldata1, int calldata2)
 	t2 = t1 + beamrepeatscale * length;
 
 	// the beam is 3 polygons in this configuration:
-	//  3   2
+	//  *   2
 	//   * *
 	// 1******
 	//   * *
-	//  *   *
+	//  *   3
 	// they are showing different portions of the beam texture, creating an
 	// illusion of a beam that appears to curl around in 3D space
 	// (and realize that the whole polygon assembly orients itself to face
