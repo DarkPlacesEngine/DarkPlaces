@@ -444,17 +444,10 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 		case LHNETADDRESSTYPE_INET4:
 		case LHNETADDRESSTYPE_INET6:
 #ifdef WIN32
-			if (!lhnet_didWSAStartup && !WSAStartup(MAKEWORD(1, 1), &lhnet_winsockdata))
-			{
-				lhnet_didWSAStartup = 1;
-#else
+			if (lhnet_didWSAStartup || (lhnet_didWSAStartup = !WSAStartup(MAKEWORD(1, 1), &lhnet_winsockdata)))
 			{
 #endif
-				if (address->addresstype == LHNETADDRESSTYPE_INET6)
-					lhnetsocket->inetsocket = socket(LHNETADDRESSTYPE_INET6_FAMILY, SOCK_DGRAM, IPPROTO_UDP);
-				else
-					lhnetsocket->inetsocket = socket(LHNETADDRESSTYPE_INET4_FAMILY, SOCK_DGRAM, IPPROTO_UDP);
-				if (lhnetsocket->inetsocket != -1)
+				if ((lhnetsocket->inetsocket = socket(address->addresstype == LHNETADDRESSTYPE_INET6 ? LHNETADDRESSTYPE_INET6_FAMILY : LHNETADDRESSTYPE_INET4_FAMILY, SOCK_DGRAM, IPPROTO_UDP)) != -1)
 				{
 #ifdef WIN32
 					u_long _true = 1;
@@ -485,7 +478,11 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 				}
 				else
 					Con_Printf("LHNET_OpenSocket_Connectionless: socket returned error: %s\n", LHNETPRIVATE_StrError());
+#ifdef WIN32
 			}
+			else
+				Con_Printf("LHNET_OpenSocket_Connectionless: WSAStartup failed\n");
+#endif
 			break;
 		default:
 			break;
