@@ -368,6 +368,8 @@ void transpolyrender()
 {
 	int i, j, tpolytype, texnum;
 	transpoly_t *p;
+	if (!r_render.value)
+		return;
 	if (currenttranspoly < 1)
 		return;
 //	transpolyrenderminmax();
@@ -570,6 +572,8 @@ void wallpolyrender()
 	int i, j, texnum, lighttexnum;
 	wallpoly_t *p;
 	wallvert_t *vert;
+	if (!r_render.value)
+		return;
 	if (currentwallpoly < 1)
 		return;
 	c_brush_polys += currentwallpoly;
@@ -793,6 +797,8 @@ void skypolyrender()
 	skyvert_t *vert;
 	float length, speedscale;
 	vec3_t dir;
+	if (!r_render.value)
+		return;
 	if (currentskypoly < 1)
 		return;
 	// testing

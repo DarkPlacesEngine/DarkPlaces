@@ -89,6 +89,7 @@ cvar_t		scr_showturtle = {"showturtle","0"};
 cvar_t		scr_showpause = {"showpause","1"};
 cvar_t		scr_printspeed = {"scr_printspeed","8"};
 cvar_t		showfps = {"showfps", "0", true};
+cvar_t		r_render = {"r_render", "1"};
 
 extern	cvar_t	crosshair;
 
@@ -397,6 +398,10 @@ void GL_Screen_Init (void)
 	Cvar_RegisterVariable (&scr_centertime);
 	Cvar_RegisterVariable (&scr_printspeed);
 	Cvar_RegisterVariable (&showfps);
+	Cvar_RegisterVariable (&r_render);
+#ifdef NORENDER
+	r_render.value = 0;
+#endif
 
 //
 // register our commands
@@ -632,7 +637,8 @@ void SCR_ScreenShot_f (void)
 	buffer[15] = glheight>>8;
 	buffer[16] = 24;	// pixel size
 
-	glReadPixels (glx, gly, glwidth, glheight, GL_RGB, GL_UNSIGNED_BYTE, buffer+18 ); 
+	if (r_render.value)
+		glReadPixels (glx, gly, glwidth, glheight, GL_RGB, GL_UNSIGNED_BYTE, buffer+18 ); 
 
 	// swap rgb to bgr
 	c = 18+glwidth*glheight*3;
@@ -802,6 +808,8 @@ extern cvar_t gl_lightmode;
 void GL_BrightenScreen()
 {
 	float f;
+	if (!r_render.value)
+		return;
 	glDisable(GL_TEXTURE_2D);
 	glEnable(GL_BLEND);
 	f = brightness.value = bound(1.0f, brightness.value, 5.0f);
@@ -901,8 +909,11 @@ void SCR_UpdateScreen (void)
 	if (vid.recalc_refdef)
 		SCR_CalcRefdef ();
 
-	glClearColor(0,0,0,0);
-	glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // LordHavoc: clear the screen (around the view as well)
+	if (r_render.value)
+	{
+		glClearColor(0,0,0,0);
+		glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // LordHavoc: clear the screen (around the view as well)
+	}
 
 //
 // do 3D refresh drawing, and then update the screen
@@ -980,6 +991,8 @@ void SCR_UpdateScreen (void)
 // for profiling, this is seperated
 void GL_Finish()
 {
+	if (!r_render.value)
+		return;
 	glFinish ();
 }
 

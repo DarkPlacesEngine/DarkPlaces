@@ -3,6 +3,7 @@
 cvar_t		gl_max_size = {"gl_max_size", "1024"};
 cvar_t		gl_picmip = {"gl_picmip", "0"};
 cvar_t		gl_lerpimages = {"gl_lerpimages", "1"};
+cvar_t		r_upload = {"r_upload", "1"};
 
 int		gl_filter_min = GL_LINEAR_MIPMAP_LINEAR; //NEAREST;
 int		gl_filter_max = GL_LINEAR;
@@ -83,6 +84,8 @@ void Draw_TextureMode_f (void)
 	gl_filter_min = modes[i].minimize;
 	gl_filter_max = modes[i].maximize;
 
+	if (!r_upload.value)
+		return;
 	// change all the existing mipmap texture objects
 	for (i=0, glt=gltextures ; i<numgltextures ; i++, glt++)
 	{
@@ -117,6 +120,10 @@ void GL_Textures_Init (void)
 	Cvar_RegisterVariable (&gl_max_size);
 	Cvar_RegisterVariable (&gl_picmip);
 	Cvar_RegisterVariable (&gl_lerpimages);
+	Cvar_RegisterVariable (&r_upload);
+#ifdef NORENDER
+	r_upload.value = 0;
+#endif
 
 	// 3dfx can only handle 256 wide textures
 	if (!Q_strncasecmp ((char *)gl_renderer, "3dfx",4) || strstr((char *)gl_renderer, "Glide"))
@@ -728,6 +735,8 @@ void GL_MipReduce(byte *in, byte *out, int width, int height, int destwidth, int
 void GL_UploadTexture (gltexture_t *glt)
 {
 	int mip, width, height;
+	if (!r_upload.value)
+		return;
 	glBindTexture(GL_TEXTURE_2D, glt->texnum);
 	width = glt->width;
 	height = glt->height;

@@ -151,6 +151,8 @@ extern qboolean lighthalf;
 void GL_DrawModelMesh(int skin, byte *colors, maliashdr_t *maliashdr)
 {
 	int i;
+	if (!r_render.value)
+		return;
 	glBindTexture(GL_TEXTURE_2D, skin);
 	if (!colors)
 	{
@@ -255,14 +257,19 @@ void R_DrawAliasFrame (maliashdr_t *maliashdr, float alpha, vec3_t color, entity
 	R_AliasLerpVerts(maliashdr->numverts, lerp, (trivert2 *)((int) maliashdr + maliashdr->posedata) + ent->draw_lastpose * maliashdr->numverts, maliashdr->scale, maliashdr->scale_origin, (trivert2 *)((int) maliashdr + maliashdr->posedata) + ent->draw_pose * maliashdr->numverts, maliashdr->scale, maliashdr->scale_origin);
 
 	// prep the vertex array as early as possible
-	if (gl_vertexarrays.value)
+	if (r_render.value)
 	{
-		qglVertexPointer(3, GL_FLOAT, 0, aliasvert);
-		glEnableClientState(GL_VERTEX_ARRAY);
+		if (gl_vertexarrays.value)
+		{
+			qglVertexPointer(3, GL_FLOAT, 0, aliasvert);
+			glEnableClientState(GL_VERTEX_ARRAY);
+		}
 	}
 
 	R_LightModel(maliashdr->numverts, org, color);
 
+	if (!r_render.value)
+		return;
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glShadeModel(GL_SMOOTH);
 	if (effects & EF_ADDITIVE)
@@ -401,7 +408,8 @@ void R_DrawQ2AliasFrame (md2mem_t *pheader, float alpha, vec3_t color, entity_t 
 	float lerp;
 	md2memframe_t *frame1, *frame2;
 
-	glBindTexture(GL_TEXTURE_2D, skin);
+	if (r_render.value)
+		glBindTexture(GL_TEXTURE_2D, skin);
 
 	softwaretransformforentity(ent);
 
@@ -419,6 +427,8 @@ void R_DrawQ2AliasFrame (md2mem_t *pheader, float alpha, vec3_t color, entity_t 
 
 	R_LightModel(pheader->num_xyz, org, color);
 
+	if (!r_render.value)
+		return;
 	if (gl_vertexarrays.value)
 	{
 		// LordHavoc: big mess...
@@ -666,7 +676,8 @@ void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, i
 			R_LightPoint (color, org);
 	}
 
-	glDisable(GL_ALPHA_TEST);
+	if (r_render.value)
+		glDisable(GL_ALPHA_TEST);
 
 	if (frame < 0 || frame >= clmodel->numframes)
 	{
@@ -693,7 +704,8 @@ void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, i
 		skinset = skinanim + i*5;
 	}
 
-	glEnable (GL_TEXTURE_2D);
+	if (r_render.value)
+		glEnable (GL_TEXTURE_2D);
 
 	c_alias_polys += clmodel->numtris;
 	if (clmodel->aliastype == ALIASTYPE_MD2)

@@ -242,3 +242,6 @@ extern vec_t fogdensity;
 #include "r_modules.h"
 
 extern void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, int frame, int skin, vec3_t org, int effects, int flags, int colormap);
+
+extern cvar_t r_render;
+extern cvar_t r_upload;

@@ -269,6 +269,8 @@ void GL_BeginRendering (int *x, int *y, int *width, int *height)
 
 void GL_EndRendering (void)
 {
+	if (!r_render.value)
+		return;
 	glFlush();
 	fxMesaSwapBuffers();
 }

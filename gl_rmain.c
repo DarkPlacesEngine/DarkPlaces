@@ -131,6 +131,8 @@ void FOG_framebegin()
 	}
 	if (glfog.value)
 	{
+		if (!r_render.value)
+			return;
 		if(fog_density)
 		{
 			// LordHavoc: Borland C++ 5.0 was choking on this line, stupid compiler...
@@ -637,6 +639,8 @@ void R_SetupGL (void)
 	extern	int glwidth, glheight;
 	int		x, x2, y2, y, w, h;
 
+	if (!r_render.value)
+		return;
 	//
 	// set up viewpoint
 	//
@@ -715,6 +719,8 @@ R_Clear
 */
 void R_Clear (void)
 {
+	if (!r_render.value)
+		return;
 //	glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // LordHavoc: moved to SCR_UpdateScreen
 	gldepthmin = 0;
 	gldepthmax = 1;
@@ -726,6 +732,8 @@ void R_Clear (void)
 // LordHavoc: my trick to *FIX* GLQuake lighting once and for all :)
 void GL_Brighten()
 {
+	if (!r_render.value)
+		return;
 	glMatrixMode(GL_PROJECTION);
     glLoadIdentity ();
 	glOrtho  (0, vid.width, vid.height, 0, -99999, 99999);
@@ -755,6 +763,8 @@ extern cvar_t gl_lightmode;
 
 void GL_BlendView()
 {
+	if (!r_render.value)
+		return;
 	glMatrixMode(GL_PROJECTION);
     glLoadIdentity ();
 	glOrtho  (0, vid.width, vid.height, 0, -99999, 99999);
