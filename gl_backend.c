@@ -253,6 +253,15 @@ void GL_SetupView_Mode_Ortho (double x1, double y1, double x2, double y2, double
 	GL_SetupView_Orientation_Identity();
 }
 
+typedef struct gltextureunit_s
+{
+	unsigned int t1d, t2d, t3d, tcubemap;
+	unsigned int arrayenabled;
+	float rgbscale;
+	// FIXME: add more combine stuff
+}
+gltextureunit_t;
+
 static struct
 {
 	int blendfunc1;
@@ -262,8 +271,7 @@ static struct
 	int depthdisable;
 	int unit;
 	int clientunit;
-	int texture[MAX_TEXTUREUNITS];
-	float texturergbscale[MAX_TEXTUREUNITS];
+	gltextureunit_t units[MAX_TEXTUREUNITS];
 	int colorarray;
 }
 gl_state;
@@ -271,114 +279,81 @@ gl_state;
 void GL_SetupTextureState(void)
 {
 	int i;
-	if (backendunits > 1)
+	gltextureunit_t *unit;
+	for (i = 0;i < backendunits;i++)
 	{
-		for (i = 0;i < backendunits;i++)
-		{
+		if (qglActiveTexture)
 			qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
-			qglBindTexture(GL_TEXTURE_2D, gl_state.texture[i]);CHECKGLERROR
-			if (gl_combine.integer)
-			{
-				qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);CHECKGLERROR
-				qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, GL_MODULATE);CHECKGLERROR
-				qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);CHECKGLERROR
-				qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB);CHECKGLERROR
-				qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_RGB_ARB, GL_CONSTANT_ARB);CHECKGLERROR
-				qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);CHECKGLERROR
-				qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);CHECKGLERROR
-				qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_RGB_ARB, GL_SRC_ALPHA);CHECKGLERROR
-				qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA_ARB, GL_MODULATE);CHECKGLERROR
-				qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_ALPHA_ARB, GL_TEXTURE);CHECKGLERROR
-				qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_ALPHA_ARB, GL_PREVIOUS_ARB);CHECKGLERROR
-				qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_ALPHA_ARB, GL_CONSTANT_ARB);CHECKGLERROR
-				qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA_ARB, GL_SRC_ALPHA);CHECKGLERROR
-				qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_ALPHA_ARB, GL_SRC_ALPHA);CHECKGLERROR
-				qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_ALPHA_ARB, GL_SRC_ALPHA);CHECKGLERROR
-				qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, gl_state.texturergbscale[i]);CHECKGLERROR
-				qglTexEnvi(GL_TEXTURE_ENV, GL_ALPHA_SCALE, 1);CHECKGLERROR
-			}
-			else
-			{
-				qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);CHECKGLERROR
-			}
-			if (gl_state.texture[i])
-			{
-				qglEnable(GL_TEXTURE_2D);CHECKGLERROR
-			}
-			else
-			{
-				qglDisable(GL_TEXTURE_2D);CHECKGLERROR
-			}
+		if (qglClientActiveTexture)
 			qglClientActiveTexture(GL_TEXTURE0_ARB + (gl_state.clientunit = i));CHECKGLERROR
-			if (gl_texture3d)
-				qglTexCoordPointer(3, GL_FLOAT, sizeof(float[4]), varray_texcoord[i]);CHECKGLERROR
-			else
-				qglTexCoordPointer(2, GL_FLOAT, sizeof(float[4]), varray_texcoord[i]);CHECKGLERROR
-			if (gl_state.texture[i])
-			{
-				qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
-			}
-			else
-			{
-				qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
-			}
-		}
-	}
-	else
-	{
-		qglBindTexture(GL_TEXTURE_2D, gl_state.texture[0]);CHECKGLERROR
-		qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);CHECKGLERROR
-		if (gl_state.texture[0])
-		{
-			qglEnable(GL_TEXTURE_2D);CHECKGLERROR
-		}
-		else
-		{
-			qglDisable(GL_TEXTURE_2D);CHECKGLERROR
-		}
+		unit = gl_state.units + i;
+		unit->t1d = 0;
+		unit->t2d = 0;
+		unit->t3d = 0;
+		unit->tcubemap = 0;
+		unit->rgbscale = 1;
+		unit->arrayenabled = false;
+		qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 		if (gl_texture3d)
-			qglTexCoordPointer(3, GL_FLOAT, sizeof(float[4]), varray_texcoord[0]);CHECKGLERROR
+			qglTexCoordPointer(3, GL_FLOAT, sizeof(float[4]), varray_texcoord[i]);CHECKGLERROR
 		else
-			qglTexCoordPointer(2, GL_FLOAT, sizeof(float[4]), varray_texcoord[0]);CHECKGLERROR
-		if (gl_state.texture[0])
+			qglTexCoordPointer(2, GL_FLOAT, sizeof(float[4]), varray_texcoord[i]);CHECKGLERROR
+		qglDisable(GL_TEXTURE_1D);CHECKGLERROR
+		qglDisable(GL_TEXTURE_2D);CHECKGLERROR
+		if (gl_texture3d)
 		{
-			qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+			qglDisable(GL_TEXTURE_3D_EXT);CHECKGLERROR
+		}
+		if (gl_texturecubemap)
+		{
+			qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
+		}
+		if (gl_combine.integer)
+		{
+			qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, GL_MODULATE);CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB);CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_RGB_ARB, GL_CONSTANT_ARB);CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_RGB_ARB, GL_SRC_ALPHA);CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA_ARB, GL_MODULATE);CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_ALPHA_ARB, GL_TEXTURE);CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_ALPHA_ARB, GL_PREVIOUS_ARB);CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_ALPHA_ARB, GL_CONSTANT_ARB);CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA_ARB, GL_SRC_ALPHA);CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_ALPHA_ARB, GL_SRC_ALPHA);CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_ALPHA_ARB, GL_SRC_ALPHA);CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, 1);CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_ALPHA_SCALE, 1);CHECKGLERROR
 		}
 		else
 		{
-			qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);CHECKGLERROR
 		}
 	}
 }
 
 void GL_Backend_ResetState(void)
 {
-	int i;
-	gl_state.unit = 0;
-	gl_state.clientunit = 0;
+	memset(&gl_state, 0, sizeof(gl_state));
+	gl_state.depthdisable = false;
+	gl_state.blendfunc1 = GL_ONE;
+	gl_state.blendfunc2 = GL_ZERO;
+	gl_state.blend = false;
+	gl_state.depthmask = GL_TRUE;
+	gl_state.colorarray = false;
 
-	for (i = 0;i < backendunits;i++)
-	{
-		gl_state.texture[i] = 0;
-		gl_state.texturergbscale[i] = 1;
-	}
+	qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
+	qglDisableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
 
 	qglEnable(GL_CULL_FACE);CHECKGLERROR
 	qglCullFace(GL_FRONT);CHECKGLERROR
-
-	gl_state.depthdisable = false;
 	qglEnable(GL_DEPTH_TEST);CHECKGLERROR
-
-	gl_state.blendfunc1 = GL_ONE;
-	gl_state.blendfunc2 = GL_ZERO;
 	qglBlendFunc(gl_state.blendfunc1, gl_state.blendfunc2);CHECKGLERROR
-
-	gl_state.blend = 0;
 	qglDisable(GL_BLEND);CHECKGLERROR
-
-	gl_state.depthmask = GL_TRUE;
 	qglDepthMask(gl_state.depthmask);CHECKGLERROR
-
 	qglVertexPointer(3, GL_FLOAT, sizeof(float[4]), varray_vertex);CHECKGLERROR
 	qglEnableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
 	if (gl_mesh_floatcolors.integer)
@@ -389,8 +364,6 @@ void GL_Backend_ResetState(void)
 	{
 		qglColorPointer(4, GL_UNSIGNED_BYTE, sizeof(qbyte[4]), varray_bcolor);CHECKGLERROR
 	}
-	// LordHavoc: default to color array off
-	gl_state.colorarray = false;
 	GL_Color(1, 1, 1, 1);
 
 	GL_SetupTextureState();
@@ -467,33 +440,6 @@ void GL_ConvertColorsFloatToByte(int numverts)
 	}
 }
 
-/*
-void GL_TransformVertices(int numverts)
-{
-	int i;
-	float m[12], tempv[4], *v;
-	m[0] = backendmatrix.m[0][0];
-	m[1] = backendmatrix.m[0][1];
-	m[2] = backendmatrix.m[0][2];
-	m[3] = backendmatrix.m[0][3];
-	m[4] = backendmatrix.m[1][0];
-	m[5] = backendmatrix.m[1][1];
-	m[6] = backendmatrix.m[1][2];
-	m[7] = backendmatrix.m[1][3];
-	m[8] = backendmatrix.m[2][0];
-	m[9] = backendmatrix.m[2][1];
-	m[10] = backendmatrix.m[2][2];
-	m[11] = backendmatrix.m[2][3];
-	for (i = 0, v = varray_vertex;i < numverts;i++, v += 4)
-	{
-		VectorCopy(v, tempv);
-		v[0] = tempv[0] * m[0] + tempv[1] * m[1] + tempv[2] * m[2] + m[3];
-		v[1] = tempv[0] * m[4] + tempv[1] * m[5] + tempv[2] * m[6] + m[7];
-		v[2] = tempv[0] * m[8] + tempv[1] * m[9] + tempv[2] * m[10] + m[11];
-	}
-}
-*/
-
 void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, int *index)
 {
 	int arraylocked = false;
@@ -538,7 +484,6 @@ void R_Mesh_Draw(int numverts, int numtriangles, int *elements)
 
 	if (gl_state.colorarray && !gl_mesh_floatcolors.integer)
 		GL_ConvertColorsFloatToByte(numverts);
-	//GL_TransformVertices(numverts);
 	if (!r_render.integer)
 		return;
 	GL_DrawRangeElements(0, numverts, numtriangles * 3, elements);
@@ -550,35 +495,28 @@ void R_Mesh_Finish(void)
 	int i;
 	BACKENDACTIVECHECK
 
-	if (backendunits > 1)
+	for (i = backendunits - 1;i >= 0;i--)
 	{
-		for (i = backendunits - 1;i >= 0;i--)
-		{
+		if (qglActiveTexture)
 			qglActiveTexture(GL_TEXTURE0_ARB + i);CHECKGLERROR
-			qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);CHECKGLERROR
-			if (gl_combine.integer)
-			{
-				qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, 1);CHECKGLERROR
-			}
-			if (i > 0)
-			{
-				qglDisable(GL_TEXTURE_2D);CHECKGLERROR
-			}
-			else
-			{
-				qglEnable(GL_TEXTURE_2D);CHECKGLERROR
-			}
-			qglBindTexture(GL_TEXTURE_2D, 0);CHECKGLERROR
-
+		if (qglClientActiveTexture)
 			qglClientActiveTexture(GL_TEXTURE0_ARB + i);CHECKGLERROR
-			qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
-		}
-	}
-	else
-	{
-		qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);CHECKGLERROR
-		qglEnable(GL_TEXTURE_2D);CHECKGLERROR
 		qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+		qglDisable(GL_TEXTURE_1D);CHECKGLERROR
+		qglDisable(GL_TEXTURE_2D);CHECKGLERROR
+		if (gl_texture3d)
+		{
+			qglDisable(GL_TEXTURE_3D_EXT);CHECKGLERROR
+		}
+		if (gl_texturecubemap)
+		{
+			qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
+		}
+		qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);CHECKGLERROR
+		if (gl_combine.integer)
+		{
+			qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, 1);CHECKGLERROR
+		}
 	}
 	qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
 	qglDisableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
@@ -653,7 +591,8 @@ void R_Mesh_MainState(const rmeshstate_t *m)
 void R_Mesh_TextureState(const rmeshstate_t *m)
 {
 	int i;
-	int texturergbscale[MAX_TEXTUREUNITS];
+	float rgbscale;
+	gltextureunit_t *unit;
 
 	BACKENDACTIVECHECK
 
@@ -665,35 +604,30 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 
 	for (i = 0;i < backendunits;i++)
 	{
-		if (m->texrgbscale[i])
-			texturergbscale[i] = m->texrgbscale[i];
-		else
-			texturergbscale[i] = 1;
-	}
-
-	if (backendunits > 1)
-	{
-		for (i = 0;i < backendunits;i++)
+		unit = gl_state.units + i;
+		if (unit->t1d != m->tex1d[i] || unit->t2d != m->tex[i] || unit->t3d != m->tex3d[i] || unit->tcubemap != m->texcubemap[i])
 		{
-			if (gl_state.texture[i] != m->tex[i])
+			if (gl_state.unit != i)
 			{
-				if (gl_state.unit != i)
+				qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
+			}
+			if (m->tex1d[i] || m->tex[i] || m->tex3d[i] || m->texcubemap[i])
+			{
+				if (!unit->arrayenabled)
 				{
-					qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
-				}
-				if (gl_state.texture[i] == 0)
-				{
-					qglEnable(GL_TEXTURE_2D);CHECKGLERROR
+					unit->arrayenabled = true;
 					if (gl_state.clientunit != i)
 					{
 						qglClientActiveTexture(GL_TEXTURE0_ARB + (gl_state.clientunit = i));CHECKGLERROR
 					}
 					qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 				}
-				qglBindTexture(GL_TEXTURE_2D, (gl_state.texture[i] = m->tex[i]));CHECKGLERROR
-				if (gl_state.texture[i] == 0)
+			}
+			else
+			{
+				if (unit->arrayenabled)
 				{
-					qglDisable(GL_TEXTURE_2D);CHECKGLERROR
+					unit->arrayenabled = false;
 					if (gl_state.clientunit != i)
 					{
 						qglClientActiveTexture(GL_TEXTURE0_ARB + (gl_state.clientunit = i));CHECKGLERROR
@@ -701,31 +635,71 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 					qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 				}
 			}
-			if (gl_state.texturergbscale[i] != texturergbscale[i])
+			if (unit->t1d != m->tex1d[i])
 			{
-				if (gl_state.unit != i)
+				if (m->tex1d[i])
 				{
-					qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
+					if (unit->t1d == 0)
+						qglEnable(GL_TEXTURE_1D);CHECKGLERROR
 				}
-				qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, (gl_state.texturergbscale[i] = texturergbscale[i]));CHECKGLERROR
+				else
+				{
+					if (unit->t1d)
+						qglDisable(GL_TEXTURE_1D);CHECKGLERROR
+				}
+				qglBindTexture(GL_TEXTURE_1D, (unit->t1d = m->tex1d[i]));CHECKGLERROR
+			}
+			if (unit->t2d != m->tex[i])
+			{
+				if (m->tex[i])
+				{
+					if (unit->t2d == 0)
+						qglEnable(GL_TEXTURE_2D);CHECKGLERROR
+				}
+				else
+				{
+					if (unit->t2d)
+						qglDisable(GL_TEXTURE_2D);CHECKGLERROR
+				}
+				qglBindTexture(GL_TEXTURE_2D, (unit->t2d = m->tex[i]));CHECKGLERROR
+			}
+			if (unit->t3d != m->tex3d[i])
+			{
+				if (m->tex3d[i])
+				{
+					if (unit->t3d == 0)
+						qglEnable(GL_TEXTURE_3D_EXT);CHECKGLERROR
+				}
+				else
+				{
+					if (unit->t3d)
+						qglDisable(GL_TEXTURE_3D_EXT);CHECKGLERROR
+				}
+				qglBindTexture(GL_TEXTURE_3D_EXT, (unit->t3d = m->tex3d[i]));CHECKGLERROR
+			}
+			if (unit->tcubemap != m->texcubemap[i])
+			{
+				if (m->texcubemap[i])
+				{
+					if (unit->tcubemap == 0)
+						qglEnable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
+				}
+				else
+				{
+					if (unit->tcubemap)
+						qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
+				}
+				qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, (unit->tcubemap = m->texcubemap[i]));CHECKGLERROR
 			}
 		}
-	}
-	else
-	{
-		if (gl_state.texture[0] != m->tex[0])
+		rgbscale = max(m->texrgbscale[i], 1);
+		if (gl_state.units[i].rgbscale != rgbscale)
 		{
-			if (gl_state.texture[0] == 0)
+			if (gl_state.unit != i)
 			{
-				qglEnable(GL_TEXTURE_2D);CHECKGLERROR
-				qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+				qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
 			}
-			qglBindTexture(GL_TEXTURE_2D, (gl_state.texture[0] = m->tex[0]));CHECKGLERROR
-			if (gl_state.texture[0] == 0)
-			{
-				qglDisable(GL_TEXTURE_2D);CHECKGLERROR
-				qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
-			}
+			qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, (gl_state.units[i].rgbscale = rgbscale));CHECKGLERROR
 		}
 	}
 }

@@ -29,7 +29,10 @@ typedef struct
 	int blendfunc1;
 	int blendfunc2;
 	//int wantoverbright;
+	int tex1d[MAX_TEXTUREUNITS];
 	int tex[MAX_TEXTUREUNITS];
+	int tex3d[MAX_TEXTUREUNITS];
+	int texcubemap[MAX_TEXTUREUNITS];
 	int texrgbscale[MAX_TEXTUREUNITS]; // used only if COMBINE is present
 }
 rmeshstate_t;
