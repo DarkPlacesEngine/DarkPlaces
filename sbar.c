@@ -47,7 +47,8 @@ sbarpic_t *sb_colon, *sb_slash;
 sbarpic_t *sb_ibar;
 sbarpic_t *sb_sbar;
 sbarpic_t *sb_scorebar;
-// AK only used by NEX(and only if everybody agrees)
+// AK only used by NEX
+sbarpic_t *sb_sbar_minimal;
 sbarpic_t *sb_sbar_overlay;
 
 // AK changed the bound to 9
@@ -167,6 +168,7 @@ void sbar_start(void)
 		sb_items[5] = Sbar_NewPic ("gfx/sb_str");
 
 		sb_sbar = Sbar_NewPic("gfx/sbar");
+		sb_sbar_minimal = Sbar_NewPic("gfx/sbar_minimal");
 		sb_sbar_overlay = Sbar_NewPic("gfx/sbar_overlay");
 
 		for(i = 0; i < 9;i++)
@@ -904,11 +906,17 @@ void Sbar_Draw (void)
 		sbar_y = vid.conheight - 47;
 		sbar_x = (vid.conwidth - 640)/2;
 
-		if (sb_lines)
+		if (sb_showscores || cl.stats[STAT_HEALTH] <= 0)
+		{
+			Sbar_DrawAlphaPic (0, 0, sb_scorebar, 0.4);
+			Sbar_DrawScoreboard ();
+		}
+		else if (sb_lines)
 		{
 			int i;
 			double time;
 			float fade;
+
 			// we have a max time 2s (min time = 0)
 			if ((time = cl.time - cl.weapontime) < 2)
 			{
@@ -924,18 +932,14 @@ void Sbar_Draw (void)
 				if((cl.items & (1<<12)))
 					Sbar_DrawWeapon(0, fade, (cl.stats[STAT_ACTIVEWEAPON] == 12));
 			}
+
 			if (!cl.islocalgame)
 				Sbar_DrawFrags ();
-		}
 
-		if (sb_showscores || cl.stats[STAT_HEALTH] <= 0)
-		{
-			Sbar_DrawAlphaPic (0, 0, sb_scorebar, 0.4);
-			Sbar_DrawScoreboard ();
-		}
-		else if (sb_lines)
-		{
-			Sbar_DrawPic (0, 0, sb_sbar);
+			if (sb_lines > 24)
+				Sbar_DrawAlphaPic (0, 0, sb_sbar, sbar_alpha.value);
+			else
+				Sbar_DrawAlphaPic (0, 0, sb_sbar_minimal, sbar_alpha.value);
 
 			// special items
 			if (cl.items & IT_INVULNERABILITY)
@@ -974,7 +978,8 @@ void Sbar_Draw (void)
 
 			}
 
-			DrawQ_Pic(sbar_x,sbar_y,sb_sbar_overlay->name,0,0,1,1,1,1,DRAWFLAG_MODULATE);
+			if (sb_lines > 24)
+				DrawQ_Pic(sbar_x,sbar_y,sb_sbar_overlay->name,0,0,1,1,1,1,DRAWFLAG_MODULATE);
 		}
 
 		if (vid.conwidth > 320 && cl.gametype == GAME_DEATHMATCH)
