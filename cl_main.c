@@ -499,7 +499,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			return;
 		if (e->render.flags & RENDER_VIEWMODEL)
 		{
-			if (cl.stats[STAT_HEALTH] <= 0 || !r_drawviewmodel.integer || chase_active.integer || envmap || (cl.items & IT_INVISIBILITY))
+			if (!r_drawviewmodel.integer || chase_active.integer || envmap)
 				return;
 			if (cl.viewentity)
 				CL_LinkNetworkEntity(cl_entities + cl.viewentity);
@@ -846,6 +846,15 @@ static void CL_RelinkNetworkEntities(void)
 	ent->state_current.modelindex = cl.stats[STAT_WEAPON];
 	ent->state_current.frame = cl.stats[STAT_WEAPONFRAME];
 	ent->state_current.flags = RENDER_VIEWMODEL;
+	if (cl.stats[STAT_HEALTH] <= 0)
+		ent->state_current.modelindex = 0;
+	else if (cl.items & IT_INVISIBILITY)
+	{
+		if (gamemode == GAME_TRANSFUSION)
+			ent->state_current.alpha = 0.5;
+		else
+			ent->state_current.modelindex = 0;
+	}
 
 	// start on the entity after the world
 	entitylinkframenumber++;
