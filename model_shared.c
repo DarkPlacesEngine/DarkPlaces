@@ -349,7 +349,7 @@ static model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, 
 	else if (crash)
 	{
 		// LordHavoc: Sys_Error was *ANNOYING*
-		Con_Printf ("Mod_LoadModel: %s not found", mod->name);
+		Con_Printf ("Mod_LoadModel: %s not found\n", mod->name);
 	}
 
 	// no errors occurred
