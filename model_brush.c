@@ -3811,12 +3811,18 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 									out->basematerialflags |= MATERIALFLAG_NODRAW;
 								else if (out->surfaceparms & Q3SURFACEPARM_SKY)
 									out->basematerialflags |= MATERIALFLAG_SKY;
-								else if (out->surfaceparms & (Q3SURFACEPARM_WATER | Q3SURFACEPARM_SLIME | Q3SURFACEPARM_LAVA))
-									out->basematerialflags |= MATERIALFLAG_WATER;
+								else if (out->surfaceparms & Q3SURFACEPARM_LAVA)
+									out->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_FULLBRIGHT;
+								else if (out->surfaceparms & Q3SURFACEPARM_SLIME)
+									out->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_WATERALPHA;
+								else if (out->surfaceparms & Q3SURFACEPARM_WATER)
+									out->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_WATERALPHA;
 								else
 									out->basematerialflags |= MATERIALFLAG_WALL;
-								if (out->surfaceparms & (Q3SURFACEPARM_SLIME | Q3SURFACEPARM_WATER))
-									out->basematerialflags |= MATERIALFLAG_WATERALPHA;
+								if (out->surfaceparms & Q3SURFACEPARM_TRANS)
+									out->basematerialflags |= MATERIALFLAG_TRANSPARENT;
+								if (out->textureflags & Q3TEXTUREFLAG_ADDITIVE)
+									out->basematerialflags |= MATERIALFLAG_ADD | MATERIALFLAG_TRANSPARENT;
 								strlcpy(out->firstpasstexturename, firstpasstexturename, sizeof(out->firstpasstexturename));
 								if ((flags & Q3SURFACEPARM_SKY) && sky[0])
 								{
