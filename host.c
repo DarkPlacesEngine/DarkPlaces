@@ -98,34 +98,6 @@ cvar_t timeformat = {CVAR_SAVE, "timeformat", "[%b %e %X] "};
 
 /*
 ================
-Host_EndGame
-================
-*/
-void Host_EndGame (const char *format, ...)
-{
-	va_list argptr;
-	char string[1024];
-
-	va_start (argptr,format);
-	vsprintf (string,format,argptr);
-	va_end (argptr);
-	Con_DPrintf("Host_EndGame: %s\n",string);
-
-	Host_ShutdownServer (false);
-
-	if (cls.state == ca_dedicated)
-		Sys_Error ("Host_EndGame: %s\n",string);	// dedicated servers exit
-
-	if (cls.demonum != -1)
-		CL_NextDemo ();
-	else
-		CL_Disconnect ();
-
-	longjmp (host_abortserver, 1);
-}
-
-/*
-================
 Host_Error
 
 This shuts down both the client and server
@@ -502,10 +474,10 @@ void Host_ShutdownServer(qboolean crash)
 	sizebuf_t buf;
 	char message[4];
 
+	Con_DPrintf("Host_ShutdownServer\n");
+
 	if (!sv.active)
 		return;
-
-	Con_DPrintf("Host_ShutdownServer\n");
 
 	// print out where the crash happened, if it was caused by QC
 	PR_Crash();
