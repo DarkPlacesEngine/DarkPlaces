@@ -1,0 +1,180 @@
+##### Variables that you may want to modify #####
+
+#choose the compiler you want to use
+CC=gcc
+
+OBJ_SND=snd_win.o snd_dma.o snd_mix.o snd_mem.o
+SOUNDLIB=
+
+OBJ_CD=cd_win.o
+
+#K6/athlon optimizations
+#CPUOPTIMIZATIONS=-march=k6
+#note: don't use -march=athlon, every gcc which has it currently (2.96-3.1)
+#have optimizer bugs (like entities disappearing randomly - a bug with
+#compiling BOX_ON_PLANE_SIDE in mathlib.h)
+#CPUOPTIMIZATIONS=-march=athlon
+#686 optimizations
+#CPUOPTIMIZATIONS=-march=i686
+#no specific CPU
+CPUOPTIMIZATIONS=
+
+
+##### Variables that you shouldn't care about #####
+
+# Objects
+CLIENTOBJECTS=	cgame.o cgamevm.o chase.o cl_collision.o cl_demo.o cl_input.o \
+		cl_main.o cl_parse.o cl_particles.o cl_screen.o cl_video.o \
+		console.o dpvsimpledecode.o fractalnoise.o gl_backend.o \
+		gl_draw.o gl_models.o gl_rmain.o gl_rsurf.o gl_textures.o \
+		jpeg.o keys.o menu.o meshqueue.o r_crosshairs.o r_explosion.o \
+		r_explosion.o r_lerpanim.o r_light.o r_modules.o r_sky.o \
+		r_sprites.o sbar.o ui.o vid_shared.o view.o wavefile.o \
+		r_shadow.o conproc.o
+SERVEROBJECTS=	pr_cmds.o pr_edict.o pr_exec.o sv_light.o sv_main.o sv_move.o \
+		sv_phys.o sv_user.o
+SHAREDOBJECTS=	builddate.o cmd.o collision.o common.o crc.o cvar.o \
+		filematch.o host.o host_cmd.o image.o mathlib.o matrixlib.o \
+		model_alias.o model_brush.o model_shared.o model_sprite.o \
+		net_dgrm.o net_loop.o net_main.o net_master.o \
+		palette.o portals.o protocol.o quakeio.o \
+		sys_shared.o world.o wad.o zone.o
+
+
+OBJ_COMMON= $(CLIENTOBJECTS) $(SERVEROBJECTS) $(SHAREDOBJECTS)
+OBJ_WGL= vid_wgl.o $(OBJ_CD) $(OBJ_SND) net_win.o net_wins.o net_wipx.o sys_win.o
+OBJ_DED= vid_null.o cd_null.o snd_null.o net_win.o net_wins.o net_wipx.o sys_win.o
+
+
+# Compilation
+CFLAGS_COMMON=-MD -Wall
+CFLAGS_DEBUG=-ggdb
+CFLAGS_PROFILE=-g -pg -ggdb
+CFLAGS_RELEASE=
+
+OPTIM_DEBUG=
+# OPTIM_RELEASE=	-O6 -fno-strict-aliasing -ffast-math -funroll-loops \
+# 		-fexpensive-optimizations $(CPUOPTIMIZATIONS)
+OPTIM_RELEASE=	-O2 -fno-strict-aliasing -ffast-math \
+		-fexpensive-optimizations $(CPUOPTIMIZATIONS)
+
+DO_CC=$(CC) $(CFLAGS) -c $< -o $@
+
+
+# Link
+LDFLAGS_COMMON=--mwindows -luser32 -lgdi32 -lwinmm -ldxguid -ldinput -lopengl32 -lcomctl32 -lwsock32
+LDFLAGS_DEBUG=-g -ggdb
+LDFLAGS_PROFILE=-g -pg
+LDFLAGS_RELEASE=
+
+EXE_WGL=darkplaces.exe
+EXE_DED=darkplaces-dedicated.exe
+
+WGL_LIB=
+
+DO_LD=$(CC) -o $@ $^ $(LDFLAGS)
+
+
+##### Commands #####
+
+.PHONY : clean help \
+	 debug profile release \
+	 wgl-debug wgl-profile wgl-release \
+	 ded-debug ded-profile ded-release \
+
+help:
+	@echo
+	@echo "===== Choose one ====="
+	@echo "* clean       : delete the binaries, and .o and .d files"
+	@echo "* help        : this help"
+	@echo "* debug       : make WGL and dedicated binaries (debug versions)"
+	@echo "* profile     : make WGL and dedicated binaries (profile versions)"
+	@echo "* release     : make WGL and dedicated binaries (release versions)"
+	@echo "* wgl-debug   : make WGL binary (debug version)"
+	@echo "* wgl-profile : make WGL binary (profile version)"
+	@echo "* wgl-release : make WGL binary (release version)"
+	@echo "* ded-debug   : make dedicated server (debug version)"
+	@echo "* ded-profile : make dedicated server (profile version)"
+	@echo "* ded-release : make dedicated server (release version)"
+	@echo
+
+debug :
+	$(MAKE) -f makefile.mingwcross wgl-debug ded-debug
+
+profile :
+	$(MAKE) -f makefile.mingwcross wgl-profile ded-profile
+
+release :
+	$(MAKE) -f makefile.mingwcross wgl-release ded-release
+
+wgl-debug :
+	$(MAKE) -f makefile.mingwcross bin-debug EXE="$(EXE_WGL)"
+
+wgl-profile :
+	$(MAKE) -f makefile.mingwcross bin-profile EXE="$(EXE_WGL)"
+
+wgl-release :
+	$(MAKE) -f makefile.mingwcross bin-release EXE="$(EXE_WGL)"
+
+ded-debug :
+	$(MAKE) -f makefile.mingwcross bin-debug EXE="$(EXE_DED)"
+
+ded-profile :
+	$(MAKE) -f makefile.mingwcross bin-profile EXE="$(EXE_DED)"
+
+ded-release :
+	$(MAKE) -f makefile.mingwcross bin-release EXE="$(EXE_DED)"
+
+bin-debug :
+	@echo
+	@echo "========== $(EXE) (debug) =========="
+#	@echo Using compiler $(CC)
+#	@echo Compiling with flags: $(CFLAGS_COMMON) $(CFLAGS_DEBUG) \
+#                                    $(OPTIM_DEBUG)
+#	@echo
+	$(MAKE) -f makefile.mingwcross $(EXE) \
+		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_DEBUG) $(OPTIM_DEBUG)"\
+		LDFLAGS="$(LDFLAGS_COMMON) $(LDFLAGS_DEBUG)"
+
+bin-profile :
+	@echo
+	@echo "========== $(EXE) (profile) =========="
+#	@echo Using compiler $(CC)
+#	@echo Compiling with flags: $(CFLAGS_COMMON) $(CFLAGS_PROFILE) \
+#                                    $(OPTIM_RELEASE)
+#	@echo
+	$(MAKE) -f makefile.mingwcross $(EXE) \
+		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_PROFILE) $(OPTIM_RELEASE)"\
+		LDFLAGS="$(LDFLAGS_COMMON) $(LDFLAGS_PROFILE)"
+
+bin-release :
+	@echo
+	@echo "========== $(EXE) (release) =========="
+#	@echo Using compiler $(CC)
+#	@echo Compiling with flags: $(CFLAGS_COMMON) $(CFLAGS_RELEASE) \
+#                                    $(OPTIM_RELEASE)
+#	@echo
+	$(MAKE) -f makefile.mingwcross $(EXE) \
+		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_RELEASE) $(OPTIM_RELEASE)"\
+		LDFLAGS="$(LDFLAGS_COMMON) $(LDFLAGS_RELEASE)"
+
+builddate:
+	touch builddate.c
+
+.c.o:
+#	@echo "   Compiling" $<
+	$(DO_CC)
+
+$(EXE_WGL):  $(OBJ_COMMON) $(OBJ_WGL)
+#	@echo "   Linking  " $@
+	$(DO_LD) $(WGL_LIB)
+	strip $(EXE_WGL)
+
+$(EXE_DED): $(OBJ_COMMON) $(OBJ_DED)
+#	@echo "   Linking  " $@
+	$(DO_LD)
+
+clean:
+	rm -f $(EXE_WGL) $(EXE_DED) *.o *.d
+
+-include *.d
