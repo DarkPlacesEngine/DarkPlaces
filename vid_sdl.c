@@ -240,6 +240,8 @@ static void IN_Init( void )
 {
 	// init keyboard
 	SDL_EnableUNICODE( SDL_ENABLE );
+	// enable key repeat since everyone expects it
+	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 
 	// init mouse
 	vid_usingmouse = false;
