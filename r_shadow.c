@@ -1659,6 +1659,9 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 		c_rt_lighttris += numtriangles;
 		GL_LockArrays(0, 0);
 		qglUseProgramObjectARB(0);
+		// HACK HACK HACK: work around for stupid NVIDIA bug that causes GL_OUT_OF_MEMORY and/or software rendering
+		qglBegin(GL_TRIANGLES);
+		qglEnd();
 	}
 	else if (gl_dot3arb && gl_texturecubemap && gl_combine.integer && gl_stencil)
 	{
