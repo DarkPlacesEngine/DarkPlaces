@@ -2968,6 +2968,7 @@ gameinfo_t gamelist[] =
 	{GAME_ROGUE, &roguegame, &roguegame},
 	{GAME_NEHAHRA, &nehahragame, &nehahragame},
 	{GAME_TRANSFUSION, &transfusiongame, &transfusiongame},
+	{GAME_GOODVSBAD2, &goodvsbad2game, &goodvsbad2game},
 	{-1, &sharewarequakegame, &registeredquakegame} // final fallback
 };
 
