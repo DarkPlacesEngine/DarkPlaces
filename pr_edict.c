@@ -207,7 +207,7 @@ edict_t *ED_Alloc (void)
 	}
 	
 	if (i == MAX_EDICTS)
-		Sys_Error ("ED_Alloc: no free edicts");
+		Host_Error ("ED_Alloc: no free edicts");
 		
 	sv.num_edicts++;
 	e = EDICT_NUM(i);
@@ -1033,7 +1033,7 @@ void ED_LoadFromFile (char *data)
 		if (!data)
 			break;
 		if (com_token[0] != '{')
-			Sys_Error ("ED_LoadFromFile: found %s when expecting {",com_token);
+			Host_Error ("ED_LoadFromFile: found %s when expecting {",com_token);
 
 		if (!ent)
 			ent = EDICT_NUM(0);
@@ -1323,7 +1323,7 @@ void PR_Init (void)
 // LordHavoc: turned EDICT_NUM into a #define for speed reasons
 edict_t *EDICT_NUM_ERROR(int n)
 {
-	Sys_Error ("EDICT_NUM: bad number %i", n);
+	Host_Error ("EDICT_NUM: bad number %i", n);
 	return NULL;
 }
 /*
@@ -1343,6 +1343,6 @@ int NUM_FOR_EDICT(edict_t *e)
 	b = b / pr_edict_size;
 	
 	if (b < 0 || b >= sv.num_edicts)
-		Sys_Error ("NUM_FOR_EDICT: bad pointer");
+		Host_Error ("NUM_FOR_EDICT: bad pointer");
 	return b;
 }

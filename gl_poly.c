@@ -286,7 +286,8 @@ void transpolyrender()
 	//// offset by 16 depth units so decal sprites appear infront of walls
 	//glPolygonOffset(1, -16);
 	//glEnable(GL_POLYGON_OFFSET_FILL);
-	tpolytype = -1;
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	tpolytype = TPOLYTYPE_ALPHA;
 	texnum = -1;
 	/*
 	if (gl_vertexarrays.value)

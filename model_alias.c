@@ -288,7 +288,7 @@ void *Mod_LoadAllSkins (int numskins, daliasskintype_t *pskintype, int bytesperp
 	skin = (byte *)(pskintype + 1);
 
 	if (numskins < 1 || numskins > MAX_SKINS)
-		Sys_Error ("Mod_LoadAliasModel: Invalid # of skins: %d\n", numskins);
+		Host_Error ("Mod_LoadAliasModel: Invalid # of skins: %d\n", numskins);
 
 	s = pheader->skinwidth * pheader->skinheight;
 
@@ -656,9 +656,9 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 			tris->v[j] = pouttriangles->index_xyz[j] = LittleShort (pintriangles->index_xyz[j]);
 			pouttriangles->index_st[j] = LittleShort (pintriangles->index_st[j]);
 			if (pouttriangles->index_xyz[j] >= pheader->num_xyz)
-				Sys_Error ("%s has invalid vertex indices", mod->name);
+				Host_Error ("%s has invalid vertex indices", mod->name);
 			if (pouttriangles->index_st[j] >= pheader->num_st)
-				Sys_Error ("%s has invalid vertex indices", mod->name);
+				Host_Error ("%s has invalid vertex indices", mod->name);
 		}
 		pintriangles++;
 		pouttriangles++;

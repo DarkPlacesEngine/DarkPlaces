@@ -487,8 +487,6 @@ void Host_ClearMemory (void)
 
 //============================================================================
 
-extern cvar_t maxfps;
-
 /*
 ===================
 Host_FilterTime
@@ -500,12 +498,8 @@ qboolean Host_FilterTime (float time)
 {
 	realtime += time;
 
-	if (maxfps.value < 5) // LordHavoc: sanity checking
-		maxfps.value = 5;
-	if (maxfps.value > 1000) // LordHavoc: sanity checking
-		maxfps.value = 1000;
-	if (!cls.timedemo && realtime - oldrealtime < (1.0 / maxfps.value))
-		return false;		// framerate is too high
+//	if (!cls.timedemo && realtime - oldrealtime < (1.0 / 72.0))
+//		return false;		// framerate is too high
 
 	host_frametime = (realtime - oldrealtime) * slowmo.value; // LordHavoc: slowmo cvar
 	oldrealtime = realtime;
@@ -619,10 +613,17 @@ void Host_ServerFrame (void)
 
 #else
 
+double frametimetotal = 0, lastservertime = 0;
 void Host_ServerFrame (void)
 {
-// run the world state	
-	pr_global_struct->frametime = host_frametime;
+	frametimetotal += host_frametime;
+	// LordHavoc: cap server at sys_ticrate in listen games
+	if (!isDedicated && ((realtime - lastservertime) < sys_ticrate.value))
+		return;
+// run the world state
+	pr_global_struct->frametime = frametimetotal;
+	frametimetotal = 0;
+//	pr_global_struct->frametime = host_frametime;
 
 // set the time and clear the general datagram
 	SV_ClearDatagram ();

@@ -89,6 +89,7 @@ cvar_t		scr_showturtle = {"showturtle","0"};
 cvar_t		scr_showpause = {"showpause","1"};
 cvar_t		scr_printspeed = {"scr_printspeed","8"};
 cvar_t		gl_triplebuffer = {"gl_triplebuffer", "1", true };
+cvar_t		showfps = {"showfps", "0", true};
 
 extern	cvar_t	crosshair;
 
@@ -390,6 +391,7 @@ void SCR_Init (void)
 	Cvar_RegisterVariable (&scr_centertime);
 	Cvar_RegisterVariable (&scr_printspeed);
 	Cvar_RegisterVariable (&gl_triplebuffer);
+	Cvar_RegisterVariable (&showfps);
 
 //
 // register our commands
@@ -967,6 +969,19 @@ void SCR_UpdateScreen (void)
 		M_Draw ();
 	}
 
+	if (showfps.value)
+	{
+		static double currtime;
+		double newtime;
+		char temp[32];
+		int calc;
+		newtime = Sys_FloatTime();
+		calc = (int) (100.0 / (newtime - currtime));
+		sprintf(temp, "% 4i.%02i fps", calc / 100, calc % 100);
+		currtime = newtime;
+		Draw_String(vid.width - (12*8), 0, temp, 9999);
+	}
+
 	V_UpdatePalette ();
 
 	GL_BrightenScreen();
@@ -976,7 +991,7 @@ void SCR_UpdateScreen (void)
 	if (r_speeds.value)
 	{
 		time2 = Sys_FloatTime ();
-		Con_Printf ("%3i ms  %4i wpoly %4i epoly %4i BSPnodes\n", (int)((time2-time1)*1000), c_brush_polys, c_alias_polys, c_nodes); 
+		Con_Printf ("%3i ms  %4i wpoly %4i epoly %4i transpoly %4i BSPnodes\n", (int)((time2-time1)*1000), c_brush_polys, c_alias_polys, currenttranspoly, c_nodes); 
 	}
 	GL_EndRendering ();
 }

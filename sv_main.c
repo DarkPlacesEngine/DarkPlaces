@@ -124,13 +124,13 @@ void SV_StartSound (edict_t *entity, int channel, char *sample, int volume,
 	int			ent;
 	
 	if (volume < 0 || volume > 255)
-		Sys_Error ("SV_StartSound: volume = %i", volume);
+		Host_Error ("SV_StartSound: volume = %i", volume);
 
 	if (attenuation < 0 || attenuation > 4)
-		Sys_Error ("SV_StartSound: attenuation = %f", attenuation);
+		Host_Error ("SV_StartSound: attenuation = %f", attenuation);
 
 	if (channel < 0 || channel > 7)
-		Sys_Error ("SV_StartSound: channel = %i", channel);
+		Host_Error ("SV_StartSound: channel = %i", channel);
 
 	if (sv.datagram.cursize > MAX_DATAGRAM-16)
 		return;	
@@ -1055,7 +1055,7 @@ int SV_ModelIndex (char *name)
 		if (!strcmp(sv.model_precache[i], name))
 			return i;
 	if (i==MAX_MODELS || !sv.model_precache[i])
-		Sys_Error ("SV_ModelIndex: model %s not precached", name);
+		Host_Error ("SV_ModelIndex: model %s not precached", name);
 	return i;
 }
 

@@ -1100,6 +1100,18 @@ void GL_Upload32 (void *data, int width, int height,  qboolean mipmap, qboolean 
 	if (scaled_height > gl_max_size.value)
 		scaled_height = gl_max_size.value;
 
+	if (alpha)
+	{
+		alpha = false;
+		in = data;
+		for (i = 3;i < width*height*4;i += 4)
+			if (in[i] != 255)
+			{
+				alpha = true;
+				break;
+			}
+	}
+
 	samples = alpha ? gl_alpha_format : gl_solid_format;
 
 #if 0
