@@ -1584,7 +1584,7 @@ void EntityState5_ReadUpdate(entity_state_t *s)
 	if (bits & E5_ALPHA)
 		s->alpha = MSG_ReadByte();
 	if (bits & E5_SCALE)
-		s->alpha = MSG_ReadByte();
+		s->scale = MSG_ReadByte();
 	if (bits & E5_COLORMAP)
 		s->colormap = MSG_ReadByte();
 	if (bits & E5_ATTACHMENT)
