@@ -165,6 +165,7 @@
 1 hmap2: add .mip loading support
 1 hmap: qbsp dies from runaway allocations if a duplicate plane is found on a brush (Tomaz)
 1 lhfire: add percentage and estimated time reporting to console output (daniel_hansson@telia.com)
+-(RenegadeC) d darkplaces client: make sure the join game menu shows status on a connection attempt, such as connecting or failed (RenegadeC)
 1 lhfire: get lhfire_gui build from Tomaz.
 1 lhfire: post lhfire_gui build.
 1 lhfire: prepare example scripts for release.

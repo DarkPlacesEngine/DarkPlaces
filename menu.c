@@ -94,6 +94,13 @@ qboolean	m_entersound;		// play after drawing a frame, so caching
 
 char		m_return_reason [32];
 
+void M_Update_Return_Reason(char *s)
+{
+	strlcpy(m_return_reason, s, sizeof(m_return_reason));
+	if (s)
+		Con_Printf("%s\n", s);
+}
+
 #define StartingGame	(m_multiplayer_cursor == 1)
 #define JoiningGame		(m_multiplayer_cursor == 0)
 
@@ -2806,7 +2813,7 @@ void M_Menu_LanConfig_f (void)
 	lanConfig_port = 26000;
 	sprintf(lanConfig_portname, "%u", lanConfig_port);
 
-	m_return_reason[0] = 0;
+	M_Update_Return_Reason("");
 }
 
 
@@ -3729,7 +3736,7 @@ void M_Menu_ServerList_f (void)
 	m_state = m_slist;
 	m_entersound = true;
 	slist_cursor = 0;
-	m_return_reason[0] = 0;
+	M_Update_Return_Reason("");
 	Net_Slist_f();
 }
 
