@@ -106,7 +106,7 @@ int CDAudio_SysResume (void)
 {
 	SDL_CDResume( cd );
 	endtime = realtime + (cd->track[ cdPlayTrack - 1 ].length - pauseoffset) / CD_FPS;
-	return SDL_CDPlayTracks( cd, cdPlayTrack - 1, pauseoffset, cdPlayTrack, 0 );
+	return SDL_CDPlayTracks( cd, cdPlayTrack - 1, (int)pauseoffset, cdPlayTrack, 0 );
 }
 
 int CDAudio_SysUpdate (void)
