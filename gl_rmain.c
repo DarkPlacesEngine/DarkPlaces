@@ -98,11 +98,6 @@ cvar_t	gl_lightmode = {"gl_lightmode", "1", TRUE}; // LordHavoc: overbright ligh
 //cvar_t	r_smokealpha = {"r_smokealpha", "0.25"};
 //cvar_t	r_dynamicbothsides = {"r_dynamicbothsides", "1"}; // LordHavoc: can disable dynamic lighting of backfaces, but quake maps are weird so it doesn't always work right...
 
-cvar_t	r_fogdensity = {"r_fogdensity", "0"};
-cvar_t	r_fogred = {"r_fogred","0.3"};
-cvar_t	r_foggreen = {"r_foggreen","0.3"};
-cvar_t	r_fogblue = {"r_fogblue","0.3"};
-
 cvar_t	gl_fogenable = {"gl_fogenable", "0"};
 cvar_t	gl_fogdensity = {"gl_fogdensity", "0.25"};
 cvar_t	gl_fogred = {"gl_fogred","0.3"};
@@ -110,6 +105,7 @@ cvar_t	gl_foggreen = {"gl_foggreen","0.3"};
 cvar_t	gl_fogblue = {"gl_fogblue","0.3"};
 cvar_t	gl_fogstart = {"gl_fogstart", "0"};
 cvar_t	gl_fogend = {"gl_fogend","0"};
+cvar_t	glfog = {"glfog", "0"};
 
 int chrometexture;
 
@@ -185,90 +181,111 @@ qboolean lighthalf;
 
 vec3_t fogcolor;
 vec_t fogdensity;
+float fog_density, fog_red, fog_green, fog_blue;
 qboolean fogenabled;
 qboolean oldgl_fogenable;
 void FOG_framebegin()
 {
-	if (gl_fogenable.value)
+	if (nehahra)
 	{
-		oldgl_fogenable = true;
-		r_fogdensity.value = gl_fogdensity.value;
-		r_fogred.value = gl_fogred.value;
-		r_foggreen.value = gl_foggreen.value;
-		r_fogblue.value = gl_fogblue.value;
-	}
-	else if (oldgl_fogenable)
-	{
-		oldgl_fogenable = false;
-		r_fogdensity.value = 0;
-		r_fogred.value = 0.3;
-		r_foggreen.value = 0.3;
-		r_fogblue.value = 0.3;
-	}
-	/*
-	if(gl_fogdensity.value)
-	{
-		// LordHavoc: Borland C++ 5.0 was choking on this line, stupid compiler...
-		//GLfloat colors[4] = {(GLfloat) gl_fogred.value, (GLfloat) gl_foggreen.value, (GLfloat) gl_fogblue.value, (GLfloat) 1};
-		GLfloat colors[4];
-		colors[0] = gl_fogred.value;
-		colors[1] = gl_foggreen.value;
-		colors[2] = gl_fogblue.value;
-		colors[3] = 1;
-
-		glFogi (GL_FOG_MODE, GL_EXP2);
-		glFogf (GL_FOG_DENSITY, (GLfloat) gl_fogdensity.value / 100); 
-		glFogfv (GL_FOG_COLOR, colors);
-		glEnable (GL_FOG);
-	}
-	else
-		glDisable(GL_FOG);
-	*/
-	if (r_fogdensity.value)
-	{
-		fogenabled = true;
-		fogdensity = -6144.0f / (r_fogdensity.value * r_fogdensity.value);
-		fogcolor[0] = bound(0.0f, r_fogred.value, 1.0f);
-		fogcolor[1] = bound(0.0f, r_foggreen.value, 1.0f);
-		fogcolor[2] = bound(0.0f, r_fogblue.value, 1.0f);
-		if (lighthalf)
+//		if (!Nehahrademcompatibility)
+//			gl_fogenable.value = 0;
+		if (gl_fogenable.value)
 		{
-			fogcolor[0] *= 0.5f;
-			fogcolor[1] *= 0.5f;
-			fogcolor[2] *= 0.5f;
+			oldgl_fogenable = true;
+			fog_density = gl_fogdensity.value;
+			fog_red = gl_fogred.value;
+			fog_green = gl_foggreen.value;
+			fog_blue = gl_fogblue.value;
+		}
+		else if (oldgl_fogenable)
+		{
+			oldgl_fogenable = false;
+			fog_density = 0;
+			fog_red = 0;
+			fog_green = 0;
+			fog_blue = 0;
 		}
 	}
+	if (glfog.value)
+	{
+		if(fog_density)
+		{
+			// LordHavoc: Borland C++ 5.0 was choking on this line, stupid compiler...
+			//GLfloat colors[4] = {(GLfloat) gl_fogred.value, (GLfloat) gl_foggreen.value, (GLfloat) gl_fogblue.value, (GLfloat) 1};
+			GLfloat colors[4];
+			colors[0] = fog_red;
+			colors[1] = fog_green;
+			colors[2] = fog_blue;
+			colors[3] = 1;
+			if (lighthalf)
+			{
+				colors[0] *= 0.5f;
+				colors[1] *= 0.5f;
+				colors[2] *= 0.5f;
+			}
+
+			glFogi (GL_FOG_MODE, GL_EXP2);
+			glFogf (GL_FOG_DENSITY, (GLfloat) fog_density / 100); 
+			glFogfv (GL_FOG_COLOR, colors);
+			glEnable (GL_FOG);
+		}
+		else
+			glDisable(GL_FOG);
+	}
 	else
-		fogenabled = false;
+	{
+		if (fog_density)
+		{
+			fogenabled = true;
+			fogdensity = -4096.0f / (fog_density * fog_density);
+			fogcolor[0] = fog_red   = bound(0.0f, fog_red  , 1.0f);
+			fogcolor[1] = fog_green = bound(0.0f, fog_green, 1.0f);
+			fogcolor[2] = fog_blue  = bound(0.0f, fog_blue , 1.0f);
+			if (lighthalf)
+			{
+				fogcolor[0] *= 0.5f;
+				fogcolor[1] *= 0.5f;
+				fogcolor[2] *= 0.5f;
+			}
+		}
+		else
+			fogenabled = false;
+	}
 }
 
 void FOG_frameend()
 {
-//	glDisable(GL_FOG);
+	if (glfog.value)
+		glDisable(GL_FOG);
 }
 
 void FOG_clear()
 {
-	gl_fogenable.value = 0;
-	r_fogdensity.value = 0;
-	r_fogred.value = 0.3;
-	r_fogblue.value = 0.3;
-	r_foggreen.value = 0.3;
+	if (nehahra)
+	{
+		Cvar_Set("gl_fogenable", "0");
+		Cvar_Set("gl_fogdensity", "0.2");
+		Cvar_Set("gl_fogred", "0.3");
+		Cvar_Set("gl_foggreen", "0.3");
+		Cvar_Set("gl_fogblue", "0.3");
+	}
+	fog_density = fog_red = fog_green = fog_blue = 0.0f;
 }
 
 void FOG_registercvars()
 {
-	Cvar_RegisterVariable (&r_fogdensity);
-	Cvar_RegisterVariable (&r_fogred);
-	Cvar_RegisterVariable (&r_foggreen); 
-	Cvar_RegisterVariable (&r_fogblue);
-	Cvar_RegisterVariable (&gl_fogenable);
-	Cvar_RegisterVariable (&gl_fogdensity);
-	Cvar_RegisterVariable (&gl_fogred);
-	Cvar_RegisterVariable (&gl_foggreen); 
-	Cvar_RegisterVariable (&gl_fogblue);
-	Cvar_RegisterVariable (&gl_fogstart);
-	Cvar_RegisterVariable (&gl_fogend);
+	Cvar_RegisterVariable (&glfog);
+	if (nehahra)
+	{
+		Cvar_RegisterVariable (&gl_fogenable);
+		Cvar_RegisterVariable (&gl_fogdensity);
+		Cvar_RegisterVariable (&gl_fogred);
+		Cvar_RegisterVariable (&gl_foggreen); 
+		Cvar_RegisterVariable (&gl_fogblue);
+		Cvar_RegisterVariable (&gl_fogstart);
+		Cvar_RegisterVariable (&gl_fogend);
+	}
 }
 
 void glpoly_init();
