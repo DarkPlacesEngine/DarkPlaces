@@ -477,8 +477,8 @@ void R_DrawQueue(void)
 	r_view_x = bound(0, r_refdef.x, vid.realwidth - r_refdef.width);
 	r_view_y = bound(0, r_refdef.y, vid.realheight - r_refdef.height);
 	r_view_z = 0;
-	r_view_fov_x = bound(1, r_refdef.fov_x, 170);
-	r_view_fov_y = bound(1, r_refdef.fov_y, 170);
+	r_view_fov_x = bound(0.1, r_refdef.fov_x, 170);
+	r_view_fov_y = bound(0.1, r_refdef.fov_y, 170);
 	r_view_matrix = r_refdef.viewentitymatrix;
 	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
 
@@ -502,7 +502,7 @@ void R_DrawQueue(void)
 	{
 		dq = (drawqueue_t *)(r_refdef.drawqueue + pos);
 		color = dq->color;
-		
+
 		if(dq->flags == DRAWFLAG_ADDITIVE)
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 		else if(dq->flags == DRAWFLAG_MODULATE)
@@ -593,7 +593,7 @@ void R_DrawQueue(void)
 				// We have to convert the con coords into real coords
 				int x , y, width, height;
 				x = dq->x * ((float)vid.realwidth / vid.conwidth);
-				// OGL uses top to bottom 
+				// OGL uses top to bottom
 				y = dq->y * ((float) vid.realheight / vid.conheight);
 				width = dq->scalex * ((float)vid.realwidth / vid.conwidth);
 				height = dq->scaley * ((float)vid.realheight / vid.conheight);
@@ -605,7 +605,7 @@ void R_DrawQueue(void)
 			break;
 		case DRAWQUEUE_RESETCLIP:
 			GL_ScissorTest(false);
-			break;				
+			break;
 		}
 	}
 
