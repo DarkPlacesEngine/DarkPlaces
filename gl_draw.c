@@ -550,6 +550,14 @@ void R_DrawQueue(void)
 			}
 			mesh = (void *)(dq + 1);
 			qglBindTexture(GL_TEXTURE_2D, R_GetTexture(mesh->texture));
+
+			if (gl_mesh_drawmode.integer < 0)
+				Cvar_SetValueQuick(&gl_mesh_drawmode, 0);
+			if (gl_mesh_drawmode.integer > 3)
+				Cvar_SetValueQuick(&gl_mesh_drawmode, 3);
+			if (gl_mesh_drawmode.integer >= 3 && (qglDrawRangeElements == NULL || gl_maxdrawrangeelementsindices < 3072 || gl_maxdrawrangeelementsvertices < 3072))
+				Cvar_SetValueQuick(&gl_mesh_drawmode, 2);
+
 			if (gl_mesh_drawmode.integer > 0)
 			{
 				qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), mesh->vertices);CHECKGLERROR
@@ -559,39 +567,41 @@ void R_DrawQueue(void)
 				qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 				qglEnableClientState(GL_COLOR_ARRAY);CHECKGLERROR
 			}
-			if (gl_mesh_drawmode.integer == 3 && qglDrawRangeElements == NULL)
-				Cvar_SetValueQuick(&gl_mesh_drawmode, 2);
 
-			if (gl_mesh_drawmode.integer == 3)
+			if (gl_mesh_drawmode.integer >= 3)
 			{
 				// GL 1.2 or GL 1.1 with extension
+				GL_LockArray(0, mesh->numvertices);
 				qglDrawRangeElements(GL_TRIANGLES, 0, mesh->numvertices, mesh->numindices, GL_UNSIGNED_INT, mesh->indices);
 				CHECKGLERROR
+				GL_UnlockArray();
 			}
-			else if (gl_mesh_drawmode.integer == 2)
+			else if (gl_mesh_drawmode.integer >= 2)
 			{
 				// GL 1.1
+				GL_LockArray(0, mesh->numvertices);
 				qglDrawElements(GL_TRIANGLES, mesh->numindices, GL_UNSIGNED_INT, mesh->indices);
 				CHECKGLERROR
+				GL_UnlockArray();
 			}
-			else if (gl_mesh_drawmode.integer == 1)
+			else if (gl_mesh_drawmode.integer >= 1)
 			{
 				int i;
 				// GL 1.1
 				// feed it manually using glArrayElement
+				GL_LockArray(0, mesh->numvertices);
 				qglBegin(GL_TRIANGLES);
 				for (i = 0;i < mesh->numindices;i++)
 					qglArrayElement(mesh->indices[i]);
 				qglEnd();
 				CHECKGLERROR
+				GL_UnlockArray();
 			}
 			else
 			{
 				int i, in;
 				// GL 1.1 but not using vertex arrays - 3dfx glquake minigl driver
 				// feed it manually
-				if (gl_mesh_drawmode.integer != 0)
-					Cvar_SetValueQuick(&gl_mesh_drawmode, 0);
 				qglBegin(GL_TRIANGLES);
 				for (i = 0;i < mesh->numindices;i++)
 				{
