@@ -522,7 +522,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 	int culled_pvs, culled_portal, culled_trace, visibleentities, totalentities;
 	qbyte *pvs;
 	vec3_t origin, angles, entmins, entmaxs, testorigin, testeye;
-	float nextfullupdate;
+	float nextfullupdate, alphaf;
 	edict_t *ent;
 	eval_t *val;
 	entity_state_t *baseline; // LordHavoc: delta or startup baseline
@@ -690,23 +690,23 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			visibleentities++;
 		}
 
-		alpha = 255;
+		alphaf = 255.0f;
 		scale = 16;
 		glowcolor = 254;
 		effects = ent->v.effects;
 
 		if ((val = GETEDICTFIELDVALUE(ent, eval_alpha)))
 		if (val->_float != 0)
-			alpha = (int) (val->_float * 255.0);
+			alphaf = val->_float * 255.0f;
 
 		// HalfLife support
 		if ((val = GETEDICTFIELDVALUE(ent, eval_renderamt)))
 		if (val->_float != 0)
-			alpha = (int) val->_float;
+			alphaf = val->_float;
 
-		if (alpha == 0)
-			alpha = 255;
-		alpha = bound(0, alpha, 255);
+		if (alphaf == 0.0f)
+			alphaf = 255.0f;
+		alpha = bound(0, alphaf, 255);
 
 		if ((val = GETEDICTFIELDVALUE(ent, eval_scale)))
 		if ((scale = (int) (val->_float * 16.0)) == 0) scale = 16;
@@ -865,6 +865,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 {
 	int e, clentnum, flags, alpha, glowcolor, glowsize, scale, effects;
 	int culled_pvs, culled_portal, culled_trace, visibleentities, totalentities;
+	float alphaf;
 	qbyte *pvs;
 	vec3_t origin, angles, entmins, entmaxs, testorigin, testeye;
 	edict_t *ent;
@@ -1025,23 +1026,23 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			visibleentities++;
 		}
 
-		alpha = 255;
+		alphaf = 255.0f;
 		scale = 16;
 		glowcolor = 254;
 		effects = ent->v.effects;
 
 		if ((val = GETEDICTFIELDVALUE(ent, eval_alpha)))
 		if (val->_float != 0)
-			alpha = (int) (val->_float * 255.0);
+			alphaf = val->_float * 255.0;
 
 		// HalfLife support
 		if ((val = GETEDICTFIELDVALUE(ent, eval_renderamt)))
 		if (val->_float != 0)
-			alpha = (int) val->_float;
+			alphaf = val->_float;
 
-		if (alpha == 0)
-			alpha = 255;
-		alpha = bound(0, alpha, 255);
+		if (alphaf == 0.0f)
+			alphaf = 255.0f;
+		alpha = bound(0, alphaf, 255);
 
 		if ((val = GETEDICTFIELDVALUE(ent, eval_scale)))
 		if ((scale = (int) (val->_float * 16.0)) == 0) scale = 16;
