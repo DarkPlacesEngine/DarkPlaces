@@ -12,7 +12,7 @@ CPUOPTIMIZATIONS=
 #the -Werror can be removed to compile even if there are warnings,
 #this is used to ensure that all released versions are free of warnings.
 
-OPTIMIZATIONS= -O6 -ffast-math -funroll-loops -fomit-frame-pointer -fexpensive-optimizations $(CPUOPTIMIZATIONS)
+OPTIMIZATIONS= -O6 -fno-strict-aliasing -ffast-math -funroll-loops -fomit-frame-pointer -fexpensive-optimizations $(CPUOPTIMIZATIONS)
 # -Werror
 # -D WIN32 -D NDEBUG -D _WINDOWS -D _M_IX86
 
