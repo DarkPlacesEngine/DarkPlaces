@@ -871,6 +871,7 @@ void ScanEdges (void)
 
 void R_Clip_DisplayBuffer(void)
 {
+	/*
 #if CLIPTEST
 	int i;
 	static int firstupload = true;
@@ -887,12 +888,12 @@ void R_Clip_DisplayBuffer(void)
 		glTexImage2D(GL_TEXTURE_2D, 0, 1, 256, 256, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, clipbuffertex);
 	}
 	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	if (lighthalf)
-		glColor3f(0.5, 0.5, 0.5);
+		glColor4ub(0.5, 0.5, 0.5);
 	else
-		glColor3f(1, 1, 1);
+		glColor4ub(1, 1, 1);
 	firstupload = false;
 	b = clipbuffertex;
 	for (i = 0;i < clipwidth*clipheight;i++)
@@ -910,9 +911,10 @@ void R_Clip_DisplayBuffer(void)
 	glTexCoord2f (0                 , clipheight / 256.0f);glVertex2f (0           , vid.conheight);
 	glEnd ();
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-//	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-//	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 #endif
+	*/
 }
 
 float boxpoints[4*3];
