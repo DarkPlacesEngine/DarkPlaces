@@ -76,6 +76,10 @@ typedef struct worldlight_s
 	// premade shadow volumes and lit surfaces to render
 	shadowmesh_t *meshchain_shadow;
 	shadowmesh_t *meshchain_light;
+	
+	// used for visibility testing
+	int numclusters;
+	int *clusterindices;
 }
 worldlight_t;
 

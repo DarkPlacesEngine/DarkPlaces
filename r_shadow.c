@@ -1153,7 +1153,7 @@ int R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	if (ix2 <= ix1 || iy2 <= iy1)
 		return true;
 	// set up the scissor rectangle
-	GL_Scissor(ix1, iy1, ix2 - ix1, iy2 - iy1);
+	GL_Scissor(ix1, vid.realheight - iy2, ix2 - ix1, iy2 - iy1);
 	//qglScissor(ix1, iy1, ix2 - ix1, iy2 - iy1);
 	//qglEnable(GL_SCISSOR_TEST);
 	c_rt_scissored++;
@@ -1863,6 +1863,7 @@ vec3_t r_editlights_cursorlocation;
 
 static int lightpvsbytes;
 static qbyte lightpvs[(MAX_MAP_LEAFS + 7)/ 8];
+static qbyte lightfullpvs[(MAX_MAP_LEAFS + 7)/ 8];
 
 typedef struct cubemapinfo_s
 {
@@ -2037,18 +2038,34 @@ void R_Shadow_NewWorldLight(vec3_t origin, vec3_t angles, vec3_t color, vec_t ra
 	e->meshchain_light = Mod_ShadowMesh_Begin(r_shadow_mempool, 32768, 32768, NULL, NULL, NULL, true, false, true);
 	if (cl.worldmodel)
 	{
+		lightpvsbytes = cl.worldmodel->brush.FatPVS(cl.worldmodel, origin, 0, lightfullpvs, sizeof(lightfullpvs));
+		memset(lightpvs, 0, lightpvsbytes);
 		if (cl.worldmodel->brushq3.num_leafs)
 		{
 			q3mleaf_t *leaf;
 			q3mface_t *face;
-			lightpvsbytes = cl.worldmodel->brush.FatPVS(cl.worldmodel, origin, 0, lightpvs, sizeof(lightpvs));
+
+			// make a pvs that only includes things within the box
+			for (i = 0, leaf = cl.worldmodel->brushq3.data_leafs;i < cl.worldmodel->brushq3.num_leafs;i++, leaf++)
+				if (CHECKPVSBIT(lightfullpvs, leaf->clusterindex) && BoxesOverlap(leaf->mins, leaf->maxs, mins, maxs))
+					SETPVSBIT(lightpvs, leaf->clusterindex);
+
+			// make a cluster list for fast visibility checking during rendering
+			for (i = 0, e->numclusters = 0;i < cl.worldmodel->brushq3.num_pvsclusters;i++)
+				if (CHECKPVSBIT(lightpvs, i))
+					e->numclusters++;
+			e->clusterindices = Mem_Alloc(r_shadow_mempool, e->numclusters * sizeof(int));
+			for (i = 0, e->numclusters = 0;i < cl.worldmodel->brushq3.num_pvsclusters;i++)
+				if (CHECKPVSBIT(lightpvs, i))
+					e->clusterindices[e->numclusters++] = i;
+
 			VectorCopy(e->origin, e->mins);
 			VectorCopy(e->origin, e->maxs);
 			for (i = 0, face = cl.worldmodel->brushq3.data_thismodel->firstface;i < cl.worldmodel->brushq3.data_thismodel->numfaces;i++, face++)
 				face->lighttemp_castshadow = false;
 			for (i = 0, leaf = cl.worldmodel->brushq3.data_leafs;i < cl.worldmodel->brushq3.num_leafs;i++, leaf++)
 			{
-				if ((leaf->clusterindex < 0 || lightpvs[leaf->clusterindex >> 3] & (1 << (leaf->clusterindex & 7))) && BoxesOverlap(leaf->mins, leaf->maxs, mins, maxs))
+				if (CHECKPVSBIT(lightpvs, leaf->clusterindex) && BoxesOverlap(leaf->mins, leaf->maxs, mins, maxs))
 				{
 					for (k = 0;k < 3;k++)
 					{
@@ -2081,7 +2098,7 @@ void R_Shadow_NewWorldLight(vec3_t origin, vec3_t angles, vec3_t color, vec_t ra
 				}
 			}
 		}
-		else if (cl.worldmodel->brushq1.numleafs)
+		else if (cl.worldmodel->brushq1.num_leafs)
 		{
 			mleaf_t *leaf;
 			msurface_t *surf;
@@ -2097,15 +2114,17 @@ void R_Shadow_NewWorldLight(vec3_t origin, vec3_t angles, vec3_t color, vec_t ra
 				qbyte *byteleafpvs;
 				qbyte *bytesurfacepvs;
 
-				byteleafpvs = Mem_Alloc(tempmempool, cl.worldmodel->brushq1.numleafs);
+				byteleafpvs = Mem_Alloc(tempmempool, cl.worldmodel->brushq1.num_leafs);
 				bytesurfacepvs = Mem_Alloc(tempmempool, cl.worldmodel->brushq1.numsurfaces);
 
 				Portal_Visibility(cl.worldmodel, e->origin, byteleafpvs, bytesurfacepvs, NULL, 0, true, mins, maxs, e->mins, e->maxs);
 
-				for (i = 0, leaf = cl.worldmodel->brushq1.leafs;i < cl.worldmodel->brushq1.numleafs;i++, leaf++)
+				// make a pvs that only includes things within the box
+				for (i = 0, leaf = cl.worldmodel->brushq1.data_leafs;i < cl.worldmodel->brushq1.num_leafs;i++, leaf++)
 				{
 					if (byteleafpvs[i] && BoxesOverlap(leaf->mins, leaf->maxs, mins, maxs))
 					{
+						SETPVSBIT(lightpvs, leaf->clusterindex);
 						for (k = 0;k < 3;k++)
 						{
 							if (e->mins[k] > leaf->mins[k]) e->mins[k] = leaf->mins[k];
@@ -2113,21 +2132,31 @@ void R_Shadow_NewWorldLight(vec3_t origin, vec3_t angles, vec3_t color, vec_t ra
 						}
 					}
 				}
-
+	
 				for (i = 0, surf = cl.worldmodel->brushq1.surfaces;i < cl.worldmodel->brushq1.numsurfaces;i++, surf++)
 					if (bytesurfacepvs[i] && BoxesOverlap(surf->poly_mins, surf->poly_maxs, mins, maxs))
 						surf->lighttemp_castshadow = true;
 
 				Mem_Free(byteleafpvs);
 				Mem_Free(bytesurfacepvs);
+	
+				// make a cluster list for fast visibility checking during rendering
+				for (i = 0, e->numclusters = 0;i < cl.worldmodel->brushq1.num_pvsclusters;i++)
+					if (CHECKPVSBIT(lightpvs, i))
+						e->numclusters++;
+				e->clusterindices = Mem_Alloc(r_shadow_mempool, e->numclusters * sizeof(int));
+				for (i = 0, e->numclusters = 0;i < cl.worldmodel->brushq1.num_pvsclusters;i++)
+					if (CHECKPVSBIT(lightpvs, i))
+						e->clusterindices[e->numclusters++] = i;
 			}
 			else
 			{
-				lightpvsbytes = cl.worldmodel->brush.FatPVS(cl.worldmodel, origin, 0, lightpvs, sizeof(lightpvs));
-				for (i = 0, leaf = cl.worldmodel->brushq1.leafs + 1;i < cl.worldmodel->brushq1.visleafs;i++, leaf++)
+				for (i = 0, leaf = cl.worldmodel->brushq1.data_leafs;i < cl.worldmodel->brushq1.num_leafs;i++, leaf++)
 				{
-					if (lightpvs[i >> 3] & (1 << (i & 7)) && BoxesOverlap(leaf->mins, leaf->maxs, mins, maxs))
+					if (CHECKPVSBIT(lightfullpvs, leaf->clusterindex) && BoxesOverlap(leaf->mins, leaf->maxs, mins, maxs))
 					{
+						// make a pvs that only includes things within the box
+						SETPVSBIT(lightpvs, leaf->clusterindex);
 						for (k = 0;k < 3;k++)
 						{
 							if (e->mins[k] > leaf->mins[k]) e->mins[k] = leaf->mins[k];
@@ -2141,6 +2170,20 @@ void R_Shadow_NewWorldLight(vec3_t origin, vec3_t angles, vec3_t color, vec_t ra
 						}
 					}
 				}
+
+				// make a pvs that only includes things within the box
+				for (i = 0, leaf = cl.worldmodel->brushq1.data_leafs;i < cl.worldmodel->brushq1.num_leafs;i++, leaf++)
+					if (CHECKPVSBIT(lightfullpvs, leaf->clusterindex) && BoxesOverlap(leaf->mins, leaf->maxs, mins, maxs))
+						SETPVSBIT(lightpvs, leaf->clusterindex);
+
+				// make a cluster list for fast visibility checking during rendering
+				for (i = 0, e->numclusters = 0;i < cl.worldmodel->brushq1.num_pvsclusters;i++)
+					if (CHECKPVSBIT(lightpvs, i))
+						e->numclusters++;
+				e->clusterindices = Mem_Alloc(r_shadow_mempool, e->numclusters * sizeof(int));
+				for (i = 0, e->numclusters = 0;i < cl.worldmodel->brushq1.num_pvsclusters;i++)
+					if (CHECKPVSBIT(lightpvs, i))
+						e->clusterindices[e->numclusters++] = i;
 			}
 
 			// add surfaces to shadow casting mesh and light mesh
