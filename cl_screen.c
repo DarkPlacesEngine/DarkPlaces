@@ -20,10 +20,12 @@ cvar_t vid_conheight = {CVAR_SAVE, "vid_conheight", "480"};
 cvar_t vid_pixelaspect = {CVAR_SAVE, "vid_pixelaspect", "1"};
 cvar_t scr_screenshot_jpeg = {CVAR_SAVE, "scr_screenshot_jpeg","0"};
 cvar_t scr_screenshot_jpeg_quality = {CVAR_SAVE, "scr_screenshot_jpeg_quality","0.9"};
+cvar_t scr_screenshot_gamma = {CVAR_SAVE, "scr_screenshot_gamma","2.2"};
 cvar_t scr_screenshot_name = {0, "scr_screenshot_name","dp"};
 cvar_t cl_capturevideo = {0, "cl_capturevideo", "0"};
 cvar_t cl_capturevideo_fps = {0, "cl_capturevideo_fps", "30"};
-cvar_t cl_capturevideo_raw = {0, "cl_capturevideo_raw", "0"};
+cvar_t cl_capturevideo_rawrgb = {0, "cl_capturevideo_rawrgb", "0"};
+cvar_t cl_capturevideo_rawyv12 = {0, "cl_capturevideo_rawyv12", "0"};
 cvar_t r_textshadow = {0, "r_textshadow", "0"};
 cvar_t r_letterbox = {0, "r_letterbox", "0"};
 
@@ -476,9 +478,11 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&vid_pixelaspect);
 	Cvar_RegisterVariable (&scr_screenshot_jpeg);
 	Cvar_RegisterVariable (&scr_screenshot_jpeg_quality);
+	Cvar_RegisterVariable (&scr_screenshot_gamma);
 	Cvar_RegisterVariable (&cl_capturevideo);
 	Cvar_RegisterVariable (&cl_capturevideo_fps);
-	Cvar_RegisterVariable (&cl_capturevideo_raw);
+	Cvar_RegisterVariable (&cl_capturevideo_rawrgb);
+	Cvar_RegisterVariable (&cl_capturevideo_rawyv12);
 	Cvar_RegisterVariable (&r_textshadow);
 	Cvar_RegisterVariable (&r_letterbox);
 
@@ -719,7 +723,8 @@ typedef enum capturevideoformat_e
 {
 	CAPTUREVIDEOFORMAT_TARGA,
 	CAPTUREVIDEOFORMAT_JPEG,
-	CAPTUREVIDEOFORMAT_RAW
+	CAPTUREVIDEOFORMAT_RAWRGB,
+	CAPTUREVIDEOFORMAT_RAWYV12
 }
 capturevideoformat_t;
 
@@ -732,9 +737,14 @@ static int cl_capturevideo_frame = 0;
 static qbyte *cl_capturevideo_buffer = NULL;
 static qfile_t *cl_capturevideo_videofile = NULL;
 static qfile_t *cl_capturevideo_soundfile = NULL;
+static short cl_capturevideo_rgbtoyuvscaletable[3][3][256];
+static unsigned char cl_capturevideo_yuvnormalizetable[3][256];
+static unsigned char cl_capturevideo_rgbgammatable[3][256];
 
 void SCR_CaptureVideo_BeginVideo(void)
 {
+	double gamma, g;
+	unsigned int i, j;
 	qbyte out[44];
 	if (cl_capturevideo_active)
 		return;
@@ -745,11 +755,53 @@ void SCR_CaptureVideo_BeginVideo(void)
 	cl_capturevideo_soundrate = 0;
 	cl_capturevideo_frame = 0;
 	cl_capturevideo_buffer = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * (3+3+3) + 18);
+	gamma = 1.0/scr_screenshot_gamma.value;
 
-	if (cl_capturevideo_raw.integer)
+	for (i = 0;i < 256;i++)
 	{
-		cl_capturevideo_format = CAPTUREVIDEOFORMAT_RAW;
+		j = (unsigned char)bound(0, 255*pow(i/255.0, gamma), 255);
+		cl_capturevideo_rgbgammatable[0][i] = j;
+		cl_capturevideo_rgbgammatable[1][i] = j;
+		cl_capturevideo_rgbgammatable[2][i] = j;
+	}
+/*
+R = Y + 1.4075 * (Cr - 128);
+G = Y + -0.3455 * (Cb - 128) + -0.7169 * (Cr - 128);
+B = Y + 1.7790 * (Cb - 128);
+Y = R *  .299 + G *  .587 + B *  .114;
+Cb = R * -.169 + G * -.332 + B *  .500 + 128.;
+Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
+*/
+	for (i = 0;i < 256;i++)
+	{
+		g = i;//255*pow(i/255.0, gamma);
+		// Y weights from RGB
+		cl_capturevideo_rgbtoyuvscaletable[0][0][i] = (short)(g *  0.299);
+		cl_capturevideo_rgbtoyuvscaletable[0][1][i] = (short)(g *  0.587);
+		cl_capturevideo_rgbtoyuvscaletable[0][2][i] = (short)(g *  0.114);
+		// Cb weights from RGB
+		cl_capturevideo_rgbtoyuvscaletable[1][0][i] = (short)(g * -0.169);
+		cl_capturevideo_rgbtoyuvscaletable[1][1][i] = (short)(g * -0.332);
+		cl_capturevideo_rgbtoyuvscaletable[1][2][i] = (short)(g *  0.500);
+		// Cr weights from RGB
+		cl_capturevideo_rgbtoyuvscaletable[2][0][i] = (short)(g *  0.500);
+		cl_capturevideo_rgbtoyuvscaletable[2][1][i] = (short)(g * -0.419);
+		cl_capturevideo_rgbtoyuvscaletable[2][2][i] = (short)(g * -0.0813);
+		// range reduction of YCbCr to valid signal range
+		cl_capturevideo_yuvnormalizetable[0][i] = 16 + i * (236-16) / 256;
+		cl_capturevideo_yuvnormalizetable[1][i] = 16 + i * (240-16) / 256;
+		cl_capturevideo_yuvnormalizetable[2][i] = 16 + i * (240-16) / 256;
+	}
+
+	if (cl_capturevideo_rawrgb.integer)
+	{
+		cl_capturevideo_format = CAPTUREVIDEOFORMAT_RAWRGB;
 		cl_capturevideo_videofile = FS_Open ("video/dpvideo.rgb", "wb", false);
+	}
+	else if (cl_capturevideo_rawyv12.integer)
+	{
+		cl_capturevideo_format = CAPTUREVIDEOFORMAT_RAWYV12;
+		cl_capturevideo_videofile = FS_Open ("video/dpvideo.yv12", "wb", false);
 	}
 	else if (scr_screenshot_jpeg.integer)
 	{
@@ -832,25 +884,76 @@ void SCR_CaptureVideo_EndVideo(void)
 	cl_capturevideo_frame = 0;
 }
 
-qboolean SCR_CaptureVideo_VideoFrame(void)
+qboolean SCR_CaptureVideo_VideoFrame(int newframenum)
 {
 	int x = vid.realx, y = vid.realy, width = vid.realwidth, height = vid.realheight;
+	unsigned char *b, *out;
 	char filename[32];
+	int outoffset = (width/2)*(height/2);
 	//return SCR_ScreenShot(filename, cl_capturevideo_buffer, cl_capturevideo_buffer + vid.realwidth * vid.realheight * 3, cl_capturevideo_buffer + vid.realwidth * vid.realheight * 6, vid.realx, vid.realy, vid.realwidth, vid.realheight, false, false, false, jpeg);
 	// speed is critical here, so do saving as directly as possible
-	if (!r_render.integer)
-		return false;
 	switch (cl_capturevideo_format)
 	{
-	case CAPTUREVIDEOFORMAT_RAW:
+	case CAPTUREVIDEOFORMAT_RAWYV12:
+		// FIXME: width/height must be multiple of 2, enforce this?
 		qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, cl_capturevideo_buffer);
 		CHECKGLERROR
-		return FS_Write (cl_capturevideo_videofile, cl_capturevideo_buffer, width*height*3);
+		// process one line at a time, and CbCr every other line at 2 pixel intervals
+		for (y = 0;y < height;y++)
+		{
+			// 1x1 Y
+			for (b = cl_capturevideo_buffer + (height-1-y)*width*3, out = cl_capturevideo_buffer + width*height*3 + y*width, x = 0;x < width;x++, b += 3, out++)
+				*out = cl_capturevideo_yuvnormalizetable[0][cl_capturevideo_rgbtoyuvscaletable[0][0][b[0]] + cl_capturevideo_rgbtoyuvscaletable[0][1][b[1]] + cl_capturevideo_rgbtoyuvscaletable[0][2][b[2]]];
+			if ((y & 1) == 0)
+			{
+				// 2x2 Cb and Cr planes
+#if 1
+				// low quality, no averaging
+				for (b = cl_capturevideo_buffer + (height-2-y)*width*3, out = cl_capturevideo_buffer + width*height*3 + width*height + (y/2)*(width/2), x = 0;x < width/2;x++, b += 6, out++)
+				{
+					// Cr
+					out[0        ] = cl_capturevideo_yuvnormalizetable[2][cl_capturevideo_rgbtoyuvscaletable[2][0][b[0]] + cl_capturevideo_rgbtoyuvscaletable[2][1][b[1]] + cl_capturevideo_rgbtoyuvscaletable[2][2][b[2]] + 128];
+					// Cb
+					out[outoffset] = cl_capturevideo_yuvnormalizetable[1][cl_capturevideo_rgbtoyuvscaletable[1][0][b[0]] + cl_capturevideo_rgbtoyuvscaletable[1][1][b[1]] + cl_capturevideo_rgbtoyuvscaletable[1][2][b[2]] + 128];
+				}
+#else
+				// high quality, averaging
+				int inpitch = width*3;
+				for (b = cl_capturevideo_buffer + (height-2-y)*width*3, out = cl_capturevideo_buffer + width*height*3 + width*height + (y/2)*(width/2), x = 0;x < width/2;x++, b += 6, out++)
+				{
+					int blockr, blockg, blockb;
+					blockr = (b[0] + b[3] + b[inpitch+0] + b[inpitch+3]) >> 2;
+					blockg = (b[1] + b[4] + b[inpitch+1] + b[inpitch+4]) >> 2;
+					blockb = (b[2] + b[5] + b[inpitch+2] + b[inpitch+5]) >> 2;
+					// Cr
+					out[0        ] = cl_capturevideo_yuvnormalizetable[2][cl_capturevideo_rgbtoyuvscaletable[2][0][blockr] + cl_capturevideo_rgbtoyuvscaletable[2][1][blockg] + cl_capturevideo_rgbtoyuvscaletable[2][2][blockb] + 128];
+					// Cb
+					out[outoffset] = cl_capturevideo_yuvnormalizetable[1][cl_capturevideo_rgbtoyuvscaletable[1][0][blockr] + cl_capturevideo_rgbtoyuvscaletable[1][1][blockg] + cl_capturevideo_rgbtoyuvscaletable[1][2][blockb] + 128];
+				}
+#endif
+			}
+		}
+		for (;cl_capturevideo_frame < newframenum;cl_capturevideo_frame++)
+			if (!FS_Write (cl_capturevideo_videofile, cl_capturevideo_buffer + width*height*3, width*height+(width/2)*(height/2)*2))
+				return false;
+		return true;
+	case CAPTUREVIDEOFORMAT_RAWRGB:
+		qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, cl_capturevideo_buffer);
+		CHECKGLERROR
+		for (;cl_capturevideo_frame < newframenum;cl_capturevideo_frame++)
+			if (!FS_Write (cl_capturevideo_videofile, cl_capturevideo_buffer, width*height*3))
+				return false;
+		return true;
 	case CAPTUREVIDEOFORMAT_JPEG:
-		sprintf(filename, "video/dp%06d.jpg", cl_capturevideo_frame);
 		qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, cl_capturevideo_buffer);
 		CHECKGLERROR
-		return JPEG_SaveImage_preflipped (filename, width, height, cl_capturevideo_buffer);
+		for (;cl_capturevideo_frame < newframenum;cl_capturevideo_frame++)
+		{
+			sprintf(filename, "video/dp%06d.jpg", cl_capturevideo_frame);
+			if (!JPEG_SaveImage_preflipped (filename, width, height, cl_capturevideo_buffer))
+				return false;
+		}
+		return true;
 	case CAPTUREVIDEOFORMAT_TARGA:
 		//return Image_WriteTGARGB_preflipped (filename, width, height, cl_capturevideo_buffer, cl_capturevideo_buffer + vid.realwidth * vid.realheight * 3, );
 		memset (cl_capturevideo_buffer, 0, 18);
@@ -862,8 +965,13 @@ qboolean SCR_CaptureVideo_VideoFrame(void)
 		cl_capturevideo_buffer[16] = 24;	// pixel size
 		qglReadPixels (x, y, width, height, GL_BGR, GL_UNSIGNED_BYTE, cl_capturevideo_buffer + 18);
 		CHECKGLERROR
-		sprintf(filename, "video/dp%06d.tga", cl_capturevideo_frame);
-		return FS_WriteFile (filename, cl_capturevideo_buffer, width*height*3 + 18);
+		for (;cl_capturevideo_frame < newframenum;cl_capturevideo_frame++)
+		{
+			sprintf(filename, "video/dp%06d.tga", cl_capturevideo_frame);
+			if (!FS_WriteFile (filename, cl_capturevideo_buffer, width*height*3 + 18))
+				return false;
+		}
+		return true;
 	default:
 		return false;
 	}
@@ -882,8 +990,8 @@ void SCR_CaptureVideo_SoundFrame(qbyte *bufstereo16le, size_t length, int rate)
 
 void SCR_CaptureVideo(void)
 {
-	int newframenum, c;
-	if (cl_capturevideo.integer)
+	int newframenum;
+	if (cl_capturevideo.integer && r_render.integer)
 	{
 		if (!cl_capturevideo_active)
 			SCR_CaptureVideo_BeginVideo();
@@ -893,21 +1001,20 @@ void SCR_CaptureVideo(void)
 			Cvar_SetValueQuick(&cl_capturevideo_fps, cl_capturevideo_framerate);
 		}
 		newframenum = (Sys_DoubleTime() - cl_capturevideo_starttime) * cl_capturevideo_framerate;
-		c = (int)ceil(cl_capturevideo_framerate);
-		while (cl_capturevideo_frame < newframenum)
+		// if falling behind more than one second, stop
+		if (newframenum - cl_capturevideo_frame > (int)ceil(cl_capturevideo_framerate))
 		{
-			if ((c--) && SCR_CaptureVideo_VideoFrame())
-				cl_capturevideo_frame++;
-			else
-			{
-				Cvar_SetValueQuick(&cl_capturevideo, 0);
-				if (c == 0)
-					Con_Printf("video saving failed on frame %i, your machine is too slow for this capture speed.\n", cl_capturevideo_frame);
-				else
-					Con_Printf("video saving failed on frame %i, out of disk space? stopping video capture.\n", cl_capturevideo_frame);
-				SCR_CaptureVideo_EndVideo();
-				break;
-			}
+			Cvar_SetValueQuick(&cl_capturevideo, 0);
+			Con_Printf("video saving failed on frame %i, your machine is too slow for this capture speed.\n", cl_capturevideo_frame);
+			SCR_CaptureVideo_EndVideo();
+			return;
+		}
+		// write frames
+		if (!SCR_CaptureVideo_VideoFrame(newframenum))
+		{
+			Cvar_SetValueQuick(&cl_capturevideo, 0);
+			Con_Printf("video saving failed on frame %i, out of disk space? stopping video capture.\n", cl_capturevideo_frame);
+			SCR_CaptureVideo_EndVideo();
 		}
 	}
 	else if (cl_capturevideo_active)
