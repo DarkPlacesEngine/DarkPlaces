@@ -665,13 +665,7 @@ void IN_MouseMove (usercmd_t *cmd)
 	
 	// LordHavoc: changed limits on pitch from -70 to 80, to -90 to 90
 	if (mouselook && !(in_strafe.state & 1))
-	{
 		cl.viewangles[PITCH] += m_pitch.value * mouse_y;
-		if (cl.viewangles[PITCH] > 90)
-			cl.viewangles[PITCH] = 90;
-		if (cl.viewangles[PITCH] < -90)
-			cl.viewangles[PITCH] = -90;
-	}
 	else
 	{
 		if ((in_strafe.state & 1) && noclip_anglehack)
@@ -695,12 +689,13 @@ IN_Move
 */
 void IN_Move (usercmd_t *cmd)
 {
-
 	if (ActiveApp && !Minimized)
 	{
 		IN_MouseMove (cmd);
 		IN_JoyMove (cmd);
 	}
+
+	cl.viewangles[PITCH] = bound (in_pitch_min.value, cl.viewangles[PITCH], in_pitch_max.value);
 }
 
 

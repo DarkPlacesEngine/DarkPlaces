@@ -17,6 +17,9 @@ cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1"};
 cvar_t vid_fullscreen = {0, "vid_fullscreen", "1"};
 cvar_t gl_combine = {0, "gl_combine", "1"};
 
+cvar_t in_pitch_min = {0, "in_pitch_min", "-90"};
+cvar_t in_pitch_max = {0, "in_pitch_max", "90"};
+
 // GL_ARB_multitexture
 void (GLAPIENTRY *qglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
 void (GLAPIENTRY *qglActiveTexture) (GLenum);
@@ -168,5 +171,7 @@ void VID_InitCvars(void)
 	Cvar_RegisterVariable(&vid_mouse);
 	Cvar_RegisterVariable(&vid_fullscreen);
 	Cvar_RegisterVariable(&gl_combine);
+	Cvar_RegisterVariable(&in_pitch_min);
+	Cvar_RegisterVariable(&in_pitch_max);
 	Cmd_AddCommand("force_centerview", Force_CenterView_f);
 }

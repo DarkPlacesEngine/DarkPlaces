@@ -862,10 +862,7 @@ void IN_MouseMove (usercmd_t *cmd)
 		V_StopPitchDrift ();
 
 	if (/*freelook && */!(in_strafe.state & 1))
-	{
 		cl.viewangles[PITCH] += m_pitch.value * mouse_y;
-		cl.viewangles[PITCH] = bound (-90, cl.viewangles[PITCH], 90);
-	}
 	else
 	{
 		if ((in_strafe.state & 1) && noclip_anglehack)
@@ -879,6 +876,7 @@ void IN_MouseMove (usercmd_t *cmd)
 void IN_Move (usercmd_t *cmd)
 {
 	IN_MouseMove(cmd);
+	cl.viewangles[PITCH] = bound (in_pitch_min.value, cl.viewangles[PITCH], in_pitch_max.value);
 }
 
 
