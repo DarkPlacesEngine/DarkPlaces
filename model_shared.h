@@ -216,6 +216,12 @@ typedef struct model_brush_s
 	int num_surfaces;
 	msurface_t *data_surfaces;
 
+	int num_brushes;
+	q3mbrush_t *data_brushes;
+
+	int num_brushsides;
+	q3mbrushside_t *data_brushsides;
+
 	// pvs
 	int num_pvsclusters;
 	int num_pvsclusterbytes;
@@ -302,12 +308,6 @@ typedef struct model_brushq3_s
 	int num_models;
 	q3mmodel_t *data_models;
 
-	int num_brushes;
-	q3mbrush_t *data_brushes;
-
-	int num_brushsides;
-	q3mbrushside_t *data_brushsides;
-
 	// freed after loading!
 	int num_vertices;
 	float *data_vertex3f;
@@ -389,6 +389,9 @@ typedef struct model_s
 	// range of surface numbers in this (sub)model
 	int				firstmodelsurface;
 	int				nummodelsurfaces;
+	// range of collision brush numbers in this (sub)model
+	int				firstmodelbrush;
+	int				nummodelbrushes;
 	// list of surface numbers in this (sub)model
 	int				*surfacelist;
 	// surface meshes are merged to a smaller set of meshes to allow reduced

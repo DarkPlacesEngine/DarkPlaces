@@ -2113,14 +2113,15 @@ void R_Q3BSP_Draw(entity_render_t *ent)
 		int i;
 		model_t *model = ent->model;
 		msurface_t *surface;
+		q3mbrush_t *brush;
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 		GL_DepthMask(false);
 		GL_DepthTest(true);
 		qglPolygonOffset(r_drawcollisionbrushes_polygonfactor.value, r_drawcollisionbrushes_polygonoffset.value);
-		for (i = 0;i < model->brushq3.data_models[model->brush.submodel].numbrushes;i++)
-			if (model->brushq3.data_models[model->brush.submodel].firstbrush[i].colbrushf && model->brushq3.data_models[model->brush.submodel].firstbrush[i].colbrushf->numtriangles)
-				R_DrawCollisionBrush(model->brushq3.data_models[model->brush.submodel].firstbrush[i].colbrushf);
-		for (i = 0, surface = model->brushq3.data_models[model->brush.submodel].firstsurface;i < model->brushq3.data_models[model->brush.submodel].numsurfaces;i++, surface++)
+		for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
+			if (brush->colbrushf && brush->colbrushf->numtriangles)
+				R_DrawCollisionBrush(brush->colbrushf);
+		for (i = 0, surface = model->brush.data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
 			if (surface->mesh.num_collisiontriangles)
 				R_Q3BSP_DrawCollisionSurface(ent, surface);
 		qglPolygonOffset(0, 0);
