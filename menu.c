@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -42,6 +42,7 @@ void M_Menu_Main_f (void);
 		void M_Menu_Setup_f (void);
 		void M_Menu_Net_f (void);
 	void M_Menu_Options_f (void);
+	void M_Menu_Options_Effects_f (void);
 		void M_Menu_Keys_f (void);
 		void M_Menu_Video_f (void);
 	void M_Menu_Help_f (void);
@@ -59,6 +60,7 @@ void M_Main_Draw (void);
 		void M_Setup_Draw (void);
 		void M_Net_Draw (void);
 	void M_Options_Draw (void);
+	void M_Options_Effects_Draw (void);
 		void M_Keys_Draw (void);
 		void M_Video_Draw (void);
 	void M_Help_Draw (void);
@@ -76,6 +78,7 @@ void M_Main_Key (int key);
 		void M_Setup_Key (int key);
 		void M_Net_Key (int key);
 	void M_Options_Key (int key);
+	void M_Options_Effects_Key (int key);
 		void M_Keys_Key (int key);
 		void M_Video_Key (int key);
 	void M_Help_Key (int key);
@@ -1221,111 +1224,7 @@ again:
 //=============================================================================
 /* OPTIONS MENU */
 
-#define	OPTIONS_ITEMS	27
-
 #define	SLIDER_RANGE	10
-
-int		options_cursor;
-
-void M_Menu_Options_f (void)
-{
-	key_dest = key_menu;
-	m_state = m_options;
-	m_entersound = true;
-}
-
-
-void M_AdjustSliders (int dir)
-{
-	S_LocalSound ("misc/menu3.wav");
-
-	switch (options_cursor)
-	{
-	case 4:
-		Cvar_SetValueQuick (&scr_2dresolution, bound(0, scr_2dresolution.value + dir * 0.2, 1));
-		break;
-	case 5:
-		Cvar_SetValueQuick (&scr_viewsize, bound(30, scr_viewsize.value + dir * 10, 120));
-		break;
-	case 6:
-		Cvar_SetValueQuick (&r_skyquality, bound(0, r_skyquality.integer + dir, 2));
-		break;
-	case 7:
-		Cvar_SetValueQuick (&r_ser, !r_ser.integer);
-		break;
-	case 8:
-		Cvar_SetValueQuick (&v_overbrightbits, bound(0, v_overbrightbits.integer + dir, 4));
-		break;
-	case 9:
-		Cvar_SetValueQuick (&gl_combine, !gl_combine.integer);
-		break;
-	case 10:
-		Cvar_SetValueQuick (&gl_dither, !gl_dither.integer);
-		break;
-	case 11:
-		Cvar_SetValueQuick (&v_hwgamma, !v_hwgamma.integer);
-		break;
-	case 12:
-		Cvar_SetValueQuick (&v_gamma, bound(1, v_gamma.value + dir * 0.25, 5));
-		break;
-	case 13:
-		Cvar_SetValueQuick (&v_contrast, bound(0.5, v_contrast.value + dir * 0.25, 5));
-		break;
-	case 14:
-		Cvar_SetValueQuick (&v_brightness, bound(0, v_brightness.value + dir * 0.05, 0.8));
-		break;
-	case 15: // music volume
-		#ifdef _WIN32
-		Cvar_SetValueQuick (&bgmvolume, bound(0, bgmvolume.value + dir * 1.0, 1));
-		#else
-		Cvar_SetValueQuick (&bgmvolume, bound(0, bgmvolume.value + dir * 0.1, 1));
-		#endif
-		break;
-	case 16: // sfx volume
-		Cvar_SetValueQuick (&volume, bound(0, volume.value + dir * 0.1, 1));
-		break;
-	case 17:
-		Cvar_SetValueQuick (&crosshair, bound(0, crosshair.integer + dir, 5));
-		break;
-	case 18:
-		Cvar_SetValueQuick (&crosshair_size, bound(1, crosshair_size.value + dir, 5));
-		break;
-	case 19: // show framerate
-		Cvar_SetValueQuick (&showfps, !showfps.integer);
-		break;
-	case 20: // always run
-		if (cl_forwardspeed.value > 200)
-		{
-			Cvar_SetValueQuick (&cl_forwardspeed, 200);
-			Cvar_SetValueQuick (&cl_backspeed, 200);
-		}
-		else
-		{
-			Cvar_SetValueQuick (&cl_forwardspeed, 400);
-			Cvar_SetValueQuick (&cl_backspeed, 400);
-		}
-		break;
-	case 21: // lookspring
-		Cvar_SetValueQuick (&lookspring, !lookspring.integer);
-		break;
-	case 22: // lookstrafe
-		Cvar_SetValueQuick (&lookstrafe, !lookstrafe.integer);
-		break;
-	case 23: // mouse speed
-		Cvar_SetValueQuick (&sensitivity, bound(1, sensitivity.value + dir * 0.5, 50));
-		break;
-	case 24: // mouse look
-		Cvar_SetValueQuick (&freelook, !freelook.integer);
-		break;
-	case 25: // invert mouse
-		Cvar_SetValueQuick (&m_pitch, -m_pitch.value);
-		break;
-	case 26: // windowed mouse
-		Cvar_SetValueQuick (&vid_mouse, !vid_mouse.integer);
-		break;
-	}
-}
-
 
 void M_DrawSlider (int x, int y, float range)
 {
@@ -1351,6 +1250,109 @@ void M_DrawCheckbox (int x, int y, int on)
 }
 
 
+#define	OPTIONS_ITEMS	28
+
+int		options_cursor;
+
+void M_Menu_Options_f (void)
+{
+	key_dest = key_menu;
+	m_state = m_options;
+	m_entersound = true;
+}
+
+
+void M_Menu_Options_AdjustSliders (int dir)
+{
+	S_LocalSound ("misc/menu3.wav");
+
+	switch (options_cursor)
+	{
+	case 5:
+		Cvar_SetValueQuick (&scr_2dresolution, bound(0, scr_2dresolution.value + dir * 0.2, 1));
+		break;
+	case 6:
+		Cvar_SetValueQuick (&scr_viewsize, bound(30, scr_viewsize.value + dir * 10, 120));
+		break;
+	case 7:
+		Cvar_SetValueQuick (&r_skyquality, bound(0, r_skyquality.integer + dir, 2));
+		break;
+	case 8:
+		Cvar_SetValueQuick (&r_ser, !r_ser.integer);
+		break;
+	case 9:
+		Cvar_SetValueQuick (&v_overbrightbits, bound(0, v_overbrightbits.integer + dir, 4));
+		break;
+	case 10:
+		Cvar_SetValueQuick (&gl_combine, !gl_combine.integer);
+		break;
+	case 11:
+		Cvar_SetValueQuick (&gl_dither, !gl_dither.integer);
+		break;
+	case 12:
+		Cvar_SetValueQuick (&v_hwgamma, !v_hwgamma.integer);
+		break;
+	case 13:
+		Cvar_SetValueQuick (&v_gamma, bound(1, v_gamma.value + dir * 0.25, 5));
+		break;
+	case 14:
+		Cvar_SetValueQuick (&v_contrast, bound(0.5, v_contrast.value + dir * 0.25, 5));
+		break;
+	case 15:
+		Cvar_SetValueQuick (&v_brightness, bound(0, v_brightness.value + dir * 0.05, 0.8));
+		break;
+	case 16: // music volume
+		#ifdef _WIN32
+		Cvar_SetValueQuick (&bgmvolume, bound(0, bgmvolume.value + dir * 1.0, 1));
+		#else
+		Cvar_SetValueQuick (&bgmvolume, bound(0, bgmvolume.value + dir * 0.1, 1));
+		#endif
+		break;
+	case 17: // sfx volume
+		Cvar_SetValueQuick (&volume, bound(0, volume.value + dir * 0.1, 1));
+		break;
+	case 18:
+		Cvar_SetValueQuick (&crosshair, bound(0, crosshair.integer + dir, 5));
+		break;
+	case 19:
+		Cvar_SetValueQuick (&crosshair_size, bound(1, crosshair_size.value + dir, 5));
+		break;
+	case 20: // show framerate
+		Cvar_SetValueQuick (&showfps, !showfps.integer);
+		break;
+	case 21: // always run
+		if (cl_forwardspeed.value > 200)
+		{
+			Cvar_SetValueQuick (&cl_forwardspeed, 200);
+			Cvar_SetValueQuick (&cl_backspeed, 200);
+		}
+		else
+		{
+			Cvar_SetValueQuick (&cl_forwardspeed, 400);
+			Cvar_SetValueQuick (&cl_backspeed, 400);
+		}
+		break;
+	case 22: // lookspring
+		Cvar_SetValueQuick (&lookspring, !lookspring.integer);
+		break;
+	case 23: // lookstrafe
+		Cvar_SetValueQuick (&lookstrafe, !lookstrafe.integer);
+		break;
+	case 24: // mouse speed
+		Cvar_SetValueQuick (&sensitivity, bound(1, sensitivity.value + dir * 0.5, 50));
+		break;
+	case 25: // mouse look
+		Cvar_SetValueQuick (&freelook, !freelook.integer);
+		break;
+	case 26: // invert mouse
+		Cvar_SetValueQuick (&m_pitch, -m_pitch.value);
+		break;
+	case 27: // windowed mouse
+		Cvar_SetValueQuick (&vid_mouse, !vid_mouse.integer);
+		break;
+	}
+}
+
 void M_Options_Draw (void)
 {
 	float y;
@@ -1365,6 +1367,7 @@ void M_Options_Draw (void)
 	M_Print(16, y, "         Go to console");y += 8;
 	M_Print(16, y, "     Reset to defaults");y += 8;
 	M_ItemPrint(16, y, "         Video Options", vid_menudrawfn != NULL);y += 8;
+	M_Print(16, y, "       Effects Options");y += 8;
 	M_Print(16, y, "         2D Resolution");M_DrawSlider(220, y, scr_2dresolution.value);y += 8;
 	M_Print(16, y, "           Screen size");M_DrawSlider(220, y, (scr_viewsize.value - 30) /(120 - 30));y += 8;
 	M_Print(16, y, "           Sky Quality");M_DrawSlider(220, y, r_skyquality.value / 2);y += 8;
@@ -1420,8 +1423,11 @@ void M_Options_Key (int k)
 			if (vid_menudrawfn)
 				M_Menu_Video_f ();
 			break;
+		case 4:
+			M_Menu_Options_Effects_f ();
+			break;
 		default:
-			M_AdjustSliders (1);
+			M_Menu_Options_AdjustSliders (1);
 			break;
 		}
 		return;
@@ -1441,11 +1447,160 @@ void M_Options_Key (int k)
 		break;
 
 	case K_LEFTARROW:
-		M_AdjustSliders (-1);
+		M_Menu_Options_AdjustSliders (-1);
 		break;
 
 	case K_RIGHTARROW:
-		M_AdjustSliders (1);
+		M_Menu_Options_AdjustSliders (1);
+		break;
+	}
+}
+
+#define	OPTIONS_EFFECTS_ITEMS	11
+
+int options_effects_cursor;
+
+void M_Menu_Options_Effects_f (void)
+{
+	key_dest = key_menu;
+	m_state = m_options_effects;
+	m_entersound = true;
+}
+
+
+extern cvar_t cl_particles;
+extern cvar_t cl_explosions;
+extern cvar_t cl_stainmaps;
+extern cvar_t r_lightmodels;
+extern cvar_t cl_particles_bulletimpacts;
+extern cvar_t cl_particles_smoke;
+extern cvar_t cl_particles_sparks;
+extern cvar_t cl_particles_bubbles;
+extern cvar_t cl_particles_blood;
+extern cvar_t cl_particles_blood_size;
+extern cvar_t cl_particles_blood_alpha;
+
+void M_Menu_Options_Effects_AdjustSliders (int dir)
+{
+	S_LocalSound ("misc/menu3.wav");
+
+	switch (options_effects_cursor)
+	{
+	case 0:
+		Cvar_SetValueQuick (&r_lightmodels, !r_lightmodels.integer);
+		break;
+	case 1:
+		Cvar_SetValueQuick (&cl_particles, !cl_particles.integer);
+		break;
+	case 2:
+		Cvar_SetValueQuick (&cl_explosions, !cl_explosions.integer);
+		break;
+	case 3:
+		Cvar_SetValueQuick (&cl_stainmaps, !cl_stainmaps.integer);
+		break;
+	case 4:
+		Cvar_SetValueQuick (&cl_particles_bulletimpacts, !cl_particles_bulletimpacts.integer);
+		break;
+	case 5:
+		Cvar_SetValueQuick (&cl_particles_smoke, !cl_particles_smoke.integer);
+		break;
+	case 6:
+		Cvar_SetValueQuick (&cl_particles_sparks, !cl_particles_sparks.integer);
+		break;
+	case 7:
+		Cvar_SetValueQuick (&cl_particles_bubbles, !cl_particles_bubbles.integer);
+		break;
+	case 8:
+		Cvar_SetValueQuick (&cl_particles_blood, !cl_particles_blood.integer);
+		break;
+	case 9:
+		Cvar_SetValueQuick (&cl_particles_blood_size, bound(2, cl_particles_blood_size.value + dir * 1, 20));
+		break;
+	case 10:
+		Cvar_SetValueQuick (&cl_particles_blood_alpha, bound(0.2, cl_particles_blood_alpha.value + dir * 0.1, 1));
+		break;
+	}
+}
+
+void M_Options_Effects_Draw (void)
+{
+	float y;
+	cachepic_t	*p;
+
+	M_DrawPic(16, 4, "gfx/qplaque.lmp");
+	p = Draw_CachePic("gfx/p_option.lmp");
+	M_DrawPic((320-p->width)/2, 4, "gfx/p_option.lmp");
+
+	y = 32;
+	M_Print(16, y, "        Model Lighting");M_DrawCheckbox(220, y, r_lightmodels.integer);y += 8;
+	M_Print(16, y, "             Particles");M_DrawCheckbox(220, y, cl_particles.integer);y += 8;
+	M_Print(16, y, "            Explosions");M_DrawCheckbox(220, y, cl_explosions.integer);y += 8;
+	M_Print(16, y, "             Stainmaps");M_DrawCheckbox(220, y, cl_stainmaps.integer);y += 8;
+	M_Print(16, y, "        Bullet Impacts");M_DrawCheckbox(220, y, cl_particles_bulletimpacts.integer);y += 8;
+	M_Print(16, y, "                 Smoke");M_DrawCheckbox(220, y, cl_particles_smoke.integer);y += 8;
+	M_Print(16, y, "                Sparks");M_DrawCheckbox(220, y, cl_particles_sparks.integer);y += 8;
+	M_Print(16, y, "               Bubbles");M_DrawCheckbox(220, y, cl_particles_bubbles.integer);y += 8;
+	M_Print(16, y, "                 Blood");M_DrawCheckbox(220, y, cl_particles_blood.integer);y += 8;
+	M_Print(16, y, "            Blood Size");M_DrawSlider(220, y, (cl_particles_blood_size.value - 2) / 18);y += 8;
+	M_Print(16, y, "         Blood Opacity");M_DrawSlider(220, y, (cl_particles_blood_alpha.value - 0.2) / 0.8);y += 8;
+
+	// cursor
+	M_DrawCharacter(200, 32 + options_effects_cursor*8, 12+((int)(realtime*4)&1));
+}
+
+
+void M_Options_Effects_Key (int k)
+{
+	switch (k)
+	{
+	case K_ESCAPE:
+		M_Menu_Main_f ();
+		break;
+
+	case K_ENTER:
+		m_entersound = true;
+		switch (options_effects_cursor)
+		{
+		case 0:
+			M_Menu_Keys_f ();
+			break;
+		case 1:
+			m_state = m_none;
+			Con_ToggleConsole_f ();
+			break;
+		case 2:
+			Cbuf_AddText ("exec default.cfg\n");
+			break;
+		case 3:
+			if (vid_menudrawfn)
+				M_Menu_Video_f ();
+			break;
+		default:
+			M_Menu_Options_Effects_AdjustSliders (1);
+			break;
+		}
+		return;
+
+	case K_UPARROW:
+		S_LocalSound ("misc/menu1.wav");
+		options_effects_cursor--;
+		if (options_effects_cursor < 0)
+			options_effects_cursor = OPTIONS_EFFECTS_ITEMS-1;
+		break;
+
+	case K_DOWNARROW:
+		S_LocalSound ("misc/menu1.wav");
+		options_effects_cursor++;
+		if (options_effects_cursor >= OPTIONS_EFFECTS_ITEMS)
+			options_effects_cursor = 0;
+		break;
+
+	case K_LEFTARROW:
+		M_Menu_Options_Effects_AdjustSliders (-1);
+		break;
+
+	case K_RIGHTARROW:
+		M_Menu_Options_Effects_AdjustSliders (1);
 		break;
 	}
 }
@@ -2934,6 +3089,7 @@ void M_Init (void)
 	Cmd_AddCommand ("menu_multiplayer", M_Menu_MultiPlayer_f);
 	Cmd_AddCommand ("menu_setup", M_Menu_Setup_f);
 	Cmd_AddCommand ("menu_options", M_Menu_Options_f);
+	Cmd_AddCommand ("menu_options_effects", M_Menu_Options_Effects_f);
 	Cmd_AddCommand ("menu_keys", M_Menu_Keys_f);
 	Cmd_AddCommand ("menu_video", M_Menu_Video_f);
 	Cmd_AddCommand ("help", M_Menu_Help_f);
@@ -3016,6 +3172,10 @@ void M_Draw (void)
 
 	case m_options:
 		M_Options_Draw ();
+		break;
+
+	case m_options_effects:
+		M_Options_Effects_Draw ();
 		break;
 
 	case m_keys:
@@ -3102,6 +3262,10 @@ void M_Keydown (int key)
 
 	case m_options:
 		M_Options_Key (key);
+		return;
+
+	case m_options_effects:
+		M_Options_Effects_Key (key);
 		return;
 
 	case m_keys:
