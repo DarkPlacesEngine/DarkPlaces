@@ -5,15 +5,13 @@ CC=gcc
 
 MAKE:=$(MAKE) -f makefile.bsd
 
-#recommended for: anyone not using ALSA 0.5
-#OBJ_BSDSOUND=snd_oss.o snd_dma.o snd_mix.o snd_mem.o
 OBJ_BSDSOUND=snd_null.o
 BSDSOUNDLIB=
 
-#if you want CD sound in Linux
-#OBJ_BSDCD=cd_bsd.o
+#if you want CD sound in BSD
+OBJ_BSDCD=cd_shared.o cd_bsd.o
 #if you want no CD audio
-OBJ_BSDCD=cd_null.o
+#OBJ_BSDCD=cd_null.o
 
 #K6/athlon optimizations
 #CPUOPTIMIZATIONS=-march=k6
@@ -72,7 +70,7 @@ DO_CC=$(CC) $(CFLAGS) -c $< -o $@
 # Link
 # LordHavoc note: I have been informed that system libraries must come last
 # on the linker line, and that -lm must always be last
-LDFLAGS_GLX=-lm
+LDFLAGS_GLX=-lm -lutil
 LDFLAGS_DED=-lm
 LDFLAGS_DEBUG=-g -ggdb
 LDFLAGS_PROFILE=-g -pg
