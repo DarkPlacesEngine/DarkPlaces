@@ -8,16 +8,22 @@ viddef_t vid;
 qboolean isG200 = false; // LordHavoc: the Matrox G200 can't do per pixel alpha, and it uses a D3D driver for GL... ugh...
 qboolean isRagePro = false; // LordHavoc: the ATI Rage Pro has limitations with per pixel alpha (the color scaler does not apply to per pixel alpha images...), although not as bad as a G200.
 
-// LordHavoc: GL_ARB_multitexture support
+// GL_ARB_multitexture
 int gl_textureunits = 0;
-// LordHavoc: GL_ARB_texture_env_combine or GL_EXT_texture_env_combine support
+// GL_ARB_texture_env_combine or GL_EXT_texture_env_combine
 int gl_combine_extension = false;
-// LordHavoc: GL_EXT_compiled_vertex_array support
+// GL_EXT_compiled_vertex_array
 int gl_supportslockarrays = false;
-// LordHavoc: GLX_SGI_video_sync and WGL_EXT_swap_control
+// GLX_SGI_video_sync or WGL_EXT_swap_control
 int gl_videosyncavailable = false;
-// indicates that stencil is available
+// stencil available
 int gl_stencil = false;
+// GL_EXT_texture3D
+int gl_texture3d = false;
+// GL_ARB_texture_cubemap
+int gl_texturecubemap = false;
+// GL_ARB_texture_env_dot3
+int gl_dot3arb = false;
 
 // LordHavoc: if window is hidden, don't update screen
 int vid_hidden = true;
@@ -142,20 +148,36 @@ void (GLAPIENTRY *qglClearStencil)(GLint s);
 
 //void (GLAPIENTRY *qglTexEnvf)(GLenum target, GLenum pname, GLfloat param);
 void (GLAPIENTRY *qglTexEnvi)(GLenum target, GLenum pname, GLint param);
-
 //void (GLAPIENTRY *qglTexParameterf)(GLenum target, GLenum pname, GLfloat param);
 void (GLAPIENTRY *qglTexParameteri)(GLenum target, GLenum pname, GLint param);
 
-void (GLAPIENTRY *qglBindTexture)(GLenum target, GLuint texture);
-void (GLAPIENTRY *qglTexImage2D)(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
-void (GLAPIENTRY *qglTexSubImage2D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels);
+void (GLAPIENTRY *qglGenTextures)(GLsizei n, GLuint *textures);
 void (GLAPIENTRY *qglDeleteTextures)(GLsizei n, const GLuint *textures);
+void (GLAPIENTRY *qglBindTexture)(GLenum target, GLuint texture);
+void (GLAPIENTRY *qglPrioritizeTextures)(GLsizei n, const GLuint *textures, const GLclampf *priorities);
+GLboolean (GLAPIENTRY *qglAreTexturesResident)(GLsizei n, const GLuint *textures, GLboolean *residences);
+GLboolean (GLAPIENTRY *qglIsTexture)(GLuint texture);
 void (GLAPIENTRY *qglPixelStoref)(GLenum pname, GLfloat param);
 void (GLAPIENTRY *qglPixelStorei)(GLenum pname, GLint param);
+
+void (GLAPIENTRY *qglTexImage1D)(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
+void (GLAPIENTRY *qglTexImage2D)(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
+void (GLAPIENTRY *qglTexSubImage1D)(GLenum target, GLint level, GLint xoffset, GLsizei width, GLenum format, GLenum type, const GLvoid *pixels);
+void (GLAPIENTRY *qglTexSubImage2D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels);
+void (GLAPIENTRY *qglCopyTexImage1D)(GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLint border);
+void (GLAPIENTRY *qglCopyTexImage2D)(GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border);
+void (GLAPIENTRY *qglCopyTexSubImage1D)(GLenum target, GLint level, GLint xoffset, GLint x, GLint y, GLsizei width);
+void (GLAPIENTRY *qglCopyTexSubImage2D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint x, GLint y, GLsizei width, GLsizei height);
+
 
 void (GLAPIENTRY *qglDrawRangeElementsEXT)(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices);
 
 //void (GLAPIENTRY *qglColorTableEXT)(int, int, int, int, int, const void *);
+
+void (GLAPIENTRY *qglTexImage3DEXT)(GLenum target, GLint level, GLenum internalFormat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
+void (GLAPIENTRY *qglTexSubImage3DEXT)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const GLvoid *pixels);
+void (GLAPIENTRY *qglCopyTexSubImage3DEXT)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLint x, GLint y, GLsizei width, GLsizei height);
+
 
 int GL_CheckExtension(const char *name, const gl_extensionfunctionlist_t *funcs, const char *disableparm, int silent)
 {
@@ -263,12 +285,22 @@ static gl_extensionfunctionlist_t opengl110funcs[] =
 	{"glTexEnvi", (void **) &qglTexEnvi},
 //	{"glTexParameterf", (void **) &qglTexParameterf},
 	{"glTexParameteri", (void **) &qglTexParameteri},
-	{"glBindTexture", (void **) &qglBindTexture},
-	{"glTexImage2D", (void **) &qglTexImage2D},
-	{"glTexSubImage2D", (void **) &qglTexSubImage2D},
-	{"glDeleteTextures", (void **) &qglDeleteTextures},
 	{"glPixelStoref", (void **) &qglPixelStoref},
 	{"glPixelStorei", (void **) &qglPixelStorei},
+	{"glGenTextures", (void **) &qglGenTextures},
+	{"glDeleteTextures", (void **) &qglDeleteTextures},
+	{"glBindTexture", (void **) &qglBindTexture},
+	{"glPrioritizeTextures", (void **) &qglPrioritizeTextures},
+	{"glAreTexturesResident", (void **) &qglAreTexturesResident},
+	{"glIsTexture", (void **) &qglIsTexture},
+	{"glTexImage1D", (void **) &qglTexImage1D},
+	{"glTexImage2D", (void **) &qglTexImage2D},
+	{"glTexSubImage1D", (void **) &qglTexSubImage1D},
+	{"glTexSubImage2D", (void **) &qglTexSubImage2D},
+	{"glCopyTexImage1D", (void **) &qglCopyTexImage1D},
+	{"glCopyTexImage2D", (void **) &qglCopyTexImage2D},
+	{"glCopyTexSubImage1D", (void **) &qglCopyTexSubImage1D},
+	{"glCopyTexSubImage2D", (void **) &qglCopyTexSubImage2D},
 	{NULL, NULL}
 };
 
@@ -299,9 +331,19 @@ static gl_extensionfunctionlist_t compiledvertexarrayfuncs[] =
 	{NULL, NULL}
 };
 
+static gl_extensionfunctionlist_t texture3dfuncs[] =
+{
+	{"glTexImage3DEXT", (void **) &qglTexImage3DEXT},
+	{"glTexSubImage3DEXT", (void **) &qglTexSubImage3DEXT},
+	{"glCopyTexSubImage3DEXT", (void **) &qglCopyTexSubImage3DEXT},
+	{NULL, NULL}
+};
+
 void VID_CheckExtensions(void)
 {
+	gl_stencil = vid_stencil.integer;
 	gl_combine_extension = false;
+	gl_dot3arb = false;
 	gl_supportslockarrays = false;
 	gl_textureunits = 1;
 
@@ -322,15 +364,13 @@ void VID_CheckExtensions(void)
 	if (GL_CheckExtension("GL_ARB_multitexture", multitexturefuncs, "-nomtex", false))
 	{
 		qglGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, &gl_textureunits);
-		if (gl_textureunits > 1)
-			gl_combine_extension = GL_CheckExtension("GL_ARB_texture_env_combine", NULL, "-nocombine", false) || GL_CheckExtension("GL_EXT_texture_env_combine", NULL, "-nocombine", false);
-		else
-		{
-			Con_Printf("GL_ARB_multitexture with less than 2 units? - BROKEN DRIVER!\n");
-			gl_textureunits = 1; // for sanity sake, make sure it's not 0
-		}
+		gl_combine_extension = GL_CheckExtension("GL_ARB_texture_env_combine", NULL, "-nocombine", false) || GL_CheckExtension("GL_EXT_texture_env_combine", NULL, "-nocombine", false);
+		if (gl_combine_extension)
+			gl_dot3arb = GL_CheckExtension("GL_ARB_texture_env_dot3", NULL, "-nodot3", false);
 	}
 
+	gl_texture3d = GL_CheckExtension("GL_EXT_texture3D", texture3dfuncs, "-notexture3d", false);
+	gl_texturecubemap = GL_CheckExtension("GL_ARB_texture_cube_map", NULL, "-nocubemap", false);
 	gl_supportslockarrays = GL_CheckExtension("GL_EXT_compiled_vertex_array", compiledvertexarrayfuncs, "-nocva", false);
 
 	// we don't care if it's an extension or not, they are identical functions, so keep it simple in the rendering code

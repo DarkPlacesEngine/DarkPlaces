@@ -40,10 +40,10 @@ void Image_WriteTGARGBA (char *filename, int width, int height, qbyte *data);
 qboolean Image_CheckAlpha(qbyte *data, int size, qboolean rgba);
 
 // resizes the image (in can not be the same as out)
-void Image_Resample (void *indata, int inwidth, int inheight, void *outdata, int outwidth, int outheight, int bytesperpixel, int quality);
+void Image_Resample (void *indata, int inwidth, int inheight, int indepth, void *outdata, int outwidth, int outheight, int outdepth, int bytesperpixel, int quality);
 
 // scales the image down by a power of 2 (in can be the same as out)
-void Image_MipReduce(qbyte *in, qbyte *out, int *width, int *height, int destwidth, int destheight, int bytesperpixel);
+void Image_MipReduce(qbyte *in, qbyte *out, int *width, int *height, int *depth, int destwidth, int destheight, int destdepth, int bytesperpixel);
 
 // only used by menuplyr coloring
 qbyte *LoadLMPAs8Bit (qbyte *f, int matchwidth, int matchheight);
