@@ -15,7 +15,19 @@ Package=<4>
 
 ###############################################################################
 
-Project: "dedicated"=".\dedicated.dsp" - Package Owner=<4>
+Project: "dedicated"=".\darkplaces-dedicated.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "sdl"=".\darkplaces-sdl.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
