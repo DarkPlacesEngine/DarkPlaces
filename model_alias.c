@@ -281,7 +281,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 				 loadmodel->name, version, ALIAS_VERSION);
 
 	loadmodel->type = mod_alias;
-	loadmodel->aliastype = ALIASTYPE_MDL;
+	loadmodel->aliastype = ALIASTYPE_MDLMD2;
 
 	loadmodel->numskins = LittleLong(pinmodel->numskins);
 	BOUNDI(loadmodel->numskins,0,256);
@@ -423,7 +423,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	}
 
 // load triangle data
-	loadmodel->mdldata_indices = Mem_Alloc(loadmodel->mempool, sizeof(int[3]) * loadmodel->numtris);
+	loadmodel->mdlmd2data_indices = Mem_Alloc(loadmodel->mempool, sizeof(int[3]) * loadmodel->numtris);
 
 	// count the vertices used
 	for (i = 0;i < numverts*2;i++)
@@ -461,16 +461,16 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	// remap the triangle references
 	for (i = 0;i < loadmodel->numtris;i++)
 	{
-		loadmodel->mdldata_indices[i*3+0] = vertremap[temptris[i][0]];
-		loadmodel->mdldata_indices[i*3+1] = vertremap[temptris[i][1]];
-		loadmodel->mdldata_indices[i*3+2] = vertremap[temptris[i][2]];
+		loadmodel->mdlmd2data_indices[i*3+0] = vertremap[temptris[i][0]];
+		loadmodel->mdlmd2data_indices[i*3+1] = vertremap[temptris[i][1]];
+		loadmodel->mdlmd2data_indices[i*3+2] = vertremap[temptris[i][2]];
 	}
 	// store the texture coordinates
-	loadmodel->mdldata_texcoords = Mem_Alloc(loadmodel->mempool, sizeof(float[2]) * totalverts);
+	loadmodel->mdlmd2data_texcoords = Mem_Alloc(loadmodel->mempool, sizeof(float[2]) * totalverts);
 	for (i = 0;i < totalverts;i++)
 	{
-		loadmodel->mdldata_texcoords[i*2+0] = vertst[i][0];
-		loadmodel->mdldata_texcoords[i*2+1] = vertst[i][1];
+		loadmodel->mdlmd2data_texcoords[i*2+0] = vertst[i][0];
+		loadmodel->mdlmd2data_texcoords[i*2+1] = vertst[i][1];
 	}
 
 // load the frames
@@ -507,17 +507,19 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	loadmodel->DrawShadow = NULL;
 }
 
-static void Mod_MD2_ConvertVerts (int numverts, vec3_t scale, vec3_t translate, trivertx_t *v, trivertx_t *out)
+static void Mod_MD2_ConvertVerts (vec3_t scale, vec3_t translate, trivertx_t *v, trivertx_t *out, int *vertremap)
 {
 	int i, invalidnormals = 0;
 	float dist;
+	trivertx_t *in;
 	vec3_t temp;
-	for (i = 0;i < numverts;i++)
+	for (i = 0;i < loadmodel->numverts;i++)
 	{
-		VectorCopy(v[i].v, out[i].v);
-		temp[0] = v[i].v[0] * scale[0] + translate[0];
-		temp[1] = v[i].v[1] * scale[1] + translate[1];
-		temp[2] = v[i].v[2] * scale[2] + translate[2];
+		in = v + vertremap[i];
+		VectorCopy(in->v, out[i].v);
+		temp[0] = in->v[0] * scale[0] + translate[0];
+		temp[1] = in->v[1] * scale[1] + translate[1];
+		temp[2] = in->v[2] * scale[2] + translate[2];
 		// update bounding box
 		if (temp[0] < aliasbboxmin[0]) aliasbboxmin[0] = temp[0];
 		if (temp[1] < aliasbboxmin[1]) aliasbboxmin[1] = temp[1];
@@ -531,7 +533,7 @@ static void Mod_MD2_ConvertVerts (int numverts, vec3_t scale, vec3_t translate, 
 		dist += temp[2]*temp[2];
 		if (modelradius < dist)
 			modelradius = dist;
-		out[i].lightnormalindex = v[i].lightnormalindex;
+		out[i].lightnormalindex = in->lightnormalindex;
 		if (out[i].lightnormalindex >= NUMVERTEXNORMALS)
 		{
 			invalidnormals++;
@@ -542,58 +544,75 @@ static void Mod_MD2_ConvertVerts (int numverts, vec3_t scale, vec3_t translate, 
 		Con_Printf("Mod_MD2_ConvertVerts: \"%s\", %i invalid normal indices found\n", loadmodel->name, invalidnormals);
 }
 
-void Mod_MD2_ReadHeader(md2_t *in, int *numglcmds)
+void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 {
+	int *vertremap;
+	md2_t *pinmodel;
+	long base;
 	int version, end;
+	int i, j, k, hashindex, num, numxyz, numst, xyz, st;
+	float *stverts, s, t;
+	struct md2verthash_s
+	{
+		struct md2verthash_s *next;
+		int xyz;
+		float st[2];
+	}
+	*hash, **md2verthash, *md2verthashdata;
+	long datapointer;
+	md2frame_t *pinframe;
+	char *inskin;
+	md2triangle_t *intri;
+	unsigned short *inst;
+	int skinwidth, skinheight;
 
-	version = LittleLong (in->version);
+	pinmodel = buffer;
+	base = (long) buffer;
+
+	version = LittleLong (pinmodel->version);
 	if (version != MD2ALIAS_VERSION)
 		Host_Error ("%s has wrong version number (%i should be %i)",
 			loadmodel->name, version, MD2ALIAS_VERSION);
 
 	loadmodel->type = mod_alias;
-	loadmodel->aliastype = ALIASTYPE_MD2;
+	loadmodel->aliastype = ALIASTYPE_MDLMD2;
 	loadmodel->SERAddEntity = Mod_Alias_SERAddEntity;
 	loadmodel->Draw = R_DrawAliasModel;
 	loadmodel->DrawSky = NULL;
 	loadmodel->DrawShadow = NULL;
 
-	if (LittleLong(in->num_tris < 1) || LittleLong(in->num_tris) > MD2MAX_TRIANGLES)
-		Host_Error ("%s has invalid number of triangles: %i", loadmodel->name, LittleLong(in->num_tris));
-	if (LittleLong(in->num_xyz < 1) || LittleLong(in->num_xyz) > MD2MAX_VERTS)
-		Host_Error ("%s has invalid number of vertices: %i", loadmodel->name, LittleLong(in->num_xyz));
-	if (LittleLong(in->num_frames < 1) || LittleLong(in->num_frames) > MD2MAX_FRAMES)
-		Host_Error ("%s has invalid number of frames: %i", loadmodel->name, LittleLong(in->num_frames));
-	if (LittleLong(in->num_skins < 0) || LittleLong(in->num_skins) > MAX_SKINS)
-		Host_Error ("%s has invalid number of skins: %i", loadmodel->name, LittleLong(in->num_skins));
+	if (LittleLong(pinmodel->num_tris < 1) || LittleLong(pinmodel->num_tris) > MD2MAX_TRIANGLES)
+		Host_Error ("%s has invalid number of triangles: %i", loadmodel->name, LittleLong(pinmodel->num_tris));
+	if (LittleLong(pinmodel->num_xyz < 1) || LittleLong(pinmodel->num_xyz) > MD2MAX_VERTS)
+		Host_Error ("%s has invalid number of vertices: %i", loadmodel->name, LittleLong(pinmodel->num_xyz));
+	if (LittleLong(pinmodel->num_frames < 1) || LittleLong(pinmodel->num_frames) > MD2MAX_FRAMES)
+		Host_Error ("%s has invalid number of frames: %i", loadmodel->name, LittleLong(pinmodel->num_frames));
+	if (LittleLong(pinmodel->num_skins < 0) || LittleLong(pinmodel->num_skins) > MAX_SKINS)
+		Host_Error ("%s has invalid number of skins: %i", loadmodel->name, LittleLong(pinmodel->num_skins));
 
-	end = LittleLong(in->ofs_end);
-	if (LittleLong(in->num_skins) >= 1 && (LittleLong(in->ofs_skins <= 0) || LittleLong(in->ofs_skins) >= end))
+	end = LittleLong(pinmodel->ofs_end);
+	if (LittleLong(pinmodel->num_skins) >= 1 && (LittleLong(pinmodel->ofs_skins <= 0) || LittleLong(pinmodel->ofs_skins) >= end))
 		Host_Error ("%s is not a valid model", loadmodel->name);
-	if (LittleLong(in->ofs_st <= 0) || LittleLong(in->ofs_st) >= end)
+	if (LittleLong(pinmodel->ofs_st <= 0) || LittleLong(pinmodel->ofs_st) >= end)
 		Host_Error ("%s is not a valid model", loadmodel->name);
-	if (LittleLong(in->ofs_tris <= 0) || LittleLong(in->ofs_tris) >= end)
+	if (LittleLong(pinmodel->ofs_tris <= 0) || LittleLong(pinmodel->ofs_tris) >= end)
 		Host_Error ("%s is not a valid model", loadmodel->name);
-	if (LittleLong(in->ofs_frames <= 0) || LittleLong(in->ofs_frames) >= end)
+	if (LittleLong(pinmodel->ofs_frames <= 0) || LittleLong(pinmodel->ofs_frames) >= end)
 		Host_Error ("%s is not a valid model", loadmodel->name);
-	if (LittleLong(in->ofs_glcmds <= 0) || LittleLong(in->ofs_glcmds) >= end)
+	if (LittleLong(pinmodel->ofs_glcmds <= 0) || LittleLong(pinmodel->ofs_glcmds) >= end)
 		Host_Error ("%s is not a valid model", loadmodel->name);
 
-	loadmodel->numskins = LittleLong(in->num_skins);
-	loadmodel->numverts = LittleLong(in->num_xyz);
-//	loadmodel->md2num_st = LittleLong(in->num_st);
-	loadmodel->numtris = LittleLong(in->num_tris);
-	loadmodel->numframes = LittleLong(in->num_frames);
-	*numglcmds = LittleLong(in->num_glcmds);
+	loadmodel->numskins = LittleLong(pinmodel->num_skins);
+	numxyz = LittleLong(pinmodel->num_xyz);
+	numst = LittleLong(pinmodel->num_st);
+	loadmodel->numtris = LittleLong(pinmodel->num_tris);
+	loadmodel->numframes = LittleLong(pinmodel->num_frames);
 
 	loadmodel->flags = 0; // there are no MD2 flags
 	loadmodel->synctype = ST_RAND;
-}
 
-void Mod_MD2_LoadSkins(char *in)
-{
-	int i;
-// load the skins
+	// load the skins
+	inskin = (void*)(base + LittleLong(pinmodel->ofs_skins));
 	if (loadmodel->numskins)
 	{
 		loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numskins);
@@ -604,51 +623,103 @@ void Mod_MD2_LoadSkins(char *in)
 			loadmodel->skinscenes[i].framecount = 1;
 			loadmodel->skinscenes[i].loop = true;
 			loadmodel->skinscenes[i].framerate = 10;
-			loadmodel->skinframes[i].base = loadtextureimagewithmask (loadmodel->texturepool, in, 0, 0, true, r_mipskins.integer, true);
+			loadmodel->skinframes[i].base = loadtextureimagewithmask (loadmodel->texturepool, inskin, 0, 0, true, r_mipskins.integer, true);
 			loadmodel->skinframes[i].fog = image_masktex;
 			loadmodel->skinframes[i].pants = NULL;
 			loadmodel->skinframes[i].shirt = NULL;
 			loadmodel->skinframes[i].glow = NULL;
 			loadmodel->skinframes[i].merged = NULL;
-			in += MD2MAX_SKINNAME;
+			inskin += MD2MAX_SKINNAME;
 		}
 	}
-}
 
-/*
-void Mod_MD2_LoadTriangles(md2triangle_t *in)
-{
-	int i, j;
-	loadmodel->md2data_tris = Mem_Alloc(loadmodel->mempool, loadmodel->numtris * sizeof(md2triangle_t));
+	// load the triangles and stvert data
+	inst = (void*)(base + LittleLong(pinmodel->ofs_st));
+	intri = (void*)(base + LittleLong(pinmodel->ofs_tris));
+	skinwidth = LittleLong(pinmodel->skinwidth);
+	skinheight = LittleLong(pinmodel->skinheight);
+
+	stverts = Mem_Alloc(tempmempool, numst * sizeof(float[2]));
+	s = 1.0f / skinwidth;
+	t = 1.0f / skinheight;
+	for (i = 0;i < numst;i++)
+	{
+		j = (unsigned short) LittleShort(inst[i*2+0]);
+		k = (unsigned short) LittleShort(inst[i*2+1]);
+		if (j >= skinwidth || k >= skinheight)
+		{
+			Mem_Free(stverts);
+			Host_Error("Mod_MD2_LoadGeometry: invalid skin coordinate (%i %i) on vert %i of model %s\n", j, k, i, loadmodel->name);
+		}
+		stverts[i*2+0] = j * s;
+		stverts[i*2+1] = k * t;
+	}
+
+	md2verthash = Mem_Alloc(tempmempool, 256 * sizeof(hash));
+	md2verthashdata = Mem_Alloc(tempmempool, loadmodel->numtris * 3 * sizeof(*hash));
 	// swap the triangle list
+	num = 0;
+	loadmodel->mdlmd2data_indices = Mem_Alloc(loadmodel->mempool, loadmodel->numtris * sizeof(int[3]));
 	for (i = 0;i < loadmodel->numtris;i++)
 	{
 		for (j = 0;j < 3;j++)
 		{
-			loadmodel->md2data_tris[i].index_xyz[j] = LittleShort (in[i].index_xyz[j]);
-			loadmodel->md2data_tris[i].index_st[j] = LittleShort (in[i].index_st[j]);
-			if (loadmodel->md2data_tris[i].index_xyz[j] >= loadmodel->md2num_xyz)
-				Host_Error ("%s has invalid vertex indices", loadmodel->name);
-			if (loadmodel->md2data_tris[i].index_st[j] >= loadmodel->md2num_st)
-				Host_Error ("%s has invalid vertex indices", loadmodel->name);
+			xyz = (unsigned short) LittleShort (intri[i].index_xyz[j]);
+			st = (unsigned short) LittleShort (intri[i].index_st[j]);
+			if (xyz >= numxyz || st >= numst)
+			{
+				Mem_Free(md2verthash);
+				Mem_Free(md2verthashdata);
+				Mem_Free(stverts);
+				if (xyz >= numxyz)
+					Host_Error("Mod_MD2_LoadGeometry: invalid xyz index (%i) on triangle %i of model %s\n", xyz, i, loadmodel->name);
+				if (st >= numst)
+					Host_Error("Mod_MD2_LoadGeometry: invalid st index (%i) on triangle %i of model %s\n", st, i, loadmodel->name);
+			}
+			s = stverts[st*2+0];
+			t = stverts[st*2+1];
+			hashindex = (xyz * 17 + st) & 255;
+			for (hash = md2verthash[hashindex];hash;hash = hash->next)
+				if (hash->xyz == xyz && hash->st[0] == s && hash->st[1] == t)
+					break;
+			if (hash == NULL)
+			{
+				hash = md2verthashdata + num++;
+				hash->xyz = xyz;
+				hash->st[0] = s;
+				hash->st[1] = t;
+				hash->next = md2verthash[hashindex];
+				md2verthash[hashindex] = hash;
+			}
+			loadmodel->mdlmd2data_indices[i*3+j] = (hash - md2verthashdata);
 		}
 	}
-}
-*/
 
-void Mod_MD2_LoadFrames(void *start)
-{
-	int i, j;
-	long datapointer;
-	md2frame_t *pinframe;
+	Mem_Free(stverts);
+
+	loadmodel->numverts = num;
+	vertremap = Mem_Alloc(loadmodel->mempool, num * sizeof(int));
+	loadmodel->mdlmd2data_texcoords = Mem_Alloc(loadmodel->mempool, num * sizeof(float[2]));
+	for (i = 0;i < num;i++)
+	{
+		hash = md2verthashdata + i;
+		vertremap[i] = hash->xyz;
+		loadmodel->mdlmd2data_texcoords[i*2+0] = hash->st[0];
+		loadmodel->mdlmd2data_texcoords[i*2+1] = hash->st[1];
+	}
+
+	Mem_Free(md2verthash);
+	Mem_Free(md2verthashdata);
+
+	// load frames
 	// LordHavoc: doing proper bbox for model
 	aliasbboxmin[0] = aliasbboxmin[1] = aliasbboxmin[2] = 1000000000;
 	aliasbboxmax[0] = aliasbboxmax[1] = aliasbboxmax[2] = -1000000000;
 	modelyawradius = 0;
 	modelradius = 0;
 
-	datapointer = (long) start;
-// load the frames
+	datapointer = (base + LittleLong(pinmodel->ofs_frames));
+	// load the frames
 	loadmodel->animscenes = Mem_Alloc(loadmodel->mempool, loadmodel->numframes * sizeof(animscene_t));
 	loadmodel->mdlmd2data_frames = Mem_Alloc(loadmodel->mempool, loadmodel->numframes * sizeof(md2frame_t));
 	loadmodel->mdlmd2data_pose = Mem_Alloc(loadmodel->mempool, loadmodel->numverts * loadmodel->numframes * sizeof(trivertx_t));
@@ -663,8 +734,8 @@ void Mod_MD2_LoadFrames(void *start)
 			loadmodel->mdlmd2data_frames[i].scale[j] = LittleFloat(pinframe->scale[j]);
 			loadmodel->mdlmd2data_frames[i].translate[j] = LittleFloat(pinframe->translate[j]);
 		}
-		Mod_MD2_ConvertVerts (loadmodel->numverts, loadmodel->mdlmd2data_frames[i].scale, loadmodel->mdlmd2data_frames[i].translate, (void *)datapointer, &loadmodel->mdlmd2data_pose[i * loadmodel->numverts]);
-		datapointer += loadmodel->numverts * sizeof(trivertx_t);
+		Mod_MD2_ConvertVerts (loadmodel->mdlmd2data_frames[i].scale, loadmodel->mdlmd2data_frames[i].translate, (void *)datapointer, &loadmodel->mdlmd2data_pose[i * loadmodel->numverts], vertremap);
+		datapointer += numxyz * sizeof(trivertx_t);
 
 		strcpy(loadmodel->animscenes[i].name, loadmodel->mdlmd2data_frames[i].name);
 		loadmodel->animscenes[i].firstframe = i;
@@ -672,6 +743,8 @@ void Mod_MD2_LoadFrames(void *start)
 		loadmodel->animscenes[i].framerate = 10;
 		loadmodel->animscenes[i].loop = true;
 	}
+
+	Mem_Free(vertremap);
 
 	// LordHavoc: model bbox
 	modelyawradius = sqrt(modelyawradius);
@@ -687,29 +760,6 @@ void Mod_MD2_LoadFrames(void *start)
 	loadmodel->yawmins[0] = loadmodel->yawmins[1] = -(loadmodel->yawmaxs[0] = loadmodel->yawmaxs[1] = modelyawradius);
 	loadmodel->yawmins[2] = loadmodel->normalmins[2];
 	loadmodel->yawmaxs[2] = loadmodel->normalmaxs[2];
-}
-
-void Mod_MD2_LoadGLCmds(int *in, int numglcmds)
-{
-	int i;
-	// load the draw list
-	loadmodel->md2data_glcmds = Mem_Alloc(loadmodel->mempool, numglcmds * sizeof(int));
-	for (i = 0;i < numglcmds;i++)
-		loadmodel->md2data_glcmds[i] = LittleLong(in[i]);
-}
-
-void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
-{
-	md2_t *pinmodel;
-	int numglcmds;
-	long base;
-	pinmodel = buffer;
-	base = (long) buffer;
-	Mod_MD2_ReadHeader(pinmodel, &numglcmds);
-	Mod_MD2_LoadSkins((void*)(base + LittleLong(pinmodel->ofs_skins)));
-//	Mod_MD2_LoadTriangles((void*)(base + LittleLong(pinmodel->ofs_tris)));
-	Mod_MD2_LoadFrames((void*)(base + LittleLong(pinmodel->ofs_frames)));
-	Mod_MD2_LoadGLCmds((void*)(base + LittleLong(pinmodel->ofs_glcmds)), numglcmds);
 }
 
 static void zymswapintblock(int *m, int size)

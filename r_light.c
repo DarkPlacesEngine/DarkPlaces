@@ -918,7 +918,7 @@ void R_LightModel(int numverts)
 			VectorCopy(color, avc);
 			avc[3] = a;
 			avc += 4;
-			av += 3;
+			av += 4;
 			avn += 3;
 		}
 	}

@@ -1425,6 +1425,8 @@ static void RSurfShader_Wall_Pass_Fog(msurface_t *s)
 
 static int RSurfShader_Wall_Fullbright(int stage, msurface_t *s)
 {
+	if (stage == 0)
+		c_brush_polys++;
 	switch(stage)
 	{
 	case 0:
@@ -1441,6 +1443,8 @@ static int RSurfShader_Wall_Fullbright(int stage, msurface_t *s)
 
 static int RSurfShader_Wall_Vertex(int stage, msurface_t *s)
 {
+	if (stage == 0)
+		c_brush_polys++;
 	switch(stage)
 	{
 	case 0:
@@ -1457,6 +1461,8 @@ static int RSurfShader_Wall_Vertex(int stage, msurface_t *s)
 
 static int RSurfShader_Wall_Lightmap(int stage, msurface_t *s)
 {
+	if (stage == 0)
+		c_brush_polys++;
 	if (r_vertexsurfaces.integer)
 	{
 		switch(stage)

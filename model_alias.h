@@ -155,9 +155,9 @@ typedef struct
 	int			ofs_end;		// end of file
 } md2_t;
 
-#define ALIASTYPE_MDL 1
-#define ALIASTYPE_MD2 2
-#define ALIASTYPE_ZYM 3
+// LordHavoc: Q1 and Q2 models are converted to the same internal format
+#define ALIASTYPE_MDLMD2 1
+#define ALIASTYPE_ZYM 2
 
 extern void Mod_LoadAliasModel (struct model_s *mod, void *buffer);
 extern void Mod_LoadQ2AliasModel (struct model_s *mod, void *buffer);
