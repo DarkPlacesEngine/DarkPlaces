@@ -275,7 +275,7 @@ void R_MarkLights(entity_render_t *ent)
 			lightpvsbytes = 0;
 			if (r_vismarklights.integer && ent->model->brush.FatPVS)
 				lightpvsbytes = ent->model->brush.FatPVS(ent->model, lightorigin, 0, lightpvs, sizeof(lightpvs));
-			R_RecursiveMarkLights(ent, lightorigin, rd, bit, bitindex, ent->model->brushq1.nodes + ent->model->brushq1.hulls[0].firstclipnode, lightpvs, min(lightpvsbytes * 8, ent->model->brushq1.num_leafs - 1));
+			R_RecursiveMarkLights(ent, lightorigin, rd, bit, bitindex, ent->model->brushq1.nodes + ent->model->brushq1.hulls[0].firstclipnode, lightpvs, min(lightpvsbytes * 8, ent->model->brushq1.visleafs));
 		}
 	}
 }
@@ -300,16 +300,6 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 	}
 	else
 		VectorSet(ambientcolor, 1, 1, 1);
-
-	/*
-	if (leaf == NULL && cl.worldmodel != NULL)
-		leaf = cl.worldmodel->brushq1.PointInLeaf(cl.worldmodel, p);
-	if (!leaf || leaf->contents == CONTENTS_SOLID || !cl.worldmodel->brushq1.lightdata)
-	{
-		VectorSet(ambientcolor, 1, 1, 1);
-		return;
-	}
-	*/
 
 	// FIXME: this .lights related stuff needs to be ported into the Mod_Q1BSP code
 	if (cl.worldmodel->brushq1.numlights)

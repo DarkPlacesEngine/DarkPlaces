@@ -24,6 +24,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // used for dlight push checking and other things
 int r_framecount;
 
+// used for visibility checking
+qbyte r_pvsbits[(MAX_MAP_LEAFS+7)>>3];
+
 mplane_t frustum[4];
 
 matrix4x4_t r_identitymatrix;
@@ -397,132 +400,7 @@ int R_CullBox(const vec3_t mins, const vec3_t maxs)
 	return false;
 }
 
-int PVS_CullBox(const vec3_t mins, const vec3_t maxs)
-{
-	int stackpos, sides;
-	mnode_t *node, *stack[4096];
-	if (cl.worldmodel == NULL)
-		return false;
-	stackpos = 0;
-	stack[stackpos++] = cl.worldmodel->brushq1.nodes;
-	while (stackpos)
-	{
-		node = stack[--stackpos];
-		if (node->contents < 0)
-		{
-			if (((mleaf_t *)node)->pvsframe == cl.worldmodel->brushq1.pvsframecount)
-				return false;
-		}
-		else
-		{
-			sides = BoxOnPlaneSide(mins, maxs, node->plane);
-			if (sides & 2 && stackpos < 4096)
-				stack[stackpos++] = node->children[1];
-			if (sides & 1 && stackpos < 4096)
-				stack[stackpos++] = node->children[0];
-		}
-	}
-	return true;
-}
-
-int VIS_CullBox(const vec3_t mins, const vec3_t maxs)
-{
-	int stackpos, sides;
-	mnode_t *node, *stack[4096];
-	if (R_CullBox(mins, maxs))
-		return true;
-	if (cl.worldmodel == NULL)
-		return false;
-	stackpos = 0;
-	stack[stackpos++] = cl.worldmodel->brushq1.nodes;
-	while (stackpos)
-	{
-		node = stack[--stackpos];
-		if (node->contents < 0)
-		{
-			if (((mleaf_t *)node)->visframe == r_framecount)
-				return false;
-		}
-		else
-		{
-			sides = BoxOnPlaneSide(mins, maxs, node->plane);
-			if (sides & 2 && stackpos < 4096)
-				stack[stackpos++] = node->children[1];
-			if (sides & 1 && stackpos < 4096)
-				stack[stackpos++] = node->children[0];
-		}
-	}
-	return true;
-}
-
-int R_CullSphere(const vec3_t origin, vec_t radius)
-{
-	return (DotProduct(frustum[0].normal, origin) + radius < frustum[0].dist
-	     || DotProduct(frustum[1].normal, origin) + radius < frustum[1].dist
-	     || DotProduct(frustum[2].normal, origin) + radius < frustum[2].dist
-	     || DotProduct(frustum[3].normal, origin) + radius < frustum[3].dist);
-}
-
-int PVS_CullSphere(const vec3_t origin, vec_t radius)
-{
-	int stackpos;
-	mnode_t *node, *stack[4096];
-	float dist;
-	if (cl.worldmodel == NULL)
-		return false;
-	stackpos = 0;
-	stack[stackpos++] = cl.worldmodel->brushq1.nodes;
-	while (stackpos)
-	{
-		node = stack[--stackpos];
-		if (node->contents < 0)
-		{
-			if (((mleaf_t *)node)->pvsframe == cl.worldmodel->brushq1.pvsframecount)
-				return false;
-		}
-		else
-		{
-			dist = PlaneDiff(origin, node->plane);
-			if (dist <= radius)
-				stack[stackpos++] = node->children[1];
-			if (dist >= -radius)
-				stack[stackpos++] = node->children[0];
-		}
-	}
-	return true;
-}
-
-int VIS_CullSphere(const vec3_t origin, vec_t radius)
-{
-	int stackpos;
-	mnode_t *node, *stack[4096];
-	float dist;
-	if (R_CullSphere(origin, radius))
-		return true;
-	if (cl.worldmodel == NULL)
-		return false;
-	stackpos = 0;
-	stack[stackpos++] = cl.worldmodel->brushq1.nodes;
-	while (stackpos)
-	{
-		node = stack[--stackpos];
-		if (node->contents < 0)
-		{
-			if (((mleaf_t *)node)->visframe == r_framecount)
-				return false;
-		}
-		else
-		{
-			dist = PlaneDiff(origin, node->plane);
-			if (dist <= radius)
-				stack[stackpos++] = node->children[1];
-			if (dist >= -radius)
-				stack[stackpos++] = node->children[0];
-		}
-	}
-	return true;
-}
-
+#define VIS_CullBox(mins,maxs) (R_CullBox((mins), (maxs)) || (cl.worldmodel && cl.worldmodel->brush.BoxTouchingPVS && !cl.worldmodel->brush.BoxTouchingPVS(cl.worldmodel, r_pvsbits, (mins), (maxs))))
 
 //==================================================================================
 
@@ -552,7 +430,6 @@ static void R_MarkEntities (void)
 		R_LerpAnimation(ent);
 		R_UpdateEntLights(ent);
 		if ((chase_active.integer || !(ent->flags & RENDER_EXTERIORMODEL))
-		 && !VIS_CullSphere(ent->origin, (ent->model != NULL ? ent->model->radius : 16) * ent->scale)
 		 && !VIS_CullBox(ent->mins, ent->maxs))
 		{
 			ent->visframe = r_framecount;
@@ -652,182 +529,21 @@ void R_DrawFakeShadows (void)
 
 int shadowframecount = 0;
 
-int Light_CullBox(const vec3_t mins, const vec3_t maxs)
-{
-	int stackpos, sides;
-	mnode_t *node, *stack[4096];
-	if (cl.worldmodel == NULL)
-		return false;
-	stackpos = 0;
-	stack[stackpos++] = cl.worldmodel->brushq1.nodes;
-	while (stackpos)
-	{
-		node = stack[--stackpos];
-		if (node->contents < 0)
-		{
-			if (((mleaf_t *)node)->worldnodeframe == shadowframecount)
-				return false;
-		}
-		else
-		{
-			sides = BoxOnPlaneSide(mins, maxs, node->plane);
-			if (sides & 2 && stackpos < 4096)
-				stack[stackpos++] = node->children[1];
-			if (sides & 1 && stackpos < 4096)
-				stack[stackpos++] = node->children[0];
-		}
-	}
-	return true;
-}
-
-int LightAndVis_CullBox(const vec3_t mins, const vec3_t maxs)
-{
-	int stackpos, sides;
-	mnode_t *node, *stack[4096];
-	if (R_CullBox(mins, maxs))
-		return true;
-	if (cl.worldmodel == NULL)
-		return false;
-	stackpos = 0;
-	stack[stackpos++] = cl.worldmodel->brushq1.nodes;
-	while (stackpos)
-	{
-		node = stack[--stackpos];
-		if (node->contents < 0)
-		{
-			if (((mleaf_t *)node)->visframe == r_framecount && ((mleaf_t *)node)->worldnodeframe == shadowframecount)
-				return false;
-		}
-		else
-		{
-			sides = BoxOnPlaneSide(mins, maxs, node->plane);
-			if (sides & 2 && stackpos < 4096)
-				stack[stackpos++] = node->children[1];
-			if (sides & 1 && stackpos < 4096)
-				stack[stackpos++] = node->children[0];
-		}
-	}
-	return true;
-}
-
-int LightAndVis_CullPointCloud(int numpoints, const float *points)
-{
-	int i;
-	const float *p;
-	int stackpos, sides;
-	mnode_t *node, *stack[4096];
-	//if (R_CullBox(mins, maxs))
-	//	return true;
-	if (cl.worldmodel == NULL)
-		return false;
-	stackpos = 0;
-	stack[stackpos++] = cl.worldmodel->brushq1.nodes;
-	while (stackpos)
-	{
-		node = stack[--stackpos];
-		if (node->contents < 0)
-		{
-			if (((mleaf_t *)node)->visframe == r_framecount && ((mleaf_t *)node)->worldnodeframe == shadowframecount)
-				return false;
-		}
-		else
-		{
-			sides = 0;
-			for (i = 0, p = points;i < numpoints && sides != 3;i++, p += 3)
-			{
-				if (DotProduct(p, node->plane->normal) < node->plane->dist)
-					sides |= 1;
-				else
-					sides |= 2;
-			}
-			if (sides & 2 && stackpos < 4096)
-				stack[stackpos++] = node->children[1];
-			if (sides & 1 && stackpos < 4096)
-				stack[stackpos++] = node->children[0];
-		}
-	}
-	return true;
-}
-
-
 void R_TestAndDrawShadowVolume(entity_render_t *ent, vec3_t lightorigin, float cullradius, float lightradius, vec3_t lightmins, vec3_t lightmaxs, vec3_t clipmins, vec3_t clipmaxs, int lightmarked)
 {
 	vec3_t relativelightorigin;
-	#if 0
-	int i;
-	vec3_t temp;
-	float dist, projectdistance;
-	float points[16][3];
-	#endif
 	// rough checks
-	if (!(ent->flags & RENDER_SHADOW) || ent->model == NULL || ent->model->DrawShadowVolume == NULL)
-		return;
-	if (r_shadow_cull.integer)
+	if ((ent->flags & RENDER_SHADOW) && ent->model && ent->model->DrawShadowVolume && !(r_shadow_cull.integer && (ent->maxs[0] < lightmins[0] || ent->mins[0] > lightmaxs[0] || ent->maxs[1] < lightmins[1] || ent->mins[1] > lightmaxs[1] || ent->maxs[2] < lightmins[2] || ent->mins[2] > lightmaxs[2])))
 	{
-		if (ent->maxs[0] < lightmins[0] || ent->mins[0] > lightmaxs[0]
-		 || ent->maxs[1] < lightmins[1] || ent->mins[1] > lightmaxs[1]
-		 || ent->maxs[2] < lightmins[2] || ent->mins[2] > lightmaxs[2]
-		 || (lightmarked && Light_CullBox(ent->mins, ent->maxs)))
-			return;
+		Matrix4x4_Transform(&ent->inversematrix, lightorigin, relativelightorigin);
+		ent->model->DrawShadowVolume (ent, relativelightorigin, lightradius);
 	}
-	#if 0
-	if (r_shadow_cull.integer)
-	{
-		projectdistance = cullradius;
-		// calculate projected bounding box and decide if it is on-screen
-		for (i = 0;i < 8;i++)
-		{
-			temp[0] = i & 1 ? ent->model->normalmaxs[0] : ent->model->normalmins[0];
-			temp[1] = i & 2 ? ent->model->normalmaxs[1] : ent->model->normalmins[1];
-			temp[2] = i & 4 ? ent->model->normalmaxs[2] : ent->model->normalmins[2];
-			Matrix4x4_Transform(&ent->matrix, temp, points[i]);
-			VectorSubtract(points[i], lightorigin, temp);
-			dist = projectdistance / sqrt(DotProduct(temp, temp));
-			VectorMA(lightorigin, dist, temp, points[i+8]);
-		}
-		if (LightAndVis_CullPointCloud(16, points[0]))
-			return;
-		/*
-		for (i = 0;i < 8;i++)
-		{
-			p2[0] = i & 1 ? ent->model->normalmaxs[0] : ent->model->normalmins[0];
-			p2[1] = i & 2 ? ent->model->normalmaxs[1] : ent->model->normalmins[1];
-			p2[2] = i & 4 ? ent->model->normalmaxs[2] : ent->model->normalmins[2];
-			Matrix4x4_Transform(&ent->matrix, p2, p);
-			VectorSubtract(p, lightorigin, temp);
-			dist = projectdistance / sqrt(DotProduct(temp, temp));
-			VectorMA(p, dist, temp, p2);
-			if (i)
-			{
-				if (mins[0] > p[0]) mins[0] = p[0];if (maxs[0] < p[0]) maxs[0] = p[0];
-				if (mins[1] > p[1]) mins[1] = p[1];if (maxs[1] < p[1]) maxs[1] = p[1];
-				if (mins[2] > p[2]) mins[2] = p[2];if (maxs[2] < p[2]) maxs[2] = p[2];
-			}
-			else
-			{
-				VectorCopy(p, mins);
-				VectorCopy(p, maxs);
-			}
-			if (mins[0] > p2[0]) mins[0] = p2[0];if (maxs[0] < p2[0]) maxs[0] = p2[0];
-			if (mins[1] > p2[1]) mins[1] = p2[1];if (maxs[1] < p2[1]) maxs[1] = p2[1];
-			if (mins[2] > p2[2]) mins[2] = p2[2];if (maxs[2] < p2[2]) maxs[2] = p2[2];
-		}
-		if (mins[0] >= clipmaxs[0] || maxs[0] <= clipmins[0]
-		 || mins[1] >= clipmaxs[1] || maxs[1] <= clipmins[1]
-		 || mins[2] >= clipmaxs[2] || maxs[2] <= clipmins[2]
-		 || LightAndVis_CullBox(mins, maxs))
-			return;
-		*/
-	}
-	#endif
-	Matrix4x4_Transform(&ent->inversematrix, lightorigin, relativelightorigin);
-	ent->model->DrawShadowVolume (ent, relativelightorigin, lightradius);
 }
 
 void R_Shadow_DrawWorldLightShadowVolume(matrix4x4_t *matrix, worldlight_t *light);
 
 extern void R_Model_Brush_DrawLightForSurfaceList(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, msurface_t **surflist, int numsurfaces, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz);
-void R_ShadowVolumeLighting (int visiblevolumes)
+void R_ShadowVolumeLighting(int visiblevolumes)
 {
 	int i;
 	entity_render_t *ent;
@@ -837,7 +553,6 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 	worldlight_t *wl;
 	rdlight_t *rd;
 	rmeshstate_t m;
-	mleaf_t *leaf;
 	matrix4x4_t matrix;
 	matrix4x4_t matrix_worldtofilter, matrix_worldtoattenuationxyz, matrix_worldtoattenuationz;
 	matrix4x4_t matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz;
@@ -863,63 +578,17 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 		{
 			if (d_lightstylevalue[wl->style] <= 0)
 				continue;
-			if (R_CullBox(wl->mins, wl->maxs))
-			//if (R_CullSphere(wl->origin, cullradius))
+			if (VIS_CullBox(wl->mins, wl->maxs))
 				continue;
-			//if (R_CullBox(wl->mins, wl->maxs) || R_CullSphere(wl->origin, lightradius))
-			//	continue;
-			//if (VIS_CullBox(wl->mins, wl->maxs) || VIS_CullSphere(wl->origin, lightradius))
-			//	continue;
 			if (r_shadow_debuglight.integer >= 0 && lnum != r_shadow_debuglight.integer)
+				continue;
+			if (R_Shadow_ScissorForBBox(wl->mins, wl->maxs))
 				continue;
 
 			cullradius = wl->cullradius;
 			lightradius = wl->lightradius;
-
-			if (cl.worldmodel != NULL)
-			{
-				for (i = 0;i < wl->numleafs;i++)
-					if (wl->leafs[i]->visframe == r_framecount)
-						break;
-				if (i == wl->numleafs)
-					continue;
-				leaf = wl->leafs[i++];
-				VectorCopy(leaf->mins, clipmins);
-				VectorCopy(leaf->maxs, clipmaxs);
-				for (;i < wl->numleafs;i++)
-				{
-					leaf = wl->leafs[i];
-					if (leaf->visframe == r_framecount)
-					{
-						if (clipmins[0] > leaf->mins[0]) clipmins[0] = leaf->mins[0];
-						if (clipmaxs[0] < leaf->maxs[0]) clipmaxs[0] = leaf->maxs[0];
-						if (clipmins[1] > leaf->mins[1]) clipmins[1] = leaf->mins[1];
-						if (clipmaxs[1] < leaf->maxs[1]) clipmaxs[1] = leaf->maxs[1];
-						if (clipmins[2] > leaf->mins[2]) clipmins[2] = leaf->mins[2];
-						if (clipmaxs[2] < leaf->maxs[2]) clipmaxs[2] = leaf->maxs[2];
-					}
-				}
-				if (clipmins[0] < wl->mins[0]) clipmins[0] = wl->mins[0];
-				if (clipmaxs[0] > wl->maxs[0]) clipmaxs[0] = wl->maxs[0];
-				if (clipmins[1] < wl->mins[1]) clipmins[1] = wl->mins[1];
-				if (clipmaxs[1] > wl->maxs[1]) clipmaxs[1] = wl->maxs[1];
-				if (clipmins[2] < wl->mins[2]) clipmins[2] = wl->mins[2];
-				if (clipmaxs[2] > wl->maxs[2]) clipmaxs[2] = wl->maxs[2];
-			}
-			else
-			{
-				VectorCopy(wl->mins, clipmins);
-				VectorCopy(wl->maxs, clipmaxs);
-			}
-
-			//if (R_Shadow_ScissorForBBoxAndSphere(clipmins, clipmaxs, wl->origin, wl->cullradius))
-			if (R_CullBox(clipmins, clipmaxs) || R_Shadow_ScissorForBBox(clipmins, clipmaxs))
-				continue;
-
-			// mark the leafs we care about so only things in those leafs will matter
-			if (cl.worldmodel != NULL)
-				for (i = 0;i < wl->numleafs;i++)
-					wl->leafs[i]->worldnodeframe = shadowframecount;
+			VectorCopy(wl->mins, clipmins);
+			VectorCopy(wl->maxs, clipmaxs);
 
 			f = d_lightstylevalue[wl->style] * (1.0f / 256.0f);
 			VectorScale(wl->light, f, lightcolor);
@@ -1212,6 +881,9 @@ void R_RenderView (void)
 	R_SkyStartFrame();
 	R_BuildLightList();
 	R_TimeReport("setup");
+
+	if (cl.worldmodel && cl.worldmodel->brush.FatPVS)
+		cl.worldmodel->brush.FatPVS(cl.worldmodel, r_origin, 2, r_pvsbits, sizeof(r_pvsbits));
 
 	R_WorldVisibility(world);
 	R_TimeReport("worldvis");

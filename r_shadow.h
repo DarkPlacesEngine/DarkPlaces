@@ -25,7 +25,6 @@ void R_Shadow_Stage_ShadowVolumes(void);
 void R_Shadow_Stage_LightWithShadows(void);
 void R_Shadow_Stage_LightWithoutShadows(void);
 void R_Shadow_Stage_End(void);
-//int R_Shadow_ScissorForBBoxAndSphere(const float *mins, const float *maxs, const float *origin, float radius);
 int R_Shadow_ScissorForBBox(const float *mins, const float *maxs);
 
 typedef struct worldlight_s
@@ -57,8 +56,6 @@ typedef struct worldlight_s
 	struct worldlight_s *next;
 	msurface_t **surfaces;
 	int numsurfaces;
-	mleaf_t **leafs;
-	int numleafs;
 	rtexture_t *cubemap;
 	int style;
 	shadowmesh_t *shadowvolume;

@@ -772,7 +772,6 @@ void R_Shadow_Stage_Begin(void)
 	if (r_shadow_texture3d.integer && !gl_texture3d)
 		Cvar_SetValueQuick(&r_shadow_texture3d, 0);
 
-	//cl.worldmodel->brushq1.numlights = min(cl.worldmodel->brushq1.numlights, 1);
 	if (!r_shadow_attenuation2dtexture
 	 || (!r_shadow_attenuation3dtexture && r_shadow_texture3d.integer)
 	 || r_shadow_lightattenuationpower.value != r_shadow_attenpower
@@ -900,147 +899,6 @@ void R_Shadow_Stage_End(void)
 	qglStencilFunc(GL_ALWAYS, 128, 0xFF);
 	r_shadowstage = SHADOWSTAGE_NONE;
 }
-
-#if 0
-int R_Shadow_ScissorForBBoxAndSphere(const float *mins, const float *maxs, const float *origin, float radius)
-{
-	int i, ix1, iy1, ix2, iy2;
-	float x1, y1, x2, y2, x, y;
-	vec3_t smins, smaxs;
-	vec4_t v, v2;
-	if (!r_shadow_scissor.integer)
-		return false;
-	// if view is inside the box, just say yes it's visible
-	if (r_origin[0] >= mins[0] && r_origin[0] <= maxs[0]
-	 && r_origin[1] >= mins[1] && r_origin[1] <= maxs[1]
-	 && r_origin[2] >= mins[2] && r_origin[2] <= maxs[2])
-	{
-		qglDisable(GL_SCISSOR_TEST);
-		return false;
-	}
-	VectorSubtract(r_origin, origin, v);
-	if (DotProduct(v, v) < radius * radius)
-	{
-		qglDisable(GL_SCISSOR_TEST);
-		return false;
-	}
-	// create viewspace bbox
-	for (i = 0;i < 8;i++)
-	{
-		v[0] = ((i & 1) ? mins[0] : maxs[0]) - r_origin[0];
-		v[1] = ((i & 2) ? mins[1] : maxs[1]) - r_origin[1];
-		v[2] = ((i & 4) ? mins[2] : maxs[2]) - r_origin[2];
-		v2[0] = DotProduct(v, vright);
-		v2[1] = DotProduct(v, vup);
-		v2[2] = DotProduct(v, vpn);
-		if (i)
-		{
-			if (smins[0] > v2[0]) smins[0] = v2[0];
-			if (smaxs[0] < v2[0]) smaxs[0] = v2[0];
-			if (smins[1] > v2[1]) smins[1] = v2[1];
-			if (smaxs[1] < v2[1]) smaxs[1] = v2[1];
-			if (smins[2] > v2[2]) smins[2] = v2[2];
-			if (smaxs[2] < v2[2]) smaxs[2] = v2[2];
-		}
-		else
-		{
-			smins[0] = smaxs[0] = v2[0];
-			smins[1] = smaxs[1] = v2[1];
-			smins[2] = smaxs[2] = v2[2];
-		}
-	}
-	// now we have a bbox in viewspace
-	// clip it to the viewspace version of the sphere
-	v[0] = origin[0] - r_origin[0];
-	v[1] = origin[1] - r_origin[1];
-	v[2] = origin[2] - r_origin[2];
-	v2[0] = DotProduct(v, vright);
-	v2[1] = DotProduct(v, vup);
-	v2[2] = DotProduct(v, vpn);
-	if (smins[0] < v2[0] - radius) smins[0] = v2[0] - radius;
-	if (smaxs[0] < v2[0] - radius) smaxs[0] = v2[0] + radius;
-	if (smins[1] < v2[1] - radius) smins[1] = v2[1] - radius;
-	if (smaxs[1] < v2[1] - radius) smaxs[1] = v2[1] + radius;
-	if (smins[2] < v2[2] - radius) smins[2] = v2[2] - radius;
-	if (smaxs[2] < v2[2] - radius) smaxs[2] = v2[2] + radius;
-	// clip it to the view plane
-	if (smins[2] < 1)
-		smins[2] = 1;
-	// return true if that culled the box
-	if (smins[2] >= smaxs[2])
-		return true;
-	// ok some of it is infront of the view, transform each corner back to
-	// worldspace and then to screenspace and make screen rect
-	// initialize these variables just to avoid compiler warnings
-	x1 = y1 = x2 = y2 = 0;
-	for (i = 0;i < 8;i++)
-	{
-		v2[0] = (i & 1) ? smins[0] : smaxs[0];
-		v2[1] = (i & 2) ? smins[1] : smaxs[1];
-		v2[2] = (i & 4) ? smins[2] : smaxs[2];
-		v[0] = v2[0] * vright[0] + v2[1] * vup[0] + v2[2] * vpn[0] + r_origin[0];
-		v[1] = v2[0] * vright[1] + v2[1] * vup[1] + v2[2] * vpn[1] + r_origin[1];
-		v[2] = v2[0] * vright[2] + v2[1] * vup[2] + v2[2] * vpn[2] + r_origin[2];
-		v[3] = 1.0f;
-		GL_TransformToScreen(v, v2);
-		//Con_Printf("%.3f %.3f %.3f %.3f transformed to %.3f %.3f %.3f %.3f\n", v[0], v[1], v[2], v[3], v2[0], v2[1], v2[2], v2[3]);
-		x = v2[0];
-		y = v2[1];
-		if (i)
-		{
-			if (x1 > x) x1 = x;
-			if (x2 < x) x2 = x;
-			if (y1 > y) y1 = y;
-			if (y2 < y) y2 = y;
-		}
-		else
-		{
-			x1 = x2 = x;
-			y1 = y2 = y;
-		}
-	}
-	/*
-	// this code doesn't handle boxes with any points behind view properly
-	x1 = 1000;x2 = -1000;
-	y1 = 1000;y2 = -1000;
-	for (i = 0;i < 8;i++)
-	{
-		v[0] = (i & 1) ? mins[0] : maxs[0];
-		v[1] = (i & 2) ? mins[1] : maxs[1];
-		v[2] = (i & 4) ? mins[2] : maxs[2];
-		v[3] = 1.0f;
-		GL_TransformToScreen(v, v2);
-		//Con_Printf("%.3f %.3f %.3f %.3f transformed to %.3f %.3f %.3f %.3f\n", v[0], v[1], v[2], v[3], v2[0], v2[1], v2[2], v2[3]);
-		if (v2[2] > 0)
-		{
-			x = v2[0];
-			y = v2[1];
-
-			if (x1 > x) x1 = x;
-			if (x2 < x) x2 = x;
-			if (y1 > y) y1 = y;
-			if (y2 < y) y2 = y;
-		}
-	}
-	*/
-	ix1 = x1 - 1.0f;
-	iy1 = y1 - 1.0f;
-	ix2 = x2 + 1.0f;
-	iy2 = y2 + 1.0f;
-	//Con_Printf("%f %f %f %f\n", x1, y1, x2, y2);
-	if (ix1 < r_refdef.x) ix1 = r_refdef.x;
-	if (iy1 < r_refdef.y) iy1 = r_refdef.y;
-	if (ix2 > r_refdef.x + r_refdef.width) ix2 = r_refdef.x + r_refdef.width;
-	if (iy2 > r_refdef.y + r_refdef.height) iy2 = r_refdef.y + r_refdef.height;
-	if (ix2 <= ix1 || iy2 <= iy1)
-		return true;
-	// set up the scissor rectangle
-	qglScissor(ix1, iy1, ix2 - ix1, iy2 - iy1);
-	qglEnable(GL_SCISSOR_TEST);
-	c_rt_scissored++;
-	return false;
-}
-#endif
 
 int R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 {
@@ -1847,8 +1705,8 @@ static qbyte lightpvs[(MAX_MAP_LEAFS + 7)/ 8];
 static int castshadowcount = 1;
 void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style, const char *cubemapname, int castshadow)
 {
-	int i, j, k, l, maxverts = 256, *mark, tris;
-	float *vertex3f = NULL;
+	int i, j, k, l, maxverts = 256, *mark, tris, numsurfaces;
+	float *vertex3f = NULL, mins[3], maxs[3];
 	worldlight_t *e;
 	shadowmesh_t *mesh, *castmesh;
 	mleaf_t *leaf;
@@ -1876,8 +1734,8 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 	e->cullradius = e->lightradius;
 	for (k = 0;k < 3;k++)
 	{
-		e->mins[k] = e->origin[k] - e->lightradius;
-		e->maxs[k] = e->origin[k] + e->lightradius;
+		mins[k] = e->origin[k] - e->lightradius;
+		maxs[k] = e->origin[k] + e->lightradius;
 	}
 
 	e->next = r_shadow_worldlightchain;
@@ -1891,6 +1749,8 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 	if (cl.worldmodel)
 	{
 		castshadowcount++;
+		VectorCopy(e->origin, e->mins);
+		VectorCopy(e->origin, e->maxs);
 		i = CL_PointContents(e->origin);
 		if (r_shadow_portallight.integer && i != CONTENTS_SOLID && i != CONTENTS_SKY)
 		{
@@ -1903,11 +1763,19 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 			Portal_Visibility(cl.worldmodel, e->origin, byteleafpvs, bytesurfacepvs, NULL, 0, true, RadiusFromBoundsAndOrigin(e->mins, e->maxs, e->origin));
 
 			for (i = 0, leaf = cl.worldmodel->brushq1.leafs;i < cl.worldmodel->brushq1.numleafs;i++, leaf++)
-				if (byteleafpvs[i] && BoxesOverlap(leaf->mins, leaf->maxs, e->mins, e->maxs))
-					leaf->worldnodeframe = castshadowcount;
+			{
+				if (byteleafpvs[i] && BoxesOverlap(leaf->mins, leaf->maxs, mins, maxs))
+				{
+					for (k = 0;k < 3;k++)
+					{
+						if (e->mins[k] > leaf->mins[k]) e->mins[k] = leaf->mins[k];
+						if (e->maxs[k] < leaf->maxs[k]) e->maxs[k] = leaf->maxs[k];
+					}
+				}
+			}
 
 			for (i = 0, surf = cl.worldmodel->brushq1.surfaces;i < cl.worldmodel->brushq1.numsurfaces;i++, surf++)
-				if (bytesurfacepvs[i] && BoxesOverlap(surf->poly_mins, surf->poly_maxs, e->mins, e->maxs))
+				if (bytesurfacepvs[i] && BoxesOverlap(surf->poly_mins, surf->poly_maxs, mins, maxs))
 					surf->castshadow = castshadowcount;
 
 			Mem_Free(byteleafpvs);
@@ -1916,53 +1784,22 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 		else
 		{
 			lightpvsbytes = cl.worldmodel->brush.FatPVS(cl.worldmodel, origin, 0, lightpvs, sizeof(lightpvs));
-			for (i = 0, leaf = cl.worldmodel->brushq1.leafs + 1;i < cl.worldmodel->brushq1.numleafs - 1;i++, leaf++)
+			for (i = 0, leaf = cl.worldmodel->brushq1.leafs + 1;i < cl.worldmodel->brushq1.visleafs;i++, leaf++)
 			{
-				if (lightpvs[i >> 3] & (1 << (i & 7)) && BoxesOverlap(leaf->mins, leaf->maxs, e->mins, e->maxs))
+				if (lightpvs[i >> 3] & (1 << (i & 7)) && BoxesOverlap(leaf->mins, leaf->maxs, mins, maxs))
 				{
-					leaf->worldnodeframe = castshadowcount;
+					for (k = 0;k < 3;k++)
+					{
+						if (e->mins[k] > leaf->mins[k]) e->mins[k] = leaf->mins[k];
+						if (e->maxs[k] < leaf->maxs[k]) e->maxs[k] = leaf->maxs[k];
+					}
 					for (j = 0, mark = leaf->firstmarksurface;j < leaf->nummarksurfaces;j++, mark++)
 					{
 						surf = cl.worldmodel->brushq1.surfaces + *mark;
-						if (surf->castshadow != castshadowcount && BoxesOverlap(surf->poly_mins, surf->poly_maxs, e->mins, e->maxs))
+						if (surf->castshadow != castshadowcount && BoxesOverlap(surf->poly_mins, surf->poly_maxs, mins, maxs))
 							surf->castshadow = castshadowcount;
 					}
 				}
-			}
-		}
-
-		e->numleafs = 0;
-		for (i = 0, leaf = cl.worldmodel->brushq1.leafs + 1;i < cl.worldmodel->brushq1.numleafs;i++, leaf++)
-			if (leaf->worldnodeframe == castshadowcount)
-				e->numleafs++;
-		e->numsurfaces = 0;
-		for (i = 0, surf = cl.worldmodel->brushq1.surfaces + cl.worldmodel->brushq1.firstmodelsurface;i < cl.worldmodel->brushq1.nummodelsurfaces;i++, surf++)
-			if (surf->castshadow == castshadowcount)
-				e->numsurfaces++;
-
-		if (e->numleafs)
-			e->leafs = Mem_Alloc(r_shadow_mempool, e->numleafs * sizeof(mleaf_t *));
-		if (e->numsurfaces)
-			e->surfaces = Mem_Alloc(r_shadow_mempool, e->numsurfaces * sizeof(msurface_t *));
-		e->numleafs = 0;
-		for (i = 0, leaf = cl.worldmodel->brushq1.leafs + 1;i < cl.worldmodel->brushq1.numleafs;i++, leaf++)
-			if (leaf->worldnodeframe == castshadowcount)
-				e->leafs[e->numleafs++] = leaf;
-		e->numsurfaces = 0;
-		for (i = 0, surf = cl.worldmodel->brushq1.surfaces + cl.worldmodel->brushq1.firstmodelsurface;i < cl.worldmodel->brushq1.nummodelsurfaces;i++, surf++)
-			if (surf->castshadow == castshadowcount)
-				e->surfaces[e->numsurfaces++] = surf;
-
-		// find bounding box of lit leafs
-		VectorCopy(e->origin, e->mins);
-		VectorCopy(e->origin, e->maxs);
-		for (j = 0;j < e->numleafs;j++)
-		{
-			leaf = e->leafs[j];
-			for (k = 0;k < 3;k++)
-			{
-				if (e->mins[k] > leaf->mins[k]) e->mins[k] = leaf->mins[k];
-				if (e->maxs[k] < leaf->maxs[k]) e->maxs[k] = leaf->maxs[k];
 			}
 		}
 
@@ -1972,6 +1809,17 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 			if (e->maxs[k] > e->origin[k] + e->lightradius) e->maxs[k] = e->origin[k] + e->lightradius;
 		}
 		e->cullradius = RadiusFromBoundsAndOrigin(e->mins, e->maxs, e->origin);
+
+		numsurfaces = 0;
+		for (i = 0, surf = cl.worldmodel->brushq1.surfaces + cl.worldmodel->brushq1.firstmodelsurface;i < cl.worldmodel->brushq1.nummodelsurfaces;i++, surf++)
+			if (surf->castshadow == castshadowcount)
+				numsurfaces++;
+		if (numsurfaces)
+			e->surfaces = Mem_Alloc(r_shadow_mempool, numsurfaces * sizeof(msurface_t *));
+		e->numsurfaces = 0;
+		for (i = 0, surf = cl.worldmodel->brushq1.surfaces + cl.worldmodel->brushq1.firstmodelsurface;i < cl.worldmodel->brushq1.nummodelsurfaces;i++, surf++)
+			if (surf->castshadow == castshadowcount)
+				e->surfaces[e->numsurfaces++] = surf;
 
 		if (e->castshadows)
 		{
@@ -2026,7 +1874,7 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 			Con_Printf("static shadow volume built containing %i triangles\n", l);
 		}
 	}
-	Con_Printf("%f %f %f, %f %f %f, %f, %f, %d, %d\n", e->mins[0], e->mins[1], e->mins[2], e->maxs[0], e->maxs[1], e->maxs[2], e->cullradius, e->lightradius, e->numleafs, e->numsurfaces);
+	Con_Printf("%f %f %f, %f %f %f, %f, %f, %d\n", e->mins[0], e->mins[1], e->mins[2], e->maxs[0], e->maxs[1], e->maxs[2], e->cullradius, e->lightradius, e->numsurfaces);
 }
 
 void R_Shadow_FreeWorldLight(worldlight_t *light)
@@ -2042,8 +1890,6 @@ void R_Shadow_FreeWorldLight(worldlight_t *light)
 		Mod_ShadowMesh_Free(light->shadowvolume);
 	if (light->surfaces)
 		Mem_Free(light->surfaces);
-	if (light->leafs)
-		Mem_Free(light->leafs);
 	Mem_Free(light);
 }
 
