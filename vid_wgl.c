@@ -436,7 +436,7 @@ void ClearAllStates (void)
 // send an up event for each key, to make sure the server clears them all
 	for (i=0 ; i<256 ; i++)
 	{
-		Key_Event (i, false);
+		Key_Event (i, 0, false);
 	}
 
 	Key_ClearStates ();
@@ -599,11 +599,11 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 		// Event.
 		case WM_MOUSEWHEEL:
 			if ((short) HIWORD(wParam) > 0) {
-				Key_Event(K_MWHEELUP, true);
-				Key_Event(K_MWHEELUP, false);
+				Key_Event(K_MWHEELUP, 0, true);
+				Key_Event(K_MWHEELUP, 0, false);
 			} else {
-				Key_Event(K_MWHEELDOWN, true);
-				Key_Event(K_MWHEELDOWN, false);
+				Key_Event(K_MWHEELDOWN, 0, true);
+				Key_Event(K_MWHEELDOWN, 0, false);
 			}
 			break;
 
@@ -1287,13 +1287,13 @@ void IN_MouseEvent (int mstate)
 			if ( (mstate & (1<<i)) &&
 				!(mouse_oldbuttonstate & (1<<i)) )
 			{
-				Key_Event (K_MOUSE1 + i, true);
+				Key_Event (K_MOUSE1 + i, 0, true);
 			}
 
 			if ( !(mstate & (1<<i)) &&
 				(mouse_oldbuttonstate & (1<<i)) )
 			{
-				Key_Event (K_MOUSE1 + i, false);
+				Key_Event (K_MOUSE1 + i, 0, false);
 			}
 		}
 
@@ -1385,13 +1385,13 @@ void IN_MouseMove (usercmd_t *cmd)
 			if ( (mstate_di & (1<<i)) &&
 				!(mouse_oldbuttonstate & (1<<i)) )
 			{
-				Key_Event (K_MOUSE1 + i, true);
+				Key_Event (K_MOUSE1 + i, 0, true);
 			}
 
 			if ( !(mstate_di & (1<<i)) &&
 				(mouse_oldbuttonstate & (1<<i)) )
 			{
-				Key_Event (K_MOUSE1 + i, false);
+				Key_Event (K_MOUSE1 + i, 0, false);
 			}
 		}
 
@@ -1660,13 +1660,13 @@ void IN_Commands (void)
 		if ( (buttonstate & (1<<i)) && !(joy_oldbuttonstate & (1<<i)) )
 		{
 			key_index = (i < 4) ? K_JOY1 : K_AUX1;
-			Key_Event (key_index + i, true);
+			Key_Event (key_index + i, 0, true);
 		}
 
 		if ( !(buttonstate & (1<<i)) && (joy_oldbuttonstate & (1<<i)) )
 		{
 			key_index = (i < 4) ? K_JOY1 : K_AUX1;
-			Key_Event (key_index + i, false);
+			Key_Event (key_index + i, 0, false);
 		}
 	}
 	joy_oldbuttonstate = buttonstate;
@@ -1693,12 +1693,12 @@ void IN_Commands (void)
 		{
 			if ( (povstate & (1<<i)) && !(joy_oldpovstate & (1<<i)) )
 			{
-				Key_Event (K_AUX29 + i, true);
+				Key_Event (K_AUX29 + i, 0, true);
 			}
 
 			if ( !(povstate & (1<<i)) && (joy_oldpovstate & (1<<i)) )
 			{
-				Key_Event (K_AUX29 + i, false);
+				Key_Event (K_AUX29 + i, 0, false);
 			}
 		}
 		joy_oldpovstate = povstate;

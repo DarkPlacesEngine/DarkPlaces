@@ -66,22 +66,22 @@ void M_LanConfig_Draw (void);
 void M_GameOptions_Draw (void);
 void M_ServerList_Draw (void);
 
-void M_Main_Key (int key);
-	void M_SinglePlayer_Key (int key);
-		void M_Load_Key (int key);
-		void M_Save_Key (int key);
-	void M_MultiPlayer_Key (int key);
-		void M_Setup_Key (int key);
-	void M_Options_Key (int key);
-	void M_Options_Effects_Key (int key);
-	void M_Options_ColorControl_Key (int key);
-		void M_Keys_Key (int key);
-		void M_Video_Key (int key);
-	void M_Help_Key (int key);
-	void M_Quit_Key (int key);
-void M_LanConfig_Key (int key);
-void M_GameOptions_Key (int key);
-void M_ServerList_Key (int key);
+void M_Main_Key (int key, char ascii);
+	void M_SinglePlayer_Key (int key, char ascii);
+		void M_Load_Key (int key, char ascii);
+		void M_Save_Key (int key, char ascii);
+	void M_MultiPlayer_Key (int key, char ascii);
+		void M_Setup_Key (int key, char ascii);
+	void M_Options_Key (int key, char ascii);
+	void M_Options_Effects_Key (int key, char ascii);
+	void M_Options_ColorControl_Key (int key, char ascii);
+		void M_Keys_Key (int key, char ascii);
+		void M_Video_Key (int key, char ascii);
+	void M_Help_Key (int key, char ascii);
+	void M_Quit_Key (int key, char ascii);
+void M_LanConfig_Key (int key, char ascii);
+void M_GameOptions_Key (int key, char ascii);
+void M_ServerList_Key (int key, char ascii);
 
 qboolean	m_entersound;		// play after drawing a frame, so caching
 								// won't disrupt the sound
@@ -308,7 +308,7 @@ void M_Menu_Demos_f (void)
 	m_entersound = true;
 }
 
-void M_Demo_Key (int k)
+void M_Demo_Key (int k, char ascii)
 {
 	switch (k)
 	{
@@ -404,7 +404,7 @@ void M_Main_Draw (void)
 }
 
 
-void M_Main_Key (int key)
+void M_Main_Key (int key, char ascii)
 {
 	switch (key)
 	{
@@ -600,7 +600,7 @@ void M_SinglePlayer_Draw (void)
 }
 
 
-void M_SinglePlayer_Key (int key)
+void M_SinglePlayer_Key (int key, char ascii)
 {
 	if (gamemode == GAME_TRANSFUSION || gamemode == GAME_NEXUIZ || gamemode == GAME_GOODVSBAD2 || gamemode == GAME_BATTLEMECH)
 	{
@@ -755,7 +755,7 @@ void M_Save_Draw (void)
 }
 
 
-void M_Load_Key (int k)
+void M_Load_Key (int k, char ascii)
 {
 	switch (k)
 	{
@@ -793,7 +793,7 @@ void M_Load_Key (int k)
 }
 
 
-void M_Save_Key (int k)
+void M_Save_Key (int k, char ascii)
 {
 	switch (k)
 	{
@@ -858,7 +858,7 @@ void M_MultiPlayer_Draw (void)
 }
 
 
-void M_MultiPlayer_Key (int key)
+void M_MultiPlayer_Key (int key, char ascii)
 {
 	switch (key)
 	{
@@ -988,7 +988,7 @@ void M_Setup_Draw (void)
 }
 
 
-void M_Setup_Key (int k)
+void M_Setup_Key (int k, char ascii)
 {
 	int			l;
 
@@ -1057,7 +1057,7 @@ forward:
 		break;
 
 	default:
-		if (k < 32 || k > 127)
+		if (ascii < 32 || ascii > 126)
 			break;
 		if (setup_cursor == 0)
 		{
@@ -1065,7 +1065,7 @@ forward:
 			if (l < 15)
 			{
 				setup_myname[l+1] = 0;
-				setup_myname[l] = k;
+				setup_myname[l] = ascii;
 			}
 		}
 	}
@@ -1295,7 +1295,7 @@ void M_Options_Draw (void)
 }
 
 
-void M_Options_Key (int k)
+void M_Options_Key (int k, char ascii)
 {
 	switch (k)
 	{
@@ -1473,7 +1473,7 @@ void M_Options_Effects_Draw (void)
 }
 
 
-void M_Options_Effects_Key (int k)
+void M_Options_Effects_Key (int k, char ascii)
 {
 	switch (k)
 	{
@@ -1701,7 +1701,7 @@ void M_Options_ColorControl_Draw (void)
 }
 
 
-void M_Options_ColorControl_Key (int k)
+void M_Options_ColorControl_Key (int k, char ascii)
 {
 	switch (k)
 	{
@@ -2065,7 +2065,7 @@ void M_Keys_Draw (void)
 }
 
 
-void M_Keys_Key (int k)
+void M_Keys_Key (int k, char ascii)
 {
 	char	cmd[80];
 	int		keys[NUMKEYS];
@@ -2241,7 +2241,7 @@ void M_Menu_Video_AdjustSliders (int dir)
 }
 
 
-void M_Video_Key (int key)
+void M_Video_Key (int key, char ascii)
 {
 	switch (key)
 	{
@@ -2317,7 +2317,7 @@ void M_Help_Draw (void)
 }
 
 
-void M_Help_Key (int key)
+void M_Help_Key (int key, char ascii)
 {
 	switch (key)
 	{
@@ -2431,7 +2431,7 @@ void M_Menu_Quit_f (void)
 }
 
 
-void M_Quit_Key (int key)
+void M_Quit_Key (int key, char ascii)
 {
 	switch (key)
 	{
@@ -2564,7 +2564,7 @@ void M_LanConfig_Draw (void)
 }
 
 
-void M_LanConfig_Key (int key)
+void M_LanConfig_Key (int key, char ascii)
 {
 	int		l;
 
@@ -2628,7 +2628,7 @@ void M_LanConfig_Key (int key)
 		break;
 
 	default:
-		if (key < 32 || key > 127)
+		if (ascii < 32 || ascii > 126)
 			break;
 
 		if (lanConfig_cursor == 2)
@@ -2637,11 +2637,11 @@ void M_LanConfig_Key (int key)
 			if (l < 21)
 			{
 				lanConfig_joinname[l+1] = 0;
-				lanConfig_joinname[l] = key;
+				lanConfig_joinname[l] = ascii;
 			}
 		}
 
-		if (key < '0' || key > '9')
+		if (ascii < '0' || ascii > '9')
 			break;
 		if (lanConfig_cursor == 0)
 		{
@@ -2649,7 +2649,7 @@ void M_LanConfig_Key (int key)
 			if (l < 5)
 			{
 				lanConfig_portname[l+1] = 0;
-				lanConfig_portname[l] = key;
+				lanConfig_portname[l] = ascii;
 			}
 		}
 	}
@@ -3288,7 +3288,7 @@ void M_NetStart_Change (int dir)
 	}
 }
 
-void M_GameOptions_Key (int key)
+void M_GameOptions_Key (int key, char ascii)
 {
 	gamelevels_t *g;
 	int l;
@@ -3359,7 +3359,7 @@ void M_GameOptions_Key (int key)
 		break;
 
 	default:
-		if (key < 32 || key > 127)
+		if (ascii < 32 || ascii > 126)
 			break;
 		if (gameoptions_cursor == 8)
 		{
@@ -3367,7 +3367,7 @@ void M_GameOptions_Key (int key)
 			if (l < 37)
 			{
 				memcpy(hostnamebuf, hostname.string, l);
-				hostnamebuf[l] = key;
+				hostnamebuf[l] = ascii;
 				hostnamebuf[l+1] = 0;
 				Cvar_Set("hostname", hostnamebuf);
 			}
@@ -3430,7 +3430,7 @@ void M_ServerList_Draw (void)
 }
 
 
-void M_ServerList_Key(int k)
+void M_ServerList_Key(int k, char ascii)
 {
 	switch (k)
 	{
@@ -3472,7 +3472,7 @@ void M_ServerList_Key(int k)
 //=============================================================================
 /* Menu Subsystem */
 
-void M_Keydown(int key);
+void M_Keydown(int key, char ascii);
 void M_Draw(void);
 void M_ToggleMenu_f(void);
 void M_Shutdown(void);
@@ -3651,7 +3651,7 @@ void M_Draw (void)
 }
 
 
-void M_Keydown (int key)
+void M_Keydown (int key, char ascii)
 {
 	switch (m_state)
 	{
@@ -3659,71 +3659,71 @@ void M_Keydown (int key)
 		return;
 
 	case m_main:
-		M_Main_Key (key);
+		M_Main_Key (key, ascii);
 		return;
 
 	case m_demo:
-		M_Demo_Key (key);
+		M_Demo_Key (key, ascii);
 		return;
 
 	case m_singleplayer:
-		M_SinglePlayer_Key (key);
+		M_SinglePlayer_Key (key, ascii);
 		return;
 
 	case m_load:
-		M_Load_Key (key);
+		M_Load_Key (key, ascii);
 		return;
 
 	case m_save:
-		M_Save_Key (key);
+		M_Save_Key (key, ascii);
 		return;
 
 	case m_multiplayer:
-		M_MultiPlayer_Key (key);
+		M_MultiPlayer_Key (key, ascii);
 		return;
 
 	case m_setup:
-		M_Setup_Key (key);
+		M_Setup_Key (key, ascii);
 		return;
 
 	case m_options:
-		M_Options_Key (key);
+		M_Options_Key (key, ascii);
 		return;
 
 	case m_options_effects:
-		M_Options_Effects_Key (key);
+		M_Options_Effects_Key (key, ascii);
 		return;
 
 	case m_options_colorcontrol:
-		M_Options_ColorControl_Key (key);
+		M_Options_ColorControl_Key (key, ascii);
 		return;
 
 	case m_keys:
-		M_Keys_Key (key);
+		M_Keys_Key (key, ascii);
 		return;
 
 	case m_video:
-		M_Video_Key (key);
+		M_Video_Key (key, ascii);
 		return;
 
 	case m_help:
-		M_Help_Key (key);
+		M_Help_Key (key, ascii);
 		return;
 
 	case m_quit:
-		M_Quit_Key (key);
+		M_Quit_Key (key, ascii);
 		return;
 
 	case m_lanconfig:
-		M_LanConfig_Key (key);
+		M_LanConfig_Key (key, ascii);
 		return;
 
 	case m_gameoptions:
-		M_GameOptions_Key (key);
+		M_GameOptions_Key (key, ascii);
 		return;
 
 	case m_slist:
-		M_ServerList_Key (key);
+		M_ServerList_Key (key, ascii);
 		return;
 	}
 }
@@ -3771,13 +3771,14 @@ void MP_Error(void)
 	MR_SetRouting (TRUE);
 }
 
-void MP_Keydown (int key)
+void MP_Keydown (int key, char ascii)
 {
 	PRVM_Begin;
 	PRVM_SetProg(PRVM_MENUPROG);
 
 	// pass key
 	prog->globals[OFS_PARM0] = (float) key;
+	prog->globals[OFS_PARM1] = (float) ascii;
 	PRVM_ExecuteProgram(m_keydown, M_F_KEYDOWN"(float key) required\n");
 
 	PRVM_End;
