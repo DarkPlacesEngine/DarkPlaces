@@ -21,7 +21,7 @@ typedef struct
 	int tex[MAX_TEXTUREUNITS];
 	float *texcoords[MAX_TEXTUREUNITS];
 	int texcoordstep[MAX_TEXTUREUNITS];
-	float texrgbscale[MAX_TEXTUREUNITS]; // used only if COMBINE is present
+	int texrgbscale[MAX_TEXTUREUNITS]; // used only if COMBINE is present
 }
 rmeshinfo_t;
 
@@ -36,7 +36,7 @@ typedef struct
 	int numtriangles;
 	int numverts;
 	int tex[MAX_TEXTUREUNITS];
-	float texrgbscale[MAX_TEXTUREUNITS]; // used only if COMBINE is present
+	int texrgbscale[MAX_TEXTUREUNITS]; // used only if COMBINE is present
 
 	// output
 	int *index;
