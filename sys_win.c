@@ -356,31 +356,31 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 		while (*lpCmdLine && *lpCmdLine <= ' ')
 			lpCmdLine++;
 
+		if (!*lpCmdLine)
+			break;
+
+		if (*lpCmdLine == '\"')
+		{
+			// quoted string
+			lpCmdLine++;
+			argv[com_argc] = lpCmdLine;
+			com_argc++;
+			while (*lpCmdLine && (*lpCmdLine != '\"'))
+				lpCmdLine++;
+		}
+		else
+		{
+			// unquoted word
+			argv[com_argc] = lpCmdLine;
+			com_argc++;
+			while (*lpCmdLine && *lpCmdLine > ' ')
+				lpCmdLine++;
+		}
+
 		if (*lpCmdLine)
 		{
-			if (*lpCmdLine == '\"')
-			{
-				// quoted string
-				lpCmdLine++;
-				argv[com_argc] = lpCmdLine;
-				com_argc++;
-				while (*lpCmdLine && (*lpCmdLine != '\"'))
-					lpCmdLine++;
-			}
-			else
-			{
-				// unquoted word
-				argv[com_argc] = lpCmdLine;
-				com_argc++;
-				while (*lpCmdLine && *lpCmdLine > ' ')
-					lpCmdLine++;
-			}
-
-			if (*lpCmdLine)
-			{
-				*lpCmdLine = 0;
-				lpCmdLine++;
-			}
+			*lpCmdLine = 0;
+			lpCmdLine++;
 		}
 	}
 
