@@ -443,6 +443,7 @@ int NetConn_ReceivedMessage(netconn_t *conn, qbyte *data, int length)
 					Con_DPrintf("Dropped %u datagram(s)\n", count);
 				}
 				conn->unreliableReceiveSequence = sequence + 1;
+				conn->lastMessageTime = realtime;
 				unreliableMessagesReceived++;
 				SZ_Clear(&net_message);
 				SZ_Write(&net_message, data, length);
@@ -462,6 +463,7 @@ int NetConn_ReceivedMessage(netconn_t *conn, qbyte *data, int length)
 					conn->ackSequence++;
 					if (conn->ackSequence != conn->sendSequence)
 						Con_DPrintf("ack sequencing error\n");
+					conn->lastMessageTime = realtime;
 					conn->sendMessageLength -= MAX_DATAGRAM;
 					if (conn->sendMessageLength > 0)
 					{
@@ -490,6 +492,7 @@ int NetConn_ReceivedMessage(netconn_t *conn, qbyte *data, int length)
 			NetConn_Write(conn->mysocket, (qbyte *)temppacket, 8, &conn->peeraddress);
 			if (sequence == conn->receiveSequence)
 			{
+				conn->lastMessageTime = realtime;
 				conn->receiveSequence++;
 				memcpy(conn->receiveMessage + conn->receiveMessageLength, data, length);
 				conn->receiveMessageLength += length;
