@@ -221,14 +221,14 @@ loc0:
 		touch = EDICT_FROM_AREA(l);
 		if (touch == ent)
 			continue;
-		if (!touch->v.touch || touch->v.solid != SOLID_TRIGGER)
+		if (!touch->v->touch || touch->v->solid != SOLID_TRIGGER)
 			continue;
-		if (ent->v.absmin[0] > touch->v.absmax[0]
-		 || ent->v.absmin[1] > touch->v.absmax[1]
-		 || ent->v.absmin[2] > touch->v.absmax[2]
-		 || ent->v.absmax[0] < touch->v.absmin[0]
-		 || ent->v.absmax[1] < touch->v.absmin[1]
-		 || ent->v.absmax[2] < touch->v.absmin[2])
+		if (ent->v->absmin[0] > touch->v->absmax[0]
+		 || ent->v->absmin[1] > touch->v->absmax[1]
+		 || ent->v->absmin[2] > touch->v->absmax[2]
+		 || ent->v->absmax[0] < touch->v->absmin[0]
+		 || ent->v->absmax[1] < touch->v->absmin[1]
+		 || ent->v->absmax[2] < touch->v->absmin[2])
 			continue;
 		old_self = pr_global_struct->self;
 		old_other = pr_global_struct->other;
@@ -236,7 +236,7 @@ loc0:
 		pr_global_struct->self = EDICT_TO_PROG(touch);
 		pr_global_struct->other = EDICT_TO_PROG(ent);
 		pr_global_struct->time = sv.time;
-		PR_ExecuteProgram (touch->v.touch, "");
+		PR_ExecuteProgram (touch->v->touch, "");
 
 		pr_global_struct->self = old_self;
 		pr_global_struct->other = old_other;
@@ -246,16 +246,16 @@ loc0:
 	if (node->axis == -1)
 		return;
 
-	if (ent->v.absmax[node->axis] > node->dist)
+	if (ent->v->absmax[node->axis] > node->dist)
 	{
-		if (ent->v.absmin[node->axis] < node->dist)
+		if (ent->v->absmin[node->axis] < node->dist)
 			SV_TouchLinks(ent, node->children[1]); // order reversed to reduce code
 		node = node->children[0];
 		goto loc0;
 	}
 	else
 	{
-		if (ent->v.absmin[node->axis] < node->dist)
+		if (ent->v->absmin[node->axis] < node->dist)
 		{
 			node = node->children[1];
 			goto loc0;
@@ -286,71 +286,71 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 
 // set the abs box
 
-	if (ent->v.solid == SOLID_BSP)
+	if (ent->v->solid == SOLID_BSP)
 	{
-		if (ent->v.modelindex < 0 || ent->v.modelindex > MAX_MODELS)
+		if (ent->v->modelindex < 0 || ent->v->modelindex > MAX_MODELS)
 			Host_Error("SOLID_BSP with invalid modelindex!\n");
-		model = sv.models[(int) ent->v.modelindex];
+		model = sv.models[(int) ent->v->modelindex];
 		if (model != NULL)
 		{
 			if (model->type != mod_brush)
 				Host_Error("SOLID_BSP with non-BSP model\n");
 
-			if (ent->v.angles[0] || ent->v.angles[2] || ent->v.avelocity[0] || ent->v.avelocity[2])
+			if (ent->v->angles[0] || ent->v->angles[2] || ent->v->avelocity[0] || ent->v->avelocity[2])
 			{
-				VectorAdd(ent->v.origin, model->rotatedmins, ent->v.absmin);
-				VectorAdd(ent->v.origin, model->rotatedmaxs, ent->v.absmax);
+				VectorAdd(ent->v->origin, model->rotatedmins, ent->v->absmin);
+				VectorAdd(ent->v->origin, model->rotatedmaxs, ent->v->absmax);
 			}
-			else if (ent->v.angles[1] || ent->v.avelocity[1])
+			else if (ent->v->angles[1] || ent->v->avelocity[1])
 			{
-				VectorAdd(ent->v.origin, model->yawmins, ent->v.absmin);
-				VectorAdd(ent->v.origin, model->yawmaxs, ent->v.absmax);
+				VectorAdd(ent->v->origin, model->yawmins, ent->v->absmin);
+				VectorAdd(ent->v->origin, model->yawmaxs, ent->v->absmax);
 			}
 			else
 			{
-				VectorAdd(ent->v.origin, model->normalmins, ent->v.absmin);
-				VectorAdd(ent->v.origin, model->normalmaxs, ent->v.absmax);
+				VectorAdd(ent->v->origin, model->normalmins, ent->v->absmin);
+				VectorAdd(ent->v->origin, model->normalmaxs, ent->v->absmax);
 			}
 		}
 		else
 		{
 			// SOLID_BSP with no model is valid, mainly because some QC setup code does so temporarily
-			VectorAdd (ent->v.origin, ent->v.mins, ent->v.absmin);
-			VectorAdd (ent->v.origin, ent->v.maxs, ent->v.absmax);
+			VectorAdd (ent->v->origin, ent->v->mins, ent->v->absmin);
+			VectorAdd (ent->v->origin, ent->v->maxs, ent->v->absmax);
 		}
 	}
 	else
 	{
-		VectorAdd (ent->v.origin, ent->v.mins, ent->v.absmin);
-		VectorAdd (ent->v.origin, ent->v.maxs, ent->v.absmax);
+		VectorAdd (ent->v->origin, ent->v->mins, ent->v->absmin);
+		VectorAdd (ent->v->origin, ent->v->maxs, ent->v->absmax);
 	}
 
 //
 // to make items easier to pick up and allow them to be grabbed off
 // of shelves, the abs sizes are expanded
 //
-	if ((int)ent->v.flags & FL_ITEM)
+	if ((int)ent->v->flags & FL_ITEM)
 	{
-		ent->v.absmin[0] -= 15;
-		ent->v.absmin[1] -= 15;
-		ent->v.absmin[2] -= 1;
-		ent->v.absmax[0] += 15;
-		ent->v.absmax[1] += 15;
-		ent->v.absmax[2] += 1;
+		ent->v->absmin[0] -= 15;
+		ent->v->absmin[1] -= 15;
+		ent->v->absmin[2] -= 1;
+		ent->v->absmax[0] += 15;
+		ent->v->absmax[1] += 15;
+		ent->v->absmax[2] += 1;
 	}
 	else
 	{
 		// because movement is clipped an epsilon away from an actual edge,
 		// we must fully check even when bounding boxes don't quite touch
-		ent->v.absmin[0] -= 1;
-		ent->v.absmin[1] -= 1;
-		ent->v.absmin[2] -= 1;
-		ent->v.absmax[0] += 1;
-		ent->v.absmax[1] += 1;
-		ent->v.absmax[2] += 1;
+		ent->v->absmin[0] -= 1;
+		ent->v->absmin[1] -= 1;
+		ent->v->absmin[2] -= 1;
+		ent->v->absmax[0] += 1;
+		ent->v->absmax[1] += 1;
+		ent->v->absmax[2] += 1;
 	}
 
-	if (ent->v.solid == SOLID_NOT)
+	if (ent->v->solid == SOLID_NOT)
 		return;
 
 // find the first node that the ent's box crosses
@@ -359,9 +359,9 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 	{
 		if (node->axis == -1)
 			break;
-		if (ent->v.absmin[node->axis] > node->dist)
+		if (ent->v->absmin[node->axis] > node->dist)
 			node = node->children[0];
-		else if (ent->v.absmax[node->axis] < node->dist)
+		else if (ent->v->absmax[node->axis] < node->dist)
 			node = node->children[1];
 		else
 			break;		// crosses the node
@@ -369,7 +369,7 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 
 // link it in
 
-	if (ent->v.solid == SOLID_TRIGGER)
+	if (ent->v->solid == SOLID_TRIGGER)
 		InsertLinkBefore (&ent->area, &node->trigger_edicts);
 	else
 		InsertLinkBefore (&ent->area, &node->solid_edicts);
@@ -398,7 +398,7 @@ This could be a lot more efficient...
 */
 int SV_TestEntityPosition (edict_t *ent)
 {
-	return SV_Move (ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent).startsolid;
+	return SV_Move (ent->v->origin, ent->v->mins, ent->v->maxs, ent->v->origin, MOVE_NORMAL, ent).startsolid;
 }
 
 
@@ -424,14 +424,14 @@ trace_t SV_ClipMoveToEntity (edict_t *ent, vec3_t start, vec3_t mins, vec3_t max
 	trace_t trace;
 	model_t *model;
 
-	i = ent->v.modelindex;
+	i = ent->v->modelindex;
 	if ((unsigned int) i >= MAX_MODELS)
 		Host_Error("SV_ClipMoveToEntity: invalid modelindex\n");
 	model = sv.models[i];
 	if (i != 0 && model == NULL)
 		Host_Error("SV_ClipMoveToEntity: invalid modelindex\n");
 
-	if ((int) ent->v.solid == SOLID_BSP)
+	if ((int) ent->v->solid == SOLID_BSP)
 	{
 		Mod_CheckLoaded(model);
 		if (model->type != mod_brush)
@@ -440,11 +440,11 @@ trace_t SV_ClipMoveToEntity (edict_t *ent, vec3_t start, vec3_t mins, vec3_t max
 			ED_Print (ent);
 			Host_Error ("SV_ClipMoveToEntity: SOLID_BSP with a non bsp model\n");
 		}
-		if (ent->v.movetype != MOVETYPE_PUSH)
+		if (ent->v->movetype != MOVETYPE_PUSH)
 			Host_Error ("SV_ClipMoveToEntity: SOLID_BSP without MOVETYPE_PUSH");
 	}
 
-	Collision_ClipTrace(&trace, ent, model, ent->v.origin, ent->v.angles, ent->v.mins, ent->v.maxs, start, mins, maxs, end);
+	Collision_ClipTrace(&trace, ent, model, ent->v->origin, ent->v->angles, ent->v->mins, ent->v->maxs, start, mins, maxs, end);
 
 	return trace;
 }
@@ -472,46 +472,46 @@ loc0:
 	{
 		next = l->next;
 		touch = EDICT_FROM_AREA(l);
-		if (touch->v.solid == SOLID_NOT)
+		if (touch->v->solid == SOLID_NOT)
 			continue;
 		if (touch == clip->passedict)
 			continue;
-		if (touch->v.solid == SOLID_TRIGGER)
+		if (touch->v->solid == SOLID_TRIGGER)
 		{
 			ED_Print(touch);
 			Host_Error ("Trigger in clipping list");
 		}
 
-		if (clip->type == MOVE_NOMONSTERS && touch->v.solid != SOLID_BSP)
+		if (clip->type == MOVE_NOMONSTERS && touch->v->solid != SOLID_BSP)
 			continue;
 
-		if (clip->boxmins[0] > touch->v.absmax[0]
-		 || clip->boxmaxs[0] < touch->v.absmin[0]
-		 || clip->boxmins[1] > touch->v.absmax[1]
-		 || clip->boxmaxs[1] < touch->v.absmin[1]
-		 || clip->boxmins[2] > touch->v.absmax[2]
-		 || clip->boxmaxs[2] < touch->v.absmin[2])
+		if (clip->boxmins[0] > touch->v->absmax[0]
+		 || clip->boxmaxs[0] < touch->v->absmin[0]
+		 || clip->boxmins[1] > touch->v->absmax[1]
+		 || clip->boxmaxs[1] < touch->v->absmin[1]
+		 || clip->boxmins[2] > touch->v->absmax[2]
+		 || clip->boxmaxs[2] < touch->v->absmin[2])
 			continue;
 
 		if (clip->passedict)
 		{
-			if (clip->passedict->v.size[0] && !touch->v.size[0])
+			if (clip->passedict->v->size[0] && !touch->v->size[0])
 				continue;	// points never interact
-		 	if (PROG_TO_EDICT(touch->v.owner) == clip->passedict)
+		 	if (PROG_TO_EDICT(touch->v->owner) == clip->passedict)
 				continue;	// don't clip against own missiles
-			if (PROG_TO_EDICT(clip->passedict->v.owner) == touch)
+			if (PROG_TO_EDICT(clip->passedict->v->owner) == touch)
 				continue;	// don't clip against owner
 			// LordHavoc: corpse code
-			if (clip->passedict->v.solid == SOLID_CORPSE && (touch->v.solid == SOLID_SLIDEBOX || touch->v.solid == SOLID_CORPSE))
+			if (clip->passedict->v->solid == SOLID_CORPSE && (touch->v->solid == SOLID_SLIDEBOX || touch->v->solid == SOLID_CORPSE))
 				continue;
-			if (clip->passedict->v.solid == SOLID_SLIDEBOX && touch->v.solid == SOLID_CORPSE)
+			if (clip->passedict->v->solid == SOLID_SLIDEBOX && touch->v->solid == SOLID_CORPSE)
 				continue;
 		}
 
 		// might interact, so do an exact clip
-		if (touch->v.solid == SOLID_BSP)
+		if (touch->v->solid == SOLID_BSP)
 			trace = SV_ClipMoveToEntity (touch, clip->start, clip->hullmins, clip->hullmaxs, clip->end);
-		else if ((int)touch->v.flags & FL_MONSTER)
+		else if ((int)touch->v->flags & FL_MONSTER)
 			trace = SV_ClipMoveToEntity (touch, clip->start, clip->mins2, clip->maxs2, clip->end);
 		else
 			trace = SV_ClipMoveToEntity (touch, clip->start, clip->mins, clip->maxs, clip->end);

@@ -88,7 +88,7 @@
 				OPC->_float = !OPA->function;
 				break;
 			case OP_NOT_ENT:
-				OPC->_float = (PROG_TO_EDICT(OPA->edict) == sv.edicts);
+				OPC->_float = (OPA->edict == 0);
 				break;
 			case OP_EQ_F:
 				OPC->_float = OPA->_float == OPB->_float;
@@ -144,17 +144,11 @@
 				if (OPB->_int < 0 || OPB->_int + 4 > pr_edictareasize)
 				{
 					pr_xstatement = st - pr_statements;
-					Host_Error("Progs attempted to write to an out of bounds edict\n");
-					return;
-				}
-				if (OPB->_int % pr_edict_size < ((qbyte *)&sv.edicts->v - (qbyte *)sv.edicts))
-				{
-					pr_xstatement = st - pr_statements;
-					Host_Error("Progs attempted to write to an engine edict field\n");
+					Host_Error("Progs attempted to write to an out of bounds edict (%i)\n", OPB->_int);
 					return;
 				}
 #endif
-				ptr = (eval_t *)((qbyte *)sv.edicts + OPB->_int);
+				ptr = (eval_t *)((qbyte *)sv.edictsfields + OPB->_int);
 				ptr->_int = OPA->_int;
 				break;
 			case OP_STOREP_V:
@@ -162,55 +156,32 @@
 				if (OPB->_int < 0 || OPB->_int + 12 > pr_edictareasize)
 				{
 					pr_xstatement = st - pr_statements;
-					Host_Error("Progs attempted to write to an out of bounds edict\n");
+					Host_Error("Progs attempted to write to an out of bounds edict (%i)\n", OPB->_int);
 					return;
 				}
 #endif
-				ptr = (eval_t *)((qbyte *)sv.edicts + OPB->_int);
+				ptr = (eval_t *)((qbyte *)sv.edictsfields + OPB->_int);
 				ptr->vector[0] = OPA->vector[0];
 				ptr->vector[1] = OPA->vector[1];
 				ptr->vector[2] = OPA->vector[2];
 				break;
 
 			case OP_ADDRESS:
+				pr_xstatement = st - pr_statements;
 #if PRBOUNDSCHECK
-				if (OPA->edict <= 0)
+				if ((unsigned int)OPB->_int >= progs->entityfields)
 				{
-					if (OPA->edict == 0 && sv.state == ss_active)
-					{
-						pr_xstatement = st - pr_statements;
-						Host_Error ("assignment to world entity");
-						return;
-					}
-					else
-					{
-						pr_xstatement = st - pr_statements;
-						Host_Error("Progs attempted to address an out of bounds edict\n");
-						return;
-					}
-				}
-				else if (OPA->edict >= pr_edictareasize)
-				{
-					pr_xstatement = st - pr_statements;
-					Host_Error("Progs attempted to address an out of bounds edict\n");
-					return;
-				}
-				if (OPB->_int < 0 || OPB->_int >= progs->entityfields)
-				{
-					pr_xstatement = st - pr_statements;
-					Host_Error("Progs attempted to address an invalid field in an edict\n");
-					return;
-				}
-#else
-				if (OPA->edict == 0 && sv.state == ss_active)
-				{
-					pr_xstatement = st - pr_statements;
-					Host_Error ("assignment to world entity");
+					Host_Error("Progs attempted to address an invalid field (%i) in an edict\n", OPB->_int);
 					return;
 				}
 #endif
+				if (OPA->edict == 0 && sv.state == ss_active)
+				{
+					Host_Error ("assignment to world entity");
+					return;
+				}
 				ed = PROG_TO_EDICT(OPA->edict);
-				OPC->_int = (qbyte *)((int *)&ed->v + OPB->_int) - (qbyte *)sv.edicts;
+				OPC->_int = (qbyte *)((int *)ed->v + OPB->_int) - (qbyte *)sv.edictsfields;
 				break;
 
 			case OP_LOAD_F:
@@ -218,43 +189,31 @@
 			case OP_LOAD_ENT:
 			case OP_LOAD_S:
 			case OP_LOAD_FNC:
+				pr_xstatement = st - pr_statements;
 #if PRBOUNDSCHECK
-				if (OPA->edict < 0 || OPA->edict >= pr_edictareasize)
+				if ((unsigned int)OPB->_int >= progs->entityfields)
 				{
-					pr_xstatement = st - pr_statements;
-					Host_Error("Progs attempted to read an out of bounds edict number\n");
-					return;
-				}
-				if (OPB->_int < 0 || OPB->_int >= progs->entityfields)
-				{
-					pr_xstatement = st - pr_statements;
-					Host_Error("Progs attempted to read an invalid field in an edict\n");
+					Host_Error("Progs attempted to read an invalid field in an edict (%i)\n", OPB->_int);
 					return;
 				}
 #endif
 				ed = PROG_TO_EDICT(OPA->edict);
-				OPC->_int = ((eval_t *)((int *)&ed->v + OPB->_int))->_int;
+				OPC->_int = ((eval_t *)((int *)ed->v + OPB->_int))->_int;
 				break;
 
 			case OP_LOAD_V:
+				pr_xstatement = st - pr_statements;
 #if PRBOUNDSCHECK
-				if (OPA->edict < 0 || OPA->edict >= pr_edictareasize)
-				{
-					pr_xstatement = st - pr_statements;
-					Host_Error("Progs attempted to read an out of bounds edict number\n");
-					return;
-				}
 				if (OPB->_int < 0 || OPB->_int + 2 >= progs->entityfields)
 				{
-					pr_xstatement = st - pr_statements;
-					Host_Error("Progs attempted to read an invalid field in an edict\n");
+					Host_Error("Progs attempted to read an invalid field in an edict (%i)\n", OPB->_int);
 					return;
 				}
 #endif
 				ed = PROG_TO_EDICT(OPA->edict);
-				OPC->vector[0] = ((eval_t *)((int *)&ed->v + OPB->_int))->vector[0];
-				OPC->vector[1] = ((eval_t *)((int *)&ed->v + OPB->_int))->vector[1];
-				OPC->vector[2] = ((eval_t *)((int *)&ed->v + OPB->_int))->vector[2];
+				OPC->vector[0] = ((eval_t *)((int *)ed->v + OPB->_int))->vector[0];
+				OPC->vector[1] = ((eval_t *)((int *)ed->v + OPB->_int))->vector[1];
+				OPC->vector[2] = ((eval_t *)((int *)ed->v + OPB->_int))->vector[2];
 				break;
 
 		//==================
@@ -317,9 +276,9 @@
 
 			case OP_STATE:
 				ed = PROG_TO_EDICT(pr_global_struct->self);
-				ed->v.nextthink = pr_global_struct->time + 0.1;
-				ed->v.frame = OPA->_float;
-				ed->v.think = OPB->function;
+				ed->v->nextthink = pr_global_struct->time + 0.1;
+				ed->v->frame = OPA->_float;
+				ed->v->think = OPB->function;
 				break;
 
 // LordHavoc: to be enabled when Progs version 7 (or whatever it will be numbered) is finalized
@@ -483,14 +442,8 @@
 					Host_Error("Progs attempted to write to an out of bounds edict\n");
 					return;
 				}
-				if (OPB->_int % pr_edict_size < ((qbyte *)&sv.edicts->v - (qbyte *)sv.edicts))
-				{
-					pr_xstatement = st - pr_statements;
-					Host_Error("Progs attempted to write to an engine edict field\n");
-					return;
-				}
 #endif
-				ptr = (eval_t *)((qbyte *)sv.edicts + OPB->_int);
+				ptr = (eval_t *)((qbyte *)sv.edictsfields + OPB->_int);
 				ptr->_int = OPA->_int;
 				break;
 			case OP_LOAD_I:
@@ -509,7 +462,7 @@
 				}
 #endif
 				ed = PROG_TO_EDICT(OPA->edict);
-				OPC->_int = ((eval_t *)((int *)&ed->v + OPB->_int))->_int;
+				OPC->_int = ((eval_t *)((int *)ed->v + OPB->_int))->_int;
 				break;
 
 			case OP_GSTOREP_I:

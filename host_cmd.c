@@ -89,7 +89,7 @@ void Host_Status_f (void)
 		}
 		else
 			hours = 0;
-		print ("#%-2u %-16.16s  %3i  %2i:%02i:%02i\n", j+1, client->name, (int)client->edict->v.frags, hours, minutes, seconds);
+		print ("#%-2u %-16.16s  %3i  %2i:%02i:%02i\n", j+1, client->name, (int)client->edict->v->frags, hours, minutes, seconds);
 		print ("   %s\n", client->netconnection->address);
 	}
 }
@@ -113,8 +113,8 @@ void Host_God_f (void)
 	if (pr_global_struct->deathmatch)
 		return;
 
-	sv_player->v.flags = (int)sv_player->v.flags ^ FL_GODMODE;
-	if (!((int)sv_player->v.flags & FL_GODMODE) )
+	sv_player->v->flags = (int)sv_player->v->flags ^ FL_GODMODE;
+	if (!((int)sv_player->v->flags & FL_GODMODE) )
 		SV_ClientPrintf ("godmode OFF\n");
 	else
 		SV_ClientPrintf ("godmode ON\n");
@@ -131,8 +131,8 @@ void Host_Notarget_f (void)
 	if (pr_global_struct->deathmatch)
 		return;
 
-	sv_player->v.flags = (int)sv_player->v.flags ^ FL_NOTARGET;
-	if (!((int)sv_player->v.flags & FL_NOTARGET) )
+	sv_player->v->flags = (int)sv_player->v->flags ^ FL_NOTARGET;
+	if (!((int)sv_player->v->flags & FL_NOTARGET) )
 		SV_ClientPrintf ("notarget OFF\n");
 	else
 		SV_ClientPrintf ("notarget ON\n");
@@ -151,16 +151,16 @@ void Host_Noclip_f (void)
 	if (pr_global_struct->deathmatch)
 		return;
 
-	if (sv_player->v.movetype != MOVETYPE_NOCLIP)
+	if (sv_player->v->movetype != MOVETYPE_NOCLIP)
 	{
 		noclip_anglehack = true;
-		sv_player->v.movetype = MOVETYPE_NOCLIP;
+		sv_player->v->movetype = MOVETYPE_NOCLIP;
 		SV_ClientPrintf ("noclip ON\n");
 	}
 	else
 	{
 		noclip_anglehack = false;
-		sv_player->v.movetype = MOVETYPE_WALK;
+		sv_player->v->movetype = MOVETYPE_WALK;
 		SV_ClientPrintf ("noclip OFF\n");
 	}
 }
@@ -183,14 +183,14 @@ void Host_Fly_f (void)
 	if (pr_global_struct->deathmatch)
 		return;
 
-	if (sv_player->v.movetype != MOVETYPE_FLY)
+	if (sv_player->v->movetype != MOVETYPE_FLY)
 	{
-		sv_player->v.movetype = MOVETYPE_FLY;
+		sv_player->v->movetype = MOVETYPE_FLY;
 		SV_ClientPrintf ("flymode ON\n");
 	}
 	else
 	{
-		sv_player->v.movetype = MOVETYPE_WALK;
+		sv_player->v->movetype = MOVETYPE_WALK;
 		SV_ClientPrintf ("flymode OFF\n");
 	}
 }
@@ -207,7 +207,7 @@ void Host_Ping_f (void)
 	int		i, j;
 	float	total;
 	client_t	*client;
-	
+
 	if (cmd_source == src_command)
 	{
 		Cmd_ForwardToServer ();
@@ -418,7 +418,7 @@ void Host_Savegame_f (void)
 
 	for (i=0 ; i<svs.maxclients ; i++)
 	{
-		if (svs.clients[i].active && (svs.clients[i].edict->v.health <= 0) )
+		if (svs.clients[i].active && (svs.clients[i].edict->v->health <= 0) )
 		{
 			Con_Printf ("Can't savegame with a dead player\n");
 			return;
@@ -600,7 +600,7 @@ void Host_PerformLoadGame(char *name)
 		{
 			// parse an edict
 			ent = EDICT_NUM(entnum);
-			memset (&ent->v, 0, progs->entityfields * 4);
+			memset (ent->v, 0, progs->entityfields * 4);
 			ent->free = false;
 			ED_ParseEdict (start, ent);
 
@@ -664,7 +664,7 @@ void Host_Name_f (void)
 		if (strcmp(host_client->name, newName) != 0)
 			Con_Printf ("%s renamed to %s\n", host_client->name, newName);
 	strcpy (host_client->name, newName);
-	host_client->edict->v.netname = host_client->name - pr_strings;
+	host_client->edict->v->netname = host_client->name - pr_strings;
 
 // send notification to all clients
 
@@ -739,7 +739,7 @@ void Host_Say(qboolean teamonly)
 	{
 		if (!client || !client->active || !client->spawned)
 			continue;
-		if (teamplay.integer && teamonly && client->edict->v.team != save->edict->v.team)
+		if (teamplay.integer && teamonly && client->edict->v->team != save->edict->v->team)
 			continue;
 		host_client = client;
 		SV_ClientPrintf("%s", text);
@@ -888,7 +888,7 @@ void Host_Color_f(void)
 	else
 	{
 		host_client->colors = playercolor;
-		host_client->edict->v.team = bottom + 1;
+		host_client->edict->v->team = bottom + 1;
 
 		// send notification to all clients
 		MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
@@ -910,7 +910,7 @@ void Host_Kill_f (void)
 		return;
 	}
 
-	if (sv_player->v.health <= 0)
+	if (sv_player->v->health <= 0)
 	{
 		SV_ClientPrintf ("Can't suicide -- already dead!\n");
 		return;
@@ -929,7 +929,7 @@ Host_Pause_f
 */
 void Host_Pause_f (void)
 {
-	
+
 	if (cmd_source == src_command)
 	{
 		Cmd_ForwardToServer ();
@@ -943,11 +943,11 @@ void Host_Pause_f (void)
 
 		if (sv.paused)
 		{
-			SV_BroadcastPrintf ("%s paused the game\n", pr_strings + sv_player->v.netname);
+			SV_BroadcastPrintf ("%s paused the game\n", pr_strings + sv_player->v->netname);
 		}
 		else
 		{
-			SV_BroadcastPrintf ("%s unpaused the game\n",pr_strings + sv_player->v.netname);
+			SV_BroadcastPrintf ("%s unpaused the game\n",pr_strings + sv_player->v->netname);
 		}
 
 	// send notification to all clients
@@ -977,7 +977,7 @@ void Host_PreSpawn_f (void)
 		Con_Printf ("prespawn not valid -- already spawned\n");
 		return;
 	}
-	
+
 	SZ_Write (&host_client->message, sv.signon.data, sv.signon.cursize);
 	MSG_WriteByte (&host_client->message, svc_signonnum);
 	MSG_WriteByte (&host_client->message, 2);
@@ -1035,10 +1035,10 @@ void Host_Spawn_f (void)
 		// set up the edict
 		ent = host_client->edict;
 
-		memset (&ent->v, 0, progs->entityfields * 4);
-		ent->v.colormap = NUM_FOR_EDICT(ent);
-		ent->v.team = (host_client->colors & 15) + 1;
-		ent->v.netname = host_client->name - pr_strings;
+		memset (ent->v, 0, progs->entityfields * 4);
+		ent->v->colormap = NUM_FOR_EDICT(ent);
+		ent->v->team = (host_client->colors & 15) + 1;
+		ent->v->netname = host_client->name - pr_strings;
 		if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_pmodel)))
 			val->_float = host_client->pmodel;
 
@@ -1112,7 +1112,7 @@ void Host_Spawn_f (void)
 	ent = EDICT_NUM( 1 + (host_client - svs.clients) );
 	MSG_WriteByte (&host_client->message, svc_setangle);
 	for (i=0 ; i < 2 ; i++)
-		MSG_WriteAngle (&host_client->message, ent->v.angles[i] );
+		MSG_WriteAngle (&host_client->message, ent->v->angles[i] );
 	MSG_WriteAngle (&host_client->message, 0 );
 
 	SV_WriteClientdataToMessage (sv_player, &host_client->message);
@@ -1279,21 +1279,21 @@ void Host_Give_f (void)
 			if (t[0] == '6')
 			{
 				if (t[1] == 'a')
-				sv_player->v.items = (int)sv_player->v.items | HIT_PROXIMITY_GUN;
+				sv_player->v->items = (int)sv_player->v->items | HIT_PROXIMITY_GUN;
 				else
-				sv_player->v.items = (int)sv_player->v.items | IT_GRENADE_LAUNCHER;
+				sv_player->v->items = (int)sv_player->v->items | IT_GRENADE_LAUNCHER;
 			}
 			else if (t[0] == '9')
-				sv_player->v.items = (int)sv_player->v.items | HIT_LASER_CANNON;
+				sv_player->v->items = (int)sv_player->v->items | HIT_LASER_CANNON;
 			else if (t[0] == '0')
-				sv_player->v.items = (int)sv_player->v.items | HIT_MJOLNIR;
+				sv_player->v->items = (int)sv_player->v->items | HIT_MJOLNIR;
 			else if (t[0] >= '2')
-				sv_player->v.items = (int)sv_player->v.items | (IT_SHOTGUN << (t[0] - '2'));
+				sv_player->v->items = (int)sv_player->v->items | (IT_SHOTGUN << (t[0] - '2'));
 		}
 		else
 		{
 			if (t[0] >= '2')
-				sv_player->v.items = (int)sv_player->v.items | (IT_SHOTGUN << (t[0] - '2'));
+				sv_player->v->items = (int)sv_player->v->items | (IT_SHOTGUN << (t[0] - '2'));
 		}
 		break;
 
@@ -1304,7 +1304,7 @@ void Host_Give_f (void)
 				val->_float = v;
 		}
 
-		sv_player->v.ammo_shells = v;
+		sv_player->v->ammo_shells = v;
 		break;
 	case 'n':
 		if (gamemode == GAME_ROGUE)
@@ -1312,13 +1312,13 @@ void Host_Give_f (void)
 			if ((val = GETEDICTFIELDVALUE(sv_player, eval_ammo_nails1)))
 			{
 				val->_float = v;
-				if (sv_player->v.weapon <= IT_LIGHTNING)
-					sv_player->v.ammo_nails = v;
+				if (sv_player->v->weapon <= IT_LIGHTNING)
+					sv_player->v->ammo_nails = v;
 			}
 		}
 		else
 		{
-			sv_player->v.ammo_nails = v;
+			sv_player->v->ammo_nails = v;
 		}
 		break;
 	case 'l':
@@ -1328,8 +1328,8 @@ void Host_Give_f (void)
 			if (val)
 			{
 				val->_float = v;
-				if (sv_player->v.weapon > IT_LIGHTNING)
-					sv_player->v.ammo_nails = v;
+				if (sv_player->v->weapon > IT_LIGHTNING)
+					sv_player->v->ammo_nails = v;
 			}
 		}
 		break;
@@ -1340,13 +1340,13 @@ void Host_Give_f (void)
 			if (val)
 			{
 				val->_float = v;
-				if (sv_player->v.weapon <= IT_LIGHTNING)
-					sv_player->v.ammo_rockets = v;
+				if (sv_player->v->weapon <= IT_LIGHTNING)
+					sv_player->v->ammo_rockets = v;
 			}
 		}
 		else
 		{
-			sv_player->v.ammo_rockets = v;
+			sv_player->v->ammo_rockets = v;
 		}
 		break;
 	case 'm':
@@ -1356,13 +1356,13 @@ void Host_Give_f (void)
 			if (val)
 			{
 				val->_float = v;
-				if (sv_player->v.weapon > IT_LIGHTNING)
-					sv_player->v.ammo_rockets = v;
+				if (sv_player->v->weapon > IT_LIGHTNING)
+					sv_player->v->ammo_rockets = v;
 			}
 		}
 		break;
 	case 'h':
-		sv_player->v.health = v;
+		sv_player->v->health = v;
 		break;
 	case 'c':
 		if (gamemode == GAME_ROGUE)
@@ -1371,13 +1371,13 @@ void Host_Give_f (void)
 			if (val)
 			{
 				val->_float = v;
-				if (sv_player->v.weapon <= IT_LIGHTNING)
-					sv_player->v.ammo_cells = v;
+				if (sv_player->v->weapon <= IT_LIGHTNING)
+					sv_player->v->ammo_cells = v;
 			}
 		}
 		else
 		{
-			sv_player->v.ammo_cells = v;
+			sv_player->v->ammo_cells = v;
 		}
 		break;
 	case 'p':
@@ -1387,8 +1387,8 @@ void Host_Give_f (void)
 			if (val)
 			{
 				val->_float = v;
-				if (sv_player->v.weapon > IT_LIGHTNING)
-					sv_player->v.ammo_cells = v;
+				if (sv_player->v->weapon > IT_LIGHTNING)
+					sv_player->v->ammo_cells = v;
 			}
 		}
 		break;
@@ -1403,7 +1403,7 @@ edict_t	*FindViewthing (void)
 	for (i=0 ; i<sv.num_edicts ; i++)
 	{
 		e = EDICT_NUM(i);
-		if ( !strcmp (pr_strings + e->v.classname, "viewthing") )
+		if ( !strcmp (pr_strings + e->v->classname, "viewthing") )
 			return e;
 	}
 	Con_Printf ("No viewthing on map\n");
@@ -1430,9 +1430,9 @@ void Host_Viewmodel_f (void)
 		Con_Printf ("Can't load %s\n", Cmd_Argv(1));
 		return;
 	}
-	
-	e->v.frame = 0;
-	cl.model_precache[(int)e->v.modelindex] = m;
+
+	e->v->frame = 0;
+	cl.model_precache[(int)e->v->modelindex] = m;
 }
 
 /*
@@ -1449,13 +1449,13 @@ void Host_Viewframe_f (void)
 	e = FindViewthing ();
 	if (!e)
 		return;
-	m = cl.model_precache[(int)e->v.modelindex];
+	m = cl.model_precache[(int)e->v->modelindex];
 
 	f = atoi(Cmd_Argv(1));
 	if (f >= m->numframes)
 		f = m->numframes-1;
 
-	e->v.frame = f;		
+	e->v->frame = f;
 }
 
 
@@ -1476,17 +1476,17 @@ void Host_Viewnext_f (void)
 {
 	edict_t	*e;
 	model_t	*m;
-	
+
 	e = FindViewthing ();
 	if (!e)
 		return;
-	m = cl.model_precache[(int)e->v.modelindex];
+	m = cl.model_precache[(int)e->v->modelindex];
 
-	e->v.frame = e->v.frame + 1;
-	if (e->v.frame >= m->numframes)
-		e->v.frame = m->numframes - 1;
+	e->v->frame = e->v->frame + 1;
+	if (e->v->frame >= m->numframes)
+		e->v->frame = m->numframes - 1;
 
-	PrintFrameName (m, e->v.frame);		
+	PrintFrameName (m, e->v->frame);
 }
 
 /*
@@ -1503,13 +1503,13 @@ void Host_Viewprev_f (void)
 	if (!e)
 		return;
 
-	m = cl.model_precache[(int)e->v.modelindex];
+	m = cl.model_precache[(int)e->v->modelindex];
 
-	e->v.frame = e->v.frame - 1;
-	if (e->v.frame < 0)
-		e->v.frame = 0;
+	e->v->frame = e->v->frame - 1;
+	if (e->v->frame < 0)
+		e->v->frame = 0;
 
-	PrintFrameName (m, e->v.frame);		
+	PrintFrameName (m, e->v->frame);
 }
 
 /*

@@ -184,7 +184,7 @@ Sets everything to NULL
 */
 void ED_ClearEdict (edict_t *e)
 {
-	memset (&e->v, 0, progs->entityfields * 4);
+	memset (e->v, 0, progs->entityfields * 4);
 	e->free = false;
 }
 
@@ -239,16 +239,16 @@ void ED_Free (edict_t *ed)
 	SV_UnlinkEdict (ed);		// unlink from world bsp
 
 	ed->free = true;
-	ed->v.model = 0;
-	ed->v.takedamage = 0;
-	ed->v.modelindex = 0;
-	ed->v.colormap = 0;
-	ed->v.skin = 0;
-	ed->v.frame = 0;
-	VectorClear(ed->v.origin);
-	VectorClear(ed->v.angles);
-	ed->v.nextthink = -1;
-	ed->v.solid = 0;
+	ed->v->model = 0;
+	ed->v->takedamage = 0;
+	ed->v->modelindex = 0;
+	ed->v->colormap = 0;
+	ed->v->skin = 0;
+	ed->v->frame = 0;
+	VectorClear(ed->v->origin);
+	VectorClear(ed->v->angles);
+	ed->v->nextthink = -1;
+	ed->v->solid = 0;
 	
 	ed->freetime = sv.time;
 }
@@ -572,7 +572,7 @@ void ED_Print (edict_t *ed)
 		if (name[strlen(name)-2] == '_')
 			continue;	// skip _x, _y, _z vars
 
-		v = (int *)((char *)&ed->v + d->ofs*4);
+		v = (int *)((char *)ed->v + d->ofs*4);
 
 	// if the value is still all 0, skip the field
 		type = d->type & ~DEF_SAVEGLOBAL;
@@ -645,7 +645,7 @@ void ED_Write (QFile *f, edict_t *ed)
 		if (name[strlen(name)-2] == '_')
 			continue;	// skip _x, _y, _z vars
 
-		v = (int *)((char *)&ed->v + d->ofs*4);
+		v = (int *)((char *)ed->v + d->ofs*4);
 
 	// if the value is still all 0, skip the field
 		type = d->type & ~DEF_SAVEGLOBAL;
@@ -723,11 +723,11 @@ void ED_Count (void)
 		if (ent->free)
 			continue;
 		active++;
-		if (ent->v.solid)
+		if (ent->v->solid)
 			solid++;
-		if (ent->v.model)
+		if (ent->v->model)
 			models++;
-		if (ent->v.movetype == MOVETYPE_STEP)
+		if (ent->v->movetype == MOVETYPE_STEP)
 			step++;
 	}
 
@@ -949,7 +949,7 @@ const char *ED_ParseEdict (const char *data, edict_t *ent)
 
 // clear it
 	if (ent != sv.edicts)	// hack
-		memset (&ent->v, 0, progs->entityfields * 4);
+		memset (ent->v, 0, progs->entityfields * 4);
 
 // go through all the dictionary pairs
 	while (1)
@@ -1012,7 +1012,7 @@ const char *ED_ParseEdict (const char *data, edict_t *ent)
 			sprintf (com_token, "0 %s 0", temp);
 		}
 
-		if (!ED_ParseEpair ((void *)&ent->v, key, com_token))
+		if (!ED_ParseEpair ((void *)ent->v, key, com_token))
 			Host_Error ("ED_ParseEdict: parse error");
 	}
 
@@ -1066,18 +1066,18 @@ void ED_LoadFromFile (const char *data)
 // remove things from different skill levels or deathmatch
 		if (deathmatch.integer)
 		{
-			if (((int)ent->v.spawnflags & SPAWNFLAG_NOT_DEATHMATCH))
+			if (((int)ent->v->spawnflags & SPAWNFLAG_NOT_DEATHMATCH))
 			{
 				ED_Free (ent);	
 				inhibit++;
 				continue;
 			}
 		}
-		else if ((current_skill == 0 && ((int)ent->v.spawnflags & SPAWNFLAG_NOT_EASY  ))
-			  || (current_skill == 1 && ((int)ent->v.spawnflags & SPAWNFLAG_NOT_MEDIUM))
-			  || (current_skill >= 2 && ((int)ent->v.spawnflags & SPAWNFLAG_NOT_HARD  )))
+		else if ((current_skill == 0 && ((int)ent->v->spawnflags & SPAWNFLAG_NOT_EASY  ))
+			  || (current_skill == 1 && ((int)ent->v->spawnflags & SPAWNFLAG_NOT_MEDIUM))
+			  || (current_skill >= 2 && ((int)ent->v->spawnflags & SPAWNFLAG_NOT_HARD  )))
 		{
-			ED_Free (ent);	
+			ED_Free (ent);
 			inhibit++;
 			continue;
 		}
@@ -1085,7 +1085,7 @@ void ED_LoadFromFile (const char *data)
 //
 // immediately call spawn function
 //
-		if (!ent->v.classname)
+		if (!ent->v->classname)
 		{
 			Con_Printf ("No classname for:\n");
 			ED_Print (ent);
@@ -1094,7 +1094,7 @@ void ED_LoadFromFile (const char *data)
 		}
 
 	// look for the spawn function
-		func = ED_FindFunction ( pr_strings + ent->v.classname );
+		func = ED_FindFunction ( pr_strings + ent->v->classname );
 
 		if (!func)
 		{
@@ -1271,8 +1271,8 @@ void PR_LoadProgs (void)
 		((int *)pr_globals)[i] = LittleLong (((int *)pr_globals)[i]);
 
 	// moved edict_size calculation down here, below field adding code
-	pr_edict_size = progs->entityfields * 4 + sizeof (edict_t) - sizeof(entvars_t);
-
+	// LordHavoc: this no longer includes the edict_t header
+	pr_edict_size = progs->entityfields * 4;
 	pr_edictareasize = pr_edict_size * MAX_EDICTS;
 
 	// LordHavoc: bounds check anything static
@@ -1404,7 +1404,7 @@ void PR_Fields_f (void)
 			name = pr_strings + d->s_name;
 			if (name[strlen(name)-2] == '_')
 				continue;	// skip _x, _y, _z vars
-			v = (int *)((char *)&ed->v + d->ofs*4);
+			v = (int *)((char *)ed->v + d->ofs*4);
 			// if the value is still all 0, skip the field
 			for (j = 0;j < type_size[d->type & ~DEF_SAVEGLOBAL];j++)
 			{
@@ -1556,13 +1556,34 @@ edict_t *EDICT_NUM_ERROR(int n)
 
 int NUM_FOR_EDICT(edict_t *e)
 {
-	if ((qbyte *)e < (qbyte *)sv.edicts || (qbyte *)e > (qbyte *)sv.edicts + pr_edictareasize)
+	int n;
+	n = e - sv.edicts;
+	if ((unsigned int)n >= MAX_EDICTS)
 		Host_Error ("NUM_FOR_EDICT: bad pointer");
-	return e->number;
+	return n;
 }
 
 int NoCrash_NUM_FOR_EDICT(edict_t *e)
 {
-	return e->number;
+	return e - sv.edicts;
+}
+
+//#define	EDICT_TO_PROG(e) ((qbyte *)(((edict_t *)e)->v) - (qbyte *)(sv.edictsfields))
+//#define PROG_TO_EDICT(e) (sv.edictstable[(e) / (progs->entityfields * 4)])
+int EDICT_TO_PROG(edict_t *e)
+{
+	int n;
+	n = e - sv.edicts;
+	if ((unsigned int)n >= sv.max_edicts)
+		Host_Error("EDICT_TO_PROG: invalid edict %8p (number %i compared to world at %8p)\n", e, n, sv.edicts);
+	return n;// EXPERIMENTAL
+	//return (qbyte *)e->v - (qbyte *)sv.edictsfields;
+}
+edict_t *PROG_TO_EDICT(int n)
+{
+	if ((unsigned int)n >= sv.max_edicts)
+		Host_Error("PROG_TO_EDICT: invalid edict number %i\n", n);
+	return sv.edictstable[n]; // EXPERIMENTAL
+	//return sv.edictstable[(n) / (progs->entityfields * 4)];
 }
 
