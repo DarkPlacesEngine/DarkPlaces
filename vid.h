@@ -94,8 +94,6 @@ void GL_CloseLibrary(void);
 void *GL_GetProcAddress(const char *name);
 int GL_CheckExtension(const char *name, const gl_extensionfunctionlist_t *funcs, const char *disableparm, int silent);
 
-double VID_CompareMode(int width1, int height1, int bpp1, int width2, int height2, int bpp2);
-
 void VID_InitCvars(void);
 
 void GL_Init (void);
