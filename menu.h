@@ -46,7 +46,6 @@ enum m_state_e {
 	m_options_colorcontrol
 };
 
-extern int  m_serverlist;
 extern enum m_state_e m_state;
 extern char m_return_reason[32];
 
