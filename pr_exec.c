@@ -243,19 +243,9 @@ void PR_Profile_f (void)
 	} while (best);
 }
 
-
-void PR_Crash(void)
+void PR_PrintState(void)
 {
 	int i;
-	if (pr_depth < 1)
-	{
-		// kill the stack just to be sure
-		pr_depth = 0;
-		localstack_used = 0;
-		return;
-	}
-
-	Con_Printf("QuakeC crash report:\n");
 	if (pr_xfunction)
 	{
 		for (i = -4;i <= 0;i++)
@@ -265,6 +255,15 @@ void PR_Crash(void)
 	else
 		Con_Printf("null function executing??\n");
 	PR_StackTrace ();
+}
+
+void PR_Crash(void)
+{
+	if (pr_depth > 0)
+	{
+		Con_Printf("QuakeC crash report:\n");
+		PR_PrintState();
+	}
 
 	// dump the stack so host_error can shutdown functions
 	pr_depth = 0;

@@ -155,6 +155,7 @@ void PR_LoadProgs (void);
 
 void PR_Profile_f (void);
 
+void PR_PrintState(void);
 void PR_Crash (void);
 
 void SV_IncreaseEdicts(void);
