@@ -2260,7 +2260,7 @@ void M_Video_Key (int key)
 			m_entersound = true;
 			switch (video_cursor)
 			{
-				case 4:
+				case 3:
 					Cbuf_AddText ("vid_restart\n");
 					M_Menu_Options_f ();
 					break;
@@ -3767,7 +3767,7 @@ void MP_Error(void)
 
 	// say it
 	Con_Printf("Falling back to normal menu.\n Error :");
-	
+
 	// init the normal menu now -> this will also correct the menu router pointers
 	M_Init();
 }
@@ -3787,7 +3787,7 @@ void MP_Draw (void)
 {
 	PRVM_Begin;
 	PRVM_SetProg(PRVM_MENUPROG);
-	
+
 	PRVM_ExecuteProgram(m_draw,"");
 
 	PRVM_End;
@@ -3829,10 +3829,10 @@ void MP_Init (void)
 	MR_Draw = MP_Draw;
 	MR_ToggleMenu_f = MP_ToggleMenu_f;
 	MR_Shutdown = MP_Shutdown;
-	
+
 	PRVM_Begin;
 	PRVM_InitProg(PRVM_MENUPROG);
-	
+
 	prog->crc = M_PROGHEADER_CRC;
 	prog->edictprivate_size = 0; // no private struct used
 	prog->name = M_NAME;
@@ -3843,21 +3843,21 @@ void MP_Init (void)
 	prog->init_cmd = VM_M_Cmd_Init;
 	prog->reset_cmd = VM_M_Cmd_Reset;
 	prog->error_cmd = MP_Error;
-	
+
 	// allocate the mempools
 	prog->edicts_mempool = Mem_AllocPool(M_NAME " edicts mempool");
 	prog->edictstring_mempool = Mem_AllocPool( M_NAME " edict string mempool");
 	prog->progs_mempool = Mem_AllocPool(M_PROG_FILENAME);
-	
+
 	PRVM_LoadProgs(M_PROG_FILENAME, m_numrequiredfunc, m_required_func);
 
 	// set m_draw and m_keydown
 	m_draw = (func_t) (PRVM_ED_FindFunction(M_F_DRAW) - prog->functions);
 	m_keydown = (func_t) (PRVM_ED_FindFunction(M_F_KEYDOWN) - prog->functions);
-	
+
 	// call the prog init
 	PRVM_ExecuteProgram((func_t) (PRVM_ED_FindFunction(M_F_INIT) - prog->functions),"");
-	
+
 	PRVM_End;
 }
 
