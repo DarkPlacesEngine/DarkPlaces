@@ -730,6 +730,6 @@ void Con_CompleteCommandLine (void)
 	}
 	for (i = 0; i < 3; i++)
 		if (list[i])
-			Mem_Free(list[i]);
+			Mem_Free((void *)list[i]);
 }
 
