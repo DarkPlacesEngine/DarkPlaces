@@ -391,7 +391,7 @@ void PRVM_ExecuteProgram (func_t fnum, const char *errormessage)
 	prvm_eval_t	*ptr;
 	int		profile, startprofile, cachedpr_trace, exitdepth;
 
-	if (!fnum || fnum >= prog->progs->numfunctions)
+	if (!fnum || fnum >= (unsigned int)prog->progs->numfunctions)
 	{
 		if (prog->self && PRVM_G_INT(prog->self->ofs))
 			PRVM_ED_Print(PRVM_PROG_TO_EDICT(PRVM_G_INT(prog->self->ofs)));
