@@ -441,7 +441,7 @@ void CL_SendMove(usercmd_t *cmd)
 	{
 		if (cl.entitydatabase4)
 		{
-			i = cl.entitydatabase4->ackframenum;
+			i = cl.latestframenum;
 			if (cl_nodelta.integer)
 				i = -1;
 			if (developer_networkentities.integer >= 1)
