@@ -31,8 +31,6 @@ void S_Play2(void);
 void S_SoundList(void);
 void S_Update_();
 
-void S_ClearBuffer (void);
-
 
 // =======================================================================
 // Internal sound data & structures
@@ -143,8 +141,6 @@ void S_Startup(void)
 	sound_started = true;
 
 	Con_DPrintf("Sound sampling rate: %i\n", shm->format.speed);
-
-	S_StopAllSounds ();
 }
 
 void S_Shutdown(void)
@@ -260,7 +256,6 @@ sfx_t *S_FindName (const char *name)
 	if (!snd_initialized.integer)
 		return NULL;
 
-	// Add the default sound directory to the path
 	if (strlen (name) >= sizeof (sfx->name))
 		Host_Error ("S_FindName: sound name too long (%s)", name);
 
@@ -326,6 +321,7 @@ S_ServerSounds
 void S_ServerSounds (char serversound [][MAX_QPATH], unsigned int numsounds)
 {
 	sfx_t *sfx;
+	sfx_t *sfxnext;
 	unsigned int i;
 
 	// Start the ambient sounds and make them loop
@@ -366,16 +362,10 @@ void S_ServerSounds (char serversound [][MAX_QPATH], unsigned int numsounds)
 	}
 
 	// Free all unlocked sfx
-	sfx = known_sfx;
-	while (sfx != NULL)
+	for (sfx = known_sfx;sfx;sfx = sfxnext)
 	{
-		sfx_t* crtsfx;
-
-		// We may lose the "next" pointer after S_FreeSfx
-		crtsfx = sfx;
-		sfx = sfx->next;
-
-		S_FreeSfx (crtsfx, false);
+		sfxnext = sfx->next;
+		S_FreeSfx (sfx);
 	}
 }
 
