@@ -6,8 +6,8 @@ cvar_t gl_mesh_maxverts = {0, "gl_mesh_maxverts", "21760"};
 cvar_t gl_mesh_floatcolors = {0, "gl_mesh_floatcolors", "1"};
 cvar_t gl_mesh_drawrangeelements = {0, "gl_mesh_drawrangeelements", "1"};
 cvar_t gl_mesh_vertex_array_range = {0, "gl_mesh_vertex_array_range", "0"};
-cvar_t gl_mesh_vertex_array_range_readfrequency = {0, "gl_mesh_vertex_array_range_readfrequency", "0.3"};
-cvar_t gl_mesh_vertex_array_range_writefrequency = {0, "gl_mesh_vertex_array_range_writefrequency", "1"};
+cvar_t gl_mesh_vertex_array_range_readfrequency = {0, "gl_mesh_vertex_array_range_readfrequency", "0.2"};
+cvar_t gl_mesh_vertex_array_range_writefrequency = {0, "gl_mesh_vertex_array_range_writefrequency", "0.2"};
 cvar_t gl_mesh_vertex_array_range_priority = {0, "gl_mesh_vertex_array_range_priority", "0.7"};
 cvar_t gl_delayfinish = {CVAR_SAVE, "gl_delayfinish", "0"};
 
