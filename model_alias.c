@@ -20,7 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-cvar_t r_mipskins = {CVAR_SAVE, "r_mipskins", "1"};
+static cvar_t r_mipskins = {CVAR_SAVE, "r_mipskins", "0"};
 
 /*
 ===============
@@ -32,19 +32,26 @@ void Mod_AliasInit (void)
 	Cvar_RegisterVariable(&r_mipskins);
 }
 
-int			posenum;
+static void Mod_Alias_SERAddEntity(void)
+{
+	R_Clip_AddBox(currentrenderentity->mins, currentrenderentity->maxs, R_Entity_Callback, currentrenderentity, NULL);
+}
 
-float		aliasbboxmin[3], aliasbboxmax[3]; // LordHavoc: proper bounding box considerations
+static int posenum;
 
-float vertst[MAXALIASVERTS][2];
-int vertusage[MAXALIASVERTS];
-int vertonseam[MAXALIASVERTS];
-int vertremap[MAXALIASVERTS];
-unsigned short temptris[MAXALIASTRIS][3];
+// LordHavoc: proper bounding box considerations
+static float aliasbboxmin[3], aliasbboxmax[3], modelyawradius, modelradius;
 
-void Mod_ConvertAliasVerts (int inverts, vec3_t scale, vec3_t translate, trivertx_t *v, trivertx_t *out)
+static float vertst[MAXALIASVERTS][2];
+static int vertusage[MAXALIASVERTS];
+static int vertonseam[MAXALIASVERTS];
+static int vertremap[MAXALIASVERTS];
+static unsigned short temptris[MAXALIASTRIS][3];
+
+static void Mod_ConvertAliasVerts (int inverts, vec3_t scale, vec3_t translate, trivertx_t *v, trivertx_t *out)
 {
 	int i, j, invalidnormals = 0;
+	float dist;
 	vec3_t temp;
 	for (i = 0;i < inverts;i++)
 	{
@@ -60,6 +67,12 @@ void Mod_ConvertAliasVerts (int inverts, vec3_t scale, vec3_t translate, trivert
 		if (temp[0] > aliasbboxmax[0]) aliasbboxmax[0] = temp[0];
 		if (temp[1] > aliasbboxmax[1]) aliasbboxmax[1] = temp[1];
 		if (temp[2] > aliasbboxmax[2]) aliasbboxmax[2] = temp[2];
+		dist = temp[0]*temp[0]+temp[1]*temp[1];
+		if (modelyawradius < dist)
+			modelyawradius = dist;
+		dist += temp[2]*temp[2];
+		if (modelradius < dist)
+			modelradius = dist;
 		j = vertremap[i]; // not onseam
 		if (j >= 0)
 		{
@@ -92,11 +105,11 @@ void Mod_ConvertAliasVerts (int inverts, vec3_t scale, vec3_t translate, trivert
 Mod_LoadAliasFrame
 =================
 */
-void * Mod_LoadAliasFrame (void *pin, maliashdr_t *mheader, int inverts, int outverts, trivertx_t **posevert, animscene_t *scene)
+static void * Mod_LoadAliasFrame (void *pin, maliashdr_t *mheader, int inverts, int outverts, trivertx_t **posevert, animscene_t *scene)
 {
 	trivertx_t		*pinframe;
 	daliasframe_t	*pdaliasframe;
-	
+
 	pdaliasframe = (daliasframe_t *)pin;
 
 	strcpy(scene->name, pdaliasframe->name);
@@ -122,12 +135,12 @@ void * Mod_LoadAliasFrame (void *pin, maliashdr_t *mheader, int inverts, int out
 Mod_LoadAliasGroup
 =================
 */
-void *Mod_LoadAliasGroup (void *pin, maliashdr_t *mheader, int inverts, int outverts, trivertx_t **posevert, animscene_t *scene)
+static void *Mod_LoadAliasGroup (void *pin, maliashdr_t *mheader, int inverts, int outverts, trivertx_t **posevert, animscene_t *scene)
 {
 	int		i, numframes;
 	void	*ptemp;
 	float	interval;
-	
+
 	numframes = LittleLong (((daliasgroup_t *)pin)->numframes);
 
 	strcpy(scene->name, ((daliasframe_t *) (sizeof(daliasinterval_t) * numframes + sizeof(daliasgroup_t) + (int) pin))->name);
@@ -155,81 +168,7 @@ void *Mod_LoadAliasGroup (void *pin, maliashdr_t *mheader, int inverts, int outv
 
 //=========================================================
 
-/*
-=================
-Mod_FloodFillSkin
-
-Fill background pixels so mipmapping doesn't have haloes - Ed
-=================
-*/
-
-typedef struct
-{
-	short		x, y;
-} floodfill_t;
-
-// must be a power of 2
-#define FLOODFILL_FIFO_SIZE 0x1000
-#define FLOODFILL_FIFO_MASK (FLOODFILL_FIFO_SIZE - 1)
-
-#define FLOODFILL_STEP( off, dx, dy ) \
-{ \
-	if (pos[off] == fillcolor) \
-	{ \
-		pos[off] = 255; \
-		fifo[inpt].x = x + (dx), fifo[inpt].y = y + (dy); \
-		inpt = (inpt + 1) & FLOODFILL_FIFO_MASK; \
-	} \
-	else if (pos[off] != 255) fdc = pos[off]; \
-}
-
-void Mod_FloodFillSkin( byte *skin, int skinwidth, int skinheight )
-{
-	byte				fillcolor = *skin; // assume this is the pixel to fill
-	floodfill_t			fifo[FLOODFILL_FIFO_SIZE];
-	int					inpt = 0, outpt = 0;
-	int					filledcolor = -1;
-	int					i;
-
-	if (filledcolor == -1)
-	{
-		filledcolor = 0;
-		// attempt to find opaque black
-		for (i = 0; i < 256; ++i)
-			if (d_8to24table[i] == (255 << 0)) // alpha 1.0
-			{
-				filledcolor = i;
-				break;
-			}
-	}
-
-	// can't fill to filled color or to transparent color (used as visited marker)
-	if ((fillcolor == filledcolor) || (fillcolor == 255))
-	{
-		//printf( "not filling skin from %d to %d\n", fillcolor, filledcolor );
-		return;
-	}
-
-	fifo[inpt].x = 0, fifo[inpt].y = 0;
-	inpt = (inpt + 1) & FLOODFILL_FIFO_MASK;
-
-	while (outpt != inpt)
-	{
-		int			x = fifo[outpt].x, y = fifo[outpt].y;
-		int			fdc = filledcolor;
-		byte		*pos = &skin[x + skinwidth * y];
-
-		outpt = (outpt + 1) & FLOODFILL_FIFO_MASK;
-
-		if (x > 0)				FLOODFILL_STEP( -1, -1, 0 );
-		if (x < skinwidth - 1)	FLOODFILL_STEP( 1, 1, 0 );
-		if (y > 0)				FLOODFILL_STEP( -skinwidth, 0, -1 );
-		if (y < skinheight - 1)	FLOODFILL_STEP( skinwidth, 0, 1 );
-		skin[x + skinwidth * y] = fdc;
-	}
-}
-
-rtexture_t *GL_SkinSplitShirt(byte *in, byte *out, int width, int height, unsigned short bits, char *name, int precache)
+static rtexture_t *GL_SkinSplitShirt(byte *in, byte *out, int width, int height, unsigned short bits, char *name, int precache)
 {
 	int i, pixels, passed;
 	byte pixeltest[16];
@@ -259,7 +198,7 @@ rtexture_t *GL_SkinSplitShirt(byte *in, byte *out, int width, int height, unsign
 		return NULL;
 }
 
-rtexture_t *GL_SkinSplit(byte *in, byte *out, int width, int height, unsigned short bits, char *name, int precache)
+static rtexture_t *GL_SkinSplit(byte *in, byte *out, int width, int height, unsigned short bits, char *name, int precache)
 {
 	int i, pixels, passed;
 	byte pixeltest[16];
@@ -285,7 +224,7 @@ rtexture_t *GL_SkinSplit(byte *in, byte *out, int width, int height, unsigned sh
 		return NULL;
 }
 
-int GL_SkinCheck(byte *in, int width, int height, unsigned short bits)
+static int GL_SkinCheck(byte *in, int width, int height, unsigned short bits)
 {
 	int i, pixels, passed;
 	byte pixeltest[16];
@@ -302,7 +241,7 @@ int GL_SkinCheck(byte *in, int width, int height, unsigned short bits)
 	return false;
 }
 
-void Mod_LoadSkin (maliashdr_t *mheader, char *basename, byte *skindata, byte *skintemp, int width, int height, rtexture_t **skintex)
+static void Mod_LoadSkin (maliashdr_t *mheader, char *basename, byte *skindata, byte *skintemp, int width, int height, rtexture_t **skintex)
 {
 	skintex[0] = loadtextureimage(va("%s_normal", basename), 0, 0, false, r_mipskins.value, true);
 	skintex[1] = NULL;
@@ -340,7 +279,7 @@ void Mod_LoadSkin (maliashdr_t *mheader, char *basename, byte *skindata, byte *s
 Mod_LoadAllSkins
 ===============
 */
-void *Mod_LoadAllSkins (maliashdr_t *mheader, int numskins, daliasskintype_t *pskintype, int width, int height)
+static void *Mod_LoadAllSkins (maliashdr_t *mheader, int numskins, daliasskintype_t *pskintype, int width, int height)
 {
 	int		i, j;
 	char	name[32];
@@ -353,7 +292,7 @@ void *Mod_LoadAllSkins (maliashdr_t *mheader, int numskins, daliasskintype_t *ps
 	rtexture_t **skintex;
 	void	*temp;
 	byte	*skintemp = NULL;
-	
+
 	skin = (byte *)(pskintype + 1);
 
 	if (numskins < 1 || numskins > MAX_SKINS)
@@ -429,7 +368,7 @@ void *Mod_LoadAllSkins (maliashdr_t *mheader, int numskins, daliasskintype_t *ps
 	return (void *)pskintype;
 }
 
-void *Mod_SkipAllSkins (int numskins, daliasskintype_t *pskintype, int skinsize)
+static void *Mod_SkipAllSkins (int numskins, daliasskintype_t *pskintype, int skinsize)
 {
 	int		i;
 	for (i = 0;i < numskins;i++)
@@ -467,6 +406,9 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	unsigned short		*pouttris;
 	trivertx_t			*posevert;
 	animscene_t			*animscenes;
+
+	modelyawradius = 0;
+	modelradius = 0;
 
 	start = Hunk_LowMark ();
 
@@ -632,11 +574,24 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	// LordHavoc: fixed model bbox - was //FIXME: do this right
 	//mod->mins[0] = mod->mins[1] = mod->mins[2] = -16;
 	//mod->maxs[0] = mod->maxs[1] = mod->maxs[2] = 16;
+	modelyawradius = sqrt(modelyawradius);
+	modelradius = sqrt(modelradius);
+//	mod->modelradius = modelradius;
 	for (j = 0;j < 3;j++)
 	{
-		mod->mins[j] = aliasbboxmin[j];
-		mod->maxs[j] = aliasbboxmax[j];
+		mod->normalmins[j] = aliasbboxmin[j];
+		mod->normalmaxs[j] = aliasbboxmax[j];
+		mod->rotatedmins[j] = -modelradius;
+		mod->rotatedmaxs[j] = modelradius;
 	}
+	mod->yawmins[0] = mod->yawmins[1] = -(mod->yawmaxs[0] = mod->yawmaxs[1] = modelyawradius);
+	mod->yawmins[2] = mod->normalmins[2];
+	mod->yawmaxs[2] = mod->normalmaxs[2];
+
+	mod->SERAddEntity = Mod_Alias_SERAddEntity;
+	mod->DrawEarly = NULL;
+	mod->DrawLate = R_DrawAliasModel;
+	mod->DrawShadow = NULL;
 
 // move the complete, relocatable alias model to the cache
 	end = Hunk_LowMark ();
@@ -650,9 +605,10 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	Hunk_FreeToLowMark (start);
 }
 
-void Mod_ConvertQ2AliasVerts (int numverts, vec3_t scale, vec3_t translate, trivertx_t *v, trivertx_t *out)
+static void Mod_ConvertQ2AliasVerts (int numverts, vec3_t scale, vec3_t translate, trivertx_t *v, trivertx_t *out)
 {
 	int i, invalidnormals = 0;
+	float dist;
 	vec3_t temp;
 	for (i = 0;i < numverts;i++)
 	{
@@ -667,6 +623,12 @@ void Mod_ConvertQ2AliasVerts (int numverts, vec3_t scale, vec3_t translate, triv
 		if (temp[0] > aliasbboxmax[0]) aliasbboxmax[0] = temp[0];
 		if (temp[1] > aliasbboxmax[1]) aliasbboxmax[1] = temp[1];
 		if (temp[2] > aliasbboxmax[2]) aliasbboxmax[2] = temp[2];
+		dist = temp[0]*temp[0]+temp[1]*temp[1];
+		if (modelyawradius < dist)
+			modelyawradius = dist;
+		dist += temp[2]*temp[2];
+		if (modelradius < dist)
+			modelradius = dist;
 		out[i].lightnormalindex = v[i].lightnormalindex;
 		if (out[i].lightnormalindex >= NUMVERTEXNORMALS)
 		{
@@ -695,6 +657,9 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 //	temptris_t			*tris;
 	animscene_t			*animscenes;
 
+	modelyawradius = 0;
+	modelradius = 0;
+
 	start = Hunk_LowMark ();
 
 //	if (!temptris)
@@ -705,7 +670,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	version = LittleLong (pinmodel->version);
 	if (version != MD2ALIAS_VERSION)
 		Host_Error ("%s has wrong version number (%i should be %i)",
-				 mod->name, version, MD2ALIAS_VERSION);
+			mod->name, version, MD2ALIAS_VERSION);
 
 	mod->type = mod_alias;
 	mod->aliastype = ALIASTYPE_MD2;
@@ -720,7 +685,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	if (size <= 0 || size >= MD2MAX_SIZE)
 		Host_Error ("%s is not a valid model", mod->name);
 	pheader = Hunk_AllocName (size, va("%s Quake2 model", loadname));
-	
+
 	mod->flags = 0; // there are no MD2 flags
 	mod->numframes = LittleLong(pinmodel->num_frames);
 	mod->synctype = ST_RAND;
@@ -761,7 +726,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 		int *skinrange;
 		skinrange = loadmodel->skinanimrange;
 		skin = loadmodel->skinanim;
-//		skinrange = Hunk_AllocName (sizeof(int) * (pheader->num_skins * 2), loadname);	
+//		skinrange = Hunk_AllocName (sizeof(int) * (pheader->num_skins * 2), loadname);
 //		skin = skinrange + pheader->num_skins * 2;
 //		loadmodel->skinanimrange = (int) skinrange - (int) pheader;
 //		loadmodel->skinanim = (int) skin - (int) pheader;
@@ -835,11 +800,19 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	mod->ofs_scenes = (int) animscenes - (int) pheader;
 
 	// LordHavoc: model bbox
+	modelyawradius = sqrt(modelyawradius);
+	modelradius = sqrt(modelradius);
+//	mod->modelradius = modelradius;
 	for (j = 0;j < 3;j++)
 	{
-		mod->mins[j] = aliasbboxmin[j];
-		mod->maxs[j] = aliasbboxmax[j];
+		mod->normalmins[j] = aliasbboxmin[j];
+		mod->normalmaxs[j] = aliasbboxmax[j];
+		mod->rotatedmins[j] = -modelradius;
+		mod->rotatedmaxs[j] = modelradius;
 	}
+	mod->yawmins[0] = mod->yawmins[1] = -(mod->yawmaxs[0] = mod->yawmaxs[1] = modelyawradius);
+	mod->yawmins[2] = mod->normalmins[2];
+	mod->yawmaxs[2] = mod->normalmaxs[2];
 
 	// load the draw list
 	pinglcmd = (void*) ((int) pinmodel + LittleLong(pinmodel->ofs_glcmds));
@@ -847,6 +820,11 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	pheader->ofs_glcmds = (int) poutglcmd - (int) pheader;
 	for (i = 0;i < pheader->num_glcmds;i++)
 		*poutglcmd++ = LittleLong(*pinglcmd++);
+
+	mod->SERAddEntity = Mod_Alias_SERAddEntity;
+	mod->DrawEarly = NULL;
+	mod->DrawLate = R_DrawAliasModel;
+	mod->DrawShadow = NULL;
 
 // move the complete, relocatable alias model to the cache
 	end = Hunk_LowMark ();
@@ -860,7 +838,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	Hunk_FreeToLowMark (start);
 }
 
-void swapintblock(int *m, int size)
+static void swapintblock(int *m, int size)
 {
 	size /= 4;
 	while(size--)
@@ -879,6 +857,7 @@ void Mod_LoadZymoticModel (model_t *mod, void *buffer)
 	zymscene_t *scene;
 	zymbone_t *bone;
 	animscene_t *animscenes;
+	float corner[2], modelradius;
 
 	start = Hunk_LowMark ();
 
@@ -936,7 +915,7 @@ void Mod_LoadZymoticModel (model_t *mod, void *buffer)
 // load the skins
 	skinrange = loadmodel->skinanimrange;
 	skin = loadmodel->skinanim;
-//	skinrange = Hunk_AllocName (sizeof(int) * (pheader->num_skins * 2), loadname);	
+//	skinrange = Hunk_AllocName (sizeof(int) * (pheader->num_skins * 2), loadname);
 //	skin = skinrange + pheader->num_skins * 2;
 //	loadmodel->skinanimrange = (int) skinrange - (int) pheader;
 //	loadmodel->skinanim = (int) skin - (int) pheader;
@@ -1017,16 +996,33 @@ void Mod_LoadZymoticModel (model_t *mod, void *buffer)
 	swapintblock((void *) (pheader->lump_trizone.start + pbase), pheader->lump_trizone.length);
 
 	// model bbox
+	modelradius = pheader->radius;
+//	mod->modelradius = pheader->radius;
 	for (i = 0;i < 3;i++)
 	{
-		mod->mins[i] = pheader->mins[i];
-		mod->maxs[i] = pheader->maxs[i];
+		mod->normalmins[i] = pheader->mins[i];
+		mod->normalmaxs[i] = pheader->maxs[i];
+		mod->rotatedmins[i] = -modelradius;
+		mod->rotatedmaxs[i] = modelradius;
 	}
+	corner[0] = max(fabs(mod->normalmins[0]), fabs(mod->normalmaxs[0]));
+	corner[1] = max(fabs(mod->normalmins[1]), fabs(mod->normalmaxs[1]));
+	mod->yawmaxs[0] = mod->yawmaxs[1] = sqrt(corner[0]*corner[0]+corner[1]*corner[1]);
+	if (mod->yawmaxs[0] > modelradius)
+		mod->yawmaxs[0] = mod->yawmaxs[1] = modelradius;
+	mod->yawmins[0] = mod->yawmins[1] = -mod->yawmaxs[0];
+	mod->yawmins[2] = mod->normalmins[2];
+	mod->yawmaxs[2] = mod->normalmaxs[2];
+
+	mod->SERAddEntity = Mod_Alias_SERAddEntity;
+	mod->DrawEarly = NULL;
+	mod->DrawLate = R_DrawAliasModel;
+	mod->DrawShadow = NULL;
 
 // move the complete, relocatable alias model to the cache
 	end = Hunk_LowMark ();
 	mod->cachesize = total = end - start;
-	
+
 	Cache_Alloc (&mod->cache, total, loadname);
 	if (!mod->cache.data)
 		return;

@@ -38,8 +38,10 @@ short lightmapupdate[MAX_LIGHTMAPS][2];
 
 signed int blocklights[BLOCK_WIDTH*BLOCK_HEIGHT*3]; // LordHavoc: *3 for colored lighting
 
-int lightmapalign, lightmapalignmask; // LordHavoc: NVIDIA's broken subimage fix, see BuildLightmaps for notes
-cvar_t gl_lightmapalign = {0, "gl_lightmapalign", "4"};
+byte templight[BLOCK_WIDTH*BLOCK_HEIGHT*4];
+
+int lightmapalign, lightmapalignmask; // LordHavoc: align texsubimage updates on 4 byte boundaries
+cvar_t gl_lightmapalign = {0, "gl_lightmapalign", "4"}; // align texsubimage updates on 4 byte boundaries
 cvar_t gl_lightmaprgba = {0, "gl_lightmaprgba", "1"};
 cvar_t gl_nosubimagefragments = {0, "gl_nosubimagefragments", "0"};
 cvar_t gl_nosubimage = {0, "gl_nosubimage", "0"};
@@ -48,8 +50,6 @@ cvar_t gl_vertex = {0, "gl_vertex", "0"};
 cvar_t r_dlightmap = {CVAR_SAVE, "r_dlightmap", "1"};
 cvar_t r_drawportals = {0, "r_drawportals", "0"};
 cvar_t r_testvis = {0, "r_testvis", "0"};
-cvar_t r_solidworldnode = {0, "r_solidworldnode", "3"};
-cvar_t r_pvsworldnode = {0, "r_pvsworldnode", "1"};
 
 qboolean lightmaprgba, nosubimagefragments, nosubimage;
 int lightmapbytes;
@@ -82,8 +82,6 @@ void GL_Surf_Init(void)
 	Cvar_RegisterVariable(&r_dlightmap);
 	Cvar_RegisterVariable(&r_drawportals);
 	Cvar_RegisterVariable(&r_testvis);
-	Cvar_RegisterVariable(&r_solidworldnode);
-	Cvar_RegisterVariable(&r_pvsworldnode);
 
 	R_RegisterModule("GL_Surf", gl_surf_start, gl_surf_shutdown, gl_surf_newmap);
 }
@@ -124,7 +122,7 @@ int R_AddDynamicLights (msurface_t *surf)
 		if (!(surf->dlightbits[lnum >> 5] & (1 << (lnum & 31))))
 			continue;					// not lit by this light
 
-		VectorSubtract (cl_dlights[lnum].origin, currententity->render.origin, local);
+		VectorSubtract (cl_dlights[lnum].origin, currentrenderentity->origin, local);
 		dist = DotProduct (local, surf->plane->normal) - surf->plane->dist;
 
 		// for comparisons to minimum acceptable light
@@ -232,7 +230,7 @@ R_BuildLightMap
 Combine and scale multiple lightmaps into the 8.8 format in blocklights
 ===============
 */
-void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
+void R_BuildLightMap (msurface_t *surf, byte *dest, int stride, int dlightchanged)
 {
 	int		smax, tmax;
 	int		i, j, size, size3;
@@ -241,9 +239,14 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 	int		maps;
 	int		*bl;
 
+	// update cached lighting info
 	surf->cached_dlight = 0;
 	surf->cached_lightscalebit = lightscalebit;
 	surf->cached_ambient = r_ambient.value;
+	surf->cached_light[0] = d_lightstylevalue[surf->styles[0]];
+	surf->cached_light[1] = d_lightstylevalue[surf->styles[1]];
+	surf->cached_light[2] = d_lightstylevalue[surf->styles[2]];
+	surf->cached_light[3] = d_lightstylevalue[surf->styles[3]];
 
 	smax = (surf->extents[0]>>4)+1;
 	tmax = (surf->extents[1]>>4)+1;
@@ -252,10 +255,10 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 	lightmap = surf->samples;
 
 // set to full bright if no light data
-	if ((currententity && (currententity->render.effects & EF_FULLBRIGHT)) || !cl.worldmodel->lightdata)
+	if ((currentrenderentity->effects & EF_FULLBRIGHT) || !cl.worldmodel->lightdata)
 	{
 		bl = blocklights;
-		for (i=0 ; i<size ; i++)
+		for (i = 0;i < size;i++)
 		{
 			*bl++ = 255*256;
 			*bl++ = 255*256;
@@ -275,28 +278,25 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 		else
 			memset(&blocklights[0], 0, size*3*sizeof(int));
 
-// add all the lightmaps
-		if (lightmap)
-		{
-			for (maps = 0;maps < MAXLIGHTMAPS && surf->styles[maps] != 255;maps++)
-			{
-				scale = d_lightstylevalue[surf->styles[maps]];
-				surf->cached_light[maps] = scale;	// 8.8 fraction
-				bl = blocklights;
-				for (i = 0;i < size3;i++)
-					*bl++ += *lightmap++ * scale;
-			}
-		}
 		if (r_dlightmap.value && surf->dlightframe == r_framecount)
+		{
 			if ((surf->cached_dlight = R_AddDynamicLights(surf)))
 				c_light_polys++;
+			else if (dlightchanged)
+				return; // don't upload if only updating dlights and none mattered
+		}
+
+// add all the lightmaps
+		if (lightmap)
+			for (maps = 0;maps < MAXLIGHTMAPS && surf->styles[maps] != 255;maps++)
+				for (scale = d_lightstylevalue[surf->styles[maps]], bl = blocklights, i = 0;i < size3;i++)
+					*bl++ += *lightmap++ * scale;
 	}
+
 	R_ConvertLightmap(blocklights, dest, smax, tmax, stride);
 }
 
-byte templight[BLOCK_WIDTH*BLOCK_HEIGHT*4];
-
-void R_UpdateLightmap(msurface_t *s, int lnum)
+void R_UpdateLightmap(msurface_t *s, int lnum, int dlightschanged)
 {
 	int smax, tmax;
 	// upload the new lightmap texture fragment
@@ -309,9 +309,9 @@ void R_UpdateLightmap(msurface_t *s, int lnum)
 		if (lightmapupdate[lnum][1] < (s->light_t + ((s->extents[1]>>4)+1)))
 			lightmapupdate[lnum][1] = (s->light_t + ((s->extents[1]>>4)+1));
 		if (lightmaprgba)
-			R_BuildLightMap (s, lightmaps[s->lightmaptexturenum] + (s->light_t * BLOCK_WIDTH + s->light_s) * 4, BLOCK_WIDTH * 4);
+			R_BuildLightMap (s, lightmaps[s->lightmaptexturenum] + (s->light_t * BLOCK_WIDTH + s->light_s) * 4, BLOCK_WIDTH * 4, false);
 		else
-			R_BuildLightMap (s, lightmaps[s->lightmaptexturenum] + (s->light_t * BLOCK_WIDTH + s->light_s) * 3, BLOCK_WIDTH * 3);
+			R_BuildLightMap (s, lightmaps[s->lightmaptexturenum] + (s->light_t * BLOCK_WIDTH + s->light_s) * 3, BLOCK_WIDTH * 3, false);
 	}
 	else
 	{
@@ -319,13 +319,13 @@ void R_UpdateLightmap(msurface_t *s, int lnum)
 		tmax = (s->extents[1]>>4)+1;
 		if (lightmaprgba)
 		{
-			R_BuildLightMap (s, templight, smax * 4);
+			R_BuildLightMap (s, templight, smax * 4, false);
 			if(r_upload.value)
 				glTexSubImage2D(GL_TEXTURE_2D, 0, s->light_s, s->light_t, smax, tmax, GL_RGBA, GL_UNSIGNED_BYTE, templight);
 		}
 		else
 		{
-			R_BuildLightMap (s, templight, smax * 3);
+			R_BuildLightMap (s, templight, smax * 3, false);
 			if(r_upload.value)
 				glTexSubImage2D(GL_TEXTURE_2D, 0, s->light_s, s->light_t, smax, tmax, GL_RGB , GL_UNSIGNED_BYTE, templight);
 		}
@@ -342,44 +342,13 @@ Returns the proper texture for a given time and base texture
 */
 texture_t *R_TextureAnimation (texture_t *base)
 {
-//	texture_t *original;
-//	int		relative;
-//	int		count;
+	if (currentrenderentity->frame && base->alternate_anims != NULL)
+		base = base->alternate_anims;
 
-	if (currententity->render.frame)
-	{
-		if (base->alternate_anims)
-			base = base->alternate_anims;
-	}
-	
-	if (!base->anim_total)
+	if (base->anim_total < 2)
 		return base;
 
-	return base->anim_frames[(int)(cl.time*5) % base->anim_total];
-
-	/*
-	original = base;
-
-	relative = (int)(cl.time*5) % base->anim_total;
-
-	count = 0;	
-	while (base->anim_min > relative || base->anim_max <= relative)
-	{
-		base = base->anim_next;
-		if (!base)
-		{
-			Con_Printf("R_TextureAnimation: broken cycle");
-			return original;
-		}
-		if (++count > 100)
-		{
-			Con_Printf("R_TextureAnimation: infinite cycle");
-			return original;
-		}
-	}
-
-	return base;
-	*/
+	return base->anim_frames[(int)(cl.time * 5.0f) % base->anim_total];
 }
 
 
@@ -625,24 +594,26 @@ void RSurf_DrawWall(msurface_t *s, texture_t *t, int transform)
 	wallvertcolor_t *outcolor;
 	// check for lightmap modification
 	if (s->cached_dlight
-	 || (r_dynamic.value && r_dlightmap.value && s->dlightframe == r_framecount)
 	 || r_ambient.value != s->cached_ambient
 	 || lightscalebit != s->cached_lightscalebit
 	 || (r_dynamic.value
-	 && ((s->styles[0] != 255 && d_lightstylevalue[s->styles[0]] != s->cached_light[0])
-	 || (s->styles[1] != 255 && d_lightstylevalue[s->styles[1]] != s->cached_light[1])
-	 || (s->styles[2] != 255 && d_lightstylevalue[s->styles[2]] != s->cached_light[2])
-	 || (s->styles[3] != 255 && d_lightstylevalue[s->styles[3]] != s->cached_light[3]))))
-		R_UpdateLightmap(s, s->lightmaptexturenum);
+	 && (d_lightstylevalue[s->styles[0]] != s->cached_light[0]
+	 ||  d_lightstylevalue[s->styles[1]] != s->cached_light[1]
+	 ||  d_lightstylevalue[s->styles[2]] != s->cached_light[2]
+	 ||  d_lightstylevalue[s->styles[3]] != s->cached_light[3])))
+		R_UpdateLightmap(s, s->lightmaptexturenum, false); // base lighting changed
+	else if (r_dynamic.value && r_dlightmap.value && s->dlightframe == r_framecount)
+		R_UpdateLightmap(s, s->lightmaptexturenum, true); // only dlights
+
 	if (s->dlightframe != r_framecount || r_dlightmap.value)
 	{
 		// LordHavoc: fast path version for no vertex lighting cases
-		wp = &wallpoly[currentwallpoly];
 		out = &wallvert[currentwallvert];
 		for (p = s->polys;p;p = p->next)
 		{
 			if ((currentwallpoly >= MAX_WALLPOLYS) || (currentwallvert+p->numverts > MAX_WALLVERTS))
 				return;
+			wp = &wallpoly[currentwallpoly++];
 			wp->texnum = (unsigned short) R_GetTexture(t->texture);
 			wp->lighttexnum = (unsigned short) (lightmap_textures + s->lightmaptexturenum);
 			wp->glowtexnum = (unsigned short) R_GetTexture(t->glowtexture);
@@ -650,7 +621,6 @@ void RSurf_DrawWall(msurface_t *s, texture_t *t, int transform)
 			wp->numverts = p->numverts;
 			wp->lit = false;
 			wp++;
-			currentwallpoly++;
 			currentwallvert += p->numverts;
 			v = p->verts[0];
 			if (transform)
@@ -757,7 +727,7 @@ void RSurf_DrawWallVertex(msurface_t *s, texture_t *t, int transform, int isbmod
 	float *v, *wv, scale;
 	glpoly_t *p;
 	byte *lm;
-	alpha = (int) (modelalpha * 255.0f);
+	alpha = (int) (currentrenderentity->alpha * 255.0f);
 	size3 = ((s->extents[0]>>4)+1)*((s->extents[1]>>4)+1)*3; // *3 for colored lighting
 	wv = wvert;
 	for (p = s->polys;p;p = p->next)
@@ -792,14 +762,14 @@ void RSurf_DrawWallVertex(msurface_t *s, texture_t *t, int transform, int isbmod
 	if (s->dlightframe == r_framecount)
 		RSurf_Light(s->dlightbits, s->polys);
 	wv = wvert;
-	if (isbmodel && (currententity->render.colormod[0] != 1 || currententity->render.colormod[1] != 1 || currententity->render.colormod[2] != 1))
+	if (alpha != 255 || currentrenderentity->colormod[0] != 1 || currentrenderentity->colormod[1] != 1 || currentrenderentity->colormod[2] != 1)
 	{
 		for (p = s->polys;p;p = p->next)
 		{
 			v = p->verts[0];
-			transpolybegin(R_GetTexture(t->texture), R_GetTexture(t->glowtexture), 0, currententity->render.effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
+			transpolybegin(R_GetTexture(t->texture), R_GetTexture(t->glowtexture), 0, currentrenderentity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
 			for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE, wv += 6)
-				transpolyvert(wv[0], wv[1], wv[2], v[3], v[4], wv[3] * currententity->render.colormod[0], wv[4] * currententity->render.colormod[1], wv[5] * currententity->render.colormod[2], alpha);
+				transpolyvert(wv[0], wv[1], wv[2], v[3], v[4], wv[3] * currentrenderentity->colormod[0], wv[4] * currentrenderentity->colormod[1], wv[5] * currentrenderentity->colormod[2], alpha);
 			transpolyend();
 		}
 	}
@@ -808,7 +778,7 @@ void RSurf_DrawWallVertex(msurface_t *s, texture_t *t, int transform, int isbmod
 		for (p = s->polys;p;p = p->next)
 		{
 			v = p->verts[0];
-			transpolybegin(R_GetTexture(t->texture), R_GetTexture(t->glowtexture), 0, currententity->render.effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
+			transpolybegin(R_GetTexture(t->texture), R_GetTexture(t->glowtexture), 0, currentrenderentity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
 			for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE, wv += 6)
 				transpolyvert(wv[0], wv[1], wv[2], v[3], v[4], wv[3], wv[4], wv[5], alpha);
 			transpolyend();
@@ -822,6 +792,7 @@ float bmverts[256*3];
 
 int vertexworld;
 
+// LordHavoc: disabled clipping on bmodels because they tend to intersect things sometimes
 /*
 void RBrushModelSurf_DoVisible(msurface_t *surf)
 {
@@ -837,12 +808,14 @@ void RBrushModelSurf_DoVisible(msurface_t *surf)
 }
 */
 
+/*
 void RBrushModelSurf_Callback(void *data, void *data2)
 {
-	entity_t *ent = data2;
 	msurface_t *surf = data;
 	texture_t *t;
 
+	currentrenderentity = data2;
+*/
 	/*
 	// FIXME: implement better dupe prevention in AddPolygon callback code
 	if (ent->render.model->firstmodelsurface != 0)
@@ -852,14 +825,12 @@ void RBrushModelSurf_Callback(void *data, void *data2)
 			return;
 	}
 	*/
+/*
 	surf->visframe = r_framecount;
 
 	c_faces++;
 
-	currententity = ent;
-	modelalpha = ent->render.alpha;
-
-	softwaretransformforbrushentity (ent);
+	softwaretransformforbrushentity (currentrenderentity);
 
 	if (surf->flags & (SURF_DRAWSKY | SURF_DRAWTURB))
 	{
@@ -872,69 +843,52 @@ void RBrushModelSurf_Callback(void *data, void *data2)
 	else
 	{
 		t = R_TextureAnimation(surf->texinfo->texture);
-		if (surf->texinfo->texture->transparent || vertexworld || ent->render.alpha != 1 || ent->render.model->firstmodelsurface == 0 || (ent->render.effects & EF_FULLBRIGHT) || ent->render.colormod[0] != 1 || ent->render.colormod[2] != 1 || ent->render.colormod[2] != 1)
+		if (t->transparent || vertexworld || ent->render.alpha != 1 || ent->render.model->firstmodelsurface == 0 || (ent->render.effects & EF_FULLBRIGHT) || ent->render.colormod[0] != 1 || ent->render.colormod[2] != 1 || ent->render.colormod[2] != 1)
 			RSurf_DrawWallVertex(surf, t, true, true);
 		else
 			RSurf_DrawWall(surf, t, true);
 	}
 }
+*/
 
 /*
 =================
 R_DrawBrushModel
 =================
 */
-void R_DrawBrushModel (entity_t *e)
+void R_DrawBrushModel (void)
 {
-	int			i, j, vertexlit;
-	vec3_t		mins, maxs;
+	int			i/*, j*/, vertexlit, rotated, transform;
 	msurface_t	*s;
-	model_t		*clmodel;
-	int			rotated;
-	vec3_t		org;
-	glpoly_t	*p;
+	model_t		*model;
+	vec3_t		org, temp, forward, right, up;
+//	glpoly_t	*p;
+	texture_t	*t;
 
-	currententity = e;
-
-	clmodel = e->render.model;
-
-	if (e->render.angles[0] || e->render.angles[1] || e->render.angles[2])
-	{
-		rotated = true;
-		for (i=0 ; i<3 ; i++)
-		{
-			mins[i] = e->render.origin[i] - clmodel->radius;
-			maxs[i] = e->render.origin[i] + clmodel->radius;
-		}
-	}
-	else
-	{
-		rotated = false;
-		VectorAdd (e->render.origin, clmodel->mins, mins);
-		VectorAdd (e->render.origin, clmodel->maxs, maxs);
-	}
-
-	if (R_CullBox (mins, maxs))
-		return;
+	model = currentrenderentity->model;
 
 	c_bmodels++;
 
-	VectorSubtract (r_origin, e->render.origin, modelorg);
-	if (rotated)
+	VectorSubtract (r_origin, currentrenderentity->origin, modelorg);
+	rotated = false;
+	transform = false;
+	if (currentrenderentity->angles[0] || currentrenderentity->angles[1] || currentrenderentity->angles[2])
 	{
-		vec3_t	temp;
-		vec3_t	forward, right, up;
-
+		transform = true;
+		rotated = true;
 		VectorCopy (modelorg, temp);
-		AngleVectors (e->render.angles, forward, right, up);
+		AngleVectors (currentrenderentity->angles, forward, right, up);
 		modelorg[0] = DotProduct (temp, forward);
 		modelorg[1] = -DotProduct (temp, right);
 		modelorg[2] = DotProduct (temp, up);
 	}
+	else if (currentrenderentity->origin[0] || currentrenderentity->origin[1] || currentrenderentity->origin[2] || currentrenderentity->scale)
+		transform = true;
 
-	softwaretransformforbrushentity (e);
+	if (transform)
+		softwaretransformforbrushentity (currentrenderentity);
 
-	for (i = 0, s = &clmodel->surfaces[clmodel->firstmodelsurface];i < clmodel->nummodelsurfaces;i++, s++)
+	for (i = 0, s = &model->surfaces[model->firstmodelsurface];i < model->nummodelsurfaces;i++, s++)
 	{
 		s->visframe = -1;
 		if (((s->flags & SURF_PLANEBACK) == 0) == (PlaneDiff(modelorg, s->plane) >= 0))
@@ -947,45 +901,56 @@ void R_DrawBrushModel (entity_t *e)
 		if (!cl_dlights[i].radius)
 			continue;
 
-		VectorSubtract(cl_dlights[i].origin, currententity->render.origin, org);
-		R_NoVisMarkLights (org, &cl_dlights[i], 1<<(i&31), i >> 5, clmodel);
+		if (rotated)
+		{
+			VectorSubtract(cl_dlights[i].origin, currentrenderentity->origin, temp);
+			org[0] = DotProduct (temp, forward);
+			org[1] = -DotProduct (temp, right);
+			org[2] = DotProduct (temp, up);
+		}
+		else
+			VectorSubtract(cl_dlights[i].origin, currentrenderentity->origin, org);
+		R_NoVisMarkLights (org, &cl_dlights[i], 1<<(i&31), i >> 5, model);
 	}
-	vertexlit = modelalpha != 1 || clmodel->firstmodelsurface == 0 || (currententity->render.effects & EF_FULLBRIGHT) || currententity->render.colormod[0] != 1 || currententity->render.colormod[2] != 1 || currententity->render.colormod[2] != 1;
+	vertexlit = vertexworld || currentrenderentity->alpha != 1 || model->firstmodelsurface == 0 || (currentrenderentity->effects & EF_FULLBRIGHT) || currentrenderentity->colormod[0] != 1 || currentrenderentity->colormod[2] != 1 || currentrenderentity->colormod[2] != 1;
 
 	// draw texture
-	for (i = 0, s = &clmodel->surfaces[clmodel->firstmodelsurface];i < clmodel->nummodelsurfaces;i++, s++)
+	for (i = 0, s = &model->surfaces[model->firstmodelsurface];i < model->nummodelsurfaces;i++, s++)
 	{
 		if (s->visframe == r_framecount)
 		{
 //			R_DrawSurf(s, true, vertexlit || s->texinfo->texture->transparent);
+			/*
 			if (r_ser.value)
 			{
 				for (p = s->polys;p;p = p->next)
 				{
 					for (j = 0;j < p->numverts;j++)
 						softwaretransform(&p->verts[j][0], bmverts + j * 3);
-					R_Clip_AddPolygon(bmverts, p->numverts, 3 * sizeof(float), (s->flags & SURF_CLIPSOLID) != 0 && modelalpha == 1, RBrushModelSurf_Callback, s, e, NULL);
+					R_Clip_AddPolygon(bmverts, p->numverts, 3 * sizeof(float), (s->flags & SURF_CLIPSOLID) != 0 && currentrenderentity->alpha == 1, RBrushModelSurf_Callback, s, e, NULL);
 				}
 			}
 			else
 			{
+			*/
+				c_faces++;
+				t = R_TextureAnimation(s->texinfo->texture);
 				if (s->flags & (SURF_DRAWSKY | SURF_DRAWTURB))
 				{
 					// sky and liquid don't need sorting (skypoly/transpoly)
 					if (s->flags & SURF_DRAWSKY)
-						RSurf_DrawSky(s, true);
+						RSurf_DrawSky(s, transform);
 					else
-						RSurf_DrawWater(s, R_TextureAnimation(s->texinfo->texture), true, s->flags & SURF_DRAWNOALPHA ? 255 : wateralpha);
+						RSurf_DrawWater(s, t, transform, s->flags & SURF_DRAWNOALPHA ? 255 : wateralpha);
 				}
 				else
 				{
-					texture_t *t = R_TextureAnimation(s->texinfo->texture);
-					if (vertexlit || s->texinfo->texture->transparent)
-						RSurf_DrawWallVertex(s, t, true, true);
+					if (t->transparent || vertexlit)
+						RSurf_DrawWallVertex(s, t, transform, true);
 					else
-						RSurf_DrawWall(s, t, true);
+						RSurf_DrawWall(s, t, transform);
 				}
-			}
+			//}
 		}
 	}
 	UploadLightmaps();
@@ -1138,7 +1103,7 @@ void R_MarkLeaves (void)
 
 void R_SolidWorldNode (void)
 {
-	if ((int) r_solidworldnode.value == 3)
+	if (r_viewleaf->contents != CONTENTS_SOLID)
 	{
 		int portalstack;
 		mportal_t *p, *pstack[8192];
@@ -1146,6 +1111,10 @@ void R_SolidWorldNode (void)
 		mleaf_t *leaf;
 		glpoly_t *poly;
 		tinyplane_t plane;
+		// LordHavoc: portal-passage worldnode; follows portals leading
+		// outward from viewleaf, if a portal leads offscreen it is not
+		// followed, in indoor maps this can often cull a great deal of
+		// geometry away when pvs data is not present (useful with pvs as well)
 
 		leaf = r_viewleaf;
 		leaf->worldnodeframe = r_framecount;
@@ -1239,18 +1208,22 @@ void R_SolidWorldNode (void)
 		if (portalstack)
 			goto loc1;
 	}
-	else if ((int) r_solidworldnode.value == 2)
+	else
 	{
 		mnode_t *nodestack[8192], *node = cl.worldmodel->nodes;
 		int nodestackpos = 0;
 		glpoly_t *poly;
+		// LordHavoc: recursive descending worldnode; if portals are not
+		// available, this is a good last resort, can cull large amounts of
+		// geometry, but is more time consuming than portal-passage and renders
+		// things behind walls
 
 loc2:
 		if (R_NotCulledBox(node->mins, node->maxs))
 		{
-			if (r_ser.value)
+			if (node->numsurfaces)
 			{
-				if (node->numsurfaces)
+				if (r_ser.value)
 				{
 					msurface_t *surf = cl.worldmodel->surfaces + node->firstsurface, *surfend = surf + node->numsurfaces;
 					tinyplane_t plane;
@@ -1277,10 +1250,7 @@ loc2:
 						}
 					}
 				}
-			}
-			else
-			{
-				if (node->numsurfaces)
+				else
 				{
 					msurface_t *surf = cl.worldmodel->surfaces + node->firstsurface, *surfend = surf + node->numsurfaces;
 					if (PlaneDiff (r_origin, node->plane) < 0)
@@ -1337,111 +1307,6 @@ loc2:
 		{
 			node = nodestack[--nodestackpos];
 			goto loc2;
-		}
-	}
-	else if ((int) r_solidworldnode.value == 1 && r_ser.value)
-	{
-		glpoly_t *poly;
-		msurface_t *surf, *endsurf;
-		tinyplane_t plane;
-
-		surf = &cl.worldmodel->surfaces[cl.worldmodel->firstmodelsurface];
-		endsurf = surf + cl.worldmodel->nummodelsurfaces;
-		for (;surf < endsurf;surf++)
-		{
-			if (PlaneDiff(r_origin, surf->plane) < 0)
-			{
-				if (surf->flags & SURF_PLANEBACK)
-				{
-					VectorNegate(surf->plane->normal, plane.normal);
-					plane.dist = -surf->plane->dist;
-					for (poly = surf->polys;poly;poly = poly->next)
-						R_Clip_AddPolygon((float *)poly->verts, poly->numverts, VERTEXSIZE * sizeof(float), (surf->flags & SURF_CLIPSOLID) != 0, RSurf_Callback, surf, NULL, &plane);
-				}
-			}
-			else
-			{
-				if (!(surf->flags & SURF_PLANEBACK))
-					for (poly = surf->polys;poly;poly = poly->next)
-						R_Clip_AddPolygon((float *)poly->verts, poly->numverts, VERTEXSIZE * sizeof(float), (surf->flags & SURF_CLIPSOLID) != 0, RSurf_Callback, surf, NULL, (tinyplane_t *)&surf->plane);
-			}
-		}
-	}
-	else
-	{
-		int l;
-		mleaf_t *leaf;
-		msurface_t *surf, **mark, **endmark;
-		glpoly_t *poly;
-		tinyplane_t plane;
-
-		for (l = 0, leaf = cl.worldmodel->leafs;l < cl.worldmodel->numleafs;l++, leaf++)
-		{
-			if (R_CullBox(leaf->mins, leaf->maxs))
-				continue;
-			leaf->visframe = r_framecount;
-			c_leafs++;
-			if (leaf->nummarksurfaces)
-			{
-//				if (R_CullBox(leaf->mins, leaf->maxs))
-//					continue;
-
-				if (leaf->nummarksurfaces)
-				{
-					mark = leaf->firstmarksurface;
-					endmark = mark + leaf->nummarksurfaces;
-					if (r_ser.value)
-					{
-						do
-						{
-							surf = *mark++;
-							// make sure surfaces are only processed once
-							if (surf->worldnodeframe == r_framecount)
-								continue;
-							surf->worldnodeframe = r_framecount;
-							if (PlaneDist(r_origin, surf->plane) < surf->plane->dist)
-							{
-								if (surf->flags & SURF_PLANEBACK)
-								{
-									VectorNegate(surf->plane->normal, plane.normal);
-									plane.dist = -surf->plane->dist;
-									for (poly = surf->polys;poly;poly = poly->next)
-										R_Clip_AddPolygon((float *)poly->verts, poly->numverts, VERTEXSIZE * sizeof(float), (surf->flags & SURF_CLIPSOLID) != 0, RSurf_Callback, surf, NULL, &plane);
-								}
-							}
-							else
-							{
-								if (!(surf->flags & SURF_PLANEBACK))
-									for (poly = surf->polys;poly;poly = poly->next)
-										R_Clip_AddPolygon((float *)poly->verts, poly->numverts, VERTEXSIZE * sizeof(float), (surf->flags & SURF_CLIPSOLID) != 0, RSurf_Callback, surf, NULL, (tinyplane_t *)surf->plane);
-							}
-						}
-						while (mark < endmark);
-					}
-					else
-					{
-						do
-						{
-							surf = *mark++;
-							// make sure surfaces are only processed once
-							if (surf->worldnodeframe == r_framecount)
-								continue;
-							surf->worldnodeframe = r_framecount;
-							if (PlaneDist(r_origin, surf->plane) < surf->plane->dist)
-							{
-								if (surf->flags & SURF_PLANEBACK)
-									surf->visframe = r_framecount;
-							}
-							else
-							{
-								if (!(surf->flags & SURF_PLANEBACK))
-									surf->visframe = r_framecount;
-							}
-						}
-						while (mark < endmark);
-					}
-				}
-			}
 		}
 	}
 }
@@ -1629,220 +1494,111 @@ void R_Portal_Callback(void *data, void *data2)
 
 void R_PVSWorldNode()
 {
-	if (r_pvsworldnode.value == 1)
+	int portalstack, i;
+	mportal_t *p, *pstack[8192];
+	msurface_t *surf, **mark, **endmark;
+	mleaf_t *leaf;
+	tinyplane_t plane;
+	glpoly_t *poly;
+	byte *worldvis;
+
+	worldvis = Mod_LeafPVS (r_viewleaf, cl.worldmodel);
+
+	leaf = r_viewleaf;
+	leaf->worldnodeframe = r_framecount;
+	portalstack = 0;
+loc0:
+	c_leafs++;
+
+	leaf->visframe = r_framecount;
+
+	if (leaf->nummarksurfaces)
 	{
-		int portalstack, i;
-		mportal_t *p, *pstack[8192];
-		msurface_t *surf, **mark, **endmark;
-		mleaf_t *leaf;
-		tinyplane_t plane;
-		glpoly_t *poly;
-		byte *worldvis;
-
-		worldvis = Mod_LeafPVS (r_viewleaf, cl.worldmodel);
-
-		leaf = r_viewleaf;
-		leaf->worldnodeframe = r_framecount;
-		portalstack = 0;
-	loc0:
-		c_leafs++;
-
-		leaf->visframe = r_framecount;
-
-		if (leaf->nummarksurfaces)
+		mark = leaf->firstmarksurface;
+		endmark = mark + leaf->nummarksurfaces;
+		if (r_ser.value)
 		{
-			mark = leaf->firstmarksurface;
-			endmark = mark + leaf->nummarksurfaces;
-			if (r_ser.value)
+			do
 			{
-				do
+				surf = *mark++;
+				// make sure surfaces are only processed once
+				if (surf->worldnodeframe == r_framecount)
+					continue;
+				surf->worldnodeframe = r_framecount;
+				if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
 				{
-					surf = *mark++;
-					// make sure surfaces are only processed once
-					if (surf->worldnodeframe == r_framecount)
-						continue;
-					surf->worldnodeframe = r_framecount;
-					if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
+					if (surf->flags & SURF_PLANEBACK)
 					{
-						if (surf->flags & SURF_PLANEBACK)
-						{
-							VectorNegate(surf->plane->normal, plane.normal);
-							plane.dist = -surf->plane->dist;
-							for (poly = surf->polys;poly;poly = poly->next)
-								R_Clip_AddPolygon((float *)poly->verts, poly->numverts, VERTEXSIZE * sizeof(float), (surf->flags & SURF_CLIPSOLID) != 0, RSurf_Callback, surf, NULL, &plane);
-						}
-					}
-					else
-					{
-						if (!(surf->flags & SURF_PLANEBACK))
-							for (poly = surf->polys;poly;poly = poly->next)
-								R_Clip_AddPolygon((float *)poly->verts, poly->numverts, VERTEXSIZE * sizeof(float), (surf->flags & SURF_CLIPSOLID) != 0, RSurf_Callback, surf, NULL, (tinyplane_t *)surf->plane);
+						VectorNegate(surf->plane->normal, plane.normal);
+						plane.dist = -surf->plane->dist;
+						for (poly = surf->polys;poly;poly = poly->next)
+							R_Clip_AddPolygon((float *)poly->verts, poly->numverts, VERTEXSIZE * sizeof(float), (surf->flags & SURF_CLIPSOLID) != 0, RSurf_Callback, surf, NULL, &plane);
 					}
 				}
-				while (mark < endmark);
-			}
-			else
-			{
-				do
+				else
 				{
-					surf = *mark++;
-					// make sure surfaces are only processed once
-					if (surf->worldnodeframe == r_framecount)
-						continue;
-					surf->worldnodeframe = r_framecount;
-					if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
-					{
-						if (surf->flags & SURF_PLANEBACK)
-							surf->visframe = r_framecount;
-					}
-					else
-					{
-						if (!(surf->flags & SURF_PLANEBACK))
-							surf->visframe = r_framecount;
-					}
+					if (!(surf->flags & SURF_PLANEBACK))
+						for (poly = surf->polys;poly;poly = poly->next)
+							R_Clip_AddPolygon((float *)poly->verts, poly->numverts, VERTEXSIZE * sizeof(float), (surf->flags & SURF_CLIPSOLID) != 0, RSurf_Callback, surf, NULL, (tinyplane_t *)surf->plane);
 				}
-				while (mark < endmark);
 			}
+			while (mark < endmark);
 		}
-
-		// follow portals into other leafs
-		p = leaf->portals;
-		for (;p;p = p->next)
+		else
 		{
-			if (DotProduct(r_origin, p->plane.normal) < p->plane.dist)
+			do
 			{
-				leaf = p->past;
-				if (leaf->worldnodeframe != r_framecount)
+				surf = *mark++;
+				// make sure surfaces are only processed once
+				if (surf->worldnodeframe == r_framecount)
+					continue;
+				surf->worldnodeframe = r_framecount;
+				if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
 				{
-					leaf->worldnodeframe = r_framecount;
-					if (leaf->contents != CONTENTS_SOLID)
-					{
-						i = (leaf - cl.worldmodel->leafs) - 1;
-						if (worldvis[i>>3] & (1<<(i&7)))
-						{
-							if (R_NotCulledBox(leaf->mins, leaf->maxs))
-							{
-								pstack[portalstack++] = p;
-								goto loc0;
-
-	loc1:
-								p = pstack[--portalstack];
-							}
-						}
-					}
+					if (surf->flags & SURF_PLANEBACK)
+						surf->visframe = r_framecount;
+				}
+				else
+				{
+					if (!(surf->flags & SURF_PLANEBACK))
+						surf->visframe = r_framecount;
 				}
 			}
+			while (mark < endmark);
 		}
-
-		if (portalstack)
-			goto loc1;
 	}
-	else
+
+	// follow portals into other leafs
+	p = leaf->portals;
+	for (;p;p = p->next)
 	{
-		int i/*, l*/, k, c, row, numbits, bit, leafnum, numleafs;
-		mleaf_t *leaf;
-		msurface_t *surf, **mark, **endmark;
-		model_t *model = cl.worldmodel;
-		byte *in;
-	//	mportal_t *portal;
-		glpoly_t *poly;
-		tinyplane_t plane;
-
-	//	c_leafs++;
-	//	r_viewleaf->visframe = r_framecount;
-		if (!r_testvis.value)
-			r_portalframecount++;
-
-		numleafs = model->numleafs;
-		numbits = numleafs;
-		k = 0;
-		in = r_viewleaf->compressed_vis;
-		row = (numbits + 7) >> 3;
-		while (k < row)
+		if (DotProduct(r_origin, p->plane.normal) < p->plane.dist)
 		{
-			c = *in++;
-			if (c)
+			leaf = p->past;
+			if (leaf->worldnodeframe != r_framecount)
 			{
-				for (i = 0, bit = 1;c;i++, bit <<= 1)
+				leaf->worldnodeframe = r_framecount;
+				if (leaf->contents != CONTENTS_SOLID)
 				{
-					if (c & bit)
+					i = (leaf - cl.worldmodel->leafs) - 1;
+					if (worldvis[i>>3] & (1<<(i&7)))
 					{
-						leafnum = (k << 3)+i+1;
-						if (leafnum > numleafs)
-							return;
-						c -= bit;
-						leaf = &model->leafs[leafnum];
 						if (R_NotCulledBox(leaf->mins, leaf->maxs))
 						{
-							//for (portal = leaf->portals;portal;portal = portal->next)
-							//	if (DotProduct(r_origin, portal->plane.normal) > portal->plane.dist)
-							//		R_Clip_AddPolygon((float *)portal->points, portal->numpoints, sizeof(mvertex_t), false, R_Portal_Callback, leaf, portal, portal->plane);
-							//leaf->visframe = r_framecount;
-							c_leafs++;
-							if (leaf->nummarksurfaces)
-							{
-								mark = leaf->firstmarksurface;
-								endmark = mark + leaf->nummarksurfaces;
-								if (r_ser.value)
-								{
-									do
-									{
-										surf = *mark++;
-										// make sure surfaces are only processed once
-										if (surf->worldnodeframe == r_framecount)
-											continue;
-										surf->worldnodeframe = r_framecount;
-										if (PlaneDist(r_origin, surf->plane) < surf->plane->dist)
-										{
-											if (surf->flags & SURF_PLANEBACK)
-											{
-												VectorNegate(surf->plane->normal, plane.normal);
-												plane.dist = -surf->plane->dist;
-												for (poly = surf->polys;poly;poly = poly->next)
-													R_Clip_AddPolygon((float *)poly->verts, poly->numverts, VERTEXSIZE * sizeof(float), (surf->flags & SURF_CLIPSOLID) != 0, RSurf_Callback, surf, NULL, &plane);
-											}
-										}
-										else
-										{
-											if (!(surf->flags & SURF_PLANEBACK))
-												for (poly = surf->polys;poly;poly = poly->next)
-													R_Clip_AddPolygon((float *)poly->verts, poly->numverts, VERTEXSIZE * sizeof(float), (surf->flags & SURF_CLIPSOLID) != 0, RSurf_Callback, surf, NULL, (tinyplane_t *)surf->plane);
-										}
-									}
-									while (mark < endmark);
-								}
-								else
-								{
-									do
-									{
-										surf = *mark++;
-										// make sure surfaces are only processed once
-										if (surf->worldnodeframe == r_framecount)
-											continue;
-										surf->worldnodeframe = r_framecount;
-										if (PlaneDist(r_origin, surf->plane) < surf->plane->dist)
-										{
-											if (surf->flags & SURF_PLANEBACK)
-												surf->visframe = r_framecount;
-										}
-										else
-										{
-											if (!(surf->flags & SURF_PLANEBACK))
-												surf->visframe = r_framecount;
-										}
-									}
-									while (mark < endmark);
-								}
-							}
+							pstack[portalstack++] = p;
+							goto loc0;
+
+loc1:
+							p = pstack[--portalstack];
 						}
 					}
 				}
-				k++;
 			}
-			else
-				k += *in++;
 		}
 	}
+
+	if (portalstack)
+		goto loc1;
 }
 
 entity_t clworldent;
@@ -1853,8 +1609,7 @@ void R_DrawSurfaces (void)
 	texture_t	*t, *currentt;
 	int vertex = gl_vertex.value;
 
-	currententity = &clworldent;
-	modelalpha = 1;
+	currentrenderentity = &clworldent.render;
 	softwaretransformidentity();
 	surf = &cl.worldmodel->surfaces[cl.worldmodel->firstmodelsurface];
 	endsurf = surf + cl.worldmodel->nummodelsurfaces;
@@ -1955,6 +1710,19 @@ void R_DrawPortals(void)
 	}
 }
 
+void R_SetupWorldEnt(void)
+{
+	memset (&clworldent, 0, sizeof(clworldent));
+	clworldent.render.model = cl.worldmodel;
+	clworldent.render.colormod[0] = clworldent.render.colormod[1] = clworldent.render.colormod[2] = 1;
+	clworldent.render.alpha = 1;
+	clworldent.render.scale = 1;
+
+	VectorCopy (r_origin, modelorg);
+
+	currentrenderentity = &clworldent.render;
+}
+
 /*
 =============
 R_DrawWorld
@@ -1965,28 +1733,14 @@ void R_DrawWorld (void)
 	wateralpha = bound(0, r_wateralpha.value*255.0f, 255);
 	vertexworld = gl_vertex.value;
 
-	memset (&clworldent, 0, sizeof(clworldent));
-	clworldent.render.model = cl.worldmodel;
-	clworldent.render.colormod[0] = clworldent.render.colormod[1] = clworldent.render.colormod[2] = 1;
-	modelalpha = clworldent.render.alpha = 1;
-	clworldent.render.scale = 1;
-
-	VectorCopy (r_origin, modelorg);
-
-	currententity = &clworldent;
+	R_SetupWorldEnt();
 
 	softwaretransformidentity(); // LordHavoc: clear transform
 
-	if (cl.worldmodel)
-	{
-		if (r_novis.value || r_viewleaf->compressed_vis == NULL)
-			R_SolidWorldNode ();
-		else
-		{
-//			R_MarkLeaves ();
-			R_PVSWorldNode ();
-		}
-	}
+	if (r_viewleaf->contents == CONTENTS_SOLID || r_novis.value || r_viewleaf->compressed_vis == NULL)
+		R_SolidWorldNode ();
+	else
+		R_PVSWorldNode ();
 }
 
 /*
@@ -2008,7 +1762,7 @@ int AllocBlock (int w, int h, short *x, short *y)
 	{
 		best = BLOCK_HEIGHT;
 
-		for (i = 0;i < BLOCK_WIDTH - w;i += lightmapalign) // LordHavoc: NVIDIA has broken subimage, so align the lightmaps
+		for (i = 0;i < BLOCK_WIDTH - w;i += lightmapalign) // LordHavoc: align updates on 4 byte boundaries
 		{
 			best2 = 0;
 
@@ -2040,17 +1794,16 @@ int AllocBlock (int w, int h, short *x, short *y)
 		// LordHavoc: clear texture to blank image, fragments are uploaded using subimage
 		else if (!allocated[texnum][0])
 		{
-			byte blank[BLOCK_WIDTH*BLOCK_HEIGHT*4];
-			memset(blank, 0, sizeof(blank));
+			memset(templight, 0, sizeof(templight));
 			if(r_upload.value)
 			{
 				glBindTexture(GL_TEXTURE_2D, lightmap_textures + texnum);
 				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 				if (lightmaprgba)
-					glTexImage2D (GL_TEXTURE_2D, 0, 3, BLOCK_WIDTH, BLOCK_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, blank);
+					glTexImage2D (GL_TEXTURE_2D, 0, 3, BLOCK_WIDTH, BLOCK_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, templight);
 				else
-					glTexImage2D (GL_TEXTURE_2D, 0, 3, BLOCK_WIDTH, BLOCK_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, blank);
+					glTexImage2D (GL_TEXTURE_2D, 0, 3, BLOCK_WIDTH, BLOCK_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, templight);
 			}
 		}
 
@@ -2195,13 +1948,13 @@ void GL_CreateSurfaceLightmap (msurface_t *surf)
 	smax = ((surf->extents[0]>>4)+lightmapalign) & lightmapalignmask;
 	if (lightmaprgba)
 	{
-		R_BuildLightMap (surf, templight, smax * 4);
+		R_BuildLightMap (surf, templight, smax * 4, false);
 		if(r_upload.value)
 			glTexSubImage2D(GL_TEXTURE_2D, 0, surf->light_s, surf->light_t, smax, tmax, GL_RGBA, GL_UNSIGNED_BYTE, templight);
 	}
 	else
 	{
-		R_BuildLightMap (surf, templight, smax * 3);
+		R_BuildLightMap (surf, templight, smax * 3, false);
 		if(r_upload.value)
 			glTexSubImage2D(GL_TEXTURE_2D, 0, surf->light_s, surf->light_t, smax, tmax, GL_RGB , GL_UNSIGNED_BYTE, templight);
 	}
@@ -2246,18 +1999,24 @@ void GL_BuildLightmaps (void)
 		lightmapbytes = 3;
 	}
 
-	// LordHavoc: NVIDIA seems to have a broken glTexSubImage2D,
-	//            it needs to be aligned on 4 pixel boundaries...
-	//            so I implemented an adjustable lightmap alignment
-	if (gl_lightmapalign.value < 1)
-		gl_lightmapalign.value = 1;
-	if (gl_lightmapalign.value > 16)
-		gl_lightmapalign.value = 16;
+	// LordHavoc: TexSubImage2D needs data aligned on 4 byte boundaries unless
+	// I specify glPixelStorei(GL_UNPACK_ALIGNMENT, 1), I suspect 4 byte may be
+	// faster anyway, so I implemented an adjustable lightmap alignment...
+
+	// validate the lightmap alignment
+	i = 1;
+	while (i < 16 && i < gl_lightmapalign.value)
+		i <<= 1;
+	Cvar_SetValue("gl_lightmapalign", i);
+
+	// find the lowest pixel count which satisfies the byte alignment
 	lightmapalign = 1;
-	while (lightmapalign < gl_lightmapalign.value)
+	j = lightmaprgba ? 4 : 3; // bytes per pixel
+	while ((lightmapalign * j) & (i - 1))
 		lightmapalign <<= 1;
-	gl_lightmapalign.value = lightmapalign;
 	lightmapalignmask = ~(lightmapalign - 1);
+
+	// alignment is irrelevant if using fallback modes
 	if (nosubimagefragments || nosubimage)
 	{
 		lightmapalign = 1;
@@ -2266,6 +2025,9 @@ void GL_BuildLightmaps (void)
 
 	if (!lightmap_textures)
 		lightmap_textures = R_GetTextureSlots(MAX_LIGHTMAPS);
+
+	// need a world entity for lightmap code
+	R_SetupWorldEnt();
 
 	for (j=1 ; j<MAX_MODELS ; j++)
 	{

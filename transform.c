@@ -148,17 +148,17 @@ void softwaretransformset (vec3_t origin, vec3_t angles, vec_t scale)
 	softwaretransform_classify();
 }
 
-void softwaretransformforentity (entity_t *e)
+void softwaretransformforentity (entity_render_t *r)
 {
 	vec3_t angles;
-	angles[0] = -e->render.angles[0];
-	angles[1] = e->render.angles[1];
-	angles[2] = e->render.angles[2];
-	softwaretransformset(e->render.origin, angles, e->render.scale);
+	angles[0] = -r->angles[0];
+	angles[1] = r->angles[1];
+	angles[2] = r->angles[2];
+	softwaretransformset(r->origin, angles, r->scale);
 }
 
 // brush entities are not backwards like models and sprites are
-void softwaretransformforbrushentity (entity_t *e)
+void softwaretransformforbrushentity (entity_render_t *r)
 {
-	softwaretransformset(e->render.origin, e->render.angles, e->render.scale);
+	softwaretransformset(r->origin, r->angles, r->scale);
 }

@@ -9,9 +9,11 @@ extern void transpolyclear(void);
 extern void transpolyrender(void);
 extern void transpolybegin(int texnum, int glowtexnum, int fogtexnum, int transpolytype);
 extern void transpolyend(void);
+extern void transpolyparticle(vec3_t org, vec3_t right, vec3_t up, vec_t scale, unsigned short texnum, unsigned short transpolytype, int ir, int ig, int ib, float alphaf, float s1, float t1, float s2, float t2);
 
 extern void wallpolyclear(void);
-extern void wallpolyrender(void);
+extern void wallpolyrender1(void);
+extern void wallpolyrender2(void);
 
 extern void skypolyclear(void);
 extern void skypolyrender(void);
@@ -88,7 +90,9 @@ skypoly_t;
 
 extern transvert_t *transvert;
 extern transpoly_t *transpoly;
-extern unsigned short *transpolyindex;
+extern int *transpolyindex;
+extern int *transvertindex;
+extern transpoly_t **transpolylist;
 extern wallvert_t *wallvert;
 extern wallvertcolor_t *wallvertcolor;
 extern wallpoly_t *wallpoly;

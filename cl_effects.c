@@ -33,25 +33,25 @@ typedef struct effect_s
 	int endframe;
 	// these are for interpolation
 	int frame;
-	double frame1start;
-	double frame2start;
+	double frame1time;
+	double frame2time;
 }
 effect_t;
 
-effect_t effect[MAX_EFFECTS];
+static effect_t effect[MAX_EFFECTS];
 
-cvar_t r_draweffects = {0, "r_draweffects", "1"};
+static cvar_t r_draweffects = {0, "r_draweffects", "1"};
 
-void r_effects_start(void)
+static void r_effects_start(void)
 {
 	memset(effect, 0, sizeof(effect));
 }
 
-void r_effects_shutdown(void)
+static void r_effects_shutdown(void)
 {
 }
 
-void r_effects_newmap(void)
+static void r_effects_newmap(void)
 {
 	memset(effect, 0, sizeof(effect));
 }
@@ -82,11 +82,13 @@ void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float
 		e->framerate = framerate;
 
 		e->frame = 0;
-		e->frame1start = cl.time;
-		e->frame2start = cl.time;
+		e->frame1time = cl.time;
+		e->frame2time = cl.time;
 		break;
 	}
 }
+
+extern void CL_LerpAnimation(entity_t *e);
 
 void CL_DoEffects()
 {
@@ -111,28 +113,30 @@ void CL_DoEffects()
 			if (intframe != e->frame)
 			{
 				e->frame = intframe;
-				e->frame1start = e->frame2start;
-				e->frame2start = cl.time;
+				e->frame1time = e->frame2time;
+				e->frame2time = cl.time;
 			}
 
-			vis = CL_NewTempEntity();
-			if (!vis)
-				continue;
-			VectorCopy(e->origin, vis->render.origin);
-			vis->render.lerp_model = vis->render.model = cl.model_precache[e->modelindex];
-			vis->render.frame1 = e->frame;
-			vis->render.frame2 = e->frame + 1;
-			if (vis->render.frame2 >= e->endframe)
-				vis->render.frame2 = -1; // disappear
-			vis->render.frame = vis->render.frame2;
-			vis->render.framelerp = frame - vis->render.frame1;
-			vis->render.frame1start = e->frame1start;
-			vis->render.frame2start = e->frame2start;
-			vis->render.lerp_starttime = -1;
-			vis->render.colormap = -1; // no special coloring
-			vis->render.scale = 1;
-			vis->render.alpha = 1;
-			vis->render.colormod[0] = vis->render.colormod[1] = vis->render.colormod[2] = 1;
+			if ((vis = CL_NewTempEntity()))
+			{
+				// interpolation stuff
+				vis->render.frame1 = intframe;
+				vis->render.frame2 = intframe + 1;
+				if (vis->render.frame2 >= e->endframe)
+					vis->render.frame2 = -1; // disappear
+				vis->render.framelerp = frame - intframe;
+				vis->render.frame1time = e->frame1time;
+				vis->render.frame2time = e->frame2time;
+
+				// normal stuff
+				VectorCopy(e->origin, vis->render.origin);
+				vis->render.model = cl.model_precache[e->modelindex];
+				vis->render.frame = vis->render.frame2;
+				vis->render.colormap = -1; // no special coloring
+				vis->render.scale = 1;
+				vis->render.alpha = 1;
+				vis->render.colormod[0] = vis->render.colormod[1] = vis->render.colormod[2] = 1;
+			}
 		}
 	}
 }

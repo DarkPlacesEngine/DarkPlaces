@@ -119,7 +119,7 @@ Draws one solid graphics character
 */
 void M_DrawCharacter (int cx, int line, int num)
 {
-	Draw_Character ( cx + ((vid.width - 320)>>1), line, num);
+	Draw_Character ( cx + ((vid.conwidth - 320)>>1), line, num);
 }
 
 void M_Print (int cx, int cy, char *str)
@@ -144,7 +144,7 @@ void M_PrintWhite (int cx, int cy, char *str)
 
 void M_DrawPic (int x, int y, qpic_t *pic)
 {
-	Draw_Pic (x + ((vid.width - 320)>>1), y, pic);
+	Draw_Pic (x + ((vid.conwidth - 320)>>1), y, pic);
 }
 
 byte identityTable[256];
@@ -179,7 +179,7 @@ void M_BuildTranslationTable(int top, int bottom)
 
 void M_DrawPicTranslate (int x, int y, qpic_t *pic)
 {
-	Draw_PicTranslate (x + ((vid.width - 320)>>1), y, pic, translationTable);
+	Draw_PicTranslate (x + ((vid.conwidth - 320)>>1), y, pic, translationTable);
 }
 
 
@@ -420,7 +420,7 @@ int MAIN_ITEMS = 4; // Nehahra: Menu Disable
 
 void M_Menu_Main_f (void)
 {
-	if (nehahra)
+	if (gamemode == GAME_NEHAHRA)
 	{
 		if (NehGameType == TYPE_DEMO)
 			MAIN_ITEMS = 4;
@@ -452,7 +452,7 @@ void M_Main_Draw (void)
 	p = Draw_CachePic ("gfx/ttl_main.lmp");
 	M_DrawPic ( (320-p->width)/2, 4, p);
 // Nehahra
-	if (nehahra)
+	if (gamemode == GAME_NEHAHRA)
 	{
 		if (NehGameType == TYPE_BOTH)
 			M_DrawPic (72, 32, Draw_CachePic ("gfx/mainmenu.lmp"));
@@ -497,7 +497,7 @@ void M_Main_Key (int key)
 	case K_ENTER:
 		m_entersound = true;
 
-		if (nehahra)
+		if (gamemode == GAME_NEHAHRA)
 		{
 			switch (NehGameType)
 			{
@@ -673,7 +673,7 @@ void M_SinglePlayer_Key (int key)
 			if (sv.active)
 				Cbuf_AddText ("disconnect\n");
 			Cbuf_AddText ("maxplayers 1\n");
-			if (nehahra)
+			if (gamemode == GAME_NEHAHRA)
 				Cbuf_AddText ("map nehstart\n");
 			else
 				Cbuf_AddText ("map start\n");
@@ -1758,7 +1758,7 @@ char *quitMessage [] =
   "  this game just like   ",
   "   everything else?     ",
   "                        ",
- 
+
   " Milord, methinks that  ",
   "   thou art a lowly     ",
   " quitter. Is this true? ",
@@ -2335,7 +2335,7 @@ void M_GameOptions_Draw (void)
 		M_Print (160, 64, "Deathmatch");
 
 	M_Print (0, 72, "        Teamplay");
-	if (rogue)
+	if (gamemode == GAME_ROGUE)
 	{
 		char *msg;
 
@@ -2387,40 +2387,40 @@ void M_GameOptions_Draw (void)
 		M_Print (160, 96, va("%i minutes", (int)timelimit.value));
 
 	M_Print (0, 112, "         Episode");
-   //MED 01/06/97 added hipnotic episodes
-   if (hipnotic)
-      M_Print (160, 112, hipnoticepisodes[startepisode].description);
-   //PGM 01/07/97 added rogue episodes
-   else if (rogue)
-      M_Print (160, 112, rogueepisodes[startepisode].description);
-   else if (nehahra)
-      M_Print (160, 112, nehahraepisodes[startepisode].description);
-   else
-      M_Print (160, 112, episodes[startepisode].description);
+	//MED 01/06/97 added hipnotic episodes
+	if (gamemode == GAME_HIPNOTIC)
+		M_Print (160, 112, hipnoticepisodes[startepisode].description);
+	//PGM 01/07/97 added rogue episodes
+	else if (gamemode == GAME_ROGUE)
+		M_Print (160, 112, rogueepisodes[startepisode].description);
+	else if (gamemode == GAME_NEHAHRA)
+		M_Print (160, 112, nehahraepisodes[startepisode].description);
+	else
+		M_Print (160, 112, episodes[startepisode].description);
 
 	M_Print (0, 120, "           Level");
-   //MED 01/06/97 added hipnotic episodes
-   if (hipnotic)
-   {
-      M_Print (160, 120, hipnoticlevels[hipnoticepisodes[startepisode].firstLevel + startlevel].description);
-      M_Print (160, 128, hipnoticlevels[hipnoticepisodes[startepisode].firstLevel + startlevel].name);
-   }
-   //PGM 01/07/97 added rogue episodes
-   else if (rogue)
-   {
-      M_Print (160, 120, roguelevels[rogueepisodes[startepisode].firstLevel + startlevel].description);
-      M_Print (160, 128, roguelevels[rogueepisodes[startepisode].firstLevel + startlevel].name);
-   }
-   else if (nehahra)
-   {
-      M_Print (160, 120, nehahralevels[nehahraepisodes[startepisode].firstLevel + startlevel].description);
-      M_Print (160, 128, nehahralevels[nehahraepisodes[startepisode].firstLevel + startlevel].name);
-   }
-   else
-   {
-      M_Print (160, 120, levels[episodes[startepisode].firstLevel + startlevel].description);
-      M_Print (160, 128, levels[episodes[startepisode].firstLevel + startlevel].name);
-   }
+	//MED 01/06/97 added hipnotic episodes
+	if (gamemode == GAME_HIPNOTIC)
+	{
+		M_Print (160, 120, hipnoticlevels[hipnoticepisodes[startepisode].firstLevel + startlevel].description);
+		M_Print (160, 128, hipnoticlevels[hipnoticepisodes[startepisode].firstLevel + startlevel].name);
+	}
+	//PGM 01/07/97 added rogue episodes
+	else if (gamemode == GAME_ROGUE)
+	{
+		M_Print (160, 120, roguelevels[rogueepisodes[startepisode].firstLevel + startlevel].description);
+		M_Print (160, 128, roguelevels[rogueepisodes[startepisode].firstLevel + startlevel].name);
+	}
+	else if (gamemode == GAME_NEHAHRA)
+	{
+		M_Print (160, 120, nehahralevels[nehahraepisodes[startepisode].firstLevel + startlevel].description);
+		M_Print (160, 128, nehahralevels[nehahraepisodes[startepisode].firstLevel + startlevel].name);
+	}
+	else
+	{
+		M_Print (160, 120, levels[episodes[startepisode].firstLevel + startlevel].description);
+		M_Print (160, 128, levels[episodes[startepisode].firstLevel + startlevel].name);
+	}
 
 // line cursor
 	M_DrawCharacter (144, gameoptions_cursor_table[gameoptions_cursor], 12+((int)(realtime*4)&1));
@@ -2483,7 +2483,7 @@ void M_NetStart_Change (int dir)
 		break;
 
 	case 3:
-		if (rogue)
+		if (gamemode == GAME_ROGUE)
 			count = 6;
 		else
 			count = 2;
@@ -2522,13 +2522,13 @@ void M_NetStart_Change (int dir)
 	case 7:
 		startepisode += dir;
 	//MED 01/06/97 added hipnotic count
-		if (hipnotic)
+		if (gamemode == GAME_HIPNOTIC)
 			count = 6;
 	//PGM 01/07/97 added rogue count
 	//PGM 03/02/97 added 1 for dmatch episode
-		else if (rogue)
+		else if (gamemode == GAME_ROGUE)
 			count = 4;
-		else if (nehahra)
+		else if (gamemode == GAME_NEHAHRA)
 			count = 4;
 		else if (registered.value)
 			count = 7;
@@ -2547,12 +2547,12 @@ void M_NetStart_Change (int dir)
 	case 8:
 		startlevel += dir;
     //MED 01/06/97 added hipnotic episodes
-		if (hipnotic)
+		if (gamemode == GAME_HIPNOTIC)
 			count = hipnoticepisodes[startepisode].levels;
 	//PGM 01/06/97 added hipnotic episodes
-		else if (rogue)
+		else if (gamemode == GAME_ROGUE)
 			count = rogueepisodes[startepisode].levels;
-		else if (nehahra)
+		else if (gamemode == GAME_NEHAHRA)
 			count = nehahraepisodes[startepisode].levels;
 		else
 			count = episodes[startepisode].levels;
@@ -2612,11 +2612,11 @@ void M_GameOptions_Key (int key)
 			Cbuf_AddText ( va ("maxplayers %u\n", maxplayers) );
 //			SCR_BeginLoadingPlaque ();
 
-			if (hipnotic)
+			if (gamemode == GAME_HIPNOTIC)
 				Cbuf_AddText ( va ("map %s\n", hipnoticlevels[hipnoticepisodes[startepisode].firstLevel + startlevel].name) );
-			else if (rogue)
+			else if (gamemode == GAME_ROGUE)
 				Cbuf_AddText ( va ("map %s\n", roguelevels[rogueepisodes[startepisode].firstLevel + startlevel].name) );
-			else if (nehahra)
+			else if (gamemode == GAME_NEHAHRA)
 				Cbuf_AddText ( va ("map %s\n", nehahralevels[nehahraepisodes[startepisode].firstLevel + startlevel].name) );
 			else
 				Cbuf_AddText ( va ("map %s\n", levels[episodes[startepisode].firstLevel + startlevel].name) );
@@ -2812,7 +2812,7 @@ void M_Init (void)
 	Cmd_AddCommand ("help", M_Menu_Help_f);
 	Cmd_AddCommand ("menu_quit", M_Menu_Quit_f);
 
-	if (nehahra)
+	if (gamemode == GAME_NEHAHRA)
 	{
 		if (COM_FileExists("maps/neh1m4.bsp"))
 		{
@@ -2854,7 +2854,7 @@ void M_Draw (void)
 	{
 		if (scr_con_current)
 		{
-			Draw_ConsoleBackground (vid.height);
+			Draw_ConsoleBackground (vid.conheight);
 			S_ExtraUpdate ();
 		}
 	}

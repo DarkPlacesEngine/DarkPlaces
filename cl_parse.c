@@ -35,7 +35,7 @@ char *svc_strings[128] =
 	"svc_stufftext",		// [string] stuffed into client's console buffer
 						// the string should be \n terminated
 	"svc_setangle",		// [vec3] set the view angle to this absolute value
-	
+
 	"svc_serverinfo",		// [long] version
 						// [string] signon string
 						// [string]..[0]model cache [string]...[0]sounds cache
@@ -94,7 +94,7 @@ void CL_Parse_Init(void)
 {
 	// LordHavoc: added demo_nehahra cvar
 	Cvar_RegisterVariable (&demo_nehahra);
-	if (nehahra)
+	if (gamemode == GAME_NEHAHRA)
 		Cvar_SetValue("demo_nehahra", 1);
 }
 
@@ -174,7 +174,7 @@ void CL_ParseStartSoundPacket(int largesoundindex)
 	
 	for (i=0 ; i<3 ; i++)
 		pos[i] = MSG_ReadCoord ();
- 
+
     S_StartSound (ent, channel, cl.sound_precache[sound_num], pos, volume/255.0, attenuation);
 }       
 
@@ -239,31 +239,90 @@ void CL_KeepaliveMessage (void)
 	SZ_Clear (&cls.message);
 }
 
+//FIXME finish this code!
+#define MAX_STATICLIGHTS 2048
+// tyrlite types
+#define LIGHTFADE_LMINUSX 0 // light, arghlite, others?
+#define LIGHTFADE_LDIVX 1
+#define LIGHTFADE_LDIVX2 2 // hlight
+#define LIGHTFADE_L 3
+#define LIGHTFADE_DEFAULT 999999 // light util not yet identified, switched later
+
+typedef struct
+{
+	int fadetype; // one of the LIGHTFADE_ values
+	int style;
+	vec3_t origin;
+	vec_t radius; // the point at which lighting stops
+	vec3_t direction;
+	vec_t cone; // if non-zero, it is a spot light
+	vec3_t color;
+	vec_t distancescale; // attenuation
+	vec_t lightsubtract; // biasing lighting toward black (hlight feature)
+}
+staticlight_t;
+
+staticlight_t staticlight[MAX_STATICLIGHTS];
+int staticlights;
+
+int r_sunlightenabled;
+vec3_t r_sunlightdirection, r_sunlightcolor;
+vec3_t r_light_ambientcolor;
+
 void CL_ParseEntityLump(char *entdata)
 {
 	char *data;
 	char key[128], value[4096];
 	char wadname[128];
-	int i, j, k;
+	char targetnamebuffer[65536];
+	char *targetname[8192], *target[MAX_STATICLIGHTS], light_target[256];
+	vec3_t targetnameorigin[8192], targetnametemporigin, v;
+	int targets, targetnames, targetnamebufferpos, targetnameorigintofillin;
+	int i, j, k, n;
+	float f1, f2, f3, f4;
+	float ambientlight, ambientcolor[3], sunlight, sunlightdirection[3], sunlightcolor[3];
+	int light_fadetype, light_style, hlight, tyrlite, light_enable;
+	float light_origin[3], light_light, light_distancescale, light_lightcolor[3], light_color[3], light_direction[3], light_cone, light_lightradius;
 	FOG_clear(); // LordHavoc: no fog until set
 	R_SetSkyBox(""); // LordHavoc: no environment mapped sky until set
 	r_farclip.value = 6144; // LordHavoc: default farclip distance
+	r_sunlightenabled = false;
+	staticlights = 0;
 	data = entdata;
 	if (!data)
 		return;
 	data = COM_Parse(data);
 	if (!data)
-		return; // valid exit
+		return; // error
 	if (com_token[0] != '{')
 		return; // error
+	hlight = false;
+	tyrlite = false;
+	ambientlight = 0;
+	ambientcolor[0] = ambientcolor[1] = ambientcolor[2] = 1;
+	sunlight = 0;
+	sunlightcolor[0] = sunlightcolor[1] = sunlightcolor[2] = 1;
+	sunlightdirection[0] = 0;
+	sunlightdirection[1] = 0;
+	sunlightdirection[2] = -1;
+	targets = 0;
+	targetnames = 0;
+	targetnamebufferpos = 0;
+	targetnameorigintofillin = -1;
+	targetnametemporigin[0] = 0;
+	targetnametemporigin[1] = 0;
+	targetnametemporigin[2] = 0;
 	while (1)
 	{
 		data = COM_Parse(data);
 		if (!data)
 			return; // error
 		if (com_token[0] == '}')
-			return; // since we're just parsing the first ent (worldspawn), exit
-		strcpy(key, com_token);
+			break; // end of worldspawn
+		if (com_token[0] == '_')
+			strcpy(key, com_token + 1);
+		else
+			strcpy(key, com_token);
 		while (key[strlen(key)-1] == ' ') // remove trailing spaces
 			key[strlen(key)-1] = 0;
 		data = COM_Parse(data);
@@ -283,10 +342,7 @@ void CL_ParseEntityLump(char *entdata)
 				r_farclip.value = 64;
 		}
 		else if (!strcmp("fog", key))
-		{
 			scanf(value, "%f %f %f %f", &fog_density, &fog_red, &fog_green, &fog_blue);
-			j = 0;
-		}
 		else if (!strcmp("fog_density", key))
 			fog_density = atof(value);
 		else if (!strcmp("fog_red", key))
@@ -325,6 +381,242 @@ void CL_ParseEntityLump(char *entdata)
 				}
 			}
 		}
+		else if (!strcmp("light", key))
+			ambientlight = atof(value);
+		else if (!strcmp("sunlight", key))
+		{
+			sunlight = atof(value);
+			tyrlite = true;
+		}
+		else if (!strcmp("sun_color", key))
+		{
+			if (scanf(value, "%f %f %f", &v[0], &v[1], &v[2]) == 3)
+				VectorCopy(v, sunlightcolor);
+			tyrlite = true;
+		}
+		else if (!strcmp("sun_mangle", key))
+		{
+			if (scanf(value, "%f %f %f", &v[0], &v[1], &v[2]) == 3)
+				AngleVectors(v, sunlightdirection, NULL, NULL);
+			tyrlite = true;
+		}
+		else if (!strcmp("origin", key))
+		{
+			if (scanf(value, "%f %f %f", &v[0], &v[1], &v[2]) == 3)
+			{
+				VectorCopy(v, targetnametemporigin);
+				VectorCopy(v, light_origin);
+			}
+		}
+		else if (!strcmp("targetname", key))
+		{
+			if ((targetnames < 8192) && (strlen(value) + 1 + targetnamebufferpos <= 65536))
+			{
+				targetname[targetnames] = targetnamebuffer + targetnamebufferpos;
+				strcpy(targetnamebuffer + targetnamebufferpos, value);
+				targetnamebufferpos += strlen(value) + 1;
+				targetnameorigintofillin = targetnames++;
+			}
+		}
+	}
+	if (targetnameorigintofillin >= 0)
+		VectorCopy(targetnametemporigin, targetnameorigin[targetnameorigintofillin]);
+
+	if (sunlight)
+	{
+		r_sunlightenabled = true;
+		VectorScale(sunlightcolor, sunlight, r_sunlightcolor);
+		VectorCopy(sunlightdirection, r_sunlightdirection);
+	}
+	VectorScale(ambientcolor, ambientlight, r_light_ambientcolor);
+
+	while(1)
+	{
+		data = COM_Parse(data);
+		if (!data)
+			break; // done
+		if (com_token[0] != '{')
+			break; // error
+		light_light = 0;
+		light_lightcolor[0] = light_lightcolor[1] = light_lightcolor[2] = 1.0f;
+		light_color[0] = light_color[1] = light_color[2] = 1.0f;
+		light_direction[0] = light_direction[1] = light_direction[2] = 0.0f;
+		light_cone = -cos(20*M_PI/180);
+		light_distancescale = 1.0f;
+		light_fadetype = LIGHTFADE_DEFAULT; // replaced later when light util is identified
+		light_style = 0;
+		light_lightradius = 0;
+		light_enable = false;
+		targetnameorigintofillin = -1;
+		targetnametemporigin[0] = 0;
+		targetnametemporigin[1] = 0;
+		targetnametemporigin[2] = 0;
+		while (1)
+		{
+			data = COM_Parse(data);
+			if (!data)
+				return; // error
+			if (com_token[0] == '}')
+				break;
+			if (com_token[0] == '_')
+				strcpy(key, com_token + 1);
+			else
+				strcpy(key, com_token);
+			while (key[strlen(key)-1] == ' ') // remove trailing spaces
+				key[strlen(key)-1] = 0;
+			data = COM_Parse(data);
+			if (!data)
+				return; // error
+			strcpy(value, com_token);
+			if (!strcmp("light", key))
+			{
+				n = scanf(value, "%f %f %f %f", &f1, &f2, &f3, &f4);
+				switch(n)
+				{
+				case 1:
+					// id light, arghlite, tyrlite, others
+					light_light = f1;
+					light_lightcolor[0] = light_lightcolor[1] = light_lightcolor[2] = 1.0f;
+					break;
+				case 3:
+					// hlight specific (supports all 3 light formats, but this one is unique to it)
+					hlight = true;
+					light_light = max(f1, max(f2, f3));
+					light_lightcolor[0] = f1 / light_light;
+					light_lightcolor[1] = f2 / light_light;
+					light_lightcolor[2] = f3 / light_light;
+					break;
+				case 4:
+					// halflife
+					hlight = true; // unless this is a halflife map, probably hlight
+					light_light = f4;
+					light_lightcolor[0] = f1 * (1.0f / 255.0f);
+					light_lightcolor[1] = f1 * (1.0f / 255.0f);
+					light_lightcolor[2] = f1 * (1.0f / 255.0f);
+					break;
+				default:
+					// error
+					break;
+				}
+			}
+			else if (!strcmp("color", key))
+			{
+				n = scanf(value, "%f %f %f", &f1, &f2, &f3);
+				if (n == 3)
+				{
+					light_color[0] = f1;
+					light_color[1] = f2;
+					light_color[2] = f3;
+				}
+				// n != 3 is an error
+			}
+			else if (!strcmp("wait", key))
+				light_distancescale = atof(value);
+			else if (!strcmp("delay", key))
+			{
+				light_fadetype = atoi(value);
+				tyrlite = true;
+			}
+			else if (!strcmp("angle", key))
+				light_cone = -cos(atof(value) * M_PI / 360);
+			else if (!strcmp("mangle", key))
+			{
+				n = scanf(value, "%f %f %f", &v[0], &v[1], &v[2]);
+				if (n == 3)
+					AngleVectors(v, light_direction, NULL, NULL);
+				// n != 3 is an error
+				tyrlite = true;
+			}
+			else if (!strcmp("style", key))
+			{
+				n = atoi(value);
+				if (n >= 0 && n < MAX_LIGHTSTYLES)
+					light_style = n;
+			}
+			else if (!strcmp("lightradius", key))
+			{
+				hlight = true;
+				light_lightradius = atof(value);
+			}
+			else if (!strcmp("classname", key))
+				if (!strncmp(value, "light", 5))
+					light_enable = true;
+			else if (!strcmp("origin", key))
+			{
+				if (scanf(value, "%f %f %f", &v[0], &v[1], &v[2]) == 3)
+					VectorCopy(v, targetnametemporigin);
+			}
+			else if (!strcmp("targetname", key))
+			{
+				if ((targetnames < 8192) && (strlen(value) + 1 + targetnamebufferpos <= 65536))
+				{
+					targetname[targetnames] = targetnamebuffer + targetnamebufferpos;
+					strcpy(targetnamebuffer + targetnamebufferpos, value);
+					targetnamebufferpos += strlen(value) + 1;
+					targetnameorigintofillin = targetnames++;
+				}
+			}
+			else if (!strcmp("target", key))
+				if (strlen(value) < sizeof(light_target))
+					strcpy(light_target, value);
+		}
+		if (targetnameorigintofillin >= 0)
+			VectorCopy(targetnametemporigin, targetnameorigin[targetnameorigintofillin]);
+		if (light_enable && staticlights < MAX_STATICLIGHTS && light_light != 0)
+		{
+			VectorCopy(light_origin, staticlight[staticlights].origin);
+			staticlight[staticlights].color[0] = light_light * light_lightcolor[0] * light_color[0];
+			staticlight[staticlights].color[1] = light_light * light_lightcolor[1] * light_color[1];
+			staticlight[staticlights].color[2] = light_light * light_lightcolor[2] * light_color[2];
+			VectorCopy(light_direction, staticlight[staticlights].direction);
+			staticlight[staticlights].cone = light_cone;
+			staticlight[staticlights].distancescale = light_distancescale;
+			staticlight[staticlights].fadetype = light_fadetype;
+			staticlight[staticlights].style = light_style;
+			if (light_target && (targets < 8192) && (strlen(value) + 1 + targetnamebufferpos <= 65536))
+			{
+				target[staticlights] = targetnamebuffer + targetnamebufferpos;
+				strcpy(targetnamebuffer + targetnamebufferpos, value);
+				targetnamebufferpos += strlen(value) + 1;
+			}
+			else
+				target[staticlights] = NULL;
+			staticlight[staticlights].lightsubtract = 0;
+			if (light_lightradius)
+			{
+				staticlight[staticlights].fadetype = LIGHTFADE_LDIVX2;
+				staticlight[staticlights].lightsubtract = max(staticlight[staticlights].color[0], max(staticlight[staticlights].color[1], staticlight[staticlights].color[2])) * 0.5f / (light_lightradius * light_distancescale * light_lightradius * light_distancescale * (1.0f / 65536.0f) + 1.0f);
+			}
+			staticlights++;
+		}
+	}
+	if (hlbsp)
+		n = LIGHTFADE_LDIVX2;
+	else if (tyrlite)
+		n = LIGHTFADE_LMINUSX;
+	else if (hlight)
+		n = LIGHTFADE_LDIVX2;
+	else
+		n = LIGHTFADE_LMINUSX;
+	for (i = 0;i < staticlights;i++)
+	{
+		if (staticlight[i].fadetype == LIGHTFADE_DEFAULT)
+			staticlight[i].fadetype = n;
+		if (target[i])
+		{
+			for (j = 0;j < targetnames;j++)
+			{
+				if (!strcmp(target[i], targetname[j]))
+				{
+					VectorSubtract(targetnameorigin[j], staticlight[i].origin, v);
+					VectorNormalize(v);
+					VectorCopy(v, staticlight[i].direction);
+					break;
+				}
+			}
+		}
+		if (staticlight[i].direction[0] == 0 && staticlight[i].direction[1] == 0 && staticlight[i].direction[2] == 0)
+			staticlight[i].cone = 0;
 	}
 }
 
@@ -340,7 +632,7 @@ void CL_ParseServerInfo (void)
 	int		nummodels, numsounds;
 	char	model_precache[MAX_MODELS][MAX_QPATH];
 	char	sound_precache[MAX_SOUNDS][MAX_QPATH];
-	
+
 	Con_DPrintf ("Serverinfo packet received.\n");
 //
 // wipe the client_state_t struct
@@ -494,6 +786,11 @@ void CL_ValidateState(entity_state_t *s)
 	{
 		Con_DPrintf("CL_ValidateState: no such frame %i in \"%s\"\n", s->frame, model->name);
 		s->frame = 0;
+	}
+	if (model && s->skin >= model->numskins)
+	{
+		Con_DPrintf("CL_ValidateState: no such skin %i in \"%s\"\n", s->skin, model->name);
+		s->skin = 0;
 	}
 }
 
@@ -812,10 +1109,10 @@ void CL_ParseClientdata (int bits)
 
 	i = MSG_ReadByte ();
 
-	if (standard_quake)
-		cl.stats[STAT_ACTIVEWEAPON] = i;
-	else
+	if (gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE)
 		cl.stats[STAT_ACTIVEWEAPON] = (1<<i);
+	else
+		cl.stats[STAT_ACTIVEWEAPON] = i;
 }
 
 /*
@@ -826,7 +1123,7 @@ CL_ParseStatic
 void CL_ParseStatic (int large)
 {
 	entity_t *ent;
-		
+
 	if (cl.num_statics >= MAX_STATIC_ENTITIES)
 		Host_Error ("Too many static entities");
 	ent = &cl_static_entities[cl.num_statics++];
@@ -836,9 +1133,8 @@ void CL_ParseStatic (int large)
 	ent->render.model = cl.model_precache[ent->state_baseline.modelindex];
 	ent->render.frame = ent->render.frame1 = ent->render.frame2 = ent->state_baseline.frame;
 	ent->render.framelerp = 0;
-	ent->render.lerp_starttime = -1;
 	// make torchs play out of sync
-	ent->render.frame1start = ent->render.frame2start = -(rand() & 32767);
+	ent->render.frame1time = ent->render.frame2time = lhrandom(-10, -1);
 	ent->render.colormap = -1; // no special coloring
 	ent->render.skinnum = ent->state_baseline.skin;
 	ent->render.effects = ent->state_baseline.effects;
@@ -1046,7 +1342,7 @@ void CL_ParseServerMessage (void)
 			
 		case svc_serverinfo:
 			CL_ParseServerInfo ();
-			vid.recalc_refdef = true;	// leave intermission full screen
+//			vid.recalc_refdef = true;	// leave intermission full screen
 			break;
 			
 		case svc_setangle:
@@ -1184,20 +1480,20 @@ void CL_ParseServerMessage (void)
 		case svc_intermission:
 			cl.intermission = 1;
 			cl.completed_time = cl.time;
-			vid.recalc_refdef = true;	// go to full screen
+//			vid.recalc_refdef = true;	// go to full screen
 			break;
 
 		case svc_finale:
 			cl.intermission = 2;
 			cl.completed_time = cl.time;
-			vid.recalc_refdef = true;	// go to full screen
+//			vid.recalc_refdef = true;	// go to full screen
 			SCR_CenterPrint (MSG_ReadString ());			
 			break;
 
 		case svc_cutscene:
 			cl.intermission = 3;
 			cl.completed_time = cl.time;
-			vid.recalc_refdef = true;	// go to full screen
+//			vid.recalc_refdef = true;	// go to full screen
 			SCR_CenterPrint (MSG_ReadString ());			
 			break;
 

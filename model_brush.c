@@ -20,7 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-byte	mod_novis[MAX_MAP_LEAFS/8];
+byte mod_novis[(MAX_MAP_LEAFS + 7)/ 8];
 
 qboolean	hlbsp; // LordHavoc: true if it is a HalfLife BSP file (version 30)
 
@@ -38,7 +38,12 @@ void Mod_BrushInit (void)
 	Cvar_RegisterVariable (&gl_subdivide_size);
 	Cvar_RegisterVariable (&halflifebsp);
 	Cvar_RegisterVariable (&r_novis);
-	memset (mod_novis, 0xff, sizeof(mod_novis));
+	memset(mod_novis, 0xff, sizeof(mod_novis));
+}
+
+void Mod_Brush_SERAddEntity(void)
+{
+	R_Clip_AddBox(currentrenderentity->mins, currentrenderentity->maxs, R_Entity_Callback, currentrenderentity, NULL);
 }
 
 /*
@@ -49,7 +54,7 @@ Mod_PointInLeaf
 mleaf_t *Mod_PointInLeaf (vec3_t p, model_t *model)
 {
 	mnode_t		*node;
-	
+
 //	if (!model || !model->nodes)
 //		Sys_Error ("Mod_PointInLeaf: bad model");
 
@@ -66,7 +71,7 @@ mleaf_t *Mod_PointInLeaf (vec3_t p, model_t *model)
 	mnode_t		*node;
 	float		d;
 	mplane_t	*plane;
-	
+
 	if (!model || !model->nodes)
 		Sys_Error ("Mod_PointInLeaf: bad model");
 
@@ -92,7 +97,7 @@ mleaf_t *Mod_PointInLeaf (vec3_t p, model_t *model)
 Mod_DecompressVis
 ===================
 */
-byte *Mod_DecompressVis (byte *in, model_t *model)
+static byte *Mod_DecompressVis (byte *in, model_t *model)
 {
 	static byte	decompressed[MAX_MAP_LEAFS/8];
 	int		c;
@@ -110,7 +115,7 @@ byte *Mod_DecompressVis (byte *in, model_t *model)
 			*out++ = 0xff;
 			row--;
 		}
-		return decompressed;		
+		return decompressed;
 	}
 	*/
 
@@ -121,7 +126,7 @@ byte *Mod_DecompressVis (byte *in, model_t *model)
 			*out++ = *in++;
 			continue;
 		}
-	
+
 		c = in[1];
 		in += 2;
 		while (c)
@@ -130,7 +135,7 @@ byte *Mod_DecompressVis (byte *in, model_t *model)
 			c--;
 		}
 	} while (out - decompressed < row);
-	
+
 	return decompressed;
 }
 
@@ -187,7 +192,7 @@ void Mod_SetupNoTexture(void)
 Mod_LoadTextures
 =================
 */
-void Mod_LoadTextures (lump_t *l)
+static void Mod_LoadTextures (lump_t *l)
 {
 	int				i, j, k, num, max, altmax, mtwidth, mtheight, *dofs;
 	miptex_t		*dmiptex;
@@ -204,7 +209,7 @@ void Mod_LoadTextures (lump_t *l)
 	m = (dmiptexlump_t *)(mod_base + l->fileofs);
 	
 	m->nummiptex = LittleLong (m->nummiptex);
-	
+
 	loadmodel->numtextures = m->nummiptex;
 	loadmodel->textures = Hunk_AllocName (m->nummiptex * sizeof(*loadmodel->textures), va("%s texture headers", loadname));
 
@@ -227,11 +232,14 @@ void Mod_LoadTextures (lump_t *l)
 				Host_Error ("Texture %s is corrupt or incomplete\n", dmiptex->name);
 			mtdata = (byte *)dmiptex + j;
 		}
-		
+
 		if ((mtwidth & 15) || (mtheight & 15))
 			Host_Error ("Texture %s is not 16 aligned", dmiptex->name);
 		// LordHavoc: rewriting the map texture loader for GLQuake
 		tx = Hunk_AllocName (sizeof(texture_t), va("%s textures", loadname));
+		memset(tx, 0, sizeof(texture_t));
+		tx->anim_total = 0;
+		tx->alternate_anims = NULL;
 		loadmodel->textures[i] = tx;
 
 		// LordHavoc: force all names to lowercase and make sure they are terminated while copying
@@ -394,51 +402,29 @@ void Mod_LoadTextures (lump_t *l)
 		// find the number of frames in the animation
 		memset (anims, 0, sizeof(anims));
 		memset (altanims, 0, sizeof(altanims));
+		max = altmax = 0;
 
-		max = tx->name[1];
-		altmax = 0;
-		if (max >= '0' && max <= '9')
-		{
-			max -= '0';
-			altmax = 0;
-			anims[max] = tx;
-			max++;
-		}
-		else if (max >= 'a' && max <= 'j')
-		{
-			altmax = max - 'a';
-			max = 0;
-			altanims[altmax] = tx;
-			altmax++;
-		}
-		else
-			Host_Error ("Bad animating texture %s", tx->name);
-
-		for (j = i + 1;j < m->nummiptex;j++)
+		for (j = i;j < m->nummiptex;j++)
 		{
 			tx2 = loadmodel->textures[j];
-			if (!tx2 || tx2->name[0] != '+')
-				continue;
-			if (strcmp (tx2->name+2, tx->name+2))
+			if (!tx2 || tx2->name[0] != '+' || strcmp (tx2->name+2, tx->name+2))
 				continue;
 
 			num = tx2->name[1];
 			if (num >= '0' && num <= '9')
-			{
-				num -= '0';
-				anims[num] = tx2;
-				if (num+1 > max)
-					max = num + 1;
-			}
+				anims[num - '0'] = tx2;
 			else if (num >= 'a' && num <= 'j')
-			{
-				num = num - 'a';
-				altanims[num] = tx2;
-				if (num+1 > altmax)
-					altmax = num+1;
-			}
+				altanims[num - 'a'] = tx2;
 			else
 				Host_Error ("Bad animating texture %s", tx->name);
+		}
+
+		for (j = 0;j < 10;j++)
+		{
+			if (anims[j] != NULL)
+				max = j + 1;
+			if (altanims[j] != NULL)
+				altmax = j + 1;
 		}
 
 		// link them all together
@@ -448,21 +434,20 @@ void Mod_LoadTextures (lump_t *l)
 			if (!tx2)
 				Host_Error ("Missing frame %i of %s", j, tx->name);
 			tx2->anim_total = max;
-			if (altmax)
-				tx2->alternate_anims = altanims[0];
+			tx2->alternate_anims = altanims[0]; // NULL if there is no alternate
 			for (k = 0;k < 10;k++)
-				tx2->anim_frames[k] = anims[j];
+				tx2->anim_frames[k] = anims[k];
 		}
+
 		for (j = 0;j < altmax;j++)
 		{
 			tx2 = altanims[j];
 			if (!tx2)
 				Host_Error ("Missing frame %i of %s", j, tx->name);
 			tx2->anim_total = altmax;
-			if (max)
-				tx2->alternate_anims = anims[0];
+			tx2->alternate_anims = anims[0]; // NULL if there is no alternate
 			for (k = 0;k < 10;k++)
-				tx2->anim_frames[k] = altanims[j];
+				tx2->anim_frames[k] = altanims[k];
 		}
 	}
 }
@@ -472,7 +457,7 @@ void Mod_LoadTextures (lump_t *l)
 Mod_LoadLighting
 =================
 */
-void Mod_LoadLighting (lump_t *l)
+static void Mod_LoadLighting (lump_t *l)
 {
 	int i;
 	byte *in, *out, *data;
@@ -531,7 +516,7 @@ void Mod_LoadLighting (lump_t *l)
 Mod_LoadVisibility
 =================
 */
-void Mod_LoadVisibility (lump_t *l)
+static void Mod_LoadVisibility (lump_t *l)
 {
 	if (!l->filelen)
 	{
@@ -547,7 +532,7 @@ void Mod_LoadVisibility (lump_t *l)
 Mod_LoadEntities
 =================
 */
-void Mod_LoadEntities (lump_t *l)
+static void Mod_LoadEntities (lump_t *l)
 {
 	if (!l->filelen)
 	{
@@ -567,7 +552,7 @@ void Mod_LoadEntities (lump_t *l)
 Mod_LoadVertexes
 =================
 */
-void Mod_LoadVertexes (lump_t *l)
+static void Mod_LoadVertexes (lump_t *l)
 {
 	dvertex_t	*in;
 	mvertex_t	*out;
@@ -595,7 +580,7 @@ void Mod_LoadVertexes (lump_t *l)
 Mod_LoadSubmodels
 =================
 */
-void Mod_LoadSubmodels (lump_t *l)
+static void Mod_LoadSubmodels (lump_t *l)
 {
 	dmodel_t	*in;
 	dmodel_t	*out;
@@ -632,7 +617,7 @@ void Mod_LoadSubmodels (lump_t *l)
 Mod_LoadEdges
 =================
 */
-void Mod_LoadEdges (lump_t *l)
+static void Mod_LoadEdges (lump_t *l)
 {
 	dedge_t *in;
 	medge_t *out;
@@ -659,7 +644,7 @@ void Mod_LoadEdges (lump_t *l)
 Mod_LoadTexinfo
 =================
 */
-void Mod_LoadTexinfo (lump_t *l)
+static void Mod_LoadTexinfo (lump_t *l)
 {
 	texinfo_t *in;
 	mtexinfo_t *out;
@@ -683,7 +668,7 @@ void Mod_LoadTexinfo (lump_t *l)
 
 		miptex = LittleLong (in->miptex);
 		out->flags = LittleLong (in->flags);
-	
+
 		if (!loadmodel->textures)
 		{
 			out->texture = &r_notexture_mip;	// checkerboard texture
@@ -710,7 +695,7 @@ CalcSurfaceExtents
 Fills in s->texturemins[] and s->extents[]
 ================
 */
-void CalcSurfaceExtents (msurface_t *s)
+static void CalcSurfaceExtents (msurface_t *s)
 {
 	float	mins[2], maxs[2], val;
 	int		i,j, e;
@@ -722,7 +707,7 @@ void CalcSurfaceExtents (msurface_t *s)
 	maxs[0] = maxs[1] = -99999;
 
 	tex = s->texinfo;
-	
+
 	for (i=0 ; i<s->numedges ; i++)
 	{
 		e = loadmodel->surfedges[s->firstedge+i];
@@ -764,7 +749,7 @@ void GL_SubdivideSurface (msurface_t *fa);
 Mod_LoadFaces
 =================
 */
-void Mod_LoadFaces (lump_t *l)
+static void Mod_LoadFaces (lump_t *l)
 {
 	dface_t		*in;
 	msurface_t 	*out;
@@ -783,13 +768,13 @@ void Mod_LoadFaces (lump_t *l)
 	for ( surfnum=0 ; surfnum<count ; surfnum++, in++, out++)
 	{
 		out->firstedge = LittleLong(in->firstedge);
-		out->numedges = LittleShort(in->numedges);		
+		out->numedges = LittleShort(in->numedges);
 		out->flags = 0;
 
 		planenum = LittleShort(in->planenum);
 		side = LittleShort(in->side);
 		if (side)
-			out->flags |= SURF_PLANEBACK;			
+			out->flags |= SURF_PLANEBACK;
 
 		out->plane = loadmodel->planes + planenum;
 
@@ -807,10 +792,10 @@ void Mod_LoadFaces (lump_t *l)
 		else if (hlbsp) // LordHavoc: HalfLife map (bsp version 30)
 			out->samples = loadmodel->lightdata + i;
 		else // LordHavoc: white lighting (bsp version 29)
-			out->samples = loadmodel->lightdata + (i * 3); 
-		
+			out->samples = loadmodel->lightdata + (i * 3);
+
 	// set the drawing flags flag
-		
+
 //		if (!strncmp(out->texinfo->texture->name,"sky",3))	// sky
 		// LordHavoc: faster check
 		if ((out->texinfo->texture->name[0] == 's' || out->texinfo->texture->name[0] == 'S')
@@ -822,7 +807,7 @@ void Mod_LoadFaces (lump_t *l)
 			GL_SubdivideSurface (out);	// cut up polygon for warps
 			continue;
 		}
-		
+
 //		if (!strncmp(out->texinfo->texture->name,"*",1))		// turbulent
 		if (out->texinfo->texture->name[0] == '*') // LordHavoc: faster check
 		{
@@ -831,7 +816,7 @@ void Mod_LoadFaces (lump_t *l)
 			if (!strncmp(out->texinfo->texture->name,"*lava",5)
 			 || !strncmp(out->texinfo->texture->name,"*teleport",9)
 			 || !strncmp(out->texinfo->texture->name,"*rift",5)) // Scourge of Armagon texture
-				out->flags |= (SURF_DRAWFULLBRIGHT | SURF_DRAWNOALPHA);
+				out->flags |= (SURF_DRAWFULLBRIGHT | SURF_DRAWNOALPHA | SURF_CLIPSOLID);
 			for (i=0 ; i<2 ; i++)
 			{
 				out->extents[i] = 16384;
@@ -840,8 +825,9 @@ void Mod_LoadFaces (lump_t *l)
 			GL_SubdivideSurface (out);	// cut up polygon for warps
 			continue;
 		}
-		
-		out->flags |= SURF_CLIPSOLID;
+
+		if (!out->texinfo->texture->transparent)
+			out->flags |= SURF_CLIPSOLID;
 	}
 }
 
@@ -851,7 +837,7 @@ void Mod_LoadFaces (lump_t *l)
 Mod_SetParent
 =================
 */
-void Mod_SetParent (mnode_t *node, mnode_t *parent)
+static void Mod_SetParent (mnode_t *node, mnode_t *parent)
 {
 	node->parent = parent;
 	if (node->contents < 0)
@@ -865,7 +851,7 @@ void Mod_SetParent (mnode_t *node, mnode_t *parent)
 Mod_LoadNodes
 =================
 */
-void Mod_LoadNodes (lump_t *l)
+static void Mod_LoadNodes (lump_t *l)
 {
 	int			i, j, count, p;
 	dnode_t		*in;
@@ -912,7 +898,7 @@ void Mod_LoadNodes (lump_t *l)
 Mod_LoadLeafs
 =================
 */
-void Mod_LoadLeafs (lump_t *l)
+static void Mod_LoadLeafs (lump_t *l)
 {
 	dleaf_t 	*in;
 	mleaf_t 	*out;
@@ -941,7 +927,7 @@ void Mod_LoadLeafs (lump_t *l)
 		out->firstmarksurface = loadmodel->marksurfaces +
 			LittleShort(in->firstmarksurface);
 		out->nummarksurfaces = LittleShort(in->nummarksurfaces);
-		
+
 		p = LittleLong(in->visofs);
 		if (p == -1)
 			out->compressed_vis = NULL;
@@ -968,7 +954,7 @@ void Mod_LoadLeafs (lump_t *l)
 Mod_LoadClipnodes
 =================
 */
-void Mod_LoadClipnodes (lump_t *l)
+static void Mod_LoadClipnodes (lump_t *l)
 {
 	dclipnode_t *in, *out;
 	int			i, count;
@@ -1065,7 +1051,7 @@ Mod_MakeHull0
 Duplicate the drawing hull structure as a clipping hull
 =================
 */
-void Mod_MakeHull0 (void)
+static void Mod_MakeHull0 (void)
 {
 	mnode_t		*in;
 	dclipnode_t *out;
@@ -1073,7 +1059,7 @@ void Mod_MakeHull0 (void)
 	hull_t		*hull;
 	
 	hull = &loadmodel->hulls[0];	
-	
+
 	in = loadmodel->nodes;
 	count = loadmodel->numnodes;
 	out = Hunk_AllocName ( count*sizeof(*out), va("%s hull0", loadname));
@@ -1096,12 +1082,12 @@ void Mod_MakeHull0 (void)
 Mod_LoadMarksurfaces
 =================
 */
-void Mod_LoadMarksurfaces (lump_t *l)
-{	
+static void Mod_LoadMarksurfaces (lump_t *l)
+{
 	int		i, j, count;
 	short		*in;
 	msurface_t **out;
-	
+
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
@@ -1125,8 +1111,8 @@ void Mod_LoadMarksurfaces (lump_t *l)
 Mod_LoadSurfedges
 =================
 */
-void Mod_LoadSurfedges (lump_t *l)
-{	
+static void Mod_LoadSurfedges (lump_t *l)
+{
 	int		i, count;
 	int		*in, *out;
 	
@@ -1149,13 +1135,13 @@ void Mod_LoadSurfedges (lump_t *l)
 Mod_LoadPlanes
 =================
 */
-void Mod_LoadPlanes (lump_t *l)
+static void Mod_LoadPlanes (lump_t *l)
 {
 	int			i, j;
 	mplane_t	*out;
 	dplane_t 	*in;
 	int			count;
-	
+
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
@@ -1191,7 +1177,7 @@ winding_t;
 NewWinding
 ==================
 */
-winding_t *NewWinding (int points)
+static winding_t *NewWinding (int points)
 {
 	winding_t *w;
 	int size;
@@ -1206,7 +1192,7 @@ winding_t *NewWinding (int points)
 	return w;
 }
 
-void FreeWinding (winding_t *w)
+static void FreeWinding (winding_t *w)
 {
 	qfree (w);
 }
@@ -1216,7 +1202,7 @@ void FreeWinding (winding_t *w)
 BaseWindingForPlane
 =================
 */
-winding_t *BaseWindingForPlane (mplane_t *p)
+static winding_t *BaseWindingForPlane (mplane_t *p)
 {
 	vec3_t	org, vright, vup;
 	winding_t	*w;
@@ -1258,7 +1244,7 @@ If keepon is true, an exactly on-plane winding will be saved, otherwise
 it will be clipped away.
 ==================
 */
-winding_t *ClipWinding (winding_t *in, mplane_t *split, int keepon)
+static winding_t *ClipWinding (winding_t *in, mplane_t *split, int keepon)
 {
 	vec_t	dists[MAX_POINTS_ON_WINDING + 1];
 	int		sides[MAX_POINTS_ON_WINDING + 1];
@@ -1359,7 +1345,7 @@ returned winding will be the input winding.  If on both sides, two
 new windings will be created.
 ==================
 */
-void DivideWinding (winding_t *in, mplane_t *split, winding_t **front, winding_t **back)
+static void DivideWinding (winding_t *in, mplane_t *split, winding_t **front, winding_t **back)
 {
 	vec_t	dists[MAX_POINTS_ON_WINDING + 1];
 	int		sides[MAX_POINTS_ON_WINDING + 1];
@@ -1473,7 +1459,7 @@ static portal_t *portalchain;
 AllocPortal
 ===========
 */
-portal_t *AllocPortal (void)
+static portal_t *AllocPortal (void)
 {
 	portal_t *p;
 	p = qmalloc(sizeof(portal_t));
@@ -1483,7 +1469,7 @@ portal_t *AllocPortal (void)
 	return p;
 }
 
-void Mod_RecursiveRecalcNodeBBox(mnode_t *node)
+static void Mod_RecursiveRecalcNodeBBox(mnode_t *node)
 {
 	// calculate children first
 	if (node->children[0]->contents >= 0)
@@ -1500,7 +1486,7 @@ void Mod_RecursiveRecalcNodeBBox(mnode_t *node)
 	node->maxs[2] = max(node->children[0]->maxs[2], node->children[1]->maxs[2]);
 }
 
-void Mod_FinalizePortals(void)
+static void Mod_FinalizePortals(void)
 {
 	int i, j, numportals, numpoints;
 	portal_t *p, *pnext;
@@ -1643,7 +1629,7 @@ void Mod_FinalizePortals(void)
 AddPortalToNodes
 =============
 */
-void AddPortalToNodes (portal_t *p, mnode_t *front, mnode_t *back)
+static void AddPortalToNodes (portal_t *p, mnode_t *front, mnode_t *back)
 {
 	if (!front)
 		Host_Error ("AddPortalToNodes: NULL front node");
@@ -1667,7 +1653,7 @@ void AddPortalToNodes (portal_t *p, mnode_t *front, mnode_t *back)
 RemovePortalFromNode
 =============
 */
-void RemovePortalFromNodes(portal_t *portal)
+static void RemovePortalFromNodes(portal_t *portal)
 {
 	int i;
 	mnode_t *node;
@@ -1711,7 +1697,7 @@ void RemovePortalFromNodes(portal_t *portal)
 	}
 }
 
-void Mod_RecursiveNodePortals (mnode_t *node)
+static void Mod_RecursiveNodePortals (mnode_t *node)
 {
 	int side;
 	mnode_t *front, *back, *other_node;
@@ -1872,7 +1858,7 @@ void Mod_MakeOutsidePortals(mnode_t *node)
 }
 */
 
-void Mod_MakePortals(void)
+static void Mod_MakePortals(void)
 {
 //	Con_Printf("building portals for %s\n", loadmodel->name);
 
@@ -1941,6 +1927,15 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 //
 	for (i = 0;i < mod->numsubmodels;i++)
 	{
+		int k, l;
+		float dist, modelyawradius, modelradius, *vec;
+		msurface_t *surf;
+
+		mod->normalmins[0] = mod->normalmins[1] = mod->normalmins[2] = 1000000000.0f;
+		mod->normalmaxs[0] = mod->normalmaxs[1] = mod->normalmaxs[2] = -1000000000.0f;
+		modelyawradius = 0;
+		modelradius = 0;
+
 		bm = &mod->submodels[i];
 
 		mod->hulls[0].firstclipnode = bm->headnode[0];
@@ -1953,12 +1948,50 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 		mod->firstmodelsurface = bm->firstface;
 		mod->nummodelsurfaces = bm->numfaces;
 
-		VectorCopy (bm->maxs, mod->maxs);
-		VectorCopy (bm->mins, mod->mins);
+		// LordHavoc: calculate bmodel bounding box rather than trusting what it says
+		for (j = 0, surf = &mod->surfaces[mod->firstmodelsurface];j < mod->nummodelsurfaces;j++, surf++)
+		{
+			for (k = 0;k < surf->numedges;k++)
+			{
+				l = mod->surfedges[k + surf->firstedge];
+				if (l > 0)
+					vec = mod->vertexes[mod->edges[l].v[0]].position;
+				else
+					vec = mod->vertexes[mod->edges[-l].v[1]].position;
+				if (mod->normalmins[0] > vec[0]) mod->normalmins[0] = vec[0];
+				if (mod->normalmins[1] > vec[1]) mod->normalmins[1] = vec[1];
+				if (mod->normalmins[2] > vec[2]) mod->normalmins[2] = vec[2];
+				if (mod->normalmaxs[0] < vec[0]) mod->normalmaxs[0] = vec[0];
+				if (mod->normalmaxs[1] < vec[1]) mod->normalmaxs[1] = vec[1];
+				if (mod->normalmaxs[2] < vec[2]) mod->normalmaxs[2] = vec[2];
+				dist = vec[0]*vec[0]+vec[1]*vec[1];
+				if (modelyawradius < dist)
+					modelyawradius = dist;
+				dist += vec[2]*vec[2];
+				if (modelradius < dist)
+					modelradius = dist;
+			}
+		}
+		modelyawradius = sqrt(modelyawradius);
+		modelradius = sqrt(modelradius);
+		mod->yawmins[0] = mod->yawmins[1] = -(mod->yawmaxs[0] = mod->yawmaxs[1] = modelyawradius);
+		mod->yawmins[2] = mod->normalmins[2];
+		mod->yawmaxs[2] = mod->normalmaxs[2];
+		mod->rotatedmins[0] = mod->rotatedmins[1] = mod->rotatedmins[2] = -modelradius;
+		mod->rotatedmaxs[0] = mod->rotatedmaxs[1] = mod->rotatedmaxs[2] = modelradius;
+//		mod->modelradius = modelradius;
 
-		mod->radius = RadiusFromBounds (mod->mins, mod->maxs);
+//		VectorCopy (bm->maxs, mod->maxs);
+//		VectorCopy (bm->mins, mod->mins);
+
+//		mod->radius = RadiusFromBounds (mod->mins, mod->maxs);
 
 		mod->numleafs = bm->visleafs;
+
+		mod->SERAddEntity = Mod_Brush_SERAddEntity;
+		mod->DrawEarly = R_DrawBrushModel;
+		mod->DrawLate = NULL;
+		mod->DrawShadow = NULL;
 
 		if (isworldmodel && i < (mod->numsubmodels - 1)) // LordHavoc: only register submodels if it is the world (prevents bsp models from replacing world submodels)
 		{	// duplicate the basic information

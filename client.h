@@ -263,17 +263,16 @@ extern client_state_t cl;
 extern	entity_t		cl_entities[MAX_EDICTS];
 extern	entity_t		cl_static_entities[MAX_STATIC_ENTITIES];
 extern	lightstyle_t	cl_lightstyle[MAX_LIGHTSTYLES];
-extern	dlight_t		cl_dlights[MAX_DLIGHTS];
 extern	entity_t		cl_temp_entities[MAX_TEMP_ENTITIES];
 extern	beam_t			cl_beams[MAX_BEAMS];
 
 //=============================================================================
 
+#include "cl_light.h"
+
 //
 // cl_main
 //
-extern void CL_AllocDlight (entity_t *ent, vec3_t org, float radius, float red, float green, float blue, float decay, float lifetime);
-extern void CL_DecayLights (void);
 
 extern void CL_Init (void);
 

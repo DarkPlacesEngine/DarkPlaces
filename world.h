@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -34,9 +34,9 @@ typedef struct
 	vec3_t	endpos;			// final position
 	plane_t	plane;			// surface normal at impact
 	edict_t	*ent;			// entity the surface is on
-	// LordHavoc: added texture and lighting to traceline
-	char	*texturename;
-	vec3_t	light;
+	int		startcontents;	// if not zero, treats this value as empty, and
+							// all others as solid (impact on content change)
+	int		endcontents;	// set to the contents that was hit at the end point
 } trace_t;
 
 
@@ -82,4 +82,17 @@ trace_t SV_Move (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, int type, e
 
 // passedict is explicitly excluded from clipping checks (normally NULL)
 
-extern qboolean SV_RecursiveHullCheck (hull_t *hull, int num, float p1f, float p2f, vec3_t p1, vec3_t p2, trace_t *trace);
+int SV_RecursiveHullCheck (int num, float p1f, float p2f, vec3_t p1, vec3_t p2);
+
+typedef struct
+{
+	hull_t *hull;
+	trace_t *trace;
+	vec3_t start;
+	vec3_t dist;
+}
+RecursiveHullCheckTraceInfo_t;
+
+// LordHavoc: FIXME: this is not thread safe, if threading matters here, pass
+// this as a struct to RecursiveHullCheck, RecursiveHullCheck_Impact, etc...
+extern RecursiveHullCheckTraceInfo_t RecursiveHullCheckInfo;

@@ -14,7 +14,7 @@ static int portal_markid = 0;
 //float viewportalpoints[16*3];
 static float boxpoints[4*3];
 
-int R_ClipPolygonToPlane(float *in, float *out, int inpoints, int maxoutpoints, tinyplane_t *p)
+int Portal_ClipPolygonToPlane(float *in, float *out, int inpoints, int maxoutpoints, tinyplane_t *p)
 {
 	int i, outpoints, prevside, side;
 	float *prevpoint, prevdist, dist, dot;
@@ -67,7 +67,7 @@ begin:
 }
 
 /*
-void R_TriangleToPlane(vec3_t point1, vec3_t point2, vec3_t point3, tinyplane_t *p)
+void Portal_TriangleToPlane(vec3_t point1, vec3_t point2, vec3_t point3, tinyplane_t *p)
 {
 	vec3_t v1, v2;
 	VectorSubtract(point1, point2, v1);
@@ -79,7 +79,7 @@ void R_TriangleToPlane(vec3_t point1, vec3_t point2, vec3_t point3, tinyplane_t 
 }
 */
 
-int R_PortalThroughPortalPlanes(tinyplane_t *clipplanes, int clipnumplanes, float *targpoints, int targnumpoints, float *out, int maxpoints)
+int Portal_PortalThroughPortalPlanes(tinyplane_t *clipplanes, int clipnumplanes, float *targpoints, int targnumpoints, float *out, int maxpoints)
 {
 	int numpoints, i;
 	if (targnumpoints < 3)
@@ -90,7 +90,7 @@ int R_PortalThroughPortalPlanes(tinyplane_t *clipplanes, int clipnumplanes, floa
 	memcpy(&portaltemppoints[0][0][0], targpoints, numpoints * 3 * sizeof(float));
 	for (i = 0;i < clipnumplanes;i++)
 	{
-		numpoints = R_ClipPolygonToPlane(&portaltemppoints[0][0][0], &portaltemppoints[1][0][0], numpoints, 256, clipplanes + i);
+		numpoints = Portal_ClipPolygonToPlane(&portaltemppoints[0][0][0], &portaltemppoints[1][0][0], numpoints, 256, clipplanes + i);
 		if (numpoints < 3)
 			return numpoints;
 		memcpy(&portaltemppoints[0][0][0], &portaltemppoints[1][0][0], numpoints * 3 * sizeof(float));
@@ -117,7 +117,7 @@ int Portal_RecursiveFlowSearch (mleaf_t *leaf, vec3_t eye, int firstclipplane, i
 		// only flow through portals facing away from the viewer
 		if (PlaneDiff(eye, (&p->plane)) < 0)
 		{
-			newpoints = R_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, (float *) p->points, p->numpoints, &portaltemppoints2[0][0], 256);
+			newpoints = Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, (float *) p->points, p->numpoints, &portaltemppoints2[0][0], 256);
 			if (newpoints < 3)
 				continue;
 			else if (firstclipplane + numclipplanes + newpoints > MAXRECURSIVEPORTALPLANES)
@@ -134,7 +134,7 @@ int Portal_RecursiveFlowSearch (mleaf_t *leaf, vec3_t eye, int firstclipplane, i
 				newplanes = &portalplanes[firstclipplane + numclipplanes];
 				for (prev = newpoints - 1, i = 0;i < newpoints;prev = i, i++)
 				{
-//					R_TriangleToPlane(eye, portaltemppoints2[i], portaltemppoints2[prev], newplanes + i);
+//					Portal_TriangleToPlane(eye, portaltemppoints2[i], portaltemppoints2[prev], newplanes + i);
 					VectorSubtract(eye, portaltemppoints2[i], v1);
 					VectorSubtract(portaltemppoints2[prev], portaltemppoints2[i], v2);
 					CrossProduct(v1, v2, newplanes[i].normal);
@@ -217,7 +217,7 @@ int Portal_CheckPolygon(model_t *model, vec3_t eye, float *polypoints, int numpo
 	// calculate the planes, and make sure the polygon can see it's own center
 	for (prev = numpoints - 1, i = 0;i < numpoints;prev = i, i++)
 	{
-//		R_TriangleToPlane(eye, portaltemppoints2[i], portaltemppoints2[prev], newplanes + i);
+//		Portal_TriangleToPlane(eye, portaltemppoints2[i], portaltemppoints2[prev], newplanes + i);
 		VectorSubtract(eye, (&polypoints[i * 3]), v1);
 		VectorSubtract((&polypoints[prev * 3]), (&polypoints[i * 3]), v2);
 		CrossProduct(v1, v2, portalplanes[i].normal);

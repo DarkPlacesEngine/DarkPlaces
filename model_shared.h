@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -69,8 +69,10 @@ typedef struct model_s
 	int			flags2; // engine calculated flags, ones that can not be set in the file
 
 // volume occupied by the model graphics
-	vec3_t		mins, maxs;
-	float		radius;
+	vec3_t		normalmins, normalmaxs; // bounding box at angles '0 0 0'
+	vec3_t		yawmins, yawmaxs; // bounding box if yaw angle is not 0, but pitch and roll are
+	vec3_t		rotatedmins, rotatedmaxs; // bounding box if pitch or roll are used
+//	float		modelradius; // usable at any angles
 
 // solid volume for clipping
 	qboolean	clipbox;
@@ -130,12 +132,19 @@ typedef struct model_s
 	// LordHavoc: useful for sprites and models
 	int			numtris;
 	int			numskins;
+
 	int			skinanimrange[MAX_SKINS*2]; // array of start and length pairs
 	rtexture_t	*skinanim[MAX_SKINS*5]; // texture numbers for each frame (indexed by animrange), note: normal pants shirt glow body (normal contains no shirt/pants/glow colors and body is normal + pants + shirt, but not glow)
+
 	int			ofs_scenes; // offset from Mod_ExtraData(model) memory to array of animscene_t structs
 	// these are used simply to simplify model/sprite/whatever processing and are specific to each type
 	int			ofs_frames; // offset from Mod_ExtraData(model) memory to array of model specific frame structs
 	int			framesize; // size of model specific frame structs
+
+	void (*SERAddEntity)(void);
+	void (*DrawEarly)(void);
+	void (*DrawLate)(void);
+	void (*DrawShadow)(void);
 
 // additional model data
 	cache_user_t	cache;		// only access through Mod_Extradata

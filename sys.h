@@ -60,3 +60,7 @@ void Sys_Sleep (void);
 void Sys_SendKeyEvents (void);
 // Perform Key_Event () callbacks until the input que is empty
 
+// called after Com_InitArgv
+void Sys_Shared_EarlyInit (void);
+// called after Host_init
+void Sys_Shared_LateInit (void);

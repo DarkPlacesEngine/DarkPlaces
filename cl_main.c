@@ -49,7 +49,6 @@ client_state_t	cl;
 entity_t		cl_entities[MAX_EDICTS];
 entity_t		cl_static_entities[MAX_STATIC_ENTITIES];
 lightstyle_t	cl_lightstyle[MAX_LIGHTSTYLES];
-dlight_t		cl_dlights[MAX_DLIGHTS];
 
 int				cl_numvisedicts;
 entity_t		*cl_visedicts[MAX_VISEDICTS];
@@ -72,9 +71,8 @@ void CL_ClearState (void)
 
 	SZ_Clear (&cls.message);
 
-// clear other arrays	
+// clear other arrays
 	memset (cl_entities, 0, sizeof(cl_entities));
-	memset (cl_dlights, 0, sizeof(cl_dlights));
 	memset (cl_lightstyle, 0, sizeof(cl_lightstyle));
 	memset (cl_temp_entities, 0, sizeof(cl_temp_entities));
 	memset (cl_beams, 0, sizeof(cl_beams));
@@ -85,6 +83,44 @@ void CL_ClearState (void)
 		ClearStateToDefault(&cl_entities[i].state_previous);
 		ClearStateToDefault(&cl_entities[i].state_current);
 	}
+}
+
+void CL_LerpUpdate(entity_t *e, int frame, int modelindex)
+{
+	entity_persistent_t *p;
+	entity_render_t *r;
+	p = &e->persistent;
+	r = &e->render;
+
+	if (p->modelindex != modelindex)
+	{
+		// reset all interpolation information
+		p->modelindex = modelindex;
+		p->frame1 = p->frame2 = frame;
+		p->frame1time = p->frame2time = cl.time;
+		p->framelerp = 1;
+	}
+	else if (p->frame2 != frame)
+	{
+		// transition to new frame
+		p->frame1 = p->frame2;
+		p->frame1time = p->frame2time;
+		p->frame2 = frame;
+		p->frame2time = cl.time;
+		p->framelerp = 0;
+	}
+	else
+	{
+		// update transition
+		p->framelerp = (cl.time - p->frame2time) * 10;
+		p->framelerp = bound(0, p->framelerp, 1);
+	}
+
+	r->frame1 = p->frame1;
+	r->frame2 = p->frame2;
+	r->framelerp = p->framelerp;
+	r->frame1time = p->frame1time;
+	r->frame2time = p->frame2time;
 }
 
 /*
@@ -186,7 +222,7 @@ Con_DPrintf ("CL_SignonReply: %i\n", cls.signon);
 		MSG_WriteByte (&cls.message, clc_stringcmd);
 		MSG_WriteString (&cls.message, "prespawn");
 		break;
-		
+
 	case 2:
 		MSG_WriteByte (&cls.message, clc_stringcmd);
 		MSG_WriteString (&cls.message, va("name \"%s\"\n", cl_name.string));
@@ -285,83 +321,6 @@ void CL_PrintEntities_f (void)
 
 /*
 ===============
-CL_AllocDlight
-
-===============
-*/
-void CL_AllocDlight (entity_t *ent, vec3_t org, float radius, float red, float green, float blue, float decay, float lifetime)
-{
-	int		i;
-	dlight_t	*dl;
-
-// first look for an exact key match
-	if (ent)
-	{
-		dl = cl_dlights;
-		for (i = 0;i < MAX_DLIGHTS;i++, dl++)
-			if (dl->ent == ent)
-				goto dlightsetup;
-	}
-
-// then look for anything else
-	dl = cl_dlights;
-	for (i = 0;i < MAX_DLIGHTS;i++, dl++)
-		if (!dl->radius)
-			goto dlightsetup;
-
-	// unable to find one
-	return;
-
-dlightsetup:
-	memset (dl, 0, sizeof(*dl));
-	dl->ent = ent;
-	VectorCopy(org, dl->origin);
-	dl->radius = radius;
-	dl->color[0] = red;
-	dl->color[1] = green;
-	dl->color[2] = blue;
-	dl->decay = decay;
-	dl->die = cl.time + lifetime;
-}
-
-
-/*
-===============
-CL_DecayLights
-
-===============
-*/
-void CL_DecayLights (void)
-{
-	int			i;
-	dlight_t	*dl;
-	float		time;
-	
-	time = cl.time - cl.oldtime;
-
-	c_dlights = 0;
-	dl = cl_dlights;
-	for (i=0 ; i<MAX_DLIGHTS ; i++, dl++)
-	{
-		if (!dl->radius)
-			continue;
-		if (dl->die < cl.time)
-		{
-			dl->radius = 0;
-			continue;
-		}
-
-		c_dlights++; // count every dlight in use
-
-		dl->radius -= time*dl->decay;
-		if (dl->radius < 0)
-			dl->radius = 0;
-	}
-}
-
-
-/*
-===============
 CL_LerpPoint
 
 Determines the fraction between the last two messages that the objects
@@ -432,14 +391,9 @@ float CL_EntityLerpPoint (entity_t *ent)
 
 void CL_RelinkStaticEntities(void)
 {
-	entity_t *ent, *endent;
-	if (cl.num_statics > MAX_VISEDICTS)
-		Host_Error("CL_RelinkStaticEntities: cl.num_statics > MAX_VISEDICTS??\n");
-
-	ent = cl_static_entities;
-	endent = ent + cl.num_statics;
-	for (;ent < endent;ent++)
-		cl_visedicts[cl_numvisedicts++] = ent;
+	int i;
+	for (i = 0;i < cl.num_statics && cl_numvisedicts < MAX_VISEDICTS;i++)
+		cl_visedicts[cl_numvisedicts++] = &cl_static_entities[i];
 }
 
 /*
@@ -448,43 +402,18 @@ CL_RelinkEntities
 ===============
 */
 void R_RocketTrail2 (vec3_t start, vec3_t end, int color, entity_t *ent);
-void CL_RelinkEntities (void)
+void CL_RelinkNetworkEntities()
 {
 	entity_t	*ent;
 	int			i, j, glowcolor, effects;
-	float		frac, f, d, bobjrotate/*, bobjoffset*/, dlightradius, glowsize;
-	vec3_t		oldorg, delta, dlightcolor;
+	float		f, d, bobjrotate/*, bobjoffset*/, dlightradius, glowsize;
+	vec3_t		oldorg, neworg, delta, dlightcolor;
 
-// determine partial update time	
-	frac = CL_LerpPoint ();
-
-	cl_numvisedicts = 0;
+	bobjrotate = ANGLEMOD(100*cl.time);
+//	bobjoffset = cos(180 * cl.time * M_PI / 180) * 4.0f + 4.0f;
 
 	CL_RelinkStaticEntities();
 
-//
-// interpolate player info
-//
-	for (i = 0;i < 3;i++)
-		cl.velocity[i] = cl.mvelocity[1][i] + frac * (cl.mvelocity[0][i] - cl.mvelocity[1][i]);
-
-	if (cls.demoplayback)
-	{
-	// interpolate the angles
-		for (j = 0;j < 3;j++)
-		{
-			d = cl.mviewangles[0][j] - cl.mviewangles[1][j];
-			if (d > 180)
-				d -= 360;
-			else if (d < -180)
-				d += 360;
-			cl.viewangles[j] = cl.mviewangles[1][j] + frac*d;
-		}
-	}
-	
-	bobjrotate = ANGLEMOD(100*cl.time);
-//	bobjoffset = cos(180 * cl.time * M_PI / 180) * 4.0f + 4.0f;
-	
 // start on the entity after the world
 	for (i = 1, ent = cl_entities + 1;i < MAX_EDICTS /*cl.num_entities*/;i++, ent++)
 	{
@@ -492,33 +421,27 @@ void CL_RelinkEntities (void)
 		if (!ent->state_current.active)
 			continue;
 
-		VectorCopy (ent->render.origin, oldorg);
+		VectorCopy(ent->persistent.trail_origin, oldorg);
 
 		if (!ent->state_previous.active)
 		{
 			// only one state available
-			VectorCopy (ent->state_current.origin, ent->render.origin);
+			VectorCopy (ent->state_current.origin, neworg);
 			VectorCopy (ent->state_current.angles, ent->render.angles);
-//			Con_Printf(" %i", i);
 		}
 		else
 		{
 			// if the delta is large, assume a teleport and don't lerp
-			f = CL_EntityLerpPoint(ent);
-			if (f < 1)
-			{
-				for (j = 0;j < 3;j++)
-				{
-					delta[j] = ent->state_current.origin[j] - ent->state_previous.origin[j];
-					// LordHavoc: increased lerp tolerance from 100 to 200
-					if (delta[j] > 200 || delta[j] < -200)
-						f = 1;
-				}
-			}
+			VectorSubtract(ent->state_current.origin, ent->state_previous.origin, delta);
+			// LordHavoc: increased tolerance from 100 to 200
+			if (DotProduct(delta, delta) > 200*200)
+				f = 1;
+			else
+				f = CL_EntityLerpPoint(ent);
 			if (f >= 1)
 			{
 				// no interpolation
-				VectorCopy (ent->state_current.origin, ent->render.origin);
+				VectorCopy (ent->state_current.origin, neworg);
 				VectorCopy (ent->state_current.angles, ent->render.angles);
 			}
 			else
@@ -526,7 +449,7 @@ void CL_RelinkEntities (void)
 				// interpolate the origin and angles
 				for (j = 0;j < 3;j++)
 				{
-					ent->render.origin[j] = ent->state_previous.origin[j] + f*delta[j];
+					neworg[j] = ent->state_previous.origin[j] + f*delta[j];
 
 					d = ent->state_current.angles[j] - ent->state_previous.angles[j];
 					if (d > 180)
@@ -538,6 +461,12 @@ void CL_RelinkEntities (void)
 			}
 		}
 
+		VectorCopy (neworg, ent->persistent.trail_origin);
+		// persistent.modelindex will be updated by CL_LerpUpdate
+		if (ent->state_current.modelindex != ent->persistent.modelindex)
+			VectorCopy(neworg, oldorg);
+
+		VectorCopy (neworg, ent->render.origin);
 		ent->render.flags = ent->state_current.flags;
 		ent->render.effects = effects = ent->state_current.effects;
 		ent->render.model = cl.model_precache[ent->state_current.modelindex];
@@ -555,6 +484,10 @@ void CL_RelinkEntities (void)
 		ent->render.colormod[1] = (float) ((ent->state_current.colormod >> 2) & 7) * (1.0f / 7.0f);
 		ent->render.colormod[2] = (float) (ent->state_current.colormod & 3) * (1.0f / 3.0f);
 
+		// update interpolation info
+		CL_LerpUpdate(ent, ent->state_current.frame, ent->state_current.modelindex);
+
+		// handle effects now...
 		dlightradius = 0;
 		dlightcolor[0] = 0;
 		dlightcolor[1] = 0;
@@ -567,13 +500,14 @@ void CL_RelinkEntities (void)
 				R_EntityParticles (ent);
 			if (effects & EF_MUZZLEFLASH)
 			{
-				vec3_t v;
+				vec3_t v, v2;
 
 				AngleVectors (ent->render.angles, v, NULL, NULL);
 
-				v[0] = v[0] * 18 + ent->render.origin[0];
-				v[1] = v[1] * 18 + ent->render.origin[1];
-				v[2] = v[2] * 18 + ent->render.origin[2] + 16;
+				v2[0] = v[0] * 18 + neworg[0];
+				v2[1] = v[1] * 18 + neworg[1];
+				v2[2] = v[2] * 18 + neworg[2] + 16;
+				TraceLine(neworg, v2, v, NULL, 0);
 
 				CL_AllocDlight (NULL, v, 100, 1, 1, 1, 0, 0.1);
 			}
@@ -602,14 +536,27 @@ void CL_RelinkEntities (void)
 				dlightcolor[1] +=  20.0f;
 				dlightcolor[2] += 200.0f;
 			}
-			else if (effects & EF_FLAME)
+			if (effects & EF_FLAME)
 			{
 				if (ent->render.model)
 				{
 					vec3_t mins, maxs;
 					int temp;
-					VectorAdd(ent->render.origin, ent->render.model->mins, mins);
-					VectorAdd(ent->render.origin, ent->render.model->maxs, maxs);
+					if (ent->render.angles[0] || ent->render.angles[2])
+					{
+						VectorAdd(neworg, ent->render.model->rotatedmins, mins);
+						VectorAdd(neworg, ent->render.model->rotatedmaxs, maxs);
+					}
+					else if (ent->render.angles[1])
+					{
+						VectorAdd(neworg, ent->render.model->yawmins, mins);
+						VectorAdd(neworg, ent->render.model->yawmaxs, maxs);
+					}
+					else
+					{
+						VectorAdd(neworg, ent->render.model->normalmins, mins);
+						VectorAdd(neworg, ent->render.model->normalmaxs, maxs);
+					}
 					// how many flames to make
 					temp = (int) (cl.time * 300) - (int) (cl.oldtime * 300);
 					R_FlameCube(mins, maxs, temp);
@@ -633,13 +580,13 @@ void CL_RelinkEntities (void)
 			if (ent->state_previous.active)
 			{
 				if (ent->render.model->flags & EF_GIB)
-					R_RocketTrail (oldorg, ent->render.origin, 2, ent);
+					R_RocketTrail (oldorg, neworg, 2, ent);
 				else if (ent->render.model->flags & EF_ZOMGIB)
-					R_RocketTrail (oldorg, ent->render.origin, 4, ent);
+					R_RocketTrail (oldorg, neworg, 4, ent);
 				else if (ent->render.model->flags & EF_TRACER)
-					R_RocketTrail (oldorg, ent->render.origin, 3, ent);
+					R_RocketTrail (oldorg, neworg, 3, ent);
 				else if (ent->render.model->flags & EF_TRACER2)
-					R_RocketTrail (oldorg, ent->render.origin, 5, ent);
+					R_RocketTrail (oldorg, neworg, 5, ent);
 				else if (ent->render.model->flags & EF_ROCKET)
 				{
 					R_RocketTrail (oldorg, ent->render.origin, 0, ent);
@@ -650,12 +597,12 @@ void CL_RelinkEntities (void)
 				else if (ent->render.model->flags & EF_GRENADE)
 				{
 					if (ent->render.alpha == -1) // LordHavoc: Nehahra dem compatibility
-						R_RocketTrail (oldorg, ent->render.origin, 7, ent);
+						R_RocketTrail (oldorg, neworg, 7, ent);
 					else
-						R_RocketTrail (oldorg, ent->render.origin, 1, ent);
+						R_RocketTrail (oldorg, neworg, 1, ent);
 				}
 				else if (ent->render.model->flags & EF_TRACER3)
-					R_RocketTrail (oldorg, ent->render.origin, 6, ent);
+					R_RocketTrail (oldorg, neworg, 6, ent);
 			}
 		}
 		// LordHavoc: customizable glow
@@ -668,17 +615,18 @@ void CL_RelinkEntities (void)
 		}
 		// LordHavoc: customizable trail
 		if (ent->render.flags & RENDER_GLOWTRAIL)
-			R_RocketTrail2 (oldorg, ent->render.origin, glowcolor, ent);
+			R_RocketTrail2 (oldorg, neworg, glowcolor, ent);
 
 		if (dlightcolor[0] || dlightcolor[1] || dlightcolor[2])
 		{
 			vec3_t vec;
 			dlightradius = VectorLength(dlightcolor);
 			d = 1.0f / dlightradius;
-			VectorCopy(ent->render.origin, vec);
+			VectorCopy(neworg, vec);
+			// hack to make glowing player light shine on their gun
 			if (i == cl.viewentity && !chase_active.value)
 				vec[2] += 30;
-			CL_AllocDlight (ent, vec, dlightradius, dlightcolor[0] * d, dlightcolor[1] * d, dlightcolor[2] * d, 0, 0);
+			CL_AllocDlight (&ent->render, vec, dlightradius, dlightcolor[0] * d, dlightcolor[1] * d, dlightcolor[2] * d, 0, 0);
 		}
 
 		if (chase_active.value)
@@ -699,7 +647,40 @@ void CL_RelinkEntities (void)
 		if (cl_numvisedicts < MAX_VISEDICTS)
 			cl_visedicts[cl_numvisedicts++] = ent;
 	}
-//	Con_Printf("\n");
+}
+
+void CL_LerpPlayerVelocity (void)
+{
+	int i;
+	float frac, d;
+
+	// fraction from previous network update to current
+	frac = CL_LerpPoint ();
+
+	for (i = 0;i < 3;i++)
+		cl.velocity[i] = cl.mvelocity[1][i] + frac * (cl.mvelocity[0][i] - cl.mvelocity[1][i]);
+
+	if (cls.demoplayback)
+	{
+		// interpolate the angles
+		for (i = 0;i < 3;i++)
+		{
+			d = cl.mviewangles[0][i] - cl.mviewangles[1][i];
+			if (d > 180)
+				d -= 360;
+			else if (d < -180)
+				d += 360;
+			cl.viewangles[i] = cl.mviewangles[1][i] + frac*d;
+		}
+	}
+}
+
+void CL_RelinkEntities (void)
+{
+	cl_numvisedicts = 0;
+
+	CL_LerpPlayerVelocity();
+	CL_RelinkNetworkEntities();
 }
 
 

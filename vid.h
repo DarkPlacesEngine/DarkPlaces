@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -19,17 +19,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // vid.h -- video driver defs
 
-typedef struct vrect_s
-{
-	int				x,y,width,height;
-	struct vrect_s	*pnext;
-} vrect_t;
-
 typedef struct
 {
-	int		width;		
-	int		height;
-	int		recalc_refdef;	// if true, recalc vid-based stuff
+	// these are set with GL_BeginRendering and can change from frame to frame
+	int		realx;
+	int		realy;
+	int		realwidth;
+	int		realheight;
+//	int		recalc_refdef;	// if true, recalc vid-based stuff
+
 	int		conwidth;
 	int		conheight;
 } viddef_t;

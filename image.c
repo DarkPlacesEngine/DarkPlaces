@@ -4,6 +4,18 @@
 int		image_width;
 int		image_height;
 
+void Image_GammaRemapRGB(byte *in, byte *out, int pixels, byte *gammar, byte *gammag, byte *gammab)
+{
+	while (pixels--)
+	{
+		out[0] = gammar[in[0]];
+		out[1] = gammag[in[1]];
+		out[2] = gammab[in[2]];
+		in += 3;
+		out += 3;
+	}
+}
+
 // note: pal must be 32bit color
 void Image_Copy8bitRGBA(byte *in, byte *out, int pixels, int *pal)
 {

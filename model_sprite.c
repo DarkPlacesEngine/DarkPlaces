@@ -56,16 +56,19 @@ void Mod_Sprite_StripExtension(char *in, char *out)
 Mod_LoadSpriteFrame
 =================
 */
-void * Mod_LoadSpriteFrame (void * pin, mspriteframe_t *frame, int framenum, int bytesperpixel, byte *palette)
+void * Mod_LoadSpriteFrame (void * pin, mspriteframe_t *frame, int framenum, int bytesperpixel, byte *palette, float *modelradius)
 {
 	dspriteframe_t		*pinframe;
 	mspriteframe_t		*pspriteframe;
+	float				dist;
 	int					i, width, height, size, origin[2];
 	char				name[256], tempname[256];
 	byte				*pixbuf, *pixel, *inpixel;
 
 	pinframe = (dspriteframe_t *)pin;
 
+	origin[0] = LittleLong (pinframe->origin[0]);
+	origin[1] = LittleLong (pinframe->origin[1]);
 	width = LittleLong (pinframe->width);
 	height = LittleLong (pinframe->height);
 	size = width * height * bytesperpixel;
@@ -74,15 +77,17 @@ void * Mod_LoadSpriteFrame (void * pin, mspriteframe_t *frame, int framenum, int
 
 	memset (pspriteframe, 0, sizeof (mspriteframe_t));
 
-//	pspriteframe->width = width;
-//	pspriteframe->height = height;
-	origin[0] = LittleLong (pinframe->origin[0]);
-	origin[1] = LittleLong (pinframe->origin[1]);
-
+	pspriteframe->left = origin[0];
+	pspriteframe->right = origin[0] + width;
 	pspriteframe->up = origin[1];
 	pspriteframe->down = origin[1] - height;
-	pspriteframe->left = origin[0];
-	pspriteframe->right = width + origin[0];
+
+	dist = pspriteframe->left*pspriteframe->left+pspriteframe->up*pspriteframe->up;
+	if (*modelradius < dist)
+		*modelradius = dist;
+	dist = pspriteframe->right*pspriteframe->right+pspriteframe->down*pspriteframe->down;
+	if (*modelradius < dist)
+		*modelradius = dist;
 
 	Mod_Sprite_StripExtension(loadmodel->name, tempname);
 	sprintf (name, "%s_%i", tempname, framenum);
@@ -151,7 +156,7 @@ void *Mod_LoadSpriteGroup (void * pin, mspriteframe_t *frame, int numframes, int
 // this actually handles both quake sprite and darkplaces sprite32
 void Mod_LoadQuakeSprite (model_t *mod, void *buffer)
 {
-	int					i, j, version, numframes, realframes, size, bytesperpixel, start, end, total, maxwidth, maxheight;
+	int					i, j, version, numframes, realframes, size, bytesperpixel, start, end, total;
 	dsprite_t			*pin;
 	msprite_t			*psprite;
 	dspriteframetype_t	*pframetype;
@@ -159,6 +164,9 @@ void Mod_LoadQuakeSprite (model_t *mod, void *buffer)
 	animscene_t			*animscenes;
 	mspriteframe_t		*frames;
 	dspriteframe_t		**framedata;
+	float				modelradius;
+
+	modelradius = 0;
 
 	start = Hunk_LowMark ();
 
@@ -191,16 +199,16 @@ void Mod_LoadQuakeSprite (model_t *mod, void *buffer)
 //	mod->cache.data = psprite;
 
 	psprite->type = LittleLong (pin->type);
-	maxwidth = LittleLong (pin->width);
-	maxheight = LittleLong (pin->height);
+//	maxwidth = LittleLong (pin->width);
+//	maxheight = LittleLong (pin->height);
 //	psprite->beamlength = LittleFloat (pin->beamlength);
 	mod->synctype = LittleLong (pin->synctype);
 //	psprite->numframes = numframes;
 
-	mod->mins[0] = mod->mins[1] = -maxwidth/2;
-	mod->maxs[0] = mod->maxs[1] = maxwidth/2;
-	mod->mins[2] = -maxheight/2;
-	mod->maxs[2] = maxheight/2;
+//	mod->mins[0] = mod->mins[1] = -maxwidth/2;
+//	mod->maxs[0] = mod->maxs[1] = maxwidth/2;
+//	mod->mins[2] = -maxheight/2;
+//	mod->maxs[2] = maxheight/2;
 
 //
 // load the frames
@@ -262,7 +270,7 @@ void Mod_LoadQuakeSprite (model_t *mod, void *buffer)
 	{
 		for (j = 0;j < animscenes[i].framecount;j++)
 		{
-			Mod_LoadSpriteFrame (framedata[realframes], frames + realframes, i, bytesperpixel, (byte *)&d_8to24table);
+			Mod_LoadSpriteFrame (framedata[realframes], frames + realframes, i, bytesperpixel, (byte *)&d_8to24table, &modelradius);
 			realframes++;
 		}
 	}
@@ -272,6 +280,14 @@ void Mod_LoadQuakeSprite (model_t *mod, void *buffer)
 	qfree(framedata);
 
 	mod->type = mod_sprite;
+
+	modelradius = sqrt(modelradius);
+	for (i = 0;i < 3;i++)
+	{
+		mod->normalmins[i] = mod->yawmins[i] = mod->rotatedmins[i] = -modelradius;
+		mod->normalmaxs[i] = mod->yawmaxs[i] = mod->rotatedmaxs[i] = modelradius;
+	}
+//	mod->modelradius = modelradius;
 
 // move the complete, relocatable sprite model to the cache
 	end = Hunk_LowMark ();
@@ -287,7 +303,7 @@ void Mod_LoadQuakeSprite (model_t *mod, void *buffer)
 
 void Mod_LoadHLSprite (model_t *mod, void *buffer)
 {
-	int					i, j, numframes, realframes, size, start, end, total, maxwidth, maxheight, rendermode;
+	int					i, j, numframes, realframes, size, start, end, total, rendermode;
 	byte				palette[256][4], *in;
 	dspritehl_t			*pin;
 	msprite_t			*psprite;
@@ -296,6 +312,9 @@ void Mod_LoadHLSprite (model_t *mod, void *buffer)
 	animscene_t			*animscenes;
 	mspriteframe_t		*frames;
 	dspriteframe_t		**framedata;
+	float				modelradius;
+
+	modelradius = 0;
 
 	start = Hunk_LowMark ();
 
@@ -311,15 +330,15 @@ void Mod_LoadHLSprite (model_t *mod, void *buffer)
 	psprite = Hunk_AllocName (sizeof(msprite_t), va("%s info", loadname));
 
 	psprite->type = LittleLong (pin->type);
-	maxwidth = LittleLong (pin->width);
-	maxheight = LittleLong (pin->height);
+//	maxwidth = LittleLong (pin->width);
+//	maxheight = LittleLong (pin->height);
 	mod->synctype = LittleLong (pin->synctype);
 	rendermode = pin->rendermode;
 
-	mod->mins[0] = mod->mins[1] = -maxwidth/2;
-	mod->maxs[0] = mod->maxs[1] = maxwidth/2;
-	mod->mins[2] = -maxheight/2;
-	mod->maxs[2] = maxheight/2;
+//	mod->mins[0] = mod->mins[1] = -maxwidth/2;
+//	mod->maxs[0] = mod->maxs[1] = maxwidth/2;
+//	mod->mins[2] = -maxheight/2;
+//	mod->maxs[2] = maxheight/2;
 
 //
 // load the frames
@@ -434,7 +453,7 @@ void Mod_LoadHLSprite (model_t *mod, void *buffer)
 	{
 		for (j = 0;j < animscenes[i].framecount;j++)
 		{
-			Mod_LoadSpriteFrame (framedata[realframes], frames + realframes, i, 1, &palette[0][0]);
+			Mod_LoadSpriteFrame (framedata[realframes], frames + realframes, i, 1, &palette[0][0], &modelradius);
 			realframes++;
 		}
 	}
@@ -444,6 +463,13 @@ void Mod_LoadHLSprite (model_t *mod, void *buffer)
 	qfree(framedata);
 
 	mod->type = mod_sprite;
+
+	modelradius = sqrt(modelradius);
+	for (i = 0;i < 3;i++)
+	{
+		mod->normalmins[i] = mod->yawmins[i] = mod->rotatedmins[i] = -modelradius;
+		mod->normalmaxs[i] = mod->yawmaxs[i] = mod->rotatedmaxs[i] = modelradius;
+	}
 
 // move the complete, relocatable sprite model to the cache
 	end = Hunk_LowMark ();
@@ -455,6 +481,11 @@ void Mod_LoadHLSprite (model_t *mod, void *buffer)
 	memcpy (mod->cache.data, psprite, total);
 
 	Hunk_FreeToLowMark (start);
+}
+
+void Mod_Sprite_SERAddEntity(void)
+{
+	R_ClipSprite();
 }
 
 
@@ -480,4 +511,8 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 		Host_Error ("Mod_LoadSpriteModel: %s has wrong version number (%i should be 1 (quake) or 32 (sprite32) or 2 (halflife)", mod->name, version);
 		break;
 	}
+	mod->SERAddEntity = Mod_Sprite_SERAddEntity;
+	mod->DrawEarly = R_DrawSpriteModel;
+	mod->DrawLate = NULL;
+	mod->DrawShadow = NULL;
 }

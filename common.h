@@ -213,7 +213,15 @@ int COM_FileExists(char *filename);
 
 extern	struct cvar_s	registered;
 
-extern qboolean		standard_quake, rogue, hipnotic, nehahra;
+#define GAME_NORMAL 0
+#define GAME_HIPNOTIC 1
+#define GAME_ROGUE 2
+#define GAME_NEHAHRA 3
+#define GAME_FIENDARENA 4
+#define GAME_ZYMOTIC 5
+
+extern int gamemode;
+extern char *gamename;
 
 // LordHavoc: useful...
 extern void COM_ToLowerString(char *in, char *out);

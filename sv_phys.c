@@ -356,6 +356,8 @@ int SV_FlyMove (edict_t *ent, float time, trace_t *steptrace)
 				return 7;
 			}
 			CrossProduct (planes[0], planes[1], dir);
+			// LordHavoc: thanks to taniwha of QuakeForge for pointing out this fix for slowed falling in corners
+			VectorNormalize(dir);
 			d = DotProduct (dir, ent->v.velocity);
 			VectorScale (dir, d, ent->v.velocity);
 		}

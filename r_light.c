@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -49,7 +49,7 @@ R_AnimateLight
 void R_AnimateLight (void)
 {
 	int			i,j,k;
-	
+
 //
 // light animations
 // 'm' is normal light, 'a' is no light, 'z' is double bright
@@ -131,7 +131,7 @@ loc0:
 	surf = cl.worldmodel->surfaces + node->firstsurface;
 	for (i=0 ; i<node->numsurfaces ; i++, surf++)
 	{
-		int d;
+		int d, impacts, impactt;
 		float dist, dist2, impact[3];
 		if (surf->visframe != r_framecount)
 			continue;
@@ -150,6 +150,22 @@ loc0:
 		impact[1] = light->origin[1] - surf->plane->normal[1] * dist;
 		impact[2] = light->origin[2] - surf->plane->normal[2] * dist;
 
+		impacts = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
+
+		d = bound(0, impacts, surf->extents[0] + 16) - impacts;
+		dist2 += d * d;
+		if (dist2 > maxdist)
+			continue;
+
+		impactt = DotProduct (impact, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3] - surf->texturemins[1];
+
+		d = bound(0, impactt, surf->extents[1] + 16) - impactt;
+		dist2 += d * d;
+		if (dist2 > maxdist)
+			continue;
+
+
+		/*
 		d = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
 
 		if (d < 0)
@@ -187,6 +203,7 @@ loc0:
 					continue;
 			}
 		}
+		*/
 
 		if (surf->dlightframe != r_framecount) // not dynamic until now
 		{
@@ -280,6 +297,7 @@ void R_VisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex
 				{
 					if (c & (1<<i))
 					{
+						// warning to the clumsy: numleafs is one less than it should be, it only counts leafs with vis bits (skips leaf 0)
 						leafnum = (k << 3)+i+1;
 						if (leafnum > model->numleafs)
 							return;
@@ -317,7 +335,7 @@ void R_VisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex
 								// LordHavoc: make sure it is infront of the surface and not too far away
 								if (dist < radius && (dist > -0.25f || ((surf->flags & SURF_LIGHTBOTHSIDES) && dist > -radius)))
 								{
-									int d;
+									int d, impacts, impactt;
 									float dist2, impact[3];
 
 									dist2 = dist * dist;
@@ -326,6 +344,21 @@ void R_VisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex
 									impact[1] = light->origin[1] - surf->plane->normal[1] * dist;
 									impact[2] = light->origin[2] - surf->plane->normal[2] * dist;
 
+									impacts = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
+
+									d = bound(0, impacts, surf->extents[0] + 16) - impacts;
+									dist2 += d * d;
+									if (dist2 > maxdist)
+										continue;
+
+									impactt = DotProduct (impact, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3] - surf->texturemins[1];
+
+									d = bound(0, impactt, surf->extents[1] + 16) - impactt;
+									dist2 += d * d;
+									if (dist2 > maxdist)
+										continue;
+
+									/*
 									d = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
 
 									if (d < 0)
@@ -363,6 +396,7 @@ void R_VisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex
 												continue;
 										}
 									}
+									*/
 
 									if (surf->dlightframe != r_framecount) // not dynamic until now
 									{
@@ -379,7 +413,7 @@ void R_VisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex
 				k++;
 				continue;
 			}
-		
+
 			k += *in++;
 		}
 	}
@@ -624,10 +658,10 @@ loc0:
 
 				if (ds < surf->texturemins[0] || dt < surf->texturemins[1])
 					continue;
-				
+
 				ds -= surf->texturemins[0];
 				dt -= surf->texturemins[1];
-				
+
 				if (ds > surf->extents[0] || dt > surf->extents[1])
 					continue;
 
@@ -730,10 +764,11 @@ void R_DynamicLightPoint(vec3_t color, vec3_t org, int *dlightbits)
 	}
 }
 
-void R_CompleteLightPoint (vec3_t color, vec3_t p, int dynamic)
+void R_CompleteLightPoint (vec3_t color, vec3_t p, int dynamic, mleaf_t *leaf)
 {
-	mleaf_t *leaf;
-	leaf = Mod_PointInLeaf(p, cl.worldmodel);
+	if (leaf == NULL)
+		leaf = Mod_PointInLeaf(p, cl.worldmodel);
+
 	if (leaf->contents == CONTENTS_SOLID)
 	{
 		color[0] = color[1] = color[2] = 0;
@@ -770,7 +805,7 @@ void R_ModelLightPoint (vec3_t color, vec3_t p, int *dlightbits)
 		dlightbits[0] = dlightbits[1] = dlightbits[2] = dlightbits[3] = dlightbits[4] = dlightbits[5] = dlightbits[6] = dlightbits[7] = 0;
 		return;
 	}
-	
+
 	color[0] = color[1] = color[2] = r_ambient.value * 2.0f;
 	RecursiveLightPoint (color, cl.worldmodel->nodes, p[0], p[1], p[2], p[2] - 65536);
 
@@ -819,12 +854,12 @@ void R_DynamicLightPointNoMask(vec3_t color, vec3_t org)
 }
 */
 
-void R_LightModel(entity_t *ent, int numverts, vec3_t center, vec3_t basecolor)
+void R_LightModel(int numverts)
 {
 	// LordHavoc: warning: reliance on int being 4 bytes here (of course the d_8to24table relies on that too...)
 	int i, j, nearlights = 0, color;
-	vec3_t dist, mod;
-	float t, t1, t2, t3, *avn;
+	vec3_t dist, mod, basecolor, center;
+	float t, t1, t2, t3, *avn, number;
 	byte r,g,b,a, *avc;
 	struct
 	{
@@ -834,29 +869,35 @@ void R_LightModel(entity_t *ent, int numverts, vec3_t center, vec3_t basecolor)
 	int modeldlightbits[8];
 	avc = aliasvertcolor;
 	avn = aliasvertnorm;
-	a = (byte) bound((int) 0, (int) (modelalpha * 255.0f), (int) 255);
+	VectorCopy(currentrenderentity->origin, center);
+	a = (byte) bound((int) 0, (int) (currentrenderentity->alpha * 255.0f), (int) 255);
 	if (lighthalf)
 	{
-		mod[0] = ent->render.colormod[0] * 0.5f;
-		mod[1] = ent->render.colormod[1] * 0.5f;
-		mod[2] = ent->render.colormod[2] * 0.5f;
+		mod[0] = currentrenderentity->colormod[0] * 0.5f;
+		mod[1] = currentrenderentity->colormod[1] * 0.5f;
+		mod[2] = currentrenderentity->colormod[2] * 0.5f;
 	}
 	else
 	{
-		mod[0] = ent->render.colormod[0];
-		mod[1] = ent->render.colormod[1];
-		mod[2] = ent->render.colormod[2];
+		mod[0] = currentrenderentity->colormod[0];
+		mod[1] = currentrenderentity->colormod[1];
+		mod[2] = currentrenderentity->colormod[2];
 	}
-	if (ent->render.effects & EF_FULLBRIGHT)
+	if (currentrenderentity->effects & EF_FULLBRIGHT)
 	{
-		((byte *)&color)[0] = (byte) (255.0f * mod[0]);
-		((byte *)&color)[1] = (byte) (255.0f * mod[1]);
-		((byte *)&color)[2] = (byte) (255.0f * mod[2]);
-		((byte *)&color)[3] = a;
-		for (i = 0;i < numverts;i++)
+		if (a == 255)
+			memset(avc, 0, 4 * numverts);
+		else
 		{
-			*((int *)avc) = color;
-			avc += 4;
+			((byte *)&color)[0] = (byte) (255.0f * mod[0]);
+			((byte *)&color)[1] = (byte) (255.0f * mod[1]);
+			((byte *)&color)[2] = (byte) (255.0f * mod[2]);
+			((byte *)&color)[3] = a;
+			for (i = 0;i < numverts;i++)
+			{
+				*((int *)avc) = color;
+				avc += 4;
+			}
 		}
 		return;
 	}
@@ -879,24 +920,36 @@ void R_LightModel(entity_t *ent, int numverts, vec3_t center, vec3_t basecolor)
 		t1 = cl_dlights[i].radius*cl_dlights[i].radius;
 		if (t2 < t1)
 		{
-			// transform the light into the model's coordinate system
-			if (gl_transform.value)
-				softwareuntransform(cl_dlights[i].origin, nearlight[nearlights].origin);
-			else
+			if (TraceLine(center, cl_dlights[i].origin, NULL, NULL, 0))
 			{
-				VectorCopy(cl_dlights[i].origin, nearlight[nearlights].origin);
-			}
-			nearlight[nearlights].color[0] = cl_dlights[i].color[0] * t1 * mod[0];
-			nearlight[nearlights].color[1] = cl_dlights[i].color[1] * t1 * mod[1];
-			nearlight[nearlights].color[2] = cl_dlights[i].color[2] * t1 * mod[2];
-			if (r_lightmodels.value && (ent == NULL || ent != cl_dlights[i].ent))
-				nearlights++;
-			else
-			{
-				t1 = 1.0f / t2;
-				basecolor[0] += nearlight[nearlights].color[0] * t1;
-				basecolor[1] += nearlight[nearlights].color[1] * t1;
-				basecolor[2] += nearlight[nearlights].color[2] * t1;
+				// transform the light into the model's coordinate system
+				if (gl_transform.value)
+					softwareuntransform(cl_dlights[i].origin, nearlight[nearlights].origin);
+				else
+					VectorCopy(cl_dlights[i].origin, nearlight[nearlights].origin);
+				nearlight[nearlights].color[0] = cl_dlights[i].color[0] * t1 * mod[0];
+				nearlight[nearlights].color[1] = cl_dlights[i].color[1] * t1 * mod[1];
+				nearlight[nearlights].color[2] = cl_dlights[i].color[2] * t1 * mod[2];
+				if (r_lightmodels.value && currentrenderentity != cl_dlights[i].ent)
+				{
+					// boost color, to compensate for dark lighting calcs
+					VectorScale(nearlight[nearlights].color, cl_dlights[i].radius * 16.0f, nearlight[nearlights].color);
+					nearlights++;
+				}
+				else
+				{
+#if SLOWMATH
+					t1 = 1.0f / sqrt(t2);
+#else
+					number = t1;
+					*((long *)&t1) = 0x5f3759df - ((* (long *) &number) >> 1);
+					t1 = t1 * (1.5f - (number * 0.5f * t1 * t1));
+#endif
+					t1 = t1 * t1;
+					basecolor[0] += nearlight[nearlights].color[0] * t1;
+					basecolor[1] += nearlight[nearlights].color[1] * t1;
+					basecolor[2] += nearlight[nearlights].color[2] * t1;
+				}
 			}
 		}
 	}
@@ -909,73 +962,61 @@ void R_LightModel(entity_t *ent, int numverts, vec3_t center, vec3_t basecolor)
 	((byte *)&color)[3] = a;
 	if (nearlights)
 	{
-		int temp;
+		int i1, i2, i3;
 		vec3_t v;
-		float *av;
+		float *av, number;
 		av = aliasvert;
-		if (nearlights == 1)
+		for (i = 0;i < numverts;i++)
 		{
-			for (i = 0;i < numverts;i++)
+			t1 = basecolor[0];
+			t2 = basecolor[1];
+			t3 = basecolor[2];
+			for (j = 0;j < nearlights;j++)
 			{
-				VectorSubtract(nearlight[0].origin, av, v);
+				VectorSubtract(nearlight[j].origin, av, v);
 				t = DotProduct(avn,v);
 				if (t > 0)
 				{
-					t /= (DotProduct(v,v) + LIGHTOFFSET);
-					temp = (int) ((float) (basecolor[0] + nearlight[0].color[0] * t));
-					avc[0] = bound(0, temp, 255);
-					temp = (int) ((float) (basecolor[1] + nearlight[0].color[1] * t));
-					avc[1] = bound(0, temp, 255);
-					temp = (int) ((float) (basecolor[2] + nearlight[0].color[2] * t));
-					avc[2] = bound(0, temp, 255);
-					avc[3] = a;
+#if SLOWMATH
+					t = 1.0f / sqrt(DotProduct(v,v) + 1.0f);
+#else
+					number = DotProduct(v, v) + LIGHTOFFSET;
+					*((long *)&t) = 0x5f3759df - ((* (long *) &number) >> 1);
+					t = t * (1.5f - (number * 0.5f * t * t));
+#endif
+					t = t * t * t;
+					t1 += nearlight[j].color[0] * t;
+					t2 += nearlight[j].color[1] * t;
+					t3 += nearlight[j].color[2] * t;
 				}
-				else
-					*((int *)avc) = color;
-				avc += 4;
-				av += 3;
-				avn += 3;
 			}
-		}
-		else
-		{
-			for (i = 0;i < numverts;i++)
-			{
-				int lit;
-				t1 = basecolor[0];
-				t2 = basecolor[1];
-				t3 = basecolor[2];
-				lit = false;
-				for (j = 0;j < nearlights;j++)
-				{
-					VectorSubtract(nearlight[j].origin, av, v);
-					t = DotProduct(avn,v);
-					if (t > 0)
-					{
-						t /= (DotProduct(v,v) + LIGHTOFFSET);
-						t1 += nearlight[j].color[0] * t;
-						t2 += nearlight[j].color[1] * t;
-						t3 += nearlight[j].color[2] * t;
-						lit = true;
-					}
-				}
-				if (lit)
-				{
-					int i1, i2, i3;
-					i1 = (int) t1;
-					avc[0] = bound(0, i1, 255);
-					i2 = (int) t2;
-					avc[1] = bound(0, i2, 255);
-					i3 = (int) t3;
-					avc[2] = bound(0, i3, 255);
-					avc[3] = a;
-				}
-				else // dodge the costly float -> int conversions
-					*((int *)avc) = color;
-				avc += 4;
-				av += 3;
-				avn += 3;
-			}
+
+			// FIXME: float to int conversions are very slow on x86 because of
+			// mode switchs (switch from nearest rounding to down, then back,
+			// each time), reimplement this part in assembly, SSE and 3DNow!
+			// versions recommended as well
+#if SLOWMATH
+			i1 = (int) t1;
+			i2 = (int) t2;
+			i3 = (int) t3;
+#else
+			// later note: implemented bit hacking float to integer,
+			// probably makes the issue irrelevant
+			t1 += 8388608.0f;
+			i1 = *((long *)&t1) & 0x007FFFFF;
+			t2 += 8388608.0f;
+			i2 = *((long *)&t2) & 0x007FFFFF;
+			t3 += 8388608.0f;
+			i3 = *((long *)&t3) & 0x007FFFFF;
+#endif
+
+			avc[0] = bound(0, i1, 255);
+			avc[1] = bound(0, i2, 255);
+			avc[2] = bound(0, i3, 255);
+			avc[3] = a;
+			avc += 4;
+			av += 3;
+			avn += 3;
 		}
 	}
 	else

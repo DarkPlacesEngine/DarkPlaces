@@ -524,7 +524,7 @@ void CL_UpdateTEnts (void)
 			ent->render.angles[2] = rand()%360;
 
 			if (r_glowinglightning.value > 0)
-				CL_AllocDlight(ent, ent->render.origin, lhrandom(100, 120), r_glowinglightning.value * 0.25f, r_glowinglightning.value * 0.25f, r_glowinglightning.value * 0.25f, 0, 0);
+				CL_AllocDlight(&ent->render, ent->render.origin, lhrandom(100, 120), r_glowinglightning.value * 0.25f, r_glowinglightning.value * 0.25f, r_glowinglightning.value * 0.25f, 0, 0);
 
 			VectorMA(org, 30, dist, org);
 			d -= 30;

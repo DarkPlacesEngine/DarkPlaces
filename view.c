@@ -562,7 +562,7 @@ CalcGunAngle
 ==================
 */
 void CalcGunAngle (void)
-{	
+{
 	/*
 	float	yaw, pitch, move;
 	static float oldyaw = 0;
@@ -718,6 +718,8 @@ void V_CalcIntermissionRefdef (void)
 	v_idlescale.value = old;
 }
 
+extern void CL_LerpUpdate(entity_t *e, int frame, int modelindex);
+
 /*
 ==================
 V_CalcRefdef
@@ -786,12 +788,11 @@ void V_CalcRefdef (void)
 		V_BoundOffsets ();
 
 	// set up gun position
+		VectorCopy (ent->render.origin, view->render.origin);
+		view->render.origin[2] += cl.viewheight;
 		VectorCopy (cl.viewangles, view->render.angles);
 
 		CalcGunAngle ();
-
-		VectorCopy (ent->render.origin, view->render.origin);
-		view->render.origin[2] += cl.viewheight;
 
 		for (i=0 ; i<3 ; i++)
 		{
@@ -801,9 +802,16 @@ void V_CalcRefdef (void)
 		}
 		view->render.origin[2] += bob;
 
+		// FIXME: this setup code is somewhat evil (CL_LerpUpdate should be private)
+		CL_LerpUpdate(view, cl.stats[STAT_WEAPONFRAME], cl.stats[STAT_WEAPON]);
+
 		view->render.model = cl.model_precache[cl.stats[STAT_WEAPON]];
 		view->render.frame = cl.stats[STAT_WEAPONFRAME];
 		view->render.colormap = -1; // no special coloring
+		view->render.alpha = ent->render.alpha; // LordHavoc: if the player is transparent, so is the gun
+		view->render.effects = ent->render.effects;
+		view->render.scale = 1;
+		VectorCopy(ent->render.colormod, view->render.colormod);
 
 	// set up the refresh position
 

@@ -138,7 +138,6 @@ void DrawCrosshair(int num)
 {
 	byte *color;
 	float scale, base;
-//	Draw_Character (r_refdef.vrect.x + r_refdef.vrect.width/2, r_refdef.vrect.y + r_refdef.vrect.height/2, '+');
 	if (num < 0 || num >= NUMCROSSHAIRS)
 		num = 0;
 	if (cl.viewentity)
@@ -158,6 +157,6 @@ void DrawCrosshair(int num)
 	else
 		base = 0.0f;
 	scale = crosshair_brightness.value / 255.0f;
-	Draw_GenericPic(crosshairtex[num], color[0] * scale + base, color[1] * scale + base, color[2] * scale + base, crosshair_alpha.value, r_refdef.vrect.x + r_refdef.vrect.width * 0.5f - 8.0f, r_refdef.vrect.y + r_refdef.vrect.height * 0.5f - 8.0f, 16.0f, 16.0f);
+	Draw_GenericPic(crosshairtex[num], color[0] * scale + base, color[1] * scale + base, color[2] * scale + base, crosshair_alpha.value, vid.conwidth * 0.5f - 8.0f, vid.conheight * 0.5f - 8.0f, 16.0f, 16.0f);
 }
 

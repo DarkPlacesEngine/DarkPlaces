@@ -778,18 +778,6 @@ Host_Init
 void Host_Init (void)
 {
 	int i;
-	/*
-	if (standard_quake)
-		minimum_memory = MINIMUM_MEMORY;
-	else
-		minimum_memory = MINIMUM_MEMORY_LEVELPAK;
-
-	if (COM_CheckParm ("-minmemory"))
-		host_parms.memsize = minimum_memory;
-
-	if (host_parms.memsize < minimum_memory)
-		Sys_Error ("Only %4.1f megs of memory available, can't execute game", host_parms.memsize / (float)0x100000);
-	*/
 
 	host_parms.memsize = DEFAULTMEM * 1024 * 1024;
 

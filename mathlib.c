@@ -631,7 +631,7 @@ int VectorCompare (vec3_t v1, vec3_t v2)
 	return 1;
 }
 
-void VectorMA (vec3_t veca, float scale, vec3_t vecb, vec3_t vecc)
+void VectorMASlow (vec3_t veca, float scale, vec3_t vecb, vec3_t vecc)
 {
 	vecc[0] = veca[0] + scale*vecb[0];
 	vecc[1] = veca[1] + scale*vecb[1];

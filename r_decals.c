@@ -26,6 +26,7 @@ typedef struct decal_s
 {
 	vec3_t		org;
 	vec3_t		direction;
+	vec2_t		texcoord[4];
 	vec3_t		vert[4];
 	byte		color[4];
 	rtexture_t	*tex;
@@ -85,7 +86,7 @@ loc0:
 		return;
 
 	ndist = PlaneDiff(decalorg, node->plane);
-	
+
 	if (ndist > 16)
 	{
 		node = node->children[0];
@@ -155,7 +156,7 @@ loc0:
 	}
 }
 
-void R_Decal(vec3_t org, rtexture_t *tex, float scale, int cred, int cgreen, int cblue, int alpha)
+void R_Decal(vec3_t org, rtexture_t *tex, float s1, float t1, float s2, float t2, float scale, int cred, int cgreen, int cblue, int alpha)
 {
 	vec3_t center, right, up;
 	decal_t *decal;
@@ -194,16 +195,24 @@ void R_Decal(vec3_t org, rtexture_t *tex, float scale, int cred, int cgreen, int
 	// set up the 4 corners
 	scale *= 0.5f;
 	VectorVectors(decal->direction, right, up);
-	decal->vert[0][0] = center[0] - right[0] * scale - up[0] * scale; // texcoords 0 1
+	decal->texcoord[0][0] = s1;
+	decal->texcoord[0][1] = t1;
+	decal->vert[0][0] = center[0] - right[0] * scale - up[0] * scale;
 	decal->vert[0][1] = center[1] - right[1] * scale - up[1] * scale;
 	decal->vert[0][2] = center[2] - right[2] * scale - up[2] * scale;
-	decal->vert[1][0] = center[0] - right[0] * scale + up[0] * scale; // texcoords 0 0
+	decal->texcoord[1][0] = s1;
+	decal->texcoord[1][1] = t2;
+	decal->vert[1][0] = center[0] - right[0] * scale + up[0] * scale;
 	decal->vert[1][1] = center[1] - right[1] * scale + up[1] * scale;
 	decal->vert[1][2] = center[2] - right[2] * scale + up[2] * scale;
-	decal->vert[2][0] = center[0] + right[0] * scale + up[0] * scale; // texcoords 1 0
+	decal->texcoord[2][0] = s2;
+	decal->texcoord[2][1] = t2;
+	decal->vert[2][0] = center[0] + right[0] * scale + up[0] * scale;
 	decal->vert[2][1] = center[1] + right[1] * scale + up[1] * scale;
 	decal->vert[2][2] = center[2] + right[2] * scale + up[2] * scale;
-	decal->vert[3][0] = center[0] + right[0] * scale - up[0] * scale; // texcoords 1 1
+	decal->texcoord[3][0] = s2;
+	decal->texcoord[3][1] = t1;
+	decal->vert[3][0] = center[0] + right[0] * scale - up[0] * scale;
 	decal->vert[3][1] = center[1] + right[1] * scale - up[1] * scale;
 	decal->vert[3][2] = center[2] + right[2] * scale - up[2] * scale;
 	// store the color
@@ -223,8 +232,8 @@ void R_Decal(vec3_t org, rtexture_t *tex, float scale, int cred, int cgreen, int
 void GL_DrawDecals (void)
 {
 	decal_t *p;
-	int i, j, k, dynamiclight, bits, texnum;
-	float scale, fr, fg, fb, dist, rad, mindist;
+	int i, j, k, dynamiclight, bits, texnum, iscale, ir, ig, ib, lit, cr, cg, cb;
+	float /*fscale, */fr, fg, fb, dist, rad, mindist;
 	byte *lightmap;
 	vec3_t v;
 	msurface_t *surf;
@@ -241,7 +250,7 @@ void GL_DrawDecals (void)
 	{
 		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 		glEnable(GL_BLEND);
-		glShadeModel(GL_FLAT);
+//		glShadeModel(GL_FLAT);
 		glDepthMask(0); // disable zbuffer updates
 		glDisable(GL_ALPHA_TEST);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -268,54 +277,11 @@ void GL_DrawDecals (void)
 		// get the surface lighting
 		surf = p->surface;
 		lightmap = p->lightmapaddress;
-		fr = fg = fb = 0.0f;
-		if (lightmap)
-		{
-			if (surf->styles[0] != 255)
-			{
-				scale = d_lightstylevalue[surf->styles[0]] * (1.0f / 256.0f);
-				fr += lightmap[0] * scale;
-				fg += lightmap[1] * scale;
-				fb += lightmap[2] * scale;
-				if (surf->styles[1] != 255)
-				{
-					lightmap += p->lightmapstep;
-					scale = d_lightstylevalue[surf->styles[1]] * (1.0f / 256.0f);
-					fr += lightmap[0] * scale;
-					fg += lightmap[1] * scale;
-					fb += lightmap[2] * scale;
-					if (surf->styles[2] != 255)
-					{
-						lightmap += p->lightmapstep;
-						scale = d_lightstylevalue[surf->styles[2]] * (1.0f / 256.0f);
-						fr += lightmap[0] * scale;
-						fg += lightmap[1] * scale;
-						fb += lightmap[2] * scale;
-						if (surf->styles[3] != 255)
-						{
-							lightmap += p->lightmapstep;
-							scale = d_lightstylevalue[surf->styles[3]] * (1.0f / 256.0f);
-							fr += lightmap[0] * scale;
-							fg += lightmap[1] * scale;
-							fb += lightmap[2] * scale;
-						}
-					}
-				}
-			}
-			/*
-			for (j = 0;j < MAXLIGHTMAPS && surf->styles[j] != 255;j++)
-			{
-				scale = d_lightstylevalue[surf->styles[j]] * (1.0f / 256.0f);
-				fr += lightmap[0] * scale;
-				fg += lightmap[1] * scale;
-				fb += lightmap[2] * scale;
-				lightmap += p->lightmapstep;
-			}
-			*/
-		}
 		// dynamic lighting
+		lit = false;
 		if (dynamiclight)
 		{
+			fr = fg = fb = 0.0f;
 			if (surf->dlightframe == r_framecount)
 			{
 				for (j = 0;j < 8;j++)
@@ -337,6 +303,7 @@ void GL_DrawDecals (void)
 									fr += rad * dl->color[0];
 									fg += rad * dl->color[1];
 									fb += rad * dl->color[2];
+									lit = true;
 								}
 							}
 						}
@@ -344,6 +311,105 @@ void GL_DrawDecals (void)
 				}
 			}
 		}
+		if (lit)
+		{
+#if SLOWMATH
+			ir = fr * 256.0f;
+			ig = fg * 256.0f;
+			ib = fb * 256.0f;
+#else
+			fr += 8388608.0f;
+			fg += 8388608.0f;
+			fb += 8388608.0f;
+			ir = (*((long *)&fr) & 0x7FFFFF) << 8;
+			ig = (*((long *)&fg) & 0x7FFFFF) << 8;
+			ib = (*((long *)&fb) & 0x7FFFFF) << 8;
+#endif
+		}
+		else
+			ir = ig = ib = 0;
+#if 1
+		if (lightmap)
+		{
+			if (surf->styles[0] != 255)
+			{
+				iscale = d_lightstylevalue[surf->styles[0]];
+				ir += lightmap[0] * iscale;
+				ig += lightmap[1] * iscale;
+				ib += lightmap[2] * iscale;
+				if (surf->styles[1] != 255)
+				{
+					lightmap += p->lightmapstep;
+					iscale = d_lightstylevalue[surf->styles[1]];
+					ir += lightmap[0] * iscale;
+					ig += lightmap[1] * iscale;
+					ib += lightmap[2] * iscale;
+					if (surf->styles[2] != 255)
+					{
+						lightmap += p->lightmapstep;
+						iscale = d_lightstylevalue[surf->styles[2]];
+						ir += lightmap[0] * iscale;
+						ig += lightmap[1] * iscale;
+						ib += lightmap[2] * iscale;
+						if (surf->styles[3] != 255)
+						{
+							lightmap += p->lightmapstep;
+							iscale = d_lightstylevalue[surf->styles[3]];
+							ir += lightmap[0] * iscale;
+							ig += lightmap[1] * iscale;
+							ib += lightmap[2] * iscale;
+						}
+					}
+				}
+			}
+		}
+#else
+		fr = fg = fb = 0.0f;
+		if (lightmap)
+		{
+			if (surf->styles[0] != 255)
+			{
+				fscale = d_lightstylevalue[surf->styles[0]] * (1.0f / 256.0f);
+				fr += lightmap[0] * fscale;
+				fg += lightmap[1] * fscale;
+				fb += lightmap[2] * fscale;
+				if (surf->styles[1] != 255)
+				{
+					lightmap += p->lightmapstep;
+					fscale = d_lightstylevalue[surf->styles[1]] * (1.0f / 256.0f);
+					fr += lightmap[0] * fscale;
+					fg += lightmap[1] * fscale;
+					fb += lightmap[2] * fscale;
+					if (surf->styles[2] != 255)
+					{
+						lightmap += p->lightmapstep;
+						fscale = d_lightstylevalue[surf->styles[2]] * (1.0f / 256.0f);
+						fr += lightmap[0] * fscale;
+						fg += lightmap[1] * fscale;
+						fb += lightmap[2] * fscale;
+						if (surf->styles[3] != 255)
+						{
+							lightmap += p->lightmapstep;
+							fscale = d_lightstylevalue[surf->styles[3]] * (1.0f / 256.0f);
+							fr += lightmap[0] * fscale;
+							fg += lightmap[1] * fscale;
+							fb += lightmap[2] * fscale;
+						}
+					}
+				}
+			}
+			/*
+			for (j = 0;j < MAXLIGHTMAPS && surf->styles[j] != 255;j++)
+			{
+				fscale = d_lightstylevalue[surf->styles[j]] * (1.0f / 256.0f);
+				fr += lightmap[0] * fscale;
+				fg += lightmap[1] * fscale;
+				fb += lightmap[2] * fscale;
+				lightmap += p->lightmapstep;
+			}
+			*/
+		}
+#endif
 		/*
 		{
 			int ir, ig, ib;
@@ -376,21 +442,40 @@ void GL_DrawDecals (void)
 				glBindTexture(GL_TEXTURE_2D, texnum);
 				glBegin(GL_QUADS);
 			}
+			/*
 			if (lighthalf)
 				glColor4f(fr * p->color[0] * (1.0f / 255.0f / 256.0f), fg * p->color[1] * (1.0f / 255.0f / 256.0f), fb * p->color[2] * (1.0f / 255.0f / 256.0f), p->color[3] * (1.0f / 255.0f));
 			else
 				glColor4f(fr * p->color[0] * (1.0f / 255.0f / 128.0f), fg * p->color[1] * (1.0f / 255.0f / 128.0f), fb * p->color[2] * (1.0f / 255.0f / 128.0f), p->color[3] * (1.0f / 255.0f));
-			glTexCoord2f(0, 1);
+			*/
+			if (lighthalf)
+			{
+				cr = (ir * p->color[0]) >> 16;
+				cg = (ig * p->color[1]) >> 16;
+				cb = (ib * p->color[2]) >> 16;
+			}
+			else
+			{
+				cr = (ir * p->color[0]) >> 15;
+				cg = (ig * p->color[1]) >> 15;
+				cb = (ib * p->color[2]) >> 15;
+			}
+			cr = min(cr, 255);
+			cg = min(cg, 255);
+			cb = min(cb, 255);
+			glColor4ub(cr, cg, cb, p->color[3]);
+
+			glTexCoord2f(p->texcoord[0][0], p->texcoord[0][1]);
 			glVertex3fv(p->vert[0]);
-			glTexCoord2f(0, 0);
+			glTexCoord2f(p->texcoord[1][0], p->texcoord[1][1]);
 			glVertex3fv(p->vert[1]);
-			glTexCoord2f(1, 0);
+			glTexCoord2f(p->texcoord[2][0], p->texcoord[2][1]);
 			glVertex3fv(p->vert[2]);
-			glTexCoord2f(1, 1);
+			glTexCoord2f(p->texcoord[3][0], p->texcoord[3][1]);
 			glVertex3fv(p->vert[3]);
 		}
 	}
-	
+
 	if (r_render.value)
 	{
 		glEnd();

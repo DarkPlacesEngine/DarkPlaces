@@ -48,7 +48,6 @@ extern float lightscale;
 extern float *aliasvert;
 extern float *aliasvertnorm;
 extern byte *aliasvertcolor;
-extern float modelalpha;
 
 // vis stuff
 extern cvar_t r_novis;
@@ -64,67 +63,121 @@ extern float ixtable[4096];
 
 //=============================================================================
 
+typedef struct frameblend_s
+{
+	int frame;
+	float lerp;
+}
+frameblend_t;
+
+// LordHavoc: nothing in this structure is persistant, it may be overwritten by the client every frame, for persistant data use entity_lerp_t.
 typedef struct entity_render_s
 {
-	vec3_t	origin;
-	vec3_t	angles;
-
-	int		visframe;		// last frame this entity was found in an active leaf
+	vec3_t	origin;			// location
+	vec3_t	angles;			// orientation
+	float	colormod[3];	// color tint for model
+	float	alpha;			// opacity (alpha) of the model
+	float	scale;			// size the model is shown
 
 	model_t	*model;			// NULL = no model
-	int		frame;			// current desired frame (usually identical to frame2, but frame2 is not always used)
+	int		frame;			// current uninterpolated animation frame (for things which do not use interpolation)
 	int		colormap;		// entity shirt and pants colors
 	int		effects;		// light, particles, etc
 	int		skinnum;		// for Alias models
 	int		flags;			// render flags
 
-	float	alpha;			// opacity (alpha) of the model
-	float	scale;			// size the model is shown
-	float	trail_time;		// last time for trail rendering
-	float	colormod[3];	// color tint for model
-
-	model_t	*lerp_model;	// lerp resets when model changes
+	// these are copied from the persistent data
 	int		frame1;			// frame that the model is interpolating from
 	int		frame2;			// frame that the model is interpolating to
-	double	lerp_starttime;	// start of this transition
-	double	framelerp;		// interpolation factor, usually computed from lerp_starttime
-	double	frame1start;	// time frame1 began playing (for framegroup animations)
-	double	frame2start;	// time frame2 began playing (for framegroup animations)
+	double	framelerp;		// interpolation factor, usually computed from frame2time
+	double	frame1time;		// time frame1 began playing (for framegroup animations)
+	double	frame2time;		// time frame2 began playing (for framegroup animations)
+
+	// calculated by the renderer (but not persistent)
+	int		visframe;		// if visframe == r_framecount, it is visible
+	vec3_t	mins, maxs;		// calculated during R_AddModelEntities
+	frameblend_t	frameblend[4]; // 4 frame numbers (-1 if not used) and their blending scalers (0-1), if interpolation is not desired, use frame instead
 }
 entity_render_t;
 
+typedef struct entity_persistent_s
+{
+	// particles
+	vec3_t	trail_origin;	// trail rendering
+	float	trail_time;		// trail rendering
+
+	// interpolated animation
+	int		modelindex;		// lerp resets when model changes
+	int		frame1;			// frame that the model is interpolating from
+	int		frame2;			// frame that the model is interpolating to
+	double	framelerp;		// interpolation factor, usually computed from frame2time
+	double	frame1time;		// time frame1 began playing (for framegroup animations)
+	double	frame2time;		// time frame2 began playing (for framegroup animations)
+}
+entity_persistent_t;
+
 typedef struct entity_s
 {
-	entity_state_t state_baseline;	// baseline for entity
+	entity_state_t state_baseline;	// baseline state (default values)
 	entity_state_t state_previous;	// previous state (interpolating from this)
 	entity_state_t state_current;	// current state (interpolating to this)
 
-	entity_render_t render;
-} entity_t;
+	entity_persistent_t persistent; // used for regenerating parts of render
+
+	entity_render_t render; // the only data the renderer should know about
+}
+entity_t;
 
 typedef struct
 {
-	vrect_t		vrect;				// subwindow in video for refresh
+	// area to render in
+	int		x, y, width, height;
+	float	fov_x, fov_y;
 
-	vec3_t		vieworg;
-	vec3_t		viewangles;
+	// view point
+	vec3_t	vieworg;
+	vec3_t	viewangles;
+}
+refdef_t;
 
-	float		fov_x, fov_y;
-} refdef_t;
-
-
-//
-// refresh
-//
-
-
-extern	refdef_t	r_refdef;
-extern vec3_t	r_origin, vpn, vright, vup;
 extern qboolean hlbsp;
+//extern	qboolean	r_cache_thrash;		// compatability
+extern	vec3_t		modelorg;
+extern	entity_render_t	*currentrenderentity;
+extern	int			r_framecount;
+extern	mplane_t	frustum[4];
+extern	int		c_brush_polys, c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c_bmodels, c_sprites, c_particles, c_dlights;
+
+
+//
+// view origin
+//
+extern	vec3_t	vup;
+extern	vec3_t	vpn;
+extern	vec3_t	vright;
+extern	vec3_t	r_origin;
+
+//
+// screen size info
+//
+extern	refdef_t	r_refdef;
+extern	mleaf_t		*r_viewleaf, *r_oldviewleaf;
+extern	unsigned short	d_lightstylevalue[256];	// 8.8 fraction of base light value
+
+extern	qboolean	envmap;
+
+extern	cvar_t	r_drawentities;
+extern	cvar_t	r_drawviewmodel;
+extern	cvar_t	r_speeds;
+extern	cvar_t	r_fullbright;
+extern	cvar_t	r_wateralpha;
+extern	cvar_t	r_dynamic;
+extern	cvar_t	r_waterripple;
+
+//extern	float	r_world_matrix[16];
 
 void R_Init (void);
 void R_RenderView (void); // must set r_refdef first
-void R_ViewChanged (vrect_t *pvrect, int lineadj, float aspect); // called whenever r_refdef or vid change
 
 // LordHavoc: changed this for sake of GLQuake
 void R_InitSky (byte *src, int bytesperpixel); // called at level load
@@ -194,14 +247,19 @@ extern qboolean lighthalf;
 void GL_LockArray(int first, int count);
 void GL_UnlockArray(void);
 
-void R_DrawBrushModel (entity_t *e);
-void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, frameblend_t *blend, int skin, vec3_t org, vec3_t angles, vec_t scale, int effects, int flags, int colormap);
-void R_DrawSpriteModel (entity_t *e, frameblend_t *blend);
+void R_DrawBrushModel (void);
+void R_DrawAliasModel (void);
+void R_DrawSpriteModel (void);
 
-void R_ClipSprite (entity_t *e, frameblend_t *blend);
+void R_ClipSprite (void);
 void R_Entity_Callback(void *data, void *junk);
 
 extern cvar_t r_render;
 extern cvar_t r_upload;
 extern cvar_t r_ser;
 #include "image.h"
+
+// if contents is not zero, it will impact on content changes
+// (leafs matching contents are considered empty, others are solid)
+extern int traceline_endcontents; // set by TraceLine
+float TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int contents);

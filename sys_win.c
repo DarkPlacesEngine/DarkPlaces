@@ -579,7 +579,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 				*lpCmdLine = 0;
 				lpCmdLine++;
 			}
-			
+
 		}
 	}
 
@@ -590,7 +590,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	host_parms.argc = com_argc;
 	host_parms.argv = com_argv;
 
-	Sys_Shared_Init();
+	Sys_Shared_EarlyInit();
 
 // take the greater of all the available memory or half the total memory,
 // but at least 8 Mb and no more than 16 Mb, unless they explicitly
@@ -631,13 +631,13 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 			if (t < com_argc)
 				hFile = (HANDLE)atoi (com_argv[t+1]);
 		}
-			
+
 		if ((t = COM_CheckParm ("-HPARENT")) > 0)
 		{
 			if (t < com_argc)
 				heventParent = (HANDLE)atoi (com_argv[t+1]);
 		}
-			
+
 		if ((t = COM_CheckParm ("-HCHILD")) > 0)
 		{
 			if (t < com_argc)
@@ -659,8 +659,9 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	timeBeginPeriod (1);
 #endif
 
-	Sys_Printf ("Host_Init\n");
 	Host_Init ();
+
+	Sys_Shared_LateInit();
 
 	oldtime = Sys_DoubleTime ();
 

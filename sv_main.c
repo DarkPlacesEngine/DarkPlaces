@@ -22,7 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 
 cvar_t sv_pvscheckentities = {0, "sv_pvscheckentities", "1"};
-cvar_t sv_vischeckentities = {0, "sv_vischeckentities", "1"};
+cvar_t sv_vischeckentities = {0, "sv_vischeckentities", "0"}; // extremely accurate visibility checking, but too slow
 cvar_t sv_reportvischeckentities = {0, "sv_reportvischeckentities", "0"};
 int sv_vischeckentitycullcount = 0;
 
@@ -233,7 +233,7 @@ void SV_SendServerinfo (client_t *client)
 	char			message[2048];
 
 	MSG_WriteByte (&client->message, svc_print);
-	sprintf (message, "%c\nDARKPLACES VERSION %4.2f BUILD %i SERVER (%i CRC)", 2, VERSION, buildnumber, pr_crc);
+	sprintf (message, "\002\nServer: %s build %i (progs %i crc)", gamename, buildnumber, pr_crc);
 	MSG_WriteString (&client->message,message);
 
 	MSG_WriteByte (&client->message, svc_serverinfo);
@@ -262,7 +262,7 @@ void SV_SendServerinfo (client_t *client)
 	MSG_WriteByte (&client->message, sv.edicts->v.sounds);
 	MSG_WriteByte (&client->message, sv.edicts->v.sounds);
 
-// set view	
+// set view
 	MSG_WriteByte (&client->message, svc_setview);
 	MSG_WriteShort (&client->message, NUM_FOR_EDICT(client->edict));
 
@@ -419,7 +419,7 @@ void SV_AddToFatPVS (vec3_t org, mnode_t *node)
 			}
 			return;
 		}
-	
+
 		plane = node->plane;
 		d = DotProduct (org, plane->normal) - plane->dist;
 		if (d > 8)
@@ -500,9 +500,10 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 	vec3_t	org, origin, angles, entmins, entmaxs;
 	float	movelerp, moveilerp, nextfullupdate;
 	edict_t	*ent;
-	eval_t  *val;
-	entity_state_t *baseline; // LordHavoc: delta or startup baseline
+	eval_t	*val;
+	entity_state_t	*baseline; // LordHavoc: delta or startup baseline
 	trace_t	trace;
+	model_t	*model;
 
 // find the client's PVS
 	VectorAdd (clent->v.origin, clent->v.view_ofs, org);
@@ -516,7 +517,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 	*/
 
 	clentnum = EDICT_TO_PROG(clent); // LordHavoc: for comparison purposes
-// send over all entities (except the client) that touch the pvs
+	// send all entities that touch the pvs
 	ent = NEXT_EDICT(sv.edicts);
 	for (e = 1;e < sv.num_edicts;e++, ent = NEXT_EDICT(ent))
 	{
@@ -559,10 +560,15 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		if (val->_float != 0)
 			bits |= U_GLOWTRAIL;
 
-		if (ent->v.modelindex == 0 || pr_strings[ent->v.model] == 0) // no model
+		if (ent->v.modelindex >= 0 && ent->v.modelindex < MAX_MODELS && pr_strings[ent->v.model])
+			model = sv.models[(int)ent->v.modelindex];
+		else
+		{
+			model = NULL;
 			if (ent != clent) // LordHavoc: always send player
 				if (glowsize == 0 && (bits & U_GLOWTRAIL) == 0) // no effects
 					continue;
+		}
 
 		if (ent->v.movetype == MOVETYPE_STEP && ((int) ent->v.flags & (FL_ONGROUND | FL_FLY | FL_SWIM))) // monsters have smoothed walking/flying/swimming movement
 		{
@@ -603,6 +609,16 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		}
 		else // copy as they are
 		{
+			if (ent->v.movetype == MOVETYPE_STEP) // monster, but airborn, update lerp info
+			{
+				// update lerp positions
+				ent->steplerptime = sv.time;
+				VectorCopy(ent->v.origin, ent->stepoldorigin);
+				VectorCopy(ent->v.angles, ent->stepoldangles);
+				VectorCopy(ent->v.origin, ent->steporigin);
+				VectorCopy(ent->v.angles, ent->stepangles);
+			}
+
 			VectorCopy(ent->v.angles, angles);
 			if (DotProduct(ent->v.velocity, ent->v.velocity) >= 1.0f)
 			{
@@ -615,27 +631,37 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			{
 				VectorCopy(ent->v.origin, origin);
 			}
-			if (ent->v.movetype == MOVETYPE_STEP) // monster, but airborn, update lerp info
-			{
-				// update lerp positions
-				ent->steplerptime = sv.time;
-				VectorCopy(ent->v.origin, ent->stepoldorigin);
-				VectorCopy(ent->v.angles, ent->stepoldangles);
-				VectorCopy(ent->v.origin, ent->steporigin);
-				VectorCopy(ent->v.angles, ent->stepangles);
-			}
 		}
 
 		// ent has survived every check so far, check if it is visible
 		if (ent != clent && ((bits & U_VIEWMODEL) == 0))
 		{
 			// use the predicted origin
-			entmins[0] = ent->v.mins[0] + origin[0] - 1.0f;
-			entmins[1] = ent->v.mins[1] + origin[1] - 1.0f;
-			entmins[2] = ent->v.mins[2] + origin[2] - 1.0f;
-			entmaxs[0] = ent->v.maxs[0] + origin[0] + 1.0f;
-			entmaxs[1] = ent->v.maxs[1] + origin[1] + 1.0f;
-			entmaxs[2] = ent->v.maxs[2] + origin[2] + 1.0f;
+			entmins[0] = origin[0] - 1.0f;
+			entmins[1] = origin[1] - 1.0f;
+			entmins[2] = origin[2] - 1.0f;
+			entmaxs[0] = origin[0] + 1.0f;
+			entmaxs[1] = origin[1] + 1.0f;
+			entmaxs[2] = origin[2] + 1.0f;
+			// using the model's bounding box to ensure things are visible regardless of their physics box
+			if (model)
+			{
+				if (ent->v.angles[0] || ent->v.angles[2]) // pitch and roll
+				{
+					VectorAdd(entmins, model->rotatedmins, entmins);
+					VectorAdd(entmaxs, model->rotatedmaxs, entmaxs);
+				}
+				else if (ent->v.angles[1])
+				{
+					VectorAdd(entmins, model->yawmins, entmins);
+					VectorAdd(entmaxs, model->yawmaxs, entmaxs);
+				}
+				else
+				{
+					VectorAdd(entmins, model->normalmins, entmins);
+					VectorAdd(entmaxs, model->normalmaxs, entmaxs);
+				}
+			}
 
 			// if not touching a visible leaf
 			if (sv_pvscheckentities.value && !SV_BoxTouchingPVS(pvs, entmins, entmaxs, sv.worldmodel->nodes))
@@ -689,10 +715,10 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		{
 			if (glowsize == 0 && (bits & U_GLOWTRAIL) == 0) // no effects
 			{
-				if (ent->v.modelindex && pr_strings[ent->v.model]) // model
+				if (model) // model
 				{
 					// don't send if flagged for NODRAW and there are no effects
-					if (sv.models[(int)ent->v.modelindex]->flags == 0 && ((effects & EF_NODRAW) || scale <= 0 || alpha <= 0))
+					if (model->flags == 0 && ((effects & EF_NODRAW) || scale <= 0 || alpha <= 0))
 						continue;
 				}
 				else // no model and no effects
@@ -992,11 +1018,7 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 	MSG_WriteByte (msg, ent->v.ammo_rockets);
 	MSG_WriteByte (msg, ent->v.ammo_cells);
 
-	if (standard_quake)
-	{
-		MSG_WriteByte (msg, ent->v.weapon);
-	}
-	else
+	if (gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE)
 	{
 		for(i=0;i<32;i++)
 		{
@@ -1006,6 +1028,10 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 				break;
 			}
 		}
+	}
+	else
+	{
+		MSG_WriteByte (msg, ent->v.weapon);
 	}
 }
 

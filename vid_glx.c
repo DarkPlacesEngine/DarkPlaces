@@ -38,7 +38,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <X11/extensions/xf86dga.h>
 #include <X11/extensions/xf86vmode.h>
 
-static Display *dpy = NULL;
+static Display *vidx11_display = NULL;
 static int scrnum;
 static Window win;
 static GLXContext ctx = NULL;
@@ -72,6 +72,9 @@ static XF86VidModeModeInfo **vidmodes;
 //static int default_dotclock_vidmode;
 static int num_vidmodes;
 static qboolean vidmode_active = false;
+
+static Visual *vidx11_visual;
+static Colormap vidx11_colormap;
 
 /*-----------------------------------------------------------------------*/
 
@@ -215,20 +218,20 @@ static void install_grabs(void)
 	XWindowAttributes attribs_1;
 	XSetWindowAttributes attribs_2;
 
-	XGetWindowAttributes(dpy, win, &attribs_1);
+	XGetWindowAttributes(vidx11_display, win, &attribs_1);
 	attribs_2.event_mask = attribs_1.your_event_mask | KEY_MASK | MOUSE_MASK;
-	XChangeWindowAttributes(dpy, win, CWEventMask, &attribs_2);
+	XChangeWindowAttributes(vidx11_display, win, CWEventMask, &attribs_2);
 
 // inviso cursor
-	XDefineCursor(dpy, win, CreateNullCursor(dpy, win));
+	XDefineCursor(vidx11_display, win, CreateNullCursor(vidx11_display, win));
 
-	XGrabPointer(dpy, win,  True, 0, GrabModeAsync, GrabModeAsync, win, None, CurrentTime);
+	XGrabPointer(vidx11_display, win,  True, 0, GrabModeAsync, GrabModeAsync, win, None, CurrentTime);
 
 	if (vid_dga.value)
 	{
 		int MajorVersion, MinorVersion;
 
-		if (!XF86DGAQueryVersion(dpy, &MajorVersion, &MinorVersion))
+		if (!XF86DGAQueryVersion(vidx11_display, &MajorVersion, &MinorVersion))
 		{
 			// unable to query, probalby not supported
 			Con_Printf( "Failed to detect XF86DGA Mouse\n" );
@@ -237,34 +240,34 @@ static void install_grabs(void)
 		else
 		{
 			vid_dga.value = 1;
-			XF86DGADirectVideo(dpy, DefaultScreen(dpy), XF86DGADirectMouse);
-			XWarpPointer(dpy, None, win, 0, 0, 0, 0, 0, 0);
+			XF86DGADirectVideo(vidx11_display, DefaultScreen(vidx11_display), XF86DGADirectMouse);
+			XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, 0, 0);
 		}
 	}
 	else
-		XWarpPointer(dpy, None, win, 0, 0, 0, 0, vid.width / 2, vid.height / 2);
+		XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, scr_width / 2, scr_height / 2);
 
-	XGrabKeyboard(dpy, win, False, GrabModeAsync, GrabModeAsync, CurrentTime);
+	XGrabKeyboard(vidx11_display, win, False, GrabModeAsync, GrabModeAsync, CurrentTime);
 
 	mouse_active = true;
 	mouse_x = mouse_y = 0;
 
-//	XSync(dpy, True);
+//	XSync(vidx11_display, True);
 }
 
 static void uninstall_grabs(void)
 {
-	if (!dpy || !win)
+	if (!vidx11_display || !win)
 		return;
 
 	if (vid_dga.value == 1)
-		XF86DGADirectVideo(dpy, DefaultScreen(dpy), 0);
+		XF86DGADirectVideo(vidx11_display, DefaultScreen(vidx11_display), 0);
 
-	XUngrabPointer(dpy, CurrentTime);
-	XUngrabKeyboard(dpy, CurrentTime);
+	XUngrabPointer(vidx11_display, CurrentTime);
+	XUngrabKeyboard(vidx11_display, CurrentTime);
 
 // inviso cursor
-	XUndefineCursor(dpy, win);
+	XUndefineCursor(vidx11_display, win);
 
 	mouse_active = false;
 }
@@ -275,12 +278,12 @@ static void HandleEvents(void)
 //	KeySym ks;
 	qboolean dowarp = false;
 
-	if (!dpy)
+	if (!vidx11_display)
 		return;
 
-	while (XPending(dpy))
+	while (XPending(vidx11_display))
 	{
-		XNextEvent(dpy, &event);
+		XNextEvent(vidx11_display, &event);
 
 		switch (event.type)
 		{
@@ -312,7 +315,7 @@ static void HandleEvents(void)
 						{
 							mouse_x += event.xmotion.x - p_mouse_x;
 							mouse_y += event.xmotion.y - p_mouse_y;
-							if (abs(vid.width/2 - event.xmotion.x) > vid.width / 4 || abs(vid.height/2 - event.xmotion.y) > vid.height / 4)
+							if (abs(scr_width/2 - event.xmotion.x) > scr_width / 4 || abs(scr_height/2 - event.xmotion.y) > scr_height / 4)
 								dowarp = true;
 						}
 					}
@@ -394,16 +397,16 @@ static void HandleEvents(void)
 	if (dowarp)
 	{
 		/* move the mouse to the window center again */
-		p_mouse_x = vid.width / 2;
-		p_mouse_y = vid.height / 2;
-		XWarpPointer(dpy, None, win, 0, 0, 0, 0, p_mouse_x, p_mouse_y);
+		p_mouse_x = scr_width / 2;
+		p_mouse_y = scr_height / 2;
+		XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, p_mouse_x, p_mouse_y);
 	}
 
 }
 
 static void IN_DeactivateMouse( void )
 {
-	if (!mouse_avail || !dpy || !win)
+	if (!mouse_avail || !vidx11_display || !win)
 		return;
 
 	if (mouse_active)
@@ -415,7 +418,7 @@ static void IN_DeactivateMouse( void )
 
 static void IN_ActivateMouse( void )
 {
-	if (!mouse_avail || !dpy || !win)
+	if (!mouse_avail || !vidx11_display || !win)
 		return;
 
 	if (!mouse_active)
@@ -429,25 +432,25 @@ static void IN_ActivateMouse( void )
 
 void VID_Shutdown(void)
 {
-	if (!ctx || !dpy)
+	if (!ctx || !vidx11_display)
 		return;
 
-	if (dpy)
+	if (vidx11_display)
 	{
 		uninstall_grabs();
 
 		if (vidmode_active)
-			XF86VidModeSwitchToMode(dpy, scrnum, vidmodes[0]);
+			XF86VidModeSwitchToMode(vidx11_display, scrnum, vidmodes[0]);
 /* Disabled, causes a segfault during shutdown.
 		if (ctx)
-			glXDestroyContext(dpy, ctx);
+			glXDestroyContext(vidx11_display, ctx);
 */
 		if (win)
-			XDestroyWindow(dpy, win);
-		XCloseDisplay(dpy);
+			XDestroyWindow(vidx11_display, win);
+		XCloseDisplay(vidx11_display);
 	}
 	vidmode_active = false;
-	dpy = NULL;
+	vidx11_display = NULL;
 	win = 0;
 	ctx = NULL;
 }
@@ -495,7 +498,7 @@ void GL_EndRendering (void)
 	if (!r_render.value)
 		return;
 	glFlush();
-	glXSwapBuffers(dpy, win);
+	glXSwapBuffers(vidx11_display, win);
 
 // handle the mouse state when windowed if that's changed
 	usemouse = false;
@@ -521,15 +524,100 @@ void GL_EndRendering (void)
 	}
 }
 
+// LordHavoc: ported from SDL 1.2.2, this was far more difficult to port from
+// SDL than to simply use the XFree gamma ramp extension, but that affects the
+// whole screen even when the game window is inactive, this only affects the
+// screen while the window is active, very desirable behavior :)
 int VID_SetGamma(float prescale, float gamma, float scale, float base)
 {
+// LordHavoc: FIXME: finish this code, we need to allocate colors before we can store them
+#if 1
 	return FALSE;
+#else
+	int i, ncolors, c;
+	unsigned int Rmask, Gmask, Bmask, Rloss, Gloss, Bloss, Rshift, Gshift, Bshift, mask;
+	XColor xcmap[256];
+	unsigned short ramp[256];
+
+	if (COM_CheckParm("-nogamma"))
+		return FALSE;
+
+	if (vidx11_visual->class != DirectColor)
+	{
+		Con_Printf("X11 Visual class is %d, can only do gamma on %d\n", vidx11_visual->class, DirectColor);
+		return FALSE;
+	}
+
+	Rmask = vidx11_visual->red_mask;
+	Gmask = vidx11_visual->green_mask;
+	Bmask = vidx11_visual->blue_mask;
+
+	Rshift = 0;
+	Rloss = 8;
+	if ((mask = Rmask))
+	{
+		for (;!(mask & 1);mask >>= 1)
+			++Rshift;
+		for (;(mask & 1);mask >>= 1)
+			--Rloss;
+	}
+	Gshift = 0;
+	Gloss = 8;
+	if ((mask = Gmask))
+	{
+		for (;!(mask & 1);mask >>= 1)
+			++Gshift;
+		for (;(mask & 1);mask >>= 1)
+			--Gloss;
+	}
+	Bshift = 0;
+	Bloss = 8;
+	if ((mask = Bmask))
+	{
+		for (;!(mask & 1);mask >>= 1)
+			++Bshift;
+		for (;(mask & 1);mask >>= 1)
+			--Bloss;
+	}
+
+	BuildGammaTable16(prescale, gamma, scale, base, ramp);
+
+	// convert gamma ramp to palette (yes this seems odd)
+	ncolors = vidx11_visual->map_entries;
+	for (i = 0;i < ncolors;i++)
+	{
+		c = (256 * i / ncolors);
+		xcmap[i].pixel = ((c >> Rloss) << Rshift) | ((c >> Gloss) << Gshift) | ((c >> Bloss) << Bshift);
+		xcmap[i].red   = ramp[c];
+		xcmap[i].green = ramp[c];
+		xcmap[i].blue  = ramp[c];
+		xcmap[i].flags = (DoRed|DoGreen|DoBlue);
+	}
+	XStoreColors(vidx11_display, vidx11_colormap, xcmap, ncolors);
+	XSync(vidx11_display, false);
+	// FIXME: should this check for BadAccess/BadColor/BadValue errors produced by XStoreColors before setting this true?
+	return TRUE;
+#endif
 }
 
 void VID_Init(void)
 {
 	int i;
-	int attrib[] =
+// LordHavoc: FIXME: finish this code, we need to allocate colors before we can store them
+#if 0
+	int gammaattrib[] =
+	{
+		GLX_RGBA,
+		GLX_RED_SIZE, 1,
+		GLX_GREEN_SIZE, 1,
+		GLX_BLUE_SIZE, 1,
+		GLX_DOUBLEBUFFER,
+		GLX_DEPTH_SIZE, 1,
+		GLX_X_VISUAL_TYPE, GLX_DIRECT_COLOR,
+		None
+	};
+#endif
+	int nogammaattrib[] =
 	{
 		GLX_RGBA,
 		GLX_RED_SIZE, 1,
@@ -547,7 +635,6 @@ void VID_Init(void)
 	XVisualInfo *visinfo;
 	qboolean fullscreen = true;
 	int MajorVersion, MinorVersion;
-	int actualWidth, actualHeight;
 
 	Cvar_RegisterVariable (&vid_mouse);
 	Cvar_RegisterVariable (&vid_dga);
@@ -584,18 +671,18 @@ void VID_Init(void)
 	if (vid.conheight < 200)
 		vid.conheight = 200;
 
-	if (!(dpy = XOpenDisplay(NULL)))
+	if (!(vidx11_display = XOpenDisplay(NULL)))
 	{
 		fprintf(stderr, "Error couldn't open the X display\n");
 		exit(1);
 	}
 
-	scrnum = DefaultScreen(dpy);
-	root = RootWindow(dpy, scrnum);
+	scrnum = DefaultScreen(vidx11_display);
+	root = RootWindow(vidx11_display, scrnum);
 
 	// Get video mode list
 	MajorVersion = MinorVersion = 0;
-	if (!XF86VidModeQueryVersion(dpy, &MajorVersion, &MinorVersion))
+	if (!XF86VidModeQueryVersion(vidx11_display, &MajorVersion, &MinorVersion))
 		vidmode_ext = false;
 	else
 	{
@@ -603,18 +690,27 @@ void VID_Init(void)
 		vidmode_ext = true;
 	}
 
-	visinfo = glXChooseVisual(dpy, scrnum, attrib);
+	visinfo = NULL;
+// LordHavoc: FIXME: finish this code, we need to allocate colors before we can store them
+#if 0
+	if (!COM_CheckParm("-nogamma"))
+		visinfo = glXChooseVisual(vidx11_display, scrnum, gammaattrib);
+#endif
 	if (!visinfo)
 	{
-		fprintf(stderr, "qkHack: Error couldn't get an RGB, Double-buffered, Depth visual\n");
-		exit(1);
+		visinfo = glXChooseVisual(vidx11_display, scrnum, nogammaattrib);
+		if (!visinfo)
+		{
+			fprintf(stderr, "qkHack: Error couldn't get an RGB, Double-buffered, Depth visual\n");
+			exit(1);
+		}
 	}
 
 	if (vidmode_ext)
 	{
 		int best_fit, best_dist, dist, x, y;
 
-		XF86VidModeGetAllModeLines(dpy, scrnum, &num_vidmodes, &vidmodes);
+		XF86VidModeGetAllModeLines(vidx11_display, scrnum, &num_vidmodes, &vidmodes);
 
 		// Are we going fullscreen?  If so, let's change video mode
 		if (fullscreen)
@@ -639,25 +735,32 @@ void VID_Init(void)
 
 			if (best_fit != -1)
 			{
-				actualWidth = vidmodes[best_fit]->hdisplay;
-				actualHeight = vidmodes[best_fit]->vdisplay;
+				// LordHavoc: changed from ActualWidth/ActualHeight =,
+				// to width/height =, so the window will take the full area of
+				// the mode chosen
+				width = vidmodes[best_fit]->hdisplay;
+				height = vidmodes[best_fit]->vdisplay;
 
 				// change to the mode
-				XF86VidModeSwitchToMode(dpy, scrnum, vidmodes[best_fit]);
+				XF86VidModeSwitchToMode(vidx11_display, scrnum, vidmodes[best_fit]);
 				vidmode_active = true;
 
 				// Move the viewport to top left
-				XF86VidModeSetViewPort(dpy, scrnum, 0, 0);
+				XF86VidModeSetViewPort(vidx11_display, scrnum, 0, 0);
 			}
 			else
 				fullscreen = 0;
 		}
 	}
 
+	// LordHavoc: save the visual for use in gamma ramp settings later
+	vidx11_visual = visinfo->visual;
+
 	/* window attributes */
 	attr.background_pixel = 0;
 	attr.border_pixel = 0;
-	attr.colormap = XCreateColormap(dpy, root, visinfo->visual, AllocNone);
+	// LordHavoc: save the colormap for later, too
+	vidx11_colormap = attr.colormap = XCreateColormap(vidx11_display, root, visinfo->visual, AllocNone);
 	attr.event_mask = X_MASK;
 	if (vidmode_active)
 	{
@@ -669,25 +772,25 @@ void VID_Init(void)
 	else
 		mask = CWBackPixel | CWBorderPixel | CWColormap | CWEventMask;
 
-	win = XCreateWindow(dpy, root, 0, 0, width, height, 0, visinfo->depth, InputOutput, visinfo->visual, mask, &attr);
-	XStoreName(dpy, win, "DarkPlaces-GLX");
-	XMapWindow(dpy, win);
+	win = XCreateWindow(vidx11_display, root, 0, 0, width, height, 0, visinfo->depth, InputOutput, visinfo->visual, mask, &attr);
+	XStoreName(vidx11_display, win, gamename);
+	XMapWindow(vidx11_display, win);
 
 	if (vidmode_active)
 	{
-		XMoveWindow(dpy, win, 0, 0);
-		XRaiseWindow(dpy, win);
-		XWarpPointer(dpy, None, win, 0, 0, 0, 0, 0, 0);
-		XFlush(dpy);
+		XMoveWindow(vidx11_display, win, 0, 0);
+		XRaiseWindow(vidx11_display, win);
+		XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, 0, 0);
+		XFlush(vidx11_display);
 		// Move the viewport to top left
-		XF86VidModeSetViewPort(dpy, scrnum, 0, 0);
+		XF86VidModeSetViewPort(vidx11_display, scrnum, 0, 0);
 	}
 
-	XFlush(dpy);
+	XFlush(vidx11_display);
 
-	ctx = glXCreateContext(dpy, visinfo, NULL, True);
+	ctx = glXCreateContext(vidx11_display, visinfo, NULL, True);
 
-	glXMakeCurrent(dpy, win, ctx);
+	glXMakeCurrent(vidx11_display, win, ctx);
 
 	scr_width = width;
 	scr_height = height;
@@ -696,8 +799,6 @@ void VID_Init(void)
 		vid.conheight = height;
 	if (vid.conwidth > width)
 		vid.conwidth = width;
-	vid.width = vid.conwidth;
-	vid.height = vid.conheight;
 
 	InitSig(); // trap evil signals
 
@@ -706,7 +807,7 @@ void VID_Init(void)
 	Con_SafePrintf ("Video mode %dx%d initialized.\n", width, height);
 
 	// force a surface cache flush
-	vid.recalc_refdef = 1;
+//	vid.recalc_refdef = 1;
 }
 
 void Sys_SendKeyEvents(void)
@@ -764,7 +865,7 @@ void IN_MouseMove (usercmd_t *cmd)
 	if (/*freelook && */!(in_strafe.state & 1))
 	{
 		cl.viewangles[PITCH] += m_pitch.value * mouse_y;
-		cl.viewangles[PITCH] = bound (-70, cl.viewangles[PITCH], 80);
+		cl.viewangles[PITCH] = bound (-90, cl.viewangles[PITCH], 90);
 	}
 	else
 	{

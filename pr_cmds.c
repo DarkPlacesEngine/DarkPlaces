@@ -262,7 +262,7 @@ void SetMinMaxSize (edict_t *e, float *min, float *max, qboolean rotate)
 		
 		VectorCopy (min, bounds[0]);
 		VectorCopy (max, bounds[1]);
-		
+
 		rmin[0] = rmin[1] = rmin[2] = 9999;
 		rmax[0] = rmax[1] = rmax[2] = -9999;
 		
@@ -350,16 +350,16 @@ void PF_setmodel (void)
 	for (i=0, check = sv.model_precache ; *check ; i++, check++)
 		if (!strcmp(*check, m))
 			break;
-			
+
 	if (!*check)
 		PR_RunError ("no precache: %s\n", m);
-		
+
 
 	e->v.model = m - pr_strings;
 	e->v.modelindex = i; //SV_ModelIndex (m);
 
 	mod = sv.models[ (int)e->v.modelindex];  // Mod_ForName (m, true);
-	
+
 	if (mod)
 	/*
 	{ // LordHavoc: corrected model bounding box, but for compatibility that means I have to break it here
@@ -374,7 +374,7 @@ void PF_setmodel (void)
 			SetMinMaxSize (e, mod->mins, mod->maxs, true);
 	}
 	*/
-		SetMinMaxSize (e, mod->mins, mod->maxs, true);
+		SetMinMaxSize (e, mod->normalmins, mod->normalmaxs, true);
 	else
 		SetMinMaxSize (e, vec3_origin, vec3_origin, true);
 }
@@ -764,11 +764,12 @@ void PF_traceline (void)
 	pr_global_struct->trace_inopen = trace.inopen;
 	VectorCopy (trace.endpos, pr_global_struct->trace_endpos);
 	VectorCopy (trace.plane.normal, pr_global_struct->trace_plane_normal);
-	pr_global_struct->trace_plane_dist =  trace.plane.dist;	
+	pr_global_struct->trace_plane_dist =  trace.plane.dist;
 	if (trace.ent)
 		pr_global_struct->trace_ent = EDICT_TO_PROG(trace.ent);
 	else
 		pr_global_struct->trace_ent = EDICT_TO_PROG(sv.edicts);
+	// FIXME: add trace_endcontents
 }
 
 

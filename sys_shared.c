@@ -107,19 +107,24 @@ void Sys_Printf (char *fmt, ...)
 //#endif
 }
 
-void Sys_Shared_Init(void)
+char engineversion[40];
+
+void Sys_Shared_EarlyInit(void)
 {
+#if defined(__linux__)
+	sprintf (engineversion, "%s Linux GL build %3i", gamename, buildnumber);
+#elif defined(WIN32)
+	sprintf (engineversion, "%s Windows GL build %3i", gamename, buildnumber);
+#else
+	sprintf (engineversion, "%s Unknown GL build %3i", gamename, buildnumber);
+#endif
+
 	if (COM_CheckParm("-nostdout"))
 		sys_nostdout = 1;
 	else
-	{
-#if defined(__linux__)
-		fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | FNDELAY);
-		printf ("DarkPlaces Linux   GL %.2f build %3i", (float) VERSION, buildnumber);
-#elif defined(WIN32)
-		printf ("DarkPlaces Windows GL %.2f build %3i", (float) VERSION, buildnumber);
-#else
-		printf ("DarkPlaces Unknown GL %.2f build %3i", (float) VERSION, buildnumber);
-#endif
-	}
+		printf("%s\n", engineversion);
+}
+
+void Sys_Shared_LateInit(void)
+{
 }
