@@ -24,6 +24,8 @@
 #include "sys.h"
 #include "netconn.h"
 #else
+#define Con_Print printf
+#define Con_Printf printf
 #define Z_Malloc malloc
 #define Z_Free free
 #endif
@@ -457,7 +459,7 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 					if (ioctl(lhnetsocket->inetsocket, FIONBIO, &_true) != -1)
 #endif
 					{
-						size_t namelen = address->addresstype == LHNETADDRESSTYPE_INET6 ? sizeof(lhnetsocket->address.addressdata.inet6) : sizeof(lhnetsocket->address.addressdata.inet4);
+						socklen_t namelen = address->addresstype == LHNETADDRESSTYPE_INET6 ? sizeof(lhnetsocket->address.addressdata.inet6) : sizeof(lhnetsocket->address.addressdata.inet4);
 						if (bind(lhnetsocket->inetsocket, (void *)&lhnetsocket->address.addressdata, namelen) != -1)
 						{
 							getsockname(lhnetsocket->inetsocket, (void *)&lhnetsocket->address.addressdata, &namelen);
