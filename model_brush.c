@@ -3319,6 +3319,10 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 	loadmodel->brushq3.data_textures = out;
 	loadmodel->brushq3.num_textures = count;
 
+	// FIXME: do a quick parse of the shader files to see if any names match
+	// up and get their surfaceparms
+
+
 	for (i = 0;i < count;i++, in++, out++)
 	{
 		out->number = i;
@@ -3328,7 +3332,8 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 		out->supercontents = Mod_Q3BSP_SuperContentsFromNativeContents(loadmodel, out->nativecontents);
 		Mod_LoadSkinFrame(&out->skin, out->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, false, true, true);
 		out->renderflags = 0;
-		if (!strcmp(out->name, "caulk") || !strcmp(out->name, "common/caulk") || !strcmp(out->name, "textures/common/caulk"))
+		if (!strcmp(out->name, "caulk") || !strcmp(out->name, "common/caulk") || !strcmp(out->name, "textures/common/caulk")
+		 || !strcmp(out->name, "nodraw") || !strcmp(out->name, "common/nodraw") || !strcmp(out->name, "textures/common/nodraw"))
 			out->renderflags |= Q3MTEXTURERENDERFLAGS_NODRAW;
 		if (!strncmp(out->name, "textures/skies/", 15))
 			out->renderflags |= Q3MTEXTURERENDERFLAGS_SKY;
