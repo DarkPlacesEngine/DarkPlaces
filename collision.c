@@ -184,47 +184,6 @@ loc0:
 	return HULLCHECKSTATE_DONE;
 }
 
-#if 0
-// used if start and end are the same
-static void RecursiveHullCheckPoint (RecursiveHullCheckTraceInfo_t *t, int num)
-{
-	// If you can read this, you understand BSP trees
-	while (num >= 0)
-		num = t->hull->clipnodes[num].children[((t->hull->planes[t->hull->clipnodes[num].planenum].type < 3) ? (t->start[t->hull->planes[t->hull->clipnodes[num].planenum].type]) : (DotProduct(t->hull->planes[t->hull->clipnodes[num].planenum].normal, t->start))) < t->hull->planes[t->hull->clipnodes[num].planenum].dist];
-
-	// check for empty
-	t->trace->endcontents = num;
-	if (t->trace->thiscontents)
-	{
-		if (num == t->trace->thiscontents)
-			t->trace->allsolid = false;
-		else
-		{
-			// if the first leaf is solid, set startsolid
-			if (t->trace->allsolid)
-				t->trace->startsolid = true;
-		}
-	}
-	else
-	{
-		if (num != CONTENTS_SOLID)
-		{
-			t->trace->allsolid = false;
-			if (num == CONTENTS_EMPTY)
-				t->trace->inopen = true;
-			else
-				t->trace->inwater = true;
-		}
-		else
-		{
-			// if the first leaf is solid, set startsolid
-			if (t->trace->allsolid)
-				t->trace->startsolid = true;
-		}
-	}
-}
-#endif
-
 static hull_t box_hull;
 static dclipnode_t box_clipnodes[6];
 static mplane_t box_planes[6];
