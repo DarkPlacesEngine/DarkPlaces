@@ -80,10 +80,6 @@ void R_Mesh_AddTransparent(void);
 // (only valid between R_Mesh_Start and R_Mesh_Finish)
 void R_Mesh_DrawPolygon(rmeshinfo_t *m, int numverts);
 
-// same as normal, except for harsh format restrictions (vertex must be 4 float, color must be 4 float, texcoord must be 2 float, flat color not supported)
-// (only valid between R_Mesh_Start and R_Mesh_Finish)
-void R_Mesh_Draw_NativeOnly(const rmeshinfo_t *m);
-
 // allocates space in geometry buffers, and fills in pointers to the buffers in passsed struct
 // (this is used for very high speed rendering, no copying)
 // (only valid between R_Mesh_Start and R_Mesh_Finish)
