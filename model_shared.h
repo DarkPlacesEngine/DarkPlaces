@@ -110,8 +110,10 @@ typedef struct model_s
 	vec3_t			yawmins, yawmaxs;
 	// bounding box if pitch or roll are used
 	vec3_t			rotatedmins, rotatedmaxs;
-	// usable at any angles
-//	float			modelradius;
+	// sphere radius, usable at any angles
+	float			radius;
+	// squared sphere radius for easier comparisons
+	float			radius2;
 
 	// brush model specific
 	int				firstmodelsurface, nummodelsurfaces;

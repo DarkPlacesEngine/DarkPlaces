@@ -225,6 +225,8 @@ static void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette
 		loadmodel->normalmins[i] = loadmodel->yawmins[i] = loadmodel->rotatedmins[i] = -modelradius;
 		loadmodel->normalmaxs[i] = loadmodel->yawmaxs[i] = loadmodel->rotatedmaxs[i] = modelradius;
 	}
+	loadmodel->radius = modelradius;
+	loadmodel->radius2 = modelradius * modelradius;
 }
 
 /*

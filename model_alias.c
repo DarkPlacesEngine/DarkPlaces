@@ -524,6 +524,8 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	loadmodel->yawmins[0] = loadmodel->yawmins[1] = -(loadmodel->yawmaxs[0] = loadmodel->yawmaxs[1] = modelyawradius);
 	loadmodel->yawmins[2] = loadmodel->normalmins[2];
 	loadmodel->yawmaxs[2] = loadmodel->normalmaxs[2];
+	loadmodel->radius = modelradius;
+	loadmodel->radius2 = modelradius * modelradius;
 
 	loadmodel->Draw = R_DrawQ1Q2AliasModel;
 	loadmodel->DrawSky = NULL;
@@ -784,6 +786,8 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	loadmodel->yawmins[0] = loadmodel->yawmins[1] = -(loadmodel->yawmaxs[0] = loadmodel->yawmaxs[1] = modelyawradius);
 	loadmodel->yawmins[2] = loadmodel->normalmins[2];
 	loadmodel->yawmaxs[2] = loadmodel->normalmaxs[2];
+	loadmodel->radius = modelradius;
+	loadmodel->radius2 = modelradius * modelradius;
 
 	loadmodel->mdlmd2data_triangleneighbors = Mem_Alloc(loadmodel->mempool, loadmodel->numtris * sizeof(int[3]));
 	Mod_BuildTriangleNeighbors(loadmodel->mdlmd2data_triangleneighbors, loadmodel->mdlmd2data_indices, loadmodel->numtris);
@@ -990,6 +994,8 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 	loadmodel->yawmins[0] = loadmodel->yawmins[1] = -loadmodel->yawmaxs[0];
 	loadmodel->yawmins[2] = loadmodel->normalmins[2];
 	loadmodel->yawmaxs[2] = loadmodel->normalmaxs[2];
+	loadmodel->radius = modelradius;
+	loadmodel->radius2 = modelradius * modelradius;
 
 	loadmodel->Draw = R_DrawZymoticModel;
 	loadmodel->DrawSky = NULL;
