@@ -476,7 +476,10 @@ void CL_ValidateState(entity_state_t *s)
 
 	// colormap is client index + 1
 	if (s->colormap > cl.maxclients)
-		Host_Error ("CL_ValidateState: colormap (%i) > cl.maxclients (%i)", s->colormap, cl.maxclients);
+	{
+		Con_DPrintf("CL_ValidateState: colormap (%i) > cl.maxclients (%i)", s->colormap, cl.maxclients);
+		s->colormap = 0;
+	}
 
 	model = cl.model_precache[s->modelindex];
 	Mod_CheckLoaded(model);
