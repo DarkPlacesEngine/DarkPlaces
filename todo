@@ -12,7 +12,7 @@
 -d darkplaces: check out qe1 textures and make sure they load in all the e1 maps, report of crashing in most but not all maps (Linny Amore)
 -d darkplaces: crashes if you type too long a command line in the console (SeienAbunae)
 -d darkplaces: darkplaces-glx -path transfusion crashes, fix the crash even though it's not going to work anyway (Todd)
--d darkplaces: don't complain if lightning bolt models are missing in client (Electro, Sajt)
+-d darkplaces: don't complain if lightning bolt models are missing in client (Electro, -Sajt)
 -d darkplaces: examine the surface rendering code to make sure it has no bugs regarding texture selection for any of the passes (sublim3)
 -d darkplaces: figure out the 'inverted bumps' bug on some texture orientations (see crate tops at end of e1m1, tenebrae1 does not suffer this problem somehow) (U8Poo) 
 -d darkplaces: figure out what is wrong with dedicated server console on win32 and fix it (and tell willis@deathmask.net)
@@ -21,7 +21,7 @@
 -d darkplaces: fix skybox orientation to match glquake/quake2/quake3, it needs to be rotated 90 degrees; +X should be rt (metlslime)
 -d darkplaces: generate tvectors the same as svectors in bumpvector calculations (Riot)
 -d darkplaces: ignore modelflags on view weaponmodel - in Malice the double barreled shotgun leaves a smoke trail, and the hellfire rotates, also in Zerstorer the riot shotgun rotates (Hidayat)
--d darkplaces: integrate zinx's psycho.c gamma hack as an easteregg (zinx)
+d darkplaces: integrate zinx's psycho.c gamma hack as an easteregg (zinx)
 -d darkplaces: locked console scrollback (sublim3)
 -d darkplaces: make lightning work without bolt models persent (Vermeulen)
 -d darkplaces: make sure PR_SetString points NULL strings at pr_strings (which would be an offset of 0) (Fuh)
@@ -34,7 +34,7 @@
 -d darkplaces: upgrade network protocol to send precise angles for entities, and make EF_LOWPRECISION downgrade both origin and angles (Urre, -Wazat for Battlemech, FrikaC, mashakos, RenegadeC, Sajt)
 -d darkplaces: write a readme (Antti)
 -d dpmod: make grapple off-hand (joe hill)
--d hmap2: light not properly figuring out the origin of rotating objects - it should take the "origin" key (FrikaC)
+d hmap2: light not properly figuring out the origin of rotating objects - it should take the "origin" key (FrikaC)
 -f darkplaces: figure out what crashes when this sequence is done: r_speeds 1;map anything, crash (Stribbs)
 -f darkplaces: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
 -f darkplaces: model interpolation off crashes?  (SeienAbunae)
@@ -66,10 +66,10 @@
 0 darkplaces: add r_editlights_editall command, same as _edit but affects all lights (mashakos) 
 0 darkplaces: add scaling capabilities to Image_CopyMux
 0 darkplaces: add support for .float corona and corona_radius to control corona intensity and radius on dlights (Electro) 
-0 darkplaces: add sv_gameplayfix_grenadebouncedownslopes cvar (default 1)
-0 darkplaces: add sv_gameplayfix_noairborncorpse cvar (default 1)
-0 darkplaces: add sv_gameplayfix_stepwhilejumping cvar (default 1), note that sv_jumpstep must also be on to enable this
-0 darkplaces: add sv_gameplayfix_swiminbmodels cvar (default 1)
+d darkplaces: add sv_gameplayfix_grenadebouncedownslopes cvar (default 1)
+d darkplaces: add sv_gameplayfix_noairborncorpse cvar (default 1)
+d darkplaces: add sv_gameplayfix_stepwhilejumping cvar (default 1), note that sv_jumpstep must also be on to enable this
+d darkplaces: add sv_gameplayfix_swiminbmodels cvar (default 1)
 0 darkplaces: add sv_maxrate cvar to server setup menu
 0 darkplaces: add sv_playerphysicsqc cvar to allow engine to ignore SV_PlayerPhysics function, this would also have to change the reported extensions (Gleeb)
 0 darkplaces: add te_flamejet builtin and add extension (Supajoe)
@@ -113,7 +113,7 @@
 0 darkplaces: increase resolution of particlefont to 512x512 (Chillo)
 0 darkplaces: make CL_RocketTrail2 use the entity to keep track of trail spacing like CL_RocketTrail does (Vic)
 0 darkplaces: make S_Update take a matrix4x4_t *
-0 darkplaces: make a DP_EF_NODEPTHTEST extension which causes an entity to show through walls, useful for navigation markers (Urre)
+0 darkplaces: make a DP_EF_NODEPTHTEST extension which causes an entity to show through walls, useful for navigation markers (Urre, CheapAlert, Supajoe)
 0 darkplaces: make a getattachmentvectors qc builtin (Supajoe)
 0 darkplaces: make blood decals a bit lighter as they're nearly black (ashridah)
 0 darkplaces: make cl_beams_relative only affect view-attached beams
@@ -164,11 +164,11 @@
 0 dpmod: add killing spree reporting; how many kills since spawn when you die, as well as announcing when you hit certain numbers of kills (SeienAbunae)
 0 dpmod: add q3bsp teleport target entity
 0 dpmod: add rotfish to spawnmonsters code (only spawn if they land in water) (Zombie)
-0 dpmod: add support for info_player_deathmatch in singleplayer for q3 compatibility (Static_Fiend)
-0 dpmod: add target_position entity for a touch of q3 compatibility on jumppads (Static_Fiend)
+-d dpmod: add support for info_player_deathmatch in singleplayer for q3 compatibility (Static_Fiend)
+-d dpmod: add target_position entity for a touch of q3 compatibility on jumppads (Static_Fiend)
 0 dpmod: crash when dog attacks you in dpdm2 deathmatch 7 with bots present (Zombie13)
 0 dpmod: figure out why the dbsg isn't selectable in deathmatch 7 mode
-0 dpmod: find a way to make deathmatch 7 get more difficulty as kills increase?  (Zombie13)
+0 dpmod: find a way to make deathmatch 7 get more difficult as kills increase?  (Zombie13)
 0 dpmod: fix angled corpse bug
 0 dpmod: fix the 'shell casing spawning at wrong player' bug somehow
 0 dpmod: fix the plasma wave doing excessive damage at low framerates
@@ -202,7 +202,7 @@
 0 hmap2: make sure seconds reports in all tools don't print secondssss when they're printing shorter and shorter updates (FrikaC)
 0 hmap2: release hmap2 (Vic, Supajoe, Urre)
 0 lhfire: make a lhfire.txt and move the scripting info to it, add some more general explanation and tips
-0 litsupport: fix the one COM_HunkFile call that uses two parameters (glquake took one) and fix the few "//lit support begin" messages at the end of code blocks (metlslime)
+-d litsupport: fix the one COM_HunkFile call that uses two parameters (glquake took one) and fix the few "//lit support begin" messages at the end of code blocks (metlslime)
 0 revelation: change the wabbit kill message to " was hunting wabbit but shot " " instead"
 0 sv_user.qc: figure out why looking up/down slows movement and fix it (Vermeulen)
 1 darkplaces: add "sendcvar <cvarname>" command which executes on clients and forwards a "sentcvar <cvarname> <cvarvalue>" to the server, which the qc can catch (Urre)
