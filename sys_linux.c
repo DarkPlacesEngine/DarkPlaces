@@ -1,20 +1,21 @@
-#include <unistd.h>
-#include <signal.h>
 #include <stdlib.h>
-#include <limits.h>
-#include <sys/time.h>
+#include <stdio.h>
+#include <stdarg.h>
+
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <stdarg.h>
-#include <stdio.h>
+
+#include <signal.h>
+#include <limits.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
-#include <sys/stat.h>
-#include <string.h>
-#include <ctype.h>
+#include <sys/time.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
+#include <string.h>
+#include <ctype.h>
 #include <errno.h>
 
 #include "quakedef.h"
@@ -27,6 +28,46 @@ char *basedir = ".";
 char *cachedir = "/tmp";
 
 cvar_t  sys_linerefresh = {"sys_linerefresh","0"};// set for entity display
+
+extern cvar_t	timestamps;
+extern cvar_t	timeformat;
+
+/* The translation table between the graphical font and plain ASCII  --KB */
+static char qfont_table[256] = {
+	'\0', '#',  '#',  '#',  '#',  '.',  '#',  '#',
+	'#',  9,    10,   '#',  ' ',  13,   '.',  '.',
+	'[',  ']',  '0',  '1',  '2',  '3',  '4',  '5',
+	'6',  '7',  '8',  '9',  '.',  '<',  '=',  '>',
+	' ',  '!',  '"',  '#',  '$',  '%',  '&',  '\'',
+	'(',  ')',  '*',  '+',  ',',  '-',  '.',  '/',
+	'0',  '1',  '2',  '3',  '4',  '5',  '6',  '7',
+	'8',  '9',  ':',  ';',  '<',  '=',  '>',  '?',
+	'@',  'A',  'B',  'C',  'D',  'E',  'F',  'G',
+	'H',  'I',  'J',  'K',  'L',  'M',  'N',  'O',
+	'P',  'Q',  'R',  'S',  'T',  'U',  'V',  'W',
+	'X',  'Y',  'Z',  '[',  '\\', ']',  '^',  '_',
+	'`',  'a',  'b',  'c',  'd',  'e',  'f',  'g',
+	'h',  'i',  'j',  'k',  'l',  'm',  'n',  'o',
+	'p',  'q',  'r',  's',  't',  'u',  'v',  'w',
+	'x',  'y',  'z',  '{',  '|',  '}',  '~',  '<',
+
+	'<',  '=',  '>',  '#',  '#',  '.',  '#',  '#',
+	'#',  '#',  ' ',  '#',  ' ',  '>',  '.',  '.',
+	'[',  ']',  '0',  '1',  '2',  '3',  '4',  '5',
+	'6',  '7',  '8',  '9',  '.',  '<',  '=',  '>',
+	' ',  '!',  '"',  '#',  '$',  '%',  '&',  '\'',
+	'(',  ')',  '*',  '+',  ',',  '-',  '.',  '/',
+	'0',  '1',  '2',  '3',  '4',  '5',  '6',  '7',
+	'8',  '9',  ':',  ';',  '<',  '=',  '>',  '?',
+	'@',  'A',  'B',  'C',  'D',  'E',  'F',  'G',
+	'H',  'I',  'J',  'K',  'L',  'M',  'N',  'O',
+	'P',  'Q',  'R',  'S',  'T',  'U',  'V',  'W',
+	'X',  'Y',  'Z',  '[',  '\\', ']',  '^',  '_',
+	'`',  'a',  'b',  'c',  'd',  'e',  'f',  'g',
+	'h',  'i',  'j',  'k',  'l',  'm',  'n',  'o', 
+	'p',  'q',  'r',  's',  't',  'u',  'v',  'w',
+	'x',  'y',  'z',  '{',  '|',  '}',  '~',  '<'
+};
 
 // =======================================================================
 // General routines
@@ -83,41 +124,40 @@ void Sys_Printf (char *fmt, ...)
 }
 */
 
-char sysprintfbuf1[1024];
-char sysprintfbuf2[4096];
-char sysprintfhextable[] = "0123456789ABCDEF"; 
+#define MAX_PRINT_MSG	4096
 void Sys_Printf (char *fmt, ...)
 {
 	va_list		argptr;
-	char		c, *o;
-	int		i;
+	char		start[MAX_PRINT_MSG];	// String we started with
+	char		stamp[MAX_PRINT_MSG];	// Time stamp
+	char		final[MAX_PRINT_MSG];	// String we print
 
-	va_start (argptr,fmt);
-	vsprintf (sysprintfbuf1,fmt,argptr);
+	time_t		mytime = 0;
+	struct tm	*local = NULL;
+
+	unsigned char		*p;
+
+	va_start (argptr, fmt);
+	vsnprintf (start, sizeof(start), fmt, argptr);
 	va_end (argptr);
-
-	if (strlen(sysprintfbuf1) > 1023)
-		Sys_Error("memory overwrite in Sys_Printf");
 
 	if (nostdout)
 		return;
 
-	o = sysprintfbuf2;
-	for (i = 0;i < 1023 && sysprintfbuf1[i];i++)
-	{
-		c = sysprintfbuf1[i] & 0x7f;
-		if (c < 32 && c != 10 && c != 13 && c != 9)
-		{
-			*o++ = '[';
-			*o++ = sysprintfhextable[(c >> 4)];
-			*o++ = sysprintfhextable[c & 0x0F];
-			*o++ = ']';
-		}
-		else
-			*o++ = c;
+	if (timestamps.value) {
+		mytime = time (NULL);
+		local = localtime (&mytime);
+		strftime (stamp, sizeof (stamp), timeformat.string, local);
+		
+		snprintf (final, sizeof (final), "%s%s", stamp, start);
+	} else {
+		snprintf (final, sizeof (final), "%s", start);
 	}
-	*o++ = 0;
-	puts(sysprintfbuf2);
+
+	for (p = (unsigned char *) final; *p; p++) {
+		putc (qfont_table[*p], stdout);
+	}
+	fflush (stdout);
 }
 
 #if 0
