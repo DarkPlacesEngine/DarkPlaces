@@ -1340,23 +1340,39 @@ will fall if the floor is pulled out from under them.
 */
 void SV_Physics_Step (edict_t *ent)
 {
-	qboolean	hitsound;
+	int flags, fall, hitsound;
 
-// freefall if not onground
-	if ( ! ((int)ent->v.flags & (FL_ONGROUND | FL_FLY | FL_SWIM) ) )
+	// freefall if not fly/swim
+	fall = true;
+	flags = (int)ent->v.flags;
+	if (flags & (FL_FLY | FL_SWIM))
+	{
+		if (flags & FL_FLY)
+			fall = false;
+		else if ((flags & FL_SWIM) && SV_PointContents(ent->v.origin) != CONTENTS_EMPTY)
+			fall = false;
+	}
+
+	if (fall)
 	{
 		if (ent->v.velocity[2] < sv_gravity.value*-0.1)
+		{
 			hitsound = true;
+			if (flags & FL_ONGROUND)
+				hitsound = false;
+		}
 		else
 			hitsound = false;
 
 		SV_AddGravity (ent);
 		SV_CheckVelocity (ent);
 		SV_FlyMove (ent, sv.frametime, NULL);
-		SV_LinkEdict (ent, true);
+		SV_LinkEdict (ent, false);
 
-		if ( (int)ent->v.flags & FL_ONGROUND )	// just hit ground
+		// just hit ground
+		if ((int)ent->v.flags & FL_ONGROUND)
 		{
+			VectorClear(ent->v.velocity);
 			if (hitsound)
 				SV_StartSound (ent, 0, "demon/dland2.wav", 255, 1);
 		}
