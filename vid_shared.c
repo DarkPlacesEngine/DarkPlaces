@@ -411,7 +411,7 @@ void VID_CheckExtensions(void)
 	Con_Printf("Checking OpenGL extensions...\n");
 
 	if (!gl_checkextension("glDrawRangeElements", drawrangeelementsfuncs, "-nodrawrangeelements", true))
-		gl_checkextension("GL_EXT_draw_range_elements", drawrangeelementsextfuncs, "-nodrawrangeelements", true);
+		gl_checkextension("GL_EXT_draw_range_elements", drawrangeelementsextfuncs, "-nodrawrangeelements", false);
 
 	if (gl_checkextension("GL_ARB_multitexture", multitexturefuncs, "-nomtex", false))
 	{
