@@ -284,8 +284,8 @@ void GL_SetupView_Mode_PerspectiveInfiniteFarClip (double fovx, double fovy, dou
 	m[ 7] = 0;
 	m[ 8] = 0;
 	m[ 9] = 0;
-	m[10] = -1 * nudge;
-	m[11] = -1 * nudge;
+	m[10] = -nudge;
+	m[11] = -1;
 	m[12] = 0;
 	m[13] = 0;
 	m[14] = -2 * zNear * nudge;
