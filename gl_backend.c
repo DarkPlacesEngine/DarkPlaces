@@ -616,7 +616,7 @@ void GL_ShowTrisColor(float cr, float cg, float cb, float ca)
 	if (!r_showtrispass)
 		return;
 	r_showtrispass = false;
-	GL_Color(cr,cg,cb,ca);
+	GL_Color(cr * r_showtris.value, cg * r_showtris.value, cb * r_showtris.value, ca);
 	r_showtrispass = true;
 }
 
@@ -1249,7 +1249,7 @@ showtris:
 
 	if (r_showtrispass)
 		r_showtrispass = false;
-	else if (r_showtris.integer)
+	else if (r_showtris.value > 0)
 	{
 		rmeshstate_t m;
 		GL_BlendFunc(GL_ONE, GL_ONE);
