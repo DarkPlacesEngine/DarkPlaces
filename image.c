@@ -604,6 +604,8 @@ qbyte *loadimagepixels (const char *filename, qboolean complain, int matchwidth,
 	int i;
 	qbyte *f, *data = NULL;
 	char basename[MAX_QPATH], name[MAX_QPATH], *c;
+	if (developer_memorydebug.integer)
+		Mem_CheckSentinelsGlobal();
 	Image_StripImageExtension(filename, basename); // strip filename extensions to allow replacement by other types
 	// replace *'s with #, so commandline utils don't get confused when dealing with the external files
 	for (c = basename;*c;c++)
@@ -616,6 +618,8 @@ qbyte *loadimagepixels (const char *filename, qboolean complain, int matchwidth,
 		{
 			Mem_Free(f);
 			Con_DPrintf("loaded image %s (%dx%d)\n", name, image_width, image_height);
+			if (developer_memorydebug.integer)
+				Mem_CheckSentinelsGlobal();
 			return data;
 		}
 	}
@@ -628,6 +632,8 @@ qbyte *loadimagepixels (const char *filename, qboolean complain, int matchwidth,
 			Con_Printf (i == 0 ? "\"%s\"" : (imageformats[i+1].formatstring ? ", \"%s\"" : " or \"%s\".\n"), imageformats[i].formatstring);
 		}
 	}
+	if (developer_memorydebug.integer)
+		Mem_CheckSentinelsGlobal();
 	return NULL;
 }
 
