@@ -851,7 +851,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 // move the complete, relocatable alias model to the cache
 	end = Hunk_LowMark ();
 	mod->cachesize = total = end - start;
-	
+
 	Cache_Alloc (&mod->cache, total, loadname);
 	if (!mod->cache.data)
 		return;
@@ -864,7 +864,10 @@ void swapintblock(int *m, int size)
 {
 	size /= 4;
 	while(size--)
-		*m++ = BigLong(*m);
+	{
+		*m = BigLong(*m);
+		m++;
+	}
 }
 
 void Mod_LoadZymoticModel (model_t *mod, void *buffer)
