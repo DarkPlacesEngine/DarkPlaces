@@ -1126,14 +1126,18 @@ void COM_InitArgv (int argc, char **argv)
 	largv[com_argc] = argvdummy;
 	com_argv = largv;
 
-#if ZYMOTIC
+#if BLOODBATH
+	gamemode = GAME_BLOODBATH;
+#elif ZYMOTIC
 	gamemode = GAME_ZYMOTIC;
 #elif FIENDARENA
 	gamemode = GAME_FIENDARENA;
 #elif NEHAHRA
 	gamemode = GAME_NEHAHRA;
 #else
-	if (COM_CheckParm ("-zymotic"))
+	if (COM_CheckParm ("-bloodbath"))
+		gamemode = GAME_BLOODBATH;
+	else if (COM_CheckParm ("-zymotic"))
 		gamemode = GAME_ZYMOTIC;
 	else if (COM_CheckParm ("-fiendarena"))
 		gamemode = GAME_FIENDARENA;
@@ -1163,6 +1167,9 @@ void COM_InitArgv (int argc, char **argv)
 		break;
 	case GAME_ZYMOTIC:
 		gamename = "Zymotic";
+		break;
+	case GAME_BLOODBATH:
+		gamename = "BloodBath";
 		break;
 	default:
 		Sys_Error("COM_InitArgv: unknown gamemode %i\n", gamemode);
