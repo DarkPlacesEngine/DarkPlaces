@@ -1433,7 +1433,7 @@ void PF_lightstyle (void)
 	if (sv.state != ss_active)
 		return;
 
-	for (j = 0, host_client = svs.clients;j < svs.maxclients;j++, host_client++)
+	for (j = 0, client = svs.clients;j < svs.maxclients;j++, client++)
 	{
 		if (client->netconnection)
 		{
@@ -2802,7 +2802,6 @@ void PF_fputs(void)
 {
 	int stringlength;
 	char string[STRINGTEMP_LENGTH];
-	PF_VarString(1, string, sizeof(string));
 	int filenum = G_FLOAT(OFS_PARM0);
 	if (filenum < 0 || filenum >= MAX_PRFILES)
 	{
@@ -2814,6 +2813,7 @@ void PF_fputs(void)
 		Con_Printf("PF_fputs: no such file handle %i (or file has been closed)\n", filenum);
 		return;
 	}
+	PF_VarString(1, string, sizeof(string));
 	if ((stringlength = strlen(string)))
 		FS_Write(pr_files[filenum], string, stringlength);
 	if (developer.integer)
