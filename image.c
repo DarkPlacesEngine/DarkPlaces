@@ -539,6 +539,35 @@ int loadtextureimagewithmask (char* filename, int matchwidth, int matchheight, q
 	return texnum;
 }
 
+void Image_WriteTGARGB_preflipped (char *filename, int width, int height, byte *data)
+{
+	byte *buffer, *in, *out, *end;
+
+	buffer = malloc(width*height*3 + 18);
+
+	memset (buffer, 0, 18);
+	buffer[2] = 2;		// uncompressed type
+	buffer[12] = (width >> 0) & 0xFF;
+	buffer[13] = (width >> 8) & 0xFF;
+	buffer[14] = (height >> 0) & 0xFF;
+	buffer[15] = (height >> 8) & 0xFF;
+	buffer[16] = 24;	// pixel size
+
+	// swap rgb to bgr
+	in = data;
+	out = buffer + 18;
+	end = in + width*height*3;
+	for (;in < end;in += 3)
+	{
+		*out++ = in[2];
+		*out++ = in[1];
+		*out++ = in[0];
+	}
+	COM_WriteFile (filename, buffer, width*height*3 + 18 );
+
+	free(buffer);
+}
+
 void Image_WriteTGARGB (char *filename, int width, int height, byte *data)
 {
 	int y;
