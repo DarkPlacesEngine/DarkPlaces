@@ -265,31 +265,100 @@ void Matrix4x4_CreateFromQuakeEntity(matrix4x4_t *out, float x, float y, float z
 {
 	double angle, sr, sp, sy, cr, cp, cy;
 
-	angle = yaw * (M_PI*2 / 360);
-	sy = sin(angle);
-	cy = cos(angle);
-	angle = pitch * (M_PI*2 / 360);
-	sp = sin(angle);
-	cp = cos(angle);
-	angle = roll * (M_PI*2 / 360);
-	sr = sin(angle);
-	cr = cos(angle);
-	out->m[0][0] = (float)((cp*cy) * scale);
-	out->m[0][1] = (float)((sr*sp*cy+cr*-sy) * scale);
-	out->m[0][2] = (float)((cr*sp*cy+-sr*-sy) * scale);
-	out->m[0][3] = x;
-	out->m[1][0] = (float)((cp*sy) * scale);
-	out->m[1][1] = (float)((sr*sp*sy+cr*cy) * scale);
-	out->m[1][2] = (float)((cr*sp*sy+-sr*cy) * scale);
-	out->m[1][3] = y;
-	out->m[2][0] = (float)((-sp) * scale);
-	out->m[2][1] = (float)((sr*cp) * scale);
-	out->m[2][2] = (float)((cr*cp) * scale);
-	out->m[2][3] = z;
-	out->m[3][0] = 0;
-	out->m[3][1] = 0;
-	out->m[3][2] = 0;
-	out->m[3][3] = 1;
+	if (roll)
+	{
+		angle = yaw * (M_PI*2 / 360);
+		sy = sin(angle);
+		cy = cos(angle);
+		angle = pitch * (M_PI*2 / 360);
+		sp = sin(angle);
+		cp = cos(angle);
+		angle = roll * (M_PI*2 / 360);
+		sr = sin(angle);
+		cr = cos(angle);
+		out->m[0][0] = (float)((cp*cy) * scale);
+		out->m[0][1] = (float)((sr*sp*cy+cr*-sy) * scale);
+		out->m[0][2] = (float)((cr*sp*cy+-sr*-sy) * scale);
+		out->m[0][3] = x;
+		out->m[1][0] = (float)((cp*sy) * scale);
+		out->m[1][1] = (float)((sr*sp*sy+cr*cy) * scale);
+		out->m[1][2] = (float)((cr*sp*sy+-sr*cy) * scale);
+		out->m[1][3] = y;
+		out->m[2][0] = (float)((-sp) * scale);
+		out->m[2][1] = (float)((sr*cp) * scale);
+		out->m[2][2] = (float)((cr*cp) * scale);
+		out->m[2][3] = z;
+		out->m[3][0] = 0;
+		out->m[3][1] = 0;
+		out->m[3][2] = 0;
+		out->m[3][3] = 1;
+	}
+	else if (pitch)
+	{
+		angle = yaw * (M_PI*2 / 360);
+		sy = sin(angle);
+		cy = cos(angle);
+		angle = pitch * (M_PI*2 / 360);
+		sp = sin(angle);
+		cp = cos(angle);
+		out->m[0][0] = (float)((cp*cy) * scale);
+		out->m[0][1] = (float)((-sy) * scale);
+		out->m[0][2] = (float)((sp*cy) * scale);
+		out->m[0][3] = x;
+		out->m[1][0] = (float)((cp*sy) * scale);
+		out->m[1][1] = (float)((cy) * scale);
+		out->m[1][2] = (float)((sp*sy) * scale);
+		out->m[1][3] = y;
+		out->m[2][0] = (float)((-sp) * scale);
+		out->m[2][1] = 0;
+		out->m[2][2] = (float)((cp) * scale);
+		out->m[2][3] = z;
+		out->m[3][0] = 0;
+		out->m[3][1] = 0;
+		out->m[3][2] = 0;
+		out->m[3][3] = 1;
+	}
+	else if (yaw)
+	{
+		angle = yaw * (M_PI*2 / 360);
+		sy = sin(angle);
+		cy = cos(angle);
+		out->m[0][0] = (float)((cy) * scale);
+		out->m[0][1] = (float)((-sy) * scale);
+		out->m[0][2] = 0;
+		out->m[0][3] = x;
+		out->m[1][0] = (float)((sy) * scale);
+		out->m[1][1] = (float)((cy) * scale);
+		out->m[1][2] = 0;
+		out->m[1][3] = y;
+		out->m[2][0] = 0;
+		out->m[2][1] = 0;
+		out->m[2][2] = scale;
+		out->m[2][3] = z;
+		out->m[3][0] = 0;
+		out->m[3][1] = 0;
+		out->m[3][2] = 0;
+		out->m[3][3] = 1;
+	}
+	else
+	{
+		out->m[0][0] = scale;
+		out->m[0][1] = 0;
+		out->m[0][2] = 0;
+		out->m[0][3] = x;
+		out->m[1][0] = 0;
+		out->m[1][1] = scale;
+		out->m[1][2] = 0;
+		out->m[1][3] = y;
+		out->m[2][0] = 0;
+		out->m[2][1] = 0;
+		out->m[2][2] = scale;
+		out->m[2][3] = z;
+		out->m[3][0] = 0;
+		out->m[3][1] = 0;
+		out->m[3][2] = 0;
+		out->m[3][3] = 1;
+	}
 }
 
 void Matrix4x4_ToVectors(const matrix4x4_t *in, float vx[3], float vy[3], float vz[3], float t[3])
