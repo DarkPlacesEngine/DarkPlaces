@@ -1140,10 +1140,28 @@ void R_RenderView (void)
 	R_Mesh_Start();
 	R_MeshQueue_BeginScene();
 
-	if (r_shadows.integer == 3 && !vid_stencil.integer)
+	if (r_shadows.integer == 3)
 	{
-		Con_Printf("Stencil not enabled, turning off r_shadows 3\n");
-		Cvar_SetValueQuick(&r_shadows, 0);
+		if (!gl_stencil)
+		{
+			Con_Printf("Stencil not enabled, turning off r_shadows 3\n");
+			Cvar_SetValueQuick(&r_shadows, 0);
+		}
+		else if (!gl_texture3d)
+		{
+			Con_Printf("3D texture support not detected, turning off r_shadows 3\n");
+			Cvar_SetValueQuick(&r_shadows, 0);
+		}
+		else if (!gl_texturecubemap)
+		{
+			Con_Printf("Cubemap texture support not detected, turning off r_shadows 3\n");
+			Cvar_SetValueQuick(&r_shadows, 0);
+		}
+		else if (!gl_dot3arb)
+		{
+			Con_Printf("Bumpmapping support not detected, turning off r_shadows 3\n");
+			Cvar_SetValueQuick(&r_shadows, 0);
+		}
 	}
 
 	if (R_DrawBrushModelsSky())

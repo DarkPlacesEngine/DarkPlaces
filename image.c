@@ -1097,8 +1097,10 @@ void Image_Resample24Nolerp(void *indata, int inwidth, int inheight, void *outda
 Image_Resample
 ================
 */
-void Image_Resample (void *indata, int inwidth, int inheight, void *outdata, int outwidth, int outheight, int bytesperpixel, int quality)
+void Image_Resample (void *indata, int inwidth, int inheight, int indepth, void *outdata, int outwidth, int outheight, int outdepth, int bytesperpixel, int quality)
 {
+	if (indepth != 1 || outdepth != 1)
+		Sys_Error("Image_Resample: 3D resampling not supported\n");
 	if (resamplerowsize < outwidth*4)
 	{
 		if (resamplerow1)
@@ -1128,9 +1130,11 @@ void Image_Resample (void *indata, int inwidth, int inheight, void *outdata, int
 }
 
 // in can be the same as out
-void Image_MipReduce(qbyte *in, qbyte *out, int *width, int *height, int destwidth, int destheight, int bytesperpixel)
+void Image_MipReduce(qbyte *in, qbyte *out, int *width, int *height, int *depth, int destwidth, int destheight, int destdepth, int bytesperpixel)
 {
 	int x, y, nextrow;
+	if (*depth != 1 || destdepth != 1)
+		Sys_Error("Image_Resample: 3D resampling not supported\n");
 	nextrow = *width * bytesperpixel;
 	if (*width > destwidth)
 	{

@@ -287,6 +287,55 @@ extern int gl_combine_extension;
 
 extern cvar_t gl_combine;
 
+extern int gl_texture3d;
+#ifndef GL_TEXTURE_3D_EXT
+#define GL_PACK_SKIP_IMAGES_EXT			0x806B
+#define GL_PACK_IMAGE_HEIGHT_EXT		0x806C
+#define GL_UNPACK_SKIP_IMAGES_EXT		0x806D
+#define GL_UNPACK_IMAGE_HEIGHT_EXT		0x806E
+#define GL_TEXTURE_3D_EXT			0x806F
+#define GL_PROXY_TEXTURE_3D_EXT			0x8070
+#define GL_TEXTURE_DEPTH_EXT			0x8071
+#define GL_TEXTURE_WRAP_R_EXT			0x8072
+#define GL_MAX_3D_TEXTURE_SIZE_EXT		0x8073
+#define GL_TEXTURE_3D_BINDING_EXT		0x806A
+extern void (GLAPIENTRY *qglTexImage3DEXT)(GLenum target, GLint level, GLenum internalFormat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
+extern void (GLAPIENTRY *qglTexSubImage3DEXT)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const GLvoid *pixels);
+extern void (GLAPIENTRY *qglCopyTexSubImage3DEXT)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLint x, GLint y, GLsizei width, GLsizei height);
+#endif
+
+extern int gl_texturecubemap;
+#ifndef GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB
+#define GL_NORMAL_MAP_ARB			    0x8511
+#define GL_REFLECTION_MAP_ARB		    0x8512
+#define GL_TEXTURE_CUBE_MAP_ARB		    0x8513
+#define GL_TEXTURE_BINDING_CUBE_MAP_ARB	    0x8514
+#define GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB     0x8515
+#define GL_TEXTURE_CUBE_MAP_NEGATIVE_X_ARB     0x8516
+#define GL_TEXTURE_CUBE_MAP_POSITIVE_Y_ARB     0x8517
+#define GL_TEXTURE_CUBE_MAP_NEGATIVE_Y_ARB     0x8518
+#define GL_TEXTURE_CUBE_MAP_POSITIVE_Z_ARB     0x8519
+#define GL_TEXTURE_CUBE_MAP_NEGATIVE_Z_ARB     0x851A
+#define GL_PROXY_TEXTURE_CUBE_MAP_ARB	    0x851B
+#define GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB		0x851C
+#endif
+
+extern int gl_dot3arb;
+#ifndef GL_DOT3_RGB_ARB
+#define DOT3_RGB_ARB				0x86AE
+#define DOT3_RGBA_ARB				0x86AF
+#endif
+
+/*
+// uncomment if this is actually needed by anyone
+extern int gl_dot3ext;
+#ifndef GL_DOT3_RGB_EXT
+#define GL_DOT3_RGB_EXT				0x8740
+#define GL_DOT3_RGBA_EXT			0x8741
+#endif
+*/
+
+
 extern void (GLAPIENTRY *qglClearColor)(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha);
 
 extern void (GLAPIENTRY *qglClear)(GLbitfield mask);
@@ -362,16 +411,26 @@ extern void (GLAPIENTRY *qglClearStencil)(GLint s);
 
 //extern void (GLAPIENTRY *qglTexEnvf)(GLenum target, GLenum pname, GLfloat param);
 extern void (GLAPIENTRY *qglTexEnvi)(GLenum target, GLenum pname, GLint param);
-
 //extern void (GLAPIENTRY *qglTexParameterf)(GLenum target, GLenum pname, GLfloat param);
 extern void (GLAPIENTRY *qglTexParameteri)(GLenum target, GLenum pname, GLint param);
 
-extern void (GLAPIENTRY *qglBindTexture)(GLenum target, GLuint texture);
-extern void (GLAPIENTRY *qglTexImage2D)(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels );
-extern void (GLAPIENTRY *qglTexSubImage2D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels);
+extern void (GLAPIENTRY *qglGenTextures)(GLsizei n, GLuint *textures);
 extern void (GLAPIENTRY *qglDeleteTextures)(GLsizei n, const GLuint *textures);
+extern void (GLAPIENTRY *qglBindTexture)(GLenum target, GLuint texture);
+extern void (GLAPIENTRY *qglPrioritizeTextures)(GLsizei n, const GLuint *textures, const GLclampf *priorities);
+extern GLboolean (GLAPIENTRY *qglAreTexturesResident)(GLsizei n, const GLuint *textures, GLboolean *residences);
+extern GLboolean (GLAPIENTRY *qglIsTexture)(GLuint texture);
 extern void (GLAPIENTRY *qglPixelStoref)(GLenum pname, GLfloat param);
 extern void (GLAPIENTRY *qglPixelStorei)(GLenum pname, GLint param);
+
+extern void (GLAPIENTRY *qglTexImage1D)(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
+extern void (GLAPIENTRY *qglTexImage2D)(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
+extern void (GLAPIENTRY *qglTexSubImage1D)(GLenum target, GLint level, GLint xoffset, GLsizei width, GLenum format, GLenum type, const GLvoid *pixels);
+extern void (GLAPIENTRY *qglTexSubImage2D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels);
+extern void (GLAPIENTRY *qglCopyTexImage1D)(GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLint border);
+extern void (GLAPIENTRY *qglCopyTexImage2D)(GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border);
+extern void (GLAPIENTRY *qglCopyTexSubImage1D)(GLenum target, GLint level, GLint xoffset, GLint x, GLint y, GLsizei width);
+extern void (GLAPIENTRY *qglCopyTexSubImage2D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint x, GLint y, GLsizei width, GLsizei height);
 
 #if WIN32
 extern int (WINAPI *qwglChoosePixelFormat)(HDC, CONST PIXELFORMATDESCRIPTOR *);
