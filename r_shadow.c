@@ -205,8 +205,6 @@ int c_rtcached_shadowmeshes, c_rtcached_shadowtris;
 
 float r_shadow_attenpower, r_shadow_attenscale;
 
-float varray_vertex3f2[65536*3];
-
 rtlight_t *r_shadow_compilingrtlight;
 dlight_t *r_shadow_worldlightchain;
 dlight_t *r_shadow_selectedlight;
