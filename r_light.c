@@ -723,6 +723,7 @@ void R_LightModel(int numverts)
 	}
 	nearlight[MAX_DLIGHTS], *nl;
 	int modeldlightbits[8];
+	//staticlight_t *sl;
 	a = currentrenderentity->alpha;
 	if (currentrenderentity->effects & EF_FULLBRIGHT)
 		basecolor[0] = basecolor[1] = basecolor[2] = 1;
@@ -733,7 +734,25 @@ void R_LightModel(int numverts)
 			R_ModelLightPoint(basecolor, currentrenderentity->origin, modeldlightbits);
 
 			nl = &nearlight[0];
-			for (i = 0;i < r_numdlights;i++)
+			/*
+			// this code is unused for now
+			for (i = 0, sl = staticlight;i < staticlights && nearlights < MAX_DLIGHTS;i++, sl++)
+			{
+				if (TraceLine(currentrenderentity->origin, sl->origin, NULL, NULL, 0) == 1)
+				{
+					nl->fadetype = sl->fadetype;
+					nl->distancescale = sl->distancescale;
+					nl->radius = sl->radius;
+					VectorCopy(sl->origin, nl->origin);
+					VectorCopy(sl->color, nl->light);
+					nl->cullradius2 = 99999999;
+					nl->lightsubtract = 0;
+					nl++;
+					nearlights++;
+				}
+			}
+			*/
+			for (i = 0;i < r_numdlights && nearlights < MAX_DLIGHTS;i++)
 			{
 				if (!(modeldlightbits[i >> 5] & (1 << (i & 31))))
 					continue;

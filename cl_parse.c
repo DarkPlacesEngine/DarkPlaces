@@ -239,7 +239,59 @@ void CL_KeepaliveMessage (void)
 	SZ_Clear (&cls.message);
 }
 
-//FIXME finish this code!
+void CL_ParseEntityLump(char *entdata)
+{
+	char *data;
+	char key[128], value[4096];
+	FOG_clear(); // LordHavoc: no fog until set
+	R_SetSkyBox(""); // LordHavoc: no environment mapped sky until set
+	data = entdata;
+	if (!data)
+		return;
+	data = COM_Parse(data);
+	if (!data)
+		return; // error
+	if (com_token[0] != '{')
+		return; // error
+	while (1)
+	{
+		data = COM_Parse(data);
+		if (!data)
+			return; // error
+		if (com_token[0] == '}')
+			break; // end of worldspawn
+		if (com_token[0] == '_')
+			strcpy(key, com_token + 1);
+		else
+			strcpy(key, com_token);
+		while (key[strlen(key)-1] == ' ') // remove trailing spaces
+			key[strlen(key)-1] = 0;
+		data = COM_Parse(data);
+		if (!data)
+			return; // error
+		strcpy(value, com_token);
+		if (!strcmp("sky", key))
+			R_SetSkyBox(value);
+		else if (!strcmp("skyname", key)) // non-standard, introduced by QuakeForge... sigh.
+			R_SetSkyBox(value);
+		else if (!strcmp("qlsky", key)) // non-standard, introduced by QuakeLives (EEK)
+			R_SetSkyBox(value);
+		else if (!strcmp("fog", key))
+			sscanf(value, "%f %f %f %f", &fog_density, &fog_red, &fog_green, &fog_blue);
+		else if (!strcmp("fog_density", key))
+			fog_density = atof(value);
+		else if (!strcmp("fog_red", key))
+			fog_red = atof(value);
+		else if (!strcmp("fog_green", key))
+			fog_green = atof(value);
+		else if (!strcmp("fog_blue", key))
+			fog_blue = atof(value);
+	}
+}
+
+/*
+//this code is going to be removed
+
 #define MAX_STATICLIGHTS 2048
 // tyrlite types
 #define LIGHTFADE_LMINUSX 0 // light, arghlite, others?
@@ -253,14 +305,30 @@ typedef struct
 	int fadetype; // one of the LIGHTFADE_ values
 	int style;
 	vec3_t origin;
-	vec_t radius; // the point at which lighting stops
-	vec3_t direction;
-	vec_t cone; // if non-zero, it is a spot light
-	vec3_t color;
 	vec_t distancescale; // attenuation
-	vec_t lightsubtract; // biasing lighting toward black (hlight feature)
+
+	// spotlights
+	vec3_t direction; // direction
+	vec_t cone; // cone cosine, any light cosine outside this range is suddenly black
+
+	// LIGHTFADE_LMINUSX
+	vec_t light;
+	vec3_t color;
+
+	// LIGHTFADE_LDIVX and LIGHTFADE_LDIVX2
+	vec3_t light2; // light * color
+	vec_t lightsubtract; // hlight feature
 }
 staticlight_t;
+
+extern staticlight_t staticlight[MAX_STATICLIGHTS];
+extern int staticlights;
+
+extern int r_sunlightenabled;
+extern vec3_t r_sunlightdirection, r_sunlightcolor;
+extern vec3_t r_light_ambientcolor;
+
+
 
 staticlight_t staticlight[MAX_STATICLIGHTS];
 int staticlights;
@@ -275,7 +343,7 @@ void CL_ParseEntityLump(char *entdata)
 	char key[128], value[4096];
 	char targetnamebuffer[65536];
 	char *targetname[8192], *target[MAX_STATICLIGHTS], light_target[256];
-	vec3_t targetnameorigin[8192], targetnametemporigin, v;
+	vec3_t targetnameorigin[8192], v;
 	int targets, targetnames, targetnamebufferpos, targetnameorigintofillin;
 	int i, j, n;
 	float f1, f2, f3, f4;
@@ -306,10 +374,6 @@ void CL_ParseEntityLump(char *entdata)
 	targets = 0;
 	targetnames = 0;
 	targetnamebufferpos = 0;
-	targetnameorigintofillin = -1;
-	targetnametemporigin[0] = 0;
-	targetnametemporigin[1] = 0;
-	targetnametemporigin[2] = 0;
 	while (1)
 	{
 		data = COM_Parse(data);
@@ -334,7 +398,7 @@ void CL_ParseEntityLump(char *entdata)
 		else if (!strcmp("qlsky", key)) // non-standard, introduced by QuakeLives (EEK)
 			R_SetSkyBox(value);
 		else if (!strcmp("fog", key))
-			scanf(value, "%f %f %f %f", &fog_density, &fog_red, &fog_green, &fog_blue);
+			sscanf(value, "%f %f %f %f", &fog_density, &fog_red, &fog_green, &fog_blue);
 		else if (!strcmp("fog_density", key))
 			fog_density = atof(value);
 		else if (!strcmp("fog_red", key))
@@ -352,37 +416,17 @@ void CL_ParseEntityLump(char *entdata)
 		}
 		else if (!strcmp("sun_color", key))
 		{
-			if (scanf(value, "%f %f %f", &v[0], &v[1], &v[2]) == 3)
+			if (sscanf(value, "%f %f %f", &v[0], &v[1], &v[2]) == 3)
 				VectorCopy(v, sunlightcolor);
 			tyrlite = true;
 		}
 		else if (!strcmp("sun_mangle", key))
 		{
-			if (scanf(value, "%f %f %f", &v[0], &v[1], &v[2]) == 3)
+			if (sscanf(value, "%f %f %f", &v[0], &v[1], &v[2]) == 3)
 				AngleVectors(v, sunlightdirection, NULL, NULL);
 			tyrlite = true;
 		}
-		else if (!strcmp("origin", key))
-		{
-			if (scanf(value, "%f %f %f", &v[0], &v[1], &v[2]) == 3)
-			{
-				VectorCopy(v, targetnametemporigin);
-				VectorCopy(v, light_origin);
-			}
-		}
-		else if (!strcmp("targetname", key))
-		{
-			if ((targetnames < 8192) && (strlen(value) + 1 + targetnamebufferpos <= 65536))
-			{
-				targetname[targetnames] = targetnamebuffer + targetnamebufferpos;
-				strcpy(targetnamebuffer + targetnamebufferpos, value);
-				targetnamebufferpos += strlen(value) + 1;
-				targetnameorigintofillin = targetnames++;
-			}
-		}
 	}
-	if (targetnameorigintofillin >= 0)
-		VectorCopy(targetnametemporigin, targetnameorigin[targetnameorigintofillin]);
 
 	if (sunlight)
 	{
@@ -400,6 +444,7 @@ void CL_ParseEntityLump(char *entdata)
 		if (com_token[0] != '{')
 			break; // error
 		light_light = 0;
+		VectorClear(light_origin);
 		light_lightcolor[0] = light_lightcolor[1] = light_lightcolor[2] = 1.0f;
 		light_color[0] = light_color[1] = light_color[2] = 1.0f;
 		light_direction[0] = light_direction[1] = light_direction[2] = 0.0f;
@@ -410,9 +455,6 @@ void CL_ParseEntityLump(char *entdata)
 		light_lightradius = 0;
 		light_enable = false;
 		targetnameorigintofillin = -1;
-		targetnametemporigin[0] = 0;
-		targetnametemporigin[1] = 0;
-		targetnametemporigin[2] = 0;
 		while (1)
 		{
 			data = COM_Parse(data);
@@ -432,7 +474,7 @@ void CL_ParseEntityLump(char *entdata)
 			strcpy(value, com_token);
 			if (!strcmp("light", key))
 			{
-				n = scanf(value, "%f %f %f %f", &f1, &f2, &f3, &f4);
+				n = sscanf(value, "%f %f %f %f", &f1, &f2, &f3, &f4);
 				switch(n)
 				{
 				case 1:
@@ -463,7 +505,7 @@ void CL_ParseEntityLump(char *entdata)
 			}
 			else if (!strcmp("color", key))
 			{
-				n = scanf(value, "%f %f %f", &f1, &f2, &f3);
+				n = sscanf(value, "%f %f %f", &f1, &f2, &f3);
 				if (n == 3)
 				{
 					light_color[0] = f1;
@@ -473,17 +515,21 @@ void CL_ParseEntityLump(char *entdata)
 				// n != 3 is an error
 			}
 			else if (!strcmp("wait", key))
+			{
 				light_distancescale = atof(value);
+			}
 			else if (!strcmp("delay", key))
 			{
 				light_fadetype = atoi(value);
 				tyrlite = true;
 			}
 			else if (!strcmp("angle", key))
+			{
 				light_cone = -cos(atof(value) * M_PI / 360);
+			}
 			else if (!strcmp("mangle", key))
 			{
-				n = scanf(value, "%f %f %f", &v[0], &v[1], &v[2]);
+				n = sscanf(value, "%f %f %f", &v[0], &v[1], &v[2]);
 				if (n == 3)
 					AngleVectors(v, light_direction, NULL, NULL);
 				// n != 3 is an error
@@ -501,12 +547,14 @@ void CL_ParseEntityLump(char *entdata)
 				light_lightradius = atof(value);
 			}
 			else if (!strcmp("classname", key))
+			{
 				if (!strncmp(value, "light", 5))
 					light_enable = true;
+			}
 			else if (!strcmp("origin", key))
 			{
-				if (scanf(value, "%f %f %f", &v[0], &v[1], &v[2]) == 3)
-					VectorCopy(v, targetnametemporigin);
+				if (sscanf(value, "%f %f %f", &v[0], &v[1], &v[2]) == 3)
+					VectorCopy(v, light_origin);
 			}
 			else if (!strcmp("targetname", key))
 			{
@@ -523,19 +571,10 @@ void CL_ParseEntityLump(char *entdata)
 					strcpy(light_target, value);
 		}
 		if (targetnameorigintofillin >= 0)
-			VectorCopy(targetnametemporigin, targetnameorigin[targetnameorigintofillin]);
+			VectorCopy(light_origin, targetnameorigin[targetnameorigintofillin]);
 		if (light_enable && staticlights < MAX_STATICLIGHTS && light_light != 0)
 		{
-			VectorCopy(light_origin, staticlight[staticlights].origin);
-			staticlight[staticlights].color[0] = light_light * light_lightcolor[0] * light_color[0];
-			staticlight[staticlights].color[1] = light_light * light_lightcolor[1] * light_color[1];
-			staticlight[staticlights].color[2] = light_light * light_lightcolor[2] * light_color[2];
-			VectorCopy(light_direction, staticlight[staticlights].direction);
-			staticlight[staticlights].cone = light_cone;
-			staticlight[staticlights].distancescale = light_distancescale;
-			staticlight[staticlights].fadetype = light_fadetype;
-			staticlight[staticlights].style = light_style;
-			if (light_target && (targets < 8192) && (strlen(value) + 1 + targetnamebufferpos <= 65536))
+			if (light_target[0] && (targets < 8192) && (strlen(value) + 1 + targetnamebufferpos <= 65536))
 			{
 				target[staticlights] = targetnamebuffer + targetnamebufferpos;
 				strcpy(targetnamebuffer + targetnamebufferpos, value);
@@ -543,6 +582,23 @@ void CL_ParseEntityLump(char *entdata)
 			}
 			else
 				target[staticlights] = NULL;
+
+			staticlight[staticlights].fadetype = light_fadetype;
+			staticlight[staticlights].style = light_style;
+			VectorCopy(light_origin, staticlight[staticlights].origin);
+			staticlight[staticlights].distancescale = light_distancescale;
+			// these are often altered later by the target name linking
+			VectorCopy(light_direction, staticlight[staticlights].direction);
+			staticlight[staticlights].cone = light_cone;
+
+			staticlight[staticlights].light = light_light;
+			staticlight[staticlights].color[0] = light_lightcolor[0] * light_color[0];
+			staticlight[staticlights].color[1] = light_lightcolor[1] * light_color[1];
+			staticlight[staticlights].color[2] = light_lightcolor[2] * light_color[2];
+
+			staticlight[staticlights].light2[0] = light_light * light_lightcolor[0] * light_color[0];
+			staticlight[staticlights].light2[1] = light_light * light_lightcolor[1] * light_color[1];
+			staticlight[staticlights].light2[2] = light_light * light_lightcolor[2] * light_color[2];
 			staticlight[staticlights].lightsubtract = 0;
 			if (light_lightradius)
 			{
@@ -553,6 +609,8 @@ void CL_ParseEntityLump(char *entdata)
 		}
 	}
 	if (cl.worldmodel->ishlbsp)
+		n = LIGHTFADE_LDIVX2;
+	else if (light_hlight.integer)
 		n = LIGHTFADE_LDIVX2;
 	else if (tyrlite)
 		n = LIGHTFADE_LMINUSX;
@@ -581,6 +639,7 @@ void CL_ParseEntityLump(char *entdata)
 			staticlight[i].cone = 0;
 	}
 }
+*/
 
 /*
 =====================
