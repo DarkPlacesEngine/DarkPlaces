@@ -638,6 +638,7 @@ void Host_Loadgame_f (void)
 	entnum = -1;
 	for (;;)
 	{
+		r = EOF;
 		for (i = 0;i < (int)sizeof(buf) - 1;i++)
 		{
 			r = FS_Getc (f);
