@@ -1234,7 +1234,7 @@ dpfield_t dpfields[] =
 	{ev_entity, "tag_entity"},
 	{ev_float, "tag_index"},
 	{ev_float, "light_lev"},
-	{ev_float, "color"},
+	{ev_vector, "color"},
 	{ev_float, "style"},
 	{ev_float, "pflags"}
 };
