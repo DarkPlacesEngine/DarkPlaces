@@ -425,27 +425,33 @@ channel_t *SND_PickChannel(int entnum, int entchannel)
 	int ch_idx;
 	int first_to_die;
 	int life_left;
+	channel_t* ch;
 
 // Check for replacement sound, or find the best one to replace
 	first_to_die = -1;
 	life_left = 0x7fffffff;
 	for (ch_idx=NUM_AMBIENTS ; ch_idx < NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS ; ch_idx++)
 	{
+		ch = &channels[ch_idx];
 		if (entchannel != 0		// channel 0 never overrides
-		&& channels[ch_idx].entnum == entnum
-		&& (channels[ch_idx].entchannel == entchannel || entchannel == -1) )
+		&& ch->entnum == entnum
+		&& (ch->entchannel == entchannel || entchannel == -1) )
 		{	// always override sound from same entity
 			first_to_die = ch_idx;
 			break;
 		}
 
 		// don't let monster sounds override player sounds
-		if (channels[ch_idx].entnum == cl.viewentity && entnum != cl.viewentity && channels[ch_idx].sfx)
+		if (ch->entnum == cl.viewentity && entnum != cl.viewentity && ch->sfx)
 			continue;
 
-		if (channels[ch_idx].end - paintedtime < life_left)
+		// don't override looped sounds
+		if (ch->forceloop || (ch->sfx != NULL && ch->sfx->loopstart >= 0))
+			continue;
+
+		if (ch->end - paintedtime < life_left)
 		{
-			life_left = channels[ch_idx].end - paintedtime;
+			life_left = ch->end - paintedtime;
 			first_to_die = ch_idx;
 		}
 	}
@@ -556,6 +562,7 @@ void S_StartSound(int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 	target_chan->sfx = sfx;
 	target_chan->pos = 0.0;
 	target_chan->end = paintedtime + sfx->total_length;
+	target_chan->lastptime = paintedtime;
 
 // if an identical sound has also been started this frame, offset the pos
 // a bit to keep it from just making the first one louder
@@ -703,6 +710,7 @@ void S_StaticSound (sfx_t *sfx, vec3_t origin, float vol, float attenuation)
 	ss->master_vol = vol;
 	ss->dist_mult = (attenuation/64) / sound_nominal_clip_dist;
 	ss->end = paintedtime + sfx->total_length;
+	ss->lastptime = paintedtime;
 
 	SND_Spatialize (ss, true);
 }
