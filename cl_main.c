@@ -568,61 +568,26 @@ void CL_LinkNetworkEntity(entity_t *e)
 				matrix = &tempmatrix;
 			}
 		}
-		// set up the render matrix
-		if (e->state_previous.active && e->state_current.modelindex == e->state_previous.modelindex)
+
+		// movement lerp
+		if (e->persistent.lerpdeltatime > 0 && (lerp = (cl.time - e->persistent.lerpstarttime) / e->persistent.lerpdeltatime) < 1)
 		{
-			// movement lerp
-			if (e->persistent.lerpdeltatime > 0 && (lerp = (cl.time - e->persistent.lerpstarttime) / e->persistent.lerpdeltatime) < 1)
-			{
-				// interpolate the origin and angles
-				VectorLerp(e->persistent.oldorigin, lerp, e->persistent.neworigin, origin);
-				VectorSubtract(e->persistent.newangles, e->persistent.oldangles, delta);
-				if (delta[0] < -180) delta[0] += 360;else if (delta[0] >= 180) delta[0] -= 360;
-				if (delta[1] < -180) delta[1] += 360;else if (delta[1] >= 180) delta[1] -= 360;
-				if (delta[2] < -180) delta[2] += 360;else if (delta[2] >= 180) delta[2] -= 360;
-				VectorMA(e->persistent.oldangles, lerp, delta, angles);
-			}
-			else
-			{
-				// no interpolation
-				VectorCopy(e->persistent.neworigin, origin);
-				VectorCopy(e->persistent.newangles, angles);
-			}
-			// animation lerp
-			if (e->render.frame2 == e->state_current.frame)
-			{
-				// update frame lerp fraction
-				e->render.framelerp = 1;
-				if (e->render.frame2time > e->render.frame1time)
-				{
-					e->render.framelerp = (cl.time - e->render.frame2time) / (e->render.frame2time - e->render.frame1time);
-					e->render.framelerp = bound(0, e->render.framelerp, 1);
-				}
-			}
-			else
-			{
-				// begin a new frame lerp
-				e->render.frame1 = e->render.frame2;
-				e->render.frame1time = e->render.frame2time;
-				e->render.frame = e->render.frame2 = e->state_current.frame;
-				e->render.frame2time = cl.time;
-				e->render.framelerp = 0;
-				// make sure frame lerp won't last longer than 100ms
-				// (this mainly helps with models that use framegroups and
-				// switch between them infrequently)
-				e->render.frame1time = max(e->render.frame1time, e->render.frame2time - 0.1f);
-			}
+			// interpolate the origin and angles
+			VectorLerp(e->persistent.oldorigin, lerp, e->persistent.neworigin, origin);
+			VectorSubtract(e->persistent.newangles, e->persistent.oldangles, delta);
+			if (delta[0] < -180) delta[0] += 360;else if (delta[0] >= 180) delta[0] -= 360;
+			if (delta[1] < -180) delta[1] += 360;else if (delta[1] >= 180) delta[1] -= 360;
+			if (delta[2] < -180) delta[2] += 360;else if (delta[2] >= 180) delta[2] -= 360;
+			VectorMA(e->persistent.oldangles, lerp, delta, angles);
 		}
 		else
 		{
 			// no interpolation
 			VectorCopy(e->persistent.neworigin, origin);
 			VectorCopy(e->persistent.newangles, angles);
-			e->render.frame = e->render.frame1 = e->render.frame2 = e->state_current.frame;
-			e->render.frame1time = e->render.frame2time = cl.time;
-			e->render.framelerp = 1;
 		}
 
+		// model setup and some modelflags
 		e->render.model = cl.model_precache[e->state_current.modelindex];
 		if (e->render.model)
 		{
@@ -641,8 +606,33 @@ void CL_LinkNetworkEntity(entity_t *e)
 				e->render.effects |= EF_FULLBRIGHT;
 		}
 
+		// animation lerp
+		if (e->render.frame2 == e->state_current.frame)
+		{
+			// update frame lerp fraction
+			e->render.framelerp = 1;
+			if (e->render.frame2time > e->render.frame1time)
+			{
+				e->render.framelerp = (cl.time - e->render.frame2time) / (e->render.frame2time - e->render.frame1time);
+				e->render.framelerp = bound(0, e->render.framelerp, 1);
+			}
+		}
+		else
+		{
+			// begin a new frame lerp
+			e->render.frame1 = e->render.frame2;
+			e->render.frame1time = e->render.frame2time;
+			e->render.frame = e->render.frame2 = e->state_current.frame;
+			e->render.frame2time = cl.time;
+			e->render.framelerp = 0;
+			// make sure frame lerp won't last longer than 100ms
+			// (this mainly helps with models that use framegroups and
+			// switch between them infrequently)
+			e->render.frame1time = max(e->render.frame1time, e->render.frame2time - 0.1f);
+		}
 		R_LerpAnimation(&e->render);
 
+		// set up the render matrix
 		// FIXME: e->render.scale should go away
 		Matrix4x4_CreateFromQuakeEntity(&matrix2, origin[0], origin[1], origin[2], angles[0], angles[1], angles[2], e->render.scale);
 		// concat the matrices to make the entity relative to its tag
@@ -837,14 +827,11 @@ void CL_LinkNetworkEntity(entity_t *e)
 				light[3] = 350;
 			CL_AllocDlight(&e->render, &e->render.matrix, light[3], light[0], light[1], light[2], 0, 0, e->state_current.skin, e->state_current.lightstyle, !(e->state_current.lightpflags & PFLAGS_NOSHADOW), (e->state_current.lightpflags & PFLAGS_CORONA) != 0);
 		}
-		// trails need the previous frame
-		if (e->state_previous.active && e->state_previous.modelindex == e->state_current.modelindex)
-		{
-			if (e->render.flags & RENDER_GLOWTRAIL)
-				trailtype = 9;
-			if (trailtype >= 0)
-				CL_RocketTrail(e->persistent.trail_origin, origin, trailtype, e->state_current.glowcolor, e);
-		}
+		// do trails
+		if (e->render.flags & RENDER_GLOWTRAIL)
+			trailtype = 9;
+		if (trailtype >= 0)
+			CL_RocketTrail(e->persistent.trail_origin, origin, trailtype, e->state_current.glowcolor, e);
 		VectorCopy(origin, e->persistent.trail_origin);
 		// tenebrae's sprites are all additive mode (weird)
 		if (gamemode == GAME_TENEBRAE && e->render.model && e->render.model->type == mod_sprite)
@@ -888,6 +875,7 @@ void CL_RelinkWorld(void)
 	// FIXME: this should be done at load
 	Matrix4x4_CreateIdentity(&ent->render.matrix);
 	Matrix4x4_CreateIdentity(&ent->render.inversematrix);
+	R_LerpAnimation(&ent->render);
 	CL_BoundingBoxForEntity(&ent->render);
 	ent->render.flags = RENDER_SHADOW;
 	if (!r_fullbright.integer)
@@ -911,6 +899,7 @@ static void CL_RelinkStaticEntities(void)
 		// hide player shadow during intermission or nehahra movie
 		if (!(e->render.effects & EF_NOSHADOW) && !(e->render.flags & RENDER_TRANSPARENT))
 			e->render.flags |= RENDER_SHADOW;
+		R_LerpAnimation(&e->render);
 		r_refdef.entities[r_refdef.numentities++] = &e->render;
 	}
 }
@@ -1006,6 +995,7 @@ static void CL_RelinkEffects(void)
 
 				Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, e->origin[0], e->origin[1], e->origin[2], 0, 0, 0, 1);
 				Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
+				R_LerpAnimation(&ent->render);
 				CL_BoundingBoxForEntity(&ent->render);
 			}
 		}
@@ -1117,6 +1107,7 @@ void CL_RelinkBeams(void)
 			//ent->render.angles[2] = rand()%360;
 			Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, org[0], org[1], org[2], -pitch, yaw, lhrandom(0, 360), 1);
 			Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
+			R_LerpAnimation(&ent->render);
 			CL_BoundingBoxForEntity(&ent->render);
 			VectorMA(org, 30, dist, org);
 			d -= 30;
