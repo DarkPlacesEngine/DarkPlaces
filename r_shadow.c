@@ -38,6 +38,7 @@ cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "0"};
 cvar_t r_shadow_gloss = {0, "r_shadow_gloss", "1"};
 cvar_t r_shadow_debuglight = {0, "r_shadow_debuglight", "-1"};
 cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1"};
+cvar_t r_shadow_bumpscale = {0, "r_shadow_bumpscale", "4"};
 
 void R_Shadow_ClearWorldLights(void);
 void R_Shadow_SaveWorldLights(void);
@@ -98,6 +99,7 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_debuglight);
 	Cvar_RegisterVariable(&r_shadow_erasebydrawing);
 	Cvar_RegisterVariable(&r_shadow_scissor);
+	Cvar_RegisterVariable(&r_shadow_bumpscale);
 	R_Shadow_EditLights_Init();
 	R_RegisterModule("R_Shadow", r_shadow_start, r_shadow_shutdown, r_shadow_newmap);
 }
@@ -1524,9 +1526,9 @@ void R_Shadow_LoadLightsFile(void)
 				Con_Printf("invalid lights file, found %d parameters on line %i, should be 14 parameters (origin[0] origin[1] origin[2] falloff light[0] light[1] light[2] subtract spotdir[0] spotdir[1] spotdir[2] spotcone distancebias style)\n", a, n + 1);
 				break;
 			}
-			radius = sqrt(DotProduct(color, color) / (falloff * falloff * 16384.0f * 16384.0f));
+			radius = sqrt(DotProduct(color, color) / (falloff * falloff * 8192.0f * 8192.0f));
 			radius = bound(15, radius, 4096);
-			VectorScale(color, (1.0f / 32768.0f), color);
+			VectorScale(color, (1.0f / (8388608.0f)), color);
 			R_Shadow_NewWorldLight(origin, radius, color, style, NULL);
 			s++;
 			n++;
@@ -1541,7 +1543,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 {
 	int entnum, style, islight;
 	char key[256], value[1024];
-	float origin[3], radius, color[3], light, scale;
+	float origin[3], radius, color[3], light, scale, originhack[3];
 	const char *data;
 
 	data = cl.worldmodel->entities;
@@ -1551,6 +1553,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 	{
 		light = 0;
 		origin[0] = origin[1] = origin[2] = 0;
+		originhack[0] = originhack[1] = originhack[2] = 0;
 		color[0] = color[1] = color[2] = 1;
 		scale = 1;
 		style = 0;
@@ -1583,7 +1586,33 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 			else if (!strcmp("classname", key))
 			{
 				if (!strncmp(value, "light", 5))
+				{
 					islight = true;
+					if (!strcmp(value, "light_flame_large_yellow"))
+					{
+						originhack[0] = 0;
+						originhack[1] = 0;
+						originhack[2] = 40;
+					}
+					if (!strcmp(value, "light_flame_small_yellow"))
+					{
+						originhack[0] = 0;
+						originhack[1] = 0;
+						originhack[2] = 40;
+					}
+					if (!strcmp(value, "light_torch_small_white"))
+					{
+						originhack[0] = 0;
+						originhack[1] = 0;
+						originhack[2] = 40;
+					}
+					if (!strcmp(value, "light_torch_small_walltorch"))
+					{
+						originhack[0] = 0;
+						originhack[1] = 0;
+						originhack[2] = 40;
+					}
+				}
 			}
 			else if (!strcmp("style", key))
 				style = atoi(value);
@@ -1593,6 +1622,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 		radius = bound(0, light / scale, 1048576) + 15.0f;
 		light = bound(0, light, 1048576) * (1.0f / 256.0f);
 		VectorScale(color, light, color);
+		VectorAdd(origin, originhack, origin);
 		if (radius >= 15)
 			R_Shadow_NewWorldLight(origin, radius, color, style, NULL);
 	}
