@@ -383,6 +383,8 @@ int PVS_CullBox(const vec3_t mins, const vec3_t maxs)
 {
 	int stackpos, sides;
 	mnode_t *node, *stack[4096];
+	if (cl.worldmodel == NULL)
+		return false;
 	stackpos = 0;
 	stack[stackpos++] = cl.worldmodel->nodes;
 	while (stackpos)
@@ -411,6 +413,8 @@ int VIS_CullBox(const vec3_t mins, const vec3_t maxs)
 	mnode_t *node, *stack[4096];
 	if (R_CullBox(mins, maxs))
 		return true;
+	if (cl.worldmodel == NULL)
+		return false;
 	stackpos = 0;
 	stack[stackpos++] = cl.worldmodel->nodes;
 	while (stackpos)
@@ -446,6 +450,8 @@ int PVS_CullSphere(const vec3_t origin, vec_t radius)
 	int stackpos;
 	mnode_t *node, *stack[4096];
 	float dist;
+	if (cl.worldmodel == NULL)
+		return false;
 	stackpos = 0;
 	stack[stackpos++] = cl.worldmodel->nodes;
 	while (stackpos)
@@ -475,6 +481,8 @@ int VIS_CullSphere(const vec3_t origin, vec_t radius)
 	float dist;
 	if (R_CullSphere(origin, radius))
 		return true;
+	if (cl.worldmodel == NULL)
+		return false;
 	stackpos = 0;
 	stack[stackpos++] = cl.worldmodel->nodes;
 	while (stackpos)
@@ -647,6 +655,8 @@ int Light_CullBox(const vec3_t mins, const vec3_t maxs)
 {
 	int stackpos, sides;
 	mnode_t *node, *stack[4096];
+	if (cl.worldmodel == NULL)
+		return false;
 	stackpos = 0;
 	stack[stackpos++] = cl.worldmodel->nodes;
 	while (stackpos)
@@ -675,6 +685,8 @@ int LightAndVis_CullBox(const vec3_t mins, const vec3_t maxs)
 	mnode_t *node, *stack[4096];
 	if (R_CullBox(mins, maxs))
 		return true;
+	if (cl.worldmodel == NULL)
+		return false;
 	stackpos = 0;
 	stack[stackpos++] = cl.worldmodel->nodes;
 	while (stackpos)
@@ -859,41 +871,49 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 		if (r_shadow_debuglight.integer >= 0 && lnum != r_shadow_debuglight.integer)
 			continue;
 
-		for (i = 0;i < wl->numleafs;i++)
-			if (wl->leafs[i]->visframe == r_framecount)
-				break;
-		if (i == wl->numleafs)
-			continue;
-		leaf = wl->leafs[i++];
-		VectorCopy(leaf->mins, clipmins);
-		VectorCopy(leaf->maxs, clipmaxs);
-		for (i++;i < wl->numleafs;i++)
+		if (cl.worldmodel != NULL)
 		{
-			leaf = wl->leafs[i];
-			if (leaf->visframe == r_framecount)
+			for (i = 0;i < wl->numleafs;i++)
+				if (wl->leafs[i]->visframe == r_framecount)
+					break;
+			if (i == wl->numleafs)
+				continue;
+			leaf = wl->leafs[i++];
+			VectorCopy(leaf->mins, clipmins);
+			VectorCopy(leaf->maxs, clipmaxs);
+			for (i++;i < wl->numleafs;i++)
 			{
-				if (clipmins[0] > leaf->mins[0]) clipmins[0] = leaf->mins[0];
-				if (clipmaxs[0] < leaf->maxs[0]) clipmaxs[0] = leaf->maxs[0];
-				if (clipmins[1] > leaf->mins[1]) clipmins[1] = leaf->mins[1];
-				if (clipmaxs[1] < leaf->maxs[1]) clipmaxs[1] = leaf->maxs[1];
-				if (clipmins[2] > leaf->mins[2]) clipmins[2] = leaf->mins[2];
-				if (clipmaxs[2] < leaf->maxs[2]) clipmaxs[2] = leaf->maxs[2];
+				leaf = wl->leafs[i];
+				if (leaf->visframe == r_framecount)
+				{
+					if (clipmins[0] > leaf->mins[0]) clipmins[0] = leaf->mins[0];
+					if (clipmaxs[0] < leaf->maxs[0]) clipmaxs[0] = leaf->maxs[0];
+					if (clipmins[1] > leaf->mins[1]) clipmins[1] = leaf->mins[1];
+					if (clipmaxs[1] < leaf->maxs[1]) clipmaxs[1] = leaf->maxs[1];
+					if (clipmins[2] > leaf->mins[2]) clipmins[2] = leaf->mins[2];
+					if (clipmaxs[2] < leaf->maxs[2]) clipmaxs[2] = leaf->maxs[2];
+				}
 			}
+			if (clipmins[0] < wl->mins[0]) clipmins[0] = wl->mins[0];
+			if (clipmins[1] < wl->mins[1]) clipmins[1] = wl->mins[1];
+			if (clipmins[2] < wl->mins[2]) clipmins[2] = wl->mins[2];
+			if (clipmaxs[0] > wl->maxs[0]) clipmaxs[0] = wl->maxs[0];
+			if (clipmaxs[1] > wl->maxs[1]) clipmaxs[1] = wl->maxs[1];
+			if (clipmaxs[2] > wl->maxs[2]) clipmaxs[2] = wl->maxs[2];
 		}
-		if (clipmins[0] < wl->mins[0]) clipmins[0] = wl->mins[0];
-		if (clipmins[1] < wl->mins[1]) clipmins[1] = wl->mins[1];
-		if (clipmins[2] < wl->mins[2]) clipmins[2] = wl->mins[2];
-		if (clipmaxs[0] > wl->maxs[0]) clipmaxs[0] = wl->maxs[0];
-		if (clipmaxs[1] > wl->maxs[1]) clipmaxs[1] = wl->maxs[1];
-		if (clipmaxs[2] > wl->maxs[2]) clipmaxs[2] = wl->maxs[2];
+		else
+		{
+			VectorCopy(wl->mins, clipmins);
+			VectorCopy(wl->maxs, clipmaxs);
+		}
 
 		if (R_Shadow_ScissorForBBoxAndSphere(clipmins, clipmaxs, wl->origin, wl->cullradius))
 			continue;
 
 		// mark the leafs we care about so only things in those leafs will matter
-		for (i = 0;i < wl->numleafs;i++)
-			wl->leafs[i]->worldnodeframe = shadowframecount;
-
+		if (cl.worldmodel != NULL)
+			for (i = 0;i < wl->numleafs;i++)
+				wl->leafs[i]->worldnodeframe = shadowframecount;
 
 		f = d_lightstylevalue[wl->style] * (1.0f / 256.0f);
 		VectorScale(wl->light, f, lightcolor);
@@ -1083,26 +1103,29 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 
 static void R_SetFrustum (void)
 {
-	int i;
-
 	// LordHavoc: note to all quake engine coders, the special case for 90
 	// degrees assumed a square view (wrong), so I removed it, Quake2 has it
 	// disabled as well.
+
 	// rotate VPN right by FOV_X/2 degrees
 	RotatePointAroundVector( frustum[0].normal, vup, vpn, -(90-r_refdef.fov_x / 2 ) );
+	frustum[0].dist = DotProduct (r_origin, frustum[0].normal);
+	PlaneClassify(&frustum[0]);
+
 	// rotate VPN left by FOV_X/2 degrees
 	RotatePointAroundVector( frustum[1].normal, vup, vpn, 90-r_refdef.fov_x / 2 );
+	frustum[1].dist = DotProduct (r_origin, frustum[1].normal);
+	PlaneClassify(&frustum[1]);
+
 	// rotate VPN up by FOV_X/2 degrees
 	RotatePointAroundVector( frustum[2].normal, vright, vpn, 90-r_refdef.fov_y / 2 );
+	frustum[2].dist = DotProduct (r_origin, frustum[2].normal);
+	PlaneClassify(&frustum[2]);
+
 	// rotate VPN down by FOV_X/2 degrees
 	RotatePointAroundVector( frustum[3].normal, vright, vpn, -( 90 - r_refdef.fov_y / 2 ) );
-
-	for (i = 0;i < 4;i++)
-	{
-		frustum[i].type = PLANE_ANYZ;
-		frustum[i].dist = DotProduct (r_origin, frustum[i].normal);
-		PlaneClassify(&frustum[i]);
-	}
+	frustum[3].dist = DotProduct (r_origin, frustum[3].normal);
+	PlaneClassify(&frustum[3]);
 }
 
 /*
@@ -1234,8 +1257,7 @@ void R_RenderView (void)
 	R_Mesh_Start();
 	R_MeshQueue_BeginScene();
 
-	if (r_shadow_lightingmode)
-		R_Shadow_UpdateWorldLightSelection();
+	R_Shadow_UpdateWorldLightSelection();
 
 	if (R_DrawBrushModelsSky())
 		R_TimeReport("bmodelsky");
