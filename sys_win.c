@@ -332,7 +332,11 @@ double Sys_DoubleTime (void)
 	}
 
 	if (newtime < oldtime)
-		Con_Printf("Sys_DoubleTime: time stepped backwards (went from %f to %f, difference %f)\n", oldtime, newtime, newtime - oldtime);
+	{
+		// warn if it's significant
+		if (newtime - oldtime < -0.01)
+			Con_Printf("Sys_DoubleTime: time stepped backwards (went from %f to %f, difference %f)\n", oldtime, newtime, newtime - oldtime);
+	}
 	else
 		curtime += newtime - oldtime;
 	oldtime = newtime;
