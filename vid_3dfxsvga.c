@@ -127,7 +127,7 @@ void VID_SetupDithering(void)
 			dither_select(GR_DITHER_4x4);
 			Con_Printf ("4x4.\n");
 		} else {
-			glDisable(GL_DITHER);
+			qglDisable(GL_DITHER);
 			Con_Printf ("disabled.\n");
 		}
 	}
@@ -151,7 +151,7 @@ void VID_Finish (void)
 {
 	if (r_render.integer)
 	{
-		glFinish();
+		qglFinish();
 		fxMesaSwapBuffers();
 	}
 }

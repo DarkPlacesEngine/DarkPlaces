@@ -880,20 +880,20 @@ void R_Clip_DisplayBuffer(void)
 		return;
 	if (clipwidth > 256 || clipheight > 256)
 		return;
-	glBlendFunc(GL_ONE, GL_ONE);
-	glBindTexture(GL_TEXTURE_2D, 8000);
+	qglBlendFunc(GL_ONE, GL_ONE);
+	qglBindTexture(GL_TEXTURE_2D, 8000);
 	if (firstupload)
 	{
 		memset(clipbuffertex, 0, sizeof(clipbuffertex));
-		glTexImage2D(GL_TEXTURE_2D, 0, 1, 256, 256, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, clipbuffertex);
+		qglTexImage2D(GL_TEXTURE_2D, 0, 1, 256, 256, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, clipbuffertex);
 	}
-	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	if (lighthalf)
-		glColor4ub(0.5, 0.5, 0.5);
+		qglColor4ub(128, 128, 128, 255);
 	else
-		glColor4ub(1, 1, 1);
+		qglColor4ub(255, 255, 255, 255);
 	firstupload = false;
 	b = clipbuffertex;
 	for (i = 0;i < clipwidth*clipheight;i++)
@@ -903,16 +903,16 @@ void R_Clip_DisplayBuffer(void)
 		else
 			*b++ = 0;
 	}
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, clipwidth, clipheight, GL_LUMINANCE, GL_UNSIGNED_BYTE, clipbuffertex);
-	glBegin (GL_QUADS);
-	glTexCoord2f (0                 , 0                  );glVertex2f (0           , 0            );
-	glTexCoord2f (clipwidth / 256.0f, 0                  );glVertex2f (vid.conwidth, 0            );
-	glTexCoord2f (clipwidth / 256.0f, clipheight / 256.0f);glVertex2f (vid.conwidth, vid.conheight);
-	glTexCoord2f (0                 , clipheight / 256.0f);glVertex2f (0           , vid.conheight);
-	glEnd ();
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	qglTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, clipwidth, clipheight, GL_LUMINANCE, GL_UNSIGNED_BYTE, clipbuffertex);
+	qglBegin (GL_QUADS);
+	qglTexCoord2f (0                 , 0                  );qglVertex2f (0           , 0            );
+	qglTexCoord2f (clipwidth / 256.0f, 0                  );qglVertex2f (vid.conwidth, 0            );
+	qglTexCoord2f (clipwidth / 256.0f, clipheight / 256.0f);qglVertex2f (vid.conwidth, vid.conheight);
+	qglTexCoord2f (0                 , clipheight / 256.0f);qglVertex2f (0           , vid.conheight);
+	qglEnd ();
+	qglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+//	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+//	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 #endif
 	*/
 }
