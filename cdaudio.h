@@ -18,6 +18,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
+extern qboolean cdValid;
+extern qboolean cdPlaying;
+extern qboolean cdPlayLooping;
+extern qbyte cdPlayTrack;
+
 int CDAudio_Init(void);
 void CDAudio_Open(void);
 void CDAudio_Close(void);
