@@ -1027,17 +1027,17 @@ void Mod_IDP3_Load(model_t *mod, void *buffer)
 		mesh->data_texcoord2f = Mem_Alloc(loadmodel->mempool, mesh->num_vertices * sizeof(float[2]));
 		mesh->data_morphvertex3f = Mem_Alloc(loadmodel->mempool, mesh->num_vertices * mesh->num_morphframes * sizeof(float[3]));
 		for (j = 0;j < mesh->num_triangles * 3;j++)
-			mesh->data_element3i[j] = LittleLong(((int *)((qbyte *)pinmesh + pinmesh->lump_elements))[j]);
+			mesh->data_element3i[j] = LittleLong(((int *)((qbyte *)pinmesh + LittleLong(pinmesh->lump_elements)))[j]);
 		for (j = 0;j < mesh->num_vertices;j++)
 		{
-			mesh->data_texcoord2f[j * 2 + 0] = LittleFloat(((float *)((qbyte *)pinmesh + pinmesh->lump_texcoords))[j * 2 + 0]);
-			mesh->data_texcoord2f[j * 2 + 1] = LittleFloat(((float *)((qbyte *)pinmesh + pinmesh->lump_texcoords))[j * 2 + 1]);
+			mesh->data_texcoord2f[j * 2 + 0] = LittleFloat(((float *)((qbyte *)pinmesh + LittleLong(pinmesh->lump_texcoords)))[j * 2 + 0]);
+			mesh->data_texcoord2f[j * 2 + 1] = LittleFloat(((float *)((qbyte *)pinmesh + LittleLong(pinmesh->lump_texcoords)))[j * 2 + 1]);
 		}
 		for (j = 0;j < mesh->num_vertices * mesh->num_morphframes;j++)
 		{
-			mesh->data_morphvertex3f[j * 3 + 0] = LittleShort(((short *)((qbyte *)pinmesh + pinmesh->lump_framevertices))[j * 4 + 0]) * (1.0f / 64.0f);
-			mesh->data_morphvertex3f[j * 3 + 1] = LittleShort(((short *)((qbyte *)pinmesh + pinmesh->lump_framevertices))[j * 4 + 1]) * (1.0f / 64.0f);
-			mesh->data_morphvertex3f[j * 3 + 2] = LittleShort(((short *)((qbyte *)pinmesh + pinmesh->lump_framevertices))[j * 4 + 2]) * (1.0f / 64.0f);
+			mesh->data_morphvertex3f[j * 3 + 0] = LittleShort(((short *)((qbyte *)pinmesh + LittleLong(pinmesh->lump_framevertices)))[j * 4 + 0]) * (1.0f / 64.0f);
+			mesh->data_morphvertex3f[j * 3 + 1] = LittleShort(((short *)((qbyte *)pinmesh + LittleLong(pinmesh->lump_framevertices)))[j * 4 + 1]) * (1.0f / 64.0f);
+			mesh->data_morphvertex3f[j * 3 + 2] = LittleShort(((short *)((qbyte *)pinmesh + LittleLong(pinmesh->lump_framevertices)))[j * 4 + 2]) * (1.0f / 64.0f);
 		}
 
 		Mod_ValidateElements(mesh->data_element3i, mesh->num_triangles, mesh->num_vertices, __FILE__, __LINE__);
@@ -1045,7 +1045,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer)
 		Mod_Alias_Mesh_CompileFrameZero(mesh);
 
 		if (LittleLong(pinmesh->num_shaders) >= 1)
-			Mod_BuildAliasSkinsFromSkinFiles(mesh->data_skins, skinfiles, pinmesh->name, ((md3shader_t *)((qbyte *) pinmesh + pinmesh->lump_shaders))->name);
+			Mod_BuildAliasSkinsFromSkinFiles(mesh->data_skins, skinfiles, pinmesh->name, ((md3shader_t *)((qbyte *) pinmesh + LittleLong(pinmesh->lump_shaders)))->name);
 		else
 			for (j = 0;j < mesh->num_skins;j++)
 				Mod_BuildAliasSkinFromSkinFrame(mesh->data_skins + j, NULL);
