@@ -648,41 +648,32 @@ void Mod_Q1BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientcolor, v
 	Mod_Q1BSP_LightPoint_RecursiveBSPNode(ambientcolor, diffusecolor, diffusenormal, cl.worldmodel->brushq1.nodes + cl.worldmodel->brushq1.hulls[0].firstclipnode, p[0], p[1], p[2], p[2] - 65536);
 }
 
-static qbyte *Mod_Q1BSP_DecompressVis(model_t *model, qbyte *in)
+static void Mod_Q1BSP_DecompressVis(const qbyte *in, const qbyte *inend, qbyte *out, qbyte *outend)
 {
-	static qbyte decompressed[MAX_MAP_LEAFS/8];
 	int c;
-	qbyte *out;
-	int row;
-
-	row = (model->brushq1.numleafs+7)>>3;
-	out = decompressed;
-
-	do
+	while (out < outend)
 	{
-		if (*in)
+		if (in == inend)
 		{
-			*out++ = *in++;
-			continue;
+			Con_Printf("Mod_Q1BSP_DecompressVis: input underrun\n");
+			return;
 		}
-
-		c = in[1];
-		in += 2;
-		while (c)
+		c = *in++;
+		if (c)
+			*out++ = c;
+		else
 		{
-			*out++ = 0;
-			c--;
+			for (c = *in++;c > 0;c--)
+			{
+				if (out == outend)
+				{
+					Con_Printf("Mod_Q1BSP_DecompressVis: output overrun\n");
+					return;
+				}
+				*out++ = 0;
+			}
 		}
-	} while (out - decompressed < row);
-
-	return decompressed;
-}
-
-static qbyte *Mod_Q1BSP_LeafPVS(model_t *model, mleaf_t *leaf)
-{
-	if (r_novis.integer || leaf == model->brushq1.leafs || leaf->compressed_vis == NULL)
-		return mod_q1bsp_novis;
-	return Mod_Q1BSP_DecompressVis(model, leaf->compressed_vis);
+	}
 }
 
 static void Mod_Q1BSP_LoadTextures(lump_t *l)
@@ -1364,11 +1355,13 @@ static void Mod_Q1BSP_ProcessLightList(void)
 
 static void Mod_Q1BSP_LoadVisibility(lump_t *l)
 {
-	loadmodel->brushq1.visdata = NULL;
+	loadmodel->brushq1.num_compressedpvs = 0;
+	loadmodel->brushq1.data_compressedpvs = NULL;
 	if (!l->filelen)
 		return;
-	loadmodel->brushq1.visdata = Mem_Alloc(loadmodel->mempool, l->filelen);
-	memcpy(loadmodel->brushq1.visdata, mod_base + l->fileofs, l->filelen);
+	loadmodel->brushq1.num_compressedpvs = l->filelen;
+	loadmodel->brushq1.data_compressedpvs = Mem_Alloc(loadmodel->mempool, l->filelen);
+	memcpy(loadmodel->brushq1.data_compressedpvs, mod_base + l->fileofs, l->filelen);
 }
 
 // used only for HalfLife maps
@@ -2012,9 +2005,10 @@ static void Mod_Q1BSP_LoadNodes(lump_t *l)
 
 static void Mod_Q1BSP_LoadLeafs(lump_t *l)
 {
-	dleaf_t 	*in;
-	mleaf_t 	*out;
-	int			i, j, count, p;
+	dleaf_t *in;
+	mleaf_t *out;
+	int i, j, count, p, pvschainbytes;
+	qbyte *pvs;
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -2024,6 +2018,8 @@ static void Mod_Q1BSP_LoadLeafs(lump_t *l)
 
 	loadmodel->brushq1.leafs = out;
 	loadmodel->brushq1.numleafs = count;
+	pvschainbytes = ((loadmodel->brushq1.num_leafs - 1)+7)>>3;
+	loadmodel->brushq1.data_decompressedpvs = pvs = Mem_Alloc(loadmodel->mempool, loadmodel->brushq1.numleafs * pvschainbytes);
 
 	for ( i=0 ; i<count ; i++, in++, out++)
 	{
@@ -2033,20 +2029,23 @@ static void Mod_Q1BSP_LoadLeafs(lump_t *l)
 			out->maxs[j] = LittleShort(in->maxs[j]);
 		}
 
-		p = LittleLong(in->contents);
-		out->contents = p;
+		// FIXME: this function could really benefit from some error checking
 
-		out->firstmarksurface = loadmodel->brushq1.marksurfaces +
-			LittleShort(in->firstmarksurface);
+		out->contents = LittleLong(in->contents);
+
+		out->firstmarksurface = loadmodel->brushq1.marksurfaces + LittleShort(in->firstmarksurface);
 		out->nummarksurfaces = LittleShort(in->nummarksurfaces);
 
-		p = LittleLong(in->visofs);
-		if (p == -1)
-			out->compressed_vis = NULL;
-		else
-			out->compressed_vis = loadmodel->brushq1.visdata + p;
+		out->pvsdata = pvs;
+		pvs += pvschainbytes;
 
-		for (j=0 ; j<4 ; j++)
+		p = LittleLong(in->visofs);
+		if (p >= 0)
+			Mod_Q1BSP_DecompressVis(loadmodel->brushq1.data_compressedpvs + p, loadmodel->brushq1.data_compressedpvs + loadmodel->brushq1.num_compressedpvs, out->pvsdata, out->pvsdata + pvschainbytes);
+		else
+			memset(out->pvsdata, 0xFF, pvschainbytes);
+
+		for (j = 0;j < 4;j++)
 			out->ambient_sound_level[j] = in->ambient_level[j];
 
 		// FIXME: Insert caustics here
@@ -3041,7 +3040,6 @@ static void Mod_Q1BSP_BuildPVSTextureChains(model_t *model)
 void Mod_Q1BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbytes, mnode_t *node)
 {
 	int i;
-	qbyte *pvs;
 	mplane_t *plane;
 	float d;
 
@@ -3050,12 +3048,9 @@ void Mod_Q1BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, vec_t r
 	// if this is a leaf, accumulate the pvs bits
 		if (node->contents < 0)
 		{
-			if (node->contents != CONTENTS_SOLID)
-			{
-				pvs = model->brushq1.LeafPVS(model, (mleaf_t *)node);
+			if (node->contents != CONTENTS_SOLID && ((mleaf_t *)node)->pvsdata)
 				for (i = 0;i < pvsbytes;i++)
-					pvsbuffer[i] |= pvs[i];
-			}
+					pvsbuffer[i] |= ((mleaf_t *)node)->pvsdata[i];
 			return;
 		}
 
@@ -3077,9 +3072,8 @@ void Mod_Q1BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, vec_t r
 //of the given point.
 int Mod_Q1BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbufferlength)
 {
-	int bytes = (sv.worldmodel->brushq1.numleafs+31)>>3;
-	if (bytes > pvsbufferlength)
-		bytes = pvsbufferlength;
+	int bytes = ((model->brushq1.num_leafs - 1) + 7) >> 3;
+	bytes = min(bytes, pvsbufferlength);
 	memset(pvsbuffer, 0, bytes);
 	Mod_Q1BSP_FatPVS_RecursiveBSPNode(model, org, radius, pvsbuffer, bytes, sv.worldmodel->brushq1.nodes);
 	return bytes;
@@ -3116,7 +3110,6 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	mod->brush.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
 	mod->brush.TraceBox = Mod_Q1BSP_TraceBox;
 	mod->brushq1.PointInLeaf = Mod_Q1BSP_PointInLeaf;
-	mod->brushq1.LeafPVS = Mod_Q1BSP_LeafPVS;
 	mod->brushq1.BuildPVSTextureChains = Mod_Q1BSP_BuildPVSTextureChains;
 
 	if (loadmodel->isworldmodel)
@@ -3153,8 +3146,16 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	Mod_Q1BSP_LoadClipnodes(&header->lumps[LUMP_CLIPNODES]);
 	Mod_Q1BSP_LoadSubmodels(&header->lumps[LUMP_MODELS]);
 
+	if (mod->brushq1.data_compressedpvs)
+		Mem_Free(mod->brushq1.data_compressedpvs);
+	mod->brushq1.data_compressedpvs = NULL;
+	mod->brushq1.num_compressedpvs = 0;
+
 	Mod_Q1BSP_MakeHull0();
 	Mod_Q1BSP_MakePortals();
+
+	if (developer.integer)
+		Con_Printf("Some stats for q1bsp model \"%s\": %i faces, %i nodes, %i leafs, %i visleafs, %i visleafportals\n", loadmodel->name, loadmodel->brushq1.numsurfaces, loadmodel->brushq1.numnodes, loadmodel->brushq1.numleafs, loadmodel->brushq1.num_leafs - 1, loadmodel->brushq1.numportals);
 
 	mod->numframes = 2;		// regular and alternate animation
 
@@ -4556,7 +4557,6 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 	mod->brush.FindNonSolidLocation = Mod_Q3BSP_FindNonSolidLocation;
 	mod->brush.TraceBox = Mod_Q3BSP_TraceBox;
 	//mod->brushq1.PointInLeaf = Mod_Q1BSP_PointInLeaf;
-	//mod->brushq1.LeafPVS = Mod_Q1BSP_LeafPVS;
 	//mod->brushq1.BuildPVSTextureChains = Mod_Q1BSP_BuildPVSTextureChains;
 
 	mod_base = (qbyte *)header;
