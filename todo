@@ -35,7 +35,7 @@
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 -n dpmod: make grapple off-hand (joe hill)
-0 darkplaces: change cl_fakelocalping_min and _max to only lag by half each way, as currently it results in 2x ping
+d darkplaces: change cl_fakelocalping_min and _max to only lag by half each way, as currently it results in 2x ping
 0 darkplaces: make MAX_PACKETFRAGMENT a property of each net connection, so memory loopbacks could use huge limits (Sajt)
 d darkplaces: add extension for tenebrae dlight entities
 0 darkplaces: fix broken mouse button display in key binding menu, it shows ??? for mouse buttons (Mercury, Tomaz)
