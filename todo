@@ -20,12 +20,10 @@
 -d darkplaces: ignore modelflags on view weaponmodel - in Malice the double barreled shotgun leaves a smoke trail, and the hellfire rotates, also in Zerstorer the riot shotgun rotates (Hidayat)
 -d darkplaces: lerp lightstyles (Mitchell)
 -d darkplaces: locked console scrollback (sublim3)
--d darkplaces: make TE_EXPLOSION2 use a spherical spawn pattern rather than cube shape (VorteX)
 -d darkplaces: make gl_texture_anisotropy take effect immediately like gl_texturemode rather than needing an r_restart (-metlslime, zinx)
 -d darkplaces: make sure QuakeDoneQuick works (Chris Kemp)
 -d darkplaces: physics bug: bmodels (doors, etc) hurt player if player pushes against it, and sometimes gets stuck for a frame when falling onto it (Andrew A. Gilevsky)
 -d darkplaces: prevent player name changes faster than once every 5 seconds (sublim3)
--d darkplaces: te_explosion2 builtin needs to be fixed, it is missing the colorlength parameter, update pr_cmds.c and dpextensions.qc (VorteX)
 -d darkplaces: write a readme (Antti)
 -d dpmod: make grapple off-hand (joe hill)
 -f darkplaces: add chase_pitch cvar to control pitch angle of chase camera, and chase_angle cvar to control yaw angle of chase camera, and add back chase_right cvar (Electro)
@@ -591,6 +589,7 @@ d darkplaces: make LHNET_OpenSocket_Connectionless call getsockname to find out 
 d darkplaces: make LHNET_Read print out the names of read errors (yummyluv)
 d darkplaces: make MAX_PACKETFRAGMENT a property of each net connection, so memory loopbacks could use huge limits (Sajt)
 d darkplaces: make Mem_Free function clear memory only if developer is on
+d darkplaces: make TE_EXPLOSION2 use a spherical spawn pattern rather than cube shape (VorteX)
 d darkplaces: make bounce check for fabs(dotproduct)<60 velocity, not dotproduct<60, so now an explosion above gibs will cause them to bounce up into the air 
 d darkplaces: make client load .ent files
 d darkplaces: make console editing allow cursoring left/right on the line and insert and delete, etc (Vic)
@@ -664,6 +663,7 @@ d darkplaces: server is starting before the "port" cvar is set by commandline an
 d darkplaces: shadow volume rendering should not unlock the arrays between renders (Mercury) 
 d darkplaces: support water lightmaps for use with hmap2 water lighting
 d darkplaces: tags support on md3 (Electro needs this urgently)
+d darkplaces: te_explosion2 builtin needs to be fixed, it is missing the colorlength parameter, update pr_cmds.c and dpextensions.qc (VorteX)
 d darkplaces: tenebrae dlights have reversed pitch (like v_angle, not model angles), make DP match this
 d darkplaces: tweak the blood decals in the particlefont to make them look more like the q2e_blood.avi video (Vermeulen)
 d darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
