@@ -181,7 +181,7 @@ edict_t *EDICT_NUM_ERROR(int n, char *filename, int fileline);
 #define EDICT_NUM_UNSIGNED(n) (((n) < sv.max_edicts) ? sv.edicts + (n) : EDICT_NUM_ERROR(n, __FILE__, __LINE__))
 
 //int NUM_FOR_EDICT_ERROR(edict_t *e);
-#define NUM_FOR_EDICT(e) ((edict_t *)(e) - sv.edicts)
+#define NUM_FOR_EDICT(e) ((int)((edict_t *)(e) - sv.edicts))
 //int NUM_FOR_EDICT(edict_t *e);
 
 #define	NEXT_EDICT(e) ((e) + 1)
