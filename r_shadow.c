@@ -576,7 +576,7 @@ void R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(float *out, int numverts, const
 void R_Shadow_GenTexCoords_Specular_Attenuation3D(float *out, int numverts, const float *vertex, const float *svectors, const float *tvectors, const float *normals, const vec3_t relativelightorigin, const vec3_t relativeeyeorigin, float lightradius)
 {
 	int i;
-	float lightdir[3], eyedir[3], halfdir[3], lightdirlen, ilen;
+	float lightdir[3], eyedir[3], halfdir[3], lightdirlen, iradius;
 	iradius = 0.5f / lightradius;
 	for (i = 0;i < numverts;i++, vertex += 4, svectors += 4, tvectors += 4, normals += 4, out += 4)
 	{
