@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 extern	HWND	mainwindow;
 
-qboolean cdaudioinitialized = false;
+cvar_t	cdaudioinitialized = {CVAR_READONLY,"cdaudioinitialized","0"};
 static qboolean cdValid = false;
 static qboolean playing = false;
 static qboolean wasPlaying = false;
@@ -428,7 +428,9 @@ int CDAudio_Init(void)
 
 	for (n = 0; n < 100; n++)
 		remap[n] = n;
-	cdaudioinitialized = true;
+
+	Cvar_RegisterVariable(&cdaudioinitialized);
+	Cvar_SetValueQuick(&cdaudioinitialized, true);
 	enabled = true;
 
 	Cmd_AddCommand("cd", CD_f);

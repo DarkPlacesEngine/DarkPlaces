@@ -387,7 +387,8 @@ int CDAudio_Init(void)
 
 	for (i = 0; i < 100; i++)
 		remap[i] = i;
-	cdaudioinitialized = true;
+	Cvar_RegisterVariable(&cdaudioinitialized);
+	Cvar_SetValueQuick(&cdaudioinitialized, true);
 	enabled = true;
 
 	return 0;

@@ -939,7 +939,7 @@ void R_Mesh_State_Texture(const rmeshstate_t *m)
 		{
 			GL_ActiveTexture(i);
 			unit->combinergb = combinergb;
-			if (gl_combine.integer)
+			if (gl_combine.integer) 
 			{
 				qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, unit->combinergb);CHECKGLERROR
 			}

@@ -1283,9 +1283,9 @@ void M_Options_Draw (void)
 	M_Options_PrintCheckbox("Delay gfx (faster)", true, gl_delayfinish.integer);
 	M_Options_PrintSlider(  "Anisotropic Filter", gl_support_anisotropy, gl_texture_anisotropy.value, 0, 8);
 	M_Options_PrintSlider(  "        Game Speed", sv.active, slowmo.value, 0, 5);
-	M_Options_PrintSlider(  "   CD Music Volume", cdaudioinitialized, bgmvolume.value, 0, 1);
-	M_Options_PrintSlider(  "      Sound Volume", snd_initialized, volume.value, 0, 1);
-	M_Options_PrintSlider(gamemode == GAME_GOODVSBAD2 ? "      Music Volume" : "    Ambient Volume", snd_initialized, snd_staticvolume.value, 0, 1);
+	M_Options_PrintSlider(  "   CD Music Volume", cdaudioinitialized.integer, bgmvolume.value, 0, 1);
+	M_Options_PrintSlider(  "      Sound Volume", snd_initialized.integer, volume.value, 0, 1);
+	M_Options_PrintSlider(gamemode == GAME_GOODVSBAD2 ? "      Music Volume" : "    Ambient Volume", snd_initialized.integer, snd_staticvolume.value, 0, 1);
 	M_Options_PrintSlider(  "         Crosshair", true, crosshair.value, 0, 5);
 	M_Options_PrintSlider(  "    Crosshair Size", true, crosshair_size.value, 1, 5);
 	M_Options_PrintCheckbox("  Static Crosshair", true, crosshair_static.integer);
