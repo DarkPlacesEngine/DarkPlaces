@@ -774,8 +774,19 @@ void COM_InitArgv (void)
 	for (j = 0;(j < MAX_NUM_ARGVS) && (j < com_argc);j++)
 	{
 		i = 0;
-		while ((n < (CMDLINE_LENGTH - 1)) && com_argv[j][i])
-			com_cmdline[n++] = com_argv[j][i++];
+		if (strstr(com_argv[j], " "))
+		{
+			// arg contains whitespace, store quotes around it
+			com_cmdline[n++] = '\"';
+			while ((n < (CMDLINE_LENGTH - 1)) && com_argv[j][i])
+				com_cmdline[n++] = com_argv[j][i++];
+			com_cmdline[n++] = '\"';
+		}
+		else
+		{
+			while ((n < (CMDLINE_LENGTH - 1)) && com_argv[j][i])
+				com_cmdline[n++] = com_argv[j][i++];
+		}
 		if (n < (CMDLINE_LENGTH - 1))
 			com_cmdline[n++] = ' ';
 		else
