@@ -1108,7 +1108,7 @@ static void R_Shadow_VertexShadingWithXYZAttenuation(int numverts, const float *
 			if ((dot = DotProduct(n, v)) > 0)
 			{
 				dist = sqrt(dist);
-				intensity = dot / (VectorLength(v) * VectorLength(n));
+				intensity = dot / sqrt(VectorLength2(v) * VectorLength2(n));
 				intensity *= pow(1 - dist, r_shadow_attenpower) * r_shadow_attenscale;
 				VectorScale(lightcolor, intensity, color4f);
 				color4f[3] = 1;
@@ -1139,7 +1139,7 @@ static void R_Shadow_VertexShadingWithZAttenuation(int numverts, const float *ve
 			Matrix4x4_Transform3x3(m, normal3f, n);
 			if ((dot = DotProduct(n, v)) > 0)
 			{
-				intensity = dot / (VectorLength(v) * VectorLength(n));
+				intensity = dot / sqrt(VectorLength2(v) * VectorLength2(n));
 				intensity *= pow(1 - dist, r_shadow_attenpower) * r_shadow_attenscale;
 				VectorScale(lightcolor, intensity, color4f);
 				color4f[3] = 1;
@@ -1168,7 +1168,7 @@ static void R_Shadow_VertexShading(int numverts, const float *vertex3f, const fl
 		Matrix4x4_Transform3x3(m, normal3f, n);
 		if ((dot = DotProduct(n, v)) > 0)
 		{
-			intensity = dot / (VectorLength(v) * VectorLength(n));
+			intensity = dot / sqrt(VectorLength2(v) * VectorLength2(n));
 			VectorScale(lightcolor, intensity, color4f);
 			color4f[3] = 1;
 		}
