@@ -261,6 +261,7 @@ typedef struct
 	int			lastclipnode;
 	vec3_t		clip_mins;
 	vec3_t		clip_maxs;
+	vec3_t		clip_size;
 }
 hull_t;
 

@@ -831,7 +831,7 @@ qboolean SV_CheckWater (edict_t *ent)
 				ent->v.waterlevel = 3;
 		}
 	}
-	
+
 	return ent->v.waterlevel > 1;
 }
 
@@ -1243,14 +1243,29 @@ void SV_Physics_Toss (edict_t *ent)
 {
 	trace_t	trace;
 	vec3_t	move;
+	edict_t	*groundentity;
 	//edict_t *groundentity;
 	// regular thinking
 	if (!SV_RunThink (ent))
 		return;
 
 // if onground, return without moving
-	if (((int)ent->v.flags & FL_ONGROUND) && ent->v.groundentity == 0)
-		return;
+	if ((int)ent->v.flags & FL_ONGROUND)
+	{
+		if (ent->v.groundentity == 0)
+			return;
+		groundentity = PROG_TO_EDICT(ent->v.groundentity);
+		if (groundentity != NULL && groundentity->v.solid == SOLID_BSP)
+			ent->suspendedinairflag = true;
+		else if (ent->suspendedinairflag && (groundentity == NULL || groundentity->v.solid != SOLID_BSP))
+		{
+			// leave it suspended in the air
+			ent->v.groundentity = 0;
+			return;
+		}
+	}
+	ent->suspendedinairflag = false;
+
 	/*
 	if ( ((int)ent->v.flags & FL_ONGROUND) )
 	{
@@ -1268,8 +1283,8 @@ void SV_Physics_Toss (edict_t *ent)
 
 // add gravity
 	if (ent->v.movetype != MOVETYPE_FLY
-	&& ent->v.movetype != MOVETYPE_BOUNCEMISSILE // LordHavoc: enabled MOVETYPE_BOUNCEMISSILE
-	&& ent->v.movetype != MOVETYPE_FLYMISSILE)
+	 && ent->v.movetype != MOVETYPE_BOUNCEMISSILE // LordHavoc: enabled MOVETYPE_BOUNCEMISSILE
+	 && ent->v.movetype != MOVETYPE_FLYMISSILE)
 		SV_AddGravity (ent);
 
 // move angles

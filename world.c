@@ -81,14 +81,31 @@ void InsertLinkAfter (link_t *l, link_t *after)
 
 typedef struct
 {
-	vec3_t		boxmins, boxmaxs;// enclose the test object along entire move
-	float		*mins, *maxs;	// size of the moving object
-	vec3_t		mins2, maxs2;	// size when clipping against mosnters
-	float		*start, *end;
+	// bounding box of entire move area
+	vec3_t		boxmins, boxmaxs;
+
+	// size of the moving object
+	vec3_t		mins, maxs;
+
+	// size when clipping against monsters
+	vec3_t		mins2, maxs2;
+
+	// size when clipping against brush models
+	vec3_t		hullmins, hullmaxs;
+
+	// start and end origin of move
+	vec3_t		start, end;
+
+	// trace results
 	trace_t		trace;
+
+	// type of move (like ignoring monsters, or similar)
 	int			type;
+
+	// the edict that is moving (if any)
 	edict_t		*passedict;
-} moveclip_t;
+}
+moveclip_t;
 
 
 /*
@@ -181,7 +198,8 @@ hull_t *SV_HullForEntity (edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t offset)
 
 // decide which clipping hull to use, based on the size
 	if (ent->v.solid == SOLID_BSP)
-	{	// explicit hulls in the BSP model
+	{
+		// explicit hulls in the BSP model
 		if (ent->v.movetype != MOVETYPE_PUSH)
 			Host_Error ("SOLID_BSP without MOVETYPE_PUSH");
 
@@ -198,7 +216,7 @@ hull_t *SV_HullForEntity (edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t offset)
 
 		VectorSubtract (maxs, mins, size);
 		// LordHavoc: FIXME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		if (sv.worldmodel->ishlbsp)
+		if (model->ishlbsp)
 		{
 			if (size[0] < 3)
 				hull = &model->hulls[0]; // 0x0x0
@@ -238,6 +256,39 @@ hull_t *SV_HullForEntity (edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t offset)
 
 
 	return hull;
+}
+
+void SV_RoundUpToHullSize(vec3_t inmins, vec3_t inmaxs, vec3_t outmins, vec3_t outmaxs)
+{
+	vec3_t size;
+	hull_t *hull;
+
+	VectorSubtract(inmaxs, inmins, size);
+	if (sv.worldmodel->ishlbsp)
+	{
+		if (size[0] < 3)
+			hull = &sv.worldmodel->hulls[0]; // 0x0x0
+		else if (size[0] <= 32)
+		{
+			if (size[2] < 54) // pick the nearest of 36 or 72
+				hull = &sv.worldmodel->hulls[3]; // 32x32x36
+			else
+				hull = &sv.worldmodel->hulls[1]; // 32x32x72
+		}
+		else
+			hull = &sv.worldmodel->hulls[2]; // 64x64x64
+	}
+	else
+	{
+		if (size[0] < 3)
+			hull = &sv.worldmodel->hulls[0]; // 0x0x0
+		else if (size[0] <= 32)
+			hull = &sv.worldmodel->hulls[1]; // 32x32x56
+		else
+			hull = &sv.worldmodel->hulls[2]; // 64x64x88
+	}
+	VectorCopy(inmins, outmins);
+	VectorAdd(inmins, hull->clip_size, outmaxs);
 }
 
 /*
@@ -413,6 +464,7 @@ SV_LinkEdict
 */
 void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 {
+	model_t		*model;
 	areanode_t	*node;
 
 	if (ent->area.prev)
@@ -426,6 +478,7 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 
 // set the abs box
 
+	/*
 // LordHavoc: enabling rotating bmodels
 	if (ent->v.solid == SOLID_BSP && (ent->v.angles[0] || ent->v.angles[1] || ent->v.angles[2]))
 	{
@@ -438,6 +491,7 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 		if (max < v)
 			max = v;
 		max = sqrt(max);
+	*/
 		/*
 		max = 0;
 		for (i=0 ; i<3 ; i++)
@@ -450,10 +504,51 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 				max = v;
 		}
 		*/
+	/*
 		for (i=0 ; i<3 ; i++)
 		{
 			ent->v.absmin[i] = ent->v.origin[i] - max;
 			ent->v.absmax[i] = ent->v.origin[i] + max;
+		}
+	}
+	else
+	{
+		VectorAdd (ent->v.origin, ent->v.mins, ent->v.absmin);
+		VectorAdd (ent->v.origin, ent->v.maxs, ent->v.absmax);
+	}
+	*/
+
+	if (ent->v.solid == SOLID_BSP)
+	{
+		if (ent->v.modelindex < 0 || ent->v.modelindex > MAX_MODELS)
+			PR_RunError("SOLID_BSP with invalid modelindex!\n");
+		model = sv.models[(int) ent->v.modelindex];
+		if (model != NULL)
+		{
+			if (model->type != mod_brush)
+				PR_RunError("SOLID_BSP with non-BSP model\n");
+
+			if (ent->v.angles[0] || ent->v.angles[2] || ent->v.avelocity[0] || ent->v.avelocity[2])
+			{
+				VectorAdd(ent->v.origin, model->rotatedmins, ent->v.absmin);
+				VectorAdd(ent->v.origin, model->rotatedmaxs, ent->v.absmax);
+			}
+			else if (ent->v.angles[1] || ent->v.avelocity[1])
+			{
+				VectorAdd(ent->v.origin, model->yawmins, ent->v.absmin);
+				VectorAdd(ent->v.origin, model->yawmaxs, ent->v.absmax);
+			}
+			else
+			{
+				VectorAdd(ent->v.origin, model->normalmins, ent->v.absmin);
+				VectorAdd(ent->v.origin, model->normalmaxs, ent->v.absmax);
+			}
+		}
+		else
+		{
+			// SOLID_BSP with no model is valid, mainly because some QC setup code does so temporarily
+			VectorAdd (ent->v.origin, ent->v.mins, ent->v.absmin);
+			VectorAdd (ent->v.origin, ent->v.maxs, ent->v.absmax);
 		}
 	}
 	else
@@ -470,8 +565,10 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 	{
 		ent->v.absmin[0] -= 15;
 		ent->v.absmin[1] -= 15;
+		ent->v.absmin[2] -= 1;
 		ent->v.absmax[0] += 15;
 		ent->v.absmax[1] += 15;
+		ent->v.absmax[2] += 1;
 	}
 	else
 	{
@@ -756,7 +853,7 @@ trace_t SV_ClipMoveToEntity (edict_t *ent, vec3_t start, vec3_t mins, vec3_t max
 	VectorSubtract(start, offset, startd);
 	VectorSubtract(end, offset, endd);
 
-	// rotate start and end into the models frame of reference
+	// rotate start and end into the model's frame of reference
 	if (ent->v.solid == SOLID_BSP && (ent->v.angles[0] || ent->v.angles[1] || ent->v.angles[2]))
 	{
 		AngleVectorsFLU (ent->v.angles, forward, left, up);
@@ -867,6 +964,8 @@ loc0:
 		// might interact, so do an exact clip
 		if ((int)touch->v.flags & FL_MONSTER)
 			trace = SV_ClipMoveToEntity (touch, clip->start, clip->mins2, clip->maxs2, clip->end);
+		else if (touch->v.solid == SOLID_BSP)
+			trace = SV_ClipMoveToEntity (touch, clip->start, clip->hullmins, clip->hullmaxs, clip->end);
 		else
 			trace = SV_ClipMoveToEntity (touch, clip->start, clip->mins, clip->maxs, clip->end);
 		// LordHavoc: take the 'best' answers from the new trace and combine with existing data
@@ -940,8 +1039,8 @@ void SV_MoveBounds (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, vec3_t b
 {
 #if 0
 // debug to test against everything
-boxmins[0] = boxmins[1] = boxmins[2] = -9999;
-boxmaxs[0] = boxmaxs[1] = boxmaxs[2] = 9999;
+boxmins[0] = boxmins[1] = boxmins[2] = -999999999;
+boxmaxs[0] = boxmaxs[1] = boxmaxs[2] =  999999999;
 #else
 	int		i;
 
@@ -969,23 +1068,27 @@ SV_Move
 trace_t SV_Move (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, int type, edict_t *passedict)
 {
 	moveclip_t	clip;
+	vec3_t		bigmins, bigmaxs;
 	int			i;
 
 	memset ( &clip, 0, sizeof ( moveclip_t ) );
 
-	clip.start = start;
-	clip.end = end;
-	clip.mins = mins;
-	clip.maxs = maxs;
+	VectorCopy(start, clip.start);
+	VectorCopy(end, clip.end);
+	VectorCopy(mins, clip.mins);
+	VectorCopy(maxs, clip.maxs);
 	clip.type = type;
 	clip.passedict = passedict;
 
+	SV_RoundUpToHullSize(clip.mins, clip.maxs, clip.hullmins, clip.hullmaxs);
+
 	if (type == MOVE_MISSILE)
 	{
+		// LordHavoc: modified this, was = -15, now = clip.mins[i] - 15
 		for (i=0 ; i<3 ; i++)
 		{
-			clip.mins2[i] = -15;
-			clip.maxs2[i] = 15;
+			clip.mins2[i] = clip.mins[i] - 15;
+			clip.maxs2[i] = clip.maxs[i] + 15;
 		}
 	}
 	else
@@ -994,6 +1097,13 @@ trace_t SV_Move (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, int type, e
 		VectorCopy (clip.maxs, clip.maxs2);
 	}
 
+	bigmins[0] = min(clip.mins2[0], clip.hullmins[0]);
+	bigmaxs[0] = max(clip.maxs2[0], clip.hullmaxs[0]);
+	bigmins[1] = min(clip.mins2[1], clip.hullmins[1]);
+	bigmaxs[1] = max(clip.maxs2[1], clip.hullmaxs[1]);
+	bigmins[2] = min(clip.mins2[2], clip.hullmins[2]);
+	bigmaxs[2] = max(clip.maxs2[2], clip.hullmaxs[2]);
+
 	// clip to world
 	clip.trace = SV_ClipMoveToEntity (sv.edicts, start, mins, maxs, end);
 
@@ -1001,7 +1111,7 @@ trace_t SV_Move (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, int type, e
 	//if (!clip.trace.allsolid)
 	{
 		// create the bounding box of the entire move
-		SV_MoveBounds ( start, clip.mins2, clip.maxs2, end, clip.boxmins, clip.boxmaxs );
+		SV_MoveBounds ( start, bigmins, bigmaxs, end, clip.boxmins, clip.boxmaxs );
 
 		SV_ClipToLinks ( sv_areanodes, &clip );
 	}
