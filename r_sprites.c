@@ -88,7 +88,6 @@ static void R_DrawSpriteImage (int wantoverbright, int additive, mspriteframe_t 
 		m.blendfunc2 = GL_ONE;
 	m.wantoverbright = wantoverbright;
 	m.tex[0] = texture;
-	Matrix4x4_CreateIdentity(&m.matrix);
 	R_Mesh_State(&m);
 
 	varray_element[0] = 0;
@@ -136,6 +135,8 @@ void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 
 	if (R_SpriteSetup(ent, ent->model->sprnum_type, org, left, up))
 		return;
+
+	R_Mesh_Matrix(&r_identitymatrix);
 
 	if ((ent->model->flags & EF_FULLBRIGHT) || (ent->effects & EF_FULLBRIGHT))
 	{

@@ -801,6 +801,8 @@ static void RSurfShader_Sky(const entity_render_t *ent, const msurface_t *firsts
 			R_Sky();
 	}
 
+	R_Mesh_Matrix(&ent->matrix);
+
 	// draw depth-only polys
 	memset(&m, 0, sizeof(m));
 	if (skyrendermasked)
@@ -816,7 +818,6 @@ static void RSurfShader_Sky(const entity_render_t *ent, const msurface_t *firsts
 	}
 	m.wantoverbright = false;
 	m.depthwrite = true;
-	m.matrix = ent->matrix;
 	R_Mesh_State(&m);
 	for (surf = firstsurf;surf;surf = surf->chain)
 	{
@@ -845,6 +846,8 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 	float modelorg[3];
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
 
+	R_Mesh_Matrix(&ent->matrix);
+
 	memset(&m, 0, sizeof(m));
 	if (ent->effects & EF_ADDITIVE)
 	{
@@ -863,7 +866,6 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 	}
 	m.wantoverbright = true;
 	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
-	m.matrix = ent->matrix;
 	R_Mesh_State(&m);
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
@@ -891,7 +893,6 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 		m.blendfunc2 = GL_ONE;
 		m.wantoverbright = false;
 		m.tex[0] = R_GetTexture(surf->currenttexture->fogtexture);
-		m.matrix = ent->matrix;
 		R_Mesh_State(&m);
 		for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 		{
@@ -918,7 +919,7 @@ static void RSurfShader_Water(const entity_render_t *ent, const msurface_t *firs
 			R_MeshQueue_AddTransparent(center, RSurfShader_Water_Callback, ent, surf - ent->model->surfaces);
 		}
 		else
-			R_MeshQueue_Add(RSurfShader_Water_Callback, ent, surf - ent->model->surfaces);
+			RSurfShader_Water_Callback(ent, surf - ent->model->surfaces);
 	}
 }
 
@@ -948,7 +949,6 @@ static void RSurfShader_Wall_Pass_BaseVertex(const entity_render_t *ent, const m
 	m.wantoverbright = true;
 	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
 	base = ent->effects & EF_FULLBRIGHT ? 2.0f : r_ambient.value * (1.0f / 64.0f);
-	m.matrix = ent->matrix;
 	R_Mesh_State(&m);
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
@@ -993,7 +993,6 @@ static void RSurfShader_Wall_Pass_BaseFullbright(const entity_render_t *ent, con
 	}
 	m.wantoverbright = false;
 	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
-	m.matrix = ent->matrix;
 	R_Mesh_State(&m);
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
@@ -1017,7 +1016,6 @@ static void RSurfShader_Wall_Pass_Glow(const entity_render_t *ent, const msurfac
 	m.blendfunc2 = GL_ONE;
 	m.wantoverbright = false;
 	m.tex[0] = R_GetTexture(surf->currenttexture->glowtexture);
-	m.matrix = ent->matrix;
 	R_Mesh_State(&m);
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
@@ -1040,7 +1038,6 @@ static void RSurfShader_Wall_Pass_Fog(const entity_render_t *ent, const msurface
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
 	m.wantoverbright = false;
-	m.matrix = ent->matrix;
 	m.tex[0] = R_GetTexture(surf->currenttexture->fogtexture);
 	R_Mesh_State(&m);
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
@@ -1070,7 +1067,6 @@ static void RSurfShader_OpaqueWall_Pass_TripleTexCombine(const entity_render_t *
 	m.texrgbscale[1] = 4.0f;
 	m.tex[2] = R_GetTexture(surf->currenttexture->detailtexture);
 	m.texrgbscale[2] = 2.0f;
-	m.matrix = ent->matrix;
 	R_Mesh_State(&m);
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
@@ -1097,7 +1093,6 @@ static void RSurfShader_OpaqueWall_Pass_BaseMTex(const entity_render_t *ent, con
 	m.wantoverbright = true;
 	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
 	m.tex[1] = R_GetTexture(surf->lightmaptexture);
-	m.matrix = ent->matrix;
 	R_Mesh_State(&m);
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
@@ -1122,7 +1117,6 @@ static void RSurfShader_OpaqueWall_Pass_BaseTexture(const entity_render_t *ent, 
 	m.blendfunc2 = GL_ZERO;
 	m.wantoverbright = false;
 	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
-	m.matrix = ent->matrix;
 	R_Mesh_State(&m);
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
@@ -1146,7 +1140,6 @@ static void RSurfShader_OpaqueWall_Pass_BaseLightmap(const entity_render_t *ent,
 	m.blendfunc2 = GL_SRC_COLOR;
 	m.wantoverbright = true;
 	m.tex[0] = R_GetTexture(surf->lightmaptexture);
-	m.matrix = ent->matrix;
 	R_Mesh_State(&m);
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
@@ -1175,7 +1168,6 @@ static void RSurfShader_OpaqueWall_Pass_Light(const entity_render_t *ent, const 
 	m.blendfunc2 = GL_ONE;
 	m.wantoverbright = true;
 	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
-	m.matrix = ent->matrix;
 	R_Mesh_State(&m);
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
@@ -1204,7 +1196,6 @@ static void RSurfShader_OpaqueWall_Pass_Fog(const entity_render_t *ent, const ms
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 	m.wantoverbright = false;
 	m.tex[0] = R_GetTexture(surf->currenttexture->fogtexture);
-	m.matrix = ent->matrix;
 	R_Mesh_State(&m);
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
@@ -1227,7 +1218,6 @@ static void RSurfShader_OpaqueWall_Pass_BaseDetail(const entity_render_t *ent, c
 	m.blendfunc2 = GL_SRC_COLOR;
 	m.wantoverbright = false;
 	m.tex[0] = R_GetTexture(surf->currenttexture->detailtexture);
-	m.matrix = ent->matrix;
 	R_Mesh_State(&m);
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
@@ -1249,7 +1239,6 @@ static void RSurfShader_OpaqueWall_Pass_Glow(const entity_render_t *ent, const m
 	m.blendfunc2 = GL_ONE;
 	m.wantoverbright = false;
 	m.tex[0] = R_GetTexture(surf->currenttexture->glowtexture);
-	m.matrix = ent->matrix;
 	R_Mesh_State(&m);
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
@@ -1266,6 +1255,7 @@ static void RSurfShader_Wall_Fullbright_Callback(const void *calldata1, int call
 {
 	const entity_render_t *ent = calldata1;
 	const msurface_t *surf = ent->model->surfaces + calldata2;
+	R_Mesh_Matrix(&ent->matrix);
 	RSurfShader_Wall_Pass_BaseFullbright(ent, surf);
 	if (surf->currenttexture->glowtexture)
 		RSurfShader_Wall_Pass_Glow(ent, surf);
@@ -1312,6 +1302,7 @@ static void RSurfShader_Wall_Vertex_Callback(const void *calldata1, int calldata
 {
 	const entity_render_t *ent = calldata1;
 	const msurface_t *surf = ent->model->surfaces + calldata2;
+	R_Mesh_Matrix(&ent->matrix);
 	RSurfShader_Wall_Pass_BaseVertex(ent, surf);
 	if (surf->currenttexture->glowtexture)
 		RSurfShader_Wall_Pass_Glow(ent, surf);
@@ -1486,6 +1477,8 @@ void R_DrawSurfaces(entity_render_t *ent, int sky, int normal)
 	if (!ent->model)
 		return;
 
+	R_Mesh_Matrix(&ent->matrix);
+
 	for (i = 0;i < Cshader_count;i++)
 		Cshaders[i]->chain = NULL;
 
@@ -1595,7 +1588,7 @@ static void R_DrawPortal_Callback(const void *calldata1, int calldata2)
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 	m.wantoverbright = false;
-	m.matrix = ent->matrix;
+	R_Mesh_Matrix(&ent->matrix);
 	R_Mesh_State(&m);
 	R_Mesh_ResizeCheck(portal->numpoints, portal->numpoints - 2);
 	for (i = 0;i < mesh->numtriangles;i++)

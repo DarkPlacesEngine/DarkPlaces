@@ -171,7 +171,7 @@ void R_DrawCrosshairSprite(rtexture_t *texture, vec3_t origin, vec_t scale, floa
 	m.wantoverbright = false;
 	m.depthdisable = true;
 	m.tex[0] = R_GetTexture(texture);
-	Matrix4x4_CreateIdentity(&m.matrix);
+	R_Mesh_Matrix(&r_identitymatrix);
 	R_Mesh_State(&m);
 
 	varray_element[0] = 0;

@@ -16,7 +16,6 @@ typedef struct
 	int wantoverbright;
 	int tex[MAX_TEXTUREUNITS];
 	int texrgbscale[MAX_TEXTUREUNITS]; // used only if COMBINE is present
-	matrix4x4_t matrix; // model to world transform matrix
 }
 rmeshstate_t;
 
@@ -42,6 +41,9 @@ void R_Mesh_Finish(void);
 // clears depth buffer, used for masked sky rendering
 // (only valid between R_Mesh_Start and R_Mesh_Finish)
 void R_Mesh_ClearDepth(void);
+
+// sets up the requested transform matrix
+void R_Mesh_Matrix(const matrix4x4_t *matrix);
 
 // sets up the requested state
 void R_Mesh_State(const rmeshstate_t *m);

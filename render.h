@@ -21,6 +21,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef RENDER_H
 #define RENDER_H
 
+extern matrix4x4_t r_identitymatrix;
+
 // 1.0f / N table
 extern float ixtable[4096];
 

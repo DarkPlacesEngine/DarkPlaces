@@ -186,7 +186,7 @@ void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 	m.blendfunc2 = GL_ONE;
 	m.wantoverbright = false;
 	m.tex[0] = R_GetTexture(explosiontexture);
-	Matrix4x4_CreateIdentity(&m.matrix);
+	R_Mesh_Matrix(&r_identitymatrix);
 	R_Mesh_State(&m);
 
 	numtriangles = EXPLOSIONTRIS;
