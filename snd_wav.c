@@ -241,7 +241,7 @@ qboolean S_LoadWavFile (const char *filename, sfx_t *s)
 	sfxbuffer_t* sb;
 
 	Mem_FreePool (&s->mempool);
-	s->mempool = Mem_AllocPool(s->name);
+	s->mempool = Mem_AllocPool(s->name, 0, NULL);
 
 	// Load the file
 	data = FS_LoadFile(filename, s->mempool, false);

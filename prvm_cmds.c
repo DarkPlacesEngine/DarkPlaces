@@ -2781,7 +2781,7 @@ void VM_getimagesize(void)
 void VM_Cmd_Init(void)
 {
 	// only init the stuff for the current prog
-	VM_STRINGS_MEMPOOL = Mem_AllocPool(va("vm_stringsmempool[%s]",PRVM_NAME));
+	VM_STRINGS_MEMPOOL = Mem_AllocPool(va("vm_stringsmempool[%s]",PRVM_NAME), 0, NULL);
 	VM_Files_Init();
 	VM_Search_Init();
 }

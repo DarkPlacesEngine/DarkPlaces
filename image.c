@@ -1307,7 +1307,7 @@ void Image_Resample (const void *indata, int inwidth, int inheight, int indepth,
 			Mem_Free(resamplerow1);
 		resamplerowsize = outwidth*4;
 		if (!resamplemempool)
-			resamplemempool = Mem_AllocPool("Image Scaling Buffer");
+			resamplemempool = Mem_AllocPool("Image Scaling Buffer", 0, NULL);
 		resamplerow1 = Mem_Alloc(resamplemempool, resamplerowsize*2);
 		resamplerow2 = resamplerow1 + resamplerowsize;
 	}

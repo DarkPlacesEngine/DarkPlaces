@@ -1593,7 +1593,7 @@ void NetConn_Init(void)
 {
 	int i;
 	lhnetaddress_t tempaddress;
-	netconn_mempool = Mem_AllocPool("Networking");
+	netconn_mempool = Mem_AllocPool("Networking", 0, NULL);
 	Cmd_AddCommand("net_stats", Net_Stats_f);
 	Cmd_AddCommand("net_slist", Net_Slist_f);
 	Cmd_AddCommand("heartbeat", Net_Heartbeat_f);

@@ -1236,8 +1236,8 @@ CL_Init
 */
 void CL_Init (void)
 {
-	cl_entities_mempool = Mem_AllocPool("client entities");
-	cl_refdef_mempool = Mem_AllocPool("refdef");
+	cl_entities_mempool = Mem_AllocPool("client entities", 0, NULL);
+	cl_refdef_mempool = Mem_AllocPool("refdef", 0, NULL);
 
 	memset(&r_refdef, 0, sizeof(r_refdef));
 	// max entities sent to renderer per frame

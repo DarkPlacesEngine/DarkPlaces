@@ -149,7 +149,7 @@ static void R_Mesh_CacheArray_Shutdown(void);
 void GL_Backend_AllocArrays(void)
 {
 	if (!gl_backend_mempool)
-		gl_backend_mempool = Mem_AllocPool("GL_Backend");
+		gl_backend_mempool = Mem_AllocPool("GL_Backend", 0, NULL);
 	R_Mesh_CacheArray_Startup();
 }
 

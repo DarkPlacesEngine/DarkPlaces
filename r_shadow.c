@@ -392,7 +392,7 @@ void R_Shadow_Init(void)
 	}
 	Cmd_AddCommand("r_shadow_help", R_Shadow_Help_f);
 	R_Shadow_EditLights_Init();
-	r_shadow_mempool = Mem_AllocPool("R_Shadow");
+	r_shadow_mempool = Mem_AllocPool("R_Shadow", 0, NULL);
 	r_shadow_worldlightchain = NULL;
 	maxshadowelements = 0;
 	shadowelements = NULL;

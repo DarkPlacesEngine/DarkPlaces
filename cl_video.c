@@ -156,5 +156,5 @@ void CL_Video_Init(void)
 	Cmd_AddCommand("playvideo", CL_PlayVideo_f);
 	Cmd_AddCommand("stopvideo", CL_StopVideo_f);
 
-	clvideomempool = Mem_AllocPool("CL_Video");
+	clvideomempool = Mem_AllocPool("CL_Video", 0, NULL);
 }

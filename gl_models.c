@@ -61,7 +61,7 @@ void gl_models_freearrays(void)
 void gl_models_start(void)
 {
 	// allocate vertex processing arrays
-	gl_models_mempool = Mem_AllocPool("GL_Models");
+	gl_models_mempool = Mem_AllocPool("GL_Models", 0, NULL);
 	zymbonepose = Mem_Alloc(gl_models_mempool, sizeof(zymbonematrix[256]));
 	gl_models_allocarrays(4096);
 }

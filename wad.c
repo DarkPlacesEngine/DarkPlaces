@@ -79,7 +79,7 @@ void *W_GetLumpName(char *name)
 				Con_Print("gfx.wad doesn't have WAD2 id\n");
 			else
 			{
-				wad_mempool = Mem_AllocPool("gfx.wad");
+				wad_mempool = Mem_AllocPool("gfx.wad", 0, NULL);
 				wad_base = Mem_Alloc(wad_mempool, fs_filesize);
 
 				memcpy(wad_base, temp, fs_filesize);

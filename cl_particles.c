@@ -355,7 +355,7 @@ void CL_Particles_Init (void)
 #ifdef WORKINGLQUAKE
 	particles = (particle_t *) Hunk_AllocName(cl_maxparticles * sizeof(particle_t), "particles");
 #else
-	cl_part_mempool = Mem_AllocPool("CL_Part");
+	cl_part_mempool = Mem_AllocPool("CL_Part", 0, NULL);
 	particles = (particle_t *) Mem_Alloc(cl_part_mempool, cl_maxparticles * sizeof(particle_t));
 #endif
 	cl_numparticles = 0;
