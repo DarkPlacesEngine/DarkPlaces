@@ -244,14 +244,9 @@ void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, 
 	vec3_t vr, vu, vf;
 
 	angle = DEG2RAD(degrees);
-
 	c = cos(angle);
 	s = sin(angle);
-
-	vf[0] = dir[0];
-	vf[1] = dir[1];
-	vf[2] = dir[2];
-
+	VectorCopy(dir, vf);
 	VectorVectors(vf, vr, vu);
 
 	t0 = vr[0] *  c + vu[0] * -s;
