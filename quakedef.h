@@ -301,6 +301,6 @@ void Chase_Init (void);
 void Chase_Reset (void);
 void Chase_Update (void);
 
-void fractalnoise(unsigned char *noise, int size);
+void fractalnoise(unsigned char *noise, int size, int startgrid);
 
 #include "image.h"

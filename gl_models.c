@@ -15,7 +15,7 @@ void makechrometexture()
 	byte noise[64*64];
 	byte data[64*64][4];
 
-	fractalnoise(noise, 64);
+	fractalnoise(noise, 64, 16);
 
 	// convert to RGBA data
 	for (i = 0;i < 64*64;i++)

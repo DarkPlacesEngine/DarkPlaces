@@ -69,12 +69,45 @@ particle_t	**freeparticles; // list used only in compacting particles array
 cvar_t r_particles = {"r_particles", "1"};
 cvar_t r_dynamicparticles = {"r_dynamicparticles", "0", TRUE};
 
+byte shadebubble(float dx, float dy, vec3_t light)
+{
+	float	dz, f, dot;
+	vec3_t	normal;
+	if ((dx*dx+dy*dy) < 1) // it does hit the sphere
+	{
+		dz = 1 - (dx*dx+dy*dy);
+		f = 0;
+		// back side
+		normal[0] = dx;normal[1] = dy;normal[2] = dz;
+		VectorNormalize(normal);
+		dot = DotProduct(normal, light);
+		if (dot > 0.5) // interior reflection
+			f += ((dot *  2) - 1);
+		else if (dot < -0.5) // exterior reflection
+			f += ((dot * -2) - 1);
+		// front side
+		normal[0] = dx;normal[1] = dy;normal[2] = -dz;
+		VectorNormalize(normal);
+		dot = DotProduct(normal, light);
+		if (dot > 0.5) // interior reflection
+			f += ((dot *  2) - 1);
+		else if (dot < -0.5) // exterior reflection
+			f += ((dot * -2) - 1);
+		f *= 128;
+		f += 16; // just to give it a haze so you can see the outline
+		f = bound(0, f, 255);
+		return (byte) f;
+	}
+	else
+		return 0;
+}
+
 void R_InitParticleTexture (void)
 {
 	int		x,y,d,i;
-	float	dx, dy, dz, f, dot;
+	float	dx, dy;
 	byte	data[32][32][4], noise1[32][32], noise2[32][32];
-	vec3_t	normal, light;
+	vec3_t	light;
 
 	for (x=0 ; x<32 ; x++)
 	{
@@ -92,15 +125,15 @@ void R_InitParticleTexture (void)
 
 	for (i = 0;i < 8;i++)
 	{
-		fractalnoise(&noise1[0][0], 32);
-		fractalnoise(&noise2[0][0], 32);
+		fractalnoise(&noise1[0][0], 32, 1);
+		fractalnoise(&noise2[0][0], 32, 8);
 		for (y = 0;y < 32;y++)
 			for (x = 0;x < 32;x++)
 			{
 				data[y][x][0] = data[y][x][1] = data[y][x][2] = (noise1[y][x] >> 1) + 128;
 				dx = x - 16;
 				dy = y - 16;
-				d = noise2[y][x] * 4 - 512;
+				d = ((noise2[y][x] * 384) >> 8) - 128;
 				if (d > 0)
 				{
 					if (d > 255)
@@ -117,25 +150,14 @@ void R_InitParticleTexture (void)
 		smokeparticletexture[i] = GL_LoadTexture (va("smokeparticletexture%d", i), 32, 32, &data[0][0][0], true, true, 4);
 	}
 
+	light[0] = 1;light[1] = 1;light[2] = 1;
+	VectorNormalize(light);
 	for (x=0 ; x<32 ; x++)
 	{
 		for (y=0 ; y<32 ; y++)
 		{
 			data[y][x][0] = data[y][x][1] = data[y][x][2] = 255;
-			if (y < 24) // stretch the upper half to make a raindrop
-			{
-				dx = (x - 16)*2;
-				dy = (y - 24)*2/3;
-				d = (255 - (dx*dx+dy*dy))/2;
-			}
-			else
-			{
-				dx = (x - 16)*2;
-				dy = (y - 24)*2;
-				d = (255 - (dx*dx+dy*dy))/2;
-			}
-			if (d < 0) d = 0;
-			data[y][x][3] = (byte) d;
+			data[y][x][3] = shadebubble((x - 16) * (1.0 / 8.0), y < 24 ? (y - 24) * (1.0 / 24.0) : (y - 24) * (1.0 / 8.0), light);
 		}
 	}
 	rainparticletexture = GL_LoadTexture ("rainparticletexture", 32, 32, &data[0][0][0], true, true, 4);
@@ -147,34 +169,7 @@ void R_InitParticleTexture (void)
 		for (y=0 ; y<32 ; y++)
 		{
 			data[y][x][0] = data[y][x][1] = data[y][x][2] = 255;
-			dx = x * (1.0 / 16.0) - 1.0;
-			dy = y * (1.0 / 16.0) - 1.0;
-			if (dx*dx+dy*dy < 1) // it does hit the sphere
-			{
-				dz = 1 - (dx*dx+dy*dy);
-				f = 0;
-				// back side
-				normal[0] = dx;normal[1] = dy;normal[2] = dz;
-				VectorNormalize(normal);
-				dot = DotProduct(normal, light);
-				if (dot > 0.5) // interior reflection
-					f += ((dot *  2) - 1);
-				else if (dot < -0.5) // exterior reflection
-					f += ((dot * -2) - 1);
-				// front side
-				normal[0] = dx;normal[1] = dy;normal[2] = -dz;
-				VectorNormalize(normal);
-				dot = DotProduct(normal, light);
-				if (dot > 0.5) // interior reflection
-					f += ((dot *  2) - 1);
-				else if (dot < -0.5) // exterior reflection
-					f += ((dot * -2) - 1);
-				f *= 64;
-				f = bound(0, f, 255);
-				data[y][x][3] = (byte) f;
-			}
-			else
-				data[y][x][3] = 0;
+			data[y][x][3] = shadebubble((x - 16) * (1.0 / 16.0), (y - 16) * (1.0 / 16.0), light);
 		}
 	}
 	bubbleparticletexture = GL_LoadTexture ("bubbleparticletexture", 32, 32, &data[0][0][0], true, true, 4);
@@ -473,12 +468,12 @@ void R_ParticleExplosion (vec3_t org, int smoke)
 	int			i;
 	if (!r_particles.value) return; // LordHavoc: particles are optional
 
-	particle(pt_smokecloud, (rand()&7) + 8, smokeparticletexture[rand()&7], 30, 96, 2, org[0], org[1], org[2], 0, 0, 0);
+	particle(pt_smokecloud, (rand()&7) + 8, smokeparticletexture[rand()&7], 30, 160, 2, org[0], org[1], org[2], 0, 0, 0);
 
 	i = Mod_PointInLeaf(org, cl.worldmodel)->contents;
 	if (i == CONTENTS_SLIME || i == CONTENTS_WATER)
-		for (i=0 ; i<32 ; i++)
-			particle2(pt_bubble, (rand()&3) + 12, bubbleparticletexture, lhrandom(1, 2), 255, 2, org, 16, 16);
+		for (i=0 ; i<128 ; i++)
+			particle2(pt_bubble, (rand()&3) + 12, bubbleparticletexture, lhrandom(1, 2), 255, 2, org, 16, 96);
 }
 
 /*
@@ -675,16 +670,17 @@ void R_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorb
 		org[1] = diff[1] * (float) (rand()&1023) * (1.0 / 1024.0) + mins[1];
 		org[2] = z;
 
-		p->scale = 1.5;
 		p->alpha = 255;
 		p->die = t;
 		if (type == 1)
 		{
+			p->scale = 2;
 			p->texnum = particletexture;
 			p->type = pt_snow;
 		}
 		else // 0
 		{
+			p->scale = 3;
 			p->texnum = rainparticletexture;
 			p->type = pt_static;
 		}
@@ -1059,11 +1055,11 @@ void R_DrawParticles (void)
 			}
 			break;
 		case pt_bloodcloud:
-			if (Mod_PointInLeaf(p->org, cl.worldmodel)->contents != CONTENTS_EMPTY)
-			{
-				p->die = -1;
-				break;
-			}
+//			if (Mod_PointInLeaf(p->org, cl.worldmodel)->contents != CONTENTS_EMPTY)
+//			{
+//				p->die = -1;
+//				break;
+//			}
 			p->scale += frametime * 4;
 			p->alpha -= frametime * 64;
 			if (p->alpha < 1 || p->scale < 1)
