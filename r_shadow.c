@@ -1877,12 +1877,12 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 				if (face->lighttemp_castshadow)
 				{
 					face->lighttemp_castshadow = false;
-					if (!(face->texture->surfaceparms & (SURFACEPARM_NODRAW | SURFACEPARM_SKY)))
+					if (!(face->texture->surfaceflags & (Q3SURFACEFLAG_NODRAW | Q3SURFACEFLAG_SKY)))
 					{
 						if (e->castshadows)
 							if (!(face->texture->nativecontents & CONTENTSQ3_TRANSLUCENT))
 								Mod_ShadowMesh_AddMesh(r_shadow_mempool, castmesh, NULL, NULL, NULL, face->data_vertex3f, NULL, NULL, NULL, NULL, face->num_triangles, face->data_element3i);
-						if (!(face->texture->surfaceparms & SURFACEPARM_SKY))
+						if (!(face->texture->surfaceflags & Q3SURFACEFLAG_SKY))
 							Mod_ShadowMesh_AddMesh(r_shadow_mempool, e->meshchain_light, face->texture->skin.base, face->texture->skin.gloss, face->texture->skin.nmap, face->data_vertex3f, face->data_svector3f, face->data_tvector3f, face->data_normal3f, face->data_texcoordtexture2f, face->num_triangles, face->data_element3i);
 					}
 				}
