@@ -1907,7 +1907,6 @@ void PF_randomvec (void)
 	VectorCopy (temp, G_VECTOR(OFS_RETURN));
 }
 
-void SV_LightPoint (vec3_t color, vec3_t p);
 /*
 =================
 PF_GetLight
@@ -1922,11 +1921,15 @@ getlight(vector)
 */
 void PF_GetLight (void)
 {
-	vec3_t		color;
-	vec_t*		p;
+	vec3_t ambientcolor, diffusecolor, diffusenormal;
+	vec_t *p;
 	p = G_VECTOR(OFS_PARM0);
-	SV_LightPoint (color, p);
-	VectorCopy (color, G_VECTOR(OFS_RETURN));
+	VectorClear(ambientcolor);
+	VectorClear(diffusecolor);
+	VectorClear(diffusenormal);
+	if (sv.worldmodel && sv.worldmodel->brush.LightPoint)
+		sv.worldmodel->brush.LightPoint(sv.worldmodel, p, ambientcolor, diffusecolor, diffusenormal);
+	VectorMA(ambientcolor, 0.5, diffusecolor, G_VECTOR(OFS_RETURN));
 }
 
 #define MAX_QC_CVARS 128

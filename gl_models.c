@@ -161,7 +161,7 @@ aliasskin_t *R_FetchAliasSkin(const entity_render_t *ent, const aliasmesh_t *mes
 void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 {
 	int c, fullbright, layernum, firstpass;
-	float tint[3], fog, ifog, colorscale, ambientcolor4f[4];
+	float tint[3], fog, ifog, colorscale, ambientcolor4f[4], diffusecolor[3], diffusenormal[3];
 	vec3_t diff;
 	qbyte *bcolor;
 	rmeshstate_t m;
@@ -271,11 +271,11 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 				GL_Color(tint[0] * colorscale, tint[1] * colorscale, tint[2] * colorscale, ent->alpha);
 			else
 			{
-				if (R_LightModel(ambientcolor4f, ent, tint[0] * colorscale, tint[1] * colorscale, tint[2] * colorscale, ent->alpha, false))
+				if (R_LightModel(ambientcolor4f, diffusecolor, diffusenormal, ent, tint[0] * colorscale, tint[1] * colorscale, tint[2] * colorscale, ent->alpha, false))
 				{
 					GL_ColorPointer(varray_color4f);
 					R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_NORMAL, varray_normal3f);
-					R_LightModel_CalcVertexColors(ambientcolor4f, mesh->num_vertices, varray_vertex3f, varray_normal3f, varray_color4f);
+					R_LightModel_CalcVertexColors(ambientcolor4f, diffusecolor, diffusenormal, mesh->num_vertices, varray_vertex3f, varray_normal3f, varray_color4f);
 				}
 				else
 					GL_Color(ambientcolor4f[0], ambientcolor4f[1], ambientcolor4f[2], ambientcolor4f[3]);
@@ -740,7 +740,7 @@ void ZymoticCalcNormal3f(int vertcount, float *vertex3f, float *normal3f, int sh
 
 void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 {
-	float fog, ifog, colorscale, ambientcolor4f[4];
+	float fog, ifog, colorscale, ambientcolor4f[4], diffusecolor[3], diffusenormal[3];
 	vec3_t diff;
 	int i, *renderlist, *elements;
 	rtexture_t *texture;
@@ -814,10 +814,10 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 
 	ZymoticTransformVerts(numverts, varray_vertex3f, ent->model->alias.zymdata_vertbonecounts, ent->model->alias.zymdata_verts);
 	ZymoticCalcNormal3f(numverts, varray_vertex3f, aliasvert_normal3f, ent->model->alias.zymnum_shaders, ent->model->alias.zymdata_renderlist);
-	if (R_LightModel(ambientcolor4f, ent, ifog * colorscale, ifog * colorscale, ifog * colorscale, ent->alpha, false))
+	if (R_LightModel(ambientcolor4f, diffusecolor, diffusenormal, ent, ifog * colorscale, ifog * colorscale, ifog * colorscale, ent->alpha, false))
 	{
 		GL_ColorPointer(varray_color4f);
-		R_LightModel_CalcVertexColors(ambientcolor4f, numverts, varray_vertex3f, aliasvert_normal3f, varray_color4f);
+		R_LightModel_CalcVertexColors(ambientcolor4f, diffusecolor, diffusenormal, numverts, varray_vertex3f, aliasvert_normal3f, varray_color4f);
 	}
 	else
 		GL_Color(ambientcolor4f[0], ambientcolor4f[1], ambientcolor4f[2], ambientcolor4f[3]);

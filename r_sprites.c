@@ -86,7 +86,7 @@ void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 {
 	const entity_render_t *ent = calldata1;
 	int i;
-	vec3_t left, up, org, color;
+	vec3_t left, up, org, color, diffusecolor, diffusenormal;
 	mspriteframe_t *frame;
 	vec3_t diff;
 	float fog, ifog;
@@ -99,7 +99,10 @@ void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 	if ((ent->model->flags & EF_FULLBRIGHT) || (ent->effects & EF_FULLBRIGHT))
 		color[0] = color[1] = color[2] = 1;
 	else
-		R_CompleteLightPoint(color, ent->origin, true, NULL);
+	{
+		R_CompleteLightPoint(color, diffusecolor, diffusenormal, ent->origin, true, NULL);
+		VectorMA(color, 0.5f, diffusecolor, color);
+	}
 
 	if (fogenabled)
 	{
