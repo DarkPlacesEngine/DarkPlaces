@@ -13,6 +13,8 @@
 0 darkplaces: delay "connect" and "playdemo" and "timedemo" until after video init to cause quicker video startup (KrimZon)
 0 darkplaces: document how polygon collision works in the code (KrimZon)
 0 darkplaces: document the TEI stuff used in Nexuiz?  check telejano site first (SeienAbunae)
+0 darkplaces: figure out and fix the 'rubbing against a moving door causes block' bug (Static_Fiend)
+0 darkplaces: figure out random crashes on map changes (Uffe, QorpsE)
 0 darkplaces: figure out what's wrong with gloss rendering vertex calculations, which may be GF2 related (QorpsE)
 0 darkplaces: figure out why monsters keep making fall pain sound after they've landed in dpmod (Cruaich)
 0 darkplaces: finish the parital update support in protocol.[ch] and reduce packet size to 1k to fix NAT routers
@@ -23,6 +25,8 @@
 0 darkplaces: funky lightmaps in prydon gate and dm1 on TNT1/2, which get worse the more times you reload it?  (NotoriousRay, Uffe)
 0 darkplaces: get rid of stencil options and make 32bit color automatically use stencil
 0 darkplaces: have a look at CFQ and figure out why its b0rked
+0 darkplaces: identify bug in gloss rendering regarding normalization cubemap (QorpsE)
+0 darkplaces: identify weird lightmap texturing bug on TNT cards - goes away in r_textureunits 1 (Uffe)
 0 darkplaces: make Com_HexDumpToConsole not use color
 0 darkplaces: make S_Update take a matrix4x4_t *
 0 darkplaces: make a flag for rtlights that makes them appear in normal mode (not just r_shadow_realtime_world mode) (Vermeulen)
@@ -31,6 +35,7 @@
 0 darkplaces: make memory pools have a flag to print them as temporary pools (I.E. consider them leaks if anything is in them) (Vicious)
 0 darkplaces: make missing skins show as white on models (Electro)
 0 darkplaces: make reliable message splitting use a different limit than unreliable message size (yummyluv)
+0 darkplaces: make server queries use a queue to avoid flooding out queries too fast, and then change the reply receive code drop packets from servers not in the list (Willis)
 0 darkplaces: make sure QuakeDoneQuick works (Chris Kemp)
 0 darkplaces: make sure r_drawportals works
 0 darkplaces: make sure r_fullbright works
