@@ -18,7 +18,7 @@
 #endif
 
 // for Z_Malloc/Z_Free in quake
-#if 1
+#ifndef STANDALONETEST
 #include "zone.h"
 #else
 #define Z_Malloc malloc
@@ -57,7 +57,7 @@ int LHNETADDRESS_FromPort(lhnetaddress_t *address, int addresstype, int port)
 
 int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int defaultport)
 {
-	int i, port, namelen, number;
+	int port, namelen, d1, d2, d3, d4;
 	struct hostent *hostentry;
 	const char *colon;
 	char name[128];
@@ -90,66 +90,48 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 	}
 	// try to parse with gethostbyname first, because it can handle ipv4 and
 	// ipv6 (in various address formats), as well as dns names
-	for (i = 0;i < 3;i++)
+	hostentry = gethostbyname(name);
+	if (hostentry)
 	{
-		if (i == 0)
-			hostentry = gethostbyaddr(name, namelen, LHNETADDRESSTYPE_INET6_FAMILY);
-		else if (i == 1)
-			hostentry = gethostbyaddr(name, namelen, LHNETADDRESSTYPE_INET4_FAMILY);
-		else
-			hostentry = gethostbyname(name);
-		if (hostentry)
+		if (hostentry->h_addrtype == LHNETADDRESSTYPE_INET6_FAMILY)
 		{
-			if (hostentry->h_addrtype == LHNETADDRESSTYPE_INET6_FAMILY)
-			{
-				// great it worked
-				address->addresstype = LHNETADDRESSTYPE_INET6;
-				address->addressdata.inet6.family = hostentry->h_addrtype;
-				address->addressdata.inet6.port = htons((unsigned short)port);
-				memcpy(address->addressdata.inet6.address, hostentry->h_addr_list[0], sizeof(address->addressdata.inet6.address));
+			// great it worked
+			address->addresstype = LHNETADDRESSTYPE_INET6;
+			address->addressdata.inet6.family = hostentry->h_addrtype;
+			address->addressdata.inet6.port = htons((unsigned short)port);
+			memcpy(address->addressdata.inet6.address, hostentry->h_addr_list[0], sizeof(address->addressdata.inet6.address));
 #ifdef STANDALONETEST
-				printf("gethostbyname(\"%s\") returned ipv6 address [%x:%x:%x:%x:%x:%x:%x:%x]:%d\n", name, (int)address->addressdata.inet6.address[0], (int)address->addressdata.inet6.address[1], (int)address->addressdata.inet6.address[2], (int)address->addressdata.inet6.address[3], (int)address->addressdata.inet6.address[4], (int)address->addressdata.inet6.address[5], (int)address->addressdata.inet6.address[6], (int)address->addressdata.inet6.address[7], (int)ntohs(address->addressdata.inet6.port));
+			printf("gethostbyname(\"%s\") returned ipv6 address [%x:%x:%x:%x:%x:%x:%x:%x]:%d\n", name, (int)address->addressdata.inet6.address[0], (int)address->addressdata.inet6.address[1], (int)address->addressdata.inet6.address[2], (int)address->addressdata.inet6.address[3], (int)address->addressdata.inet6.address[4], (int)address->addressdata.inet6.address[5], (int)address->addressdata.inet6.address[6], (int)address->addressdata.inet6.address[7], (int)ntohs(address->addressdata.inet6.port));
 #endif
-				return 1;
-			}
-			else if (hostentry->h_addrtype == LHNETADDRESSTYPE_INET4_FAMILY)
-			{
-				// great it worked
-				address->addresstype = LHNETADDRESSTYPE_INET4;
-				address->addressdata.inet4.family = hostentry->h_addrtype;
-				address->addressdata.inet4.port = htons((unsigned short)port);
-				memcpy(address->addressdata.inet4.address, hostentry->h_addr_list[0], sizeof(address->addressdata.inet4.address));
+			return 1;
+		}
+		else if (hostentry->h_addrtype == LHNETADDRESSTYPE_INET4_FAMILY)
+		{
+			// great it worked
+			address->addresstype = LHNETADDRESSTYPE_INET4;
+			address->addressdata.inet4.family = hostentry->h_addrtype;
+			address->addressdata.inet4.port = htons((unsigned short)port);
+			memcpy(address->addressdata.inet4.address, hostentry->h_addr_list[0], sizeof(address->addressdata.inet4.address));
 #ifdef STANDALONETEST
-				printf("gethostbyname(\"%s\") returned ipv4 address %d.%d.%d.%d:%d\n", name, (int)address->addressdata.inet4.address[0], (int)address->addressdata.inet4.address[1], (int)address->addressdata.inet4.address[2], (int)address->addressdata.inet4.address[3], (int)ntohs(address->addressdata.inet4.port));
+			printf("gethostbyname(\"%s\") returned ipv4 address %d.%d.%d.%d:%d\n", name, (int)address->addressdata.inet4.address[0], (int)address->addressdata.inet4.address[1], (int)address->addressdata.inet4.address[2], (int)address->addressdata.inet4.address[3], (int)ntohs(address->addressdata.inet4.port));
 #endif
-				return 1;
-			}
+			return 1;
 		}
 	}
 	// failed, try to parse as an ipv4 address as a fallback (is this needed?)
 #ifdef STANDALONETEST
 	printf("gethostbyname and gethostbyaddr failed on address \"%s\"\n", name);
 #endif
-	for (i = 0, number = 0;i < 4;string++)
-	{
-		if (*string >= '0' && *string <= '9')
-			number = number * 10 + (*string - '0');
-		else if (number < 256 && (*string == '.' || *string == ':'))
-		{
-			address->addressdata.inet4.address[i++] = number;
-			number = 0;
-		}
-		else
-			break;
-		if (*string == 0 || *string == ':')
-			break;
-	}
-	if (i == 4)
+	if (sscanf(name, "%d.%d.%d.%d", &d1, &d2, &d3, &d4) == 4 && (unsigned int)d1 < 256 && (unsigned int)d2 < 256 && (unsigned int)d3 < 256 && (unsigned int)d4 < 256)
 	{
 		// parsed a valid ipv4 address
 		address->addresstype = LHNETADDRESSTYPE_INET4;
 		address->addressdata.inet4.family = LHNETADDRESSTYPE_INET4_FAMILY;
 		address->addressdata.inet4.port = htons((unsigned short)port);
+		address->addressdata.inet4.address[0] = (unsigned char)d1;
+		address->addressdata.inet4.address[1] = (unsigned char)d2;
+		address->addressdata.inet4.address[2] = (unsigned char)d3;
+		address->addressdata.inet4.address[3] = (unsigned char)d4;
 #ifdef STANDALONETEST
 		printf("manual parsing of ipv4 dotted decimal address \"%s\" successful: %d.%d.%d.%d:%d\n", string, (int)address->addressdata.inet4.address[0], (int)address->addressdata.inet4.address[1], (int)address->addressdata.inet4.address[2], (int)address->addressdata.inet4.address[3], (int)ntohs(address->addressdata.inet4.port));
 #endif
