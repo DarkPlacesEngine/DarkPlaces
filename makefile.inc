@@ -145,11 +145,11 @@ CMD_UNIXRM=rm -rf
 ##### Linux specific variables #####
 
 # Recommended for: anyone not using ALSA
-#OBJ_LINUXSOUND=$(OBJ_COMMONSOUND) snd_oss.o
-#LIB_LINUXSOUND=
+OBJ_LINUXSOUND=$(OBJ_COMMONSOUND) snd_oss.o
+LIB_LINUXSOUND=
 # Recommended for: anyone using ALSA
-OBJ_LINUXSOUND=$(OBJ_COMMONSOUND) snd_alsa.o
-LIB_LINUXSOUND=-lasound
+#OBJ_LINUXSOUND=$(OBJ_COMMONSOUND) snd_alsa.o
+#LIB_LINUXSOUND=-lasound
 # Recommended for: anyone who can't use the above drivers
 #OBJ_LINUXSOUND=$(OBJ_NOSOUND)
 #LIB_LINUXSOUND=
