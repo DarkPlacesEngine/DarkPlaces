@@ -47,7 +47,7 @@ double bsplinesample(int dimensions, double t, double *param)
 void Q3PatchTesselateFloat(int numcomponents, int outputstride, float *outputvertices, int patchwidth, int patchheight, int inputstride, float *patchvertices, int tesselationwidth, int tesselationheight)
 {
 	int k, l, x, y, component, outputwidth = (patchwidth-1)*tesselationwidth+1;
-	float px, py, *v0, *v1, a, b, c, *cp[3][3], temp[3][64];
+	float px, py, *v, a, b, c, *cp[3][3], temp[3][64];
 	// iterate over the individual 3x3 quadratic spline surfaces one at a time
 	// expanding them to fill the output array (with some overlap to ensure
 	// the edges are filled)
