@@ -1181,6 +1181,8 @@ void COM_Memstats_f(void)
 }
 
 
+extern void Mathlib_Init(void);
+
 /*
 ================
 COM_Init
@@ -1216,6 +1218,8 @@ void COM_Init (char *basedir)
 	Cvar_RegisterVariable (&cmdline);
 	Cmd_AddCommand ("path", COM_Path_f);
 	Cmd_AddCommand ("memstats", COM_Memstats_f);
+
+	Mathlib_Init();
 
 	COM_InitFilesystem ();
 	COM_CheckRegistered ();

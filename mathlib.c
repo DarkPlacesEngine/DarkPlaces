@@ -26,6 +26,7 @@ void Sys_Error (char *error, ...);
 
 vec3_t vec3_origin = {0,0,0};
 int nanmask = 255<<23;
+float ixtable[4096];
 
 /*-----------------------------------------------------------------*/
 
@@ -887,4 +888,15 @@ int GreatestCommonDivisor (int i1, int i2)
 			return (i2);
 		return GreatestCommonDivisor (i1, i2 % i1);
 	}
+}
+
+
+void Mathlib_Init(void)
+{
+	int a;
+
+	// LordHavoc: setup 1.0f / N table for quick recipricols of integers
+	ixtable[0] = 0;
+	for (a = 1;a < 4096;a++)
+		ixtable[a] = 1.0f / a;
 }
