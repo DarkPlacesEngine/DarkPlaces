@@ -575,11 +575,15 @@ void SV_PushMove (edict_t *pusher, float movetime)
 		SV_LinkEdict (pusher, false);
 		return;
 	default:
-		Host_Error("SV_PushMove: unrecognized solid type %f\n", pusher->v->solid);
+		Con_DPrintf("SV_PushMove: unrecognized solid type %f\n", pusher->v->solid);
+		return;
 	}
 	index = (int) pusher->v->modelindex;
 	if (index < 1 || index >= MAX_MODELS)
-		Host_Error("SV_PushMove: invalid modelindex %f\n", pusher->v->modelindex);
+	{
+		Con_DPrintf("SV_PushMove: invalid modelindex %f\n", pusher->v->modelindex);
+		return;
+	}
 	pushermodel = sv.models[index];
 
 	movetime2 = movetime;
