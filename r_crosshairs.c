@@ -12,137 +12,6 @@ cvar_t crosshair_static = {CVAR_SAVE, "crosshair_static", "0"};
 // must match NUMCROSSHAIRS in gl_draw.c
 #define NUMCROSSHAIRS 5
 
-static qbyte *crosshairtexdata[NUMCROSSHAIRS] =
-{
-	"................"
-	"................"
-	"................"
-	"...33......33..."
-	"...355....553..."
-	"....577..775...."
-	".....77..77....."
-	"................"
-	"................"
-	".....77..77....."
-	"....577..775...."
-	"...355....553..."
-	"...33......33..."
-	"................"
-	"................"
-	"................"
-	,
-	"................"
-	"................"
-	"................"
-	"...3........3..."
-	"....5......5...."
-	".....7....7....."
-	"......7..7......"
-	"................"
-	"................"
-	"......7..7......"
-	".....7....7....."
-	"....5......5...."
-	"...3........3..."
-	"................"
-	"................"
-	"................"
-	,
-	"................"
-	".......77......."
-	".......77......."
-	"................"
-	"................"
-	".......44......."
-	".......44......."
-	".77..44..44..77."
-	".77..44..44..77."
-	".......44......."
-	".......44......."
-	"................"
-	".......77......."
-	".......77......."
-	"................"
-	"................"
-	,
-	"................"
-	"................"
-	"................"
-	"................"
-	"................"
-	"................"
-	"................"
-	"................"
-	"........7777777."
-	"........752....."
-	"........72......"
-	"........7......."
-	"........7......."
-	"........7......."
-	"................"
-	"................"
-	,
-	"................"
-	"................"
-	"................"
-	"................"
-	"................"
-	"........7......."
-	"................"
-	"........4......."
-	".....7.4.4.7...."
-	"........4......."
-	"................"
-	"........7......."
-	"................"
-	"................"
-	"................"
-	"................"
-};
-
-rtexturepool_t *crosshairtexturepool;
-rtexture_t *crosshairtexture[NUMCROSSHAIRS];
-
-void r_crosshairs_start(void)
-{
-	int num;
-	int i;
-	char *in;
-	qbyte data[16*16][4];
-	crosshairtexturepool = R_AllocTexturePool();
-	for (num = 0;num < 5;num++)
-	{
-		in = crosshairtexdata[num];
-		for (i = 0;i < 16*16;i++)
-		{
-			if (in[i] == '.')
-			{
-				data[i][0] = 255;
-				data[i][1] = 255;
-				data[i][2] = 255;
-				data[i][3] = 0;
-			}
-			else
-			{
-				data[i][0] = 255;
-				data[i][1] = 255;
-				data[i][2] = 255;
-				data[i][3] = (qbyte) ((int) (in[i] - '0') * 255 / 7);
-			}
-		}
-		crosshairtexture[num] = R_LoadTexture(crosshairtexturepool, va("crosshair%i", num), 16, 16, &data[0][0], TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE);
-	}
-}
-
-void r_crosshairs_shutdown(void)
-{
-	R_FreeTexturePool(&crosshairtexturepool);
-}
-
-void r_crosshairs_newmap(void)
-{
-}
-
 void R_Crosshairs_Init(void)
 {
 	Cvar_RegisterVariable(&crosshair_brightness);
@@ -151,7 +20,6 @@ void R_Crosshairs_Init(void)
 	Cvar_RegisterVariable(&crosshair_flashrange);
 	Cvar_RegisterVariable(&crosshair_size);
 	Cvar_RegisterVariable(&crosshair_static);
-	R_RegisterModule("R_Crosshair", r_crosshairs_start, r_crosshairs_shutdown, r_crosshairs_newmap);
 }
 
 void R_DrawCrosshairSprite(rtexture_t *texture, vec3_t origin, vec_t scale, float cr, float cg, float cb, float ca)
@@ -200,19 +68,11 @@ void R_DrawCrosshairSprite(rtexture_t *texture, vec3_t origin, vec_t scale, floa
 	R_Mesh_Draw(4, 2, polygonelements);
 }
 
-void R_DrawCrosshair(void)
+void R_GetCrosshairColor(float *out)
 {
-	int i, num;
+	int i;
 	qbyte *color;
 	float scale, base;
-	vec3_t v1, v2, spriteorigin;
-	vec_t spritescale;
-	float cr, cg, cb, ca;
-	num = crosshair.integer - 1;
-	if (num < 0 || cl.intermission)
-		return;
-	if (num >= NUMCROSSHAIRS)
-		num = 0;
 	if (cl.viewentity >= 1 && cl.viewentity <= cl.maxclients)
 	{
 		i = (cl.scores[cl.viewentity-1].colors & 0xF) << 4;
@@ -229,45 +89,67 @@ void R_DrawCrosshair(void)
 	else
 		base = 0.0f;
 	scale = crosshair_brightness.value * (1.0f / 255.0f);
+	out[0] = color[0] * scale + base;
+	out[1] = color[1] * scale + base;
+	out[2] = color[2] * scale + base;
+	out[3] = crosshair_alpha.value;
 
-	if (crosshair_static.integer)
-	{
-		char *picname;
-		cachepic_t *pic;
-
-		picname = va("gfx/crosshair%i.tga", num + 1);
-		pic = Draw_CachePic(picname);
-		if (pic)
-			DrawQ_Pic((vid.conwidth - pic->width * crosshair_size.value) * 0.5f, (vid.conheight - pic->height * crosshair_size.value) * 0.5f, picname, pic->width * crosshair_size.value, pic->height * crosshair_size.value, color[0] * scale + base, color[1] * scale + base, color[2] * scale + base, crosshair_alpha.value, 0);
-	}
-	else
-	{
-		// trace the shot path up to a certain distance
-		VectorCopy(cl_entities[cl.viewentity].render.origin, v1);
-		v1[2] += 16; // HACK: this depends on the QC
-		// get the forward vector for the gun (not the view)
-		AngleVectors(cl.viewangles, v2, NULL, NULL);
-		//VectorCopy(r_origin, v1);
-		VectorMA(v1, 8192, v2, v2);
-		spritescale = 4.0f + (CL_TraceLine(v1, v2, spriteorigin, NULL, 0, true) * 8192.0f) * (1.0f / 48.0f);
-		spritescale = bound(0.0f, spritescale, 32.0f);
-		//VectorMA(spriteorigin, -4, vpn, spriteorigin);
-
-		cr = color[0] * scale + base;
-		cg = color[1] * scale + base;
-		cb = color[2] * scale + base;
-		ca = crosshair_alpha.value;
-
-		// clamp the colors so they don't go negative
-		cr = max(0, cr);
-		cg = max(0, cg);
-		cb = max(0, cb);
-		// might as well clamp the alpha
-		ca = bound(0, ca, 1.0f);
-
-		// finally draw the sprite
-		R_DrawCrosshairSprite(crosshairtexture[num], spriteorigin, spritescale, cr, cg, cb, ca);
-	}
+	// clamp the colors and alpha
+	out[0] = bound(0, out[0], 1);
+	out[1] = bound(0, out[1], 1);
+	out[2] = bound(0, out[2], 1);
+	out[3] = bound(0, out[3], 1.0f);
 }
+
+void R_DrawWorldCrosshair(void)
+{
+	int num;
+	cachepic_t *pic;
+	vec3_t v1, v2, spriteorigin;
+	vec_t spritescale;
+	vec4_t color;
+	if (crosshair_static.integer)
+		return;
+	num = crosshair.integer;
+	if (num < 1 || num > NUMCROSSHAIRS || cl.intermission)
+		return;
+	if (!cl.viewentity || !cl_entities[cl.viewentity].state_current.active)
+		return;
+	pic = Draw_CachePic(va("gfx/crosshair%i.tga", num + 1));
+	if (!pic)
+		return;
+	R_GetCrosshairColor(color);
+	
+	// trace the shot path up to a certain distance
+	VectorCopy(cl_entities[cl.viewentity].render.origin, v1);
+	v1[2] += 16; // HACK: this depends on the QC
+	
+	// get the forward vector for the gun (not the view)
+	AngleVectors(cl.viewangles, v2, NULL, NULL);
+	//VectorCopy(r_origin, v1);
+	VectorMA(v1, 8192, v2, v2);
+	spritescale = CL_TraceLine(v1, v2, spriteorigin, NULL, 0, true) * (8192.0f / 40.0f) * crosshair_size.value;
+
+	// draw the sprite
+	R_DrawCrosshairSprite(pic->tex, spriteorigin, spritescale, color[0], color[1], color[2], color[3]);
+}
+
+void R_Draw2DCrosshair(void)
+{
+	int num;
+	cachepic_t *pic;
+	vec4_t color;
+	if (!crosshair_static.integer)
+		return;
+	num = crosshair.integer;
+	if (num < 1 || num > NUMCROSSHAIRS || cl.intermission)
+		return;
+	R_GetCrosshairColor(color);
+	pic = Draw_CachePic(va("gfx/crosshair%i.tga", num + 1));
+	if (pic)
+		DrawQ_Pic((vid.conwidth - pic->width * crosshair_size.value) * 0.5f, (vid.conheight - pic->height * crosshair_size.value) * 0.5f, pic->name, pic->width * crosshair_size.value, pic->height * crosshair_size.value, color[0], color[1], color[2], color[3], 0);
+}
+
+
 
 

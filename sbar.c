@@ -789,7 +789,6 @@ void Sbar_ShowFPS(void)
 Sbar_Draw
 ===============
 */
-//void DrawCrosshair(int num);
 void Sbar_Draw (void)
 {
 	if (scr_con_current == vid.conheight)
@@ -911,8 +910,7 @@ void Sbar_Draw (void)
 
 	Sbar_ShowFPS();
 
-//	if (crosshair.integer >= 1)
-//		DrawCrosshair(crosshair.integer - 1);
+	R_Draw2DCrosshair();
 }
 
 //=============================================================================
