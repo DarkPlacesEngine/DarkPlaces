@@ -118,6 +118,10 @@ int VID_SetMode (int modenum);
 // sets the mode; only used by the Quake engine for resetting to mode 0 (the
 // base mode) on memory allocation failures
 
+int VID_InitMode(int fullscreen, int width, int height, int bpp);
+// allocates and opens an appropriate OpenGL context (and its window)
+
+
 // sets hardware gamma correction, returns false if the device does not
 // support gamma control
 int VID_SetGamma (unsigned short *ramps);
