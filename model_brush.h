@@ -227,6 +227,9 @@ typedef struct msurface_s
 	//struct msurface_s **neighborsurfaces;
 	// currently used only for generating static shadow volumes
 	int lighttemp_castshadow;
+
+	// avoid redundent surface shadows
+	int shadowmark;
 }
 msurface_t;
 

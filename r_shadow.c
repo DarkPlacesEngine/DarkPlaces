@@ -1698,7 +1698,6 @@ void R_RTLight_UpdateFromDLight(rtlight_t *rtlight, const dlight_t *light, int i
 // (undone by R_FreeCompiledRTLight, which R_UpdateLight calls)
 void R_RTLight_Compile(rtlight_t *rtlight)
 {
-#if 0
 	int i, j, k, l, maxverts = 256, tris;
 	float *vertex3f = NULL, mins[3], maxs[3];
 	shadowmesh_t *mesh, *castmesh = NULL;
@@ -1908,7 +1907,19 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 			for (mesh = castmesh;mesh;mesh = mesh->next)
 			{
 				Mod_BuildTriangleNeighbors(mesh->neighbor3i, mesh->element3i, mesh->numtriangles);
-				if ((tris = R_Shadow_ConstructShadowVolume(castmesh->numverts, 0, castmesh->numtriangles, castmesh->element3i, castmesh->neighbor3i, castmesh->vertex3f, NULL, shadowelements, vertex3f, rtlight->shadoworigin, r_shadow_projectdistance.value)))
+				R_Shadow_PrepareShadowMark(mesh->numtriangles);
+				for (i = 0;i < mesh->numtriangles;i++)
+				{
+					const float *v[3];
+					v[0] = mesh->vertex3f + mesh->element3i[i*3+0] * 3;
+					v[1] = mesh->vertex3f + mesh->element3i[i*3+1] * 3;
+					v[2] = mesh->vertex3f + mesh->element3i[i*3+2] * 3;
+					if (PointInfrontOfTriangle(rtlight->shadoworigin, v[0], v[1], v[2]) && rtlight->cullmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && rtlight->cullmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && rtlight->cullmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && rtlight->cullmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && rtlight->cullmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && rtlight->cullmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+						shadowmarklist[numshadowmark++] = i;
+				}
+				if (maxshadowelements < numshadowmark * 24)
+					R_Shadow_ResizeShadowElements((numshadowmark + 256) * 24);
+				if ((tris = R_Shadow_ConstructShadowVolume(mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->neighbor3i, mesh->vertex3f, NULL, shadowelements, vertex3f, rtlight->shadoworigin, r_shadow_projectdistance.value, numshadowmark, shadowmarklist)))
 					Mod_ShadowMesh_AddMesh(r_shadow_mempool, rtlight->static_meshchain_shadow, NULL, NULL, NULL, vertex3f, NULL, NULL, NULL, NULL, tris, shadowelements);
 			}
 			Mem_Free(vertex3f);
@@ -1930,7 +1941,6 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 		for (mesh = rtlight->static_meshchain_light;mesh;mesh = mesh->next)
 			l += mesh->numtriangles;
 	Con_DPrintf("static light built: %f %f %f : %f %f %f box, %i shadow volume triangles, %i light triangles\n", rtlight->cullmins[0], rtlight->cullmins[1], rtlight->cullmins[2], rtlight->cullmaxs[0], rtlight->cullmaxs[1], rtlight->cullmaxs[2], k, l);
-#endif
 }
 
 void R_RTLight_Uncompile(rtlight_t *rtlight)

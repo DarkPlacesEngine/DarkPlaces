@@ -2814,6 +2814,54 @@ static void Mod_Q1BSP_RoundUpToHullSize(model_t *cmodel, const vec3_t inmins, co
 	VectorAdd(inmins, hull->clip_size, outmaxs);
 }
 
+/*
+void Mod_Q1BSP_RecursiveGetVisible(mnode_t *node, model_t *model, const vec3_t point, const vec3_t mins, const vec3_t maxs, int maxleafs, mleaf_t *leaflist, int *numleafs, int maxsurfaces, msurface_t *surfacelist, int *numsurfaces, const qbyte *pvs)
+{
+	mleaf_t *leaf;
+	for (;;)
+	{
+		if (!BoxesOverlap(node->mins, node->maxs, mins, maxs))
+			return;
+		if (!node->plane)
+			break;
+		Mod_Q1BSP_RecursiveGetVisible(node->children[0], model, point, mins, maxs, maxleafs, leaflist, numleafs, maxsurfaces, surfacelist, numsurfaces, pvs);
+		node = node->children[1];
+	}
+	leaf = (mleaf_t *)node;
+	if ((pvs == NULL || CHECKPVSBIT(pvs, leaf->clusterindex)))
+	{
+		int marksurfacenum;
+		msurface_t *surf;
+		if (maxleafs && *numleafs < maxleafs)
+			leaflist[(*numleafs)++] = leaf;
+		if (maxsurfaces)
+		{
+			for (marksurfacenum = 0;marksurfacenum < leaf->nummarksurfaces;marksurfacenum++)
+			{
+				surf = model->brushq1.surfaces + leaf->firstmarksurface[marksurfacenum];
+				if (surf->shadowmark != shadowmarkcount)
+				{
+					surf->shadowmark = shadowmarkcount;
+					if (BoxesOverlap(mins, maxs, surf->poly_mins, surf->poly_maxs) && ((surf->flags & SURF_PLANEBACK) ? PlaneDiff(point, surf->plane) < 0 : PlaneDiff(point, surf->plane) > 0) && *numsurfaces < maxsurfaces)
+						surfacelist[(*numsurfaces)++] = surf;
+				}
+			}
+		}
+	}
+}
+
+void Mod_Q1BSP_GetVisible(model_t *model, const vec3_t point, const vec3_t mins, const vec3_t maxs, int maxleafs, mleaf_t *leaflist, int *numleafs, int maxsurfaces, msurface_t *surfacelist, int *numsurfaces)
+{
+	// FIXME: support portals
+	if (maxsurfaces)
+		*numsurfaces = 0;
+	if (maxleafs)
+		*numleafs = 0;
+	pvs = ent->model->brush.GetPVS(ent->model, relativelightorigin);
+	Mod_Q1BSP_RecursiveGetVisible(ent->model->brushq1.nodes + ent->model->brushq1.firstclipnode, model, point, mins, maxs, maxleafs, leaflist, numleafs, maxsurfaces, surfacelist, numsurfaces);
+}
+*/
+
 extern void R_Model_Brush_DrawSky(entity_render_t *ent);
 extern void R_Model_Brush_Draw(entity_render_t *ent);
 extern void R_Model_Brush_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius);
@@ -5300,6 +5348,69 @@ static int Mod_Q3BSP_NativeContentsFromSuperContents(model_t *model, int superco
 		nativecontents |= Q2CONTENTS_LAVA;
 	return nativecontents;
 }
+
+/*
+void Mod_Q3BSP_RecursiveGetVisible(q3mnode_t *node, model_t *model, const vec3_t point, const vec3_t mins, const vec3_t maxs, int maxleafs, q3mleaf_t *leaflist, int *numleafs, int maxsurfaces, q3msurface_t *surfacelist, int *numsurfaces, const qbyte *pvs)
+{
+	mleaf_t *leaf;
+	for (;;)
+	{
+		if (!BoxesOverlap(node->mins, node->maxs, mins, maxs))
+			return;
+		if (!node->plane)
+			break;
+		Mod_Q3BSP_RecursiveGetVisible(node->children[0], model, point, mins, maxs, maxleafs, leaflist, numleafs, maxsurfaces, surfacelist, numsurfaces, pvs);
+		node = node->children[1];
+	}
+	leaf = (mleaf_t *)node;
+	if ((pvs == NULL || CHECKPVSBIT(pvs, leaf->clusterindex)))
+	{
+		int marksurfacenum;
+		q3mface_t *surf;
+		if (maxleafs && *numleafs < maxleafs)
+			leaflist[(*numleaf)++] = leaf;
+		if (maxsurfaces)
+		{
+			for (marksurfacenum = 0;marksurfacenum < leaf->nummarksurfaces;marksurfacenum++)
+			{
+				face = leaf->firstleafface[marksurfacenum];
+				if (face->shadowmark != shadowmarkcount)
+				{
+					face->shadowmark = shadowmarkcount;
+					if (BoxesOverlap(mins, maxs, face->mins, face->maxs) && *numsurfaces < maxsurfaces)
+						surfacelist[(*numsurfaces)++] = face;
+				}
+			}
+		}
+	}
+}
+
+void Mod_Q3BSP_GetVisible(model_t *model, const vec3_t point, const vec3_t mins, const vec3_t maxs, int maxleafs, q3mleaf_t *leaflist, int *numleafs, int maxsurfaces, q3msurface_t *surfacelist, int *numsurfaces)
+{
+	// FIXME: support portals
+	if (maxsurfaces)
+		*numsurfaces = 0;
+	if (maxleafs)
+		*numleafs = 0;
+	if (model->submodel)
+	{
+		if (maxsurfaces)
+		{
+			for (marksurfacenum = 0;marksurfacenum < leaf->nummarksurfaces;marksurfacenum++)
+			{
+				face = ent->model->brushq3.surfaces + leaf->firstmarksurface[marksurfacenum];
+				if (BoxesOverlap(mins, maxs, face->mins, face->maxs) && *numsurfaces < maxsurfaces)
+					surfacelist[(*numsurfaces)++] = face;
+			}
+		}
+	}
+	else
+	{
+		pvs = ent->model->brush.GetPVS(ent->model, relativelightorigin);
+		Mod_Q3BSP_RecursiveGetVisible(ent->model->brushq3.data_nodes, model, point, mins, maxs, maxleafs, leaflist, numleafs, maxsurfaces, surfacelist, numsurfaces, pvs);
+	}
+}
+*/
 
 extern void R_Q3BSP_DrawSky(struct entity_render_s *ent);
 extern void R_Q3BSP_Draw(struct entity_render_s *ent);
