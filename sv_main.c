@@ -907,6 +907,8 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 	ent = NEXT_EDICT(sv.edicts);
 	for (e = 1;e < sv.num_edicts;e++, ent = NEXT_EDICT(ent))
 	{
+		if (ent->free)
+			continue;
 		flags = 0;
 
 		if (ent != clent) // LordHavoc: always send player
