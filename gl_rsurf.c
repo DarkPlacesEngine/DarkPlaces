@@ -1982,7 +1982,7 @@ void R_Q3BSP_DrawFace_TransparentCallback(const void *voident, int facenumber)
 	if (face->texture->textureflags & (Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
 	{
 		int i, j;
-		float f, center[3], center2[3], forward[3], right[3], up[3], v[4][3];
+		float center[3], center2[3], forward[3], right[3], up[3], v[4][3];
 		matrix4x4_t matrix1, imatrix1;
 		R_Mesh_Matrix(&r_identitymatrix);
 		// a single autosprite surface can contain multiple sprites...
