@@ -34,8 +34,8 @@ static cvar_t sv_masters [] =
 	{CVAR_SAVE, "sv_master2", ""},
 	{CVAR_SAVE, "sv_master3", ""},
 	{CVAR_SAVE, "sv_master4", ""},
-	{0, "sv_masterextra1", "69.59.212.88"},
-	{0, "sv_masterextra2", "66.28.32.64"},
+	{0, "sv_masterextra1", "ghdigital.com"},
+	{0, "sv_masterextra2", "dpmaster.deathmask.net"},
 	{0, NULL, NULL}
 };
 
