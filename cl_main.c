@@ -993,9 +993,13 @@ void R_LightningBeams_Init(void)
 
 void R_CalcLightningBeamPolygonVertices(float *v, float *tc, const float *start, const float *end, const float *offset, float t1, float t2)
 {
+	// near right corner
 	VectorAdd     (start, offset, (v +  0));tc[ 0] = 0;tc[ 1] = t1;
+	// near left corner
 	VectorSubtract(start, offset, (v +  4));tc[ 4] = 1;tc[ 5] = t1;
+	// far left corner
 	VectorSubtract(end  , offset, (v +  8));tc[ 8] = 1;tc[ 9] = t2;
+	// far right corner
 	VectorAdd     (end  , offset, (v + 12));tc[12] = 0;tc[13] = t2;
 }
 
@@ -1029,44 +1033,74 @@ void R_DrawLightningBeamCallback(const void *calldata1, int calldata2)
 	m.tex[0] = R_GetTexture(r_lightningbeamtexture);
 	R_Mesh_State(&m);
 	R_Mesh_Matrix(&r_identitymatrix);
+
+	// calculate beam direction (beamdir) vector and beam length
+	// get difference vector
 	VectorSubtract(b->end, b->start, beamdir);
+	// find length of difference vector
 	length = sqrt(DotProduct(beamdir, beamdir));
+	// calculate scale to make beamdir a unit vector (normalized)
 	t1 = 1.0f / length;
+	// scale beamdir so it is now normalized
 	VectorScale(beamdir, t1, beamdir);
+
+	// calculate up vector such that it points toward viewer, and rotates around the beamdir
+	// get direction from start of beam to viewer
 	VectorSubtract(r_origin, b->start, up);
+	// remove the portion of the vector that moves along the beam
+	// (this leaves only a vector pointing directly away from the beam)
 	t1 = -DotProduct(up, beamdir);
 	VectorMA(up, t1, beamdir, up);
+	// now we have a vector pointing away from the beam, now we need to normalize it
 	VectorNormalizeFast(up);
+	// generate right vector from forward and up, the result is already normalized
+	// (CrossProduct returns a vector of multiplied length of the two inputs)
 	CrossProduct(beamdir, up, right);
-	//VectorVectors(beamdir, right, up);
 
+	// calculate T coordinate scrolling (start and end texcoord along the beam)
 	t1 = cl.time * -r_lightningbeam_scroll.value;
 	t1 = t1 - (int) t1;
 	t2 = t1 + beamrepeatscale * length;
 
-	// horizontal
+	// the beam is 3 polygons in this configuration:
+	//  2   3
+	//   * *
+	// 1******
+	//   * *
+	//  *   *
+	// they are showing different portions of the beam texture, creating an
+	// illusion of a beam that appears to curl around in 3D space
+	// (and realize that the whole polygon assembly orients itself to face
+	//  the viewer)
+
+	// polygon 1, verts 0-3
 	VectorScale(right, r_lightningbeam_thickness.value, offset);
 	R_CalcLightningBeamPolygonVertices(varray_vertex, varray_texcoord[0], b->start, b->end, offset, t1, t2);
-	// diagonal up-right/down-left
+
+	// polygon 2, verts 4-7
 	VectorAdd(right, up, offset);
 	VectorScale(offset, r_lightningbeam_thickness.value * 0.70710681f, offset);
 	R_CalcLightningBeamPolygonVertices(varray_vertex + 16, varray_texcoord[0] + 16, b->start, b->end, offset, t1 + 0.33, t2 + 0.33);
-	// diagonal down-right/up-left
+
+	// polygon 3, verts 8-11
 	VectorSubtract(right, up, offset);
 	VectorScale(offset, r_lightningbeam_thickness.value * 0.70710681f, offset);
 	R_CalcLightningBeamPolygonVertices(varray_vertex + 32, varray_texcoord[0] + 32, b->start, b->end, offset, t1 + 0.66, t2 + 0.66);
 
 	if (fogenabled)
 	{
+		// per vertex colors if fog is used
 		GL_UseColorArray();
 		R_FogLightningBeamColors(varray_vertex, varray_color, 12, r_lightningbeam_color_red.value, r_lightningbeam_color_green.value, r_lightningbeam_color_blue.value, 1);
 	}
 	else
+	{
+		// solid color if fog is not used
 		GL_Color(r_lightningbeam_color_red.value, r_lightningbeam_color_green.value, r_lightningbeam_color_blue.value, 1);
+	}
 
-	//qglDisable(GL_CULL_FACE);
+	// draw the 3 polygons as one batch of 6 triangles using the 12 vertices
 	R_Mesh_Draw(12, 6, r_lightningbeamelements);
-	//qglEnable(GL_CULL_FACE);
 }
 
 void R_DrawLightningBeams (void)
