@@ -118,7 +118,6 @@ void SV_CheckVelocity (edict_t *ent)
 		ent->v.velocity[0] *= wishspeed;
 		ent->v.velocity[1] *= wishspeed;
 		ent->v.velocity[2] *= wishspeed;
-		wishspeed = sv_maxvelocity.value;
 	}
 }
 
