@@ -126,6 +126,8 @@ extern int eval_viewzoom;
 
 extern mfunction_t *SV_PlayerPhysicsQC;
 extern mfunction_t *EndFrameQC;
+//KrimZon - SERVER COMMANDS IN QUAKEC
+extern mfunction_t *SV_ParseClientCommandQC;
 
 //============================================================================
 

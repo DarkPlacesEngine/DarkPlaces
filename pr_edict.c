@@ -122,6 +122,8 @@ int eval_viewzoom;
 
 mfunction_t *SV_PlayerPhysicsQC;
 mfunction_t *EndFrameQC;
+//KrimZon - SERVER COMMANDS IN QUAKEC
+mfunction_t *SV_ParseClientCommandQC;
 
 int FindFieldOffset(const char *field)
 {
@@ -173,6 +175,8 @@ void FindEdictFieldOffsets(void)
 	SV_PlayerPhysicsQC = ED_FindFunction ("SV_PlayerPhysics");
 	// LordHavoc: support for endframe
 	EndFrameQC = ED_FindFunction ("EndFrame");
+	//KrimZon - SERVER COMMANDS IN QUAKEC
+	SV_ParseClientCommandQC = ED_FindFunction ("SV_ParseClientCommand");
 }
 
 /*
