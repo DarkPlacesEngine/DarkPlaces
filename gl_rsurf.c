@@ -1915,8 +1915,9 @@ void R_DrawCollisionBrush(colbrushf_t *brush)
 void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
 {
 	rmeshstate_t m;
-	if ((face->texture->renderflags & Q3MTEXTURERENDERFLAGS_NODRAW) || !face->numtriangles || R_CullBox(face->mins, face->maxs))
+	if ((face->texture->renderflags & Q3MTEXTURERENDERFLAGS_NODRAW) || !face->numtriangles)
 		return;
+	face->visframe = r_framecount;
 	memset(&m, 0, sizeof(m));
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
@@ -1969,7 +1970,8 @@ void R_Q3BSP_RecursiveWorldNode(entity_render_t *ent, q3mnode_t *node, const vec
 			if (face->markframe != markframe)
 			{
 				face->markframe = markframe;
-				R_Q3BSP_DrawFace(ent, face);
+				if (!R_CullBox(face->mins, face->maxs))
+					R_Q3BSP_DrawFace(ent, face);
 			}
 		}
 	}
@@ -1989,7 +1991,6 @@ void R_Q3BSP_Draw(entity_render_t *ent)
 	model = ent->model;
 	if (r_drawcollisionbrushes.integer < 2)
 	{
-		qglPolygonOffset(1.0f, 0);
 		Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
 		if (ent == &cl_entities[0].render && model->brushq3.num_pvsclusters && !r_novis.integer && (pvs = model->brush.GetPVS(model, modelorg)))
 			R_Q3BSP_RecursiveWorldNode(ent, model->brushq3.data_nodes, modelorg, pvs, ++markframe);
@@ -2017,14 +2018,68 @@ void R_Q3BSP_DrawFakeShadow(entity_render_t *ent)
 }
 */
 
-/*
 void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius)
 {
+	int i;
+	q3mface_t *face;
+	vec3_t modelorg, lightmins, lightmaxs;
+	model_t *model;
+	float projectdistance;
+	projectdistance = 1000000000.0f;//lightradius + ent->model->radius;
+	if (r_drawcollisionbrushes.integer < 2)
+	{
+		model = ent->model;
+		R_Mesh_Matrix(&ent->matrix);
+		Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+		lightmins[0] = relativelightorigin[0] - lightradius;
+		lightmins[1] = relativelightorigin[1] - lightradius;
+		lightmins[2] = relativelightorigin[2] - lightradius;
+		lightmaxs[0] = relativelightorigin[0] + lightradius;
+		lightmaxs[1] = relativelightorigin[1] + lightradius;
+		lightmaxs[2] = relativelightorigin[2] + lightradius;
+		//if (ent == &cl_entities[0].render && model->brushq3.num_pvsclusters && !r_novis.integer && (pvs = model->brush.GetPVS(model, modelorg)))
+		//	R_Q3BSP_RecursiveWorldNode(ent, model->brushq3.data_nodes, modelorg, pvs, ++markframe);
+		//else
+			for (i = 0, face = model->brushq3.data_thismodel->firstface;i < model->brushq3.data_thismodel->numfaces;i++, face++)
+				if (BoxesOverlap(lightmins, lightmaxs, face->mins, face->maxs))
+					R_Shadow_Volume(face->numvertices, face->numtriangles, face->data_vertex3f, face->data_element3i, face->data_neighbor3i, relativelightorigin, lightradius, projectdistance);
+	}
 }
-*/
+
+void R_Q3BSP_DrawFaceLight(entity_render_t *ent, q3mface_t *face, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz)
+{
+	if ((face->texture->renderflags & Q3MTEXTURERENDERFLAGS_NODRAW) || !face->numtriangles)
+		return;
+	R_Shadow_DiffuseLighting(face->numvertices, face->numtriangles, face->data_element3i, face->data_vertex3f, face->data_svector3f, face->data_tvector3f, face->data_normal3f, face->data_texcoordtexture2f, relativelightorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, face->texture->skin.base, face->texture->skin.nmap, NULL);
+	R_Shadow_SpecularLighting(face->numvertices, face->numtriangles, face->data_element3i, face->data_vertex3f, face->data_svector3f, face->data_tvector3f, face->data_normal3f, face->data_texcoordtexture2f, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, face->texture->skin.gloss, face->texture->skin.nmap, NULL);
+}
 
 void R_Q3BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz)
 {
+	int i;
+	q3mface_t *face;
+	vec3_t modelorg, lightmins, lightmaxs;
+	model_t *model;
+	//qbyte *pvs;
+	//static int markframe = 0;
+	if (r_drawcollisionbrushes.integer < 2)
+	{
+		model = ent->model;
+		R_Mesh_Matrix(&ent->matrix);
+		Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+		lightmins[0] = relativelightorigin[0] - lightradius;
+		lightmins[1] = relativelightorigin[1] - lightradius;
+		lightmins[2] = relativelightorigin[2] - lightradius;
+		lightmaxs[0] = relativelightorigin[0] + lightradius;
+		lightmaxs[1] = relativelightorigin[1] + lightradius;
+		lightmaxs[2] = relativelightorigin[2] + lightradius;
+		//if (ent == &cl_entities[0].render && model->brushq3.num_pvsclusters && !r_novis.integer && (pvs = model->brush.GetPVS(model, modelorg)))
+		//	R_Q3BSP_RecursiveWorldNode(ent, model->brushq3.data_nodes, modelorg, pvs, ++markframe);
+		//else
+			for (i = 0, face = model->brushq3.data_thismodel->firstface;i < model->brushq3.data_thismodel->numfaces;i++, face++)
+				if ((ent != &cl_entities[0].render || face->visframe == r_framecount) && BoxesOverlap(lightmins, lightmaxs, face->mins, face->maxs))
+					R_Q3BSP_DrawFaceLight(ent, face, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz);
+	}
 }
 
 static void gl_surf_start(void)

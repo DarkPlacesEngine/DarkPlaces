@@ -361,7 +361,10 @@ typedef struct q3mface_s
 	int firstelement;
 	int numelements;
 	int patchsize[2];
+	// used for processing
 	int markframe;
+	// (world only) visframe == r_framecount means it is visible this frame
+	int visframe;
 	// bounding box for culling
 	float mins[3];
 	float maxs[3];
