@@ -270,5 +270,13 @@ typedef struct aliasmesh_s
 }
 aliasmesh_t;
 
+typedef struct aliastag_s
+{
+	char name[MD3NAME];
+	matrix4x4_t matrix;
+}
+aliastag_t;
+
+
 #endif
 
