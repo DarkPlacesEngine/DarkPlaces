@@ -252,7 +252,7 @@ void PRVM_PrintState(void)
 	int i;
 	if (prog->xfunction)
 	{
-		for (i = -4;i <= 0;i++)
+		for (i = -7; i <= 0;i++)
 			if (prog->xstatement + i >= prog->xfunction->first_statement)
 				PRVM_PrintStatement (prog->statements + prog->xstatement + i);
 	}
