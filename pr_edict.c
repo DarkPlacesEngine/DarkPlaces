@@ -1443,7 +1443,7 @@ void PR_Fields_f (void)
 		return;
 	}
 	counts = Mem_Alloc(tempmempool, progs->numfielddefs * sizeof(int));
-	for (ednum = 0;ednum < MAX_EDICTS;ednum++)
+	for (ednum = 0;ednum < sv.max_edicts;ednum++)
 	{
 		ed = EDICT_NUM(ednum);
 		if (ed->e->free)
@@ -1531,7 +1531,7 @@ void PR_Fields_f (void)
 		}
 	}
 	Mem_Free(counts);
-	Con_Printf("%i entity fields (%i in use), totalling %i bytes per edict (%i in use), %i edicts, %i bytes total spent on edict fields (%i needed)\n", progs->entityfields, used, progs->entityfields * 4, usedamount * 4, MAX_EDICTS, progs->entityfields * 4 * MAX_EDICTS, usedamount * 4 * MAX_EDICTS);
+	Con_Printf("%i entity fields (%i in use), totalling %i bytes per edict (%i in use), %i edicts allocated, %i bytes total spent on edict fields (%i needed)\n", progs->entityfields, used, progs->entityfields * 4, usedamount * 4, sv.max_edicts, progs->entityfields * 4 * sv.max_edicts, usedamount * 4 * sv.max_edicts);
 }
 
 void PR_Globals_f (void)
