@@ -2294,7 +2294,7 @@ void R_Q3BSP_DrawFaces(entity_render_t *ent, int skyfaces)
 					if (r_surf_surfacevisible[t->facenumlist[i]])
 					{
 						face = t->facelist[i];
-						if (!R_CullBox(face->mins, face->maxs))
+						if (!R_CullBox(face->mins, face->maxs) && face->numtriangles)
 						{
 							if (numfaces >= maxfaces)
 							{
@@ -2317,8 +2317,8 @@ void R_Q3BSP_DrawFaces(entity_render_t *ent, int skyfaces)
 		numfaces = 0;
 		for (i = 0, face = model->brushq3.data_thismodel->firstface;i < model->brushq3.data_thismodel->numfaces;i++, face++)
 		{
-			if ((face->texture->surfaceflags & flagsmask) == flags)
-			{
+			if ((face->texture->surfaceflags & flagsmask) == flags && face->numtriangles)
+			{                                                     
 				if (t != face->texture || numfaces >= maxfaces)
 				{
 					if (numfaces)
@@ -2422,7 +2422,7 @@ void R_Q3BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 					surfaceindex = surface - model->brushq3.data_faces;
 					if (!CHECKPVSBIT(outsurfacepvs, surfaceindex))
 					{
-						if (BoxesOverlap(lightmins, lightmaxs, surface->mins, surface->maxs) && !(surface->texture->surfaceparms & Q3SURFACEPARM_TRANS) && !(surface->texture->surfaceflags & (Q3SURFACEFLAG_SKY | Q3SURFACEFLAG_NODRAW)))
+						if (BoxesOverlap(lightmins, lightmaxs, surface->mins, surface->maxs) && !(surface->texture->surfaceparms & Q3SURFACEPARM_TRANS) && !(surface->texture->surfaceflags & (Q3SURFACEFLAG_SKY | Q3SURFACEFLAG_NODRAW)) && surface->numtriangles)
 						{
 							for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->num_triangles;triangleindex++, t++, e += 3)
 							{
@@ -2475,7 +2475,7 @@ void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 		{
 			surface = model->brushq3.data_faces + surfacelist[surfacelistindex];
 			// FIXME: check some manner of face->rendermode here?
-			if (!(surface->texture->surfaceflags & Q3SURFACEFLAG_NODRAW) && surface->num_triangles && !(surface->texture->surfaceparms & Q3SURFACEPARM_TRANS))
+			if (!(surface->texture->surfaceflags & Q3SURFACEFLAG_NODRAW) && !(surface->texture->surfaceparms & Q3SURFACEPARM_TRANS))
 				R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, lightmins, lightmaxs, surface->mins, surface->maxs);
 		}
 		R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, lightradius + model->radius + r_shadow_projectdistance.value, numshadowmark, shadowmarklist);
