@@ -560,8 +560,8 @@ void IN_Mouse(usercmd_t *cmd, float mx, float my)
 	old_mouse_x = mx;
 	old_mouse_y = my;
 
-	in_mouse_x = mouse_x;
-	in_mouse_y = mouse_y;
+	in_mouse_x = (float) mouse_x * vid.conwidth / vid.realwidth;
+	in_mouse_y = (float) mouse_y * vid.conheight / vid.realheight;
 
 	// AK: eveything else is client stuff 
 	// BTW, this should be seperated somewhen
