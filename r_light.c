@@ -165,7 +165,7 @@ void R_DrawCoronas(void)
 			{
 				cscale = wl->corona * r_coronas.value * 0.25f;
 				scale = wl->radius * 0.25f;
-				R_DrawSprite(GL_ONE, GL_ONE, lightcorona, true, rd->origin, r_viewright, r_viewup, scale, -scale, -scale, scale, wl->color[0] * cscale, wl->color[1] * cscale, wl->color[2] * cscale, 1);
+				R_DrawSprite(GL_ONE, GL_ONE, lightcorona, true, wl->origin, r_viewright, r_viewup, scale, -scale, -scale, scale, wl->color[0] * cscale, wl->color[1] * cscale, wl->color[2] * cscale, 1);
 			}
 		}
 	}
