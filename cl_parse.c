@@ -267,6 +267,11 @@ void CL_ParseEntityLump(char *entdata)
 //			if (r_skyboxsize.value < 64)
 //				r_skyboxsize.value = 64;
 //		}
+		else if (!strcmp("fog", key))
+		{
+			scanf(value, "%f %f %f %f", &fog_density, &fog_red, &fog_green, &fog_blue);
+			j = 0;
+		}
 		else if (!strcmp("fog_density", key))
 			fog_density = atof(value);
 		else if (!strcmp("fog_red", key))
@@ -521,7 +526,7 @@ void CL_ParseUpdate (int bits)
 	{
 		if (i > cl.maxclients)
 			Host_Error ("i >= cl.maxclients");
-		ent->colormap = cl.scores[i-1].translations;
+		ent->colormap = vid.colormap; // cl.scores[i-1].translations;
 	}
 
 	skin = bits & U_SKIN ? MSG_ReadByte() : baseline->skin;
@@ -742,44 +747,6 @@ void CL_ParseClientdata (int bits)
 
 /*
 =====================
-CL_NewTranslation
-=====================
-*/
-void CL_NewTranslation (int slot)
-{
-	int		i, j;
-	int		top, bottom;
-	byte	*dest, *source;
-	
-	if (slot > cl.maxclients)
-		Host_Error ("CL_NewTranslation: slot > cl.maxclients");
-	dest = cl.scores[slot].translations;
-	source = vid.colormap;
-	memcpy (dest, vid.colormap, sizeof(cl.scores[slot].translations));
-	top = cl.scores[slot].colors & 0xf0;
-	bottom = (cl.scores[slot].colors &15)<<4;
-	R_TranslatePlayerSkin (slot);
-
-	for (i=0 ; i<VID_GRADES ; i++, dest += 256, source+=256)
-	{
-		// LordHavoc: corrected color ranges
-		if (top < 128 || (top >= 224 && top < 240))	// the artists made some backwards ranges.  sigh.
-			memcpy (dest + TOP_RANGE, source + top, 16);
-		else
-			for (j=0 ; j<16 ; j++)
-				dest[TOP_RANGE+j] = source[top+15-j];
-				
-		// LordHavoc: corrected color ranges
-		if (bottom < 128 || (bottom >= 224 && bottom < 240))
-			memcpy (dest + BOTTOM_RANGE, source + bottom, 16);
-		else
-			for (j=0 ; j<16 ; j++)
-				dest[BOTTOM_RANGE+j] = source[bottom+15-j];		
-	}
-}
-
-/*
-=====================
 CL_ParseStatic
 =====================
 */
@@ -992,7 +959,7 @@ void CL_ParseServerMessage (void)
 			if (i >= cl.maxclients)
 				Host_Error ("CL_ParseServerMessage: svc_updatecolors > MAX_SCOREBOARD");
 			cl.scores[i].colors = MSG_ReadByte ();
-			CL_NewTranslation (i);
+			R_TranslatePlayerSkin (i);
 			break;
 			
 		case svc_particle:

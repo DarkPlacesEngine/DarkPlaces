@@ -34,7 +34,7 @@ aliashdr_t	*pheader;
 typedef struct
 {
 	int v[3];
-	vec3_t n;
+	vec3_t normal;
 } temptris_t;
 temptris_t *temptris;
 //stvert_t	stverts[MAXALIASVERTS];
@@ -57,7 +57,7 @@ void Mod_ConvertAliasVerts (int numverts, int numtris, vec3_t scale, vec3_t tran
 	struct
 	{
 		vec3_t v;
-		vec3_t n;
+		vec3_t normal;
 		int count;
 	} tempvert[MD2MAX_VERTS];
 	temptris_t *tris;
@@ -68,7 +68,7 @@ void Mod_ConvertAliasVerts (int numverts, int numtris, vec3_t scale, vec3_t tran
 		tempvert[i].v[0] = v[i].v[0] * scale[0] + translate[0];
 		tempvert[i].v[1] = v[i].v[1] * scale[1] + translate[1];
 		tempvert[i].v[2] = v[i].v[2] * scale[2] + translate[2];
-		tempvert[i].n[0] = tempvert[i].n[1] = tempvert[i].n[2] = 0;
+		tempvert[i].normal[0] = tempvert[i].normal[1] = tempvert[i].normal[2] = 0;
 		tempvert[i].count = 0;
 		// update bounding box
 		if (tempvert[i].v[0] < aliasbboxmin[0]) aliasbboxmin[0] = tempvert[i].v[0];
@@ -84,12 +84,12 @@ void Mod_ConvertAliasVerts (int numverts, int numtris, vec3_t scale, vec3_t tran
 	{
 		VectorSubtract(tempvert[tris->v[0]].v, tempvert[tris->v[1]].v, t1);
 		VectorSubtract(tempvert[tris->v[2]].v, tempvert[tris->v[1]].v, t2);
-		CrossProduct(t1, t2, tris->n);
-		VectorNormalize(tris->n);
+		CrossProduct(t1, t2, tris->normal);
+		VectorNormalize(tris->normal);
 		// add surface normal to vertices
 		for (j = 0;j < 3;j++)
 		{
-			VectorAdd(tris->n, tempvert[tris->v[j]].n, tempvert[tris->v[j]].n);
+			VectorAdd(tris->normal, tempvert[tris->v[j]].normal, tempvert[tris->v[j]].normal);
 			tempvert[tris->v[j]].count++;
 		}
 		tris++;
@@ -97,10 +97,10 @@ void Mod_ConvertAliasVerts (int numverts, int numtris, vec3_t scale, vec3_t tran
 	// average normals and write out 1.7bit format
 	for (i = 0;i < pheader->numtris;i++)
 	{
-		VectorNormalize(tempvert[i].n);
-		out[i].n[0] = (signed char) (tempvert[i].n[0] * 127.0);
-		out[i].n[1] = (signed char) (tempvert[i].n[1] * 127.0);
-		out[i].n[2] = (signed char) (tempvert[i].n[2] * 127.0);
+		VectorNormalize(tempvert[i].normal);
+		out[i].n[0] = (signed char) (tempvert[i].normal[0] * 127.0);
+		out[i].n[1] = (signed char) (tempvert[i].normal[1] * 127.0);
+		out[i].n[2] = (signed char) (tempvert[i].normal[2] * 127.0);
 	}
 }
 

@@ -351,7 +351,7 @@ void CL_SendMove (usercmd_t *cmd)
 	upmove += cmd->upmove;
 	total++;
 	// LordHavoc: cap outgoing movement messages to sys_ticrate
-	if (cl.maxclients > 1 && realtime - lastmovetime < sys_ticrate.value)
+	if ((cl.maxclients > 1) && (realtime - lastmovetime < sys_ticrate.value))
 		return;
 	lastmovetime = realtime;
 	// average what has happened during this time
@@ -381,6 +381,7 @@ void CL_SendMove (usercmd_t *cmd)
     MSG_WriteShort (&buf, sidemove);
     MSG_WriteShort (&buf, upmove);
 
+	forwardmove = sidemove = upmove = 0;
 //
 // send button bits
 //

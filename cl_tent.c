@@ -576,8 +576,7 @@ void CL_UpdateTEnts (void)
 			dl->die = cl.time + 0.001;
 			dl->color[0] = 1;dl->color[1] = 1;dl->color[2] = 1;
 
-			for (i=0 ; i<3 ; i++)
-				org[i] += dist[i]*30;
+			VectorMA(org, 30, dist, org);
 			d -= 30;
 		}
 	}

@@ -39,13 +39,15 @@ int			active_lightmaps;
 short allocated[MAX_LIGHTMAPS][BLOCK_WIDTH];
 
 byte *lightmaps[MAX_LIGHTMAPS];
+short lightmapupdate[MAX_LIGHTMAPS][2];
 
 int lightmapalign, lightmapalignmask; // LordHavoc: NVIDIA's broken subimage fix, see BuildLightmaps for notes
 cvar_t gl_lightmapalign = {"gl_lightmapalign", "4"};
 cvar_t gl_lightmaprgba = {"gl_lightmaprgba", "1"};
 cvar_t gl_nosubimagefragments = {"gl_nosubimagefragments", "0"};
+cvar_t gl_nosubimage = {"gl_nosubimage", "0"};
 
-qboolean lightmaprgba, nosubimagefragments;
+qboolean lightmaprgba, nosubimagefragments, nosubimage;
 int lightmapbytes;
 
 qboolean skyisvisible;
@@ -55,15 +57,17 @@ void glrsurf_init()
 {
 	int i;
 	for (i = 0;i < MAX_LIGHTMAPS;i++)
-		lightmaps[i] = (byte *) NULL;
+		lightmaps[i] = NULL;
 	Cvar_RegisterVariable(&gl_lightmapalign);
 	Cvar_RegisterVariable(&gl_lightmaprgba);
 	Cvar_RegisterVariable(&gl_nosubimagefragments);
+	Cvar_RegisterVariable(&gl_nosubimage);
 	// check if it's the glquake minigl driver
 	if (strnicmp(gl_vendor,"3Dfx",4)==0)
 	if (!gl_arrays)
 	{
 		Cvar_SetValue("gl_nosubimagefragments", 1);
+//		Cvar_SetValue("gl_nosubimage", 1);
 		Cvar_SetValue("gl_lightmode", 0);
 	}
 }
@@ -300,20 +304,16 @@ void R_UpdateLightmap(msurface_t *s, int lnum)
 	int smax, tmax;
 	// upload the new lightmap texture fragment
 	glBindTexture(GL_TEXTURE_2D, lightmap_textures + lnum);
-	if (nosubimagefragments)
+	if (nosubimage || nosubimagefragments)
 	{
-		smax = (s->extents[0]>>4)+1;
-		tmax = (s->extents[1]>>4)+1;
+		if (lightmapupdate[lnum][0] > s->light_t)
+			lightmapupdate[lnum][0] = s->light_t;
+		if (lightmapupdate[lnum][1] < (s->light_t + ((s->extents[1]>>4)+1)))
+			lightmapupdate[lnum][1] = (s->light_t + ((s->extents[1]>>4)+1));
 		if (lightmaprgba)
-		{
 			R_BuildLightMap (s, lightmaps[s->lightmaptexturenum] + (s->light_t * BLOCK_WIDTH + s->light_s) * 4, BLOCK_WIDTH * 4);
-			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, s->light_t, BLOCK_WIDTH, tmax, GL_RGBA, GL_UNSIGNED_BYTE, lightmaps[s->lightmaptexturenum] + s->light_t * (BLOCK_WIDTH * 4));
-		}
 		else
-		{
 			R_BuildLightMap (s, lightmaps[s->lightmaptexturenum] + (s->light_t * BLOCK_WIDTH + s->light_s) * 3, BLOCK_WIDTH * 3);
-			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, s->light_t, BLOCK_WIDTH, tmax, GL_RGB , GL_UNSIGNED_BYTE, lightmaps[s->lightmaptexturenum] + s->light_t * (BLOCK_WIDTH * 3));
-		}
 	}
 	else
 	{
@@ -406,12 +406,45 @@ float	turbsin[256] =
 #define TURBSCALE (256.0 / (2 * M_PI))
 
 
+void UploadLightmaps()
+{
+	int i;
+	if (nosubimage || nosubimagefragments)
+	{
+		for (i = 0;i < MAX_LIGHTMAPS;i++)
+		{
+			if (lightmapupdate[i][0] < lightmapupdate[i][1])
+			{
+				glBindTexture(GL_TEXTURE_2D, lightmap_textures + i);
+				if (nosubimage)
+				{
+					if (lightmaprgba)
+						glTexImage2D(GL_TEXTURE_2D, 0, 4, BLOCK_WIDTH, BLOCK_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, lightmaps[i]);
+					else
+						glTexImage2D(GL_TEXTURE_2D, 0, 3, BLOCK_WIDTH, BLOCK_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, lightmaps[i]);
+				}
+				else
+				{
+					if (lightmaprgba)
+						glTexSubImage2D(GL_TEXTURE_2D, 0, 0, lightmapupdate[i][0], BLOCK_WIDTH, lightmapupdate[i][1] - lightmapupdate[i][0], GL_RGBA, GL_UNSIGNED_BYTE, lightmaps[i] + (BLOCK_WIDTH * 4 * lightmapupdate[i][0]));
+					else
+						glTexSubImage2D(GL_TEXTURE_2D, 0, 0, lightmapupdate[i][0], BLOCK_WIDTH, lightmapupdate[i][1] - lightmapupdate[i][0], GL_RGB, GL_UNSIGNED_BYTE, lightmaps[i] + (BLOCK_WIDTH * 3 * lightmapupdate[i][0]));
+				}
+			}
+			lightmapupdate[i][0] = BLOCK_HEIGHT;
+			lightmapupdate[i][1] = 0;
+		}
+	}
+}
+
 /*
 ================
 DrawTextureChains
 ================
 */
 extern qboolean hlbsp;
+extern void R_Sky();
+extern char skyname[];
 void DrawTextureChains (void)
 {
 	int		i, j, maps;
@@ -421,6 +454,97 @@ void DrawTextureChains (void)
 	float		*v;
 	float		os = turbsin[(int)(realtime * TURBSCALE) & 255], ot = turbsin[(int)(realtime * TURBSCALE + 96.0) & 255];
 
+	// first the sky
+	skypolyclear();
+	for (j = 0;j < cl.worldmodel->numtextures;j++)
+	{
+		if (!cl.worldmodel->textures[j] || !(s = cl.worldmodel->textures[j]->texturechain))
+			continue;
+		// LordHavoc: decide the render type only once, because the surface properties were determined by texture anyway
+		// subdivided water surface warp
+		if (s->flags & SURF_DRAWSKY)
+		{
+			cl.worldmodel->textures[j]->texturechain = NULL;
+			t = R_TextureAnimation (cl.worldmodel->textures[j]);
+			skyisvisible = true;
+			if (!hlbsp) // LordHavoc: HalfLife maps have freaky skypolys...
+			{
+				for (;s;s = s->texturechain)
+				{
+					for (p=s->polys ; p ; p=p->next)
+					{
+						if (currentskypoly < MAX_SKYPOLYS && currentskyvert + p->numverts <= MAX_SKYVERTS)
+						{
+							skypoly[currentskypoly].firstvert = currentskyvert;
+							skypoly[currentskypoly++].verts = p->numverts;
+							for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
+							{
+								skyvert[currentskyvert].v[0] = v[0];
+								skyvert[currentskyvert].v[1] = v[1];
+								skyvert[currentskyvert++].v[2] = v[2];
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	skypolyrender(); // fogged sky polys, affects depth
+
+	if (skyname[0] && skyisvisible && !fogenabled)
+		R_Sky(); // does not affect depth, draws over the sky polys
+
+	// then walls
+	wallpolyclear();
+	for (j = 0;j < cl.worldmodel->numtextures;j++)
+	{
+		if (!cl.worldmodel->textures[j] || !(s = cl.worldmodel->textures[j]->texturechain))
+			continue;
+		if (!(s->flags & SURF_DRAWTURB))
+		{
+			cl.worldmodel->textures[j]->texturechain = NULL;
+			t = R_TextureAnimation (cl.worldmodel->textures[j]);
+			c_brush_polys++;
+			for (;s;s = s->texturechain)
+			{
+				if (currentwallpoly < MAX_WALLPOLYS && currentwallvert < MAX_WALLVERTS && (currentwallvert + s->polys->numverts) <= MAX_WALLVERTS)
+				{
+					// check for lightmap modification
+//					if (r_dynamic.value)
+//					{
+						if (s->dlightframe == r_framecount || s->cached_dlight || lighthalf != s->cached_lighthalf) // dynamic this frame or previously, or lighthalf changed
+							R_UpdateLightmap(s, s->lightmaptexturenum);
+						else
+							for (maps = 0 ; maps < MAXLIGHTMAPS && s->styles[maps] != 255 ; maps++)
+								if (d_lightstylevalue[s->styles[maps]] != s->cached_light[maps])
+								{
+									R_UpdateLightmap(s, s->lightmaptexturenum);
+									break;
+								}
+//					}
+					wallpoly[currentwallpoly].texnum = (unsigned short) t->gl_texturenum;
+					wallpoly[currentwallpoly].lighttexnum = (unsigned short) lightmap_textures + s->lightmaptexturenum;
+					wallpoly[currentwallpoly].glowtexnum = (unsigned short) t->gl_glowtexturenum;
+					wallpoly[currentwallpoly].firstvert = currentwallvert;
+					wallpoly[currentwallpoly++].verts = s->polys->numverts;
+					for (i = 0,v = s->polys->verts[0];i<s->polys->numverts;i++, v += VERTEXSIZE)
+					{
+						wallvert[currentwallvert].vert[0] = v[0];
+						wallvert[currentwallvert].vert[1] = v[1];
+						wallvert[currentwallvert].vert[2] = v[2];
+						wallvert[currentwallvert].s = v[3];
+						wallvert[currentwallvert].t = v[4];
+						wallvert[currentwallvert].u = v[5];
+						wallvert[currentwallvert++].v = v[6];
+					}
+				}
+			}
+		}
+	}
+	UploadLightmaps();
+	wallpolyrender();
+
+	// then water (water gets diverted to transpoly list)
 	for (j = 0;j < cl.worldmodel->numtextures;j++)
 	{
 		if (!cl.worldmodel->textures[j] || !(s = cl.worldmodel->textures[j]->texturechain))
@@ -604,68 +728,6 @@ void DrawTextureChains (void)
 								transpolyend();
 							}
 						}
-					}
-				}
-			}
-		}
-		else if (s->flags & SURF_DRAWSKY)
-		{
-			skyisvisible = true;
-			if (!hlbsp) // LordHavoc: HalfLife maps have freaky skypolys...
-			{
-				for (;s;s = s->texturechain)
-				{
-					for (p=s->polys ; p ; p=p->next)
-					{
-						if (currentskypoly < MAX_SKYPOLYS && currentskyvert + p->numverts <= MAX_SKYVERTS)
-						{
-							skypoly[currentskypoly].firstvert = currentskyvert;
-							skypoly[currentskypoly++].verts = p->numverts;
-							for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
-							{
-								skyvert[currentskyvert].v[0] = v[0];
-								skyvert[currentskyvert].v[1] = v[1];
-								skyvert[currentskyvert++].v[2] = v[2];
-							}
-						}
-					}
-				}
-			}
-		}
-		else // normal wall
-		{
-			c_brush_polys++;
-			for (;s;s = s->texturechain)
-			{
-				if (currentwallpoly < MAX_WALLPOLYS && currentwallvert < MAX_WALLVERTS && (currentwallvert + s->polys->numverts) <= MAX_WALLVERTS)
-				{
-					// check for lightmap modification
-//					if (r_dynamic.value)
-//					{
-						if (s->dlightframe == r_framecount || s->cached_dlight || lighthalf != s->cached_lighthalf) // dynamic this frame or previously, or lighthalf changed
-							R_UpdateLightmap(s, s->lightmaptexturenum);
-						else
-							for (maps = 0 ; maps < MAXLIGHTMAPS && s->styles[maps] != 255 ; maps++)
-								if (d_lightstylevalue[s->styles[maps]] != s->cached_light[maps])
-								{
-									R_UpdateLightmap(s, s->lightmaptexturenum);
-									break;
-								}
-//					}
-					wallpoly[currentwallpoly].texnum = (unsigned short) t->gl_texturenum;
-					wallpoly[currentwallpoly].lighttexnum = (unsigned short) lightmap_textures + s->lightmaptexturenum;
-					wallpoly[currentwallpoly].glowtexnum = (unsigned short) t->gl_glowtexturenum;
-					wallpoly[currentwallpoly].firstvert = currentwallvert;
-					wallpoly[currentwallpoly++].verts = s->polys->numverts;
-					for (i = 0,v = s->polys->verts[0];i<s->polys->numverts;i++, v += VERTEXSIZE)
-					{
-						wallvert[currentwallvert].vert[0] = v[0];
-						wallvert[currentwallvert].vert[1] = v[1];
-						wallvert[currentwallvert].vert[2] = v[2];
-						wallvert[currentwallvert].s = v[3];
-						wallvert[currentwallvert].t = v[4];
-						wallvert[currentwallvert].u = v[5];
-						wallvert[currentwallvert++].v = v[6];
 					}
 				}
 			}
@@ -932,6 +994,7 @@ e->angles[0] = -e->angles[0];	// stupid quake bug
 			}
 		}
 	}
+	UploadLightmaps();
 }
 
 /*
@@ -1179,7 +1242,6 @@ loc0:
 R_DrawWorld
 =============
 */
-extern void R_Sky();
 void R_DrawWorld (void)
 {
 	entity_t	ent;
@@ -1195,20 +1257,14 @@ void R_DrawWorld (void)
 	currententity = &ent;
 
 	softwaretransformidentity(); // LordHavoc: clear transform
-	skypolyclear();
 	skyisvisible = false;
 
 	if (cl.worldmodel)
 		R_WorldNode ();
 
-	DrawTextureChains ();
-
 	glClear (GL_DEPTH_BUFFER_BIT);
 
-	skypolyrender(); // fogged sky polys, affects depth
-
-	if (skyisvisible && !fogenabled)
-		R_Sky(); // does not affect depth, draws over the sky polys
+	DrawTextureChains ();
 
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -1309,11 +1365,13 @@ int AllocBlock (int w, int h, int *x, int *y)
 		if (best + h > BLOCK_HEIGHT)
 			continue;
 
-		if (gl_nosubimagefragments.value)
+		if (nosubimagefragments || nosubimage)
+		{
 			if (!lightmaps[texnum])
 				lightmaps[texnum] = calloc(BLOCK_WIDTH*BLOCK_HEIGHT*4, 1);
+		}
 		// LordHavoc: clear texture to blank image, fragments are uploaded using subimage
-		if (!allocated[texnum][0])
+		else if (!allocated[texnum][0])
 		{
 			byte blank[BLOCK_WIDTH*BLOCK_HEIGHT*3];
 			memset(blank, 0, sizeof(blank));
@@ -1475,33 +1533,19 @@ void GL_CreateSurfaceLightmap (msurface_t *surf)
 	tmax = (surf->extents[1]>>4)+1;
 
 	surf->lightmaptexturenum = AllocBlock (smax, tmax, &surf->light_s, &surf->light_t);
+	if (nosubimage || nosubimagefragments)
+		return;
 	glBindTexture(GL_TEXTURE_2D, lightmap_textures + surf->lightmaptexturenum);
-	if (nosubimagefragments)
+	smax = ((surf->extents[0]>>4)+lightmapalign) & lightmapalignmask;
+	if (lightmaprgba)
 	{
-		if (lightmaprgba)
-		{
-			R_BuildLightMap (surf, lightmaps[surf->lightmaptexturenum] + (surf->light_t * BLOCK_WIDTH + surf->light_s) * 4, BLOCK_WIDTH * 4);
-			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, surf->light_t, BLOCK_WIDTH, tmax, GL_RGBA, GL_UNSIGNED_BYTE, lightmaps[surf->lightmaptexturenum] + surf->light_t * (BLOCK_WIDTH * 4));
-		}
-		else
-		{
-			R_BuildLightMap (surf, lightmaps[surf->lightmaptexturenum] + (surf->light_t * BLOCK_WIDTH + surf->light_s) * 3, BLOCK_WIDTH * 3);
-			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, surf->light_t, BLOCK_WIDTH, tmax, GL_RGB , GL_UNSIGNED_BYTE, lightmaps[surf->lightmaptexturenum] + surf->light_t * (BLOCK_WIDTH * 3));
-		}
+		R_BuildLightMap (surf, templight, smax * 4);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, surf->light_s, surf->light_t, smax, tmax, GL_RGBA, GL_UNSIGNED_BYTE, templight);
 	}
 	else
 	{
-		smax = ((surf->extents[0]>>4)+lightmapalign) & lightmapalignmask;
-		if (lightmaprgba)
-		{
-			R_BuildLightMap (surf, templight, smax * 4);
-			glTexSubImage2D(GL_TEXTURE_2D, 0, surf->light_s, surf->light_t, smax, tmax, GL_RGBA, GL_UNSIGNED_BYTE, templight);
-		}
-		else
-		{
-			R_BuildLightMap (surf, templight, smax * 3);
-			glTexSubImage2D(GL_TEXTURE_2D, 0, surf->light_s, surf->light_t, smax, tmax, GL_RGB , GL_UNSIGNED_BYTE, templight);
-		}
+		R_BuildLightMap (surf, templight, smax * 3);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, surf->light_s, surf->light_t, smax, tmax, GL_RGB , GL_UNSIGNED_BYTE, templight);
 	}
 }
 
@@ -1528,6 +1572,11 @@ void GL_BuildLightmaps (void)
 	else
 		nosubimagefragments = 0;
 
+	if (gl_nosubimage.value)
+		nosubimage = 1;
+	else
+		nosubimage = 0;
+
 	if (gl_lightmaprgba.value)
 	{
 		lightmaprgba = true;
@@ -1551,7 +1600,7 @@ void GL_BuildLightmaps (void)
 		lightmapalign <<= 1;
 	gl_lightmapalign.value = lightmapalign;
 	lightmapalignmask = ~(lightmapalign - 1);
-	if (nosubimagefragments)
+	if (nosubimagefragments || nosubimage)
 	{
 		lightmapalign = 1;
 		lightmapalignmask = ~0;
@@ -1581,6 +1630,28 @@ void GL_BuildLightmaps (void)
 			GL_CreateSurfaceLightmap (m->surfaces + i);
 			BuildSurfaceDisplayList (m->surfaces + i);
 		}
+	}
+
+	if (nosubimage || nosubimagefragments)
+	{
+		if (gl_mtexable)
+			qglSelectTexture(gl_mtex_enum+1);
+		for (i = 0;i < MAX_LIGHTMAPS;i++)
+		{
+			if (!allocated[i][0])
+				break;
+			lightmapupdate[i][0] = BLOCK_HEIGHT;
+			lightmapupdate[i][1] = 0;
+			glBindTexture(GL_TEXTURE_2D, lightmap_textures + i);
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			if (lightmaprgba)
+				glTexImage2D(GL_TEXTURE_2D, 0, 4, BLOCK_WIDTH, BLOCK_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, lightmaps[i]);
+			else
+				glTexImage2D(GL_TEXTURE_2D, 0, 3, BLOCK_WIDTH, BLOCK_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, lightmaps[i]);
+		}
+		if (gl_mtexable)
+			qglSelectTexture(gl_mtex_enum+0);
 	}
 }
 

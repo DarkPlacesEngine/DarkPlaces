@@ -304,6 +304,7 @@ void R_SkyBox()
 	glEnd();
 }
 
+/*
 float skydomeouter[33*33*3];
 float skydomeinner[33*33*3];
 unsigned short skydomeindices[32*66];
@@ -403,15 +404,18 @@ void R_SkyDome()
 	skydome(skydomeinner, speedscale, 1.0 / 128.0);
 	glDisable (GL_BLEND);
 }
+*/
 
 void R_Sky()
 {
+	if (!skyname[0])
+		return;
 	glDisable(GL_DEPTH_TEST);
 	glDepthMask(0);
-	if (skyname[0])
+//	if (skyname[0])
 		R_SkyBox();
-	else // classic quake sky
-		R_SkyDome();
+//	else // classic quake sky
+//		R_SkyDome();
 	glDepthMask(1);
 	glEnable (GL_DEPTH_TEST);
 	glColor3f (1,1,1);
