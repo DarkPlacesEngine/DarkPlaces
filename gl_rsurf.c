@@ -378,7 +378,7 @@ static void R_BuildLightMap (msurface_t *surf, int dlightchanged)
 	lightmap = surf->samples;
 
 // set to full bright if no light data
-	if ((currentrenderentity->effects & EF_FULLBRIGHT) || !cl.worldmodel->lightdata)
+	if ((currentrenderentity->effects & EF_FULLBRIGHT) || !currentrenderentity->model->lightdata)
 	{
 		bl = blocklights;
 		for (i = 0;i < size3;i++)
@@ -387,7 +387,7 @@ static void R_BuildLightMap (msurface_t *surf, int dlightchanged)
 	else
 	{
 // clear to no light
-		j = r_ambient.value * 512.0f; // would be 256.0f logically, but using 512.0f to match winquake style
+		j = r_ambient.value * 512.0f; // would be 128.0f logically, but using 512.0f to match winquake style
 		if (j)
 		{
 			bl = blocklights;
