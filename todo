@@ -1,5 +1,5 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
--d darkplaces: add DP_EF_NOSHADOW extension (Urre)
+d darkplaces: add DP_EF_NOSHADOW extension (Urre)
 -d darkplaces: add GL_EXT_stencil_two_side support to shadow rendering - note: this got a 77% speedup! (fuh)
 -d darkplaces: add a config saving command (Speeds)
 -d darkplaces: add an extension for EF_RED and EF_BLUE (FrikaC)
@@ -40,9 +40,9 @@
 -d darkplaces: physics bug: bmodels (doors, etc) hurt player if player pushes against it, and sometimes gets stuck for a frame when falling onto it (Andrew A. Gilevsky)
 -d darkplaces: prevent player name changes faster than once every 5 seconds (sublim3)
 -d darkplaces: r_skyscroll1 and r_skyscroll2 cvars (SeienAbunae)
--d darkplaces: rename r_shadow_polygonoffset and r_shadow_polygonfactor to r_shadow_shadow_polygonoffset and r_shadow_shadow_polygonfactor (Urre)
+d darkplaces: rename r_shadow_polygonoffset and r_shadow_polygonfactor to r_shadow_shadow_polygonoffset and r_shadow_shadow_polygonfactor (Urre)
 -d darkplaces: restarting server with two people on it, hits the name change timer and thus people rejoin with blank names (romi)
--d darkplaces: upgrade network protocol to send precise angles for entities, and make EF_LOWPRECISION downgrade both origin and angles (Urre, -Wazat for Battlemech, FrikaC, mashakos, RenegadeC, Sajt)
+d darkplaces: upgrade network protocol to send precise angles for entities, and make EF_LOWPRECISION downgrade both origin and angles (Urre, -Wazat for Battlemech, FrikaC, mashakos, RenegadeC, Sajt)
 -d darkplaces: write a readme (Antti)
 -d dpmod: make grapple off-hand (joe hill)
 -d hmap2: report locations of lights which can not be vis optimized (Urre, -FrikaC)
