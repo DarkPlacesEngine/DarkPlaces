@@ -543,6 +543,8 @@ extern rtexture_t *mod_shared_detailtextures[NUM_DETAILTEXTURES];
 // every texture must be in a pool...
 extern rtexturepool_t *mod_shared_texturepool;
 
+extern rtexture_t *mod_shared_distorttexture;
+
 // model loading
 extern model_t *loadmodel;
 extern qbyte *mod_base;

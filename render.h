@@ -71,6 +71,7 @@ extern cvar_t r_detailtextures;
 extern cvar_t r_lerpsprites;
 extern cvar_t r_lerpmodels;
 extern cvar_t r_waterscroll;
+extern cvar_t r_watershader;
 
 // useful functions for rendering
 void R_ModulateColors(float *in, float *out, int verts, float r, float g, float b);

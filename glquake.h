@@ -295,6 +295,17 @@ extern int gl_combine_extension;
 
 extern cvar_t gl_combine;
 
+extern int gl_textureshader;
+#ifndef GL_TEXTURE_SHADER_NV
+#define GL_TEXTURE_SHADER_NV			0x86DE
+#define GL_SHADER_OPERATION_NV			0x86DF
+#define GL_OFFSET_TEXTURE_MATRIX_NV		0x86E1
+#define GL_PREVIOUS_TEXTURE_INPUT_NV	0x86E4
+#define GL_OFFSET_TEXTURE_2D_NV			0x86E8
+#define GL_DSDT_NV						0x86F5
+#define GL_DSDT8_NV						0x8709
+#endif
+
 extern int gl_texture3d;
 #ifndef GL_TEXTURE_3D
 #define GL_PACK_SKIP_IMAGES			0x806B
@@ -447,6 +458,7 @@ extern void (GLAPIENTRY *qglStencilOp)(GLenum fail, GLenum zfail, GLenum zpass);
 extern void (GLAPIENTRY *qglClearStencil)(GLint s);
 
 //extern void (GLAPIENTRY *qglTexEnvf)(GLenum target, GLenum pname, GLfloat param);
+extern void (GLAPIENTRY *qglTexEnvfv)(GLenum target, GLenum pname, const GLfloat *params);
 extern void (GLAPIENTRY *qglTexEnvi)(GLenum target, GLenum pname, GLint param);
 extern void (GLAPIENTRY *qglTexParameterf)(GLenum target, GLenum pname, GLfloat param);
 //extern void (GLAPIENTRY *qglTexParameterfv)(GLenum target, GLenum pname, GLfloat *params);

@@ -787,11 +787,17 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 	float modelorg[3];
 	texture_t *texture;
 	matrix4x4_t tempmatrix;
+	float	args[4] = {0.05f,0,0,0.04f};
 
 	if (r_waterscroll.value)
 	{
 		// scrolling in texture matrix
 		Matrix4x4_CreateTranslate(&tempmatrix, sin(cl.time) * 0.025 * r_waterscroll.value, sin(cl.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
+		if (gl_textureshader && r_watershader.integer)
+		{
+			R_Mesh_TextureMatrix(1, &tempmatrix);
+			Matrix4x4_CreateTranslate(&tempmatrix, -sin(cl.time) * 0.025 * r_waterscroll.value, -sin(cl.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
+		}
 		R_Mesh_TextureMatrix(0, &tempmatrix);
 	}
 
@@ -816,7 +822,13 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		GL_DepthMask(true);
 	}
-	m.tex[0] = R_GetTexture(texture->skin.base);
+	if (gl_textureshader && r_watershader.integer)
+	{
+		m.tex[0] = R_GetTexture(mod_shared_distorttexture);
+		m.tex[1] = R_GetTexture(texture->skin.base);
+	}
+	else
+		m.tex[0] = R_GetTexture(texture->skin.base);
 	colorscale = r_colorscale;
 	if (gl_combine.integer)
 	{
@@ -829,6 +841,8 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 	{
 		GL_VertexPointer(mesh->vertex3f);
 		m.pointer_texcoord[0] = mesh->texcoordtexture2f;
+		m.pointer_texcoord[1] = mesh->texcoordtexture2f;
+		m.texcombinergb[1] = GL_REPLACE;
 		R_Mesh_State_Texture(&m);
 		f = surf->flags & SURF_DRAWFULLBRIGHT ? 1.0f : ((surf->flags & SURF_LIGHTMAP) ? 0 : 0.5f);
 		R_FillColors(varray_color4f, mesh->numverts, f, f, f, alpha);
@@ -840,7 +854,23 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 				RSurf_AddLightmapToVertexColors_Color4f(mesh->lightmapoffsets, varray_color4f, mesh->numverts, surf->samples, ((surf->extents[0]>>4)+1)*((surf->extents[1]>>4)+1)*3, surf->styles);
 		}
 		RSurf_FogColors_Vertex3f_Color4f(mesh->vertex3f, varray_color4f, colorscale, mesh->numverts, modelorg);
-		R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
+		if (gl_textureshader && r_watershader.integer)
+		{
+			GL_ActiveTexture (0);
+			qglTexEnvi (GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_TEXTURE_2D);	
+			GL_ActiveTexture (1);
+			qglTexEnvi (GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_TEXTURE_2D);
+			qglTexEnvi (GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_OFFSET_TEXTURE_2D_NV);
+			qglTexEnvi (GL_TEXTURE_SHADER_NV, GL_PREVIOUS_TEXTURE_INPUT_NV, GL_TEXTURE0_ARB);
+			qglTexEnvfv (GL_TEXTURE_SHADER_NV, GL_OFFSET_TEXTURE_MATRIX_NV, &args[0]);
+			qglEnable (GL_TEXTURE_SHADER_NV);
+		}
+ 		R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
+		if (gl_textureshader && r_watershader.integer)
+		{
+			qglDisable (GL_TEXTURE_SHADER_NV);
+			GL_ActiveTexture (0);
+		}
 	}
 
 	if (fogenabled)
@@ -865,6 +895,7 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 	{
 		Matrix4x4_CreateIdentity(&tempmatrix);
 		R_Mesh_TextureMatrix(0, &tempmatrix);
+		R_Mesh_TextureMatrix(1, &tempmatrix);
 	}
 }
 
