@@ -152,12 +152,12 @@ void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up)
 #include "cl_collision.h"
 #endif
 
-#define MAX_PARTICLES			8192	// default max # of particles at one time
+#define MAX_PARTICLES			32768	// default max # of particles at one time
 #define ABSOLUTE_MIN_PARTICLES	512		// no fewer than this no matter what's on the command line
 
 typedef enum
 {
-	pt_static, pt_rain, pt_bubble, pt_blood, pt_grow
+	pt_static, pt_rain, pt_bubble, pt_blood, pt_grow, pt_decal
 }
 ptype_t;
 
@@ -167,12 +167,16 @@ ptype_t;
 #define PARTICLE_ORIENTED_DOUBLESIDED 3
 #define PARTICLE_BEAM 4
 
+#define PBLEND_ALPHA 0
+#define PBLEND_ADD 1
+#define PBLEND_MOD 2
+
 typedef struct particle_s
 {
 	ptype_t		type;
 	int			orientation;
 	int			texnum;
-	int			additive;
+	int			blendmode;
 	vec3_t		org;
 	vec3_t		vel;
 	float		die;
@@ -236,6 +240,7 @@ static const int tex_particle = 24;
 static const int tex_raindrop = 25;
 static const int tex_bubble = 26;
 static const int tex_beam = 27;
+static const int tex_blooddecal[8] = {32, 33, 34, 35, 36, 37, 38, 39};
 
 static int			cl_maxparticles;
 static int			cl_numparticles;
@@ -252,6 +257,9 @@ cvar_t cl_particles_bulletimpacts = {CVAR_SAVE, "cl_particles_bulletimpacts", "1
 cvar_t cl_particles_smoke = {CVAR_SAVE, "cl_particles_smoke", "1"};
 cvar_t cl_particles_sparks = {CVAR_SAVE, "cl_particles_sparks", "1"};
 cvar_t cl_particles_bubbles = {CVAR_SAVE, "cl_particles_bubbles", "1"};
+cvar_t cl_decals = {CVAR_SAVE, "cl_decals", "0"};
+cvar_t cl_decals_time = {CVAR_SAVE, "cl_decals_time", "0"};
+cvar_t cl_decals_fadetime = {CVAR_SAVE, "cl_decals_fadetime", "20"};
 
 #ifndef WORKINGLQUAKE
 static mempool_t *cl_part_mempool;
@@ -295,6 +303,9 @@ void CL_Particles_Init (void)
 	Cvar_RegisterVariable (&cl_particles_smoke);
 	Cvar_RegisterVariable (&cl_particles_sparks);
 	Cvar_RegisterVariable (&cl_particles_bubbles);
+	Cvar_RegisterVariable (&cl_decals);
+	Cvar_RegisterVariable (&cl_decals_time);
+	Cvar_RegisterVariable (&cl_decals_fadetime);
 
 #ifdef WORKINGLQUAKE
 	particles = (particle_t *) Hunk_AllocName(cl_maxparticles * sizeof(particle_t), "particles");
@@ -307,10 +318,9 @@ void CL_Particles_Init (void)
 	cl_numparticles = 0;
 }
 
-#define particle(ptype, porientation, pcolor1, pcolor2, ptex, plight, padditive, pscalex, pscaley, palpha, palphafade, ptime, pgravity, pbounce, px, py, pz, pvx, pvy, pvz, ptime2, pvx2, pvy2, pvz2, pfriction, ppressure)\
+#define particle(ptype, porientation, pcolor1, pcolor2, ptex, plight, pblendmode, pscalex, pscaley, palpha, palphafade, ptime, pgravity, pbounce, px, py, pz, pvx, pvy, pvz, ptime2, pvx2, pvy2, pvz2, pfriction, ppressure)\
 {\
-	if (cl_numparticles >= cl_maxparticles)\
-		return;\
+	if (cl_numparticles < cl_maxparticles)\
 	{\
 		particle_t	*part;\
 		int ptempcolor, ptempcolor2, pcr1, pcg1, pcb1, pcr2, pcg2, pcb2;\
@@ -337,7 +347,7 @@ void CL_Particles_Init (void)
 		part->color[3] = 0xFF;\
 		part->orientation = porientation;\
 		part->texnum = ptex;\
-		part->additive = padditive;\
+		part->blendmode = pblendmode;\
 		part->scalex = (pscalex);\
 		part->scaley = (pscaley);\
 		part->alpha = (palpha);\
@@ -397,9 +407,9 @@ void CL_EntityParticles (entity_t *ent)
 		forward[2] = -sp;
 
 #ifdef WORKINGLQUAKE
-		particle(pt_static, PARTICLE_BILLBOARD, particlepalette[0x6f], particlepalette[0x6f], tex_particle, false, false, 2, 2, 255, 0, 0, 0, 0, ent->origin[0] + m_bytenormals[i][0]*dist + forward[0]*beamlength, ent->origin[1] + m_bytenormals[i][1]*dist + forward[1]*beamlength, ent->origin[2] + m_bytenormals[i][2]*dist + forward[2]*beamlength, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+		particle(pt_static, PARTICLE_BILLBOARD, particlepalette[0x6f], particlepalette[0x6f], tex_particle, false, PBLEND_ALPHA, 2, 2, 255, 0, 0, 0, 0, ent->origin[0] + m_bytenormals[i][0]*dist + forward[0]*beamlength, ent->origin[1] + m_bytenormals[i][1]*dist + forward[1]*beamlength, ent->origin[2] + m_bytenormals[i][2]*dist + forward[2]*beamlength, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 #else
-		particle(pt_static, PARTICLE_BILLBOARD, particlepalette[0x6f], particlepalette[0x6f], tex_particle, false, false, 2, 2, 255, 0, 0, 0, 0, ent->render.origin[0] + m_bytenormals[i][0]*dist + forward[0]*beamlength, ent->render.origin[1] + m_bytenormals[i][1]*dist + forward[1]*beamlength, ent->render.origin[2] + m_bytenormals[i][2]*dist + forward[2]*beamlength, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+		particle(pt_static, PARTICLE_BILLBOARD, particlepalette[0x6f], particlepalette[0x6f], tex_particle, false, PBLEND_ALPHA, 2, 2, 255, 0, 0, 0, 0, ent->render.origin[0] + m_bytenormals[i][0]*dist + forward[0]*beamlength, ent->render.origin[1] + m_bytenormals[i][1]*dist + forward[1]*beamlength, ent->render.origin[2] + m_bytenormals[i][2]*dist + forward[2]*beamlength, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 #endif
 	}
 }
@@ -461,7 +471,7 @@ void CL_ReadPointFile_f (void)
 			Con_Printf ("Not enough free particles\n");
 			break;
 		}
-		particle(pt_static, PARTICLE_BILLBOARD, particlepalette[(-c)&15], particlepalette[(-c)&15], tex_particle, false, false, 2, 2, 255, 0, 99999, 0, 0, org[0], org[1], org[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
+		particle(pt_static, PARTICLE_BILLBOARD, particlepalette[(-c)&15], particlepalette[(-c)&15], tex_particle, false, PBLEND_ALPHA, 2, 2, 255, 0, 99999, 0, 0, org[0], org[1], org[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
 	}
 
 #ifdef WORKINGLQUAKE
@@ -518,7 +528,7 @@ void CL_ParticleExplosion (vec3_t org)
 	{
 		for (i = 0;i < 128;i++)
 		{
-			particle(pt_bubble, PARTICLE_BILLBOARD, 0x404040, 0x808080, tex_bubble, false, true, 2, 2, lhrandom(128, 255), 256, 9999, -0.25, 1.5, org[0] + lhrandom(-16, 16), org[1] + lhrandom(-16, 16), org[2] + lhrandom(-16, 16), lhrandom(-96, 96), lhrandom(-96, 96), lhrandom(-96, 96), 0, 0, 0, 0, (1.0 / 16.0), 0);
+			particle(pt_bubble, PARTICLE_BILLBOARD, 0x404040, 0x808080, tex_bubble, false, PBLEND_ADD, 2, 2, lhrandom(128, 255), 256, 9999, -0.25, 1.5, org[0] + lhrandom(-16, 16), org[1] + lhrandom(-16, 16), org[2] + lhrandom(-16, 16), lhrandom(-96, 96), lhrandom(-96, 96), lhrandom(-96, 96), 0, 0, 0, 0, (1.0 / 16.0), 0);
 		}
 	}
 	else
@@ -546,7 +556,7 @@ void CL_ParticleExplosion (vec3_t org)
 				VectorSubtract(v2, org, v2);
 #endif
 				VectorScale(v2, 2.0f, v2);
-				particle(pt_static, PARTICLE_BILLBOARD, 0x101010, 0x202020, tex_smoke[rand()&7], true, true, 12, 12, 255, 512, 9999, 0, 0, org[0], org[1], org[2], v2[0], v2[1], v2[2], 0, 0, 0, 0, 0, 0);
+				particle(pt_static, PARTICLE_BILLBOARD, 0x101010, 0x202020, tex_smoke[rand()&7], true, PBLEND_ADD, 12, 12, 255, 512, 9999, 0, 0, org[0], org[1], org[2], v2[0], v2[1], v2[2], 0, 0, 0, 0, 0, 0);
 			}
 		}
 		*/
@@ -557,7 +567,7 @@ void CL_ParticleExplosion (vec3_t org)
 			for (i = 0;i < 256;i++)
 			{
 				k = particlepalette[0x68 + (rand() & 7)];
-				particle(pt_static, PARTICLE_SPARK, k, k, tex_particle, false, true, 1.5f, 0.05f, lhrandom(0, 255), 512, 9999, 1, 0, org[0], org[1], org[2], lhrandom(-192, 192), lhrandom(-192, 192), lhrandom(-192, 192) + 160, 0, 0, 0, 0, 0, 0);
+				particle(pt_static, PARTICLE_SPARK, k, k, tex_particle, false, PBLEND_ADD, 1.5f, 0.05f, lhrandom(0, 255), 512, 9999, 1, 0, org[0], org[1], org[2], lhrandom(-192, 192), lhrandom(-192, 192), lhrandom(-192, 192) + 160, 0, 0, 0, 0, 0, 0);
 			}
 		}
 	}
@@ -580,7 +590,7 @@ void CL_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength)
 	for (i = 0;i < 512;i++)
 	{
 		k = particlepalette[colorStart + (i % colorLength)];
-		particle(pt_static, PARTICLE_BILLBOARD, k, k, tex_particle, false, false, 1.5, 1.5, 255, 384, 0.3, 0, 0, org[0] + lhrandom(-8, 8), org[1] + lhrandom(-8, 8), org[2] + lhrandom(-8, 8), lhrandom(-192, 192), lhrandom(-192, 192), lhrandom(-192, 192), 0, 0, 0, 0, 1, 0);
+		particle(pt_static, PARTICLE_BILLBOARD, k, k, tex_particle, false, PBLEND_ALPHA, 1.5, 1.5, 255, 384, 0.3, 0, 0, org[0] + lhrandom(-8, 8), org[1] + lhrandom(-8, 8), org[2] + lhrandom(-8, 8), lhrandom(-192, 192), lhrandom(-192, 192), lhrandom(-192, 192), 0, 0, 0, 0, 1, 0);
 	}
 }
 
@@ -618,7 +628,7 @@ void CL_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count)
 	while (count--)
 	{
 		k = particlepalette[color + (rand()&7)];
-		particle(pt_static, PARTICLE_BILLBOARD, k, k, tex_particle, false, false, 1, 1, 255, 512, 9999, 0, 0, org[0] + lhrandom(-8, 8), org[1] + lhrandom(-8, 8), org[2] + lhrandom(-8, 8), lhrandom(-15, 15), lhrandom(-15, 15), lhrandom(-15, 15), 0, 0, 0, 0, 0, 0);
+		particle(pt_static, PARTICLE_BILLBOARD, k, k, tex_particle, false, PBLEND_ALPHA, 1, 1, 255, 512, 9999, 0, 0, org[0] + lhrandom(-8, 8), org[1] + lhrandom(-8, 8), org[2] + lhrandom(-8, 8), lhrandom(-15, 15), lhrandom(-15, 15), lhrandom(-15, 15), 0, 0, 0, 0, 0, 0);
 	}
 }
 
@@ -644,7 +654,7 @@ void CL_SparkShower (vec3_t org, vec3_t dir, int count)
 			k = count / 4;
 			while(k--)
 			{
-				particle(pt_grow, PARTICLE_BILLBOARD, 0x101010, 0x202020, tex_smoke[rand()&7], true, true, 3, 3, 255, 1024, 9999, -0.2, 0, org[0] + 0.125f * lhrandom(-count, count), org[1] + 0.125f * lhrandom (-count, count), org[2] + 0.125f * lhrandom(-count, count), lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(0, 16), 15, 0, 0, 0, 0, 0);
+				particle(pt_grow, PARTICLE_BILLBOARD, 0x101010, 0x202020, tex_smoke[rand()&7], true, PBLEND_ADD, 3, 3, 255, 1024, 9999, -0.2, 0, org[0] + 0.125f * lhrandom(-count, count), org[1] + 0.125f * lhrandom (-count, count), org[2] + 0.125f * lhrandom(-count, count), lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(0, 16), 15, 0, 0, 0, 0, 0);
 			}
 		}
 
@@ -654,7 +664,7 @@ void CL_SparkShower (vec3_t org, vec3_t dir, int count)
 			while(count--)
 			{
 				k = particlepalette[0x68 + (rand() & 7)];
-				particle(pt_static, PARTICLE_SPARK, k, k, tex_particle, false, true, 0.4f, 0.015f, lhrandom(64, 255), 512, 9999, 1, 0, org[0], org[1], org[2], lhrandom(-64, 64) + dir[0], lhrandom(-64, 64) + dir[1], lhrandom(0, 128) + dir[2], 0, 0, 0, 0, 0, 0);
+				particle(pt_static, PARTICLE_SPARK, k, k, tex_particle, false, PBLEND_ADD, 0.4f, 0.015f, lhrandom(64, 255), 512, 9999, 1, 0, org[0], org[1], org[2], lhrandom(-64, 64) + dir[0], lhrandom(-64, 64) + dir[1], lhrandom(0, 128) + dir[2], 0, 0, 0, 0, 0, 0);
 			}
 		}
 	}
@@ -683,7 +693,8 @@ void CL_BloodPuff (vec3_t org, vec3_t vel, int count)
 	a = cl_particles_blood_alpha.value * 255;
 	while(bloodcount > 0)
 	{
-		particle(pt_blood, PARTICLE_BILLBOARD, 0x000000, 0x200000, tex_smoke[rand()&7], true, false, r, r, a, a * 0.5, 9999, 0, -1, org[0], org[1], org[2], vel[0] + lhrandom(-s, s), vel[1] + lhrandom(-s, s), vel[2] + lhrandom(-s, s), 0, 0, 0, 0, 1, 0);
+		particle(pt_blood, PARTICLE_BILLBOARD, 0xFFFFFF, 0xFFFFFF, tex_blooddecal[rand()&7], true, PBLEND_MOD, r, r, a * 3, a * 1.5, 9999, 0, -1, org[0], org[1], org[2], vel[0] + lhrandom(-s, s), vel[1] + lhrandom(-s, s), vel[2] + lhrandom(-s, s), 0, 0, 0, 0, 1, 0);
+		//particle(pt_blood, PARTICLE_BILLBOARD, 0x000000, 0x200000, tex_smoke[rand()&7], true, PBLEND_ALPHA, r, r, a, a * 0.5, 9999, 0, -1, org[0], org[1], org[2], vel[0] + lhrandom(-s, s), vel[1] + lhrandom(-s, s), vel[2] + lhrandom(-s, s), 0, 0, 0, 0, 1, 0);
 		bloodcount -= r;
 	}
 }
@@ -719,7 +730,8 @@ void CL_BloodShower (vec3_t mins, vec3_t maxs, float velspeed, int count)
 		vel[1] = (org[1] - center[1]) * velscale[1];
 		vel[2] = (org[2] - center[2]) * velscale[2];
 		bloodcount -= r;
-		particle(pt_blood, PARTICLE_BILLBOARD, 0x000000, 0x200000, tex_smoke[rand()&7], true, false, r, r, a, a * 0.5, 9999, 0, -1, org[0], org[1], org[2], vel[0], vel[1], vel[2], 0, 0, 0, 0, 1, 0);
+		particle(pt_blood, PARTICLE_BILLBOARD, 0xFFFFFF, 0xFFFFFF, tex_blooddecal[rand()&7], true, PBLEND_MOD, r, r, a * 3, a * 1.5, 9999, 0, -1, org[0], org[1], org[2], vel[0], vel[1], vel[2], 0, 0, 0, 0, 1, 0);
+		//particle(pt_blood, PARTICLE_BILLBOARD, 0x000000, 0x200000, tex_smoke[rand()&7], true, PBLEND_ALPHA, r, r, a, a * 0.5, 9999, 0, -1, org[0], org[1], org[2], vel[0], vel[1], vel[2], 0, 0, 0, 0, 1, 0);
 	}
 }
 
@@ -735,7 +747,7 @@ void CL_ParticleCube (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int color
 	while (count--)
 	{
 		k = particlepalette[colorbase + (rand()&3)];
-		particle(pt_static, PARTICLE_BILLBOARD, k, k, tex_particle, false, false, 2, 2, 255, 0, lhrandom(1, 2), gravity ? 1 : 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(mins[2], maxs[2]), dir[0] + lhrandom(-randomvel, randomvel), dir[1] + lhrandom(-randomvel, randomvel), dir[2] + lhrandom(-randomvel, randomvel), 0, 0, 0, 0, 0, 0);
+		particle(pt_static, PARTICLE_BILLBOARD, k, k, tex_particle, false, PBLEND_ALPHA, 2, 2, 255, 0, lhrandom(1, 2), gravity ? 1 : 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(mins[2], maxs[2]), dir[0] + lhrandom(-randomvel, randomvel), dir[1] + lhrandom(-randomvel, randomvel), dir[2] + lhrandom(-randomvel, randomvel), 0, 0, 0, 0, 0, 0);
 	}
 }
 
@@ -773,14 +785,14 @@ void CL_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int color
 		while(count--)
 		{
 			k = particlepalette[colorbase + (rand()&3)];
-			particle(pt_rain, PARTICLE_SPARK, k, k, tex_particle, true, true, 0.5, 0.02, lhrandom(8, 16), 0, t, 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], cl.time + 9999, dir[0], dir[1], dir[2], 0, 0);
+			particle(pt_rain, PARTICLE_SPARK, k, k, tex_particle, true, PBLEND_ADD, 0.5, 0.02, lhrandom(8, 16), 0, t, 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], cl.time + 9999, dir[0], dir[1], dir[2], 0, 0);
 		}
 		break;
 	case 1:
 		while(count--)
 		{
 			k = particlepalette[colorbase + (rand()&3)];
-			particle(pt_rain, PARTICLE_BILLBOARD, k, k, tex_particle, false, true, 1, 1, lhrandom(64, 128), 0, t, 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], 0, dir[0], dir[1], dir[2], 0, 0);
+			particle(pt_rain, PARTICLE_BILLBOARD, k, k, tex_particle, false, PBLEND_ADD, 1, 1, lhrandom(64, 128), 0, t, 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], 0, dir[0], dir[1], dir[2], 0, 0);
 		}
 		break;
 	default:
@@ -813,7 +825,7 @@ void CL_Stardust (vec3_t mins, vec3_t maxs, int count)
 		VectorNormalizeFast(v);
 		VectorScale(v, 100, v);
 		v[2] += sv_gravity.value * 0.15f;
-		particle(pt_static, PARTICLE_BILLBOARD, 0x903010, 0xFFD030, tex_particle, false, true, 1.5, 1.5, lhrandom(64, 128), 128, 9999, 1, 0, o[0], o[1], o[2], v[0], v[1], v[2], 0, 0, 0, 0, 0, 0);
+		particle(pt_static, PARTICLE_BILLBOARD, 0x903010, 0xFFD030, tex_particle, false, PBLEND_ADD, 1.5, 1.5, lhrandom(64, 128), 128, 9999, 1, 0, o[0], o[1], o[2], v[0], v[1], v[2], 0, 0, 0, 0, 0, 0);
 	}
 }
 
@@ -829,9 +841,9 @@ void CL_FlameCube (vec3_t mins, vec3_t maxs, int count)
 	while (count--)
 	{
 		k = particlepalette[224 + (rand()&15)];
-		particle(pt_static, PARTICLE_BILLBOARD, k, k, tex_particle, false, true, 4, 4, lhrandom(64, 128), 384, 9999, -1, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(mins[2], maxs[2]), lhrandom(-32, 32), lhrandom(-32, 32), lhrandom(0, 64), 0, 0, 0, 0, 1, 0);
+		particle(pt_static, PARTICLE_BILLBOARD, k, k, tex_particle, false, PBLEND_ADD, 4, 4, lhrandom(64, 128), 384, 9999, -1, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(mins[2], maxs[2]), lhrandom(-32, 32), lhrandom(-32, 32), lhrandom(0, 64), 0, 0, 0, 0, 1, 0);
 		if (count & 1)
-			particle(pt_static, PARTICLE_BILLBOARD, 0x303030, 0x606060, tex_smoke[rand()&7], false, true, 6, 6, lhrandom(48, 96), 64, 9999, 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(mins[2], maxs[2]), lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(0, 32), 0, 0, 0, 0, 0, 0);
+			particle(pt_static, PARTICLE_BILLBOARD, 0x303030, 0x606060, tex_smoke[rand()&7], false, PBLEND_ADD, 6, 6, lhrandom(48, 96), 64, 9999, 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(mins[2], maxs[2]), lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(0, 32), 0, 0, 0, 0, 0, 0);
 	}
 }
 
@@ -843,7 +855,7 @@ void CL_Flames (vec3_t org, vec3_t vel, int count)
 	while (count--)
 	{
 		k = particlepalette[224 + (rand()&15)];
-		particle(pt_static, PARTICLE_BILLBOARD, k, k, tex_particle, false, true, 4, 4, lhrandom(64, 128), 384, 9999, -1, 1.1, org[0], org[1], org[2], vel[0] + lhrandom(-128, 128), vel[1] + lhrandom(-128, 128), vel[2] + lhrandom(-128, 128), 0, 0, 0, 0, 1, 0);
+		particle(pt_static, PARTICLE_BILLBOARD, k, k, tex_particle, false, PBLEND_ADD, 4, 4, lhrandom(64, 128), 384, 9999, -1, 1.1, org[0], org[1], org[2], vel[0] + lhrandom(-128, 128), vel[1] + lhrandom(-128, 128), vel[2] + lhrandom(-128, 128), 0, 0, 0, 0, 1, 0);
 	}
 }
 
@@ -874,7 +886,7 @@ void CL_LavaSplash (vec3_t origin)
 			org[2] = origin[2] + lhrandom(0, 64);
 			vel = lhrandom(50, 120) / VectorLength(dir); // normalize and scale
 			k = particlepalette[224 + (rand()&7)];
-			particle(pt_static, PARTICLE_BILLBOARD, k, k, tex_particle, false, true, 7, 7, 255, 192, 9999, 0.05, 0, org[0], org[1], org[2], dir[0] * vel, dir[1] * vel, dir[2] * vel, 0, 0, 0, 0, 0, 0);
+			particle(pt_static, PARTICLE_BILLBOARD, k, k, tex_particle, false, PBLEND_ADD, 7, 7, 255, 192, 9999, 0.05, 0, org[0], org[1], org[2], dir[0] * vel, dir[1] * vel, dir[2] * vel, 0, 0, 0, 0, 0, 0);
 		}
 	}
 }
@@ -894,7 +906,7 @@ void R_TeleportSplash (vec3_t org)
 	for (i=-16 ; i<16 ; i+=8)
 		for (j=-16 ; j<16 ; j+=8)
 			for (k=-24 ; k<32 ; k+=8)
-				particle(pt_static, PARTICLE_BILLBOARD, 0xA0A0A0, 0xFFFFFF, tex_particle, false, true, 10, 10, lhrandom(64, 128), 256, 9999, 0, 0, org[0] + i + lhrandom(0, 8), org[1] + j + lhrandom(0, 8), org[2] + k + lhrandom(0, 8), lhrandom(-64, 64), lhrandom(-64, 64), lhrandom(-256, 256), 0, 0, 0, 0, 1, 0);
+				particle(pt_static, PARTICLE_BILLBOARD, 0xA0A0A0, 0xFFFFFF, tex_particle, false, PBLEND_ADD, 10, 10, lhrandom(64, 128), 256, 9999, 0, 0, org[0] + i + lhrandom(0, 8), org[1] + j + lhrandom(0, 8), org[2] + k + lhrandom(0, 8), lhrandom(-64, 64), lhrandom(-64, 64), lhrandom(-256, 256), 0, 0, 0, 0, 1, 0);
 }
 #endif
 
@@ -952,13 +964,13 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				dec = 3;
 				if (smoke)
 				{
-					particle(pt_grow,   PARTICLE_BILLBOARD, 0x303030, 0x606060, tex_smoke[rand()&7], false, true, dec, dec, 32, 64, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-5, 5), lhrandom(-5, 5), lhrandom(-5, 5), 6, 0, 0, 0, 0, 0);
-					particle(pt_static, PARTICLE_BILLBOARD, 0x801010, 0xFFA020, tex_smoke[rand()&7], false, true, dec, dec, 128, 768, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-20, 20), lhrandom(-20, 20), lhrandom(-20, 20), 0, 0, 0, 0, 0, 0);
+					particle(pt_grow,   PARTICLE_BILLBOARD, 0x303030, 0x606060, tex_smoke[rand()&7], false, PBLEND_ADD, dec, dec, 32, 64, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-5, 5), lhrandom(-5, 5), lhrandom(-5, 5), 6, 0, 0, 0, 0, 0);
+					particle(pt_static, PARTICLE_BILLBOARD, 0x801010, 0xFFA020, tex_smoke[rand()&7], false, PBLEND_ADD, dec, dec, 128, 768, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-20, 20), lhrandom(-20, 20), lhrandom(-20, 20), 0, 0, 0, 0, 0, 0);
 				}
 				if (bubbles)
 				{
 					r = lhrandom(1, 2);
-					particle(pt_bubble, PARTICLE_BILLBOARD, 0x404040, 0x808080, tex_bubble, false, true, r, r, lhrandom(64, 255), 256, 9999, -0.25, 1.5, pos[0], pos[1], pos[2], lhrandom(-16, 16), lhrandom(-16, 16), lhrandom(-16, 16), 0, 0, 0, 0, (1.0 / 16.0), 0);
+					particle(pt_bubble, PARTICLE_BILLBOARD, 0x404040, 0x808080, tex_bubble, false, PBLEND_ADD, r, r, lhrandom(64, 255), 256, 9999, -0.25, 1.5, pos[0], pos[1], pos[2], lhrandom(-16, 16), lhrandom(-16, 16), lhrandom(-16, 16), 0, 0, 0, 0, (1.0 / 16.0), 0);
 				}
 				break;
 
@@ -967,7 +979,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				dec = 3;
 				if (cl_particles.integer && cl_particles_smoke.integer)
 				{
-					particle(pt_static, PARTICLE_BILLBOARD, 0x303030, 0x606060, tex_smoke[rand()&7], false, true, dec, dec, 32, 96, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-5, 5), lhrandom(-5, 5), lhrandom(-5, 5), 0, 0, 0, 0, 0, 0);
+					particle(pt_static, PARTICLE_BILLBOARD, 0x303030, 0x606060, tex_smoke[rand()&7], false, PBLEND_ADD, dec, dec, 32, 96, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-5, 5), lhrandom(-5, 5), lhrandom(-5, 5), 0, 0, 0, 0, 0, 0);
 				}
 				break;
 
@@ -977,7 +989,8 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				dec = cl_particles_blood_size.value;
 				if (blood)
 				{
-					particle(pt_blood, PARTICLE_BILLBOARD, 0x100000, 0x280000, tex_smoke[rand()&7], true, false, dec, dec, cl_particles_blood_alpha.value * 255.0f, cl_particles_blood_alpha.value * 255.0f * 0.5, 9999, 0, -1, pos[0], pos[1], pos[2], vel[0] * 0.5f + lhrandom(-64, 64), vel[1] * 0.5f + lhrandom(-64, 64), vel[2] * 0.5f + lhrandom(-64, 64), 0, 0, 0, 0, 1, 0);
+					particle(pt_blood, PARTICLE_BILLBOARD, 0xFFFFFF, 0xFFFFFF, tex_blooddecal[rand()&7], true, PBLEND_MOD, dec, dec, cl_particles_blood_alpha.value * 255.0f * 3.0f, cl_particles_blood_alpha.value * 255.0f * 0.5f * 1.5f, 9999, 0, -1, pos[0], pos[1], pos[2], vel[0] * 0.5f + lhrandom(-64, 64), vel[1] * 0.5f + lhrandom(-64, 64), vel[2] * 0.5f + lhrandom(-64, 64), 0, 0, 0, 0, 1, 0);
+					//particle(pt_blood, PARTICLE_BILLBOARD, 0x100000, 0x280000, tex_smoke[rand()&7], true, PBLEND_ALPHA, dec, dec, cl_particles_blood_alpha.value * 255.0f, cl_particles_blood_alpha.value * 255.0f * 0.5, 9999, 0, -1, pos[0], pos[1], pos[2], vel[0] * 0.5f + lhrandom(-64, 64), vel[1] * 0.5f + lhrandom(-64, 64), vel[2] * 0.5f + lhrandom(-64, 64), 0, 0, 0, 0, 1, 0);
 				}
 				break;
 
@@ -985,7 +998,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				dec = 6;
 				if (smoke)
 				{
-					particle(pt_static, PARTICLE_BILLBOARD, 0x002000, 0x003000, tex_particle, false, true, dec, dec, 128, 384, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0, 0, 0, 0, 0, 0);
+					particle(pt_static, PARTICLE_BILLBOARD, 0x002000, 0x003000, tex_particle, false, PBLEND_ADD, dec, dec, 128, 384, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0, 0, 0, 0, 0, 0);
 				}
 				break;
 
@@ -993,7 +1006,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				dec = 6;
 				if (smoke)
 				{
-					particle(pt_static, PARTICLE_BILLBOARD, 0x301000, 0x502000, tex_particle, false, true, dec, dec, 128, 384, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0, 0, 0, 0, 0, 0);
+					particle(pt_static, PARTICLE_BILLBOARD, 0x301000, 0x502000, tex_particle, false, PBLEND_ADD, dec, dec, 128, 384, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0, 0, 0, 0, 0, 0);
 				}
 				break;
 
@@ -1001,7 +1014,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				dec = 6;
 				if (smoke)
 				{
-					particle(pt_static, PARTICLE_BILLBOARD, 0x502030, 0x502030, tex_particle, false, true, dec, dec, 128, 384, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0, 0, 0, 0, 0, 0);
+					particle(pt_static, PARTICLE_BILLBOARD, 0x502030, 0x502030, tex_particle, false, PBLEND_ADD, dec, dec, 128, 384, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0, 0, 0, 0, 0, 0);
 				}
 				break;
 
@@ -1009,15 +1022,15 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				dec = 7;
 				if (smoke)
 				{
-					particle(pt_static, PARTICLE_BILLBOARD, 0x303030, 0x606060, tex_smoke[rand()&7], true, false, dec, dec, 64, 320, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-4, 4), lhrandom(-4, 4), lhrandom(0, 16), 0, 0, 0, 0, 0, 0);
+					particle(pt_static, PARTICLE_BILLBOARD, 0x303030, 0x606060, tex_smoke[rand()&7], true, PBLEND_ALPHA, dec, dec, 64, 320, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-4, 4), lhrandom(-4, 4), lhrandom(0, 16), 0, 0, 0, 0, 0, 0);
 				}
 				break;
 			case 8: // Nexiuz plasma trail
 				dec = 4;
 				if (smoke)
 				{
-					//particle(pt_static, PARTICLE_BILLBOARD, 0x2030FF, 0x80C0FF, tex_particle, false, true, 3.0f, 3.0f, lhrandom(64, 255), 512, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-32, 32) + dir[0] * -64.0f, lhrandom(-32, 32) + dir[1] * -64.0f, lhrandom(-32, 32) + dir[2] * -64.0f, 0, 0, 0, 0, 0, 0);
-					particle(pt_static, PARTICLE_BILLBOARD, 0x283880, 0x283880, tex_particle, false, true, dec, dec, 255, 1024, 9999, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
+					//particle(pt_static, PARTICLE_BILLBOARD, 0x2030FF, 0x80C0FF, tex_particle, false, PBLEND_ADD, 3.0f, 3.0f, lhrandom(64, 255), 512, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-32, 32) + dir[0] * -64.0f, lhrandom(-32, 32) + dir[1] * -64.0f, lhrandom(-32, 32) + dir[2] * -64.0f, 0, 0, 0, 0, 0, 0);
+					particle(pt_static, PARTICLE_BILLBOARD, 0x283880, 0x283880, tex_particle, false, PBLEND_ADD, dec, dec, 255, 1024, 9999, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
 				}
 		}
 
@@ -1048,7 +1061,7 @@ void CL_RocketTrail2 (vec3_t start, vec3_t end, int color, entity_t *ent)
 	color = particlepalette[color];
 	while (len--)
 	{
-		particle(pt_static, PARTICLE_BILLBOARD, color, color, tex_particle, false, false, 5, 5, 128, 320, 9999, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
+		particle(pt_static, PARTICLE_BILLBOARD, color, color, tex_particle, false, PBLEND_ALPHA, 5, 5, 128, 320, 9999, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
 		VectorAdd (pos, vec, pos);
 	}
 }
@@ -1060,7 +1073,7 @@ void CL_BeamParticle (const vec3_t start, const vec3_t end, vec_t radius, float 
 	cg = green * 255;
 	cb = blue * 255;
 	tempcolor2 = (bound(0, cr, 255) << 16) | (bound(0, cg, 255) << 8) | bound(0, cb, 255);
-	particle(pt_static, PARTICLE_BEAM, tempcolor2, tempcolor2, tex_beam, false, true, radius, radius, alpha * 255, alpha * 255 / lifetime, 9999, 0, 0, start[0], start[1], start[2], 0, 0, 0, 0, end[0], end[1], end[2], 0, 0);
+	particle(pt_static, PARTICLE_BEAM, tempcolor2, tempcolor2, tex_beam, false, PBLEND_ADD, radius, radius, alpha * 255, alpha * 255 / lifetime, 9999, 0, 0, start[0], start[1], start[2], 0, 0, 0, 0, end[0], end[1], end[2], 0, 0);
 }
 
 void CL_Tei_Smoke(const vec3_t org, const vec3_t dir, int count)
@@ -1074,7 +1087,7 @@ void CL_Tei_Smoke(const vec3_t org, const vec3_t dir, int count)
 		k = count / 4;
 		while(k--)
 		{
-			particle(pt_grow, PARTICLE_BILLBOARD, 0x202020, 0x404040, tex_smoke[rand()&7], true, true, 5, 5, 255, 512, 9999, 0, 0, org[0] + 0.125f * lhrandom(-count, count), org[1] + 0.125f * lhrandom (-count, count), org[2] + 0.125f * lhrandom(-count, count), dir[0] + lhrandom(-count, count) * 0.5f, dir[1] + lhrandom(-count, count) * 0.5f, dir[2] + lhrandom(-count, count) * 0.5f, 15, 0, 0, 0, 0, 0);
+			particle(pt_grow, PARTICLE_BILLBOARD, 0x202020, 0x404040, tex_smoke[rand()&7], true, PBLEND_ADD, 5, 5, 255, 512, 9999, 0, 0, org[0] + 0.125f * lhrandom(-count, count), org[1] + 0.125f * lhrandom (-count, count), org[2] + 0.125f * lhrandom(-count, count), dir[0] + lhrandom(-count, count) * 0.5f, dir[1] + lhrandom(-count, count) * 0.5f, dir[2] + lhrandom(-count, count) * 0.5f, 15, 0, 0, 0, 0, 0);
 		}
 	}
 }
@@ -1093,7 +1106,7 @@ void CL_Tei_PlasmaHit(const vec3_t org, const vec3_t dir, int count)
 		k = count / 4;
 		while(k--)
 		{
-			particle(pt_grow, PARTICLE_BILLBOARD, 0x202020, 0x404040, tex_smoke[rand()&7], true, true, 5, 5, 255, 512, 9999, 0, 0, org[0] + 0.125f * lhrandom(-count, count), org[1] + 0.125f * lhrandom (-count, count), org[2] + 0.125f * lhrandom(-count, count), dir[0] + lhrandom(-count, count), dir[1] + lhrandom(-count, count), dir[2] + lhrandom(-count, count), 15, 0, 0, 0, 0, 0);
+			particle(pt_grow, PARTICLE_BILLBOARD, 0x202020, 0x404040, tex_smoke[rand()&7], true, PBLEND_ADD, 5, 5, 255, 512, 9999, 0, 0, org[0] + 0.125f * lhrandom(-count, count), org[1] + 0.125f * lhrandom (-count, count), org[2] + 0.125f * lhrandom(-count, count), dir[0] + lhrandom(-count, count), dir[1] + lhrandom(-count, count), dir[2] + lhrandom(-count, count), 15, 0, 0, 0, 0, 0);
 		}
 	}
 
@@ -1102,7 +1115,7 @@ void CL_Tei_PlasmaHit(const vec3_t org, const vec3_t dir, int count)
 		// sparks
 		while(count--)
 		{
-			particle(pt_static, PARTICLE_SPARK, 0x2030FF, 0x80C0FF, tex_particle, false, true, 2.0f, 0.1f, lhrandom(64, 255), 512, 9999, 0, 0, org[0], org[1], org[2], lhrandom(-count, count) * 3.0f + dir[0], lhrandom(-count, count) * 3.0f + dir[1], lhrandom(-count, count) * 3.0f + dir[2], 0, 0, 0, 0, 0, 0);
+			particle(pt_static, PARTICLE_SPARK, 0x2030FF, 0x80C0FF, tex_particle, false, PBLEND_ADD, 2.0f, 0.1f, lhrandom(64, 255), 512, 9999, 0, 0, org[0], org[1], org[2], lhrandom(-count, count) * 3.0f + dir[0], lhrandom(-count, count) * 3.0f + dir[1], lhrandom(-count, count) * 3.0f + dir[2], 0, 0, 0, 0, 0, 0);
 		}
 	}
 }
@@ -1151,9 +1164,28 @@ void CL_MoveParticles (void)
 					// assume it's blood (lame, but...)
 					if (cl_stainmaps.integer)
 						R_Stain(v, 32, 32, 16, 16, p->alpha * p->scalex * (1.0f / 40.0f), 192, 48, 48, p->alpha * p->scalex * (1.0f / 40.0f));
-					p->die = -1;
-					freeparticles[j++] = p;
-					continue;
+					if (cl_decals.integer)
+					{
+						p->type = pt_decal;
+						p->orientation = PARTICLE_ORIENTED_DOUBLESIDED;
+						p->time2 = cl.time + cl_decals_time.value;
+						p->die = p->time2 + cl_decals_fadetime.value;
+						p->alphafade = 0;
+						VectorCopy(normal, p->vel2);
+						VectorClear(p->vel);
+						VectorAdd(p->org, normal, p->org);
+						p->bounce = 0;
+						p->friction = 0;
+						p->gravity = 0;
+						p->scalex *= 1.25f;
+						p->scaley *= 1.25f;
+					}
+					else
+					{
+						p->die = -1;
+						freeparticles[j++] = p;
+						continue;
+					}
 				}
 				else
 				{
@@ -1227,6 +1259,13 @@ void CL_MoveParticles (void)
 			case pt_grow:
 				p->scalex += frametime * p->time2;
 				p->scaley += frametime * p->time2;
+				break;
+			case pt_decal:
+				if (cl.time > p->time2)
+				{
+					p->alphafade = p->alpha / (p->die - cl.time);
+					p->time2 += 10000;
+				}
 				break;
 			default:
 				printf("unknown particle type %i\n", p->type);
@@ -1353,15 +1392,14 @@ static void setuptex(int texnum, qbyte *data, qbyte *particletexturedata)
 
 static void R_InitParticleTexture (void)
 {
-	int x,y,d,i,m;
-	float dx, dy, radius, f, f2;
+	int x, y, d, i, j, k, m;
+	float cx, cy, dx, dy, radius, f, f2;
 	qbyte data[32][32][4], noise1[64][64], noise2[64][64], data2[64][16][4];
 	vec3_t light;
 	qbyte particletexturedata[256*256*4];
 
 	memset(particletexturedata, 255, sizeof(particletexturedata));
 
-	// the second setuptex parameter must match the tex_ numbers
 	// smoke/blood
 	for (i = 0;i < 8;i++)
 	{
@@ -1453,6 +1491,46 @@ static void R_InitParticleTexture (void)
 		}
 	}
 	setuptex(tex_bubble, &data[0][0][0], particletexturedata);
+
+	// smoke/blood
+	for (i = 0;i < 8;i++)
+	{
+		memset(&data[0][0][0], 255, sizeof(data));
+		for (j = 1;j < 8;j++)
+		{
+			for (k = 0;k < 3;k++)
+			{
+				cx = lhrandom(j + 1, 30 - j);
+				cy = lhrandom(j + 1, 30 - j);
+				for (y = 0;y < 32;y++)
+				{
+					for (x = 0;x < 32;x++)
+					{
+						dx = (x - cx);
+						dy = (y - cy);
+						f = 1.0f - sqrt(dx * dx + dy * dy) / j;
+						if (f > 0)
+						{
+							data[y][x][0] = data[y][x][0] + f * 0.5 * ( 160 - data[y][x][0]);
+							data[y][x][1] = data[y][x][1] + f * 0.5 * ( 32 - data[y][x][1]);
+							data[y][x][2] = data[y][x][2] + f * 0.5 * ( 32 - data[y][x][2]);
+						}
+					}
+				}
+			}
+		}
+		// use inverted colors so we can scale them later using glColor and use an inverse blend
+		for (y = 0;y < 32;y++)
+		{
+			for (x = 0;x < 32;x++)
+			{
+				data[y][x][0] = 255 - data[y][x][0];
+				data[y][x][1] = 255 - data[y][x][1];
+				data[y][x][2] = 255 - data[y][x][2];
+			}
+		}
+		setuptex(tex_blooddecal[i], &data[0][0][0], particletexturedata);
+	}
 
 #if WORKINGLQUAKE
 	glBindTexture(GL_TEXTURE_2D, (particlefonttexture = gl_extension_number++));
@@ -1593,12 +1671,24 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	cg = p->color[1] * (1.0f / 255.0f);
 	cb = p->color[2] * (1.0f / 255.0f);
 	ca = p->alpha * (1.0f / 255.0f);
+	if (p->blendmode == PBLEND_MOD)
+	{
+		cr *= ca;
+		cg *= ca;
+		cb *= ca;
+		cr = min(cr, 1);
+		cg = min(cg, 1);
+		cb = min(cb, 1);
+		ca = 1;
+	}
 
 #if WORKINGLQUAKE
-	if (p->additive)
+	if (p->blendmode == 0)
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	else if (p->blendmode == 1)
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 	else
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
 	glBegin(GL_QUADS);
 	glColor4f(cr, cg, cb, ca);
 	glTexCoord2f(tex->s2, tex->t1);glVertex3f(varray_vertex[ 0], varray_vertex[ 1], varray_vertex[ 2]);
@@ -1608,16 +1698,26 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	glEnd();
 #else
 	memset(&m, 0, sizeof(m));
-	m.blendfunc1 = GL_SRC_ALPHA;
-	if (p->additive)
-		m.blendfunc2 = GL_ONE;
-	else
+	if (p->blendmode == 0)
+	{
+		m.blendfunc1 = GL_SRC_ALPHA;
 		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+	}
+	else if (p->blendmode == 1)
+	{
+		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE;
+	}
+	else
+	{
+		m.blendfunc1 = GL_ZERO;
+		m.blendfunc2 = GL_ONE_MINUS_SRC_COLOR;
+	}
 	m.tex[0] = R_GetTexture(tex->texture);
 	R_Mesh_Matrix(&r_identitymatrix);
 	R_Mesh_State(&m);
 
-	if (fogenabled)
+	if (fogenabled && p->blendmode != PBLEND_MOD)
 	{
 		VectorSubtract(org, r_origin, fogvec);
 		fog = exp(fogdensity/DotProduct(fogvec,fogvec));
@@ -1625,7 +1725,7 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 		cr = cr * ifog;
 		cg = cg * ifog;
 		cb = cb * ifog;
-		if (!p->additive)
+		if (p->blendmode == 0)
 		{
 			cr += fogcolor[0] * fog;
 			cg += fogcolor[1] * fog;
