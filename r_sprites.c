@@ -1,5 +1,9 @@
 #include "quakedef.h"
 
+// LordHavoc: disabled lerping
+#define LERPSPRITES
+
+#ifdef LERPSPRITES
 void R_ClipSpriteImage (vec3_t origin, vec3_t right, vec3_t up)
 {
 	int i;
@@ -25,6 +29,27 @@ void R_ClipSpriteImage (vec3_t origin, vec3_t right, vec3_t up)
 	points[3][0] = origin[0] + fdown * up[0] + fright * right[0];points[3][1] = origin[1] + fdown * up[1] + fright * right[1];points[3][2] = origin[2] + fdown * up[2] + fright * right[2];
 	R_Clip_AddPolygon(&points[0][0], 4, sizeof(float[3]), false, R_Entity_Callback, currentrenderentity, NULL, NULL);
 }
+#else
+void R_ClipSpriteImage (vec3_t origin, vec3_t right, vec3_t up)
+{
+	int i;
+	mspriteframe_t *frame;
+	vec3_t points[4];
+	float fleft, fright, fdown, fup;
+	frame = NULL;
+	for (i = 0;i < 4 && currentrenderentity->frameblend[i].lerp;i++)
+		frame = currentrenderentity->model->sprdata_frames + currentrenderentity->frameblend[i].frame;
+	fleft  = frame->left;
+	fdown  = frame->down;
+	fright = frame->right;
+	fup    = frame->up;
+	points[0][0] = origin[0] + fdown * up[0] + fleft  * right[0];points[0][1] = origin[1] + fdown * up[1] + fleft  * right[1];points[0][2] = origin[2] + fdown * up[2] + fleft  * right[2];
+	points[1][0] = origin[0] + fup   * up[0] + fleft  * right[0];points[1][1] = origin[1] + fup   * up[1] + fleft  * right[1];points[1][2] = origin[2] + fup   * up[2] + fleft  * right[2];
+	points[2][0] = origin[0] + fup   * up[0] + fright * right[0];points[2][1] = origin[1] + fup   * up[1] + fright * right[1];points[2][2] = origin[2] + fup   * up[2] + fright * right[2];
+	points[3][0] = origin[0] + fdown * up[0] + fright * right[0];points[3][1] = origin[1] + fdown * up[1] + fright * right[1];points[3][2] = origin[2] + fdown * up[2] + fright * right[2];
+	R_Clip_AddPolygon(&points[0][0], 4, sizeof(float[3]), false, R_Entity_Callback, currentrenderentity, NULL, NULL);
+}
+#endif
 
 int R_SpriteSetup (int type, float org[3], float right[3], float up[3])
 {
@@ -197,6 +222,7 @@ void R_DrawSpriteModel ()
 		fog = 0;
 	ifog = 1 - fog;
 
+#ifdef LERPSPRITES
 	// LordHavoc: interpolated sprite rendering
 	for (i = 0;i < 4;i++)
 	{
@@ -208,4 +234,14 @@ void R_DrawSpriteModel ()
 				GL_DrawSpriteImage(true, frame, R_GetTexture(frame->fogtexture), org, up, right, fogcolor[0],fogcolor[1],fogcolor[2], fog * currentrenderentity->alpha * currentrenderentity->frameblend[i].lerp);
 		}
 	}
+#else
+	// LordHavoc: no interpolation
+	frame = NULL;
+	for (i = 0;i < 4 && currentrenderentity->frameblend[i].lerp;i++)
+		frame = currentrenderentity->model->sprdata_frames + currentrenderentity->frameblend[i].frame;
+
+	GL_DrawSpriteImage(false, frame, R_GetTexture(frame->texture), org, up, right, color[0] * ifog, color[1] * ifog, color[2] * ifog, currentrenderentity->alpha);
+	if (fog * currentrenderentity->frameblend[i].lerp >= 0.01f)
+		GL_DrawSpriteImage(true, frame, R_GetTexture(frame->fogtexture), org, up, right, fogcolor[0],fogcolor[1],fogcolor[2], fog * currentrenderentity->alpha);
+#endif
 }
