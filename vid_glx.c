@@ -469,6 +469,7 @@ void InitSig(void)
 	signal(SIGTERM, signal_handler);
 }
 
+/*
 void (*qglVertexPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
 void (*qglColorPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
 void (*qglTexCoordPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
@@ -508,6 +509,13 @@ void VID_CheckVertexArrays (void)
 
 	Con_Printf("...vertex array support disabled (not detected - get a better driver)\n");
 	dlclose(prjobj);
+}
+*/
+
+// LordHavoc: require OpenGL 1.2.x
+void VID_CheckVertexArrays (void)
+{
+	gl_arrays = true;
 }
 
 void VID_CheckMultiTexture(void) 
