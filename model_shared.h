@@ -165,6 +165,15 @@ typedef struct model_brush_s
 	// number of submodels in this map (just used by server to know how many
 	// submodels to load)
 	int numsubmodels;
+
+	// pvs
+	int num_pvsclusters;
+	int num_pvsclusterbytes;
+	unsigned char *data_pvsclusters;
+	// example
+	//pvschain = model->brush.data_pvsclusters + mycluster * model->brush.num_pvsclusterbytes;
+	//if (pvschain[thatcluster >> 3] & (1 << (thatcluster & 7)))
+
 	// common functions
 	int (*SuperContentsFromNativeContents)(struct model_s *model, int nativecontents);
 	int (*NativeContentsFromSuperContents)(struct model_s *model, int supercontents);
@@ -232,9 +241,6 @@ typedef struct model_brushq1_s
 
 	int				num_compressedpvs;
 	qbyte			*data_compressedpvs;
-	int num_pvsclusters;
-	int num_pvsclusterbytes;
-	unsigned char *data_pvsclusters;
 
 	int				num_lightdata;
 	qbyte			*lightdata;
@@ -516,14 +522,6 @@ typedef struct model_brushq3_s
 	int num_lightgrid_dimensions[3];
 	// transform modelspace coordinates to lightgrid index
 	matrix4x4_t num_lightgrid_indexfromworld;
-
-	// pvs
-	int num_pvsclusters;
-	int num_pvsclusterbytes;
-	unsigned char *data_pvsclusters;
-	// example
-	//pvschain = model->brushq3.data_pvsclusters + mycluster * model->brushq3.num_pvsclusterbytes;
-	//if (pvschain[thatcluster >> 3] & (1 << (thatcluster & 7)))
 }
 model_brushq3_t;
 

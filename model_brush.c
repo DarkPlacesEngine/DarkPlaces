@@ -1985,10 +1985,10 @@ static void Mod_Q1BSP_LoadLeafs(lump_t *l)
 	loadmodel->brushq1.data_leafs = out;
 	loadmodel->brushq1.num_leafs = count;
 	// get visleafs from the submodel data
-	loadmodel->brushq1.num_pvsclusters = loadmodel->brushq1.submodels[0].visleafs;
-	loadmodel->brushq1.num_pvsclusterbytes = (loadmodel->brushq1.num_pvsclusters+7)>>3;
-	loadmodel->brushq1.data_pvsclusters = Mem_Alloc(loadmodel->mempool, loadmodel->brushq1.num_pvsclusters * loadmodel->brushq1.num_pvsclusterbytes);
-	memset(loadmodel->brushq1.data_pvsclusters, 0xFF, loadmodel->brushq1.num_pvsclusters * loadmodel->brushq1.num_pvsclusterbytes);
+	loadmodel->brush.num_pvsclusters = loadmodel->brushq1.submodels[0].visleafs;
+	loadmodel->brush.num_pvsclusterbytes = (loadmodel->brush.num_pvsclusters+7)>>3;
+	loadmodel->brush.data_pvsclusters = Mem_Alloc(loadmodel->mempool, loadmodel->brush.num_pvsclusters * loadmodel->brush.num_pvsclusterbytes);
+	memset(loadmodel->brush.data_pvsclusters, 0xFF, loadmodel->brush.num_pvsclusters * loadmodel->brush.num_pvsclusterbytes);
 
 	for ( i=0 ; i<count ; i++, in++, out++)
 	{
@@ -2012,7 +2012,7 @@ static void Mod_Q1BSP_LoadLeafs(lump_t *l)
 		}
 
 		out->clusterindex = i - 1;
-		if (out->clusterindex >= loadmodel->brushq1.num_pvsclusters)
+		if (out->clusterindex >= loadmodel->brush.num_pvsclusters)
 			out->clusterindex = -1;
 
 		p = LittleLong(in->visofs);
@@ -2022,7 +2022,7 @@ static void Mod_Q1BSP_LoadLeafs(lump_t *l)
 			if (p >= loadmodel->brushq1.num_compressedpvs)
 				Con_Printf("Mod_Q1BSP_LoadLeafs: invalid visofs\n");
 			else
-				Mod_Q1BSP_DecompressVis(loadmodel->brushq1.data_compressedpvs + p, loadmodel->brushq1.data_compressedpvs + loadmodel->brushq1.num_compressedpvs, loadmodel->brushq1.data_pvsclusters + out->clusterindex * loadmodel->brushq1.num_pvsclusterbytes, loadmodel->brushq1.data_pvsclusters + (out->clusterindex + 1) * loadmodel->brushq1.num_pvsclusterbytes);
+				Mod_Q1BSP_DecompressVis(loadmodel->brushq1.data_compressedpvs + p, loadmodel->brushq1.data_compressedpvs + loadmodel->brushq1.num_compressedpvs, loadmodel->brush.data_pvsclusters + out->clusterindex * loadmodel->brush.num_pvsclusterbytes, loadmodel->brush.data_pvsclusters + (out->clusterindex + 1) * loadmodel->brush.num_pvsclusterbytes);
 		}
 
 		for (j = 0;j < 4;j++)
@@ -2749,7 +2749,7 @@ static void Mod_Q1BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, 
 	if (((mleaf_t *)node)->clusterindex >= 0)
 	{
 		int i;
-		qbyte *pvs = model->brushq1.data_pvsclusters + ((mleaf_t *)node)->clusterindex * model->brushq1.num_pvsclusterbytes;
+		qbyte *pvs = model->brush.data_pvsclusters + ((mleaf_t *)node)->clusterindex * model->brush.num_pvsclusterbytes;
 		for (i = 0;i < pvsbytes;i++)
 			pvsbuffer[i] |= pvs[i];
 	}
@@ -2781,7 +2781,7 @@ static qbyte *Mod_Q1BSP_GetPVS(model_t *model, const vec3_t p)
 	while (node->plane)
 		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct(p,node->plane->normal)) < node->plane->dist];
 	if (((mleaf_t *)node)->clusterindex >= 0)
-		return model->brushq1.data_pvsclusters + ((mleaf_t *)node)->clusterindex * model->brushq1.num_pvsclusterbytes;
+		return model->brush.data_pvsclusters + ((mleaf_t *)node)->clusterindex * model->brush.num_pvsclusterbytes;
 	else
 		return NULL;
 }
@@ -4497,15 +4497,15 @@ static void Mod_Q3BSP_LoadPVS(lump_t *l)
 		int i;
 		// unvised maps often have cluster indices even without pvs, so check
 		// leafs to find real number of clusters
-		loadmodel->brushq3.num_pvsclusters = 1;
+		loadmodel->brush.num_pvsclusters = 1;
 		for (i = 0;i < loadmodel->brushq3.num_leafs;i++)
-			loadmodel->brushq3.num_pvsclusters = min(loadmodel->brushq3.num_pvsclusters, loadmodel->brushq3.data_leafs[i].clusterindex + 1);
+			loadmodel->brush.num_pvsclusters = min(loadmodel->brush.num_pvsclusters, loadmodel->brushq3.data_leafs[i].clusterindex + 1);
 
 		// create clusters
-		loadmodel->brushq3.num_pvsclusterbytes = (loadmodel->brushq3.num_pvsclusters + 7) / 8;
-		totalchains = loadmodel->brushq3.num_pvsclusterbytes * loadmodel->brushq3.num_pvsclusters;
-		loadmodel->brushq3.data_pvsclusters = Mem_Alloc(loadmodel->mempool, totalchains);
-		memset(loadmodel->brushq3.data_pvsclusters, 0xFF, totalchains);
+		loadmodel->brush.num_pvsclusterbytes = (loadmodel->brush.num_pvsclusters + 7) / 8;
+		totalchains = loadmodel->brush.num_pvsclusterbytes * loadmodel->brush.num_pvsclusters;
+		loadmodel->brush.data_pvsclusters = Mem_Alloc(loadmodel->mempool, totalchains);
+		memset(loadmodel->brush.data_pvsclusters, 0xFF, totalchains);
 		return;
 	}
 
@@ -4513,16 +4513,16 @@ static void Mod_Q3BSP_LoadPVS(lump_t *l)
 	if (l->filelen < 9)
 		Host_Error("Mod_Q3BSP_LoadPVS: funny lump size in %s",loadmodel->name);
 
-	loadmodel->brushq3.num_pvsclusters = LittleLong(in->numclusters);
-	loadmodel->brushq3.num_pvsclusterbytes = LittleLong(in->chainlength);
-	if (loadmodel->brushq3.num_pvsclusterbytes < ((loadmodel->brushq3.num_pvsclusters + 7) / 8))
-		Host_Error("Mod_Q3BSP_LoadPVS: (chainlength = %i) < ((numclusters = %i) + 7) / 8\n", loadmodel->brushq3.num_pvsclusterbytes, loadmodel->brushq3.num_pvsclusters);
-	totalchains = loadmodel->brushq3.num_pvsclusterbytes * loadmodel->brushq3.num_pvsclusters;
+	loadmodel->brush.num_pvsclusters = LittleLong(in->numclusters);
+	loadmodel->brush.num_pvsclusterbytes = LittleLong(in->chainlength);
+	if (loadmodel->brush.num_pvsclusterbytes < ((loadmodel->brush.num_pvsclusters + 7) / 8))
+		Host_Error("Mod_Q3BSP_LoadPVS: (chainlength = %i) < ((numclusters = %i) + 7) / 8\n", loadmodel->brush.num_pvsclusterbytes, loadmodel->brush.num_pvsclusters);
+	totalchains = loadmodel->brush.num_pvsclusterbytes * loadmodel->brush.num_pvsclusters;
 	if (l->filelen < totalchains + (int)sizeof(*in))
-		Host_Error("Mod_Q3BSP_LoadPVS: lump too small ((numclusters = %i) * (chainlength = %i) + sizeof(q3dpvs_t) == %i bytes, lump is %i bytes)\n", loadmodel->brushq3.num_pvsclusters, loadmodel->brushq3.num_pvsclusterbytes, totalchains + sizeof(*in), l->filelen);
+		Host_Error("Mod_Q3BSP_LoadPVS: lump too small ((numclusters = %i) * (chainlength = %i) + sizeof(q3dpvs_t) == %i bytes, lump is %i bytes)\n", loadmodel->brush.num_pvsclusters, loadmodel->brush.num_pvsclusterbytes, totalchains + sizeof(*in), l->filelen);
 
-	loadmodel->brushq3.data_pvsclusters = Mem_Alloc(loadmodel->mempool, totalchains);
-	memcpy(loadmodel->brushq3.data_pvsclusters, (qbyte *)(in + 1), totalchains);
+	loadmodel->brush.data_pvsclusters = Mem_Alloc(loadmodel->mempool, totalchains);
+	memcpy(loadmodel->brush.data_pvsclusters, (qbyte *)(in + 1), totalchains);
 }
 
 static void Mod_Q3BSP_FindNonSolidLocation(model_t *model, const vec3_t in, vec3_t out, vec_t radius)
@@ -5157,7 +5157,7 @@ static int Mod_Q3BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3
 	int clusterindex, side, nodestackindex = 0;
 	q3mnode_t *node, *nodestack[1024];
 	node = model->brushq3.data_nodes;
-	if (!loadmodel->brushq3.num_pvsclusters)
+	if (!loadmodel->brush.num_pvsclusters)
 		return true;
 	for (;;)
 	{
@@ -5182,9 +5182,9 @@ static int Mod_Q3BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3
 			// leaf - check cluster bit
 			clusterindex = ((q3mleaf_t *)node)->clusterindex;
 #if 0
-			if (clusterindex >= loadmodel->brushq3.num_pvsclusters)
+			if (clusterindex >= loadmodel->brush.num_pvsclusters)
 			{
-				Con_Printf("%i >= %i\n", clusterindex, loadmodel->brushq3.num_pvsclusters);
+				Con_Printf("%i >= %i\n", clusterindex, loadmodel->brush.num_pvsclusters);
 				return true;
 			}
 #endif
@@ -5216,7 +5216,7 @@ static qbyte *Mod_Q3BSP_GetPVS(model_t *model, const vec3_t p)
 	while (node->plane)
 		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct(p,node->plane->normal)) < node->plane->dist];
 	if (((q3mleaf_t *)node)->clusterindex >= 0)
-		return model->brushq3.data_pvsclusters + ((q3mleaf_t *)node)->clusterindex * model->brushq3.num_pvsclusterbytes;
+		return model->brush.data_pvsclusters + ((q3mleaf_t *)node)->clusterindex * model->brush.num_pvsclusterbytes;
 	else
 		return NULL;
 }
@@ -5241,7 +5241,7 @@ static void Mod_Q3BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, 
 	if (((q3mleaf_t *)node)->clusterindex >= 0)
 	{
 		int i;
-		qbyte *pvs = model->brushq1.data_pvsclusters + ((q3mleaf_t *)node)->clusterindex * model->brushq1.num_pvsclusterbytes;
+		qbyte *pvs = model->brush.data_pvsclusters + ((q3mleaf_t *)node)->clusterindex * model->brush.num_pvsclusterbytes;
 		for (i = 0;i < pvsbytes;i++)
 			pvsbuffer[i] |= pvs[i];
 	}
@@ -5251,9 +5251,9 @@ static void Mod_Q3BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, 
 //of the given point.
 static int Mod_Q3BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbufferlength)
 {
-	int bytes = model->brushq3.num_pvsclusterbytes;
+	int bytes = model->brush.num_pvsclusterbytes;
 	bytes = min(bytes, pvsbufferlength);
-	if (r_novis.integer || !loadmodel->brushq3.num_pvsclusters)
+	if (r_novis.integer || !loadmodel->brush.num_pvsclusters)
 	{
 		memset(pvsbuffer, 0xFF, bytes);
 		return bytes;

@@ -34,6 +34,8 @@
 -n darkplaces: segfault reading memory in windows when starting a new server from menu (yummyluv)
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
+d darkplaces: make bounce check for fabs(dotproduct)<60 velocity, not dotproduct<60, so now an explosion above gibs will cause them to bounce up into the air 
+d darkplaces: merge pvs info for all brush model formats
 d darkplaces: figure out why fullbrights are black on models (romi)
 0 darkplaces: add support for .float corona and corona_radius to control corona intensity and radius on dlights (Electro) 
 0 darkplaces: add "skin" and "pflags" parsing to light entity loader in rtlights mode (Electro)  
@@ -174,7 +176,7 @@ d darkplaces: add DP_LITSUPPORT extension and document it
 0 darkplaces: add sv_gameplayfix_noairborncorpse cvar (default 1)
 0 darkplaces: add sv_gameplayfix_stepwhilejumping cvar (default 1), note that sv_jumpstep must also be on to enable this
 0 darkplaces: add sv_gameplayfix_swiminbmodels cvar (default 1)
-0 darkplaces: add svc_setanglefloat and DP_SVC_SETANGLEFLOAT extension (FrikaC, SeienAbunae)
+0 darkplaces: add svc_setanglefloat and DP_SVC_SETANGLEFLOAT extension (FrikaC, SeienAbunae, mashakos, RenegadeC)
 0 darkplaces: add te_flamejet builtin and add extension (Supajoe)
 0 darkplaces: add vid_vsync cvar and also to options menu (metlslime)
 0 darkplaces: alias layers should have a shadow volume pass so that nodraw textures don't cast a shadow (Electro)
@@ -274,7 +276,7 @@ d darkplaces: q1bsp trace bug: scrags frequently fly through ceilings - this nee
 0 sv_user.qc: figure out why looking up/down slows movement and fix it (Vermeulen)
 1 darkplaces: add DP_CLIENTCAMERA extension (.entity clientcamera; sets which entity the client views from) (Wazat for Battlemech, SeienAbunae)
 1 darkplaces: add DP_EF_CLIENTLOCKANGLES extension (prevents client from turning view, takes angles from entity) (Wazat for Battlemech, SeienAbunae)
-1 darkplaces: add DP_EF_PRECISEANGLES extension (sends short angles instead of byte) (Wazat for Battlemech)
+1 darkplaces: add DP_EF_PRECISEANGLES extension (sends short angles instead of byte) (Wazat for Battlemech, FrikaC, mashakos, RenegadeC)
 1 darkplaces: add DP_QC_ENDFRAME extension/documentation and post it on wiki (tell Uffe, SeienAbunae)
 1 darkplaces: add DP_SV_READCLIENTINPUT extension (.vector clientinput; works like .movement but for mouse or any other similar controllers) (Wazat for Battlemech, FrikaC, SeienAbunae)
 1 darkplaces: add EndGame function (called on server shutdown or level change) (SeienAbunae, Nexuiz)

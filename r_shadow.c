@@ -2051,11 +2051,11 @@ void R_Shadow_NewWorldLight(vec3_t origin, vec3_t angles, vec3_t color, vec_t ra
 					SETPVSBIT(lightpvs, leaf->clusterindex);
 
 			// make a cluster list for fast visibility checking during rendering
-			for (i = 0, e->numclusters = 0;i < cl.worldmodel->brushq3.num_pvsclusters;i++)
+			for (i = 0, e->numclusters = 0;i < cl.worldmodel->brush.num_pvsclusters;i++)
 				if (CHECKPVSBIT(lightpvs, i))
 					e->numclusters++;
 			e->clusterindices = Mem_Alloc(r_shadow_mempool, e->numclusters * sizeof(int));
-			for (i = 0, e->numclusters = 0;i < cl.worldmodel->brushq3.num_pvsclusters;i++)
+			for (i = 0, e->numclusters = 0;i < cl.worldmodel->brush.num_pvsclusters;i++)
 				if (CHECKPVSBIT(lightpvs, i))
 					e->clusterindices[e->numclusters++] = i;
 
@@ -2141,11 +2141,11 @@ void R_Shadow_NewWorldLight(vec3_t origin, vec3_t angles, vec3_t color, vec_t ra
 				Mem_Free(bytesurfacepvs);
 	
 				// make a cluster list for fast visibility checking during rendering
-				for (i = 0, e->numclusters = 0;i < cl.worldmodel->brushq1.num_pvsclusters;i++)
+				for (i = 0, e->numclusters = 0;i < cl.worldmodel->brush.num_pvsclusters;i++)
 					if (CHECKPVSBIT(lightpvs, i))
 						e->numclusters++;
 				e->clusterindices = Mem_Alloc(r_shadow_mempool, e->numclusters * sizeof(int));
-				for (i = 0, e->numclusters = 0;i < cl.worldmodel->brushq1.num_pvsclusters;i++)
+				for (i = 0, e->numclusters = 0;i < cl.worldmodel->brush.num_pvsclusters;i++)
 					if (CHECKPVSBIT(lightpvs, i))
 						e->clusterindices[e->numclusters++] = i;
 			}
@@ -2177,11 +2177,11 @@ void R_Shadow_NewWorldLight(vec3_t origin, vec3_t angles, vec3_t color, vec_t ra
 						SETPVSBIT(lightpvs, leaf->clusterindex);
 
 				// make a cluster list for fast visibility checking during rendering
-				for (i = 0, e->numclusters = 0;i < cl.worldmodel->brushq1.num_pvsclusters;i++)
+				for (i = 0, e->numclusters = 0;i < cl.worldmodel->brush.num_pvsclusters;i++)
 					if (CHECKPVSBIT(lightpvs, i))
 						e->numclusters++;
 				e->clusterindices = Mem_Alloc(r_shadow_mempool, e->numclusters * sizeof(int));
-				for (i = 0, e->numclusters = 0;i < cl.worldmodel->brushq1.num_pvsclusters;i++)
+				for (i = 0, e->numclusters = 0;i < cl.worldmodel->brush.num_pvsclusters;i++)
 					if (CHECKPVSBIT(lightpvs, i))
 						e->clusterindices[e->numclusters++] = i;
 			}
