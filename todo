@@ -30,6 +30,7 @@
 0 darkplaces: add te_flamejet builtin and add extension (Supajoe)
 0 darkplaces: add view height to chase_active again (yummyluv)
 0 darkplaces: alias layers should have a shadow volume pass so that nodraw textures don't cast a shadow (Electro)
+0 darkplaces: bug in mod_q3bsp_optimizedtraceline code, bots shooting through walls? (Vermeulen)
 0 darkplaces: bullets don't hit walls at steep angles in id1
 0 darkplaces: can't move when stuck in a monster (SeienAbunae)
 0 darkplaces: change particle() macro in cl_particles.c to have a do{}while(0) to eat the ;
@@ -173,7 +174,6 @@
 1 darkplaces: make Host_Error call error reset functions on renderer subsystems?  (models are already flushed)
 1 darkplaces: make r_fogsky cvar to allow use of sky instead of fog when fog is used (SeienAbunae)
 1 darkplaces: make r_shadow cvars accessible in effects options menu
-1 darkplaces: make sure 24bit sky textures work (Static_Fiend)
 1 darkplaces: send bmodels even if alpha is 0 or EF_NODRAW is on
 1 darkplaces: still says " disconnected" in dpmod, figure out why and fix it
 1 dpmod: add a Treasure Hunt mode (inspired by preview of Will Rock) - a team wins when they hold all the artifacts
@@ -342,6 +342,7 @@ d darkplaces: make missing skins show as white on models (Electro)
 d darkplaces: make model lerping optional
 d darkplaces: make reliable message splitting use a different limit than unreliable message size, to fix NAT routers (yummyluv)
 d darkplaces: make sprite lerping optional (yummyluv)
+d darkplaces: make sure 24bit sky textures work (Static_Fiend)
 d darkplaces: make sure r_drawportals works
 d darkplaces: make sure that textureless models are white and not invisible, apparently creating a .bmp texture (not supported) made the models black, even more odd... (McKilled, QorpsE)
 d darkplaces: make water scrolling optional
