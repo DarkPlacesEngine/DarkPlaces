@@ -2,9 +2,13 @@
 #include "quakedef.h"
 #include "image.h"
 
-cvar_t gl_mesh_maxverts = {0, "gl_mesh_maxverts", "1024"};
+cvar_t gl_mesh_maxverts = {0, "gl_mesh_maxverts", "21760"};
 cvar_t gl_mesh_floatcolors = {0, "gl_mesh_floatcolors", "1"};
 cvar_t gl_mesh_drawrangeelements = {0, "gl_mesh_drawrangeelements", "1"};
+cvar_t gl_mesh_vertex_array_range = {0, "gl_mesh_vertex_array_range", "0"};
+cvar_t gl_mesh_vertex_array_range_readfrequency = {0, "gl_mesh_vertex_array_range_readfrequency", "0.3"};
+cvar_t gl_mesh_vertex_array_range_writefrequency = {0, "gl_mesh_vertex_array_range_writefrequency", "1"};
+cvar_t gl_mesh_vertex_array_range_priority = {0, "gl_mesh_vertex_array_range_priority", "0.7"};
 cvar_t gl_delayfinish = {CVAR_SAVE, "gl_delayfinish", "0"};
 
 cvar_t r_render = {0, "r_render", "1"};
@@ -76,6 +80,10 @@ GLfloat *varray_vertex, *varray_buf_vertex;
 GLfloat *varray_color, *varray_buf_color;
 GLfloat *varray_texcoord[MAX_TEXTUREUNITS], *varray_buf_texcoord[MAX_TEXTUREUNITS];
 int mesh_maxverts;
+int mesh_var;
+float mesh_var_readfrequency;
+float mesh_var_writefrequency;
+float mesh_var_priority;
 int varray_offset = 0, varray_offsetnext = 0;
 GLuint *varray_buf_elements;
 int mesh_maxelements = 3072;
@@ -121,11 +129,34 @@ void GL_Backend_FreeElementArray(void)
 	varray_buf_elements = NULL;
 }
 
+void GL_Backend_CheckCvars(void)
+{
+	// 21760 is (65536 / 3) rounded off to a multiple of 128
+	if (gl_mesh_maxverts.integer < 1024)
+		Cvar_SetValueQuick(&gl_mesh_maxverts, 1024);
+	if (gl_mesh_maxverts.integer > 21760)
+		Cvar_SetValueQuick(&gl_mesh_maxverts, 21760);
+	if (gl_mesh_vertex_array_range.integer && !gl_support_var)
+		Cvar_SetValueQuick(&gl_mesh_vertex_array_range, 0);
+	if (gl_mesh_vertex_array_range_readfrequency.value < 0)
+		Cvar_SetValueQuick(&gl_mesh_vertex_array_range_readfrequency, 0);
+	if (gl_mesh_vertex_array_range_readfrequency.value > 1)
+		Cvar_SetValueQuick(&gl_mesh_vertex_array_range_readfrequency, 1);
+	if (gl_mesh_vertex_array_range_writefrequency.value < 0)
+		Cvar_SetValueQuick(&gl_mesh_vertex_array_range_writefrequency, 0);
+	if (gl_mesh_vertex_array_range_writefrequency.value > 1)
+		Cvar_SetValueQuick(&gl_mesh_vertex_array_range_writefrequency, 1);
+	if (gl_mesh_vertex_array_range_priority.value < 0)
+		Cvar_SetValueQuick(&gl_mesh_vertex_array_range_priority, 0);
+	if (gl_mesh_vertex_array_range_priority.value > 1)
+		Cvar_SetValueQuick(&gl_mesh_vertex_array_range_priority, 1);
+}
+
 int polygonelements[768];
 
 void GL_Backend_AllocArrays(void)
 {
-	int i;
+	int i, size;
 
 	if (!gl_backend_mempool)
 	{
@@ -138,53 +169,75 @@ void GL_Backend_AllocArrays(void)
 			varray_buf_texcoord[i] = NULL;
 	}
 
+	mesh_maxverts = gl_mesh_maxverts.integer;
+	mesh_var = gl_mesh_vertex_array_range.integer;
+	mesh_var_readfrequency = gl_mesh_vertex_array_range_readfrequency.value;
+	mesh_var_writefrequency = gl_mesh_vertex_array_range_writefrequency.value;
+	mesh_var_priority = gl_mesh_vertex_array_range_priority.value;
+
 	if (varray_buf_vertex)
-		Mem_Free(varray_buf_vertex);
+		VID_FreeVertexArrays(varray_buf_vertex);
 	varray_buf_vertex = NULL;
-	if (varray_buf_color)
-		Mem_Free(varray_buf_color);
 	varray_buf_color = NULL;
-	if (varray_buf_bcolor)
-		Mem_Free(varray_buf_bcolor);
 	varray_buf_bcolor = NULL;
 	for (i = 0;i < MAX_TEXTUREUNITS;i++)
-	{
-		if (varray_buf_texcoord[i])
-			Mem_Free(varray_buf_texcoord[i]);
 		varray_buf_texcoord[i] = NULL;
-	}
 
-	varray_buf_vertex = Mem_Alloc(gl_backend_mempool, mesh_maxverts * sizeof(GLfloat[4]));
-	varray_buf_color = Mem_Alloc(gl_backend_mempool, mesh_maxverts * sizeof(GLfloat[4]));
-	varray_buf_bcolor = Mem_Alloc(gl_backend_mempool, mesh_maxverts * sizeof(GLubyte[4]));
+	size = mesh_maxverts * (sizeof(GLfloat[4]) + sizeof(GLfloat[4]) + sizeof(GLfloat[4]) * backendunits + sizeof(GLubyte[4]));
+	varray_buf_vertex = VID_AllocVertexArrays(gl_backend_mempool, size, gl_mesh_vertex_array_range.integer, gl_mesh_vertex_array_range_readfrequency.value, gl_mesh_vertex_array_range_writefrequency.value, gl_mesh_vertex_array_range_priority.value);
+	varray_buf_color = varray_buf_vertex + 4 * mesh_maxverts;
 	for (i = 0;i < backendunits;i++)
-		varray_buf_texcoord[i] = Mem_Alloc(gl_backend_mempool, mesh_maxverts * sizeof(GLfloat[4]));
+		varray_buf_texcoord[i] = varray_buf_vertex + (i + 2) * 4 * mesh_maxverts;
 	for (;i < MAX_TEXTUREUNITS;i++)
 		varray_buf_texcoord[i] = NULL;
+	varray_buf_bcolor = (GLubyte *)(varray_buf_vertex + (backendunits + 2) * 4 * mesh_maxverts);
 
 	GL_Backend_AllocElementsArray();
+
+	if (gl_support_var)
+	{
+		CHECKGLERROR
+		qglVertexArrayRangeNV(size, varray_buf_vertex);
+		CHECKGLERROR
+		qglEnableClientState(GL_VERTEX_ARRAY_RANGE_NV);
+		CHECKGLERROR
+	}
 }
 
 void GL_Backend_FreeArrays(void)
 {
 	int i;
-	Mem_FreePool(&gl_backend_mempool);
 
+	if (gl_support_var)
+	{
+		CHECKGLERROR
+		qglDisableClientState(GL_VERTEX_ARRAY_RANGE_NV);
+		CHECKGLERROR
+	}
+
+	if (varray_buf_vertex)
+		VID_FreeVertexArrays(varray_buf_vertex);
 	varray_buf_vertex = NULL;
 	varray_buf_color = NULL;
 	varray_buf_bcolor = NULL;
 	for (i = 0;i < MAX_TEXTUREUNITS;i++)
 		varray_buf_texcoord[i] = NULL;
+
+	Mem_FreePool(&gl_backend_mempool);
 
 	varray_buf_elements = NULL;
 }
 
 static void gl_backend_start(void)
 {
+	GL_Backend_CheckCvars();
+
 	Con_Printf("OpenGL Backend started with gl_mesh_maxverts %i\n", gl_mesh_maxverts.integer);
 	if (qglDrawRangeElements != NULL)
 	{
+		CHECKGLERROR
 		qglGetIntegerv(GL_MAX_ELEMENTS_VERTICES, &gl_maxdrawrangeelementsvertices);
+		CHECKGLERROR
 		qglGetIntegerv(GL_MAX_ELEMENTS_INDICES, &gl_maxdrawrangeelementsindices);
 		CHECKGLERROR
 		Con_Printf("glDrawRangeElements detected (max vertices %i, max indices %i)\n", gl_maxdrawrangeelementsvertices, gl_maxdrawrangeelementsindices);
@@ -210,15 +263,6 @@ static void gl_backend_shutdown(void)
 	Con_Printf("OpenGL Backend shutting down\n");
 
 	GL_Backend_FreeArrays();
-}
-
-void GL_Backend_CheckCvars(void)
-{
-	// 21760 is (65536 / 3) rounded off to a multiple of 128
-	if (gl_mesh_maxverts.integer < 1024)
-		Cvar_SetValueQuick(&gl_mesh_maxverts, 1024);
-	if (gl_mesh_maxverts.integer > 21760)
-		Cvar_SetValueQuick(&gl_mesh_maxverts, 21760);
 }
 
 void GL_Backend_ResizeArrays(int numvertices)
@@ -255,7 +299,10 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&gl_mesh_maxverts);
 	Cvar_RegisterVariable(&gl_mesh_floatcolors);
 	Cvar_RegisterVariable(&gl_mesh_drawrangeelements);
-	GL_Backend_CheckCvars();
+	Cvar_RegisterVariable(&gl_mesh_vertex_array_range);
+	Cvar_RegisterVariable(&gl_mesh_vertex_array_range_readfrequency);
+	Cvar_RegisterVariable(&gl_mesh_vertex_array_range_writefrequency);
+	Cvar_RegisterVariable(&gl_mesh_vertex_array_range_priority);
 	R_RegisterModule("GL_Backend", gl_backend_start, gl_backend_shutdown, gl_backend_newmap);
 }
 
@@ -530,10 +577,22 @@ void R_Mesh_Start(void)
 	CHECKGLERROR
 
 	GL_Backend_CheckCvars();
-	if (mesh_maxverts != gl_mesh_maxverts.integer)
+	if (mesh_maxverts != gl_mesh_maxverts.integer
+	 || mesh_var != gl_mesh_vertex_array_range.integer
+	 || mesh_var_readfrequency != gl_mesh_vertex_array_range_readfrequency.value
+	 || mesh_var_writefrequency != gl_mesh_vertex_array_range_writefrequency.value
+	 || mesh_var_priority != gl_mesh_vertex_array_range_priority.value)
 		GL_Backend_ResizeArrays(gl_mesh_maxverts.integer);
 
 	GL_Backend_ResetState();
+
+	if (mesh_var)
+	{
+		CHECKGLERROR
+		qglFlushVertexArrayRangeNV();
+		CHECKGLERROR
+	}
+	varray_offset = 0;
 }
 
 int gl_backend_rebindtextures;
@@ -601,10 +660,7 @@ void R_Mesh_GetSpace(int numverts)
 
 	varray_offset = varray_offsetnext;
 	if (varray_offset + numverts > mesh_maxverts)
-	{
-		//flush stuff here
 		varray_offset = 0;
-	}
 	if (numverts > mesh_maxverts)
 	{
 		BACKENDACTIVECHECK
@@ -613,8 +669,16 @@ void R_Mesh_GetSpace(int numverts)
 		varray_offset = 0;
 	}
 
+	if (varray_offset == 0 && mesh_var)
+	{
+		CHECKGLERROR
+		qglFlushVertexArrayRangeNV();
+		CHECKGLERROR
+	}
+
 	// for debugging
-	//varray_offset = rand() % (mesh_maxverts - numverts);
+	//if (!mesh_var)
+	//	varray_offset = rand() % (mesh_maxverts - numverts);
 
 	varray_vertex = varray_buf_vertex + varray_offset * 4;
 	varray_color = varray_buf_color + varray_offset * 4;
@@ -677,6 +741,13 @@ void R_Mesh_Finish(void)
 {
 	int i;
 	BACKENDACTIVECHECK
+	if (mesh_var)
+	{
+		CHECKGLERROR
+		qglFlushVertexArrayRangeNV();
+		CHECKGLERROR
+	}
+	varray_offset = 0;
 
 	for (i = backendunits - 1;i >= 0;i--)
 	{

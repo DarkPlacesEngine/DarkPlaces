@@ -61,7 +61,7 @@ static dllfunction_t getprocaddressfuncs[] =
 
 //GLX_SGI_video_sync
 GLint (GLAPIENTRY *qglXGetVideoSyncSGI)(GLuint *count);
-GLint (GLAPIENTRY *qglXWaitVideoSyncSGI)(int divisor, int remainder, unsigned int *count);
+GLint (GLAPIENTRY *qglXWaitVideoSyncSGI)(GLint divisor, GLint remainder, GLuint *count);
 
 static dllfunction_t videosyncfuncs[] =
 {
@@ -863,3 +863,4 @@ void *GL_GetProcAddress(const char *name)
 		p = (void *) dlsym(prjobj, name);
 	return p;
 }
+

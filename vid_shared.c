@@ -26,6 +26,10 @@ int gl_texturecubemap = false;
 int gl_dot3arb = false;
 // GL_SGIS_texture_edge_clamp
 int gl_support_clamptoedge = false;
+// GL_NV_vertex_array_range
+int gl_support_var = false;
+// GL_NV_vertex_array_range2
+int gl_support_var2 = false;
 
 // LordHavoc: if window is hidden, don't update screen
 int vid_hidden = true;
@@ -98,6 +102,11 @@ void (GLAPIENTRY *qglClientActiveTexture) (GLenum);
 void (GLAPIENTRY *qglLockArraysEXT) (GLint first, GLint count);
 void (GLAPIENTRY *qglUnlockArraysEXT) (void);
 
+//GL_NV_vertex_array_range
+GLvoid *(GLAPIENTRY *qglAllocateMemoryNV)(GLsizei size, GLfloat readFrequency, GLfloat writeFrequency, GLfloat priority);
+GLvoid (GLAPIENTRY *qglFreeMemoryNV)(GLvoid *pointer);
+GLvoid (GLAPIENTRY *qglVertexArrayRangeNV)(GLsizei length, GLvoid *pointer);
+GLvoid (GLAPIENTRY *qglFlushVertexArrayRangeNV)(GLvoid);
 
 // general GL functions
 
@@ -374,6 +383,25 @@ static dllfunction_t texture3dextfuncs[] =
 	{NULL, NULL}
 };
 
+static dllfunction_t glxvarfuncs[] =
+{
+	{"glXAllocateMemoryNV", (void **) &qglAllocateMemoryNV},
+	{"glXFreeMemoryNV", (void **) &qglFreeMemoryNV},
+	{"glVertexArrayRangeNV", (void **) &qglVertexArrayRangeNV},
+	{"glFlushVertexArrayRangeNV", (void **) &qglFlushVertexArrayRangeNV},
+	{NULL, NULL}
+};
+
+static dllfunction_t wglvarfuncs[] =
+{
+	{"wglAllocateMemoryNV", (void **) &qglAllocateMemoryNV},
+	{"wglFreeMemoryNV", (void **) &qglFreeMemoryNV},
+	{"glVertexArrayRangeNV", (void **) &qglVertexArrayRangeNV},
+	{"glFlushVertexArrayRangeNV", (void **) &qglFlushVertexArrayRangeNV},
+	{NULL, NULL}
+};
+
+
 void VID_CheckExtensions(void)
 {
 	gl_stencil = vid_stencil.integer;
@@ -382,6 +410,8 @@ void VID_CheckExtensions(void)
 	gl_supportslockarrays = false;
 	gl_textureunits = 1;
 	gl_support_clamptoedge = false;
+	gl_support_var = false;
+	gl_support_var2 = false;
 
 	if (!GL_CheckExtension("OpenGL 1.1.0", opengl110funcs, NULL, false))
 		Sys_Error("OpenGL 1.1.0 functions not found\n");
@@ -410,9 +440,48 @@ void VID_CheckExtensions(void)
 	gl_supportslockarrays = GL_CheckExtension("GL_EXT_compiled_vertex_array", compiledvertexarrayfuncs, "-nocva", false);
 	gl_support_clamptoedge = GL_CheckExtension("GL_EXT_texture_edge_clamp", NULL, "-noedgeclamp", false) || GL_CheckExtension("GL_SGIS_texture_edge_clamp", NULL, "-noedgeclamp", false);
 
+	if (!strcmp(gl_platform, "GLX"))
+		gl_support_var = GL_CheckExtension("GL_NV_vertex_array_range", glxvarfuncs, "-novar", false);
+	else if (!strcmp(gl_platform, "WGL"))
+		gl_support_var = GL_CheckExtension("GL_NV_vertex_array_range", wglvarfuncs, "-novar", false);
+	if (gl_support_var)
+		gl_support_var2 = GL_CheckExtension("GL_NV_vertex_array_range2", NULL, "-novar2", false);
+
 	// we don't care if it's an extension or not, they are identical functions, so keep it simple in the rendering code
 	if (qglDrawRangeElements == NULL)
 		qglDrawRangeElements = qglDrawRangeElementsEXT;
+}
+
+int vid_vertexarrays_are_var = false;
+void *VID_AllocVertexArrays(mempool_t *pool, int size, int fast, float readfrequency, float writefrequency, float priority)
+{
+	void *m;
+	vid_vertexarrays_are_var = false;
+	if (fast && qglAllocateMemoryNV)
+	{
+		CHECKGLERROR
+		m = qglAllocateMemoryNV(size, readfrequency, writefrequency, priority);
+		CHECKGLERROR
+		if (m)
+		{
+			vid_vertexarrays_are_var = true;
+			return m;
+		}
+	}
+	return Mem_Alloc(pool, size);
+}
+
+void VID_FreeVertexArrays(void *pointer)
+{
+	if (vid_vertexarrays_are_var)
+	{
+		CHECKGLERROR
+		qglFreeMemoryNV(pointer);
+		CHECKGLERROR
+	}
+	else
+		Mem_Free(pointer);
+	vid_vertexarrays_are_var = false;
 }
 
 void Force_CenterView_f (void)
@@ -717,3 +786,4 @@ void VID_Close(void)
 	VID_CloseSystems();
 	VID_Shutdown();
 }
+
