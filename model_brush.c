@@ -2460,6 +2460,8 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 		mod->yawmaxs[2] = mod->normalmaxs[2];
 		mod->rotatedmins[0] = mod->rotatedmins[1] = mod->rotatedmins[2] = -modelradius;
 		mod->rotatedmaxs[0] = mod->rotatedmaxs[1] = mod->rotatedmaxs[2] = modelradius;
+		mod->radius = modelradius;
+		mod->radius2 = modelradius * modelradius;
 		// LordHavoc: check for empty submodels (lacrima.bsp has such a glitch)
 		if (mod->normalmins[0] > mod->normalmaxs[0] || mod->normalmins[1] > mod->normalmaxs[1] || mod->normalmins[2] > mod->normalmaxs[2])
 		{
@@ -2470,6 +2472,8 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 			VectorClear(mod->yawmaxs);
 			VectorClear(mod->rotatedmins);
 			VectorClear(mod->rotatedmaxs);
+			mod->radius = 0;
+			mod->radius2 = 0;
 		}
 
 		mod->numleafs = bm->visleafs;
