@@ -20,9 +20,18 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // gl_vidnt.c -- NT GL vid component
 
 #include "quakedef.h"
-#include "winquake.h"
+#include <windows.h>
+#include <dsound.h>
 #include "resource.h"
 #include <commctrl.h>
+
+extern void S_BlockSound (void);
+extern HINSTANCE global_hInstance;
+
+
+#ifndef WM_MOUSEWHEEL
+#define WM_MOUSEWHEEL                   0x020A
+#endif
 
 // Tell startup code that we have a client
 int cl_available = true;
