@@ -682,6 +682,8 @@ void COM_InitGameType (void)
 		gamemode = GAME_GOODVSBAD2;
 	else if (strstr(name, "teu"))
 		gamemode = GAME_TEU;
+	else if (strstr(name, "battlemech"))
+		gamemode = GAME_BATTLEMECH;
 	else
 		gamemode = GAME_NORMAL;
 
@@ -701,6 +703,8 @@ void COM_InitGameType (void)
 		gamemode = GAME_GOODVSBAD2;
 	else if (COM_CheckParm ("-teu"))
 		gamemode = GAME_TEU;
+	else if (COM_CheckParm ("-battlemech"))
+		gamemode = GAME_BATTLEMECH;
 
 	switch(gamemode)
 	{
@@ -735,6 +739,10 @@ void COM_InitGameType (void)
 	case GAME_TEU:
 		gamename = "TheEvilUnleashed";
 		gamedirname = "teu";
+		break;
+	case GAME_BATTLEMECH:
+		gamename = "Battlemech";
+		gamedirname = "battlemech";
 		break;
 	default:
 		Sys_Error("COM_InitGameType: unknown gamemode %i\n", gamemode);

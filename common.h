@@ -170,6 +170,7 @@ extern	struct cvar_s	registered;
 #define GAME_TRANSFUSION 5
 #define GAME_GOODVSBAD2 6
 #define GAME_TEU 7
+#define GAME_BATTLEMECH 8
 
 extern int gamemode;
 extern char *gamename;

@@ -570,7 +570,7 @@ void M_SinglePlayer_Draw (void)
 	p = Draw_CachePic ("gfx/ttl_sgl.lmp");
 
 	// Transfusion doesn't have a single player mode
-	if (gamemode == GAME_TRANSFUSION || gamemode == GAME_NEXUIZ || gamemode == GAME_GOODVSBAD2)
+	if (gamemode == GAME_TRANSFUSION || gamemode == GAME_NEXUIZ || gamemode == GAME_GOODVSBAD2 || gamemode == GAME_BATTLEMECH)
 	{
 		M_DrawPic ((320 - p->width) / 2, 4, "gfx/ttl_sgl.lmp");
 
@@ -579,6 +579,8 @@ void M_SinglePlayer_Draw (void)
 			M_PrintWhite (95, 10 * 8, "Nexuiz is for");
 		else if (gamemode == GAME_GOODVSBAD2)
 			M_PrintWhite (95, 10 * 8, "Good Vs Bad 2 is for");
+		else if (gamemode == GAME_BATTLEMECH)
+			M_PrintWhite (95, 10 * 8, "Battlemech is for");
 		else
 			M_PrintWhite (95, 10 * 8, "Transfusion is for");
 		M_PrintWhite (83, 11 * 8, "multiplayer play only");
@@ -599,7 +601,7 @@ void M_SinglePlayer_Draw (void)
 
 void M_SinglePlayer_Key (int key)
 {
-	if (gamemode == GAME_TRANSFUSION || gamemode == GAME_NEXUIZ || gamemode == GAME_GOODVSBAD2)
+	if (gamemode == GAME_TRANSFUSION || gamemode == GAME_NEXUIZ || gamemode == GAME_GOODVSBAD2 || gamemode == GAME_BATTLEMECH)
 	{
 		if (key == K_ESCAPE || key == K_ENTER)
 			m_state = m_main;
@@ -2334,6 +2336,13 @@ int M_ChooseQuitMessage(int request)
 		if (request-- == 0) return M_QuitMessage("you","want to quit?",NULL,NULL,NULL,NULL,NULL,NULL);
 		if (request-- == 0) return M_QuitMessage("Please stop playing","this stupid game",NULL,NULL,NULL,NULL,NULL,NULL);
 		break;
+	case GAME_BATTLEMECH:
+		if (request-- == 0) return M_QuitMessage("WHY","?",NULL,NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Leave now and your mech","is scrap!",NULL,NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Accept Defeat?",NULL,NULL,NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Wait!","There are more mechs to","destroy!",NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Where's your bloodlust?",NULL,NULL,NULL,NULL,NULL,NULL,NULL);
+		break;
 	default:
 		if (request-- == 0) return M_QuitMessage("Tired of fragging already?",NULL,NULL,NULL,NULL,NULL,NULL,NULL);
 		if (request-- == 0) return M_QuitMessage("Quit now and forfeit your bodycount?",NULL,NULL,NULL,NULL,NULL,NULL,NULL);
@@ -2863,6 +2872,22 @@ episode_t goodvsbad2episodes[] =
 	{"Levels? Bevels!", 0, 8},
 };
 
+level_t battlemechlevels[] =
+{
+	{"start", "Parking Level"},
+	{"dm1", "Hot Dump"},                        // 1
+	{"dm2", "The Pits"},
+	{"dm3", "Dimber Died"},
+	{"dm4", "Fire in the Hole"},
+	{"dm5", "Clubhouses"},
+	{"dm6", "Army go Underground"},
+};
+
+episode_t battlemechepisodes[] =
+{
+	{"Time for Battle", 0, 7},
+};
+
 gamelevels_t sharewarequakegame = {"Shareware Quake", quakelevels, quakeepisodes, 2};
 gamelevels_t registeredquakegame = {"Quake", quakelevels, quakeepisodes, 7};
 gamelevels_t hipnoticgame = {"Scourge of Armagon", hipnoticlevels, hipnoticepisodes, 6};
@@ -2870,6 +2895,7 @@ gamelevels_t roguegame = {"Dissolution of Eternity", roguelevels, rogueepisodes,
 gamelevels_t nehahragame = {"Nehahra", nehahralevels, nehahraepisodes, 4};
 gamelevels_t transfusiongame = {"Transfusion", transfusionlevels, transfusionepisodes, 7};
 gamelevels_t goodvsbad2game = {"Good Vs. Bad 2", goodvsbad2levels, goodvsbad2episodes, 1};
+gamelevels_t battlemechgame = {"Battlemech", battlemechlevels, battlemechepisodes, 1};
 
 typedef struct
 {
@@ -2887,6 +2913,7 @@ gameinfo_t gamelist[] =
 	{GAME_NEHAHRA, &nehahragame, &nehahragame},
 	{GAME_TRANSFUSION, &transfusiongame, &transfusiongame},
 	{GAME_GOODVSBAD2, &goodvsbad2game, &goodvsbad2game},
+	{GAME_BATTLEMECH, &battlemechgame, &battlemechgame},
 	{-1, &sharewarequakegame, &registeredquakegame} // final fallback
 };
 
