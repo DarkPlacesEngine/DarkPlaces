@@ -215,8 +215,10 @@ prvm_edict_t *PRVM_ED_Alloc (void)
 
 	// the client qc dont need maxclients
 	// thus it doesnt need to use svs.maxclients
-	// AK: changed i=svs.maxclients+1
-	for (i = 0;i < prog->num_edicts;i++)
+	// AK:	changed i=svs.maxclients+1
+	// AK:	changed so the edict 0 wont spawned -> used as reserved/world entity
+	//		although the menu/client has no world
+	for (i = 1;i < prog->num_edicts;i++)
 	{
 		e = PRVM_EDICT_NUM(i);
 		// the first couple seconds of server time can involve a lot of
@@ -1443,10 +1445,13 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	if(PRVM_ED_FindGlobal("time"))
 		prog->flag |= PRVM_GE_TIME;
 
-	if(PRVM_ED_FindFieldOffset ("classname"))
+	if(PRVM_ED_FindField ("chain"))
+		prog->flag |= PRVM_FE_CHAIN;
+
+	if(PRVM_ED_FindField ("classname"))
 		prog->flag |= PRVM_FE_CLASSNAME; 
 
-	if(PRVM_ED_FindFieldOffset ("nextthink") && PRVM_ED_FindFieldOffset("frame") && PRVM_ED_FindFieldOffset("think") 
+	if(PRVM_ED_FindField ("nextthink") && PRVM_ED_FindField ("frame") && PRVM_ED_FindField ("think") 
 		&& prog->flag &  PRVM_GE_TIME && prog->self) 
 		prog->flag |= PRVM_OP_STATE;
 	

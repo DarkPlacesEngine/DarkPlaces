@@ -1,6 +1,80 @@
 // AK
 // Basically every vm builtin cmd should be in here.
 // All 3 builtin list and extension lists can be found here
+// cause large (I think they will) are from pr_cmds the same copyright like in pr_cms 
+// also applies here
+
+
+/*============================================================================
+common cmd list:
+=================
+
+		checkextension(string)
+		error(...[string])
+		objerror(...[string)
+		print(...[strings])
+		centerprint(...[string])
+vector	normalize(vector)
+float	vlen(vector)
+float	vectoyaw(vector)
+vector	vectoangles(vector)
+float	random()
+		cmd(string)
+		float cvar (string)
+		cvar_set (string,string)
+		dprint(...[string])
+string	ftos(float)
+float	fabs(float)
+string	vtos(vector)
+string	etos(entity)
+float	stof(...[string])
+entity	spawn()
+entity	remove()
+entity	find(entity start, .string field, string match)
+
+entity	findfloat(entity start, .float field, string match)
+entity	findentity(entity start, .entity field, string match)
+
+entity	findchain(.string field, string match)
+
+entity	findchainfloat(.string field, float match)
+entity	findchainentity(.string field, entity match)
+
+		coredump()
+		traceon()
+		traceoff()
+		eprint()
+float	rint(float)
+float	floor(float)
+float	ceil(float)
+entity	nextent(entity)
+float	sin(float)
+float	cos(float)
+float	sqrt(float)
+		randomvec()
+float	registercvar (string name, string value)
+float	min(float a, float b, ...[float])
+float	max(float a, float b, ...[float])
+float	bound(float min, float value, float max)
+float	pow(float a, float b)
+		copyentity(entity src, entity dst)
+float	fopen(string filename, float mode)
+		fclose(float fhandle)
+string	fgets(float fhandle)
+		fputs(float fhandle, string s)
+float	strlen(string s)
+string	strcat(string s1, string s2)
+string	substring(string s, float start, float length)
+vector	stov(string s)
+string	strzone(string s)
+		strzone(string s)
+float	isserver()
+float	clientcount()
+float	clientstate()
+		clientcommand(float client, string s) (for client and menu)
+float	tokenize(string s)
+		
+*/
 
 #include "quakedef.h"
 #include "progdefs.h"
@@ -10,7 +84,15 @@
 //============================================================================
 // nice helper macros
 
+#ifndef VM_NOPARMCHECK
 #define VM_SAFEPARMCOUNT(p,f)	if(prog->argc != p) PRVM_ERROR(#f "wrong parameter count (" #p "expected ) !\n") 
+#else
+#define VM_SAFEPARMCOUNT(p,f)
+#endif
+
+#define	VM_RETURN_EDICT(e)		(((int *)prog->globals)[OFS_RETURN] = PRVM_EDICT_TO_PROG(e))
+
+#define VM_STRINGS_MEMPOOL		vm_strings_mempool[PRVM_GetProgNr()]
 
 #define e10 0,0,0,0,0,0,0,0,0,0
 #define e100 e10,e10,e10,e10,e10,e10,e10,e10,e10,e10
@@ -18,6 +100,1763 @@
 
 //============================================================================
 // Common 
+cvar_t vm_zone_min_strings = {0, "prvm_zone_min_strings", "64"};
+
+mempool_t *vm_strings_mempool[PRVM_MAXPROGS];
+
+/*
+typedef struct vm_string_s
+{
+	int prog_id;
+	// here follows everything else
+	char string[0];
+} vm_string_t;
+*/
+
+// LordHavoc: added this to semi-fix the problem of using many ftos calls in a print
+#define STRINGTEMP_BUFFERS 16
+#define STRINGTEMP_LENGTH 4096
+static char vm_string_temp[STRINGTEMP_BUFFERS][STRINGTEMP_LENGTH];
+static int vm_string_tempindex = 0;
+
+static char *VM_GetTempString(void)
+{
+	char *s;
+	s = vm_string_temp[vm_string_tempindex];
+	vm_string_tempindex = (vm_string_tempindex + 1) % STRINGTEMP_BUFFERS;
+	return s;
+}
+
+
+void VM_CheckEmptyString (char *s)
+{
+	if (s[0] <= ' ')
+		PRVM_ERROR ("%s: Bad string", PRVM_NAME);
+}
+
+//============================================================================
+//BUILT-IN FUNCTIONS
+
+void VM_VarString(int first, char *out, int outlength)
+{
+	int i;
+	const char *s;
+	char *outend;
+
+	outend = out + outlength - 1;
+	for (i = first;i < pr_argc && out < outend;i++)
+	{
+		s = PRVM_G_STRING((OFS_PARM0+i*3));
+		while (out < outend && *s)
+			*out++ = *s++;
+	}
+	*out++ = 0;
+}
+
+/*
+=================
+VM_checkextension
+
+returns true if the extension is supported by the server
+
+checkextension(extensionname)
+=================
+*/
+
+// kind of helper function
+static qboolean checkextension(char *name)
+{
+	int len;
+	char *e, *start;
+	len = strlen(name);
+
+	for (e = prog->extensionstring;*e;e++)
+	{
+		while (*e == ' ')
+			e++;
+		if (!*e)
+			break;
+		start = e;
+		while (*e && *e != ' ')
+			e++;
+		if (e - start == len)
+			if (!strncasecmp(start, name, len))
+			{
+				return true;
+			}
+	}
+	return false;
+}
+
+void VM_checkextension (void)
+{
+	VM_SAFEPARMCOUNT(1,VM_checkextension);
+	
+	PRVM_G_FLOAT(OFS_RETURN) = checkextension(PRVM_G_STRING(OFS_PARM0));
+}
+
+/*
+=================
+VM_error
+
+This is a TERMINAL error, which will kill off the entire prog.
+Dumps self.
+
+error(value)
+=================
+*/
+void VM_Error (void)
+{
+	prvm_edict_t	*ed;
+	char string[STRINGTEMP_LENGTH];
+
+	VM_VarString(0, string, sizeof(string));
+	Con_Printf ("======%S ERROR in %s:\n%s\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
+	if(prog->self)
+	{
+		ed = PRVM_G_EDICT(prog->self->ofs); 
+		PRVM_ED_Print (ed);
+	}
+
+	PRVM_ERROR ("%s: Program error", PRVM_NAME);
+}
+
+/*
+=================
+VM_objerror
+
+Dumps out self, then an error message.  The program is aborted and self is
+removed, but the level can continue.
+
+objerror(value)
+=================
+*/
+void VM_objerror (void)
+{
+	prvm_edict_t	*ed;
+	char string[STRINGTEMP_LENGTH];
+
+	VM_VarString(0, string, sizeof(string));
+	Con_Printf ("======%s OBJECT ERROR in %s:\n%s\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
+	if(prog->self)
+	{
+		ed = PRVM_G_EDICT (prog->self->ofs);
+		PRVM_ED_Print (ed);
+	}
+	else
+		// objerror has to display the object fields -> else call 
+		PRVM_ERROR ("VM_objecterror: self not defined !\n");
+	
+	PRVM_ED_Free (ed);
+}
+
+/*
+=================
+VM_print (actually used only by client and menu)
+
+print to console
+
+print(string)
+=================
+*/
+void VM_print (void)
+{
+	char string[STRINGTEMP_LENGTH];
+
+	VM_VarString(0, string, sizeof(string));
+	Con_Print(string);
+}
+
+/*
+=================
+VM_centerprint
+
+single print to the screen
+
+centerprint(clientent, value)
+=================
+*/
+void VM_centerprint (void)
+{
+	char string[STRINGTEMP_LENGTH];
+
+	VM_VarString(0, string, sizeof(string));
+	SCR_CenterPrint(string);
+}
+
+/*
+=================
+VM_normalize
+
+vector normalize(vector)
+=================
+*/
+void VM_normalize (void)
+{
+	float	*value1;
+	vec3_t	newvalue;
+	float	new;
+
+	VM_SAFEPARMCOUNT(1,VM_normalize);
+
+	value1 = PRVM_G_VECTOR(OFS_PARM0);
+
+	new = value1[0] * value1[0] + value1[1] * value1[1] + value1[2]*value1[2];
+	new = sqrt(new);
+
+	if (new == 0)
+		newvalue[0] = newvalue[1] = newvalue[2] = 0;
+	else
+	{
+		new = 1/new;
+		newvalue[0] = value1[0] * new;
+		newvalue[1] = value1[1] * new;
+		newvalue[2] = value1[2] * new;
+	}
+
+	VectorCopy (newvalue, PRVM_G_VECTOR(OFS_RETURN));
+}
+
+/*
+=================
+VM_vlen
+
+scalar vlen(vector)
+=================
+*/
+void VM_vlen (void)
+{
+	float	*value1;
+	float	new;
+
+	VM_SAFEPARMCOUNT(1,VM_vlen);
+
+	value1 = PRVM_G_VECTOR(OFS_PARM0);
+
+	new = value1[0] * value1[0] + value1[1] * value1[1] + value1[2]*value1[2];
+	new = sqrt(new);
+
+	PRVM_G_FLOAT(OFS_RETURN) = new;
+}
+
+/*
+=================
+VM_vectoyaw
+
+float vectoyaw(vector)
+=================
+*/
+void VM_vectoyaw (void)
+{
+	float	*value1;
+	float	yaw;
+
+	VM_SAFEPARMCOUNT(1,VM_vectoyaw);
+
+	value1 = PRVM_G_VECTOR(OFS_PARM0);
+
+	if (value1[1] == 0 && value1[0] == 0)
+		yaw = 0;
+	else
+	{
+		yaw = (int) (atan2(value1[1], value1[0]) * 180 / M_PI);
+		if (yaw < 0)
+			yaw += 360;
+	}
+
+	PRVM_G_FLOAT(OFS_RETURN) = yaw;
+}
+
+
+/*
+=================
+VM_vectoangles
+
+vector vectoangles(vector)
+=================
+*/
+void VM_vectoangles (void)
+{
+	float	*value1;
+	float	forward;
+	float	yaw, pitch;
+	
+	VM_SAFEPARMCOUNT(1,VM_vectoangles);
+		
+	value1 = PRVM_G_VECTOR(OFS_PARM0);
+
+	if (value1[1] == 0 && value1[0] == 0)
+	{
+		yaw = 0;
+		if (value1[2] > 0)
+			pitch = 90;
+		else
+			pitch = 270;
+	}
+	else
+	{
+		// LordHavoc: optimized a bit
+		if (value1[0])
+		{
+			yaw = (atan2(value1[1], value1[0]) * 180 / M_PI);
+			if (yaw < 0)
+				yaw += 360;
+		}
+		else if (value1[1] > 0)
+			yaw = 90;
+		else
+			yaw = 270;
+
+		forward = sqrt(value1[0]*value1[0] + value1[1]*value1[1]);
+		pitch = (int) (atan2(value1[2], forward) * 180 / M_PI);
+		if (pitch < 0)
+			pitch += 360;
+	}
+
+	PRVM_G_FLOAT(OFS_RETURN+0) = pitch;
+	PRVM_G_FLOAT(OFS_RETURN+1) = yaw;
+	PRVM_G_FLOAT(OFS_RETURN+2) = 0;
+}
+
+/*
+=================
+VM_random
+
+Returns a number from 0<= num < 1
+
+float random()
+=================
+*/
+void VM_random (void)
+{
+	float		num;
+
+	VM_SAFEPARMCOUNT(0,VM_random);
+
+	num = (rand ()&0x7fff) / ((float)0x7fff);
+
+	PRVM_G_FLOAT(OFS_RETURN) = num;
+}
+
+/*
+=================
+PF_sound
+
+Each entity can have eight independant sound sources, like voice,
+weapon, feet, etc.
+
+Channel 0 is an auto-allocate channel, the others override anything
+already running on that entity/channel pair.
+
+An attenuation of 0 will play full volume everywhere in the level.
+Larger attenuations will drop off.
+
+=================
+*/
+/*
+void PF_sound (void)
+{
+	char		*sample;
+	int			channel;
+	edict_t		*entity;
+	int 		volume;
+	float attenuation;
+
+	entity = G_EDICT(OFS_PARM0);
+	channel = G_FLOAT(OFS_PARM1);
+	sample = G_STRING(OFS_PARM2);
+	volume = G_FLOAT(OFS_PARM3) * 255;
+	attenuation = G_FLOAT(OFS_PARM4);
+
+	if (volume < 0 || volume > 255)
+		Host_Error ("SV_StartSound: volume = %i", volume);
+
+	if (attenuation < 0 || attenuation > 4)
+		Host_Error ("SV_StartSound: attenuation = %f", attenuation);
+
+	if (channel < 0 || channel > 7)
+		Host_Error ("SV_StartSound: channel = %i", channel);
+
+	SV_StartSound (entity, channel, sample, volume, attenuation);
+}
+*/
+
+/*
+=================
+VM_break
+
+break()
+=================
+*/
+void VM_break (void)
+{
+	PRVM_ERROR ("%s: break statement", PRVM_NAME);
+}
+
+//============================================================================
+
+error();
+int checkpvsbytes;
+qbyte checkpvs[MAX_MAP_LEAFS/8];
+
+//============================================================================
+
+/*
+=================
+VM_localcmd
+
+Sends text over to the client's execution buffer
+
+[localcmd (string) or]
+cmd (string)
+=================
+*/
+void VM_localcmd (void)
+{
+	VM_SAFEPARMCOUNT(1,VM_localcmd);
+
+	Cbuf_AddText(PRVM_G_STRING(OFS_PARM0));
+}
+
+/*
+=================
+VM_cvar
+
+float cvar (string)
+=================
+*/
+void VM_cvar (void)
+{
+	VM_SAFEPARMCOUNT(1,VM_cvar);
+
+	PRVM_G_FLOAT(OFS_RETURN) = Cvar_VariableValue(PRVM_G_STRING(OFS_PARM0));
+}
+
+/*
+=================
+VM_cvar_set
+
+void cvar_set (string,string)
+=================
+*/
+void VM_cvar_set (void)
+{
+	VM_SAFEPARMCOUNT(2,VM_cvar_set);
+	
+	Cvar_Set(PRVM_G_STRING(OFS_PARM0), PRVM_G_STRING(OFS_PARM1));
+}
+
+/*
+=========
+VM_dprint
+
+dprint(...[string])
+=========
+*/
+void VM_dprint (void)
+{
+	char string[STRINGTEMP_LENGTH];
+	if (developer.integer)
+	{
+		VM_VarString(0, string, sizeof(string));
+		Con_Printf("%s: %s", PRVM_NAME, string);
+	}
+}
+
+/*
+=========
+VM_ftos
+
+string	ftos(float)
+=========
+*/
+
+void VM_ftos (void)
+{
+	float v;
+	char *s;
+
+	VM_SAFEPARMCOUNT(1, VM_ftos);
+
+	v = PRVM_G_FLOAT(OFS_PARM0);
+
+	s = VM_GetTempString();
+	if ((float)((int)v) == v)
+		sprintf(s, "%i", (int)v);
+	else
+		sprintf(s, "%f", v);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetString(s);
+}
+
+/*
+=========
+VM_fabs
+
+float	fabs(float)
+=========
+*/
+
+void VM_fabs (void)
+{
+	float	v;
+
+	VM_SAFEPARMCOUNT(1,VM_fabs);
+
+	v = PRVM_G_FLOAT(OFS_PARM0);
+	PRVM_G_FLOAT(OFS_RETURN) = fabs(v);
+}
+
+/*
+=========
+VM_vtos
+
+string	vtos(vector)
+=========
+*/
+
+void VM_vtos (void)
+{
+	char *s;
+
+	VM_SAFEPARMCOUNT(1,VM_vtos);
+
+	s = VM_GetTempString();
+	sprintf (s, "'%5.1f %5.1f %5.1f'", PRVM_G_VECTOR(OFS_PARM0)[0], PRVM_G_VECTOR(OFS_PARM0)[1], PRVM_G_VECTOR(OFS_PARM0)[2]);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetString(s);
+}
+
+/*
+=========
+VM_etos
+
+string	etos(entity)
+=========
+*/
+
+void VM_etos (void)
+{
+	char *s;
+
+	VM_SAFEPARMCOUNT(1, VM_etos);
+
+	s = VM_GetTempString();
+	sprintf (s, "entity %i", PRVM_G_EDICTNUM(OFS_PARM0));
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetString(s);
+}
+
+/*
+=========
+VM_stof
+
+float stof(...[string])
+=========
+*/
+void VM_stof(void)
+{
+	char string[STRINGTEMP_LENGTH];
+	VM_VarString(0, string, sizeof(string));
+	PRVM_G_FLOAT(OFS_RETURN) = atof(string);
+}
+
+/*
+=========
+VM_spawn
+
+entity spawn()
+=========
+*/
+
+void VM_Spawn (void)
+{
+	prvm_edict_t	*ed;
+	prog->xfunction->builtinsprofile += 20;
+	ed = PRVM_ED_Alloc();
+	VM_RETURN_EDICT(ed);
+}
+
+/*
+=========
+VM_remove
+
+entity	remove()
+=========
+*/
+
+void VM_remove (void)
+{
+	prvm_edict_t	*ed;
+	prog->xfunction->builtinsprofile += 20;
+
+	VM_SAFEPARMCOUNT(1, VM_remove);
+
+	ed = PRVM_G_EDICT(OFS_PARM0);
+//	if (ed == prog->edicts)
+//		PRVM_ERROR ("remove: tried to remove world\n");
+//	if (PRVM_NUM_FOR_EDICT(ed) <= sv.maxclients)
+//		Host_Error("remove: tried to remove a client\n");
+	PRVM_ED_Free (ed);
+}
+
+/*
+=========
+VM_find
+
+entity	find(entity start, .string field, string match)
+=========
+*/
+
+void VM_find (void)
+{
+	int		e;
+	int		f;
+	char	*s, *t;
+	prvm_edict_t	*ed;
+
+	VM_SAFEPARMCOUNT(3,VM_find);
+
+	e = PRVM_G_EDICTNUM(OFS_PARM0);
+	f = PRVM_G_INT(OFS_PARM1);
+	s = PRVM_G_STRING(OFS_PARM2);
+
+	if (!s || !s[0])
+	{
+		// return reserved edict 0 (could be used for whatever the prog wants)
+		VM_RETURN_EDICT(prog->edicts);
+		return;
+	}
+
+	for (e++ ; e < prog->num_edicts ; e++)
+	{
+		prog->xfunction->builtinsprofile++;
+		ed = PRVM_EDICT_NUM(e);
+		if (ed->e->free)
+			continue;
+		t = PRVM_E_STRING(ed,f);
+		if (!t)
+			continue;
+		if (!strcmp(t,s))
+		{
+			VM_RETURN_EDICT(ed);
+			return;
+		}
+	}
+
+	VM_RETURN_EDICT(sv.edicts);
+}
+
+/*
+=========
+VM_findfloat
+
+  entity	findfloat(entity start, .float field, string match)
+  entity	findentity(entity start, .entity field, string match)
+=========
+*/
+// LordHavoc: added this for searching float, int, and entity reference fields
+void VM_findfloat (void)
+{
+	int		e;
+	int		f;
+	float	s;
+	prvm_edict_t	*ed;
+
+	VM_SAFEPARMCOUNT(3,VM_findfloat);
+
+	e = PRVM_G_EDICTNUM(OFS_PARM0);
+	f = PRVM_G_INT(OFS_PARM1);
+	s = PRVM_G_FLOAT(OFS_PARM2);
+
+	for (e++ ; e < prog->num_edicts ; e++)
+	{
+		prog->xfunction->builtinsprofile++;
+		ed = PRVM_EDICT_NUM(e);
+		if (ed->e->free)
+			continue;
+		if (PRVM_E_FLOAT(ed,f) == s)
+		{
+			VM_RETURN_EDICT(ed);
+			return;
+		}
+	}
+
+	VM_RETURN_EDICT(prog->edicts);
+}
+
+/*
+=========
+VM_findchain
+
+entity	findchain(.string field, string match)
+=========
+*/
+int PRVM_ED_FindFieldOffset(const char *field);
+// chained search for strings in entity fields
+// entity(.string field, string match) findchain = #402;
+void VM_findchain (void)
+{
+	int		i;
+	int		f;
+	int		chain_of;
+	char	*s, *t;
+	prvm_edict_t	*ent, *chain;
+
+	VM_SAFEPARMCOUNT(2,VM_findchain);
+
+	// is the same like !(prog->flag & PRVM_FE_CHAIN) - even if the operator precedence is another
+	if(!prog->flag & PRVM_FE_CHAIN)
+		PRVM_ERROR("VM_findchain: %s doesnt have a chain field !\n", PRVM_NAME); 
+
+	chain_of = PRVM_ED_FindFieldOffset ("chain");
+
+	chain = prog->edicts;
+
+	f = PRVM_G_INT(OFS_PARM0);
+	s = PRVM_G_STRING(OFS_PARM1);
+	if (!s || !s[0])
+	{
+		VM_RETURN_EDICT(prog->edicts);
+		return;
+	}
+
+	ent = PRVM_NEXT_EDICT(prog->edicts);
+	for (i = 1;i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
+	{
+		prog->xfunction->builtinsprofile++;
+		if (ent->e->free)
+			continue;
+		t = PRVM_E_STRING(ent,f);
+		if (!t)
+			continue;
+		if (strcmp(t,s))
+			continue;
+
+		PRVM_E_FLOAT(ent,chain_of) = PRVM_NUM_FOR_EDICT(chain);  
+		chain = ent;
+	}
+
+	VM_RETURN_EDICT(chain);
+}
+
+/*
+=========
+VM_findchainfloat
+
+entity	findchainfloat(.string field, float match)
+entity	findchainentity(.string field, entity match)
+=========
+*/
+// LordHavoc: chained search for float, int, and entity reference fields
+// entity(.string field, float match) findchainfloat = #403;
+void VM_findchainfloat (void)
+{
+	int		i;
+	int		f;
+	int		chain_of;
+	float	s;
+	prvm_edict_t	*ent, *chain;
+
+	VM_SAFEPARMCOUNT(2, VM_findchainfloat);
+
+	if(!prog->flag & PRVM_FE_CHAIN)
+		PRVM_ERROR("VM_findchainfloat: %s doesnt have a chain field !\n", PRVM_NAME); 
+	
+	chain_of = PRVM_ED_FindFieldOffset ("chain");
+
+	chain = (prvm_edict_t *)prog->edicts;
+
+	f = PRVM_G_INT(OFS_PARM0);
+	s = PRVM_G_FLOAT(OFS_PARM1);
+
+	ent = PRVM_NEXT_EDICT(prog->edicts);
+	for (i = 1;i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
+	{
+		prog->xfunction->builtinsprofile++;
+		if (ent->e->free)
+			continue;
+		if (E_FLOAT(ent,f) != s)
+			continue;
+		
+		PRVM_E_FLOAT(ent,chain_of) = PRVM_NUM_FOR_EDICT(chain);
+		chain = ent;
+	}
+
+	VM_RETURN_EDICT(chain);
+}
+
+/*
+=========
+VM_precache_file
+
+precache_file
+=========
+*/
+void VM_precache_file (void)
+{	// precache_file is only used to copy files with qcc, it does nothing
+	VM_SAFEPARMCOUNT(1,VM_precache_file);
+
+	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
+}
+
+/*
+=========
+VM_preache_error
+
+used instead of the other VM_precache_* functions in the builtin list
+=========
+*/
+
+void VM_precache_error (void)
+{
+	PRVM_ERROR ("PF_Precache_*: Precache can only be done in spawn functions");	
+}
+
+/*
+=========
+VM_precache_sound
+
+=========
+*/
+/*
+void VM_precache_sound (void)
+{
+	char	*s;
+	int		i;
+
+	VM_SAFEPARMCOUNT(1, VM_precache_sound); 
+
+	s = PRVM_G_STRING(OFS_PARM0);
+	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
+	VM_CheckEmptyString (s);
+
+	for (i=0 ; i < MAX_SOUNDS ; i++)
+	{
+		if (!sv.sound_precache[i])
+		{
+			sv.sound_precache[i] = s;
+			return;
+		}
+		if (!strcmp(sv.sound_precache[i], s))
+			return;
+	}
+	Host_Error ("PF_precache_sound: overflow");
+}*/
+
+/*
+=========
+VM_coredump
+
+coredump()
+=========
+*/
+void VM_coredump (void)
+{
+	VM_SAFEPARMCOUNT(0,VM_coredump);
+	
+	PRVM_ED_PrintEdicts_f ();
+}
+
+/*
+=========
+VM_traceon
+
+traceon()
+=========
+*/
+void VM_traceon (void)
+{
+	VM_SAFEPARMCOUNT(0,VM_traceon);
+	
+	prog->trace = true;
+}
+
+/*
+=========
+VM_traceoff
+
+traceoff()
+=========
+*/
+void VM_traceoff (void)
+{
+	VM_SAFEPARMCOUNT(0,VM_traceoff);
+
+	prog->trace = false;
+}
+
+/*
+=========
+VM_eprint
+
+eprint()
+=========
+*/
+void VM_eprint (void)
+{
+	VM_SAFEPARMCOUNT(1,VM_eprint);
+
+	PRVM_ED_PrintNum (PRVM_G_EDICTNUM(OFS_PARM0));
+}
+
+/*
+=========
+VM_rint
+
+float	rint(float)
+=========
+*/
+void VM_rint (void)
+{
+	float	f;
+
+	VM_SAFEPARMCOUNT(1,VM_rint);
+
+	f = PRVM_G_FLOAT(OFS_PARM0);
+	if (f > 0)
+		PRVM_G_FLOAT(OFS_RETURN) = (int)(f + 0.5);
+	else
+		PRVM_G_FLOAT(OFS_RETURN) = (int)(f - 0.5);
+}
+
+/*
+=========
+VM_floor
+
+float	floor(float)
+=========
+*/
+void VM_floor (void)
+{
+	VM_SAFEPARMCOUNT(1,VM_floor);
+
+	PRVM_G_FLOAT(OFS_RETURN) = floor(PRVM_G_FLOAT(OFS_PARM0));
+}
+
+/*
+=========
+VM_ceil
+
+float	ceil(float)
+=========
+*/
+void VM_ceil (void)
+{
+	VM_SAFEPARMCOUNT(1,VM_ceil);
+
+	PRVM_G_FLOAT(OFS_RETURN) = ceil(PRVM_G_FLOAT(OFS_PARM0));
+}
+
+
+/*
+=============
+VM_nextent
+
+entity	nextent(entity)
+=============
+*/
+void VM_nextent (void)
+{
+	int		i;
+	prvm_edict_t	*ent;
+
+	i = PRVM_G_EDICTNUM(OFS_PARM0);
+	while (1)
+	{
+		prog->xfunction->builtinsprofile++;
+		i++;
+		if (i == prog->num_edicts)
+		{
+			VM_RETURN_EDICT(prog->edicts);
+			return;
+		}
+		ent = PRVM_EDICT_NUM(i);
+		if (!ent->e->free)
+		{
+			VM_RETURN_EDICT(ent);
+			return;
+		}
+	}
+}
+
+//=============================================================================
+
+/*
+==============
+PF_changelevel
+==============
+*/
+/*void PF_changelevel (void)
+{
+	char	*s;
+
+// make sure we don't issue two changelevels
+	if (svs.changelevel_issued)
+		return;
+	svs.changelevel_issued = true;
+
+	s = G_STRING(OFS_PARM0);
+	Cbuf_AddText (va("changelevel %s\n",s));
+}*/
+
+/*
+=========
+VM_sin
+
+float	sin(float)
+=========
+*/
+void VM_sin (void)
+{
+	VM_SAFEPARMCOUNT(1,VM_sin);
+	PRVM_G_FLOAT(OFS_RETURN) = sin(PRVM_G_FLOAT(OFS_PARM0));
+}
+
+/*
+=========
+VM_cos
+float	cos(float)
+=========
+*/
+void VM_cos (void)
+{
+	VM_SAFEPARMCOUNT(1,VM_cos);
+	PRVM_G_FLOAT(OFS_RETURN) = cos(PRVM_G_FLOAT(OFS_PARM0));
+}
+
+/*
+=========
+VM_sqrt
+
+float	sqrt(float)
+=========
+*/
+void VM_sqrt (void)
+{
+	VM_SAFEPARMCOUNT(1,VM_sqrt);
+	PRVM_G_FLOAT(OFS_RETURN) = sqrt(PRVM_G_FLOAT(OFS_PARM0));
+}
+
+/*
+=================
+VM_RandomVec
+
+Returns a vector of length < 1 and > 0
+
+randomvec()
+=================
+*/
+void VM_randomvec (void)
+{
+	vec3_t		temp;
+	//float		length;
+
+	VM_SAFEPARMCOUNT(0, VM_randomvec);
+
+	//// WTF ??
+	do
+	{
+		temp[0] = (rand()&32767) * (2.0 / 32767.0) - 1.0;
+		temp[1] = (rand()&32767) * (2.0 / 32767.0) - 1.0;
+		temp[2] = (rand()&32767) * (2.0 / 32767.0) - 1.0;
+	}
+	while (DotProduct(temp, temp) >= 1);
+	VectorCopy (temp, PRVM_G_VECTOR(OFS_RETURN));
+	
+	/*
+	temp[0] = (rand()&32767) * (2.0 / 32767.0) - 1.0;
+	temp[1] = (rand()&32767) * (2.0 / 32767.0) - 1.0;
+	temp[2] = (rand()&32767) * (2.0 / 32767.0) - 1.0;
+	// length returned always > 0
+	length = (rand()&32766 + 1) * (1.0 / 32767.0) / VectorLength(temp);
+	VectorScale(temp,length, temp);*/
+	VectorCopy(temp, PRVM_G_VECTOR(OFS_RETURN));	
+}
+
+//=============================================================================
+#define MAX_QC_CVARS 128 * PRVM_MAXPROGS
+cvar_t vm_qc_cvar[MAX_QC_CVARS];
+int vm_currentqc_cvar;
+
+/*
+=========
+VM_registercvar
+
+float	registercvar (string name, string value)
+=========
+*/
+void VM_registercvar (void)
+{
+	char *name, *value;
+	cvar_t *variable;
+
+	VM_SAFEPARMCOUNT(2,VM_registercvar);
+
+	name = PRVM_G_STRING(OFS_PARM0);
+	value = PRVM_G_STRING(OFS_PARM1);
+	PRVM_G_FLOAT(OFS_RETURN) = 0;
+// first check to see if it has already been defined
+	if (Cvar_FindVar (name))
+		return;
+
+// check for overlap with a command
+	if (Cmd_Exists (name))
+	{
+		Con_Printf ("VM_registercvar: %s is a command\n", name);
+		return;
+	}
+
+	if (vm_currentqc_cvar >= MAX_QC_CVARS)
+		PRVM_ERROR ("VM_registercvar: ran out of cvar slots (%i)\n", MAX_QC_CVARS);
+
+// copy the name and value
+	variable = &vm_qc_cvar[vm_currentqc_cvar++];
+	variable->name = Z_Malloc (strlen(name)+1);
+	strcpy (variable->name, name);
+	variable->string = Z_Malloc (strlen(value)+1);
+	strcpy (variable->string, value);
+	variable->value = atof (value);
+
+	Cvar_RegisterVariable(variable);
+	PRVM_G_FLOAT(OFS_RETURN) = 1; // success
+}
+
+/*
+=================
+VM_min
+
+returns the minimum of two supplied floats
+
+float min(float a, float b, ...[float])
+=================
+*/
+void VM_min (void)
+{
+	// LordHavoc: 3+ argument enhancement suggested by FrikaC
+	if (prog->argc == 2)
+		PRVM_G_FLOAT(OFS_RETURN) = min(PRVM_G_FLOAT(OFS_PARM0), PRVM_G_FLOAT(OFS_PARM1));
+	else if (prog->argc >= 3)
+	{
+		int i;
+		float f = PRVM_G_FLOAT(OFS_PARM0);
+		for (i = 1;i < prog->argc;i++)
+			if (PRVM_G_FLOAT((OFS_PARM0+i*3)) < f)
+				f = PRVM_G_FLOAT((OFS_PARM0+i*3));
+		PRVM_G_FLOAT(OFS_RETURN) = f;
+	}
+	else
+		PRVM_ERROR("VM_min: %s must supply at least 2 floats\n", PRVM_NAME);
+}
+
+/*
+=================
+VM_max
+
+returns the maximum of two supplied floats
+
+float	max(float a, float b, ...[float])
+=================
+*/
+void VM_max (void)
+{
+	// LordHavoc: 3+ argument enhancement suggested by FrikaC
+	if (pr_argc == 2)
+		PRVM_G_FLOAT(OFS_RETURN) = max(PRVM_G_FLOAT(OFS_PARM0), PRVM_G_FLOAT(OFS_PARM1));
+	else if (pr_argc >= 3)
+	{
+		int i;
+		float f = PRVM_G_FLOAT(OFS_PARM0);
+		for (i = 1;i < pr_argc;i++)
+			if (PRVM_G_FLOAT((OFS_PARM0+i*3)) > f)
+				f = PRVM_G_FLOAT((OFS_PARM0+i*3));
+		G_FLOAT(OFS_RETURN) = f;
+	}
+	else
+		PRVM_ERROR("VM_max: %s must supply at least 2 floats\n", PRVM_NAME);
+}
+
+/*
+=================
+VM_bound
+
+returns number bounded by supplied range
+
+float	bound(float min, float value, float max)
+=================
+*/
+void VM_bound (void)
+{
+	VM_SAFEPARMCOUNT(3,VM_bound);
+	PRVM_G_FLOAT(OFS_RETURN) = bound(PRVM_G_FLOAT(OFS_PARM0), PRVM_G_FLOAT(OFS_PARM1), PRVM_G_FLOAT(OFS_PARM2));
+}
+
+/*
+=================
+VM_pow
+
+returns a raised to power b
+
+float	pow(float a, float b)
+=================
+*/
+void VM_pow (void)
+{
+	VM_SAFEPARMCOUNT(2,VM_pow);
+	PRVM_G_FLOAT(OFS_RETURN) = pow(PRVM_G_FLOAT(OFS_PARM0), PRVM_G_FLOAT(OFS_PARM1));
+}
+
+/*
+=================
+VM_copyentity
+
+copies data from one entity to another
+
+copyentity(entity src, entity dst)
+=================
+*/
+void VM_copyentity (void)
+{
+	prvm_edict_t *in, *out;
+	VM_SAFEPARMCOUNT(2,VM_copyentity);
+	in = PRVM_G_EDICT(OFS_PARM0);
+	out = PRVM_G_EDICT(OFS_PARM1);
+	memcpy(out->v, in->v, prog->progs->entityfields * 4);
+}
+
+/*
+=================
+VM_setcolor
+
+sets the color of a client and broadcasts the update to all connected clients
+
+setcolor(clientent, value)
+=================
+*/
+/*void PF_setcolor (void)
+{
+	client_t *client;
+	int entnum, i;
+	eval_t *val;
+
+	entnum = G_EDICTNUM(OFS_PARM0);
+	i = G_FLOAT(OFS_PARM1);
+
+	if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
+	{
+		Con_Printf ("tried to setcolor a non-client\n");
+		return;
+	}
+
+	client = svs.clients + entnum-1;
+	if ((val = GETEDICTFIELDVALUE(client->edict, eval_clientcolors)))
+		val->_float = i;
+	client->colors = i;
+	client->old_colors = i;
+	client->edict->v->team = (i & 15) + 1;
+
+	MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
+	MSG_WriteByte (&sv.reliable_datagram, entnum - 1);
+	MSG_WriteByte (&sv.reliable_datagram, i);
+}*/
+
+#define MAX_VMFILES		256
+#define MAX_PRVMFILES	MAX_VMFILES * PRVM_MAXPROGS
+// old #define VM_FILES(index) vm_files[PRVM_GetProgNr()+(index)]
+#define VM_FILES ((qfile_t**)(vm_files + PRVM_GetProgNr() * MAX_VMFILES))
+
+qfile_t *vm_files[MAX_PRVMFILES];
+
+void VM_Files_Init(void)
+{
+	memset(vm_files, 0, sizeof(qfile_t*[MAX_VMFILES]));
+}
+
+void VM_Files_CloseAll(void)
+{
+	int i;
+	for (i = 0;i < MAX_VMFILES;i++)
+	{
+		if (VM_FILES[i])
+			FS_Close(VM_FILES[i]);
+		//VM_FILES[i] = NULL;
+	}
+	memset(VM_FILES,0,sizeof(qfile_t*[MAX_VMFILES])); // this should be faster (is it ?)
+}
+
+/*
+=========
+VM_fopen
+
+float	fopen(string filename, float mode)
+=========
+*/
+// float(string filename, float mode) fopen = #110;
+// opens a file inside quake/gamedir/data/ (mode is FILE_READ, FILE_APPEND, or FILE_WRITE),
+// returns fhandle >= 0 if successful, or fhandle < 0 if unable to open file for any reason
+void VM_fopen(void)
+{
+	int filenum, mode;
+	char *modestring, *filename;
+
+	VM_SAFEPARMCOUNT(2,VM_fopen);
+
+	for (filenum = 0;filenum < MAX_VMFILES;filenum++)
+		if (VM_FILES[filenum] == NULL)
+			break;
+	if (filenum >= MAX_VMFILES)
+	{
+		Con_Printf("VM_fopen: %s ran out of file handles (%i)\n", PRVM_NAME, MAX_VMFILES);
+		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		return;
+	}
+	mode = PRVM_G_FLOAT(OFS_PARM1);
+	switch(mode)
+	{
+	case 0: // FILE_READ
+		modestring = "rb";
+		break;
+	case 1: // FILE_APPEND
+		modestring = "ab";
+		break;
+	case 2: // FILE_WRITE
+		modestring = "wb";
+		break;
+	default:
+		Con_Printf ("VM_fopen: %s no such mode %i (valid: 0 = read, 1 = append, 2 = write)\n", PRVM_NAME, mode);
+		PRVM_G_FLOAT(OFS_RETURN) = -3;
+		return;
+	}
+	filename = PRVM_G_STRING(OFS_PARM0);
+	// .. is parent directory on many platforms
+	// / is parent directory on Amiga
+	// : is root of drive on Amiga (also used as a directory separator on Mac, but / works there too, so that's a bad idea)
+	// \ is a windows-ism (so it's naughty to use it, / works on all platforms)
+	if ((filename[0] == '.' && filename[1] == '.') || filename[0] == '/' || strrchr(filename, ':') || strrchr(filename, '\\'))
+	{
+		Con_Printf("VM_fopen: dangerous or non-portable filename \"%s\" not allowed. (contains : or \\ or begins with .. or /)\n", filename);
+		PRVM_G_FLOAT(OFS_RETURN) = -4;
+		return;
+	}
+	VM_FILES[filenum] = FS_Open(va("data/%s", filename), modestring, false);
+	if (VM_FILES[filenum] == NULL)
+		PRVM_G_FLOAT(OFS_RETURN) = -1;
+	else
+		PRVM_G_FLOAT(OFS_RETURN) = filenum;
+}
+
+/*
+=========
+VM_fclose
+
+fclose(float fhandle)
+=========
+*/
+//void(float fhandle) fclose = #111; // closes a file
+void VM_fclose(void)
+{
+	int filenum;
+	
+	VM_SAFEPARMCOUNT(1,VM_fclose);
+
+	filenum = PRVM_G_FLOAT(OFS_PARM0);
+	if (filenum < 0 || filenum >= MAX_VMFILES)
+	{
+		Con_Printf("VM_fclose: invalid file handle %i used in %s\n", filenum, PRVM_NAME);
+		return;
+	}
+	if (VM_FILES[filenum] == NULL)
+	{
+		Con_Printf("VM_fclose: no such file handle %i (or file has been closed) in %s\n", filenum, PRVM_NAME);
+		return;
+	}
+	FS_Close(VM_FILES[filenum]);
+	VM_FILES[filenum] = NULL;
+}
+
+/*
+=========
+VM_fgets
+
+string	fgets(float fhandle)
+=========
+*/
+//string(float fhandle) fgets = #112; // reads a line of text from the file and returns as a tempstring
+void VM_fgets(void)
+{
+	int c, end;
+	static char string[STRINGTEMP_LENGTH];
+	int filenum;
+	
+	VM_SAFEPARMCOUNT(1,VM_fgets);
+
+	filenum = PRVM_G_FLOAT(OFS_PARM0);
+	if (filenum < 0 || filenum >= MAX_VMFILES)
+	{
+		Con_Printf("VM_fgets: invalid file handle %i used in %s\n", filenum, PRVM_NAME);
+		return;
+	}
+	if (VM_FILES[filenum] == NULL)
+	{
+		Con_Printf("VM_fgets: no such file handle %i (or file has been closed) in %s\n", filenum, PRVM_NAME);
+		return;
+	}
+	end = 0;
+	for (;;)
+	{
+		c = FS_Getc(VM_FILES[filenum]);
+		if (c == '\r' || c == '\n' || c < 0)
+			break;
+		if (end < STRINGTEMP_LENGTH - 1)
+			string[end++] = c;
+	}
+	string[end] = 0;
+	// remove \n following \r
+	if (c == '\r')
+		c = FS_Getc(VM_FILES[filenum]);
+	if (developer.integer)
+		Con_Printf("fgets: %s: %s\n", PRVM_NAME, string);
+	if (c >= 0)
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetString(string);
+	else
+		PRVM_G_INT(OFS_RETURN) = 0;
+}
+
+/*
+=========
+VM_fputs
+
+fputs(float fhandle, string s)
+=========
+*/
+//void(float fhandle, string s) fputs = #113; // writes a line of text to the end of the file
+void VM_fputs(void)
+{
+	int stringlength;
+	char string[STRINGTEMP_LENGTH];
+	int filenum;
+	
+	VM_SAFEPARMCOUNT(2,VM_fputs);
+
+	filenum = PRVM_G_FLOAT(OFS_PARM0);
+	if (filenum < 0 || filenum >= MAX_VMFILES)
+	{
+		Con_Printf("VM_fputs: invalid file handle %i used in %s\n", filenum, PRVM_NAME);
+		return;
+	}
+	if (VM_FILES[filenum] == NULL)
+	{
+		Con_Printf("VM_fputs: no such file handle %i (or file has been closed) in %s\n", filenum, PRVM_NAME);
+		return;
+	}
+	VM_VarString(1, string, sizeof(string));
+	if ((stringlength = strlen(string)))
+		FS_Write(VM_FILES[filenum], string, stringlength);
+	if (developer.integer)
+		Con_Printf("fputs: %s: %s\n", PRVM_NAME, string);
+}
+
+/*
+=========
+VM_strlen
+
+float	strlen(string s)
+=========
+*/
+//float(string s) strlen = #114; // returns how many characters are in a string
+void VM_strlen(void)
+{
+	char *s;
+
+	VM_SAFEPARMCOUNT(1,VM_strlen);
+
+	s = PRVM_G_STRING(OFS_PARM0);
+	if (s)
+		PRVM_G_FLOAT(OFS_RETURN) = strlen(s);
+	else
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
+}
+
+/*
+=========
+VM_strcat
+
+string strcat(string s1, string s2)
+=========
+*/
+//string(string s1, string s2) strcat = #115; 
+// concatenates two strings (for example "abc", "def" would return "abcdef") 
+// and returns as a tempstring
+void VM_strcat(void)
+{
+	char *s;
+
+	VM_SAFEPARMCOUNT(2,VM_strcat);
+
+	s = VM_GetTempString();
+	VM_VarString(0, s, STRINGTEMP_LENGTH);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetString(s);
+}
+
+/*
+=========
+VM_substring
+
+string	substring(string s, float start, float length)
+=========
+*/
+// string(string s, float start, float length) substring = #116;
+// returns a section of a string as a tempstring
+void VM_substring(void)
+{
+	int i, start, length;
+	char *s, *string;
+	
+	VM_SAFEPARMCOUNT(3,VM_substring);
+
+	string = VM_GetTempString();
+	s = PRVM_G_STRING(OFS_PARM0);
+	start = PRVM_G_FLOAT(OFS_PARM1);
+	length = PRVM_G_FLOAT(OFS_PARM2);
+	if (!s)
+		s = "";
+	for (i = 0;i < start && *s;i++, s++);
+	for (i = 0;i < STRINGTEMP_LENGTH - 1 && *s && i < length;i++, s++)
+		string[i] = *s;
+	string[i] = 0;
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetString(string);
+}
+
+/*
+=========
+VM_stov
+
+vector	stov(string s)
+=========
+*/
+//vector(string s) stov = #117; // returns vector value from a string
+void VM_stov(void)
+{
+	char string[STRINGTEMP_LENGTH];
+
+	VM_SAFEPARMCOUNT(1,VM_stov);
+
+	VM_VarString(0, string, sizeof(string));
+	Math_atov(string, PRVM_G_VECTOR(OFS_RETURN));
+}
+
+/*
+=========
+VM_strzone
+
+string	strzone(string s)
+=========
+*/
+//string(string s) strzone = #118; // makes a copy of a string into the string zone and returns it, this is often used to keep around a tempstring for longer periods of time (tempstrings are replaced often)
+void VM_strzone(void)
+{
+	char *in, *out;
+
+	VM_SAFEPARMCOUNT(1,VM_strzone);
+
+	in = PRVM_G_STRING(OFS_PARM0);
+	out = Mem_Alloc(VM_STRINGS_MEMPOOL, strlen(in) + 1);
+	strcpy(out, in);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetString(out);
+}
+
+/*
+=========
+VM_strunzone
+
+strzone(string s)
+=========
+*/
+//void(string s) strunzone = #119; // removes a copy of a string from the string zone (you can not use that string again or it may crash!!!)
+void VM_strunzone(void)
+{
+	VM_SAFEPARMCOUNT(1,VM_strunzone);
+
+	Mem_Free(PRVM_G_STRING(OFS_PARM0));
+}
+
+/*
+=========
+VM_command (used by client and menu)
+
+clientcommand(float client, string s) (for client and menu)
+=========
+*/
+//void(entity e, string s) clientcommand = #440; // executes a command string as if it came from the specified client
+//this function originally written by KrimZon, made shorter by LordHavoc
+void VM_clcommand (void)
+{
+	client_t *temp_client;
+	int i;
+
+	VM_SAFEPARMCOUNT(2,VM_clcommand);
+
+	//find client for this entity
+	i = PRVM_G_FLOAT(OFS_PARM0);
+	if (!sv.active  || i < 0 || i >= svs.maxclients || !svs.clients[i].active)
+	{
+		Con_Printf("VM_clientcommand: %s: invalid client/server is not active !", PRVM_NAME);
+		return;
+	}
+
+	temp_client = host_client;
+	host_client = svs.clients + i;
+	Cmd_ExecuteString (PRVM_G_STRING(OFS_PARM1), src_client);
+	host_client = temp_client;
+}
+
+
+/*
+=========
+VM_tokenize
+
+float tokenize(string s)
+=========
+*/
+//float(string s) tokenize = #441;
+// takes apart a string into individal words (access them with argv), returns how many
+// this function originally written by KrimZon, made shorter by LordHavoc
+static char **tokens = NULL;
+static int    max_tokens, num_tokens = 0;
+void VM_tokenize (void)
+{
+	const char *p;
+	char *str;
+
+	VM_SAFEPARMCOUNT(1,VM_tokenize);
+
+	str = PRVM_G_STRING(OFS_PARM0);
+
+	if (tokens != NULL)
+	{
+		int i;
+		for (i=0;i<num_tokens;i++)
+			Z_Free(tokens[i]);
+		Z_Free(tokens);
+		num_tokens = 0;
+	}
+
+	tokens = Z_Malloc(strlen(str) * sizeof(char *));
+	max_tokens = strlen(str);
+
+	for (p = str;COM_ParseToken(&p, false) && num_tokens < max_tokens;num_tokens++)
+	{
+		tokens[num_tokens] = Z_Malloc(strlen(com_token) + 1);
+		strcpy(tokens[num_tokens], com_token);
+	}
+
+	PRVM_G_FLOAT(OFS_RETURN) = num_tokens;
+}
+
+/*
+=========
+VM_argv
+
+string argv(float n)
+=========
+*/
+//string(float n) argv = #442; 
+// returns a word from the tokenized string (returns nothing for an invalid index)
+// this function originally written by KrimZon, made shorter by LordHavoc
+void VM_argv (void)
+{
+	int token_num;
+	
+	VM_SAFEPARMCOUNT(1,VM_argv);
+
+	token_num = PRVM_G_FLOAT(OFS_PARM0);
+	if (token_num >= 0 && token_num < num_tokens)
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetString(tokens[token_num]);
+	else
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetString("");
+}
+
+/*
+//void(entity e, entity tagentity, string tagname) setattachment = #443; // attachs e to a tag on tagentity (note: use "" to attach to entity origin/angles instead of a tag)
+void PF_setattachment (void)
+{
+	edict_t *e = G_EDICT(OFS_PARM0);
+	edict_t *tagentity = G_EDICT(OFS_PARM1);
+	char *tagname = G_STRING(OFS_PARM2);
+	eval_t *v;
+	int i, modelindex;
+	model_t *model;
+
+	if (tagentity == NULL)
+		tagentity = sv.edicts;
+
+	v = GETEDICTFIELDVALUE(e, eval_tag_entity);
+	if (v)
+		v->edict = EDICT_TO_PROG(tagentity);
+
+	v = GETEDICTFIELDVALUE(e, eval_tag_index);
+	if (v)
+		v->_float = 0;
+	if (tagentity != NULL && tagentity != sv.edicts && tagname && tagname[0])
+	{
+		modelindex = (int)tagentity->v->modelindex;
+		if (modelindex >= 0 && modelindex < MAX_MODELS)
+		{
+			model = sv.models[modelindex];
+			if (model->data_overridetagnamesforskin && (unsigned int)tagentity->v->skin < (unsigned int)model->numskins && model->data_overridetagnamesforskin[(unsigned int)tagentity->v->skin].num_overridetagnames)
+				for (i = 0;i < model->data_overridetagnamesforskin[(unsigned int)tagentity->v->skin].num_overridetagnames;i++)
+					if (!strcmp(tagname, model->data_overridetagnamesforskin[(unsigned int)tagentity->v->skin].data_overridetagnames[i].name))
+						v->_float = i + 1;
+			if (v->_float == 0 && model->alias.aliasnum_tags)
+				for (i = 0;i < model->alias.aliasnum_tags;i++)
+					if (!strcmp(tagname, model->alias.aliasdata_tags[i].name))
+						v->_float = i + 1;
+			if (v->_float == 0)
+				Con_DPrintf("setattachment(edict %i, edict %i, string \"%s\"): tried to find tag named \"%s\" on entity %i (model \"%s\") but could not find it\n", NUM_FOR_EDICT(e), NUM_FOR_EDICT(tagentity), tagname, tagname, NUM_FOR_EDICT(tagentity), model->name);
+		}
+		else
+			Con_DPrintf("setattachment(edict %i, edict %i, string \"%s\"): tried to find tag named \"%s\" on entity %i but it has no model\n", NUM_FOR_EDICT(e), NUM_FOR_EDICT(tagentity), tagname, tagname, NUM_FOR_EDICT(tagentity));
+	}
+}*/
+
+/*
+=========
+VM_serverstate
+
+float	isserver()
+=========
+*/
+void VM_isserver(void)
+{
+	VM_SAFEPARMCOUNT(0,VM_serverstate);
+
+	PRVM_G_FLOAT(OFS_RETURN) = sv.active;
+}
+
+/*
+=========
+VM_clientcount
+
+float	clientcount()
+=========
+*/
+void VM_clientcount(void)
+{
+	VM_SAFEPARMCOUNT(0,VM_clientcount);
+
+	PRVM_G_FLOAT(OFS_RETURN) = svs.maxclients;
+}
+
+/*
+=========
+VM_clientstate
+
+float	clientstate()
+=========
+*/
+void VM_clientstate(void)
+{
+	VM_SAFEPARMCOUNT(0,VM_clientstate);
+
+	PRVM_G_FLOAT(OFS_RETURN) = cls.state;
+}
 
 void VM_Cmd_Init(void)
 {
