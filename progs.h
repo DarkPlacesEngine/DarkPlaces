@@ -48,10 +48,11 @@ typedef struct edict_s
 {
 	// true if this edict is unused
 	qboolean free;
-	// physics area this edict is linked into
-	link_t area;
 	// physics grid areas this edict is linked into
 	link_t areagrid[ENTITYGRIDAREAS];
+	// since the areagrid can have multiple references to one entity,
+	// we should avoid extensive checking on entities already encountered
+	int areagridmarknumber;
 
 	// old entity protocol, not used
 #ifdef QUAKEENTITIES
