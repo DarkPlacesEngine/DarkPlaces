@@ -817,7 +817,6 @@ void Host_Init (void)
 		developer.value = 1;
 	}
 
-	Memory_Init ();
 	Cmd_Init ();
 	Memory_Init_Commands();
 	R_Modules_Init();

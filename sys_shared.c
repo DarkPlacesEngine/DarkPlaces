@@ -106,6 +106,8 @@ char engineversion[128];
 
 void Sys_Shared_EarlyInit(void)
 {
+	Memory_Init ();
+
 #if defined(__linux__)
 	sprintf (engineversion, "%s Linux %s", gamename, buildstring);
 #elif defined(WIN32)
