@@ -4,6 +4,7 @@
 -n darkplaces: fix server list only querying the master to reply (Rick)
 -n darkplaces: fix sounds not following entities (yummyluv, SeienAbunae)
 -n dpmod: make grapple off-hand (joe hill)
+0 darkplaces: fix startup on multiplayer games so they don't start a game when executing startdemos unless -listen or -dedicated was used (yummyluv)
 0 darkplaces: ability to disable fopen builtin access to read /, read data/, write data/, or disable fopen builtin entirely
 0 darkplaces: add DP_GFX_QUAKE3MODELTAGS, DP_GFX_SKINFILES, and any other new extensions to the wiki
 0 darkplaces: add DP_LITSUPPORT extension
