@@ -137,7 +137,7 @@ byte		menuplyr_pixels[4096];
 int		pic_texels;
 int		pic_count;
 
-int GL_LoadPicTexture (qpic_t *pic);
+extern int GL_LoadPicTexture (qpic_t *pic);
 
 qpic_t *Draw_PicFromWad (char *name)
 {
