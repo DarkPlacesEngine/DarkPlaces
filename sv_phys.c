@@ -1450,7 +1450,7 @@ void SV_Physics (void)
 		case MOVETYPE_FLY:
 		case MOVETYPE_FLYMISSILE:
 			// LordHavoc: manually inlined SV_RunThink here
-			if (ent->v->nextthink && ent->v->nextthink <= nexttime)
+			if (ent->v->nextthink > 0 && ent->v->nextthink <= nexttime)
 			{
 				/*
 				SV_RunThink
