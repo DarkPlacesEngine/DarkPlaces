@@ -2337,11 +2337,13 @@ int M_ChooseQuitMessage(int request)
 		if (request-- == 0) return M_QuitMessage("Please stop playing","this stupid game",NULL,NULL,NULL,NULL,NULL,NULL);
 		break;
 	case GAME_BATTLEMECH:
-		if (request-- == 0) return M_QuitMessage("WHY","?",NULL,NULL,NULL,NULL,NULL,NULL);
-		if (request-- == 0) return M_QuitMessage("Leave now and your mech","is scrap!",NULL,NULL,NULL,NULL,NULL,NULL);
-		if (request-- == 0) return M_QuitMessage("Accept Defeat?",NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-		if (request-- == 0) return M_QuitMessage("Wait!","There are more mechs to","destroy!",NULL,NULL,NULL,NULL,NULL);
-		if (request-- == 0) return M_QuitMessage("Where's your bloodlust?",NULL,NULL,NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("? WHY ?","Press Y to quit, N to keep fraggin'",NULL,NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Leave now and your mech is scrap!","Press Y to quit, N to keep fraggin'",NULL,NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Accept Defeat?","Press Y to quit, N to keep fraggin'",NULL,NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Wait! There are more mechs to destroy!","Press Y to quit, N to keep fraggin'",NULL,NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Where's your bloodlust?","Press Y to quit, N to keep fraggin'",NULL,NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Your mech here is way more impressive","than your car out there...","Press Y to quit, N to keep fraggin'",NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Quitting won't reduce your debt","Press Y to quit, N to keep fraggin'",NULL,NULL,NULL,NULL,NULL,NULL);
 		break;
 	default:
 		if (request-- == 0) return M_QuitMessage("Tired of fragging already?",NULL,NULL,NULL,NULL,NULL,NULL,NULL);
@@ -2981,6 +2983,15 @@ void M_GameOptions_Draw (void)
 			else
 				M_Print (160, 64, "Blood Bath");
 		}
+		else if (gamemode == GAME_BATTLEMECH)
+		{
+			if (!deathmatch.integer)
+				Cvar_SetValue("deathmatch", 1);
+			if (deathmatch.integer == 2)
+				M_Print (160, 64, "Rambo Match");
+			else
+				M_Print (160, 64, "Deathmatch");
+		}
 		else
 		{
 			if (!coop.integer && !deathmatch.integer)
@@ -3114,6 +3125,13 @@ void M_NetStart_Change (int dir)
 			if (deathmatch.integer == 2) // changing from CTF to BloodBath
 				Cvar_SetValueQuick (&deathmatch, 0);
 			else // changing from BloodBath to CTF
+				Cvar_SetValueQuick (&deathmatch, 2);
+		}
+		else if (gamemode == GAME_BATTLEMECH)
+		{
+			if (deathmatch.integer == 2) // changing from Rambo to Deathmatch
+				Cvar_SetValueQuick (&deathmatch, 0);
+			else // changing from Deathmatch to Rambo
 				Cvar_SetValueQuick (&deathmatch, 2);
 		}
 		else
