@@ -70,9 +70,7 @@ float CL_TraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t n
 		for (n = 0;n < cl_num_brushmodel_entities;n++)
 		{
 			ent = cl_brushmodel_entities[n];
-			if (ent->mins[0] > tracemaxs[0] || ent->maxs[0] < tracemins[0]
-			 || ent->mins[1] > tracemaxs[1] || ent->maxs[1] < tracemins[1]
-			 || ent->mins[2] > tracemaxs[2] || ent->maxs[2] < tracemins[2])
+			if (!BoxesOverlap(tracemins, tracemaxs, ent->mins, ent->maxs))
 				continue;
 
 			Matrix4x4_Transform(&ent->inversematrix, start, starttransformed);
@@ -104,7 +102,7 @@ float CL_TraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t n
 	return maxfrac;
 }
 
-float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t normal, int *hitent)
+float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t normal, int *hitent, entity_render_t *ignoreent)
 {
 	float maxfrac, maxrealfrac;
 	int n;
@@ -149,6 +147,8 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 			continue;
 		// if transparent and not selectable, skip entity
 		if (!(cl_entities[n].state_current.effects & EF_SELECTABLE) && (ent->alpha < 1 || (ent->effects & (EF_ADDITIVE | EF_NODEPTHTEST))))
+			continue;
+		if (ent == ignoreent)
 			continue;
 		Matrix4x4_Transform(&ent->inversematrix, start, starttransformed);
 		Matrix4x4_Transform(&ent->inversematrix, end, endtransformed);
