@@ -89,10 +89,6 @@ static void R_DrawSpriteImage (int additive, mspriteframe_t *frame, int texture,
 	m.tex[0] = texture;
 	R_Mesh_State(&m);
 
-	varray_color[0] = varray_color[4] = varray_color[8] = varray_color[12] = red * r_colorscale;
-	varray_color[1] = varray_color[5] = varray_color[9] = varray_color[13] = green * r_colorscale;
-	varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = blue * r_colorscale;
-	varray_color[3] = varray_color[7] = varray_color[11] = varray_color[15] = alpha;
 	varray_texcoord[0][0] = 0;
 	varray_texcoord[0][1] = 1;
 	varray_texcoord[0][2] = 0;
@@ -114,6 +110,7 @@ static void R_DrawSpriteImage (int additive, mspriteframe_t *frame, int texture,
 	varray_vertex[12] = origin[0] + frame->down * up[0] - frame->right * left[0];
 	varray_vertex[13] = origin[1] + frame->down * up[1] - frame->right * left[1];
 	varray_vertex[14] = origin[2] + frame->down * up[2] - frame->right * left[2];
+	GL_Color(red * r_colorscale, green * r_colorscale, blue * r_colorscale, alpha);
 	R_Mesh_Draw(4, 2, polygonelements);
 }
 

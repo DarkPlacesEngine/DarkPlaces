@@ -626,10 +626,6 @@ static void R_BlendView(void)
 	R_Mesh_Matrix(&r_identitymatrix);
 	R_Mesh_State(&m);
 
-	varray_color[0] = varray_color[4] = varray_color[8] = r_refdef.viewblend[0];
-	varray_color[1] = varray_color[5] = varray_color[9] = r_refdef.viewblend[1];
-	varray_color[2] = varray_color[6] = varray_color[10] = r_refdef.viewblend[2];
-	varray_color[3] = varray_color[7] = varray_color[11] = r_refdef.viewblend[3];
 	r = 64000;
 	varray_vertex[0] = r_origin[0] + vpn[0] * 1.5 - vright[0] * r - vup[0] * r;
 	varray_vertex[1] = r_origin[1] + vpn[1] * 1.5 - vright[1] * r - vup[1] * r;
@@ -641,6 +637,7 @@ static void R_BlendView(void)
 	varray_vertex[8] = varray_vertex[0] + vright[0] * r;
 	varray_vertex[9] = varray_vertex[1] + vright[1] * r;
 	varray_vertex[10] = varray_vertex[2] + vright[2] * r;
+	GL_Color(r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
 	R_Mesh_Draw(3, 1, polygonelements);
 }
 
@@ -747,10 +744,7 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 	varray_vertex[20] = maxs[0];varray_vertex[21] = mins[1];varray_vertex[22] = maxs[2];
 	varray_vertex[24] = mins[0];varray_vertex[25] = maxs[1];varray_vertex[26] = maxs[2];
 	varray_vertex[28] = maxs[0];varray_vertex[29] = maxs[1];varray_vertex[30] = maxs[2];
-	varray_color[ 0] = varray_color[ 4] = varray_color[ 8] = varray_color[12] = varray_color[16] = varray_color[20] = varray_color[24] = varray_color[28] = cr * r_colorscale;
-	varray_color[ 1] = varray_color[ 5] = varray_color[ 9] = varray_color[13] = varray_color[17] = varray_color[21] = varray_color[25] = varray_color[29] = cg * r_colorscale;
-	varray_color[ 2] = varray_color[ 6] = varray_color[10] = varray_color[14] = varray_color[18] = varray_color[22] = varray_color[26] = varray_color[30] = cb * r_colorscale;
-	varray_color[ 3] = varray_color[ 7] = varray_color[11] = varray_color[15] = varray_color[19] = varray_color[23] = varray_color[27] = varray_color[31] = ca;
+	R_FillColors(varray_color, 8, cr * r_colorscale, cg * r_colorscale, cb * r_colorscale, ca);
 	if (fogenabled)
 	{
 		for (i = 0, v = varray_vertex, c = varray_color;i < 8;i++, v += 4, c += 4)
@@ -764,6 +758,7 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 			c[2] = c[2] * f1 + fogcolor[2] * f2;
 		}
 	}
+	GL_UseColorArray();
 	R_Mesh_Draw(8, 12);
 }
 */
@@ -807,12 +802,12 @@ void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 	varray_vertex[12] =   0;varray_vertex[13] =  16;varray_vertex[14] =   0;
 	varray_vertex[16] =   0;varray_vertex[17] =   0;varray_vertex[18] = -16;
 	varray_vertex[20] =   0;varray_vertex[21] =   0;varray_vertex[22] =  16;
-	varray_color[ 0] = 0.00f;varray_color[ 1] = 0.00f;varray_color[ 2] = 0.50f;varray_color[ 3] = ent->alpha;
-	varray_color[ 4] = 0.00f;varray_color[ 5] = 0.00f;varray_color[ 6] = 0.50f;varray_color[ 7] = ent->alpha;
-	varray_color[ 8] = 0.00f;varray_color[ 9] = 0.50f;varray_color[10] = 0.00f;varray_color[11] = ent->alpha;
-	varray_color[12] = 0.00f;varray_color[13] = 0.50f;varray_color[14] = 0.00f;varray_color[15] = ent->alpha;
-	varray_color[16] = 0.50f;varray_color[17] = 0.00f;varray_color[18] = 0.00f;varray_color[19] = ent->alpha;
-	varray_color[20] = 0.50f;varray_color[21] = 0.00f;varray_color[22] = 0.00f;varray_color[23] = ent->alpha;
+	varray_color[ 0] = 0.00f * r_colorscale;varray_color[ 1] = 0.00f * r_colorscale;varray_color[ 2] = 0.50f * r_colorscale;varray_color[ 3] = ent->alpha;
+	varray_color[ 4] = 0.00f * r_colorscale;varray_color[ 5] = 0.00f * r_colorscale;varray_color[ 6] = 0.50f * r_colorscale;varray_color[ 7] = ent->alpha;
+	varray_color[ 8] = 0.00f * r_colorscale;varray_color[ 9] = 0.50f * r_colorscale;varray_color[10] = 0.00f * r_colorscale;varray_color[11] = ent->alpha;
+	varray_color[12] = 0.00f * r_colorscale;varray_color[13] = 0.50f * r_colorscale;varray_color[14] = 0.00f * r_colorscale;varray_color[15] = ent->alpha;
+	varray_color[16] = 0.50f * r_colorscale;varray_color[17] = 0.00f * r_colorscale;varray_color[18] = 0.00f * r_colorscale;varray_color[19] = ent->alpha;
+	varray_color[20] = 0.50f * r_colorscale;varray_color[21] = 0.00f * r_colorscale;varray_color[22] = 0.00f * r_colorscale;varray_color[23] = ent->alpha;
 	if (fogenabled)
 	{
 		VectorSubtract(ent->origin, r_origin, diff);
@@ -834,6 +829,7 @@ void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 			c[2] *= r_colorscale;
 		}
 	}
+	GL_UseColorArray();
 	R_Mesh_Draw(6, 8, element);
 }
 

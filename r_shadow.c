@@ -36,7 +36,7 @@ void R_Shadow_Init(void)
 	R_RegisterModule("R_Shadow", r_shadow_start, r_shadow_shutdown, r_shadow_newmap);
 }
 
-void R_ShadowVolume(int numverts, int numtris, int *elements, int *neighbors, vec3_t relativelightorigin, float projectdistance)
+void R_ShadowVolume(int numverts, int numtris, int *elements, int *neighbors, vec3_t relativelightorigin, float projectdistance, int visiblevolume)
 {
 	int i, *e, *n, *out, tris;
 	float *v0, *v1, *v2, dir0[3], dir1[3], temp[3], f;
@@ -164,5 +164,24 @@ void R_ShadowVolume(int numverts, int numtris, int *elements, int *neighbors, ve
 		}
 	}
 	// draw the volume
-	R_Mesh_Draw(numverts * 2, tris, shadowelements);
+	if (visiblevolume)
+	{
+		qglDisable(GL_CULL_FACE);
+		R_Mesh_Draw(numverts * 2, tris, shadowelements);
+		qglEnable(GL_CULL_FACE);
+	}
+	else
+	{
+		qglCullFace(GL_FRONT);
+		//qglStencilFunc(
+	}
+}
+
+void R_Shadow_BeginScene(void)
+{
+	rmeshstate_t m;
+	memset(&m, 0, sizeof(m));
+	m.blendfunc1 = GL_ONE;
+	m.blendfunc2 = GL_ZERO;
+	R_Mesh_State(&m);
 }

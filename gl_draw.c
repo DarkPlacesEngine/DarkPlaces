@@ -459,10 +459,6 @@ void R_DrawQueue(void)
 				if (h == 0)
 					h = pic->height;
 			}
-			varray_color[0] = varray_color[4] = varray_color[ 8] = varray_color[12] = cr;
-			varray_color[1] = varray_color[5] = varray_color[ 9] = varray_color[13] = cg;
-			varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = cb;
-			varray_color[3] = varray_color[7] = varray_color[11] = varray_color[15] = ca;
 			varray_texcoord[0][0] = 0;varray_texcoord[0][1] = 0;
 			varray_texcoord[0][2] = 1;varray_texcoord[0][3] = 0;
 			varray_texcoord[0][4] = 1;varray_texcoord[0][5] = 1;
@@ -471,6 +467,7 @@ void R_DrawQueue(void)
 			varray_vertex[ 4] = x+w;varray_vertex[ 5] = y  ;varray_vertex[ 6] = 10;
 			varray_vertex[ 8] = x+w;varray_vertex[ 9] = y+h;varray_vertex[10] = 10;
 			varray_vertex[12] = x  ;varray_vertex[13] = y+h;varray_vertex[14] = 10;
+			GL_Color(cr, cg, cb, ca);
 			R_Mesh_Draw(4, 2, quadelements);
 			break;
 		case DRAWQUEUE_STRING:
@@ -482,9 +479,9 @@ void R_DrawQueue(void)
 				R_Mesh_TextureState(&m);
 			}
 			batchcount = 0;
-			ac = varray_color;
 			at = varray_texcoord[0];
 			av = varray_vertex;
+			GL_Color(cr, cg, cb, ca);
 			while ((num = *str++) && x < vid.conwidth)
 			{
 				if (num != ' ')
@@ -493,10 +490,6 @@ void R_DrawQueue(void)
 					t = (num >> 4)*0.0625f + (0.5f / 256.0f);
 					u = 0.0625f - (1.0f / 256.0f);
 					v = 0.0625f - (1.0f / 256.0f);
-					ac[0] = ac[4] = ac[ 8] = ac[12] = cr;
-					ac[1] = ac[5] = ac[ 9] = ac[13] = cg;
-					ac[2] = ac[6] = ac[10] = ac[14] = cb;
-					ac[3] = ac[7] = ac[11] = ac[15] = ca;
 					at[0] = s  ;at[1] = t  ;
 					at[2] = s+u;at[3] = t  ;
 					at[4] = s+u;at[5] = t+v;
@@ -513,7 +506,6 @@ void R_DrawQueue(void)
 					{
 						R_Mesh_Draw(batchcount * 4, batchcount * 2, quadelements);
 						batchcount = 0;
-						ac = varray_color;
 						at = varray_texcoord[0];
 						av = varray_vertex;
 					}
@@ -531,6 +523,7 @@ void R_DrawQueue(void)
 			memcpy(varray_vertex, mesh->vertices, sizeof(float[4]) * mesh->numvertices);
 			memcpy(varray_texcoord[0], mesh->texcoords, sizeof(float[2]) * mesh->numvertices);
 			memcpy(varray_color, mesh->colors, sizeof(float[4]) * mesh->numvertices);
+			GL_UseColorArray();
 			R_Mesh_Draw(mesh->numvertices, mesh->numtriangles, mesh->indices);
 			currentpic = "\0";
 			break;
@@ -546,8 +539,6 @@ void R_DrawQueue(void)
 		varray_vertex[0] = -5000;varray_vertex[1] = -5000;varray_vertex[2] = 10;
 		varray_vertex[4] = 10000;varray_vertex[5] = -5000;varray_vertex[6] = 10;
 		varray_vertex[8] = -5000;varray_vertex[9] = 10000;varray_vertex[10] = 10;
-		// alpha is 1 for all these
-		varray_color[3] = varray_color[7] = varray_color[11] = 1;
 		// all the blends ignore depth
 		memset(&m, 0, sizeof(m));
 		m.depthdisable = true;
@@ -562,9 +553,7 @@ void R_DrawQueue(void)
 				cr = t - 1.0f;
 				if (cr > 1.0f)
 					cr = 1.0f;
-				varray_color[0] = varray_color[4] = varray_color[ 8] = cr;
-				varray_color[1] = varray_color[5] = varray_color[ 9] = cr;
-				varray_color[2] = varray_color[6] = varray_color[10] = cr;
+				GL_Color(cr, cr, cr, 1);
 				R_Mesh_Draw(3, 1, polygonelements);
 				t *= 0.5;
 			}
@@ -574,9 +563,7 @@ void R_DrawQueue(void)
 			m.blendfunc1 = GL_ZERO;
 			m.blendfunc2 = GL_SRC_COLOR;
 			R_Mesh_State(&m);
-			varray_color[0] = varray_color[4] = varray_color[ 8] = varray_color[12] = t;
-			varray_color[1] = varray_color[5] = varray_color[ 9] = varray_color[13] = t;
-			varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = t;
+			GL_Color(t, t, t, 1);
 			R_Mesh_Draw(3, 1, polygonelements);
 		}
 		if (v_brightness.value >= 0.01f)
@@ -584,9 +571,7 @@ void R_DrawQueue(void)
 			m.blendfunc1 = GL_ONE;
 			m.blendfunc2 = GL_ONE;
 			R_Mesh_State(&m);
-			varray_color[0] = varray_color[4] = varray_color[ 8] = varray_color[12] = v_brightness.value;
-			varray_color[1] = varray_color[5] = varray_color[ 9] = varray_color[13] = v_brightness.value;
-			varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = v_brightness.value;
+			GL_Color(v_brightness.value, v_brightness.value, v_brightness.value, 1);
 			R_Mesh_Draw(3, 1, polygonelements);
 		}
 	}

@@ -107,7 +107,7 @@ void (GLAPIENTRY *qglColorPointer)(GLint size, GLenum type, GLsizei stride, cons
 void (GLAPIENTRY *qglTexCoordPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
 void (GLAPIENTRY *qglArrayElement)(GLint i);
 
-void (GLAPIENTRY *qglColor4ub)(GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha);
+void (GLAPIENTRY *qglColor4f)(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
 void (GLAPIENTRY *qglTexCoord2f)(GLfloat s, GLfloat t);
 void (GLAPIENTRY *qglVertex2f)(GLfloat x, GLfloat y);
 void (GLAPIENTRY *qglVertex3f)(GLfloat x, GLfloat y, GLfloat z);
@@ -229,7 +229,7 @@ static gl_extensionfunctionlist_t opengl110funcs[] =
 	{"glColorPointer", (void **) &qglColorPointer},
 	{"glTexCoordPointer", (void **) &qglTexCoordPointer},
 	{"glArrayElement", (void **) &qglArrayElement},
-	{"glColor4ub", (void **) &qglColor4ub},
+	{"glColor4f", (void **) &qglColor4f},
 	{"glTexCoord2f", (void **) &qglTexCoord2f},
 	{"glVertex2f", (void **) &qglVertex2f},
 	{"glVertex3f", (void **) &qglVertex3f},

@@ -241,6 +241,7 @@ void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 			c[3] = 1;
 		}
 	}
+	GL_UseColorArray();
 	R_Mesh_Draw(numverts, numtriangles, explosiontris[0]);
 }
 
