@@ -647,7 +647,7 @@ void Mod_LoadLightList(void)
 			if (a != 14)
 			{
 				Mem_Free(lightsstring);
-				Host_Error("invalid lights file, found %d parameters on line %i, should be 13 parameters (origin[0] origin[1] origin[2] falloff light[0] light[1] light[2] subtract spotdir[0] spotdir[1] spotdir[2] spotcone style)\n", a, n + 1);
+				Host_Error("invalid lights file, found %d parameters on line %i, should be 14 parameters (origin[0] origin[1] origin[2] falloff light[0] light[1] light[2] subtract spotdir[0] spotdir[1] spotdir[2] spotcone distancebias style)\n", a, n + 1);
 			}
 			s++;
 			n++;
