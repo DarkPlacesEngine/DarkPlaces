@@ -1173,6 +1173,9 @@ void CL_ParseServerMessage (void)
 			if (i >= cl.maxclients)
 				Host_Error ("CL_ParseServerMessage: svc_updatecolors >= cl.maxclients");
 			cl.scores[i].colors = MSG_ReadByte ();
+			// update our color cvar if our color changed
+			if (i == cl.playerentity - 1)
+				Cvar_SetValue ("_cl_color", cl.scores[i].colors);
 			break;
 
 		case svc_particle:
