@@ -1839,7 +1839,7 @@ void R_Model_Brush_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin
 				if (!CHECKPVSBIT(outsurfacepvs, surfaceindex))
 				{
 					surface = model->brushq1.surfaces + surfaceindex;
-					if (BoxesOverlap(lightmins, lightmaxs, surface->poly_mins, surface->poly_maxs))
+					if (BoxesOverlap(lightmins, lightmaxs, surface->poly_mins, surface->poly_maxs) && (surface->flags & SURF_LIGHTMAP) && !surface->texinfo->texture->skin.fog)
 					{
 						for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->mesh.num_triangles;triangleindex++, t++, e += 3)
 						{
@@ -2518,7 +2518,7 @@ void R_Q3BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 				surfaceindex = surface - model->brushq3.data_faces;
 				if (!CHECKPVSBIT(outsurfacepvs, surfaceindex))
 				{
-					if (BoxesOverlap(lightmins, lightmaxs, surface->mins, surface->maxs))
+					if (BoxesOverlap(lightmins, lightmaxs, surface->mins, surface->maxs) && !(surface->texture->surfaceparms & Q3SURFACEPARM_TRANS) && !(surface->texture->surfaceflags & (Q3SURFACEFLAG_SKY | Q3SURFACEFLAG_NODRAW)))
 					{
 						for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->num_triangles;triangleindex++, t++, e += 3)
 						{
