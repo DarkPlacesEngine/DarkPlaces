@@ -37,6 +37,9 @@ d darkplaces: revert noclip movement to match nq for compatibility with mods tha
 d darkplaces: make light_lev dlights from qc require PFLAGS_FULLDYNAMIC flag
 d darkplaces: improve tenebrae compatibility by handling EF_FULLDYNAMIC flag in tenebrae mode, also make all sprites render additive
 d darkplaces: add r_showtris cvar (Riot)
+0 darkplaces: don't complain if lightning bolt models are missing in client (Electro)
+0 darkplaces: add per-entity PolygonOffset to renderer, to allow zfighting bmodel/world glitches to be fixed, this has to affect all rendering involving the entity, including light/shadow (Tomaz)
+0 darkplaces: figure out what's making monsters act like notarget is on while underwater (romi)
 0 darkplaces: figure out why dlights are flashing on/off in TEU, particularly test the flashlight (Electro)
 0 darkplaces: fix r_editlights_edit origin not working (romi)
 0 darkplaces: make players step down stairs rather than just flying off (Riot) 
@@ -54,14 +57,13 @@ d darkplaces: moved R_ShadowVolumeLighting to r_shadow.c
 d darkplaces: added RENDER_LIGHT flag to entity_render_t to make rtlighting optional per entity
 d darkplaces: cleaned up rtlight handling, merging most code between world rtlights and dlights
 d darkplaces: safety checked lightmap access in Mod_Q1BSP_RecursiveLightPoint as one map Sajt uses was crashing (Sajt)
--n darkplaces: upgrade network protocol to send precise angles, and make EF_LOWPRECISION downgrade both origin and angles (-Urre, -Wazat for Battlemech, FrikaC, mashakos, RenegadeC, Sajt)
--n darkplaces: fix cubemap upload scaling crashes (Urre)
+-n darkplaces: upgrade network protocol to send precise angles, and make EF_LOWPRECISION downgrade both origin and angles (Urre, -Wazat for Battlemech, FrikaC, mashakos, RenegadeC, Sajt)
+d darkplaces: fix cubemap upload scaling crashes (Urre)
 d darkplaces: make screenshots save to screenshots/fniggium%04i.tga in GAME_FNIGGIUM (Sajt)
 d darkplaces: make screenshots save to screenshots directory (Sajt)
 2 darkplaces: make corona occlusion testing use GL_ARB_occlusion_query instead of a CL_TraceLine (Riot)
 d darkplaces: default a few cvars accordingly for GAME_TENEBRAE mode
 d darkplaces: add skin and pflags support to light entity loader
-0 darkplaces: add EF_NOSHADOW to make entities that never cast shadows (Urre)
 2 darkplaces: fix fogging in realtime lighting mode, need to split the shaders into two stages, this will also fix decal bugs with fog (Electro, Mitchell)
 0 darkplaces: fix cl_nodelta 1, it's halting updates (Tomaz)
 0 darkplaces: player setup menu network speed is never applying to rate (Mitchell)
@@ -144,7 +146,7 @@ d darkplaces: fix win32 bug where shift key types a character (Black, Sajt)
 3 darkplaces: add fs_reload command to allow restarting the filesystem module, this would mean that it could check for new paks and such (Mercury)
 0 darkplaces: figure out what crashes when this sequence is done: r_speeds 1;map anything, crash (Stribbs)
 0 darkplaces: add vid_pixelaspect patch from Grisha Spivak's email
-0 darkplaces: upgrade punchangle protocol to 16bit angles for smoother motion (Urre)
+d darkplaces: upgrade punchangle protocol to 16bit angles for smoother motion (Urre)
 1 darkplaces: add md3 mesh name reporting to qc somehow when traceline does model tracing and hits the model
 d darkplaces: optimized ray-triangle collision code
 d darkplaces: don't crash if SOLID_BSP is used with modelindex 0 - TargetQuake does this...
@@ -158,17 +160,16 @@ d darkplaces: figure out and fix vis problems when noclipping out of world in q1
 d darkplaces: figure out and fix win32 networking problems
 2 darkplaces: make light checks use rtlights if in r_shadow_realtime_world 1 mode for consistency reasons on transparent models and such, as well as particles (romi)
 0 darkplaces: add back cl_particles_lighting cvar and add back the particle lighting (romi)
-5 darkplaces: lightshader files (probably loaded by the cubemap field already present in rtlights handling), these would indicate what attenuation textures to use for the light, what cubemap filter, whether to have a corona and so on (romi)
+5 darkplaces: lightshader files (probably loaded by the cubemap field already present in rtlights handling), these would indicate what attenuation textures to use for the light, what cubemap filter, which corona texture and size and so on, and all textures can be animated (romi, Urre)
 1 darkplaces: shadow volumes from q3bsp brush models are broken, maybe inverted or something (Vermeulen)
 2 darkplaces: decal clipping (romi, Sajt)
 7 darkplaces: shadow volume clipping (romi)
 0 dpmod: make run animation play back according to movement speed (along v_forward), instead of just playing a continuous loop based on time (Urre)
-1 darkplaces: q1bsp: parse submodels before leafs, so that the pvs can be allocated smaller (only enough for the world model's visleafs count) (Vic) 
+-n darkplaces: q1bsp: parse submodels before leafs, so that the pvs can be allocated smaller (only enough for the world model's visleafs count) (Vic) 
 0 darkplaces: figure out the 'inverted bumps' bug on some texture orientations (see crate tops at end of e1m1, tenebrae1 does not suffer this problem somehow) (U8Poo) 
 0 darkplaces: fix the bug causing models in an unlit map to be black when they should be fullbright (Sajt)
 0 darkplaces: r_shadow_showtris messes up r_shadow_visiblevolumes color (jitspoe)
-0 darkplaces: make notify lines show based on cl.time, not realtime, so they last the proper length when using cl_avidemo (Urre)
-0 darkplaces: darkplaces is leaving a dead window button on the taskbar when closed?  this is odd as the window closing code in darkplaces is designed to prevent this (Urre)
+d darkplaces: make notify lines show based on cl.time, not realtime, so they last the proper length when using cl_avidemo (Urre)
 2 darkplaces: make sound engine restart ambients after a restart (RenegadeC)
 0 darkplaces: make blood decals a bit lighter as they're nearly black (ashridah)
 0 darkplaces: add GL_EXT_stencil_two_side support to shadow rendering (fuh)
@@ -262,8 +263,8 @@ d darkplaces: make v_cshift affect view even if in a liquid, by adding another c
 0 darkplaces: mod_q3bsp_optimizedtraceline bug: shooting through brushes? (Vermeulen)
 -f darkplaces: model interpolation off crashes?  (SeienAbunae)
 0 darkplaces: pointcontents crash when building harvester in gvb2? (yummyluv)
--n darkplaces: q1bsp trace bug: 'wall hugging' stuttering, also stuttering movement when walking over steps or monsters and causes block on moving doors (Urre, romi, Static_Fiend)
-0 darkplaces: q1bsp trace bug: bullets don't hit walls at extremely steep angles, especially at very high framerates...
+d darkplaces: q1bsp trace bug: 'wall hugging' stuttering, also stuttering movement when walking over steps or monsters and causes block on moving doors (Urre, romi, Static_Fiend)
+d darkplaces: q1bsp trace bug: bullets don't hit walls at extremely steep angles, especially at very high framerates...
 d darkplaces: q1bsp trace bug: scrags frequently fly through ceilings - this needs to be fixed
 0 darkplaces: r_shadow should load .ent when importing light entities
 0 darkplaces: r_skyscroll1 and r_skyscroll2 cvars (SeienAbunae)
