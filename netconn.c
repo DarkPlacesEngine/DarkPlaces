@@ -1587,20 +1587,22 @@ void NetConn_QueryMasters(void)
 	int i;
 	int masternum;
 	lhnetaddress_t masteraddress;
+	lhnetaddress_t broadcastaddress;
 	char request[256];
 
 	if (hostcache_cachecount >= HOSTCACHE_TOTALSIZE)
 		return;
 
+	// 26000 is the default quake server port, servers on other ports will not
+	// be found
+	// note this is IPv4-only, I doubt there are IPv6-only LANs out there
+	LHNETADDRESS_FromString(&broadcastaddress, "255.255.255.255", 26000);
+
 	for (i = 0;i < cl_numsockets;i++)
 	{
 		if (cl_sockets[i])
 		{
-#if 0
-			// search LAN
-#if 1
-			UDP_Broadcast(UDP_controlSock, "\377\377\377\377getinfo", 11);
-#else
+			// search LAN for Quake servers
 			SZ_Clear(&net_message);
 			// save space for the header, filled in later
 			MSG_WriteLong(&net_message, 0);
@@ -1608,12 +1610,13 @@ void NetConn_QueryMasters(void)
 			MSG_WriteString(&net_message, "QUAKE");
 			MSG_WriteByte(&net_message, NET_PROTOCOL_VERSION);
 			*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
-			UDP_Broadcast(UDP_controlSock, net_message.data, net_message.cursize);
+			NetConn_Write(cl_sockets[i], net_message.data, net_message.cursize, &broadcastaddress);
 			SZ_Clear(&net_message);
-#endif
-#endif
 
-			// build the getservers
+			// search LAN for DarkPlaces servers
+			NetConn_WriteString(cl_sockets[i], "\377\377\377\377getinfo", &broadcastaddress);
+
+			// build the getservers message to send to the master servers
 			dpsnprintf(request, sizeof(request), "\377\377\377\377getservers %s %u empty full\x0A", gamename, NET_PROTOCOL_VERSION);
 
 			// search internet
