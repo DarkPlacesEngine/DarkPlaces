@@ -108,10 +108,6 @@ SOURCE=.\cgamevm.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\chase.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\cl_collision.c
 # End Source File
 # Begin Source File
