@@ -2499,7 +2499,7 @@ void R_Shadow_LoadLightsFile(void)
 
 void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 {
-	int entnum, style, islight;
+	int entnum, style, islight, skin, pflags;
 	char key[256], value[1024];
 	float origin[3], radius, color[3], light, fadescale, lightscale, originhack[3], overridecolor[3];
 	const char *data;
@@ -2522,6 +2522,8 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 		fadescale = 1;
 		lightscale = 1;
 		style = 0;
+		skin = 0;
+		pflags = 0;
 		islight = false;
 		while (1)
 		{
@@ -2627,6 +2629,10 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 				if (!strcmp("fade", key))
 					fadescale = atof(value);
 			}
+			else if (!strcmp("skin", key))
+				skin = (int)atof(value);
+			else if (!strcmp("pflags", key))
+				pflags = (int)atof(value);
 		}
 		if (light <= 0 && islight)
 			light = 300;
@@ -2641,7 +2647,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 		VectorScale(color, light, color);
 		VectorAdd(origin, originhack, origin);
 		if (radius >= 15)
-			R_Shadow_NewWorldLight(origin, vec3_origin, color, radius, 0, style, true, NULL);
+			R_Shadow_NewWorldLight(origin, vec3_origin, color, radius, !!(pflags & 2), style, !(pflags & 1), skin >= 16 ? va("cubemaps/%i", skin) : NULL);
 	}
 }
 
