@@ -515,7 +515,7 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 		return false;
 
 	Mem_FreePool (&s->mempool);
-	s->mempool = Mem_AllocPool (s->name);
+	s->mempool = Mem_AllocPool (s->name, 0, NULL);
 
 	// Load the file
 	data = FS_LoadFile (filename, s->mempool, false);

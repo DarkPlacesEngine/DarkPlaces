@@ -29,7 +29,7 @@ void R_MeshQueue_Init(void)
 	Cvar_RegisterVariable(&r_meshqueue_immediaterender);
 	Cvar_RegisterVariable(&r_meshqueue_sort);
 
-	meshqueuemempool = Mem_AllocPool("R_MeshQueue");
+	meshqueuemempool = Mem_AllocPool("R_MeshQueue", 0, NULL);
 	mq_total = 0;
 	mqt_total = 1000;
 	mq_array = NULL;

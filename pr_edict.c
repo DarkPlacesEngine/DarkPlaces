@@ -1623,8 +1623,8 @@ void PR_Init (void)
 	Cvar_RegisterVariable (&pr_boundscheck);
 	Cvar_RegisterVariable (&pr_traceqc);
 
-	progs_mempool = Mem_AllocPool("progs.dat");
-	edictstring_mempool = Mem_AllocPool("edict strings");
+	progs_mempool = Mem_AllocPool("progs.dat", 0, NULL);
+	edictstring_mempool = Mem_AllocPool("edict strings", 0, NULL);
 
 	PR_Cmd_Init();
 }

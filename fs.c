@@ -550,7 +550,7 @@ pack_t *FS_LoadPackPK3 (const char *packfile)
 	strlcpy (pack->filename, packfile, sizeof (pack->filename));
 	pack->handle = packhandle;
 	pack->numfiles = eocd.nbentries;
-	pack->mempool = Mem_AllocPool (packfile);
+	pack->mempool = Mem_AllocPool (packfile, 0, NULL);
 	pack->files = Mem_Alloc (pack->mempool, eocd.nbentries * sizeof(packfile_t));
 	pack->next = packlist;
 	packlist = pack;
@@ -744,7 +744,7 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 	strlcpy (pack->filename, packfile, sizeof (pack->filename));
 	pack->handle = packhandle;
 	pack->numfiles = 0;
-	pack->mempool = Mem_AllocPool(packfile);
+	pack->mempool = Mem_AllocPool(packfile, 0, NULL);
 	pack->files = Mem_Alloc(pack->mempool, numpackfiles * sizeof(packfile_t));
 	pack->next = packlist;
 	packlist = pack;
@@ -886,8 +886,8 @@ void FS_Init (void)
 	int i;
 	searchpath_t *search;
 
-	fs_mempool = Mem_AllocPool("file management");
-	pak_mempool = Mem_AllocPool("paks");
+	fs_mempool = Mem_AllocPool("file management", 0, NULL);
+	pak_mempool = Mem_AllocPool("paks", 0, NULL);
 
 	Cvar_RegisterVariable (&scr_screenshot_name);
 

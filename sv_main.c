@@ -82,7 +82,7 @@ void SV_Init (void)
 	for (i = 0;i < MAX_MODELS;i++)
 		sprintf (localmodels[i], "*%i", i);
 
-	sv_edicts_mempool = Mem_AllocPool("server edicts");
+	sv_edicts_mempool = Mem_AllocPool("server edicts", 0, NULL);
 }
 
 static void SV_SaveEntFile_f(void)

@@ -342,7 +342,7 @@ void SZ_Alloc (sizebuf_t *buf, int startsize, const char *name)
 {
 	if (startsize < 256)
 		startsize = 256;
-	buf->mempool = Mem_AllocPool(name);
+	buf->mempool = Mem_AllocPool(name, 0, NULL);
 	buf->data = Mem_Alloc(buf->mempool, startsize);
 	buf->maxsize = startsize;
 	buf->cursize = 0;

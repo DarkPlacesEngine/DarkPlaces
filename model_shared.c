@@ -297,7 +297,7 @@ static model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, 
 	VectorSet(mod->rotatedmaxs, mod->radius, mod->radius, mod->radius);
 
 	// all models use memory, so allocate a memory pool
-	mod->mempool = Mem_AllocPool(mod->name);
+	mod->mempool = Mem_AllocPool(mod->name, 0, NULL);
 	// all models load textures, so allocate a texture pool
 	if (cls.state != ca_dedicated)
 		mod->texturepool = R_AllocTexturePool();

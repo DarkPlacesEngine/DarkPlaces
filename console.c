@@ -419,7 +419,7 @@ Con_Init
 */
 void Con_Init (void)
 {
-	console_mempool = Mem_AllocPool("console");
+	console_mempool = Mem_AllocPool("console", 0, NULL);
 	con_text = Mem_Alloc(console_mempool, CON_TEXTSIZE);
 	memset (con_text, ' ', CON_TEXTSIZE);
 	con_linewidth = -1;

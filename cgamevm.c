@@ -23,7 +23,7 @@ static model_t *cgvm_model[MAX_CGVM_MODELS];
 
 void CL_CGVM_Init(void)
 {
-	cgvm_mempool = Mem_AllocPool("CGVM");
+	cgvm_mempool = Mem_AllocPool("CGVM", 0, NULL);
 }
 
 void CL_CGVM_Clear(void)

@@ -462,7 +462,7 @@ Cmd_Init
 */
 void Cmd_Init (void)
 {
-	cmd_mempool = Mem_AllocPool("commands");
+	cmd_mempool = Mem_AllocPool("commands", 0, NULL);
 
 //
 // register our commands

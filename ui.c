@@ -49,7 +49,7 @@ static mempool_t *ui_mem;
 
 void UI_Init(void)
 {
-	ui_mem = Mem_AllocPool("Intern UI Memory");
+	ui_mem = Mem_AllocPool("Intern UI Memory", 0, NULL);
 }
 
 #define UI_Alloc(size)	Mem_Alloc(ui_mem, size)

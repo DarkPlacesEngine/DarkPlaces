@@ -214,7 +214,7 @@ void Host_ServerOptions (void)
 		Cvar_SetValueQuick(&deathmatch, 1);
 
 	svs.maxclients = numplayers;
-	sv_clients_mempool = Mem_AllocPool("server clients");
+	sv_clients_mempool = Mem_AllocPool("server clients", 0, NULL);
 	svs.clients = Mem_Alloc(sv_clients_mempool, sizeof(client_t) * svs.maxclients);
 }
 

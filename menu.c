@@ -3725,7 +3725,7 @@ void M_Shutdown(void);
 
 void M_Init (void)
 {
-	menu_mempool = Mem_AllocPool("Menu");
+	menu_mempool = Mem_AllocPool("Menu", 0, NULL);
 	menuplyr_load = true;
 	menuplyr_pixels = NULL;
 
@@ -4129,9 +4129,9 @@ void MP_Init (void)
 	prog->error_cmd = MP_Error;
 
 	// allocate the mempools
-	prog->edicts_mempool = Mem_AllocPool(M_NAME " edicts mempool");
-	prog->edictstring_mempool = Mem_AllocPool( M_NAME " edict string mempool");
-	prog->progs_mempool = Mem_AllocPool(M_PROG_FILENAME);
+	prog->edicts_mempool = Mem_AllocPool(M_NAME " edicts mempool", 0, NULL);
+	prog->edictstring_mempool = Mem_AllocPool( M_NAME " edict string mempool", 0, NULL);
+	prog->progs_mempool = Mem_AllocPool(M_PROG_FILENAME, 0, NULL);
 
 	PRVM_LoadProgs(M_PROG_FILENAME, m_numrequiredfunc, m_required_func);
 

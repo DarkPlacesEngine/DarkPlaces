@@ -25,6 +25,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //#define MEMCLUMPING
 
 #define POOLNAMESIZE 128
+// if set this pool will be printed in memlist reports
+#define POOLFLAG_TEMP 1
 #if MEMCLUMPING
 // give malloc padding so we can't waste most of a page at the end
 #define MEMCLUMPSIZE (65536 - 1536)
@@ -93,6 +95,8 @@ typedef struct mempool_s
 	// chain of clumps (if any)
 	struct memclump_s *clumpchain;
 #endif
+	// POOLFLAG_*
+	int flags;
 	// total memory allocated in this pool (inside memheaders)
 	int totalsize;
 	// total memory allocated in this pool (actual malloc total)
@@ -117,14 +121,13 @@ mempool_t;
 #define Mem_Free(mem) _Mem_Free(mem, __FILE__, __LINE__)
 #define Mem_CheckSentinels(data) _Mem_CheckSentinels(data, __FILE__, __LINE__)
 #define Mem_CheckSentinelsGlobal() _Mem_CheckSentinelsGlobal(__FILE__, __LINE__)
-#define Mem_AllocPool(name) _Mem_AllocPool(name, NULL, __FILE__, __LINE__)
-#define Mem_AllocNestedPool(name, parent) _Mem_AllocPool(name, (parent), __FILE__, __LINE__)
+#define Mem_AllocPool(name, flags, parent) _Mem_AllocPool(name, flags, parent, __FILE__, __LINE__)
 #define Mem_FreePool(pool) _Mem_FreePool(pool, __FILE__, __LINE__)
 #define Mem_EmptyPool(pool) _Mem_EmptyPool(pool, __FILE__, __LINE__)
 
 void *_Mem_Alloc(mempool_t *pool, int size, const char *filename, int fileline);
 void _Mem_Free(void *data, const char *filename, int fileline);
-mempool_t *_Mem_AllocPool(const char *name, mempool_t *parent, const char *filename, int fileline);
+mempool_t *_Mem_AllocPool(const char *name, int flags, mempool_t *parent, const char *filename, int fileline);
 void _Mem_FreePool(mempool_t **pool, const char *filename, int fileline);
 void _Mem_EmptyPool(mempool_t *pool, const char *filename, int fileline);
 void _Mem_CheckSentinels(void *data, const char *filename, int fileline);

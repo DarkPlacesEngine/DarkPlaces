@@ -205,7 +205,7 @@ void _Mem_Free(void *data, const char *filename, int fileline)
 #endif
 }
 
-mempool_t *_Mem_AllocPool(const char *name, mempool_t *parent, const char *filename, int fileline)
+mempool_t *_Mem_AllocPool(const char *name, int flags, mempool_t *parent, const char *filename, int fileline)
 {
 	mempool_t *pool;
 	pool = malloc(sizeof(mempool_t));
@@ -216,6 +216,7 @@ mempool_t *_Mem_AllocPool(const char *name, mempool_t *parent, const char *filen
 	pool->sentinel2 = MEMHEADER_SENTINEL1;
 	pool->filename = filename;
 	pool->fileline = fileline;
+	pool->flags = flags;
 	pool->chain = NULL;
 	pool->totalsize = 0;
 	pool->realsize = sizeof(mempool_t);
@@ -348,14 +349,14 @@ void Mem_PrintStats(void)
 		size += pool->totalsize;
 	}
 	Con_Printf("%i memory pools, totalling %i bytes (%.3fMB)\n", count, size, size / 1048576.0);
-	if (tempmempool == NULL)
-		Con_Print("Error: no tempmempool allocated\n");
-	else if (tempmempool->chain)
+	for (pool = poolchain;pool;pool = pool->next)
 	{
-		Con_Printf("%i bytes (%.3fMB) of temporary memory still allocated (Leak!)\n", tempmempool->totalsize, tempmempool->totalsize / 1048576.0);
-		Con_Print("listing temporary memory allocations:\n");
-		for (mem = tempmempool->chain;mem;mem = mem->next)
-			Con_Printf("%10i bytes allocated at %s:%i\n", mem->size, mem->filename, mem->fileline);
+		if ((pool->flags & POOLFLAG_TEMP) && pool->chain)
+		{
+			Con_Printf("Memory pool %p has sprung a leak totalling %i bytes (%.3fMB)!  Listing contents...\n", pool, pool->totalsize, pool->totalsize / 1048576.0);
+			for (mem = pool->chain;mem;mem = mem->next)
+				Con_Printf("%10i bytes allocated at %s:%i\n", mem->size, mem->filename, mem->fileline);
+		}
 	}
 }
 
@@ -368,10 +369,7 @@ void Mem_PrintList(int listallocations)
 	           "size    name\n");
 	for (pool = poolchain;pool;pool = pool->next)
 	{
-		if (pool->lastchecksize != 0 && pool->totalsize != pool->lastchecksize)
-			Con_Printf("%10ik (%10ik actual) %s (%i byte change)\n", (pool->totalsize + 1023) / 1024, (pool->realsize + 1023) / 1024, pool->name, pool->totalsize - pool->lastchecksize);
-		else
-			Con_Printf("%10ik (%10ik actual) %s\n", (pool->totalsize + 1023) / 1024, (pool->realsize + 1023) / 1024, pool->name);
+		Con_Printf("%10ik (%10ik actual) %s (%+i byte change) %s\n", (pool->totalsize + 1023) / 1024, (pool->realsize + 1023) / 1024, pool->name, pool->totalsize - pool->lastchecksize, (pool->flags & POOLFLAG_TEMP) ? "TEMP" : "");
 		pool->lastchecksize = pool->totalsize;
 		if (listallocations)
 			for (mem = pool->chain;mem;mem = mem->next)
@@ -417,8 +415,8 @@ Memory_Init
 */
 void Memory_Init (void)
 {
-	tempmempool = Mem_AllocPool("Temporary Memory");
-	zonemempool = Mem_AllocPool("Zone");
+	tempmempool = Mem_AllocPool("Temporary Memory", POOLFLAG_TEMP, NULL);
+	zonemempool = Mem_AllocPool("Zone", 0, NULL);
 	poolchain = NULL;
 }
 

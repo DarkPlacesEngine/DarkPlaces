@@ -1820,7 +1820,7 @@ void CL_Parse_DumpPacket(void)
 void CL_Parse_Init(void)
 {
 	// LordHavoc: added demo_nehahra cvar
-	cl_scores_mempool = Mem_AllocPool("client player info");
+	cl_scores_mempool = Mem_AllocPool("client player info", 0, NULL);
 	Cvar_RegisterVariable (&demo_nehahra);
 	if (gamemode == GAME_NEHAHRA)
 		Cvar_SetValue("demo_nehahra", 1);

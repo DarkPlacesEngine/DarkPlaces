@@ -3422,7 +3422,7 @@ int pr_numbuiltins = sizeof(pr_builtin)/sizeof(pr_builtin[0]);
 
 void PR_Cmd_Init(void)
 {
-	pr_strings_mempool = Mem_AllocPool("pr_stringszone");
+	pr_strings_mempool = Mem_AllocPool("pr_stringszone", 0, NULL);
 	PR_Files_Init();
 	PR_Search_Init();
 }

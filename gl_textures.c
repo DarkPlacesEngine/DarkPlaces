@@ -482,9 +482,9 @@ static void r_textures_start(void)
 	// use the largest scrap texture size we can (not sure if this is really a good idea)
 	for (block_size = 1;block_size < realmaxsize && block_size < gl_max_scrapsize.integer;block_size <<= 1);
 
-	texturemempool = Mem_AllocPool("Texture Info");
-	texturedatamempool = Mem_AllocPool("Texture Storage (not yet uploaded)");
-	textureprocessingmempool = Mem_AllocPool("Texture Processing Buffers");
+	texturemempool = Mem_AllocPool("Texture Info", 0, NULL);
+	texturedatamempool = Mem_AllocPool("Texture Storage (not yet uploaded)", 0, NULL);
+	textureprocessingmempool = Mem_AllocPool("Texture Processing Buffers", 0, NULL);
 
 	// Disable JPEG screenshots if the DLL isn't loaded
 	if (! JPEG_OpenLibrary ())
