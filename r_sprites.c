@@ -3,7 +3,7 @@
 
 #define LERPSPRITES
 
-static int R_SpriteSetup (entity_render_t *ent, int type, float org[3], float left[3], float up[3])
+static int R_SpriteSetup (const entity_render_t *ent, int type, float org[3], float left[3], float up[3])
 {
 	float matrix1[3][3], matrix2[3][3], matrix3[3][3];
 
@@ -89,6 +89,7 @@ static void R_DrawSpriteImage (int wantoverbright, int additive, mspriteframe_t 
 	m.numtriangles = 2;
 	m.numverts = 4;
 	m.tex[0] = texture;
+	Matrix4x4_CreateIdentity(&m.matrix);
 	if (R_Mesh_Draw_GetBuffer(&m, wantoverbright))
 	{
 		m.index[0] = 0;
@@ -126,16 +127,15 @@ static void R_DrawSpriteImage (int wantoverbright, int additive, mspriteframe_t 
 	}
 }
 
-void R_DrawSpriteModelCallback(void *calldata1, int calldata2)
+void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 {
-	entity_render_t *ent;
+	const entity_render_t *ent = calldata1;
 	int i, wantoverbright;
 	vec3_t left, up, org, color;
 	mspriteframe_t *frame;
 	vec3_t diff;
 	float fog, ifog;
 
-	ent = calldata1;
 	if (R_SpriteSetup(ent, ent->model->sprnum_type, org, left, up))
 		return;
 

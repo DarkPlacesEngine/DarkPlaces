@@ -30,7 +30,7 @@ physentity_t;
 
 int cl_traceline_endcontents;
 
-float CL_TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int contents, int hitbmodels)
+float CL_TraceLine (const vec3_t start, const vec3_t end, vec3_t impact, vec3_t normal, int contents, int hitbmodels)
 {
 	double maxfrac;
 	trace_t trace;

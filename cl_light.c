@@ -33,6 +33,7 @@ void CL_AllocDlight (entity_render_t *ent, vec3_t org, float radius, float red, 
 	return;
 
 dlightsetup:
+	//Con_Printf("dlight %i : %f %f %f : %f %f %f\n", i, org[0], org[1], org[2], red * radius, green * radius, blue * radius);
 	memset (dl, 0, sizeof(*dl));
 	//dl->ent = ent;
 	VectorCopy(org, dl->origin);

@@ -22,6 +22,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef CLIENT_H
 #define CLIENT_H
 
+#include "matrixlib.h"
+
 // LordHavoc: 256 dynamic lights
 #define MAX_DLIGHTS 256
 // LordHavoc: this affects the lighting scale of the whole game
@@ -92,6 +94,10 @@ typedef struct entity_render_s
 	vec3_t origin;
 	// orientation
 	vec3_t angles;
+	// transform matrix for model to world
+	matrix4x4_t matrix;
+	// transform matrix for world to model
+	matrix4x4_t inversematrix;
 	// opacity (alpha) of the model
 	float alpha;
 	// size the model is shown
@@ -135,6 +141,7 @@ typedef struct entity_render_s
 	// caching results of static light traces (this is semi-persistent)
 	double entlightstime;
 	vec3_t entlightsorigin;
+	int entlightsframe;
 	int numentlights;
 	unsigned short entlights[MAXENTLIGHTS];
 }

@@ -50,6 +50,7 @@ void GL_Models_Init(void)
 	R_RegisterModule("GL_Models", gl_models_start, gl_models_shutdown, gl_models_newmap);
 }
 
+/*
 void R_AliasTransformVerts(int vertcount)
 {
 	vec3_t point;
@@ -69,16 +70,17 @@ void R_AliasTransformVerts(int vertcount)
 		vertcount--;
 	}
 }
+*/
 
 void R_AliasLerpVerts(int vertcount,
-		float lerp1, trivertx_t *verts1, vec3_t fscale1, vec3_t translate1,
-		float lerp2, trivertx_t *verts2, vec3_t fscale2, vec3_t translate2,
-		float lerp3, trivertx_t *verts3, vec3_t fscale3, vec3_t translate3,
-		float lerp4, trivertx_t *verts4, vec3_t fscale4, vec3_t translate4)
+		float lerp1, const trivertx_t *verts1, const vec3_t fscale1, const vec3_t translate1,
+		float lerp2, const trivertx_t *verts2, const vec3_t fscale2, const vec3_t translate2,
+		float lerp3, const trivertx_t *verts3, const vec3_t fscale3, const vec3_t translate3,
+		float lerp4, const trivertx_t *verts4, const vec3_t fscale4, const vec3_t translate4)
 {
 	int i;
 	vec3_t scale1, scale2, scale3, scale4, translate;
-	float *n1, *n2, *n3, *n4;
+	const float *n1, *n2, *n3, *n4;
 	float *av, *avn;
 	av = aliasvert;
 	avn = aliasvertnorm;
@@ -198,7 +200,7 @@ void R_AliasLerpVerts(int vertcount,
 	}
 }
 
-skinframe_t *R_FetchSkinFrame(entity_render_t *ent)
+skinframe_t *R_FetchSkinFrame(const entity_render_t *ent)
 {
 	model_t *model = ent->model;
 	if (model->skinscenes[ent->skinnum].framecount > 1)
@@ -207,12 +209,11 @@ skinframe_t *R_FetchSkinFrame(entity_render_t *ent)
 		return &model->skinframes[model->skinscenes[ent->skinnum].firstframe];
 }
 
-void R_SetupMDLMD2Frames(entity_render_t *ent, float colorr, float colorg, float colorb)
+void R_SetupMDLMD2Frames(const entity_render_t *ent, float colorr, float colorg, float colorb)
 {
-	md2frame_t *frame1, *frame2, *frame3, *frame4;
-	trivertx_t *frame1verts, *frame2verts, *frame3verts, *frame4verts;
-	model_t *model;
-	model = ent->model;
+	const md2frame_t *frame1, *frame2, *frame3, *frame4;
+	const trivertx_t *frame1verts, *frame2verts, *frame3verts, *frame4verts;
+	const model_t *model = ent->model;
 
 	frame1 = &model->mdlmd2data_frames[ent->frameblend[0].frame];
 	frame2 = &model->mdlmd2data_frames[ent->frameblend[1].frame];
@@ -230,10 +231,10 @@ void R_SetupMDLMD2Frames(entity_render_t *ent, float colorr, float colorg, float
 
 	R_LightModel(ent, model->numverts, colorr, colorg, colorb, false);
 
-	R_AliasTransformVerts(model->numverts);
+	//R_AliasTransformVerts(model->numverts);
 }
 
-void R_DrawQ1Q2AliasModelCallback (void *calldata1, int calldata2)
+void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 {
 	int c, pantsfullbright, shirtfullbright, colormapped;
 	float pantscolor[3], shirtcolor[3];
@@ -243,10 +244,9 @@ void R_DrawQ1Q2AliasModelCallback (void *calldata1, int calldata2)
 	rmeshbufferinfo_t m;
 	model_t *model;
 	skinframe_t *skinframe;
-	entity_render_t *ent;
+	const entity_render_t *ent = calldata1;
 
-	ent = calldata1;
-	softwaretransformforentity(ent);
+//	softwaretransformforentity(ent);
 
 	fog = 0;
 	if (fogenabled)
@@ -292,6 +292,7 @@ void R_DrawQ1Q2AliasModelCallback (void *calldata1, int calldata2)
 		m.numtriangles = model->numtris;
 		m.numverts = model->numverts;
 		m.tex[0] = R_GetTexture(skinframe->merged);
+		m.matrix = ent->matrix;
 
 		c_alias_polys += m.numtriangles;
 		if (R_Mesh_Draw_GetBuffer(&m, true))
@@ -349,6 +350,7 @@ void R_DrawQ1Q2AliasModelCallback (void *calldata1, int calldata2)
 	m.numtriangles = model->numtris;
 	m.numverts = model->numverts;
 	m.tex[0] = colormapped ? R_GetTexture(skinframe->base) : R_GetTexture(skinframe->merged);
+	m.matrix = ent->matrix;
 	if (R_Mesh_Draw_GetBuffer(&m, true))
 	{
 		c_alias_polys += m.numtriangles;
@@ -369,6 +371,7 @@ void R_DrawQ1Q2AliasModelCallback (void *calldata1, int calldata2)
 			m.numtriangles = model->numtris;
 			m.numverts = model->numverts;
 			m.tex[0] = R_GetTexture(skinframe->pants);
+			m.matrix = ent->matrix;
 			if (R_Mesh_Draw_GetBuffer(&m, true))
 			{
 				c_alias_polys += m.numtriangles;
@@ -390,6 +393,7 @@ void R_DrawQ1Q2AliasModelCallback (void *calldata1, int calldata2)
 			m.numtriangles = model->numtris;
 			m.numverts = model->numverts;
 			m.tex[0] = R_GetTexture(skinframe->shirt);
+			m.matrix = ent->matrix;
 			if (R_Mesh_Draw_GetBuffer(&m, true))
 			{
 				c_alias_polys += m.numtriangles;
@@ -412,6 +416,7 @@ void R_DrawQ1Q2AliasModelCallback (void *calldata1, int calldata2)
 		m.numtriangles = model->numtris;
 		m.numverts = model->numverts;
 		m.tex[0] = R_GetTexture(skinframe->glow);
+		m.matrix = ent->matrix;
 		if (R_Mesh_Draw_GetBuffer(&m, true))
 		{
 			c_alias_polys += m.numtriangles;
@@ -430,6 +435,7 @@ void R_DrawQ1Q2AliasModelCallback (void *calldata1, int calldata2)
 		m.numtriangles = model->numtris;
 		m.numverts = model->numverts;
 		m.tex[0] = R_GetTexture(skinframe->fog);
+		m.matrix = ent->matrix;
 		if (R_Mesh_Draw_GetBuffer(&m, false))
 		{
 			c_alias_polys += m.numtriangles;
@@ -442,12 +448,14 @@ void R_DrawQ1Q2AliasModelCallback (void *calldata1, int calldata2)
 	}
 }
 
-int ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, zymbone_t *bone)
+int ZymoticLerpBones(int count, const zymbonematrix *bonebase, const frameblend_t *blend, const zymbone_t *bone)
 {
 	int i;
 	float lerp1, lerp2, lerp3, lerp4;
-	zymbonematrix *out, rootmatrix, m, *bone1, *bone2, *bone3, *bone4;
+	zymbonematrix *out, rootmatrix, m;
+	const zymbonematrix *bone1, *bone2, *bone3, *bone4;
 
+	/*
 	// LordHavoc: combine transform from zym coordinate space to quake coordinate space with model to world transform matrix
 	rootmatrix.m[0][0] = softwaretransform_matrix[0][1];
 	rootmatrix.m[0][1] = -softwaretransform_matrix[0][0];
@@ -461,6 +469,19 @@ int ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, zy
 	rootmatrix.m[2][1] = -softwaretransform_matrix[2][0];
 	rootmatrix.m[2][2] = softwaretransform_matrix[2][2];
 	rootmatrix.m[2][3] = softwaretransform_matrix[2][3];
+	*/
+	rootmatrix.m[0][0] = 1;
+	rootmatrix.m[0][1] = 0;
+	rootmatrix.m[0][2] = 0;
+	rootmatrix.m[0][3] = 0;
+	rootmatrix.m[1][0] = 0;
+	rootmatrix.m[1][1] = 1;
+	rootmatrix.m[1][2] = 0;
+	rootmatrix.m[1][3] = 0;
+	rootmatrix.m[2][0] = 0;
+	rootmatrix.m[2][1] = 0;
+	rootmatrix.m[2][2] = 1;
+	rootmatrix.m[2][3] = 0;
 
 	bone1 = bonebase + blend[0].frame * count;
 	lerp1 = blend[0].lerp;
@@ -702,7 +723,7 @@ void ZymoticCalcNormals(int vertcount, int shadercount, int *renderlist)
 	}
 }
 
-void R_DrawZymoticModelMeshCallback (void *calldata1, int calldata2)
+void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 {
 	float fog;
 	vec3_t diff;
@@ -710,11 +731,8 @@ void R_DrawZymoticModelMeshCallback (void *calldata1, int calldata2)
 	zymtype1header_t *m;
 	rtexture_t *texture;
 	rmeshbufferinfo_t mbuf;
-	entity_render_t *ent;
-	int shadernum;
-
-	ent = calldata1;
-	shadernum = calldata2;
+	const entity_render_t *ent = calldata1;
+	int shadernum = calldata2;
 
 	// find the vertex index list and texture
 	m = ent->model->zymdata_header;
@@ -740,12 +758,11 @@ void R_DrawZymoticModelMeshCallback (void *calldata1, int calldata2)
 		// 2. render fog as additive
 	}
 
-	softwaretransformforentity(ent);
 	ZymoticLerpBones(m->numbones, (zymbonematrix *)(m->lump_poses.start + (int) m), ent->frameblend, (zymbone_t *)(m->lump_bones.start + (int) m));
 	ZymoticTransformVerts(m->numverts, (int *)(m->lump_vertbonecounts.start + (int) m), (zymvertex_t *)(m->lump_verts.start + (int) m));
 	ZymoticCalcNormals(m->numverts, m->numshaders, (int *)(m->lump_render.start + (int) m));
 
-	R_LightModel(ent, m->numverts, 1 - fog, 1 - fog, 1 - fog, true);
+	R_LightModel(ent, m->numverts, 1 - fog, 1 - fog, 1 - fog, false);
 
 	memset(&mbuf, 0, sizeof(mbuf));
 	mbuf.numverts = m->numverts;
@@ -766,6 +783,7 @@ void R_DrawZymoticModelMeshCallback (void *calldata1, int calldata2)
 		mbuf.blendfunc2 = GL_ZERO;
 	}
 	mbuf.tex[0] = R_GetTexture(texture);
+	mbuf.matrix = ent->matrix;
 	if (R_Mesh_Draw_GetBuffer(&mbuf, true))
 	{
 		c_alias_polys += mbuf.numtriangles;
@@ -786,6 +804,7 @@ void R_DrawZymoticModelMeshCallback (void *calldata1, int calldata2)
 		mbuf.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 		// FIXME: need alpha mask for fogging...
 		//mbuf.tex[0] = R_GetTexture(texture);
+		mbuf.matrix = ent->matrix;
 		if (R_Mesh_Draw_GetBuffer(&mbuf, false))
 		{
 			c_alias_polys += mbuf.numtriangles;

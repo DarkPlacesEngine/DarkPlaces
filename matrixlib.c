@@ -3,12 +3,12 @@
 #include "matrixlib.h"
 #include <math.h>
 
-void Matrix4x4_Copy (matrix4x4_t *out, matrix4x4_t *in)
+void Matrix4x4_Copy (matrix4x4_t *out, const matrix4x4_t *in)
 {
 	*out = *in;
 }
 
-void Matrix4x4_CopyRotateOnly (matrix4x4_t *out, matrix4x4_t *in)
+void Matrix4x4_CopyRotateOnly (matrix4x4_t *out, const matrix4x4_t *in)
 {
 	out->m[0][0] = in->m[0][0];
 	out->m[0][1] = in->m[0][1];
@@ -28,7 +28,7 @@ void Matrix4x4_CopyRotateOnly (matrix4x4_t *out, matrix4x4_t *in)
 	out->m[3][3] = 1.0f;
 }
 
-void Matrix4x4_CopyTranslateOnly (matrix4x4_t *out, matrix4x4_t *in)
+void Matrix4x4_CopyTranslateOnly (matrix4x4_t *out, const matrix4x4_t *in)
 {
 	out->m[0][0] = 0.0f;
 	out->m[0][1] = 0.0f;
@@ -48,7 +48,7 @@ void Matrix4x4_CopyTranslateOnly (matrix4x4_t *out, matrix4x4_t *in)
 	out->m[3][3] = 1.0f;
 }
 
-void Matrix4x4_FromMatrix3x4 (matrix4x4_t *out, matrix3x4_t *in)
+void Matrix4x4_FromMatrix3x4 (matrix4x4_t *out, const matrix3x4_t *in)
 {
 	out->m[0][0] = in->m[0][0];
 	out->m[0][1] = in->m[0][1];
@@ -90,32 +90,75 @@ void Matrix4x4_Concat (matrix4x4_t *out, const matrix4x4_t *in1, const matrix4x4
 
 void Matrix4x4_Transpose (matrix4x4_t *out, const matrix4x4_t *in1)
 {
-	float scale;
-	scale = 3.0 / (in1->m[0][0] * in1->m[0][0]
-	             + in1->m[0][1] * in1->m[0][1]
-	             + in1->m[0][2] * in1->m[0][2]
-	             + in1->m[1][0] * in1->m[1][0]
-	             + in1->m[1][1] * in1->m[1][1]
-	             + in1->m[1][2] * in1->m[1][2]
-	             + in1->m[2][0] * in1->m[2][0]
-	             + in1->m[2][1] * in1->m[2][1]
-	             + in1->m[2][2] * in1->m[2][2]);
-	out->m[0][0] = in1->m[0][0] * scale;
-	out->m[0][1] = in1->m[1][0] * scale;
-	out->m[0][2] = in1->m[2][0] * scale;
+	out->m[0][0] = in1->m[0][0];
+	out->m[0][1] = in1->m[1][0];
+	out->m[0][2] = in1->m[2][0];
 	out->m[0][3] = in1->m[3][0];
-	out->m[1][0] = in1->m[0][1] * scale;
-	out->m[1][1] = in1->m[1][1] * scale;
-	out->m[1][2] = in1->m[2][1] * scale;
+	out->m[1][0] = in1->m[0][1];
+	out->m[1][1] = in1->m[1][1];
+	out->m[1][2] = in1->m[2][1];
 	out->m[1][3] = in1->m[3][1];
-	out->m[2][0] = in1->m[0][2] * scale;
-	out->m[2][1] = in1->m[1][2] * scale;
-	out->m[2][2] = in1->m[2][2] * scale;
+	out->m[2][0] = in1->m[0][2];
+	out->m[2][1] = in1->m[1][2];
+	out->m[2][2] = in1->m[2][2];
 	out->m[2][3] = in1->m[3][2];
 	out->m[3][0] = in1->m[0][3];
 	out->m[3][1] = in1->m[1][3];
 	out->m[3][2] = in1->m[2][3];
 	out->m[3][3] = in1->m[3][3];
+}
+
+void Matrix4x4_Transpose3x3 (matrix4x4_t *out, const matrix4x4_t *in1)
+{
+	out->m[0][0] = in1->m[0][0];
+	out->m[0][1] = in1->m[1][0];
+	out->m[0][2] = in1->m[2][0];
+	out->m[1][0] = in1->m[0][1];
+	out->m[1][1] = in1->m[1][1];
+	out->m[1][2] = in1->m[2][1];
+	out->m[2][0] = in1->m[0][2];
+	out->m[2][1] = in1->m[1][2];
+	out->m[2][2] = in1->m[2][2];
+
+	out->m[0][3] = in1->m[0][3];
+	out->m[1][3] = in1->m[1][3];
+	out->m[2][3] = in1->m[2][3];
+	out->m[3][0] = in1->m[0][3];
+	out->m[3][1] = in1->m[1][3];
+	out->m[3][2] = in1->m[2][3];
+	out->m[3][3] = in1->m[3][3];
+}
+
+void Matrix4x4_Invert_Simple (matrix4x4_t *out, const matrix4x4_t *in1)
+{
+	// we only support uniform scaling, so assume the first row is enough
+	// (note the lack of sqrt here, because we're trying to undo the scaling,
+	// this means multiplying by the inverse scale twice - squaring it, which
+	// makes the sqrt a waste of time)
+	double scale = 1.0 / (in1->m[0][0] * in1->m[0][0] + in1->m[0][1] * in1->m[0][1] + in1->m[0][2] * in1->m[0][2]);
+
+	// invert the rotation by transposing and multiplying by the squared
+	// recipricol of the input matrix scale as described above
+	out->m[0][0] = in1->m[0][0] * scale;
+	out->m[0][1] = in1->m[1][0] * scale;
+	out->m[0][2] = in1->m[2][0] * scale;
+	out->m[1][0] = in1->m[0][1] * scale;
+	out->m[1][1] = in1->m[1][1] * scale;
+	out->m[1][2] = in1->m[2][1] * scale;
+	out->m[2][0] = in1->m[0][2] * scale;
+	out->m[2][1] = in1->m[1][2] * scale;
+	out->m[2][2] = in1->m[2][2] * scale;
+
+	// invert the translate
+	out->m[0][3] = -(in1->m[0][3] * out->m[0][0] + in1->m[1][3] * out->m[0][1] + in1->m[2][3] * out->m[0][2]);
+	out->m[1][3] = -(in1->m[0][3] * out->m[1][0] + in1->m[1][3] * out->m[1][1] + in1->m[2][3] * out->m[1][2]);
+	out->m[2][3] = -(in1->m[0][3] * out->m[2][0] + in1->m[1][3] * out->m[2][1] + in1->m[2][3] * out->m[2][2]);
+
+	// don't know if there's anything worth doing here
+	out->m[3][0] = 0;
+	out->m[3][1] = 0;
+	out->m[3][2] = 0;
+	out->m[3][3] = 1;
 }
 
 void Matrix4x4_CreateIdentity (matrix4x4_t *out)
@@ -231,6 +274,37 @@ void Matrix4x4_CreateScale3 (matrix4x4_t *out, float x, float y, float z)
 	out->m[3][3]=1.0f;
 }
 
+void Matrix4x4_CreateFromQuakeEntity(matrix4x4_t *out, float x, float y, float z, float pitch, float yaw, float roll, float scale)
+{
+	double angle, sr, sp, sy, cr, cp, cy;
+
+	angle = yaw * (M_PI*2 / 360);
+	sy = sin(angle);
+	cy = cos(angle);
+	angle = pitch * (M_PI*2 / 360);
+	sp = sin(angle);
+	cp = cos(angle);
+	angle = roll * (M_PI*2 / 360);
+	sr = sin(angle);
+	cr = cos(angle);
+	out->m[0][0] = cp*cy * scale;
+	out->m[0][1] = sr*sp*cy+cr*-sy * scale;
+	out->m[0][2] = cr*sp*cy+-sr*-sy * scale;
+	out->m[0][3] = x;
+	out->m[1][0] = cp*sy * scale;
+	out->m[1][1] = sr*sp*sy+cr*cy * scale;
+	out->m[1][2] = cr*sp*sy+-sr*cy * scale;
+	out->m[1][3] = y;
+	out->m[2][0] = -sp * scale;
+	out->m[2][1] = sr*cp * scale;
+	out->m[2][2] = cr*cp * scale;
+	out->m[2][3] = z;
+	out->m[3][0] = 0;
+	out->m[3][1] = 0;
+	out->m[3][2] = 0;
+	out->m[3][3] = 1;
+}
+
 void Matrix4x4_ToVectors(const matrix4x4_t *in, float vx[3], float vy[3], float vz[3], float t[3])
 {
 	vx[0] = in->m[0][0];
@@ -282,6 +356,7 @@ void Matrix4x4_Transform4 (const matrix4x4_t *in, const float v[4], float out[4]
 	out[3] = v[0] * in->m[3][0] + v[1] * in->m[3][1] + v[2] * in->m[3][2] + v[3] * in->m[3][3];
 }
 
+/*
 void Matrix4x4_SimpleUntransform (const matrix4x4_t *in, const float v[3], float out[3])
 {
 	float t[3];
@@ -292,6 +367,7 @@ void Matrix4x4_SimpleUntransform (const matrix4x4_t *in, const float v[3], float
 	out[1] = t[0] * in->m[0][1] + t[1] * in->m[1][1] + t[2] * in->m[2][1];
 	out[2] = t[0] * in->m[0][2] + t[1] * in->m[1][2] + t[2] * in->m[2][2];
 }
+*/
 
 // FIXME: optimize
 void Matrix4x4_ConcatTranslate (matrix4x4_t *out, float x, float y, float z)
@@ -336,12 +412,12 @@ void Matrix4x4_ConcatScale3 (matrix4x4_t *out, float x, float y, float z)
 
 
 
-void Matrix3x4_Copy (matrix3x4_t *out, matrix3x4_t *in)
+void Matrix3x4_Copy (matrix3x4_t *out, const matrix3x4_t *in)
 {
 	*out = *in;
 }
 
-void Matrix3x4_CopyRotateOnly (matrix3x4_t *out, matrix3x4_t *in)
+void Matrix3x4_CopyRotateOnly (matrix3x4_t *out, const matrix3x4_t *in)
 {
 	out->m[0][0] = in->m[0][0];
 	out->m[0][1] = in->m[0][1];
@@ -357,7 +433,7 @@ void Matrix3x4_CopyRotateOnly (matrix3x4_t *out, matrix3x4_t *in)
 	out->m[2][3] = 0.0f;
 }
 
-void Matrix3x4_CopyTranslateOnly (matrix3x4_t *out, matrix3x4_t *in)
+void Matrix3x4_CopyTranslateOnly (matrix3x4_t *out, const matrix3x4_t *in)
 {
 	out->m[0][0] = 0.0f;
 	out->m[0][1] = 0.0f;
@@ -373,7 +449,7 @@ void Matrix3x4_CopyTranslateOnly (matrix3x4_t *out, matrix3x4_t *in)
 	out->m[2][3] = in->m[0][3];
 }
 
-void Matrix3x4_FromMatrix4x4 (matrix3x4_t *out, matrix4x4_t *in)
+void Matrix3x4_FromMatrix4x4 (matrix3x4_t *out, const matrix4x4_t *in)
 {
 	out->m[0][0] = in->m[0][0];
 	out->m[0][1] = in->m[0][1];
@@ -407,29 +483,46 @@ void Matrix3x4_Concat (matrix3x4_t *out, const matrix3x4_t *in1, const matrix3x4
 
 void Matrix3x4_Transpose3x3 (matrix3x4_t *out, const matrix3x4_t *in1)
 {
-	float scale;
-	scale = 3.0 / (in1->m[0][0] * in1->m[0][0]
-	             + in1->m[0][1] * in1->m[0][1]
-	             + in1->m[0][2] * in1->m[0][2]
-	             + in1->m[1][0] * in1->m[1][0]
-	             + in1->m[1][1] * in1->m[1][1]
-	             + in1->m[1][2] * in1->m[1][2]
-	             + in1->m[2][0] * in1->m[2][0]
-	             + in1->m[2][1] * in1->m[2][1]
-	             + in1->m[2][2] * in1->m[2][2]);
+	out->m[0][0] = in1->m[0][0];
+	out->m[0][1] = in1->m[1][0];
+	out->m[0][2] = in1->m[2][0];
+	out->m[0][3] = 0.0f;
+	out->m[1][0] = in1->m[0][1];
+	out->m[1][1] = in1->m[1][1];
+	out->m[1][2] = in1->m[2][1];
+	out->m[1][3] = 0.0f;
+	out->m[2][0] = in1->m[0][2];
+	out->m[2][1] = in1->m[1][2];
+	out->m[2][2] = in1->m[2][2];
+	out->m[2][3] = 0.0f;
+}
+
+void Matrix3x4_Invert_Simple (matrix3x4_t *out, const matrix3x4_t *in1)
+{
+	// we only support uniform scaling, so assume the first row is enough
+	// (note the lack of sqrt here, because we're trying to undo the scaling,
+	// this means multiplying by the inverse scale twice - squaring it, which
+	// makes the sqrt a waste of time)
+	double scale = 1.0 / (in1->m[0][0] * in1->m[0][0] + in1->m[0][1] * in1->m[0][1] + in1->m[0][2] * in1->m[0][2]);
+
+	// invert the rotation by transposing and multiplying by the squared
+	// recipricol of the input matrix scale as described above
 	out->m[0][0] = in1->m[0][0] * scale;
 	out->m[0][1] = in1->m[1][0] * scale;
 	out->m[0][2] = in1->m[2][0] * scale;
-	out->m[0][3] = 0.0f;
 	out->m[1][0] = in1->m[0][1] * scale;
 	out->m[1][1] = in1->m[1][1] * scale;
 	out->m[1][2] = in1->m[2][1] * scale;
-	out->m[1][3] = 0.0f;
 	out->m[2][0] = in1->m[0][2] * scale;
 	out->m[2][1] = in1->m[1][2] * scale;
 	out->m[2][2] = in1->m[2][2] * scale;
-	out->m[2][3] = 0.0f;
+
+	// invert the translate
+	out->m[0][3] = -(in1->m[0][3] * out->m[0][0] + in1->m[1][3] * out->m[0][1] + in1->m[2][3] * out->m[0][2]);
+	out->m[1][3] = -(in1->m[0][3] * out->m[1][0] + in1->m[1][3] * out->m[1][1] + in1->m[2][3] * out->m[1][2]);
+	out->m[2][3] = -(in1->m[0][3] * out->m[2][0] + in1->m[1][3] * out->m[2][1] + in1->m[2][3] * out->m[2][2]);
 }
+
 
 void Matrix3x4_CreateIdentity (matrix3x4_t *out)
 {
@@ -522,6 +615,33 @@ void Matrix3x4_CreateScale3 (matrix3x4_t *out, float x, float y, float z)
 	out->m[2][1]=0.0f;
 	out->m[2][2]=z;
 	out->m[2][3]=0.0f;
+}
+
+void Matrix3x4_CreateFromQuakeEntity(matrix3x4_t *out, float x, float y, float z, float pitch, float yaw, float roll, float scale)
+{
+	double angle, sr, sp, sy, cr, cp, cy;
+
+	angle = yaw * (M_PI*2 / 360);
+	sy = sin(angle);
+	cy = cos(angle);
+	angle = pitch * (M_PI*2 / 360);
+	sp = sin(angle);
+	cp = cos(angle);
+	angle = roll * (M_PI*2 / 360);
+	sr = sin(angle);
+	cr = cos(angle);
+	out->m[0][0] = cp*cy * scale;
+	out->m[0][1] = sr*sp*cy+cr*-sy * scale;
+	out->m[0][2] = cr*sp*cy+-sr*-sy * scale;
+	out->m[0][3] = x;
+	out->m[1][0] = cp*sy * scale;
+	out->m[1][1] = sr*sp*sy+cr*cy * scale;
+	out->m[1][2] = cr*sp*sy+-sr*cy * scale;
+	out->m[1][3] = y;
+	out->m[2][0] = -sp * scale;
+	out->m[2][1] = sr*cp * scale;
+	out->m[2][2] = cr*cp * scale;
+	out->m[2][3] = z;
 }
 
 void Matrix3x4_ToVectors(const matrix3x4_t *in, float vx[3], float vy[3], float vz[3], float t[3])

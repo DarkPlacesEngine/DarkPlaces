@@ -9,8 +9,8 @@ cvar_t r_meshqueue_sort = {0, "r_meshqueue_sort", "0"};
 typedef struct meshqueue_s
 {
 	struct meshqueue_s *next;
-	void (*callback)(void *data1, int data2);
-	void *data1;
+	void (*callback)(const void *data1, int data2);
+	const void *data1;
 	int data2;
 	float dist;
 }
@@ -60,7 +60,7 @@ static void R_MeshQueue_EnlargeTransparentArray(int newtotal)
 	mqt_total = newtotal;
 }
 
-void R_MeshQueue_Add(void (*callback)(void *data1, int data2), void *data1, int data2)
+void R_MeshQueue_Add(void (*callback)(const void *data1, int data2), const void *data1, int data2)
 {
 	meshqueue_t *mq, **mqnext;
 	if (r_meshqueue_immediaterender.integer)
@@ -103,7 +103,7 @@ void R_MeshQueue_Add(void (*callback)(void *data1, int data2), void *data1, int 
 	*mqnext = mq;
 }
 
-void R_MeshQueue_AddTransparent(vec3_t center, void (*callback)(void *data1, int data2), void *data1, int data2)
+void R_MeshQueue_AddTransparent(const vec3_t center, void (*callback)(const void *data1, int data2), const void *data1, int data2)
 {
 	meshqueue_t *mq;
 	if (mqt_count >= mqt_total)

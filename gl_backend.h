@@ -8,28 +8,6 @@ extern int c_meshtris, c_meshs, c_transtris, c_transmeshs;
 
 typedef struct
 {
-	int transparent;
-	int depthwrite; // force depth writing enabled even if polygon is not opaque
-	int depthdisable; // disable depth read/write entirely
-	int blendfunc1;
-	int blendfunc2;
-	int numtriangles;
-	int *index;
-	int numverts;
-	float *vertex;
-	int vertexstep;
-	float *color;
-	int colorstep;
-	float cr, cg, cb, ca; // if color is NULL, these are used for all vertices
-	int tex[MAX_TEXTUREUNITS];
-	float *texcoords[MAX_TEXTUREUNITS];
-	int texcoordstep[MAX_TEXTUREUNITS];
-	int texrgbscale[MAX_TEXTUREUNITS]; // used only if COMBINE is present
-}
-rmeshinfo_t;
-
-typedef struct
-{
 	//input to R_Mesh_Draw_GetBuffer
 	int transparent;
 	int depthwrite; // force depth writing enabled even if polygon is not opaque
@@ -40,6 +18,8 @@ typedef struct
 	int numverts;
 	int tex[MAX_TEXTUREUNITS];
 	int texrgbscale[MAX_TEXTUREUNITS]; // used only if COMBINE is present
+	// model to world transform matrix
+	matrix4x4_t matrix;
 
 	// output
 	int *index;

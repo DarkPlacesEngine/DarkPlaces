@@ -27,6 +27,8 @@ int r_numdlights = 0;
 
 cvar_t r_modellights = {CVAR_SAVE, "r_modellights", "4"};
 cvar_t r_vismarklights = {0, "r_vismarklights", "1"};
+cvar_t r_coronas = {CVAR_SAVE, "r_coronas", "1"};
+cvar_t gl_flashblend = {CVAR_SAVE, "gl_flashblend", "1"};
 
 static rtexture_t *lightcorona;
 static rtexturepool_t *lighttexturepool;
@@ -68,6 +70,8 @@ void R_Light_Init(void)
 {
 	Cvar_RegisterVariable(&r_modellights);
 	Cvar_RegisterVariable(&r_vismarklights);
+	Cvar_RegisterVariable(&r_coronas);
+	Cvar_RegisterVariable(&gl_flashblend);
 	R_RegisterModule("R_Light", r_light_start, r_light_shutdown, r_light_newmap);
 }
 
@@ -126,7 +130,6 @@ void R_BuildLightList(void)
 		rd->cullradius = sqrt(rd->cullradius2);
 		rd->subtract = 1.0f / rd->cullradius2;
 		//rd->ent = cd->ent;
-		r_numdlights++;
 		c_dlights++; // count every dlight in use
 	}
 }
@@ -137,6 +140,8 @@ void R_DrawCoronas(void)
 	rmeshbufferinfo_t m;
 	float scale, viewdist, diff[3], dist;
 	rdlight_t *rd;
+	if (!r_coronas.integer)
+		return;
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ONE;
@@ -151,48 +156,54 @@ void R_DrawCoronas(void)
 		dist = (DotProduct(rd->origin, vpn) - viewdist);
 		if (dist >= 24.0f)
 		{
-			// trace to a point just barely closer to the eye
-			VectorSubtract(rd->origin, vpn, diff);
-			if (CL_TraceLine(r_origin, diff, NULL, NULL, 0, true) == 1 && R_Mesh_Draw_GetBuffer(&m, false))
+			if (CL_TraceLine(rd->origin, r_origin, NULL, NULL, 0, true) == 1)
 			{
-				scale = m.colorscale * (1.0f / 131072.0f);
-				if (fogenabled)
+				Matrix4x4_CreateIdentity(&m.matrix);
+				if (R_Mesh_Draw_GetBuffer(&m, false))
 				{
-					VectorSubtract(rd->origin, r_origin, diff);
-					scale *= 1 - exp(fogdensity/DotProduct(diff,diff));
+					scale = m.colorscale * (1.0f / 131072.0f);
+					if (gl_flashblend.integer)
+						scale *= 4.0f;
+					if (fogenabled)
+					{
+						VectorSubtract(rd->origin, r_origin, diff);
+						scale *= 1 - exp(fogdensity/DotProduct(diff,diff));
+					}
+					m.index[0] = 0;
+					m.index[1] = 1;
+					m.index[2] = 2;
+					m.index[3] = 0;
+					m.index[4] = 2;
+					m.index[5] = 3;
+					m.color[0] = m.color[4] = m.color[8] = m.color[12] = rd->light[0] * scale;
+					m.color[1] = m.color[5] = m.color[9] = m.color[13] = rd->light[1] * scale;
+					m.color[2] = m.color[6] = m.color[10] = m.color[14] = rd->light[2] * scale;
+					m.color[3] = m.color[7] = m.color[11] = m.color[15] = 1;
+					m.texcoords[0][0] = 0;
+					m.texcoords[0][1] = 0;
+					m.texcoords[0][2] = 0;
+					m.texcoords[0][3] = 1;
+					m.texcoords[0][4] = 1;
+					m.texcoords[0][5] = 1;
+					m.texcoords[0][6] = 1;
+					m.texcoords[0][7] = 0;
+					scale = rd->cullradius * 0.25f;
+					if (gl_flashblend.integer)
+						scale *= 2.0f;
+					m.vertex[0] = rd->origin[0] - vright[0] * scale - vup[0] * scale;
+					m.vertex[1] = rd->origin[1] - vright[1] * scale - vup[1] * scale;
+					m.vertex[2] = rd->origin[2] - vright[2] * scale - vup[2] * scale;
+					m.vertex[4] = rd->origin[0] - vright[0] * scale + vup[0] * scale;
+					m.vertex[5] = rd->origin[1] - vright[1] * scale + vup[1] * scale;
+					m.vertex[6] = rd->origin[2] - vright[2] * scale + vup[2] * scale;
+					m.vertex[8] = rd->origin[0] + vright[0] * scale + vup[0] * scale;
+					m.vertex[9] = rd->origin[1] + vright[1] * scale + vup[1] * scale;
+					m.vertex[10] = rd->origin[2] + vright[2] * scale + vup[2] * scale;
+					m.vertex[12] = rd->origin[0] + vright[0] * scale - vup[0] * scale;
+					m.vertex[13] = rd->origin[1] + vright[1] * scale - vup[1] * scale;
+					m.vertex[14] = rd->origin[2] + vright[2] * scale - vup[2] * scale;
+					R_Mesh_Render();
 				}
-				m.index[0] = 0;
-				m.index[1] = 1;
-				m.index[2] = 2;
-				m.index[3] = 0;
-				m.index[4] = 2;
-				m.index[5] = 3;
-				m.color[0] = m.color[4] = m.color[8] = m.color[12] = rd->light[0] * scale;
-				m.color[1] = m.color[5] = m.color[9] = m.color[13] = rd->light[1] * scale;
-				m.color[2] = m.color[6] = m.color[10] = m.color[14] = rd->light[2] * scale;
-				m.color[3] = m.color[7] = m.color[11] = m.color[15] = 1;
-				m.texcoords[0][0] = 0;
-				m.texcoords[0][1] = 0;
-				m.texcoords[0][2] = 0;
-				m.texcoords[0][3] = 1;
-				m.texcoords[0][4] = 1;
-				m.texcoords[0][5] = 1;
-				m.texcoords[0][6] = 1;
-				m.texcoords[0][7] = 0;
-				scale = rd->cullradius * 0.25f;
-				m.vertex[0] = rd->origin[0] - vright[0] * scale - vup[0] * scale;
-				m.vertex[1] = rd->origin[1] - vright[1] * scale - vup[1] * scale;
-				m.vertex[2] = rd->origin[2] - vright[2] * scale - vup[2] * scale;
-				m.vertex[4] = rd->origin[0] - vright[0] * scale + vup[0] * scale;
-				m.vertex[5] = rd->origin[1] - vright[1] * scale + vup[1] * scale;
-				m.vertex[6] = rd->origin[2] - vright[2] * scale + vup[2] * scale;
-				m.vertex[8] = rd->origin[0] + vright[0] * scale + vup[0] * scale;
-				m.vertex[9] = rd->origin[1] + vright[1] * scale + vup[1] * scale;
-				m.vertex[10] = rd->origin[2] + vright[2] * scale + vup[2] * scale;
-				m.vertex[12] = rd->origin[0] + vright[0] * scale - vup[0] * scale;
-				m.vertex[13] = rd->origin[1] + vright[1] * scale - vup[1] * scale;
-				m.vertex[14] = rd->origin[2] + vright[2] * scale - vup[2] * scale;
-				R_Mesh_Render();
 			}
 		}
 	}
@@ -345,7 +356,8 @@ static void R_VisMarkLights (entity_render_t *ent, rdlight_t *rd, int bit, int b
 		return;
 
 	model = ent->model;
-	softwareuntransform(rd->origin, lightorigin);
+	//softwareuntransform(rd->origin, lightorigin);
+	Matrix4x4_Transform(&ent->inversematrix, rd->origin, lightorigin);
 
 	if (!r_vismarklights.integer)
 	{
@@ -478,8 +490,9 @@ static void R_VisMarkLights (entity_render_t *ent, rdlight_t *rd, int bit, int b
 void R_MarkLights(entity_render_t *ent)
 {
 	int i;
-	for (i = 0;i < r_numdlights;i++)
-		R_VisMarkLights (ent, r_dlight + i, 1 << (i & 31), i >> 5);
+	if (!gl_flashblend.integer)
+		for (i = 0;i < r_numdlights;i++)
+			R_VisMarkLights (ent, r_dlight + i, 1 << (i & 31), i >> 5);
 }
 
 /*
@@ -490,7 +503,7 @@ LIGHT SAMPLING
 =============================================================================
 */
 
-static int RecursiveLightPoint (vec3_t color, mnode_t *node, float x, float y, float startz, float endz)
+static int RecursiveLightPoint (vec3_t color, const mnode_t *node, float x, float y, float startz, float endz)
 {
 	int side, distz = endz - startz;
 	float front, back;
@@ -630,9 +643,10 @@ middle sample (the one which was requested)
 	}
 }
 
-void R_CompleteLightPoint (vec3_t color, vec3_t p, int dynamic, mleaf_t *leaf)
+void R_CompleteLightPoint (vec3_t color, const vec3_t p, int dynamic, const mleaf_t *leaf)
 {
-	int i, *dlightbits;
+	int i;
+	const int *dlightbits;
 	vec3_t v;
 	float f;
 	rdlight_t *rd;
@@ -692,7 +706,7 @@ void R_CompleteLightPoint (vec3_t color, vec3_t p, int dynamic, mleaf_t *leaf)
 	}
 }
 
-void R_ModelLightPoint (entity_render_t *ent, vec3_t color, vec3_t p, int *dlightbits)
+void R_ModelLightPoint (const entity_render_t *ent, vec3_t color, const vec3_t p, int *dlightbits)
 {
 	mleaf_t *leaf;
 	leaf = Mod_PointInLeaf(p, cl.worldmodel);
@@ -729,7 +743,7 @@ void R_ModelLightPoint (entity_render_t *ent, vec3_t color, vec3_t p, int *dligh
 		dlightbits[0] = dlightbits[1] = dlightbits[2] = dlightbits[3] = dlightbits[4] = dlightbits[5] = dlightbits[6] = dlightbits[7] = 0;
 }
 
-void R_LightModel(entity_render_t *ent, int numverts, float colorr, float colorg, float colorb, int worldcoords)
+void R_LightModel(const entity_render_t *ent, int numverts, float colorr, float colorg, float colorb, int worldcoords)
 {
 	int i, j, nearlights = 0, maxnearlights = r_modellights.integer;
 	float color[3], basecolor[3], v[3], t, *av, *avn, *avc, a, f, dist2, mscale, dot, stylescale, intensity, ambientcolor[3];
@@ -759,16 +773,6 @@ void R_LightModel(entity_render_t *ent, int numverts, float colorr, float colorg
 		R_ModelLightPoint(ent, basecolor, ent->origin, modeldlightbits);
 
 		nl = &nearlight[0];
-		VectorSubtract(ent->origin, ent->entlightsorigin, v);
-		if ((realtime > ent->entlightstime && DotProduct(v,v) >= 1.0f))
-		{
-			ent->numentlights = 0;
-			ent->entlightstime = realtime + 0.2;
-			VectorCopy(ent->origin, ent->entlightsorigin);
-			for (i = 0, sl = cl.worldmodel->lights;i < cl.worldmodel->numlights && ent->numentlights < MAXENTLIGHTS;i++, sl++)
-				if (CL_TraceLine(ent->origin, sl->origin, NULL, NULL, 0, false) == 1)
-					ent->entlights[ent->numentlights++] = i;
-		}
 		for (i = 0;i < ent->numentlights;i++)
 		{
 			sl = cl.worldmodel->lights + ent->entlights[i];
@@ -808,7 +812,8 @@ void R_LightModel(entity_render_t *ent, int numverts, float colorr, float colorg
 				if (worldcoords)
 					VectorCopy(sl->origin, nl->origin);
 				else
-					softwareuntransform(sl->origin, nl->origin);
+					//softwareuntransform(sl->origin, nl->origin);
+					Matrix4x4_Transform(&ent->inversematrix, sl->origin, nl->origin);
 				// integrate mscale into falloff, for maximum speed
 				nl->falloff = sl->falloff * mscale;
 				VectorCopy(ambientcolor, nl->ambientlight);
@@ -859,7 +864,20 @@ void R_LightModel(entity_render_t *ent, int numverts, float colorr, float colorg
 				if (worldcoords)
 					VectorCopy(rd->origin, nl->origin);
 				else
-					softwareuntransform(rd->origin, nl->origin);
+				{
+					//softwareuntransform(rd->origin, nl->origin);
+					Matrix4x4_Transform(&ent->inversematrix, rd->origin, nl->origin);
+					/*
+					Con_Printf("%i %s : %f %f %f : %f %f %f\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n"
+					, rd - r_dlight, ent->model->name
+					, rd->origin[0], rd->origin[1], rd->origin[2]
+					, nl->origin[0], nl->origin[1], nl->origin[2]
+					, ent->inversematrix.m[0][0], ent->inversematrix.m[0][1], ent->inversematrix.m[0][2], ent->inversematrix.m[0][3]
+					, ent->inversematrix.m[1][0], ent->inversematrix.m[1][1], ent->inversematrix.m[1][2], ent->inversematrix.m[1][3]
+					, ent->inversematrix.m[2][0], ent->inversematrix.m[2][1], ent->inversematrix.m[2][2], ent->inversematrix.m[2][3]
+					, ent->inversematrix.m[3][0], ent->inversematrix.m[3][1], ent->inversematrix.m[3][2], ent->inversematrix.m[3][3]);
+					*/
+				}
 				// integrate mscale into falloff, for maximum speed
 				nl->falloff = mscale;
 				VectorCopy(ambientcolor, nl->ambientlight);
@@ -938,3 +956,20 @@ void R_LightModel(entity_render_t *ent, int numverts, float colorr, float colorg
 	}
 }
 
+void R_UpdateEntLights(entity_render_t *ent)
+{
+	int i;
+	const mlight_t *sl;
+	vec3_t v;
+	VectorSubtract(ent->origin, ent->entlightsorigin, v);
+	if (ent->entlightsframe != (r_framecount - 1) || (realtime > ent->entlightstime && DotProduct(v,v) >= 1.0f))
+	{
+		ent->entlightstime = realtime + 0.1;
+		VectorCopy(ent->origin, ent->entlightsorigin);
+		ent->numentlights = 0;
+		for (i = 0, sl = cl.worldmodel->lights;i < cl.worldmodel->numlights && ent->numentlights < MAXENTLIGHTS;i++, sl++)
+			if (CL_TraceLine(ent->origin, sl->origin, NULL, NULL, 0, false) == 1)
+				ent->entlights[ent->numentlights++] = i;
+	}
+	ent->entlightsframe = r_framecount;
+}

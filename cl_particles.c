@@ -1183,16 +1183,14 @@ void R_Particles_Init (void)
 
 int partindexarray[6] = {0, 1, 2, 0, 2, 3};
 
-void R_DrawParticleCallback(void *calldata1, int calldata2)
+void R_DrawParticleCallback(const void *calldata1, int calldata2)
 {
 	int lighting, dynlight, additive, texnum, orientation;
 	float org[3], up2[3], right2[3], v[3], right[3], up[3], fog, ifog, fogvec[3], cr, cg, cb, ca;
 	particletexture_t *tex;
 	mleaf_t *leaf;
 	rmeshbufferinfo_t m;
-	particle_t *p;
-
-	p = calldata1;
+	const particle_t *p = calldata1;
 
 	// LordHavoc: check if it's in a visible leaf
 	leaf = Mod_PointInLeaf(p->org, cl.worldmodel);
@@ -1274,6 +1272,7 @@ void R_DrawParticleCallback(void *calldata1, int calldata2)
 	m.numtriangles = 2;
 	m.numverts = 4;
 	m.tex[0] = R_GetTexture(particlefonttexture);
+	Matrix4x4_CreateIdentity(&m.matrix);
 	if (R_Mesh_Draw_GetBuffer(&m, false))
 	{
 		m.index[0] = 0;

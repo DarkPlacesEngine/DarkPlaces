@@ -173,12 +173,12 @@ void R_NewExplosion(vec3_t org)
 	}
 }
 
-void R_DrawExplosionCallback(void *calldata1, int calldata2)
+void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 {
 	int i;
 	float *c, *v, diff[3], centerdir[3], ifog, alpha, dist;
 	rmeshbufferinfo_t m;
-	explosion_t *e;
+	const explosion_t *e;
 	e = calldata1;
 
 	memset(&m, 0, sizeof(m));
@@ -187,6 +187,7 @@ void R_DrawExplosionCallback(void *calldata1, int calldata2)
 	m.numtriangles = EXPLOSIONTRIS;
 	m.numverts = EXPLOSIONVERTS;
 	m.tex[0] = R_GetTexture(explosiontexture);
+	Matrix4x4_CreateIdentity(&m.matrix);
 	if (R_Mesh_Draw_GetBuffer(&m, false))
 	{
 		memcpy(m.index, explosiontris, m.numtriangles * sizeof(int[3]));
