@@ -104,7 +104,7 @@ d darkplaces: fix key based turning being affected by slowmo - it should not be
 -n darkplaces: make sure EF_FULLBRIGHT works on bmodels (FrikaC)
 -n darkplaces: make sure EF_FULLBRIGHT works on models (FrikaC)
 -n darkplaces: make sure EF_FULLBRIGHT works on sprites (FrikaC)
-0 darkplaces: make sure PR_SetString points NULL strings at pr_strings (which would be an offset of 0) (Fuh)
+-n darkplaces: make sure PR_SetString points NULL strings at pr_strings (which would be an offset of 0) (Fuh)
 0 darkplaces: make sure QuakeDoneQuick works (Chris Kemp)
 0 darkplaces: make sure r_fullbright works
 0 darkplaces: make sure that sky works without a valid size (just treat it as single layer clouds or non-animated) (tell Vermeulen)

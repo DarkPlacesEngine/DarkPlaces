@@ -422,7 +422,7 @@ void PRVM_ED_PrintEdicts_f (void);
 void PRVM_ED_PrintNum (int ent);
 
 #define PRVM_GetString(num) (prog->strings + num)
-#define PRVM_SetString(s) ((int) (s - prog->strings))
+#define PRVM_SetString(s)   ((int) (s) ? (s - prog->strings) : 0)
 
 //============================================================================
 
