@@ -27,7 +27,7 @@ void DrawCrosshair(int num)
 	cachepic_t *pic;
 	if (num < 0 || num >= NUMCROSSHAIRS)
 		num = 0;
-	if (cl.viewentity)
+	if (cl.viewentity >= 1 && cl.viewentity <= cl.maxclients)
 	{
 		i = (cl.scores[cl.viewentity-1].colors & 0xF) << 4;
 		if (i >= 208 && i < 224) // blue
