@@ -792,7 +792,7 @@ void Host_Say(qboolean teamonly)
 {
 	client_t *save;
 	int j;
-	const char *p1, *p2;
+	const char *p1;
 	// LordHavoc: 256 char say messages
 	unsigned char text[256];
 	qboolean fromServer = false;
@@ -814,39 +814,20 @@ void Host_Say(qboolean teamonly)
 	if (Cmd_Argc () < 2)
 		return;
 
-	save = host_client;
+	if (!teamplay.integer)
+		teamonly = false;
 
 // turn on color set 1
-	if (!fromServer)
-		sprintf (text, "%c%s: ", 1, host_client->name);
-	else
-		sprintf (text, "%c<%s> ", 1, hostname.string);
-
 	p1 = Cmd_Args();
-	p2 = p1 + strlen(p1);
-	// remove trailing newlines
-	while (p2 > p1 && (p2[-1] == '\n' || p2[-1] == '\r'))
-		p2--;
-	// remove quotes if present
-	if (*p1 == '"')
-	{
-		p1++;
-		if (p2[-1] == '"')
-			p2--;
-		else if (fromServer)
-			Con_Print("Host_Say: missing end quote\n");
-		else
-			SV_ClientPrint("Host_Say: missing end quote\n");
-	}
-	while (p2 > p1 && (p2[-1] == '\n' || p2[-1] == '\r'))
-		p2--;
-	for (j = strlen(text);j < (int)(sizeof(text) - 2) && p1 < p2;)
-		text[j++] = *p1++;
-	text[j++] = '\n';
-	text[j++] = 0;
+	if (!fromServer)
+		snprintf (text, sizeof(text), "%c%s: %s\n", 1, host_client->name, p1);
+	else
+		snprintf (text, sizeof(text), "%c<%s> %s\n", 1, hostname.string, p1);
 
+	// note: save is not a valid edict if fromServer is true
+	save = host_client;
 	for (j = 0, host_client = svs.clients;j < svs.maxclients;j++, host_client++)
-		if (host_client->spawned && (!teamplay.integer || host_client->edict->v->team == save->edict->v->team))
+		if (host_client->spawned && (!teamonly || host_client->edict->v->team == save->edict->v->team))
 			SV_ClientPrint(text);
 	host_client = save;
 
