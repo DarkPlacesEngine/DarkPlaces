@@ -669,8 +669,6 @@ void CL_ReadEntityFrame(void)
 		entlife[ent->state_current.number] = 2;
 		cl_entities_active[ent->state_current.number] = true;
 	}
-	VectorCopy(cl.viewentoriginnew, cl.viewentoriginold);
-	VectorCopy(entityframe.eye, cl.viewentoriginnew);
 }
 
 void CL_EntityUpdateSetup(void)
