@@ -188,22 +188,20 @@ md3shader_t;
 //
 // to find the next mesh in the file, you must go to lump_end, which puts you
 // at the beginning of the next mesh
-//
-// the comments after each field are example values from 4 models I examined
 typedef struct md3mesh_s
 {
 	char identifier[4]; // "IDP3"
 	char name[MD3NAME];
-	int num_unknown1; // 0 0 0 0
-	int num_frames; // 1 9 1 138
-	int num_shaders; // 1 1 1 1
-	int num_vertices; // 68 275 346 42
-	int num_triangles; // 96 324 324 55
-	int lump_elements; // 108 108 108 176
-	int lump_shaders; // 1260 3996 3996 108
-	int lump_texcoords; // 1328 4064 4064 836
-	int lump_framevertices; // 1872 6264 6832 1172
-	int lump_end; // 2416 26064 9600 47540
+	int flags;
+	int num_frames;
+	int num_shaders;
+	int num_vertices;
+	int num_triangles;
+	int lump_elements;
+	int lump_shaders;
+	int lump_texcoords;
+	int lump_framevertices;
+	int lump_end;
 }
 md3mesh_t;
 
@@ -211,22 +209,20 @@ md3mesh_t;
 //
 // note that the lump_ offsets in this struct are relative to the beginning
 // of the header struct (which is the beginning of the file)
-//
-// the comments after each field are example values from 4 models I examined
 typedef struct md3modelheader_s
 {
 	char identifier[4]; // "IDP3"
-	int version; // 15 15 15 15
-	char name[MD3NAME]; // "eyes" "v_axe" "armor" "models/players/brandon/brandon.md3"
-	int unknown1; // 0 0 0 0
-	int num_frames; // 1 9 1 138
-	int num_tags; // 0 0 3 0
-	int num_meshes; // 1 1 1 3
-	int unknown2; // 0 0 0 0
-	int lump_frameinfo; // 108 108 108 108
-	int lump_tags; // 164 612 164 7836
-	int lump_meshes; // 164 612 164 54204
-	int lump_end; // 2580 26676 9764 219904
+	int version; // 15
+	char name[MD3NAME];
+	int flags;
+	int num_frames;
+	int num_tags;
+	int num_meshes;
+	int num_skins;
+	int lump_frameinfo;
+	int lump_tags;
+	int lump_meshes;
+	int lump_end;
 }
 md3modelheader_t;
 
