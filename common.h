@@ -52,20 +52,38 @@ void SZ_HexDumpToConsole(const sizebuf_t *buf);
 
 void Com_HexDumpToConsole(const qbyte *data, int size);
 
+
 //============================================================================
-#if !defined(ENDIAN_LITTLE) && !defined(ENDIAN_BIG)
-#if  defined(__i386__) || defined(__ia64__) || defined(WIN32) || (defined(__alpha__) || defined(__alpha)) || defined(__arm__) || (defined(__mips__) && defined(__MIPSEL__)) || defined(__LITTLE_ENDIAN__)
-#define ENDIAN_LITTLE
-#else
-#define ENDIAN_BIG
+//							Endianess handling
+//============================================================================
+
+// We use BSD-style defines: BYTE_ORDER is defined to either BIG_ENDIAN or LITTLE_ENDIAN
+
+// Initializations
+#if !defined(BYTE_ORDER) || !defined(LITTLE_ENDIAN) || !defined(BIG_ENDIAN) || (BYTE_ORDER != LITTLE_ENDIAN && BYTE_ORDER != BIG_ENDIAN)
+# undef BYTE_ORDER
+# undef LITTLE_ENDIAN
+# undef BIG_ENDIAN
+# define LITTLE_ENDIAN 1234
+# define BIG_ENDIAN 4321
 #endif
+
+// If we still don't know the CPU endianess at this point, we try to guess
+#ifndef BYTE_ORDER
+# if defined(WIN32)
+#  define BYTE_ORDER LITTLE_ENDIAN
+# else
+#  warning "Unable to determine the CPU endianess. Defaulting to little endian"
+#  define BYTE_ORDER LITTLE_ENDIAN
+# endif
 #endif
+
 
 short ShortSwap (short l);
 int LongSwap (int l);
 float FloatSwap (float f);
 
-#ifdef ENDIAN_LITTLE
+#if BYTE_ORDER == LITTLE_ENDIAN
 // little endian
 #define BigShort(l) ShortSwap(l)
 #define LittleShort(l) (l)
@@ -73,7 +91,7 @@ float FloatSwap (float f);
 #define LittleLong(l) (l)
 #define BigFloat(l) FloatSwap(l)
 #define LittleFloat(l) (l)
-#elif defined(ENDIAN_BIG)
+#else
 // big endian
 #define BigShort(l) (l)
 #define LittleShort(l) ShortSwap(l)
@@ -81,14 +99,6 @@ float FloatSwap (float f);
 #define LittleLong(l) LongSwap(l)
 #define BigFloat(l) (l)
 #define LittleFloat(l) FloatSwap(l)
-#else
-// figure it out at runtime
-extern short (*BigShort) (short l);
-extern short (*LittleShort) (short l);
-extern int (*BigLong) (int l);
-extern int (*LittleLong) (int l);
-extern float (*BigFloat) (float l);
-extern float (*LittleFloat) (float l);
 #endif
 
 unsigned int BuffBigLong (const qbyte *buffer);
