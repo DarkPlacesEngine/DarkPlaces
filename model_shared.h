@@ -60,6 +60,13 @@ skinframe_t;
 
 #define MAX_SKINS 256
 
+#define SHADOWMESHVERTEXHASH 1024
+typedef struct shadowmeshvertexhash_s
+{
+	struct shadowmeshvertexhash_s *next;
+}
+shadowmeshvertexhash_t;
+
 typedef struct shadowmesh_s
 {
 	struct shadowmesh_s *next;
@@ -68,6 +75,9 @@ typedef struct shadowmesh_s
 	float *verts;
 	int *elements;
 	int *neighbors;
+	// these are NULL after Mod_ShadowMesh_Finish is performed, only used
+	// while building meshes
+	shadowmeshvertexhash_t **vertexhashtable, *vertexhashentries;
 }
 shadowmesh_t;
 

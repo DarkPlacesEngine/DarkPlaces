@@ -33,12 +33,12 @@ rtexture_t *r_shadow_blankwhitetexture;
 cvar_t r_shadow_lightattenuationscale = {0, "r_shadow_lightattenuationscale", "2"};
 cvar_t r_shadow_lightintensityscale = {0, "r_shadow_lightintensityscale", "1"};
 cvar_t r_shadow_realtime = {0, "r_shadow_realtime", "0"};
-cvar_t r_shadow_erasebydrawing = {0, "r_shadow_erasebydrawing", "0"};
 cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "0"};
 cvar_t r_shadow_gloss = {0, "r_shadow_gloss", "1"};
 cvar_t r_shadow_debuglight = {0, "r_shadow_debuglight", "-1"};
 cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1"};
 cvar_t r_shadow_bumpscale = {0, "r_shadow_bumpscale", "4"};
+cvar_t r_shadow_shadownudge = {0, "r_shadow_shadownudge", "1"};
 
 void R_Shadow_ClearWorldLights(void);
 void R_Shadow_SaveWorldLights(void);
@@ -97,33 +97,25 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_texture3d);
 	Cvar_RegisterVariable(&r_shadow_gloss);
 	Cvar_RegisterVariable(&r_shadow_debuglight);
-	Cvar_RegisterVariable(&r_shadow_erasebydrawing);
 	Cvar_RegisterVariable(&r_shadow_scissor);
 	Cvar_RegisterVariable(&r_shadow_bumpscale);
+	Cvar_RegisterVariable(&r_shadow_shadownudge);
 	R_Shadow_EditLights_Init();
 	R_RegisterModule("R_Shadow", r_shadow_start, r_shadow_shutdown, r_shadow_newmap);
 }
 
-void R_Shadow_ProjectVertices(const float *in, float *out, int numverts, const float *relativelightorigin, float projectdistance)
+void R_Shadow_ProjectVertices(float *verts, int numverts, const float *relativelightorigin, float projectdistance)
 {
 	int i;
+	float *in, *out, diff[4];
+	in = verts;
+	out = verts + numverts * 4;
 	for (i = 0;i < numverts;i++, in += 4, out += 4)
 	{
-#if 1
-		out[0] = in[0] + 1000000.0f * (in[0] - relativelightorigin[0]);
-		out[1] = in[1] + 1000000.0f * (in[1] - relativelightorigin[1]);
-		out[2] = in[2] + 1000000.0f * (in[2] - relativelightorigin[2]);
-#elif 0
-		VectorSubtract(in, relativelightorigin, temp);
-		f = lightradius / sqrt(DotProduct(temp,temp));
-		if (f < 1)
-			f = 1;
-		VectorMA(relativelightorigin, f, temp, out);
-#else
-		VectorSubtract(in, relativelightorigin, temp);
-		f = projectdistance / sqrt(DotProduct(temp,temp));
-		VectorMA(in, f, temp, out);
-#endif
+		VectorSubtract(in, relativelightorigin, diff);
+		VectorNormalizeFast(diff);
+		VectorMA(in, projectdistance, diff, out);
+		VectorMA(in, r_shadow_shadownudge.value, diff, in);
 	}
 }
 
@@ -304,13 +296,13 @@ void R_Shadow_Volume(int numverts, int numtris, int *elements, int *neighbors, v
 	if (maxshadowelements < numtris * 24)
 		R_Shadow_ResizeShadowElements(numtris);
 
+	// check which triangles are facing the light
+	R_Shadow_MakeTriangleShadowFlags(elements, varray_vertex, numtris, trianglefacinglight, relativelightorigin, lightradius);
+
 	// generate projected vertices
 	// by clever use of elements we'll construct the whole shadow from
 	// the unprojected vertices and these projected vertices
-	R_Shadow_ProjectVertices(varray_vertex, varray_vertex + numverts * 4, numverts, relativelightorigin, projectdistance);
-
-	// check which triangles are facing the light
-	R_Shadow_MakeTriangleShadowFlags(elements, varray_vertex, numtris, trianglefacinglight, relativelightorigin, lightradius);
+	R_Shadow_ProjectVertices(varray_vertex, numverts, relativelightorigin, projectdistance);
 
 	// output triangle elements
 	tris = R_Shadow_BuildShadowVolumeTriangles(elements, neighbors, numtris, numverts, trianglefacinglight, shadowelements);
@@ -541,12 +533,11 @@ void R_Shadow_Stage_ShadowVolumes(void)
 	qglDepthFunc(GL_LESS);
 	qglEnable(GL_STENCIL_TEST);
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-	qglStencilFunc(GL_ALWAYS, 0, 0xFF);
+	qglStencilFunc(GL_ALWAYS, 128, 0xFF);
 	qglEnable(GL_CULL_FACE);
 	qglEnable(GL_DEPTH_TEST);
 	r_shadowstage = SHADOWSTAGE_STENCIL;
-	if (!r_shadow_erasebydrawing.integer)
-		qglClear(GL_STENCIL_BUFFER_BIT);
+	qglClear(GL_STENCIL_BUFFER_BIT);
 }
 
 void R_Shadow_Stage_Light(void)
@@ -565,35 +556,11 @@ void R_Shadow_Stage_Light(void)
 	qglEnable(GL_STENCIL_TEST);
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 	// only draw light where this geometry was already rendered AND the
-	// stencil is 0 (non-zero means shadow)
-	qglStencilFunc(GL_EQUAL, 0, 0xFF);
+	// stencil is 128 (values other than this mean shadow)
+	qglStencilFunc(GL_EQUAL, 128, 0xFF);
 	qglEnable(GL_CULL_FACE);
 	qglEnable(GL_DEPTH_TEST);
 	r_shadowstage = SHADOWSTAGE_LIGHT;
-}
-
-int R_Shadow_Stage_EraseShadowVolumes(void)
-{
-	if (r_shadow_erasebydrawing.integer)
-	{
-		rmeshstate_t m;
-		memset(&m, 0, sizeof(m));
-		R_Mesh_TextureState(&m);
-		GL_Color(1, 1, 1, 1);
-		qglColorMask(0, 0, 0, 0);
-		qglDisable(GL_BLEND);
-		qglDepthMask(0);
-		qglDepthFunc(GL_LESS);
-		qglEnable(GL_STENCIL_TEST);
-		qglStencilOp(GL_ZERO, GL_ZERO, GL_ZERO);
-		qglStencilFunc(GL_ALWAYS, 0, 0xFF);
-		qglDisable(GL_CULL_FACE);
-		qglDisable(GL_DEPTH_TEST);
-		r_shadowstage = SHADOWSTAGE_ERASESTENCIL;
-		return true;
-	}
-	else
-		return false;
 }
 
 void R_Shadow_Stage_End(void)
@@ -610,7 +577,7 @@ void R_Shadow_Stage_End(void)
 	qglDepthFunc(GL_LEQUAL);
 	qglDisable(GL_STENCIL_TEST);
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-	qglStencilFunc(GL_ALWAYS, 0, 0xFF);
+	qglStencilFunc(GL_ALWAYS, 128, 0xFF);
 	qglEnable(GL_CULL_FACE);
 	qglEnable(GL_DEPTH_TEST);
 	// force mesh state to reset by using various combinations of features
@@ -1076,22 +1043,10 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 	}
 }
 
-#define PRECOMPUTEDSHADOWVOLUMES 1
 void R_Shadow_DrawWorldLightShadowVolume(matrix4x4_t *matrix, worldlight_t *light)
 {
-#if PRECOMPUTEDSHADOWVOLUMES
 	R_Mesh_Matrix(matrix);
 	R_Shadow_RenderShadowMeshVolume(light->shadowvolume);
-#else
-	shadowmesh_t *mesh;
-	R_Mesh_Matrix(matrix);
-	for (mesh = light->shadowvolume;mesh;mesh = mesh->next)
-	{
-		R_Mesh_ResizeCheck(mesh->numverts * 2);
-		memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-		R_Shadow_Volume(mesh->numverts, mesh->numtriangles, varray_vertex, mesh->elements, mesh->neighbors, light->origin, light->lightradius, light->lightradius);
-	}
-#endif
 }
 
 cvar_t r_editlights = {0, "r_editlights", "0"};
@@ -1106,13 +1061,15 @@ vec3_t r_editlights_cursorlocation;
 static int castshadowcount = 1;
 void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style, const char *cubemapname)
 {
-	int i, j, k, l, maxverts, *mark;
-	float *verts, *v, *v0, *v1, f, projectdistance, temp[3], temp2[3], temp3[3], radius2;
+	int i, j, k, l, maxverts, *mark, tris;
+	float *verts, *v, f, temp[3], radius2;
+	//float projectdistance, *v0, *v1, temp2[3], temp3[3];
 	worldlight_t *e;
-	shadowmesh_t *mesh;
+	shadowmesh_t *mesh, *castmesh;
 	mleaf_t *leaf;
 	msurface_t *surf;
 	qbyte *pvs;
+	surfmesh_t *surfmesh;
 
 	e = Mem_Alloc(r_shadow_mempool, sizeof(worldlight_t));
 	VectorCopy(origin, e->origin);
@@ -1160,8 +1117,10 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 								f = -f;
 							if (f > 0 && f < e->lightradius)
 							{
-								VectorSubtract(e->origin, surf->poly_center, temp);
-								if (DotProduct(temp, temp) - surf->poly_radius2 < e->lightradius * e->lightradius)
+								temp[0] = bound(surf->poly_mins[0], e->origin[0], surf->poly_maxs[0]) - e->origin[0];
+								temp[1] = bound(surf->poly_mins[1], e->origin[1], surf->poly_maxs[1]) - e->origin[1];
+								temp[2] = bound(surf->poly_mins[2], e->origin[2], surf->poly_maxs[2]) - e->origin[2];
+								if (DotProduct(temp, temp) < e->lightradius * e->lightradius)
 									surf->castshadow = castshadowcount;
 							}
 						}
@@ -1236,17 +1195,6 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 			}
 		}
 		e->shadowvolume = Mod_ShadowMesh_Begin(r_shadow_mempool, 32768);
-#if !PRECOMPUTEDSHADOWVOLUMES
-		// make a mesh to cast a shadow volume from
-		for (j = 0;j < e->numsurfaces;j++)
-			if (e->surfaces[j]->castshadow == castshadowcount)
-				Mod_ShadowMesh_AddPolygon(r_shadow_mempool, e->shadowvolume, e->surfaces[j]->poly_numverts, e->surfaces[j]->poly_verts);
-#else
-#if 1
-		{
-		int tris;
-		shadowmesh_t *castmesh, *mesh;
-		surfmesh_t *surfmesh;
 		// make a mesh to cast a shadow volume from
 		castmesh = Mod_ShadowMesh_Begin(r_shadow_mempool, 32768);
 		for (j = 0;j < e->numsurfaces;j++)
@@ -1273,7 +1221,7 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 
 			// now that we have the buffers big enough, construct shadow volume mesh
 			memcpy(verts, castmesh->verts, castmesh->numverts * sizeof(float[4]));
-			R_Shadow_ProjectVertices(verts, verts + castmesh->numverts * 4, castmesh->numverts, e->origin, e->lightradius);
+			R_Shadow_ProjectVertices(verts, castmesh->numverts, e->origin, 1000000.0f);//, e->lightradius);
 			R_Shadow_MakeTriangleShadowFlags(castmesh->elements, verts, castmesh->numtriangles, trianglefacinglight, e->origin, e->lightradius);
 			tris = R_Shadow_BuildShadowVolumeTriangles(castmesh->elements, castmesh->neighbors, castmesh->numtriangles, castmesh->numverts, trianglefacinglight, shadowelements);
 			// add the constructed shadow volume mesh
@@ -1281,72 +1229,6 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 		}
 		// we're done with castmesh now
 		Mod_ShadowMesh_Free(castmesh);
-		}
-#else
-		// make a shadow volume mesh
-		if (verts == NULL && maxverts > 0)
-			verts = Mem_Alloc(r_shadow_mempool, maxverts * sizeof(float[4]));
-		for (j = 0;j < e->numsurfaces;j++)
-		{
-			surf = e->surfaces[j];
-			if (surf->castshadow != castshadowcount)
-				continue;
-			projectdistance = 1000000.0f;//e->lightradius;
-			// copy the original polygon, for the front cap of the volume
-			for (k = 0, v0 = surf->poly_verts, v1 = verts;k < surf->poly_numverts;k++, v0 += 3, v1 += 3)
-				VectorCopy(v0, v1);
-			Mod_ShadowMesh_AddPolygon(r_shadow_mempool, e->shadowvolume, surf->poly_numverts, verts);
-			// project the original polygon, reversed, for the back cap of the volume
-			for (k = 0, v0 = surf->poly_verts + (surf->poly_numverts - 1) * 3, v1 = verts;k < surf->poly_numverts;k++, v0 -= 3, v1 += 3)
-			{
-				VectorSubtract(v0, e->origin, temp);
-				//VectorNormalize(temp);
-				VectorMA(v0, projectdistance, temp, v1);
-			}
-			Mod_ShadowMesh_AddPolygon(r_shadow_mempool, e->shadowvolume, surf->poly_numverts, verts);
-			// project the shadow volume sides
-			for (l = surf->poly_numverts - 1, k = 0, v0 = surf->poly_verts + (surf->poly_numverts - 1) * 3, v1 = surf->poly_verts;k < surf->poly_numverts;l = k, k++, v0 = v1, v1 += 3)
-			{
-				if (surf->neighborsurfaces == NULL || surf->neighborsurfaces[l] == NULL || surf->neighborsurfaces[l]->castshadow != castshadowcount)
-				{
-					VectorCopy(v1, &verts[0]);
-					VectorCopy(v0, &verts[3]);
-					VectorCopy(v0, &verts[6]);
-					VectorCopy(v1, &verts[9]);
-					VectorSubtract(&verts[6], e->origin, temp);
-					//VectorNormalize(temp);
-					VectorMA(&verts[6], projectdistance, temp, &verts[6]);
-					VectorSubtract(&verts[9], e->origin, temp);
-					//VectorNormalize(temp);
-					VectorMA(&verts[9], projectdistance, temp, &verts[9]);
-
-#if 0
-					VectorSubtract(&verts[0], &verts[3], temp);
-					VectorSubtract(&verts[6], &verts[3], temp2);
-					CrossProduct(temp, temp2, temp3);
-					VectorNormalize(temp3);
-					if (DotProduct(surf->poly_center, temp3) > DotProduct(&verts[0], temp3))
-					{
-						VectorCopy(v0, &verts[0]);
-						VectorCopy(v1, &verts[3]);
-						VectorCopy(v1, &verts[6]);
-						VectorCopy(v0, &verts[9]);
-						VectorSubtract(&verts[6], e->origin, temp);
-						//VectorNormalize(temp);
-						VectorMA(&verts[6], projectdistance, temp, &verts[6]);
-						VectorSubtract(&verts[9], e->origin, temp);
-						//VectorNormalize(temp);
-						VectorMA(&verts[9], projectdistance, temp, &verts[9]);
-						Con_Printf("flipped shadow volume edge %8p %i\n", surf, l);
-					}
-#endif
-
-					Mod_ShadowMesh_AddPolygon(r_shadow_mempool, e->shadowvolume, 4, verts);
-				}
-			}
-		}
-#endif
-#endif
 		e->shadowvolume = Mod_ShadowMesh_Finish(r_shadow_mempool, e->shadowvolume);
 		for (l = 0, mesh = e->shadowvolume;mesh;mesh = mesh->next)
 			l += mesh->numtriangles;
@@ -1399,7 +1281,7 @@ void R_Shadow_FreeSelectedWorldLight(void)
 
 void R_Shadow_SelectLightInView(void)
 {
-	float bestrating, rating, temp[3], dist;
+	float bestrating, temp[3], dist;
 	worldlight_t *best, *light;
 	best = NULL;
 	bestrating = 1e30;
@@ -1498,7 +1380,7 @@ void R_Shadow_SaveWorldLights(void)
 void R_Shadow_LoadLightsFile(void)
 {
 	int n, a, style;
-	char name[MAX_QPATH], cubemapname[MAX_QPATH], *lightsstring, *s, *t;
+	char name[MAX_QPATH], *lightsstring, *s, *t;
 	float origin[3], radius, color[3], subtract, spotdir[3], spotcone, falloff, distbias;
 	COM_StripExtension(cl.worldmodel->name, name);
 	strcat(name, ".lights");

@@ -216,8 +216,6 @@ typedef struct msurface_s
 	float *poly_verts;
 	// bounding box for onscreen checks, and center for sorting
 	vec3_t poly_mins, poly_maxs, poly_center;
-	// bounding sphere radius (around poly_center)
-	float poly_radius, poly_radius2;
 
 	// neighboring surfaces (one per poly_numverts)
 	struct msurface_s **neighborsurfaces;

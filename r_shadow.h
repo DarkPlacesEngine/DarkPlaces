@@ -20,9 +20,6 @@ void R_Shadow_RenderShadowMeshVolume(shadowmesh_t *mesh);
 void R_Shadow_Stage_Begin(void);
 void R_Shadow_Stage_ShadowVolumes(void);
 void R_Shadow_Stage_Light(void);
-// returns true if shadow volumes should be drawn again to erase,
-// otherwise clears stencil
-int R_Shadow_Stage_EraseShadowVolumes(void);
 void R_Shadow_Stage_End(void);
 int R_Shadow_ScissorForBBoxAndSphere(const float *mins, const float *maxs, const float *origin, float radius);
 

@@ -495,6 +495,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	loadmodel->radius2 = modelradius * modelradius;
 
 	loadmodel->mdlmd2data_triangleneighbors = Mem_Alloc(loadmodel->mempool, loadmodel->numtris * sizeof(int[3]));
+	Mod_ValidateElements(loadmodel->mdlmd2data_indices, loadmodel->numtris, loadmodel->numverts, __FILE__, __LINE__);
 	Mod_BuildTriangleNeighbors(loadmodel->mdlmd2data_triangleneighbors, loadmodel->mdlmd2data_indices, loadmodel->numtris);
 }
 
@@ -757,6 +758,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	loadmodel->radius2 = modelradius * modelradius;
 
 	loadmodel->mdlmd2data_triangleneighbors = Mem_Alloc(loadmodel->mempool, loadmodel->numtris * sizeof(int[3]));
+	Mod_ValidateElements(loadmodel->mdlmd2data_indices, loadmodel->numtris, loadmodel->numverts, __FILE__, __LINE__);
 	Mod_BuildTriangleNeighbors(loadmodel->mdlmd2data_triangleneighbors, loadmodel->mdlmd2data_indices, loadmodel->numtris);
 }
 
