@@ -435,6 +435,7 @@ void CL_InitTEnts (void);
 #define PARTICLE_UPRIGHT_FACING 2
 #define PARTICLE_ORIENTED_DOUBLESIDED 3
 
+/*
 typedef struct renderparticle_s
 {
 	int tex;
@@ -448,6 +449,7 @@ typedef struct renderparticle_s
 	float color[4];
 }
 renderparticle_t;
+*/
 
 void CL_Particles_Clear(void);
 void CL_Particles_Init(void);
@@ -504,8 +506,8 @@ typedef struct
 	int numentities;
 	entity_render_t **entities;
 
-	int numparticles;
-	struct renderparticle_s *particles;
+	//int numparticles;
+	//struct renderparticle_s *particles;
 
 	qbyte drawqueue[MAX_DRAWQUEUE];
 	int drawqueuesize;
