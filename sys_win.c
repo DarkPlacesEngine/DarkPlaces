@@ -171,12 +171,12 @@ void Sys_FileSeek (int handle, int position)
 
 int Sys_FileRead (int handle, void *dest, int count)
 {
-	return Qread (dest, 1, count, sys_handles[handle]);
+	return Qread (sys_handles[handle], dest, count);
 }
 
 int Sys_FileWrite (int handle, void *data, int count)
 {
-	return Qwrite (data, 1, count, sys_handles[handle]);
+	return Qwrite (sys_handles[handle], data, count);
 }
 
 int	Sys_FileTime (char *path)
