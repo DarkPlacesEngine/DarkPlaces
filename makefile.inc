@@ -22,11 +22,11 @@ OBJ_COMMONSOUND=snd_dma.o snd_mem.o snd_mix.o snd_ogg.o snd_wav.o
 OBJ_NOSOUND=snd_null.o
 
 # CD objects
-OBJ_COMMONCD=cd_shared.o
 OBJ_NOCD=cd_null.o
 
 # Common objects
 OBJ_COMMON= \
+	cd_shared.o \
 	cgame.o \
 	cgamevm.o \
 	cl_collision.o \
@@ -158,7 +158,7 @@ LIB_LINUXSOUND=
 #LIB_LINUXSOUND=
 
 # If you want CD sound in Linux
-OBJ_LINUXCD=$(OBJ_COMMONCD) cd_linux.o
+OBJ_LINUXCD=cd_linux.o
 # If you want no CD audio
 #OBJ_LINUXCD=$(OBJ_NOCD)
 
@@ -175,7 +175,7 @@ OBJ_BSDSOUND=$(OBJ_COMMONSOUND) snd_bsd.o
 LIB_BSDSOUND=
 
 #if you want CD sound in BSD
-OBJ_BSDCD=$(OBJ_COMMONCD) cd_bsd.o
+OBJ_BSDCD=cd_bsd.o
 #if you want no CD audio
 #OBJ_BSDCD=$(OBJ_NOCD)
 
@@ -192,7 +192,7 @@ OBJ_WINSOUND=$(OBJ_COMMONSOUND) snd_win.o
 LIB_WINSOUND=
 
 #if you want CD sound in Win32
-OBJ_WINCD=$(OBJ_COMMONCD) cd_win.o
+OBJ_WINCD=cd_win.o
 #if you want no CD audio
 #OBJ_WINCD=$(OBJ_NOCD)
 

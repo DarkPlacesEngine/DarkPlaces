@@ -101,8 +101,12 @@ struct snd_fetcher_s
 void S_Init (void);
 void S_Startup (void);
 void S_Shutdown (void);
+// S_StartSound returns the channel index, or -1 if an error occurred
 int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol,  float attenuation);
 void S_StaticSound (sfx_t *sfx, vec3_t origin, float vol, float attenuation);
+void S_StopChannel (unsigned int channel_ind);
+void S_PauseChannel (unsigned int channel_ind, qboolean toggle);
+void S_LoopChannel (unsigned int channel_ind, qboolean toggle);
 void S_StopSound (int entnum, int entchannel);
 void S_StopAllSounds(qboolean clear);
 void S_PauseGameSounds (void);

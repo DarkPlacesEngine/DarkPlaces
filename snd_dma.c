@@ -591,27 +591,65 @@ int S_StartSound(int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fv
 		}
 	}
 
-	return (channels - target_chan);
+	return (target_chan - channels);
+}
+
+void S_StopChannel (unsigned int channel_ind)
+{
+	channel_t *ch;
+
+	if (channel_ind >= total_channels)
+		return;
+
+	ch = &channels[channel_ind];
+	if (ch->sfx != NULL)
+	{
+		if (ch->sfx->fetcher != NULL)
+		{
+			snd_fetcher_end_t fetcher_end = ch->sfx->fetcher->end;
+			if (fetcher_end != NULL)
+				fetcher_end (ch);
+		}
+		ch->sfx = NULL;
+	}
+	ch->end = 0;
+}
+
+void S_PauseChannel (unsigned int channel_ind, qboolean toggle)
+{
+	if (toggle)
+		channels[channel_ind].flags |= CHANNELFLAG_PAUSED;
+	else
+		channels[channel_ind].flags &= ~CHANNELFLAG_PAUSED;
+}
+
+void S_LoopChannel (unsigned int channel_ind, qboolean toggle)
+{
+	if (toggle)
+		channels[channel_ind].flags |= CHANNELFLAG_FORCELOOP;
+	else
+		channels[channel_ind].flags &= ~CHANNELFLAG_FORCELOOP;
 }
 
 void S_StopSound(int entnum, int entchannel)
 {
-	int i;
+	unsigned int i;
 
-	for (i=0 ; i<MAX_DYNAMIC_CHANNELS ; i++)
-	{
-		if (channels[i].entnum == entnum
-			&& channels[i].entchannel == entchannel)
+	for (i = 0; i < MAX_DYNAMIC_CHANNELS; i++)
+		if (channels[i].entnum == entnum && channels[i].entchannel == entchannel)
 		{
-			channels[i].end = 0;
-			channels[i].sfx = NULL;
+			S_StopChannel (i);
 			return;
 		}
-	}
 }
 
 void S_StopAllSounds(qboolean clear)
 {
+	unsigned int i;
+
+	for (i = 0; i < total_channels; i++)
+		S_StopChannel (i);
+
 	total_channels = MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS;	// no statics
 	memset(channels, 0, MAX_CHANNELS * sizeof(channel_t));
 

@@ -17,55 +17,63 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
+
 #include "quakedef.h"
 
-cvar_t	cdaudioinitialized = {CVAR_READONLY,"cdaudioinitialized","0"};
 
-void CDAudio_Play(qbyte track, qboolean looping)
+void CDAudio_SysEject (void)
 {
 }
 
 
-void CDAudio_Stop(void)
+void CDAudio_SysCloseDoor (void)
 {
 }
 
 
-void CDAudio_Pause(void)
+int CDAudio_SysGetAudioDiskInfo (void)
 {
+	return -1;
 }
 
 
-void CDAudio_Resume(void)
+int CDAudio_SysPlay (qbyte track)
 {
+	return -1;
 }
 
 
-void CDAudio_Update(void)
+int CDAudio_SysStop (void)
 {
+	return -1;
 }
 
 
-int CDAudio_Init(void)
+int CDAudio_SysPause (void)
 {
-	Cvar_RegisterVariable(&cdaudioinitialized);
-	return 0;
+	return -1;
 }
 
-int CDAudio_Startup(void)
+int CDAudio_SysResume (void)
 {
-	return 0;
+	return -1;
 }
 
-void CDAudio_Shutdown(void)
+int CDAudio_SysUpdate (void)
 {
+	return -1;
 }
 
 
-void CDAudio_Open(void)
+void CDAudio_SysInit (void)
 {
 }
 
-void CDAudio_Close(void)
+int CDAudio_SysStartup (void)
+{
+	return -1;
+}
+
+void CDAudio_SysShutdown (void)
 {
 }

@@ -375,9 +375,7 @@ void S_PaintChannels(int endtime)
 
 				if (stop_paint)
 				{
-					if (ch->sfx->fetcher->end != NULL)
-						ch->sfx->fetcher->end (ch);
-					ch->sfx = NULL;
+					S_StopChannel (ch - channels);
 					break;
 				}
 			}

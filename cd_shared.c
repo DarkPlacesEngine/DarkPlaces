@@ -44,6 +44,7 @@ static qboolean enabled = false;
 static float cdvolume;
 static qbyte remap[100];
 static qbyte maxTrack;
+static int faketrack = -1;
 
 // exported variables
 qboolean cdValid = false;
@@ -88,18 +89,13 @@ static int CDAudio_GetAudioDiskInfo (void)
 
 void CDAudio_Play (qbyte track, qboolean looping)
 {
+	sfx_t* sfx;
+
 	if (!enabled)
 		return;
 
-	if (!cdValid)
-	{
-		CDAudio_GetAudioDiskInfo();
-		if (!cdValid)
-			return;
-	}
-
 	track = remap[track];
-	if (track < 1 || track > maxTrack)
+	if (track < 1)
 	{
 		Con_DPrintf("CDAudio: Bad track number %u.\n", track);
 		return;
@@ -107,9 +103,43 @@ void CDAudio_Play (qbyte track, qboolean looping)
 
 	if (cdPlaying && cdPlayTrack == track)
 		return;
+	CDAudio_Stop ();
 
-	if (CDAudio_SysPlay(track) == -1)
-		return;
+	// Try playing a fake track (sound file) first
+	sfx = S_PrecacheSound (va ("cdtracks/track%02u.wav", track), false);
+	if (sfx != NULL)
+	{
+		faketrack = S_StartSound (-1, 0, sfx, vec3_origin, 1, 0);
+		if (faketrack != -1)
+		{
+			if (looping)
+			S_LoopChannel (faketrack, true);
+			Con_DPrintf ("Fake CD track %u playing...\n", track);
+		}
+	}
+
+	// If we can't play a fake CD track, try the real one
+	if (faketrack == -1)
+	{
+		if (!cdValid)
+		{
+			CDAudio_GetAudioDiskInfo();
+			if (!cdValid)
+			{
+				Con_Print ("No CD in player.\n");
+				return;
+			}
+		}
+
+		if (track > maxTrack)
+		{
+			Con_DPrintf("CDAudio: Bad track number %u.\n", track);
+			return;
+		}
+
+		if (CDAudio_SysPlay(track) == -1)
+			return;
+	}
 
 	cdPlayLooping = looping;
 	cdPlayTrack = track;
@@ -125,7 +155,12 @@ void CDAudio_Stop (void)
 	if (!enabled || !cdPlaying)
 		return;
 
-	if (CDAudio_SysStop() == -1)
+	if (faketrack != -1)
+	{
+		S_StopChannel (faketrack);
+		faketrack = -1;
+	}
+	else if (CDAudio_SysStop() == -1)
 		return;
 
 	wasPlaying = false;
@@ -137,7 +172,9 @@ void CDAudio_Pause (void)
 	if (!enabled || !cdPlaying)
 		return;
 
-	if (CDAudio_SysPause() == -1)
+	if (faketrack != -1)
+		S_PauseChannel (faketrack, true);
+	else if (CDAudio_SysPause() == -1)
 		return;
 
 	wasPlaying = cdPlaying;
@@ -147,10 +184,12 @@ void CDAudio_Pause (void)
 
 void CDAudio_Resume (void)
 {
-	if (!enabled || !cdValid || !wasPlaying)
+	if (!enabled || !wasPlaying)
 		return;
 
-	if (CDAudio_SysResume() == -1)
+	if (faketrack != -1)
+		S_PauseChannel (faketrack, false);
+	else if (CDAudio_SysResume() == -1)
 		return;
 	cdPlaying = true;
 }
@@ -212,16 +251,6 @@ static void CD_f (void)
 		return;
 	}
 
-	if (!cdValid)
-	{
-		CDAudio_GetAudioDiskInfo();
-		if (!cdValid)
-		{
-			Con_Print("No CD in player.\n");
-			return;
-		}
-	}
-
 	if (strcasecmp(command, "play") == 0)
 	{
 		CDAudio_Play((qbyte)atoi(Cmd_Argv (2)), false);
@@ -254,7 +283,7 @@ static void CD_f (void)
 
 	if (strcasecmp(command, "eject") == 0)
 	{
-		if (cdPlaying)
+		if (cdPlaying && faketrack == -1)
 			CDAudio_Stop();
 		CDAudio_Eject();
 		cdValid = false;
@@ -263,7 +292,11 @@ static void CD_f (void)
 
 	if (strcasecmp(command, "info") == 0)
 	{
-		Con_Printf("%u tracks\n", maxTrack);
+		CDAudio_GetAudioDiskInfo ();
+		if (cdValid)
+			Con_Printf("%u tracks on CD.\n", maxTrack);
+		else
+			Con_Print ("No CD in player.\n");
 		if (cdPlaying)
 			Con_Printf("Currently %s track %u\n", cdPlayLooping ? "looping" : "playing", cdPlayTrack);
 		else if (wasPlaying)
@@ -294,7 +327,8 @@ void CDAudio_Update (void)
 		}
 	}
 
-	CDAudio_SysUpdate();
+	if (faketrack == -1)
+		CDAudio_SysUpdate();
 }
 
 int CDAudio_Init (void)
@@ -323,8 +357,7 @@ int CDAudio_Init (void)
 
 int CDAudio_Startup (void)
 {
-	if (CDAudio_SysStartup() == -1)
-		return -1;
+	CDAudio_SysStartup ();
 
 	if (CDAudio_GetAudioDiskInfo())
 	{

@@ -58,6 +58,9 @@ int CDAudio_SysGetAudioDiskInfo (void)
 {
 	struct cdrom_tochdr tochdr;
 
+	if (cdfile == -1)
+		return -1;
+
 	if (ioctl(cdfile, CDROMREADTOCHDR, &tochdr) == -1)
 	{
 		Con_DPrint("ioctl CDROMREADTOCHDR failed\n");
