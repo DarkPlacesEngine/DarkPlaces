@@ -560,14 +560,13 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 				else
 					hostCacheCount++;
 			}
-			c = -1;
-			if ((s = SearchInfostring(string, "gamename"     )) != NULL) strncpy(game, s, sizeof(game) - 1);
-			if ((s = SearchInfostring(string, "modname"      )) != NULL) strncpy(mod , s, sizeof(mod ) - 1);
-			if ((s = SearchInfostring(string, "mapname"      )) != NULL) strncpy(map , s, sizeof(map ) - 1);
-			if ((s = SearchInfostring(string, "hostname"     )) != NULL) strncpy(name, s, sizeof(name) - 1);
-			if ((s = SearchInfostring(string, "protocol"     )) != NULL) c = atoi(s);
-			if ((s = SearchInfostring(string, "clients"      )) != NULL) users = atoi(s);
-			if ((s = SearchInfostring(string, "sv_maxclients")) != NULL) maxusers = atoi(s);
+			if ((s = SearchInfostring(string, "gamename"     )) != NULL) strncpy(game, s, sizeof(game) - 1);else game[0] = 0;
+			if ((s = SearchInfostring(string, "modname"      )) != NULL) strncpy(mod , s, sizeof(mod ) - 1);else mod[0] = 0;
+			if ((s = SearchInfostring(string, "mapname"      )) != NULL) strncpy(map , s, sizeof(map ) - 1);else map[0] = 0;
+			if ((s = SearchInfostring(string, "hostname"     )) != NULL) strncpy(name, s, sizeof(name) - 1);else name[0] = 0;
+			if ((s = SearchInfostring(string, "protocol"     )) != NULL) c = atoi(s);else c = -1;
+			if ((s = SearchInfostring(string, "clients"      )) != NULL) users = atoi(s);else users = 0;
+			if ((s = SearchInfostring(string, "sv_maxclients")) != NULL) maxusers = atoi(s);else maxusers = 0;
 			pingtime = 9999;
 			for (i = 0;i < HOSTCACHESIZE;i++)
 				if (!LHNETADDRESS_Compare(peeraddress, &pingcache[i].peeraddress))
