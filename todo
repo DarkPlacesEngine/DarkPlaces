@@ -17,7 +17,6 @@
 -d darkplaces menu: add slowmo to options menu (Cristian Beltramo)
 -d darkplaces menu: player setup menu network speed is never applying to rate (Mitchell)
 -d darkplaces physics: bmodels (doors, etc) hurt player if player pushes against it, and sometimes gets stuck for a frame when falling onto it (Andrew A. Gilevsky)
--d darkplaces physics: disable sv_gameplayfix_stepdown while underwater (Sajt)
 -d darkplaces renderer: check out qe1 textures and make sure they load in all the e1 maps, report of crashing in most but not all maps (Linny Amore)
 -d darkplaces renderer: figure out what's wrong with gloss rendering vertex calculations, which may be GF2 related (QorpsE)
 -d darkplaces renderer: make sure r_novis works (Carni)
@@ -25,8 +24,9 @@
 -d darkplaces: add ogg music playback using optional library after adding wav music playback (-Joseph Caporale, Static_Fiend, Akuma)
 -d darkplaces: add wav music playback (-Joseph Caporale, Static_Fiend)
 -d dpmod: make grapple off-hand (joe hill)
+-d dpmod: make grunts reload less often, like every 10 shotgun shells (scar3crow)
+-d dpmod: modify anglemod to be able to recover from extremely large angles numbers (Zombie13)
 -f darkplaces client: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
--f darkplaces loading: crash when progs/k_spike.mdl isn't found? (CheapAlert)
 -f darkplaces server: add an extension to indicate that MOVETYPE_WALK works on non-clients (tell FrikaC)
 -f darkplaces testing: figure out a workaround for broken gcc optimizers on BoxOnPlaneSide? (Diablo-D3)
 -f darkplaces: add crude DML model loading with animation list (ask Riot for dml library) (Mitchell)
@@ -137,12 +137,10 @@
 0 dpmod: fix tilted corpse bug
 0 dpmod: identify what could cause huge angles values (1187488512.0000) on a dog entity, may be related to anglemod, FacingIdeal, ai_run, or dog_run2 (Zombie13)
 0 dpmod: impulse 102 isn't removing the bots (Sajt)
-0 dpmod: impulse 154 should cycle to deathmatch 7 (Rick)
 0 dpmod: items aren't respawning in coop, they should
 0 dpmod: make run animation play back according to movement speed (along v_forward), instead of just playing a continuous loop based on time (Urre)
 0 dpmod: make spawning use viewzoom to start zoomed out 2.0 and then zoom in to 1.0 (Urre)
 0 dpmod: make teleport leave an EF_ADDITIVE clone of the player which fades out
-0 dpmod: modify anglemod to be able to recover from extremely large angles numbers (Zombie13)
 0 dpmod: monsters falling out of level? (Sajt)
 0 dpmod: revert back to id1 weapons
 0 dpmod: set oldorigin when spawning to prevent being stuck at the spawn from causing an instant teleport back to where you died (Sajt)
@@ -192,7 +190,6 @@
 1 darkplaces server: add EndGame function (called on server shutdown or level change) (Sajt, Nexuiz)
 1 darkplaces server: add a string function that returns a character value from a string, mainly for csqc printing its own text (Sajt)
 1 darkplaces server: add contents reporting to qc somehow when traceline does model tracing and hits the model
-1 darkplaces server: add findflag and findchainflag builtins (Sajt)
 1 darkplaces server: add gettimestamp builtin (returns a string) for logging purposes (Sajt)
 1 darkplaces server: add md3 mesh name reporting to qc somehow when traceline does model tracing and hits the model
 1 darkplaces server: change host_minfps to not lie about the time but instead control how many times SV_Physics runs per network frame, so if rendering goes slow the game doesn't slow down
@@ -205,7 +202,6 @@
 1 dpmod: dm 7 super monsters should glow and have a name which shows up when in crosshairs (Rick)
 1 dpmod: dm 7 super scrag should fire spiral acid (Rick)
 1 dpmod: make a skill 4 mode where monsters are nearly invisible (alpha 0.2?) except when attacking or in pain
-1 dpmod: make grunts reload less often, like every 10 shotgun shells (scar3crow)
 1 dpmod: make ogres start up their chainsaw when first seeing an enemy (scar3crow)
 1 hmap2: add .mip loading support
 1 lhfire: add percentage and estimated time reporting to console output (daniel_hansson@telia.com)
@@ -385,6 +381,7 @@ d darkplaces loading: make hl map loading halve the lightmap samples, to fit hl'
 d darkplaces loading: make it only reload rtlights when current map changes, not when restarting renderer or reloading same map (Stribbs)
 d darkplaces loading: make sure .skin files work on md3 models that have no default shaders but do have mesh names (VorteX)
 d darkplaces menu: add sv_maxrate cvar to server setup menu
+d darkplaces physics: disable sv_gameplayfix_stepdown while underwater (Sajt)
 d darkplaces physics: make players step down stairs rather than just flying off (Riot) 
 d darkplaces physics: repeatedly jumping against a wall can cause a fall to your death (MoALTz)
 d darkplaces physics: standing on a slope that slopes into an obstacle causes a 'falling' condition, velocity keeps increasing (VorteX)
@@ -399,6 +396,7 @@ d darkplaces renderer: make gl_texture_anisotropy take effect immediately like g
 d darkplaces renderer: make sure zym code is rendering at correct brightness, it's too dark in nexuiz (Vermeulen)
 d darkplaces renderer: zym model rtlight support (Vermeulen)
 d darkplaces server: "edict -1" and other invalid numbers cause an error, should just complain (Supajoe)
+d darkplaces server: add findflag and findchainflag builtins (Sajt)
 d darkplaces server: figure out what is wrong with dedicated server console on win32 and fix it (and tell Willis)
 d darkplaces server: figure out what's making monsters act like notarget is on while underwater (romi)
 d darkplaces server: figure out why zombies are disappearing when not entirely submerged in some hipnotic maps (romi) 
@@ -677,6 +675,7 @@ d dpmod: add target_position entity for a touch of q3 compatibility on jumppads 
 d dpmod: apparently can't fire in start.bsp? (scar3crow)
 d dpmod: change weapons 8-10 to lightning, plasma, plasma wave (joe hill)
 d dpmod: fix backpacks (giving no ammo)
+d dpmod: impulse 154 should cycle to deathmatch 7 (Rick)
 d dpmod: make enforcers drop more cells for plasma gun (Sajt)
 d dpmod: make tarbabies easier to kill?  (Sajt)
 d dpmod: make tarbabies explode larger (Sajt)
@@ -704,6 +703,7 @@ d zmodel: fix scale and origin commands (Vermeulen)
 f LordHavoc: examine .mb (Maya Binary) file from Electro and learn its format (Electro)
 f darkplaces client: add chase_pitch cvar to control pitch angle of chase camera, and chase_angle cvar to control yaw angle of chase camera, and add back chase_right cvar (Electro)
 f darkplaces client: figure out why dlights are flashing on/off in TEU, particularly test the flashlight (Electro)
+f darkplaces loading: crash when progs/k_spike.mdl isn't found? (CheapAlert)
 f darkplaces physics: can't move when stuck in a monster (Sajt)
 f darkplaces physics: walking backward toward the cage in e4m2, it's 'sticky' (MoALTz)
 f darkplaces protocol: add EF_PARTICLESPAWNER extension (FrikaC, [TACO])
