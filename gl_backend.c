@@ -3,15 +3,24 @@
 #include "image.h"
 #include "jpeg.h"
 
+//#define MESH_VAR
+#define MESH_BATCH
+
 // 65536 is the max addressable on a Geforce 256 up until Geforce3
 // (excluding MX), seems a reasonable number...
 cvar_t gl_mesh_maxverts = {0, "gl_mesh_maxverts", "65536"};
 cvar_t gl_mesh_floatcolors = {0, "gl_mesh_floatcolors", "1"};
 cvar_t gl_mesh_drawrangeelements = {0, "gl_mesh_drawrangeelements", "1"};
+#ifdef MESH_VAR
 cvar_t gl_mesh_vertex_array_range = {0, "gl_mesh_vertex_array_range", "0"};
 cvar_t gl_mesh_vertex_array_range_readfrequency = {0, "gl_mesh_vertex_array_range_readfrequency", "0.2"};
 cvar_t gl_mesh_vertex_array_range_writefrequency = {0, "gl_mesh_vertex_array_range_writefrequency", "0.2"};
 cvar_t gl_mesh_vertex_array_range_priority = {0, "gl_mesh_vertex_array_range_priority", "0.7"};
+#endif
+#ifdef MESH_BATCH
+cvar_t gl_mesh_batching = {0, "gl_mesh_batching", "1"};
+#endif
+cvar_t gl_mesh_copyarrays = {0, "gl_mesh_copyarrays", "1"};
 cvar_t gl_delayfinish = {CVAR_SAVE, "gl_delayfinish", "0"};
 
 cvar_t r_render = {0, "r_render", "1"};
@@ -83,15 +92,22 @@ GLfloat *varray_vertex3f, *varray_buf_vertex3f;
 GLfloat *varray_color4f, *varray_buf_color4f;
 GLfloat *varray_texcoord3f[MAX_TEXTUREUNITS], *varray_buf_texcoord3f[MAX_TEXTUREUNITS];
 GLfloat *varray_texcoord2f[MAX_TEXTUREUNITS], *varray_buf_texcoord2f[MAX_TEXTUREUNITS];
-static qbyte *varray_color4b, *varray_buf_color4b;
+static qbyte *varray_buf_color4b;
 int mesh_maxverts;
+#ifdef MESH_VAR
 int mesh_var;
 float mesh_var_readfrequency;
 float mesh_var_writefrequency;
 float mesh_var_priority;
+#endif
 int varray_offset = 0, varray_offsetnext = 0;
 GLuint *varray_buf_elements3i;
-int mesh_maxelements = 3072;
+int mesh_maxelements = 32768;
+#ifdef MESH_BATCH
+int gl_batchvertexfirst = 0;
+int gl_batchvertexcount = 0;
+int gl_batchelementcount = 0;
+#endif
 
 static matrix4x4_t backend_viewmatrix;
 static matrix4x4_t backend_modelmatrix;
@@ -139,6 +155,7 @@ void GL_Backend_CheckCvars(void)
 		Cvar_SetValueQuick(&gl_mesh_maxverts, 1024);
 	if (gl_mesh_maxverts.integer > 65536)
 		Cvar_SetValueQuick(&gl_mesh_maxverts, 65536);
+#ifdef MESH_VAR
 	if (gl_mesh_vertex_array_range.integer && !gl_support_var)
 		Cvar_SetValueQuick(&gl_mesh_vertex_array_range, 0);
 	if (gl_mesh_vertex_array_range_readfrequency.value < 0)
@@ -153,6 +170,7 @@ void GL_Backend_CheckCvars(void)
 		Cvar_SetValueQuick(&gl_mesh_vertex_array_range_priority, 0);
 	if (gl_mesh_vertex_array_range_priority.value > 1)
 		Cvar_SetValueQuick(&gl_mesh_vertex_array_range_priority, 1);
+#endif
 }
 
 int polygonelements[768];
@@ -173,22 +191,30 @@ void GL_Backend_AllocArrays(void)
 			varray_buf_texcoord3f[i] = varray_buf_texcoord2f[i] = NULL;
 	}
 
-	mesh_maxverts = gl_mesh_maxverts.integer;
-	mesh_var = gl_mesh_vertex_array_range.integer;
-	mesh_var_readfrequency = gl_mesh_vertex_array_range_readfrequency.value;
-	mesh_var_writefrequency = gl_mesh_vertex_array_range_writefrequency.value;
-	mesh_var_priority = gl_mesh_vertex_array_range_priority.value;
-
 	if (varray_buf_vertex3f)
+#ifdef MESH_VAR
 		VID_FreeVertexArrays(varray_buf_vertex3f);
+#else
+		Mem_Free(varray_buf_vertex3f);
+#endif
 	varray_buf_vertex3f = NULL;
 	varray_buf_color4f = NULL;
 	varray_buf_color4b = NULL;
 	for (i = 0;i < MAX_TEXTUREUNITS;i++)
 		varray_buf_texcoord3f[i] = varray_buf_texcoord2f[i] = NULL;
 
+	mesh_maxverts = gl_mesh_maxverts.integer;
 	size = mesh_maxverts * (sizeof(float[3]) + sizeof(float[4]) + sizeof(qbyte[4]) + (sizeof(float[3]) + sizeof(float[2])) * backendunits);
+#ifdef MESH_VAR
+	mesh_var = gl_mesh_vertex_array_range.integer && gl_support_var;
+	mesh_var_readfrequency = gl_mesh_vertex_array_range_readfrequency.value;
+	mesh_var_writefrequency = gl_mesh_vertex_array_range_writefrequency.value;
+	mesh_var_priority = gl_mesh_vertex_array_range_priority.value;
 	data = VID_AllocVertexArrays(gl_backend_mempool, size, gl_mesh_vertex_array_range.integer, gl_mesh_vertex_array_range_readfrequency.value, gl_mesh_vertex_array_range_writefrequency.value, gl_mesh_vertex_array_range_priority.value);
+#else
+	data = Mem_Alloc(gl_backend_mempool, size);
+#endif
+
 	varray_buf_vertex3f = (void *)data;data += sizeof(float[3]) * mesh_maxverts;
 	varray_buf_color4f = (void *)data;data += sizeof(float[4]) * mesh_maxverts;
 	for (i = 0;i < backendunits;i++)
@@ -202,29 +228,35 @@ void GL_Backend_AllocArrays(void)
 
 	GL_Backend_AllocElementsArray();
 
-	if (gl_support_var)
+#ifdef MESH_VAR
+	if (mesh_var)
 	{
 		CHECKGLERROR
 		qglVertexArrayRangeNV(size, varray_buf_vertex3f);
 		CHECKGLERROR
-		qglEnableClientState(GL_VERTEX_ARRAY_RANGE_NV);
-		CHECKGLERROR
 	}
+#endif
 }
 
 void GL_Backend_FreeArrays(void)
 {
 	int i;
 
-	if (gl_support_var)
+#ifdef MESH_VAR
+	if (mesh_var)
 	{
 		CHECKGLERROR
 		qglDisableClientState(GL_VERTEX_ARRAY_RANGE_NV);
 		CHECKGLERROR
 	}
+#endif
 
 	if (varray_buf_vertex3f)
+#ifdef MESH_VAR
 		VID_FreeVertexArrays(varray_buf_vertex3f);
+#else
+		Mem_Free(varray_buf_vertex3f);
+#endif
 	varray_buf_vertex3f = NULL;
 	varray_buf_color4f = NULL;
 	varray_buf_color4b = NULL;
@@ -259,6 +291,21 @@ static void gl_backend_start(void)
 
 	GL_Backend_AllocArrays();
 
+#ifdef MESH_VAR
+	if (mesh_var)
+	{
+		CHECKGLERROR
+		qglEnableClientState(GL_VERTEX_ARRAY_RANGE_NV);
+		CHECKGLERROR
+	}
+#endif
+	varray_offset = varray_offsetnext = 0;
+#ifdef MESH_BATCH
+	gl_batchvertexfirst = 0;
+	gl_batchvertexcount = 0;
+	gl_batchelementcount = 0;
+#endif
+
 	backendactive = true;
 }
 
@@ -268,6 +315,15 @@ static void gl_backend_shutdown(void)
 	backendactive = false;
 
 	Con_Printf("OpenGL Backend shutting down\n");
+
+#ifdef MESH_VAR
+	if (mesh_var)
+	{
+		CHECKGLERROR
+		qglDisableClientState(GL_VERTEX_ARRAY_RANGE_NV);
+		CHECKGLERROR
+	}
+#endif
 
 	GL_Backend_FreeArrays();
 }
@@ -306,10 +362,16 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&gl_mesh_maxverts);
 	Cvar_RegisterVariable(&gl_mesh_floatcolors);
 	Cvar_RegisterVariable(&gl_mesh_drawrangeelements);
+#ifdef MESH_VAR
 	Cvar_RegisterVariable(&gl_mesh_vertex_array_range);
 	Cvar_RegisterVariable(&gl_mesh_vertex_array_range_readfrequency);
 	Cvar_RegisterVariable(&gl_mesh_vertex_array_range_writefrequency);
 	Cvar_RegisterVariable(&gl_mesh_vertex_array_range_priority);
+#endif
+#ifdef MESH_BATCH
+	Cvar_RegisterVariable(&gl_mesh_batching);
+#endif
+	Cvar_RegisterVariable(&gl_mesh_copyarrays);
 	R_RegisterModule("GL_Backend", gl_backend_start, gl_backend_shutdown, gl_backend_newmap);
 }
 
@@ -425,6 +487,7 @@ typedef struct gltextureunit_s
 {
 	int t1d, t2d, t3d, tcubemap;
 	int arrayenabled, arrayis3d;
+	void *pointer_texcoord;
 	float rgbscale, alphascale;
 	int combinergb, combinealpha;
 	// FIXME: add more combine stuff
@@ -442,6 +505,12 @@ static struct
 	int clientunit;
 	gltextureunit_t units[MAX_TEXTUREUNITS];
 	int colorarray;
+	float color4f[4];
+	int lockrange_first;
+	int lockrange_count;
+	int pointervertexcount;
+	void *pointer_vertex;
+	void *pointer_color;
 }
 gl_state;
 
@@ -460,12 +529,13 @@ void GL_SetupTextureState(void)
 		unit->t2d = 0;
 		unit->t3d = 0;
 		unit->tcubemap = 0;
+		unit->arrayenabled = false;
+		unit->arrayis3d = false;
+		unit->pointer_texcoord = NULL;
 		unit->rgbscale = 1;
 		unit->alphascale = 1;
 		unit->combinergb = GL_MODULATE;
 		unit->combinealpha = GL_MODULATE;
-		unit->arrayenabled = false;
-		unit->arrayis3d = false;
 		qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 		qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), varray_buf_texcoord2f[i]);CHECKGLERROR
 		qglDisable(GL_TEXTURE_1D);CHECKGLERROR
@@ -514,7 +584,14 @@ void GL_Backend_ResetState(void)
 	gl_state.blend = false;
 	gl_state.depthmask = GL_TRUE;
 	gl_state.colorarray = false;
+	gl_state.color4f[0] = gl_state.color4f[1] = gl_state.color4f[2] = gl_state.color4f[3] = 1;
+	gl_state.lockrange_first = 0;
+	gl_state.lockrange_count = 0;
+	gl_state.pointervertexcount = 0;
+	gl_state.pointer_vertex = NULL;
+	gl_state.pointer_color = NULL;
 
+	CHECKGLERROR
 	qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
 	qglDisableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
 
@@ -534,6 +611,7 @@ void GL_Backend_ResetState(void)
 	{
 		qglColorPointer(4, GL_UNSIGNED_BYTE, sizeof(qbyte[4]), varray_buf_color4b);CHECKGLERROR
 	}
+	GL_Color(0, 0, 0, 0);
 	GL_Color(1, 1, 1, 1);
 
 	GL_SetupTextureState();
@@ -543,6 +621,10 @@ void GL_UseColorArray(void)
 {
 	if (!gl_state.colorarray)
 	{
+#ifdef MESH_BATCH
+		if (gl_batchelementcount)
+			R_Mesh_EndBatch();
+#endif
 		gl_state.colorarray = true;
 		qglEnableClientState(GL_COLOR_ARRAY);CHECKGLERROR
 	}
@@ -552,10 +634,55 @@ void GL_Color(float cr, float cg, float cb, float ca)
 {
 	if (gl_state.colorarray)
 	{
+#ifdef MESH_BATCH
+		if (gl_batchelementcount)
+			R_Mesh_EndBatch();
+#endif
 		gl_state.colorarray = false;
 		qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
+		gl_state.color4f[0] = cr;
+		gl_state.color4f[1] = cg;
+		gl_state.color4f[2] = cb;
+		gl_state.color4f[3] = ca;
+		qglColor4f(cr, cg, cb, ca);
 	}
-	qglColor4f(cr, cg, cb, ca);
+	else
+	{
+		if (gl_state.color4f[0] != cr || gl_state.color4f[1] != cg || gl_state.color4f[2] != cb || gl_state.color4f[3] != ca)
+		{
+#ifdef MESH_BATCH
+			if (gl_batchelementcount)
+				R_Mesh_EndBatch();
+#endif
+			gl_state.color4f[0] = cr;
+			gl_state.color4f[1] = cg;
+			gl_state.color4f[2] = cb;
+			gl_state.color4f[3] = ca;
+			qglColor4f(cr, cg, cb, ca);
+		}
+	}
+}
+
+void GL_LockArrays(int first, int count)
+{
+	if (gl_state.lockrange_count != count || gl_state.lockrange_first != first)
+	{
+		if (gl_state.lockrange_count)
+		{
+			gl_state.lockrange_count = 0;
+			CHECKGLERROR
+			qglUnlockArraysEXT();
+			CHECKGLERROR
+		}
+		if (count && gl_supportslockarrays && gl_lockarrays.integer)
+		{
+			gl_state.lockrange_first = first;
+			gl_state.lockrange_count = count;
+			CHECKGLERROR
+			qglLockArraysEXT(first, count);
+			CHECKGLERROR
+		}
+	}
 }
 
 void GL_TransformToScreen(const vec4_t in, vec4_t out)
@@ -579,58 +706,54 @@ void R_Mesh_Start(void)
 
 	GL_Backend_CheckCvars();
 	if (mesh_maxverts != gl_mesh_maxverts.integer
-	 || mesh_var != gl_mesh_vertex_array_range.integer
+#ifdef MESH_VAR
+	 || mesh_var != (gl_mesh_vertex_array_range.integer && gl_support_var)
 	 || mesh_var_readfrequency != gl_mesh_vertex_array_range_readfrequency.value
 	 || mesh_var_writefrequency != gl_mesh_vertex_array_range_writefrequency.value
-	 || mesh_var_priority != gl_mesh_vertex_array_range_priority.value)
+	 || mesh_var_priority != gl_mesh_vertex_array_range_priority.value
+#endif
+		)
 		GL_Backend_ResizeArrays(gl_mesh_maxverts.integer);
 
 	GL_Backend_ResetState();
-
-	if (mesh_var)
+#ifdef MESH_VAR
+	if (!mesh_var)
 	{
-		CHECKGLERROR
-		qglFlushVertexArrayRangeNV();
-		CHECKGLERROR
+		gl_batchvertexfirst = gl_batchvertexcount = gl_batchelementcount = 0;
+		varray_offset = varray_offsetnext = 0;
 	}
-	varray_offset = 0;
+#else
+	varray_offset = varray_offsetnext = 0;
+#endif
 }
 
 int gl_backend_rebindtextures;
 
-void GL_ConvertColorsFloatToByte(int numverts)
+void GL_ConvertColorsFloatToByte(int first, int count)
 {
-	int i, k, total;
-	// LordHavoc: to avoid problems with aliasing (treating memory as two
-	// different types - exactly what this is doing), these must be volatile
-	// (or a union)
-	volatile int *icolor;
-	volatile float *fcolor;
-	GLubyte *bcolor;
-
-	total = numverts * 4;
+	int i, k;
+	union {float f[4];int i[4];} *color4fi;
+	struct {GLubyte c[4];} *color4b;
 
 	// shift float to have 8bit fraction at base of number
-	fcolor = varray_buf_color4f;
-	for (i = 0;i < total;)
+	color4fi = (void *)(varray_buf_color4f + first * 4);
+	for (i = 0;i < count;i++, color4fi++)
 	{
-		fcolor[i    ] += 32768.0f;
-		fcolor[i + 1] += 32768.0f;
-		fcolor[i + 2] += 32768.0f;
-		fcolor[i + 3] += 32768.0f;
-		i += 4;
+		color4fi->f[0] += 32768.0f;
+		color4fi->f[1] += 32768.0f;
+		color4fi->f[2] += 32768.0f;
+		color4fi->f[3] += 32768.0f;
 	}
 
 	// then read as integer and kill float bits...
-	icolor = (int *)varray_buf_color4f;
-	bcolor = varray_buf_color4b;
-	for (i = 0;i < total;)
+	color4fi = (void *)(varray_buf_color4f + first * 4);
+	color4b = (void *)(varray_buf_color4b + first * 4);
+	for (i = 0;i < count;i++, color4fi++, color4b++)
 	{
-		k = icolor[i    ] & 0x7FFFFF;if (k > 255) k = 255;bcolor[i    ] = (GLubyte) k;
-		k = icolor[i + 1] & 0x7FFFFF;if (k > 255) k = 255;bcolor[i + 1] = (GLubyte) k;
-		k = icolor[i + 2] & 0x7FFFFF;if (k > 255) k = 255;bcolor[i + 2] = (GLubyte) k;
-		k = icolor[i + 3] & 0x7FFFFF;if (k > 255) k = 255;bcolor[i + 3] = (GLubyte) k;
-		i += 4;
+		k = color4fi->i[0] & 0x7FFFFF;color4b->c[0] = (GLubyte) min(k, 255);
+		k = color4fi->i[1] & 0x7FFFFF;color4b->c[1] = (GLubyte) min(k, 255);
+		k = color4fi->i[2] & 0x7FFFFF;color4b->c[2] = (GLubyte) min(k, 255);
+		k = color4fi->i[3] & 0x7FFFFF;color4b->c[3] = (GLubyte) min(k, 255);
 	}
 }
 
@@ -647,43 +770,94 @@ void _R_Mesh_ResizeCheck(int numverts)
 }
 */
 
-void GL_Backend_RenumberElements(int numelements, const int *in, int offset)
+void R_Mesh_EndBatch(void)
 {
-	int i;
-	for (i = 0;i < numelements;i++)
-		varray_buf_elements3i[i] = in[i] + offset;
+#ifdef MESH_BATCH
+	if (gl_batchelementcount)
+	{
+		if (gl_state.pointervertexcount)
+			Host_Error("R_Mesh_EndBatch: called with pointers enabled\n");
+
+		if (gl_state.colorarray && !gl_mesh_floatcolors.integer && gl_state.pointer_color == NULL)
+			GL_ConvertColorsFloatToByte(gl_batchvertexfirst, gl_batchvertexcount);
+		if (r_render.integer)
+		{
+			//int i;for (i = 0;i < gl_batchelementcount;i++) if (varray_buf_elements3i[i] < gl_batchvertexfirst || varray_buf_elements3i[i] >= (gl_batchvertexfirst + gl_batchvertexcount)) Host_Error("R_Mesh_EndBatch: invalid element #%i (value %i) outside range %i-%i\n", i, varray_buf_elements3i[i], gl_batchvertexfirst, gl_batchvertexfirst + gl_batchvertexcount);
+			CHECKGLERROR
+			GL_LockArrays(gl_batchvertexfirst, gl_batchvertexcount);
+			if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
+			{
+				qglDrawRangeElements(GL_TRIANGLES, gl_batchvertexfirst, gl_batchvertexfirst + gl_batchvertexcount, gl_batchelementcount, GL_UNSIGNED_INT, (const GLuint *) varray_buf_elements3i);CHECKGLERROR
+			}
+			else
+			{
+				qglDrawElements(GL_TRIANGLES, gl_batchelementcount, GL_UNSIGNED_INT, (const GLuint *) varray_buf_elements3i);CHECKGLERROR
+			}
+			GL_LockArrays(0, 0);
+		}
+		gl_batchelementcount = 0;
+		gl_batchvertexcount = 0;
+	}
+#endif
 }
 
-// gets geometry space for a mesh
+void GL_Backend_RenumberElements(int *out, int count, const int *in, int offset)
+{
+	int i;
+	//if (offset)
+		for (i = 0;i < count;i++)
+			*out++ = *in++ + offset;
+	//else
+	//	memcpy(out, in, sizeof(*out) * count);
+}
+
+// gets vertex buffer space for use with a following R_Mesh_Draw
+// (can be multiple Draw calls per GetSpace)
 void R_Mesh_GetSpace(int numverts)
 {
 	int i;
 
+	if (gl_state.pointervertexcount)
+		Host_Error("R_Mesh_GetSpace: called with pointers enabled\n");
+	if (gl_state.lockrange_count)
+		Host_Error("R_Mesh_GetSpace: called with arrays locked\n");
+
 	varray_offset = varray_offsetnext;
 	if (varray_offset + numverts > mesh_maxverts)
-		varray_offset = 0;
-	if (numverts > mesh_maxverts)
 	{
-		BACKENDACTIVECHECK
-		GL_Backend_ResizeArrays(numverts + 100);
-		GL_Backend_ResetState();
+		//Con_Printf("R_Mesh_GetSpace: vertex buffer wrap\n");
+#ifdef MESH_BATCH
+		if (gl_batchelementcount)
+			R_Mesh_EndBatch();
+#endif
 		varray_offset = 0;
+#ifdef MESH_VAR
+		if (mesh_var)
+		{
+			CHECKGLERROR
+			qglFlushVertexArrayRangeNV();
+			CHECKGLERROR
+		}
+#endif
+		if (numverts > mesh_maxverts)
+		{
+			GL_Backend_ResizeArrays(numverts + 100);
+			GL_Backend_ResetState();
+		}
 	}
 
-	if (varray_offset == 0 && mesh_var)
+/*
+#ifdef MESH_BATCH
+	if (gl_mesh_batching.integer)
 	{
-		CHECKGLERROR
-		qglFlushVertexArrayRangeNV();
-		CHECKGLERROR
+		if (gl_batchvertexcount == 0)
+			gl_batchvertexfirst = varray_offset;
+		gl_batchvertexcount += numverts;
 	}
-
-	// for debugging
-	//if (!mesh_var)
-	//	varray_offset = rand() % (mesh_maxverts - numverts);
-
+#endif
+*/
 	varray_vertex3f = varray_buf_vertex3f + varray_offset * 3;
 	varray_color4f = varray_buf_color4f + varray_offset * 4;
-	varray_color4b = varray_buf_color4b + varray_offset * 4;
 	for (i = 0;i < backendunits;i++)
 	{
 		varray_texcoord3f[i] = varray_buf_texcoord3f[i] + varray_offset * 3;
@@ -693,49 +867,81 @@ void R_Mesh_GetSpace(int numverts)
 	varray_offsetnext = varray_offset + numverts;
 }
 
-// renders the current mesh
+// renders triangles using vertices from the most recent GetSpace call
+// (can be multiple Draw calls per GetSpace)
 void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 {
-	int numelements;
+	int numelements = numtriangles * 3;
 	if (numtriangles == 0 || numverts == 0)
 	{
 		Con_Printf("R_Mesh_Draw(%d, %d, %08p);\n", numverts, numtriangles, elements);
 		return;
 	}
-	numelements = numtriangles * 3;
-	if (mesh_maxelements < numelements)
-	{
-		mesh_maxelements = numelements;
-		GL_Backend_AllocElementsArray();
-	}
-	GL_Backend_RenumberElements(numelements, elements, varray_offset);
 	c_meshs++;
 	c_meshelements += numelements;
-	if (gl_state.colorarray && !gl_mesh_floatcolors.integer)
-		GL_ConvertColorsFloatToByte(numverts);
-	if (r_render.integer)
+	CHECKGLERROR
+	if (gl_state.pointervertexcount)
 	{
-		if (gl_supportslockarrays && gl_lockarrays.integer)
+#ifdef MESH_BATCH
+		if (gl_batchelementcount)
+			R_Mesh_EndBatch();
+#endif
+		if (r_render.integer)
 		{
-			qglLockArraysEXT(varray_offset, numverts);
-			CHECKGLERROR
+			GL_LockArrays(0, gl_state.pointervertexcount);
 			if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
 			{
-				qglDrawRangeElements(GL_TRIANGLES, varray_offset, varray_offset + numverts, numelements, GL_UNSIGNED_INT, (const GLuint *) varray_buf_elements3i);
-				CHECKGLERROR
+				qglDrawRangeElements(GL_TRIANGLES, 0, gl_state.pointervertexcount, numelements, GL_UNSIGNED_INT, elements);CHECKGLERROR
 			}
 			else
 			{
-				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, (const GLuint *) varray_buf_elements3i);
-				CHECKGLERROR
+				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, elements);CHECKGLERROR
 			}
-			qglUnlockArraysEXT();
-			CHECKGLERROR
+			GL_LockArrays(0, 0);
 		}
-		else
+	}
+#ifdef MESH_BATCH
+	else if (gl_mesh_batching.integer)
+	{
+		if (mesh_maxelements < gl_batchelementcount + numelements)
 		{
-			qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, (const GLuint *) varray_buf_elements3i);
-			CHECKGLERROR
+			//Con_Printf("R_Mesh_Draw: enlarging elements array\n");
+			if (gl_batchelementcount)
+				R_Mesh_EndBatch();
+			// round up to a multiple of 1024 and add another 1024 just for good measure
+			mesh_maxelements = (gl_batchelementcount + numelements + 1024 + 1023) & ~1023;
+			GL_Backend_AllocElementsArray();
+		}
+		if (varray_offset < gl_batchvertexfirst && gl_batchelementcount)
+			R_Mesh_EndBatch();
+		if (gl_batchelementcount == 0)
+		{
+			gl_batchvertexfirst = varray_offset;
+			gl_batchvertexcount = 0;
+		}
+		if (gl_batchvertexcount < varray_offsetnext - gl_batchvertexfirst)
+			gl_batchvertexcount = varray_offsetnext - gl_batchvertexfirst;
+		GL_Backend_RenumberElements(varray_buf_elements3i + gl_batchelementcount, numelements, elements, varray_offset);
+		//Con_Printf("off %i:%i, vertex %i:%i, element %i:%i\n", varray_offset, varray_offsetnext, gl_batchvertexfirst, gl_batchvertexfirst + gl_batchvertexcount, gl_batchelementcount, gl_batchelementcount + numelements);
+		gl_batchelementcount += numelements;
+		//{int i;for (i = 0;i < gl_batchelementcount;i++) if (varray_buf_elements3i[i] < gl_batchvertexfirst || varray_buf_elements3i[i] >= (gl_batchvertexfirst + gl_batchvertexcount)) Host_Error("R_Mesh_EndBatch: invalid element #%i (value %i) outside range %i-%i, there were previously %i elements and there are now %i elements, varray_offset is %i\n", i, varray_buf_elements3i[i], gl_batchvertexfirst, gl_batchvertexfirst + gl_batchvertexcount, gl_batchelementcount - numelements, gl_batchelementcount, varray_offset);}
+	}
+#endif
+	else
+	{
+		GL_Backend_RenumberElements(varray_buf_elements3i, numelements, elements, varray_offset);
+		if (r_render.integer)
+		{
+			GL_LockArrays(varray_offset, numverts);
+			if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
+			{
+				qglDrawRangeElements(GL_TRIANGLES, varray_offset, varray_offset + numverts, numelements, GL_UNSIGNED_INT, varray_buf_elements3i);CHECKGLERROR
+			}
+			else
+			{
+				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, varray_buf_elements3i);CHECKGLERROR
+			}
+			GL_LockArrays(0, 0);
 		}
 	}
 }
@@ -745,13 +951,11 @@ void R_Mesh_Finish(void)
 {
 	int i;
 	BACKENDACTIVECHECK
-	if (mesh_var)
-	{
-		CHECKGLERROR
-		qglFlushVertexArrayRangeNV();
-		CHECKGLERROR
-	}
-	varray_offset = 0;
+#ifdef MESH_BATCH
+	if (gl_batchelementcount)
+		R_Mesh_EndBatch();
+#endif
+	GL_LockArrays(0, 0);
 
 	for (i = backendunits - 1;i >= 0;i--)
 	{
@@ -790,6 +994,10 @@ void R_Mesh_Matrix(const matrix4x4_t *matrix)
 {
 	if (memcmp(matrix, &backend_modelmatrix, sizeof(matrix4x4_t)))
 	{
+#ifdef MESH_BATCH
+		if (gl_batchelementcount)
+			R_Mesh_EndBatch();
+#endif
 		backend_modelmatrix = *matrix;
 		Matrix4x4_Concat(&backend_modelviewmatrix, &backend_viewmatrix, matrix);
 		Matrix4x4_Transpose(&backend_glmodelviewmatrix, &backend_modelviewmatrix);
@@ -800,10 +1008,15 @@ void R_Mesh_Matrix(const matrix4x4_t *matrix)
 // sets up the requested state
 void R_Mesh_MainState(const rmeshstate_t *m)
 {
+	void *p;
 	BACKENDACTIVECHECK
 
 	if (gl_state.blendfunc1 != m->blendfunc1 || gl_state.blendfunc2 != m->blendfunc2)
 	{
+#ifdef MESH_BATCH
+		if (gl_batchelementcount)
+			R_Mesh_EndBatch();
+#endif
 		qglBlendFunc(gl_state.blendfunc1 = m->blendfunc1, gl_state.blendfunc2 = m->blendfunc2);CHECKGLERROR
 		if (gl_state.blendfunc2 == GL_ZERO)
 		{
@@ -835,6 +1048,10 @@ void R_Mesh_MainState(const rmeshstate_t *m)
 	}
 	if (gl_state.depthdisable != m->depthdisable)
 	{
+#ifdef MESH_BATCH
+		if (gl_batchelementcount)
+			R_Mesh_EndBatch();
+#endif
 		gl_state.depthdisable = m->depthdisable;
 		if (gl_state.depthdisable)
 			qglDisable(GL_DEPTH_TEST);
@@ -843,7 +1060,49 @@ void R_Mesh_MainState(const rmeshstate_t *m)
 	}
 	if (gl_state.depthmask != (m->blendfunc2 == GL_ZERO || m->depthwrite))
 	{
+#ifdef MESH_BATCH
+		if (gl_batchelementcount)
+			R_Mesh_EndBatch();
+#endif
 		qglDepthMask(gl_state.depthmask = (m->blendfunc2 == GL_ZERO || m->depthwrite));CHECKGLERROR
+	}
+
+	if (gl_state.pointervertexcount != m->pointervertexcount)
+	{
+#ifdef MESH_BATCH
+		if (gl_batchelementcount)
+			R_Mesh_EndBatch();
+#endif
+		gl_state.pointervertexcount = m->pointervertexcount;
+	}
+
+	p = gl_state.pointervertexcount ? m->pointer_vertex : NULL;
+	if (gl_state.pointer_vertex != p)
+	{
+#ifdef MESH_BATCH
+		if (gl_batchelementcount)
+			R_Mesh_EndBatch();
+#endif
+		gl_state.pointer_vertex = p;
+		qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), p ? p : varray_buf_vertex3f);CHECKGLERROR
+	}
+
+	if (gl_state.colorarray)
+	{
+		p = gl_state.pointervertexcount ? m->pointer_color : NULL;
+		if (gl_state.pointer_color != p)
+		{
+#ifdef MESH_BATCH
+			if (gl_batchelementcount)
+				R_Mesh_EndBatch();
+#endif
+			gl_state.pointer_color = p;
+			if (p != varray_buf_color4f || gl_mesh_floatcolors.integer)
+				qglColorPointer(4, GL_FLOAT, sizeof(float[4]), p ? p : varray_buf_color4f);
+			else
+				qglColorPointer(4, GL_UNSIGNED_BYTE, sizeof(GLubyte[4]), p ? p : varray_buf_color4b);
+			CHECKGLERROR
+		}
 	}
 }
 
@@ -852,6 +1111,7 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 	int i, combinergb, combinealpha;
 	float scale;
 	gltextureunit_t *unit;
+	void *p;
 
 	BACKENDACTIVECHECK
 
@@ -870,6 +1130,10 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 			{
 				if (!unit->arrayis3d)
 				{
+#ifdef MESH_BATCH
+					if (gl_batchelementcount)
+						R_Mesh_EndBatch();
+#endif
 					unit->arrayis3d = true;
 					if (gl_state.clientunit != i)
 					{
@@ -879,6 +1143,10 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 				}
 				if (!unit->arrayenabled)
 				{
+#ifdef MESH_BATCH
+					if (gl_batchelementcount)
+						R_Mesh_EndBatch();
+#endif
 					unit->arrayenabled = true;
 					if (gl_state.clientunit != i)
 					{
@@ -891,6 +1159,10 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 			{
 				if (unit->arrayis3d)
 				{
+#ifdef MESH_BATCH
+					if (gl_batchelementcount)
+						R_Mesh_EndBatch();
+#endif
 					unit->arrayis3d = false;
 					if (gl_state.clientunit != i)
 					{
@@ -900,6 +1172,10 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 				}
 				if (!unit->arrayenabled)
 				{
+#ifdef MESH_BATCH
+					if (gl_batchelementcount)
+						R_Mesh_EndBatch();
+#endif
 					unit->arrayenabled = true;
 					if (gl_state.clientunit != i)
 					{
@@ -912,6 +1188,10 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 			{
 				if (unit->arrayenabled)
 				{
+#ifdef MESH_BATCH
+					if (gl_batchelementcount)
+						R_Mesh_EndBatch();
+#endif
 					unit->arrayenabled = false;
 					if (gl_state.clientunit != i)
 					{
@@ -922,6 +1202,10 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 			}
 			if (unit->t1d != m->tex1d[i])
 			{
+#ifdef MESH_BATCH
+				if (gl_batchelementcount)
+					R_Mesh_EndBatch();
+#endif
 				if (gl_state.unit != i)
 				{
 					qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
@@ -940,6 +1224,10 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 			}
 			if (unit->t2d != m->tex[i])
 			{
+#ifdef MESH_BATCH
+				if (gl_batchelementcount)
+					R_Mesh_EndBatch();
+#endif
 				if (gl_state.unit != i)
 				{
 					qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
@@ -958,6 +1246,10 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 			}
 			if (unit->t3d != m->tex3d[i])
 			{
+#ifdef MESH_BATCH
+				if (gl_batchelementcount)
+					R_Mesh_EndBatch();
+#endif
 				if (gl_state.unit != i)
 				{
 					qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
@@ -976,6 +1268,10 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 			}
 			if (unit->tcubemap != m->texcubemap[i])
 			{
+#ifdef MESH_BATCH
+				if (gl_batchelementcount)
+					R_Mesh_EndBatch();
+#endif
 				if (gl_state.unit != i)
 				{
 					qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
@@ -998,6 +1294,10 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 			combinergb = GL_MODULATE;
 		if (unit->combinergb != combinergb)
 		{
+#ifdef MESH_BATCH
+			if (gl_batchelementcount)
+				R_Mesh_EndBatch();
+#endif
 			if (gl_state.unit != i)
 			{
 				qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
@@ -1017,6 +1317,10 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 			combinealpha = GL_MODULATE;
 		if (unit->combinealpha != combinealpha)
 		{
+#ifdef MESH_BATCH
+			if (gl_batchelementcount)
+				R_Mesh_EndBatch();
+#endif
 			if (gl_state.unit != i)
 			{
 				qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
@@ -1030,6 +1334,10 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 		scale = max(m->texrgbscale[i], 1);
 		if (gl_state.units[i].rgbscale != scale)
 		{
+#ifdef MESH_BATCH
+			if (gl_batchelementcount)
+				R_Mesh_EndBatch();
+#endif
 			if (gl_state.unit != i)
 			{
 				qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
@@ -1039,11 +1347,36 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 		scale = max(m->texalphascale[i], 1);
 		if (gl_state.units[i].alphascale != scale)
 		{
+#ifdef MESH_BATCH
+			if (gl_batchelementcount)
+				R_Mesh_EndBatch();
+#endif
 			if (gl_state.unit != i)
 			{
 				qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
 			}
 			qglTexEnvi(GL_TEXTURE_ENV, GL_ALPHA_SCALE, (gl_state.units[i].alphascale = scale));CHECKGLERROR
+		}
+		if (unit->arrayenabled)
+		{
+			p = gl_state.pointervertexcount ? m->pointer_texcoord[i] : NULL;
+			if (unit->pointer_texcoord != p)
+			{
+#ifdef MESH_BATCH
+				if (gl_batchelementcount)
+					R_Mesh_EndBatch();
+#endif
+				unit->pointer_texcoord = p;
+				if (gl_state.clientunit != i)
+				{
+					qglClientActiveTexture(GL_TEXTURE0_ARB + (gl_state.clientunit = i));CHECKGLERROR
+				}
+				if (unit->arrayis3d)
+					qglTexCoordPointer(3, GL_FLOAT, sizeof(float[3]), p ? p : varray_buf_texcoord3f[i]);
+				else
+					qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), p ? p : varray_buf_texcoord2f[i]);
+				CHECKGLERROR
+			}
 		}
 	}
 }
@@ -1187,6 +1520,7 @@ void SCR_UpdateScreen (void)
 
 void R_Mesh_CopyVertex3f(const float *vertex3f, int numverts)
 {
+#ifdef MESH_VAR
 	if (mesh_var)
 	{
 		float *out = varray_vertex3f;
@@ -1198,11 +1532,13 @@ void R_Mesh_CopyVertex3f(const float *vertex3f, int numverts)
 		}
 	}
 	else
+#endif
 		memcpy(varray_vertex3f, vertex3f, numverts * sizeof(float[3]));
 }
 
 void R_Mesh_CopyTexCoord2f(int tmu, const float *texcoord2f, int numverts)
 {
+#ifdef MESH_VAR
 	if (mesh_var)
 	{
 		float *out = varray_texcoord2f[tmu];
@@ -1213,11 +1549,13 @@ void R_Mesh_CopyTexCoord2f(int tmu, const float *texcoord2f, int numverts)
 		}
 	}
 	else
+#endif
 		memcpy(varray_texcoord2f[tmu], texcoord2f, numverts * sizeof(float[2]));
 }
 
 void R_Mesh_CopyColor4f(const float *color4f, int numverts)
 {
+#ifdef MESH_VAR
 	if (mesh_var)
 	{
 		float *out = varray_color4f;
@@ -1230,7 +1568,7 @@ void R_Mesh_CopyColor4f(const float *color4f, int numverts)
 		}
 	}
 	else
+#endif
 		memcpy(varray_color4f, color4f, numverts * sizeof(float[4]));
 }
-
 

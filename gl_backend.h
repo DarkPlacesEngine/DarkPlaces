@@ -16,8 +16,10 @@ void GL_SetupView_Mode_Ortho (double x1, double y1, double x2, double y2, double
 void GL_UseColorArray(void);
 void GL_Color(float cr, float cg, float cb, float ca);
 void GL_TransformToScreen(const vec4_t in, vec4_t out);
+void GL_LockArrays(int first, int count);
 
 extern cvar_t gl_lockarrays;
+extern cvar_t gl_mesh_copyarrays;
 
 extern int c_meshelements, c_meshs;
 
@@ -37,6 +39,10 @@ typedef struct
 	int texalphascale[MAX_TEXTUREUNITS]; // used only if COMBINE is present
 	int texcombinergb[MAX_TEXTUREUNITS]; // works with or without combine for some operations
 	int texcombinealpha[MAX_TEXTUREUNITS]; // does nothing without combine
+	int pointervertexcount;
+	float *pointer_vertex;
+	float *pointer_color;
+	float *pointer_texcoord[MAX_TEXTUREUNITS];
 }
 rmeshstate_t;
 
@@ -71,6 +77,8 @@ void R_Mesh_MainState(const rmeshstate_t *m);
 // sets up the requested texture state
 void R_Mesh_TextureState(const rmeshstate_t *m);
 
+// forcefully ends a batch (do this before calling any gl functions directly)
+void R_Mesh_EndBatch(void);
 // prepares varray_* buffers for rendering a mesh
 void R_Mesh_GetSpace(int numverts);
 // renders the mesh in the varray_* buffers

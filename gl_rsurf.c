@@ -997,6 +997,9 @@ static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render
 	R_Mesh_State(&m);
 	cl = (float) (1 << r_lightmapscalebit) * r_colorscale;
 	GL_Color(cl, cl, cl, 1);
+	if (!gl_mesh_copyarrays.integer)
+		R_Mesh_EndBatch();
+
 	while((surf = *surfchain++) != NULL)
 	{
 		if (surf->visframe == r_framecount)
@@ -1005,15 +1008,28 @@ static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render
 			if (m.tex[1] != lightmaptexturenum)
 			{
 				m.tex[1] = lightmaptexturenum;
-				R_Mesh_State(&m);
+				if (gl_mesh_copyarrays.integer)
+					R_Mesh_State(&m);
 			}
 			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 			{
-				R_Mesh_GetSpace(mesh->numverts);
-				R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
-				R_Mesh_CopyTexCoord2f(0, mesh->texcoordtexture2f, mesh->numverts);
-				R_Mesh_CopyTexCoord2f(1, mesh->texcoordlightmap2f, mesh->numverts);
-				R_Mesh_CopyTexCoord2f(2, mesh->texcoorddetail2f, mesh->numverts);
+				if (gl_mesh_copyarrays.integer)
+				{
+					m.pointervertexcount = mesh->numverts;
+					m.pointer_vertex = mesh->vertex3f;
+					m.pointer_texcoord[0] = mesh->texcoordtexture2f;
+					m.pointer_texcoord[1] = mesh->texcoordlightmap2f;
+					m.pointer_texcoord[2] = mesh->texcoorddetail2f;
+					R_Mesh_State(&m);
+				}
+				else
+				{
+					R_Mesh_GetSpace(mesh->numverts);
+					R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
+					R_Mesh_CopyTexCoord2f(0, mesh->texcoordtexture2f, mesh->numverts);
+					R_Mesh_CopyTexCoord2f(1, mesh->texcoordlightmap2f, mesh->numverts);
+					R_Mesh_CopyTexCoord2f(2, mesh->texcoorddetail2f, mesh->numverts);
+				}
 				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
 			}
 		}

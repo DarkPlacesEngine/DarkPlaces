@@ -372,7 +372,6 @@ static void GL_TextureMode_f (void)
 			}
 		}
 	}
-	gl_backend_rebindtextures = true;
 }
 
 static int R_CalcTexelDataSize (gltexture_t *glt)
@@ -607,6 +606,8 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 	int i, mip, width, height, depth, internalformat;
 	qbyte *prevbuffer;
 	prevbuffer = data;
+
+	R_Mesh_EndBatch();
 
 	CHECKGLERROR
 
