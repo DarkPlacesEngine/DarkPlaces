@@ -833,6 +833,7 @@ void Host_Say(qboolean teamonly)
 		p2[-1] = 0;
 		p2--;
 	}
+	strlcat(text, "\n");
 
 	// note: save is not a valid edict if fromServer is true
 	save = host_client;
