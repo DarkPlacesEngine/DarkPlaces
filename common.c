@@ -510,6 +510,8 @@ void COM_StripExtension (char *in, char *out)
 	}
 	if (last)
 		*last = 0;
+	else
+		*out = 0;
 }
 
 /*
