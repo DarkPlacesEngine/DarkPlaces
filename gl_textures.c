@@ -530,7 +530,7 @@ void R_Textures_Init (void)
 
 void R_Textures_Frame (void)
 {
-	static	old_aniso = 0;
+	static int old_aniso = 0;
 
 	// could do procedural texture animation here, if we keep track of which
 	// textures were accessed this frame...
