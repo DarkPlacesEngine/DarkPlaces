@@ -20,19 +20,21 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // Quake is a trademark of Id Software, Inc., (c) 1996 Id Software, Inc. All
 // rights reserved.
 
-#include <linux/cdrom.h>
+#include <sys/types.h>
+#include <sys/cdio.h>
 #include <sys/ioctl.h>
 
 #include <errno.h>
 #include <fcntl.h>
-#include <time.h>
+#include <paths.h>
 #include <unistd.h>
+#include <util.h>
 
 #include "quakedef.h"
 
 
 static int cdfile = -1;
-static char cd_dev[64] = "/dev/cdrom";
+static char cd_dev[64] = _PATH_DEV "cd0";
 
 
 void CDAudio_SysEject (void)
@@ -40,8 +42,9 @@ void CDAudio_SysEject (void)
 	if (cdfile == -1)
 		return;
 
-	if (ioctl(cdfile, CDROMEJECT) == -1)
-		Con_DPrintf("ioctl CDROMEJECT failed\n");
+	ioctl(cdfile, CDIOCALLOW);
+	if (ioctl(cdfile, CDIOCEJECT) == -1)
+		Con_DPrintf("ioctl CDIOCEJECT failed\n");
 }
 
 
@@ -50,47 +53,51 @@ void CDAudio_SysCloseDoor (void)
 	if (cdfile == -1)
 		return;
 
-	if (ioctl(cdfile, CDROMCLOSETRAY) == -1)
-		Con_DPrintf("ioctl CDROMCLOSETRAY failed\n");
+	ioctl(cdfile, CDIOCALLOW);
+	if (ioctl(cdfile, CDIOCCLOSE) == -1)
+		Con_DPrintf("ioctl CDIOCCLOSE failed\n");
 }
 
 int CDAudio_SysGetAudioDiskInfo (void)
 {
-	struct cdrom_tochdr tochdr;
+	struct ioc_toc_header tochdr;
 
-	if (ioctl(cdfile, CDROMREADTOCHDR, &tochdr) == -1)
+	if (ioctl(cdfile, CDIOREADTOCHEADER, &tochdr) == -1)
 	{
-		Con_DPrintf("ioctl CDROMREADTOCHDR failed\n");
+		Con_DPrintf("ioctl CDIOREADTOCHEADER failed\n");
 		return -1;
 	}
 
-	if (tochdr.cdth_trk0 < 1)
+	if (tochdr.starting_track < 1)
 	{
 		Con_DPrintf("CDAudio: no music tracks\n");
 		return -1;
 	}
 
-	return tochdr.cdth_trk1;
+	return tochdr.ending_track;
 }
 
 
 int CDAudio_SysPlay (qbyte track)
 {
-	struct cdrom_tocentry entry;
-	struct cdrom_ti ti;
+	struct ioc_read_toc_entry rte;
+	struct cd_toc_entry entry;
+	struct ioc_play_track ti;
 
 	if (cdfile == -1)
 		return -1;
 
 	// don't try to play a non-audio track
-	entry.cdte_track = track;
-	entry.cdte_format = CDROM_MSF;
-	if (ioctl(cdfile, CDROMREADTOCENTRY, &entry) == -1)
+	rte.address_format = CD_MSF_FORMAT;
+	rte.starting_track = track;
+	rte.data_len = sizeof(entry);
+	rte.data = &entry;
+	if (ioctl(cdfile, CDIOREADTOCENTRYS, &rte) == -1)
 	{
-		Con_DPrintf("ioctl CDROMREADTOCENTRY failed\n");
+		Con_DPrintf("ioctl CDIOREADTOCENTRYS failed\n");
 		return -1;
 	}
-	if (entry.cdte_ctrl == CDROM_DATA_TRACK)
+	if (entry.control & 4)  // if it's a data track
 	{
 		Con_Printf("CDAudio: track %i is not audio\n", track);
 		return -1;
@@ -99,20 +106,20 @@ int CDAudio_SysPlay (qbyte track)
 	if (cdPlaying)
 		CDAudio_Stop();
 
-	ti.cdti_trk0 = track;
-	ti.cdti_trk1 = track;
-	ti.cdti_ind0 = 1;
-	ti.cdti_ind1 = 99;
+	ti.start_track = track;
+	ti.end_track = track;
+	ti.start_index = 1;
+	ti.end_index = 99;
 
-	if (ioctl(cdfile, CDROMPLAYTRKIND, &ti) == -1)
+	if (ioctl(cdfile, CDIOCPLAYTRACKS, &ti) == -1)
 	{
-		Con_DPrintf("ioctl CDROMPLAYTRKIND failed\n");
+		Con_DPrintf("ioctl CDIOCPLAYTRACKS failed\n");
 		return -1;
 	}
 
-	if (ioctl(cdfile, CDROMRESUME) == -1)
+	if (ioctl(cdfile, CDIOCRESUME) == -1)
 	{
-		Con_DPrintf("ioctl CDROMRESUME failed\n");
+		Con_DPrintf("ioctl CDIOCRESUME failed\n");
 		return -1;
 	}
 
@@ -125,11 +132,12 @@ int CDAudio_SysStop (void)
 	if (cdfile == -1)
 		return -1;
 
-	if (ioctl(cdfile, CDROMSTOP) == -1)
+	if (ioctl(cdfile, CDIOCSTOP) == -1)
 	{
-		Con_DPrintf("ioctl CDROMSTOP failed (%d)\n", errno);
+		Con_DPrintf("ioctl CDIOCSTOP failed (%d)\n", errno);
 		return -1;
 	}
+	ioctl(cdfile, CDIOCALLOW);
 
 	return 0;
 }
@@ -139,9 +147,9 @@ int CDAudio_SysPause (void)
 	if (cdfile == -1)
 		return -1;
 
-	if (ioctl(cdfile, CDROMPAUSE) == -1)
+	if (ioctl(cdfile, CDIOCPAUSE) == -1)
 	{
-		Con_DPrintf("ioctl CDROMPAUSE failed\n");
+		Con_DPrintf("ioctl CDIOCPAUSE failed\n");
 		return -1;
 	}
 
@@ -154,36 +162,43 @@ int CDAudio_SysResume (void)
 	if (cdfile == -1)
 		return -1;
 
-	if (ioctl(cdfile, CDROMRESUME) == -1)
-		Con_DPrintf("ioctl CDROMRESUME failed\n");
+	if (ioctl(cdfile, CDIOCRESUME) == -1)
+		Con_DPrintf("ioctl CDIOCRESUME failed\n");
 
 	return 0;
 }
 
 int CDAudio_SysUpdate (void)
 {
-	struct cdrom_subchnl subchnl;
 	static time_t lastchk = 0;
+	struct ioc_read_subchannel subchnl;
+	struct cd_sub_channel_info data;
 
 	if (cdPlaying && lastchk < time(NULL))
 	{
 		lastchk = time(NULL) + 2; //two seconds between chks
-		subchnl.cdsc_format = CDROM_MSF;
-		if (ioctl(cdfile, CDROMSUBCHNL, &subchnl) == -1)
+
+		bzero(&subchnl, sizeof(subchnl));
+		subchnl.data = &data;
+		subchnl.data_len = sizeof(data);
+		subchnl.address_format = CD_MSF_FORMAT;
+		subchnl.data_format = CD_CURRENT_POSITION;
+
+		if (ioctl(cdfile, CDIOCREADSUBCHANNEL, &subchnl) == -1)
 		{
-			Con_DPrintf("ioctl CDROMSUBCHNL failed\n");
+			Con_DPrintf("ioctl CDIOCREADSUBCHANNEL failed\n");
 			cdPlaying = false;
 			return -1;
 		}
-		if (subchnl.cdsc_audiostatus != CDROM_AUDIO_PLAY &&
-			subchnl.cdsc_audiostatus != CDROM_AUDIO_PAUSED)
+		if (data.header.audio_status != CD_AS_PLAY_IN_PROGRESS &&
+			data.header.audio_status != CD_AS_PLAY_PAUSED)
 		{
 			cdPlaying = false;
 			if (cdPlayLooping)
 				CDAudio_Play(cdPlayTrack, true);
 		}
 		else
-			cdPlayTrack = subchnl.cdsc_trk;
+			cdPlayTrack = data.what.position.track_number;
 	}
 
 	return 0;
@@ -199,7 +214,9 @@ void CDAudio_SysInit (void)
 
 int CDAudio_SysStartup (void)
 {
-	if ((cdfile = open(cd_dev, O_RDONLY)) == -1)
+	char buff [80];
+
+	if ((cdfile = opendisk(cd_dev, O_RDONLY, buff, sizeof(buff), 0)) == -1)
 	{
 		Con_DPrintf("CDAudio_SysStartup: open of \"%s\" failed (%i)\n",
 					cd_dev, errno);
