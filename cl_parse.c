@@ -1516,7 +1516,7 @@ void CL_ParseServerMessage(void)
 					if (i >= 1 && i < MAX_SOUNDS)
 					{
 						sfx_t *sfx = S_PrecacheSound (s, true, false);
-						if (!sfx)
+						if (!sfx && snd_initialized.integer)
 							Con_Printf("svc_precache: S_PrecacheSound(\"%s\") failed\n", s);
 						cl.sound_precache[i] = sfx;
 					}
