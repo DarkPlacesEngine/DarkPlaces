@@ -134,8 +134,8 @@ extern float m_bytenormals[NUMVERTEXNORMALS][3];
 qbyte NormalToByte(const vec3_t n);
 void ByteToNormal(qbyte num, vec3_t n);
 
-void R_ConcatRotations (const float in1[3][3], const float in2[3][3], float out[3][3]);
-void R_ConcatTransforms (const float in1[3][4], const float in2[3][4], float out[3][4]);
+void R_ConcatRotations (const float in1[3*3], const float in2[3*3], float out[3*3]);
+void R_ConcatTransforms (const float in1[3*4], const float in2[3*4], float out[3*4]);
 
 void AngleVectors (const vec3_t angles, vec3_t forward, vec3_t right, vec3_t up);
 // LordHavoc: proper matrix version of AngleVectors

@@ -118,7 +118,7 @@ int R_SpriteSetup (int type, float org[3], float left[3], float up[3])
 		VectorCopy(vpn, matrix2[0]);
 		VectorNegate(vright, matrix2[1]);
 		VectorCopy(vup, matrix2[2]);
-		R_ConcatRotations (matrix1, matrix2, matrix3);
+		R_ConcatRotations (matrix1[0], matrix2[0], matrix3[0]);
 		break;
 	}
 

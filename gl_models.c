@@ -568,7 +568,7 @@ int ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, zy
 	m.m[2][1] = 0;
 	m.m[2][2] = 1;
 	m.m[2][3] = 0;
-	R_ConcatTransforms(&softwaretransform_matrix[0], &m.m[0], &rootmatrix.m[0]);
+	R_ConcatTransforms(&softwaretransform_matrix[0], &m.m[0][0], &rootmatrix.m[0][0]);
 	*/
 
 	// LordHavoc: combine transform from zym coordinate space to quake coordinate space with model to world transform matrix
@@ -616,9 +616,9 @@ int ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, zy
 					m.m[2][2] = bone1->m[2][2] * lerp1 + bone2->m[2][2] * lerp2 + bone3->m[2][2] * lerp3 + bone4->m[2][2] * lerp4;
 					m.m[2][3] = bone1->m[2][3] * lerp1 + bone2->m[2][3] * lerp2 + bone3->m[2][3] * lerp3 + bone4->m[2][3] * lerp4;
 					if (bone->parent >= 0)
-						R_ConcatTransforms(&zymbonepose[bone->parent].m[0], &m.m[0], &out->m[0]);
+						R_ConcatTransforms(&zymbonepose[bone->parent].m[0][0], &m.m[0][0], &out->m[0][0]);
 					else
-						R_ConcatTransforms(&rootmatrix.m[0], &m.m[0], &out->m[0]);
+						R_ConcatTransforms(&rootmatrix.m[0][0], &m.m[0][0], &out->m[0][0]);
 					bone1++;
 					bone2++;
 					bone3++;
@@ -645,9 +645,9 @@ int ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, zy
 					m.m[2][2] = bone1->m[2][2] * lerp1 + bone2->m[2][2] * lerp2 + bone3->m[2][2] * lerp3;
 					m.m[2][3] = bone1->m[2][3] * lerp1 + bone2->m[2][3] * lerp2 + bone3->m[2][3] * lerp3;
 					if (bone->parent >= 0)
-						R_ConcatTransforms(&zymbonepose[bone->parent].m[0], &m.m[0], &out->m[0]);
+						R_ConcatTransforms(&zymbonepose[bone->parent].m[0][0], &m.m[0][0], &out->m[0][0]);
 					else
-						R_ConcatTransforms(&rootmatrix.m[0], &m.m[0], &out->m[0]);
+						R_ConcatTransforms(&rootmatrix.m[0][0], &m.m[0][0], &out->m[0][0]);
 					bone1++;
 					bone2++;
 					bone3++;
@@ -674,9 +674,9 @@ int ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, zy
 				m.m[2][2] = bone1->m[2][2] * lerp1 + bone2->m[2][2] * lerp2;
 				m.m[2][3] = bone1->m[2][3] * lerp1 + bone2->m[2][3] * lerp2;
 				if (bone->parent >= 0)
-					R_ConcatTransforms(&zymbonepose[bone->parent].m[0], &m.m[0], &out->m[0]);
+					R_ConcatTransforms(&zymbonepose[bone->parent].m[0][0], &m.m[0][0], &out->m[0][0]);
 				else
-					R_ConcatTransforms(&rootmatrix.m[0], &m.m[0], &out->m[0]);
+					R_ConcatTransforms(&rootmatrix.m[0][0], &m.m[0][0], &out->m[0][0]);
 				bone1++;
 				bone2++;
 				bone++;
@@ -705,9 +705,9 @@ int ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, zy
 				m.m[2][2] = bone1->m[2][2] * lerp1;
 				m.m[2][3] = bone1->m[2][3] * lerp1;
 				if (bone->parent >= 0)
-					R_ConcatTransforms(&zymbonepose[bone->parent].m[0], &m.m[0], &out->m[0]);
+					R_ConcatTransforms(&zymbonepose[bone->parent].m[0][0], &m.m[0][0], &out->m[0][0]);
 				else
-					R_ConcatTransforms(&rootmatrix.m[0], &m.m[0], &out->m[0]);
+					R_ConcatTransforms(&rootmatrix.m[0][0], &m.m[0][0], &out->m[0][0]);
 				bone1++;
 				bone++;
 			}
@@ -718,9 +718,9 @@ int ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, zy
 			for (i = 0, out = zymbonepose;i < count;i++, out++)
 			{
 				if (bone->parent >= 0)
-					R_ConcatTransforms(&zymbonepose[bone->parent].m[0], &bone1->m[0], &out->m[0]);
+					R_ConcatTransforms(&zymbonepose[bone->parent].m[0][0], &bone1->m[0][0], &out->m[0][0]);
 				else
-					R_ConcatTransforms(&rootmatrix.m[0], &bone1->m[0], &out->m[0]);
+					R_ConcatTransforms(&rootmatrix.m[0][0], &bone1->m[0][0], &out->m[0][0]);
 				bone1++;
 				bone++;
 			}
