@@ -1144,7 +1144,7 @@ void SV_UpdateToReliableMessages (void)
 			strcpy(host_client->old_name, host_client->name);
 			for (j = 0, client = svs.clients;j < svs.maxclients;j++, client++)
 			{
-				if (!client->spawned || !client->netconnection)
+				if (!client->netconnection)
 					continue;
 				MSG_WriteByte (&client->message, svc_updatename);
 				MSG_WriteByte (&client->message, i);
@@ -1156,7 +1156,7 @@ void SV_UpdateToReliableMessages (void)
 			host_client->old_colors = host_client->colors;
 			for (j = 0, client = svs.clients;j < svs.maxclients;j++, client++)
 			{
-				if (!client->spawned || !client->netconnection)
+				if (!client->netconnection)
 					continue;
 				MSG_WriteByte (&client->message, svc_updatecolors);
 				MSG_WriteByte (&client->message, i);
@@ -1168,7 +1168,7 @@ void SV_UpdateToReliableMessages (void)
 			host_client->old_frags = host_client->frags;
 			for (j = 0, client = svs.clients;j < svs.maxclients;j++, client++)
 			{
-				if (!client->spawned || !client->netconnection)
+				if (!client->netconnection)
 					continue;
 				MSG_WriteByte (&client->message, svc_updatefrags);
 				MSG_WriteByte (&client->message, i);
