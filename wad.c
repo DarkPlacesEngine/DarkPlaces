@@ -21,11 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-static int			wad_numlumps;
-static lumpinfo_t	*wad_lumps;
-static qbyte			*wad_base = NULL;
-static mempool_t	*wad_mempool = NULL;
-
 void SwapPic (qpic_t *pic);
 
 /*
@@ -59,64 +54,62 @@ static void W_CleanupName (char *in, char *out)
 		out[i] = 0;
 }
 
-
-
-/*
-====================
-W_LoadWadFile
-====================
-*/
-void W_LoadWadFile (char *filename)
+void *W_GetLumpName(char *name)
 {
-	lumpinfo_t		*lump_p;
-	wadinfo_t		*header;
-	int				i;
-	int				infotableofs;
-	void			*temp;
-
-	temp = FS_LoadFile (filename, false);
-	if (!temp)
-		Sys_Error ("W_LoadWadFile: couldn't load %s", filename);
-
-	if (wad_mempool)
-		Mem_FreePool(&wad_mempool);
-	wad_mempool = Mem_AllocPool(filename);
-	wad_base = Mem_Alloc(wad_mempool, fs_filesize);
-
-	memcpy(wad_base, temp, fs_filesize);
-	Mem_Free(temp);
-
-	header = (wadinfo_t *)wad_base;
-
-	if (memcmp(header->identification, "WAD2", 4))
-		Sys_Error ("Wad file %s doesn't have WAD2 id\n",filename);
-
-	wad_numlumps = LittleLong(header->numlumps);
-	infotableofs = LittleLong(header->infotableofs);
-	wad_lumps = (lumpinfo_t *)(wad_base + infotableofs);
-
-	for (i=0, lump_p = wad_lumps ; i<wad_numlumps ; i++,lump_p++)
-	{
-		lump_p->filepos = LittleLong(lump_p->filepos);
-		lump_p->size = LittleLong(lump_p->size);
-		W_CleanupName (lump_p->name, lump_p->name);
-		if (lump_p->type == TYP_QPIC)
-			SwapPic ( (qpic_t *)(wad_base + lump_p->filepos));
-	}
-}
-
-void *W_GetLumpName (char *name)
-{
-	int		i;
-	lumpinfo_t	*lump;
-	char	clean[16];
+	int i;
+	lumpinfo_t *lump;
+	char clean[16];
+	wadinfo_t *header;
+	int infotableofs;
+	void *temp;
+	static int wad_loaded = false;
+	static int wad_numlumps = 0;
+	static lumpinfo_t *wad_lumps = NULL;
+	static qbyte *wad_base = NULL;
+	static mempool_t *wad_mempool = NULL;
 
 	W_CleanupName (name, clean);
+
+	if (!wad_loaded)
+	{
+		wad_loaded = true;
+		if ((temp = FS_LoadFile ("gfx.wad", false)))
+		{
+			if (memcmp(temp, "WAD2", 4))
+				Con_Printf("gfx.wad doesn't have WAD2 id\n");
+			else
+			{
+				wad_mempool = Mem_AllocPool("gfx.wad");
+				wad_base = Mem_Alloc(wad_mempool, fs_filesize);
+
+				memcpy(wad_base, temp, fs_filesize);
+				Mem_Free(temp);
+
+				header = (wadinfo_t *)wad_base;
+				wad_numlumps = LittleLong(header->numlumps);
+				infotableofs = LittleLong(header->infotableofs);
+				wad_lumps = (lumpinfo_t *)(wad_base + infotableofs);
+
+				for (i=0, lump = wad_lumps ; i<wad_numlumps ; i++,lump++)
+				{
+					lump->filepos = LittleLong(lump->filepos);
+					lump->size = LittleLong(lump->size);
+					W_CleanupName (lump->name, lump->name);
+					if (lump->type == TYP_QPIC)
+						SwapPic ( (qpic_t *)(wad_base + lump->filepos));
+				}
+			}
+		}
+	}
 
 	for (lump = wad_lumps, i = 0;i < wad_numlumps;i++, lump++)
 		if (!strcmp(clean, lump->name))
 			return (void *)(wad_base + lump->filepos);
 
+	if (wad_base)
+		Con_DPrintf("W_GetLumpByName(\"%s\"): couldn't find file in gfx.wad\n", name);
+	else
+		Con_DPrintf("W_GetLumpByName(\"%s\"): couldn't load gfx.wad\n", name);
 	return NULL;
 }
 

@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -69,7 +69,6 @@ extern	int			wad_numlumps;
 extern	lumpinfo_t	*wad_lumps;
 extern	qbyte		*wad_base;
 
-void	W_LoadWadFile (char *filename);
 void	*W_GetLumpName (char *name);
 
 void SwapPic (qpic_t *pic);
