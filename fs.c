@@ -1939,8 +1939,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 			{
 				for (dirfile = dir;dirfile;dirfile = dirfile->next)
 				{
-					memcpy(temp, basepath, basepathlength);
-					strcpy(temp + basepathlength, dirfile->text);
+					snprintf(temp, sizeof(temp), "%s/%s", basepath, dirfile->text);
 					if (matchpattern(temp, (char *)pattern, true))
 					{
 						for (listtemp = liststart;listtemp;listtemp = listtemp->next)
