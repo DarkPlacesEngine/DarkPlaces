@@ -43,6 +43,7 @@ void M_Menu_Main_f (void);
 	void M_Menu_Options_Graphics_f (void);
 	void M_Menu_Options_ColorControl_f (void);
 		void M_Menu_Keys_f (void);
+		void M_Menu_Reset_f (void);
 		void M_Menu_Video_f (void);
 	void M_Menu_Help_f (void);
 	void M_Menu_Quit_f (void);
@@ -61,6 +62,7 @@ void M_Main_Draw (void);
 	void M_Options_Graphics_Draw (void);
 	void M_Options_ColorControl_Draw (void);
 		void M_Keys_Draw (void);
+		void M_Reset_Draw (void);
 		void M_Video_Draw (void);
 	void M_Help_Draw (void);
 	void M_Quit_Draw (void);
@@ -79,6 +81,7 @@ void M_Main_Key (int key, char ascii);
 	void M_Options_Graphics_Key (int key, char ascii);
 	void M_Options_ColorControl_Key (int key, char ascii);
 		void M_Keys_Key (int key, char ascii);
+		void M_Reset_Key (int key, char ascii);
 		void M_Video_Key (int key, char ascii);
 	void M_Help_Key (int key, char ascii);
 	void M_Quit_Key (int key, char ascii);
@@ -1422,7 +1425,7 @@ void M_Options_Key (int k, char ascii)
 			Con_ToggleConsole_f ();
 			break;
 		case 2:
-			Cbuf_AddText ("exec default.cfg\n");
+			M_Menu_Reset_f ();
 			break;
 		case 3:
 			M_Menu_Video_f ();
@@ -2363,6 +2366,44 @@ void M_Keys_Key (int k, char ascii)
 		M_UnbindCommand (bindnames[keys_cursor][0]);
 		break;
 	}
+}
+
+void M_Menu_Reset_f (void)
+{
+	key_dest = key_menu;
+	m_state = m_reset;
+	m_entersound = true;
+}
+
+
+void M_Reset_Key (int key, char ascii)
+{
+	switch (key)
+	{
+	case K_ESCAPE:
+	case 'n':
+	case 'N':
+		m_state = m_options;
+		m_entersound = true;
+		break;
+
+	case 'Y':
+	case 'y':
+		Cbuf_AddText ("exec default.cfg\n");
+		break;
+
+	default:
+		break;
+	}
+}
+
+void M_Reset_Draw (void)
+{
+	int lines = 2, linelength = 20;
+	M_Background(linelength * 8 + 16, lines * 8 + 16);
+	M_DrawTextBox(0, 0, linelength, lines);
+	M_Print(8 + 4 * (linelength - 19),  8, "Really wanna reset?");
+	M_Print(8 + 4 * (linelength - 11), 16, "Press y / n");
 }
 
 //=============================================================================
@@ -3790,6 +3831,7 @@ void M_Init (void)
 	Cvar_RegisterVariable (&menu_options_colorcontrol_correctionvalue);
 	Cmd_AddCommand ("menu_keys", M_Menu_Keys_f);
 	Cmd_AddCommand ("menu_video", M_Menu_Video_f);
+	Cmd_AddCommand ("menu_reset", M_Menu_Reset_f);
 	Cmd_AddCommand ("help", M_Menu_Help_f);
 	Cmd_AddCommand ("menu_quit", M_Menu_Quit_f);
 
@@ -3913,6 +3955,10 @@ void M_Draw (void)
 		M_Keys_Draw ();
 		break;
 
+	case m_reset:
+		M_Reset_Draw ();
+		break;
+
 	case m_video:
 		M_Video_Draw ();
 		break;
@@ -4002,6 +4048,11 @@ void M_Keydown (int key, char ascii)
 	case m_keys:
 		M_Keys_Key (key, ascii);
 		return;
+
+	case m_reset:
+		M_Reset_Key (key, ascii);
+		return;
+
 
 	case m_video:
 		M_Video_Key (key, ascii);
