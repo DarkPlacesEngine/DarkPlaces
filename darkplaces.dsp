@@ -320,10 +320,6 @@ SOURCE=.\quakeio.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\r_clip.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\r_crosshairs.c
 # End Source File
 # Begin Source File
@@ -629,10 +625,6 @@ SOURCE=.\quakedef.h
 # Begin Source File
 
 SOURCE=.\quakeio.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\r_clip.h
 # End Source File
 # Begin Source File
 

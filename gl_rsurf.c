@@ -1752,11 +1752,6 @@ static void RSurfShader_Wall_Lightmap(msurface_t *firstsurf)
 =============================================================
 */
 
-static void RSurf_Callback(void *data, void *junk)
-{
-	((msurface_t *)data)->visframe = r_framecount;
-}
-
 static void R_SolidWorldNode (void)
 {
 	if (r_viewleaf->contents != CONTENTS_SOLID)
@@ -1765,7 +1760,6 @@ static void R_SolidWorldNode (void)
 		mportal_t *p, *pstack[8192];
 		msurface_t *surf, **mark, **endmark;
 		mleaf_t *leaf;
-		tinyplane_t plane;
 		// LordHavoc: portal-passage worldnode; follows portals leading
 		// outward from viewleaf, if a portal leads offscreen it is not
 		// followed, in indoor maps this can often cull a great deal of
@@ -1783,54 +1777,25 @@ static void R_SolidWorldNode (void)
 		{
 			mark = leaf->firstmarksurface;
 			endmark = mark + leaf->nummarksurfaces;
-			if (r_ser.integer)
+			do
 			{
-				do
+				surf = *mark++;
+				// make sure surfaces are only processed once
+				if (surf->worldnodeframe == r_framecount)
+					continue;
+				surf->worldnodeframe = r_framecount;
+				if (PlaneDist(r_origin, surf->plane) < surf->plane->dist)
 				{
-					surf = *mark++;
-					// make sure surfaces are only processed once
-					if (surf->worldnodeframe == r_framecount)
-						continue;
-					surf->worldnodeframe = r_framecount;
-					if (PlaneDist(r_origin, surf->plane) < surf->plane->dist)
-					{
-						if (surf->flags & SURF_PLANEBACK)
-						{
-							VectorNegate(surf->plane->normal, plane.normal);
-							plane.dist = -surf->plane->dist;
-							R_Clip_AddPolygon((float *)surf->poly_verts, surf->poly_numverts, sizeof(float[3]), (surf->flags & SURF_CLIPSOLID) != 0, RSurf_Callback, surf, NULL, &plane);
-						}
-					}
-					else
-					{
-						if (!(surf->flags & SURF_PLANEBACK))
-							R_Clip_AddPolygon((float *)surf->poly_verts, surf->poly_numverts, sizeof(float[3]), (surf->flags & SURF_CLIPSOLID) != 0, RSurf_Callback, surf, NULL, (tinyplane_t *)surf->plane);
-					}
+					if (surf->flags & SURF_PLANEBACK)
+						surf->visframe = r_framecount;
 				}
-				while (mark < endmark);
-			}
-			else
-			{
-				do
+				else
 				{
-					surf = *mark++;
-					// make sure surfaces are only processed once
-					if (surf->worldnodeframe == r_framecount)
-						continue;
-					surf->worldnodeframe = r_framecount;
-					if (PlaneDist(r_origin, surf->plane) < surf->plane->dist)
-					{
-						if (surf->flags & SURF_PLANEBACK)
-							surf->visframe = r_framecount;
-					}
-					else
-					{
-						if (!(surf->flags & SURF_PLANEBACK))
-							surf->visframe = r_framecount;
-					}
+					if (!(surf->flags & SURF_PLANEBACK))
+						surf->visframe = r_framecount;
 				}
-				while (mark < endmark);
 			}
+			while (mark < endmark);
 		}
 
 		// follow portals into other leafs
@@ -1876,49 +1841,21 @@ loc2:
 		{
 			if (node->numsurfaces)
 			{
-				if (r_ser.integer)
+				msurface_t *surf = cl.worldmodel->surfaces + node->firstsurface, *surfend = surf + node->numsurfaces;
+				if (PlaneDiff (r_origin, node->plane) < 0)
 				{
-					msurface_t *surf = cl.worldmodel->surfaces + node->firstsurface, *surfend = surf + node->numsurfaces;
-					tinyplane_t plane;
-					if (PlaneDiff (r_origin, node->plane) < 0)
+					for (;surf < surfend;surf++)
 					{
-						for (;surf < surfend;surf++)
-						{
-							if (surf->flags & SURF_PLANEBACK)
-							{
-								VectorNegate(surf->plane->normal, plane.normal);
-								plane.dist = -surf->plane->dist;
-								R_Clip_AddPolygon((float *)surf->poly_verts, surf->poly_numverts, sizeof(float[3]), surf->flags & SURF_CLIPSOLID, RSurf_Callback, surf, NULL, &plane);
-							}
-						}
-					}
-					else
-					{
-						for (;surf < surfend;surf++)
-						{
-							if (!(surf->flags & SURF_PLANEBACK))
-								R_Clip_AddPolygon((float *)surf->poly_verts, surf->poly_numverts, sizeof(float[3]), surf->flags & SURF_CLIPSOLID, RSurf_Callback, surf, NULL, (tinyplane_t *)surf->plane);
-						}
+						if (surf->flags & SURF_PLANEBACK)
+							surf->visframe = r_framecount;
 					}
 				}
 				else
 				{
-					msurface_t *surf = cl.worldmodel->surfaces + node->firstsurface, *surfend = surf + node->numsurfaces;
-					if (PlaneDiff (r_origin, node->plane) < 0)
+					for (;surf < surfend;surf++)
 					{
-						for (;surf < surfend;surf++)
-						{
-							if (surf->flags & SURF_PLANEBACK)
-								surf->visframe = r_framecount;
-						}
-					}
-					else
-					{
-						for (;surf < surfend;surf++)
-						{
-							if (!(surf->flags & SURF_PLANEBACK))
-								surf->visframe = r_framecount;
-						}
+						if (!(surf->flags & SURF_PLANEBACK))
+							surf->visframe = r_framecount;
 					}
 				}
 			}
@@ -1970,7 +1907,6 @@ static void R_PVSWorldNode()
 	mportal_t *p, *pstack[8192];
 	msurface_t *surf, **mark, **endmark;
 	mleaf_t *leaf;
-	tinyplane_t plane;
 	qbyte *worldvis;
 
 	worldvis = Mod_LeafPVS (r_viewleaf, cl.worldmodel);
@@ -1987,54 +1923,25 @@ loc0:
 	{
 		mark = leaf->firstmarksurface;
 		endmark = mark + leaf->nummarksurfaces;
-		if (r_ser.integer)
+		do
 		{
-			do
+			surf = *mark++;
+			// make sure surfaces are only processed once
+			if (surf->worldnodeframe == r_framecount)
+				continue;
+			surf->worldnodeframe = r_framecount;
+			if (PlaneDist(r_origin, surf->plane) < surf->plane->dist)
 			{
-				surf = *mark++;
-				// make sure surfaces are only processed once
-				if (surf->worldnodeframe == r_framecount)
-					continue;
-				surf->worldnodeframe = r_framecount;
-				if (PlaneDist(r_origin, surf->plane) < surf->plane->dist)
-				{
-					if (surf->flags & SURF_PLANEBACK)
-					{
-						VectorNegate(surf->plane->normal, plane.normal);
-						plane.dist = -surf->plane->dist;
-						R_Clip_AddPolygon((float *)surf->poly_verts, surf->poly_numverts, sizeof(float[3]), (surf->flags & SURF_CLIPSOLID) != 0, RSurf_Callback, surf, NULL, &plane);
-					}
-				}
-				else
-				{
-					if (!(surf->flags & SURF_PLANEBACK))
-						R_Clip_AddPolygon((float *)surf->poly_verts, surf->poly_numverts, sizeof(float[3]), (surf->flags & SURF_CLIPSOLID) != 0, RSurf_Callback, surf, NULL, (tinyplane_t *)surf->plane);
-				}
+				if (surf->flags & SURF_PLANEBACK)
+					surf->visframe = r_framecount;
 			}
-			while (mark < endmark);
-		}
-		else
-		{
-			do
+			else
 			{
-				surf = *mark++;
-				// make sure surfaces are only processed once
-				if (surf->worldnodeframe == r_framecount)
-					continue;
-				surf->worldnodeframe = r_framecount;
-				if (PlaneDist(r_origin, surf->plane) < surf->plane->dist)
-				{
-					if (surf->flags & SURF_PLANEBACK)
-						surf->visframe = r_framecount;
-				}
-				else
-				{
-					if (!(surf->flags & SURF_PLANEBACK))
-						surf->visframe = r_framecount;
-				}
+				if (!(surf->flags & SURF_PLANEBACK))
+					surf->visframe = r_framecount;
 			}
-			while (mark < endmark);
 		}
+		while (mark < endmark);
 	}
 
 	// follow portals into other leafs

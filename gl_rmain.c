@@ -65,8 +65,6 @@ cvar_t	gl_fogblue = {0, "gl_fogblue","0.3"};
 cvar_t	gl_fogstart = {0, "gl_fogstart", "0"};
 cvar_t	gl_fogend = {0, "gl_fogend","0"};
 
-cvar_t	r_ser = {CVAR_SAVE, "r_ser", "0"};
-
 cvar_t r_multitexture = {0, "r_multitexture", "1"};
 
 /*
@@ -241,7 +239,6 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable (&r_dynamic);
 	Cvar_RegisterVariable (&r_waterripple);
 	Cvar_RegisterVariable (&r_fullbright);
-	Cvar_RegisterVariable (&r_ser);
 	Cvar_RegisterVariable (&r_multitexture);
 	if (gamemode == GAME_NEHAHRA)
 		Cvar_SetValue("r_fullbrights", 0);
@@ -278,7 +275,6 @@ extern void R_Crosshairs_Init(void);
 extern void R_Light_Init(void);
 extern void R_Particles_Init(void);
 extern void R_Explosion_Init(void);
-extern void R_Clip_Init(void);
 extern void ui_init(void);
 extern void gl_backend_init(void);
 
@@ -288,7 +284,6 @@ void Render_Init(void)
 	R_Textures_Init();
 	Mod_RenderInit();
 	gl_backend_init();
-	R_Clip_Init();
 	GL_Draw_Init();
 	GL_Main_Init();
 	GL_Models_Init();
@@ -373,10 +368,7 @@ static void R_MarkEntities (void)
 			continue;
 
 		R_LerpAnimation(currentrenderentity);
-		if (r_ser.integer)
-			currentrenderentity->model->SERAddEntity();
-		else
-			currentrenderentity->visframe = r_framecount;
+		currentrenderentity->visframe = r_framecount;
 	}
 }
 
@@ -550,8 +542,6 @@ void R_RenderView (void)
 	R_SetFrustum();
 	R_SetupFog();
 	R_SkyStartFrame();
-	if (r_ser.integer)
-		R_Clip_StartFrame();
 	R_BuildLightList();
 
 	R_Mesh_Start();
@@ -563,12 +553,6 @@ void R_RenderView (void)
 
 	R_MarkEntities();
 	R_TimeReport("markentity");
-
-	if (r_ser.integer)
-	{
-		R_Clip_EndFrame();
-		R_TimeReport("hiddensurf");
-	}
 
 	R_MarkWorldLights();
 	R_TimeReport("marklights");

@@ -3,61 +3,7 @@
 
 #define LERPSPRITES
 
-#ifdef LERPSPRITES
-void R_ClipSpriteImage (vec3_t origin, vec3_t left, vec3_t up)
-{
-	int i;
-	mspriteframe_t *frame;
-	vec3_t points[4];
-	float fleft, fright, fdown, fup;
-	frame = currentrenderentity->model->sprdata_frames + currentrenderentity->frameblend[0].frame;
-	fleft  = frame->left;
-	fdown  = frame->down;
-	fright = frame->right;
-	fup    = frame->up;
-	for (i = 1;i < 4 && currentrenderentity->frameblend[i].lerp;i++)
-	{
-		frame = currentrenderentity->model->sprdata_frames + currentrenderentity->frameblend[i].frame;
-		fleft  = min(fleft , frame->left );
-		fdown  = min(fdown , frame->down );
-		fright = max(fright, frame->right);
-		fup    = max(fup   , frame->up   );
-	}
-	// FIXME: reverse these in loader to save time
-	fleft = -fleft;
-	fright = -fright;
-	points[0][0] = origin[0] + fdown * up[0] + fleft  * left[0];points[0][1] = origin[1] + fdown * up[1] + fleft  * left[1];points[0][2] = origin[2] + fdown * up[2] + fleft  * left[2];
-	points[1][0] = origin[0] + fup   * up[0] + fleft  * left[0];points[1][1] = origin[1] + fup   * up[1] + fleft  * left[1];points[1][2] = origin[2] + fup   * up[2] + fleft  * left[2];
-	points[2][0] = origin[0] + fup   * up[0] + fright * left[0];points[2][1] = origin[1] + fup   * up[1] + fright * left[1];points[2][2] = origin[2] + fup   * up[2] + fright * left[2];
-	points[3][0] = origin[0] + fdown * up[0] + fright * left[0];points[3][1] = origin[1] + fdown * up[1] + fright * left[1];points[3][2] = origin[2] + fdown * up[2] + fright * left[2];
-	R_Clip_AddPolygon(&points[0][0], 4, sizeof(float[3]), false, R_Entity_Callback, currentrenderentity, NULL, NULL);
-}
-#else
-void R_ClipSpriteImage (vec3_t origin, vec3_t left, vec3_t up)
-{
-	int i;
-	mspriteframe_t *frame;
-	vec3_t points[4];
-	float fleft, fright, fdown, fup;
-	frame = NULL;
-	for (i = 0;i < 4 && currentrenderentity->frameblend[i].lerp;i++)
-		frame = currentrenderentity->model->sprdata_frames + currentrenderentity->frameblend[i].frame;
-	fleft  = frame->left;
-	fdown  = frame->down;
-	fright = frame->right;
-	fup    = frame->up;
-	// FIXME: reverse these in loader to save time
-	fleft = -fleft;
-	fright = -fright;
-	points[0][0] = origin[0] + fdown * up[0] + fleft  * left[0];points[0][1] = origin[1] + fdown * up[1] + fleft  * left[1];points[0][2] = origin[2] + fdown * up[2] + fleft  * left[2];
-	points[1][0] = origin[0] + fup   * up[0] + fleft  * left[0];points[1][1] = origin[1] + fup   * up[1] + fleft  * left[1];points[1][2] = origin[2] + fup   * up[2] + fleft  * left[2];
-	points[2][0] = origin[0] + fup   * up[0] + fright * left[0];points[2][1] = origin[1] + fup   * up[1] + fright * left[1];points[2][2] = origin[2] + fup   * up[2] + fright * left[2];
-	points[3][0] = origin[0] + fdown * up[0] + fright * left[0];points[3][1] = origin[1] + fdown * up[1] + fright * left[1];points[3][2] = origin[2] + fdown * up[2] + fright * left[2];
-	R_Clip_AddPolygon(&points[0][0], 4, sizeof(float[3]), false, R_Entity_Callback, currentrenderentity, NULL, NULL);
-}
-#endif
-
-int R_SpriteSetup (int type, float org[3], float left[3], float up[3])
+static int R_SpriteSetup (int type, float org[3], float left[3], float up[3])
 {
 	float matrix1[3][3], matrix2[3][3], matrix3[3][3];
 
@@ -132,23 +78,9 @@ int R_SpriteSetup (int type, float org[3], float left[3], float up[3])
 	return false;
 }
 
-void R_ClipSprite (void)
-{
-	vec3_t org, left, up;
+static int spritepolyindex[6] = {0, 1, 2, 0, 2, 3};
 
-	if (currentrenderentity->frameblend[0].frame < 0)
-		return;
-
-	if (R_SpriteSetup(currentrenderentity->model->sprnum_type, org, left, up))
-		return;
-
-	// LordHavoc: interpolated sprite rendering
-	R_ClipSpriteImage(org, left, up);
-}
-
-int spritepolyindex[6] = {0, 1, 2, 0, 2, 3};
-
-void GL_DrawSpriteImage (int fog, mspriteframe_t *frame, int texture, vec3_t origin, vec3_t up, vec3_t left, float red, float green, float blue, float alpha)
+static void GL_DrawSpriteImage (int fog, mspriteframe_t *frame, int texture, vec3_t origin, vec3_t up, vec3_t left, float red, float green, float blue, float alpha)
 {
 	rmeshinfo_t m;
 	float v[4][4], st[4][2];

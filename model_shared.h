@@ -192,9 +192,6 @@ typedef struct model_s
 	int				sprnum_type;
 	mspriteframe_t	*sprdata_frames;
 
-	// adds a box (or individual polygons) to the clipping engine,
-	// which will mark the entity visible if seen
-	void(*SERAddEntity)(void);
 	// draw the model
 	void(*Draw)(void);
 	// draw the model's sky polygons (only used by brush models)

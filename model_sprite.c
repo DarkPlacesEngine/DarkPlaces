@@ -36,7 +36,7 @@ void Mod_SpriteInit (void)
 	Cvar_RegisterVariable(&r_mipsprites);
 }
 
-void Mod_Sprite_StripExtension(char *in, char *out)
+static void Mod_Sprite_StripExtension(char *in, char *out)
 {
 	char *end;
 	end = in + strlen(in);
@@ -51,7 +51,7 @@ void Mod_Sprite_StripExtension(char *in, char *out)
 	*out++ = 0;
 }
 
-void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette)
+static void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette)
 {
 	int					i, j, k, groupframes, realframes, x, y, origin[2], width, height;
 	dspriteframetype_t	*pinframetype;
@@ -227,12 +227,6 @@ void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette)
 	}
 }
 
-void Mod_Sprite_SERAddEntity(void)
-{
-	R_ClipSprite();
-}
-
-
 /*
 =================
 Mod_LoadSpriteModel
@@ -248,7 +242,6 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 
 	datapointer = buffer;
 
-	loadmodel->SERAddEntity = Mod_Sprite_SERAddEntity;
 	loadmodel->Draw = R_DrawSpriteModel;
 	loadmodel->DrawSky = NULL;
 	loadmodel->DrawShadow = NULL;
