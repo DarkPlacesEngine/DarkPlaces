@@ -399,8 +399,8 @@ R_DrawSpriteModel
 void R_DrawSpriteModel (entity_t *e)
 {
 	mspriteframe_t	*oldframe, *newframe;
-	float		*up, *right, lerp, ilerp;
-	vec3_t		v_forward, v_right, v_up, org;
+	float			lerp, ilerp;
+	vec3_t			forward, right, up, org;
 	msprite_t		*psprite;
 
 	// don't even bother culling, because it's just a single
@@ -415,15 +415,13 @@ void R_DrawSpriteModel (entity_t *e)
 
 	if (psprite->type == SPR_ORIENTED)
 	{	// bullet marks on walls
-		AngleVectors (e->angles, v_forward, v_right, v_up);
-		up = v_up;
-		right = v_right;
+		AngleVectors (e->angles, forward, right, up);
 		VectorSubtract(e->origin, vpn, org);
 	}
 	else
 	{	// normal sprite
-		up = vup;
-		right = vright;
+		VectorCopy(vup, up);
+		VectorCopy(vright, right);
 		VectorCopy(e->origin, org);
 	}
 	if (e->scale != 1)
