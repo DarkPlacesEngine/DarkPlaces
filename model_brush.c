@@ -911,10 +911,18 @@ R_Q1BSP_LoadSplitSky
 A sky texture is 256*128, with the right side being a masked overlay
 ==============
 */
-void R_Q1BSP_LoadSplitSky (qbyte *src, int bytesperpixel)
+void R_Q1BSP_LoadSplitSky (qbyte *src, int width, int height, int bytesperpixel)
 {
 	int i, j;
 	unsigned solidpixels[128*128], alphapixels[128*128];
+
+	// if sky isn't the right size, just use it as a solid layer
+	if (width != 256 || height != 128)
+	{
+		loadmodel->brush.solidskytexture = R_LoadTexture2D(loadmodel->texturepool, "sky_solidtexture", width, height, src, bytesperpixel == 4 ? TEXTYPE_RGBA : TEXTYPE_PALETTE, TEXF_PRECACHE, bytesperpixel == 1 ? palette_complete : NULL);
+		loadmodel->brush.alphaskytexture = NULL;;
+		return;
+	}
 
 	if (bytesperpixel == 4)
 	{
@@ -1068,21 +1076,11 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 				data = loadimagepixels(tx->name, false, 0, 0);
 				if (data)
 				{
-					if (image_width == 256 && image_height == 128)
-					{
-						R_Q1BSP_LoadSplitSky(data, 4);
-						Mem_Free(data);
-					}
-					else
-					{
-						Mem_Free(data);
-						Con_Printf("Invalid replacement texture for sky \"%s\" in %\"%s\", must be 256x128 pixels\n", tx->name, loadmodel->name);
-						if (mtdata != NULL)
-							R_Q1BSP_LoadSplitSky(mtdata, 1);
-					}
+					R_Q1BSP_LoadSplitSky(data, image_width, image_height, 4);
+					Mem_Free(data);
 				}
 				else if (mtdata != NULL)
-					R_Q1BSP_LoadSplitSky(mtdata, 1);
+					R_Q1BSP_LoadSplitSky(mtdata, mtwidth, mtheight, 1);
 			}
 		}
 		else
