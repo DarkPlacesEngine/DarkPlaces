@@ -44,8 +44,18 @@ void EntityFrame_AckFrame(entity_database_t *d, int frame)
 // (server) clears frame, to prepare for adding entities
 void EntityFrame_Clear(entity_frame_t *f, vec3_t eye)
 {
-	memset(f, 0, sizeof(*f));
-	VectorCopy(eye, f->eye);
+	//memset(f, 0, sizeof(*f));
+	f->time = 0;
+	f->framenum = 0;
+	f->numentities = 0;
+	if (eye == NULL)
+	{
+		VectorClear(f->eye);
+	}
+	else
+	{
+		VectorCopy(eye, f->eye);
+	}
 }
 
 // (server) allocates an entity slot in frame, returns NULL if full
@@ -64,7 +74,7 @@ entity_state_t *EntityFrame_NewEntity(entity_frame_t *f, int number)
 void EntityFrame_FetchFrame(entity_database_t *d, int framenum, entity_frame_t *f)
 {
 	int i, n;
-	memset(f, 0, sizeof(*f));
+	EntityFrame_Clear(f, NULL);
 	for (i = 0;i < d->numframes && d->frames[i].framenum < framenum;i++);
 	if (i < d->numframes && framenum == d->frames[i].framenum)
 	{
@@ -316,7 +326,9 @@ void EntityFrame_Read(entity_database_t *d)
 	entity_state_t *e, baseline, *old, *oldend;
 
 	ClearStateToDefault(&baseline);
-	memset(f, 0, sizeof(*f));
+
+	EntityFrame_Clear(f, NULL);
+
 	// read the frame header info
 	f->time = cl.mtime[0];
 	number = MSG_ReadLong();
