@@ -45,5 +45,8 @@ void Image_Resample (void *indata, int inwidth, int inheight, void *outdata, int
 // scales the image down by a power of 2 (in can be the same as out)
 void Image_MipReduce(qbyte *in, qbyte *out, int *width, int *height, int destwidth, int destheight, int bytesperpixel);
 
+// only used by menuplyr coloring
+qbyte *LoadLMPAs8Bit (qbyte *f, int matchwidth, int matchheight);
+
 #endif
 

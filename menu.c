@@ -931,26 +931,52 @@ void M_Menu_Setup_f (void)
 }
 
 // LordHavoc: rewrote this code greatly
-void M_MenuPlayerTranslate (qbyte *translation)
+void M_MenuPlayerTranslate (qbyte *translation, int top, int bottom)
 {
-	int i, c;
+	int i;
 	unsigned int trans[4096];
-	qpic_t *p;
+	qbyte *data, *f;
+	static qbyte pixels[4096];
+	static int menuplyr_width, menuplyr_height, menuplyr_top, menuplyr_bottom, menuplyr_load = true, menuplyr_failed = false;
 
-	p = W_GetLumpName ("gfx/menuplyr.lmp");
-	if (!p)
+	if (menuplyr_failed)
 		return;
-	c = p->width * p->height;
-	if (c > 4096)
+	if (menuplyr_top == top && menuplyr_bottom == bottom)
+		return;
+
+	menuplyr_top = top;
+	menuplyr_bottom = bottom;
+
+	if (menuplyr_load)
 	{
-		Con_Printf("M_MenuPlayerTranslate: image larger than 4096 pixel buffer\n");
-		return;
+		menuplyr_load = false;
+		f = COM_LoadFile("gfx/menuplyr.lmp", true);
+		if (!f)
+		{
+			menuplyr_failed = true;
+			return;
+		}
+		data = LoadLMPAs8Bit (f, 0, 0);
+		Mem_Free(f);
+		if (image_width * image_height > 4096)
+		{
+			Con_Printf("M_MenuPlayerTranslate: image larger than 4096 pixel buffer\n");
+			Mem_Free(data);
+			menuplyr_failed = true;
+			return;
+		}
+		menuplyr_width = image_width;
+		menuplyr_height = image_height;
+		memcpy(pixels, data, menuplyr_width * menuplyr_height);
+		Mem_Free(data);
 	}
 
-	for (i = 0;i < c;i++)
-		trans[i] = d_8to24table[translation[((qbyte *)p->data)[i]]];
+	M_BuildTranslationTable (menuplyr_top*16, menuplyr_bottom*16);
 
-	Draw_NewPic("gfx/menuplyr.lmp", p->width, p->height, true, (qbyte *)trans);
+	for (i = 0;i < menuplyr_width * menuplyr_height;i++)
+		trans[i] = d_8to24table[translation[pixels[i]]];
+
+	Draw_NewPic("gfx/menuplyr.lmp", menuplyr_width, menuplyr_height, true, (qbyte *)trans);
 }
 
 void M_Setup_Draw (void)
@@ -978,8 +1004,7 @@ void M_Setup_Draw (void)
 	M_DrawPic (160, 64, "gfx/bigbox.lmp");
 
 	// LordHavoc: rewrote this code greatly
-	M_BuildTranslationTable (setup_top*16, setup_bottom*16);
-	M_MenuPlayerTranslate (translationTable);
+	M_MenuPlayerTranslate (translationTable, setup_top, setup_bottom);
 	M_DrawPic (172, 72, "gfx/menuplyr.lmp");
 
 	M_DrawCharacter (56, setup_cursor_table [setup_cursor], 12+((int)(realtime*4)&1));
@@ -1091,14 +1116,14 @@ forward:
 		}
 	}
 
-	if (setup_top > 13)
+	if (setup_top > 15)
 		setup_top = 0;
 	if (setup_top < 0)
-		setup_top = 13;
-	if (setup_bottom > 13)
+		setup_top = 15;
+	if (setup_bottom > 15)
 		setup_bottom = 0;
 	if (setup_bottom < 0)
-		setup_bottom = 13;
+		setup_bottom = 15;
 }
 
 //=============================================================================

@@ -453,6 +453,52 @@ qbyte *LoadLMP (qbyte *f, int matchwidth, int matchheight)
 	return image_rgba;
 }
 
+/*
+============
+LoadLMP
+============
+*/
+qbyte *LoadLMPAs8Bit (qbyte *f, int matchwidth, int matchheight)
+{
+	qbyte *image_8bit;
+	int width, height;
+
+	if (loadsize < 9)
+	{
+		Con_Printf("LoadLMPAs8Bit: invalid LMP file\n");
+		return NULL;
+	}
+
+	// parse the very complicated header *chuckle*
+	width = f[0] + f[1] * 256 + f[2] * 65536 + f[3] * 16777216;
+	height = f[4] + f[5] * 256 + f[6] * 65536 + f[7] * 16777216;
+	if ((unsigned) width > 4096 || (unsigned) height > 4096)
+	{
+		Con_Printf("LoadLMPAs8Bit: invalid size\n");
+		return NULL;
+	}
+	if ((matchwidth && width != matchwidth) || (matchheight && height != matchheight))
+		return NULL;
+
+	if (loadsize < 8 + width * height)
+	{
+		Con_Printf("LoadLMPAs8Bit: invalid LMP file\n");
+		return NULL;
+	}
+
+	image_width = width;
+	image_height = height;
+
+	image_8bit = Mem_Alloc(tempmempool, image_width * image_height);
+	if (!image_8bit)
+	{
+		Con_Printf("LoadLMPAs8Bit: not enough memory for %i by %i image\n", image_width, image_height);
+		return NULL;
+	}
+	memcpy(image_8bit, f + 8, image_width * image_height);
+	return image_8bit;
+}
+
 void Image_StripImageExtension (char *in, char *out)
 {
 	char *end, *temp;
