@@ -369,7 +369,7 @@ void R_DrawQueue(void)
 	cachepic_t *pic;
 	drawqueue_t *dq;
 	char *str, *currentpic;
-	int batch, batchcount, additive;
+	int batchcount;
 	unsigned int color;
 	drawqueuemesh_t *mesh;
 
@@ -384,13 +384,10 @@ void R_DrawQueue(void)
 
 	chartexnum = R_GetTexture(char_texture);
 
-	additive = false;
-	qglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	currentpic = "";
 	pic = NULL;
-	qglBindTexture(GL_TEXTURE_2D, 0);
+	texnum = 0;
 	color = 0;
-	qglColor4ub(0,0,0,0);
 
 	overbright = v_overbrightbits.integer;
 	batch = false;
@@ -407,6 +404,7 @@ void R_DrawQueue(void)
 			m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 		m.depthdisable = true;
 		R_Mesh_MainState(&m);
+
 		cr = (float) ((color >> 24) & 0xFF) * (1.0f / 255.0f) * r_colorscale;
 		cg = (float) ((color >> 16) & 0xFF) * (1.0f / 255.0f) * r_colorscale;
 		cb = (float) ((color >>  8) & 0xFF) * (1.0f / 255.0f) * r_colorscale;
@@ -415,67 +413,42 @@ void R_DrawQueue(void)
 		y = dq->y;
 		w = dq->scalex;
 		h = dq->scaley;
+		
 		switch(dq->command)
 		{
 		case DRAWQUEUE_PIC:
 			str = (char *)(dq + 1);
+			if (strcmp(str, currentpic))
+			{
+				if (batch)
+				{
+					batch = false;
+					qglEnd();
+				}
+				currentpic = str;
+				pic = Draw_CachePic(str);
+				qglBindTexture(GL_TEXTURE_2D, R_GetTexture(pic->tex));
+			}
 			if (*str)
 			{
-				if (strcmp(str, currentpic))
-				{
-					if (batch)
-					{
-						batch = false;
-						qglEnd();
-					}
-					currentpic = str;
-					pic = Draw_CachePic(str);
-					qglBindTexture(GL_TEXTURE_2D, R_GetTexture(pic->tex));
-				}
 				if (w == 0)
 					w = pic->width;
 				if (h == 0)
 					h = pic->height;
-				if (!batch)
-				{
-					batch = true;
-					qglBegin(GL_TRIANGLES);
-					batchcount = 0;
-				}
-				qglTexCoord2f (0, 0);qglVertex2f (x  , y  );
-				qglTexCoord2f (1, 0);qglVertex2f (x+w, y  );
-				qglTexCoord2f (1, 1);qglVertex2f (x+w, y+h);
-				qglTexCoord2f (0, 0);qglVertex2f (x  , y  );
-				qglTexCoord2f (1, 1);qglVertex2f (x+w, y+h);
-				qglTexCoord2f (0, 1);qglVertex2f (x  , y+h);
-				batchcount++;
 			}
-			else
-			{
-				if (currentpic[0])
-				{
-					if (batch)
-					{
-						batch = false;
-						qglEnd();
-					}
-					currentpic = "";
-					qglBindTexture(GL_TEXTURE_2D, 0);
-				}
-				if (!batch)
-				{
-					batch = true;
-					qglBegin(GL_TRIANGLES);
-					batchcount = 0;
-				}
-				qglTexCoord2f (0, 0);qglVertex2f (x  , y  );
-				qglTexCoord2f (1, 0);qglVertex2f (x+w, y  );
-				qglTexCoord2f (1, 1);qglVertex2f (x+w, y+h);
-				qglTexCoord2f (0, 0);qglVertex2f (x  , y  );
-				qglTexCoord2f (1, 1);qglVertex2f (x+w, y+h);
-				qglTexCoord2f (0, 1);qglVertex2f (x  , y+h);
-				batchcount++;
-			}
+			varray_color[0] = varray_color[4] = varray_color[ 8] = varray_color[12] = cr;
+			varray_color[1] = varray_color[5] = varray_color[ 9] = varray_color[13] = cg;
+			varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = cb;
+			varray_color[3] = varray_color[7] = varray_color[11] = varray_color[15] = ca;
+			varray_texcoord[0] = 0;varray_texcoord[1] = 0;
+			varray_texcoord[2] = 1;varray_texcoord[3] = 0;
+			varray_texcoord[4] = 1;varray_texcoord[5] = 1;
+			varray_texcoord[6] = 0;varray_texcoord[7] = 1;
+			varray_vertex[ 0] = x  ;varray_vertex[ 1] = y  ;varray_vertex[ 2] = 0;
+			varray_vertex[ 4] = x+w;varray_vertex[ 5] = y  ;varray_vertex[ 6] = 0;
+			varray_vertex[ 8] = x+w;varray_vertex[ 9] = y+h;varray_vertex[10] = 0;
+			varray_vertex[12] = x  ;varray_vertex[13] = y+h;varray_vertex[14] = 0;
+			R_Mesh_Draw(4, 2, polygonelements);
 			break;
 		case DRAWQUEUE_STRING:
 			str = (char *)(dq + 1);
@@ -489,12 +462,10 @@ void R_DrawQueue(void)
 				currentpic = "conchars";
 				qglBindTexture(GL_TEXTURE_2D, chartexnum);
 			}
-			if (!batch)
-			{
-				batch = true;
-				qglBegin(GL_TRIANGLES);
-				batchcount = 0;
-			}
+			batchcount = 0;
+			ac = varray_color;
+			at = varray_texcoord;
+			av = varray_vertex;
 			while ((num = *str++) && x < vid.conwidth)
 			{
 				if (num != ' ')
@@ -503,71 +474,74 @@ void R_DrawQueue(void)
 					t = (num >> 4)*0.0625f + (0.5f / 256.0f);
 					u = 0.0625f - (1.0f / 256.0f);
 					v = 0.0625f - (1.0f / 256.0f);
-					qglTexCoord2f (s  , t  );qglVertex2f (x  , y  );
-					qglTexCoord2f (s+u, t  );qglVertex2f (x+w, y  );
-					qglTexCoord2f (s+u, t+v);qglVertex2f (x+w, y+h);
-					qglTexCoord2f (s  , t  );qglVertex2f (x  , y  );
-					qglTexCoord2f (s+u, t+v);qglVertex2f (x+w, y+h);
-					qglTexCoord2f (s  , t+v);qglVertex2f (x  , y+h);
+					ac[0] = ac[4] = ac[ 8] = ac[12] = cr;
+					ac[1] = ac[5] = ac[ 9] = ac[13] = cg;
+					ac[2] = ac[6] = ac[10] = ac[14] = cb;
+					ac[3] = ac[7] = ac[11] = ac[15] = ca;
+					at[0] = s  ;at[1] = t  ;
+					at[2] = s+u;at[3] = t  ;
+					at[4] = s+u;at[5] = t+v;
+					at[6] = s  ;at[7] = t+v;
+					av[0] = x  ;av[1] = y  ;av[2] = 0;
+					av[4] = x+w;av[1] = y  ;av[2] = 0;
+					av[8] = x+w;av[1] = y+h;av[2] = 0;
+					av[0] = x  ;av[1] = y+h;av[2] = 0;
+					ac += 16;
+					at += 8;
+					av += 16;
 					batchcount++;
+					if (batchcount >= 128)
+					{
+						R_Mesh_Draw(batchcount * 4, batchcount * 2, polygonelements);
+						batchcount = 0;
+						ac = varray_color;
+						at = varray_texcoord;
+						av = varray_vertex;
+					}
 				}
 				x += w;
 			}
+			R_Mesh_Draw(batchcount * 4, batchcount * 2, polygonelements);
 			break;
 		case DRAWQUEUE_MESH:
-			if (batch)
-			{
-				batch = false;
-				qglEnd();
-			}
-			
 			mesh = (void *)(dq + 1);
-			qglBindTexture(GL_TEXTURE_2D, R_GetTexture(mesh->texture));
-			qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), mesh->vertices);CHECKGLERROR
-			qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), mesh->texcoords);CHECKGLERROR
-			qglColorPointer(4, GL_UNSIGNED_BYTE, sizeof(qbyte[4]), mesh->colors);CHECKGLERROR
-			qglEnableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
-			qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
-			qglEnableClientState(GL_COLOR_ARRAY);CHECKGLERROR
-			GL_DrawRangeElements(0, mesh->numvertices, mesh->numindices, mesh->indices);
-			qglDisableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
-			qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
-			qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
-
-			// restore color, since it got trashed by using color array
-			qglColor4ub((qbyte)(((color >> 24) & 0xFF) >> overbright), (qbyte)(((color >> 16) & 0xFF) >> overbright), (qbyte)(((color >> 8) & 0xFF) >> overbright), (qbyte)(color & 0xFF));
-			CHECKGLERROR
+			m.tex[0] = R_GetTexture(mesh->texture);
+			R_Mesh_ResizeCheck(mesh->numvertices);
+			memcpy(varray_vertex, mesh->vertices, sizeof(float[4]) * mesh->numvertices);
+			memcpy(varray_texcoord, mesh->texcoords, sizeof(float[2]) * mesh->numvertices);
+			memcpy(varray_color, mesh->colors, sizeof(float[4]) * mesh->numvertices);
+			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->indices);
 			currentpic = "\0";
 			break;
 		}
 	}
-	if (batch)
-		qglEnd();
-	CHECKGLERROR
 
 	if (!v_hwgamma.integer)
 	{
-		qglDisable(GL_TEXTURE_2D);
-		CHECKGLERROR
 		t = v_contrast.value * (float) (1 << v_overbrightbits.integer);
 		if (t >= 1.01f)
 		{
-			qglBlendFunc (GL_DST_COLOR, GL_ONE);
-			CHECKGLERROR
-			qglBegin (GL_TRIANGLES);
+			m.blendfunc1 = GL_DST_COLOR;
+			m.blendfunc2 = GL_ONE;
+			m.depthdisable = true;
+			R_Mesh_State(&m);
 			while (t >= 1.01f)
 			{
-				num = (int) ((t - 1.0f) * 255.0f);
-				if (num > 255)
-					num = 255;
-				qglColor4ub ((qbyte) num, (qbyte) num, (qbyte) num, 255);
-				qglVertex2f (-5000, -5000);
-				qglVertex2f (10000, -5000);
-				qglVertex2f (-5000, 10000);
+				cr = t - 1.0f;
+				if (cr > 1.0f)
+					cr = 1.0f;
+				varray_color[0] = varray_color[4] = varray_color[ 8] = varray_color[12] = cr;
+				varray_color[1] = varray_color[5] = varray_color[ 9] = varray_color[13] = cr;
+				varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = cr;
+				varray_texcoord[0] = 0;varray_texcoord[1] = 0;
+				varray_texcoord[2] = 0;varray_texcoord[3] = 0;
+				varray_texcoord[4] = 0;varray_texcoord[5] = 0;
+				varray_vertex[0] = -5000;varray_vertex[1] = -5000;varray_vertex[2] = 0;
+				varray_vertex[4] = 10000;varray_vertex[1] = -5000;varray_vertex[2] = 0;
+				varray_vertex[8] = -5000;varray_vertex[1] = 10000;varray_vertex[2] = 0;
+				R_Mesh_Draw(3, 1, polygonelements);
 				t *= 0.5;
 			}
-			qglEnd ();
-			CHECKGLERROR
 		}
 		else if (t <= 0.99f)
 		{
@@ -803,9 +777,9 @@ void R_DrawQueue(void)
 			
 			mesh = (void *)(dq + 1);
 			qglBindTexture(GL_TEXTURE_2D, R_GetTexture(mesh->texture));
-			qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), mesh->vertices);CHECKGLERROR
+			qglVertexPointer(3, GL_FLOAT, sizeof(float[4]), mesh->vertices);CHECKGLERROR
 			qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), mesh->texcoords);CHECKGLERROR
-			qglColorPointer(4, GL_UNSIGNED_BYTE, sizeof(qbyte[4]), mesh->colors);CHECKGLERROR
+			qglColorPointer(4, GL_FLOAT, sizeof(float[4]), mesh->colors);CHECKGLERROR
 			qglEnableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
 			qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 			qglEnableClientState(GL_COLOR_ARRAY);CHECKGLERROR
