@@ -72,7 +72,7 @@ void SV_SetIdealPitch (void)
 		top[0] = sv_player->v.origin[0] + cosval*(i+3)*12;
 		top[1] = sv_player->v.origin[1] + sinval*(i+3)*12;
 		top[2] = sv_player->v.origin[2] + sv_player->v.view_ofs[2];
-		
+
 		bottom[0] = top[0];
 		bottom[1] = top[1];
 		bottom[2] = top[2] - 160;
@@ -150,7 +150,7 @@ void SV_UserFriction (void)
 // apply friction	
 	control = speed < sv_stopspeed.value ? sv_stopspeed.value : speed;
 	newspeed = speed - sv.frametime*control*friction;
-	
+
 	if (newspeed < 0)
 		newspeed = 0;
 	else
@@ -384,7 +384,7 @@ void SV_AirMove (void)
 	else
 	{	// not on ground, so little effect on velocity
 		SV_AirAccelerate (wishvel);
-	}		
+	}
 }
 
 /*
@@ -551,6 +551,14 @@ nextmsg:
 			}
 
 			cmd = MSG_ReadChar ();
+
+#ifndef NOROUTINGFIX
+			if (cmd != -1 && host_client->waitingforconnect)
+			{
+				host_client->waitingforconnect = false;
+				host_client->sendserverinfo = true;
+			}
+#endif
 
 			switch (cmd)
 			{
