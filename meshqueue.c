@@ -36,9 +36,11 @@ void R_MeshQueue_Init(void)
 	mqt_array = NULL;
 }
 
-static void R_MeshQueue_Render(void)
+void R_MeshQueue_Render(void)
 {
 	meshqueue_t *mq;
+	if (!mq_count)
+		return;
 	for (mq = mq_listhead;mq;mq = mq->next)
 		mq->callback(mq->data1, mq->data2);
 	mq_count = 0;
@@ -73,31 +75,29 @@ void R_MeshQueue_Add(void (*callback)(void *data1, int data2), void *data1, int 
 	mq->data1 = data1;
 	mq->data2 = data2;
 
-	// bubble-insert sort into meshqueue
-	mqnext = &mq_listhead;
 	if (r_meshqueue_sort.integer)
 	{
-		for(;;)
+		// bubble-insert sort into meshqueue
+		for(mqnext = &mq_listhead;*mqnext;mqnext = &(*mqnext)->next)
 		{
-			if (*mqnext)
+			if (mq->callback == (*mqnext)->callback)
 			{
-				if (mq->callback == (*mqnext)->callback)
+				if (mq->data1 == (*mqnext)->data1)
 				{
-					if (mq->data1 == (*mqnext)->data1)
-					{
-						if (mq->data2 <= (*mqnext)->data2)
-							break;
-					}
-					else if (mq->data1 < (*mqnext)->data1)
+					if (mq->data2 <= (*mqnext)->data2)
 						break;
 				}
-				else if (mq->callback < (*mqnext)->callback)
+				else if (mq->data1 < (*mqnext)->data1)
 					break;
 			}
-			else
+			else if (mq->callback < (*mqnext)->callback)
 				break;
-			mqnext = &(*mqnext)->next;
 		}
+	}
+	else
+	{
+		// maintain the order
+		for(mqnext = &mq_listhead;*mqnext;mqnext = &(*mqnext)->next);
 	}
 	mq->next = *mqnext;
 	*mqnext = mq;
@@ -116,28 +116,33 @@ void R_MeshQueue_AddTransparent(vec3_t center, void (*callback)(void *data1, int
 	mq->next = NULL;
 }
 
-static void R_MeshQueue_RenderTransparent(void)
+void R_MeshQueue_RenderTransparent(void)
 {
 	int i;
 	int hashdist;
 	meshqueue_t *mqt;
-	meshqueue_t *hash[4096];
-	memset(hash, 0, 4096 * sizeof(meshqueue_t *));
+	meshqueue_t *hash[4096], **hashpointer[4096];
+	if (mq_count)
+		R_MeshQueue_Render();
+	if (!mqt_count)
+		return;
+	memset(hash, 0, sizeof(hash));
+	for (i = 0;i < 4096;i++)
+		hashpointer[i] = &hash[i];
 	for (i = 0, mqt = mqt_array;i < mqt_count;i++, mqt++)
 	{
 		// generate index
 		hashdist = (int) (mqt->dist);
 		hashdist = bound(0, hashdist, 4095);
-		// reversed to simplify render loop
-		hashdist = 4095 - hashdist;
-		// link into hash chain
-		mqt->next = hash[hashdist];
-		hash[hashdist] = mqt;
+		// link to tail of hash chain (to preserve render order)
+		mqt->next = NULL;
+		*hashpointer[hashdist] = mqt;
+		hashpointer[hashdist] = &mqt->next;
 	}
-	for (i = 0;i < 4096;i++)
+	for (i = 4095;i >= 0;i--)
 		if (hash[i])
 			for (mqt = hash[i];mqt;mqt = mqt->next)
-				R_MeshQueue_Add(mqt->callback, mqt->data1, mqt->data2);
+				mqt->callback(mqt->data1, mqt->data2);
 	mqt_count = 0;
 }
 
@@ -167,9 +172,15 @@ void R_MeshQueue_BeginScene(void)
 
 void R_MeshQueue_EndScene(void)
 {
-	if (mqt_count)
-		R_MeshQueue_RenderTransparent();
 	if (mq_count)
+	{
+		Con_Printf("R_MeshQueue_EndScene: main mesh queue still has %i items left, flushing\n", mq_count);
 		R_MeshQueue_Render();
+	}
+	if (mqt_count)
+	{
+		Con_Printf("R_MeshQueue_EndScene: transparent mesh queue still has %i items left, flushing\n", mqt_count);
+		R_MeshQueue_RenderTransparent();
+	}
 }
 

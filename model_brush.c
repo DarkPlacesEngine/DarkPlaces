@@ -1248,10 +1248,8 @@ void Mod_GenerateVertexMesh (msurface_t *surf)
 
 void Mod_GenerateSurfacePolygon (msurface_t *surf)
 {
-	float		*vert;
-	int			i;
-	int			lindex;
-	float		*vec;
+	int i, lindex;
+	float *vec, *vert, mins[3], maxs[3];
 
 	// convert edges back to a normal polygon
 	surf->poly_numverts = surf->numedges;
@@ -1266,6 +1264,20 @@ void Mod_GenerateSurfacePolygon (msurface_t *surf)
 		VectorCopy (vec, vert);
 		vert += 3;
 	}
+	vert = surf->poly_verts;
+	VectorCopy(vert, mins);
+	VectorCopy(vert, maxs);
+	vert += 3;
+	for (i = 1;i < surf->poly_numverts;i++)
+	{
+		if (mins[0] > vert[0]) mins[0] = vert[0];if (maxs[0] < vert[0]) maxs[0] = vert[0];
+		if (mins[1] > vert[1]) mins[1] = vert[1];if (maxs[1] < vert[1]) maxs[1] = vert[1];
+		if (mins[2] > vert[2]) mins[2] = vert[2];if (maxs[2] < vert[2]) maxs[2] = vert[2];
+		vert += 3;
+	}
+	surf->poly_center[0] = (mins[0] + maxs[0]) * 0.5f;
+	surf->poly_center[1] = (mins[1] + maxs[1]) * 0.5f;
+	surf->poly_center[2] = (mins[2] + maxs[2]) * 0.5f;
 }
 
 static void Mod_SplitSurfMeshIfTooBig(msurface_t *s)
