@@ -3537,6 +3537,8 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l)
 	rtexture_t **out;
 	int i, count;
 
+	if (!l->filelen)
+		return;
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q3BSP_LoadLightmaps: funny lump size in %s",loadmodel->name);
