@@ -661,14 +661,14 @@ static void R_BlendView(void)
 		qglViewport(r_view_x, vid.realheight - (r_view_y + bloomheight), bloomwidth, bloomheight);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		GL_Color(1, 1, 1, 1);
-		R_Mesh_Draw(4, 2, polygonelements);
+		R_Mesh_Draw(0, 4, 2, polygonelements);
 		c_bloomdraws++;
 		c_bloomdrawpixels += bloomwidth * bloomheight;
 		// render multiple times with a multiply blendfunc to raise to a power
 		GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
 		for (x = 1;x < r_bloom_power.integer;x++)
 		{
-			R_Mesh_Draw(4, 2, polygonelements);
+			R_Mesh_Draw(0, 4, 2, polygonelements);
 			c_bloomdraws++;
 			c_bloomdrawpixels += bloomwidth * bloomheight;
 		}
@@ -707,7 +707,7 @@ static void R_BlendView(void)
 			if (r < 0.01f)
 				continue;
 			GL_Color(r, r, r, 1);
-			R_Mesh_Draw(4, 2, polygonelements);
+			R_Mesh_Draw(0, 4, 2, polygonelements);
 			c_bloomdraws++;
 			c_bloomdrawpixels += bloomwidth * bloomheight;
 			GL_BlendFunc(GL_ONE, GL_ONE);
@@ -742,7 +742,7 @@ static void R_BlendView(void)
 			if (r < 0.01f)
 				continue;
 			GL_Color(r, r, r, 1);
-			R_Mesh_Draw(4, 2, polygonelements);
+			R_Mesh_Draw(0, 4, 2, polygonelements);
 			c_bloomdraws++;
 			c_bloomdrawpixels += bloomwidth * bloomheight;
 			GL_BlendFunc(GL_ONE, GL_ONE);
@@ -777,7 +777,7 @@ static void R_BlendView(void)
 		R_Mesh_State(&m);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		GL_Color(1,1,1,1);
-		R_Mesh_Draw(4, 2, polygonelements);
+		R_Mesh_Draw(0, 4, 2, polygonelements);
 		c_bloomdraws++;
 		c_bloomdrawpixels += r_view_width * r_view_height;
 		// now blend on the bloom texture if multipass
@@ -790,7 +790,7 @@ static void R_BlendView(void)
 			R_Mesh_State(&m);
 			GL_BlendFunc(GL_ONE, GL_ONE);
 			GL_Color(1,1,1,1);
-			R_Mesh_Draw(4, 2, polygonelements);
+			R_Mesh_Draw(0, 4, 2, polygonelements);
 			c_bloomdraws++;
 			c_bloomdrawpixels += r_view_width * r_view_height;
 		}
@@ -803,7 +803,7 @@ static void R_BlendView(void)
 		R_Mesh_State(&m);
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		GL_Color(r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
-		R_Mesh_Draw(4, 2, polygonelements);
+		R_Mesh_Draw(0, 4, 2, polygonelements);
 	}
 }
 
@@ -1098,7 +1098,7 @@ void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 	else
 		m.pointer_color = nomodelcolor4f;
 	R_Mesh_State(&m);
-	R_Mesh_Draw(6, 8, nomodelelements);
+	R_Mesh_Draw(0, 6, 8, nomodelelements);
 }
 
 void R_DrawNoModel(entity_render_t *ent)
@@ -1176,6 +1176,6 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, int depth
 	m.pointer_vertex = varray_vertex3f;
 	R_Mesh_State(&m);
 	GL_Color(cr, cg, cb, ca);
-	R_Mesh_Draw(4, 2, polygonelements);
+	R_Mesh_Draw(0, 4, 2, polygonelements);
 }
 

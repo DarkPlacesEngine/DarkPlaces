@@ -2037,7 +2037,7 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	glTexCoord2f(particle_texcoord2f[6], particle_texcoord2f[7]);glVertex3f(particle_vertex3f[ 9], particle_vertex3f[10], particle_vertex3f[11]);
 	glEnd();
 #else
-	R_Mesh_Draw(4, 2, polygonelements);
+	R_Mesh_Draw(0, 4, 2, polygonelements);
 #endif
 }
 

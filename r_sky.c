@@ -283,7 +283,7 @@ static void R_SkyBox(void)
 	{
 		m.tex[0] = R_GetTexture(skyboxside[i]);
 		R_Mesh_State(&m);
-		R_Mesh_Draw(6*4, 2, skyboxelements + i * 6);
+		R_Mesh_Draw(0, 6*4, 2, skyboxelements + i * 6);
 	}
 	GL_LockArrays(0, 0);
 }
@@ -387,7 +387,7 @@ static void R_SkySphere(void)
 		m.texmatrix[1] = scroll2matrix;
 		R_Mesh_State(&m);
 		GL_LockArrays(0, skysphere_numverts);
-		R_Mesh_Draw(skysphere_numverts, skysphere_numtriangles, skysphere_element3i);
+		R_Mesh_Draw(0, skysphere_numverts, skysphere_numtriangles, skysphere_element3i);
 		GL_LockArrays(0, 0);
 	}
 	else
@@ -395,7 +395,7 @@ static void R_SkySphere(void)
 		// two pass
 		R_Mesh_State(&m);
 		GL_LockArrays(0, skysphere_numverts);
-		R_Mesh_Draw(skysphere_numverts, skysphere_numtriangles, skysphere_element3i);
+		R_Mesh_Draw(0, skysphere_numverts, skysphere_numtriangles, skysphere_element3i);
 		GL_LockArrays(0, 0);
 
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -403,7 +403,7 @@ static void R_SkySphere(void)
 		m.texmatrix[0] = scroll2matrix;
 		R_Mesh_State(&m);
 		GL_LockArrays(0, skysphere_numverts);
-		R_Mesh_Draw(skysphere_numverts, skysphere_numtriangles, skysphere_element3i);
+		R_Mesh_Draw(0, skysphere_numverts, skysphere_numtriangles, skysphere_element3i);
 		GL_LockArrays(0, 0);
 	}
 }

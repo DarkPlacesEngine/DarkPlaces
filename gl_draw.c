@@ -559,7 +559,7 @@ void R_DrawQueue(void)
 					if (batchcount >= 128)
 					{
 						GL_LockArrays(0, batchcount * 4);
-						R_Mesh_Draw(batchcount * 4, batchcount * 2, quadelements);
+						R_Mesh_Draw(0, batchcount * 4, batchcount * 2, quadelements);
 						GL_LockArrays(0, 0);
 						batchcount = 0;
 						at = varray_texcoord2f[0];
@@ -571,7 +571,7 @@ void R_DrawQueue(void)
 			if (batchcount > 0)
 			{
 				GL_LockArrays(0, batchcount * 4);
-				R_Mesh_Draw(batchcount * 4, batchcount * 2, quadelements);
+				R_Mesh_Draw(0, batchcount * 4, batchcount * 2, quadelements);
 				GL_LockArrays(0, 0);
 			}
 			break;
@@ -585,7 +585,7 @@ void R_DrawQueue(void)
 				m.pointer_texcoord[0] = NULL;
 			R_Mesh_State(&m);
 			GL_LockArrays(0, mesh->num_vertices);
-			R_Mesh_Draw(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
+			R_Mesh_Draw(0, mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
 			GL_LockArrays(0, 0);
 			break;
 		case DRAWQUEUE_SETCLIP:
@@ -631,7 +631,7 @@ void R_DrawQueue(void)
 			while (c[0] >= 1.01f || c[1] >= 1.01f || c[2] >= 1.01f)
 			{
 				GL_Color(bound(0, c[0] - 1, 1), bound(0, c[1] - 1, 1), bound(0, c[2] - 1, 1), 1);
-				R_Mesh_Draw(3, 1, polygonelements);
+				R_Mesh_Draw(0, 3, 1, polygonelements);
 				VectorScale(c, 0.5, c);
 			}
 		}
@@ -647,7 +647,7 @@ void R_DrawQueue(void)
 		{
 			GL_BlendFunc(GL_ONE, GL_ONE);
 			GL_Color(c[0], c[1], c[2], 1);
-			R_Mesh_Draw(3, 1, polygonelements);
+			R_Mesh_Draw(0, 3, 1, polygonelements);
 		}
 	}
 }
