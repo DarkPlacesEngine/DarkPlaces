@@ -759,6 +759,8 @@ static const gamemode_info_t gamemode_info [] =
 { "openquartz",		"-openquartz",	"OpenQuartz",			"id1",		"openquartz"},
 // GAME_PRYDON
 { "prydon",			"-prydon",		"PrydonGate",			"prydon",	"prydon"},
+// GAME_NETHERWORLD
+{ "netherworld",	"-netherworld",	"Dark Masters",			"netherworld", 	"nw"},
 };
 
 void COM_InitGameType (void)
