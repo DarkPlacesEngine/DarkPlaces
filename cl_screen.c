@@ -19,6 +19,7 @@ cvar_t vid_conwidth = {CVAR_SAVE, "vid_conwidth", "640"};
 cvar_t vid_conheight = {CVAR_SAVE, "vid_conheight", "480"};
 cvar_t scr_screenshot_jpeg = {CVAR_SAVE, "scr_screenshot_jpeg","0"};
 cvar_t scr_screenshot_jpeg_quality = {CVAR_SAVE, "scr_screenshot_jpeg_quality","0.9"};
+cvar_t scr_screenshot_name = {0, "scr_screenshot_name","dp"};
 cvar_t cl_avidemo = {0, "cl_avidemo", "0"};
 
 int jpeg_supported = false;
@@ -654,17 +655,15 @@ SCR_ScreenShot_f
 */
 void SCR_ScreenShot_f (void)
 {
-	static int shotnumber = 0;
-	const char *base;
-	char filename[64];
+	int shotnumber;
+	char base[MAX_QPATH];
+	char filename[MAX_QPATH];
 	qboolean jpeg = (scr_screenshot_jpeg.integer != 0);
 
-	base = "screenshots/dp";
-	if (gamemode == GAME_FNIGGIUM)
-		base = "screenshots/fniggium";
+	sprintf (base, "screenshots/%s", scr_screenshot_name.string);
 	
 	// find a file name to save it to
-	for (;shotnumber < 1000000;shotnumber++)
+	for (shotnumber=0;shotnumber < 1000000;shotnumber++)
 		if (!FS_SysFileExists(va("%s/%s%06d.tga", fs_gamedir, base, shotnumber)) && !FS_SysFileExists(va("%s/%s%06d.jpg", fs_gamedir, base, shotnumber)))
 			break;
 	if (shotnumber >= 1000000)

@@ -891,6 +891,8 @@ void FS_Init (void)
 	fs_mempool = Mem_AllocPool("file management");
 	pak_mempool = Mem_AllocPool("paks");
 
+	Cvar_RegisterVariable (&scr_screenshot_name);
+
 	Cmd_AddCommand ("path", FS_Path_f);
 	Cmd_AddCommand ("dir", FS_Dir_f);
 	Cmd_AddCommand ("ls", FS_Ls_f);
@@ -943,6 +945,55 @@ void FS_Init (void)
 		return;
 	}
 
+	switch(gamemode)
+	{
+		case GAME_NORMAL:
+			Cvar_SetQuick (&scr_screenshot_name, "dp");
+			break;
+		case GAME_HIPNOTIC:
+			Cvar_SetQuick (&scr_screenshot_name, "hipnotic");
+			break;
+		case GAME_ROGUE:
+			Cvar_SetQuick (&scr_screenshot_name, "rogue");
+			break;
+		case GAME_NEHAHRA:
+			Cvar_SetQuick (&scr_screenshot_name, "nehahra");
+			break;
+		case GAME_NEXUIZ:
+			Cvar_SetQuick (&scr_screenshot_name, "nexuiz");
+			break;
+		case GAME_TRANSFUSION:
+			Cvar_SetQuick (&scr_screenshot_name, "transfusion");
+			break;
+		case GAME_GOODVSBAD2:
+			Cvar_SetQuick (&scr_screenshot_name, "gvb2");
+			break;
+		case GAME_TEU:
+			Cvar_SetQuick (&scr_screenshot_name, "teu");
+			break;
+		case GAME_BATTLEMECH:
+			Cvar_SetQuick (&scr_screenshot_name, "battlemech");
+			break;
+		case GAME_ZYMOTIC:
+			Cvar_SetQuick (&scr_screenshot_name, "zymotic");
+			break;
+		case GAME_FNIGGIUM:
+			Cvar_SetQuick (&scr_screenshot_name, "fniggium");
+			break;
+		case GAME_SETHERAL:
+			Cvar_SetQuick (&scr_screenshot_name, "setheral");
+			break;
+		case GAME_SOM:
+			Cvar_SetQuick (&scr_screenshot_name, "som");
+			break;
+		case GAME_TENEBRAE:
+			Cvar_SetQuick (&scr_screenshot_name, "tenebrae");
+			break;
+		default:
+			Cvar_SetQuick (&scr_screenshot_name, "dp");
+			break;
+	}
+
 	// start up with GAMENAME by default (id1)
 	strlcpy (com_modname, GAMENAME, sizeof (com_modname));
 	FS_AddGameDirectory (va("%s/"GAMENAME, fs_basedir));
@@ -963,6 +1014,7 @@ void FS_Init (void)
 		fs_modified = true;
 		strlcpy (com_modname, com_argv[i+1], sizeof (com_modname));
 		FS_AddGameDirectory (va("%s/%s", fs_basedir, com_argv[i+1]));
+		Cvar_SetQuick (&scr_screenshot_name, com_modname);
 	}
 }
 
