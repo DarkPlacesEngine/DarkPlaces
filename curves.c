@@ -221,7 +221,7 @@ void QuadraticSplinePatchSubdivideFloatBuffer(int cpwidth, int cpheight, int xle
 						// fetch next control point
 						next = out[((y + ystep) * outwidth + x) * components + c];
 						// flatten central control point 
-						out[(y * outwidth + x) * components + c] = (curr + (prev + next) * 0.5f) * 0.5f;;
+						out[(y * outwidth + x) * components + c] = (curr + (prev + next) * 0.5f) * 0.5f;
 						// create following midpoint
 						out[((y + halfstep) * outwidth + x) * components + c] = (curr + next) * 0.5f;
 					}
@@ -244,7 +244,7 @@ void QuadraticSplinePatchSubdivideFloatBuffer(int cpwidth, int cpheight, int xle
 				// fetch next control point 
 				next = out[(y * outwidth + (x + xstep)) * components + c];
 				// flatten central control point 
-				out[(y * outwidth + x) * components + c] = (curr + (prev + next) * 0.5f) * 0.5f;;
+				out[(y * outwidth + x) * components + c] = (curr + (prev + next) * 0.5f) * 0.5f;
 			}
 		}
 	}
@@ -262,7 +262,7 @@ void QuadraticSplinePatchSubdivideFloatBuffer(int cpwidth, int cpheight, int xle
 				// fetch next control point 
 				next = out[((y + ystep) * outwidth + x) * components + c];
 				// flatten central control point 
-				out[(y * outwidth + x) * components + c] = (curr + (prev + next) * 0.5f) * 0.5f;;
+				out[(y * outwidth + x) * components + c] = (curr + (prev + next) * 0.5f) * 0.5f;
 			}
 		}
 	}

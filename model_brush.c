@@ -95,7 +95,7 @@ static void Mod_Q1BSP_AmbientSoundLevelsForPoint(model_t *model, const vec3_t p,
 	leaf = Mod_Q1BSP_PointInLeaf(model, p);
 	if (leaf)
 	{
-		i = min(outsize, (int)sizeof(leaf->ambient_sound_level));;
+		i = min(outsize, (int)sizeof(leaf->ambient_sound_level));
 		if (i)
 		{
 			memcpy(out, leaf->ambient_sound_level, i);
