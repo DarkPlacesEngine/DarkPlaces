@@ -718,7 +718,7 @@ void NET_Init (void)
 	}
 	net_hostport = DEFAULTnet_hostport;
 
-	if (COM_CheckParm("-listen") || cls.state == ca_dedicated)
+	if (COM_CheckParm("-listen") || cls.state == ca_dedicated || gamemode == GAME_BLOODBATH)
 		listening = true;
 	// LordHavoc: sockets are dynamically allocated now
 	//net_numsockets = svs.maxclientslimit;
