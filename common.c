@@ -43,6 +43,7 @@ char com_cmdline[CMDLINE_LENGTH];
 int gamemode;
 char *gamename;
 char *gamedirname;
+char *gamescreenshotname;
 char com_modname[MAX_OSPATH] = "";
 
 
@@ -776,58 +777,72 @@ void COM_InitGameType (void)
 	case GAME_NORMAL:
 		gamename = "DarkPlaces-Quake";
 		gamedirname = "";
+		gamescreenshotname = "dp";
 		break;
 	case GAME_HIPNOTIC:
 		gamename = "Darkplaces-Hipnotic";
 		gamedirname = "hipnotic";
+		gamescreenshotname = "dp";
 		break;
 	case GAME_ROGUE:
 		gamename = "Darkplaces-Rogue";
 		gamedirname = "rogue";
+		gamescreenshotname = "dp";
 		break;
 	case GAME_NEHAHRA:
 		gamename = "DarkPlaces-Nehahra";
 		gamedirname = "nehahra";
+		gamescreenshotname = "dp";
 		break;
 	case GAME_NEXUIZ:
 		gamename = "Nexuiz";
 		gamedirname = "data";
+		gamescreenshotname = "nexuiz";
 		break;
 	case GAME_TRANSFUSION:
 		gamename = "Transfusion";
 		gamedirname = "basetf";
+		gamescreenshotname = "transfusion";
 		break;
 	case GAME_GOODVSBAD2:
 		gamename = "GoodVs.Bad2";
 		gamedirname = "rts";
+		gamescreenshotname = "gvb2";
 		break;
 	case GAME_TEU:
 		gamename = "TheEvilUnleashed";
 		gamedirname = "baseteu";
+		gamescreenshotname = "teu";
 		break;
 	case GAME_BATTLEMECH:
 		gamename = "Battlemech";
 		gamedirname = "base";
+		gamescreenshotname = "battlemech";
 		break;
 	case GAME_ZYMOTIC:
 		gamename = "Zymotic";
 		gamedirname = "data";
+		gamescreenshotname = "zymotic";
 		break;
 	case GAME_FNIGGIUM:
 		gamename = "Fniggium";
 		gamedirname = "data";
+		gamescreenshotname = "fniggium";
 		break;
 	case GAME_SETHERAL:
 		gamename = "Setheral";
 		gamedirname = "data";
+		gamescreenshotname = "setheral";
 		break;
 	case GAME_SOM:
 		gamename = "Son of Man";
 		gamedirname = "data";
+		gamescreenshotname = "som";
 		break;
 	case GAME_TENEBRAE:
 		gamename = "DarkPlaces-Tenebrae";
 		gamedirname = "tenebrae";
+		gamescreenshotname = "dp";
 		break;
 	default:
 		Sys_Error("COM_InitGameType: unknown gamemode %i\n", gamemode);
@@ -854,8 +869,6 @@ void COM_Init (void)
 	FS_Init ();
 	Log_Init ();
 	COM_CheckRegistered ();
-
-	COM_InitGameType();
 }
 
 
