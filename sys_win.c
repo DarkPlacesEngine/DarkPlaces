@@ -45,6 +45,31 @@ static HANDLE	hFile;
 static HANDLE	heventParent;
 static HANDLE	heventChild;
 
+
+/*
+===============================================================================
+
+DLL MANAGEMENT
+
+===============================================================================
+*/
+
+dllhandle_t Sys_LoadLibrary (const char* name)
+{
+	return LoadLibrary (name);
+}
+
+void Sys_UnloadLibrary (dllhandle_t handle)
+{
+	FreeLibrary (handle);
+}
+
+void* Sys_GetProcAddress (dllhandle_t handle, const char* name)
+{
+	return (void *)GetProcAddress (handle, name);
+}
+
+
 /*
 ===============================================================================
 

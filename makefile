@@ -40,7 +40,7 @@ CLIENTOBJECTS=	cgame.o cgamevm.o chase.o cl_collision.o cl_demo.o cl_input.o \
 		cl_main.o cl_parse.o cl_particles.o cl_screen.o cl_video.o \
 		console.o dpvsimpledecode.o fractalnoise.o gl_backend.o \
 		gl_draw.o gl_models.o gl_rmain.o gl_rsurf.o gl_textures.o \
-		keys.o menu.o meshqueue.o r_crosshairs.o r_explosion.o \
+		jpeg.o keys.o menu.o meshqueue.o r_crosshairs.o r_explosion.o \
 		r_explosion.o r_lerpanim.o r_light.o r_modules.o r_sky.o \
 		r_sprites.o sbar.o ui.o vid_shared.o view.o wavefile.o \
 		r_shadow.c

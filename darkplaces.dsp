@@ -16,7 +16,7 @@ CFG=darkplaces - Win32 Debug
 !MESSAGE NMAKE /f "darkplaces.mak" CFG="darkplaces - Win32 Debug"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
-!MESSAGE 
+!MESSAGE
 !MESSAGE "darkplaces - Win32 Release" (based on "Win32 (x86) Application")
 !MESSAGE "darkplaces - Win32 Debug" (based on "Win32 (x86) Application")
 !MESSAGE 
@@ -217,6 +217,10 @@ SOURCE=.\host_cmd.c
 # Begin Source File
 
 SOURCE=.\image.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\jpeg.c
 # End Source File
 # Begin Source File
 
@@ -521,6 +525,10 @@ SOURCE=.\image.h
 # Begin Source File
 
 SOURCE=.\input.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\jpeg.h
 # End Source File
 # Begin Source File
 

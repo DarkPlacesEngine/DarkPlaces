@@ -22,6 +22,33 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef SYS_H
 #define SYS_H
 
+
+//
+// DLL management
+//
+
+// Win32 specific
+#ifdef WIN32
+# include <windows.h>
+typedef HMODULE dllhandle_t;
+
+// Other platforms
+#else
+  typedef void* dllhandle_t;
+#endif
+
+typedef struct
+{
+	const char *name;
+	void **funcvariable;
+}
+dllfunction_t;
+
+dllhandle_t Sys_LoadLibrary (const char* name);
+void Sys_UnloadLibrary (dllhandle_t handle);
+void* Sys_GetProcAddress (dllhandle_t handle, const char* name);
+
+
 //
 // file IO
 //

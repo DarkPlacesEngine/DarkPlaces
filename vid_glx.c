@@ -53,7 +53,7 @@ const char *(GLAPIENTRY *qglXQueryExtensionsString)(Display *dpy, int screen);
 //GLX_ARB_get_proc_address
 void *(GLAPIENTRY *qglXGetProcAddressARB)(const GLubyte *procName);
 
-static gl_extensionfunctionlist_t getprocaddressfuncs[] =
+static dllfunction_t getprocaddressfuncs[] =
 {
 	{"glXGetProcAddressARB", (void **) &qglXGetProcAddressARB},
 	{NULL, NULL}
@@ -63,7 +63,7 @@ static gl_extensionfunctionlist_t getprocaddressfuncs[] =
 GLint (GLAPIENTRY *qglXGetVideoSyncSGI)(GLuint *count);
 GLint (GLAPIENTRY *qglXWaitVideoSyncSGI)(int divisor, int remainder, unsigned int *count);
 
-static gl_extensionfunctionlist_t videosyncfuncs[] =
+static dllfunction_t videosyncfuncs[] =
 {
 	{"glXGetVideoSyncSGI", (void **) &qglXGetVideoSyncSGI},
 	{"glXWaitVideoSyncSGI", (void **) &qglXWaitVideoSyncSGI},

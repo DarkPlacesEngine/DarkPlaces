@@ -1494,7 +1494,7 @@ void R_DrawSurfaces(entity_render_t *ent, int type)
 	texture_t *t;
 	R_Mesh_Matrix(&ent->matrix);
 	for (i = 0, t = ent->model->textures;i < ent->model->numtextures;i++, t++)
-		if (t->shader->shaderfunc[type] && ent->model->texturesurfacechains[i])
+		if (t->shader->shaderfunc[type] && t->currentframe && ent->model->texturesurfacechains[i])
 			t->shader->shaderfunc[type](ent, t->currentframe, ent->model->texturesurfacechains[i]);
 }
 

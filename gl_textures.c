@@ -1,6 +1,7 @@
 
 #include "quakedef.h"
 #include "image.h"
+#include "jpeg.h"
 
 cvar_t	r_max_size = {CVAR_SAVE, "r_max_size", "2048"};
 cvar_t	r_max_scrapsize = {CVAR_SAVE, "r_max_scrapsize", "256"};
@@ -476,11 +477,16 @@ static void r_textures_start(void)
 	texturemempool = Mem_AllocPool("Texture Info");
 	texturedatamempool = Mem_AllocPool("Texture Storage (not yet uploaded)");
 	textureprocessingmempool = Mem_AllocPool("Texture Processing Buffers");
+
+	JPEG_OpenLibrary ();
 }
 
 static void r_textures_shutdown(void)
 {
 	rtexturepool_t *temp;
+
+	JPEG_CloseLibrary ();
+
 	while(gltexturepoolchain)
 	{
 		temp = (rtexturepool_t *) gltexturepoolchain;
