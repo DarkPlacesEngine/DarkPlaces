@@ -81,6 +81,7 @@ static void Mod_BuildAliasVertexTextureVectors(int numtriangles, const int *elem
 	Mod_BuildTextureVectorsAndNormals(numverts, numtriangles, vertexbuffer, texcoords, elements, svectorsbuffer, tvectorsbuffer, normalsbuffer);
 	for (i = 0;i < numverts;i++)
 	{
+		// LordHavoc: alias models are backwards, apparently
 		vertices[i].normal[0] = normalsbuffer[i * 4 + 0];
 		vertices[i].normal[1] = normalsbuffer[i * 4 + 1];
 		vertices[i].normal[2] = normalsbuffer[i * 4 + 2];
@@ -245,23 +246,23 @@ void Mod_BuildMDLMD2MeshInfo(void)
 		if (skinframe->glow != NULL)
 			skin->num_layers++;
 		if (skinframe->merged != NULL)
-			skin->num_layers++;
+			skin->num_layers += 2;
 		if (skinframe->base != NULL)
-			skin->num_layers++;
+			skin->num_layers += 2;
 		if (skinframe->pants != NULL)
-			skin->num_layers++;
+			skin->num_layers += 2;
 		if (skinframe->shirt != NULL)
-			skin->num_layers++;
+			skin->num_layers += 2;
 		layer = skin->data_layers = Mem_Alloc(loadmodel->mempool, skin->num_layers * sizeof(aliaslayer_t));
 		if (skinframe->glow != NULL)
 		{
-			layer->flags = ALIASLAYER_REALTIME_NODRAW;
+			layer->flags = 0;
 			layer->texture = skinframe->glow;
 			layer++;
 		}
 		if (skinframe->merged != NULL)
 		{
-			layer->flags = ALIASLAYER_COLORMAP_NODRAW | ALIASLAYER_DIFFUSE;
+			layer->flags = ALIASLAYER_NODRAW_IF_COLORMAPPED | ALIASLAYER_DIFFUSE;
 			if (skinframe->glow != NULL)
 				layer->flags |= ALIASLAYER_ADD;
 			layer->texture = skinframe->merged;
@@ -270,7 +271,7 @@ void Mod_BuildMDLMD2MeshInfo(void)
 		}
 		if (skinframe->base != NULL)
 		{
-			layer->flags = ALIASLAYER_COLORMAP_DRAW | ALIASLAYER_DIFFUSE;
+			layer->flags = ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_DIFFUSE;
 			if (skinframe->glow != NULL)
 				layer->flags |= ALIASLAYER_ADD;
 			layer->texture = skinframe->base;
@@ -279,7 +280,7 @@ void Mod_BuildMDLMD2MeshInfo(void)
 		}
 		if (skinframe->pants != NULL)
 		{
-			layer->flags = ALIASLAYER_COLORMAP_DRAW | ALIASLAYER_COLORMAP_DIFFUSE_SHIRT;
+			layer->flags = ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_DIFFUSE | ALIASLAYER_COLORMAP_SHIRT;
 			if (skinframe->glow != NULL || skinframe->base != NULL)
 				layer->flags |= ALIASLAYER_ADD;
 			layer->texture = skinframe->pants;
@@ -288,20 +289,48 @@ void Mod_BuildMDLMD2MeshInfo(void)
 		}
 		if (skinframe->shirt != NULL)
 		{
-			layer->flags = ALIASLAYER_COLORMAP_DRAW | ALIASLAYER_COLORMAP_DIFFUSE_SHIRT;
+			layer->flags = ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_DIFFUSE | ALIASLAYER_COLORMAP_SHIRT;
 			if (skinframe->glow != NULL || skinframe->base != NULL || skinframe->pants != NULL)
 				layer->flags |= ALIASLAYER_ADD;
 			layer->texture = skinframe->shirt;
 			layer->nmap = skinframe->nmap;
 			layer++;
 		}
-		layer->flags = ALIASLAYER_REALTIME_DRAW | ALIASLAYER_SPECULAR;
+		layer->flags = ALIASLAYER_FOG;
+		layer->texture = skinframe->fog;
+		layer++;
+		layer->flags = ALIASLAYER_DRAW_PER_LIGHT | ALIASLAYER_SPECULAR;
 		layer->texture = skinframe->gloss;
 		layer->nmap = skinframe->nmap;
 		layer++;
-		layer->flags = ALIASLAYER_REALTIME_NODRAW | ALIASLAYER_FOG;
-		layer->texture = skinframe->fog;
-		layer++;
+		if (skinframe->merged != NULL)
+		{
+			layer->flags = ALIASLAYER_DRAW_PER_LIGHT | ALIASLAYER_NODRAW_IF_COLORMAPPED | ALIASLAYER_DIFFUSE;
+			layer->texture = skinframe->merged;
+			layer->nmap = skinframe->nmap;
+			layer++;
+		}
+		if (skinframe->base != NULL)
+		{
+			layer->flags = ALIASLAYER_DRAW_PER_LIGHT | ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_DIFFUSE;
+			layer->texture = skinframe->base;
+			layer->nmap = skinframe->nmap;
+			layer++;
+		}
+		if (skinframe->pants != NULL)
+		{
+			layer->flags = ALIASLAYER_DRAW_PER_LIGHT | ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_DIFFUSE | ALIASLAYER_COLORMAP_PANTS;
+			layer->texture = skinframe->pants;
+			layer->nmap = skinframe->nmap;
+			layer++;
+		}
+		if (skinframe->shirt != NULL)
+		{
+			layer->flags = ALIASLAYER_DRAW_PER_LIGHT | ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_DIFFUSE | ALIASLAYER_COLORMAP_SHIRT;
+			layer->texture = skinframe->shirt;
+			layer->nmap = skinframe->nmap;
+			layer++;
+		}
 	}
 }
 

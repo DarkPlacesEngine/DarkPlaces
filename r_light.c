@@ -840,7 +840,7 @@ void R_LightModel(const entity_render_t *ent, int numverts, float *vertices, flo
 			VectorCopy(basecolor, color);
 			for (j = 0, nl = &nearlight[0];j < nearlights;j++, nl++)
 			{
-				VectorSubtract(nl->origin, av, v);
+				VectorSubtract(av, nl->origin, v);
 				// directional shading
 				dot = DotProduct(avn,v);
 				if (dot > 0)

@@ -238,7 +238,7 @@ typedef struct aliasvertex_s
 }
 aliasvertex_t;
 
-// this layer is fog
+// this layer is fog (completely specialized behavior)
 #define ALIASLAYER_FOG 1
 // alpha blending
 #define ALIASLAYER_ALPHA 2
@@ -249,17 +249,15 @@ aliasvertex_t;
 // apply specular lighting
 #define ALIASLAYER_SPECULAR 16
 // tint with pants color
-#define ALIASLAYER_COLORMAP_DIFFUSE_PANTS 32
+#define ALIASLAYER_COLORMAP_PANTS 32
 // tint with shirt color
-#define ALIASLAYER_COLORMAP_DIFFUSE_SHIRT 64
+#define ALIASLAYER_COLORMAP_SHIRT 64
+// don't draw this layer if colormap is not used
+#define ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED 128
 // don't draw this layer if colormap is used
-#define ALIASLAYER_COLORMAP_NODRAW 128
-// only draw this layer if colormap is used
-#define ALIASLAYER_COLORMAP_DRAW 256
-// don't draw this layer for realtime lighting passes
-#define ALIASLAYER_REALTIME_NODRAW 512
-// only draw this layer for realtime lighting passes
-#define ALIASLAYER_REALTIME_DRAW 1024
+#define ALIASLAYER_NODRAW_IF_COLORMAPPED 256
+// draw this layer for realtime lighting passes, otherwise don't
+#define ALIASLAYER_DRAW_PER_LIGHT 512
 
 typedef struct aliaslayer_s
 {
