@@ -304,7 +304,6 @@ void VID_Init()
 {
 	int i;
 	GLint attribs[32];
-	char	gldir[MAX_OSPATH];
 	int width = 640, height = 480;
 
 // set vid parameters
