@@ -1,7 +1,7 @@
 
 #include "quakedef.h"
 
-cvar_t ui_showname = {0, "ui_showname", "0"};
+/*cvar_t ui_showname = {0, "ui_showname", "0"};
 
 #define ITEM_CLICKABLE 1
 #define ITEM_DRAWABLE 2
@@ -407,5 +407,146 @@ void ui_draw(void)
 
 		DrawQ_Pic(ui_mouse_x, ui_mouse_y, "ui/mousepointer.tga", 0, 0, 1, 1, 1, 1, 0);
 	}
+}*/
+
+#define FRAME_THICKNESS	2
+#define FRAME_COLOR1	0.2, 0.2, 0.5, 0, 0
+#define FRAME_COLOR2	0, 0, 0, 0.6, 0
+#define TEXT_FONTSIZE	10, 10
+
+static void UIG_DrawFrame(float x, float y, float w, float h)
+{
+	// bottom
+	DrawQ_Fill(x - FRAME_THICKNESS, y - FRAME_THICKNESS, w + 2 * FRAME_THICKNESS, FRAME_THICKNESS, FRAME_COLOR1);
+	// top
+	DrawQ_Fill(x - FRAME_THICKNESS, y + h, w + 2 * FRAME_THICKNESS, FRAME_THICKNESS, FRAME_COLOR1);
+	// left
+	DrawQ_Fill(x - FRAME_THICKNESS, y, FRAME_THICKNESS, h, FRAME_COLOR1);
+	// right
+	DrawQ_Fill(x + w, y, FRAME_THICKNESS, h, FRAME_COLOR1);
+	// area
+	DrawQ_Fill(x, y, w, h, FRAME_COLOR2);
+} 
+
+static void UIG_DrawText(const char *text, float x, float y, float w, float h, float r, float g, float b, float a, float f)
+{
+	if(w != 0 && h != 0)
+		DrawQ_SetClipArea(x, y, w, h);
+	DrawQ_String(x, y, text, 0, TEXT_FONTSIZE, r, g, b, a , f);
+	if(w != 0 && h != 0)	
+		DrawQ_ResetClipArea();
 }
 
+void UI_Init(void)
+{
+}
+
+void UI_Key(ui_itemlist_t list, int key, int ascii)
+{
+}
+
+void UI_Draw(ui_itemlist_t list)
+{
+}
+
+void UI_SetFocus(ui_itemlist_t list, ui_item_t item)
+{
+}
+
+void UI_SetNeighbors(ui_item_t left, ui_item_t right, ui_item_t up, ui_item_t down)
+{
+}
+
+// item stuff
+ui_item_t UI_CreateButton(const char *caption, float x, float y, void(*action)(ui_item_t))
+{
+	return NULL;
+}
+
+ui_item_t UI_CreateLabel(const char *caption, float x, float y)
+{
+	return NULL;
+}
+
+ui_item_t UI_CreateText(const char *caption, float x, float y, const char *allowed, int maxlen, int scrolllen)
+{
+	return NULL;
+}
+
+void UI_FreeItem(ui_item_t item)
+{
+}
+
+const char* UI_GetCaption(ui_item_t item)
+{
+}
+
+void UI_SetCaption(ui_item_t item, const char * caption)
+{
+}
+
+// itemlist stuff
+ui_itemlist_t UI_CreateItemList(float x, float y)
+{
+	return NULL;
+}
+
+void UI_FreeItemList(ui_itemlist_t list)
+{
+}
+
+void UI_AddItem(ui_itemlist_t list, ui_item_t item)
+{
+}
+
+// AK: callback system stuff
+static ui_callback_t ui_callback_list[UI_MAX_CALLBACK_COUNT];
+
+void UI_Callback_Init(void)
+{
+	memset(ui_callback_list, 0, sizeof(ui_callback_list));
+}
+
+int  UI_Callback_GetFreeSlot(void)
+{
+	int i;
+	for(i = 0; ui_callback_list[i].flag & UI_SLOTUSED && i < UI_MAX_CALLBACK_COUNT; i++);
+
+	if(i == UI_MAX_CALLBACK_COUNT)
+		return -1;
+	else
+		return i;
+}
+
+int UI_Callback_IsSlotUsed(int slotnr)
+{
+	if(slotnr < 0 || slotnr >= UI_MAX_CALLBACK_COUNT)
+		return false;
+	return (ui_callback_list[slotnr].flag & UI_SLOTUSED);
+}
+
+void UI_Callback_SetupSlot(int slotnr, void(*keydownf)(int num, char ascii), void(*drawf)(void))
+{
+	ui_callback_list[slotnr].flag = UI_SLOTUSED;
+	ui_callback_list[slotnr].draw = drawf;
+	ui_callback_list[slotnr].keydown = keydownf;
+}
+
+void UI_Callback_ResetSlot(int slotnr)
+{
+	ui_callback_list[slotnr].flag = 0;
+}
+
+void UI_Callback_Draw(void)
+{
+	int i;
+	for(i = 0; i < UI_MAX_CALLBACK_COUNT; i++)
+		if(ui_callback_list[i].flag & UI_SLOTUSED && ui_callback_list[i].draw)
+			ui_callback_list[i].draw();
+}
+
+void UI_Callback_KeyDown(int num, char ascii)
+{
+	if(ui_callback_list[key_dest - 3].flag & UI_SLOTUSED && ui_callback_list[key_dest - 3].keydown)
+		ui_callback_list[key_dest - 3].keydown(num, ascii);
+}

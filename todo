@@ -73,7 +73,6 @@ f darkplaces: change particle() macro in cl_particles.c to have a do{}while(0) t
 0 darkplaces: check for out of bounds lump data ranges in maps (FrikaC)
 0 darkplaces: check for truncated sound files (FrikaC)
 0 darkplaces: cl_particles_maximum cvar (default 32768) which would change number of particles allowed at once (TheBeast)
-0 darkplaces: clean up the DrawQ_ blendfunc handling, instead of taking DRAWFLAG_ADDITIVE they should take blendfunc values (Black)
 0 darkplaces: client colors are being reset to "15 15" each level in prydon gate? (FrikaC)
 0 darkplaces: darkplaces-glx -path transfusion crashes, fix the crash even though it's not going to work anyway (Todd)
 0 darkplaces: delay "connect" and "playdemo" and "timedemo" until after video init to cause quicker video startup (KrimZon)
@@ -283,7 +282,8 @@ d darkplaces: q1bsp trace bug: scrags frequently fly through ceilings - this nee
 4 darkplaces: figure out what is wrong with dedicated server console on win32 and fix it (and tell willis@deathmask.net)
 4 darkplaces: ingame mod switching
 4 darkplaces: make hqbsp save mip textures to bsp if tga textures are found
-4 darkplaces: memory pool nesting, allowing pools of pools to be batch freed (Vicious)
+-n darkplaces: memory pool nesting, allowing pools of pools to be batch freed (Vicious)
+4 darkplaces: use the memory pool nesting feature ! (Black[,Vicious])
 4 darkplaces: rewrite sound system! (FrikaC, Static_Fiend, SeienAbunae)
 4 darkplaces: use getaddrinfo to support ipv6, add support for winsock2 (or require it), check if winsock2 has ipv6 functions (getaddrinfo)... (|Rain|)
 4 dpzoo: a drivable vehicle (using same technique as remote cameras, plus DP_SV_READCLIENTINPUT)

@@ -348,8 +348,8 @@ static void HandleEvents(void)
 					p_mouse_y = event.xmotion.y;
 				}
 			}
-			else
-				ui_mouseupdate(event.xmotion.x, event.xmotion.y);
+			//else
+			//	ui_mouseupdate(event.xmotion.x, event.xmotion.y);
 			break;
 
 		case ButtonPress:

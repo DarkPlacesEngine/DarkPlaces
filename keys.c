@@ -812,7 +812,10 @@ void Key_Event (int key, char ascii, qboolean down)
 			MR_ToggleMenu_f ();
 			break;
 		default:
-			Sys_Error ("Bad key_dest");
+			if(UI_Callback_IsSlotUsed(key_dest - 3))
+				UI_Callback_KeyDown (key, ascii);
+			else
+				Sys_Error ("Bad key_dest");
 		}
 		return;
 	}
@@ -908,7 +911,10 @@ void Key_Event (int key, char ascii, qboolean down)
 			Key_Console (key, ascii);
 			break;
 		default:
-			Sys_Error ("Bad key_dest");
+			if(UI_Callback_IsSlotUsed(key_dest - 3))
+				UI_Callback_KeyDown (key, ascii);
+			else
+				Sys_Error ("Bad key_dest");
 		}
 	}
 }
