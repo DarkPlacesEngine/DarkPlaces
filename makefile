@@ -64,7 +64,7 @@ COMMONOBJECTS= $(CLIENTOBJECTS) $(SERVEROBJECTS) $(SHAREDOBJECTS)
 # built to give the executable a proper date string
 OBJ_GLX= builddate.c sys_linux.o vid_glx.o $(OBJ_LINUXCD) $(OBJ_LINUXSOUND) $(COMMONOBJECTS)
 OBJ_DED= builddate.c sys_linux.o vid_null.o cd_null.o snd_null.o $(COMMONOBJECTS)
-OBJ_WGL_EXE= builddate.c sys_win.o vid_wgl.o conproc.o cd_shared.o cd_win.o snd_win.o snd_dma.o snd_mix.o snd_mem.o $(COMMONOBJECTS)
+OBJ_WGL_EXE= builddate.c sys_win.o vid_wgl.o conproc.o cd_shared.o cd_win.o snd_win.o snd_dma.o snd_mix.o snd_mem.o ogg.o $(COMMONOBJECTS)
 OBJ_DED_EXE= builddate.c sys_linux.o vid_null.o cd_null.o snd_null.o $(COMMONOBJECTS)
 
 
