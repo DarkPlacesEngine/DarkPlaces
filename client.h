@@ -233,7 +233,6 @@ typedef struct
 typedef struct
 {
 	char	name[MAX_SCOREBOARDNAME];
-	float	entertime;
 	int		frags;
 	int		colors; // two 4 bit fields
 } scoreboard_t;
