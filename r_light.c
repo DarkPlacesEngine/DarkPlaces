@@ -540,7 +540,9 @@ void R_LightModel_CalcVertexColors(const float *ambientcolor4f, const float *dif
 	float color[4], v[3], dot, dist2, f, dnormal[3];
 	nearlight_t *nl;
 	usediffuse = DotProduct(diffusecolor, diffusecolor) > 0;
-	VectorCopy(diffusenormal, dnormal);
+	// negate the diffuse normal to avoid the need to negate the
+	// dotproduct on each vertex
+	VectorNegate(diffusenormal, dnormal);
 	if (usediffuse)
 		VectorNormalize(dnormal);
 	// directional shading code here
@@ -551,7 +553,7 @@ void R_LightModel_CalcVertexColors(const float *ambientcolor4f, const float *dif
 		// silly directional diffuse shading
 		if (usediffuse)
 		{
-			dot = -DotProduct(normal3f, dnormal);
+			dot = DotProduct(normal3f, dnormal);
 			if (dot > 0)
 				VectorMA(color, dot, diffusecolor, color);
 		}
