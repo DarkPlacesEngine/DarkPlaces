@@ -1900,7 +1900,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 	if (separator < colon)
 		separator = colon;
 	basepathlength = separator - pattern;
-	basepath = Z_Malloc(basepathlength + 1);
+	basepath = Mem_Alloc (tempmempool, basepathlength + 1);
 	if (basepathlength)
 		memcpy(basepath, pattern, basepathlength);
 	basepath[basepathlength] = 0;
@@ -2004,7 +2004,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 			stringlistfree(liststart);
 	}
 
-	Z_Free(basepath);
+	Mem_Free(basepath);
 	return search;
 }
 

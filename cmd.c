@@ -115,25 +115,25 @@ void Cbuf_InsertText (const char *text)
 	char	*temp;
 	int		templen;
 
-// copy off any commands still remaining in the exec buffer
+	// copy off any commands still remaining in the exec buffer
 	templen = cmd_text.cursize;
 	if (templen)
 	{
-		temp = Z_Malloc (templen);
+		temp = Mem_Alloc (tempmempool, templen);
 		memcpy (temp, cmd_text.data, templen);
 		SZ_Clear (&cmd_text);
 	}
 	else
-		temp = NULL;	// shut up compiler
+		temp = NULL;
 
-// add the entire text of the file
+	// add the entire text of the file
 	Cbuf_AddText (text);
 
-// add the copied off data
-	if (templen)
+	// add the copied off data
+	if (temp != NULL)
 	{
 		SZ_Write (&cmd_text, temp, templen);
-		Z_Free (temp);
+		Mem_Free (temp);
 	}
 }
 
@@ -237,7 +237,7 @@ void Cmd_StuffCmds_f (void)
 	if (!s)
 		return;
 
-	text = Z_Malloc (s+1);
+	text = Mem_Alloc (tempmempool, s + 1);
 	text[0] = 0;
 	for (i=1 ; i<com_argc ; i++)
 	{
@@ -248,8 +248,8 @@ void Cmd_StuffCmds_f (void)
 			strcat (text, " ");
 	}
 
-// pull out the commands
-	build = Z_Malloc (s+1);
+	// pull out the commands
+	build = Mem_Alloc (tempmempool, s + 1);
 	build[0] = 0;
 
 	for (i=0 ; i<s-1 ; i++)
@@ -274,8 +274,8 @@ void Cmd_StuffCmds_f (void)
 	if (build[0])
 		Cbuf_InsertText (build);
 
-	Z_Free (text);
-	Z_Free (build);
+	Mem_Free (text);
+	Mem_Free (build);
 }
 
 
@@ -330,15 +330,6 @@ Cmd_Alias_f
 Creates a new command that executes a command string (possibly ; seperated)
 ===============
 */
-static char *CopyString (char *in)
-{
-	char *out;
-
-	out = Z_Malloc (strlen(in)+1);
-	strcpy (out, in);
-	return out;
-}
-
 static void Cmd_Alias_f (void)
 {
 	cmdalias_t	*a;
@@ -390,7 +381,8 @@ static void Cmd_Alias_f (void)
 	}
 	strlcat (cmd, "\n", sizeof (cmd));
 
-	a->value = CopyString (cmd);
+	a->value = Z_Malloc (strlen (cmd) + 1);
+	strcpy (a->value, cmd);
 }
 
 /*

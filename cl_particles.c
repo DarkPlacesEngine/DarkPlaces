@@ -88,7 +88,7 @@ void fractalnoise(qbyte *noise, int size, int startgrid)
 	startgrid = bound(0, startgrid, size);
 
 	amplitude = 0xFFFF; // this gets halved before use
-	noisebuf = malloc(size*size*sizeof(int));
+	noisebuf = Mem_Alloc (tempmempool, size * size * sizeof (*noisebuf));
 	memset(noisebuf, 0, size*size*sizeof(int));
 
 	for (g2 = startgrid;g2;g2 >>= 1)
@@ -130,7 +130,7 @@ void fractalnoise(qbyte *noise, int size, int startgrid)
 	for (y = 0;y < size;y++)
 		for (x = 0;x < size;x++)
 			*noise++ = (qbyte) (((n(x,y) - min) * 256) / max);
-	free(noisebuf);
+	Mem_Free (noisebuf);
 #undef n
 }
 void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up)
