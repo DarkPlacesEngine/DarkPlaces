@@ -43,6 +43,19 @@ qboolean SNDDMA_Init(void)
 	char *s;
 	struct audio_buf_info info;
 	int caps;
+	int format16bit;
+	// LordHavoc: a quick patch to support big endian cpu, I hope
+	union
+	{
+		unsigned char c[2];
+		unsigned short s;
+	}
+	endiantest;
+	endiantest.s = 1;
+	if (endiantest.c[1])
+		format16bit = AFMT_S16_BE;
+	else
+		format16bit = AFMT_S16_LE;
 
 	snd_inited = 0;
 
@@ -55,8 +68,7 @@ qboolean SNDDMA_Init(void)
 		return 0;
 	}
 
-	rc = ioctl(audio_fd, SNDCTL_DSP_RESET, 0);
-	if (rc < 0)
+	if (ioctl(audio_fd, SNDCTL_DSP_RESET, 0) < 0)
 	{
 		perror("/dev/dsp");
 		Con_Printf("Could not reset /dev/dsp\n");
@@ -87,9 +99,6 @@ qboolean SNDDMA_Init(void)
 		return 0;
 	}
 
-	shm = &sn;
-	shm->splitbuffer = 0;
-
 	// set sample bits & speed
 	s = getenv("QUAKE_SOUND_SAMPLEBITS");
 	if (s)
@@ -100,7 +109,7 @@ qboolean SNDDMA_Init(void)
 	if (shm->samplebits != 16 && shm->samplebits != 8)
 	{
 		ioctl(audio_fd, SNDCTL_DSP_GETFMTS, &fmt);
-		if (fmt & AFMT_S16_LE)
+		if (fmt & format16bit)
 			shm->samplebits = 16;
 		else if (fmt & AFMT_U8)
 			shm->samplebits = 8;
@@ -131,11 +140,10 @@ qboolean SNDDMA_Init(void)
 		shm->channels = 2;
 
 	shm->samples = info.fragstotal * info.fragsize / (shm->samplebits/8);
-	shm->submission_chunk = 1;
 
 	// memory map the dma buffer
-	shm->buffer = (unsigned char *) mmap(NULL, info.fragstotal
-		* info.fragsize, PROT_READ|PROT_WRITE, MAP_FILE|MAP_SHARED, audio_fd, 0);
+	shm->bufferlength = info.fragstotal * info.fragsize;
+	shm->buffer = (unsigned char *) mmap(NULL, shm->bufferlength, PROT_READ|PROT_WRITE, MAP_FILE|MAP_SHARED, audio_fd, 0);
 	if (!shm->buffer || shm->buffer == (unsigned char *)-1)
 	{
 		perror("/dev/dsp");
@@ -172,7 +180,7 @@ qboolean SNDDMA_Init(void)
 
 	if (shm->samplebits == 16)
 	{
-		rc = AFMT_S16_LE;
+		rc = format16bit;
 		rc = ioctl(audio_fd, SNDCTL_DSP_SETFMT, &rc);
 		if (rc < 0)
 		{
@@ -250,9 +258,18 @@ int SNDDMA_GetDMAPos(void)
 
 void SNDDMA_Shutdown(void)
 {
+	int tmp;
 	if (snd_inited)
 	{
+		// unmap the memory
+		munmap(shm->buffer, shm->bufferlength);
+		// stop the sound
+		tmp = 0;
+		ioctl(audio_fd, SNDCTL_DSP_SETTRIGGER, &tmp);
+		ioctl(audio_fd, SNDCTL_DSP_RESET, 0);
+		// close the device
 		close(audio_fd);
+		audio_fd = -1;
 		snd_inited = 0;
 	}
 }
@@ -277,11 +294,3 @@ void S_UnlockBuffer(void)
 {
 }
 
-
-void S_Open(void)
-{
-}
-
-void S_Close(void)
-{
-}

@@ -722,7 +722,7 @@ void VID_Init(void)
 	IN_Init();
 }
 
-int VID_InitMode (int fullscreen, int width, int height, int bpp, int stencil)
+int VID_InitMode (int fullscreen, int width, int height, int bpp)
 {
 	int i;
 	HDC hdc;
@@ -759,7 +759,7 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int stencil)
 		Sys_Error("VID_InitMode called when video is already initialised\n");
 
 	// if stencil is enabled, ask for alpha too
-	if (stencil)
+	if (bpp >= 32)
 	{
 		pfd.cStencilBits = 8;
 		pfd.cAlphaBits = 8;

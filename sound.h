@@ -51,16 +51,13 @@ typedef struct sfx_s
 
 typedef struct
 {
-	qboolean		gamealive;
-	qboolean		soundalive;
-	qboolean		splitbuffer;
 	int				channels;
 	int				samples;				// mono samples in buffer
-	int				submission_chunk;		// don't mix less than this #
 	int				samplepos;				// in mono samples
 	int				samplebits;
 	int				speed;
 	unsigned char	*buffer;
+	int				bufferlength; // used only by certain drivers
 } dma_t;
 
 typedef struct
@@ -92,8 +89,6 @@ typedef struct
 void S_Init (void);
 void S_Startup (void);
 void S_Shutdown (void);
-void S_Open (void);
-void S_Close (void);
 void S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol,  float attenuation);
 void S_StaticSound (sfx_t *sfx, vec3_t origin, float vol, float attenuation);
 void S_StopSound (int entnum, int entchannel);
@@ -172,6 +167,7 @@ extern int snd_blocked;
 
 void S_LocalSound (char *s);
 sfxcache_t *S_LoadSound (sfx_t *s, int complain);
+void S_UnloadSound(sfx_t *s);
 
 wavinfo_t GetWavinfo (char *name, qbyte *wav, int wavlength);
 

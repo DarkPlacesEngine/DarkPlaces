@@ -2136,10 +2136,10 @@ void M_Keys_Key (int k)
 //=============================================================================
 /* VIDEO MENU */
 
-#define VIDEO_ITEMS 5
+#define VIDEO_ITEMS 4
 
 int video_cursor = 0;
-int video_cursor_table[] = {56, 68, 80, 92, 116};
+int video_cursor_table[] = {56, 68, 80, 100};
 // note: if modes are added to the beginning of this list, update the
 // video_resolution = x; in M_Menu_Video_f below
 unsigned short video_resolutions[][2] = {{320,240}, {400,300}, {512,384}, {640,480}, {800,600}, {1024,768}, {1152,864}, {1280,960}, {1280,1024}, {1600,1200}, {1792,1344}, {1920,1440}, {2048,1536}};
@@ -2149,7 +2149,6 @@ extern int current_vid_fullscreen;
 extern int current_vid_width;
 extern int current_vid_height;
 extern int current_vid_bitsperpixel;
-extern int current_vid_stencil;
 
 
 void M_Menu_Video_f (void)
@@ -2201,12 +2200,8 @@ void M_Video_Draw (void)
 	M_Print(16, video_cursor_table[2], "            Fullscreen");
 	M_DrawCheckbox(220, video_cursor_table[2], vid_fullscreen.integer);
 
-	// Stencil
-	M_Print(16, video_cursor_table[3], "               Stencil");
-	M_DrawCheckbox(220, video_cursor_table[3], vid_stencil.integer);
-
 	// "Apply" button
-	M_Print(220, video_cursor_table[4], "Apply");
+	M_Print(220, video_cursor_table[3], "Apply");
 
 	// Cursor
 	M_DrawCharacter(200, video_cursor_table[video_cursor], 12+((int)(realtime*4)&1));
@@ -2242,9 +2237,6 @@ void M_Menu_Video_AdjustSliders (int dir)
 		case 2:
 			Cvar_SetValueQuick (&vid_fullscreen, !vid_fullscreen.integer);
 			break;
-		case 3:
-			Cvar_SetValueQuick (&vid_stencil, !vid_stencil.integer);
-			break;
 	}
 }
 
@@ -2259,7 +2251,6 @@ void M_Video_Key (int key)
 			Cvar_SetValueQuick(&vid_width, current_vid_width);
 			Cvar_SetValueQuick(&vid_height, current_vid_height);
 			Cvar_SetValueQuick(&vid_bitsperpixel, current_vid_bitsperpixel);
-			Cvar_SetValueQuick(&vid_stencil, current_vid_stencil);
 
 			S_LocalSound ("misc/menu1.wav");
 			M_Menu_Options_f ();

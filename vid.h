@@ -52,7 +52,6 @@ extern cvar_t vid_width;
 extern cvar_t vid_height;
 extern cvar_t vid_bitsperpixel;
 extern cvar_t vid_mouse;
-extern cvar_t vid_stencil;
 
 extern cvar_t v_gamma;
 extern cvar_t v_contrast;

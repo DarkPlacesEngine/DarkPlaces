@@ -132,7 +132,7 @@ qboolean SNDDMA_Init(void)
 		break;
 	case 8:
 	case 16:
-		 if (snd_pcm_hw_params_set_format(pcm, hw, 
+		 if (snd_pcm_hw_params_set_format(pcm, hw,
 						  bps == 8 ? SND_PCM_FORMAT_U8 :
 						  SND_PCM_FORMAT_S16) >= 0) {
 			 break;
@@ -143,7 +143,7 @@ qboolean SNDDMA_Init(void)
 		goto error;
 	}
 
-	if (snd_pcm_hw_params_set_access(pcm, hw, 
+	if (snd_pcm_hw_params_set_access(pcm, hw,
 					 SND_PCM_ACCESS_MMAP_INTERLEAVED) < 0) {
 		Con_Printf("ALSA: interleaved is not supported\n");
 		goto error;
@@ -171,7 +171,7 @@ qboolean SNDDMA_Init(void)
 	}
 
 	snd_pcm_hw_params_set_period_size_near(pcm, hw, frag_size, 0);
-	
+
 	err = snd_pcm_hw_params(pcm, hw);
 	if (err < 0) {
 		Con_Printf("ALSA: unable to install hw params\n");
@@ -190,14 +190,11 @@ qboolean SNDDMA_Init(void)
 
 	mmap_areas = snd_pcm_mmap_running_areas(pcm);
 
-	shm=&sn;
 	memset((dma_t*)shm,0,sizeof(*shm));
-	shm->splitbuffer = 0;
 	shm->channels=stereo+1;
-	shm->submission_chunk=snd_pcm_hw_params_get_period_size(hw, 0); // don't mix less than this #
 	shm->samplepos=0;			// in mono samples
 	shm->samplebits=bps;
-	buffer_size = snd_pcm_hw_params_get_buffer_size(hw); 
+	buffer_size = snd_pcm_hw_params_get_buffer_size(hw);
 	shm->samples=buffer_size*shm->channels;	// mono samples in buffer
 	shm->speed=rate;
 	shm->buffer=(unsigned char*)mmap_areas->addr;
@@ -205,7 +202,6 @@ qboolean SNDDMA_Init(void)
 	Con_Printf("%5d samples\n", shm->samples);
 	Con_Printf("%5d samplepos\n", shm->samplepos);
 	Con_Printf("%5d samplebits\n", shm->samplebits);
-	Con_Printf("%5d submission_chunk\n", shm->submission_chunk);
 	Con_Printf("%5d speed\n", shm->speed);
 	Con_Printf("0x%x dma buffer\n", (int)shm->buffer);
 	Con_Printf("%5d total_channels\n", total_channels);
@@ -314,11 +310,3 @@ void S_UnlockBuffer(void)
 {
 }
 
-
-void S_Open(void)
-{
-}
-
-void S_Close(void)
-{
-}

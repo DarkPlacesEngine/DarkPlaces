@@ -43,6 +43,10 @@ void S_AmbientOn (void)
 {
 }
 
+void S_Startup (void)
+{
+}
+
 void S_Shutdown (void)
 {
 }
@@ -126,11 +130,3 @@ int S_RawSamples_SampleRate(void)
 	return 0;
 }
 
-
-void S_Open(void)
-{
-}
-
-void S_Close(void)
-{
-}
