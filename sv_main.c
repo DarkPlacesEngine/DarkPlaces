@@ -881,9 +881,16 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 	Mod_CheckLoaded(sv.worldmodel);
 
 // find the client's PVS
+	// the real place being tested from
 	VectorAdd (clent->v.origin, clent->v.view_ofs, testeye);
 	pvs = SV_FatPVS (testeye);
-	EntityFrame_Clear(&entityframe, testeye);
+
+	// the place being reported (to consider the fact the client still
+	// applies the view_ofs[2], so we have to only send the fractional part
+	// of view_ofs[2], undoing what the client will redo)
+	VectorCopy (testeye, testorigin);
+	testorigin[2] -= (float) ((int)(clent->v.view_ofs[2]) & 255);
+	EntityFrame_Clear(&entityframe, testorigin);
 
 	culled_pvs = 0;
 	culled_portal = 0;
@@ -1170,7 +1177,8 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 
 	bits = 0;
 
-	bits |= SU_VIEWHEIGHT;
+	if (ent->v.view_ofs[2] != DEFAULT_VIEWHEIGHT)
+		bits |= SU_VIEWHEIGHT;
 
 	if (ent->v.idealpitch)
 		bits |= SU_IDEALPITCH;
@@ -1244,8 +1252,7 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 		MSG_WriteByte(msg, bits >> 24);
 
 	if (bits & SU_VIEWHEIGHT)
-		//MSG_WriteChar (msg, ent->v.view_ofs[2]);
-		MSG_WriteChar (msg, 0);
+		MSG_WriteChar (msg, ent->v.view_ofs[2]);
 
 	if (bits & SU_IDEALPITCH)
 		MSG_WriteChar (msg, ent->v.idealpitch);

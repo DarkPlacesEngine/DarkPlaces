@@ -638,7 +638,7 @@ void CL_LerpPlayer(float frac)
 	int i;
 	float d;
 
-	if (cl.entitydatabase.numframes)
+	if (cl.entitydatabase.numframes && cl.viewentity == cl.playerentity)
 	{
 		cl.viewentorigin[0] = cl.viewentoriginold[0] + frac * (cl.viewentoriginnew[0] - cl.viewentoriginold[0]);
 		cl.viewentorigin[1] = cl.viewentoriginold[1] + frac * (cl.viewentoriginnew[1] - cl.viewentoriginold[1]);
