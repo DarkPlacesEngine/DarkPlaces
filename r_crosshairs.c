@@ -185,12 +185,17 @@ void DrawCrosshair(int num)
 }
 */
 
-int crosshairpolyindex[6] = {0, 1, 2, 0, 2, 3};
-
 void R_DrawCrosshairSprite(rtexture_t *texture, vec3_t origin, vec_t scale, float cr, float cg, float cb, float ca)
 {
-	rmeshinfo_t m;
-	float tvxyz[4][4], tvst[4][2], diff[3];
+	rmeshbufferinfo_t m;
+	float diff[3];
+
+	if (fogenabled)
+	{
+		VectorSubtract(origin, r_origin, diff);
+		ca *= 1 - exp(fogdensity/DotProduct(diff,diff));
+	}
+
 	memset(&m, 0, sizeof(m));
 	m.transparent = false;
 	m.blendfunc1 = GL_SRC_ALPHA;
@@ -198,42 +203,40 @@ void R_DrawCrosshairSprite(rtexture_t *texture, vec3_t origin, vec_t scale, floa
 	m.depthdisable = true;
 	m.numtriangles = 2;
 	m.numverts = 4;
-	m.cr = cr;
-	m.cg = cg;
-	m.cb = cb;
-	m.ca = ca;
-	if (fogenabled)
-	{
-		VectorSubtract(origin, r_origin, diff);
-		m.ca *= 1 - exp(fogdensity/DotProduct(diff,diff));
-	}
-	m.index = crosshairpolyindex;
-	m.vertex = &tvxyz[0][0];
-	m.vertexstep = sizeof(float[4]);
 	m.tex[0] = R_GetTexture(texture);
-	m.texcoords[0] = &tvst[0][0];
-	m.texcoordstep[0] = sizeof(float[2]);
-	tvst[0][0] = 0;
-	tvst[0][1] = 0;
-	tvst[1][0] = 0;
-	tvst[1][1] = 1;
-	tvst[2][0] = 1;
-	tvst[2][1] = 1;
-	tvst[3][0] = 1;
-	tvst[3][1] = 0;
-	tvxyz[0][0] = origin[0] - vright[0] * scale - vup[0] * scale;
-	tvxyz[0][1] = origin[1] - vright[1] * scale - vup[1] * scale;
-	tvxyz[0][2] = origin[2] - vright[2] * scale - vup[2] * scale;
-	tvxyz[1][0] = origin[0] - vright[0] * scale + vup[0] * scale;
-	tvxyz[1][1] = origin[1] - vright[1] * scale + vup[1] * scale;
-	tvxyz[1][2] = origin[2] - vright[2] * scale + vup[2] * scale;
-	tvxyz[2][0] = origin[0] + vright[0] * scale + vup[0] * scale;
-	tvxyz[2][1] = origin[1] + vright[1] * scale + vup[1] * scale;
-	tvxyz[2][2] = origin[2] + vright[2] * scale + vup[2] * scale;
-	tvxyz[3][0] = origin[0] + vright[0] * scale - vup[0] * scale;
-	tvxyz[3][1] = origin[1] + vright[1] * scale - vup[1] * scale;
-	tvxyz[3][2] = origin[2] + vright[2] * scale - vup[2] * scale;
-	R_Mesh_Draw(&m);
+	if (R_Mesh_Draw_GetBuffer(&m))
+	{
+		m.index[0] = 0;
+		m.index[1] = 1;
+		m.index[2] = 2;
+		m.index[3] = 0;
+		m.index[4] = 2;
+		m.index[5] = 3;
+		m.color[0] = m.color[4] = m.color[8] = m.color[12] = cr * m.colorscale;
+		m.color[1] = m.color[5] = m.color[9] = m.color[13] = cg * m.colorscale;
+		m.color[2] = m.color[6] = m.color[10] = m.color[14] = cb * m.colorscale;
+		m.color[3] = m.color[7] = m.color[11] = m.color[15] = ca * m.colorscale;
+		m.texcoords[0][0] = 0;
+		m.texcoords[0][1] = 0;
+		m.texcoords[0][2] = 0;
+		m.texcoords[0][3] = 1;
+		m.texcoords[0][4] = 1;
+		m.texcoords[0][5] = 1;
+		m.texcoords[0][6] = 1;
+		m.texcoords[0][7] = 0;
+		m.vertex[0] = origin[0] - vright[0] * scale - vup[0] * scale;
+		m.vertex[1] = origin[1] - vright[1] * scale - vup[1] * scale;
+		m.vertex[2] = origin[2] - vright[2] * scale - vup[2] * scale;
+		m.vertex[4] = origin[0] - vright[0] * scale + vup[0] * scale;
+		m.vertex[5] = origin[1] - vright[1] * scale + vup[1] * scale;
+		m.vertex[6] = origin[2] - vright[2] * scale + vup[2] * scale;
+		m.vertex[8] = origin[0] + vright[0] * scale + vup[0] * scale;
+		m.vertex[9] = origin[1] + vright[1] * scale + vup[1] * scale;
+		m.vertex[10] = origin[2] + vright[2] * scale + vup[2] * scale;
+		m.vertex[12] = origin[0] + vright[0] * scale - vup[0] * scale;
+		m.vertex[13] = origin[1] + vright[1] * scale - vup[1] * scale;
+		m.vertex[14] = origin[2] + vright[2] * scale - vup[2] * scale;
+	}
 }
 
 void R_DrawCrosshair(void)
