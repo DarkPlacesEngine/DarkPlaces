@@ -528,7 +528,7 @@ qboolean SV_ReadClientMessage (void)
 	int		cmd;
 	char		*s;
 
-	do
+	for (;;)
 	{
 nextmsg:
 		ret = NET_GetMessage (host_client->netconnection);
@@ -542,7 +542,7 @@ nextmsg:
 
 		MSG_BeginReading ();
 
-		while (1)
+		for(;;)
 		{
 			if (!host_client->active)
 				// a command caused an error
@@ -571,8 +571,17 @@ nextmsg:
 
 			case clc_stringcmd:
 				s = MSG_ReadString ();
-				ret = 0;
-				if (strncasecmp(s, "status", 6) == 0
+				if (strncasecmp(s, "spawn", 5) == 0
+				 || strncasecmp(s, "begin", 5) == 0
+				 || strncasecmp(s, "prespawn", 8) == 0)
+					Cmd_ExecuteString (s, src_client);
+				else if (SV_ParseClientCommandQC)
+				{
+					G_INT(OFS_PARM0) = PR_SetString(s);
+					pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
+					PR_ExecuteProgram ((func_t)(SV_ParseClientCommandQC - pr_functions), "");
+				}
+				else if (strncasecmp(s, "status", 6) == 0
 				 || strncasecmp(s, "name", 4) == 0
 				 || strncasecmp(s, "say", 3) == 0
 				 || strncasecmp(s, "say_team", 8) == 0
@@ -580,19 +589,13 @@ nextmsg:
 				 || strncasecmp(s, "color", 5) == 0
 				 || strncasecmp(s, "kill", 4) == 0
 				 || strncasecmp(s, "pause", 5) == 0
-				 || strncasecmp(s, "spawn", 5) == 0
-				 || strncasecmp(s, "begin", 5) == 0
-				 || strncasecmp(s, "prespawn", 8) == 0
 				 || strncasecmp(s, "kick", 4) == 0
 				 || strncasecmp(s, "ping", 4) == 0
 				 || strncasecmp(s, "ban", 3) == 0
 				 || strncasecmp(s, "pmodel", 6) == 0
 				 || (gamemode == GAME_NEHAHRA && (strncasecmp(s, "max", 3) == 0 || strncasecmp(s, "monster", 7) == 0 || strncasecmp(s, "scrag", 5) == 0 || strncasecmp(s, "gimme", 5) == 0 || strncasecmp(s, "wraith", 6) == 0))
 				 || (gamemode != GAME_NEHAHRA && (strncasecmp(s, "god", 3) == 0 || strncasecmp(s, "notarget", 8) == 0 || strncasecmp(s, "fly", 3) == 0 || strncasecmp(s, "give", 4) == 0 || strncasecmp(s, "noclip", 6) == 0)))
-				{
-					ret = 1;
 					Cmd_ExecuteString (s, src_client);
-				}
 				else
 					Con_Printf("%s tried to %s\n", host_client->name, s);
 				break;
@@ -610,8 +613,6 @@ nextmsg:
 			}
 		}
 	}
-	while (ret == 1);
-
 	return true;
 }
 

@@ -128,6 +128,7 @@ char *ENGINE_EXTENSIONS =
 "DP_TE_STANDARDEFFECTBUILTINS "
 "DP_VIEWZOOM "
 "FRIK_FILE "
+"KRIMZON_SV_PARSECLIENTCOMMAND "
 "NEH_CMD_PLAY2 "
 "NEH_RESTOREGAME "
 "TW_SV_STEPCONTROL "
@@ -2855,29 +2856,17 @@ void PF_strcat(void)
 //string(string s, float start, float length) substring = #116; // returns a section of a string as a tempstring
 void PF_substring(void)
 {
-	int end, start, length, slen;
-	char *s;
-	char string[MAX_VARSTRING];
+	int i, start, end;
+	char *s, string[MAX_VARSTRING];
 	s = G_STRING(OFS_PARM0);
 	start = G_FLOAT(OFS_PARM1);
-	length = G_FLOAT(OFS_PARM2);
-	if (s)
-		slen = strlen(s);
-	else
-		slen = 0;
-	if (start < 0)
-		start = 0;
-	if (length > slen - start)
-		length = slen - start;
-	if (length > MAX_VARSTRING - 1)
-		length = MAX_VARSTRING - 1;
-	end = 0;
-	if (length > 0)
-	{
-		memcpy(string, s + start, length);
-		end = length;
-	}
-	string[end] = 0;
+	end = G_FLOAT(OFS_PARM2) + start;
+	if (!s)
+		s = "";
+	for (i = 0;i < start && *s;i++, s++);
+	for (i = 0;i < MAX_VARSTRING - 1 && *s && i < end;i++, s++)
+		string[i] = *s;
+	string[i] = 0;
 	G_INT(OFS_RETURN) = PR_SetString(string);
 }
 
@@ -2902,6 +2891,67 @@ void PF_strunzone(void)
 {
 	Mem_Free(G_STRING(OFS_PARM0));
 }
+
+//void(entity e, string s) clientcommand = #440; // executes a command string as if it came from the specified client
+//this function originally written by KrimZon, made shorter by LordHavoc
+void PF_clientcommand (void)
+{
+	client_t *temp_client;
+	int i;
+
+	//find client for this entity
+	i = (NUM_FOR_EDICT(G_EDICT(OFS_PARM0)) - 1);
+	if (i < 0 || i >= svs.maxclients)
+		Host_Error("PF_clientcommand: entity is not a client");
+
+	temp_client = host_client;
+	host_client = &svs.clients[i];
+	Cmd_ExecuteString (G_STRING(OFS_PARM1), src_client);
+	host_client = temp_client;
+}
+
+//float(string s) tokenize = #441; // takes apart a string into individal words (access them with argv), returns how many
+//this function originally written by KrimZon, made shorter by LordHavoc
+char **tokens = NULL;
+int    max_tokens, num_tokens = 0;
+void PF_tokenize (void)
+{
+	const char *p;
+	char *str;
+	str = G_STRING(OFS_PARM0);
+
+	if (tokens != NULL)
+	{
+		int i;
+		for (i=0;i<num_tokens;i++)
+			Z_Free(tokens[i]);
+		Z_Free(tokens);
+		num_tokens = 0;
+	}
+
+	tokens = Z_Malloc(strlen(str) * sizeof(char *));
+	max_tokens = strlen(str);
+
+	for (p = str;COM_ParseToken(&p) && num_tokens < max_tokens;num_tokens++)
+	{
+		tokens[num_tokens] = Z_Malloc(strlen(com_token) + 1);
+		strcpy(tokens[num_tokens], com_token);
+	}
+
+	G_FLOAT(OFS_RETURN) = num_tokens;
+}
+
+//string(float n) argv = #442; // returns a word from the tokenized string (returns nothing for an invalid index)
+//this function originally written by KrimZon, made shorter by LordHavoc
+void PF_argv (void)
+{
+	int token_num = G_FLOAT(OFS_PARM0);
+	if (token_num >= 0 && token_num < num_tokens)
+		G_INT(OFS_RETURN) = PR_SetString(tokens[token_num]);
+	else
+		G_INT(OFS_RETURN) = PR_SetString("");
+}
+
 
 builtin_t pr_builtin[] =
 {
@@ -3069,7 +3119,17 @@ PF_getsurfacenormal,		// #436 vector(entity e, float s) getsurfacenormal (DP_QC_
 PF_getsurfacetexture,		// #437 string(entity e, float s) getsurfacetexture (DP_QC_GETSURFACE)
 PF_getsurfacenearpoint,		// #438 float(entity e, vector p) getsurfacenearpoint (DP_QC_GETSURFACE)
 PF_getsurfaceclippedpoint,	// #439 vector(entity e, float s, vector p) getsurfaceclippedpoint (DP_QC_GETSURFACE)
-a a a a a a					// #440-499 (LordHavoc)
+PF_clientcommand,			// #440 void(entity e, string s) clientcommand (KRIMZON_SV_PARSECLIENTCOMMAND)
+PF_tokenize,				// #441 float(string s) tokenize (KRIMZON_SV_PARSECLIENTCOMMAND)
+PF_argv,					// #442 string(float n) argv (KRIMZON_SV_PARSECLIENTCOMMAND)
+NULL,						// #443
+NULL,						// #444
+NULL,						// #445
+NULL,						// #446
+NULL,						// #447
+NULL,						// #448
+NULL,						// #449
+a a a a a					// #450-499 (LordHavoc)
 };
 
 builtin_t *pr_builtins = pr_builtin;
