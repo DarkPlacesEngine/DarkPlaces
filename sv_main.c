@@ -374,96 +374,8 @@ crosses a waterline.
 =============================================================================
 */
 
-int		fatbytes;
-qbyte	fatpvs[MAX_MAP_LEAFS/8];
-
-void SV_AddToFatPVS (vec3_t org, mnode_t *node)
-{
-	int		i;
-	qbyte	*pvs;
-	mplane_t	*plane;
-	float	d;
-
-	while (1)
-	{
-	// if this is a leaf, accumulate the pvs bits
-		if (node->contents < 0)
-		{
-			if (node->contents != CONTENTS_SOLID)
-			{
-				pvs = sv.worldmodel->brushq1.LeafPVS(sv.worldmodel, (mleaf_t *)node);
-				for (i=0 ; i<fatbytes ; i++)
-					fatpvs[i] |= pvs[i];
-			}
-			return;
-		}
-
-		plane = node->plane;
-		d = DotProduct (org, plane->normal) - plane->dist;
-		if (d > 8)
-			node = node->children[0];
-		else if (d < -8)
-			node = node->children[1];
-		else
-		{	// go down both
-			SV_AddToFatPVS (org, node->children[0]);
-			node = node->children[1];
-		}
-	}
-}
-
-/*
-=============
-SV_FatPVS
-
-Calculates a PVS that is the inclusive or of all leafs within 8 pixels of the
-given point.
-=============
-*/
-qbyte *SV_FatPVS (vec3_t org)
-{
-	fatbytes = (sv.worldmodel->brushq1.numleafs+31)>>3;
-	memset (fatpvs, 0, fatbytes);
-	SV_AddToFatPVS (org, sv.worldmodel->brushq1.nodes);
-	return fatpvs;
-}
-
-//=============================================================================
-
-
-int SV_BoxTouchingPVS (qbyte *pvs, vec3_t mins, vec3_t maxs, mnode_t *node)
-{
-	int leafnum;
-loc0:
-	if (node->contents < 0)
-	{
-		// leaf
-		if (node->contents == CONTENTS_SOLID)
-			return false;
-		leafnum = (mleaf_t *)node - sv.worldmodel->brushq1.leafs - 1;
-		return pvs[leafnum >> 3] & (1 << (leafnum & 7));
-	}
-
-	// node - recurse down the BSP tree
-	switch (BoxOnPlaneSide(mins, maxs, node->plane))
-	{
-	case 1: // front
-		node = node->children[0];
-		goto loc0;
-	case 2: // back
-		node = node->children[1];
-		goto loc0;
-	default: // crossing
-		if (node->children[0]->contents != CONTENTS_SOLID)
-			if (SV_BoxTouchingPVS (pvs, mins, maxs, node->children[0]))
-				return true;
-		node = node->children[1];
-		goto loc0;
-	}
-	// never reached
-	return false;
-}
-
+int sv_writeentitiestoclient_pvsbytes;
+qbyte sv_writeentitiestoclient_pvs[MAX_MAP_LEAFS/8];
 
 /*
 =============
@@ -488,7 +400,9 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 
 // find the client's PVS
 	VectorAdd (clent->v->origin, clent->v->view_ofs, testeye);
-	pvs = SV_FatPVS (testeye);
+	fatbytes = 0;
+	if (sv.worldmodel && sv.worldmodel->brush.FatPVS)
+		fatbytes = sv.worldmodel->brush.FatPVS(sv.worldmodel, testeye, 8, sv_writeentitiestoclient_pvs, sizeof(sv_writeentitiestoclient_pvs));
 
 	culled_pvs = 0;
 	culled_portal = 0;
@@ -589,7 +503,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			totalentities++;
 
 			// if not touching a visible leaf
-			if (sv_cullentities_pvs.integer && !SV_BoxTouchingPVS(pvs, entmins, entmaxs, sv.worldmodel->brushq1.nodes))
+			if (sv_cullentities_pvs.integer && fatbytes && sv.worldmodel && sv.worldmodel->brush.BoxTouchingPVS && !sv.worldmodel->brush.BoxTouchingPVS(sv.worldmodel, sv_writeentitiestoclient_pvs, entmins, entmaxs))
 			{
 				culled_pvs++;
 				continue;
@@ -925,7 +839,6 @@ static int sv_writeentitiestoclient_visibleentities;
 static int sv_writeentitiestoclient_totalentities;
 //static entity_frame_t sv_writeentitiestoclient_entityframe;
 static int sv_writeentitiestoclient_clentnum;
-static qbyte *sv_writeentitiestoclient_pvs;
 static vec3_t sv_writeentitiestoclient_testeye;
 static client_t *sv_writeentitiestoclient_client;
 
@@ -1006,7 +919,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 			lightmaxs[2] = min(entmaxs[2], s->origin[2] + s->specialvisibilityradius);
 			sv_writeentitiestoclient_totalentities++;
 			// if not touching a visible leaf
-			if (sv_cullentities_pvs.integer && !SV_BoxTouchingPVS(sv_writeentitiestoclient_pvs, lightmins, lightmaxs, sv.worldmodel->brushq1.nodes))
+			if (sv_cullentities_pvs.integer && sv_writeentitiestoclient_pvsbytes && sv.worldmodel && sv.worldmodel->brush.BoxTouchingPVS && !sv.worldmodel->brush.BoxTouchingPVS(sv.worldmodel, sv_writeentitiestoclient_pvs, lightmins, lightmaxs))
 			{
 				sv_writeentitiestoclient_culled_pvs++;
 				return;
@@ -1097,7 +1010,9 @@ void SV_WriteEntitiesToClient(client_t *client, edict_t *clent, sizebuf_t *msg)
 // find the client's PVS
 	// the real place being tested from
 	VectorAdd(clent->v->origin, clent->v->view_ofs, sv_writeentitiestoclient_testeye);
-	sv_writeentitiestoclient_pvs = SV_FatPVS(sv_writeentitiestoclient_testeye);
+	sv_writeentitiestoclient_pvsbytes = 0;
+	if (sv.worldmodel && sv.worldmodel->brush.FatPVS)
+		sv_writeentitiestoclient_pvsbytes = sv.worldmodel->brush.FatPVS(sv.worldmodel, sv_writeentitiestoclient_testeye, 8, sv_writeentitiestoclient_pvs, sizeof(sv_writeentitiestoclient_pvs));
 
 	sv_writeentitiestoclient_clentnum = EDICT_TO_PROG(clent); // LordHavoc: for comparison purposes
 
