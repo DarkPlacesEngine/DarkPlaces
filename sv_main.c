@@ -518,7 +518,7 @@ SV_WriteEntitiesToClient
 #ifdef QUAKEENTITIES
 void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 {
-	int e, clentnum, bits, alpha, glowcolor, glowsize, scale, effects;
+	int e, clentnum, bits, alpha, glowcolor, glowsize, scale, effects, lightsize;
 	int culled_pvs, culled_portal, culled_trace, visibleentities, totalentities;
 	qbyte *pvs;
 	vec3_t origin, angles, entmins, entmaxs, testorigin, testeye;
@@ -865,7 +865,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 {
 	int e, clentnum, flags, alpha, glowcolor, glowsize, scale, effects;
 	int culled_pvs, culled_portal, culled_trace, visibleentities, totalentities;
-	float alphaf;
+	float alphaf, lightsize;
 	qbyte *pvs;
 	vec3_t origin, angles, entmins, entmaxs, testorigin, testeye;
 	edict_t *ent;
@@ -931,14 +931,40 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		}
 
 		glowsize = 0;
-
+		effects = ent->v.effects;
 		if ((val = GETEDICTFIELDVALUE(ent, eval_glow_size)))
 			glowsize = (int) val->_float >> 2;
 		glowsize = bound(0, glowsize, 255);
 
+		lightsize = 0;
+		if (effects & (EF_BRIGHTFIELD | EF_MUZZLEFLASH | EF_BRIGHTLIGHT | EF_DIMLIGHT | EF_RED | EF_BLUE | EF_FLAME | EF_STARDUST))
+		{
+			if (effects & EF_BRIGHTFIELD)
+				lightsize = max(lightsize, 80);
+			if (effects & EF_MUZZLEFLASH)
+				lightsize = max(lightsize, 100);
+			if (effects & EF_BRIGHTLIGHT)
+				lightsize = max(lightsize, 400);
+			if (effects & EF_DIMLIGHT)
+				lightsize = max(lightsize, 200);
+			if (effects & EF_RED)
+				lightsize = max(lightsize, 200);
+			if (effects & EF_BLUE)
+				lightsize = max(lightsize, 200);
+			if (effects & EF_FLAME)
+				lightsize = max(lightsize, 250);
+			if (effects & EF_STARDUST)
+				lightsize = max(lightsize, 100);
+		}
+		if (glowsize)
+			lightsize = max(lightsize, glowsize << 2);
+
 		if ((val = GETEDICTFIELDVALUE(ent, eval_glow_trail)))
 		if (val->_float != 0)
+		{
 			flags |= RENDER_GLOWTRAIL;
+			lightsize = max(lightsize, 100);
+		}
 
 		if (ent->v.modelindex >= 0 && ent->v.modelindex < MAX_MODELS && pr_strings[ent->v.model])
 		{
@@ -949,7 +975,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		{
 			model = NULL;
 			if (ent != clent) // LordHavoc: always send player
-				if (glowsize == 0 && (flags & RENDER_GLOWTRAIL) == 0) // no effects
+				if (lightsize == 0) // no effects
 					continue;
 		}
 
@@ -995,6 +1021,15 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 					VectorAdd(entmins, model->normalmins, entmins);
 					VectorAdd(entmaxs, model->normalmaxs, entmaxs);
 				}
+			}
+			if (lightsize)
+			{
+				entmins[0] = min(entmins[0], origin[0] - lightsize);
+				entmins[1] = min(entmins[1], origin[1] - lightsize);
+				entmins[2] = min(entmins[2], origin[2] - lightsize);
+				entmaxs[0] = min(entmaxs[0], origin[0] + lightsize);
+				entmaxs[1] = min(entmaxs[1], origin[1] + lightsize);
+				entmaxs[2] = min(entmaxs[2], origin[2] + lightsize);
 			}
 
 			totalentities++;
@@ -1069,7 +1104,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 
 		if (ent != clent)
 		{
-			if (glowsize == 0 && (flags & RENDER_GLOWTRAIL) == 0) // no effects
+			if (lightsize == 0) // no effects
 			{
 				if (model) // model
 				{
