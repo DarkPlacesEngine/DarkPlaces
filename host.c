@@ -132,6 +132,7 @@ Host_Error
 This shuts down both the client and server
 ================
 */
+void PRVM_ProcessError(void);
 static char hosterrorstring1[4096];
 static char hosterrorstring2[4096];
 static qboolean hosterror = false;
@@ -170,6 +171,8 @@ void Host_Error (const char *error, ...)
 
 	// crash all prvm progs
 	PRVM_CrashAll();
+
+	PRVM_ProcessError();
 
 	if (sv.active)
 		Host_ShutdownServer (false);
@@ -857,7 +860,6 @@ void Host_Init (void)
 	Chase_Init();
 	PR_Init();
 	PRVM_Init();
-	MR_Init();
 	Mod_Init();
 	NetConn_Init();
 	SV_Init();
@@ -891,6 +893,8 @@ void Host_Init (void)
 		VID_Open();
 		SCR_BeginLoadingPlaque();
 	}
+	
+	MR_Init();
 }
 
 

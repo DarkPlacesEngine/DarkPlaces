@@ -3915,6 +3915,10 @@ void MR_Init()
 {
 	// set router console commands
 	Cvar_RegisterVariable (&forceqmenu);
+
+	if(COM_CheckParm("-forceqmenu"))
+		Cvar_SetValueQuick(&forceqmenu,1);
+
 	Cmd_AddCommand ("menu_restart",MR_Restart);
 	
 	MR_SetRouting (FALSE);

@@ -423,15 +423,19 @@ void PRVM_ED_PrintNum (int ent);
 //============================================================================
 
 // used as replacement for a prog stack
-#if 1
-	#define PRVM_Begin  
-	#define PRVM_End	prog = 0;
-#else
-	#define PRVM_Begin	{ prvm_prog_t *_oldprog_ = prog
-	#define PRVM_End	if(_oldprog_ != 0) Con_Print("Stack used !\n"); prog = _oldprog_;}
-#endif 
+#define PRVM_DEBUGPRSTACK
 
-#if 1
+#ifdef PRVM_DEBUGPRSTACK
+#define PRVM_Begin  if(prog != 0) Con_Printf("prog not 0(prog = %i)!\n", PRVM_GetProgNr())
+#define PRVM_End	prog = 0
+#else
+#define PRVM_Begin  
+#define PRVM_End	prog = 0
+#endif
+
+
+//#define PRVM_SAFENAME
+#ifndef PRVM_SAFENAME
 	#define PRVM_NAME	(prog->name)
 #else
 	#define PRVM_NAME	(prog->name ? prog->name : "Unknown prog name")
@@ -445,9 +449,7 @@ void PRVM_ED_PrintNum (int ent);
 					else \
 						prog->error_cmd*/
 
-#define PRVM_ERROR		PRVM_GCALL(error_cmd)(),Host_Error
-
-
+#define PRVM_ERROR		Host_Error
 
 // other prog handling functions
 qboolean PRVM_SetProgFromString(const char *str);

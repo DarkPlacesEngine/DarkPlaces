@@ -264,6 +264,32 @@ void S_Init(void)
 // =======================================================================
 
 /*
+=========
+S_IsCached
+
+=========
+*/
+sfx_t *S_GetCached (const char *name)
+{
+	int i;
+
+	if (!snd_initialized)
+		return NULL;
+	
+	if (!name)
+		Host_Error("S_IsCached: NULL\n");
+	
+	if (strlen(name) >= MAX_QPATH)
+		Host_Error("Sound name too long: %s", name);
+
+	for(i = 0;i < num_sfx;i++)
+		if(!strcmp(known_sfx[i].name, name))
+			return &known_sfx[i];
+
+	return NULL;
+}
+
+/*
 ==================
 S_FindName
 
