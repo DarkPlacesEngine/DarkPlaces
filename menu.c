@@ -3651,10 +3651,20 @@ void M_NetStart_Change (int dir)
 		if (gamemode == GAME_GOODVSBAD2)
 			break;
 		Cvar_SetValueQuick (&skill, skill.integer + dir);
-		if (skill.integer > 3)
-			Cvar_SetValueQuick (&skill, 0);
-		if (skill.integer < 0)
-			Cvar_SetValueQuick (&skill, 3);
+		if (gamemode == GAME_TRANSFUSION)
+		{
+			if (skill.integer > 4)
+				Cvar_SetValueQuick (&skill, 0);
+			if (skill.integer < 0)
+				Cvar_SetValueQuick (&skill, 4);
+		}
+		else
+		{
+			if (skill.integer > 3)
+				Cvar_SetValueQuick (&skill, 0);
+			if (skill.integer < 0)
+				Cvar_SetValueQuick (&skill, 3);
+		}
 		break;
 
 	case 5:

@@ -1176,7 +1176,7 @@ void ED_LoadFromFile (const char *data)
 				continue;
 			}
 		}
-		else if ((current_skill == 0 && ((int)ent->v->spawnflags & SPAWNFLAG_NOT_EASY  ))
+		else if ((current_skill <= 0 && ((int)ent->v->spawnflags & SPAWNFLAG_NOT_EASY  ))
 			  || (current_skill == 1 && ((int)ent->v->spawnflags & SPAWNFLAG_NOT_MEDIUM))
 			  || (current_skill >= 2 && ((int)ent->v->spawnflags & SPAWNFLAG_NOT_HARD  )))
 		{

@@ -1642,9 +1642,10 @@ void SV_SpawnServer (const char *server)
 //
 	if (coop.integer)
 		Cvar_SetValue ("deathmatch", 0);
-	current_skill = bound(0, (int)(skill.value + 0.5), 3);
-
-	Cvar_SetValue ("skill", (float)current_skill);
+	// LordHavoc: it can be useful to have skills outside the range 0-3...
+	//current_skill = bound(0, (int)(skill.value + 0.5), 3);
+	//Cvar_SetValue ("skill", (float)current_skill);
+	current_skill = (int)(skill.value + 0.5);
 
 //
 // set up the new server
