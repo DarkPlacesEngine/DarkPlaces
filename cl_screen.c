@@ -749,8 +749,14 @@ static int cl_avidemo_frame = 0;
 void SCR_CaptureAVIDemo(void)
 {
 	char filename[32];
-	sprintf(filename, "dpavi%06d.tga", cl_avidemo_frame);
-	if (SCR_ScreenShot(filename, vid.realx, vid.realy, vid.realwidth, vid.realheight, false))
+	qboolean jpeg = (scr_screenshot_jpeg.integer != 0);
+
+	if (jpeg)
+		sprintf(filename, "dpavi%06d.jpg", cl_avidemo_frame);
+	else
+		sprintf(filename, "dpavi%06d.tga", cl_avidemo_frame);
+
+	if (SCR_ScreenShot(filename, vid.realx, vid.realy, vid.realwidth, vid.realheight, jpeg))
 		cl_avidemo_frame++;
 	else
 	{
