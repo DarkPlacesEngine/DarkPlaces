@@ -465,22 +465,7 @@ typedef struct q3msurface_s
 	float mins[3];
 	float maxs[3];
 
-	int num_vertices;
-	int num_triangles;
-	float *data_vertex3f;
-	float *data_svector3f;
-	float *data_tvector3f;
-	float *data_normal3f;
-	float *data_texcoordtexture2f;
-	float *data_texcoordlightmap2f;
-	float *data_color4f;
-	int *data_element3i;
-	int *data_neighbor3i;
-
-	int num_collisionvertices;
-	int num_collisiontriangles;
-	float *data_collisionvertex3f;
-	int *data_collisionelement3i;
+	surfmesh_t mesh;
 
 	// index into model->brush.shadowmesh
 	int num_firstshadowmeshtriangle;
