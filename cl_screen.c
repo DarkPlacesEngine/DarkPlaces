@@ -594,14 +594,14 @@ void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 	dq->scalex = 0;
 	dq->scaley = 0;
 	p = (void *)(dq + 1);
-	m = p;(qbyte *)p += sizeof(drawqueuemesh_t);
+	m = p;p = (qbyte*)p + sizeof(drawqueuemesh_t);
 	m->num_triangles = mesh->num_triangles;
 	m->num_vertices = mesh->num_vertices;
 	m->texture = mesh->texture;
-	m->data_element3i  = p;memcpy(m->data_element3i , mesh->data_element3i , m->num_triangles * sizeof(int[3]));(qbyte *)p += m->num_triangles * sizeof(int[3]);
-	m->data_vertex3f   = p;memcpy(m->data_vertex3f  , mesh->data_vertex3f  , m->num_vertices * sizeof(float[3]));(qbyte *)p += m->num_vertices * sizeof(float[3]);
-	m->data_texcoord2f = p;memcpy(m->data_texcoord2f, mesh->data_texcoord2f, m->num_vertices * sizeof(float[2]));(qbyte *)p += m->num_vertices * sizeof(float[2]);
-	m->data_color4f    = p;memcpy(m->data_color4f   , mesh->data_color4f   , m->num_vertices * sizeof(float[4]));(qbyte *)p += m->num_vertices * sizeof(float[4]);
+	m->data_element3i  = p;memcpy(m->data_element3i , mesh->data_element3i , m->num_triangles * sizeof(int[3]));p = (qbyte*)p + m->num_triangles * sizeof(int[3]);
+	m->data_vertex3f   = p;memcpy(m->data_vertex3f  , mesh->data_vertex3f  , m->num_vertices * sizeof(float[3]));p = (qbyte*)p + m->num_vertices * sizeof(float[3]);
+	m->data_texcoord2f = p;memcpy(m->data_texcoord2f, mesh->data_texcoord2f, m->num_vertices * sizeof(float[2]));p = (qbyte*)p + m->num_vertices * sizeof(float[2]);
+	m->data_color4f    = p;memcpy(m->data_color4f   , mesh->data_color4f   , m->num_vertices * sizeof(float[4]));p = (qbyte*)p + m->num_vertices * sizeof(float[4]);
 	r_refdef.drawqueuesize += dq->size;
 }
 
@@ -948,4 +948,3 @@ void CL_Screen_NewMap(void)
 {
 	SHOWLMP_clear();
 }
-
