@@ -23,6 +23,7 @@ cvar_t scr_screenshot_jpeg_quality = {CVAR_SAVE, "scr_screenshot_jpeg_quality","
 cvar_t scr_screenshot_name = {0, "scr_screenshot_name","dp"};
 cvar_t cl_avidemo = {0, "cl_avidemo", "0"};
 cvar_t r_textshadow = {0, "r_textshadow", "0"};
+cvar_t r_letterbox = {0, "r_letterbox", "0"};
 
 int jpeg_supported = false;
 
@@ -481,6 +482,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_screenshot_jpeg_quality);
 	Cvar_RegisterVariable (&cl_avidemo);
 	Cvar_RegisterVariable (&r_textshadow);
+	Cvar_RegisterVariable (&r_letterbox);
 
 	Cmd_AddCommand ("sizeup",SCR_SizeUp_f);
 	Cmd_AddCommand ("sizedown",SCR_SizeDown_f);
@@ -993,7 +995,8 @@ void CL_UpdateScreen(void)
 			SCR_DrawNet ();
 			SCR_DrawTurtle ();
 			SCR_DrawPause ();
-			Sbar_Draw();
+			if (!r_letterbox.value)
+				Sbar_Draw();
 			SHOWLMP_drawall();
 			SCR_CheckDrawCenterString();
 		}

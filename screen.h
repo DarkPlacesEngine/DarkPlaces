@@ -50,6 +50,7 @@ extern cvar_t crosshair_static;
 extern cvar_t scr_conspeed;
 extern cvar_t scr_conalpha;
 extern cvar_t scr_conbrightness;
+extern cvar_t r_letterbox;
 
 #endif
 

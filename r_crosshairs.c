@@ -62,6 +62,8 @@ void R_DrawWorldCrosshair(void)
 	vec3_t v1, v2, spriteorigin;
 	vec_t spritescale;
 	vec4_t color;
+	if (r_letterbox.value)
+		return;
 	if (crosshair_static.integer)
 		return;
 	num = crosshair.integer;
@@ -93,6 +95,8 @@ void R_Draw2DCrosshair(void)
 	int num;
 	cachepic_t *pic;
 	vec4_t color;
+	if (r_letterbox.value)
+		return;
 	if (!crosshair_static.integer)
 		return;
 	num = crosshair.integer;
