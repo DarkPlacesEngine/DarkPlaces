@@ -542,6 +542,7 @@ void R_Shadow_Stage_Begin(void)
 	m.blendfunc2 = GL_ZERO;
 	R_Mesh_State(&m);
 	GL_Color(0, 0, 0, 1);
+	qglDisable(GL_SCISSOR_TEST);
 	r_shadowstage = SHADOWSTAGE_NONE;
 
 	c_rt_lights = c_rt_clears = c_rt_scissored = 0;
@@ -816,7 +817,9 @@ int R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	if (!r_shadow_scissor.integer)
 		return false;
 	// if view is inside the box, just say yes it's visible
-	if (BoxesOverlap(r_origin, r_origin, mins, maxs))
+	// LordHavoc: for some odd reason scissor seems broken without stencil
+	// (?!?  seems like a driver bug) so abort if gl_stencil is false
+	if (!gl_stencil || BoxesOverlap(r_origin, r_origin, mins, maxs))
 	{
 		qglDisable(GL_SCISSOR_TEST);
 		return false;
