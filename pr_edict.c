@@ -458,7 +458,7 @@ char *PR_UglyValueString (etype_t type, eval_t *val)
 		// (like newline, specifically) into escape codes,
 		// this fixes saving games from various mods
 		s = PR_GetString (val->string);
-		for (i = 0;i < sizeof (line) - 2 && *s;)
+		for (i = 0;i < (int)sizeof(line) - 2 && *s;)
 		{
 			if (*s == '\n')
 			{
