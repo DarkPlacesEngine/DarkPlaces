@@ -26,6 +26,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 extern void CDAudio_SysEject (void);
 extern void CDAudio_SysCloseDoor (void);
 extern int CDAudio_SysGetAudioDiskInfo (void);
+extern float CDAudio_SysGetVolume (void);
+extern void CDAudio_SysSetVolume (float volume);
 extern int CDAudio_SysPlay (qbyte track);
 extern int CDAudio_SysStop (void);
 extern int CDAudio_SysPause (void);
@@ -45,6 +47,8 @@ static float cdvolume;
 static qbyte remap[100];
 static qbyte maxTrack;
 static int faketrack = -1;
+
+static float saved_vol = 1.0f;
 
 // exported variables
 qboolean cdValid = false;
@@ -323,10 +327,7 @@ void CDAudio_SetVolume (float newvol)
 
 		if (faketrack != -1)
 			S_SetChannelVolume (faketrack, newvol);
-		else
-		{
-			// TODO: add support for the "real CD" mixer
-		}
+		CDAudio_SysSetVolume (newvol);
 	}
 
 	cdvolume = newvol;
@@ -377,6 +378,10 @@ int CDAudio_Startup (void)
 		cdValid = false;
 	}
 
+	saved_vol = CDAudio_SysGetVolume ();
+	if (saved_vol < 0.0f)
+		saved_vol = 1.0f;
+
 	initialized = true;
 
 	Con_DPrint("CD Audio Initialized\n");
@@ -388,6 +393,9 @@ void CDAudio_Shutdown (void)
 {
 	if (!initialized)
 		return;
+
+	CDAudio_SysSetVolume (saved_vol);
+
 	CDAudio_Stop();
 	CDAudio_SysShutdown();
 	initialized = false;

@@ -37,6 +37,17 @@ int CDAudio_SysGetAudioDiskInfo (void)
 }
 
 
+float CDAudio_SysGetVolume (void)
+{
+	return -1.0f;
+}
+
+
+void CDAudio_SysSetVolume (float volume)
+{
+}
+
+
 int CDAudio_SysPlay (qbyte track)
 {
 	return -1;

@@ -77,6 +77,36 @@ int CDAudio_SysGetAudioDiskInfo (void)
 }
 
 
+float CDAudio_SysGetVolume (void)
+{
+	struct cdrom_volctrl vol;
+
+	if (cdfile == -1)
+		return -1.0f;
+
+	if (ioctl (cdfile, CDROMVOLREAD, &vol) == -1)
+	{
+		Con_DPrint("ioctl CDROMVOLREAD failed\n");
+		return -1.0f;
+	}
+
+	return (vol.channel0 + vol.channel1) / 2.0f / 255.0f;
+}
+
+
+void CDAudio_SysSetVolume (float volume)
+{
+	struct cdrom_volctrl vol;
+
+	if (cdfile == -1)
+		return;
+
+	vol.channel0 = vol.channel1 = volume * 255;
+	if (ioctl (cdfile, CDROMVOLCTRL, &vol) == -1)
+		Con_DPrint("ioctl CDROMVOLCTRL failed\n");
+}
+
+
 int CDAudio_SysPlay (qbyte track)
 {
 	struct cdrom_tocentry entry;
