@@ -877,7 +877,12 @@ static void R_FindImageForTexture(gltexture_t *glt)
 		image->type = GLIMAGETYPE_FRAGMENTS;
 		// make sure the created image is big enough for the fragment
 		for (image->width = block_size;image->width < glt->width;image->width <<= 1);
-		for (image->height = block_size;image->height < glt->height;image->height <<= 1);
+		image->height = 1;
+		if (glt->texturetype != GLTEXTURETYPE_1D)
+			for (image->height = block_size;image->height < glt->height;image->height <<= 1);
+		image->depth = 1;
+		if (glt->texturetype == GLTEXTURETYPE_3D)
+			for (image->depth = block_size;image->depth < glt->depth;image->depth <<= 1);
 		image->blockallocation = Mem_Alloc(texturemempool, image->width * sizeof(short));
 		memset(image->blockallocation, 0, image->width * sizeof(short));
 
@@ -954,16 +959,12 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, char *identifier
 	if (cls.state == ca_dedicated)
 		return NULL;
 
-	if (texturetype == GLTEXTURETYPE_CUBEMAP)
-	{
-		if (flags & TEXF_FRAGMENT)
-			Sys_Error("R_LoadTexture: fragment cubemap texture??\n");
-		if (!gl_texturecubemap)
-			Sys_Error("R_LoadTexture: cubemap texture not supported by driver\n");
-	}
-	if (texturetype == GLTEXTURETYPE_3D)
-		if (!gl_texture3d)
-			Sys_Error("R_LoadTexture: 3d texture not supported by driver\n");
+	if (flags & TEXF_FRAGMENT && texturetype != GLTEXTURETYPE_2D)
+		Sys_Error("R_LoadTexture: only 2D fragment textures implemented\n");
+	if (texturetype == GLTEXTURETYPE_CUBEMAP && !gl_texturecubemap)
+		Sys_Error("R_LoadTexture: cubemap texture not supported by driver\n");
+	if (texturetype == GLTEXTURETYPE_3D && !gl_texture3d)
+		Sys_Error("R_LoadTexture: 3d texture not supported by driver\n");
 
 	/*
 	glt = R_FindTexture (pool, identifier);
