@@ -110,12 +110,12 @@ pr_global_struct->trace_normal is set to the normal of the blocking wall
 qboolean SV_movestep (edict_t *ent, vec3_t move, qboolean relink)
 {
 	float		dz;
-	vec3_t		oldorg, neworg, end;
+	vec3_t		oldorg, neworg, end, traceendpos;
 	trace_t		trace;
 	int			i;
 	edict_t		*enemy;
 
-// try the move	
+// try the move
 	VectorCopy (ent->v.origin, oldorg);
 	VectorAdd (ent->v.origin, move, neworg);
 
@@ -136,22 +136,23 @@ qboolean SV_movestep (edict_t *ent, vec3_t move, qboolean relink)
 					neworg[2] += 8;
 			}
 			trace = SV_Move (ent->v.origin, ent->v.mins, ent->v.maxs, neworg, MOVE_NORMAL, ent);
-	
+
 			if (trace.fraction == 1)
 			{
-				if ( ((int)ent->v.flags & FL_SWIM) && SV_PointContents(trace.endpos) == CONTENTS_EMPTY )
+				VectorCopy(trace.endpos, traceendpos);
+				if ( ((int)ent->v.flags & FL_SWIM) && SV_PointContents(traceendpos) == CONTENTS_EMPTY )
 					return false;	// swim monster left water
-	
-				VectorCopy (trace.endpos, ent->v.origin);
+
+				VectorCopy (traceendpos, ent->v.origin);
 				if (relink)
 					SV_LinkEdict (ent, true);
 				return true;
 			}
-			
+
 			if (enemy == sv.edicts)
 				break;
 		}
-		
+
 		return false;
 	}
 

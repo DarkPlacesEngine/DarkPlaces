@@ -503,18 +503,21 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 	int e, clentnum, bits, alpha, glowcolor, glowsize, scale, effects;
 	int culled_pvs, culled_portal, culled_trace, visibleentities, totalentities;
 	byte *pvs;
-	vec3_t org, origin, angles, entmins, entmaxs, testorigin;
+	vec3_t org, origin, angles, entmins, entmaxs;
 	float nextfullupdate;
 	edict_t *ent;
 	eval_t *val;
 	entity_state_t *baseline; // LordHavoc: delta or startup baseline
 	trace_t trace;
 	model_t *model;
+	double testeye[3];
+	double testorigin[3];
 
 	Mod_CheckLoaded(sv.worldmodel);
 
 // find the client's PVS
 	VectorAdd (clent->v.origin, clent->v.view_ofs, org);
+	VectorCopy (org, testeye);
 	pvs = SV_FatPVS (org);
 	/*
 	// dp protocol
@@ -660,10 +663,10 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 				VectorCopy(testorigin, trace.endpos);
 
 				VectorCopy(org, RecursiveHullCheckInfo.start);
-				VectorSubtract(testorigin, org, RecursiveHullCheckInfo.dist);
+				VectorSubtract(testorigin, testeye, RecursiveHullCheckInfo.dist);
 				RecursiveHullCheckInfo.hull = sv.worldmodel->hulls;
 				RecursiveHullCheckInfo.trace = &trace;
-				SV_RecursiveHullCheck (sv.worldmodel->hulls->firstclipnode, 0, 1, org, testorigin);
+				SV_RecursiveHullCheck (sv.worldmodel->hulls->firstclipnode, 0, 1, testeye, testorigin);
 
 				if (trace.fraction == 1)
 					client->lastvisible[e] = realtime;
