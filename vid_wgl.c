@@ -468,7 +468,6 @@ void AppActivate(BOOL fActive, BOOL minimize)
 
 	if (fActive)
 	{
-		vid_allowhwgamma = true;
 		if (vid_isfullscreen)
 		{
 			if (vid_wassuspended)
@@ -485,7 +484,6 @@ void AppActivate(BOOL fActive, BOOL minimize)
 
 	if (!fActive)
 	{
-		vid_allowhwgamma = false;
 		vid_usingmouse = false;
 		IN_DeactivateMouse ();
 		IN_ShowMouse ();

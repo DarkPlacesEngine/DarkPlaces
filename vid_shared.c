@@ -46,8 +46,6 @@ int vid_hidden = true;
 // LordHavoc: if window is not the active window, don't hog as much CPU time,
 // let go of the mouse, turn off sound, and restore system gamma ramps...
 int vid_activewindow = true;
-// LordHavoc: whether to allow use of hwgamma (disabled when window is inactive)
-int vid_allowhwgamma = false;
 
 // we don't know until we try it!
 cvar_t vid_hardwaregammasupported = {CVAR_READONLY,"vid_hardwaregammasupported","1"};
@@ -605,7 +603,7 @@ void VID_UpdateGamma(qboolean force)
 		return;
 
 	if (!force
-	 && vid_usinghwgamma == (vid_allowhwgamma && v_hwgamma.integer)
+	 && vid_usinghwgamma == (vid_activewindow && v_hwgamma.integer)
 	 && v_gamma.value == cachegamma
 	 && v_contrast.value == cachecontrast
 	 && v_brightness.value == cachebrightness
@@ -621,7 +619,7 @@ void VID_UpdateGamma(qboolean force)
 	 && cachewhite[2] == v_color_white_b.value)
 		return;
 
-	if (vid_allowhwgamma && v_hwgamma.integer)
+	if (vid_activewindow && v_hwgamma.integer)
 	{
 		if (!vid_usinghwgamma)
 		{
