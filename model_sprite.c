@@ -266,7 +266,6 @@ void Mod_IDSP_Load(model_t *mod, void *buffer)
 				palette[i][2] = *in++;
 				palette[i][3] = 255;
 			}
-			palette[255][0] = palette[255][1] = palette[255][2] = palette[255][3] = 0;
 			break;
 		case SPRHL_ADDITIVE:
 			for (i = 0;i < 256;i++)
@@ -281,9 +280,9 @@ void Mod_IDSP_Load(model_t *mod, void *buffer)
 		case SPRHL_INDEXALPHA:
 			for (i = 0;i < 256;i++)
 			{
-				palette[i][0] = 255;
-				palette[i][1] = 255;
-				palette[i][2] = 255;
+				palette[i][0] = in[765];
+				palette[i][1] = in[766];
+				palette[i][2] = in[767];
 				palette[i][3] = i;
 				in += 3;
 			}
@@ -296,7 +295,7 @@ void Mod_IDSP_Load(model_t *mod, void *buffer)
 				palette[i][2] = *in++;
 				palette[i][3] = 255;
 			}
-			palette[0][0] = palette[0][1] = palette[0][2] = palette[0][3] = 0;
+			palette[255][0] = palette[255][1] = palette[255][2] = palette[255][3] = 0;
 			break;
 		default:
 			Host_Error("Mod_IDSP_Load: unknown texFormat (%i, should be 0, 1, 2, or 3)\n", i);
