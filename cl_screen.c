@@ -479,10 +479,6 @@ void CL_Screen_Init(void)
 	Cmd_AddCommand ("screenshot",SCR_ScreenShot_f);
 	Cmd_AddCommand ("envmap", R_Envmap_f);
 
-	// different default in GAME_FNIGGIUM
-	if (gamemode == GAME_FNIGGIUM)
-		Cvar_SetQuick(&scr_conforcewhiledisconnected, 0);
-	
 	scr_initialized = true;
 }
 
