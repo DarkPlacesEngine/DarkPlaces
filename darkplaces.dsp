@@ -300,6 +300,18 @@ SOURCE=.\protocol.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\prvm_cmds.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\prvm_edict.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\prvm_exec.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\r_crosshairs.c
 # End Source File
 # Begin Source File
@@ -597,6 +609,10 @@ SOURCE=.\progs.h
 # Begin Source File
 
 SOURCE=.\protocol.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\prvm_execprogram.h
 # End Source File
 # Begin Source File
 
