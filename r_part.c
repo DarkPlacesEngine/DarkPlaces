@@ -1239,6 +1239,8 @@ void R_MoveParticles (void)
 			if (p->alpha < 64)
 				p->die = -1;
 			break;
+		default:
+			break;
 		}
 
 		// LordHavoc: immediate removal of unnecessary particles (must be done to ensure compactor below operates properly in all cases)
