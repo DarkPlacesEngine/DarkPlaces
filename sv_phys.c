@@ -1412,18 +1412,15 @@ void SV_Physics (void)
 		if (pr_global_struct->force_retouch)
 			SV_LinkEdict (ent, true);	// force retouch even for stationary
 
-		if (i <= svs.maxclients)
+		if (i >= 1 && i <= svs.maxclients && svs.clients[i-1].spawned)
 		{
-			if (i > 0)
-			{
-				// connected slot
-				// call standard client pre-think
-				SV_CheckVelocity (ent);
-				pr_global_struct->time = sv.time;
-				pr_global_struct->self = EDICT_TO_PROG(ent);
-				PR_ExecuteProgram (pr_global_struct->PlayerPreThink, "QC function PlayerPreThink is missing");
-				SV_CheckVelocity (ent);
-			}
+			// connected slot
+			// call standard client pre-think
+			SV_CheckVelocity (ent);
+			pr_global_struct->time = sv.time;
+			pr_global_struct->self = EDICT_TO_PROG(ent);
+			PR_ExecuteProgram (pr_global_struct->PlayerPreThink, "QC function PlayerPreThink is missing");
+			SV_CheckVelocity (ent);
 		}
 		else if (sv_freezenonclients.integer)
 			continue;
@@ -1492,7 +1489,7 @@ void SV_Physics (void)
 			break;
 		}
 
-		if (i <= svs.maxclients && i > 0 && !ent->e->free)
+		if (i >= 1 && i <= svs.maxclients && svs.clients[i-1].spawned)
 		{
 			SV_CheckVelocity (ent);
 
