@@ -108,21 +108,6 @@ typedef struct
 }
 mtexinfo_t;
 
-typedef struct surfvertex_s
-{
-	// position
-	float v[3];
-	// offset into lightmap (used by vertex lighting)
-	int lightmapoffset;
-	// texture coordinates
-	float st[2];
-	// lightmap coordinates
-	float uv[2];
-	// detail texture coordinates
-	float ab[2];
-}
-surfvertex_t;
-
 // LordHavoc: replaces glpoly, triangle mesh
 typedef struct surfmesh_s
 {
@@ -130,7 +115,11 @@ typedef struct surfmesh_s
 	struct surfmesh_s *chain;
 	int numverts;
 	int numtriangles;
-	surfvertex_t *vertex;
+	float *verts;
+	int *lightmapoffsets;
+	float *st;
+	float *uv;
+	float *ab;
 	int *index;
 }
 surfmesh_t;
