@@ -1,6 +1,7 @@
 
 #include "quakedef.h"
 #include "cl_collision.h"
+#include "r_shadow.h"
 
 cvar_t r_quickmodels = {0, "r_quickmodels", "1"};
 
@@ -471,12 +472,41 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 	}
 }
 
+extern cvar_t r_shadows;
 void R_DrawQ1Q2AliasModelFakeShadow (entity_render_t *ent)
 {
 	int i;
 	rmeshstate_t m;
 	model_t *model;
 	float *v, planenormal[3], planedist, dist, projection[3], floororigin[3], surfnormal[3], lightdirection[3], v2[3];
+
+	if (r_shadows.integer > 1)
+	{
+		float f;
+		vec3_t temp;
+		for (i = 0;i < r_numdlights;i++)
+		{
+			if (ent != r_dlight[i].ent)
+			{
+				VectorSubtract(ent->origin, r_dlight[i].origin, temp);
+				f = DotProduct(temp,temp);
+				if (f < (ent->model->radius2 + r_dlight[i].cullradius2))
+				{
+					model = ent->model;
+					R_Mesh_ResizeCheck(model->numverts * 2);
+					memset(&m, 0, sizeof(m));
+					m.blendfunc1 = GL_ONE;
+					m.blendfunc2 = GL_ONE;
+					R_Mesh_State(&m);
+					R_Mesh_Matrix(&ent->matrix);
+					R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
+					R_FillColors(varray_color, model->numverts * 2, 0.1 * r_colorscale, 0.025 * r_colorscale, 0.0125 * r_colorscale, 1);
+					Matrix4x4_Transform(&ent->inversematrix, r_dlight[i].origin, temp);
+					R_ShadowVolume(model->numverts, model->numtris, model->mdlmd2data_indices, model->mdlmd2data_triangleneighbors, temp, r_dlight[i].cullradius + model->radius - sqrt(f));
+				}
+			}
+		}
+	}
 
 	lightdirection[0] = 0.5;
 	lightdirection[1] = 0.2;

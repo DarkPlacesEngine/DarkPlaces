@@ -332,6 +332,10 @@ SOURCE=.\r_modules.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\r_shadow.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\r_sky.c
 # End Source File
 # Begin Source File
