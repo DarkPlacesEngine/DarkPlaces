@@ -778,8 +778,8 @@ void IN_Mouse(float mx, float my)
 
 	if (cl_prydoncursor.integer)
 	{
-		cl.cmd.cursor_screen[0] += mouse_x / vid.realwidth;
-		cl.cmd.cursor_screen[1] += mouse_y / vid.realheight;
+		cl.cmd.cursor_screen[0] += mouse_x * sensitivity.value / vid.realwidth;
+		cl.cmd.cursor_screen[1] += mouse_y * sensitivity.value / vid.realheight;
 		V_StopPitchDrift();
 		return;
 	}
