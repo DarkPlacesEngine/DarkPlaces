@@ -45,8 +45,8 @@ void TraceLine (vec3_t start, vec3_t end, vec3_t impact)
 	trace_t	trace;
 
 	memset (&trace, 0, sizeof(trace));
+	VectorCopy (end, trace.endpos); // fix TraceLine endpoint bug
 	SV_RecursiveHullCheck (cl.worldmodel->hulls, 0, 0, 1, start, end, &trace);
-
 	VectorCopy (trace.endpos, impact);
 }
 
