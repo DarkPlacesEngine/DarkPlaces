@@ -1367,7 +1367,7 @@ void PF_droptofloor (void)
 
 	trace = SV_Move (ent->v->origin, ent->v->mins, ent->v->maxs, end, MOVE_NORMAL, ent);
 
-	if (trace.fraction == 1 || trace.allsolid)
+	if (trace.fraction == 1)
 		G_FLOAT(OFS_RETURN) = 0;
 	else
 	{
