@@ -221,7 +221,7 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 		GL_DepthTest(true);
 		firstpass = false;
 		expandaliasvert(mesh->num_vertices);
-		colorscale = r_colorscale;
+		colorscale = 1.0f;
 
 		memset(&m, 0, sizeof(m));
 		if (layer->texture != NULL)
@@ -800,7 +800,7 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 	GL_VertexPointer(varray_vertex3f);
 
 	memset(&mstate, 0, sizeof(mstate));
-	colorscale = r_colorscale;
+	colorscale = 1.0f;
 	if (gl_combine.integer)
 	{
 		mstate.texrgbscale[0] = 4;
@@ -837,7 +837,7 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 		//mstate.pointer_texcoord = ent->model->alias.zymdata_texcoords;
 		R_Mesh_State_Texture(&mstate);
 
-		GL_Color(fogcolor[0] * r_colorscale, fogcolor[1] * r_colorscale, fogcolor[2] * r_colorscale, ent->alpha * fog);
+		GL_Color(fogcolor[0], fogcolor[1], fogcolor[2], ent->alpha * fog);
 		ZymoticTransformVerts(numverts, varray_vertex3f, ent->model->alias.zymdata_vertbonecounts, ent->model->alias.zymdata_verts);
 		R_Mesh_Draw(numverts, numtriangles, elements);
 		c_alias_polys += numtriangles;

@@ -78,7 +78,6 @@ cvar_t v_color_grey_b = {CVAR_SAVE, "v_color_grey_b", "0.5"};
 cvar_t v_color_white_r = {CVAR_SAVE, "v_color_white_r", "1"};
 cvar_t v_color_white_g = {CVAR_SAVE, "v_color_white_g", "1"};
 cvar_t v_color_white_b = {CVAR_SAVE, "v_color_white_b", "1"};
-cvar_t v_overbrightbits = {CVAR_SAVE, "v_overbrightbits", "0"};
 cvar_t v_hwgamma = {CVAR_SAVE, "v_hwgamma", "1"};
 
 // brand of graphics chip
@@ -560,7 +559,7 @@ void IN_Mouse(usercmd_t *cmd, float mx, float my)
 }
 
 static float cachegamma, cachebrightness, cachecontrast, cacheblack[3], cachegrey[3], cachewhite[3];
-static int cacheoverbrightbits = -1, cachecolorenable, cachehwgamma;
+static int cachecolorenable, cachehwgamma;
 #define BOUNDCVAR(cvar, m1, m2) c = &(cvar);f = bound(m1, c->value, m2);if (c->value != f) Cvar_SetValueQuick(c, f);
 void VID_UpdateGamma(qboolean force)
 {
@@ -573,7 +572,6 @@ void VID_UpdateGamma(qboolean force)
 
 	if (!force
 	 && vid_usinghwgamma == (vid_allowhwgamma && v_hwgamma.integer)
-	 && v_overbrightbits.integer == cacheoverbrightbits
 	 && v_gamma.value == cachegamma
 	 && v_contrast.value == cachecontrast
 	 && v_brightness.value == cachebrightness
@@ -610,20 +608,19 @@ void VID_UpdateGamma(qboolean force)
 		BOUNDCVAR(v_color_white_g, 1, 5);cachewhite[1] = v_color_white_g.value;
 		BOUNDCVAR(v_color_white_b, 1, 5);cachewhite[2] = v_color_white_b.value;
 		cachecolorenable = v_color_enable.integer;
-		cacheoverbrightbits = v_overbrightbits.integer;
 		cachehwgamma = v_hwgamma.integer;
 
 		if (cachecolorenable)
 		{
-			BuildGammaTable16((float) (1 << cacheoverbrightbits), invpow(0.5, 1 - cachegrey[0]), cachewhite[0], cacheblack[0], vid_gammaramps);
-			BuildGammaTable16((float) (1 << cacheoverbrightbits), invpow(0.5, 1 - cachegrey[1]), cachewhite[1], cacheblack[1], vid_gammaramps + 256);
-			BuildGammaTable16((float) (1 << cacheoverbrightbits), invpow(0.5, 1 - cachegrey[2]), cachewhite[2], cacheblack[2], vid_gammaramps + 512);
+			BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[0]), cachewhite[0], cacheblack[0], vid_gammaramps);
+			BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[1]), cachewhite[1], cacheblack[1], vid_gammaramps + 256);
+			BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[2]), cachewhite[2], cacheblack[2], vid_gammaramps + 512);
 		}
 		else
 		{
-			BuildGammaTable16((float) (1 << cacheoverbrightbits), cachegamma, cachecontrast, cachebrightness, vid_gammaramps);
-			BuildGammaTable16((float) (1 << cacheoverbrightbits), cachegamma, cachecontrast, cachebrightness, vid_gammaramps + 256);
-			BuildGammaTable16((float) (1 << cacheoverbrightbits), cachegamma, cachecontrast, cachebrightness, vid_gammaramps + 512);
+			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, vid_gammaramps);
+			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, vid_gammaramps + 256);
+			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, vid_gammaramps + 512);
 		}
 
 		vid_hardwaregammasupported = VID_SetGamma(vid_gammaramps);
@@ -665,7 +662,6 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&v_color_white_b);
 
 	Cvar_RegisterVariable(&v_hwgamma);
-	Cvar_RegisterVariable(&v_overbrightbits);
 
 	Cvar_RegisterVariable(&vid_fullscreen);
 	Cvar_RegisterVariable(&vid_width);

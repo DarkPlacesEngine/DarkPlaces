@@ -74,7 +74,6 @@ void SCR_ScreenShot_f (void);
 
 // these are externally accessible
 int r_lightmapscalebit;
-float r_colorscale;
 
 static matrix4x4_t backend_viewmatrix;
 static matrix4x4_t backend_modelmatrix;
@@ -994,7 +993,6 @@ void R_Mesh_State_Texture(const rmeshstate_t *m)
 qboolean SCR_ScreenShot(char *filename, int x, int y, int width, int height, qboolean jpeg)
 {
 	qboolean ret;
-	int i, j;
 	qbyte *buffer;
 
 	if (!r_render.integer)
@@ -1003,16 +1001,6 @@ qboolean SCR_ScreenShot(char *filename, int x, int y, int width, int height, qbo
 	buffer = Mem_Alloc(tempmempool, width*height*3);
 	qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer);
 	CHECKGLERROR
-
-	// LordHavoc: compensate for v_overbrightbits when using hardware gamma
-	if (v_hwgamma.integer)
-	{
-		for (i = 0;i < width * height * 3;i++)
-		{
-			j = buffer[i] << v_overbrightbits.integer;
-			buffer[i] = (qbyte) (bound(0, j, 255));
-		}
-	}
 
 	if (jpeg)
 		ret = JPEG_SaveImage_preflipped (filename, width, height, buffer);
@@ -1078,11 +1066,8 @@ void SCR_UpdateScreen (void)
 	if (gl_combine.integer && (!gl_combine_extension || r_textureunits.integer < 2))
 		Cvar_SetValueQuick(&gl_combine, 0);
 
-	// lighting scale
-	r_colorscale = 1.0f / (float) (1 << v_overbrightbits.integer);
-
 	// lightmaps only
-	r_lightmapscalebit = v_overbrightbits.integer;
+	r_lightmapscalebit = 0;
 	if (gl_combine.integer && r_textureunits.integer > 1)
 		r_lightmapscalebit += 2;
 

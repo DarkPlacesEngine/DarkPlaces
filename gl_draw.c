@@ -378,7 +378,7 @@ float blendvertex3f[9] = {-5000, -5000, 10, 10000, -5000, 10, -5000, 10000, 10};
 int quadelements[768];
 void R_DrawQueue(void)
 {
-	int pos, num, chartexnum, overbright, texnum, batch;
+	int pos, num, chartexnum, texnum, batch;
 	float x, y, w, h, s, t, u, v, *av, *at, c[4];
 	cachepic_t *pic;
 	drawqueue_t *dq;
@@ -421,27 +421,26 @@ void R_DrawQueue(void)
 	texnum = 0;
 	color = 0;
 
-	overbright = v_overbrightbits.integer;
 	batch = false;
 	batchcount = 0;
 	for (pos = 0;pos < r_refdef.drawqueuesize;pos += ((drawqueue_t *)(r_refdef.drawqueue + pos))->size)
 	{
 		dq = (drawqueue_t *)(r_refdef.drawqueue + pos);
 		color = dq->color;
-		
+
 		if(dq->flags & DRAWFLAG_ADDITIVE)
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 		else if(dq->flags & DRAWFLAG_MODULATE)
 			GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
 		else
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		
+
 		GL_DepthMask(true);
 		GL_DepthTest(false);
 
-		c[0] = (float) ((color >> 24) & 0xFF) * (1.0f / 255.0f) * r_colorscale;
-		c[1] = (float) ((color >> 16) & 0xFF) * (1.0f / 255.0f) * r_colorscale;
-		c[2] = (float) ((color >>  8) & 0xFF) * (1.0f / 255.0f) * r_colorscale;
+		c[0] = (float) ((color >> 24) & 0xFF) * (1.0f / 255.0f);
+		c[1] = (float) ((color >> 16) & 0xFF) * (1.0f / 255.0f);
+		c[2] = (float) ((color >>  8) & 0xFF) * (1.0f / 255.0f);
 		c[3] = (float) ( color        & 0xFF) * (1.0f / 255.0f);
 		x = dq->x;
 		y = dq->y;
@@ -524,7 +523,6 @@ void R_DrawQueue(void)
 		}
 		else
 			c[0] = c[1] = c[2] = v_contrast.value;
-		VectorScale(c, (float) (1 << v_overbrightbits.integer), c);
 		if (c[0] >= 1.01f || c[1] >= 1.01f || c[2] >= 1.01f)
 		{
 			GL_BlendFunc(GL_DST_COLOR, GL_ONE);

@@ -1832,9 +1832,6 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 			cb += fogcolor[2] * fog;
 		}
 	}
-	cr *= r_colorscale;
-	cg *= r_colorscale;
-	cb *= r_colorscale;
 
 	GL_Color(cr, cg, cb, ca);
 

@@ -67,7 +67,6 @@ extern cvar_t v_color_grey_b;
 extern cvar_t v_color_white_r;
 extern cvar_t v_color_white_g;
 extern cvar_t v_color_white_b;
-extern cvar_t v_overbrightbits;
 extern cvar_t v_hwgamma;
 
 extern int gl_stencil;

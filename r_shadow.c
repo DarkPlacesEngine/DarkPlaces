@@ -1238,7 +1238,7 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 			GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 			if (lightcubemap)
 				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltofilter);
-			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color2);
+			VectorScale(lightcolor, r_shadow_lightintensityscale.value, color2);
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
 			{
 				color[0] = bound(0, color2[0], 1);
@@ -1288,7 +1288,7 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 			GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 			if (lightcubemap)
 				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltofilter);
-			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color2);
+			VectorScale(lightcolor, r_shadow_lightintensityscale.value, color2);
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
 			{
 				color[0] = bound(0, color2[0], 1);
@@ -1327,7 +1327,7 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 			qglColorMask(1,1,1,0);
 			GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 			R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltoattenuationxyz);
-			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color2);
+			VectorScale(lightcolor, r_shadow_lightintensityscale.value, color2);
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
 			{
 				color[0] = bound(0, color2[0], 1);
@@ -1373,7 +1373,7 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 			GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 			if (lightcubemap)
 				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltofilter);
-			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color2);
+			VectorScale(lightcolor, r_shadow_lightintensityscale.value, color2);
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
 			{
 				color[0] = bound(0, color2[0], 1);
@@ -1426,7 +1426,7 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 			GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 			if (lightcubemap)
 				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltofilter);
-			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color2);
+			VectorScale(lightcolor, r_shadow_lightintensityscale.value, color2);
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
 			{
 				color[0] = bound(0, color2[0], 1);
@@ -1445,7 +1445,7 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 		GL_DepthMask(false);
 		GL_DepthTest(true);
 		GL_ColorPointer(varray_color4f);
-		VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color2);
+		VectorScale(lightcolor, r_shadow_lightintensityscale.value, color2);
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(basetexture);
 		m.pointer_texcoord[0] = texcoord2f;
@@ -1484,7 +1484,7 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 		glosstexture = r_shadow_blankglosstexture;
 	if (r_shadow_gloss.integer >= 2 || (r_shadow_gloss.integer >= 1 && glosstexture != r_shadow_blankglosstexture))
 	{
-		colorscale = r_colorscale * r_shadow_glossintensity.value;
+		colorscale = r_shadow_glossintensity.value;
 		if (!bumptexture)
 			bumptexture = r_shadow_blankbumptexture;
 		if (glosstexture == r_shadow_blankglosstexture)
