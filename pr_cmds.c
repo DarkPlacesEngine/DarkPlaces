@@ -69,18 +69,18 @@ void PF_VarString(int first, char *out, int outlength)
 
 char *ENGINE_EXTENSIONS =
 "DP_CL_LOADSKY "
-"DP_EF_NODRAW "
 "DP_EF_ADDITIVE "
 "DP_EF_BLUE "
-"DP_EF_RED "
-"DP_EF_FULLBRIGHT "
 "DP_EF_FLAME "
+"DP_EF_FULLBRIGHT "
+"DP_EF_NODRAW "
+"DP_EF_RED "
 "DP_EF_STARDUST "
 "DP_ENT_ALPHA "
 "DP_ENT_CUSTOMCOLORMAP "
 "DP_ENT_EXTERIORMODELTOCLIENT "
-"DP_ENT_LOWPRECISION "
 "DP_ENT_GLOW "
+"DP_ENT_LOWPRECISION "
 "DP_ENT_SCALE "
 "DP_ENT_VIEWMODEL "
 "DP_GFX_EXTERNALTEXTURES "
@@ -97,10 +97,12 @@ char *ENGINE_EXTENSIONS =
 "DP_MOVETYPEFOLLOW "
 "DP_QC_CHANGEPITCH "
 "DP_QC_COPYENTITY "
+"DP_QC_CVAR_STRING "
 "DP_QC_ETOS "
 "DP_QC_FINDCHAIN "
 "DP_QC_FINDCHAINFLOAT "
 "DP_QC_FINDFLOAT "
+"DP_QC_FS_SEARCH " // Black: same as in the menu qc
 "DP_QC_GETLIGHT "
 "DP_QC_GETSURFACE "
 "DP_QC_MINMAXBOUND "
@@ -108,8 +110,8 @@ char *ENGINE_EXTENSIONS =
 "DP_QC_SINCOSSQRTPOW "
 "DP_QC_TRACEBOX "
 "DP_QC_TRACETOSS "
-"DP_QC_TRACE_MOVETYPE_WORLDONLY "
 "DP_QC_TRACE_MOVETYPE_HITMODEL "
+"DP_QC_TRACE_MOVETYPE_WORLDONLY "
 "DP_QC_VECTORVECTORS "
 "DP_QUAKE2_MODEL "
 "DP_QUAKE3_MODEL "
@@ -142,7 +144,6 @@ char *ENGINE_EXTENSIONS =
 "NEH_CMD_PLAY2 "
 "NEH_RESTOREGAME "
 "TW_SV_STEPCONTROL "
-"DP_QC_FS_SEARCH " // Black: same as in the menu qc
 ;
 
 qboolean checkextension(char *name)
@@ -3195,6 +3196,22 @@ void PF_search_getfilename(void)
 	G_INT(OFS_RETURN) = PR_SetString(tmp);
 }
 
+void PF_cvar_string (void)
+{
+	char *str;
+	cvar_t *var;
+	char *tmp;
+
+	str = G_STRING(OFS_PARM0);
+	var = Cvar_FindVar (str);
+
+	tmp = PR_GetTempString();
+	strcpy(tmp, var->string);
+
+	G_INT(OFS_RETURN) = PR_SetString(tmp);
+}
+
+
 
 builtin_t pr_builtin[] =
 {
@@ -3370,7 +3387,7 @@ PF_search_begin,			// #444
 PF_search_end,				// #445
 PF_search_getsize,			// #446
 PF_search_getfilename,		// #447
-NULL,						// #448
+PF_cvar_string,				// #448 string(string s) cvar_string (DP_QC_CVAR_STRING)
 NULL,						// #449
 a a a a a					// #450-499 (LordHavoc)
 };
