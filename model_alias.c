@@ -492,7 +492,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	loadmodel->yawmins[2] = loadmodel->normalmins[2];
 	loadmodel->yawmaxs[2] = loadmodel->normalmaxs[2];
 
-	loadmodel->Draw = R_DrawAliasModel;
+	loadmodel->Draw = R_DrawQ1Q2AliasModel;
 	loadmodel->DrawSky = NULL;
 	loadmodel->DrawShadow = NULL;
 }
@@ -566,7 +566,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 
 	loadmodel->type = mod_alias;
 	loadmodel->aliastype = ALIASTYPE_MDLMD2;
-	loadmodel->Draw = R_DrawAliasModel;
+	loadmodel->Draw = R_DrawQ1Q2AliasModel;
 	loadmodel->DrawSky = NULL;
 	loadmodel->DrawShadow = NULL;
 
@@ -952,7 +952,7 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 	loadmodel->yawmins[2] = loadmodel->normalmins[2];
 	loadmodel->yawmaxs[2] = loadmodel->normalmaxs[2];
 
-	loadmodel->Draw = R_DrawAliasModel;
+	loadmodel->Draw = R_DrawZymoticModel;
 	loadmodel->DrawSky = NULL;
 	loadmodel->DrawShadow = NULL;
 }

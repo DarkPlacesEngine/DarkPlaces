@@ -21,8 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-entity_render_t *currentrenderentity;
-
 // used for dlight push checking and other things
 int r_framecount;
 
@@ -351,6 +349,7 @@ void Render_Init(void)
 	R_Textures_Init();
 	Mod_RenderInit();
 	gl_backend_init();
+	R_MeshQueue_Init();
 	GL_Draw_Init();
 	GL_Main_Init();
 	GL_Models_Init();
@@ -388,6 +387,7 @@ static void R_MarkEntities (void)
 {
 	int i;
 	vec3_t v;
+	entity_render_t *ent;
 
 	R_FarClip_Box(cl.worldmodel->normalmins, cl.worldmodel->normalmaxs);
 
@@ -396,45 +396,45 @@ static void R_MarkEntities (void)
 
 	for (i = 0;i < r_refdef.numentities;i++)
 	{
-		currentrenderentity = r_refdef.entities[i];
-		Mod_CheckLoaded(currentrenderentity->model);
+		ent = r_refdef.entities[i];
+		Mod_CheckLoaded(ent->model);
 
 		// move view-relative models to where they should be
-		if (currentrenderentity->flags & RENDER_VIEWMODEL)
+		if (ent->flags & RENDER_VIEWMODEL)
 		{
 			// remove flag so it will not be repeated incase RelinkEntities is not called again for a while
-			currentrenderentity->flags -= RENDER_VIEWMODEL;
+			ent->flags -= RENDER_VIEWMODEL;
 			// transform origin
-			VectorCopy(currentrenderentity->origin, v);
-			currentrenderentity->origin[0] = v[0] * vpn[0] + v[1] * vright[0] + v[2] * vup[0] + r_origin[0];
-			currentrenderentity->origin[1] = v[0] * vpn[1] + v[1] * vright[1] + v[2] * vup[1] + r_origin[1];
-			currentrenderentity->origin[2] = v[0] * vpn[2] + v[1] * vright[2] + v[2] * vup[2] + r_origin[2];
+			VectorCopy(ent->origin, v);
+			ent->origin[0] = v[0] * vpn[0] + v[1] * vright[0] + v[2] * vup[0] + r_origin[0];
+			ent->origin[1] = v[0] * vpn[1] + v[1] * vright[1] + v[2] * vup[1] + r_origin[1];
+			ent->origin[2] = v[0] * vpn[2] + v[1] * vright[2] + v[2] * vup[2] + r_origin[2];
 			// adjust angles
-			VectorAdd(currentrenderentity->angles, r_refdef.viewangles, currentrenderentity->angles);
+			VectorAdd(ent->angles, r_refdef.viewangles, ent->angles);
 		}
 
-		if (currentrenderentity->angles[0] || currentrenderentity->angles[2])
+		if (ent->angles[0] || ent->angles[2])
 		{
-			VectorMA(currentrenderentity->origin, currentrenderentity->scale, currentrenderentity->model->rotatedmins, currentrenderentity->mins);
-			VectorMA(currentrenderentity->origin, currentrenderentity->scale, currentrenderentity->model->rotatedmaxs, currentrenderentity->maxs);
+			VectorMA(ent->origin, ent->scale, ent->model->rotatedmins, ent->mins);
+			VectorMA(ent->origin, ent->scale, ent->model->rotatedmaxs, ent->maxs);
 		}
-		else if (currentrenderentity->angles[1])
+		else if (ent->angles[1])
 		{
-			VectorMA(currentrenderentity->origin, currentrenderentity->scale, currentrenderentity->model->yawmins, currentrenderentity->mins);
-			VectorMA(currentrenderentity->origin, currentrenderentity->scale, currentrenderentity->model->yawmaxs, currentrenderentity->maxs);
+			VectorMA(ent->origin, ent->scale, ent->model->yawmins, ent->mins);
+			VectorMA(ent->origin, ent->scale, ent->model->yawmaxs, ent->maxs);
 		}
 		else
 		{
-			VectorMA(currentrenderentity->origin, currentrenderentity->scale, currentrenderentity->model->normalmins, currentrenderentity->mins);
-			VectorMA(currentrenderentity->origin, currentrenderentity->scale, currentrenderentity->model->normalmaxs, currentrenderentity->maxs);
+			VectorMA(ent->origin, ent->scale, ent->model->normalmins, ent->mins);
+			VectorMA(ent->origin, ent->scale, ent->model->normalmaxs, ent->maxs);
 		}
-		if (R_VisibleCullBox(currentrenderentity->mins, currentrenderentity->maxs))
+		if (R_VisibleCullBox(ent->mins, ent->maxs))
 			continue;
 
-		R_LerpAnimation(currentrenderentity);
-		currentrenderentity->visframe = r_framecount;
+		R_LerpAnimation(ent);
+		ent->visframe = r_framecount;
 
-		R_FarClip_Box(currentrenderentity->mins, currentrenderentity->maxs);
+		R_FarClip_Box(ent->mins, ent->maxs);
 	}
 }
 
@@ -442,6 +442,7 @@ static void R_MarkEntities (void)
 int R_DrawBModelSky (void)
 {
 	int i, sky;
+	entity_render_t *ent;
 
 	if (!r_drawentities.integer)
 		return false;
@@ -449,10 +450,10 @@ int R_DrawBModelSky (void)
 	sky = false;
 	for (i = 0;i < r_refdef.numentities;i++)
 	{
-		currentrenderentity = r_refdef.entities[i];
-		if (currentrenderentity->visframe == r_framecount && currentrenderentity->model->DrawSky)
+		ent = r_refdef.entities[i];
+		if (ent->visframe == r_framecount && ent->model->DrawSky)
 		{
-			currentrenderentity->model->DrawSky();
+			ent->model->DrawSky(ent);
 			sky = true;
 		}
 	}
@@ -462,15 +463,16 @@ int R_DrawBModelSky (void)
 void R_DrawModels (void)
 {
 	int i;
+	entity_render_t *ent;
 
 	if (!r_drawentities.integer)
 		return;
 
 	for (i = 0;i < r_refdef.numentities;i++)
 	{
-		currentrenderentity = r_refdef.entities[i];
-		if (currentrenderentity->visframe == r_framecount && currentrenderentity->model->Draw)
-			currentrenderentity->model->Draw();
+		ent = r_refdef.entities[i];
+		if (ent->visframe == r_framecount && ent->model->Draw)
+			ent->model->Draw(ent);
 	}
 }
 
@@ -481,16 +483,18 @@ R_DrawViewModel
 */
 void R_DrawViewModel (void)
 {
+	entity_render_t *ent;
+
 	// FIXME: move these checks to client
 	if (!r_drawviewmodel.integer || chase_active.integer || envmap || !r_drawentities.integer || cl.items & IT_INVISIBILITY || cl.stats[STAT_HEALTH] <= 0 || !cl.viewent.render.model)
 		return;
 
-	currentrenderentity = &cl.viewent.render;
-	Mod_CheckLoaded(currentrenderentity->model);
+	ent = &cl.viewent.render;
+	Mod_CheckLoaded(ent->model);
 
-	R_LerpAnimation(currentrenderentity);
+	R_LerpAnimation(ent);
 
-	currentrenderentity->model->Draw();
+	ent->model->Draw(ent);
 }
 
 static void R_SetFrustum (void)
@@ -596,6 +600,7 @@ r_refdef must be set before the first call
 */
 void R_RenderView (void)
 {
+	entity_render_t *world = &cl_entities[0].render;
 	if (!cl.worldmodel)
 		return; //Host_Error ("R_RenderView: NULL worldmodel");
 
@@ -609,22 +614,25 @@ void R_RenderView (void)
 	R_SkyStartFrame();
 	R_BuildLightList();
 
+	R_MeshQueue_BeginScene();
+
 	R_FarClip_Start(r_origin, vpn, 768.0f);
 
 	R_TimeReport("setup");
 
-	R_DrawWorld();
+	R_DrawWorld(world);
 	R_TimeReport("worldnode");
 
 	R_MarkEntities();
 	R_TimeReport("markentity");
 
-	R_MarkWorldLights();
+	R_MarkWorldLights(world);
 	R_TimeReport("marklights");
 
 	r_farclip = R_FarClip_Finish() + 256.0f;
 
 	R_Mesh_Start(r_farclip);
+
 
 	if (skyrendermasked)
 	{
@@ -637,17 +645,17 @@ void R_RenderView (void)
 		R_TimeReport("viewmodel");
 	}
 
-	R_SetupForWorldRendering();
-	R_PrepareSurfaces();
+	R_SetupForWorldRendering(world);
+	R_PrepareSurfaces(world);
 	R_TimeReport("surfprep");
 
-	R_DrawSurfaces(SHADERSTAGE_SKY);
-	R_DrawSurfaces(SHADERSTAGE_NORMAL);
+	R_DrawSurfaces(world, SHADERSTAGE_SKY);
+	R_DrawSurfaces(world, SHADERSTAGE_NORMAL);
 	R_TimeReport("surfdraw");
 
 	if (r_drawportals.integer)
 	{
-		R_DrawPortals();
+		R_DrawPortals(world);
 		R_TimeReport("portals");
 	}
 
@@ -670,6 +678,8 @@ void R_RenderView (void)
 	R_DrawExplosions();
 	R_TimeReport("explosions");
 
+	R_MeshQueue_EndScene();
+
 	// draw transparent meshs
 	R_Mesh_AddTransparent();
 	R_TimeReport("addtrans");
@@ -677,13 +687,12 @@ void R_RenderView (void)
 	R_DrawCoronas();
 	R_TimeReport("coronas");
 
-	R_BlendView();
-	R_TimeReport("blendview");
-
 	R_DrawCrosshair();
 	R_TimeReport("crosshair");
 
-	// render any queued meshs
+	R_BlendView();
+	R_TimeReport("blendview");
+
 	R_Mesh_Finish();
 	R_TimeReport("meshfinish");
 }

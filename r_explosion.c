@@ -173,14 +173,16 @@ void R_NewExplosion(vec3_t org)
 	}
 }
 
-void R_DrawExplosion(explosion_t *e)
+void R_DrawExplosionCallback(void *calldata1, int calldata2)
 {
 	int i;
 	float *c, *v, diff[3], centerdir[3], ifog, alpha, dist;
 	rmeshbufferinfo_t m;
+	explosion_t *e;
+	e = calldata1;
 
 	memset(&m, 0, sizeof(m));
-	m.transparent = true;
+	m.transparent = false;
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
 	m.numtriangles = EXPLOSIONTRIS;
@@ -303,6 +305,6 @@ void R_DrawExplosions(void)
 		return;
 	for (i = 0;i < MAX_EXPLOSIONS;i++)
 		if (explosion[i].alpha > 0.01f)
-			R_DrawExplosion(&explosion[i]);
+			R_MeshQueue_AddTransparent(explosion[i].origin, R_DrawExplosionCallback, &explosion[i], 0);
 }
 

@@ -204,10 +204,11 @@ msurface_t;
 #define SHADERSTAGE_NORMAL 1
 #define SHADERSTAGE_COUNT 2
 
+struct entity_render_s;
 // change this stuff when real shaders are added
 typedef struct Cshader_s
 {
-	void (*shaderfunc[SHADERSTAGE_COUNT])(msurface_t *firstsurf);
+	void (*shaderfunc[SHADERSTAGE_COUNT])(struct entity_render_s *ent, msurface_t *firstsurf);
 	// list of surfaces using this shader (used during surface rendering)
 	msurface_t *chain;
 }

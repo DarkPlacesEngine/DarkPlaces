@@ -236,7 +236,7 @@ R_BuildLightMap
 Combine and scale multiple lightmaps into the 8.8 format in blocklights
 ===============
 */
-static void R_BuildLightMap (msurface_t *surf, int dlightchanged)
+static void R_BuildLightMap (entity_render_t *ent, msurface_t *surf, int dlightchanged)
 {
 	if (!r_floatbuildlightmap.integer)
 	{
@@ -261,7 +261,7 @@ static void R_BuildLightMap (msurface_t *surf, int dlightchanged)
 
 	// set to full bright if no light data
 		bl = intblocklights;
-		if ((currentrenderentity->effects & EF_FULLBRIGHT) || !currentrenderentity->model->lightdata)
+		if ((ent->effects & EF_FULLBRIGHT) || !ent->model->lightdata)
 		{
 			for (i = 0;i < size3;i++)
 				bl[i] = 255*256;
@@ -302,7 +302,7 @@ static void R_BuildLightMap (msurface_t *surf, int dlightchanged)
 		out = templight;
 		// deal with lightmap brightness scale
 		shift = 7 + lightscalebit + 8;
-		if (currentrenderentity->model->lightmaprgba)
+		if (ent->model->lightmaprgba)
 		{
 			stride = (surf->lightmaptexturestride - smax) * 4;
 			for (i = 0;i < tmax;i++, out += stride)
@@ -355,7 +355,7 @@ static void R_BuildLightMap (msurface_t *surf, int dlightchanged)
 
 	// set to full bright if no light data
 		bl = floatblocklights;
-		if ((currentrenderentity->effects & EF_FULLBRIGHT) || !currentrenderentity->model->lightdata)
+		if ((ent->effects & EF_FULLBRIGHT) || !ent->model->lightdata)
 			j = 255*256;
 		else
 			j = r_ambient.value * 512.0f; // would be 128.0f logically, but using 512.0f to match winquake style
@@ -392,7 +392,7 @@ static void R_BuildLightMap (msurface_t *surf, int dlightchanged)
 		out = templight;
 		// deal with lightmap brightness scale
 		scale = 1.0f / (1 << (7 + lightscalebit + 8));
-		if (currentrenderentity->model->lightmaprgba)
+		if (ent->model->lightmaprgba)
 		{
 			stride = (surf->lightmaptexturestride - smax) * 4;
 			for (i = 0;i < tmax;i++, out += stride)
@@ -617,7 +617,7 @@ void R_Stain (vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, i
 =============================================================
 */
 
-static void RSurfShader_Sky(msurface_t *firstsurf)
+static void RSurfShader_Sky(entity_render_t *ent, msurface_t *firstsurf)
 {
 	msurface_t *surf;
 	int i;
@@ -628,7 +628,7 @@ static void RSurfShader_Sky(msurface_t *firstsurf)
 	float *outv, *outc;
 
 	// LordHavoc: HalfLife maps have freaky skypolys...
-	if (currentrenderentity->model->ishlbsp)
+	if (ent->model->ishlbsp)
 		return;
 
 	if (skyrendernow)
@@ -732,7 +732,7 @@ static int RSurf_LightCheck(int *dlightbits, surfmesh_t *mesh)
 	return false;
 }
 
-static void RSurfShader_Water_Pass_Base(msurface_t *surf)
+static void RSurfShader_Water_Pass_Base(entity_render_t *ent, msurface_t *surf)
 {
 	int i, size3;
 	surfvertex_t *v;
@@ -741,9 +741,9 @@ static void RSurfShader_Water_Pass_Base(msurface_t *surf)
 	qbyte *lm;
 	surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
-	float alpha = currentrenderentity->alpha * (surf->flags & SURF_DRAWNOALPHA ? 1 : r_wateralpha.value);
+	float alpha = ent->alpha * (surf->flags & SURF_DRAWNOALPHA ? 1 : r_wateralpha.value);
 	memset(&m, 0, sizeof(m));
-	if (currentrenderentity->effects & EF_ADDITIVE)
+	if (ent->effects & EF_ADDITIVE)
 	{
 		m.transparent = true;
 		m.blendfunc1 = GL_SRC_ALPHA;
@@ -764,7 +764,7 @@ static void RSurfShader_Water_Pass_Base(msurface_t *surf)
 	m.depthwrite = false;
 	m.depthdisable = false;
 	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
-	if (surf->flags & SURF_DRAWFULLBRIGHT || currentrenderentity->effects & EF_FULLBRIGHT)
+	if (surf->flags & SURF_DRAWFULLBRIGHT || ent->effects & EF_FULLBRIGHT)
 	{
 		for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 		{
@@ -858,7 +858,7 @@ static void RSurfShader_Water_Pass_Base(msurface_t *surf)
 	}
 }
 
-static void RSurfShader_Water_Pass_Fog(msurface_t *surf)
+static void RSurfShader_Water_Pass_Fog(entity_render_t *ent, msurface_t *surf)
 {
 	int i;
 	surfvertex_t *v;
@@ -866,9 +866,9 @@ static void RSurfShader_Water_Pass_Fog(msurface_t *surf)
 	float base[3], f;
 	surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
-	float alpha = currentrenderentity->alpha * (surf->flags & SURF_DRAWNOALPHA ? 1 : r_wateralpha.value);
+	float alpha = ent->alpha * (surf->flags & SURF_DRAWNOALPHA ? 1 : r_wateralpha.value);
 	memset(&m, 0, sizeof(m));
-	m.transparent = currentrenderentity->effects & EF_ADDITIVE || surf->currenttexture->fogtexture != NULL || alpha < 1;
+	m.transparent = ent->effects & EF_ADDITIVE || surf->currenttexture->fogtexture != NULL || alpha < 1;
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
 	m.depthwrite = false;
@@ -904,17 +904,17 @@ static void RSurfShader_Water_Pass_Fog(msurface_t *surf)
 	}
 }
 
-static void RSurfShader_Water(msurface_t *firstsurf)
+static void RSurfShader_Water(entity_render_t *ent, msurface_t *firstsurf)
 {
 	msurface_t *surf;
 	for (surf = firstsurf;surf;surf = surf->chain)
-		RSurfShader_Water_Pass_Base(surf);
+		RSurfShader_Water_Pass_Base(ent, surf);
 	if (fogenabled)
 		for (surf = firstsurf;surf;surf = surf->chain)
-			RSurfShader_Water_Pass_Fog(surf);
+			RSurfShader_Water_Pass_Fog(ent, surf);
 }
 
-static void RSurfShader_Wall_Pass_BaseVertex(msurface_t *surf)
+static void RSurfShader_Wall_Pass_BaseVertex(entity_render_t *ent, msurface_t *surf)
 {
 	int i, size3;
 	surfvertex_t *v;
@@ -924,13 +924,13 @@ static void RSurfShader_Wall_Pass_BaseVertex(msurface_t *surf)
 	surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
 	memset(&m, 0, sizeof(m));
-	if (currentrenderentity->effects & EF_ADDITIVE)
+	if (ent->effects & EF_ADDITIVE)
 	{
 		m.transparent = true;
 		m.blendfunc1 = GL_SRC_ALPHA;
 		m.blendfunc2 = GL_ONE;
 	}
-	else if (surf->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1)
+	else if (surf->currenttexture->fogtexture != NULL || ent->alpha != 1)
 	{
 		m.transparent = true;
 		m.blendfunc1 = GL_SRC_ALPHA;
@@ -948,9 +948,9 @@ static void RSurfShader_Wall_Pass_BaseVertex(msurface_t *surf)
 
 	size3 = ((surf->extents[0]>>4)+1)*((surf->extents[1]>>4)+1)*3;
 
-	base[0] = base[1] = base[2] = currentrenderentity->effects & EF_FULLBRIGHT ? 2.0f : r_ambient.value * (1.0f / 64.0f);
+	base[0] = base[1] = base[2] = ent->effects & EF_FULLBRIGHT ? 2.0f : r_ambient.value * (1.0f / 64.0f);
 
-	ca = currentrenderentity->alpha;
+	ca = ent->alpha;
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
 		m.numtriangles = mesh->numtriangles;
@@ -961,7 +961,7 @@ static void RSurfShader_Wall_Pass_BaseVertex(msurface_t *surf)
 			cl = m.colorscale;
 			memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
 
-			if (currentrenderentity->effects & EF_FULLBRIGHT)
+			if (ent->effects & EF_FULLBRIGHT)
 			{
 				for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outst = m.texcoords[0];i < m.numverts;i++, v++, outv += 4, outc += 4, outst += 2)
 				{
@@ -1030,7 +1030,7 @@ static void RSurfShader_Wall_Pass_BaseVertex(msurface_t *surf)
 	}
 }
 
-static void RSurfShader_Wall_Pass_BaseFullbright(msurface_t *surf)
+static void RSurfShader_Wall_Pass_BaseFullbright(entity_render_t *ent, msurface_t *surf)
 {
 	int i;
 	surfvertex_t *v;
@@ -1038,13 +1038,13 @@ static void RSurfShader_Wall_Pass_BaseFullbright(msurface_t *surf)
 	surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
 	memset(&m, 0, sizeof(m));
-	if (currentrenderentity->effects & EF_ADDITIVE)
+	if (ent->effects & EF_ADDITIVE)
 	{
 		m.transparent = true;
 		m.blendfunc1 = GL_SRC_ALPHA;
 		m.blendfunc2 = GL_ONE;
 	}
-	else if (surf->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1)
+	else if (surf->currenttexture->fogtexture != NULL || ent->alpha != 1)
 	{
 		m.transparent = true;
 		m.blendfunc1 = GL_SRC_ALPHA;
@@ -1059,7 +1059,7 @@ static void RSurfShader_Wall_Pass_BaseFullbright(msurface_t *surf)
 	m.depthwrite = false;
 	m.depthdisable = false;
 	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
-	ca = currentrenderentity->alpha;
+	ca = ent->alpha;
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
 		m.numtriangles = mesh->numtriangles;
@@ -1089,7 +1089,7 @@ static void RSurfShader_Wall_Pass_BaseFullbright(msurface_t *surf)
 	}
 }
 
-static void RSurfShader_Wall_Pass_Glow(msurface_t *surf)
+static void RSurfShader_Wall_Pass_Glow(entity_render_t *ent, msurface_t *surf)
 {
 	int i;
 	surfvertex_t *v;
@@ -1097,11 +1097,11 @@ static void RSurfShader_Wall_Pass_Glow(msurface_t *surf)
 	surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
 	memset(&m, 0, sizeof(m));
-	m.transparent = currentrenderentity->effects & EF_ADDITIVE || surf->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1;
+	m.transparent = ent->effects & EF_ADDITIVE || surf->currenttexture->fogtexture != NULL || ent->alpha != 1;
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
 	m.tex[0] = R_GetTexture(surf->currenttexture->glowtexture);
-	ca = currentrenderentity->alpha;
+	ca = ent->alpha;
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
 		m.numtriangles = mesh->numtriangles;
@@ -1131,7 +1131,7 @@ static void RSurfShader_Wall_Pass_Glow(msurface_t *surf)
 	}
 }
 
-static void RSurfShader_Wall_Pass_Fog(msurface_t *surf)
+static void RSurfShader_Wall_Pass_Fog(entity_render_t *ent, msurface_t *surf)
 {
 	int i;
 	surfvertex_t *v;
@@ -1139,10 +1139,10 @@ static void RSurfShader_Wall_Pass_Fog(msurface_t *surf)
 	surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
 	memset(&m, 0, sizeof(m));
-	m.transparent = currentrenderentity->effects & EF_ADDITIVE || surf->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1;
+	m.transparent = ent->effects & EF_ADDITIVE || surf->currenttexture->fogtexture != NULL || ent->alpha != 1;
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
-	ca = currentrenderentity->alpha;
+	ca = ent->alpha;
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
 		m.numtriangles = mesh->numtriangles;
@@ -1168,7 +1168,7 @@ static void RSurfShader_Wall_Pass_Fog(msurface_t *surf)
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_TripleTexCombine(msurface_t *surf)
+static void RSurfShader_OpaqueWall_Pass_TripleTexCombine(entity_render_t *ent, msurface_t *surf)
 {
 	int i;
 	surfvertex_t *v;
@@ -1214,7 +1214,7 @@ static void RSurfShader_OpaqueWall_Pass_TripleTexCombine(msurface_t *surf)
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_BaseMTex(msurface_t *surf)
+static void RSurfShader_OpaqueWall_Pass_BaseMTex(entity_render_t *ent, msurface_t *surf)
 {
 	int i;
 	surfvertex_t *v;
@@ -1254,7 +1254,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseMTex(msurface_t *surf)
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_BaseTexture(msurface_t *surf)
+static void RSurfShader_OpaqueWall_Pass_BaseTexture(entity_render_t *ent, msurface_t *surf)
 {
 	int i;
 	surfvertex_t *v;
@@ -1291,7 +1291,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseTexture(msurface_t *surf)
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_BaseLightmap(msurface_t *surf)
+static void RSurfShader_OpaqueWall_Pass_BaseLightmap(entity_render_t *ent, msurface_t *surf)
 {
 	int i;
 	surfvertex_t *v;
@@ -1328,7 +1328,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseLightmap(msurface_t *surf)
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_Light(msurface_t *surf)
+static void RSurfShader_OpaqueWall_Pass_Light(entity_render_t *ent, msurface_t *surf)
 {
 	int i;
 	surfvertex_t *v;
@@ -1338,7 +1338,7 @@ static void RSurfShader_OpaqueWall_Pass_Light(msurface_t *surf)
 
 	if (surf->dlightframe != r_framecount)
 		return;
-	if (currentrenderentity->effects & EF_FULLBRIGHT)
+	if (ent->effects & EF_FULLBRIGHT)
 		return;
 
 	memset(&m, 0, sizeof(m));
@@ -1378,7 +1378,7 @@ static void RSurfShader_OpaqueWall_Pass_Light(msurface_t *surf)
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_Fog(msurface_t *surf)
+static void RSurfShader_OpaqueWall_Pass_Fog(entity_render_t *ent, msurface_t *surf)
 {
 	int i;
 	surfvertex_t *v;
@@ -1412,7 +1412,7 @@ static void RSurfShader_OpaqueWall_Pass_Fog(msurface_t *surf)
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_BaseDetail(msurface_t *surf)
+static void RSurfShader_OpaqueWall_Pass_BaseDetail(entity_render_t *ent, msurface_t *surf)
 {
 	int i;
 	surfvertex_t *v;
@@ -1447,7 +1447,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseDetail(msurface_t *surf)
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_Glow(msurface_t *surf)
+static void RSurfShader_OpaqueWall_Pass_Glow(entity_render_t *ent, msurface_t *surf)
 {
 	int i;
 	surfvertex_t *v;
@@ -1482,54 +1482,54 @@ static void RSurfShader_OpaqueWall_Pass_Glow(msurface_t *surf)
 	}
 }
 
-static void RSurfShader_Wall_Fullbright(msurface_t *firstsurf)
+static void RSurfShader_Wall_Fullbright(entity_render_t *ent, msurface_t *firstsurf)
 {
 	msurface_t *surf;
 	for (surf = firstsurf;surf;surf = surf->chain)
 	{
 		c_brush_polys++;
-		RSurfShader_Wall_Pass_BaseFullbright(surf);
+		RSurfShader_Wall_Pass_BaseFullbright(ent, surf);
 	}
 	for (surf = firstsurf;surf;surf = surf->chain)
 		if (surf->currenttexture->glowtexture)
-			RSurfShader_Wall_Pass_Glow(surf);
+			RSurfShader_Wall_Pass_Glow(ent, surf);
 	if (fogenabled)
 		for (surf = firstsurf;surf;surf = surf->chain)
-			RSurfShader_Wall_Pass_Fog(surf);
+			RSurfShader_Wall_Pass_Fog(ent, surf);
 }
 
-static void RSurfShader_Wall_Vertex(msurface_t *firstsurf)
+static void RSurfShader_Wall_Vertex(entity_render_t *ent, msurface_t *firstsurf)
 {
 	msurface_t *surf;
 	for (surf = firstsurf;surf;surf = surf->chain)
 	{
 		c_brush_polys++;
-		RSurfShader_Wall_Pass_BaseVertex(surf);
+		RSurfShader_Wall_Pass_BaseVertex(ent, surf);
 	}
 	for (surf = firstsurf;surf;surf = surf->chain)
 		if (surf->currenttexture->glowtexture)
-			RSurfShader_Wall_Pass_Glow(surf);
+			RSurfShader_Wall_Pass_Glow(ent, surf);
 	if (fogenabled)
 		for (surf = firstsurf;surf;surf = surf->chain)
-			RSurfShader_Wall_Pass_Fog(surf);
+			RSurfShader_Wall_Pass_Fog(ent, surf);
 }
 
-static void RSurfShader_Wall_Lightmap(msurface_t *firstsurf)
+static void RSurfShader_Wall_Lightmap(entity_render_t *ent, msurface_t *firstsurf)
 {
 	msurface_t *surf;
-	if (r_vertexsurfaces.integer || firstsurf->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1 || currentrenderentity->effects & EF_ADDITIVE)
+	if (r_vertexsurfaces.integer || firstsurf->currenttexture->fogtexture != NULL || ent->alpha != 1 || ent->effects & EF_ADDITIVE)
 	{
 		for (surf = firstsurf;surf;surf = surf->chain)
 		{
 			c_brush_polys++;
-			RSurfShader_Wall_Pass_BaseVertex(surf);
+			RSurfShader_Wall_Pass_BaseVertex(ent, surf);
 		}
 		for (surf = firstsurf;surf;surf = surf->chain)
 			if (surf->currenttexture->glowtexture)
-				RSurfShader_Wall_Pass_Glow(surf);
+				RSurfShader_Wall_Pass_Glow(ent, surf);
 		if (fogenabled)
 			for (surf = firstsurf;surf;surf = surf->chain)
-				RSurfShader_Wall_Pass_Fog(surf);
+				RSurfShader_Wall_Pass_Fog(ent, surf);
 	}
 	else
 	{
@@ -1540,7 +1540,7 @@ static void RSurfShader_Wall_Lightmap(msurface_t *firstsurf)
 				for (surf = firstsurf;surf;surf = surf->chain)
 				{
 					c_brush_polys++;
-					RSurfShader_OpaqueWall_Pass_TripleTexCombine(surf);
+					RSurfShader_OpaqueWall_Pass_TripleTexCombine(ent, surf);
 				}
 			}
 			else
@@ -1548,11 +1548,11 @@ static void RSurfShader_Wall_Lightmap(msurface_t *firstsurf)
 				for (surf = firstsurf;surf;surf = surf->chain)
 				{
 					c_brush_polys++;
-					RSurfShader_OpaqueWall_Pass_BaseMTex(surf);
+					RSurfShader_OpaqueWall_Pass_BaseMTex(ent, surf);
 				}
 				if (r_detailtextures.integer)
 					for (surf = firstsurf;surf;surf = surf->chain)
-						RSurfShader_OpaqueWall_Pass_BaseDetail(surf);
+						RSurfShader_OpaqueWall_Pass_BaseDetail(ent, surf);
 			}
 		}
 		else
@@ -1560,24 +1560,24 @@ static void RSurfShader_Wall_Lightmap(msurface_t *firstsurf)
 			for (surf = firstsurf;surf;surf = surf->chain)
 			{
 				c_brush_polys++;
-				RSurfShader_OpaqueWall_Pass_BaseTexture(surf);
+				RSurfShader_OpaqueWall_Pass_BaseTexture(ent, surf);
 			}
 			for (surf = firstsurf;surf;surf = surf->chain)
-				RSurfShader_OpaqueWall_Pass_BaseLightmap(surf);
+				RSurfShader_OpaqueWall_Pass_BaseLightmap(ent, surf);
 			if (r_detailtextures.integer)
 				for (surf = firstsurf;surf;surf = surf->chain)
-					RSurfShader_OpaqueWall_Pass_BaseDetail(surf);
+					RSurfShader_OpaqueWall_Pass_BaseDetail(ent, surf);
 		}
 		if (!r_dlightmap.integer)
 			for (surf = firstsurf;surf;surf = surf->chain)
 				if (surf->dlightframe == r_framecount)
-					RSurfShader_OpaqueWall_Pass_Light(surf);
+					RSurfShader_OpaqueWall_Pass_Light(ent, surf);
 		for (surf = firstsurf;surf;surf = surf->chain)
 			if (surf->currenttexture->glowtexture)
-				RSurfShader_OpaqueWall_Pass_Glow(surf);
+				RSurfShader_OpaqueWall_Pass_Glow(ent, surf);
 		if (fogenabled)
 			for (surf = firstsurf;surf;surf = surf->chain)
-				RSurfShader_OpaqueWall_Pass_Fog(surf);
+				RSurfShader_OpaqueWall_Pass_Fog(ent, surf);
 	}
 }
 
@@ -1589,7 +1589,7 @@ static void RSurfShader_Wall_Lightmap(msurface_t *firstsurf)
 =============================================================
 */
 
-static void R_SolidWorldNode (void)
+static void R_SolidWorldNode (entity_render_t *ent)
 {
 	if (r_viewleaf->contents != CONTENTS_SOLID)
 	{
@@ -1829,7 +1829,7 @@ Cshader_t *Cshaders[5] =
 	&Cshader_sky
 };
 
-void R_PrepareSurfaces(void)
+void R_PrepareSurfaces(entity_render_t *ent)
 {
 	int i, alttextures, texframe, framecount;
 	texture_t *t;
@@ -1839,8 +1839,8 @@ void R_PrepareSurfaces(void)
 	for (i = 0;i < Cshader_count;i++)
 		Cshaders[i]->chain = NULL;
 
-	model = currentrenderentity->model;
-	alttextures = currentrenderentity->frame != 0;
+	model = ent->model;
+	alttextures = ent->frame != 0;
 	texframe = (int)(cl.time * 5.0f);
 
 	for (i = 0;i < model->nummodelsurfaces;i++)
@@ -1871,7 +1871,7 @@ void R_PrepareSurfaces(void)
 	}
 }
 
-void R_DrawSurfaces (int type)
+void R_DrawSurfaces (entity_render_t *ent, int type)
 {
 	int			i;
 	Cshader_t	*shader;
@@ -1880,11 +1880,11 @@ void R_DrawSurfaces (int type)
 	{
 		shader = Cshaders[i];
 		if (shader->chain && shader->shaderfunc[type])
-			shader->shaderfunc[type](shader->chain);
+			shader->shaderfunc[type](ent, shader->chain);
 	}
 }
 
-void R_DrawPortals(void)
+void R_DrawPortals(entity_render_t *ent)
 {
 	int drawportals, i;
 	float *v;
@@ -1933,7 +1933,7 @@ void R_DrawPortals(void)
 	}
 }
 
-void R_SetupForBModelRendering(void)
+void R_SetupForBModelRendering(entity_render_t *ent)
 {
 	int			i;
 	msurface_t	*surf;
@@ -1943,9 +1943,9 @@ void R_SetupForBModelRendering(void)
 	// because bmodels can be reused, we have to decide which things to render
 	// from scratch every time
 
-	model = currentrenderentity->model;
+	model = ent->model;
 
-	softwaretransformforentity (currentrenderentity);
+	softwaretransformforentity (ent);
 	softwareuntransform(r_origin, modelorg);
 
 	for (i = 0;i < model->nummodelsurfaces;i++)
@@ -1962,53 +1962,51 @@ void R_SetupForBModelRendering(void)
 	}
 }
 
-void R_SetupForWorldRendering(void)
+void R_SetupForWorldRendering(entity_render_t *ent)
 {
 	// there is only one instance of the world, but it can be rendered in
 	// multiple stages
-
-	currentrenderentity = &cl_entities[0].render;
 	softwaretransformidentity();
 }
 
-static void R_SurfMarkLights (void)
+static void R_SurfMarkLights (entity_render_t *ent)
 {
 	int			i;
 	msurface_t	*surf;
 
 	if (r_dynamic.integer)
-		R_MarkLights();
+		R_MarkLights(ent);
 
 	if (!r_vertexsurfaces.integer)
 	{
-		for (i = 0;i < currentrenderentity->model->nummodelsurfaces;i++)
+		for (i = 0;i < ent->model->nummodelsurfaces;i++)
 		{
-			surf = currentrenderentity->model->modelsortedsurfaces[i];
+			surf = ent->model->modelsortedsurfaces[i];
 			if (surf->visframe == r_framecount && surf->lightmaptexture != NULL)
 			{
 				if (surf->cached_dlight
 				 || surf->cached_ambient != r_ambient.value
 				 || surf->cached_lightscalebit != lightscalebit)
-					R_BuildLightMap(surf, false); // base lighting changed
+					R_BuildLightMap(ent, surf, false); // base lighting changed
 				else if (r_dynamic.integer)
 				{
 					if  (surf->styles[0] != 255 && (d_lightstylevalue[surf->styles[0]] != surf->cached_light[0]
 					 || (surf->styles[1] != 255 && (d_lightstylevalue[surf->styles[1]] != surf->cached_light[1]
 					 || (surf->styles[2] != 255 && (d_lightstylevalue[surf->styles[2]] != surf->cached_light[2]
 					 || (surf->styles[3] != 255 && (d_lightstylevalue[surf->styles[3]] != surf->cached_light[3]))))))))
-						R_BuildLightMap(surf, false); // base lighting changed
+						R_BuildLightMap(ent, surf, false); // base lighting changed
 					else if (surf->dlightframe == r_framecount && r_dlightmap.integer)
-						R_BuildLightMap(surf, true); // only dlights
+						R_BuildLightMap(ent, surf, true); // only dlights
 				}
 			}
 		}
 	}
 }
 
-void R_MarkWorldLights(void)
+void R_MarkWorldLights(entity_render_t *ent)
 {
-	R_SetupForWorldRendering();
-	R_SurfMarkLights();
+	R_SetupForWorldRendering(ent);
+	R_SurfMarkLights(ent);
 }
 
 /*
@@ -2016,14 +2014,14 @@ void R_MarkWorldLights(void)
 R_DrawWorld
 =============
 */
-void R_DrawWorld (void)
+void R_DrawWorld (entity_render_t *ent)
 {
-	R_SetupForWorldRendering();
+	R_SetupForWorldRendering(ent);
 
 	if (r_viewleaf->contents == CONTENTS_SOLID || r_novis.integer || r_viewleaf->compressed_vis == NULL)
-		R_SolidWorldNode ();
+		R_SolidWorldNode (ent);
 	else
-		R_PVSWorldNode ();
+		R_PVSWorldNode (ent);
 }
 
 /*
@@ -2031,30 +2029,30 @@ void R_DrawWorld (void)
 R_DrawBrushModel
 =================
 */
-void R_DrawBrushModelSky (void)
+void R_DrawBrushModelSky (entity_render_t *ent)
 {
-	R_SetupForBModelRendering();
+	R_SetupForBModelRendering(ent);
 
-	R_PrepareSurfaces();
-	R_DrawSurfaces(SHADERSTAGE_SKY);
+	R_PrepareSurfaces(ent);
+	R_DrawSurfaces(ent, SHADERSTAGE_SKY);
 }
 
-void R_DrawBrushModelNormal (void)
+void R_DrawBrushModelNormal (entity_render_t *ent)
 {
 	c_bmodels++;
 
 	// have to flush queue because of possible lightmap reuse
 	R_Mesh_Render();
 
-	R_SetupForBModelRendering();
+	R_SetupForBModelRendering(ent);
 
-	R_SurfMarkLights();
+	R_SurfMarkLights(ent);
 
-	R_PrepareSurfaces();
+	R_PrepareSurfaces(ent);
 
 	if (!skyrendermasked)
-		R_DrawSurfaces(SHADERSTAGE_SKY);
-	R_DrawSurfaces(SHADERSTAGE_NORMAL);
+		R_DrawSurfaces(ent, SHADERSTAGE_SKY);
+	R_DrawSurfaces(ent, SHADERSTAGE_NORMAL);
 }
 
 static void gl_surf_start(void)
