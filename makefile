@@ -43,7 +43,7 @@ CLIENTOBJECTS=	cgame.o cgamevm.o chase.o cl_collision.o cl_demo.o cl_input.o \
 		jpeg.o keys.o menu.o meshqueue.o r_crosshairs.o r_explosion.o \
 		r_explosion.o r_lerpanim.o r_light.o r_modules.o r_sky.o \
 		r_sprites.o sbar.o ui.o vid_shared.o view.o wavefile.o \
-		r_shadow.c
+		r_shadow.o
 SERVEROBJECTS=	pr_cmds.o pr_edict.o pr_exec.o sv_light.o sv_main.o sv_move.o \
 		sv_phys.o sv_user.o
 SHAREDOBJECTS=	builddate.o cmd.o collision.o common.o crc.o cvar.o \
@@ -54,7 +54,7 @@ SHAREDOBJECTS=	builddate.o cmd.o collision.o common.o crc.o cvar.o \
 		sys_shared.o world.o wad.o zone.o
 
 OBJ_COMMON= $(CLIENTOBJECTS) $(SERVEROBJECTS) $(SHAREDOBJECTS)
-OBJ_GLX= vid_glx.c $(OBJ_CD) $(OBJ_SND)
+OBJ_GLX= vid_glx.o $(OBJ_CD) $(OBJ_SND)
 OBJ_DED= vid_null.o cd_null.o snd_null.o
 
 
