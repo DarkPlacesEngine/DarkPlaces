@@ -226,7 +226,7 @@ extern cvar_t r_farclip;
 void CL_ParseEntityLump(char *entdata)
 {
 	char *data;
-	char key[128], value[1024];
+	char key[128], value[4096];
 	char wadname[128];
 	int i, j, k;
 	FOG_clear(); // LordHavoc: no fog until set
@@ -282,12 +282,12 @@ void CL_ParseEntityLump(char *entdata)
 		else if (!strcmp("wad", key)) // for HalfLife maps
 		{
 			j = 0;
-			for (i = 0;i < 128;i++)
+			for (i = 0;i < 4096;i++)
 				if (value[i] != ';' && value[i] != '\\' && value[i] != '/' && value[i] != ':')
 					break;
 			if (value[i])
 			{
-				for (;i < 128;i++)
+				for (;i < 4096;i++)
 				{
 					// ignore path - the \\ check is for HalfLife... stupid windoze 'programmers'...
 					if (value[i] == '\\' || value[i] == '/' || value[i] == ':')
@@ -298,7 +298,7 @@ void CL_ParseEntityLump(char *entdata)
 						value[i] = 0;
 						strcpy(wadname, "textures/");
 						strcat(wadname, &value[j]);
-						W_LoadTextureWadFile (wadname, FALSE);
+						W_LoadTextureWadFile (wadname, false);
 						j = i+1;
 						if (!k)
 							break;

@@ -160,27 +160,31 @@ void Mod_LoadTextures (lump_t *l)
 		tx->height = mt->height;
 		for (j=0 ; j<MIPLEVELS ; j++)
 			tx->offsets[j] = 0;
-		freeimage = TRUE;
+		freeimage = true;
+		transparent = true;
+		fullbrights = false;
 		bytesperpixel = 4;
-		fullbrights = FALSE;
-		transparent = TRUE;
-		data = loadimagepixels(tx->name, FALSE, 0, 0); //tx->width, tx->height);
+		data = loadimagepixels(tx->name, false, 0, 0); //tx->width, tx->height);
 		if (!data) // no external texture found
 		{
-			freeimage = FALSE;
-			transparent = FALSE;
-			bytesperpixel = 1;
-			if (mt->offsets[0]) // texture included
+			if (hlbsp)
 			{
-				data = (byte *)((int) mt + mt->offsets[0]);
-				if (hlbsp)
+				if (mt->offsets[0]) // texture included
 				{
+					freeimage = true;
+					transparent = true;
+					bytesperpixel = 4;
+					data = W_ConvertWAD3Texture(mt);
+					tx->width = image_width;
+					tx->height = image_height;
+					/*
 					byte *in, *out, *pal;
 //					int palsize;
 					int d, p;
 					bytesperpixel = 4;
-					freeimage = TRUE;
-					in = data;
+					freeimage = true;
+					transparent = false;
+					in = (byte *)((int) mt + mt->offsets[0]);
 					data = out = qmalloc(mt->width * mt->height * 4);
 					pal = in + (((mt->width * mt->height) * 85) >> 6);
 //					palsize = pal[1] * 0x100 + pal[0];
@@ -193,7 +197,7 @@ void Mod_LoadTextures (lump_t *l)
 						if (mt->name[0] == '{' && p == 255)
 						{
 							out[0] = out[1] = out[2] = out[3] = 0;
-							transparent = TRUE;
+							transparent = true;
 						}
 						else
 						{
@@ -205,31 +209,61 @@ void Mod_LoadTextures (lump_t *l)
 						}
 						out += 4;
 					}
+					*/
 				}
-				else
+				if (!data)
 				{
+					freeimage = true;
+					transparent = true;
+					bytesperpixel = 4;
+					data = W_GetTexture(mt->name);
+					tx->width = image_width;
+					tx->height = image_height;
+				}
+				if (!data)
+				{
+					freeimage = false;
+					transparent = false;
+					bytesperpixel = 1;
+					data = (byte *)((int) r_notexture_mip + r_notexture_mip->offsets[0]);
+					tx->width = tx->height = 16;
+				}
+			}
+			else
+			{
+				if (mt->offsets[0]) // texture included
+				{
+					freeimage = false;
+					transparent = false;
+					bytesperpixel = 1;
+					data = (byte *)((int) mt + mt->offsets[0]);
+					tx->width = mt->width;
+					tx->height = mt->height;
 					if (r_fullbrights.value && tx->name[0] != '*')
 					{
 						for (j = 0;j < tx->width*tx->height;j++)
 						{
 							if (data[j] >= 224) // fullbright
 							{
-								fullbrights = TRUE;
+								fullbrights = true;
 								break;
 							}
 						}
 					}
 				}
-			}
-			else // no texture, and no external replacement texture was found
-			{
-				tx->width = tx->height = 16;
-				data = (byte *)((int) r_notexture_mip + r_notexture_mip->offsets[0]);
+				else // no texture, and no external replacement texture was found
+				{
+					freeimage = false;
+					transparent = false;
+					bytesperpixel = 1;
+					data = (byte *)((int) r_notexture_mip + r_notexture_mip->offsets[0]);
+					tx->width = tx->height = 16;
+				}
 			}
 		}
 		if (!hlbsp && !strncmp(tx->name,"sky",3) && tx->width == 256 && tx->height == 128) // LordHavoc: HL sky textures are entirely unrelated
 		{
-			tx->transparent = FALSE;
+			tx->transparent = false;
 			R_InitSky (data, bytesperpixel);
 		}
 		else
@@ -597,7 +631,7 @@ void Mod_LoadTexinfo (lump_t *l)
 		{
 			out->texture = r_notexture_mip;	// checkerboard texture
 			out->flags = 0;
-			out->texture->transparent = FALSE;
+			out->texture->transparent = false;
 		}
 		else
 		{
@@ -608,7 +642,7 @@ void Mod_LoadTexinfo (lump_t *l)
 			{
 				out->texture = r_notexture_mip; // texture not found
 				out->flags = 0;
-				out->texture->transparent = FALSE;
+				out->texture->transparent = false;
 			}
 		}
 	}

@@ -80,9 +80,9 @@ cvar_t	r_novis = {"r_novis","0"};
 cvar_t	r_waterripple = {"r_waterripple","0"};
 cvar_t	r_fullbrights = {"r_fullbrights", "1"};
 
-cvar_t	contrast = {"contrast", "1.0", TRUE}; // LordHavoc: a method of operating system independent color correction
-cvar_t	brightness = {"brightness", "1.0", TRUE}; // LordHavoc: a method of operating system independent color correction
-cvar_t	gl_lightmode = {"gl_lightmode", "1", TRUE}; // LordHavoc: overbright lighting
+cvar_t	contrast = {"contrast", "1.0", true}; // LordHavoc: a method of operating system independent color correction
+cvar_t	brightness = {"brightness", "1.0", true}; // LordHavoc: a method of operating system independent color correction
+cvar_t	gl_lightmode = {"gl_lightmode", "1", true}; // LordHavoc: overbright lighting
 //cvar_t	r_dynamicbothsides = {"r_dynamicbothsides", "1"}; // LordHavoc: can disable dynamic lighting of backfaces, but quake maps are weird so it doesn't always work right...
 cvar_t	r_farclip = {"r_farclip", "6144"};
 
@@ -413,7 +413,7 @@ void R_DrawViewModel (void)
 
 	// hack the depth range to prevent view model from poking into walls
 	glDepthRange (gldepthmin, gldepthmin + 0.3*(gldepthmax-gldepthmin));
-	R_DrawAliasModel (currententity, FALSE, modelalpha, currententity->model, currententity->frame, currententity->skinnum, currententity->origin, currententity->angles, currententity->effects, currententity->model->flags, currententity->colormap);
+	R_DrawAliasModel (currententity, false, modelalpha, currententity->model, currententity->frame, currententity->skinnum, currententity->origin, currententity->angles, currententity->effects, currententity->model->flags, currententity->colormap);
 	glDepthRange (gldepthmin, gldepthmax);
 }
 

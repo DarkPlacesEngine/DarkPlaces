@@ -428,7 +428,7 @@ byte* loadimagepixels (char* filename, qboolean complain, int matchwidth, int ma
 {
 	FILE	*f;
 	char	basename[256], name[256];
-	byte	*image_rgba, *c;
+	byte	*c;
 	Image_StripImageExtension(filename, basename); // strip .tga, .pcx and .lmp extensions to allow replacement by other types
 	// replace *'s with #, so commandline utils don't get confused when dealing with the external files
 	for (c = basename;*c;c++)
@@ -454,11 +454,6 @@ byte* loadimagepixels (char* filename, qboolean complain, int matchwidth, int ma
 	COM_FOpenFile (name, &f, true);
 	if (f)
 		return LoadLMP (f, matchwidth, matchheight);
-	if ((image_rgba = W_GetTexture(basename, matchwidth, matchheight)))
-		return image_rgba;
-	COM_StripExtension(filename, basename); // do it again with a * this time
-	if ((image_rgba = W_GetTexture(basename, matchwidth, matchheight)))
-		return image_rgba;
 	if (complain)
 		Con_Printf ("Couldn't load %s.tga or .pcx\n", filename);
 	return NULL;

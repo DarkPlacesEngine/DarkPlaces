@@ -54,7 +54,7 @@ void InitConProc (HANDLE hFile, HANDLE heventParent, HANDLE heventChild)
 	heventChildSend = heventChild;
 
 // so we'll know when to go away.
-	heventDone = CreateEvent (NULL, FALSE, FALSE, NULL);
+	heventDone = CreateEvent (NULL, false, false, NULL);
 
 	if (!heventDone)
 	{
@@ -102,7 +102,7 @@ DWORD RequestProc (DWORD dwNichts)
 
 	while (1)
 	{
-		dwRet = WaitForMultipleObjects (2, heventWait, FALSE, INFINITE);
+		dwRet = WaitForMultipleObjects (2, heventWait, false, INFINITE);
 
 	// heventDone fired, so we're exiting.
 		if (dwRet == WAIT_OBJECT_0 + 1)	
@@ -231,7 +231,7 @@ BOOL WriteText (LPCTSTR szText)
 		upper = toupper(*sz);
 
 		rec.EventType = KEY_EVENT;
-		rec.Event.KeyEvent.bKeyDown = TRUE;
+		rec.Event.KeyEvent.bKeyDown = true;
 		rec.Event.KeyEvent.wRepeatCount = 1;
 		rec.Event.KeyEvent.wVirtualKeyCode = upper;
 		rec.Event.KeyEvent.wVirtualScanCode = CharToCode (*sz);
@@ -245,7 +245,7 @@ BOOL WriteText (LPCTSTR szText)
 			1,
 			&dwWritten);
 
-		rec.Event.KeyEvent.bKeyDown = FALSE;
+		rec.Event.KeyEvent.bKeyDown = false;
 
 		WriteConsoleInput(
 			hStdin,
@@ -256,7 +256,7 @@ BOOL WriteText (LPCTSTR szText)
 		sz++;
 	}
 
-	return TRUE;
+	return true;
 }
 
 
@@ -299,7 +299,7 @@ BOOL SetConsoleCXCY(HANDLE hStdout, int cx, int cy)
 		cx = coordMax.X;
  
 	if (!GetConsoleScreenBufferInfo(hStdout, &info))
-		return FALSE;
+		return false;
  
 // height
     info.srWindow.Left = 0;         
@@ -309,27 +309,27 @@ BOOL SetConsoleCXCY(HANDLE hStdout, int cx, int cy)
  
 	if (cy < info.dwSize.Y)
 	{
-		if (!SetConsoleWindowInfo(hStdout, TRUE, &info.srWindow))
-			return FALSE;
+		if (!SetConsoleWindowInfo(hStdout, true, &info.srWindow))
+			return false;
  
 		info.dwSize.Y = cy;
  
 		if (!SetConsoleScreenBufferSize(hStdout, info.dwSize))
-			return FALSE;
+			return false;
     }
     else if (cy > info.dwSize.Y)
     {
 		info.dwSize.Y = cy;
  
 		if (!SetConsoleScreenBufferSize(hStdout, info.dwSize))
-			return FALSE;
+			return false;
  
-		if (!SetConsoleWindowInfo(hStdout, TRUE, &info.srWindow))
-			return FALSE;
+		if (!SetConsoleWindowInfo(hStdout, true, &info.srWindow))
+			return false;
     }
  
 	if (!GetConsoleScreenBufferInfo(hStdout, &info))
-		return FALSE;
+		return false;
  
 // width
 	info.srWindow.Left = 0;         
@@ -339,25 +339,25 @@ BOOL SetConsoleCXCY(HANDLE hStdout, int cx, int cy)
  
 	if (cx < info.dwSize.X)
 	{
-		if (!SetConsoleWindowInfo(hStdout, TRUE, &info.srWindow))
-			return FALSE;
+		if (!SetConsoleWindowInfo(hStdout, true, &info.srWindow))
+			return false;
  
 		info.dwSize.X = cx;
     
 		if (!SetConsoleScreenBufferSize(hStdout, info.dwSize))
-			return FALSE;
+			return false;
 	}
 	else if (cx > info.dwSize.X)
 	{
 		info.dwSize.X = cx;
  
 		if (!SetConsoleScreenBufferSize(hStdout, info.dwSize))
-			return FALSE;
+			return false;
  
-		if (!SetConsoleWindowInfo(hStdout, TRUE, &info.srWindow))
-			return FALSE;
+		if (!SetConsoleWindowInfo(hStdout, true, &info.srWindow))
+			return false;
 	}
  
-	return TRUE;
+	return true;
 }
      
