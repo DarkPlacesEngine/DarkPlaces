@@ -50,10 +50,12 @@ void Chase_Update (void)
 	camback = bound(0, chase_back.value, 128);
 	if (chase_back.value != camback)
 		Cvar_SetValueQuick(&chase_back, camback);
-	// this + 22 is to match view_ofs for compatibility with older versions
-	camup = bound(-48, chase_up.value, 96) + 22;
+	camup = bound(-48, chase_up.value, 96);
 	if (chase_up.value != camup)
 		Cvar_SetValueQuick(&chase_up, camup);
+
+	// this + 22 is to match view_ofs for compatibility with older versions
+	camup += 22;
 
 	VectorCopy(cl.viewangles, projectangles);
 	if (gamemode == GAME_GOODVSBAD2 && chase_stevie.integer)
