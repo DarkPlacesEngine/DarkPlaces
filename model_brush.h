@@ -68,7 +68,6 @@ mplane_t;
 #define SURF_DRAWNOALPHA 0x100
 #define SURF_DRAWFULLBRIGHT 0x200
 #define SURF_LIGHTBOTHSIDES 0x400
-#define SURF_CLIPSOLID 0x800 // this polygon can obscure other polygons
 #define SURF_SHADOWCAST 0x1000 // this polygon can cast stencil shadows
 #define SURF_SHADOWLIGHT 0x2000 // this polygon can be lit by stencil shadowing
 #define SURF_WATERALPHA 0x4000 // this polygon's alpha is modulated by r_wateralpha
@@ -221,6 +220,8 @@ typedef struct msurface_s
 
 	// neighboring surfaces (one per poly_numverts)
 	struct msurface_s **neighborsurfaces;
+	// currently used only for generating static shadow volumes
+	int castshadow;
 
 	// these are regenerated every frame
 	// lighting info
@@ -279,8 +280,12 @@ typedef struct mleaf_s
 	vec3_t maxs;
 
 // leaf specific
-	// potentially visible if current (r_pvsframecount)
+	// next leaf in pvschain
+	struct mleaf_s *pvschain;
+	// potentially visible if current (model->pvsframecount)
 	int pvsframe;
+	// visible if marked current (r_framecount)
+	int visframe;
 	// used by certain worldnode variants to avoid processing the same leaf twice in a frame
 	int worldnodeframe;
 	// used by polygon-through-portals visibility checker

@@ -745,561 +745,20 @@ void Mod_LoadLightList(void)
 	}
 }
 
-
-
-/*
-// svbspmesh_t is in model_brush.h
-
-typedef struct svbsppolygon_s
-{
-	struct svbsppolygon_s *next;
-	int numverts;
-	float *verts;
-	float normal[3], dist;
-}
-svbsppolygon_t;
-
-typedef struct svbspnode_s
-{
-	// true if this is a leaf (has no children), not a node
-	int isleaf;
-	// (shared) parent node
-	struct svbspnode_s *parent;
-	// (leaf) dark or lit leaf
-	int dark;
-	// (leaf) polygons bounding this leaf
-	svbsppolygon_t *polygons;
-	// (node) children
-	struct svbspnode_s *children[2];
-	// (node) splitting plane
-	float normal[3], dist;
-}
-svbspnode_t;
-
-svbspnode_t *Mod_SVBSP_AllocNode(svbspnode_t *parent, svbspnode_t *child0, svbspnode_t *child1, float *normal, float dist)
-{
-	svbspnode_t *node;
-	node = Mem_Alloc(loadmodel->mempool, sizeof(svbspnode_t));
-	node->parent = parent;
-	node->children[0] = child0;
-	node->children[1] = child1;
-	VectorCopy(normal, node->normal);
-	node->dist = dist;
-	return node;
-}
-
-svbspnode_t *Mod_SVBSP_AllocLeaf(svbspnode_t *parent, int dark)
-{
-	svbspnode_t *leaf;
-	leaf = Mem_Alloc(loadmodel->mempool, sizeof(svbspnode_t));
-	leaf->isleaf = true;
-	leaf->parent = parent;
-	leaf->dark = dark;
-	return leaf;
-}
-
-svbspnode_t *Mod_SVBSP_NewTree(void)
-{
-	return Mod_SVBSP_AllocLeaf(NULL, false);
-}
-
-void Mod_SVBSP_FreeTree(svbspnode_t *node)
-{
-	if (!node->isleaf)
-	{
-		Mod_SVBSP_FreeTree(node->children[0]);
-		Mod_SVBSP_FreeTree(node->children[1]);
-	}
-	Mem_Free(node);
-}
-
-void Mod_SVBSP_RecursiveAddPolygon(svbspnode_t *node, int numverts, float *verts, float *normal, float dist, int constructmode)
-{
-	int i, j, numvertsfront, numvertsback, maxverts, counts[3];
-	float *vertsfront, *vertsback, *v, d, temp[3];
-	float dists[4096];
-	qbyte sides[4096];
-	svbsppolygon_t *poly;
-	if (node->isleaf)
-	{
-		if (constructmode == 0)
-		{
-			// construct tree structure
-			node->isleaf = false;
-			node->children[0] = Mod_SVBSP_AllocLeaf(node, false);
-			node->children[1] = Mod_SVBSP_AllocLeaf(node, false);
-			VectorCopy(normal, node->normal);
-			node->dist = dist;
-		}
-		else if (constructmode == 1)
-		{
-			// mark dark leafs
-			node->dark = true;
-		}
-		else
-		{
-			// link polygons into lit leafs only (this is the optimization)
-			if (!node->dark)
-			{
-				poly = Mem_Alloc(loadmodel->mempool, sizeof(svbsppolygon_t) + numverts * sizeof(float[3]));
-				poly->numverts = numverts;
-				poly->verts = (float *)(poly + 1);
-				VectorCopy(normal, poly->normal);
-				poly->dist = dist;
-				memcpy(poly->verts, verts, numverts * sizeof(float[3]));
-				poly->next = node->polygons;
-				node->polygons = poly;
-			}
-		}
-	}
-	else
-	{
-		counts[SIDE_FRONT] = counts[SIDE_BACK] = counts[SIDE_ON] = 0;
-		for (i = 0, v = verts;i < numverts;i++, v += 3)
-		{
-			dists[i] = DotProduct(v, node->normal) - node->dist;
-			if (dists[i] >= 0.1)
-				sides[i] = SIDE_FRONT;
-			else if (dists[i] <= -0.1)
-				sides[i] = SIDE_BACK;
-			else
-				sides[i] = SIDE_ON;
-			counts[sides[i]]++;
-		}
-		if (counts[SIDE_FRONT] && counts[SIDE_BACK])
-		{
-			// some front, some back...  sliced
-			numvertsfront = 0;
-			numvertsback = 0;
-			// this is excessive, but nice for safety...
-			maxverts = numverts + 4;
-			vertsfront = Mem_Alloc(loadmodel->mempool, maxverts * sizeof(float[3]));
-			vertsback = Mem_Alloc(loadmodel->mempool, maxverts * sizeof(float[3]));
-			for (i = 0, j = numverts - 1;i < numverts;j = i, i++)
-			{
-				if (sides[j] == SIDE_FRONT)
-				{
-					VectorCopy(&verts[j * 3], &vertsfront[numvertsfront * 3]);
-					numvertsfront++;
-					if (sides[i] == SIDE_BACK)
-					{
-						d = dists[j] / (dists[j] - dists[i]);
-						VectorSubtract(&verts[i * 3], &verts[j * 3], temp);
-						VectorMA(&verts[j * 3], d, temp, temp);
-						VectorCopy(temp, &vertsfront[numvertsfront * 3]);
-						VectorCopy(temp, &vertsback[numvertsback * 3]);
-						numvertsfront++;
-						numvertsback++;
-					}
-				}
-				else if (sides[j] == SIDE_BACK)
-				{
-					VectorCopy(&verts[j * 3], &vertsback[numvertsback * 3]);
-					numvertsback++;
-					if (sides[i] == SIDE_FRONT)
-					{
-						d = dists[j] / (dists[j] - dists[i]);
-						VectorSubtract(&verts[i * 3], &verts[j * 3], temp);
-						VectorMA(&verts[j * 3], d, temp, temp);
-						VectorCopy(temp, &vertsfront[numvertsfront * 3]);
-						VectorCopy(temp, &vertsback[numvertsback * 3]);
-						numvertsfront++;
-						numvertsback++;
-					}
-				}
-				else
-				{
-					VectorCopy(&verts[j * 3], &vertsfront[numvertsfront * 3]);
-					VectorCopy(&verts[j * 3], &vertsback[numvertsback * 3]);
-					numvertsfront++;
-					numvertsback++;
-				}
-			}
-			Mod_SVBSP_RecursiveAddPolygon(node->children[1], numvertsfront, vertsfront, normal, dist, constructmode);
-			Mod_SVBSP_RecursiveAddPolygon(node->children[0], numvertsback, vertsback, normal, dist, constructmode);
-			Mem_Free(vertsfront);
-			Mem_Free(vertsback);
-		}
-		else if (counts[SIDE_BACK])
-			Mod_SVBSP_RecursiveAddPolygon(node->children[0], numverts, verts, normal, dist, constructmode);
-		else if (counts[SIDE_FRONT])
-			Mod_SVBSP_RecursiveAddPolygon(node->children[1], numverts, verts, normal, dist, constructmode);
-		else
-		{
-			// mode 0 is constructing tree, don't make unnecessary splits
-			if (constructmode == 1)
-			{
-				// marking dark leafs
-				// send it down the side it is not facing
-				Mod_SVBSP_RecursiveAddPolygon(node->children[DotProduct(node->normal, normal) < 0], numverts, verts, normal, dist, constructmode);
-			}
-			else if (constructmode == 2)
-			{
-				// linking polygons into lit leafs only
-				// send it down the side it is facing
-				Mod_SVBSP_RecursiveAddPolygon(node->children[DotProduct(node->normal, normal) >= 0], numverts, verts, normal, dist, constructmode);
-			}
-		}
-	}
-}
-
-int svbsp_count_nodes;
-int svbsp_count_leafs;
-int svbsp_count_polygons;
-int svbsp_count_darkleafs;
-int svbsp_count_originalpolygons;
-int svbsp_count_meshs;
-int svbsp_count_triangles;
-int svbsp_count_vertices;
-
-void Mod_SVBSP_AddPolygon(svbspnode_t *root, int numverts, float *verts, int constructmode, float *test, int linenumber)
-{
-	int i;
-	float normal[3], dist, dir0[3], dir1[3], *v0, *v1, *v2;
-	svbsp_count_originalpolygons++;
-	for (i = 0, v0 = verts + (numverts - 2) * 3, v1 = verts + (numverts - 1) * 3, v2 = verts;i < numverts;i++, v0 = v1, v1 = v2, v2 += 3)
-	{
-		VectorSubtract(v0, v1, dir0);
-		VectorSubtract(v2, v1, dir1);
-		CrossProduct(dir0, dir1, normal);
-		if (DotProduct(normal, normal) >= 0.1)
-			break;
-	}
-	if (i == numverts)
-		return;
-	VectorNormalize(normal);
-	dist = DotProduct(verts, normal);
-	if (test && DotProduct(test, normal) > dist + 0.1)
-		Con_Printf("%i %f %f %f %f : %f %f %f %f\n", linenumber, normal[0], normal[1], normal[2], dist, test[0], test[1], test[2], DotProduct(test, normal));
-	Mod_SVBSP_RecursiveAddPolygon(root, numverts, verts, normal, dist, constructmode);
-}
-
-void Mod_SVBSP_RecursiveGatherStats(svbspnode_t *node)
-{
-	svbsppolygon_t *poly;
-	for (poly = node->polygons;poly;poly = poly->next)
-		svbsp_count_polygons++;
-	if (node->isleaf)
-	{
-		svbsp_count_leafs++;
-		if (node->dark)
-			svbsp_count_darkleafs++;
-	}
-	else
-	{
-		svbsp_count_nodes++;
-		Mod_SVBSP_RecursiveGatherStats(node->children[0]);
-		Mod_SVBSP_RecursiveGatherStats(node->children[1]);
-	}
-}
-
-svbspmesh_t *Mod_SVBSP_AllocMesh(int maxverts)
-{
-	svbspmesh_t *mesh;
-	mesh = Mem_Alloc(loadmodel->mempool, sizeof(svbspmesh_t) + maxverts * sizeof(float[4]) + maxverts * sizeof(int[3]));
-	mesh->maxverts = maxverts;
-	mesh->maxtriangles = maxverts;
-	mesh->numverts = 0;
-	mesh->numtriangles = 0;
-	mesh->verts = (float *)(mesh + 1);
-	mesh->elements = (int *)(mesh->verts + mesh->maxverts * 4);
-	return mesh;
-}
-
-svbspmesh_t *Mod_SVBSP_ReAllocMesh(svbspmesh_t *oldmesh)
-{
-	svbspmesh_t *newmesh;
-	newmesh = Mem_Alloc(loadmodel->mempool, sizeof(svbspmesh_t) + oldmesh->numverts * sizeof(float[4]) + oldmesh->numtriangles * sizeof(int[3]));
-	newmesh->maxverts = newmesh->numverts = oldmesh->numverts;
-	newmesh->maxtriangles = newmesh->numtriangles = oldmesh->numtriangles;
-	newmesh->verts = (float *)(newmesh + 1);
-	newmesh->elements = (int *)(newmesh->verts + newmesh->maxverts * 4);
-	memcpy(newmesh->verts, oldmesh->verts, newmesh->numverts * sizeof(float[4]));
-	memcpy(newmesh->elements, oldmesh->elements, newmesh->numtriangles * sizeof(int[3]));
-	return newmesh;
-}
-
-void Mod_SVBSP_RecursiveBuildTriangleMeshs(svbspmesh_t *firstmesh, svbspnode_t *node)
-{
-	svbsppolygon_t *poly;
-	svbspmesh_t *mesh;
-	int i, j, k;
-	float *v, *m, temp[3];
-	if (node->isleaf)
-	{
-		for (poly = node->polygons;poly;poly = poly->next)
-		{
-			mesh = firstmesh;
-			while (poly->numverts + mesh->numverts > mesh->maxverts || (poly->numverts - 2) + mesh->numtriangles > mesh->maxtriangles)
-			{
-				if (mesh->next == NULL)
-					mesh->next = Mod_SVBSP_AllocMesh(max(1000, poly->numverts));
-				mesh = mesh->next;
-			}
-			for (i = 0, v = poly->verts;i < poly->numverts - 2;i++, v += 3)
-			{
-				for (k = 0;k < 3;k++)
-				{
-					if (k == 0)
-						v = poly->verts;
-					else if (k == 1)
-						v = poly->verts + (i + 1) * 3;
-					else if (k == 2)
-						v = poly->verts + (i + 2) * 3;
-					for (j = 0, m = mesh->verts;j < mesh->numverts;j++, m += 4)
-					{
-						VectorSubtract(v, m, temp);
-						if (DotProduct(temp, temp) < 0.1)
-							break;
-					}
-					if (j == mesh->numverts)
-					{
-						mesh->numverts++;
-						VectorCopy(v, m);
-					}
-					mesh->elements[mesh->numtriangles * 3 + k] = j;
-				}
-				mesh->numtriangles++;
-			}
-		}
-	}
-	else
-	{
-		Mod_SVBSP_RecursiveBuildTriangleMeshs(firstmesh, node->children[0]);
-		Mod_SVBSP_RecursiveBuildTriangleMeshs(firstmesh, node->children[1]);
-	}
-}
-
-svbspmesh_t *Mod_SVBSP_BuildTriangleMeshs(svbspnode_t *root, vec3_t mins, vec3_t maxs)
-{
-	svbspmesh_t *firstmesh, *mesh, *newmesh, *nextmesh;
-	int i;
-	float *v;
-	firstmesh = Mod_SVBSP_AllocMesh(1000);
-	Mod_SVBSP_RecursiveBuildTriangleMeshs(firstmesh, root);
-	// reallocate meshs to conserve space
-	for (mesh = firstmesh, firstmesh = NULL;mesh;mesh = nextmesh)
-	{
-		svbsp_count_meshs++;
-		svbsp_count_triangles += mesh->numtriangles;
-		svbsp_count_vertices += mesh->numverts;
-
-		// calculate bbox
-		if (firstmesh == NULL)
-		{
-			VectorCopy(mesh->verts, mins);
-			VectorCopy(mesh->verts, maxs);
-		}
-		for (i = 0, v = mesh->verts;i < mesh->numverts;i++, v += 4)
-		{
-			if (mins[0] > v[0]) mins[0] = v[0];if (maxs[0] < v[0]) maxs[0] = v[0];
-			if (mins[1] > v[1]) mins[1] = v[1];if (maxs[1] < v[1]) maxs[1] = v[1];
-			if (mins[2] > v[2]) mins[2] = v[2];if (maxs[2] < v[2]) maxs[2] = v[2];
-		}
-
-		nextmesh = mesh->next;
-		newmesh = Mod_SVBSP_ReAllocMesh(mesh);
-		newmesh->next = firstmesh;
-		firstmesh = newmesh;
-		Mem_Free(mesh);
-	}
-	return firstmesh;
-}
-
-void Mod_SVBSP_FreeTriangleMeshs(svbspmesh_t *mesh)
-{
-	svbspmesh_t *nextmesh;
-	for (;mesh;mesh = nextmesh)
-	{
-		nextmesh = mesh->next;
-		Mem_Free(mesh);
-	}
-}
-*/
-
-typedef struct svpolygon_s
-{
-	struct svpolygon_s *next;
-	int maxverts;
-	int numverts;
-	float *verts;
-	float normal[3], dist;
-}
-svpolygon_t;
-
-typedef struct svbrush_s
-{
-	struct svbrush_s *next;
-	svpolygon_t *polygons;
-	vec3_t mins, maxs;
-}
-svbrush_t;
-
-typedef struct svworld_s
-{
-	svbrush_t *brushs;
-}
-svworld_t;
-
-svworld_t *Mod_ShadowBrush_NewWorld(mempool_t *mempool)
-{
-	return Mem_Alloc(mempool, sizeof(svworld_t));
-}
-
-void Mod_ShadowBrush_FreeWorld(svworld_t *world)
-{
-	svbrush_t *brush, *brushnext;
-	svpolygon_t *poly, *polynext;
-	for (brush = world->brushs;brush;brush = brushnext)
-	{
-		brushnext = brush->next;
-		for (poly = brush->polygons;poly;poly = polynext)
-		{
-			polynext = poly->next;
-			Mem_Free(poly);
-		}
-		Mem_Free(brush);
-	}
-	Mem_Free(world);
-}
-
-svbrush_t *Mod_ShadowBrush_BeginBrush(mempool_t *mempool)
-{
-	return Mem_Alloc(mempool, sizeof(svbrush_t));
-}
-
-void Mod_ShadowBrush_AddPolygon(mempool_t *mempool, svbrush_t *brush, int numverts, float *verts)
-{
-	int i;
-	float normal[3], dist, dir0[3], dir1[3], *v0, *v1, *v2;
-	svpolygon_t *poly;
-	for (i = 0, v0 = verts + (numverts - 2) * 3, v1 = verts + (numverts - 1) * 3, v2 = verts;i < numverts;i++, v0 = v1, v1 = v2, v2 += 3)
-	{
-		VectorSubtract(v0, v1, dir0);
-		VectorSubtract(v2, v1, dir1);
-		CrossProduct(dir0, dir1, normal);
-		if (DotProduct(normal, normal) >= 0.1)
-			break;
-	}
-	if (i == numverts)
-		return;
-	VectorNormalize(normal);
-	dist = DotProduct(verts, normal);
-
-	poly = Mem_Alloc(mempool, sizeof(svpolygon_t) + numverts * sizeof(float[3]));
-	poly->numverts = numverts;
-	poly->verts = (float *)(poly + 1);
-	VectorCopy(normal, poly->normal);
-	poly->dist = dist;
-	poly->next = brush->polygons;
-	brush->polygons = poly;
-	memcpy(poly->verts, verts, numverts * sizeof(float[3]));
-}
-
-void Mod_ShadowBrush_AddPolygonI(mempool_t *mempool, svbrush_t *brush, int numverts, float *verts)
-{
-	int i;
-	float normal[3], dist, dir0[3], dir1[3], *v0, *v1, *v2;
-	svpolygon_t *poly;
-	for (i = 0, v0 = verts + (numverts - 2) * 3, v1 = verts + (numverts - 1) * 3, v2 = verts;i < numverts;i++, v0 = v1, v1 = v2, v2 += 3)
-	{
-		VectorSubtract(v0, v1, dir0);
-		VectorSubtract(v2, v1, dir1);
-		CrossProduct(dir0, dir1, normal);
-		if (DotProduct(normal, normal) >= 0.1)
-			break;
-	}
-	if (i == numverts)
-		return;
-	VectorNormalize(normal);
-	dist = DotProduct(verts, normal);
-	VectorNegate(normal, normal);
-	dist = -dist;
-
-	poly = Mem_Alloc(mempool, sizeof(svpolygon_t) + numverts * sizeof(float[3]));
-	poly->numverts = numverts;
-	poly->verts = (float *)(poly + 1);
-	VectorCopy(normal, poly->normal);
-	poly->dist = dist;
-	poly->next = brush->polygons;
-	brush->polygons = poly;
-	for (i = 0, v0 = verts + (numverts - 1) * 3, v1 = poly->verts;i < numverts;i++, v0 -= 3, v1 += 3)
-		VectorCopy(v0, v1);
-}
-
-void Mod_ShadowBrush_EndBrush(svworld_t *world, svbrush_t *brush)
-{
-	int i;
-	float *v;
-	svpolygon_t *poly;
-	if (!brush->polygons)
-	{
-		Mem_Free(brush);
-		return;
-	}
-	brush->next = world->brushs;
-	world->brushs = brush;
-	VectorCopy(brush->polygons->verts, brush->mins);
-	VectorCopy(brush->polygons->verts, brush->maxs);
-	for (poly = brush->polygons;poly;poly = poly->next)
-	{
-		for (i = 0, v = poly->verts;i < poly->numverts;i++, v += 3)
-		{
-			if (brush->mins[0] > v[0]) brush->mins[0] = v[0];if (brush->maxs[0] < v[0]) brush->maxs[0] = v[0];
-			if (brush->mins[1] > v[1]) brush->mins[1] = v[1];if (brush->maxs[1] < v[1]) brush->maxs[1] = v[1];
-			if (brush->mins[2] > v[2]) brush->mins[2] = v[2];if (brush->maxs[2] < v[2]) brush->maxs[2] = v[2];
-		}
-	}
-}
-
-void Mod_ShadowBrush_ProcessWorld(mempool_t *mempool, svworld_t *world)
-{
-	/*
-	for (clipbrush = world->brushs;clipbrush;clipbrush = clipbrush->next)
-	{
-		for (brush = world->brushs;brush;brush = brush->next)
-		{
-			if (brush != clipbrush
-			 && brush->mins[0] <= clipbrush->maxs[0]
-			 && brush->maxs[0] >= clipbrush->mins[0]
-			 && brush->mins[1] <= clipbrush->maxs[1]
-			 && brush->maxs[1] >= clipbrush->mins[1]
-			 && brush->mins[2] <= clipbrush->maxs[2]
-			 && brush->maxs[2] >= clipbrush->mins[2])
-				continue;
-			for (poly = brush->polygons;poly;poly = poly->next)
-			{
-
-			}
-		}
-	}
-	*/
-}
-
-shadowmesh_t *Mod_ShadowBrush_BuildMeshs(mempool_t *mempool, svworld_t *world)
-{
-	shadowmesh_t *mesh;
-	svbrush_t *brush;
-	svpolygon_t *poly;
-	mesh = Mod_ShadowMesh_Begin(mempool);
-	for (brush = world->brushs;brush;brush = brush->next)
-		for (poly = brush->polygons;poly;poly = poly->next)
-			Mod_ShadowMesh_AddPolygon(mempool, mesh, poly->numverts, poly->verts);
-	mesh = Mod_ShadowMesh_Finish(mempool, mesh);
-	return mesh;
-}
-
+static int castshadowcount = 0;
 void Mod_ProcessLightList(void)
 {
-	int j, k, *mark, lnum;
+	int j, k, l, *mark, lnum;
 	mlight_t *e;
 	msurface_t *surf;
 	float dist;
 	mleaf_t *leaf;
 	qbyte *pvs;
+	vec3_t temp;
+	float *v, radius2;
 	for (lnum = 0, e = loadmodel->lights;lnum < loadmodel->numlights;lnum++, e++)
 	{
-		e->cullradius2 = DotProduct(e->light, e->light) / (e->falloff * e->falloff * 8192.0f * 8192.0f);// + 4096.0f;
+		e->cullradius2 = DotProduct(e->light, e->light) / (e->falloff * e->falloff * 8192.0f * 8192.0f * 2.0f * 2.0f);// + 4096.0f;
 		if (e->cullradius2 > 4096.0f * 4096.0f)
 			e->cullradius2 = 4096.0f * 4096.0f;
 		e->cullradius = e->lightradius = sqrt(e->cullradius2);
@@ -1323,7 +782,11 @@ void Mod_ProcessLightList(void)
 					if (surf->flags & SURF_PLANEBACK)
 						dist = -dist;
 					if (dist > 0 && dist < e->cullradius)
-						loadmodel->surfacevisframes[*mark] = -2;
+					{
+						VectorSubtract(e->origin, surf->poly_center, temp);
+						if (DotProduct(temp, temp) - surf->poly_radius2 < e->cullradius2)
+							loadmodel->surfacevisframes[*mark] = -2;
+					}
 				}
 			}
 		}
@@ -1341,11 +804,8 @@ void Mod_ProcessLightList(void)
 				if (loadmodel->surfacevisframes[j] == -2)
 					e->surfaces[e->numsurfaces++] = loadmodel->surfaces + j;
 		}
-#if 1
-		{
 		// find bounding box and sphere of lit surfaces
 		// (these will be used for creating a shape to clip the light)
-		float *v, temp[3], radius2;
 		radius2 = 0;
 		for (j = 0;j < e->numsurfaces;j++)
 		{
@@ -1371,29 +831,21 @@ void Mod_ProcessLightList(void)
 			e->cullradius2 = radius2;
 			e->cullradius = sqrt(e->cullradius2);
 		}
-		}
-#endif
-#if 1
-		e->mins[0] = e->origin[0] - e->cullradius;
-		e->maxs[0] = e->origin[0] + e->cullradius;
-		e->mins[1] = e->origin[1] - e->cullradius;
-		e->maxs[1] = e->origin[1] + e->cullradius;
-		e->mins[2] = e->origin[2] - e->cullradius;
-		e->maxs[2] = e->origin[2] + e->cullradius;
-#endif
-#if 1
+		if (e->mins[0] < e->origin[0] - e->lightradius) e->mins[0] = e->origin[0] - e->lightradius;
+		if (e->maxs[0] > e->origin[0] + e->lightradius) e->maxs[0] = e->origin[0] + e->lightradius;
+		if (e->mins[1] < e->origin[1] - e->lightradius) e->mins[1] = e->origin[1] - e->lightradius;
+		if (e->maxs[1] > e->origin[1] + e->lightradius) e->maxs[1] = e->origin[1] + e->lightradius;
+		if (e->mins[2] < e->origin[2] - e->lightradius) e->mins[2] = e->origin[2] - e->lightradius;
+		if (e->maxs[2] > e->origin[2] + e->lightradius) e->maxs[2] = e->origin[2] + e->lightradius;
 		// clip shadow volumes against eachother to remove unnecessary
 		// polygons (and sections of polygons)
 		{
-			vec3_t temp;
 			//vec3_t polymins, polymaxs;
 			int maxverts = 4;
 			float *verts = Mem_Alloc(loadmodel->mempool, maxverts * sizeof(float[3]));
 			float f, *v0, *v1, projectdistance;
-			svworld_t *svworld;
-			svbrush_t *svbrush;
 
-			svworld = Mod_ShadowBrush_NewWorld(loadmodel->mempool);
+			e->shadowvolume = Mod_ShadowMesh_Begin(loadmodel->mempool);
 #if 0
 			{
 			vec3_t outermins, outermaxs, innermins, innermaxs;
@@ -1413,123 +865,89 @@ void Mod_ProcessLightList(void)
 			// facing inward to limit light area, with an outer bounding box
 			// facing outward (this is needed by the shadow rendering method)
 			// X major
-			svbrush = Mod_ShadowBrush_BeginBrush(loadmodel->mempool);
 			verts[ 0] = innermaxs[0];verts[ 1] = innermins[1];verts[ 2] = innermaxs[2];
 			verts[ 3] = innermaxs[0];verts[ 4] = innermins[1];verts[ 5] = innermins[2];
 			verts[ 6] = innermaxs[0];verts[ 7] = innermaxs[1];verts[ 8] = innermins[2];
 			verts[ 9] = innermaxs[0];verts[10] = innermaxs[1];verts[11] = innermaxs[2];
-			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
+			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
 			verts[ 0] = outermaxs[0];verts[ 1] = outermaxs[1];verts[ 2] = outermaxs[2];
 			verts[ 3] = outermaxs[0];verts[ 4] = outermaxs[1];verts[ 5] = outermins[2];
 			verts[ 6] = outermaxs[0];verts[ 7] = outermins[1];verts[ 8] = outermins[2];
 			verts[ 9] = outermaxs[0];verts[10] = outermins[1];verts[11] = outermaxs[2];
-			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
-			Mod_ShadowBrush_EndBrush(svworld, svbrush);
+			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
 			// X minor
-			svbrush = Mod_ShadowBrush_BeginBrush(loadmodel->mempool);
 			verts[ 0] = innermins[0];verts[ 1] = innermaxs[1];verts[ 2] = innermaxs[2];
 			verts[ 3] = innermins[0];verts[ 4] = innermaxs[1];verts[ 5] = innermins[2];
 			verts[ 6] = innermins[0];verts[ 7] = innermins[1];verts[ 8] = innermins[2];
 			verts[ 9] = innermins[0];verts[10] = innermins[1];verts[11] = innermaxs[2];
-			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
+			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
 			verts[ 0] = outermins[0];verts[ 1] = outermins[1];verts[ 2] = outermaxs[2];
 			verts[ 3] = outermins[0];verts[ 4] = outermins[1];verts[ 5] = outermins[2];
 			verts[ 6] = outermins[0];verts[ 7] = outermaxs[1];verts[ 8] = outermins[2];
 			verts[ 9] = outermins[0];verts[10] = outermaxs[1];verts[11] = outermaxs[2];
-			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
-			Mod_ShadowBrush_EndBrush(svworld, svbrush);
+			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
 			// Y major
-			svbrush = Mod_ShadowBrush_BeginBrush(loadmodel->mempool);
 			verts[ 0] = innermaxs[0];verts[ 1] = innermaxs[1];verts[ 2] = innermaxs[2];
 			verts[ 3] = innermaxs[0];verts[ 4] = innermaxs[1];verts[ 5] = innermins[2];
 			verts[ 6] = innermins[0];verts[ 7] = innermaxs[1];verts[ 8] = innermins[2];
 			verts[ 9] = innermins[0];verts[10] = innermaxs[1];verts[11] = innermaxs[2];
-			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
+			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
 			verts[ 0] = outermins[0];verts[ 1] = outermaxs[1];verts[ 2] = outermaxs[2];
 			verts[ 3] = outermins[0];verts[ 4] = outermaxs[1];verts[ 5] = outermins[2];
 			verts[ 6] = outermaxs[0];verts[ 7] = outermaxs[1];verts[ 8] = outermins[2];
 			verts[ 9] = outermaxs[0];verts[10] = outermaxs[1];verts[11] = outermaxs[2];
-			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
-			Mod_ShadowBrush_EndBrush(svworld, svbrush);
+			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
 			// Y minor
-			svbrush = Mod_ShadowBrush_BeginBrush(loadmodel->mempool);
 			verts[ 0] = innermins[0];verts[ 1] = innermins[1];verts[ 2] = innermaxs[2];
 			verts[ 3] = innermins[0];verts[ 4] = innermins[1];verts[ 5] = innermins[2];
 			verts[ 6] = innermaxs[0];verts[ 7] = innermins[1];verts[ 8] = innermins[2];
 			verts[ 9] = innermaxs[0];verts[10] = innermins[1];verts[11] = innermaxs[2];
-			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
+			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
 			verts[ 0] = outermaxs[0];verts[ 1] = outermins[1];verts[ 2] = outermaxs[2];
 			verts[ 3] = outermaxs[0];verts[ 4] = outermins[1];verts[ 5] = outermins[2];
 			verts[ 6] = outermins[0];verts[ 7] = outermins[1];verts[ 8] = outermins[2];
 			verts[ 9] = outermins[0];verts[10] = outermins[1];verts[11] = outermaxs[2];
-			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
-			Mod_ShadowBrush_EndBrush(svworld, svbrush);
+			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
 			// Z major
-			svbrush = Mod_ShadowBrush_BeginBrush(loadmodel->mempool);
 			verts[ 0] = innermaxs[0];verts[ 1] = innermins[1];verts[ 2] = innermaxs[2];
 			verts[ 3] = innermaxs[0];verts[ 4] = innermaxs[1];verts[ 5] = innermaxs[2];
 			verts[ 6] = innermins[0];verts[ 7] = innermaxs[1];verts[ 8] = innermaxs[2];
 			verts[ 9] = innermins[0];verts[10] = innermins[1];verts[11] = innermaxs[2];
-			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
+			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
 			verts[ 0] = outermaxs[0];verts[ 1] = outermaxs[1];verts[ 2] = outermaxs[2];
 			verts[ 3] = outermaxs[0];verts[ 4] = outermins[1];verts[ 5] = outermaxs[2];
 			verts[ 6] = outermins[0];verts[ 7] = outermins[1];verts[ 8] = outermaxs[2];
 			verts[ 9] = outermins[0];verts[10] = outermaxs[1];verts[11] = outermaxs[2];
-			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
-			Mod_ShadowBrush_EndBrush(svworld, svbrush);
+			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
 			// Z minor
-			svbrush = Mod_ShadowBrush_BeginBrush(loadmodel->mempool);
 			verts[ 0] = innermaxs[0];verts[ 1] = innermaxs[1];verts[ 2] = innermins[2];
 			verts[ 3] = innermaxs[0];verts[ 4] = innermins[1];verts[ 5] = innermins[2];
 			verts[ 6] = innermins[0];verts[ 7] = innermins[1];verts[ 8] = innermins[2];
 			verts[ 9] = innermins[0];verts[10] = innermaxs[1];verts[11] = innermins[2];
-			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
+			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
 			verts[ 0] = outermaxs[0];verts[ 1] = outermins[1];verts[ 2] = outermins[2];
 			verts[ 3] = outermaxs[0];verts[ 4] = outermaxs[1];verts[ 5] = outermins[2];
 			verts[ 6] = outermins[0];verts[ 7] = outermaxs[1];verts[ 8] = outermins[2];
 			verts[ 9] = outermins[0];verts[10] = outermins[1];verts[11] = outermins[2];
-			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
-			Mod_ShadowBrush_EndBrush(svworld, svbrush);
+			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
 			}
 #endif
-#define SHADOWCASTFRONT 1
-#if SHADOWCASTFRONT
+			castshadowcount++;
 			for (j = 0;j < e->numsurfaces;j++)
 			{
 				surf = e->surfaces[j];
-#else
-			for (j = 0, surf = loadmodel->surfaces + loadmodel->firstmodelsurface;j < loadmodel->nummodelsurfaces;j++, surf++)
+				if (surf->flags & SURF_SHADOWCAST)
+					surf->castshadow = castshadowcount;
+			}
+			for (j = 0;j < e->numsurfaces;j++)
 			{
-#endif
-				if (!(surf->flags & SURF_CLIPSOLID))
+				surf = e->surfaces[j];
+				if (surf->castshadow != castshadowcount)
 					continue;
 				f = DotProduct(e->origin, surf->plane->normal) - surf->plane->dist;
 				if (surf->flags & SURF_PLANEBACK)
 					f = -f;
-#if SHADOWCASTFRONT
-				projectdistance = e->cullradius - f;
-#else
-				projectdistance = e->cullradius + f;
-#endif
-				if (projectdistance < 0.1 || projectdistance > e->cullradius)
-					continue;
-				VectorSubtract(e->origin, surf->poly_center, temp);
-				if (DotProduct(temp, temp) > (surf->poly_radius2 + e->cullradius2))
-					continue;
-				/*
-				VectorCopy(surf->poly_verts, polymins);
-				VectorCopy(surf->poly_verts, polymaxs);
-				for (k = 0, v0 = surf->poly_verts;k < surf->poly_numverts;k++, v0 += 3)
-				{
-					if (polymins[0] > v0[0]) polymins[0] = v0[0];if (polymaxs[0] < v0[0]) polymaxs[0] = v0[0];
-					if (polymins[1] > v0[1]) polymins[1] = v0[1];if (polymaxs[1] < v0[1]) polymaxs[1] = v0[1];
-					if (polymins[2] > v0[2]) polymins[2] = v0[2];if (polymaxs[2] < v0[2]) polymaxs[2] = v0[2];
-				}
-				if (polymins[0] > e->maxs[0] || polymaxs[0] < e->mins[0]
-				 || polymins[1] > e->maxs[1] || polymaxs[1] < e->mins[1]
-				 || polymins[2] > e->maxs[2] || polymaxs[2] < e->mins[2])
-					continue;
-				*/
+				projectdistance = e->lightradius;
 				if (maxverts < surf->poly_numverts)
 				{
 					maxverts = surf->poly_numverts;
@@ -1537,12 +955,10 @@ void Mod_ProcessLightList(void)
 						Mem_Free(verts);
 					verts = Mem_Alloc(loadmodel->mempool, maxverts * sizeof(float[3]));
 				}
-				svbrush = Mod_ShadowBrush_BeginBrush(loadmodel->mempool);
-#if SHADOWCASTFRONT
 				// copy the original polygon, for the front cap of the volume
 				for (k = 0, v0 = surf->poly_verts, v1 = verts;k < surf->poly_numverts;k++, v0 += 3, v1 += 3)
 					VectorCopy(v0, v1);
-				Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, surf->poly_numverts, verts);
+				Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, surf->poly_numverts, verts);
 				// project the original polygon, reversed, for the back cap of the volume
 				for (k = 0, v0 = surf->poly_verts + (surf->poly_numverts - 1) * 3, v1 = verts;k < surf->poly_numverts;k++, v0 -= 3, v1 += 3)
 				{
@@ -1550,210 +966,11 @@ void Mod_ProcessLightList(void)
 					VectorNormalize(temp);
 					VectorMA(v0, projectdistance, temp, v1);
 				}
-				Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, surf->poly_numverts, verts);
+				Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, surf->poly_numverts, verts);
 				// project the shadow volume sides
-				for (k = 0, v0 = surf->poly_verts + (surf->poly_numverts - 1) * 3, v1 = surf->poly_verts;k < surf->poly_numverts;k++, v0 = v1, v1 += 3)
+				for (l = surf->poly_numverts - 1, k = 0, v0 = surf->poly_verts + (surf->poly_numverts - 1) * 3, v1 = surf->poly_verts;k < surf->poly_numverts;l = k, k++, v0 = v1, v1 += 3)
 				{
-					VectorCopy(v1, &verts[0]);
-					VectorCopy(v0, &verts[3]);
-					VectorCopy(v0, &verts[6]);
-					VectorCopy(v1, &verts[9]);
-					VectorSubtract(&verts[6], e->origin, temp);
-					VectorNormalize(temp);
-					VectorMA(&verts[6], projectdistance, temp, &verts[6]);
-					VectorSubtract(&verts[9], e->origin, temp);
-					VectorNormalize(temp);
-					VectorMA(&verts[9], projectdistance, temp, &verts[9]);
-					Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
-				}
-#else
-				// copy the original polygon, reversed, for the front cap of the volume
-				for (k = 0, v0 = surf->poly_verts + (surf->poly_numverts - 1) * 3, v1 = verts;k < surf->poly_numverts;k++, v0 -= 3, v1 += 3)
-					VectorCopy(v0, v1);
-				Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, surf->poly_numverts, verts);
-				// project the original polygon, for the back cap of the volume
-				for (k = 0, v0 = surf->poly_verts, v1 = verts;k < surf->poly_numverts;k++, v0 += 3, v1 += 3)
-				{
-					VectorSubtract(v0, e->origin, temp);
-					VectorNormalize(temp);
-					VectorMA(v0, projectdistance, temp, v1);
-				}
-				Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, surf->poly_numverts, verts);
-				// project the shadow volume sides
-				for (k = 0, v0 = surf->poly_verts + (surf->poly_numverts - 1) * 3, v1 = surf->poly_verts;k < surf->poly_numverts;k++, v0 = v1, v1 += 3)
-				{
-					VectorCopy(v0, &verts[0]);
-					VectorCopy(v1, &verts[3]);
-					VectorCopy(v1, &verts[6]);
-					VectorCopy(v0, &verts[9]);
-					VectorSubtract(&verts[6], e->origin, temp);
-					VectorNormalize(temp);
-					VectorMA(&verts[6], projectdistance, temp, &verts[6]);
-					VectorSubtract(&verts[9], e->origin, temp);
-					VectorNormalize(temp);
-					VectorMA(&verts[9], projectdistance, temp, &verts[9]);
-					Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
-				}
-#endif
-				Mod_ShadowBrush_EndBrush(svworld, svbrush);
-			}
-			// clip away hidden polygons
-			Mod_ShadowBrush_ProcessWorld(loadmodel->mempool, svworld);
-			// build the triangle mesh
-			e->shadowvolume = Mod_ShadowBrush_BuildMeshs(loadmodel->mempool, svworld);
-			Mod_ShadowBrush_FreeWorld(svworld);
-		}
-#elif 0
-		// build svbsp (shadow volume bsp)
-		{
-			int maxverts = 0, constructmode;
-			float *verts = NULL, projectdistance, *v0, *v1, f, temp[3];
-			svbspnode_t *svbsproot;
-			svbsproot = Mod_SVBSP_NewTree();
-			// we do this in three stages:
-			// 1. construct the svbsp structure
-			// 2. mark which leafs are dark (shadow)
-			// 3. link polygons into only leafs that are not dark
-			// this results in polygons that are only on the outside of the
-			// shadow volume, removing polygons that are inside the shadow
-			// volume (which waste time)
-			for (constructmode = 0;constructmode < 3;constructmode++)
-			{
-				svbsp_count_originalpolygons = 0;
-#if 1
-				for (j = 0, surf = loadmodel->surfaces + loadmodel->firstmodelsurface;j < loadmodel->nummodelsurfaces;j++, surf++)
-				{
-					if (!(surf->flags & SURF_SHADOWCAST))
-						continue;
-					/*
-					if (surf->poly_maxs[0] < e->mins[0]
-					 || surf->poly_mins[0] > e->maxs[0]
-					 || surf->poly_maxs[1] < e->mins[1]
-					 || surf->poly_mins[1] > e->maxs[1]
-					 || surf->poly_maxs[2] < e->mins[2]
-					 || surf->poly_mins[2] > e->maxs[2])
-						continue;
-					*/
-					f = DotProduct(e->origin, surf->plane->normal) - surf->plane->dist;
-					if (surf->flags & SURF_PLANEBACK)
-						f = -f;
-					projectdistance = e->cullradius + f;
-					if (projectdistance < 0.1 || projectdistance > e->cullradius)
-						continue;
-					/*
-					// find the nearest vertex of the projected volume
-					for (k = 0, v0 = surf->poly_verts;k < surf->poly_numverts;k++, v0 += 3)
-					{
-						VectorSubtract(v0, e->origin, temp);
-						VectorNormalize(temp);
-						if (maxdist00 > v0[0] - e->origin[0]) maxdist00 = v0[0] - e->origin[0];
-						if (maxdist01 < e->origin[0] - v0[0]) maxdist01 = e->origin[0] - v0[0];
-						if (maxdist10 > v0[1] - e->origin[1]) maxdist10 = v0[1] - e->origin[1];
-						if (maxdist11 < e->origin[1] - v0[1]) maxdist11 = e->origin[1] - v0[1];
-						if (maxdist20 > v0[2] - e->origin[2]) maxdist20 = v0[2] - e->origin[2];
-						if (maxdist21 < e->origin[2] - v0[2]) maxdist21 = e->origin[2] - v0[2];
-						dist =
-
-						dist = DotProduct(temp, temp);
-						if (bestdist > dist)
-						{
-							bestdist = dist;
-							VectorCopy(temp, bestvec);
-						}
-					}
-					projectdistance = e->cullradius - sqrt(bestdist);
-					if (projectdistance < 0.1)
-						continue;
-					for (k = 0, v0 = surf->poly_verts;k < surf->poly_numverts;k++, v0 += 3)
-					{
-						VectorNormalize(temp);
-						if (temp[0] > 0)
-						{
-							dist = (e->maxs[0] - e->origin[0]) / temp[0];
-							if (maxdist >
-						}
-						else if (temp[0] < 0)
-							dist = (e->mins[0] - e->origin[0]) / temp[0];
-						dist =
-						VectorMA(v0, projectdistance, temp, temp);
-						dist = (temp[0]
-						VectorSubtract(temp, e->origin,
-					}
-					*/
-					VectorSubtract(e->origin, surf->poly_center, temp);
-					if (DotProduct(temp, temp) > (surf->poly_radius2 + e->cullradius2))
-						continue;
-					if (maxverts < surf->poly_numverts)
-					{
-						maxverts = surf->poly_numverts;
-						if (verts)
-							Mem_Free(verts);
-						verts = Mem_Alloc(loadmodel->mempool, maxverts * sizeof(float[3]));
-					}
-					// copy the original polygon, reversed, for the front cap of the volume
-					for (k = 0, v0 = surf->poly_verts + (surf->poly_numverts - 1) * 3, v1 = verts;k < surf->poly_numverts;k++, v0 -= 3, v1 += 3)
-						VectorCopy(v0, v1);
-					Mod_SVBSP_AddPolygon(svbsproot, surf->poly_numverts, verts, constructmode, surf->poly_center, __LINE__);
-					// project the original polygon, for the back cap of the volume
-					for (k = 0, v0 = surf->poly_verts, v1 = verts;k < surf->poly_numverts;k++, v0 += 3, v1 += 3)
-					{
-						VectorSubtract(v0, e->origin, temp);
-						VectorNormalize(temp);
-						VectorMA(v0, projectdistance, temp, v1);
-					}
-					Mod_SVBSP_AddPolygon(svbsproot, surf->poly_numverts, verts, constructmode, surf->poly_center, __LINE__);
-					// project the shadow volume sides
-					for (k = 0, v0 = surf->poly_verts + (surf->poly_numverts - 1) * 3, v1 = surf->poly_verts;k < surf->poly_numverts;k++, v0 = v1, v1 += 3)
-					{
-						VectorCopy(v0, &verts[0]);
-						VectorCopy(v1, &verts[3]);
-						VectorCopy(v1, &verts[6]);
-						VectorCopy(v0, &verts[9]);
-						VectorSubtract(&verts[6], e->origin, temp);
-						VectorNormalize(temp);
-						VectorMA(&verts[6], projectdistance, temp, &verts[6]);
-						VectorSubtract(&verts[9], e->origin, temp);
-						VectorNormalize(temp);
-						VectorMA(&verts[9], projectdistance, temp, &verts[9]);
-						Mod_SVBSP_AddPolygon(svbsproot, 4, verts, constructmode, surf->poly_center, __LINE__);
-					}
-				}
-#else
-				for (j = 0;j < e->numsurfaces;j++)
-				{
-					surf = e->surfaces[j];
-					if (!(surf->flags & SURF_SHADOWCAST))
-						continue;
-					f = DotProduct(e->origin, surf->plane->normal) - surf->plane->dist;
-					if (surf->flags & SURF_PLANEBACK)
-						f = -f;
-					projectdistance = e->cullradius - f;
-					if (projectdistance < 0.1 || projectdistance > e->cullradius)
-						continue;
-					VectorSubtract(e->origin, surf->poly_center, temp);
-					if (DotProduct(temp, temp) > (surf->poly_radius2 + e->cullradius2))
-						continue;
-					if (maxverts < surf->poly_numverts)
-					{
-						maxverts = surf->poly_numverts;
-						if (verts)
-							Mem_Free(verts);
-						verts = Mem_Alloc(loadmodel->mempool, maxverts * sizeof(float[3]));
-					}
-					// copy the original polygon, for the front cap of the volume
-					for (k = 0, v0 = surf->poly_verts, v1 = verts;k < surf->poly_numverts;k++, v0 += 3, v1 += 3)
-						VectorCopy(v0, v1);
-					Mod_SVBSP_AddPolygon(svbsproot, surf->poly_numverts, verts, constructmode, surf->poly_center, __LINE__);
-					// project the original polygon, reversed, for the back cap of the volume
-					for (k = 0, v0 = surf->poly_verts + (surf->poly_numverts - 1) * 3, v1 = verts;k < surf->poly_numverts;k++, v0 -= 3, v1 += 3)
-					{
-						VectorSubtract(v0, e->origin, temp);
-						VectorNormalize(temp);
-						VectorMA(v0, projectdistance, temp, v1);
-					}
-					Mod_SVBSP_AddPolygon(svbsproot, surf->poly_numverts, verts, constructmode, surf->poly_center, __LINE__);
-					// project the shadow volume sides
-					for (k = 0, v0 = surf->poly_verts + (surf->poly_numverts - 1) * 3, v1 = surf->poly_verts;k < surf->poly_numverts;k++, v0 = v1, v1 += 3)
+					if (!surf->neighborsurfaces[l] || surf->neighborsurfaces[l]->castshadow != castshadowcount)
 					{
 						VectorCopy(v1, &verts[0]);
 						VectorCopy(v0, &verts[3]);
@@ -1765,27 +982,20 @@ void Mod_ProcessLightList(void)
 						VectorSubtract(&verts[9], e->origin, temp);
 						VectorNormalize(temp);
 						VectorMA(&verts[9], projectdistance, temp, &verts[9]);
-						Mod_SVBSP_AddPolygon(svbsproot, 4, verts, constructmode, surf->poly_center, __LINE__);
+						Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
 					}
 				}
-#endif
 			}
-			if (verts)
-				Mem_Free(verts);
-
-			svbsp_count_nodes = 0;
-			svbsp_count_leafs = 0;
-			svbsp_count_polygons = 0;
-			svbsp_count_darkleafs = 0;
-			svbsp_count_meshs = 0;
-			svbsp_count_triangles = 0;
-			svbsp_count_vertices = 0;
-			e->shadowvolume = Mod_SVBSP_BuildTriangleMeshs(svbsproot, e->shadowvolumemins, e->shadowvolumemaxs);
-			Mod_SVBSP_RecursiveGatherStats(svbsproot);
-			Mod_SVBSP_FreeTree(svbsproot);
-			Con_Printf("light %d (radius %d) has %d surfaces, svbsp contains %d nodes, %d leafs, %d are dark (%d%%), %d original polygons, %d polygons stored (%d%%), %d meshs %d vertices %d triangles\n", lnum, (int)e->cullradius, e->numsurfaces, svbsp_count_nodes, svbsp_count_leafs, svbsp_count_darkleafs, svbsp_count_leafs ? (100 * svbsp_count_darkleafs / svbsp_count_leafs) : 0, svbsp_count_originalpolygons, svbsp_count_polygons, svbsp_count_originalpolygons ? (100 * svbsp_count_polygons / svbsp_count_originalpolygons) : 0, svbsp_count_meshs, svbsp_count_triangles, svbsp_count_vertices);
+			// build the triangle mesh
+			e->shadowvolume = Mod_ShadowMesh_Finish(loadmodel->mempool, e->shadowvolume);
+			{
+				shadowmesh_t *mesh;
+				l = 0;
+				for (mesh = e->shadowvolume;mesh;mesh = mesh->next)
+					l += mesh->numtriangles;
+				Con_Printf("light %i shadow volume built containing %i triangles\n", lnum, l);
+			}
 		}
-#endif
 	}
 }
 
@@ -2441,6 +1651,7 @@ static void Mod_LoadFaces (lump_t *l)
 	loadmodel->numsurfaces = count;
 	loadmodel->surfacevisframes = Mem_Alloc(loadmodel->mempool, count * sizeof(int));
 	loadmodel->surfacepvsframes = Mem_Alloc(loadmodel->mempool, count * sizeof(int));
+	loadmodel->pvssurflist = Mem_Alloc(loadmodel->mempool, count * sizeof(int));
 
 	for (surfnum = 0;surfnum < count;surfnum++, in++, out++)
 	{
@@ -3491,7 +2702,6 @@ static void Mod_MakePortals(void)
 
 static void Mod_BuildSurfaceNeighbors (msurface_t *surfaces, int numsurfaces, mempool_t *mempool)
 {
-	#if 0
 	int surfnum, vertnum, snum, vnum;
 	msurface_t *surf, *s;
 	float *v0, *v1, *v2, *v3;
@@ -3505,7 +2715,10 @@ static void Mod_BuildSurfaceNeighbors (msurface_t *surfaces, int numsurfaces, me
 			surf->neighborsurfaces[vertnum] = NULL;
 			for (s = surfaces, snum = 0;snum < numsurfaces;s++, snum++)
 			{
-				if (s == surf)
+				if (s->poly_mins[0] > (surf->poly_maxs[0] + 1) || s->poly_maxs[0] < (surf->poly_mins[0] - 1)
+				 || s->poly_mins[1] > (surf->poly_maxs[1] + 1) || s->poly_maxs[1] < (surf->poly_mins[1] - 1)
+				 || s->poly_mins[2] > (surf->poly_maxs[2] + 1) || s->poly_maxs[2] < (surf->poly_mins[2] - 1)
+				 || s == surf)
 					continue;
 				for (vnum = 0, v2 = s->poly_verts + (s->poly_numverts - 1) * 3, v3 = s->poly_verts;vnum < s->poly_numverts;vnum++, v2 = v3, v3 += 3)
 				{
@@ -3520,7 +2733,6 @@ static void Mod_BuildSurfaceNeighbors (msurface_t *surfaces, int numsurfaces, me
 			}
 		}
 	}
-	#endif
 }
 
 /*

@@ -52,7 +52,7 @@ unsigned short d_lightstylevalue[256];
 cvar_t r_drawentities = {0, "r_drawentities","1"};
 cvar_t r_drawviewmodel = {0, "r_drawviewmodel","1"};
 cvar_t r_shadows = {CVAR_SAVE, "r_shadows", "1"};
-cvar_t r_staticworldlights = {0, "r_staticworldlights", "0"};
+cvar_t r_staticworldlights = {0, "r_staticworldlights", "1"};
 cvar_t r_speeds = {0, "r_speeds","0"};
 cvar_t r_fullbright = {0, "r_fullbright","0"};
 cvar_t r_wateralpha = {CVAR_SAVE, "r_wateralpha","1"};
@@ -403,6 +403,34 @@ int PVS_CullBox(const vec3_t mins, const vec3_t maxs)
 	return true;
 }
 
+int VIS_CullBox(const vec3_t mins, const vec3_t maxs)
+{
+	int stackpos, sides;
+	mnode_t *node, *stack[4096];
+	if (R_CullBox(mins, maxs))
+		return true;
+	stackpos = 0;
+	stack[stackpos++] = cl.worldmodel->nodes;
+	while (stackpos)
+	{
+		node = stack[--stackpos];
+		if (node->contents < 0)
+		{
+			if (((mleaf_t *)node)->visframe == r_framecount)
+				return false;
+		}
+		else
+		{
+			sides = BoxOnPlaneSide(mins, maxs, node->plane);
+			if (sides & 2 && stackpos < 4096)
+				stack[stackpos++] = node->children[1];
+			if (sides & 1 && stackpos < 4096)
+				stack[stackpos++] = node->children[0];
+		}
+	}
+	return true;
+}
+
 int R_CullSphere(const vec3_t origin, vec_t radius)
 {
 	return (DotProduct(frustum[0].normal, origin) + radius < frustum[0].dist
@@ -424,6 +452,35 @@ int PVS_CullSphere(const vec3_t origin, vec_t radius)
 		if (node->contents < 0)
 		{
 			if (((mleaf_t *)node)->pvsframe == cl.worldmodel->pvsframecount)
+				return false;
+		}
+		else
+		{
+			dist = PlaneDiff(origin, node->plane);
+			if (dist <= radius)
+				stack[stackpos++] = node->children[1];
+			if (dist >= -radius)
+				stack[stackpos++] = node->children[0];
+		}
+	}
+	return true;
+}
+
+int VIS_CullSphere(const vec3_t origin, vec_t radius)
+{
+	int stackpos;
+	mnode_t *node, *stack[4096];
+	float dist;
+	if (R_CullSphere(origin, radius))
+		return true;
+	stackpos = 0;
+	stack[stackpos++] = cl.worldmodel->nodes;
+	while (stackpos)
+	{
+		node = stack[--stackpos];
+		if (node->contents < 0)
+		{
+			if (((mleaf_t *)node)->visframe == r_framecount)
 				return false;
 		}
 		else
@@ -483,10 +540,8 @@ static void R_MarkEntities (void)
 		Matrix4x4_Invert_Simple(&ent->inversematrix, &ent->matrix);
 		R_LerpAnimation(ent);
 		R_UpdateEntLights(ent);
-		if (!R_CullSphere(ent->origin, ent->model->radius * ent->scale)
-		 && !PVS_CullSphere(ent->origin, ent->model->radius * ent->scale)
-		 && !R_CullBox(ent->mins, ent->maxs)
-		 && !PVS_CullBox(ent->mins, ent->maxs))
+		if (!VIS_CullSphere(ent->origin, ent->model->radius * ent->scale)
+		 && !VIS_CullBox(ent->mins, ent->maxs))
 		{
 			ent->visframe = r_framecount;
 			R_FarClip_Box(ent->mins, ent->maxs);
@@ -582,10 +637,10 @@ void R_DrawFakeShadows (void)
 
 #include "r_shadow.h"
 
-void R_TestAndDrawShadowVolume(entity_render_t *ent, vec3_t lightorigin, float lightradius)
+void R_TestAndDrawShadowVolume(entity_render_t *ent, vec3_t lightorigin, float cullradius, float lightradius)
 {
 	int i;
-	vec3_t p, p2, temp, relativelightorigin;
+	vec3_t p, p2, temp, relativelightorigin, mins, maxs;
 	float dist, projectdistance;
 	// rough checks
 	if (ent->model && ent->model->DrawShadowVolume)
@@ -594,37 +649,9 @@ void R_TestAndDrawShadowVolume(entity_render_t *ent, vec3_t lightorigin, float l
 		temp[1] = bound(ent->mins[1], lightorigin[1], ent->maxs[1]) - lightorigin[1];
 		temp[2] = bound(ent->mins[2], lightorigin[2], ent->maxs[2]) - lightorigin[2];
 		dist = DotProduct(temp, temp);
-		if (dist < lightradius * lightradius)
+		if (dist < cullradius * cullradius)
 		{
-			projectdistance = lightradius - sqrt(dist);
-			{
-#if 0
-			int d0, d1, d2, d3;
-			// calculate projected bounding box and decide if it is on-screen
-			d0 = false;
-			d1 = false;
-			d2 = false;
-			d3 = false;
-			for (i = 0;i < 8;i++)
-			{
-				p[0] = i & 1 ? ent->maxs[0] : ent->mins[0];
-				p[1] = i & 2 ? ent->maxs[1] : ent->mins[1];
-				p[2] = i & 4 ? ent->maxs[2] : ent->mins[2];
-				VectorSubtract(p, lightorigin, temp);
-				dist = projectdistance / sqrt(DotProduct(temp, temp));
-				VectorMA(p, dist, temp, p2);
-				if (!d0 && (DotProduct(p , frustum[0].normal) < frustum[0].dist || DotProduct(p2, frustum[0].normal) < frustum[0].dist))
-					d0 = true;
-				if (!d1 && (DotProduct(p , frustum[1].normal) < frustum[1].dist || DotProduct(p2, frustum[1].normal) < frustum[1].dist))
-					d1 = true;
-				if (!d2 && (DotProduct(p , frustum[2].normal) < frustum[2].dist || DotProduct(p2, frustum[2].normal) < frustum[2].dist))
-					d2 = true;
-				if (!d3 && (DotProduct(p , frustum[3].normal) < frustum[3].dist || DotProduct(p2, frustum[3].normal) < frustum[3].dist))
-					d3 = true;
-			}
-			if (d0 && d1 && d2 && d3)
-#else
-			vec3_t mins, maxs;
+			projectdistance = cullradius - sqrt(dist);
 			// calculate projected bounding box and decide if it is on-screen
 			VectorCopy(ent->mins, mins);
 			VectorCopy(ent->maxs, maxs);
@@ -640,12 +667,10 @@ void R_TestAndDrawShadowVolume(entity_render_t *ent, vec3_t lightorigin, float l
 				if (mins[1] > p2[1]) mins[1] = p2[1];if (maxs[1] < p2[1]) maxs[1] = p2[1];
 				if (mins[2] > p2[2]) mins[2] = p2[2];if (maxs[2] < p2[2]) maxs[2] = p2[2];
 			}
-			if (!R_CullBox(mins, maxs))
-#endif
+			if (!VIS_CullBox(mins, maxs))
 			{
 				Matrix4x4_Transform(&ent->inversematrix, lightorigin, relativelightorigin);
 				ent->model->DrawShadowVolume (ent, relativelightorigin, lightradius);
-			}
 			}
 		}
 	}
@@ -657,6 +682,7 @@ void R_DrawWorldLightShadowVolume(mlight_t *sl)
 	R_Mesh_Matrix(&cl_entities[0].render.matrix);
 	for (mesh = sl->shadowvolume;mesh;mesh = mesh->next)
 	{
+		R_Mesh_ResizeCheck(mesh->numverts);
 		memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 		R_Shadow_RenderVolume(mesh->numverts, mesh->numtriangles, mesh->elements);
 	}
@@ -753,7 +779,7 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 			continue;
 		cullradius = sl->cullradius;
 		lightradius = sl->lightradius;
-		if (R_CullBox(sl->mins, sl->maxs) || PVS_CullBox(sl->mins, sl->maxs) || R_CullSphere(sl->origin, cullradius) || PVS_CullSphere(sl->origin, cullradius))
+		if (VIS_CullBox(sl->mins, sl->maxs) || VIS_CullSphere(sl->origin, cullradius))
 			continue;
 
 		f = d_lightstylevalue[sl->style] * (1.0f / 32768.0f);
@@ -761,11 +787,13 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 
 		if (!visiblevolumes)
 			R_Shadow_Stage_ShadowVolumes();
-		R_DrawShadowSphere(sl->origin, cullradius, lightradius * 2);
 		if (sl->shadowvolume && r_staticworldlights.integer)
 			R_DrawWorldLightShadowVolume(sl);
 		else
-			R_TestAndDrawShadowVolume(&cl_entities[0].render, sl->origin, cullradius);
+		{
+			//R_DrawShadowSphere(sl->origin, cullradius, lightradius * 2);
+			R_TestAndDrawShadowVolume(&cl_entities[0].render, sl->origin, cullradius, lightradius);
+		}
 		if (r_drawentities.integer)
 		{
 			for (i = 0;i < r_refdef.numentities;i++)
@@ -773,8 +801,9 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 				ent = r_refdef.entities[i];
 				if (ent->maxs[0] >= sl->mins[0] && ent->mins[0] <= sl->maxs[0]
 				 && ent->maxs[1] >= sl->mins[1] && ent->mins[1] <= sl->maxs[1]
-				 && ent->maxs[2] >= sl->mins[2] && ent->mins[2] <= sl->maxs[2])
-					R_TestAndDrawShadowVolume(r_refdef.entities[i], sl->origin, cullradius);
+				 && ent->maxs[2] >= sl->mins[2] && ent->mins[2] <= sl->maxs[2]
+				 && !(ent->effects & EF_ADDITIVE) && ent->alpha == 1)
+					R_TestAndDrawShadowVolume(r_refdef.entities[i], sl->origin, cullradius, lightradius);
 			}
 		}
 
@@ -796,7 +825,8 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 					if (ent->visframe == r_framecount && ent->model && ent->model->DrawLight
 					 && ent->maxs[0] >= sl->mins[0] && ent->mins[0] <= sl->maxs[0]
 					 && ent->maxs[1] >= sl->mins[1] && ent->mins[1] <= sl->maxs[1]
-					 && ent->maxs[2] >= sl->mins[2] && ent->mins[2] <= sl->maxs[2])
+					 && ent->maxs[2] >= sl->mins[2] && ent->mins[2] <= sl->maxs[2]
+					 && !(ent->effects & EF_ADDITIVE) && ent->alpha == 1)
 					{
 						Matrix4x4_Transform(&ent->inversematrix, sl->origin, relativelightorigin);
 						Matrix4x4_Transform(&ent->inversematrix, r_origin, relativeeyeorigin);
@@ -806,11 +836,13 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 			}
 
 			R_Shadow_Stage_EraseShadowVolumes();
-			R_DrawShadowSphere(sl->origin, cullradius, lightradius * 2);
 			if (sl->shadowvolume && r_staticworldlights.integer)
 				R_DrawWorldLightShadowVolume(sl);
 			else
-				R_TestAndDrawShadowVolume(&cl_entities[0].render, sl->origin, cullradius);
+			{
+				//R_DrawShadowSphere(sl->origin, cullradius, lightradius * 2);
+				R_TestAndDrawShadowVolume(&cl_entities[0].render, sl->origin, cullradius, lightradius);
+			}
 			if (r_drawentities.integer)
 			{
 				for (i = 0;i < r_refdef.numentities;i++)
@@ -818,8 +850,9 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 					ent = r_refdef.entities[i];
 					if (ent->maxs[0] >= sl->mins[0] && ent->mins[0] <= sl->maxs[0]
 					 && ent->maxs[1] >= sl->mins[1] && ent->mins[1] <= sl->maxs[1]
-					 && ent->maxs[2] >= sl->mins[2] && ent->mins[2] <= sl->maxs[2])
-						R_TestAndDrawShadowVolume(r_refdef.entities[i], sl->origin, cullradius);
+					 && ent->maxs[2] >= sl->mins[2] && ent->mins[2] <= sl->maxs[2]
+					 && !(ent->effects & EF_ADDITIVE) && ent->alpha == 1)
+						R_TestAndDrawShadowVolume(r_refdef.entities[i], sl->origin, cullradius, lightradius);
 				}
 			}
 		}
@@ -828,21 +861,21 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 	{
 		cullradius = rd->cullradius;
 		lightradius = rd->cullradius;
-		if (R_CullSphere(rd->origin, cullradius) || PVS_CullSphere(rd->origin, cullradius))
+		if (VIS_CullSphere(rd->origin, cullradius))
 			continue;
 
-		VectorScale(rd->light, 4.0f, lightcolor);
+		VectorScale(rd->light, 16.0f, lightcolor);
 
 		if (!visiblevolumes)
 			R_Shadow_Stage_ShadowVolumes();
-		R_TestAndDrawShadowVolume(&cl_entities[0].render, rd->origin, cullradius);
+		R_TestAndDrawShadowVolume(&cl_entities[0].render, rd->origin, cullradius, lightradius);
 		if (r_drawentities.integer)
 		{
 			for (i = 0;i < r_refdef.numentities;i++)
 			{
 				ent = r_refdef.entities[i];
-				if (ent != rd->ent)
-					R_TestAndDrawShadowVolume(ent, rd->origin, cullradius);
+				if (ent != rd->ent && !(ent->effects & EF_ADDITIVE) && ent->alpha == 1)
+					R_TestAndDrawShadowVolume(ent, rd->origin, cullradius, lightradius);
 			}
 		}
 
@@ -854,31 +887,32 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 			{
 				Matrix4x4_Transform(&ent->inversematrix, rd->origin, relativelightorigin);
 				Matrix4x4_Transform(&ent->inversematrix, r_origin, relativeeyeorigin);
-				ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, cullradius, LIGHTOFFSET, rd->subtract, lightcolor);
+				ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, lightradius, LIGHTOFFSET, rd->subtract, lightcolor);
 			}
 			if (r_drawentities.integer)
 			{
 				for (i = 0;i < r_refdef.numentities;i++)
 				{
 					ent = r_refdef.entities[i];
-					if (ent->visframe == r_framecount && ent->model && ent->model->DrawLight)
+					if (ent->visframe == r_framecount && ent->model && ent->model->DrawLight
+					 && !(ent->effects & EF_ADDITIVE) && ent->alpha == 1)
 					{
 						Matrix4x4_Transform(&ent->inversematrix, rd->origin, relativelightorigin);
 						Matrix4x4_Transform(&ent->inversematrix, r_origin, relativeeyeorigin);
-						ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, cullradius, LIGHTOFFSET, rd->subtract, lightcolor);
+						ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, lightradius, LIGHTOFFSET, rd->subtract, lightcolor);
 					}
 				}
 			}
 
 			R_Shadow_Stage_EraseShadowVolumes();
-			R_TestAndDrawShadowVolume(&cl_entities[0].render, rd->origin, cullradius);
+			R_TestAndDrawShadowVolume(&cl_entities[0].render, rd->origin, cullradius, lightradius);
 			if (r_drawentities.integer)
 			{
 				for (i = 0;i < r_refdef.numentities;i++)
 				{
 					ent = r_refdef.entities[i];
-					if (ent != rd->ent)
-						R_TestAndDrawShadowVolume(ent, rd->origin, cullradius);
+					if (ent != rd->ent && !(ent->effects & EF_ADDITIVE) && ent->alpha == 1)
+						R_TestAndDrawShadowVolume(ent, rd->origin, cullradius, lightradius);
 				}
 			}
 		}
@@ -996,14 +1030,19 @@ void R_RenderView (void)
 	R_BuildLightList();
 	R_TimeReport("setup");
 
+	R_WorldVisibility(world);
+	R_TimeReport("worldvis");
+
 	R_FarClip_Start(r_origin, vpn, 768.0f);
 	R_MarkEntities();
-	r_farclip = R_FarClip_Finish() + 16384.0f;//256.0f;
+	r_farclip = R_FarClip_Finish() + 256.0f;
 	R_TimeReport("markentity");
 
 	GL_SetupView_ViewPort(r_refdef.x, r_refdef.y, r_refdef.width, r_refdef.height);
-	//GL_SetupView_Mode_Perspective(r_refdef.fov_x, r_refdef.fov_y, 1.0f, r_farclip);
-	GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_refdef.fov_x, r_refdef.fov_y, 1.0f);
+	if (r_shadows.integer == 3)
+		GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_refdef.fov_x, r_refdef.fov_y, 1.0f);
+	else
+		GL_SetupView_Mode_Perspective(r_refdef.fov_x, r_refdef.fov_y, 1.0f, r_farclip);
 	GL_SetupView_Orientation_FromEntity (r_refdef.vieworg, r_refdef.viewangles);
 	qglDepthFunc(GL_LEQUAL);
 
