@@ -1555,7 +1555,8 @@ void M_Options_Key (int k)
 char *bindnames[][2] =
 {
 {"+attack", 		"attack"},
-{"impulse 10", 		"change weapon"},
+{"impulse 10", 		"next weapon"},
+{"impulse 12", 		"previous weapon"},
 {"+jump", 			"jump / swim up"},
 {"+forward", 		"walk forward"},
 {"+back", 			"backpedal"},
@@ -1576,6 +1577,97 @@ char *bindnames[][2] =
 
 #define	NUMCOMMANDS	(sizeof(bindnames)/sizeof(bindnames[0]))
 
+/*
+typedef struct binditem_s
+{
+	char *command, *description;
+	struct binditem_s *next;
+}
+binditem_t;
+
+typedef struct bindcategory_s
+{
+	char *name;
+	binditem_t *binds;
+	struct bindcategory_s *next;
+}
+bindcategory_t;
+
+bindcategory_t *bindcategories = NULL;
+
+void M_ClearBinds (void)
+{
+	for (c = bindcategories;c;c = cnext)
+	{
+		cnext = c->next;
+		for (b = c->binds;b;b = bnext)
+		{
+			bnext = b->next;
+			Z_Free(b);
+		}
+		Z_Free(c);
+	}
+	bindcategories = NULL;
+}
+
+void M_AddBindToCategory(bindcategory_t *c, char *command, char *description)
+{
+	for (b = &c->binds;*b;*b = &(*b)->next);
+	*b = Z_Alloc(sizeof(binditem_t) + strlen(command) + 1 + strlen(description) + 1);
+	*b->command = (char *)((*b) + 1);
+	*b->description = *b->command + strlen(command) + 1;
+	strcpy(*b->command, command);
+	strcpy(*b->description, description);
+}
+
+void M_AddBind (char *category, char *command, char *description)
+{
+	for (c = &bindcategories;*c;c = &(*c)->next)
+	{
+		if (!strcmp(category, (*c)->name))
+		{
+			M_AddBindToCategory(*c, command, description);
+			return;
+		}
+	}
+	*c = Z_Alloc(sizeof(bindcategory_t));
+	M_AddBindToCategory(*c, command, description);
+}
+
+void M_DefaultBinds (void)
+{
+	M_ClearBinds();
+	M_AddBind("movement", "+jump", "jump / swim up");
+	M_AddBind("movement", "+forward", "walk forward");
+	M_AddBind("movement", "+back", "backpedal");
+	M_AddBind("movement", "+left", "turn left");
+	M_AddBind("movement", "+right", "turn right");
+	M_AddBind("movement", "+speed", "run");
+	M_AddBind("movement", "+moveleft", "step left");
+	M_AddBind("movement", "+moveright", "step right");
+	M_AddBind("movement", "+strafe", "sidestep");
+	M_AddBind("movement", "+lookup", "look up");
+	M_AddBind("movement", "+lookdown", "look down");
+	M_AddBind("movement", "centerview", "center view");
+	M_AddBind("movement", "+mlook", "mouse look");
+	M_AddBind("movement", "+klook", "keyboard look");
+	M_AddBind("movement", "+moveup", "swim up");
+	M_AddBind("movement", "+movedown", "swim down");
+	M_AddBind("weapons", "+attack", "attack");
+	M_AddBind("weapons", "impulse 10", "next weapon");
+	M_AddBind("weapons", "impulse 12", "previous weapon");
+	M_AddBind("weapons", "impulse 1", "select weapon 1 (axe)");
+	M_AddBind("weapons", "impulse 2", "select weapon 2 (shotgun)");
+	M_AddBind("weapons", "impulse 3", "select weapon 3 (super )");
+	M_AddBind("weapons", "impulse 4", "select weapon 4 (nailgun)");
+	M_AddBind("weapons", "impulse 5", "select weapon 5 (super nailgun)");
+	M_AddBind("weapons", "impulse 6", "select weapon 6 (grenade launcher)");
+	M_AddBind("weapons", "impulse 7", "select weapon 7 (rocket launcher)");
+	M_AddBind("weapons", "impulse 8", "select weapon 8 (lightning gun)");
+}
+*/
+
+
 int		keys_cursor;
 int		bind_grab;
 
@@ -1586,14 +1678,17 @@ void M_Menu_Keys_f (void)
 	m_entersound = true;
 }
 
+#define NUMKEYS 5
 
-void M_FindKeysForCommand (char *command, int *twokeys)
+void M_FindKeysForCommand (char *command, int *keys)
 {
 	int		count;
 	int		j;
 	char	*b;
 
-	twokeys[0] = twokeys[1] = -1;
+	for (j = 0;j < NUMKEYS;j++)
+		keys[j] = -1;
+
 	count = 0;
 
 	for (j=0 ; j<256 ; j++)
@@ -1603,9 +1698,8 @@ void M_FindKeysForCommand (char *command, int *twokeys)
 			continue;
 		if (!strcmp (b, command) )
 		{
-			twokeys[count] = j;
-			count++;
-			if (count == 2)
+			keys[count++] = j;
+			if (count == NUMKEYS)
 				break;
 		}
 	}
@@ -1629,11 +1723,11 @@ void M_UnbindCommand (char *command)
 
 void M_Keys_Draw (void)
 {
-	int		i, l;
-	int		keys[2];
-	char	*name;
-	int		x, y;
+	int		i, j;
+	int		keys[NUMKEYS];
+	int		y;
 	cachepic_t	*p;
+	char	keystring[1024];
 
 	p = Draw_CachePic ("gfx/ttl_cstm.lmp");
 	M_DrawPic ( (320-p->width)/2, 4, "gfx/ttl_cstm.lmp");
@@ -1650,25 +1744,25 @@ void M_Keys_Draw (void)
 
 		M_Print (16, y, bindnames[i][1]);
 
-		l = strlen (bindnames[i][0]);
-
 		M_FindKeysForCommand (bindnames[i][0], keys);
 
+		// LordHavoc: redesigned to print more than 2 keys, inspired by Tomaz's MiniRacer
 		if (keys[0] == -1)
-		{
-			M_Print (140, y, "???");
-		}
+			strcpy(keystring, "???");
 		else
 		{
-			name = Key_KeynumToString (keys[0]);
-			M_Print (140, y, name);
-			x = strlen(name) * 8;
-			if (keys[1] != -1)
+			keystring[0] = 0;
+			for (j = 0;j < NUMKEYS;j++)
 			{
-				M_Print (140 + x + 8, y, "or");
-				M_Print (140 + x + 32, y, Key_KeynumToString (keys[1]));
+				if (keys[j] != -1)
+				{
+					if (j > 0)
+						strcat(keystring, " or ");
+					strcat(keystring, Key_KeynumToString (keys[j]));
+				}
 			}
 		}
+		M_Print (140, y, keystring);
 	}
 
 	if (bind_grab)
@@ -1681,7 +1775,7 @@ void M_Keys_Draw (void)
 void M_Keys_Key (int k)
 {
 	char	cmd[80];
-	int		keys[2];
+	int		keys[NUMKEYS];
 
 	if (bind_grab)
 	{	// defining a key
@@ -1690,7 +1784,7 @@ void M_Keys_Key (int k)
 		{
 			bind_grab = false;
 		}
-		else if (k != '`')
+		else //if (k != '`')
 		{
 			sprintf (cmd, "bind \"%s\" \"%s\"\n", Key_KeynumToString (k), bindnames[keys_cursor][0]);
 			Cbuf_InsertText (cmd);
@@ -1725,7 +1819,7 @@ void M_Keys_Key (int k)
 	case K_ENTER:		// go into bind mode
 		M_FindKeysForCommand (bindnames[keys_cursor][0], keys);
 		S_LocalSound ("misc/menu2.wav");
-		if (keys[1] != -1)
+		if (keys[NUMKEYS - 1] != -1)
 			M_UnbindCommand (bindnames[keys_cursor][0]);
 		bind_grab = true;
 		break;
@@ -1839,7 +1933,7 @@ char *quitMessage [] =
   "   for trying to quit!  ",
   "     Press Y to get     ",
   "      smacked out.      ",
- 
+
   " Press Y to quit like a ",
   "   big loser in life.   ",
   "  Press N to stay proud ",
