@@ -1,5 +1,7 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
 -(Baalz) d darkplaces input bug: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
+-(Kinn) d darkplaces client: all glow trails are bright blue (Kinn)
+-(Kinn) d darkplaces renderer: fix the sometimes non-animating framegroups on sprites (Kinn) 
 0 darkplaces client: add DP_LITSPRITES extension to document the fact that any sprite with a ! in its filename is lit rather than fullbright
 0 darkplaces client: add a swinging weapon motion to replace the removed forward/back movement of the weapon, should be controllable with cl_bob_* cvars (Joel Murdoch)
 0 darkplaces client: add back cl_particles_lighting cvar and add back the particle lighting (romi)
@@ -44,6 +46,7 @@
 0 darkplaces protocol: add DP_TE_BUBBLES extension to spawn a puff of bubbles (shadowalker)
 0 darkplaces protocol: add DP_WEAPONSKIN extension which would add a .float weaponskin field (protoplasmatic, Kazashi)
 0 darkplaces protocol: add EF_DOUBLESIDED for double sided entity rendering (disable cull face for this entity) (yummyluv)
+0 darkplaces protocol: add a couple beams for Nexuiz (Vermeulen)
 0 darkplaces protocol: add a new TE_ explosion effect with RGB color choice for particle color and another choice for light color (VorteX)
 0 darkplaces protocol: add lava-steam particle puff effect for bursting lava bubbles (Zombie)
 0 darkplaces protocol: add support for .float corona and corona_radius to control corona intensity and radius on dlights 
@@ -58,10 +61,12 @@
 0 darkplaces renderer: add r_shadow_light_polygonoffset and polygonfactor cvars for lighting polygons (Diablo-D3)
 0 darkplaces renderer: alias layers should have a shadow volume pass so that nodraw textures don't cast a shadow
 0 darkplaces renderer: change sky handling to draw sky even if fog is on, and fog intensity should be cvar controlled (Deej, C0burn)
+0 darkplaces renderer: don't shut off gl_combine when r_textureunits goes below 2, and don't save gl_combine either
 0 darkplaces renderer: fix disappearing viewmodel (and other models) when in an unvised q3bsp, or partially inside a wall in q3bsp
 0 darkplaces renderer: fix loadsky;r_restart;r_restart crashing or showing random textures (Sajt, Randy)
 0 darkplaces renderer: fix q3bsp fogging (Sajt)
 0 darkplaces renderer: fix q3bsp map disappearing when noclipping outside it, and the entities still show up
+0 darkplaces renderer: fix rtdlights not rendering in q3bsp (Vermeulen)
 0 darkplaces renderer: fix the delayed lightmap updates on bmodels, they're lagging behind one frame, very noticable on flickering light
 0 darkplaces renderer: fix vis problems when outside the level in q1bsp
 0 darkplaces renderer: make sure that the texture fragment allocator can upload a full size block that uses the entire image, this may involve width/height comparisons needing a + 1 (fuh)
@@ -83,9 +88,11 @@
 0 darkplaces server: make server able to work without models, just for sake of completeness
 0 darkplaces sound: Lordhavoc needs to talk to fuh about snd_macos.c (fuh)
 0 darkplaces sound: make sound precaching not allocate an sfx if the sound is not found, so it complains only once about missing sounds when you connect, rather than constantly, and also so using "play" commands for non-existent files won't eat up sfx slots (fuh) 
+0 darkplaces sound: non-cd music tracks should not be affected by sound volume setting (Urre)
 0 darkplaces sound: the new sound engine should have a cvar for random variations of pitch on sounds like in doom (RenegadeC)
 0 dpmod: add flame thrower enforcers back (scar3crow)
 0 dpmod: add flame thrower weapon, and make its altfire drop a canister of fuel (10 fuel units?), which can be ignited to set off as a bomb about the size of a rocket blast, plus some fireballs raining down (scar3crow)
+0 dpmod: allow selection of weapons with secondary ammo but no primary ammo, and switch away if trying to fire primary ammo you don't have (romi)
 0 dpmod: change kill awards to use DP_SV_CLIENTFLASHPIC (Tomaz)
 0 dpmod: crash when dog attacks you in dpdm2 deathmatch 7 with bots present (Zombie13)
 0 dpmod: figure out what's wrong with the bots
@@ -102,9 +109,11 @@
 0 dpmod: make teleport leave an EF_ADDITIVE clone of the player which fades out
 0 dpmod: monsters falling out of level? (Sajt)
 0 dpmod: monsters shouldn't constantly do sightsounds on a slain player, it's annoying and silly
+0 dpmod: shouldn't get double kill for killing something and its corpse (Sajt)
 0 dpmod: test for any unnamed death messages that might be happening
 0 dpmod: try making ball lightning mortar shamblers (scar3crow)
 0 dpmod: try not adding gravity when onground to see if it gets rid of ramp sliding (Midgar)
+0 dpmod: update stats to count monster kills in dm 7 and such (Sajt)
 0 dpzoo.map: flame jet
 0 dpzoo.map: func_train with sky brushes
 0 dpzoo.map: particlecube
@@ -326,6 +335,7 @@ d darkplaces client: add r_waterwarp cvar to control amount of viewwarping under
 d darkplaces client: add two cvars to replace sbar_alpha, one would control background as 0-1, and one would control everything else as 0-1
 d darkplaces client: don't disconnect before attempting to connect to another server, so if it fails you remain on the current one (RenegadeC, Urre)
 d darkplaces client: don't draw entities which are tagged to the camera entity; exterior view models and such
+d darkplaces client: figure out why tenebrae style dlights are brilliantly blue, PLUS their color
 d darkplaces client: fix disappearing decals bug, it seems that when the smoke disappears so do the decals (Urre)
 d darkplaces client: increase resolution of particlefont to 512x512 (Chillo)
 d darkplaces client: lerp lightstyles (Mitchell)
@@ -400,6 +410,7 @@ d darkplaces server: add findflag and findchainflag builtins (Sajt)
 d darkplaces server: figure out what is wrong with dedicated server console on win32 and fix it (and tell Willis)
 d darkplaces server: figure out what's making monsters act like notarget is on while underwater (romi)
 d darkplaces server: figure out why zombies are disappearing when not entirely submerged in some hipnotic maps (romi) 
+d darkplaces server: for some clients PROTOCOL_DARKPLACES5 stops updating after a short while after a reconnect... why?
 d darkplaces server: make qc profile command post an error message instead of crashing when used during demo playback (Sajt)
 d darkplaces server: prevent player name changes faster than once every 5 seconds (sublim3)
 d darkplaces server: stop sound before loading a level to get rid of looping noise (Edward Holness)
