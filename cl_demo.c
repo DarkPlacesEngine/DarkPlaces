@@ -168,6 +168,8 @@ void CL_ReadDemoMessage(void)
 		// get the next message
 		FS_Read(cls.demofile, &net_message.cursize, 4);
 		net_message.cursize = LittleLong(net_message.cursize);
+		if (net_message.cursize > net_message.maxsize)
+			Host_Error("Demo message (%i) > net_message.maxsize (%i)", net_message.cursize, net_message.maxsize);
 		VectorCopy(cl.mviewangles[0], cl.mviewangles[1]);
 		for (i = 0;i < 3;i++)
 		{
@@ -175,8 +177,6 @@ void CL_ReadDemoMessage(void)
 			cl.mviewangles[0][i] = LittleFloat(f);
 		}
 
-		if (net_message.cursize > NET_MAXMESSAGE)
-			Host_Error("Demo message > NET_MAXMESSAGE");
 		if (FS_Read(cls.demofile, net_message.data, net_message.cursize) == (size_t)net_message.cursize)
 		{
 			MSG_BeginReading();

@@ -291,6 +291,9 @@ Con_DPrintf ("CL_SignonReply: %i\n", cls.signon);
 		}
 
 		MSG_WriteByte (&cls.message, clc_stringcmd);
+		MSG_WriteString (&cls.message, va("rate %i\n", cl_rate.integer));
+
+		MSG_WriteByte (&cls.message, clc_stringcmd);
 		MSG_WriteString (&cls.message, "spawn");
 		break;
 

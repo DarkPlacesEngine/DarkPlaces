@@ -46,9 +46,9 @@ extern char *buildstring;
 #define	ON_EPSILON		0.1			// point on plane side epsilon
 
 #define MAX_PACKETFRAGMENT 1024		// max length of packet fragment
-// LordHavoc: this was 1024, now 65536
-#define	MAX_DATAGRAM	65536		// max length of unreliable
-#define	MAX_NETRELIABLE	65536		// max length of reliable message (fragments into unreliable packets)
+#define NET_MAXMESSAGE	65536
+#define NET_MINRATE		500 // limits "rate" and "sv_maxrate" cvars
+#define NET_MAXRATE		25000 // limits "rate" and "sv_maxrate" cvars
 
 //
 // per-level limits

@@ -24,11 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "lhnet.h"
 
-#define NET_NAMELEN			128
-
-#define NET_MAXMESSAGE		65536
 #define NET_HEADERSIZE		(2 * sizeof(unsigned int))
-#define NET_DATAGRAMSIZE	(MAX_DATAGRAM + NET_HEADERSIZE)
 
 // NetHeader flags
 #define NETFLAG_LENGTH_MASK	0x0000ffff
@@ -120,6 +116,9 @@ typedef struct netconn_s
 
 	lhnetsocket_t *mysocket;
 	lhnetaddress_t peeraddress;
+	
+	// requested rate in bytes per second
+	int rate;
 
 	// this is mostly identical to qsocket_t from quake
 
@@ -143,7 +142,7 @@ typedef struct netconn_s
 	int receiveMessageLength;
 	qbyte receiveMessage[NET_MAXMESSAGE];
 
-	char address[NET_NAMELEN];
+	char address[128];
 } netconn_t;
 
 extern netconn_t *netconn_list;

@@ -930,6 +930,37 @@ void Host_Color_f(void)
 	}
 }
 
+cvar_t cl_rate = {CVAR_SAVE, "_cl_rate", "10000"};
+cvar_t sv_maxrate = {CVAR_SAVE | CVAR_NOTIFY, "sv_maxrate", "10000"};
+void Host_Rate_f(void)
+{
+	int rate, maxrate;
+
+	if (Cmd_Argc() != 2)
+	{
+		Con_Printf ("\"rate\" is \"%i\"\n", cl_rate.integer);
+		Con_Printf ("rate <500-25000>\n");
+		return;
+	}
+
+	rate = atoi(Cmd_Argv(1));
+
+	if (cmd_source == src_command)
+	{
+		Cvar_SetValue ("_cl_rate", bound(NET_MINRATE, rate, NET_MAXRATE));
+		if (cls.state == ca_connected)
+			Cmd_ForwardToServer ();
+		return;
+	}
+
+	maxrate = bound(NET_MINRATE, sv_maxrate.integer, NET_MAXRATE);
+	if (sv_maxrate.integer != maxrate)
+		Cvar_SetValueQuick(&sv_maxrate, maxrate);
+
+	if (LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) != LHNETADDRESSTYPE_LOOP)
+		host_client->netconnection->rate = bound(NET_MINRATE, rate, maxrate);
+}
+
 /*
 ==================
 Host_Kill_f
@@ -1730,6 +1761,9 @@ void Host_InitCommands (void)
 	Cmd_AddCommand ("name", Host_Name_f);
 	Cvar_RegisterVariable (&cl_color);
 	Cmd_AddCommand ("color", Host_Color_f);
+	Cvar_RegisterVariable (&cl_rate);
+	Cmd_AddCommand ("rate", Host_Rate_f);
+	Cvar_RegisterVariable (&sv_maxrate);
 	if (gamemode == GAME_NEHAHRA)
 	{
 		Cvar_RegisterVariable (&cl_pmodel);
