@@ -21,8 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-#define	STEPSIZE	18
-
 /*
 =============
 SV_CheckBottom
@@ -40,7 +38,7 @@ qboolean SV_CheckBottom (edict_t *ent)
 	trace_t	trace;
 	int		x, y;
 	float	mid, bottom;
-	
+
 	VectorAdd (ent->v.origin, ent->v.mins, mins);
 	VectorAdd (ent->v.origin, ent->v.maxs, maxs);
 
@@ -53,7 +51,7 @@ qboolean SV_CheckBottom (edict_t *ent)
 		{
 			start[0] = x ? maxs[0] : mins[0];
 			start[1] = y ? maxs[1] : mins[1];
-			if (SV_PointContents (start) != CONTENTS_SOLID)
+			if (Mod_PointInLeaf(start, sv.worldmodel)->contents != CONTENTS_SOLID)
 				goto realcheck;
 		}
 
@@ -66,29 +64,29 @@ realcheck:
 // check it for real...
 //
 	start[2] = mins[2];
-	
+
 // the midpoint must be within 16 of the bottom
 	start[0] = stop[0] = (mins[0] + maxs[0])*0.5;
 	start[1] = stop[1] = (mins[1] + maxs[1])*0.5;
-	stop[2] = start[2] - 2*STEPSIZE;
+	stop[2] = start[2] - 2*sv_stepheight.value;
 	trace = SV_Move (start, vec3_origin, vec3_origin, stop, MOVE_NOMONSTERS, ent);
 
 	if (trace.fraction == 1.0)
 		return false;
 	mid = bottom = trace.endpos[2];
-	
-// the corners must be within 16 of the midpoint	
+
+// the corners must be within 16 of the midpoint
 	for	(x=0 ; x<=1 ; x++)
 		for	(y=0 ; y<=1 ; y++)
 		{
 			start[0] = stop[0] = x ? maxs[0] : mins[0];
 			start[1] = stop[1] = y ? maxs[1] : mins[1];
-			
+
 			trace = SV_Move (start, vec3_origin, vec3_origin, stop, MOVE_NOMONSTERS, ent);
-			
+
 			if (trace.fraction != 1.0 && trace.endpos[2] > bottom)
 				bottom = trace.endpos[2];
-			if (trace.fraction == 1.0 || mid - trace.endpos[2] > STEPSIZE)
+			if (trace.fraction == 1.0 || mid - trace.endpos[2] > sv_stepheight.value)
 				return false;
 		}
 
@@ -140,7 +138,7 @@ qboolean SV_movestep (edict_t *ent, vec3_t move, qboolean relink)
 			if (trace.fraction == 1)
 			{
 				VectorCopy(trace.endpos, traceendpos);
-				if ( ((int)ent->v.flags & FL_SWIM) && SV_PointContents(traceendpos) == CONTENTS_EMPTY )
+				if ( ((int)ent->v.flags & FL_SWIM) && Mod_PointInLeaf(traceendpos, sv.worldmodel)->contents == CONTENTS_EMPTY )
 					return false;	// swim monster left water
 
 				VectorCopy (traceendpos, ent->v.origin);
@@ -157,9 +155,9 @@ qboolean SV_movestep (edict_t *ent, vec3_t move, qboolean relink)
 	}
 
 // push down from a step height above the wished position
-	neworg[2] += STEPSIZE;
+	neworg[2] += sv_stepheight.value;
 	VectorCopy (neworg, end);
-	end[2] -= STEPSIZE*2;
+	end[2] -= sv_stepheight.value*2;
 
 	trace = SV_Move (neworg, ent->v.mins, ent->v.maxs, end, MOVE_NORMAL, ent);
 
@@ -168,7 +166,7 @@ qboolean SV_movestep (edict_t *ent, vec3_t move, qboolean relink)
 
 	if (trace.startsolid)
 	{
-		neworg[2] -= STEPSIZE;
+		neworg[2] -= sv_stepheight.value;
 		trace = SV_Move (neworg, ent->v.mins, ent->v.maxs, end, MOVE_NORMAL, ent);
 		if (trace.allsolid || trace.startsolid)
 			return false;
@@ -321,7 +319,7 @@ void SV_NewChaseDir (edict_t *actor, edict_t *enemy, float dist)
 		d[2]=tdir;
 	}
 
-	if (d[1]!=DI_NODIR && d[1]!=turnaround 
+	if (d[1]!=DI_NODIR && d[1]!=turnaround
 	&& SV_StepDirection(actor, d[1], dist))
 			return;
 
@@ -369,7 +367,7 @@ SV_CloseEnough
 qboolean SV_CloseEnough (edict_t *ent, edict_t *goal, float dist)
 {
 	int		i;
-	
+
 	for (i=0 ; i<3 ; i++)
 	{
 		if (goal->v.absmin[i] > ent->v.absmax[i] + dist)

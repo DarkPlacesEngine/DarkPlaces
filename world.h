@@ -29,31 +29,22 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	MOVE_MISSILE	2
 
 
-void SV_ClearWorld (void);
 // called after the world model has been loaded, before linking any entities
+void SV_ClearWorld (void);
 
-void SV_UnlinkEdict (edict_t *ent);
 // call before removing an entity, and before trying to move one,
 // so it doesn't clip against itself
-// flags ent->v.modified
+void SV_UnlinkEdict (edict_t *ent);
 
-void SV_LinkEdict (edict_t *ent, qboolean touch_triggers);
 // Needs to be called any time an entity changes origin, mins, maxs, or solid
-// flags ent->v.modified
 // sets ent->v.absmin and ent->v.absmax
 // if touchtriggers, calls prog functions for the intersected triggers
+void SV_LinkEdict (edict_t *ent, qboolean touch_triggers);
 
-extern int SV_HullPointContents (hull_t *hull, int num, vec3_t p);
-#define SV_PointContents(testpoint) SV_HullPointContents(&sv.worldmodel->hulls[0], 0, (testpoint))
-// returns the CONTENTS_* value from the world at the given point.
-// does not check any entities at all
-// the non-true version remaps the water current contents to content_water
+// returns true if the entity is in solid currently
+int SV_TestEntityPosition (edict_t *ent);
 
-edict_t	*SV_TestEntityPosition (edict_t *ent);
-
-trace_t SV_Move (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, int type, edict_t *passedict);
 // mins and maxs are relative
-
 // if the entire move stays in a solid volume, trace.allsolid will be set
 
 // if the starting point is in a solid, it will be allowed to move out
@@ -63,6 +54,7 @@ trace_t SV_Move (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, int type, e
 // shouldn't be considered solid objects
 
 // passedict is explicitly excluded from clipping checks (normally NULL)
+trace_t SV_Move (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, int type, edict_t *passedict);
 
 #endif
 
