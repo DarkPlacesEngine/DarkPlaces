@@ -152,12 +152,6 @@ static void Mod_MDL_LoadFrames (qbyte* datapointer, int inverts, vec3_t scale, v
 		{
 			pinframe = (daliasframe_t *)datapointer;
 			datapointer += sizeof(daliasframe_t);
-
-			// convert to MD2 frame headers
-			strcpy(loadmodel->mdlmd2data_frames[pose].name, pinframe->name);
-			VectorCopy(scale, loadmodel->mdlmd2data_frames[pose].scale);
-			VectorCopy(translate, loadmodel->mdlmd2data_frames[pose].translate);
-
 			Mod_ConvertAliasVerts(inverts, scale, translate, (trivertx_t *)datapointer, loadmodel->mdlmd2data_pose + pose * loadmodel->numverts);
 			Mod_BuildAliasVertexTextureVectors(loadmodel->numtris, loadmodel->mdlmd2data_indices, loadmodel->numverts, loadmodel->mdlmd2data_pose + pose * loadmodel->numverts, loadmodel->mdlmd2data_texcoords, vertexbuffer, svectorsbuffer, tvectorsbuffer, normalsbuffer);
 			datapointer += sizeof(trivertx_t) * inverts;
@@ -481,7 +475,6 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 
 // load the frames
 	loadmodel->animscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numframes);
-	loadmodel->mdlmd2data_frames = Mem_Alloc(loadmodel->mempool, sizeof(md2frame_t) * totalposes);
 	loadmodel->mdlmd2data_pose = Mem_Alloc(loadmodel->mempool, sizeof(aliasvertex_t) * totalposes * totalverts);
 
 	// LordHavoc: doing proper bbox for model
@@ -550,7 +543,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	qbyte *base;
 	int version, end;
 	int i, j, k, hashindex, num, numxyz, numst, xyz, st;
-	float *stverts, s, t;
+	float *stverts, s, t, scale[3], translate[3];
 	struct md2verthash_s
 	{
 		struct md2verthash_s *next;
@@ -724,7 +717,6 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	datapointer = (base + LittleLong(pinmodel->ofs_frames));
 	// load the frames
 	loadmodel->animscenes = Mem_Alloc(loadmodel->mempool, loadmodel->numframes * sizeof(animscene_t));
-	loadmodel->mdlmd2data_frames = Mem_Alloc(loadmodel->mempool, loadmodel->numframes * sizeof(md2frame_t));
 	loadmodel->mdlmd2data_pose = Mem_Alloc(loadmodel->mempool, loadmodel->numverts * loadmodel->numframes * sizeof(trivertx_t));
 
 	vertexbuffer = Mem_Alloc(tempmempool, loadmodel->numverts * sizeof(float[4]) * 4);
@@ -735,17 +727,16 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	{
 		pinframe = (md2frame_t *)datapointer;
 		datapointer += sizeof(md2frame_t);
-		strcpy(loadmodel->mdlmd2data_frames[i].name, pinframe->name);
 		for (j = 0;j < 3;j++)
 		{
-			loadmodel->mdlmd2data_frames[i].scale[j] = LittleFloat(pinframe->scale[j]);
-			loadmodel->mdlmd2data_frames[i].translate[j] = LittleFloat(pinframe->translate[j]);
+			scale[j] = LittleFloat(pinframe->scale[j]);
+			translate[j] = LittleFloat(pinframe->translate[j]);
 		}
-		Mod_MD2_ConvertVerts(loadmodel->mdlmd2data_frames[i].scale, loadmodel->mdlmd2data_frames[i].translate, (void *)datapointer, loadmodel->mdlmd2data_pose + i * loadmodel->numverts, vertremap);
+		Mod_MD2_ConvertVerts(scale, translate, (void *)datapointer, loadmodel->mdlmd2data_pose + i * loadmodel->numverts, vertremap);
 		Mod_BuildAliasVertexTextureVectors(loadmodel->numtris, loadmodel->mdlmd2data_indices, loadmodel->numverts, loadmodel->mdlmd2data_pose + i * loadmodel->numverts, loadmodel->mdlmd2data_texcoords, vertexbuffer, svectorsbuffer, tvectorsbuffer, normalsbuffer);
 		datapointer += numxyz * sizeof(trivertx_t);
 
-		strcpy(loadmodel->animscenes[i].name, loadmodel->mdlmd2data_frames[i].name);
+		strcpy(loadmodel->animscenes[i].name, pinframe->name);
 		loadmodel->animscenes[i].firstframe = i;
 		loadmodel->animscenes[i].framecount = 1;
 		loadmodel->animscenes[i].framerate = 10;

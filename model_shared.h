@@ -233,7 +233,6 @@ typedef struct model_s
 	// Q1 and Q2 models are the same after loading
 	int				*mdlmd2data_indices;
 	float			*mdlmd2data_texcoords;
-	md2frame_t		*mdlmd2data_frames;
 	aliasvertex_t	*mdlmd2data_pose;
 	int				*mdlmd2data_triangleneighbors;
 
