@@ -352,8 +352,8 @@ matrix4x4_t matrix_attenuationz =
 {
 	{
 		{0.0, 0.0, 0.5, 0.5},
-		{0.0, 0.0, 0.0, 0.0},
-		{0.0, 0.0, 0.0, 0.0},
+		{0.0, 0.0, 0.0, 0.5},
+		{0.0, 0.0, 0.0, 0.5},
 		{0.0, 0.0, 0.0, 1.0}
 	}
 };
@@ -1223,6 +1223,8 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 		bumptexture = r_shadow_blankbumptexture;
 	if (!glosstexture)
 		glosstexture = r_shadow_blankglosstexture;
+	GL_DepthMask(false);
+	GL_DepthTest(true);
 	if (gl_dot3arb && gl_texturecubemap && gl_combine.integer && gl_stencil)
 	{
 		if (lighting & LIGHTING_DIFFUSE)
@@ -1745,8 +1747,6 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 		if (lighting & LIGHTING_DIFFUSE)
 		{
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-			GL_DepthMask(false);
-			GL_DepthTest(true);
 			VectorScale(lightcolor, r_shadow_lightintensityscale.value, color2);
 			memset(&m, 0, sizeof(m));
 			m.pointer_vertex = vertex3f;
