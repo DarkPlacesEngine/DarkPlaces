@@ -1316,7 +1316,7 @@ void SV_Physics (void)
 
 		if (i > 0 && i <= MAX_SCOREBOARD)
 		{
-			if (!svs.connectedclients[i-1])
+			if (!svs.connectedclients[i-1] || !svs.connectedclients[i-1]->spawned)
 				continue;
 			// connected slot
 			// call standard client pre-think
