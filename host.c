@@ -646,6 +646,8 @@ Host_ServerFrame
 */
 void Host_ServerFrame (void)
 {
+	// never run more than 20 frames at a time as a sanity limit
+	int framecount, framelimit = 20;
 	double advancetime;
 	static double frametimetotal = 0, lastservertime = 0;
 	frametimetotal += host_frametime;
@@ -659,10 +661,9 @@ void Host_ServerFrame (void)
 
 	// run the world state
 	// don't allow simulation to run too fast or too slow or logic glitches can occur
-	while (frametimetotal > 0)
+	for (framecount = 0;framecount < framelimit && frametimetotal > 0;framecount++, frametimetotal -= advancetime)
 	{
 		advancetime = min(frametimetotal, sys_ticrate.value);
-		frametimetotal = frametimetotal - advancetime;
 
 		// only advance time if not paused
 		// the game also pauses in singleplayer when menu or console is used
