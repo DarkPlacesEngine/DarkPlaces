@@ -298,6 +298,9 @@ qboolean OGG_OpenLibrary (void)
 	if (vf_dll)
 		return true;
 
+	if (COM_CheckParm("-novorbis"))
+		return false;
+
 #ifdef WIN32
 	dllname = "vorbisfile.dll";
 #else
