@@ -215,6 +215,12 @@ void PR_Profile_f (void)
 	mfunction_t *f, *best;
 	int i, num, max/*, howmany*/;
 
+	if (!sv.active)
+	{
+		Con_Printf("no server running, can't profile\n");
+		return;
+	}
+
 	//howmany = 10;
 	//if (Cmd_Argc() == 2)
 	//	howmany = atoi(Cmd_Argv(1));
