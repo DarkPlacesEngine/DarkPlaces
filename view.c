@@ -76,7 +76,7 @@ float V_CalcRoll (vec3_t angles, vec3_t velocity)
 	side = DotProduct (velocity, right);
 	sign = side < 0 ? -1 : 1;
 	side = fabs(side);
-	
+
 	value = cl_rollangle.value;
 //	if (cl.inwater)
 //		value *= 6;
@@ -499,17 +499,19 @@ void V_CalcRefdef (void)
 
 	V_DriftPitch ();
 
-	VectorCopy (ent->render.origin, r_refdef.vieworg);
+	VectorCopy (cl.viewentorigin, r_refdef.vieworg);
 	if (!intimerefresh)
 		VectorCopy (cl.viewangles, r_refdef.viewangles);
 
 	if (cl.intermission)
 	{
 		view->render.model = NULL;
+		VectorCopy (ent->render.angles, r_refdef.viewangles);
 		V_AddIdle (1);
 	}
 	else if (chase_active.value)
 	{
+		r_refdef.vieworg[2] += cl.viewheight;
 		Chase_Update ();
 		V_AddIdle (v_idlescale.value);
 	}
@@ -544,9 +546,10 @@ void V_CalcRefdef (void)
 		// set up gun
 		view->state_current.modelindex = cl.stats[STAT_WEAPON];
 		view->state_current.frame = cl.stats[STAT_WEAPONFRAME];
-		view->render.origin[0] = ent->render.origin[0] + bob * 0.4 * forward[0];
-		view->render.origin[1] = ent->render.origin[1] + bob * 0.4 * forward[1];
-		view->render.origin[2] = ent->render.origin[2] + bob * 0.4 * forward[2] + cl.viewheight + bob;
+		VectorCopy(r_refdef.vieworg, view->render.origin);
+		//view->render.origin[0] = ent->render.origin[0] + bob * 0.4 * forward[0];
+		//view->render.origin[1] = ent->render.origin[1] + bob * 0.4 * forward[1];
+		//view->render.origin[2] = ent->render.origin[2] + bob * 0.4 * forward[2] + cl.viewheight + bob;
 		view->render.angles[PITCH] = -r_refdef.viewangles[PITCH] - v_idlescale.value * sin(cl.time*v_iyaw_cycle.value) * v_iyaw_level.value;
 		view->render.angles[YAW] = r_refdef.viewangles[YAW] - v_idlescale.value * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value;
 		view->render.angles[ROLL] = r_refdef.viewangles[ROLL] - v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value;

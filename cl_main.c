@@ -287,44 +287,24 @@ should be put at.
 */
 static float CL_LerpPoint (void)
 {
-	float	f, frac;
+	float	f;
 
-	f = cl.mtime[0] - cl.mtime[1];
+	// dropped packet, or start of demo
+	if (cl.mtime[1] < cl.mtime[0] - 0.1)
+		cl.mtime[1] = cl.mtime[0] - 0.1;
+
+	cl.time = bound(cl.mtime[1], cl.time, cl.mtime[0]);
 
 	// LordHavoc: lerp in listen games as the server is being capped below the client (usually)
+	f = cl.mtime[0] - cl.mtime[1];
 	if (!f || cl_nolerp.integer || cls.timedemo || (sv.active && svs.maxclients == 1))
 	{
 		cl.time = cl.mtime[0];
 		return 1;
 	}
 
-	if (f > 0.1)
-	{	// dropped packet, or start of demo
-		cl.mtime[1] = cl.mtime[0] - 0.1;
-		f = 0.1;
-	}
-	frac = (cl.time - cl.mtime[1]) / f;
-//	Con_Printf ("frac: %f\n",frac);
-	if (frac < 0)
-	{
-		if (frac < -0.01)
-		{
-			cl.time = cl.mtime[1];
-//			Con_Printf ("low frac\n");
-		}
-		frac = 0;
-	}
-	else if (frac > 1)
-	{
-		if (frac > 1.01)
-		{
-			cl.time = cl.mtime[0];
-//			Con_Printf ("high frac\n");
-		}
-		frac = 1;
-	}
-
-	return frac;
+	f = (cl.time - cl.mtime[1]) / f;
+	return bound(0, f, 1);
 }
 
 static void CL_RelinkStaticEntities(void)
@@ -354,8 +334,6 @@ static void CL_RelinkNetworkEntities()
 		bobjoffset = (cos(cl.time * cl_itembobspeed.value * (2.0 * M_PI)) + 1.0) * 0.5 * cl_itembobheight.value;
 	else
 		bobjoffset = 0;
-
-	CL_RelinkStaticEntities();
 
 // start on the entity after the world
 	for (i = 1, ent = cl_entities + 1;i < MAX_EDICTS /*cl.num_entities*/;i++, ent++)
@@ -648,13 +626,22 @@ static void CL_RelinkNetworkEntities()
 	}
 }
 
-static void CL_LerpPlayerVelocity (void)
+void CL_LerpPlayerEye(float frac)
+{
+	if (cl.entitydatabase.numframes)
+	{
+		cl.viewentorigin[0] = cl.viewentoriginold[0] + frac * (cl.viewentoriginnew[0] - cl.viewentoriginold[0]);
+		cl.viewentorigin[1] = cl.viewentoriginold[1] + frac * (cl.viewentoriginnew[1] - cl.viewentoriginold[1]);
+		cl.viewentorigin[2] = cl.viewentoriginold[2] + frac * (cl.viewentoriginnew[2] - cl.viewentoriginold[2]);
+	}
+	else
+		VectorCopy (cl_entities[cl.viewentity].render.origin, cl.viewentorigin);
+}
+
+static void CL_LerpPlayerVelocity (float frac)
 {
 	int i;
-	float frac, d;
-
-	// fraction from previous network update to current
-	frac = CL_LerpPoint ();
+	float d;
 
 	for (i = 0;i < 3;i++)
 		cl.velocity[i] = cl.mvelocity[1][i] + frac * (cl.mvelocity[0][i] - cl.mvelocity[1][i]);
@@ -751,13 +738,21 @@ static void CL_RelinkEffects()
 
 void CL_RelinkEntities (void)
 {
+	float frac;
+
+	// fraction from previous network update to current
+	frac = CL_LerpPoint ();
+
 	CL_DecayLights ();
-	CL_LerpPlayerVelocity();
+	CL_RelinkStaticEntities();
 	CL_RelinkNetworkEntities();
 	TraceLine_ScanForBModels();
 	CL_RelinkEffects();
 	CL_MoveParticles();
 	CL_UpdateTEnts();
+
+	CL_LerpPlayerEye(frac);
+	CL_LerpPlayerVelocity(frac);
 }
 
 

@@ -108,9 +108,17 @@ typedef struct client_s
 	int				old_frags;
 	int				pmodel;
 
+#ifdef QUAKEENTITIES
 	// delta compression state
 	float			nextfullupdate[MAX_EDICTS];
-	float			lastvisible[MAX_EDICTS];
+#endif
+	// visibility state
+	float			visibletime[MAX_EDICTS];
+
+#ifndef QUAKEENTITIES
+	entity_database_t entitydatabase;
+	int				entityframenumber; // incremented each time an entity frame is sent
+#endif
 } client_t;
 
 

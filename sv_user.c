@@ -76,7 +76,7 @@ void SV_SetIdealPitch (void)
 		bottom[0] = top[0];
 		bottom[1] = top[1];
 		bottom[2] = top[2] - 160;
-		
+
 		tr = SV_Move (top, vec3_origin, vec3_origin, bottom, MOVE_NOMONSTERS, sv_player);
 		if (tr.allsolid)
 			return;	// looking at a wall, leave ideal the way is was
@@ -232,7 +232,7 @@ void DropPunchAngle (void)
 	eval_t	*val;
 	
 	len = VectorNormalizeLength (sv_player->v.punchangle);
-	
+
 	len -= 10*sv.frametime;
 	if (len < 0)
 		len = 0;
@@ -606,6 +606,10 @@ nextmsg:
 
 			case clc_move:
 				SV_ReadClientMove (&host_client->cmd);
+				break;
+
+			case clc_ackentities:
+				EntityFrame_AckFrame(&host_client->entitydatabase, MSG_ReadLong());
 				break;
 			}
 		}

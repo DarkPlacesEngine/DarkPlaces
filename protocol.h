@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -20,7 +20,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // protocol.h -- communications protocols
 
 #define	PROTOCOL_VERSION	15
-#define	DPPROTOCOL_VERSION	96
+#define	DPPROTOCOL_VERSION1	96
+#define	DPPROTOCOL_VERSION2	97
 
 // model effects
 #define	EF_ROCKET	1			// leave a trail
@@ -202,6 +203,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	svc_hidelmp			36		// [string] slotname
 #define	svc_skybox			37		// [string] skyname
 
+// LordHavoc: my svc_ range, 50-59
 #define svc_cgame			50		// [short] length [bytes] data
 #define svc_fog				51		// unfinished and obsolete
 #define svc_effect			52		// [vector] org [byte] modelindex [byte] startframe [byte] framecount [byte] framerate
@@ -222,6 +224,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	clc_move		3			// [usercmd_t]
 #define	clc_stringcmd	4		// [string] message
 
+// LordHavoc: my clc_ range, 50-59
+#define clc_ackentities	50		// [int] framenumber
+#define clc_unusedlh1 	51
+#define clc_unusedlh2 	52
+#define clc_unusedlh3 	53
+#define clc_unusedlh4 	54
+#define clc_unusedlh5 	55
+#define clc_unusedlh6 	56
+#define clc_unusedlh7 	57
+#define clc_unusedlh8 	58
+#define clc_unusedlh9 	59
 
 //
 // temp entity events
@@ -240,7 +253,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	TE_TELEPORT			11 // [vector] origin
 #define TE_EXPLOSION2		12 // [vector] origin [byte] startcolor [byte] colorcount
 
-// PGM 01/21/97 
+// PGM 01/21/97
 #define TE_BEAM				13 // [entity] entity [vector] start [vector] end
 // PGM 01/21/97 
 
@@ -296,7 +309,6 @@ entity_state_t;
 typedef struct
 {
 	double time;
-	vec3_t eye;
 	int framenum;
 	int firstentity; // index into entitydata, modulo MAX_ENTITY_DATABASE
 	int endentity; // index into entitydata, firstentity + numentities
@@ -318,6 +330,7 @@ typedef struct
 	// the only reason this system is used is to avoid copying memory when frames are removed
 	int numframes;
 	int ackframe; // server only: last acknowledged frame
+	vec3_t eye;
 	entity_frameinfo_t frames[MAX_ENTITY_HISTORY];
 	entity_state_t entitydata[MAX_ENTITY_DATABASE];
 }
@@ -389,14 +402,21 @@ void EntityFrame_AckFrame(entity_database_t *d, int frame);
 void EntityFrame_Clear(entity_frame_t *f, vec3_t eye);
 // (server) allocates an entity slot in frame, returns NULL if full
 entity_state_t *EntityFrame_NewEntity(entity_frame_t *f, int number);
+// (server and client) reads a frame from the database
+void EntityFrame_FetchFrame(entity_database_t *d, int framenum, entity_frame_t *f);
 // (server and client) adds a entity_frame to the database, for future
 // reference
 void EntityFrame_AddFrame(entity_database_t *d, entity_frame_t *f);
 // (server) writes a frame to network stream
-void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, int newframe, sizebuf_t *msg);
+void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, sizebuf_t *msg);
 // (client) reads a frame from network stream
 void EntityFrame_Read(entity_database_t *d);
+// (client) reads (and interpolates) the eye location from the database,
+// given a current time
+//int EntityFrame_FetchEye(entity_database_t *d, vec3_t eye, double time);
 // (client) fetchs an entity from the frame by index into the entity list
-int EntityFrame_FetchEntityByIndex(entity_frame_t *f, entity_state_t *e, int index);
+//int EntityFrame_FetchEntityByIndex(entity_frame_t *f, entity_state_t *e, int index);
 // (client) fetchs an entity from the frame by entity number
-int EntityFrame_FetchEntityByNumber(entity_frame_t *f, entity_state_t *e, int number);
+//int EntityFrame_FetchEntityByNumber(entity_frame_t *f, entity_state_t *e, int number);
+// (client) returns the frame number of the most recent frame recieved
+int EntityFrame_MostRecentlyRecievedFrameNum(entity_database_t *d);
