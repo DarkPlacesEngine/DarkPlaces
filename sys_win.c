@@ -372,7 +372,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 				// unquoted word
 				argv[com_argc] = lpCmdLine;
 				com_argc++;
-				while (*lpCmdLine && *lpCmdLine > ' )
+				while (*lpCmdLine && *lpCmdLine > ' ')
 					lpCmdLine++;
 			}
 
