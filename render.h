@@ -52,7 +52,6 @@ extern void SHOWLMP_drawall(void);
 extern void SHOWLMP_clear(void);
 
 // render profiling stuff
-extern qboolean intimerefresh;
 extern char r_speeds_string[1024];
 
 // lighting stuff
@@ -133,8 +132,7 @@ void R_RenderView(void); // must call R_UpdateWorld and set r_refdef first
 
 void R_InitSky (qbyte *src, int bytesperpixel); // called at level load
 
-void R_WorldVisibility(entity_render_t *ent);
-void R_DrawWorld(entity_render_t *ent);
+void R_WorldVisibility();
 void R_DrawParticles(void);
 void R_DrawExplosions(void);
 
@@ -142,7 +140,7 @@ void R_DrawExplosions(void);
 #define gl_alpha_format 4
 
 int R_CullBox(const vec3_t mins, const vec3_t maxs);
-#define VIS_CullBox(mins,maxs) (R_CullBox((mins), (maxs)) || (cl.worldmodel && cl.worldmodel->brush.BoxTouchingPVS && !cl.worldmodel->brush.BoxTouchingPVS(cl.worldmodel, r_pvsbits, (mins), (maxs))))
+#define VIS_CullBox(mins,maxs) (R_CullBox((mins), (maxs)) || (r_refdef.worldmodel && r_refdef.worldmodel->brush.BoxTouchingPVS && !r_refdef.worldmodel->brush.BoxTouchingPVS(r_refdef.worldmodel, r_pvsbits, (mins), (maxs))))
 
 extern qboolean fogenabled;
 extern vec3_t fogcolor;

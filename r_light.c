@@ -288,24 +288,24 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 	VectorClear(diffusecolor);
 	VectorClear(diffusenormal);
 
-	if (!r_fullbright.integer && cl.worldmodel && cl.worldmodel->brush.LightPoint)
+	if (!r_fullbright.integer && r_refdef.worldmodel && r_refdef.worldmodel->brush.LightPoint)
 	{
 		ambientcolor[0] = ambientcolor[1] = ambientcolor[2] = r_ambient.value * (2.0f / 128.0f);
-		cl.worldmodel->brush.LightPoint(cl.worldmodel, p, ambientcolor, diffusecolor, diffusenormal);
+		r_refdef.worldmodel->brush.LightPoint(r_refdef.worldmodel, p, ambientcolor, diffusecolor, diffusenormal);
 	}
 	else
 		VectorSet(ambientcolor, 1, 1, 1);
 
 	// FIXME: this .lights related stuff needs to be ported into the Mod_Q1BSP code
-	if (cl.worldmodel->brushq1.numlights)
+	if (r_refdef.worldmodel->brushq1.numlights)
 	{
 		int i;
 		vec3_t v;
 		float f;
 		mlight_t *sl;
-		for (i = 0;i < cl.worldmodel->brushq1.numlights;i++)
+		for (i = 0;i < r_refdef.worldmodel->brushq1.numlights;i++)
 		{
-			sl = cl.worldmodel->brushq1.lights + i;
+			sl = r_refdef.worldmodel->brushq1.lights + i;
 			if (d_lightstylevalue[sl->style] > 0)
 			{
 				VectorSubtract (p, sl->origin, v);
@@ -380,9 +380,9 @@ int R_LightModel(float *ambient4f, float *diffusecolor, float *diffusenormal, co
 		maxnearlights = 0;
 	else
 	{
-		if (cl.worldmodel && cl.worldmodel->brush.LightPoint)
+		if (r_refdef.worldmodel && r_refdef.worldmodel->brush.LightPoint)
 		{
-			cl.worldmodel->brush.LightPoint(cl.worldmodel, ent->origin, ambient4f, diffusecolor, tempdiffusenormal);
+			r_refdef.worldmodel->brush.LightPoint(r_refdef.worldmodel, ent->origin, ambient4f, diffusecolor, tempdiffusenormal);
 			Matrix4x4_Transform3x3(&ent->inversematrix, tempdiffusenormal, diffusenormal);
 			VectorNormalize(diffusenormal);
 		}
@@ -397,7 +397,7 @@ int R_LightModel(float *ambient4f, float *diffusecolor, float *diffusenormal, co
 	nl = &nearlight[0];
 	for (i = 0;i < ent->numentlights;i++)
 	{
-		sl = cl.worldmodel->brushq1.lights + ent->entlights[i];
+		sl = r_refdef.worldmodel->brushq1.lights + ent->entlights[i];
 		stylescale = d_lightstylevalue[sl->style] * (1.0f / 65536.0f);
 		VectorSubtract (ent->origin, sl->origin, v);
 		f = ((1.0f / (DotProduct(v, v) * sl->falloff + sl->distbias)) - sl->subtract) * stylescale;
@@ -595,8 +595,8 @@ void R_UpdateEntLights(entity_render_t *ent)
 		ent->entlightstime = realtime + 0.1;
 		VectorCopy(ent->origin, ent->entlightsorigin);
 		ent->numentlights = 0;
-		if (cl.worldmodel)
-			for (i = 0, sl = cl.worldmodel->brushq1.lights;i < cl.worldmodel->brushq1.numlights && ent->numentlights < MAXENTLIGHTS;i++, sl++)
+		if (r_refdef.worldmodel)
+			for (i = 0, sl = r_refdef.worldmodel->brushq1.lights;i < r_refdef.worldmodel->brushq1.numlights && ent->numentlights < MAXENTLIGHTS;i++, sl++)
 				if (CL_TraceLine(ent->origin, sl->origin, NULL, NULL, false, NULL, SUPERCONTENTS_SOLID) == 1)
 					ent->entlights[ent->numentlights++] = i;
 	}

@@ -893,6 +893,8 @@ void CL_RelinkWorld(void)
 	if (!r_fullbright.integer)
 		ent->render.flags |= RENDER_LIGHT;
 	VectorSet(ent->render.colormod, 1, 1, 1);
+	r_refdef.worldentity = &ent->render;
+	r_refdef.worldmodel = cl.worldmodel;
 }
 
 static void CL_RelinkStaticEntities(void)
@@ -1174,6 +1176,8 @@ int CL_ReadFromServer(void)
 {
 	CL_ReadDemoMessage();
 
+	r_refdef.time = cl.time;
+	r_refdef.extraupdate = !r_speeds.integer;
 	r_refdef.numentities = 0;
 	cl_num_entities = 0;
 	cl_num_brushmodel_entities = 0;
@@ -1269,36 +1273,38 @@ static void CL_Fog_f (void)
 }
 
 /*
+====================
+CL_TimeRefresh_f
+
+For program optimization
+====================
+*/
+static void CL_TimeRefresh_f (void)
+{
+	int i;
+	float timestart, timedelta, oldangles[3];
+
+	r_refdef.extraupdate = false;
+	VectorCopy(cl.viewangles, oldangles);
+	VectorClear(cl.viewangles);
+
+	timestart = Sys_DoubleTime();
+	for (i = 0;i < 128;i++)
+	{
+		Matrix4x4_CreateFromQuakeEntity(&r_refdef.viewentitymatrix, r_vieworigin[0], r_vieworigin[1], r_vieworigin[2], 0, i / 128.0 * 360.0, 0, 1);
+		CL_UpdateScreen();
+	}
+	timedelta = Sys_DoubleTime() - timestart;
+
+	VectorCopy(oldangles, cl.viewangles);
+	Con_Printf("%f seconds (%f fps)\n", timedelta, 128/timedelta);
+}
+
+/*
 =================
 CL_Init
 =================
 */
-//VorteX: cvars for GAME_NETHERWORLD
-cvar_t __cl_playermodel = {CVAR_SAVE, "cl_playermodel", "ranger"}; 
-cvar_t cl_footsteps = {CVAR_SAVE, "cl_footsteps", "1"}; 
-cvar_t cl_weapon_ofs = {CVAR_SAVE, "cl_weapon_ofs", "0 0 0"}; 
-cvar_t cl_weapon_bstep = {CVAR_SAVE, "cl_weapon_bstep", "100 0 0"}; 
-cvar_t cl_weapon_bborder = {CVAR_SAVE, "cl_weapon_bborder", "2 0 0"};
-cvar_t cl_weapon_bphase = {CVAR_SAVE, "cl_weapon_bphase", "0 0 0"};
-cvar_t cl_weapon_bphasescale = {CVAR_SAVE, "cl_weapon_bphasescale", "1 1 1"};
-cvar_t cl_weapon_bphasescissor = {CVAR_SAVE, "cl_weapon_bphasescissor", "-1 -1 -1 1 1 1"};
-cvar_t cl_deathcam = {CVAR_SAVE, "cl_deathcam", "0"};
-cvar_t cl_askonresave = {CVAR_SAVE, "cl_askonresave", "1"};  //Asking on saving to full saveslot in savegame menu
-cvar_t sv_corpses_solid = {CVAR_SAVE, "sv_corpses_solid", "1"}; 
-cvar_t sv_corpses_removetime = {CVAR_SAVE, "sv_corpses_removetime", "0"}; 
-cvar_t sv_monsters_healthscale = {CVAR_SAVE, "sv_monsters_healthscale", "1"}; 
-cvar_t sv_monsters_damagescale = {CVAR_SAVE, "sv_monsters_damagescale", "1"}; 
-cvar_t sv_monsters_multiply = {CVAR_SAVE, "sv_monsters_multiply", "1"};
-cvar_t sv_monsters_randomize = {CVAR_SAVE, "sv_monsters_randomize", "0"};  
-cvar_t sv_monsters_multiply_radius = {CVAR_SAVE, "sv_monsters_multiply_radius", "5"}; 
-cvar_t sv_monsters_ai_skillmod = {CVAR_SAVE, "sv_monsters_ai_skillmod", "1"};
-cvar_t sv_monsters_ai_agrmod = {CVAR_SAVE, "sv_monsters_ai_agrmod", "1"};
-cvar_t sv_monsters_ai_dexmod = {CVAR_SAVE, "sv_monsters_ai_dexmod", "1"};
-cvar_t sv_monsters_deathmatch = {CVAR_SAVE, "sv_monsters_deathmatch", "0"}; 
-cvar_t sv_monsters_deathmatch_maxnum = {CVAR_SAVE, "sv_monsters_deathmatch_maxnum", "20"}; 
-cvar_t sv_monsters_deathmatch_spawntime = {CVAR_SAVE, "sv_monsters_deathmatch_spawntime", "5"}; 
-cvar_t sv_monsters_deathmatch_fragpermonster = {CVAR_SAVE, "sv_monsters_deathmatch_fragpermonster", "0"}; 
-
 void CL_Init (void)
 {
 	cl_entities_mempool = Mem_AllocPool("client entities", 0, NULL);
@@ -1369,33 +1375,7 @@ void CL_Init (void)
 
 	Cvar_RegisterVariable(&cl_prydoncursor);
 
-	if (gamemode == GAME_NETHERWORLD)
-	{
-		Cvar_RegisterVariable (&__cl_playermodel); 
-		Cvar_RegisterVariable (&cl_footsteps); 
-		Cvar_RegisterVariable (&cl_weapon_ofs); 
-		Cvar_RegisterVariable (&cl_weapon_bstep); 
-		Cvar_RegisterVariable (&cl_weapon_bborder);
-		Cvar_RegisterVariable (&cl_weapon_bphase);
-		Cvar_RegisterVariable (&cl_weapon_bphasescale);
-		Cvar_RegisterVariable (&cl_weapon_bphasescissor);
-		Cvar_RegisterVariable (&cl_deathcam);	 //Hack for q3-style death
-		Cvar_RegisterVariable (&cl_askonresave); //Every time ask if saving to "full" saveslot
-		//This must be server-side cvars, after complete finishing of subsystems whitch uses this, they must be moved to server-side
-		Cvar_RegisterVariable (&sv_monsters_healthscale); 
-		Cvar_RegisterVariable (&sv_monsters_damagescale); 
-		Cvar_RegisterVariable (&sv_monsters_randomize);
-		Cvar_RegisterVariable (&sv_monsters_multiply); 
-		Cvar_RegisterVariable (&sv_monsters_multiply_radius); 
-		Cvar_RegisterVariable (&sv_monsters_ai_skillmod); 
-		Cvar_RegisterVariable (&sv_monsters_ai_agrmod); 
-		Cvar_RegisterVariable (&sv_monsters_ai_dexmod); 
-		Cvar_RegisterVariable (&sv_monsters_deathmatch); //Keeping RPG mod
-		Cvar_RegisterVariable (&sv_monsters_deathmatch_maxnum); 
-		Cvar_RegisterVariable (&sv_monsters_deathmatch_spawntime); 
-		Cvar_RegisterVariable (&sv_monsters_deathmatch_fragpermonster); 
-		Cvar_RegisterVariable (&sv_corpses_solid); 
-	}
+	Cmd_AddCommand("timerefresh", CL_TimeRefresh_f);
 
 	CL_Parse_Init();
 	CL_Particles_Init();

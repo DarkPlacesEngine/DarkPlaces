@@ -1430,56 +1430,6 @@ void SCR_UpdateScreen (void)
 	if (gl_combine.integer && (!gl_combine_extension || r_textureunits.integer < 2))
 		Cvar_SetValueQuick(&gl_combine, 0);
 
-	// don't allow cheats in multiplayer
-	if (!cl.islocalgame && cl.worldmodel)
-	{
-		if (r_fullbright.integer != 0)
-			Cvar_Set ("r_fullbright", "0");
-		if (r_ambient.value != 0)
-			Cvar_Set ("r_ambient", "0");
-	}
-
-	// bound viewsize
-	if (scr_viewsize.value < 30)
-		Cvar_Set ("viewsize","30");
-	if (scr_viewsize.value > 120)
-		Cvar_Set ("viewsize","120");
-
-	// bound field of view
-	if (scr_fov.value < 1)
-		Cvar_Set ("fov","1");
-	if (scr_fov.value > 170)
-		Cvar_Set ("fov","170");
-
-	// intermission is always full screen
-	if (cl.intermission)
-		sb_lines = 0;
-	else
-	{
-		if (scr_viewsize.value >= 120)
-			sb_lines = 0;		// no status bar at all
-		else if (scr_viewsize.value >= 110)
-			sb_lines = 24;		// no inventory
-		else
-			sb_lines = 24+16+8;
-	}
-
-	r_refdef.fovscale_x = 1;
-	r_refdef.fovscale_y = 1;
-	if (r_waterwarp.value > 0 && cl.worldmodel)
-	{
-		Mod_CheckLoaded(cl.worldmodel);
-		if (CL_PointSuperContents(r_vieworigin) & SUPERCONTENTS_LIQUIDSMASK)
-		{
-			r_refdef.fovscale_x = 1 - (((sin(cl.time * 4.7) + 1) * 0.015) * r_waterwarp.value);
-			r_refdef.fovscale_y = 1 - (((sin(cl.time * 3.0) + 1) * 0.015) * r_waterwarp.value);
-		}
-	}
-
-	r_refdef.colormask[0] = 1;
-	r_refdef.colormask[1] = 1;
-	r_refdef.colormask[2] = 1;
-
 	CHECKGLERROR
 	qglViewport(0, 0, vid.realwidth, vid.realheight);
 	qglDisable(GL_SCISSOR_TEST);

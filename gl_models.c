@@ -17,7 +17,7 @@ aliasskin_t *R_FetchAliasSkin(const entity_render_t *ent, const aliasmesh_t *mes
 		if ((unsigned int)s >= (unsigned int)model->numskins)
 			s = 0;
 		if (model->skinscenes[s].framecount > 1)
-			s = model->skinscenes[s].firstframe + (int) (cl.time * model->skinscenes[s].framerate) % model->skinscenes[s].framecount;
+			s = model->skinscenes[s].firstframe + (int) (r_refdef.time * model->skinscenes[s].framerate) % model->skinscenes[s].framecount;
 		else
 			s = model->skinscenes[s].firstframe;
 		if (s >= mesh->num_skins)

@@ -835,10 +835,25 @@ typedef struct
 	// fullscreen color blend
 	float viewblend[4];
 
+	// whether to call S_ExtraUpdate during render to reduce sound chop
+	qboolean extraupdate;
+
+	// client gameworld time for rendering time based effects
+	double time;
+
+	// the world
+	entity_render_t *worldentity;
+
+	// same as worldentity->model
+	model_t *worldmodel;
+
+	// renderable entities (excluding world)
 	entity_render_t **entities;
 	int numentities;
 	int maxentities;
 
+	// 2D art drawing queue
+	// TODO: get rid of this
 	qbyte *drawqueue;
 	int drawqueuesize;
 	int maxdrawqueuesize;
