@@ -560,7 +560,7 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 			window_y = (int) HIWORD(lParam);
 			VID_UpdateWindowStatus ();
 			break;
-	
+
 		case WM_KEYDOWN:
 		case WM_SYSKEYDOWN:
 			down = true;
@@ -1000,6 +1000,8 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 
 	//vid_menudrawfn = VID_MenuDraw;
 	//vid_menukeyfn = VID_MenuKey;
+	vid_usingmouse = false;
+	vid_usingvsync = false;
 	vid_hidden = false;
 	vid_initialized = true;
 
