@@ -37,7 +37,7 @@
 0 darkplaces: add DP_OGGSOUND extension which can be checked by mods to know they can intentionally load .ogg instead of .wav, since the engine prefers wav over ogg normally (CheapAlert)
 0 darkplaces: add DP_SENSITIVITYSCALE extension which scales sensitivity on client like viewzoom does, but without affecting fov, note if this is non-zero it overrides viewzoom sensitivity entirely, it does not scale it (Urre)
 0 darkplaces: add DP_SV_DRAWONLYTOTEAM extension (Supajoe)
-0 darkplaces: add DP_WEAPONSKIN extension which would add a .float weaponskin field (protoplasmatic)
+0 darkplaces: add DP_WEAPONSKIN extension which would add a .float weaponskin field (protoplasmatic, Kazashi)
 0 darkplaces: add Mem_AllocNoClear function, and use it where possible, if developer is on it should clear with random garbage
 0 darkplaces: add PF_tokenizeseparator function and DP_QC_TOKENIZESEPARATOR extension (Electro)
 0 darkplaces: add a .collision_cancollide QC function call to decide if an entity should collide with another, or pass through it (Uffe)
@@ -79,6 +79,7 @@
 0 darkplaces: cl_particles_maximum cvar (default 32768) which would change number of particles allowed at once (TheBeast)
 0 darkplaces: clean up Collision_TraceBrushBrush to have another temp variable besides f and clean up the enterfrac2 handling (Vic)
 0 darkplaces: client colors are being reset to "15 15" each level in prydon gate? (FrikaC)
+0 darkplaces: collision: client getting fraction out of bounds errors when in a map the client does not have
 0 darkplaces: corona on your own muzzleflash is annoying when looking down because it can be seen (flum)
 0 darkplaces: crash when progs/k_spike.mdl isn't found? (CheapAlert)
 0 darkplaces: delay "connect" and "playdemo" and "timedemo" until after video init to cause quicker video startup (KrimZon)
@@ -133,6 +134,7 @@
 0 darkplaces: make sure zym code is rendering at correct brightness, it's too dark in nexuiz (Vermeulen)
 0 darkplaces: memory pools should be able to be nested multiple levels (Vic)
 0 darkplaces: mini scoreboard (the deathmatch overlay) shows player names multiple times in some cases?
+0 darkplaces: missing triangles in q3bsp patches, appears only one of the two triangles per cell is being rendered (Zombie)
 0 darkplaces: mod_q3bsp_optimizedtraceline bug: shooting through brushes? (Vermeulen)
 0 darkplaces: nodestack[nodestackindex++] = node->children[0]; and similar things should skip the node if stack is full (Vic)
 0 darkplaces: optimize Collision_TraceBrushBrush to compare enterfrac changes to realfraction and skip out if further, also leavefrac changes to skip out (Vic)
@@ -148,6 +150,7 @@
 0 darkplaces: remove the loop unrolling in Image_Resample32LerpLine and Image_Resample24LerpLine and related functions, as the loop is really too long to get much benefit, and it might even not fit in the L1 instruction cache on Pentium1 (fuh)
 0 darkplaces: rename everything possible in msurface_t, mleaf_t, and mnode_t to be named like q3mface_t, q3mleaf_t, and q3mnode_t, to make them more similar
 0 darkplaces: reset zoom on connect (Rick)
+0 darkplaces: rtlights: light entity loader is broken, it ends up with scrambled colors (avirox, Tomaz)
 0 darkplaces: server should send slowmo to client somehow (Vermeulen)
 0 darkplaces: server should send sv_gravity to client somehow (Vermeulen)
 0 darkplaces: skybox is getting reset during renderer restart (Stribbs)
@@ -158,6 +161,8 @@
 0 darkplaces: test TecnoX and find the frikbot crash in SV_Physics (KrimZon)
 0 darkplaces: test zlib support with entirely pk3'd id1 data (should crash because of zlib not being setup early enough - fix this) (Mabus)
 0 darkplaces: the new sound engine should have a cvar for random variations of pitch on sounds like in doom (RenegadeC)
+0 dpmaster: add a commandline option to dpmaster that remaps a server ip to another ip, so LordHavoc can make his server show up on his dpmaster
+0 dpmaster: rename 'interface' variable so it compiles in MSVC, interface is a compiler keyword (Vic)
 0 dpmod: add a "monsterwander" cvar and default it off, this would enable the spawnwanderpath code (Zombie13)
 0 dpmod: add back nails in walls, even if only in singleplayer (Zenex)
 0 dpmod: add combo kill detection; rapid burst of kills (SeienAbunae)
@@ -266,6 +271,7 @@
 2 darkplaces: add q2 sprite support sometime
 2 darkplaces: add q3bsp water rendering, both scrolling and watershader (Zombie)
 2 darkplaces: add removemapmusic (optional map name or ogg name to clear) and mapmusic commands (<maps/mapname.bsp> <music/whatever.ogg> perhaps) to manipulate list of per-map music overrides (Joseph Caporale, tell Static_Fiend)
+2 darkplaces: add support for stereo shutter glasses
 2 darkplaces: add windres stuff to makefile to compile darkplaces.rc into win32 builds (tell de-we)
 2 darkplaces: bmodel bounding boxes need to be calculated to account for clip brushes, which are not in the drawing hull (metlslime)
 2 darkplaces: change menu qc key input to using string key names instead of numbers (the bind alias names should be able to do this) (Mercury, Black, Vermeulen)
@@ -324,6 +330,7 @@
 3 darkplaces: add ogg music playback using optional library after adding wav music playback (Joseph Caporale, Static_Fiend, Akuma)
 3 darkplaces: add snd_rate cvar and make it changable during game (RenegadeC)
 3 darkplaces: add stainmaps to realtime lighting mode
+3 darkplaces: add support for red/cyan and red/green and red/blue anaglyph stereo glasses
 3 darkplaces: call checkvelocity (to clear NaNs) every time velocity is set in physics, to fix frikbot (tell FrikaC)
 3 darkplaces: delay unreliable effects into later packets if they could not send in this packet (romi) 
 3 darkplaces: directional lighting from the q3bsp lightgrid should use diffuse and specular lighting if available (Electro)
