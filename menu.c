@@ -2015,7 +2015,7 @@ void M_FindKeysForCommand (char *command, int *keys)
 
 	count = 0;
 
-	for (j = 0; j < sizeof (keybindings[0]) / sizeof (keybindings[0][0]); j++)
+	for (j = 0; j < (int)sizeof (keybindings[0]) / (int)sizeof (keybindings[0][0]); j++)
 	{
 		b = keybindings[0][j];
 		if (!b)
@@ -2034,7 +2034,7 @@ void M_UnbindCommand (char *command)
 	int		j;
 	char	*b;
 
-	for (j = 0; j < sizeof (keybindings[0]) / sizeof (keybindings[0][0]); j++)
+	for (j = 0; j < (int)sizeof (keybindings[0]) / (int)sizeof (keybindings[0][0]); j++)
 	{
 		b = keybindings[0][j];
 		if (!b)
