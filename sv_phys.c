@@ -1061,83 +1061,6 @@ void SV_WalkMove (edict_t *ent)
 	}
 }
 
-
-/*
-================
-SV_Physics_Client
-
-Player character actions
-================
-*/
-void SV_Physics_Client (edict_t *ent, int num)
-{
-	if (!svs.clients[num-1].active)
-		return;		// unconnected slot
-
-	SV_CheckVelocity (ent);
-
-	// call standard client pre-think
-	pr_global_struct->time = sv.time;
-	pr_global_struct->self = EDICT_TO_PROG(ent);
-	PR_ExecuteProgram (pr_global_struct->PlayerPreThink, "QC function PlayerPreThink is missing");
-
-	// do a move
-	SV_CheckVelocity (ent);
-
-	// decide which move function to call
-	switch ((int)ent->v->movetype)
-	{
-	case MOVETYPE_NONE:
-		if (!SV_RunThink (ent))
-			return;
-		break;
-
-	case MOVETYPE_WALK:
-		if (!SV_RunThink (ent))
-			return;
-		if (!SV_CheckWater (ent) && ! ((int)ent->v->flags & FL_WATERJUMP) )
-			SV_AddGravity (ent);
-		SV_CheckStuck (ent);
-		SV_WalkMove (ent);
-		break;
-
-	case MOVETYPE_TOSS:
-	case MOVETYPE_BOUNCE:
-		SV_Physics_Toss (ent);
-		break;
-
-	case MOVETYPE_FLY:
-		if (!SV_RunThink (ent))
-			return;
-		SV_CheckWater (ent);
-		//SV_FlyMove (ent, sv.frametime, NULL);
-		SV_WalkMove (ent);
-		break;
-
-	case MOVETYPE_NOCLIP:
-		if (!SV_RunThink (ent))
-			return;
-		SV_CheckWater (ent);
-		VectorMA (ent->v->origin, sv.frametime, ent->v->velocity, ent->v->origin);
-		VectorMA (ent->v->angles, sv.frametime, ent->v->avelocity, ent->v->angles);
-		break;
-
-	default:
-		Host_Error ("SV_Physics_client: bad movetype %i", (int)ent->v->movetype);
-	}
-
-	SV_CheckVelocity (ent);
-
-	// call standard player post-think
-	SV_LinkEdict (ent, true);
-
-	SV_CheckVelocity (ent);
-
-	pr_global_struct->time = sv.time;
-	pr_global_struct->self = EDICT_TO_PROG(ent);
-	PR_ExecuteProgram (pr_global_struct->PlayerPostThink, "QC function PlayerPostThink is missing");
-}
-
 //============================================================================
 
 /*
@@ -1445,10 +1368,18 @@ void SV_Physics (void)
 
 		if (i > 0 && i <= svs.maxclients)
 		{
-			SV_Physics_Client (ent, i);
-			continue;
+			if (!svs.clients[i-1].active)
+				continue;
+			// connected slot
+			// call standard client pre-think
+			SV_CheckVelocity (ent);
+			pr_global_struct->time = sv.time;
+			pr_global_struct->self = EDICT_TO_PROG(ent);
+			PR_ExecuteProgram (pr_global_struct->PlayerPreThink, "QC function PlayerPreThink is missing");
+			SV_CheckVelocity (ent);
 		}
 
+		// LordHavoc: merged client and normal entity physics
 		switch ((int) ent->v->movetype)
 		{
 		case MOVETYPE_PUSH:
@@ -1463,12 +1394,21 @@ void SV_Physics (void)
 			SV_Physics_Follow (ent);
 			break;
 		case MOVETYPE_NOCLIP:
-			SV_Physics_Noclip (ent);
+			if (i > 0 && i <= svs.maxclients)
+			{
+				if (SV_RunThink (ent))
+				{
+					SV_CheckWater (ent);
+					VectorMA (ent->v->origin, sv.frametime, ent->v->velocity, ent->v->origin);
+					VectorMA (ent->v->angles, sv.frametime, ent->v->avelocity, ent->v->angles);
+				}
+			}
+			else
+				SV_Physics_Noclip (ent);
 			break;
 		case MOVETYPE_STEP:
 			SV_Physics_Step (ent);
 			break;
-		// LordHavoc: added support for MOVETYPE_WALK on normal entities! :)
 		case MOVETYPE_WALK:
 			if (SV_RunThink (ent))
 			{
@@ -1482,13 +1422,38 @@ void SV_Physics (void)
 		case MOVETYPE_TOSS:
 		case MOVETYPE_BOUNCE:
 		case MOVETYPE_BOUNCEMISSILE:
-		case MOVETYPE_FLY:
 		case MOVETYPE_FLYMISSILE:
 			SV_Physics_Toss (ent);
+			break;
+		case MOVETYPE_FLY:
+			if (i > 0 && i <= svs.maxclients)
+			{
+				if (SV_RunThink (ent))
+				{
+					SV_CheckWater (ent);
+					SV_WalkMove (ent);
+				}
+			}
+			else
+				SV_Physics_Toss (ent);
 			break;
 		default:
 			Host_Error ("SV_Physics: bad movetype %i", (int)ent->v->movetype);
 			break;
+		}
+
+		if (i > 0 && i <= svs.maxclients && !ent->e->free)
+		{
+			SV_CheckVelocity (ent);
+
+			// call standard player post-think
+			SV_LinkEdict (ent, true);
+
+			SV_CheckVelocity (ent);
+
+			pr_global_struct->time = sv.time;
+			pr_global_struct->self = EDICT_TO_PROG(ent);
+			PR_ExecuteProgram (pr_global_struct->PlayerPostThink, "QC function PlayerPostThink is missing");
 		}
 	}
 
