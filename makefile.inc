@@ -70,6 +70,7 @@ OBJ_COMMON= \
 	model_sprite.o \
 	netconn.o \
 	palette.o \
+	polygon.o \
 	portals.o \
 	pr_cmds.o \
 	pr_edict.o \
