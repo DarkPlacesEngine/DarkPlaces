@@ -786,20 +786,20 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 
 			case 3:	// green tracer
 				dec = 6;
-				//particle(pt_fade, PARTICLE_BILLBOARD, 0x373707, tex_particle, false, true, dec, dec, 255, 9999, 0, pos[0], pos[1], pos[2], 0, 0, 0, 384.0f, 0, 0, 0, 0, 0);
-				particle(pt_fade, PARTICLE_BILLBOARD, 0x373707, tex_particle, false, true, dec, dec, 255, 9999, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 384.0f, 0, 0, 0, 0, 0);
+				//particle(pt_fade, PARTICLE_BILLBOARD, 0x373707, tex_particle, false, true, dec, dec, 128, 9999, 0, pos[0], pos[1], pos[2], 0, 0, 0, 384.0f, 0, 0, 0, 0, 0);
+				particle(pt_fade, PARTICLE_BILLBOARD, 0x373707, tex_particle, false, true, dec, dec, 128, 9999, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 384.0f, 0, 0, 0, 0, 0);
 				break;
 
 			case 5:	// flame tracer
 				dec = 6;
-				//particle(pt_fade, PARTICLE_BILLBOARD, 0xCF632B, tex_particle, false, true, dec, dec, 255, 9999, 0, pos[0], pos[1], pos[2], 0, 0, 0, 384.0f, 0, 0, 0, 0, 0);
-				particle(pt_fade, PARTICLE_BILLBOARD, 0xCF632B, tex_particle, false, true, dec, dec, 255, 9999, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 384.0f, 0, 0, 0, 0, 0);
+				//particle(pt_fade, PARTICLE_BILLBOARD, 0xCF632B, tex_particle, false, true, dec, dec, 128, 9999, 0, pos[0], pos[1], pos[2], 0, 0, 0, 384.0f, 0, 0, 0, 0, 0);
+				particle(pt_fade, PARTICLE_BILLBOARD, 0xCF632B, tex_particle, false, true, dec, dec, 128, 9999, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 384.0f, 0, 0, 0, 0, 0);
 				break;
 
 			case 6:	// voor trail
 				dec = 6;
-				//particle(pt_fade, PARTICLE_BILLBOARD, 0x47232B, tex_particle, false, true, dec, dec, 255, 9999, 0, pos[0], pos[1], pos[2], 0, 0, 0, 384.0f, 0, 0, 0, 0, 0);
-				particle(pt_fade, PARTICLE_BILLBOARD, 0x47232B, tex_particle, false, true, dec, dec, 255, 9999, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 384.0f, 0, 0, 0, 0, 0);
+				//particle(pt_fade, PARTICLE_BILLBOARD, 0x47232B, tex_particle, false, true, dec, dec, 128, 9999, 0, pos[0], pos[1], pos[2], 0, 0, 0, 384.0f, 0, 0, 0, 0, 0);
+				particle(pt_fade, PARTICLE_BILLBOARD, 0x47232B, tex_particle, false, true, dec, dec, 128, 9999, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 384.0f, 0, 0, 0, 0, 0);
 				break;
 
 			case 7:	// Nehahra smoke tracer
