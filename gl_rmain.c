@@ -1024,17 +1024,16 @@ void R_CalcBeam_Vertex3f (float *vert, const vec3_t org1, const vec3_t org2, flo
 	vec3_t right1, right2, diff, normal;
 
 	VectorSubtract (org2, org1, normal);
-	VectorNormalizeFast (normal);
 
 	// calculate 'right' vector for start
 	VectorSubtract (r_vieworigin, org1, diff);
-	VectorNormalizeFast (diff);
 	CrossProduct (normal, diff, right1);
+	VectorNormalize (right1);
 
 	// calculate 'right' vector for end
 	VectorSubtract (r_vieworigin, org2, diff);
-	VectorNormalizeFast (diff);
 	CrossProduct (normal, diff, right2);
+	VectorNormalize (right2);
 
 	vert[ 0] = org1[0] + width * right1[0];
 	vert[ 1] = org1[1] + width * right1[1];
