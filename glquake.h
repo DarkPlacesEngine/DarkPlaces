@@ -203,6 +203,12 @@ typedef double GLclampd;
 #define GL_REPLACE				0x1E01
 #define GL_INCR					0x1E02
 #define GL_DECR					0x1E03
+
+#define GL_POLYGON_OFFSET_FACTOR          0x8038
+#define GL_POLYGON_OFFSET_UNITS           0x2A00
+#define GL_POLYGON_OFFSET_POINT           0x2A01
+#define GL_POLYGON_OFFSET_LINE            0x2A02
+#define GL_POLYGON_OFFSET_FILL            0x8037
 #endif
 
 // GL_ARB_multitexture
@@ -440,6 +446,8 @@ extern void (GLAPIENTRY *qglCopyTexImage1D)(GLenum target, GLint level, GLenum i
 extern void (GLAPIENTRY *qglCopyTexImage2D)(GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border);
 extern void (GLAPIENTRY *qglCopyTexSubImage1D)(GLenum target, GLint level, GLint xoffset, GLint x, GLint y, GLsizei width);
 extern void (GLAPIENTRY *qglCopyTexSubImage2D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint x, GLint y, GLsizei width, GLsizei height);
+
+extern void (GLAPIENTRY *qglPolygonOffset)(GLfloat factor, GLfloat units);
 
 #if WIN32
 extern int (WINAPI *qwglChoosePixelFormat)(HDC, CONST PIXELFORMATDESCRIPTOR *);
