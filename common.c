@@ -898,7 +898,7 @@ char *SearchInfostring(const char *infostring, const char *key)
 
 			if (c == '\0')
 				return NULL;
-			if (c == '\\')
+			if (c == '\\' || key_ind == sizeof (crt_key) - 1)
 			{
 				crt_key[key_ind] = '\0';
 				break;
@@ -914,7 +914,7 @@ char *SearchInfostring(const char *infostring, const char *key)
 			{
 				c = *infostring++;
 
-				if (c == '\0' || c == '\\')
+				if (c == '\0' || c == '\\' || value_ind == sizeof (value) - 1)
 				{
 					value[value_ind] = '\0';
 					return value;
