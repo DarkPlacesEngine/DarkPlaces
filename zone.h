@@ -28,8 +28,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MEMBITS (MEMCLUMPSIZE / MEMUNIT)
 #define MEMBITINTS (MEMBITS / 32)
 
-#define MEMHEADER_SENTINEL 0xABADCAFE
-#define MEMCLUMP_SENTINEL 0xDEADF00D
+#define MEMHEADER_SENTINEL1 0xDEADF00D
+#define MEMHEADER_SENTINEL2 0xDF
+#define MEMCLUMP_SENTINEL 0xABADCAFE
 
 typedef struct memheader_s
 {
@@ -44,9 +45,9 @@ typedef struct memheader_s
 	// file name and line where Mem_Alloc was called
 	char *filename;
 	int fileline;
-	// should always be MEMHEADER_SENTINEL
+	// should always be MEMHEADER_SENTINEL1
 	int sentinel1;
-	// immediately followed by data, which is followed by another MEMHEADER_SENTINEL
+	// immediately followed by data, which is followed by a MEMHEADER_SENTINEL2 byte
 }
 memheader_t;
 

@@ -51,7 +51,7 @@ void Mod_Sprite_StripExtension(char *in, char *out)
 	*out++ = 0;
 }
 
-void Mod_Sprite_SharedSetup(long datapointer, int version, int *palette)
+void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette)
 {
 	int					i, j, k, groupframes, realframes, x, y, origin[2], width, height;
 	dspriteframetype_t	*pinframetype;
@@ -61,7 +61,7 @@ void Mod_Sprite_SharedSetup(long datapointer, int version, int *palette)
 	float				modelradius, interval;
 	char				tempname[MAX_QPATH], name[MAX_QPATH];
 	qbyte				*pixbuf;
-	long				startframes;
+	void				*startframes;
 	modelradius = 0;
 
 	Mod_Sprite_StripExtension(loadmodel->name, tempname);
@@ -188,9 +188,9 @@ void Mod_Sprite_SharedSetup(long datapointer, int version, int *palette)
 				{
 					pixbuf = Mem_Alloc(tempmempool, width*height*4);
 					if (version == SPRITE32_VERSION)
-						memcpy(pixbuf, (qbyte *)datapointer, width*height*4);
+						memcpy(pixbuf, datapointer, width*height*4);
 					else //if (version == SPRITE_VERSION || version == SPRITEHL_VERSION)
-						Image_Copy8bitRGBA((qbyte *)datapointer, pixbuf, width*height, palette);
+						Image_Copy8bitRGBA(datapointer, pixbuf, width*height, palette);
 
 					loadmodel->sprdata_frames[realframes].texture = R_LoadTexture (loadmodel->texturepool, name, width, height, pixbuf, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_PRECACHE);
 
@@ -241,7 +241,14 @@ Mod_LoadSpriteModel
 */
 void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 {
-	int version;
+	int version, i, rendermode;
+	qbyte palette[256][4], *in;
+	dsprite_t *pinqsprite;
+	dspritehl_t *pinhlsprite;
+	qbyte *datapointer;
+
+	datapointer = buffer;
+
 	loadmodel->SERAddEntity = Mod_Sprite_SERAddEntity;
 	loadmodel->Draw = R_DrawSpriteModel;
 	loadmodel->DrawSky = NULL;
@@ -250,43 +257,31 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 	version = LittleLong(((dsprite_t *)buffer)->version);
 	if (version == SPRITE_VERSION || SPRITE32_VERSION)
 	{
-		dsprite_t			*pinsprite;
-		long				datapointer;
-
-		datapointer = (long) buffer;
-
-		pinsprite = (dsprite_t *)datapointer;
+		pinqsprite = (dsprite_t *)datapointer;
 		datapointer += sizeof(dsprite_t);
 
-		loadmodel->numframes = LittleLong (pinsprite->numframes);
-		loadmodel->sprnum_type = LittleLong (pinsprite->type);
-		loadmodel->synctype = LittleLong (pinsprite->synctype);
+		loadmodel->numframes = LittleLong (pinqsprite->numframes);
+		loadmodel->sprnum_type = LittleLong (pinqsprite->type);
+		loadmodel->synctype = LittleLong (pinqsprite->synctype);
 
-		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinsprite->version), d_8to24table);
+		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinqsprite->version), d_8to24table);
 	}
 	else if (version == SPRITEHL_VERSION)
 	{
-		int					i, rendermode;
-		qbyte				palette[256][4], *in;
-		dspritehl_t			*pinsprite;
-		long				datapointer;
-
-		datapointer = (long) buffer;
-
-		pinsprite = (dspritehl_t *)datapointer;
+		pinhlsprite = (dspritehl_t *)datapointer;
 		datapointer += sizeof(dspritehl_t);
 
-		loadmodel->numframes = LittleLong (pinsprite->numframes);
-		loadmodel->sprnum_type = LittleLong (pinsprite->type);
-		loadmodel->synctype = LittleLong (pinsprite->synctype);
-		rendermode = pinsprite->rendermode;
+		loadmodel->numframes = LittleLong (pinhlsprite->numframes);
+		loadmodel->sprnum_type = LittleLong (pinhlsprite->type);
+		loadmodel->synctype = LittleLong (pinhlsprite->synctype);
+		rendermode = pinhlsprite->rendermode;
 
-		in = (qbyte *)datapointer;
+		in = datapointer;
 		datapointer += 2;
 		i = in[0] + in[1] * 256;
 		if (i != 256)
 			Host_Error ("Mod_LoadHLSprite: unexpected number of palette colors %i (should be 256)", i);
-		in = (qbyte *)datapointer;
+		in = datapointer;
 		datapointer += 768;
 		switch(rendermode)
 		{
@@ -336,7 +331,7 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 			return;
 		}
 
-		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinsprite->version), (int *)(&palette[0][0]));
+		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinhlsprite->version), (int *)(&palette[0][0]));
 	}
 	else
 		Host_Error ("Mod_LoadSpriteModel: %s has wrong version number (%i should be 1 (quake) or 32 (sprite32) or 2 (halflife)", loadmodel->name, version);

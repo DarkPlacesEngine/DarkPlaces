@@ -975,7 +975,7 @@ void Mod_GenerateWarpMesh (msurface_t *surf)
 	if (mesh->numtriangles < 1)
 		Host_Error("Mod_GenerateWarpMesh: no triangles?\n");
 	mesh->index = Mem_Alloc(loadmodel->mempool, mesh->numtriangles * sizeof(int[3]) + mesh->numverts * sizeof(surfvertex_t));
-	mesh->vertex = (surfvertex_t *)((long) mesh->index + mesh->numtriangles * sizeof(int[3]));
+	mesh->vertex = (surfvertex_t *)((qbyte *) mesh->index + mesh->numtriangles * sizeof(int[3]));
 	memset(mesh->vertex, 0, mesh->numverts * sizeof(surfvertex_t));
 
 	for (i = 0;i < mesh->numtriangles;i++)
@@ -1013,7 +1013,7 @@ void Mod_GenerateVertexLitMesh (msurface_t *surf)
 	mesh->numverts = surf->poly_numverts;
 	mesh->numtriangles = surf->poly_numverts - 2;
 	mesh->index = Mem_Alloc(loadmodel->mempool, mesh->numtriangles * sizeof(int[3]) + mesh->numverts * sizeof(surfvertex_t));
-	mesh->vertex = (surfvertex_t *)((long) mesh->index + mesh->numtriangles * sizeof(int[3]));
+	mesh->vertex = (surfvertex_t *)((qbyte *) mesh->index + mesh->numtriangles * sizeof(int[3]));
 	memset(mesh->vertex, 0, mesh->numverts * sizeof(surfvertex_t));
 
 	index = mesh->index;
@@ -1080,7 +1080,7 @@ void Mod_GenerateLightmappedMesh (msurface_t *surf)
 	mesh->numverts = surf->poly_numverts;
 	mesh->numtriangles = surf->poly_numverts - 2;
 	mesh->index = Mem_Alloc(loadmodel->mempool, mesh->numtriangles * sizeof(int[3]) + mesh->numverts * sizeof(surfvertex_t));
-	mesh->vertex = (surfvertex_t *)((long) mesh->index + mesh->numtriangles * sizeof(int[3]));
+	mesh->vertex = (surfvertex_t *)((qbyte *) mesh->index + mesh->numtriangles * sizeof(int[3]));
 	memset(mesh->vertex, 0, mesh->numverts * sizeof(surfvertex_t));
 
 	index = mesh->index;
@@ -1131,7 +1131,7 @@ void Mod_GenerateVertexMesh (msurface_t *surf)
 	mesh->numverts = surf->poly_numverts;
 	mesh->numtriangles = surf->poly_numverts - 2;
 	mesh->index = Mem_Alloc(loadmodel->mempool, mesh->numtriangles * sizeof(int[3]) + mesh->numverts * sizeof(surfvertex_t));
-	mesh->vertex = (surfvertex_t *)((long) mesh->index + mesh->numtriangles * sizeof(int[3]));
+	mesh->vertex = (surfvertex_t *)((qbyte *) mesh->index + mesh->numtriangles * sizeof(int[3]));
 	memset(mesh->vertex, 0, mesh->numverts * sizeof(surfvertex_t));
 
 	index = mesh->index;
@@ -1302,7 +1302,7 @@ static int Mod_SurfaceQSortCompare(const void *voida, const void *voidb)
 	a = *((const msurface_t **)voida);
 	b = *((const msurface_t **)voidb);
 	if (a->shader != b->shader)
-		return (long) a->shader - (long) b->shader;
+		return (qbyte *) a->shader - (qbyte *) b->shader;
 	if (a->texinfo->texture != b->texinfo->texture);
 		return a->texinfo->texture - b->texinfo->texture;
 	return 0;
@@ -2049,7 +2049,7 @@ static void Mod_FinalizePortals(void)
 	}
 	loadmodel->portals = Mem_Alloc(loadmodel->mempool, numportals * sizeof(mportal_t) + numpoints * sizeof(mvertex_t));
 	loadmodel->numportals = numportals;
-	loadmodel->portalpoints = (void *) ((long) loadmodel->portals + numportals * sizeof(mportal_t));
+	loadmodel->portalpoints = (void *) ((qbyte *) loadmodel->portals + numportals * sizeof(mportal_t));
 	loadmodel->numportalpoints = numpoints;
 	// clear all leaf portal chains
 	for (i = 0;i < loadmodel->numleafs;i++)

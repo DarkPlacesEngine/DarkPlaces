@@ -579,7 +579,7 @@ static void RSurfShader_Sky(msurface_t *firstsurf)
 				#if SLOWMATH
 				length = 3.0f / sqrt(number);
 				#else
-				*((long *)&length) = 0x5f3759df - ((* (long *) &number) >> 1);
+				*((int *)&length) = 0x5f3759df - ((* (int *) &number) >> 1);
 				length = 3.0f * (length * (1.5f - (number * 0.5f * length * length)));
 				#endif
 
@@ -653,7 +653,7 @@ static void RSurfShader_Sky(msurface_t *firstsurf)
 				#if SLOWMATH
 				length = 3.0f / sqrt(number);
 				#else
-				*((long *)&length) = 0x5f3759df - ((* (long *) &number) >> 1);
+				*((int *)&length) = 0x5f3759df - ((* (int *) &number) >> 1);
 				length = 3.0f * (length * (1.5f - (number * 0.5f * length * length)));
 				#endif
 
