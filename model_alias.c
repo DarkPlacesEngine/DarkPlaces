@@ -230,26 +230,21 @@ void Mod_BuildAliasSkinsFromSkinFiles(aliasskin_t *skin, skinfile_t *skinfile, c
 			memset(skin, 0, sizeof(*skin));
 			for (skinfileitem = skinfile->items;skinfileitem;skinfileitem = skinfileitem->next)
 			{
-				if (!strcmp(skinfileitem->name, meshname))
+				// leave the skin unitialized (nodraw) if the replacement is "common/nodraw" or "textures/common/nodraw"
+				if (!strcmp(skinfileitem->name, meshname) && strcmp(skinfileitem->replacement, "common/nodraw") && strcmp(skinfileitem->replacement, "textures/common/nodraw"))
 				{
-					if (!strcmp(skinfileitem->replacement, "common/nodraw"))
-					{
-					}
+					memset(&tempskinframe, 0, sizeof(tempskinframe));
+					if (Mod_LoadSkinFrame(&tempskinframe, skinfileitem->replacement, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE, true, false, true))
+						Mod_BuildAliasSkinFromSkinFrame(skin, &tempskinframe);
 					else
 					{
-						memset(&tempskinframe, 0, sizeof(tempskinframe));
-						if (Mod_LoadSkinFrame(&tempskinframe, skinfileitem->replacement, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE, true, false, true))
+						Con_Printf("mesh \"%s\": failed to load skin #%i \"%s\", falling back to mesh's internal shader name \"%s\"\n", meshname, i, skinfileitem->replacement, shadername);
+						if (Mod_LoadSkinFrame(&tempskinframe, shadername, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE, true, false, true))
 							Mod_BuildAliasSkinFromSkinFrame(skin, &tempskinframe);
 						else
 						{
-							Con_Printf("mesh \"%s\": failed to load skin #%i \"%s\", falling back to mesh's internal shader name \"%s\"\n", meshname, i, skinfileitem->replacement, shadername);
-							if (Mod_LoadSkinFrame(&tempskinframe, shadername, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE, true, false, true))
-								Mod_BuildAliasSkinFromSkinFrame(skin, &tempskinframe);
-							else
-							{
-								Con_Printf("failed to load skin \"%s\"\n", shadername);
-								Mod_BuildAliasSkinFromSkinFrame(skin, NULL);
-							}
+							Con_Printf("failed to load skin \"%s\"\n", shadername);
+							Mod_BuildAliasSkinFromSkinFrame(skin, NULL);
 						}
 					}
 				}
@@ -472,7 +467,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer)
 	// load the skins
 	if ((skinfiles = Mod_LoadSkinFiles()))
 	{
-		loadmodel->alias.aliasdata_meshes->num_skins = totalskins = loadmodel->numskins = Mod_CountSkinFiles(skinfiles);
+		loadmodel->alias.aliasdata_meshes->num_skins = totalskins = loadmodel->numskins;
 		loadmodel->alias.aliasdata_meshes->data_skins = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasdata_meshes->num_skins * sizeof(aliasskin_t));
 		Mod_BuildAliasSkinsFromSkinFiles(loadmodel->alias.aliasdata_meshes->data_skins, skinfiles, "default", "");
 		Mod_FreeSkinFiles(skinfiles);
@@ -655,7 +650,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer)
 	inskin = (void*)(base + LittleLong(pinmodel->ofs_skins));
 	if ((skinfiles = Mod_LoadSkinFiles()))
 	{
-		loadmodel->alias.aliasdata_meshes->num_skins = loadmodel->numskins = Mod_CountSkinFiles(skinfiles);
+		loadmodel->alias.aliasdata_meshes->num_skins = loadmodel->numskins;
 		loadmodel->alias.aliasdata_meshes->data_skins = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasdata_meshes->num_skins * sizeof(aliasskin_t));
 		Mod_BuildAliasSkinsFromSkinFiles(loadmodel->alias.aliasdata_meshes->data_skins, skinfiles, "default", "");
 		Mod_FreeSkinFiles(skinfiles);
@@ -826,7 +821,6 @@ void Mod_IDP3_Load(model_t *mod, void *buffer)
 			loadmodel->name, version, MD3VERSION);
 
 	skinfiles = Mod_LoadSkinFiles();
-	loadmodel->numskins = Mod_CountSkinFiles(skinfiles);
 	if (loadmodel->numskins < 1)
 		loadmodel->numskins = 1;
 
@@ -869,16 +863,17 @@ void Mod_IDP3_Load(model_t *mod, void *buffer)
 	loadmodel->alias.aliasnum_tagframes = loadmodel->numframes;
 	loadmodel->alias.aliasnum_tags = LittleLong(pinmodel->num_tags);
 	loadmodel->alias.aliasdata_tags = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasnum_tagframes * loadmodel->alias.aliasnum_tags * sizeof(aliastag_t));
-	for (i = 0, pintag = (md3tag_t *)((qbyte *)pinmodel + LittleLong(pinmodel->lump_tags));i < loadmodel->alias.aliasnum_tagframes * loadmodel->alias.aliasnum_tags;i++, pinframe++)
+	for (i = 0, pintag = (md3tag_t *)((qbyte *)pinmodel + LittleLong(pinmodel->lump_tags));i < loadmodel->alias.aliasnum_tagframes * loadmodel->alias.aliasnum_tags;i++, pintag++)
 	{
 		strcpy(loadmodel->alias.aliasdata_tags[i].name, pintag->name);
 		Matrix4x4_CreateIdentity(&loadmodel->alias.aliasdata_tags[i].matrix);
 		for (j = 0;j < 3;j++)
 		{
 			for (k = 0;k < 3;k++)
-				loadmodel->alias.aliasdata_tags[i].matrix.m[j][k] = LittleLong(pintag->rotationmatrix[j * 3 + k]);
-			loadmodel->alias.aliasdata_tags[i].matrix.m[j][3] = LittleLong(pintag->origin[j]);
+				loadmodel->alias.aliasdata_tags[i].matrix.m[j][k] = LittleFloat(pintag->rotationmatrix[j * 3 + k]);
+			loadmodel->alias.aliasdata_tags[i].matrix.m[j][3] = LittleFloat(pintag->origin[j]);
 		}
+		//Con_Printf("model \"%s\" frame #%i tag #%i \"%s\"\n", loadmodel->name, i / loadmodel->alias.aliasnum_tags, i % loadmodel->alias.aliasnum_tags, loadmodel->alias.aliasdata_tags[i].name);
 	}
 
 	// load meshes
@@ -904,8 +899,8 @@ void Mod_IDP3_Load(model_t *mod, void *buffer)
 			mesh->data_element3i[j] = LittleLong(((int *)((qbyte *)pinmesh + pinmesh->lump_elements))[j]);
 		for (j = 0;j < mesh->num_vertices;j++)
 		{
-			mesh->data_texcoord2f[j * 2 + 0] = LittleLong(((float *)((qbyte *)pinmesh + pinmesh->lump_texcoords))[j * 2 + 0]);
-			mesh->data_texcoord2f[j * 2 + 1] = LittleLong(((float *)((qbyte *)pinmesh + pinmesh->lump_texcoords))[j * 2 + 1]);
+			mesh->data_texcoord2f[j * 2 + 0] = LittleFloat(((float *)((qbyte *)pinmesh + pinmesh->lump_texcoords))[j * 2 + 0]);
+			mesh->data_texcoord2f[j * 2 + 1] = LittleFloat(((float *)((qbyte *)pinmesh + pinmesh->lump_texcoords))[j * 2 + 1]);
 		}
 		for (j = 0;j < mesh->num_vertices * mesh->num_frames;j++)
 		{
@@ -922,10 +917,8 @@ void Mod_IDP3_Load(model_t *mod, void *buffer)
 		if (LittleLong(pinmesh->num_shaders) >= 1 && ((md3shader_t *)((qbyte *) pinmesh + pinmesh->lump_shaders))->name[0])
 			Mod_BuildAliasSkinsFromSkinFiles(mesh->data_skins, skinfiles, pinmesh->name, ((md3shader_t *)((qbyte *) pinmesh + pinmesh->lump_shaders))->name);
 		else
-		{
 			for (j = 0;j < mesh->num_skins;j++)
 				Mod_BuildAliasSkinFromSkinFrame(mesh->data_skins + j, NULL);
-		}
 	}
 	Mod_CalcAliasModelBBoxes();
 	Mod_FreeSkinFiles(skinfiles);

@@ -506,7 +506,7 @@ COM_ParseToken
 Parse a token out of a string
 ==============
 */
-int COM_ParseToken (const char **datapointer)
+int COM_ParseToken(const char **datapointer, int returnnewline)
 {
 	int c;
 	int len;
@@ -523,7 +523,7 @@ int COM_ParseToken (const char **datapointer)
 
 // skip whitespace
 skipwhite:
-	while ((c = *data) <= ' ')
+	while ((c = *data) <= ' ' && (c != '\n' || !returnnewline))
 	{
 		if (c == 0)
 		{
@@ -534,14 +534,24 @@ skipwhite:
 		data++;
 	}
 
-// skip // comments
-	if (c=='/' && data[1] == '/')
+	// check if it's a comment
+	if (c == '/')
 	{
-		while (*data && *data != '\n')
-			data++;
-		goto skipwhite;
+		// skip // comments
+		if (data[1] == '/')
+		{
+			while (*data && *data != '\n')
+				data++;
+			goto skipwhite;
+		}
+		// skip /* comments
+		if (data[1] == '*')
+		{
+			while (*data && *data != '*' && data[1] != '/')
+				data++;
+			goto skipwhite;
+		}
 	}
-
 
 // handle quoted strings specially
 	if (c == '\"')
@@ -550,7 +560,7 @@ skipwhite:
 		while (1)
 		{
 			c = *data++;
-			if (c=='\"' || !c)
+			if (c == '\"' || !c)
 			{
 				com_token[len] = 0;
 				*datapointer = data;
@@ -562,7 +572,7 @@ skipwhite:
 	}
 
 // parse single characters
-	if (c=='{' || c=='}'|| c==')'|| c=='(' || c=='\'' || c==':')
+	if (c == '{' || c == '}' || c == ')' || c == '(' || c == ']' || c == '[' || c == '\'' || c == ':' || c == ',' || c == ';' || c == '\n')
 	{
 		com_token[len] = c;
 		len++;
@@ -578,7 +588,7 @@ skipwhite:
 		data++;
 		len++;
 		c = *data;
-		if (c=='{' || c=='}'|| c==')'|| c=='(' || c=='\'' || c==':')
+		if (c == '{' || c == '}' || c == ')' || c == '(' || c == ']' || c == '[' || c == '\'' || c == ':' || c == ',' || c == ';')
 			break;
 	} while (c>32);
 

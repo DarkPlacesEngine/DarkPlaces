@@ -814,7 +814,7 @@ void ED_ParseGlobals (const char *data)
 	while (1)
 	{
 		// parse key
-		if (!COM_ParseToken (&data))
+		if (!COM_ParseToken(&data, false))
 			Host_Error ("ED_ParseEntity: EOF without closing brace");
 		if (com_token[0] == '}')
 			break;
@@ -822,7 +822,7 @@ void ED_ParseGlobals (const char *data)
 		strcpy (keyname, com_token);
 
 		// parse value
-		if (!COM_ParseToken (&data))
+		if (!COM_ParseToken(&data, false))
 			Host_Error ("ED_ParseEntity: EOF without closing brace");
 
 		if (com_token[0] == '}')
@@ -982,7 +982,7 @@ const char *ED_ParseEdict (const char *data, edict_t *ent)
 	while (1)
 	{
 	// parse key
-		if (!COM_ParseToken (&data))
+		if (!COM_ParseToken(&data, false))
 			Host_Error ("ED_ParseEntity: EOF without closing brace");
 		if (com_token[0] == '}')
 			break;
@@ -1012,7 +1012,7 @@ const char *ED_ParseEdict (const char *data, edict_t *ent)
 		}
 
 	// parse value
-		if (!COM_ParseToken (&data))
+		if (!COM_ParseToken(&data, false))
 			Host_Error ("ED_ParseEntity: EOF without closing brace");
 
 		if (com_token[0] == '}')
@@ -1082,7 +1082,7 @@ void ED_LoadFromFile (const char *data)
 	while (1)
 	{
 // parse the opening brace
-		if (!COM_ParseToken (&data))
+		if (!COM_ParseToken(&data, false))
 			break;
 		if (com_token[0] != '{')
 			Host_Error ("ED_LoadFromFile: found %s when expecting {",com_token);

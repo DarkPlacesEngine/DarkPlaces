@@ -904,50 +904,114 @@ void Mod_ConstructTerrainPatchFromRGBA(const qbyte *imagepixels, int imagewidth,
 
 skinfile_t *Mod_LoadSkinFiles(void)
 {
-	int i;
+	int i, words, numtags, line, tagsetsused = false, wordsoverflow;
 	char *text;
 	const char *data;
 	skinfile_t *skinfile, *first = NULL;
 	skinfileitem_t *skinfileitem;
-	char command[MAX_QPATH], name[MAX_QPATH], replacement[MAX_QPATH];
-	for (i = 0;(data = text = FS_LoadFile(va("%s_%i.skin", loadmodel->name, i), true));i++)
+	char word[10][MAX_QPATH];
+	overridetagnameset_t tagsets[MAX_SKINS];
+	overridetagname_t tags[256];
+
+/*
+sample file:
+U_bodyBox,models/players/Legoman/BikerA2.tga
+U_RArm,models/players/Legoman/BikerA1.tga
+U_LArm,models/players/Legoman/BikerA1.tga
+U_armor,common/nodraw
+U_sword,common/nodraw
+U_shield,common/nodraw
+U_homb,common/nodraw
+U_backpack,common/nodraw
+U_colcha,common/nodraw
+tag_head,
+tag_weapon,
+tag_torso,
+*/
+	memset(tagsets, 0, sizeof(tagsets));
+	memset(word, 0, sizeof(word));
+	for (i = 0;i < MAX_SKINS && (data = text = FS_LoadFile(va("%s_%i.skin", loadmodel->name, i), true));i++)
 	{
+		numtags = 0;
 		skinfile = Mem_Alloc(tempmempool, sizeof(skinfile_t));
 		skinfile->next = first;
 		first = skinfile;
-		for(;;)
+		for(line = 0;;line++)
 		{
-			if (!COM_ParseToken(&data))
+			// parse line
+			if (!COM_ParseToken(&data, true))
 				break;
-			strncpy(command, com_token, sizeof(command) - 1);
-			command[sizeof(command) - 1] = 0;
-			if (!strcmp(command, "replace"))
+			if (!strcmp(com_token, "\n"))
+				continue;
+			words = 0;
+			wordsoverflow = false;
+			do
 			{
-				if (!COM_ParseToken(&data))
+				if (words < 10)
+					strncpy(word[words++], com_token, MAX_QPATH - 1);
+				else
+					wordsoverflow = true;
+			}
+			while (COM_ParseToken(&data, true) && strcmp(com_token, "\n"));
+			if (wordsoverflow)
+			{
+				Con_Printf("Mod_LoadSkinFiles: parsing error in file \"%s_%i.skin\" on line #%i: line with too many statements, skipping\n", loadmodel->name, i, line);
+				continue;
+			}
+			// words is always >= 1
+			if (!strcmp(word[0], "replace"))
+			{
+				if (words == 3)
 				{
-					Con_Printf("Mod_LoadSkinFiles: parsing error (insufficient parameters to command \"%s\" in file \"%s_%i.skin\")\n", command, loadmodel->name, i);
-					break;
+					Con_DPrintf("Mod_LoadSkinFiles: parsed mesh \"%s\" shader replacement \"%s\"\n", word[1], word[2]);
+					skinfileitem = Mem_Alloc(tempmempool, sizeof(skinfileitem_t));
+					skinfileitem->next = skinfile->items;
+					skinfile->items = skinfileitem;
+					strncpy(skinfileitem->name, word[1], sizeof(skinfileitem->name) - 1);
+					strncpy(skinfileitem->replacement, word[2], sizeof(skinfileitem->replacement) - 1);
 				}
-				strncpy(name, com_token, sizeof(name) - 1);
-				name[sizeof(name) - 1] = 0;
-				if (!COM_ParseToken(&data))
-				{
-					Con_Printf("Mod_LoadSkinFiles: parsing error (insufficient parameters to command \"%s\" in file \"%s_%i.skin\")\n", command, loadmodel->name, i);
-					break;
-				}
-				strncpy(replacement, com_token, sizeof(replacement) - 1);
-				replacement[sizeof(replacement) - 1] = 0;
+				else
+					Con_Printf("Mod_LoadSkinFiles: parsing error in file \"%s_%i.skin\" on line #%i: wrong number of parameters to command \"%s\", see documentation in DP_GFX_SKINFILES extension in dpextensions.qc\n", loadmodel->name, i, line, word[0]);
+			}
+			else if (words == 2 && !strcmp(word[1], ","))
+			{
+				// tag name, like "tag_weapon,"
+				Con_DPrintf("Mod_LoadSkinFiles: parsed tag #%i \"%s\"\n", numtags, word[0]);
+				memset(tags + numtags, 0, sizeof(tags[numtags]));
+				strncpy(tags[numtags].name, word[0], sizeof(tags[numtags].name) - 1);
+				numtags++;
+			}
+			else if (words == 3 && !strcmp(word[1], ","))
+			{
+				// mesh shader name, like "U_RArm,models/players/Legoman/BikerA1.tga"
+				Con_DPrintf("Mod_LoadSkinFiles: parsed mesh \"%s\" shader replacement \"%s\"\n", word[0], word[2]);
 				skinfileitem = Mem_Alloc(tempmempool, sizeof(skinfileitem_t));
 				skinfileitem->next = skinfile->items;
 				skinfile->items = skinfileitem;
-				strncpy(skinfileitem->name, name, sizeof(skinfileitem->name) - 1);
-				strncpy(skinfileitem->replacement, replacement, sizeof(skinfileitem->replacement) - 1);
+				strncpy(skinfileitem->name, word[0], sizeof(skinfileitem->name) - 1);
+				strncpy(skinfileitem->replacement, word[2], sizeof(skinfileitem->replacement) - 1);
 			}
 			else
-				Con_Printf("Mod_LoadSkinFiles: parsing error (unknown command \"%s\" in file \"%s_%i.skin\")\n", command, loadmodel->name, i);
+				Con_Printf("Mod_LoadSkinFiles: parsing error in file \"%s_%i.skin\" on line #%i: does not look like tag or mesh specification, or replace command, see documentation in DP_GFX_SKINFILES extension in dpextensions.qc\n", loadmodel->name, i, line);
 		}
 		Mem_Free(text);
+
+		if (numtags)
+		{
+			overridetagnameset_t *t;
+			t = tagsets + i;
+			t->num_overridetagnames = numtags;
+			t->data_overridetagnames = Mem_Alloc(loadmodel->mempool, t->num_overridetagnames * sizeof(overridetagname_t));
+			memcpy(t->data_overridetagnames, tags, t->num_overridetagnames * sizeof(overridetagname_t));
+			tagsetsused = true;
+		}
 	}
+	if (tagsetsused)
+	{
+		loadmodel->data_overridetagnamesforskin = Mem_Alloc(loadmodel->mempool, i * sizeof(overridetagnameset_t));
+		memcpy(loadmodel->data_overridetagnamesforskin, tagsets, i * sizeof(overridetagnameset_t));
+	}
+	loadmodel->numskins = i;
 	return first;
 }
 

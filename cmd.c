@@ -552,7 +552,7 @@ static void Cmd_TokenizeString (const char *text)
 		if (cmd_argc == 1)
 			 cmd_args = text;
 
-		if (!COM_ParseToken (&text))
+		if (!COM_ParseToken(&text, false))
 			return;
 
 		if (cmd_argc < MAX_ARGS)
