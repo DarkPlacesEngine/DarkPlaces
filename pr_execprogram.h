@@ -4,7 +4,7 @@
 		while (1)
 		{
 			st++;
-			if (++profile > 1000000) // LordHavoc: increased runaway loop limit 10x
+			if (++profile > 10000000) // LordHavoc: increased runaway loop limit 100x
 			{
 				pr_xstatement = st - pr_statements;
 				Host_Error ("runaway loop error");
