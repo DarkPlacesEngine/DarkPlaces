@@ -168,6 +168,8 @@ extern	struct cvar_s	registered;
 #define GAME_NEHAHRA 3
 #define GAME_NEXUIZ 4
 #define GAME_TRANSFUSION 5
+#define GAME_GOODVSBAD2 6
+#define GAME_TEU 7
 
 extern int gamemode;
 extern char *gamename;
