@@ -93,7 +93,7 @@ extern char gl_driver[256];
 extern qboolean isG200;
 extern qboolean isRagePro;
 
-// LordHavoc: GLX_SGI_video_sync and WGL_EXT_swap_control
+// LordHavoc: GLX_SGI_swap_control and WGL_EXT_swap_control
 extern int gl_videosyncavailable;
 
 int GL_OpenLibrary(const char *name);
