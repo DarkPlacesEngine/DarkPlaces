@@ -199,6 +199,7 @@ instead of being removed and recreated, which can cause interpolated
 angles and bad trails.
 =================
 */
+extern void SV_IncreaseEdicts(void);
 edict_t *ED_Alloc (void)
 {
 	int			i;
@@ -220,6 +221,8 @@ edict_t *ED_Alloc (void)
 		Host_Error ("ED_Alloc: no free edicts");
 
 	sv.num_edicts++;
+	if (sv.num_edicts >= sv.max_edicts)
+		SV_IncreaseEdicts();
 	e = EDICT_NUM(i);
 	ED_ClearEdict (e);
 
@@ -375,7 +378,8 @@ char *PR_ValueString (etype_t type, eval_t *val)
 		sprintf (line, "%s", PR_GetString(val->string));
 		break;
 	case ev_entity:
-		n = NoCrash_NUM_FOR_EDICT(PROG_TO_EDICT(val->edict));
+		//n = NoCrash_NUM_FOR_EDICT(PROG_TO_EDICT(val->edict));
+		n = val->edict;
 		if (n < 0 || n >= MAX_EDICTS)
 			sprintf (line, "entity %i (invalid!)", n);
 		else
@@ -1564,10 +1568,17 @@ void PR_Init (void)
 }
 
 // LordHavoc: turned EDICT_NUM into a #define for speed reasons
-edict_t *EDICT_NUM_ERROR(int n)
+edict_t *EDICT_NUM_ERROR(int n, char *filename, int fileline)
 {
-	Host_Error ("EDICT_NUM: bad number %i", n);
+	Host_Error ("EDICT_NUM: bad number %i (called at %f:%i)", n, filename, fileline);
 	return NULL;
+}
+
+/*
+int NUM_FOR_EDICT_ERROR(edict_t *e)
+{
+	Host_Error ("NUM_FOR_EDICT: bad pointer %p (world is %p, entity number would be %i)", e, sv.edicts, e - sv.edicts);
+	return 0;
 }
 
 int NUM_FOR_EDICT(edict_t *e)
@@ -1579,10 +1590,10 @@ int NUM_FOR_EDICT(edict_t *e)
 	return n;
 }
 
-int NoCrash_NUM_FOR_EDICT(edict_t *e)
-{
-	return e - sv.edicts;
-}
+//int NoCrash_NUM_FOR_EDICT(edict_t *e)
+//{
+//	return e - sv.edicts;
+//}
 
 //#define	EDICT_TO_PROG(e) ((qbyte *)(((edict_t *)e)->v) - (qbyte *)(sv.edictsfields))
 //#define PROG_TO_EDICT(e) (sv.edictstable[(e) / (progs->entityfields * 4)])
@@ -1602,4 +1613,5 @@ edict_t *PROG_TO_EDICT(int n)
 	return sv.edictstable[n]; // EXPERIMENTAL
 	//return sv.edictstable[(n) / (progs->entityfields * 4)];
 }
+*/
 

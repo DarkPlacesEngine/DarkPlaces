@@ -37,7 +37,7 @@ typedef union eval_s
 
 typedef struct link_s
 {
-	void *entity;
+	int entitynumber;
 	struct link_s	*prev, *next;
 } link_t;
 
@@ -157,15 +157,19 @@ void ED_ParseGlobals (const char *data);
 
 void ED_LoadFromFile (const char *data);
 
-edict_t *EDICT_NUM_ERROR(int n);
-#define EDICT_NUM(n) ((n >= 0 && n < sv.max_edicts) ? sv.edictstable[(n)] : EDICT_NUM_ERROR(n))
+edict_t *EDICT_NUM_ERROR(int n, char *filename, int fileline);
+#define EDICT_NUM(n) (((n) >= 0 && (n) < sv.max_edicts) ? sv.edictstable[(n)] : EDICT_NUM_ERROR(n, __FILE__, __LINE__))
 
-int NUM_FOR_EDICT(edict_t *e);
+//int NUM_FOR_EDICT_ERROR(edict_t *e);
+#define NUM_FOR_EDICT(e) ((edict_t *)(e) - sv.edicts)
+//int NUM_FOR_EDICT(edict_t *e);
 
 #define	NEXT_EDICT(e) ((e) + 1)
 
-int EDICT_TO_PROG(edict_t *e);
-edict_t *PROG_TO_EDICT(int n);
+#define EDICT_TO_PROG(e) (NUM_FOR_EDICT(e))
+//int EDICT_TO_PROG(edict_t *e);
+#define PROG_TO_EDICT(n) (EDICT_NUM(n))
+//edict_t *PROG_TO_EDICT(int n);
 
 //============================================================================
 

@@ -127,8 +127,8 @@ typedef struct client_s
 	// can be added to at any time, copied and clear once per frame
 	sizebuf_t message;
 	qbyte msgbuf[MAX_DATAGRAM];
-	// EDICT_NUM(clientnum+1)
-	edict_t *edict;
+	// (clientnum+1)
+	int edictnumber;
 	// for printing to other people
 	char name[32];
 	int colors;
