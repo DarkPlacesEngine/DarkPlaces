@@ -47,6 +47,8 @@ sbarpic_t *sb_colon, *sb_slash;
 sbarpic_t *sb_ibar;
 sbarpic_t *sb_sbar;
 sbarpic_t *sb_scorebar;
+// AK only used by NX(and only if everybody agrees)
+sbarpic_t *sb_sbar_overlay;
 
 sbarpic_t *sb_weapons[7][8]; // 0 is active, 1 is owned, 2-5 are flashes
 sbarpic_t *sb_ammo[4];
@@ -119,7 +121,7 @@ void sbar_start(void)
 	int i;
 
 	numsbarpics = 0;
-
+		
 	sb_disc = Sbar_NewPic("gfx/disc");
 
 	for (i = 0;i < 10;i++)
@@ -133,6 +135,25 @@ void sbar_start(void)
 
 	sb_colon = Sbar_NewPic ("gfx/num_colon");
 	sb_slash = Sbar_NewPic ("gfx/num_slash");
+
+	//AK NX uses his own hud
+	if(gamemode = GAME_NEXUIZ)
+	{
+		sb_ammo[0] = Sbar_NewPic ("gfx/sb_shells");
+		sb_ammo[1] = Sbar_NewPic ("gfx/sb_bullets");
+		sb_ammo[2] = Sbar_NewPic ("gfx/sb_rocket");
+		sb_ammo[3] = Sbar_NewPic ("gfx/sb_cells");
+		
+		sb_items[2] = Sbar_NewPic ("gfx/sb_slowmo");
+		sb_items[3] = Sbar_NewPic ("gfx/sb_invinc");
+		sb_items[4] = Sbar_NewPic ("gfx/sb_energy");
+		sb_items[5] = Sbar_NewPic ("gfx/sb_str");
+		
+		sb_sbar = Sbar_NewPic("gfx/sbar");
+		sb_sbar_overlay = Sbar_NewPic("gfx/sbar_overlay");
+		
+		return;
+	}	
 
 	sb_weapons[0][0] = Sbar_NewPic ("gfx/inv_shotgun");
 	sb_weapons[0][1] = Sbar_NewPic ("gfx/inv_sshotgun");
@@ -758,7 +779,7 @@ void Sbar_Draw (void)
 {
 	if (scr_con_current == vid.conheight)
 		return;		// console is full screen
-
+	
 	if (cl.intermission == 1)
 	{
 		Sbar_IntermissionOverlay();
@@ -770,110 +791,169 @@ void Sbar_Draw (void)
 		return;
 	}
 
-	sbar_y = vid.conheight - SBAR_HEIGHT;
-	if (cl.gametype == GAME_DEATHMATCH)
-		sbar_x = 0;
-	else
-		sbar_x = (vid.conwidth - 320)/2;
-
-	if (sb_lines > 24)
-	{
-		if (gamemode != GAME_GOODVSBAD2)
-			Sbar_DrawInventory ();
-		if (!cl.islocalgame)
-			Sbar_DrawFrags ();
-	}
-
-	if (sb_showscores || cl.stats[STAT_HEALTH] <= 0)
-	{
-		if (gamemode != GAME_GOODVSBAD2)
-			Sbar_DrawAlphaPic (0, 0, sb_scorebar, 0.4);
-		Sbar_DrawScoreboard ();
-	}
-	else if (sb_lines)
-	{
-		Sbar_DrawAlphaPic (0, 0, sb_sbar, 0.4);
-
-// keys (hipnotic only)
-		//MED 01/04/97 moved keys here so they would not be overwritten
-		if (gamemode == GAME_HIPNOTIC)
+	if(gamemode == GAME_NEXUIZ)
+	{		
+		sbar_y = vid.conheight - 47;
+		sbar_x = (vid.conwidth - 640)/2;
+		
+		if (sb_lines > 24)
 		{
-			if (cl.items & IT_KEY1)
-				Sbar_DrawPic (209, 3, sb_items[0]);
-			if (cl.items & IT_KEY2)
-				Sbar_DrawPic (209, 12, sb_items[1]);
+			if (!cl.islocalgame)
+				Sbar_DrawFrags ();
 		}
-// armor
-		if (gamemode != GAME_GOODVSBAD2)
+		
+		if (sb_showscores || cl.stats[STAT_HEALTH] <= 0)
 		{
+			if (gamemode != GAME_GOODVSBAD2)
+				Sbar_DrawAlphaPic (0, 0, sb_scorebar, 0.4);
+			Sbar_DrawScoreboard ();
+		}
+		else if (sb_lines)
+		{
+			Sbar_DrawPic (0, 0, sb_sbar);
+			
+			// special items
 			if (cl.items & IT_INVULNERABILITY)
 			{
 				Sbar_DrawNum (24, 0, 666, 3, 1);
 				Sbar_DrawPic (0, 0, sb_disc);
 			}
-			else
+			
+			// armor
+			Sbar_DrawNum ((340-3*24), 12, cl.stats[STAT_ARMOR], 3, cl.stats[STAT_ARMOR] <= 25);
+			
+			// health
+			Sbar_DrawNum ((154-3*24), 12, cl.stats[STAT_HEALTH], 3, cl.stats[STAT_HEALTH] <= 25);
+			
+			if (cl.items & NEX_IT_SHELLS)
+				Sbar_DrawPic (519, 0, sb_ammo[0]);
+			else if (cl.items & NEX_IT_BULLETS)
+				Sbar_DrawPic (519, 0, sb_ammo[1]);
+			else if (cl.items & NEX_IT_ROCKETS)
+				Sbar_DrawPic (519, 0, sb_ammo[2]);
+			else if (cl.items & NEX_IT_CELLS)
+				Sbar_DrawPic (519, 0, sb_ammo[3]);
+			
+			Sbar_DrawNum ((519-3*24), 12, cl.stats[STAT_AMMO], 3, cl.stats[STAT_AMMO] <= 10);
+			
+			//Sbar_DrawAlphaPic(0,0,sb_sbar_overlay,0.5);
+			DrawQ_Pic(sbar_x,sbar_y,sb_sbar_overlay->name,0,0,1,1,1,1,DRAWFLAG_MODULATE); 
+			
+		}
+		
+		if (vid.conwidth > 320 && cl.gametype == GAME_DEATHMATCH)
+			Sbar_MiniDeathmatchOverlay ();
+		
+	}
+	else
+	{
+		sbar_y = vid.conheight - SBAR_HEIGHT;
+		if (cl.gametype == GAME_DEATHMATCH)
+			sbar_x = 0;
+		else
+			sbar_x = (vid.conwidth - 320)/2;
+		
+		if (sb_lines > 24)
+		{
+			if (gamemode != GAME_GOODVSBAD2)
+				Sbar_DrawInventory ();
+			if (!cl.islocalgame)
+				Sbar_DrawFrags ();
+		}
+		
+		if (sb_showscores || cl.stats[STAT_HEALTH] <= 0)
+		{
+			if (gamemode != GAME_GOODVSBAD2)
+				Sbar_DrawAlphaPic (0, 0, sb_scorebar, 0.4);
+			Sbar_DrawScoreboard ();
+		}
+		else if (sb_lines)
+		{
+			Sbar_DrawAlphaPic (0, 0, sb_sbar, 0.4);
+			
+			// keys (hipnotic only)
+			//MED 01/04/97 moved keys here so they would not be overwritten
+			if (gamemode == GAME_HIPNOTIC)
 			{
-				if (gamemode == GAME_ROGUE)
+				if (cl.items & IT_KEY1)
+					Sbar_DrawPic (209, 3, sb_items[0]);
+				if (cl.items & IT_KEY2)
+					Sbar_DrawPic (209, 12, sb_items[1]);
+			}
+			// armor
+			if (gamemode != GAME_GOODVSBAD2)
+			{
+				if (cl.items & IT_INVULNERABILITY)
 				{
-					Sbar_DrawNum (24, 0, cl.stats[STAT_ARMOR], 3, cl.stats[STAT_ARMOR] <= 25);
-					if (cl.items & RIT_ARMOR3)
-						Sbar_DrawPic (0, 0, sb_armor[2]);
-					else if (cl.items & RIT_ARMOR2)
-						Sbar_DrawPic (0, 0, sb_armor[1]);
-					else if (cl.items & RIT_ARMOR1)
-						Sbar_DrawPic (0, 0, sb_armor[0]);
+					Sbar_DrawNum (24, 0, 666, 3, 1);
+					Sbar_DrawPic (0, 0, sb_disc);
 				}
 				else
 				{
-					Sbar_DrawNum (24, 0, cl.stats[STAT_ARMOR], 3, cl.stats[STAT_ARMOR] <= 25);
-					if (cl.items & IT_ARMOR3)
-						Sbar_DrawPic (0, 0, sb_armor[2]);
-					else if (cl.items & IT_ARMOR2)
-						Sbar_DrawPic (0, 0, sb_armor[1]);
-					else if (cl.items & IT_ARMOR1)
-						Sbar_DrawPic (0, 0, sb_armor[0]);
+					if (gamemode == GAME_ROGUE)
+					{
+						Sbar_DrawNum (24, 0, cl.stats[STAT_ARMOR], 3, cl.stats[STAT_ARMOR] <= 25);
+						if (cl.items & RIT_ARMOR3)
+							Sbar_DrawPic (0, 0, sb_armor[2]);
+						else if (cl.items & RIT_ARMOR2)
+							Sbar_DrawPic (0, 0, sb_armor[1]);
+						else if (cl.items & RIT_ARMOR1)
+							Sbar_DrawPic (0, 0, sb_armor[0]);
+					}
+					else
+					{
+						Sbar_DrawNum (24, 0, cl.stats[STAT_ARMOR], 3, cl.stats[STAT_ARMOR] <= 25);
+						if (cl.items & IT_ARMOR3)
+							Sbar_DrawPic (0, 0, sb_armor[2]);
+						else if (cl.items & IT_ARMOR2)
+							Sbar_DrawPic (0, 0, sb_armor[1]);
+						else if (cl.items & IT_ARMOR1)
+							Sbar_DrawPic (0, 0, sb_armor[0]);
+					}
 				}
 			}
+			
+			// face
+			Sbar_DrawFace ();
+			
+			// health
+			Sbar_DrawNum (154, 0, cl.stats[STAT_HEALTH], 3, cl.stats[STAT_HEALTH] <= 25);
+			
+			// ammo icon
+			if (gamemode == GAME_ROGUE)
+			{
+				if (cl.items & RIT_SHELLS)
+					Sbar_DrawPic (224, 0, sb_ammo[0]);
+				else if (cl.items & RIT_NAILS)
+					Sbar_DrawPic (224, 0, sb_ammo[1]);
+				else if (cl.items & RIT_ROCKETS)
+					Sbar_DrawPic (224, 0, sb_ammo[2]);
+				else if (cl.items & RIT_CELLS)
+					Sbar_DrawPic (224, 0, sb_ammo[3]);
+				else if (cl.items & RIT_LAVA_NAILS)
+					Sbar_DrawPic (224, 0, rsb_ammo[0]);
+				else if (cl.items & RIT_PLASMA_AMMO)
+					Sbar_DrawPic (224, 0, rsb_ammo[1]);
+				else if (cl.items & RIT_MULTI_ROCKETS)
+					Sbar_DrawPic (224, 0, rsb_ammo[2]);
+			}
+			else
+			{
+				if (cl.items & IT_SHELLS)
+					Sbar_DrawPic (224, 0, sb_ammo[0]);
+				else if (cl.items & IT_NAILS)
+					Sbar_DrawPic (224, 0, sb_ammo[1]);
+				else if (cl.items & IT_ROCKETS)
+					Sbar_DrawPic (224, 0, sb_ammo[2]);
+				else if (cl.items & IT_CELLS)
+					Sbar_DrawPic (224, 0, sb_ammo[3]);
+			}
+			
+			Sbar_DrawNum (248, 0, cl.stats[STAT_AMMO], 3, cl.stats[STAT_AMMO] <= 10);
+			
 		}
-
-	// face
-		Sbar_DrawFace ();
-
-	// health
-		Sbar_DrawNum (136, 0, cl.stats[STAT_HEALTH], 3, cl.stats[STAT_HEALTH] <= 25);
-
-	// ammo icon
-		if (gamemode == GAME_ROGUE)
-		{
-			if (cl.items & RIT_SHELLS)
-				Sbar_DrawPic (224, 0, sb_ammo[0]);
-			else if (cl.items & RIT_NAILS)
-				Sbar_DrawPic (224, 0, sb_ammo[1]);
-			else if (cl.items & RIT_ROCKETS)
-				Sbar_DrawPic (224, 0, sb_ammo[2]);
-			else if (cl.items & RIT_CELLS)
-				Sbar_DrawPic (224, 0, sb_ammo[3]);
-			else if (cl.items & RIT_LAVA_NAILS)
-				Sbar_DrawPic (224, 0, rsb_ammo[0]);
-			else if (cl.items & RIT_PLASMA_AMMO)
-				Sbar_DrawPic (224, 0, rsb_ammo[1]);
-			else if (cl.items & RIT_MULTI_ROCKETS)
-				Sbar_DrawPic (224, 0, rsb_ammo[2]);
-		}
-		else
-		{
-			if (cl.items & IT_SHELLS)
-				Sbar_DrawPic (224, 0, sb_ammo[0]);
-			else if (cl.items & IT_NAILS)
-				Sbar_DrawPic (224, 0, sb_ammo[1]);
-			else if (cl.items & IT_ROCKETS)
-				Sbar_DrawPic (224, 0, sb_ammo[2]);
-			else if (cl.items & IT_CELLS)
-				Sbar_DrawPic (224, 0, sb_ammo[3]);
-		}
-
-		Sbar_DrawNum (248, 0, cl.stats[STAT_AMMO], 3, cl.stats[STAT_AMMO] <= 10);
 	}
+	
 
 	if (vid.conwidth > 320 && cl.gametype == GAME_DEATHMATCH)
 		Sbar_MiniDeathmatchOverlay ();
