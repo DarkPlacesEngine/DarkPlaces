@@ -154,12 +154,14 @@ surfmesh_t;
 
 typedef struct msurface_s
 {
+	// surface number, to avoid having to do a divide to find the number of a surface from it's address
+	int number;
 	// should be drawn if visframe == r_framecount (set by WorldNode functions)
-	int visframe;
+	//int visframe;
 	// should be drawn if onscreen and not a backface (used for setting visframe)
-	int pvsframe;
+	//int pvsframe;
 	// chain of surfaces marked visible by pvs
-	struct msurface_s *pvschain;
+	//struct msurface_s *pvschain;
 
 	// the node plane this is on, backwards if SURF_PLANEBACK flag set
 	mplane_t *plane;
@@ -207,7 +209,7 @@ typedef struct msurface_s
 	// avoid redundent addition of dlights
 	int lightframe;
 	// only render each surface once
-	int worldnodeframe;
+	//int worldnodeframe;
 
 	// these cause lightmap updates if regenerated
 	// values currently used in lightmap
@@ -266,7 +268,7 @@ typedef struct mleaf_s
 
 	qbyte *compressed_vis;
 
-	msurface_t **firstmarksurface;
+	int *firstmarksurface;
 	int nummarksurfaces;
 	qbyte ambient_sound_level[NUM_AMBIENTS];
 }

@@ -143,6 +143,9 @@ typedef struct model_s
 
 	int				numsurfaces;
 	msurface_t		*surfaces;
+	int				*surfacevisframes;
+	int				*surfacepvsframes;
+	msurface_t		*surfacepvsnext;
 
 	int				numsurfedges;
 	int				*surfedges;
@@ -151,7 +154,7 @@ typedef struct model_s
 	dclipnode_t		*clipnodes;
 
 	int				nummarksurfaces;
-	msurface_t		**marksurfaces;
+	int				*marksurfaces;
 
 	hull_t			hulls[MAX_MAP_HULLS];
 
