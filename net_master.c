@@ -27,11 +27,13 @@ cvar_t sv_heartbeatperiod = {CVAR_SAVE, "sv_heartbeatperiod", "180"};
 
 cvar_t sv_masters [] =
 {
-	{0, "sv_masterextra1", "68.102.242.12"},
 	{CVAR_SAVE, "sv_master1", ""},
 	{CVAR_SAVE, "sv_master2", ""},
 	{CVAR_SAVE, "sv_master3", ""},
-	{CVAR_SAVE, "sv_master4", ""}
+	{CVAR_SAVE, "sv_master4", ""},
+	{0, "sv_masterextra1", "rick.cube-sol.net"},
+	{0, "sv_masterextra2", "198.88.152.4"},
+	{0, "sv_masterextra3", "68.102.242.12"}
 };
 
 static double nextheartbeattime = 0;
@@ -91,13 +93,17 @@ const char* Master_BuildGetServers (void)
 		return NULL;
 	}
 
-	sv_master = &sv_masters[nextmaster++];
-
-	// No master, no heartbeat
-	if (sv_master->string[0] == '\0')
+	// find a non-empty master server address in the list
+	for(;;)
 	{
-		nextmaster = 0;
-		return NULL;
+		sv_master = &sv_masters[nextmaster++];
+		if (sv_master->string[0])
+			break;
+		if (nextmaster >= (int)(sizeof (sv_masters) / sizeof (sv_masters[0])))
+		{
+			nextmaster = 0;
+			return NULL;
+		}
 	}
 
 	// Build the heartbeat
@@ -130,13 +136,17 @@ const char* Master_BuildHeartbeat (void)
 		return NULL;
 	}
 
-	sv_master = &sv_masters[nextmaster++];
-
-	// No master, no heartbeat
-	if (sv_master->string[0] == '\0')
+	// find a non-empty master server address in the list
+	for(;;)
 	{
-		nextmaster = 0;
-		return NULL;
+		sv_master = &sv_masters[nextmaster++];
+		if (sv_master->string[0])
+			break;
+		if (nextmaster >= (int)(sizeof (sv_masters) / sizeof (sv_masters[0])))
+		{
+			nextmaster = 0;
+			return NULL;
+		}
 	}
 
 	// Build the heartbeat
@@ -229,9 +239,15 @@ void Master_ParseServerList (net_landriver_t* dfunc)
 	int control;
 	qbyte* servers;
 	qbyte* crtserver;
-	int ipaddr;
+	unsigned int ipaddr;
 	struct qsockaddr svaddr;
 	char ipstring [32];
+
+	if (developer.integer)
+	{
+		Con_Printf("Master_ParseServerList: packet received:\n");
+		SZ_HexDumpToConsole(&net_message);
+	}
 
 	if (net_message.cursize < (int)sizeof(int))
 		return;
@@ -246,7 +262,7 @@ void Master_ParseServerList (net_landriver_t* dfunc)
 	if (control != -1)
 		return;
 
-	if (strncmp (net_message.data + 4, "getserversResponse\\", 19))	
+	if (strncmp (net_message.data + 4, "getserversResponse\\", 19))
 		return;
 
 	// Skip the next 19 bytes
@@ -257,17 +273,17 @@ void Master_ParseServerList (net_landriver_t* dfunc)
 	memcpy (servers , net_message.data + 23, net_message.cursize - 23);
 
 	// Extract the IP addresses
-	while ((ipaddr = (crtserver[3] << 24) | (crtserver[2] << 16) | (crtserver[1] << 8) | crtserver[0]) != -1)
+	while ((ipaddr = (crtserver[3] << 24) | (crtserver[2] << 16) | (crtserver[1] << 8) | crtserver[0]) != 0xFFFFFFFF)
 	{
 		int port = (crtserver[5] << 8) | crtserver[4];
 
-		if (port == -1 || port == 0)
+		if (port < 1 || port >= 65535)
 			break;
 
 		port = ((port >> 8) & 0xFF) + ((port & 0xFF) << 8);
 		sprintf (ipstring, "%u.%u.%u.%u:%hu",
 					ipaddr & 0xFF, (ipaddr >> 8) & 0xFF,
-					(ipaddr >> 16) & 0xFF, ipaddr >> 24,
+					(ipaddr >> 16) & 0xFF, (ipaddr >> 24) & 0xFF,
 					port);
 		dfunc->GetAddrFromName (ipstring, &svaddr);
 
