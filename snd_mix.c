@@ -267,11 +267,11 @@ void SND_PaintChannelFrom16 (channel_t *ch, sfxcache_t *sc, int endtime);
 
 void S_PaintChannels(int endtime)
 {
-	int 	i;
-	int 	end;
+	int i;
+	int end;
 	channel_t *ch;
-	sfxcache_t	*sc;
-	int		ltime, count;
+	sfxcache_t *sc;
+	int ltime, count;
 
 	while (paintedtime < endtime)
 	{
@@ -280,8 +280,8 @@ void S_PaintChannels(int endtime)
 		if (endtime - paintedtime > PAINTBUFFER_SIZE)
 			end = paintedtime + PAINTBUFFER_SIZE;
 
-		// clear the paint buffer
-		memset(paintbuffer, 0, (end - paintedtime) * sizeof(portable_samplepair_t));
+		// clear the paint buffer, filling it with data from rawsamples (music/video/whatever)
+		S_RawSamples_Dequeue(&paintbuffer->left, end - paintedtime);
 
 		// paint in the channels.
 		ch = channels;
@@ -331,7 +331,6 @@ void S_PaintChannels(int endtime)
 					}
 				}
 			}
-
 		}
 
 		// transfer out according to DMA format
