@@ -13,7 +13,7 @@ typedef struct
 	double start[3];
 	double end[3];
 
-	// end - start (for quick fraction -> vector conversions)
+	// end - start
 	double dist[3];
 }
 RecursiveHullCheckTraceInfo_t;
@@ -25,59 +25,21 @@ RecursiveHullCheckTraceInfo_t;
 #define HULLCHECKSTATE_SOLID 1
 #define HULLCHECKSTATE_DONE 2
 
-static void RecursiveHullCheck_Impact (RecursiveHullCheckTraceInfo_t *t, const mplane_t *plane, const int side)
-{
-	// LordHavoc: using doubles for extra accuracy
-	double t1, t2, frac, pdist;
-
-	// LordHavoc: now that we have found the impact, recalculate the impact
-	// point from scratch for maximum accuracy, with an epsilon bias on the
-	// surface distance
-	pdist = plane->dist;
-	if (side)
-	{
-		pdist -= DIST_EPSILON;
-		VectorNegate (plane->normal, t->trace->plane.normal);
-		t->trace->plane.dist = -plane->dist;
-	}
-	else
-	{
-		pdist += DIST_EPSILON;
-		VectorCopy (plane->normal, t->trace->plane.normal);
-		t->trace->plane.dist = plane->dist;
-	}
-
-	if (plane->type < 3)
-	{
-		t1 = t->start[plane->type] - pdist;
-		t2 = t->start[plane->type] + t->dist[plane->type] - pdist;
-	}
-	else
-	{
-		t1 = plane->normal[0] * t->start[0] + plane->normal[1] * t->start[1] + plane->normal[2] * t->start[2] - pdist;
-		t2 = plane->normal[0] * (t->start[0] + t->dist[0]) + plane->normal[1] * (t->start[1] + t->dist[1]) + plane->normal[2] * (t->start[2] + t->dist[2]) - pdist;
-	}
-
-	frac = t1 / (t1 - t2);
-	frac = bound(0.0f, frac, 1.0);
-
-	t->trace->fraction = frac;
-	VectorMA(t->start, frac, t->dist, t->trace->endpos);
-}
-
-static int RecursiveHullCheck (RecursiveHullCheckTraceInfo_t *t, int num, double p1f, double p2f, const double p1[3], const double p2[3])
+static int RecursiveHullCheck (RecursiveHullCheckTraceInfo_t *t, int num, double p1f, double p2f, double p1[3], double p2[3])
 {
 	// status variables, these don't need to be saved on the stack when
 	// recursing...  but are because this should be thread-safe
 	// (note: tracing against a bbox is not thread-safe, yet)
 	int ret;
 	mplane_t *plane;
-	double t1, t2, frac;
+	double t1, t2;
+	//double frac;
+	//double mid[3];
 
 	// variables that need to be stored on the stack when recursing
-	dclipnode_t	*node;
-	int			side;
-	double		midf, mid[3];
+	dclipnode_t *node;
+	int side;
+	double midf, mid[3];
 
 	// LordHavoc: a goto!  everyone flee in terror... :)
 loc0:
@@ -134,45 +96,113 @@ loc0:
 		t2 = DotProduct (plane->normal, p2) - plane->dist;
 	}
 
-	side = t1 < 0;
-
-	if (side)
+	if (t1 < 0)
 	{
-		if (t1 < -DIST_EPSILON && t2 < -DIST_EPSILON)
+		if (t2 < 0)
 		{
 			num = node->children[1];
 			goto loc0;
 		}
+		side = 1;
 	}
 	else
 	{
-		if (t1 > DIST_EPSILON && t2 > DIST_EPSILON)
+		if (t2 >= 0)
 		{
 			num = node->children[0];
 			goto loc0;
 		}
+		side = 0;
 	}
 
-	// the line (almost) intersects, recurse both sides
+	// the line intersects, find intersection point
+	// LordHavoc: this uses the original trace for maximum accuracy
+	if (plane->type < 3)
+	{
+		t1 = t->start[plane->type] - plane->dist;
+		t2 = t->end[plane->type] - plane->dist;
+	}
+	else
+	{
+		t1 = DotProduct (plane->normal, t->start) - plane->dist;
+		t2 = DotProduct (plane->normal, t->end) - plane->dist;
+	}
 
-	frac = t1 / (t1 - t2);
-	frac = bound(0.0f, frac, 1.0);
-
-	midf = p1f + ((p2f - p1f) * frac);
+	midf = t1 / (t1 - t2);
+	midf = bound(p1f, midf, p2f);
 	VectorMA(t->start, midf, t->dist, mid);
 
-	// front side first
+	// recurse both sides, front side first
 	ret = RecursiveHullCheck (t, node->children[side], p1f, midf, p1, mid);
+	// if this side is not empty, return what it is (solid or done)
 	if (ret != HULLCHECKSTATE_EMPTY)
-		return ret; // solid or done
-	ret = RecursiveHullCheck (t, node->children[!side], midf, p2f, mid, p2);
+		return ret;
+
+	ret = RecursiveHullCheck (t, node->children[side ^ 1], midf, p2f, mid, p2);
+	// if other side is not solid, return what it is (empty or done)
 	if (ret != HULLCHECKSTATE_SOLID)
-		return ret; // empty or done
+		return ret;
 
 	// front is air and back is solid, this is the impact point...
-	RecursiveHullCheck_Impact(t, t->hull->planes + node->planenum, side);
+	if (side)
+	{
+		t->trace->plane.dist = -plane->dist;
+		VectorNegate (plane->normal, t->trace->plane.normal);
+	}
+	else
+	{
+		t->trace->plane.dist = plane->dist;
+		VectorCopy (plane->normal, t->trace->plane.normal);
+	}
+
+	// bias away from surface a bit
+	t1 = DotProduct(t->trace->plane.normal, t->start) - (t->trace->plane.dist + DIST_EPSILON);
+	t2 = DotProduct(t->trace->plane.normal, t->end) - (t->trace->plane.dist + DIST_EPSILON);
+
+	midf = t1 / (t1 - t2);
+	t->trace->fraction = bound(0.0f, midf, 1.0);
+
+	VectorMA(t->start, t->trace->fraction, t->dist, t->trace->endpos);
 
 	return HULLCHECKSTATE_DONE;
+}
+
+// used if start and end are the same
+static void RecursiveHullCheckPoint (RecursiveHullCheckTraceInfo_t *t, int num)
+{
+	while (num >= 0)
+		num = t->hull->clipnodes[num].children[((t->hull->planes[t->hull->clipnodes[num].planenum].type < 3) ? (t->start[t->hull->planes[t->hull->clipnodes[num].planenum].type]) : (DotProduct(t->hull->planes[t->hull->clipnodes[num].planenum].normal, t->start))) < t->hull->planes[t->hull->clipnodes[num].planenum].dist];
+
+	// check for empty
+	t->trace->endcontents = num;
+	if (t->trace->startcontents)
+	{
+		if (num == t->trace->startcontents)
+			t->trace->allsolid = false;
+		else
+		{
+			// if the first leaf is solid, set startsolid
+			if (t->trace->allsolid)
+				t->trace->startsolid = true;
+		}
+	}
+	else
+	{
+		if (num != CONTENTS_SOLID)
+		{
+			t->trace->allsolid = false;
+			if (num == CONTENTS_EMPTY)
+				t->trace->inopen = true;
+			else
+				t->trace->inwater = true;
+		}
+		else
+		{
+			// if the first leaf is solid, set startsolid
+			if (t->trace->allsolid)
+				t->trace->startsolid = true;
+		}
+	}
 }
 
 void Collision_RoundUpToHullSize(const model_t *cmodel, const vec3_t inmins, const vec3_t inmaxs, vec3_t outmins, vec3_t outmaxs)
@@ -342,14 +372,15 @@ void Collision_ClipTrace (trace_t *trace, const void *cent, const model_t *cmode
 			endd[2] = DotProduct (tempd, up);
 		}
 
-		VectorCopy(end, rhc.trace->endpos);
-
 		// trace a line through the appropriate clipping hull
 		VectorCopy(startd, rhc.start);
 		VectorCopy(endd, rhc.end);
-
+		VectorCopy(rhc.end, rhc.trace->endpos);
 		VectorSubtract(rhc.end, rhc.start, rhc.dist);
-		RecursiveHullCheck (&rhc, rhc.hull->firstclipnode, 0, 1, startd, endd);
+		if (DotProduct(rhc.dist, rhc.dist) > 0.00001)
+			RecursiveHullCheck (&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
+		else
+			RecursiveHullCheckPoint (&rhc, rhc.hull->firstclipnode);
 
 		// if we hit, unrotate endpos and normal, and store the entity we hit
 		if (rhc.trace->fraction != 1)
@@ -383,14 +414,15 @@ void Collision_ClipTrace (trace_t *trace, const void *cent, const model_t *cmode
 
 		rhc.hull = HullForBBoxEntity (corigin, cmins, cmaxs, mins, maxs, offset);
 
-		VectorSubtract(start, offset, startd);
-		VectorSubtract(end, offset, endd);
-		VectorCopy(end, rhc.trace->endpos);
-
 		// trace a line through the generated clipping hull
 		VectorCopy(startd, rhc.start);
-		VectorSubtract(endd, startd, rhc.dist);
-		RecursiveHullCheck (&rhc, rhc.hull->firstclipnode, 0, 1, startd, endd);
+		VectorCopy(endd, rhc.end);
+		VectorCopy(rhc.end, rhc.trace->endpos);
+		VectorSubtract(rhc.end, rhc.start, rhc.dist);
+		if (DotProduct(rhc.dist, rhc.dist) > 0.00001)
+			RecursiveHullCheck (&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
+		else
+			RecursiveHullCheckPoint (&rhc, rhc.hull->firstclipnode);
 
 		// if we hit, store the entity we hit
 		if (rhc.trace->fraction != 1)
