@@ -5510,6 +5510,11 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 			// textures and memory belong to the main model
 			mod->texturepool = NULL;
 			mod->mempool = NULL;
+			mod->brush.GetPVS = NULL;
+			mod->brush.FatPVS = NULL;
+			mod->brush.BoxTouchingPVS = NULL;
+			mod->brush.LightPoint = NULL;
+			mod->brush.FindNonSolidLocation = Mod_Q3BSP_FindNonSolidLocation;
 		}
 		mod->brushq3.data_thismodel = loadmodel->brushq3.data_models + i;
 		mod->brushq3.submodel = i;
