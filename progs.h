@@ -224,8 +224,8 @@ void PR_Execute_ProgsLoaded(void);
 void ED_PrintEdicts (void);
 void ED_PrintNum (int ent);
 
-#define PR_GetString(num) (pr_strings + num)
-#define PR_SetString(s) ((int) (s - pr_strings))
+#define PR_GetString(num) (pr_strings + num) 
+#define PR_SetString(s)   ((int) (s) ? (s - pr_strings) : 0)
 
 #endif
 
