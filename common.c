@@ -819,7 +819,7 @@ void COM_InitGameType (void)
 		break;
 	case GAME_TRANSFUSION:
 		gamename = "Transfusion";
-		gamedirname = "transfusion";
+		gamedirname = "basetf";
 		break;
 	case GAME_GOODVSBAD2:
 		gamename = "GoodVs.Bad2";

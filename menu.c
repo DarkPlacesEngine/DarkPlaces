@@ -2887,6 +2887,8 @@ level_t		transfusionlevels[] =
 	{"e1m7",		"Altar of Stone"},
 	{"e2m8",		"The Lair of Shial"},
 	{"e3m7",		"The Pit of Cerberus"},
+	{"e4m1",		"Butchery Loves Company"},
+	{"e4m7",		"In the Flesh"},
 	{"e4m8",		"The Hall of the Epiphany"},
 	{"e4m9",		"Mall of the Dead"},
 
@@ -2895,6 +2897,7 @@ level_t		transfusionlevels[] =
 	{"dm3",			"Area 15"},
 	{"e6m1",		"Welcome to Your Life"},
 	{"e6m8",		"Beauty and the Beast"},
+	{"e6m9",		"Forgotten Catacombs"},
 
 	{"cpbb01",		"Crypt of Despair"},
 	{"cpbb03",		"Unholy Cathedral"},
@@ -2906,6 +2909,8 @@ level_t		transfusionlevels[] =
 	{"crypt",		"The Crypt"},
 
 	{"bb3_2k1",		"Bodies Infusion"},
+	{"captasao",	"Captasao"},
+	{"curandero",	"Curandero"},
 	{"dcamp",		"DeathCamp"},
 	{"highnoon",	"HighNoon"},
 	{"qbb1",		"The Confluence"},
@@ -2916,18 +2921,19 @@ level_t		transfusionlevels[] =
 	{"fragm",		"Frag'M"},
 	{"maim",		"Maim"},
 	{"qe1m7",		"The House of Chthon"},
+	{"qmorbias",	"Dm-Morbias"},
 	{"simple",		"Dead Simple"}
 };
 
 episode_t	transfusionepisodes[] =
 {
 	{"Blood", 0, 8},
-	{"Blood Single Player", 8, 7},
-	{"Plasma Pack", 15, 5},
-	{"Cryptic Passage", 20, 2},
-	{"Blood 2", 22, 5},
-	{"Transfusion", 27, 6},
-	{"Conversions", 33, 5}
+	{"Blood Single Player", 8, 9},
+	{"Plasma Pack", 17, 6},
+	{"Cryptic Passage", 23, 2},
+	{"Blood 2", 25, 5},
+	{"Transfusion", 30, 8},
+	{"Conversions", 38, 6}
 };
 
 level_t goodvsbad2levels[] =
