@@ -930,9 +930,7 @@ int R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	if (!r_shadow_scissor.integer)
 		return false;
 	// if view is inside the box, just say yes it's visible
-	// LordHavoc: for some odd reason scissor seems broken without stencil
-	// (?!?  seems like a driver bug) so abort if gl_stencil is false
-	if (!gl_stencil || BoxesOverlap(r_vieworigin, r_vieworigin, mins, maxs))
+	if (BoxesOverlap(r_vieworigin, r_vieworigin, mins, maxs))
 	{
 		GL_Scissor(r_view_x, r_view_y, r_view_width, r_view_height);
 		return false;
@@ -1094,7 +1092,7 @@ int R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	return false;
 }
 
-void R_Shadow_VertexLighting(int numverts, const float *vertex3f, const float *normal3f, const float *lightcolor, const matrix4x4_t *m)
+static void R_Shadow_VertexShadingWithXYZAttenuation(int numverts, const float *vertex3f, const float *normal3f, const float *lightcolor, const matrix4x4_t *m)
 {
 	float *color4f = varray_color4f;
 	float dist, dot, intensity, v[3], n[3];
@@ -1107,7 +1105,8 @@ void R_Shadow_VertexLighting(int numverts, const float *vertex3f, const float *n
 			if ((dot = DotProduct(n, v)) > 0)
 			{
 				dist = sqrt(dist);
-				intensity = pow(1 - dist, r_shadow_attenpower) * r_shadow_attenscale * dot / sqrt(DotProduct(n,n));
+				intensity = dot / (VectorLength(v) * VectorLength(n));
+				intensity *= pow(1 - dist, r_shadow_attenpower) * r_shadow_attenscale;
 				VectorScale(lightcolor, intensity, color4f);
 				color4f[3] = 1;
 			}
@@ -1125,7 +1124,7 @@ void R_Shadow_VertexLighting(int numverts, const float *vertex3f, const float *n
 	}
 }
 
-void R_Shadow_VertexLightingWithXYAttenuationTexture(int numverts, const float *vertex3f, const float *normal3f, const float *lightcolor, const matrix4x4_t *m)
+static void R_Shadow_VertexShadingWithZAttenuation(int numverts, const float *vertex3f, const float *normal3f, const float *lightcolor, const matrix4x4_t *m)
 {
 	float *color4f = varray_color4f;
 	float dist, dot, intensity, v[3], n[3];
@@ -1137,7 +1136,8 @@ void R_Shadow_VertexLightingWithXYAttenuationTexture(int numverts, const float *
 			Matrix4x4_Transform3x3(m, normal3f, n);
 			if ((dot = DotProduct(n, v)) > 0)
 			{
-				intensity = pow(1 - dist, r_shadow_attenpower) * r_shadow_attenscale * dot / sqrt(DotProduct(n,n));
+				intensity = dot / (VectorLength(v) * VectorLength(n));
+				intensity *= pow(1 - dist, r_shadow_attenpower) * r_shadow_attenscale;
 				VectorScale(lightcolor, intensity, color4f);
 				color4f[3] = 1;
 			}
@@ -1155,9 +1155,33 @@ void R_Shadow_VertexLightingWithXYAttenuationTexture(int numverts, const float *
 	}
 }
 
-// FIXME: this should be done in a vertex program when possible
+static void R_Shadow_VertexShading(int numverts, const float *vertex3f, const float *normal3f, const float *lightcolor, const matrix4x4_t *m)
+{
+	float *color4f = varray_color4f;
+	float dot, intensity, v[3], n[3];
+	for (;numverts > 0;numverts--, vertex3f += 3, normal3f += 3, color4f += 4)
+	{
+		Matrix4x4_Transform(m, vertex3f, v);
+		Matrix4x4_Transform3x3(m, normal3f, n);
+		if ((dot = DotProduct(n, v)) > 0)
+		{
+			intensity = dot / (VectorLength(v) * VectorLength(n));
+			VectorScale(lightcolor, intensity, color4f);
+			color4f[3] = 1;
+		}
+		else
+		{
+			VectorClear(color4f);
+			color4f[3] = 1;
+		}
+	}
+}
+
+#define USETEXMATRIX 1
+#ifndef USETEXMATRIX
+// FIXME: this should be done in a texture matrix or vertex program when possible
 // FIXME: if vertex program not available, this would really benefit from 3DNow! or SSE
-void R_Shadow_Transform_Vertex3f_TexCoord3f(float *tc3f, int numverts, const float *vertex3f, const matrix4x4_t *matrix)
+static void R_Shadow_Transform_Vertex3f_TexCoord3f(float *tc3f, int numverts, const float *vertex3f, const matrix4x4_t *matrix)
 {
 	do
 	{
@@ -1170,7 +1194,7 @@ void R_Shadow_Transform_Vertex3f_TexCoord3f(float *tc3f, int numverts, const flo
 	while (--numverts);
 }
 
-void R_Shadow_Transform_Vertex3f_TexCoord2f(float *tc2f, int numverts, const float *vertex3f, const matrix4x4_t *matrix)
+static void R_Shadow_Transform_Vertex3f_TexCoord2f(float *tc2f, int numverts, const float *vertex3f, const matrix4x4_t *matrix)
 {
 	do
 	{
@@ -1181,8 +1205,9 @@ void R_Shadow_Transform_Vertex3f_TexCoord2f(float *tc2f, int numverts, const flo
 	}
 	while (--numverts);
 }
+#endif
 
-void R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(float *out3f, int numverts, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const vec3_t relativelightorigin)
+static void R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(float *out3f, int numverts, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const vec3_t relativelightorigin)
 {
 	int i;
 	float lightdir[3];
@@ -1196,7 +1221,7 @@ void R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(float *out3f, int numverts, con
 	}
 }
 
-void R_Shadow_GenTexCoords_Specular_NormalCubeMap(float *out3f, int numverts, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const vec3_t relativelightorigin, const vec3_t relativeeyeorigin)
+static void R_Shadow_GenTexCoords_Specular_NormalCubeMap(float *out3f, int numverts, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const vec3_t relativelightorigin, const vec3_t relativeeyeorigin)
 {
 	int i;
 	float lightdir[3], eyedir[3], halfdir[3];
@@ -1214,7 +1239,6 @@ void R_Shadow_GenTexCoords_Specular_NormalCubeMap(float *out3f, int numverts, co
 	}
 }
 
-#define USETEXMATRIX 1
 void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *texcoord2f, const float *relativelightorigin, const float *relativeeyeorigin, const float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *basetexture, rtexture_t *bumptexture, rtexture_t *glosstexture, rtexture_t *lightcubemap, int lighting)
 {
 	int renders;
@@ -1231,10 +1255,14 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 		if (lighting & LIGHTING_DIFFUSE)
 		{
 			GL_Color(1,1,1,1);
-			// colorscale accounts for how much we multiply the brightness during combine
+			colorscale = r_shadow_lightintensityscale.value;
+			// colorscale accounts for how much we multiply the brightness
+			// during combine.
+			//
 			// mult is how many times the final pass of the lighting will be
-			// performed to get more brightness than otherwise possible
-			// limit mult to 64 for sanity sake
+			// performed to get more brightness than otherwise possible.
+			//
+			// Limit mult to 64 for sanity sake.
 			if (r_shadow_texture3d.integer && r_textureunits.integer >= 4)
 			{
 				// 3/2 3D combine path (Geforce3, Radeon 8500)
@@ -1279,22 +1307,6 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
 #endif
 				}
-				R_Mesh_State(&m);
-				GL_LockArrays(0, numverts);
-				GL_ColorMask(1,1,1,0);
-				GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
-				VectorScale(lightcolor, r_shadow_lightintensityscale.value, color2);
-				for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
-				{
-					color[0] = bound(0, color2[0], 1);
-					color[1] = bound(0, color2[1], 1);
-					color[2] = bound(0, color2[2], 1);
-					GL_Color(color[0], color[1], color[2], 1);
-					R_Mesh_Draw(numverts, numtriangles, elements);
-					c_rt_lightmeshes++;
-					c_rt_lighttris += numtriangles;
-				}
-				GL_LockArrays(0, 0);
 			}
 			else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && lightcubemap)
 			{
@@ -1350,22 +1362,6 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
 #endif
 				}
-				R_Mesh_State(&m);
-				GL_LockArrays(0, numverts);
-				GL_ColorMask(1,1,1,0);
-				GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
-				VectorScale(lightcolor, r_shadow_lightintensityscale.value, color2);
-				for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
-				{
-					color[0] = bound(0, color2[0], 1);
-					color[1] = bound(0, color2[1], 1);
-					color[2] = bound(0, color2[2], 1);
-					GL_Color(color[0], color[1], color[2], 1);
-					R_Mesh_Draw(numverts, numtriangles, elements);
-					c_rt_lightmeshes++;
-					c_rt_lighttris += numtriangles;
-				}
-				GL_LockArrays(0, 0);
 			}
 			else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && !lightcubemap)
 			{
@@ -1400,22 +1396,6 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltoattenuationxyz);
 #endif
-				R_Mesh_State(&m);
-				GL_LockArrays(0, numverts);
-				GL_ColorMask(1,1,1,0);
-				GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
-				VectorScale(lightcolor, r_shadow_lightintensityscale.value, color2);
-				for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
-				{
-					color[0] = bound(0, color2[0], 1);
-					color[1] = bound(0, color2[1], 1);
-					color[2] = bound(0, color2[2], 1);
-					GL_Color(color[0], color[1], color[2], 1);
-					R_Mesh_Draw(numverts, numtriangles, elements);
-					c_rt_lightmeshes++;
-					c_rt_lighttris += numtriangles;
-				}
-				GL_LockArrays(0, 0);
 			}
 			else if (r_textureunits.integer >= 4)
 			{
@@ -1469,22 +1449,6 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
 #endif
 				}
-				R_Mesh_State(&m);
-				GL_LockArrays(0, numverts);
-				GL_ColorMask(1,1,1,0);
-				GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
-				VectorScale(lightcolor, r_shadow_lightintensityscale.value, color2);
-				for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
-				{
-					color[0] = bound(0, color2[0], 1);
-					color[1] = bound(0, color2[1], 1);
-					color[2] = bound(0, color2[2], 1);
-					GL_Color(color[0], color[1], color[2], 1);
-					R_Mesh_Draw(numverts, numtriangles, elements);
-					c_rt_lightmeshes++;
-					c_rt_lighttris += numtriangles;
-				}
-				GL_LockArrays(0, 0);
 			}
 			else
 			{
@@ -1548,284 +1512,251 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
 #endif
 				}
-				R_Mesh_State(&m);
+			}
+			// this final code is shared
+			R_Mesh_State(&m);
+			GL_ColorMask(1,1,1,0);
+			GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
+			VectorScale(lightcolor, colorscale, color2);
+			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
+			{
+				GL_Color(bound(0, color2[0], 1), bound(0, color2[1], 1), bound(0, color2[2], 1), 1);
 				GL_LockArrays(0, numverts);
-				GL_ColorMask(1,1,1,0);
-				GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
-				VectorScale(lightcolor, r_shadow_lightintensityscale.value, color2);
-				for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
-				{
-					color[0] = bound(0, color2[0], 1);
-					color[1] = bound(0, color2[1], 1);
-					color[2] = bound(0, color2[2], 1);
-					GL_Color(color[0], color[1], color[2], 1);
-					R_Mesh_Draw(numverts, numtriangles, elements);
-					c_rt_lightmeshes++;
-					c_rt_lighttris += numtriangles;
-				}
+				R_Mesh_Draw(numverts, numtriangles, elements);
 				GL_LockArrays(0, 0);
+				c_rt_lightmeshes++;
+				c_rt_lighttris += numtriangles;
 			}
 		}
 		if ((lighting & LIGHTING_SPECULAR) && (r_shadow_gloss.integer >= 2 || (r_shadow_gloss.integer >= 1 && glosstexture != r_shadow_blankglosstexture)))
 		{
-			colorscale = r_shadow_glossintensity.value;
-			if (glosstexture == r_shadow_blankglosstexture)
-				colorscale *= r_shadow_gloss2intensity.value;
-			GL_Color(1,1,1,1);
-			if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && lightcubemap /*&& gl_support_blendsquare*/) // FIXME: detect blendsquare!
+			// FIXME: detect blendsquare!
+			//if (gl_support_blendsquare)
 			{
-				// 2/0/0/1/2 3D combine blendsquare path
-				memset(&m, 0, sizeof(m));
-				m.pointer_vertex = vertex3f;
-				m.tex[0] = R_GetTexture(bumptexture);
-				m.pointer_texcoord[0] = texcoord2f;
-				m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
-				m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
-				m.pointer_texcoord3f[1] = varray_texcoord3f[1];
-				R_Shadow_GenTexCoords_Specular_NormalCubeMap(varray_texcoord3f[1], numverts, vertex3f, svector3f, tvector3f, normal3f, relativelightorigin, relativeeyeorigin);
-				R_Mesh_State(&m);
-				GL_ColorMask(0,0,0,1);
-				// this squares the result
-				GL_BlendFunc(GL_SRC_ALPHA, GL_ZERO);
-				GL_LockArrays(0, numverts);
-				R_Mesh_Draw(numverts, numtriangles, elements);
-				GL_LockArrays(0, 0);
-				c_rt_lightmeshes++;
-				c_rt_lighttris += numtriangles;
-	
-				memset(&m, 0, sizeof(m));
-				m.pointer_vertex = vertex3f;
-				R_Mesh_State(&m);
-				GL_LockArrays(0, numverts);
-				// square alpha in framebuffer a few times to make it shiny
-				GL_BlendFunc(GL_ZERO, GL_DST_ALPHA);
-				// these comments are a test run through this math for intensity 0.5
-				// 0.5 * 0.5 = 0.25 (done by the BlendFunc earlier)
-				// 0.25 * 0.25 = 0.0625 (this is another pass)
-				// 0.0625 * 0.0625 = 0.00390625 (this is another pass)
-				R_Mesh_Draw(numverts, numtriangles, elements);
-				c_rt_lightmeshes++;
-				c_rt_lighttris += numtriangles;
-				R_Mesh_Draw(numverts, numtriangles, elements);
-				c_rt_lightmeshes++;
-				c_rt_lighttris += numtriangles;
-				GL_LockArrays(0, 0);
-	
-				memset(&m, 0, sizeof(m));
-				m.pointer_vertex = vertex3f;
-				m.tex3d[0] = R_GetTexture(r_shadow_attenuation3dtexture);
-#if USETEXMATRIX
-				m.pointer_texcoord3f[0] = vertex3f;
-				m.texmatrix[0] = *matrix_modeltoattenuationxyz;
-#else
-				m.pointer_texcoord3f[0] = varray_texcoord3f[0];
-				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[0], numverts, vertex3f, matrix_modeltoattenuationxyz);
-#endif
-				R_Mesh_State(&m);
-				GL_BlendFunc(GL_DST_ALPHA, GL_ZERO);
-				GL_LockArrays(0, numverts);
-				R_Mesh_Draw(numverts, numtriangles, elements);
-				GL_LockArrays(0, 0);
-				c_rt_lightmeshes++;
-				c_rt_lighttris += numtriangles;
-	
-				memset(&m, 0, sizeof(m));
-				m.pointer_vertex = vertex3f;
-				m.tex[0] = R_GetTexture(glosstexture);
-				m.pointer_texcoord[0] = texcoord2f;
-				if (lightcubemap)
+				colorscale = r_shadow_lightintensityscale.value * r_shadow_glossintensity.value;
+				if (glosstexture == r_shadow_blankglosstexture)
+					colorscale *= r_shadow_gloss2intensity.value;
+				GL_Color(1,1,1,1);
+				if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && lightcubemap /*&& gl_support_blendsquare*/) // FIXME: detect blendsquare!
 				{
-					m.texcubemap[1] = R_GetTexture(lightcubemap);
+					// 2/0/0/1/2 3D combine blendsquare path
+					memset(&m, 0, sizeof(m));
+					m.pointer_vertex = vertex3f;
+					m.tex[0] = R_GetTexture(bumptexture);
+					m.pointer_texcoord[0] = texcoord2f;
+					m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
+					m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
+					m.pointer_texcoord3f[1] = varray_texcoord3f[1];
+					R_Shadow_GenTexCoords_Specular_NormalCubeMap(varray_texcoord3f[1], numverts, vertex3f, svector3f, tvector3f, normal3f, relativelightorigin, relativeeyeorigin);
+					R_Mesh_State(&m);
+					GL_ColorMask(0,0,0,1);
+					// this squares the result
+					GL_BlendFunc(GL_SRC_ALPHA, GL_ZERO);
+					GL_LockArrays(0, numverts);
+					R_Mesh_Draw(numverts, numtriangles, elements);
+					GL_LockArrays(0, 0);
+					c_rt_lightmeshes++;
+					c_rt_lighttris += numtriangles;
+		
+					memset(&m, 0, sizeof(m));
+					m.pointer_vertex = vertex3f;
+					R_Mesh_State(&m);
+					GL_LockArrays(0, numverts);
+					// square alpha in framebuffer a few times to make it shiny
+					GL_BlendFunc(GL_ZERO, GL_DST_ALPHA);
+					// these comments are a test run through this math for intensity 0.5
+					// 0.5 * 0.5 = 0.25 (done by the BlendFunc earlier)
+					// 0.25 * 0.25 = 0.0625 (this is another pass)
+					// 0.0625 * 0.0625 = 0.00390625 (this is another pass)
+					R_Mesh_Draw(numverts, numtriangles, elements);
+					c_rt_lightmeshes++;
+					c_rt_lighttris += numtriangles;
+					R_Mesh_Draw(numverts, numtriangles, elements);
+					c_rt_lightmeshes++;
+					c_rt_lighttris += numtriangles;
+					GL_LockArrays(0, 0);
+		
+					memset(&m, 0, sizeof(m));
+					m.pointer_vertex = vertex3f;
+					m.tex3d[0] = R_GetTexture(r_shadow_attenuation3dtexture);
+#if USETEXMATRIX
+					m.pointer_texcoord3f[0] = vertex3f;
+					m.texmatrix[0] = *matrix_modeltoattenuationxyz;
+#else
+					m.pointer_texcoord3f[0] = varray_texcoord3f[0];
+					R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[0], numverts, vertex3f, matrix_modeltoattenuationxyz);
+#endif
+					R_Mesh_State(&m);
+					GL_BlendFunc(GL_DST_ALPHA, GL_ZERO);
+					GL_LockArrays(0, numverts);
+					R_Mesh_Draw(numverts, numtriangles, elements);
+					GL_LockArrays(0, 0);
+					c_rt_lightmeshes++;
+					c_rt_lighttris += numtriangles;
+		
+					memset(&m, 0, sizeof(m));
+					m.pointer_vertex = vertex3f;
+					m.tex[0] = R_GetTexture(glosstexture);
+					m.pointer_texcoord[0] = texcoord2f;
+					if (lightcubemap)
+					{
+						m.texcubemap[1] = R_GetTexture(lightcubemap);
+#if USETEXMATRIX
+						m.pointer_texcoord3f[1] = vertex3f;
+						m.texmatrix[1] = *matrix_modeltolight;
+#else
+						m.pointer_texcoord3f[1] = varray_texcoord3f[1];
+						R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
+#endif
+					}
+				}
+				else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && !lightcubemap /*&& gl_support_blendsquare*/) // FIXME: detect blendsquare!
+				{
+					// 2/0/0/2 3D combine blendsquare path
+					memset(&m, 0, sizeof(m));
+					m.pointer_vertex = vertex3f;
+					m.tex[0] = R_GetTexture(bumptexture);
+					m.pointer_texcoord[0] = texcoord2f;
+					m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
+					m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
+					m.pointer_texcoord3f[1] = varray_texcoord3f[1];
+					R_Shadow_GenTexCoords_Specular_NormalCubeMap(varray_texcoord3f[1], numverts, vertex3f, svector3f, tvector3f, normal3f, relativelightorigin, relativeeyeorigin);
+					R_Mesh_State(&m);
+					GL_ColorMask(0,0,0,1);
+					// this squares the result
+					GL_BlendFunc(GL_SRC_ALPHA, GL_ZERO);
+					GL_LockArrays(0, numverts);
+					R_Mesh_Draw(numverts, numtriangles, elements);
+					GL_LockArrays(0, 0);
+					c_rt_lightmeshes++;
+					c_rt_lighttris += numtriangles;
+		
+					memset(&m, 0, sizeof(m));
+					m.pointer_vertex = vertex3f;
+					R_Mesh_State(&m);
+					GL_LockArrays(0, numverts);
+					// square alpha in framebuffer a few times to make it shiny
+					GL_BlendFunc(GL_ZERO, GL_DST_ALPHA);
+					// these comments are a test run through this math for intensity 0.5
+					// 0.5 * 0.5 = 0.25 (done by the BlendFunc earlier)
+					// 0.25 * 0.25 = 0.0625 (this is another pass)
+					// 0.0625 * 0.0625 = 0.00390625 (this is another pass)
+					R_Mesh_Draw(numverts, numtriangles, elements);
+					c_rt_lightmeshes++;
+					c_rt_lighttris += numtriangles;
+					R_Mesh_Draw(numverts, numtriangles, elements);
+					c_rt_lightmeshes++;
+					c_rt_lighttris += numtriangles;
+					GL_LockArrays(0, 0);
+		
+					memset(&m, 0, sizeof(m));
+					m.pointer_vertex = vertex3f;
+					m.tex[0] = R_GetTexture(glosstexture);
+					m.pointer_texcoord[0] = texcoord2f;
+					m.tex3d[1] = R_GetTexture(r_shadow_attenuation3dtexture);
 #if USETEXMATRIX
 					m.pointer_texcoord3f[1] = vertex3f;
-					m.texmatrix[1] = *matrix_modeltolight;
+					m.texmatrix[1] = *matrix_modeltoattenuationxyz;
 #else
 					m.pointer_texcoord3f[1] = varray_texcoord3f[1];
-					R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
+					R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltoattenuationxyz);
 #endif
 				}
-				R_Mesh_State(&m);
-				GL_LockArrays(0, numverts);
-				GL_ColorMask(1,1,1,0);
-				GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
-				VectorScale(lightcolor, colorscale, color2);
-				for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
+				else
 				{
-					color[0] = bound(0, color2[0], 1);
-					color[1] = bound(0, color2[1], 1);
-					color[2] = bound(0, color2[2], 1);
-					GL_Color(color[0], color[1], color[2], 1);
+					// 2/0/0/2/2 2D combine blendsquare path
+					memset(&m, 0, sizeof(m));
+					m.pointer_vertex = vertex3f;
+					m.tex[0] = R_GetTexture(bumptexture);
+					m.pointer_texcoord[0] = texcoord2f;
+					m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
+					m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
+					m.pointer_texcoord3f[1] = varray_texcoord3f[1];
+					R_Shadow_GenTexCoords_Specular_NormalCubeMap(varray_texcoord3f[1], numverts, vertex3f, svector3f, tvector3f, normal3f, relativelightorigin, relativeeyeorigin);
+					R_Mesh_State(&m);
+					GL_ColorMask(0,0,0,1);
+					// this squares the result
+					GL_BlendFunc(GL_SRC_ALPHA, GL_ZERO);
+					GL_LockArrays(0, numverts);
+					R_Mesh_Draw(numverts, numtriangles, elements);
+					GL_LockArrays(0, 0);
+					c_rt_lightmeshes++;
+					c_rt_lighttris += numtriangles;
+		
+					memset(&m, 0, sizeof(m));
+					m.pointer_vertex = vertex3f;
+					R_Mesh_State(&m);
+					GL_LockArrays(0, numverts);
+					// square alpha in framebuffer a few times to make it shiny
+					GL_BlendFunc(GL_ZERO, GL_DST_ALPHA);
+					// these comments are a test run through this math for intensity 0.5
+					// 0.5 * 0.5 = 0.25 (done by the BlendFunc earlier)
+					// 0.25 * 0.25 = 0.0625 (this is another pass)
+					// 0.0625 * 0.0625 = 0.00390625 (this is another pass)
 					R_Mesh_Draw(numverts, numtriangles, elements);
 					c_rt_lightmeshes++;
 					c_rt_lighttris += numtriangles;
-				}
-				GL_LockArrays(0, 0);
-			}
-			else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && !lightcubemap /*&& gl_support_blendsquare*/) // FIXME: detect blendsquare!
-			{
-				// 2/0/0/2 3D combine blendsquare path
-				memset(&m, 0, sizeof(m));
-				m.pointer_vertex = vertex3f;
-				m.tex[0] = R_GetTexture(bumptexture);
-				m.pointer_texcoord[0] = texcoord2f;
-				m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
-				m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
-				m.pointer_texcoord3f[1] = varray_texcoord3f[1];
-				R_Shadow_GenTexCoords_Specular_NormalCubeMap(varray_texcoord3f[1], numverts, vertex3f, svector3f, tvector3f, normal3f, relativelightorigin, relativeeyeorigin);
-				R_Mesh_State(&m);
-				GL_ColorMask(0,0,0,1);
-				// this squares the result
-				GL_BlendFunc(GL_SRC_ALPHA, GL_ZERO);
-				GL_LockArrays(0, numverts);
-				R_Mesh_Draw(numverts, numtriangles, elements);
-				GL_LockArrays(0, 0);
-				c_rt_lightmeshes++;
-				c_rt_lighttris += numtriangles;
-	
-				memset(&m, 0, sizeof(m));
-				m.pointer_vertex = vertex3f;
-				R_Mesh_State(&m);
-				GL_LockArrays(0, numverts);
-				// square alpha in framebuffer a few times to make it shiny
-				GL_BlendFunc(GL_ZERO, GL_DST_ALPHA);
-				// these comments are a test run through this math for intensity 0.5
-				// 0.5 * 0.5 = 0.25 (done by the BlendFunc earlier)
-				// 0.25 * 0.25 = 0.0625 (this is another pass)
-				// 0.0625 * 0.0625 = 0.00390625 (this is another pass)
-				R_Mesh_Draw(numverts, numtriangles, elements);
-				c_rt_lightmeshes++;
-				c_rt_lighttris += numtriangles;
-				R_Mesh_Draw(numverts, numtriangles, elements);
-				c_rt_lightmeshes++;
-				c_rt_lighttris += numtriangles;
-				GL_LockArrays(0, 0);
-	
-				memset(&m, 0, sizeof(m));
-				m.pointer_vertex = vertex3f;
-				m.tex[0] = R_GetTexture(glosstexture);
-				m.pointer_texcoord[0] = texcoord2f;
-				m.tex3d[1] = R_GetTexture(r_shadow_attenuation3dtexture);
-#if USETEXMATRIX
-				m.pointer_texcoord3f[1] = vertex3f;
-				m.texmatrix[1] = *matrix_modeltoattenuationxyz;
-#else
-				m.pointer_texcoord3f[1] = varray_texcoord3f[1];
-				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltoattenuationxyz);
-#endif
-				R_Mesh_State(&m);
-				GL_LockArrays(0, numverts);
-				GL_ColorMask(1,1,1,0);
-				GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
-				VectorScale(lightcolor, colorscale, color2);
-				for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
-				{
-					color[0] = bound(0, color2[0], 1);
-					color[1] = bound(0, color2[1], 1);
-					color[2] = bound(0, color2[2], 1);
-					GL_Color(color[0], color[1], color[2], 1);
 					R_Mesh_Draw(numverts, numtriangles, elements);
 					c_rt_lightmeshes++;
 					c_rt_lighttris += numtriangles;
-				}
-				GL_LockArrays(0, 0);
-			}
-			else if (r_textureunits.integer >= 2 /*&& gl_support_blendsquare*/) // FIXME: detect blendsquare!
-			{
-				// 2/0/0/2/2 2D combine blendsquare path
-				memset(&m, 0, sizeof(m));
-				m.pointer_vertex = vertex3f;
-				m.tex[0] = R_GetTexture(bumptexture);
-				m.pointer_texcoord[0] = texcoord2f;
-				m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
-				m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
-				m.pointer_texcoord3f[1] = varray_texcoord3f[1];
-				R_Shadow_GenTexCoords_Specular_NormalCubeMap(varray_texcoord3f[1], numverts, vertex3f, svector3f, tvector3f, normal3f, relativelightorigin, relativeeyeorigin);
-				R_Mesh_State(&m);
-				GL_ColorMask(0,0,0,1);
-				// this squares the result
-				GL_BlendFunc(GL_SRC_ALPHA, GL_ZERO);
-				GL_LockArrays(0, numverts);
-				R_Mesh_Draw(numverts, numtriangles, elements);
-				GL_LockArrays(0, 0);
-				c_rt_lightmeshes++;
-				c_rt_lighttris += numtriangles;
-	
-				memset(&m, 0, sizeof(m));
-				m.pointer_vertex = vertex3f;
-				R_Mesh_State(&m);
-				GL_LockArrays(0, numverts);
-				// square alpha in framebuffer a few times to make it shiny
-				GL_BlendFunc(GL_ZERO, GL_DST_ALPHA);
-				// these comments are a test run through this math for intensity 0.5
-				// 0.5 * 0.5 = 0.25 (done by the BlendFunc earlier)
-				// 0.25 * 0.25 = 0.0625 (this is another pass)
-				// 0.0625 * 0.0625 = 0.00390625 (this is another pass)
-				R_Mesh_Draw(numverts, numtriangles, elements);
-				c_rt_lightmeshes++;
-				c_rt_lighttris += numtriangles;
-				R_Mesh_Draw(numverts, numtriangles, elements);
-				c_rt_lightmeshes++;
-				c_rt_lighttris += numtriangles;
-				GL_LockArrays(0, 0);
-	
-				memset(&m, 0, sizeof(m));
-				m.pointer_vertex = vertex3f;
-				m.tex[0] = R_GetTexture(r_shadow_attenuation2dtexture);
+					GL_LockArrays(0, 0);
+		
+					memset(&m, 0, sizeof(m));
+					m.pointer_vertex = vertex3f;
+					m.tex[0] = R_GetTexture(r_shadow_attenuation2dtexture);
 #if USETEXMATRIX
-				m.pointer_texcoord3f[0] = vertex3f;
-				m.texmatrix[0] = *matrix_modeltoattenuationxyz;
+					m.pointer_texcoord3f[0] = vertex3f;
+					m.texmatrix[0] = *matrix_modeltoattenuationxyz;
 #else
-				m.pointer_texcoord[0] = varray_texcoord2f[0];
-				R_Shadow_Transform_Vertex3f_TexCoord2f(varray_texcoord2f[0], numverts, vertex3f, matrix_modeltoattenuationxyz);
+					m.pointer_texcoord[0] = varray_texcoord2f[0];
+					R_Shadow_Transform_Vertex3f_TexCoord2f(varray_texcoord2f[0], numverts, vertex3f, matrix_modeltoattenuationxyz);
 #endif
-				m.tex[1] = R_GetTexture(r_shadow_attenuation2dtexture);
-#if USETEXMATRIX
-				m.pointer_texcoord3f[1] = vertex3f;
-				m.texmatrix[1] = *matrix_modeltoattenuationz;
-#else
-				m.pointer_texcoord[1] = varray_texcoord2f[1];
-				R_Shadow_Transform_Vertex3f_TexCoord2f(varray_texcoord2f[1], numverts, vertex3f, matrix_modeltoattenuationz);
-#endif
-				R_Mesh_State(&m);
-				GL_BlendFunc(GL_DST_ALPHA, GL_ZERO);
-				GL_LockArrays(0, numverts);
-				R_Mesh_Draw(numverts, numtriangles, elements);
-				GL_LockArrays(0, 0);
-				c_rt_lightmeshes++;
-				c_rt_lighttris += numtriangles;
-	
-				memset(&m, 0, sizeof(m));
-				m.pointer_vertex = vertex3f;
-				m.tex[0] = R_GetTexture(glosstexture);
-				m.pointer_texcoord[0] = texcoord2f;
-				if (lightcubemap)
-				{
-					m.texcubemap[1] = R_GetTexture(lightcubemap);
+					m.tex[1] = R_GetTexture(r_shadow_attenuation2dtexture);
 #if USETEXMATRIX
 					m.pointer_texcoord3f[1] = vertex3f;
-					m.texmatrix[1] = *matrix_modeltolight;
+					m.texmatrix[1] = *matrix_modeltoattenuationz;
 #else
-					m.pointer_texcoord3f[1] = varray_texcoord3f[1];
-					R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
+					m.pointer_texcoord[1] = varray_texcoord2f[1];
+					R_Shadow_Transform_Vertex3f_TexCoord2f(varray_texcoord2f[1], numverts, vertex3f, matrix_modeltoattenuationz);
 #endif
-				}
-				R_Mesh_State(&m);
-				GL_LockArrays(0, numverts);
-				GL_ColorMask(1,1,1,0);
-				GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
-				VectorScale(lightcolor, colorscale, color2);
-				for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
-				{
-					color[0] = bound(0, color2[0], 1);
-					color[1] = bound(0, color2[1], 1);
-					color[2] = bound(0, color2[2], 1);
-					GL_Color(color[0], color[1], color[2], 1);
+					R_Mesh_State(&m);
+					GL_BlendFunc(GL_DST_ALPHA, GL_ZERO);
+					GL_LockArrays(0, numverts);
 					R_Mesh_Draw(numverts, numtriangles, elements);
+					GL_LockArrays(0, 0);
 					c_rt_lightmeshes++;
 					c_rt_lighttris += numtriangles;
+		
+					memset(&m, 0, sizeof(m));
+					m.pointer_vertex = vertex3f;
+					m.tex[0] = R_GetTexture(glosstexture);
+					m.pointer_texcoord[0] = texcoord2f;
+					if (lightcubemap)
+					{
+						m.texcubemap[1] = R_GetTexture(lightcubemap);
+#if USETEXMATRIX
+						m.pointer_texcoord3f[1] = vertex3f;
+						m.texmatrix[1] = *matrix_modeltolight;
+#else
+						m.pointer_texcoord3f[1] = varray_texcoord3f[1];
+						R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
+#endif
+					}
 				}
-				GL_LockArrays(0, 0);
 			}
+			R_Mesh_State(&m);
+			GL_ColorMask(1,1,1,0);
+			GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
+			VectorScale(lightcolor, colorscale, color2);
+			GL_LockArrays(0, numverts);
+			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
+			{
+				GL_Color(bound(0, color2[0], 1), bound(0, color2[1], 1), bound(0, color2[2], 1), 1);
+				R_Mesh_Draw(numverts, numtriangles, elements);
+				c_rt_lightmeshes++;
+				c_rt_lighttris += numtriangles;
+			}
+			GL_LockArrays(0, 0);
 		}
 	}
 	else
@@ -1850,6 +1781,18 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				m.pointer_texcoord[1] = varray_texcoord2f[1];
 				R_Shadow_Transform_Vertex3f_TexCoord2f(varray_texcoord2f[1], numverts, vertex3f, matrix_modeltoattenuationxyz);
 #endif
+				if (r_textureunits.integer >= 3)
+				{
+					// Geforce3/Radeon class but not using dot3
+					m.tex[2] = R_GetTexture(r_shadow_attenuation2dtexture);
+#if USETEXMATRIX
+					m.pointer_texcoord3f[2] = vertex3f;
+					m.texmatrix[2] = *matrix_modeltoattenuationz;
+#else
+					m.pointer_texcoord[2] = varray_texcoord2f[2];
+					R_Shadow_Transform_Vertex3f_TexCoord2f(varray_texcoord2f[2], numverts, vertex3f, matrix_modeltoattenuationz);
+#endif
+				}
 			}
 			R_Mesh_State(&m);
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
@@ -1857,10 +1800,12 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				color[0] = bound(0, color2[0], 1);
 				color[1] = bound(0, color2[1], 1);
 				color[2] = bound(0, color2[2], 1);
-				if (r_textureunits.integer >= 2)
-					R_Shadow_VertexLightingWithXYAttenuationTexture(numverts, vertex3f, normal3f, color, matrix_modeltolight);
+				if (r_textureunits.integer >= 3)
+					R_Shadow_VertexShading(numverts, vertex3f, normal3f, color, matrix_modeltolight);
+				else if (r_textureunits.integer >= 2)
+					R_Shadow_VertexShadingWithZAttenuation(numverts, vertex3f, normal3f, color, matrix_modeltolight);
 				else
-					R_Shadow_VertexLighting(numverts, vertex3f, normal3f, color, matrix_modeltolight);
+					R_Shadow_VertexShadingWithXYZAttenuation(numverts, vertex3f, normal3f, color, matrix_modeltolight);
 				GL_LockArrays(0, numverts);
 				R_Mesh_Draw(numverts, numtriangles, elements);
 				GL_LockArrays(0, 0);
