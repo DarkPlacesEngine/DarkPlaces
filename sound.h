@@ -27,12 +27,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 typedef struct
 {
-	int left;
-	int right;
-} portable_samplepair_t;
-
-typedef struct
-{
 	size_t	length;
 	size_t	offset;
 	qbyte	data[4];	// variable sized
