@@ -836,7 +836,7 @@ void COM_InitGameType (void)
 		break;
 	case GAME_SOM:
 		gamename = "Son of Man";
-		gamedirname = "data";
+		gamedirname = "sonofman";
 		gamescreenshotname = "som";
 		break;
 	case GAME_TENEBRAE:
