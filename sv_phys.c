@@ -1249,6 +1249,8 @@ void SV_Physics_Toss (edict_t *ent)
 		return;
 
 // if onground, return without moving
+	if (((int)ent->v.flags & FL_ONGROUND) && ent->v.groundentity == 0)
+		return;
 	/*
 	if ( ((int)ent->v.flags & FL_ONGROUND) )
 	{
@@ -1352,6 +1354,8 @@ void SV_Physics_Step (edict_t *ent)
 		else if ((flags & FL_SWIM) && SV_PointContents(ent->v.origin) != CONTENTS_EMPTY)
 			fall = false;
 	}
+	if (fall && (flags & FL_ONGROUND) && ent->v.groundentity == 0)
+		fall = false;
 
 	if (fall)
 	{
