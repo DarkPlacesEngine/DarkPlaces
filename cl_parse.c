@@ -1288,7 +1288,7 @@ void CL_ParseTempEntity (void)
 		pos[0] = MSG_ReadCoord ();
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
-		CL_AllocDlight (NULL, pos, 1000, 1.25f, 1.25f, 1.25f, 3000, 99.0f);
+		CL_AllocDlight (NULL, pos, 500, 1.0f, 1.0f, 1.0f, 1500, 99.0f);
 //		CL_TeleportSplash (pos);
 		break;
 
