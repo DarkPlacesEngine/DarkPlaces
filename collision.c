@@ -845,25 +845,29 @@ void Collision_RecursiveTraceBrushNode(colbrushbmodelinfo_t *info, mnode_t *node
 	else
 	{
 		// recurse down node sides
-		int i, bits;
-		float dist1, dist2;
+		int i;
+		float dist;
 		colpointf_t *ps, *pe;
-		bits = 0;
 		// FIXME? if TraceBrushPolygonTransform were to be made usable, the
 		// node planes would need to be transformed too
-		dist1 = node->plane->dist - (1.0f / 8.0f);
-		dist2 = node->plane->dist + (1.0f / 8.0f);
+		dist = node->plane->dist - (1.0f / 8.0f);
 		for (i = 0, ps = info->thisbrush_start->points, pe = info->thisbrush_end->points;i < info->thisbrush_start->numpoints;i++, ps++, pe++)
 		{
-			if (!(bits & 1) && (DotProduct(ps->v, node->plane->normal) > dist1 || DotProduct(pe->v, node->plane->normal) > dist1))
-				bits |= 1;
-			if (!(bits & 2) && (DotProduct(ps->v, node->plane->normal) < dist2 || DotProduct(pe->v, node->plane->normal) < dist2))
-				bits |= 2;
+			if (DotProduct(ps->v, node->plane->normal) > dist || DotProduct(pe->v, node->plane->normal) > dist)
+			{
+				Collision_RecursiveTraceBrushNode(info, node->children[0]);
+				break;
+			}
 		}
-		if (bits & 1)
-			Collision_RecursiveTraceBrushNode(info, node->children[0]);
-		if (bits & 2)
-			Collision_RecursiveTraceBrushNode(info, node->children[1]);
+		dist = node->plane->dist + (1.0f / 8.0f);
+		for (i = 0, ps = info->thisbrush_start->points, pe = info->thisbrush_end->points;i < info->thisbrush_start->numpoints;i++, ps++, pe++)
+		{
+			if (DotProduct(ps->v, node->plane->normal) < dist || DotProduct(pe->v, node->plane->normal) < dist)
+			{
+				Collision_RecursiveTraceBrushNode(info, node->children[1]);
+				break;
+			}
+		}
 	}
 }
 
