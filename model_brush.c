@@ -3930,6 +3930,8 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 									flags |= Q3SURFACEPARM_TRANS;
 								else if (!strcasecmp(parameter[1], "water"))
 									flags |= Q3SURFACEPARM_WATER;
+								else if (!strcasecmp(parameter[1], "pointlight"))
+									flags |= Q3SURFACEPARM_POINTLIGHT;
 								else
 									Con_Printf("%s parsing warning: unknown surfaceparm \"%s\"\n", search->filenames[i], parameter[1]);
 							}
