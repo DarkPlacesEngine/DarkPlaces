@@ -279,7 +279,7 @@ void GL_DrawModelMesh(rtexture_t *skin, byte *colors, maliashdr_t *maliashdr)
 	}
 	if (colors)
 	{
-		glColorPointer(4, GL_UNSIGNED_BYTE, 0, colors);
+		glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(byte[4]), colors);
 		glEnableClientState(GL_COLOR_ARRAY);
 	}
 
@@ -341,9 +341,9 @@ void R_DrawAliasFrame (maliashdr_t *maliashdr, float alpha, vec3_t color, entity
 	// prep the vertex array as early as possible
 	if (r_render.value)
 	{
-		glVertexPointer(3, GL_FLOAT, 0, aliasvert);
+		glVertexPointer(3, GL_FLOAT, sizeof(float[3]), aliasvert);
 		glEnableClientState(GL_VERTEX_ARRAY);
-		glTexCoordPointer(2, GL_FLOAT, 0, (void *)((int) maliashdr->texdata + (int) maliashdr));
+		glTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), (void *)((int) maliashdr->texdata + (int) maliashdr));
 		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 		GL_LockArray(0, maliashdr->numverts);
 	}
@@ -478,8 +478,8 @@ void R_DrawQ2AliasFrame (md2mem_t *pheader, float alpha, vec3_t color, entity_t 
 	// LordHavoc: big mess...
 	// using vertex arrays only slightly, although it is enough to prevent duplicates
 	// (saving half the transforms)
-	glVertexPointer(3, GL_FLOAT, 0, aliasvert);
-	glColorPointer(4, GL_UNSIGNED_BYTE, 0, aliasvertcolor);
+	glVertexPointer(3, GL_FLOAT, sizeof(float[3]), aliasvert);
+	glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(byte[4]), aliasvertcolor);
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
 
@@ -522,7 +522,7 @@ void R_DrawQ2AliasFrame (md2mem_t *pheader, float alpha, vec3_t color, entity_t 
 		// LordHavoc: big mess...
 		// using vertex arrays only slightly, although it is enough to prevent duplicates
 		// (saving half the transforms)
-		glVertexPointer(3, GL_FLOAT, 0, aliasvert);
+		glVertexPointer(3, GL_FLOAT, sizeof(float[3]), aliasvert);
 		glEnableClientState(GL_VERTEX_ARRAY);
 
 		order = (int *)((int)pheader + pheader->ofs_glcmds);
@@ -818,13 +818,13 @@ void GL_DrawZymoticModelMesh(byte *colors, zymtype1header_t *m)
 		return;
 	renderlist = (int *)(m->lump_render.start + (int) m);
 	texture = (rtexture_t **)(m->lump_shaders.start + (int) m);
-	glVertexPointer(3, GL_FLOAT, 0, aliasvert);
+	glVertexPointer(3, GL_FLOAT, sizeof(float[3]), aliasvert);
 	glEnableClientState(GL_VERTEX_ARRAY);
 
-	glColorPointer(4, GL_UNSIGNED_BYTE, 0, colors);
+	glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(byte[4]), colors);
 	glEnableClientState(GL_COLOR_ARRAY);
 
-	glTexCoordPointer(2, GL_FLOAT, 0, (float *)(m->lump_texcoords.start + (int) m));
+	glTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), (float *)(m->lump_texcoords.start + (int) m));
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
 	for (i = 0;i < m->numshaders;i++)
@@ -858,7 +858,7 @@ void GL_DrawZymoticModelMeshFog(vec3_t org, zymtype1header_t *m)
 	VectorSubtract(org, r_origin, diff);
 	glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], exp(fogdensity/DotProduct(diff,diff)));
 
-	glVertexPointer(3, GL_FLOAT, 0, aliasvert);
+	glVertexPointer(3, GL_FLOAT, sizeof(float[3]), aliasvert);
 	glEnableClientState(GL_VERTEX_ARRAY);
 
 	for (i = 0;i < m->numshaders;i++)
