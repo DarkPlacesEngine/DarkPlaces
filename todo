@@ -1,5 +1,4 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
--1 (John Truex) darkplaces loading: clear stainmaps on map restart/change based on cl_stainmapsclearonload cvar (John Truex)
 -d (Alex Boveri) darkplaces client: add cl_particles_particleffect_bloodhack cvar to enable converting id1 blood effects to TE_BLOOD style (Alex Boveri)
 -d (Alex Boveri) darkplaces menu: add cl_particles_particleffect_bloodhack cvar to menu (Alex Boveri)
 -d (Andrew A. Gilevsky) darkplaces client: add gl_polyblend cvar to control amount of viewblend effect (Andrew A. Gilevsky)
@@ -12,6 +11,7 @@
 -d (Chris Kemp) darkplaces client bug: make sure QuakeDoneQuick works (Chris Kemp)
 -d (Cristian Beltramo) darkplaces menu: add slowmo to options menu (Cristian Beltramo)
 -d (Hidayat) darkplaces client bug: ignore modelflags on view weaponmodel - in Malice the double barreled shotgun leaves a smoke trail, and the hellfire rotates, also in Zerstorer the riot shotgun rotates (Hidayat)
+-d (John Truex) darkplaces loading: clear stainmaps on map restart/change based on cl_stainmapsclearonload cvar (John Truex)
 -d (Joseph Caporale) darkplaces: add ogg music playback using optional library after adding wav music playback (Joseph Caporale, Static_Fiend, Akuma)
 -d (Joseph Caporale) darkplaces: add wav music playback (Joseph Caporale, Static_Fiend)
 -d (Linny Amore) darkplaces renderer: check out qe1 textures and make sure they load in all the e1 maps, report of crashing in most but not all maps (Linny Amore)
