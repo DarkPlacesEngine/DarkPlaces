@@ -213,42 +213,6 @@ typedef struct md3modelheader_s
 }
 md3modelheader_t;
 
-// this layer is fog (completely specialized behavior, automatic NODRAW_IF_NOTFOGGED behavior)
-#define ALIASLAYER_FOG 1
-// apply diffuse lighting
-#define ALIASLAYER_DIFFUSE 8
-// apply specular lighting
-#define ALIASLAYER_SPECULAR 16
-// tint with pants color
-#define ALIASLAYER_COLORMAP_PANTS 32
-// tint with shirt color
-#define ALIASLAYER_COLORMAP_SHIRT 64
-// don't draw this layer if colormap is not used
-#define ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED 128
-// don't draw this layer if colormap is used
-#define ALIASLAYER_NODRAW_IF_COLORMAPPED 256
-// ignore NODRAW flags on this layer only if all previous layers were skipped
-#define ALIASLAYER_FORCEDRAW_IF_FIRSTPASS 512
-
-typedef struct aliaslayer_s
-{
-	int flags;
-	rtexture_t *texture;
-	rtexture_t *nmap;
-}
-aliaslayer_t;
-
-// indicates this skin is transparent
-#define ALIASSKIN_TRANSPARENT 1
-
-typedef struct aliasskin_s
-{
-	int flags;
-	int num_layers;
-	aliaslayer_t *data_layers;
-}
-aliasskin_t;
-
 typedef struct aliasvertexboneweight_s
 {
 	unsigned int vertexindex;
@@ -262,7 +226,7 @@ typedef struct aliasmesh_s
 {
 	// skins to choose from (indexed by entity skin)
 	int num_skins;
-	aliasskin_t *data_skins;
+	texture_t *data_skins;
 
 	// triangles comprising the mesh
 	int num_triangles;
