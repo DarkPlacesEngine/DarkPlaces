@@ -827,7 +827,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer)
 	loadmodel->Draw = R_Model_Alias_Draw;
 	loadmodel->DrawShadowVolume = R_Model_Alias_DrawShadowVolume;
 	loadmodel->DrawLight = R_Model_Alias_DrawLight;
-	loadmodel->flags = 0;
+	loadmodel->flags = LittleLong(pinmodel->flags);
 	loadmodel->synctype = ST_RAND;
 
 	// set up some global info about the model
