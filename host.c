@@ -269,7 +269,7 @@ void Host_WriteConfiguration (void)
 
 // dedicated servers initialize the host but don't parse and set the
 // config.cfg cvars
-	if (host_initialized & !isDedicated)
+	if (host_initialized && cls.state != ca_dedicated)
 	{
 		f = Qopen (va("%s/config.cfg",com_gamedir), "w");
 		if (!f)
@@ -597,7 +597,7 @@ void Host_ServerFrame (void)
 	static double frametimetotal = 0, lastservertime = 0;
 	frametimetotal += host_frametime;
 	// LordHavoc: cap server at sys_ticrate in listen games
-	if (!isDedicated && svs.maxclients > 1 && ((realtime - lastservertime) < sys_ticrate.value))
+	if (cls.state != ca_dedicated && svs.maxclients > 1 && ((realtime - lastservertime) < sys_ticrate.value))
 		return;
 // run the world state
 	sv.frametime = pr_global_struct->frametime = frametimetotal;
@@ -816,12 +816,12 @@ void Host_Init (void)
 	Cbuf_Init ();
 	Cmd_Init ();	
 	V_Init ();
-	Chase_Init ();
 	COM_Init (host_parms.basedir);
 	Host_InitLocal ();
 	W_LoadWadFile ("gfx.wad");
 	Key_Init ();
 	Con_Init ();	
+	Chase_Init ();
 	M_Init ();	
 	PR_Init ();
 	Mod_Init ();
