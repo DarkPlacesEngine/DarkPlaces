@@ -1641,6 +1641,7 @@ static void Mod_LoadPlanes (lump_t *l)
 typedef struct
 {
 	int numpoints;
+	int padding;
 	double points[8][3]; // variable sized
 }
 winding_t;
@@ -1656,7 +1657,7 @@ static winding_t *NewWinding (int points)
 	int size;
 
 	if (points > MAX_POINTS_ON_WINDING)
-		Host_Error("NewWinding: too many points\n");
+		Sys_Error("NewWinding: too many points\n");
 
 	size = sizeof(winding_t) + sizeof(double[3]) * (points - 8);
 	w = Mem_Alloc(loadmodel->mempool, size);
@@ -1762,12 +1763,17 @@ static winding_t *ClipWinding (winding_t *in, mplane_t *split, int keepon)
 		return in;
 
 	maxpts = in->numpoints+4;	// can't use counts[0]+2 because of fp grouping errors
+	if (maxpts > MAX_POINTS_ON_WINDING)
+		Sys_Error ("ClipWinding: maxpts > MAX_POINTS_ON_WINDING");
+
 	neww = NewWinding (maxpts);
 
 	for (i = 0;i < in->numpoints;i++)
 	{
 		if (neww->numpoints >= maxpts)
-			Host_Error ("ClipWinding: points exceeded estimate");
+			Sys_Error ("ClipWinding: points exceeded estimate");
+
+		Mem_CheckSentinels(neww);
 
 		p1 = in->points[i];
 
@@ -1775,6 +1781,7 @@ static winding_t *ClipWinding (winding_t *in, mplane_t *split, int keepon)
 		{
 			VectorCopy (p1, neww->points[neww->numpoints]);
 			neww->numpoints++;
+			Mem_CheckSentinels(neww);
 			continue;
 		}
 
@@ -1782,6 +1789,7 @@ static winding_t *ClipWinding (winding_t *in, mplane_t *split, int keepon)
 		{
 			VectorCopy (p1, neww->points[neww->numpoints]);
 			neww->numpoints++;
+			Mem_CheckSentinels(neww);
 		}
 
 		if (sides[i+1] == SIDE_ON || sides[i+1] == sides[i])
@@ -1803,6 +1811,7 @@ static winding_t *ClipWinding (winding_t *in, mplane_t *split, int keepon)
 
 		VectorCopy (mid, neww->points[neww->numpoints]);
 		neww->numpoints++;
+		Mem_CheckSentinels(neww);
 	}
 
 	// free the original winding
@@ -1871,13 +1880,16 @@ static void DivideWinding (winding_t *in, mplane_t *split, winding_t **front, wi
 
 	maxpts = in->numpoints+4;	// can't use counts[0]+2 because of fp grouping errors
 
+	if (maxpts > MAX_POINTS_ON_WINDING)
+		Sys_Error ("ClipWinding: maxpts > MAX_POINTS_ON_WINDING");
+
 	*front = f = NewWinding (maxpts);
 	*back = b = NewWinding (maxpts);
 
 	for (i = 0;i < in->numpoints;i++)
 	{
 		if (f->numpoints >= maxpts || b->numpoints >= maxpts)
-			Host_Error ("DivideWinding: points exceeded estimate");
+			Sys_Error ("DivideWinding: points exceeded estimate");
 
 		p1 = in->points[i];
 
@@ -1885,8 +1897,10 @@ static void DivideWinding (winding_t *in, mplane_t *split, winding_t **front, wi
 		{
 			VectorCopy (p1, f->points[f->numpoints]);
 			f->numpoints++;
+			Mem_CheckSentinels(f);
 			VectorCopy (p1, b->points[b->numpoints]);
 			b->numpoints++;
+			Mem_CheckSentinels(b);
 			continue;
 		}
 
@@ -1894,11 +1908,13 @@ static void DivideWinding (winding_t *in, mplane_t *split, winding_t **front, wi
 		{
 			VectorCopy (p1, f->points[f->numpoints]);
 			f->numpoints++;
+			Mem_CheckSentinels(f);
 		}
 		else if (sides[i] == SIDE_BACK)
 		{
 			VectorCopy (p1, b->points[b->numpoints]);
 			b->numpoints++;
+			Mem_CheckSentinels(b);
 		}
 
 		if (sides[i+1] == SIDE_ON || sides[i+1] == sides[i])
@@ -1920,8 +1936,10 @@ static void DivideWinding (winding_t *in, mplane_t *split, winding_t **front, wi
 
 		VectorCopy (mid, f->points[f->numpoints]);
 		f->numpoints++;
+		Mem_CheckSentinels(f);
 		VectorCopy (mid, b->points[b->numpoints]);
 		b->numpoints++;
+		Mem_CheckSentinels(b);
 	}
 
 	// debugging
@@ -1987,6 +2005,8 @@ static void Mod_FinalizePortals(void)
 	mleaf_t *leaf, *endleaf;
 	winding_t *w;
 
+	Mem_CheckSentinelsGlobal();
+
 	// recalculate bounding boxes for all leafs (because qbsp is very sloppy)
 	leaf = loadmodel->leafs;
 	endleaf = leaf + loadmodel->numleafs;
@@ -2019,6 +2039,8 @@ static void Mod_FinalizePortals(void)
 	}
 
 	Mod_RecursiveRecalcNodeBBox(loadmodel->nodes);
+
+	Mem_CheckSentinelsGlobal();
 
 	// tally up portal and point counts
 	p = portalchain;
@@ -2110,6 +2132,8 @@ static void Mod_FinalizePortals(void)
 		FreePortal(p);
 		p = pnext;
 	}
+
+	Mem_CheckSentinelsGlobal();
 }
 
 /*
