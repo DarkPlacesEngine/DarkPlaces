@@ -904,6 +904,69 @@ static void Mod_Q1BSP_DecompressVis(const qbyte *in, const qbyte *inend, qbyte *
 	}
 }
 
+/*
+=============
+R_Q1BSP_LoadSplitSky
+
+A sky texture is 256*128, with the right side being a masked overlay
+==============
+*/
+void R_Q1BSP_LoadSplitSky (qbyte *src, int bytesperpixel)
+{
+	int i, j;
+	unsigned solidpixels[128*128], alphapixels[128*128];
+
+	if (bytesperpixel == 4)
+	{
+		for (i = 0;i < 128;i++)
+		{
+			for (j = 0;j < 128;j++)
+			{
+				solidpixels[(i*128) + j] = ((unsigned *)src)[i*256+j+128];
+				alphapixels[(i*128) + j] = ((unsigned *)src)[i*256+j];
+			}
+		}
+	}
+	else
+	{
+		// make an average value for the back to avoid
+		// a fringe on the top level
+		int p, r, g, b;
+		union
+		{
+			unsigned int i;
+			unsigned char b[4];
+		}
+		rgba;
+		r = g = b = 0;
+		for (i = 0;i < 128;i++)
+		{
+			for (j = 0;j < 128;j++)
+			{
+				rgba.i = palette_complete[src[i*256 + j + 128]];
+				r += rgba.b[0];
+				g += rgba.b[1];
+				b += rgba.b[2];
+			}
+		}
+		rgba.b[0] = r/(128*128);
+		rgba.b[1] = g/(128*128);
+		rgba.b[2] = b/(128*128);
+		rgba.b[3] = 0;
+		for (i = 0;i < 128;i++)
+		{
+			for (j = 0;j < 128;j++)
+			{
+				solidpixels[(i*128) + j] = palette_complete[src[i*256 + j + 128]];
+				alphapixels[(i*128) + j] = (p = src[i*256 + j]) ? palette_complete[p] : rgba.i;
+			}
+		}
+	}
+
+	loadmodel->brush.solidskytexture = R_LoadTexture2D(loadmodel->texturepool, "sky_solidtexture", 128, 128, (qbyte *) solidpixels, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
+	loadmodel->brush.alphaskytexture = R_LoadTexture2D(loadmodel->texturepool, "sky_alphatexture", 128, 128, (qbyte *) alphapixels, TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
+}
+
 static void Mod_Q1BSP_LoadTextures(lump_t *l)
 {
 	int i, j, k, num, max, altmax, mtwidth, mtheight, *dofs, incomplete;
@@ -1007,7 +1070,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 				{
 					if (image_width == 256 && image_height == 128)
 					{
-						R_InitSky(data, 4);
+						R_Q1BSP_LoadSplitSky(data, 4);
 						Mem_Free(data);
 					}
 					else
@@ -1015,11 +1078,11 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 						Mem_Free(data);
 						Con_Printf("Invalid replacement texture for sky \"%s\" in %\"%s\", must be 256x128 pixels\n", tx->name, loadmodel->name);
 						if (mtdata != NULL)
-							R_InitSky(mtdata, 1);
+							R_Q1BSP_LoadSplitSky(mtdata, 1);
 					}
 				}
 				else if (mtdata != NULL)
-					R_InitSky(mtdata, 1);
+					R_Q1BSP_LoadSplitSky(mtdata, 1);
 			}
 		}
 		else
@@ -2913,11 +2976,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	mod->brushq1.BuildPVSTextureChains = Mod_Q1BSP_BuildPVSTextureChains;
 
 	if (loadmodel->isworldmodel)
-	{
 		Cvar_SetValue("halflifebsp", mod->brush.ishlbsp);
-		// until we get a texture for it...
-		R_ResetQuakeSky();
-	}
 
 // swap all the lumps
 	mod_base = (qbyte *)header;
@@ -3509,11 +3568,7 @@ void static Mod_Q2BSP_Load(model_t *mod, void *buffer)
 		Host_Error("Mod_Q2BSP_Load: %s has wrong version number (%i, should be %i)", mod->name, i, Q2BSPVERSION);
 	mod->brush.ishlbsp = false;
 	if (loadmodel->isworldmodel)
-	{
 		Cvar_SetValue("halflifebsp", mod->brush.ishlbsp);
-		// until we get a texture for it...
-		R_ResetQuakeSky();
-	}
 
 	mod_base = (qbyte *)header;
 
@@ -5634,11 +5689,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 	if (i != Q3BSPVERSION)
 		Host_Error("Mod_Q3BSP_Load: %s has wrong version number (%i, should be %i)", mod->name, i, Q3BSPVERSION);
 	if (mod->isworldmodel)
-	{
 		Cvar_SetValue("halflifebsp", false);
-		// until we get a texture for it...
-		R_ResetQuakeSky();
-	}
 
 	mod->soundfromcenter = true;
 	mod->TraceBox = Mod_Q3BSP_TraceBox;
