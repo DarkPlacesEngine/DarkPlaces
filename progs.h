@@ -45,7 +45,6 @@ typedef struct edict_s
 {
 	qboolean free; // true if this edict is unused
 	link_t area; // physics area this edict is linked into
-	int number; // number of this edict
 
 #ifdef QUAKEENTITIES
 	entity_state_t baseline; // baseline values
@@ -54,8 +53,7 @@ typedef struct edict_s
 
 	int suspendedinairflag; // LordHavoc: gross hack to make floating items still work
 	float freetime; // sv.time when the object was freed
-	entvars_t v; // C exported fields from progs
-// other fields from progs come immediately after
+	entvars_t *v; // edict fields
 } edict_t;
 
 // LordHavoc: in an effort to eliminate time wasted on GetEdictFieldValue...  see pr_edict.c for the functions which use these.
@@ -94,7 +92,7 @@ extern int eval_pmodel;
 extern int eval_punchvector;
 extern int eval_viewzoom;
 
-#define GETEDICTFIELDVALUE(ed, fieldoffset) (fieldoffset ? (eval_t*)((char*)&ed->v + fieldoffset) : NULL)
+#define GETEDICTFIELDVALUE(ed, fieldoffset) (fieldoffset ? (eval_t *)((qbyte *)ed->v + fieldoffset) : NULL)
 
 
 extern dfunction_t *SV_PlayerPhysicsQC;
@@ -145,25 +143,26 @@ edict_t *EDICT_NUM_ERROR(int n);
 
 int NUM_FOR_EDICT(edict_t *e);
 
-#define	NEXT_EDICT(e) ((edict_t *)( (qbyte *)e + pr_edict_size))
+#define	NEXT_EDICT(e) ((e) + 1)
 
-#define	EDICT_TO_PROG(e) ((qbyte *)e - (qbyte *)sv.edicts)
-#define PROG_TO_EDICT(e) ((edict_t *)((qbyte *)sv.edicts + e))
+int EDICT_TO_PROG(edict_t *e);
+edict_t *PROG_TO_EDICT(int n);
 
 //============================================================================
 
 #define	G_FLOAT(o) (pr_globals[o])
 #define	G_INT(o) (*(int *)&pr_globals[o])
-#define	G_EDICT(o) ((edict_t *)((qbyte *)sv.edicts+ *(int *)&pr_globals[o]))
+#define	G_EDICT(o) (PROG_TO_EDICT(*(int *)&pr_globals[o]))
 #define G_EDICTNUM(o) NUM_FOR_EDICT(G_EDICT(o))
 #define	G_VECTOR(o) (&pr_globals[o])
 #define	G_STRING(o) (pr_strings + *(string_t *)&pr_globals[o])
-#define	G_FUNCTION(o) (*(func_t *)&pr_globals[o])
+//#define	G_FUNCTION(o) (*(func_t *)&pr_globals[o])
 
-#define	E_FLOAT(e,o) (((float*)&e->v)[o])
-#define	E_INT(e,o) (*(int *)&((float*)&e->v)[o])
-#define	E_VECTOR(e,o) (&((float*)&e->v)[o])
-#define	E_STRING(e,o) (pr_strings + *(string_t *)&((float*)&e->v)[o])
+// FIXME: make these go away?
+#define	E_FLOAT(e,o) (((float*)e->v)[o])
+//#define	E_INT(e,o) (((int*)e->v)[o])
+//#define	E_VECTOR(e,o) (&((float*)e->v)[o])
+#define	E_STRING(e,o) (pr_strings + *(string_t *)&((float*)e->v)[o])
 
 extern	int		type_size[8];
 

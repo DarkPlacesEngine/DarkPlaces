@@ -71,6 +71,8 @@ typedef struct
 	edict_t *edicts;
 	// can be array indexed
 	edict_t **edictstable;
+	// array of QC edict field variables
+	void *edictsfields;
 	// some actions are only valid during load
 	server_state_t state;
 
