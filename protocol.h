@@ -28,10 +28,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // LordHavoc: I think the 96-99 range was going to run out too soon...
 // so here I jump to 3500
 #define	DPPROTOCOL_VERSION3 3500
-// partial entity updates, changed entity origin updates back to quake style
-// (RENDER_LOWPRECISION on by default, but the precision was changed from
-// integer to 1/8th unit like quake)
-#define DPPROTOCOL_VERSION4 3501
 
 // model effects
 #define	EF_ROCKET	1			// leave a trail
@@ -330,6 +326,38 @@ typedef struct
 }
 entity_state_t;
 
+/*
+DPPROTOCOL_VERSION3
+server updates entities according to some (unmentioned) scheme.
+
+a frame consists of all visible entities, some of which are up to date,
+often some are not up to date.
+
+these entities are stored in a range (firstentity/endentity) of structs in the
+entitydata[] buffer.
+
+to make a commit the server performs these steps:
+1. duplicate oldest frame in database (this is the baseline) as new frame, and
+   write frame numbers (oldest frame's number, new frame's number) and eye
+   location to network packet (eye location is obsolete and will be removed in
+   future revisions)
+2. write an entity change to packet and modify new frame accordingly
+   (this repeats until packet is sufficiently full or new frame is complete)
+3. write terminator (0xFFFF) to network packet
+   (FIXME: this terminator value conflicts with MAX_EDICTS 32768...)
+
+to read a commit the client performs these steps:
+1. reads frame numbers from packet and duplicates baseline frame as new frame,
+   also reads eye location but does nothing with it (obsolete).
+2. delete frames older than the baseline which was used
+3. read entity changes from packet until terminator (0xFFFF) is encountered,
+   each change is applied to entity frame.
+4. sends ack framenumber to server as part of input packet
+
+if server receives ack message in put packet it performs these steps:
+1. remove all older frames from database.
+*/
+
 typedef struct
 {
 	double time;
@@ -374,63 +402,6 @@ typedef struct
 	entity_state_t entitydata[MAX_ENTITY_DATABASE];
 }
 entity_frame_t;
-
-/*
-DPPROTOCOL_VERSION4
-server only updates entities according to some (unmentioned) scheme.
-
-a commit consists of all entities changed at server's discretion,
-these entities are stored in a range (start/count) of structs in the
-commitentity[] buffer.
-
-when a commit is confirmed, range_count entity states beginning at
-commitentity[range_start] (this may wrap!) are read and copied into
-currententity according to their .number field, and the commit (and
-any older commits) are deleted.
-*/
-
-// DPPROTOCOL_VERSION4
-#define MAX_ENTITIES_PER_FRAME 1024
-
-// DPPROTOCOL_VERSION4
-typedef struct
-{
-	// time of frame
-	double time;
-	// number of frame
-	int framenum;
-
-	// range of commmitentity[] items owned by this frame (this may wrap!)
-	int range_start;
-	int range_count;
-}
-entity_commitframe4_t;
-
-// DPPROTOCOL_VERSION4
-typedef struct
-{
-	// note: each frame contains a limited number of entities, so in
-	// situations with a high maximum data rate AND large number of entities,
-	// updates may be partial despite a high data rate.
-
-	// time of current frame
-	double time;
-	// number of current frame
-	int framenum;
-
-	// number of frames waiting to be committed to database
-	int numframes;
-
-	// current entity states
-	entity_state_t entity[MAX_EDICTS];
-
-	// unconfirmed entity states
-	entity_state_t commitentity[MAX_EDICTS];
-
-	// frame updates that have not yet been committed to entity
-	entity_commitframe4_t commitframes[MAX_ENTITY_HISTORY];
-}
-entity_database4_t;
 
 // LordHavoc: these are in approximately sorted order, according to cost and
 // likelyhood of being used for numerous objects in a frame
@@ -499,26 +470,6 @@ void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, sizebuf_t *msg);
 void EntityFrame_Read(entity_database_t *d);
 // (client) returns the frame number of the most recent frame recieved
 int EntityFrame_MostRecentlyRecievedFrameNum(entity_database_t *d);
-
-
-
-// (server and client) clears the database to contain blank entities and no
-// commits (thus delta compression compresses against nothing)
-void EntityFrame4_ClearDatabase(entity_database4_t *d);
-// (server and client) applies commit to database and removes it (and older)
-void EntityFrame4_Commit_Ack(entity_database4_t *d, int frame);
-// (server) prepares for sending entities
-void EntityFrame4_Commit_Write_Begin(entity_database4_t *d, int frame, sizebuf_t *msg);
-// (server) sends an entity and adds to current commit (may delete old
-// commits to make room), returns success if there is room left in the packet
-// (according to maxbytes), otherwise false (end commit)
-int EntityFrame4_Commit_Write_Entity(entity_database4_t *d, entity_state_t *s, sizebuf_t *msg, int maxbytes);
-// (server) ends commit
-void EntityFrame4_Commit_Write_End(entity_database4_t *d, sizebuf_t *msg);
-// (client) begins parsing of a commit from the network stream
-void EntityFrame4_Commit_Read_Begin(entity_database4_t *d);
-// (client) parses a commit entity from the network stream (NULL == end)
-entity_state_t *EntityFrame4_Commit_Read_Entity(entity_database4_t *d);
 
 #endif
 
