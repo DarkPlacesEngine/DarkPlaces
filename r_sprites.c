@@ -90,12 +90,6 @@ static void R_DrawSpriteImage (int wantoverbright, int additive, mspriteframe_t 
 	m.tex[0] = texture;
 	R_Mesh_State(&m);
 
-	varray_element[0] = 0;
-	varray_element[1] = 1;
-	varray_element[2] = 2;
-	varray_element[3] = 0;
-	varray_element[4] = 2;
-	varray_element[5] = 3;
 	varray_color[0] = varray_color[4] = varray_color[8] = varray_color[12] = red * mesh_colorscale;
 	varray_color[1] = varray_color[5] = varray_color[9] = varray_color[13] = green * mesh_colorscale;
 	varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = blue * mesh_colorscale;
@@ -121,7 +115,7 @@ static void R_DrawSpriteImage (int wantoverbright, int additive, mspriteframe_t 
 	varray_vertex[12] = origin[0] + frame->down * up[0] - frame->right * left[0];
 	varray_vertex[13] = origin[1] + frame->down * up[1] - frame->right * left[1];
 	varray_vertex[14] = origin[2] + frame->down * up[2] - frame->right * left[2];
-	R_Mesh_Draw(4, 2);
+	R_Mesh_Draw(4, 2, polygonelements);
 }
 
 void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)

@@ -191,9 +191,8 @@ void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 
 	numtriangles = EXPLOSIONTRIS;
 	numverts = EXPLOSIONVERTS;
-	R_Mesh_ResizeCheck(numverts, numtriangles);
+	R_Mesh_ResizeCheck(numverts);
 
-	memcpy(varray_element, explosiontris, numtriangles * sizeof(int[3]));
 	for (i = 0, v = varray_vertex;i < numverts;i++, v += 4)
 	{
 		v[0] = e->vert[i][0];
@@ -243,7 +242,7 @@ void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 			c[3] = 1;
 		}
 	}
-	R_Mesh_Draw(numverts, numtriangles);
+	R_Mesh_Draw(numverts, numtriangles, explosiontris[0]);
 }
 
 void R_MoveExplosion(explosion_t *e)
