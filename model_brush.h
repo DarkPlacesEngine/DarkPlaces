@@ -143,11 +143,13 @@ typedef struct surfmesh_s
 	int numverts;
 	int numtriangles;
 	float *verts;
+	float *normals;
 	int *lightmapoffsets;
 	float *st;
 	float *uv;
 	float *ab;
 	int *index;
+	int *triangleneighbors;
 }
 surfmesh_t;
 
@@ -200,6 +202,8 @@ typedef struct msurface_s
 	float *poly_verts;
 	// bounding box for onscreen checks, and center for sorting
 	vec3_t poly_mins, poly_maxs, poly_center;
+	// bounding sphere radius (around poly_center)
+	float poly_radius, poly_radius2;
 
 	// these are regenerated every frame
 	// lighting info
@@ -315,6 +319,12 @@ typedef struct mlight_s
 	float distbias;
 	// light style controlling this light
 	int style;
+	// maximum extent of the light for various purposes
+	float cullradius;
+	float cullradius2;
+	// surfaces this shines on
+	int numsurfaces;
+	msurface_t **surfaces;
 	// used only for loading calculations, number of leafs this shines on
 	//int numleafs;
 }

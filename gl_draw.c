@@ -397,7 +397,7 @@ void R_DrawQueue(void)
 	}
 	GL_SetupView_ViewPort(vid.realx, vid.realy, vid.realwidth, vid.realheight);
 	GL_SetupView_Mode_Ortho(0, 0, vid.conwidth, vid.conheight, -10, 100);
-	GL_DepthFunc(GL_LEQUAL);
+	qglDepthFunc(GL_LEQUAL);
 	R_Mesh_Start();
 	R_Mesh_Matrix(&r_identitymatrix);
 

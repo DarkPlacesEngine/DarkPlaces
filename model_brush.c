@@ -662,6 +662,56 @@ void Mod_LoadLightList(void)
 	}
 }
 
+void Mod_ProcessLightList(void)
+{
+	int i, j, k, *mark;
+	mlight_t *e;
+	msurface_t *surf;
+	float dist;
+	mleaf_t *l;
+	qbyte *pvs;
+	for (i = 0, e = loadmodel->lights;i < loadmodel->numlights;i++, e++)
+	{
+		e->cullradius2 = DotProduct(e->light, e->light) * (1.0f / (8192.0f * 8192.0f)) / (e->falloff * e->falloff) + 4096.0f;
+		if (e->cullradius2 > 4096.0f * 4096.0f)
+			e->cullradius2 = 4096.0f * 4096.0f;
+		e->cullradius = sqrt(e->cullradius2);
+		l = Mod_PointInLeaf(e->origin, loadmodel);
+		if (l->compressed_vis)
+			pvs = Mod_DecompressVis (l->compressed_vis, loadmodel);
+		else
+			pvs = mod_novis;
+		for (j = 0, l = loadmodel->leafs + 1;j < loadmodel->numleafs - 1;j++)
+		{
+			if (pvs[j >> 3] & (1 << (j & 7)))
+			{
+				for (k = 0, mark = l->firstmarksurface;k < l->nummarksurfaces;k++, mark++)
+				{
+					surf = loadmodel->surfaces + *mark;
+					dist = DotProduct(e->origin, surf->plane->normal) - surf->plane->dist;
+					if (surf->flags & SURF_PLANEBACK)
+						dist = -dist;
+					if (dist > 0 && dist < e->cullradius)
+						loadmodel->surfacevisframes[j] = i - 1000000;
+				}
+			}
+		}
+		e->numsurfaces = 0;
+		for (j = 0;j < loadmodel->nummodelsurfaces;j++)
+			if (loadmodel->surfacevisframes[j] == i - 1000000)
+				e->numsurfaces++;
+		e->surfaces = NULL;
+		if (e->numsurfaces > 0)
+		{
+			e->surfaces = Mem_Alloc(loadmodel->mempool, sizeof(msurface_t *) * e->numsurfaces);
+			e->numsurfaces = 0;
+			for (j = 0;j < loadmodel->nummodelsurfaces;j++)
+				if (loadmodel->surfacevisframes[j] == i - 1000000)
+					e->surfaces[e->numsurfaces++] = loadmodel->surfaces + loadmodel->firstmodelsurface + j;
+		}
+	}
+}
+
 
 /*
 =================
@@ -1111,8 +1161,8 @@ void Mod_GenerateWarpMesh (msurface_t *surf)
 
 void Mod_GenerateWallMesh (msurface_t *surf, int vertexonly)
 {
-	int i, iu, iv, *index, smax, tmax;
-	float *in, s, t, u, v, ubase, vbase, uscale, vscale;
+	int i, iu, iv, *index, *n, smax, tmax;
+	float *in, s, t, u, v, ubase, vbase, uscale, vscale, normal[3];
 	surfmesh_t *mesh;
 
 	smax = surf->extents[0] >> 4;
@@ -1145,7 +1195,7 @@ void Mod_GenerateWallMesh (msurface_t *surf, int vertexonly)
 		vscale = (vscale - vbase) * 16.0 / ((surf->extents[1] & ~15) + 16);
 	}
 
-	surf->mesh = mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + (surf->poly_numverts - 2) * sizeof(int[3]) + surf->poly_numverts * (4 + 2 + 2 + 2 + 1) * sizeof(float));
+	surf->mesh = mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + (surf->poly_numverts - 2) * sizeof(int[6]) + surf->poly_numverts * (4 + 2 + 2 + 2 + 1 + 3) * sizeof(float));
 	mesh->numverts = surf->poly_numverts;
 	mesh->numtriangles = surf->poly_numverts - 2;
 	mesh->verts = (float *)(mesh + 1);
@@ -1154,15 +1204,24 @@ void Mod_GenerateWallMesh (msurface_t *surf, int vertexonly)
 	mesh->ab = mesh->uv + mesh->numverts * 2;
 	mesh->lightmapoffsets = (int *)(mesh->ab + mesh->numverts * 2);
 	mesh->index = mesh->lightmapoffsets + mesh->numverts;
+	mesh->triangleneighbors = mesh->index + mesh->numtriangles * 3;
+	mesh->normals = (float *)(mesh->triangleneighbors + mesh->numtriangles * 3);
 
 	index = mesh->index;
+	n = mesh->triangleneighbors;
 	for (i = 0;i < mesh->numtriangles;i++)
 	{
 		*index++ = 0;
 		*index++ = i + 1;
 		*index++ = i + 2;
+		*n++ = i - 1;
+		*n++ = -1;
+		*n++ = i + 1;
 	}
 
+	VectorCopy(surf->plane->normal, normal);
+	if (surf->flags & SURF_PLANEBACK)
+		VectorNegate(normal, normal);
 	for (i = 0, in = surf->poly_verts;i < mesh->numverts;i++, in += 3)
 	{
 		s = DotProduct (in, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3];
@@ -1187,34 +1246,46 @@ void Mod_GenerateWallMesh (msurface_t *surf, int vertexonly)
 		mesh->ab[i * 2 + 0] = s * (1.0f / 16.0f);
 		mesh->ab[i * 2 + 1] = t * (1.0f / 16.0f);
 		mesh->lightmapoffsets[i] = ((iv * (smax+1) + iu) * 3);
+		mesh->normals[i * 3 + 0] = normal[0];
+		mesh->normals[i * 3 + 1] = normal[1];
+		mesh->normals[i * 3 + 2] = normal[2];
 	}
 }
 
 void Mod_GenerateVertexMesh (msurface_t *surf)
 {
-	int i, *index;
-	float *in, s, t;
+	int i, *index, *n;
+	float *in, s, t, normal[3];
 	surfmesh_t *mesh;
 
 	surf->lightmaptexturestride = 0;
 	surf->lightmaptexture = NULL;
 
-	surf->mesh = mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + (surf->poly_numverts - 2) * sizeof(int[3]) + surf->poly_numverts * (4 + 2 + 2) * sizeof(float));
+	surf->mesh = mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + (surf->poly_numverts - 2) * sizeof(int[6]) + surf->poly_numverts * (4 + 2 + 2 + 3) * sizeof(float));
 	mesh->numverts = surf->poly_numverts;
 	mesh->numtriangles = surf->poly_numverts - 2;
 	mesh->verts = (float *)(mesh + 1);
 	mesh->st = mesh->verts + mesh->numverts * 4;
 	mesh->ab = mesh->st + mesh->numverts * 2;
 	mesh->index = (int *)(mesh->ab + mesh->numverts * 2);
+	mesh->triangleneighbors = mesh->index + mesh->numtriangles * 3;
+	mesh->normals = (float *)(mesh->triangleneighbors + mesh->numtriangles * 3);
 
 	index = mesh->index;
+	n = mesh->triangleneighbors;
 	for (i = 0;i < mesh->numtriangles;i++)
 	{
 		*index++ = 0;
 		*index++ = i + 1;
 		*index++ = i + 2;
+		*n++ = -1;
+		*n++ = -1;
+		*n++ = i + 1;
 	}
 
+	VectorCopy(surf->plane->normal, normal);
+	if (surf->flags & SURF_PLANEBACK)
+		VectorNegate(normal, normal);
 	for (i = 0, in = surf->poly_verts;i < mesh->numverts;i++, in += 3)
 	{
 		s = (DotProduct (in, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3]);
@@ -1226,13 +1297,16 @@ void Mod_GenerateVertexMesh (msurface_t *surf)
 		mesh->st[i * 2 + 1] = t / surf->texinfo->texture->height;
 		mesh->ab[i * 2 + 0] = s * (1.0f / 16.0f);
 		mesh->ab[i * 2 + 1] = t * (1.0f / 16.0f);
+		mesh->normals[i * 3 + 0] = normal[0];
+		mesh->normals[i * 3 + 1] = normal[1];
+		mesh->normals[i * 3 + 2] = normal[2];
 	}
 }
 
 void Mod_GenerateSurfacePolygon (msurface_t *surf)
 {
 	int i, lindex;
-	float *vec, *vert, mins[3], maxs[3];
+	float *vec, *vert, mins[3], maxs[3], temp[3], dist;
 
 	// convert edges back to a normal polygon
 	surf->poly_numverts = surf->numedges;
@@ -1263,6 +1337,17 @@ void Mod_GenerateSurfacePolygon (msurface_t *surf)
 	surf->poly_center[0] = (mins[0] + maxs[0]) * 0.5f;
 	surf->poly_center[1] = (mins[1] + maxs[1]) * 0.5f;
 	surf->poly_center[2] = (mins[2] + maxs[2]) * 0.5f;
+	surf->poly_radius2 = 0;
+	vert = surf->poly_verts;
+	for (i = 0;i < surf->poly_numverts;i++)
+	{
+		VectorSubtract(vert, surf->poly_center, temp);
+		dist = DotProduct(temp, temp);
+		if (surf->poly_radius2 < dist)
+			surf->poly_radius2 = dist;
+		vert += 3;
+	}
+	surf->poly_radius = sqrt(surf->poly_radius2);
 }
 
 /*
@@ -2339,6 +2424,7 @@ static void Mod_MakePortals(void)
 Mod_LoadBrushModel
 =================
 */
+extern void R_DrawBrushModelFakeShadow (entity_render_t *ent);
 void Mod_LoadBrushModel (model_t *mod, void *buffer)
 {
 	int			i, j;
@@ -2346,6 +2432,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 	dmodel_t 	*bm;
 	mempool_t	*mainmempool;
 	char		*loadname;
+	model_t		*originalloadmodel;
 
 	mod->type = mod_brush;
 
@@ -2398,6 +2485,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 	loadname = mod->name;
 
 	Mod_LoadLightList ();
+	originalloadmodel = loadmodel;
 
 //
 // set up the submodels (FIXME: this is confusing)
@@ -2479,7 +2567,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 		mod->numleafs = bm->visleafs;
 
 		mod->Draw = R_DrawBrushModelNormal;
-		mod->DrawFakeShadow = NULL;
+		mod->DrawFakeShadow = R_DrawBrushModelFakeShadow;
 
 		// LordHavoc: only register submodels if it is the world
 		// (prevents bsp models from replacing world submodels)
@@ -2497,5 +2585,8 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 			mod = loadmodel;
 		}
 	}
+
+	loadmodel = originalloadmodel;
+	Mod_ProcessLightList ();
 }
 

@@ -36,7 +36,7 @@ void R_Shadow_Init(void)
 	R_RegisterModule("R_Shadow", r_shadow_start, r_shadow_shutdown, r_shadow_newmap);
 }
 
-void R_ShadowVolume(int numverts, int numtris, int *elements, int *neighbors, vec3_t relativelightorigin, float projectdistance, int visiblevolume)
+void R_Shadow_Volume(int numverts, int numtris, int *elements, int *neighbors, vec3_t relativelightorigin, float projectdistance, int visiblevolume)
 {
 	int i, *e, *n, *out, tris;
 	float *v0, *v1, *v2, dir0[3], dir1[3], temp[3], f;
@@ -128,7 +128,7 @@ void R_ShadowVolume(int numverts, int numtris, int *elements, int *neighbors, ve
 			out += 6;
 			tris += 2;
 			// check the edges
-			if (trianglefacinglight[n[0]])
+			if (n[0] < 0 || trianglefacinglight[n[0]])
 			{
 				out[0] = e[0];
 				out[1] = e[1];
@@ -139,7 +139,7 @@ void R_ShadowVolume(int numverts, int numtris, int *elements, int *neighbors, ve
 				out += 6;
 				tris += 2;
 			}
-			if (trianglefacinglight[n[1]])
+			if (n[1] < 0 || trianglefacinglight[n[1]])
 			{
 				out[0] = e[1];
 				out[1] = e[2];
@@ -150,7 +150,7 @@ void R_ShadowVolume(int numverts, int numtris, int *elements, int *neighbors, ve
 				out += 6;
 				tris += 2;
 			}
-			if (trianglefacinglight[n[2]])
+			if (n[2] < 0 || trianglefacinglight[n[2]])
 			{
 				out[0] = e[2];
 				out[1] = e[0];
@@ -172,16 +172,64 @@ void R_ShadowVolume(int numverts, int numtris, int *elements, int *neighbors, ve
 	}
 	else
 	{
-		qglCullFace(GL_FRONT);
-		//qglStencilFunc(
+		qglColorMask(0,0,0,0);
+		qglEnable(GL_STENCIL_TEST);
+		// increment stencil if backface is behind depthbuffer
+		qglCullFace(GL_BACK); // quake is backwards, this culls front faces
+		qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
+		R_Mesh_Draw(numverts * 2, tris, shadowelements);
+		// decrement stencil if frontface is infront of depthbuffer
+		qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
+		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
+		R_Mesh_Draw(numverts * 2, tris, shadowelements);
+		// restore to normal quake rendering
+		qglDisable(GL_STENCIL_TEST);
+		qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+		qglColorMask(1,1,1,1);
 	}
 }
 
-void R_Shadow_BeginScene(void)
+void R_Shadow_VertexLight(int numverts, float *normals, vec3_t relativelightorigin, float lightradius2, float lightdistbias, float lightsubtract, float *lightcolor)
 {
-	rmeshstate_t m;
-	memset(&m, 0, sizeof(m));
-	m.blendfunc1 = GL_ONE;
-	m.blendfunc2 = GL_ZERO;
-	R_Mesh_State(&m);
+	int i;
+	float *n, *v, *c, f, dist, temp[3];
+	// calculate vertex colors
+	for (i = 0, v = varray_vertex, c = varray_color, n = normals;i < numverts;i++, v += 4, c += 4, n += 3)
+	{
+		VectorSubtract(relativelightorigin, v, temp);
+		c[0] = 0;
+		c[1] = 0;
+		c[2] = 0;
+		c[3] = 1;
+		f = DotProduct(n, temp);
+		if (f > 0)
+		{
+			dist = DotProduct(temp, temp);
+			if (dist < lightradius2)
+			{
+				f = ((1.0f / (dist + lightdistbias)) - lightsubtract) * (f / sqrt(dist));
+				c[0] = f * lightcolor[0];
+				c[1] = f * lightcolor[1];
+				c[2] = f * lightcolor[2];
+			}
+		}
+	}
+}
+
+void R_Shadow_RenderLightThroughStencil(int numverts, int numtris, int *elements, vec3_t relativelightorigin, float *normals)
+{
+	// only draw light where this geometry was already rendered AND the
+	// stencil is 0 (non-zero means shadow)
+	qglDepthFunc(GL_EQUAL);
+	qglEnable(GL_STENCIL_TEST);
+	qglStencilFunc(GL_EQUAL, 0, 0xFF);
+	R_Mesh_Draw(numverts, numtris, elements);
+	qglDisable(GL_STENCIL_TEST);
+	qglDepthFunc(GL_LEQUAL);
+}
+
+void R_Shadow_ClearStencil(void)
+{
+	qglClearStencil(0);
+	qglClear(GL_STENCIL_BUFFER_BIT);
 }

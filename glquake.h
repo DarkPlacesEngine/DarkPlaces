@@ -195,6 +195,12 @@ typedef double GLclampd;
 #define GL_ACCUM_BUFFER_BIT			0x00000200
 #define GL_STENCIL_BUFFER_BIT			0x00000400
 #define GL_COLOR_BUFFER_BIT			0x00004000
+
+#define GL_STENCIL_TEST				0x0B90
+#define GL_KEEP					0x1E00
+#define GL_REPLACE				0x1E01
+#define GL_INCR					0x1E02
+#define GL_DECR					0x1E03
 #endif
 
 // GL_ARB_multitexture
@@ -312,6 +318,7 @@ extern void (GLAPIENTRY *qglClearDepth)(GLclampd depth);
 extern void (GLAPIENTRY *qglDepthFunc)(GLenum func);
 extern void (GLAPIENTRY *qglDepthMask)(GLboolean flag);
 extern void (GLAPIENTRY *qglDepthRange)(GLclampd near_val, GLclampd far_val);
+extern void (GLAPIENTRY *qglColorMask)(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
 
 extern void (GLAPIENTRY *qglDrawRangeElements)(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices);
 extern void (GLAPIENTRY *qglDrawElements)(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);

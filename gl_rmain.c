@@ -544,7 +544,7 @@ void R_DrawModels (void)
 	}
 }
 
-void R_DrawModelFakeShadows (void)
+void R_DrawFakeShadows (void)
 {
 	int i;
 	entity_render_t *ent;
@@ -552,6 +552,9 @@ void R_DrawModelFakeShadows (void)
 	if (!r_drawentities.integer)
 		return;
 
+	ent = &cl_entities[0].render;
+	if (ent->model && ent->model->DrawFakeShadow)
+		ent->model->DrawFakeShadow(ent);
 	for (i = 0;i < r_refdef.numentities;i++)
 	{
 		ent = r_refdef.entities[i];
@@ -676,7 +679,7 @@ void R_RenderView (void)
 	GL_SetupView_ViewPort(r_refdef.x, r_refdef.y, r_refdef.width, r_refdef.height);
 	GL_SetupView_Mode_Perspective((double) r_refdef.height / r_refdef.width, r_refdef.fov_x, r_refdef.fov_y, 1.0f, r_farclip);
 	GL_SetupView_Orientation_FromEntity (r_refdef.vieworg, r_refdef.viewangles);
-	GL_DepthFunc(GL_LEQUAL);
+	qglDepthFunc(GL_LEQUAL);
 	
 	R_Mesh_Start();
 	R_MeshQueue_BeginScene();
@@ -691,12 +694,6 @@ void R_RenderView (void)
 	// don't let sound skip if going slow
 	if (!intimerefresh && !r_speeds.integer)
 		S_ExtraUpdate ();
-
-	if (r_shadows.integer)
-	{
-		R_DrawModelFakeShadows();
-		R_TimeReport("fakeshadows");
-	}
 
 	R_DrawModels();
 	R_TimeReport("models");
@@ -721,6 +718,11 @@ void R_RenderView (void)
 
 	R_MeshQueue_Render();
 	R_MeshQueue_EndScene();
+	if (r_shadows.integer)
+	{
+		R_DrawFakeShadows();
+		R_TimeReport("fakeshadows");
+	}
 	R_Mesh_Finish();
 	R_TimeReport("meshfinish");
 }
