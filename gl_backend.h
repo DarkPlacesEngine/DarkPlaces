@@ -49,7 +49,8 @@ typedef struct
 	// matrices
 	matrix4x4_t texmatrix[MAX_TEXTUREUNITS];
 	// pointers
-	const float *pointer_texcoord[MAX_TEXTUREUNITS];
+	const float *pointer_texcoord[MAX_TEXTUREUNITS]; // 2D
+	const float *pointer_texcoord3f[MAX_TEXTUREUNITS]; // 3D
 
 	// other state set by this
 	const float *pointer_vertex;
