@@ -490,14 +490,17 @@ shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh)
 	for (mesh = firstmesh, firstmesh = NULL;mesh;mesh = nextmesh)
 	{
 		nextmesh = mesh->next;
-		newmesh = Mod_ShadowMesh_ReAlloc(mempool, mesh);
-		newmesh->next = firstmesh;
-		firstmesh = newmesh;
+		if (mesh->numverts >= 3 && mesh->numtriangles >= 1)
+		{
+			newmesh = Mod_ShadowMesh_ReAlloc(mempool, mesh);
+			newmesh->next = firstmesh;
+			firstmesh = newmesh;
+			//Con_Printf("mesh\n");
+			//for (i = 0;i < newmesh->numtriangles;i++)
+			//	Con_Printf("tri %d %d %d\n", newmesh->elements[i * 3 + 0], newmesh->elements[i * 3 + 1], newmesh->elements[i * 3 + 2]);
+			Mod_BuildTriangleNeighbors(newmesh->neighbors, newmesh->elements, newmesh->numtriangles);
+		}
 		Mem_Free(mesh);
-		//Con_Printf("mesh\n");
-		//for (i = 0;i < newmesh->numtriangles;i++)
-		//	Con_Printf("tri %d %d %d\n", newmesh->elements[i * 3 + 0], newmesh->elements[i * 3 + 1], newmesh->elements[i * 3 + 2]);
-		Mod_BuildTriangleNeighbors(newmesh->neighbors, newmesh->elements, newmesh->numtriangles);
 	}
 	return firstmesh;
 }
