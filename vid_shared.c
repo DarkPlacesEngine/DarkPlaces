@@ -24,9 +24,9 @@ int vid_hidden = false;
 int vid_activewindow = true;
 
 cvar_t vid_fullscreen = {0, "vid_fullscreen", "1"};
-cvar_t vid_width = {0, "vid_width", "800"};
-cvar_t vid_height = {0, "vid_height", "600"};
-cvar_t vid_bitsperpixel = {0, "vid_bitsperpixel", "32"};
+cvar_t vid_width = {0, "vid_width", "640"};
+cvar_t vid_height = {0, "vid_height", "480"};
+cvar_t vid_bitsperpixel = {0, "vid_bitsperpixel", "16"};
 
 cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1"};
 cvar_t gl_combine = {0, "gl_combine", "1"};
