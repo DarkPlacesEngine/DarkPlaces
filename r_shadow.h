@@ -33,8 +33,7 @@ extern mempool_t *r_shadow_mempool;
 
 void R_Shadow_Init(void);
 void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, float projectdistance, int nummarktris, const int *marktris);
-void R_Shadow_VolumeFromBox(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, float projectdistance, const vec3_t mins, const vec3_t maxs);
-void R_Shadow_VolumeFromSphere(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, float projectdistance, float radius);
+void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *invertex3f, const int *elements, const vec3_t projectorigin, vec3_t lightmins, vec3_t lightmaxs, vec3_t surfacemins, vec3_t surfacemaxs);
 #define LIGHTING_DIFFUSE 1
 #define LIGHTING_SPECULAR 2
 void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements, const float *vertices, const float *svectors, const float *tvectors, const float *normals, const float *texcoords, const float *relativelightorigin, const float *relativeeyeorigin, const float *lightcolor, const matrix4x4_t *matrix_worldtolight, const matrix4x4_t *matrix_worldtoattenuationxyz, const matrix4x4_t *matrix_worldtoattenuationz, rtexture_t *basetexture, rtexture_t *bumptexture, rtexture_t *glosstexture, rtexture_t *lightcubemap, int lightingflags);

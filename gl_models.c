@@ -190,10 +190,20 @@ void R_Model_Alias_Draw(entity_render_t *ent)
 void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius)
 {
 	int meshnum;
+	vec3_t lightmins, lightmaxs;
 	aliasmesh_t *mesh;
 	aliasskin_t *skin;
 	float projectdistance, *vertex3f;
 	if (!(ent->flags & RENDER_SHADOW))
+		return;
+	lightmins[0] = relativelightorigin[0] - lightradius;
+	lightmins[1] = relativelightorigin[1] - lightradius;
+	lightmins[2] = relativelightorigin[2] - lightradius;
+	lightmaxs[0] = relativelightorigin[0] + lightradius;
+	lightmaxs[1] = relativelightorigin[1] + lightradius;
+	lightmaxs[2] = relativelightorigin[2] + lightradius;
+	// check the box in modelspace, it was already checked in worldspace
+	if (!BoxesOverlap(ent->model->normalmins, ent->model->normalmaxs, lightmins, lightmaxs))
 		return;
 	projectdistance = lightradius + ent->model->radius;// - sqrt(DotProduct(relativelightorigin, relativelightorigin));
 	if (projectdistance > 0.1)
@@ -211,7 +221,10 @@ void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightor
 				vertex3f = varray_vertex3f;
 				Mod_Alias_GetMesh_Vertex3f(ent->model, ent->frameblend, mesh, vertex3f);
 			}
-			R_Shadow_VolumeFromSphere(mesh->num_vertices, mesh->num_triangles, vertex3f, mesh->data_element3i, mesh->data_neighbor3i, relativelightorigin, projectdistance, lightradius);
+			// identify lit faces within the bounding box
+			R_Shadow_PrepareShadowMark(mesh->num_triangles);
+			R_Shadow_MarkVolumeFromBox(0, mesh->num_triangles, vertex3f, mesh->data_element3i, relativelightorigin, lightmins, lightmaxs, ent->model->normalmins, ent->model->normalmaxs);
+			R_Shadow_VolumeFromList(mesh->num_vertices, mesh->num_triangles, vertex3f, mesh->data_element3i, mesh->data_neighbor3i, relativelightorigin, projectdistance, numshadowmark, shadowmarklist);
 		}
 	}
 }

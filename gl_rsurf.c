@@ -1835,9 +1835,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 	model_t *model = ent->model;
 	vec3_t lightmins, lightmaxs;
 	msurface_t *surface;
-	int surfacelistindex, j, t;
-	const int *e;
-	const float *v[3];
+	int surfacelistindex;
 	if (r_drawcollisionbrushes.integer < 2)
 	{
 		lightmins[0] = relativelightorigin[0] - lightradius;
@@ -1851,14 +1849,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 		{
 			surface = model->brushq1.surfaces + surfacelist[surfacelistindex];
-			for (j = 0, t = surface->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;j < surface->mesh.num_triangles;j++, t++, e += 3)
-			{
-				v[0] = model->brush.shadowmesh->vertex3f + e[0] * 3;
-				v[1] = model->brush.shadowmesh->vertex3f + e[1] * 3;
-				v[2] = model->brush.shadowmesh->vertex3f + e[2] * 3;
-				if (PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
-					shadowmarklist[numshadowmark++] = t;
-			}
+			R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->mesh.num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, lightmins, lightmaxs, surface->poly_mins, surface->poly_maxs);
 		}
 		R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, lightradius + model->radius + r_shadow_projectdistance.value, numshadowmark, shadowmarklist);
 	}
@@ -2469,9 +2460,7 @@ void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 	model_t *model = ent->model;
 	vec3_t lightmins, lightmaxs;
 	q3msurface_t *surface;
-	int surfacelistindex, j, t;
-	const int *e;
-	const float *v[3];
+	int surfacelistindex;
 	if (r_drawcollisionbrushes.integer < 2)
 	{
 		lightmins[0] = relativelightorigin[0] - lightradius;
@@ -2486,17 +2475,8 @@ void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 		{
 			surface = model->brushq3.data_faces + surfacelist[surfacelistindex];
 			// FIXME: check some manner of face->rendermode here?
-			if (!(surface->texture->surfaceflags & Q3SURFACEFLAG_NODRAW) && surface->num_triangles && !surface->texture->skin.fog)
-			{
-				for (j = 0, t = surface->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;j < surface->num_triangles;j++, t++, e += 3)
-				{
-					v[0] = model->brush.shadowmesh->vertex3f + e[0] * 3;
-					v[1] = model->brush.shadowmesh->vertex3f + e[1] * 3;
-					v[2] = model->brush.shadowmesh->vertex3f + e[2] * 3;
-					if (PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
-						shadowmarklist[numshadowmark++] = t;
-				}
-			}
+			if (!(surface->texture->surfaceflags & Q3SURFACEFLAG_NODRAW) && surface->num_triangles && !(surface->texture->surfaceparms & Q3SURFACEPARM_TRANS))
+				R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, lightmins, lightmaxs, surface->mins, surface->maxs);
 		}
 		R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, lightradius + model->radius + r_shadow_projectdistance.value, numshadowmark, shadowmarklist);
 	}
