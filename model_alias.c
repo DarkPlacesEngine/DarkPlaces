@@ -196,16 +196,11 @@ void Mod_BuildAliasSkinFromSkinFrame(aliasskin_t *skin, skinframe_t *skinframe)
 		layer->flags = 0;
 		layer->texture = skinframe->glow;
 		layer++;
-		layer->flags = ALIASLAYER_FOG;
-		layer->texture = skinframe->fog;
-		layer++;
 	}
-	else
-	{
-		layer->flags = ALIASLAYER_FOG | ALIASLAYER_FORCEDRAW_IF_FIRSTPASS;
-		layer->texture = skinframe->fog;
-		layer++;
-	}
+
+	layer->flags = ALIASLAYER_FOG | ALIASLAYER_FORCEDRAW_IF_FIRSTPASS;
+	layer->texture = skinframe->fog;
+	layer++;
 
 	skin->flags = 0;
 	// fog texture only exists if some pixels are transparent...
