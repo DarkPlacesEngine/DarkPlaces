@@ -56,6 +56,7 @@ extern char r_speeds_string[1024];
 
 // lighting stuff
 extern cvar_t r_ambient;
+extern cvar_t gl_flashblend;
 
 // vis stuff
 extern cvar_t r_novis;
