@@ -95,6 +95,10 @@ d darkplaces: add tenebrae light entity properties, like cubemap and style and s
 -n darkplaces: implement cubemap support on rtlights (romi, Vermeulen, Mitchell)
 d darkplaces: add r_shadow_realtime_world_lightmaps cvar to control lightmap brightness (Mitchell)
 -n darkplaces: add gl_lightmaps cvar to disable texturing except lightmaps for testing (Vic)
+0 darkplaces: adaptive patch subdivision levels on X and Y based on r_subdivisions cvar
+0 darkplaces: put patches on a delayed queue in q3bsp collision code so the trace is first clipped by brushes
+2 darkplaces: do culling traces against patch bbox
+0 darkplaces: cap packet size at 1k for non-local connections, regardless of their rate setting
 0 hmap2: release hmap2 (Vic, Supajoe)
 4 darkplaces: add capability for qc entities to act as bones in a model, and send them as compressed origins in the parent entity's updates, with perhaps a limit of 16 bones, this would allow some simple serverside ragdoll (Mitchell, Deej)
 d darkplaces: worked around Intel precision bug with view blends (they were not covering one line of the screen, due to being so huge that it had precision problems, on ATI and NVIDIA) (Sajt)

@@ -450,6 +450,9 @@ typedef struct q3mface_s
 
 	// index into model->brush.shadowmesh
 	int num_firstshadowmeshtriangle;
+	
+	// used for shadow volume generation
+	int shadowmark;
 
 	// temporary use by light processing
 	int lighttemp_castshadow;
