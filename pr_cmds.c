@@ -2610,9 +2610,9 @@ static msurface_t *getsurface(edict_t *ed, int surfnum)
 	if (modelindex < 1 || modelindex >= MAX_MODELS)
 		return NULL;
 	model = sv.models[modelindex];
-	if (surfnum < 0 || surfnum >= model->brushq1.nummodelsurfaces)
+	if (surfnum < 0 || surfnum >= model->nummodelsurfaces)
 		return NULL;
-	return model->brushq1.surfaces + surfnum + model->brushq1.firstmodelsurface;
+	return model->brushq1.surfaces + surfnum + model->firstmodelsurface;
 }
 
 
@@ -2696,9 +2696,9 @@ void PF_getsurfacenearpoint(void)
 	VectorSubtract(point, ed->v->origin, p);
 	best = -1;
 	bestdist = 1000000000;
-	for (surfnum = 0;surfnum < model->brushq1.nummodelsurfaces;surfnum++)
+	for (surfnum = 0;surfnum < model->nummodelsurfaces;surfnum++)
 	{
-		surf = model->brushq1.surfaces + surfnum + model->brushq1.firstmodelsurface;
+		surf = model->brushq1.surfaces + surfnum + model->firstmodelsurface;
 		dist = PlaneDiff(p, surf->plane);
 		dist = dist * dist;
 		if (dist < bestdist)

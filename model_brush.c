@@ -2638,9 +2638,9 @@ static void Mod_Q1BSP_BuildLightmapUpdateChains(mempool_t *mempool, model_t *mod
 	int i, j, stylecounts[256], totalcount, remapstyles[256];
 	msurface_t *surf;
 	memset(stylecounts, 0, sizeof(stylecounts));
-	for (i = 0;i < model->brushq1.nummodelsurfaces;i++)
+	for (i = 0;i < model->nummodelsurfaces;i++)
 	{
-		surf = model->brushq1.surfaces + model->brushq1.firstmodelsurface + i;
+		surf = model->brushq1.surfaces + model->firstmodelsurface + i;
 		for (j = 0;j < MAXLIGHTMAPS;j++)
 			stylecounts[surf->styles[j]]++;
 	}
@@ -2670,9 +2670,9 @@ static void Mod_Q1BSP_BuildLightmapUpdateChains(mempool_t *mempool, model_t *mod
 		model->brushq1.light_styleupdatechains[i] = model->brushq1.light_styleupdatechainsbuffer + j;
 		j += stylecounts[model->brushq1.light_style[i]] + 1;
 	}
-	for (i = 0;i < model->brushq1.nummodelsurfaces;i++)
+	for (i = 0;i < model->nummodelsurfaces;i++)
 	{
-		surf = model->brushq1.surfaces + model->brushq1.firstmodelsurface + i;
+		surf = model->brushq1.surfaces + model->firstmodelsurface + i;
 		for (j = 0;j < MAXLIGHTMAPS;j++)
 			if (surf->styles[j] != 255)
 				*model->brushq1.light_styleupdatechains[remapstyles[surf->styles[j]]]++ = surf;
@@ -2691,7 +2691,7 @@ static void Mod_Q1BSP_BuildPVSTextureChains(model_t *model)
 	int i, j;
 	for (i = 0;i < model->brushq1.numtextures;i++)
 		model->brushq1.pvstexturechainslength[i] = 0;
-	for (i = 0, j = model->brushq1.firstmodelsurface;i < model->brushq1.nummodelsurfaces;i++, j++)
+	for (i = 0, j = model->firstmodelsurface;i < model->nummodelsurfaces;i++, j++)
 	{
 		if (model->brushq1.surfacepvsframes[j] == model->brushq1.pvsframecount)
 		{
@@ -2709,7 +2709,7 @@ static void Mod_Q1BSP_BuildPVSTextureChains(model_t *model)
 		else
 			model->brushq1.pvstexturechains[i] = NULL;
 	}
-	for (i = 0, j = model->brushq1.firstmodelsurface;i < model->brushq1.nummodelsurfaces;i++, j++)
+	for (i = 0, j = model->firstmodelsurface;i < model->nummodelsurfaces;i++, j++)
 		if (model->brushq1.surfacepvsframes[j] == model->brushq1.pvsframecount)
 			*model->brushq1.pvstexturechains[model->brushq1.surfaces[j].texinfo->texture->number]++ = model->brushq1.surfaces + j;
 	for (i = 0;i < model->brushq1.numtextures;i++)
@@ -3007,14 +3007,13 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 			mod->brushq1.hulls[j].lastclipnode = mod->brushq1.numclipnodes - 1;
 		}
 
-		mod->brushq1.firstmodelsurface = bm->firstface;
-		mod->brushq1.nummodelsurfaces = bm->numfaces;
+		mod->firstmodelsurface = bm->firstface;
+		mod->nummodelsurfaces = bm->numfaces;
 
 		// make the model surface list (used by shadowing/lighting)
-		mod->numsurfaces = mod->brushq1.nummodelsurfaces;
-		mod->surfacelist = Mem_Alloc(loadmodel->mempool, mod->numsurfaces * sizeof(*mod->surfacelist));
-		for (j = 0;j < mod->numsurfaces;j++)
-			mod->surfacelist[j] = mod->brushq1.firstmodelsurface + j;
+		mod->surfacelist = Mem_Alloc(loadmodel->mempool, mod->nummodelsurfaces * sizeof(*mod->surfacelist));
+		for (j = 0;j < mod->nummodelsurfaces;j++)
+			mod->surfacelist[j] = mod->firstmodelsurface + j;
 
 		// this gets altered below if sky is used
 		mod->DrawSky = NULL;
@@ -3031,18 +3030,18 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 			mod->brush.AmbientSoundLevelsForPoint = NULL;
 		}
 		mod->brushq1.pvstexturechains = Mem_Alloc(loadmodel->mempool, mod->brushq1.numtextures * sizeof(msurface_t **));
-		mod->brushq1.pvstexturechainsbuffer = Mem_Alloc(loadmodel->mempool,(mod->brushq1.nummodelsurfaces + mod->brushq1.numtextures) * sizeof(msurface_t *));
+		mod->brushq1.pvstexturechainsbuffer = Mem_Alloc(loadmodel->mempool,(mod->nummodelsurfaces + mod->brushq1.numtextures) * sizeof(msurface_t *));
 		mod->brushq1.pvstexturechainslength = Mem_Alloc(loadmodel->mempool, mod->brushq1.numtextures * sizeof(int));
 		Mod_Q1BSP_BuildPVSTextureChains(mod);
 		Mod_Q1BSP_BuildLightmapUpdateChains(loadmodel->mempool, mod);
-		if (mod->brushq1.nummodelsurfaces)
+		if (mod->nummodelsurfaces)
 		{
 			// LordHavoc: calculate bmodel bounding box rather than trusting what it says
 			mod->normalmins[0] = mod->normalmins[1] = mod->normalmins[2] = 1000000000.0f;
 			mod->normalmaxs[0] = mod->normalmaxs[1] = mod->normalmaxs[2] = -1000000000.0f;
 			modelyawradius = 0;
 			modelradius = 0;
-			for (j = 0, surf = &mod->brushq1.surfaces[mod->brushq1.firstmodelsurface];j < mod->brushq1.nummodelsurfaces;j++, surf++)
+			for (j = 0, surf = &mod->brushq1.surfaces[mod->firstmodelsurface];j < mod->nummodelsurfaces;j++, surf++)
 			{
 				// we only need to have a drawsky function if it is used(usually only on world model)
 				if (surf->texinfo->texture->flags & SURF_DRAWSKY)
@@ -3082,7 +3081,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 			// LordHavoc: empty submodel(lacrima.bsp has such a glitch)
 			Con_Printf("warning: empty submodel *%i in %s\n", i+1, loadmodel->name);
 		}
-		Mod_Q1BSP_BuildSurfaceNeighbors(mod->brushq1.surfaces + mod->brushq1.firstmodelsurface, mod->brushq1.nummodelsurfaces, loadmodel->mempool);
+		Mod_Q1BSP_BuildSurfaceNeighbors(mod->brushq1.surfaces + mod->firstmodelsurface, mod->nummodelsurfaces, loadmodel->mempool);
 
 		mod->brushq1.num_visleafs = bm->visleafs;
 	}
@@ -5630,9 +5629,9 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 		mod->brushq3.submodel = i;
 
 		// make the model surface list (used by shadowing/lighting)
-		mod->numsurfaces = mod->brushq3.data_thismodel->numfaces;
-		mod->surfacelist = Mem_Alloc(loadmodel->mempool, mod->numsurfaces * sizeof(*mod->surfacelist));
-		for (j = 0;j < mod->numsurfaces;j++)
+		mod->nummodelsurfaces = mod->brushq3.data_thismodel->numfaces;
+		mod->surfacelist = Mem_Alloc(loadmodel->mempool, mod->nummodelsurfaces * sizeof(*mod->surfacelist));
+		for (j = 0;j < mod->nummodelsurfaces;j++)
 			mod->surfacelist[j] = (mod->brushq3.data_thismodel->firstface - mod->brushq3.data_faces) + j;
 
 		VectorCopy(mod->brushq3.data_thismodel->mins, mod->normalmins);
