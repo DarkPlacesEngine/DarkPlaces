@@ -73,9 +73,9 @@ typedef struct shadowmesh_s
 	struct shadowmesh_s *next;
 	int numverts, maxverts;
 	int numtriangles, maxtriangles;
-	float *verts;
-	int *elements;
-	int *neighbors;
+	float *vertex3f;
+	int *element3i;
+	int *neighbor3i;
 	// these are NULL after Mod_ShadowMesh_Finish is performed, only used
 	// while building meshes
 	shadowmeshvertexhash_t **vertexhashtable, *vertexhashentries;

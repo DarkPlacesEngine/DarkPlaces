@@ -149,16 +149,16 @@ typedef struct surfmesh_s
 	struct surfmesh_s *chain;
 	int numverts; // number of vertices in the mesh
 	int numtriangles; // number of triangles in the mesh
-	float *verts; // float[verts*4] vertex locations
-	float *svectors; // float[verts*4] direction of 'S' (right) texture axis for each vertex
-	float *tvectors; // float[verts*4] direction of 'T' (down) texture axis for each vertex
-	float *normals; // float[verts*4] direction of 'R' (out) texture axis for each vertex
+	float *vertex3f; // float[verts*3] vertex locations
+	float *svector3f; // float[verts*3] direction of 'S' (right) texture axis for each vertex
+	float *tvector3f; // float[verts*3] direction of 'T' (down) texture axis for each vertex
+	float *normal3f; // float[verts*3] direction of 'R' (out) texture axis for each vertex
 	int *lightmapoffsets; // index into surface's lightmap samples for vertex lighting
-	float *str; // float[verts*4] texcoords for surface texture
-	float *uvw; // float[verts*4] texcoords for lightmap texture
-	float *abc; // float[verts*4] texcoords for detail texture
-	int *index; // int[tris*3] triangles of the mesh, 3 indices into vertex arrays for each
-	int *triangleneighbors; // int[tris*3] neighboring triangle on each edge (-1 if none)
+	float *texcoordtexture2f; // float[verts*2] texcoords for surface texture
+	float *texcoordlightmap2f; // float[verts*2] texcoords for lightmap texture
+	float *texcoorddetail2f; // float[verts*2] texcoords for detail texture
+	int *element3i; // int[tris*3] triangles of the mesh, 3 indices into vertex arrays for each
+	int *neighbor3i; // int[tris*3] neighboring triangle on each edge (-1 if none)
 }
 surfmesh_t;
 

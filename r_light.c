@@ -172,24 +172,7 @@ void R_DrawCoronas(void)
 			scale = rd->cullradius * 0.25f;
 			if (gl_flashblend.integer)
 				scale *= 2.0f;
-			R_Mesh_GetSpace(4);
-			varray_texcoord[0][ 0] = 0;varray_texcoord[0][ 1] = 0;
-			varray_texcoord[0][ 4] = 0;varray_texcoord[0][ 5] = 1;
-			varray_texcoord[0][ 8] = 1;varray_texcoord[0][ 9] = 1;
-			varray_texcoord[0][12] = 1;varray_texcoord[0][13] = 0;
-			varray_vertex[0] = rd->origin[0] - vright[0] * scale - vup[0] * scale;
-			varray_vertex[1] = rd->origin[1] - vright[1] * scale - vup[1] * scale;
-			varray_vertex[2] = rd->origin[2] - vright[2] * scale - vup[2] * scale;
-			varray_vertex[4] = rd->origin[0] - vright[0] * scale + vup[0] * scale;
-			varray_vertex[5] = rd->origin[1] - vright[1] * scale + vup[1] * scale;
-			varray_vertex[6] = rd->origin[2] - vright[2] * scale + vup[2] * scale;
-			varray_vertex[8] = rd->origin[0] + vright[0] * scale + vup[0] * scale;
-			varray_vertex[9] = rd->origin[1] + vright[1] * scale + vup[1] * scale;
-			varray_vertex[10] = rd->origin[2] + vright[2] * scale + vup[2] * scale;
-			varray_vertex[12] = rd->origin[0] + vright[0] * scale - vup[0] * scale;
-			varray_vertex[13] = rd->origin[1] + vright[1] * scale - vup[1] * scale;
-			varray_vertex[14] = rd->origin[2] + vright[2] * scale - vup[2] * scale;
-			R_Mesh_Draw(4, 2, polygonelements);
+			R_DrawSpriteMesh(rd->origin, vright, vup, scale, -scale, -scale, scale);
 		}
 	}
 }
@@ -878,8 +861,8 @@ void R_LightModel(const entity_render_t *ent, int numverts, float *vertices, flo
 			VectorCopy(color, avc);
 			avc[3] = a;
 			avc += 4;
-			av += 4;
-			avn += 4;
+			av += 3;
+			avn += 3;
 		}
 	}
 	else

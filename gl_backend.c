@@ -76,16 +76,18 @@ void SCR_ScreenShot_f (void);
 // these are externally accessible
 int r_lightmapscalebit;
 float r_colorscale;
-GLfloat *varray_vertex, *varray_buf_vertex;
-GLfloat *varray_color, *varray_buf_color;
-GLfloat *varray_texcoord[MAX_TEXTUREUNITS], *varray_buf_texcoord[MAX_TEXTUREUNITS];
+GLfloat *varray_vertex3f, *varray_buf_vertex3f;
+GLfloat *varray_color4f, *varray_buf_color4f;
+GLfloat *varray_texcoord3f[MAX_TEXTUREUNITS], *varray_buf_texcoord3f[MAX_TEXTUREUNITS];
+GLfloat *varray_texcoord2f[MAX_TEXTUREUNITS], *varray_buf_texcoord2f[MAX_TEXTUREUNITS];
+static qbyte *varray_color4b, *varray_buf_color4b;
 int mesh_maxverts;
 int mesh_var;
 float mesh_var_readfrequency;
 float mesh_var_writefrequency;
 float mesh_var_priority;
 int varray_offset = 0, varray_offsetnext = 0;
-GLuint *varray_buf_elements;
+GLuint *varray_buf_elements3i;
 int mesh_maxelements = 3072;
 
 static matrix4x4_t backend_viewmatrix;
@@ -95,7 +97,6 @@ static matrix4x4_t backend_glmodelviewmatrix;
 static matrix4x4_t backend_projectmatrix;
 
 static int backendunits, backendactive;
-static GLubyte *varray_bcolor, *varray_buf_bcolor;
 static mempool_t *gl_backend_mempool;
 
 /*
@@ -117,16 +118,16 @@ A0B, 01B, B1C, 12C, C2D, 23D, D3E, 34E
 
 void GL_Backend_AllocElementsArray(void)
 {
-	if (varray_buf_elements)
-		Mem_Free(varray_buf_elements);
-	varray_buf_elements = Mem_Alloc(gl_backend_mempool, mesh_maxelements * sizeof(GLuint));
+	if (varray_buf_elements3i)
+		Mem_Free(varray_buf_elements3i);
+	varray_buf_elements3i = Mem_Alloc(gl_backend_mempool, mesh_maxelements * sizeof(GLuint));
 }
 
 void GL_Backend_FreeElementArray(void)
 {
-	if (varray_buf_elements)
-		Mem_Free(varray_buf_elements);
-	varray_buf_elements = NULL;
+	if (varray_buf_elements3i)
+		Mem_Free(varray_buf_elements3i);
+	varray_buf_elements3i = NULL;
 }
 
 void GL_Backend_CheckCvars(void)
@@ -157,16 +158,17 @@ int polygonelements[768];
 void GL_Backend_AllocArrays(void)
 {
 	int i, size;
+	qbyte *data;
 
 	if (!gl_backend_mempool)
 	{
 		gl_backend_mempool = Mem_AllocPool("GL_Backend");
-		varray_buf_vertex = NULL;
-		varray_buf_color = NULL;
-		varray_buf_bcolor = NULL;
-		varray_buf_elements = NULL;
+		varray_buf_vertex3f = NULL;
+		varray_buf_color4f = NULL;
+		varray_buf_color4b = NULL;
+		varray_buf_elements3i = NULL;
 		for (i = 0;i < MAX_TEXTUREUNITS;i++)
-			varray_buf_texcoord[i] = NULL;
+			varray_buf_texcoord3f[i] = varray_buf_texcoord2f[i] = NULL;
 	}
 
 	mesh_maxverts = gl_mesh_maxverts.integer;
@@ -175,29 +177,33 @@ void GL_Backend_AllocArrays(void)
 	mesh_var_writefrequency = gl_mesh_vertex_array_range_writefrequency.value;
 	mesh_var_priority = gl_mesh_vertex_array_range_priority.value;
 
-	if (varray_buf_vertex)
-		VID_FreeVertexArrays(varray_buf_vertex);
-	varray_buf_vertex = NULL;
-	varray_buf_color = NULL;
-	varray_buf_bcolor = NULL;
+	if (varray_buf_vertex3f)
+		VID_FreeVertexArrays(varray_buf_vertex3f);
+	varray_buf_vertex3f = NULL;
+	varray_buf_color4f = NULL;
+	varray_buf_color4b = NULL;
 	for (i = 0;i < MAX_TEXTUREUNITS;i++)
-		varray_buf_texcoord[i] = NULL;
+		varray_buf_texcoord3f[i] = varray_buf_texcoord2f[i] = NULL;
 
-	size = mesh_maxverts * (sizeof(GLfloat[4]) + sizeof(GLfloat[4]) + sizeof(GLfloat[4]) * backendunits + sizeof(GLubyte[4]));
-	varray_buf_vertex = VID_AllocVertexArrays(gl_backend_mempool, size, gl_mesh_vertex_array_range.integer, gl_mesh_vertex_array_range_readfrequency.value, gl_mesh_vertex_array_range_writefrequency.value, gl_mesh_vertex_array_range_priority.value);
-	varray_buf_color = varray_buf_vertex + 4 * mesh_maxverts;
+	size = mesh_maxverts * (sizeof(float[3]) + sizeof(float[4]) + sizeof(qbyte[4]) + (sizeof(float[3]) + sizeof(float[2])) * backendunits);
+	data = VID_AllocVertexArrays(gl_backend_mempool, size, gl_mesh_vertex_array_range.integer, gl_mesh_vertex_array_range_readfrequency.value, gl_mesh_vertex_array_range_writefrequency.value, gl_mesh_vertex_array_range_priority.value);
+	varray_buf_vertex3f = (void *)data;data += sizeof(float[3]) * mesh_maxverts;
+	varray_buf_color4f = (void *)data;data += sizeof(float[4]) * mesh_maxverts;
 	for (i = 0;i < backendunits;i++)
-		varray_buf_texcoord[i] = varray_buf_vertex + (i + 2) * 4 * mesh_maxverts;
+	{
+		varray_buf_texcoord3f[i] = (void *)data;data += sizeof(float[3]) * mesh_maxverts;
+		varray_buf_texcoord2f[i] = (void *)data;data += sizeof(float[2]) * mesh_maxverts;
+	}
 	for (;i < MAX_TEXTUREUNITS;i++)
-		varray_buf_texcoord[i] = NULL;
-	varray_buf_bcolor = (GLubyte *)(varray_buf_vertex + (backendunits + 2) * 4 * mesh_maxverts);
+		varray_buf_texcoord3f[i] = varray_buf_texcoord2f[i] = NULL;
+	varray_buf_color4b = (void *)data;data += sizeof(qbyte[4]) * mesh_maxverts;
 
 	GL_Backend_AllocElementsArray();
 
 	if (gl_support_var)
 	{
 		CHECKGLERROR
-		qglVertexArrayRangeNV(size, varray_buf_vertex);
+		qglVertexArrayRangeNV(size, varray_buf_vertex3f);
 		CHECKGLERROR
 		qglEnableClientState(GL_VERTEX_ARRAY_RANGE_NV);
 		CHECKGLERROR
@@ -215,17 +221,16 @@ void GL_Backend_FreeArrays(void)
 		CHECKGLERROR
 	}
 
-	if (varray_buf_vertex)
-		VID_FreeVertexArrays(varray_buf_vertex);
-	varray_buf_vertex = NULL;
-	varray_buf_color = NULL;
-	varray_buf_bcolor = NULL;
+	if (varray_buf_vertex3f)
+		VID_FreeVertexArrays(varray_buf_vertex3f);
+	varray_buf_vertex3f = NULL;
+	varray_buf_color4f = NULL;
+	varray_buf_color4b = NULL;
 	for (i = 0;i < MAX_TEXTUREUNITS;i++)
-		varray_buf_texcoord[i] = NULL;
+		varray_buf_texcoord3f[i] = varray_buf_texcoord2f[i] = NULL;
+	varray_buf_elements3i = NULL;
 
 	Mem_FreePool(&gl_backend_mempool);
-
-	varray_buf_elements = NULL;
 }
 
 static void gl_backend_start(void)
@@ -417,7 +422,7 @@ void GL_SetupView_Mode_Ortho (double x1, double y1, double x2, double y2, double
 typedef struct gltextureunit_s
 {
 	int t1d, t2d, t3d, tcubemap;
-	int arrayenabled;
+	int arrayenabled, arrayis3d;
 	float rgbscale, alphascale;
 	int combinergb, combinealpha;
 	// FIXME: add more combine stuff
@@ -458,15 +463,9 @@ void GL_SetupTextureState(void)
 		unit->combinergb = GL_MODULATE;
 		unit->combinealpha = GL_MODULATE;
 		unit->arrayenabled = false;
+		unit->arrayis3d = false;
 		qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
-		if (gl_texture3d || gl_texturecubemap)
-		{
-			qglTexCoordPointer(3, GL_FLOAT, sizeof(float[4]), varray_buf_texcoord[i]);CHECKGLERROR
-		}
-		else
-		{
-			qglTexCoordPointer(2, GL_FLOAT, sizeof(float[4]), varray_buf_texcoord[i]);CHECKGLERROR
-		}
+		qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), varray_buf_texcoord2f[i]);CHECKGLERROR
 		qglDisable(GL_TEXTURE_1D);CHECKGLERROR
 		qglDisable(GL_TEXTURE_2D);CHECKGLERROR
 		if (gl_texture3d)
@@ -523,15 +522,15 @@ void GL_Backend_ResetState(void)
 	qglBlendFunc(gl_state.blendfunc1, gl_state.blendfunc2);CHECKGLERROR
 	qglDisable(GL_BLEND);CHECKGLERROR
 	qglDepthMask(gl_state.depthmask);CHECKGLERROR
-	qglVertexPointer(3, GL_FLOAT, sizeof(GLfloat[4]), varray_buf_vertex);CHECKGLERROR
+	qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), varray_buf_vertex3f);CHECKGLERROR
 	qglEnableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
 	if (gl_mesh_floatcolors.integer)
 	{
-		qglColorPointer(4, GL_FLOAT, sizeof(GLfloat[4]), varray_buf_color);CHECKGLERROR
+		qglColorPointer(4, GL_FLOAT, sizeof(float[4]), varray_buf_color4f);CHECKGLERROR
 	}
 	else
 	{
-		qglColorPointer(4, GL_UNSIGNED_BYTE, sizeof(GLubyte[4]), varray_buf_bcolor);CHECKGLERROR
+		qglColorPointer(4, GL_UNSIGNED_BYTE, sizeof(qbyte[4]), varray_buf_color4b);CHECKGLERROR
 	}
 	GL_Color(1, 1, 1, 1);
 
@@ -610,7 +609,7 @@ void GL_ConvertColorsFloatToByte(int numverts)
 	total = numverts * 4;
 
 	// shift float to have 8bit fraction at base of number
-	fcolor = varray_buf_color;
+	fcolor = varray_buf_color4f;
 	for (i = 0;i < total;)
 	{
 		fcolor[i    ] += 32768.0f;
@@ -621,8 +620,8 @@ void GL_ConvertColorsFloatToByte(int numverts)
 	}
 
 	// then read as integer and kill float bits...
-	icolor = (int *)varray_buf_color;
-	bcolor = varray_buf_bcolor;
+	icolor = (int *)varray_buf_color4f;
+	bcolor = varray_buf_color4b;
 	for (i = 0;i < total;)
 	{
 		k = icolor[i    ] & 0x7FFFFF;if (k > 255) k = 255;bcolor[i    ] = (GLubyte) k;
@@ -650,7 +649,7 @@ void GL_Backend_RenumberElements(int numelements, const int *in, int offset)
 {
 	int i;
 	for (i = 0;i < numelements;i++)
-		varray_buf_elements[i] = in[i] + offset;
+		varray_buf_elements3i[i] = in[i] + offset;
 }
 
 // gets geometry space for a mesh
@@ -680,11 +679,14 @@ void R_Mesh_GetSpace(int numverts)
 	//if (!mesh_var)
 	//	varray_offset = rand() % (mesh_maxverts - numverts);
 
-	varray_vertex = varray_buf_vertex + varray_offset * 4;
-	varray_color = varray_buf_color + varray_offset * 4;
-	varray_bcolor = varray_buf_bcolor + varray_offset * 4;
+	varray_vertex3f = varray_buf_vertex3f + varray_offset * 3;
+	varray_color4f = varray_buf_color4f + varray_offset * 4;
+	varray_color4b = varray_buf_color4b + varray_offset * 4;
 	for (i = 0;i < backendunits;i++)
-		varray_texcoord[i] = varray_buf_texcoord[i] + varray_offset * 4;
+	{
+		varray_texcoord3f[i] = varray_buf_texcoord3f[i] + varray_offset * 3;
+		varray_texcoord2f[i] = varray_buf_texcoord2f[i] + varray_offset * 2;
+	}
 
 	varray_offsetnext = varray_offset + numverts;
 }
@@ -717,12 +719,12 @@ void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 			CHECKGLERROR
 			if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
 			{
-				qglDrawRangeElements(GL_TRIANGLES, varray_offset, varray_offset + numverts, numelements, GL_UNSIGNED_INT, (const GLuint *) varray_buf_elements);
+				qglDrawRangeElements(GL_TRIANGLES, varray_offset, varray_offset + numverts, numelements, GL_UNSIGNED_INT, (const GLuint *) varray_buf_elements3i);
 				CHECKGLERROR
 			}
 			else
 			{
-				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, (const GLuint *) varray_buf_elements);
+				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, (const GLuint *) varray_buf_elements3i);
 				CHECKGLERROR
 			}
 			qglUnlockArraysEXT();
@@ -730,7 +732,7 @@ void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 		}
 		else
 		{
-			qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, (const GLuint *) varray_buf_elements);
+			qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, (const GLuint *) varray_buf_elements3i);
 			CHECKGLERROR
 		}
 	}
@@ -862,12 +864,38 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 		unit = gl_state.units + i;
 		if (unit->t1d != m->tex1d[i] || unit->t2d != m->tex[i] || unit->t3d != m->tex3d[i] || unit->tcubemap != m->texcubemap[i])
 		{
-			if (gl_state.unit != i)
+			if (m->tex3d[i] || m->texcubemap[i])
 			{
-				qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
+				if (!unit->arrayis3d)
+				{
+					unit->arrayis3d = true;
+					if (gl_state.clientunit != i)
+					{
+						qglClientActiveTexture(GL_TEXTURE0_ARB + (gl_state.clientunit = i));CHECKGLERROR
+					}
+					qglTexCoordPointer(3, GL_FLOAT, sizeof(float[3]), varray_buf_texcoord3f[i]);
+				}
+				if (!unit->arrayenabled)
+				{
+					unit->arrayenabled = true;
+					if (gl_state.clientunit != i)
+					{
+						qglClientActiveTexture(GL_TEXTURE0_ARB + (gl_state.clientunit = i));CHECKGLERROR
+					}
+					qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+				}
 			}
-			if (m->tex1d[i] || m->tex[i] || m->tex3d[i] || m->texcubemap[i])
+			else if (m->tex1d[i] || m->tex[i])
 			{
+				if (unit->arrayis3d)
+				{
+					unit->arrayis3d = false;
+					if (gl_state.clientunit != i)
+					{
+						qglClientActiveTexture(GL_TEXTURE0_ARB + (gl_state.clientunit = i));CHECKGLERROR
+					}
+					qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), varray_buf_texcoord2f[i]);
+				}
 				if (!unit->arrayenabled)
 				{
 					unit->arrayenabled = true;
@@ -890,34 +918,12 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 					qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 				}
 			}
-			combinergb = m->texcombinergb[i];
-			combinealpha = m->texcombinealpha[i];
-			if (!combinergb)
-				combinergb = GL_MODULATE;
-			if (!combinealpha)
-				combinealpha = GL_MODULATE;
-			if (unit->combinergb != combinergb)
-			{
-				unit->combinergb = combinergb;
-				if (gl_combine.integer)
-				{
-					qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, unit->combinergb);CHECKGLERROR
-				}
-				else
-				{
-					qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, unit->combinergb);CHECKGLERROR
-				}
-			}
-			if (unit->combinealpha != combinealpha)
-			{
-				unit->combinealpha = combinealpha;
-				if (gl_combine.integer)
-				{
-					qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA_ARB, unit->combinealpha);CHECKGLERROR
-				}
-			}
 			if (unit->t1d != m->tex1d[i])
 			{
+				if (gl_state.unit != i)
+				{
+					qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
+				}
 				if (m->tex1d[i])
 				{
 					if (unit->t1d == 0)
@@ -932,6 +938,10 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 			}
 			if (unit->t2d != m->tex[i])
 			{
+				if (gl_state.unit != i)
+				{
+					qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
+				}
 				if (m->tex[i])
 				{
 					if (unit->t2d == 0)
@@ -946,6 +956,10 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 			}
 			if (unit->t3d != m->tex3d[i])
 			{
+				if (gl_state.unit != i)
+				{
+					qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
+				}
 				if (m->tex3d[i])
 				{
 					if (unit->t3d == 0)
@@ -960,6 +974,10 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 			}
 			if (unit->tcubemap != m->texcubemap[i])
 			{
+				if (gl_state.unit != i)
+				{
+					qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
+				}
 				if (m->texcubemap[i])
 				{
 					if (unit->tcubemap == 0)
@@ -971,6 +989,40 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 						qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
 				}
 				qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, (unit->tcubemap = m->texcubemap[i]));CHECKGLERROR
+			}
+		}
+		combinergb = m->texcombinergb[i];
+		if (!combinergb)
+			combinergb = GL_MODULATE;
+		if (unit->combinergb != combinergb)
+		{
+			if (gl_state.unit != i)
+			{
+				qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
+			}
+			unit->combinergb = combinergb;
+			if (gl_combine.integer)
+			{
+				qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, unit->combinergb);CHECKGLERROR
+			}
+			else
+			{
+				qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, unit->combinergb);CHECKGLERROR
+			}
+		}
+		combinealpha = m->texcombinealpha[i];
+		if (!combinealpha)
+			combinealpha = GL_MODULATE;
+		if (unit->combinealpha != combinealpha)
+		{
+			if (gl_state.unit != i)
+			{
+				qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
+			}
+			unit->combinealpha = combinealpha;
+			if (gl_combine.integer)
+			{
+				qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA_ARB, unit->combinealpha);CHECKGLERROR
 			}
 		}
 		scale = max(m->texrgbscale[i], 1);
@@ -1125,4 +1177,55 @@ void SCR_UpdateScreen (void)
 		R_TimeReport("finish");
 	}
 }
+
+// utility functions
+
+void R_Mesh_CopyVertex3f(const float *vertex3f, int numverts)
+{
+	if (mesh_var)
+	{
+		float *out = varray_vertex3f;
+		while (--numverts)
+		{
+			*out++ = *vertex3f++;
+			*out++ = *vertex3f++;
+			*out++ = *vertex3f++;
+		}
+	}
+	else
+		memcpy(varray_vertex3f, vertex3f, numverts * sizeof(float[3]));
+}
+
+void R_Mesh_CopyTexCoord2f(int tmu, const float *texcoord2f, int numverts)
+{
+	if (mesh_var)
+	{
+		float *out = varray_texcoord2f[tmu];
+		while (--numverts)
+		{
+			*out++ = *texcoord2f++;
+			*out++ = *texcoord2f++;
+		}
+	}
+	else
+		memcpy(varray_texcoord2f[tmu], texcoord2f, numverts * sizeof(float[2]));
+}
+
+void R_Mesh_CopyColor4f(const float *color4f, int numverts)
+{
+	if (mesh_var)
+	{
+		float *out = varray_color4f;
+		while (--numverts)
+		{
+			*out++ = *color4f++;
+			*out++ = *color4f++;
+			*out++ = *color4f++;
+			*out++ = *color4f++;
+		}
+	}
+	else
+		memcpy(varray_color4f, color4f, numverts * sizeof(float[4]));
+}
+
 

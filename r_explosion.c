@@ -29,7 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define EXPLOSIONFADESTART (1.5f)
 #define EXPLOSIONFADERATE (3.0f)
 
-float explosiontexcoords[EXPLOSIONVERTS][4];
+float explosiontexcoord2f[EXPLOSIONVERTS][2];
 int explosiontris[EXPLOSIONTRIS][3];
 int explosionnoiseindex[EXPLOSIONVERTS];
 vec3_t explosionpoint[EXPLOSIONVERTS];
@@ -112,8 +112,8 @@ int R_ExplosionVert(int column, int row)
 	explosionspherevertvel[i][0] = explosionpoint[i][0] * EXPLOSIONSTARTVELOCITY;
 	explosionspherevertvel[i][1] = explosionpoint[i][1] * EXPLOSIONSTARTVELOCITY;
 	explosionspherevertvel[i][2] = explosionpoint[i][2] * EXPLOSIONSTARTVELOCITY;
-	explosiontexcoords[i][0] = (float) column / (float) EXPLOSIONGRID;
-	explosiontexcoords[i][1] = (float) row / (float) EXPLOSIONGRID;
+	explosiontexcoord2f[i][0] = (float) column / (float) EXPLOSIONGRID;
+	explosiontexcoord2f[i][1] = (float) row / (float) EXPLOSIONGRID;
 	// top and bottom rows are all one position...
 	if (row == 0 || row == EXPLOSIONGRID)
 		column = 0;
@@ -176,7 +176,7 @@ void R_NewExplosion(vec3_t org)
 void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 {
 	int i, numtriangles, numverts;
-	float *c, *v, diff[3], centerdir[3], ifog, alpha, dist;
+	float *c, diff[3], centerdir[3], ifog, alpha, dist;
 	rmeshstate_t m;
 	const explosion_t *e;
 	e = calldata1;
@@ -193,19 +193,14 @@ void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 	GL_UseColorArray();
 	R_Mesh_GetSpace(numverts);
 
-	for (i = 0, v = varray_vertex;i < numverts;i++, v += 4)
-	{
-		v[0] = e->vert[i][0];
-		v[1] = e->vert[i][1];
-		v[2] = e->vert[i][2];
-	}
-	memcpy(varray_texcoord[0], explosiontexcoords, numverts * sizeof(float[4]));
+	R_Mesh_CopyVertex3f(e->vert[0], numverts);
+	R_Mesh_CopyTexCoord2f(0, explosiontexcoord2f[0], numverts);
 	alpha = e->alpha;
 	VectorSubtract(r_origin, e->origin, centerdir);
 	VectorNormalizeFast(centerdir);
 	if (fogenabled)
 	{
-		for (i = 0, c = varray_color;i < EXPLOSIONVERTS;i++, c += 4)
+		for (i = 0, c = varray_color4f;i < EXPLOSIONVERTS;i++, c += 4)
 		{
 			VectorSubtract(e->vert[i], e->origin, diff);
 			VectorNormalizeFast(diff);
@@ -229,7 +224,7 @@ void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 	}
 	else
 	{
-		for (i = 0, c = varray_color;i < EXPLOSIONVERTS;i++, c += 4)
+		for (i = 0, c = varray_color4f;i < EXPLOSIONVERTS;i++, c += 4)
 		{
 			VectorSubtract(e->vert[i], e->origin, diff);
 			VectorNormalizeFast(diff);
