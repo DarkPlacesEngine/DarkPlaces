@@ -564,10 +564,13 @@ qboolean Host_FilterTime (double time)
 		// default to sys_ticrate (server framerate - presumably low) unless we
 		// have a good reason to run faster
 		timecap = sys_ticrate.value;
-		if (cl_avidemo.value >= 0.1f)
-			timecap = 1.0 / (double)cl_avidemo.value;
-		else if (vid_activewindow)
-			timecap = 1.0 / host_maxfps.value;
+		if (cls.state != ca_dedicated)
+		{
+			if (cl_avidemo.value >= 0.1f)
+				timecap = 1.0 / (double)cl_avidemo.value;
+			else if (vid_activewindow)
+				timecap = 1.0 / host_maxfps.value;
+		}
 
 		timeleft = oldrealtime + timecap - realtime;
 		if (timeleft > 0)
