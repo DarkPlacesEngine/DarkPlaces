@@ -27,6 +27,7 @@
 -d (joe hill) dpmod: make grapple off-hand (joe hill)
 -d (mashakos) darkplaces editlights: add r_editlights_editall command, same as _edit but affects all lights (mashakos)
 -d (metlslime) darkplaces video: add vid_vsync cvar and also to options menu (metlslime)
+-d dpmod: up nail limit to 500 (scar3crow)
 -f (Cruaich) darkplaces client: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
 -f (Mitchell) darkplaces: add crude DML model loading with animation list (ask Riot for dml library) (Mitchell)
 -f (Option42) darkplaces: crashes on radeon in rare situations that seem to occur in dpmod dm 7 mode? (Option42)
@@ -141,7 +142,6 @@
 0 dpmod: test for any unnamed death messages that might be happening
 0 dpmod: try making ball lightning mortar shamblers (scar3crow)
 0 dpmod: try not adding gravity when onground to see if it gets rid of ramp sliding (Midgar)
-0 dpmod: up nail limit to 500 (scar3crow)
 0 dpzoo.map: flame jet
 0 dpzoo.map: func_train with sky brushes
 0 dpzoo.map: particlecube
