@@ -323,7 +323,8 @@ typedef struct portalrecursioninfo_s
 {
 	int exact;
 	int numfrustumplanes;
-	float nradius;
+	vec3_t boxmins;
+	vec3_t boxmaxs;
 	qbyte *surfacemark;
 	qbyte *leafmark;
 	model_t *model;
@@ -336,6 +337,7 @@ portalrecursioninfo_t;
 void Portal_RecursiveFlow_ExactMarkSurfaces(portalrecursioninfo_t *info, int *mark, int nummarksurfaces, int firstclipplane, int numclipplanes)
 {
 	int i, j, *elements;
+	vec3_t trimins, trimaxs;
 	msurface_t *surf;
 	surfmesh_t *surfmesh;
 	for (i = 0;i < nummarksurfaces;i++, mark++)
@@ -367,9 +369,18 @@ void Portal_RecursiveFlow_ExactMarkSurfaces(portalrecursioninfo_t *info, int *ma
 						VectorCopy((surfmesh->vertex3f + elements[0] * 3), trianglepoints[0]);
 						VectorCopy((surfmesh->vertex3f + elements[1] * 3), trianglepoints[1]);
 						VectorCopy((surfmesh->vertex3f + elements[2] * 3), trianglepoints[2]);
-						if (PointInfrontOfTriangle(info->eye, trianglepoints[0], trianglepoints[1], trianglepoints[2])
-						 && Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, trianglepoints[0], 3, &portaltemppoints2[0][0], 256) >= 3)
-							break;
+						if (PointInfrontOfTriangle(info->eye, trianglepoints[0], trianglepoints[1], trianglepoints[2]))
+						{
+							trimins[0] = min(trianglepoints[0][0], min(trianglepoints[1][0], trianglepoints[2][0]));
+							trimaxs[0] = max(trianglepoints[0][0], max(trianglepoints[1][0], trianglepoints[2][0]));
+							trimins[1] = min(trianglepoints[0][1], min(trianglepoints[1][1], trianglepoints[2][1]));
+							trimaxs[1] = max(trianglepoints[0][1], max(trianglepoints[1][1], trianglepoints[2][1]));
+							trimins[2] = min(trianglepoints[0][2], min(trianglepoints[1][2], trianglepoints[2][2]));
+							trimaxs[2] = max(trianglepoints[0][2], max(trianglepoints[1][2], trianglepoints[2][2]));
+							if (BoxesOverlap(trimins, trimaxs, info->boxmins, info->boxmaxs))
+								if (Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, trianglepoints[0], 3, &portaltemppoints2[0][0], 256) >= 3)
+									break;
+						}
 					}
 					if (j < surfmesh->numtriangles)
 						break;
@@ -412,9 +423,9 @@ void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, int first
 	// follow portals into other leafs
 	for (p = leaf->portals;p;p = p->next)
 	{
-		// only flow through portals facing away from the viewer
+		// only flow through portals facing the viewer
 		dist = PlaneDiff(info->eye, (&p->plane));
-		if (dist < 0 && dist >= info->nradius)
+		if (dist < 0 && BoxesOverlap(p->past->mins, p->past->maxs, info->boxmins, info->boxmaxs))
 		{
 			newpoints = Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, (float *) p->points, p->numpoints, &portaltemppoints2[0][0], 256);
 			if (newpoints < 3)
@@ -433,8 +444,8 @@ void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, int first
 				newplanes = &portalplanes[firstclipplane + numclipplanes];
 				for (prev = newpoints - 1, i = 0;i < newpoints;prev = i, i++)
 				{
-					VectorSubtract(info->eye, portaltemppoints2[i], v1);
-					VectorSubtract(portaltemppoints2[prev], portaltemppoints2[i], v2);
+					VectorSubtract(portaltemppoints2[prev], portaltemppoints2[i], v1);
+					VectorSubtract(info->eye, portaltemppoints2[i], v2);
 					CrossProduct(v1, v2, newplanes[i].normal);
 					VectorNormalizeFast(newplanes[i].normal);
 					newplanes[i].dist = DotProduct(info->eye, newplanes[i].normal);
@@ -470,7 +481,7 @@ void Portal_RecursiveFindLeafForFlow(portalrecursioninfo_t *info, mnode_t *node)
 	}
 }
 
-void Portal_Visibility(model_t *model, const vec3_t eye, qbyte *leafmark, qbyte *surfacemark, const mplane_t *frustumplanes, int numfrustumplanes, int exact, float radius, float *updateleafsmins, float *updateleafsmaxs)
+void Portal_Visibility(model_t *model, const vec3_t eye, qbyte *leafmark, qbyte *surfacemark, const mplane_t *frustumplanes, int numfrustumplanes, int exact, const float *boxmins, const float *boxmaxs, float *updateleafsmins, float *updateleafsmaxs)
 {
 	int i;
 	portalrecursioninfo_t info;
@@ -500,7 +511,8 @@ void Portal_Visibility(model_t *model, const vec3_t eye, qbyte *leafmark, qbyte 
 	ranoutofportalplanes = false;
 	ranoutofportals = false;
 
-	info.nradius = -radius;
+	VectorCopy(boxmins, info.boxmins);
+	VectorCopy(boxmaxs, info.boxmaxs);
 	info.exact = exact;
 	info.surfacemark = surfacemark;
 	info.leafmark = leafmark;

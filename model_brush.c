@@ -2308,9 +2308,9 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 	// create the new portal by generating a polygon for the node plane,
 	// and clipping it by all of the other portals(which came from nodes above this one)
 	nodeportal = AllocPortal();
-	nodeportal->plane = *node->plane;
+	nodeportal->plane = *plane;
 
-	nodeportalwinding = Winding_NewFromPlane(node->plane->normal[0], node->plane->normal[1], node->plane->normal[2], node->plane->dist);
+	nodeportalwinding = Winding_NewFromPlane(nodeportal->plane.normal[0], nodeportal->plane.normal[1], nodeportal->plane.normal[2], nodeportal->plane.dist);
 	side = 0;	// shut up compiler warning
 	for (portal = (portal_t *)node->portals;portal;portal = portal->next[side])
 	{
