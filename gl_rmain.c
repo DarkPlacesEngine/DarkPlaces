@@ -543,7 +543,7 @@ static int blendviewpolyindex[3] = {0, 1, 2};
 static void R_BlendView(void)
 {
 	rmeshinfo_t m;
-	float tvxyz[3][4];
+	float tvxyz[3][4], r;
 
 	if (!r_render.integer)
 		return;
@@ -565,15 +565,17 @@ static void R_BlendView(void)
 	m.cg = r_refdef.viewblend[1];
 	m.cb = r_refdef.viewblend[2];
 	m.ca = r_refdef.viewblend[3];
-	tvxyz[0][0] = r_origin[0] + vpn[0] * 8 - vright[0] * 16 - vup[0] * 16;
-	tvxyz[0][1] = r_origin[1] + vpn[1] * 8 - vright[1] * 16 - vup[1] * 16;
-	tvxyz[0][2] = r_origin[2] + vpn[2] * 8 - vright[2] * 16 - vup[2] * 16;
-	tvxyz[1][0] = tvxyz[0][0] + vup[0] * 48;
-	tvxyz[1][1] = tvxyz[0][1] + vup[1] * 48;
-	tvxyz[1][2] = tvxyz[0][2] + vup[2] * 48;
-	tvxyz[2][0] = tvxyz[0][0] + vright[0] * 48;
-	tvxyz[2][1] = tvxyz[0][1] + vright[1] * 48;
-	tvxyz[2][2] = tvxyz[0][2] + vright[2] * 48;
+	r = 64000;
+	tvxyz[0][0] = r_origin[0] + vpn[0] * 1.5 - vright[0] * r - vup[0] * r;
+	tvxyz[0][1] = r_origin[1] + vpn[1] * 1.5 - vright[1] * r - vup[1] * r;
+	tvxyz[0][2] = r_origin[2] + vpn[2] * 1.5 - vright[2] * r - vup[2] * r;
+	r *= 3;
+	tvxyz[1][0] = tvxyz[0][0] + vup[0] * r;
+	tvxyz[1][1] = tvxyz[0][1] + vup[1] * r;
+	tvxyz[1][2] = tvxyz[0][2] + vup[2] * r;
+	tvxyz[2][0] = tvxyz[0][0] + vright[0] * r;
+	tvxyz[2][1] = tvxyz[0][1] + vright[1] * r;
+	tvxyz[2][2] = tvxyz[0][2] + vright[2] * r;
 	R_Mesh_Draw(&m);
 
 	/*

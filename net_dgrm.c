@@ -1242,7 +1242,7 @@ static qsocket_t *_Datagram_Connect (char *host)
 		goto ErrorReturn;
 
 	// send the connection request
-	Con_Printf("trying...\n"); CL_UpdateScreen ();
+	Con_Printf("trying...\n");CL_UpdateScreen();CL_UpdateScreen();
 	start_time = net_time;
 
 	for (reps = 0; reps < 3; reps++)
@@ -1306,7 +1306,7 @@ static qsocket_t *_Datagram_Connect (char *host)
 		while (ret == 0 && (SetNetTime() - start_time) < 2.5);
 		if (ret)
 			break;
-		Con_Printf("still trying...\n"); CL_UpdateScreen ();
+		Con_Printf("still trying...\n");CL_UpdateScreen();CL_UpdateScreen();
 		start_time = SetNetTime();
 	}
 

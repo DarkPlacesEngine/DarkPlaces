@@ -469,16 +469,16 @@ void Con_SafePrintf (char *fmt, ...)
 {
 	va_list		argptr;
 	char		msg[1024];
-	int			temp;
+	//int			temp;
 
 	va_start (argptr,fmt);
 	vsprintf (msg,fmt,argptr);
 	va_end (argptr);
 
-	temp = scr_disabled_for_loading;
-	scr_disabled_for_loading = true;
+	//temp = scr_disabled_for_loading;
+	//scr_disabled_for_loading = true;
 	Con_Printf ("%s", msg);
-	scr_disabled_for_loading = temp;
+	//scr_disabled_for_loading = temp;
 }
 
 

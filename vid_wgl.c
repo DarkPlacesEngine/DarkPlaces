@@ -249,7 +249,8 @@ qboolean VID_SetFullDIBMode (int modenum)
 
 int VID_SetMode (int modenum)
 {
-	int				original_mode, temp;
+	int				original_mode
+	//int				temp;
 	qboolean		stat = 0;
     MSG				msg;
 
@@ -257,8 +258,8 @@ int VID_SetMode (int modenum)
 		Sys_Error ("Bad video mode\n");
 
 // so Con_Printfs don't mess us up by forcing vid and snd updates
-	temp = scr_disabled_for_loading;
-	scr_disabled_for_loading = true;
+//	temp = scr_disabled_for_loading;
+//	scr_disabled_for_loading = true;
 
 	CDAudio_Pause ();
 
@@ -301,7 +302,7 @@ int VID_SetMode (int modenum)
 	VID_UpdateWindowStatus ();
 
 	CDAudio_Resume ();
-	scr_disabled_for_loading = temp;
+//	scr_disabled_for_loading = temp;
 
 	if (!stat)
 		Sys_Error ("Couldn't set video mode");
