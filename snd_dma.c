@@ -251,8 +251,8 @@ void S_Init(void)
 
 	SND_InitScaletable ();
 
-	ambient_sfx[AMBIENT_WATER] = S_PrecacheSound ("ambience/water1.wav", false);
-	ambient_sfx[AMBIENT_SKY] = S_PrecacheSound ("ambience/wind2.wav", false);
+	ambient_sfx[AMBIENT_WATER] = S_PrecacheSound ("ambience/water1.wav", false, true);
+	ambient_sfx[AMBIENT_SKY] = S_PrecacheSound ("ambience/wind2.wav", false, true);
 
 	total_channels = MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS;	// no statics
 	memset(channels, 0, MAX_CHANNELS * sizeof(channel_t));
@@ -271,21 +271,25 @@ S_GetCached
 
 =========
 */
-sfx_t *S_GetCached (const char *name)
+sfx_t *S_GetCached (const char *name, qboolean stdpath)
 {
+	char namebuffer [MAX_QPATH];
+	size_t len;
 	int i;
 
 	if (!snd_initialized.integer)
 		return NULL;
 
 	if (!name)
-		Host_Error("S_IsCached: NULL\n");
+		Host_Error("S_GetCached: NULL");
 
-	if (strlen(name) >= MAX_QPATH)
-		Host_Error("Sound name too long: %s", name);
+	// Add the default sound directory to the path
+	len = snprintf (namebuffer, sizeof (namebuffer), stdpath ? "sound/%s" : "%s", name);
+	if (len >= sizeof (namebuffer))
+		Host_Error ("S_GetCached: sound name too long (%s)", name);
 
 	for(i = 0;i < num_sfx;i++)
-		if(!strcmp(known_sfx[i].name, name))
+		if(!strcmp(known_sfx[i].name, namebuffer))
 			return &known_sfx[i];
 
 	return NULL;
@@ -297,31 +301,22 @@ S_FindName
 
 ==================
 */
-sfx_t *S_FindName (char *name)
+sfx_t *S_FindName (const char *name, qboolean stdpath)
 {
-	int i;
 	sfx_t *sfx;
 
-	if (!snd_initialized.integer)
-		return NULL;
+	sfx = S_GetCached (name, stdpath);
 
-	if (!name)
-		Host_Error("S_FindName: NULL\n");
+	// If we haven't allocated a sfx_t struct for it yet
+	if (sfx == NULL)
+	{
+		if (num_sfx == MAX_SFX)
+			Sys_Error ("S_FindName: out of sfx_t");
 
-	if (strlen(name) >= MAX_QPATH)
-		Host_Error("Sound name too long: %s", name);
-
-// see if already loaded
-	for (i = 0;i < num_sfx;i++)
-		if (!strcmp(known_sfx[i].name, name))
-			return &known_sfx[i];
-
-	if (num_sfx == MAX_SFX)
-		Sys_Error("S_FindName: out of sfx_t");
-
-	sfx = &known_sfx[num_sfx++];
-	memset(sfx, 0, sizeof(*sfx));
-	strlcpy (sfx->name, name, sizeof (sfx->name));
+		sfx = &known_sfx[num_sfx++];
+		memset (sfx, 0, sizeof(*sfx));
+		snprintf (sfx->name, sizeof (sfx->name), stdpath ? "sound/%s" : "%s", name);
+	}
 	return sfx;
 }
 
@@ -332,11 +327,11 @@ S_TouchSound
 
 ==================
 */
-void S_TouchSound (char *name)
+void S_TouchSound (const char *name, qboolean stdpath)
 {
 	sfx_t *sfx;
 
-	sfx = S_FindName (name);
+	sfx = S_FindName (name, stdpath);
 
 	// Set the "used" flag for this sound
 	if (sfx != NULL)
@@ -387,14 +382,14 @@ S_PrecacheSound
 
 ==================
 */
-sfx_t *S_PrecacheSound (char *name, int complain)
+sfx_t *S_PrecacheSound (const char *name, qboolean complain, qboolean stdpath)
 {
 	sfx_t *sfx;
 
 	if (!snd_initialized.integer)
 		return NULL;
 
-	sfx = S_FindName(name);
+	sfx = S_FindName (name, stdpath);
 
 	if (!nosound.integer && snd_precache.integer)
 		S_LoadSound(sfx, complain);
@@ -1038,7 +1033,7 @@ static void S_Play_Common(float fvol, float attenuation)
 			snprintf(name, sizeof(name), "%s.wav", Cmd_Argv(i));
 		else
 			strlcpy(name, Cmd_Argv(i), sizeof(name));
-		sfx = S_PrecacheSound(name, true);
+		sfx = S_PrecacheSound(name, true, true);
 
 		// If we need to get the volume from the command line
 		if (fvol == -1.0f)
@@ -1096,7 +1091,7 @@ void S_SoundList(void)
 }
 
 
-void S_LocalSound (char *sound)
+void S_LocalSound (const char *sound, qboolean stdpath)
 {
 	sfx_t	*sfx;
 	int		ch_ind;
@@ -1104,7 +1099,7 @@ void S_LocalSound (char *sound)
 	if (!snd_initialized.integer || nosound.integer)
 		return;
 
-	sfx = S_PrecacheSound (sound, true);
+	sfx = S_PrecacheSound (sound, true, stdpath);
 	if (!sfx)
 	{
 		Con_Printf("S_LocalSound: can't precache %s\n", sound);

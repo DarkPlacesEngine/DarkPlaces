@@ -97,7 +97,7 @@ const char* Log_Timestamp (const char *desc)
 	// Build the time stamp (ex: "Wed Jun 30 21:49:08 1993");
 	time (&crt_time);
 	crt_tm = localtime (&crt_time);
-	strftime (timestring, sizeof (timestring), "%a %b %d %T %Y", crt_tm);
+	strftime (timestring, sizeof (timestring), "%a %b %d %H:%M:%S %Y", crt_tm);
 
 	if (desc != NULL)
 		snprintf (timestamp, sizeof (timestamp), "====== %s (%s) ======\n", desc, timestring);
@@ -472,7 +472,7 @@ void Con_PrintToHistory(const char *txt)
 	if (txt[0] == 1)
 	{
 		mask = 128;		// go to colored text
-		S_LocalSound ("misc/talk.wav");
+		S_LocalSound ("misc/talk.wav", true);
 	// play talk wav
 		txt++;
 	}

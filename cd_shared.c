@@ -110,14 +110,14 @@ void CDAudio_Play (qbyte track, qboolean looping)
 	CDAudio_Stop ();
 
 	// Try playing a fake track (sound file) first
-	sfx = S_PrecacheSound (va ("cdtracks/track%02u.wav", track), false);
+	sfx = S_PrecacheSound (va ("cdtracks/track%02u.wav", track), false, true);
 	if (sfx != NULL)
 	{
 		faketrack = S_StartSound (-1, 0, sfx, vec3_origin, cdvolume, 0);
 		if (faketrack != -1)
 		{
 			if (looping)
-			S_LoopChannel (faketrack, true);
+				S_LoopChannel (faketrack, true);
 			Con_DPrintf ("Fake CD track %u playing...\n", track);
 		}
 	}

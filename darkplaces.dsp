@@ -424,10 +424,6 @@ SOURCE=.\wad.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\wavefile.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\winding.c
 # End Source File
 # Begin Source File
@@ -701,10 +697,6 @@ SOURCE=.\vid.h
 # Begin Source File
 
 SOURCE=.\wad.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\wavefile.h
 # End Source File
 # Begin Source File
 

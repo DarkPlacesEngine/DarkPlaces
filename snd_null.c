@@ -44,7 +44,7 @@ void S_Shutdown (void)
 {
 }
 
-void S_TouchSound (char *sample)
+void S_TouchSound (const char *sample, qboolean stdpath)
 {
 }
 
@@ -93,12 +93,12 @@ void S_SetChannelVolume (unsigned int ch_ind, float fvol)
 {
 }
 
-sfx_t *S_GetCached(const char *name)
+sfx_t *S_GetCached(const char *name, qboolean stdpath)
 {
 	return NULL;
 }
 
-sfx_t *S_PrecacheSound (char *sample, int complain)
+sfx_t *S_PrecacheSound (const char *sample, qboolean complain, qboolean stdpath)
 {
 	return NULL;
 }
@@ -115,7 +115,7 @@ void S_ExtraUpdate (void)
 {
 }
 
-void S_LocalSound (char *s)
+void S_LocalSound (const char *s, qboolean stdpath)
 {
 }
 
