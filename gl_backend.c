@@ -493,7 +493,7 @@ typedef struct gltextureunit_s
 {
 	int t1d, t2d, t3d, tcubemap;
 	int arrayenabled, arrayis3d;
-	void *pointer_texcoord;
+	const void *pointer_texcoord;
 	float rgbscale, alphascale;
 	int combinergb, combinealpha;
 	// FIXME: add more combine stuff
@@ -515,8 +515,8 @@ static struct
 	int lockrange_first;
 	int lockrange_count;
 	int pointervertexcount;
-	void *pointer_vertex;
-	void *pointer_color;
+	const void *pointer_vertex;
+	const void *pointer_color;
 }
 gl_state;
 
@@ -1052,7 +1052,7 @@ void R_Mesh_Matrix(const matrix4x4_t *matrix)
 // sets up the requested state
 void R_Mesh_MainState(const rmeshstate_t *m)
 {
-	void *p;
+	const void *p;
 	BACKENDACTIVECHECK
 
 	if (gl_state.blendfunc1 != m->blendfunc1 || gl_state.blendfunc2 != m->blendfunc2)
@@ -1152,7 +1152,7 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 	int i, combinergb, combinealpha;
 	float scale;
 	gltextureunit_t *unit;
-	void *p;
+	const void *p;
 
 	BACKENDACTIVECHECK
 

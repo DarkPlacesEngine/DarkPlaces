@@ -40,9 +40,9 @@ typedef struct
 	int texcombinergb[MAX_TEXTUREUNITS]; // works with or without combine for some operations
 	int texcombinealpha[MAX_TEXTUREUNITS]; // does nothing without combine
 	int pointervertexcount;
-	float *pointer_vertex;
-	float *pointer_color;
-	float *pointer_texcoord[MAX_TEXTUREUNITS];
+	const float *pointer_vertex;
+	const float *pointer_color;
+	const float *pointer_texcoord[MAX_TEXTUREUNITS];
 }
 rmeshstate_t;
 
