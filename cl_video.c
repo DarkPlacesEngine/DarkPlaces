@@ -53,7 +53,7 @@ static qboolean WakeVideo( clvideo_t * video )
 	if( !video->suspended )
 		return true;
 	video->suspended = false;
-	
+
 	if( video->state == CLVIDEO_FIRSTFRAME )
 		if( !OpenStream( video ) ) {
 			video->state = CLVIDEO_UNUSED;
@@ -66,6 +66,7 @@ static qboolean WakeVideo( clvideo_t * video )
 
 	// update starttime
 	video->starttime += realtime - video->lasttime;
+
 	return true;
 }
 
@@ -73,8 +74,9 @@ static clvideo_t* OpenVideo( clvideo_t *video, char *filename, char *name, int o
 {
 	strncpy( video->filename, filename, MAX_QPATH );
 	video->ownertag = owner;
-	strncpy( video->cpif.name, CLVIDEOPREFIX, MAX_QPATH );
-	strncat( video->cpif.name, name, MAX_QPATH - sizeof( CLVIDEOPREFIX ) );
+	if( strncmp( name, CLVIDEOPREFIX, sizeof( CLVIDEOPREFIX ) - 1 ) )
+		return NULL;
+	strncpy( video->cpif.name, name, MAX_QPATH );
 
 	if( !OpenStream( video ) )
 		return NULL;
@@ -122,38 +124,23 @@ clvideo_t* CL_GetVideo( char *name )
 	if( video->suspended )
 		if( !WakeVideo( video ) )
 			return NULL;
+		else if( video->state == CLVIDEO_RESETONWAKEUP ) 
+			video->framenum = -1;
+
 	video->lasttime = realtime;
 
 	return video;
 }
 
-void CL_StartVideo( clvideo_t * video )
+void CL_SetVideoState( clvideo_t *video, clvideostate_t state )
 {
 	if( !video )
 		return;
 
-	video->starttime = video->lasttime = realtime;
-	video->framenum = -1;
-	video->state = CLVIDEO_PLAY;
-}
-
-void CL_LoopVideo( clvideo_t * video )
-{
-	if( !video )
-		return;
-
-	video->starttime = video->lasttime = realtime;
-	video->framenum = -1;
-	video->state = CLVIDEO_LOOP;
-}
-
-void CL_PauseVideo( clvideo_t * video )
-{
-	if( !video )
-		return;
-
-	video->state = CLVIDEO_PAUSE;
 	video->lasttime = realtime;
+	video->state = state;
+	if( state == CLVIDEO_FIRSTFRAME )
+		CL_RestartVideo( video );
 }
 
 void CL_RestartVideo( clvideo_t *video )
@@ -163,16 +150,10 @@ void CL_RestartVideo( clvideo_t *video )
     
 	video->starttime = video->lasttime = realtime;
 	video->framenum = -1;
-}
 
-void CL_StopVideo( clvideo_t * video )
-{
-	if( !video )
-		return;
-
-	video->lasttime = realtime;
-	video->framenum = -1;
-	video->state = CLVIDEO_FIRSTFRAME;
+	dpvsimpledecode_close( video->stream );
+	if( !OpenStream( video ) )
+		video->state = CLVIDEO_UNUSED;
 }
 
 void CL_CloseVideo( clvideo_t * video )
@@ -180,14 +161,14 @@ void CL_CloseVideo( clvideo_t * video )
 	if( !video || video->state == CLVIDEO_UNUSED )
 		return;
 
-	video->state = CLVIDEO_UNUSED;
-	
 	if( !video->suspended || video->state != CLVIDEO_FIRSTFRAME )
 		dpvsimpledecode_close( video->stream );
 	if( !video->suspended ) {
 		Mem_Free( video->imagedata );
 		R_FreeTexture( video->cpif.tex );
 	}
+
+	video->state = CLVIDEO_UNUSED;
 }
 
 static void VideoFrame( clvideo_t *video )
@@ -207,10 +188,8 @@ static void VideoFrame( clvideo_t *video )
 				cl_videogmask, cl_videobmask, cl_videobytesperpixel, 
 				cl_videobytesperpixel * video->cpif.width ) 
 				) { // finished?
-				video->framenum = -1;
-				if( video->state == CLVIDEO_LOOP )
-						video->starttime = realtime;
-				else if( video->state == CLVIDEO_PLAY )
+				CL_RestartVideo( video );
+				if( video->state == CLVIDEO_PLAY )
 						video->state = CLVIDEO_FIRSTFRAME;
 				return;
 			}
@@ -267,12 +246,13 @@ void CL_VideoStart(char *filename)
 {
 	if( videoarray->state != CLVIDEO_UNUSED )
 		CL_CloseVideo( videoarray );
-	if( !OpenVideo( videoarray, filename, filename, 0 ) )
+	if( !OpenVideo( videoarray, filename, va( CLVIDEOPREFIX "%s", filename ), 0 ) )
 		return;
 
 	cl_videoplaying = true;
 
-	CL_StartVideo( videoarray );
+	CL_SetVideoState( videoarray, CLVIDEO_PLAY );
+	CL_RestartVideo( videoarray );
 }
 
 void CL_VideoStop(void)

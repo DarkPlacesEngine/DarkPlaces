@@ -3,16 +3,20 @@
 #define CL_VIDEO_H
 
 #define MAXCLVIDEOS		64 + 1 // 1 video is reserved for the cinematic mode
-#define CLVIDEOPREFIX	"_"
+#define CLVIDEOPREFIX	"_video/"
 #define CLTHRESHOLD		2.0
 
-typedef enum clvideostate_s
+#define MENUOWNER		1
+
+typedef enum clvideostate_e
 {
 	CLVIDEO_UNUSED,
 	CLVIDEO_PLAY,
 	CLVIDEO_LOOP,
 	CLVIDEO_PAUSE,
 	CLVIDEO_FIRSTFRAME,
+	CLVIDEO_RESETONWAKEUP,
+	CLVIDEO_STATECOUNT
 } clvideostate_t;
 
 typedef struct clvideo_s
@@ -40,11 +44,9 @@ typedef struct clvideo_s
 
 clvideo_t*	CL_OpenVideo( char *filename, char *name, int owner );
 clvideo_t*	CL_GetVideo( char *name );
-void		CL_StartVideo( clvideo_t * video );
-void		CL_LoopVideo( clvideo_t * video );
-void		CL_PauseVideo( clvideo_t * video );
-void		CL_StopVideo( clvideo_t * video );
+void		CL_SetVideoState( clvideo_t *video, clvideostate_t state );
 void		CL_RestartVideo( clvideo_t *video );
+
 void		CL_CloseVideo( clvideo_t * video );
 void		CL_PurgeOwner( int owner );
 
