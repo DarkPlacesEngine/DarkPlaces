@@ -1391,20 +1391,23 @@ void SV_Physics (void)
 		if (pr_global_struct->force_retouch)
 			SV_LinkEdict (ent, true);	// force retouch even for stationary
 
-		if (i <= svs.maxclients && i > 0)
+		if (i <= svs.maxclients)
 		{
-			if (!svs.clients[i-1].spawned)
-				continue;
-			// connected slot
-			// call standard client pre-think
-			SV_CheckVelocity (ent);
-			pr_global_struct->time = sv.time;
-			pr_global_struct->self = EDICT_TO_PROG(ent);
-			PR_ExecuteProgram (pr_global_struct->PlayerPreThink, "QC function PlayerPreThink is missing");
-			SV_CheckVelocity (ent);
+			if (i > 0)
+			{
+				if (!svs.clients[i-1].spawned)
+					continue;
+				// connected slot
+				// call standard client pre-think
+				SV_CheckVelocity (ent);
+				pr_global_struct->time = sv.time;
+				pr_global_struct->self = EDICT_TO_PROG(ent);
+				PR_ExecuteProgram (pr_global_struct->PlayerPreThink, "QC function PlayerPreThink is missing");
+				SV_CheckVelocity (ent);
+			}
 		}
 		else if (sv_freezenonclients.integer)
-			break;
+			continue;
 
 		// LordHavoc: merged client and normal entity physics
 		switch ((int) ent->v->movetype)
@@ -1469,7 +1472,7 @@ void SV_Physics (void)
 			break;
 		}
 
-		if (i > 0 && i <= svs.maxclients && !ent->e->free)
+		if (i <= svs.maxclients && i > 0 && !ent->e->free)
 		{
 			SV_CheckVelocity (ent);
 
@@ -1496,7 +1499,8 @@ void SV_Physics (void)
 		PR_ExecuteProgram ((func_t)(EndFrameQC - pr_functions), "");
 	}
 
-	sv.time += sv.frametime;
+	if (!sv_freezenonclients.integer)
+		sv.time += sv.frametime;
 }
 
 
