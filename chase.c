@@ -47,7 +47,14 @@ void TraceLine (vec3_t start, vec3_t end, vec3_t impact)
 	memset (&trace, 0, sizeof(trace));
 	SV_RecursiveHullCheck (cl.worldmodel->hulls, 0, 0, 1, start, end, &trace);
 
-	VectorCopy (trace.endpos, impact);
+	if (trace.fraction < 1)
+	{
+		VectorCopy (trace.endpos, impact);
+	}
+	else
+	{
+		VectorCopy (end, impact);
+	}
 }
 
 void Chase_Update (void)
