@@ -1608,7 +1608,7 @@ void NetConn_Init(void)
 		if (i >= 0 && i < 65536)
 		{
 			Con_Printf("-port option used, setting port cvar to %i\n", i);
-			Cvar_SetQuick(&sv_netport, i);
+			Cvar_SetValueQuick(&sv_netport, i);
 		}
 		else
 			Con_Printf("-port option used, but %i is not a valid port number\n", i);
