@@ -20,8 +20,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "image.h"
 
-void (*vid_menudrawfn)(void);
-void (*vid_menukeyfn)(int key);
 
 #define TYPE_DEMO 1
 #define TYPE_GAME 2
@@ -174,7 +172,7 @@ void M_DrawCharacter (float cx, float cy, int num)
 	DrawQ_String(menu_x + cx, menu_y + cy, temp, 1, 8, 8, 1, 1, 1, 1, 0);
 }
 
-void M_Print (float cx, float cy, char *str)
+void M_Print (float cx, float cy, const char *str)
 {
 	DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 1, 1, 1, 0);
 }
@@ -1389,7 +1387,7 @@ void M_Options_Draw (void)
 	M_Print(16, y, "    Customize controls");y += 8;
 	M_Print(16, y, "         Go to console");y += 8;
 	M_Print(16, y, "     Reset to defaults");y += 8;
-	M_ItemPrint(16, y, "         Video Options", vid_menudrawfn != NULL);y += 8;
+	M_Print(16, y, "         Video Options");y += 8;
 	M_Print(16, y, "       Effects Options");y += 8;
 	M_Print(16, y, "         2D Resolution");M_DrawSlider(220, y, scr_2dresolution.value);y += 8;
 	M_Print(16, y, "           Screen size");M_DrawSlider(220, y, (scr_viewsize.value - 30) /(120 - 30));y += 8;
@@ -1443,8 +1441,7 @@ void M_Options_Key (int k)
 			Cbuf_AddText ("exec default.cfg\n");
 			break;
 		case 3:
-			if (vid_menudrawfn)
-				M_Menu_Video_f ();
+			M_Menu_Video_f ();
 			break;
 		case 4:
 			M_Menu_Options_Effects_f ();
@@ -1956,6 +1953,10 @@ void M_Keys_Key (int k)
 //=============================================================================
 /* VIDEO MENU */
 
+#define VIDEO_ITEMS 5
+
+int video_cursor;
+
 void M_Menu_Video_f (void)
 {
 	key_dest = key_menu;
@@ -1966,13 +1967,163 @@ void M_Menu_Video_f (void)
 
 void M_Video_Draw (void)
 {
-	(*vid_menudrawfn) ();
+	cachepic_t	*p;
+	float y;
+	const char* string;
+
+	M_DrawPic(16, 4, "gfx/qplaque.lmp");
+	p = Draw_CachePic("gfx/vidmodes.lmp");
+	M_DrawPic((320-p->width)/2, 4, "gfx/vidmodes.lmp");
+
+	y = 40;
+
+	// Resolution
+	M_Print(16, y, "            Resolution");
+	switch (vid_width.integer)
+	{
+		case 512: string = "512x384"; break;
+		case 800: string = "800x600"; break;
+		case 1024: string = "1024x768"; break;
+		case 1280: string = "1280x960"; break;
+		default: string = "640x480";
+	}
+	M_Print (220, y, string);
+	y += 8;
+
+	// Bits per pixel
+	M_Print(16, y, "        Bits per pixel");
+	if (vid_bitsperpixel.integer == 32)
+		M_Print (220, y, "32");
+	else
+		M_Print (220, y, "16");
+	y += 8;
+
+	M_Print(16, y, "            Fullscreen");M_DrawCheckbox(220, y, vid_fullscreen.integer);y += 8;
+	M_Print(16, y, "               Stencil");M_DrawCheckbox(220, y, vid_stencil.integer);y += 8;
+
+	M_Print(220, y, "Apply");
+
+	// Cursor
+	M_DrawCharacter(200, 40 + video_cursor*8, 12+((int)(realtime*4)&1));
 }
 
 
+void M_Menu_Video_AdjustSliders (int dir)
+{
+	S_LocalSound ("misc/menu3.wav");
+
+	switch (video_cursor)
+	{
+		// Resolution
+		case 0:
+		{
+			int new_width, new_height;
+			if (dir < 0)
+				switch (vid_width.integer)
+				{
+					case 1280: new_width = 1024; break;
+					case 1024: new_width = 800; break;
+					case 640: new_width = 512; break;
+					case 512: new_width = 1280; break;
+					default: new_width = 640;
+				}
+			else
+				switch (vid_width.integer)
+				{
+					case 1280: new_width = 512; break;
+					case 1024: new_width = 1280; break;
+					case 800: new_width = 1024; break;
+					case 640: new_width = 800; break;
+					default: new_width = 640;
+				}
+			
+			switch (new_width)
+			{
+				case 1280: new_height = 960; break;
+				case 1024: new_height = 768; break;
+				case 800: new_height = 600; break;
+				case 512: new_height = 384; break;
+				default: new_height = 480;
+			}
+
+			Cvar_SetValueQuick (&vid_width, new_width);
+			Cvar_SetValueQuick (&vid_height, new_height);
+			break;
+		}
+
+		// Bits per pixel
+		case 1:
+			if (vid_bitsperpixel.integer == 32)
+				Cvar_SetValueQuick (&vid_bitsperpixel, 16);
+			else
+				Cvar_SetValueQuick (&vid_bitsperpixel, 32);
+			break;
+		case 2:
+			Cvar_SetValueQuick (&vid_fullscreen, !vid_fullscreen.integer);
+			break;
+		case 3:
+			Cvar_SetValueQuick (&vid_stencil, !vid_stencil.integer);
+			break;
+	}
+}
+
+extern int current_vid_fullscreen;
+extern int current_vid_width;
+extern int current_vid_height;
+extern int current_vid_bitsperpixel;
+extern int current_vid_stencil;
+
 void M_Video_Key (int key)
 {
-	(*vid_menukeyfn) (key);
+	switch (key)
+	{
+		case K_ESCAPE:
+			// vid_shared.c has a copy of the current video config. We restore it
+			Cvar_SetValueQuick(&vid_fullscreen, current_vid_fullscreen);
+			Cvar_SetValueQuick(&vid_width, current_vid_width);
+			Cvar_SetValueQuick(&vid_height, current_vid_height);
+			Cvar_SetValueQuick(&vid_bitsperpixel, current_vid_bitsperpixel);
+			Cvar_SetValueQuick(&vid_stencil, current_vid_stencil);
+
+			S_LocalSound ("misc/menu1.wav");
+			M_Menu_Options_f ();
+			break;
+
+		case K_ENTER:
+			m_entersound = true;
+			switch (video_cursor)
+			{
+				case 4:
+					Cbuf_AddText ("vid_restart\n");
+					M_Menu_Options_f ();
+					break;
+				default:
+					M_Menu_Video_AdjustSliders (1);
+			}
+			break;
+
+		case K_UPARROW:
+			S_LocalSound ("misc/menu1.wav");
+			video_cursor--;
+			if (video_cursor < 0)
+				video_cursor = VIDEO_ITEMS-1;
+			break;
+
+		case K_DOWNARROW:
+			S_LocalSound ("misc/menu1.wav");
+			video_cursor++;
+			if (video_cursor >= VIDEO_ITEMS)
+				video_cursor = 0;
+			break;
+
+		case K_LEFTARROW:
+			M_Menu_Video_AdjustSliders (-1);
+			break;
+
+		case K_RIGHTARROW:
+			M_Menu_Video_AdjustSliders (1);
+			break;
+	}
 }
 
 //=============================================================================
@@ -2780,7 +2931,7 @@ void M_GameOptions_Draw (void)
 			M_Print (x, 146, " More than 64 players?? ");
 			M_Print (x, 154, "  First, question your  ");
 			M_Print (x, 162, "   sanity, then email   ");
-			M_Print (x, 170, "   havoc@inside3d.com   ");
+			M_Print (x, 170, " havoc@telefragged.com  ");
 		}
 		else
 		{
