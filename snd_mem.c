@@ -17,7 +17,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
-// snd_mem.c: sound caching
+
 
 #include "quakedef.h"
 
@@ -32,173 +32,111 @@ ResampleSfx
 */
 size_t ResampleSfx (const qbyte *in_data, size_t in_length, const snd_format_t* in_format, qbyte *out_data, const char* sfxname)
 {
-	int samplefrac, fracstep;
-	size_t i, srcsample, srclength, outcount;
-
-	// this is usually 0.5 (128), 1 (256), or 2 (512)
-	fracstep = ((double) in_format->speed / (double) shm->format.speed) * 256.0;
+	size_t srclength, outcount, i;
 
 	srclength = in_length * in_format->channels;
+	outcount = (double)in_length * shm->format.speed / in_format->speed;
 
-	outcount = (double) in_length * (double) shm->format.speed / (double) in_format->speed;
 	Con_DPrintf("ResampleSfx: resampling sound \"%s\" from %dHz to %dHz (%d samples to %d samples)\n",
 				sfxname, in_format->speed, shm->format.speed, in_length, outcount);
 
-// resample / decimate to the current source rate
-
-	if (fracstep == 256)
+	// Trivial case (direct transfer)
+	if (in_format->speed == shm->format.speed)
 	{
-		// fast case for direct transfer
-		if (in_format->width == 1) // 8bit
-			for (i = 0;i < srclength;i++)
-				((signed char *)out_data)[i] = ((unsigned char *)in_data)[i] - 128;
-		else //if (sb->width == 2) // 16bit
-			for (i = 0;i < srclength;i++)
-				((short *)out_data)[i] = ((short *)in_data)[i];
+		if (in_format->width == 1)
+		{
+			for (i = 0; i < srclength; i++)
+				((signed char*)out_data)[i] = in_data[i] - 128;
+		}
+		else  // if (in_format->width == 2)
+			memcpy (out_data, in_data, srclength * in_format->width);
 	}
+
+	// General case (linear interpolation with a fixed-point fractional
+	// step, 18-bit integer part and 14-bit fractional part)
+	// Can handle up to 2^18 (262144) samples per second (> 96KHz stereo)
+	#define FRACTIONAL_BITS 14
+	#define FRACTIONAL_MASK ((1 << FRACTIONAL_BITS) - 1)
+	#define INTEGER_BITS (sizeof(samplefrac)*8 - FRACTIONAL_BITS)
 	else
 	{
-		// general case
-		samplefrac = 0;
-		if ((fracstep & 255) == 0) // skipping points on perfect multiple
+		const unsigned int fracstep = (double)in_format->speed / shm->format.speed * (1 << FRACTIONAL_BITS);
+		size_t remain_in = srclength, total_out = 0;
+		unsigned int samplefrac;
+		const qbyte *in_ptr = in_data;
+		qbyte *out_ptr = out_data;
+
+		// Check that we can handle one second of that sound
+		if (in_format->speed * in_format->channels > (1 << INTEGER_BITS))
+			Sys_Error ("ResampleSfx: sound quality too high for resampling (%uHz, %u channel(s))",
+					   in_format->speed, in_format->channels);
+
+		// We work 1 sec at a time to make sure we don't accumulate any
+		// significant error when adding "fracstep" over several seconds, and
+		// also to be able to handle very long sounds.
+		while (total_out < outcount)
 		{
-			srcsample = 0;
-			fracstep >>= 8;
-			if (in_format->width == 2)
-			{
-				short *out = (short*)out_data;
-				const short *in = (const short*)in_data;
-				if (in_format->channels == 2) // LordHavoc: stereo sound support
-				{
-					fracstep <<= 1;
-					for (i=0 ; i<outcount ; i++)
-					{
-						*out++ = in[srcsample  ];
-						*out++ = in[srcsample+1];
-						srcsample += fracstep;
-					}
-				}
-				else
-				{
-					for (i=0 ; i<outcount ; i++)
-					{
-						*out++ = in[srcsample];
-						srcsample += fracstep;
-					}
-				}
-			}
+			size_t tmpcount;
+
+			samplefrac = 0;
+
+			// If more than 1 sec of sound remains to be converted
+			if (outcount - total_out > shm->format.speed)
+				tmpcount = shm->format.speed;
 			else
+				tmpcount = outcount - total_out;
+
+			// Convert up to 1 sec of sound
+			for (i = 0; i < tmpcount; i++)
 			{
-				signed char *out = out_data;
-				const unsigned char *in = in_data;
-				if (in_format->channels == 2)
+				unsigned int j = 0;
+				unsigned int srcsample = (samplefrac >> FRACTIONAL_BITS) * in_format->channels;
+				int a, b;
+
+				// 16 bit samples
+				if (in_format->width == 2)
 				{
-					fracstep <<= 1;
-					for (i=0 ; i<outcount ; i++)
+					for (j = 0; j < in_format->channels; j++, srcsample++)
 					{
-						*out++ = in[srcsample  ] - 128;
-						*out++ = in[srcsample+1] - 128;
-						srcsample += fracstep;
+						// No value to interpolate with?
+						if (srcsample + in_format->channels < remain_in)
+						{
+							a = ((const short*)in_ptr)[srcsample];
+							b = ((const short*)in_ptr)[srcsample + in_format->channels];
+							*((short*)out_ptr) = (((b - a) * (samplefrac & FRACTIONAL_MASK)) >> FRACTIONAL_BITS) + a;
+						}
+						else
+							*((short*)out_ptr) = ((const short*)in_ptr)[srcsample];
+
+						out_ptr += sizeof (short);
 					}
 				}
-				else
+				// 8 bit samples
+				else  // if (in_format->width == 1)
 				{
-					for (i=0 ; i<outcount ; i++)
+					for (j = 0; j < in_format->channels; j++, srcsample++)
 					{
-						*out++ = in[srcsample  ] - 128;
-						srcsample += fracstep;
+						// No more value to interpolate with?
+						if (srcsample + in_format->channels < remain_in)
+						{
+							a = ((const qbyte*)in_ptr)[srcsample] - 128;
+							b = ((const qbyte*)in_ptr)[srcsample + in_format->channels] - 128;
+							*((signed char*)out_ptr) = (((b - a) * (samplefrac & FRACTIONAL_MASK)) >> FRACTIONAL_BITS) + a;
+						}
+						else
+							*((signed char*)out_ptr) = ((const qbyte*)in_ptr)[srcsample] - 128;
+
+						out_ptr += sizeof (signed char);
 					}
 				}
+
+				samplefrac += fracstep;
 			}
-		}
-		else
-		{
-			int sample;
-			int a, b;
-			if (in_format->width == 2)
-			{
-				short *out = (short*)out_data;
-				const short *in = (const short*)in_data;
-				if (in_format->channels == 2)
-				{
-					for (i=0 ; i<outcount ; i++)
-					{
-						srcsample = (samplefrac >> 8) << 1;
-						a = in[srcsample  ];
-						if (srcsample+2 >= srclength)
-							b = 0;
-						else
-							b = in[srcsample+2];
-						sample = (((b - a) * (samplefrac & 255)) >> 8) + a;
-						*out++ = (short) sample;
-						a = in[srcsample+1];
-						if (srcsample+2 >= srclength)
-							b = 0;
-						else
-							b = in[srcsample+3];
-						sample = (((b - a) * (samplefrac & 255)) >> 8) + a;
-						*out++ = (short) sample;
-						samplefrac += fracstep;
-					}
-				}
-				else
-				{
-					for (i=0 ; i<outcount ; i++)
-					{
-						srcsample = samplefrac >> 8;
-						a = in[srcsample  ];
-						if (srcsample+1 >= srclength)
-							b = 0;
-						else
-							b = in[srcsample+1];
-						sample = (((b - a) * (samplefrac & 255)) >> 8) + a;
-						*out++ = (short) sample;
-						samplefrac += fracstep;
-					}
-				}
-			}
-			else
-			{
-				signed char *out = out_data;
-				const unsigned char *in = in_data;
-				if (in_format->channels == 2)
-				{
-					for (i=0 ; i<outcount ; i++)
-					{
-						srcsample = (samplefrac >> 8) << 1;
-						a = (int) in[srcsample  ] - 128;
-						if (srcsample+2 >= srclength)
-							b = 0;
-						else
-							b = (int) in[srcsample+2] - 128;
-						sample = (((b - a) * (samplefrac & 255)) >> 8) + a;
-						*out++ = (signed char) sample;
-						a = (int) in[srcsample+1] - 128;
-						if (srcsample+2 >= srclength)
-							b = 0;
-						else
-							b = (int) in[srcsample+3] - 128;
-						sample = (((b - a) * (samplefrac & 255)) >> 8) + a;
-						*out++ = (signed char) sample;
-						samplefrac += fracstep;
-					}
-				}
-				else
-				{
-					for (i=0 ; i<outcount ; i++)
-					{
-						srcsample = samplefrac >> 8;
-						a = (int) in[srcsample  ] - 128;
-						if (srcsample+1 >= srclength)
-							b = 0;
-						else
-							b = (int) in[srcsample+1] - 128;
-						sample = (((b - a) * (samplefrac & 255)) >> 8) + a;
-						*out++ = (signed char) sample;
-						samplefrac += fracstep;
-					}
-				}
-			}
+
+			// Update the counters and the buffer position
+			remain_in -= in_format->speed * in_format->channels;
+			in_ptr += in_format->speed * in_format->channels * in_format->width;
+			total_out += tmpcount;
 		}
 	}
 
