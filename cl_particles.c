@@ -1629,10 +1629,10 @@ static void R_InitParticleTexture (void)
 			m = 0;
 			for (y = 0;y < PARTICLETEXTURESIZE;y++)
 			{
-				dy = (y - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f+1);
+				dy = (y - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
 				for (x = 0;x < PARTICLETEXTURESIZE;x++)
 				{
-					dx = (x - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f+1);
+					dx = (x - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
 					d = (noise2[y][x] - 128) * 3 + 192;
 					if (d > 0)
 						d = d * (1-(dx*dx+dy*dy));
@@ -1656,10 +1656,10 @@ static void R_InitParticleTexture (void)
 		f2 = 255.0f * ((15.0f - i) / 15.0f);
 		for (y = 0;y < PARTICLETEXTURESIZE;y++)
 		{
-			dy = (y - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f+1);
+			dy = (y - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
 			for (x = 0;x < PARTICLETEXTURESIZE;x++)
 			{
-				dx = (x - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f+1);
+				dx = (x - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
 				f = f2 * (1.0 - 4.0f * fabs(radius - sqrt(dx*dx+dy*dy)));
 				data[y][x][3] = (int) (bound(0.0f, f, 255.0f));
 			}
@@ -1671,10 +1671,10 @@ static void R_InitParticleTexture (void)
 	memset(&data[0][0][0], 255, sizeof(data));
 	for (y = 0;y < PARTICLETEXTURESIZE;y++)
 	{
-		dy = (y - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f+1);
+		dy = (y - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
 		for (x = 0;x < PARTICLETEXTURESIZE;x++)
 		{
-			dx = (x - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f+1);
+			dx = (x - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
 			d = 256 * (1 - (dx*dx+dy*dy));
 			d = bound(0, d, 255);
 			data[y][x][3] = (qbyte) d;
@@ -1688,7 +1688,7 @@ static void R_InitParticleTexture (void)
 	VectorNormalize(light);
 	for (y = 0;y < PARTICLETEXTURESIZE;y++)
 	{
-		dy = (y - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f+1);
+		dy = (y - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
 		// stretch upper half of bubble by +50% and shrink lower half by -50%
 		// (this gives an elongated teardrop shape)
 		if (dy > 0.5f)
@@ -1697,7 +1697,7 @@ static void R_InitParticleTexture (void)
 			dy = (dy - 0.5f) / 1.5f;
 		for (x = 0;x < PARTICLETEXTURESIZE;x++)
 		{
-			dx = (x - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f+1);
+			dx = (x - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
 			// shrink bubble width to half
 			dx *= 2.0f;
 			data[y][x][3] = shadebubble(dx, dy, light);
@@ -1711,10 +1711,10 @@ static void R_InitParticleTexture (void)
 	VectorNormalize(light);
 	for (y = 0;y < PARTICLETEXTURESIZE;y++)
 	{
-		dy = (y - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f+1);
+		dy = (y - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
 		for (x = 0;x < PARTICLETEXTURESIZE;x++)
 		{
-			dx = (x - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f+1);
+			dx = (x - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
 			data[y][x][3] = shadebubble(dx, dy, light);
 		}
 	}
@@ -1778,11 +1778,11 @@ static void R_InitParticleTexture (void)
 	m = 0;
 	for (y = 0;y < 64;y++)
 	{
-		dy = (y - 0.5f*64) / (64*0.5f+1);
+		dy = (y - 0.5f*64) / (64*0.5f-1);
 		for (x = 0;x < 16;x++)
 		{
-			dx = (x - 0.5f*16) / (16*0.5f+1);
-			d = (1 - (dx*dx)) * noise3[y][x];
+			dx = (x - 0.5f*16) / (16*0.5f-2);
+			d = (1 - sqrt(fabs(dx))) * noise3[y][x];
 			data2[y][x][0] = data2[y][x][1] = data2[y][x][2] = (qbyte) bound(0, d, 255);
 			data2[y][x][3] = 255;
 		}
@@ -1954,8 +1954,8 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 		R_CalcBeam_Vertex3f(particle_vertex3f, p->org, p->vel2, p->scalex);
 		VectorSubtract(p->vel2, p->org, up);
 		VectorNormalizeFast(up);
-		v[0] = DotProduct(p->org, up) * (1.0f / 64.0f) - cl.time * 0.25;
-		v[1] = DotProduct(p->vel2, up) * (1.0f / 64.0f) - cl.time * 0.25;
+		v[0] = DotProduct(p->org, up) * (1.0f / 64.0f);
+		v[1] = DotProduct(p->vel2, up) * (1.0f / 64.0f);
 		particle_texcoord2f[0] = 1;particle_texcoord2f[1] = v[0];
 		particle_texcoord2f[2] = 0;particle_texcoord2f[3] = v[0];
 		particle_texcoord2f[4] = 0;particle_texcoord2f[5] = v[1];
