@@ -125,7 +125,6 @@ extern void R_Shadow_EditLights_Init(void);
 #define SHADOWSTAGE_STENCILTWOSIDE 3
 
 int r_shadowstage = SHADOWSTAGE_NONE;
-int r_shadow_reloadlights = false;
 
 mempool_t *r_shadow_mempool;
 
@@ -159,6 +158,9 @@ rtexture_t *r_shadow_blankbumptexture;
 rtexture_t *r_shadow_blankglosstexture;
 rtexture_t *r_shadow_blankwhitetexture;
 
+// lights are reloaded when this changes
+char r_shadow_mapname[MAX_QPATH];
+
 // used only for light filters (cubemaps)
 rtexturepool_t *r_shadow_filters_texturepool;
 
@@ -188,21 +190,68 @@ cvar_t r_shadow_staticworldlights = {0, "r_shadow_staticworldlights", "1"};
 cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1"};
 cvar_t r_shadow_visiblevolumes = {0, "r_shadow_visiblevolumes", "0"};
 cvar_t gl_ext_stenciltwoside = {0, "gl_ext_stenciltwoside", "1"};
+cvar_t r_editlights = {0, "r_editlights", "0"};
+cvar_t r_editlights_cursordistance = {0, "r_editlights_distance", "1024"};
+cvar_t r_editlights_cursorpushback = {0, "r_editlights_pushback", "0"};
+cvar_t r_editlights_cursorpushoff = {0, "r_editlights_pushoff", "4"};
+cvar_t r_editlights_cursorgrid = {0, "r_editlights_grid", "4"};
+cvar_t r_editlights_quakelightsizescale = {CVAR_SAVE, "r_editlights_quakelightsizescale", "0.8"};
+cvar_t r_editlights_rtlightssizescale = {CVAR_SAVE, "r_editlights_rtlightssizescale", "0.7"};
+cvar_t r_editlights_rtlightscolorscale = {CVAR_SAVE, "r_editlights_rtlightscolorscale", "2"};
 
 int c_rt_lights, c_rt_clears, c_rt_scissored;
 int c_rt_shadowmeshes, c_rt_shadowtris, c_rt_lightmeshes, c_rt_lighttris;
 int c_rtcached_shadowmeshes, c_rtcached_shadowtris;
 
+float r_shadow_attenpower, r_shadow_attenscale;
+
+float varray_vertex3f2[65536*3];
+
+rtlight_t *r_shadow_compilingrtlight;
+dlight_t *r_shadow_worldlightchain;
+dlight_t *r_shadow_selectedlight;
+vec3_t r_editlights_cursorlocation;
+
+rtexture_t *lighttextures[5];
+
+extern int con_vislines;
+
+typedef struct cubemapinfo_s
+{
+	char basename[64];
+	rtexture_t *texture;
+}
+cubemapinfo_t;
+
+#define MAX_CUBEMAPS 256
+static int numcubemaps;
+static cubemapinfo_t cubemaps[MAX_CUBEMAPS];
+
+void R_Shadow_UncompileWorldLights(void);
 void R_Shadow_ClearWorldLights(void);
 void R_Shadow_SaveWorldLights(void);
 void R_Shadow_LoadWorldLights(void);
 void R_Shadow_LoadLightsFile(void);
 void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void);
+void R_Shadow_EditLights_Reload_f(void);
+void R_Shadow_ValidateCvars(void);
+static void R_Shadow_MakeTextures(void);
+void R_Shadow_DrawWorldLightShadowVolume(matrix4x4_t *matrix, dlight_t *light);
 
 void r_shadow_start(void)
 {
 	// allocate vertex processing arrays
-	r_shadow_mempool = Mem_AllocPool("R_Shadow");
+	numcubemaps = 0;
+	r_shadow_normalcubetexture = NULL;
+	r_shadow_attenuation2dtexture = NULL;
+	r_shadow_attenuation3dtexture = NULL;
+	r_shadow_blankbumptexture = NULL;
+	r_shadow_blankglosstexture = NULL;
+	r_shadow_blankwhitetexture = NULL;
+	r_shadow_texturepool = NULL;
+	r_shadow_filters_texturepool = NULL;
+	R_Shadow_ValidateCvars();
+	R_Shadow_MakeTextures();
 	maxshadowelements = 0;
 	shadowelements = NULL;
 	maxvertexupdate = 0;
@@ -220,22 +269,12 @@ void r_shadow_start(void)
 	r_shadow_buffer_numsurfacepvsbytes = 0;
 	r_shadow_buffer_surfacepvs = NULL;
 	r_shadow_buffer_surfacelist = NULL;
-	r_shadow_normalcubetexture = NULL;
-	r_shadow_attenuation2dtexture = NULL;
-	r_shadow_attenuation3dtexture = NULL;
-	r_shadow_blankbumptexture = NULL;
-	r_shadow_blankglosstexture = NULL;
-	r_shadow_blankwhitetexture = NULL;
-	r_shadow_texturepool = NULL;
-	r_shadow_filters_texturepool = NULL;
-	R_Shadow_ClearWorldLights();
-	r_shadow_reloadlights = true;
 }
 
 void r_shadow_shutdown(void)
 {
-	R_Shadow_ClearWorldLights();
-	r_shadow_reloadlights = true;
+	R_Shadow_UncompileWorldLights();
+	numcubemaps = 0;
 	r_shadow_normalcubetexture = NULL;
 	r_shadow_attenuation2dtexture = NULL;
 	r_shadow_attenuation3dtexture = NULL;
@@ -245,29 +284,44 @@ void r_shadow_shutdown(void)
 	R_FreeTexturePool(&r_shadow_texturepool);
 	R_FreeTexturePool(&r_shadow_filters_texturepool);
 	maxshadowelements = 0;
+	if (shadowelements)
+		Mem_Free(shadowelements);
 	shadowelements = NULL;
 	maxvertexupdate = 0;
+	if (vertexupdate)
+		Mem_Free(vertexupdate);
 	vertexupdate = NULL;
+	if (vertexremap)
+		Mem_Free(vertexremap);
 	vertexremap = NULL;
 	vertexupdatenum = 0;
 	maxshadowmark = 0;
 	numshadowmark = 0;
+	if (shadowmark)
+		Mem_Free(shadowmark);
 	shadowmark = NULL;
+	if (shadowmarklist)
+		Mem_Free(shadowmarklist);
 	shadowmarklist = NULL;
 	shadowmarkcount = 0;
 	r_shadow_buffer_numclusterpvsbytes = 0;
+	if (r_shadow_buffer_clusterpvs)
+		Mem_Free(r_shadow_buffer_clusterpvs);
 	r_shadow_buffer_clusterpvs = NULL;
+	if (r_shadow_buffer_clusterlist)
+		Mem_Free(r_shadow_buffer_clusterlist);
 	r_shadow_buffer_clusterlist = NULL;
 	r_shadow_buffer_numsurfacepvsbytes = 0;
+	if (r_shadow_buffer_surfacepvs)
+		Mem_Free(r_shadow_buffer_surfacepvs);
 	r_shadow_buffer_surfacepvs = NULL;
+	if (r_shadow_buffer_surfacelist)
+		Mem_Free(r_shadow_buffer_surfacelist);
 	r_shadow_buffer_surfacelist = NULL;
-	Mem_FreePool(&r_shadow_mempool);
 }
 
 void r_shadow_newmap(void)
 {
-	R_Shadow_ClearWorldLights();
-	r_shadow_reloadlights = true;
 }
 
 void R_Shadow_Help_f(void)
@@ -338,6 +392,25 @@ void R_Shadow_Init(void)
 	}
 	Cmd_AddCommand("r_shadow_help", R_Shadow_Help_f);
 	R_Shadow_EditLights_Init();
+	r_shadow_mempool = Mem_AllocPool("R_Shadow");
+	r_shadow_worldlightchain = NULL;
+	maxshadowelements = 0;
+	shadowelements = NULL;
+	maxvertexupdate = 0;
+	vertexupdate = NULL;
+	vertexremap = NULL;
+	vertexupdatenum = 0;
+	maxshadowmark = 0;
+	numshadowmark = 0;
+	shadowmark = NULL;
+	shadowmarklist = NULL;
+	shadowmarkcount = 0;
+	r_shadow_buffer_numclusterpvsbytes = 0;
+	r_shadow_buffer_clusterpvs = NULL;
+	r_shadow_buffer_clusterlist = NULL;
+	r_shadow_buffer_numsurfacepvsbytes = 0;
+	r_shadow_buffer_surfacepvs = NULL;
+	r_shadow_buffer_surfacelist = NULL;
 	R_RegisterModule("R_Shadow", r_shadow_start, r_shadow_shutdown, r_shadow_newmap);
 }
 
@@ -535,8 +608,6 @@ int R_Shadow_ConstructShadowVolume(int innumvertices, int innumtris, const int *
 	return tris;
 }
 
-float varray_vertex3f2[65536*3];
-
 void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, float projectdistance, int nummarktris, const int *marktris)
 {
 	int tris, outverts;
@@ -620,7 +691,6 @@ void R_Shadow_RenderVolume(int numvertices, int numtriangles, const float *verte
 	GL_LockArrays(0, 0);
 }
 
-float r_shadow_attenpower, r_shadow_attenscale;
 static void R_Shadow_MakeTextures(void)
 {
 	int x, y, z, d, side;
@@ -749,14 +819,19 @@ static void R_Shadow_MakeTextures(void)
 	Mem_Free(data);
 }
 
-void R_Shadow_Stage_Begin(void)
+void R_Shadow_ValidateCvars(void)
 {
-	rmeshstate_t m;
-
 	if (r_shadow_texture3d.integer && !gl_texture3d)
 		Cvar_SetValueQuick(&r_shadow_texture3d, 0);
 	if (gl_ext_stenciltwoside.integer && !gl_support_stenciltwoside)
 		Cvar_SetValueQuick(&gl_ext_stenciltwoside, 0);
+}
+
+void R_Shadow_Stage_Begin(void)
+{
+	rmeshstate_t m;
+
+	R_Shadow_ValidateCvars();
 
 	if (!r_shadow_attenuation2dtexture
 	 || (!r_shadow_attenuation3dtexture && r_shadow_texture3d.integer)
@@ -778,22 +853,6 @@ void R_Shadow_Stage_Begin(void)
 	c_rt_lights = c_rt_clears = c_rt_scissored = 0;
 	c_rt_shadowmeshes = c_rt_shadowtris = c_rt_lightmeshes = c_rt_lighttris = 0;
 	c_rtcached_shadowmeshes = c_rtcached_shadowtris = 0;
-}
-
-void R_Shadow_LoadWorldLightsIfNeeded(void)
-{
-	if (r_shadow_reloadlights && cl.worldmodel)
-	{
-		R_Shadow_ClearWorldLights();
-		r_shadow_reloadlights = false;
-		R_Shadow_LoadWorldLights();
-		if (r_shadow_worldlightchain == NULL)
-		{
-			R_Shadow_LoadLightsFile();
-			if (r_shadow_worldlightchain == NULL)
-				R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite();
-		}
-	}
 }
 
 void R_Shadow_Stage_ShadowVolumes(void)
@@ -1862,8 +1921,6 @@ void R_RTLight_UpdateFromDLight(rtlight_t *rtlight, const dlight_t *light, int i
 	rtlight->lightmap_subtract = 1.0f / rtlight->lightmap_cullradius2;
 }
 
-rtlight_t *r_shadow_compilingrtlight;
-
 // compiles rtlight geometry
 // (undone by R_FreeCompiledRTLight, which R_UpdateLight calls)
 void R_RTLight_Compile(rtlight_t *rtlight)
@@ -1971,9 +2028,12 @@ void R_RTLight_Uncompile(rtlight_t *rtlight)
 	}
 }
 
-int shadowframecount = 0;
-
-void R_Shadow_DrawWorldLightShadowVolume(matrix4x4_t *matrix, dlight_t *light);
+void R_Shadow_UncompileWorldLights(void)
+{
+	dlight_t *light;
+	for (light = r_shadow_worldlightchain;light;light = light->next)
+		R_RTLight_Uncompile(&light->rtlight);
+}
 
 void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 {
@@ -1990,18 +2050,24 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 	shadowmesh_t *mesh;
 	rmeshstate_t m;
 
-	if (d_lightstylevalue[rtlight->style] <= 0)
-		return;
+	// loading is done before visibility checks because loading should happen
+	// all at once at the start of a level, not when it stalls gameplay.
+	// (especially important to benchmarks)
+	if (rtlight->isstatic && !rtlight->compiled && r_shadow_staticworldlights.integer)
+		R_RTLight_Compile(rtlight);
+	if (rtlight->cubemapname[0])
+		cubemaptexture = R_Shadow_Cubemap(rtlight->cubemapname);
+	else
+		cubemaptexture = NULL;
+
 	cullmins[0] = rtlight->shadoworigin[0] - rtlight->radius;
 	cullmins[1] = rtlight->shadoworigin[1] - rtlight->radius;
 	cullmins[2] = rtlight->shadoworigin[2] - rtlight->radius;
 	cullmaxs[0] = rtlight->shadoworigin[0] + rtlight->radius;
 	cullmaxs[1] = rtlight->shadoworigin[1] + rtlight->radius;
 	cullmaxs[2] = rtlight->shadoworigin[2] + rtlight->radius;
-	if (R_CullBox(cullmins, cullmaxs))
+	if (d_lightstylevalue[rtlight->style] <= 0)
 		return;
-	if (rtlight->isstatic && !rtlight->compiled && r_shadow_staticworldlights.integer)
-		R_RTLight_Compile(rtlight);
 	numclusters = 0;
 	clusterlist = NULL;
 	clusterpvs = NULL;
@@ -2009,6 +2075,8 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 	surfacelist = NULL;
 	if (rtlight->compiled && r_shadow_staticworldlights.integer)
 	{
+		// compiled light, world available and can receive realtime lighting
+		// retrieve cluster information
 		numclusters = rtlight->static_numclusters;
 		clusterlist = rtlight->static_clusterlist;
 		clusterpvs = rtlight->static_clusterpvs;
@@ -2017,6 +2085,11 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 	}
 	else if (cl.worldmodel && cl.worldmodel->GetLightInfo)
 	{
+		// dynamic light, world available and can receive realtime lighting
+		// if the light box is offscreen, skip it right away
+		if (R_CullBox(cullmins, cullmaxs))
+			return;
+		// calculate lit surfaces and clusters
 		R_Shadow_EnlargeClusterBuffer(cl.worldmodel->brush.num_pvsclusters);
 		R_Shadow_EnlargeSurfaceBuffer(cl.worldmodel->nummodelsurfaces); 
 		cl.worldmodel->GetLightInfo(&cl_entities[0].render, rtlight->shadoworigin, rtlight->radius, cullmins, cullmaxs, r_shadow_buffer_clusterlist, r_shadow_buffer_clusterpvs, &numclusters, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces);
@@ -2024,6 +2097,10 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 		clusterpvs = r_shadow_buffer_clusterpvs;
 		surfacelist = r_shadow_buffer_surfacelist;
 	}
+	// if the reduced cluster bounds are offscreen, skip it
+	if (R_CullBox(cullmins, cullmaxs))
+		return;
+	// check if light is illuminating any visible clusters
 	if (numclusters)
 	{
 		for (i = 0;i < numclusters;i++)
@@ -2032,8 +2109,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 		if (i == numclusters)
 			return;
 	}
-	if (R_CullBox(cullmins, cullmaxs))
-		return;
+	// set up a scissor rectangle for this light
 	if (R_Shadow_ScissorForBBox(cullmins, cullmaxs))
 		return;
 
@@ -2046,11 +2122,6 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 		VectorScale(lightcolor, f, lightcolor);
 	}
 	*/
-
-	if (rtlight->cubemapname[0])
-		cubemaptexture = R_Shadow_Cubemap(rtlight->cubemapname);
-	else
-		cubemaptexture = NULL;
 
 #if 1
 	shadow = rtlight->shadow && (rtlight->isstatic ? r_shadow_realtime_world_shadows.integer : (r_shadow_realtime_world.integer ? r_shadow_realtime_world_dlightshadows.integer : r_shadow_realtime_dlight_shadows.integer));
@@ -2180,6 +2251,9 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 	dlight_t *light;
 	rmeshstate_t m;
 
+	if (cl.worldmodel && strncmp(cl.worldmodel->name, r_shadow_mapname, sizeof(r_shadow_mapname)))
+		R_Shadow_EditLights_Reload_f();
+
 	if (visiblevolumes)
 	{
 		memset(&m, 0, sizeof(m));
@@ -2193,10 +2267,8 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 	}
 	else
 		R_Shadow_Stage_Begin();
-	shadowframecount++;
 	if (r_shadow_realtime_world.integer)
 	{
-		R_Shadow_LoadWorldLightsIfNeeded();
 		if (r_shadow_debuglight.integer >= 0)
 		{
 			for (lnum = 0, light = r_shadow_worldlightchain;light;lnum++, light = light->next)
@@ -2219,29 +2291,6 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 	else
 		R_Shadow_Stage_End();
 }
-
-cvar_t r_editlights = {0, "r_editlights", "0"};
-cvar_t r_editlights_cursordistance = {0, "r_editlights_distance", "1024"};
-cvar_t r_editlights_cursorpushback = {0, "r_editlights_pushback", "0"};
-cvar_t r_editlights_cursorpushoff = {0, "r_editlights_pushoff", "4"};
-cvar_t r_editlights_cursorgrid = {0, "r_editlights_grid", "4"};
-cvar_t r_editlights_quakelightsizescale = {CVAR_SAVE, "r_editlights_quakelightsizescale", "0.8"};
-cvar_t r_editlights_rtlightssizescale = {CVAR_SAVE, "r_editlights_rtlightssizescale", "0.7"};
-cvar_t r_editlights_rtlightscolorscale = {CVAR_SAVE, "r_editlights_rtlightscolorscale", "2"};
-dlight_t *r_shadow_worldlightchain;
-dlight_t *r_shadow_selectedlight;
-vec3_t r_editlights_cursorlocation;
-
-typedef struct cubemapinfo_s
-{
-	char basename[64];
-	rtexture_t *texture;
-}
-cubemapinfo_t;
-
-#define MAX_CUBEMAPS 128
-static int numcubemaps;
-static cubemapinfo_t cubemaps[MAX_CUBEMAPS];
 
 //static char *suffix[6] = {"ft", "bk", "rt", "lf", "up", "dn"};
 typedef struct suffixinfo_s
@@ -2391,18 +2440,16 @@ void R_Shadow_NewWorldLight(vec3_t origin, vec3_t angles, vec3_t color, vec_t ra
 	r_shadow_worldlightchain = light;
 
 	R_RTLight_UpdateFromDLight(&light->rtlight, light, true);
-	if (r_shadow_staticworldlights.integer)
-		R_RTLight_Compile(&light->rtlight);
 }
 
 void R_Shadow_FreeWorldLight(dlight_t *light)
 {
 	dlight_t **lightpointer;
+	R_RTLight_Uncompile(&light->rtlight);
 	for (lightpointer = &r_shadow_worldlightchain;*lightpointer && *lightpointer != light;lightpointer = &(*lightpointer)->next);
 	if (*lightpointer != light)
 		Sys_Error("R_Shadow_FreeWorldLight: light not linked into chain\n");
 	*lightpointer = light->next;
-	R_RTLight_Uncompile(&light->rtlight);
 	Mem_Free(light);
 }
 
@@ -2422,8 +2469,6 @@ void R_Shadow_SelectLight(dlight_t *light)
 	if (r_shadow_selectedlight)
 		r_shadow_selectedlight->selected = true;
 }
-
-rtexture_t *lighttextures[5];
 
 void R_Shadow_DrawCursorCallback(const void *calldata1, int calldata2)
 {
@@ -2859,13 +2904,24 @@ void R_Shadow_EditLights_Clear_f(void)
 
 void R_Shadow_EditLights_Reload_f(void)
 {
-	r_shadow_reloadlights = true;
+	if (!cl.worldmodel)
+		return;
+	strlcpy(r_shadow_mapname, cl.worldmodel->name, sizeof(r_shadow_mapname));
+	R_Shadow_ClearWorldLights();
+	R_Shadow_LoadWorldLights();
+	if (r_shadow_worldlightchain == NULL)
+	{
+		R_Shadow_LoadLightsFile();
+		if (r_shadow_worldlightchain == NULL)
+			R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite();
+	}
 }
 
 void R_Shadow_EditLights_Save_f(void)
 {
-	if (cl.worldmodel)
-		R_Shadow_SaveWorldLights();
+	if (!cl.worldmodel)
+		return;
+	R_Shadow_SaveWorldLights();
 }
 
 void R_Shadow_EditLights_ImportLightEntitiesFromMap_f(void)
@@ -3116,7 +3172,6 @@ void R_Shadow_EditLights_Edit_f(void)
 	R_Shadow_NewWorldLight(origin, angles, color, radius, corona, style, shadows, cubemapname);
 }
 
-extern int con_vislines;
 void R_Shadow_EditLights_DrawSelectedLightProperties(void)
 {
 	float x, y;
