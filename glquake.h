@@ -61,7 +61,7 @@ void *GL_GetProcAddress(char *name);
 #define GLAPIENTRY APIENTRY
 #endif
 
-#ifndef GL_MATRIX_MODE
+#ifndef GL_PROJECTION
 typedef unsigned int GLenum;
 typedef unsigned char GLboolean;
 typedef unsigned int GLbitfield;
@@ -89,7 +89,6 @@ typedef double GLdouble;
 // double precision float in [0,1]
 typedef double GLclampd;
 
-#define GL_MATRIX_MODE				0x0BA0
 #define GL_MODELVIEW				0x1700
 #define GL_PROJECTION				0x1701
 #define GL_TEXTURE				0x1702
