@@ -109,7 +109,7 @@ void CDAudio_Play (qbyte track, qboolean looping)
 	sfx = S_PrecacheSound (va ("cdtracks/track%02u.wav", track), false);
 	if (sfx != NULL)
 	{
-		faketrack = S_StartSound (-1, 0, sfx, vec3_origin, 1, 0);
+		faketrack = S_StartSound (-1, 0, sfx, vec3_origin, cdvolume, 0);
 		if (faketrack != -1)
 		{
 			if (looping)
@@ -184,7 +184,7 @@ void CDAudio_Pause (void)
 
 void CDAudio_Resume (void)
 {
-	if (!enabled || !wasPlaying)
+	if (!enabled || cdPlaying || !wasPlaying)
 		return;
 
 	if (faketrack != -1)
@@ -306,26 +306,38 @@ static void CD_f (void)
 	}
 }
 
+void CDAudio_SetVolume (float newvol)
+{
+	// If the volume hasn't changed
+	if (newvol == cdvolume)
+		return;
+
+	// If the CD has been muted
+	if (newvol == 0.0f)
+		CDAudio_Pause ();
+	else
+	{
+		// If the CD has been unmuted
+		if (cdvolume == 0.0f)
+			CDAudio_Resume ();
+
+		if (faketrack != -1)
+			S_SetChannelVolume (faketrack, newvol);
+		else
+		{
+			// TODO: add support for the "real CD" mixer
+		}
+	}
+
+	cdvolume = newvol;
+}
+
 void CDAudio_Update (void)
 {
 	if (!enabled)
 		return;
 
-	if (bgmvolume.value != cdvolume)
-	{
-		if (cdvolume)
-		{
-			Cvar_SetValueQuick (&bgmvolume, 0.0);
-			cdvolume = bgmvolume.value;
-			CDAudio_Pause ();
-		}
-		else
-		{
-			Cvar_SetValueQuick (&bgmvolume, 1.0);
-			cdvolume = bgmvolume.value;
-			CDAudio_Resume ();
-		}
-	}
+	CDAudio_SetVolume (bgmvolume.value);
 
 	if (faketrack == -1)
 		CDAudio_SysUpdate();

@@ -112,6 +112,7 @@ void S_StopSound (int entnum, int entchannel);
 void S_StopAllSounds(qboolean clear);
 void S_PauseGameSounds (void);
 void S_ResumeGameSounds (void);
+void S_SetChannelVolume (unsigned int ch_ind, float fvol);
 void S_ClearBuffer (void);
 void S_Update(vec3_t origin, vec3_t forward, vec3_t left, vec3_t up);
 void S_ExtraUpdate (void);
@@ -167,10 +168,8 @@ extern vec3_t listener_viewforward;
 extern vec3_t listener_viewleft;
 extern vec3_t listener_viewup;
 extern volatile dma_t *shm;
-extern volatile dma_t sn;
 extern vec_t sound_nominal_clip_dist;
 
-extern cvar_t loadas8bit;
 extern cvar_t bgmvolume;
 extern cvar_t volume;
 extern cvar_t snd_swapstereo;

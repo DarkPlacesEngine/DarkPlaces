@@ -1216,11 +1216,7 @@ void M_Menu_Options_AdjustSliders (int dir)
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&slowmo, bound(0, slowmo.value + dir * 0.25, 5));
 	else if (options_cursor == optnum++)
-#ifdef _WIN32
-		Cvar_SetValueQuick (&bgmvolume, bound(0, bgmvolume.value + dir * 1.0, 1));
-#else
 		Cvar_SetValueQuick (&bgmvolume, bound(0, bgmvolume.value + dir * 0.1, 1));
-#endif
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&volume, bound(0, volume.value + dir * 0.1, 1));
 	else if (options_cursor == optnum++)

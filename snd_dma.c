@@ -690,6 +690,12 @@ void S_ResumeGameSounds (void)
 	}
 }
 
+void S_SetChannelVolume (unsigned int ch_ind, float fvol)
+{
+	channels[ch_ind].master_vol = fvol * 255;
+}
+
+
 void S_ClearBuffer(void)
 {
 	int		clear;
