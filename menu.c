@@ -1330,7 +1330,7 @@ void M_Options_Key (int k)
 	}
 }
 
-#define	OPTIONS_EFFECTS_ITEMS	16
+#define	OPTIONS_EFFECTS_ITEMS	17
 
 int options_effects_cursor;
 
@@ -1346,6 +1346,7 @@ extern cvar_t r_detailtextures;
 extern cvar_t cl_particles;
 extern cvar_t cl_explosions;
 extern cvar_t cl_stainmaps;
+extern cvar_t cl_decals;
 extern cvar_t r_explosionclip;
 extern cvar_t r_dlightmap;
 extern cvar_t r_modellights;
@@ -1390,27 +1391,30 @@ void M_Menu_Options_Effects_AdjustSliders (int dir)
 		Cvar_SetValueQuick (&cl_stainmaps, !cl_stainmaps.integer);
 		break;
 	case 8:
-		Cvar_SetValueQuick (&r_detailtextures, !r_detailtextures.integer);
+		Cvar_SetValueQuick (&cl_stainmaps, !cl_decals.integer);
 		break;
 	case 9:
-		Cvar_SetValueQuick (&cl_particles_bulletimpacts, !cl_particles_bulletimpacts.integer);
+		Cvar_SetValueQuick (&r_detailtextures, !r_detailtextures.integer);
 		break;
 	case 10:
-		Cvar_SetValueQuick (&cl_particles_smoke, !cl_particles_smoke.integer);
+		Cvar_SetValueQuick (&cl_particles_bulletimpacts, !cl_particles_bulletimpacts.integer);
 		break;
 	case 11:
-		Cvar_SetValueQuick (&cl_particles_sparks, !cl_particles_sparks.integer);
+		Cvar_SetValueQuick (&cl_particles_smoke, !cl_particles_smoke.integer);
 		break;
 	case 12:
-		Cvar_SetValueQuick (&cl_particles_bubbles, !cl_particles_bubbles.integer);
+		Cvar_SetValueQuick (&cl_particles_sparks, !cl_particles_sparks.integer);
 		break;
 	case 13:
-		Cvar_SetValueQuick (&cl_particles_blood, !cl_particles_blood.integer);
+		Cvar_SetValueQuick (&cl_particles_bubbles, !cl_particles_bubbles.integer);
 		break;
 	case 14:
-		Cvar_SetValueQuick (&cl_particles_blood_size, bound(2, cl_particles_blood_size.value + dir * 1, 20));
+		Cvar_SetValueQuick (&cl_particles_blood, !cl_particles_blood.integer);
 		break;
 	case 15:
+		Cvar_SetValueQuick (&cl_particles_blood_size, bound(2, cl_particles_blood_size.value + dir * 1, 20));
+		break;
+	case 16:
 		Cvar_SetValueQuick (&cl_particles_blood_alpha, bound(0.2, cl_particles_blood_alpha.value + dir * 0.1, 1));
 		break;
 	}
@@ -1436,6 +1440,7 @@ void M_Options_Effects_Draw (void)
 	M_Print(16, y, "            Explosions");M_DrawCheckbox(220, y, cl_explosions.integer);y += 8;
 	M_Print(16, y, "    Explosion Clipping");M_DrawCheckbox(220, y, r_explosionclip.integer);y += 8;
 	M_Print(16, y, "             Stainmaps");M_DrawCheckbox(220, y, cl_stainmaps.integer);y += 8;
+	M_Print(16, y, "                Decals");M_DrawCheckbox(220, y, cl_decals.integer);y += 8;
 	M_Print(16, y, "      Detail Texturing");M_DrawCheckbox(220, y, r_detailtextures.integer);y += 8;
 	M_Print(16, y, "        Bullet Impacts");M_DrawCheckbox(220, y, cl_particles_bulletimpacts.integer);y += 8;
 	M_Print(16, y, "                 Smoke");M_DrawCheckbox(220, y, cl_particles_smoke.integer);y += 8;
