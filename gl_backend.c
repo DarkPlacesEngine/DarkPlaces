@@ -1209,6 +1209,17 @@ qboolean SCR_ScreenShot(char *filename, qbyte *buffer1, qbyte *buffer2, qbyte *b
 	qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer1);
 	CHECKGLERROR
 
+	if (scr_screenshot_gamma.value != 1)
+	{
+		int i;
+		double igamma = 1.0 / scr_screenshot_gamma.value;
+		unsigned char ramp[256];
+		for (i = 0;i < 256;i++)
+			ramp[i] = (unsigned char) (pow(i * (1.0 / 255.0), igamma) * 255.0);
+		for (i = 0;i < width*height*3;i++)
+			buffer1[i] = ramp[buffer1[i]];
+	}
+
 	Image_CopyMux (buffer2, buffer1, width, height, flipx, flipy, flipdiagonal, 3, 3, indices);
 
 	if (jpeg)
