@@ -493,8 +493,41 @@ void DrawQ_Clear(void)
 	r_refdef.drawqueuesize = 0;
 }
 
+static int picelements[6] = {0, 1, 2, 0, 2, 3};
 void DrawQ_Pic(float x, float y, char *picname, float width, float height, float red, float green, float blue, float alpha, int flags)
 {
+#if 1
+	DrawQ_SuperPic(x,y,picname,width,height,0,0,red,green,blue,alpha,1,0,red,green,blue,alpha,0,1,red,green,blue,alpha,1,1,red,green,blue,alpha,flags);
+#elif 1
+	float floats[48];
+	cachepic_t *pic;
+	drawqueuemesh_t mesh;
+	if (alpha < (1.0f / 255.0f) || !picname || !picname[0])
+		return;
+	pic = Draw_CachePic(picname);
+	if (width == 0)
+		width = pic->width;
+	if (height == 0)
+		height = pic->height;
+	mesh.texture = pic->tex;
+	mesh.numtriangles = 2;
+	mesh.numvertices = 4;
+	mesh.indices = picelements;
+	mesh.vertices = floats;
+	mesh.texcoords = floats + 16;
+	mesh.colors = floats + 32;
+	memset(floats, 0, sizeof(floats));
+	mesh.vertices[0] = mesh.vertices[12] = x;
+	mesh.vertices[1] = mesh.vertices[5] = y;
+	mesh.vertices[4] = mesh.vertices[8] = x + width;
+	mesh.vertices[9] = mesh.vertices[13] = y + height;
+	mesh.texcoords[4] = mesh.texcoords[8] = mesh.texcoords[9] = mesh.texcoords[13] = 1;
+	mesh.colors[0] = mesh.colors[4] = mesh.colors[8] = mesh.colors[12] = red;
+	mesh.colors[1] = mesh.colors[5] = mesh.colors[9] = mesh.colors[13] = green;
+	mesh.colors[2] = mesh.colors[6] = mesh.colors[10] = mesh.colors[14] = blue;
+	mesh.colors[3] = mesh.colors[7] = mesh.colors[11] = mesh.colors[15] = alpha;
+	DrawQ_Mesh (&mesh, flags);
+#else
 	int size;
 	drawqueue_t *dq;
 	if (alpha < (1.0f / 255.0f) || !picname || !picname[0])
@@ -518,6 +551,7 @@ void DrawQ_Pic(float x, float y, char *picname, float width, float height, float
 	dq->scaley = height;
 	strcpy((char *)(dq + 1), picname);
 	r_refdef.drawqueuesize += dq->size;
+#endif
 }
 
 void DrawQ_String(float x, float y, const char *string, int maxlen, float scalex, float scaley, float red, float green, float blue, float alpha, int flags)
@@ -561,6 +595,31 @@ void DrawQ_String(float x, float y, const char *string, int maxlen, float scalex
 
 void DrawQ_Fill (float x, float y, float w, float h, float red, float green, float blue, float alpha, int flags)
 {
+#if 1
+	DrawQ_SuperPic(x,y,NULL,w,h,0,0,red,green,blue,alpha,1,0,red,green,blue,alpha,0,1,red,green,blue,alpha,1,1,red,green,blue,alpha,flags);
+#elif 1
+	float floats[48];
+	drawqueuemesh_t mesh;
+	if (alpha < (1.0f / 255.0f))
+		return;
+	mesh.texture = NULL;
+	mesh.numtriangles = 2;
+	mesh.numvertices = 4;
+	mesh.indices = picelements;
+	mesh.vertices = floats;
+	mesh.texcoords = floats + 16;
+	mesh.colors = floats + 32;
+	memset(floats, 0, sizeof(floats));
+	mesh.vertices[0] = mesh.vertices[12] = x;
+	mesh.vertices[1] = mesh.vertices[5] = y;
+	mesh.vertices[4] = mesh.vertices[8] = x + w;
+	mesh.vertices[9] = mesh.vertices[13] = y + h;
+	mesh.colors[0] = mesh.colors[4] = mesh.colors[8] = mesh.colors[12] = red;
+	mesh.colors[1] = mesh.colors[5] = mesh.colors[9] = mesh.colors[13] = green;
+	mesh.colors[2] = mesh.colors[6] = mesh.colors[10] = mesh.colors[14] = blue;
+	mesh.colors[3] = mesh.colors[7] = mesh.colors[11] = mesh.colors[15] = alpha;
+	DrawQ_Mesh (&mesh, flags);
+#else
 	int size;
 	drawqueue_t *dq;
 	if (alpha < (1.0f / 255.0f))
@@ -584,6 +643,40 @@ void DrawQ_Fill (float x, float y, float w, float h, float red, float green, flo
 	// empty pic name
 	*((char *)(dq + 1)) = 0;
 	r_refdef.drawqueuesize += dq->size;
+#endif
+}
+
+void DrawQ_SuperPic(float x, float y, char *picname, float width, float height, float s1, float t1, float r1, float g1, float b1, float a1, float s2, float t2, float r2, float g2, float b2, float a2, float s3, float t3, float r3, float g3, float b3, float a3, float s4, float t4, float r4, float g4, float b4, float a4, int flags)
+{
+	float floats[48];
+	cachepic_t *pic;
+	drawqueuemesh_t mesh;
+	memset(&mesh, 0, sizeof(mesh));
+	if (picname && picname[0])
+	{
+		pic = Draw_CachePic(picname);
+		if (width == 0)
+			width = pic->width;
+		if (height == 0)
+			height = pic->height;
+		mesh.texture = pic->tex;
+	}
+	mesh.numtriangles = 2;
+	mesh.numvertices = 4;
+	mesh.indices = picelements;
+	mesh.vertices = floats;
+	mesh.texcoords = floats + 16;
+	mesh.colors = floats + 32;
+	memset(floats, 0, sizeof(floats));
+	mesh.vertices[0] = mesh.vertices[12] = x;
+	mesh.vertices[1] = mesh.vertices[5] = y;
+	mesh.vertices[4] = mesh.vertices[8] = x + width;
+	mesh.vertices[9] = mesh.vertices[13] = y + height;
+	mesh.texcoords[ 0] = s1;mesh.texcoords[ 1] = t1;mesh.colors[ 0] = r1;mesh.colors[ 1] = g1;mesh.colors[ 2] = b1;mesh.colors[ 3] = a1;
+	mesh.texcoords[ 4] = s2;mesh.texcoords[ 5] = t2;mesh.colors[ 4] = r2;mesh.colors[ 5] = g2;mesh.colors[ 6] = b2;mesh.colors[ 7] = a2;
+	mesh.texcoords[ 8] = s4;mesh.texcoords[ 9] = t4;mesh.colors[ 8] = r4;mesh.colors[ 9] = g4;mesh.colors[10] = b4;mesh.colors[11] = a4;
+	mesh.texcoords[12] = s3;mesh.texcoords[13] = t3;mesh.colors[12] = r3;mesh.colors[13] = g3;mesh.colors[14] = b3;mesh.colors[15] = a3;
+	DrawQ_Mesh (&mesh, flags);
 }
 
 void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
@@ -596,7 +689,7 @@ void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 	size += sizeof(drawqueuemesh_t);
 	size += sizeof(int[3]) * mesh->numtriangles;
 	size += sizeof(float[4]) * mesh->numvertices;
-	size += sizeof(float[2]) * mesh->numvertices;
+	size += sizeof(float[4]) * mesh->numvertices;
 	size += sizeof(float[4]) * mesh->numvertices;
 	if (r_refdef.drawqueuesize + size > r_refdef.maxdrawqueuesize)
 		return;
