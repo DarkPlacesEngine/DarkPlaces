@@ -235,14 +235,12 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 			}
 		}
 		m.pointer_vertex = varray_vertex3f;
-		R_Mesh_State(&m);
 
 		c_alias_polys += mesh->num_triangles;
 		R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_VERTEX, varray_vertex3f);
 		if (layer->flags & ALIASLAYER_FOG)
 		{
 			colorscale *= fog;
-			GL_ColorPointer(NULL);
 			GL_Color(fogcolor[0] * colorscale, fogcolor[1] * colorscale, fogcolor[2] * colorscale, ent->alpha);
 		}
 		else
@@ -266,25 +264,20 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 				VectorScale(tint, r_shadow_realtime_world_lightmaps.value, tint);
 			colorscale *= ifog;
 			if (fullbright)
-			{
-				GL_ColorPointer(NULL);
 				GL_Color(tint[0] * colorscale, tint[1] * colorscale, tint[2] * colorscale, ent->alpha);
-			}
 			else
 			{
 				if (R_LightModel(ambientcolor4f, diffusecolor, diffusenormal, ent, tint[0] * colorscale, tint[1] * colorscale, tint[2] * colorscale, ent->alpha, false))
 				{
-					GL_ColorPointer(varray_color4f);
+					m.pointer_color = varray_color4f;
 					R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_NORMAL, varray_normal3f);
 					R_LightModel_CalcVertexColors(ambientcolor4f, diffusecolor, diffusenormal, mesh->num_vertices, varray_vertex3f, varray_normal3f, varray_color4f);
 				}
 				else
-				{
-					GL_ColorPointer(NULL);
 					GL_Color(ambientcolor4f[0], ambientcolor4f[1], ambientcolor4f[2], ambientcolor4f[3]);
-				}
 			}
 		}
+		R_Mesh_State(&m);
 		R_Mesh_Draw(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
 	}
 }
@@ -750,7 +743,6 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 	mstate.tex[0] = R_GetTexture(texture);
 	mstate.pointer_texcoord[0] = ent->model->alias.zymdata_texcoords;
 	mstate.pointer_vertex = varray_vertex3f;
-	R_Mesh_State(&mstate);
 
 	ZymoticLerpBones(ent->model->alias.zymnum_bones, (zymbonematrix *) ent->model->alias.zymdata_poses, ent->frameblend, ent->model->alias.zymdata_bones);
 
@@ -758,14 +750,12 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 	ZymoticCalcNormal3f(numverts, varray_vertex3f, aliasvert_normal3f, ent->model->alias.zymnum_shaders, ent->model->alias.zymdata_renderlist);
 	if (R_LightModel(ambientcolor4f, diffusecolor, diffusenormal, ent, ifog * colorscale, ifog * colorscale, ifog * colorscale, ent->alpha, false))
 	{
-		GL_ColorPointer(varray_color4f);
+		mstate.pointer_color = varray_color4f;
 		R_LightModel_CalcVertexColors(ambientcolor4f, diffusecolor, diffusenormal, numverts, varray_vertex3f, aliasvert_normal3f, varray_color4f);
 	}
 	else
-	{
-		GL_ColorPointer(NULL);
 		GL_Color(ambientcolor4f[0], ambientcolor4f[1], ambientcolor4f[2], ambientcolor4f[3]);
-	}
+	R_Mesh_State(&mstate);
 	R_Mesh_Draw(numverts, numtriangles, elements);
 	c_alias_polys += numtriangles;
 
@@ -782,9 +772,9 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 		mstate.pointer_vertex = varray_vertex3f;
 		R_Mesh_State(&mstate);
 
-		GL_ColorPointer(NULL);
 		GL_Color(fogcolor[0], fogcolor[1], fogcolor[2], ent->alpha * fog);
 		ZymoticTransformVerts(numverts, varray_vertex3f, ent->model->alias.zymdata_vertbonecounts, ent->model->alias.zymdata_verts);
+		R_Mesh_State(&mstate);
 		R_Mesh_Draw(numverts, numtriangles, elements);
 		c_alias_polys += numtriangles;
 	}

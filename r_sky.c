@@ -231,7 +231,6 @@ static void R_SkyBox(void)
 {
 	int i;
 	rmeshstate_t m;
-	GL_ColorPointer(NULL);
 	GL_Color(1, 1, 1, 1);
 	memset(&m, 0, sizeof(m));
 	GL_BlendFunc(GL_ONE, GL_ZERO);
@@ -327,7 +326,6 @@ static void R_SkySphere(void)
 	Matrix4x4_CreateTranslate(&scroll2matrix, speedscale * 2, speedscale * 2, 0);
 	Matrix4x4_CreateIdentity(&identitymatrix);
 
-	GL_ColorPointer(NULL);
 	GL_Color(1, 1, 1, 1);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
