@@ -678,13 +678,18 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 	DWORD WindowStyle, ExWindowStyle;
 	HGLRC baseRC;
 	int CenterX, CenterY;
+	const char *gldrivername;
 
 	if (vid_initialized)
 		Sys_Error("VID_InitMode called when video is already initialised\n");
 
-	if (!GL_OpenLibrary("opengl32.dll"))
+	gldrivername = "opengl32.dll";
+	i = COM_CheckParm("-gl_driver");
+	if (i && i < com_argc - 1)
+		gldrivername = com_argv[i + 1];
+	if (!GL_OpenLibrary(gldrivername))
 	{
-		Con_Printf("Unable to load GL driver\n");
+		Con_Printf("Unable to load GL driver %s\n", gldrivername);
 		return false;
 	}
 
