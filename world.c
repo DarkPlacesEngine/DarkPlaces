@@ -342,8 +342,8 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 		if (model != NULL)
 		{
 			Mod_CheckLoaded(model);
-			if (!model->brush.TraceBox)
-				Host_Error("SOLID_BSP with non-BSP model\n");
+			if (!model->TraceBox)
+				Host_Error("SOLID_BSP with non-collidable model\n");
 
 			if (ent->v->angles[0] || ent->v->angles[2] || ent->v->avelocity[0] || ent->v->avelocity[2])
 			{
@@ -448,7 +448,7 @@ Handles selection or creation of a clipping hull, and offseting (and
 eventually rotation) of the end points
 ==================
 */
-trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end)
+trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int movetype)
 {
 	int i;
 	trace_t trace;
@@ -457,7 +457,7 @@ trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins,
 	float tempnormal[3], starttransformed[3], endtransformed[3];
 	float starttransformedmins[3], starttransformedmaxs[3], endtransformedmins[3], endtransformedmaxs[3];
 
-	if ((int) ent->v->solid == SOLID_BSP)
+	if ((int) ent->v->solid == SOLID_BSP || movetype == MOVE_HITMODEL)
 	{
 		i = ent->v->modelindex;
 		if ((unsigned int) i >= MAX_MODELS)
@@ -467,14 +467,17 @@ trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins,
 			Host_Error("SV_ClipMoveToEntity: invalid modelindex\n");
 
 		Mod_CheckLoaded(model);
-		if (!model->brush.TraceBox)
+		if ((int) ent->v->solid == SOLID_BSP)
 		{
-			Con_Printf ("SV_ClipMoveToEntity: SOLID_BSP with a non bsp model, entity dump:\n");
-			ED_Print (ent);
-			Host_Error ("SV_ClipMoveToEntity: SOLID_BSP with a non bsp model\n");
+			if (!model->TraceBox)
+			{
+				Con_Printf("SV_ClipMoveToEntity: SOLID_BSP with a non-collidable model, entity dump:\n");
+				ED_Print(ent);
+				Host_Error("SV_ClipMoveToEntity: SOLID_BSP with a non-collidable model\n");
+			}
+			if (ent->v->movetype != MOVETYPE_PUSH)
+				Host_Error("SV_ClipMoveToEntity: SOLID_BSP without MOVETYPE_PUSH");
 		}
-		if (ent->v->movetype != MOVETYPE_PUSH)
-			Host_Error ("SV_ClipMoveToEntity: SOLID_BSP without MOVETYPE_PUSH");
 	}
 
 	Matrix4x4_CreateFromQuakeEntity(&matrix, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2], ent->v->angles[0], ent->v->angles[1], ent->v->angles[2], 1);
@@ -482,13 +485,16 @@ trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins,
 	Matrix4x4_Transform(&imatrix, start, starttransformed);
 	Matrix4x4_Transform(&imatrix, end, endtransformed);
 
-	if (model && model->brush.TraceBox)
+	if (model && model->TraceBox)
 	{
+		int frame;
+		frame = (int)ent->v->frame;
+		frame = bound(0, frame, (model->numframes - 1));
 		VectorAdd(starttransformed, maxs, starttransformedmaxs);
 		VectorAdd(endtransformed, maxs, endtransformedmaxs);
 		VectorAdd(starttransformed, mins, starttransformedmins);
 		VectorAdd(endtransformed, mins, endtransformedmins);
-		model->brush.TraceBox(model, &trace, starttransformedmins, starttransformedmaxs, endtransformedmins, endtransformedmaxs, SUPERCONTENTS_SOLID);
+		model->TraceBox(model, frame, &trace, starttransformedmins, starttransformedmaxs, endtransformedmins, endtransformedmaxs, SUPERCONTENTS_SOLID);
 	}
 	else
 		Collision_ClipTrace_Box(&trace, ent->v->mins, ent->v->maxs, starttransformed, mins, maxs, endtransformed, SUPERCONTENTS_SOLID, SUPERCONTENTS_SOLID);
@@ -564,11 +570,11 @@ void SV_ClipToNode(moveclip_t *clip, link_t *list)
 
 		// might interact, so do an exact clip
 		if (touch->v->solid == SOLID_BSP)
-			trace = SV_ClipMoveToEntity (touch, clip->start, clip->mins, clip->maxs, clip->end);
+			trace = SV_ClipMoveToEntity(touch, clip->start, clip->mins, clip->maxs, clip->end, clip->type);
 		else if ((int)touch->v->flags & FL_MONSTER)
-			trace = SV_ClipMoveToEntity (touch, clip->start, clip->mins2, clip->maxs2, clip->end);
+			trace = SV_ClipMoveToEntity(touch, clip->start, clip->mins2, clip->maxs2, clip->end, clip->type);
 		else
-			trace = SV_ClipMoveToEntity (touch, clip->start, clip->mins, clip->maxs, clip->end);
+			trace = SV_ClipMoveToEntity(touch, clip->start, clip->mins, clip->maxs, clip->end, clip->type);
 		// LordHavoc: take the 'best' answers from the new trace and combine with existing data
 		if (trace.allsolid)
 			clip->trace.allsolid = true;
@@ -619,7 +625,7 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	clip.passedict = passedict;
 
 	// clip to world
-	clip.trace = SV_ClipMoveToEntity(sv.edicts, clip.start, clip.mins, clip.maxs, clip.end);
+	clip.trace = SV_ClipMoveToEntity(sv.edicts, clip.start, clip.mins, clip.maxs, clip.end, clip.type);
 	if (clip.type == MOVE_WORLDONLY)
 	//if (clip.trace.allsolid)
 		return clip.trace;

@@ -44,8 +44,8 @@ float CL_TraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t n
 	if (hitent)
 		*hitent = &cl_entities[0].render;
 	Mod_CheckLoaded(cl.worldmodel);
-	if (cl.worldmodel && cl.worldmodel->brush.TraceBox)
-		cl.worldmodel->brush.TraceBox(cl.worldmodel, &trace, start, start, end, end, hitsupercontentsmask);
+	if (cl.worldmodel && cl.worldmodel->TraceBox)
+		cl.worldmodel->TraceBox(cl.worldmodel, 0, &trace, start, start, end, end, hitsupercontentsmask);
 
 	if (impact)
 		VectorLerp(start, trace.fraction, end, impact);
@@ -77,8 +77,8 @@ float CL_TraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t n
 			Matrix4x4_Transform(&imatrix, start, starttransformed);
 			Matrix4x4_Transform(&imatrix, end, endtransformed);
 
-			if (ent->model && ent->model->brush.TraceBox)
-				ent->model->brush.TraceBox(ent->model, &trace, starttransformed, starttransformed, endtransformed, endtransformed, hitsupercontentsmask);
+			if (ent->model && ent->model->TraceBox)
+				ent->model->TraceBox(ent->model, 0, &trace, starttransformed, starttransformed, endtransformed, endtransformed, hitsupercontentsmask);
 
 			cl_traceline_startsupercontents |= trace.startsupercontents;
 			if (maxfrac > trace.fraction)

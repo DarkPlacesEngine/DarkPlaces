@@ -794,7 +794,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 		// as soon as player is known we can call V_CalcRefDef
 		if ((e - cl_entities) == cl.viewentity)
 			V_CalcRefdef();
-		if (e->render.model && e->render.model->name[0] == '*' && e->render.model->brush.TraceBox)
+		if (e->render.model && e->render.model->name[0] == '*' && e->render.model->TraceBox)
 			cl_brushmodel_entities[cl_num_brushmodel_entities++] = &e->render;
 		// don't show entities with no modelindex (note: this still shows
 		// entities which have a modelindex that resolved to a NULL model)
