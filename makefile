@@ -12,12 +12,15 @@ DP_ARCH:=$(shell uname)
 ifneq ($(filter %BSD,$(DP_ARCH)),)
 	DP_MAKE_TARGET=bsd
 else
+ifeq ($(DP_ARCH), Darwin)
+	DP_MAKE_TARGET=macosx
+else
 	DP_MAKE_TARGET=linux
-endif
 
-endif
-
-endif
+endif  # ifeq ($(DP_ARCH), Darwin)
+endif  # ifneq ($(filter %BSD,$(DP_ARCH)),)
+endif  # ifdef windir
+endif  # ifndef DP_MAKE_TARGET
 
 # If we're not on compiling for Win32, we need additional information
 ifneq ($(DP_MAKE_TARGET), mingw)
@@ -52,6 +55,23 @@ ifeq ($(DP_MAKE_TARGET), linux)
 	LDFLAGS_CL=$(LDFLAGS_LINUXCL)
 	LDFLAGS_SV=$(LDFLAGS_LINUXSV)
 	LDFLAGS_SDL=$(LDFLAGS_LINUXSDL)
+
+	EXE_CL=$(EXE_UNIXCL)
+	EXE_SV=$(EXE_UNIXSV)
+	EXE_SDL=$(EXE_UNIXSDL)
+endif
+
+# Mac OS X configuration
+ifeq ($(DP_MAKE_TARGET), macosx)
+	OBJ_SOUND=$(OBJ_MACOSXSOUND)
+	LIB_SOUND=$(LIB_MACOSXSOUND)
+	OBJ_CD=$(OBJ_MACOSXCD)
+
+	OBJ_CL=$(OBJ_AGL)
+
+	LDFLAGS_CL=$(LDFLAGS_MACOSXCL)
+	LDFLAGS_SV=$(LDFLAGS_MACOSXSV)
+	LDFLAGS_SDL=$(LDFLAGS_MACOSXSDL)
 
 	EXE_CL=$(EXE_UNIXCL)
 	EXE_SV=$(EXE_UNIXSV)
