@@ -105,7 +105,7 @@ qboolean checkextension(char *name)
 		while (*e && *e != ' ')
 			e++;
 		if (e - start == len)
-			if (!strncasecmp(e, name, len))
+			if (!strncasecmp(start, name, len))
 				return true;
 	}
 	return false;
@@ -2120,20 +2120,20 @@ void PF_setcolor (void)
 {
 	client_t	*client;
 	int			entnum, i;
-	
+
 	entnum = G_EDICTNUM(OFS_PARM0);
 	i = G_FLOAT(OFS_PARM1);
-	
+
 	if (entnum < 1 || entnum > svs.maxclients)
 	{
 		Con_Printf ("tried to setcolor a non-client\n");
 		return;
 	}
-		
+
 	client = &svs.clients[entnum-1];
 	client->colors = i;
 	client->edict->v.team = (i & 15) + 1;
-		
+
 	MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
 	MSG_WriteByte (&sv.reliable_datagram, entnum - 1);
 	MSG_WriteByte (&sv.reliable_datagram, i);
