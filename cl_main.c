@@ -789,8 +789,8 @@ void CL_LinkNetworkEntity(entity_t *e)
 				if (gamemode == GAME_PRYDON)
 				{
 					dlightradius = max(dlightradius, 100);
-					dlightcolor[0] += 0.50f;
-					dlightcolor[1] += 0.50f;
+					dlightcolor[0] += 0.30f;
+					dlightcolor[1] += 0.60f;
 					dlightcolor[2] += 1.20f;
 				}
 				else
