@@ -68,6 +68,9 @@ void R_Envmap_f (void)
 {
 	byte	buffer[256*256*4];
 
+	if (!r_render.value)
+		return;
+
 	glDrawBuffer  (GL_FRONT);
 	glReadBuffer  (GL_FRONT);
 	envmap = true;

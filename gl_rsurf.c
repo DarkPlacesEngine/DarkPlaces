@@ -223,7 +223,8 @@ void R_UpdateLightmap(msurface_t *s, int lnum)
 {
 	int smax, tmax;
 	// upload the new lightmap texture fragment
-	glBindTexture(GL_TEXTURE_2D, lightmap_textures + lnum);
+	if(r_upload.value)
+		glBindTexture(GL_TEXTURE_2D, lightmap_textures + lnum);
 	if (nosubimage || nosubimagefragments)
 	{
 		if (lightmapupdate[lnum][0] > s->light_t)
@@ -242,12 +243,14 @@ void R_UpdateLightmap(msurface_t *s, int lnum)
 		if (lightmaprgba)
 		{
 			R_BuildLightMap (s, templight, smax * 4);
-			glTexSubImage2D(GL_TEXTURE_2D, 0, s->light_s, s->light_t, smax, tmax, GL_RGBA, GL_UNSIGNED_BYTE, templight);
+			if(r_upload.value)
+				glTexSubImage2D(GL_TEXTURE_2D, 0, s->light_s, s->light_t, smax, tmax, GL_RGBA, GL_UNSIGNED_BYTE, templight);
 		}
 		else
 		{
 			R_BuildLightMap (s, templight, smax * 3);
-			glTexSubImage2D(GL_TEXTURE_2D, 0, s->light_s, s->light_t, smax, tmax, GL_RGB , GL_UNSIGNED_BYTE, templight);
+			if(r_upload.value)
+				glTexSubImage2D(GL_TEXTURE_2D, 0, s->light_s, s->light_t, smax, tmax, GL_RGB , GL_UNSIGNED_BYTE, templight);
 		}
 	}
 }
@@ -331,20 +334,23 @@ void UploadLightmaps()
 		{
 			if (lightmapupdate[i][0] < lightmapupdate[i][1])
 			{
-				glBindTexture(GL_TEXTURE_2D, lightmap_textures + i);
-				if (nosubimage)
+				if(r_upload.value)
 				{
-					if (lightmaprgba)
-						glTexImage2D(GL_TEXTURE_2D, 0, 3, BLOCK_WIDTH, BLOCK_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, lightmaps[i]);
+					glBindTexture(GL_TEXTURE_2D, lightmap_textures + i);
+					if (nosubimage)
+					{
+						if (lightmaprgba)
+							glTexImage2D(GL_TEXTURE_2D, 0, 3, BLOCK_WIDTH, BLOCK_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, lightmaps[i]);
+						else
+							glTexImage2D(GL_TEXTURE_2D, 0, 3, BLOCK_WIDTH, BLOCK_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, lightmaps[i]);
+					}
 					else
-						glTexImage2D(GL_TEXTURE_2D, 0, 3, BLOCK_WIDTH, BLOCK_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, lightmaps[i]);
-				}
-				else
-				{
-					if (lightmaprgba)
-						glTexSubImage2D(GL_TEXTURE_2D, 0, 0, lightmapupdate[i][0], BLOCK_WIDTH, lightmapupdate[i][1] - lightmapupdate[i][0], GL_RGBA, GL_UNSIGNED_BYTE, lightmaps[i] + (BLOCK_WIDTH * 4 * lightmapupdate[i][0]));
-					else
-						glTexSubImage2D(GL_TEXTURE_2D, 0, 0, lightmapupdate[i][0], BLOCK_WIDTH, lightmapupdate[i][1] - lightmapupdate[i][0], GL_RGB, GL_UNSIGNED_BYTE, lightmaps[i] + (BLOCK_WIDTH * 3 * lightmapupdate[i][0]));
+					{
+						if (lightmaprgba)
+							glTexSubImage2D(GL_TEXTURE_2D, 0, 0, lightmapupdate[i][0], BLOCK_WIDTH, lightmapupdate[i][1] - lightmapupdate[i][0], GL_RGBA, GL_UNSIGNED_BYTE, lightmaps[i] + (BLOCK_WIDTH * 4 * lightmapupdate[i][0]));
+						else
+							glTexSubImage2D(GL_TEXTURE_2D, 0, 0, lightmapupdate[i][0], BLOCK_WIDTH, lightmapupdate[i][1] - lightmapupdate[i][0], GL_RGB, GL_UNSIGNED_BYTE, lightmaps[i] + (BLOCK_WIDTH * 3 * lightmapupdate[i][0]));
+					}
 				}
 			}
 			lightmapupdate[i][0] = BLOCK_HEIGHT;
@@ -1111,13 +1117,16 @@ int AllocBlock (int w, int h, short *x, short *y)
 		{
 			byte blank[BLOCK_WIDTH*BLOCK_HEIGHT*3];
 			memset(blank, 0, sizeof(blank));
-			glBindTexture(GL_TEXTURE_2D, lightmap_textures + texnum);
-			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			if (lightmaprgba)
-				glTexImage2D (GL_TEXTURE_2D, 0, 3, BLOCK_WIDTH, BLOCK_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, blank);
-			else
-				glTexImage2D (GL_TEXTURE_2D, 0, 3, BLOCK_WIDTH, BLOCK_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, blank);
+			if(r_upload.value)
+			{
+				glBindTexture(GL_TEXTURE_2D, lightmap_textures + texnum);
+				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				if (lightmaprgba)
+					glTexImage2D (GL_TEXTURE_2D, 0, 3, BLOCK_WIDTH, BLOCK_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, blank);
+				else
+					glTexImage2D (GL_TEXTURE_2D, 0, 3, BLOCK_WIDTH, BLOCK_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, blank);
+			}
 		}
 
 		for (i=0 ; i<w ; i++)
@@ -1272,12 +1281,14 @@ void GL_CreateSurfaceLightmap (msurface_t *surf)
 	if (lightmaprgba)
 	{
 		R_BuildLightMap (surf, templight, smax * 4);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, surf->light_s, surf->light_t, smax, tmax, GL_RGBA, GL_UNSIGNED_BYTE, templight);
+		if(r_upload.value)
+			glTexSubImage2D(GL_TEXTURE_2D, 0, surf->light_s, surf->light_t, smax, tmax, GL_RGBA, GL_UNSIGNED_BYTE, templight);
 	}
 	else
 	{
 		R_BuildLightMap (surf, templight, smax * 3);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, surf->light_s, surf->light_t, smax, tmax, GL_RGB , GL_UNSIGNED_BYTE, templight);
+		if(r_upload.value)
+			glTexSubImage2D(GL_TEXTURE_2D, 0, surf->light_s, surf->light_t, smax, tmax, GL_RGB , GL_UNSIGNED_BYTE, templight);
 	}
 }
 
@@ -1366,24 +1377,29 @@ void GL_BuildLightmaps (void)
 
 	if (nosubimage || nosubimagefragments)
 	{
-		if (gl_mtexable)
-			qglSelectTexture(gl_mtex_enum+1);
+		if(r_upload.value)
+			if (gl_mtexable)
+				qglSelectTexture(gl_mtex_enum+1);
 		for (i = 0;i < MAX_LIGHTMAPS;i++)
 		{
 			if (!allocated[i][0])
 				break;
 			lightmapupdate[i][0] = BLOCK_HEIGHT;
 			lightmapupdate[i][1] = 0;
-			glBindTexture(GL_TEXTURE_2D, lightmap_textures + i);
-			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			if (lightmaprgba)
-				glTexImage2D(GL_TEXTURE_2D, 0, 3, BLOCK_WIDTH, BLOCK_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, lightmaps[i]);
-			else
-				glTexImage2D(GL_TEXTURE_2D, 0, 3, BLOCK_WIDTH, BLOCK_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, lightmaps[i]);
+			if(r_upload.value)
+			{
+				glBindTexture(GL_TEXTURE_2D, lightmap_textures + i);
+				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				if (lightmaprgba)
+					glTexImage2D(GL_TEXTURE_2D, 0, 3, BLOCK_WIDTH, BLOCK_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, lightmaps[i]);
+				else
+					glTexImage2D(GL_TEXTURE_2D, 0, 3, BLOCK_WIDTH, BLOCK_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, lightmaps[i]);
+			}
 		}
-		if (gl_mtexable)
-			qglSelectTexture(gl_mtex_enum+0);
+		if(r_upload.value)
+			if (gl_mtexable)
+				qglSelectTexture(gl_mtex_enum+0);
 	}
 }
 

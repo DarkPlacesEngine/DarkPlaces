@@ -405,6 +405,8 @@ void R_SkyDome()
 
 void R_Sky()
 {
+	if (!r_render.value)
+		return;
 	if (!skyname[0])
 		return;
 	glDisable(GL_DEPTH_TEST);

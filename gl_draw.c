@@ -378,6 +378,8 @@ void Draw_Character (int x, int y, int num)
 	fcol = col*0.0625;
 	size = 0.0625;
 
+	if (!r_render.value)
+		return;
 	glBindTexture(GL_TEXTURE_2D, char_texture);
 	// LordHavoc: NEAREST mode on text if not scaling up
 	if ((int) vid.width < glwidth)
@@ -419,6 +421,8 @@ void Draw_String (int x, int y, char *str, int maxlen)
 		maxlen = strlen(str);
 	else if (maxlen > (int) strlen(str))
 		maxlen = strlen(str);
+	if (!r_render.value)
+		return;
 	glBindTexture(GL_TEXTURE_2D, char_texture);
 
 	// LordHavoc: NEAREST mode on text if not scaling up
@@ -456,6 +460,8 @@ void Draw_String (int x, int y, char *str, int maxlen)
 
 void Draw_GenericPic (int texnum, float red, float green, float blue, float alpha, float x, float y, float width, float height)
 {
+	if (!r_render.value)
+		return;
 	glDisable(GL_ALPHA_TEST);
 //	glEnable (GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -490,6 +496,8 @@ void Draw_AlphaPic (int x, int y, qpic_t *pic, float alpha)
 	if (scrap_dirty)
 		Scrap_Upload ();
 	gl = (glpic_t *)pic->data;
+	if (!r_render.value)
+		return;
 	glColor4f(1,1,1,alpha);
 	glBindTexture(GL_TEXTURE_2D, gl->texnum);
 	glBegin (GL_QUADS);
@@ -517,6 +525,8 @@ void Draw_Pic (int x, int y, qpic_t *pic)
 	if (scrap_dirty)
 		Scrap_Upload ();
 	gl = (glpic_t *)pic->data;
+	if (!r_render.value)
+		return;
 	glColor3f(1,1,1);
 	glBindTexture(GL_TEXTURE_2D, gl->texnum);
 	glBegin (GL_QUADS);
@@ -550,9 +560,12 @@ void Draw_PicTranslate (int x, int y, qpic_t *pic, byte *translation)
 	for (i = 0;i < c;i++)
 		*dest++ = translation[*src++];
 
-	glBindTexture(GL_TEXTURE_2D, GL_LoadTexture ("translatedplayerpic", pic->width, pic->height, trans, false, true, 1));
+	c = GL_LoadTexture ("translatedplayerpic", pic->width, pic->height, trans, false, true, 1);
 	free(trans);
 
+	if (!r_render.value)
+		return;
+	glBindTexture(GL_TEXTURE_2D, c);
 	glColor3f(1,1,1);
 	glBegin (GL_QUADS);
 	glTexCoord2f (0, 0);
@@ -596,6 +609,8 @@ Fills a box of pixels with a single color
 */
 void Draw_Fill (int x, int y, int w, int h, int c)
 {
+	if (!r_render.value)
+		return;
 	glDisable (GL_TEXTURE_2D);
 	glColor3f (host_basepal[c*3]/255.0, host_basepal[c*3+1]/255.0, host_basepal[c*3+2]/255.0);
 
@@ -623,6 +638,8 @@ Setup as if the screen was 320*200
 */
 void GL_Set2D (void)
 {
+	if (!r_render.value)
+		return;
 	glViewport (glx, gly, glwidth, glheight);
 
 	glMatrixMode(GL_PROJECTION);
