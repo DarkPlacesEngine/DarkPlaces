@@ -62,12 +62,18 @@ void R_LoadSkyBox(void)
 		return;
 	for (i = 0;i < 6;i++)
 	{
-		if (snprintf(name, sizeof(name), "env/%s%s", skyname, suf[i]) >= (int)sizeof(name) || !(image_rgba = loadimagepixels(name, false, 0, 0)))
+		if (snprintf(name, sizeof(name), "%s_%s", skyname, suf[i]) >= (int)sizeof(name) || !(image_rgba = loadimagepixels(name, false, 0, 0)))
 		{
-			if (snprintf(name, sizeof(name), "gfx/env/%s%s", skyname, suf[i]) >= (int)sizeof(name) || !(image_rgba = loadimagepixels(name, false, 0, 0)))
+			if (snprintf(name, sizeof(name), "%s%s", skyname, suf[i]) >= (int)sizeof(name) || !(image_rgba = loadimagepixels(name, false, 0, 0)))
 			{
-				Con_Printf ("Couldn't load env/%s%s or gfx/env/%s%s\n", skyname, suf[i], skyname, suf[i]);
-				continue;
+				if (snprintf(name, sizeof(name), "env/%s%s", skyname, suf[i]) >= (int)sizeof(name) || !(image_rgba = loadimagepixels(name, false, 0, 0)))
+				{
+					if (snprintf(name, sizeof(name), "gfx/env/%s%s", skyname, suf[i]) >= (int)sizeof(name) || !(image_rgba = loadimagepixels(name, false, 0, 0)))
+					{
+						Con_Printf("Couldn't load %s_%s or %s%s or env/%s%s or gfx/env/%s%s\n", skyname, suf[i], skyname, suf[i], skyname, suf[i], skyname, suf[i]);
+						continue;
+					}
+				}
 			}
 		}
 		skyboxside[i] = R_LoadTexture2D(skytexturepool, va("skyboxside%d", i), image_width, image_height, image_rgba, TEXTYPE_RGBA, TEXF_CLAMP | TEXF_PRECACHE, NULL);

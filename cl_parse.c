@@ -213,7 +213,8 @@ void CL_ParseEntityLump(char *entdata)
 	const char *data;
 	char key[128], value[4096];
 	FOG_clear(); // LordHavoc: no fog until set
-	R_SetSkyBox(""); // LordHavoc: no environment mapped sky until set
+	// LordHavoc: default to the map's sky (q3 shader parsing sets this)
+	R_SetSkyBox(cl.worldmodel->brush.skybox);
 	data = entdata;
 	if (!data)
 		return;
