@@ -619,7 +619,10 @@ void CL_LinkNetworkEntity(entity_t *e)
 			e->render.framelerp = 1;
 			if (e->render.frame2time > e->render.frame1time)
 			{
-				e->render.framelerp = (cl.time - e->render.frame2time) / (e->render.frame2time - e->render.frame1time);
+				// make sure frame lerp won't last longer than 100ms
+				// (this mainly helps with models that use framegroups and
+				// switch between them infrequently)
+				e->render.framelerp = (cl.time - e->render.frame2time) / min(e->render.frame2time - e->render.frame1time, 0.1);
 				e->render.framelerp = bound(0, e->render.framelerp, 1);
 			}
 		}
@@ -631,10 +634,6 @@ void CL_LinkNetworkEntity(entity_t *e)
 			e->render.frame = e->render.frame2 = e->state_current.frame;
 			e->render.frame2time = cl.time;
 			e->render.framelerp = 0;
-			// make sure frame lerp won't last longer than 100ms
-			// (this mainly helps with models that use framegroups and
-			// switch between them infrequently)
-			e->render.frame1time = max(e->render.frame1time, e->render.frame2time - 0.1f);
 		}
 		R_LerpAnimation(&e->render);
 
