@@ -1134,7 +1134,7 @@ void PRVM_ED_LoadFromFile (const char *data)
 		}
 
 //
-// immediately call spawn function, but only if there is a self global
+// immediately call spawn function, but only if there is a self global and a classname
 //
 		if(prog->self && prog->flag & PRVM_FE_CLASSNAME)
 		{

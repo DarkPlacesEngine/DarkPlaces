@@ -7,9 +7,8 @@ typedef struct
 	int	self;
 } m_globalvars_t;
 
-typedef struct
+/*typedef struct
 {
-	string_t	classname;
-} m_entvars_t;
+} m_entvars_t;*/
 
-#define M_PROGHEADER_CRC 40313
+#define M_PROGHEADER_CRC 10020
