@@ -328,6 +328,28 @@ void Matrix4x4_FromVectors(matrix4x4_t *out, const float vx[3], const float vy[3
 	out->m[3][3] = 1.0f;
 }
 
+void Matrix4x4_Blend (matrix4x4_t *out, const matrix4x4_t *in1, const matrix4x4_t *in2, float blend)
+{
+	float iblend = 1 - blend;
+	out->m[0][0] = in1->m[0][0] * iblend + in2->m[0][0] * blend;
+	out->m[0][1] = in1->m[0][1] * iblend + in2->m[0][1] * blend;
+	out->m[0][2] = in1->m[0][2] * iblend + in2->m[0][2] * blend;
+	out->m[0][3] = in1->m[0][3] * iblend + in2->m[0][3] * blend;
+	out->m[1][0] = in1->m[1][0] * iblend + in2->m[1][0] * blend;
+	out->m[1][1] = in1->m[1][1] * iblend + in2->m[1][1] * blend;
+	out->m[1][2] = in1->m[1][2] * iblend + in2->m[1][2] * blend;
+	out->m[1][3] = in1->m[1][3] * iblend + in2->m[1][3] * blend;
+	out->m[2][0] = in1->m[2][0] * iblend + in2->m[2][0] * blend;
+	out->m[2][1] = in1->m[2][1] * iblend + in2->m[2][1] * blend;
+	out->m[2][2] = in1->m[2][2] * iblend + in2->m[2][2] * blend;
+	out->m[2][3] = in1->m[2][3] * iblend + in2->m[2][3] * blend;
+	out->m[3][0] = in1->m[3][0] * iblend + in2->m[3][0] * blend;
+	out->m[3][1] = in1->m[3][1] * iblend + in2->m[3][1] * blend;
+	out->m[3][2] = in1->m[3][2] * iblend + in2->m[3][2] * blend;
+	out->m[3][3] = in1->m[3][3] * iblend + in2->m[3][3] * blend;
+}
+
+
 void Matrix4x4_Transform (const matrix4x4_t *in, const float v[3], float out[3])
 {
 	out[0] = v[0] * in->m[0][0] + v[1] * in->m[0][1] + v[2] * in->m[0][2] + in->m[0][3];
