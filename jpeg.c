@@ -395,7 +395,6 @@ Try to load the JPEG DLL
 qboolean JPEG_OpenLibrary (void)
 {
 	const char* dllname;
-	const dllfunction_t *func;
 
 	// Already loaded?
 	if (jpeg_dll)
@@ -407,27 +406,14 @@ qboolean JPEG_OpenLibrary (void)
 	dllname = "libjpeg.so.62";
 #endif
 
-	// Initializations
-	for (func = jpegfuncs; func && func->name != NULL; func++)
-		*func->funcvariable = NULL;
-
 	// Load the DLL
-	if (! (jpeg_dll = Sys_LoadLibrary (dllname)))
+	if (! Sys_LoadLibrary (dllname, &jpeg_dll, jpegfuncs))
 	{
-		Con_DPrintf("Can't find %s. JPEG support disabled\n", dllname);
+		Con_Printf ("JPEG support disabled\n");
 		return false;
 	}
 
-	// Get the function adresses
-	for (func = jpegfuncs; func && func->name != NULL; func++)
-		if (!(*func->funcvariable = (void *) Sys_GetProcAddress (jpeg_dll, func->name)))
-		{
-			Con_Printf("missing function \"%s\" - broken JPEG library!\n", func->name);
-			JPEG_CloseLibrary ();
-			return false;
-		}
-
-	Con_DPrintf("%s loaded. JPEG support enabled\n", dllname);
+	Con_Printf ("JPEG support enabled\n");
 	return true;
 }
 
@@ -441,11 +427,7 @@ Unload the JPEG DLL
 */
 void JPEG_CloseLibrary (void)
 {
-	if (!jpeg_dll)
-		return;
-
-	Sys_UnloadLibrary (jpeg_dll);
-	jpeg_dll = NULL;
+	Sys_UnloadLibrary (&jpeg_dll);
 }
 
 

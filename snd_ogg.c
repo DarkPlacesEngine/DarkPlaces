@@ -292,7 +292,6 @@ Try to load the VorbisFile DLL
 qboolean OGG_OpenLibrary (void)
 {
 	const char* dllname;
-	const dllfunction_t *func;
 
 	// Already loaded?
 	if (vf_dll)
@@ -304,27 +303,14 @@ qboolean OGG_OpenLibrary (void)
 	dllname = "libvorbisfile.so";
 #endif
 
-	// Initializations
-	for (func = oggvorbisfuncs; func && func->name != NULL; func++)
-		*func->funcvariable = NULL;
-
 	// Load the DLL
-	if (! (vf_dll = Sys_LoadLibrary (dllname)))
+	if (! Sys_LoadLibrary (dllname, &vf_dll, oggvorbisfuncs))
 	{
-		Con_DPrintf("Can't find %s. Ogg Vorbis support disabled\n", dllname);
+		Con_Printf ("Ogg Vorbis support disabled\n");
 		return false;
 	}
 
-	// Get the function adresses
-	for (func = oggvorbisfuncs; func && func->name != NULL; func++)
-		if (!(*func->funcvariable = (void *) Sys_GetProcAddress (vf_dll, func->name)))
-		{
-			Con_Printf("missing function \"%s\" - broken Ogg Vorbis library!\n", func->name);
-			OGG_CloseLibrary ();
-			return false;
-		}
-
-	Con_DPrintf("%s loaded. Ogg Vorbis support enabled\n", dllname);
+	Con_Printf ("Ogg Vorbis support enabled\n");
 	return true;
 }
 
@@ -338,11 +324,7 @@ Unload the VorbisFile DLL
 */
 void OGG_CloseLibrary (void)
 {
-	if (!vf_dll)
-		return;
-
-	Sys_UnloadLibrary (vf_dll);
-	vf_dll = NULL;
+	Sys_UnloadLibrary (&vf_dll);
 }
 
 

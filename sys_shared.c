@@ -1,9 +1,10 @@
 
 #include "quakedef.h"
-#include <time.h>
+# include <time.h>
 #ifndef WIN32
-#include <unistd.h>
-#include <fcntl.h>
+# include <unistd.h>
+# include <fcntl.h>
+# include <dlfcn.h>
 #endif
 
 extern cvar_t	timestamps;
@@ -135,26 +136,56 @@ DLL MANAGEMENT
 ===============================================================================
 */
 
-#ifndef WIN32
-#include <dlfcn.h>
-#endif
-
-dllhandle_t Sys_LoadLibrary (const char* name)
+qboolean Sys_LoadLibrary (const char* dllname, dllhandle_t* handle, const dllfunction_t *fcts)
 {
+	const dllfunction_t *func;
+	dllhandle_t dllhandle;
+
+	if (handle == NULL)
+		return false;
+
+	// Initializations
+	for (func = fcts; func && func->name != NULL; func++)
+		*func->funcvariable = NULL;
+
+	// Load the DLL
 #ifdef WIN32
-	return LoadLibrary (name);
+	dllhandle = LoadLibrary (dllname);
 #else
-	return dlopen (name, RTLD_LAZY);
+	dllhandle = dlopen (dllname, RTLD_LAZY);
 #endif
+	if (! dllhandle)
+	{
+		Con_Printf ("Can't load \"%s\".\n", dllname);
+		return false;
+	}
+
+	// Get the function adresses
+	for (func = fcts; func && func->name != NULL; func++)
+		if (!(*func->funcvariable = (void *) Sys_GetProcAddress (dllhandle, func->name)))
+		{
+			Con_Printf ("Missing function \"%s\" - broken library!\n", func->name);
+			Sys_UnloadLibrary (&dllhandle);
+			return false;
+		}
+
+	*handle = dllhandle;
+	Con_DPrintf("\"%s\" loaded.\n", dllname);
+	return true;
 }
 
-void Sys_UnloadLibrary (dllhandle_t handle)
+void Sys_UnloadLibrary (dllhandle_t* handle)
 {
+	if (handle == NULL || *handle == NULL)
+		return;
+
 #ifdef WIN32
-	FreeLibrary (handle);
+	FreeLibrary (*handle);
 #else
-	dlclose (handle);
+	dlclose (*handle);
 #endif
+
+	*handle = NULL;
 }
 
 void* Sys_GetProcAddress (dllhandle_t handle, const char* name)
