@@ -168,9 +168,9 @@ void M_Print (float cx, float cy, const char *str)
 	DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 1, 1, 1, 0);
 }
 
-void M_PrintWhite (float cx, float cy, const char *str)
+void M_PrintRed (float cx, float cy, const char *str)
 {
-	DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 1, 1, 1, 0);
+	DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 0, 0, 1, 0);
 }
 
 void M_ItemPrint (float cx, float cy, char *str, int unghosted)
@@ -576,14 +576,14 @@ void M_SinglePlayer_Draw (void)
 
 		M_DrawTextBox (60, 8 * 8, 23, 4);
 		if (gamemode == GAME_NEXUIZ)
-			M_PrintWhite (95, 10 * 8, "Nexuiz is for");
+			M_Print (95, 10 * 8, "Nexuiz is for");
 		else if (gamemode == GAME_GOODVSBAD2)
-			M_PrintWhite (95, 10 * 8, "Good Vs Bad 2 is for");
+			M_Print (95, 10 * 8, "Good Vs Bad 2 is for");
 		else if (gamemode == GAME_BATTLEMECH)
-			M_PrintWhite (95, 10 * 8, "Battlemech is for");
+			M_Print (95, 10 * 8, "Battlemech is for");
 		else
-			M_PrintWhite (95, 10 * 8, "Transfusion is for");
-		M_PrintWhite (83, 11 * 8, "multiplayer play only");
+			M_Print (95, 10 * 8, "Transfusion is for");
+		M_Print (83, 11 * 8, "multiplayer play only");
 	}
 	else
 	{
@@ -1748,6 +1748,7 @@ char *quakebindnames[][2] =
 
 char *transfusionbindnames[][2] =
 {
+{"",				"Movement"},		// Movement commands
 {"+forward", 		"walk forward"},
 {"+back", 			"backpedal"},
 {"+left", 			"turn left"},
@@ -1756,31 +1757,40 @@ char *transfusionbindnames[][2] =
 {"+moveright", 		"step right"},
 {"+jump", 			"jump / swim up"},
 {"+movedown",		"swim down"},
-{"+attack", 		"attack"},
-{"+button3",		"altfire"},
-{"+button4",		"use"},
+{"",				"Combat"},			// Combat commands
 {"impulse 1",		"Pitch Fork"},
 {"impulse 2",		"Flare Gun"},
 {"impulse 3",		"Shotgun"},
 {"impulse 4",		"Machine Gun"},
 {"impulse 5",		"Incinerator"},
-{"impulse 6",		"Bombs"},
+{"impulse 6",		"Bombs (TNT)"},
+{"impulse 35",		"Proximity Bomb"},
+{"impulse 36",		"Remote Detonator"},
 {"impulse 7",		"Aerosol Can"},
 {"impulse 8",		"Tesla Cannon"},
 {"impulse 9",		"Life Leech"},
-{"impulse 17",		"Voodoo Doll"},
-{"impulse 11",		"previous weapon"},
-{"impulse 10",		"next weapon"},
-{"impulse 14",		"previous item"},
-{"impulse 15",		"next item"},
-{"impulse 13",		"use item"},
-{"impulse 100",		"add bot (red)"},
-{"impulse 101",		"add bot (blue)"},
-{"impulse 102",		"kick a bot"},
-{"impulse 50",		"voting menu"},
-{"impulse 141",		"identify player"},
-{"impulse 16",		"next armor type"},
-{"impulse 20",		"observer mode"}
+{"impulse 10",		"Voodoo Doll"},
+{"impulse 21",		"next weapon"},
+{"impulse 22",		"previous weapon"},
+{"+attack", 		"attack"},
+{"+button3",		"altfire"},
+{"",				"Inventory"},		// Inventory commands
+{"impulse 40",		"Dr.'s Bag"},
+{"impulse 41",		"Crystal Ball"},
+{"impulse 42",		"Beast Vision"},
+{"impulse 43",		"Jump Boots"},
+{"impulse 23",		"next item"},
+{"impulse 24",		"previous item"},
+{"impulse 25",		"use item"},
+{"",				"Misc"},			// Misc commands
+{"+button4",		"use"},
+{"impulse 50",		"add bot (red)"},
+{"impulse 51",		"add bot (blue)"},
+{"impulse 52",		"kick a bot"},
+{"impulse 26",		"next armor type"},
+{"impulse 27",		"identify player"},
+{"impulse 55",		"voting menu"},
+{"impulse 56",		"observer mode"}
 };
 
 char *goodvsbad2bindnames[][2] =
@@ -1961,7 +1971,7 @@ void M_Keys_Draw (void)
 	cachepic_t	*p;
 	char	keystring[1024];
 
-	M_Background(320, 200);
+	M_Background(320, 48 + 8 * numcommands);
 
 	p = Draw_CachePic ("gfx/ttl_cstm.lmp");
 	M_DrawPic ( (320-p->width)/2, 4, "gfx/ttl_cstm.lmp");
@@ -1976,7 +1986,15 @@ void M_Keys_Draw (void)
 	{
 		y = 48 + 8*i;
 
-		M_Print (16, y, bindnames[i][1]);
+		// If there's no command, it's just a section
+		if (bindnames[i][0][0] == '\0')
+		{
+			M_PrintRed (4, y, "\x0D");  // #13 is the little arrow pointing to the right
+			M_PrintRed (16, y, bindnames[i][1]);
+			continue;
+		}
+		else
+			M_Print (16, y, bindnames[i][1]);
 
 		M_FindKeysForCommand (bindnames[i][0], keys);
 
@@ -2037,17 +2055,25 @@ void M_Keys_Key (int k)
 	case K_LEFTARROW:
 	case K_UPARROW:
 		S_LocalSound ("misc/menu1.wav");
-		keys_cursor--;
-		if (keys_cursor < 0)
-			keys_cursor = numcommands-1;
+		do
+		{
+			keys_cursor--;
+			if (keys_cursor < 0)
+				keys_cursor = numcommands-1;
+		}
+		while (bindnames[keys_cursor][0][0] == '\0');  // skip sections
 		break;
 
 	case K_DOWNARROW:
 	case K_RIGHTARROW:
 		S_LocalSound ("misc/menu1.wav");
-		keys_cursor++;
-		if (keys_cursor >= numcommands)
-			keys_cursor = 0;
+		do
+		{
+			keys_cursor++;
+			if (keys_cursor >= numcommands)
+				keys_cursor = 0;
+		}
+		while (bindnames[keys_cursor][0][0] == '\0');  // skip sections
 		break;
 
 	case K_ENTER:		// go into bind mode
@@ -2502,7 +2528,7 @@ void M_LanConfig_Draw (void)
 		M_DrawCharacter (basex+16 + 8*strlen(lanConfig_joinname), lanConfig_cursor_table [2], 10+((int)(realtime*4)&1));
 
 	if (*m_return_reason)
-		M_PrintWhite (basex, 168, m_return_reason);
+		M_Print (basex, 168, m_return_reason);
 }
 
 
@@ -3356,7 +3382,7 @@ void M_ServerList_Draw (void)
 	M_DrawCharacter(0, 32 + (slist_cursor - start) * 16, 12+((int)(realtime*4)&1));
 
 	if (*m_return_reason)
-		M_PrintWhite(16, vid.conheight - 8, m_return_reason);
+		M_Print(16, vid.conheight - 8, m_return_reason);
 }
 
 
@@ -3441,6 +3467,18 @@ void M_Init (void)
 		numcommands = sizeof(quakebindnames) / sizeof(quakebindnames[0]);
 		bindnames = quakebindnames;
 	}
+
+	// Make sure "keys_cursor" doesn't start on a section in the binding list
+	keys_cursor = 0;
+	while (bindnames[keys_cursor][0][0] == '\0')
+	{
+		keys_cursor++;
+
+		// Only sections? There may be a problem somewhere...
+		if (keys_cursor >= numcommands)
+			Sys_Error ("M_Init: The key binding list only contains sections");
+	}
+
 
 	if (gamemode == GAME_NEHAHRA)
 	{
