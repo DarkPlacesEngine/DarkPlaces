@@ -283,6 +283,27 @@ void SV_SendServerinfo (client_t *client)
 	// edicts get reallocated on level changes, so we need to update it here
 	client->edict = EDICT_NUM((client - svs.clients) + 1);
 
+	// if client is a botclient coming from a level change, we need to set up
+	// client info that normally requires networking
+	if (!client->netconnection)
+	{
+		int i;
+
+		// set up the edict
+		ED_ClearEdict(client->edict);
+
+		// copy spawn parms out of the client_t
+		for (i=0 ; i< NUM_SPAWN_PARMS ; i++)
+			(&pr_global_struct->parm1)[i] = host_client->spawn_parms[i];
+
+		// call the spawn function
+		pr_global_struct->time = sv.time;
+		pr_global_struct->self = EDICT_TO_PROG(sv_player);
+		PR_ExecuteProgram (pr_global_struct->ClientConnect, "QC function ClientConnect is missing");
+		PR_ExecuteProgram (pr_global_struct->PutClientInServer, "QC function PutClientInServer is missing");
+		host_client->spawned = true;
+		return;
+	}
 
 	// LordHavoc: clear entityframe tracking
 
@@ -388,7 +409,10 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 			client->spawn_parms[i] = (&pr_global_struct->parm1)[i];
 	}
 
-	SV_SendServerinfo (client);
+	// don't call SendServerinfo for a fresh botclient because its fields have
+	// not been set up by the qc yet
+	if (client->netconnection)
+		SV_SendServerinfo (client);
 }
 
 
@@ -1718,6 +1742,7 @@ void SV_SpawnServer (const char *server)
 		SV_CreateBaseline ();
 
 // send serverinfo to all connected clients
+	// (note this also handles botclients coming back from a level change)
 	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 		if (host_client->active)
 			SV_SendServerinfo(host_client);
