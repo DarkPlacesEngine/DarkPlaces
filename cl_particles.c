@@ -1911,7 +1911,7 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 		ca = 1;
 	}
 #ifndef WORKINGLQUAKE
-	else if (fogenabled)
+	if (fogenabled)
 	{
 		VectorSubtract(org, r_vieworigin, fogvec);
 		fog = exp(fogdensity/DotProduct(fogvec,fogvec));
