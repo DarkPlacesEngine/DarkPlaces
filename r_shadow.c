@@ -2678,16 +2678,23 @@ typedef enum lighttype_e {LIGHTTYPE_MINUSX, LIGHTTYPE_RECIPX, LIGHTTYPE_RECIPXX,
 void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 {
 	int entnum, style, islight, skin, pflags, effects, type, n;
-	char key[256], value[1024];
-	float origin[3], angles[3], radius, color[3], light[4], fadescale, lightscale, originhack[3], overridecolor[3], vec[4];
+	char *entfiledata;
 	const char *data;
+	float origin[3], angles[3], radius, color[3], light[4], fadescale, lightscale, originhack[3], overridecolor[3], vec[4];
+	char key[256], value[1024];
 
 	if (cl.worldmodel == NULL)
 	{
 		Con_Print("No map loaded.\n");
 		return;
 	}
-	data = cl.worldmodel->brush.entities;
+	// try to load a .ent file first
+	FS_StripExtension (cl.worldmodel->name, key, sizeof (key));
+	strlcat (key, ".ent", sizeof (key));
+	data = entfiledata = FS_LoadFile(key, tempmempool, true);
+	// and if that is not found, fall back to the bsp file entity string
+	if (!data)
+		data = cl.worldmodel->brush.entities;
 	if (!data)
 		return;
 	for (entnum = 0;COM_ParseToken(&data, false) && com_token[0] == '{';entnum++)
@@ -2881,6 +2888,8 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 		if (radius >= 1)
 			R_Shadow_UpdateWorldLight(R_Shadow_NewWorldLight(), origin, angles, color, radius, (pflags & PFLAGS_CORONA) != 0, style, (pflags & PFLAGS_NOSHADOW) == 0, skin >= 16 ? va("cubemaps/%i", skin) : NULL);
 	}
+	if (entfiledata)
+		Mem_Free(entfiledata);
 }
 
 
