@@ -476,18 +476,7 @@ static void CL_RelinkNetworkEntities()
 			if (effects & EF_BRIGHTFIELD)
 				CL_EntityParticles (ent);
 			if (effects & EF_MUZZLEFLASH)
-			{
-				vec3_t v, v2;
-
-				AngleVectors (ent->render.angles, v, NULL, NULL);
-
-				v2[0] = v[0] * 18 + neworg[0];
-				v2[1] = v[1] * 18 + neworg[1];
-				v2[2] = v[2] * 18 + neworg[2] + 16;
-				TraceLine(neworg, v2, v, NULL, 0, true);
-
-				CL_AllocDlight (NULL, v, 100, 1, 1, 1, 0, 0);
-			}
+				ent->persistent.muzzleflash = 100.0f;
 			if (effects & EF_DIMLIGHT)
 			{
 				dlightcolor[0] += 200.0f;
@@ -589,6 +578,21 @@ static void CL_RelinkNetworkEntities()
 				dlightcolor[1] += d * 0.7f;
 				dlightcolor[2] += d * 0.3f;
 			}
+		}
+
+		if (ent->persistent.muzzleflash > 0)
+		{
+			vec3_t v, v2;
+
+			AngleVectors (ent->render.angles, v, NULL, NULL);
+
+			v2[0] = v[0] * 18 + neworg[0];
+			v2[1] = v[1] * 18 + neworg[1];
+			v2[2] = v[2] * 18 + neworg[2] + 16;
+			TraceLine(neworg, v2, v, NULL, 0, true);
+
+			CL_AllocDlight (NULL, v, ent->persistent.muzzleflash, 1, 1, 1, 0, 0);
+			ent->persistent.muzzleflash -= cl.frametime * 1000;
 		}
 
 		// LordHavoc: if the model has no flags, don't check each

@@ -755,7 +755,7 @@ void R_CompleteLightPoint (vec3_t color, vec3_t p, int dynamic, mleaf_t *leaf)
 			if (d_lightstylevalue[sl->style] > 0)
 			{
 				VectorSubtract (p, sl->origin, dist);
-				f = DotProduct(dist, dist) + 65536.0f;
+				f = DotProduct(dist, dist) + sl->distbias;
 				f = (1.0f / f) - sl->subtract;
 				if (f > 0)
 				{
@@ -897,7 +897,7 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 					VectorScale(sl->light, f, nl->light);
 					nl->cullradius2 = 99999999;
 					nl->lightsubtract = sl->subtract;
-					nl->offset = 65536.0f;
+					nl->offset = sl->distbias;
 					nl++;
 					nearlights++;
 				}

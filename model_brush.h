@@ -111,6 +111,8 @@ surfvertex_t;
 // LordHavoc: replaces glpoly, triangle mesh
 typedef struct surfmesh_s
 {
+	// can be multiple meshs per surface
+	struct surfmesh_s *chain;
 	int numverts;
 	int numtriangles;
 	surfvertex_t *vertex;
@@ -153,7 +155,7 @@ typedef struct msurface_s
 	// the stride when building lightmaps to comply with fragment update
 	int			lightmaptexturestride;
 	// mesh for rendering
-	surfmesh_t	mesh;
+	surfmesh_t	*mesh;
 
 	// these are just 3D points defining the outline of the polygon,
 	// no texcoord info (that can be generated from these)
@@ -285,6 +287,7 @@ typedef struct mlight_s
 	float subtract;
 	vec3_t spotdir;
 	float spotcone; // cosine of spotlight cone angle (or 0 if not a spotlight)
+	float distbias;
 	int style;
 	int numleafs; // used only for loading calculations, number of leafs this shines on
 }
