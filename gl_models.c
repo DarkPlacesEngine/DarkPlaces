@@ -180,8 +180,8 @@ void R_AliasLerpVerts(int vertcount, float *vertices, float *normals,
 skinframe_t *R_FetchSkinFrame(const entity_render_t *ent)
 {
 	model_t *model = ent->model;
-	unsigned int s = (unsigned int) ent->skinnum;
-	if (s >= model->numskins)
+	int s = ent->skinnum;
+	if ((unsigned int)s >= (unsigned int)model->numskins)
 		s = 0;
 	if (model->skinscenes[s].framecount > 1)
 		return &model->skinframes[model->skinscenes[s].firstframe + (int) (cl.time * 10) % model->skinscenes[s].framecount];

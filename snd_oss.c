@@ -113,10 +113,9 @@ qboolean SNDDMA_Init(void)
 		shm->speed = atoi(com_argv[i+1]);
 	else
 	{
-		for (i=0 ; i<sizeof(tryrates)/4 ; i++) {
+		for (i = 0;i < (int) sizeof(tryrates) / 4;i++)
 			if (!ioctl(audio_fd, SNDCTL_DSP_SPEED, &tryrates[i]))
 				break;
-		}
 
 		shm->speed = tryrates[i];
     }

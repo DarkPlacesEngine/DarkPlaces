@@ -211,7 +211,7 @@ void Key_Console (int key)
 
 	if (key == K_DEL)		// delete char on cursor
 	{
-		if (key_linepos < strlen(key_lines[edit_line]))
+		if ((size_t)key_linepos < strlen(key_lines[edit_line]))
 			strcpy(key_lines[edit_line] + key_linepos, key_lines[edit_line] + key_linepos + 1);
 		return;
 	}
@@ -221,9 +221,9 @@ void Key_Console (int key)
 	// otherwise just go right one
 	if (key == K_RIGHTARROW)
 	{
-		if (strlen(key_lines[edit_line]) == key_linepos)
+		if (strlen(key_lines[edit_line]) == (size_t)key_linepos)
 		{
-			if (strlen(key_lines[(edit_line + 31) & 31]) <= key_linepos)
+			if (strlen(key_lines[(edit_line + 31) & 31]) <= (size_t)key_linepos)
 				return; // no character to get
 
 			key_lines[edit_line][key_linepos] = key_lines[(edit_line + 31) & 31][key_linepos];

@@ -323,8 +323,8 @@ void GL_SetupView_Mode_Ortho (double x1, double y1, double x2, double y2, double
 
 typedef struct gltextureunit_s
 {
-	unsigned int t1d, t2d, t3d, tcubemap;
-	unsigned int arrayenabled;
+	int t1d, t2d, t3d, tcubemap;
+	int arrayenabled;
 	float rgbscale, alphascale;
 	int combinergb, combinealpha;
 	// FIXME: add more combine stuff

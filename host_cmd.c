@@ -567,7 +567,7 @@ void Host_PerformLoadGame(char *name)
 	entnum = -1;
 	while (!Qeof(f))
 	{
-		for (i = 0;i < sizeof(buf) - 1;i++)
+		for (i = 0;i < (int)sizeof(buf) - 1;i++)
 		{
 			r = Qgetc (f);
 			if (r == EOF || !r)
@@ -730,7 +730,7 @@ void Host_Say(qboolean teamonly)
 	}
 	while (p2 > p1 && (p2[-1] == '\n' || p2[-1] == '\r'))
 		p2--;
-	for (j = strlen(text);j < (sizeof(text) - 2) && p1 < p2;)
+	for (j = strlen(text);j < (int)(sizeof(text) - 2) && p1 < p2;)
 		text[j++] = *p1++;
 	text[j++] = '\n';
 	text[j++] = 0;
@@ -811,7 +811,7 @@ void Host_Tell_f(void)
 	}
 	while (p2 > p1 && (p2[-1] == '\n' || p2[-1] == '\r'))
 		p2--;
-	for (j = strlen(text);j < (sizeof(text) - 2) && p1 < p2;)
+	for (j = strlen(text);j < (int)(sizeof(text) - 2) && p1 < p2;)
 		text[j++] = *p1++;
 	text[j++] = '\n';
 	text[j++] = 0;

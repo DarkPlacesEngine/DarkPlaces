@@ -70,7 +70,7 @@ void W_LoadWadFile (char *filename)
 {
 	lumpinfo_t		*lump_p;
 	wadinfo_t		*header;
-	unsigned		i;
+	int				i;
 	int				infotableofs;
 	void			*temp;
 
@@ -155,7 +155,7 @@ void W_LoadTextureWadFile (char *filename, int complain)
 {
 	lumpinfo_t		*lumps, *lump_p;
 	wadinfo_t		header;
-	unsigned		i, j;
+	int				i, j;
 	int				infotableofs;
 	QFile			*file;
 	int				numlumps;
@@ -183,7 +183,7 @@ void W_LoadTextureWadFile (char *filename, int complain)
 	if (!(lumps = Mem_Alloc(tempmempool, sizeof(lumpinfo_t)*numlumps)))
 	{Con_Printf ("W_LoadTextureWadFile: unable to allocate temporary memory for lump table");return;}
 
-	if (Qread(file, lumps, sizeof(lumpinfo_t) * numlumps) != sizeof(lumpinfo_t) * numlumps)
+	if (Qread(file, lumps, sizeof(lumpinfo_t) * numlumps) != (int)sizeof(lumpinfo_t) * numlumps)
 	{Con_Printf ("W_LoadTextureWadFile: unable to read lump table");return;}
 
 	for (i=0, lump_p = lumps ; i<numlumps ; i++,lump_p++)

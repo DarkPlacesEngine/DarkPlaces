@@ -911,7 +911,7 @@ qboolean	ED_ParseEpair (void *base, ddef_t *key, const char *s)
 		}
 		*(int *)d = G_INT(def->ofs);
 		break;
-	
+
 	case ev_function:
 		func = ED_FindFunction (s);
 		if (!func)
@@ -1194,7 +1194,7 @@ void PR_LoadProgs (void)
 	pr_crc = CRC_Block((qbyte *)progs, com_filesize);
 
 // byte swap the header
-	for (i=0 ; i<sizeof(*progs)/4 ; i++)
+	for (i = 0;i < (int) sizeof(*progs) / 4;i++)
 		((int *)progs)[i] = LittleLong ( ((int *)progs)[i] );
 
 	if (progs->version != PROG_VERSION)
@@ -1255,7 +1255,7 @@ void PR_LoadProgs (void)
 	}
 
 	// append the darkplaces fields
-	for (i = 0;i < DPFIELDS;i++)
+	for (i = 0;i < (int) DPFIELDS;i++)
 	{
 		pr_fielddefs[progs->numfielddefs].type = dpfields[i].type;
 		pr_fielddefs[progs->numfielddefs].ofs = progs->entityfields;
@@ -1574,14 +1574,14 @@ int EDICT_TO_PROG(edict_t *e)
 {
 	int n;
 	n = e - sv.edicts;
-	if ((unsigned int)n >= sv.max_edicts)
+	if ((unsigned int)n >= (unsigned int)sv.max_edicts)
 		Host_Error("EDICT_TO_PROG: invalid edict %8p (number %i compared to world at %8p)\n", e, n, sv.edicts);
 	return n;// EXPERIMENTAL
 	//return (qbyte *)e->v - (qbyte *)sv.edictsfields;
 }
 edict_t *PROG_TO_EDICT(int n)
 {
-	if ((unsigned int)n >= sv.max_edicts)
+	if ((unsigned int)n >= (unsigned int)sv.max_edicts)
 		Host_Error("PROG_TO_EDICT: invalid edict number %i\n", n);
 	return sv.edictstable[n]; // EXPERIMENTAL
 	//return sv.edictstable[(n) / (progs->entityfields * 4)];

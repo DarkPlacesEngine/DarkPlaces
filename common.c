@@ -375,7 +375,7 @@ char *MSG_ReadString (void)
 			break;
 		string[l] = c;
 		l++;
-	} while (l < sizeof(string)-1);
+	} while (l < (int)sizeof(string)-1);
 
 	string[l] = 0;
 
@@ -1083,7 +1083,7 @@ void COM_CopyFile (char *netpath, char *cachepath)
 
 	while (remaining)
 	{
-		if (remaining < sizeof(buf))
+		if (remaining < (int)sizeof(buf))
 			count = remaining;
 		else
 			count = sizeof(buf);

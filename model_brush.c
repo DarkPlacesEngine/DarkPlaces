@@ -383,10 +383,10 @@ static void Mod_LoadTextures (lump_t *l)
 							Image_Copy8bitRGBA(mtdata, basepixels, basepixels_width * basepixels_height, palette_nofullbrights);
 							if (!glowpixels)
 							{
-								for (j = 0;j < tx->width*tx->height;j++)
+								for (j = 0;j < (int)(tx->width*tx->height);j++)
 									if (((qbyte *)&palette_onlyfullbrights[mtdata[j]])[3] > 0) // fullbright
 										break;
-								if (j < tx->width * tx->height)
+								if (j < (int)(tx->width * tx->height))
 								{
 									glowpixels_width = tx->width;
 									glowpixels_height = tx->height;
@@ -2783,7 +2783,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 // swap all the lumps
 	mod_base = (qbyte *)header;
 
-	for (i=0 ; i<sizeof(dheader_t)/4 ; i++)
+	for (i = 0;i < (int) sizeof(dheader_t) / 4;i++)
 		((int *)header)[i] = LittleLong ( ((int *)header)[i]);
 
 // load into heap

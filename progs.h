@@ -172,7 +172,7 @@ extern int pr_numbuiltins;
 
 extern int		pr_argc;
 
-extern	qboolean	pr_trace;
+extern	int			pr_trace;
 extern	dfunction_t	*pr_xfunction;
 extern	int			pr_xstatement;
 

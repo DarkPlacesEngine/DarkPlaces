@@ -870,7 +870,7 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 	// go through the lumps, swapping things
 
 	{
-		unsigned int i, numposes;
+		int i, numposes;
 		zymscene_t *scene;
 	//	zymlump_t lump_scenes; // zymscene_t scene[numscenes]; // name and other information for each scene (see zymscene struct)
 		loadmodel->animscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numframes);
@@ -883,9 +883,9 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 			loadmodel->animscenes[i].framecount = BigLong(scene->length);
 			loadmodel->animscenes[i].framerate = BigFloat(scene->framerate);
 			loadmodel->animscenes[i].loop = (BigLong(scene->flags) & ZYMSCENEFLAG_NOLOOP) == 0;
-			if ((unsigned int) loadmodel->animscenes[i].firstframe >= numposes)
+			if ((unsigned int) loadmodel->animscenes[i].firstframe >= (unsigned int) numposes)
 				Host_Error("Mod_LoadZymoticModel: scene firstframe (%i) >= numposes (%i)\n", loadmodel->animscenes[i].firstframe, numposes);
-			if ((unsigned int) loadmodel->animscenes[i].firstframe + (unsigned int) loadmodel->animscenes[i].framecount > numposes)
+			if ((unsigned int) loadmodel->animscenes[i].firstframe + (unsigned int) loadmodel->animscenes[i].framecount > (unsigned int) numposes)
 				Host_Error("Mod_LoadZymoticModel: scene firstframe (%i) + framecount (%i) >= numposes (%i)\n", loadmodel->animscenes[i].firstframe, loadmodel->animscenes[i].framecount, numposes);
 			if (loadmodel->animscenes[i].framerate < 0)
 				Host_Error("Mod_LoadZymoticModel: scene framerate (%f) < 0\n", loadmodel->animscenes[i].framerate);
@@ -894,7 +894,7 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 	}
 
 	{
-		unsigned int i;
+		int i;
 		float *poses;
 	//	zymlump_t lump_poses; // float pose[numposes][numbones][3][4]; // animation data
 		loadmodel->zymdata_poses = Mem_Alloc(loadmodel->mempool, pheader->lump_poses.length);
@@ -904,7 +904,7 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 	}
 
 	{
-		unsigned int i;
+		int i;
 		zymbone_t *bone;
 	//	zymlump_t lump_bones; // zymbone_t bone[numbones];
 		loadmodel->zymdata_bones = Mem_Alloc(loadmodel->mempool, pheader->numbones * sizeof(zymbone_t));
@@ -920,7 +920,7 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 	}
 
 	{
-		unsigned int i, *bonecount;
+		int i, *bonecount;
 	//	zymlump_t lump_vertbonecounts; // int vertbonecounts[numvertices]; // how many bones influence each vertex (separate mainly to make this compress better)
 		loadmodel->zymdata_vertbonecounts = Mem_Alloc(loadmodel->mempool, pheader->numbones * sizeof(int));
 		bonecount = (void *) (pheader->lump_vertbonecounts.start + pbase);
@@ -933,7 +933,7 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 	}
 
 	{
-		unsigned int i;
+		int i;
 		zymvertex_t *vertdata;
 	//	zymlump_t lump_verts; // zymvertex_t vert[numvertices]; // see vertex struct
 		loadmodel->zymdata_verts = Mem_Alloc(loadmodel->mempool, pheader->lump_verts.length);
@@ -948,7 +948,7 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 	}
 
 	{
-		unsigned int i;
+		int i;
 		float *intexcoord, *outtexcoord;
 	//	zymlump_t lump_texcoords; // float texcoords[numvertices][2];
 		loadmodel->zymdata_texcoords = outtexcoord = Mem_Alloc(loadmodel->mempool, pheader->numverts * sizeof(float[4]));
@@ -962,7 +962,7 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 	}
 
 	{
-		unsigned int i, count, a, b, c, *renderlist, *renderlistend, *outrenderlist;
+		int i, count, a, b, c, *renderlist, *renderlistend, *outrenderlist;
 	//	zymlump_t lump_render; // int renderlist[rendersize]; // sorted by shader with run lengths (int count), shaders are sequentially used, each run can be used with glDrawElements (each triangle is 3 int indices)
 		loadmodel->zymdata_renderlist = Mem_Alloc(loadmodel->mempool, pheader->lump_render.length);
 		// byteswap, validate, and swap winding order of tris
@@ -996,7 +996,7 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 	}
 
 	{
-		unsigned int i;
+		int i;
 		char *shadername;
 	//	zymlump_t lump_shaders; // char shadername[numshaders][32]; // shaders used on this model
 		shadername = (void *) (pheader->lump_shaders.start + pbase);

@@ -85,7 +85,7 @@ const char* Master_BuildGetServers (void)
 	cvar_t* sv_master;
 	char request [256];
 
-	if (nextmaster >= sizeof (sv_masters) / sizeof (sv_masters[0]))
+	if (nextmaster >= (int)(sizeof (sv_masters) / sizeof (sv_masters[0])))
 	{
 		nextmaster = 0;
 		return NULL;
@@ -123,8 +123,8 @@ const char* Master_BuildHeartbeat (void)
 {
 	static int nextmaster = 0;
 	cvar_t* sv_master;
-	
-	if (nextmaster >= sizeof (sv_masters) / sizeof (sv_masters[0]))
+
+	if (nextmaster >= (int)(sizeof (sv_masters) / sizeof (sv_masters[0])))
 	{
 		nextmaster = 0;
 		return NULL;
@@ -233,7 +233,7 @@ void Master_ParseServerList (net_landriver_t* dfunc)
 	struct qsockaddr svaddr;
 	char ipstring [32];
 
-	if (net_message.cursize < sizeof(int))
+	if (net_message.cursize < (int)sizeof(int))
 		return;
 
 	// is the cache full?

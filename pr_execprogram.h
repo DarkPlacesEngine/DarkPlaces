@@ -169,7 +169,7 @@
 			case OP_ADDRESS:
 				pr_xstatement = st - pr_statements;
 #if PRBOUNDSCHECK
-				if ((unsigned int)OPB->_int >= progs->entityfields)
+				if ((unsigned int)(OPB->_int) >= (unsigned int)(progs->entityfields))
 				{
 					Host_Error("Progs attempted to address an invalid field (%i) in an edict\n", OPB->_int);
 					return;
@@ -191,7 +191,7 @@
 			case OP_LOAD_FNC:
 				pr_xstatement = st - pr_statements;
 #if PRBOUNDSCHECK
-				if ((unsigned int)OPB->_int >= progs->entityfields)
+				if ((unsigned int)(OPB->_int) >= (unsigned int)(progs->entityfields))
 				{
 					Host_Error("Progs attempted to read an invalid field in an edict (%i)\n", OPB->_int);
 					return;

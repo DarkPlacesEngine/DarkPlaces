@@ -1,7 +1,7 @@
 ##### Variables that you may want to modify #####
 
 #choose the compiler you want to use
-CC=gcc-3.1
+CC=gcc-cvs
 
 #recommended for: anyone not using ALSA 0.5
 OBJ_SND=snd_oss.o snd_dma.o snd_mix.o snd_mem.o
