@@ -46,13 +46,17 @@ cvar_t gl_nosubimagefragments = {"gl_nosubimagefragments", "0"};
 cvar_t gl_nosubimage = {"gl_nosubimage", "0"};
 cvar_t r_ambient = {"r_ambient", "0"};
 cvar_t gl_vertex = {"gl_vertex", "0"};
-cvar_t gl_texsort = {"gl_texsort", "1"};
-cvar_t r_newworldnode = {"r_newworldnode", "0"};
-cvar_t r_oldclip = {"r_oldclip", "1"};
+cvar_t r_leafworldnode = {"r_leafworldnode", "0"};
+cvar_t r_portalworldnode = {"r_portalworldnode", "0"};
+//cvar_t r_oldclip = {"r_oldclip", "1"};
 cvar_t r_dlightmap = {"r_dlightmap", "1"};
+cvar_t r_drawportals = {"r_drawportals", "0"};
+cvar_t	r_novis = {"r_novis","0"};
 
-qboolean lightmaprgba, nosubimagefragments, nosubimage, skyisvisible;
+qboolean lightmaprgba, nosubimagefragments, nosubimage;
 int lightmapbytes;
+
+int wateralpha;
 
 void gl_surf_start()
 {
@@ -77,10 +81,12 @@ void GL_Surf_Init()
 	Cvar_RegisterVariable(&gl_nosubimage);
 	Cvar_RegisterVariable(&r_ambient);
 	Cvar_RegisterVariable(&gl_vertex);
-	Cvar_RegisterVariable(&gl_texsort);
-	Cvar_RegisterVariable(&r_newworldnode);
-	Cvar_RegisterVariable(&r_oldclip);
+	Cvar_RegisterVariable(&r_leafworldnode);
+	Cvar_RegisterVariable(&r_portalworldnode);
+//	Cvar_RegisterVariable(&r_oldclip);
 	Cvar_RegisterVariable(&r_dlightmap);
+	Cvar_RegisterVariable(&r_drawportals);
+	Cvar_RegisterVariable(&r_novis);
 
 	R_RegisterModule("GL_Surf", gl_surf_start, gl_surf_shutdown, gl_surf_newmap);
 }
@@ -315,7 +321,7 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 					*bl++ += *lightmap++ * scale;
 			}
 		}
-		if (r_dlightmap.value && surf->dlightframe == r_dlightframecount)
+		if (r_dlightmap.value && surf->dlightframe == r_framecount)
 			if ((surf->cached_dlight = R_AddDynamicLights(surf)))
 				c_light_polys++;
 	}
@@ -370,9 +376,9 @@ Returns the proper texture for a given time and base texture
 */
 texture_t *R_TextureAnimation (texture_t *base)
 {
-	texture_t *original;
-	int		relative;
-	int		count;
+//	texture_t *original;
+//	int		relative;
+//	int		count;
 
 	if (currententity->render.frame)
 	{
@@ -383,9 +389,12 @@ texture_t *R_TextureAnimation (texture_t *base)
 	if (!base->anim_total)
 		return base;
 
+	return base->anim_frames[(int)(cl.time*5) % base->anim_total];
+
+	/*
 	original = base;
 
-	relative = (int)(cl.time*10) % base->anim_total;
+	relative = (int)(cl.time*5) % base->anim_total;
 
 	count = 0;	
 	while (base->anim_min > relative || base->anim_max <= relative)
@@ -404,6 +413,7 @@ texture_t *R_TextureAnimation (texture_t *base)
 	}
 
 	return base;
+	*/
 }
 
 
@@ -465,11 +475,18 @@ void UploadLightmaps()
 
 float	wvert[1024*6]; // used by the following functions
 
+extern qboolean hlbsp;
+
 void RSurf_DrawSky(msurface_t *s, int transform)
 {
 	glpoly_t *p;
 	int i;
 	float *v;
+
+	// LordHavoc: HalfLife maps have freaky skypolys...
+	if (hlbsp)
+		return;
+
 	for (p=s->polys ; p ; p=p->next)
 	{
 		if (currentskypoly < MAX_SKYPOLYS && currentskyvert + p->numverts <= MAX_SKYVERTS)
@@ -547,12 +564,12 @@ int RSurf_Light(int *dlightbits, glpoly_t *polys)
 void RSurf_DrawWater(msurface_t *s, texture_t *t, int transform, int alpha)
 {
 	int		i;
-	float	os = turbsin[(int)(realtime * TURBSCALE) & 255], ot = turbsin[(int)(cl.time * TURBSCALE + 96.0) & 255];
+	float	os = turbsin[(int)(cl.time * TURBSCALE) & 255], ot = turbsin[(int)(cl.time * TURBSCALE + 96.0) & 255];
 	glpoly_t *p;
 	float	*v;
 	// FIXME: make fog texture if water texture is transparent?
 
-	if (s->dlightframe != r_dlightframecount)
+	if (s->dlightframe != r_framecount)
 	{
 		vec3_t temp;
 		// LordHavoc: fast path for no vertex lighting cases
@@ -566,7 +583,7 @@ void RSurf_DrawWater(msurface_t *s, texture_t *t, int transform, int alpha)
 					for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
 					{
 						softwaretransform(v, temp);
-						transpolyvert(temp[0], temp[1], temp[2] + r_waterripple.value * turbsin[(int)((temp[0]*(1.0f/32.0f)+cl.time) * TURBSCALE) & 255] * turbsin[(int)((temp[1]*(1.0f/32.0f)+realtime) * TURBSCALE) & 255] * (1.0f / 64.0f), (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), 128, 128, 128, alpha);
+						transpolyvert(temp[0], temp[1], temp[2] + r_waterripple.value * turbsin[(int)((temp[0]*(1.0f/32.0f)+cl.time) * TURBSCALE) & 255] * turbsin[(int)((temp[1]*(1.0f/32.0f)+cl.time) * TURBSCALE) & 255] * (1.0f / 64.0f), (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), 128, 128, 128, alpha);
 					}
 					transpolyend();
 				}
@@ -593,7 +610,7 @@ void RSurf_DrawWater(msurface_t *s, texture_t *t, int transform, int alpha)
 				{
 					transpolybegin(R_GetTexture(t->texture), R_GetTexture(t->glowtexture), 0, TPOLYTYPE_ALPHA);
 					for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
-						transpolyvert(v[0], v[1], v[2] + r_waterripple.value * turbsin[(int)((v[0]*(1.0f/32.0f)+cl.time) * TURBSCALE) & 255] * turbsin[(int)((v[1]*(1.0f/32.0f)+realtime) * TURBSCALE) & 255] * (1.0f / 64.0f), (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), 128, 128, 128, alpha);
+						transpolyvert(v[0], v[1], v[2] + r_waterripple.value * turbsin[(int)((v[0]*(1.0f/32.0f)+cl.time) * TURBSCALE) & 255] * turbsin[(int)((v[1]*(1.0f/32.0f)+cl.time) * TURBSCALE) & 255] * (1.0f / 64.0f), (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), 128, 128, 128, alpha);
 					transpolyend();
 				}
 			}
@@ -622,12 +639,12 @@ void RSurf_DrawWater(msurface_t *s, texture_t *t, int transform, int alpha)
 				else
 					VectorCopy(v, wv);
 				if (r_waterripple.value)
-					wv[2] += r_waterripple.value * turbsin[(int)((wv[0]*(1.0f/32.0f)+cl.time) * TURBSCALE) & 255] * turbsin[(int)((wv[1]*(1.0f/32.0f)+realtime) * TURBSCALE) & 255] * (1.0f / 64.0f);
+					wv[2] += r_waterripple.value * turbsin[(int)((wv[0]*(1.0f/32.0f)+cl.time) * TURBSCALE) & 255] * turbsin[(int)((wv[1]*(1.0f/32.0f)+cl.time) * TURBSCALE) & 255] * (1.0f / 64.0f);
 				wv[3] = wv[4] = wv[5] = 128.0f;
 				wv += 6;
 			}
 		}
-		if (s->dlightframe == r_dlightframecount)
+		if (s->dlightframe == r_framecount)
 			RSurf_Light(s->dlightbits, s->polys);
 		wv = wvert;
 		for (p=s->polys ; p ; p=p->next)
@@ -650,7 +667,7 @@ void RSurf_DrawWall(msurface_t *s, texture_t *t, int transform)
 	wallvertcolor_t *outcolor;
 	// check for lightmap modification
 	if (s->cached_dlight
-	 || (r_dynamic.value && r_dlightmap.value && s->dlightframe == r_dlightframecount)
+	 || (r_dynamic.value && r_dlightmap.value && s->dlightframe == r_framecount)
 	 || r_ambient.value != s->cached_ambient
 	 || lighthalf != s->cached_lighthalf
 	 || (r_dynamic.value
@@ -659,7 +676,7 @@ void RSurf_DrawWall(msurface_t *s, texture_t *t, int transform)
 	 || (s->styles[2] != 255 && d_lightstylevalue[s->styles[2]] != s->cached_light[2])
 	 || (s->styles[3] != 255 && d_lightstylevalue[s->styles[3]] != s->cached_light[3]))))
 		R_UpdateLightmap(s, s->lightmaptexturenum);
-	if (r_dlightmap.value || s->dlightframe != r_dlightframecount)
+	if (r_dlightmap.value || s->dlightframe != r_framecount)
 	{
 		// LordHavoc: fast path version for no vertex lighting cases
 		wp = &wallpoly[currentwallpoly];
@@ -726,7 +743,7 @@ void RSurf_DrawWall(msurface_t *s, texture_t *t, int transform)
 		}
 		if ((currentwallpoly + polys > MAX_WALLPOLYS) || (currentwallvert+verts > MAX_WALLVERTS))
 			return;
-		if ((!r_dlightmap.value) && s->dlightframe == r_dlightframecount)
+		if ((!r_dlightmap.value) && s->dlightframe == r_framecount)
 			lit = RSurf_Light(s->dlightbits, s->polys);
 		wv = wvert;
 		wp = &wallpoly[currentwallpoly];
@@ -816,7 +833,7 @@ void RSurf_DrawWallVertex(msurface_t *s, texture_t *t, int transform, int isbmod
 			wv += 6;
 		}
 	}
-	if (s->dlightframe == r_dlightframecount)
+	if (s->dlightframe == r_framecount)
 		RSurf_Light(s->dlightbits, s->polys);
 	wv = wvert;
 	if (isbmodel && (currententity->render.colormod[0] != 1 || currententity->render.colormod[1] != 1 || currententity->render.colormod[2] != 1))
@@ -843,76 +860,6 @@ void RSurf_DrawWallVertex(msurface_t *s, texture_t *t, int transform, int isbmod
 	}
 }
 
-/*
-================
-DrawTextureChains
-================
-*/
-extern qboolean hlbsp;
-extern char skyname[];
-void R_DrawSurf(msurface_t *s, int isbmodel, int vertexlit)
-{
-	texture_t *t;
-	if (s->flags & SURF_DRAWSKY)
-	{
-		skyisvisible = true;
-		if (!hlbsp) // LordHavoc: HalfLife maps have freaky skypolys...
-			RSurf_DrawSky(s, false);
-		return;
-	}
-	t = R_TextureAnimation (s->texinfo->texture);
-	if (s->flags & SURF_DRAWTURB)
-	{
-		RSurf_DrawWater(s, t, false, s->flags & SURF_DRAWNOALPHA ? 255 : r_wateralpha.value*255.0f);
-		return;
-	}
-	if (vertexlit)
-		RSurf_DrawWallVertex(s, t, false, false);
-	else
-		RSurf_DrawWall(s, t, false);
-}
-
-void DrawTextureChains (void)
-{
-	int			n;
-	msurface_t	*s;
-	texture_t	*t;
-
-	for (n = 0;n < cl.worldmodel->numtextures;n++)
-	{
-		if (!cl.worldmodel->textures[n] || !(s = cl.worldmodel->textures[n]->texturechain))
-			continue;
-		cl.worldmodel->textures[n]->texturechain = NULL;
-//		for (;s;s = s->texturechain)
-//			R_DrawSurf(s, false, gl_vertex.value);
-		// LordHavoc: decide the render type only once, because the surface properties were determined by texture anyway
-		// sky
-		if (s->flags & SURF_DRAWSKY)
-		{
-			skyisvisible = true;
-			if (!hlbsp) // LordHavoc: HalfLife maps have freaky skypolys...
-				for (;s;s = s->texturechain)
-					RSurf_DrawSky(s, false);
-			continue;
-		}
-		t = R_TextureAnimation (cl.worldmodel->textures[n]);
-		// subdivided water surface warp
-		if (s->flags & SURF_DRAWTURB)
-		{
-			int alpha = s->flags & SURF_DRAWNOALPHA ? 255 : r_wateralpha.value*255.0f;
-			for (;s;s = s->texturechain)
-				RSurf_DrawWater(s, t, false, alpha);
-			continue;
-		}
-		if (gl_vertex.value)
-			for (;s;s = s->texturechain)
-				RSurf_DrawWallVertex(s, t, false, false);
-		else
-			for (;s;s = s->texturechain)
-				RSurf_DrawWall(s, t, false);
-	}
-}
-
 void R_NoVisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex, model_t *model);
 
 /*
@@ -927,7 +874,6 @@ void R_DrawBrushModel (entity_t *e)
 	msurface_t	*s;
 	model_t		*clmodel;
 	int	rotated, vertexlit = false;
-	texture_t	*t;
 	vec3_t		org;
 
 	currententity = e;
@@ -950,7 +896,7 @@ void R_DrawBrushModel (entity_t *e)
 		VectorAdd (e->render.origin, clmodel->maxs, maxs);
 	}
 
-	if (R_CullBox (mins, maxs))
+	if (R_VisibleCullBox (mins, maxs))
 		return;
 
 	c_bmodels++;
@@ -982,9 +928,9 @@ void R_DrawBrushModel (entity_t *e)
 	}
 	vertexlit = modelalpha != 1 || clmodel->firstmodelsurface == 0 || (currententity->render.effects & EF_FULLBRIGHT) || currententity->render.colormod[0] != 1 || currententity->render.colormod[2] != 1 || currententity->render.colormod[2] != 1;
 
-e->render.angles[0] = -e->render.angles[0];	// stupid quake bug
+	e->render.angles[0] = -e->render.angles[0];	// stupid quake bug
 	softwaretransformforentity (e);
-e->render.angles[0] = -e->render.angles[0];	// stupid quake bug
+	e->render.angles[0] = -e->render.angles[0];	// stupid quake bug
 
 	// draw texture
 	for (i = 0;i < clmodel->nummodelsurfaces;i++, s++)
@@ -992,21 +938,22 @@ e->render.angles[0] = -e->render.angles[0];	// stupid quake bug
 		if (((s->flags & SURF_PLANEBACK) == 0) == (PlaneDiff(modelorg, s->plane) >= 0))
 		{
 //			R_DrawSurf(s, true, vertexlit || s->texinfo->texture->transparent);
-			if (s->flags & SURF_DRAWSKY)
+			if (s->flags & (SURF_DRAWSKY | SURF_DRAWTURB))
 			{
-				RSurf_DrawSky(s, true);
-				continue;
+				// sky and liquid don't need sorting (skypoly/transpoly)
+				if (s->flags & SURF_DRAWSKY)
+					RSurf_DrawSky(s, true);
+				else
+					RSurf_DrawWater(s, R_TextureAnimation(s->texinfo->texture), true, s->flags & SURF_DRAWNOALPHA ? 255 : wateralpha);
 			}
-			t = R_TextureAnimation (s->texinfo->texture);
-			if (s->flags & SURF_DRAWTURB)
-			{
-				RSurf_DrawWater(s, t, true, s->flags & SURF_DRAWNOALPHA ? 255 : r_wateralpha.value*255.0f);
-				continue;
-			}
-			if (vertexlit || s->texinfo->texture->transparent)
-				RSurf_DrawWallVertex(s, t, true, true);
 			else
-				RSurf_DrawWall(s, t, true);
+			{
+				texture_t *t = R_TextureAnimation(s->texinfo->texture);
+				if (vertexlit || s->texinfo->texture->transparent)
+					RSurf_DrawWallVertex(s, t, true, true);
+				else
+					RSurf_DrawWall(s, t, true);
+			}
 		}
 	}
 	UploadLightmaps();
@@ -1020,26 +967,58 @@ e->render.angles[0] = -e->render.angles[0];	// stupid quake bug
 =============================================================
 */
 
-void R_StoreEfrags (efrag_t **ppefrag);
+int r_vismarkframecount; // bumped when going to a new PVS
 
-void R_NewWorldNode ()
+void R_MarkLeaves (void)
 {
-	int l, texsort = gl_texsort.value, vertex = gl_vertex.value;
+	byte	*vis;
+	mnode_t	*node;
+	int		i;
+
+	if (r_oldviewleaf == r_viewleaf)
+		return;
+
+	r_vismarkframecount++;
+	r_oldviewleaf = r_viewleaf;
+
+	vis = Mod_LeafPVS (r_viewleaf, cl.worldmodel);
+	
+	for (i = 0;i < cl.worldmodel->numleafs;i++)
+	{
+		if (vis[i>>3] & (1<<(i&7)))
+		{
+			node = (mnode_t *)&cl.worldmodel->leafs[i+1];
+			do
+			{
+				if (node->vismarkframe == r_vismarkframecount)
+					break;
+				node->vismarkframe = r_vismarkframecount;
+				node = node->parent;
+			} while (node);
+		}
+	}
+}
+
+void R_LeafWorldNode ()
+{
+	int l;
 	mleaf_t *leaf;
 	msurface_t *surf, **mark, **endmark;
 
 	for (l = 0, leaf = cl.worldmodel->leafs;l < cl.worldmodel->numleafs;l++, leaf++)
 	{
-		if ((leaf->visframe == r_visframecount) && (leaf->efrags || leaf->nummarksurfaces))
+		if ((leaf->vismarkframe == r_vismarkframecount) && (/*leaf->efrags || */leaf->nummarksurfaces))
 		{
-			if (R_CullBox(leaf->minmaxs, leaf->minmaxs+3))
+			if (R_CullBox(leaf->mins, leaf->maxs))
 				continue;
 
 			c_leafs++;
 
+			leaf->visframe = r_framecount;
+
 			// deal with model fragments in this leaf
-			if (leaf->efrags)
-				R_StoreEfrags (&leaf->efrags);
+//			if (leaf->efrags)
+//				R_StoreEfrags (&leaf->efrags);
 
 			if (leaf->nummarksurfaces)
 			{
@@ -1054,33 +1033,13 @@ void R_NewWorldNode ()
 					surf->worldnodeframe = r_framecount;
 					if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
 					{
-						if ( (surf->flags & SURF_PLANEBACK))
-						{
+						if (surf->flags & SURF_PLANEBACK)
 							surf->visframe = r_framecount;
-							c_faces++;
-							if (texsort)
-							{
-								surf->texturechain = surf->texinfo->texture->texturechain;
-								surf->texinfo->texture->texturechain = surf;
-							}
-							else
-								R_DrawSurf(surf, false, vertex);
-						}
 					}
 					else
 					{
 						if (!(surf->flags & SURF_PLANEBACK))
-						{
 							surf->visframe = r_framecount;
-							c_faces++;
-							if (texsort)
-							{
-								surf->texturechain = surf->texinfo->texture->texturechain;
-								surf->texinfo->texture->texturechain = surf;
-							}
-							else
-								R_DrawSurf(surf, false, vertex);
-						}
 					}
 				}
 				while (mark < endmark);
@@ -1089,89 +1048,82 @@ void R_NewWorldNode ()
 	}
 }
 
-struct nodestack_s
+typedef struct nodestack_s
 {
-	int side;
+	unsigned short side, clip;
 	mnode_t *node;
-	int noclipping;
-} nodestack[8192];
+}
+nodestack_t;
 
-/*
-================
-R_WorldNode
-================
-*/
-void R_WorldNode ()
+void R_NoVisWorldNode ()
 {
-	int side, texsort = gl_texsort.value, vertex = gl_vertex.value, ca, cb, cc, cd, noclipping = false, oldclip = r_oldclip.value;
-	struct nodestack_s *nstack;
+	int side, c, clip;
+	nodestack_t *nstack, nodestack[8192];
 	mnode_t *node;
 	mleaf_t *pleaf;
 	msurface_t *surf, *endsurf, **mark, **endmark;
 	nstack = nodestack;
 
-	if (!(node = cl.worldmodel->nodes))
+	node = cl.worldmodel->nodes;
+
+	if (!node)
 		return;
 
+	clip = true;
 	while(1)
 	{
-		if (oldclip)
-		{
-			if (R_CullBox(node->minmaxs, node->minmaxs+3))
-			{
-backupstack:
-				if (nstack <= nodestack)
-					break;
-				nstack--;
-				node = nstack->node;
-				side = nstack->side;
-				noclipping = nstack->noclipping;
-				goto loc0;
-			}
-		}
-		else
-		if (!noclipping)
-		{
-			ca = frustum[0].BoxOnPlaneSideFunc(node->minmaxs, node->minmaxs+3, &frustum[0]);if (ca == 2) goto backupstack; // completely clipped away
-			cb = frustum[1].BoxOnPlaneSideFunc(node->minmaxs, node->minmaxs+3, &frustum[1]);if (cb == 2) goto backupstack; // completely clipped away
-			cc = frustum[2].BoxOnPlaneSideFunc(node->minmaxs, node->minmaxs+3, &frustum[2]);if (cc == 2) goto backupstack; // completely clipped away
-			cd = frustum[3].BoxOnPlaneSideFunc(node->minmaxs, node->minmaxs+3, &frustum[3]);if (cd == 2) goto backupstack; // completely clipped away
-			if (ca == 0 && cb == 0 && cc == 0 && cd == 0)
-				noclipping = true; // not clipped at all, no need to clip any children of this node
-			// partially clipped node
-		}
-	// if a leaf node, draw stuff
 		if (node->contents < 0)
 		{
-			if (node->contents != CONTENTS_SOLID)
+			if (node->contents != CONTENTS_SOLID && R_NotCulledBox(node->mins, node->maxs))
 			{
+				// mark surfaces as being visible for processing by code later
 				pleaf = (mleaf_t *)node;
 
 				c_leafs++;
+
+				pleaf->visframe = r_framecount;
+
 				if (pleaf->nummarksurfaces)
 				{
 					mark = pleaf->firstmarksurface;
 					endmark = mark + pleaf->nummarksurfaces;
 					do
-					{
-						(*mark)->visframe = r_framecount;
-						mark++;
-					}
+						(*mark++)->visframe = r_framecount;
 					while (mark < endmark);
 				}
 
 				// deal with model fragments in this leaf
-				if (pleaf->efrags)
-					R_StoreEfrags (&pleaf->efrags);
+//				if (pleaf->efrags)
+//					R_StoreEfrags (&pleaf->efrags);
 			}
 
+culled:
 			if (nstack <= nodestack)
 				break;
 			nstack--;
 			node = nstack->node;
 			side = nstack->side;
-			noclipping = nstack->noclipping;
+			clip = nstack->clip;
 			goto loc0;
+		}
+		else if (clip)
+		{
+			// for easier reading, the values are:
+			// 1 = not culled at all (very uncommon in large nodes, uncommon in medium nodes, common   in small nodes)
+			// 2 = completely culled (uncommon      in large nodes, common   in medium nodes, uncommon in small nodes)
+			// 3 = partially culled  (common        in large nodes, common   in medium nodes, uncommon in small nodes)
+			if ((c = frustum[0].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[0])) == 3) goto cull1;else if (c == 2) goto culled;// else 1
+			if ((c = frustum[1].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[1])) == 3) goto cull2;else if (c == 2) goto culled;// else 1
+			if ((c = frustum[2].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[2])) == 3) goto cull3;else if (c == 2) goto culled;// else 1
+			if ((c = frustum[3].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[3])) == 3) goto cull4;else if (c == 2) goto culled;// else 1
+			// completely onscreen, no need to cull children
+			clip = false;
+			goto cull4;
+			// partially clipped node
+cull1:		if (frustum[1].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[1]) == 2) goto culled;// else 1 or 3
+cull2:		if (frustum[2].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[2]) == 2) goto culled;// else 1 or 3
+cull3:		if (frustum[3].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[3]) == 2) goto culled;// else 1 or 3
+cull4:		;
 		}
 
 		c_nodes++;
@@ -1182,11 +1134,139 @@ backupstack:
 		side = PlaneDist(modelorg, node->plane) < node->plane->dist;
 
 		// recurse down the children, front side first
-		if (node->children[side]->visframe == r_visframecount)
+		nstack->node = node;
+		nstack->side = !side; // go down back side when we come back up
+		nstack->clip = clip;
+		nstack++;
+		node = node->children[side];
+		continue;
+loc0:
+
+		// draw stuff
+		if (node->numsurfaces)
+		{
+			surf = cl.worldmodel->surfaces + node->firstsurface;
+			endsurf = surf + node->numsurfaces;
+
+			if (side)
+			{
+				for (;surf < endsurf;surf++)
+					if (surf->flags & SURF_PLANEBACK)
+						surf->visframe = -1;
+			}
+			else
+			{
+				for (;surf < endsurf;surf++)
+					if (!(surf->flags & SURF_PLANEBACK))
+						surf->visframe = -1;
+			}
+		}
+
+		// recurse down the back side
+		node = node->children[side];
+		continue;
+	}
+}
+
+void R_BSPWorldNode ()
+{
+	int side, c, clip/*, oldclip = r_oldclip.value*/;
+	nodestack_t *nstack, nodestack[8192];
+	mnode_t *node;
+	mleaf_t *pleaf;
+	msurface_t *surf, *endsurf, **mark, **endmark;
+	nstack = nodestack;
+
+	node = cl.worldmodel->nodes;
+
+	if (!node)
+		return;
+
+	clip = true;
+	while(1)
+	{
+		if (node->contents < 0)
+		{
+			if (node->contents != CONTENTS_SOLID && R_NotCulledBox(node->mins, node->maxs))
+			{
+				// mark surfaces as being visible for processing by code later
+				pleaf = (mleaf_t *)node;
+
+				c_leafs++;
+
+				pleaf->visframe = r_framecount;
+
+				if (pleaf->nummarksurfaces)
+				{
+					mark = pleaf->firstmarksurface;
+					endmark = mark + pleaf->nummarksurfaces;
+					do
+						(*mark++)->visframe = r_framecount;
+					while (mark < endmark);
+				}
+
+				// deal with model fragments in this leaf
+//				if (pleaf->efrags)
+//					R_StoreEfrags (&pleaf->efrags);
+			}
+
+culled:
+			if (nstack <= nodestack)
+				break;
+			nstack--;
+			node = nstack->node;
+			side = nstack->side;
+			clip = nstack->clip;
+			goto loc0;
+		}
+		/*
+		else if (oldclip)
+		{
+			if (R_CullBox(node->mins, node->maxs))
+			{
+				if (nstack <= nodestack)
+					break;
+				nstack--;
+				node = nstack->node;
+				side = nstack->side;
+				clip = nstack->clip;
+				goto loc0;
+			}
+		}
+		*/
+		else if (clip)
+		{
+			// for easier reading, the values are:
+			// 1 = not culled at all (very uncommon in large nodes, uncommon in medium nodes, common   in small nodes)
+			// 2 = completely culled (uncommon      in large nodes, common   in medium nodes, uncommon in small nodes)
+			// 3 = partially culled  (common        in large nodes, common   in medium nodes, uncommon in small nodes)
+			if ((c = frustum[0].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[0])) == 3) goto cull1;else if (c == 2) goto culled;// else 1
+			if ((c = frustum[1].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[1])) == 3) goto cull2;else if (c == 2) goto culled;// else 1
+			if ((c = frustum[2].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[2])) == 3) goto cull3;else if (c == 2) goto culled;// else 1
+			if ((c = frustum[3].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[3])) == 3) goto cull4;else if (c == 2) goto culled;// else 1
+			// completely onscreen, no need to cull children
+			clip = false;
+			goto cull4;
+			// partially clipped node
+cull1:		if (frustum[1].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[1]) == 2) goto culled;// else 1 or 3
+cull2:		if (frustum[2].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[2]) == 2) goto culled;// else 1 or 3
+cull3:		if (frustum[3].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[3]) == 2) goto culled;// else 1 or 3
+cull4:		;
+		}
+
+		c_nodes++;
+
+		// node is just a decision point, so go down the apropriate sides
+
+		// find which side of the node we are on
+		side = PlaneDist(modelorg, node->plane) < node->plane->dist;
+
+		// recurse down the children, front side first
+		if (node->children[side]->vismarkframe == r_vismarkframecount)
 		{
 			nstack->node = node;
 			nstack->side = !side; // go down back side when we come back up
-			nstack->noclipping = noclipping;
+			nstack->clip = clip;
 			nstack++;
 			node = node->children[side];
 			continue;
@@ -1194,84 +1274,28 @@ backupstack:
 		side = !side;
 loc0:
 
-	// draw stuff
+		// draw stuff
 		if (node->numsurfaces)
 		{
 			surf = cl.worldmodel->surfaces + node->firstsurface;
 			endsurf = surf + node->numsurfaces;
 
-			if (texsort)
+			if (side)
 			{
-				if (side)
-				{
-					do
-					{
-						if (surf->visframe == r_framecount && !(surf->flags & SURF_PLANEBACK))
-						{
-							c_faces++;
-							surf->texturechain = surf->texinfo->texture->texturechain;
-							surf->texinfo->texture->texturechain = surf;
-						}
-						else
-							surf->visframe = -1; // LordHavoc: mark as not visible, so lighting will not touch it
-						surf++;
-					}
-					while (surf < endsurf);
-				}
-				else
-				{
-					do
-					{
-						if (surf->visframe == r_framecount && (surf->flags & SURF_PLANEBACK))
-						{
-							c_faces++;
-							surf->texturechain = surf->texinfo->texture->texturechain;
-							surf->texinfo->texture->texturechain = surf;
-						}
-						else
-							surf->visframe = -1; // LordHavoc: mark as not visible, so lighting will not touch it
-						surf++;
-					}
-					while (surf < endsurf);
-				}
+				for (;surf < endsurf;surf++)
+					if (surf->flags & SURF_PLANEBACK)
+						surf->visframe = -1;
 			}
 			else
 			{
-				if (side)
-				{
-					do
-					{
-						if (surf->visframe == r_framecount && !(surf->flags & SURF_PLANEBACK))
-						{
-							c_faces++;
-							R_DrawSurf(surf, false, vertex);
-						}
-						else
-							surf->visframe = -1; // LordHavoc: mark as not visible, so lighting will not touch it
-						surf++;
-					}
-					while (surf < endsurf);
-				}
-				else
-				{
-					do
-					{
-						if (surf->visframe == r_framecount && (surf->flags & SURF_PLANEBACK))
-						{
-							c_faces++;
-							R_DrawSurf(surf, false, vertex);
-						}
-						else
-							surf->visframe = -1; // LordHavoc: mark as not visible, so lighting will not touch it
-						surf++;
-					}
-					while (surf < endsurf);
-				}
+				for (;surf < endsurf;surf++)
+					if (!(surf->flags & SURF_PLANEBACK))
+						surf->visframe = -1;
 			}
 		}
 
-	// recurse down the back side
-		if (node->children[side]->visframe == r_visframecount)
+		// recurse down the back side
+		if (node->children[side]->vismarkframe == r_vismarkframecount)
 		{
 			node = node->children[side];
 			continue;
@@ -1282,11 +1306,143 @@ loc0:
 		nstack--;
 		node = nstack->node;
 		side = nstack->side;
-		noclipping = nstack->noclipping;
+		clip = nstack->clip;
 		goto loc0;
 	}
 }
 
+void R_PortalWorldNode ()
+{
+	int portalstack;
+	mportal_t *p, *pstack[8192];
+	msurface_t *surf, **mark, **endmark;
+	mleaf_t *leaf;
+
+	leaf = r_viewleaf;
+	portalstack = 0;
+loc0:
+	c_leafs++;
+
+	leaf->visframe = r_framecount;
+
+	// deal with model fragments in this leaf
+//	if (leaf->efrags)
+//		R_StoreEfrags (&leaf->efrags);
+
+	if (leaf->nummarksurfaces)
+	{
+		mark = leaf->firstmarksurface;
+		endmark = mark + leaf->nummarksurfaces;
+		do
+		{
+			surf = *mark++;
+			// make sure surfaces are only processed once
+			if (surf->worldnodeframe == r_framecount)
+				continue;
+			surf->worldnodeframe = r_framecount;
+			if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
+			{
+				if (surf->flags & SURF_PLANEBACK)
+					surf->visframe = r_framecount;
+			}
+			else
+			{
+				if (!(surf->flags & SURF_PLANEBACK))
+					surf->visframe = r_framecount;
+			}
+		}
+		while (mark < endmark);
+	}
+
+	// follow portals into other leafs
+	for (p = leaf->portals;p;p = p->next)
+	{
+		if (p->past->worldnodeframe != r_framecount)
+		{
+			leaf = p->past;
+			leaf->worldnodeframe = r_framecount;
+			if (leaf->contents != CONTENTS_SOLID && leaf->vismarkframe == r_vismarkframecount && R_NotCulledBox(leaf->mins, leaf->maxs))
+			{
+				pstack[portalstack++] = p;
+				goto loc0;
+loc1:;
+			}
+		}
+	}
+
+	if (portalstack)
+	{
+		p = pstack[--portalstack];
+		goto loc1;
+	}
+}
+
+void R_DrawSurfaces (void)
+{
+	msurface_t	*surf, *endsurf;
+	texture_t	*t;
+	int vertex = gl_vertex.value;
+
+	surf = &cl.worldmodel->surfaces[cl.worldmodel->firstmodelsurface];
+	endsurf = surf + cl.worldmodel->nummodelsurfaces;
+	for (;surf < endsurf;surf++)
+	{
+		if (surf->visframe == r_framecount)
+		{
+			c_faces++;
+			if (surf->flags & (SURF_DRAWSKY | SURF_DRAWTURB))
+			{
+				// sky and liquid don't need sorting (skypoly/transpoly)
+				if (surf->flags & SURF_DRAWSKY)
+					RSurf_DrawSky(surf, false);
+				else
+					RSurf_DrawWater(surf, R_TextureAnimation(surf->texinfo->texture), false, surf->flags & SURF_DRAWNOALPHA ? 255 : wateralpha);
+			}
+			else
+			{
+				t = R_TextureAnimation(surf->texinfo->texture);
+				if (vertex)
+					RSurf_DrawWallVertex(surf, t, false, false);
+				else
+					RSurf_DrawWall(surf, t, false);
+			}
+		}
+	}
+}
+
+void R_DrawPortals()
+{
+	int drawportals, i, r, g, b;
+	mleaf_t *leaf, *endleaf;
+	mportal_t *portal;
+	mvertex_t *point, *endpoint;
+	drawportals = (int)r_drawportals.value;
+	if (drawportals < 1)
+		return;
+	leaf = cl.worldmodel->leafs;
+	endleaf = leaf + cl.worldmodel->numleafs;
+	for (;leaf < endleaf;leaf++)
+	{
+		if (leaf->visframe == r_framecount && leaf->portals)
+		{
+			i = leaf - cl.worldmodel->leafs;
+			r = (i & 0x0007) << 5;
+			g = (i & 0x0038) << 2;
+			b = (i & 0x01C0) >> 1;
+			portal = leaf->portals;
+			while (portal)
+			{
+				transpolybegin(0, 0, 0, TPOLYTYPE_ALPHA);
+				point = portal->points;
+				endpoint = point + portal->numpoints;
+				for (;point < endpoint;point++)
+					transpolyvertub(point->position[0], point->position[1], point->position[2], 0, 0, r, g, b, 32);
+				transpolyend();
+				portal = portal->next;
+			}
+		}
+	}
+}
 
 /*
 =============
@@ -1296,6 +1452,8 @@ R_DrawWorld
 void R_DrawWorld (void)
 {
 	entity_t	ent;
+
+	wateralpha = bound(0, r_wateralpha.value*255.0f, 255);
 
 	memset (&ent, 0, sizeof(ent));
 	ent.render.model = cl.worldmodel;
@@ -1311,71 +1469,26 @@ void R_DrawWorld (void)
 
 	if (cl.worldmodel)
 	{
-		if (r_newworldnode.value)
-			R_NewWorldNode ();
+		if (r_novis.value || !r_viewleaf->compressed_vis)
+			R_NoVisWorldNode ();
 		else
-			R_WorldNode ();
+		{
+			R_MarkLeaves ();
+			if (r_portalworldnode.value)
+				R_PortalWorldNode ();
+			else if (r_leafworldnode.value)
+				R_LeafWorldNode ();
+			else
+				R_BSPWorldNode ();
+		}
 	}
 
 	R_PushDlights (); // now mark the lit surfaces
 
-	DrawTextureChains ();
+	R_DrawSurfaces ();
+
+	R_DrawPortals ();
 }
-
-
-/*
-===============
-R_MarkLeaves
-===============
-*/
-void R_MarkLeaves (void)
-{
-	byte	*vis;
-	mnode_t	*node;
-	int		i;
-
-	if (r_oldviewleaf == r_viewleaf && !r_novis.value)
-		return;
-	
-	r_visframecount++;
-	r_oldviewleaf = r_viewleaf;
-
-	if (r_novis.value)
-	{
-		for (i=0 ; i<cl.worldmodel->numleafs ; i++)
-		{
-			node = (mnode_t *)&cl.worldmodel->leafs[i+1];
-			do
-			{
-				if (node->visframe == r_visframecount)
-					break;
-				node->visframe = r_visframecount;
-				node = node->parent;
-			} while (node);
-		}
-	}
-	else
-	{
-		vis = Mod_LeafPVS (r_viewleaf, cl.worldmodel);
-		
-		for (i=0 ; i<cl.worldmodel->numleafs ; i++)
-		{
-			if (vis[i>>3] & (1<<(i&7)))
-			{
-				node = (mnode_t *)&cl.worldmodel->leafs[i+1];
-				do
-				{
-					if (node->visframe == r_visframecount)
-						break;
-					node->visframe = r_visframecount;
-					node = node->parent;
-				} while (node);
-			}
-		}
-	}
-}
-
-
 
 /*
 =============================================================================
@@ -1392,11 +1505,11 @@ int AllocBlock (int w, int h, short *x, short *y)
 	int		best, best2;
 	int		texnum;
 
-	for (texnum=0 ; texnum<MAX_LIGHTMAPS ; texnum++)
+	for (texnum = 0;texnum < MAX_LIGHTMAPS;texnum++)
 	{
 		best = BLOCK_HEIGHT;
 
-		for (i=0 ; i<BLOCK_WIDTH-w ; i+=lightmapalign) // LordHavoc: NVIDIA has broken subimage, so align the lightmaps
+		for (i = 0;i < BLOCK_WIDTH - w;i += lightmapalign) // LordHavoc: NVIDIA has broken subimage, so align the lightmaps
 		{
 			best2 = 0;
 
@@ -1442,7 +1555,7 @@ int AllocBlock (int w, int h, short *x, short *y)
 			}
 		}
 
-		for (i=0 ; i<w ; i++)
+		for (i = 0;i < w;i++)
 			allocated[texnum][*x + i] = best + h;
 
 		return texnum;

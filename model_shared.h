@@ -118,6 +118,12 @@ typedef struct model_s
 	byte		*lightdata;
 	char		*entities;
 
+	int			numportals;
+	mportal_t	*portals;
+
+	int			numportalpoints;
+	mvertex_t	*portalpoints;
+
 	// LordHavoc: useful for sprites and models
 	int			numtris;
 	int			numskins;

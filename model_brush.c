@@ -146,6 +146,47 @@ extern byte	*mod_base;
 
 extern cvar_t r_fullbrights;
 
+rtexture_t *r_notexture;
+texture_t r_notexture_mip;
+
+void Mod_SetupNoTexture()
+{
+	int		x, y;
+	byte	pix[16][16][4];
+
+	// create a simple checkerboard texture for the default
+	// LordHavoc: redesigned this to remove reliance on the palette and texture_t
+	for (y = 0;y < 16;y++)
+	{
+		for (x = 0;x < 16;x++)
+		{
+			if ((y < 8) ^ (x < 8))
+			{
+				pix[y][x][0] = 128;
+				pix[y][x][1] = 128;
+				pix[y][x][2] = 128;
+				pix[y][x][3] = 255;
+			}
+			else
+			{
+				pix[y][x][0] = 64;
+				pix[y][x][1] = 64;
+				pix[y][x][2] = 64;
+				pix[y][x][3] = 255;
+			}
+		}
+	}
+
+	r_notexture = R_LoadTexture("notexture", 16, 16, &pix[0][0][0], TEXF_MIPMAP | TEXF_RGBA);
+
+	strcpy(r_notexture_mip.name, "notexture");
+	r_notexture_mip.width = 16;
+	r_notexture_mip.height = 16;
+	r_notexture_mip.transparent = false;
+	r_notexture_mip.texture = r_notexture;
+	r_notexture_mip.glowtexture = NULL;
+}
+
 /*
 =================
 Mod_LoadTextures
@@ -153,14 +194,11 @@ Mod_LoadTextures
 */
 void Mod_LoadTextures (lump_t *l)
 {
-	int		i, j, num, max, altmax;
-	miptex_t	*mt;
-	texture_t	*tx, *tx2;
-	texture_t	*anims[10];
-	texture_t	*altanims[10];
-	dmiptexlump_t *m;
-	byte	*data;
-	int		*dofs;
+	int				i, j, k, num, max, altmax, mtwidth, mtheight, *dofs;
+	miptex_t		*dmiptex;
+	texture_t		*tx, *tx2, *anims[10], *altanims[10];
+	dmiptexlump_t	*m;
+	byte			*data, *mtdata;
 
 	if (!l->filelen)
 	{
@@ -177,44 +215,49 @@ void Mod_LoadTextures (lump_t *l)
 
 	// just to work around bounds checking when debugging with it (array index out of bounds error thing)
 	dofs = m->dataofs;
-	for (i=0 ; i<m->nummiptex ; i++)
+	for (i = 0;i < m->nummiptex;i++)
 	{
 		dofs[i] = LittleLong(dofs[i]);
 		if (dofs[i] == -1)
 			continue;
-		mt = (miptex_t *)((byte *)m + dofs[i]);
-		mt->width = LittleLong (mt->width);
-		mt->height = LittleLong (mt->height);
-		for (j=0 ; j<MIPLEVELS ; j++)
-			mt->offsets[j] = LittleLong (mt->offsets[j]);
+		dmiptex = (miptex_t *)((byte *)m + dofs[i]);
+		mtwidth = LittleLong (dmiptex->width);
+		mtheight = LittleLong (dmiptex->height);
+		mtdata = NULL;
+		j = LittleLong (dmiptex->offsets[0]);
+		if (j)
+		{
+			// texture included
+			if (j < 40 || j + mtwidth * mtheight > l->filelen)
+				Host_Error ("Texture %s is corrupt or incomplete\n", dmiptex->name);
+			mtdata = (byte *)dmiptex + j;
+		}
 		
-		if ( (mt->width & 15) || (mt->height & 15) )
-			Host_Error ("Texture %s is not 16 aligned", mt->name);
+		if ((mtwidth & 15) || (mtheight & 15))
+			Host_Error ("Texture %s is not 16 aligned", dmiptex->name);
 		// LordHavoc: rewriting the map texture loader for GLQuake
 		tx = Hunk_AllocName (sizeof(texture_t), va("%s textures", loadname));
 		loadmodel->textures[i] = tx;
 
 		// LordHavoc: force all names to lowercase and make sure they are terminated while copying
-		for (j = 0;mt->name[j] && j < 15;j++)
+		for (j = 0;dmiptex->name[j] && j < 15;j++)
 		{
-			if (mt->name[j] >= 'A' && mt->name[j] <= 'Z')
-				tx->name[j] = mt->name[j] + ('a' - 'A');
+			if (dmiptex->name[j] >= 'A' && dmiptex->name[j] <= 'Z')
+				tx->name[j] = dmiptex->name[j] + ('a' - 'A');
 			else
-				tx->name[j] = mt->name[j];
+				tx->name[j] = dmiptex->name[j];
 		}
 		for (;j < 16;j++)
 			tx->name[j] = 0;
 
-		for (j=0 ; j<MIPLEVELS ; j++)
-			tx->offsets[j] = 0;
 		tx->transparent = false;
 		data = loadimagepixels(tx->name, false, 0, 0);
 		if (data)
 		{
 			if (!hlbsp && !strncmp(tx->name,"sky",3) && image_width == 256 && image_height == 128) // LordHavoc: HL sky textures are entirely unrelated
 			{
-				tx->width = image_width;
-				tx->height = image_height;
+				tx->width = 0;
+				tx->height = 0;
 				tx->transparent = false;
 				tx->texture = NULL;
 				tx->glowtexture = NULL;
@@ -222,8 +265,8 @@ void Mod_LoadTextures (lump_t *l)
 			}
 			else
 			{
-				tx->width = mt->width;
-				tx->height = mt->height;
+				tx->width = mtwidth;
+				tx->height = mtheight;
 				tx->transparent = Image_CheckAlpha(data, image_width * image_height, true);
 				tx->texture = R_LoadTexture (tx->name, image_width, image_height, data, TEXF_MIPMAP | (tx->transparent ? TEXF_ALPHA : 0) | TEXF_RGBA | TEXF_PRECACHE);
 				tx->glowtexture = NULL;
@@ -232,63 +275,63 @@ void Mod_LoadTextures (lump_t *l)
 		}
 		else
 		{
-			if (!hlbsp && !strncmp(tx->name,"sky",3) && mt->width == 256 && mt->height == 128) // LordHavoc: HL sky textures are entirely unrelated
+			if (hlbsp)
 			{
-				tx->width = mt->width;
-				tx->height = mt->height;
-				tx->transparent = false;
-				tx->texture = NULL;
-				tx->glowtexture = NULL;
-				R_InitSky ((byte *)((int) mt + mt->offsets[0]), 1);
+				if (mtdata) // texture included
+				{
+					data = W_ConvertWAD3Texture(dmiptex);
+					if (data)
+					{
+						tx->width = mtwidth;
+						tx->height = mtheight;
+						tx->transparent = Image_CheckAlpha(data, mtwidth * mtheight, true);
+						tx->texture = R_LoadTexture (tx->name, mtwidth, mtheight, data, TEXF_MIPMAP | (tx->transparent ? TEXF_ALPHA : 0) | TEXF_RGBA | TEXF_PRECACHE);
+						tx->glowtexture = NULL;
+						qfree(data);
+					}
+				}
+				if (!data)
+				{
+					data = W_GetTexture(tx->name);
+					// get the size from the wad texture
+					if (data)
+					{
+						tx->width = image_width;
+						tx->height = image_height;
+						tx->transparent = Image_CheckAlpha(data, image_width * image_height, true);
+						tx->texture = R_LoadTexture (tx->name, image_width, image_height, data, TEXF_MIPMAP | (tx->transparent ? TEXF_ALPHA : 0) | TEXF_RGBA | TEXF_PRECACHE);
+						tx->glowtexture = NULL;
+						qfree(data);
+					}
+				}
+				if (!data)
+				{
+					tx->width = 16;
+					tx->height = 16;
+					tx->transparent = false;
+					tx->texture = r_notexture;
+					tx->glowtexture = NULL;
+				}
 			}
 			else
 			{
-				if (hlbsp)
+				if (!strncmp(tx->name,"sky",3) && mtwidth == 256 && mtheight == 128)
 				{
-					if (mt->offsets[0]) // texture included
-					{
-						data = W_ConvertWAD3Texture(mt);
-						if (data)
-						{
-							tx->width = mt->width;
-							tx->height = mt->height;
-							tx->transparent = Image_CheckAlpha(data, mt->width * mt->height, true);
-							tx->texture = R_LoadTexture (tx->name, mt->width, mt->height, data, TEXF_MIPMAP | (tx->transparent ? TEXF_ALPHA : 0) | TEXF_RGBA | TEXF_PRECACHE);
-							tx->glowtexture = NULL;
-							qfree(data);
-						}
-					}
-					if (!data)
-					{
-						data = W_GetTexture(mt->name);
-						// get the size from the wad texture
-						if (data)
-						{
-							tx->width = image_width;
-							tx->height = image_height;
-							tx->transparent = Image_CheckAlpha(data, image_width * image_height, true);
-							tx->texture = R_LoadTexture (tx->name, image_width, image_height, data, TEXF_MIPMAP | (tx->transparent ? TEXF_ALPHA : 0) | TEXF_RGBA | TEXF_PRECACHE);
-							tx->glowtexture = NULL;
-							qfree(data);
-						}
-					}
-					if (!data)
-					{
-						tx->width = r_notexture_mip->width;
-						tx->height = r_notexture_mip->height;
-						tx->transparent = false;
-						tx->texture = R_LoadTexture ("notexture", tx->width, tx->height, (byte *)((int) r_notexture_mip + r_notexture_mip->offsets[0]), TEXF_MIPMAP | TEXF_PRECACHE);
-						tx->glowtexture = NULL;
-					}
+					tx->width = mtwidth;
+					tx->height = mtheight;
+					tx->transparent = false;
+					tx->texture = NULL;
+					tx->glowtexture = NULL;
+					R_InitSky (mtdata, 1);
 				}
 				else
 				{
-					if (mt->offsets[0]) // texture included
+					if (mtdata) // texture included
 					{
 						int fullbrights;
-						data = (byte *)((int) mt + mt->offsets[0]);
-						tx->width = mt->width;
-						tx->height = mt->height;
+						data = mtdata;
+						tx->width = mtwidth;
+						tx->height = mtheight;
 						tx->transparent = false;
 						fullbrights = false;
 						if (r_fullbrights.value && tx->name[0] != '*')
@@ -325,10 +368,10 @@ void Mod_LoadTextures (lump_t *l)
 					}
 					else // no texture, and no external replacement texture was found
 					{
-						tx->width = r_notexture_mip->width;
-						tx->height = r_notexture_mip->height;
+						tx->width = 16;
+						tx->height = 16;
 						tx->transparent = false;
-						tx->texture = R_LoadTexture ("notexture", tx->width, tx->height, (byte *)((int) r_notexture_mip + r_notexture_mip->offsets[0]), TEXF_MIPMAP | TEXF_PRECACHE);
+						tx->texture = r_notexture;
 						tx->glowtexture = NULL;
 					}
 				}
@@ -339,22 +382,20 @@ void Mod_LoadTextures (lump_t *l)
 //
 // sequence the animations
 //
-	for (i=0 ; i<m->nummiptex ; i++)
+	for (i = 0;i < m->nummiptex;i++)
 	{
 		tx = loadmodel->textures[i];
 		if (!tx || tx->name[0] != '+')
 			continue;
-		if (tx->anim_next)
+		if (tx->anim_total)
 			continue;	// already sequenced
 
-	// find the number of frames in the animation
+		// find the number of frames in the animation
 		memset (anims, 0, sizeof(anims));
 		memset (altanims, 0, sizeof(altanims));
 
 		max = tx->name[1];
 		altmax = 0;
-		if (max >= 'a' && max <= 'z')
-			max -= 'a' - 'A';
 		if (max >= '0' && max <= '9')
 		{
 			max -= '0';
@@ -362,9 +403,9 @@ void Mod_LoadTextures (lump_t *l)
 			anims[max] = tx;
 			max++;
 		}
-		else if (max >= 'A' && max <= 'J')
+		else if (max >= 'a' && max <= 'j')
 		{
-			altmax = max - 'A';
+			altmax = max - 'a';
 			max = 0;
 			altanims[altmax] = tx;
 			altmax++;
@@ -372,7 +413,7 @@ void Mod_LoadTextures (lump_t *l)
 		else
 			Host_Error ("Bad animating texture %s", tx->name);
 
-		for (j=i+1 ; j<m->nummiptex ; j++)
+		for (j = i + 1;j < m->nummiptex;j++)
 		{
 			tx2 = loadmodel->textures[j];
 			if (!tx2 || tx2->name[0] != '+')
@@ -381,8 +422,6 @@ void Mod_LoadTextures (lump_t *l)
 				continue;
 
 			num = tx2->name[1];
-			if (num >= 'a' && num <= 'z')
-				num -= 'a' - 'A';
 			if (num >= '0' && num <= '9')
 			{
 				num -= '0';
@@ -390,9 +429,9 @@ void Mod_LoadTextures (lump_t *l)
 				if (num+1 > max)
 					max = num + 1;
 			}
-			else if (num >= 'A' && num <= 'J')
+			else if (num >= 'a' && num <= 'j')
 			{
-				num = num - 'A';
+				num = num - 'a';
 				altanims[num] = tx2;
 				if (num+1 > altmax)
 					altmax = num+1;
@@ -400,32 +439,29 @@ void Mod_LoadTextures (lump_t *l)
 			else
 				Host_Error ("Bad animating texture %s", tx->name);
 		}
-		
-#define	ANIM_CYCLE	2
-	// link them all together
-		for (j=0 ; j<max ; j++)
+
+		// link them all together
+		for (j = 0;j < max;j++)
 		{
 			tx2 = anims[j];
 			if (!tx2)
-				Host_Error ("Missing frame %i of %s",j, tx->name);
-			tx2->anim_total = max * ANIM_CYCLE;
-			tx2->anim_min = j * ANIM_CYCLE;
-			tx2->anim_max = (j+1) * ANIM_CYCLE;
-			tx2->anim_next = anims[ (j+1)%max ];
+				Host_Error ("Missing frame %i of %s", j, tx->name);
+			tx2->anim_total = max;
 			if (altmax)
 				tx2->alternate_anims = altanims[0];
+			for (k = 0;k < 10;k++)
+				tx2->anim_frames[k] = anims[j];
 		}
-		for (j=0 ; j<altmax ; j++)
+		for (j = 0;j < altmax;j++)
 		{
 			tx2 = altanims[j];
 			if (!tx2)
-				Host_Error ("Missing frame %i of %s",j, tx->name);
-			tx2->anim_total = altmax * ANIM_CYCLE;
-			tx2->anim_min = j * ANIM_CYCLE;
-			tx2->anim_max = (j+1) * ANIM_CYCLE;
-			tx2->anim_next = altanims[ (j+1)%altmax ];
+				Host_Error ("Missing frame %i of %s", j, tx->name);
+			tx2->anim_total = altmax;
 			if (max)
 				tx2->alternate_anims = anims[0];
+			for (k = 0;k < 10;k++)
+				tx2->anim_frames[k] = altanims[j];
 		}
 	}
 }
@@ -631,7 +667,6 @@ void Mod_LoadTexinfo (lump_t *l)
 	mtexinfo_t *out;
 	int 	i, j, k, count;
 	int		miptex;
-	float	len1, len2;
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -647,32 +682,14 @@ void Mod_LoadTexinfo (lump_t *l)
 		for (k=0 ; k<2 ; k++)
 			for (j=0 ; j<4 ; j++)
 				out->vecs[k][j] = LittleFloat (in->vecs[k][j]);
-		len1 = Length (out->vecs[0]);
-		len2 = Length (out->vecs[1]);
-		len1 = (len1 + len2)/2;
-		if (len1 < 0.32)
-			out->mipadjust = 4;
-		else if (len1 < 0.49)
-			out->mipadjust = 3;
-		else if (len1 < 0.99)
-			out->mipadjust = 2;
-		else
-			out->mipadjust = 1;
-#if 0
-		if (len1 + len2 < 0.001)
-			out->mipadjust = 1;		// don't crash
-		else
-			out->mipadjust = 1 / floor( (len1+len2)/2 + 0.1 );
-#endif
 
 		miptex = LittleLong (in->miptex);
 		out->flags = LittleLong (in->flags);
 	
 		if (!loadmodel->textures)
 		{
-			out->texture = r_notexture_mip;	// checkerboard texture
+			out->texture = &r_notexture_mip;	// checkerboard texture
 			out->flags = 0;
-			out->texture->transparent = false;
 		}
 		else
 		{
@@ -681,9 +698,8 @@ void Mod_LoadTexinfo (lump_t *l)
 			out->texture = loadmodel->textures[miptex];
 			if (!out->texture)
 			{
-				out->texture = r_notexture_mip; // texture not found
+				out->texture = &r_notexture_mip; // checkerboard texture
 				out->flags = 0;
-				out->texture->transparent = false;
 			}
 		}
 	}
@@ -871,8 +887,8 @@ void Mod_LoadNodes (lump_t *l)
 	{
 		for (j=0 ; j<3 ; j++)
 		{
-			out->minmaxs[j] = LittleShort (in->mins[j]);
-			out->minmaxs[3+j] = LittleShort (in->maxs[j]);
+			out->mins[j] = LittleShort (in->mins[j]);
+			out->maxs[j] = LittleShort (in->maxs[j]);
 		}
 	
 		p = LittleLong(in->planenum);
@@ -918,8 +934,8 @@ void Mod_LoadLeafs (lump_t *l)
 	{
 		for (j=0 ; j<3 ; j++)
 		{
-			out->minmaxs[j] = LittleShort (in->mins[j]);
-			out->minmaxs[3+j] = LittleShort (in->maxs[j]);
+			out->mins[j] = LittleShort (in->mins[j]);
+			out->maxs[j] = LittleShort (in->maxs[j]);
 		}
 
 		p = LittleLong(in->contents);
@@ -934,7 +950,7 @@ void Mod_LoadLeafs (lump_t *l)
 			out->compressed_vis = NULL;
 		else
 			out->compressed_vis = loadmodel->visdata + p;
-		out->efrags = NULL;
+//		out->efrags = NULL;
 		
 		for (j=0 ; j<4 ; j++)
 			out->ambient_sound_level[j] = in->ambient_level[j];
@@ -1055,9 +1071,9 @@ Duplicate the drawing hull structure as a clipping hull
 */
 void Mod_MakeHull0 (void)
 {
-	mnode_t		*in, *child;
+	mnode_t		*in;
 	dclipnode_t *out;
-	int			i, j, count;
+	int			i, count;
 	hull_t		*hull;
 	
 	hull = &loadmodel->hulls[0];	
@@ -1068,20 +1084,14 @@ void Mod_MakeHull0 (void)
 
 	hull->clipnodes = out;
 	hull->firstclipnode = 0;
-	hull->lastclipnode = count-1;
+	hull->lastclipnode = count - 1;
 	hull->planes = loadmodel->planes;
 
-	for (i=0 ; i<count ; i++, out++, in++)
+	for (i = 0;i < count;i++, out++, in++)
 	{
 		out->planenum = in->plane - loadmodel->planes;
-		for (j=0 ; j<2 ; j++)
-		{
-			child = in->children[j];
-			if (child->contents < 0)
-				out->children[j] = child->contents;
-			else
-				out->children[j] = child - loadmodel->nodes;
-		}
+		out->children[0] = in->children[0]->contents < 0 ? in->children[0]->contents : in->children[0] - loadmodel->nodes;
+		out->children[1] = in->children[1]->contents < 0 ? in->children[1]->contents : in->children[1] - loadmodel->nodes;
 	}
 }
 
@@ -1177,6 +1187,644 @@ void Mod_LoadPlanes (lump_t *l)
 	}
 }
 
+#define MAX_POINTS_ON_WINDING 64
+
+typedef struct
+{
+	int numpoints;
+	vec3_t points[8]; // variable sized
+}
+winding_t;
+
+/*
+==================
+NewWinding
+==================
+*/
+winding_t *NewWinding (int points)
+{
+	winding_t *w;
+	int size;
+
+	if (points > MAX_POINTS_ON_WINDING)
+		Host_Error("NewWinding: too many points\n");
+
+	size = (int)((winding_t *)0)->points[points];
+	w = malloc (size);
+	memset (w, 0, size);
+
+	return w;
+}
+
+void FreeWinding (winding_t *w)
+{
+	free (w);
+}
+
+/*
+=================
+BaseWindingForPlane
+=================
+*/
+winding_t *BaseWindingForPlane (mplane_t *p)
+{
+	vec3_t	org, vright, vup;
+	winding_t	*w;
+
+	VectorVectors(p->normal, vright, vup);
+
+	VectorScale (vup, 65536, vup);
+	VectorScale (vright, 65536, vright);
+
+	// project a really big	axis aligned box onto the plane
+	w = NewWinding (4);
+
+	VectorScale (p->normal, p->dist, org);
+
+	VectorSubtract (org, vright, w->points[0]);
+	VectorAdd (w->points[0], vup, w->points[0]);
+
+	VectorAdd (org, vright, w->points[1]);
+	VectorAdd (w->points[1], vup, w->points[1]);
+
+	VectorAdd (org, vright, w->points[2]);
+	VectorSubtract (w->points[2], vup, w->points[2]);
+
+	VectorSubtract (org, vright, w->points[3]);
+	VectorSubtract (w->points[3], vup, w->points[3]);
+
+	w->numpoints = 4;
+
+	return w;	
+}
+
+/*
+==================
+ClipWinding
+
+Clips the winding to the plane, returning the new winding on the positive side
+Frees the input winding.
+If keepon is true, an exactly on-plane winding will be saved, otherwise
+it will be clipped away.
+==================
+*/
+winding_t *ClipWinding (winding_t *in, mplane_t *split, int keepon)
+{
+	vec_t	dists[MAX_POINTS_ON_WINDING + 1];
+	int		sides[MAX_POINTS_ON_WINDING + 1];
+	int		counts[3];
+	vec_t	dot;
+	int		i, j;
+	vec_t	*p1, *p2;
+	vec3_t	mid;
+	winding_t	*neww;
+	int		maxpts;
+
+	counts[SIDE_FRONT] = counts[SIDE_BACK] = counts[SIDE_ON] = 0;
+
+	// determine sides for each point
+	for (i = 0;i < in->numpoints;i++)
+	{
+		dists[i] = dot = DotProduct (in->points[i], split->normal) - split->dist;
+		if (dot > ON_EPSILON)
+			sides[i] = SIDE_FRONT;
+		else if (dot < -ON_EPSILON)
+			sides[i] = SIDE_BACK;
+		else
+			sides[i] = SIDE_ON;
+		counts[sides[i]]++;
+	}
+	sides[i] = sides[0];
+	dists[i] = dists[0];
+
+	if (keepon && !counts[0] && !counts[1])
+		return in;
+
+	if (!counts[0])
+	{
+		FreeWinding (in);
+		return NULL;
+	}
+	if (!counts[1])
+		return in;
+
+	maxpts = in->numpoints+4;	// can't use counts[0]+2 because of fp grouping errors
+	neww = NewWinding (maxpts);
+
+	for (i = 0;i < in->numpoints;i++)
+	{
+		p1 = in->points[i];
+
+		if (sides[i] == SIDE_ON)
+		{
+			VectorCopy (p1, neww->points[neww->numpoints]);
+			neww->numpoints++;
+			continue;
+		}
+
+		if (sides[i] == SIDE_FRONT)
+		{
+			VectorCopy (p1, neww->points[neww->numpoints]);
+			neww->numpoints++;
+		}
+
+		if (sides[i+1] == SIDE_ON || sides[i+1] == sides[i])
+			continue;
+
+		// generate a split point
+		p2 = in->points[(i+1)%in->numpoints];
+
+		dot = dists[i] / (dists[i]-dists[i+1]);
+		for (j = 0;j < 3;j++)
+		{	// avoid round off error when possible
+			if (split->normal[j] == 1)
+				mid[j] = split->dist;
+			else if (split->normal[j] == -1)
+				mid[j] = -split->dist;
+			else
+				mid[j] = p1[j] + dot*(p2[j]-p1[j]);
+		}
+
+		VectorCopy (mid, neww->points[neww->numpoints]);
+		neww->numpoints++;
+	}
+
+	if (neww->numpoints > maxpts)
+		Host_Error ("ClipWinding: points exceeded estimate");
+
+	// free the original winding
+	FreeWinding (in);
+
+	return neww;
+}
+
+
+/*
+==================
+DivideWinding
+
+Divides a winding by a plane, producing one or two windings.  The
+original winding is not damaged or freed.  If only on one side, the
+returned winding will be the input winding.  If on both sides, two
+new windings will be created.
+==================
+*/
+void DivideWinding (winding_t *in, mplane_t *split, winding_t **front, winding_t **back)
+{
+	vec_t	dists[MAX_POINTS_ON_WINDING + 1];
+	int		sides[MAX_POINTS_ON_WINDING + 1];
+	int		counts[3];
+	vec_t	dot;
+	int		i, j;
+	vec_t	*p1, *p2;
+	vec3_t	mid;
+	winding_t	*f, *b;
+	int		maxpts;
+
+	counts[SIDE_FRONT] = counts[SIDE_BACK] = counts[SIDE_ON] = 0;
+
+	// determine sides for each point
+	for (i = 0;i < in->numpoints;i++)
+	{
+		dot = DotProduct (in->points[i], split->normal);
+		dot -= split->dist;
+		dists[i] = dot;
+		if (dot > ON_EPSILON) sides[i] = SIDE_FRONT;
+		else if (dot < -ON_EPSILON) sides[i] = SIDE_BACK;
+		else sides[i] = SIDE_ON;
+		counts[sides[i]]++;
+	}
+	sides[i] = sides[0];
+	dists[i] = dists[0];
+
+	*front = *back = NULL;
+
+	if (!counts[0])
+	{
+		*back = in;
+		return;
+	}
+	if (!counts[1])
+	{
+		*front = in;
+		return;
+	}
+
+	maxpts = in->numpoints+4;	// can't use counts[0]+2 because of fp grouping errors
+
+	*front = f = NewWinding (maxpts);
+	*back = b = NewWinding (maxpts);
+
+	for (i = 0;i < in->numpoints;i++)
+	{
+		p1 = in->points[i];
+
+		if (sides[i] == SIDE_ON)
+		{
+			VectorCopy (p1, f->points[f->numpoints]);
+			f->numpoints++;
+			VectorCopy (p1, b->points[b->numpoints]);
+			b->numpoints++;
+			continue;
+		}
+
+		if (sides[i] == SIDE_FRONT)
+		{
+			VectorCopy (p1, f->points[f->numpoints]);
+			f->numpoints++;
+		}
+		else if (sides[i] == SIDE_BACK)
+		{
+			VectorCopy (p1, b->points[b->numpoints]);
+			b->numpoints++;
+		}
+
+		if (sides[i+1] == SIDE_ON || sides[i+1] == sides[i])
+			continue;
+
+		// generate a split point
+		p2 = in->points[(i+1)%in->numpoints];
+
+		dot = dists[i] / (dists[i]-dists[i+1]);
+		for (j = 0;j < 3;j++)
+		{	// avoid round off error when possible
+			if (split->normal[j] == 1)
+				mid[j] = split->dist;
+			else if (split->normal[j] == -1)
+				mid[j] = -split->dist;
+			else
+				mid[j] = p1[j] + dot*(p2[j]-p1[j]);
+		}
+
+		VectorCopy (mid, f->points[f->numpoints]);
+		f->numpoints++;
+		VectorCopy (mid, b->points[b->numpoints]);
+		b->numpoints++;
+	}
+
+	if (f->numpoints > maxpts || b->numpoints > maxpts)
+		Host_Error ("DivideWinding: points exceeded estimate");
+}
+
+typedef struct portal_s
+{
+	mplane_t plane;
+	mnode_t *nodes[2];		// [0] = front side of plane
+	struct portal_s *next[2];	
+	winding_t *winding;
+	struct portal_s *chain; // all portals are linked into a list
+}
+portal_t;
+
+static portal_t *portalchain;
+
+/*
+===========
+AllocPortal
+===========
+*/
+portal_t *AllocPortal (void)
+{
+	portal_t *p;
+	p = malloc(sizeof(portal_t));
+	memset(p, 0, sizeof(portal_t));
+	p->chain = portalchain;
+	portalchain = p;
+	return p;
+}
+
+void Mod_FinalizePortals()
+{
+	int i, j, numportals, numpoints;
+	portal_t *p, *pnext;
+	mportal_t *portal;
+	mvertex_t *point;
+	p = portalchain;
+	numportals = 0;
+	numpoints = 0;
+	while(p)
+	{
+		if (p->winding && p->nodes[0] != p->nodes[1] && p->nodes[0]->contents != CONTENTS_SOLID && p->nodes[1]->contents != CONTENTS_SOLID)
+		{
+			numportals += 2;
+			numpoints += p->winding->numpoints * 2;
+		}
+		p = p->chain;
+	}
+	loadmodel->portals = Hunk_AllocName(numportals * sizeof(mportal_t), va("%s portals", loadmodel->name));
+	loadmodel->numportals = numportals;
+	loadmodel->portalpoints = Hunk_AllocName(numpoints * sizeof(mvertex_t), va("%s portals", loadmodel->name));
+	loadmodel->numportalpoints = numpoints;
+	// clear all leaf portal chains
+	for (i = 0;i < loadmodel->numleafs;i++)
+		loadmodel->leafs[i].portals = NULL;
+	// process all portals in the global portal chain, while freeing them
+	portal = loadmodel->portals;
+	point = loadmodel->portalpoints;
+	p = portalchain;
+	portalchain = NULL;
+	while (p)
+	{
+		pnext = p->chain;
+
+		if (p->winding)
+		{
+			// the nodes[0] != nodes[1] check is because leaf 0 is the shared solid leaf, it can have many portals inside with leaf 0 on both sides
+			if (p->nodes[0] != p->nodes[1] && p->nodes[0]->contents != CONTENTS_SOLID && p->nodes[1]->contents != CONTENTS_SOLID)
+			{
+				// first make the back to front portal (forward portal)
+				portal->points = point;
+				portal->numpoints = p->winding->numpoints;
+				portal->plane.dist = p->plane.dist;
+				VectorCopy(p->plane.normal, portal->plane.normal);
+				portal->here = (mleaf_t *)p->nodes[1];
+				portal->past = (mleaf_t *)p->nodes[0];
+				// copy points
+				for (j = 0;j < portal->numpoints;j++)
+				{
+					VectorCopy(p->winding->points[j], point->position);
+					point++;
+				}
+
+				// link into leaf's portal chain
+				portal->next = portal->here->portals;
+				portal->here->portals = portal;
+
+				// advance to next portal
+				portal++;
+
+				// then make the front to back portal (backward portal)
+				portal->points = point;
+				portal->numpoints = p->winding->numpoints;
+				portal->plane.dist = -p->plane.dist;
+				VectorNegate(p->plane.normal, portal->plane.normal);
+				portal->here = (mleaf_t *)p->nodes[0];
+				portal->past = (mleaf_t *)p->nodes[1];
+				// copy points
+				for (j = portal->numpoints - 1;j >= 0;j--)
+				{
+					VectorCopy(p->winding->points[j], point->position);
+					point++;
+				}
+
+				// link into leaf's portal chain
+				portal->next = portal->here->portals;
+				portal->here->portals = portal;
+
+				// advance to next portal
+				portal++;
+			}
+			FreeWinding(p->winding);
+		}
+		free(p);
+		p = pnext;
+	}
+}
+
+/*
+=============
+AddPortalToNodes
+=============
+*/
+void AddPortalToNodes (portal_t *p, mnode_t *front, mnode_t *back)
+{
+	if (!front)
+		Host_Error ("AddPortalToNodes: NULL front node");
+	if (!back)
+		Host_Error ("AddPortalToNodes: NULL back node");
+	if (p->nodes[0] || p->nodes[1])
+		Host_Error ("AddPortalToNodes: already included");
+	// note: front == back is handled gracefully, because leaf 0 is the shared solid leaf, it can often have portals with the same leaf on both sides
+
+	p->nodes[0] = front;
+	p->next[0] = (portal_t *)front->portals;
+	front->portals = (mportal_t *)p;
+
+	p->nodes[1] = back;
+	p->next[1] = (portal_t *)back->portals;
+	back->portals = (mportal_t *)p;
+}
+
+/*
+=============
+RemovePortalFromNode
+=============
+*/
+void RemovePortalFromNodes(portal_t *portal)
+{
+	int i;
+	mnode_t *node;
+	void **portalpointer;
+	portal_t *t;
+	for (i = 0;i < 2;i++)
+	{
+		node = portal->nodes[i];
+
+		portalpointer = &node->portals;
+		while (1)
+		{
+			t = *portalpointer;
+			if (!t)
+				Host_Error ("RemovePortalFromNodes: portal not in leaf");
+
+			if (t == portal)
+			{
+				if (portal->nodes[0] == node)
+				{
+					*portalpointer = portal->next[0];
+					portal->nodes[0] = NULL;
+				}
+				else if (portal->nodes[1] == node)
+				{
+					*portalpointer = portal->next[1];	
+					portal->nodes[1] = NULL;
+				}
+				else
+					Host_Error ("RemovePortalFromNodes: portal not bounding leaf");
+				break;
+			}
+
+			if (t->nodes[0] == node)
+				portalpointer = &t->next[0];
+			else if (t->nodes[1] == node)
+				portalpointer = &t->next[1];
+			else
+				Host_Error ("RemovePortalFromNodes: portal not bounding leaf");
+		}
+	}
+}
+
+void Mod_RecursiveNodePortals (mnode_t *node)
+{
+	int side;
+	mnode_t *front, *back, *other_node;
+	mplane_t clipplane, *plane;
+	portal_t *portal, *nextportal, *nodeportal, *splitportal, *temp;
+	winding_t *nodeportalwinding, *frontwinding, *backwinding;
+
+	//	CheckLeafPortalConsistancy (node);
+
+	// if a leaf, we're done
+	if (node->contents)
+		return;
+
+	plane = node->plane;
+
+	front = node->children[0];
+	back = node->children[1];
+	if (front == back)
+		Host_Error("Mod_RecursiveNodePortals: corrupt node hierarchy");
+
+	// create the new portal by generating a polygon for the node plane,
+	// and clipping it by all of the other portals (which came from nodes above this one)
+	nodeportal = AllocPortal ();
+	nodeportal->plane = *node->plane;
+
+	nodeportalwinding = BaseWindingForPlane (node->plane);
+	side = 0;	// shut up compiler warning
+	for (portal = (portal_t *)node->portals;portal;portal = portal->next[side])	
+	{
+		clipplane = portal->plane;
+		if (portal->nodes[0] == portal->nodes[1])
+			Host_Error("Mod_RecursiveNodePortals: portal has same node on both sides (1)");
+		if (portal->nodes[0] == node)
+			side = 0;
+		else if (portal->nodes[1] == node)
+		{
+			clipplane.dist = -clipplane.dist;
+			VectorNegate (clipplane.normal, clipplane.normal);
+			side = 1;
+		}
+		else
+			Host_Error ("Mod_RecursiveNodePortals: mislinked portal");
+
+		nodeportalwinding = ClipWinding (nodeportalwinding, &clipplane, true);
+		if (!nodeportalwinding)
+		{
+			printf ("Mod_RecursiveNodePortals: WARNING: new portal was clipped away\n");
+			break;
+		}
+	}
+
+	if (nodeportalwinding)
+	{
+		// if the plane was not clipped on all sides, there was an error
+		nodeportal->winding = nodeportalwinding;
+		AddPortalToNodes (nodeportal, front, back);
+	}
+
+	// split the portals of this node along this node's plane and assign them to the children of this node
+	// (migrating the portals downward through the tree)
+	for (portal = (portal_t *)node->portals;portal;portal = nextportal)
+	{
+		if (portal->nodes[0] == portal->nodes[1])
+			Host_Error("Mod_RecursiveNodePortals: portal has same node on both sides (2)");
+		if (portal->nodes[0] == node)
+			side = 0;
+		else if (portal->nodes[1] == node)
+			side = 1;
+		else
+			Host_Error ("Mod_RecursiveNodePortals: mislinked portal");
+		nextportal = portal->next[side];
+
+		other_node = portal->nodes[!side];
+		RemovePortalFromNodes (portal);
+
+		// cut the portal into two portals, one on each side of the node plane
+		DivideWinding (portal->winding, plane, &frontwinding, &backwinding);
+
+		if (!frontwinding)
+		{
+			if (side == 0)
+				AddPortalToNodes (portal, back, other_node);
+			else
+				AddPortalToNodes (portal, other_node, back);
+			continue;
+		}
+		if (!backwinding)
+		{
+			if (side == 0)
+				AddPortalToNodes (portal, front, other_node);
+			else
+				AddPortalToNodes (portal, other_node, front);
+			continue;
+		}
+
+		// the winding is split
+		splitportal = AllocPortal ();
+		temp = splitportal->chain;
+		*splitportal = *portal;
+		splitportal->chain = temp;
+		splitportal->winding = backwinding;
+		FreeWinding (portal->winding);
+		portal->winding = frontwinding;
+
+		if (side == 0)
+		{
+			AddPortalToNodes (portal, front, other_node);
+			AddPortalToNodes (splitportal, back, other_node);
+		}
+		else
+		{
+			AddPortalToNodes (portal, other_node, front);
+			AddPortalToNodes (splitportal, other_node, back);
+		}
+	}
+
+	Mod_RecursiveNodePortals(front);
+	Mod_RecursiveNodePortals(back);
+}
+
+/*
+void Mod_MakeOutsidePortals(mnode_t *node)
+{
+	int			i, j;
+	portal_t	*p, *portals[6];
+	mnode_t		*outside_node;
+
+	outside_node = Hunk_AllocName(sizeof(mnode_t), loadmodel->name);
+	outside_node->contents = CONTENTS_SOLID;
+	outside_node->portals = NULL;
+
+	for (i = 0;i < 3;i++)
+	{
+		for (j = 0;j < 2;j++)
+		{
+			portals[j*3 + i] = p = AllocPortal ();
+			memset (&p->plane, 0, sizeof(mplane_t));
+			p->plane.normal[i] = j ? -1 : 1;
+			p->plane.dist = -65536;
+			p->winding = BaseWindingForPlane (&p->plane);
+			if (j)
+				AddPortalToNodes (p, outside_node, node);
+			else
+				AddPortalToNodes (p, node, outside_node);
+		}
+	}
+
+	// clip the basewindings by all the other planes
+	for (i = 0;i < 6;i++)
+	{
+		for (j = 0;j < 6;j++)
+		{
+			if (j == i)
+				continue;
+			portals[i]->winding = ClipWinding (portals[i]->winding, &portals[j]->plane, true);
+		}
+	}
+}
+*/
+
+void Mod_MakePortals()
+{
+//	Con_Printf("building portals for %s\n", loadmodel->name);
+
+	portalchain = NULL;
+//	Mod_MakeOutsidePortals (loadmodel->nodes);
+	Mod_RecursiveNodePortals (loadmodel->nodes);
+	Mod_FinalizePortals();
+}
+
 /*
 =================
 Mod_LoadBrushModel
@@ -1226,13 +1874,15 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 	Mod_LoadSubmodels (&header->lumps[LUMP_MODELS]);
 
 	Mod_MakeHull0 ();
+
+	Mod_MakePortals();
 	
 	mod->numframes = 2;		// regular and alternate animation
 	
 //
 // set up the submodels (FIXME: this is confusing)
 //
-	for (i=0 ; i<mod->numsubmodels ; i++)
+	for (i = 0;i < mod->numsubmodels;i++)
 	{
 		bm = &mod->submodels[i];
 
@@ -1240,7 +1890,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 		for (j=1 ; j<MAX_MAP_HULLS ; j++)
 		{
 			mod->hulls[j].firstclipnode = bm->headnode[j];
-			mod->hulls[j].lastclipnode = mod->numclipnodes-1;
+			mod->hulls[j].lastclipnode = mod->numclipnodes - 1;
 		}
 		
 		mod->firstmodelsurface = bm->firstface;
@@ -1253,7 +1903,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 
 		mod->numleafs = bm->visleafs;
 
-		if (isworldmodel && i < (mod->numsubmodels-1)) // LordHavoc: only register submodels if it is the world (prevents bsp models from replacing world submodels)
+		if (isworldmodel && i < (mod->numsubmodels - 1)) // LordHavoc: only register submodels if it is the world (prevents bsp models from replacing world submodels)
 		{	// duplicate the basic information
 			char	name[10];
 

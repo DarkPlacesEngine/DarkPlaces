@@ -26,18 +26,14 @@ void SCR_UpdateScreen (void);
 
 void SCR_SizeUp (void);
 void SCR_SizeDown (void);
-void SCR_BringDownConsole (void);
 void SCR_CenterPrint (char *str);
 
-void SCR_BeginLoadingPlaque (void);
-void SCR_EndLoadingPlaque (void);
-
-int SCR_ModalMessage (char *text);
+//void SCR_BeginLoadingPlaque (void);
+//void SCR_EndLoadingPlaque (void);
 
 extern	float		scr_con_current;
 extern	float		scr_conlines;		// lines of console to display
 
-extern	int			scr_fullupdate;	// set to 0 to force full redraw
 extern	int			sb_lines;
 
 extern	int			clearnotify;	// set to 0 whenever notify text is drawn
@@ -47,9 +43,3 @@ extern	qboolean	scr_skipupdate;
 extern	cvar_t		scr_viewsize;
 
 extern cvar_t scr_viewsize;
-
-// only the refresh window will be updated unless these variables are flagged 
-extern	int			scr_copytop;
-extern	int			scr_copyeverything;
-
-void SCR_UpdateWholeScreen (void);

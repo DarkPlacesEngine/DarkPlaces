@@ -463,10 +463,10 @@ SV_WriteEntitiesToClient
 */
 void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 {
-	int		e, i, clentnum, bits, alpha, glowcolor, glowsize, scale, colormod, modred, modgreen, modblue, dodelta, effects;
+	int		e, i, clentnum, bits, alpha, glowcolor, glowsize, scale, colormod, modred, modgreen, modblue, effects;
 	byte	*pvs;
 	vec3_t	org, origin, angles;
-	float	movelerp, moveilerp;
+	float	movelerp, moveilerp, nextfullupdate;
 	edict_t	*ent;
 	eval_t  *val;
 	entity_state_t *baseline; // LordHavoc: delta or startup baseline
@@ -489,15 +489,23 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 	clentnum = EDICT_TO_PROG(clent); // LordHavoc: for comparison purposes
 // send over all entities (except the client) that touch the pvs
 	ent = NEXT_EDICT(sv.edicts);
-	for (e=1 ; e<sv.num_edicts ; e++, ent = NEXT_EDICT(ent))
+	for (e = 1;e < sv.num_edicts;e++, ent = NEXT_EDICT(ent))
 	{
 		bits = 0;
+
+		// prevent delta compression against this frame (unless actually sent, which will restore this later)
+		nextfullupdate = client->nextfullupdate[e];
+		client->nextfullupdate[e] = -1;
+
 		if (ent != clent) // LordHavoc: always send player
 		{
 			if ((val = GETEDICTFIELDVALUE(ent, eval_viewmodelforclient)) && val->edict)
 			{
 				if (val->edict != clentnum)
-					continue; // don't show to anyone else
+				{
+					// don't show to anyone else
+					continue;
+				}
 				else
 					bits |= U_VIEWMODEL; // show relative to the view
 			}
@@ -509,12 +517,15 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 				if ((val = GETEDICTFIELDVALUE(ent, eval_drawonlytoclient)) && val->edict && val->edict != clentnum)
 					continue;
 				// ignore if not touching a PV leaf
-				for (i=0 ; i < ent->num_leafs ; i++)
+				for (i = 0;i < ent->num_leafs;i++)
 					if (pvs[ent->leafnums[i] >> 3] & (1 << (ent->leafnums[i]&7) ))
 						break;
 					
 				if (i == ent->num_leafs)
-					continue;		// not visible
+				{
+					// not visible
+					continue;
+				}
 			}
 		}
 
@@ -582,29 +593,35 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		if (msg->maxsize - msg->cursize < 32) // LordHavoc: increased check from 16 to 32
 		{
 			Con_Printf ("packet overflow\n");
+			// mark the rest of the entities so they can't be delta compressed against this frame
+			for (;e < sv.num_edicts;e++)
+				client->nextfullupdate[e] = -1;
 			return;
 		}
 
 // send an update
-		bits = 0;
+		baseline = &ent->baseline;
 
-		dodelta = false;
 		if ((int)ent->v.effects & EF_DELTA)
-			dodelta = realtime < client->nextfullupdate[e]; // every half second a full update is forced
-
-		if (dodelta)
 		{
-			bits |= U_DELTA;
-			baseline = &ent->deltabaseline;
+			// every half second a full update is forced
+			if (realtime < client->nextfullupdate[e])
+			{
+				bits |= U_DELTA;
+				baseline = &ent->deltabaseline;
+			}
+			else
+				nextfullupdate = realtime + 0.5f;
 		}
 		else
-		{
-			client->nextfullupdate[e] = realtime + 0.5;
-			baseline = &ent->baseline;
-		}
+			nextfullupdate = realtime + 0.5f;
+
+		// restore nextfullupdate since this is being sent
+		client->nextfullupdate[e] = nextfullupdate;
 
 		if (e >= 256)
 			bits |= U_LONGENTITY;
+
 		if (ent->v.movetype == MOVETYPE_STEP)
 			bits |= U_STEP;
 		

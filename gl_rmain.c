@@ -28,7 +28,6 @@ qboolean	r_cache_thrash;		// compatability
 vec3_t		modelorg, r_entorigin;
 entity_t	*currententity;
 
-int			r_visframecount;	// bumped when going to a new PVS
 int			r_framecount;		// used for dlight push checking
 
 mplane_t	frustum[4];
@@ -59,8 +58,6 @@ refdef_t	r_refdef;
 
 mleaf_t		*r_viewleaf, *r_oldviewleaf;
 
-texture_t	*r_notexture_mip;
-
 unsigned short	d_lightstylevalue[256];	// 8.8 fraction of base light value
 
 
@@ -75,7 +72,6 @@ cvar_t	r_fullbright = {"r_fullbright","0"};
 //cvar_t	r_lightmap = {"r_lightmap","0"};
 cvar_t	r_wateralpha = {"r_wateralpha","1"};
 cvar_t	r_dynamic = {"r_dynamic","1"};
-cvar_t	r_novis = {"r_novis","0"};
 cvar_t	r_waterripple = {"r_waterripple","0"};
 cvar_t	r_fullbrights = {"r_fullbrights", "1"};
 
@@ -93,6 +89,50 @@ cvar_t	gl_fogblue = {"gl_fogblue","0.3"};
 cvar_t	gl_fogstart = {"gl_fogstart", "0"};
 cvar_t	gl_fogend = {"gl_fogend","0"};
 cvar_t	glfog = {"glfog", "0"};
+
+int R_VisibleCullBox (vec3_t mins, vec3_t maxs)
+{
+	int sides;
+	mnode_t *nodestack[8192], *node;
+	int stack = 0;
+
+	if (R_CullBox(mins, maxs))
+		return true;
+
+	node = cl.worldmodel->nodes;
+loc0:
+	if (node->contents < 0)
+	{
+		if (((mleaf_t *)node)->visframe == r_framecount)
+			return false;
+		if (!stack)
+			return true;
+		node = nodestack[--stack];
+		goto loc0;
+	}
+	
+	sides = BOX_ON_PLANE_SIDE(mins, maxs, node->plane);
+	
+// recurse down the contacted sides
+	if (sides & 1)
+	{
+		if (sides & 2) // 3
+		{
+			// put second child on the stack for later examination
+			nodestack[stack++] = node->children[1];
+			node = node->children[0];
+			goto loc0;
+		}
+		else // 1
+		{
+			node = node->children[0];
+			goto loc0;
+		}
+	}
+	// 2
+	node = node->children[1];
+	goto loc0;
+}
 
 qboolean lighthalf;
 
@@ -238,7 +278,6 @@ void GL_Main_Init()
 	Cvar_RegisterVariable (&r_fullbrights);
 	Cvar_RegisterVariable (&r_wateralpha);
 	Cvar_RegisterVariable (&r_dynamic);
-	Cvar_RegisterVariable (&r_novis);
 	Cvar_RegisterVariable (&r_waterripple); // LordHavoc: added waterripple
 	if (nehahra)
 		Cvar_SetValue("r_fullbrights", 0);
@@ -784,7 +823,6 @@ r_refdef must be set before the first call
 ================
 */
 extern qboolean intimerefresh;
-extern qboolean skyisvisible;
 extern void R_Sky();
 extern void UploadLightmaps();
 char r_speeds2_string1[81], r_speeds2_string2[81], r_speeds2_string3[81], r_speeds2_string4[81], r_speeds2_string5[81], r_speeds2_string6[81], r_speeds2_string7[81];
@@ -809,7 +847,6 @@ void R_RenderView (void)
 	else
 		starttime = currtime = 0;
 	R_Clear();
-	skyisvisible = false;
 	TIMEREPORT(time_clear)
 
 	// render normal view
@@ -826,8 +863,7 @@ void R_RenderView (void)
 
 	TIMEREPORT(time_setup)
 
-	R_MarkLeaves ();	// done here so we know if we're in water
-	R_DrawWorld ();		// adds static entities to the list
+	R_DrawWorld ();
 	TIMEREPORT(time_world)
 	R_DrawEntitiesOnList1 (); // BSP models
 	TIMEREPORT(time_bmodels)
@@ -837,12 +873,15 @@ void R_RenderView (void)
 
 	skypolyrender(); // fogged sky polys, affects depth
 
-	if (skyname[0] && skyisvisible && !fogenabled)
+	if (skyname[0] && currentskypoly && !fogenabled)
 		R_Sky(); // does not affect depth, draws over the sky polys
 	TIMEREPORT(time_sky)
 
 	wallpolyrender();
 	TIMEREPORT(time_wall)
+
+	GL_DrawDecals();
+	TIMEREPORT(time_drawdecals)
 
 	if (!intimerefresh && !r_speeds2.value)
 		S_ExtraUpdate ();	// don't let sound get messed up if going slow
@@ -859,8 +898,6 @@ void R_RenderView (void)
 	TIMEREPORT(time_moveexplosions)
 	R_DrawExplosions();
 	TIMEREPORT(time_drawexplosions)
-	R_DrawDecals();
-	TIMEREPORT(time_drawdecals)
 
 	transpolyrender();
 	TIMEREPORT(time_transpoly)

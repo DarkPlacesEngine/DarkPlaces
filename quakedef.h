@@ -225,7 +225,9 @@ extern int buildnumber;
 typedef struct
 {
 	char	*basedir;
+#if CACHEENABLE
 	char	*cachedir;		// for development over ISDN lines
+#endif
 	int		argc;
 	char	**argv;
 	void	*membase;

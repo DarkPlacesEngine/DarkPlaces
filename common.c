@@ -1349,8 +1349,10 @@ typedef struct
 // LordHavoc: was 2048, increased to 16384 and changed info[MAX_PACK_FILES] to a temporary malloc to avoid stack overflows
 #define MAX_FILES_IN_PACK       16384
 
-char    com_cachedir[MAX_OSPATH];
-char    com_gamedir[MAX_OSPATH];
+#if CACHEENABLE
+char	com_cachedir[MAX_OSPATH];
+#endif
+char	com_gamedir[MAX_OSPATH];
 
 typedef struct searchpath_s
 {
@@ -1480,12 +1482,15 @@ Sets com_filesize and one of handle or file
 */
 int COM_FindFile (char *filename, int *handle, FILE **file, qboolean quiet)
 {
-	searchpath_t    *search;
-	char            netpath[MAX_OSPATH];
-	char            cachepath[MAX_OSPATH];
-	pack_t          *pak;
-	int                     i;
-	int                     findtime, cachetime;
+	searchpath_t	*search;
+	char			netpath[MAX_OSPATH];
+#if CACHEENABLE
+	char			cachepath[MAX_OSPATH];
+	int				cachetime;
+#endif
+	pack_t			*pak;
+	int				i;
+	int				findtime;
 
 	if (file && handle)
 		Sys_Error ("COM_FindFile: both handle and file set");
@@ -1544,10 +1549,9 @@ int COM_FindFile (char *filename, int *handle, FILE **file, qboolean quiet)
 			if (findtime == -1)
 				continue;
 				
-		// see if the file needs to be updated in the cache
-			if (!com_cachedir[0])
-				strcpy (cachepath, netpath);
-			else
+#if CACHEENABLE
+			// see if the file needs to be updated in the cache
+			if (com_cachedir[0])
 			{	
 #if defined(_WIN32)
 				if ((strlen(netpath) < 2) || (netpath[1] != ':'))
@@ -1564,6 +1568,7 @@ int COM_FindFile (char *filename, int *handle, FILE **file, qboolean quiet)
 					COM_CopyFile (netpath, cachepath);
 				strcpy (netpath, cachepath);
 			}	
+#endif
 
 			if (!quiet)
 				Sys_Printf ("FindFile: %s\n",netpath);
@@ -1870,6 +1875,7 @@ void COM_InitFilesystem (void)
 			basedir[j-1] = 0;
 	}
 
+#if CACHEENABLE
 //
 // -cachedir <path>
 // Overrides the system supplied cache directory (NULL or /qcache)
@@ -1887,6 +1893,7 @@ void COM_InitFilesystem (void)
 		strcpy (com_cachedir, host_parms.cachedir);
 	else
 		com_cachedir[0] = 0;
+#endif
 
 //
 // start up with GAMENAME by default (id1)

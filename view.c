@@ -855,14 +855,9 @@ void V_RenderView (void)
 		return;
 
 	if (cl.intermission)
-	{	// intermission / finale rendering
 		V_CalcIntermissionRefdef ();	
-	}
 	else
-	{
-		if (!cl.paused /* && (sv.maxclients > 1 || key_dest == key_game) */ )
-			V_CalcRefdef ();
-	}
+		V_CalcRefdef ();
 
 	R_RenderView ();
 }

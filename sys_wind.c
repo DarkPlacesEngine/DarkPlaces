@@ -149,9 +149,11 @@ SYSTEM IO
 ===============================================================================
 */
 
+#if NOTUSED
 void Sys_MakeCodeWriteable (unsigned long startaddr, unsigned long length)
 {
 }
+#endif
 
 
 void Sys_DebugLog(char *file, char *fmt, ...)

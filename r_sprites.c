@@ -20,12 +20,15 @@ R_DrawSpriteModel
 */
 void R_DrawSpriteModel (entity_t *e, frameblend_t *blend)
 {
-	vec3_t			right, up, org, color;
+	vec3_t			right, up, org, color, mins, maxs;
 	byte			colorub[4];
 	msprite_t		*psprite;
 
-	// don't even bother culling, because it's just a single
-	// polygon without a surface cache
+	VectorAdd (e->render.origin, e->render.model->mins, mins);
+	VectorAdd (e->render.origin, e->render.model->maxs, maxs);
+
+	if (R_VisibleCullBox (mins, maxs))
+		return;
 
 	c_sprites++;
 

@@ -43,8 +43,6 @@ void R_Light_Init()
 	R_RegisterModule("R_Light", r_light_start, r_light_shutdown, r_light_newmap);
 }
 
-int	r_dlightframecount;
-
 /*
 ==================
 R_AnimateLight
@@ -89,6 +87,7 @@ void R_OldMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex
 {
 	float		ndist, maxdist;
 	msurface_t	*surf;
+	mleaf_t		*leaf;
 	int			i;
 
 	if (!r_dynamic.value)
@@ -103,35 +102,32 @@ void R_OldMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex
 
 loc0:
 	if (node->contents < 0)
+	{
+		if (node->contents != CONTENTS_SOLID)
+		{
+			leaf = (mleaf_t *)node;
+			if (leaf->dlightframe != r_framecount) // not dynamic until now
+			{
+				leaf->dlightbits[0] = leaf->dlightbits[1] = leaf->dlightbits[2] = leaf->dlightbits[3] = leaf->dlightbits[4] = leaf->dlightbits[5] = leaf->dlightbits[6] = leaf->dlightbits[7] = 0;
+				leaf->dlightframe = r_framecount;
+			}
+			leaf->dlightbits[bitindex] |= bit;
+		}
 		return;
+	}
 
 	ndist = PlaneDiff(lightorigin, node->plane);
 	
 	if (ndist > light->radius)
 	{
-		if (node->children[0]->contents >= 0) // LordHavoc: save some time by not pushing another stack frame
-		{
-			node = node->children[0];
-			goto loc0;
-		}
-		return;
+		node = node->children[0];
+		goto loc0;
 	}
 	if (ndist < -light->radius)
 	{
-		if (node->children[1]->contents >= 0) // LordHavoc: save some time by not pushing another stack frame
-		{
-			node = node->children[1];
-			goto loc0;
-		}
-		return;
+		node = node->children[1];
+		goto loc0;
 	}
-
-	if (node->dlightframe != r_dlightframecount) // not dynamic until now
-	{
-		node->dlightbits[0] = node->dlightbits[1] = node->dlightbits[2] = node->dlightbits[3] = node->dlightbits[4] = node->dlightbits[5] = node->dlightbits[6] = node->dlightbits[7] = 0;
-		node->dlightframe = r_dlightframecount;
-	}
-	node->dlightbits[bitindex] |= bit;
 
 // mark the polygons
 	surf = cl.worldmodel->surfaces + node->firstsurface;
@@ -139,6 +135,8 @@ loc0:
 	{
 		int d;
 		float dist, dist2, impact[3];
+		if (surf->visframe != r_framecount)
+			continue;
 		dist = ndist;
 		if (surf->flags & SURF_PLANEBACK)
 			dist = -dist;
@@ -192,20 +190,20 @@ loc0:
 			}
 		}
 
-		if (surf->dlightframe != r_dlightframecount) // not dynamic until now
+		if (surf->dlightframe != r_framecount) // not dynamic until now
 		{
 			surf->dlightbits[0] = surf->dlightbits[1] = surf->dlightbits[2] = surf->dlightbits[3] = surf->dlightbits[4] = surf->dlightbits[5] = surf->dlightbits[6] = surf->dlightbits[7] = 0;
-			surf->dlightframe = r_dlightframecount;
+			surf->dlightframe = r_framecount;
 		}
 		surf->dlightbits[bitindex] |= bit;
 
 		/*
 		if (((surf->flags & SURF_PLANEBACK) == 0) == ((PlaneDist(lightorigin, surf->plane)) >= surf->plane->dist))
 		{
-			if (surf->dlightframe != r_dlightframecount) // not dynamic until now
+			if (surf->dlightframe != r_framecount) // not dynamic until now
 			{
 				surf->dlightbits[0] = surf->dlightbits[1] = surf->dlightbits[2] = surf->dlightbits[3] = surf->dlightbits[4] = surf->dlightbits[5] = surf->dlightbits[6] = surf->dlightbits[7] = 0;
-				surf->dlightframe = r_dlightframecount;
+				surf->dlightframe = r_framecount;
 			}
 			surf->dlightbits[bitindex] |= bit;
 		}
@@ -288,20 +286,19 @@ void R_VisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex
 					if (c & (1<<i))
 					{
 						leaf = &model->leafs[(k << 3)+i+1];
-						leaf->lightframe = lightframe;
-						if (leaf->visframe != r_visframecount)
+						if (leaf->visframe != r_framecount)
 							continue;
 						if (leaf->contents == CONTENTS_SOLID)
 							continue;
 						// if out of the light radius, skip
-						if (leaf->minmaxs[0] > high[0] || leaf->minmaxs[3] < low[0]
-						 || leaf->minmaxs[1] > high[1] || leaf->minmaxs[4] < low[1]
-						 || leaf->minmaxs[2] > high[2] || leaf->minmaxs[5] < low[2])
+						if (leaf->mins[0] > high[0] || leaf->maxs[0] < low[0]
+						 || leaf->mins[1] > high[1] || leaf->maxs[1] < low[1]
+						 || leaf->mins[2] > high[2] || leaf->maxs[2] < low[2])
 							continue;
-						if (leaf->dlightframe != r_dlightframecount) // not dynamic until now
+						if (leaf->dlightframe != r_framecount) // not dynamic until now
 						{
 							leaf->dlightbits[0] = leaf->dlightbits[1] = leaf->dlightbits[2] = leaf->dlightbits[3] = leaf->dlightbits[4] = leaf->dlightbits[5] = leaf->dlightbits[6] = leaf->dlightbits[7] = 0;
-							leaf->dlightframe = r_dlightframecount;
+							leaf->dlightframe = r_framecount;
 						}
 						leaf->dlightbits[bitindex] |= bit;
 						if ((m = leaf->nummarksurfaces))
@@ -366,10 +363,10 @@ void R_VisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex
 										}
 									}
 
-									if (surf->dlightframe != r_dlightframecount) // not dynamic until now
+									if (surf->dlightframe != r_framecount) // not dynamic until now
 									{
 										surf->dlightbits[0] = surf->dlightbits[1] = surf->dlightbits[2] = surf->dlightbits[3] = surf->dlightbits[4] = surf->dlightbits[5] = surf->dlightbits[6] = surf->dlightbits[7] = 0;
-										surf->dlightframe = r_dlightframecount;
+										surf->dlightframe = r_framecount;
 									}
 									surf->dlightbits[bitindex] |= bit;
 								}
@@ -397,8 +394,6 @@ void R_PushDlights (void)
 {
 	int		i;
 	dlight_t	*l;
-
-	r_dlightframecount = r_framecount + 1;	// because the count hasn't advanced yet for this frame
 
 	if (!r_dynamic.value)
 		return;
@@ -750,7 +745,7 @@ void R_ModelLightPoint (vec3_t color, vec3_t p, int *dlightbits)
 	color[0] = color[1] = color[2] = r_ambient.value * 2.0f;
 	RecursiveLightPoint (color, cl.worldmodel->nodes, p[0], p[1], p[2], p[2] - 65536);
 
-	if (leaf->dlightframe == r_dlightframecount)
+	if (leaf->dlightframe == r_framecount)
 	{
 		dlightbits[0] = leaf->dlightbits[0];
 		dlightbits[1] = leaf->dlightbits[1];

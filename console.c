@@ -93,7 +93,7 @@ void Con_ToggleConsole_f (void)
 	else
 		key_dest = key_console;
 	
-	SCR_EndLoadingPlaque ();
+//	SCR_EndLoadingPlaque ();
 	memset (con_times, 0, sizeof(con_times));
 }
 
@@ -387,7 +387,7 @@ void Con_Printf (char *fmt, ...)
 {
 	va_list		argptr;
 	char		msg[MAXPRINTMSG];
-	static qboolean	inupdate;
+//	static qboolean	inupdate;
 	
 	va_start (argptr,fmt);
 	vsprintf (msg,fmt,argptr);
@@ -410,6 +410,8 @@ void Con_Printf (char *fmt, ...)
 	Con_Print (msg);
 	
 // update the screen if the console is displayed
+	// LordHavoc: I don't think there's a real need for this
+	/*
 	// LordHavoc: don't print text while loading scripts
 	if (cls.state != ca_disconnected)
 	if (cls.signon != SIGNONS && !scr_disabled_for_loading )
@@ -423,6 +425,7 @@ void Con_Printf (char *fmt, ...)
 			inupdate = false;
 		}
 	}
+	*/
 }
 
 /*
@@ -553,7 +556,6 @@ void Con_DrawNotify (void)
 		text = con_text + (i % con_totallines)*con_linewidth;
 		
 		clearnotify = 0;
-		scr_copytop = 1;
 
 //		for (x = 0 ; x < con_linewidth ; x++)
 //			Draw_Character ( (x+1)<<3, v, text[x]);
@@ -567,7 +569,6 @@ void Con_DrawNotify (void)
 	if (key_dest == key_message)
 	{
 		clearnotify = 0;
-		scr_copytop = 1;
 	
 		x = 0;
 		
@@ -645,39 +646,3 @@ void Con_DrawConsole (int lines, qboolean drawinput)
 	if (drawinput)
 		Con_DrawInput ();
 }
-
-
-/*
-==================
-Con_NotifyBox
-==================
-*/
-void Con_NotifyBox (char *text)
-{
-	double		t1, t2;
-
-// during startup for sound / cd warnings
-	Con_Printf("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n");
-
-	Con_Printf (text);
-
-	Con_Printf ("Press a key.\n");
-	Con_Printf("\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n");
-
-	key_count = -2;		// wait for a key down and up
-	key_dest = key_console;
-
-	do
-	{
-		t1 = Sys_FloatTime ();
-		SCR_UpdateScreen ();
-		Sys_SendKeyEvents ();
-		t2 = Sys_FloatTime ();
-		realtime += t2-t1;		// make the cursor blink
-	} while (key_count < 0);
-
-	Con_Printf ("\n");
-	key_dest = key_game;
-	realtime = 0;				// put the cursor back to invisible
-}
-

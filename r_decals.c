@@ -67,49 +67,55 @@ void R_Decals_Init()
 	R_RegisterModule("R_Decals", r_decals_start, r_decals_shutdown, r_decals_newmap);
 }
 
-void R_Decal(vec3_t org, rtexture_t *tex, float scale, int cred, int cgreen, int cblue, int alpha)
+// these are static globals only to avoid putting unnecessary things on the stack
+static vec3_t decalorg;
+static float decalbestdist;
+static msurface_t *decalbestsurf;
+static int decalbestlightmapofs;
+void R_RecursiveDecalSurface (mnode_t *node)
 {
-	int i, ds, dt, bestlightmapofs;
-	float bestdist, dist;
-	vec3_t impact, right, up;
-	decal_t *decal;
-//	mleaf_t *leaf;
-	msurface_t *surf/*, **mark, **endmark*/, *bestsurf;
+	// these are static because only one occurance of them need exist at once, so avoid putting them on the stack
+	static float ndist, dist;
+	static msurface_t *surf, *endsurf;
+	static vec3_t impact;
+	static int ds, dt;
 
-	if (alpha < 1)
+loc0:
+	if (node->contents < 0)
 		return;
 
-//	leaf = Mod_PointInLeaf(org, cl.worldmodel);
-//	if (!leaf->nummarksurfaces)
-//		return;
+	ndist = PlaneDiff(decalorg, node->plane);
+	
+	if (ndist > 16)
+	{
+		node = node->children[0];
+		goto loc0;
+	}
+	if (ndist < -16)
+	{
+		node = node->children[1];
+		goto loc0;
+	}
 
-//	mark = leaf->firstmarksurface;
-//	endmark = mark + leaf->nummarksurfaces;
-
-	// find the best surface to place the decal on
-	bestsurf = NULL;
-	bestdist = 16;
-	bestlightmapofs = 0;
-//	while(mark < endmark)
-//	{
-//		surf = *mark++;
-	surf = &cl.worldmodel->surfaces[cl.worldmodel->firstmodelsurface];
-	for (i = 0;i < cl.worldmodel->nummodelsurfaces;i++, surf++)
+// mark the polygons
+	surf = cl.worldmodel->surfaces + node->firstsurface;
+	endsurf = surf + node->numsurfaces;
+	for (;surf < endsurf;surf++)
 	{
 		if (surf->flags & SURF_DRAWTILED)
 			continue;	// no lightmaps
 
-		dist = PlaneDiff(org, surf->plane);
+		dist = PlaneDiff(decalorg, surf->plane);
 		if (surf->flags & SURF_PLANEBACK)
 			dist = -dist;
 		if (dist < 0)
 			continue;
-		if (dist >= bestdist)
+		if (dist >= decalbestdist)
 			continue;
 
-		impact[0] = org[0] - surf->plane->normal[0] * dist;
-		impact[1] = org[1] - surf->plane->normal[1] * dist;
-		impact[2] = org[2] - surf->plane->normal[2] * dist;
+		impact[0] = decalorg[0] - surf->plane->normal[0] * dist;
+		impact[1] = decalorg[1] - surf->plane->normal[1] * dist;
+		impact[2] = decalorg[2] - surf->plane->normal[2] * dist;
 
 		ds = (int) (DotProduct(impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3]);
 		dt = (int) (DotProduct(impact, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3]);
@@ -123,12 +129,50 @@ void R_Decal(vec3_t org, rtexture_t *tex, float scale, int cred, int cgreen, int
 		if (ds > surf->extents[0] || dt > surf->extents[1])
 			continue;
 
-		bestsurf = surf;
-		bestdist = dist;
-		bestlightmapofs = (dt >> 4) * ((surf->extents[0] >> 4) + 1) + (ds >> 4);
+		decalbestsurf = surf;
+		decalbestdist = dist;
+		decalbestlightmapofs = (dt >> 4) * ((surf->extents[0] >> 4) + 1) + (ds >> 4);
 	}
+
+	if (node->children[0]->contents >= 0)
+	{
+		if (node->children[1]->contents >= 0)
+		{
+			R_RecursiveDecalSurface (node->children[0]);
+			node = node->children[1];
+			goto loc0;
+		}
+		else
+		{
+			node = node->children[0];
+			goto loc0;
+		}
+	}
+	else if (node->children[1]->contents >= 0)
+	{
+		node = node->children[1];
+		goto loc0;
+	}
+}
+
+void R_Decal(vec3_t org, rtexture_t *tex, float scale, int cred, int cgreen, int cblue, int alpha)
+{
+	vec3_t center, right, up;
+	decal_t *decal;
+
+	if (alpha < 1)
+		return;
+
+	// find the best surface to place the decal on
+	decalbestsurf = NULL;
+	decalbestdist = 16;
+	decalbestlightmapofs = 0;
+	VectorCopy(org, decalorg);
+
+	R_RecursiveDecalSurface (cl.worldmodel->nodes);
+
 	// abort if no suitable surface was found
-	if (bestsurf == NULL)
+	if (decalbestsurf == NULL)
 		return;
 
 	// grab a decal from the array and advance to the next decal to replace, wrapping to replace an old decal if necessary
@@ -137,53 +181,49 @@ void R_Decal(vec3_t org, rtexture_t *tex, float scale, int cred, int cgreen, int
 	if (currentdecal >= MAX_DECALS)
 		currentdecal = 0;
 	decal->tex = tex;
+	VectorCopy(decalbestsurf->plane->normal, decal->direction);
 	// reverse direction
-	if (bestsurf->flags & SURF_PLANEBACK)
-	{
-		VectorCopy(bestsurf->plane->normal, decal->direction);
-	}
-	else
-	{
-		VectorNegate(bestsurf->plane->normal, decal->direction);
-	}
-	// - 0.25 to push it off the surface a bit
-	decal->org[0] = impact[0] = org[0] + decal->direction[0] * (bestdist - 0.25f);
-	decal->org[1] = impact[1] = org[1] + decal->direction[1] * (bestdist - 0.25f);
-	decal->org[2] = impact[2] = org[2] + decal->direction[2] * (bestdist - 0.25f);
+	if (decalbestsurf->flags & SURF_PLANEBACK)
+		VectorNegate(decal->direction, decal->direction);
+	VectorNegate(decal->direction, decal->direction);
+	// 0.25 to push it off the surface a bit
+	decalbestdist -= 0.25f;
+	decal->org[0] = center[0] = org[0] + decal->direction[0] * decalbestdist;
+	decal->org[1] = center[1] = org[1] + decal->direction[1] * decalbestdist;
+	decal->org[2] = center[2] = org[2] + decal->direction[2] * decalbestdist;
 	// set up the 4 corners
 	scale *= 0.5f;
 	VectorVectors(decal->direction, right, up);
-	decal->vert[0][0] = impact[0] - up[0] * scale - right[0] * scale;
-	decal->vert[0][1] = impact[1] - up[1] * scale - right[1] * scale;
-	decal->vert[0][2] = impact[2] - up[2] * scale - right[2] * scale;
-	decal->vert[1][0] = impact[0] + up[0] * scale - right[0] * scale;
-	decal->vert[1][1] = impact[1] + up[1] * scale - right[1] * scale;
-	decal->vert[1][2] = impact[2] + up[2] * scale - right[2] * scale;
-	decal->vert[2][0] = impact[0] + up[0] * scale + right[0] * scale;
-	decal->vert[2][1] = impact[1] + up[1] * scale + right[1] * scale;
-	decal->vert[2][2] = impact[2] + up[2] * scale + right[2] * scale;
-	decal->vert[3][0] = impact[0] - up[0] * scale + right[0] * scale;
-	decal->vert[3][1] = impact[1] - up[1] * scale + right[1] * scale;
-	decal->vert[3][2] = impact[2] - up[2] * scale + right[2] * scale;
+	decal->vert[0][0] = center[0] - right[0] * scale - up[0] * scale; // texcoords 0 1
+	decal->vert[0][1] = center[1] - right[1] * scale - up[1] * scale;
+	decal->vert[0][2] = center[2] - right[2] * scale - up[2] * scale;
+	decal->vert[1][0] = center[0] - right[0] * scale + up[0] * scale; // texcoords 0 0
+	decal->vert[1][1] = center[1] - right[1] * scale + up[1] * scale;
+	decal->vert[1][2] = center[2] - right[2] * scale + up[2] * scale;
+	decal->vert[2][0] = center[0] + right[0] * scale + up[0] * scale; // texcoords 1 0
+	decal->vert[2][1] = center[1] + right[1] * scale + up[1] * scale;
+	decal->vert[2][2] = center[2] + right[2] * scale + up[2] * scale;
+	decal->vert[3][0] = center[0] + right[0] * scale - up[0] * scale; // texcoords 1 1
+	decal->vert[3][1] = center[1] + right[1] * scale - up[1] * scale;
+	decal->vert[3][2] = center[2] + right[2] * scale - up[2] * scale;
 	// store the color
 	decal->color[0] = (byte) bound(0, cred, 255);
 	decal->color[1] = (byte) bound(0, cgreen, 255);
 	decal->color[2] = (byte) bound(0, cblue, 255);
 	decal->color[3] = (byte) bound(0, alpha, 255);
 	// store the surface information for lighting
-	decal->surface = bestsurf;
-	decal->lightmapstep = ((bestsurf->extents[0]>>4)+1) * ((bestsurf->extents[1]>>4)+1)*3; // LordHavoc: *3 for colored lighting
-	if (bestsurf->samples)
-		decal->lightmapaddress = bestsurf->samples + bestlightmapofs * 3; // LordHavoc: *3 for colored lighitng
+	decal->surface = decalbestsurf;
+	decal->lightmapstep = ((decalbestsurf->extents[0]>>4)+1) * ((decalbestsurf->extents[1]>>4)+1)*3; // LordHavoc: *3 for colored lighting
+	if (decalbestsurf->samples)
+		decal->lightmapaddress = decalbestsurf->samples + decalbestlightmapofs * 3; // LordHavoc: *3 for colored lighitng
 	else
 		decal->lightmapaddress = NULL;
 }
 
-void R_DrawDecals (void)
+void GL_DrawDecals (void)
 {
 	decal_t *p;
-	int i, j, k, dynamiclight, ir, ig, ib, maps, bits;
-	byte br, bg, bb, ba;
+	int i, j, k, dynamiclight, bits, texnum;
 	float scale, fr, fg, fb, dist, rad, mindist;
 	byte *lightmap;
 	vec3_t v;
@@ -197,10 +237,24 @@ void R_DrawDecals (void)
 
 	mindist = DotProduct(r_refdef.vieworg, vpn) + 4.0f;
 
+	if (r_render.value)
+	{
+		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+		glEnable(GL_BLEND);
+		glShadeModel(GL_FLAT);
+		glDepthMask(0); // disable zbuffer updates
+		glDisable(GL_ALPHA_TEST);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	}
+	texnum = -1;
+
 	for (i = 0, p = decals;i < MAX_DECALS;i++, p++)
 	{
 		if (p->tex == NULL)
 			break;
+		// skip decals on surfaces that aren't visible in this frame
+		if (p->surface->visframe != r_framecount)
+			continue;
 
 		// do not render if the decal is behind the view
 		if (DotProduct(p->org, vpn) < mindist)
@@ -217,22 +271,52 @@ void R_DrawDecals (void)
 		fr = fg = fb = 0.0f;
 		if (lightmap)
 		{
-			for (maps = 0;maps < MAXLIGHTMAPS && surf->styles[maps] != 255;maps++)
+			if (surf->styles[0] != 255)
 			{
-				scale = d_lightstylevalue[surf->styles[maps]];
+				scale = d_lightstylevalue[surf->styles[0]] * (1.0f / 256.0f);
+				fr += lightmap[0] * scale;
+				fg += lightmap[1] * scale;
+				fb += lightmap[2] * scale;
+				if (surf->styles[1] != 255)
+				{
+					lightmap += p->lightmapstep;
+					scale = d_lightstylevalue[surf->styles[1]] * (1.0f / 256.0f);
+					fr += lightmap[0] * scale;
+					fg += lightmap[1] * scale;
+					fb += lightmap[2] * scale;
+					if (surf->styles[2] != 255)
+					{
+						lightmap += p->lightmapstep;
+						scale = d_lightstylevalue[surf->styles[2]] * (1.0f / 256.0f);
+						fr += lightmap[0] * scale;
+						fg += lightmap[1] * scale;
+						fb += lightmap[2] * scale;
+						if (surf->styles[3] != 255)
+						{
+							lightmap += p->lightmapstep;
+							scale = d_lightstylevalue[surf->styles[3]] * (1.0f / 256.0f);
+							fr += lightmap[0] * scale;
+							fg += lightmap[1] * scale;
+							fb += lightmap[2] * scale;
+						}
+					}
+				}
+			}
+			/*
+			for (j = 0;j < MAXLIGHTMAPS && surf->styles[j] != 255;j++)
+			{
+				scale = d_lightstylevalue[surf->styles[j]] * (1.0f / 256.0f);
 				fr += lightmap[0] * scale;
 				fg += lightmap[1] * scale;
 				fb += lightmap[2] * scale;
 				lightmap += p->lightmapstep;
 			}
+			*/
 		}
-		fr *= (1.0f / 256.0f);
-		fg *= (1.0f / 256.0f);
-		fb *= (1.0f / 256.0f);
 		// dynamic lighting
 		if (dynamiclight)
 		{
-			if (surf->dlightframe == r_dlightframecount)
+			if (surf->dlightframe == r_framecount)
 			{
 				for (j = 0;j < 8;j++)
 				{
@@ -260,21 +344,58 @@ void R_DrawDecals (void)
 				}
 			}
 		}
-		// apply color to lighting
-		ir = (int) (fr * p->color[0] * (1.0f / 128.0f));
-		ig = (int) (fg * p->color[1] * (1.0f / 128.0f));
-		ib = (int) (fb * p->color[2] * (1.0f / 128.0f));
-		// compute byte color
-		br = (byte) min(ir, 255);
-		bg = (byte) min(ig, 255);
-		bb = (byte) min(ib, 255);
-		ba = p->color[3];
-		// put into transpoly system for sorted drawing later
-		transpolybegin(R_GetTexture(p->tex), 0, R_GetTexture(p->tex), TPOLYTYPE_ALPHA);
-		transpolyvertub(p->vert[0][0], p->vert[0][1], p->vert[0][2], 0,1,br,bg,bb,ba);
-		transpolyvertub(p->vert[1][0], p->vert[1][1], p->vert[1][2], 0,0,br,bg,bb,ba);
-		transpolyvertub(p->vert[2][0], p->vert[2][1], p->vert[2][2], 1,0,br,bg,bb,ba);
-		transpolyvertub(p->vert[3][0], p->vert[3][1], p->vert[3][2], 1,1,br,bg,bb,ba);
-		transpolyend();
+		/*
+		{
+			int ir, ig, ib;
+			byte br, bg, bb, ba;
+			// apply color to lighting
+			ir = (int) (fr * p->color[0] * (1.0f / 128.0f));
+			ig = (int) (fg * p->color[1] * (1.0f / 128.0f));
+			ib = (int) (fb * p->color[2] * (1.0f / 128.0f));
+			// compute byte color
+			br = (byte) min(ir, 255);
+			bg = (byte) min(ig, 255);
+			bb = (byte) min(ib, 255);
+			ba = p->color[3];
+			// put into transpoly system for sorted drawing later
+			transpolybegin(R_GetTexture(p->tex), 0, R_GetTexture(p->tex), TPOLYTYPE_ALPHA);
+			transpolyvertub(p->vert[0][0], p->vert[0][1], p->vert[0][2], 0,1,br,bg,bb,ba);
+			transpolyvertub(p->vert[1][0], p->vert[1][1], p->vert[1][2], 0,0,br,bg,bb,ba);
+			transpolyvertub(p->vert[2][0], p->vert[2][1], p->vert[2][2], 1,0,br,bg,bb,ba);
+			transpolyvertub(p->vert[3][0], p->vert[3][1], p->vert[3][2], 1,1,br,bg,bb,ba);
+			transpolyend();
+		}
+		*/
+		if (r_render.value)
+		{
+			j = R_GetTexture(p->tex);
+			if (texnum != j)
+			{
+				glEnd();
+				texnum = j;
+				glBindTexture(GL_TEXTURE_2D, texnum);
+				glBegin(GL_QUADS);
+			}
+			if (lighthalf)
+				glColor4f(fr * p->color[0] * (1.0f / 255.0f / 256.0f), fg * p->color[1] * (1.0f / 255.0f / 256.0f), fb * p->color[2] * (1.0f / 255.0f / 256.0f), p->color[3] * (1.0f / 255.0f));
+			else
+				glColor4f(fr * p->color[0] * (1.0f / 255.0f / 128.0f), fg * p->color[1] * (1.0f / 255.0f / 128.0f), fb * p->color[2] * (1.0f / 255.0f / 128.0f), p->color[3] * (1.0f / 255.0f));
+			glTexCoord2f(0, 1);
+			glVertex3fv(p->vert[0]);
+			glTexCoord2f(0, 0);
+			glVertex3fv(p->vert[1]);
+			glTexCoord2f(1, 0);
+			glVertex3fv(p->vert[2]);
+			glTexCoord2f(1, 1);
+			glVertex3fv(p->vert[3]);
+		}
+	}
+	
+	if (r_render.value)
+	{
+		glEnd();
+
+		glDepthMask(1); // enable zbuffer updates
+		glDisable(GL_ALPHA_TEST);
 	}
 }

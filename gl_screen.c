@@ -72,10 +72,6 @@ console is:
 
 int			glx, gly, glwidth, glheight;
 
-// only the refresh window will be updated unless these variables are flagged 
-int			scr_copytop;
-int			scr_copyeverything;
-
 float		scr_con_current;
 float		scr_conlines;		// lines of console to display
 
@@ -99,8 +95,6 @@ qpic_t		*scr_ram;
 qpic_t		*scr_net;
 qpic_t		*scr_turtle;
 
-int			scr_fullupdate;
-
 int			clearconsole;
 int			clearnotify;
 
@@ -109,8 +103,8 @@ extern int                     sb_lines;
 extern viddef_t        vid;                            // global video state
 
 qboolean	scr_disabled_for_loading;
-qboolean	scr_drawloading;
-float		scr_disabled_time;
+//qboolean	scr_drawloading;
+//float		scr_disabled_time;
 
 void SCR_ScreenShot_f (void);
 
@@ -214,7 +208,6 @@ void SCR_DrawCenterString (void)
 
 void SCR_CheckDrawCenterString (void)
 {
-	scr_copytop = 1;
 	if (scr_center_lines > scr_erase_lines)
 		scr_erase_lines = scr_center_lines;
 
@@ -267,7 +260,6 @@ static void SCR_CalcRefdef (void)
 	qboolean		full = false;
 
 
-	scr_fullupdate = 0;		// force a background redraw
 	vid.recalc_refdef = 0;
 
 //========================================
@@ -501,6 +493,7 @@ void SCR_DrawPause (void)
 SCR_DrawLoading
 ==============
 */
+/*
 void SCR_DrawLoading (void)
 {
 	qpic_t	*pic;
@@ -512,6 +505,7 @@ void SCR_DrawLoading (void)
 	Draw_Pic ( (vid.width - pic->width)/2, 
 		(vid.height - 48 - pic->height)/2, pic);
 }
+*/
 
 
 
@@ -567,7 +561,6 @@ void SCR_DrawConsole (void)
 {
 	if (scr_con_current)
 	{
-		scr_copyeverything = 1;
 		Con_DrawConsole (scr_con_current, true);
 		clearconsole = 0;
 	}
@@ -637,29 +630,28 @@ SCR_BeginLoadingPlaque
 
 ================
 */
+/*
 void SCR_BeginLoadingPlaque (void)
 {
 	S_StopAllSounds (true);
 
-	if (cls.state != ca_connected)
-		return;
-	if (cls.signon != SIGNONS)
-		return;
+//	if (cls.state != ca_connected)
+//		return;
+//	if (cls.signon != SIGNONS)
+//		return;
 	
 // redraw with no console and the loading plaque
-	Con_ClearNotify ();
-	scr_centertime_off = 0;
-	scr_con_current = 0;
+//	Con_ClearNotify ();
+//	scr_centertime_off = 0;
+//	scr_con_current = 0;
 
 	scr_drawloading = true;
-	scr_fullupdate = 0;
 	SCR_UpdateScreen ();
-	scr_drawloading = false;
 
-	scr_disabled_for_loading = true;
-	scr_disabled_time = realtime;
-	scr_fullupdate = 0;
+//	scr_disabled_for_loading = true;
+//	scr_disabled_time = realtime;
 }
+*/
 
 /*
 ===============
@@ -667,17 +659,18 @@ SCR_EndLoadingPlaque
 
 ================
 */
+/*
 void SCR_EndLoadingPlaque (void)
 {
-	scr_disabled_for_loading = false;
-	scr_fullupdate = 0;
+//	scr_disabled_for_loading = false;
+	scr_drawloading = false;
 	Con_ClearNotify ();
 }
+*/
 
 //=============================================================================
 
 char	*scr_notifystring;
-qboolean	scr_drawdialog;
 
 void SCR_DrawNotifyString (void)
 {
@@ -712,62 +705,7 @@ void SCR_DrawNotifyString (void)
 	} while (1);
 }
 
-/*
-==================
-SCR_ModalMessage
-
-Displays a text string in the center of the screen and waits for a Y or N
-keypress.  
-==================
-*/
-int SCR_ModalMessage (char *text)
-{
-	if (cls.state == ca_dedicated)
-		return true;
-
-	scr_notifystring = text;
- 
-// draw a fresh screen
-	scr_fullupdate = 0;
-	scr_drawdialog = true;
-	SCR_UpdateScreen ();
-	scr_drawdialog = false;
-	
-	S_ClearBuffer ();		// so dma doesn't loop current sound
-
-	do
-	{
-		key_count = -1;		// wait for a key down and up
-		Sys_SendKeyEvents ();
-	} while (key_lastpress != 'y' && key_lastpress != 'n' && key_lastpress != K_ESCAPE);
-
-	scr_fullupdate = 0;
-	SCR_UpdateScreen ();
-
-	return key_lastpress == 'y';
-}
-
-
 //=============================================================================
-
-/*
-===============
-SCR_BringDownConsole
-
-Brings the console down and fades the blends back to normal
-================
-*/
-void SCR_BringDownConsole (void)
-{
-	int		i;
-	
-	scr_centertime_off = 0;
-	
-	for (i=0 ; i<20 && scr_conlines != scr_con_current ; i++)
-		SCR_UpdateScreen ();
-
-	cl.cshifts[0].percent = 0;		// no area contents blend on next frame
-}
 
 void DrawCrosshair(int num);
 void GL_Set2D (void);
@@ -785,7 +723,9 @@ void GL_BrightenScreen()
 		return;
 	glDisable(GL_TEXTURE_2D);
 	glEnable(GL_BLEND);
-	f = brightness.value = bound(1.0f, brightness.value, 5.0f);
+	f = bound(1.0f, brightness.value, 5.0f);
+	if (f != brightness.value)
+		Cvar_SetValue("brightness", f);
 	if (f >= 1.01f)
 	{
 		glBlendFunc (GL_DST_COLOR, GL_ONE);
@@ -804,7 +744,9 @@ void GL_BrightenScreen()
 		glEnd ();
 	}
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	contrast.value = bound(0.2, contrast.value, 1.0);
+	f = bound(0.2f, contrast.value, 1.0f);
+	if (f != contrast.value)
+		Cvar_SetValue("contrast", f);
 	if (contrast.value < 0.99f)
 	{
 		glBegin (GL_TRIANGLES);
@@ -839,17 +781,16 @@ void SCR_UpdateScreen (void)
 	if (r_speeds.value)
 		time1 = Sys_FloatTime ();
 
-	scr_copytop = 0;
-	scr_copyeverything = 0;
-
 	if (scr_disabled_for_loading)
 	{
+		/*
 		if (realtime - scr_disabled_time > 60)
 		{
 			scr_disabled_for_loading = false;
 			Con_Printf ("load failed.\n");
 		}
 		else
+		*/
 			return;
 	}
 
@@ -875,59 +816,44 @@ void SCR_UpdateScreen (void)
 	}
 
 	if (vid.recalc_refdef)
-		SCR_CalcRefdef ();
+		SCR_CalcRefdef();
 
 	if (r_render.value)
 	{
 		glClearColor(0,0,0,0);
-		glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // LordHavoc: clear the screen (around the view as well)
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // LordHavoc: clear the screen (around the view as well)
 	}
 
 //
 // do 3D refresh drawing, and then update the screen
 //
-	SCR_SetUpToDrawConsole ();
+	SCR_SetUpToDrawConsole();
 
-	V_RenderView ();
+	V_RenderView();
 
-	GL_Set2D ();
+	GL_Set2D();
 
-	if (scr_drawdialog)
-	{
-		Sbar_Draw ();
-//		Draw_FadeScreen ();
-		SCR_DrawNotifyString ();
-		scr_copyeverything = true;
-	}
-	else if (scr_drawloading)
-	{
-		SCR_DrawLoading ();
-		Sbar_Draw ();
-	}
-	else if (cl.intermission == 1 && key_dest == key_game)
-	{
-		Sbar_IntermissionOverlay ();
-	}
-	else if (cl.intermission == 2 && key_dest == key_game)
-	{
-		Sbar_FinaleOverlay ();
-		SCR_CheckDrawCenterString ();
-	}
-	else
-	{
-		if (crosshair.value)
-			DrawCrosshair(crosshair.value - 1);
-		
-		SCR_DrawRam ();
-		SCR_DrawNet ();
-		SCR_DrawTurtle ();
-		SCR_DrawPause ();
-		SCR_CheckDrawCenterString ();
-		Sbar_Draw ();
-		SHOWLMP_drawall();
-		SCR_DrawConsole ();	
-		M_Draw ();
-	}
+	SCR_DrawRam();
+	SCR_DrawNet();
+	SCR_DrawTurtle();
+	SCR_DrawPause();
+	SCR_CheckDrawCenterString();
+	Sbar_Draw();
+	SHOWLMP_drawall();
+
+	if (crosshair.value)
+		DrawCrosshair(crosshair.value - 1);
+
+	if (cl.intermission == 1)
+		Sbar_IntermissionOverlay();
+	else if (cl.intermission == 2)
+		Sbar_FinaleOverlay();
+
+	SCR_DrawConsole();	
+	M_Draw();
+
+//	if (scr_drawloading)
+//		SCR_DrawLoading();
 
 	if (showfps.value)
 	{
@@ -954,7 +880,7 @@ void SCR_UpdateScreen (void)
 		Draw_String(0, vid.height - sb_lines -  8, r_speeds2_string7, 80);
 	}
 
-	V_UpdateBlends ();
+	V_UpdateBlends();
 
 	GL_BrightenScreen();
 
