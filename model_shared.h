@@ -269,6 +269,7 @@ model_brushq2_t;
 */
 
 #define Q3MTEXTURERENDERFLAGS_NODRAW 1
+#define Q3MTEXTURERENDERFLAGS_SKY 2
 
 typedef struct q3mtexture_s
 {

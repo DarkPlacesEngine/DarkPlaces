@@ -186,18 +186,18 @@ float skyboxtexcoord2f[6*4*2] =
 
 int skyboxelements[6*2*3] =
 {
-	// skyside[0]
-	 8,  9, 10,
-	 8, 10, 11,
-	// skyside[1]
-	 4,  5,  6,
-	 4,  6,  7,
-	// skyside[2]
-	12, 13, 14,
-	12, 14, 15,
 	// skyside[3]
 	 0,  1,  2,
 	 0,  2,  3,
+	// skyside[1]
+	 4,  5,  6,
+	 4,  6,  7,
+	// skyside[0]
+	 8,  9, 10,
+	 8, 10, 11,
+	// skyside[2]
+	12, 13, 14,
+	12, 14, 15,
 	// skyside[4]
 	16, 17, 18,
 	16, 18, 19,
