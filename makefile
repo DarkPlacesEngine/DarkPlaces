@@ -11,8 +11,8 @@ OBJECTS= buildnumber.o cd_linux.o chase.o cl_demo.o cl_input.o cl_main.o cl_pars
 OPTIMIZATIONS= -O6 -ffast-math -funroll-loops -fomit-frame-pointer -fexpensive-optimizations
 #OPTIMIZATIONS= -O -g
 
-CFLAGS= -Wall -Werror -I/usr/X11R6/include -I/usr/include/glide $(OPTIMIZATIONS)
-#CFLAGS= -Wall -Werror -I/usr/X11R6/include -ggdb $(OPTIMIZATIONS)
+CFLAGS= -MD -Wall -Werror -I/usr/X11R6/include -I/usr/include/glide $(OPTIMIZATIONS)
+#CFLAGS= -MD -Wall -Werror -I/usr/X11R6/include -ggdb $(OPTIMIZATIONS)
 #LDFLAGS= -L/usr/X11R6/lib -lm -lX11 -lXext -lXIE -lXxf86dga -lXxf86vm -lGL -ldl
 LDFLAGS= -L/usr/X11R6/lib -lm -lX11 -lXext -lXIE -lXxf86dga -lXxf86vm -lGL -ldl -lasound -lz
 
@@ -32,6 +32,8 @@ darkplaces-3dfx: $(OBJECTS) in_svgalib.o vid_3dfxsvga.o
 
 clean:
 	-rm -f darkplaces-glx darkplaces-3dfx
-	-rm -f vid_glx.o in_svgalib.o vid_3dfxsvga.o $(OBJECTS)
+	-rm -f vid_glx.o in_svgalib.o vid_3dfxsvga.o $(OBJECTS) *.d
 
 .PHONY: clean
+
+-include *.d
