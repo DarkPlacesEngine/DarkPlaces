@@ -404,6 +404,7 @@ if (crash = true), don't bother sending signofs
 */
 void SV_DropClient(qboolean crash)
 {
+	int i;
 	Con_Printf("Client \"%s\" dropped\n", host_client->name);
 
 	// send any final messages (don't check for errors)
@@ -445,14 +446,16 @@ void SV_DropClient(qboolean crash)
 	host_client->colors = 0;
 	host_client->frags = 0;
 	// send notification to all clients
+	// get number of client manually just to make sure we get it right...
+	i = host_client - svs.clients;
 	MSG_WriteByte (&sv.reliable_datagram, svc_updatename);
-	MSG_WriteByte (&sv.reliable_datagram, host_client->number);
+	MSG_WriteByte (&sv.reliable_datagram, i);
 	MSG_WriteString (&sv.reliable_datagram, host_client->name);
 	MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
-	MSG_WriteByte (&sv.reliable_datagram, host_client->number);
+	MSG_WriteByte (&sv.reliable_datagram, i);
 	MSG_WriteByte (&sv.reliable_datagram, host_client->colors);
 	MSG_WriteByte (&sv.reliable_datagram, svc_updatefrags);
-	MSG_WriteByte (&sv.reliable_datagram, host_client->number);
+	MSG_WriteByte (&sv.reliable_datagram, i);
 	MSG_WriteShort (&sv.reliable_datagram, host_client->frags);
 
 	// free the client now

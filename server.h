@@ -116,8 +116,6 @@ typedef struct client_s
 	qboolean sendsignon;
 	// remove this client immediately
 	qboolean deadsocket;
-	// index of this client in the svs.clients array
-	int number;
 
 	// reliable messages must be sent periodically
 	double last_message;

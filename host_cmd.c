@@ -767,7 +767,7 @@ void Host_Name_f (void)
 		strcpy(host_client->old_name, host_client->name);
 		// send notification to all clients
 		MSG_WriteByte (&sv.reliable_datagram, svc_updatename);
-		MSG_WriteByte (&sv.reliable_datagram, host_client->number);
+		MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
 		MSG_WriteString (&sv.reliable_datagram, host_client->name);
 	}
 }
@@ -986,7 +986,7 @@ void Host_Color_f(void)
 			host_client->old_colors = host_client->colors;
 			// send notification to all clients
 			MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
-			MSG_WriteByte (&sv.reliable_datagram, host_client->number);
+			MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
 			MSG_WriteByte (&sv.reliable_datagram, host_client->colors);
 		}
 	}
