@@ -21,8 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "image.h"
 
-cvar_t scr_conalpha = {CVAR_SAVE, "scr_conalpha", "1"};
-
 static rtexture_t *char_texture;
 
 //=============================================================================
@@ -369,8 +367,6 @@ static void gl_draw_newmap(void)
 
 void GL_Draw_Init (void)
 {
-	Cvar_RegisterVariable (&scr_conalpha);
-
 	numcachepics = 0;
 	memset(cachepichash, 0, sizeof(cachepichash));
 

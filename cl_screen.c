@@ -6,6 +6,8 @@
 cvar_t scr_viewsize = {CVAR_SAVE, "viewsize","100"};
 cvar_t scr_fov = {CVAR_SAVE, "fov","90"};	// 10 - 170
 cvar_t scr_conspeed = {CVAR_SAVE, "scr_conspeed","900"}; // LordHavoc: quake used 300
+cvar_t scr_conalpha = {CVAR_SAVE, "scr_conalpha", "1"};
+cvar_t scr_conbrightness = {CVAR_SAVE, "scr_conbrightness", "0"};
 cvar_t scr_centertime = {0, "scr_centertime","2"};
 cvar_t scr_showram = {CVAR_SAVE, "showram","1"};
 cvar_t scr_showturtle = {CVAR_SAVE, "showturtle","0"};
@@ -458,6 +460,8 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_fov);
 	Cvar_RegisterVariable (&scr_viewsize);
 	Cvar_RegisterVariable (&scr_conspeed);
+	Cvar_RegisterVariable (&scr_conalpha);
+	Cvar_RegisterVariable (&scr_conbrightness);
 	Cvar_RegisterVariable (&scr_showram);
 	Cvar_RegisterVariable (&scr_showturtle);
 	Cvar_RegisterVariable (&scr_showpause);
