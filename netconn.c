@@ -919,7 +919,7 @@ void NetConn_ClientFrame(void)
 		if (cls.connect_remainingtries == 0)
 		{
 			cls.connect_trying = false;
-			Host_Error("Connect failed\n");
+			Con_Printf("Connect failed\n");
 			return;
 		}
 		if (cls.connect_nextsendtime)
