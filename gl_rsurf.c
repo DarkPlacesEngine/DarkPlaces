@@ -279,14 +279,7 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
 		else
 		{
 	// clear to no light
-			j = r_ambient.value * 512.0f; // would be 128.0f logically, but using 512.0f to match winquake style
-			if (j)
-			{
-				for (i = 0;i < size3;i++)
-					*bl++ = j;
-			}
-			else
-				memset(bl, 0, size*3*sizeof(unsigned int));
+			memset(bl, 0, size*3*sizeof(unsigned int));
 
 			if (surf->dlightframe == r_framecount)
 			{
@@ -360,33 +353,29 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
 	// set to full bright if no light data
 		bl = floatblocklights;
 		if (!ent->model->brushq1.lightdata)
-			j = 255*256;
-		else
-			j = r_ambient.value * 512.0f; // would be 128.0f logically, but using 512.0f to match winquake style
-
-		// clear to no light
-		if (j)
 		{
 			for (i = 0;i < size3;i++)
-				*bl++ = j;
+				bl[i] = 255*256;
 		}
 		else
+		{
 			memset(bl, 0, size*3*sizeof(float));
-
-		if (surf->dlightframe == r_framecount)
-		{
-			surf->cached_dlight = R_FloatAddDynamicLights(&ent->inversematrix, surf);
-			if (surf->cached_dlight)
-				c_light_polys++;
-		}
-
-		// add all the lightmaps
-		if (lightmap)
-		{
-			bl = floatblocklights;
-			for (maps = 0;maps < MAXLIGHTMAPS && surf->styles[maps] != 255;maps++, lightmap += size3)
-				for (scale = d_lightstylevalue[surf->styles[maps]], i = 0;i < size3;i++)
-					bl[i] += lightmap[i] * scale;
+	
+			if (surf->dlightframe == r_framecount)
+			{
+				surf->cached_dlight = R_FloatAddDynamicLights(&ent->inversematrix, surf);
+				if (surf->cached_dlight)
+					c_light_polys++;
+			}
+	
+			// add all the lightmaps
+			if (lightmap)
+			{
+				bl = floatblocklights;
+				for (maps = 0;maps < MAXLIGHTMAPS && surf->styles[maps] != 255;maps++, lightmap += size3)
+					for (scale = d_lightstylevalue[surf->styles[maps]], i = 0;i < size3;i++)
+						bl[i] += lightmap[i] * scale;
+			}
 		}
 
 		stain = surf->stainsamples;
@@ -1138,6 +1127,30 @@ static void RSurfShader_OpaqueWall_Pass_BaseLightmap(const entity_render_t *ent,
 	}
 }
 
+static void RSurfShader_OpaqueWall_Pass_BaseAmbient(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
+{
+	const msurface_t *surf;
+	rmeshstate_t m;
+	memset(&m, 0, sizeof(m));
+	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+	GL_DepthMask(false);
+	GL_DepthTest(true);
+	m.tex[0] = R_GetTexture(texture->skin.base);
+	GL_Color(r_ambient.value * (1.0f / 128.0f), r_ambient.value * (1.0f / 128.0f), r_ambient.value * (1.0f / 128.0f), 1);
+	while((surf = *surfchain++) != NULL)
+	{
+		if (surf->visframe == r_framecount)
+		{
+			m.pointer_vertex = surf->mesh.data_vertex3f;
+			m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
+			R_Mesh_State(&m);
+			GL_LockArrays(0, surf->mesh.num_vertices);
+			R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
+			GL_LockArrays(0, 0);
+		}
+	}
+}
+
 static void RSurfShader_OpaqueWall_Pass_Fog(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
 {
 	const msurface_t *surf;
@@ -1306,6 +1319,18 @@ static void R_DrawSurfaceChain(const entity_render_t *ent, const texture_t *text
 			if (fogenabled)
 				RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
 		}
+		else if (r_ambient.value > 0)
+		{
+			RSurfShader_OpaqueWall_Pass_BaseTexture(ent, texture, surfchain);
+			RSurfShader_OpaqueWall_Pass_BaseLightmap(ent, texture, surfchain);
+			RSurfShader_OpaqueWall_Pass_BaseAmbient(ent, texture, surfchain);
+			if (r_detailtextures.integer)
+				RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, surfchain);
+			if (texture->skin.glow)
+				RSurfShader_OpaqueWall_Pass_Glow(ent, texture, surfchain);
+			if (fogenabled)
+				RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
+		}
 		else if (r_textureunits.integer >= 4 && gl_combine.integer && r_detailtextures.integer)
 		{
 			RSurfShader_OpaqueWall_Pass_BaseCombine_TextureLightmapDetailGlow(ent, texture, surfchain);
@@ -1400,22 +1425,13 @@ void R_UpdateLightmapInfo(entity_render_t *ent)
 		return;
 	if (r_dynamic.integer && !r_shadow_realtime_dlight.integer)
 		R_MarkLights(ent);
-	if (model->brushq1.light_ambient != r_ambient.value)
+	for (i = 0;i < model->brushq1.light_styles;i++)
 	{
-		model->brushq1.light_ambient = r_ambient.value;
-		for (i = 0;i < model->nummodelsurfaces;i++)
-			model->brushq1.surfaces[i + model->firstmodelsurface].cached_dlight = true;
-	}
-	else
-	{
-		for (i = 0;i < model->brushq1.light_styles;i++)
+		if (model->brushq1.light_stylevalue[i] != d_lightstylevalue[model->brushq1.light_style[i]])
 		{
-			if (model->brushq1.light_stylevalue[i] != d_lightstylevalue[model->brushq1.light_style[i]])
-			{
-				model->brushq1.light_stylevalue[i] = d_lightstylevalue[model->brushq1.light_style[i]];
-				for (surfacechain = model->brushq1.light_styleupdatechains[i];(surface = *surfacechain);surfacechain++)
-					surface->cached_dlight = true;
-			}
+			model->brushq1.light_stylevalue[i] = d_lightstylevalue[model->brushq1.light_style[i]];
+			for (surfacechain = model->brushq1.light_styleupdatechains[i];(surface = *surfacechain);surfacechain++)
+				surface->cached_dlight = true;
 		}
 	}
 }

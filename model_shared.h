@@ -277,7 +277,6 @@ typedef struct model_brushq1_s
 	int				*light_stylevalue;
 	msurface_t		***light_styleupdatechains;
 	msurface_t		**light_styleupdatechainsbuffer;
-	float			light_ambient;
 
 	mleaf_t *(*PointInLeaf)(struct model_s *model, const float *p);
 	void (*BuildPVSTextureChains)(struct model_s *model);
