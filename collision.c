@@ -571,7 +571,7 @@ colbrushf_t *Collision_AllocBrushFloat(mempool_t *mempool, int numpoints, int nu
 void Collision_CalcPlanesForPolygonBrushFloat(colbrushf_t *brush)
 {
 	int i;
-	float edge0[3], edge1[3], edge2[3], normal[3], dist, bestdist, temp[3];
+	float edge0[3], edge1[3], edge2[3], normal[3], dist, bestdist;
 	colpointf_t *p, *p2;
 
 	if (brush->numpoints == 3)
@@ -641,6 +641,8 @@ void Collision_CalcPlanesForPolygonBrushFloat(colbrushf_t *brush)
 			{
 				// validation code
 #if 0
+				float temp[3];
+
 				VectorSubtract(brush->points[0].v, brush->points[1].v, edge0);
 				VectorSubtract(brush->points[2].v, brush->points[1].v, edge1);
 				CrossProduct(edge0, edge1, normal);
