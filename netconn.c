@@ -1016,8 +1016,6 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 			{
 				int n;
 
-				serverquerycount++;
-
 				dpsnprintf (ipstring, sizeof (ipstring), "%u.%u.%u.%u:%u", data[1], data[2], data[3], data[4], (data[5] << 8) | data[6]);
 				if (developer.integer)
 					Con_Printf("Requesting info from server %s\n", ipstring);
@@ -1028,22 +1026,24 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 				for( n = 0 ; n < serverlist_cachecount ; n++ ) 
 					if( !strcmp( ipstring, serverlist_cache[ n ].info.cname ) )
 						break;
-				if( n < serverlist_cachecount )
-					break;
+				if( n >= serverlist_cachecount )
+				{
+					serverquerycount++;
 
-				LHNETADDRESS_FromString(&svaddress, ipstring, 0);
-				NetConn_WriteString(mysocket, "\377\377\377\377getinfo", &svaddress);
+					LHNETADDRESS_FromString(&svaddress, ipstring, 0);
+					NetConn_WriteString(mysocket, "\377\377\377\377getinfo", &svaddress);
 
-				memset(&serverlist_cache[serverlist_cachecount], 0, sizeof(serverlist_cache[serverlist_cachecount]));
-				// store the data the engine cares about (address and ping)
-				strlcpy (serverlist_cache[serverlist_cachecount].info.cname, ipstring, sizeof (serverlist_cache[serverlist_cachecount].info.cname));
-				serverlist_cache[serverlist_cachecount].info.ping = 100000;
-				serverlist_cache[serverlist_cachecount].querytime = realtime;
-				// if not in the slist menu we should print the server to console
-				if (serverlist_consoleoutput)
-					Con_Printf("querying %s\n", ipstring);
+					memset(&serverlist_cache[serverlist_cachecount], 0, sizeof(serverlist_cache[serverlist_cachecount]));
+					// store the data the engine cares about (address and ping)
+					strlcpy (serverlist_cache[serverlist_cachecount].info.cname, ipstring, sizeof (serverlist_cache[serverlist_cachecount].info.cname));
+					serverlist_cache[serverlist_cachecount].info.ping = 100000;
+					serverlist_cache[serverlist_cachecount].querytime = realtime;
+					// if not in the slist menu we should print the server to console
+					if (serverlist_consoleoutput)
+						Con_Printf("querying %s\n", ipstring);
 
-				++serverlist_cachecount;
+					++serverlist_cachecount;
+				}
 
 				// move on to next address in packet
 				data += 7;
