@@ -39,8 +39,8 @@ mempool_t		*edictstring_mempool;
 
 int		type_size[8] = {1,sizeof(string_t)/4,1,3,1,1,sizeof(func_t)/4,sizeof(void *)/4};
 
-ddef_t *ED_FieldAtOfs (int ofs);
-qboolean ED_ParseEpair (void *base, ddef_t *key, const char *s);
+ddef_t *ED_FieldAtOfs(int ofs);
+qboolean ED_ParseEpair(edict_t *ent, ddef_t *key, const char *s);
 
 cvar_t	pr_checkextension = {0, "pr_checkextension", "1"};
 cvar_t	nomonsters = {0, "nomonsters", "0"};
@@ -835,7 +835,7 @@ void ED_ParseGlobals (const char *data)
 			continue;
 		}
 
-		if (!ED_ParseEpair ((void *)pr_globals, key, com_token))
+		if (!ED_ParseEpair(NULL, key, com_token))
 			Host_Error ("ED_ParseGlobals: parse error");
 	}
 }
@@ -883,74 +883,81 @@ Can parse either fields or globals
 returns false if error
 =============
 */
-qboolean	ED_ParseEpair (void *base, ddef_t *key, const char *s)
+qboolean ED_ParseEpair(edict_t *ent, ddef_t *key, const char *s)
 {
-	int		i;
-	char	string[128];
-	ddef_t	*def;
-	char	*v, *w;
-	void	*d;
-	mfunction_t	*func;
+	int i;
+	ddef_t *def;
+	eval_t *val;
+	mfunction_t *func;
 
-	d = (void *)((int *)base + key->ofs);
-
+	if (ent)
+		val = (eval_t *)((int *)ent->v + key->ofs);
+	else
+		val = (eval_t *)((int *)pr_globals + key->ofs);
 	switch (key->type & ~DEF_SAVEGLOBAL)
 	{
 	case ev_string:
-		*(string_t *)d = PR_SetString(ED_NewString(s));
+		val->string = PR_SetString(ED_NewString(s));
 		break;
 
 	case ev_float:
-		*(float *)d = atof (s);
+		while (*s && *s <= ' ')
+			s++;
+		val->_float = atof(s);
 		break;
 
 	case ev_vector:
-		strcpy (string, s);
-		v = string;
-		w = string;
-		for (i=0 ; i<3 ; i++)
+		for (i = 0;i < 3;i++)
 		{
-			while (*v && *v != ' ')
-				v++;
-			*v = 0;
-			((float *)d)[i] = atof (w);
-			w = v = v+1;
+			while (*s && *s <= ' ')
+				s++;
+			if (!*s)
+				break;
+			val->vector[i] = atof(s);
+			while (*s > ' ')
+				s++;
+			if (!*s)
+				break;
 		}
 		break;
 
 	case ev_entity:
-		i = atoi (s);
+		while (*s && *s <= ' ')
+			s++;
+		i = atoi(s);
 		if (i < 0 || i >= MAX_EDICTS)
-			Con_DPrintf("ED_ParseEpair: ev_entity reference too large (edict %i >= MAX_EDICTS %i)\n", i, MAX_EDICTS);
+			Con_Printf("ED_ParseEpair: ev_entity reference too large (edict %i >= MAX_EDICTS %i)\n", i, MAX_EDICTS);
 		while (i >= sv.max_edicts)
 			SV_IncreaseEdicts();
-		*(int *)d = EDICT_TO_PROG(EDICT_NUM(i));
+		// if SV_IncreaseEdicts was called the base pointer needs to be updated
+		if (ent)
+			val = (eval_t *)((int *)ent->v + key->ofs);
+		val->edict = EDICT_TO_PROG(EDICT_NUM(i));
 		break;
 
 	case ev_field:
-		def = ED_FindField (s);
+		def = ED_FindField(s);
 		if (!def)
 		{
-			// LordHavoc: don't warn about worldspawn sky/fog fields because they don't require mod support
-			if (strcmp(s, "sky") && strcmp(s, "fog") && strncmp(s, "fog_", 4) && strcmp(s, "farclip"))
-				Con_DPrintf ("Can't find field %s\n", s);
+			Con_DPrintf("ED_ParseEpair: Can't find field %s\n", s);
 			return false;
 		}
-		*(int *)d = G_INT(def->ofs);
+		val->_int = G_INT(def->ofs);
 		break;
 
 	case ev_function:
-		func = ED_FindFunction (s);
+		func = ED_FindFunction(s);
 		if (!func)
 		{
-			Con_DPrintf ("Can't find function %s\n", s);
+			Con_Printf ("ED_ParseEpair: Can't find function %s\n", s);
 			return false;
 		}
-		*(func_t *)d = func - pr_functions;
+		val->function = func - pr_functions;
 		break;
 
 	default:
-		break;
+		Con_Printf("ED_ParseEpair: Unknown key->type %i for key \"%s\"\n", key->type, PR_GetString(key->s_name));
+		return false;
 	}
 	return true;
 }
@@ -1039,7 +1046,7 @@ const char *ED_ParseEdict (const char *data, edict_t *ent)
 			sprintf (com_token, "0 %s 0", temp);
 		}
 
-		if (!ED_ParseEpair ((void *)ent->v, key, com_token))
+		if (!ED_ParseEpair(ent, key, com_token))
 			Host_Error ("ED_ParseEdict: parse error");
 	}
 
