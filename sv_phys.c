@@ -1039,6 +1039,7 @@ void SV_Physics_Client (edict_t	*ent, int num)
 			return;
 		SV_CheckWater (ent);
 		VectorMA (ent->v.origin, sv.frametime, ent->v.velocity, ent->v.origin);
+		VectorMA (ent->v.angles, sv.frametime, ent->v.avelocity, ent->v.angles);
 		break;
 
 	default:
