@@ -723,6 +723,7 @@ void CL_BaseMove (void);
 
 float CL_KeyState (kbutton_t *key);
 const char *Key_KeynumToString (int keynum);
+int Key_StringToKeynum (const char *str);
 
 //
 // cl_demo.c
