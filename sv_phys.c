@@ -959,6 +959,7 @@ void SV_WalkMove (edict_t *ent)
 
 	if (downtrace.plane.normal[2] > 0.7)
 	{
+		// LordHavoc: disabled this so you can walk on monsters/players
 		//if (ent->v.solid == SOLID_BSP)
 		{
 			ent->v.flags =	(int)ent->v.flags | FL_ONGROUND;
@@ -983,26 +984,20 @@ SV_Physics_Client
 Player character actions
 ================
 */
-void SV_Physics_Client (edict_t	*ent, int num)
+void SV_Physics_Client (edict_t *ent, int num)
 {
-	if ( ! svs.clients[num-1].active )
+	if (!svs.clients[num-1].active)
 		return;		// unconnected slot
 
-//
-// call standard client pre-think
-//
+	// call standard client pre-think
 	pr_global_struct->time = sv.time;
 	pr_global_struct->self = EDICT_TO_PROG(ent);
 	PR_ExecuteProgram (pr_global_struct->PlayerPreThink, "QC function PlayerPreThink is missing");
 
-//
-// do a move
-//
+	// do a move
 	SV_CheckVelocity (ent);
 
-//
-// decide which move function to call
-//
+	// decide which move function to call
 	switch ((int)ent->v.movetype)
 	{
 	case MOVETYPE_NONE:
@@ -1044,9 +1039,7 @@ void SV_Physics_Client (edict_t	*ent, int num)
 		Host_Error ("SV_Physics_client: bad movetype %i", (int)ent->v.movetype);
 	}
 
-//
-// call standard player post-think
-//
+	// call standard player post-think
 	SV_LinkEdict (ent, true);
 
 	pr_global_struct->time = sv.time;
