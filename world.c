@@ -29,23 +29,11 @@ line of sight checks trace->crosscontent, but bullets don't
 
 */
 
-/*
-typedef struct link_s
-{
-	struct link_s	*prev, *next;
-} link_t;
-*/
-
 
 void ClearLink (link_t *l);
 void RemoveLink (link_t *l);
 void InsertLinkBefore (link_t *l, link_t *before);
 void InsertLinkAfter (link_t *l, link_t *after);
-
-// (type *)STRUCT_FROM_LINK(link_t *link, type, member)
-// ent = STRUCT_FROM_LINK(link,entity_t,order)
-// FIXME: remove this mess!
-//#define	STRUCT_FROM_LINK(l,t,m) ((t *)((qbyte *)l - (int)&(((t *)0)->m)))
 
 #define	EDICT_FROM_AREA(l) ((edict_t *)((qbyte *)l - (int)&(((edict_t *)0)->area)))
 
@@ -252,9 +240,6 @@ loc0:
 	if (node->axis == -1)
 		return;
 
-	// LordHavoc: optimized recursion
-//	if (ent->v.absmax[node->axis] > node->dist) SV_TouchLinks (ent, node->children[0]);
-//	if (ent->v.absmin[node->axis] < node->dist) SV_TouchLinks (ent, node->children[1]);
 	if (ent->v.absmax[node->axis] > node->dist)
 	{
 		if (ent->v.absmin[node->axis] < node->dist)
@@ -294,46 +279,6 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 		return;
 
 // set the abs box
-
-	/*
-// LordHavoc: enabling rotating bmodels
-	if (ent->v.solid == SOLID_BSP && (ent->v.angles[0] || ent->v.angles[1] || ent->v.angles[2]))
-	{
-		// expand for rotation
-		float		max, v;
-		int			i;
-
-		max = DotProduct(ent->v.mins, ent->v.mins);
-		v = DotProduct(ent->v.maxs, ent->v.maxs);
-		if (max < v)
-			max = v;
-		max = sqrt(max);
-	*/
-		/*
-		max = 0;
-		for (i=0 ; i<3 ; i++)
-		{
-			v = fabs(ent->v.mins[i]);
-			if (max < v)
-				max = v;
-			v = fabs(ent->v.maxs[i]);
-			if (max < v)
-				max = v;
-		}
-		*/
-	/*
-		for (i=0 ; i<3 ; i++)
-		{
-			ent->v.absmin[i] = ent->v.origin[i] - max;
-			ent->v.absmax[i] = ent->v.origin[i] + max;
-		}
-	}
-	else
-	{
-		VectorAdd (ent->v.origin, ent->v.mins, ent->v.absmin);
-		VectorAdd (ent->v.origin, ent->v.maxs, ent->v.absmax);
-	}
-	*/
 
 	if (ent->v.solid == SOLID_BSP)
 	{
@@ -609,9 +554,6 @@ loc0:
 	if (node->axis == -1)
 		return;
 
-	// LordHavoc: optimized recursion
-//	if (clip->boxmaxs[node->axis] > node->dist) SV_ClipToLinks(node->children[0], clip);
-//	if (clip->boxmins[node->axis] < node->dist) SV_ClipToLinks(node->children[1], clip);
 	if (clip->boxmaxs[node->axis] > node->dist)
 	{
 		if (clip->boxmins[node->axis] < node->dist)
@@ -712,3 +654,4 @@ trace_t SV_Move (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, int type, e
 
 	return clip.trace;
 }
+

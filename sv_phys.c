@@ -107,13 +107,6 @@ void SV_CheckVelocity (edict_t *ent)
 			Con_Printf ("Got a NaN origin on %s\n", pr_strings + ent->v.classname);
 			ent->v.origin[i] = 0;
 		}
-		// LordHavoc: maxvelocity fix, see below
-/*
-		if (ent->v.velocity[i] > sv_maxvelocity.value)
-			ent->v.velocity[i] = sv_maxvelocity.value;
-		else if (ent->v.velocity[i] < -sv_maxvelocity.value)
-			ent->v.velocity[i] = -sv_maxvelocity.value;
-*/
 	}
 
 	// LordHavoc: max velocity fix, inspired by Maddes's source fixes, but this is faster
@@ -311,11 +304,8 @@ int SV_FlyMove (edict_t *ent, float time, trace_t *steptrace)
 		if (trace.plane.normal[2] > 0.7)
 		{
 			blocked |= 1;		// floor
-			//if (trace.ent->v.solid == SOLID_BSP)
-			{
-				ent->v.flags =	(int)ent->v.flags | FL_ONGROUND;
-				ent->v.groundentity = EDICT_TO_PROG(trace.ent);
-			}
+			ent->v.flags =	(int)ent->v.flags | FL_ONGROUND;
+			ent->v.groundentity = EDICT_TO_PROG(trace.ent);
 		}
 		if (!trace.plane.normal[2])
 		{
@@ -369,7 +359,6 @@ int SV_FlyMove (edict_t *ent, float time, trace_t *steptrace)
 		{	// go along the crease
 			if (numplanes != 2)
 			{
-//				Con_Printf ("clip velocity, numplanes == %i\n",numplanes);
 				VectorClear(ent->v.velocity);
 				return 7;
 			}
@@ -505,8 +494,7 @@ void SV_PushMove (edict_t *pusher, float movetime)
 		Host_Error("SV_PushMove: invalid modelindex %f\n", pusher->v.modelindex);
 	pushermodel = sv.models[index];
 
-	// LordHavoc: round up by a small epsilon
-	movetime2 = movetime; // + (1.0 / 256.0);
+	movetime2 = movetime;
 	VectorScale(pusher->v.velocity, movetime2, move1);
 	VectorScale(pusher->v.avelocity, movetime2, moveangle);
 	if (moveangle[0] || moveangle[2])
@@ -598,35 +586,9 @@ void SV_PushMove (edict_t *pusher, float movetime)
 			 || check->v.absmax[2] <= mins[2])
 				continue;
 
-			/*
-			if (forward[0] < 0.999f) // quick way to check if any rotation is used
-			{
-				VectorSubtract (check->v.origin, pusher->v.origin, org);
-				org2[0] = DotProduct (org, forward);
-				org2[1] = DotProduct (org, left);
-				org2[2] = DotProduct (org, up);
-				//VectorSubtract (org2, org, move);
-				//VectorAdd (move, move1, move);
-				//VectorSubtract(check->v.origin, move, a);
-				a[0] = check->v.origin[0] + (org[0] - org2[0]) - move1[0];
-				a[1] = check->v.origin[1] + (org[1] - org2[1]) - move1[1];
-				a[2] = check->v.origin[2] + (org[2] - org2[2]) - move1[2];
-			}
-			else
-				VectorSubtract (check->v.origin, move1, a);
-
-			trace = SV_ClipMoveToEntity (pusher, a, check->v.mins, check->v.maxs, check->v.origin);
-			if (trace.fraction == 1 && !trace.startsolid)
-				continue;
-			*/
 			trace = SV_ClipMoveToEntity (pusher, check->v.origin, check->v.mins, check->v.maxs, check->v.origin);
 			if (!trace.startsolid)
 				continue;
-			/*
-			// see if the ent's bbox is inside the pusher's final position
-			if (!SV_TestEntityPosition (check))
-				continue;
-			*/
 		}
 
 		if (forward[0] < 0.999f) // quick way to check if any rotation is used
@@ -641,16 +603,10 @@ void SV_PushMove (edict_t *pusher, float movetime)
 		else
 			VectorCopy (move1, move);
 
-		// LordHavoc: debugging
-		//VectorAdd(entorig, move, org2);
-		//CL_RocketTrail2 (entorig, org2, 238, NULL);
-
 		// remove the onground flag for non-players
 		if (check->v.movetype != MOVETYPE_WALK)
 			check->v.flags = (int)check->v.flags & ~FL_ONGROUND;
 
-		//VectorCopy (check->v.origin, entorig);
-		//VectorCopy (check->v.angles, entang);
 		VectorCopy (check->v.origin, moved_from[num_moved]);
 		VectorCopy (check->v.angles, moved_fromangles[num_moved]);
 		moved_edict[num_moved++] = check;
@@ -661,8 +617,7 @@ void SV_PushMove (edict_t *pusher, float movetime)
 		pusher->v.solid = savesolid; // was SOLID_BSP
 
 		// if it is still inside the pusher, block
-		// LordHavoc: cleanup - check trace.fraction and startsolid
-		if (/*trace.fraction != 1 || trace.startsolid || */SV_TestEntityPosition (check))
+		if (SV_TestEntityPosition (check))
 		{
 			// fail the move
 			if (check->v.mins[0] == check->v.maxs[0])
@@ -675,19 +630,12 @@ void SV_PushMove (edict_t *pusher, float movetime)
 				continue;
 			}
 
-			/*
-			VectorCopy (entorig, check->v.origin);
-			VectorCopy (entang, check->v.angles);
-			SV_LinkEdict (check, true);
-			*/
-
 			VectorCopy (pushorig, pusher->v.origin);
 			VectorCopy (pushang, pusher->v.angles);
 			pusher->v.ltime = pushltime;
 			SV_LinkEdict (pusher, false);
 
 			// move back any entities we already moved
-			//num_moved--; // LordHavoc: pop off check, because it was already restored
 			for (i=0 ; i<num_moved ; i++)
 			{
 				VectorCopy (moved_from[i], moved_edict[i]->v.origin);
@@ -918,7 +866,6 @@ int SV_TryUnstick (edict_t *ent, vec3_t oldvel)
 		if ( fabs(oldorg[1] - ent->v.origin[1]) > 4
 		|| fabs(oldorg[0] - ent->v.origin[0]) > 4 )
 		{
-//Con_DPrintf ("unstuck!\n");
 			return clip;
 		}
 
@@ -1111,22 +1058,6 @@ void SV_Physics_Client (edict_t	*ent, int num)
 
 /*
 =============
-SV_Physics_None
-
-Non moving objects can only think
-=============
-*/
-// LordHavoc: inlined manually because it was a real time waster
-/*
-void SV_Physics_None (edict_t *ent)
-{
-// regular thinking
-	SV_RunThink (ent);
-}
-*/
-
-/*
-=============
 SV_Physics_Follow
 
 Entities that are "stuck" to another entity
@@ -1162,14 +1093,8 @@ void SV_Physics_Follow (edict_t *ent)
 		ent->v.origin[0] = v[0] * vf[0] + v[1] * vf[1] + v[2] * vf[2] + e->v.origin[0];
 		ent->v.origin[1] = v[0] * vr[0] + v[1] * vr[1] + v[2] * vr[2] + e->v.origin[1];
 		ent->v.origin[2] = v[0] * vu[0] + v[1] * vu[1] + v[2] * vu[2] + e->v.origin[2];
-		/*
-		ent->v.origin[0] = ent->v.view_ofs[0] * vf[0] + ent->v.view_ofs[0] * vf[1] + ent->v.view_ofs[0] * vf[2] + e->v.origin[0];
-		ent->v.origin[1] = ent->v.view_ofs[1] * vr[0] + ent->v.view_ofs[1] * vr[1] + ent->v.view_ofs[1] * vr[2] + e->v.origin[1];
-		ent->v.origin[2] = ent->v.view_ofs[2] * vu[0] + ent->v.view_ofs[2] * vu[1] + ent->v.view_ofs[2] * vu[2] + e->v.origin[2];
-		*/
 	}
 	VectorAdd (e->v.angles, ent->v.v_angle, ent->v.angles);
-//	VectorAdd (PROG_TO_EDICT(ent->v.aiment)->v.origin, ent->v.v_angle, ent->v.origin);
 	SV_LinkEdict (ent, true);
 }
 
@@ -1249,7 +1174,7 @@ void SV_Physics_Toss (edict_t *ent)
 	trace_t	trace;
 	vec3_t	move;
 	edict_t	*groundentity;
-	//edict_t *groundentity;
+
 	// regular thinking
 	if (!SV_RunThink (ent))
 		return;
@@ -1271,19 +1196,6 @@ void SV_Physics_Toss (edict_t *ent)
 		}
 	}
 	ent->suspendedinairflag = false;
-
-	/*
-	if ( ((int)ent->v.flags & FL_ONGROUND) )
-	{
-		// LordHavoc: fall if the groundentity was removed
-		if (ent->v.groundentity)
-		{
-			groundentity = PROG_TO_EDICT(ent->v.groundentity);
-			if (groundentity && groundentity->v.solid != SOLID_NOT && groundentity->v.solid != SOLID_TRIGGER)
-				return;
-		}
-	}
-	*/
 
 	SV_CheckVelocity (ent);
 
@@ -1314,7 +1226,6 @@ void SV_Physics_Toss (edict_t *ent)
 		ClipVelocity (ent->v.velocity, trace.plane.normal, ent->v.velocity, 1.5);
 		// LordHavoc: fixed grenades not bouncing when fired down a slope
 		if (trace.plane.normal[2] > 0.7 && DotProduct(trace.plane.normal, ent->v.velocity) < 60)
-		//if (trace.plane.normal[2] > 0.7 && ent->v.velocity[2] < 60)
 		{
 			ent->v.flags = (int)ent->v.flags | FL_ONGROUND;
 			ent->v.groundentity = EDICT_TO_PROG(trace.ent);
@@ -1428,8 +1339,6 @@ void SV_Physics (void)
 	pr_global_struct->time = sv.time;
 	PR_ExecuteProgram (pr_global_struct->StartFrame, "QC function StartFrame is missing");
 
-//SV_CheckAllEnts ();
-
 //
 // treat each object in turn
 //
@@ -1454,7 +1363,6 @@ void SV_Physics (void)
 			SV_Physics_Pusher (ent);
 			break;
 		case MOVETYPE_NONE:
-//			SV_Physics_None (ent);
 			// LordHavoc: manually inlined the thinktime check here because MOVETYPE_NONE is used on so many objects
 			if (ent->v.nextthink > 0 && ent->v.nextthink <= sv.time + sv.frametime)
 				SV_RunThink (ent);
@@ -1549,3 +1457,4 @@ trace_t SV_Trace_Toss (edict_t *tossent, edict_t *ignore)
 	trace.fraction = 0; // not relevant
 	return trace;
 }
+

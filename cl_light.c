@@ -1,3 +1,4 @@
+
 #include "quakedef.h"
 
 dlight_t cl_dlights[MAX_DLIGHTS];
@@ -77,5 +78,4 @@ void CL_DecayLights (void)
 			dl->radius = 0;
 	}
 }
-
 

@@ -1,3 +1,4 @@
+
 #include "quakedef.h"
 
 void LoadSky_f(void);
@@ -416,15 +417,6 @@ void R_InitSky (qbyte *src, int bytesperpixel)
 	memcpy(skyupperlayerpixels, trans, 128*128*4);
 
 	solidskytexture = R_LoadTexture (skytexturepool, "sky_solidtexture", 128, 128, (qbyte *) trans, TEXTYPE_RGBA, TEXF_PRECACHE);
-	/*
-	for (i = 0;i < 128*128;i++)
-	{
-		((qbyte *)&trans[i])[0] >>= 1;
-		((qbyte *)&trans[i])[1] >>= 1;
-		((qbyte *)&trans[i])[2] >>= 1;
-	}
-	solidskytexture_half = R_LoadTexture (skytexturepool, "sky_solidtexture_half", 128, 128, (qbyte *) trans, TEXTYPE_RGBA, TEXF_PRECACHE);
-	*/
 
 	if (bytesperpixel == 4)
 	{
@@ -450,13 +442,5 @@ void R_InitSky (qbyte *src, int bytesperpixel)
 	memcpy(skylowerlayerpixels, trans, 128*128*4);
 
 	alphaskytexture = R_LoadTexture (skytexturepool, "sky_alphatexture", 128, 128, (qbyte *) trans, TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE);
-	/*
-	for (i = 0;i < 128*128;i++)
-	{
-		((qbyte *)&trans[i])[0] >>= 1;
-		((qbyte *)&trans[i])[1] >>= 1;
-		((qbyte *)&trans[i])[2] >>= 1;
-	}
-	alphaskytexture_half = R_LoadTexture (skytexturepool, "sky_alphatexture_half", 128, 128, (qbyte *) trans, TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE);
-	*/
 }
+

@@ -98,3 +98,4 @@ unsigned short CRC_Block(qbyte *data, int size)
 		crc = (crc << 8) ^ crctable[(crc >> 8) ^ (*data++)];
 	return crc ^ CRC_XOR_VALUE;
 }
+

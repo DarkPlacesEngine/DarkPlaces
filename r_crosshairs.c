@@ -1,3 +1,4 @@
+
 #include "quakedef.h"
 
 cvar_t crosshair_brightness = {CVAR_SAVE, "crosshair_brightness", "1"};

@@ -532,13 +532,6 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 // find the client's PVS
 	VectorAdd (clent->v.origin, clent->v.view_ofs, testeye);
 	pvs = SV_FatPVS (testeye);
-	/*
-	// dp protocol
-	MSG_WriteByte(msg, svc_playerposition);
-	MSG_WriteFloat(msg, testeye[0]);
-	MSG_WriteFloat(msg, testeye[1]);
-	MSG_WriteFloat(msg, testeye[2]);
-	*/
 
 	culled_pvs = 0;
 	culled_portal = 0;
@@ -783,9 +776,6 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			bits |= U_STEP;
 
 		// LordHavoc: old stuff, but rewritten to have more exact tolerances
-//		if ((int)(origin[0]*8.0) != (int)(baseline->origin[0]*8.0))						bits |= U_ORIGIN1;
-//		if ((int)(origin[1]*8.0) != (int)(baseline->origin[1]*8.0))						bits |= U_ORIGIN2;
-//		if ((int)(origin[2]*8.0) != (int)(baseline->origin[2]*8.0))						bits |= U_ORIGIN3;
 		if (origin[0] != baseline->origin[0])											bits |= U_ORIGIN1;
 		if (origin[1] != baseline->origin[1])											bits |= U_ORIGIN2;
 		if (origin[2] != baseline->origin[2])											bits |= U_ORIGIN3;
@@ -1177,8 +1167,7 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 
 	bits = 0;
 
-	//if (ent->v.view_ofs[2] != DEFAULT_VIEWHEIGHT)
-		bits |= SU_VIEWHEIGHT;
+	bits |= SU_VIEWHEIGHT;
 
 	if (ent->v.idealpitch)
 		bits |= SU_IDEALPITCH;
@@ -1235,8 +1224,7 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 	if (ent->v.armorvalue)
 		bits |= SU_ARMOR;
 
-//	if (ent->v.weapon)
-		bits |= SU_WEAPON;
+	bits |= SU_WEAPON;
 
 	if (bits >= 65536)
 		bits |= SU_EXTEND1;
@@ -1467,10 +1455,7 @@ void SV_SendClientMessages (void)
 		if (host_client->message.cursize || host_client->dropasap)
 		{
 			if (!NET_CanSendMessage (host_client->netconnection))
-			{
-//				I_Printf ("can't write\n");
 				continue;
-			}
 
 			if (host_client->dropasap)
 				SV_DropClient (false);	// went to another level
@@ -1559,7 +1544,7 @@ void SV_CreateBaseline (void)
 		else
 		{
 			svent->baseline.colormap = 0;
-			svent->baseline.modelindex = svent->v.modelindex; //SV_ModelIndex(pr_strings + svent->v.model);
+			svent->baseline.modelindex = svent->v.modelindex;
 		}
 
 		large = false;
@@ -1806,3 +1791,4 @@ void SV_SpawnServer (char *server)
 
 	Con_DPrintf ("Server spawned.\n");
 }
+

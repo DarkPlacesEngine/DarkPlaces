@@ -17,7 +17,6 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
-// r_light.c
 
 #include "quakedef.h"
 
@@ -47,11 +46,6 @@ loc0:
 			goto loc0;
 		}
 		// found an intersection
-//		mid = startz + (endz - startz) * (startz - node->plane->dist) / (startz - endz);
-//		mid = startz + distz * (startz - node->plane->dist) / (-distz);
-//		mid = startz + (-(startz - node->plane->dist));
-//		mid = startz - (startz - node->plane->dist);
-//		mid = startz + node->plane->dist - startz;
 		mid = node->plane->dist;
 		break;
 	default:
@@ -65,8 +59,6 @@ loc0:
 			goto loc0;
 		}
 		// found an intersection
-//		mid = startz + (endz - startz) * ((front - node->plane->dist) / ((front - node->plane->dist) - (back - node->plane->dist)));
-//		mid = startz + (endz - startz) * ((front - node->plane->dist) / (front - back));
 		mid = startz + distz * (front - node->plane->dist) / (front - back);
 		break;
 	}
@@ -132,7 +124,6 @@ loc0:
 		startz = mid;
 		distz = endz - startz;
 		goto loc0;
-//		return RecursiveLightPoint (color, node->children[side ^ 1], x, y, mid, endz);
 	}
 }
 
@@ -149,3 +140,4 @@ void SV_LightPoint (vec3_t color, vec3_t p)
 	color[0] = color[1] = color[2] = 0;
 	SV_RecursiveLightPoint (color, sv.worldmodel->nodes, p[0], p[1], p[2], p[2] - 65536);
 }
+

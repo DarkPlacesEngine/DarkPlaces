@@ -116,19 +116,6 @@ This error checks and tracks the total number of entities
 */
 entity_t	*CL_EntityNum (int num)
 {
-	/*
-	if (num >= cl.num_entities)
-	{
-		if (num >= MAX_EDICTS)
-			Host_Error ("CL_EntityNum: %i is an invalid number",num);
-		cl.num_entities = num;
-//		while (cl.num_entities <= num)
-//		{
-//			cl_entities[cl.num_entities].colormap = -1; // no special coloring
-//			cl.num_entities++;
-//		}
-	}
-	*/
 	if (num >= MAX_EDICTS)
 		Host_Error ("CL_EntityNum: %i is an invalid number",num);
 		
@@ -341,7 +328,6 @@ Con_DPrintf ("CL_SignonReply: %i\n", cls.signon);
 		break;
 
 	case 4:
-		SCR_EndLoadingPlaque ();		// allow normal screen updates
 		Con_ClearNotify();
 		break;
 	}
@@ -597,12 +583,8 @@ void CL_ParseUpdate (int bits)
 	if (bits & U_EFFECTS2)	new.effects = (new.effects & 0x00FF) | (MSG_ReadByte() << 8);
 	if (bits & U_GLOWSIZE)	new.glowsize = MSG_ReadByte();
 	if (bits & U_GLOWCOLOR)	new.glowcolor = MSG_ReadByte();
-#if 0
-	if (bits & U_COLORMOD)	{int i = MSG_ReadByte();float r = (((int) i >> 5) & 7) * 1.0 / 7, g = (((int) i >> 2) & 7) * 1.0 / 7, b = ((int) i & 3) * 1.0 / 3;Con_Printf("warning: U_COLORMOD %i (%1.2f %1.2f %1.2f) ignored\n", i, r, g, b);}
-#else
 	// apparently the dpcrush demo uses this (unintended, and it uses white anyway)
 	if (bits & U_COLORMOD)	MSG_ReadByte();
-#endif
 	if (bits & U_GLOWTRAIL) new.flags |= RENDER_GLOWTRAIL;
 	if (bits & U_FRAME2)	new.frame = (new.frame & 0x00FF) | (MSG_ReadByte() << 8);
 	if (bits & U_MODEL2)	new.modelindex = (new.modelindex & 0x00FF) | (MSG_ReadByte() << 8);
@@ -722,8 +704,7 @@ void CL_BitProfile_f(void)
 	Con_Printf("bitprofile: %i updates\n");
 	if (bitprofilecount)
 		for (i = 0;i < 32;i++)
-//			if (bitprofile[i])
-				Con_Printf("%s: %i %3.2f%%\n", bitprofilenames[i], bitprofile[i], bitprofile[i] * 100.0 / bitprofilecount);
+			Con_Printf("%s: %i %3.2f%%\n", bitprofilenames[i], bitprofile[i], bitprofile[i] * 100.0 / bitprofilecount);
 	Con_Printf("\n");
 	for (i = 0;i < 32;i++)
 		bitprofile[i] = 0;
@@ -1058,7 +1039,6 @@ void CL_ParseServerMessage (void)
 			break;
 
 		case svc_nop:
-//			Con_Printf ("svc_nop\n");
 			break;
 
 		case svc_time:
@@ -1108,7 +1088,6 @@ void CL_ParseServerMessage (void)
 
 		case svc_serverinfo:
 			CL_ParseServerInfo ();
-//			vid.recalc_refdef = true;	// leave intermission full screen
 			break;
 
 		case svc_setangle:
@@ -1246,20 +1225,17 @@ void CL_ParseServerMessage (void)
 		case svc_intermission:
 			cl.intermission = 1;
 			cl.completed_time = cl.time;
-//			vid.recalc_refdef = true;	// go to full screen
 			break;
 
 		case svc_finale:
 			cl.intermission = 2;
 			cl.completed_time = cl.time;
-//			vid.recalc_refdef = true;	// go to full screen
 			SCR_CenterPrint (MSG_ReadString ());
 			break;
 
 		case svc_cutscene:
 			cl.intermission = 3;
 			cl.completed_time = cl.time;
-//			vid.recalc_refdef = true;	// go to full screen
 			SCR_CenterPrint (MSG_ReadString ());
 			break;
 
@@ -1279,15 +1255,6 @@ void CL_ParseServerMessage (void)
 			{
 				int length;
 				length = (int) ((unsigned short) MSG_ReadShort());
-				/*
-				if (cgamenetbuffersize < length)
-				{
-					cgamenetbuffersize = length;
-					if (cgamenetbuffer)
-						Mem_Free(cgamenetbuffer);
-					cgamenetbuffer = Mem_Alloc(cgamenetbuffersize);
-				}
-				*/
 				for (i = 0;i < length;i++)
 					cgamenetbuffer[i] = MSG_ReadByte();
 				if (!msg_badread)
@@ -1308,3 +1275,4 @@ void CL_ParseServerMessage (void)
 	if (entitiesupdated)
 		CL_EntityUpdateEnd();
 }
+

@@ -1185,3 +1185,4 @@ void Image_MipReduce(qbyte *in, qbyte *out, int *width, int *height, int destwid
 			Sys_Error("Image_MipReduce: desired size already achieved\n");
 	}
 }
+

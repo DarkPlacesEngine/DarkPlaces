@@ -161,7 +161,7 @@ void Key_Console (int key)
 {
 	if (key == K_ENTER)
 	{
-		Cbuf_AddText (key_lines[edit_line]+1);	// skip the >
+		Cbuf_AddText (key_lines[edit_line]+1);	// skip the ]
 		Cbuf_AddText ("\n");
 		Con_Printf ("%s\n",key_lines[edit_line]);
 		edit_line = (edit_line + 1) & 31;

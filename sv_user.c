@@ -166,27 +166,6 @@ void SV_UserFriction (void)
 SV_Accelerate
 ==============
 */
-#if 0
-void SV_Accelerate (vec3_t wishvel)
-{
-	int			i;
-	float		addspeed, accelspeed;
-	vec3_t		pushvec;
-
-	if (wishspeed == 0)
-		return;
-
-	VectorSubtract (wishvel, velocity, pushvec);
-	addspeed = VectorNormalize (pushvec);
-
-	accelspeed = sv_accelerate.value*sv.frametime*addspeed;
-	if (accelspeed > addspeed)
-		accelspeed = addspeed;
-	
-	for (i=0 ; i<3 ; i++)
-		velocity[i] += accelspeed*pushvec[i];	
-}
-#endif
 void SV_Accelerate (void)
 {
 	int			i;
@@ -216,7 +195,6 @@ void SV_AirAccelerate (vec3_t wishveloc)
 	addspeed = wishspd - currentspeed;
 	if (addspeed <= 0)
 		return;
-//	accelspeed = sv_accelerate.value * sv.frametime;
 	accelspeed = sv_accelerate.value*wishspeed * sv.frametime;
 	if (accelspeed > addspeed)
 		accelspeed = addspeed;
@@ -346,7 +324,6 @@ void SV_AirMove (void)
 	wishvel[0] = wishvel[2] = 0;
 	wishvel[1] = sv_player->v.angles[1];
 	AngleVectors (wishvel, forward, right, up);
-//	AngleVectors (sv_player->v.angles, forward, right, up);
 
 	fmove = cmd.forwardmove;
 	smove = cmd.sidemove;
@@ -570,7 +547,6 @@ nextmsg:
 				return false;
 
 			case clc_nop:
-//				Sys_Printf ("clc_nop\n");
 				break;
 
 			case clc_stringcmd:
@@ -599,18 +575,9 @@ nextmsg:
 				}
 				else
 					Con_DPrintf("%s tried to %s\n", host_client->name, s);
-				/*
-				if (ret == 2)
-					Cbuf_InsertText (s);
-				else if (ret == 1)
-					Cmd_ExecuteString (s, src_client);
-				else
-					Con_DPrintf("%s tried to %s\n", host_client->name, s);
-				*/
 				break;
 
 			case clc_disconnect:
-//				Sys_Printf ("SV_ReadClientMessage: client disconnected\n");
 				return false;
 
 			case clc_move:

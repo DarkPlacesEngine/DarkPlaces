@@ -1,3 +1,4 @@
+
 #include "quakedef.h"
 
 cvar_t	r_max_size = {CVAR_SAVE, "r_max_size", "2048"};
@@ -6,7 +7,7 @@ cvar_t	r_picmip = {CVAR_SAVE, "r_picmip", "0"};
 cvar_t	r_lerpimages = {CVAR_SAVE, "r_lerpimages", "1"};
 cvar_t	r_precachetextures = {CVAR_SAVE, "r_precachetextures", "1"};
 
-int		gl_filter_min = GL_LINEAR_MIPMAP_LINEAR; //NEAREST;
+int		gl_filter_min = GL_LINEAR_MIPMAP_LINEAR;
 int		gl_filter_mag = GL_LINEAR;
 
 
@@ -269,7 +270,6 @@ rtexturepool_t *R_AllocTexturePool(void)
 	pool = Mem_Alloc(texturemempool, sizeof(gltexturepool_t));
 	if (pool == NULL)
 		return NULL;
-	//memset(pool, 0, sizeof(gltexturepool_t));
 	pool->next = gltexturepoolchain;
 	gltexturepoolchain = pool;
 	pool->sentinel = TEXTUREPOOL_SENTINEL;
@@ -472,7 +472,6 @@ static void r_textures_start(void)
 	texturedatamempool = Mem_AllocPool("Texture Storage (not yet uploaded)");
 	textureprocessingmempool = Mem_AllocPool("Texture Processing Buffers");
 	gltexnuminuse = Mem_Alloc(texturemempool, MAX_GLTEXTURES);
-	//memset(gltexnuminuse, 0, MAX_GLTEXTURES);
 }
 
 static void r_textures_shutdown(void)
@@ -484,12 +483,6 @@ static void r_textures_shutdown(void)
 		R_FreeTexturePool(&temp);
 	}
 
-	/*
-	if (resizebuffer) Mem_Free(resizebuffer);resizebuffer = NULL;
-	if (colorconvertbuffer) Mem_Free(colorconvertbuffer);colorconvertbuffer = NULL;
-	if (texturebuffer) Mem_Free(texturebuffer);texturebuffer = NULL;
-	if (gltexnuminuse) Mem_Free(gltexnuminuse);gltexnuminuse = NULL;
-	*/
 	resizebuffersize = 0;
 	texturebuffersize = 0;
 	resizebuffer = NULL;
@@ -719,7 +712,6 @@ static void R_FindImageForTexture(gltexture_t *glt)
 		image = Mem_Alloc(texturemempool, sizeof(gltextureimage_t));
 		if (image == NULL)
 			Sys_Error("R_FindImageForTexture: ran out of memory\n");
-		//memset(image, 0, sizeof(*image));
 		image->type = GLIMAGETYPE_FRAGMENTS;
 		image->width = block_size;
 		image->height = block_size;
@@ -738,7 +730,6 @@ static void R_FindImageForTexture(gltexture_t *glt)
 		image = Mem_Alloc(texturemempool, sizeof(gltextureimage_t));
 		if (image == NULL)
 			Sys_Error("R_FindImageForTexture: ran out of memory\n");
-		//memset(image, 0, sizeof(*image));
 		image->type = GLIMAGETYPE_TILE;
 		image->blockallocation = NULL;
 
@@ -810,7 +801,6 @@ static gltexture_t *R_SetupTexture(gltexturepool_t *pool, char *identifier, int 
 {
 	gltexture_t *glt;
 	glt = Mem_Alloc(texturemempool, sizeof(gltexture_t));
-	//memset(glt, 0, sizeof(gltexture_t));
 	if (identifier)
 	{
 		glt->identifier = Mem_Alloc(texturemempool, strlen(identifier)+1);
@@ -871,10 +861,6 @@ rtexture_t *R_LoadTexture (rtexturepool_t *rtexturepool, char *identifier, int w
 		return NULL;
 
 	texinfo = R_GetTexTypeInfo(textype, flags);
-
-	// data can be NULL
-//	if (data == NULL)
-//		Host_Error("R_LoadTexture: \"%s\" has no data\n", identifier);
 
 	if (flags & TEXF_FRAGMENT)
 	{
@@ -955,9 +941,6 @@ rtexture_t *R_ProceduralTexture (rtexturepool_t *rtexturepool, char *identifier,
 
 	texinfo = R_GetTexTypeInfo(textype, flags);
 
-	// no function is supported, for odd uses
-//	if (generate == NULL)
-//		Host_Error("R_ProceduralTexture: \"%s\" has no generate function\n", identifier);
 	if (flags & TEXF_FRAGMENT)
 	{
 		if (width > block_size || height > block_size)
@@ -1086,19 +1069,7 @@ void R_UpdateTexture(rtexture_t *rt, qbyte *data)
 	if (data == NULL)
 		Host_Error("R_UpdateTexture: no data supplied\n");
 	glt = (gltexture_t *)rt;
-	/*
-	if (!(glt->flags & GLTEXF_PROCEDURAL))
-	{
-		if (glt->inputtexels == NULL)
-		{
-			glt->inputtexels = Mem_Alloc(texturedatamempool, glt->width * glt->height * glt->textype->inputbytesperpixel);
-			if (glt->inputtexels == NULL)
-				Host_Error("R_UpdateTexture: ran out of memory\n");
-		}
-		memcpy(glt->inputtexels, data, glt->width * glt->height * glt->textype->inputbytesperpixel);
-	}
-	R_Upload(glt, data);
-	*/
+
 	// if it has not been uploaded yet, update the data that will be used when it is
 	if (glt->inputtexels)
 		memcpy(glt->inputtexels, data, glt->width * glt->height * glt->textype->inputbytesperpixel);

@@ -20,9 +20,7 @@ float		scr_conlines;		// lines of console to display
 int			clearconsole;
 int			clearnotify;
 
-//qboolean	scr_disabled_for_loading;
 qboolean	scr_drawloading = false;
-//float		scr_disabled_time;
 
 static qbyte menuplyr_pixels[4096];
 
@@ -144,18 +142,6 @@ void SCR_CheckDrawCenterString (void)
 
 /*
 ==============
-SCR_DrawRam
-==============
-*/
-void SCR_DrawRam (void)
-{
-//	if (!scr_showram.integer)
-//		return;
-//	DrawQ_Pic (32, 0, "ram", 0, 0, 1, 1, 1, 1, 0);
-}
-
-/*
-==============
 SCR_DrawTurtle
 ==============
 */
@@ -231,9 +217,6 @@ SCR_DrawLoading
 void SCR_DrawLoading (void)
 {
 	cachepic_t	*pic;
-
-	//if (!scr_drawloading)
-	//	return;
 
 	pic = Draw_CachePic ("gfx/loading.lmp");
 	DrawQ_Pic ((vid.conwidth - pic->width)/2, (vid.conheight - pic->height)/2, "gfx/loading.lmp", 0, 0, 1, 1, 1, 1, 0);
@@ -313,42 +296,10 @@ void SCR_BeginLoadingPlaque (void)
 
 	S_StopAllSounds (true);
 
-//	if (cls.state != ca_connected)
-//		return;
-//	if (cls.signon != SIGNONS)
-//		return;
-
-// redraw with no console and the loading plaque
-//	Con_ClearNotify ();
-//	scr_centertime_off = 0;
-//	scr_con_current = 0;
-
 	scr_drawloading = true;
 	CL_UpdateScreen ();
 	scr_drawloading = true;
 	CL_UpdateScreen ();
-	//scr_drawloading = false;
-
-//	scr_disabled_for_loading = true;
-//	scr_disabled_time = realtime;
-}
-
-/*
-===============
-SCR_EndLoadingPlaque
-
-================
-*/
-void SCR_EndLoadingPlaque (void)
-{
-	/*
-	if (!scr_drawloading)
-		return;
-
-//	scr_disabled_for_loading = false;
-	scr_drawloading = false;
-	Con_ClearNotify ();
-	*/
 }
 
 //=============================================================================
@@ -401,10 +352,6 @@ void R_TimeReport_Start(void)
 	{
 		speedstringcount = 0;
 		AngleVectors (r_refdef.viewangles, vpn, NULL, NULL);
-		//sprintf(r_speeds_string, "org:'%c%6.2f %c%6.2f %c%6.2f' ang:'%c%3.0f %c%3.0f %c%3.0f' dir:'%c%2.3f %c%2.3f %c%2.3f'\n%6i walls %6i dlitwalls %7i modeltris %7i meshtris\nBSP: %6i faces %6i nodes %6i leafs\n%4i models %4i bmodels %4i sprites %5i particles %3i dlights\n",
-		//	r_refdef.vieworg[0] < 0 ? '-' : ' ', fabs(r_refdef.vieworg[0]), r_refdef.vieworg[1] < 0 ? '-' : ' ', fabs(r_refdef.vieworg[1]), r_refdef.vieworg[2] < 0 ? '-' : ' ', fabs(r_refdef.vieworg[2]),
-		//	r_refdef.viewangles[0] < 0 ? '-' : ' ', fabs(r_refdef.viewangles[0]), r_refdef.viewangles[1] < 0 ? '-' : ' ', fabs(r_refdef.viewangles[1]), r_refdef.viewangles[2] < 0 ? '-' : ' ', fabs(r_refdef.viewangles[2]),
-		//	vpn[0] < 0 ? '-' : ' ', fabs(vpn[0]), vpn[1] < 0 ? '-' : ' ', fabs(vpn[1]), vpn[2] < 0 ? '-' : ' ', fabs(vpn[2]),
 		sprintf(r_speeds_string,
 			"org:'%+8.2f %+8.2f %+8.2f' ang:'%+4.0f %+4.0f %+4.0f' dir:'%+2.3f %+2.3f %+2.3f'\n"
 			"world:%6i faces%6i nodes%6i leafs%6i walls%6i dlitwalls\n"
@@ -425,7 +372,6 @@ void R_TimeReport_Start(void)
 		c_bmodels = 0;
 		c_sprites = 0;
 		c_particles = 0;
-	//	c_dlights = 0;
 
 		r_timereport_start = Sys_DoubleTime();
 	}
@@ -443,7 +389,7 @@ void R_TimeReport_End(void)
 		for (i = 0;r_speeds_string[i];i++)
 			if (r_speeds_string[i] == '\n')
 				lines++;
-		y = vid.conheight - sb_lines - lines * 8/* - 8*/;
+		y = vid.conheight - sb_lines - lines * 8;
 		i = j = 0;
 		DrawQ_Fill(0, y, vid.conwidth, lines * 8, 0, 0, 0, 0.5, 0);
 		while (r_speeds_string[i])
@@ -1000,7 +946,6 @@ void CL_UpdateScreen(void)
 
 	R_TimeReport("setup");
 
-	SCR_DrawRam ();
 	SCR_DrawNet ();
 	SCR_DrawTurtle ();
 	SCR_DrawPause ();
@@ -1038,3 +983,4 @@ void CL_Screen_NewMap(void)
 {
 	SHOWLMP_clear();
 }
+

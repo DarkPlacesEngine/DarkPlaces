@@ -414,4 +414,3 @@ int UDP_SetSocketPort (struct qsockaddr *addr, int port)
 	return 0;
 }
 
-//=============================================================================

@@ -151,9 +151,6 @@ static model_t *Mod_LoadModel (model_t *mod, qboolean crash, qboolean checkdisk,
 		crc = CRC_Block(buf, com_filesize);
 	}
 
-	// make sure nothing got trashed
-	//Mem_CheckSentinelsGlobal();
-
 	// allocate a new model
 	loadmodel = mod;
 
@@ -178,9 +175,6 @@ static model_t *Mod_LoadModel (model_t *mod, qboolean crash, qboolean checkdisk,
 	else                                  Mod_LoadBrushModel  (mod, buf);
 
 	Mem_Free(buf);
-
-	// make sure nothing got trashed
-	//Mem_CheckSentinelsGlobal();
 
 	return mod;
 }
@@ -208,15 +202,6 @@ Mod_ClearAll
 */
 void Mod_ClearAll (void)
 {
-	/*
-	int		i;
-	model_t	*mod;
-
-	for (i = 0, mod = mod_known;i < MAX_MOD_KNOWN;i++, mod++)
-		if (mod->name[0])
-			if (mod->usesheap)
-				Mod_FreeModel(mod);
-	*/
 }
 
 void Mod_ClearUsed(void)
@@ -311,23 +296,6 @@ model_t *Mod_ForName (char *name, qboolean crash, qboolean checkdisk, qboolean i
 
 qbyte *mod_base;
 
-/*
-=================
-RadiusFromBounds
-=================
-*/
-/*
-float RadiusFromBounds (vec3_t mins, vec3_t maxs)
-{
-	int		i;
-	vec3_t	corner;
-
-	for (i=0 ; i<3 ; i++)
-		corner[i] = fabs(mins[i]) > fabs(maxs[i]) ? fabs(mins[i]) : fabs(maxs[i]);
-
-	return Length (corner);
-}
-*/
 
 //=============================================================================
 

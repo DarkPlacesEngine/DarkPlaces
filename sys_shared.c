@@ -100,11 +100,6 @@ void Sys_Printf (char *fmt, ...)
 #else
 	printf("%s", final);
 #endif
-//	for (p = (unsigned char *) final; *p; p++)
-//		putc (qfont_table[*p], stdout);
-//#ifndef WIN32
-//	fflush (stdout);
-//#endif
 }
 
 char engineversion[40];
@@ -128,3 +123,4 @@ void Sys_Shared_EarlyInit(void)
 void Sys_Shared_LateInit(void)
 {
 }
+

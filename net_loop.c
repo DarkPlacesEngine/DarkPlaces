@@ -244,3 +244,4 @@ void Loop_Close (qsocket_t *sock)
 	else
 		loop_server = NULL;
 }
+

@@ -138,7 +138,6 @@ void CL_ParseTEnt (void)
 		Mod_FindNonSolidLocation(pos, cl.worldmodel);
 		// LordHavoc: changed to spark shower
 		CL_SparkShower(pos, vec3_origin, 15);
-		//CL_RunParticleEffect (pos, vec3_origin, 0, 10);
 		if ( rand() % 5 )
 			S_StartSound (-1, 0, cl_sfx_tink1, pos, 1, 1);
 		else
@@ -157,7 +156,6 @@ void CL_ParseTEnt (void)
 		Mod_FindNonSolidLocation(pos, cl.worldmodel);
 		// LordHavoc: changed to spark shower
 		CL_SparkShower(pos, vec3_origin, 15);
-		//CL_RunParticleEffect (pos, vec3_origin, 0, 10);
 		CL_AllocDlight (NULL, pos, 200, 0.1f, 0.1f, 1.0f, 1000, 0.2);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		if ( rand() % 5 )
@@ -178,7 +176,6 @@ void CL_ParseTEnt (void)
 		Mod_FindNonSolidLocation(pos, cl.worldmodel);
 		// LordHavoc: changed to dust shower
 		CL_SparkShower(pos, vec3_origin, 30);
-		//CL_RunParticleEffect (pos, vec3_origin, 0, 20);
 		if ( rand() % 5 )
 			S_StartSound (-1, 0, cl_sfx_tink1, pos, 1, 1);
 		else
@@ -197,7 +194,6 @@ void CL_ParseTEnt (void)
 		Mod_FindNonSolidLocation(pos, cl.worldmodel);
 		// LordHavoc: changed to dust shower
 		CL_SparkShower(pos, vec3_origin, 30);
-		//CL_RunParticleEffect (pos, vec3_origin, 0, 20);
 		CL_AllocDlight (NULL, pos, 200, 0.1f, 0.1f, 1.0f, 1000, 0.2);
 		if ( rand() % 5 )
 			S_StartSound (-1, 0, cl_sfx_tink1, pos, 1, 1);
@@ -282,7 +278,6 @@ void CL_ParseTEnt (void)
 		Mod_FindNonSolidLocation(pos, cl.worldmodel);
 		// LordHavoc: changed to dust shower
 		CL_SparkShower(pos, vec3_origin, 15);
-		//CL_RunParticleEffect (pos, vec3_origin, 0, 20);
 		break;
 
 	case TE_GUNSHOTQUAD:			// quad bullet hitting wall
@@ -296,7 +291,6 @@ void CL_ParseTEnt (void)
 		MSG_ReadVector(pos);
 		Mod_FindNonSolidLocation(pos, cl.worldmodel);
 		CL_ParticleExplosion (pos, false);
-//		CL_BlastParticles (pos, 120, 120);
 		// LordHavoc: boosted color from 1.0, 0.8, 0.4 to 1.25, 1.0, 0.5
 		CL_AllocDlight (NULL, pos, 350, 1.25f, 1.0f, 0.5f, 700, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
@@ -306,26 +300,14 @@ void CL_ParseTEnt (void)
 		MSG_ReadVector(pos);
 		Mod_FindNonSolidLocation(pos, cl.worldmodel);
 		CL_ParticleExplosion (pos, false);
-//		CL_BlastParticles (pos, 120, 480);
 		CL_AllocDlight (NULL, pos, 600, 0.5f, 0.4f, 1.0f, 1200, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
-
-		/*
-	case TE_SMOKEEXPLOSION:			// rocket explosion with a cloud of smoke
-		MSG_ReadVector(pos);
-		Mod_FindNonSolidLocation(pos, cl.worldmodel);
-		CL_ParticleExplosion (pos, true);
-		CL_AllocDlight (NULL, pos, 350, 1.0f, 0.8f, 0.4f, 700, 0.5);
-		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
-		break;
-		*/
 
 	case TE_EXPLOSION3:				// Nehahra movie colored lighting explosion
 		MSG_ReadVector(pos);
 		Mod_FindNonSolidLocation(pos, cl.worldmodel);
 		CL_ParticleExplosion (pos, false);
-//		CL_BlastParticles (pos, 120, 120);
 		CL_AllocDlight (NULL, pos, 350, MSG_ReadCoord(), MSG_ReadCoord(), MSG_ReadCoord(), 700, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
@@ -334,7 +316,6 @@ void CL_ParseTEnt (void)
 		MSG_ReadVector(pos);
 		Mod_FindNonSolidLocation(pos, cl.worldmodel);
 		CL_ParticleExplosion (pos, false);
-//		CL_BlastParticles (pos, 120, 120);
 		color[0] = MSG_ReadByte() * (1.0 / 255.0);
 		color[1] = MSG_ReadByte() * (1.0 / 255.0);
 		color[2] = MSG_ReadByte() * (1.0 / 255.0);
@@ -346,7 +327,6 @@ void CL_ParseTEnt (void)
 		MSG_ReadVector(pos);
 		Mod_FindNonSolidLocation(pos, cl.worldmodel);
 		CL_BlobExplosion (pos);
-//		CL_BlastParticles (pos, 120, 120);
 
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		CL_AllocDlight (NULL, pos, 600, 0.8f, 0.4f, 1.0f, 1200, 0.5);
@@ -428,7 +408,6 @@ void CL_ParseTEnt (void)
 		colorStart = MSG_ReadByte ();
 		colorLength = MSG_ReadByte ();
 		CL_ParticleExplosion2 (pos, colorStart, colorLength);
-//		CL_BlastParticles (pos, 80, 80);
 		tempcolor = (qbyte *)&d_8to24table[(rand()%colorLength) + colorStart];
 		CL_AllocDlight (NULL, pos, 350, tempcolor[0] * (1.0f / 255.0f), tempcolor[1] * (1.0f / 255.0f), tempcolor[2] * (1.0f / 255.0f), 700, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
@@ -534,5 +513,4 @@ void CL_UpdateTEnts (void)
 	}
 
 }
-
 

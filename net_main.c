@@ -22,8 +22,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 
 qsocket_t *net_activeSockets = NULL;
-//qsocket_t *net_freeSockets = NULL;
-//int net_numsockets = 0;
 mempool_t *net_mempool;
 
 qboolean	ipxAvailable = false;
@@ -90,16 +88,9 @@ qsocket_t *NET_NewQSocket (void)
 {
 	qsocket_t	*sock;
 
-//	if (net_freeSockets == NULL)
-//		return NULL;
-
 	if (net_activeconnections >= svs.maxclients)
 		return NULL;
 
-	// get one from free list
-//	sock = net_freeSockets;
-//	net_freeSockets = sock->next;
-	// LordHavoc: sockets are dynamically allocated now
 	sock = Mem_Alloc(net_mempool, sizeof(qsocket_t));
 
 	// add it to active list
@@ -146,11 +137,6 @@ void NET_FreeQSocket(qsocket_t *sock)
 			Sys_Error ("NET_FreeQSocket: not active\n");
 	}
 
-	// add it to free list
-//	sock->next = net_freeSockets;
-//	net_freeSockets = sock;
-//	sock->disconnected = true;
-	// LordHavoc: sockets are dynamically allocated now
 	Mem_Free(sock);
 }
 
@@ -206,13 +192,6 @@ static void MaxPlayers_f (void)
 		Cbuf_AddText ("listen 1\n");
 
 	svs.maxclients = n;
-	// LordHavoc: resetting deathmatch and coop was silly
-	/*
-	if (n == 1)
-		Cvar_Set ("deathmatch", "0");
-	else
-		Cvar_Set ("deathmatch", "1");
-	*/
 }
 
 
@@ -700,8 +679,6 @@ void NET_Init (void)
 {
 	int			i;
 	int			controlSocket;
-	// LordHavoc: sockets are dynamically allocated now
-	//qsocket_t	*s;
 
 	i = COM_CheckParm ("-port");
 	if (!i)
@@ -720,25 +697,10 @@ void NET_Init (void)
 
 	if (COM_CheckParm("-listen") || cls.state == ca_dedicated || gamemode == GAME_BLOODBATH)
 		listening = true;
-	// LordHavoc: sockets are dynamically allocated now
-	//net_numsockets = svs.maxclientslimit;
-	//if (cls.state != ca_dedicated)
-	//	net_numsockets++;
 
 	SetNetTime();
 
 	net_mempool = Mem_AllocPool("qsocket");
-	// LordHavoc: sockets are dynamically allocated now
-	/*
-	s = Mem_Alloc(net_mempool, net_numsockets * sizeof(qsocket_t));
-	for (i = 0; i < net_numsockets; i++)
-	{
-		s->next = net_freeSockets;
-		net_freeSockets = s;
-		s->disconnected = true;
-		s++;
-	}
-	*/
 
 	// allocate space for network message buffer
 	SZ_Alloc (&net_message, NET_MAXMESSAGE, "net_message");
@@ -843,3 +805,4 @@ void SchedulePollProcedure(PollProcedure *proc, double timeOffset)
 	proc->next = pp;
 	prev->next = proc;
 }
+

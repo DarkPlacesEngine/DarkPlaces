@@ -53,7 +53,6 @@ viddef_t	vid;				// global video state
 
 static qboolean		mouse_avail = true;
 static qboolean		mouse_active = false, usingmouse = false;
-// static qboolean		dga_active;
 static float	mouse_x, mouse_y;
 static int p_mouse_x, p_mouse_y;
 
@@ -67,7 +66,6 @@ static int win_x, win_y;
 static int scr_width, scr_height;
 
 static XF86VidModeModeInfo **vidmodes;
-//static int default_dotclock_vidmode;
 static int num_vidmodes;
 static qboolean vidmode_active = false;
 
@@ -83,9 +81,8 @@ const char *gl_extensions;
 
 /*-----------------------------------------------------------------------*/
 static int
-XLateKey(XKeyEvent *ev/*, qboolean modified*/)
+XLateKey(XKeyEvent *ev)
 {
-//	char tmp[2];
 	int key = 0;
 	KeySym keysym;
 
@@ -179,7 +176,7 @@ XLateKey(XKeyEvent *ev/*, qboolean modified*/)
 			{
 				/* ASCII keys */
 				key = keysym;
-				if (/*!modified && */((key >= 'A') && (key <= 'Z')))
+				if ((key >= 'A') && (key <= 'Z'))
 					key = key + ('a' - 'A');
 			}
 			break;
@@ -196,7 +193,7 @@ static Cursor CreateNullCursor(Display *display, Window root)
 	XColor dummycolour;
 	Cursor cursor;
 
-	cursormask = XCreatePixmap(display, root, 1, 1, 1/*depth*/);
+	cursormask = XCreatePixmap(display, root, 1, 1, 1);
 	xgc.function = GXclear;
 	gc =  XCreateGC(display, cursormask, GCFunction, &xgc);
 	XFillRectangle(display, cursormask, gc, 0, 0, 1, 1);
@@ -247,8 +244,6 @@ static void install_grabs(void)
 
 	mouse_active = true;
 	mouse_x = mouse_y = 0;
-
-//	XSync(vidx11_display, True);
 }
 
 static void uninstall_grabs(void)
@@ -271,7 +266,6 @@ static void uninstall_grabs(void)
 static void HandleEvents(void)
 {
 	XEvent event;
-//	KeySym ks;
 	qboolean dowarp = false;
 
 	if (!vidx11_display)
@@ -298,30 +292,14 @@ static void HandleEvents(void)
 				}
 				else
 				{
-					/*
-					if (!p_mouse_x && !p_mouse_y)
+					
+					if (!event.xmotion.send_event)
 					{
-						Con_Printf("event->xmotion.x: %d\n", event.xmotion.x);
-						Con_Printf("event->xmotion.y: %d\n", event.xmotion.y);
+						mouse_x += event.xmotion.x - p_mouse_x;
+						mouse_y += event.xmotion.y - p_mouse_y;
+						if (abs(scr_width/2 - event.xmotion.x) > scr_width / 4 || abs(scr_height/2 - event.xmotion.y) > scr_height / 4)
+							dowarp = true;
 					}
-					*/
-					//if (usingmouse)
-					{
-						if (!event.xmotion.send_event)
-						{
-							mouse_x += event.xmotion.x - p_mouse_x;
-							mouse_y += event.xmotion.y - p_mouse_y;
-							if (abs(scr_width/2 - event.xmotion.x) > scr_width / 4 || abs(scr_height/2 - event.xmotion.y) > scr_height / 4)
-								dowarp = true;
-						}
-					}
-					/*
-					else
-					{
-						mouse_x += (event.xmotion.x - p_mouse_x);
-						mouse_y += (event.xmotion.y - p_mouse_y);
-					}
-					*/
 					p_mouse_x = event.xmotion.x;
 					p_mouse_y = event.xmotion.y;
 				}
@@ -437,10 +415,6 @@ void VID_Shutdown(void)
 
 		if (vidmode_active)
 			XF86VidModeSwitchToMode(vidx11_display, scrnum, vidmodes[0]);
-/* Disabled, causes a segfault during shutdown.
-		if (ctx)
-			glXDestroyContext(vidx11_display, ctx);
-*/
 		if (win)
 			XDestroyWindow(vidx11_display, win);
 		XCloseDisplay(vidx11_display);
@@ -620,7 +594,6 @@ void VID_Init(void)
 		GLX_DEPTH_SIZE, 1,
 		None
 	};
-//	char	gldir[MAX_OSPATH];
 	int width = 640, height = 480;
 	XSetWindowAttributes attr;
 	unsigned long mask;
@@ -796,9 +769,6 @@ void VID_Init(void)
 	GL_Init();
 
 	Con_SafePrintf ("Video mode %dx%d initialized.\n", width, height);
-
-	// force a surface cache flush
-//	vid.recalc_refdef = 1;
 }
 
 void Sys_SendKeyEvents(void)
@@ -832,5 +802,4 @@ void IN_Move (usercmd_t *cmd)
 	mouse_x = 0;
 	mouse_y = 0;
 }
-
 

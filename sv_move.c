@@ -182,7 +182,6 @@ qboolean SV_movestep (edict_t *ent, vec3_t move, qboolean relink)
 			if (relink)
 				SV_LinkEdict (ent, true);
 			ent->v.flags = (int)ent->v.flags & ~FL_ONGROUND;
-//	Con_Printf ("fall down\n"); 
 			return true;
 		}
 
@@ -206,10 +205,8 @@ qboolean SV_movestep (edict_t *ent, vec3_t move, qboolean relink)
 	}
 
 	if ( (int)ent->v.flags & FL_PARTIALGROUND )
-	{
-//		Con_Printf ("back on ground\n"); 
 		ent->v.flags = (int)ent->v.flags & ~FL_PARTIALGROUND;
-	}
+
 	ent->v.groundentity = EDICT_TO_PROG(trace.ent);
 
 // the move is ok
@@ -268,8 +265,6 @@ SV_FixCheckBottom
 */
 void SV_FixCheckBottom (edict_t *ent)
 {
-//	Con_Printf ("SV_FixCheckBottom\n");
-	
 	ent->v.flags = (int)ent->v.flags | FL_PARTIALGROUND;
 }
 

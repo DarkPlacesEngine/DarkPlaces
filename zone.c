@@ -184,7 +184,6 @@ void _Mem_Free(void *data, char *filename, int fileline)
 
 mempool_t *_Mem_AllocPool(char *name, char *filename, int fileline)
 {
-//	int i;
 	mempool_t *pool;
 	pool = malloc(sizeof(mempool_t));
 	if (pool == NULL)
@@ -194,10 +193,6 @@ mempool_t *_Mem_AllocPool(char *name, char *filename, int fileline)
 	pool->totalsize = 0;
 	pool->realsize = sizeof(mempool_t);
 	strcpy(pool->name, name);
-//	for (i = 0;i < (POOLNAMESIZE - 1) && name[i];i++)
-//		pool->name[i] = name[i];
-//	for (i = 0;i < POOLNAMESIZE;i++)
-//		pool->name[i] = 0;
 	pool->next = poolchain;
 	poolchain = pool;
 	return pool;

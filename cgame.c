@@ -27,8 +27,6 @@ typedef struct localentity_s
 	float airfrictionscale;
 	float gravityscale;
 	void (*framethink)(struct localentity_s *e);
-	//int solid;
-	//void (*touch)(struct localentity_s *self, struct localentity_s *other);
 	void (*touchnetwork)(struct localentity_s *self);
 	cgdrawentity_t draw;
 }

@@ -16,10 +16,6 @@ typedef struct clipsurf_s
 	// updated each time the surface is added to the stack,
 	// for quicker comparisons.
 	float wcurrent;
-	// this is a linked list of all edges belonging to this surface,
-	// used to remove them if this is a non-solid surface that is
-	// marked visible (it can not hide anything, so it is useless)
-//	struct clipedge_s *edgechain;
 }
 clipsurf_t;
 
@@ -60,9 +56,6 @@ clippixel_t *clipbuffer;
 #endif
 
 float r_clip_viewmatrix[3][3], r_clip_viewmulx, r_clip_viewmuly, r_clip_viewcenterx, r_clip_viewcentery;
-// REMOVELATER
-//float xscale, yscale, xscaleinv, yscaleinv;
-//float r_clip_nearclipdist, r_clip_nearclipdist2;
 tinyplane_t r_clip_viewplane[5];
 
 mempool_t *r_clip_mempool;
@@ -82,20 +75,12 @@ void R_Clip_MakeViewMatrix(void)
 	VectorCopy (vright, r_clip_viewmatrix[0]);
 	VectorNegate (vup, r_clip_viewmatrix[1]);
 	VectorCopy (vpn, r_clip_viewmatrix[2]);
-//	r_clip_nearclipdist = DotProduct(r_origin, vpn) + 4.0f;
-//	r_clip_nearclipdist2 = r_clip_nearclipdist - 8.0f;
 	VectorCopy (vpn, r_clip_viewplane[0].normal);
 	r_clip_viewplane[0].dist = DotProduct(r_origin, vpn);
 	memcpy(&r_clip_viewplane[1], &frustum[0], sizeof(tinyplane_t));
 	memcpy(&r_clip_viewplane[2], &frustum[1], sizeof(tinyplane_t));
 	memcpy(&r_clip_viewplane[3], &frustum[2], sizeof(tinyplane_t));
 	memcpy(&r_clip_viewplane[4], &frustum[3], sizeof(tinyplane_t));
-// REMOVELATER
-//	maxscreenscaleinv = (1.0f / max(clipwidth, clipheight)) * horizontalfieldofview * 0.5f;
-//	xscale = clipwidth / horizontalfieldofview;
-//	xscaleinv = 1.0 / xscale;
-//	yscale = xscale * pixelaspect;
-//	yscaleinv = 1.0 / yscale;
 }
 
 void R_Clip_StartFrame(void)
@@ -221,26 +206,6 @@ int R_Clip_TriangleToPlane(vec3_t point1, vec3_t point2, vec3_t point3, tinyplan
 		return false;
 }
 
-/*
-int R_Clip_TriangleToDoublePlane(double *point1, double *point2, double *point3, tinydoubleplane_t *p)
-{
-	double y, number;
-	double v1[3], v2[3];
-	VectorSubtract(point1, point2, v1);
-	VectorSubtract(point3, point2, v2);
-	CrossProduct(v1, v2, p->normal);
-	number = DotProduct(p->normal, p->normal);
-	if (number >= 0.1)
-	{
-		y = 1.0 / sqrt(number);
-		VectorScale(p->normal, y, p->normal);
-		p->dist = DotProduct(point1, p->normal);
-		return true;
-	}
-	else
-		return false;
-}
-*/
 
 int R_Clip_ClipPolygonToPlane(float *in, float *out, int inpoints, int stride, tinyplane_t *plane)
 {
@@ -301,13 +266,8 @@ void R_Clip_AddPolygon (vec_t *points, int numverts, int stride, int solid, void
 	float deltax, deltay, vx, vy, vz, fx;
 	int i, j, k, nextvert, temp, topy, bottomy, height, addededges;
 	clipedge_t *pedge;
-//	tinydoubleplane_t plane;
 	tinyplane_t localplane;
-//	tinyplane_t testplane;
 	float distinv;
-
-//	if (!solid)
-//		return;
 
 	if (polyplane == NULL)
 	{
@@ -328,29 +288,6 @@ void R_Clip_AddPolygon (vec_t *points, int numverts, int stride, int solid, void
 		if (DotProduct(r_origin, polyplane->normal) < (polyplane->dist + 0.5f))
 			return;
 	}
-#if 0 // debugging (validates planes passed in)
-	else
-	{
-		// calculate the plane for the polygon
-		if (!R_Clip_TriangleToPlane((float *) points, (float *) ((qbyte *)points + stride), (float *) ((qbyte *)points + 2 * stride), &localplane))
-		{
-			for (i = 0;i < numverts;i++)
-				for (j = i + 1;j < numverts;j++)
-					for (k = j + 1;k < numverts;k++)
-						if (R_Clip_TriangleToPlane((float *) ((qbyte *)points + i * stride), (float *) ((qbyte *)points + j * stride), (float *) ((qbyte *)points + k * stride), &localplane))
-							goto valid4;
-			return; // gave up
-			valid4:;
-		}
-
-//		if ((DotProduct(r_origin, polyplane->normal) < (polyplane->dist + 0.5f)) != (DotProduct(r_origin, localplane.normal) < (localplane.dist + 0.5f)))
-		if (DotProduct(polyplane->normal, localplane.normal) < 0.9f)
-		{
-			Con_Printf("*\n");
-			return;
-		}
-	}
-#endif
 
 	// for adaptive limits
 	needededges += numverts;
@@ -375,7 +312,6 @@ void R_Clip_AddPolygon (vec_t *points, int numverts, int stride, int solid, void
 	if (pavailedge + numverts > clipedgesend)
 		return;
 
-#if 1
 	for (i = 0;i < numverts;i++)
 	{
 		vx = tempverts2[i][0] - r_origin[0];
@@ -386,115 +322,25 @@ void R_Clip_AddPolygon (vec_t *points, int numverts, int stride, int solid, void
 		screenverts[i][1] = (r_clip_viewmatrix[1][0] * vx + r_clip_viewmatrix[1][1] * vy + r_clip_viewmatrix[1][2] * vz) * r_clip_viewmuly * screenverts[i][2] + r_clip_viewcentery;
 	}
 
-	/*
-	if (polyplane != NULL)
-	{
-	*/
-	/*
-		distinv = 1.0f / (polyplane->dist - DotProduct(r_origin, polyplane->normal));
-		pavailsurf->wstepx = DotProduct(r_clip_viewmatrix[0], polyplane->normal) * xscaleinv * distinv;
-		pavailsurf->wstepy = DotProduct(r_clip_viewmatrix[1], polyplane->normal) * yscaleinv * distinv;
-		pavailsurf->w00 = DotProduct(r_clip_viewmatrix[2], polyplane->normal) * distinv - r_clip_viewcenterx * pavailsurf->wstepx - r_clip_viewcentery * pavailsurf->wstepy;
-	*/
-	/*
-	}
-	else
-	{
-	*/
-		// calculate the plane for the polygon
-		if (!R_Clip_TriangleToPlane(screenverts[0], screenverts[1], screenverts[2], &localplane))
-		{
-			for (i = 0;i < numverts;i++)
-				for (j = i + 1;j < numverts;j++)
-					for (k = j + 1;k < numverts;k++)
-						if (R_Clip_TriangleToPlane(screenverts[i], screenverts[j], screenverts[k], &localplane))
-							goto valid;
-			return; // gave up
-			valid:;
-		}
-
-		// Set up the 1/z gradients from the polygon, calculating the
-		// base value at screen coordinate 0,0 so we can use screen
-		// coordinates directly when calculating 1/z from the gradients
-		distinv = 1.0f / localplane.normal[2];
-		pavailsurf->wstepx = -(localplane.normal[0] * distinv);
-		pavailsurf->wstepy = -(localplane.normal[1] * distinv);
-		pavailsurf->w00 = localplane.dist * distinv;
-	/*
-	}
-	*/
-	// REMOVELATER
-	/*
-	prevdist = z1 * plane.normal[2] - plane.dist;
-	dist = z2 * plane.normal[2] - plane.dist;
-	d = prevdist / (prevdist - dist);
-	zc = z1 + d * (z2 - z1);
-
-	prevdist = plane.normal[0] + z1 * plane.normal[2] - plane.dist;
-	dist = plane.normal[0] + z2 * plane.normal[2] - plane.dist;
-	d = prevdist / (prevdist - dist);
-	zx = (z1 + d * (z2 - z1)) - zc;
-
-	prevdist = plane.normal[1] + z1 * plane.normal[2] - plane.dist;
-	dist = plane.normal[1] + z2 * plane.normal[2] - plane.dist;
-	d = prevdist / (prevdist - dist);
-	zy = (z1 + d * (z2 - z1)) - zc;
-	*/
-
-	/*
-	zc = (-plane.dist) / ((-plane.dist) - (plane.normal[2] - plane.dist));
-	zx = ((plane.normal[0] - plane.dist) / ((plane.normal[0] - plane.dist) - (plane.normal[0] + plane.normal[2] - plane.dist))) - zc;
-	zy = ((plane.normal[1] - plane.dist) / ((plane.normal[1] - plane.dist) - (plane.normal[1] + plane.normal[2] - plane.dist))) - zc;
-	*/
-
-//	zc = (plane.dist / plane.normal[2]);
-//	zx = -(plane.normal[0] / plane.normal[2]);
-//	zy = -(plane.normal[1] / plane.normal[2]);
-//	zy = ((plane.normal[1] - plane.dist) / (-plane.normal[2])) + ((plane.dist) / (-plane.normal[2]));
-#else // REMOVELATER
-	for (i = 0;i < numverts;i++)
-	{
-		vx = tempverts2[i][0] - r_origin[0];
-		vy = tempverts2[i][1] - r_origin[1];
-		vz = tempverts2[i][2] - r_origin[2];
-		screenverts[i][0] = r_clip_viewmatrix[0][0] * vx + r_clip_viewmatrix[0][1] * vy + r_clip_viewmatrix[0][2] * vz;
-		screenverts[i][1] = r_clip_viewmatrix[1][0] * vx + r_clip_viewmatrix[1][1] * vy + r_clip_viewmatrix[1][2] * vz;
-		screenverts[i][2] = r_clip_viewmatrix[2][0] * vx + r_clip_viewmatrix[2][1] * vy + r_clip_viewmatrix[2][2] * vz;
-	}
-
-	// REMOVELATER
 	// calculate the plane for the polygon
-	for (i = 0;i < numverts;i++)
-		for (j = i + 1;j < numverts;j++)
-			for (k = j + 1;k < numverts;k++)
-				if (R_Clip_TriangleToDoublePlane(screenverts[i], screenverts[j], screenverts[k], &plane))
-					goto valid2;
-	return; // gave up
-valid2:;
-
-	distinv = 1.0f / plane.dist;
-	pavailsurf->d_zistepx = plane.normal[0] * xscaleinv * distinv;
-	pavailsurf->d_zistepy = -plane.normal[1] * yscaleinv * distinv;
-	pavailsurf->d_ziorigin = plane.normal[2] * distinv - r_clip_viewcenterx * pavailsurf->wstepx - r_clip_viewcentery * pavailsurf->wstepy;
-
-	for (i = 0;i < numverts;i++)
+	if (!R_Clip_TriangleToPlane(screenverts[0], screenverts[1], screenverts[2], &localplane))
 	{
-		screenverts[i][2] = 1.0f / (screenverts[i][2]);
-		screenverts[i][0] = screenverts[i][0] * r_clip_viewmulx * screenverts[i][2] + r_clip_viewcenterx;
-		screenverts[i][1] = screenverts[i][1] * r_clip_viewmuly * screenverts[i][2] + r_clip_viewcentery;
-		// REMOVELATER
-//		if (screenverts[i][0] < -0.5)
-//			screenverts[i][0] = -0.5;
-//		if (screenverts[i][0] > (clipwidth - 0.5))
-//			screenverts[i][0] = clipwidth - 0.5;
-//		if (screenverts[i][1] < -0.5)
-//			screenverts[i][1] = -0.5;
-//		if (screenverts[i][1] > (clipheight - 0.5))
-//			screenverts[i][1] = clipheight - 0.5;
-//		if (screenverts[i][2] <= 0.0)
-//			Con_Printf("R_Clip_AddPolygon: vertex z <= 0!\n");
+		for (i = 0;i < numverts;i++)
+			for (j = i + 1;j < numverts;j++)
+				for (k = j + 1;k < numverts;k++)
+					if (R_Clip_TriangleToPlane(screenverts[i], screenverts[j], screenverts[k], &localplane))
+						goto valid;
+		return; // gave up
+valid:;
 	}
-#endif
+
+	// Set up the 1/z gradients from the polygon, calculating the
+	// base value at screen coordinate 0,0 so we can use screen
+	// coordinates directly when calculating 1/z from the gradients
+	distinv = 1.0f / localplane.normal[2];
+	pavailsurf->wstepx = -(localplane.normal[0] * distinv);
+	pavailsurf->wstepy = -(localplane.normal[1] * distinv);
+	pavailsurf->w00 = localplane.dist * distinv;
 
 	addededges = false;
 
@@ -586,9 +432,7 @@ valid2:;
 	pavailsurf++;
 }
 
-/////////////////////////////////////////////////////////////////////
 // Scan all the edges in the global edge table into spans.
-/////////////////////////////////////////////////////////////////////
 void ScanEdges (void)
 {
 	int y, rescan;
@@ -707,14 +551,10 @@ void ScanEdges (void)
 						fx = pedge->x;
 						// Calculate the surface's 1/z value at this pixel, and cache the y depth for quick compares later
 						w = (psurf->wcurrent = psurf->w00 + psurf->wstepy * fy) + psurf->wstepx * fx;
-//						if (w < 0)
-//							w = 0;
 
 						// See if that makes it a new top surface
 						psurf2 = surfstack.next;
 						w2 = psurf2->wcurrent + psurf2->wstepx * fx;
-//						if (w2 < 0 && psurf2 != &surfstack)
-//							w2 = 0;
 
 						if (w >= w2)
 						{
@@ -747,8 +587,6 @@ void ScanEdges (void)
 							{
 								psurf2 = psurf2->next;
 								w2 = psurf2->wcurrent + psurf2->wstepx * fx;
-//								if (w2 < 0 && psurf2 != &surfstack)
-//									w2 = 0;
 							}
 							while (w < w2);
 
@@ -871,50 +709,6 @@ void ScanEdges (void)
 
 void R_Clip_DisplayBuffer(void)
 {
-	/*
-#if CLIPTEST
-	int i;
-	static int firstupload = true;
-	qbyte clipbuffertex[256*256], *b;
-	if (!r_render.integer)
-		return;
-	if (clipwidth > 256 || clipheight > 256)
-		return;
-	qglBlendFunc(GL_ONE, GL_ONE);
-	qglBindTexture(GL_TEXTURE_2D, 8000);
-	if (firstupload)
-	{
-		memset(clipbuffertex, 0, sizeof(clipbuffertex));
-		qglTexImage2D(GL_TEXTURE_2D, 0, 1, 256, 256, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, clipbuffertex);
-	}
-	qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	if (lighthalf)
-		qglColor4ub(128, 128, 128, 255);
-	else
-		qglColor4ub(255, 255, 255, 255);
-	firstupload = false;
-	b = clipbuffertex;
-	for (i = 0;i < clipwidth*clipheight;i++)
-	{
-		if (clipbuffer[i].w > 0)
-			*b++ = bound(0, (int) (clipbuffer[i].w * 4096.0f), 255);
-		else
-			*b++ = 0;
-	}
-	qglTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, clipwidth, clipheight, GL_LUMINANCE, GL_UNSIGNED_BYTE, clipbuffertex);
-	qglBegin (GL_QUADS);
-	qglTexCoord2f (0                 , 0                  );qglVertex2f (0           , 0            );
-	qglTexCoord2f (clipwidth / 256.0f, 0                  );qglVertex2f (vid.conwidth, 0            );
-	qglTexCoord2f (clipwidth / 256.0f, clipheight / 256.0f);qglVertex2f (vid.conwidth, vid.conheight);
-	qglTexCoord2f (0                 , clipheight / 256.0f);qglVertex2f (0           , vid.conheight);
-	qglEnd ();
-	qglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-//	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-//	qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-#endif
-	*/
 }
 
 float boxpoints[4*3];
@@ -1023,3 +817,4 @@ void R_Clip_AddBox(float *a, float *b, void (*callback)(void *nativedata, void *
 		callback, nativedata, nativedata2, &clipboxplane[5]
 	);
 }
+

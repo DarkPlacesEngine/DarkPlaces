@@ -44,7 +44,6 @@ void EntityFrame_AckFrame(entity_database_t *d, int frame)
 // (server) clears frame, to prepare for adding entities
 void EntityFrame_Clear(entity_frame_t *f, vec3_t eye)
 {
-	//memset(f, 0, sizeof(*f));
 	f->time = 0;
 	f->framenum = 0;
 	f->numentities = 0;
@@ -481,51 +480,6 @@ void EntityFrame_Read(entity_database_t *d)
 	EntityFrame_AddFrame(d, f);
 }
 
-/*
-// (client) reads (and interpolates) the eye location from the database,
-// given a current time
-int EntityFrame_FetchEye(entity_database_t *d, vec3_t eye, double time)
-{
-	float frac;
-	if (d->numframes == 0)
-		return false;
-//		Host_Error("EntityFrame_FetchEye: no frames\n");
-	if (d->numframes > 1 && d->frames[d->numframes - 2].time != d->frames[d->numframes - 1].time)
-	{
-		frac = (time - d->frames[d->numframes - 2].time) / (d->frames[d->numframes - 1].time - d->frames[d->numframes - 2].time);
-		frac = bound(0, frac, 1);
-		VectorSubtract(d->frames[d->numframes - 2].eye, d->frames[d->numframes - 1].eye, eye);
-		VectorMA(d->frames[d->numframes - 2].eye, frac, eye, eye);
-	}
-	else
-		VectorCopy(d->frames[0].eye, eye);
-	return true;
-}
-
-// (client) fetchs an entity from a frame, index is the index into the frame's entity list, returns false if index is out of bounds
-int EntityFrame_FetchEntityByIndex(entity_frame_t *f, entity_state_t *e, int index)
-{
-	if (index < 0 || index >= f->numentities)
-		return false;
-	memcpy(e, f->entitydata + index, sizeof(*e));
-	return true;
-}
-
-int EntityFrame_FetchEntityByNumber(entity_frame_t *f, entity_state_t *e, int number)
-{
-	int i;
-	for (i = 0;i < f->numentities;i++)
-	{
-		if (f->entitydata[i].number == number)
-		{
-			memcpy(e, f->entitydata + i, sizeof(*e));
-			return true;
-		}
-	}
-	ClearStateToDefault(e);
-	return false;
-}
-*/
 
 // (client) returns the frame number of the most recent frame recieved
 int EntityFrame_MostRecentlyRecievedFrameNum(entity_database_t *d)
@@ -535,3 +489,4 @@ int EntityFrame_MostRecentlyRecievedFrameNum(entity_database_t *d)
 	else
 		return -1;
 }
+

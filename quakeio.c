@@ -39,10 +39,6 @@
 # include <unistd.h>
 #endif
 
-//#ifdef _MSC_VER
-//# define _POSIX_
-//#endif
-
 #include <stdarg.h>
 #include <stdlib.h>
 #include <limits.h>
@@ -402,3 +398,4 @@ void QuakeIO_Init(void)
 {
 	quakeio_mempool = Mem_AllocPool("file management");
 }
+

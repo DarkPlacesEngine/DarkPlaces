@@ -153,7 +153,6 @@ void M_DrawBackground(void)
 	menu_height = 200;
 	menu_x = (vid.conwidth - menu_width) * 0.5;
 	menu_y = (vid.conheight - menu_height) * 0.5;
-	//DrawQ_Fill(menu_x, menu_y, menu_width, menu_height, 0, 0, 0, 0.5, 0);
 	DrawQ_Fill(0, 0, vid.conwidth, vid.conheight, 0, 0, 0, 0.5, 0);
 }
 
@@ -174,13 +173,6 @@ void M_DrawCharacter (float cx, float cy, int num)
 
 void M_Print (float cx, float cy, char *str)
 {
-	/*
-	while (*str)
-	{
-		M_DrawCharacter (cx, cy, (*str++)+128);
-		cx += 8;
-	}
-	*/
 	DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 1, 1, 1, 0);
 }
 
@@ -191,13 +183,6 @@ void M_PrintWhite (float cx, float cy, char *str)
 
 void M_ItemPrint (float cx, float cy, char *str, int unghosted)
 {
-	/*
-	while (*str)
-	{
-		M_DrawCharacter (cx, cy, (*str++)+128);
-		cx += 8;
-	}
-	*/
 	if (unghosted)
 		DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 1, 1, 1, 0);
 	else
@@ -325,50 +310,6 @@ void M_ToggleMenu_f (void)
 	}
 }
 
-// LordHavoc: FIXME: finish this menu stuff
-#if 0
-#define MAXMENUITEMS 128
-
-typedef struct menuitem_s
-{
-	char *string; // may be text, or an image to use, or a cvar name, depending on the functions used
-	char *description;
-	char *command; // used by command items mainly (when used, this command is executed)
-	cvar_t *cvar; // used for cvar items (sliders, number boxes), value is retrieved from the cvar itself
-	int selectable; // purely decorative if this is false
-	int selected; // true if this menu item is currently selected, used by funcs so they don't need to know anything but fields in the menuitem
-	float selecttime; // the time that this menu item was activated (copied from realtime), used for animating selection flashs and such
-	float color[4]; // current color for the item (may be different than base color, due to selection flash effects)
-	float basecolor[4]; // the base color
-	float x, y, width, height; // width and height are used for mouse selection
-	void(*drawfunc)(struct menuitem_s *item);
-	void(*activefunc)(struct menuitem_s *item);
-//	void(*selectfunc)(struct menuitem_s *item);
-//	void(*deselectfunc)(struct menuitem_s *item);
-	void(*usefunc)(struct menuitem_s *item);
-}
-menuitem_t;
-
-menuitem_t menuitem[MAXMENUITEMS];
-int menuitems;
-
-void menuitem_text_drawfunc(struct menuitem_s *item)
-{
-	// FIXME: handle color flashs and such when selected
-	M_Print (item->x, item->y, item->string);
-}
-
-void menuitem_image_drawfunc(struct menuitem_s *item)
-{
-	// FIXME: handle color flashs and such when selected
-	M_DrawPic (item->x, item->y, item->string);
-}
-
-void menuitem_command_usefunc(struct menuitem_s *item)
-{
-	Cbuf_AddText (item->command);
-}
-#endif
 
 int demo_cursor;
 void M_Demo_Draw (void)
@@ -427,7 +368,6 @@ void M_Demo_Key (int k)
 /* MAIN MENU */
 
 int	m_main_cursor;
-//#define	MAIN_ITEMS	5
 
 int MAIN_ITEMS = 4; // Nehahra: Menu Disable
 
@@ -1385,70 +1325,12 @@ void M_DrawSlider (int x, int y, float range)
 
 void M_DrawCheckbox (int x, int y, int on)
 {
-#if 0
-	if (on)
-		M_DrawCharacter (x, y, 131);
-	else
-		M_DrawCharacter (x, y, 129);
-#endif
 	if (on)
 		M_Print (x, y, "on");
 	else
 		M_Print (x, y, "off");
 }
 
-/*
-int m_2dres[] =
-{
-	320, 200,
-	320, 240,
-	400, 300,
-	512, 384,
-	640, 480,
-	800, 600,
-	1024, 768,
-	1280, 960,
-	1600, 1200,
-	2048, 1536
-};
-
-int M_Num2DResolutions(void)
-{
-	return sizeof(m_2dres) / sizeof(int[2]);
-};
-
-float M_Classify2DResolution(void)
-{
-	int i, num, *res, best, bestdist, diff[3];
-	num = M_Num2DResolutions();
-	best = -1;
-	bestdist = 1000000000;
-	for (i = 0;i < num;i++)
-	{
-		res = m_2dres + i * 2;
-		diff[0] = res[0] - vid.conwidth;
-		diff[1] = res[1] - vid.conheight;
-		diff[2] = 0;
-		dist = DotProduct(diff, diff);
-		if (bestdist > dist)
-		{
-			bestdist = dist;
-			best = i;
-		}
-	}
-	return i;
-}
-
-void M_Adjust2DResolution(int dir)
-{
-	int i, num;
-	i = M_Classify2DResolution() + dir;
-	num = M_Num2DResolutions() - 1;
-	i = bound(0, i, num);
-	Cvar_SetValue("v_2dwidth", m_2dres[i*2]);
-	Cvar_SetValue("v_2dheight", m_2dres[i*2+1]);
-}
-*/
 
 void M_Options_Draw (void)
 {
@@ -1909,7 +1791,6 @@ int		msgNumber;
 int		m_quit_prevstate;
 qboolean	wasInMenus;
 
-//#ifndef	_WIN32
 char *quitMessage [] = 
 {
 /* .........1.........2.... */
@@ -1976,7 +1857,6 @@ char *quitMessage [] =
   "      constructive?     ",
   "                        ",
 };
-//#endif
 
 void M_Menu_Quit_f (void)
 {
@@ -2025,38 +1905,11 @@ void M_Quit_Key (int key)
 
 void M_Quit_Draw (void)
 {
-/*
-#ifdef _WIN32
-	M_DrawTextBox (0, 0, 38, 23);
-	M_PrintWhite (16, 12,  "  Quake version 1.09 by id Software\n\n");
-	M_PrintWhite (16, 28,  "Programming        Art \n");
-	M_Print (16, 36,  " John Carmack       Adrian Carmack\n");
-	M_Print (16, 44,  " Michael Abrash     Kevin Cloud\n");
-	M_Print (16, 52,  " John Cash          Paul Steed\n");
-	M_Print (16, 60,  " Dave 'Zoid' Kirsch\n");
-	M_PrintWhite (16, 68,  "Design             Biz\n");
-	M_Print (16, 76,  " John Romero        Jay Wilbur\n");
-	M_Print (16, 84,  " Sandy Petersen     Mike Wilson\n");
-	M_Print (16, 92,  " American McGee     Donna Jackson\n");
-	M_Print (16, 100,  " Tim Willits        Todd Hollenshead\n");
-	M_PrintWhite (16, 108, "Support            Projects\n");
-	M_Print (16, 116, " Barrett Alexander  Shawn Green\n");
-	M_PrintWhite (16, 124, "Sound Effects\n");
-	M_Print (16, 132, " Trent Reznor and Nine Inch Nails\n\n");
-	M_PrintWhite (16, 140, "Quake is a trademark of Id Software,\n");
-	M_PrintWhite (16, 148, "inc., (c)1996 Id Software, inc. All\n");
-	M_PrintWhite (16, 156, "rights reserved. NIN logo is a\n");
-	M_PrintWhite (16, 164, "registered trademark licensed to\n");
-	M_PrintWhite (16, 172, "Nothing Interactive, Inc. All rights\n");
-	M_PrintWhite (16, 180, "reserved. Press y to exit\n");
-#else
-*/
 	M_DrawTextBox (56, 76, 24, 4);
 	M_Print (64, 84,  quitMessage[msgNumber*4+0]);
 	M_Print (64, 92,  quitMessage[msgNumber*4+1]);
 	M_Print (64, 100, quitMessage[msgNumber*4+2]);
 	M_Print (64, 108, quitMessage[msgNumber*4+3]);
-//#endif
 }
 
 //=============================================================================
@@ -2672,12 +2525,6 @@ void M_GameOptions_Draw (void)
 			M_Print (x, 154, "  First, question your  ");
 			M_Print (x, 162, "   sanity, then email   ");
 			M_Print (x, 170, " havoc@gamevisions.com  ");
-			/*
-			M_Print (x, 146, "  More than 4 players   ");
-			M_Print (x, 154, " requires using command ");
-			M_Print (x, 162, "line parameters; please ");
-			M_Print (x, 170, "   see techinfo.txt.    ");
-			*/
 		}
 		else
 		{
@@ -3241,3 +3088,4 @@ void M_ConfigureNetSubsystem(void)
 	if (IPXConfig || TCPIPConfig)
 		net_hostport = lanConfig_port;
 }
+

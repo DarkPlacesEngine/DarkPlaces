@@ -60,8 +60,6 @@ mleaf_t *Mod_PointInLeaf (vec3_t p, model_t *model)
 	mnode_t		*node;
 
 	Mod_CheckLoaded(model);
-//	if (!model || !model->nodes)
-//		Sys_Error ("Mod_PointInLeaf: bad model");
 
 	// LordHavoc: modified to start at first clip node,
 	// in other words: first node of the (sub)model
@@ -86,32 +84,6 @@ void Mod_FindNonSolidLocation(vec3_t pos, model_t *mod)
 	pos[2]-=1;
 }
 
-/*
-mleaf_t *Mod_PointInLeaf (vec3_t p, model_t *model)
-{
-	mnode_t		*node;
-	float		d;
-	mplane_t	*plane;
-
-	if (!model || !model->nodes)
-		Sys_Error ("Mod_PointInLeaf: bad model");
-
-	node = model->nodes;
-	while (1)
-	{
-		if (node->contents < 0)
-			return (mleaf_t *)node;
-		plane = node->plane;
-		d = DotProduct (p,plane->normal) - plane->dist;
-		if (d > 0)
-			node = node->children[0];
-		else
-			node = node->children[1];
-	}
-
-	return NULL;	// never reached
-}
-*/
 
 /*
 ===================
@@ -127,18 +99,6 @@ static qbyte *Mod_DecompressVis (qbyte *in, model_t *model)
 
 	row = (model->numleafs+7)>>3;
 	out = decompressed;
-
-	/*
-	if (!in)
-	{	// no vis info, so make all visible
-		while (row)
-		{
-			*out++ = 0xff;
-			row--;
-		}
-		return decompressed;
-	}
-	*/
 
 	do
 	{
@@ -1039,14 +999,8 @@ void Mod_GenerateWarpMesh (msurface_t *surf)
 	memset(mesh->vertex, 0, mesh->numverts * sizeof(surfvertex_t));
 
 	for (i = 0;i < mesh->numtriangles;i++)
-	{
 		for (j = 0;j < 3;j++)
-		{
 			mesh->index[i*3+j] = subdivpolyindex[i][j];
-			//if (mesh->index[i] < 0 || mesh->index[i] >= mesh->numverts)
-			//	Host_Error("Mod_GenerateWarpMesh: invalid index generated\n");
-		}
-	}
 
 	for (i = 0, v = mesh->vertex;i < subdivpolyverts;i++, v++)
 	{
@@ -1063,7 +1017,6 @@ void Mod_GenerateVertexLitMesh (msurface_t *surf)
 	surfvertex_t	*out;
 	surfmesh_t		*mesh;
 
-	//surf->flags |= SURF_LIGHTMAP;
 	smax = surf->extents[0] >> 4;
 	tmax = surf->extents[1] >> 4;
 	surf->lightmaptexturestride = 0;
@@ -1130,8 +1083,6 @@ void Mod_GenerateLightmappedMesh (msurface_t *surf)
 		surf->lightmaptexturestride = R_CompatibleFragmentWidth((surf->extents[0]>>4)+1, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, 0);
 		surf->lightmaptexture = R_ProceduralTexture(loadmodel->texturepool, NULL, surf->lightmaptexturestride, (surf->extents[1]>>4)+1, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_FRAGMENT | TEXF_PRECACHE, NULL, NULL, 0);
 	}
-//	surf->lightmaptexture = R_LoadTexture(loadmodel->texturepool, va("lightmap%08x", lightmapnum), surf->lightmaptexturestride, (surf->extents[1]>>4)+1, NULL, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_FRAGMENT | TEXF_PRECACHE);
-//	surf->lightmaptexture = R_LoadTexture(loadmodel->texturepool, va("lightmap%08x", lightmapnum), surf->lightmaptexturestride, (surf->extents[1]>>4)+1, NULL, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_PRECACHE);
 	R_FragmentLocation(surf->lightmaptexture, NULL, NULL, &xbase, &ybase, &xscale, &yscale);
 	xscale = (xscale - xbase) * 16.0 / ((surf->extents[0] & ~15) + 16);
 	yscale = (yscale - ybase) * 16.0 / ((surf->extents[1] & ~15) + 16);
@@ -1352,13 +1303,6 @@ static void Mod_LoadFaces (lump_t *l)
 		else if (out->texinfo->texture->flags & SURF_DRAWTURB)
 		{
 			out->shader = &Cshader_water;
-			/*
-			for (i=0 ; i<2 ; i++)
-			{
-				out->extents[i] = 16384*1024;
-				out->texturemins[i] = -8192*1024;
-			}
-			*/
 			out->samples = NULL;
 			Mod_GenerateWarpMesh (out);
 		}
@@ -1534,15 +1478,7 @@ static void Mod_LoadLeafs (lump_t *l)
 		for (j=0 ; j<4 ; j++)
 			out->ambient_sound_level[j] = in->ambient_level[j];
 
-		// gl underwater warp
-		// LordHavoc: disabled underwater warping
-		/*
-		if (out->contents != CONTENTS_EMPTY)
-		{
-			for (j=0 ; j<out->nummarksurfaces ; j++)
-				out->firstmarksurface[j]->flags |= SURF_UNDERWATER;
-		}
-		*/
+		// FIXME: Insert caustics here
 	}
 }
 
@@ -1749,8 +1685,6 @@ static void Mod_LoadPlanes (lump_t *l)
 		out->normal[2] = LittleFloat (in->normal[2]);
 		out->dist = LittleFloat (in->dist);
 
-		// LordHavoc: recalculated by PlaneClassify, FIXME: validate type and report error if type does not match normal?
-//		out->type = LittleLong (in->type);
 		PlaneClassify(out);
 	}
 }
@@ -1928,9 +1862,6 @@ static winding_t *ClipWinding (winding_t *in, mplane_t *split, int keepon)
 	// free the original winding
 	FreeWinding (in);
 
-	// debugging
-	//Mem_CheckSentinels(neww);
-
 	return neww;
 }
 
@@ -2043,10 +1974,6 @@ static void DivideWinding (winding_t *in, mplane_t *split, winding_t **front, wi
 		VectorCopy (mid, b->points[b->numpoints]);
 		b->numpoints++;
 	}
-
-	// debugging
-	//Mem_CheckSentinels(f);
-	//Mem_CheckSentinels(b);
 }
 
 typedef struct portal_s
@@ -2070,7 +1997,6 @@ static portal_t *AllocPortal (void)
 {
 	portal_t *p;
 	p = Mem_Alloc(loadmodel->mempool, sizeof(portal_t));
-	//memset(p, 0, sizeof(portal_t));
 	p->chain = portalchain;
 	portalchain = p;
 	return p;
@@ -2107,8 +2033,6 @@ static void Mod_FinalizePortals(void)
 	mleaf_t *leaf, *endleaf;
 	winding_t *w;
 
-	//Mem_CheckSentinelsGlobal();
-
 	// recalculate bounding boxes for all leafs (because qbsp is very sloppy)
 	leaf = loadmodel->leafs;
 	endleaf = leaf + loadmodel->numleafs;
@@ -2141,8 +2065,6 @@ static void Mod_FinalizePortals(void)
 	}
 
 	Mod_RecursiveRecalcNodeBBox(loadmodel->nodes);
-
-	//Mem_CheckSentinelsGlobal();
 
 	// tally up portal and point counts
 	p = portalchain;
@@ -2234,8 +2156,6 @@ static void Mod_FinalizePortals(void)
 		FreePortal(p);
 		p = pnext;
 	}
-
-	//Mem_CheckSentinelsGlobal();
 }
 
 /*
@@ -2319,8 +2239,6 @@ static void Mod_RecursiveNodePortals (mnode_t *node)
 	portal_t *portal, *nextportal, *nodeportal, *splitportal, *temp;
 	winding_t *nodeportalwinding, *frontwinding, *backwinding;
 
-	//	CheckLeafPortalConsistancy (node);
-
 	// if a leaf, we're done
 	if (node->contents)
 		return;
@@ -2338,7 +2256,6 @@ static void Mod_RecursiveNodePortals (mnode_t *node)
 	nodeportal->plane = *node->plane;
 
 	nodeportalwinding = BaseWindingForPlane (node->plane);
-	//Mem_CheckSentinels(nodeportalwinding);
 	side = 0;	// shut up compiler warning
 	for (portal = (portal_t *)node->portals;portal;portal = portal->next[side])
 	{
@@ -2433,52 +2350,10 @@ static void Mod_RecursiveNodePortals (mnode_t *node)
 	Mod_RecursiveNodePortals(back);
 }
 
-/*
-void Mod_MakeOutsidePortals(mnode_t *node)
-{
-	int			i, j;
-	portal_t	*p, *portals[6];
-	mnode_t		*outside_node;
-
-	outside_node = Mem_Alloc(loadmodel->mempool, sizeof(mnode_t));
-	outside_node->contents = CONTENTS_SOLID;
-	outside_node->portals = NULL;
-
-	for (i = 0;i < 3;i++)
-	{
-		for (j = 0;j < 2;j++)
-		{
-			portals[j*3 + i] = p = AllocPortal ();
-			memset (&p->plane, 0, sizeof(mplane_t));
-			p->plane.normal[i] = j ? -1 : 1;
-			p->plane.dist = -65536;
-			p->winding = BaseWindingForPlane (&p->plane);
-			if (j)
-				AddPortalToNodes (p, outside_node, node);
-			else
-				AddPortalToNodes (p, node, outside_node);
-		}
-	}
-
-	// clip the basewindings by all the other planes
-	for (i = 0;i < 6;i++)
-	{
-		for (j = 0;j < 6;j++)
-		{
-			if (j == i)
-				continue;
-			portals[i]->winding = ClipWinding (portals[i]->winding, &portals[j]->plane, true);
-		}
-	}
-}
-*/
 
 static void Mod_MakePortals(void)
 {
-//	Con_Printf("building portals for %s\n", loadmodel->name);
-
 	portalchain = NULL;
-//	Mod_MakeOutsidePortals (loadmodel->nodes);
 	Mod_RecursiveNodePortals (loadmodel->nodes);
 	Mod_FinalizePortals();
 }
@@ -2518,44 +2393,24 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 	// store which lightmap format to use
 	mod->lightmaprgba = r_lightmaprgba.integer;
 
-//	Mem_CheckSentinelsGlobal();
-	// LordHavoc: had to move entity loading above everything to allow parsing various settings from worldspawn
 	Mod_LoadEntities (&header->lumps[LUMP_ENTITIES]);
-//	Mem_CheckSentinelsGlobal();
 	Mod_LoadVertexes (&header->lumps[LUMP_VERTEXES]);
-//	Mem_CheckSentinelsGlobal();
 	Mod_LoadEdges (&header->lumps[LUMP_EDGES]);
-//	Mem_CheckSentinelsGlobal();
 	Mod_LoadSurfedges (&header->lumps[LUMP_SURFEDGES]);
-//	Mem_CheckSentinelsGlobal();
 	Mod_LoadTextures (&header->lumps[LUMP_TEXTURES]);
-//	Mem_CheckSentinelsGlobal();
 	Mod_LoadLighting (&header->lumps[LUMP_LIGHTING]);
-//	Mem_CheckSentinelsGlobal();
 	Mod_LoadPlanes (&header->lumps[LUMP_PLANES]);
-//	Mem_CheckSentinelsGlobal();
 	Mod_LoadTexinfo (&header->lumps[LUMP_TEXINFO]);
-//	Mem_CheckSentinelsGlobal();
 	Mod_LoadFaces (&header->lumps[LUMP_FACES]);
-//	Mem_CheckSentinelsGlobal();
 	Mod_LoadMarksurfaces (&header->lumps[LUMP_MARKSURFACES]);
-//	Mem_CheckSentinelsGlobal();
 	Mod_LoadVisibility (&header->lumps[LUMP_VISIBILITY]);
-//	Mem_CheckSentinelsGlobal();
 	Mod_LoadLeafs (&header->lumps[LUMP_LEAFS]);
-//	Mem_CheckSentinelsGlobal();
 	Mod_LoadNodes (&header->lumps[LUMP_NODES]);
-//	Mem_CheckSentinelsGlobal();
 	Mod_LoadClipnodes (&header->lumps[LUMP_CLIPNODES]);
-//	Mem_CheckSentinelsGlobal();
-//	Mod_LoadEntities (&header->lumps[LUMP_ENTITIES]);
 	Mod_LoadSubmodels (&header->lumps[LUMP_MODELS]);
-//	Mem_CheckSentinelsGlobal();
 
 	Mod_MakeHull0 ();
-//	Mem_CheckSentinelsGlobal();
 	Mod_MakePortals();
-//	Mem_CheckSentinelsGlobal();
 
 	mod->numframes = 2;		// regular and alternate animation
 
@@ -2625,7 +2480,6 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 		mod->yawmaxs[2] = mod->normalmaxs[2];
 		mod->rotatedmins[0] = mod->rotatedmins[1] = mod->rotatedmins[2] = -modelradius;
 		mod->rotatedmaxs[0] = mod->rotatedmaxs[1] = mod->rotatedmaxs[2] = modelradius;
-//		mod->modelradius = modelradius;
 		// LordHavoc: check for empty submodels (lacrima.bsp has such a glitch)
 		if (mod->normalmins[0] > mod->normalmaxs[0] || mod->normalmins[1] > mod->normalmaxs[1] || mod->normalmins[2] > mod->normalmaxs[2])
 		{
@@ -2636,13 +2490,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 			VectorClear(mod->yawmaxs);
 			VectorClear(mod->rotatedmins);
 			VectorClear(mod->rotatedmaxs);
-			//mod->modelradius = 0;
 		}
-
-//		VectorCopy (bm->maxs, mod->maxs);
-//		VectorCopy (bm->mins, mod->mins);
-
-//		mod->radius = RadiusFromBounds (mod->mins, mod->maxs);
 
 		mod->numleafs = bm->visleafs;
 
@@ -2668,5 +2516,5 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 			mod = loadmodel;
 		}
 	}
-//	Mem_CheckSentinelsGlobal();
 }
+

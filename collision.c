@@ -33,8 +33,6 @@ static int RecursiveHullCheck (RecursiveHullCheckTraceInfo_t *t, int num, double
 	int ret;
 	mplane_t *plane;
 	double t1, t2;
-	//double frac;
-	//double mid[3];
 
 	// variables that need to be stored on the stack when recursing
 	dclipnode_t *node;
@@ -170,6 +168,7 @@ loc0:
 // used if start and end are the same
 static void RecursiveHullCheckPoint (RecursiveHullCheckTraceInfo_t *t, int num)
 {
+	// If you can read this, you understand BSP trees
 	while (num >= 0)
 		num = t->hull->clipnodes[num].children[((t->hull->planes[t->hull->clipnodes[num].planenum].type < 3) ? (t->start[t->hull->planes[t->hull->clipnodes[num].planenum].type]) : (DotProduct(t->hull->planes[t->hull->clipnodes[num].planenum].normal, t->start))) < t->hull->planes[t->hull->clipnodes[num].planenum].dist];
 
@@ -435,3 +434,4 @@ void Collision_ClipTrace (trace_t *trace, const void *cent, const model_t *cmode
 			rhc.trace->ent = (void *) cent;
 	}
 }
+

@@ -85,3 +85,4 @@ void softwaretransformforentity (entity_render_t *r)
 		softwaretransformset(r->origin, angles, r->scale);
 	}
 }
+

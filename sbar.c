@@ -406,7 +406,6 @@ void Sbar_UpdateScoreboard (void)
 }
 
 
-
 /*
 ===============
 Sbar_SoloScoreboard
@@ -1061,3 +1060,4 @@ void Sbar_FinaleOverlay (void)
 	pic = Draw_CachePic ("gfx/finale.lmp");
 	DrawQ_Pic((vid.conwidth - pic->width)/2, 16, "gfx/finale.lmp", 0, 0, 1, 1, 1, 1, 0);
 }
+

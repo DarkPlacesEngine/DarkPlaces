@@ -1,6 +1,6 @@
+
 #include "quakedef.h"
 
-// LordHavoc: disabled lerping
 #define LERPSPRITES
 
 #ifdef LERPSPRITES
@@ -70,8 +70,6 @@ int R_SpriteSetup (int type, float org[3], float left[3], float up[3])
 		VectorNegate(vpn, matrix3[0]);
 		matrix3[0][2] = 0;
 		VectorNormalizeFast(matrix3[0]);
-		//VectorVectors(matrix3[0], matrix3[1], matrix3[2]);
-		//VectorNegate(matrix3[1], matrix3[1]);
 		matrix3[1][0] = matrix3[0][1];
 		matrix3[1][1] = -matrix3[0][0];
 		matrix3[1][2] = 0;
@@ -85,7 +83,6 @@ int R_SpriteSetup (int type, float org[3], float left[3], float up[3])
 		VectorSubtract(currentrenderentity->origin, r_origin, matrix3[0]);
 		matrix3[0][2] = 0;
 		VectorNormalizeFast(matrix3[0]);
-		//VectorVectors(matrix3[0], matrix3[1], matrix3[2]);
 		matrix3[1][0] = matrix3[0][1];
 		matrix3[1][1] = -matrix3[0][0];
 		matrix3[1][2] = 0;
@@ -121,10 +118,6 @@ int R_SpriteSetup (int type, float org[3], float left[3], float up[3])
 		R_ConcatRotations (matrix1[0], matrix2[0], matrix3[0]);
 		break;
 	}
-
-	// don't draw if view origin is behind it
-	//if (DotProduct(org, matrix3[0]) < (DotProduct(r_origin, matrix3[0]) - 1.0f))
-	//	return true;
 
 	if (currentrenderentity->scale != 1)
 	{
@@ -265,3 +258,4 @@ void R_DrawSpriteModel ()
 		GL_DrawSpriteImage(true, frame, R_GetTexture(frame->fogtexture), org, up, left, fogcolor[0],fogcolor[1],fogcolor[2], fog * currentrenderentity->alpha);
 #endif
 }
+

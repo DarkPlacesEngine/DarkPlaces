@@ -22,7 +22,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include "winquake.h"
-//#include "dosisms.h"
 
 #include <dinput.h>
 
@@ -472,7 +471,6 @@ IN_Shutdown
 */
 void IN_Shutdown (void)
 {
-//	usingmouse = false;
 	IN_DeactivateMouse ();
 	IN_ShowMouse ();
 
@@ -562,9 +560,7 @@ void IN_MouseMove (usercmd_t *cmd)
 
 			/* Unable to read data or no data available */
 			if (FAILED(hr) || dwElements == 0)
-			{
 				break;
-			}
 
 			/* Look at the element to see what happened */
 
@@ -683,7 +679,6 @@ IN_ClearStates
 */
 void IN_ClearStates (void)
 {
-
 	if (mouseactive)
 	{
 		mx_accum = 0;
@@ -959,8 +954,6 @@ qboolean IN_ReadJoystick (void)
 		// read error occurred
 		// turning off the joystick seems too harsh for 1 read error,
 		// but what should be done?
-		// Con_Printf ("IN_ReadJoystick: no response\n");
-		// joy_avail = false;
 		return false;
 	}
 }
@@ -1138,3 +1131,4 @@ void IN_JoyMove (usercmd_t *cmd)
 		}
 	}
 }
+

@@ -153,70 +153,10 @@ float Q_RSqrt(float number)
 	return y * (1.5f - (number * 0.5f * y * y));
 }
 
-#if 0
-// LordHavoc: no longer used at all
-void ProjectPointOnPlane( vec3_t dst, const vec3_t p, const vec3_t normal )
-{
-#if 0
-	// LordHavoc: the old way...
-	float d;
-	vec3_t n;
-	float inv_denom;
-
-	inv_denom = 1.0F / DotProduct( normal, normal );
-
-	d = DotProduct( normal, p ) * inv_denom;
-
-	n[0] = normal[0] * inv_denom;
-	n[1] = normal[1] * inv_denom;
-	n[2] = normal[2] * inv_denom;
-
-	dst[0] = p[0] - d * n[0];
-	dst[1] = p[1] - d * n[1];
-	dst[2] = p[2] - d * n[2];
-#else
-	// LordHavoc: optimized to death and beyond
-	float d;
-
-	// LordHavoc: the normal is a unit vector by definition,
-	//            therefore inv_denom was pointless.
-	d = DotProduct(normal, p);
-	dst[0] = p[0] - d * normal[0];
-	dst[1] = p[1] - d * normal[1];
-	dst[2] = p[2] - d * normal[2];
-#endif
-}
-#endif
 
 // assumes "src" is normalized
 void PerpendicularVector( vec3_t dst, const vec3_t src )
 {
-#if 0
-	// LordHavoc: the old way...
-	int	pos;
-	int i;
-	float minelem, d;
-	vec3_t tempvec;
-
-	// find the smallest magnitude axially aligned vector
-	minelem = 1.0F;
-	for ( pos = 0, i = 0; i < 3; i++ )
-	{
-		if ( fabs( src[i] ) < minelem )
-		{
-			pos = i;
-			minelem = fabs( src[i] );
-		}
-	}
-	VectorClear(tempvec);
-	tempvec[pos] = 1.0F;
-
-	// project the point onto the plane defined by src
-	ProjectPointOnPlane( dst, tempvec, src );
-
-	// normalize the result
-	VectorNormalize(dst);
-#else
 	// LordHavoc: optimized to death and beyond
 	int	pos;
 	float minelem;
@@ -263,7 +203,6 @@ void PerpendicularVector( vec3_t dst, const vec3_t src )
 		dst[1] = 0;
 		dst[2] = 0;
 	}
-#endif
 }
 
 
@@ -302,145 +241,6 @@ void VectorVectorsDouble(const double *forward, double *right, double *up)
 
 void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, float degrees )
 {
-#if 0
-	// LordHavoc: the old way, cryptic brute force...
-	float	m[3][3];
-	float	im[3][3];
-	float	zrot[3][3];
-	float	tmpmat[3][3];
-	float	rot[3][3];
-	int	i;
-	vec3_t vr, vup, vf;
-
-	vf[0] = dir[0];
-	vf[1] = dir[1];
-	vf[2] = dir[2];
-
-	PerpendicularVector( vr, dir );
-	CrossProduct( vr, vf, vup );
-
-	m[0][0] = vr[0];
-	m[1][0] = vr[1];
-	m[2][0] = vr[2];
-
-	m[0][1] = vup[0];
-	m[1][1] = vup[1];
-	m[2][1] = vup[2];
-
-	m[0][2] = vf[0];
-	m[1][2] = vf[1];
-	m[2][2] = vf[2];
-
-	memcpy( im, m, sizeof( im ) );
-
-	im[0][1] = m[1][0];
-	im[0][2] = m[2][0];
-	im[1][0] = m[0][1];
-	im[1][2] = m[2][1];
-	im[2][0] = m[0][2];
-	im[2][1] = m[1][2];
-
-	memset( zrot, 0, sizeof( zrot ) );
-	zrot[0][0] = zrot[1][1] = zrot[2][2] = 1.0F;
-
-	zrot[0][0] = cos( DEG2RAD( degrees ) );
-	zrot[0][1] = sin( DEG2RAD( degrees ) );
-	zrot[1][0] = -sin( DEG2RAD( degrees ) );
-	zrot[1][1] = cos( DEG2RAD( degrees ) );
-
-	R_ConcatRotations( m, zrot, tmpmat );
-	R_ConcatRotations( tmpmat, im, rot );
-
-	for ( i = 0; i < 3; i++ )
-		dst[i] = rot[i][0] * point[0] + rot[i][1] * point[1] + rot[i][2] * point[2];
-#elif 0
-	// LordHavoc: on the path to unintelligible code...
-//	float	m[3][3];
-//	float	im[3][3];
-//	float	zrot[3][3];
-	float	tmpmat[3][3];
-//	float	rot[3][3];
-	float	angle, c, s;
-//	int	i;
-	vec3_t vr, vu, vf;
-
-	angle = DEG2RAD(degrees);
-
-	c = cos(angle);
-	s = sin(angle);
-
-	vf[0] = dir[0];
-	vf[1] = dir[1];
-	vf[2] = dir[2];
-
-	PerpendicularVector(vr, dir);
-	CrossProduct(vr, vf, vu);
-
-//	m   [0][0] = vr[0];m   [0][1] = vu[0];m   [0][2] = vf[0];
-//	m   [1][0] = vr[1];m   [1][1] = vu[1];m   [1][2] = vf[1];
-//	m   [2][0] = vr[2];m   [2][1] = vu[2];m   [2][2] = vf[2];
-//	im  [0][0] = vr[0];im  [0][1] = vr[1];im  [0][2] = vr[2];
-//	im  [1][0] = vu[0];im  [1][1] = vu[1];im  [1][2] = vu[2];
-//	im  [2][0] = vf[0];im  [2][1] = vf[1];im  [2][2] = vf[2];
-//	zrot[0][0] =     c;zrot[0][1] =     s;zrot[0][2] =     0;
-//	zrot[1][0] =    -s;zrot[1][1] =     c;zrot[1][2] =     0;
-//	zrot[2][0] =     0;zrot[2][1] =     0;zrot[2][2] =     1;
-
-//	tmpmat[0][0] = m[0][0] * zrot[0][0] + m[0][1] * zrot[1][0] + m[0][2] * zrot[2][0];
-//	tmpmat[0][1] = m[0][0] * zrot[0][1] + m[0][1] * zrot[1][1] + m[0][2] * zrot[2][1];
-//	tmpmat[0][2] = m[0][0] * zrot[0][2] + m[0][1] * zrot[1][2] + m[0][2] * zrot[2][2];
-//	tmpmat[1][0] = m[1][0] * zrot[0][0] + m[1][1] * zrot[1][0] + m[1][2] * zrot[2][0];
-//	tmpmat[1][1] = m[1][0] * zrot[0][1] + m[1][1] * zrot[1][1] + m[1][2] * zrot[2][1];
-//	tmpmat[1][2] = m[1][0] * zrot[0][2] + m[1][1] * zrot[1][2] + m[1][2] * zrot[2][2];
-//	tmpmat[2][0] = m[2][0] * zrot[0][0] + m[2][1] * zrot[1][0] + m[2][2] * zrot[2][0];
-//	tmpmat[2][1] = m[2][0] * zrot[0][1] + m[2][1] * zrot[1][1] + m[2][2] * zrot[2][1];
-//	tmpmat[2][2] = m[2][0] * zrot[0][2] + m[2][1] * zrot[1][2] + m[2][2] * zrot[2][2];
-
-	tmpmat[0][0] = vr[0] *  c + vu[0] * -s;
-	tmpmat[0][1] = vr[0] *  s + vu[0] *  c;
-//	tmpmat[0][2] =                           vf[0];
-	tmpmat[1][0] = vr[1] *  c + vu[1] * -s;
-	tmpmat[1][1] = vr[1] *  s + vu[1] *  c;
-//	tmpmat[1][2] =                           vf[1];
-	tmpmat[2][0] = vr[2] *  c + vu[2] * -s;
-	tmpmat[2][1] = vr[2] *  s + vu[2] *  c;
-//	tmpmat[2][2] =                           vf[2];
-
-//	rot[0][0] = tmpmat[0][0] * vr[0] + tmpmat[0][1] * vu[0] + tmpmat[0][2] * vf[0];
-//	rot[0][1] = tmpmat[0][0] * vr[1] + tmpmat[0][1] * vu[1] + tmpmat[0][2] * vf[1];
-//	rot[0][2] = tmpmat[0][0] * vr[2] + tmpmat[0][1] * vu[2] + tmpmat[0][2] * vf[2];
-//	rot[1][0] = tmpmat[1][0] * vr[0] + tmpmat[1][1] * vu[0] + tmpmat[1][2] * vf[0];
-//	rot[1][1] = tmpmat[1][0] * vr[1] + tmpmat[1][1] * vu[1] + tmpmat[1][2] * vf[1];
-//	rot[1][2] = tmpmat[1][0] * vr[2] + tmpmat[1][1] * vu[2] + tmpmat[1][2] * vf[2];
-//	rot[2][0] = tmpmat[2][0] * vr[0] + tmpmat[2][1] * vu[0] + tmpmat[2][2] * vf[0];
-//	rot[2][1] = tmpmat[2][0] * vr[1] + tmpmat[2][1] * vu[1] + tmpmat[2][2] * vf[1];
-//	rot[2][2] = tmpmat[2][0] * vr[2] + tmpmat[2][1] * vu[2] + tmpmat[2][2] * vf[2];
-
-//	rot[0][0] = tmpmat[0][0] * vr[0] + tmpmat[0][1] * vu[0] + vf[0] * vf[0];
-//	rot[0][1] = tmpmat[0][0] * vr[1] + tmpmat[0][1] * vu[1] + vf[0] * vf[1];
-//	rot[0][2] = tmpmat[0][0] * vr[2] + tmpmat[0][1] * vu[2] + vf[0] * vf[2];
-//	rot[1][0] = tmpmat[1][0] * vr[0] + tmpmat[1][1] * vu[0] + vf[1] * vf[0];
-//	rot[1][1] = tmpmat[1][0] * vr[1] + tmpmat[1][1] * vu[1] + vf[1] * vf[1];
-//	rot[1][2] = tmpmat[1][0] * vr[2] + tmpmat[1][1] * vu[2] + vf[1] * vf[2];
-//	rot[2][0] = tmpmat[2][0] * vr[0] + tmpmat[2][1] * vu[0] + vf[2] * vf[0];
-//	rot[2][1] = tmpmat[2][0] * vr[1] + tmpmat[2][1] * vu[1] + vf[2] * vf[1];
-//	rot[2][2] = tmpmat[2][0] * vr[2] + tmpmat[2][1] * vu[2] + vf[2] * vf[2];
-
-//	dst[0] = rot[0][0] * point[0] + rot[0][1] * point[1] + rot[0][2] * point[2];
-//	dst[1] = rot[1][0] * point[0] + rot[1][1] * point[1] + rot[1][2] * point[2];
-//	dst[2] = rot[2][0] * point[0] + rot[2][1] * point[1] + rot[2][2] * point[2];
-
-	dst[0] = (tmpmat[0][0] * vr[0] + tmpmat[0][1] * vu[0] + vf[0] * vf[0]) * point[0]
-	       + (tmpmat[0][0] * vr[1] + tmpmat[0][1] * vu[1] + vf[0] * vf[1]) * point[1]
-	       + (tmpmat[0][0] * vr[2] + tmpmat[0][1] * vu[2] + vf[0] * vf[2]) * point[2];
-	dst[1] = (tmpmat[1][0] * vr[0] + tmpmat[1][1] * vu[0] + vf[1] * vf[0]) * point[0]
-	       + (tmpmat[1][0] * vr[1] + tmpmat[1][1] * vu[1] + vf[1] * vf[1]) * point[1]
-	       + (tmpmat[1][0] * vr[2] + tmpmat[1][1] * vu[2] + vf[1] * vf[2]) * point[2];
-	dst[2] = (tmpmat[2][0] * vr[0] + tmpmat[2][1] * vu[0] + vf[2] * vf[0]) * point[0]
-	       + (tmpmat[2][0] * vr[1] + tmpmat[2][1] * vu[1] + vf[2] * vf[1]) * point[1]
-	       + (tmpmat[2][0] * vr[2] + tmpmat[2][1] * vu[2] + vf[2] * vf[2]) * point[2];
-#else
-	// LordHavoc: optimized to death and beyond, cryptic in an entirely new way
 	float	t0, t1;
 	float	angle, c, s;
 	vec3_t	vr, vu, vf;
@@ -454,8 +254,6 @@ void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, 
 	vf[1] = dir[1];
 	vf[2] = dir[2];
 
-//	PerpendicularVector(vr, dir);
-//	CrossProduct(vr, vf, vu);
 	VectorVectors(vf, vr, vu);
 
 	t0 = vr[0] *  c + vu[0] * -s;
@@ -475,7 +273,6 @@ void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, 
 	dst[2] = (t0 * vr[0] + t1 * vu[0] + vf[2] * vf[0]) * point[0]
 	       + (t0 * vr[1] + t1 * vu[1] + vf[2] * vf[1]) * point[1]
 	       + (t0 * vr[2] + t1 * vu[2] + vf[2] * vf[2]) * point[2];
-#endif
 }
 
 /*-----------------------------------------------------------------*/
@@ -668,36 +465,6 @@ void AngleMatrix (const vec3_t angles, const vec3_t translate, vec_t matrix[][4]
 	matrix[2][3] = translate[2];
 }
 
-// LordHavoc: changed CrossProduct to a #define
-/*
-void CrossProduct (vec3_t v1, vec3_t v2, vec3_t cross)
-{
-	cross[0] = v1[1]*v2[2] - v1[2]*v2[1];
-	cross[1] = v1[2]*v2[0] - v1[0]*v2[2];
-	cross[2] = v1[0]*v2[1] - v1[1]*v2[0];
-}
-*/
-
-/*
-// LordHavoc: fixme: do more research on gcc assembly so that qftol_minushalf and result will not be considered unused
-static double qftol_minushalf = -0.5;
-
-int qftol(double v)
-{
-	int result;
-#ifdef _MSC_VER
-	__asm
-	{
-		fld		v
-		fadd	qftol_minushalf
-		fistp	result
-	}
-#else // gcc hopefully
-	asm("fldl v\n\tfaddl qftol_minushalf\n\tfistpl result");
-#endif
-	return result;
-}
-*/
 
 // LordHavoc: renamed these to Length, and made the normal ones #define
 float VectorNormalizeLength (vec3_t v)
@@ -719,27 +486,6 @@ float VectorNormalizeLength (vec3_t v)
 
 }
 
-/*
-float VectorNormalizeLength2 (vec3_t v, vec3_t dest) // LordHavoc: added to allow copying while doing the calculation...
-{
-	float	length, ilength;
-
-	length = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
-	length = sqrt (length);		// FIXME
-
-	if (length)
-	{
-		ilength = 1/length;
-		dest[0] = v[0] * ilength;
-		dest[1] = v[1] * ilength;
-		dest[2] = v[2] * ilength;
-	}
-	else
-		dest[0] = dest[1] = dest[2] = 0;
-		
-	return length;
-}
-*/
 
 /*
 ================
@@ -791,3 +537,4 @@ void Mathlib_Init(void)
 	for (a = 1;a < 4096;a++)
 		ixtable[a] = 1.0f / a;
 }
+

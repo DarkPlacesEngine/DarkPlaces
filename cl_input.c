@@ -119,10 +119,11 @@ void KeyUp (kbutton_t *b)
 void IN_KLookDown (void) {KeyDown(&in_klook);}
 void IN_KLookUp (void) {KeyUp(&in_klook);}
 void IN_MLookDown (void) {KeyDown(&in_mlook);}
-void IN_MLookUp (void) {
-KeyUp(&in_mlook);
-if ( !(in_mlook.state&1) &&  lookspring.value)
-	V_StartPitchDrift();
+void IN_MLookUp (void)
+{
+	KeyUp(&in_mlook);
+	if ( !(in_mlook.state&1) && lookspring.value)
+		V_StartPitchDrift();
 }
 void IN_UpDown(void) {KeyDown(&in_up);}
 void IN_UpUp(void) {KeyUp(&in_up);}
@@ -154,12 +155,18 @@ void IN_AttackDown(void) {KeyDown(&in_attack);}
 void IN_AttackUp(void) {KeyUp(&in_attack);}
 
 // LordHavoc: added 6 new buttons
-void IN_Button3Down(void) {KeyDown(&in_button3);} void IN_Button3Up(void) {KeyUp(&in_button3);}
-void IN_Button4Down(void) {KeyDown(&in_button4);} void IN_Button4Up(void) {KeyUp(&in_button4);}
-void IN_Button5Down(void) {KeyDown(&in_button5);} void IN_Button5Up(void) {KeyUp(&in_button5);}
-void IN_Button6Down(void) {KeyDown(&in_button6);} void IN_Button6Up(void) {KeyUp(&in_button6);}
-void IN_Button7Down(void) {KeyDown(&in_button7);} void IN_Button7Up(void) {KeyUp(&in_button7);}
-void IN_Button8Down(void) {KeyDown(&in_button8);} void IN_Button8Up(void) {KeyUp(&in_button8);}
+void IN_Button3Down(void) {KeyDown(&in_button3);}
+void IN_Button3Up(void) {KeyUp(&in_button3);}
+void IN_Button4Down(void) {KeyDown(&in_button4);}
+void IN_Button4Up(void) {KeyUp(&in_button4);}
+void IN_Button5Down(void) {KeyDown(&in_button5);}
+void IN_Button5Up(void) {KeyUp(&in_button5);}
+void IN_Button6Down(void) {KeyDown(&in_button6);}
+void IN_Button6Up(void) {KeyUp(&in_button6);}
+void IN_Button7Down(void) {KeyDown(&in_button7);}
+void IN_Button7Up(void) {KeyUp(&in_button7);}
+void IN_Button8Down(void) {KeyDown(&in_button8);}
+void IN_Button8Up(void) {KeyUp(&in_button8);}
 
 void IN_UseDown (void) {KeyDown(&in_use);}
 void IN_UseUp (void) {KeyUp(&in_use);}
@@ -511,3 +518,4 @@ void CL_InitInput (void)
 	Cmd_AddCommand ("+button8", IN_Button8Down);
 	Cmd_AddCommand ("-button8", IN_Button8Up);
 }
+

@@ -21,8 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-//static qboolean	r_cache_thrash;		// compatability
-
 entity_render_t	*currentrenderentity;
 
 int			r_framecount;		// used for dlight push checking
@@ -33,10 +31,6 @@ int			c_brush_polys, c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_
 
 qboolean	envmap;				// true during envmap command capture
 
-// LordHavoc: moved all code related to particles into r_part.c
-//int			particletexture;	// little dot for particles
-//int			playertextures;		// up to 16 color translated skins
-
 //
 // view origin
 //
@@ -44,9 +38,6 @@ vec3_t	vup;
 vec3_t	vpn;
 vec3_t	vright;
 vec3_t	r_origin;
-
-//float	r_world_matrix[16];
-//float	r_base_world_matrix[16];
 
 //
 // screen size info
@@ -57,18 +48,14 @@ mleaf_t		*r_viewleaf, *r_oldviewleaf;
 
 unsigned short	d_lightstylevalue[256];	// 8.8 fraction of base light value
 
-//cvar_t	r_norefresh = {0, "r_norefresh","0"};
 cvar_t	r_drawentities = {0, "r_drawentities","1"};
 cvar_t	r_drawviewmodel = {0, "r_drawviewmodel","1"};
 cvar_t	r_speeds = {0, "r_speeds","0"};
 cvar_t	r_fullbright = {0, "r_fullbright","0"};
-//cvar_t	r_lightmap = {0, "r_lightmap","0"};
 cvar_t	r_wateralpha = {CVAR_SAVE, "r_wateralpha","1"};
 cvar_t	r_dynamic = {CVAR_SAVE, "r_dynamic","1"};
 cvar_t	r_waterripple = {CVAR_SAVE, "r_waterripple","0"};
 cvar_t	r_fullbrights = {CVAR_SAVE, "r_fullbrights", "1"};
-
-//cvar_t	r_dynamicbothsides = {CVAR_SAVE, "r_dynamicbothsides", "1"}; // LordHavoc: can disable dynamic lighting of backfaces, but quake maps are weird so it doesn't always work right...
 
 cvar_t	gl_fogenable = {0, "gl_fogenable", "0"};
 cvar_t	gl_fogdensity = {0, "gl_fogdensity", "0.25"};
@@ -79,7 +66,6 @@ cvar_t	gl_fogstart = {0, "gl_fogstart", "0"};
 cvar_t	gl_fogend = {0, "gl_fogend","0"};
 
 cvar_t	r_ser = {CVAR_SAVE, "r_ser", "1"};
-//cvar_t	gl_viewmodeldepthhack = {0, "gl_viewmodeldepthhack", "1"};
 
 cvar_t r_multitexture = {0, "r_multitexture", "1"};
 
@@ -98,16 +84,13 @@ static void R_TimeRefresh_f (void)
 
 	intimerefresh = 1;
 	start = Sys_DoubleTime ();
-	//qglDrawBuffer (GL_FRONT);
 	for (i = 0;i < 128;i++)
 	{
 		r_refdef.viewangles[0] = 0;
 		r_refdef.viewangles[1] = i/128.0*360.0;
 		r_refdef.viewangles[2] = 0;
 		CL_UpdateScreen();
-		//R_RenderView();
 	}
-	//qglDrawBuffer  (GL_BACK);
 
 	stop = Sys_DoubleTime ();
 	intimerefresh = 0;
@@ -253,15 +236,12 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable (&r_drawentities);
 	Cvar_RegisterVariable (&r_drawviewmodel);
 	Cvar_RegisterVariable (&r_speeds);
-//	Cvar_RegisterVariable (&r_dynamicwater);
-//	Cvar_RegisterVariable (&r_dynamicbothsides);
 	Cvar_RegisterVariable (&r_fullbrights);
 	Cvar_RegisterVariable (&r_wateralpha);
 	Cvar_RegisterVariable (&r_dynamic);
 	Cvar_RegisterVariable (&r_waterripple);
 	Cvar_RegisterVariable (&r_fullbright);
 	Cvar_RegisterVariable (&r_ser);
-//	Cvar_RegisterVariable (&gl_viewmodeldepthhack);
 	Cvar_RegisterVariable (&r_multitexture);
 	if (gamemode == GAME_NEHAHRA)
 		Cvar_SetValue("r_fullbrights", 0);
@@ -340,8 +320,6 @@ void GL_Init (void)
 	gl_extensions = glGetString (GL_EXTENSIONS);
 	Con_Printf ("GL_EXTENSIONS: %s\n", gl_extensions);
 
-//	Con_Printf ("%s %s\n", gl_renderer, gl_version);
-
 	VID_CheckExtensions();
 
 	// LordHavoc: report supported extensions
@@ -349,8 +327,6 @@ void GL_Init (void)
 
 	qglCullFace(GL_FRONT);
 	qglEnable(GL_TEXTURE_2D);
-
-//	qglPolygonMode (GL_FRONT_AND_BACK, GL_FILL);
 }
 
 
@@ -465,18 +441,7 @@ void R_DrawViewModel (void)
 
 	R_LerpAnimation(currentrenderentity);
 
-	// hack the depth range to prevent view model from poking into walls
-//	if (gl_viewmodeldepthhack.integer)
-//	{
-//		R_Mesh_Render();
-//		qglDepthRange (gldepthmin, gldepthmin + 0.3*(gldepthmax-gldepthmin));
-//	}
 	currentrenderentity->model->Draw();
-//	if (gl_viewmodeldepthhack.integer)
-//	{
-//		R_Mesh_Render();
-//		qglDepthRange (gldepthmin, gldepthmax);
-//	}
 }
 
 static void R_SetFrustum (void)
@@ -533,8 +498,6 @@ static void R_SetupFrame (void)
 	r_oldviewleaf = r_viewleaf;
 	r_viewleaf = Mod_PointInLeaf (r_origin, cl.worldmodel);
 
-//	r_cache_thrash = false;
-
 	R_AnimateLight ();
 }
 
@@ -578,30 +541,6 @@ static void R_BlendView(void)
 	tvxyz[2][1] = tvxyz[0][1] + vright[1] * r;
 	tvxyz[2][2] = tvxyz[0][2] + vright[2] * r;
 	R_Mesh_Draw(&m);
-
-	/*
-	qglMatrixMode(GL_PROJECTION);
-	qglLoadIdentity ();
-	qglOrtho  (0, 1, 1, 0, -99999, 99999);
-	qglMatrixMode(GL_MODELVIEW);
-	qglLoadIdentity ();
-	qglDisable (GL_DEPTH_TEST);
-	qglDisable (GL_CULL_FACE);
-	qglDisable(GL_TEXTURE_2D);
-	qglEnable(GL_BLEND);
-	qglBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	qglBegin (GL_TRIANGLES);
-	qglColor4f (r_refdef.viewblend[0] * overbrightscale, r_refdef.viewblend[1] * overbrightscale, r_refdef.viewblend[2] * overbrightscale, r_refdef.viewblend[3]);
-	qglVertex2f (-5, -5);
-	qglVertex2f (10, -5);
-	qglVertex2f (-5, 10);
-	qglEnd ();
-
-	qglEnable (GL_CULL_FACE);
-	qglEnable (GL_DEPTH_TEST);
-	qglDisable(GL_BLEND);
-	qglEnable(GL_TEXTURE_2D);
-	*/
 }
 
 /*
@@ -704,7 +643,5 @@ void R_RenderView (void)
 	// render any queued meshs
 	R_Mesh_Finish();
 	R_TimeReport("meshfinish");
-
-	//Mem_CheckSentinelsGlobal();
-	//R_TimeReport("memtest");
 }
+

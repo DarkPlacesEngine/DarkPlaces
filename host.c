@@ -143,8 +143,6 @@ void Host_Error (char *error, ...)
 	}
 	inerror = true;
 	
-	SCR_EndLoadingPlaque ();		// reenable screen updates
-
 	va_start (argptr,error);
 	vsprintf (hosterrorstring,error,argptr);
 	va_end (argptr);
@@ -571,11 +569,7 @@ qboolean Host_FilterTime (double time)
 	if (host_framerate.value > 0)
 		host_frametime = host_framerate.value;
 	else if (cl_avidemo.value >= 0.1f)
-	{
-		// don't allow really short frames
-		//if (host_frametime > (1.0 / cl_avidemo.value))
-			host_frametime = (1.0 / cl_avidemo.value);
-	}
+		host_frametime = (1.0 / cl_avidemo.value);
 	else
 	{
 		// don't allow really short frames
@@ -630,7 +624,6 @@ void Host_ServerFrame (void)
 		sv.frametime = 0;
 	frametimetotal = 0;
 	lastservertime = realtime;
-//	pr_global_struct->frametime = host_frametime;
 
 // set the time and clear the general datagram
 	SV_ClearDatagram ();
@@ -839,7 +832,7 @@ void Host_Init (void)
 	NET_Init ();
 	SV_Init ();
 
-	Con_Printf ("Exe: "__TIME__" "__DATE__"\n");
+	Con_Printf ("Builddate: %s\n", buildstring);
 
 	if (cls.state != ca_dedicated)
 	{
@@ -890,9 +883,6 @@ void Host_Shutdown(void)
 		return;
 	}
 	isdown = true;
-
-// keep Con_Printf from trying to update the screen
-//	scr_disabled_for_loading = true;
 
 	Host_WriteConfiguration (); 
 

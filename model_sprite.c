@@ -225,7 +225,6 @@ void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette)
 		loadmodel->normalmins[i] = loadmodel->yawmins[i] = loadmodel->rotatedmins[i] = -modelradius;
 		loadmodel->normalmaxs[i] = loadmodel->yawmaxs[i] = loadmodel->rotatedmaxs[i] = modelradius;
 	}
-//	loadmodel->modelradius = modelradius;
 }
 
 void Mod_Sprite_SERAddEntity(void)
@@ -303,7 +302,6 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 				palette[i][2] = *in++;
 				palette[i][3] = 255;
 			}
-	//		palette[255][0] = palette[255][1] = palette[255][2] = palette[255][3] = 0;
 			loadmodel->flags |= EF_ADDITIVE;
 			break;
 		case SPRHL_INDEXALPHA:
@@ -336,3 +334,4 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 	else
 		Host_Error ("Mod_LoadSpriteModel: %s has wrong version number (%i should be 1 (quake) or 32 (sprite32) or 2 (halflife)", loadmodel->name, version);
 }
+
