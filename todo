@@ -6,6 +6,7 @@
 -(scar3crow) d dpmod: add flame thrower weapon, and make its altfire drop a canister of fuel (10 fuel units?), which can be ignited to set off as a bomb about the size of a rocket blast, plus some fireballs raining down (scar3crow)
 -d (FrikaC, Uffe, Gilgamesh, Wazat) darkplaces protocol: add back colormod extension (FrikaC, Uffe, Gilgamesh, Wazat)
 -d (Kazashi) darkplaces protocol: add DP_SV_BUTTONUSE extension to document the addition of .buttonuse and +use/-use commands (Kazashi)
+-d (Mabus) darkplaces loading: test zlib support with entirely pk3'd id1 data (should crash because of zlib not being setup early enough - fix this) (Mabus)
 -d (Spike) darkplaces compatibility: add a sv_gameplayfix_setmodeluserealbox to allow people to use the +-16 box hack for running some mods (Spike)
 -d (Urre, Harb, FrikaC) darkplaces protocol: add PRYDON_CLIENTCURSOR extension - clientside mouse with highlighting of selected entities with the EF_SELECTABLE flag, and qc fields on the client entity on the server would indicate which entity the cursor is highlighting as well as where it is (Urre, Harb, FrikaC) 
 -d (Vermeulen) darkplaces protocol: add DP_SV_BUTTONCHAT extension to document the addition of .buttonchat to indicate if someone is not in key_game mode, so mods can show a talk bubble if they wish (Vermeulen)
@@ -48,7 +49,6 @@
 0 darkplaces loading: add hud_clearprecache and hud_precachepic commands to preload pics by name, these get reloaded by r_restart as well, mods can put a lot of these commands in their default.cfg to precache needed hud art (Tomaz)
 0 darkplaces loading: check for out of bounds lump data ranges in maps (FrikaC)
 0 darkplaces loading: check for truncated sound files (FrikaC)
-0 darkplaces loading: test zlib support with entirely pk3'd id1 data (should crash because of zlib not being setup early enough - fix this) (Mabus)
 0 darkplaces memory: add Mem_AllocNoClear function, and use it where possible, if developer is on it should clear with random garbage
 0 darkplaces optimize: Collision_TraceBrushBrush should compare enterfrac changes to realfraction and skip out if further, also leavefrac (Vic)
 0 darkplaces optimize: R_Q1BSP_BoxTouchingPVS and R_Q3BSP_BoxTouchingPVS should check pvsframe on nodes as well as leafs (Vic)
@@ -56,12 +56,9 @@
 0 darkplaces optimize: put patches on a delayed queue in q3bsp collision code so the trace is first clipped by brushes
 0 darkplaces optimize: remove the loop unrolling in Image_Resample32LerpLine and Image_Resample24LerpLine and related functions, as the loop is really too long to get much benefit, and it might even not fit in the L1 instruction cache on Pentium1 (fuh)
 0 darkplaces optimize: support GL_ATI_separate_stencil since ATI does not support GL_EXT_stencil_two_side yet (romi)
-d darkplaces parse: support " as an end token for words in Com_Parse
-d darkplaces parse: support ' quoted strings
 0 darkplaces physics: figure out why monsters keep making fall pain sound after they've landed in dpmod (Cruaich)
 0 darkplaces physics: q3bsp collisions are still glitchy, particularly gunshots hitting thin air near brushes, even with mod_q3bsp_optimizedtraceline 0, test in dpdm2r by shooting down through gaps in the architecture around the top platform (Vermeulen)
 0 darkplaces physics: test TecnoX and find the frikbot crash in SV_Physics (KrimZon)
-d darkplaces protocol: GAME_NEXUIZ: add a NEXUIZ_PLAYERMODEL and NEXUIZ_PLAYERSKIN extension which would add playermodel and playerskin commands and set them up like the Host_Name_f stuff works, this means a command for each, saved _cl_playermodel and _cl_playerskin cvars, playermodel and playerskin fields in the client_t struct, and quakec fields to allow access to these similarly to .clientcolors (Vermeulen, Black, VorteX)
 0 darkplaces protocol: PRYDON_CLIENTCURSOR should use a stat and .prydoncursor field instead of the cl_prydoncursor cvar, because stuffcmd is a bit icky (FrikaC)
 0 darkplaces protocol: add DP_GFX_QUAKE3MODELTAGS_ATTACHMENTTYPE extension to allow attachments to affect only origin or only orientation, and enable/disable client camera turning while attached (Urre)
 0 darkplaces protocol: add DP_SENSITIVITYSCALE extension which scales sensitivity on client like viewzoom does, but without affecting fov, note if this is non-zero it overrides viewzoom sensitivity entirely, it does not scale it (Urre)
@@ -418,12 +415,15 @@ d darkplaces menu: add slowmo to options menu (Cristian Beltramo)
 d darkplaces menu: add sv_maxrate cvar to server setup menu
 d darkplaces menu: player setup menu network speed is never applying to rate (Mitchell)
 d darkplaces menu: r_shadow_realtime_world_lightmaps cvar should be a slider, not a checkbox (Diablo-D3)
+d darkplaces parse: support " as an end token for words in Com_Parse
+d darkplaces parse: support ' quoted strings
 d darkplaces physics: bmodels (doors, etc) hurt player if player pushes against it, and sometimes gets stuck for a frame when falling onto it (Andrew A. Gilevsky)
 d darkplaces physics: disable sv_gameplayfix_stepdown while underwater (Sajt)
 d darkplaces physics: make players step down stairs rather than just flying off (Riot) 
 d darkplaces physics: repeatedly jumping against a wall can cause a fall to your death (MoALTz)
 d darkplaces physics: standing on a slope that slopes into an obstacle causes a 'falling' condition, velocity keeps increasing (VorteX)
 d darkplaces protocol bug: model colormap is showing white on client, is it even being sent? 
+d darkplaces protocol: GAME_NEXUIZ: add a NEXUIZ_PLAYERMODEL and NEXUIZ_PLAYERSKIN extension which would add playermodel and playerskin commands and set them up like the Host_Name_f stuff works, this means a command for each, saved _cl_playermodel and _cl_playerskin cvars, playermodel and playerskin fields in the client_t struct, and quakec fields to allow access to these similarly to .clientcolors (Vermeulen, Black, VorteX)
 d darkplaces protocol: MSG_ReadAngle functions should return +-180 range, not 0-360 (Carni)
 d darkplaces protocol: PROTOCOL_DARKPLACES4 malfunctioning after a few seconds, probably not acknowledging packets properly (Sajt)
 d darkplaces protocol: add rate command and sv_maxrate cvar (and _cl_rate cvar to save to config) to control client rate (rate is sent to server on connect as a command, like other properties) (protoplasmatic)
