@@ -369,57 +369,6 @@ void VID_UpdateWindowStatus (void)
 
 //====================================
 
-void VID_CheckMultitexture(void) 
-{
-	qglMTexCoord2f = NULL;
-	qglSelectTexture = NULL;
-	gl_mtexable = false;
-	// Check to see if multitexture is disabled
-	if (COM_CheckParm("-nomtex"))
-	{
-		Con_Printf("...multitexture disabled\n");
-		return;
-	}
-	// Test for ARB_multitexture
-	if (!COM_CheckParm("-SGISmtex") && strstr(gl_extensions, "GL_ARB_multitexture "))
-	{
-		Con_Printf("...using GL_ARB_multitexture\n");
-		qglMTexCoord2f = (void *) wglGetProcAddress("glMultiTexCoord2fARB");
-		qglSelectTexture = (void *) wglGetProcAddress("glActiveTextureARB");
-		gl_mtexable = true;
-		gl_mtex_enum = GL_TEXTURE0_ARB;
-	}
-	else if (strstr(gl_extensions, "GL_SGIS_multitexture ")) // Test for SGIS_multitexture (if ARB_multitexture not found)
-	{
-		Con_Printf("...using GL_SGIS_multitexture\n");
-		qglMTexCoord2f = (void *) wglGetProcAddress("glMTexCoord2fSGIS");
-		qglSelectTexture = (void *) wglGetProcAddress("glSelectTextureSGIS");
-		gl_mtexable = true;
-		gl_mtex_enum = TEXTURE0_SGIS;
-	}
-	else
-		Con_Printf("...multitexture disabled (not detected)\n");
-}
-
-void VID_CheckCVA(void)
-{
-	qglLockArraysEXT = NULL;
-	qglUnlockArraysEXT = NULL;
-	gl_supportslockarrays = false;
-	if (COM_CheckParm("-nocva"))
-	{
-		Con_Printf("...compiled vertex arrays disabled\n");
-		return;
-	}
-	if (strstr(gl_extensions, "GL_EXT_compiled_vertex_array"))
-	{
-		Con_Printf("...using compiled vertex arrays\n");
-		qglLockArraysEXT = (void *) wglGetProcAddress("glLockArraysEXT");
-		qglUnlockArraysEXT = (void *) wglGetProcAddress("glUnlockArraysEXT");
-		gl_supportslockarrays = true;
-	}
-}
-
 /*
 =================
 GL_BeginRendering
