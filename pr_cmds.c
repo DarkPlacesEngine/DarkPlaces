@@ -103,7 +103,9 @@ char *ENGINE_EXTENSIONS =
 "DP_QC_CVAR_STRING "
 "DP_QC_ETOS "
 "DP_QC_FINDCHAIN "
+"DP_QC_FINDCHAINFLAGS "
 "DP_QC_FINDCHAINFLOAT "
+"DP_QC_FINDFLAGS "
 "DP_QC_FINDFLOAT "
 "DP_QC_FS_SEARCH " // Black: same as in the menu qc
 "DP_QC_GETLIGHT "
@@ -1269,6 +1271,63 @@ void PF_findchainfloat (void)
 		if (ent->e->free)
 			continue;
 		if (E_FLOAT(ent,f) != s)
+			continue;
+
+		ent->v->chain = EDICT_TO_PROG(chain);
+		chain = ent;
+	}
+
+	RETURN_EDICT(chain);
+}
+
+// LordHavoc: search for flags in float fields
+void PF_findflags (void)
+{
+	int		e;
+	int		f;
+	int		s;
+	edict_t	*ed;
+
+	e = G_EDICTNUM(OFS_PARM0);
+	f = G_INT(OFS_PARM1);
+	s = (int)G_FLOAT(OFS_PARM2);
+
+	for (e++ ; e < sv.num_edicts ; e++)
+	{
+		pr_xfunction->builtinsprofile++;
+		ed = EDICT_NUM(e);
+		if (ed->e->free)
+			continue;
+		if ((int)E_FLOAT(ed,f) & s)
+		{
+			RETURN_EDICT(ed);
+			return;
+		}
+	}
+
+	RETURN_EDICT(sv.edicts);
+}
+
+// LordHavoc: chained search for flags in float fields
+void PF_findchainflags (void)
+{
+	int		i;
+	int		f;
+	int		s;
+	edict_t	*ent, *chain;
+
+	chain = (edict_t *)sv.edicts;
+
+	f = G_INT(OFS_PARM0);
+	s = (int)G_FLOAT(OFS_PARM1);
+
+	ent = NEXT_EDICT(sv.edicts);
+	for (i = 1;i < sv.num_edicts;i++, ent = NEXT_EDICT(ent))
+	{
+		pr_xfunction->builtinsprofile++;
+		if (ent->e->free)
+			continue;
+		if (!((int)E_FLOAT(ent,f) & s))
 			continue;
 
 		ent->v->chain = EDICT_TO_PROG(chain);
@@ -3413,8 +3472,18 @@ PF_search_end,				// #445
 PF_search_getsize,			// #446
 PF_search_getfilename,		// #447
 PF_cvar_string,				// #448 string(string s) cvar_string (DP_QC_CVAR_STRING)
-NULL,						// #449
-a a a a a					// #450-499 (LordHavoc)
+PF_findflags,				// #449 entity(entity start, .float fld, float match) findflags (DP_QC_FINDFLAGS)
+PF_findchainflags,			// #450 entity(.float fld, float match) findchainflags (DP_QC_FINDCHAINFLAGS)
+NULL,						// #451
+NULL,						// #452
+NULL,						// #453
+NULL,						// #454
+NULL,						// #455
+NULL,						// #456
+NULL,						// #457
+NULL,						// #458
+NULL,						// #459
+a a a a						// #460-499 (LordHavoc)
 };
 
 builtin_t *pr_builtins = pr_builtin;
