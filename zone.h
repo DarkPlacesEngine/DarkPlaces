@@ -40,8 +40,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 typedef struct memheader_s
 {
-	// next memheader in chain belonging to pool
-	struct memheader_s *chain;
+	// next and previous memheaders in chain belonging to pool
+	struct memheader_s *next;
+	struct memheader_s *prev;
 	// pool this memheader belongs to
 	struct mempool_s *pool;
 #if MEMCLUMPING
