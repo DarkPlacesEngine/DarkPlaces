@@ -317,7 +317,7 @@ CHECKGLERROR
 	glDisable(GL_BLEND);
 CHECKGLERROR
 	depthmask = true;
-	glDepthMask((GLuint) depthmask);
+	glDepthMask((GLboolean) depthmask);
 CHECKGLERROR
 
 CHECKGLERROR
@@ -548,7 +548,7 @@ CHECKGLERROR
 		if (depthmask != mesh->depthmask)
 		{
 			depthmask = mesh->depthmask;
-			glDepthMask((GLuint) depthmask);
+			glDepthMask((GLboolean) depthmask);
 CHECKGLERROR
 		}
 
