@@ -151,7 +151,7 @@ typedef struct
 	float		scale[3];	// multiply byte verts by this
 	float		translate[3];	// then add this
 	char		name[16];	// frame name from grabbing
-	trivertx_t	verts[];	// variable sized
+	trivertx_t	verts[1];	// variable sized
 } md2frame_t;
 
 // LordHavoc: memory representation is different than disk
@@ -159,8 +159,15 @@ typedef struct
 {
 	float		scale[3];	// multiply byte verts by this
 	float		translate[3];	// then add this
-	trivert2	verts[];	// variable sized
+	trivert2	verts[1];	// variable sized
 } md2memframe_t;
+
+// must match md2memframe_t, this is just used for sizeof()
+typedef struct
+{
+	float		scale[3];	// multiply byte verts by this
+	float		translate[3];	// then add this
+} md2memframesize_t;
 
 
 // the glcmd format:
