@@ -64,6 +64,7 @@ COMMONOBJECTS= $(CLIENTOBJECTS) $(SERVEROBJECTS) $(SHAREDOBJECTS)
 # built to give the executable a proper date string
 OBJ_GLX= builddate.c sys_linux.o vid_glx.o $(OBJ_LINUXCD) $(OBJ_LINUXSOUND) $(COMMONOBJECTS)
 OBJ_DED= builddate.c sys_linux.o vid_null.o cd_null.o snd_null.o $(COMMONOBJECTS)
+OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o cd_null.o snd_null.o $(COMMONOBJECTS)
 OBJ_WGL_EXE= builddate.c sys_win.o vid_wgl.o conproc.o cd_shared.o cd_win.o snd_win.o snd_dma.o snd_mix.o snd_mem.o ogg.o $(COMMONOBJECTS)
 OBJ_DED_EXE= builddate.c sys_linux.o vid_null.o cd_null.o snd_null.o $(COMMONOBJECTS)
 
@@ -87,6 +88,7 @@ DO_CC=$(CC) $(CFLAGS) -c $< -o $@
 # on the linker line, and that -lm must always be last
 LDFLAGS_GLX=-ldl -lm
 LDFLAGS_DED=-ldl -lm
+LDFLAGS_SDL=-ldl -lm
 LDFLAGS_WGL_EXE=-mwindows -lwinmm -lwsock32 -luser32 -lgdi32 -ldxguid -ldinput -lcomctl32
 LDFLAGS_DED_EXE=-mconsole -lwinmm -lwsock32
 LDFLAGS_DEBUG=-g -ggdb
@@ -95,6 +97,7 @@ LDFLAGS_RELEASE=
 
 EXE_GLX=darkplaces-glx
 EXE_DED=darkplaces-dedicated
+EXE_SDL=darkplaces-sdl
 EXE_WGL_EXE=darkplaces.exe
 EXE_DED_EXE=darkplaces-dedicated.exe
 
@@ -125,6 +128,9 @@ help:
 	@echo "* $(MAKE) ded-debug      : make dedicated server (debug version)"
 	@echo "* $(MAKE) ded-profile    : make dedicated server (profile version)"
 	@echo "* $(MAKE) ded-release    : make dedicated server (release version)"
+	@echo "* $(MAKE) sdl-debug      : make SDL client (debug version)"
+	@echo "* $(MAKE) sdl-profile    : make SDL client (profile version)"
+	@echo "* $(MAKE) sdl-release    : make SDL client (release version)"
 	@echo "* $(MAKE) exedebug       : make WGL and dedicated binaries (debug versions)"
 	@echo "* $(MAKE) exeprofile     : make WGL and dedicated binaries (profile versions)"
 	@echo "* $(MAKE) exerelease     : make WGL and dedicated binaries (release versions)"
@@ -172,6 +178,15 @@ ded-profile :
 ded-release :
 	$(MAKE) bin-release EXE="$(EXE_DED)" LDFLAGS_COMMON="$(LDFLAGS_DED)" CFLAGS_COMMON="$(CFLAGS_NONEXECOMMON)"
 
+sdl-debug :
+	$(MAKE) bin-debug EXE="$(EXE_SDL)" LDFLAGS_COMMON="$(LDFLAGS_SDL)" CFLAGS_COMMON="$(CFLAGS_NONEXECOMMON)"
+
+sdl-profile :
+	$(MAKE) bin-profile EXE="$(EXE_SDL)" LDFLAGS_COMMON="$(LDFLAGS_SDL)" CFLAGS_COMMON="$(CFLAGS_NONEXECOMMON)"
+
+sdl-release :
+	$(MAKE) bin-release EXE="$(EXE_SDL)" LDFLAGS_COMMON="$(LDFLAGS_SDL)" CFLAGS_COMMON="$(CFLAGS_NONEXECOMMON)"
+	
 wglexe-debug :
 	$(MAKE) bin-debug EXE="$(EXE_WGL_EXE)" LDFLAGS_COMMON="$(LDFLAGS_WGL_EXE)" CFLAGS_COMMON="$(CFLAGS_EXECOMMON)"
 
@@ -215,8 +230,17 @@ bin-release :
 vid_glx.o: vid_glx.c
 	$(DO_CC) -I/usr/X11R6/include
 
+vid_sdl.o: vid_sdl.c
+	$(DO_CC) `sdl-config --cflags`
+
+sys_sdl.o: sys_sdl.c
+	$(DO_CC) `sdl-config --cflags`
+
 .c.o:
 	$(DO_CC)
+
+$(EXE_SDL):  $(OBJ_SDL)
+	$(DO_LD) `sdl-config --libs`
 
 $(EXE_GLX):  $(OBJ_GLX)
 	$(DO_LD) -L/usr/X11R6/lib -lX11 -lXext -lXxf86dga -lXxf86vm $(LINUXSOUNDLIB)
