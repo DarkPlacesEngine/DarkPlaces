@@ -421,7 +421,9 @@ static void CL_RelinkNetworkEntities()
 		VectorCopy (neworg, ent->render.origin);
 		ent->render.flags = ent->state_current.flags;
 		ent->render.effects = effects = ent->state_current.effects;
-		if (cl.scores == NULL || !ent->state_current.colormap)
+		if (ent->state_current.flags & RENDER_COLORMAPPED)
+			ent->render.colormap = ent->state_current.colormap;
+		else if (cl.scores == NULL || !ent->state_current.colormap)
 			ent->render.colormap = -1; // no special coloring
 		else
 			ent->render.colormap = cl.scores[ent->state_current.colormap - 1].colors; // color it
