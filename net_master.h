@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -29,6 +29,6 @@ const char*	Master_BuildGetServers (void);
 const char*	Master_BuildHeartbeat (void);
 int			Master_HandleMessage (void);
 void		Master_Init (void);
-void		Master_ParseServerList (net_landriver_t* dfunc);
+int			Master_ParseServerList (net_landriver_t* dfunc);
 
 #endif

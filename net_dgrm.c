@@ -1092,7 +1092,7 @@ qsocket_t *Datagram_CheckNewConnections (void)
 
 static qboolean Datagram_HandleServerInfo (struct qsockaddr *readaddr)
 {
-	struct qsockaddr myaddr;
+	//struct qsockaddr myaddr;
 	int control;
 	int c, n, i;
 
@@ -1100,7 +1100,7 @@ static qboolean Datagram_HandleServerInfo (struct qsockaddr *readaddr)
 		return false;
 
 	// don't answer our own query
-	dfunc.GetSocketAddr (dfunc.controlSock, &myaddr);
+	//dfunc.GetSocketAddr (dfunc.controlSock, &myaddr);
 	//if (dfunc.AddrCompare(readaddr, &myaddr) >= 0)
 	//	return false;
 
@@ -1230,15 +1230,8 @@ static qboolean _Datagram_SearchForInetHosts (const char *master)
 				portnum = MASTER_PORT;
 			Con_DPrintf("Datagram_SearchForInetHosts: sending %d byte message to master %s port %i\n", net_message.cursize, master, portnum);
 			dfunc.SetSocketPort (&masteraddr, portnum);
-			dfunc.Send (net_message.data, net_message.cursize, &masteraddr);
+			dfunc.Write (dfunc.controlSock, net_message.data, net_message.cursize, &masteraddr);
 		}
-	}
-
-	while ((ret = dfunc.Recv (net_message.data, net_message.maxsize, &readaddr)) > 0)
-	{
-		net_message.cursize = ret;
-		Con_DPrintf("Datagram_SearchForInetHosts: Recv received %d byte message\n", net_message.cursize);
-		Master_ParseServerList (&dfunc);
 	}
 
 	while ((ret = dfunc.Read (dfunc.controlSock, net_message.data, net_message.maxsize, &readaddr)) > 0)
@@ -1247,6 +1240,8 @@ static qboolean _Datagram_SearchForInetHosts (const char *master)
 		Con_DPrintf("Datagram_SearchForInetHosts: Read received %d byte message\n", net_message.cursize);
 		if (Datagram_HandleServerInfo (&readaddr))
 			result = true;
+		else
+			Master_ParseServerList (&dfunc);
 	}
 
 	return result;
@@ -1462,6 +1457,7 @@ static void _Datagram_Heartbeat (const char *master)
 		portnum = MASTER_PORT;
 	dfunc.SetSocketPort (&masteraddr, portnum);
 
+	// FIXME: this is the only use of UDP_Send in the entire engine, add a dfunc.acceptSock to get rid of this function!
 	dfunc.Send (net_message.data, net_message.cursize, &masteraddr);
 }
 

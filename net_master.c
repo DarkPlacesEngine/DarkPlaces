@@ -232,16 +232,18 @@ void Master_Init (void)
 Master_ParseServerList
 
 Parse getserverResponse messages
+Returns true if it was a valid getserversResponse
 ====================
 */
-void Master_ParseServerList (net_landriver_t* dfunc)
+int Master_ParseServerList (net_landriver_t* dfunc)
 {
+	int servercount = 0;
 	int control;
 	qbyte* servers;
 	qbyte* crtserver;
-	unsigned int ipaddr;
 	struct qsockaddr svaddr;
 	char ipstring [32];
+	char string[32];
 
 	if (developer.integer)
 	{
@@ -249,45 +251,33 @@ void Master_ParseServerList (net_landriver_t* dfunc)
 		SZ_HexDumpToConsole(&net_message);
 	}
 
-	if (net_message.cursize < (int)sizeof(int))
-		return;
+	if (net_message.cursize < 23)
+		return 0;
 
 	// is the cache full?
 	if (hostCacheCount == HOSTCACHESIZE)
-		return;
+		return 0;
 
 	MSG_BeginReading ();
-	control = BigLong(*((int *)net_message.data));
-	MSG_ReadLong();
+	control = MSG_ReadBigLong();
 	if (control != -1)
-		return;
+		return 0;
 
-	if (strncmp (net_message.data + 4, "getserversResponse\\", 19))
-		return;
-
-	// Skip the next 19 bytes
-	MSG_ReadLong(); MSG_ReadLong(); MSG_ReadLong(); MSG_ReadLong();
-	MSG_ReadShort(); MSG_ReadByte();
+	if (MSG_ReadBytes(19, string) < 19 || memcmp(string, "getserversResponse\\", 19))
+		return 0;
 
 	crtserver = servers = Z_Malloc (net_message.cursize - 23);
 	memcpy (servers , net_message.data + 23, net_message.cursize - 23);
 
 	// Extract the IP addresses
-	while ((ipaddr = (crtserver[3] << 24) | (crtserver[2] << 16) | (crtserver[1] << 8) | crtserver[0]) != 0xFFFFFFFF)
+	while ((crtserver[0] != 0xFF || crtserver[1] != 0xFF || crtserver[2] != 0xFF || crtserver[3] != 0xFF) && (crtserver[4] != 0 || crtserver[5] != 0))
 	{
-		int port = (crtserver[5] << 8) | crtserver[4];
-
-		if (port < 1 || port >= 65535)
-			break;
-
-		port = ((port >> 8) & 0xFF) + ((port & 0xFF) << 8);
-		sprintf (ipstring, "%u.%u.%u.%u:%hu",
-					ipaddr & 0xFF, (ipaddr >> 8) & 0xFF,
-					(ipaddr >> 16) & 0xFF, (ipaddr >> 24) & 0xFF,
-					port);
+		// LordHavoc: FIXME: this could be much faster than converting to a string and back
+		// LordHavoc: FIXME: this code is very UDP specific, perhaps it should be part of net_udp?
+		sprintf (ipstring, "%u.%u.%u.%u:%u", crtserver[0], crtserver[1], crtserver[2], crtserver[3], (crtserver[4] << 8) | crtserver[5]);
 		dfunc->GetAddrFromName (ipstring, &svaddr);
-
 		Con_DPrintf("Requesting info from server %s\n", ipstring);
+
 		// Send a request at this address
 		SZ_Clear(&net_message);
 		MSG_WriteLong(&net_message, 0);  // save space for the header, filled in later
@@ -298,10 +288,14 @@ void Master_ParseServerList (net_landriver_t* dfunc)
 		dfunc->Write(dfunc->controlSock, net_message.data, net_message.cursize, &svaddr);
 		SZ_Clear(&net_message);
 
+		servercount++;
+
 		if (crtserver[6] != '\\')
 			break;
 		crtserver += 7;
 	}
 
 	Z_Free (servers);
+
+	return servercount;
 }
