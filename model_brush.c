@@ -2538,32 +2538,27 @@ static void Mod_Q1BSP_BuildPVSTextureChains(model_t *model)
 static void Mod_Q1BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbytes, mnode_t *node)
 {
 	int i;
-	mplane_t *plane;
 	float d;
 
-	while (1)
+	while (node->contents >= 0)
 	{
-	// if this is a leaf, accumulate the pvs bits
-		if (node->contents < 0)
-		{
-			if (node->contents != CONTENTS_SOLID && ((mleaf_t *)node)->pvsdata)
-				for (i = 0;i < pvsbytes;i++)
-					pvsbuffer[i] |= ((mleaf_t *)node)->pvsdata[i];
-			return;
-		}
-
-		plane = node->plane;
-		d = DotProduct(org, plane->normal) - plane->dist;
+		d = PlaneDiff(org, node->plane);
 		if (d > radius)
 			node = node->children[0];
 		else if (d < -radius)
 			node = node->children[1];
 		else
-		{	// go down both
+		{
+			// go down both sides
 			Mod_Q1BSP_FatPVS_RecursiveBSPNode(model, org, radius, pvsbuffer, pvsbytes, node->children[0]);
 			node = node->children[1];
 		}
 	}
+	// FIXME: code!
+	// if this is a leaf, accumulate the pvs bits
+	if (node->contents != CONTENTS_SOLID && ((mleaf_t *)node)->pvsdata)
+		for (i = 0;i < pvsbytes;i++)
+			pvsbuffer[i] |= ((mleaf_t *)node)->pvsdata[i];
 }
 
 //Calculates a PVS that is the inclusive or of all leafs within radius pixels
@@ -2575,6 +2570,20 @@ static int Mod_Q1BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, qbyt
 	memset(pvsbuffer, 0, bytes);
 	Mod_Q1BSP_FatPVS_RecursiveBSPNode(model, org, radius, pvsbuffer, bytes, model->brushq1.nodes);
 	return bytes;
+}
+
+//Returns PVS data for a given point
+//(note: always returns valid data, never NULL)
+static qbyte *Mod_Q1BSP_GetPVS(model_t *model, const vec3_t p)
+{
+	mnode_t *node;
+	Mod_CheckLoaded(model);
+	// LordHavoc: modified to start at first clip node,
+	// in other words: first node of the (sub)model
+	node = model->brushq1.nodes + model->brushq1.hulls[0].firstclipnode;
+	while (node->contents == 0)
+		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct(p,node->plane->normal)) < node->plane->dist];
+	return ((mleaf_t *)node)->pvsdata;
 }
 
 static void Mod_Q1BSP_RoundUpToHullSize(model_t *cmodel, const vec3_t inmins, const vec3_t inmaxs, vec3_t outmins, vec3_t outmaxs)
@@ -2637,12 +2646,13 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 
 	mod->brush.SuperContentsFromNativeContents = Mod_Q1BSP_SuperContentsFromNativeContents;
 	mod->brush.NativeContentsFromSuperContents = Mod_Q1BSP_NativeContentsFromSuperContents;
-	mod->brush.AmbientSoundLevelsForPoint = Mod_Q1BSP_AmbientSoundLevelsForPoint;
+	mod->brush.GetPVS = Mod_Q1BSP_GetPVS;
 	mod->brush.FatPVS = Mod_Q1BSP_FatPVS;
 	mod->brush.BoxTouchingPVS = Mod_Q1BSP_BoxTouchingPVS;
 	mod->brush.LightPoint = Mod_Q1BSP_LightPoint;
 	mod->brush.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
 	mod->brush.TraceBox = Mod_Q1BSP_TraceBox;
+	mod->brush.AmbientSoundLevelsForPoint = Mod_Q1BSP_AmbientSoundLevelsForPoint;
 	mod->brush.RoundUpToHullSize = Mod_Q1BSP_RoundUpToHullSize;
 	mod->brushq1.PointInLeaf = Mod_Q1BSP_PointInLeaf;
 	mod->brushq1.BuildPVSTextureChains = Mod_Q1BSP_BuildPVSTextureChains;
@@ -3363,7 +3373,7 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 {
 	q3dbrush_t *in;
 	q3mbrush_t *out;
-	int i, j, n, c, count, numplanes, maxplanes;
+	int i, j, n, c, count, maxplanes;
 	mplane_t *planes;
 
 	in = (void *)(mod_base + l->fileofs);
@@ -3392,9 +3402,9 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 		out->texture = loadmodel->brushq3.data_textures + n;
 
 		// make a list of mplane_t structs to construct a colbrush from
-		if (maxplanes < numplanes)
+		if (maxplanes < out->numbrushsides)
 		{
-			maxplanes = numplanes;
+			maxplanes = out->numbrushsides;
 			if (planes)
 				Mem_Free(planes);
 			planes = Mem_Alloc(tempmempool, sizeof(mplane_t) * maxplanes);
@@ -3829,13 +3839,18 @@ static void Mod_Q3BSP_LoadNodes(lump_t *l)
 			}
 			else
 			{
-				n = 1 - n;
+				n = -1 - n;
 				if (n >= loadmodel->brushq3.num_leafs)
 					Host_Error("Mod_Q3BSP_LoadNodes: invalid child leaf index %i (%i leafs)\n", n, loadmodel->brushq3.num_leafs);
 				out->children[j] = (q3mnode_t *)(loadmodel->brushq3.data_leafs + n);
 			}
 		}
-		// we don't load the mins/maxs
+		for (j = 0;j < 3;j++)
+		{
+			// yes the mins/maxs are ints
+			out->mins[j] = LittleLong(in->mins[j]);
+			out->maxs[j] = LittleLong(in->maxs[j]);
+		}
 	}
 
 	// set the parent pointers
@@ -3907,22 +3922,120 @@ static void Mod_Q3BSP_FindNonSolidLocation(model_t *model, const vec3_t in, vec3
 	VectorCopy(in, out);
 }
 
-static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *node, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end)
+static void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal)
 {
+	int i, j, k, index[3];
+	float transformed[3], blend1, blend2, blend, yaw, pitch, sinpitch;
+	q3dlightgrid_t *a, *s;
+	// FIXME: write this
+	if (!model->brushq3.num_lightgrid)
+	{
+		ambientcolor[0] += 128;
+		ambientcolor[1] += 128;
+		ambientcolor[2] += 128;
+		return;
+	}
+	Matrix4x4_Transform(&model->brushq3.num_lightgrid_indexfromworld, p, transformed);
+	//Matrix4x4_Print(&model->brushq3.num_lightgrid_indexfromworld);
+	//Con_Printf("%f %f %f transformed %f %f %f clamped ", p[0], p[1], p[2], transformed[0], transformed[1], transformed[2]);
+	transformed[0] = bound(0, transformed[0], model->brushq3.num_lightgrid_isize[0]);
+	transformed[1] = bound(0, transformed[1], model->brushq3.num_lightgrid_isize[1]);
+	transformed[2] = bound(0, transformed[2], model->brushq3.num_lightgrid_isize[2]);
+	index[0] = (int)floor(transformed[0]);
+	index[1] = (int)floor(transformed[1]);
+	index[2] = (int)floor(transformed[2]);
+	//Con_Printf("%f %f %f index %i %i %i:\n", transformed[0], transformed[1], transformed[2], index[0], index[1], index[2]);
+	// now lerp the values
+	VectorClear(diffusenormal);
+	a = &model->brushq3.data_lightgrid[(index[2] * model->brushq3.num_lightgrid_isize[1] + index[1]) * model->brushq3.num_lightgrid_isize[0] + index[0]];
+	for (k = 0;k < 2;k++)
+	{
+		blend1 = (k ? (transformed[2] - index[2]) : (1 - (transformed[2] - index[2])));
+		for (j = 0;j < 2;j++)
+		{
+			blend2 = blend1 * (j ? (transformed[1] - index[1]) : (1 - (transformed[1] - index[1])));
+			for (i = 0;i < 2;i++)
+			{
+				blend = blend2 * (i ? (transformed[0] - index[0]) : (1 - (transformed[0] - index[0])));
+				s = a + (k * model->brushq3.num_lightgrid_isize[1] + j) * model->brushq3.num_lightgrid_isize[0] + i;
+				VectorMA(ambientcolor, blend * (1.0f / 128.0f), s->ambientrgb, ambientcolor);
+				VectorMA(diffusecolor, blend * (1.0f / 128.0f), s->diffusergb, diffusecolor);
+				pitch = s->diffusepitch * M_PI / 128;
+				yaw = s->diffuseyaw * M_PI / 128;
+				sinpitch = sin(pitch);
+				diffusenormal[0] += blend * (cos(yaw) * sinpitch);
+				diffusenormal[1] += blend * (sin(yaw) * sinpitch);
+				diffusenormal[2] += blend * (cos(pitch));
+				//Con_Printf("blend %f: ambient %i %i %i, diffuse %i %i %i, diffusepitch %i diffuseyaw %i (%f %f, normal %f %f %f)\n", blend, s->ambientrgb[0], s->ambientrgb[1], s->ambientrgb[2], s->diffusergb[0], s->diffusergb[1], s->diffusergb[2], s->diffusepitch, s->diffuseyaw, pitch, yaw, (cos(yaw) * cospitch), (sin(yaw) * cospitch), (-sin(pitch)));
+			}
+		}
+	}
+	VectorNormalize(diffusenormal);
+	//Con_Printf("result: ambient %f %f %f diffuse %f %f %f diffusenormal %f %f %f\n", ambientcolor[0], ambientcolor[1], ambientcolor[2], diffusecolor[0], diffusecolor[1], diffusecolor[2], diffusenormal[0], diffusenormal[1], diffusenormal[2]);
+}
+
+static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, q3mnode_t *node, const vec3_t start, const vec3_t end, vec_t startfrac, vec_t endfrac, const vec3_t linestart, const vec3_t lineend, int markframe)
+{
+	int i, startside, endside;
+	float dist1, dist2, midfrac, mid[3];
+	q3mleaf_t *leaf;
+	// note: all line fragments past first impact fraction are ignored
+	while (node->isnode)
+	{
+		// recurse down node sides
+		dist1 = PlaneDiff(start, node->plane);
+		dist2 = PlaneDiff(end, node->plane);
+		startside = dist1 < 0;
+		endside = dist2 < 0;
+		if (startside == endside)
+		{
+			// most of the time the line fragment is on one side of the plane
+			node = node->children[startside];
+		}
+		else
+		{
+			// take the near side first
+			if (startfrac < trace->fraction)
+			{
+				// line crosses node plane, split the line
+				midfrac = dist1 / (dist1 - dist2);
+				VectorLerp(linestart, midfrac, lineend, mid);
+				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, node->children[startside], start, mid, startfrac, midfrac, linestart, lineend, markframe);
+				if (midfrac < trace->fraction)
+					Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, node->children[endside], mid, end, midfrac, endfrac, linestart, lineend, markframe);
+			}
+			return;
+		}
+	}
+	// hit a leaf
+	leaf = (q3mleaf_t *)node;
+	for (i = 0;i < leaf->numleafbrushes;i++)
+	{
+		if (endfrac >= trace->fraction)
+			return;
+		if (leaf->firstleafbrush[i]->colbrushf && leaf->firstleafbrush[i]->colbrushf->markframe != markframe)
+		{
+			leaf->firstleafbrush[i]->colbrushf->markframe = markframe;
+			Collision_TraceLineBrushFloat(trace, linestart, lineend, leaf->firstleafbrush[i]->colbrushf, leaf->firstleafbrush[i]->colbrushf);
+		}
+	}
+}
+
+static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *node, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int markframe)
+{
+	int i;
+	float dist;
+	colpointf_t *ps, *pe;
+	q3mleaf_t *leaf;
 	if (node->isnode)
 	{
 		// recurse down node sides
-		int i;
-		float dist;
-		colpointf_t *ps, *pe;
-		// FIXME? if TraceBrushPolygonTransform were to be made usable, the
-		// node planes would need to be transformed too
 		dist = node->plane->dist - (1.0f / 8.0f);
 		for (i = 0, ps = thisbrush_start->points, pe = thisbrush_end->points;i < thisbrush_start->numpoints;i++, ps++, pe++)
 		{
 			if (DotProduct(ps->v, node->plane->normal) >= dist || DotProduct(pe->v, node->plane->normal) >= dist)
 			{
-				Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end);
+				Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe);
 				break;
 			}
 		}
@@ -3931,7 +4044,7 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *nod
 		{
 			if (DotProduct(ps->v, node->plane->normal) <= dist || DotProduct(pe->v, node->plane->normal) <= dist)
 			{
-				Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[1], thisbrush_start, thisbrush_end);
+				Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[1], thisbrush_start, thisbrush_end, markframe);
 				break;
 			}
 		}
@@ -3945,21 +4058,17 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *nod
 	}
 	else
 	{
-		int i;
-		q3mleaf_t *leaf;
+		// hit a leaf
 		leaf = (q3mleaf_t *)node;
 		for (i = 0;i < leaf->numleafbrushes;i++)
-			if (leaf->firstleafbrush[i]->colbrushf)
+		{
+			if (leaf->firstleafbrush[i]->colbrushf && leaf->firstleafbrush[i]->colbrushf->markframe != markframe)
+			{
+				leaf->firstleafbrush[i]->colbrushf->markframe = markframe;
 				Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, leaf->firstleafbrush[i]->colbrushf, leaf->firstleafbrush[i]->colbrushf);
+			}
+		}
 	}
-}
-
-static void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal)
-{
-	// FIXME: write this
-	ambientcolor[0] += 255;
-	ambientcolor[1] += 255;
-	ambientcolor[2] += 255;
 }
 
 static void Mod_Q3BSP_TraceBox(model_t *model, trace_t *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs, int hitsupercontentsmask)
@@ -3967,20 +4076,38 @@ static void Mod_Q3BSP_TraceBox(model_t *model, trace_t *trace, const vec3_t boxs
 	int i;
 	colbrushf_t *thisbrush_start, *thisbrush_end;
 	matrix4x4_t startmatrix, endmatrix;
-	// FIXME: finish this code
-	Matrix4x4_CreateIdentity(&startmatrix);
-	Matrix4x4_CreateIdentity(&endmatrix);
-	thisbrush_start = Collision_BrushForBox(&startmatrix, boxstartmins, boxstartmaxs);
-	thisbrush_end = Collision_BrushForBox(&endmatrix, boxendmins, boxendmaxs);
+	static int markframe = 0;
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
-	if (model->brushq3.num_nodes)
-		Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model->brushq3.data_nodes, thisbrush_start, thisbrush_end);
+	Matrix4x4_CreateIdentity(&startmatrix);
+	Matrix4x4_CreateIdentity(&endmatrix);
+	if (VectorCompare(boxstartmins, boxstartmaxs) && VectorCompare(boxendmins, boxendmaxs))
+	{
+		// line trace
+		if (model->brushq3.submodel)
+		{
+			for (i = 0;i < model->brushq3.data_thismodel->numbrushes;i++)
+				if (model->brushq3.data_thismodel->firstbrush[i].colbrushf)
+					Collision_TraceLineBrushFloat(trace, boxstartmins, boxendmins, model->brushq3.data_thismodel->firstbrush[i].colbrushf, model->brushq3.data_thismodel->firstbrush[i].colbrushf);
+		}
+		else
+			Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model->brushq3.data_nodes, boxstartmins, boxendmins, 0, 1, boxstartmins, boxendmins, ++markframe);
+	}
 	else
-		for (i = 0;i < model->brushq3.num_brushes;i++)
-			if (model->brushq3.data_brushes[i].colbrushf)
-				Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, model->brushq3.data_brushes[i].colbrushf, model->brushq3.data_brushes[i].colbrushf);
+	{
+		// box trace, performed as box trace
+		thisbrush_start = Collision_BrushForBox(&startmatrix, boxstartmins, boxstartmaxs);
+		thisbrush_end = Collision_BrushForBox(&endmatrix, boxendmins, boxendmaxs);
+		if (model->brushq3.submodel)
+		{
+			for (i = 0;i < model->brushq3.data_thismodel->numbrushes;i++)
+				if (model->brushq3.data_thismodel->firstbrush[i].colbrushf)
+					Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, model->brushq3.data_thismodel->firstbrush[i].colbrushf, model->brushq3.data_thismodel->firstbrush[i].colbrushf);
+		}
+		else
+			Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model->brushq3.data_nodes, thisbrush_start, thisbrush_end, ++markframe);
+	}
 }
 
 
@@ -4019,12 +4146,56 @@ static int Mod_Q3BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3
 	return Mod_Q3BSP_BoxTouchingPVS_RecursiveBSPNode(model, model->brushq3.data_nodes, pvs, mins, maxs);
 }
 
+//Returns PVS data for a given point
+//(note: always returns valid data, never NULL)
+static qbyte *Mod_Q3BSP_GetPVS(model_t *model, const vec3_t p)
+{
+	q3mnode_t *node;
+	Mod_CheckLoaded(model);
+	node = model->brushq3.data_nodes;
+	while (node->isnode)
+		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct(p,node->plane->normal)) < node->plane->dist];
+	return model->brushq3.data_pvschains + ((q3mleaf_t *)node)->clusterindex * model->brushq3.num_pvschainlength;
+}
+
+static void Mod_Q3BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbytes, q3mnode_t *node)
+{
+	int i;
+	float d;
+	qbyte *pvs;
+
+	while (node->isnode)
+	{
+		d = PlaneDiff(org, node->plane);
+		if (d > radius)
+			node = node->children[0];
+		else if (d < -radius)
+			node = node->children[1];
+		else
+		{
+			// go down both sides
+			Mod_Q3BSP_FatPVS_RecursiveBSPNode(model, org, radius, pvsbuffer, pvsbytes, node->children[0]);
+			node = node->children[1];
+		}
+	}
+	// if this is a leaf, accumulate the pvs bits
+	pvs = model->brushq3.data_pvschains + ((q3mleaf_t *)node)->clusterindex * model->brushq3.num_pvschainlength;
+	for (i = 0;i < pvsbytes;i++)
+		pvsbuffer[i] |= pvs[i];
+	return;
+}
+
+//Calculates a PVS that is the inclusive or of all leafs within radius pixels
+//of the given point.
 static int Mod_Q3BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbufferlength)
 {
-	// FIXME: write this
-	memset(pvsbuffer, 0xFF, pvsbufferlength);
-	return pvsbufferlength;
+	int bytes = model->brushq3.num_pvschainlength;
+	bytes = min(bytes, pvsbufferlength);
+	memset(pvsbuffer, 0, bytes);
+	Mod_Q3BSP_FatPVS_RecursiveBSPNode(model, org, radius, pvsbuffer, bytes, model->brushq3.data_nodes);
+	return bytes;
 }
+
 
 static int Mod_Q3BSP_SuperContentsFromNativeContents(model_t *model, int nativecontents)
 {
@@ -4081,6 +4252,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 
 	mod->brush.SuperContentsFromNativeContents = Mod_Q3BSP_SuperContentsFromNativeContents;
 	mod->brush.NativeContentsFromSuperContents = Mod_Q3BSP_NativeContentsFromSuperContents;
+	mod->brush.GetPVS = Mod_Q3BSP_GetPVS;
 	mod->brush.FatPVS = Mod_Q3BSP_FatPVS;
 	mod->brush.BoxTouchingPVS = Mod_Q3BSP_BoxTouchingPVS;
 	mod->brush.LightPoint = Mod_Q3BSP_LightPoint;
@@ -4138,6 +4310,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 			mod->mempool = NULL;
 		}
 		mod->brushq3.data_thismodel = loadmodel->brushq3.data_models + i;
+		mod->brushq3.submodel = i;
 
 		VectorCopy(mod->brushq3.data_thismodel->mins, mod->normalmins);
 		VectorCopy(mod->brushq3.data_thismodel->maxs, mod->normalmaxs);
