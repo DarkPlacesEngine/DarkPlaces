@@ -639,31 +639,94 @@ void skypolyclear()
 }
 
 extern qboolean isATI;
+
+extern char skyname[];
+extern int solidskytexture, alphaskytexture;
 void skypolyrender()
 {
 	int i, j;
 	skypoly_t *p;
 	skyvert_t *vert;
+	float length, speedscale;
+	vec3_t dir;
 	if (currentskypoly < 1)
 		return;
 	// testing
 //	Con_DPrintf("skypolyrender: %i polys %i vertices\n", currentskypoly, currentskyvert);
-	glDisable(GL_TEXTURE_2D);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glDisable(GL_ALPHA_TEST);
 	glDisable(GL_BLEND);
 	// make sure zbuffer is enabled
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(1);
-	glColor3fv(fogcolor); // note: gets rendered over by sky if fog is not enabled
-	for (i = 0,p = &skypoly[0];i < currentskypoly;i++, p++)
+	if (!fogenabled && !skyname[0]) // normal quake sky
 	{
-		vert = &skyvert[p->firstvert];
-		glBegin(GL_POLYGON);
-		for (j=0 ; j<p->verts ; j++, vert++)
-			glVertex3fv (vert->v);
-		glEnd ();
+		glColor3f(0.5f, 0.5f, 0.5f);
+		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+		glEnable(GL_TEXTURE_2D);
+		glDisable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glBindTexture(GL_TEXTURE_2D, solidskytexture); // upper clouds
+		speedscale = realtime*8;
+		speedscale -= (int)speedscale & ~127 ;
+		for (i = 0,p = &skypoly[0];i < currentskypoly;i++, p++)
+		{
+			vert = &skyvert[p->firstvert];
+			glBegin(GL_POLYGON);
+			for (j=0 ; j<p->verts ; j++, vert++)
+			{
+				VectorSubtract (vert->v, r_origin, dir);
+				dir[2] *= 3;	// flatten the sphere
+
+				length = dir[0]*dir[0] + dir[1]*dir[1] + dir[2]*dir[2];
+				length = sqrt (length);
+				length = 6*63/length;
+
+				glTexCoord2f ((speedscale + dir[0] * length) * (1.0/128), (speedscale + dir[1] * length) * (1.0/128));
+				glVertex3fv (vert->v);
+			}
+			glEnd ();
+		}
+		glEnable(GL_BLEND);
+		glDepthMask(0);
+		glBindTexture(GL_TEXTURE_2D, alphaskytexture); // lower clouds
+		speedscale = realtime*16;
+		speedscale -= (int)speedscale & ~127 ;
+		for (i = 0,p = &skypoly[0];i < currentskypoly;i++, p++)
+		{
+			vert = &skyvert[p->firstvert];
+			glBegin(GL_POLYGON);
+			for (j=0 ; j<p->verts ; j++, vert++)
+			{
+				VectorSubtract (vert->v, r_origin, dir);
+				dir[2] *= 3;	// flatten the sphere
+
+				length = dir[0]*dir[0] + dir[1]*dir[1] + dir[2]*dir[2];
+				length = sqrt (length);
+				length = 6*63/length;
+
+				glTexCoord2f ((speedscale + dir[0] * length) * (1.0/128), (speedscale + dir[1] * length) * (1.0/128));
+				glVertex3fv (vert->v);
+			}
+			glEnd ();
+		}
+		glDisable(GL_BLEND);
+		glColor3f(1,1,1);
+		glDepthMask(1);
 	}
-	glColor3f(1,1,1);
-	glEnable(GL_TEXTURE_2D);
+	else
+	{
+		glDisable(GL_TEXTURE_2D);
+		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+		glColor3fv(fogcolor); // note: gets rendered over by skybox if fog is not enabled
+		for (i = 0,p = &skypoly[0];i < currentskypoly;i++, p++)
+		{
+			vert = &skyvert[p->firstvert];
+			glBegin(GL_POLYGON);
+			for (j=0 ; j<p->verts ; j++, vert++)
+				glVertex3fv (vert->v);
+			glEnd ();
+		}
+		glColor3f(1,1,1);
+		glEnable(GL_TEXTURE_2D);
+	}
 }

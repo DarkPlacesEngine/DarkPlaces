@@ -93,9 +93,7 @@ cvar_t	gl_playermip = {"gl_playermip","0"};
 cvar_t	contrast = {"contrast", "1.0", TRUE}; // LordHavoc: a method of operating system independent color correction
 cvar_t	brightness = {"brightness", "1.0", TRUE}; // LordHavoc: a method of operating system independent color correction
 cvar_t	gl_lightmode = {"gl_lightmode", "1", TRUE}; // LordHavoc: overbright lighting
-//cvar_t	r_particles = {"r_particles", "1"};
 //cvar_t	r_dynamicwater = {"r_dynamicwater", "1"};
-//cvar_t	r_smokealpha = {"r_smokealpha", "0.25"};
 //cvar_t	r_dynamicbothsides = {"r_dynamicbothsides", "1"}; // LordHavoc: can disable dynamic lighting of backfaces, but quake maps are weird so it doesn't always work right...
 
 cvar_t	gl_fogenable = {"gl_fogenable", "0"};
@@ -238,7 +236,7 @@ void FOG_framebegin()
 		if (fog_density)
 		{
 			fogenabled = true;
-			fogdensity = -4096.0f / (fog_density * fog_density);
+			fogdensity = -4000.0f / (fog_density * fog_density);
 			fogcolor[0] = fog_red   = bound(0.0f, fog_red  , 1.0f);
 			fogcolor[1] = fog_green = bound(0.0f, fog_green, 1.0f);
 			fogcolor[2] = fog_blue  = bound(0.0f, fog_blue , 1.0f);
@@ -310,8 +308,6 @@ void rmain_registercvars()
 	Cvar_RegisterVariable (&brightness);
 	Cvar_RegisterVariable (&gl_lightmode);
 //	Cvar_RegisterVariable (&r_dynamicwater);
-//	Cvar_RegisterVariable (&r_particles);
-//	Cvar_RegisterVariable (&r_smokealpha);
 //	Cvar_RegisterVariable (&r_dynamicbothsides);
 	Cvar_RegisterVariable (&r_fullbrights);
 	if (nehahra)
@@ -1558,7 +1554,7 @@ r_refdef must be set before the first call
 */
 void R_RenderView (void)
 {
-	double currtime, temptime;
+//	double currtime, temptime;
 //	if (r_norefresh.value)
 //		return;
 
@@ -1569,47 +1565,34 @@ void R_RenderView (void)
 
 	FOG_framebegin();
 	transpolyclear();
-	wallpolyclear();
 
-	if (r_speeds2.value)
-	{
-		currtime = Sys_FloatTime();
-		Con_Printf("render time: ");
-	}
+//	if (r_speeds2.value)
+//	{
+//		currtime = Sys_FloatTime();
+//		Con_Printf("render time: ");
+//	}
 	R_Clear();
-	TIMEREPORT("R_Clear")
+//	TIMEREPORT("R_Clear")
 
 	// render normal view
 
 	R_SetupFrame ();
-	TIMEREPORT("R_SetupFrame")
 	R_SetFrustum ();
-	TIMEREPORT("R_SetFrustum")
 	R_SetupGL ();
-	TIMEREPORT("R_SetupGL")
 	R_MarkLeaves ();	// done here so we know if we're in water
-	TIMEREPORT("R_MarkLeaves")
 	R_DrawWorld ();		// adds static entities to the list
-	TIMEREPORT("R_DrawWorld")
 	S_ExtraUpdate ();	// don't let sound get messed up if going slow
-	TIMEREPORT("S_ExtraUpdate")
+	wallpolyclear();
 	R_DrawEntitiesOnList1 (); // BSP models
-	TIMEREPORT("R_DrawEntitiesOnList1")
 	wallpolyrender();
-	TIMEREPORT("wallpolyrender")
 	R_DrawEntitiesOnList2 (); // other models
-	TIMEREPORT("R_DrawEntitiesOnList2")
 //	R_RenderDlights ();
 	R_DrawViewModel ();
-	TIMEREPORT("R_DrawViewModel")
 	R_DrawParticles ();
-	TIMEREPORT("R_DrawParticles")
 	transpolyrender();
-	TIMEREPORT("transpolyrender")
 
 	FOG_frameend();
 	GL_BlendView();
-	TIMEREPORT("GL_BlendView")
-	if (r_speeds2.value)
-		Con_Printf("\n");
+//	if (r_speeds2.value)
+//		Con_Printf("\n");
 }

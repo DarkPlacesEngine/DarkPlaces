@@ -41,7 +41,7 @@ typedef struct
 	float	entertime;
 	int		frags;
 	int		colors;			// two 4 bit fields
-	byte	translations[VID_GRADES*256];
+	byte	translations[256]; // LordHavoc: major memory reduction (was VID_GRADES*256, and VID_GRADES is 64), and weirdness cleanup
 } scoreboard_t;
 
 typedef struct
@@ -346,7 +346,6 @@ void CL_TimeDemo_f (void);
 // cl_parse.c
 //
 void CL_ParseServerMessage (void);
-void CL_NewTranslation (int slot);
 
 //
 // view

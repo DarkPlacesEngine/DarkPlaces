@@ -812,6 +812,25 @@ void CL_PModel_f (void)
 		val->_float = i;
 }
 
+/*
+======================
+CL_Fog_f
+======================
+*/
+extern float fog_density, fog_red, fog_green, fog_blue;
+void CL_Fog_f (void)
+{
+	if (Cmd_Argc () == 1)
+	{
+		Con_Printf ("\"fog\" is \"%f %f %f %f\"\n", fog_density, fog_red, fog_green, fog_blue);
+		return;
+	}
+	fog_density = atof(Cmd_Argv(1));
+	fog_red = atof(Cmd_Argv(2));
+	fog_green = atof(Cmd_Argv(3));
+	fog_blue = atof(Cmd_Argv(4));
+}
+
 cvar_t demo_nehahra = {"demo_nehahra", "0"};
 
 /*
@@ -859,6 +878,8 @@ void CL_Init (void)
 	Cmd_AddCommand ("stop", CL_Stop_f);
 	Cmd_AddCommand ("playdemo", CL_PlayDemo_f);
 	Cmd_AddCommand ("timedemo", CL_TimeDemo_f);
+
+	Cmd_AddCommand ("fog", CL_Fog_f);
 
 	// LordHavoc: added pausedemo
 	Cmd_AddCommand ("pausedemo", CL_PauseDemo_f);

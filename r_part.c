@@ -20,7 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-#define MAX_PARTICLES			2048	// default max # of particles at one
+#define MAX_PARTICLES			4096	// default max # of particles at one
 										//  time
 #define ABSOLUTE_MIN_PARTICLES	512		// no fewer than this no matter what's
 										//  on the command line
@@ -43,8 +43,7 @@ int			r_numparticles;
 
 vec3_t			r_pright, r_pup, r_ppn;
 
-//extern cvar_t r_particles/*, r_smoke*/, r_smokealpha;
-//cvar_t r_smokecolor = {"r_smokecolor", "0"};
+cvar_t r_particles = {"r_particles", "1", true};
 
 void fractalnoise(char *noise, int size);
 void fractalnoise_zeroedge(char *noise, int size);
@@ -53,15 +52,15 @@ void R_InitParticleTexture (void)
 {
 	int		x,y,d;
 	float	dx, dy, dz, f, dot;
-	byte	data[64][64][4], noise1[64][64], noise2[64][64];
+	byte	data[32][32][4], noise1[32][32], noise2[32][32];
 	vec3_t	normal, light;
 
 	particletexture = texture_extension_number++;
     glBindTexture(GL_TEXTURE_2D, particletexture);
 
-	for (x=0 ; x<64 ; x++)
+	for (x=0 ; x<32 ; x++)
 	{
-		for (y=0 ; y<64 ; y++)
+		for (y=0 ; y<32 ; y++)
 		{
 			data[y][x][0] = data[y][x][1] = data[y][x][2] = 255;
 			dx = x - 16;
@@ -71,7 +70,7 @@ void R_InitParticleTexture (void)
 			data[y][x][3] = (byte) d;
 		}
 	}
-	glTexImage2D (GL_TEXTURE_2D, 0, 4, 64, 64, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+	glTexImage2D (GL_TEXTURE_2D, 0, 4, 32, 32, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
@@ -79,10 +78,10 @@ void R_InitParticleTexture (void)
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 
-	fractalnoise(&noise1[0][0], 64);
-	fractalnoise(&noise2[0][0], 64);
-	for (y = 0;y < 64;y++)
-		for (x = 0;x < 64;x++)
+	fractalnoise(&noise1[0][0], 32);
+	fractalnoise(&noise2[0][0], 32);
+	for (y = 0;y < 32;y++)
+		for (x = 0;x < 32;x++)
 		{
 			data[y][x][0] = data[y][x][1] = data[y][x][2] = (noise1[y][x] >> 1) + 128;
 			dx = x - 16;
@@ -96,7 +95,7 @@ void R_InitParticleTexture (void)
 	/*
 	for (x=0 ; x<34 ; x+=2)
 		for (y=0 ; y<34 ; y+=2)
-			data[y][x][0] = data[y][x][1] = data[y][x][2] = (rand()%64)+192;
+			data[y][x][0] = data[y][x][1] = data[y][x][2] = (rand()%32)+192;
 	for (x=0 ; x<32 ; x+=2)
 		for (y=0 ; y<32 ; y+=2)
 		{
@@ -104,11 +103,11 @@ void R_InitParticleTexture (void)
 			data[y+1][x  ][0] = data[y+1][x  ][1] = data[y+1][x  ][2] = (int) (data[y  ][x  ][0] + data[y+2][x  ][0]) >> 1;
 			data[y+1][x+1][0] = data[y+1][x+1][1] = data[y+1][x+1][2] = (int) (data[y  ][x  ][0] + data[y  ][x+2][0] + data[y+2][x  ][0] + data[y+2][x+2][0]) >> 2;
 		}
-	for (x=0 ; x<64 ; x++)
+	for (x=0 ; x<32 ; x++)
 	{
-		for (y=0 ; y<64 ; y++)
+		for (y=0 ; y<32 ; y++)
 		{
-			//data[y][x][0] = data[y][x][1] = data[y][x][2] = (rand()%192)+64;
+			//data[y][x][0] = data[y][x][1] = data[y][x][2] = (rand()%192)+32;
 			dx = x - 16;
 			dy = y - 16;
 			d = (255 - (dx*dx+dy*dy));
@@ -119,15 +118,15 @@ void R_InitParticleTexture (void)
 	*/
 	smokeparticletexture = texture_extension_number++;
 	glBindTexture(GL_TEXTURE_2D, smokeparticletexture);
-	glTexImage2D (GL_TEXTURE_2D, 0, 4, 64, 64, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+	glTexImage2D (GL_TEXTURE_2D, 0, 4, 32, 32, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	fractalnoise(&noise1[0][0], 64);
-	fractalnoise(&noise2[0][0], 64);
-	for (y = 0;y < 64;y++)
-		for (x = 0;x < 64;x++)
+	fractalnoise(&noise1[0][0], 32);
+	fractalnoise(&noise2[0][0], 32);
+	for (y = 0;y < 32;y++)
+		for (x = 0;x < 32;x++)
 		{
 			data[y][x][0] = data[y][x][1] = data[y][x][2] = (noise1[y][x] >> 1) + 128;
 			dx = x - 16;
@@ -140,7 +139,7 @@ void R_InitParticleTexture (void)
 
 	bloodcloudparticletexture = texture_extension_number++;
 	glBindTexture(GL_TEXTURE_2D, bloodcloudparticletexture);
-	glTexImage2D (GL_TEXTURE_2D, 0, 4, 64, 64, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+	glTexImage2D (GL_TEXTURE_2D, 0, 4, 32, 32, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -148,9 +147,9 @@ void R_InitParticleTexture (void)
 	flareparticletexture = texture_extension_number++;
     glBindTexture(GL_TEXTURE_2D, flareparticletexture);
 
-	for (x=0 ; x<64 ; x++)
+	for (x=0 ; x<32 ; x++)
 	{
-		for (y=0 ; y<64 ; y++)
+		for (y=0 ; y<32 ; y++)
 		{
 			data[y][x][0] = data[y][x][1] = data[y][x][2] = 255;
 			dx = x - 16;
@@ -160,7 +159,7 @@ void R_InitParticleTexture (void)
 			data[y][x][3] = (byte) d;
 		}
 	}
-	glTexImage2D (GL_TEXTURE_2D, 0, 4, 64, 64, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+	glTexImage2D (GL_TEXTURE_2D, 0, 4, 32, 32, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
@@ -170,9 +169,9 @@ void R_InitParticleTexture (void)
 	rainparticletexture = texture_extension_number++;
     glBindTexture(GL_TEXTURE_2D, rainparticletexture);
 
-	for (x=0 ; x<64 ; x++)
+	for (x=0 ; x<32 ; x++)
 	{
-		for (y=0 ; y<64 ; y++)
+		for (y=0 ; y<32 ; y++)
 		{
 			data[y][x][0] = data[y][x][1] = data[y][x][2] = 255;
 			if (y < 24) // stretch the upper half to make a raindrop
@@ -191,7 +190,7 @@ void R_InitParticleTexture (void)
 			data[y][x][3] = (byte) d;
 		}
 	}
-	glTexImage2D (GL_TEXTURE_2D, 0, 4, 64, 64, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+	glTexImage2D (GL_TEXTURE_2D, 0, 4, 32, 32, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
@@ -203,9 +202,9 @@ void R_InitParticleTexture (void)
 
 	light[0] = 1;light[1] = 1;light[2] = 1;
 	VectorNormalize(light);
-	for (x=0 ; x<64 ; x++)
+	for (x=0 ; x<32 ; x++)
 	{
-		for (y=0 ; y<64 ; y++)
+		for (y=0 ; y<32 ; y++)
 		{
 			data[y][x][0] = data[y][x][1] = data[y][x][2] = 255;
 			dx = x * (1.0 / 16.0) - 1.0;
@@ -230,15 +229,15 @@ void R_InitParticleTexture (void)
 					f += ((dot *  2) - 1);
 				else if (dot < -0.5) // exterior reflection
 					f += ((dot * -2) - 1);
-				f *= 255;
+				f *= 64;
 				f = bound(0, f, 255);
-				data[y][x][3] = (byte) d;
+				data[y][x][3] = (byte) f;
 			}
 			else
 				data[y][x][3] = 0;
 		}
 	}
-	glTexImage2D (GL_TEXTURE_2D, 0, 4, 64, 64, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+	glTexImage2D (GL_TEXTURE_2D, 0, 4, 32, 32, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
@@ -270,7 +269,7 @@ void R_InitParticles (void)
 
 	particles = (particle_t *) Hunk_AllocName (r_numparticles * sizeof(particle_t), "particles");
 
-//	Cvar_RegisterVariable (&r_smokecolor);
+	Cvar_RegisterVariable (&r_particles);
 	R_InitParticleTexture ();
 }
 
@@ -297,7 +296,7 @@ void R_EntityParticles (entity_t *ent)
 	float		sr, sp, sy, cr, cp, cy;
 	vec3_t		forward;
 	float		dist;
-//	if (!r_particles.value) return; // LordHavoc: particles are optional
+	if (!r_particles.value) return; // LordHavoc: particles are optional
 	
 	dist = 64;
 	count = 50;
@@ -452,7 +451,7 @@ void R_ParticleExplosion (vec3_t org, int smoke)
 {
 	int			i, j;
 	particle_t	*p;
-//	if (!r_particles.value) return; // LordHavoc: particles are optional
+	if (!r_particles.value) return; // LordHavoc: particles are optional
 	
 	for (i=0 ; i<1024 ; i++)
 	{
@@ -464,7 +463,7 @@ void R_ParticleExplosion (vec3_t org, int smoke)
 		active_particles = p;
 
 		p->texnum = flareparticletexture;
-		p->scale = 4+(rand()&7);
+		p->scale = lhrandom(2,5);
 		p->alpha = rand()&255;
 		p->die = cl.time + 5;
 		p->color = ramp1[0];
@@ -497,7 +496,7 @@ void R_ParticleExplosion (vec3_t org, int smoke)
 			active_particles = p;
 
 			p->texnum = smokeparticletexture;
-			p->scale = 24;
+			p->scale = 12;
 			p->alpha = 80;
 			p->die = cl.time + 2;
 			p->type = pt_smoke;
@@ -522,7 +521,7 @@ void R_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength)
 	int			i, j;
 	particle_t	*p;
 	int			colorMod = 0;
-//	if (!r_particles.value) return; // LordHavoc: particles are optional
+	if (!r_particles.value) return; // LordHavoc: particles are optional
 
 	for (i=0; i<512; i++)
 	{
@@ -534,7 +533,7 @@ void R_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength)
 		active_particles = p;
 
 		p->texnum = flareparticletexture;
-		p->scale = 8;
+		p->scale = 4;
 		p->alpha = 255;
 		p->die = cl.time + 0.3;
 		p->color = colorStart + (colorMod % colorLength);
@@ -559,7 +558,7 @@ void R_BlobExplosion (vec3_t org)
 {
 	int			i, j;
 	particle_t	*p;
-//	if (!r_particles.value) return; // LordHavoc: particles are optional
+	if (!r_particles.value) return; // LordHavoc: particles are optional
 	
 	for (i=0 ; i<1024 ; i++)
 	{
@@ -571,7 +570,7 @@ void R_BlobExplosion (vec3_t org)
 		active_particles = p;
 
 		p->texnum = flareparticletexture;
-		p->scale = 8;
+		p->scale = 4;
 		p->alpha = 255;
 		p->die = cl.time + 1 + (rand()&8)*0.05;
 
@@ -608,7 +607,7 @@ void R_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count)
 {
 	int			i, j;
 	particle_t	*p;
-//	if (!r_particles.value) return; // LordHavoc: particles are optional
+	if (!r_particles.value) return; // LordHavoc: particles are optional
 	
 	for (i=0 ; i<count ; i++)
 	{
@@ -622,7 +621,7 @@ void R_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count)
 		if (count == 1024)
 		{	// rocket explosion
 			p->texnum = flareparticletexture;
-			p->scale = 8;
+			p->scale = 4;
 			p->alpha = 255;
 			p->die = cl.time + 5;
 			p->color = ramp1[0];
@@ -649,7 +648,7 @@ void R_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count)
 		else
 		{
 			p->texnum = flareparticletexture;
-			p->scale = 8;
+			p->scale = 4;
 			p->alpha = 255;
 			p->die = cl.time + 0.1*(rand()%5);
 			p->color = (color&~7) + (rand()&7);
@@ -674,7 +673,7 @@ void R_SparkShower (vec3_t org, vec3_t dir, int count, int type)
 {
 	int			i, j;
 	particle_t	*p;
-//	if (!r_particles.value) return; // LordHavoc: particles are optional
+	if (!r_particles.value) return; // LordHavoc: particles are optional
 
 	if (!free_particles)
 		return;
@@ -685,7 +684,7 @@ void R_SparkShower (vec3_t org, vec3_t dir, int count, int type)
 	if (type == 0) // sparks
 	{
 		p->texnum = smokeparticletexture;
-		p->scale = 20;
+		p->scale = 10;
 		p->alpha = 64;
 		p->color = (rand()&3)+12;
 		p->type = pt_bulletpuff;
@@ -696,7 +695,7 @@ void R_SparkShower (vec3_t org, vec3_t dir, int count, int type)
 	else // blood
 	{
 		p->texnum = bloodcloudparticletexture;
-		p->scale = 24;
+		p->scale = 12;
 		p->alpha = 128;
 		p->color = (rand()&3)+68;
 		p->type = pt_bloodcloud;
@@ -715,7 +714,7 @@ void R_SparkShower (vec3_t org, vec3_t dir, int count, int type)
 		active_particles = p;
 
 		p->texnum = flareparticletexture;
-		p->scale = 5;
+		p->scale = 2;
 		p->alpha = 255;
 		p->die = cl.time + 0.0625 * (rand()&15);
 		/*
@@ -753,7 +752,7 @@ void R_BloodShower (vec3_t mins, vec3_t maxs, float velspeed, int count)
 	vec3_t		diff;
 	vec3_t		center;
 	vec3_t		velscale;
-//	if (!r_particles.value) return; // LordHavoc: particles are optional
+	if (!r_particles.value) return; // LordHavoc: particles are optional
 
 	VectorSubtract(maxs, mins, diff);
 	center[0] = (mins[0] + maxs[0]) * 0.5;
@@ -773,7 +772,7 @@ void R_BloodShower (vec3_t mins, vec3_t maxs, float velspeed, int count)
 		active_particles = p;
 
 		p->texnum = bloodcloudparticletexture;
-		p->scale = 24;
+		p->scale = 12;
 		p->alpha = 96 + (rand()&63);
 		p->die = cl.time + 2; //0.015625 * (rand()%128);
 		p->type = pt_fadespark;
@@ -793,7 +792,7 @@ void R_ParticleCube (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorb
 	particle_t	*p;
 	vec3_t		diff;
 	float		t;
-//	if (!r_particles.value) return; // LordHavoc: particles are optional
+	if (!r_particles.value) return; // LordHavoc: particles are optional
 	if (maxs[0] <= mins[0]) {t = mins[0];mins[0] = maxs[0];maxs[0] = t;}
 	if (maxs[1] <= mins[1]) {t = mins[1];mins[1] = maxs[1];maxs[1] = t;}
 	if (maxs[2] <= mins[2]) {t = mins[2];mins[2] = maxs[2];maxs[2] = t;}
@@ -810,7 +809,7 @@ void R_ParticleCube (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorb
 		active_particles = p;
 
 		p->texnum = flareparticletexture;
-		p->scale = 12;
+		p->scale = 6;
 		p->alpha = 255;
 		p->die = cl.time + 1 + (rand()&15)*0.0625;
 		if (gravity)
@@ -837,7 +836,7 @@ void R_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorb
 	vec3_t		org;
 	vec3_t		vel;
 	float		t, z;
-//	if (!r_particles.value) return; // LordHavoc: particles are optional
+	if (!r_particles.value) return; // LordHavoc: particles are optional
 	if (maxs[0] <= mins[0]) {t = mins[0];mins[0] = maxs[0];maxs[0] = t;}
 	if (maxs[1] <= mins[1]) {t = mins[1];mins[1] = maxs[1];maxs[1] = t;}
 	if (maxs[2] <= mins[2]) {t = mins[2];mins[2] = maxs[2];maxs[2] = t;}
@@ -873,7 +872,7 @@ void R_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorb
 		org[1] = diff[1] * (float) (rand()&1023) * (1.0 / 1024.0) + mins[1];
 		org[2] = z;
 
-		p->scale = 6;
+		p->scale = 1.5;
 		p->alpha = 255;
 		p->die = t;
 		if (type == 1)
@@ -889,6 +888,7 @@ void R_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorb
 		p->color = colorbase + (rand()&3);
 		VectorCopy(org, p->org);
 		VectorCopy(vel, p->vel);
+		VectorCopy(vel, p->vel2);
 	}
 }
 
@@ -905,7 +905,7 @@ void R_LavaSplash (vec3_t org)
 	particle_t	*p;
 	float		vel;
 	vec3_t		dir;
-//	if (!r_particles.value) return; // LordHavoc: particles are optional
+	if (!r_particles.value) return; // LordHavoc: particles are optional
 
 	for (i=-16 ; i<16 ; i+=2)
 		for (j=-16 ; j<16 ; j+=2)
@@ -919,8 +919,8 @@ void R_LavaSplash (vec3_t org)
 				active_particles = p;
 		
 				p->texnum = flareparticletexture;
-				p->scale = 24;
-				p->alpha = 255;
+				p->scale = 10;
+				p->alpha = 128;
 				p->die = cl.time + 2 + (rand()&31) * 0.02;
 				p->color = 224 + (rand()&7);
 				p->type = pt_slowgrav;
@@ -950,7 +950,7 @@ void R_TeleportSplash (vec3_t org)
 	int			i, j, k;
 	particle_t	*p;
 //	vec3_t		dir;
-//	if (!r_particles.value) return; // LordHavoc: particles are optional
+	if (!r_particles.value) return; // LordHavoc: particles are optional
 
 	/*
 	for (i=-16 ; i<16 ; i+=4)
@@ -997,7 +997,7 @@ void R_TeleportSplash (vec3_t org)
 				active_particles = p;
 		
 				p->texnum = flareparticletexture;
-				p->scale = 8;
+				p->scale = 4;
 				p->alpha = (1 + rand()&7) * 32;
 				p->die = cl.time + 5;
 				p->color = 254; //8 + (rand()&7);
@@ -1020,7 +1020,7 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 	int			j, contents, bubbles;
 	particle_t	*p;
 	static int	tracercount;
-//	if (!r_particles.value) return; // LordHavoc: particles are optional
+	if (!r_particles.value) return; // LordHavoc: particles are optional
 
 	t = cl.oldtime;
 	nt = cl.time;
@@ -1061,14 +1061,11 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 			case 1: // grenade trail
 				if (bubbles)
 				{
-					dec = 0.01f;
+					dec = 0.005f;
 					p->texnum = bubbleparticletexture;
-					p->scale = 6+(rand()&3);
+					p->scale = lhrandom(1,2);
 					p->alpha = 255;
-//					if (r_smokecolor.value)
-//						p->color = r_smokecolor.value;
-//					else
-						p->color = (rand()&3)+12;
+					p->color = (rand()&3)+12;
 					p->type = pt_bubble;
 					p->die = cl.time + 2;
 					for (j=0 ; j<3 ; j++)
@@ -1079,16 +1076,13 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				}
 				else
 				{
-					dec = 0.03f;
+					dec = 0.02f;
 					p->texnum = smokeparticletexture;
-					p->scale = 12+(rand()&7);
+					p->scale = lhrandom(4, 7);
 					p->alpha = 64 + (rand()&31);
-//					if (r_smokecolor.value)
-//						p->color = r_smokecolor.value;
-//					else
-						p->color = (rand()&3)+12;
+					p->color = (rand()&3)+12;
 					p->type = pt_smoke;
-					p->die = cl.time + 2;
+					p->die = cl.time + 10000;
 					VectorCopy(start, p->org);
 				}
 				break;
@@ -1097,7 +1091,7 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 			case 1:	// smoke smoke
 				dec = 0.016f;
 				p->texnum = smokeparticletexture;
-				p->scale = 12+rand()&7;
+				p->scale = lhrandom(6,9);
 				p->alpha = 64;
 				if (r_smokecolor.value)
 					p->color = r_smokecolor.value;
@@ -1112,7 +1106,7 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 			case 2:	// blood
 				dec = 0.03f;
 				p->texnum = bloodcloudparticletexture;
-				p->scale = 20+(rand()&7);
+				p->scale = lhrandom(8, 12);
 				p->alpha = 255;
 				p->color = (rand()&3)+68;
 				p->type = pt_bloodcloud;
@@ -1128,7 +1122,7 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 			case 5:	// tracer
 				dec = 0.01f;
 				p->texnum = flareparticletexture;
-				p->scale = 4;
+				p->scale = 2;
 				p->alpha = 255;
 				p->die = cl.time + 0.2; //5;
 				p->type = pt_static;
@@ -1155,7 +1149,7 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 			case 4:	// slight blood
 				dec = 0.03f; // sparse trail
 				p->texnum = bloodcloudparticletexture;
-				p->scale = 20+(rand()&7);
+				p->scale = lhrandom(8,12);
 				p->alpha = 255;
 				p->color = (rand()&3)+68;
 				p->type = pt_fadespark2;
@@ -1170,7 +1164,7 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 			case 6:	// voor trail
 				dec = 0.05f; // sparse trail
 				p->texnum = flareparticletexture;
-				p->scale = 20+(rand()&7);
+				p->scale = lhrandom(4, 8);
 				p->alpha = 255;
 				p->color = 9*16 + 8 + (rand()&3);
 				p->type = pt_fadespark2;
@@ -1185,11 +1179,11 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 			case 7:	// Nehahra smoke tracer
 				dec = 0.14f;
 				p->texnum = smokeparticletexture;
-				p->scale = 12+(rand()&7);
+				p->scale = lhrandom(6, 10);
 				p->alpha = 64;
 				p->color = (rand()&3)+12;
 				p->type = pt_smoke;
-				p->die = cl.time + 1;
+				p->die = cl.time + 10000;
 				for (j=0 ; j<3 ; j++)
 					p->org[j] = start[j] + ((rand()&3)-2);
 				break;
@@ -1208,7 +1202,7 @@ void R_RocketTrail2 (vec3_t start, vec3_t end, int color, entity_t *ent)
 	float		len;
 	particle_t	*p;
 	static int	tracercount;
-//	if (!r_particles.value) return; // LordHavoc: particles are optional
+	if (!r_particles.value) return; // LordHavoc: particles are optional
 
 	VectorSubtract (end, start, vec);
 	len = VectorNormalizeLength (vec);
@@ -1226,7 +1220,7 @@ void R_RocketTrail2 (vec3_t start, vec3_t end, int color, entity_t *ent)
 		VectorCopy (vec3_origin, p->vel);
 
 		p->texnum = flareparticletexture;
-		p->scale = 16;
+		p->scale = 8;
 		p->alpha = 192;
 		p->color = color;
 		p->type = pt_smoke;
@@ -1240,7 +1234,6 @@ void R_RocketTrail2 (vec3_t start, vec3_t end, int color, entity_t *ent)
 }
 
 
-//extern qboolean isG200, isATI, isRagePro;
 extern qboolean lighthalf;
 
 /*
@@ -1253,7 +1246,7 @@ extern	cvar_t	sv_gravity;
 void R_DrawParticles (void)
 {
 	particle_t		*p, *kill;
-	int				i, /*texnum, */r,g,b,a;
+	int				i, r,g,b,a;
 	float			grav, grav1, time1, time2, time3, dvel, frametime, scale, scale2;
 	byte			*color24;
 	vec3_t			up, right, uprightangles, forward2, up2, right2, v;
@@ -1261,23 +1254,6 @@ void R_DrawParticles (void)
 	// LordHavoc: early out condition
 	if (!active_particles)
 		return;
-
-	/*
-	texnum = particletexture;
-    glBindTexture(GL_TEXTURE_2D, texnum);
-	glEnable (GL_BLEND);
-	// LordHavoc: Matrox G200 cards can't handle per pixel alpha at all...
-	// and ATI Rage Pro can't modulate a per pixel alpha texture
-	if (isG200 || isRagePro)
-		glEnable(GL_ALPHA_TEST);
-	else
-		glDisable(GL_ALPHA_TEST);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glDepthMask(0); // disable zbuffer updates
-	glShadeModel(GL_FLAT);
-	glBegin (GL_TRIANGLES);
-	*/
 
 	VectorScale (vup, 1.5, up);
 	VectorScale (vright, 1.5, right);
@@ -1328,51 +1304,7 @@ void R_DrawParticles (void)
 		VectorSubtract(p->org, r_refdef.vieworg, v);
 		if (DotProduct(v, v) >= 256.0f)
 		{
-			scale = p->scale * -0.25;scale2 = p->scale * 0.75;
-			/*
-			if (p->texnum != texnum)
-			{
-				texnum = p->texnum;
-				glEnd();
-				glBindTexture(GL_TEXTURE_2D, texnum);
-				glBegin(GL_TRIANGLES);
-			}
-			if (lighthalf)
-			{
-				color24 = (byte *)&d_8to24table[(int)p->color];
-				if (p->texnum == smokeparticletexture)
-					glColor4ub((byte) (color24[0] >> 1), (byte) (color24[1] >> 1), (byte) (color24[2] >> 1), (byte) (p->alpha*r_smokealpha.value));
-				else
-					glColor4ub((byte) (color24[0] >> 1), (byte) (color24[1] >> 1), (byte) (color24[2] >> 1), (byte) p->alpha);
-			}
-			else
-			{
-				color24 = (byte *) &d_8to24table[(int)p->color];
-				if (p->texnum == smokeparticletexture)
-					glColor4ub(color24[0], color24[1], color24[2], (byte) (p->alpha*r_smokealpha.value));
-				else
-					glColor4ub(color24[0], color24[1], color24[2], (byte) p->alpha);
-			}
-			if (p->texnum == rainparticletexture) // rain streak
-			{
-				glTexCoord2f (0,0);
-				glVertex3f (p->org[0] + right2[0]*scale , p->org[1] + right2[1]*scale , p->org[2] + right2[2]*scale );
-				glTexCoord2f (1,0);
-				glVertex3f (p->org[0] + right2[0]*scale , p->org[1] + right2[1]*scale , p->org[2] + right2[2]*scale );
-				glTexCoord2f (0,1);
-				glVertex3f (p->org[0] + right2[0]*scale2, p->org[1] + right2[1]*scale2, p->org[2] + right2[2]*scale2);
-			}
-			else
-			{
-				glTexCoord2f (0,0);
-				// LordHavoc: centered particle sprites
-				glVertex3f (p->org[0] + up[0]*scale  + right[0]*scale , p->org[1] + up[1]*scale  + right[1]*scale , p->org[2] + up[2]*scale  + right[2]*scale );
-				glTexCoord2f (1,0);
-				glVertex3f (p->org[0] + up[0]*scale2 + right[0]*scale , p->org[1] + up[1]*scale2 + right[1]*scale , p->org[2] + up[2]*scale2 + right[2]*scale );
-				glTexCoord2f (0,1);
-				glVertex3f (p->org[0] + up[0]*scale  + right[0]*scale2, p->org[1] + up[1]*scale  + right[1]*scale2, p->org[2] + up[2]*scale  + right[2]*scale2);
-			}
-			*/
+			scale = p->scale * -0.5;scale2 = p->scale * 0.5;
 			color24 = (byte *) &d_8to24table[(int)p->color];
 			r = color24[0];
 			g = color24[1];
@@ -1387,15 +1319,17 @@ void R_DrawParticles (void)
 			transpolybegin(p->texnum, 0, p->texnum, TPOLYTYPE_ALPHA);
 			if (p->texnum == rainparticletexture) // rain streak
 			{
-				transpolyvert(p->org[0] + right2[0]*scale , p->org[1] + right2[1]*scale , p->org[2] + right2[2]*scale , 0,0,r,g,b,a);
-				transpolyvert(p->org[0] + right2[0]*scale , p->org[1] + right2[1]*scale , p->org[2] + right2[2]*scale , 1,0,r,g,b,a);
-				transpolyvert(p->org[0] + right2[0]*scale2, p->org[1] + right2[1]*scale2, p->org[2] + right2[2]*scale2, 0,1,r,g,b,a);
+				transpolyvert(p->org[0] + up2[0]*scale  + right2[0]*scale , p->org[1] + up2[1]*scale  + right2[1]*scale , p->org[2] + up2[2]*scale  + right2[2]*scale , 0,1,r,g,b,a);
+				transpolyvert(p->org[0] + up2[0]*scale2 + right2[0]*scale , p->org[1] + up2[1]*scale2 + right2[1]*scale , p->org[2] + up2[2]*scale2 + right2[2]*scale , 0,0,r,g,b,a);
+				transpolyvert(p->org[0] + up2[0]*scale2 + right2[0]*scale2, p->org[1] + up2[1]*scale2 + right2[1]*scale2, p->org[2] + up2[2]*scale2 + right2[2]*scale2, 1,0,r,g,b,a);
+				transpolyvert(p->org[0] + up2[0]*scale  + right2[0]*scale2, p->org[1] + up2[1]*scale  + right2[1]*scale2, p->org[2] + up2[2]*scale  + right2[2]*scale2, 1,1,r,g,b,a);
 			}
 			else
 			{
-				transpolyvert(p->org[0] + up[0]*scale  + right[0]*scale , p->org[1] + up[1]*scale  + right[1]*scale , p->org[2] + up[2]*scale  + right[2]*scale , 0,0,r,g,b,a);
-				transpolyvert(p->org[0] + up[0]*scale2 + right[0]*scale , p->org[1] + up[1]*scale2 + right[1]*scale , p->org[2] + up[2]*scale2 + right[2]*scale , 1,0,r,g,b,a);
-				transpolyvert(p->org[0] + up[0]*scale  + right[0]*scale2, p->org[1] + up[1]*scale  + right[1]*scale2, p->org[2] + up[2]*scale  + right[2]*scale2, 0,1,r,g,b,a);
+				transpolyvert(p->org[0] + up[0]*scale  + right[0]*scale , p->org[1] + up[1]*scale  + right[1]*scale , p->org[2] + up[2]*scale  + right[2]*scale , 0,1,r,g,b,a);
+				transpolyvert(p->org[0] + up[0]*scale2 + right[0]*scale , p->org[1] + up[1]*scale2 + right[1]*scale , p->org[2] + up[2]*scale2 + right[2]*scale , 0,0,r,g,b,a);
+				transpolyvert(p->org[0] + up[0]*scale2 + right[0]*scale2, p->org[1] + up[1]*scale2 + right[1]*scale2, p->org[2] + up[2]*scale2 + right[2]*scale2, 1,0,r,g,b,a);
+				transpolyvert(p->org[0] + up[0]*scale  + right[0]*scale2, p->org[1] + up[1]*scale  + right[1]*scale2, p->org[2] + up[2]*scale  + right[2]*scale2, 1,1,r,g,b,a);
 			}
 			transpolyend();
 		}
@@ -1407,6 +1341,8 @@ void R_DrawParticles (void)
 		switch (p->type)
 		{
 		case pt_static:
+			if (Mod_PointInLeaf(p->org, cl.worldmodel)->contents == CONTENTS_SOLID)
+				p->die = -1;
 			break;
 		case pt_fire:
 			p->ramp += time1;
@@ -1415,6 +1351,8 @@ void R_DrawParticles (void)
 			else
 				p->color = ramp3[(int)p->ramp];
 			p->vel[2] += grav;
+			if (Mod_PointInLeaf(p->org, cl.worldmodel)->contents == CONTENTS_SOLID)
+				p->die = -1;
 			break;
 
 		case pt_explode:
@@ -1431,7 +1369,7 @@ void R_DrawParticles (void)
 
 		case pt_explode2:
 			p->ramp += time3;
-			if (p->ramp >=8)
+			if (p->ramp >= 8 || Mod_PointInLeaf(p->org, cl.worldmodel)->contents == CONTENTS_SOLID)
 				p->die = -1;
 			else
 				p->color = ramp2[(int)p->ramp];
@@ -1445,25 +1383,33 @@ void R_DrawParticles (void)
 			for (i=0 ; i<3 ; i++)
 				p->vel[i] += p->vel[i]*dvel;
 			p->vel[2] -= grav;
+			if (Mod_PointInLeaf(p->org, cl.worldmodel)->contents == CONTENTS_SOLID)
+				p->die = -1;
 			break;
 
 		case pt_blob2:
 			for (i=0 ; i<2 ; i++)
 				p->vel[i] -= p->vel[i]*dvel;
 			p->vel[2] -= grav;
+			if (Mod_PointInLeaf(p->org, cl.worldmodel)->contents == CONTENTS_SOLID)
+				p->die = -1;
 			break;
 
 		case pt_grav:
 			p->vel[2] -= grav1;
+			if (Mod_PointInLeaf(p->org, cl.worldmodel)->contents == CONTENTS_SOLID)
+				p->die = -1;
 			break;
 		case pt_slowgrav:
 			p->vel[2] -= grav;
+			if (Mod_PointInLeaf(p->org, cl.worldmodel)->contents == CONTENTS_SOLID)
+				p->die = -1;
 			break;
 // LordHavoc: gunshot spark showers
 		case pt_dust:
 			p->ramp += time1;
 			p->scale -= frametime * 4;
-			if (p->ramp >= 8 || p->scale <= 0)
+			if (p->ramp >= 8 || p->scale <= 0 || Mod_PointInLeaf(p->org, cl.worldmodel)->contents == CONTENTS_SOLID)
 				p->die = -1;
 			else
 				p->color = ramp3[(int)p->ramp];
@@ -1471,18 +1417,21 @@ void R_DrawParticles (void)
 			break;
 // LordHavoc: for smoke trails
 		case pt_smoke:
-			p->scale += frametime * 16;
-			p->alpha -= frametime * 64;
-			p->vel[2] += grav;
+			p->scale += frametime * 4;
+			p->alpha -= frametime * 48;
+//			p->vel[2] += grav;
 			if (p->alpha < 1)
 				p->die = -1;
 			break;
 		case pt_snow:
 			if (cl.time > p->time2)
 			{
-				p->time2 = cl.time + 0.4;
-				p->vel[0] = (rand()&63)-32;
-				p->vel[1] = (rand()&63)-32;
+				p->time2 = cl.time + (rand() & 3) * 0.1;
+				p->vel[0] = (rand()&63)-32 + p->vel2[0];
+				p->vel[1] = (rand()&63)-32 + p->vel2[1];
+				p->vel[2] = (rand()&63)-32 + p->vel2[2];
+				if (Mod_PointInLeaf(p->org, cl.worldmodel)->contents != CONTENTS_EMPTY)
+					p->die = -1;
 			}
 			break;
 		case pt_bulletpuff:
@@ -1502,49 +1451,42 @@ void R_DrawParticles (void)
 		case pt_fadespark:
 			p->alpha -= frametime * 256;
 			p->vel[2] -= grav;
-			if (p->alpha < 1)
+			if (p->alpha < 1 || Mod_PointInLeaf(p->org, cl.worldmodel)->contents == CONTENTS_SOLID)
 				p->die = -1;
 			break;
 		case pt_fadespark2:
 			p->alpha -= frametime * 512;
 			p->vel[2] -= grav;
-			if (p->alpha < 1)
+			if (p->alpha < 1 || Mod_PointInLeaf(p->org, cl.worldmodel)->contents == CONTENTS_SOLID)
 				p->die = -1;
 			break;
 		case pt_fallfadespark:
 			p->alpha -= frametime * 256;
 			p->vel[2] -= grav1;
-			if (p->alpha < 1)
+			if (p->alpha < 1 || Mod_PointInLeaf(p->org, cl.worldmodel)->contents == CONTENTS_SOLID)
 				p->die = -1;
 			break;
 		case pt_fallfadespark2:
 			p->alpha -= frametime * 512;
 			p->vel[2] -= grav1;
-			if (p->alpha < 1)
+			if (p->alpha < 1 || Mod_PointInLeaf(p->org, cl.worldmodel)->contents == CONTENTS_SOLID)
 				p->die = -1;
 			break;
 		case pt_bubble:
-			p->vel[2] += grav1;
-			if (p->vel[2] >= 100)
-				p->vel[2] = 68+rand()&31;
+			p->vel[2] += grav1 * 2;
+			if (p->vel[2] >= 200)
+				p->vel[2] = 136+rand()&63;
 			if (cl.time > p->time2)
 			{
 				p->time2 = cl.time + (rand()&7)*0.0625;
 				p->vel[0] = (rand()&63)-32;
 				p->vel[1] = (rand()&63)-32;
 			}
-			p->alpha -= frametime * 32;
-			if (p->alpha < 1)
+			p->alpha -= frametime * 64;
+			if (p->alpha < 1 || Mod_PointInLeaf(p->org, cl.worldmodel)->contents == CONTENTS_EMPTY)
 				p->die = -1;
 			break;
 		}
 	}
-
-	/*
-	glEnd ();
-	glShadeModel(GL_SMOOTH);
-	glDepthMask(1); // enable zbuffer updates
-	glDisable (GL_BLEND);
-	*/
 }
 

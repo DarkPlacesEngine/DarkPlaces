@@ -142,6 +142,7 @@ typedef struct particle_s
 	int			texnum;
 	float		alpha; // 0-255
 	float		time2; // used for various things (snow fluttering, for example)
+	vec3_t		vel2; // used for snow fluttering (base velocity, wind for instance)
 } particle_t;
 
 
