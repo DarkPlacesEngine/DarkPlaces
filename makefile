@@ -11,10 +11,20 @@ OBJECTS= buildnumber.o cd_linux.o chase.o cl_demo.o cl_input.o cl_main.o cl_pars
 OPTIMIZATIONS= -O6 -ffast-math -funroll-loops -fomit-frame-pointer -fexpensive-optimizations
 #OPTIMIZATIONS= -O -g
 
+#note:
+#the -Werror can be removed to compile even if there are warnings,
+#the Quakeforge team uses this to ensure that all released versions are free
+#of warnings.
+
+#normal compile
 CFLAGS= -MD -Wall -Werror -I/usr/X11R6/include -I/usr/include/glide $(OPTIMIZATIONS)
+#debug compile
 #CFLAGS= -MD -Wall -Werror -I/usr/X11R6/include -ggdb $(OPTIMIZATIONS)
-#LDFLAGS= -L/usr/X11R6/lib -lm -lX11 -lXext -lXIE -lXxf86dga -lXxf86vm -lGL -ldl
-LDFLAGS= -L/usr/X11R6/lib -lm -lX11 -lXext -lXIE -lXxf86dga -lXxf86vm -lGL -ldl -lasound -lz
+
+#if using oss or kernel sound driver, use this line
+LDFLAGS= -L/usr/X11R6/lib -lm -lX11 -lXext -lXIE -lXxf86dga -lXxf86vm -lGL -ldl -lz
+#if using alsa, use this line
+#LDFLAGS= -L/usr/X11R6/lib -lm -lX11 -lXext -lXIE -lXxf86dga -lXxf86vm -lGL -ldl -lasound -lz
 
 #most people can't build the -3dfx version (-3dfx version needs some updates for new mesa)
 all: darkplaces-glx
