@@ -392,8 +392,6 @@ void VM_sprint (void)
 	}
 	
 	client = svs.clients + clientnum;
-	if (!client->netconnection)
-		return;
 	VM_VarString(1, string, sizeof(string));
 	MSG_WriteChar(&client->message,svc_print);
 	MSG_WriteString(&client->message, string);

@@ -424,8 +424,6 @@ void PF_sprint (void)
 	}
 
 	client = svs.clients + entnum-1;
-	if (!client->netconnection)
-		return;
 	PF_VarString(1, string, sizeof(string));
 	MSG_WriteChar(&client->message,svc_print);
 	MSG_WriteString(&client->message, string);
@@ -456,8 +454,6 @@ void PF_centerprint (void)
 	}
 
 	client = svs.clients + entnum-1;
-	if (!client->netconnection)
-		return;
 	PF_VarString(1, string, sizeof(string));
 	MSG_WriteChar(&client->message,svc_centerprint);
 	MSG_WriteString(&client->message, string);
@@ -985,8 +981,8 @@ void PF_stuffcmd (void)
 	str = G_STRING(OFS_PARM1);
 
 	old = host_client;
-	if ((host_client = svs.clients + entnum-1) && host_client->netconnection)
-		Host_ClientCommands ("%s", str);
+	host_client = svs.clients + entnum-1;
+	Host_ClientCommands ("%s", str);
 	host_client = old;
 }
 
@@ -1551,7 +1547,7 @@ void PF_lightstyle (void)
 
 	for (j = 0, client = svs.clients;j < svs.maxclients;j++, client++)
 	{
-		if (client->netconnection)
+		if (client->active)
 		{
 			MSG_WriteChar (&client->message, svc_lightstyle);
 			MSG_WriteChar (&client->message,style);
@@ -3615,7 +3611,7 @@ PF_floor,					// #37 float(float v) floor
 PF_ceil,					// #38 float(float v) ceil
 NULL,						// #39
 PF_checkbottom,				// #40 float(entity e) checkbottom
-PF_pointcontents		,	// #41 float(vector v) pointcontents
+PF_pointcontents,			// #41 float(vector v) pointcontents
 NULL,						// #42
 PF_fabs,					// #43 float(float f) fabs
 PF_aim,						// #44 vector(entity e, float speed) aim
