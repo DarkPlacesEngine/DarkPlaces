@@ -1,7 +1,4 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
--d darkplaces cleanup: clean up Collision_TraceBrushBrush to have another temp variable besides f and clean up the enterfrac2 handling (Vic)
--d darkplaces cleanup: make memory pools have a flag to print them as temporary pools (I.E. consider them leaks if anything is in them) (Vicious)
--d darkplaces cleanup: nodestack[nodestackindex++] = node->children[0]; and similar things should skip the node if stack is full (Vic)
 -d darkplaces client bug: ignore modelflags on view weaponmodel - in Malice the double barreled shotgun leaves a smoke trail, and the hellfire rotates, also in Zerstorer the riot shotgun rotates (Hidayat)
 -d darkplaces client bug: make sure QuakeDoneQuick works (Chris Kemp)
 -d darkplaces client: add GAME_PRYDON mode which would make vore spike trails blue as they're used for ice (Urre, -Harb, FrikaC)
@@ -375,7 +372,10 @@
 7 darkplaces: make it work on Savage4 again (Ender)
 7 darkplaces: mirrors (Sajt)
 7 darkplaces: shadow volume clipping (romi)
+d darkplaces cleanup: clean up Collision_TraceBrushBrush to have another temp variable besides f and clean up the enterfrac2 handling (Vic)
+d darkplaces cleanup: make memory pools have a flag to print them as temporary pools (I.E. consider them leaks if anything is in them) (Vicious)
 d darkplaces cleanup: make sure engine dumps log file to disk if there is a Sys_Error (VorteX)
+d darkplaces cleanup: nodestack[nodestackindex++] = node->children[0]; and similar things should skip the node if stack is full (Vic)
 d darkplaces client: ValidateState should not error out about colormap > maxclients, only warn (Static_Fiend)
 d darkplaces client: fix disappearing decals bug, it seems that when the smoke disappears so do the decals (Urre)
 d darkplaces client: locked console scrollback (sublim3)
