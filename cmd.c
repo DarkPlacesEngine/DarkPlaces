@@ -283,7 +283,6 @@ Cmd_Exec_f
 void Cmd_Exec_f (void)
 {
 	char	*f;
-	int		mark;
 
 	if (Cmd_Argc () != 2)
 	{
@@ -291,8 +290,7 @@ void Cmd_Exec_f (void)
 		return;
 	}
 
-	mark = Hunk_LowMark ();
-	f = (char *)COM_LoadHunkFile (Cmd_Argv(1), false);
+	f = (char *)COM_LoadMallocFile (Cmd_Argv(1), false);
 	if (!f)
 	{
 		Con_Printf ("couldn't exec %s\n",Cmd_Argv(1));
@@ -301,7 +299,7 @@ void Cmd_Exec_f (void)
 	Con_Printf ("execing %s\n",Cmd_Argv(1));
 	
 	Cbuf_InsertText (f);
-	Hunk_FreeToLowMark (mark);
+	qfree(f);
 }
 
 
