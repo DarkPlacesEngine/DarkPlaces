@@ -207,38 +207,23 @@ void ResampleSfx (sfxcache_t *sc, qbyte *data, char *name)
 
 /*
 ==============
-S_LoadSound
+S_LoadWavFile
 ==============
 */
-sfxcache_t *S_LoadSound (sfx_t *s, int complain)
+sfxcache_t *S_LoadWavFile (const char *filename, sfx_t *s)
 {
-	char namebuffer[MAX_QPATH];
 	qbyte *data;
 	wavinfo_t info;
 	int len;
 	sfxcache_t *sc;
 
-	// see if still in memory
-	if (!shm || !shm->speed)
-		return NULL;
-	if (s->sfxcache && s->sfxcache->speed == shm->speed)
-		return s->sfxcache;
-
-	// load it in
-	snprintf(namebuffer, sizeof(namebuffer), "sound/%s", s->name);
-
-	data = FS_LoadFile(namebuffer, false);
-
+	// Load the file
+	data = FS_LoadFile(filename, false);
 	if (!data)
-	{
-		s->silentlymissing = !complain;
-		if (complain)
-			Con_Printf("Couldn't load %s\n", namebuffer);
 		return NULL;
-	}
 
 	info = GetWavinfo (s->name, data, fs_filesize);
-	// LordHavoc: stereo sounds are now allowed (intended for music)
+	// Stereo sounds are allowed (intended for music)
 	if (info.channels < 1 || info.channels > 2)
 	{
 		Con_Printf("%s has an unsupported number of channels (%i)\n",s->name, info.channels);
@@ -271,6 +256,45 @@ sfxcache_t *S_LoadSound (sfx_t *s, int complain)
 	ResampleSfx(sc, data + info.dataofs, s->name);
 
 	Mem_Free(data);
+	return sc;
+}
+
+
+/*
+==============
+S_LoadSound
+==============
+*/
+sfxcache_t *S_LoadSound (sfx_t *s, int complain)
+{
+	char namebuffer[MAX_QPATH];
+	size_t len;
+	sfxcache_t *sc;
+
+	// see if still in memory
+	if (!shm || !shm->speed)
+		return NULL;
+	if (s->sfxcache && (s->sfxcache->speed == shm->speed))
+		return s->sfxcache;
+
+	len = snprintf (namebuffer, sizeof (namebuffer), "sound/%s", s->name);
+	if (len >= sizeof (namebuffer))
+		return NULL;
+
+	// Try to load it as a WAV file
+	sc = S_LoadWavFile (namebuffer, s);
+
+	// TODO: insert Ogg Vorbis support here
+
+	// Can't load the sound!
+	if (sc == NULL)
+	{
+		s->silentlymissing = !complain;
+		if (complain)
+			Con_Printf ("Couldn't load %s\n", namebuffer);
+		return NULL;
+	}
+
 	return sc;
 }
 
