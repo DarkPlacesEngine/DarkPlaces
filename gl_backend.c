@@ -784,6 +784,14 @@ void R_Mesh_Render(void)
 	if (!currentmesh)
 		return;
 
+	if (!r_render.integer)
+	{
+		currentmesh = 0;
+		currenttriangle = 0;
+		currentvertex = 0;
+		return;
+	}
+
 	CHECKGLERROR
 
 	GL_UpdateFarclip();
