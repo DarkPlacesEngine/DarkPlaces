@@ -50,13 +50,13 @@ int			key_consoleactive;
 static int	key_count;					// incremented every key event
 static int	key_bmap, key_bmap2;
 
-char				*keybindings[8][256];
-static qboolean		consolekeys[256];	// if true, can't be rebound while in
+char				*keybindings[8][1024];
+static qboolean		consolekeys[1024];	// if true, can't be rebound while in
 										// console
-static qboolean		menubound[256];		// if true, can't be rebound while in
+static qboolean		menubound[1024];		// if true, can't be rebound while in
 										// menu
-static unsigned int	key_repeats[256];	// if > 1, it is autorepeating
-static qboolean		keydown[256];
+static unsigned int	key_repeats[1024];	// if > 1, it is autorepeating
+static qboolean		keydown[1024];
 
 typedef struct {
 	const char	*name;
@@ -734,7 +734,7 @@ Key_Unbindall_f (void)
 	int         i, j;
 
 	for (j = 0; j < 8; j++)
-		for (i = 0; i < 256; i++)
+		for (i = 0; i < sizeof(keybindings[0])/sizeof(keybindings[0][0]); i++)
 			if (keybindings[j][i])
 				Key_SetBinding (i, j, "");
 }
@@ -786,12 +786,12 @@ Key_WriteBindings (qfile_t *f)
 {
 	int         i, j;
 
-	for (i = 0; i < 256; i++)
+	for (i = 0; i < sizeof(keybindings[0])/sizeof(keybindings[0][0]); i++)
 		if (keybindings[0][i])
 			FS_Printf (f, "bind %s \"%s\"\n",
 					Key_KeynumToString (i), keybindings[0][i]);
 	for (j = 1; j < 8; j++)
-		for (i = 0; i < 256; i++)
+		for (i = 0; i < sizeof(keybindings[0])/sizeof(keybindings[0][0]); i++)
 			if (keybindings[j][i])
 				FS_Printf (f, "in_bind %d %s \"%s\"\n",
 						j, Key_KeynumToString (i), keybindings[j][i]);
@@ -1016,7 +1016,7 @@ Key_ClearStates (void)
 {
 	int i;
 
-	for (i = 0;i < 256;i++)
+	for (i = 0; i < sizeof(keydown)/sizeof(keydown[0]); i++)
 	{
 		keydown[i] = false;
 		key_repeats[i] = 0;
