@@ -67,10 +67,8 @@ cvar_t host_framerate = {0, "host_framerate","0"};
 cvar_t host_speeds = {0, "host_speeds","0"};
 // LordHavoc: framerate independent slowmo
 cvar_t slowmo = {0, "slowmo", "1.0"};
-// LordHavoc: game logic lower cap on framerate (if framerate is below this is, it pretends it is this, so game logic will run normally)
-cvar_t host_minfps = {CVAR_SAVE, "host_minfps", "10"};
 // LordHavoc: framerate upper cap
-cvar_t host_maxfps = {CVAR_SAVE, "host_maxfps", "1000"};
+cvar_t cl_maxfps = {CVAR_SAVE, "cl_maxfps", "1000"};
 
 // print broadcast messages in dedicated mode
 cvar_t sv_echobprint = {CVAR_SAVE, "sv_echobprint", "1"};
@@ -237,8 +235,7 @@ void Host_InitLocal (void)
 	Cvar_RegisterVariable (&host_framerate);
 	Cvar_RegisterVariable (&host_speeds);
 	Cvar_RegisterVariable (&slowmo);
-	Cvar_RegisterVariable (&host_minfps);
-	Cvar_RegisterVariable (&host_maxfps);
+	Cvar_RegisterVariable (&cl_maxfps);
 
 	Cvar_RegisterVariable (&sv_echobprint);
 
@@ -552,68 +549,65 @@ Host_FilterTime
 Returns false if the time is too short to run a frame
 ===================
 */
-extern cvar_t cl_avidemo;
+extern qboolean cl_capturevideo_active;
+extern double cl_capturevideo_framerate;
 qboolean Host_FilterTime (double time)
 {
 	double timecap, timeleft;
 	realtime += time;
 
-	if (slowmo.value < 0.0f)
-		Cvar_SetValue("slowmo", 0.0f);
-	if (host_minfps.value < 10.0f)
-		Cvar_SetValue("host_minfps", 10.0f);
-	if (host_maxfps.value < host_minfps.value)
-		Cvar_SetValue("host_maxfps", host_minfps.value);
-	if (cl_avidemo.value < 0.1f && cl_avidemo.value != 0.0f)
-		Cvar_SetValue("cl_avidemo", 0.0f);
+	if (sys_ticrate.value < 0.01 || sys_ticrate.value > 0.1)
+		Cvar_SetValue("sys_ticrate", bound(0.01, sys_ticrate.value, 0.1));
+	if (slowmo.value < 0)
+		Cvar_SetValue("slowmo", 0);
+	if (host_framerate.value < 0.00001 && host_framerate.value != 0)
+		Cvar_SetValue("host_framerate", 0);
+	if (cl_maxfps.value < 1)
+		Cvar_SetValue("cl_maxfps", 1);
+
+	if (cls.timedemo)
+	{
+		// disable time effects during timedemo
+		cl.frametime = host_realframetime = host_frametime = realtime - oldrealtime;
+		oldrealtime = realtime;
+		return true;
+	}
 
 	// check if framerate is too high
-	if (!cls.timedemo)
-	{
-		// default to sys_ticrate (server framerate - presumably low) unless we
-		// have a good reason to run faster
+	// default to sys_ticrate (server framerate - presumably low) unless we
+	// have a good reason to run faster
+	timecap = host_framerate.value;
+	if (!timecap)
 		timecap = sys_ticrate.value;
-		if (cls.state != ca_dedicated)
-		{
-			if (cl_avidemo.value >= 0.1f)
-				timecap = 1.0 / (double)cl_avidemo.value;
-			else if (vid_activewindow)
-				timecap = 1.0 / host_maxfps.value;
-		}
+	if (cls.state != ca_dedicated)
+	{
+		if (cl_capturevideo_active)
+			timecap = 1.0 / cl_capturevideo_framerate;
+		else if (vid_activewindow)
+			timecap = 1.0 / cl_maxfps.value;
+	}
 
-		timeleft = oldrealtime + timecap - realtime;
-		if (timeleft > 0)
-		{
-			// don't totally hog the CPU
-			if (timeleft >= 0.02)
-				Sys_Sleep((int)(timeleft * 1000) - 5);
-			return false;
-		}
+	timeleft = (oldrealtime - realtime) + timecap;
+	if (timeleft > 0)
+	{
+		// don't totally hog the CPU
+		if (timeleft >= 0.03)
+			Sys_Sleep((int)(timeleft * 1000) - 10);
+		return false;
 	}
 
 	// LordHavoc: copy into host_realframetime as well
 	host_realframetime = host_frametime = realtime - oldrealtime;
 	oldrealtime = realtime;
 
-	if (cls.timedemo)
-	{
-		// disable time effects
-		cl.frametime = host_frametime;
-		return true;
-	}
+	// apply slowmo scaling
+	host_frametime *= slowmo.value;
 
-	if (host_framerate.value > 0)
+	// host_framerate overrides all else
+	if (host_framerate.value)
 		host_frametime = host_framerate.value;
-	else if (cl_avidemo.value >= 0.1f)
-		host_frametime = (1.0 / cl_avidemo.value);
-	else
-	{
-		// don't allow really short frames
-		if (host_frametime > (1.0 / host_minfps.value))
-			host_frametime = (1.0 / host_minfps.value);
-	}
 
-	cl.frametime = host_frametime = bound(0, host_frametime * slowmo.value, 0.1f); // LordHavoc: the QC code relies on no less than 10fps
+	cl.frametime = host_frametime;
 
 	return true;
 }
@@ -648,37 +642,49 @@ Host_ServerFrame
 */
 void Host_ServerFrame (void)
 {
+	double advancetime;
 	static double frametimetotal = 0, lastservertime = 0;
 	frametimetotal += host_frametime;
 	// LordHavoc: cap server at sys_ticrate in networked games
-	if (!cl.islocalgame && ((realtime - lastservertime) < sys_ticrate.value))
+	if (frametimetotal < 0.001 || (!cl.islocalgame && cls.state == ca_connected && sv.active && ((realtime - lastservertime) < sys_ticrate.value)))
 		return;
-
-	NetConn_ServerFrame();
-
-// run the world state
-	if (!sv.paused && (!cl.islocalgame || (key_dest == key_game && !key_consoleactive)))
-		sv.frametime = pr_global_struct->frametime = frametimetotal;
-	else
-		sv.frametime = 0;
-	frametimetotal = 0;
 	lastservertime = realtime;
 
-// set the time and clear the general datagram
+	// set the time and clear the general datagram
 	SV_ClearDatagram();
 
-// read client messages
-	SV_RunClients();
+	// run the world state
+	// don't allow simulation to run too fast or too slow or logic glitches can occur
+	while (frametimetotal > 0)
+	{
+		advancetime = min(frametimetotal, sys_ticrate.value);
+		frametimetotal = frametimetotal - advancetime;
 
-// move things around and think
-// always pause in single player if in console or menus
-	if (sv.frametime)
-		SV_Physics();
+		// only advance time if not paused
+		// the game also pauses in singleplayer when menu or console is used
+		if (!sv.paused && (!cl.islocalgame || (key_dest == key_game && !key_consoleactive)))
+			sv.frametime = advancetime;
+		else
+			sv.frametime = 0;
 
-// send all messages to the clients
+		pr_global_struct->frametime = sv.frametime;
+
+		// check for network packets to the server each world step incase they
+		// come in midframe (particularly if host is running really slow)
+		NetConn_ServerFrame();
+
+		// read client messages
+		SV_RunClients();
+
+		// move things around and think unless paused
+		if (sv.frametime)
+			SV_Physics();
+	}
+
+	// send all messages to the clients
 	SV_SendClientMessages();
 
-// send an heartbeat if enough time has passed since the last one
+	// send an heartbeat if enough time has passed since the last one
 	NetConn_Heartbeat(0);
 }
 
@@ -701,12 +707,12 @@ void _Host_Frame (float time)
 	if (setjmp(host_abortserver))
 		return;			// something bad happened, or the server disconnected
 
-	// keep the random time dependent
-	rand();
-
 	// decide the simulation time
 	if (!Host_FilterTime(time))
 		return;
+
+	// keep the random time dependent
+	rand();
 
 	cl.islocalgame = NetConn_IsLocalGame();
 

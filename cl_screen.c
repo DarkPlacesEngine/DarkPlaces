@@ -21,7 +21,9 @@ cvar_t vid_pixelaspect = {CVAR_SAVE, "vid_pixelaspect", "1"};
 cvar_t scr_screenshot_jpeg = {CVAR_SAVE, "scr_screenshot_jpeg","0"};
 cvar_t scr_screenshot_jpeg_quality = {CVAR_SAVE, "scr_screenshot_jpeg_quality","0.9"};
 cvar_t scr_screenshot_name = {0, "scr_screenshot_name","dp"};
-cvar_t cl_avidemo = {0, "cl_avidemo", "0"};
+cvar_t cl_capturevideo = {0, "cl_capturevideo", "0"};
+cvar_t cl_capturevideo_fps = {0, "cl_capturevideo_fps", "30"};
+cvar_t cl_capturevideo_raw = {0, "cl_capturevideo_raw", "0"};
 cvar_t r_textshadow = {0, "r_textshadow", "0"};
 cvar_t r_letterbox = {0, "r_letterbox", "0"};
 
@@ -474,7 +476,9 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&vid_pixelaspect);
 	Cvar_RegisterVariable (&scr_screenshot_jpeg);
 	Cvar_RegisterVariable (&scr_screenshot_jpeg_quality);
-	Cvar_RegisterVariable (&cl_avidemo);
+	Cvar_RegisterVariable (&cl_capturevideo);
+	Cvar_RegisterVariable (&cl_capturevideo_fps);
+	Cvar_RegisterVariable (&cl_capturevideo_raw);
 	Cvar_RegisterVariable (&r_textshadow);
 	Cvar_RegisterVariable (&r_letterbox);
 
@@ -711,48 +715,199 @@ void SCR_ScreenShot_f (void)
 	shotnumber++;
 }
 
-static int cl_avidemo_frame = 0;
-
-void SCR_CaptureAVIDemo(void)
+typedef enum capturevideoformat_e
 {
-	static qbyte *avi_buffer1 = NULL;
-	static qbyte *avi_buffer2 = NULL;
-	static qbyte *avi_buffer3 = NULL;
-	char filename[32];
-	qboolean jpeg = (scr_screenshot_jpeg.integer != 0);
+	CAPTUREVIDEOFORMAT_TARGA,
+	CAPTUREVIDEOFORMAT_JPEG,
+	CAPTUREVIDEOFORMAT_RAW
+}
+capturevideoformat_t;
 
-	if (!cl_avidemo.integer)
-	{
-		if (avi_buffer1 != NULL)
-		{
-			Mem_Free (avi_buffer1);
-			Mem_Free (avi_buffer2);
-			Mem_Free (avi_buffer3);
-			avi_buffer1 = NULL;
-			avi_buffer2 = NULL;
-			avi_buffer3 = NULL;
-		}
-		cl_avidemo_frame = 0;
+qboolean cl_capturevideo_active = false;
+capturevideoformat_t cl_capturevideo_format;
+static double cl_capturevideo_starttime = 0;
+double cl_capturevideo_framerate = 0;
+static int cl_capturevideo_soundrate = 0;
+static int cl_capturevideo_frame = 0;
+static qbyte *cl_capturevideo_buffer = NULL;
+static qfile_t *cl_capturevideo_videofile = NULL;
+static qfile_t *cl_capturevideo_soundfile = NULL;
+
+void SCR_CaptureVideo_BeginVideo(void)
+{
+	qbyte out[44];
+	if (cl_capturevideo_active)
 		return;
-	}
+	// soundrate is figured out on the first SoundFrame
+	cl_capturevideo_active = true;
+	cl_capturevideo_starttime = Sys_DoubleTime();
+	cl_capturevideo_framerate = bound(1, cl_capturevideo_fps.value, 1000);
+	cl_capturevideo_soundrate = 0;
+	cl_capturevideo_frame = 0;
+	cl_capturevideo_buffer = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * (3+3+3) + 18);
 
-	if (avi_buffer1 == NULL)
+	if (cl_capturevideo_raw.integer)
 	{
-		avi_buffer1 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3);
-		avi_buffer2 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3);
-		avi_buffer3 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3 + 18);
+		cl_capturevideo_format = CAPTUREVIDEOFORMAT_RAW;
+		cl_capturevideo_videofile = FS_Open ("video/dpvideo.rgb", "wb", false);
 	}
-
-	sprintf(filename, "video/dp%06d.%s", cl_avidemo_frame, jpeg ? "jpg" : "tga");
-
-	if (SCR_ScreenShot(filename, avi_buffer1, avi_buffer2, avi_buffer3, vid.realx, vid.realy, vid.realwidth, vid.realheight, false, false, false, jpeg))
-		cl_avidemo_frame++;
+	else if (scr_screenshot_jpeg.integer)
+	{
+		cl_capturevideo_format = CAPTUREVIDEOFORMAT_JPEG;
+		cl_capturevideo_videofile = NULL;
+	}
 	else
 	{
-		Cvar_SetValueQuick(&cl_avidemo, 0);
-		Con_Printf("avi saving failed on frame %i, out of disk space? stopping avi demo capture.\n", cl_avidemo_frame);
-		cl_avidemo_frame = 0;
+		cl_capturevideo_format = CAPTUREVIDEOFORMAT_TARGA;
+		cl_capturevideo_videofile = NULL;
 	}
+
+	cl_capturevideo_soundfile = FS_Open ("video/dpvideo.wav", "wb", false);
+
+	// wave header will be filled out when video ends
+	memset(out, 0, 44);
+	FS_Write (cl_capturevideo_soundfile, out, 44);
+}
+
+void SCR_CaptureVideo_EndVideo(void)
+{
+	int i, n;
+	qbyte out[44];
+	if (!cl_capturevideo_active)
+		return;
+	cl_capturevideo_active = false;
+
+	if (cl_capturevideo_videofile)
+	{
+		FS_Close(cl_capturevideo_videofile);
+		cl_capturevideo_videofile = NULL;
+	}
+
+	// finish the wave file
+	if (cl_capturevideo_soundfile)
+	{
+		i = FS_Tell (cl_capturevideo_soundfile);
+		//"RIFF", (int) unknown (chunk size), "WAVE",
+		//"fmt ", (int) 16 (chunk size), (short) format 1 (uncompressed PCM), (short) 2 channels, (int) unknown rate, (int) unknown bytes per second, (short) 4 bytes per sample (channels * bytes per channel), (short) 16 bits per channel
+		//"data", (int) unknown (chunk size)
+		memcpy (out, "RIFF****WAVEfmt \x10\x00\x00\x00\x01\x00\x02\x00********\x04\x00\x10\0data****", 44);
+		// the length of the whole RIFF chunk
+		n = i - 8;
+		out[4] = (n) & 0xFF;
+		out[5] = (n >> 8) & 0xFF;
+		out[6] = (n >> 16) & 0xFF;
+		out[7] = (n >> 24) & 0xFF;
+		// rate
+		n = cl_capturevideo_soundrate;
+		out[24] = (n) & 0xFF;
+		out[25] = (n >> 8) & 0xFF;
+		out[26] = (n >> 16) & 0xFF;
+		out[27] = (n >> 24) & 0xFF;
+		// bytes per second (rate * channels * bytes per channel)
+		n = cl_capturevideo_soundrate * 2 * 2;
+		out[28] = (n) & 0xFF;
+		out[29] = (n >> 8) & 0xFF;
+		out[30] = (n >> 16) & 0xFF;
+		out[31] = (n >> 24) & 0xFF;
+		// the length of the data chunk
+		n = i - 44;
+		out[40] = (n) & 0xFF;
+		out[41] = (n >> 8) & 0xFF;
+		out[42] = (n >> 16) & 0xFF;
+		out[43] = (n >> 24) & 0xFF;
+		FS_Seek (cl_capturevideo_soundfile, 0, SEEK_SET);
+		FS_Write (cl_capturevideo_soundfile, out, 44);
+		FS_Close (cl_capturevideo_soundfile);
+		cl_capturevideo_soundfile = NULL;
+	}
+
+	if (cl_capturevideo_buffer)
+	{
+		Mem_Free (cl_capturevideo_buffer);
+		cl_capturevideo_buffer = NULL;
+	}
+
+	cl_capturevideo_starttime = 0;
+	cl_capturevideo_framerate = 0;
+	cl_capturevideo_frame = 0;
+}
+
+qboolean SCR_CaptureVideo_VideoFrame(void)
+{
+	int x = vid.realx, y = vid.realy, width = vid.realwidth, height = vid.realheight;
+	char filename[32];
+	//return SCR_ScreenShot(filename, cl_capturevideo_buffer, cl_capturevideo_buffer + vid.realwidth * vid.realheight * 3, cl_capturevideo_buffer + vid.realwidth * vid.realheight * 6, vid.realx, vid.realy, vid.realwidth, vid.realheight, false, false, false, jpeg);
+	// speed is critical here, so do saving as directly as possible
+	if (!r_render.integer)
+		return false;
+	switch (cl_capturevideo_format)
+	{
+	case CAPTUREVIDEOFORMAT_RAW:
+		qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, cl_capturevideo_buffer);
+		CHECKGLERROR
+		return FS_Write (cl_capturevideo_videofile, cl_capturevideo_buffer, width*height*3);
+	case CAPTUREVIDEOFORMAT_JPEG:
+		sprintf(filename, "video/dp%06d.jpg", cl_capturevideo_frame);
+		qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, cl_capturevideo_buffer);
+		CHECKGLERROR
+		return JPEG_SaveImage_preflipped (filename, width, height, cl_capturevideo_buffer);
+	case CAPTUREVIDEOFORMAT_TARGA:
+		//return Image_WriteTGARGB_preflipped (filename, width, height, cl_capturevideo_buffer, cl_capturevideo_buffer + vid.realwidth * vid.realheight * 3, );
+		memset (cl_capturevideo_buffer, 0, 18);
+		cl_capturevideo_buffer[2] = 2;		// uncompressed type
+		cl_capturevideo_buffer[12] = (width >> 0) & 0xFF;
+		cl_capturevideo_buffer[13] = (width >> 8) & 0xFF;
+		cl_capturevideo_buffer[14] = (height >> 0) & 0xFF;
+		cl_capturevideo_buffer[15] = (height >> 8) & 0xFF;
+		cl_capturevideo_buffer[16] = 24;	// pixel size
+		qglReadPixels (x, y, width, height, GL_BGR, GL_UNSIGNED_BYTE, cl_capturevideo_buffer + 18);
+		CHECKGLERROR
+		sprintf(filename, "video/dp%06d.tga", cl_capturevideo_frame);
+		return FS_WriteFile (filename, cl_capturevideo_buffer, width*height*3 + 18);
+	default:
+		return false;
+	}
+}
+
+void SCR_CaptureVideo_SoundFrame(qbyte *bufstereo16le, size_t length, int rate)
+{
+	cl_capturevideo_soundrate = rate;
+	if (FS_Write (cl_capturevideo_soundfile, bufstereo16le, 4 * length) < 4 * length)
+	{
+		Cvar_SetValueQuick(&cl_capturevideo, 0);
+		Con_Printf("video sound saving failed on frame %i, out of disk space? stopping video capture.\n", cl_capturevideo_frame);
+		SCR_CaptureVideo_EndVideo();
+	}
+}
+
+void SCR_CaptureVideo(void)
+{
+	int newframenum;
+	if (cl_capturevideo.integer)
+	{
+		if (!cl_capturevideo_active)
+			SCR_CaptureVideo_BeginVideo();
+		if (cl_capturevideo_framerate != cl_capturevideo_fps.value)
+		{
+			Con_Printf("You can not change the video framerate while recording a video.\n");
+			Cvar_SetValueQuick(&cl_capturevideo_fps, cl_capturevideo_framerate);
+		}
+		newframenum = (Sys_DoubleTime() - cl_capturevideo_starttime) * cl_capturevideo_framerate;
+		while (cl_capturevideo_frame < newframenum)
+		{
+			if (SCR_CaptureVideo_VideoFrame())
+				cl_capturevideo_frame++;
+			else
+			{
+				Cvar_SetValueQuick(&cl_capturevideo, 0);
+				Con_Printf("video saving failed on frame %i, out of disk space? stopping avi demo capture.\n", cl_capturevideo_frame);
+				SCR_CaptureVideo_EndVideo();
+				break;
+			}
+		}
+	}
+	else if (cl_capturevideo_active)
+		SCR_CaptureVideo_EndVideo();
 }
 
 /*
@@ -962,7 +1117,7 @@ void CL_UpdateScreen(void)
 	if (!scr_initialized || !con_initialized || vid_hidden)
 		return;				// not initialized yet
 
-	SCR_CaptureAVIDemo();
+	SCR_CaptureVideo();
 
 	if (cls.signon == SIGNONS)
 		R_TimeReport("other");

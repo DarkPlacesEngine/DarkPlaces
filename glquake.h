@@ -675,6 +675,12 @@ extern int gl_support_shading_language_100;
 #define GL_SHADING_LANGUAGE_VERSION_ARB				0x8B8C
 #endif
 
+// GL_EXT_bgr
+#define GL_BGR					0x80E0
+
+// GL_EXT_bgra
+#define GL_BGRA					0x80E1
+
 #define DEBUGGL
 
 #ifdef DEBUGGL
