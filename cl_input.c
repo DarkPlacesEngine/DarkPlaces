@@ -261,7 +261,6 @@ void CL_AdjustAngles (void)
 	{
 		cl.viewangles[YAW] -= speed*cl_yawspeed.value*CL_KeyState (&in_right);
 		cl.viewangles[YAW] += speed*cl_yawspeed.value*CL_KeyState (&in_left);
-		cl.viewangles[YAW] = ANGLEMOD(cl.viewangles[YAW]);
 	}
 	if (in_klook.state & 1)
 	{
@@ -279,18 +278,12 @@ void CL_AdjustAngles (void)
 	if (up || down)
 		V_StopPitchDrift ();
 
-	// LordHavoc: changed from 80 to 90 (straight up)
-	if (cl.viewangles[PITCH] > 90)
-		cl.viewangles[PITCH] = 90;
-	// LordHavoc: changed from -70 to -90 (straight down)
-	if (cl.viewangles[PITCH] < -90)
-		cl.viewangles[PITCH] = -90;
+	cl.viewangles[YAW] = ANGLEMOD(cl.viewangles[YAW]);
+	cl.viewangles[PITCH] = ANGLEMOD(cl.viewangles[PITCH]);
+	cl.viewangles[ROLL] = ANGLEMOD(cl.viewangles[ROLL]);
 
-	if (cl.viewangles[ROLL] > 50)
-		cl.viewangles[ROLL] = 50;
-	if (cl.viewangles[ROLL] < -50)
-		cl.viewangles[ROLL] = -50;
-		
+	cl.viewangles[PITCH] = bound (in_pitch_min.value, cl.viewangles[PITCH], in_pitch_max.value);
+	cl.viewangles[ROLL] = bound(-50, cl.viewangles[ROLL], 50);
 }
 
 /*

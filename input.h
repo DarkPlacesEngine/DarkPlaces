@@ -19,6 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // input.h -- external (non-keyboard) input devices
 
+extern cvar_t in_pitch_min;
+extern cvar_t in_pitch_max;
+
 void IN_Init (void);
 
 void IN_Shutdown (void);
@@ -28,6 +31,11 @@ void IN_Commands (void);
 
 void IN_Move (usercmd_t *cmd);
 // add additional movement on top of the keyboard move cmd
+
+void IN_PreMove(void);
+void IN_PostMove(void);
+
+void IN_Mouse(usercmd_t *cmd, float mx, float my);
 
 void IN_ClearStates (void);
 // restores all button and position states to defaults

@@ -20,6 +20,8 @@ cvar_t gl_combine = {0, "gl_combine", "1"};
 cvar_t in_pitch_min = {0, "in_pitch_min", "-90"};
 cvar_t in_pitch_max = {0, "in_pitch_max", "90"};
 
+cvar_t m_filter = {CVAR_SAVE, "m_filter","0"};
+
 // GL_ARB_multitexture
 void (GLAPIENTRY *qglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
 void (GLAPIENTRY *qglActiveTexture) (GLenum);
@@ -167,6 +169,58 @@ void Force_CenterView_f (void)
 	cl.viewangles[PITCH] = 0;
 }
 
+void IN_PreMove(void)
+{
+}
+
+void IN_PostMove(void)
+{
+}
+
+void IN_Mouse(usercmd_t *cmd, float mx, float my)
+{
+	int mouselook = (in_mlook.state & 1) || freelook.integer;
+	float mouse_x, mouse_y;
+	static float old_mouse_x = 0, old_mouse_y = 0;
+
+	if (m_filter.integer)
+	{
+		mouse_x = (mx + old_mouse_x) * 0.5;
+		mouse_y = (my + old_mouse_y) * 0.5;
+	}
+	else
+	{
+		mouse_x = mx;
+		mouse_y = my;
+	}
+
+	old_mouse_x = mx;
+	old_mouse_y = my;
+
+	// LordHavoc: viewzoom affects mouse sensitivity for sniping
+	mouse_x *= sensitivity.value * cl.viewzoom;
+	mouse_y *= sensitivity.value * cl.viewzoom;
+
+	// Add mouse X/Y movement to cmd
+	if ( (in_strafe.state & 1) || (lookstrafe.integer && mouselook))
+		cmd->sidemove += m_side.value * mouse_x;
+	else
+		cl.viewangles[YAW] -= m_yaw.value * mouse_x;
+
+	if (mouselook)
+		V_StopPitchDrift();
+
+	if (mouselook && !(in_strafe.state & 1))
+		cl.viewangles[PITCH] += m_pitch.value * mouse_y;
+	else
+	{
+		if ((in_strafe.state & 1) && noclip_anglehack)
+			cmd->upmove -= m_forward.value * mouse_y;
+		else
+			cmd->forwardmove -= m_forward.value * mouse_y;
+	}
+}
+
 void VID_InitCvars(void)
 {
 	Cvar_RegisterVariable(&vid_mode);
@@ -175,5 +229,6 @@ void VID_InitCvars(void)
 	Cvar_RegisterVariable(&gl_combine);
 	Cvar_RegisterVariable(&in_pitch_min);
 	Cvar_RegisterVariable(&in_pitch_max);
+	Cvar_RegisterVariable(&m_filter);
 	Cmd_AddCommand("force_centerview", Force_CenterView_f);
 }
