@@ -688,7 +688,12 @@ void SV_ReadClientMove (usercmd_t *move)
 		move->cursor_impact[0] = MSG_ReadFloat();
 		move->cursor_impact[1] = MSG_ReadFloat();
 		move->cursor_impact[2] = MSG_ReadFloat();
-		move->cursor_entitynumber = MSG_ReadShort();
+		move->cursor_entitynumber = (unsigned short)MSG_ReadShort();
+		if (move->cursor_entitynumber >= sv.max_edicts)
+		{
+			Con_DPrintf("SV_ReadClientMessage: client send bad cursor_entitynumber\n");
+			move->cursor_entitynumber = 0;
+		}
 		// as requested by FrikaC, cursor_trace_ent is reset to world if the
 		// entity is free at time of receipt
 		if (EDICT_NUM(move->cursor_entitynumber)->e->free)
