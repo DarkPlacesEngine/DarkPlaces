@@ -522,14 +522,14 @@ static void RSurfShader_Water_Pass_Base(msurface_t *s)
 	surfvertex_t	*v;
 	surfvert_t 		*sv;
 	rmeshinfo_t		m;
-	alpha = s->flags & SURF_DRAWNOALPHA ? 1 : r_wateralpha.value;
+	alpha = currentrenderentity->alpha * (s->flags & SURF_DRAWNOALPHA ? 1 : r_wateralpha.value);
 
 	memset(&m, 0, sizeof(m));
 	if (alpha != 1 || s->currenttexture->fogtexture != NULL)
 	{
 		m.transparent = true;
 		m.blendfunc1 = GL_SRC_ALPHA;
-		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE; //_MINUS_SRC_ALPHA;
 	}
 	else
 	{
@@ -571,7 +571,7 @@ static void RSurfShader_Water_Pass_Base(msurface_t *s)
 	}
 	if (s->dlightframe == r_framecount && !(s->flags & SURF_DRAWFULLBRIGHT))
 		RSurf_Light(s->dlightbits, m.numverts);
-	if (fogenabled)
+	if (fogenabled/* && m.blendfunc2 == GL_ONE_MINUS_SRC_ALPHA*/)
 	{
 		for (i = 0, sv = svert;i < m.numverts;i++, sv++)
 		{
@@ -592,7 +592,7 @@ static void RSurfShader_Water_Pass_Glow(msurface_t *s)
 	surfvertex_t	*v;
 	surfvert_t 		*sv;
 	rmeshinfo_t		m;
-	alpha = s->flags & SURF_DRAWNOALPHA ? 1 : r_wateralpha.value;
+	alpha = currentrenderentity->alpha * (s->flags & SURF_DRAWNOALPHA ? 1 : r_wateralpha.value);
 
 	memset(&m, 0, sizeof(m));
 	m.transparent = alpha != 1 || s->currenttexture->fogtexture != NULL;
@@ -651,7 +651,7 @@ static void RSurfShader_Water_Pass_Fog(msurface_t *s)
 	surfvert_t		*sv;
 	rmeshinfo_t		m;
 	vec3_t			diff;
-	alpha = s->flags & SURF_DRAWNOALPHA ? 1 : r_wateralpha.value;
+	alpha = currentrenderentity->alpha * (s->flags & SURF_DRAWNOALPHA ? 1 : r_wateralpha.value);
 
 	memset(&m, 0, sizeof(m));
 	m.transparent = alpha != 1 || s->currenttexture->fogtexture != NULL;
@@ -699,7 +699,7 @@ static int RSurfShader_Water(int stage, msurface_t *s)
 			RSurfShader_Water_Pass_Glow(s);
 		return false;
 	case 2:
-		if (fogenabled)
+		if (fogenabled && (s->flags & SURF_DRAWNOALPHA))
 		{
 			RSurfShader_Water_Pass_Fog(s);
 			return false;
@@ -726,7 +726,7 @@ static void RSurfShader_Wall_Pass_BaseMTex(msurface_t *s)
 		m.blendfunc1 = GL_SRC_ALPHA;
 		m.blendfunc2 = GL_ONE;
 	}
-	else if (currentrenderentity != &cl_entities[0].render && (s->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1))
+	else if (s->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1)
 	{
 		m.transparent = true;
 		m.blendfunc1 = GL_SRC_ALPHA;
@@ -748,7 +748,7 @@ static void RSurfShader_Wall_Pass_BaseMTex(msurface_t *s)
 		m.cr *= 4;
 	m.cg = m.cr;
 	m.cb = m.cr;
-	m.ca = 1;
+	m.ca = currentrenderentity->alpha;
 	m.tex[0] = R_GetTexture(s->currenttexture->texture);
 	m.tex[1] = R_GetTexture(s->lightmaptexture);
 	m.texcoords[0] = &s->mesh.vertex->st[0];
@@ -948,7 +948,7 @@ static void RSurfShader_Wall_Pass_BaseVertex(msurface_t *s)
 		m.blendfunc1 = GL_SRC_ALPHA;
 		m.blendfunc2 = GL_ONE;
 	}
-	else if (currentrenderentity != &cl_entities[0].render && (s->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1))
+	else if (s->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1)
 	{
 		m.transparent = true;
 		m.blendfunc1 = GL_SRC_ALPHA;
@@ -1034,7 +1034,7 @@ static void RSurfShader_Wall_Pass_BaseFullbright(msurface_t *s)
 		m.blendfunc1 = GL_SRC_ALPHA;
 		m.blendfunc2 = GL_ONE;
 	}
-	else if (currentrenderentity != &cl_entities[0].render && (s->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1))
+	else if (s->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1)
 	{
 		m.transparent = true;
 		m.blendfunc1 = GL_SRC_ALPHA;
@@ -1090,7 +1090,7 @@ static void RSurfShader_Wall_Pass_Light(msurface_t *s)
 	memset(&m, 0, sizeof(m));
 	if (currentrenderentity->effects & EF_ADDITIVE)
 		m.transparent = true;
-	else if (currentrenderentity != &cl_entities[0].render && (s->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1))
+	else if (s->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1)
 		m.transparent = true;
 	else
 		m.transparent = false;
@@ -1142,7 +1142,7 @@ static void RSurfShader_Wall_Pass_Glow(msurface_t *s)
 	memset(&m, 0, sizeof(m));
 	if (currentrenderentity->effects & EF_ADDITIVE)
 		m.transparent = true;
-	else if (currentrenderentity != &cl_entities[0].render && (s->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1))
+	else if (s->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1)
 		m.transparent = true;
 	else
 		m.transparent = false;
@@ -1221,7 +1221,7 @@ static void RSurfShader_Wall_Pass_Fog(msurface_t *s)
 	memset(&m, 0, sizeof(m));
 	if (currentrenderentity->effects & EF_ADDITIVE)
 		m.transparent = true;
-	else if (currentrenderentity != &cl_entities[0].render && (s->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1))
+	else if (s->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1)
 		m.transparent = true;
 	else
 		m.transparent = false;
@@ -1351,7 +1351,7 @@ static int RSurfShader_Wall_Lightmap(int stage, msurface_t *s)
 			}
 		}
 	}
-	else if (currentrenderentity != &cl_entities[0].render && (s->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1 || currentrenderentity->effects & EF_ADDITIVE))
+	else if (s->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1 || currentrenderentity->effects & EF_ADDITIVE)
 	{
 		switch(stage)
 		{
