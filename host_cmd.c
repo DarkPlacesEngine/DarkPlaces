@@ -1553,6 +1553,10 @@ void Host_Startdemos_f (void)
 	for (i=1 ; i<c+1 ; i++)
 		strncpy (cls.demos[i-1], Cmd_Argv(i), sizeof(cls.demos[0])-1);
 
+	// LordHavoc: clear the remaining slots
+	for (;i <= MAX_DEMOS;i++)
+		cls.demos[i-1][0] = 0;
+
 	if (!sv.active && cls.demonum != -1 && !cls.demoplayback)
 	{
 		cls.demonum = 0;
