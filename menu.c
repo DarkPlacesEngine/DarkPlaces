@@ -307,40 +307,40 @@ void M_Menu_Demos_f (void)
 
         NumberOfDemos = 34;
 
-        strcpy(Demos[0].name,  "INTRO");         strcpy(Demos[0].desc,  "Prologue");
-        strcpy(Demos[1].name,  "GENF");          strcpy(Demos[1].desc,  "The Beginning");
-        strcpy(Demos[2].name,  "GENLAB");        strcpy(Demos[2].desc,  "A Doomed Project");
-        strcpy(Demos[3].name,  "NEHCRE");        strcpy(Demos[3].desc,  "The New Recruits");
-        strcpy(Demos[4].name,  "MAXNEH");        strcpy(Demos[4].desc,  "Breakthrough");
-        strcpy(Demos[5].name,  "MAXCHAR");       strcpy(Demos[5].desc,  "Renewal and Duty");
-        strcpy(Demos[6].name,  "CRISIS");        strcpy(Demos[6].desc,  "Worlds Collide");
-        strcpy(Demos[7].name,  "POSTCRIS");      strcpy(Demos[7].desc,  "Darkening Skies");
-        strcpy(Demos[8].name,  "HEARING");       strcpy(Demos[8].desc,  "The Hearing");
-        strcpy(Demos[9].name,  "GETJACK");       strcpy(Demos[9].desc,  "On a Mexican Radio");
-        strcpy(Demos[10].name, "PRELUDE");       strcpy(Demos[10].desc, "Honor and Justice");
-        strcpy(Demos[11].name, "ABASE");         strcpy(Demos[11].desc, "A Message Sent");
-        strcpy(Demos[12].name, "EFFECT");        strcpy(Demos[12].desc, "The Other Side");
-        strcpy(Demos[13].name, "UHOH");          strcpy(Demos[13].desc, "Missing in Action");
-        strcpy(Demos[14].name, "PREPARE");       strcpy(Demos[14].desc, "The Response");
-        strcpy(Demos[15].name, "VISION");        strcpy(Demos[15].desc, "Farsighted Eyes");
-        strcpy(Demos[16].name, "MAXTURNS");      strcpy(Demos[16].desc, "Enter the Immortal");
-        strcpy(Demos[17].name, "BACKLOT");       strcpy(Demos[17].desc, "Separate Ways");
-        strcpy(Demos[18].name, "MAXSIDE");       strcpy(Demos[18].desc, "The Ancient Runes");
-        strcpy(Demos[19].name, "COUNTER");       strcpy(Demos[19].desc, "The New Initiative");
-        strcpy(Demos[20].name, "WARPREP");       strcpy(Demos[20].desc, "Ghosts to the World");
-        strcpy(Demos[21].name, "COUNTER1");      strcpy(Demos[21].desc, "A Fate Worse Than Death");
-        strcpy(Demos[22].name, "COUNTER2");      strcpy(Demos[22].desc, "Friendly Fire");
-        strcpy(Demos[23].name, "COUNTER3");      strcpy(Demos[23].desc, "Minor Setback");
-        strcpy(Demos[24].name, "MADMAX");        strcpy(Demos[24].desc, "Scores to Settle");
-        strcpy(Demos[25].name, "QUAKE");         strcpy(Demos[25].desc, "One Man");
-        strcpy(Demos[26].name, "CTHMM");         strcpy(Demos[26].desc, "Shattered Masks");
-        strcpy(Demos[27].name, "SHADES");        strcpy(Demos[27].desc, "Deal with the Dead");
-        strcpy(Demos[28].name, "GOPHIL");        strcpy(Demos[28].desc, "An Unlikely Hero");
-        strcpy(Demos[29].name, "CSTRIKE");       strcpy(Demos[29].desc, "War in Hell");
-        strcpy(Demos[30].name, "SHUBSET");       strcpy(Demos[30].desc, "The Conspiracy");
-        strcpy(Demos[31].name, "SHUBDIE");       strcpy(Demos[31].desc, "Even Death May Die");
-        strcpy(Demos[32].name, "NEWRANKS");      strcpy(Demos[32].desc, "An Empty Throne");
-        strcpy(Demos[33].name, "SEAL");          strcpy(Demos[33].desc, "The Seal is Broken");
+        strcpy(Demos[0].name,  "intro");         strcpy(Demos[0].desc,  "Prologue");
+        strcpy(Demos[1].name,  "genf");          strcpy(Demos[1].desc,  "The Beginning");
+        strcpy(Demos[2].name,  "genlab");        strcpy(Demos[2].desc,  "A Doomed Project");
+        strcpy(Demos[3].name,  "nehcre");        strcpy(Demos[3].desc,  "The New Recruits");
+        strcpy(Demos[4].name,  "maxneh");        strcpy(Demos[4].desc,  "Breakthrough");
+        strcpy(Demos[5].name,  "maxchar");       strcpy(Demos[5].desc,  "Renewal and Duty");
+        strcpy(Demos[6].name,  "crisis");        strcpy(Demos[6].desc,  "Worlds Collide");
+        strcpy(Demos[7].name,  "postcris");      strcpy(Demos[7].desc,  "Darkening Skies");
+        strcpy(Demos[8].name,  "hearing");       strcpy(Demos[8].desc,  "The Hearing");
+        strcpy(Demos[9].name,  "getjack");       strcpy(Demos[9].desc,  "On a Mexican Radio");
+        strcpy(Demos[10].name, "prelude");       strcpy(Demos[10].desc, "Honor and Justice");
+        strcpy(Demos[11].name, "abase");         strcpy(Demos[11].desc, "A Message Sent");
+        strcpy(Demos[12].name, "effect");        strcpy(Demos[12].desc, "The Other Side");
+        strcpy(Demos[13].name, "uhoh");          strcpy(Demos[13].desc, "Missing in Action");
+        strcpy(Demos[14].name, "prepare");       strcpy(Demos[14].desc, "The Response");
+        strcpy(Demos[15].name, "vision");        strcpy(Demos[15].desc, "Farsighted Eyes");
+        strcpy(Demos[16].name, "maxturns");      strcpy(Demos[16].desc, "Enter the Immortal");
+        strcpy(Demos[17].name, "backlot");       strcpy(Demos[17].desc, "Separate Ways");
+        strcpy(Demos[18].name, "maxside");       strcpy(Demos[18].desc, "The Ancient Runes");
+        strcpy(Demos[19].name, "counter");       strcpy(Demos[19].desc, "The New Initiative");
+        strcpy(Demos[20].name, "warprep");       strcpy(Demos[20].desc, "Ghosts to the World");
+        strcpy(Demos[21].name, "counter1");      strcpy(Demos[21].desc, "A Fate Worse Than Death");
+        strcpy(Demos[22].name, "counter2");      strcpy(Demos[22].desc, "Friendly Fire");
+        strcpy(Demos[23].name, "counter3");      strcpy(Demos[23].desc, "Minor Setback");
+        strcpy(Demos[24].name, "madmax");        strcpy(Demos[24].desc, "Scores to Settle");
+        strcpy(Demos[25].name, "quake");         strcpy(Demos[25].desc, "One Man");
+        strcpy(Demos[26].name, "cthmm");         strcpy(Demos[26].desc, "Shattered Masks");
+        strcpy(Demos[27].name, "shades");        strcpy(Demos[27].desc, "Deal with the Dead");
+        strcpy(Demos[28].name, "gophil");        strcpy(Demos[28].desc, "An Unlikely Hero");
+        strcpy(Demos[29].name, "cstrike");       strcpy(Demos[29].desc, "War in Hell");
+        strcpy(Demos[30].name, "shubset");       strcpy(Demos[30].desc, "The Conspiracy");
+        strcpy(Demos[31].name, "shubdie");       strcpy(Demos[31].desc, "Even Death May Die");
+        strcpy(Demos[32].name, "newranks");      strcpy(Demos[32].desc, "An Empty Throne");
+        strcpy(Demos[33].name, "seal");          strcpy(Demos[33].desc, "The Seal is Broken");
 }
 
 void M_Demo_Key (int k)
@@ -491,7 +491,7 @@ void M_Main_Key (int key)
 					key_dest = key_game;
 					if (sv.active)
 						Cbuf_AddText ("disconnect\n");
-					Cbuf_AddText ("playdemo ENDCRED\n");
+					Cbuf_AddText ("playdemo endcred\n");
 					break;
 
 				case 5:
@@ -518,7 +518,7 @@ void M_Main_Key (int key)
 					key_dest = key_game;
 					if (sv.active)
 						Cbuf_AddText ("disconnect\n");
-					Cbuf_AddText ("playdemo ENDCRED\n");
+					Cbuf_AddText ("playdemo endcred\n");
 					break;
 
 				case 4:
@@ -537,7 +537,7 @@ void M_Main_Key (int key)
 					key_dest = key_game;
 					if (sv.active)
 						Cbuf_AddText ("disconnect\n");
-					Cbuf_AddText ("playdemo ENDCRED\n");
+					Cbuf_AddText ("playdemo endcred\n");
 					break;
 
 				case 2:
