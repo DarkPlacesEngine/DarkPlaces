@@ -49,16 +49,6 @@ void r_light_start(void)
 			pixels[y][x][1] = 255;
 			pixels[y][x][2] = 255;
 			pixels[y][x][3] = a;
-			/*
-			// for testing the size of the corona textures
-			if (a == 0)
-			{
-				pixels[y][x][0] = 255;
-				pixels[y][x][1] = 0;
-				pixels[y][x][2] = 0;
-				pixels[y][x][3] = 255;
-			}
-			*/
 		}
 	}
 	lightcorona = R_LoadTexture (lighttexturepool, "lightcorona", 32, 32, &pixels[0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_ALPHA);
@@ -182,7 +172,6 @@ void R_DrawCoronas(void)
 			VectorSubtract(rd->origin, vpn, diff);
 			if (TraceLine(r_origin, diff, NULL, NULL, 0, true) == 1)
 			{
-				//scale = 1.0f / 65536.0f;//64.0f / (dist * dist + 1024.0f);
 				scale = 1.0f / 4096.0f;
 				m.cr = rd->light[0] * scale;
 				m.cg = rd->light[1] * scale;
@@ -193,9 +182,6 @@ void R_DrawCoronas(void)
 					VectorSubtract(rd->origin, r_origin, diff);
 					m.ca *= 1 - exp(fogdensity/DotProduct(diff,diff));
 				}
-				// make it larger in the distance to keep a consistent size
-				//scale = 0.4f * dist;
-				//scale = 128.0f;
 				scale = rd->cullradius * 0.25f;
 				tvxyz[0][0] = rd->origin[0] - vright[0] * scale - vup[0] * scale;
 				tvxyz[0][1] = rd->origin[1] - vright[1] * scale - vup[1] * scale;
