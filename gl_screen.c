@@ -796,11 +796,11 @@ void GL_BrightenScreen()
 	glDisable(GL_TEXTURE_2D);
 	glEnable(GL_BLEND);
 	f = brightness.value = bound(1.0f, brightness.value, 5.0f);
-	if (f > 1)
+	if (f >= 1.01f)
 	{
 		glBlendFunc (GL_DST_COLOR, GL_ONE);
 		glBegin (GL_TRIANGLES);
-		while (f > 1)
+		while (f >= 1.01f)
 		{
 			if (f >= 2)
 				glColor3f (1, 1, 1);
@@ -815,7 +815,7 @@ void GL_BrightenScreen()
 	}
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	contrast.value = bound(0.2, contrast.value, 1.0);
-	if (contrast.value < 1.0f)
+	if (contrast.value < 0.99f)
 	{
 		glBegin (GL_TRIANGLES);
 		glColor4f (1, 1, 1, 1-contrast.value);
