@@ -86,6 +86,7 @@
 0 darkplaces renderer: EF_ADDITIVE alias model entities not appearing in realtime lighting mode? (VorteX)
 0 darkplaces renderer: add per-entity PolygonOffset to renderer, to allow zfighting bmodel/world glitches to be fixed, this has to affect all rendering involving the entity, including light/shadow (Tomaz)
 0 darkplaces renderer: add procedural ripple distortion texture of some sort for use with envmap reflections (FrikaC)
+0 darkplaces renderer: add r_shadow_light_polygonoffset and polygonfactor cvars for lighting polygons (Diablo-D3)
 0 darkplaces renderer: alias layers should have a shadow volume pass so that nodraw textures don't cast a shadow
 0 darkplaces renderer: change sky handling to draw sky even if fog is on, and fog intensity should be cvar controlled (Deej, C0burn)
 0 darkplaces renderer: fix disappearing viewmodel (and other models) when in an unvised q3bsp, or partially inside a wall in q3bsp
@@ -149,9 +150,7 @@
 0 dpzoo.map: thief-like area to sneak past a guard who can easily kill you (shambler?) to demonstrate lightlevel checking
 0 hmap2 -qbsp: add ORIGIN brush support in bmodel compilation (Carni)
 0 hmap2: add CAULK texture support - delete surfaces using this texture, or at least don't link them (Tomaz)
-0 hmap2: make LoadBrush reject incomplete brushes - they produce bogus polygon boundaries (Tomaz)
 0 hmap2: make sure seconds reports in all tools don't print secondssss when they're printing shorter and shorter updates (FrikaC)
-0 hmap2: release hmap2 (Vic, Supajoe, Urre)
 0 lhfire: make a lhfire.txt and move the scripting info to it, add some more general explanation and tips
 0 revelation: change the wabbit kill message to " was hunting wabbit but shot " " instead"
 1 darkplaces : still says " disconnected" in dpmod, figure out why and fix it
@@ -282,6 +281,7 @@
 3 darkplaces renderer: add stainmaps to realtime lighting mode
 3 darkplaces renderer: directional lighting from the q3bsp lightgrid should use diffuse and specular lighting if available (Vermeulen)
 3 darkplaces renderer: dpshaders (when supported) should have support for envmaps, and should support being lit by diffuse lighting as a fake gloss effect for normal mode (Vermeulen)
+3 darkplaces renderer: need to make a standalone minimod to test darkplaces rtlights code, which Diablo-D3 can throw at the ATI driver team to test with, 3D txtures with GL_CLAMP_TO_EDGE wrapping are broken (Diablo-D3)
 3 darkplaces renderer: skyroom needs to be added ("info_skyroom" entity sets view origin, scanned by client at load, and by server to send all entities in skyroom) (Sajt)
 3 darkplaces renderer: try two-cubemap approach to specular lighting math (Black)
 3 darkplaces server: add DP_GFX_QUAKE3MODELTAGS, DP_GFX_SKINFILES, and any other new extensions to the wiki
@@ -695,6 +695,8 @@ d hmap2: add -ambientlight option, with warning that it does not produce a .ligh
 d hmap2: add -minlight option, with warning that it does not produce a .lights file (Harb)
 d hmap2: add tyrlite compatible "delay" settings, with the interpretation of no specified delay being dependent on a -tyrlite option, and add a new type which is a sun light; light cast in a direction, from sky polygons or the void, these light types would warn that they disable .lights files
 d hmap2: light not properly figuring out the origin of rotating objects - it should take the "origin" key (FrikaC)
+d hmap2: make LoadBrush reject incomplete brushes - they produce bogus polygon boundaries (Tomaz)
+d hmap2: release hmap2 (Vic, Supajoe, Urre)
 d hmap2: report locations of lights which can not be vis optimized (Urre, FrikaC)
 d hmap2: tweak the light point generation a bit more to try to solve the 'corner light' glitch (Urre)
 d hmap2: update .bat files to use hmap2 name and remove -noreuse from revis.bat (Vic)
