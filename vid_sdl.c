@@ -195,7 +195,7 @@ static unsigned int tbl_sdltoquake[] =
 #undef fiftyoh
 #undef hundredoh
 
-static int MapKey( int sdlkey )
+static int MapKey( unsigned int sdlkey )
 {
 	if( sdlkey > sizeof(tbl_sdltoquake)/ sizeof(int) )
 		return 0;
