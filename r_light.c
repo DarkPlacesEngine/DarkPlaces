@@ -298,7 +298,7 @@ static void R_VisMarkLights (entity_render_t *ent, rdlight_t *rd, int bit, int b
 	int row;
 	float low[3], high[3], dist, maxdist;
 
-	if (!r_dynamic.integer)
+	if (!r_dynamic.integer || !ent->model)
 		return;
 
 	Matrix4x4_Transform(&ent->inversematrix, rd->origin, lightorigin);
@@ -579,7 +579,7 @@ void R_CompleteLightPoint (vec3_t color, const vec3_t p, int dynamic, const mlea
 	float f;
 	rdlight_t *rd;
 	mlight_t *sl;
-	if (leaf == NULL)
+	if (leaf == NULL && cl.worldmodel != NULL)
 		leaf = cl.worldmodel->PointInLeaf(cl.worldmodel, p);
 	if (!leaf || leaf->contents == CONTENTS_SOLID || r_fullbright.integer || !cl.worldmodel->lightdata)
 	{
@@ -681,7 +681,7 @@ int R_LightModel(float *ambient4f, const entity_render_t *ent, float colorr, flo
 		ambient4f[3] = colora;
 		return false;
 	}
-	leaf = cl.worldmodel->PointInLeaf(cl.worldmodel, ent->origin);
+	leaf = cl.worldmodel ? cl.worldmodel->PointInLeaf(cl.worldmodel, ent->origin) : NULL;
 	if (!leaf || leaf->contents == CONTENTS_SOLID || !cl.worldmodel->lightdata)
 		ambient4f[0] = ambient4f[1] = ambient4f[2] = 1;
 	else

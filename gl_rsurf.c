@@ -1764,7 +1764,7 @@ void R_WorldVisibility (entity_render_t *ent)
 	mleaf_t *viewleaf;
 
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
-	viewleaf = ent->model->PointInLeaf(ent->model, modelorg);
+	viewleaf = ent->model ? ent->model->PointInLeaf(ent->model, modelorg) : NULL;
 	R_PVSUpdate(ent, viewleaf);
 
 	if (!viewleaf)

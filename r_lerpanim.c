@@ -11,7 +11,7 @@ void R_LerpAnimation(entity_render_t *r)
 	animscene_t *scene;
 	frameblend_t *blend;
 
-	if (!r->model)
+	if (!r->model || !r->model->type)
 		return;
 
 	blend = r->frameblend;
