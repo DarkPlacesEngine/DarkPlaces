@@ -26,6 +26,11 @@ static cvar_t sv_cullentities_trace = {0, "sv_cullentities_trace", "0"}; // tend
 static cvar_t sv_cullentities_stats = {0, "sv_cullentities_stats", "0"};
 static cvar_t sv_entpatch = {0, "sv_entpatch", "1"};
 
+cvar_t sv_gameplayfix_grenadebouncedownslopes = {0, "sv_gameplayfix_grenadebouncedownslopes", "1"};
+cvar_t sv_gameplayfix_noairborncorpse = {0, "sv_gameplayfix_noairborncorpse", "1"};
+cvar_t sv_gameplayfix_stepwhilejumping = {0, "sv_gameplayfix_stepwhilejumping", "1"};
+cvar_t sv_gameplayfix_swiminbmodels = {0, "sv_gameplayfix_swiminbmodels", "1"};
+
 server_t sv;
 server_static_t svs;
 
@@ -64,6 +69,10 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_cullentities_trace);
 	Cvar_RegisterVariable (&sv_cullentities_stats);
 	Cvar_RegisterVariable (&sv_entpatch);
+	Cvar_RegisterVariable (&sv_gameplayfix_grenadebouncedownslopes);
+	Cvar_RegisterVariable (&sv_gameplayfix_noairborncorpse);
+	Cvar_RegisterVariable (&sv_gameplayfix_stepwhilejumping);
+	Cvar_RegisterVariable (&sv_gameplayfix_swiminbmodels);
 
 	SV_Phys_Init();
 	SV_World_Init();

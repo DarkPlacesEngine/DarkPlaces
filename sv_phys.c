@@ -1014,7 +1014,7 @@ void SV_WalkMove (edict_t *ent)
 
 	if (ent->v->movetype != MOVETYPE_FLY)
 	{
-		if (!oldonground && ent->v->waterlevel == 0 && !sv_jumpstep.integer)
+		if (!oldonground && ent->v->waterlevel == 0 && (!sv_jumpstep.integer || !sv_gameplayfix_stepwhilejumping.integer))
 			// don't stair up while jumping
 			return;
 
@@ -1205,6 +1205,8 @@ void SV_Physics_Toss (edict_t *ent)
 // if onground, return without moving
 	if ((int)ent->v->flags & FL_ONGROUND)
 	{
+		if (!sv_gameplayfix_noairborncorpse.integer)
+			return;
 		if (ent->v->groundentity == 0)
 			return;
 		// if ent was supported by a brush model on previous frame,
@@ -1252,16 +1254,31 @@ void SV_Physics_Toss (edict_t *ent)
 			float d;
 			ClipVelocity (ent->v->velocity, trace.plane.normal, ent->v->velocity, 1.5);
 			// LordHavoc: fixed grenades not bouncing when fired down a slope
-			d = DotProduct(trace.plane.normal, ent->v->velocity);
-			if (trace.plane.normal[2] > 0.7 && fabs(d) < 60)
+			if (sv_gameplayfix_grenadebouncedownslopes.integer)
 			{
-				ent->v->flags = (int)ent->v->flags | FL_ONGROUND;
-				ent->v->groundentity = EDICT_TO_PROG(trace.ent);
-				VectorClear (ent->v->velocity);
-				VectorClear (ent->v->avelocity);
+				d = DotProduct(trace.plane.normal, ent->v->velocity);
+				if (trace.plane.normal[2] > 0.7 && fabs(d) < 60)
+				{
+					ent->v->flags = (int)ent->v->flags | FL_ONGROUND;
+					ent->v->groundentity = EDICT_TO_PROG(trace.ent);
+					VectorClear (ent->v->velocity);
+					VectorClear (ent->v->avelocity);
+				}
+				else
+					ent->v->flags = (int)ent->v->flags & ~FL_ONGROUND;
 			}
 			else
-				ent->v->flags = (int)ent->v->flags & ~FL_ONGROUND;
+			{
+				if (trace.plane.normal[2] > 0.7 && ent->v->velocity[2] < 60)
+				{
+					ent->v->flags = (int)ent->v->flags | FL_ONGROUND;
+					ent->v->groundentity = EDICT_TO_PROG(trace.ent);
+					VectorClear (ent->v->velocity);
+					VectorClear (ent->v->avelocity);
+				}
+				else
+					ent->v->flags = (int)ent->v->flags & ~FL_ONGROUND;
+			}
 		}
 		else
 		{
