@@ -227,13 +227,6 @@ Host should be either "local" or a net address to be passed on
 */
 void CL_EstablishConnection (char *host)
 {
-	sizebuf_t	buf;
-	qbyte	data[128];
-
-	buf.maxsize = 128;
-	buf.cursize = 0;
-	buf.data = data;
-
 	if (cls.state == ca_dedicated)
 		return;
 
@@ -884,19 +877,6 @@ void CL_SendCmd (void)
 
 	// send the unreliable message
 		CL_SendMove (&cmd);
-	}
-	else
-	{
-		// LordHavoc: fix for NAT routing of netquake:
-		// bounce back a clc_nop message to the newly allocated server port,
-		// to establish a routing connection for incoming frames,
-		// the server waits for this before sending anything
-		if (realtime > cl.sendnoptime)
-		{
-			Con_DPrintf("sending clc_nop to get server's attention\n");
-			cl.sendnoptime = realtime + 3;
-			MSG_WriteByte(&cls.message, clc_nop);
-		}
 	}
 
 	if (cls.demoplayback)

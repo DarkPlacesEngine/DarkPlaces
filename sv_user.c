@@ -552,12 +552,6 @@ nextmsg:
 
 			cmd = MSG_ReadChar ();
 
-			if (cmd != -1 && host_client->waitingforconnect)
-			{
-				host_client->waitingforconnect = false;
-				host_client->sendserverinfo = true;
-			}
-
 			switch (cmd)
 			{
 			case -1:
