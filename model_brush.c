@@ -5310,7 +5310,7 @@ static int Mod_Q3BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3
 	int clusterindex, side, nodestackindex = 0;
 	q3mnode_t *node, *nodestack[1024];
 	node = model->brushq3.data_nodes;
-	if (!loadmodel->brush.num_pvsclusters)
+	if (!model->brush.num_pvsclusters)
 		return true;
 	for (;;)
 	{
@@ -5335,9 +5335,9 @@ static int Mod_Q3BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3
 			// leaf - check cluster bit
 			clusterindex = ((q3mleaf_t *)node)->clusterindex;
 #if 0
-			if (clusterindex >= loadmodel->brush.num_pvsclusters)
+			if (clusterindex >= model->brush.num_pvsclusters)
 			{
-				Con_Printf("%i >= %i\n", clusterindex, loadmodel->brush.num_pvsclusters);
+				Con_Printf("%i >= %i\n", clusterindex, model->brush.num_pvsclusters);
 				return true;
 			}
 #endif
@@ -5406,7 +5406,7 @@ static int Mod_Q3BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, qbyt
 {
 	int bytes = model->brush.num_pvsclusterbytes;
 	bytes = min(bytes, pvsbufferlength);
-	if (r_novis.integer || !loadmodel->brush.num_pvsclusters || !Mod_Q3BSP_GetPVS(model, org))
+	if (r_novis.integer || !model->brush.num_pvsclusters || !Mod_Q3BSP_GetPVS(model, org))
 	{
 		memset(pvsbuffer, 0xFF, bytes);
 		return bytes;
@@ -5529,7 +5529,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 	i = LittleLong(header->version);
 	if (i != Q3BSPVERSION)
 		Host_Error("Mod_Q3BSP_Load: %s has wrong version number (%i, should be %i)", mod->name, i, Q3BSPVERSION);
-	if (loadmodel->isworldmodel)
+	if (mod->isworldmodel)
 	{
 		Cvar_SetValue("halflifebsp", false);
 		// until we get a texture for it...
