@@ -466,7 +466,7 @@ void R_EntityParticles (entity_t *ent)
 
 void R_ReadPointFile_f (void)
 {
-	FILE	*f;
+	QFile	*f;
 	vec3_t	org;
 	int		r;
 	int		c;
@@ -474,7 +474,7 @@ void R_ReadPointFile_f (void)
 	
 	sprintf (name,"maps/%s.pts", sv.name);
 
-	COM_FOpenFile (name, &f, false);
+	COM_FOpenFile (name, &f, false, true);
 	if (!f)
 	{
 		Con_Printf ("couldn't open %s\n", name);
@@ -485,7 +485,8 @@ void R_ReadPointFile_f (void)
 	c = 0;
 	for (;;)
 	{
-		r = fscanf (f,"%f %f %f\n", &org[0], &org[1], &org[2]);
+	    	char *str = Qgetline (f);
+		r = sscanf (str,"%f %f %f\n", &org[0], &org[1], &org[2]);
 		if (r != 3)
 			break;
 		c++;
@@ -498,7 +499,7 @@ void R_ReadPointFile_f (void)
 		particle(pt_static, (-c)&15, particletexture, TPOLYTYPE_ALPHA, false, 2, 255, 99999, 0, org[0], org[1], org[2], 0, 0, 0);
 	}
 
-	fclose (f);
+	Qclose (f);
 	Con_Printf ("%i points read\n", c);
 }
 

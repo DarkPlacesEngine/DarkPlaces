@@ -32,7 +32,7 @@ void (*vid_menukeyfn)(int key);
 
 int NehGameType;
 
-enum {m_none, m_main, m_demo, m_singleplayer, m_load, m_save, m_multiplayer, m_setup, m_net, m_options, m_video, m_keys, m_help, m_quit, m_lanconfig, m_gameoptions, m_search, m_slist} m_state;
+enum m_state_e m_state;
 
 void M_Menu_Main_f (void);
 	void M_Menu_SinglePlayer_f (void);
@@ -703,7 +703,8 @@ void M_ScanSaves (void)
 {
 	int		i, j;
 	char	name[MAX_OSPATH];
-	FILE	*f;
+	char	*str;
+	QFile	*f;
 	int		version;
 
 	for (i=0 ; i<MAX_SAVEGAMES ; i++)
@@ -711,19 +712,20 @@ void M_ScanSaves (void)
 		strcpy (m_filenames[i], "--- UNUSED SLOT ---");
 		loadable[i] = false;
 		sprintf (name, "%s/s%i.sav", com_gamedir, i);
-		f = fopen (name, "r");
+		f = Qopen (name, "rz");
 		if (!f)
 			continue;
-		fscanf (f, "%i\n", &version);
-		fscanf (f, "%79s\n", name);
-		strncpy (m_filenames[i], name, sizeof(m_filenames[i])-1);
+		str = Qgetline (f);
+		sscanf (str, "%i\n", &version);
+		str = Qgetline (f);
+		strncpy (m_filenames[i], str, sizeof(m_filenames[i])-1);
 
 	// change _ back to space
 		for (j=0 ; j<SAVEGAME_COMMENT_LENGTH ; j++)
 			if (m_filenames[i][j] == '_')
 				m_filenames[i][j] = ' ';
 		loadable[i] = true;
-		fclose (f);
+		Qclose (f);
 	}
 }
 

@@ -19,6 +19,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // common.c -- misc functions used in client and server
 
+#include <fcntl.h>
+#ifndef WIN32
+#include <unistd.h>
+#endif
+#include <stdlib.h>
+
 #include "quakedef.h"
 
 #define NUM_SAFE_ARGVS  7
@@ -1071,16 +1077,16 @@ being registered.
 */
 void COM_CheckRegistered (void)
 {
-	int             h;
+	QFile           *h;
 	unsigned short  check[128];
 	int                     i;
 
 	Cvar_Set ("cmdline", com_cmdline);
 
-	COM_OpenFile("gfx/pop.lmp", &h, false);
+	COM_FOpenFile("gfx/pop.lmp", &h, false, true);
 	static_registered = 0;
 
-	if (h == -1)
+	if (!h)
 	{
 		if (com_modified)
 			Con_Printf ("Playing shareware version, with modification.\nwarning: most mods require full quake data.\n");
@@ -1095,8 +1101,8 @@ void COM_CheckRegistered (void)
 		return;
 	}
 
-	Sys_FileRead (h, check, sizeof(check));
-	COM_CloseFile (h);
+	Qread (h, check, sizeof(check));
+	Qclose (h);
 	
 	for (i=0 ; i<128 ; i++)
 		if (pop[i] != (unsigned short)BigShort (check[i]))
@@ -1474,13 +1480,62 @@ void COM_CopyFile (char *netpath, char *cachepath)
 
 /*
 ===========
+COM_OpenRead
+===========
+*/
+QFile * COM_OpenRead (const char *path, int offs, int len, qboolean zip)
+{
+	int				fd = open (path, O_RDONLY);
+	unsigned char	id[2];
+	unsigned char	len_bytes[4];
+
+	if (fd == -1)
+	{
+		Sys_Error ("Couldn't open %s", path);
+		return 0;
+	}
+	if (offs < 0 || len < 0)
+	{
+		// normal file
+		offs = 0;
+		len = lseek (fd, 0, SEEK_END);
+		lseek (fd, 0, SEEK_SET);
+	}
+	lseek (fd, offs, SEEK_SET);
+	if (zip)
+	{
+		read (fd, id, 2);
+		if (id[0] == 0x1f && id[1] == 0x8b)
+		{
+			lseek (fd, offs + len - 4, SEEK_SET);
+			read (fd, len_bytes, 4);
+			len = ((len_bytes[3] << 24)
+				   | (len_bytes[2] << 16)
+				   | (len_bytes[1] << 8)
+				   | (len_bytes[0]));
+		}
+	}
+	lseek (fd, offs, SEEK_SET);
+	com_filesize = len;
+
+#ifdef WIN32
+	setmode (fd, O_BINARY);
+#endif
+	if (zip)
+		return Qdopen (fd, "rbz");
+	else
+		return Qdopen (fd, "rb");
+}
+
+/*
+===========
 COM_FindFile
 
 Finds the file in the search path.
 Sets com_filesize and one of handle or file
 ===========
 */
-int COM_FindFile (char *filename, int *handle, FILE **file, qboolean quiet)
+int COM_FindFile (char *filename, QFile **file, qboolean quiet, qboolean zip)
 {
 	searchpath_t	*search;
 	char			netpath[MAX_OSPATH];
@@ -1491,11 +1546,14 @@ int COM_FindFile (char *filename, int *handle, FILE **file, qboolean quiet)
 	pack_t			*pak;
 	int				i;
 	int				findtime;
+	char			gzfilename[MAX_OSPATH];
+	int				filenamelen;
 
-	if (file && handle)
-		Sys_Error ("COM_FindFile: both handle and file set");
-	if (!file && !handle)
-		Sys_Error ("COM_FindFile: neither handle or file set");
+	filenamelen = strlen (filename);
+	snprintf (gzfilename, sizeof (gzfilename), "%s.gz", filename);
+
+	if (!file)
+		Sys_Error ("COM_FindFile: file not set");
 		
 //
 // search through the path, one element at a time
@@ -1515,22 +1573,13 @@ int COM_FindFile (char *filename, int *handle, FILE **file, qboolean quiet)
 		// look through all the pak file elements
 			pak = search->pack;
 			for (i=0 ; i<pak->numfiles ; i++)
-				if (!strcmp (pak->files[i].name, filename))
+				if (!strcmp (pak->files[i].name, filename)
+				    || !strcmp (pak->files[i].name, gzfilename))
 				{       // found it!
 					if (!quiet)
-						Sys_Printf ("PackFile: %s : %s\n",pak->filename, filename);
-					if (handle)
-					{
-						*handle = pak->handle;
-						Sys_FileSeek (pak->handle, pak->files[i].filepos);
-					}
-					else
-					{       // open a new file on the pakfile
-						*file = fopen (pak->filename, "rb");
-						if (*file)
-							fseek (*file, pak->files[i].filepos, SEEK_SET);
-					}
-					com_filesize = pak->files[i].filelen;
+						Sys_Printf ("PackFile: %s : %s\n",pak->filename, pak->files[i].name);
+					// open a new file on the pakfile
+					*file = COM_OpenRead (pak->filename, pak->files[i].filepos, pak->files[i].filelen, zip);
 					return com_filesize;
 				}
 		}
@@ -1572,14 +1621,7 @@ int COM_FindFile (char *filename, int *handle, FILE **file, qboolean quiet)
 
 			if (!quiet)
 				Sys_Printf ("FindFile: %s\n",netpath);
-			com_filesize = Sys_FileOpenRead (netpath, &i);
-			if (handle)
-				*handle = i;
-			else
-			{
-				Sys_FileClose (i);
-				*file = fopen (netpath, "rb");
-			}
+			*file = COM_OpenRead (netpath, -1, -1, zip);
 			return com_filesize;
 		}
 		
@@ -1588,10 +1630,7 @@ int COM_FindFile (char *filename, int *handle, FILE **file, qboolean quiet)
 	if (!quiet)
 		Sys_Printf ("FindFile: can't find %s\n", filename);
 	
-	if (handle)
-		*handle = -1;
-	else
-		*file = NULL;
+	*file = NULL;
 	com_filesize = -1;
 	return -1;
 }
@@ -1599,47 +1638,15 @@ int COM_FindFile (char *filename, int *handle, FILE **file, qboolean quiet)
 
 /*
 ===========
-COM_OpenFile
-
-filename never has a leading slash, but may contain directory walks
-returns a handle and a length
-it may actually be inside a pak file
-===========
-*/
-int COM_OpenFile (char *filename, int *handle, qboolean quiet)
-{
-	return COM_FindFile (filename, handle, NULL, quiet);
-}
-
-/*
-===========
 COM_FOpenFile
 
-If the requested file is inside a packfile, a new FILE * will be opened
+If the requested file is inside a packfile, a new QFile * will be opened
 into the file.
 ===========
 */
-int COM_FOpenFile (char *filename, FILE **file, qboolean quiet)
+int COM_FOpenFile (char *filename, QFile **file, qboolean quiet, qboolean zip)
 {
-	return COM_FindFile (filename, NULL, file, quiet);
-}
-
-/*
-============
-COM_CloseFile
-
-If it is a pak file handle, don't really close it
-============
-*/
-void COM_CloseFile (int h)
-{
-	searchpath_t    *s;
-	
-	for (s = com_searchpaths ; s ; s=s->next)
-		if (s->pack && s->pack->handle == h)
-			return;
-			
-	Sys_FileClose (h);
+	return COM_FindFile (filename, file, quiet, zip);
 }
 
 
@@ -1656,7 +1663,7 @@ byte    *loadbuf;
 int             loadsize;
 byte *COM_LoadFile (char *path, int usehunk, qboolean quiet)
 {
-	int             h;
+	QFile             *h;
 	byte    *buf;
 	char    base[1024];
 	int             len;
@@ -1664,8 +1671,8 @@ byte *COM_LoadFile (char *path, int usehunk, qboolean quiet)
 	buf = NULL;     // quiet compiler warning
 
 // look for it in the filesystem or pack files
-	len = COM_OpenFile (path, &h, quiet);
-	if (h == -1)
+	len = COM_FOpenFile (path, &h, quiet, true);
+	if (!h)
 		return NULL;
 	
 // extract the filename base name for hunk tag
@@ -1700,8 +1707,8 @@ byte *COM_LoadFile (char *path, int usehunk, qboolean quiet)
 
 	((byte *)buf)[len] = 0;
 
-	Sys_FileRead (h, buf, len);                     
-	COM_CloseFile (h);
+	Qread (h, buf, len);                     
+	Qclose (h);
 
 	return buf;
 }

@@ -110,7 +110,7 @@ typedef struct
 	qboolean	demoplayback;
 	qboolean	timedemo;
 	int			forcetrack;			// -1 = use normal cd track
-	FILE		*demofile;
+	QFile		*demofile;
 	int			td_lastframe;		// to meter out one message a frame
 	int			td_startframe;		// host_framecount at start
 	double		td_starttime;		// realtime at second frame of timedemo (LordHavoc: changed to double)

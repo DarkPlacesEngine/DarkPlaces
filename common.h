@@ -29,6 +29,8 @@ typedef unsigned char 		byte;
 
 typedef enum {false, true}	qboolean;
 
+#include "quakeio.h"
+
 //============================================================================
 
 extern void *qmalloc(unsigned int size);
@@ -203,9 +205,7 @@ struct cache_user_s;
 extern	char	com_gamedir[MAX_OSPATH];
 
 void COM_WriteFile (char *filename, void *data, int len);
-int COM_OpenFile (char *filename, int *hndl, qboolean quiet);
-int COM_FOpenFile (char *filename, FILE **file, qboolean quiet);
-void COM_CloseFile (int h);
+int COM_FOpenFile (char *filename, QFile **file, qboolean quiet, qboolean zip);
 
 byte *COM_LoadHunkFile (char *path, qboolean quiet);
 byte *COM_LoadMallocFile (char *path, qboolean quiet);

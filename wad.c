@@ -162,7 +162,7 @@ void SwapPic (qpic_t *pic)
 typedef struct
 {
 	char name[16];
-	FILE *file;
+	QFile *file;
 	int position;
 	int size;
 } texwadlump_t;
@@ -180,10 +180,10 @@ void W_LoadTextureWadFile (char *filename, int complain)
 	wadinfo_t		header;
 	unsigned		i, j;
 	int				infotableofs;
-	FILE			*file;
+	QFile			*file;
 	int				numlumps;
 	
-	COM_FOpenFile (filename, &file, false);
+	COM_FOpenFile (filename, &file, false, true);
 	if (!file)
 	{
 		if (complain)
@@ -191,7 +191,7 @@ void W_LoadTextureWadFile (char *filename, int complain)
 		return;
 	}
 
-	if (fread(&header, sizeof(wadinfo_t), 1, file) != 1)
+	if (Qread(file, &header, sizeof(wadinfo_t)) != sizeof(wadinfo_t))
 	{Con_Printf ("W_LoadTextureWadFile: unable to read wad header");return;}
 	
 	if(header.identification[0] != 'W'
@@ -204,12 +204,12 @@ void W_LoadTextureWadFile (char *filename, int complain)
 	if (numlumps < 1 || numlumps > TEXWAD_MAXIMAGES)
 	{Con_Printf ("W_LoadTextureWadFile: invalid number of lumps (%i)\n", numlumps);return;}
 	infotableofs = LittleLong(header.infotableofs);
-	if (fseek(file, infotableofs, SEEK_SET))
+	if (Qseek(file, infotableofs, SEEK_SET))
 	{Con_Printf ("W_LoadTextureWadFile: unable to seek to lump table");return;}
 	if (!(lumps = qmalloc(sizeof(lumpinfo_t)*numlumps)))
 	{Con_Printf ("W_LoadTextureWadFile: unable to allocate temporary memory for lump table");return;}
 
-	if (fread(lumps, sizeof(lumpinfo_t), numlumps, file) != numlumps)
+	if (Qread(file, lumps, sizeof(lumpinfo_t) * numlumps) != sizeof(lumpinfo_t) * numlumps)
 	{Con_Printf ("W_LoadTextureWadFile: unable to read lump table");return;}
 
 	for (i=0, lump_p = lumps ; i<numlumps ; i++,lump_p++)
@@ -331,7 +331,7 @@ byte *W_GetTexture(char *name)
 //	byte pal[256][3], *indata, *outdata, *data;
 	char texname[17];
 	int i, j;
-	FILE *file;
+	QFile *file;
 	miptex_t *tex;
 	byte *data;
 	texname[16] = 0;
@@ -343,13 +343,13 @@ byte *W_GetTexture(char *name)
 			if (!strcmp(texname, texwadlump[i].name)) // found it
 			{
 				file = texwadlump[i].file;
-				if (fseek(file, texwadlump[i].position, SEEK_SET))
+				if (Qseek(file, texwadlump[i].position, SEEK_SET))
 				{Con_Printf("W_GetTexture: corrupt WAD3 file");return NULL;}
 
 				tex = qmalloc(texwadlump[i].size);
 				if (!tex)
 					return NULL;
-				if (fread(tex, 1, texwadlump[i].size, file) < texwadlump[i].size)
+				if (Qread(file, tex, texwadlump[i].size) < texwadlump[i].size)
 				{Con_Printf("W_GetTexture: corrupt WAD3 file");return NULL;}
 
 				tex->width = LittleLong(tex->width);
@@ -375,14 +375,14 @@ byte *W_GetTexture(char *name)
 				indata = outdata + image_width*image_height*3;
 				datasize = image_width*image_height*85/64;
 				// read the image data
-				if (fseek(file, texwadlump[i].position + sizeof(t), SEEK_SET))
+				if (Qseek(file, texwadlump[i].position + sizeof(t), SEEK_SET))
 				{Con_Printf("W_GetTexture: corrupt WAD3 file");return NULL;}
-				if (fread(indata, 1, image_width*image_height, file) != image_width*image_height)
+				if (Qread(file, indata, image_width*image_height) != image_width*image_height)
 				{Con_Printf("W_GetTexture: corrupt WAD3 file");return NULL;}
 				// read the number of colors used (always 256)
-				if (fseek(file, texwadlump[i].position + sizeof(t) + datasize, SEEK_SET))
+				if (Qseek(file, texwadlump[i].position + sizeof(t) + datasize, SEEK_SET))
 				{Con_Printf("W_GetTexture: corrupt WAD3 file");return NULL;}
-				if (fread(&colorcount, 2, 1, file) != 1)
+				if (Qread(file, &colorcount, 2) != 2)
 				{Con_Printf("W_GetTexture: corrupt WAD3 file");return NULL;}
 				if (texwadlump[i].size > (datasize + sizeof(t)))
 				{
@@ -391,8 +391,8 @@ byte *W_GetTexture(char *name)
 					if (colorcount < 0) colorcount = 0;
 					if (colorcount > 256) colorcount = 256;
 					// read the palette
-	//				fseek(file, texwadlump[i].position + sizeof(t) + datasize + 2, SEEK_SET);
-					if (fread(&pal, 3, colorcount, file) != colorcount)
+	//				Qseek(file, texwadlump[i].position + sizeof(t) + datasize + 2, SEEK_SET);
+					if (Qread(file, &pal, 3 * colorcount) != 3 * colorcount)
 					{Con_Printf("W_GetTexture: corrupt WAD3 file");return NULL;}
 				}
 				else

@@ -240,7 +240,7 @@ int SNDDMA_GetDMAPos(void)
 		return 0;
 	}
 //	shm->samplepos = (count.bytes / (shm->samplebits / 8)) & (shm->samples-1);
-//	fprintf(stderr, "%d    \r", count.ptr);
+//	Qprintf(stderr, "%d    \r", count.ptr);
 	shm->samplepos = count.ptr / (shm->samplebits / 8);
 
 	return shm->samplepos;

@@ -388,25 +388,3 @@ Qgetline (QFile *file)
 	}
 	return buf;
 }
-
-int
-Qgetpos (QFile *file, fpos_t * pos)
-{
-#ifdef HAVE_FPOS_T_STRUCT
-	pos->__pos = Qtell (file);
-	return pos->__pos == -1 ? -1 : 0;
-#else
-	*pos = Qtell (file);
-	return *pos == -1 ? -1 : 0;
-#endif
-}
-
-int
-Qsetpos (QFile *file, fpos_t * pos)
-{
-#ifdef HAVE_FPOS_T_STRUCT
-	return Qseek (file, pos->__pos, 0);
-#else
-	return Qseek (file, *pos, 0);
-#endif
-}
