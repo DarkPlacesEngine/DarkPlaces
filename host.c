@@ -937,6 +937,12 @@ void Host_Shutdown(void)
 	}
 	isdown = true;
 
+	// disconnect client from server if active
+	CL_Disconnect();
+
+	// shut down local server if active
+	Host_ShutdownServer (false);
+
 	// Shutdown menu
 	if(MR_Shutdown)
 		MR_Shutdown();

@@ -32,13 +32,8 @@ Host_Quit_f
 ==================
 */
 
-extern qboolean host_shuttingdown;
 void Host_Quit_f (void)
 {
-	host_shuttingdown = true;
-	CL_Disconnect ();
-	Host_ShutdownServer(false);
-
 	Sys_Quit ();
 }
 
