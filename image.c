@@ -554,76 +554,78 @@ qbyte *loadimagepixels (const char *filename, qboolean complain, int matchwidth,
 	if (f)
 	{
 		data = LoadTGA (f, matchwidth, matchheight);
-		Mem_Free(f);
-		return data;
+		goto loaded;
 	}
 	sprintf (name, "override/%s.jpg", basename);
 	f = COM_LoadFile(name, true);
 	if (f)
 	{
 		data = JPEG_LoadImage (f, matchwidth, matchheight);
-		Mem_Free(f);
-		return data;
+		goto loaded;
 	}
 	sprintf (name, "textures/%s.tga", basename);
 	f = COM_LoadFile(name, true);
 	if (f)
 	{
 		data = LoadTGA (f, matchwidth, matchheight);
-		Mem_Free(f);
-		return data;
+		goto loaded;
 	}
 	sprintf (name, "textures/%s.jpg", basename);
 	f = COM_LoadFile(name, true);
 	if (f)
 	{
 		data = JPEG_LoadImage (f, matchwidth, matchheight);
-		Mem_Free(f);
-		return data;
+		goto loaded;
 	}
 	sprintf (name, "textures/%s.pcx", basename);
 	f = COM_LoadFile(name, true);
 	if (f)
 	{
 		data = LoadPCX (f, matchwidth, matchheight);
-		Mem_Free(f);
-		return data;
+		goto loaded;
 	}
 	sprintf (name, "%s.tga", basename);
 	f = COM_LoadFile(name, true);
 	if (f)
 	{
 		data = LoadTGA (f, matchwidth, matchheight);
-		Mem_Free(f);
-		return data;
+		goto loaded;
 	}
 	sprintf (name, "%s.jpg", basename);
 	f = COM_LoadFile(name, true);
 	if (f)
 	{
 		data = JPEG_LoadImage (f, matchwidth, matchheight);
-		Mem_Free(f);
-		return data;
+		goto loaded;
 	}
 	sprintf (name, "%s.pcx", basename);
 	f = COM_LoadFile(name, true);
 	if (f)
 	{
 		data = LoadPCX (f, matchwidth, matchheight);
-		Mem_Free(f);
-		return data;
+		goto loaded;
 	}
 	sprintf (name, "%s.lmp", basename);
 	f = COM_LoadFile(name, true);
 	if (f)
 	{
 		data = LoadLMP (f, matchwidth, matchheight);
-		Mem_Free(f);
-		return data;
+		goto loaded;
 	}
 	if (complain)
 		Con_Printf ("Couldn't load %s.tga, .jpg, .pcx, .lmp\n", filename);
 	return NULL;
+loaded:
+	Mem_Free(f);
+	Con_DPrintf("loaded image %s (%dx%d)\n", name);
+	if (image_width == 0 || image_height == 0)
+	{
+		Con_Printf("error loading image %s - it is a %dx%d pixel image!\n", name);
+		if (data != NULL)
+			Mem_Free(data);
+		data = NULL;
+	}
+	return data;
 }
 
 int image_makemask (const qbyte *in, qbyte *out, int size)
@@ -1414,6 +1416,8 @@ int image_loadskin(imageskin_t *s, char *name)
 	s->basepixels = loadimagepixels(name, false, 0, 0);
 	if (s->basepixels == NULL)
 		return false;
+	s->basepixels_width = image_width;
+	s->basepixels_height = image_height;
 
 	bumppixels = NULL;bumppixels_width = 0;bumppixels_height = 0;
 	for (j = 3;j < s->basepixels_width * s->basepixels_height * 4;j += 4)
