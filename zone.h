@@ -137,5 +137,8 @@ extern mempool_t *zonemempool;
 #define Z_Malloc(size) Mem_Alloc(zonemempool,size)
 #define Z_Free(data) Mem_Free(data)
 
+extern struct cvar_s developer_memory;
+extern struct cvar_s developer_memorydebug;
+
 #endif
 
