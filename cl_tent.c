@@ -21,6 +21,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+#define MSG_ReadVector(v) {(v)[0] = MSG_ReadCoord();(v)[1] = MSG_ReadCoord();(v)[2] = MSG_ReadCoord();}
+
 cvar_t r_glowinglightning = {"r_glowinglightning", "1", true};
 
 int			num_temp_entities;
@@ -65,14 +67,8 @@ void CL_ParseBeam (model_t *m)
 	int		i;
 	
 	ent = MSG_ReadShort ();
-	
-	start[0] = MSG_ReadCoord ();
-	start[1] = MSG_ReadCoord ();
-	start[2] = MSG_ReadCoord ();
-	
-	end[0] = MSG_ReadCoord ();
-	end[1] = MSG_ReadCoord ();
-	end[2] = MSG_ReadCoord ();
+	MSG_ReadVector(start);
+	MSG_ReadVector(end);
 
 // override any beam with the same entity
 	for (i=0, b=cl_beams ; i< MAX_BEAMS ; i++, b++)
@@ -143,25 +139,19 @@ void CL_ParseTEnt (void)
 	switch (type)
 	{
 	case TE_WIZSPIKE:			// spike hitting wall
-		pos[0] = MSG_ReadCoord ();
-		pos[1] = MSG_ReadCoord ();
-		pos[2] = MSG_ReadCoord ();
+		MSG_ReadVector(pos);
 		R_RunParticleEffect (pos, vec3_origin, 20, 30);
 		S_StartSound (-1, 0, cl_sfx_wizhit, pos, 1, 1);
 		break;
 		
 	case TE_KNIGHTSPIKE:			// spike hitting wall
-		pos[0] = MSG_ReadCoord ();
-		pos[1] = MSG_ReadCoord ();
-		pos[2] = MSG_ReadCoord ();
+		MSG_ReadVector(pos);
 		R_RunParticleEffect (pos, vec3_origin, 226, 20);
 		S_StartSound (-1, 0, cl_sfx_knighthit, pos, 1, 1);
 		break;
 		
 	case TE_SPIKE:			// spike hitting wall
-		pos[0] = MSG_ReadCoord ();
-		pos[1] = MSG_ReadCoord ();
-		pos[2] = MSG_ReadCoord ();
+		MSG_ReadVector(pos);
 		// LordHavoc: changed to spark shower
 		R_SparkShower(pos, vec3_origin, 15);
 		//R_RunParticleEffect (pos, vec3_origin, 0, 10);
@@ -179,9 +169,7 @@ void CL_ParseTEnt (void)
 		}
 		break;
 	case TE_SPIKEQUAD:			// quad spike hitting wall
-		pos[0] = MSG_ReadCoord ();
-		pos[1] = MSG_ReadCoord ();
-		pos[2] = MSG_ReadCoord ();
+		MSG_ReadVector(pos);
 		// LordHavoc: changed to spark shower
 		R_SparkShower(pos, vec3_origin, 15);
 		//R_RunParticleEffect (pos, vec3_origin, 0, 10);
@@ -206,9 +194,7 @@ void CL_ParseTEnt (void)
 		}
 		break;
 	case TE_SUPERSPIKE:			// super spike hitting wall
-		pos[0] = MSG_ReadCoord ();
-		pos[1] = MSG_ReadCoord ();
-		pos[2] = MSG_ReadCoord ();
+		MSG_ReadVector(pos);
 		// LordHavoc: changed to dust shower
 		R_SparkShower(pos, vec3_origin, 30);
 		//R_RunParticleEffect (pos, vec3_origin, 0, 20);
@@ -226,9 +212,7 @@ void CL_ParseTEnt (void)
 		}
 		break;
 	case TE_SUPERSPIKEQUAD:			// quad super spike hitting wall
-		pos[0] = MSG_ReadCoord ();
-		pos[1] = MSG_ReadCoord ();
-		pos[2] = MSG_ReadCoord ();
+		MSG_ReadVector(pos);
 		// LordHavoc: changed to dust shower
 		R_SparkShower(pos, vec3_origin, 30);
 		//R_RunParticleEffect (pos, vec3_origin, 0, 20);
@@ -253,9 +237,7 @@ void CL_ParseTEnt (void)
 		break;
 		// LordHavoc: added for improved blood splatters
 	case TE_BLOOD:	// blood puff
-		pos[0] = MSG_ReadCoord ();
-		pos[1] = MSG_ReadCoord ();
-		pos[2] = MSG_ReadCoord ();
+		MSG_ReadVector(pos);
 		dir[0] = MSG_ReadChar ();
 		dir[1] = MSG_ReadChar ();
 		dir[2] = MSG_ReadChar ();
@@ -263,15 +245,11 @@ void CL_ParseTEnt (void)
 		R_BloodPuff(pos);
 		break;
 	case TE_BLOOD2:	// blood puff
-		pos[0] = MSG_ReadCoord ();
-		pos[1] = MSG_ReadCoord ();
-		pos[2] = MSG_ReadCoord ();
+		MSG_ReadVector(pos);
 		R_BloodPuff(pos);
 		break;
 	case TE_SPARK:	// spark shower
-		pos[0] = MSG_ReadCoord ();
-		pos[1] = MSG_ReadCoord ();
-		pos[2] = MSG_ReadCoord ();
+		MSG_ReadVector(pos);
 		dir[0] = MSG_ReadChar ();
 		dir[1] = MSG_ReadChar ();
 		dir[2] = MSG_ReadChar ();
@@ -280,26 +258,16 @@ void CL_ParseTEnt (void)
 		break;
 		// LordHavoc: added for improved gore
 	case TE_BLOODSHOWER:	// vaporized body
-		pos[0] = MSG_ReadCoord (); // mins
-		pos[1] = MSG_ReadCoord ();
-		pos[2] = MSG_ReadCoord ();
-		dir[0] = MSG_ReadCoord (); // maxs
-		dir[1] = MSG_ReadCoord ();
-		dir[2] = MSG_ReadCoord ();
+		MSG_ReadVector(pos); // mins
+		MSG_ReadVector(pos2); // maxs
 		velspeed = MSG_ReadCoord (); // speed
 		count = MSG_ReadShort (); // number of particles
-		R_BloodShower(pos, dir, velspeed, count);
+		R_BloodShower(pos, pos2, velspeed, count);
 		break;
 	case TE_PARTICLECUBE:	// general purpose particle effect
-		pos[0] = MSG_ReadCoord (); // mins
-		pos[1] = MSG_ReadCoord ();
-		pos[2] = MSG_ReadCoord ();
-		pos2[0] = MSG_ReadCoord (); // maxs
-		pos2[1] = MSG_ReadCoord ();
-		pos2[2] = MSG_ReadCoord ();
-		dir[0] = MSG_ReadCoord (); // dir
-		dir[1] = MSG_ReadCoord ();
-		dir[2] = MSG_ReadCoord ();
+		MSG_ReadVector(pos); // mins
+		MSG_ReadVector(pos2); // maxs
+		MSG_ReadVector(dir); // dir
 		count = MSG_ReadShort (); // number of particles
 		colorStart = MSG_ReadByte (); // color
 		colorLength = MSG_ReadByte (); // gravity (1 or 0)
@@ -308,48 +276,32 @@ void CL_ParseTEnt (void)
 		break;
 
 	case TE_PARTICLERAIN:	// general purpose particle effect
-		pos[0] = MSG_ReadCoord (); // mins
-		pos[1] = MSG_ReadCoord ();
-		pos[2] = MSG_ReadCoord ();
-		pos2[0] = MSG_ReadCoord (); // maxs
-		pos2[1] = MSG_ReadCoord ();
-		pos2[2] = MSG_ReadCoord ();
-		dir[0] = MSG_ReadCoord (); // dir
-		dir[1] = MSG_ReadCoord ();
-		dir[2] = MSG_ReadCoord ();
+		MSG_ReadVector(pos); // mins
+		MSG_ReadVector(pos2); // maxs
+		MSG_ReadVector(dir); // dir
 		count = MSG_ReadShort (); // number of particles
 		colorStart = MSG_ReadByte (); // color
 		R_ParticleRain(pos, pos2, dir, count, colorStart, 0);
 		break;
 
 	case TE_PARTICLESNOW:	// general purpose particle effect
-		pos[0] = MSG_ReadCoord (); // mins
-		pos[1] = MSG_ReadCoord ();
-		pos[2] = MSG_ReadCoord ();
-		pos2[0] = MSG_ReadCoord (); // maxs
-		pos2[1] = MSG_ReadCoord ();
-		pos2[2] = MSG_ReadCoord ();
-		dir[0] = MSG_ReadCoord (); // dir
-		dir[1] = MSG_ReadCoord ();
-		dir[2] = MSG_ReadCoord ();
+		MSG_ReadVector(pos); // mins
+		MSG_ReadVector(pos2); // maxs
+		MSG_ReadVector(dir); // dir
 		count = MSG_ReadShort (); // number of particles
 		colorStart = MSG_ReadByte (); // color
 		R_ParticleRain(pos, pos2, dir, count, colorStart, 1);
 		break;
 
 	case TE_GUNSHOT:			// bullet hitting wall
-		pos[0] = MSG_ReadCoord ();
-		pos[1] = MSG_ReadCoord ();
-		pos[2] = MSG_ReadCoord ();
+		MSG_ReadVector(pos);
 		// LordHavoc: changed to dust shower
 		R_SparkShower(pos, vec3_origin, 15);
 		//R_RunParticleEffect (pos, vec3_origin, 0, 20);
 		break;
 
 	case TE_GUNSHOTQUAD:			// quad bullet hitting wall
-		pos[0] = MSG_ReadCoord ();
-		pos[1] = MSG_ReadCoord ();
-		pos[2] = MSG_ReadCoord ();
+		MSG_ReadVector(pos);
 		R_SparkShower(pos, vec3_origin, 15);
 		dl = CL_AllocDlight (0);
 		VectorCopy (pos, dl->origin);
@@ -360,9 +312,7 @@ void CL_ParseTEnt (void)
 		break;
 
 	case TE_EXPLOSION:			// rocket explosion
-		pos[0] = MSG_ReadCoord ();
-		pos[1] = MSG_ReadCoord ();
-		pos[2] = MSG_ReadCoord ();
+		MSG_ReadVector(pos);
 		FindNonSolidLocation(pos);
 		R_ParticleExplosion (pos, false);
 //		R_BlastParticles (pos, 120, 120);
@@ -376,9 +326,7 @@ void CL_ParseTEnt (void)
 		break;
 
 	case TE_EXPLOSIONQUAD:			// quad rocket explosion
-		pos[0] = MSG_ReadCoord ();
-		pos[1] = MSG_ReadCoord ();
-		pos[2] = MSG_ReadCoord ();
+		MSG_ReadVector(pos);
 		FindNonSolidLocation(pos);
 		R_ParticleExplosion (pos, false);
 //		R_BlastParticles (pos, 120, 480);
@@ -393,9 +341,7 @@ void CL_ParseTEnt (void)
 
 		/*
 	case TE_SMOKEEXPLOSION:			// rocket explosion with a cloud of smoke
-		pos[0] = MSG_ReadCoord ();
-		pos[1] = MSG_ReadCoord ();
-		pos[2] = MSG_ReadCoord ();
+		MSG_ReadVector(pos);
 		FindNonSolidLocation(pos);
 		R_ParticleExplosion (pos, true);
 		dl = CL_AllocDlight (0);
@@ -409,9 +355,7 @@ void CL_ParseTEnt (void)
 		*/
 
 	case TE_EXPLOSION3:				// Nehahra movie colored lighting explosion
-		pos[0] = MSG_ReadCoord ();
-		pos[1] = MSG_ReadCoord ();
-		pos[2] = MSG_ReadCoord ();
+		MSG_ReadVector(pos);
 		FindNonSolidLocation(pos);
 		R_ParticleExplosion (pos, false);
 //		R_BlastParticles (pos, 120, 120);
@@ -425,9 +369,7 @@ void CL_ParseTEnt (void)
 		break;
 
 	case TE_EXPLOSIONRGB:			// colored lighting explosion
-		pos[0] = MSG_ReadCoord ();
-		pos[1] = MSG_ReadCoord ();
-		pos[2] = MSG_ReadCoord ();
+		MSG_ReadVector(pos);
 		FindNonSolidLocation(pos);
 		R_ParticleExplosion (pos, false);
 //		R_BlastParticles (pos, 120, 120);
@@ -441,9 +383,7 @@ void CL_ParseTEnt (void)
 		break;
 
 	case TE_TAREXPLOSION:			// tarbaby explosion
-		pos[0] = MSG_ReadCoord ();
-		pos[1] = MSG_ReadCoord ();
-		pos[2] = MSG_ReadCoord ();
+		MSG_ReadVector(pos);
 		FindNonSolidLocation(pos);
 		R_BlobExplosion (pos);
 //		R_BlastParticles (pos, 120, 120);
@@ -496,9 +436,7 @@ void CL_ParseTEnt (void)
 		break;
 		
 	case TE_EXPLOSION2:				// color mapped explosion
-		pos[0] = MSG_ReadCoord ();
-		pos[1] = MSG_ReadCoord ();
-		pos[2] = MSG_ReadCoord ();
+		MSG_ReadVector(pos);
 		FindNonSolidLocation(pos);
 		colorStart = MSG_ReadByte ();
 		colorLength = MSG_ReadByte ();

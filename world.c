@@ -1050,8 +1050,7 @@ loc0:
 			trace = SV_ClipMoveToEntity (touch, clip->start, clip->mins2, clip->maxs2, clip->end);
 		else
 			trace = SV_ClipMoveToEntity (touch, clip->start, clip->mins, clip->maxs, clip->end);
-		if (trace.allsolid || trace.startsolid ||
-		trace.fraction < clip->trace.fraction)
+		if (trace.allsolid || trace.startsolid || trace.fraction < clip->trace.fraction)
 		{
 			trace.ent = touch;
 		 	if (clip->trace.startsolid)

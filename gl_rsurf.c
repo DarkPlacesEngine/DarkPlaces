@@ -41,13 +41,12 @@ short lightmapupdate[MAX_LIGHTMAPS][2];
 
 int lightmapalign, lightmapalignmask; // LordHavoc: NVIDIA's broken subimage fix, see BuildLightmaps for notes
 cvar_t gl_lightmapalign = {"gl_lightmapalign", "4"};
-cvar_t gl_lightmaprgba = {"gl_lightmaprgba", "0"};
+cvar_t gl_lightmaprgba = {"gl_lightmaprgba", "1"};
 cvar_t gl_nosubimagefragments = {"gl_nosubimagefragments", "0"};
 cvar_t gl_nosubimage = {"gl_nosubimage", "0"};
 cvar_t r_ambient = {"r_ambient", "0"};
 cvar_t gl_vertex = {"gl_vertex", "0"};
 cvar_t gl_texsort = {"gl_texsort", "1"};
-//cvar_t gl_funnywalls = {"gl_funnywalls", "0"}; // LordHavoc: see BuildSurfaceDisplayList
 cvar_t r_newworldnode = {"r_newworldnode", "0"};
 cvar_t r_oldclip = {"r_oldclip", "1"};
 cvar_t r_dlightmap = {"r_dlightmap", "1"};
@@ -77,7 +76,6 @@ void GL_Surf_Init()
 	Cvar_RegisterVariable(&gl_nosubimagefragments);
 	Cvar_RegisterVariable(&gl_nosubimage);
 	Cvar_RegisterVariable(&r_ambient);
-//	Cvar_RegisterVariable(&gl_funnywalls);
 	Cvar_RegisterVariable(&gl_vertex);
 	Cvar_RegisterVariable(&gl_texsort);
 	Cvar_RegisterVariable(&r_newworldnode);

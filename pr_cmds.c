@@ -616,7 +616,7 @@ void PF_ambientsound (void)
 
 	MSG_WriteByte (&sv.signon,svc_spawnstaticsound);
 	for (i=0 ; i<3 ; i++)
-		MSG_WriteCoord(&sv.signon, pos[i]);
+		MSG_WriteFloatCoord(&sv.signon, pos[i]);
 
 	MSG_WriteByte (&sv.signon, soundnum);
 
@@ -1674,7 +1674,7 @@ void PF_WriteAngle (void)
 
 void PF_WriteCoord (void)
 {
-	MSG_WriteCoord (WriteDest(), G_FLOAT(OFS_PARM1));
+	MSG_WriteFloatCoord (WriteDest(), G_FLOAT(OFS_PARM1));
 }
 
 void PF_WriteString (void)
@@ -1708,7 +1708,7 @@ void PF_makestatic (void)
 	MSG_WriteByte (&sv.signon, ent->v.skin);
 	for (i=0 ; i<3 ; i++)
 	{
-		MSG_WriteCoord(&sv.signon, ent->v.origin[i]);
+		MSG_WriteFloatCoord(&sv.signon, ent->v.origin[i]);
 		MSG_WriteAngle(&sv.signon, ent->v.angles[i]);
 	}
 

@@ -341,11 +341,28 @@ void Mod_LoadSkin (maliashdr_t *mheader, char *basename, byte *skindata, byte *s
 		}
 	}
 #else
-	skintexnum[0] = GL_SkinSplit(skindata, skintemp, width, height, 0x3FBD, va("&%s_normal", basename)); // normal (no special colors)
-	skintexnum[1] = GL_SkinSplitShirt(skindata, skintemp, width, height, 0x0040, va("&%s_pants", basename)); // pants
-	skintexnum[2] = GL_SkinSplitShirt(skindata, skintemp, width, height, 0x0002, va("&%s_shirt", basename)); // shirt
-	skintexnum[3] = GL_SkinSplit(skindata, skintemp, width, height, 0xC000, va("%s_glow", basename)); // glow
-	skintexnum[4] = GL_SkinSplit(skindata, skintemp, width, height, 0x3FFF, va("%s_body", basename)); // body (normal + pants + shirt, but not glow)
+	skintexnum[0] = loadtextureimage(va("%s_normal", basename), 0, 0, false, true);
+	skintexnum[1] = 0;
+	skintexnum[2] = 0;
+	skintexnum[3] = loadtextureimage(va("%s_glow"  , basename), 0, 0, false, true);
+	skintexnum[4] = 0;
+	if (skintexnum[0])
+	{
+		skintexnum[1] = loadtextureimage(va("%s_pants" , basename), 0, 0, false, true);
+		skintexnum[2] = loadtextureimage(va("%s_shirt" , basename), 0, 0, false, true);
+	}
+	else
+	{
+		skintexnum[0] = loadtextureimage(basename, 0, 0, false, true);
+		if (!skintexnum[0])
+		{
+			skintexnum[0] = GL_SkinSplit(skindata, skintemp, width, height, 0x3FBD, va("&%s_normal", basename)); // normal (no special colors)
+			skintexnum[1] = GL_SkinSplitShirt(skindata, skintemp, width, height, 0x0040, va("&%s_pants", basename)); // pants
+			skintexnum[2] = GL_SkinSplitShirt(skindata, skintemp, width, height, 0x0002, va("&%s_shirt", basename)); // shirt
+			skintexnum[3] = GL_SkinSplit(skindata, skintemp, width, height, 0xC000, va("%s_glow", basename)); // glow
+			skintexnum[4] = GL_SkinSplit(skindata, skintemp, width, height, 0x3FFF, va("%s_body", basename)); // body (normal + pants + shirt, but not glow)
+		}
+	}
 #endif
 }
 

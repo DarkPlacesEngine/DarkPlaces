@@ -158,7 +158,7 @@ void SwapPic (qpic_t *pic)
 }
 
 // LordHavoc: added alternate WAD2/WAD3 system for HalfLife texture wads
-#define TEXWAD_MAXIMAGES 8192
+#define TEXWAD_MAXIMAGES 16384
 typedef struct
 {
 	char name[16];
@@ -354,20 +354,16 @@ byte *W_GetTexture(char *name, int matchwidth, int matchheight)
 				for (i = 0;i < image_width*image_height;i++)
 				{
 					c = *indata++;
-					if (c == 255) // transparent color
-					{
-						*outdata++ = 0;
-						*outdata++ = 0;
-						*outdata++ = 0;
-						*outdata++ = 0;
-					}
+					if (pal[c][0] == 255 && pal[c][1] == 0 && pal[c][2] == 0) // HL transparent color (pure blue)
+						outdata[0] = outdata[1] = outdata[2] = outdata[3] = 0;
 					else
 					{
-						*outdata++ = pal[c][0];
-						*outdata++ = pal[c][1];
-						*outdata++ = pal[c][2];
-						*outdata++ = 255;
+						outdata[0] = pal[c][0];
+						outdata[1] = pal[c][1];
+						outdata[2] = pal[c][2];
+						outdata[3] = 255;
 					}
+					outdata += 4;
 				}
 				return data;
 			}

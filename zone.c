@@ -271,7 +271,7 @@ typedef struct
 {
 	int		sentinal;
 	int		size;		// including sizeof(hunk_t), -1 = not allocated
-	char	name[24];
+	char	name[56];
 } hunk_t;
 
 byte	*hunk_base;
@@ -316,9 +316,9 @@ void Hunk_Print (qboolean all)
 	hunk_t	*h, *next, *endlow, *starthigh, *endhigh;
 	int		count, sum, i;
 	int		totalblocks;
-	char	name[25];
+	char	name[51];
 
-	name[24] = 0;
+	name[50] = 0;
 	count = 0;
 	sum = 0;
 	totalblocks = 0;
@@ -367,25 +367,25 @@ void Hunk_Print (qboolean all)
 	// print the single block
 	//
 		// LordHavoc: pad name to full length
-		for (i = 0;i < 24;i++)
+		for (i = 0;i < 50;i++)
 		{
 			if (!h->name[i])
 				break;
 			name[i] = h->name[i];
 		}
-		for (;i < 24;i++)
+		for (;i < 50;i++)
 			name[i] = ' ';
-		//memcpy (name, h->name, 24);
+		//memcpy (name, h->name, 51);
 		if (all)
 			Con_Printf ("%8p :%8i %s\n",h, h->size, name);
 			
 	//
 	// print the total
 	//
-		if (next == endlow || next == endhigh || strncmp(h->name, next->name, 24))
+		if (next == endlow || next == endhigh || strncmp(h->name, next->name, 50))
 		{
 			if (!all)
-				Con_Printf ("          :%8i %s (TOTAL)\n",sum, name);
+				Con_Printf ("         :%8i %s (TOTAL)\n",sum, name);
 			count = 0;
 			sum = 0;
 		}
@@ -428,7 +428,8 @@ void *Hunk_AllocName (int size, char *name)
 	
 	h->size = size;
 	h->sentinal = HUNK_SENTINAL;
-	strncpy (h->name, name, 24);
+	strncpy (h->name, name, 50);
+	h->name[50] = 0;
 	
 	return (void *)(h+1);
 }
