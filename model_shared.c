@@ -625,7 +625,13 @@ void Mod_BuildBumpVectors(const float *v0, const float *v1, const float *v2, con
 	f = -DotProduct(tvector3f, normal3f);
 	VectorMA(tvector3f, f, normal3f, tvector3f);
 	VectorNormalize(tvector3f);
-	CrossProduct(normal3f, tvector3f, svector3f);
+	// note: can't be a CrossProduct as that sometimes flips the texture
+	svector3f[0] = ((tc1[1] - tc0[1]) * (v2[0] - v0[0]) - (tc2[1] - tc0[1]) * (v1[0] - v0[0]));
+	svector3f[1] = ((tc1[1] - tc0[1]) * (v2[1] - v0[1]) - (tc2[1] - tc0[1]) * (v1[1] - v0[1]));
+	svector3f[2] = ((tc1[1] - tc0[1]) * (v2[2] - v0[2]) - (tc2[1] - tc0[1]) * (v1[2] - v0[2]));
+	f = -DotProduct(svector3f, normal3f);
+	VectorMA(svector3f, f, normal3f, svector3f);
+	VectorNormalize(svector3f);
 }
 
 // warning: this is an expensive function!
