@@ -30,6 +30,7 @@
 -d darkplaces: r_skyscroll1 and r_skyscroll2 cvars (SeienAbunae)
 -d darkplaces: upgrade network protocol to send precise angles for entities, and make EF_LOWPRECISION downgrade both origin and angles, note this does not cover svc_setangle (Urre, -Wazat for Battlemech, FrikaC, mashakos, RenegadeC, Sajt)
 -d darkplaces: write a readme (Antti)
+-d darkplaces: make sure QuakeDoneQuick works (Chris Kemp)
 -d dpmod: add support for info_player_deathmatch in singleplayer for q3 compatibility (Static_Fiend)
 -d dpmod: add target_position entity for a touch of q3 compatibility on jumppads (Static_Fiend)
 -d dpmod: make grapple off-hand (joe hill)
@@ -127,7 +128,6 @@
 0 darkplaces: make server able to work without models, just for sake of completeness
 0 darkplaces: make server queries use a queue to avoid flooding out queries too fast (Willis)
 0 darkplaces: make static entities work in realtime lighting mode, like func_illusionary for example, they're currently black (Urre)
-0 darkplaces: make sure QuakeDoneQuick works (Chris Kemp)
 0 darkplaces: make sure that sky works without a valid size (just treat it as single layer clouds or non-animated) (tell Vermeulen)
 0 darkplaces: make sure that the fragment allocator can upload a full size block that uses the entire image, this may involve width/height comparisons needing a + 1 (fuh)
 0 darkplaces: make sure the engine uses only the first 32 special chars, so the high set can be replaced, this means player messages should not be shifted up, and the 'shift down' printing in dedicated server consoles should be removed, etc (Urre)
