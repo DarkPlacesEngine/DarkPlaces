@@ -101,22 +101,21 @@ void r_explosion_newmap(void)
 int R_ExplosionVert(int column, int row)
 {
 	int i;
-	float a, b, c;
+	float yaw, pitch;
+	// top and bottom rows are all one position...
+	if (row == 0 || row == EXPLOSIONGRID)
+		column = 0;
 	i = row * (EXPLOSIONGRID + 1) + column;
-	a = ((double) row / EXPLOSIONGRID) * M_PI * 2;
-	b = (((double) column / EXPLOSIONGRID) + 0.5) * M_PI;
-	c = cos(b);
-	explosionpoint[i][0] = cos(a) * c;
-	explosionpoint[i][1] = sin(a) * c;
-	explosionpoint[i][2] = -sin(b);
+	yaw = ((double) column / EXPLOSIONGRID) * M_PI * 2;
+	pitch = (((double) row / EXPLOSIONGRID) - 0.5) * M_PI;
+	explosionpoint[i][0] = cos(yaw) *  cos(pitch);
+	explosionpoint[i][1] = sin(yaw) *  cos(pitch);
+	explosionpoint[i][2] =        1 * -sin(pitch);
 	explosionspherevertvel[i][0] = explosionpoint[i][0] * EXPLOSIONSTARTVELOCITY;
 	explosionspherevertvel[i][1] = explosionpoint[i][1] * EXPLOSIONSTARTVELOCITY;
 	explosionspherevertvel[i][2] = explosionpoint[i][2] * EXPLOSIONSTARTVELOCITY;
 	explosiontexcoord2f[i][0] = (float) column / (float) EXPLOSIONGRID;
 	explosiontexcoord2f[i][1] = (float) row / (float) EXPLOSIONGRID;
-	// top and bottom rows are all one position...
-	if (row == 0 || row == EXPLOSIONGRID)
-		column = 0;
 	explosionnoiseindex[i] = (row % EXPLOSIONGRID) * EXPLOSIONGRID + (column % EXPLOSIONGRID);
 	return i;
 }
@@ -235,9 +234,6 @@ void R_MoveExplosion(explosion_t *e)
 				VectorCopy(end, e->vert[i]);
 		}
 	}
-	for (i = 0;i < EXPLOSIONGRID;i++)
-		VectorCopy(e->vert[i * (EXPLOSIONGRID + 1)], e->vert[i * (EXPLOSIONGRID + 1) + EXPLOSIONGRID]);
-	memcpy(e->vert[EXPLOSIONGRID * (EXPLOSIONGRID + 1)], e->vert[0], sizeof(float[3]) * (EXPLOSIONGRID + 1));
 }
 
 
