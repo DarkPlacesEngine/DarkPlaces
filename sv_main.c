@@ -1354,7 +1354,7 @@ int SV_ModelIndex(char *s, int precachemode)
 					Con_Printf("SV_ModelIndex(\"%s\"): not precached (fix your code), precaching anyway\n", filename);
 				strlcpy(sv.model_precache[i], filename, sizeof(sv.model_precache[i]));
 				sv.models[i] = Mod_ForName (sv.model_precache[i], true, false, false);
-				if (sv.protocol == PROTOCOL_DARKPLACES6)
+				if (sv.protocol == PROTOCOL_DARKPLACES6 && sv.state != ss_loading)
 				{
 					MSG_WriteByte(&sv.reliable_datagram, svc_precache);
 					MSG_WriteShort(&sv.reliable_datagram, i);
@@ -1402,7 +1402,7 @@ int SV_SoundIndex(char *s, int precachemode)
 				if (precachemode == 1)
 					Con_Printf("SV_SoundIndex(\"%s\"): not precached (fix your code), precaching anyway\n", filename);
 				strlcpy(sv.sound_precache[i], filename, sizeof(sv.sound_precache[i]));
-				if (sv.protocol == PROTOCOL_DARKPLACES6)
+				if (sv.protocol == PROTOCOL_DARKPLACES6 && sv.state != ss_loading)
 				{
 					MSG_WriteByte(&sv.reliable_datagram, svc_precache);
 					MSG_WriteShort(&sv.reliable_datagram, i + 32768);
