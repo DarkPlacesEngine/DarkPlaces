@@ -1,6 +1,9 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -n = done but have not notified the people who asked for it, f = failed
 -f darkplaces: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
 -f darkplaces: model interpolation off crashes?  (SeienAbunae)
+-n darkplaces: "edict -1" and other invalid numbers cause an error, should just complain (Supajoe)
+-n darkplaces: GAME_FNIGGIUM: console doesn't show unless you manually pull it down (Sajt)
+-n darkplaces: add -benchmark commandline option which plays a demo, appends the resulting min/max/avg fps to gamedir/benchmark.log with commandline so people know what settings were used, like +exec realtimelow.cfg, +exec realtimemed.cfg, etc (romi)
 -n darkplaces: add PF_copyentity error checking for copying to world (yummyluv)
 -n darkplaces: add a "edictset" command to console to set a single field of an edict to the specified value
 -n darkplaces: add a config saving command (Speeds)
@@ -40,11 +43,6 @@
 -n darkplaces: upgrade network protocol to send precise angles, and make EF_LOWPRECISION downgrade both origin and angles (Urre, -Wazat for Battlemech, FrikaC, mashakos, RenegadeC, Sajt)
 -n darkplaces: write a readme (Antti)
 -n dpmod: make grapple off-hand (joe hill)
--n darkplaces: "edict -1" and other invalid numbers cause an error, should just complain (Supajoe)
--n darkplaces: GAME_FNIGGIUM: console doesn't show unless you manually pull it down (Sajt)
-d darkplaces: adaptive patch subdivision levels on X and Y based on r_subdivisions cvar
-d darkplaces: add "skin" and "pflags" parsing to light entity loader in rtlights mode (Electro)  
-0 darkplaces: add -benchmark commandline option which plays a demo, appends the resulting min/max/avg fps to gamedir/benchmark.log with commandline so people know what settings were used, like +exec realtimelow.cfg, +exec realtimemed.cfg, etc (romi)
 0 darkplaces: add DP_EF_NOSHADOW extension (Urre)
 0 darkplaces: add DP_GFX_QUAKE3MODELTAGS, DP_GFX_SKINFILES, and any other new extensions to the wiki
 0 darkplaces: add DP_SV_ROTATINGBMODEL extension to explain that MOVETYPE_PUSH/SOLID_BSP support rotation in darkplaces and a demonstration of how to use it without qc modifications (Uffe, Supajoe)
@@ -113,6 +111,7 @@ d darkplaces: add "skin" and "pflags" parsing to light entity loader in rtlights
 0 darkplaces: fix loadsky;r_restart;r_restart crash, again (sajt)
 0 darkplaces: fix model lighting with r_shadow_realtime_world_lightmaps mode, it seems to be adding dlights to vertices? (Mitchell)
 0 darkplaces: fix q3bsp fogging (Sajt)
+0 darkplaces: fix q3bsp static shadow volumes (currently they are calculated as if novis)
 0 darkplaces: fix r_editlights_edit origin not working (romi)
 0 darkplaces: fix the bug causing models in an unlit map to be black when they should be fullbright (Sajt)
 0 darkplaces: fix the mouse move when console is raised, probably by ignoring the first move after console raise (mashakos)
@@ -210,6 +209,7 @@ d darkplaces: add "skin" and "pflags" parsing to light entity loader in rtlights
 0 litsupport: fix the one COM_HunkFile call that uses two parameters (glquake took one) and fix the few "//lit support begin" messages at the end of code blocks (metlslime)
 0 revelation: change the wabbit kill message to " was hunting wabbit but shot " " instead"
 0 sv_user.qc: figure out why looking up/down slows movement and fix it (Vermeulen)
+1 darkplaces: add "sendcvar <cvarname>" command which executes on clients and forwards a "sentcvar <cvarname> <cvarvalue>" to the server, which the qc can catch (Urre)
 1 darkplaces: add DP_CLIENTCAMERA extension (.entity clientcamera; sets which entity the client views from) (Wazat for Battlemech, SeienAbunae)
 1 darkplaces: add DP_EF_CLIENTLOCKANGLES extension (prevents client from turning view, takes angles from entity) (Wazat for Battlemech, SeienAbunae)
 1 darkplaces: add DP_QC_ENDFRAME extension/documentation and post it on wiki (tell Uffe, SeienAbunae)
@@ -392,6 +392,10 @@ d darkplaces: GAME_FNIGGIUM: minimum resolution: 640x480
 d darkplaces: PF_traceline/PF_tracebox now work with world as the edict
 d darkplaces: Quake3 bsp support (Vermeulen, Mitchell, SeienAbunae)
 d darkplaces: TEXF_CLAMP needs to use GL_CLAMP_TO_EDGE (if not supported just use REPEAT as a fallback, not aware of any cards that lack this)
+d darkplaces: adaptive patch subdivision levels on X and Y based on r_subdivisions cvar
+d darkplaces: add "showdate" cvar
+d darkplaces: add "showtime" cvar
+d darkplaces: add "skin" and "pflags" parsing to light entity loader in rtlights mode (Electro)  
 d darkplaces: add 66.28.32.64 to master server list (Willis)
 d darkplaces: add DP_GFX_EXTERNALTEXTURES extension (Electro)
 d darkplaces: add DP_LITSUPPORT extension and document it

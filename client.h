@@ -367,6 +367,8 @@ typedef struct
 	int demonum;
 	// list of demos in loop
 	char demos[MAX_DEMOS][MAX_DEMONAME];
+	// the actively playing demo (set by CL_PlayDemo_f)
+	char demoname[64];
 
 // demo recording info must be here, because record is started before
 // entering a map (and clearing client_state_t)
