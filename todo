@@ -112,7 +112,6 @@
 0 darkplaces server: make dedicated server not load images (maybe all fail?)
 0 darkplaces server: make fopen have the ability to disable fopen builtin access to read /, read data/, write data/, or disable fopen builtin entirely
 0 darkplaces sound: Lordhavoc needs to talk to fuh about snd_macos.c (fuh)
-0 darkplaces sound: clear sound buffer at startup so it doesn't play static during startup on windows (FrikaC)
 0 darkplaces sound: the new sound engine should have a cvar for random variations of pitch on sounds like in doom (RenegadeC)
 0 dpmod: allow selection of weapons with secondary ammo but no primary ammo, and switch away if trying to fire primary ammo you don't have (romi)
 0 dpmod: change kill awards to use DP_SV_CLIENTFLASHPIC (Tomaz)
@@ -470,6 +469,7 @@ d darkplaces server: prevent player name changes faster than once every 5 second
 d darkplaces server: still says " disconnected" in dpmod, figure out why and fix it
 d darkplaces server: stop sound before loading a level to get rid of looping noise (Edward Holness)
 d darkplaces sound: add a sound unloader of some sort, to allow music and other one-level stuff to be unloaded
+d darkplaces sound: clear sound buffer at startup so it doesn't play static during startup on windows (FrikaC)
 d darkplaces sound: dsound broken, needs to be managed as part of video system (jeremy janzen)
 d darkplaces sound: make sound loader check both sound/%s and %s, incase a sound (like music/something.wav in q3 maps) is not in the sound directory (Static_Fiend)
 d darkplaces sound: non-cd music tracks should not be affected by sound volume setting (Urre)
