@@ -65,6 +65,13 @@ char *PF_VarString (int	first)
 }
 
 char *ENGINE_EXTENSIONS =
+"DP_EF_NODRAW "
+"DP_EF_ADDITIVE "
+"DP_EF_BLUE "
+"DP_EF_RED "
+"DP_EF_FULLBRIGHT "
+"DP_EF_FLAME "
+"DP_EF_STARDUST "
 "DP_ENT_ALPHA "
 "DP_ENT_CUSTOMCOLORMAP "
 "DP_ENT_EXTERIORMODELTOCLIENT "
@@ -84,6 +91,7 @@ char *ENGINE_EXTENSIONS =
 "DP_QC_FINDCHAINFLOAT "
 "DP_QC_FINDFLOAT "
 "DP_QC_GETLIGHT "
+"DP_QC_GETSURFACE "
 "DP_QC_MINMAXBOUND "
 "DP_QC_RANDOMVEC "
 "DP_QC_SINCOSSQRTPOW "
@@ -104,6 +112,7 @@ char *ENGINE_EXTENSIONS =
 "DP_TE_BLOOD "
 "DP_TE_BLOODSHOWER "
 "DP_TE_EXPLOSIONRGB "
+"DP_TE_FLAMEJET "
 "DP_TE_PARTICLECUBE "
 "DP_TE_PARTICLERAIN "
 "DP_TE_PARTICLESNOW "
@@ -2063,14 +2072,14 @@ void PF_copyentity (void)
 
 /*
 =================
-PF_setcolors
+PF_setcolor
 
 sets the color of a client and broadcasts the update to all connected clients
 
-setcolors(clientent, value)
+setcolor(clientent, value)
 =================
 */
-void PF_setcolors (void)
+void PF_setcolor (void)
 {
 	client_t	*client;
 	int			entnum, i;
@@ -2662,11 +2671,6 @@ void PF_getsurfaceclippedpoint(void)
 	VectorAdd(out, ed->v->origin, G_VECTOR(OFS_RETURN));
 }
 
-void PF_Fixme (void)
-{
-	Host_Error ("unimplemented QC builtin"); // LordHavoc: was misspelled (bulitin)
-}
-
 #define MAX_PRFILES 256
 
 qfile_t *pr_files[MAX_PRFILES];
@@ -2891,178 +2895,171 @@ void PF_strunzone(void)
 
 builtin_t pr_builtin[] =
 {
-PF_Fixme,
-PF_makevectors,	// void(entity e)	makevectors 		= #1;
-PF_setorigin,	// void(entity e, vector o) setorigin	= #2;
-PF_setmodel,	// void(entity e, string m) setmodel	= #3;
-PF_setsize,	// void(entity e, vector min, vector max) setsize = #4;
-PF_Fixme,	// void(entity e, vector min, vector max) setabssize = #5;
-PF_break,	// void() break						= #6;
-PF_random,	// float() random						= #7;
-PF_sound,	// void(entity e, float chan, string samp) sound = #8;
-PF_normalize,	// vector(vector v) normalize			= #9;
-PF_error,	// void(string e) error				= #10;
-PF_objerror,	// void(string e) objerror				= #11;
-PF_vlen,	// float(vector v) vlen				= #12;
-PF_vectoyaw,	// float(vector v) vectoyaw		= #13;
-PF_Spawn,	// entity() spawn						= #14;
-PF_Remove,	// void(entity e) remove				= #15;
-PF_traceline,	// float(vector v1, vector v2, float tryents) traceline = #16;
-PF_checkclient,	// entity() clientlist					= #17;
-PF_Find,	// entity(entity start, .string fld, string match) find = #18;
-PF_precache_sound,	// void(string s) precache_sound		= #19;
-PF_precache_model,	// void(string s) precache_model		= #20;
-PF_stuffcmd,	// void(entity client, string s)stuffcmd = #21;
-PF_findradius,	// entity(vector org, float rad) findradius = #22;
-PF_bprint,	// void(string s) bprint				= #23;
-PF_sprint,	// void(entity client, string s) sprint = #24;
-PF_dprint,	// void(string s) dprint				= #25;
-PF_ftos,	// void(string s) ftos				= #26;
-PF_vtos,	// void(string s) vtos				= #27;
-PF_coredump,
-PF_traceon,
-PF_traceoff,
-PF_eprint,	// void(entity e) debug print an entire entity
-PF_walkmove, // float(float yaw, float dist) walkmove
-PF_Fixme, // float(float yaw, float dist) walkmove
-PF_droptofloor,
-PF_lightstyle,
-PF_rint,
-PF_floor,
-PF_ceil,
-PF_Fixme,
-PF_checkbottom,
-PF_pointcontents,
-PF_Fixme,
-PF_fabs,
-PF_aim,
-PF_cvar,
-PF_localcmd,
-PF_nextent,
-PF_particle,
-PF_changeyaw,
-PF_Fixme,
-PF_vectoangles,
-
-PF_WriteByte,
-PF_WriteChar,
-PF_WriteShort,
-PF_WriteLong,
-PF_WriteCoord,
-PF_WriteAngle,
-PF_WriteString,
-PF_WriteEntity,
-
-PF_sin,
-PF_cos,
-PF_sqrt,
-PF_changepitch,
-PF_TraceToss,
-PF_etos,
-PF_Fixme,
-
-SV_MoveToGoal,
-PF_precache_file,
-PF_makestatic,
-
-PF_changelevel,
-PF_Fixme,
-
-PF_cvar_set,
-PF_centerprint,
-
-PF_ambientsound,
-
-PF_precache_model,
-PF_precache_sound,		// precache_sound2 is different only for qcc
-PF_precache_file,
-
-PF_setspawnparms,
-
-PF_Fixme,				// #79 LordHavoc: dunno who owns 79-89, so these are just padding
-PF_Fixme,				// #80
-PF_stof,				// #81 float(string s) stof = #81;
-PF_Fixme,				// #82
-PF_Fixme,				// #83
-PF_Fixme,				// #84
-PF_Fixme,				// #85
-PF_Fixme,				// #86
-PF_Fixme,				// #87
-PF_Fixme,				// #88
-PF_Fixme,				// #89
-
-PF_tracebox,			// #90 LordHavoc builtin range (9x)
-PF_randomvec,			// #91
-PF_GetLight,			// #92
-PF_registercvar,		// #93
-PF_min,					// #94
-PF_max,					// #95
-PF_bound,				// #96
-PF_pow,					// #97
-PF_FindFloat,			// #98
-PF_checkextension,		// #99
-#define a PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme,
-a						// #100-109
-PF_fopen,				// #110 float(string filename, float mode) fopen = #110;
-PF_fclose,				// #111 void(float fhandle) fclose = #111;
-PF_fgets,				// #112 string(float fhandle) fgets = #112;
-PF_fputs,				// #113 void(float fhandle, string s) fputs = #113;
-PF_strlen,				// #114 float(string s) strlen = #114;
-PF_strcat,				// #115 string(string s1, string s2) strcat = #115;
-PF_substring,			// #116 string(string s, float start, float length) substring = #116;
-PF_stov,				// #117 vector(string) stov = #117;
-PF_strzone,				// #118 string(string s) strzone = #118;
-PF_strunzone,			// #119 void(string s) strunzone = #119;
-a						// #120-129
-a						// #130-139
-a						// #140-149
-a						// #150-159
-a						// #160-169
-a						// #170-179
-a						// #180-189
-a						// #190-199
-a a a a a a a a a a		// #200-299
-a a a a a a a a a a		// #300-399
-PF_copyentity,			// #400 LordHavoc: builtin range (4xx)
-PF_setcolors,			// #401
-PF_findchain,			// #402
-PF_findchainfloat,		// #403
-PF_effect,				// #404
-PF_te_blood,			// #405
-PF_te_bloodshower,		// #406
-PF_te_explosionrgb,		// #407
-PF_te_particlecube,		// #408
-PF_te_particlerain,		// #409
-PF_te_particlesnow,		// #410
-PF_te_spark,			// #411
-PF_te_gunshotquad,		// #412
-PF_te_spikequad,		// #413
-PF_te_superspikequad,	// #414
-PF_te_explosionquad,	// #415
-PF_te_smallflash,		// #416
-PF_te_customflash,		// #417
-PF_te_gunshot,			// #418
-PF_te_spike,			// #419
-PF_te_superspike,		// #420
-PF_te_explosion,		// #421
-PF_te_tarexplosion,		// #422
-PF_te_wizspike,			// #423
-PF_te_knightspike,		// #424
-PF_te_lavasplash,		// #425
-PF_te_teleport,			// #426
-PF_te_explosion2,		// #427
-PF_te_lightning1,		// #428
-PF_te_lightning2,		// #429
-PF_te_lightning3,		// #430
-PF_te_beam,				// #431
-PF_vectorvectors,		// #432
-PF_te_plasmaburn,		// #433
-PF_getsurfacenumpoints, // #434 float(entity e, float s) getsurfacenumpoints = #434;
-PF_getsurfacepoint,     // #435 vector(entity e, float s, float n) getsurfacepoint = #435;
-PF_getsurfacenormal,    // #436 vector(entity e, float s) getsurfacenormal = #436;
-PF_getsurfacetexture,   // #437 string(entity e, float s) getsurfacetexture = #437;
-PF_getsurfacenearpoint, // #438 float(entity e, vector p) getsurfacenearpoint = #438;
-PF_getsurfaceclippedpoint,// #439 vector(entity e, float s, vector p) getsurfaceclippedpoint = #439;
+NULL,						// #0
+PF_makevectors,				// #1 void(entity e) makevectors
+PF_setorigin,				// #2 void(entity e, vector o) setorigin
+PF_setmodel,				// #3 void(entity e, string m) setmodel
+PF_setsize,					// #4 void(entity e, vector min, vector max) setsize
+NULL,						// #5 void(entity e, vector min, vector max) setabssize
+PF_break,					// #6 void() break
+PF_random,					// #7 float() random
+PF_sound,					// #8 void(entity e, float chan, string samp) sound
+PF_normalize,				// #9 vector(vector v) normalize
+PF_error,					// #10 void(string e) error
+PF_objerror,				// #11 void(string e) objerror
+PF_vlen,					// #12 float(vector v) vlen
+PF_vectoyaw,				// #13 float(vector v) vectoyaw
+PF_Spawn,					// #14 entity() spawn
+PF_Remove,					// #15 void(entity e) remove
+PF_traceline,				// #16 float(vector v1, vector v2, float tryents) traceline
+PF_checkclient,				// #17 entity() clientlist
+PF_Find,					// #18 entity(entity start, .string fld, string match) find
+PF_precache_sound,			// #19 void(string s) precache_sound
+PF_precache_model,			// #20 void(string s) precache_model
+PF_stuffcmd,				// #21 void(entity client, string s)stuffcmd
+PF_findradius,				// #22 entity(vector org, float rad) findradius
+PF_bprint,					// #23 void(string s) bprint
+PF_sprint,					// #24 void(entity client, string s) sprint
+PF_dprint,					// #25 void(string s) dprint
+PF_ftos,					// #26 void(string s) ftos
+PF_vtos,					// #27 void(string s) vtos
+PF_coredump,				// #28 void() coredump
+PF_traceon,					// #29 void() traceon
+PF_traceoff,				// #30 void() traceoff
+PF_eprint,					// #31 void(entity e) eprint
+PF_walkmove,				// #32 float(float yaw, float dist) walkmove
+NULL,						// #33
+PF_droptofloor,				// #34 float() droptofloor
+PF_lightstyle,				// #35 void(float style, string value) lightstyle
+PF_rint,					// #36 float(float v) rint
+PF_floor,					// #37 float(float v) floor
+PF_ceil,					// #38 float(float v) ceil
+NULL,						// #39
+PF_checkbottom,				// #40 float(entity e) checkbottom
+PF_pointcontents		,	// #41 float(vector v) pointcontents
+NULL,						// #42
+PF_fabs,					// #43 float(float f) fabs
+PF_aim,						// #44 vector(entity e, float speed) aim
+PF_cvar,					// #45 float(string s) cvar
+PF_localcmd,				// #46 void(string s) localcmd
+PF_nextent,					// #47 entity(entity e) nextent
+PF_particle,				// #48 void(vector o, vector d, float color, float count) particle
+PF_changeyaw,				// #49 void() ChangeYaw
+NULL,						// #50
+PF_vectoangles,				// #51 vector(vector v) vectoangles
+PF_WriteByte,				// #52 void(float to, float f) WriteByte
+PF_WriteChar,				// #53 void(float to, float f) WriteChar
+PF_WriteShort,				// #54 void(float to, float f) WriteShort
+PF_WriteLong,				// #55 void(float to, float f) WriteLong
+PF_WriteCoord,				// #56 void(float to, float f) WriteCoord
+PF_WriteAngle,				// #57 void(float to, float f) WriteAngle
+PF_WriteString,				// #58 void(float to, string s) WriteString
+PF_WriteEntity,				// #59 void(float to, entity e) WriteEntity
+PF_sin,						// #60 float(float f) sin (DP_QC_SINCOSSQRTPOW)
+PF_cos,						// #61 float(float f) cos (DP_QC_SINCOSSQRTPOW)
+PF_sqrt,					// #62 float(float f) sqrt (DP_QC_SINCOSSQRTPOW)
+PF_changepitch,				// #63 void(entity ent) changepitch (DP_QC_CHANGEPITCH)
+PF_TraceToss,				// #64 void(entity e, entity ignore) tracetoss (DP_QC_TRACETOSS)
+PF_etos,					// #65 string(entity ent) etos (DP_QC_ETOS)
+NULL,						// #66
+SV_MoveToGoal,				// #67 void(float step) movetogoal
+PF_precache_file,			// #68 string(string s) precache_file
+PF_makestatic,				// #69 void(entity e) makestatic
+PF_changelevel,				// #70 void(string s) changelevel
+NULL,						// #71
+PF_cvar_set,				// #72 void(string var, string val) cvar_set
+PF_centerprint,				// #73 void(entity client, strings) centerprint
+PF_ambientsound,			// #74 void(vector pos, string samp, float vol, float atten) ambientsound
+PF_precache_model,			// #75 string(string s) precache_model2
+PF_precache_sound,			// #76 string(string s) precache_sound2
+PF_precache_file,			// #77 string(string s) precache_file2
+PF_setspawnparms,			// #78 void(entity e) setspawnparms
+NULL,						// #79
+NULL,						// #80
+PF_stof,					// #81 float(string s) stof (FRIK_FILE)
+NULL,						// #82
+NULL,						// #83
+NULL,						// #84
+NULL,						// #85
+NULL,						// #86
+NULL,						// #87
+NULL,						// #88
+NULL,						// #89
+PF_tracebox,				// #90 void(vector v1, vector min, vector max, vector v2, float nomonsters, entity forent) tracebox (DP_QC_TRACEBOX)
+PF_randomvec,				// #91 vector() randomvec (DP_QC_RANDOMVEC)
+PF_GetLight,				// #92 vector(vector org) getlight (DP_QC_GETLIGHT)
+PF_registercvar,			// #93 float(string name, string value) registercvar (DP_REGISTERCVAR)
+PF_min,						// #94 float(float a, floats) min (DP_QC_MINMAXBOUND)
+PF_max,						// #95 float(float a, floats) max (DP_QC_MINMAXBOUND)
+PF_bound,					// #96 float(float minimum, float val, float maximum) bound (DP_QC_MINMAXBOUND)
+PF_pow,						// #97 float(float f, float f) pow (DP_QC_SINCOSSQRTPOW)
+PF_FindFloat,				// #98 entity(entity start, .float fld, float match) findfloat (DP_QC_FINDFLOAT)
+PF_checkextension,			// #99 float(string s) checkextension (the basis of the extension system)
+NULL,						// #100
+NULL,						// #101
+NULL,						// #102
+NULL,						// #103
+NULL,						// #104
+NULL,						// #105
+NULL,						// #106
+NULL,						// #107
+NULL,						// #108
+NULL,						// #109
+PF_fopen,					// #110 float(string filename, float mode) fopen (FRIK_FILE)
+PF_fclose,					// #111 void(float fhandle) fclose (FRIK_FILE)
+PF_fgets,					// #112 string(float fhandle) fgets (FRIK_FILE)
+PF_fputs,					// #113 void(float fhandle, string s) fputs (FRIK_FILE)
+PF_strlen,					// #114 float(string s) strlen (FRIK_FILE)
+PF_strcat,					// #115 string(string s1, string s2) strcat (FRIK_FILE)
+PF_substring,				// #116 string(string s, float start, float length) substring (FRIK_FILE)
+PF_stov,					// #117 vector(string) stov (FRIK_FILE)
+PF_strzone,					// #118 string(string s) strzone (FRIK_FILE)
+PF_strunzone,				// #119 void(string s) strunzone (FRIK_FILE)
+#define a NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+a a a a a a a a				// #120-199
+a a a a a a a a a a			// #200-299
+a a a a a a a a a a			// #300-399
+PF_copyentity,				// #400 void(entity from, entity to) copyentity (DP_QC_COPYENTITY)
+PF_setcolor,				// #401 void(entity ent, float colors) setcolor (DP_QC_SETCOLOR)
+PF_findchain,				// #402 entity(.string fld, string match) findchain (DP_QC_FINDCHAIN)
+PF_findchainfloat,			// #403 entity(.float fld, float match) findchainfloat (DP_QC_FINDCHAINFLOAT)
+PF_effect,					// #404 void(vector org, string modelname, float startframe, float endframe, float framerate) effect (DP_SV_EFFECT)
+PF_te_blood,				// #405 void(vector org, vector velocity, float howmany) te_blood (DP_TE_BLOOD)
+PF_te_bloodshower,			// #406 void(vector mincorner, vector maxcorner, float explosionspeed, float howmany) te_bloodshower (DP_TE_BLOODSHOWER)
+PF_te_explosionrgb,			// #407 void(vector org, vector color) te_explosionrgb (DP_TE_EXPLOSIONRGB)
+PF_te_particlecube,			// #408 void(vector mincorner, vector maxcorner, vector vel, float howmany, float color, float gravityflag, float randomveljitter) te_particlecube (DP_TE_PARTICLECUBE)
+PF_te_particlerain,			// #409 void(vector mincorner, vector maxcorner, vector vel, float howmany, float color) te_particlerain (DP_TE_PARTICLERAIN)
+PF_te_particlesnow,			// #410 void(vector mincorner, vector maxcorner, vector vel, float howmany, float color) te_particlesnow (DP_TE_PARTICLESNOW)
+PF_te_spark,				// #411 void(vector org, vector vel, float howmany) te_spark (DP_TE_SPARK)
+PF_te_gunshotquad,			// #412 void(vector org) te_gunshotquad (DP_QUADEFFECTS1)
+PF_te_spikequad,			// #413 void(vector org) te_spikequad (DP_QUADEFFECTS1)
+PF_te_superspikequad,		// #414 void(vector org) te_superspikequad (DP_QUADEFFECTS1)
+PF_te_explosionquad,		// #415 void(vector org) te_explosionquad (DP_QUADEFFECTS1)
+PF_te_smallflash,			// #416 void(vector org) te_smallflash (DP_TE_SMALLFLASH)
+PF_te_customflash,			// #417 void(vector org, float radius, float lifetime, vector color) te_customflash (DP_TE_CUSTOMFLASH)
+PF_te_gunshot,				// #418 void(vector org) te_gunshot (DP_TE_STANDARDEFFECTBUILTINS)
+PF_te_spike,				// #419 void(vector org) te_spike (DP_TE_STANDARDEFFECTBUILTINS)
+PF_te_superspike,			// #420 void(vector org) te_superspike (DP_TE_STANDARDEFFECTBUILTINS)
+PF_te_explosion,			// #421 void(vector org) te_explosion (DP_TE_STANDARDEFFECTBUILTINS)
+PF_te_tarexplosion,			// #422 void(vector org) te_tarexplosion (DP_TE_STANDARDEFFECTBUILTINS)
+PF_te_wizspike,				// #423 void(vector org) te_wizspike (DP_TE_STANDARDEFFECTBUILTINS)
+PF_te_knightspike,			// #424 void(vector org) te_knightspike (DP_TE_STANDARDEFFECTBUILTINS)
+PF_te_lavasplash,			// #425 void(vector org) te_lavasplash (DP_TE_STANDARDEFFECTBUILTINS)
+PF_te_teleport,				// #426 void(vector org) te_teleport (DP_TE_STANDARDEFFECTBUILTINS)
+PF_te_explosion2,			// #427 void(vector org, float color) te_explosion2 (DP_TE_STANDARDEFFECTBUILTINS)
+PF_te_lightning1,			// #428 void(entity own, vector start, vector end) te_lightning1 (DP_TE_STANDARDEFFECTBUILTINS)
+PF_te_lightning2,			// #429 void(entity own, vector start, vector end) te_lightning2 (DP_TE_STANDARDEFFECTBUILTINS)
+PF_te_lightning3,			// #430 void(entity own, vector start, vector end) te_lightning3 (DP_TE_STANDARDEFFECTBUILTINS)
+PF_te_beam,					// #431 void(entity own, vector start, vector end) te_beam (DP_TE_STANDARDEFFECTBUILTINS)
+PF_vectorvectors,			// #432 void(vector dir) vectorvectors (DP_QC_VECTORVECTORS)
+PF_te_plasmaburn,			// #433 void(vector org) te_plasmaburn (DP_TE_PLASMABURN)
+PF_getsurfacenumpoints,		// #434 float(entity e, float s) getsurfacenumpoints (DP_QC_GETSURFACE)
+PF_getsurfacepoint,			// #435 vector(entity e, float s, float n) getsurfacepoint (DP_QC_GETSURFACE)
+PF_getsurfacenormal,		// #436 vector(entity e, float s) getsurfacenormal (DP_QC_GETSURFACE)
+PF_getsurfacetexture,		// #437 string(entity e, float s) getsurfacetexture (DP_QC_GETSURFACE)
+PF_getsurfacenearpoint,		// #438 float(entity e, vector p) getsurfacenearpoint (DP_QC_GETSURFACE)
+PF_getsurfaceclippedpoint,	// #439 vector(entity e, float s, vector p) getsurfaceclippedpoint (DP_QC_GETSURFACE)
+a a a a a a					// #440-499 (LordHavoc)
 };
 
 builtin_t *pr_builtins = pr_builtin;
