@@ -34,8 +34,9 @@ cvar_t r_novis = {0, "r_novis", "0"};
 cvar_t r_miplightmaps = {CVAR_SAVE, "r_miplightmaps", "0"};
 cvar_t r_lightmaprgba = {0, "r_lightmaprgba", "1"};
 cvar_t r_nosurftextures = {0, "r_nosurftextures", "0"};
-cvar_t r_sortsurfaces = {0, "r_sortsurfaces", "0"};
-cvar_t r_curves_subdivide_level = {0, "r_curves_subdivide_level", "2"};
+cvar_t mod_q3bsp_curves_subdivide_level = {0, "mod_q3bsp_curves_subdivide_level", "2"};
+cvar_t mod_q3bsp_curves_collisions = {0, "mod_q3bsp_curves_collisions", "1"};
+cvar_t mod_q3bsp_optimizedtraceline = {0, "mod_q3bsp_optimizedtraceline", "1"};
 
 void Mod_BrushInit(void)
 {
@@ -45,8 +46,9 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&r_miplightmaps);
 	Cvar_RegisterVariable(&r_lightmaprgba);
 	Cvar_RegisterVariable(&r_nosurftextures);
-	Cvar_RegisterVariable(&r_sortsurfaces);
-	Cvar_RegisterVariable(&r_curves_subdivide_level);
+	Cvar_RegisterVariable(&mod_q3bsp_curves_subdivide_level);
+	Cvar_RegisterVariable(&mod_q3bsp_curves_collisions);
+	Cvar_RegisterVariable(&mod_q3bsp_optimizedtraceline);
 	memset(mod_q1bsp_novis, 0xff, sizeof(mod_q1bsp_novis));
 }
 
@@ -3553,6 +3555,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 	float *originalcolor4f;
 	float *originaltexcoordtexture2f;
 	float *originaltexcoordlightmap2f;
+	float *v;
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -3655,8 +3658,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				continue;
 			}
 			// convert patch to Q3FACETYPE_MESH
-			xlevel = r_curves_subdivide_level.integer;
-			ylevel = r_curves_subdivide_level.integer;
+			xlevel = mod_q3bsp_curves_subdivide_level.integer;
+			ylevel = mod_q3bsp_curves_subdivide_level.integer;
 			finalwidth = ((patchsize[0] - 1) << xlevel) + 1;
 			finalheight = ((patchsize[1] - 1) << ylevel) + 1;
 			finalvertices = finalwidth * finalheight;
@@ -3709,6 +3712,16 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 					row1++;
 				}
 			}
+			out->numtriangles = Mod_RemoveDegenerateTriangles(out->numtriangles, out->data_element3i, out->data_element3i, out->data_vertex3f);
+			if (developer.integer)
+			{
+				if (out->numtriangles < finaltriangles)
+					Con_Printf("Mod_Q3BSP_LoadFaces: %ix%i curve subdivided to %i vertices / %i triangles, %i degenerate triangles removed (leaving %i)\n", patchsize[0], patchsize[1], out->numvertices, finaltriangles, finaltriangles - out->numtriangles, out->numtriangles);
+				else
+					Con_Printf("Mod_Q3BSP_LoadFaces: %ix%i curve subdivided to %i vertices / %i triangles\n", patchsize[0], patchsize[1], out->numvertices, out->numtriangles);
+			}
+			// q3map does not put in collision brushes for curves... ugh
+			out->collisions = true;
 			break;
 		case Q3FACETYPE_FLARE:
 			Con_DPrintf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): Q3FACETYPE_FLARE not supported (yet)\n", i, out->texture->name);
@@ -3734,6 +3747,29 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		Mod_BuildTriangleNeighbors(out->data_neighbor3i, out->data_element3i, out->numtriangles);
 		// for per pixel lighting
 		Mod_BuildTextureVectorsAndNormals(out->numvertices, out->numtriangles, out->data_vertex3f, out->data_texcoordtexture2f, out->data_element3i, out->data_svector3f, out->data_tvector3f, out->data_normal3f);
+		// calculate a bounding box
+		VectorClear(out->mins);
+		VectorClear(out->maxs);
+		if (out->numvertices)
+		{
+			VectorCopy(out->data_vertex3f, out->mins);
+			VectorCopy(out->data_vertex3f, out->maxs);
+			for (j = 1, v = out->data_vertex3f + 3;j < out->numvertices;j++, v += 3)
+			{
+				out->mins[0] = min(out->mins[0], v[0]);
+				out->maxs[0] = max(out->maxs[0], v[0]);
+				out->mins[1] = min(out->mins[1], v[1]);
+				out->maxs[1] = max(out->maxs[1], v[1]);
+				out->mins[2] = min(out->mins[2], v[2]);
+				out->maxs[2] = max(out->maxs[2], v[2]);
+			}
+			out->mins[0] -= 1.0f;
+			out->mins[1] -= 1.0f;
+			out->mins[2] -= 1.0f;
+			out->maxs[0] += 1.0f;
+			out->maxs[1] += 1.0f;
+			out->maxs[2] += 1.0f;
+		}
 	}
 }
 
@@ -4051,8 +4087,12 @@ static void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientc
 static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, q3mnode_t *node, const vec3_t start, const vec3_t end, vec_t startfrac, vec_t endfrac, const vec3_t linestart, const vec3_t lineend, int markframe)
 {
 	int i, startside, endside;
-	float dist1, dist2, midfrac, mid[3];
+	float dist1, dist2, midfrac, mid[3], segmentmins[3], segmentmaxs[3];
 	q3mleaf_t *leaf;
+	q3mface_t *face;
+	colbrushf_t *brush;
+	if (startfrac >= trace->fraction)
+		return;
 	// note: all line fragments past first impact fraction are ignored
 	while (node->isnode)
 	{
@@ -4068,60 +4108,103 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, q3mnode_t *node
 		}
 		else
 		{
+			// line crosses node plane, split the line
+			midfrac = dist1 / (dist1 - dist2);
+			VectorLerp(linestart, midfrac, lineend, mid);
 			// take the near side first
-			if (startfrac < trace->fraction)
-			{
-				// line crosses node plane, split the line
-				midfrac = dist1 / (dist1 - dist2);
-				VectorLerp(linestart, midfrac, lineend, mid);
-				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, node->children[startside], start, mid, startfrac, midfrac, linestart, lineend, markframe);
-				if (midfrac < trace->fraction)
-					Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, node->children[endside], mid, end, midfrac, endfrac, linestart, lineend, markframe);
-			}
+			Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, node->children[startside], start, mid, startfrac, midfrac, linestart, lineend, markframe);
+			if (midfrac < trace->fraction)
+				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, node->children[endside], mid, end, midfrac, endfrac, linestart, lineend, markframe);
 			return;
 		}
 	}
 	// hit a leaf
+	segmentmins[0] = min(start[0], end[0]);
+	segmentmins[1] = min(start[1], end[1]);
+	segmentmins[2] = min(start[2], end[2]);
+	segmentmaxs[0] = max(start[0], end[0]);
+	segmentmaxs[1] = max(start[1], end[1]);
+	segmentmaxs[2] = max(start[2], end[2]);
 	leaf = (q3mleaf_t *)node;
 	for (i = 0;i < leaf->numleafbrushes;i++)
 	{
-		if (endfrac >= trace->fraction)
+		if (startfrac >= trace->fraction)
 			return;
-		if (leaf->firstleafbrush[i]->colbrushf && leaf->firstleafbrush[i]->colbrushf->markframe != markframe)
+		brush = leaf->firstleafbrush[i]->colbrushf;
+		if (brush && brush->markframe != markframe)
 		{
-			leaf->firstleafbrush[i]->colbrushf->markframe = markframe;
-			Collision_TraceLineBrushFloat(trace, linestart, lineend, leaf->firstleafbrush[i]->colbrushf, leaf->firstleafbrush[i]->colbrushf);
+			brush->markframe = markframe;
+			if (BoxesOverlap(segmentmins, segmentmaxs, brush->mins, brush->maxs))
+				Collision_TraceLineBrushFloat(trace, linestart, lineend, leaf->firstleafbrush[i]->colbrushf, leaf->firstleafbrush[i]->colbrushf);
+		}
+	}
+	if (mod_q3bsp_curves_collisions.integer)
+	{
+		for (i = 0;i < leaf->numleaffaces;i++)
+		{
+			if (startfrac >= trace->fraction)
+				return;
+			face = leaf->firstleafface[i];
+			if (face->collisions && face->collisionmarkframe != markframe)
+			{
+				face->collisionmarkframe = markframe;
+				if (BoxesOverlap(segmentmins, segmentmaxs, face->mins, face->maxs))
+					Collision_TraceLineTriangleMeshFloat(trace, linestart, lineend, face->numtriangles, face->data_element3i, face->data_vertex3f, face->texture->supercontents, segmentmins, segmentmaxs);
+			}
 		}
 	}
 }
 
-static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *node, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int markframe)
+static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *node, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int markframe, const vec3_t segmentmins, const vec3_t segmentmaxs)
 {
-	int i;
-	float dist;
-	colpointf_t *ps, *pe;
+	int i, sides;
+	float nodesegmentmins[3], nodesegmentmaxs[3];
 	q3mleaf_t *leaf;
+	colbrushf_t *brush;
+	q3mface_t *face;
+	nodesegmentmins[0] = max(segmentmins[0], node->mins[0]);
+	nodesegmentmins[1] = max(segmentmins[1], node->mins[1]);
+	nodesegmentmins[2] = max(segmentmins[2], node->mins[2]);
+	nodesegmentmaxs[0] = min(segmentmaxs[0], node->maxs[0]);
+	nodesegmentmaxs[1] = min(segmentmaxs[1], node->maxs[1]);
+	nodesegmentmaxs[2] = min(segmentmaxs[2], node->maxs[2]);
+	if (nodesegmentmins[0] > nodesegmentmaxs[0] || nodesegmentmins[1] > nodesegmentmaxs[1] || nodesegmentmins[2] > nodesegmentmaxs[2])
+		return;
 	if (node->isnode)
 	{
 		// recurse down node sides
+		sides = BoxOnPlaneSide(segmentmins, segmentmaxs, node->plane);
+		if (sides == 3)
+		{
+			Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, nodesegmentmins, nodesegmentmaxs);
+			Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[1], thisbrush_start, thisbrush_end, markframe, nodesegmentmins, nodesegmentmaxs);
+		}
+		else if (sides == 2)
+			Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[1], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
+		else // sides == 1
+			Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
+		/*
 		dist = node->plane->dist - (1.0f / 8.0f);
 		for (i = 0, ps = thisbrush_start->points, pe = thisbrush_end->points;i < thisbrush_start->numpoints;i++, ps++, pe++)
 		{
 			if (DotProduct(ps->v, node->plane->normal) >= dist || DotProduct(pe->v, node->plane->normal) >= dist)
 			{
-				Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe);
+				Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, nodesegmentmins, nodesegmentmaxs);
 				break;
 			}
 		}
+		*/
+		/*
 		dist = node->plane->dist + (1.0f / 8.0f);
 		for (i = 0, ps = thisbrush_start->points, pe = thisbrush_end->points;i < thisbrush_start->numpoints;i++, ps++, pe++)
 		{
 			if (DotProduct(ps->v, node->plane->normal) <= dist || DotProduct(pe->v, node->plane->normal) <= dist)
 			{
-				Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[1], thisbrush_start, thisbrush_end, markframe);
+				Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[1], thisbrush_start, thisbrush_end, markframe, nodesegmentmins, nodesegmentmaxs);
 				break;
 			}
 		}
+		*/
 		/*
 		sides = BoxOnPlaneSide(boxstartmins, boxstartmaxs, node->plane) | BoxOnPlaneSide(boxendmins, boxendmaxs, node->plane);
 		if (sides & 1)
@@ -4136,10 +4219,21 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *nod
 		leaf = (q3mleaf_t *)node;
 		for (i = 0;i < leaf->numleafbrushes;i++)
 		{
-			if (leaf->firstleafbrush[i]->colbrushf && leaf->firstleafbrush[i]->colbrushf->markframe != markframe)
+			brush = leaf->firstleafbrush[i]->colbrushf;
+			if (brush && brush->markframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, brush->mins, brush->maxs))
 			{
-				leaf->firstleafbrush[i]->colbrushf->markframe = markframe;
+				brush->markframe = markframe;
 				Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, leaf->firstleafbrush[i]->colbrushf, leaf->firstleafbrush[i]->colbrushf);
+			}
+		}
+		if (mod_q3bsp_curves_collisions.integer)
+		{
+			for (i = 0;i < leaf->numleaffaces;i++)
+			{
+				face = leaf->firstleafface[i];
+				// note: this can not be optimized with a face->collisionmarkframe because each triangle of the face would need to be marked as done individually (because each one is bbox culled individually), and if all are marked, then the face could be marked as done
+				if (face->collisions && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, face->mins, face->maxs))
+					Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, face->numtriangles, face->data_element3i, face->data_vertex3f, face->texture->supercontents, segmentmins, segmentmaxs);
 			}
 		}
 	}
@@ -4148,15 +4242,23 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *nod
 static void Mod_Q3BSP_TraceBox(model_t *model, trace_t *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs, int hitsupercontentsmask)
 {
 	int i;
+	float segmentmins[3], segmentmaxs[3];
 	colbrushf_t *thisbrush_start, *thisbrush_end;
 	matrix4x4_t startmatrix, endmatrix;
 	static int markframe = 0;
+	q3mface_t *face;
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 	Matrix4x4_CreateIdentity(&startmatrix);
 	Matrix4x4_CreateIdentity(&endmatrix);
-	if (VectorCompare(boxstartmins, boxstartmaxs) && VectorCompare(boxendmins, boxendmaxs))
+	segmentmins[0] = min(boxstartmins[0], boxendmins[0]);
+	segmentmins[1] = min(boxstartmins[1], boxendmins[1]);
+	segmentmins[2] = min(boxstartmins[2], boxendmins[2]);
+	segmentmaxs[0] = max(boxstartmaxs[0], boxendmaxs[0]);
+	segmentmaxs[1] = max(boxstartmaxs[1], boxendmaxs[1]);
+	segmentmaxs[2] = max(boxstartmaxs[2], boxendmaxs[2]);
+	if (mod_q3bsp_optimizedtraceline.integer && VectorCompare(boxstartmins, boxstartmaxs) && VectorCompare(boxendmins, boxendmaxs))
 	{
 		// line trace
 		if (model->brushq3.submodel)
@@ -4164,13 +4266,22 @@ static void Mod_Q3BSP_TraceBox(model_t *model, trace_t *trace, const vec3_t boxs
 			for (i = 0;i < model->brushq3.data_thismodel->numbrushes;i++)
 				if (model->brushq3.data_thismodel->firstbrush[i].colbrushf)
 					Collision_TraceLineBrushFloat(trace, boxstartmins, boxendmins, model->brushq3.data_thismodel->firstbrush[i].colbrushf, model->brushq3.data_thismodel->firstbrush[i].colbrushf);
+			if (mod_q3bsp_curves_collisions.integer)
+			{
+				for (i = 0;i < model->brushq3.data_thismodel->numfaces;i++)
+				{
+					face = model->brushq3.data_thismodel->firstface + i;
+					if (face->collisions)
+						Collision_TraceLineTriangleMeshFloat(trace, boxstartmins, boxendmins, face->numtriangles, face->data_element3i, face->data_vertex3f, face->texture->supercontents, segmentmins, segmentmaxs);
+				}
+			}
 		}
 		else
 			Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model->brushq3.data_nodes, boxstartmins, boxendmins, 0, 1, boxstartmins, boxendmins, ++markframe);
 	}
 	else
 	{
-		// box trace, performed as box trace
+		// box trace, performed as brush trace
 		thisbrush_start = Collision_BrushForBox(&startmatrix, boxstartmins, boxstartmaxs);
 		thisbrush_end = Collision_BrushForBox(&endmatrix, boxendmins, boxendmaxs);
 		if (model->brushq3.submodel)
@@ -4178,9 +4289,18 @@ static void Mod_Q3BSP_TraceBox(model_t *model, trace_t *trace, const vec3_t boxs
 			for (i = 0;i < model->brushq3.data_thismodel->numbrushes;i++)
 				if (model->brushq3.data_thismodel->firstbrush[i].colbrushf)
 					Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, model->brushq3.data_thismodel->firstbrush[i].colbrushf, model->brushq3.data_thismodel->firstbrush[i].colbrushf);
+			if (mod_q3bsp_curves_collisions.integer)
+			{
+				for (i = 0;i < model->brushq3.data_thismodel->numfaces;i++)
+				{
+					face = model->brushq3.data_thismodel->firstface + i;
+					if (face->collisions)
+						Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, face->numtriangles, face->data_element3i, face->data_vertex3f, face->texture->supercontents, segmentmins, segmentmaxs);
+				}
+			}
 		}
 		else
-			Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model->brushq3.data_nodes, thisbrush_start, thisbrush_end, ++markframe);
+			Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model->brushq3.data_nodes, thisbrush_start, thisbrush_end, ++markframe, segmentmins, segmentmaxs);
 	}
 }
 
@@ -4311,6 +4431,8 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 	float corner[3], yawradius, modelradius;
 
 	mod->type = mod_brushq3;
+	mod->numframes = 1;
+	mod->numskins = 1;
 
 	header = (q3dheader_t *)buffer;
 

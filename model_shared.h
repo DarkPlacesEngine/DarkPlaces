@@ -353,6 +353,8 @@ typedef struct q3mface_s
 	struct q3mtexture_s *texture;
 	struct q3meffect_s *effect;
 	rtexture_t *lightmaptexture;
+	int collisions; // performs per triangle collisions on this surface
+	int collisionmarkframe; // don't collide twice in one trace
 	int type;
 	int firstvertex;
 	int numvertices;
@@ -360,6 +362,9 @@ typedef struct q3mface_s
 	int numelements;
 	int patchsize[2];
 	int markframe;
+	// bounding box for culling
+	float mins[3];
+	float maxs[3];
 
 	float *data_vertex3f;
 	float *data_texcoordtexture2f;
@@ -601,6 +606,8 @@ skinfile_t;
 skinfile_t *Mod_LoadSkinFiles(void);
 void Mod_FreeSkinFiles(skinfile_t *skinfile);
 int Mod_CountSkinFiles(skinfile_t *skinfile);
+
+int Mod_RemoveDegenerateTriangles(int numtriangles, const int *inelement3i, int *outelement3i, const float *vertex3f);
 
 #endif	// __MODEL__
 

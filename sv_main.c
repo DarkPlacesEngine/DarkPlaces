@@ -513,7 +513,8 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 				testorigin[1] = lhrandom(entmins[1], entmaxs[1]);
 				testorigin[2] = lhrandom(entmins[2], entmaxs[2]);
 
-				if (SV_Move(testeye, vec3_origin, vec3_origin, testorigin, MOVE_WORLDONLY, NULL).fraction == 1)
+				sv.worldmodel->brush.TraceBox(sv.worldmodel, &trace, testeye, testeye, testorigin, testorigin, SUPERCONTENTS_SOLID);
+				if (trace.fraction == 1)
 					client->visibletime[e] = realtime + 1;
 				else
 				{
@@ -522,7 +523,8 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 					testorigin[1] = bound(entmins[1], testeye[1], entmaxs[1]);
 					testorigin[2] = bound(entmins[2], testeye[2], entmaxs[2]);
 
-					if (SV_Move(testeye, vec3_origin, vec3_origin, testorigin, MOVE_WORLDONLY, NULL).fraction == 1)
+					sv.worldmodel->brush.TraceBox(sv.worldmodel, &trace, testeye, testeye, testorigin, testorigin, SUPERCONTENTS_SOLID);
+					if (trace.fraction == 1)
 						client->visibletime[e] = realtime + 1;
 					else if (realtime > client->visibletime[e])
 					{
@@ -679,16 +681,16 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			MSG_WriteShort (msg,e);
 		else
 			MSG_WriteByte (msg,e);
-		if (bits & U_MODEL)		MSG_WriteByte (msg,	ent->v->modelindex);
-		if (bits & U_FRAME)		MSG_WriteByte (msg, ent->v->frame);
-		if (bits & U_COLORMAP)	MSG_WriteByte (msg, ent->v->colormap);
-		if (bits & U_SKIN)		MSG_WriteByte (msg, ent->v->skin);
-		if (bits & U_EFFECTS)	MSG_WriteByte (msg, ent->v->effects);
-		if (bits & U_ORIGIN1)	MSG_WriteDPCoord (msg, origin[0]);
+		if (bits & U_MODEL)		MSG_WriteByte(msg,	ent->v->modelindex);
+		if (bits & U_FRAME)		MSG_WriteByte(msg, ent->v->frame);
+		if (bits & U_COLORMAP)	MSG_WriteByte(msg, ent->v->colormap);
+		if (bits & U_SKIN)		MSG_WriteByte(msg, ent->v->skin);
+		if (bits & U_EFFECTS)	MSG_WriteByte(msg, ent->v->effects);
+		if (bits & U_ORIGIN1)	MSG_WriteDPCoord(msg, origin[0]);
 		if (bits & U_ANGLE1)	MSG_WriteAngle(msg, angles[0]);
-		if (bits & U_ORIGIN2)	MSG_WriteDPCoord (msg, origin[1]);
+		if (bits & U_ORIGIN2)	MSG_WriteDPCoord(msg, origin[1]);
 		if (bits & U_ANGLE2)	MSG_WriteAngle(msg, angles[1]);
-		if (bits & U_ORIGIN3)	MSG_WriteDPCoord (msg, origin[2]);
+		if (bits & U_ORIGIN3)	MSG_WriteDPCoord(msg, origin[2]);
 		if (bits & U_ANGLE3)	MSG_WriteAngle(msg, angles[2]);
 
 		// LordHavoc: new stuff
@@ -928,7 +930,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 				testorigin[0] = (entmins[0] + entmaxs[0]) * 0.5f;
 				testorigin[1] = (entmins[1] + entmaxs[1]) * 0.5f;
 				testorigin[2] = (entmins[2] + entmaxs[2]) * 0.5f;
-				trace = SV_Move(sv_writeentitiestoclient_testeye, vec3_origin, vec3_origin, testorigin, MOVE_WORLDONLY, NULL);
+				sv.worldmodel->brush.TraceBox(sv.worldmodel, &trace, sv_writeentitiestoclient_testeye, sv_writeentitiestoclient_testeye, testorigin, testorigin, SUPERCONTENTS_SOLID);
 				if (trace.fraction == 1 || BoxesOverlap(trace.endpos, trace.endpos, entmins, entmaxs))
 					sv_writeentitiestoclient_client->visibletime[s->number] = realtime + 1;
 				else
@@ -937,7 +939,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 					testorigin[0] = lhrandom(entmins[0], entmaxs[0]);
 					testorigin[1] = lhrandom(entmins[1], entmaxs[1]);
 					testorigin[2] = lhrandom(entmins[2], entmaxs[2]);
-					trace = SV_Move(sv_writeentitiestoclient_testeye, vec3_origin, vec3_origin, testorigin, MOVE_WORLDONLY, NULL);
+					sv.worldmodel->brush.TraceBox(sv.worldmodel, &trace, sv_writeentitiestoclient_testeye, sv_writeentitiestoclient_testeye, testorigin, testorigin, SUPERCONTENTS_SOLID);
 					if (trace.fraction == 1 || BoxesOverlap(trace.endpos, trace.endpos, entmins, entmaxs))
 						sv_writeentitiestoclient_client->visibletime[s->number] = realtime + 1;
 					else
@@ -948,7 +950,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 							testorigin[0] = lhrandom(lightmins[0], lightmaxs[0]);
 							testorigin[1] = lhrandom(lightmins[1], lightmaxs[1]);
 							testorigin[2] = lhrandom(lightmins[2], lightmaxs[2]);
-							trace = SV_Move(sv_writeentitiestoclient_testeye, vec3_origin, vec3_origin, testorigin, MOVE_WORLDONLY, NULL);
+							sv.worldmodel->brush.TraceBox(sv.worldmodel, &trace, sv_writeentitiestoclient_testeye, sv_writeentitiestoclient_testeye, testorigin, testorigin, SUPERCONTENTS_SOLID);
 							if (trace.fraction == 1 || BoxesOverlap(trace.endpos, trace.endpos, entmins, entmaxs))
 								sv_writeentitiestoclient_client->visibletime[s->number] = realtime + 1;
 						}

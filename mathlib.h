@@ -71,7 +71,8 @@ extern vec3_t vec3_origin;
 #define VectorNormalizeDouble(v) {double ilength = sqrt(DotProduct(v,v));if (ilength) ilength = 1.0 / ilength;v[0] *= ilength;v[1] *= ilength;v[2] *= ilength;}
 #define VectorDistance2(a, b) (((a)[0] - (b)[0]) * ((a)[0] - (b)[0]) + ((a)[1] - (b)[1]) * ((a)[1] - (b)[1]) + ((a)[2] - (b)[2]) * ((a)[2] - (b)[2]))
 #define VectorDistance(a, b) (sqrt(VectorDistance2(a,b)))
-#define VectorLength(a) sqrt(DotProduct(a, a))
+#define VectorLength(a) (sqrt(DotProduct(a, a)))
+#define VectorLength2(a) (DotProduct(a, a))
 #define VectorScale(in, scale, out) ((out)[0] = (in)[0] * (scale),(out)[1] = (in)[1] * (scale),(out)[2] = (in)[2] * (scale))
 #define VectorCompare(a,b) (((a)[0]==(b)[0])&&((a)[1]==(b)[1])&&((a)[2]==(b)[2]))
 #define VectorMA(a, scale, b, c) ((c)[0] = (a)[0] + (scale) * (b)[0],(c)[1] = (a)[1] + (scale) * (b)[1],(c)[2] = (a)[2] + (scale) * (b)[2])
@@ -91,9 +92,10 @@ extern vec3_t vec3_origin;
 	}\
 }
 #define VectorRandom(v) do{(v)[0] = lhrandom(-1, 1);(v)[1] = lhrandom(-1, 1);(v)[2] = lhrandom(-1, 1);}while(DotProduct(v, v) > 1)
-#define VectorBlend(b1, b2, blend, c) do{float iblend = 1 - (blend);VectorMAM(iblend, b1, blend, b2, c);}while(0)
 #define VectorLerp(v1,lerp,v2,c) ((c)[0] = (v1)[0] + (lerp) * ((v2)[0] - (v1)[0]), (c)[1] = (v1)[1] + (lerp) * ((v2)[1] - (v1)[1]), (c)[2] = (v1)[2] + (lerp) * ((v2)[2] - (v1)[2]))
 #define BoxesOverlap(a,b,c,d) ((a)[0] <= (d)[0] && (b)[0] >= (c)[0] && (a)[1] <= (d)[1] && (b)[1] >= (c)[1] && (a)[2] <= (d)[2] && (b)[2] >= (c)[2])
+
+#define TriangleNormal(a,b,c,n) ((n)[0] = ((a)[1] - (b)[1]) * ((c)[2] - (b)[2]) - ((a)[2] - (b)[2]) * ((c)[1] - (b)[1]), (n)[1] = ((a)[2] - (b)[2]) * ((c)[0] - (b)[0]) - ((a)[0] - (b)[0]) * ((c)[2] - (b)[2]), (n)[2] = ((a)[0] - (b)[0]) * ((c)[1] - (b)[1]) - ((a)[1] - (b)[1]) * ((c)[0] - (b)[0]))
 
 // fast PointInfrontOfTriangle
 // subtracts v1 from v0 and v2, combined into a crossproduct, combined with a
