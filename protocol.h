@@ -22,11 +22,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
-#define	PROTOCOL_VERSION	15
-#define	DPPROTOCOL_VERSION1	96
-#define	DPPROTOCOL_VERSION2	97
-// LordHavoc: I think the 96-99 range was going to run out too soon...  so here I jump to 3500
-#define	DPPROTOCOL_VERSION3	3500
+#define	PROTOCOL_VERSION 15
+#define	DPPROTOCOL_VERSION1 96
+#define	DPPROTOCOL_VERSION2 97
+// LordHavoc: I think the 96-99 range was going to run out too soon...
+// so here I jump to 3500
+#define	DPPROTOCOL_VERSION3 3500
+// partial entity updates, changed entity origin updates back to quake style
+// (RENDER_LOWPRECISION on by default, but the precision was changed from
+// integer to 1/8th unit like quake)
+#define DPPROTOCOL_VERSION4 3501
 
 // model effects
 #define	EF_ROCKET	1			// leave a trail
@@ -348,9 +353,13 @@ typedef struct
 	// note: if numframes == 0, insert at start (0 in entitydata)
 	// the only reason this system is used is to avoid copying memory when frames are removed
 	int numframes;
-	int ackframe; // server only: last acknowledged frame
+	// server only: last acknowledged frame
+	int ackframe;
+	// the current state in the database
 	vec3_t eye;
+	// table of entities in the entityhistorydata
 	entity_frameinfo_t frames[MAX_ENTITY_HISTORY];
+	// entities
 	entity_state_t entitydata[MAX_ENTITY_DATABASE];
 }
 entity_database_t;
@@ -365,6 +374,48 @@ typedef struct
 	entity_state_t entitydata[MAX_ENTITY_DATABASE];
 }
 entity_frame_t;
+
+
+// DPPROTOCOL_VERSION4
+#define MAX_ENTITIES_PER_FRAME 1024
+
+// DPPROTOCOL_VERSION4
+typedef struct
+{
+	double time;
+	int framenum;
+
+	// partial updates only update a certain range of entities in one update
+	// note that if end <= start the range wrapped (full update)
+	// note also that this means that the range can not be empty, if there is no update, don't write an update!
+	int range_start;
+	int range_end;
+
+	// entities
+	entity_state_t entity[MAX_ENTITIES_PER_FRAME];
+}
+entity_frame4_t;
+
+// DPPROTOCOL_VERSION4
+typedef struct
+{
+	// note: each frame contains a limited number of entities, so in
+	// situations with a high maximum data rate AND large number of entities,
+	// updates may be partial despite a high data rate.
+
+	// current frame number
+	int currentframe;
+	// number of frames waiting to be committed to database
+	int numframes;
+	// the current state in the database
+	vec3_t currenteye;
+	// current entity states
+	entity_state_t currententity[MAX_EDICTS];
+	// frame updates (each one limited in size) that have not yet been
+	// committed to currententitydata
+	entity_frame4_t frames[MAX_ENTITY_HISTORY];
+}
+entity_database4_t;
 
 // LordHavoc: these are in approximately sorted order, according to cost and
 // likelyhood of being used for numerous objects in a frame
@@ -412,6 +463,7 @@ entity_frame_t;
 #define E_EXTEND4		(1<<31)
 
 void ClearStateToDefault(entity_state_t *s);
+
 // (server) clears the database to contain no frames (thus delta compression
 // compresses against nothing)
 void EntityFrame_ClearDatabase(entity_database_t *d);
@@ -432,6 +484,28 @@ void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, sizebuf_t *msg);
 void EntityFrame_Read(entity_database_t *d);
 // (client) returns the frame number of the most recent frame recieved
 int EntityFrame_MostRecentlyRecievedFrameNum(entity_database_t *d);
+
+// (server) clears the database to contain blank entities and no frames (thus
+// delta compression compresses against nothing)
+void EntityFrame4_ClearDatabase(entity_database4_t *d);
+// (server and client) updates database to requested frame by commiting
+// awaiting frames until the desired frame is reached
+void EntityFrame4_AckFrame(entity_database4_t *d, int frame);
+// (server) clears frame, to prepare for adding entities
+void EntityFrame4_Clear(entity_frame4_t *f, vec3_t eye);
+// (server) allocates an entity slot in frame, returns NULL if full
+entity_state_t *EntityFrame4_NewEntity(entity_frame4_t *f, int number);
+// (server and client) reads a frame from the database
+void EntityFrame4_FetchFrame(entity_database4_t *d, int framenum, entity_frame4_t *f);
+// (server and client) adds a entity_frame to the database, for future
+// reference
+void EntityFrame4_AddFrame(entity_database4_t *d, entity_frame4_t *f);
+// (server) writes a frame to network stream
+void EntityFrame4_Write(entity_database4_t *d, entity_frame4_t *f, sizebuf_t *msg);
+// (client) reads a frame from network stream
+void EntityFrame4_Read(entity_database4_t *d);
+// (client) returns the frame number of the most recent frame recieved
+int EntityFrame4_MostRecentlyRecievedFrameNum(entity_database4_t *d);
 
 #endif
 
