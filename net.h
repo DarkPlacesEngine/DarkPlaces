@@ -333,8 +333,6 @@ extern	qboolean	slistInProgress;
 extern	qboolean	slistSilent;
 extern	qboolean	slistLocal;
 
-extern cvar_t hostname;
-
 void NET_Slist_f (void);
 void NET_InetSlist_f (void);
 

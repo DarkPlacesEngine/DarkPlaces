@@ -3023,6 +3023,8 @@ int maxplayers;
 qboolean m_serverInfoMessage = false;
 double m_serverInfoMessageTime;
 
+extern cvar_t sv_public;
+
 void M_Menu_GameOptions_f (void)
 {
 	key_dest = key_menu;
@@ -3035,8 +3037,8 @@ void M_Menu_GameOptions_f (void)
 }
 
 
-int gameoptions_cursor_table[] = {40, 56, 64, 72, 80, 88, 96, 112, 120};
-#define	NUM_GAMEOPTIONS	9
+int gameoptions_cursor_table[] = {40, 56, 64, 72, 80, 88, 96, 104, 120, 128};
+#define	NUM_GAMEOPTIONS	10
 int		gameoptions_cursor;
 
 void M_GameOptions_Draw (void)
@@ -3139,14 +3141,17 @@ void M_GameOptions_Draw (void)
 	else
 		M_Print (160, 96, va("%i minutes", timelimit.integer));
 
+	M_Print (0, 104, "    Public server");
+	M_Print (160, 104, (sv_public.integer == 0) ? "no" : "yes");
+
 	g = lookupgameinfo();
 
-	M_Print (0, 112, "         Episode");
-	M_Print (160, 112, g->episodes[startepisode].description);
+	M_Print (0, 120, "         Episode");
+	M_Print (160, 120, g->episodes[startepisode].description);
 
-	M_Print (0, 120, "           Level");
-	M_Print (160, 120, g->levels[g->episodes[startepisode].firstLevel + startlevel].description);
-	M_Print (160, 128, g->levels[g->episodes[startepisode].firstLevel + startlevel].name);
+	M_Print (0, 128, "           Level");
+	M_Print (160, 128, g->levels[g->episodes[startepisode].firstLevel + startlevel].description);
+	M_Print (160, 136, g->levels[g->episodes[startepisode].firstLevel + startlevel].name);
 
 // line cursor
 	M_DrawCharacter (144, gameoptions_cursor_table[gameoptions_cursor], 12+((int)(realtime*4)&1));
@@ -3251,6 +3256,10 @@ void M_NetStart_Change (int dir)
 		break;
 
 	case 7:
+		Cvar_SetValueQuick (&sv_public, !sv_public.integer);
+		break;
+
+	case 8:
 		startepisode += dir;
 		g = lookupgameinfo();
 
@@ -3263,7 +3272,7 @@ void M_NetStart_Change (int dir)
 		startlevel = 0;
 		break;
 
-	case 8:
+	case 9:
 		startlevel += dir;
 		g = lookupgameinfo();
 
