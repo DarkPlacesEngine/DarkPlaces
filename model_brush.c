@@ -4302,6 +4302,9 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			Q3PatchTesselateFloat(3, sizeof(float[3]), out->data_collisionvertex3f, patchsize[0], patchsize[1], sizeof(float[3]), originalvertex3f, xtess, ytess);
 			Q3PatchTriangleElements(out->data_collisionelement3i, finalwidth, finalheight);
 
+			Mod_SnapVertices(3, out->num_vertices, out->data_vertex3f, 0.25);
+			Mod_SnapVertices(3, out->num_collisionvertices, out->data_collisionvertex3f, 1);
+
 			oldnumtriangles = out->num_triangles;
 			oldnumtriangles2 = out->num_collisiontriangles;
 			out->num_triangles = Mod_RemoveDegenerateTriangles(out->num_triangles, out->data_element3i, out->data_element3i, out->data_vertex3f);

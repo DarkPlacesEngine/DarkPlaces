@@ -692,6 +692,7 @@ skinfile_t *Mod_LoadSkinFiles(void);
 void Mod_FreeSkinFiles(skinfile_t *skinfile);
 int Mod_CountSkinFiles(skinfile_t *skinfile);
 
+void Mod_SnapVertices(int numcomponents, int numvertices, float *vertices, float snap);
 int Mod_RemoveDegenerateTriangles(int numtriangles, const int *inelement3i, int *outelement3i, const float *vertex3f);
 
 #endif	// MODEL_SHARED_H

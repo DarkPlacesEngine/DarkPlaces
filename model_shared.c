@@ -1322,6 +1322,14 @@ int Mod_CountSkinFiles(skinfile_t *skinfile)
 	return i;
 }
 
+void Mod_SnapVertices(int numcomponents, int numvertices, float *vertices, float snap)
+{
+	int i;
+	double isnap = 1.0 / snap;
+	for (i = 0;i < numvertices*numcomponents;i++)
+		vertices[i] = floor(vertices[i]*isnap)*snap;
+}
+
 int Mod_RemoveDegenerateTriangles(int numtriangles, const int *inelement3i, int *outelement3i, const float *vertex3f)
 {
 	int i, outtriangles;
