@@ -82,8 +82,6 @@ static void R_DrawSpriteImage (int wantoverbright, int additive, mspriteframe_t 
 {
 	rmeshbufferinfo_t m;
 	memset(&m, 0, sizeof(m));
-	// the mesh was sorted already, so don't transparent sort
-	m.transparent = false;
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 	if (additive)

@@ -166,7 +166,6 @@ void R_DrawCrosshairSprite(rtexture_t *texture, vec3_t origin, vec_t scale, floa
 	}
 
 	memset(&m, 0, sizeof(m));
-	m.transparent = false;
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
 	m.depthdisable = true;

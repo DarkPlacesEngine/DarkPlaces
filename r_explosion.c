@@ -182,7 +182,6 @@ void R_DrawExplosionCallback(void *calldata1, int calldata2)
 	e = calldata1;
 
 	memset(&m, 0, sizeof(m));
-	m.transparent = false;
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
 	m.numtriangles = EXPLOSIONTRIS;

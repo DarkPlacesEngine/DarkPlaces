@@ -276,19 +276,16 @@ void R_DrawQ1Q2AliasModelCallback (void *calldata1, int calldata2)
 		memset(&m, 0, sizeof(m));
 		if (ent->effects & EF_ADDITIVE)
 		{
-			m.transparent = true;
 			m.blendfunc1 = GL_SRC_ALPHA;
 			m.blendfunc2 = GL_ONE;
 		}
 		else if (ent->alpha != 1.0 || skinframe->fog != NULL)
 		{
-			m.transparent = true;
 			m.blendfunc1 = GL_SRC_ALPHA;
 			m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 		}
 		else
 		{
-			m.transparent = false;
 			m.blendfunc1 = GL_ONE;
 			m.blendfunc2 = GL_ZERO;
 		}
@@ -336,19 +333,16 @@ void R_DrawQ1Q2AliasModelCallback (void *calldata1, int calldata2)
 	memset(&m, 0, sizeof(m));
 	if (ent->effects & EF_ADDITIVE)
 	{
-		m.transparent = true;
 		m.blendfunc1 = GL_SRC_ALPHA;
 		m.blendfunc2 = GL_ONE;
 	}
 	else if (ent->alpha != 1.0 || skinframe->fog != NULL)
 	{
-		m.transparent = true;
 		m.blendfunc1 = GL_SRC_ALPHA;
 		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 	}
 	else
 	{
-		m.transparent = false;
 		m.blendfunc1 = GL_ONE;
 		m.blendfunc2 = GL_ZERO;
 	}
@@ -370,7 +364,6 @@ void R_DrawQ1Q2AliasModelCallback (void *calldata1, int calldata2)
 		if (skinframe->pants)
 		{
 			memset(&m, 0, sizeof(m));
-			m.transparent = ent->effects & EF_ADDITIVE || ent->alpha != 1.0 || skinframe->fog != NULL;
 			m.blendfunc1 = GL_SRC_ALPHA;
 			m.blendfunc2 = GL_ONE;
 			m.numtriangles = model->numtris;
@@ -392,7 +385,6 @@ void R_DrawQ1Q2AliasModelCallback (void *calldata1, int calldata2)
 		if (skinframe->shirt)
 		{
 			memset(&m, 0, sizeof(m));
-			m.transparent = ent->effects & EF_ADDITIVE || ent->alpha != 1.0 || skinframe->fog != NULL;
 			m.blendfunc1 = GL_SRC_ALPHA;
 			m.blendfunc2 = GL_ONE;
 			m.numtriangles = model->numtris;
@@ -415,7 +407,6 @@ void R_DrawQ1Q2AliasModelCallback (void *calldata1, int calldata2)
 	if (skinframe->glow)
 	{
 		memset(&m, 0, sizeof(m));
-		m.transparent = ent->effects & EF_ADDITIVE || ent->alpha != 1.0 || skinframe->fog != NULL;
 		m.blendfunc1 = GL_SRC_ALPHA;
 		m.blendfunc2 = GL_ONE;
 		m.numtriangles = model->numtris;
@@ -434,7 +425,6 @@ void R_DrawQ1Q2AliasModelCallback (void *calldata1, int calldata2)
 	if (fog)
 	{
 		memset(&m, 0, sizeof(m));
-		m.transparent = ent->effects & EF_ADDITIVE || ent->alpha != 1.0 || skinframe->fog != NULL;
 		m.blendfunc1 = GL_SRC_ALPHA;
 		m.blendfunc2 = GL_ONE;
 		m.numtriangles = model->numtris;
@@ -760,7 +750,6 @@ void R_DrawZymoticModelMeshCallback (void *calldata1, int calldata2)
 	memset(&mbuf, 0, sizeof(mbuf));
 	mbuf.numverts = m->numverts;
 	mbuf.numtriangles = renderlist[0];
-	mbuf.transparent = false;
 	if (ent->effects & EF_ADDITIVE)
 	{
 		mbuf.blendfunc1 = GL_SRC_ALPHA;
@@ -793,7 +782,6 @@ void R_DrawZymoticModelMeshCallback (void *calldata1, int calldata2)
 		memset(&mbuf, 0, sizeof(mbuf));
 		mbuf.numverts = m->numverts;
 		mbuf.numtriangles = renderlist[0];
-		mbuf.transparent = false;
 		mbuf.blendfunc1 = GL_SRC_ALPHA;
 		mbuf.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 		// FIXME: need alpha mask for fogging...

@@ -138,7 +138,6 @@ void R_DrawCoronas(void)
 	float scale, viewdist, diff[3], dist;
 	rdlight_t *rd;
 	memset(&m, 0, sizeof(m));
-	m.transparent = false;
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ONE;
 	m.depthdisable = true; // magic
