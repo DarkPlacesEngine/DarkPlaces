@@ -6,7 +6,8 @@ static int max_batch;
 static int max_verts; // always max_meshs * 3
 #define TRANSDEPTHRES 4096
 
-static cvar_t gl_mesh_maxtriangles = {0, "gl_mesh_maxtriangles", "21760"};
+//static cvar_t gl_mesh_maxtriangles = {0, "gl_mesh_maxtriangles", "21760"};
+static cvar_t gl_mesh_maxtriangles = {0, "gl_mesh_maxtriangles", "4096"};
 static cvar_t gl_mesh_batchtriangles = {0, "gl_mesh_batchtriangles", "1024"};
 static cvar_t gl_mesh_merge = {0, "gl_mesh_merge", "1"};
 static cvar_t gl_mesh_floatcolors = {0, "gl_mesh_floatcolors", "1"};
@@ -84,6 +85,7 @@ static buf_bcolor_t *buf_transbcolor;
 static buf_texcoord_t *buf_transtexcoord[MAX_TEXTUREUNITS];
 
 static mempool_t *gl_backend_mempool;
+static int resizingbuffers = false;
 
 static void gl_backend_start(void)
 {
@@ -91,7 +93,8 @@ static void gl_backend_start(void)
 
 	max_verts = max_meshs * 3;
 
-	gl_backend_mempool = Mem_AllocPool("GL_Backend");
+	if (!gl_backend_mempool)
+		gl_backend_mempool = Mem_AllocPool("GL_Backend");
 
 #define BACKENDALLOC(var, count, sizeofstruct)\
 	{\
@@ -134,7 +137,7 @@ static void gl_backend_start(void)
 
 static void gl_backend_shutdown(void)
 {
-	int i;
+	//int i;
 	/*
 #define BACKENDFREE(var)\
 	if (var)\
@@ -143,6 +146,7 @@ static void gl_backend_shutdown(void)
 		var = NULL;\
 	}
 	*/
+	/*
 #define BACKENDFREE(var) var = NULL;
 
 	BACKENDFREE(buf_mesh)
@@ -163,8 +167,12 @@ static void gl_backend_shutdown(void)
 		BACKENDFREE(buf_texcoord[i])
 		BACKENDFREE(buf_transtexcoord[i])
 	}
+	*/
 
-	Mem_FreePool(&gl_backend_mempool);
+	if (resizingbuffers)
+		Mem_EmptyPool(gl_backend_mempool);
+	else
+		Mem_FreePool(&gl_backend_mempool);
 
 	backendunits = 0;
 	backendactive = false;
@@ -191,8 +199,10 @@ static void gl_backend_bufferchanges(int init)
 
 		if (!init)
 		{
+			resizingbuffers = true;
 			gl_backend_shutdown();
 			gl_backend_start();
+			resizingbuffers = false;
 		}
 	}
 }

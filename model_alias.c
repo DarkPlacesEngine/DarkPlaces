@@ -216,18 +216,18 @@ static rtexture_t *GL_SkinSplit(byte *in, byte *out, int width, int height, int 
 		return NULL;
 }
 
-static void Mod_LoadSkin (char *basename, byte *skindata, byte *skintemp, int width, int height, skinframe_t *skinframe)
+static void Mod_LoadSkin (char *basename, byte *skindata, byte *skintemp, int width, int height, skinframe_t *skinframe, int precache)
 {
-	skinframe->base   = loadtextureimagewithmask(loadmodel->texturepool, va("%s_normal", basename), 0, 0, false, r_mipskins.integer, true);
+	skinframe->base   = loadtextureimagewithmask(loadmodel->texturepool, va("%s_normal", basename), 0, 0, false, r_mipskins.integer, precache);
 	skinframe->fog    = image_masktex;
 	skinframe->pants  = NULL;
 	skinframe->shirt  = NULL;
-	skinframe->glow   = loadtextureimage(loadmodel->texturepool, va("%s_glow"  , basename), 0, 0, false, r_mipskins.integer, true);
+	skinframe->glow   = loadtextureimage(loadmodel->texturepool, va("%s_glow"  , basename), 0, 0, false, r_mipskins.integer, precache);
 	skinframe->merged = NULL;
 	if (skinframe->base)
 	{
-		skinframe->pants  = loadtextureimage(loadmodel->texturepool, va("%s_pants" , basename), 0, 0, false, r_mipskins.integer, true);
-		skinframe->shirt  = loadtextureimage(loadmodel->texturepool, va("%s_shirt" , basename), 0, 0, false, r_mipskins.integer, true);
+		skinframe->pants  = loadtextureimage(loadmodel->texturepool, va("%s_pants" , basename), 0, 0, false, r_mipskins.integer, precache);
+		skinframe->shirt  = loadtextureimage(loadmodel->texturepool, va("%s_shirt" , basename), 0, 0, false, r_mipskins.integer, precache);
 	}
 	else
 	{
@@ -237,14 +237,14 @@ static void Mod_LoadSkin (char *basename, byte *skindata, byte *skintemp, int wi
 		{
 			skinframe->pants  = GL_SkinSplitShirt(skindata, skintemp, width, height, 0x0040, va("%s_pants", basename), false); // pants
 			skinframe->shirt  = GL_SkinSplitShirt(skindata, skintemp, width, height, 0x0002, va("%s_shirt", basename), false); // shirt
-			skinframe->glow   = GL_SkinSplit     (skindata, skintemp, width, height, 0xC000, va("%s_glow", basename), true); // glow
+			skinframe->glow   = GL_SkinSplit     (skindata, skintemp, width, height, 0xC000, va("%s_glow", basename), precache); // glow
 			if (skinframe->pants || skinframe->shirt)
 			{
 				skinframe->base   = GL_SkinSplit (skindata, skintemp, width, height, 0x3FBD, va("%s_normal", basename), false); // normal (no special colors)
-				skinframe->merged = GL_SkinSplit (skindata, skintemp, width, height, 0x3FFF, va("%s_body", basename), true); // body (normal + pants + shirt, but not glow)
+				skinframe->merged = GL_SkinSplit (skindata, skintemp, width, height, 0x3FFF, va("%s_body", basename), precache); // body (normal + pants + shirt, but not glow)
 			}
 			else
-				skinframe->base   = GL_SkinSplit (skindata, skintemp, width, height, 0x3FFF, va("%s_base", basename), true); // no special colors
+				skinframe->base   = GL_SkinSplit (skindata, skintemp, width, height, 0x3FFF, va("%s_base", basename), precache); // no special colors
 			// quake model skins don't have alpha
 			skinframe->fog = NULL;
 		}
@@ -401,7 +401,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 				sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
 			else
 				sprintf (name, "%s_%i", loadmodel->name, i);
-			Mod_LoadSkin(name, (byte *)datapointer, skintemp, skinwidth, skinheight, loadmodel->skinframes + totalskins);
+			Mod_LoadSkin(name, (byte *)datapointer, skintemp, skinwidth, skinheight, loadmodel->skinframes + totalskins, i == 0);
 			datapointer += skinwidth * skinheight;
 			totalskins++;
 		}

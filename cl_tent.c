@@ -121,18 +121,21 @@ void CL_ParseTEnt (void)
 	{
 	case TE_WIZSPIKE:			// spike hitting wall
 		MSG_ReadVector(pos);
+		Mod_FindNonSolidLocation(pos, cl.worldmodel);
 		CL_RunParticleEffect (pos, vec3_origin, 20, 30);
 		S_StartSound (-1, 0, cl_sfx_wizhit, pos, 1, 1);
 		break;
-		
+
 	case TE_KNIGHTSPIKE:			// spike hitting wall
 		MSG_ReadVector(pos);
+		Mod_FindNonSolidLocation(pos, cl.worldmodel);
 		CL_RunParticleEffect (pos, vec3_origin, 226, 20);
 		S_StartSound (-1, 0, cl_sfx_knighthit, pos, 1, 1);
 		break;
-		
+
 	case TE_SPIKE:			// spike hitting wall
 		MSG_ReadVector(pos);
+		Mod_FindNonSolidLocation(pos, cl.worldmodel);
 		// LordHavoc: changed to spark shower
 		CL_SparkShower(pos, vec3_origin, 15);
 		//CL_RunParticleEffect (pos, vec3_origin, 0, 10);
@@ -151,6 +154,7 @@ void CL_ParseTEnt (void)
 		break;
 	case TE_SPIKEQUAD:			// quad spike hitting wall
 		MSG_ReadVector(pos);
+		Mod_FindNonSolidLocation(pos, cl.worldmodel);
 		// LordHavoc: changed to spark shower
 		CL_SparkShower(pos, vec3_origin, 15);
 		//CL_RunParticleEffect (pos, vec3_origin, 0, 10);
@@ -171,6 +175,7 @@ void CL_ParseTEnt (void)
 		break;
 	case TE_SUPERSPIKE:			// super spike hitting wall
 		MSG_ReadVector(pos);
+		Mod_FindNonSolidLocation(pos, cl.worldmodel);
 		// LordHavoc: changed to dust shower
 		CL_SparkShower(pos, vec3_origin, 30);
 		//CL_RunParticleEffect (pos, vec3_origin, 0, 20);
@@ -189,6 +194,7 @@ void CL_ParseTEnt (void)
 		break;
 	case TE_SUPERSPIKEQUAD:			// quad super spike hitting wall
 		MSG_ReadVector(pos);
+		Mod_FindNonSolidLocation(pos, cl.worldmodel);
 		// LordHavoc: changed to dust shower
 		CL_SparkShower(pos, vec3_origin, 30);
 		//CL_RunParticleEffect (pos, vec3_origin, 0, 20);
@@ -225,7 +231,14 @@ void CL_ParseTEnt (void)
 		dir[1] = MSG_ReadChar ();
 		dir[2] = MSG_ReadChar ();
 		count = MSG_ReadByte (); // amount of particles
+		Mod_FindNonSolidLocation(pos, cl.worldmodel);
 		CL_SparkShower(pos, dir, count);
+		break;
+	case TE_PLASMABURN:
+		MSG_ReadVector(pos);
+		Mod_FindNonSolidLocation(pos, cl.worldmodel);
+		CL_AllocDlight (NULL, pos, 200, 1, 1, 1, 1000, 0.2);
+		CL_PlasmaBurn(pos);
 		break;
 		// LordHavoc: added for improved gore
 	case TE_BLOODSHOWER:	// vaporized body
@@ -266,6 +279,7 @@ void CL_ParseTEnt (void)
 
 	case TE_GUNSHOT:			// bullet hitting wall
 		MSG_ReadVector(pos);
+		Mod_FindNonSolidLocation(pos, cl.worldmodel);
 		// LordHavoc: changed to dust shower
 		CL_SparkShower(pos, vec3_origin, 15);
 		//CL_RunParticleEffect (pos, vec3_origin, 0, 20);
@@ -273,6 +287,7 @@ void CL_ParseTEnt (void)
 
 	case TE_GUNSHOTQUAD:			// quad bullet hitting wall
 		MSG_ReadVector(pos);
+		Mod_FindNonSolidLocation(pos, cl.worldmodel);
 		CL_SparkShower(pos, vec3_origin, 15);
 		CL_AllocDlight (NULL, pos, 200, 0.1f, 0.1f, 1.0f, 1000, 0.2);
 		break;
@@ -393,20 +408,20 @@ void CL_ParseTEnt (void)
 		CL_ParseBeam (Mod_ForName(MSG_ReadString(), true, false, false));
 		break;
 
-	case TE_LAVASPLASH:	
+	case TE_LAVASPLASH:
 		pos[0] = MSG_ReadCoord ();
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
 		CL_LavaSplash (pos);
 		break;
-	
+
 	case TE_TELEPORT:
 		pos[0] = MSG_ReadCoord ();
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
 		CL_TeleportSplash (pos);
 		break;
-		
+
 	case TE_EXPLOSION2:				// color mapped explosion
 		MSG_ReadVector(pos);
 		Mod_FindNonSolidLocation(pos, cl.worldmodel);
@@ -418,7 +433,7 @@ void CL_ParseTEnt (void)
 		CL_AllocDlight (NULL, pos, 350, tempcolor[0] * (1.0f / 255.0f), tempcolor[1] * (1.0f / 255.0f), tempcolor[2] * (1.0f / 255.0f), 700, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
-		
+
 	default:
 		Host_Error ("CL_ParseTEnt: bad type %d", type);
 	}

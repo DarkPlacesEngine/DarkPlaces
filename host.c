@@ -44,9 +44,7 @@ double		realtime;				// without any filtering or bounding
 double		oldrealtime;			// last frame run
 int			host_framecount;
 
-double		sv_frametime;
-
-int			minimum_memory;
+int			forcedeveloper;			// used for -developer commandline parameter, hacky hacky
 
 client_t	*host_client;			// current client
 
@@ -248,6 +246,8 @@ void Host_InitLocal (void)
 	Cvar_RegisterVariable (&noexit);
 	Cvar_RegisterVariable (&skill);
 	Cvar_RegisterVariable (&developer);
+	if (forcedeveloper) // make it real now that the cvar is registered
+		Cvar_SetValue("developer", 1);
 	Cvar_RegisterVariable (&deathmatch);
 	Cvar_RegisterVariable (&coop);
 
@@ -783,6 +783,13 @@ void Host_Init (void)
 {
 	com_argc = host_parms.argc;
 	com_argv = host_parms.argv;
+	// FIXME: this is evil, but possibly temporary
+	if (COM_CheckParm("-developer"))
+	{
+		forcedeveloper = true;
+		developer.integer = 1;
+		developer.value = 1;
+	}
 
 	Memory_Init ();
 	Cmd_Init ();

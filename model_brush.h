@@ -144,6 +144,8 @@ typedef struct msurface_s
 	byte		styles[MAXLIGHTMAPS];
 	// RGB lighting data [numstyles][height][width][3]
 	byte		*samples;
+	// stain to apply on lightmap (soot/dirt/blood/whatever)
+	byte		*stainsamples;
 
 	// these fields are generated during model loading
 	// the lightmap texture fragment to use on the surface

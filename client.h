@@ -448,6 +448,7 @@ void CL_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count);
 void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent);
 void CL_RocketTrail2 (vec3_t start, vec3_t end, int color, entity_t *ent);
 void CL_SparkShower (vec3_t org, vec3_t dir, int count);
+void CL_PlasmaBurn (vec3_t org);
 void CL_BloodPuff (vec3_t org, vec3_t vel, int count);
 void CL_FlameCube (vec3_t mins, vec3_t maxs, int count);
 void CL_Flames (vec3_t org, vec3_t vel, int count);
@@ -488,7 +489,9 @@ void CL_Decal(vec3_t origin, int tex, float scale, float red, float green, float
 // if contents is not zero, it will impact on content changes
 // (leafs matching contents are considered empty, others are solid)
 extern int traceline_endcontents; // set by TraceLine
-float TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int contents);
+// need to call this sometime before using TraceLine with hitbmodels
+void TraceLine_ScanForBModels(void);
+float TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int contents, int hitbmodels);
 
 #include "cl_screen.h"
 
@@ -527,3 +530,5 @@ refdef_t;
 refdef_t r_refdef;
 
 extern mempool_t *cl_refdef_mempool;
+
+#include "cgamevm.h"

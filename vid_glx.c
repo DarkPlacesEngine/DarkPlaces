@@ -636,7 +636,6 @@ void VID_Init(void)
 	qboolean fullscreen = true;
 	int MajorVersion, MinorVersion;
 
-	Cvar_RegisterVariable (&vid_mouse);
 	Cvar_RegisterVariable (&vid_dga);
 	Cvar_RegisterVariable (&vid_dga_mouseaccel);
 	Cvar_RegisterVariable (&m_filter);

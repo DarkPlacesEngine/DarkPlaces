@@ -1,8 +1,8 @@
 #include "quakedef.h"
 
-cvar_t	r_max_size = {0, "r_max_size", "2048"};
-cvar_t	r_max_scrapsize = {0, "r_max_scrapsize", "1024"};
-cvar_t	r_picmip = {0, "r_picmip", "0"};
+cvar_t	r_max_size = {CVAR_SAVE, "r_max_size", "2048"};
+cvar_t	r_max_scrapsize = {CVAR_SAVE, "r_max_scrapsize", "256"};
+cvar_t	r_picmip = {CVAR_SAVE, "r_picmip", "0"};
 cvar_t	r_lerpimages = {CVAR_SAVE, "r_lerpimages", "1"};
 cvar_t	r_precachetextures = {CVAR_SAVE, "r_precachetextures", "1"};
 
@@ -11,6 +11,8 @@ int		gl_filter_mag = GL_LINEAR;
 
 
 static mempool_t *texturemempool;
+static mempool_t *texturedatamempool;
+static mempool_t *textureprocessingmempool;
 
 // note: this must not conflict with TEXF_ flags in r_textures.h
 // cleared when a texture is uploaded
@@ -289,6 +291,8 @@ void R_FreeTexturePool(rtexturepool_t **rtexturepool)
 		Host_Error("R_FreeTexturePool: pool not linked\n");
 	while (pool->gltchain)
 		R_FreeTexture(pool->gltchain);
+	if (pool->imagechain)
+		Sys_Error("R_FreeTexturePool: not all images freed\n");
 	Mem_Free(pool);
 }
 
@@ -458,7 +462,9 @@ static void r_textures_start(void)
 	// use the largest scrap texture size we can (not sure if this is really a good idea)
 	for (block_size = 1;block_size < realmaxsize && block_size < r_max_scrapsize.integer;block_size <<= 1);
 
-	texturemempool = Mem_AllocPool("Textures");
+	texturemempool = Mem_AllocPool("Texture Info");
+	texturedatamempool = Mem_AllocPool("Texture Storage (not yet uploaded)");
+	textureprocessingmempool = Mem_AllocPool("Texture Processing Buffers");
 	gltexnuminuse = Mem_Alloc(texturemempool, MAX_GLTEXTURES);
 	//memset(gltexnuminuse, 0, MAX_GLTEXTURES);
 }
@@ -490,6 +496,8 @@ static void r_textures_shutdown(void)
 	texturebuffer = NULL;
 	gltexnuminuse = NULL;
 	Mem_FreePool(&texturemempool);
+	Mem_FreePool(&texturedatamempool);
+	Mem_FreePool(&textureprocessingmempool);
 }
 
 static void r_textures_newmap(void)
@@ -585,8 +593,8 @@ static void R_ResampleTexture (void *indata, int inwidth, int inheight, void *ou
 		if (resamplerow2)
 			Mem_Free(resamplerow2);
 		resamplerowsize = outwidth*4;
-		resamplerow1 = Mem_Alloc(texturemempool, resamplerowsize);
-		resamplerow2 = Mem_Alloc(texturemempool, resamplerowsize);
+		resamplerow1 = Mem_Alloc(textureprocessingmempool, resamplerowsize);
+		resamplerow2 = Mem_Alloc(textureprocessingmempool, resamplerowsize);
 	}
 #define row1 resamplerow1
 #define row2 resamplerow2
@@ -1000,14 +1008,15 @@ static void R_Upload(gltexture_t *glt, byte *data)
 				Mem_Free(resizebuffer);
 			if (colorconvertbuffer)
 				Mem_Free(colorconvertbuffer);
-			resizebuffer = Mem_Alloc(texturemempool, resizebuffersize);
-			colorconvertbuffer = Mem_Alloc(texturemempool, resizebuffersize);
+			resizebuffer = Mem_Alloc(textureprocessingmempool, resizebuffersize);
+			colorconvertbuffer = Mem_Alloc(textureprocessingmempool, resizebuffersize);
 			if (!resizebuffer || !colorconvertbuffer)
 				Host_Error("R_Upload: out of memory\n");
 		}
 
 		if (glt->image->flags & GLTEXF_UPLOAD)
 		{
+			Con_DPrintf("uploaded new fragments image\n");
 			glt->image->flags &= ~GLTEXF_UPLOAD;
 			memset(resizebuffer, 255, glt->image->width * glt->image->height * glt->image->bytesperpixel);
 			glTexImage2D (GL_TEXTURE_2D, 0, glt->image->glinternalformat, glt->image->width, glt->image->height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, resizebuffer);
@@ -1049,8 +1058,8 @@ static void R_Upload(gltexture_t *glt, byte *data)
 			Mem_Free(resizebuffer);
 		if (colorconvertbuffer)
 			Mem_Free(colorconvertbuffer);
-		resizebuffer = Mem_Alloc(texturemempool, resizebuffersize);
-		colorconvertbuffer = Mem_Alloc(texturemempool, resizebuffersize);
+		resizebuffer = Mem_Alloc(textureprocessingmempool, resizebuffersize);
+		colorconvertbuffer = Mem_Alloc(textureprocessingmempool, resizebuffersize);
 		if (!resizebuffer || !colorconvertbuffer)
 			Host_Error("R_Upload: out of memory\n");
 	}
@@ -1244,7 +1253,7 @@ static void R_UploadTexture (gltexture_t *glt)
 				if (texturebuffer)
 					Mem_Free(texturebuffer);
 				texturebuffersize = glt->width * glt->height * glt->textype->inputbytesperpixel;
-				texturebuffer = Mem_Alloc(texturemempool, texturebuffersize);
+				texturebuffer = Mem_Alloc(textureprocessingmempool, texturebuffersize);
 			}
 
 			glt->generate(texturebuffer, glt->width, glt->height, (void *)glt->proceduraldata, glt->proceduraldatasize);
@@ -1287,7 +1296,7 @@ static gltexture_t *R_SetupTexture(gltexturepool_t *pool, char *identifier, int 
 
 	if (data)
 	{
-		glt->inputtexels = Mem_Alloc(texturemempool, glt->width * glt->height * texinfo->inputbytesperpixel);
+		glt->inputtexels = Mem_Alloc(texturedatamempool, glt->width * glt->height * texinfo->inputbytesperpixel);
 		if (glt->inputtexels == NULL)
 			Sys_Error("R_SetupTexture: out of memory\n");
 		memcpy(glt->inputtexels, data, glt->width * glt->height * texinfo->inputbytesperpixel);
@@ -1391,7 +1400,10 @@ rtexture_t *R_LoadTexture (rtexturepool_t *rtexturepool, char *identifier, int w
 	if (identifier && (glt = R_FindTexture(pool, identifier)))
 	{
 		if (crc == glt->crc && width == glt->width && height == glt->height && texinfo == glt->textype && ((flags ^ glt->flags) & TEXF_IMPORTANTBITS) == 0 && ((flags ^ glt->flags) & GLTEXF_IMPORTANTBITS) == 0)
+		{
+			Con_Printf("R_LoadTexture: exact match with existing texture %s\n", identifier);
 			return (rtexture_t *)glt; // exact match, use existing
+		}
 		Con_Printf("R_LoadTexture: cache mismatch on %s, replacing old texture\n", identifier);
 		R_FreeTexture(glt);
 	}
@@ -1425,7 +1437,10 @@ rtexture_t *R_ProceduralTexture (rtexturepool_t *rtexturepool, char *identifier,
 	if (identifier && (glt = R_FindTexture(pool, identifier)))
 	{
 		if (width == glt->width && height == glt->height && texinfo == glt->textype && ((flags ^ glt->flags) & TEXF_IMPORTANTBITS) == 0 && ((flags ^ glt->flags) & GLTEXF_IMPORTANTBITS) == 0)
+		{
+			Con_Printf("R_LoadTexture: exact match with existing texture %s\n", identifier);
 			return (rtexture_t *)glt; // exact match, use existing
+		}
 		Con_DPrintf("R_LoadTexture: cache mismatch, replacing old texture\n");
 		R_FreeTexture(glt);
 	}
@@ -1538,16 +1553,23 @@ void R_UpdateTexture(rtexture_t *rt, byte *data)
 	if (data == NULL)
 		Host_Error("R_UpdateTexture: no data supplied\n");
 	glt = (gltexture_t *)rt;
+	/*
 	if (!(glt->flags & GLTEXF_PROCEDURAL))
 	{
 		if (glt->inputtexels == NULL)
 		{
-			glt->inputtexels = Mem_Alloc(texturemempool, glt->width * glt->height * glt->textype->inputbytesperpixel);
+			glt->inputtexels = Mem_Alloc(texturedatamempool, glt->width * glt->height * glt->textype->inputbytesperpixel);
 			if (glt->inputtexels == NULL)
 				Host_Error("R_UpdateTexture: ran out of memory\n");
 		}
 		memcpy(glt->inputtexels, data, glt->width * glt->height * glt->textype->inputbytesperpixel);
 	}
 	R_Upload(glt, data);
+	*/
+	// if it has not been uploaded yet, update the data that will be used when it is
+	if (glt->inputtexels)
+		memcpy(glt->inputtexels, data, glt->width * glt->height * glt->textype->inputbytesperpixel);
+	else
+		R_Upload(glt, data);
 }
 

@@ -673,6 +673,8 @@ void M_SinglePlayer_Key (int key)
 			if (sv.active)
 				Cbuf_AddText ("disconnect\n");
 			Cbuf_AddText ("maxplayers 1\n");
+			Cbuf_AddText ("deathmatch 0\n");
+			Cbuf_AddText ("coop 0\n");
 			if (gamemode == GAME_NEHAHRA)
 				Cbuf_AddText ("map nehstart\n");
 			else

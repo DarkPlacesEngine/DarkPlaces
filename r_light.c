@@ -180,7 +180,7 @@ void R_DrawCoronas(void)
 		{
 			// trace to a point just barely closer to the eye
 			VectorSubtract(rd->origin, vpn, diff);
-			if (TraceLine(r_origin, diff, NULL, NULL, 0) == 1)
+			if (TraceLine(r_origin, diff, NULL, NULL, 0, true) == 1)
 			{
 				scale = 1.0f / 65536.0f;//64.0f / (dist * dist + 1024.0f);
 				m.cr = rd->light[0] * scale;
@@ -269,7 +269,7 @@ loc0:
 	}
 
 // mark the polygons
-	surf = cl.worldmodel->surfaces + node->firstsurface;
+	surf = currentrenderentity->model->surfaces + node->firstsurface;
 	for (i=0 ; i<node->numsurfaces ; i++, surf++)
 	{
 		int d, impacts, impactt;

@@ -34,7 +34,7 @@ typedef vec_t vec8_t[8];
 struct mplane_s;
 extern vec3_t vec3_origin;
 
-extern int nanmask;
+#define nanmask (255<<23)
 #define	IS_NAN(x) (((*(int *)&x)&nanmask)==nanmask)
 
 #define bound(min,num,max) (num >= min ? (num < max ? num : max) : min)
@@ -51,7 +51,7 @@ extern int nanmask;
 #define ANGLEMOD(a) (((int) ((a) * (65536.0f / 360.0f)) & 65535) * (360.0f / 65536.0f))
 
 #define VectorNegate(a,b) ((b)[0]=-((a)[0]),(b)[1]=-((a)[1]),(b)[2]=-((a)[2]))
-#define VectorSet(a,b,c,d) ((d)[0]=(a),(d)[1]=(b),(d)[2]=(c))
+#define VectorSet(a,b,c,d) ((a)[0]=(b),(a)[1]=(c),(a)[2]=(d))
 #define VectorClear(a) ((a)[0]=(a)[1]=(a)[2]=0)
 #define DotProduct(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1]+(a)[2]*(b)[2])
 #define VectorSubtract(a,b,c) ((c)[0]=(a)[0]-(b)[0],(c)[1]=(a)[1]-(b)[1],(c)[2]=(a)[2]-(b)[2])

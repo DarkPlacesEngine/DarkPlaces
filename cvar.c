@@ -172,10 +172,17 @@ void Cvar_Set (char *var_name, char *value)
 	}
 
 	changed = strcmp(var->string, value);
+	// LordHavoc: don't reallocate when there is no change
+	if (!changed)
+		return;
 
-	Z_Free (var->string);	// free the old value string
+	// LordHavoc: don't reallocate when the buffer is the same size
+	if (!var->string || strlen(var->string) != strlen(value))
+	{
+		Z_Free (var->string);	// free the old value string
 
-	var->string = Z_Malloc (strlen(value)+1);
+		var->string = Z_Malloc (strlen(value)+1);
+	}
 	strcpy (var->string, value);
 	var->value = atof (var->string);
 	var->integer = (int) var->value;

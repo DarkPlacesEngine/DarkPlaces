@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define QUAKE_GAME // as opposed to utilities
 
-extern int buildnumber;
+extern char *buildstring;
 
 #if !defined BYTE_DEFINED
 typedef unsigned char 		byte;
@@ -294,6 +294,7 @@ void Chase_Reset (void);
 void Chase_Update (void);
 
 void fractalnoise(unsigned char *noise, int size, int startgrid);
+void fractalnoisequick(byte *noise, int size, int startgrid);
 
 #include "palette.h"
 #include "image.h"

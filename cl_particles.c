@@ -321,14 +321,14 @@ CL_ParticleExplosion
 */
 void CL_ParticleExplosion (vec3_t org, int smoke)
 {
-	int i, j;
-	float f;
-	vec3_t v, end, ang;
-	byte noise1[32*32], noise2[32*32];
-
-	VectorClear(end); // hush MSVC
 	if (cl_particles.integer && cl_particles_explosions.integer)
 	{
+		int i, j;
+		float f;
+		vec3_t v, end, ang;
+		byte noise1[32*32], noise2[32*32];
+
+		VectorClear(end); // hush MSVC
 		i = Mod_PointInLeaf(org, cl.worldmodel)->contents;
 		if (i == CONTENTS_SLIME || i == CONTENTS_WATER)
 		{
@@ -336,15 +336,15 @@ void CL_ParticleExplosion (vec3_t org, int smoke)
 				particle(pt_bubble, PARTICLE_BILLBOARD, 0xFFFFFF, tex_bubble, false, true, 2, 2, 255, 9999, 1.5, org[0] + lhrandom(-16, 16), org[1] + lhrandom(-16, 16), org[2] + lhrandom(-16, 16), lhrandom(-96, 96), lhrandom(-96, 96), lhrandom(-96, 96), 0, 0, 0, 0, 0, 0);
 
 			ang[2] = lhrandom(0, 360);
-			fractalnoise(noise1, 32, 4);
-			fractalnoise(noise2, 32, 8);
+			fractalnoisequick(noise1, 32, 4);
+			fractalnoisequick(noise2, 32, 8);
 			for (i = 0;i < 32;i++)
 			{
 				for (j = 0;j < 32;j++)
 				{
 					VectorRandom(v);
 					VectorMA(org, 16, v, v);
-					TraceLine(org, v, end, NULL, 0);
+					TraceLine(org, v, end, NULL, 0, true);
 					ang[0] = (j + 0.5f) * (360.0f / 32.0f);
 					ang[1] = (i + 0.5f) * (360.0f / 32.0f);
 					AngleVectors(ang, v, NULL, NULL);
@@ -359,15 +359,15 @@ void CL_ParticleExplosion (vec3_t org, int smoke)
 		else
 		{
 			ang[2] = lhrandom(0, 360);
-			fractalnoise(noise1, 32, 4);
-			fractalnoise(noise2, 32, 8);
+			fractalnoisequick(noise1, 32, 4);
+			fractalnoisequick(noise2, 32, 8);
 			for (i = 0;i < 32;i++)
 			{
 				for (j = 0;j < 32;j++)
 				{
 					VectorRandom(v);
 					VectorMA(org, 16, v, v);
-					TraceLine(org, v, end, NULL, 0);
+					TraceLine(org, v, end, NULL, 0, true);
 					ang[0] = (j + 0.5f) * (360.0f / 32.0f);
 					ang[1] = (i + 0.5f) * (360.0f / 32.0f);
 					AngleVectors(ang, v, NULL, NULL);
@@ -385,6 +385,7 @@ void CL_ParticleExplosion (vec3_t org, int smoke)
 	}
 	else
 		R_NewExplosion(org);
+	R_Stain(org, 96, 80, 80, 80, 128, 176, 176, 176, 128);
 }
 
 /*
@@ -413,6 +414,7 @@ void CL_BlobExplosion (vec3_t org)
 	int			i;
 	if (!cl_particles.integer) return;
 
+	R_Stain(org, 96, 96, 64, 96, 128, 160, 128, 160, 128);
 	for (i = 0;i < 256;i++)
 		particle(pt_blob , PARTICLE_BILLBOARD, particlepalette[ 66+(rand()%6)], tex_particle, false, true, 4, 4, 255, 9999, 0, org[0] + lhrandom(-16, 16), org[1] + lhrandom(-16, 16), org[2] + lhrandom(-16, 16), lhrandom(-4, 4), lhrandom(-4, 4), lhrandom(-128, 128), 0, 0, 0, 0, 0, 0);
 	for (i = 0;i < 256;i++)
@@ -448,6 +450,7 @@ void CL_SparkShower (vec3_t org, vec3_t dir, int count)
 {
 	if (!cl_particles.integer) return;
 
+	R_Stain(org, 32, 96, 96, 96, 32, 128, 128, 128, 32);
 	CL_Decal(org, tex_bullethole[rand()&7], 16 * cl_particles_size.value, 0, 0, 0, 1);
 
 	// smoke puff
@@ -458,8 +461,15 @@ void CL_SparkShower (vec3_t org, vec3_t dir, int count)
 	{
 		// sparks
 		while(count--)
-			particle(pt_spark, PARTICLE_BILLBOARD, particlepalette[0x68 + (rand() & 7)], tex_particle, false, true, 1, 1, lhrandom(0, 255), 9999, 1.5, org[0], org[1], org[2], lhrandom(-64, 64), lhrandom(-64, 64), lhrandom(0, 128), 512.0f, 0, 0, 0, 0.2f, 0);
+			particle(pt_spark, PARTICLE_BILLBOARD, particlepalette[0x68 + (rand() & 7)], tex_particle, false, true, 1, 1, lhrandom(0, 255), 9999, 1.5, org[0], org[1], org[2], lhrandom(-64, 64) + dir[0], lhrandom(-64, 64) + dir[1], lhrandom(0, 128) + dir[2], 512.0f, 0, 0, 0, 0.2f, 0);
 	}
+}
+
+void CL_PlasmaBurn (vec3_t org)
+{
+	if (!cl_particles.integer) return;
+
+	R_Stain(org, 48, 96, 96, 96, 48, 128, 128, 128, 48);
 }
 
 void CL_BloodPuff (vec3_t org, vec3_t vel, int count)
@@ -809,8 +819,8 @@ void CL_MoveParticles (void)
 {
 	particle_t *p;
 	renderparticle_t *r;
-	int i, activeparticles, maxparticle, j, a, b, pressureused = false;
-	float gravity, dvel, frametime, f, dist, normal[3], v[3], org[3], o[3];
+	int i, activeparticles, maxparticle, j, a, pressureused = false;
+	float gravity, dvel, frametime, f, dist, normal[3], v[3], org[3];
 
 	// LordHavoc: early out condition
 	if (!cl_numparticles)
@@ -846,11 +856,13 @@ void CL_MoveParticles (void)
 		VectorCopy(p->org, org);
 		if (p->bounce)
 		{
-			if (TraceLine(p->oldorg, p->org, v, normal, 0) < 1)
+			if (TraceLine(p->oldorg, p->org, v, normal, 0, true) < 1)
 			{
 				VectorCopy(v, p->org);
 				if (p->bounce < 0)
 				{
+					// assume it's blood (lame, but...)
+					R_Stain(v, 48, 64, 24, 24, 48, 192, 48, 48, 48);
 					CL_Decal(v, p->tex, p->scalex * cl_particles_size.value, p->color[0] * (1.0f / 255.0f), p->color[1] * (1.0f / 255.0f), p->color[2] * (1.0f / 255.0f), p->alpha * (1.0f / 255.0f));
 					p->die = -1;
 					freeparticles[j++] = p;
@@ -930,7 +942,7 @@ void CL_MoveParticles (void)
 					p->vel[2] = 96;
 					break;
 				default: // CONTENTS_SOLID and any others
-					TraceLine(p->oldorg, p->org, v, normal, 0);
+					TraceLine(p->oldorg, p->org, v, normal, 0, true);
 					VectorCopy(v, p->org);
 					p->tex = tex_smoke[rand()&7];
 					p->orientation = PARTICLE_BILLBOARD;
@@ -1064,18 +1076,23 @@ void CL_MoveParticles (void)
 				p->die = -1;
 			break;
 		case pt_rain:
+			a = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
+			if (a != CONTENTS_EMPTY && a != CONTENTS_SKY)
+				p->die = -1;
+			/*
 			f = 0;
 			b = Mod_PointInLeaf(p->oldorg, cl.worldmodel)->contents;
 			VectorCopy(p->oldorg, o);
 			while (f < 1)
 			{
 				a = b;
-				f = TraceLine(o, p->org, v, normal, a);
+				f = TraceLine(o, p->org, v, normal, a, true);
 				b = traceline_endcontents;
 				if (f < 1 && b != CONTENTS_EMPTY && b != CONTENTS_SKY)
 				{
+					#if 1
 					p->die = -1;
-					/*
+					#else
 					p->die = cl.time + 1000;
 					p->vel[0] = p->vel[1] = p->vel[2] = 0;
 					VectorCopy(v, p->org);
@@ -1101,9 +1118,11 @@ void CL_MoveParticles (void)
 						p->scaley = 8;
 						break;
 					}
-					*/
+					#endif
+					break;
 				}
 			}
+			*/
 			break;
 			/*
 		case pt_raindropsplash:

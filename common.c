@@ -1243,14 +1243,18 @@ FIXME: make this buffer size safe someday
 */
 char    *va(char *format, ...)
 {
-	va_list         argptr;
-	static char             string[1024];
-	
+	va_list argptr;
+	// LordHavoc: now cycles through 8 buffers to avoid problems in most cases
+	static char string[8][1024], *s;
+	static int stringindex = 0;
+
+	s = string[stringindex];
+	stringindex = (stringindex + 1) & 7;
 	va_start (argptr, format);
-	vsprintf (string, format,argptr);
+	vsprintf (s, format,argptr);
 	va_end (argptr);
 
-	return string;  
+	return s;
 }
 
 
@@ -1258,7 +1262,7 @@ char    *va(char *format, ...)
 int     memsearch (byte *start, int count, int search)
 {
 	int             i;
-	
+
 	for (i=0 ; i<count ; i++)
 		if (start[i] == search)
 			return i;
