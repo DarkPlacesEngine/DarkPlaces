@@ -44,7 +44,8 @@ enum m_state_e {
 	m_slist,
 	m_options_effects,
 	m_options_graphics,
-	m_options_colorcontrol
+	m_options_colorcontrol,
+	m_reset
 };
 
 extern enum m_state_e m_state;
