@@ -2563,7 +2563,7 @@ void PF_getsurfacetexture(void)
 		return;
 	G_INT(OFS_RETURN) = surf->texinfo->texture->name - pr_strings;
 }
-//PF_getsurfacenearpoint, // #438 void(entity e, vector p) getsurfacenearpoint = #438;
+//PF_getsurfacenearpoint, // #438 float(entity e, vector p) getsurfacenearpoint = #438;
 void PF_getsurfacenearpoint(void)
 {
 	int surfnum, best, modelindex;
@@ -2608,6 +2608,24 @@ void PF_getsurfacenearpoint(void)
 		}
 	}
 	G_FLOAT(OFS_RETURN) = best;
+}
+//PF_getsurfaceclippedpoint, // #439 vector(entity e, float s, vector p) getsurfaceclippedpoint = #439;
+void PF_getsurfaceclippedpoint(void)
+{
+	edict_t *ed;
+	msurface_t *surf;
+	vec3_t p, out;
+	VectorClear(G_VECTOR(OFS_RETURN));
+	ed = G_EDICT(OFS_PARM0);
+	if (!ed || ed->free)
+		return;
+	if (!(surf = getsurface(ed, G_FLOAT(OFS_PARM1))))
+		return;
+	// FIXME: implement rotation/scaling
+	VectorSubtract(G_VECTOR(OFS_PARM2), ed->v.origin, p);
+	clippointtosurface(surf, p, out);
+	// FIXME: implement rotation/scaling
+	VectorAdd(out, ed->v.origin, G_VECTOR(OFS_RETURN));
 }
 
 void PF_Fixme (void)
@@ -2773,6 +2791,7 @@ PF_getsurfacepoint,     // #435 vector(entity e, float s, float n) getsurfacepoi
 PF_getsurfacenormal,    // #436 vector(entity e, float s) getsurfacenormal = #436;
 PF_getsurfacetexture,   // #437 string(entity e, float s) getsurfacetexture = #437;
 PF_getsurfacenearpoint, // #438 float(entity e, vector p) getsurfacenearpoint = #438;
+PF_getsurfaceclippedpoint,// #439 vector(entity e, float s, vector p) getsurfaceclippedpoint = #439;
 };
 
 builtin_t *pr_builtins = pr_builtin;
