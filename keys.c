@@ -836,18 +836,13 @@ void Key_Event (int key, char ascii, qboolean down)
 		}
 	}
 
-	// AK What the fuck ?!?
+	// AK New WTF ?!?
 	// AK Changed so the code does what the comments tell 
 	// 
 	// 1. if console is active or not, always send the up events
+	// console only wants key down events
 	if (key_consoleactive && consolekeys[key] && down)
-	{
-		// console only wants key down events
-		//if (!down)
-		//	return;
-
 		Key_Console (key, ascii);
-	}
 	else
 	{
 		//
@@ -880,6 +875,7 @@ void Key_Event (int key, char ascii, qboolean down)
 		if ((key_consoleactive && !consolekeys[key])
 		 || (key_dest == key_menu && menubound[key])
 		 || key_dest == key_game)
+		if (!key_consoleactive && key_dest != key_menu)
 		{
 			kb = keybindings[key];
 			if (kb)
@@ -898,9 +894,6 @@ void Key_Event (int key, char ascii, qboolean down)
 			}
 			return;
 		}
-
-		if (!down)
-			return;		// other systems only care about key down events
 
 		switch (key_dest)
 		{

@@ -1115,16 +1115,16 @@ void CL_SendCmd(void)
 	{
 		// get basic movement from keyboard
 		CL_BaseMove(&cmd);
-
+		
 		// OS independent code
 		IN_PreMove();
-
+			
 		// allow mice or other external controllers to add to the move
 		IN_Move(&cmd);
-
+			
 		// OS independent code
 		IN_PostMove();
-
+			
 		// send the unreliable message
 		CL_SendMove(&cmd);
 	}
