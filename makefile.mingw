@@ -1,0 +1,36 @@
+OBJECTS= builddate.o chase.o cl_demo.o cl_input.o cl_main.o cl_parse.o cl_tent.o cmd.o common.o console.o crc.o cvar.o fractalnoise.o gl_draw.o r_sky.o gl_rmain.o gl_rsurf.o host.o host_cmd.o image.o keys.o mathlib.o menu.o model_alias.o model_brush.o model_shared.o model_sprite.o net_dgrm.o net_loop.o net_main.o pr_cmds.o pr_edict.o pr_exec.o r_light.o r_particles.o r_explosion.o sbar.o snd_dma.o snd_mem.o snd_mix.o sv_main.o sv_move.o sv_phys.o sv_user.o sv_light.o transform.o view.o wad.o world.o zone.o vid_shared.o palette.o r_crosshairs.o gl_textures.o gl_models.o r_sprites.o r_modules.o r_explosion.o r_lerpanim.o protocol.o quakeio.o r_clip.o ui.o portals.o sys_shared.o cl_light.o gl_backend.o cl_particles.o cl_screen.o cgamevm.o cgame.o
+
+#K6/athlon optimizations
+#CPUOPTIMIZATIONS=-march=k6
+#686 optimizations
+CPUOPTIMIZATIONS=-march=i686
+
+#note:
+#the -Werror can be removed to compile even if there are warnings,
+#this is used to ensure that all released versions are free of warnings.
+
+OPTIMIZATIONS= -O6 -ffast-math -funroll-loops -fomit-frame-pointer -fexpensive-optimizations $(CPUOPTIMIZATIONS)
+CFLAGS= -I/usr/local/mingw/include -MD -Wall $(OPTIMIZATIONS)
+# -Werror
+# -D WIN32 -D NDEBUG -D _WINDOWS -D _M_IX86
+
+LDFLAGS= -L/msdev/lib -L/usr/local/mingw/lib -luser32 -lgdi32 -lwinmm -ldxguid -ldinput -lopengl32 -lcomctl32 -lwsock32
+
+all: builddate darkplaces
+
+builddate:
+	touch builddate.c
+
+.c.o:
+	gcc $(CFLAGS) -c $*.c
+
+darkplaces: $(OBJECTS) vid_wgl.o sys_win.o snd_win.o net_win.o net_wins.o net_wipx.o cd_win.o in_win.o conproc.o
+	gcc -o $@ $^ $(LDFLAGS)
+
+
+clean:
+	-rm -f darkplaces *.o *.d
+
+.PHONY: clean builddate
+
+-include *.d

@@ -1,0 +1,9 @@
+Darkplaces needs these files which do not come in the standard mingw installation, nor are supplied with darkplaces itself:
+include/GL/gl.h (can be obtained in the opengl download hidden away on the microsoft website)
+include/ddraw.h (part of DirectX)
+include/dinput.h (part of DirectX)
+include/dsound.h (part of DirectX)
+include/wsipx.h (winsock IPX header, needed for net_wipx.c, which can be removed if you edit net_win.c a bit)
+
+Assuming you placed mingw in c:\mingw, you can simply type this to compile:
+make -f makefile.mingw
