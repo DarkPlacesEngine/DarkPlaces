@@ -348,11 +348,11 @@ void Mem_PrintStats(void)
 	}
 	Con_Printf("%i memory pools, totalling %i bytes (%.3fMB)\n", count, size, size / 1048576.0);
 	if (tempmempool == NULL)
-		Con_Printf("Error: no tempmempool allocated\n");
+		Con_Print("Error: no tempmempool allocated\n");
 	else if (tempmempool->chain)
 	{
 		Con_Printf("%i bytes (%.3fMB) of temporary memory still allocated (Leak!)\n", tempmempool->totalsize, tempmempool->totalsize / 1048576.0);
-		Con_Printf("listing temporary memory allocations:\n");
+		Con_Print("listing temporary memory allocations:\n");
 		for (mem = tempmempool->chain;mem;mem = mem->next)
 			Con_Printf("%10i bytes allocated at %s:%i\n", mem->size, mem->filename, mem->fileline);
 	}
@@ -363,7 +363,7 @@ void Mem_PrintList(int listallocations)
 	mempool_t *pool;
 	memheader_t *mem;
 	Mem_CheckSentinelsGlobal();
-	Con_Printf("memory pool list:\n"
+	Con_Print("memory pool list:\n"
 	           "size    name\n");
 	for (pool = poolchain;pool;pool = pool->next)
 	{
@@ -395,7 +395,7 @@ void MemList_f(void)
 		}
 		// drop through
 	default:
-		Con_Printf("MemList_f: unrecognized options\nusage: memlist [all]\n");
+		Con_Print("MemList_f: unrecognized options\nusage: memlist [all]\n");
 		break;
 	}
 }

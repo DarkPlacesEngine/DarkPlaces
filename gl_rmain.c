@@ -144,7 +144,7 @@ static void R_TimeRefresh_f (void)
 
 	VectorCopy(oldangles, cl.viewangles);
 	intimerefresh = 0;
-	Con_Printf ("%f seconds (%f fps)\n", timedelta, 128/timedelta);
+	Con_Printf("%f seconds (%f fps)\n", timedelta, 128/timedelta);
 }
 
 vec3_t fogcolor;
@@ -585,7 +585,7 @@ void R_UpdateWorld(void)
 
 	if (r_shadow_realtime_world.integer && !gl_stencil)
 	{
-		Con_Printf("Realtime world lighting requires 32bit color; turning off r_shadow_realtime_world, please type vid_bitsperpixel 32;vid_restart and try again\n");
+		Con_Print("Realtime world lighting requires 32bit color; turning off r_shadow_realtime_world, please type vid_bitsperpixel 32;vid_restart and try again\n");
 		Cvar_SetValueQuick(&r_shadow_realtime_world, 0);
 	}
 

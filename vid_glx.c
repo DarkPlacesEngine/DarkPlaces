@@ -267,7 +267,7 @@ static void install_grabs(void)
 		if (!XF86DGAQueryVersion(vidx11_display, &MajorVersion, &MinorVersion))
 		{
 			// unable to query, probalby not supported
-			Con_Printf( "Failed to detect XF86DGA Mouse\n" );
+			Con_Print( "Failed to detect XF86DGA Mouse\n" );
 			vid_dga.integer = 0;
 		}
 		else
@@ -700,7 +700,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 
 	if (!(vidx11_display = XOpenDisplay(NULL)))
 	{
-		Con_Printf("Couldn't open the X display\n");
+		Con_Print("Couldn't open the X display\n");
 		return false;
 	}
 
@@ -731,7 +731,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 	visinfo = qglXChooseVisual(vidx11_display, vidx11_screen, attrib);
 	if (!visinfo)
 	{
-		Con_Printf("Couldn't get an RGB, Double-buffered, Depth visual\n");
+		Con_Print("Couldn't get an RGB, Double-buffered, Depth visual\n");
 		return false;
 	}
 

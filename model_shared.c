@@ -201,7 +201,7 @@ static void mod_newmap(void)
 Mod_Init
 ===============
 */
-static void Mod_Print (void);
+static void Mod_Print(void);
 static void Mod_Precache (void);
 void Mod_Init (void)
 {
@@ -476,10 +476,10 @@ static void Mod_Print(void)
 	int		i;
 	model_t	*mod;
 
-	Con_Printf ("Loaded models:\n");
+	Con_Print("Loaded models:\n");
 	for (i = 0, mod = mod_known;i < MAX_MOD_KNOWN;i++, mod++)
 		if (mod->name[0])
-			Con_Printf ("%4iK %s\n", mod->mempool ? (mod->mempool->totalsize + 1023) / 1024 : 0, mod->name);
+			Con_Printf("%4iK %s\n", mod->mempool ? (mod->mempool->totalsize + 1023) / 1024 : 0, mod->name);
 }
 
 /*
@@ -492,7 +492,7 @@ static void Mod_Precache(void)
 	if (Cmd_Argc() == 2)
 		Mod_ForName(Cmd_Argv(1), false, true, cl.worldmodel && !strcasecmp(Cmd_Argv(1), cl.worldmodel->name));
 	else
-		Con_Printf("usage: modelprecache <filename>\n");
+		Con_Print("usage: modelprecache <filename>\n");
 }
 
 #if 1

@@ -122,7 +122,7 @@ void S_SoundInfo_f(void)
 {
 	if (!sound_started || !shm)
 	{
-		Con_Printf ("sound system not started\n");
+		Con_Print("sound system not started\n");
 		return;
 	}
 
@@ -172,7 +172,7 @@ void S_Startup(void)
 	{
 		if (!SNDDMA_Init())
 		{
-			Con_Printf("S_Startup: SNDDMA_Init failed.\n");
+			Con_Print("S_Startup: SNDDMA_Init failed.\n");
 			sound_started = 0;
 			shm = NULL;
 			return;
@@ -217,7 +217,7 @@ S_Init
 */
 void S_Init(void)
 {
-	Con_DPrintf("\nSound Initialization\n");
+	Con_DPrint("\nSound Initialization\n");
 
 	S_RawSamples_ClearQueue();
 
@@ -329,7 +329,7 @@ sfx_t *S_FindName (char *name)
 
 	sfx = &known_sfx[num_sfx++];
 	memset(sfx, 0, sizeof(*sfx));
-	snprintf(sfx->name, sizeof(sfx->name), "%s", name);
+	strncpy(sfx->name, name, sizeof(sfx->name));
 	return sfx;
 }
 
@@ -635,14 +635,14 @@ void S_ClearBuffer(void)
 		{
 			if (hresult != DSERR_BUFFERLOST)
 			{
-				Con_Printf ("S_ClearBuffer: DS::Lock Sound Buffer Failed\n");
+				Con_Print("S_ClearBuffer: DS::Lock Sound Buffer Failed\n");
 				S_Shutdown ();
 				return;
 			}
 
 			if (++reps > 10000)
 			{
-				Con_Printf ("S_ClearBuffer: DS: couldn't restore buffer\n");
+				Con_Print("S_ClearBuffer: DS: couldn't restore buffer\n");
 				S_Shutdown ();
 				return;
 			}
@@ -686,7 +686,7 @@ void S_StaticSound (sfx_t *sfx, vec3_t origin, float vol, float attenuation)
 
 	if (total_channels == MAX_CHANNELS)
 	{
-		Con_Printf ("total_channels == MAX_CHANNELS\n");
+		Con_Print("total_channels == MAX_CHANNELS\n");
 		return;
 	}
 
@@ -848,7 +848,7 @@ void S_Update(vec3_t origin, vec3_t forward, vec3_t left, vec3_t up)
 			if (ch->sfx && (ch->leftvol || ch->rightvol) )
 				total++;
 
-		Con_Printf ("----(%i)----\n", total);
+		Con_Printf("----(%i)----\n", total);
 	}
 
 // mix some sound
@@ -927,7 +927,7 @@ void S_Update_(void)
 		if (pDSBuf)
 		{
 			if (pDSBuf->lpVtbl->GetStatus (pDSBuf, &dwStatus) != DS_OK)
-				Con_Printf ("Couldn't get sound buffer status\n");
+				Con_Print("Couldn't get sound buffer status\n");
 
 			if (dwStatus & DSBSTATUS_BUFFERLOST)
 				pDSBuf->lpVtbl->Restore (pDSBuf);
@@ -1026,7 +1026,7 @@ void S_LocalSound (char *sound)
 	sfx = S_PrecacheSound (sound, true);
 	if (!sfx)
 	{
-		Con_Printf ("S_LocalSound: can't precache %s\n", sound);
+		Con_Printf("S_LocalSound: can't precache %s\n", sound);
 		return;
 	}
 	S_StartSound (cl.viewentity, -1, sfx, vec3_origin, 1, 1);

@@ -61,7 +61,7 @@ void S_CaptureAVISound(portable_samplepair_t *buf, int length)
 		if (fwrite(out, 4, length, cl_avidemo_soundfile) < length)
 		{
 			Cvar_SetValueQuick(&cl_avidemo, 0);
-			Con_Printf("avi saving sound failed, out of disk space?  stopping avi demo capture.\n");
+			Con_Print("avi saving sound failed, out of disk space?  stopping avi demo capture.\n");
 		}
 	}
 	else if (cl_avidemo_soundfile)

@@ -197,7 +197,7 @@ void CL_KeepaliveMessage (void)
 		lastmsg = time;
 		// write out a nop
 		// LordHavoc: must use unreliable because reliable could kill the sigon message!
-		Con_Printf("--> client to server keepalive\n");
+		Con_Print("--> client to server keepalive\n");
 		msg.data = buf;
 		msg.maxsize = sizeof(buf);
 		msg.cursize = 0;
@@ -267,7 +267,7 @@ static void CL_SignonReply (void)
 {
 	//char 	str[8192];
 
-Con_DPrintf ("CL_SignonReply: %i\n", cls.signon);
+Con_DPrintf("CL_SignonReply: %i\n", cls.signon);
 
 	switch (cls.signon)
 	{
@@ -323,7 +323,7 @@ void CL_ParseServerInfo (void)
 	int nummodels, numsounds;
 	entity_t *ent;
 
-	Con_DPrintf ("Serverinfo packet received.\n");
+	Con_DPrint("Serverinfo packet received.\n");
 //
 // wipe the client_state_t struct
 //
@@ -360,10 +360,7 @@ void CL_ParseServerInfo (void)
 
 // seperate the printfs so the server message can have a color
 	if (cl.protocol != PROTOCOL_NEHAHRAMOVIE) // no messages when playing the Nehahra movie
-	{
-		Con_Printf("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n");
-		Con_Printf("%c%s\n", 2, str);
-	}
+		Con_Printf("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n\2%s", str);
 
 	// check memory integrity
 	Mem_CheckSentinelsGlobal();
@@ -1016,7 +1013,7 @@ void CL_ParseBeam (model_t *m, int lightning)
 			return;
 		}
 	}
-	Con_Printf ("beam list overflow!\n");
+	Con_Print("beam list overflow!\n");
 }
 
 void CL_ParseTempEntity(void)
@@ -1404,7 +1401,7 @@ void CL_ParseTempEntity(void)
 	}
 }
 
-#define SHOWNET(x) if(cl_shownet.integer==2)Con_Printf ("%3i:%s\n", msg_readcount-1, x);
+#define SHOWNET(x) if(cl_shownet.integer==2)Con_Printf("%3i:%s\n", msg_readcount-1, x);
 
 static qbyte cgamenetbuffer[65536];
 
@@ -1431,9 +1428,9 @@ void CL_ParseServerMessage(void)
 // if recording demos, copy the message out
 //
 	if (cl_shownet.integer == 1)
-		Con_Printf ("%f %i\n", realtime, net_message.cursize);
+		Con_Printf("%f %i\n", realtime, net_message.cursize);
 	else if (cl_shownet.integer == 2)
-		Con_Printf ("------------------\n");
+		Con_Print("------------------\n");
 
 	cl.onground = false;	// unless the server says otherwise
 //
@@ -1510,14 +1507,14 @@ void CL_ParseServerMessage(void)
 					i &= 31;
 				}
 				description[strlen(description)-1] = '\n'; // replace the last space with a newline
-				Con_Printf("%s", description);
+				Con_Print(description);
 				Host_Error ("CL_ParseServerMessage: Illegible server message\n");
 			}
 			break;
 
 		case svc_nop:
 			if (cls.signon < SIGNONS)
-				Con_Printf("<-- server to client keepalive\n");
+				Con_Print("<-- server to client keepalive\n");
 			break;
 
 		case svc_time:
@@ -1551,11 +1548,11 @@ void CL_ParseServerMessage(void)
 			Host_EndGame ("Server disconnected\n");
 
 		case svc_print:
-			Con_Printf ("%s", MSG_ReadString ());
+			Con_Print(MSG_ReadString());
 			break;
 
 		case svc_centerprint:
-			SCR_CenterPrint (MSG_ReadString ());
+			SCR_CenterPrint(MSG_ReadString ());
 			break;
 
 		case svc_stufftext:
@@ -1717,13 +1714,13 @@ void CL_ParseServerMessage(void)
 		case svc_finale:
 			cl.intermission = 2;
 			cl.completed_time = cl.time;
-			SCR_CenterPrint (MSG_ReadString ());
+			SCR_CenterPrint(MSG_ReadString ());
 			break;
 
 		case svc_cutscene:
 			cl.intermission = 3;
 			cl.completed_time = cl.time;
-			SCR_CenterPrint (MSG_ReadString ());
+			SCR_CenterPrint(MSG_ReadString ());
 			break;
 
 		case svc_sellscreen:
@@ -1795,7 +1792,7 @@ void CL_Parse_DumpPacket(void)
 {
 	if (!parsingerror)
 		return;
-	Con_Printf("Packet dump:\n");
+	Con_Print("Packet dump:\n");
 	SZ_HexDumpToConsole(&net_message);
 	parsingerror = false;
 }

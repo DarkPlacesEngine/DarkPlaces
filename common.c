@@ -404,7 +404,7 @@ void *SZ_GetSpace (sizebuf_t *buf, int length)
 			Host_Error ("SZ_GetSpace: %i is > full buffer size\n", length);
 
 		buf->overflowed = true;
-		Con_Printf ("SZ_GetSpace: overflow\n");
+		Con_Print("SZ_GetSpace: overflow\n");
 		SZ_Clear (buf);
 	}
 
@@ -470,7 +470,7 @@ void Com_HexDumpToConsole(const qbyte *data, int size)
 		if (cur >= flushpointer || i >= size)
 		{
 			*cur++ = 0;
-			Con_Printf("%s", text);
+			Con_Print(text);
 			cur = text;
 		}
 	}
@@ -695,14 +695,14 @@ void COM_CheckRegistered (void)
 	if (!FS_FileExists("gfx/pop.lmp"))
 	{
 		if (fs_modified)
-			Con_Printf ("Playing shareware version, with modification.\nwarning: most mods require full quake data.\n");
+			Con_Print("Playing shareware version, with modification.\nwarning: most mods require full quake data.\n");
 		else
-			Con_Printf ("Playing shareware version.\n");
+			Con_Print("Playing shareware version.\n");
 		return;
 	}
 
 	Cvar_Set ("registered", "1");
-	Con_Printf ("Playing registered version.\n");
+	Con_Print("Playing registered version.\n");
 }
 
 

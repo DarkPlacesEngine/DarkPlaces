@@ -86,7 +86,7 @@ void SV_CheckAllEnts (void)
 			continue;
 
 		if (SV_TestEntityPosition (check))
-			Con_Printf ("entity in invalid position\n");
+			Con_Print("entity in invalid position\n");
 	}
 }
 
@@ -107,12 +107,12 @@ void SV_CheckVelocity (edict_t *ent)
 	{
 		if (IS_NAN(ent->v->velocity[i]))
 		{
-			Con_Printf ("Got a NaN velocity on %s\n", PR_GetString(ent->v->classname));
+			Con_Printf("Got a NaN velocity on %s\n", PR_GetString(ent->v->classname));
 			ent->v->velocity[i] = 0;
 		}
 		if (IS_NAN(ent->v->origin[i]))
 		{
-			Con_Printf ("Got a NaN origin on %s\n", PR_GetString(ent->v->classname));
+			Con_Printf("Got a NaN origin on %s\n", PR_GetString(ent->v->classname));
 			ent->v->origin[i] = 0;
 		}
 	}
@@ -294,7 +294,7 @@ int SV_FlyMove (edict_t *ent, float time, float *stepnormal)
 		Con_Printf("entity %i bump %i: velocity %f %f %f trace %f", ent - sv.edicts, bumpcount, ent->v->velocity[0], ent->v->velocity[1], ent->v->velocity[2], trace.fraction);
 		if (trace.fraction < 1)
 			Con_Printf(" : %f %f %f", trace.plane.normal[0], trace.plane.normal[1], trace.plane.normal[2]);
-		Con_Printf("\n");
+		Con_Print("\n");
 #endif
 
 		/*
@@ -825,7 +825,7 @@ void SV_CheckStuck (edict_t *ent)
 	VectorCopy (ent->v->oldorigin, ent->v->origin);
 	if (!SV_TestEntityPosition(ent))
 	{
-		Con_DPrintf ("Unstuck.\n");
+		Con_DPrint("Unstuck.\n");
 		SV_LinkEdict (ent, true);
 		return;
 	}
@@ -839,14 +839,14 @@ void SV_CheckStuck (edict_t *ent)
 				ent->v->origin[2] = org[2] + z;
 				if (!SV_TestEntityPosition(ent))
 				{
-					Con_DPrintf ("Unstuck.\n");
+					Con_DPrint("Unstuck.\n");
 					SV_LinkEdict (ent, true);
 					return;
 				}
 			}
 
 	VectorCopy (org, ent->v->origin);
-	Con_DPrintf ("player is stuck.\n");
+	Con_DPrint("player is stuck.\n");
 }
 
 
@@ -955,7 +955,7 @@ int SV_TryUnstick (edict_t *ent, vec3_t oldvel)
 		if (fabs(oldorg[1] - ent->v->origin[1]) > 4
 		 || fabs(oldorg[0] - ent->v->origin[0]) > 4)
 		{
-			Con_DPrintf("TryUnstick - success.\n");
+			Con_DPrint("TryUnstick - success.\n");
 			return clip;
 		}
 
@@ -965,7 +965,7 @@ int SV_TryUnstick (edict_t *ent, vec3_t oldvel)
 
 	// still not moving
 	VectorClear (ent->v->velocity);
-	Con_DPrintf("TryUnstick - failure.\n");
+	Con_DPrint("TryUnstick - failure.\n");
 	return 7;
 }
 

@@ -375,7 +375,7 @@ void PRVM_ED_ClearEdict (prvm_edict_t *e);
 char *PRVM_ED_NewString (const char *string);
 // returns a copy of the string allocated from the server's string heap
 
-void PRVM_ED_Print (prvm_edict_t *ed);
+void PRVM_ED_Print(prvm_edict_t *ed);
 void PRVM_ED_Write (qfile_t *f, prvm_edict_t *ed);
 const char *PRVM_ED_ParseEdict (const char *data, prvm_edict_t *ent);
 

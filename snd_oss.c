@@ -64,14 +64,14 @@ qboolean SNDDMA_Init(void)
 	if (audio_fd < 0)
 	{
 		perror("/dev/dsp");
-		Con_Printf("Could not open /dev/dsp\n");
+		Con_Print("Could not open /dev/dsp\n");
 		return 0;
 	}
 
 	if (ioctl(audio_fd, SNDCTL_DSP_RESET, 0) < 0)
 	{
 		perror("/dev/dsp");
-		Con_Printf("Could not reset /dev/dsp\n");
+		Con_Print("Could not reset /dev/dsp\n");
 		close(audio_fd);
 		return 0;
 	}
@@ -79,14 +79,14 @@ qboolean SNDDMA_Init(void)
 	if (ioctl(audio_fd, SNDCTL_DSP_GETCAPS, &caps)==-1)
 	{
 		perror("/dev/dsp");
-		Con_Printf("Sound driver too old\n");
+		Con_Print("Sound driver too old\n");
 		close(audio_fd);
 		return 0;
 	}
 
 	if (!(caps & DSP_CAP_TRIGGER) || !(caps & DSP_CAP_MMAP))
 	{
-		Con_Printf("Sorry but your soundcard can't do this\n");
+		Con_Print("Sorry but your soundcard can't do this\n");
 		close(audio_fd);
 		return 0;
 	}
@@ -94,7 +94,7 @@ qboolean SNDDMA_Init(void)
 	if (ioctl(audio_fd, SNDCTL_DSP_GETOSPACE, &info)==-1)
 	{
 		perror("GETOSPACE");
-		Con_Printf("Um, can't do GETOSPACE?\n");
+		Con_Print("Um, can't do GETOSPACE?\n");
 		close(audio_fd);
 		return 0;
 	}
@@ -147,7 +147,7 @@ qboolean SNDDMA_Init(void)
 	if (!shm->buffer || shm->buffer == (unsigned char *)-1)
 	{
 		perror("/dev/dsp");
-		Con_Printf("Could not mmap /dev/dsp\n");
+		Con_Print("Could not mmap /dev/dsp\n");
 		close(audio_fd);
 		return 0;
 	}
@@ -160,7 +160,7 @@ qboolean SNDDMA_Init(void)
 	if (rc < 0)
 	{
 		perror("/dev/dsp");
-		Con_Printf("Could not set /dev/dsp to stereo=%d", shm->channels);
+		Con_Printf("Could not set /dev/dsp to stereo=%d\n", shm->channels);
 		close(audio_fd);
 		return 0;
 	}
@@ -173,7 +173,7 @@ qboolean SNDDMA_Init(void)
 	if (rc < 0)
 	{
 		perror("/dev/dsp");
-		Con_Printf("Could not set /dev/dsp speed to %d", shm->speed);
+		Con_Printf("Could not set /dev/dsp speed to %d\n", shm->speed);
 		close(audio_fd);
 		return 0;
 	}
@@ -185,7 +185,7 @@ qboolean SNDDMA_Init(void)
 		if (rc < 0)
 		{
 			perror("/dev/dsp");
-			Con_Printf("Could not support 16-bit data.  Try 8-bit.\n");
+			Con_Print("Could not support 16-bit data.  Try 8-bit.\n");
 			close(audio_fd);
 			return 0;
 		}
@@ -197,7 +197,7 @@ qboolean SNDDMA_Init(void)
 		if (rc < 0)
 		{
 			perror("/dev/dsp");
-			Con_Printf("Could not support 8-bit data.\n");
+			Con_Print("Could not support 8-bit data.\n");
 			close(audio_fd);
 			return 0;
 		}
@@ -205,7 +205,7 @@ qboolean SNDDMA_Init(void)
 	else
 	{
 		perror("/dev/dsp");
-		Con_Printf("%d-bit sound not supported.", shm->samplebits);
+		Con_Printf("%d-bit sound not supported.\n", shm->samplebits);
 		close(audio_fd);
 		return 0;
 	}
@@ -216,7 +216,7 @@ qboolean SNDDMA_Init(void)
 	if (rc < 0)
 	{
 		perror("/dev/dsp");
-		Con_Printf("Could not toggle.\n");
+		Con_Print("Could not toggle.\n");
 		close(audio_fd);
 		return 0;
 	}
@@ -225,7 +225,7 @@ qboolean SNDDMA_Init(void)
 	if (rc < 0)
 	{
 		perror("/dev/dsp");
-		Con_Printf("Could not toggle.\n");
+		Con_Print("Could not toggle.\n");
 		close(audio_fd);
 		return 0;
 	}
@@ -246,7 +246,7 @@ int SNDDMA_GetDMAPos(void)
 	if (ioctl(audio_fd, SNDCTL_DSP_GETOPTR, &count)==-1)
 	{
 		perror("/dev/dsp");
-		Con_Printf("Uh, sound dead.\n");
+		Con_Print("Uh, sound dead.\n");
 		close(audio_fd);
 		snd_inited = 0;
 		return 0;

@@ -93,7 +93,7 @@ void Cbuf_AddText (const char *text)
 
 	if (cmd_text.cursize + l >= cmd_text.maxsize)
 	{
-		Con_Printf ("Cbuf_AddText: overflow\n");
+		Con_Print("Cbuf_AddText: overflow\n");
 		return;
 	}
 
@@ -224,7 +224,7 @@ void Cmd_StuffCmds_f (void)
 
 	if (Cmd_Argc () != 1)
 	{
-		Con_Printf ("stuffcmds : execute command line parameters\n");
+		Con_Print("stuffcmds : execute command line parameters\n");
 		return;
 	}
 
@@ -292,17 +292,17 @@ static void Cmd_Exec_f (void)
 
 	if (Cmd_Argc () != 2)
 	{
-		Con_Printf ("exec <filename> : execute a script file\n");
+		Con_Print("exec <filename> : execute a script file\n");
 		return;
 	}
 
 	f = (char *)FS_LoadFile (Cmd_Argv(1), false);
 	if (!f)
 	{
-		Con_Printf ("couldn't exec %s\n",Cmd_Argv(1));
+		Con_Printf("couldn't exec %s\n",Cmd_Argv(1));
 		return;
 	}
-	Con_DPrintf ("execing %s\n",Cmd_Argv(1));
+	Con_DPrintf("execing %s\n",Cmd_Argv(1));
 
 	Cbuf_InsertText (f);
 	Mem_Free(f);
@@ -321,8 +321,8 @@ static void Cmd_Echo_f (void)
 	int		i;
 
 	for (i=1 ; i<Cmd_Argc() ; i++)
-		Con_Printf ("%s ",Cmd_Argv(i));
-	Con_Printf ("\n");
+		Con_Printf("%s ",Cmd_Argv(i));
+	Con_Print("\n");
 }
 
 /*
@@ -350,16 +350,16 @@ static void Cmd_Alias_f (void)
 
 	if (Cmd_Argc() == 1)
 	{
-		Con_Printf ("Current alias commands:\n");
+		Con_Print("Current alias commands:\n");
 		for (a = cmd_alias ; a ; a=a->next)
-			Con_Printf ("%s : %s\n", a->name, a->value);
+			Con_Printf("%s : %s\n", a->name, a->value);
 		return;
 	}
 
 	s = Cmd_Argv(1);
 	if (strlen(s) >= MAX_ALIAS_NAME)
 	{
-		Con_Printf ("Alias name is too long\n");
+		Con_Print("Alias name is too long\n");
 		return;
 	}
 
@@ -454,15 +454,15 @@ static void Cmd_List_f (void)
 	{
 		if (partial && strncmp(partial, cmd->name, len))
 			continue;
-		Con_Printf ("%s\n", cmd->name);
+		Con_Printf("%s\n", cmd->name);
 		count++;
 	}
 
-	Con_Printf ("%i Command%s", count, (count > 1) ? "s" : "");
+	Con_Printf("%i Command%s", count, (count > 1) ? "s" : "");
 	if (partial)
 		Con_Printf(" beginning with \"%s\"", partial);
 
-	Con_Printf ("\n\n");
+	Con_Print("\n\n");
 }
 
 /*
@@ -584,7 +584,7 @@ void Cmd_AddCommand (const char *cmd_name, xcommand_t function)
 // fail if the command is a variable name
 	if (Cvar_VariableString(cmd_name)[0])
 	{
-		Con_Printf ("Cmd_AddCommand: %s already defined as a var\n", cmd_name);
+		Con_Printf("Cmd_AddCommand: %s already defined as a var\n", cmd_name);
 		return;
 	}
 
@@ -593,7 +593,7 @@ void Cmd_AddCommand (const char *cmd_name, xcommand_t function)
 	{
 		if (!strcmp (cmd_name, cmd->name))
 		{
-			Con_Printf ("Cmd_AddCommand: %s already defined\n", cmd_name);
+			Con_Printf("Cmd_AddCommand: %s already defined\n", cmd_name);
 			return;
 		}
 	}
@@ -841,7 +841,7 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 
 // check cvars (always)
 	if (!Cvar_Command () && host_initialized)
-		Con_Printf ("Unknown command \"%s\"\n", Cmd_Argv(0));
+		Con_Printf("Unknown command \"%s\"\n", Cmd_Argv(0));
 
 	cmd_tokenizebufferpos = oldpos;
 }
@@ -856,10 +856,10 @@ Sends the entire command line over to the server
 */
 void Cmd_ForwardToServer (void)
 {
-	char *s;
+	const char *s;
 	if (cls.state != ca_connected)
 	{
-		Con_Printf ("Can't \"%s\", not connected\n", Cmd_Argv(0));
+		Con_Printf("Can't \"%s\", not connected\n", Cmd_Argv(0));
 		return;
 	}
 
@@ -872,7 +872,7 @@ void Cmd_ForwardToServer (void)
 	if (strcasecmp(Cmd_Argv(0), "cmd") != 0)
 		s = va("%s %s", Cmd_Argv(0), Cmd_Argc() > 1 ? Cmd_Args() : "\n");
 	else
-		s = va("%s", Cmd_Argc() > 1 ? Cmd_Args() : "\n");
+		s = Cmd_Argc() > 1 ? Cmd_Args() : "\n";
 	MSG_WriteByte(&cls.message, clc_stringcmd);
 	SZ_Write(&cls.message, s, strlen(s) + 1);
 }

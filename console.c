@@ -231,7 +231,7 @@ void Con_Init (void)
 	con_linewidth = -1;
 	Con_CheckResize ();
 
-	Con_Printf ("Console initialized.\n");
+	Con_Print("Console initialized.\n");
 
 //
 // register our commands
@@ -261,14 +261,14 @@ void Con_Linefeed (void)
 
 /*
 ================
-Con_Print
+Con_PrintToHistory
 
 Handles cursor positioning, line wrapping, etc
 All console printing must go through this in order to be displayed
 If no console is visible, the notify window will pop up.
 ================
 */
-void Con_Print (const char *txt)
+void Con_PrintToHistory(const char *txt)
 {
 	int y, c, l, mask;
 	static int cr;
@@ -349,50 +349,57 @@ void Con_Print (const char *txt)
 	}
 }
 
+// LordHavoc: increased from 4096 to 16384
+#define	MAXPRINTMSG	16384
 
 /*
 ================
-Con_DebugLog
+Con_LogPrint
 ================
 */
-void Con_DebugLog (const char *msg)
+void Con_LogPrint(const char *logfilename, const char *msg)
 {
-    qfile_t* file;
-
-    file = FS_Open ("qconsole.log", "at", true);
+	qfile_t *file;
+	file = FS_Open(logfilename, "at", true);
 	if (file)
 	{
-		FS_Printf (file, "%s", msg);
-		FS_Close (file);
+		FS_Print(file, msg);
+		FS_Close(file);
 	}
 }
 
-
 /*
 ================
-Con_Printf
-
-Handles cursor positioning, line wrapping, etc
+Con_LogPrintf
 ================
 */
-// LordHavoc: increased from 4096 to 16384
-#define	MAXPRINTMSG	16384
-// FIXME: make a buffer size safe vsprintf?
-void Con_Printf (const char *fmt, ...)
+void Con_LogPrintf(const char *logfilename, const char *fmt, ...)
 {
 	va_list argptr;
 	char msg[MAXPRINTMSG];
 
-	va_start (argptr,fmt);
-	vsprintf (msg,fmt,argptr);
-	va_end (argptr);
+	va_start(argptr,fmt);
+	vsprintf(msg,fmt,argptr);
+	va_end(argptr);
 
+	Con_LogPrint(logfilename, msg);
+}
+
+/*
+================
+Con_Print
+
+Prints to all appropriate console targets
+================
+*/
+void Con_Print(const char *msg)
+{
 	// also echo to debugging console
-	Sys_Printf ("%s", msg);
+	Sys_Print(msg);
 
 	// log all messages to file
 	if (con_debuglog)
-		Con_DebugLog (msg);
+		Con_LogPrint("qconsole.log", msg);
 
 	if (!con_initialized)
 		return;
@@ -401,7 +408,40 @@ void Con_Printf (const char *fmt, ...)
 		return;		// no graphics mode
 
 	// write it to the scrollable buffer
-	Con_Print (msg);
+	Con_PrintToHistory(msg);
+}
+
+/*
+================
+Con_Printf
+
+Prints to all appropriate console targets
+================
+*/
+void Con_Printf(const char *fmt, ...)
+{
+	va_list argptr;
+	char msg[MAXPRINTMSG];
+
+	va_start(argptr,fmt);
+	vsprintf(msg,fmt,argptr);
+	va_end(argptr);
+
+	Con_Print(msg);
+}
+
+/*
+================
+Con_DPrint
+
+A Con_Print that only shows up if the "developer" cvar is set
+================
+*/
+void Con_DPrint(const char *msg)
+{
+	if (!developer.integer)
+		return;			// don't confuse non-developers with techie stuff...
+	Con_Print(msg);
 }
 
 /*
@@ -411,7 +451,7 @@ Con_DPrintf
 A Con_Printf that only shows up if the "developer" cvar is set
 ================
 */
-void Con_DPrintf (const char *fmt, ...)
+void Con_DPrintf(const char *fmt, ...)
 {
 	va_list argptr;
 	char msg[MAXPRINTMSG];
@@ -419,13 +459,25 @@ void Con_DPrintf (const char *fmt, ...)
 	if (!developer.integer)
 		return;			// don't confuse non-developers with techie stuff...
 
-	va_start (argptr,fmt);
-	vsprintf (msg,fmt,argptr);
-	va_end (argptr);
+	va_start(argptr,fmt);
+	vsprintf(msg,fmt,argptr);
+	va_end(argptr);
 
-	Con_Printf ("%s", msg);
+	Con_Print(msg);
 }
 
+
+/*
+================
+Con_SafePrint
+
+Okay to call even when the screen can't be updated
+==================
+*/
+void Con_SafePrint(const char *msg)
+{
+	Con_Print(msg);
+}
 
 /*
 ==================
@@ -434,16 +486,16 @@ Con_SafePrintf
 Okay to call even when the screen can't be updated
 ==================
 */
-void Con_SafePrintf (const char *fmt, ...)
+void Con_SafePrintf(const char *fmt, ...)
 {
-	va_list		argptr;
-	char		msg[1024];
+	va_list argptr;
+	char msg[MAXPRINTMSG];
 
-	va_start (argptr,fmt);
-	vsprintf (msg,fmt,argptr);
-	va_end (argptr);
+	va_start(argptr,fmt);
+	vsprintf(msg,fmt,argptr);
+	va_end(argptr);
 
-	Con_Printf ("%s", msg);
+	Con_Print(msg);
 }
 
 
@@ -629,20 +681,20 @@ void Con_DisplayList(const char **list)
 	while (*list) {
 		len = strlen(*list);
 		if (pos + maxlen >= width) {
-			Con_Printf("\n");
+			Con_Print("\n");
 			pos = 0;
 		}
 
-		Con_Printf("%s", *list);
+		Con_Print(*list);
 		for (i = 0; i < (maxlen - len); i++)
-			Con_Printf(" ");
+			Con_Print(" ");
 
 		pos += maxlen;
 		list++;
 	}
 
 	if (pos)
-		Con_Printf("\n\n");
+		Con_Print("\n\n");
 }
 
 /*
@@ -702,10 +754,10 @@ void Con_CompleteCommandLine (void)
 				cmd_len++;
 		} while (i == 3);
 		// 'quakebar'
-		Con_Printf("\n\35");
+		Con_Print("\n\35");
 		for (i = 0; i < con_linewidth - 4; i++)
-			Con_Printf("\36");
-		Con_Printf("\37\n");
+			Con_Print("\36");
+		Con_Print("\37\n");
 
 		// Print Possible Commands
 		if (c) {

@@ -151,33 +151,33 @@ void PR_PrintStatement (dstatement_t *s)
 
 	if ( (unsigned)s->op < sizeof(pr_opnames)/sizeof(pr_opnames[0]))
 	{
-		Con_Printf ("%s ",  pr_opnames[s->op]);
+		Con_Printf("%s ",  pr_opnames[s->op]);
 		i = strlen(pr_opnames[s->op]);
 		for ( ; i<10 ; i++)
-			Con_Printf (" ");
+			Con_Print(" ");
 	}
 
 	if (s->op == OP_IF || s->op == OP_IFNOT)
-		Con_Printf ("%sbranch %i",PR_GlobalString((unsigned short) s->a),s->b);
+		Con_Printf("%sbranch %i",PR_GlobalString((unsigned short) s->a),s->b);
 	else if (s->op == OP_GOTO)
 	{
-		Con_Printf ("branch %i",s->a);
+		Con_Printf("branch %i",s->a);
 	}
 	else if ( (unsigned)(s->op - OP_STORE_F) < 6)
 	{
-		Con_Printf ("%s", PR_GlobalString((unsigned short) s->a));
-		Con_Printf ("%s", PR_GlobalStringNoContents((unsigned short) s->b));
+		Con_Print(PR_GlobalString((unsigned short) s->a));
+		Con_Print(PR_GlobalStringNoContents((unsigned short) s->b));
 	}
 	else
 	{
 		if (s->a)
-			Con_Printf ("%s", PR_GlobalString((unsigned short) s->a));
+			Con_Print(PR_GlobalString((unsigned short) s->a));
 		if (s->b)
-			Con_Printf ("%s", PR_GlobalString((unsigned short) s->b));
+			Con_Print(PR_GlobalString((unsigned short) s->b));
 		if (s->c)
-			Con_Printf ("%s", PR_GlobalStringNoContents((unsigned short) s->c));
+			Con_Print(PR_GlobalStringNoContents((unsigned short) s->c));
 	}
-	Con_Printf ("\n");
+	Con_Print("\n");
 }
 
 /*
@@ -197,9 +197,9 @@ void PR_StackTrace (void)
 		f = pr_stack[i].f;
 
 		if (!f)
-			Con_Printf ("<NULL FUNCTION>\n");
+			Con_Print("<NULL FUNCTION>\n");
 		else
-			Con_Printf ("%12s : %s : statement %i\n", PR_GetString(f->s_file), PR_GetString(f->s_name), pr_stack[i].s - f->first_statement);
+			Con_Printf("%12s : %s : statement %i\n", PR_GetString(f->s_file), PR_GetString(f->s_name), pr_stack[i].s - f->first_statement);
 	}
 }
 
@@ -235,7 +235,7 @@ void PR_Profile_f (void)
 		if (best)
 		{
 			//if (num < howmany)
-				Con_Printf ("%7i %7i %s\n", best->profile, best->builtinsprofile, PR_GetString(best->s_name));
+				Con_Printf("%7i %7i %s\n", best->profile, best->builtinsprofile, PR_GetString(best->s_name));
 			num++;
 			best->profile = 0;
 			best->builtinsprofile = 0;
@@ -253,7 +253,7 @@ void PR_PrintState(void)
 				PR_PrintStatement (pr_statements + pr_xstatement + i);
 	}
 	else
-		Con_Printf("null function executing??\n");
+		Con_Print("null function executing??\n");
 	PR_StackTrace ();
 }
 
@@ -261,7 +261,7 @@ void PR_Crash(void)
 {
 	if (pr_depth > 0)
 	{
-		Con_Printf("QuakeC crash report:\n");
+		Con_Print("QuakeC crash report:\n");
 		PR_PrintState();
 	}
 
@@ -383,7 +383,7 @@ void PR_ExecuteProgram (func_t fnum, const char *errormessage)
 	if (!fnum || fnum >= progs->numfunctions)
 	{
 		if (pr_global_struct->self)
-			ED_Print (PROG_TO_EDICT(pr_global_struct->self));
+			ED_Print(PROG_TO_EDICT(pr_global_struct->self));
 		Host_Error ("PR_ExecuteProgram: %s", errormessage);
 	}
 

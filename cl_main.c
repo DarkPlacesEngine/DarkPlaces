@@ -177,7 +177,7 @@ void CL_Disconnect(void)
 		if (cls.demorecording)
 			CL_Stop_f();
 
-		Con_DPrintf("Sending clc_disconnect\n");
+		Con_DPrint("Sending clc_disconnect\n");
 		SZ_Clear(&cls.message);
 		MSG_WriteByte(&cls.message, clc_disconnect);
 		NetConn_SendUnreliableMessage(cls.netcon, &cls.message);
@@ -248,7 +248,7 @@ void CL_EstablishConnection(const char *host)
 	}
 	else
 	{
-		Con_Printf("Unable to find a suitable network socket to connect to server.\n");
+		Con_Print("Unable to find a suitable network socket to connect to server.\n");
 		strcpy(m_return_reason, "No network");
 	}
 }
@@ -275,7 +275,7 @@ static void CL_PrintEntities_f(void)
 			strcpy(name, "--no model--");
 		for (j = strlen(name);j < 25;j++)
 			name[j] = ' ';
-		Con_Printf ("%3i: %s:%04i (%5i %5i %5i) [%3i %3i %3i] %4.2f %5.3f\n", i, name, ent->render.frame, (int) ent->render.origin[0], (int) ent->render.origin[1], (int) ent->render.origin[2], (int) ent->render.angles[0] % 360, (int) ent->render.angles[1] % 360, (int) ent->render.angles[2] % 360, ent->render.scale, ent->render.alpha);
+		Con_Printf("%3i: %s:%04i (%5i %5i %5i) [%3i %3i %3i] %4.2f %5.3f\n", i, name, ent->render.frame, (int) ent->render.origin[0], (int) ent->render.origin[1], (int) ent->render.origin[2], (int) ent->render.angles[0] % 360, (int) ent->render.angles[1] % 360, (int) ent->render.angles[2] % 360, ent->render.scale, ent->render.alpha);
 	}
 }
 
@@ -1179,7 +1179,7 @@ void CL_SendCmd(usercmd_t *cmd)
 	{
 		if (developer.integer)
 		{
-			Con_Printf("CL_SendCmd: sending reliable message:\n");
+			Con_Print("CL_SendCmd: sending reliable message:\n");
 			SZ_HexDumpToConsole(&cls.message);
 		}
 		if (NetConn_SendReliableMessage(cls.netcon, &cls.message) == -1)
@@ -1193,9 +1193,9 @@ static void CL_PauseDemo_f (void)
 {
 	cls.demopaused = !cls.demopaused;
 	if (cls.demopaused)
-		Con_Printf("Demo paused\n");
+		Con_Print("Demo paused\n");
 	else
-		Con_Printf("Demo unpaused\n");
+		Con_Print("Demo unpaused\n");
 }
 
 /*
@@ -1207,7 +1207,7 @@ static void CL_Fog_f (void)
 {
 	if (Cmd_Argc () == 1)
 	{
-		Con_Printf ("\"fog\" is \"%f %f %f %f\"\n", fog_density, fog_red, fog_green, fog_blue);
+		Con_Printf("\"fog\" is \"%f %f %f %f\"\n", fog_density, fog_red, fog_green, fog_blue);
 		return;
 	}
 	fog_density = atof(Cmd_Argv(1));

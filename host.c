@@ -109,7 +109,7 @@ void Host_EndGame (const char *format, ...)
 	va_start (argptr,format);
 	vsprintf (string,format,argptr);
 	va_end (argptr);
-	Con_DPrintf ("Host_EndGame: %s\n",string);
+	Con_DPrintf("Host_EndGame: %s\n",string);
 
 	if (sv.active)
 		Host_ShutdownServer (false);
@@ -144,7 +144,7 @@ void Host_Error (const char *error, ...)
 	vsprintf (hosterrorstring1,error,argptr);
 	va_end (argptr);
 
-	Con_Printf ("Host_Error: %s\n", hosterrorstring1);
+	Con_Printf("Host_Error: %s\n", hosterrorstring1);
 
 	// LordHavoc: if first frame has not been shown, or currently shutting
 	// down, do Sys_Error instead
@@ -312,7 +312,7 @@ void Host_SaveConfig_f(void)
 		f = FS_Open ("config.cfg", "w", false);
 		if (!f)
 		{
-			Con_Printf ("Couldn't write config.cfg.\n");
+			Con_Print("Couldn't write config.cfg.\n");
 			return;
 		}
 
@@ -326,6 +326,20 @@ void Host_SaveConfig_f(void)
 
 /*
 =================
+SV_ClientPrint
+
+Sends text across to be displayed
+FIXME: make this just a stuffed echo?
+=================
+*/
+void SV_ClientPrint(const char *msg)
+{
+	MSG_WriteByte(&host_client->message, svc_print);
+	MSG_WriteString(&host_client->message, msg);
+}
+
+/*
+=================
 SV_ClientPrintf
 
 Sends text across to be displayed
@@ -335,14 +349,38 @@ FIXME: make this just a stuffed echo?
 void SV_ClientPrintf(const char *fmt, ...)
 {
 	va_list argptr;
-	char string[1024];
+	char msg[4096];
 
-	va_start (argptr,fmt);
-	vsprintf (string, fmt,argptr);
-	va_end (argptr);
+	va_start(argptr,fmt);
+	vsnprintf(msg,sizeof(msg),fmt,argptr);
+	va_end(argptr);
 
-	MSG_WriteByte (&host_client->message, svc_print);
-	MSG_WriteString (&host_client->message, string);
+	SV_ClientPrint(msg);
+}
+
+/*
+=================
+SV_BroadcastPrint
+
+Sends text to all active clients
+=================
+*/
+void SV_BroadcastPrint(const char *msg)
+{
+	int i;
+	client_t *client;
+
+	for (i = 0, client = svs.clients;i < svs.maxclients;i++, client++)
+	{
+		if (client->spawned)
+		{
+			MSG_WriteByte(&client->message, svc_print);
+			MSG_WriteString(&client->message, msg);
+		}
+	}
+
+	if (sv_echobprint.integer && cls.state == ca_dedicated)
+		Sys_Print(msg);
 }
 
 /*
@@ -355,25 +393,13 @@ Sends text to all active clients
 void SV_BroadcastPrintf(const char *fmt, ...)
 {
 	va_list argptr;
-	char string[4096];
-	int i;
-	client_t *client;
+	char msg[4096];
 
 	va_start(argptr,fmt);
-	vsnprintf(string, sizeof(string), fmt,argptr);
+	vsnprintf(msg,sizeof(msg),fmt,argptr);
 	va_end(argptr);
 
-	for (i = 0, client = svs.clients;i < svs.maxclients;i++, client++)
-	{
-		if (client->spawned)
-		{
-			MSG_WriteByte(&client->message, svc_print);
-			MSG_WriteString(&client->message, string);
-		}
-	}
-
-	if (sv_echobprint.integer && cls.state == ca_dedicated)
-		Sys_Printf("%s", string);
+	SV_BroadcastPrint(msg);
 }
 
 /*
@@ -525,7 +551,7 @@ not reinitialize anything.
 */
 void Host_ClearMemory (void)
 {
-	Con_DPrintf ("Clearing memory\n");
+	Con_DPrint("Clearing memory\n");
 	Mod_ClearAll ();
 
 	cls.signon = 0;
@@ -824,7 +850,7 @@ void Host_Frame (float time)
 			c++;
 	}
 
-	Con_Printf ("serverprofile: %2i clients %2i msec\n",  c,  m);
+	Con_Printf("serverprofile: %2i clients %2i msec\n",  c,  m);
 }
 
 //============================================================================
@@ -864,7 +890,7 @@ void Host_Init (void)
 	NetConn_Init();
 	SV_Init();
 
-	Con_Printf ("Builddate: %s\n", buildstring);
+	Con_Printf("Builddate: %s\n", buildstring);
 
 	if (cls.state != ca_dedicated)
 	{
@@ -887,7 +913,7 @@ void Host_Init (void)
 
 	host_initialized = true;
 
-	Con_DPrintf ("========Initialized=========\n");
+	Con_DPrint("========Initialized=========\n");
 
 	if (cls.state != ca_dedicated)
 	{
@@ -920,7 +946,7 @@ void Host_Shutdown(void)
 
 	if (isdown)
 	{
-		Con_Printf ("recursive shutdown\n");
+		Con_Print("recursive shutdown\n");
 		return;
 	}
 	isdown = true;

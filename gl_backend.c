@@ -155,7 +155,7 @@ void GL_Backend_FreeArrays(void)
 
 static void gl_backend_start(void)
 {
-	Con_DPrintf("OpenGL Backend started\n");
+	Con_DPrint("OpenGL Backend started\n");
 	if (qglDrawRangeElements != NULL)
 	{
 		CHECKGLERROR
@@ -178,7 +178,7 @@ static void gl_backend_shutdown(void)
 	backendunits = 0;
 	backendactive = false;
 
-	Con_DPrintf("OpenGL Backend shutting down\n");
+	Con_DPrint("OpenGL Backend shutting down\n");
 
 	GL_Backend_FreeArrays();
 }
@@ -729,13 +729,13 @@ void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 			int i, j, size;
 			const int *p;
 			if (!qglIsEnabled(GL_VERTEX_ARRAY))
-				Con_Printf("R_Mesh_Draw: vertex array not enabled\n");
+				Con_Print("R_Mesh_Draw: vertex array not enabled\n");
 			for (j = 0, size = numverts * (int)sizeof(float[3]), p = gl_state.pointer_vertex;j < size;j += sizeof(int), p++)
 				paranoidblah += *p;
 			if (gl_state.pointer_color)
 			{
 				if (!qglIsEnabled(GL_COLOR_ARRAY))
-					Con_Printf("R_Mesh_Draw: color array set but not enabled\n");
+					Con_Print("R_Mesh_Draw: color array set but not enabled\n");
 				for (j = 0, size = numverts * (int)sizeof(float[4]), p = gl_state.pointer_color;j < size;j += sizeof(int), p++)
 					paranoidblah += *p;
 			}
@@ -744,10 +744,10 @@ void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 				if (gl_state.units[i].t1d || gl_state.units[i].t2d || gl_state.units[i].t3d || gl_state.units[i].tcubemap || gl_state.units[i].arrayenabled)
 				{
 					if (gl_state.units[i].arrayenabled && !(gl_state.units[i].t1d || gl_state.units[i].t2d || gl_state.units[i].t3d || gl_state.units[i].tcubemap))
-						Con_Printf("R_Mesh_Draw: array enabled but no texture bound\n");
+						Con_Print("R_Mesh_Draw: array enabled but no texture bound\n");
 					GL_ActiveTexture(i);
 					if (!qglIsEnabled(GL_TEXTURE_COORD_ARRAY))
-						Con_Printf("R_Mesh_Draw: texcoord array set but not enabled\n");
+						Con_Print("R_Mesh_Draw: texcoord array set but not enabled\n");
 					for (j = 0, size = numverts * ((gl_state.units[i].t3d || gl_state.units[i].tcubemap) ? (int)sizeof(float[3]) : (int)sizeof(float[2])), p = gl_state.units[i].pointer_texcoord;j < size;j += sizeof(int), p++)
 						paranoidblah += *p;
 				}
@@ -1509,13 +1509,13 @@ int R_Mesh_CacheArray(rcachearrayrequest_t *r)
 	l->prev = l->next->prev;
 	while (l->next->data && l->data && l->next->data->offset <= d->offset)
 	{
-		//Con_Printf(">\n");
+		//Con_Print(">\n");
 		l->next = l->next->next;
 		l->prev = l->prev->next;
 	}
 	while (l->prev->data && l->data && l->prev->data->offset >= d->offset)
 	{
-		//Con_Printf("<\n");
+		//Con_Print("<\n");
 		l->prev = l->prev->prev;
 		l->next = l->next->prev;
 	}

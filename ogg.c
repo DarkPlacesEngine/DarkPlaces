@@ -390,7 +390,7 @@ sfxcache_t *OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 	ov_decode.buffsize = fs_filesize;
 	if (qov_open_callbacks (&ov_decode, &vf, NULL, 0, callbacks) < 0)
 	{
-		Con_Printf ("error while opening Ogg Vorbis file \"%s\"\n", filename);
+		Con_Printf("error while opening Ogg Vorbis file \"%s\"\n", filename);
 		Mem_Free (data);
 		return NULL;
 	}
@@ -399,7 +399,7 @@ sfxcache_t *OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 	vi = qov_info (&vf, -1);
 	if (vi->channels < 1 || vi->channels > 2)
 	{
-		Con_Printf ("%s has an unsupported number of channels (%i)\n",
+		Con_Printf("%s has an unsupported number of channels (%i)\n",
 					s->name, vi->channels);
 		qov_clear (&vf);
 		Mem_Free (data);
@@ -433,7 +433,7 @@ sfxcache_t *OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 	}
 	else
 	{
-		Con_Printf ("failed to allocate memory for sound \"%s\"\n", s->name);
+		Con_Printf("failed to allocate memory for sound \"%s\"\n", s->name);
 		Mem_FreePool (&s->mempool);
 	}
 

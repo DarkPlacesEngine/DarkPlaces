@@ -54,7 +54,7 @@ void CL_NextDemo (void)
 		cls.demonum = 0;
 		if (!cls.demos[cls.demonum][0])
 		{
-			Con_Printf ("No demos listed with startdemos\n");
+			Con_Print("No demos listed with startdemos\n");
 			cls.demonum = -1;
 			return;
 		}
@@ -212,7 +212,7 @@ void CL_Stop_f (void)
 
 	if (!cls.demorecording)
 	{
-		Con_Printf ("Not recording a demo.\n");
+		Con_Print("Not recording a demo.\n");
 		return;
 	}
 
@@ -225,7 +225,7 @@ void CL_Stop_f (void)
 	FS_Close (cls.demofile);
 	cls.demofile = NULL;
 	cls.demorecording = false;
-	Con_Printf ("Completed demo\n");
+	Con_Print("Completed demo\n");
 }
 
 /*
@@ -246,19 +246,19 @@ void CL_Record_f (void)
 	c = Cmd_Argc();
 	if (c != 2 && c != 3 && c != 4)
 	{
-		Con_Printf ("record <demoname> [<map> [cd track]]\n");
+		Con_Print("record <demoname> [<map> [cd track]]\n");
 		return;
 	}
 
 	if (strstr(Cmd_Argv(1), ".."))
 	{
-		Con_Printf ("Relative pathnames are not allowed.\n");
+		Con_Print("Relative pathnames are not allowed.\n");
 		return;
 	}
 
 	if (c == 2 && cls.state == ca_connected)
 	{
-		Con_Printf("Can not record - already connected to server\nClient demo recording must be started before connecting\n");
+		Con_Print("Can not record - already connected to server\nClient demo recording must be started before connecting\n");
 		return;
 	}
 
@@ -266,7 +266,7 @@ void CL_Record_f (void)
 	if (c == 4)
 	{
 		track = atoi(Cmd_Argv(3));
-		Con_Printf ("Forcing CD track to %i\n", cls.forcetrack);
+		Con_Printf("Forcing CD track to %i\n", cls.forcetrack);
 	}
 	else
 		track = -1;
@@ -280,16 +280,16 @@ void CL_Record_f (void)
 		Cmd_ExecuteString ( va("map %s", Cmd_Argv(2)), src_command);
 
 	// open the demo file
-	Con_Printf ("recording to %s.\n", name);
+	Con_Printf("recording to %s.\n", name);
 	cls.demofile = FS_Open (name, "wb", false);
 	if (!cls.demofile)
 	{
-		Con_Printf ("ERROR: couldn't open.\n");
+		Con_Print("ERROR: couldn't open.\n");
 		return;
 	}
 
 	cls.forcetrack = track;
-	FS_Printf (cls.demofile, "%i\n", cls.forcetrack);
+	FS_Printf(cls.demofile, "%i\n", cls.forcetrack);
 
 	cls.demorecording = true;
 }
@@ -313,7 +313,7 @@ void CL_PlayDemo_f (void)
 
 	if (Cmd_Argc() != 2)
 	{
-		Con_Printf ("play <demoname> : plays a demo\n");
+		Con_Print("play <demoname> : plays a demo\n");
 		return;
 	}
 
@@ -327,11 +327,11 @@ void CL_PlayDemo_f (void)
 	strlcpy (name, Cmd_Argv(1), sizeof (name));
 	FS_DefaultExtension (name, ".dem", sizeof (name));
 
-	Con_Printf ("Playing demo from %s.\n", name);
+	Con_Printf("Playing demo from %s.\n", name);
 	cls.demofile = FS_Open (name, "rb", false);
 	if (!cls.demofile)
 	{
-		Con_Printf ("ERROR: couldn't open.\n");
+		Con_Print("ERROR: couldn't open.\n");
 		cls.demonum = -1;		// stop demo loop
 		return;
 	}
@@ -373,7 +373,7 @@ void CL_FinishTimeDemo (void)
 	fpsavg = time > 0 ? frames / time : 0;
 	fpsmax = cls.td_minframetime > 0 ? 1.0 / cls.td_minframetime : 0;
 	// LordHavoc: timedemo now prints out 7 digits of fraction, and min/avg/max
-	Con_Printf ("%i frames %5.7f seconds %5.7f fps\nmin/avg/max: %5.7f/%5.7f/%5.7f\n", frames, time, fpsavg, fpsmin, fpsavg, fpsmax);
+	Con_Printf("%i frames %5.7f seconds %5.7f fps\nmin/avg/max: %5.7f/%5.7f/%5.7f\n", frames, time, fpsavg, fpsmin, fpsavg, fpsmax);
 }
 
 /*
@@ -390,7 +390,7 @@ void CL_TimeDemo_f (void)
 
 	if (Cmd_Argc() != 2)
 	{
-		Con_Printf ("timedemo <demoname> : gets demo speeds\n");
+		Con_Print("timedemo <demoname> : gets demo speeds\n");
 		return;
 	}
 

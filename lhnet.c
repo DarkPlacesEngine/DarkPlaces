@@ -481,7 +481,7 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 #ifdef WIN32
 			}
 			else
-				Con_Printf("LHNET_OpenSocket_Connectionless: WSAStartup failed\n");
+				Con_Print("LHNET_OpenSocket_Connectionless: WSAStartup failed\n");
 #endif
 			break;
 		default:
@@ -597,7 +597,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 			switch (e)
 			{
 				case WSAECONNREFUSED:
-					Con_Printf("Connection refused\n");
+					Con_Print("Connection refused\n");
 					return 0;
 			}
 #else
@@ -606,7 +606,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 			switch (errno)
 			{
 				case ECONNREFUSED:
-					Con_Printf("Connection refused\n");
+					Con_Print("Connection refused\n");
 					return 0;
 			}
 #endif
@@ -632,7 +632,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 			switch (e)
 			{
 				case WSAECONNREFUSED:
-					Con_Printf("Connection refused\n");
+					Con_Print("Connection refused\n");
 					return 0;
 			}
 #else
@@ -641,7 +641,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 			switch (errno)
 			{
 				case ECONNREFUSED:
-					Con_Printf("Connection refused\n");
+					Con_Print("Connection refused\n");
 					return 0;
 			}
 #endif

@@ -73,7 +73,7 @@ void R_Modules_Shutdown(void)
 
 void R_Modules_Restart(void)
 {
-	Con_Printf("restarting renderer\n");
+	Con_Print("restarting renderer\n");
 	R_Modules_Shutdown();
 	R_Modules_Start();
 }

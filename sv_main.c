@@ -79,7 +79,7 @@ static void SV_SaveEntFile_f(void)
 	char basename[MAX_QPATH];
 	if (!sv.active || !sv.worldmodel)
 	{
-		Con_Printf("Not running a server\n");
+		Con_Print("Not running a server\n");
 		return;
 	}
 	FS_StripExtension(sv.worldmodel->name, basename, sizeof(basename));
@@ -199,7 +199,7 @@ void SV_StartSound (edict_t *entity, int channel, char *sample, int volume, floa
 
 	if ( sound_num == MAX_SOUNDS || !sv.sound_precache[sound_num] )
 	{
-		Con_Printf ("SV_StartSound: %s not precached\n", sample);
+		Con_Printf("SV_StartSound: %s not precached\n", sample);
 		return;
 	}
 
@@ -597,7 +597,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 
 		if (msg->maxsize - msg->cursize < 32) // LordHavoc: increased check from 16 to 32
 		{
-			Con_Printf ("packet overflow\n");
+			Con_Print("packet overflow\n");
 			// mark the rest of the entities so they can't be delta compressed against this frame
 			for (;e < sv.num_edicts;e++)
 			{
@@ -1094,7 +1094,7 @@ void SV_WriteEntitiesToClient(client_t *client, edict_t *clent, sizebuf_t *msg)
 		for (i = 0;i < MAX_ENTITY_HISTORY;i++)
 			if (d->commit[i].numentities)
 				Con_Printf(" %i", d->commit[i].framenum);
-		Con_Printf(")\n");
+		Con_Print(")\n");
 	}
 	if (d->currententitynumber >= sv.max_edicts)
 		startnumber = 1;
@@ -1797,7 +1797,7 @@ void SV_SpawnServer (const char *server)
 		Cvar_Set ("hostname", "UNNAMED");
 	scr_centertime_off = 0;
 
-	Con_DPrintf ("SpawnServer: %s\n",server);
+	Con_DPrintf("SpawnServer: %s\n",server);
 	svs.changelevel_issued = false;		// now safe to issue another
 
 //
@@ -1882,7 +1882,7 @@ void SV_SpawnServer (const char *server)
 	sv.worldmodel = Mod_ForName(sv.modelname, false, true, true);
 	if (!sv.worldmodel)
 	{
-		Con_Printf ("Couldn't spawn server %s\n", sv.modelname);
+		Con_Printf("Couldn't spawn server %s\n", sv.modelname);
 		sv.active = false;
 		return;
 	}
@@ -1965,7 +1965,7 @@ void SV_SpawnServer (const char *server)
 		if (host_client->netconnection)
 			SV_SendServerinfo(host_client);
 
-	Con_DPrintf ("Server spawned.\n");
+	Con_DPrint("Server spawned.\n");
 	NetConn_Heartbeat (2);
 }
 

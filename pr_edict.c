@@ -401,7 +401,7 @@ char *PR_ValueString (etype_t type, eval_t *val)
 	switch (type)
 	{
 	case ev_string:
-		snprintf (line, sizeof (line), "%s", PR_GetString(val->string));
+		strncpy(line, PR_GetString(val->string), sizeof(line));
 		break;
 	case ev_entity:
 		//n = NoCrash_NUM_FOR_EDICT(PROG_TO_EDICT(val->edict));
@@ -489,7 +489,7 @@ char *PR_UglyValueString (etype_t type, eval_t *val)
 		break;
 	case ev_function:
 		f = pr_functions + val->function;
-		snprintf (line, sizeof (line), "%s", PR_GetString(f->s_name));
+		strncpy(line, PR_GetString(f->s_name), sizeof(line));
 		break;
 	case ev_field:
 		def = ED_FieldAtOfs ( val->_int );
@@ -576,7 +576,7 @@ For debugging
 */
 // LordHavoc: optimized this to print out much more quickly (tempstring)
 // LordHavoc: changed to print out every 4096 characters (incase there are a lot of fields to print)
-void ED_Print (edict_t *ed)
+void ED_Print(edict_t *ed)
 {
 	int		l;
 	ddef_t	*d;
@@ -588,7 +588,7 @@ void ED_Print (edict_t *ed)
 
 	if (ed->e->free)
 	{
-		Con_Printf ("FREE\n");
+		Con_Print("FREE\n");
 		return;
 	}
 
@@ -636,12 +636,12 @@ void ED_Print (edict_t *ed)
 		strlcat (tempstring, "\n", sizeof (tempstring));
 		if (strlen(tempstring) >= 4096)
 		{
-			Con_Printf("%s", tempstring);
+			Con_Print(tempstring);
 			tempstring[0] = 0;
 		}
 	}
 	if (tempstring[0])
-		Con_Printf("%s", tempstring);
+		Con_Print(tempstring);
 }
 
 /*
@@ -659,11 +659,11 @@ void ED_Write (qfile_t *f, edict_t *ed)
 	char	*name;
 	int		type;
 
-	FS_Printf (f, "{\n");
+	FS_Print(f, "{\n");
 
 	if (ed->e->free)
 	{
-		FS_Printf (f, "}\n");
+		FS_Print(f, "}\n");
 		return;
 	}
 
@@ -684,16 +684,16 @@ void ED_Write (qfile_t *f, edict_t *ed)
 		if (j == type_size[type])
 			continue;
 
-		FS_Printf (f,"\"%s\" ",name);
-		FS_Printf (f,"\"%s\"\n", PR_UglyValueString(d->type, (eval_t *)v));
+		FS_Printf(f,"\"%s\" ",name);
+		FS_Printf(f,"\"%s\"\n", PR_UglyValueString(d->type, (eval_t *)v));
 	}
 
-	FS_Printf (f, "}\n");
+	FS_Print(f, "}\n");
 }
 
 void ED_PrintNum (int ent)
 {
-	ED_Print (EDICT_NUM(ent));
+	ED_Print(EDICT_NUM(ent));
 }
 
 /*
@@ -707,7 +707,7 @@ void ED_PrintEdicts (void)
 {
 	int		i;
 
-	Con_Printf ("%i entities\n", sv.num_edicts);
+	Con_Printf("%i entities\n", sv.num_edicts);
 	for (i=0 ; i<sv.num_edicts ; i++)
 		ED_PrintNum (i);
 }
@@ -726,7 +726,7 @@ void ED_PrintEdict_f (void)
 	i = atoi (Cmd_Argv(1));
 	if (i < 0 || i >= sv.num_edicts)
 	{
-		Con_Printf("Bad edict number\n");
+		Con_Print("Bad edict number\n");
 		return;
 	}
 	ED_PrintNum (i);
@@ -760,11 +760,11 @@ void ED_Count (void)
 			step++;
 	}
 
-	Con_Printf ("num_edicts:%3i\n", sv.num_edicts);
-	Con_Printf ("active    :%3i\n", active);
-	Con_Printf ("view      :%3i\n", models);
-	Con_Printf ("touch     :%3i\n", solid);
-	Con_Printf ("step      :%3i\n", step);
+	Con_Printf("num_edicts:%3i\n", sv.num_edicts);
+	Con_Printf("active    :%3i\n", active);
+	Con_Printf("view      :%3i\n", models);
+	Con_Printf("touch     :%3i\n", solid);
+	Con_Printf("step      :%3i\n", step);
 
 }
 
@@ -789,7 +789,7 @@ void ED_WriteGlobals (qfile_t *f)
 	char		*name;
 	int			type;
 
-	FS_Printf (f,"{\n");
+	FS_Print(f,"{\n");
 	for (i=0 ; i<progs->numglobaldefs ; i++)
 	{
 		def = &pr_globaldefs[i];
@@ -802,10 +802,10 @@ void ED_WriteGlobals (qfile_t *f)
 			continue;
 
 		name = PR_GetString(def->s_name);
-		FS_Printf (f,"\"%s\" ", name);
-		FS_Printf (f,"\"%s\"\n", PR_UglyValueString(type, (eval_t *)&pr_globals[def->ofs]));
+		FS_Printf(f,"\"%s\" ", name);
+		FS_Printf(f,"\"%s\"\n", PR_UglyValueString(type, (eval_t *)&pr_globals[def->ofs]));
 	}
-	FS_Printf (f,"}\n");
+	FS_Print(f,"}\n");
 }
 
 /*
@@ -822,7 +822,7 @@ void ED_EdictSet_f(void)
 
 	if(Cmd_Argc() != 4)
 	{
-		Con_Printf("edictset <edict number> <field> <value>\n");
+		Con_Print("edictset <edict number> <field> <value>\n");
 		return;
 	}
 	ed = EDICT_NUM(atoi(Cmd_Argv(1)));
@@ -866,7 +866,7 @@ void ED_ParseGlobals (const char *data)
 		key = ED_FindGlobal (keyname);
 		if (!key)
 		{
-			Con_DPrintf ("'%s' is not a global\n", keyname);
+			Con_DPrintf("'%s' is not a global\n", keyname);
 			continue;
 		}
 
@@ -984,7 +984,7 @@ qboolean ED_ParseEpair(edict_t *ent, ddef_t *key, const char *s)
 		func = ED_FindFunction(s);
 		if (!func)
 		{
-			Con_Printf ("ED_ParseEpair: Can't find function %s\n", s);
+			Con_Printf("ED_ParseEpair: Can't find function %s\n", s);
 			return false;
 		}
 		val->function = func - pr_functions;
@@ -1066,7 +1066,7 @@ const char *ED_ParseEdict (const char *data, edict_t *ent)
 		key = ED_FindField (keyname);
 		if (!key)
 		{
-			Con_DPrintf ("'%s' is not a field\n", keyname);
+			Con_DPrintf("'%s' is not a field\n", keyname);
 			continue;
 		}
 
@@ -1156,8 +1156,8 @@ void ED_LoadFromFile (const char *data)
 //
 		if (!ent->v->classname)
 		{
-			Con_Printf ("No classname for:\n");
-			ED_Print (ent);
+			Con_Print("No classname for:\n");
+			ED_Print(ent);
 			ED_Free (ent);
 			continue;
 		}
@@ -1169,8 +1169,8 @@ void ED_LoadFromFile (const char *data)
 		{
 			if (developer.integer) // don't confuse non-developers with errors
 			{
-				Con_Printf ("No spawn function for:\n");
-				ED_Print (ent);
+				Con_Print("No spawn function for:\n");
+				ED_Print(ent);
 			}
 			ED_Free (ent);
 			continue;
@@ -1183,7 +1183,7 @@ void ED_LoadFromFile (const char *data)
 			died++;
 	}
 
-	Con_DPrintf ("%i entities parsed, %i inhibited, %i spawned (%i removed self, %i stayed)\n", parsed, inhibited, spawned, died, spawned - died);
+	Con_DPrintf("%i entities parsed, %i inhibited, %i spawned (%i removed self, %i stayed)\n", parsed, inhibited, spawned, died, spawned - died);
 }
 
 
@@ -1270,7 +1270,7 @@ void PR_LoadProgs (void)
 	memcpy(progs, temp, fs_filesize);
 	Mem_Free(temp);
 
-	Con_DPrintf ("Programs occupy %iK.\n", fs_filesize/1024);
+	Con_DPrintf("Programs occupy %iK.\n", fs_filesize/1024);
 
 	pr_crc = CRC_Block((qbyte *)progs, fs_filesize);
 
@@ -1474,7 +1474,7 @@ void PR_Fields_f (void)
 	int *v;
 	if (!sv.active)
 	{
-		Con_Printf("no progs loaded\n");
+		Con_Print("no progs loaded\n");
 		return;
 	}
 	counts = Mem_Alloc(tempmempool, progs->numfielddefs * sizeof(int));
@@ -1556,7 +1556,7 @@ void PR_Fields_f (void)
 		strlcat (tempstring, "\n", sizeof (tempstring));
 		if (strlen(tempstring) >= 4096)
 		{
-			Con_Printf("%s", tempstring);
+			Con_Print(tempstring);
 			tempstring[0] = 0;
 		}
 		if (counts[i])
@@ -1574,7 +1574,7 @@ void PR_Globals_f (void)
 	int i;
 	if (!sv.active)
 	{
-		Con_Printf("no progs loaded\n");
+		Con_Print("no progs loaded\n");
 		return;
 	}
 	for (i = 0;i < progs->numglobaldefs;i++)

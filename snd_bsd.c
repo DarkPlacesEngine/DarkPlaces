@@ -54,7 +54,7 @@ qboolean SNDDMA_Init (void)
 	audio_fd = open (snddev, O_WRONLY | O_NDELAY | O_NONBLOCK);
 	if (audio_fd < 0)
 	{
-		Con_Printf ("Can't open the sound device (%s)\n", snddev);
+		Con_Printf("Can't open the sound device (%s)\n", snddev);
 		return false;
 	}
 
@@ -82,13 +82,13 @@ qboolean SNDDMA_Init (void)
 	}
 	if (i == sizeof (tryrates) / sizeof (tryrates[0]))
 	{
-		Con_Printf ("Can't select an appropriate sound output format\n");
+		Con_Print("Can't select an appropriate sound output format\n");
 		close (audio_fd);
 		return false;
 	}
 
 	// Print some information
-	Con_Printf ("%d bit %s sound initialized (rate: %dHz)\n",
+	Con_Printf("%d bit %s sound initialized (rate: %dHz)\n",
 				info.play.precision,
 				(info.play.channels == 2) ? "stereo" : "mono",
 				info.play.sample_rate);
@@ -110,7 +110,7 @@ int SNDDMA_GetDMAPos (void)
 
 	if (ioctl (audio_fd, AUDIO_GETINFO, &info) < 0)
 	{
-		Con_Printf ("Error: can't get audio info\n");
+		Con_Print("Error: can't get audio info\n");
 		SNDDMA_Shutdown ();
 		return 0;
 	}
@@ -173,7 +173,7 @@ void SNDDMA_Submit (void)
 	}
 
 	if (write (audio_fd, writebuf, bytes) < bytes)
-		Con_Printf ("audio can't keep up!\n");
+		Con_Print("audio can't keep up!\n");
 
 	wbufp = stop;
 }

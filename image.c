@@ -133,7 +133,7 @@ qbyte* LoadPCX (qbyte *f, int matchwidth, int matchheight)
 
 	if (fs_filesize < (int)sizeof(pcx) + 768)
 	{
-		Con_Printf ("Bad pcx file\n");
+		Con_Print("Bad pcx file\n");
 		return NULL;
 	}
 
@@ -156,7 +156,7 @@ qbyte* LoadPCX (qbyte *f, int matchwidth, int matchheight)
 	image_height = pcx.ymax + 1 - pcx.ymin;
 	if (pcx.manufacturer != 0x0a || pcx.version != 5 || pcx.encoding != 1 || pcx.bits_per_pixel != 8 || image_width > 4096 || image_height > 4096 || image_width <= 0 || image_height <= 0)
 	{
-		Con_Printf ("Bad pcx file\n");
+		Con_Print("Bad pcx file\n");
 		return NULL;
 	}
 	if ((matchwidth && image_width != matchwidth) || (matchheight && image_height != matchheight))
@@ -233,7 +233,7 @@ TargaHeader;
 
 void PrintTargaHeader(TargaHeader *t)
 {
-	Con_Printf("TargaHeader:\n");
+	Con_Print("TargaHeader:\n");
 	Con_Printf("uint8 id_length = %i;\n", t->id_length);
 	Con_Printf("uint8 colormap_type = %i;\n", t->colormap_type);
 	Con_Printf("uint8 image_type = %i;\n", t->image_type);
@@ -279,7 +279,7 @@ qbyte *LoadTGA (qbyte *f, int matchwidth, int matchheight)
 	targa_header.height = image_height = f[14] + f[15] * 256;
 	if (image_width > 4096 || image_height > 4096 || image_width <= 0 || image_height <= 0)
 	{
-		Con_Printf("LoadTGA: invalid size\n");
+		Con_Print("LoadTGA: invalid size\n");
 		PrintTargaHeader(&targa_header);
 		return NULL;
 	}
@@ -295,7 +295,7 @@ qbyte *LoadTGA (qbyte *f, int matchwidth, int matchheight)
 	{
 		if (targa_header.pixel_size != 24 && targa_header.pixel_size != 32)
 		{
-			Con_Printf ("LoadTGA: only 24bit and 32bit pixel sizes supported for type 2 and type 10 images\n");
+			Con_Print("LoadTGA: only 24bit and 32bit pixel sizes supported for type 2 and type 10 images\n");
 			PrintTargaHeader(&targa_header);
 			return NULL;
 		}
@@ -304,19 +304,19 @@ qbyte *LoadTGA (qbyte *f, int matchwidth, int matchheight)
 	{
 		if (targa_header.pixel_size != 8)
 		{
-			Con_Printf ("LoadTGA: only 8bit pixel size for type 1, 3, 9, and 11 images supported\n");
+			Con_Print("LoadTGA: only 8bit pixel size for type 1, 3, 9, and 11 images supported\n");
 			PrintTargaHeader(&targa_header);
 			return NULL;
 		}
 		if (targa_header.colormap_length > 256)
 		{
-			Con_Printf ("LoadTGA: only up to 256 colormap_length supported\n");
+			Con_Print("LoadTGA: only up to 256 colormap_length supported\n");
 			PrintTargaHeader(&targa_header);
 			return NULL;
 		}
 		if (targa_header.colormap_index)
 		{
-			Con_Printf ("LoadTGA: colormap_index not supported\n");
+			Con_Print("LoadTGA: colormap_index not supported\n");
 			PrintTargaHeader(&targa_header);
 			return NULL;
 		}
@@ -342,7 +342,7 @@ qbyte *LoadTGA (qbyte *f, int matchwidth, int matchheight)
 		}
 		else
 		{
-			Con_Printf ("LoadTGA: Only 32 and 24 bit colormap_size supported\n");
+			Con_Print("LoadTGA: Only 32 and 24 bit colormap_size supported\n");
 			PrintTargaHeader(&targa_header);
 			return NULL;
 		}
@@ -351,28 +351,28 @@ qbyte *LoadTGA (qbyte *f, int matchwidth, int matchheight)
 	{
 		if (targa_header.pixel_size != 8)
 		{
-			Con_Printf ("LoadTGA: only 8bit pixel size for type 1, 3, 9, and 11 images supported\n");
+			Con_Print("LoadTGA: only 8bit pixel size for type 1, 3, 9, and 11 images supported\n");
 			PrintTargaHeader(&targa_header);
 			return NULL;
 		}
 	}
 	else
 	{
-		Con_Printf ("LoadTGA: Only type 1, 2, 3, 9, 10, and 11 targa RGB images supported, image_type = %i\n", targa_header.image_type);
+		Con_Printf("LoadTGA: Only type 1, 2, 3, 9, 10, and 11 targa RGB images supported, image_type = %i\n", targa_header.image_type);
 		PrintTargaHeader(&targa_header);
 		return NULL;
 	}
 
 	if (targa_header.attributes & 0x10)
 	{
-		Con_Printf ("LoadTGA: origin must be in top left or bottom left, top right and bottom right are not supported\n");
+		Con_Print("LoadTGA: origin must be in top left or bottom left, top right and bottom right are not supported\n");
 		return NULL;
 	}
 
 	image_rgba = Mem_Alloc(tempmempool, image_width * image_height * 4);
 	if (!image_rgba)
 	{
-		Con_Printf ("LoadTGA: not enough memory for %i by %i image\n", image_width, image_height);
+		Con_Printf("LoadTGA: not enough memory for %i by %i image\n", image_width, image_height);
 		return NULL;
 	}
 
@@ -476,7 +476,7 @@ qbyte *LoadLMP (qbyte *f, int matchwidth, int matchheight)
 
 	if (fs_filesize < 9)
 	{
-		Con_Printf("LoadLMP: invalid LMP file\n");
+		Con_Print("LoadLMP: invalid LMP file\n");
 		return NULL;
 	}
 
@@ -493,7 +493,7 @@ qbyte *LoadLMP (qbyte *f, int matchwidth, int matchheight)
 
 	if (fs_filesize < 8 + image_width * image_height)
 	{
-		Con_Printf("LoadLMP: invalid LMP file\n");
+		Con_Print("LoadLMP: invalid LMP file\n");
 		return NULL;
 	}
 
@@ -525,7 +525,7 @@ qbyte *LoadWAL (qbyte *f, int matchwidth, int matchheight)
 
 	if (fs_filesize < (int) sizeof(q2wal_t))
 	{
-		Con_Printf("LoadWAL: invalid WAL file\n");
+		Con_Print("LoadWAL: invalid WAL file\n");
 		return NULL;
 	}
 
@@ -541,7 +541,7 @@ qbyte *LoadWAL (qbyte *f, int matchwidth, int matchheight)
 
 	if ((int) fs_filesize < (int) sizeof(q2wal_t) + (int) LittleLong(inwal->offsets[0]) + image_width * image_height)
 	{
-		Con_Printf("LoadWAL: invalid WAL file\n");
+		Con_Print("LoadWAL: invalid WAL file\n");
 		return NULL;
 	}
 
@@ -568,7 +568,7 @@ qbyte *LoadLMPAs8Bit (qbyte *f, int matchwidth, int matchheight)
 
 	if (fs_filesize < 9)
 	{
-		Con_Printf("LoadLMPAs8Bit: invalid LMP file\n");
+		Con_Print("LoadLMPAs8Bit: invalid LMP file\n");
 		return NULL;
 	}
 
@@ -585,7 +585,7 @@ qbyte *LoadLMPAs8Bit (qbyte *f, int matchwidth, int matchheight)
 
 	if (fs_filesize < 8 + image_width * image_height)
 	{
-		Con_Printf("LoadLMPAs8Bit: invalid LMP file\n");
+		Con_Print("LoadLMPAs8Bit: invalid LMP file\n");
 		return NULL;
 	}
 
@@ -666,11 +666,11 @@ qbyte *loadimagepixels (const char *filename, qboolean complain, int matchwidth,
 	}
 	if (complain)
 	{
-		Con_Printf ("Couldn't load %s using ", filename);
+		Con_Printf("Couldn't load %s using ", filename);
 		for (i = 0;imageformats[i].formatstring;i++)
 		{
 			sprintf (name, imageformats[i].formatstring, basename);
-			Con_Printf (i == 0 ? "\"%s\"" : (imageformats[i+1].formatstring ? ", \"%s\"" : " or \"%s\".\n"), imageformats[i].formatstring);
+			Con_Printf(i == 0 ? "\"%s\"" : (imageformats[i+1].formatstring ? ", \"%s\"" : " or \"%s\".\n"), imageformats[i].formatstring);
 		}
 	}
 	if (developer_memorydebug.integer)

@@ -55,10 +55,11 @@ void* Sys_GetProcAddress (dllhandle_t handle, const char* name);
 void Sys_Error (const char *error, ...);
 // an error will cause the entire program to exit
 
-void Sys_Printf (const char *fmt, ...);
+void Sys_Print(const char *msg);
+void Sys_Printf(const char *fmt, ...);
 // send text to the quake console (and possibly to terminal)
 
-void Sys_Print(const char *text);
+void Sys_PrintToTerminal(const char *text);
 // (may) output text to terminal which launched program
 
 void Sys_Quit (void);

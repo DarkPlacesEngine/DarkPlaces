@@ -189,7 +189,7 @@ static void CL_PlayVideo_f(void)
 
 	if (Cmd_Argc() != 2)
 	{
-		Con_Printf ("usage: playvideo <videoname>\nplays video named video/<videoname>.dpv\n");
+		Con_Print("usage: playvideo <videoname>\nplays video named video/<videoname>.dpv\n");
 		return;
 	}
 

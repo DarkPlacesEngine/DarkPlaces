@@ -290,11 +290,11 @@ void VM_error (void)
 	char string[VM_STRINGTEMP_LENGTH];
 
 	VM_VarString(0, string, sizeof(string));
-	Con_Printf ("======%S ERROR in %s:\n%s\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
+	Con_Printf("======%S ERROR in %s:\n%s\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
 	if(prog->self)
 	{
 		ed = PRVM_G_EDICT(prog->self->ofs);
-		PRVM_ED_Print (ed);
+		PRVM_ED_Print(ed);
 	}
 
 	PRVM_ERROR ("%s: Program error", PRVM_NAME);
@@ -316,11 +316,11 @@ void VM_objerror (void)
 	char string[VM_STRINGTEMP_LENGTH];
 
 	VM_VarString(0, string, sizeof(string));
-	Con_Printf ("======%s OBJECT ERROR in %s:\n%s\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
+	Con_Printf("======%s OBJECT ERROR in %s:\n%s\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
 	if(prog->self)
 	{
 		ed = PRVM_G_EDICT (prog->self->ofs);
-		PRVM_ED_Print (ed);
+		PRVM_ED_Print(ed);
 
 		PRVM_ED_Free (ed);
 	}
@@ -343,7 +343,7 @@ void VM_print (void)
 	char string[VM_STRINGTEMP_LENGTH];
 
 	VM_VarString(0, string, sizeof(string));
-	Con_Printf(string);
+	Con_Print(string);
 }
 
 /*
@@ -361,12 +361,12 @@ void VM_bprint (void)
 
 	if(!sv.active)
 	{
-		Con_Printf("VM_bprint: game is not server(%s) !", PRVM_NAME);
+		Con_Printf("VM_bprint: game is not server(%s) !\n", PRVM_NAME);
 		return;
 	}
 
 	VM_VarString(0, string, sizeof(string));
-	SV_BroadcastPrintf("%s", string);
+	SV_BroadcastPrint(string);
 }
 
 /*
@@ -388,7 +388,7 @@ void VM_sprint (void)
 	clientnum = PRVM_G_FLOAT(OFS_PARM0);
 	if (!sv.active  || clientnum < 0 || clientnum >= svs.maxclients || !svs.clients[clientnum].active)
 	{
-		Con_Printf("VM_sprint: %s: invalid client or server is not active !", PRVM_NAME);
+		Con_Printf("VM_sprint: %s: invalid client or server is not active !\n", PRVM_NAME);
 		return;
 	}
 	
@@ -1516,7 +1516,7 @@ void VM_registercvar (void)
 // check for overlap with a command
 	if (Cmd_Exists (name))
 	{
-		Con_Printf ("VM_registercvar: %s is a command\n", name);
+		Con_Printf("VM_registercvar: %s is a command\n", name);
 		return;
 	}
 
@@ -1658,7 +1658,7 @@ setcolor(clientent, value)
 
 	if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
 	{
-		Con_Printf ("tried to setcolor a non-client\n");
+		Con_Print("tried to setcolor a non-client\n");
 		return;
 	}
 
@@ -1730,7 +1730,7 @@ void VM_fopen(void)
 		modestring = "wb";
 		break;
 	default:
-		Con_Printf ("VM_fopen: %s no such mode %i (valid: 0 = read, 1 = append, 2 = write)\n", PRVM_NAME, mode);
+		Con_Printf("VM_fopen: %s no such mode %i (valid: 0 = read, 1 = append, 2 = write)\n", PRVM_NAME, mode);
 		PRVM_G_FLOAT(OFS_RETURN) = -3;
 		return;
 	}
@@ -2007,7 +2007,7 @@ void VM_clcommand (void)
 	i = PRVM_G_FLOAT(OFS_PARM0);
 	if (!sv.active  || i < 0 || i >= svs.maxclients || !svs.clients[i].active)
 	{
-		Con_Printf("VM_clientcommand: %s: invalid client/server is not active !", PRVM_NAME);
+		Con_Printf("VM_clientcommand: %s: invalid client/server is not active !\n", PRVM_NAME);
 		return;
 	}
 
@@ -2564,7 +2564,7 @@ void VM_drawcharacter(void)
 	}
 	
 	if(pos[2] || scale[2])
-		Con_Printf("VM_drawcharacter: z value%c from %s discarded",(pos[2] && scale[2]) ? 's' : 0,((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale"))); 
+		Con_Printf("VM_drawcharacter: z value%c from %s discarded\n",(pos[2] && scale[2]) ? 's' : 0,((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale"))); 
 
 	if(!scale[0] || !scale[1])
 	{
@@ -2621,7 +2621,7 @@ void VM_drawstring(void)
 	}
 
 	if(pos[2] || scale[2])
-		Con_Printf("VM_drawstring: z value%c from %s discarded",(pos[2] && scale[2]) ? 's' : 0,((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale"))); 
+		Con_Printf("VM_drawstring: z value%c from %s discarded\n",(pos[2] && scale[2]) ? 's' : 0,((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale"))); 
 	
 	DrawQ_String (pos[0], pos[1], string, 0, scale[0], scale[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag);
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
@@ -2673,7 +2673,7 @@ void VM_drawpic(void)
 	}
 
 	if(pos[2] || size[2])
-		Con_Printf("VM_drawstring: z value%c from %s discarded",(pos[2] && size[2]) ? 's' : 0,((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size"))); 
+		Con_Printf("VM_drawstring: z value%c from %s discarded\n",(pos[2] && size[2]) ? 's' : 0,((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size"))); 
 	
 	DrawQ_Pic(pos[0], pos[1], pic, size[0], size[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag);
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
@@ -2707,7 +2707,7 @@ void VM_drawfill(void)
 	}
 	
 	if(pos[2] || size[2])
-		Con_Printf("VM_drawstring: z value%c from %s discarded",(pos[2] && size[2]) ? 's' : 0,((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size"))); 
+		Con_Printf("VM_drawstring: z value%c from %s discarded\n",(pos[2] && size[2]) ? 's' : 0,((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size"))); 
 	
 	DrawQ_Pic(pos[0], pos[1], 0, size[0], size[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM3), flag);
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
@@ -3151,7 +3151,7 @@ void VM_M_gethostcachevalue( void )
 
 	type = PRVM_G_FLOAT( OFS_PARM0 );
 	if( type < 0 || type > 4 )
-		Con_Printf ( "VM_M_gethostcachevalue: bad type %i!\n", type );
+		Con_Printf( "VM_M_gethostcachevalue: bad type %i!\n", type );
 	else switch(type)
 	{
 	case 0:
@@ -3197,7 +3197,7 @@ void VM_M_gethostcachestring(void)
 	
 	if(type < 0 || type > 2)
 	{
-		Con_Printf("VM_M_gethostcachestring: bad string type requested!\n");
+		Con_Print("VM_M_gethostcachestring: bad string type requested!\n");
 		return;
 	}
 
@@ -3205,7 +3205,7 @@ void VM_M_gethostcachestring(void)
 
 	if(hostnr < 0 || hostnr >= hostCacheCount)
 	{
-		Con_Printf("VM_M_gethostcachestring: bad hostnr passed!\n");
+		Con_Print("VM_M_gethostcachestring: bad hostnr passed!\n");
 		return;
 	}
 

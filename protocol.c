@@ -391,7 +391,7 @@ void EntityState_ReadUpdate(entity_state_t *e, int number)
 			Con_Printf(" E_TAGATTACHMENT e%i:%i", e->tagentity, e->tagindex);
 		if (bits & E_LIGHTSTYLE)
 			Con_Printf(" E_LIGHTSTYLE %i", e->lightstyle);
-		Con_Printf("\n");
+		Con_Print("\n");
 	}
 }
 
@@ -491,9 +491,9 @@ void EntityFrame_AddFrame(entity_database_t *d, entity_frame_t *f)
 		if (e >= d->frames[n].framenum)
 		{
 			if (e == f->framenum)
-				Con_Printf("EntityFrame_AddFrame: tried to add out of sequence frame to database\n");
+				Con_Print("EntityFrame_AddFrame: tried to add out of sequence frame to database\n");
 			else
-				Con_Printf("EntityFrame_AddFrame: out of sequence frames in database\n");
+				Con_Print("EntityFrame_AddFrame: out of sequence frames in database\n");
 			return;
 		}
 		e = d->frames[n].framenum;
@@ -816,11 +816,11 @@ void EntityFrame4_CL_ReadFrame(entity_database4_t *d)
 		for (i = 0;i < MAX_ENTITY_HISTORY;i++)
 			if (d->commit[i].numentities)
 				Con_Printf(" %i", d->commit[i].framenum);
-		Con_Printf("\n");
+		Con_Print("\n");
 	}
 	if (!EntityFrame4_AckFrame(d, referenceframenum))
 	{
-		Con_Printf("EntityFrame4_CL_ReadFrame: reference frame invalid (VERY BAD ERROR), this update will be skipped\n");
+		Con_Print("EntityFrame4_CL_ReadFrame: reference frame invalid (VERY BAD ERROR), this update will be skipped\n");
 		skip = true;
 		d->ackframenum = -1;
 		EntityFrame4_ResetDatabase(d);

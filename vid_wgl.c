@@ -821,13 +821,13 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 		if (i & RC_PALETTE)
 		{
 			VID_Shutdown();
-			Con_Printf ("Can't run in non-RGB mode\n");
+			Con_Print("Can't run in non-RGB mode\n");
 			return false;
 		}
 		if (bpp > depth)
 		{
 			VID_Shutdown();
-			Con_Printf ("A higher desktop depth is required to run this video mode\n");
+			Con_Print("A higher desktop depth is required to run this video mode\n");
 			return false;
 		}
 
@@ -924,7 +924,7 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 	if (!GL_CheckExtension("wgl", wglfuncs, NULL, false))
 	{
 		VID_Shutdown();
-		Con_Printf("wgl functions not found\n");
+		Con_Print("wgl functions not found\n");
 		return false;
 	}
 
@@ -932,7 +932,7 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 	if (!baseRC)
 	{
 		VID_Shutdown();
-		Con_Printf("Could not initialize GL (wglCreateContext failed).\n\nMake sure you are in 65536 color mode, and try running -window.\n");
+		Con_Print("Could not initialize GL (wglCreateContext failed).\n\nMake sure you are in 65536 color mode, and try running -window.\n");
 		return false;
 	}
 	if (!qwglMakeCurrent(hdc, baseRC))
@@ -947,7 +947,7 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 	if (qglGetString == NULL)
 	{
 		VID_Shutdown();
-		Con_Printf("glGetString not found\n");
+		Con_Print("glGetString not found\n");
 		return false;
 	}
 	gl_renderer = qglGetString(GL_RENDERER);
@@ -1159,7 +1159,7 @@ qboolean IN_InitDInput (void)
 
 		if (hInstDI == NULL)
 		{
-			Con_SafePrintf ("Couldn't load dinput.dll\n");
+			Con_SafePrint("Couldn't load dinput.dll\n");
 			return false;
 		}
 	}
@@ -1170,7 +1170,7 @@ qboolean IN_InitDInput (void)
 
 		if (!pDirectInputCreate)
 		{
-			Con_SafePrintf ("Couldn't get DI proc addr\n");
+			Con_SafePrint("Couldn't get DI proc addr\n");
 			return false;
 		}
 	}
@@ -1188,7 +1188,7 @@ qboolean IN_InitDInput (void)
 
 	if (FAILED(hr))
 	{
-		Con_SafePrintf ("Couldn't open DI mouse device\n");
+		Con_SafePrint("Couldn't open DI mouse device\n");
 		return false;
 	}
 
@@ -1197,7 +1197,7 @@ qboolean IN_InitDInput (void)
 
 	if (FAILED(hr))
 	{
-		Con_SafePrintf ("Couldn't set DI mouse format\n");
+		Con_SafePrint("Couldn't set DI mouse format\n");
 		return false;
 	}
 
@@ -1207,7 +1207,7 @@ qboolean IN_InitDInput (void)
 
 	if (FAILED(hr))
 	{
-		Con_SafePrintf ("Couldn't set DI coop level\n");
+		Con_SafePrint("Couldn't set DI coop level\n");
 		return false;
 	}
 
@@ -1218,7 +1218,7 @@ qboolean IN_InitDInput (void)
 
 	if (FAILED(hr))
 	{
-		Con_SafePrintf ("Couldn't set DI buffersize\n");
+		Con_SafePrint("Couldn't set DI buffersize\n");
 		return false;
 	}
 
@@ -1244,11 +1244,11 @@ void IN_StartupMouse (void)
 
 		if (dinput)
 		{
-			Con_SafePrintf ("DirectInput initialized\n");
+			Con_SafePrint("DirectInput initialized\n");
 		}
 		else
 		{
-			Con_SafePrintf ("DirectInput not initialized\n");
+			Con_SafePrint("DirectInput not initialized\n");
 		}
 	}
 
@@ -1506,7 +1506,7 @@ void IN_StartupJoystick (void)
 	// verify joystick driver is present
 	if ((numdevs = joyGetNumDevs ()) == 0)
 	{
-		Con_Printf ("\njoystick not found -- driver not present\n\n");
+		Con_Print("\njoystick not found -- driver not present\n\n");
 		return;
 	}
 
@@ -1524,7 +1524,7 @@ void IN_StartupJoystick (void)
 	// abort startup if we didn't find a valid joystick
 	if (mmr != JOYERR_NOERROR)
 	{
-		Con_Printf ("\njoystick not found -- no valid joysticks (%x)\n\n", mmr);
+		Con_Printf("\njoystick not found -- no valid joysticks (%x)\n\n", mmr);
 		return;
 	}
 
@@ -1533,7 +1533,7 @@ void IN_StartupJoystick (void)
 	memset (&jc, 0, sizeof(jc));
 	if ((mmr = joyGetDevCaps (joy_id, &jc, sizeof(jc))) != JOYERR_NOERROR)
 	{
-		Con_Printf ("\njoystick not found -- invalid joystick capabilities (%x)\n\n", mmr);
+		Con_Printf("\njoystick not found -- invalid joystick capabilities (%x)\n\n", mmr);
 		return;
 	}
 
@@ -1550,7 +1550,7 @@ void IN_StartupJoystick (void)
 	joy_avail = true;
 	joy_advancedinit = false;
 
-	Con_Printf ("\njoystick detected\n\n");
+	Con_Print("\njoystick detected\n\n");
 }
 
 
@@ -1615,7 +1615,7 @@ void Joy_AdvancedUpdate_f (void)
 		if (strcmp (joy_name.string, "joystick") != 0)
 		{
 			// notify user of advanced controller
-			Con_Printf ("\n%s configured\n\n", joy_name.string);
+			Con_Printf("\n%s configured\n\n", joy_name.string);
 		}
 
 		// advanced initialization here

@@ -591,7 +591,7 @@ void Mathlib_Init(void)
 
 #include "matrixlib.h"
 
-void Matrix4x4_Print (const matrix4x4_t *in)
+void Matrix4x4_Print(const matrix4x4_t *in)
 {
 	Con_Printf("%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n"
 	, in->m[0][0], in->m[0][1], in->m[0][2], in->m[0][3]

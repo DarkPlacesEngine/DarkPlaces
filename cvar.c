@@ -187,7 +187,7 @@ void Cvar_SetQuick (cvar_t *var, const char *value)
 
 	if (var == NULL)
 	{
-		Con_Printf("Cvar_SetQuick: var == NULL\n");
+		Con_Print("Cvar_SetQuick: var == NULL\n");
 		return;
 	}
 
@@ -206,11 +206,8 @@ void Cvar_SetQuick (cvar_t *var, const char *value)
 	strcpy (var->string, value);
 	var->value = atof (var->string);
 	var->integer = (int) var->value;
-	if ((var->flags & CVAR_NOTIFY) && changed)
-	{
-		if (sv.active)
-			SV_BroadcastPrintf ("\"%s\" changed to \"%s\"\n", var->name, var->string);
-	}
+	if ((var->flags & CVAR_NOTIFY) && changed && sv.active)
+		SV_BroadcastPrintf("\"%s\" changed to \"%s\"\n", var->name, var->string);
 }
 
 void Cvar_Set (const char *var_name, const char *value)
@@ -220,12 +217,12 @@ void Cvar_Set (const char *var_name, const char *value)
 	if (var == NULL)
 	{
 		// there is an error in C code if this happens
-		Con_Printf ("Cvar_Set: variable %s not found\n", var_name);
+		Con_Printf("Cvar_Set: variable %s not found\n", var_name);
 		return;
 	}
 	if (var->flags & CVAR_READONLY)
 	{
-		Con_Printf ("Cvar_Set: %s is read-only\n", var_name);
+		Con_Printf("Cvar_Set: %s is read-only\n", var_name);
 		return;
 	}
 
@@ -273,14 +270,14 @@ void Cvar_RegisterVariable (cvar_t *variable)
 // first check to see if it has already been defined
 	if (Cvar_FindVar (variable->name))
 	{
-		Con_Printf ("Can't register variable %s, already defined\n", variable->name);
+		Con_Printf("Can't register variable %s, already defined\n", variable->name);
 		return;
 	}
 
 // check for overlap with a command
 	if (Cmd_Exists (variable->name))
 	{
-		Con_Printf ("Cvar_RegisterVariable: %s is a command\n", variable->name);
+		Con_Printf("Cvar_RegisterVariable: %s is a command\n", variable->name);
 		return;
 	}
 
@@ -317,7 +314,7 @@ qboolean	Cvar_Command (void)
 	{
 		// only print if host_initialized (otherwise it could print twice if this is in a script)
 		if (host_initialized)
-			Con_Printf ("\"%s\" is \"%s\"\n", v->name, v->string);
+			Con_Printf("\"%s\" is \"%s\"\n", v->name, v->string);
 		return true;
 	}
 
@@ -340,7 +337,7 @@ void Cvar_WriteVariables (qfile_t *f)
 
 	for (var = cvar_vars ; var ; var = var->next)
 		if (var->flags & CVAR_SAVE)
-			FS_Printf (f, "%s \"%s\"\n", var->name, var->string);
+			FS_Printf(f, "%s \"%s\"\n", var->name, var->string);
 }
 
 
@@ -374,14 +371,14 @@ void Cvar_List_f (void)
 		if (partial && strncmp (partial,cvar->name,len))
 			continue;
 
-		Con_Printf ("%s is \"%s\"\n", cvar->name, cvar->string);
+		Con_Printf("%s is \"%s\"\n", cvar->name, cvar->string);
 		count++;
 	}
 
-	Con_Printf ("%i cvar(s)", count);
+	Con_Printf("%i cvar(s)", count);
 	if (partial)
-		Con_Printf (" beginning with \"%s\"", partial);
-	Con_Printf ("\n");
+		Con_Printf(" beginning with \"%s\"", partial);
+	Con_Print("\n");
 }
 // 2000-01-09 CvarList command by Maddes
 

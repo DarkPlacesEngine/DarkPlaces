@@ -102,7 +102,7 @@ qboolean SNDDMA_Init(void)
 			frag_size = 64;	/* assuming stereo 8 bit */
 			rate = 11025;
 		} else {
-			Con_Printf("ALSA: no useable rates\n");
+			Con_Print("ALSA: no useable rates\n");
 			goto error;
 		}
 		break;
@@ -115,7 +115,7 @@ qboolean SNDDMA_Init(void)
 		}
 		/* Fall through */
 	default:
-		Con_Printf("ALSA: desired rate not supported\n");
+		Con_Print("ALSA: desired rate not supported\n");
 		goto error;
 	}
 
@@ -126,7 +126,7 @@ qboolean SNDDMA_Init(void)
 		} else if (snd_pcm_hw_params_set_format(pcm, hw, SND_PCM_FORMAT_U8) >= 0) {
 			bps = 8;
 		} else {
-			Con_Printf("ALSA: no useable formats\n");
+			Con_Print("ALSA: no useable formats\n");
 			goto error;
 		}
 		break;
@@ -139,13 +139,13 @@ qboolean SNDDMA_Init(void)
 		 }
 		/* Fall through */
 	default:
-		Con_Printf("ALSA: desired format not supported\n");
+		Con_Print("ALSA: desired format not supported\n");
 		goto error;
 	}
 
 	if (snd_pcm_hw_params_set_access(pcm, hw,
 					 SND_PCM_ACCESS_MMAP_INTERLEAVED) < 0) {
-		Con_Printf("ALSA: interleaved is not supported\n");
+		Con_Print("ALSA: interleaved is not supported\n");
 		goto error;
 	}
 
@@ -156,7 +156,7 @@ qboolean SNDDMA_Init(void)
 		} else if (snd_pcm_hw_params_set_channels(pcm, hw, 1) >= 0) {
 			stereo = 0;
 		} else {
-			Con_Printf("ALSA: no useable channels\n");
+			Con_Print("ALSA: no useable channels\n");
 			goto error;
 		}
 		break;
@@ -166,7 +166,7 @@ qboolean SNDDMA_Init(void)
 			 break;
 		 /* Fall through */
 	default:
-		Con_Printf("ALSA: desired channels not supported\n");
+		Con_Print("ALSA: desired channels not supported\n");
 		goto error;
 	}
 
@@ -174,7 +174,7 @@ qboolean SNDDMA_Init(void)
 
 	err = snd_pcm_hw_params(pcm, hw);
 	if (err < 0) {
-		Con_Printf("ALSA: unable to install hw params\n");
+		Con_Print("ALSA: unable to install hw params\n");
 		goto error;
 	}
 
@@ -184,7 +184,7 @@ qboolean SNDDMA_Init(void)
 
 	err = snd_pcm_sw_params(pcm, sw);
 	if (err < 0) {
-		Con_Printf("ALSA: unable to install sw params\n");
+		Con_Print("ALSA: unable to install sw params\n");
 		goto error;
 	}
 
