@@ -757,19 +757,19 @@ void Host_Name_f (void)
 	
 	host_client->nametime = sv.time + 5;
 
-	if (strcmp(host_client->name, newName) && host_client->name[0] && strcmp(host_client->name, "unconnected"))
-		SV_BroadcastPrintf("%s changed name to %s\n", host_client->name, newName);
-	strcpy(host_client->name, newName);
-	strcpy(host_client->old_name, newName);
-	if (sv_player)
-		sv_player->v->netname = PR_SetString(host_client->name);
-	//Con_Printf("Host_Name_f: host_client->edict->netname = %s, sv_player->netname = %s, host_client->name = %s\n", PR_GetString(host_client->edict->v->netname), PR_GetString(sv_player->v->netname), host_client->name);
-
-// send notification to all clients
-
-	MSG_WriteByte(&sv.reliable_datagram, svc_updatename);
-	MSG_WriteByte(&sv.reliable_datagram, host_client->number);
-	MSG_WriteString(&sv.reliable_datagram, host_client->name);
+	// point the string back at updateclient->name to keep it safe
+	strlcpy (host_client->name, newName, sizeof (host_client->name));
+	host_client->edict->v->netname = PR_SetString(host_client->name);
+	if (strcmp(host_client->old_name, host_client->name))
+	{
+		if (host_client->spawned)
+			SV_BroadcastPrintf("%s changed name to %s\n", host_client->name, newName);
+		strcpy(host_client->old_name, host_client->name);
+		// send notification to all clients
+		MSG_WriteByte (&sv.reliable_datagram, svc_updatename);
+		MSG_WriteByte (&sv.reliable_datagram, host_client->number);
+		MSG_WriteString (&sv.reliable_datagram, host_client->name);
+	}
 }
 
 
@@ -981,12 +981,14 @@ void Host_Color_f(void)
 			sv_player->v->team = bottom + 1;
 		}
 		host_client->colors = playercolor;
-		host_client->old_colors = playercolor;
-
-		// send notification to all clients
-		MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
-		MSG_WriteByte (&sv.reliable_datagram, host_client->number);
-		MSG_WriteByte (&sv.reliable_datagram, host_client->colors);
+		if (host_client->old_colors != host_client->colors)
+		{
+			host_client->old_colors = host_client->colors;
+			// send notification to all clients
+			MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
+			MSG_WriteByte (&sv.reliable_datagram, host_client->number);
+			MSG_WriteByte (&sv.reliable_datagram, host_client->colors);
+		}
 	}
 }
 
@@ -1217,13 +1219,13 @@ void Host_Spawn_f (void)
 			continue;
 		MSG_WriteByte (&host_client->message, svc_updatename);
 		MSG_WriteByte (&host_client->message, i);
-		MSG_WriteString (&host_client->message, client->old_name);
+		MSG_WriteString (&host_client->message, client->name);
 		MSG_WriteByte (&host_client->message, svc_updatefrags);
 		MSG_WriteByte (&host_client->message, i);
-		MSG_WriteShort (&host_client->message, client->old_frags);
+		MSG_WriteShort (&host_client->message, client->frags);
 		MSG_WriteByte (&host_client->message, svc_updatecolors);
 		MSG_WriteByte (&host_client->message, i);
-		MSG_WriteByte (&host_client->message, client->old_colors);
+		MSG_WriteByte (&host_client->message, client->colors);
 	}
 
 	// send all current light styles

@@ -209,9 +209,16 @@ void ED_ClearEdict (edict_t *e)
 	num = NUM_FOR_EDICT(e) - 1;
 	if (num >= 0 && num < svs.maxclients)
 	{
+		eval_t *val;
+		// set colormap and team on newly created player entity
 		e->v->colormap = num + 1;
 		e->v->team = (svs.clients[num].colors & 15) + 1;
+		// set netname/clientcolors back to client values so that
+		// DP_SV_CLIENTNAME and DPV_SV_CLIENTCOLORS will not immediately
+		// reset them
 		e->v->netname = PR_SetString(svs.clients[num].name);
+		if ((val = GETEDICTFIELDVALUE(e, eval_clientcolors)))
+			val->_float = svs.clients[num].colors;
 	}
 }
 
