@@ -37,6 +37,7 @@ void R_Stain (vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, i
 #define CL_ParseParticleEffect R_ParseParticleEffect
 #define CL_ParticleExplosion R_ParticleExplosion
 #define CL_ParticleExplosion2 R_ParticleExplosion2
+#define CL_TeleportSplash R_TeleportSplash
 #define CL_BlobExplosion R_BlobExplosion
 #define CL_RunParticleEffect R_RunParticleEffect
 #define CL_LavaSplash R_LavaSplash
@@ -1091,8 +1092,7 @@ CL_TeleportSplash
 
 ===============
 */
-#if WORKINGLQUAKE
-void R_TeleportSplash (vec3_t org)
+void CL_TeleportSplash (vec3_t org)
 {
 	float i, j, k, inc;
 	if (!cl_particles.integer) return;
@@ -1101,9 +1101,8 @@ void R_TeleportSplash (vec3_t org)
 	for (i = -16;i < 16;i += inc)
 		for (j = -16;j < 16;j += inc)
 			for (k = -24;k < 32;k += inc)
-				particle(pt_static, PARTICLE_BILLBOARD, 0xA0A0A0, 0xFFFFFF, tex_particle, false, PBLEND_ADD, 10, 10, inc * 32, inc * lhrandom(8, 16), inc * 32, 9999, 0, 0, org[0] + i + lhrandom(0, 8), org[1] + j + lhrandom(0, 8), org[2] + k + lhrandom(0, 8), lhrandom(-64, 64), lhrandom(-64, 64), lhrandom(-256, 256), 0, 0, 0, 0, 1, 0);
+				particle(pt_static, PARTICLE_BILLBOARD, 0xA0A0A0, 0xFFFFFF, tex_particle, false, PBLEND_ADD, 10, 10, inc * lhrandom(8, 16), inc * 32, 9999, 0, 0, org[0] + i + lhrandom(0, 8), org[1] + j + lhrandom(0, 8), org[2] + k + lhrandom(0, 8), lhrandom(-64, 64), lhrandom(-64, 64), lhrandom(-256, 256), 0, 0, 0, 0, 1, 0);
 }
-#endif
 
 #ifdef WORKINGLQUAKE
 void R_RocketTrail (vec3_t start, vec3_t end, int type)

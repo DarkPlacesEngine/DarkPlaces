@@ -1257,8 +1257,8 @@ void CL_ParseTempEntity(void)
 	case TE_TELEPORT:
 		MSG_ReadVector(pos, cl.protocol);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 500, 1.0f, 1.0f, 1.0f, 1500, 99.0f, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-//		CL_TeleportSplash(pos);
+		CL_AllocDlight(NULL, &tempmatrix, 200, 1.0f, 1.0f, 1.0f, 600, 99.0f, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_TeleportSplash(pos);
 		break;
 
 	case TE_EXPLOSION2:
