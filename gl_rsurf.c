@@ -1931,7 +1931,7 @@ Cshader_t *Cshaders[5] =
 
 void R_PrepareSurfaces(void)
 {
-	int i, entframe, texframe, framecount;
+	int i, alttextures, texframe, framecount;
 	texture_t *t;
 	model_t *model;
 	msurface_t *surf;
@@ -1940,7 +1940,7 @@ void R_PrepareSurfaces(void)
 		Cshaders[i]->chain = NULL;
 
 	model = currentrenderentity->model;
-	entframe = currentrenderentity->frame;
+	alttextures = currentrenderentity->frame != 0;
 	texframe = (int)(cl.time * 5.0f);
 
 	for (i = 0;i < model->nummodelsurfaces;i++)
@@ -1955,22 +1955,11 @@ void R_PrepareSurfaces(void)
 				t = surf->texinfo->texture;
 				if (t->animated)
 				{
-					if (entframe)
-					{
-						framecount = t->anim_total[1];
-						if (framecount >= 2)
-							surf->currenttexture = t->anim_frames[1][texframe % framecount];
-						else
-							surf->currenttexture = t->anim_frames[1][0];
-					}
+					framecount = t->anim_total[alttextures];
+					if (framecount >= 2)
+						surf->currenttexture = t->anim_frames[alttextures][texframe % framecount];
 					else
-					{
-						framecount = t->anim_total[0];
-						if (framecount >= 2)
-							surf->currenttexture = t->anim_frames[0][texframe % framecount];
-						else
-							surf->currenttexture = t->anim_frames[0][0];
-					}
+						surf->currenttexture = t->anim_frames[alttextures][0];
 				}
 				else
 					surf->currenttexture = t;
