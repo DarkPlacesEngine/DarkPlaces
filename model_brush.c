@@ -3741,6 +3741,8 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 										else if (numparameters >= 3 && !strcasecmp(parameter[0], "animmap"))
 											strlcpy(firstpasstexturename, parameter[2], sizeof(firstpasstexturename));
 									}
+									if (!strcasecmp(parameter[0], "alphafunc"))
+										flags2 |= Q3TEXTUREFLAG_ALPHATEST;
 									// break out a level if it was }
 									if (!strcasecmp(com_token, "}"))
 										break;
@@ -3854,7 +3856,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 						// force transparent render path for a number of odd
 						// shader effects to avoid bogging down the normal
 						// render path unnecessarily
-						if (flags2 & (Q3TEXTUREFLAG_ADDITIVE | Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
+						if (flags2 & (Q3TEXTUREFLAG_ADDITIVE | Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2 | Q3TEXTUREFLAG_ALPHATEST))
 							flags |= Q3SURFACEPARM_TRANS;
 						// add shader to list (shadername and flags)
 						// actually here we just poke into the texture settings

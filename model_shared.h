@@ -337,6 +337,7 @@ model_brushq2_t;
 #define Q3TEXTUREFLAG_NOPICMIP 8
 #define Q3TEXTUREFLAG_AUTOSPRITE 16
 #define Q3TEXTUREFLAG_AUTOSPRITE2 32
+#define Q3TEXTUREFLAG_ALPHATEST 64
 
 struct q3msurface_s;
 typedef struct q3mtexture_s
