@@ -134,7 +134,7 @@ typedef struct
 }
 mtexinfo_t;
 
-struct q3meffect_s;
+struct q3deffect_s;
 typedef struct msurface_s
 {
 	// bounding box for onscreen checks
@@ -173,7 +173,7 @@ typedef struct msurface_s
 	// (only access this if dlightframe is current)
 	int dlightbits[8]; // q1bsp
 
-	struct q3meffect_s *effect; // q3bsp
+	struct q3deffect_s *effect; // q3bsp
 	// FIXME: collisionmarkframe should be kept in a separate array
 	int collisionmarkframe; // q3bsp // don't collide twice in one trace
 }
@@ -593,7 +593,7 @@ typedef struct
 }
 q3dmeshvertex_t;
 
-typedef struct
+typedef struct q3deffect_s
 {
 	char shadername[Q3PATHLENGTH];
 	int brushindex;
@@ -776,14 +776,6 @@ typedef struct q3mbrushside_s
 	struct texture_s *texture;
 }
 q3mbrushside_t;
-
-typedef struct q3meffect_s
-{
-	char shadername[Q3PATHLENGTH];
-	struct q3mbrush_s *brush;
-	int unknown; // 5 or -1
-}
-q3meffect_t;
 
 #define CHECKPVSBIT(pvs,b) ((b) >= 0 ? ((pvs)[(b) >> 3] & (1 << ((b) & 7))) : false)
 #define SETPVSBIT(pvs,b) ((b) >= 0 ? ((pvs)[(b) >> 3] |= (1 << ((b) & 7))) : false)
