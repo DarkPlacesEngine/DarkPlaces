@@ -473,7 +473,7 @@ static void CL_RelinkStaticEntities(void)
 CL_RelinkEntities
 ===============
 */
-static void CL_RelinkNetworkEntities()
+static void CL_RelinkNetworkEntities(void)
 {
 	entity_t *ent;
 	int i, effects, temp;
@@ -746,6 +746,18 @@ static void CL_RelinkNetworkEntities()
 	}
 }
 
+static void CL_RelinkViewModel(void)
+{
+	entity_t *ent;
+	if (!r_drawviewmodel.integer || chase_active.integer || envmap || !r_drawentities.integer || cl.items & IT_INVISIBILITY || cl.stats[STAT_HEALTH] <= 0 || cl.viewent.render.model == NULL)
+		return;
+
+	ent = &cl.viewent;
+	// FIXME: set up view model here?
+	if (r_refdef.numentities < r_refdef.maxentities)
+		r_refdef.entities[r_refdef.numentities++] = &ent->render;
+}
+
 void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float framerate)
 {
 	int i;
@@ -771,7 +783,7 @@ void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float
 	}
 }
 
-static void CL_RelinkEffects()
+static void CL_RelinkEffects(void)
 {
 	int i, intframe;
 	cl_effect_t *e;
@@ -939,6 +951,7 @@ void CL_RelinkEntities (void)
 	CL_RelinkWorld();
 	CL_RelinkStaticEntities();
 	CL_RelinkNetworkEntities();
+	CL_RelinkViewModel();
 	CL_RelinkEffects();
 	CL_RelinkBeams();
 	CL_MoveParticles();

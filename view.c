@@ -544,6 +544,7 @@ void V_CalcRefdef (void)
 		view->render.angles[ROLL] = r_refdef.viewangles[ROLL] - v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value;
 		// FIXME: this setup code is somewhat evil (CL_LerpUpdate should be private?)
 		CL_LerpUpdate(view);
+		CL_BoundingBoxForEntity(&view->render);
 		view->render.colormap = -1; // no special coloring
 		view->render.alpha = ent->render.alpha; // LordHavoc: if the player is transparent, so is the gun
 		view->render.effects = ent->render.effects;
