@@ -145,8 +145,7 @@ void 	Cvar_WriteVariables (QFile *f);
 // with the archive flag set to true.
 
 cvar_t *Cvar_FindVar (char *var_name);
-
-extern cvar_t	*cvar_vars;
+cvar_t *Cvar_FindVarAfter (char *prev_var_name, int neededflags);
 
 int		Cvar_CompleteCountPossible (char *partial);
 char	**Cvar_CompleteBuildList (char *partial);
