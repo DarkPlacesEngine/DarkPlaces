@@ -1928,14 +1928,12 @@ void Host_InitCommands (void)
 		Cvar_RegisterVariable (&cl_pmodel);
 		Cmd_AddCommand ("pmodel", Host_PModel_f);
 	}
-	// FIXME: Do this only for GAME_NEXUIZ?
-	else if (gamemode == GAME_NEXUIZ) 
-	{
-		Cvar_RegisterVariable (&cl_playermodel);
-		Cmd_AddCommand ("playermodel", Host_Playermodel_f);
-		Cvar_RegisterVariable (&cl_playerskin);
-		Cmd_AddCommand ("playerskin", Host_Playerskin_f);
-	}
+
+	// BLACK: This isnt game specific anymore (it was GAME_NEXUIZ at first)
+	Cvar_RegisterVariable (&cl_playermodel);
+	Cmd_AddCommand ("playermodel", Host_Playermodel_f);
+	Cvar_RegisterVariable (&cl_playerskin);
+	Cmd_AddCommand ("playerskin", Host_Playerskin_f);
 
 	Cmd_AddCommand ("prespawn", Host_PreSpawn_f);
 	Cmd_AddCommand ("spawn", Host_Spawn_f);
