@@ -26,7 +26,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define EXPLOSIONVERTS ((EXPLOSIONGRID+1)*(EXPLOSIONGRID+1))
 #define EXPLOSIONTRIS (EXPLOSIONGRID*EXPLOSIONGRID*2)
 #define EXPLOSIONSTARTVELOCITY (256.0f)
-#define EXPLOSIONFADESTART (1.5f)
 #define EXPLOSIONFADERATE (3.0f)
 
 float explosiontexcoord2f[EXPLOSIONVERTS][2];
@@ -153,11 +152,11 @@ void R_NewExplosion(vec3_t org)
 	fractalnoisequick(noise, EXPLOSIONGRID, 4); // adjust noise grid size according to explosion
 	for (i = 0;i < MAX_EXPLOSIONS;i++)
 	{
-		if (explosion[i].alpha <= 0.01f)
+		if (explosion[i].alpha <= cl_explosions_alpha_end.value)
 		{
 			explosion[i].starttime = cl.time;
 			explosion[i].time = explosion[i].starttime - 0.1;
-			explosion[i].alpha = EXPLOSIONFADESTART;
+			explosion[i].alpha = cl_explosions_alpha_start.value;
 			VectorCopy(org, explosion[i].origin);
 			for (j = 0;j < EXPLOSIONVERTS;j++)
 			{
@@ -209,8 +208,8 @@ void R_MoveExplosion(explosion_t *e)
 
 	frametime = cl.time - e->time;
 	e->time = cl.time;
-	e->alpha = EXPLOSIONFADESTART - (cl.time - e->starttime) * EXPLOSIONFADERATE;
-	if (e->alpha <= 0.01f)
+	e->alpha = cl_explosions_alpha_start.value - (cl.time - e->starttime) * EXPLOSIONFADERATE;
+	if (e->alpha <= cl_explosions_alpha_end.value)
 	{
 		e->alpha = -1;
 		return;
@@ -248,7 +247,7 @@ void R_MoveExplosions(void)
 	frametime = cl.time - cl.oldtime;
 
 	for (i = 0;i < MAX_EXPLOSIONS;i++)
-		if (explosion[i].alpha > 0.01f)
+		if (explosion[i].alpha > cl_explosions_alpha_end.value)
 			R_MoveExplosion(&explosion[i]);
 }
 
@@ -259,7 +258,7 @@ void R_DrawExplosions(void)
 	if (!r_drawexplosions.integer)
 		return;
 	for (i = 0;i < MAX_EXPLOSIONS;i++)
-		if (explosion[i].alpha > 0.01f)
+		if (explosion[i].alpha > cl_explosions_alpha_end.value)
 			R_MeshQueue_AddTransparent(explosion[i].origin, R_DrawExplosionCallback, &explosion[i], 0);
 }
 

@@ -587,6 +587,11 @@ extern cvar_t m_side;
 extern cvar_t r_draweffects;
 
 extern cvar_t cl_explosions;
+extern cvar_t cl_explosions_alpha_start;
+extern cvar_t cl_explosions_alpha_end;
+extern cvar_t cl_explosions_size_start;
+extern cvar_t cl_explosions_size_end;
+extern cvar_t cl_explosions_lifetime;
 extern cvar_t cl_stainmaps;
 
 // these are updated by CL_ClearState
