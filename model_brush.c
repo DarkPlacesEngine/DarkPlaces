@@ -3104,6 +3104,8 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 			mod->mempool = NULL;
 		}
 
+		mod->brush.submodel = i;
+
 		if (loadmodel->brush.submodels)
 			loadmodel->brush.submodels[i] = mod;
 
@@ -5350,11 +5352,11 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 		if (VectorCompare(boxstartmins, boxendmins))
 		{
 			// point trace
-			if (model->brushq3.submodel)
+			if (model->brush.submodel)
 			{
-				for (i = 0;i < model->brushq3.data_thismodel->numbrushes;i++)
-					if (model->brushq3.data_thismodel->firstbrush[i].colbrushf)
-						Collision_TracePointBrushFloat(trace, boxstartmins, model->brushq3.data_thismodel->firstbrush[i].colbrushf);
+				for (i = 0;i < model->brushq3.data_models[model->brush.submodel].numbrushes;i++)
+					if (model->brushq3.data_models[model->brush.submodel].firstbrush[i].colbrushf)
+						Collision_TracePointBrushFloat(trace, boxstartmins, model->brushq3.data_models[model->brush.submodel].firstbrush[i].colbrushf);
 			}
 			else
 				Mod_Q3BSP_TracePoint_RecursiveBSPNode(trace, model, model->brush.data_nodes, boxstartmins, ++markframe);
@@ -5362,16 +5364,16 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 		else
 		{
 			// line trace
-			if (model->brushq3.submodel)
+			if (model->brush.submodel)
 			{
-				for (i = 0;i < model->brushq3.data_thismodel->numbrushes;i++)
-					if (model->brushq3.data_thismodel->firstbrush[i].colbrushf)
-						Collision_TraceLineBrushFloat(trace, boxstartmins, boxendmins, model->brushq3.data_thismodel->firstbrush[i].colbrushf, model->brushq3.data_thismodel->firstbrush[i].colbrushf);
+				for (i = 0;i < model->brushq3.data_models[model->brush.submodel].numbrushes;i++)
+					if (model->brushq3.data_models[model->brush.submodel].firstbrush[i].colbrushf)
+						Collision_TraceLineBrushFloat(trace, boxstartmins, boxendmins, model->brushq3.data_models[model->brush.submodel].firstbrush[i].colbrushf, model->brushq3.data_models[model->brush.submodel].firstbrush[i].colbrushf);
 				if (mod_q3bsp_curves_collisions.integer)
 				{
-					for (i = 0;i < model->brushq3.data_thismodel->numfaces;i++)
+					for (i = 0;i < model->brushq3.data_models[model->brush.submodel].numfaces;i++)
 					{
-						face = model->brushq3.data_thismodel->firstface + i;
+						face = model->brushq3.data_models[model->brush.submodel].firstface + i;
 						if (face->mesh.num_collisiontriangles)
 							Collision_TraceLineTriangleMeshFloat(trace, boxstartmins, boxendmins, face->mesh.num_collisiontriangles, face->mesh.data_collisionelement3i, face->mesh.data_collisionvertex3f, face->texture->supercontents, segmentmins, segmentmaxs);
 					}
@@ -5386,16 +5388,16 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 		// box trace, performed as brush trace
 		thisbrush_start = Collision_BrushForBox(&startmatrix, boxstartmins, boxstartmaxs);
 		thisbrush_end = Collision_BrushForBox(&endmatrix, boxendmins, boxendmaxs);
-		if (model->brushq3.submodel)
+		if (model->brush.submodel)
 		{
-			for (i = 0;i < model->brushq3.data_thismodel->numbrushes;i++)
-				if (model->brushq3.data_thismodel->firstbrush[i].colbrushf)
-					Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, model->brushq3.data_thismodel->firstbrush[i].colbrushf, model->brushq3.data_thismodel->firstbrush[i].colbrushf);
+			for (i = 0;i < model->brushq3.data_models[model->brush.submodel].numbrushes;i++)
+				if (model->brushq3.data_models[model->brush.submodel].firstbrush[i].colbrushf)
+					Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, model->brushq3.data_models[model->brush.submodel].firstbrush[i].colbrushf, model->brushq3.data_models[model->brush.submodel].firstbrush[i].colbrushf);
 			if (mod_q3bsp_curves_collisions.integer)
 			{
-				for (i = 0;i < model->brushq3.data_thismodel->numfaces;i++)
+				for (i = 0;i < model->brushq3.data_models[model->brush.submodel].numfaces;i++)
 				{
-					face = model->brushq3.data_thismodel->firstface + i;
+					face = model->brushq3.data_models[model->brush.submodel].firstface + i;
 					if (face->mesh.num_collisiontriangles)
 						Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, face->mesh.num_collisiontriangles, face->mesh.data_collisionelement3i, face->mesh.data_collisionvertex3f, face->texture->supercontents, segmentmins, segmentmaxs);
 				}
@@ -5682,17 +5684,16 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 			mod->brush.LightPoint = NULL;
 			mod->brush.FindNonSolidLocation = Mod_Q3BSP_FindNonSolidLocation;
 		}
-		mod->brushq3.data_thismodel = loadmodel->brushq3.data_models + i;
-		mod->brushq3.submodel = i;
+		mod->brush.submodel = i;
 
 		// make the model surface list (used by shadowing/lighting)
-		mod->nummodelsurfaces = mod->brushq3.data_thismodel->numfaces;
+		mod->nummodelsurfaces = mod->brushq3.data_models[i].numfaces;
 		mod->surfacelist = Mem_Alloc(loadmodel->mempool, mod->nummodelsurfaces * sizeof(*mod->surfacelist));
 		for (j = 0;j < mod->nummodelsurfaces;j++)
-			mod->surfacelist[j] = (mod->brushq3.data_thismodel->firstface - mod->brushq3.data_faces) + j;
+			mod->surfacelist[j] = (mod->brushq3.data_models[i].firstface - mod->brushq3.data_faces) + j;
 
-		VectorCopy(mod->brushq3.data_thismodel->mins, mod->normalmins);
-		VectorCopy(mod->brushq3.data_thismodel->maxs, mod->normalmaxs);
+		VectorCopy(mod->brushq3.data_models[i].mins, mod->normalmins);
+		VectorCopy(mod->brushq3.data_models[i].maxs, mod->normalmaxs);
 		corner[0] = max(fabs(mod->normalmins[0]), fabs(mod->normalmaxs[0]));
 		corner[1] = max(fabs(mod->normalmins[1]), fabs(mod->normalmaxs[1]));
 		corner[2] = max(fabs(mod->normalmins[2]), fabs(mod->normalmaxs[2]));
@@ -5707,10 +5708,10 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 		mod->radius = modelradius;
 		mod->radius2 = modelradius * modelradius;
 
-		for (j = 0;j < mod->brushq3.data_thismodel->numfaces;j++)
-			if (mod->brushq3.data_thismodel->firstface[j].texture->surfaceflags & Q3SURFACEFLAG_SKY)
+		for (j = 0;j < mod->brushq3.data_models[i].numfaces;j++)
+			if (mod->brushq3.data_models[i].firstface[j].texture->surfaceflags & Q3SURFACEFLAG_SKY)
 				break;
-		if (j < mod->brushq3.data_thismodel->numfaces)
+		if (j < mod->brushq3.data_models[i].numfaces)
 			mod->DrawSky = R_Q3BSP_DrawSky;
 	}
 }
