@@ -1,9 +1,25 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -n = done but have not notified the people who asked for it, f = failed
--n darkplaces: finish the partial update support in protocol.[ch] and reduce packet size to 1k to fix NAT routers (yummyluv, Vermeulen, Elric)
--n darkplaces: fix server crashing from client timeouts (Moz)
--n darkplaces: fix server list only querying the master to reply (Rick)
--n darkplaces: fix sounds not following entities (yummyluv, SeienAbunae)
+-n darkplaces: finish the partial update support in protocol.[ch] and reduce packet size to 1k to fix NAT routers (yummyluv notified, Vermeulen notified, Elric needs to be notified)
+d darkplaces: fix server crashing from client timeouts (Moz)
+d darkplaces: fix server list only querying the master to reply (Rick)
+d darkplaces: fix sounds not following entities (yummyluv, SeienAbunae)
 -n dpmod: make grapple off-hand (joe hill)
+0 dpmod: set oldorigin when spawning to prevent being stuck at the spawn from causing an instant teleport back to where you died (SeienAbunae)
+0 darkplaces: model interpolation off crashes?  (SeienAbunae)
+0 dpmod: impulse 102 isn't removing the bots (SeienAbunae)
+0 dpmod: make enforcers drop more cells for plasma gun (SeienAbunae)
+0 dpmod: make tarbabies easier to kill?  (SeienAbunae)
+0 dpmod: make tarbabies have a self.resist_explosive = 3; like zombies (SeienAbunae)
+0 dpmod: make tarbabies explode larger (SeienAbunae)
+0 darkplaces: make sure that sound engine does not remove sounds when volume drops to 0 due to going out of range (SeienAbunae)
+0 darkplaces: crashes if you type too long a command line in the console (SeienAbunae)
+0 darkplaces: fix 'wall hugging' stuttering (romi)
+0 darkplaces: fix intermission failing to move view to intermission camera (romi, Zombie_13)
+0 darkplaces: fix key based turning being affected by slowmo - it should not be
+0 darkplaces: add view height to chase_active again (yummyluv)
+0 darkplaces: examine the surface rendering code to make sure it has no bugs regarding texture selection for any of the passes (sublim3)
+1 darkplaces: add rate command (and _cl_rate cvar to save to config) to control client rate (send to server on connect as a command, like other properties) (Transfusion)
+3 darkplaces: add sv_rate cvar (limits total rate of the server - rather complicated rules to distribute rate between clients on the server, honoring their requests as best as possible) (Transfusion)
 0 darkplaces: ability to disable fopen builtin access to read /, read data/, write data/, or disable fopen builtin entirely
 0 darkplaces: add DP_GFX_QUAKE3MODELTAGS, DP_GFX_SKINFILES, and any other new extensions to the wiki
 0 darkplaces: add DP_LITSUPPORT extension
@@ -56,7 +72,7 @@
 0 darkplaces: r_skyscroll1 and r_skyscroll2 cvars (SeienAbunae)
 0 darkplaces: rename r_picmip and r_max_size and such to glquake names
 0 darkplaces: reset zoom on connect (Rick)
-0 darkplaces: revert noclip movement to match nq for compatibility with mods that trap movement as input (MauveBib)
+-n darkplaces: revert noclip movement to match nq for compatibility with mods that trap movement as input (MauveBib)
 0 darkplaces: segfault reading memory in windows when starting a new server from menu (yummyluv)
 0 darkplaces: test TecnoX and find the frikbot crash in SV_Physics (KrimZon)
 0 darkplaces: test zlib support with entirely pk3'd id1 data (should crash because of zlib not being setup early enough - fix this) (Mabus)
