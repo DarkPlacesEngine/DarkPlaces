@@ -786,9 +786,10 @@ static void RSurfShader_Sky(const entity_render_t *ent, const texture_t *texture
 
 static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 {
+	int i;
 	const entity_render_t *ent = calldata1;
 	const msurface_t *surf = ent->model->surfaces + calldata2;
-	float f, colorscale;
+	float f, colorscale, scroll[2], *v;
 	const surfmesh_t *mesh;
 	rmeshstate_t m;
 	float alpha;
@@ -830,6 +831,13 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 		R_Mesh_ResizeCheck(mesh->numverts);
 		memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 		memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
+		scroll[0] = sin(cl.time) * 0.125f;
+		scroll[1] = sin(cl.time * 0.8f) * 0.125f;
+		for (i = 0, v = varray_texcoord[0];i < mesh->numverts;i++, v += 4)
+		{
+			v[0] += scroll[0];
+			v[1] += scroll[1];
+		}
 		f = surf->flags & SURF_DRAWFULLBRIGHT ? 1.0f : ((surf->flags & SURF_LIGHTMAP) ? 0 : 0.5f);
 		R_FillColors(varray_color, mesh->numverts, f, f, f, alpha);
 		if (!(surf->flags & SURF_DRAWFULLBRIGHT || ent->effects & EF_FULLBRIGHT))
