@@ -146,7 +146,7 @@ d darkplaces: shadow volume rendering should not unlock the arrays between rende
 0 darkplaces: figure out why zombies are disappearing when not entirely submerged in some hipnotic maps (romi) 
 0 darkplaces: fix broken key repeat on backspace key in console (Mercury)
 0 darkplaces: fix broken mouse button display in key binding menu, it shows ??? for mouse buttons (Mercury, Tomaz)
-2 darkplaces: fix cl_nodelta 1, it's halting updates (Tomaz, sublim3)
+-n darkplaces: fix cl_nodelta 1, it's halting updates (Tomaz, sublim3)
 0 darkplaces: fix disappearing viewmodel (and other models) when in an unvised q3bsp, or partially inside a wall in q3bsp
 0 darkplaces: fix loadsky;r_restart;r_restart crash, again (sajt)
 0 darkplaces: fix model lighting with r_shadow_realtime_world_lightmaps mode, it seems to be adding dlights to vertices? (Mitchell)
