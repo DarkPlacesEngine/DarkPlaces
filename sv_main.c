@@ -443,7 +443,7 @@ void SV_WriteEntitiesToClient (edict_t	*clent, sizebuf_t *msg)
 		MSG_WriteFloat(msg, org[2]);
 	}
 
-	clentnum = NUM_FOR_EDICT(clent); // LordHavoc: for comparison purposes
+	clentnum = EDICT_TO_PROG(clent); // LordHavoc: for comparison purposes
 // send over all entities (except the client) that touch the pvs
 	ent = NEXT_EDICT(sv.edicts);
 	for (e=1 ; e<sv.num_edicts ; e++, ent = NEXT_EDICT(ent))
