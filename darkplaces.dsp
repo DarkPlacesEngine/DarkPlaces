@@ -232,6 +232,14 @@ SOURCE=.\mathlib.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\matrix3x4.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\matrix4x4.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\menu.c
 # End Source File
 # Begin Source File
@@ -589,6 +597,10 @@ SOURCE=.\progs.h
 # Begin Source File
 
 SOURCE=.\protocol.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\qtypes.h
 # End Source File
 # Begin Source File
 
