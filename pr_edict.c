@@ -134,6 +134,8 @@ int eval_cursor_trace_start;
 int eval_cursor_trace_endpos;
 int eval_cursor_trace_ent;
 int eval_colormod;
+int eval_playermodel;
+int eval_playerskin;
 
 mfunction_t *SV_PlayerPhysicsQC;
 mfunction_t *EndFrameQC;
@@ -200,6 +202,8 @@ void FindEdictFieldOffsets(void)
 	eval_cursor_trace_endpos = FindFieldOffset("cursor_trace_endpos");
 	eval_cursor_trace_ent = FindFieldOffset("cursor_trace_ent");
 	eval_colormod = FindFieldOffset("colormod");
+	eval_playermodel = FindFieldOffset("playermodel");
+	eval_playerskin = FindFieldOffset("playerskin");
 
 	// LordHavoc: allowing QuakeC to override the player movement code
 	SV_PlayerPhysicsQC = ED_FindFunction ("SV_PlayerPhysics");
@@ -236,8 +240,10 @@ void ED_ClearEdict (edict_t *e)
 		if ((val = GETEDICTFIELDVALUE(e, eval_clientcolors)))
 			val->_float = svs.clients[num].colors;
 		// NEXUIZ_PLAYERMODEL and NEXUIZ_PLAYERSKIN
-		e->v->playermodel = PR_SetString(svs.clients[num].playermodel);
-		e->v->playerskin = PR_SetString(svs.clients[num].playerskin);
+		if( eval_playermodel )
+			GETEDICTFIELDVALUE(host_client->edict, eval_playermodel)->string = PR_SetString(svs.clients[num].playermodel);
+		if( eval_playerskin )
+			GETEDICTFIELDVALUE(host_client->edict, eval_playerskin)->string = PR_SetString(svs.clients[num].playerskin);
 	}
 }
 
@@ -1002,7 +1008,7 @@ qboolean ED_ParseEpair(edict_t *ent, ddef_t *key, const char *s)
 			Con_DPrintf("ED_ParseEpair: Can't find field %s\n", s);
 			return false;
 		}
-		//val->_int = G_INT(def->ofs); AK Please check this - seems to be an org. quake bug
+		//val->_int = G_INT(def->ofs); // AK Please check this - seems to be an org. quake bug
 		val->_int = def->ofs;
 		break;
 

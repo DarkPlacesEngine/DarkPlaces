@@ -1160,20 +1160,24 @@ void SV_UpdateToReliableMessages (void)
 		}
 
 		// NEXUIZ_PLAYERMODEL
-		model = PR_GetString(host_client->edict->v->playermodel);
-		if (model == NULL)
-			model = "";
-		// always point the string back at host_client->name to keep it safe
-		strlcpy (host_client->playermodel, model, sizeof (host_client->playermodel));
-		host_client->edict->v->playermodel = PR_SetString(host_client->playermodel);
+		if( eval_playermodel ) {
+			model = PR_GetString(GETEDICTFIELDVALUE(host_client->edict, eval_playermodel)->string);
+			if (model == NULL)
+				model = "";
+			// always point the string back at host_client->name to keep it safe
+			strlcpy (host_client->playermodel, model, sizeof (host_client->playermodel));
+			GETEDICTFIELDVALUE(host_client->edict, eval_playermodel)->string = PR_SetString(host_client->playermodel);
+		}
 
 		// NEXUIZ_PLAYERSKIN
-		skin = PR_GetString(host_client->edict->v->playerskin);
-		if (skin == NULL)
-			skin = "";
-		// always point the string back at host_client->name to keep it safe
-		strlcpy (host_client->playerskin, skin, sizeof (host_client->playerskin));
-		host_client->edict->v->playerskin = PR_SetString(host_client->playerskin);
+		if( eval_playerskin ) {
+			skin = PR_GetString(GETEDICTFIELDVALUE(host_client->edict, eval_playerskin)->string);
+			if (skin == NULL)
+				skin = "";
+			// always point the string back at host_client->name to keep it safe
+			strlcpy (host_client->playerskin, skin, sizeof (host_client->playerskin));
+			GETEDICTFIELDVALUE(host_client->edict, eval_playerskin)->string = PR_SetString(host_client->playerskin);
+		}
 
 		// frags
 		host_client->frags = (int)host_client->edict->v->frags;

@@ -812,7 +812,8 @@ void Host_Playermodel_f (void)
 
 	// point the string back at updateclient->name to keep it safe
 	strlcpy (host_client->playermodel, newPath, sizeof (host_client->playermodel));
-	host_client->edict->v->playermodel = PR_SetString(host_client->playermodel);
+	if( eval_playermodel )
+		GETEDICTFIELDVALUE(host_client->edict, eval_playermodel)->string = PR_SetString(host_client->playermodel);
 	if (strcmp(host_client->old_model, host_client->playermodel))
 	{
 		if (host_client->spawned)
@@ -872,7 +873,8 @@ void Host_Playerskin_f (void)
 
 	// point the string back at updateclient->name to keep it safe
 	strlcpy (host_client->playerskin, newPath, sizeof (host_client->playerskin));
-	host_client->edict->v->playerskin = PR_SetString(host_client->playerskin);
+	if( eval_playerskin )
+		GETEDICTFIELDVALUE(host_client->edict, eval_playerskin)->string = PR_SetString(host_client->playerskin);
 	if (strcmp(host_client->old_skin, host_client->playerskin))
 	{
 		if (host_client->spawned)
