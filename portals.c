@@ -5,7 +5,6 @@
 #define MAXRECURSIVEPORTALS 256
 
 static tinyplane_t portalplanes[MAXRECURSIVEPORTALPLANES];
-static int portalplanecount;
 static int ranoutofportalplanes;
 static int ranoutofportals;
 static float portaltemppoints[2][256][3];
@@ -84,7 +83,7 @@ int Portal_PortalThroughPortalPlanes(tinyplane_t *clipplanes, int clipnumplanes,
 	}
 	if (numpoints > maxpoints)
 		return -1;
-	memcpy(out, &portaltemppoints[1][0][0], numpoints * 3 * sizeof(float));
+	memcpy(out, &portaltemppoints[0][0][0], numpoints * 3 * sizeof(float));
 	return numpoints;
 }
 
@@ -220,7 +219,6 @@ int Portal_CheckPolygon(model_t *model, vec3_t eye, float *polypoints, int numpo
 		}
 	}
 
-	portalplanecount = 0;
 	ranoutofportalplanes = false;
 	ranoutofportals = false;
 
@@ -317,5 +315,173 @@ int Portal_CheckBox(model_t *model, vec3_t eye, vec3_t a, vec3_t b)
 	);
 
 	return false;
+}
+
+vec3_t trianglepoints[3];
+
+typedef struct portalrecursioninfo_s
+{
+	int exact;
+	float nradius;
+	qbyte *surfacemark;
+	qbyte *leafmark;
+	model_t *model;
+	vec3_t eye;
+}
+portalrecursioninfo_t;
+
+void Portal_RecursiveFlow_ExactMarkSurfaces(portalrecursioninfo_t *info, int *mark, int nummarksurfaces, int firstclipplane, int numclipplanes)
+{
+	int i, j, *elements;
+	msurface_t *surf;
+	surfmesh_t *surfmesh;
+	for (i = 0;i < nummarksurfaces;i++, mark++)
+	{
+		if (!info->surfacemark[*mark])
+		{
+			surf = info->model->surfaces + *mark;
+			if (surf->poly_numverts)
+			{
+				if (surf->flags & SURF_PLANEBACK)
+				{
+					if (DotProduct(info->eye, surf->plane->normal) > surf->plane->dist)
+						continue;
+				}
+				else
+				{
+					if (DotProduct(info->eye, surf->plane->normal) < surf->plane->dist)
+						continue;
+				}
+				if (Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, surf->poly_verts, surf->poly_numverts, &portaltemppoints2[0][0], 256) < 3)
+					continue;
+			}
+			else
+			{
+				for (surfmesh = surf->mesh;surfmesh;surfmesh = surfmesh->chain)
+				{
+					for (j = 0, elements = surfmesh->index;j < surfmesh->numtriangles;j++, elements += 3)
+					{
+						VectorCopy((surfmesh->verts + elements[0] * 4), trianglepoints[0]);
+						VectorCopy((surfmesh->verts + elements[1] * 4), trianglepoints[1]);
+						VectorCopy((surfmesh->verts + elements[2] * 4), trianglepoints[2]);
+						if ((info->eye[0] - trianglepoints[0][0]) * ((trianglepoints[0][1] - trianglepoints[1][1]) * (trianglepoints[2][2] - trianglepoints[1][2]) - (trianglepoints[0][2] - trianglepoints[1][2]) * (trianglepoints[2][1] - trianglepoints[1][1]))
+						  + (info->eye[1] - trianglepoints[0][1]) * ((trianglepoints[0][2] - trianglepoints[1][2]) * (trianglepoints[2][0] - trianglepoints[1][0]) - (trianglepoints[0][0] - trianglepoints[1][0]) * (trianglepoints[2][2] - trianglepoints[1][2]))
+						  + (info->eye[2] - trianglepoints[0][2]) * ((trianglepoints[0][0] - trianglepoints[1][0]) * (trianglepoints[2][1] - trianglepoints[1][1]) - (trianglepoints[0][1] - trianglepoints[1][1]) * (trianglepoints[2][0] - trianglepoints[1][0])) > 0
+						 && Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, trianglepoints[0], 3, &portaltemppoints2[0][0], 256) >= 3)
+							break;
+					}
+					if (j < surfmesh->numtriangles)
+						break;
+				}
+				if (surfmesh == NULL)
+					continue;
+			}
+			info->surfacemark[*mark] = true;
+		}
+	}
+}
+
+void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, int firstclipplane, int numclipplanes)
+{
+	mportal_t *p;
+	int newpoints, i, prev;
+	float dist;
+	vec3_t center, v1, v2;
+	tinyplane_t *newplanes;
+
+	if (info->leafmark)
+		info->leafmark[leaf - info->model->leafs] = true;
+
+	// mark surfaces in leaf that can be seen through portal
+	if (leaf->nummarksurfaces && info->surfacemark)
+	{
+		if (info->exact)
+			Portal_RecursiveFlow_ExactMarkSurfaces(info, leaf->firstmarksurface, leaf->nummarksurfaces, firstclipplane, numclipplanes);
+		else
+			for (i = 0;i < leaf->nummarksurfaces;i++)
+				info->surfacemark[leaf->firstmarksurface[i]] = true;
+	}
+
+	// follow portals into other leafs
+	for (p = leaf->portals;p;p = p->next)
+	{
+		// only flow through portals facing away from the viewer
+		dist = PlaneDiff(info->eye, (&p->plane));
+		if (dist < 0 && dist >= info->nradius)
+		{
+			newpoints = Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, (float *) p->points, p->numpoints, &portaltemppoints2[0][0], 256);
+			if (newpoints < 3)
+				continue;
+			else if (firstclipplane + numclipplanes + newpoints > MAXRECURSIVEPORTALPLANES)
+				ranoutofportalplanes = true;
+			else
+			{
+				// find the center by averaging
+				VectorClear(center);
+				for (i = 0;i < newpoints;i++)
+					VectorAdd(center, portaltemppoints2[i], center);
+				// ixtable is a 1.0f / N table
+				VectorScale(center, ixtable[newpoints], center);
+				// calculate the planes, and make sure the polygon can see it's own center
+				newplanes = &portalplanes[firstclipplane + numclipplanes];
+				for (prev = newpoints - 1, i = 0;i < newpoints;prev = i, i++)
+				{
+					VectorSubtract(info->eye, portaltemppoints2[i], v1);
+					VectorSubtract(portaltemppoints2[prev], portaltemppoints2[i], v2);
+					CrossProduct(v1, v2, newplanes[i].normal);
+					VectorNormalizeFast(newplanes[i].normal);
+					newplanes[i].dist = DotProduct(info->eye, newplanes[i].normal);
+					if (DotProduct(newplanes[i].normal, center) <= newplanes[i].dist)
+					{
+						// polygon can't see it's own center, discard and use parent portal
+						break;
+					}
+				}
+				if (i == newpoints)
+					Portal_RecursiveFlow(info, p->past, firstclipplane + numclipplanes, newpoints);
+				else
+					Portal_RecursiveFlow(info, p->past, firstclipplane, numclipplanes);
+			}
+		}
+	}
+}
+
+void Portal_Visibility(model_t *model, const vec3_t eye, qbyte *leafmark, qbyte *surfacemark, const mplane_t *frustumplanes, int numfrustumplanes, int exact, float radius)
+{
+	int i;
+	portalrecursioninfo_t info;
+
+	// if there is no model, it can not block visibility
+	if (model == NULL)
+		Host_Error("Portal_Visibility: NULL model\n");
+
+	Mod_CheckLoaded(model);
+
+	if (model->type != mod_brush)
+		Host_Error("Portal_Visibility: not a brush model\n");
+
+	// put frustum planes (if any) into tinyplane format at start of buffer
+	for (i = 0;i < numfrustumplanes;i++)
+	{
+		VectorCopy(frustumplanes[i].normal, portalplanes[i].normal);
+		portalplanes[i].dist = frustumplanes[i].dist;
+	}
+
+	ranoutofportalplanes = false;
+	ranoutofportals = false;
+
+	info.nradius = -radius;
+	info.exact = exact;
+	info.surfacemark = surfacemark;
+	info.leafmark = leafmark;
+	info.model = model;
+	VectorCopy(eye, info.eye);
+
+	Portal_RecursiveFlow(&info, Mod_PointInLeaf(eye, model), 0, numfrustumplanes);
+
+	if (ranoutofportalplanes)
+		Con_Printf("Portal_RecursiveFlow: ran out of %d plane stack when recursing through portals\n", MAXRECURSIVEPORTALPLANES);
+	if (ranoutofportals)
+		Con_Printf("Portal_RecursiveFlow: ran out of %d portal stack when recursing through portals\n", MAXRECURSIVEPORTALS);
 }
 
