@@ -66,6 +66,7 @@ void SHOWLMP_clear(void);
 extern cvar_t vid_conwidth;
 extern cvar_t vid_conheight;
 extern cvar_t scr_screenshot_jpeg;
+extern cvar_t scr_screenshot_jpeg_quality;
 
 void CL_Screen_NewMap(void);
 void CL_Screen_Init(void);

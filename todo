@@ -35,6 +35,8 @@
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 -n dpmod: make grapple off-hand (joe hill)
+4 darkplaces: use larger of model box or collision box for linking into areagrid so that bullet tracing can use the model bounding box instead of the collision one?  (Urre)  
+2 darkplaces: use model box size for SOLID_BSP objects in areagrid linking and such, just for optimal consistency.
 0 darkplaces: GAME_FNIGGIUM: console doesn't show unless you manually pull it down
 0 darkplaces: add DP_GFX_QUAKE3MODELTAGS, DP_GFX_SKINFILES, and any other new extensions to the wiki
 d darkplaces: add DP_LITSUPPORT extension and document it
