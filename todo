@@ -22,6 +22,7 @@
 -d (Throvold@uboot.com) darkplaces client: add cvars for sbar alpha (background and foreground) (Throvold@uboot.com)
 -d (Vic) darkplaces client: make CL_RocketTrail2 use the entity to keep track of trail spacing like CL_RocketTrail does (Vic)
 -d (VorteX) darkplaces console: add "set" and "seta" commands (DP_CONSOLE_SET and DP_CONSOLE_SETA extensions) to create a cvar and set its value (seta makes a saved cvar) (VorteX)
+-d (Zombie) darkplaces loading: missing triangles in q3bsp patches, appears only one of the two triangles per cell is being rendered (Zombie)
 -d (avirox) darkplaces editlights: light entity loader is broken, it ends up with scrambled colors (avirox, Tomaz)
 -d (de-we) darkplaces docs: add de-we to credits page for the great icons (de-we)
 -d (frightfan) darkplaces client: add ability to load gfx/particlefont.tga (Vermeulen, frightfan, Error)
@@ -58,7 +59,6 @@
 0 darkplaces loading: check for truncated sound files (FrikaC)
 0 darkplaces loading: make sky work without a valid size (just treat it as single layer clouds or non-animated) (tell Vermeulen)
 0 darkplaces loading: make sure startup script code executes aliases when doing the cvar scan
-0 darkplaces loading: missing triangles in q3bsp patches, appears only one of the two triangles per cell is being rendered (Zombie)
 0 darkplaces loading: test zlib support with entirely pk3'd id1 data (should crash because of zlib not being setup early enough - fix this) (Mabus)
 0 darkplaces memory: add Mem_AllocNoClear function, and use it where possible, if developer is on it should clear with random garbage
 0 darkplaces menu: add confirm question to "Reset to Defaults" option, with No selected (Sajt
