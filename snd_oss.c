@@ -32,7 +32,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 int audio_fd;
 int snd_inited;
 
-static int tryrates[] = { 11025, 22051, 44100, 8000 };
+static int tryrates[] = {44100, 22051, 11025, 8000};
 
 qboolean SNDDMA_Init(void)
 {
@@ -80,13 +80,13 @@ qboolean SNDDMA_Init(void)
 	}
 
 	if (ioctl(audio_fd, SNDCTL_DSP_GETOSPACE, &info)==-1)
-	{   
+	{
 		perror("GETOSPACE");
 		Con_Printf("Um, can't do GETOSPACE?\n");
 		close(audio_fd);
 		return 0;
 	}
-    
+
 	shm = &sn;
 	shm->splitbuffer = 0;
 

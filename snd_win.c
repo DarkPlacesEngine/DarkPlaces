@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -42,10 +42,10 @@ static int	sample16;
 static int	snd_sent, snd_completed;
 
 
-/* 
- * Global variables. Must be visible to window-procedure function 
- *  so it can unlock and free the data block after it has been played. 
- */ 
+/*
+ * Global variables. Must be visible to window-procedure function
+ *  so it can unlock and free the data block after it has been played.
+ */
 
 HANDLE		hData;
 HPSTR		lpData, lpData2;
@@ -53,7 +53,7 @@ HPSTR		lpData, lpData2;
 HGLOBAL		hWaveHdr;
 LPWAVEHDR	lpWaveHdr;
 
-HWAVEOUT    hWaveOut; 
+HWAVEOUT    hWaveOut;
 
 WAVEOUTCAPS	wavecaps;
 
@@ -147,7 +147,7 @@ void FreeSound (void)
 
 		if (hWaveHdr)
 		{
-			GlobalUnlock(hWaveHdr); 
+			GlobalUnlock(hWaveHdr);
 			GlobalFree(hWaveHdr);
 		}
 
@@ -185,7 +185,7 @@ sndinitstat SNDDMA_InitDirect (void)
 	DSBCAPS			dsbcaps;
 	DWORD			dwSize, dwWrite;
 	DSCAPS			dscaps;
-	WAVEFORMATEX	format, pformat; 
+	WAVEFORMATEX	format, pformat;
 	HRESULT			hresult;
 	int				reps;
 	int i;
@@ -200,7 +200,7 @@ sndinitstat SNDDMA_InitDirect (void)
 	if (i && i != (com_argc - 1))
 		shm->speed = atoi(com_argv[i+1]);
 	else
-		shm->speed = 11025;
+		shm->speed = 44100;
 
 	memset (&format, 0, sizeof(format));
 	format.wFormatTag = WAVE_FORMAT_PCM;
@@ -209,12 +209,12 @@ sndinitstat SNDDMA_InitDirect (void)
     format.nSamplesPerSec = shm->speed;
     format.nBlockAlign = format.nChannels * format.wBitsPerSample / 8;
     format.cbSize = 0;
-    format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign; 
+    format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
 
 	if (!hInstDS)
 	{
 		hInstDS = LoadLibrary("dsound.dll");
-		
+
 		if (hInstDS == NULL)
 		{
 			Con_SafePrintf ("Couldn't load dsound.dll\n");
@@ -364,7 +364,7 @@ sndinitstat SNDDMA_InitDirect (void)
 		               "   %d bits/sample\n"
 					   "   %d samples/sec\n",
 					   shm->channels, shm->samplebits, shm->speed);
-	
+
 	gSndBufSize = dsbcaps.dwBufferBytes;
 
 // initialize the buffer
@@ -393,7 +393,7 @@ sndinitstat SNDDMA_InitDirect (void)
 	pDSBuf->lpVtbl->Unlock(pDSBuf, lpData, dwSize, NULL, 0);
 
 	/* we don't want anyone to access the buffer directly w/o locking it first. */
-	lpData = NULL; 
+	lpData = NULL;
 
 	pDSBuf->lpVtbl->Stop(pDSBuf);
 	pDSBuf->lpVtbl->GetCurrentPosition(pDSBuf, &mmstarttime.u.sample, &dwWrite);
@@ -422,10 +422,10 @@ Crappy windows multimedia base
 */
 qboolean SNDDMA_InitWav (void)
 {
-	WAVEFORMATEX  format; 
+	WAVEFORMATEX  format;
 	int				i;
 	HRESULT			hr;
-	
+
 	snd_sent = 0;
 	snd_completed = 0;
 
@@ -437,7 +437,7 @@ qboolean SNDDMA_InitWav (void)
 	if (i && i != (com_argc - 1))
 		shm->speed = atoi(com_argv[i+1]);
 	else
-		shm->speed = 11025;
+		shm->speed = 44100;
 
 	memset (&format, 0, sizeof(format));
 	format.wFormatTag = WAVE_FORMAT_PCM;
@@ -448,11 +448,11 @@ qboolean SNDDMA_InitWav (void)
 		*format.wBitsPerSample / 8;
 	format.cbSize = 0;
 	format.nAvgBytesPerSec = format.nSamplesPerSec
-		*format.nBlockAlign; 
-	
-	/* Open a waveform device for output using window callback. */ 
-	while ((hr = waveOutOpen((LPHWAVEOUT)&hWaveOut, WAVE_MAPPER, 
-					&format, 
+		*format.nBlockAlign;
+
+	/* Open a waveform device for output using window callback. */
+	while ((hr = waveOutOpen((LPHWAVEOUT)&hWaveOut, WAVE_MAPPER,
+					&format,
 					0, 0L, CALLBACK_NULL)) != MMSYSERR_NOERROR)
 	{
 		if (hr != MMSYSERR_ALLOCATED)
@@ -471,61 +471,61 @@ qboolean SNDDMA_InitWav (void)
 							"  hardware already in use\n");
 			return false;
 		}
-	} 
+	}
 
-	/* 
-	 * Allocate and lock memory for the waveform data. The memory 
-	 * for waveform data must be globally allocated with 
-	 * GMEM_MOVEABLE and GMEM_SHARE flags. 
+	/*
+	 * Allocate and lock memory for the waveform data. The memory
+	 * for waveform data must be globally allocated with
+	 * GMEM_MOVEABLE and GMEM_SHARE flags.
 
-	*/ 
+	*/
 	gSndBufSize = WAV_BUFFERS*WAV_BUFFER_SIZE;
-	hData = GlobalAlloc(GMEM_MOVEABLE | GMEM_SHARE, gSndBufSize); 
-	if (!hData) 
-	{ 
+	hData = GlobalAlloc(GMEM_MOVEABLE | GMEM_SHARE, gSndBufSize);
+	if (!hData)
+	{
 		Con_SafePrintf ("Sound: Out of memory.\n");
 		FreeSound ();
-		return false; 
+		return false;
 	}
 	lpData = GlobalLock(hData);
 	if (!lpData)
-	{ 
+	{
 		Con_SafePrintf ("Sound: Failed to lock.\n");
 		FreeSound ();
-		return false; 
-	} 
+		return false;
+	}
 	memset (lpData, 0, gSndBufSize);
 
-	/* 
-	 * Allocate and lock memory for the header. This memory must 
-	 * also be globally allocated with GMEM_MOVEABLE and 
-	 * GMEM_SHARE flags. 
-	 */ 
-	hWaveHdr = GlobalAlloc(GMEM_MOVEABLE | GMEM_SHARE, 
-		(DWORD) sizeof(WAVEHDR) * WAV_BUFFERS); 
+	/*
+	 * Allocate and lock memory for the header. This memory must
+	 * also be globally allocated with GMEM_MOVEABLE and
+	 * GMEM_SHARE flags.
+	 */
+	hWaveHdr = GlobalAlloc(GMEM_MOVEABLE | GMEM_SHARE,
+		(DWORD) sizeof(WAVEHDR) * WAV_BUFFERS);
 
 	if (hWaveHdr == NULL)
-	{ 
+	{
 		Con_SafePrintf ("Sound: Failed to Alloc header.\n");
 		FreeSound ();
-		return false; 
-	} 
+		return false;
+	}
 
-	lpWaveHdr = (LPWAVEHDR) GlobalLock(hWaveHdr); 
+	lpWaveHdr = (LPWAVEHDR) GlobalLock(hWaveHdr);
 
 	if (lpWaveHdr == NULL)
-	{ 
+	{
 		Con_SafePrintf ("Sound: Failed to lock header.\n");
 		FreeSound ();
-		return false; 
+		return false;
 	}
 
 	memset (lpWaveHdr, 0, sizeof(WAVEHDR) * WAV_BUFFERS);
 
-	/* After allocation, set up and prepare headers. */ 
+	/* After allocation, set up and prepare headers. */
 	for (i=0 ; i<WAV_BUFFERS ; i++)
 	{
-		lpWaveHdr[i].dwBufferLength = WAV_BUFFER_SIZE; 
+		lpWaveHdr[i].dwBufferLength = WAV_BUFFER_SIZE;
 		lpWaveHdr[i].lpData = lpData + i*WAV_BUFFER_SIZE;
 
 		if (waveOutPrepareHeader(hWaveOut, lpWaveHdr+i, sizeof(WAVEHDR)) !=
@@ -638,7 +638,7 @@ int SNDDMA_GetDMAPos(void)
 	int		s;
 	DWORD	dwWrite;
 
-	if (dsound_init) 
+	if (dsound_init)
 	{
 		mmtime.wType = TIME_SAMPLES;
 		pDSBuf->lpVtbl->GetCurrentPosition(pDSBuf, &mmtime.u.sample, &dwWrite);
