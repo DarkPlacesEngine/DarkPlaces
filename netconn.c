@@ -103,18 +103,18 @@ qboolean	hostcache_consoleoutput;
 
 // helper function to insert a value into the viewset
 // spare entries will be removed
-static void _HostCache_VS_Insert( int index, hostcache_t *entry )
+static void _HostCache_ViewSet_InsertBefore( int index, hostcache_t *entry )
 {
-    int start;
-	for( start = index, index = hostcache_viewcount; index > start; index-- )
-		hostcache_viewset[index] = hostcache_viewset[index - 1];
+    int i;
 	if( ++hostcache_viewcount > HOSTCACHE_VIEWCACHESIZE )
 		hostcache_viewcount = HOSTCACHE_VIEWCACHESIZE;
-	hostcache_viewset[start] = entry;
+	for( i = hostcache_viewcount - 1; i > index; i-- )
+		hostcache_viewset[i] = hostcache_viewset[i - 1];
+	hostcache_viewset[index] = entry;
 }
 
 // we suppose hostcache_viewcount to be valid, ie > 0
-static void _HostCache_VS_Remove( int index )
+static void _HostCache_ViewSet_Remove( int index )
 {
 	for( --hostcache_viewcount; index < hostcache_viewcount; index++ )
 		hostcache_viewset[index] = hostcache_viewset[index + 1];
@@ -207,7 +207,7 @@ static qboolean _HostCache_TestMask( hostcache_info_t *info )
 
 static void _HostCache_Insert( hostcache_t *entry )
 {
-	int start, end, size;
+	int start, end, mid;
 	if( hostcache_viewcount == HOSTCACHE_VIEWCACHESIZE )
 		return;
 	// now check whether it passes through mask
@@ -215,7 +215,7 @@ static void _HostCache_Insert( hostcache_t *entry )
 		return;
 
 	if( !hostcache_viewcount ) {
-		_HostCache_VS_Insert( 0, entry );
+		_HostCache_ViewSet_InsertBefore( 0, entry );
 		return;
 	}
 	// ok, insert it, we just need to find out where exactly:
@@ -223,24 +223,40 @@ static void _HostCache_Insert( hostcache_t *entry )
 	// two special cases
 	// check whether to insert it as new first item
 	if( _HostCache_SortTest( entry, hostcache_viewset[0] ) ) {
-		_HostCache_VS_Insert( 0, entry );
+		_HostCache_ViewSet_InsertBefore( 0, entry );
 		return;
 	} // check whether to insert it as new last item
 	else if( !_HostCache_SortTest( entry, hostcache_viewset[hostcache_viewcount - 1] ) ) {
-		_HostCache_VS_Insert( hostcache_viewcount, entry );
+		_HostCache_ViewSet_InsertBefore( hostcache_viewcount, entry );
 		return;
 	}
 	start = 1;
 	end = hostcache_viewcount - 1;
-	while( (size = start - end) > 0 )
+	while( end > start )
+	{
+		mid = (start + end) / 2;
 		// test the item that lies in the middle between start and end
-		if( _HostCache_SortTest( entry, hostcache_viewset[(start + end) / 2] ) )
+		if( _HostCache_SortTest( entry, hostcache_viewset[mid] ) )
 			// the item has to be in the upper half
-			end = (start + end) / 2 - 1;
+			end = mid - 1;
 		else 
 			// the item has to be in the lower half
-			start = (start + end) / 2 + 1;
-	_HostCache_VS_Insert( start + 1, entry );
+			start = mid + 1;
+	}
+	_HostCache_ViewSet_InsertBefore( start + 1, entry );
+}
+
+static void _HostCache_Remove( hostcache_t *entry )
+{
+	int i;
+	for( i = 0; i < hostcache_viewcount; i++ )
+	{
+		if (hostcache_viewset[i] == entry)
+		{
+			_HostCache_ViewSet_Remove(i);
+			break;
+		}
+	}
 }
 
 void HostCache_RebuildViewSet(void)
@@ -864,10 +880,9 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 			// hostcache only uses text addresses
 			LHNETADDRESS_ToString(peeraddress, cname, sizeof(cname), true);
 			// search the cache for this server and update it
-			for( n = 0; n < hostcache_cachecount; n++ ) {
+			for( n = 0; n < hostcache_cachecount; n++ )
 				if( !strcmp( cname, hostcache_cache[n].info.cname ) )
 					break;
-			}
 			if( n == hostcache_cachecount )
 				return true;
 
@@ -882,14 +897,14 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 
 			if (info->ping == 100000)
 					serverreplycount++;
-	
+
 			pingtime = (int)((realtime - hostcache_cache[n].querytime) * 1000.0);
 			pingtime = bound(0, pingtime, 9999);
 			// update the ping
 			info->ping = pingtime;
 
 			// legacy/old stuff move it to the menu ASAP
-			
+
 			// build description strings for the things users care about
 			snprintf(hostcache_cache[n].line1, sizeof(hostcache_cache[n].line1), "%5d%c%3u/%3u %-65.65s", (int)pingtime, info->protocol != NET_PROTOCOL_VERSION ? '*' : ' ', info->numplayers, info->maxplayers, info->name);
 			snprintf(hostcache_cache[n].line2, sizeof(hostcache_cache[n].line2), "%-21.21s %-19.19s %-17.17s %-20.20s", info->cname, info->game, info->mod, info->map);
@@ -912,13 +927,11 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 			if( hostcache_consoleoutput )
 				Con_Printf("%s\n%s\n", hostcache_cache[n].line1, hostcache_cache[n].line2);
 			// and finally, update the view set
-			if( hostcache_cache[n].finished ) {
-                _HostCache_VS_Remove( n );
-				_HostCache_Insert( &hostcache_cache[n] );
-			} else
-				_HostCache_Insert( &hostcache_cache[n] );
+			if( hostcache_cache[n].finished )
+                _HostCache_Remove( &hostcache_cache[n] );
+			_HostCache_Insert( &hostcache_cache[n] );
 			hostcache_cache[n].finished = true;
-	
+
 			return true;
 		}
 		if (!strncmp(string, "getserversResponse\\", 19) && hostcache_cachecount < HOSTCACHE_TOTALSIZE)
@@ -936,13 +949,13 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 				snprintf (ipstring, sizeof (ipstring), "%u.%u.%u.%u:%u", data[1], data[2], data[3], data[4], (data[5] << 8) | data[6]);
 				if (developer.integer)
 					Con_Printf("Requesting info from server %s\n", ipstring);				
+				// ignore the rest of the message if the hostcache is full
 				if( hostcache_cachecount == HOSTCACHE_TOTALSIZE )
-						// ignore the rest of the message since there wont magically disappear entries
-						break;
-						
+					break;
+
 				LHNETADDRESS_FromString(&svaddress, ipstring, 0);
 				NetConn_WriteString(mysocket, "\377\377\377\377getinfo", &svaddress);
-                
+
 				memset(&hostcache_cache[hostcache_cachecount], 0, sizeof(hostcache_cache[hostcache_cachecount]));
 				// store the data the engine cares about (address and ping)
 				strlcpy (hostcache_cache[hostcache_cachecount].info.cname, ipstring, sizeof (hostcache_cache[hostcache_cachecount].info.cname));
@@ -953,7 +966,7 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 					Con_Printf("querying %s\n", ipstring);
 
 				++hostcache_cachecount;
-				
+
 				// move on to next address in packet
 				data += 7;
 				length -= 7;
