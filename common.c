@@ -1115,9 +1115,7 @@ char *SearchInfostring(const char *infostring, const char *key)
 /*	$OpenBSD: strlcpy.c,v 1.8 2003/06/17 21:56:24 millert Exp $	*/
 
 
-// Most (all?) BSDs already have them
-#if !defined(__OpenBSD__) && !defined(__NetBSD__) && !defined(__FreeBSD__) && !(defined(__APPLE__) && defined(__MACH__))
-
+#ifndef HAVE_STRLCAT
 size_t
 strlcat(char *dst, const char *src, size_t siz)
 {
@@ -1145,7 +1143,10 @@ strlcat(char *dst, const char *src, size_t siz)
 
 	return(dlen + (s - src));	/* count does not include NUL */
 }
+#endif  // #ifndef HAVE_STRLCAT
 
+
+#ifndef HAVE_STRLCPY
 size_t
 strlcpy(char *dst, const char *src, size_t siz)
 {
@@ -1172,4 +1173,4 @@ strlcpy(char *dst, const char *src, size_t siz)
 	return(s - src - 1);	/* count does not include NUL */
 }
 
-#endif  // #if !defined(__OpenBSD__) && !defined(__NetBSD__) && !defined(__FreeBSD__)
+#endif  // #ifndef HAVE_STRLCPY

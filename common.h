@@ -204,8 +204,12 @@ char *SearchInfostring(const char *infostring, const char *key);
 
 // strlcat and strlcpy, from OpenBSD
 // Most (all?) BSDs already have them
-#if !defined(__OpenBSD__) && !defined(__NetBSD__) && !defined(__FreeBSD__)
+#if defined(__OpenBSD__) || defined(__NetBSD__) || defined(__FreeBSD__) || (defined(__APPLE__) && defined(__MACH__))
+# define HAVE_STRLCAT 1
+# define HAVE_STRLCPY 1
+#endif
 
+#ifndef HAVE_STRLCAT
 /*
  * Appends src to string dst of size siz (unlike strncat, siz is the
  * full size of dst, not space left).  At most siz-1 characters
@@ -214,7 +218,9 @@ char *SearchInfostring(const char *infostring, const char *key);
  * If retval >= siz, truncation occurred.
  */
 size_t strlcat(char *dst, const char *src, size_t siz);
+#endif  // #ifndef HAVE_STRLCAT
 
+#ifndef HAVE_STRLCPY
 /*
  * Copy src to string dst of size siz.  At most siz-1 characters
  * will be copied.  Always NUL terminates (unless siz == 0).
@@ -222,7 +228,7 @@ size_t strlcat(char *dst, const char *src, size_t siz);
  */
 size_t strlcpy(char *dst, const char *src, size_t siz);
 
-#endif  // #if !defined(__OpenBSD__) && !defined(__NetBSD__) && !defined(__FreeBSD__)
+#endif  // #ifndef HAVE_STRLCPY
 
 #endif
 
