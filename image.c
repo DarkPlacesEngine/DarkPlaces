@@ -7,21 +7,21 @@
 int		image_width;
 int		image_height;
 
-void Image_CopyMux(qbyte *outpixels, const qbyte *inpixels, int width, int height, int flipx, int flipy, int flipdiagonal, int numincomponents, int numoutcomponents, int *inputcomponentindices)
+void Image_CopyMux(qbyte *outpixels, const qbyte *inpixels, int inputwidth, int inputheight, qboolean inputflipx, qboolean inputflipy, qboolean inputflipdiagonal, int numoutputcomponents, int numinputcomponents, int *outputinputcomponentindices)
 {
 	int index, c, x, y;
 	const qbyte *in, *inrow, *incolumn;
-	if (flipdiagonal)
+	if (inputflipdiagonal)
 	{
-		for (y = 0;y < height;y++)
+		for (x = 0;x < inputwidth;x++)
 		{
-			incolumn = inpixels + (flipx ? width - 1 - y : y) * numincomponents;
-			for (x = 0;x < width;x++)
+			incolumn = inpixels + (inputflipx ? inputwidth - 1 - x : x) * numinputcomponents;
+			for (y = 0;y < inputheight;y++)
 			{
-				in = incolumn + (flipy ? height - 1 - x : x) * width * numincomponents;
-				for (c = 0;c < numoutcomponents;c++)
+				in = incolumn + (inputflipy ? inputheight - 1 - y : y) * inputwidth * numinputcomponents;
+				for (c = 0;c < numoutputcomponents;c++)
 				{
-					index = inputcomponentindices[c];
+					index = outputinputcomponentindices[c];
 					*outpixels++ = (index & 0x80000000) ? (index - 0x8000000) : in[index];
 				}
 			}
@@ -29,15 +29,15 @@ void Image_CopyMux(qbyte *outpixels, const qbyte *inpixels, int width, int heigh
 	}
 	else
 	{
-		for (y = 0;y < height;y++)
+		for (y = 0;y < inputheight;y++)
 		{
-			inrow = inpixels + (flipy ? height - 1 - y : y) * width * numincomponents;
-			for (x = 0;x < width;x++)
+			inrow = inpixels + (inputflipy ? inputheight - 1 - y : y) * inputwidth * numinputcomponents;
+			for (x = 0;x < inputwidth;x++)
 			{
-				in = inrow + (flipx ? width - 1 - x : x) * numincomponents;
-				for (c = 0;c < numoutcomponents;c++)
+				in = inrow + (inputflipx ? inputwidth - 1 - x : x) * numinputcomponents;
+				for (c = 0;c < numoutputcomponents;c++)
 				{
-					index = inputcomponentindices[c];
+					index = outputinputcomponentindices[c];
 					*outpixels++ = (index & 0x80000000) ? (index - 0x8000000) : in[index];
 				}
 			}
