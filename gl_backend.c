@@ -91,6 +91,7 @@ note: here's strip order for a terrain row:
 |\ |\ |\ |\ |
 | \| \| \| \|
 A--B--C--D--E
+clockwise
 
 A0B, 01B, B1C, 12C, C2D, 23D, D3E, 34E
 
@@ -100,6 +101,42 @@ A0B, 01B, B1C, 12C, C2D, 23D, D3E, 34E
 *elements++ = i;
 *elements++ = i + 1;
 *elements++ = i + row + 1;
+
+
+for (y = 0;y < rows - 1;y++)
+{
+	for (x = 0;x < columns - 1;x++)
+	{
+		i = y * rows + x;
+		*elements++ = i + columns;
+		*elements++ = i;
+		*elements++ = i + columns + 1;
+		*elements++ = i;
+		*elements++ = i + 1;
+		*elements++ = i + columns + 1;
+	}
+}
+
+alternative:
+0--1--2--3--4
+| /| /|\ | /|
+|/ |/ | \|/ |
+A--B--C--D--E
+counterclockwise
+
+for (y = 0;y < rows - 1;y++)
+{
+	for (x = 0;x < columns - 1;x++)
+	{
+		i = y * rows + x;
+		*elements++ = i;
+		*elements++ = i + columns;
+		*elements++ = i + columns + 1;
+		*elements++ = i + columns;
+		*elements++ = i + columns + 1;
+		*elements++ = i + 1;
+	}
+}
 */
 
 int polygonelements[768];
