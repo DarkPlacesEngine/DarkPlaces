@@ -37,11 +37,11 @@ void Matrix4x4_CopyTranslateOnly (matrix4x4_t *out, const matrix4x4_t *in)
 	out->m[1][0] = 0.0f;
 	out->m[1][1] = 0.0f;
 	out->m[1][2] = 0.0f;
-	out->m[1][3] = in->m[0][3];
+	out->m[1][3] = in->m[1][3];
 	out->m[2][0] = 0.0f;
 	out->m[2][1] = 0.0f;
 	out->m[2][2] = 0.0f;
-	out->m[2][3] = in->m[0][3];
+	out->m[2][3] = in->m[2][3];
 	out->m[3][0] = 0.0f;
 	out->m[3][1] = 0.0f;
 	out->m[3][2] = 0.0f;
@@ -465,11 +465,11 @@ void Matrix3x4_CopyTranslateOnly (matrix3x4_t *out, const matrix3x4_t *in)
 	out->m[1][0] = 0.0f;
 	out->m[1][1] = 0.0f;
 	out->m[1][2] = 0.0f;
-	out->m[1][3] = in->m[0][3];
+	out->m[1][3] = in->m[1][3];
 	out->m[2][0] = 0.0f;
 	out->m[2][1] = 0.0f;
 	out->m[2][2] = 0.0f;
-	out->m[2][3] = in->m[0][3];
+	out->m[2][3] = in->m[2][3];
 }
 
 void Matrix3x4_FromMatrix4x4 (matrix3x4_t *out, const matrix4x4_t *in)
