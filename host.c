@@ -428,24 +428,30 @@ void SV_DropClient (qboolean crash)
 	if (!crash)
 	{
 		// send any final messages (don't check for errors)
+#if 1
+		// LordHavoc: no opportunity for resending, so reliable is silly
+		MSG_WriteByte (&host_client->message, svc_disconnect);
+		NET_SendUnreliableMessage (host_client->netconnection, &host_client->message);
+#else
 		if (NET_CanSendMessage (host_client->netconnection))
 		{
 			MSG_WriteByte (&host_client->message, svc_disconnect);
 			NET_SendMessage (host_client->netconnection, &host_client->message);
 		}
-
-		if (sv.active && host_client->edict && host_client->spawned) // LordHavoc: don't call QC if server is dead (avoids recursive Host_Error in some mods when they run out of edicts)
-		{
-		// call the prog function for removing a client
-		// this will set the body to a dead frame, among other things
-			saveSelf = pr_global_struct->self;
-			pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
-			PR_ExecuteProgram (pr_global_struct->ClientDisconnect, "QC function ClientDisconnect is missing");
-			pr_global_struct->self = saveSelf;
-		}
-
-		Sys_Printf ("Client %s removed\n",host_client->name);
+#endif
 	}
+
+	if (sv.active && host_client->edict && host_client->spawned) // LordHavoc: don't call QC if server is dead (avoids recursive Host_Error in some mods when they run out of edicts)
+	{
+	// call the prog function for removing a client
+	// this will set the body to a dead frame, among other things
+		saveSelf = pr_global_struct->self;
+		pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
+		PR_ExecuteProgram (pr_global_struct->ClientDisconnect, "QC function ClientDisconnect is missing");
+		pr_global_struct->self = saveSelf;
+	}
+
+	Sys_Printf ("Client %s removed\n",host_client->name);
 
 // break the net connection
 	NET_Close (host_client->netconnection);
