@@ -881,7 +881,7 @@ void S_Update_(void)
 
 		if (pDSBuf)
 		{
-			if (pDSBuf->lpVtbl->GetStatus (pDSBuf, &dwStatus) != DD_OK)
+			if (pDSBuf->lpVtbl->GetStatus (pDSBuf, &dwStatus) != DS_OK)
 				Con_Printf ("Couldn't get sound buffer status\n");
 
 			if (dwStatus & DSBSTATUS_BUFFERLOST)
