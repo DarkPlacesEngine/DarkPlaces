@@ -208,8 +208,10 @@ extern	struct cvar_s	cmdline;
 
 extern int gamemode;
 extern const char *gamename;
-extern const char *gamedirname;
+extern const char *gamedirname1;
+extern const char *gamedirname2;
 extern const char *gamescreenshotname;
+extern const char *gameuserdirname;
 extern char com_modname[MAX_OSPATH];
 
 void COM_ToLowerString (const char *in, char *out, size_t size_out);

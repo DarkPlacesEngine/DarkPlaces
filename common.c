@@ -42,8 +42,10 @@ char com_cmdline[CMDLINE_LENGTH];
 
 int gamemode;
 const char *gamename;
-const char *gamedirname;
+const char *gamedirname1;
+const char *gamedirname2;
 const char *gamescreenshotname;
+const char *gameuserdirname;
 char com_modname[MAX_OSPATH] = "";
 
 
@@ -901,8 +903,10 @@ typedef struct
 	const char* prog_name;
 	const char* cmdline;
 	const char* gamename;
-	const char* gamedirname;
+	const char* gamedirname1;
+	const char* gamedirname2;
 	const char* gamescreenshotname;
+	const char* gameuserdirname;
 } gamemode_info_t;
 
 static const gamemode_info_t gamemode_info [] =
@@ -910,58 +914,58 @@ static const gamemode_info_t gamemode_info [] =
 
 // GAME_NORMAL
 // COMMANDLINEOPTION: Game: -quake runs the game Quake (default)
-{ "",				"-quake",		"DarkPlaces-Quake",		"",			"dp" },
+{ "",				"-quake",		"DarkPlaces-Quake",		"id1",		NULL,			"dp",			"darkplaces" },
 // GAME_HIPNOTIC
 // COMMANDLINEOPTION: Game: -hipnotic runs Quake mission pack 1: The Scourge of Armagon
-{ "hipnotic",		"-hipnotic",	"Darkplaces-Hipnotic",	"hipnotic",	"dp" },
+{ "hipnotic",		"-hipnotic",	"Darkplaces-Hipnotic",	"id1",		"hipnotic",		"dp",			"darkplaces" },
 // GAME_ROGUE
 // COMMANDLINEOPTION: Game: -rogue runs Quake mission pack 2: The Dissolution of Eternity
-{ "rogue",			"-rogue",		"Darkplaces-Rogue",		"rogue",	"dp" },
+{ "rogue",			"-rogue",		"Darkplaces-Rogue",		"id1",		"rogue",		"dp",			"darkplaces" },
 // GAME_NEHAHRA
 // COMMANDLINEOPTION: Game: -nehahra runs The Seal of Nehahra movie and game
-{ "nehahra",		"-nehahra",		"DarkPlaces-Nehahra",	"nehahra",	"dp" },
+{ "nehahra",		"-nehahra",		"DarkPlaces-Nehahra",	"id1",		"nehahra",		"dp",			"darkplaces" },
 // GAME_NEXUIZ
 // COMMANDLINEOPTION: Game: -nexuiz runs the multiplayer game Nexuiz
-{ "nexuiz",			"-nexuiz",		"Nexuiz",				"data",		"nexuiz" },
+{ "nexuiz",			"-nexuiz",		"Nexuiz",				"data",		NULL,			"nexuiz",		"nexuiz" },
 // GAME_TRANSFUSION
 // COMMANDLINEOPTION: Game: -transfusion runs Transfusion (the recreation of Blood in Quake)
-{ "transfusion",	"-transfusion",	"Transfusion",			"basetf",	"transfusion" },
+{ "transfusion",	"-transfusion",	"Transfusion",			"basetf",	NULL,			"transfusion",	"transfusion" },
 // GAME_GOODVSBAD2
 // COMMANDLINEOPTION: Game: -goodvsbad2 runs the psychadelic RTS FPS game Good Vs Bad 2
-{ "gvb2",			"-goodvsbad2",	"GoodVs.Bad2",			"rts",		"gvb2" },
+{ "gvb2",			"-goodvsbad2",	"GoodVs.Bad2",			"rts",		NULL,			"gvb2",			"gvb2" },
 // GAME_TEU
 // COMMANDLINEOPTION: Game: -teu runs The Evil Unleashed (this option is obsolete as they are not using darkplaces)
-{ "teu",			"-teu",			"TheEvilUnleashed",		"baseteu",	"teu" },
+{ "teu",			"-teu",			"TheEvilUnleashed",		"baseteu",	NULL,			"teu",			"teu" },
 // GAME_BATTLEMECH
 // COMMANDLINEOPTION: Game: -battlemech runs the multiplayer topdown deathmatch game BattleMech 
-{ "battlemech",		"-battlemech",	"Battlemech",			"base",		"battlemech" },
+{ "battlemech",		"-battlemech",	"Battlemech",			"base",		NULL,			"battlemech",	"battlemech" },
 // GAME_ZYMOTIC
 // COMMANDLINEOPTION: Game: -zymotic runs the singleplayer game Zymotic
-{ "zymotic",		"-zymotic",		"Zymotic",				"data",		"zymotic" },
+{ "zymotic",		"-zymotic",		"Zymotic",				"data",		NULL,			"zymotic",		"zymotic" },
 // GAME_FNIGGIUM
 // COMMANDLINEOPTION: Game: -fniggium runs the post apocalyptic melee RPG Fniggium 
-{ "fniggium",		"-fniggium",	"Fniggium",				"data",		"fniggium" },
+{ "fniggium",		"-fniggium",	"Fniggium",				"data",		NULL,			"fniggium",		"fniggium" },
 // GAME_SETHERAL
 // COMMANDLINEOPTION: Game: -setheral runs the multiplayer game Setheral 
-{ "setheral",		"-setheral",	"Setheral",				"data",		"setheral" },
+{ "setheral",		"-setheral",	"Setheral",				"data",		NULL,			"setheral",		"setheral" },
 // GAME_SOM
 // COMMANDLINEOPTION: Game: -som runs the multiplayer game Son Of Man 
-{ "som",			"-som",			"Son of Man",			"sonofman",	"som" },
+{ "som",			"-som",			"Son of Man",			"id1",		"sonofman",		"som",			"darkplaces" },
 // GAME_TENEBRAE
 // COMMANDLINEOPTION: Game: -tenebrae runs the graphics test mod known as Tenebrae (some features not implemented)
-{ "tenebrae",		"-tenebrae",	"DarkPlaces-Tenebrae",	"tenebrae",	"dp" },
+{ "tenebrae",		"-tenebrae",	"DarkPlaces-Tenebrae",	"id1",		"tenebrae",		"dp",			"darkplaces" },
 // GAME_NEOTERIC
 // COMMANDLINEOPTION: Game: -neoteric runs the game Neoteric
-{ "neoteric",		"-neoteric",	"Neoteric",				"neobase",	"neo" },
+{ "neoteric",		"-neoteric",	"Neoteric",				"id1",		"neobase",		"neo",			"darkplaces" },
 // GAME_OPENQUARTZ
 // COMMANDLINEOPTION: Game: -openquartz runs the game OpenQuartz, a standalone GPL replacement of the quake content
-{ "openquartz",		"-openquartz",	"OpenQuartz",			"id1",		"openquartz"},
+{ "openquartz",		"-openquartz",	"OpenQuartz",			"id1",		NULL,			"openquartz",	"darkplaces"},
 // GAME_PRYDON
 // COMMANDLINEOPTION: Game: -prydon runs the topdown point and click action-RPG Prydon Gate
-{ "prydon",			"-prydon",		"PrydonGate",			"prydon",	"prydon"},
+{ "prydon",			"-prydon",		"PrydonGate",			"id1",		"prydon",		"prydon",		"darkplaces"},
 // GAME_NETHERWORLD
 // COMMANDLINEOPTION: Game: -netherworld runs the game Netherworld: Dark Masters
-{ "netherworld",	"-netherworld",	"Dark Masters",			"netherworld", 	"nw"},
+{ "netherworld",	"-netherworld",	"Dark Masters",			"id1",		"netherworld", 	"nw",			"darkplaces"},
 };
 
 void COM_InitGameType (void)
@@ -990,8 +994,10 @@ void COM_InitGameType (void)
 		}
 
 	gamename = gamemode_info[gamemode].gamename;
-	gamedirname = gamemode_info[gamemode].gamedirname;
+	gamedirname1 = gamemode_info[gamemode].gamedirname1;
+	gamedirname2 = gamemode_info[gamemode].gamedirname2;
 	gamescreenshotname = gamemode_info[gamemode].gamescreenshotname;
+	gameuserdirname = gamemode_info[gamemode].gameuserdirname;
 }
 
 
