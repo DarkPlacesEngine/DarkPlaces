@@ -71,6 +71,68 @@ void R_CalcBeamVerts (float *vert, vec3_t org1, vec3_t org2, float width)
 	vert[13] = org2[1] + width * right2[1];
 	vert[14] = org2[2] + width * right2[2];
 }
+void fractalnoise(qbyte *noise, int size, int startgrid)
+{
+	int x, y, g, g2, amplitude, min, max, size1 = size - 1, sizepower, gridpower;
+	int *noisebuf;
+#define n(x,y) noisebuf[((y)&size1)*size+((x)&size1)]
+
+	for (sizepower = 0;(1 << sizepower) < size;sizepower++);
+	if (size != (1 << sizepower))
+		Sys_Error("fractalnoise: size must be power of 2\n");
+
+	for (gridpower = 0;(1 << gridpower) < startgrid;gridpower++);
+	if (startgrid != (1 << gridpower))
+		Sys_Error("fractalnoise: grid must be power of 2\n");
+
+	startgrid = bound(0, startgrid, size);
+
+	amplitude = 0xFFFF; // this gets halved before use
+	noisebuf = malloc(size*size*sizeof(int));
+	memset(noisebuf, 0, size*size*sizeof(int));
+
+	for (g2 = startgrid;g2;g2 >>= 1)
+	{
+		// brownian motion (at every smaller level there is random behavior)
+		amplitude >>= 1;
+		for (y = 0;y < size;y += g2)
+			for (x = 0;x < size;x += g2)
+				n(x,y) += (rand()&amplitude);
+
+		g = g2 >> 1;
+		if (g)
+		{
+			// subdivide, diamond-square algorithm (really this has little to do with squares)
+			// diamond
+			for (y = 0;y < size;y += g2)
+				for (x = 0;x < size;x += g2)
+					n(x+g,y+g) = (n(x,y) + n(x+g2,y) + n(x,y+g2) + n(x+g2,y+g2)) >> 2;
+			// square
+			for (y = 0;y < size;y += g2)
+				for (x = 0;x < size;x += g2)
+				{
+					n(x+g,y) = (n(x,y) + n(x+g2,y) + n(x+g,y-g) + n(x+g,y+g)) >> 2;
+					n(x,y+g) = (n(x,y) + n(x,y+g2) + n(x-g,y+g) + n(x+g,y+g)) >> 2;
+				}
+		}
+	}
+	// find range of noise values
+	min = max = 0;
+	for (y = 0;y < size;y++)
+		for (x = 0;x < size;x++)
+		{
+			if (n(x,y) < min) min = n(x,y);
+			if (n(x,y) > max) max = n(x,y);
+		}
+	max -= min;
+	max++;
+	// normalize noise and copy to output
+	for (y = 0;y < size;y++)
+		for (x = 0;x < size;x++)
+			*noise++ = (qbyte) (((n(x,y) - min) * 256) / max);
+	free(noisebuf);
+#undef n
+}
 #else
 #include "cl_collision.h"
 #endif
@@ -439,8 +501,8 @@ CL_ParticleExplosion
 void CL_ParticleExplosion (vec3_t org)
 {
 	int i, k;
-	vec3_t v;
-	vec3_t v2;
+	//vec3_t v;
+	//vec3_t v2;
 	if (cl_stainmaps.integer)
 		R_Stain(org, 96, 80, 80, 80, 64, 176, 176, 176, 64);
 
@@ -454,6 +516,8 @@ void CL_ParticleExplosion (vec3_t org)
 	}
 	else
 	{
+		/*
+		// LordHavoc: smoke effect similar to UT2003, chews fillrate too badly up close
 		// smoke puff
 		if (cl_particles_smoke.integer)
 		{
@@ -472,6 +536,7 @@ void CL_ParticleExplosion (vec3_t org)
 				particle(pt_static, PARTICLE_BILLBOARD, 0x101010, 0x202020, tex_smoke[rand()&7], true, true, 12, 12, 255, 512, 9999, 0, 0, org[0], org[1], org[2], v2[0], v2[1], v2[2], 0, 0, 0, 0, 0, 0);
 			}
 		}
+		*/
 
 		if (cl_particles_sparks.integer)
 		{
@@ -831,7 +896,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 #ifdef WORKINGLQUAKE
 	len = VectorNormalize (vec);
 	dec = 0;
-	speed = 1.0f / (cl.time - cl.oldtime);
+	speed = 1.0f / cl.frametime;
 	VectorSubtract(end, start, vel);
 #else
 	len = VectorNormalizeLength (vec);
