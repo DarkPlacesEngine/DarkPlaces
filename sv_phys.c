@@ -48,6 +48,7 @@ cvar_t sv_stepheight = {CVAR_NOTIFY, "sv_stepheight", "18"};
 cvar_t sv_jumpstep = {CVAR_NOTIFY, "sv_jumpstep", "1"};
 cvar_t sv_wallfriction = {CVAR_NOTIFY, "sv_wallfriction", "1"};
 cvar_t sv_newflymove = {CVAR_NOTIFY, "sv_newflymove", "1"};
+cvar_t sv_freezenonclients = {CVAR_NOTIFY, "sv_freezenonclients", "0"};
 
 #define	MOVE_EPSILON	0.01
 
@@ -59,6 +60,7 @@ void SV_Phys_Init (void)
 	Cvar_RegisterVariable(&sv_jumpstep);
 	Cvar_RegisterVariable(&sv_wallfriction);
 	Cvar_RegisterVariable(&sv_newflymove);
+	Cvar_RegisterVariable(&sv_freezenonclients);
 }
 
 /*
@@ -230,17 +232,21 @@ If stepnormal is not NULL, the plane normal of any vertical wall hit will be sto
 #define MAX_CLIP_PLANES 20
 int SV_FlyMove (edict_t *ent, float time, float *stepnormal)
 {
+	int blocked, bumpcount;
+	edict_t *hackongroundentity;
+	hackongroundentity = NULL;
 	if (sv_newflymove.integer)
 	{
-		int blocked, impact, bumpcount;
+		int impact;
 		vec3_t end, primal_velocity;
 		trace_t trace;
 
 		blocked = 0;
 		VectorCopy (ent->v->velocity, primal_velocity);
 
-		for (bumpcount = 0;bumpcount < 4;bumpcount++)
+		for (bumpcount = 0;bumpcount < 8;bumpcount++)
 		{
+			//Con_Printf("entity %i bump %i: blocked %i velocity %f %f %f\n", ent - sv.edicts, bumpcount, blocked, ent->v->velocity[0], ent->v->velocity[1], ent->v->velocity[2]);
 			if (!ent->v->velocity[0] && !ent->v->velocity[1] && !ent->v->velocity[2])
 				break;
 
@@ -284,14 +290,19 @@ int SV_FlyMove (edict_t *ent, float time, float *stepnormal)
 			else
 				impact = true;
 
-			if (trace.plane.normal[2] > 0.7)
+			if (trace.plane.normal[2])
 			{
-				// floor
-				blocked |= 1;
-				ent->v->flags = (int)ent->v->flags | FL_ONGROUND;
-				ent->v->groundentity = EDICT_TO_PROG(trace.ent);
+				if (trace.plane.normal[2] > 0.7)
+				{
+					// floor
+					blocked |= 1;
+					ent->v->flags = (int)ent->v->flags | FL_ONGROUND;
+					ent->v->groundentity = EDICT_TO_PROG(trace.ent);
+				}
+				else if (trace.fraction < 0.001)
+					hackongroundentity = trace.ent;
 			}
-			if (!trace.plane.normal[2])
+			else
 			{
 				// step
 				blocked |= 2;
@@ -313,18 +324,22 @@ int SV_FlyMove (edict_t *ent, float time, float *stepnormal)
 			time *= 1 - trace.fraction;
 
 			ClipVelocity (ent->v->velocity, trace.plane.normal, ent->v->velocity, 1);
-		}
 
-		return blocked;
+			// if original velocity is against the original velocity,
+			// stop dead to avoid tiny occilations in sloping corners
+			if (DotProduct (ent->v->velocity, primal_velocity) < 0)
+			{
+				VectorClear(ent->v->velocity);
+				break;
+			}
+		}
 	}
 	else
 	{
-		int i, j, blocked, impact, numplanes, bumpcount, numbumps;
+		int i, j, impact, numplanes;
 		float d, time_left;
 		vec3_t dir, end, planes[MAX_CLIP_PLANES], primal_velocity, original_velocity, new_velocity;
 		trace_t trace;
-
-		numbumps = 4;
 
 		blocked = 0;
 		VectorCopy (ent->v->velocity, original_velocity);
@@ -333,8 +348,9 @@ int SV_FlyMove (edict_t *ent, float time, float *stepnormal)
 
 		time_left = time;
 
-		for (bumpcount=0 ; bumpcount<numbumps ; bumpcount++)
+		for (bumpcount = 0;bumpcount < 8;bumpcount++)
 		{
+			//Con_Printf("entity %i bump %i: blocked %i velocity %f %f %f\n", ent - sv.edicts, bumpcount, blocked, ent->v->velocity[0], ent->v->velocity[1], ent->v->velocity[2]);
 			if (!ent->v->velocity[0] && !ent->v->velocity[1] && !ent->v->velocity[2])
 				break;
 
@@ -381,14 +397,19 @@ int SV_FlyMove (edict_t *ent, float time, float *stepnormal)
 			else
 				impact = true;
 
-			if (trace.plane.normal[2] > 0.7)
+			if (trace.plane.normal[2])
 			{
-				// floor
-				blocked |= 1;
-				ent->v->flags =	(int)ent->v->flags | FL_ONGROUND;
-				ent->v->groundentity = EDICT_TO_PROG(trace.ent);
+				if (trace.plane.normal[2] > 0.7)
+				{
+					// floor
+					blocked |= 1;
+					ent->v->flags = (int)ent->v->flags | FL_ONGROUND;
+					ent->v->groundentity = EDICT_TO_PROG(trace.ent);
+				}
+				else if (trace.fraction < 0.001)
+					hackongroundentity = trace.ent;
 			}
-			if (!trace.plane.normal[2])
+			else
 			{
 				// step
 				blocked |= 2;
@@ -415,7 +436,8 @@ int SV_FlyMove (edict_t *ent, float time, float *stepnormal)
 			{
 				// this shouldn't really happen
 				VectorClear(ent->v->velocity);
-				return 3;
+				blocked = 3;
+				break;
 			}
 
 			VectorCopy (trace.plane.normal, planes[numplanes]);
@@ -447,7 +469,8 @@ int SV_FlyMove (edict_t *ent, float time, float *stepnormal)
 				if (numplanes != 2)
 				{
 					VectorClear(ent->v->velocity);
-					return 7;
+					blocked = 7;
+					break;
 				}
 				CrossProduct (planes[0], planes[1], dir);
 				// LordHavoc: thanks to taniwha of QuakeForge for pointing out this fix for slowed falling in corners
@@ -461,12 +484,34 @@ int SV_FlyMove (edict_t *ent, float time, float *stepnormal)
 			if (DotProduct (ent->v->velocity, primal_velocity) <= 0)
 			{
 				VectorClear(ent->v->velocity);
-				return blocked;
+				break;
 			}
 		}
-
-		return blocked;
 	}
+
+	//Con_Printf("entity %i final: blocked %i velocity %f %f %f\n", ent - sv.edicts, blocked, ent->v->velocity[0], ent->v->velocity[1], ent->v->velocity[2]);
+
+	/*
+	// FIXME: this doesn't work well at all, find another solution
+	// if player is ontop of a non-onground floor and made no progress,
+	// set onground anyway (this tends to happen if standing in a wedge)
+	if (bumpcount == 8 && hackongroundentity)
+	{
+		blocked |= 1;
+		ent->v->flags = (int)ent->v->flags | FL_ONGROUND;
+		ent->v->groundentity = EDICT_TO_PROG(hackongroundentity);
+	}
+	*/
+	
+	/*
+	if ((blocked & 1) == 0 && bumpcount > 1)
+	{
+		// LordHavoc: fix the 'fall to your death in a wedge corner' glitch
+		// flag ONGROUND if there's ground under it
+		trace = SV_Move (ent->v->origin, ent->v->mins, ent->v->maxs, end, MOVE_NORMAL, ent);
+	}
+	*/
+	return blocked;
 }
 
 
@@ -975,8 +1020,8 @@ Only used by players
 */
 void SV_WalkMove (edict_t *ent)
 {
-	int clip, oldonground;
-	vec3_t upmove, downmove, oldorg, oldvel, nosteporg, nostepvel, stepnormal;
+	int clip, oldonground, originalmove_clip, originalmove_flags, originalmove_groundentity;
+	vec3_t upmove, downmove, oldorg, oldvel, nosteporg, nostepvel, stepnormal, originalmove_origin, originalmove_velocity;
 	trace_t downtrace;
 
 	SV_CheckVelocity(ent);
@@ -989,11 +1034,20 @@ void SV_WalkMove (edict_t *ent)
 	VectorCopy (ent->v->velocity, oldvel);
 
 	clip = SV_FlyMove (ent, sv.frametime, NULL);
+	VectorCopy(ent->v->origin, originalmove_origin);
+	VectorCopy(ent->v->velocity, originalmove_velocity);
+	originalmove_clip = clip;
+	originalmove_flags = (int)ent->v->flags;
+	originalmove_groundentity = ent->v->groundentity; 
 
 	SV_CheckVelocity(ent);
 
 	// if move didn't block on a step, return
 	if ( !(clip & 2) )
+		return;
+
+	// if move was not trying to move into the step, return
+	if (fabs(oldvel[0]) < 0.03125 && fabs(oldvel[1]) < 0.03125)
 		return;
 
 	if (ent->v->movetype != MOVETYPE_FLY)
@@ -1026,7 +1080,7 @@ void SV_WalkMove (edict_t *ent)
 
 	// move up
 	// FIXME: don't link?
-	SV_PushEntity (ent, upmove, vec3_origin);
+	SV_PushEntity(ent, upmove, vec3_origin);
 
 	// move forward
 	ent->v->velocity[0] = oldvel[0];
@@ -1040,8 +1094,17 @@ void SV_WalkMove (edict_t *ent)
 	if (clip
 	 && fabs(oldorg[1] - ent->v->origin[1]) < 0.03125
 	 && fabs(oldorg[0] - ent->v->origin[0]) < 0.03125)
-		// stepping up didn't make any progress
-		clip = SV_TryUnstick (ent, oldvel);
+	{
+		// stepping up didn't make any progress, revert to original move
+		VectorCopy(originalmove_origin, ent->v->origin);
+		VectorCopy(originalmove_velocity, ent->v->velocity);
+		clip = originalmove_clip;
+		ent->v->flags = originalmove_flags;
+		ent->v->groundentity = originalmove_groundentity; 
+		// now try to unstick if needed
+		//clip = SV_TryUnstick (ent, oldvel);
+		return;
+	}
 
 	// extra friction based on view angle
 	if (clip & 2 && sv_wallfriction.integer)
@@ -1328,7 +1391,7 @@ void SV_Physics (void)
 		if (pr_global_struct->force_retouch)
 			SV_LinkEdict (ent, true);	// force retouch even for stationary
 
-		if (i > 0 && i <= svs.maxclients)
+		if (i <= svs.maxclients && i > 0)
 		{
 			if (!svs.clients[i-1].spawned)
 				continue;
@@ -1340,6 +1403,8 @@ void SV_Physics (void)
 			PR_ExecuteProgram (pr_global_struct->PlayerPreThink, "QC function PlayerPreThink is missing");
 			SV_CheckVelocity (ent);
 		}
+		else if (sv_freezenonclients.integer)
+			break;
 
 		// LordHavoc: merged client and normal entity physics
 		switch ((int) ent->v->movetype)
@@ -1472,9 +1537,8 @@ trace_t SV_Trace_Toss (edict_t *tossent, edict_t *ignore)
 		trace = SV_Move (tent->v->origin, tent->v->mins, tent->v->maxs, end, MOVE_NORMAL, tent);
 		VectorCopy (trace.endpos, tent->v->origin);
 
-		if (trace.fraction < 1 && trace.ent)
-			if (trace.ent != ignore)
-				break;
+		if (trace.fraction < 1 && trace.ent && trace.ent != ignore)
+			break;
 	}
 	tossent->v->solid = savesolid;
 	trace.fraction = 0; // not relevant
