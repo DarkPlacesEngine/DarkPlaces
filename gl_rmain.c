@@ -58,8 +58,6 @@ mleaf_t		*r_viewleaf, *r_oldviewleaf;
 
 unsigned short	d_lightstylevalue[256];	// 8.8 fraction of base light value
 
-float ixtable[4096];
-
 void R_MarkLeaves (void);
 
 //cvar_t	r_norefresh = {0, "r_norefresh","0"};
@@ -267,12 +265,7 @@ void gl_main_newmap(void)
 
 void GL_Main_Init(void)
 {
-	int a;
 	FOG_registercvars();
-	// LordHavoc: setup 1.0f / N table for quick recipricols of integers
-	ixtable[0] = 0;
-	for (a = 1;a < 4096;a++)
-		ixtable[a] = 1.0f / a;
 	Cvar_RegisterVariable (&r_drawentities);
 	Cvar_RegisterVariable (&r_drawviewmodel);
 	Cvar_RegisterVariable (&r_speeds);
