@@ -137,7 +137,7 @@ void SV_InitBoxHull (void)
 		box_planes[i].type = i>>1;
 		box_planes[i].normal[i>>1] = 1;
 	}
-	
+
 }
 
 
@@ -803,7 +803,7 @@ trace_t SV_ClipMoveToEntity (edict_t *ent, vec3_t start, vec3_t mins, vec3_t max
 		VectorAdd (trace.endpos, offset, trace.endpos);
 		trace.ent = ent;
 	}
-	else if (trace.startsolid)
+	else if (trace.allsolid || trace.startsolid)
 		trace.ent = ent;
 
 	return trace;
@@ -824,9 +824,9 @@ void SV_ClipToLinks ( areanode_t *node, moveclip_t *clip )
 	edict_t		*touch;
 	trace_t		trace;
 
+loc0:
 	if (clip->trace.allsolid)
 		return;
-loc0:
 // touch linked edicts
 	for (l = node->solid_edicts.next ; l != &node->solid_edicts ; l = next)
 	{
@@ -870,10 +870,14 @@ loc0:
 			trace = SV_ClipMoveToEntity (touch, clip->start, clip->mins2, clip->maxs2, clip->end);
 		else
 			trace = SV_ClipMoveToEntity (touch, clip->start, clip->mins, clip->maxs, clip->end);
-		if (trace.allsolid || trace.startsolid || trace.fraction < clip->trace.fraction)
+		if (trace.allsolid)
 		{
-			trace.ent = touch;
-		 	if (clip->trace.startsolid)
+			clip->trace = trace;
+			return;
+		}
+		if (trace.startsolid || trace.fraction < clip->trace.fraction)
+		{
+			if (clip->trace.startsolid)
 			{
 				clip->trace = trace;
 				clip->trace.startsolid = true;
@@ -881,8 +885,6 @@ loc0:
 			else
 				clip->trace = trace;
 		}
-		if (clip->trace.allsolid)
-			return;
 	}
 
 // recurse down both sides
