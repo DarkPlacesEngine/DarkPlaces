@@ -38,7 +38,6 @@ float CL_TraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t n
 	entity_render_t *ent;
 	float tracemins[3], tracemaxs[3];
 	trace_t trace;
-	matrix4x4_t matrix, imatrix;
 	float tempnormal[3], starttransformed[3], endtransformed[3];
 
 	memset (&trace, 0 , sizeof(trace_t));
@@ -76,10 +75,8 @@ float CL_TraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t n
 			 || ent->mins[2] > tracemaxs[2] || ent->maxs[2] < tracemins[2])
 				continue;
 
-			Matrix4x4_CreateFromQuakeEntity(&matrix, ent->origin[0], ent->origin[1], ent->origin[2], ent->angles[0], ent->angles[1], ent->angles[2], 1);
-			Matrix4x4_Invert_Simple(&imatrix, &matrix);
-			Matrix4x4_Transform(&imatrix, start, starttransformed);
-			Matrix4x4_Transform(&imatrix, end, endtransformed);
+			Matrix4x4_Transform(&ent->inversematrix, start, starttransformed);
+			Matrix4x4_Transform(&ent->inversematrix, end, endtransformed);
 
 			if (ent->model && ent->model->TraceBox)
 				ent->model->TraceBox(ent->model, 0, &trace, starttransformed, starttransformed, endtransformed, endtransformed, hitsupercontentsmask);
@@ -94,8 +91,82 @@ float CL_TraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t n
 				if (normal)
 				{
 					VectorCopy(trace.plane.normal, tempnormal);
-					Matrix4x4_Transform3x3(&matrix, tempnormal, normal);
+					Matrix4x4_Transform3x3(&ent->matrix, tempnormal, normal);
 				}
+			}
+		}
+	}
+	if (maxfrac < 0 || maxfrac > 1) Con_Printf("fraction out of bounds %f %s:%d\n", maxfrac, __FILE__, __LINE__);
+	if (impact)
+		VectorLerp(start, maxfrac, end, impact);
+	return maxfrac;
+}
+
+float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t normal, int *hitent)
+{
+	float maxfrac, maxrealfrac;
+	int n;
+	entity_render_t *ent;
+	float tracemins[3], tracemaxs[3];
+	trace_t trace;
+	float tempnormal[3], starttransformed[3], endtransformed[3];
+
+	memset (&trace, 0 , sizeof(trace_t));
+	trace.fraction = 1;
+	trace.realfraction = 1;
+	VectorCopy (end, trace.endpos);
+
+	if (hitent)
+		*hitent = 0;
+	Mod_CheckLoaded(cl.worldmodel);
+	if (cl.worldmodel && cl.worldmodel->TraceBox)
+		cl.worldmodel->TraceBox(cl.worldmodel, 0, &trace, start, start, end, end, SUPERCONTENTS_SOLID);
+
+	if (normal)
+		VectorCopy(trace.plane.normal, normal);
+	cl_traceline_startsupercontents = trace.startsupercontents;
+	maxfrac = trace.fraction;
+	maxrealfrac = trace.realfraction;
+
+	tracemins[0] = min(start[0], end[0]);
+	tracemaxs[0] = max(start[0], end[0]);
+	tracemins[1] = min(start[1], end[1]);
+	tracemaxs[1] = max(start[1], end[1]);
+	tracemins[2] = min(start[2], end[2]);
+	tracemaxs[2] = max(start[2], end[2]);
+
+	// look for embedded bmodels
+	for (n = 0;n < MAX_EDICTS;n++)
+	{
+		if (!cl_entities[n].state_current.active)
+			continue;
+		ent = &cl_entities[n].render;
+		if (!ent->model || !ent->model->TraceBox)
+			continue;
+		//if (((ent->model->type != mod_brushq1 && ent->model->type != mod_brushq2 && ent->model->type != mod_brushq3) || ent->alpha < 1) && !(cl_entities[n].state_current.effects & EF_SELECTABLE))
+		//	continue;
+		if (ent->mins[0] > tracemaxs[0] || ent->maxs[0] < tracemins[0]
+		 || ent->mins[1] > tracemaxs[1] || ent->maxs[1] < tracemins[1]
+		 || ent->mins[2] > tracemaxs[2] || ent->maxs[2] < tracemins[2])
+			continue;
+
+		Matrix4x4_Transform(&ent->inversematrix, start, starttransformed);
+		Matrix4x4_Transform(&ent->inversematrix, end, endtransformed);
+
+		if (ent->model && ent->model->TraceBox)
+			ent->model->TraceBox(ent->model, ent->frameblend[0].frame, &trace, starttransformed, starttransformed, endtransformed, endtransformed, SUPERCONTENTS_SOLID);
+
+		cl_traceline_startsupercontents |= trace.startsupercontents;
+		if (maxrealfrac > trace.realfraction)
+		{
+			if (hitent)
+				*hitent = n;
+			maxfrac = trace.fraction;
+			maxrealfrac = trace.realfraction;
+			if (normal)
+			{
+				VectorCopy(trace.plane.normal, tempnormal);
+				Matrix4x4_Transform3x3(&ent->matrix, tempnormal, normal);
 			}
 		}
 	}
