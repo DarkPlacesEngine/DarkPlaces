@@ -784,12 +784,12 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 	if (cl_capturevideo_rawrgb.integer)
 	{
 		cl_capturevideo_format = CAPTUREVIDEOFORMAT_RAWRGB;
-		cl_capturevideo_videofile = FS_Open ("video/dpvideo.rgb", "wb", false);
+		cl_capturevideo_videofile = FS_Open ("video/dpvideo.rgb", "wb", false, true);
 	}
 	else if (cl_capturevideo_rawyv12.integer)
 	{
 		cl_capturevideo_format = CAPTUREVIDEOFORMAT_RAWYV12;
-		cl_capturevideo_videofile = FS_Open ("video/dpvideo.yv12", "wb", false);
+		cl_capturevideo_videofile = FS_Open ("video/dpvideo.yv12", "wb", false, true);
 	}
 	else if (scr_screenshot_jpeg.integer)
 	{
@@ -802,7 +802,7 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 		cl_capturevideo_videofile = NULL;
 	}
 
-	cl_capturevideo_soundfile = FS_Open ("video/dpvideo.wav", "wb", false);
+	cl_capturevideo_soundfile = FS_Open ("video/dpvideo.wav", "wb", false, true);
 
 	// wave header will be filled out when video ends
 	memset(out, 0, 44);

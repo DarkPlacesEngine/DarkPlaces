@@ -280,7 +280,7 @@ void Host_SaveConfig_f(void)
 // config.cfg cvars
 	if (host_initialized && cls.state != ca_dedicated)
 	{
-		f = FS_Open ("config.cfg", "wb", false);
+		f = FS_Open ("config.cfg", "wb", false, false);
 		if (!f)
 		{
 			Con_Print("Couldn't write config.cfg.\n");

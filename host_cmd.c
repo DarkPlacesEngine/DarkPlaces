@@ -500,7 +500,7 @@ void Host_Savegame_f (void)
 	FS_DefaultExtension (name, ".sav", sizeof (name));
 
 	Con_Printf("Saving game to %s...\n", name);
-	f = FS_Open (name, "wb", false);
+	f = FS_Open (name, "wb", false, false);
 	if (!f)
 	{
 		Con_Print("ERROR: couldn't open.\n");

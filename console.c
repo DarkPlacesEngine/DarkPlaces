@@ -138,7 +138,7 @@ void Log_Open (void)
 	if (logfile != NULL || log_file.string[0] == '\0')
 		return;
 
-	logfile = FS_Open (log_file.string, "ab", false);
+	logfile = FS_Open (log_file.string, "ab", false, false);
 	if (logfile != NULL)
 	{
 		strlcpy (crt_log_file, log_file.string, sizeof (crt_log_file));
@@ -252,7 +252,7 @@ void Log_Printf (const char *logfilename, const char *fmt, ...)
 {
 	qfile_t *file;
 
-	file = FS_Open (logfilename, "ab", true);
+	file = FS_Open (logfilename, "ab", true, false);
 	if (file != NULL)
 	{
 		va_list argptr;
@@ -752,7 +752,7 @@ static void _Con_DrawString( float x, float y, const char *text, int maxlen, flo
 			color = _con_colors[index];
 			// we dont want to display the color tag and the color index
 			first = last;
-		} 
+		}
 	}
 }
 
@@ -907,7 +907,7 @@ void Con_DrawConsole (int lines)
 
 	rows = (lines-16)>>3;		// rows of text to draw
 	y = lines - 16 - (rows<<3);	// may start slightly negative
-    
+
 	for (i = con_current - rows + 1;i <= con_current;i++, y += 8)
 	{
 		j = max(i - con_backscroll, 0);

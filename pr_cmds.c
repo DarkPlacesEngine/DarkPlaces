@@ -2840,10 +2840,10 @@ void PF_fopen(void)
 	}
 	filename = G_STRING(OFS_PARM0);
 	// -4 failure (dangerous/non-portable filename) removed, FS_Open checks
-	pr_files[filenum] = FS_Open(va("data/%s", filename), modestring, false);
+	pr_files[filenum] = FS_Open(va("data/%s", filename), modestring, false, false);
 
 	if (pr_files[filenum] == NULL && modestring == "rb")
-		pr_files[filenum] = FS_Open(filename, modestring, false);
+		pr_files[filenum] = FS_Open(filename, modestring, false, false);
 
 	if (pr_files[filenum] == NULL)
 		G_FLOAT(OFS_RETURN) = -1;

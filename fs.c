@@ -1012,7 +1012,7 @@ FS_SysOpen
 Internal function used to create a qfile_t and open the relevant non-packed file on disk
 ====================
 */
-static qfile_t* FS_SysOpen (const char* filepath, const char* mode)
+static qfile_t* FS_SysOpen (const char* filepath, const char* mode, qboolean nonblocking)
 {
 	qfile_t* file;
 	int mod, opt;
@@ -1052,6 +1052,9 @@ static qfile_t* FS_SysOpen (const char* filepath, const char* mode)
 							filepath, mode, mode[ind]);
 		}
 	}
+
+	if (nonblocking)
+		opt |= O_NONBLOCK;
 
 	file = Mem_Alloc (fs_mempool, sizeof (*file));
 	memset (file, 0, sizeof (*file));
@@ -1291,7 +1294,7 @@ Look for a file in the search paths and open it in read-only mode
 Sets fs_filesize
 ===========
 */
-qfile_t *FS_OpenReadFile (const char *filename, qboolean quiet)
+qfile_t *FS_OpenReadFile (const char *filename, qboolean quiet, qboolean nonblocking)
 {
 	searchpath_t *search;
 	int pack_ind;
@@ -1310,7 +1313,7 @@ qfile_t *FS_OpenReadFile (const char *filename, qboolean quiet)
 	{
 		char path [MAX_OSPATH];
 		dpsnprintf (path, sizeof (path), "%s/%s", search->filename, filename);
-		return FS_SysOpen (path, "rb");
+		return FS_SysOpen (path, "rb", nonblocking);
 	}
 
 	// So, we found it in a package...
@@ -1333,7 +1336,7 @@ FS_Open
 Open a file. The syntax is the same as fopen
 ====================
 */
-qfile_t* FS_Open (const char* filepath, const char* mode, qboolean quiet)
+qfile_t* FS_Open (const char* filepath, const char* mode, qboolean quiet, qboolean nonblocking)
 {
 	qfile_t* file;
 
@@ -1354,11 +1357,11 @@ qfile_t* FS_Open (const char* filepath, const char* mode, qboolean quiet)
 		// Create directories up to the file
 		FS_CreatePath (real_path);
 
-		return FS_SysOpen (real_path, mode);
+		return FS_SysOpen (real_path, mode, nonblocking);
 	}
 
 	// Else, we look at the various search paths and open the file in read-only mode
-	file = FS_OpenReadFile (filepath, quiet);
+	file = FS_OpenReadFile (filepath, quiet, nonblocking);
 	if (file != NULL)
 		fs_filesize = file->real_length;
 
@@ -1794,7 +1797,7 @@ qbyte *FS_LoadFile (const char *path, mempool_t *pool, qboolean quiet)
 	qfile_t *file;
 	qbyte *buf;
 
-	file = FS_Open (path, "rb", quiet);
+	file = FS_Open (path, "rb", quiet, false);
 	if (!file)
 		return NULL;
 
@@ -1819,7 +1822,7 @@ qboolean FS_WriteFile (const char *filename, void *data, int len)
 {
 	qfile_t *file;
 
-	file = FS_Open (filename, "wb", false);
+	file = FS_Open (filename, "wb", false, false);
 	if (!file)
 	{
 		Con_Printf("FS_WriteFile: failed on %s\n", filename);

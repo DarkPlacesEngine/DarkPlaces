@@ -286,7 +286,7 @@ void CL_Record_f (void)
 
 	// open the demo file
 	Con_Printf("recording to %s.\n", name);
-	cls.demofile = FS_Open (name, "wb", false);
+	cls.demofile = FS_Open (name, "wb", false, false);
 	if (!cls.demofile)
 	{
 		Con_Print("ERROR: couldn't open.\n");
@@ -334,7 +334,7 @@ void CL_PlayDemo_f (void)
 	FS_DefaultExtension (name, ".dem", sizeof (name));
 
 	Con_Printf("Playing demo from %s.\n", name);
-	cls.demofile = FS_Open (name, "rb", false);
+	cls.demofile = FS_Open (name, "rb", false, false);
 	if (!cls.demofile)
 	{
 		Con_Print("ERROR: couldn't open.\n");
@@ -414,6 +414,6 @@ void CL_TimeDemo_f (void)
 
 	cls.timedemo = true;
 	// get first message this frame
-	cls.td_lastframe = -1;	
+	cls.td_lastframe = -1;
 }
 
