@@ -1036,7 +1036,7 @@ void Sbar_Draw (void)
 		{
 			if (gamemode != GAME_GOODVSBAD2)
 				Sbar_DrawInventory ();
-			if (!cl.islocalgame)
+			if (!cl.islocalgame && gamemode != GAME_TRANSFUSION)
 				Sbar_DrawFrags ();
 		}
 
