@@ -36,14 +36,6 @@ void S_Init (void)
 	Cvar_RegisterVariable(&snd_initialized);
 }
 
-void S_AmbientOff (void)
-{
-}
-
-void S_AmbientOn (void)
-{
-}
-
 void S_Startup (void)
 {
 }
@@ -61,10 +53,6 @@ void S_ClearUsed (void)
 }
 
 void S_PurgeUnused (void)
-{
-}
-
-void S_ClearBuffer (void)
 {
 }
 
