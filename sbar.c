@@ -891,54 +891,39 @@ Sbar_DeathmatchOverlay
 
 ==================
 */
+float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
+{
+	qbyte *c;
+	if (s->name[0] || s->frags || s->colors || (s - cl.scores) == cl.playerentity - 1)
+	{
+		// draw colors behind score
+		c = (qbyte *)&palette_complete[(s->colors & 0xf0) + 8];
+		DrawQ_Fill(x + 8, y+1, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f), 0);
+		c = (qbyte *)&palette_complete[((s->colors & 15)<<4) + 8];
+		DrawQ_Fill(x + 8, y+4, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f), 0);
+		// print the text
+		DrawQ_String(x, y, va("%c%4i %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1, 0);
+		return 8;
+	}
+	else
+		return 0;
+}
+
 void Sbar_DeathmatchOverlay (void)
 {
+	int i, x, y;
 	cachepic_t *pic;
-	int i, k, l, x, y, total, n, minutes, tens, units, fph;
-	char num[128];
-	scoreboard_t *s;
-	qbyte *c;
 
 	pic = Draw_CachePic ("gfx/ranking.lmp");
 	DrawQ_Pic ((vid.conwidth - pic->width)/2, 8, "gfx/ranking.lmp", 0, 0, 1, 1, 1, 1, 0);
 
-// scores
+	// scores
 	Sbar_SortFrags ();
-
-// draw the text
-	l = scoreboardlines;
-
-	x = (vid.conwidth - 280)>>1;
+	// draw the text
+	x = (vid.conwidth - (6 + 15) * 8) / 2;
 	y = 40;
-	for (i = 0;i < l;i++)
-	{
-		k = fragsort[i];
-		s = &cl.scores[k];
-		if (!s->name[0])
-			continue;
-
-	// draw background
-		c = (qbyte *)&palette_complete[(s->colors & 0xf0) + 8];
-		DrawQ_Fill ( x + 8, y+1, 88, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f), 0);
-		c = (qbyte *)&palette_complete[((s->colors & 15)<<4) + 8];
-		DrawQ_Fill ( x + 8, y+4, 88, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f), 0);
-
-		total = cl.time - s->entertime;
-		minutes = (int)total/60;
-		n = total - minutes*60;
-		tens = '0' + n/10;
-		units = '0' + n%10;
-
-		fph = total ? (int) ((float) s->frags * 3600.0 / total) : 0;
-		if (fph < -999) fph = -999;
-		if (fph > 9999) fph = 9999;
-
-		// put it together
-		sprintf (num, "%c %4i:%4i %4i:%c%c %s", k == cl.viewentity - 1 ? 12 : ' ', (int) s->frags, fph, minutes, tens, units, s->name);
-		DrawQ_String(x, y, num, 0, 8, 8, 1, 1, 1, 1, 0);
-
-		y += 8;
-	}
+	for (i = 0;i < scoreboardlines && y < vid.conheight;i++)
+		y += Sbar_PrintScoreboardItem(cl.scores + fragsort[i], x, y);
 }
 
 /*
@@ -949,63 +934,34 @@ Sbar_DeathmatchOverlay
 */
 void Sbar_MiniDeathmatchOverlay (void)
 {
-	int i, l, k, x, y, fph, numlines;
-	char num[128];
-	scoreboard_t *s;
-	qbyte *c;
+	int i, x, y, numlines;
 
-	if (vid.conwidth < 512 || !sb_lines)
+	// decide where to print
+	x = 324;
+	y = vid.conheight - sb_lines;
+	numlines = (vid.conheight - y) / 8;
+	// give up if there isn't room
+	if (x + (6 + 15) * 8 > vid.conwidth || numlines < 1)
 		return;
 
 	// scores
 	Sbar_SortFrags ();
 
-	// draw the text
-	l = scoreboardlines;
-	y = vid.conheight - sb_lines;
-	numlines = sb_lines/8;
-	if (numlines < 3)
-		return;
-
 	//find us
 	for (i = 0; i < scoreboardlines; i++)
-		if (fragsort[i] == cl.viewentity - 1)
+		if (fragsort[i] == cl.playerentity - 1)
 			break;
 
 	if (i == scoreboardlines) // we're not there
 		i = 0;
 	else // figure out start
-		i = i - numlines/2;
-
-	if (i > scoreboardlines - numlines)
-		i = scoreboardlines - numlines;
-	if (i < 0)
-		i = 0;
-
-	x = 324;
-	for (;i < scoreboardlines && y < vid.conheight - 8;i++)
 	{
-		k = fragsort[i];
-		s = &cl.scores[k];
-		if (!s->name[0])
-			continue;
-
-		// draw background
-		c = (qbyte *)&palette_complete[(s->colors & 0xf0) + 8];
-		DrawQ_Fill ( x, y+1, 72, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f), 0);
-		c = (qbyte *)&palette_complete[((s->colors & 15)<<4) + 8];
-		DrawQ_Fill ( x, y+4, 72, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f), 0);
-
-		fph = (cl.time - s->entertime) ? (int) ((float) s->frags * 3600.0 / (cl.time - s->entertime)) : 0;
-		if (fph < -999) fph = -999;
-		if (fph > 9999) fph = 9999;
-
-		// put it together
-		sprintf (num, "%c%4i:%4i%c %s", k == cl.viewentity - 1 ? 16 : ' ', (int) s->frags, fph, k == cl.viewentity - 1 ? 17 : ' ', s->name);
-		DrawQ_String(x - 8, y, num, 0, 8, 8, 1, 1, 1, 1, 0);
-
-		y += 8;
+		i -= numlines/2;
+		i = bound(0, i, scoreboardlines - numlines);
 	}
+
+	for (;i < scoreboardlines && y < vid.conheight;i++)
+		y += Sbar_PrintScoreboardItem(cl.scores + fragsort[i], x, y);
 }
 
 /*
