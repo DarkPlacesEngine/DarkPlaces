@@ -169,7 +169,7 @@ void CGVM_Draw_Light(const cgdrawlight_t *l)
 {
 	matrix4x4_t matrix;
 	Matrix4x4_CreateTranslate(&matrix, l->origin[0], l->origin[1], l->origin[2]);
-	CL_AllocDlight(NULL, &matrix, l->radius, l->color[0], l->color[1], l->color[2], 0, 0, 0, 0, true, 1);
+	CL_AllocDlight(NULL, &matrix, l->radius, l->color[0], l->color[1], l->color[2], 0, 0, 0, 0, true, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 }
 
 void *CGVM_Malloc(const int size)

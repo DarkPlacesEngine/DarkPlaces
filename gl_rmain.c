@@ -588,7 +588,7 @@ void R_RenderView(void)
 	r_view_matrix = r_refdef.viewentitymatrix;
 	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
 	r_rtworld = r_shadow_realtime_world.integer;
-	r_rtworldshadows = r_rtworld && r_shadow_realtime_world_shadows.integer && gl_stencil;
+	r_rtworldshadows = r_shadow_realtime_world_shadows.integer && gl_stencil;
 	r_rtdlight = r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer;
 	r_rtdlightshadows = r_rtdlight && (r_rtworld ? r_shadow_realtime_world_dlightshadows.integer : r_shadow_realtime_dlight_shadows.integer) && gl_stencil;
 	r_lightmapintensity = r_rtworld ? r_shadow_realtime_world_lightmaps.value : 1;

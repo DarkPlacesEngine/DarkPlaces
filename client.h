@@ -31,6 +31,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // max lights shining on one entity
 #define MAXENTLIGHTS 128
 
+// flags for rtlight rendering
+#define LIGHTFLAG_NORMALMODE 1
+#define LIGHTFLAG_REALTIMEMODE 2
+
 extern int cl_max_entities;
 extern int cl_max_static_entities;
 extern int cl_max_temp_entities;
@@ -90,12 +94,22 @@ typedef struct rtlight_s
 	vec_t radius;
 	// light filter
 	char cubemapname[64];
+	// light style to monitor for brightness
+	int style;
 	// whether light should render shadows
 	int shadow;
 	// intensity of corona to render
 	vec_t corona;
-	// light style to monitor for brightness
-	int style;
+	// radius scale of corona to render (1.0 means same as light radius)
+	vec_t coronasizescale;
+	// ambient intensity to render
+	vec_t ambientscale;
+	// diffuse intensity to render
+	vec_t diffusescale;
+	// specular intensity to render
+	vec_t specularscale;
+	// LIGHTFLAG_* flags
+	int flags;
 	
 	// generated properties
 	// used only for shadow volumes
@@ -180,6 +194,21 @@ typedef struct dlight_s
 	// corona intensity
 	// (worldlight: saved to .rtlights file)
 	vec_t corona;
+	// radius scale of corona to render (1.0 means same as light radius)
+	// (worldlight: saved to .rtlights file)
+	vec_t coronasizescale;
+	// ambient intensity to render
+	// (worldlight: saved to .rtlights file)
+	vec_t ambientscale;
+	// diffuse intensity to render
+	// (worldlight: saved to .rtlights file)
+	vec_t diffusescale;
+	// specular intensity to render
+	// (worldlight: saved to .rtlights file)
+	vec_t specularscale;
+	// LIGHTFLAG_* flags
+	// (worldlight: saved to .rtlights file)
+	int flags;
 	// linked list of world lights
 	// (worldlight only)
 	struct dlight_s *next;
@@ -616,7 +645,7 @@ extern lightstyle_t *cl_lightstyle;
 
 extern client_state_t cl;
 
-extern void CL_AllocDlight (entity_render_t *ent, matrix4x4_t *matrix, float radius, float red, float green, float blue, float decay, float lifetime, int cubemapnum, int style, int shadowenable, vec_t corona);
+extern void CL_AllocDlight (entity_render_t *ent, matrix4x4_t *matrix, float radius, float red, float green, float blue, float decay, float lifetime, int cubemapnum, int style, int shadowenable, vec_t corona, vec_t coronasizescale, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int flags);
 extern void CL_DecayLights (void);
 
 //=============================================================================

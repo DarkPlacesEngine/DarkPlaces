@@ -922,7 +922,7 @@ void CL_ParseTempEntity(void)
 		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 4);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 100, 0.12f, 0.50f, 0.12f, 500, 0.2, 0, 0, false, 1);
+		CL_AllocDlight(NULL, &tempmatrix, 100, 0.12f, 0.50f, 0.12f, 500, 0.2, 0, 0, false, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		CL_RunParticleEffect(pos, vec3_origin, 20, 30);
 		S_StartSound(-1, 0, cl_sfx_wizhit, pos, 1, 1);
 		break;
@@ -932,7 +932,7 @@ void CL_ParseTempEntity(void)
 		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 4);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 100, 0.50f, 0.30f, 0.10f, 500, 0.2, 0, 0, false, 1);
+		CL_AllocDlight(NULL, &tempmatrix, 100, 0.50f, 0.30f, 0.10f, 500, 0.2, 0, 0, false, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		CL_RunParticleEffect(pos, vec3_origin, 226, 20);
 		S_StartSound(-1, 0, cl_sfx_knighthit, pos, 1, 1);
 		break;
@@ -972,7 +972,7 @@ void CL_ParseTempEntity(void)
 			CL_BulletMark(pos);
 		}
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, 0, true, 1);
+		CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, 0, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		if (rand() % 5)
 			S_StartSound(-1, 0, cl_sfx_tink1, pos, 1, 1);
@@ -1023,7 +1023,7 @@ void CL_ParseTempEntity(void)
 			CL_BulletMark(pos);
 		}
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, 0, true, 1);
+		CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, 0, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		if (rand() % 5)
 			S_StartSound(-1, 0, cl_sfx_tink1, pos, 1, 1);
 		else
@@ -1062,7 +1062,7 @@ void CL_ParseTempEntity(void)
 		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 4);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 200, 1, 1, 1, 1000, 0.2, 0, 0, true, 1);
+		CL_AllocDlight(NULL, &tempmatrix, 200, 1, 1, 1, 1000, 0.2, 0, 0, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		CL_PlasmaBurn(pos);
 		break;
 		// LordHavoc: added for improved gore
@@ -1123,7 +1123,7 @@ void CL_ParseTempEntity(void)
 		CL_Smoke(pos, vec3_origin, 15);
 		CL_BulletMark(pos);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, 0, true, 1);
+		CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, 0, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		break;
 
 	case TE_EXPLOSION:
@@ -1133,7 +1133,7 @@ void CL_ParseTempEntity(void)
 		CL_ParticleExplosion(pos);
 		// LordHavoc: boosted color from 1.0, 0.8, 0.4 to 1.25, 1.0, 0.5
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 350, 4.0f, 2.0f, 0.50f, 700, 0.5, 0, 0, true, 1);
+		CL_AllocDlight(NULL, &tempmatrix, 350, 4.0f, 2.0f, 0.50f, 700, 0.5, 0, 0, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
@@ -1143,7 +1143,7 @@ void CL_ParseTempEntity(void)
 		CL_FindNonSolidLocation(pos, pos, 10);
 		CL_ParticleExplosion(pos);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 350, 2.5f, 2.0f, 4.0f, 700, 0.5, 0, 0, true, 1);
+		CL_AllocDlight(NULL, &tempmatrix, 350, 2.5f, 2.0f, 4.0f, 700, 0.5, 0, 0, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
@@ -1156,7 +1156,7 @@ void CL_ParseTempEntity(void)
 		color[0] = MSG_ReadCoord(cl.protocol) * (2.0f / 1.0f);
 		color[1] = MSG_ReadCoord(cl.protocol) * (2.0f / 1.0f);
 		color[2] = MSG_ReadCoord(cl.protocol) * (2.0f / 1.0f);
-		CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, 0, true, 1);	
+		CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, 0, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);	
 		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
@@ -1169,7 +1169,7 @@ void CL_ParseTempEntity(void)
 		color[1] = MSG_ReadByte() * (2.0f / 255.0f);
 		color[2] = MSG_ReadByte() * (2.0f / 255.0f);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, 0, true, 1);
+		CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, 0, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
@@ -1182,14 +1182,14 @@ void CL_ParseTempEntity(void)
 		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 600, 1.6f, 0.8f, 2.0f, 1200, 0.5, 0, 0, true, 1);
+		CL_AllocDlight(NULL, &tempmatrix, 600, 1.6f, 0.8f, 2.0f, 1200, 0.5, 0, 0, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		break;
 
 	case TE_SMALLFLASH:
 		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 10);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 200, 2, 2, 2, 1000, 0.2, 0, 0, true, 1);
+		CL_AllocDlight(NULL, &tempmatrix, 200, 2, 2, 2, 1000, 0.2, 0, 0, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		break;
 
 	case TE_CUSTOMFLASH:
@@ -1201,7 +1201,7 @@ void CL_ParseTempEntity(void)
 		color[1] = MSG_ReadByte() * (2.0f / 255.0f);
 		color[2] = MSG_ReadByte() * (2.0f / 255.0f);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, radius, color[0], color[1], color[2], radius / velspeed, velspeed, 0, 0, true, 1);
+		CL_AllocDlight(NULL, &tempmatrix, radius, color[0], color[1], color[2], radius / velspeed, velspeed, 0, 0, true, 1, 0.25, 1, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		break;
 
 	case TE_FLAMEJET:
@@ -1254,7 +1254,7 @@ void CL_ParseTempEntity(void)
 	case TE_TELEPORT:
 		MSG_ReadVector(pos, cl.protocol);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 500, 1.0f, 1.0f, 1.0f, 1500, 99.0f, 0, 0, true, 1);
+		CL_AllocDlight(NULL, &tempmatrix, 500, 1.0f, 1.0f, 1.0f, 1500, 99.0f, 0, 0, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 //		CL_TeleportSplash(pos);
 		break;
 
@@ -1270,7 +1270,7 @@ void CL_ParseTempEntity(void)
 		color[1] = tempcolor[1] * (2.0f / 255.0f);
 		color[2] = tempcolor[2] * (2.0f / 255.0f);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, 0, true, 1);
+		CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, 0, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
@@ -1295,7 +1295,7 @@ void CL_ParseTempEntity(void)
 		CL_FindNonSolidLocation(pos, pos, 10);
 		CL_ParticleExplosion(pos);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 500, 2.5f, 2.0f, 1.0f, 500, 9999, 0, 0, true, 1);
+		CL_AllocDlight(NULL, &tempmatrix, 500, 2.5f, 2.0f, 1.0f, 500, 9999, 0, 0, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
@@ -1306,7 +1306,7 @@ void CL_ParseTempEntity(void)
 		CL_FindNonSolidLocation(pos, pos, 5);
 		CL_Tei_PlasmaHit(pos, dir, count);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 500, 0.6, 1.2, 2.0f, 2000, 9999, 0, 0, true, 1);
+		CL_AllocDlight(NULL, &tempmatrix, 500, 0.6, 1.2, 2.0f, 2000, 9999, 0, 0, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		break;
 
 	default:
