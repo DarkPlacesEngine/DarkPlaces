@@ -3,8 +3,10 @@ OBJECTS= builddate.o chase.o cl_demo.o cl_input.o cl_main.o cl_parse.o cl_tent.o
 
 #K6/athlon optimizations
 #CPUOPTIMIZATIONS=-march=k6
-#686 optimizations
-CPUOPTIMIZATIONS=-march=i686
+#686 optimizations (note: crashs on k6, works on athlon)
+#CPUOPTIMIZATIONS=-march=i686
+#generic (run on anything)
+CPUOPTIMIZATIONS=
 
 #note:
 #the -Werror can be removed to compile even if there are warnings,
