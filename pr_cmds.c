@@ -41,26 +41,21 @@ char pr_varstring_temp[MAX_VARSTRING];
 */
 
 
-char *PF_VarString (int	first)
+char *PF_VarString (int first)
 {
-	int i, j, end;
-	char *s;
+	int i;
+	const char *s;
+	char *out, *outend;
 
-	end = 0;
-	for (i = first;i < pr_argc;i++)
+	out = pr_varstring_temp;
+	outend = pr_varstring_temp + sizeof(pr_varstring_temp) - 1;
+	for (i = first;i < pr_argc && out < outend;i++)
 	{
-		// LordHavoc: FIXME: this is just a strlcat inlined
 		s = G_STRING((OFS_PARM0+i*3));
-		j = strlen(s);
-		if (j > MAX_VARSTRING - 1 - end)
-			j = MAX_VARSTRING - 1 - end;
-		if (j > 0)
-		{
-			memcpy(pr_varstring_temp + end, s, j);
-			end += j;
-		}
+		while (out < outend && *s)
+			*out++ = *s++;
 	}
-	pr_varstring_temp[end] = 0;
+	*out++ = 0;
 	return pr_varstring_temp;
 }
 
