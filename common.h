@@ -207,6 +207,8 @@ extern	char	com_gamedir[MAX_OSPATH];
 void COM_WriteFile (char *filename, void *data, int len);
 int COM_FOpenFile (char *filename, QFile **file, qboolean quiet, qboolean zip);
 
+// set by COM_LoadFile functions
+extern int loadsize;
 byte *COM_LoadHunkFile (char *path, qboolean quiet);
 byte *COM_LoadMallocFile (char *path, qboolean quiet);
 //void COM_LoadCacheFile (char *path, struct cache_user_s *cu, qboolean quiet);

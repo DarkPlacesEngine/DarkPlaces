@@ -1660,9 +1660,9 @@ Filename are reletive to the quake directory.
 Always appends a 0 byte.
 ============
 */
-cache_user_t *loadcache;
-byte    *loadbuf;
-int             loadsize;
+cache_user_t	*loadcache;
+byte			*loadbuf;
+int				loadsize;
 byte *COM_LoadFile (char *path, int usehunk, qboolean quiet)
 {
 	QFile             *h;
@@ -1671,11 +1671,14 @@ byte *COM_LoadFile (char *path, int usehunk, qboolean quiet)
 	int             len;
 
 	buf = NULL;     // quiet compiler warning
+	loadsize = 0;
 
 // look for it in the filesystem or pack files
 	len = COM_FOpenFile (path, &h, quiet, true);
 	if (!h)
 		return NULL;
+
+	loadsize = len;
 	
 // extract the filename base name for hunk tag
 	COM_FileBase (path, base);
