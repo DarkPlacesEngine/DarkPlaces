@@ -793,6 +793,8 @@ void EntityFrame4_CL_ReadFrame(entity_database4_t *d)
 				}
 			}
 			cl_entities[enumber].state_current.number = enumber;
+#if 0
+			// debugging code
 			if (cl_entities[enumber].state_current.active != cl_entities[enumber].state_previous.active)
 			{
 				if (cl_entities[enumber].state_current.active)
@@ -800,6 +802,7 @@ void EntityFrame4_CL_ReadFrame(entity_database4_t *d)
 				else if (cl_entities[enumber].state_current.active)
 					Con_Printf("entity #%i has become inactive\n");
 			}
+#endif
 			CL_MoveLerpEntityStates(&cl_entities[enumber]);
 			cl_entities_active[enumber] = true;
 			if (d->currentcommit)

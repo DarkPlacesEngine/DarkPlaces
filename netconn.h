@@ -191,7 +191,6 @@ extern unsigned short ntohs (unsigned short netshort);
 //
 //============================================================================
 
-extern cvar_t sv_maxplayers;
 extern sizebuf_t net_message;
 
 int NetConn_SendReliableMessage(netconn_t *conn, sizebuf_t *data);

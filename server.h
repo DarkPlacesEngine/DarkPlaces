@@ -247,6 +247,7 @@ extern cvar_t sv_idealpitchscale;
 extern cvar_t sv_aim;
 extern cvar_t sv_stepheight;
 extern cvar_t sv_jumpstep;
+extern cvar_t sv_maxplayers;
 
 extern mempool_t *sv_clients_mempool;
 extern mempool_t *sv_edicts_mempool;
