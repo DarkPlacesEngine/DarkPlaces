@@ -158,6 +158,8 @@ typedef struct msurface_s
 	texture_t *texture;
 	// the lightmap texture fragment to use on the rendering mesh
 	rtexture_t *lightmaptexture;
+	// if lightmap settings changed, this forces update
+	int cached_dlight; // q1bsp
 	// mesh for rendering
 	surfmesh_t mesh;
 	// index into model->brush.shadowmesh
@@ -179,8 +181,6 @@ typedef struct msurface_s
 	int lightmaptexturestride; // q1bsp
 	int texturemins[2]; // q1bsp
 	int extents[2]; // q1bsp
-	// if lightmap settings changed, this forces update
-	int cached_dlight; // q1bsp
 
 	struct q3deffect_s *effect; // q3bsp
 	// FIXME: collisionmarkframe should be kept in a separate array
