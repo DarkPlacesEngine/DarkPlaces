@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "image.h"
 #include "r_shadow.h"
-#include "winding.h"
+#include "polygon.h"
 #include "curves.h"
 
 // note: model_shared.c sets up r_notexture, and r_surf_notexture
@@ -2207,12 +2207,15 @@ static void Mod_Q1BSP_LoadPlanes(lump_t *l)
 	}
 }
 
+#define MAX_PORTALPOINTS 64
+
 typedef struct portal_s
 {
 	mplane_t plane;
 	mnode_t *nodes[2];		// [0] = front side of plane
 	struct portal_s *next[2];
-	winding_t *winding;
+	int numpoints;
+	double points[3*MAX_PORTALPOINTS];
 	struct portal_s *chain; // all portals are linked into a list
 }
 portal_t;
@@ -2262,7 +2265,6 @@ static void Mod_Q1BSP_FinalizePortals(void)
 	mportal_t *portal;
 	mvertex_t *point;
 	mleaf_t *leaf, *endleaf;
-	winding_t *w;
 
 	// recalculate bounding boxes for all leafs(because qbsp is very sloppy)
 	leaf = loadmodel->brushq1.data_leafs;
@@ -2275,20 +2277,19 @@ static void Mod_Q1BSP_FinalizePortals(void)
 	p = portalchain;
 	while (p)
 	{
-		if (p->winding)
+		if (p->numpoints >= 3)
 		{
 			for (i = 0;i < 2;i++)
 			{
 				leaf = (mleaf_t *)p->nodes[i];
-				w = p->winding;
-				for (j = 0;j < w->numpoints;j++)
+				for (j = 0;j < p->numpoints;j++)
 				{
-					if (leaf->mins[0] > w->points[j][0]) leaf->mins[0] = w->points[j][0];
-					if (leaf->mins[1] > w->points[j][1]) leaf->mins[1] = w->points[j][1];
-					if (leaf->mins[2] > w->points[j][2]) leaf->mins[2] = w->points[j][2];
-					if (leaf->maxs[0] < w->points[j][0]) leaf->maxs[0] = w->points[j][0];
-					if (leaf->maxs[1] < w->points[j][1]) leaf->maxs[1] = w->points[j][1];
-					if (leaf->maxs[2] < w->points[j][2]) leaf->maxs[2] = w->points[j][2];
+					if (leaf->mins[0] > p->points[j*3+0]) leaf->mins[0] = p->points[j*3+0];
+					if (leaf->mins[1] > p->points[j*3+1]) leaf->mins[1] = p->points[j*3+1];
+					if (leaf->mins[2] > p->points[j*3+2]) leaf->mins[2] = p->points[j*3+2];
+					if (leaf->maxs[0] < p->points[j*3+0]) leaf->maxs[0] = p->points[j*3+0];
+					if (leaf->maxs[1] < p->points[j*3+1]) leaf->maxs[1] = p->points[j*3+1];
+					if (leaf->maxs[2] < p->points[j*3+2]) leaf->maxs[2] = p->points[j*3+2];
 				}
 			}
 		}
@@ -2305,12 +2306,12 @@ static void Mod_Q1BSP_FinalizePortals(void)
 	{
 		// note: this check must match the one below or it will usually corrupt memory
 		// the nodes[0] != nodes[1] check is because leaf 0 is the shared solid leaf, it can have many portals inside with leaf 0 on both sides
-		if (p->winding && p->nodes[0] != p->nodes[1]
+		if (p->numpoints >= 3 && p->nodes[0] != p->nodes[1]
 		 && p->nodes[0]->contents != CONTENTS_SOLID && p->nodes[1]->contents != CONTENTS_SOLID
 		 && p->nodes[0]->contents != CONTENTS_SKY && p->nodes[1]->contents != CONTENTS_SKY)
 		{
 			numportals += 2;
-			numpoints += p->winding->numpoints * 2;
+			numpoints += p->numpoints * 2;
 		}
 		p = p->chain;
 	}
@@ -2330,7 +2331,7 @@ static void Mod_Q1BSP_FinalizePortals(void)
 	{
 		pnext = p->chain;
 
-		if (p->winding)
+		if (p->numpoints >= 3)
 		{
 			// note: this check must match the one above or it will usually corrupt memory
 			// the nodes[0] != nodes[1] check is because leaf 0 is the shared solid leaf, it can have many portals inside with leaf 0 on both sides
@@ -2340,7 +2341,7 @@ static void Mod_Q1BSP_FinalizePortals(void)
 			{
 				// first make the back to front portal(forward portal)
 				portal->points = point;
-				portal->numpoints = p->winding->numpoints;
+				portal->numpoints = p->numpoints;
 				portal->plane.dist = p->plane.dist;
 				VectorCopy(p->plane.normal, portal->plane.normal);
 				portal->here = (mleaf_t *)p->nodes[1];
@@ -2348,7 +2349,7 @@ static void Mod_Q1BSP_FinalizePortals(void)
 				// copy points
 				for (j = 0;j < portal->numpoints;j++)
 				{
-					VectorCopy(p->winding->points[j], point->position);
+					VectorCopy(p->points + j*3, point->position);
 					point++;
 				}
 				PlaneClassify(&portal->plane);
@@ -2362,7 +2363,7 @@ static void Mod_Q1BSP_FinalizePortals(void)
 
 				// then make the front to back portal(backward portal)
 				portal->points = point;
-				portal->numpoints = p->winding->numpoints;
+				portal->numpoints = p->numpoints;
 				portal->plane.dist = -p->plane.dist;
 				VectorNegate(p->plane.normal, portal->plane.normal);
 				portal->here = (mleaf_t *)p->nodes[0];
@@ -2370,7 +2371,7 @@ static void Mod_Q1BSP_FinalizePortals(void)
 				// copy points
 				for (j = portal->numpoints - 1;j >= 0;j--)
 				{
-					VectorCopy(p->winding->points[j], point->position);
+					VectorCopy(p->points + j*3, point->position);
 					point++;
 				}
 				PlaneClassify(&portal->plane);
@@ -2382,7 +2383,6 @@ static void Mod_Q1BSP_FinalizePortals(void)
 				// advance to next portal
 				portal++;
 			}
-			Winding_Free(p->winding);
 		}
 		FreePortal(p);
 		p = pnext;
@@ -2464,11 +2464,12 @@ static void RemovePortalFromNodes(portal_t *portal)
 
 static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 {
-	int side;
+	int i, side;
 	mnode_t *front, *back, *other_node;
 	mplane_t clipplane, *plane;
 	portal_t *portal, *nextportal, *nodeportal, *splitportal, *temp;
-	winding_t *nodeportalwinding, *frontwinding, *backwinding;
+	int numfrontpoints, numbackpoints;
+	double frontpoints[3*MAX_PORTALPOINTS], backpoints[3*MAX_PORTALPOINTS];
 
 	// if a leaf, we're done
 	if (node->contents)
@@ -2486,7 +2487,8 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 	nodeportal = AllocPortal();
 	nodeportal->plane = *plane;
 
-	nodeportalwinding = Winding_NewFromPlane(nodeportal->plane.normal[0], nodeportal->plane.normal[1], nodeportal->plane.normal[2], nodeportal->plane.dist);
+	PolygonD_QuadForPlane(nodeportal->points, nodeportal->plane.normal[0], nodeportal->plane.normal[1], nodeportal->plane.normal[2], nodeportal->plane.dist, 1024.0*1024.0*1024.0);
+	nodeportal->numpoints = 4;
 	side = 0;	// shut up compiler warning
 	for (portal = (portal_t *)node->portals;portal;portal = portal->next[side])
 	{
@@ -2504,76 +2506,86 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 		else
 			Host_Error("Mod_Q1BSP_RecursiveNodePortals: mislinked portal");
 
-		nodeportalwinding = Winding_Clip(nodeportalwinding, clipplane.normal[0], clipplane.normal[1], clipplane.normal[2], clipplane.dist, true);
-		if (!nodeportalwinding)
-		{
-			Con_Print("Mod_Q1BSP_RecursiveNodePortals: WARNING: new portal was clipped away\n");
+		for (i = 0;i < nodeportal->numpoints*3;i++)
+			frontpoints[i] = nodeportal->points[i];
+		PolygonD_Divide(nodeportal->numpoints, frontpoints, clipplane.normal[0], clipplane.normal[1], clipplane.normal[2], clipplane.dist, 1.0/32.0, MAX_PORTALPOINTS, nodeportal->points, &nodeportal->numpoints, 0, NULL, NULL);
+		if (nodeportal->numpoints <= 0 || nodeportal->numpoints >= MAX_PORTALPOINTS)
 			break;
-		}
 	}
 
-	if (nodeportalwinding)
+	if (nodeportal->numpoints < 3)
 	{
-		// if the plane was not clipped on all sides, there was an error
-		nodeportal->winding = nodeportalwinding;
+		Con_Print("Mod_Q1BSP_RecursiveNodePortals: WARNING: new portal was clipped away\n");
+		nodeportal->numpoints = 0;
+	}
+	else if (nodeportal->numpoints >= MAX_PORTALPOINTS)
+	{
+		Con_Print("Mod_Q1BSP_RecursiveNodePortals: WARNING: new portal has too many points\n");
+		nodeportal->numpoints = 0;
+	}
+	else
+	{
 		AddPortalToNodes(nodeportal, front, back);
-	}
 
-	// split the portals of this node along this node's plane and assign them to the children of this node
-	// (migrating the portals downward through the tree)
-	for (portal = (portal_t *)node->portals;portal;portal = nextportal)
-	{
-		if (portal->nodes[0] == portal->nodes[1])
-			Host_Error("Mod_Q1BSP_RecursiveNodePortals: portal has same node on both sides(2)");
-		if (portal->nodes[0] == node)
-			side = 0;
-		else if (portal->nodes[1] == node)
-			side = 1;
-		else
-			Host_Error("Mod_Q1BSP_RecursiveNodePortals: mislinked portal");
-		nextportal = portal->next[side];
-
-		other_node = portal->nodes[!side];
-		RemovePortalFromNodes(portal);
-
-		// cut the portal into two portals, one on each side of the node plane
-		Winding_Divide(portal->winding, plane->normal[0], plane->normal[1], plane->normal[2], plane->dist, &frontwinding, &backwinding);
-
-		if (!frontwinding)
+		// split the portals of this node along this node's plane and assign them to the children of this node
+		// (migrating the portals downward through the tree)
+		for (portal = (portal_t *)node->portals;portal;portal = nextportal)
 		{
-			if (side == 0)
-				AddPortalToNodes(portal, back, other_node);
+			if (portal->nodes[0] == portal->nodes[1])
+				Host_Error("Mod_Q1BSP_RecursiveNodePortals: portal has same node on both sides(2)");
+			if (portal->nodes[0] == node)
+				side = 0;
+			else if (portal->nodes[1] == node)
+				side = 1;
 			else
-				AddPortalToNodes(portal, other_node, back);
-			continue;
-		}
-		if (!backwinding)
-		{
+				Host_Error("Mod_Q1BSP_RecursiveNodePortals: mislinked portal");
+			nextportal = portal->next[side];
+
+			other_node = portal->nodes[!side];
+			RemovePortalFromNodes(portal);
+
+			// cut the portal into two portals, one on each side of the node plane
+			PolygonD_Divide(portal->numpoints, portal->points, plane->normal[0], plane->normal[1], plane->normal[2], plane->dist, 1.0/32.0, MAX_PORTALPOINTS, frontpoints, &numfrontpoints, MAX_PORTALPOINTS, backpoints, &numbackpoints); 
+
+			if (!numfrontpoints)
+			{
+				if (side == 0)
+					AddPortalToNodes(portal, back, other_node);
+				else
+					AddPortalToNodes(portal, other_node, back);
+				continue;
+			}
+			if (!numbackpoints)
+			{
+				if (side == 0)
+					AddPortalToNodes(portal, front, other_node);
+				else
+					AddPortalToNodes(portal, other_node, front);
+				continue;
+			}
+
+			// the portal is split
+			splitportal = AllocPortal();
+			temp = splitportal->chain;
+			*splitportal = *portal;
+			splitportal->chain = temp;
+			for (i = 0;i < numbackpoints*3;i++)
+				splitportal->points[i] = backpoints[i];
+			splitportal->numpoints = numbackpoints;
+			for (i = 0;i < numfrontpoints*3;i++)
+				portal->points[i] = frontpoints[i];
+			portal->numpoints = numfrontpoints;
+
 			if (side == 0)
+			{
 				AddPortalToNodes(portal, front, other_node);
+				AddPortalToNodes(splitportal, back, other_node);
+			}
 			else
+			{
 				AddPortalToNodes(portal, other_node, front);
-			continue;
-		}
-
-		// the winding is split
-		splitportal = AllocPortal();
-		temp = splitportal->chain;
-		*splitportal = *portal;
-		splitportal->chain = temp;
-		splitportal->winding = backwinding;
-		Winding_Free(portal->winding);
-		portal->winding = frontwinding;
-
-		if (side == 0)
-		{
-			AddPortalToNodes(portal, front, other_node);
-			AddPortalToNodes(splitportal, back, other_node);
-		}
-		else
-		{
-			AddPortalToNodes(portal, other_node, front);
-			AddPortalToNodes(splitportal, other_node, back);
+				AddPortalToNodes(splitportal, other_node, back);
+			}
 		}
 	}
 
