@@ -823,3 +823,33 @@ void R_DrawNoModel(entity_render_t *ent)
 	//	R_DrawNoModelCallback(ent, 0);
 }
 
+void R_CalcBeamVerts (float *vert, vec3_t org1, vec3_t org2, float width)
+{
+	vec3_t right1, right2, diff, normal;
+
+	VectorSubtract (org2, org1, normal);
+	VectorNormalizeFast (normal);
+
+	// calculate 'right' vector for start
+	VectorSubtract (r_origin, org1, diff);
+	VectorNormalizeFast (diff);
+	CrossProduct (normal, diff, right1);
+
+	// calculate 'right' vector for end
+	VectorSubtract (r_origin, org2, diff);
+	VectorNormalizeFast (diff);
+	CrossProduct (normal, diff, right2);
+
+	vert[ 0] = org1[0] + width * right1[0];
+	vert[ 1] = org1[1] + width * right1[1];
+	vert[ 2] = org1[2] + width * right1[2];
+	vert[ 4] = org1[0] - width * right1[0];
+	vert[ 5] = org1[1] - width * right1[1];
+	vert[ 6] = org1[2] - width * right1[2];
+	vert[ 8] = org2[0] - width * right2[0];
+	vert[ 9] = org2[1] - width * right2[1];
+	vert[10] = org2[2] - width * right2[2];
+	vert[12] = org2[0] + width * right2[0];
+	vert[13] = org2[1] + width * right2[1];
+	vert[14] = org2[2] + width * right2[2];
+}

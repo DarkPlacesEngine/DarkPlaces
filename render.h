@@ -172,5 +172,7 @@ void R_Stain (vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, i
 
 void R_DrawCrosshair(void);
 
+void R_CalcBeamVerts (float *vert, vec3_t org1, vec3_t org2, float width);
+
 #endif
 
