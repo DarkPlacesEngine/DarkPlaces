@@ -22,6 +22,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+#define MAXTRACKS	256
+
 // Prototypes of the system dependent functions
 extern void CDAudio_SysEject (void);
 extern void CDAudio_SysCloseDoor (void);
@@ -44,7 +46,7 @@ static qboolean wasPlaying = false;
 static qboolean initialized = false;
 static qboolean enabled = false;
 static float cdvolume;
-static qbyte remap[100];
+static qbyte remap[MAXTRACKS];
 static qbyte maxTrack;
 static int faketrack = -1;
 
@@ -111,6 +113,9 @@ void CDAudio_Play (qbyte track, qboolean looping)
 
 	// Try playing a fake track (sound file) first
 	sfx = S_PrecacheSound (va ("cdtracks/track%02u.wav", track), false, true, false);
+	// FIXME: perhaps force it to be always %03u (but for compatibility?):
+	if (!sfx)
+		sfx = S_PrecacheSound (va ("cdtracks/track%03u.wav", track), false, true, false);
 	if (sfx != NULL)
 	{
 		faketrack = S_StartSound (-1, 0, sfx, vec3_origin, cdvolume, 0);
@@ -229,7 +234,7 @@ static void CD_f (void)
 		enabled = true;
 		if (cdPlaying)
 			CDAudio_Stop();
-		for (n = 0; n < 100; n++)
+		for (n = 0; n < MAXTRACKS; n++)
 			remap[n] = n;
 		CDAudio_GetAudioDiskInfo();
 		return;
@@ -240,7 +245,7 @@ static void CD_f (void)
 		ret = Cmd_Argc() - 2;
 		if (ret <= 0)
 		{
-			for (n = 1; n < 100; n++)
+			for (n = 1; n < MAXTRACKS; n++)
 				if (remap[n] != n)
 					Con_Printf("  %u -> %u\n", n, remap[n]);
 			return;
@@ -358,7 +363,7 @@ int CDAudio_Init (void)
 
 	CDAudio_SysInit();
 
-	for (i = 0; i < 100; i++)
+	for (i = 0; i < MAXTRACKS; i++)
 		remap[i] = i;
 
 	Cvar_RegisterVariable(&cdaudioinitialized);
