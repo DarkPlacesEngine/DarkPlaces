@@ -942,6 +942,7 @@ void Host_Init (void)
 	if (cls.state != ca_dedicated)
 	{
 		VID_Open();
+		CDAudio_Startup();
 		CL_InitTEnts ();  // We must wait after sound startup to load tent sounds
 		SCR_BeginLoadingPlaque();
 		MR_Init();

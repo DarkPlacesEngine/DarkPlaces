@@ -1007,12 +1007,10 @@ static void VID_OpenSystems(void)
 {
 	R_Modules_Start();
 	S_Startup();
-	CDAudio_Startup();
 }
 
 static void VID_CloseSystems(void)
 {
-	CDAudio_Shutdown();
 	S_Shutdown();
 	R_Modules_Shutdown();
 }
