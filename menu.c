@@ -2235,7 +2235,7 @@ void M_Menu_Video_AdjustSliders (int dir)
 			int new_resolution = video_resolution + dir;
 			if (gamemode == GAME_FNIGGIUM ? new_resolution < VID_640 : new_resolution < 0)
 				video_resolution = VID_RES_COUNT - 1;
-			else if (new_resolution > VID_RES_COUNT)
+			else if (new_resolution > VID_RES_COUNT - 1)
 				video_resolution = gamemode == GAME_FNIGGIUM ? VID_640 : 0;
 			else
 				video_resolution = new_resolution;
