@@ -208,7 +208,7 @@ void CL_VideoFrame( void ) // update all videos
 			if( realtime - video->lasttime > CLTHRESHOLD )
 				SuspendVideo( video );
 			else if( video->state == CLVIDEO_PAUSE )
-				video->starttime = realtime + video->framenum * video->framerate;
+				video->starttime = realtime - video->framenum * video->framerate;
 			else 
 				VideoFrame( video );
 
