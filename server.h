@@ -149,6 +149,10 @@ typedef struct client_s
 
 	// visibility state
 	float visibletime[MAX_EDICTS];
+
+	// prevent animated names
+	float nametime;
+
 #ifdef QUAKEENTITIES
 	// delta compression state
 	float nextfullupdate[MAX_EDICTS];

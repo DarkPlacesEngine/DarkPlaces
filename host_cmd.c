@@ -686,13 +686,19 @@ void Host_Name_f (void)
 
 	if (cmd_source == src_command)
 	{
-		if (strcmp(cl_name.string, newName) == 0)
-			return;
 		Cvar_Set ("_cl_name", newName);
 		if (cls.state == ca_connected)
 			Cmd_ForwardToServer ();
 		return;
 	}
+
+	if (sv.time < host_client->nametime)
+	{
+		SV_ClientPrintf("You can't change name more than once every 5 seconds!\n");
+		return;
+	}
+	
+	host_client->nametime = sv.time + 5;
 
 	if (strcmp(host_client->name, newName) && host_client->name[0] && strcmp(host_client->name, "unconnected"))
 		SV_BroadcastPrintf("%s changed name to %s\n", host_client->name, newName);
