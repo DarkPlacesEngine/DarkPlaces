@@ -85,4 +85,9 @@ void Matrix4x4_ConcatScale (matrix4x4_t *out, float x);
 // immediately applies a Scale3 to the matrix
 void Matrix4x4_ConcatScale3 (matrix4x4_t *out, float x, float y, float z);
 
+// extracts origin vector (translate) from matrix
+void Matrix4x4_OriginFromMatrix (const matrix4x4_t *in, float *out);
+// extracts scaling factor from matrix (only works for uniform scaling)
+float Matrix4x4_ScaleFromMatrix (const matrix4x4_t *in);
+
 #endif

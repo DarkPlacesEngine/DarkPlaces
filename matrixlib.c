@@ -421,3 +421,16 @@ void Matrix4x4_ConcatScale3 (matrix4x4_t *out, float x, float y, float z)
 	Matrix4x4_Concat(out, &base, &temp);
 }
 
+void Matrix4x4_OriginFromMatrix (const matrix4x4_t *in, float *out)
+{
+	out[0] = in->m[0][3];
+	out[1] = in->m[1][3];
+	out[2] = in->m[2][3];
+}
+
+float Matrix4x4_ScaleFromMatrix (const matrix4x4_t *in)
+{
+	// we only support uniform scaling, so assume the first row is enough
+	return sqrt(in->m[0][0] * in->m[0][0] + in->m[0][1] * in->m[0][1] + in->m[0][2] * in->m[0][2]);
+}
+
