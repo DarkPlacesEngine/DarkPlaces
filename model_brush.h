@@ -301,6 +301,15 @@ typedef struct mportal_s
 }
 mportal_t;
 
+typedef struct mlightshadowvolumemesh_s
+{
+	struct mlightshadowvolumemesh_s *next;
+	int numverts;
+	int numtris;
+	float *vertex;
+}
+mlightshadowvolumemesh_t;
+
 typedef struct mlight_s
 {
 	// location of light
@@ -325,6 +334,8 @@ typedef struct mlight_s
 	// surfaces this shines on
 	int numsurfaces;
 	msurface_t **surfaces;
+	// precomputed shadow volume meshs
+	mlightshadowvolumemesh_t *shadowvolumemeshs;
 	// used only for loading calculations, number of leafs this shines on
 	//int numleafs;
 }

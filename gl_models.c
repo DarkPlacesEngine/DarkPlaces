@@ -513,11 +513,11 @@ void R_DrawQ1Q2AliasModelFakeShadow (entity_render_t *ent)
 					R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
 					Matrix4x4_Transform(&ent->inversematrix, sl->origin, temp);
 					GL_Color(0.1 * r_colorscale, 0.025 * r_colorscale, 0.0125 * r_colorscale, 1);
-					R_Shadow_Volume(model->numverts, model->numtris, model->mdlmd2data_indices, model->mdlmd2data_triangleneighbors, temp, sl->cullradius + model->radius - sqrt(f), true);
+					R_Shadow_Volume(model->numverts, model->numtris, varray_vertex, model->mdlmd2data_indices, model->mdlmd2data_triangleneighbors, temp, sl->cullradius + model->radius - sqrt(f), true);
 					GL_UseColorArray();
 					lightscale = d_lightstylevalue[sl->style] * (1.0f / 65536.0f);
 					VectorScale(sl->light, lightscale, lightcolor);
-					R_Shadow_VertexLight(model->numverts, aliasvertnorm, temp, sl->cullradius2, sl->distbias, sl->subtract, lightcolor);
+					R_Shadow_VertexLight(model->numverts, varray_vertex, aliasvertnorm, temp, sl->cullradius2, sl->distbias, sl->subtract, lightcolor);
 					R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
 				}
 			}
@@ -535,9 +535,9 @@ void R_DrawQ1Q2AliasModelFakeShadow (entity_render_t *ent)
 					R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
 					Matrix4x4_Transform(&ent->inversematrix, rd->origin, temp);
 					GL_Color(0.1 * r_colorscale, 0.025 * r_colorscale, 0.0125 * r_colorscale, 1);
-					R_Shadow_Volume(model->numverts, model->numtris, model->mdlmd2data_indices, model->mdlmd2data_triangleneighbors, temp, rd->cullradius + model->radius - sqrt(f), true);
+					R_Shadow_Volume(model->numverts, model->numtris, varray_vertex, model->mdlmd2data_indices, model->mdlmd2data_triangleneighbors, temp, rd->cullradius + model->radius - sqrt(f), true);
 					GL_UseColorArray();
-					R_Shadow_VertexLight(model->numverts, aliasvertnorm, temp, rd->cullradius2, LIGHTOFFSET, rd->subtract, rd->light);
+					R_Shadow_VertexLight(model->numverts, varray_vertex, aliasvertnorm, temp, rd->cullradius2, LIGHTOFFSET, rd->subtract, rd->light);
 					R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
 				}
 			}

@@ -1856,7 +1856,7 @@ void R_DrawBrushModelShadowVolumes (entity_render_t *ent, vec3_t relativelightor
 					{
 						R_Mesh_ResizeCheck(mesh->numverts * 2);
 						memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-						R_Shadow_Volume(mesh->numverts, mesh->numtriangles, mesh->index, mesh->triangleneighbors, relativelightorigin, projectdistance, visiblevolume);
+						R_Shadow_Volume(mesh->numverts, mesh->numtriangles, varray_vertex, mesh->index, mesh->triangleneighbors, relativelightorigin, projectdistance, visiblevolume);
 					}
 				}
 			}

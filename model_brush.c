@@ -710,6 +710,13 @@ void Mod_ProcessLightList(void)
 					e->surfaces[e->numsurfaces++] = loadmodel->surfaces + loadmodel->firstmodelsurface + j;
 		}
 	}
+	// construct shadow volumes for each light
+	/*
+	for (i = 0, e = loadmodel->lights;i < loadmodel->numlights;i++, e++)
+	{
+		FIXME FINISH THIS CODE!
+	}
+	*/
 }
 
 

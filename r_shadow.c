@@ -36,10 +36,10 @@ void R_Shadow_Init(void)
 	R_RegisterModule("R_Shadow", r_shadow_start, r_shadow_shutdown, r_shadow_newmap);
 }
 
-void R_Shadow_Volume(int numverts, int numtris, int *elements, int *neighbors, vec3_t relativelightorigin, float projectdistance, int visiblevolume)
+void R_Shadow_Volume(int numverts, int numtris, float *vertex, int *elements, int *neighbors, vec3_t relativelightorigin, float projectdistance, int visiblevolume)
 {
 	int i, *e, *n, *out, tris;
-	float *v0, *v1, *v2, dir0[3], dir1[3], temp[3], f;
+	float *v0, *v1, *v2, temp[3], f;
 // terminology:
 //
 // frontface:
@@ -57,8 +57,8 @@ void R_Shadow_Volume(int numverts, int numtris, int *elements, int *neighbors, v
 // description:
 // draws the shadow volumes of the model.
 // requirements:
-// vertex loations must already be in varray_vertex before use.
-// varray_vertex must have capacity for numverts * 2.
+// vertex loations must already be in vertex before use.
+// vertex must have capacity for numverts * 2.
 
 	// make sure trianglefacinglight is big enough for this volume
 	if (maxtrianglefacinglight < numtris)
@@ -81,7 +81,7 @@ void R_Shadow_Volume(int numverts, int numtris, int *elements, int *neighbors, v
 	// make projected vertices
 	// by clever use of elements we'll construct the whole shadow from
 	// the unprojected vertices and these projected vertices
-	for (i = 0, v0 = varray_vertex, v1 = varray_vertex + numverts * 4;i < numverts;i++, v0 += 4, v1 += 4)
+	for (i = 0, v0 = vertex, v1 = vertex + numverts * 4;i < numverts;i++, v0 += 4, v1 += 4)
 	{
 		VectorSubtract(v0, relativelightorigin, temp);
 		f = projectdistance / sqrt(DotProduct(temp,temp));
@@ -91,17 +91,50 @@ void R_Shadow_Volume(int numverts, int numtris, int *elements, int *neighbors, v
 	// check which triangles are facing the light
 	for (i = 0, e = elements;i < numtris;i++, e += 3)
 	{
-		// calculate surface plane
-		v0 = varray_vertex + e[0] * 4;
-		v1 = varray_vertex + e[1] * 4;
-		v2 = varray_vertex + e[2] * 4;
-		VectorSubtract(v0, v1, dir0);
-		VectorSubtract(v2, v1, dir1);
-		CrossProduct(dir0, dir1, temp);
+		// calculate triangle facing flag
+		v0 = vertex + e[0] * 4;
+		v1 = vertex + e[1] * 4;
+		v2 = vertex + e[2] * 4;
 		// we do not need to normalize the surface normal because both sides
 		// of the comparison use it, therefore they are both multiplied the
-		// same amount...
+		// same amount...  furthermore the subtract can be done on the
+		// vectors, saving a little bit of math in the dotproducts
+#if 1
+		// fast version
+		// subtracts v1 from v0 and v2, combined into a crossproduct,
+		// combined with a dotproduct of the light location relative to the
+		// first point of the triangle (any point works, since the triangle
+		// is obviously flat), and finally a comparison to determine if the
+		// light is infront of the triangle (the goal of this statement)
+		trianglefacinglight[i] =
+		   (relativelightorigin[0] - v0[0]) * ((v0[1] - v1[1]) * (v2[2] - v1[2]) - (v0[2] - v1[2]) * (v2[1] - v1[1]))
+		 + (relativelightorigin[1] - v0[1]) * ((v0[2] - v1[2]) * (v2[0] - v1[0]) - (v0[0] - v1[0]) * (v2[2] - v1[2]))
+		 + (relativelightorigin[2] - v0[2]) * ((v0[0] - v1[0]) * (v2[1] - v1[1]) - (v0[1] - v1[1]) * (v2[0] - v1[0])) > 0;
+#else
+		// readable version
+		{
+		float dir0[3], dir1[3],
+
+		// calculate two mostly perpendicular edge directions
+		VectorSubtract(v0, v1, dir0);
+		VectorSubtract(v2, v1, dir1);
+
+		// we have two edge directions, we can calculate a third vector from
+		// them, which is the direction of the surface normal (it's magnitude
+		// is not 1 however)
+		CrossProduct(dir0, dir1, temp);
+
+		// this is entirely unnecessary, but kept for clarity
+		//VectorNormalize(temp);
+
+		// compare distance of light along normal, with distance of any point
+		// of the triangle along the same normal (the triangle is planar,
+		// I.E. flat, so all points give the same answer)
+		// the normal is not normalized because it is used on both sides of
+		// the comparison, so it's magnitude does not matter
 		trianglefacinglight[i] = DotProduct(relativelightorigin, temp) >= DotProduct(v0, temp);
+		}
+#endif
 	}
 
 	// output triangle elements
@@ -189,12 +222,12 @@ void R_Shadow_Volume(int numverts, int numtris, int *elements, int *neighbors, v
 	}
 }
 
-void R_Shadow_VertexLight(int numverts, float *normals, vec3_t relativelightorigin, float lightradius2, float lightdistbias, float lightsubtract, float *lightcolor)
+void R_Shadow_VertexLight(int numverts, float *vertex, float *normals, vec3_t relativelightorigin, float lightradius2, float lightdistbias, float lightsubtract, float *lightcolor)
 {
 	int i;
 	float *n, *v, *c, f, dist, temp[3];
 	// calculate vertex colors
-	for (i = 0, v = varray_vertex, c = varray_color, n = normals;i < numverts;i++, v += 4, c += 4, n += 3)
+	for (i = 0, v = vertex, c = varray_color, n = normals;i < numverts;i++, v += 4, c += 4, n += 3)
 	{
 		VectorSubtract(relativelightorigin, v, temp);
 		c[0] = 0;
