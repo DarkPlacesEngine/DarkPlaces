@@ -983,7 +983,8 @@ qboolean ED_ParseEpair(edict_t *ent, ddef_t *key, const char *s)
 			Con_DPrintf("ED_ParseEpair: Can't find field %s\n", s);
 			return false;
 		}
-		val->_int = G_INT(def->ofs);
+		//val->_int = G_INT(def->ofs); AK Please check this - seems to be an org. quake bug
+		val->_int = def->ofs;
 		break;
 
 	case ev_function:

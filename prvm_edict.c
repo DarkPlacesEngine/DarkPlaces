@@ -965,7 +965,7 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s)
 			Con_DPrintf("PRVM_ED_ParseEpair: Can't find field %s in %s\n", s, PRVM_NAME);
 			return false;
 		}
-		val->_int = PRVM_G_INT(def->ofs);
+		val->_int = def->ofs;
 		break;
 
 	case ev_function:
@@ -1483,7 +1483,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	
 	prog->self = PRVM_ED_FindGlobal("self");
 
-	if(PRVM_ED_FindGlobal("time"))
+	if( PRVM_ED_FindGlobal("time") && PRVM_ED_FindGlobal("time")->type == ev_float )
 		prog->time = &PRVM_G_FLOAT(PRVM_ED_FindGlobal("time")->ofs);
 
 	if(PRVM_ED_FindField ("chain"))
