@@ -428,7 +428,7 @@ chooseexecprogram:
 }
 
 // LordHavoc: grabbed these from QWSV, works around a gcc 2.95.3 compiler bug
-#define MAX_PRSTR 1024
+#define MAX_PRSTR 65536
 static char *pr_strtbl[MAX_PRSTR];
 static int num_prstr;
 
