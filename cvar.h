@@ -95,3 +95,16 @@ void 	Cvar_WriteVariables (QFile *f);
 cvar_t *Cvar_FindVar (char *var_name);
 
 extern cvar_t	*cvar_vars;
+
+int		Cvar_CompleteCountPossible (char *partial);
+char	**Cvar_CompleteBuildList (char *partial);
+// Added by EvilTypeGuy - functions for tab completion system
+// Thanks to Fett erich@heintz.com
+// Thanks to taniwha
+
+void	Cvar_List_f (void);
+// Prints a list of Cvars including a count of them to the user console
+// Referenced in cmd.c in Cmd_Init hence it's inclusion here
+// Added by EvilTypeGuy eviltypeguy@qeradiant.com
+// Thanks to Matthias "Maddes" Buecher, http://www.inside3d.com/qip/
+

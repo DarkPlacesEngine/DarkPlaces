@@ -45,28 +45,29 @@ int			con_totallines;		// total lines in console scrollback
 int			con_backscroll;		// lines up from bottom to display
 int			con_current;		// where next message will be printed
 int			con_x;				// offset in current line for next print
-char		*con_text=0;
+char		*con_text = 0;
 
-cvar_t		con_notifytime = {"con_notifytime","3"};		//seconds
+cvar_t		con_notifytime = {"con_notifytime","3"};	//seconds
 cvar_t		logfile = {"logfile","0"};
 
 #define	NUM_CON_TIMES 4
 float		con_times[NUM_CON_TIMES];	// realtime time the line was generated
-								// for transparent notify lines
+						// for transparent notify lines
 
 int			con_vislines;
 
 qboolean	con_debuglog;
 
-#define		MAXCMDLINE	256
+#define	MAXCMDLINE	256
 extern	char	key_lines[32][MAXCMDLINE];
 extern	int		edit_line;
 extern	int		key_linepos;
+extern	int		key_insert;
 		
 
 qboolean	con_initialized;
 
-int			con_notifylines;		// scan lines to clear for notify lines
+int		con_notifylines;		// scan lines to clear for notify lines
 
 extern void M_Menu_Main_f (void);
 
@@ -487,39 +488,53 @@ DRAWING
 Con_DrawInput
 
 The input line scrolls horizontally if typing goes beyond the right edge
+
+Modified by EvilTypeGuy eviltypeguy@qeradiant.com
 ================
 */
 void Con_DrawInput (void)
 {
 	int		y;
 	char	*text;
+	char	editlinecopy[256];
 
 	if (key_dest != key_console && !con_forcedup)
 		return;		// don't draw anything
 
-	text = key_lines[edit_line];
+	text = strcpy(editlinecopy, key_lines[edit_line]);
+	y = strlen(text);
 	
-// add the cursor frame
-	text[key_linepos] = 10+((int)(realtime*con_cursorspeed)&1);
+	// Advanced Console Editing by Radix radix@planetquake.com
+	// Added/Modified by EvilTypeGuy eviltypeguy@qeradiant.com
+	// use strlen of edit_line instead of key_linepos to allow editing
+	// of early characters w/o erasing
+
+	// add the cursor frame
+	if ((int)(realtime*con_cursorspeed) & 1)		// cursor is visible
+		text[key_linepos] = 11 + 130 * key_insert;	// either solid or triangle facing right
 	
-	text[key_linepos+1] = 0; // LordHavoc: null terminate, rather than padding with spaces
-// fill out remainder with spaces
-//	for (i=key_linepos+1 ; i< con_linewidth ; i++)
-//		text[i] = ' ';
+	text[key_linepos + 1] = 0; // LordHavoc: null terminate, rather than padding with spaces
+	// text[key_linepos] = 10 + ((int)(realtime*con_cursorspeed) & 1);
+	
+
+	// fill out remainder with spaces
+	//	for (i=key_linepos+1 ; i< con_linewidth ; i++)
+	//		text[i] = ' ';
 		
-//	prestep if horizontally scrolling
+	//	prestep if horizontally scrolling
 	if (key_linepos >= con_linewidth)
 		text += 1 + key_linepos - con_linewidth;
 		
-// draw it
-	y = con_vislines-16;
+	// draw it
+	y = con_vislines - 16;
 
-//	for (i=0 ; i<con_linewidth ; i++)
-//		Draw_Character ( (i+1)<<3, con_vislines - 16, text[i]);
+	//	for (i=0 ; i<con_linewidth ; i++)
+	//		Draw_Character ( (i+1)<<3, con_vislines - 16, text[i]);
+
 	// LordHavoc: speedup
 	Draw_String(8, con_vislines - 16, text, con_linewidth);
 
-// remove cursor
+	// remove cursor
 	key_lines[edit_line][key_linepos] = 0;
 }
 
@@ -644,3 +659,146 @@ void Con_DrawConsole (int lines, qboolean drawinput)
 	if (drawinput)
 		Con_DrawInput ();
 }
+
+/*
+	Con_DisplayList
+
+	New function for tab-completion system
+	Added by EvilTypeGuy
+	MEGA Thanks to Taniwha
+
+*/
+void
+Con_DisplayList(char **list)
+{
+	int	i = 0;
+	int	pos = 0;
+	int	len = 0;
+	int	maxlen = 0;
+	int	width = (con_linewidth - 4);
+	char	**walk = list;
+
+	while (*walk) {
+		len = strlen(*walk);
+		if (len > maxlen)
+			maxlen = len;
+		walk++;
+	}
+	maxlen += 1;
+
+	while (*list) {
+		len = strlen(*list);
+		if (pos + maxlen >= width) {
+			Con_Printf("\n");
+			pos = 0;
+		}
+
+		Con_Printf("%s", *list);
+		for (i = 0; i < (maxlen - len); i++)
+			Con_Printf(" ");
+
+		pos += maxlen;
+		list++;
+	}
+
+	if (pos)
+		Con_Printf("\n\n");
+}
+
+/*
+	Con_CompleteCommandLine
+
+	New function for tab-completion system
+	Added by EvilTypeGuy
+	Thanks to Fett erich@heintz.com
+	Thanks to taniwha
+
+*/
+void
+Con_CompleteCommandLine (void)
+{
+	char	*cmd = "";
+	char	*s;
+	int		c, v, a, i;
+	int		cmd_len;
+	char	**list[3] = {0, 0, 0};
+
+	s = key_lines[edit_line] + 1;
+	// Count number of possible matches
+	c = Cmd_CompleteCountPossible(s);
+	v = Cvar_CompleteCountPossible(s);
+	a = Cmd_CompleteAliasCountPossible(s);
+	
+	if (!(c + v + a))	// No possible matches
+		return;
+	
+	if (c + v + a == 1) {
+		if (c)
+			list[0] = Cmd_CompleteBuildList(s);
+		else if (v)
+			list[0] = Cvar_CompleteBuildList(s);
+		else
+			list[0] = Cmd_CompleteAliasBuildList(s);
+		cmd = *list[0];
+		cmd_len = strlen (cmd);
+	} else {
+		if (c)
+			cmd = *(list[0] = Cmd_CompleteBuildList(s));
+		if (v)
+			cmd = *(list[1] = Cvar_CompleteBuildList(s));
+		if (a)
+			cmd = *(list[2] = Cmd_CompleteAliasBuildList(s));
+
+		cmd_len = strlen (s);
+		do {
+			for (i = 0; i < 3; i++) {
+				char ch = cmd[cmd_len];
+				char **l = list[i];
+				if (l) {
+					while (*l && (*l)[cmd_len] == ch)
+						l++;
+					if (*l)
+						break;
+				}
+			}
+			if (i == 3)
+				cmd_len++;
+		} while (i == 3);
+		// 'quakebar'
+		Con_Printf("\n\35");
+		for (i = 0; i < con_linewidth - 4; i++)
+			Con_Printf("\36");
+		Con_Printf("\37\n");
+
+		// Print Possible Commands
+		if (c) {
+			Con_Printf("%i possible command%s\n", c, (c > 1) ? "s: " : ":");
+			Con_DisplayList(list[0]);
+		}
+		
+		if (v) {
+			Con_Printf("%i possible variable%s\n", v, (v > 1) ? "s: " : ":");
+			Con_DisplayList(list[1]);
+		}
+		
+		if (a) {
+			Con_Printf("%i possible aliases%s\n", a, (a > 1) ? "s: " : ":");
+			Con_DisplayList(list[2]);
+		}
+		return;
+	}
+	
+	if (cmd) {
+		strncpy(key_lines[edit_line] + 2, cmd, cmd_len);
+		key_linepos = cmd_len + 2;
+		if (c + v + a == 1) {
+			key_lines[edit_line][key_linepos] = ' ';
+			key_linepos++;
+		}
+		key_lines[edit_line][key_linepos] = 0;
+	}
+	for (i = 0; i < 3; i++)
+		if (list[i])
+			free (list[i]);
+}
+

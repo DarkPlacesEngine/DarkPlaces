@@ -97,6 +97,64 @@ char *Cvar_CompleteVariable (char *partial)
 
 
 /*
+	CVar_CompleteCountPossible
+
+	New function for tab-completion system
+	Added by EvilTypeGuy
+	Thanks to Fett erich@heintz.com
+
+*/
+int
+Cvar_CompleteCountPossible (char *partial)
+{
+	cvar_t	*cvar;
+	int		len;
+	int		h;
+	
+	h = 0;
+	len = strlen(partial);
+	
+	if (!len)
+		return	0;
+	
+	// Loop through the cvars and count all possible matches
+	for (cvar = cvar_vars; cvar; cvar = cvar->next)
+		if (!strncasecmp(partial, cvar->name, len))
+			h++;
+	
+	return h;
+}
+
+/*
+	CVar_CompleteBuildList
+
+	New function for tab-completion system
+	Added by EvilTypeGuy
+	Thanks to Fett erich@heintz.com
+	Thanks to taniwha
+
+*/
+char	**
+Cvar_CompleteBuildList (char *partial)
+{
+	cvar_t	*cvar;
+	int		len = 0;
+	int		bpos = 0;
+	int		sizeofbuf = (Cvar_CompleteCountPossible (partial) + 1) * sizeof (char *);
+	char	**buf;
+
+	len = strlen(partial);
+	buf = malloc(sizeofbuf + sizeof (char *));
+	// Loop through the alias list and print all matches
+	for (cvar = cvar_vars; cvar; cvar = cvar->next)
+		if (!strncasecmp(partial, cvar->name, len))
+			buf[bpos++] = cvar->name;
+
+	buf[bpos] = NULL;
+	return buf;
+}	
+
+/*
 ============
 Cvar_Set
 ============
@@ -223,3 +281,41 @@ void Cvar_WriteVariables (QFile *f)
 			Qprintf (f, "%s \"%s\"\n", var->name, var->string);
 }
 
+
+// Added by EvilTypeGuy eviltypeguy@qeradiant.com
+// 2000-01-09 CvarList command By Matthias "Maddes" Buecher, http://www.inside3d.com/qip/
+/*
+=========
+Cvar_List
+=========
+*/
+void Cvar_List_f (void)
+{
+	cvar_t	*cvar;
+	char	*partial;
+	int		len;
+	int		count;
+
+	if (Cmd_Argc() > 1) {
+		partial = Cmd_Argv (1);
+		len = strlen(partial);
+	} else {
+		partial = NULL;
+		len = 0;
+	}
+
+	count = 0;
+	for (cvar = cvar_vars; cvar; cvar = cvar->next) {
+		if (partial && strncmp (partial,cvar->name,len))
+			continue;
+
+		Con_Printf ("%s is \"%s\"\n", cvar->name, cvar->string);
+		count++;
+	}
+
+	Con_Printf ("%i cvar(s)", count);
+	if (partial)
+		Con_Printf (" beginning with \"%s\"", partial);
+	Con_Printf ("\n");
+}
+// 2000-01-09 CvarList command by Maddes
