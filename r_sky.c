@@ -514,6 +514,8 @@ void R_Sky_Init(void)
 {
 	Cmd_AddCommand ("loadsky", &LoadSky_f);
 	Cvar_RegisterVariable (&r_sky);
+	R_ResetSkyBox();
+	R_ResetQuakeSky();
 	R_RegisterModule("R_Sky", r_sky_start, r_sky_shutdown, r_sky_newmap);
 }
 
