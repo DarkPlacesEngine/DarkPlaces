@@ -272,8 +272,6 @@ Key_Console (int key, char ascii)
 		break;
 	}
 
-	// LordHavoc: FIXME: implement this sometime
-	#if 0
 	if ((toupper(key) == 'V' && keydown[K_CTRL]) || ((key == K_INS || key == K_KP_INS) && keydown[K_SHIFT]))
 	{
 		char *cbd;
@@ -294,7 +292,6 @@ Key_Console (int key, char ascii)
 		}
 		return;
 	}
-	#endif
 
 	if (key == 'l')
 	{
