@@ -42,9 +42,57 @@ extern void (*vid_menukeyfn)(int key);
 extern int vid_hidden;
 extern int vid_activewindow;
 
-extern cvar_t vid_mode;
-extern cvar_t vid_mouse;
 extern cvar_t vid_fullscreen;
+extern cvar_t vid_width;
+extern cvar_t vid_height;
+extern cvar_t vid_bitsperpixel;
+extern cvar_t vid_mouse;
+
+// brand of graphics chip
+extern const char *gl_vendor;
+// graphics chip model and other information
+extern const char *gl_renderer;
+// begins with 1.0.0, 1.1.0, 1.2.0, 1.2.1, 1.3.0, 1.3.1, or 1.4.0
+extern const char *gl_version;
+// extensions list, space separated
+extern const char *gl_extensions;
+// WGL, GLX, or AGL
+extern const char *gl_platform;
+// another extensions list, containing platform-specific extensions that are
+// not in the main list
+extern const char *gl_platformextensions;
+// name of driver library (opengl32.dll, libGL.so.1, or whatever)
+extern char gl_driver[256];
+
+// compatibility hacks
+extern qboolean isG200;
+extern qboolean isRagePro;
+
+// LordHavoc: GLX_SGI_video_sync and WGL_EXT_swap_control
+extern int gl_videosyncavailable;
+
+typedef struct
+{
+	const char *name;
+	void **funcvariable;
+}
+gl_extensionfunctionlist_t;
+
+typedef struct
+{
+	const char *name;
+	const gl_extensionfunctionlist_t *funcs;
+	int *enablevariable;
+	const char *disableparm;
+}
+gl_extensioninfo_t;
+
+int GL_OpenLibrary(const char *name);
+void GL_CloseLibrary(void);
+void *GL_GetProcAddress(const char *name);
+int GL_CheckExtension(const char *name, const gl_extensionfunctionlist_t *funcs, const char *disableparm, int silent);
+
+double VID_CompareMode(int width1, int height1, int bpp1, int width2, int height2, int bpp2);
 
 void VID_InitCvars(void);
 
@@ -52,7 +100,7 @@ void GL_Init (void);
 
 void VID_CheckExtensions(void);
 
-void VID_Init (void);
+void VID_Init (int fullscreen, int width, int height);
 // Called at startup
 
 void VID_Shutdown (void);

@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //#include <stdio.h>
 #include <signal.h>
 
-//#include <dlfcn.h>
+#include <dlfcn.h>
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -40,12 +40,33 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+//GLX prototypes
 XVisualInfo *(GLAPIENTRY *qglXChooseVisual)(Display *dpy, int screen, int *attribList);
 GLXContext (GLAPIENTRY *qglXCreateContext)(Display *dpy, XVisualInfo *vis, GLXContext shareList, Bool direct);
 void (GLAPIENTRY *qglXDestroyContext)(Display *dpy, GLXContext ctx);
 Bool (GLAPIENTRY *qglXMakeCurrent)(Display *dpy, GLXDrawable drawable, GLXContext ctx);
 void (GLAPIENTRY *qglXSwapBuffers)(Display *dpy, GLXDrawable drawable);
+const char *(GLAPIENTRY *qglXQueryExtensionsString)(Display *dpy, int screen);
 
+//GLX_ARB_get_proc_address
+void *(GLAPIENTRY *qglXGetProcAddressARB)(const GLubyte *procName);
+
+static gl_extensionfunctionlist_t getprocaddressfuncs[] =
+{
+	{"glXGetProcAddressARB", (void **) &qglXGetProcAddressARB},
+	{NULL, NULL}
+};
+
+//GLX_SGI_video_sync
+GLint (GLAPIENTRY *qglXGetVideoSyncSGI)(GLuint *count);
+GLint (GLAPIENTRY *qglXWaitVideoSyncSGI)(int divisor, int remainder, unsigned int *count);
+
+static gl_extensionfunctionlist_t videosyncfuncs[] =
+{
+	{"glXGetVideoSyncSGI", (void **) &qglXGetVideoSyncSGI},
+	{"glXWaitVideoSyncSGI", (void **) &qglXWaitVideoSyncSGI},
+	{NULL, NULL}
+};
 
 static Display *vidx11_display = NULL;
 static int scrnum;
@@ -613,7 +634,7 @@ int VID_SetGamma(float prescale, float gamma, float scale, float base)
 #endif
 }
 
-void VID_Init(void)
+void VID_Init(int fullscreen, int width, int height)
 {
 	int i;
 // LordHavoc: FIXME: finish this code, we need to allocate colors before we can store them
@@ -640,48 +661,17 @@ void VID_Init(void)
 		GLX_DEPTH_SIZE, 1,
 		None
 	};
-	int width = 640, height = 480;
 	XSetWindowAttributes attr;
 	unsigned long mask;
 	Window root;
 	XVisualInfo *visinfo;
-	qboolean fullscreen = true;
 	int MajorVersion, MinorVersion;
 
-	GL_OpenLibrary();
+	if (!GL_OpenLibrary("libGL.so.1"))
+		Sys_Error("Unable to load GL driver\n");
 
 	Cvar_RegisterVariable (&vid_dga);
 	Cvar_RegisterVariable (&vid_dga_mouseaccel);
-
-// interpret command-line params
-
-// set vid parameters
-	if ((i = COM_CheckParm("-window")) != 0)
-		fullscreen = false;
-
-	if ((i = COM_CheckParm("-width")) != 0)
-		width = atoi(com_argv[i+1]);
-
-	if ((i = COM_CheckParm("-height")) != 0)
-		height = atoi(com_argv[i+1]);
-
-	if ((i = COM_CheckParm("-conwidth")) != 0)
-		vid.conwidth = atoi(com_argv[i+1]);
-	else
-		vid.conwidth = 640;
-
-	vid.conwidth &= 0xfff8; // make it a multiple of eight
-
-	if (vid.conwidth < 320)
-		vid.conwidth = 320;
-
-	// pick a conheight that matches with correct aspect
-	vid.conheight = vid.conwidth*3 / 4;
-
-	if ((i = COM_CheckParm("-conheight")) != 0)
-		vid.conheight = atoi(com_argv[i+1]);
-	if (vid.conheight < 200)
-		vid.conheight = 200;
 
 	if (!(vidx11_display = XOpenDisplay(NULL)))
 	{
@@ -705,8 +695,9 @@ void VID_Init(void)
 	if ((qglXChooseVisual = GL_GetProcAddress("glXChooseVisual")) == NULL
 	 || (qglXCreateContext = GL_GetProcAddress("glXCreateContext")) == NULL
 	 || (qglXMakeCurrent = GL_GetProcAddress("glXMakeCurrent")) == NULL
-	 || (qglXSwapBuffers = GL_GetProcAddress("glXSwapBuffers")) == NULL)
-		Sys_Error("glX functions not found in libGL.so.1\n");
+	 || (qglXSwapBuffers = GL_GetProcAddress("glXSwapBuffers")) == NULL
+	 || (qglXQueryExtensionsString = GL_GetProcAddress("glXQueryExtensionsString")) == NULL)
+		Sys_Error("glX functions not found in %s\n", gl_driver);
 
 	visinfo = NULL;
 // LordHavoc: FIXME: finish this code, we need to allocate colors before we can store them
@@ -818,10 +809,18 @@ void VID_Init(void)
 	scr_width = width;
 	scr_height = height;
 
-	if (vid.conheight > height)
-		vid.conheight = height;
-	if (vid.conwidth > width)
-		vid.conwidth = width;
+	if ((qglGetString = GL_GetProcAddress("glGetString")) == NULL)
+		Sys_Error("glGetString not found in %s", gl_driver);
+
+	gl_renderer = qglGetString(GL_RENDERER);
+	gl_vendor = qglGetString(GL_VENDOR);
+	gl_version = qglGetString(GL_VERSION);
+	gl_extensions = qglGetString(GL_EXTENSIONS);
+	gl_platform = "GLX";
+	gl_platformextensions = qglXQueryExtensionsString(vidx11_display, scrnum);
+
+	GL_CheckExtension("GLX_ARB_get_proc_address", getprocaddressfuncs, "-nogetprocaddress", false);
+	gl_videosyncavailable = GL_CheckExtension("GLX_SGI_video_sync", videosyncfuncs, "-novideosync", false);
 
 	InitSig(); // trap evil signals
 
@@ -839,7 +838,7 @@ void Sys_SendKeyEvents(void)
 
 void IN_Init(void)
 {
-	if (COM_CheckParm ("-nomouse"))
+	if (COM_CheckParm ("-nomouse") || COM_CheckParm("-safe"))
 		mouse_avail = false;
 }
 
@@ -864,3 +863,39 @@ void IN_Move (usercmd_t *cmd)
 	mouse_y = 0;
 }
 
+static void *prjobj = NULL;
+
+int GL_OpenLibrary(const char *name)
+{
+	Con_Printf("Loading GL driver %s\n", name);
+	GL_CloseLibrary();
+	if (!(prjobj = dlopen(name, RTLD_LAZY)))
+	{
+		Con_Printf("Unable to open symbol list for %s\n", name);
+		return false;
+	}
+	strcpy(gl_driver, name);
+	return true;
+}
+
+void GL_CloseLibrary(void)
+{
+	if (prjobj)
+		dlclose(prjobj);
+	prjobj = NULL;
+	gl_driver[0] = 0;
+	qglXGetProcAddressARB = NULL;
+	gl_extensions = "";
+	gl_platform = "";
+	gl_platformextensions = "";
+}
+
+void *GL_GetProcAddress(const char *name)
+{
+	void *p = NULL;
+	if (qglXGetProcAddressARB != NULL)
+		p = (void *) qglXGetProcAddressARB(name);
+	if (p == NULL)
+		p = (void *) dlsym(prjobj, name);
+	return p;
+}

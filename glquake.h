@@ -37,19 +37,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 //#include <GL/gl.h>
 
-extern qboolean isG200;
-extern qboolean isRagePro;
-
 //====================================================
-
-extern const char *gl_vendor;
-extern const char *gl_renderer;
-extern const char *gl_version;
-extern const char *gl_extensions;
-
-void GL_OpenLibrary(void);
-void GL_CloseLibrary(void);
-void *GL_GetProcAddress(char *name);
 
 // wgl uses APIENTRY
 #ifndef APIENTRY

@@ -24,6 +24,44 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "resource.h"
 #include <commctrl.h>
 
+int (WINAPI *qwglChoosePixelFormat)(HDC, CONST PIXELFORMATDESCRIPTOR *);
+int (WINAPI *qwglDescribePixelFormat)(HDC, int, UINT, LPPIXELFORMATDESCRIPTOR);
+//int (WINAPI *qwglGetPixelFormat)(HDC);
+BOOL (WINAPI *qwglSetPixelFormat)(HDC, int, CONST PIXELFORMATDESCRIPTOR *);
+BOOL (WINAPI *qwglSwapBuffers)(HDC);
+HGLRC (WINAPI *qwglCreateContext)(HDC);
+BOOL (WINAPI *qwglDeleteContext)(HGLRC);
+PROC (WINAPI *qwglGetProcAddress)(LPCSTR);
+BOOL (WINAPI *qwglMakeCurrent)(HDC, HGLRC);
+BOOL (WINAPI *qwglSwapIntervalEXT)(int interval);
+const char *(WINAPI *wglGetExtensionsStringARB)(HDC hdc);
+
+static gl_extensionfunctionlist_t getextensionsstringfuncs[] =
+{
+	{"wglGetExtensionsString", (void **) &qwglGetExtensionsString},
+	{NULL, NULL}
+};
+
+static gl_extensionfunctionlist_t wglfuncs[] =
+{
+	{"wglChoosePixelFormat", (void **) &qwglChoosePixelFormat},
+	{"wglDescribePixelFormat", (void **) &qwglDescribePixelFormat},
+//	{"wglGetPixelFormat", (void **) &qwglGetPixelFormat},
+	{"wglSetPixelFormat", (void **) &qwglSetPixelFormat},
+	{"wglSwapBuffers", (void **) &qwglSwapBuffers},
+	{"wglCreateContext", (void **) &qwglCreateContext},
+	{"wglDeleteContext", (void **) &qwglDeleteContext},
+	{"wglGetProcAddress", (void **) &qwglGetProcAddress},
+	{"wglMakeCurrent", (void **) &qwglMakeCurrent},
+	{NULL, NULL}
+};
+
+static gl_extensionfunctionlist_t wglswapintervalfuncs[] =
+{
+	{"wglSwapIntervalEXT", (void **) &qwglSwapIntervalEXT},
+	{NULL, NULL}
+};
+
 #define MAX_MODE_LIST	30
 #define VID_ROW_SIZE	3
 #define MAXWIDTH		10000
@@ -41,7 +79,6 @@ typedef struct {
 	int			dib;
 	int			fullscreen;
 	int			bpp;
-	int			halfscreen;
 	char		modedesc[17];
 } vmode_t;
 
@@ -162,11 +199,6 @@ qboolean VID_SetWindowedMode (int modenum)
 
 	modestate = MS_WINDOWED;
 
-	if (vid.conheight > modelist[modenum].height)
-		vid.conheight = modelist[modenum].height;
-	if (vid.conwidth > modelist[modenum].width)
-		vid.conwidth = modelist[modenum].width;
-
 	SendMessage (mainwindow, WM_SETICON, (WPARAM)true, (LPARAM)hIcon);
 	SendMessage (mainwindow, WM_SETICON, (WPARAM)false, (LPARAM)hIcon);
 
@@ -183,7 +215,7 @@ qboolean VID_SetFullDIBMode (int modenum)
 	{
 		gdevmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
 		gdevmode.dmBitsPerPel = modelist[modenum].bpp;
-		gdevmode.dmPelsWidth = modelist[modenum].width << modelist[modenum].halfscreen;
+		gdevmode.dmPelsWidth = modelist[modenum].width;
 		gdevmode.dmPelsHeight = modelist[modenum].height;
 		gdevmode.dmSize = sizeof (gdevmode);
 
@@ -219,11 +251,6 @@ qboolean VID_SetFullDIBMode (int modenum)
 
 	ShowWindow (mainwindow, SW_SHOWDEFAULT);
 	UpdateWindow (mainwindow);
-
-	if (vid.conheight > modelist[modenum].height)
-		vid.conheight = modelist[modenum].height;
-	if (vid.conwidth > modelist[modenum].width)
-		vid.conwidth = modelist[modenum].width;
 
 // needed because we're not getting WM_MOVE messages fullscreen on NT
 	window_x = 0;
@@ -388,10 +415,10 @@ void VID_Shutdown (void)
 	if (vid_initialized)
 	{
 		vid_canalttab = false;
-		hRC = wglGetCurrentContext();
-		hDC = wglGetCurrentDC();
+		hRC = qwglGetCurrentContext();
+		hDC = qwglGetCurrentDC();
 
-		wglMakeCurrent(NULL, NULL);
+		qwglMakeCurrent(NULL, NULL);
 
 		// LordHavoc: free textures before closing (may help NVIDIA)
 		for (i = 0;i < 8192;i++)
@@ -399,7 +426,7 @@ void VID_Shutdown (void)
 		qglDeleteTextures(8192, temp);
 
 		if (hRC)
-			wglDeleteContext(hRC);
+			qwglDeleteContext(hRC);
 
 		// close the library before we get rid of the window
 		GL_CloseLibrary();
@@ -864,7 +891,7 @@ void VID_DescribeModes_f (void)
 	leavecurrentmode = t;
 }
 
-void VID_AddMode(int type, int width, int height, int modenum, int halfscreen, int dib, int fullscreen, int bpp)
+void VID_AddMode(int type, int width, int height, int modenum, int dib, int fullscreen, int bpp)
 {
 	int i;
 	if (nummodes >= MAX_MODE_LIST)
@@ -873,7 +900,6 @@ void VID_AddMode(int type, int width, int height, int modenum, int halfscreen, i
 	modelist[nummodes].width = width;
 	modelist[nummodes].height = height;
 	modelist[nummodes].modenum = modenum;
-	modelist[nummodes].halfscreen = halfscreen;
 	modelist[nummodes].dib = dib;
 	modelist[nummodes].fullscreen = fullscreen;
 	modelist[nummodes].bpp = bpp;
@@ -925,7 +951,7 @@ void VID_InitDIB (HINSTANCE hInstance)
 	if (h < 240)
 		h = 240;
 
-	VID_AddMode(MS_WINDOWED, w, h, 0, 0, 1, 0, 0);
+	VID_AddMode(MS_WINDOWED, w, h, 0, 1, 0, 0);
 }
 
 
@@ -1054,203 +1080,6 @@ void VID_RestoreSystemGamma(void)
 	ReleaseDC (NULL, hdc);
 }
 
-/*
-===================
-VID_Init
-===================
-*/
-void VID_Init (void)
-{
-	int i;
-	int basenummodes, width, height = 0, bpp, findbpp, done;
-	HDC hdc;
-	DEVMODE devmode;
-
-	GL_OpenLibrary();
-
-	memset(&devmode, 0, sizeof(devmode));
-
-	Cmd_AddCommand ("vid_nummodes", VID_NumModes_f);
-	Cmd_AddCommand ("vid_describecurrentmode", VID_DescribeCurrentMode_f);
-	Cmd_AddCommand ("vid_describemode", VID_DescribeMode_f);
-	Cmd_AddCommand ("vid_describemodes", VID_DescribeModes_f);
-
-	VID_GetSystemGamma();
-
-	hIcon = LoadIcon (global_hInstance, MAKEINTRESOURCE (IDI_ICON2));
-
-	InitCommonControls();
-
-	VID_InitDIB (global_hInstance);
-	basenummodes = nummodes = 1;
-
-	VID_InitFullDIB (global_hInstance);
-
-	if (COM_CheckParm("-window"))
-	{
-		hdc = GetDC (NULL);
-
-		if (GetDeviceCaps(hdc, RASTERCAPS) & RC_PALETTE)
-			Sys_Error ("Can't run in non-RGB mode");
-
-		ReleaseDC (NULL, hdc);
-
-		windowed = true;
-
-		vid_default = MODE_WINDOWED;
-	}
-	else
-	{
-		if (nummodes == 1)
-			Sys_Error ("No RGB fullscreen modes available");
-
-		windowed = false;
-
-		if (COM_CheckParm("-mode"))
-			vid_default = atoi(com_argv[COM_CheckParm("-mode")+1]);
-		else
-		{
-			if (COM_CheckParm("-current"))
-			{
-				modelist[MODE_FULLSCREEN_DEFAULT].width = GetSystemMetrics (SM_CXSCREEN);
-				modelist[MODE_FULLSCREEN_DEFAULT].height = GetSystemMetrics (SM_CYSCREEN);
-				vid_default = MODE_FULLSCREEN_DEFAULT;
-				leavecurrentmode = 1;
-			}
-			else
-			{
-				if (COM_CheckParm("-width"))
-					width = atoi(com_argv[COM_CheckParm("-width")+1]);
-				else
-					width = 640;
-
-				if (COM_CheckParm("-bpp"))
-				{
-					bpp = atoi(com_argv[COM_CheckParm("-bpp")+1]);
-					findbpp = 0;
-				}
-				else
-				{
-					bpp = 15;
-					findbpp = 1;
-				}
-
-				if (COM_CheckParm("-height"))
-					height = atoi(com_argv[COM_CheckParm("-height")+1]);
-
-			// if they want to force it, add the specified mode to the list
-				if (COM_CheckParm("-force") && (nummodes < MAX_MODE_LIST))
-					VID_AddMode(MS_FULLDIB, width, height, 0, 0, 1, 1, bpp);
-
-				done = 0;
-
-				do
-				{
-					if (COM_CheckParm("-height"))
-					{
-						height = atoi(com_argv[COM_CheckParm("-height")+1]);
-
-						for (i=1, vid_default=0 ; i<nummodes ; i++)
-						{
-							if ((modelist[i].width == width) && (modelist[i].height == height) && (modelist[i].bpp == bpp))
-							{
-								vid_default = i;
-								done = 1;
-								break;
-							}
-						}
-					}
-					else
-					{
-						for (i=1, vid_default=0 ; i<nummodes ; i++)
-						{
-							if ((modelist[i].width == width) && (modelist[i].bpp == bpp))
-							{
-								vid_default = i;
-								done = 1;
-								break;
-							}
-						}
-					}
-
-					if (!done)
-					{
-						if (findbpp)
-						{
-							switch (bpp)
-							{
-							case 15: bpp = 16;break;
-							case 16: bpp = 32;break;
-							case 32: bpp = 24;break;
-							case 24: done = 1;break;
-							}
-						}
-						else
-							done = 1;
-					}
-				}
-				while (!done);
-
-				if (!vid_default)
-					Sys_Error ("Specified video mode not available");
-			}
-		}
-	}
-
-	vid_initialized = true;
-
-	if ((i = COM_CheckParm("-conwidth")) != 0)
-		vid.conwidth = atoi(com_argv[i+1]);
-	else
-		vid.conwidth = 640;
-
-	vid.conwidth &= 0xfff8; // make it a multiple of eight
-
-	if (vid.conwidth < 320)
-		vid.conwidth = 320;
-
-	// pick a conheight that matches with correct aspect
-	vid.conheight = vid.conwidth*3 / 4;
-
-	if ((i = COM_CheckParm("-conheight")) != 0)
-		vid.conheight = atoi(com_argv[i+1]);
-	if (vid.conheight < 200)
-		vid.conheight = 200;
-
-	VID_SetMode (vid_default);
-
-	maindc = GetDC(mainwindow);
-	bSetupPixelFormat(maindc);
-
-	baseRC = wglCreateContext( maindc );
-	if (!baseRC)
-		Sys_Error ("Could not initialize GL (wglCreateContext failed).\n\nMake sure you are in 65536 color mode, and try running -window.");
-	if (!wglMakeCurrent( maindc, baseRC ))
-		Sys_Error ("wglMakeCurrent failed");
-
-	GL_Init ();
-
-	// LordHavoc: special differences for ATI (broken 8bit color when also using 32bit? weird!)
-	if (strncasecmp(gl_vendor,"ATI",3)==0)
-	{
-		if (strncasecmp(gl_renderer,"Rage Pro",8)==0)
-			isRagePro = true;
-	}
-	if (strncasecmp(gl_renderer,"Matrox G200 Direct3D",20)==0) // a D3D driver for GL? sigh...
-		isG200 = true;
-
-	vid_realmode = vid_modenum;
-
-	vid_menudrawfn = VID_MenuDraw;
-	vid_menukeyfn = VID_MenuKey;
-
-	strcpy (badmode.modedesc, "Bad mode");
-	vid_canalttab = true;
-
-	vid_hidden = false;
-}
-
-
 //========================================================
 // Video menu stuff
 //========================================================
@@ -1360,5 +1189,161 @@ void VID_MenuKey (int key)
 	default:
 		break;
 	}
+}
+
+static HINSTANCE gldll;
+
+int GL_OpenLibrary(const char *name)
+{
+	Con_Printf("Loading GL driver %s\n", name);
+	GL_CloseLibrary();
+	if (!(gldll = LoadLibrary(name)))
+	{
+		Con_Printf("Unable to LoadLibrary %s\n", name);
+		return false;
+	}
+	strcpy(gl_driver, name);
+	return true;
+}
+
+void GL_CloseLibrary(void)
+{
+	FreeLibrary(gldll);
+	gldll = 0;
+	gl_driver[0] = 0;
+	qwglGetProcAddress = NULL;
+	gl_extensions = "";
+	gl_platform = "";
+	gl_platformextensions = "";
+}
+
+void *GL_GetProcAddress(const char *name)
+{
+	void *p = NULL;
+	if (qwglGetProcAddress != NULL)
+		p = (void *) qwglGetProcAddress(name);
+	if (p == NULL)
+		p = (void *) GetProcAddress(gldll, name);
+	return p;
+}
+/*
+===================
+VID_Init
+===================
+*/
+void VID_Init (int fullscreen, int width, int height)
+{
+	int i;
+	int basenummodes, bpp, findbpp, done;
+	HDC hdc;
+	DEVMODE devmode;
+
+	if (!GL_OpenLibrary("opengl32.dll"))
+		Sys_Error("Unable to load GL driver\n");
+
+	memset(&devmode, 0, sizeof(devmode));
+
+	Cmd_AddCommand ("vid_nummodes", VID_NumModes_f);
+	Cmd_AddCommand ("vid_describecurrentmode", VID_DescribeCurrentMode_f);
+	Cmd_AddCommand ("vid_describemode", VID_DescribeMode_f);
+	Cmd_AddCommand ("vid_describemodes", VID_DescribeModes_f);
+
+	VID_GetSystemGamma();
+
+	hIcon = LoadIcon (global_hInstance, MAKEINTRESOURCE (IDI_ICON2));
+
+	InitCommonControls();
+
+	VID_InitDIB (global_hInstance);
+	basenummodes = nummodes = 1;
+
+	VID_InitFullDIB (global_hInstance);
+
+	if (!fullscreen)
+	{
+		hdc = GetDC (NULL);
+
+		if (GetDeviceCaps(hdc, RASTERCAPS) & RC_PALETTE)
+			Sys_Error ("Can't run in non-RGB mode");
+
+		ReleaseDC (NULL, hdc);
+
+		windowed = true;
+
+		vid_default = MODE_WINDOWED;
+	}
+	else
+	{
+		if (nummodes == 1)
+			Sys_Error ("No RGB fullscreen modes available");
+
+		windowed = false;
+
+		done = 0;
+
+		bestmode = -1;
+		bestrating = 1000000000;
+		for (i = 0;i < nummodes;i++)
+		{
+			rating = VID_CompareMode(fullscreen, width, height, bpp, modelist[i].fullscreen, modelist[i].width, modelist[i].height, modelist[i].bpp);
+			if (bestrating > rating)
+			{
+				bestrating = rating;
+				bestmode = i;
+			}
+		}
+
+		if (bestmode < 0)
+			Sys_Error ("Specified video mode not available");
+	}
+
+	vid_initialized = true;
+
+	VID_SetMode (vid_default);
+
+	maindc = GetDC(mainwindow);
+	bSetupPixelFormat(maindc);
+
+	if (!gl_checkextension("wgl", wglfuncs, NULL, false))
+		Sys_Error("wgl functions not found\n");
+
+	baseRC = qwglCreateContext( maindc );
+	if (!baseRC)
+		Sys_Error ("Could not initialize GL (wglCreateContext failed).\n\nMake sure you are in 65536 color mode, and try running -window.");
+	if (!qwglMakeCurrent( maindc, baseRC ))
+		Sys_Error ("wglMakeCurrent failed");
+
+	gl_renderer = qglGetString(GL_RENDERER);
+	gl_vendor = qglGetString(GL_VENDOR);
+	gl_version = qglGetString(GL_VERSION);
+	gl_extensions = qglGetString(GL_EXTENSIONS);
+	gl_platformname = "WGL";
+	gl_platformextensions = "";
+
+	if (gl_checkextension("WGL_ARB_extensions_string", extensionsstringfuncs, NULL, false))
+		gl_platformextensions = qwglGetExtensionsStringARB(maindc);
+
+	gl_videosyncavailable = gl_checkextension("WGL_EXT_swap_control", wglswapintervalfuncs, NULL, false);
+
+	GL_Init ();
+
+	// LordHavoc: special differences for ATI (broken 8bit color when also using 32bit? weird!)
+	if (strncasecmp(gl_vendor,"ATI",3)==0)
+	{
+		if (strncasecmp(gl_renderer,"Rage Pro",8)==0)
+			isRagePro = true;
+	}
+	if (strncasecmp(gl_renderer,"Matrox G200 Direct3D",20)==0) // a D3D driver for GL? sigh...
+		isG200 = true;
+
+	vid_realmode = vid_modenum;
+
+	vid_menudrawfn = VID_MenuDraw;
+	vid_menukeyfn = VID_MenuKey;
+
+	strcpy (badmode.modedesc, "Bad mode");
+	vid_canalttab = true;
+
+	vid_hidden = false;
 }
 
