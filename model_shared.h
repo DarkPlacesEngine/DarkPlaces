@@ -172,6 +172,8 @@ typedef struct model_s
 	int				*surfacevisframes;
 	int				*surfacepvsframes;
 	msurface_t		*surfacepvsnext;
+	surfmesh_t		*entiremesh;
+	surfmesh_t		*surfmeshes;
 
 	int				numsurfedges;
 	int				*surfedges;
