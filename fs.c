@@ -982,6 +982,98 @@ qfile_t *FS_FOpenFile (const char *filename, qboolean quiet)
 
 	filenamelen = strlen (filename);
 
+		// search through the path, one element at a time
+	search = fs_searchpaths;
+
+	for( ; search ; search = search->next)
+		if(!search->pack)
+		{
+			snprintf (netpath, sizeof (netpath), "%s/%s",search->filename, filename);
+			
+			if (!FS_SysFileExists (netpath))
+				continue;
+			
+			if (!quiet)
+				Sys_Printf ("FindFile: %s\n",netpath);
+			return FS_OpenRead (netpath, -1, -1);
+		}
+		
+#ifdef AKVERSION		
+	search = fs_searchpaths;
+	for ( ; search ; search = search->next)
+		// is the element a pak file?
+		if (search->pack)
+		{
+			// look through all the pak file elements
+			pak = search->pack;
+			for (i=0 ; i<pak->numfiles ; i++)
+			{
+				if (pak->ignorecase)
+					matched = !strcasecmp (pak->files[i].name, filename);
+				else
+					matched = !strcmp (pak->files[i].name, filename);
+				if (matched)  // found it?
+				{
+					qfile_t *file;
+
+					if (!quiet)
+						Sys_Printf ("PackFile: %s : %s\n",pak->filename, pak->files[i].name);
+
+					// If we don't have the true offset, get it now
+					if (! (pak->files[i].flags & FILE_FLAG_TRUEOFFS))
+						PK3_GetTrueFileOffset (&pak->files[i], pak);
+
+					// No Zlib DLL = no compressed files
+					if (!zlib_dll && (pak->files[i].flags & FILE_FLAG_DEFLATED))
+					{
+						Con_Printf ("WARNING: can't open the compressed file %s\n"
+									"You need the Zlib DLL to use compressed files\n", filename);
+						fs_filesize = -1;
+						return NULL;
+					}
+
+					// open a new file in the pakfile
+					file = FS_OpenRead (pak->filename, pak->files[i].offset, pak->files[i].packsize);
+					fs_filesize = pak->files[i].realsize;
+
+					if (pak->files[i].flags & FILE_FLAG_DEFLATED)
+					{
+						ztoolkit_t *ztk;
+
+						file->flags |= FS_FLAG_DEFLATED;
+
+						// We need some more variables
+						ztk = Mem_Alloc (fs_mempool, sizeof (*file->z));
+
+						ztk->real_length = pak->files[i].realsize;
+
+						// Initialize zlib stream
+						ztk->zstream.next_in = ztk->input;
+						ztk->zstream.avail_in = 0;
+
+						/* From Zlib's "unzip.c":
+						 *
+						 * windowBits is passed < 0 to tell that there is no zlib header.
+						 * Note that in this case inflate *requires* an extra "dummy" byte
+						 * after the compressed stream in order to complete decompression and
+						 * return Z_STREAM_END.
+						 * In unzip, i don't wait absolutely Z_STREAM_END because I known the
+						 * size of both compressed and uncompressed data
+						 */
+						if (qz_inflateInit2 (&ztk->zstream, -MAX_WBITS) != Z_OK)
+							Sys_Error ("inflate init error (file: %s)", filename);
+
+						ztk->zstream.next_out = ztk->output;
+						ztk->zstream.avail_out = sizeof (ztk->output);
+
+						file->z = ztk;
+					}
+
+					return file;
+				}
+			}
+		}
+#else
 	// search through the path, one element at a time
 	search = fs_searchpaths;
 
@@ -1071,7 +1163,8 @@ qfile_t *FS_FOpenFile (const char *filename, qboolean quiet)
 			return FS_OpenRead (netpath, -1, -1);
 		}
 	}
-
+#endif
+	
 	if (!quiet)
 		Sys_Printf ("FindFile: can't find %s\n", filename);
 

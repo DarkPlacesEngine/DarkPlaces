@@ -8,6 +8,12 @@ viddef_t vid;
 qboolean isG200 = false; // LordHavoc: the Matrox G200 can't do per pixel alpha, and it uses a D3D driver for GL... ugh...
 qboolean isRagePro = false; // LordHavoc: the ATI Rage Pro has limitations with per pixel alpha (the color scaler does not apply to per pixel alpha images...), although not as bad as a G200.
 
+// AK FIXME -> input_dest
+qboolean in_client_mouse = true;
+
+// AK where should it be placed ?
+float in_mouse_x, in_mouse_y;
+
 // GL_ARB_multitexture
 int gl_textureunits = 0;
 // GL_ARB_texture_env_combine or GL_EXT_texture_env_combine
@@ -532,6 +538,14 @@ void IN_Mouse(usercmd_t *cmd, float mx, float my)
 
 	old_mouse_x = mx;
 	old_mouse_y = my;
+
+	in_mouse_x = mouse_x;
+	in_mouse_y = mouse_y;
+
+	// AK: eveything else is client stuff 
+	// BTW, this should be seperated somewhen
+	if(!in_client_mouse) 
+		return;
 
 	// LordHavoc: viewzoom affects mouse sensitivity for sniping
 	mouse_x *= sensitivity.value * cl.viewzoom;

@@ -25,6 +25,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 extern cvar_t in_pitch_min;
 extern cvar_t in_pitch_max;
 
+extern qboolean in_client_mouse;
+extern float in_mouse_x, in_mouse_y;
+
+//enum {input_game,input_message,input_menu} input_dest;
+
 void IN_Commands (void);
 // oportunity for devices to stick commands on the script buffer
 

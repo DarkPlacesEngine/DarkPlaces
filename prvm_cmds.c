@@ -32,11 +32,11 @@ string	vtos(vector)
 string	etos(entity)
 float	stof(...[string])
 entity	spawn()
-entity	remove()
+		remove(entity e)
 entity	find(entity start, .string field, string match)
 
-entity	findfloat(entity start, .float field, string match)
-entity	findentity(entity start, .entity field, string match)
+entity	findfloat(entity start, .float field, float match)
+entity	findentity(entity start, .entity field, entity match)
 
 entity	findchain(.string field, string match)
 
@@ -48,7 +48,7 @@ string	precache_sound (string sample)
 		coredump()
 		traceon()
 		traceoff()
-		eprint(entity float)
+		eprint(entity e)
 float	rint(float)
 float	floor(float)
 float	ceil(float)
@@ -56,7 +56,7 @@ entity	nextent(entity)
 float	sin(float)
 float	cos(float)
 float	sqrt(float)
-		randomvec()
+vector	randomvec()
 float	registercvar (string name, string value)
 float	min(float a, float b, ...[float])
 float	max(float a, float b, ...[float])
@@ -68,19 +68,21 @@ float	fopen(string filename, float mode)
 string	fgets(float fhandle)
 		fputs(float fhandle, string s)
 float	strlen(string s)
-string	strcat(string s1, string s2)
+string	strcat(string,string,...[string])
 string	substring(string s, float start, float length)
 vector	stov(string s)
 string	strzone(string s)
-		strzone(string s)
+		strunzone(string s)
+float	tokenize(string s)
+string	argv(float n)
 float	isserver()
 float	clientcount()
 float	clientstate()
 		clientcommand(float client, string s) (for client and menu)
-float	tokenize(string s)
 		changelevel(string map)
 		localsound(string sample)
-
+vector	getmousepos()
+		
 perhaps only : Menu : WriteMsg 
 ===============================
 
@@ -104,6 +106,15 @@ float	drawstring(vector position, string text, vector scale, vector rgb, float a
 float	drawpic(vector position, string pic, vector size, vector rgb, float alpha, float flag)
 float	drawfill(vector position, vector size, vector rgb, float alpha, float flag)
 
+
+==============================================================================
+menu cmd list:
+===============
+
+		setkeydest(float dest)
+float	getkeydest
+		setmousetarget(float target)
+float	getmousetarget(void)
 */
 
 #include "quakedef.h"
@@ -855,8 +866,8 @@ void VM_find (void)
 =========
 VM_findfloat
 
-  entity	findfloat(entity start, .float field, string match)
-  entity	findentity(entity start, .entity field, string match)
+  entity	findfloat(entity start, .float field, float match)
+  entity	findentity(entity start, .entity field, entity match)
 =========
 */
 // LordHavoc: added this for searching float, int, and entity reference fields
@@ -1090,7 +1101,7 @@ void VM_traceoff (void)
 =========
 VM_eprint
 
-eprint(entity float)
+eprint(entity e)
 =========
 */
 void VM_eprint (void)
@@ -1347,7 +1358,7 @@ VM_randomvec
 
 Returns a vector of length < 1 and > 0
 
-randomvec()
+vector randomvec()
 =================
 */
 void VM_randomvec (void)
@@ -1774,7 +1785,7 @@ void VM_strlen(void)
 =========
 VM_strcat
 
-string strcat(string s1, string s2)
+string strcat(string,string,...[string])
 =========
 */
 //string(string s1, string s2) strcat = #115;
@@ -1784,8 +1795,9 @@ void VM_strcat(void)
 {
 	char *s;
 
-	VM_SAFEPARMCOUNT(2,VM_strcat);
-
+	if(prog->argc <= 2) 
+		PRVM_ERROR("VM_strcat wrong parameter count (min. 2 expected ) !\n");
+	
 	s = VM_GetTempString();
 	VM_VarString(0, s, STRINGTEMP_LENGTH);
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetString(s);
@@ -1862,7 +1874,7 @@ void VM_strzone(void)
 =========
 VM_strunzone
 
-strzone(string s)
+strunzone(string s)
 =========
 */
 //void(string s) strunzone = #119; // removes a copy of a string from the string zone (you can not use that string again or it may crash!!!)
@@ -2013,7 +2025,7 @@ void PF_setattachment (void)
 
 /*
 =========
-VM_serverstate
+VM_isserver
 
 float	isserver()
 =========
@@ -2302,6 +2314,23 @@ void VM_drawfill(void)
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 
+/*
+=========
+VM_getmousepos
+
+vector	getmousepos()
+=========
+*/
+void VM_getmousepos(void)
+{
+
+	VM_SAFEPARMCOUNT(0,VM_getmousepos);
+	
+	PRVM_G_VECTOR(OFS_RETURN)[0] = in_mouse_x;
+	PRVM_G_VECTOR(OFS_RETURN)[1] = in_mouse_y;
+	PRVM_G_VECTOR(OFS_RETURN)[0] = 0;
+}
+
 void VM_Cmd_Init(void)
 {
 	// only init the stuff for the current prog
@@ -2361,7 +2390,56 @@ void VM_CL_Cmd_Reset(void)
 char *vm_m_extensions =
 "";
 
-// void setkeydest(float dest)
+/*
+=========
+VM_M_setmousetarget
+
+setmousetarget(float target)
+=========
+*/
+void VM_M_setmousetarget(void)
+{
+	VM_SAFEPARMCOUNT(1, VM_M_setmousetarget);
+
+	switch((int)PRVM_G_FLOAT(OFS_PARM0))
+	{
+	case 1:
+		in_client_mouse = false;
+		break;
+	case 2:
+		in_client_mouse = true;
+		break;
+	default:
+		PRVM_ERROR("VM_M_setmousetarget: wrong destination %i !\n",PRVM_G_FLOAT(OFS_PARM0));
+	}
+}
+
+/*
+=========
+VM_M_getmousetarget
+
+float	getmousetarget
+=========
+*/
+void VM_M_getmousetarget(void)
+{
+	VM_SAFEPARMCOUNT(0,VM_M_getmousetarget);
+
+	if(in_client_mouse)
+		PRVM_G_FLOAT(OFS_RETURN) = 2;
+	else
+		PRVM_G_FLOAT(OFS_RETURN) = 1;
+}
+	
+
+
+/*
+=========
+VM_M_setkeydest
+
+setkeydest(float dest)
+=========
+*/
 void VM_M_setkeydest(void)
 {
 	VM_SAFEPARMCOUNT(1,VM_M_SetKeyDest);
@@ -2381,13 +2459,17 @@ void VM_M_setkeydest(void)
 		// key_dest = key_message
 		// break;
 	default:
-		PRVM_ERROR("VM_M_SetKeyDest: wrong destination %i !\n",prog->globals[OFS_PARM0]);
+		PRVM_ERROR("VM_M_setkeydest: wrong destination %i !\n",prog->globals[OFS_PARM0]);
 	}
-
-	return;
 }
 
-// float getkeydest(void)
+/*
+=========
+VM_M_getkeydest
+
+float	getkeydest
+=========
+*/
 void VM_M_getkeydest(void)
 {
 	VM_SAFEPARMCOUNT(0,VM_M_GetKeyDest);
@@ -2470,15 +2552,15 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_stov,
 	VM_strzone,
 	VM_strunzone,
-	VM_isserver,
-	VM_clientcount,
-	VM_clientstate,	// 60
-	VM_clcommand,
 	VM_tokenize,
+	VM_argv,
+	VM_isserver,	// 60
+	VM_clientcount, 
+	VM_clientstate,	
+	VM_clcommand,
 	VM_changelevel,
-	VM_localsound,	// 64
-	0,
-	0,
+	VM_localsound,	
+	VM_getmousepos, // 66
 	0,
 	0,
 	0,
@@ -2519,9 +2601,12 @@ prvm_builtin_t vm_m_builtins[] = {
 	e10,			// 480
 	e10,			// 490
 	e10,			// 500
+	e100,			// 600
 	// menu functions
 	VM_M_setkeydest,
-	VM_M_getkeydest
+	VM_M_getkeydest,
+	VM_M_setmousetarget,
+	VM_M_getmousetarget
 };
 
 const int vm_m_numbuiltins = sizeof(vm_m_builtins) / sizeof(prvm_builtin_t);
