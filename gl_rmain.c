@@ -285,7 +285,7 @@ void GL_Init (void)
 
 //	Con_Printf ("%s %s\n", gl_renderer, gl_version);
 
-	VID_CheckMultiTexture();
+	VID_CheckMultitexture();
 	VID_CheckVertexArrays();
 
 	// LordHavoc: report supported extensions
