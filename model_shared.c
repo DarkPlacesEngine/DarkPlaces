@@ -1011,7 +1011,8 @@ tag_torso,
 		loadmodel->data_overridetagnamesforskin = Mem_Alloc(loadmodel->mempool, i * sizeof(overridetagnameset_t));
 		memcpy(loadmodel->data_overridetagnamesforskin, tagsets, i * sizeof(overridetagnameset_t));
 	}
-	loadmodel->numskins = i;
+	if (i)
+		loadmodel->numskins = i;
 	return first;
 }
 
