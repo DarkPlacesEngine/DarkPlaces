@@ -6,7 +6,6 @@ cvar_t r_skyquality = {CVAR_SAVE, "r_skyquality", "2"};
 cvar_t r_skyflush = {0, "r_skyflush", "0"};
 
 static char skyworldname[1024];
-rtexture_t *mergeskytexture;
 rtexture_t *solidskytexture;
 rtexture_t *alphaskytexture;
 static qboolean skyavailable_quake;
@@ -17,12 +16,9 @@ int skyrendernow;
 int skyrendermasked;
 int skyrenderglquake;
 
-static void R_BuildSky (int scrollupper, int scrolllower);
-
 static void r_sky_start(void)
 {
 	skytexturepool = R_AllocTexturePool();
-	mergeskytexture = NULL;
 	solidskytexture = NULL;
 	alphaskytexture = NULL;
 }
@@ -30,7 +26,6 @@ static void r_sky_start(void)
 static void r_sky_shutdown(void)
 {
 	R_FreeTexturePool(&skytexturepool);
-	mergeskytexture = NULL;
 	solidskytexture = NULL;
 	alphaskytexture = NULL;
 }
@@ -368,45 +363,6 @@ void R_Sky(void)
 
 static byte skyupperlayerpixels[128*128*4];
 static byte skylowerlayerpixels[128*128*4];
-static byte skymergedpixels[128*128*4];
-
-static void R_BuildSky (int scrollupper, int scrolllower)
-{
-	int x, y, ux, uy, lx, ly;
-	byte *m, *u, *l;
-	m = skymergedpixels;
-	for (y = 0;y < 128;y++)
-	{
-		uy = (y + scrollupper) & 127;
-		ly = (y + scrolllower) & 127;
-		for (x = 0;x < 128;x++)
-		{
-			ux = (x + scrollupper) & 127;
-			lx = (x + scrolllower) & 127;
-			u = &skyupperlayerpixels[(uy * 128 + ux) * 4];
-			l = &skylowerlayerpixels[(ly * 128 + lx) * 4];
-			if (l[3])
-			{
-				if (l[3] == 255)
-					*((int *)m) = *((int *)l);
-				else
-				{
-					m[0] = ((((int) l[0] - (int) u[0]) * (int) l[3]) >> 8) + (int) u[0];
-					m[1] = ((((int) l[1] - (int) u[1]) * (int) l[3]) >> 8) + (int) u[1];
-					m[2] = ((((int) l[2] - (int) u[2]) * (int) l[3]) >> 8) + (int) u[2];
-					m[3] = 255;
-				}
-			}
-			else
-				*((int *)m) = *((int *)u);
-			m += 4;
-		}
-	}
-	if (mergeskytexture)
-		R_UpdateTexture(mergeskytexture, skymergedpixels);
-	else
-		mergeskytexture = R_LoadTexture(skytexturepool, "mergedskytexture", 128, 128, skymergedpixels, TEXTYPE_RGBA, TEXF_ALWAYSPRECACHE);
-}
 
 /*
 =============
@@ -428,7 +384,6 @@ void R_InitSky (byte *src, int bytesperpixel)
 	// flush skytexturepool so we won't build up a leak from uploading textures multiple times
 	R_FreeTexturePool(&skytexturepool);
 	skytexturepool = R_AllocTexturePool();
-	mergeskytexture = NULL;
 	solidskytexture = NULL;
 	alphaskytexture = NULL;
 
