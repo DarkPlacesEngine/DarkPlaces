@@ -156,7 +156,7 @@ void Mod_BuildAliasSkinFromSkinFrame(aliasskin_t *skin, skinframe_t *skinframe)
 	if (skinframe == NULL)
 	{
 		skinframe = &missingskinframe;
-		memset(skinframe, 0, sizeof(*skinframe);
+		memset(skinframe, 0, sizeof(*skinframe));
 		skinframe->base = r_notexture;
 	}
 
