@@ -1105,7 +1105,9 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 	// if we skip out, leave it reset
 	ent->persistent.trail_time = 0.0f;
 
-	speed = 1.0f / (ent->state_current.time - ent->state_previous.time);
+	speed = ent->state_current.time - ent->state_previous.time;
+	if (speed)
+		speed = 1.0f / speed;
 	VectorSubtract(ent->state_current.origin, ent->state_previous.origin, vel);
 #endif
 	VectorScale(vel, speed, vel);
