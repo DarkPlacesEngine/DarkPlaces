@@ -940,7 +940,7 @@ void CL_RelinkBeams (void)
 				// have some lag in it's location, so compare to the
 				// previous player state, not the latest
 				if (b->entity == cl.viewentity)
-					Matrix4x4_CreateFromQuakeEntity(&matrix, cl.viewentoriginold[0], cl.viewentoriginold[1], cl.viewentoriginold[2] + 16, cl.viewangles[0], cl.viewangles[1], cl.viewangles[2], 1);
+					Matrix4x4_CreateFromQuakeEntity(&matrix, p->origin[0], p->origin[1], p->origin[2] + 16, cl.viewangles[0], cl.viewangles[1], cl.viewangles[2], 1);
 				else
 					Matrix4x4_CreateFromQuakeEntity(&matrix, p->origin[0], p->origin[1], p->origin[2] + 16, p->angles[0], p->angles[1], p->angles[2], 1);
 				Matrix4x4_Invert_Simple(&imatrix, &matrix);
@@ -951,7 +951,7 @@ void CL_RelinkBeams (void)
 			else
 			{
 				if (b->entity == cl.viewentity)
-					Matrix4x4_CreateFromQuakeEntity(&matrix, cl.viewentorigin[0], cl.viewentorigin[1], cl.viewentorigin[2] + 16, cl.viewangles[0], cl.viewangles[1], cl.viewangles[2], 1);
+					Matrix4x4_CreateFromQuakeEntity(&matrix, r->origin[0], r->origin[1], r->origin[2] + 16, cl.viewangles[0], cl.viewangles[1], cl.viewangles[2], 1);
 				else
 					Matrix4x4_CreateFromQuakeEntity(&matrix, r->origin[0], r->origin[1], r->origin[2] + 16, r->angles[0], r->angles[1], r->angles[2], 1);
 				Matrix4x4_Transform(&matrix, b->relativestart, b->start);
@@ -1358,19 +1358,6 @@ void CL_LerpPlayer(float frac)
 {
 	int i;
 	float d;
-
-	if (cl.entitydatabase.numframes && cl.viewentity == cl.playerentity)
-	{
-		cl.viewentorigin[0] = cl.viewentoriginold[0] + frac * (cl.viewentoriginnew[0] - cl.viewentoriginold[0]);
-		cl.viewentorigin[1] = cl.viewentoriginold[1] + frac * (cl.viewentoriginnew[1] - cl.viewentoriginold[1]);
-		cl.viewentorigin[2] = cl.viewentoriginold[2] + frac * (cl.viewentoriginnew[2] - cl.viewentoriginold[2]);
-	}
-	else
-	{
-		VectorCopy (cl_entities[cl.viewentity].state_previous.origin, cl.viewentoriginold);
-		VectorCopy (cl_entities[cl.viewentity].state_current.origin, cl.viewentoriginnew);
-		VectorCopy (cl_entities[cl.viewentity].render.origin, cl.viewentorigin);
-	}
 
 	cl.viewzoom = cl.viewzoomold + frac * (cl.viewzoomnew - cl.viewzoomold);
 

@@ -530,7 +530,7 @@ void V_CalcRefdef (void)
 
 	V_DriftPitch ();
 
-	VectorCopy (cl.viewentorigin, r_refdef.vieworg);
+	VectorCopy (ent->render.origin, r_refdef.vieworg);
 	if (!intimerefresh)
 		VectorCopy (cl.viewangles, r_refdef.viewangles);
 

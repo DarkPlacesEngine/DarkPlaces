@@ -429,15 +429,12 @@ typedef struct
 	// [cl.maxclients]
 	scoreboard_t *scores;
 
-	// used by view code for setting up eye position
-	vec3_t viewentorigin;
 	// LordHavoc: sniping zoom, QC controlled
 	float viewzoom;
 	// for interpolation
 	float viewzoomold, viewzoomnew;
 
 	// entity database stuff
-	vec3_t viewentoriginold, viewentoriginnew;
 	entity_database_t entitydatabase;
 }
 client_state_t;
