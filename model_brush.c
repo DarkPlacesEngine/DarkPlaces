@@ -546,6 +546,66 @@ static void Mod_LoadLighting (lump_t *l)
 	}
 }
 
+void Mod_LoadLightList(void)
+{
+	int a, n, numlights;
+	char lightsfilename[1024], *s, *t, *lightsstring;
+	mlight_t *e;
+
+	strcpy(lightsfilename, loadmodel->name);
+	COM_StripExtension(lightsfilename, lightsfilename);
+	strcat(lightsfilename, ".lights");
+	s = lightsstring = (char *) COM_LoadFile (lightsfilename, false);
+	if (s)
+	{
+		numlights = 0;
+		while (*s)
+		{
+			while (*s && *s != '\n')
+				s++;
+			if (!*s)
+			{
+				Mem_Free(lightsstring);
+				Host_Error("lights file must end with a newline\n");
+			}
+			s++;
+			numlights++;
+		}
+		loadmodel->lights = Mem_Alloc(loadmodel->mempool, numlights * sizeof(mlight_t));
+		s = lightsstring;
+		n = 0;
+		while (*s && n < numlights)
+		{
+			t = s;
+			while (*s && *s != '\n')
+				s++;
+			if (!*s)
+			{
+				Mem_Free(lightsstring);
+				Host_Error("misparsed lights file!\n");
+			}
+			e = loadmodel->lights + n;
+			*s = 0;
+			a = sscanf(t, "%f %f %f %f %f %f %f %f %f %f %f %f %d", &e->origin[0], &e->origin[1], &e->origin[2], &e->falloff, &e->light[0], &e->light[1], &e->light[2], &e->subtract, &e->spotdir[0], &e->spotdir[1], &e->spotdir[2], &e->spotcone, &e->style);
+			*s = '\n';
+			if (a != 13)
+			{
+				Mem_Free(lightsstring);
+				Host_Error("invalid lights file, found %d parameters on line %i, should be 13 parameters (origin[0] origin[1] origin[2] falloff light[0] light[1] light[2] subtract spotdir[0] spotdir[1] spotdir[2] spotcone style)\n", a, n + 1);
+			}
+			s++;
+			n++;
+		}
+		if (*s)
+		{
+			Mem_Free(lightsstring);
+			Host_Error("misparsed lights file!\n");
+		}
+		loadmodel->numlights = numlights;
+		Mem_Free(lightsstring);
+	}
+}
+
 
 /*
 =================
@@ -2452,6 +2512,8 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 
 	mainmempool = mod->mempool;
 	loadname = mod->name;
+
+	Mod_LoadLightList ();
 
 //
 // set up the submodels (FIXME: this is confusing)

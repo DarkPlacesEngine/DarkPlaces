@@ -277,6 +277,19 @@ typedef struct mportal_s
 }
 mportal_t;
 
+typedef struct mlight_s
+{
+	vec3_t origin;
+	float falloff;
+	vec3_t light;
+	float subtract;
+	vec3_t spotdir;
+	float spotcone; // cosine of spotlight cone angle (or 0 if not a spotlight)
+	int style;
+	int numleafs; // used only for loading calculations, number of leafs this shines on
+}
+mlight_t;
+
 extern rtexture_t *r_notexture;
 extern texture_t r_notexture_mip;
 

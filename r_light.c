@@ -730,6 +730,7 @@ void R_CompleteLightPoint (vec3_t color, vec3_t p, int dynamic, mleaf_t *leaf)
 	vec3_t dist;
 	float f;
 	rdlight_t *rd;
+	mlight_t *sl;
 	if (leaf == NULL)
 		leaf = Mod_PointInLeaf(p, cl.worldmodel);
 
@@ -746,7 +747,30 @@ void R_CompleteLightPoint (vec3_t color, vec3_t p, int dynamic, mleaf_t *leaf)
 	}
 
 	color[0] = color[1] = color[2] = r_ambient.value * (2.0f / 128.0f);
-	RecursiveLightPoint (color, cl.worldmodel->nodes, p[0], p[1], p[2], p[2] - 65536);
+	if (cl.worldmodel->numlights)
+	{
+		for (i = 0;i < cl.worldmodel->numlights;i++)
+		{
+			sl = cl.worldmodel->lights + i;
+			if (d_lightstylevalue[sl->style] > 0)
+			{
+				VectorSubtract (p, sl->origin, dist);
+				f = DotProduct(dist, dist) + 65536.0f;
+				f = (1.0f / f) - sl->subtract;
+				if (f > 0)
+				{
+					if (TraceLine(p, sl->origin, NULL, NULL, 0, false) == 1)
+					{
+						f *= d_lightstylevalue[sl->style] * (1.0f / 32768.0f);
+						VectorMA(color, f, sl->light, color);
+					}
+				}
+			}
+
+		}
+	}
+	else
+		RecursiveLightPoint (color, cl.worldmodel->nodes, p[0], p[1], p[2], p[2] - 65536);
 
 	if (dynamic && leaf->dlightframe == r_framecount)
 	{
@@ -787,7 +811,8 @@ void R_ModelLightPoint (vec3_t color, vec3_t p, int *dlightbits)
 	}
 
 	color[0] = color[1] = color[2] = r_ambient.value * (2.0f / 128.0f);
-	RecursiveLightPoint (color, cl.worldmodel->nodes, p[0], p[1], p[2], p[2] - 65536);
+	if (!cl.worldmodel->numlights)
+		RecursiveLightPoint (color, cl.worldmodel->nodes, p[0], p[1], p[2], p[2] - 65536);
 
 	if (leaf->dlightframe == r_framecount)
 	{
@@ -814,10 +839,13 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 		vec_t cullradius2;
 		vec3_t light;
 		vec_t lightsubtract;
+		vec_t falloff;
+		vec_t offset;
 	}
 	nearlight[MAX_DLIGHTS], *nl;
 	int modeldlightbits[8];
 	//staticlight_t *sl;
+	mlight_t *sl;
 	a = currentrenderentity->alpha;
 	if (currentrenderentity->effects & EF_FULLBRIGHT)
 	{
@@ -854,6 +882,26 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 				}
 			}
 			*/
+			// this code is unused for now
+			for (i = 0, sl = cl.worldmodel->lights;i < cl.worldmodel->numlights && nearlights < MAX_DLIGHTS;i++, sl++)
+			{
+				if (TraceLine(currentrenderentity->origin, sl->origin, NULL, NULL, 0, false) == 1)
+				{
+					nl->falloff = sl->falloff;
+					// transform the light into the model's coordinate system
+					if (worldcoords)
+						VectorCopy(sl->origin, nl->origin);
+					else
+						softwareuntransform(sl->origin, nl->origin);
+					f = d_lightstylevalue[sl->style] * (1.0f / 32768.0f);
+					VectorScale(sl->light, f, nl->light);
+					nl->cullradius2 = 99999999;
+					nl->lightsubtract = sl->subtract;
+					nl->offset = 65536.0f;
+					nl++;
+					nearlights++;
+				}
+			}
 			for (i = 0;i < r_numdlights && nearlights < MAX_DLIGHTS;i++)
 			{
 				if (!(modeldlightbits[i >> 5] & (1 << (i & 31))))
@@ -879,6 +927,7 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 						nl->light[1] = r_dlight[i].light[1] * colorg;
 						nl->light[2] = r_dlight[i].light[2] * colorb;
 						nl->lightsubtract = r_dlight[i].lightsubtract;
+						nl->offset = LIGHTOFFSET;
 						nl++;
 						nearlights++;
 					}
@@ -908,7 +957,7 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 				dist2 = DotProduct(v,v);
 				if (dist2 < nl->cullradius2)
 				{
-					f = (1.0f / (dist2 + LIGHTOFFSET)) - nl->lightsubtract;
+					f = (1.0f / (dist2 + nl->offset)) - nl->lightsubtract;
 					if (f > 0)
 					{
 						// directional shading
