@@ -329,11 +329,13 @@ int NetConn_Read(lhnetsocket_t *mysocket, void *data, int maxlength, lhnetaddres
 {
 	int length = LHNET_Read(mysocket, data, maxlength, peeraddress);
 	int i;
+	if (length == 0)
+		return 0;
 	if (cl_netpacketloss.integer)
 		for (i = 0;i < cl_numsockets;i++)
 			if (cl_sockets[i] == mysocket && (rand() % 100) < cl_netpacketloss.integer)
 				return 0;
-	if (developer_networking.integer && length != 0)
+	if (developer_networking.integer)
 	{
 		char addressstring[128], addressstring2[128];
 		LHNETADDRESS_ToString(LHNET_AddressFromSocket(mysocket), addressstring, sizeof(addressstring), true);
@@ -844,7 +846,6 @@ void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_t *peer
 	cls.state = ca_connected;
 	cls.signon = 0;				// need all the signon messages before playing
 	CL_ClearState();
-	SCR_BeginLoadingPlaque();
 }
 
 int NetConn_IsLocalGame(void)
