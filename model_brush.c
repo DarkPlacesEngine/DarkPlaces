@@ -35,12 +35,12 @@ cvar_t r_miplightmaps = {CVAR_SAVE, "r_miplightmaps", "0"};
 cvar_t r_lightmaprgba = {0, "r_lightmaprgba", "1"};
 cvar_t r_nosurftextures = {0, "r_nosurftextures", "0"};
 cvar_t r_subdivisions_tolerance = {0, "r_subdivisions_tolerance", "4"};
-cvar_t r_subdivisions_minlevel = {0, "r_subdivisions_minlevel", "0"};
-cvar_t r_subdivisions_maxlevel = {0, "r_subdivisions_maxlevel", "10"};
+cvar_t r_subdivisions_mintess = {0, "r_subdivisions_mintess", "1"};
+cvar_t r_subdivisions_maxtess = {0, "r_subdivisions_maxtess", "1024"};
 cvar_t r_subdivisions_maxvertices = {0, "r_subdivisions_maxvertices", "65536"};
 cvar_t r_subdivisions_collision_tolerance = {0, "r_subdivisions_collision_tolerance", "15"};
-cvar_t r_subdivisions_collision_minlevel = {0, "r_subdivisions_collision_minlevel", "0"};
-cvar_t r_subdivisions_collision_maxlevel = {0, "r_subdivisions_collision_maxlevel", "10"};
+cvar_t r_subdivisions_collision_mintess = {0, "r_subdivisions_collision_mintess", "1"};
+cvar_t r_subdivisions_collision_maxtess = {0, "r_subdivisions_collision_maxtess", "1024"};
 cvar_t r_subdivisions_collision_maxvertices = {0, "r_subdivisions_collision_maxvertices", "4225"};
 cvar_t mod_q3bsp_curves_collisions = {0, "mod_q3bsp_curves_collisions", "1"};
 cvar_t mod_q3bsp_optimizedtraceline = {0, "mod_q3bsp_optimizedtraceline", "1"};
@@ -56,12 +56,12 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&r_lightmaprgba);
 	Cvar_RegisterVariable(&r_nosurftextures);
 	Cvar_RegisterVariable(&r_subdivisions_tolerance);
-	Cvar_RegisterVariable(&r_subdivisions_minlevel);
-	Cvar_RegisterVariable(&r_subdivisions_maxlevel);
+	Cvar_RegisterVariable(&r_subdivisions_mintess);
+	Cvar_RegisterVariable(&r_subdivisions_maxtess);
 	Cvar_RegisterVariable(&r_subdivisions_maxvertices);
 	Cvar_RegisterVariable(&r_subdivisions_collision_tolerance);
-	Cvar_RegisterVariable(&r_subdivisions_collision_minlevel);
-	Cvar_RegisterVariable(&r_subdivisions_collision_maxlevel);
+	Cvar_RegisterVariable(&r_subdivisions_collision_mintess);
+	Cvar_RegisterVariable(&r_subdivisions_collision_maxtess);
 	Cvar_RegisterVariable(&r_subdivisions_collision_maxvertices);
 	Cvar_RegisterVariable(&mod_q3bsp_curves_collisions);
 	Cvar_RegisterVariable(&mod_q3bsp_optimizedtraceline);
@@ -3674,7 +3674,6 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 									{
 										if (!strcasecmp(parameter[0], "blendfunc"))
 										{
-											Con_Printf("!\n");
 											if (numparameters == 2 && !strcasecmp(parameter[1], "add"))
 												flags2 |= Q3TEXTUREFLAG_ADDITIVE;
 											else if (numparameters == 3 && !strcasecmp(parameter[1], "gl_one") && !strcasecmp(parameter[2], "gl_one"))
@@ -4080,7 +4079,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 {
 	q3dface_t *in;
 	q3msurface_t *out;
-	int i, j, n, count, invalidelements, patchsize[2], finalwidth, finalheight, xlevel, ylevel, row0, row1, x, y, *e, finalvertices, finaltriangles, firstvertex, firstelement, type;
+	int i, j, n, count, invalidelements, patchsize[2], finalwidth, finalheight, xtess, ytess, finalvertices, finaltriangles, firstvertex, firstelement, type, oldnumtriangles, oldnumtriangles2;
 	//int *originalelement3i;
 	//int *originalneighbor3i;
 	float *originalvertex3f;
@@ -4131,7 +4130,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		n = LittleLong(in->effectindex);
 		if (n < -1 || n >= loadmodel->brushq3.num_effects)
 		{
-			Con_DPrintf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid effectindex %i (%i effects)\n", i, out->texture->name, n, loadmodel->brushq3.num_effects);
+			if (developer.integer >= 2)
+				Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid effectindex %i (%i effects)\n", i, out->texture->name, n, loadmodel->brushq3.num_effects);
 			n = -1;
 		}
 		if (n == -1)
@@ -4195,7 +4195,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		case Q3FACETYPE_PATCH:
 			patchsize[0] = LittleLong(in->specific.patch.patchsize[0]);
 			patchsize[1] = LittleLong(in->specific.patch.patchsize[1]);
-			if (patchsize[0] < 1 || patchsize[1] < 1)
+			if (patchsize[0] < 3 || patchsize[1] < 3 || !(patchsize[0] & 1) || !(patchsize[1] & 1) || patchsize[0] * patchsize[1] >= min(r_subdivisions_maxvertices.integer, r_subdivisions_collision_maxvertices.integer))
 			{
 				Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid patchsize %ix%i\n", i, out->texture->name, patchsize[0], patchsize[1]);
 				out->num_vertices = 0;
@@ -4224,24 +4224,24 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			//originalneighbor3i = out->data_neighbor3i;
 			*/
 			// convert patch to Q3FACETYPE_MESH
-			xlevel = QuadraticBSplinePatchSubdivisionLevelOnX(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_tolerance.value, 10);
-			ylevel = QuadraticBSplinePatchSubdivisionLevelOnY(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_tolerance.value, 10);
+			xtess = Q3PatchTesselationOnX(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_tolerance.value);
+			ytess = Q3PatchTesselationOnY(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_tolerance.value);
 			// bound to user settings
-			xlevel = bound(r_subdivisions_minlevel.integer, xlevel, r_subdivisions_maxlevel.integer);
-			ylevel = bound(r_subdivisions_minlevel.integer, ylevel, r_subdivisions_maxlevel.integer);
+			xtess = bound(r_subdivisions_mintess.integer, xtess, r_subdivisions_maxtess.integer);
+			ytess = bound(r_subdivisions_mintess.integer, ytess, r_subdivisions_maxtess.integer);
 			// bound to sanity settings
-			xlevel = bound(0, xlevel, 10);
-			ylevel = bound(0, ylevel, 10);
+			xtess = bound(1, xtess, 1024);
+			ytess = bound(1, ytess, 1024);
 			// bound to user limit on vertices
-			while ((xlevel > 0 || ylevel > 0) && (((patchsize[0] - 1) << xlevel) + 1) * (((patchsize[1] - 1) << ylevel) + 1) > min(r_subdivisions_maxvertices.integer, 262144))
+			while ((xtess > 1 || ytess > 1) && (((patchsize[0] - 1) * xtess) + 1) * (((patchsize[1] - 1) * ytess) + 1) > min(r_subdivisions_maxvertices.integer, 262144))
 			{
-				if (xlevel > ylevel)
-					xlevel--;
+				if (xtess > ytess)
+					xtess--;
 				else
-					ylevel--;
+					ytess--;
 			}
-			finalwidth = ((patchsize[0] - 1) << xlevel) + 1;
-			finalheight = ((patchsize[1] - 1) << ylevel) + 1;
+			finalwidth = ((patchsize[0] - 1) * xtess) + 1;
+			finalheight = ((patchsize[1] - 1) * ytess) + 1;
 			finalvertices = finalwidth * finalheight;
 			finaltriangles = (finalwidth - 1) * (finalheight - 1) * 2;
 			out->data_vertex3f = Mem_Alloc(loadmodel->mempool, sizeof(float[20]) * finalvertices);
@@ -4260,30 +4260,12 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			out->num_triangles = finaltriangles;
 			// generate geometry
 			// (note: normals are skipped because they get recalculated)
-			QuadraticBSplinePatchSubdivideFloatBuffer(patchsize[0], patchsize[1], xlevel, ylevel, 3, originalvertex3f, out->data_vertex3f);
-			QuadraticBSplinePatchSubdivideFloatBuffer(patchsize[0], patchsize[1], xlevel, ylevel, 2, originaltexcoordtexture2f, out->data_texcoordtexture2f);
-			QuadraticBSplinePatchSubdivideFloatBuffer(patchsize[0], patchsize[1], xlevel, ylevel, 2, originaltexcoordlightmap2f, out->data_texcoordlightmap2f);
-			QuadraticBSplinePatchSubdivideFloatBuffer(patchsize[0], patchsize[1], xlevel, ylevel, 4, originalcolor4f, out->data_color4f);
-			// generate elements
-			e = out->data_element3i;
-			for (y = 0;y < finalheight - 1;y++)
-			{
-				row0 = (y + 0) * finalwidth;
-				row1 = (y + 1) * finalwidth;
-				for (x = 0;x < finalwidth - 1;x++)
-				{
-					*e++ = row0;
-					*e++ = row1;
-					*e++ = row0 + 1;
-					*e++ = row1;
-					*e++ = row1 + 1;
-					*e++ = row0 + 1;
-					row0++;
-					row1++;
-				}
-			}
-			out->num_triangles = Mod_RemoveDegenerateTriangles(out->num_triangles, out->data_element3i, out->data_element3i, out->data_vertex3f);
-			if (developer.integer)
+			Q3PatchTesselateFloat(3, sizeof(float[3]), out->data_vertex3f, patchsize[0], patchsize[1], sizeof(float[3]), originalvertex3f, xtess, ytess);
+			Q3PatchTesselateFloat(2, sizeof(float[2]), out->data_texcoordtexture2f, patchsize[0], patchsize[1], sizeof(float[2]), originaltexcoordtexture2f, xtess, ytess);
+			Q3PatchTesselateFloat(2, sizeof(float[2]), out->data_texcoordlightmap2f, patchsize[0], patchsize[1], sizeof(float[2]), originaltexcoordlightmap2f, xtess, ytess);
+			Q3PatchTesselateFloat(4, sizeof(float[4]), out->data_color4f, patchsize[0], patchsize[1], sizeof(float[4]), originalcolor4f, xtess, ytess);
+			Q3PatchTriangleElements(out->data_element3i, finalwidth, finalheight);
+			if (developer.integer >= 2)
 			{
 				if (out->num_triangles < finaltriangles)
 					Con_Printf("Mod_Q3BSP_LoadFaces: %ix%i curve subdivided to %i vertices / %i triangles, %i degenerate triangles removed (leaving %i)\n", patchsize[0], patchsize[1], out->num_vertices, finaltriangles, finaltriangles - out->num_triangles, out->num_triangles);
@@ -4292,60 +4274,44 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			}
 			// q3map does not put in collision brushes for curves... ugh
 			// build the lower quality collision geometry
-			xlevel = QuadraticBSplinePatchSubdivisionLevelOnX(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_collision_tolerance.value, 10);
-			ylevel = QuadraticBSplinePatchSubdivisionLevelOnY(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_collision_tolerance.value, 10);
+			xtess = Q3PatchTesselationOnX(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_collision_tolerance.value);
+			ytess = Q3PatchTesselationOnY(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_collision_tolerance.value);
 			// bound to user settings
-			xlevel = bound(r_subdivisions_collision_minlevel.integer, xlevel, r_subdivisions_collision_maxlevel.integer);
-			ylevel = bound(r_subdivisions_collision_minlevel.integer, ylevel, r_subdivisions_collision_maxlevel.integer);
+			xtess = bound(r_subdivisions_collision_mintess.integer, xtess, r_subdivisions_collision_maxtess.integer);
+			ytess = bound(r_subdivisions_collision_mintess.integer, ytess, r_subdivisions_collision_maxtess.integer);
 			// bound to sanity settings
-			xlevel = bound(0, xlevel, 10);
-			ylevel = bound(0, ylevel, 10);
+			xtess = bound(1, xtess, 1024);
+			ytess = bound(1, ytess, 1024);
 			// bound to user limit on vertices
-			while ((xlevel > 0 || ylevel > 0) && (((patchsize[0] - 1) << xlevel) + 1) * (((patchsize[1] - 1) << ylevel) + 1) > min(r_subdivisions_collision_maxvertices.integer, 262144))
+			while ((xtess > 1 || ytess > 1) && (((patchsize[0] - 1) * xtess) + 1) * (((patchsize[1] - 1) * ytess) + 1) > min(r_subdivisions_collision_maxvertices.integer, 262144))
 			{
-				if (xlevel > ylevel)
-					xlevel--;
+				if (xtess > ytess)
+					xtess--;
 				else
-					ylevel--;
+					ytess--;
 			}
-			finalwidth = ((patchsize[0] - 1) << xlevel) + 1;
-			finalheight = ((patchsize[1] - 1) << ylevel) + 1;
+			finalwidth = ((patchsize[0] - 1) * xtess) + 1;
+			finalheight = ((patchsize[1] - 1) * ytess) + 1;
 			finalvertices = finalwidth * finalheight;
 			finaltriangles = (finalwidth - 1) * (finalheight - 1) * 2;
+
 			out->data_collisionvertex3f = Mem_Alloc(loadmodel->mempool, sizeof(float[3]) * finalvertices);
 			out->data_collisionelement3i = Mem_Alloc(loadmodel->mempool, sizeof(int[3]) * finaltriangles);
 			out->num_collisionvertices = finalvertices;
 			out->num_collisiontriangles = finaltriangles;
-			QuadraticBSplinePatchSubdivideFloatBuffer(patchsize[0], patchsize[1], xlevel, ylevel, 3, originalvertex3f, out->data_collisionvertex3f);
-			// generate elements
-			e = out->data_collisionelement3i;
-			for (y = 0;y < finalheight - 1;y++)
-			{
-				row0 = (y + 0) * finalwidth;
-				row1 = (y + 1) * finalwidth;
-				for (x = 0;x < finalwidth - 1;x++)
-				{
-					*e++ = row0;
-					*e++ = row1;
-					*e++ = row0 + 1;
-					*e++ = row1;
-					*e++ = row1 + 1;
-					*e++ = row0 + 1;
-					row0++;
-					row1++;
-				}
-			}
+			Q3PatchTesselateFloat(3, sizeof(float[3]), out->data_collisionvertex3f, patchsize[0], patchsize[1], sizeof(float[3]), originalvertex3f, xtess, ytess);
+			Q3PatchTriangleElements(out->data_collisionelement3i, finalwidth, finalheight);
+
+			oldnumtriangles = out->num_triangles;
+			oldnumtriangles2 = out->num_collisiontriangles;
+			out->num_triangles = Mod_RemoveDegenerateTriangles(out->num_triangles, out->data_element3i, out->data_element3i, out->data_vertex3f);
 			out->num_collisiontriangles = Mod_RemoveDegenerateTriangles(out->num_collisiontriangles, out->data_collisionelement3i, out->data_collisionelement3i, out->data_collisionvertex3f);
 			if (developer.integer)
-			{
-				if (out->num_collisiontriangles < finaltriangles)
-					Con_Printf("Mod_Q3BSP_LoadFaces: %ix%i curve subdivided for collisions to %i vertices / %i triangles, %i degenerate triangles removed (leaving %i)\n", patchsize[0], patchsize[1], out->num_collisionvertices, finaltriangles, finaltriangles - out->num_collisiontriangles, out->num_collisiontriangles);
-				else
-					Con_Printf("Mod_Q3BSP_LoadFaces: %ix%i curve subdivided for collisions to %i vertices / %i triangles\n", patchsize[0], patchsize[1], out->num_collisionvertices, out->num_collisiontriangles);
-			}
+				Con_Printf("Mod_Q3BSP_LoadFaces: %ix%i curve became %i:%i vertices / %i:%i triangles (%i:%i degenerate)\n", patchsize[0], patchsize[1], out->num_vertices, out->num_collisionvertices, oldnumtriangles, oldnumtriangles2, oldnumtriangles - out->num_triangles, oldnumtriangles2 - out->num_collisiontriangles);
 			break;
 		case Q3FACETYPE_FLARE:
-			Con_DPrintf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): Q3FACETYPE_FLARE not supported (yet)\n", i, out->texture->name);
+			if (developer.integer >= 2)
+				Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): Q3FACETYPE_FLARE not supported (yet)\n", i, out->texture->name);
 			// don't render it
 			out->num_vertices = 0;
 			out->num_triangles = 0;
