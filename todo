@@ -1,18 +1,31 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -n = done but have not notified the people who asked for it, f = failed
+-n darkplaces: add airborn blood images to the particlefont which would look like a cloud of droplets (Vermeulen)
+-n darkplaces: add bullet hole decals to the particlefont (Vermeulen)
+-n darkplaces: add cl_particles_quality cvar (1-10) which would scale count of particles and inversely scale alpha of particles (TheBeast)
+-n darkplaces: add error messages to LHNET_OpenSocket_Connectionless or its callers (Zombie13)
+-n darkplaces: add slowmo to options menu (Cristian Beltramo)
 -n darkplaces: add stats to slist menu displaying how many masters/servers have been queried and replied (tell yummyluv)
 -n darkplaces: check out qe1 textures and make sure they load in all the e1 maps, report of crashing in most but not all maps (Linny Amore)
 -n darkplaces: display "No servers found" instead of a cursor when there are none (yummyluv)
+-n darkplaces: don't accept connect packets after first one (tell Willis)
+-n darkplaces: examine the surface rendering code to make sure it has no bugs regarding texture selection for any of the passes (sublim3)
+-n darkplaces: figure out random crashes on map changes (Uffe, QorpsE)
+-n darkplaces: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
+-n darkplaces: figure out why -sndspeed 22050, 44100 and 16000 are choppy in windows? (cheapalert)
 -n darkplaces: fix a crash when changing level while using qe1 textures (Todd)
+-n darkplaces: fix r_shadow_portallight 1 (default) mode (Vermeulen)
 -n darkplaces: fix skybox geometry (SeienAbunae)
+-n darkplaces: make the WriteEntitiesToClient code call TraceBox directly instead of SV_Move because checking all the entities is far too slow in helm18 (banshee21)
+-n darkplaces: make the reply receive code drop packets from servers not in the list (Willis)
 -n darkplaces: net_slist and the server browser should show servers when they are queried, not just when they reply; which would replace the matching entry (yummyluv)
 -n darkplaces: net_slist should print out "No network." if networking is not initialized (yummyluv)
+-n darkplaces: noclipping out the ceiling of q3dm17 crashes (Static_Fiend)
 -n darkplaces: remove dead master server from default masters list (yummyluv)
 -n darkplaces: revert noclip movement to match nq for compatibility with mods that trap movement as input (MauveBib)
 -n darkplaces: segfault reading memory in windows when starting a new server from menu (yummyluv)
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 -n dpmod: make grapple off-hand (joe hill)
-0 darkplaces: ability to disable fopen builtin access to read /, read data/, write data/, or disable fopen builtin entirely
 0 darkplaces: add DP_GFX_QUAKE3MODELTAGS, DP_GFX_SKINFILES, and any other new extensions to the wiki
 0 darkplaces: add DP_LITSUPPORT extension and document it
 0 darkplaces: add DP_SV_ROTATINGBMODEL extension to explain that MOVETYPE_PUSH/SOLID_BSP support rotation in darkplaces and a demonstration of how to use it without qc modifications (Uffe, Supajoe)
@@ -21,20 +34,15 @@
 0 darkplaces: add a .collision_cancollide QC function call to decide if an entity should collide with another, or pass through it (Uffe)
 0 darkplaces: add a clipmask thingy to allow QC to mask off collisions as it wishes (Uffe)
 0 darkplaces: add a scr_screenshot_jpeg_quality cvar (Electro)
-0 darkplaces: add ability to load gfx/particlefont.tga (Vermeulen)
-0 darkplaces: add airborn blood images to the particlefont which would look like a cloud of droplets (Vermeulen)
+0 darkplaces: add ability to load gfx/particlefont.tga (Vermeulen, frightfan)
 0 darkplaces: add automatic binding to whatever address the machine's hostname resolves to (in addition to 0.0.0.0); see original quake code for examples (yummyluv)
-0 darkplaces: add bullet hole decals to the particlefont (Vermeulen)
 0 darkplaces: add chase_pitch cvar to control pitch angle of chase camera, and chase_angle cvar to control yaw angle of chase camera, and add back chase_right cvar (Electro)
 0 darkplaces: add cl_particles_particleffect_bloodhack cvar to enable converting id1 blood effects to TE_BLOOD style (Alex Boveri)
 0 darkplaces: add cl_particles_particleffect_bloodhack cvar to menu (Alex Boveri)
-0 darkplaces: add cl_particles_quality cvar (1-10) which would scale count of particles and inversely scale alpha of particles (TheBeast)
 0 darkplaces: add cvars for sbar alpha (background and foreground) (Throvold@uboot.com)
 0 darkplaces: add cvars to control lighting quality to allow performance tradeoffs
-0 darkplaces: add error messages to LHNET_OpenSocket_Connectionless or its callers (Zombie13)
 0 darkplaces: add graphics options menu and put realtime lighting stuff in it (Antti)
 0 darkplaces: add lightning beam settings to menu (romi)
-0 darkplaces: add slowmo to options menu (Cristian Beltramo)
 0 darkplaces: add support for multiple -game's (note: this needs an enhanced COM_CheckParm to find the multiple matches) (Static_Fiend)
 0 darkplaces: add sv_gameplayfix_grenadebouncedownslopes cvar (default 1)
 0 darkplaces: add sv_gameplayfix_noairborncorpse cvar (default 1)
@@ -43,82 +51,67 @@
 0 darkplaces: add svc_setanglefloat and DP_SVC_SETANGLEFLOAT extension (FrikaC, SeienAbunae)
 0 darkplaces: add te_flamejet builtin and add extension (Supajoe)
 0 darkplaces: alias layers should have a shadow volume pass so that nodraw textures don't cast a shadow (Electro)
-0 darkplaces: bug in mod_q3bsp_optimizedtraceline code, bots shooting through walls? (Vermeulen)
-0 darkplaces: bullets don't hit walls at steep angles in id1
 0 darkplaces: can't move when stuck in a monster (SeienAbunae)
 0 darkplaces: change particle() macro in cl_particles.c to have a do{}while(0) to eat the ;
 0 darkplaces: cl_particles_maximum cvar (default 32768) which would change number of particles allowed at once (TheBeast)
 0 darkplaces: clean up the DrawQ_ blendfunc handling, instead of taking DRAWFLAG_ADDITIVE they should take blendfunc values (Black)
-0 darkplaces: client colors being reset to "15 15" each level in prydon gate (FrikaC)
+0 darkplaces: client colors are being reset to "15 15" each level in prydon gate? (FrikaC)
 0 darkplaces: crashes if you type too long a command line in the console (SeienAbunae)
 0 darkplaces: darkplaces-glx -path transfusion crashes, fix the crash even though it's not going to work anyway (Todd)
-0 darkplaces: dedicated server hosting prydon with multiple players exhibited severe networking bugs in tests, including failure to find acked network frames, and a segfault (Supajoe, Uffe, FrikaC, Harb)
-0 darkplaces: default to 32bit color
 0 darkplaces: delay "connect" and "playdemo" and "timedemo" until after video init to cause quicker video startup (KrimZon)
-0 darkplaces: document how polygon collision works in the code (KrimZon)
 0 darkplaces: document the TEI stuff used in Nexuiz?  check telejano site first (SeienAbunae)
-0 darkplaces: examine the surface rendering code to make sure it has no bugs regarding texture selection for any of the passes (sublim3)
-0 darkplaces: figure out and fix the 'rubbing against a moving door causes block' bug (Static_Fiend)
-0 darkplaces: figure out random crashes on map changes (Uffe, QorpsE)
-0 darkplaces: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
 0 darkplaces: figure out what's wrong with gloss rendering vertex calculations, which may be GF2 related (QorpsE)
 0 darkplaces: figure out why monsters keep making fall pain sound after they've landed in dpmod (Cruaich)
-0 darkplaces: fix "game speed" menu option, it's too far left (Tomaz)
-0 darkplaces: fix 'wall hugging' stuttering, also stuttering movement when walking over steps or monsters (romi)
 0 darkplaces: fix con_notify (should control number of lines)
+0 darkplaces: fix disappearing viewmodel (and other models) when in an unvised q3bsp, or partially inside a wall in q3bsp
 0 darkplaces: fix intermission failing to move view to intermission camera (romi, Zombie_13)
 0 darkplaces: fix key based turning being affected by slowmo - it should not be
-0 darkplaces: fix the fact singleplayer is using maxplayers 8
+0 darkplaces: fix r_drawentities view problem (stops updating r_refdef.vieworg?) (Vic)
 0 darkplaces: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
-0 darkplaces: get rid of stencil options and make 32bit color automatically use stencil
-0 darkplaces: hack PF_nextent to skip inaccessible client slots depending on maxplayers - but always report ones that are active at the time (FrikaC)
 0 darkplaces: identify weird lightmap texturing bug on TNT cards - goes away in r_textureunits 1 (NotoriousRay, Uffe)
 0 darkplaces: increase resolution of particlefont to 512x512 (Chillo)
 0 darkplaces: integrate zinx's psycho.c gamma hack as an easteregg
 0 darkplaces: make Com_HexDumpToConsole not use color
 0 darkplaces: make DP_EF_FULLBRIGHT extension (FrikaC)
 0 darkplaces: make S_Update take a matrix4x4_t *
-0 darkplaces: make a flag for rtlights that makes them appear in normal mode (not just r_shadow_realtime_world mode) (Vermeulen)
 0 darkplaces: make a getattachmentvectors qc builtin (Supajoe)
 0 darkplaces: make cl_beams_relative only affect view-attached beams
 0 darkplaces: make dedicated server not load images (maybe all fail?)
 0 darkplaces: make fopen builtin check / as well as data/ when reading (writing would always go in data/)
+0 darkplaces: make fopen have the ability to disable fopen builtin access to read /, read data/, write data/, or disable fopen builtin entirely
 0 darkplaces: make lightning work without bolt models persent (Vermeulen)
 0 darkplaces: make memory pools have a flag to print them as temporary pools (I.E. consider them leaks if anything is in them) (Vicious)
-0 darkplaces: make server queries use a queue to avoid flooding out queries too fast, and then change the reply receive code drop packets from servers not in the list (Willis)
+0 darkplaces: make server queries use a queue to avoid flooding out queries too fast (Willis)
 0 darkplaces: make sure EF_FULLBRIGHT works on bmodels (FrikaC)
 0 darkplaces: make sure EF_FULLBRIGHT works on models (FrikaC)
-0 darkplaces: make sure EF_FULLBRIGHT works on sprites
+0 darkplaces: make sure EF_FULLBRIGHT works on sprites (FrikaC)
 0 darkplaces: make sure PR_SetString points NULL strings at pr_strings (which would be an offset of 0) (Fuh)
 0 darkplaces: make sure QuakeDoneQuick works (Chris Kemp)
-0 darkplaces: make sure r_fullbright works - need to fix maxplayers checking
-0 darkplaces: make sure that disappearing entities are removed on the client in quake demos, they aren't currently
+0 darkplaces: make sure r_fullbright works
 0 darkplaces: make sure that sky works without a valid size (just treat it as single layer clouds or non-animated) (tell Vermeulen)
 0 darkplaces: make sure that sound engine does not remove sounds when volume drops to 0 due to going out of range (SeienAbunae)
-0 darkplaces: make the WriteEntitiesToClient code call TraceBox directly instead of SV_Move because checking all the entities is far too slow in helm18 (banshee21)
 0 darkplaces: make v_cshift affect view even if in a liquid, by adding another cshift slot for it
+0 darkplaces: mod_q3bsp_optimizedtraceline bug: shooting through brushes? (Vermeulen)
 0 darkplaces: model interpolation off crashes?  (SeienAbunae)
-0 darkplaces: noclipping out the ceiling of q3dm17 crashes (Static_Fiend)
 0 darkplaces: pointcontents crash when building harvester in gvb2? (yummyluv)
+0 darkplaces: q1bsp trace bug: 'wall hugging' stuttering, also stuttering movement when walking over steps or monsters and causes block on moving doors (romi, Static_Fiend)
+0 darkplaces: q1bsp trace bug: bullets don't hit walls at steep angles?
+0 darkplaces: q1bsp trace bug: scrags frequently fly through ceilings - this needs to be fixed
 0 darkplaces: r_shadow should load .ent when importing light entities
-0 darkplaces: r_shadow_portallight 1 (default) mode is broken currently, does not light all surfaces, maybe even fails to go through some portals? (Vermeulen)
 0 darkplaces: r_skyscroll1 and r_skyscroll2 cvars (SeienAbunae)
 0 darkplaces: rename r_picmip and r_max_size and such to glquake names
 0 darkplaces: reset zoom on connect (Rick)
-0 darkplaces: scrags frequently fly through ceilings - this needs to be fixed
 0 darkplaces: server should send slowmo to client somehow (Vermeulen)
 0 darkplaces: server should send sv_gravity to client somehow (Vermeulen)
-0 darkplaces: shadows are not working with model tag attachments (Electro)
 0 darkplaces: test TecnoX and find the frikbot crash in SV_Physics (KrimZon)
 0 darkplaces: test zlib support with entirely pk3'd id1 data (should crash because of zlib not being setup early enough - fix this) (Mabus)
 0 darkplaces: the new sound engine should have a cvar for random variations of pitch on sounds like in doom (RenegadeC)
-0 darkplaces: try not adding gravity when onground to see if it gets rid of ramp sliding (Midgar)
-0 darkplaces: tweak the blood decals in the particlefont to make them look more like the q2e_blood.avi video (Vermeulen)
 0 dpmod: add a "monsterwander" cvar and default it off, this would enable the spawnwanderpath code (Zombie13)
 0 dpmod: add combo kill detection; rapid burst of kills (SeienAbunae)
 0 dpmod: add flame thrower enforcers back (scar3crow)
 0 dpmod: add flame thrower weapon, and make its altfire drop a canister of fuel (10 fuel units?), which can be ignited to set off as a bomb about the size of a rocket blast, plus some fireballs raining down (scar3crow)
 0 dpmod: add killing spree reporting; how many kills since spawn when you die, as well as announcing when you hit certain numbers of kills (SeienAbunae)
+0 dpmod: add q3bsp teleport target entity
 0 dpmod: add rotfish to spawnmonsters code (only spawn if they land in water) (Zombie)
 0 dpmod: add support for info_player_deathmatch in singleplayer for q3 compatibility (Static_Fiend)
 0 dpmod: add target_position entity for a touch of q3 compatibility on jumppads (Static_Fiend)
@@ -131,7 +124,9 @@
 0 dpmod: modify anglemod to be able to recover from extremely large angles numbers (Zombie13)
 0 dpmod: monsters falling out of level? (SeienAbunae)
 0 dpmod: set oldorigin when spawning to prevent being stuck at the spawn from causing an instant teleport back to where you died (SeienAbunae)
+0 dpmod: test for any unnamed death messages that might be happening
 0 dpmod: try making ball lightning mortar shamblers (scar3crow)
+0 dpmod: try not adding gravity when onground to see if it gets rid of ramp sliding (Midgar)
 0 dpmod: up nail limit to 500 (scar3crow)
 0 dpzoo: colored lighting
 0 dpzoo: flame jet
@@ -156,7 +151,7 @@
 1 darkplaces: add DP_SV_READCLIENTINPUT extension (.vector clientinput; works like .movement but for mouse or any other similar controllers) (Wazat for Battlemech, FrikaC, SeienAbunae)
 1 darkplaces: add EndGame function (called on server shutdown or level change) (SeienAbunae, Nexuiz)
 1 darkplaces: add a "cmd" command to the client for sending arbitrary commands to the server, mainly for use with KRIMZON_SV_PARSECLIENTCOMMAND
-1 darkplaces: add a .modelflags variable which if non-zero overrides model flags (Electro, Arwing)
+1 darkplaces: add a .modelflags variable which if non-zero overrides model flags (Electro, Arwing, frightfan)
 1 darkplaces: add a string function that returns a character value from a string, mainly for csqc printing its own text (SeienAbunae)
 1 darkplaces: add an optimized special case to AngleVectors for roll == 0 (thanks to fuh for the idea)
 1 darkplaces: add buttons 9-16 (yummyluv)
@@ -173,13 +168,11 @@
 1 darkplaces: client crashes on +button8? (Static_Fiend)
 1 darkplaces: crashes on radeon in rare situations that seem to occur in dpmod dm 7 mode? (Option42)
 1 darkplaces: decide on an extension name for .ent loading and report it, also document in dpextensions (tell FrikaC, Gleeb, and add to wiki)
-1 darkplaces: don't accept connect packets after first one (tell Willis)
 1 darkplaces: finish porting Quake2 keyboard stuff (such as clipboard) (Rick, FrikaC)
 1 darkplaces: fix lots of bugs and then retitle the website to get more publicity: DarkPlaces: Re-live Quake again...
 1 darkplaces: fix stuck buttons during a level change (mercury82, tkimmet@ezworks.net)  (further note: this is from the console becoming active temporarily and catching the key release when the player lets go during the loading stage, make it possible to release a button that was pressed before the console was activated, or make it execute -commands for all pressed binds when level starts)
 1 darkplaces: make Host_Error call error reset functions on renderer subsystems?  (models are already flushed)
 1 darkplaces: make r_fogsky cvar to allow use of sky instead of fog when fog is used (SeienAbunae)
-1 darkplaces: make r_shadow cvars accessible in effects options menu
 1 darkplaces: send bmodels even if alpha is 0 or EF_NODRAW is on
 1 darkplaces: still says " disconnected" in dpmod, figure out why and fix it
 1 dpmod: add a Treasure Hunt mode (inspired by preview of Will Rock) - a team wins when they hold all the artifacts
@@ -207,17 +200,16 @@
 2 darkplaces: add fuhquake naming of map textures (textures/start/quake.tga style)
 2 darkplaces: add removemapmusic (optional map name or ogg name to clear) and mapmusic commands (<maps/mapname.bsp> <music/whatever.ogg> perhaps) to manipulate list of per-map music overrides (Joseph Caporale, tell Static_Fiend)
 2 darkplaces: figure out how to prevent "alias a a" - infinite loop when executed, this should be detected when executing it (Vicious)
-2 darkplaces: figure out why -sndspeed 22050, 44100 and 16000 are choppy in windows? (cheapalert)
 2 darkplaces: frikbot scores don't update - discovered this is because of the fact they have no client (Todd)
 2 darkplaces: implement menu_clearkeyconfig and menu_keyconfig and the corresponding menu (diGGer)
 2 darkplaces: lerp lightstyles (Mitchell)
 2 darkplaces: locked console scrollback (sublim3)
 2 darkplaces: make commandline parsing use COM_ParseToken.
 2 darkplaces: make sure Zerstoerer works (Chris Kemp, Kaotic))
-2 darkplaces: movetogoal is broken - monsters are not going around corners, just running into walls (scar3crow)
 2 darkplaces: player ip logging by nickname (sublim3)
 2 darkplaces: prevent player name changes faster than twice a second (sublim3)
 2 darkplaces: proquake precise aiming support (sublim3 doesn't care, but tell him anyway)
+2 darkplaces: q1bsp trace bug: movetogoal is broken - monsters are not going around corners, just running into walls (scar3crow)
 2 darkplaces: should support corona-model shaders somehow (equation: pow(normalizationcubemap(transform(eye, vertexmatrix)) dot3 '0 0 1', 8)), which are normally used around unusually shaped lights instead of flat coronas (Mitchell)
 2 darkplaces: upgrade protocol to have shorts for stats (scar3crow)
 2 darkplaces: write a readme (Antti)
@@ -315,15 +307,18 @@ d darkplaces: add wgl support for mouse buttons 4 and 5 (Intellimouse Explorer) 
 d darkplaces: check if nodrawtoclient works and if not, fix it (Uffe)
 d darkplaces: colors of player in demos seems to alter player config (this is clearly a more severe problem than just demos) (tkimmet@ezworks.net)
 d darkplaces: debug server crash
+d darkplaces: dedicated server hosting prydon with multiple players exhibited severe networking bugs in tests, including failure to find acked network frames, and a segfault (Supajoe, Uffe, FrikaC, Harb)
 d darkplaces: dedicated server should error out if it has no sockets (yummyluv)
 d darkplaces: dedicated server should not bother allocating a loopback socket (yummyluv)
 d darkplaces: default deathmatch 1 in multiplayer games like Nexuiz incase someone starts a game from console (Vermeulen)
+d darkplaces: default to 32bit color
 d darkplaces: figure out what is broken about the shadow volumes or stencil comparisons
 d darkplaces: figure out what is wrong with loading _glow/_luma textures on md3 models (not bsp textures) (kd23 Nexuiz)
 d darkplaces: figure out why disconnections are showing up as " disconnected"
 d darkplaces: figure out why quad is creating two coronas, one at player and one at 0 0 0 - answer: viewmodel dlight (Tomaz)
 d darkplaces: finish new udp networking code (yummyluv)
 d darkplaces: finish the partial update support in protocol.[ch] and reduce packet size to 1k to fix NAT routers (yummyluv, Vermeulen, Elric)
+d darkplaces: fix "game speed" menu option, it's too far left (Tomaz)
 d darkplaces: fix PF_substring's mishandling of the end variable (Fuh)
 d darkplaces: fix Short format entity origins to fix shell casings sitting in floor/above floor (Tomaz)
 d darkplaces: fix bounding box bugs with viewmodelforclient (diGGer)
@@ -342,9 +337,11 @@ d darkplaces: fix server list only querying the master to reply (Rick)
 d darkplaces: fix sounds not following entities (yummyluv, SeienAbunae)
 d darkplaces: fix starting non-existent maps.  (drops to console with an error like it should)
 d darkplaces: fix startup on multiplayer games so they don't start a game when executing startdemos unless -listen or -dedicated was used (yummyluv)
+d darkplaces: fix the fact singleplayer is using maxplayers 8
 d darkplaces: fix toggling decals in menu
 d darkplaces: fix wrapping textures on sprites/models (Elric)
 d darkplaces: get rid of frags per hour rating in deathmatch scoreboard and mini scoreboard
+d darkplaces: get rid of stencil options and make 32bit color automatically use stencil
 d darkplaces: gl_flashblend 1 should disable dlighting of models (Tomaz)
 d darkplaces: have a look at CFQ and figure out why its b0rked (it assumed nq noclip movement)
 d darkplaces: heartbeat should print an error message if used with no server running (yummyluv)
@@ -357,6 +354,7 @@ d darkplaces: make reliable message splitting use a different limit than unrelia
 d darkplaces: make sprite lerping optional (yummyluv)
 d darkplaces: make sure 24bit sky textures work (Static_Fiend)
 d darkplaces: make sure r_drawportals works
+d darkplaces: make sure that disappearing entities are removed on the client in quake demos
 d darkplaces: make sure that textureless models are white and not invisible, apparently creating a .bmp texture (not supported) made the models black, even more odd... (McKilled, QorpsE)
 d darkplaces: make water scrolling optional
 d darkplaces: may be reading md3 tag matrices wrong (Electro)
@@ -369,6 +367,7 @@ d darkplaces: release new hmap (fixes compilation of TF entities for one person,
 d darkplaces: release new hqbsp with -wadpath support (also searchs in map's directory and map's parent directory)
 d darkplaces: remove frags per hour rating from scoreboard because it depends on cl.scores[i]->entertime (which is never set)
 d darkplaces: tags support on md3 (Electro needs this urgently)
+d darkplaces: tweak the blood decals in the particlefont to make them look more like the q2e_blood.avi video (Vermeulen)
 d dpmod: add back charge-up on plasma rifle alt-fire and increase the max charge to 50 cells
 d dpmod: add back tarbaby gibs (scar3crow)
 d dpmod: add frags for killing monsters in dpmod (scar3crow)
@@ -384,7 +383,11 @@ d hmap: add support for GTKRadiant stuff
 d lhfire: post lhfire build with example scripts.
 d lmp2pcx: post new lmp2pcx build.
 f darkplaces: add _0.tga support (per texture) to bsp/md2/md3 loaders
+f darkplaces: document how polygon collision works in the code (KrimZon)
 f darkplaces: examine proquake code to find nat fix and implement similar in darkplaces
+f darkplaces: hack PF_nextent to skip inaccessible client slots depending on maxplayers - but always report ones that are active at the time (FrikaC)
 f darkplaces: look at and integrate Vic's updated zone.[ch] (Vic)
+f darkplaces: make a flag for rtlights that makes them appear in normal mode (not just r_shadow_realtime_world mode) (Vermeulen)
+f darkplaces: shadows are not working with model tag attachments (Electro)
 f dpmod: make tarbabies have a self.resist_explosive = 3; like zombies (SeienAbunae)
 
