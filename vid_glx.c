@@ -62,14 +62,12 @@ static dllfunction_t getprocaddressfuncs[] =
 	{NULL, NULL}
 };
 
-//GLX_SGI_video_sync
-GLint (GLAPIENTRY *qglXGetVideoSyncSGI)(GLuint *count);
-GLint (GLAPIENTRY *qglXWaitVideoSyncSGI)(GLint divisor, GLint remainder, GLuint *count);
+//GLX_SGI_swap_control
+GLint (GLAPIENTRY *qglXSwapIntervalSGI)(GLint interval);
 
-static dllfunction_t videosyncfuncs[] =
+static dllfunction_t swapcontrolfuncs[] =
 {
-	{"glXGetVideoSyncSGI", (void **) &qglXGetVideoSyncSGI},
-	{"glXWaitVideoSyncSGI", (void **) &qglXWaitVideoSyncSGI},
+	{"glXSwapIntervalSGI", (void **) &qglXSwapIntervalSGI},
 	{NULL, NULL}
 };
 
@@ -88,8 +86,13 @@ Atom wm_delete_window_atom;
 		LeaveWindowMask)
 
 
-static qboolean		mouse_avail = true;
-static qboolean		mouse_active = false, usingmouse = false, ignoremousemove = false;
+static qboolean mouse_avail = true;
+static qboolean mouse_active = false;
+static qboolean vid_usingmouse = false;
+static qboolean vid_usemouse = false;
+static qboolean vid_usingvsync = false;
+static qboolean vid_usevsync = false;
+static qboolean ignoremousemove = false;
 static float	mouse_x, mouse_y;
 static int p_mouse_x, p_mouse_y;
 
@@ -338,7 +341,7 @@ static void HandleEvents(void)
 
 		case MotionNotify:
 			// mouse moved
-			if (usingmouse)
+			if (vid_usingmouse)
 			{
 #ifndef __APPLE__
 				if (vid_dga.integer == 1)
@@ -554,7 +557,7 @@ void VID_Shutdown(void)
 		return;
 
 	vid_hidden = true;
-	usingmouse = false;
+	vid_usingmouse = false;
 	if (vidx11_display)
 	{
 		VID_RestoreSystemGamma();
@@ -612,35 +615,41 @@ void VID_GetWindowSize (int *x, int *y, int *width, int *height)
 
 void VID_Finish (void)
 {
-	int usemouse;
-	if (r_render.integer)
+	vid_usevsync = vid_vsync.integer && !cls.timedemo && gl_videosyncavailable;
+	if (vid_usingvsync != vid_usevsync && gl_videosyncavailable)
 	{
-		if (r_speeds.integer || gl_finish.integer)
-			qglFinish();
-		qglXSwapBuffers(vidx11_display, win);
+		vid_usingvsync = vid_usevsync;
+		qglXSwapIntervalSGI (vid_usevsync);
 	}
 
 // handle the mouse state when windowed if that's changed
-	usemouse = false;
+	vid_usemouse = false;
 	if (vid_mouse.integer && !key_consoleactive)
-		usemouse = true;
+		vid_usemouse = true;
 	if (vidmode_active)
-		usemouse = true;
-	if (usemouse)
+		vid_usemouse = true;
+	if (vid_usemouse)
 	{
-		if (!usingmouse)
+		if (!vid_usingmouse)
 		{
-			usingmouse = true;
+			vid_usingmouse = true;
 			IN_ActivateMouse ();
 		}
 	}
 	else
 	{
-		if (usingmouse)
+		if (vid_usingmouse)
 		{
-			usingmouse = false;
+			vid_usingmouse = false;
 			IN_DeactivateMouse ();
 		}
+	}
+
+	if (r_render.integer)
+	{
+		if (r_speeds.integer || gl_finish.integer)
+			qglFinish();
+		qglXSwapBuffers(vidx11_display, win);
 	}
 }
 
@@ -862,12 +871,12 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 // COMMANDLINEOPTION: BSD GLX: -nogetprocaddress disables GLX_ARB_get_proc_address (not required, more formal method of getting extension functions)
 // COMMANDLINEOPTION: MacOSX GLX: -nogetprocaddress disables GLX_ARB_get_proc_address (not required, more formal method of getting extension functions)
 	GL_CheckExtension("GLX_ARB_get_proc_address", getprocaddressfuncs, "-nogetprocaddress", false);
-// COMMANDLINEOPTION: Linux GLX: -novideosync disables GLX_SGI_video_sync
-// COMMANDLINEOPTION: BSD GLX: -novideosync disables GLX_SGI_video_sync
-// COMMANDLINEOPTION: MacOSX GLX: -novideosync disables GLX_SGI_video_sync
-	gl_videosyncavailable = GL_CheckExtension("GLX_SGI_video_sync", videosyncfuncs, "-novideosync", false);
+// COMMANDLINEOPTION: Linux GLX: -novideosync disables GLX_SGI_swap_control
+// COMMANDLINEOPTION: BSD GLX: -novideosync disables GLX_SGI_swap_control
+// COMMANDLINEOPTION: MacOSX GLX: -novideosync disables GLX_SGI_swap_control
+	gl_videosyncavailable = GL_CheckExtension("GLX_SGI_swap_control", swapcontrolfuncs, "-novideosync", false);
 
-	usingmouse = false;
+	vid_usingmouse = false;
 	ignoremousemove = true;
 	vid_hidden = false;
 	vid_activewindow = true;

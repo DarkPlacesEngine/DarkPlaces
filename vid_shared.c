@@ -21,7 +21,7 @@ int gl_textureunits = 1;
 int gl_combine_extension = false;
 // GL_EXT_compiled_vertex_array
 int gl_supportslockarrays = false;
-// GLX_SGI_video_sync or WGL_EXT_swap_control
+// GLX_SGI_swap_control or WGL_EXT_swap_control
 int gl_videosyncavailable = false;
 // stencil available
 int gl_stencil = false;
