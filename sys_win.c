@@ -344,23 +344,46 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	GetModuleFileNameA(NULL, program_name, sizeof(program_name) - 1);
 	argv[0] = program_name;
 
+	// FIXME: this tokenizer is rather redundent, call a more general one
 	while (*lpCmdLine && (com_argc < MAX_NUM_ARGVS))
 	{
-		while (*lpCmdLine && ((*lpCmdLine <= 32) || (*lpCmdLine > 126)))
+		while (*lpCmdLine && *lpCmdLine <= 32)
 			lpCmdLine++;
 
 		if (*lpCmdLine)
 		{
-			argv[com_argc] = lpCmdLine;
-			com_argc++;
-
-			while (*lpCmdLine && ((*lpCmdLine > 32) && (*lpCmdLine <= 126)))
-				lpCmdLine++;
-
-			if (*lpCmdLine)
+			if (*lpCmdLine == '\"')
 			{
-				*lpCmdLine = 0;
-				lpCmdLine++;
+				// quoted string
+				argv[com_argc] = lpCmdLine;
+				com_argc++;
+
+				while (*lpCmdLine && (*lpCmdLine != '\"'))
+					lpCmdLine++;
+
+				if (*lpCmdLine)
+				{
+					*lpCmdLine = 0;
+					lpCmdLine++;
+				}
+
+				if (*lpCmdLine == '\"')
+					lpCmdLine++;
+			}
+			else
+			{
+				// unquoted word
+				argv[com_argc] = lpCmdLine;
+				com_argc++;
+
+				while (*lpCmdLine && *lpCmdLine > 32)
+					lpCmdLine++;
+
+				if (*lpCmdLine)
+				{
+					*lpCmdLine = 0;
+					lpCmdLine++;
+				}
 			}
 		}
 	}
