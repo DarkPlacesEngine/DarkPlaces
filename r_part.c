@@ -25,14 +25,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // LordHavoc: added dust, smoke, snow, bloodcloud, and many others
 typedef enum {
-	pt_static, pt_grav, pt_slowgrav, pt_blob, pt_blob2, pt_smoke, pt_snow, pt_bloodcloud, pt_fadespark, pt_fadespark2, pt_fallfadespark, pt_fallfadespark2, pt_bubble, pt_fade, pt_smokecloud
+	pt_static, pt_grav, pt_blob, pt_blob2, pt_smoke, pt_snow, pt_bloodcloud,
+	pt_fadespark, pt_fadespark2, pt_fallfadespark, pt_fallfadespark2, pt_bubble, pt_fade, pt_smokecloud
 } ptype_t;
 
 typedef struct particle_s
 {
 	vec3_t		org;
 	float		color;
-//	struct particle_s	*next;
 	vec3_t		vel;
 	float		die;
 	ptype_t		type;
@@ -573,7 +573,7 @@ void R_SparkShower (vec3_t org, vec3_t dir, int count)
 	if (!r_particles.value) return; // LordHavoc: particles are optional
 
 	// smoke puff
-	particle(pt_smokecloud, 12+(rand()&3), smokeparticletexture[rand()&7], 10, 48, 99, org[0], org[1], org[2], 0, 0, 0);
+	particle(pt_smokecloud, 12+(rand()&3), smokeparticletexture[rand()&7], 8, 64, 99, org[0], org[1], org[2], 0, 0, 0);
 	// sparks
 	while(count--)
 		particle2(pt_fallfadespark, ramp3[rand()%6], particletexture, 1, lhrandom(0, 255), 5, org, 4, 96);
@@ -742,7 +742,7 @@ void R_LavaSplash (vec3_t org)
 			p->alpha = 128;
 			p->die = cl.time + 2 + (rand()&31) * 0.02;
 			p->color = 224 + (rand()&7);
-			p->type = pt_slowgrav;
+			p->type = pt_grav;
 			
 			dir[0] = j + (rand()&7);
 			dir[1] = i + (rand()&7);
@@ -777,11 +777,11 @@ void R_TeleportSplash (vec3_t org)
 				ALLOCPARTICLE
 		
 				p->texnum = particletexture;
-				p->scale = 4;
-				p->alpha = lhrandom(32,256);
+				p->scale = 1;
+				p->alpha = lhrandom(32,128);
 				p->die = cl.time + 5;
 				p->color = 254;
-				p->type = pt_fadespark;
+				p->type = pt_fade;
 				
 				p->org[0] = org[0] + i + (rand()&7);
 				p->org[1] = org[1] + j + (rand()&7);
@@ -1002,7 +1002,7 @@ void R_DrawParticles (void)
 {
 	particle_t		*p;
 	int				i, r,g,b,a;
-	float			grav, grav1, time1, time2, time3, dvel, frametime, scale, scale2, minparticledist;
+	float			gravity, dvel, frametime, scale, scale2, minparticledist;
 	byte			*color24;
 	vec3_t			up, right, uprightangles, forward2, up2, right2, tempcolor;
 	int				activeparticles, maxparticle, j, k;
@@ -1020,10 +1020,7 @@ void R_DrawParticles (void)
 	AngleVectors (uprightangles, forward2, right2, up2);
 
 	frametime = cl.time - cl.oldtime;
-	time3 = frametime * 15;
-	time2 = frametime * 10; // 15;
-	time1 = frametime * 5;
-	grav = (grav1 = frametime * sv_gravity.value) * 0.05;
+	gravity = frametime * sv_gravity.value;
 	dvel = 1+4*frametime;
 
 	minparticledist = DotProduct(r_refdef.vieworg, vpn) + 16.0f;
@@ -1087,26 +1084,20 @@ void R_DrawParticles (void)
 		case pt_blob:
 			for (i=0 ; i<3 ; i++)
 				p->vel[i] *= dvel;
-			p->vel[2] -= grav;
 			break;
 
 		case pt_blob2:
 			for (i=0 ; i<2 ; i++)
 				p->vel[i] *= dvel;
-			p->vel[2] -= grav;
 			break;
 
 		case pt_grav:
-			p->vel[2] -= grav1;
-			break;
-		case pt_slowgrav:
-			p->vel[2] -= grav;
+			p->vel[2] -= gravity;
 			break;
 // LordHavoc: for smoke trails
 		case pt_smoke:
 			p->scale += frametime * 6;
 			p->alpha -= frametime * 128;
-//			p->vel[2] += grav;
 			if (p->alpha < 1)
 				p->die = -1;
 			break;
@@ -1127,31 +1118,30 @@ void R_DrawParticles (void)
 			}
 			p->scale += frametime * 4;
 			p->alpha -= frametime * 64;
-			p->vel[2] -= grav;
 			if (p->alpha < 1 || p->scale < 1)
 				p->die = -1;
 			break;
 		case pt_fadespark:
 			p->alpha -= frametime * 256;
-			p->vel[2] -= grav;
+			p->vel[2] -= gravity;
 			if (p->alpha < 1)
 				p->die = -1;
 			break;
 		case pt_fadespark2:
 			p->alpha -= frametime * 512;
-			p->vel[2] -= grav;
+			p->vel[2] -= gravity;
 			if (p->alpha < 1)
 				p->die = -1;
 			break;
 		case pt_fallfadespark:
 			p->alpha -= frametime * 256;
-			p->vel[2] -= grav1;
+			p->vel[2] -= gravity;
 			if (p->alpha < 1)
 				p->die = -1;
 			break;
 		case pt_fallfadespark2:
 			p->alpha -= frametime * 512;
-			p->vel[2] -= grav1;
+			p->vel[2] -= gravity;
 			if (p->alpha < 1)
 				p->die = -1;
 			break;
@@ -1163,7 +1153,7 @@ void R_DrawParticles (void)
 		case pt_bubble:
 			if (Mod_PointInLeaf(p->org, cl.worldmodel)->contents == CONTENTS_EMPTY)
 				p->die = -1;
-			p->vel[2] += grav1 * 2;
+			p->vel[2] += gravity;
 			if (p->vel[2] >= 200)
 				p->vel[2] = lhrandom(130, 200);
 			if (cl.time > p->time2)
