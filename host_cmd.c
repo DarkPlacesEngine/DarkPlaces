@@ -452,9 +452,8 @@ void Host_Savegame_f (void)
 		return;
 	}
 
-	strncpy (name, Cmd_Argv(1), sizeof (name) - 1);
-	name[sizeof (name) - 1] = '\0';
-	FS_DefaultExtension (name, ".sav");
+	strlcpy (name, Cmd_Argv(1), sizeof (name));
+	FS_DefaultExtension (name, ".sav", sizeof (name));
 
 	Con_Printf ("Saving game to %s...\n", name);
 	f = FS_Open (name, "w", false);
@@ -514,7 +513,7 @@ void Host_Loadgame_f (void)
 	}
 
 	strcpy (sv_loadgame, Cmd_Argv(1));
-	FS_DefaultExtension (sv_loadgame, ".sav");
+	FS_DefaultExtension (sv_loadgame, ".sav", sizeof (sv_loadgame));
 
 	Con_Printf ("Loading game from %s...\n", sv_loadgame);
 }
@@ -675,10 +674,9 @@ void Host_Name_f (void)
 	}
 
 	if (Cmd_Argc () == 2)
-		strncpy(newName, Cmd_Argv(1), sizeof(host_client->name) - 1);
+		strlcpy (newName, Cmd_Argv(1), sizeof (newName));
 	else
-		strncpy(newName, Cmd_Args(), sizeof(host_client->name) - 1);
-	newName[sizeof(host_client->name) - 1] = 0;
+		strlcpy (newName, Cmd_Args(), sizeof (newName));
 
 	if (cmd_source == src_command)
 	{
@@ -1593,7 +1591,7 @@ void Host_Startdemos_f (void)
 	Con_DPrintf ("%i demo(s) in loop\n", c);
 
 	for (i=1 ; i<c+1 ; i++)
-		strncpy (cls.demos[i-1], Cmd_Argv(i), sizeof(cls.demos[0])-1);
+		strlcpy (cls.demos[i-1], Cmd_Argv(i), sizeof (cls.demos[i-1]));
 
 	// LordHavoc: clear the remaining slots
 	for (;i <= MAX_DEMOS;i++)

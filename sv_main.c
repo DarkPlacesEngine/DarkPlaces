@@ -1370,7 +1370,7 @@ void SV_UpdateToReliableMessages (void)
 			if (s == NULL)
 				s = "";
 			// point the string back at host_client->name to keep it safe
-			strncpy(host_client->name, s, sizeof(host_client->name) - 1);
+			strlcpy (host_client->name, s, sizeof (host_client->name));
 			sv_player->v->netname = PR_SetString(host_client->name);
 		}
 		if ((val = GETEDICTFIELDVALUE(sv_player, eval_clientcolors)) && host_client->colors != val->_float)

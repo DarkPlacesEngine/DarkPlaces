@@ -129,8 +129,8 @@ stringlist_t *listdirectory(char *path)
 	struct _finddata_t n_file;
     long hFile;
 	stringlist_t *start, *current;
-	strcpy(pattern, path);
-	strcat(pattern, "\\*");
+	strlcpy (pattern, path, sizeof (pattern));
+	strlcat (pattern, "\\*", sizeof (pattern));
 	// ask for the directory listing handle
 	hFile = _findfirst(pattern, &n_file);
 	if(hFile != -1)

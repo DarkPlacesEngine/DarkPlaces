@@ -524,17 +524,17 @@ char *PR_GlobalString (int ofs)
 	val = (void *)&pr_globals[ofs];
 	def = ED_GlobalAtOfs(ofs);
 	if (!def)
-		sprintf (line,"%i(?)", ofs);
+		snprintf (line, sizeof (line), "%i(?)", ofs);
 	else
 	{
 		s = PR_ValueString (def->type, val);
-		sprintf (line,"%i(%s)%s", ofs, PR_GetString(def->s_name), s);
+		snprintf (line, sizeof (line), "%i(%s)%s", ofs, PR_GetString(def->s_name), s);
 	}
 
 	i = strlen(line);
 	for ( ; i<20 ; i++)
-		strcat (line," ");
-	strcat (line," ");
+		strlcat (line, " ", sizeof (line));
+	strlcat (line, " ", sizeof (line));
 
 	return line;
 }
@@ -547,14 +547,14 @@ char *PR_GlobalStringNoContents (int ofs)
 
 	def = ED_GlobalAtOfs(ofs);
 	if (!def)
-		sprintf (line,"%i(?)", ofs);
+		snprintf (line, sizeof (line), "%i(?)", ofs);
 	else
-		sprintf (line,"%i(%s)", ofs, PR_GetString(def->s_name));
+		snprintf (line, sizeof (line), "%i(%s)", ofs, PR_GetString(def->s_name));
 
 	i = strlen(line);
 	for ( ; i<20 ; i++)
-		strcat (line," ");
-	strcat (line," ");
+		strlcat (line, " ", sizeof (line));
+	strlcat (line, " ", sizeof (line));
 
 	return line;
 }
@@ -612,7 +612,7 @@ void ED_Print (edict_t *ed)
 			tempstring2[259] = 0;
 			name = tempstring2;
 		}
-		strcat(tempstring, name);
+		strlcat (tempstring, name, sizeof (tempstring));
 		for (l = strlen(name);l < 14;l++)
 			strcat(tempstring, " ");
 		strcat(tempstring, " ");
@@ -625,8 +625,8 @@ void ED_Print (edict_t *ed)
 			tempstring2[259] = 0;
 			name = tempstring2;
 		}
-		strcat(tempstring, name);
-		strcat(tempstring, "\n");
+		strlcat (tempstring, name, sizeof (tempstring));
+		strlcat (tempstring, "\n", sizeof (tempstring));
 		if (strlen(tempstring) >= 4096)
 		{
 			Con_Printf("%s", tempstring);
@@ -1478,32 +1478,32 @@ void PR_Fields_f (void)
 		switch(d->type & ~DEF_SAVEGLOBAL)
 		{
 		case ev_string:
-			strcat(tempstring, "string   ");
+			strlcat (tempstring, "string   ", sizeof (tempstring));
 			break;
 		case ev_entity:
-			strcat(tempstring, "entity   ");
+			strlcat (tempstring, "entity   ", sizeof (tempstring));
 			break;
 		case ev_function:
-			strcat(tempstring, "function ");
+			strlcat (tempstring, "function ", sizeof (tempstring));
 			break;
 		case ev_field:
-			strcat(tempstring, "field    ");
+			strlcat (tempstring, "field    ", sizeof (tempstring));
 			break;
 		case ev_void:
-			strcat(tempstring, "void     ");
+			strlcat (tempstring, "void     ", sizeof (tempstring));
 			break;
 		case ev_float:
-			strcat(tempstring, "float    ");
+			strlcat (tempstring, "float    ", sizeof (tempstring));
 			break;
 		case ev_vector:
-			strcat(tempstring, "vector   ");
+			strlcat (tempstring, "vector   ", sizeof (tempstring));
 			break;
 		case ev_pointer:
-			strcat(tempstring, "pointer  ");
+			strlcat (tempstring, "pointer  ", sizeof (tempstring));
 			break;
 		default:
-			sprintf (tempstring2, "bad type %i ", d->type & ~DEF_SAVEGLOBAL);
-			strcat(tempstring, tempstring2);
+			snprintf (tempstring2, sizeof (tempstring2), "bad type %i ", d->type & ~DEF_SAVEGLOBAL);
+			strlcat (tempstring, tempstring2, sizeof (tempstring));
 			break;
 		}
 		if (strlen(name) > 256)
@@ -1513,12 +1513,12 @@ void PR_Fields_f (void)
 			tempstring2[259] = 0;
 			name = tempstring2;
 		}
-		strcat(tempstring, name);
+		strcat (tempstring, name);
 		for (j = strlen(name);j < 25;j++)
 			strcat(tempstring, " ");
-		sprintf(tempstring2, "%5d", counts[i]);
-		strcat(tempstring, tempstring2);
-		strcat(tempstring, "\n");
+		snprintf (tempstring2, sizeof (tempstring2), "%5d", counts[i]);
+		strlcat (tempstring, tempstring2, sizeof (tempstring));
+		strlcat (tempstring, "\n", sizeof (tempstring));
 		if (strlen(tempstring) >= 4096)
 		{
 			Con_Printf("%s", tempstring);

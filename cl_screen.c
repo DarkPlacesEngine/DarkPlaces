@@ -64,7 +64,7 @@ for a few moments
 */
 void SCR_CenterPrint (char *str)
 {
-	strncpy (scr_centerstring, str, sizeof(scr_centerstring)-1);
+	strlcpy (scr_centerstring, str, sizeof (scr_centerstring));
 	scr_centertime_off = scr_centertime.value;
 	scr_centertime_start = cl.time;
 
@@ -802,7 +802,7 @@ static void R_Envmap_f (void)
 		return;
 	}
 
-	strcpy(basename, Cmd_Argv(1));
+	strlcpy (basename, Cmd_Argv(1), sizeof (basename));
 	size = atoi(Cmd_Argv(2));
 	if (size != 128 && size != 256 && size != 512 && size != 1024)
 	{
@@ -871,8 +871,8 @@ void SHOWLMP_decodeshow(void)
 	int i, k;
 	qbyte lmplabel[256], picname[256];
 	float x, y;
-	strcpy(lmplabel,MSG_ReadString());
-	strcpy(picname, MSG_ReadString());
+	strlcpy (lmplabel,MSG_ReadString(), sizeof (lmplabel));
+	strlcpy (picname, MSG_ReadString(), sizeof (picname));
 	if (gamemode == GAME_NEHAHRA) // LordHavoc: nasty old legacy junk
 	{
 		x = MSG_ReadByte();
@@ -899,8 +899,8 @@ void SHOWLMP_decodeshow(void)
 		return; // none found to replace
 	// change existing one
 	showlmp[k].isactive = true;
-	strcpy(showlmp[k].label, lmplabel);
-	strcpy(showlmp[k].pic, picname);
+	strlcpy (showlmp[k].label, lmplabel, sizeof (showlmp[k].label));
+	strlcpy (showlmp[k].pic, picname, sizeof (showlmp[k].pic));
 	showlmp[k].x = x;
 	showlmp[k].y = y;
 }
