@@ -64,6 +64,45 @@ static mleaf_t *Mod_Q1BSP_PointInLeaf(model_t *model, const vec3_t p)
 	return (mleaf_t *)node;
 }
 
+
+static int Mod_Q1BSP_BoxTouchingPVS_RecursiveBSPNode(const model_t *model, const mnode_t *node, const qbyte *pvs, const vec3_t mins, const vec3_t maxs)
+{
+	int leafnum;
+loc0:
+	if (node->contents < 0)
+	{
+		// leaf
+		if (node->contents == CONTENTS_SOLID)
+			return false;
+		leafnum = (mleaf_t *)node - model->brushq1.leafs - 1;
+		return pvs[leafnum >> 3] & (1 << (leafnum & 7));
+	}
+
+	// node - recurse down the BSP tree
+	switch (BoxOnPlaneSide(mins, maxs, node->plane))
+	{
+	case 1: // front
+		node = node->children[0];
+		goto loc0;
+	case 2: // back
+		node = node->children[1];
+		goto loc0;
+	default: // crossing
+		if (node->children[0]->contents != CONTENTS_SOLID)
+			if (Mod_Q1BSP_BoxTouchingPVS_RecursiveBSPNode(model, node->children[0], pvs, mins, maxs))
+				return true;
+		node = node->children[1];
+		goto loc0;
+	}
+	// never reached
+	return false;
+}
+
+int Mod_Q1BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3_t mins, const vec3_t maxs)
+{
+	return Mod_Q1BSP_BoxTouchingPVS_RecursiveBSPNode(model, model->brushq1.nodes + model->brushq1.hulls[0].firstclipnode, pvs, mins, maxs);
+}
+
 /*
 static int Mod_Q1BSP_PointContents(model_t *model, const vec3_t p)
 {
@@ -2999,6 +3038,53 @@ static void Mod_Q1BSP_BuildPVSTextureChains(model_t *model)
 	}
 }
 
+void Mod_Q1BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbytes, mnode_t *node)
+{
+	int i;
+	qbyte *pvs;
+	mplane_t *plane;
+	float d;
+
+	while (1)
+	{
+	// if this is a leaf, accumulate the pvs bits
+		if (node->contents < 0)
+		{
+			if (node->contents != CONTENTS_SOLID)
+			{
+				pvs = model->brushq1.LeafPVS(model, (mleaf_t *)node);
+				for (i = 0;i < pvsbytes;i++)
+					pvsbuffer[i] |= pvs[i];
+			}
+			return;
+		}
+
+		plane = node->plane;
+		d = DotProduct(org, plane->normal) - plane->dist;
+		if (d > radius)
+			node = node->children[0];
+		else if (d < -radius)
+			node = node->children[1];
+		else
+		{	// go down both
+			Mod_Q1BSP_FatPVS_RecursiveBSPNode(model, org, radius, pvsbuffer, pvsbytes, node->children[0]);
+			node = node->children[1];
+		}
+	}
+}
+
+//Calculates a PVS that is the inclusive or of all leafs within radius pixels
+//of the given point.
+int Mod_Q1BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbufferlength)
+{
+	int bytes = (sv.worldmodel->brushq1.numleafs+31)>>3;
+	if (bytes > pvsbufferlength)
+		bytes = pvsbufferlength;
+	memset(pvsbuffer, 0, bytes);
+	Mod_Q1BSP_FatPVS_RecursiveBSPNode(model, org, radius, pvsbuffer, bytes, sv.worldmodel->brushq1.nodes);
+	return bytes;
+}
+
 extern void R_Model_Brush_DrawSky(entity_render_t *ent);
 extern void R_Model_Brush_Draw(entity_render_t *ent);
 extern void R_Model_Brush_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius);
@@ -3024,6 +3110,8 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 		Host_Error("Mod_Q1BSP_Load: %s has wrong version number(%i should be %i(Quake) or 30(HalfLife))", mod->name, i, BSPVERSION);
 	mod->brushq1.ishlbsp = i == 30;
 
+	mod->brush.FatPVS = Mod_Q1BSP_FatPVS;
+	mod->brush.BoxTouchingPVS = Mod_Q1BSP_BoxTouchingPVS;
 	mod->brush.LightPoint = Mod_Q1BSP_LightPoint;
 	mod->brush.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
 	mod->brush.TraceBox = Mod_Q1BSP_TraceBox;
@@ -4400,6 +4488,49 @@ void Mod_Q3BSP_TraceBox(model_t *model, trace_t *trace, const vec3_t boxstartmin
 			Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, model->brushq3.data_brushes[i].colbrushf, model->brushq3.data_brushes[i].colbrushf);
 }
 
+
+static int Mod_Q3BSP_BoxTouchingPVS_RecursiveBSPNode(const model_t *model, const q3mnode_t *node, const qbyte *pvs, const vec3_t mins, const vec3_t maxs)
+{
+	int clusterindex;
+loc0:
+	if (!node->isnode)
+	{
+		// leaf
+		clusterindex = ((q3mleaf_t *)node)->clusterindex;
+		return pvs[clusterindex >> 3] & (1 << (clusterindex & 7));
+	}
+
+	// node - recurse down the BSP tree
+	switch (BoxOnPlaneSide(mins, maxs, node->plane))
+	{
+	case 1: // front
+		node = node->children[0];
+		goto loc0;
+	case 2: // back
+		node = node->children[1];
+		goto loc0;
+	default: // crossing
+		if (Mod_Q3BSP_BoxTouchingPVS_RecursiveBSPNode(model, node->children[0], pvs, mins, maxs))
+			return true;
+		node = node->children[1];
+		goto loc0;
+	}
+	// never reached
+	return false;
+}
+
+int Mod_Q3BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3_t mins, const vec3_t maxs)
+{
+	return Mod_Q3BSP_BoxTouchingPVS_RecursiveBSPNode(model, model->brushq3.data_nodes, pvs, mins, maxs);
+}
+
+int Mod_Q3BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbufferlength)
+{
+	// FIXME: write this
+	memset(pvsbuffer, 0xFF, pvsbufferlength);
+	return pvsbufferlength;
+}
+
 void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 {
 	int i;
@@ -4419,6 +4550,8 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 		R_ResetQuakeSky();
 	}
 
+	mod->brush.FatPVS = Mod_Q3BSP_FatPVS;
+	mod->brush.BoxTouchingPVS = Mod_Q3BSP_BoxTouchingPVS;
 	mod->brush.LightPoint = Mod_Q3BSP_LightPoint;
 	mod->brush.FindNonSolidLocation = Mod_Q3BSP_FindNonSolidLocation;
 	mod->brush.TraceBox = Mod_Q3BSP_TraceBox;
