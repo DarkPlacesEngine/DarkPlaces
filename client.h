@@ -29,7 +29,10 @@ typedef struct frameblend_s
 }
 frameblend_t;
 
-// LordHavoc: nothing in this structure is persistant, it may be overwritten by the client every frame, for persistant data use entity_lerp_t.
+#define MAXENTLIGHTS 128
+
+// LordHavoc: disregard the following warning, entlights stuff is semi-persistent...
+// LordHavoc: nothing in this structure is persistent, it may be overwritten by the client every frame, for persistent data use entity_lerp_t.
 typedef struct entity_render_s
 {
 	// location
@@ -75,6 +78,12 @@ typedef struct entity_render_s
 	vec3_t mins, maxs;
 	// 4 frame numbers (-1 if not used) and their blending scalers (0-1), if interpolation is not desired, use frame instead
 	frameblend_t frameblend[4];
+
+	// caching results of static light traces (this is semi-persistent)
+	double entlightstime;
+	vec3_t entlightsorigin;
+	int numentlights;
+	unsigned short entlights[MAXENTLIGHTS];
 }
 entity_render_t;
 
@@ -193,7 +202,7 @@ typedef enum
 cactive_t;
 
 //
-// the client_static_t structure is persistant through an arbitrary number
+// the client_static_t structure is persistent through an arbitrary number
 // of server connections
 //
 typedef struct
