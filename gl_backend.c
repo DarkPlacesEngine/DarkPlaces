@@ -449,6 +449,11 @@ void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, int *index
 	int arraylocked = false;
 	c_meshs++;
 	c_meshelements += indexcount;
+	if (indexcount == 0 || endvert == firstvert)
+	{
+		Con_Printf("GL_DrawRangeElements(%d, %d, %d, %08p);\n", firstvert, endvert, indexcount, index);
+		return;
+	}
 	if (gl_supportslockarrays && gl_lockarrays.integer)
 	{
 		qglLockArraysEXT(firstvert, endvert - firstvert);
