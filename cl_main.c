@@ -742,7 +742,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			tempmatrix.m[0][3] = v[0];
 			tempmatrix.m[1][3] = v[1];
 			tempmatrix.m[2][3] = v[2];
-			CL_AllocDlight(NULL, &tempmatrix, e->persistent.muzzleflash, 1, 1, 1, 0, 0, 0, 0, true, 1);
+			CL_AllocDlight(NULL, &tempmatrix, e->persistent.muzzleflash, 1, 1, 1, 0, 0, 0, 0, true, 0);
 			e->persistent.muzzleflash -= cl.frametime * 1000;
 		}
 		// LordHavoc: if the model has no flags, don't check each
