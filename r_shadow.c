@@ -166,7 +166,8 @@ cvar_t r_shadow_portallight = {0, "r_shadow_portallight", "1"};
 cvar_t r_shadow_projectdistance = {0, "r_shadow_projectdistance", "10000"};
 cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1"};
 cvar_t r_shadow_singlepassvolumegeneration = {0, "r_shadow_singlepassvolumegeneration", "1"};
-cvar_t r_shadow_shadows = {CVAR_SAVE, "r_shadow_shadows", "1"};
+cvar_t r_shadow_worldshadows = {0, "r_shadow_worldshadows", "1"};
+cvar_t r_shadow_dlightshadows = {CVAR_SAVE, "r_shadow_dlightshadows", "1"};
 cvar_t r_shadow_showtris = {0, "r_shadow_showtris", "0"};
 
 int c_rt_lights, c_rt_clears, c_rt_scissored;
@@ -256,7 +257,8 @@ void R_Shadow_Help_f(void)
 "r_shadow_projectdistance : shadow volume projection distance\n"
 "r_shadow_texture3d : use 3d attenuation texture (if hardware supports)\n"
 "r_shadow_singlepassvolumegeneration : selects shadow volume algorithm\n"
-"r_shadow_shadows : dlight shadows (world always has shadows)\n"
+"r_shadow_worldshadows : enable world shadows\n"
+"r_shadow_dlightshadows : enable dlight shadows\n"
 "Commands:\n"
 "r_shadow_help : this help\n"
 	);
@@ -283,7 +285,8 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_projectdistance);
 	Cvar_RegisterVariable(&r_shadow_texture3d);
 	Cvar_RegisterVariable(&r_shadow_singlepassvolumegeneration);
-	Cvar_RegisterVariable(&r_shadow_shadows);
+	Cvar_RegisterVariable(&r_shadow_worldshadows);
+	Cvar_RegisterVariable(&r_shadow_dlightshadows);
 	Cvar_RegisterVariable(&r_shadow_showtris);
 	Cmd_AddCommand("r_shadow_help", R_Shadow_Help_f);
 	R_Shadow_EditLights_Init();

@@ -583,7 +583,7 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 				VectorScale(lightcolor, f, lightcolor);
 			}
 
-			if (wl->castshadows && (gl_stencil || visiblevolumes))
+			if (r_shadow_worldshadows.integer && wl->castshadows && (gl_stencil || visiblevolumes))
 			{
 				if (!visiblevolumes)
 					R_Shadow_Stage_ShadowVolumes();
@@ -599,7 +599,7 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 
 			if (!visiblevolumes)
 			{
-				if (wl->castshadows && gl_stencil)
+				if (r_shadow_worldshadows.integer && wl->castshadows && gl_stencil)
 					R_Shadow_Stage_LightWithShadows();
 				else
 					R_Shadow_Stage_LightWithoutShadows();
@@ -668,7 +668,7 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 			cullradius = RadiusFromBoundsAndOrigin(clipmins, clipmaxs, rd->origin);
 			VectorScale(rd->light, (1.0f / 4096.0f), lightcolor);
 
-			if (r_shadow_shadows.integer && (gl_stencil || visiblevolumes))
+			if (r_shadow_dlightshadows.integer && (gl_stencil || visiblevolumes))
 			{
 				if (!visiblevolumes)
 					R_Shadow_Stage_ShadowVolumes();
@@ -687,7 +687,7 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 
 			if (!visiblevolumes)
 			{
-				if (r_shadow_shadows.integer && gl_stencil)
+				if (r_shadow_dlightshadows.integer && gl_stencil)
 					R_Shadow_Stage_LightWithShadows();
 				else
 					R_Shadow_Stage_LightWithoutShadows();
@@ -796,7 +796,7 @@ static void R_SetupFrame (void)
 	VectorNegate(r_viewleft, r_viewright);
 
 	GL_SetupView_ViewPort(r_refdef.x, r_refdef.y, r_refdef.width, r_refdef.height);
-	if ((r_shadow_realtime_world.integer || r_shadow_shadows.integer) && gl_stencil)
+	if (gl_stencil && ((r_shadow_realtime_world.integer && r_shadow_worldshadows.integer) || ((r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer) && r_shadow_dlightshadows.integer)))
 		GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_refdef.fov_x, r_refdef.fov_y, 1.0f);
 	else
 		GL_SetupView_Mode_Perspective(r_refdef.fov_x, r_refdef.fov_y, 1.0f, r_farclip);
