@@ -53,7 +53,7 @@ void Sys_Shared_EarlyInit(void)
 #else
 	os = "Unknown";
 #endif
-	snprintf (engineversion, sizeof (engineversion), "%s %s %s", gamename, os, buildstring);
+	dpsnprintf (engineversion, sizeof (engineversion), "%s %s %s", gamename, os, buildstring);
 
 // COMMANDLINEOPTION: Console: -nostdout disables text output to the terminal the game was launched from
 	if (COM_CheckParm("-nostdout"))

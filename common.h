@@ -24,8 +24,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // MSVC has a different name for several standard functions
 #ifdef WIN32
-# define snprintf _snprintf
-# define vsnprintf _vsnprintf
 # define strcasecmp stricmp
 # define strncasecmp strnicmp
 #endif
@@ -180,6 +178,18 @@ void COM_InitGameType (void);
 
 char	*va(const char *format, ...);
 // does a varargs printf into a temp buffer
+
+
+// snprintf and vsnprintf are NOT portable. Use their DP counterparts instead
+#define snprintf DO_NOT_USE_SNPRINTF__USE_DPSNPRINTF
+#define vsnprintf DO_NOT_USE_VSNPRINTF__USE_DPVSNPRINTF
+
+// dpsnprintf and dpvsnprintf
+// return the number of printed characters, excluding the final '\0'
+// or return -1 if the buffer isn't big enough to contain the entire string.
+// buffer is ALWAYS null-terminated
+extern int dpsnprintf (char *buffer, size_t buffersize, const char *format, ...);
+extern int dpvsnprintf (char *buffer, size_t buffersize, const char *format, va_list args);
 
 
 //============================================================================

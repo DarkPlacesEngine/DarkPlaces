@@ -112,7 +112,7 @@ void Host_Error (const char *error, ...)
 	va_list argptr;
 
 	va_start (argptr,error);
-	vsnprintf (hosterrorstring1,sizeof(hosterrorstring1),error,argptr);
+	dpvsnprintf (hosterrorstring1,sizeof(hosterrorstring1),error,argptr);
 	va_end (argptr);
 
 	Con_Printf("Host_Error: %s\n", hosterrorstring1);
@@ -323,7 +323,7 @@ void SV_ClientPrintf(const char *fmt, ...)
 	char msg[4096];
 
 	va_start(argptr,fmt);
-	vsnprintf(msg,sizeof(msg),fmt,argptr);
+	dpvsnprintf(msg,sizeof(msg),fmt,argptr);
 	va_end(argptr);
 
 	SV_ClientPrint(msg);
@@ -367,7 +367,7 @@ void SV_BroadcastPrintf(const char *fmt, ...)
 	char msg[4096];
 
 	va_start(argptr,fmt);
-	vsnprintf(msg,sizeof(msg),fmt,argptr);
+	dpvsnprintf(msg,sizeof(msg),fmt,argptr);
 	va_end(argptr);
 
 	SV_BroadcastPrint(msg);
@@ -386,7 +386,7 @@ void Host_ClientCommands(const char *fmt, ...)
 	char string[1024];
 
 	va_start(argptr,fmt);
-	vsnprintf(string, sizeof(string), fmt, argptr);
+	dpvsnprintf(string, sizeof(string), fmt, argptr);
 	va_end(argptr);
 
 	MSG_WriteByte(&host_client->message, svc_stufftext);

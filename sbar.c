@@ -847,7 +847,7 @@ void Sbar_ShowFPS(void)
 			framecount++;
 			calc = framerate;
 		}
-		snprintf(fpsstring, sizeof(fpsstring), "%4i fps", calc);
+		dpsnprintf(fpsstring, sizeof(fpsstring), "%4i fps", calc);
 	}
 	if (showtime.integer)
 		strlcpy(timestring, Sys_TimeString(showtime_format.string), sizeof(timestring));

@@ -947,7 +947,7 @@ Key_Event (int key, char ascii, qboolean down)
 				kb = keybindings[key_bmap2][key];
 
 			if (kb && kb[0] == '+') {
-				snprintf (cmd, sizeof(cmd), "-%s %i\n", kb + 1, key);
+				dpsnprintf (cmd, sizeof(cmd), "-%s %i\n", kb + 1, key);
 				Cbuf_AddText (cmd);
 			}
 			return;
@@ -972,7 +972,7 @@ Key_Event (int key, char ascii, qboolean down)
 				kb = keybindings[key_bmap2][key];
 			if (kb) {
 				if (kb[0] == '+') {			// button commands add keynum as a parm
-					snprintf (cmd, sizeof(cmd), "%s %i\n", kb, key);
+					dpsnprintf (cmd, sizeof(cmd), "%s %i\n", kb, key);
 					Cbuf_AddText (cmd);
 				} else {
 					Cbuf_AddText (kb);
