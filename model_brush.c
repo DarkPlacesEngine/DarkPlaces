@@ -1241,58 +1241,6 @@ static void Mod_LoadTexinfo (lump_t *l)
 	}
 }
 
-/*
-================
-CalcSurfaceExtents
-
-Fills in s->texturemins[] and s->extents[]
-================
-*/
-static void CalcSurfaceExtents (msurface_t *s)
-{
-	float	mins[2], maxs[2], val;
-	int		i,j, e;
-	mvertex_t	*v;
-	mtexinfo_t	*tex;
-	int		bmins[2], bmaxs[2];
-
-	mins[0] = mins[1] = 999999999;
-	maxs[0] = maxs[1] = -999999999;
-
-	tex = s->texinfo;
-
-	for (i=0 ; i<s->numedges ; i++)
-	{
-		e = loadmodel->surfedges[s->firstedge+i];
-		if (e >= 0)
-			v = &loadmodel->vertexes[loadmodel->edges[e].v[0]];
-		else
-			v = &loadmodel->vertexes[loadmodel->edges[-e].v[1]];
-
-		for (j=0 ; j<2 ; j++)
-		{
-			val = v->position[0] * tex->vecs[j][0] +
-				v->position[1] * tex->vecs[j][1] +
-				v->position[2] * tex->vecs[j][2] +
-				tex->vecs[j][3];
-			if (val < mins[j])
-				mins[j] = val;
-			if (val > maxs[j])
-				maxs[j] = val;
-		}
-	}
-
-	for (i=0 ; i<2 ; i++)
-	{
-		bmins[i] = floor(mins[i]/16);
-		bmaxs[i] = ceil(maxs[i]/16);
-
-		s->texturemins[i] = bmins[i] * 16;
-		s->extents[i] = (bmaxs[i] - bmins[i]) * 16;
-	}
-}
-
-
 void BoundPoly (int numverts, float *verts, vec3_t mins, vec3_t maxs)
 {
 	int		i, j;
@@ -1588,17 +1536,18 @@ void Mod_GenerateVertexMesh (msurface_t *surf)
 	Mod_BuildTextureVectorsAndNormals(mesh->numverts, mesh->numtriangles, mesh->verts, mesh->str, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals);
 }
 
-void Mod_GenerateSurfacePolygon (msurface_t *surf)
+void Mod_GenerateSurfacePolygon (msurface_t *surf, int firstedge, int numedges)
 {
-	int i, lindex;
-	float *vec, *vert, mins[3], maxs[3];
+	int i, lindex, j;
+	float *vec, *vert, mins[3], maxs[3], val, *v;
+	mtexinfo_t *tex;
 
 	// convert edges back to a normal polygon
-	surf->poly_numverts = surf->numedges;
-	vert = surf->poly_verts = Mem_Alloc(loadmodel->mempool, sizeof(float[3]) * surf->numedges);
-	for (i = 0;i < surf->numedges;i++)
+	surf->poly_numverts = numedges;
+	vert = surf->poly_verts = Mem_Alloc(loadmodel->mempool, sizeof(float[3]) * numedges);
+	for (i = 0;i < numedges;i++)
 	{
-		lindex = loadmodel->surfedges[surf->firstedge + i];
+		lindex = loadmodel->surfedges[firstedge + i];
 		if (lindex > 0)
 			vec = loadmodel->vertexes[loadmodel->edges[lindex].v[0]].position;
 		else
@@ -1606,6 +1555,8 @@ void Mod_GenerateSurfacePolygon (msurface_t *surf)
 		VectorCopy (vec, vert);
 		vert += 3;
 	}
+
+	// calculate polygon bounding box and center
 	vert = surf->poly_verts;
 	VectorCopy(vert, mins);
 	VectorCopy(vert, maxs);
@@ -1621,6 +1572,27 @@ void Mod_GenerateSurfacePolygon (msurface_t *surf)
 	surf->poly_center[0] = (mins[0] + maxs[0]) * 0.5f;
 	surf->poly_center[1] = (mins[1] + maxs[1]) * 0.5f;
 	surf->poly_center[2] = (mins[2] + maxs[2]) * 0.5f;
+
+	// generate surface extents information
+	tex = surf->texinfo;
+	mins[0] = maxs[0] = DotProduct(surf->poly_verts, tex->vecs[0]) + tex->vecs[0][3];
+	mins[1] = maxs[1] = DotProduct(surf->poly_verts, tex->vecs[1]) + tex->vecs[1][3];
+	for (i = 1, v = surf->poly_verts + 3;i < surf->poly_numverts;i++, v += 3)
+	{
+		for (j = 0;j < 2;j++)
+		{
+			val = DotProduct(v, tex->vecs[j]) + tex->vecs[j][3];
+			if (mins[j] > val)
+				mins[j] = val;
+			if (maxs[j] < val)
+				maxs[j] = val;
+		}
+	}
+	for (i = 0;i < 2;i++)
+	{
+		surf->texturemins[i] = (int) floor(mins[i] / 16) * 16;
+		surf->extents[i] = (int) ceil(maxs[i] / 16) * 16 - surf->texturemins[i];
+	}
 }
 
 /*
@@ -1632,7 +1604,7 @@ static void Mod_LoadFaces (lump_t *l)
 {
 	dface_t *in;
 	msurface_t 	*out;
-	int i, count, surfnum, planenum, ssize, tsize;
+	int i, count, surfnum, planenum, ssize, tsize, firstedge, numedges;
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -1650,10 +1622,10 @@ static void Mod_LoadFaces (lump_t *l)
 	{
 		out->number = surfnum;
 		// FIXME: validate edges, texinfo, etc?
-		out->firstedge = LittleLong(in->firstedge);
-		out->numedges = LittleShort(in->numedges);
-		if ((unsigned int) out->firstedge + (unsigned int) out->numedges > (unsigned int) loadmodel->numsurfedges)
-			Host_Error("Mod_LoadFaces: invalid edge range (firstedge %i, numedges %i, model edges %i)\n", out->firstedge, out->numedges, loadmodel->numsurfedges);
+		firstedge = LittleLong(in->firstedge);
+		numedges = LittleShort(in->numedges);
+		if ((unsigned int) firstedge + (unsigned int) numedges > (unsigned int) loadmodel->numsurfedges)
+			Host_Error("Mod_LoadFaces: invalid edge range (firstedge %i, numedges %i, model edges %i)\n", firstedge, numedges, loadmodel->numsurfedges);
 
 		i = LittleShort (in->texinfo);
 		if ((unsigned int) i >= (unsigned int) loadmodel->numtexinfo)
@@ -1676,7 +1648,7 @@ static void Mod_LoadFaces (lump_t *l)
 		// force lightmap upload on first time seeing the surface
 		out->cached_dlight = true;
 
-		CalcSurfaceExtents (out);
+		Mod_GenerateSurfacePolygon(out, firstedge, numedges);
 
 		ssize = (out->extents[0] >> 4) + 1;
 		tsize = (out->extents[1] >> 4) + 1;
@@ -1692,7 +1664,6 @@ static void Mod_LoadFaces (lump_t *l)
 		else // LordHavoc: white lighting (bsp version 29)
 			out->samples = loadmodel->lightdata + (i * 3);
 
-		Mod_GenerateSurfacePolygon(out);
 		if (out->texinfo->texture->shader == &Cshader_wall_lightmap)
 		{
 			if ((out->extents[0] >> 4) + 1 > (256) || (out->extents[1] >> 4) + 1 > (256))
@@ -2839,12 +2810,15 @@ extern void R_Model_Brush_DrawShadowVolume(entity_render_t *ent, vec3_t relative
 extern void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor);
 void Mod_LoadBrushModel (model_t *mod, void *buffer)
 {
-	int			i, j;
-	dheader_t	*header;
-	dmodel_t 	*bm;
-	mempool_t	*mainmempool;
-	char		*loadname;
-	model_t		*originalloadmodel;
+	int i, j, k;
+	dheader_t *header;
+	dmodel_t *bm;
+	mempool_t *mainmempool;
+	char *loadname;
+	model_t *originalloadmodel;
+	float dist, modelyawradius, modelradius, *vec;
+	msurface_t *surf;
+	surfmesh_t *mesh;
 
 	mod->type = mod_brush;
 
@@ -2904,10 +2878,6 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 //
 	for (i = 0;i < mod->numsubmodels;i++)
 	{
-		int k, l;
-		float dist, modelyawradius, modelradius, *vec;
-		msurface_t *surf;
-
 		bm = &mod->submodels[i];
 
 		mod->hulls[0].firstclipnode = bm->headnode[0];
@@ -2944,25 +2914,23 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 				if (surf->texinfo->texture->shader == &Cshader_sky)
 					mod->DrawSky = R_Model_Brush_DrawSky;
 				// calculate bounding shapes
-				for (k = 0;k < surf->numedges;k++)
+				for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 				{
-					l = mod->surfedges[k + surf->firstedge];
-					if (l > 0)
-						vec = mod->vertexes[mod->edges[l].v[0]].position;
-					else
-						vec = mod->vertexes[mod->edges[-l].v[1]].position;
-					if (mod->normalmins[0] > vec[0]) mod->normalmins[0] = vec[0];
-					if (mod->normalmins[1] > vec[1]) mod->normalmins[1] = vec[1];
-					if (mod->normalmins[2] > vec[2]) mod->normalmins[2] = vec[2];
-					if (mod->normalmaxs[0] < vec[0]) mod->normalmaxs[0] = vec[0];
-					if (mod->normalmaxs[1] < vec[1]) mod->normalmaxs[1] = vec[1];
-					if (mod->normalmaxs[2] < vec[2]) mod->normalmaxs[2] = vec[2];
-					dist = vec[0]*vec[0]+vec[1]*vec[1];
-					if (modelyawradius < dist)
-						modelyawradius = dist;
-					dist += vec[2]*vec[2];
-					if (modelradius < dist)
-						modelradius = dist;
+					for (k = 0, vec = mesh->verts;k < mesh->numverts;k++, vec += 4)
+					{
+						if (mod->normalmins[0] > vec[0]) mod->normalmins[0] = vec[0];
+						if (mod->normalmins[1] > vec[1]) mod->normalmins[1] = vec[1];
+						if (mod->normalmins[2] > vec[2]) mod->normalmins[2] = vec[2];
+						if (mod->normalmaxs[0] < vec[0]) mod->normalmaxs[0] = vec[0];
+						if (mod->normalmaxs[1] < vec[1]) mod->normalmaxs[1] = vec[1];
+						if (mod->normalmaxs[2] < vec[2]) mod->normalmaxs[2] = vec[2];
+						dist = vec[0]*vec[0]+vec[1]*vec[1];
+						if (modelyawradius < dist)
+							modelyawradius = dist;
+						dist += vec[2]*vec[2];
+						if (modelradius < dist)
+							modelradius = dist;
+					}
 				}
 			}
 			modelyawradius = sqrt(modelyawradius);
