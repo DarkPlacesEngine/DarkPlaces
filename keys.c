@@ -1002,7 +1002,6 @@ Key_Event (int key, char ascii, qboolean down)
 			case key_menu:
 				MR_Keydown (key, ascii);
 				break;
-
 			case key_game:
 				Key_Console (key, ascii);
 				break;
