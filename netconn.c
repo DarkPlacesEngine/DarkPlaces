@@ -170,9 +170,9 @@ static qboolean _hc_testint( int A, hostcache_maskop_t op, int B )
 static qboolean _hc_teststr( const char *A, hostcache_maskop_t op, const char *B )
 {
 	if( op == HCMO_CONTAINS ) // A info B mask
-		return *A && !!strstr( B, A ); // we want a real bool
+		return *B && !!strstr( A, B ); // we want a real bool
 	else if( op == HCMO_NOTCONTAIN )
-		return !*A || !strstr( B, A );
+		return !*B || !strstr( A, B );
 	else if( op == HCMO_LESS )
 		return strcmp( A, B ) < 0;
 	else if( op == HCMO_LESSEQUAL )
@@ -292,6 +292,21 @@ void HostCache_ResetMasks(void)
 	memset( &hostcache_ormasks, 0, sizeof( hostcache_ormasks ) );
 }
 
+#if 1
+static void _HostCache_Test(void)
+{
+	int i;
+	for( i = 0 ; i < 1024 ; i++ ) {
+		memset( &hostcache_cache[hostcache_cachecount], 0, sizeof( hostcache_t ) );
+		hostcache_cache[hostcache_cachecount].info.ping = rand() % 450 + 250;
+		snprintf( hostcache_cache[hostcache_cachecount].info.name, 128, "Black's HostCache Test %i", i );
+		hostcache_cache[hostcache_cachecount].finished = true;
+		sprintf( hostcache_cache[hostcache_cachecount].line1, "%i %s", hostcache_cache[hostcache_cachecount].info.ping, hostcache_cache[hostcache_cachecount].info.name );
+		_HostCache_Insert( &hostcache_cache[hostcache_cachecount] );
+		hostcache_cachecount++;
+	}
+}
+#endif
 
 void HostCache_QueryList(void)
 {
@@ -305,23 +320,8 @@ void HostCache_QueryList(void)
 	hostcache_consoleoutput = false;
 	NetConn_QueryMasters();
 	
-	//_HostCache_PingTest(); 
+	_HostCache_Test(); 
 }
-
-#if 0
-static void _HostCache_PingTest(void)
-{
-	int i;
-	for( i = 0 ; i < 50 ; i++ ) {
-		memset( &hostcache_cache[hostcache_cachecount], 0, sizeof( hostcache_t ) );
-		hostcache_cache[hostcache_cachecount].info.ping = rand() % 450;
-		hostcache_cache[hostcache_cachecount].finished = true;
-		sprintf( hostcache_cache[hostcache_cachecount].line1, "%i", hostcache_cache[hostcache_cachecount].info.ping );
-		_HostCache_Insert( &hostcache_cache[hostcache_cachecount] );
-		hostcache_cachecount++;
-	}
-}
-#endif
 
 // rest
 
