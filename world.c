@@ -581,8 +581,8 @@ void SV_ClipToNode(moveclip_t *clip, link_t *list)
 		if (trace.startsolid)
 		{
 			clip->trace.startsolid = true;
-			if (!clip->trace.ent)
-				clip->trace.ent = trace.ent;
+			//if (!clip->trace.ent)
+			//	clip->trace.ent = trace.ent;
 		}
 		if (trace.inopen)
 			clip->trace.inopen = true;
@@ -596,8 +596,8 @@ void SV_ClipToNode(moveclip_t *clip, link_t *list)
 			clip->trace.ent = touch;
 		}
 		clip->trace.startsupercontents |= trace.startsupercontents;
-		if (clip->trace.allsolid)
-			return;
+		//if (clip->trace.allsolid)
+		//	return;
 	}
 }
 
@@ -690,25 +690,14 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	return clip.trace;
 }
 
-int SV_PointQ1Contents(const vec3_t point)
-{
-#if 1
-	return Mod_Q1BSP_NativeContentsFromSuperContents(NULL, SV_Move(point, vec3_origin, vec3_origin, point, MOVE_NOMONSTERS, NULL).startsupercontents);
-#else
-	if (sv.worldmodel && sv.worldmodel->brush.PointContents)
-		return sv.worldmodel->brush.PointContents(sv.worldmodel, point);
-	return CONTENTS_SOLID;
-#endif
-}
-
 int SV_PointSuperContents(const vec3_t point)
 {
-#if 1
 	return SV_Move(point, vec3_origin, vec3_origin, point, MOVE_NOMONSTERS, NULL).startsupercontents;
-#else
-	if (sv.worldmodel && sv.worldmodel->brush.PointContents)
-		return sv.worldmodel->brush.PointContents(sv.worldmodel, point);
-	return CONTENTS_SOLID;
-#endif
 }
+
+int SV_PointQ1Contents(const vec3_t point)
+{
+	return Mod_Q1BSP_NativeContentsFromSuperContents(NULL, SV_PointSuperContents(point));
+}
+
 
