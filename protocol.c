@@ -275,17 +275,17 @@ void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, sizebuf_t *msg)
 			if (bits & E_ANGLE3)
 				MSG_WriteAngle(msg, ent->angles[2]);
 			if (bits & E_MODEL1)
-				MSG_WriteByte(msg, ent->modelindex & 0x00FF);
+				MSG_WriteByte(msg, ent->modelindex & 0xFF);
 			if (bits & E_MODEL2)
-				MSG_WriteByte(msg, ent->modelindex & 0xFF00);
+				MSG_WriteByte(msg, (ent->modelindex >> 8) & 0xFF);
 			if (bits & E_FRAME1)
-				MSG_WriteByte(msg, ent->frame & 0x00FF);
+				MSG_WriteByte(msg, ent->frame & 0xFF);
 			if (bits & E_FRAME2)
-				MSG_WriteByte(msg, ent->frame & 0xFF00);
+				MSG_WriteByte(msg, (ent->frame >> 8) & 0xFF);
 			if (bits & E_EFFECTS1)
-				MSG_WriteByte(msg, ent->effects & 0x00FF);
+				MSG_WriteByte(msg, ent->effects & 0xFF);
 			if (bits & E_EFFECTS2)
-				MSG_WriteByte(msg, ent->effects & 0xFF00);
+				MSG_WriteByte(msg, (ent->effects >> 8) & 0xFF);
 			if (bits & E_COLORMAP)
 				MSG_WriteByte(msg, ent->colormap);
 			if (bits & E_SKIN)
@@ -429,17 +429,17 @@ void EntityFrame_Read(entity_database_t *d)
 			if (bits & E_ANGLE3)
 				e->angles[2] = MSG_ReadAngle();
 			if (bits & E_MODEL1)
-				e->modelindex = (e->modelindex & 0xFF00) | MSG_ReadByte();
+				e->modelindex = (e->modelindex & 0xFF00) | (unsigned int) MSG_ReadByte();
 			if (bits & E_MODEL2)
-				e->modelindex = (e->modelindex & 0x00FF) | (MSG_ReadByte() << 8);
+				e->modelindex = (e->modelindex & 0x00FF) | ((unsigned int) MSG_ReadByte() << 8);
 			if (bits & E_FRAME1)
-				e->frame = (e->frame & 0xFF00) | MSG_ReadByte();
+				e->frame = (e->frame & 0xFF00) | (unsigned int) MSG_ReadByte();
 			if (bits & E_FRAME2)
-				e->frame = (e->frame & 0x00FF) | (MSG_ReadByte() << 8);
+				e->frame = (e->frame & 0x00FF) | ((unsigned int) MSG_ReadByte() << 8);
 			if (bits & E_EFFECTS1)
-				e->effects = (e->effects & 0xFF00) | MSG_ReadByte();
+				e->effects = (e->effects & 0xFF00) | (unsigned int) MSG_ReadByte();
 			if (bits & E_EFFECTS2)
-				e->effects = (e->effects & 0x00FF) | (MSG_ReadByte() << 8);
+				e->effects = (e->effects & 0x00FF) | ((unsigned int) MSG_ReadByte() << 8);
 			if (bits & E_COLORMAP)
 				e->colormap = MSG_ReadByte();
 			if (bits & E_SKIN)
