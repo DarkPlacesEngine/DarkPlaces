@@ -361,19 +361,19 @@ void V_UpdateBlends (void)
 		cl.cshifts[CSHIFT_CONTENTS].destcolor[0] = 255;
 		cl.cshifts[CSHIFT_CONTENTS].destcolor[1] = 80;
 		cl.cshifts[CSHIFT_CONTENTS].destcolor[2] = 0;
-		cl.cshifts[CSHIFT_CONTENTS].percent = 150;
+		cl.cshifts[CSHIFT_CONTENTS].percent = 150 >> 1;
 		break;
 	case CONTENTS_SLIME:
 		cl.cshifts[CSHIFT_CONTENTS].destcolor[0] = 0;
 		cl.cshifts[CSHIFT_CONTENTS].destcolor[1] = 25;
 		cl.cshifts[CSHIFT_CONTENTS].destcolor[2] = 5;
-		cl.cshifts[CSHIFT_CONTENTS].percent = 150;
+		cl.cshifts[CSHIFT_CONTENTS].percent = 150 >> 1;
 		break;
 	default:
 		cl.cshifts[CSHIFT_CONTENTS].destcolor[0] = 130;
 		cl.cshifts[CSHIFT_CONTENTS].destcolor[1] = 80;
 		cl.cshifts[CSHIFT_CONTENTS].destcolor[2] = 50;
-		cl.cshifts[CSHIFT_CONTENTS].percent = 128;
+		cl.cshifts[CSHIFT_CONTENTS].percent = 128 >> 1;
 	}
 
 	if (cl.items & IT_QUAD)
