@@ -721,7 +721,7 @@ void EntityFrame4_AckFrame(entity_database4_t *d, int framenum)
 	{
 		//*EntityFrame4_GetReferenceEntity(d, commit->entity[j].number) = commit->entity[j];
 		entity_state_t *s = EntityFrame4_GetReferenceEntity(d, commit->entity[j].number);
-		if (commit->entity[j].active != s->active)
+		if (developer_networkentities.integer && commit->entity[j].active != s->active)
 		{
 			if (commit->entity[j].active)
 				Con_Printf("commit entity %i has become active (modelindex %i)\n", commit->entity[j].number, commit->entity[j].modelindex);
