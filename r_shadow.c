@@ -1401,7 +1401,7 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 				R_Mesh_CopyVertex3f(vertex3f, numverts);
 				R_Mesh_CopyTexCoord2f(0, texcoord2f, numverts);
 				R_Shadow_Transform_Vertex3f_TexCoord2f(varray_texcoord2f[1], numverts, vertex3f, matrix_modeltoattenuationxyz);
-				R_Shadow_VertexLightingWithXYAttenuationTexture(numverts, vertex3f, normal3f, color, relativelightorigin, lightradius, matrix_modeltofilter);
+				R_Shadow_VertexLightingWithXYAttenuationTexture(numverts, vertex3f, normal3f, color, matrix_modeltofilter);
 				R_Mesh_Draw(numverts, numtriangles, elements);
 			}
 		}
@@ -1429,7 +1429,7 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 				R_Mesh_GetSpace(numverts);
 				R_Mesh_CopyVertex3f(vertex3f, numverts);
 				R_Mesh_CopyTexCoord2f(0, texcoord2f, numverts);
-				R_Shadow_VertexLighting(numverts, vertex3f, normal3f, color, relativelightorigin, lightradius, matrix_modeltofilter);
+				R_Shadow_VertexLighting(numverts, vertex3f, normal3f, color, matrix_modeltofilter);
 				R_Mesh_Draw(numverts, numtriangles, elements);
 			}
 		}
