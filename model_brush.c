@@ -1239,7 +1239,6 @@ static void Mod_SplitSurfMeshIfTooBig(msurface_t *s)
 	if (s->mesh->numtriangles > 1000)
 	{
 		vertexremap = Mem_Alloc(tempmempool, s->mesh->numverts * sizeof(int));
-		memset(vertexremap, -1, s->mesh->numverts * sizeof(int));
 		base = 0;
 		oldmesh = NULL;
 		firstmesh = NULL;
@@ -1253,6 +1252,7 @@ static void Mod_SplitSurfMeshIfTooBig(msurface_t *s)
 			base += tricount;
 
 			newvertexcount = 0;
+			memset(vertexremap, -1, s->mesh->numverts * sizeof(int));
 			for (j = 0;j < tricount * 3;j++)
 				if (vertexremap[index[j]] < 0)
 					vertexremap[index[j]] = newvertexcount++;
