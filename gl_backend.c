@@ -876,18 +876,18 @@ void GL_Backend_RenumberElements(int *out, int count, const int *in, int offset)
 
 // renders triangles using vertices from the active arrays
 int paranoidblah = 0;
-void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
+void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *elements)
 {
 	unsigned int numelements = numtriangles * 3;
-	if (numverts == 0 || numtriangles == 0)
+	if (numvertices < 3 || numtriangles < 1)
 	{
-		Con_Printf("R_Mesh_Draw(%d, %d, %08p);\n", numverts, numtriangles, elements);
+		Con_Printf("R_Mesh_Draw(%d, %d, %d, %08p);\n", firstvertex, numvertices, numtriangles, elements);
 		return;
 	}
 	//CHECKGLERROR
 	if (r_showtrispass)
 	{
-		R_Mesh_Draw_ShowTris(numverts, numtriangles, elements);
+		R_Mesh_Draw_ShowTris(firstvertex, numvertices, numtriangles, elements);
 		return;
 	}
 	c_meshs++;
@@ -898,13 +898,13 @@ void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 		const int *p;
 		if (!qglIsEnabled(GL_VERTEX_ARRAY))
 			Con_Print("R_Mesh_Draw: vertex array not enabled\n");
-		for (j = 0, size = numverts * (int)sizeof(float[3]), p = gl_state.pointer_vertex;j < size;j += sizeof(int), p++)
+		for (j = 0, size = numvertices * 3, p = gl_state.pointer_vertex + firstvertex * 3;j < size;j++, p++)
 			paranoidblah += *p;
 		if (gl_state.pointer_color)
 		{
 			if (!qglIsEnabled(GL_COLOR_ARRAY))
 				Con_Print("R_Mesh_Draw: color array set but not enabled\n");
-			for (j = 0, size = numverts * (int)sizeof(float[4]), p = gl_state.pointer_color;j < size;j += sizeof(int), p++)
+			for (j = 0, size = numvertices * 4, p = gl_state.pointer_color + firstvertex * 4;j < size;j++, p++)
 				paranoidblah += *p;
 		}
 		for (i = 0;i < backendarrayunits;i++)
@@ -914,15 +914,15 @@ void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 				GL_ClientActiveTexture(i);
 				if (!qglIsEnabled(GL_TEXTURE_COORD_ARRAY))
 					Con_Print("R_Mesh_Draw: texcoord array set but not enabled\n");
-				for (j = 0, size = numverts * ((gl_state.units[i].t3d || gl_state.units[i].tcubemap) ? (int)sizeof(float[3]) : (int)sizeof(float[2])), p = gl_state.units[i].pointer_texcoord;j < size;j += sizeof(int), p++)
+				for (j = 0, size = numvertices * gl_state.units[i].arraycomponents, p = gl_state.units[i].pointer_texcoord + firstvertex * gl_state.units[i].arraycomponents;j < size;j++, p++)
 					paranoidblah += *p;
 			}
 		}
 		for (i = 0;i < (unsigned int) numtriangles * 3;i++)
 		{
-			if (elements[i] < 0 || elements[i] >= numverts)
+			if (elements[i] < firstvertex || elements[i] >= firstvertex + numvertices)
 			{
-				Con_Printf("R_Mesh_Draw: invalid vertex index %i (outside range 0 - %i) in elements list\n", elements[i], numverts);
+				Con_Printf("R_Mesh_Draw: invalid vertex index %i (outside range %i - %i) in elements list\n", elements[i], firstvertex, firstvertex + numvertices);
 				return;
 			}
 		}
@@ -1014,7 +1014,7 @@ void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 		}
 		else if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
 		{
-			qglDrawRangeElements(GL_TRIANGLES, 0, numverts, numelements, GL_UNSIGNED_INT, elements);
+			qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices, numelements, GL_UNSIGNED_INT, elements);
 			CHECKGLERROR
 		}
 		else
@@ -1592,7 +1592,7 @@ void R_Mesh_State(const rmeshstate_t *m)
 	}
 }
 
-void R_Mesh_Draw_ShowTris(int numverts, int numtriangles, const int *elements)
+void R_Mesh_Draw_ShowTris(int firstvertex, int numvertices, int numtriangles, const int *elements)
 {
 	qglBegin(GL_LINES);
 	for (;numtriangles;numtriangles--, elements += 3)
@@ -1817,7 +1817,7 @@ void SCR_UpdateLoadingScreen (void)
 	varray_texcoord2f[0][4] = 1;varray_texcoord2f[0][5] = 1;
 	varray_texcoord2f[0][6] = 0;varray_texcoord2f[0][7] = 1;
 	GL_LockArrays(0, 4);
-	R_Mesh_Draw(4, 2, polygonelements);
+	R_Mesh_Draw(0, 4, 2, polygonelements);
 	GL_LockArrays(0, 0);
 	R_Mesh_Finish();
 	// refresh

@@ -917,14 +917,14 @@ void R_Shadow_RenderVolume(int numvertices, int numtriangles, const float *verte
 		// increment stencil if backface is behind depthbuffer
 		qglCullFace(GL_BACK); // quake is backwards, this culls front faces
 		qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
-		R_Mesh_Draw(numvertices, numtriangles, element3i);
+		R_Mesh_Draw(0, numvertices, numtriangles, element3i);
 		c_rt_shadowmeshes++;
 		c_rt_shadowtris += numtriangles;
 		// decrement stencil if frontface is behind depthbuffer
 		qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
 	}
-	R_Mesh_Draw(numvertices, numtriangles, element3i);
+	R_Mesh_Draw(0, numvertices, numtriangles, element3i);
 	c_rt_shadowmeshes++;
 	c_rt_shadowtris += numtriangles;
 	GL_LockArrays(0, 0);
@@ -1642,7 +1642,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 		}
 		CHECKGLERROR
 		GL_LockArrays(0, numverts);
-		R_Mesh_Draw(numverts, numtriangles, elements);
+		R_Mesh_Draw(0, numverts, numtriangles, elements);
 		c_rt_lightmeshes++;
 		c_rt_lighttris += numtriangles;
 		GL_LockArrays(0, 0);
@@ -1797,7 +1797,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_ColorMask(0,0,0,1);
 				GL_BlendFunc(GL_ONE, GL_ZERO);
 				GL_LockArrays(0, numverts);
-				R_Mesh_Draw(numverts, numtriangles, elements);
+				R_Mesh_Draw(0, numverts, numtriangles, elements);
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
@@ -1827,7 +1827,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
 			{
 				GL_Color(bound(0, color2[0], 1), bound(0, color2[1], 1), bound(0, color2[2], 1), 1);
-				R_Mesh_Draw(numverts, numtriangles, elements);
+				R_Mesh_Draw(0, numverts, numtriangles, elements);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
 			}
@@ -1868,7 +1868,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_ColorMask(0,0,0,1);
 				GL_BlendFunc(GL_ONE, GL_ZERO);
 				GL_LockArrays(0, numverts);
-				R_Mesh_Draw(numverts, numtriangles, elements);
+				R_Mesh_Draw(0, numverts, numtriangles, elements);
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
@@ -1907,7 +1907,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_ColorMask(0,0,0,1);
 				GL_BlendFunc(GL_ONE, GL_ZERO);
 				GL_LockArrays(0, numverts);
-				R_Mesh_Draw(numverts, numtriangles, elements);
+				R_Mesh_Draw(0, numverts, numtriangles, elements);
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
@@ -1924,7 +1924,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				R_Mesh_State(&m);
 				GL_BlendFunc(GL_DST_ALPHA, GL_ZERO);
 				GL_LockArrays(0, numverts);
-				R_Mesh_Draw(numverts, numtriangles, elements);
+				R_Mesh_Draw(0, numverts, numtriangles, elements);
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
@@ -1962,7 +1962,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_ColorMask(0,0,0,1);
 				GL_BlendFunc(GL_ONE, GL_ZERO);
 				GL_LockArrays(0, numverts);
-				R_Mesh_Draw(numverts, numtriangles, elements);
+				R_Mesh_Draw(0, numverts, numtriangles, elements);
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
@@ -2013,7 +2013,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_ColorMask(0,0,0,1);
 				GL_BlendFunc(GL_ONE, GL_ZERO);
 				GL_LockArrays(0, numverts);
-				R_Mesh_Draw(numverts, numtriangles, elements);
+				R_Mesh_Draw(0, numverts, numtriangles, elements);
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
@@ -2060,7 +2060,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_ColorMask(0,0,0,1);
 				GL_BlendFunc(GL_ONE, GL_ZERO);
 				GL_LockArrays(0, numverts);
-				R_Mesh_Draw(numverts, numtriangles, elements);
+				R_Mesh_Draw(0, numverts, numtriangles, elements);
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
@@ -2077,7 +2077,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				R_Mesh_State(&m);
 				GL_BlendFunc(GL_DST_ALPHA, GL_ZERO);
 				GL_LockArrays(0, numverts);
-				R_Mesh_Draw(numverts, numtriangles, elements);
+				R_Mesh_Draw(0, numverts, numtriangles, elements);
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
@@ -2107,7 +2107,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
 			{
 				GL_Color(bound(0, color2[0], 1), bound(0, color2[1], 1), bound(0, color2[2], 1), 1);
-				R_Mesh_Draw(numverts, numtriangles, elements);
+				R_Mesh_Draw(0, numverts, numtriangles, elements);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
 			}
@@ -2136,7 +2136,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					// this squares the result
 					GL_BlendFunc(GL_SRC_ALPHA, GL_ZERO);
 					GL_LockArrays(0, numverts);
-					R_Mesh_Draw(numverts, numtriangles, elements);
+					R_Mesh_Draw(0, numverts, numtriangles, elements);
 					GL_LockArrays(0, 0);
 					c_rt_lightmeshes++;
 					c_rt_lighttris += numtriangles;
@@ -2151,10 +2151,10 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					// 0.5 * 0.5 = 0.25 (done by the BlendFunc earlier)
 					// 0.25 * 0.25 = 0.0625 (this is another pass)
 					// 0.0625 * 0.0625 = 0.00390625 (this is another pass)
-					R_Mesh_Draw(numverts, numtriangles, elements);
+					R_Mesh_Draw(0, numverts, numtriangles, elements);
 					c_rt_lightmeshes++;
 					c_rt_lighttris += numtriangles;
-					R_Mesh_Draw(numverts, numtriangles, elements);
+					R_Mesh_Draw(0, numverts, numtriangles, elements);
 					c_rt_lightmeshes++;
 					c_rt_lighttris += numtriangles;
 					GL_LockArrays(0, 0);
@@ -2172,7 +2172,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					R_Mesh_State(&m);
 					GL_BlendFunc(GL_DST_ALPHA, GL_ZERO);
 					GL_LockArrays(0, numverts);
-					R_Mesh_Draw(numverts, numtriangles, elements);
+					R_Mesh_Draw(0, numverts, numtriangles, elements);
 					GL_LockArrays(0, 0);
 					c_rt_lightmeshes++;
 					c_rt_lighttris += numtriangles;
@@ -2210,7 +2210,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					// this squares the result
 					GL_BlendFunc(GL_SRC_ALPHA, GL_ZERO);
 					GL_LockArrays(0, numverts);
-					R_Mesh_Draw(numverts, numtriangles, elements);
+					R_Mesh_Draw(0, numverts, numtriangles, elements);
 					GL_LockArrays(0, 0);
 					c_rt_lightmeshes++;
 					c_rt_lighttris += numtriangles;
@@ -2225,10 +2225,10 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					// 0.5 * 0.5 = 0.25 (done by the BlendFunc earlier)
 					// 0.25 * 0.25 = 0.0625 (this is another pass)
 					// 0.0625 * 0.0625 = 0.00390625 (this is another pass)
-					R_Mesh_Draw(numverts, numtriangles, elements);
+					R_Mesh_Draw(0, numverts, numtriangles, elements);
 					c_rt_lightmeshes++;
 					c_rt_lighttris += numtriangles;
-					R_Mesh_Draw(numverts, numtriangles, elements);
+					R_Mesh_Draw(0, numverts, numtriangles, elements);
 					c_rt_lightmeshes++;
 					c_rt_lighttris += numtriangles;
 					GL_LockArrays(0, 0);
@@ -2263,7 +2263,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					// this squares the result
 					GL_BlendFunc(GL_SRC_ALPHA, GL_ZERO);
 					GL_LockArrays(0, numverts);
-					R_Mesh_Draw(numverts, numtriangles, elements);
+					R_Mesh_Draw(0, numverts, numtriangles, elements);
 					GL_LockArrays(0, 0);
 					c_rt_lightmeshes++;
 					c_rt_lighttris += numtriangles;
@@ -2278,10 +2278,10 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					// 0.5 * 0.5 = 0.25 (done by the BlendFunc earlier)
 					// 0.25 * 0.25 = 0.0625 (this is another pass)
 					// 0.0625 * 0.0625 = 0.00390625 (this is another pass)
-					R_Mesh_Draw(numverts, numtriangles, elements);
+					R_Mesh_Draw(0, numverts, numtriangles, elements);
 					c_rt_lightmeshes++;
 					c_rt_lighttris += numtriangles;
-					R_Mesh_Draw(numverts, numtriangles, elements);
+					R_Mesh_Draw(0, numverts, numtriangles, elements);
 					c_rt_lightmeshes++;
 					c_rt_lighttris += numtriangles;
 					GL_LockArrays(0, 0);
@@ -2307,7 +2307,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					R_Mesh_State(&m);
 					GL_BlendFunc(GL_DST_ALPHA, GL_ZERO);
 					GL_LockArrays(0, numverts);
-					R_Mesh_Draw(numverts, numtriangles, elements);
+					R_Mesh_Draw(0, numverts, numtriangles, elements);
 					GL_LockArrays(0, 0);
 					c_rt_lightmeshes++;
 					c_rt_lighttris += numtriangles;
@@ -2336,7 +2336,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
 				{
 					GL_Color(bound(0, color2[0], 1), bound(0, color2[1], 1), bound(0, color2[2], 1), 1);
-					R_Mesh_Draw(numverts, numtriangles, elements);
+					R_Mesh_Draw(0, numverts, numtriangles, elements);
 					c_rt_lightmeshes++;
 					c_rt_lighttris += numtriangles;
 				}
@@ -2395,7 +2395,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				else
 					R_Shadow_VertexNoShadingWithXYZAttenuation(numverts, vertex3f, color, matrix_modeltolight);
 				GL_LockArrays(0, numverts);
-				R_Mesh_Draw(numverts, numtriangles, elements);
+				R_Mesh_Draw(0, numverts, numtriangles, elements);
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
@@ -2447,7 +2447,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				else
 					R_Shadow_VertexShadingWithXYZAttenuation(numverts, vertex3f, normal3f, color, matrix_modeltolight);
 				GL_LockArrays(0, numverts);
-				R_Mesh_Draw(numverts, numtriangles, elements);
+				R_Mesh_Draw(0, numverts, numtriangles, elements);
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
@@ -2737,14 +2737,14 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 					// increment stencil if backface is behind depthbuffer
 					qglCullFace(GL_BACK); // quake is backwards, this culls front faces
 					qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
-					R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
+					R_Mesh_Draw(0, mesh->numverts, mesh->numtriangles, mesh->element3i);
 					c_rtcached_shadowmeshes++;
 					c_rtcached_shadowtris += mesh->numtriangles;
 					// decrement stencil if frontface is behind depthbuffer
 					qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 					qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
 				}
-				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
+				R_Mesh_Draw(0, mesh->numverts, mesh->numtriangles, mesh->element3i);
 				c_rtcached_shadowmeshes++;
 				c_rtcached_shadowtris += mesh->numtriangles;
 				GL_LockArrays(0, 0);

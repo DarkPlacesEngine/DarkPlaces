@@ -158,7 +158,7 @@ static void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 	R_Mesh_State(&m);
 	c_alias_polys += mesh->num_triangles;
 	GL_LockArrays(0, mesh->num_vertices);
-	R_Mesh_Draw(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
+	R_Mesh_Draw(0, mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
 	GL_LockArrays(0, 0);
 	m.tex[1] = 0;
 	m.pointer_texcoord[1] = NULL;
@@ -188,7 +188,7 @@ static void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 		R_Mesh_State(&m);
 		c_alias_polys += mesh->num_triangles;
 		GL_LockArrays(0, mesh->num_vertices);
-		R_Mesh_Draw(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
+		R_Mesh_Draw(0, mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
 		GL_LockArrays(0, 0);
 	}
 
@@ -216,7 +216,7 @@ static void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 		R_Mesh_State(&m);
 		c_alias_polys += mesh->num_triangles;
 		GL_LockArrays(0, mesh->num_vertices);
-		R_Mesh_Draw(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
+		R_Mesh_Draw(0, mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
 		GL_LockArrays(0, 0);
 	}
 
@@ -233,7 +233,7 @@ static void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 		R_Mesh_State(&m);
 		c_alias_polys += mesh->num_triangles;
 		GL_LockArrays(0, mesh->num_vertices);
-		R_Mesh_Draw(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
+		R_Mesh_Draw(0, mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
 		GL_LockArrays(0, 0);
 	}
 
@@ -247,7 +247,7 @@ static void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 		R_Mesh_State(&m);
 		c_alias_polys += mesh->num_triangles;
 		GL_LockArrays(0, mesh->num_vertices);
-		R_Mesh_Draw(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
+		R_Mesh_Draw(0, mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
 		GL_LockArrays(0, 0);
 	}
 }
