@@ -1,0 +1,175 @@
+
+#include "quakedef.h"
+#include "meshqueue.h"
+
+cvar_t r_meshqueue_entries = {CVAR_SAVE, "r_meshqueue_entries", "16"};
+cvar_t r_meshqueue_immediaterender = {0, "r_meshqueue_immediaterender", "0"};
+cvar_t r_meshqueue_sort = {0, "r_meshqueue_sort", "0"};
+
+typedef struct meshqueue_s
+{
+	struct meshqueue_s *next;
+	void (*callback)(void *data1, int data2);
+	void *data1;
+	int data2;
+	float dist;
+}
+meshqueue_t;
+
+float mqt_viewplanedist;
+meshqueue_t *mq_array, *mqt_array, *mq_listhead;
+int mq_count, mqt_count;
+int mq_total, mqt_total;
+
+mempool_t *meshqueuemempool;
+
+void R_MeshQueue_Init(void)
+{
+	Cvar_RegisterVariable(&r_meshqueue_entries);
+	Cvar_RegisterVariable(&r_meshqueue_immediaterender);
+	Cvar_RegisterVariable(&r_meshqueue_sort);
+
+	meshqueuemempool = Mem_AllocPool("R_MeshQueue");
+	mq_total = 0;
+	mqt_total = 1000;
+	mq_array = NULL;
+	mqt_array = NULL;
+}
+
+static void R_MeshQueue_Render(void)
+{
+	meshqueue_t *mq;
+	for (mq = mq_listhead;mq;mq = mq->next)
+		mq->callback(mq->data1, mq->data2);
+	mq_count = 0;
+	mq_listhead = NULL;
+}
+
+static void R_MeshQueue_EnlargeTransparentArray(int newtotal)
+{
+	meshqueue_t *newarray;
+	newarray = Mem_Alloc(meshqueuemempool, newtotal * sizeof(meshqueue_t));
+	if (mqt_array)
+	{
+		memcpy(newarray, mqt_array, mqt_total * sizeof(meshqueue_t));
+		Mem_Free(mqt_array);
+	}
+	mqt_array = newarray;
+	mqt_total = newtotal;
+}
+
+void R_MeshQueue_Add(void (*callback)(void *data1, int data2), void *data1, int data2)
+{
+	meshqueue_t *mq, **mqnext;
+	if (r_meshqueue_immediaterender.integer)
+	{
+		callback(data1, data2);
+		return;
+	}
+	if (mq_count >= mq_total)
+		R_MeshQueue_Render();
+	mq = &mq_array[mq_count++];
+	mq->callback = callback;
+	mq->data1 = data1;
+	mq->data2 = data2;
+
+	// bubble-insert sort into meshqueue
+	mqnext = &mq_listhead;
+	if (r_meshqueue_sort.integer)
+	{
+		for(;;)
+		{
+			if (*mqnext)
+			{
+				if (mq->callback == (*mqnext)->callback)
+				{
+					if (mq->data1 == (*mqnext)->data1)
+					{
+						if (mq->data2 <= (*mqnext)->data2)
+							break;
+					}
+					else if (mq->data1 < (*mqnext)->data1)
+						break;
+				}
+				else if (mq->callback < (*mqnext)->callback)
+					break;
+			}
+			else
+				break;
+			mqnext = &(*mqnext)->next;
+		}
+	}
+	mq->next = *mqnext;
+	*mqnext = mq;
+}
+
+void R_MeshQueue_AddTransparent(vec3_t center, void (*callback)(void *data1, int data2), void *data1, int data2)
+{
+	meshqueue_t *mq;
+	if (mqt_count >= mqt_total)
+		R_MeshQueue_EnlargeTransparentArray(mqt_total + 100);
+	mq = &mqt_array[mqt_count++];
+	mq->callback = callback;
+	mq->data1 = data1;
+	mq->data2 = data2;
+	mq->dist = DotProduct(center, vpn) - mqt_viewplanedist;
+	mq->next = NULL;
+}
+
+static void R_MeshQueue_RenderTransparent(void)
+{
+	int i;
+	int hashdist;
+	meshqueue_t *mqt;
+	meshqueue_t *hash[4096];
+	memset(hash, 0, 4096 * sizeof(meshqueue_t *));
+	for (i = 0, mqt = mqt_array;i < mqt_count;i++, mqt++)
+	{
+		// generate index
+		hashdist = (int) (mqt->dist);
+		hashdist = bound(0, hashdist, 4095);
+		// reversed to simplify render loop
+		hashdist = 4095 - hashdist;
+		// link into hash chain
+		mqt->next = hash[hashdist];
+		hash[hashdist] = mqt;
+	}
+	for (i = 0;i < 4096;i++)
+		if (hash[i])
+			for (mqt = hash[i];mqt;mqt = mqt->next)
+				R_MeshQueue_Add(mqt->callback, mqt->data1, mqt->data2);
+	mqt_count = 0;
+}
+
+void R_MeshQueue_BeginScene(void)
+{
+	if (r_meshqueue_entries.integer < 1)
+		Cvar_SetValueQuick(&r_meshqueue_entries, 1);
+	if (r_meshqueue_entries.integer > 65536)
+		Cvar_SetValueQuick(&r_meshqueue_entries, 65536);
+
+	if (mq_total != r_meshqueue_entries.integer || mq_array == NULL)
+	{
+		mq_total = r_meshqueue_entries.integer;
+		if (mq_array)
+			Mem_Free(mq_array);
+		mq_array = Mem_Alloc(meshqueuemempool, mq_total * sizeof(meshqueue_t));
+	}
+
+	if (mqt_array == NULL)
+		mqt_array = Mem_Alloc(meshqueuemempool, mqt_total * sizeof(meshqueue_t));
+
+	mq_count = 0;
+	mqt_count = 0;
+	mq_listhead = NULL;
+	mqt_viewplanedist = DotProduct(r_origin, vpn);
+}
+
+void R_MeshQueue_EndScene(void)
+{
+	if (mqt_count)
+		R_MeshQueue_RenderTransparent();
+	if (mq_count)
+		R_MeshQueue_Render();
+}
+
