@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "quakedef.h"
+#include "cl_collision.h"
 
 #define MAX_EXPLOSIONS 64
 #define EXPLOSIONGRID 8
@@ -366,7 +367,7 @@ void R_MoveExplosion(explosion_t *e/*, explosiongas_t **list, explosiongas_t **l
 			VectorMA(e->vert[i], frametime, e->vertvel[i], end);
 			if (r_explosionclip.integer)
 			{
-				if (TraceLine(e->vert[i], end, impact, normal, 0, true) < 1)
+				if (CL_TraceLine(e->vert[i], end, impact, normal, 0, true) < 1)
 				{
 					// clip velocity against the wall
 					dot = DotProduct(e->vertvel[i], normal) * -1.125f;

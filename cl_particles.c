@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "quakedef.h"
+#include "cl_collision.h"
 
 #define MAX_PARTICLES			16384	// default max # of particles at one time
 #define ABSOLUTE_MIN_PARTICLES	512		// no fewer than this no matter what's on the command line
@@ -385,7 +386,7 @@ void CL_ParticleExplosion (vec3_t org, int smoke)
 				{
 					VectorRandom(v);
 					VectorMA(org, 16, v, v);
-					TraceLine(org, v, end, NULL, 0, true);
+					CL_TraceLine(org, v, end, NULL, 0, true);
 					ang[0] = (j + 0.5f) * (360.0f / 32.0f);
 					ang[1] = (i + 0.5f) * (360.0f / 32.0f);
 					AngleVectors(ang, v, NULL, NULL);
@@ -410,7 +411,7 @@ void CL_ParticleExplosion (vec3_t org, int smoke)
 				{
 					VectorRandom(v);
 					VectorMA(org, 16, v, v);
-					TraceLine(org, v, end, NULL, 0, true);
+					CL_TraceLine(org, v, end, NULL, 0, true);
 					ang[0] = (j + 0.5f) * (360.0f / 32.0f);
 					ang[1] = (i + 0.5f) * (360.0f / 32.0f);
 					AngleVectors(ang, v, NULL, NULL);
@@ -974,7 +975,7 @@ void CL_MoveParticles (void)
 		VectorCopy(p->org, org);
 		if (p->bounce)
 		{
-			if (TraceLine(p->oldorg, p->org, v, normal, 0, true) < 1)
+			if (CL_TraceLine(p->oldorg, p->org, v, normal, 0, true) < 1)
 			{
 				VectorCopy(v, p->org);
 				if (p->bounce < 0)
@@ -1211,7 +1212,7 @@ void CL_MoveParticles (void)
 			{
 				a = b;
 				f = TraceLine(o, p->org, v, normal, a, true);
-				b = traceline_endcontents;
+				b = cl_traceline_endcontents;
 				if (f < 1 && b != CONTENTS_EMPTY && b != CONTENTS_SKY)
 				{
 					#if 1

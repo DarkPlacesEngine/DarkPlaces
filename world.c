@@ -111,189 +111,6 @@ moveclip_t;
 /*
 ===============================================================================
 
-HULL BOXES
-
-===============================================================================
-*/
-
-
-static	hull_t		box_hull;
-static	dclipnode_t	box_clipnodes[6];
-static	mplane_t	box_planes[6];
-
-/*
-===================
-SV_InitBoxHull
-
-Set up the planes and clipnodes so that the six floats of a bounding box
-can just be stored out and get a proper hull_t structure.
-===================
-*/
-void SV_InitBoxHull (void)
-{
-	int		i;
-	int		side;
-
-	box_hull.clipnodes = box_clipnodes;
-	box_hull.planes = box_planes;
-	box_hull.firstclipnode = 0;
-	box_hull.lastclipnode = 5;
-
-	for (i=0 ; i<6 ; i++)
-	{
-		box_clipnodes[i].planenum = i;
-
-		side = i&1;
-
-		box_clipnodes[i].children[side] = CONTENTS_EMPTY;
-		if (i != 5)
-			box_clipnodes[i].children[side^1] = i + 1;
-		else
-			box_clipnodes[i].children[side^1] = CONTENTS_SOLID;
-
-		box_planes[i].type = i>>1;
-		box_planes[i].normal[i>>1] = 1;
-	}
-}
-
-
-/*
-===================
-SV_HullForBox
-
-To keep everything totally uniform, bounding boxes are turned into small
-BSP trees instead of being compared directly.
-===================
-*/
-hull_t	*SV_HullForBox (vec3_t mins, vec3_t maxs)
-{
-	box_planes[0].dist = maxs[0];
-	box_planes[1].dist = mins[0];
-	box_planes[2].dist = maxs[1];
-	box_planes[3].dist = mins[1];
-	box_planes[4].dist = maxs[2];
-	box_planes[5].dist = mins[2];
-
-	return &box_hull;
-}
-
-
-
-/*
-================
-SV_HullForEntity
-
-Returns a hull that can be used for testing or clipping an object of mins/maxs
-size.
-Offset is filled in to contain the adjustment that must be added to the
-testing object's origin to get a point to use with the returned hull.
-================
-*/
-hull_t *SV_HullForEntity (edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t offset)
-{
-	model_t		*model;
-	vec3_t		size;
-	vec3_t		hullmins, hullmaxs;
-	hull_t		*hull;
-
-// decide which clipping hull to use, based on the size
-	if (ent->v.solid == SOLID_BSP)
-	{
-		// explicit hulls in the BSP model
-		if (ent->v.movetype != MOVETYPE_PUSH)
-			Host_Error ("SOLID_BSP without MOVETYPE_PUSH");
-
-		model = sv.models[ (int)ent->v.modelindex ];
-		Mod_CheckLoaded(model);
-
-		// LordHavoc: fixed SOLID_BSP error message
-		if (!model || model->type != mod_brush)
-		{
-			Con_Printf ("SOLID_BSP with a non bsp model, entity dump:\n");
-			ED_Print (ent);
-			Host_Error ("SOLID_BSP with a non bsp model\n");
-		}
-
-		VectorSubtract (maxs, mins, size);
-		// LordHavoc: FIXME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		if (model->ishlbsp)
-		{
-			if (size[0] < 3)
-				hull = &model->hulls[0]; // 0x0x0
-			else if (size[0] <= 32)
-			{
-				if (size[2] < 54) // pick the nearest of 36 or 72
-					hull = &model->hulls[3]; // 32x32x36
-				else
-					hull = &model->hulls[1]; // 32x32x72
-			}
-			else
-				hull = &model->hulls[2]; // 64x64x64
-		}
-		else
-		{
-			if (size[0] < 3)
-				hull = &model->hulls[0]; // 0x0x0
-			else if (size[0] <= 32)
-				hull = &model->hulls[1]; // 32x32x56
-			else
-				hull = &model->hulls[2]; // 64x64x88
-		}
-
-// calculate an offset value to center the origin
-		VectorSubtract (hull->clip_mins, mins, offset);
-		VectorAdd (offset, ent->v.origin, offset);
-	}
-	else
-	{	// create a temp hull from bounding box sizes
-
-		VectorSubtract (ent->v.mins, maxs, hullmins);
-		VectorSubtract (ent->v.maxs, mins, hullmaxs);
-		hull = SV_HullForBox (hullmins, hullmaxs);
-
-		VectorCopy (ent->v.origin, offset);
-	}
-
-
-	return hull;
-}
-
-void SV_RoundUpToHullSize(vec3_t inmins, vec3_t inmaxs, vec3_t outmins, vec3_t outmaxs)
-{
-	vec3_t size;
-	hull_t *hull;
-
-	VectorSubtract(inmaxs, inmins, size);
-	if (sv.worldmodel->ishlbsp)
-	{
-		if (size[0] < 3)
-			hull = &sv.worldmodel->hulls[0]; // 0x0x0
-		else if (size[0] <= 32)
-		{
-			if (size[2] < 54) // pick the nearest of 36 or 72
-				hull = &sv.worldmodel->hulls[3]; // 32x32x36
-			else
-				hull = &sv.worldmodel->hulls[1]; // 32x32x72
-		}
-		else
-			hull = &sv.worldmodel->hulls[2]; // 64x64x64
-	}
-	else
-	{
-		if (size[0] < 3)
-			hull = &sv.worldmodel->hulls[0]; // 0x0x0
-		else if (size[0] <= 32)
-			hull = &sv.worldmodel->hulls[1]; // 32x32x56
-		else
-			hull = &sv.worldmodel->hulls[2]; // 64x64x88
-	}
-	VectorCopy(inmins, outmins);
-	VectorAdd(inmins, hull->clip_size, outmaxs);
-}
-
-/*
-===============================================================================
-
 ENTITY AREA CHECKING
 
 ===============================================================================
@@ -367,7 +184,7 @@ SV_ClearWorld
 */
 void SV_ClearWorld (void)
 {
-	SV_InitBoxHull ();
+	Collision_Init ();
 
 	memset (sv_areanodes, 0, sizeof(sv_areanodes));
 	sv_numareanodes = 0;
@@ -663,170 +480,6 @@ LINE TESTING IN HULLS
 ===============================================================================
 */
 
-// 1/32 epsilon to keep floating point happy
-#define DIST_EPSILON (0.03125)
-
-#define HULLCHECKSTATE_EMPTY 0
-#define HULLCHECKSTATE_SOLID 1
-#define HULLCHECKSTATE_DONE 2
-
-// LordHavoc: FIXME: this is not thread safe, if threading matters here, pass
-// this as a struct to RecursiveHullCheck, RecursiveHullCheck_Impact, etc...
-RecursiveHullCheckTraceInfo_t RecursiveHullCheckInfo;
-#define RHC RecursiveHullCheckInfo
-
-void SV_RecursiveHullCheck_Impact (mplane_t *plane, int side)
-{
-	// LordHavoc: using doubles for extra accuracy
-	double t1, t2, frac;
-
-	// LordHavoc: now that we have found the impact, recalculate the impact
-	// point from scratch for maximum accuracy, with an epsilon bias on the
-	// surface distance
-	frac = plane->dist;
-	if (side)
-	{
-		frac -= DIST_EPSILON;
-		VectorNegate (plane->normal, RHC.trace->plane.normal);
-		RHC.trace->plane.dist = -plane->dist;
-	}
-	else
-	{
-		frac += DIST_EPSILON;
-		VectorCopy (plane->normal, RHC.trace->plane.normal);
-		RHC.trace->plane.dist = plane->dist;
-	}
-
-	if (plane->type < 3)
-	{
-		t1 = RHC.start[plane->type] - frac;
-		t2 = RHC.start[plane->type] + RHC.dist[plane->type] - frac;
-	}
-	else
-	{
-		t1 = plane->normal[0] * RHC.start[0] + plane->normal[1] * RHC.start[1] + plane->normal[2] * RHC.start[2] - frac;
-		t2 = plane->normal[0] * (RHC.start[0] + RHC.dist[0]) + plane->normal[1] * (RHC.start[1] + RHC.dist[1]) + plane->normal[2] * (RHC.start[2] + RHC.dist[2]) - frac;
-	}
-
-	frac = t1 / (t1 - t2);
-	frac = bound(0.0f, frac, 1.0);
-
-	RHC.trace->fraction = frac;
-	RHC.trace->endpos[0] = RHC.start[0] + frac * RHC.dist[0];
-	RHC.trace->endpos[1] = RHC.start[1] + frac * RHC.dist[1];
-	RHC.trace->endpos[2] = RHC.start[2] + frac * RHC.dist[2];
-}
-
-int SV_RecursiveHullCheck (int num, double p1f, double p2f, double p1[3], double p2[3])
-{
-	dclipnode_t	*node;
-	int			side;
-	double		midf, mid[3];
-	// LordHavoc: FIXME: this is not thread safe...  if threading matters here,
-	// remove the static prefixes
-	static int ret;
-	static mplane_t *plane;
-	static double t1, t2, frac;
-
-	// LordHavoc: a goto!  everyone flee in terror... :)
-loc0:
-	// check for empty
-	if (num < 0)
-	{
-		RHC.trace->endcontents = num;
-		if (RHC.trace->startcontents)
-		{
-			if (num == RHC.trace->startcontents)
-				RHC.trace->allsolid = false;
-			else
-			{
-				// if the first leaf is solid, set startsolid
-				if (RHC.trace->allsolid)
-					RHC.trace->startsolid = true;
-				return HULLCHECKSTATE_SOLID;
-			}
-			return HULLCHECKSTATE_EMPTY;
-		}
-		else
-		{
-			if (num != CONTENTS_SOLID)
-			{
-				RHC.trace->allsolid = false;
-				if (num == CONTENTS_EMPTY)
-					RHC.trace->inopen = true;
-				else
-					RHC.trace->inwater = true;
-			}
-			else
-			{
-				// if the first leaf is solid, set startsolid
-				if (RHC.trace->allsolid)
-					RHC.trace->startsolid = true;
-				return HULLCHECKSTATE_SOLID;
-			}
-			return HULLCHECKSTATE_EMPTY;
-		}
-	}
-
-	// find the point distances
-	node = RHC.hull->clipnodes + num;
-
-	plane = RHC.hull->planes + node->planenum;
-	if (plane->type < 3)
-	{
-		t1 = p1[plane->type] - plane->dist;
-		t2 = p2[plane->type] - plane->dist;
-	}
-	else
-	{
-		t1 = DotProduct (plane->normal, p1) - plane->dist;
-		t2 = DotProduct (plane->normal, p2) - plane->dist;
-	}
-
-	// LordHavoc: rearranged the side/frac code
-	if (t1 >= 0)
-	{
-		if (t2 >= 0)
-		{
-			num = node->children[0];
-			goto loc0;
-		}
-		// put the crosspoint DIST_EPSILON pixels on the near side
-		side = 0;
-	}
-	else
-	{
-		if (t2 < 0)
-		{
-			num = node->children[1];
-			goto loc0;
-		}
-		// put the crosspoint DIST_EPSILON pixels on the near side
-		side = 1;
-	}
-
-	frac = t1 / (t1 - t2);
-	frac = bound(0.0f, frac, 1.0);
-
-	midf = p1f + ((p2f - p1f) * frac);
-	mid[0] = RHC.start[0] + midf * RHC.dist[0];
-	mid[1] = RHC.start[1] + midf * RHC.dist[1];
-	mid[2] = RHC.start[2] + midf * RHC.dist[2];
-
-	// front side first
-	ret = SV_RecursiveHullCheck (node->children[side], p1f, midf, p1, mid);
-	if (ret != HULLCHECKSTATE_EMPTY)
-		return ret; // solid or done
-	ret = SV_RecursiveHullCheck (node->children[!side], midf, p2f, mid, p2);
-	if (ret != HULLCHECKSTATE_SOLID)
-		return ret; // empty or done
-
-	// front is air and back is solid, this is the impact point...
-	SV_RecursiveHullCheck_Impact(RHC.hull->planes + node->planenum, side);
-
-	return HULLCHECKSTATE_DONE;
-}
-
 /*
 ==================
 SV_ClipMoveToEntity
@@ -837,70 +490,31 @@ eventually rotation) of the end points
 */
 trace_t SV_ClipMoveToEntity (edict_t *ent, vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end)
 {
+	int i;
 	trace_t trace;
-	vec3_t offset, forward, left, up;
-	double startd[3], endd[3], tempd[3];
-	hull_t *hull;
+	model_t *model;
 
-// fill in a default trace
-	memset (&trace, 0, sizeof(trace_t));
-	trace.fraction = 1;
-	trace.allsolid = true;
+	i = ent->v.modelindex;
+	if ((unsigned int) i >= MAX_MODELS)
+		PR_RunError("SV_ClipMoveToEntity: invalid modelindex\n");
+	model = sv.models[i];
+	if (i != 0 && model == NULL)
+		PR_RunError("SV_ClipMoveToEntity: invalid modelindex\n");
 
-// get the clipping hull
-	hull = SV_HullForEntity (ent, mins, maxs, offset);
-
-	VectorSubtract(start, offset, startd);
-	VectorSubtract(end, offset, endd);
-
-	// rotate start and end into the model's frame of reference
-	if (ent->v.solid == SOLID_BSP && (ent->v.angles[0] || ent->v.angles[1] || ent->v.angles[2]))
+	if ((int) ent->v.solid == SOLID_BSP)
 	{
-		AngleVectorsFLU (ent->v.angles, forward, left, up);
-		VectorCopy(startd, tempd);
-		startd[0] = DotProduct (tempd, forward);
-		startd[1] = DotProduct (tempd, left);
-		startd[2] = DotProduct (tempd, up);
-		VectorCopy(endd, tempd);
-		endd[0] = DotProduct (tempd, forward);
-		endd[1] = DotProduct (tempd, left);
-		endd[2] = DotProduct (tempd, up);
-	}
-
-	VectorCopy(end, trace.endpos);
-
-// trace a line through the appropriate clipping hull
-	VectorCopy(startd, RecursiveHullCheckInfo.start);
-	VectorSubtract(endd, startd, RecursiveHullCheckInfo.dist);
-	RecursiveHullCheckInfo.hull = hull;
-	RecursiveHullCheckInfo.trace = &trace;
-	SV_RecursiveHullCheck (hull->firstclipnode, 0, 1, startd, endd);
-
-	// if we hit, unrotate endpos and normal, and store the entity we hit
-	if (trace.fraction != 1)
-	{
-		// rotate endpos back to world frame of reference
-		if (ent->v.solid == SOLID_BSP && (ent->v.angles[0] || ent->v.angles[1] || ent->v.angles[2]))
+		Mod_CheckLoaded(model);
+		if (model->type != mod_brush)
 		{
-			VectorNegate (ent->v.angles, offset);
-			AngleVectorsFLU (offset, forward, left, up);
-
-			VectorCopy (trace.endpos, tempd);
-			trace.endpos[0] = DotProduct (tempd, forward);
-			trace.endpos[1] = DotProduct (tempd, left);
-			trace.endpos[2] = DotProduct (tempd, up);
-
-			VectorCopy (trace.plane.normal, tempd);
-			trace.plane.normal[0] = DotProduct (tempd, forward);
-			trace.plane.normal[1] = DotProduct (tempd, left);
-			trace.plane.normal[2] = DotProduct (tempd, up);
+			Con_Printf ("SV_ClipMoveToEntity: SOLID_BSP with a non bsp model, entity dump:\n");
+			ED_Print (ent);
+			Host_Error ("SV_ClipMoveToEntity: SOLID_BSP with a non bsp model\n");
 		}
-		// fix offset
-		VectorAdd (trace.endpos, offset, trace.endpos);
-		trace.ent = ent;
+		if (ent->v.movetype != MOVETYPE_PUSH)
+			Host_Error ("SV_ClipMoveToEntity: SOLID_BSP without MOVETYPE_PUSH");
 	}
-	else if (trace.allsolid || trace.startsolid)
-		trace.ent = ent;
+
+	Collision_ClipTrace(&trace, ent, model, ent->v.origin, ent->v.angles, ent->v.mins, ent->v.maxs, start, mins, maxs, end);
 
 	return trace;
 }
@@ -989,23 +603,6 @@ loc0:
 			clip->trace.endcontents = trace.endcontents;
 			clip->trace.ent = trace.ent;
 		}
-		/*
-		if (trace.allsolid)
-		{
-			clip->trace = trace;
-			return;
-		}
-		if (trace.startsolid || trace.fraction < clip->trace.fraction)
-		{
-			if (clip->trace.startsolid)
-			{
-				clip->trace = trace;
-				clip->trace.startsolid = true;
-			}
-			else
-				clip->trace = trace;
-		}
-		*/
 	}
 
 // recurse down both sides
@@ -1080,7 +677,7 @@ trace_t SV_Move (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, int type, e
 	clip.type = type;
 	clip.passedict = passedict;
 
-	SV_RoundUpToHullSize(clip.mins, clip.maxs, clip.hullmins, clip.hullmaxs);
+	Collision_RoundUpToHullSize(sv.worldmodel, clip.mins, clip.maxs, clip.hullmins, clip.hullmaxs);
 
 	if (type == MOVE_MISSILE)
 	{
@@ -1108,13 +705,10 @@ trace_t SV_Move (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, int type, e
 	clip.trace = SV_ClipMoveToEntity (sv.edicts, start, mins, maxs, end);
 
 	// clip to entities
-	//if (!clip.trace.allsolid)
-	{
-		// create the bounding box of the entire move
-		SV_MoveBounds ( start, bigmins, bigmaxs, end, clip.boxmins, clip.boxmaxs );
+	// create the bounding box of the entire move
+	SV_MoveBounds ( start, bigmins, bigmaxs, end, clip.boxmins, clip.boxmaxs );
 
-		SV_ClipToLinks ( sv_areanodes, &clip );
-	}
+	SV_ClipToLinks ( sv_areanodes, &clip );
 
 	return clip.trace;
 }

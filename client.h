@@ -516,13 +516,6 @@ void CL_MoveParticles(void);
 void R_MoveExplosions(void);
 void R_NewExplosion(vec3_t org);
 
-// if contents is not zero, it will impact on content changes
-// (leafs matching contents are considered empty, others are solid)
-extern int traceline_endcontents; // set by TraceLine
-// need to call this sometime before using TraceLine with hitbmodels
-void TraceLine_ScanForBModels(void);
-float TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int contents, int hitbmodels);
-
 #include "cl_screen.h"
 
 #define MAX_VISEDICTS (MAX_EDICTS + MAX_STATIC_ENTITIES + MAX_TEMP_ENTITIES)
