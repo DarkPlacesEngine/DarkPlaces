@@ -21,17 +21,22 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef ZONE_H
 #define ZONE_H
 
+// LordHavoc: this is pointless with a good C library
+//#define MEMCLUMPING
+
 #define POOLNAMESIZE 128
+#if MEMCLUMPING
 // give malloc padding so we can't waste most of a page at the end
 #define MEMCLUMPSIZE (65536 - 1536)
 // smallest unit we care about is this many bytes
 #define MEMUNIT 8
 #define MEMBITS (MEMCLUMPSIZE / MEMUNIT)
 #define MEMBITINTS (MEMBITS / 32)
+#define MEMCLUMP_SENTINEL 0xABADCAFE
+#endif
 
 #define MEMHEADER_SENTINEL1 0xDEADF00D
 #define MEMHEADER_SENTINEL2 0xDF
-#define MEMCLUMP_SENTINEL 0xABADCAFE
 
 typedef struct memheader_s
 {
@@ -39,8 +44,10 @@ typedef struct memheader_s
 	struct memheader_s *chain;
 	// pool this memheader belongs to
 	struct mempool_s *pool;
+#if MEMCLUMPING
 	// clump this memheader lives in, NULL if not in a clump
 	struct memclump_s *clump;
+#endif
 	// size of the memory after the header (excluding header and sentinel2)
 	int size;
 	// file name and line where Mem_Alloc was called
@@ -52,6 +59,7 @@ typedef struct memheader_s
 }
 memheader_t;
 
+#if MEMCLUMPING
 typedef struct memclump_s
 {
 	// contents of the clump
@@ -72,13 +80,16 @@ typedef struct memclump_s
 	struct memclump_s *chain;
 }
 memclump_t;
+#endif
 
 typedef struct mempool_s
 {
 	// chain of individual memory allocations
 	struct memheader_s *chain;
+#if MEMCLUMPING
 	// chain of clumps (if any)
 	struct memclump_s *clumpchain;
+#endif
 	// total memory allocated in this pool (inside memheaders)
 	int totalsize;
 	// total memory allocated in this pool (actual malloc total)

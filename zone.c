@@ -25,8 +25,10 @@ mempool_t *poolchain = NULL;
 
 void *_Mem_Alloc(mempool_t *pool, int size, char *filename, int fileline)
 {
+#if MEMCLUMPING
 	int i, j, k, needed, endbit, largest;
 	memclump_t *clump, **clumpchainpointer;
+#endif
 	memheader_t *mem;
 	if (size <= 0)
 		return NULL;
@@ -34,6 +36,7 @@ void *_Mem_Alloc(mempool_t *pool, int size, char *filename, int fileline)
 		Sys_Error("Mem_Alloc: pool == NULL (alloc at %s:%i)", filename, fileline);
 	Con_DPrintf("Mem_Alloc: pool %s, file %s:%i, size %i bytes\n", pool->name, filename, fileline, size);
 	pool->totalsize += size;
+#if MEMCLUMPING
 	if (size < 4096)
 	{
 		// clumping
@@ -90,12 +93,15 @@ choseclump:
 	else
 	{
 		// big allocations are not clumped
+#endif
 		pool->realsize += sizeof(memheader_t) + size + sizeof(int);
 		mem = malloc(sizeof(memheader_t) + size + sizeof(int));
 		if (mem == NULL)
 			Sys_Error("Mem_Alloc: out of memory (alloc at %s:%i)", filename, fileline);
+#if MEMCLUMPING
 		mem->clump = NULL;
 	}
+#endif
 	mem->filename = filename;
 	mem->fileline = fileline;
 	mem->size = size;
@@ -112,8 +118,10 @@ choseclump:
 
 void _Mem_Free(void *data, char *filename, int fileline)
 {
+#if MEMCLUMPING
 	int i, firstblock, endblock;
 	memclump_t *clump, **clumpchainpointer;
+#endif
 	memheader_t *mem, **memchainpointer;
 	mempool_t *pool;
 	if (data == NULL)
@@ -133,6 +141,7 @@ void _Mem_Free(void *data, char *filename, int fileline)
 		{
 			*memchainpointer = mem->chain;
 			pool->totalsize -= mem->size;
+#if MEMCLUMPING
 			if ((clump = mem->clump))
 			{
 				if (clump->sentinel1 != MEMCLUMP_SENTINEL)
@@ -172,10 +181,13 @@ void _Mem_Free(void *data, char *filename, int fileline)
 			}
 			else
 			{
+#endif
 				pool->realsize -= sizeof(memheader_t) + mem->size + sizeof(int);
 				memset(mem, 0xBF, sizeof(memheader_t) + mem->size + sizeof(int));
 				free(mem);
+#if MEMCLUMPING
 			}
+#endif
 			return;
 		}
 	}
@@ -244,6 +256,7 @@ void _Mem_CheckSentinels(void *data, char *filename, int fileline)
 		Sys_Error("Mem_CheckSentinels: trashed header sentinel 2 (block allocated at %s:%i, sentinel check at %s:%i)", mem->filename, mem->fileline, filename, fileline);
 }
 
+#if MEMCLUMPING
 static void _Mem_CheckClumpSentinels(memclump_t *clump, char *filename, int fileline)
 {
 	// this isn't really very useful
@@ -252,19 +265,26 @@ static void _Mem_CheckClumpSentinels(memclump_t *clump, char *filename, int file
 	if (clump->sentinel2 != MEMCLUMP_SENTINEL)
 		Sys_Error("Mem_CheckClumpSentinels: trashed sentinel 2 (sentinel check at %s:%i)", filename, fileline);
 }
+#endif
 
 void _Mem_CheckSentinelsGlobal(char *filename, int fileline)
 {
 	memheader_t *mem;
+#if MEMCLUMPING
 	memclump_t *clump;
+#endif
 	mempool_t *pool;
 	for (pool = poolchain;pool;pool = pool->next)
+#if MEMCLUMPING
 	{
+#endif
 		for (mem = pool->chain;mem;mem = mem->chain)
 			_Mem_CheckSentinels((void *)((qbyte *) mem + sizeof(memheader_t)), filename, fileline);
+#if MEMCLUMPING
 		for (clump = pool->clumpchain;clump;clump = clump->chain)
 			_Mem_CheckClumpSentinels(clump, filename, fileline);
 	}
+#endif
 }
 
 // used for temporary memory allocations around the engine, not for longterm
