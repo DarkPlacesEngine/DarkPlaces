@@ -71,7 +71,7 @@ Optional fullbrights (r_fullbrights 0/1 followed by r_restart)
 Dynamic Farclip (no distance limits in huge maps)
 Improved gl_flashblend (now renders a corona instead of an ugly blob)
 DynamicLight coronas (more realism)
-Transparent statusbar (scr_conalpha) that does not block your view as much.
+Transparent statusbar (sbar_alpha) that does not block your view as much.
 No 8bit texture uploads (fixes 'green' walls in the distance).
 Fixed view blends (glquake was quite broken).
 
@@ -87,6 +87,8 @@ Sends 20fps network packets to improve modem play instead of one per frame. (sys
 Allow skin colormaps 14 and 15 (freaky :)
 Longer chat messages.
 No more 72fps limit, host_maxfps lets you decide.
+Support for more mouse buttons (mouse1-mouse16, mwheelup/mwheeldown are aliases to mouse4 and mouse5).
+Server browser for public (sv_public 1) darkplaces servers. 
 
 Server features: (Note server only supports darkplaces clients)
 More accurate movement and precise aiming.
@@ -96,6 +98,7 @@ slowmo cvar controls game speed.
 No crash with the buggy 'teleport train' in shub's pit.
 Allow skin colormaps 14 and 15 (freaky :)
 sys_ticrate applies to listen (client) servers as well as dedicated.
+sv_public cvar to advertise to master server.
 
 Modding features:
 HalfLife map support (place your HalfLife wads in quake/id1/textures/ or quake/MODDIR/textures/ as the maps need them)
