@@ -2414,8 +2414,9 @@ void R_Shadow_UpdateWorldLight(dlight_t *light, vec3_t origin, vec3_t angles, ve
 	}
 	light->shadow = shadowenable;
 	light->corona = corona;
-	if (cubemapname && cubemapname[0] && strlen(cubemapname) < sizeof(light->cubemapname))
-		strcpy(light->cubemapname, cubemapname);
+	if (!cubemapname)
+		cubemapname = "";
+	strlcpy(light->cubemapname, cubemapname, strlen(light->cubemapname));
 	Matrix4x4_CreateFromQuakeEntity(&light->matrix, light->origin[0], light->origin[1], light->origin[2], light->angles[0], light->angles[1], light->angles[2], 1);
 
 	R_RTLight_UpdateFromDLight(&light->rtlight, light, true);
