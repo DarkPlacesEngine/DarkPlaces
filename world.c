@@ -384,36 +384,15 @@ POINT TESTING IN HULLS
 */
 
 /*
-==================
-SV_HullPointContents
-
-==================
-*/
-int SV_HullPointContents (hull_t *hull, int num, vec3_t p)
-{
-	while (num >= 0)
-		num = hull->clipnodes[num].children[(hull->planes[hull->clipnodes[num].planenum].type < 3 ? p[hull->planes[hull->clipnodes[num].planenum].type] : DotProduct (hull->planes[hull->clipnodes[num].planenum].normal, p)) < hull->planes[hull->clipnodes[num].planenum].dist];
-
-	return num;
-}
-
-/*
 ============
 SV_TestEntityPosition
 
 This could be a lot more efficient...
 ============
 */
-edict_t	*SV_TestEntityPosition (edict_t *ent)
+int SV_TestEntityPosition (edict_t *ent)
 {
-	trace_t	trace;
-
-	trace = SV_Move (ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent);
-
-	if (trace.startsolid)
-		return sv.edicts;
-
-	return NULL;
+	return SV_Move (ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent).startsolid;
 }
 
 

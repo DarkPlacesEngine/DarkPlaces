@@ -1443,7 +1443,7 @@ PF_pointcontents
 */
 void PF_pointcontents (void)
 {
-	G_FLOAT(OFS_RETURN) = SV_PointContents (G_VECTOR(OFS_PARM0));
+	G_FLOAT(OFS_RETURN) = Mod_PointInLeaf(G_VECTOR(OFS_PARM0), sv.worldmodel)->contents;
 }
 
 /*

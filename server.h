@@ -219,6 +219,8 @@ extern cvar_t sv_accelerate;
 extern cvar_t sv_idealpitchscale;
 extern cvar_t sv_aim;
 extern cvar_t sv_predict;
+extern cvar_t sv_stepheight;
+extern cvar_t sv_jumpstep;
 
 extern server_static_t svs;				// persistant server info
 extern server_t sv;					// local server
