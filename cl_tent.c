@@ -486,8 +486,13 @@ void CL_RelinkBeams (void)
 			continue;
 
 		// if coming from the player, update the start position
-		if (b->entity == cl.viewentity)
-			VectorCopy (cl_entities[cl.viewentity].render.origin, b->start);
+		//if (b->entity == cl.viewentity)
+		//	VectorCopy (cl_entities[cl.viewentity].render.origin, b->start);
+		if (b->entity)
+		{
+			VectorCopy (cl_entities[b->entity].render.origin, b->start);
+			b->start[2] += 16;
+		}
 
 		// calculate pitch and yaw
 		VectorSubtract (b->end, b->start, dist);
@@ -526,6 +531,7 @@ void CL_RelinkBeams (void)
 			ent->render.angles[0] = pitch;
 			ent->render.angles[1] = yaw;
 			ent->render.angles[2] = rand()%360;
+			CL_BoundingBoxForEntity(&ent->render);
 			VectorMA(org, 30, dist, org);
 			d -= 30;
 		}
