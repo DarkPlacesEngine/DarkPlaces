@@ -1877,6 +1877,7 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 		}
 	}
 
+	GL_ColorPointer(NULL);
 	GL_Color(cr, cg, cb, ca);
 
 	R_Mesh_Matrix(&r_identitymatrix);

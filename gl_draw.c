@@ -433,6 +433,8 @@ void R_DrawQueue(void)
 	pic = NULL;
 	texnum = 0;
 	color = 0;
+	GL_ColorPointer(NULL);
+	GL_Color(1,1,1,1);
 
 	batch = false;
 	batchcount = 0;
@@ -518,6 +520,7 @@ void R_DrawQueue(void)
 			m.pointer_texcoord[0] = mesh->data_texcoord2f;
 			R_Mesh_State_Texture(&m);
 			R_Mesh_Draw(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
+			GL_ColorPointer(NULL);
 			currentpic = "\0";
 			break;
 		case DRAWQUEUE_SETCLIP:
