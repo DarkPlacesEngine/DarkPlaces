@@ -58,7 +58,12 @@ void VID_Finish (void)
 {
 }
 
-int VID_SetGamma(float prescale, float gamma, float scale, float base)
+int VID_SetGamma(unsigned short *ramps)
+{
+	return FALSE;
+}
+
+int VID_GetGamma(unsigned short *ramps)
 {
 	return FALSE;
 }

@@ -32,6 +32,16 @@ int vid_hidden = true;
 // LordHavoc: if window is not the active window, don't hog as much CPU time,
 // let go of the mouse, turn off sound, and restore system gamma ramps...
 int vid_activewindow = true;
+// LordHavoc: whether to allow use of hwgamma (disabled when window is inactive)
+int vid_allowhwgamma = false;
+
+// we don't know until we try it!
+int vid_hardwaregammasupported = true;
+// whether hardware gamma ramps are currently in effect
+int vid_usinghwgamma = false;
+
+unsigned short vid_gammaramps[768];
+unsigned short vid_systemgammaramps[768];
 
 cvar_t vid_fullscreen = {CVAR_SAVE, "vid_fullscreen", "1"};
 cvar_t vid_width = {CVAR_SAVE, "vid_width", "640"};
@@ -46,6 +56,22 @@ cvar_t in_pitch_min = {0, "in_pitch_min", "-70"};
 cvar_t in_pitch_max = {0, "in_pitch_max", "80"};
 
 cvar_t m_filter = {CVAR_SAVE, "m_filter","0"};
+
+cvar_t v_gamma = {CVAR_SAVE, "v_gamma", "1"};
+cvar_t v_contrast = {CVAR_SAVE, "v_contrast", "1"};
+cvar_t v_brightness = {CVAR_SAVE, "v_brightness", "0"};
+cvar_t v_color_enable = {CVAR_SAVE, "v_color_enable", "0"};
+cvar_t v_color_black_r = {CVAR_SAVE, "v_color_black_r", "0"};
+cvar_t v_color_black_g = {CVAR_SAVE, "v_color_black_g", "0"};
+cvar_t v_color_black_b = {CVAR_SAVE, "v_color_black_b", "0"};
+cvar_t v_color_grey_r = {CVAR_SAVE, "v_color_grey_r", "0.5"};
+cvar_t v_color_grey_g = {CVAR_SAVE, "v_color_grey_g", "0.5"};
+cvar_t v_color_grey_b = {CVAR_SAVE, "v_color_grey_b", "0.5"};
+cvar_t v_color_white_r = {CVAR_SAVE, "v_color_white_r", "1"};
+cvar_t v_color_white_g = {CVAR_SAVE, "v_color_white_g", "1"};
+cvar_t v_color_white_b = {CVAR_SAVE, "v_color_white_b", "1"};
+cvar_t v_overbrightbits = {CVAR_SAVE, "v_overbrightbits", "0"};
+cvar_t v_hwgamma = {0, "v_hwgamma", "1"};
 
 // brand of graphics chip
 const char *gl_vendor;
@@ -449,8 +475,114 @@ void IN_Mouse(usercmd_t *cmd, float mx, float my)
 	}
 }
 
+static float cachegamma, cachebrightness, cachecontrast, cacheblack[3], cachegrey[3], cachewhite[3];
+static int cacheoverbrightbits = -1, cachecolorenable, cachehwgamma;
+#define BOUNDCVAR(cvar, m1, m2) c = &(cvar);f = bound(m1, c->value, m2);if (c->value != f) Cvar_SetValueQuick(c, f);
+void VID_UpdateGamma(qboolean force)
+{
+	cvar_t *c;
+	float f;
+
+	// LordHavoc: don't mess with gamma tables if running dedicated
+	if (cls.state == ca_dedicated)
+		return;
+
+	if (!force
+	 && vid_usinghwgamma == (vid_allowhwgamma && v_hwgamma.integer)
+	 && v_overbrightbits.integer == cacheoverbrightbits
+	 && v_gamma.value == cachegamma
+	 && v_contrast.value == cachecontrast
+	 && v_brightness.value == cachebrightness
+	 && cachecolorenable == v_color_enable.integer
+	 && cacheblack[0] == v_color_black_r.value
+	 && cacheblack[1] == v_color_black_g.value
+	 && cacheblack[2] == v_color_black_b.value
+	 && cachegrey[0] == v_color_grey_r.value
+	 && cachegrey[1] == v_color_grey_g.value
+	 && cachegrey[2] == v_color_grey_b.value
+	 && cachewhite[0] == v_color_white_r.value
+	 && cachewhite[1] == v_color_white_g.value
+	 && cachewhite[2] == v_color_white_b.value)
+		return;
+
+	if (vid_allowhwgamma && v_hwgamma.integer)
+	{
+		if (!vid_usinghwgamma)
+		{
+			vid_usinghwgamma = true;
+			vid_hardwaregammasupported = VID_GetGamma(vid_systemgammaramps);
+		}
+
+		BOUNDCVAR(v_gamma, 0.1, 5);cachegamma = v_gamma.value;
+		BOUNDCVAR(v_contrast, 1, 5);cachecontrast = v_contrast.value;
+		BOUNDCVAR(v_brightness, 0, 0.8);cachebrightness = v_brightness.value;
+		BOUNDCVAR(v_color_black_r, 0, 0.8);cacheblack[0] = v_color_black_r.value;
+		BOUNDCVAR(v_color_black_g, 0, 0.8);cacheblack[1] = v_color_black_g.value;
+		BOUNDCVAR(v_color_black_b, 0, 0.8);cacheblack[2] = v_color_black_b.value;
+		BOUNDCVAR(v_color_grey_r, 0, 0.95);cachegrey[0] = v_color_grey_r.value;
+		BOUNDCVAR(v_color_grey_g, 0, 0.95);cachegrey[1] = v_color_grey_g.value;
+		BOUNDCVAR(v_color_grey_b, 0, 0.95);cachegrey[2] = v_color_grey_b.value;
+		BOUNDCVAR(v_color_white_r, 1, 5);cachewhite[0] = v_color_white_r.value;
+		BOUNDCVAR(v_color_white_g, 1, 5);cachewhite[1] = v_color_white_g.value;
+		BOUNDCVAR(v_color_white_b, 1, 5);cachewhite[2] = v_color_white_b.value;
+		cachecolorenable = v_color_enable.integer;
+		cacheoverbrightbits = v_overbrightbits.integer;
+		cachehwgamma = v_hwgamma.integer;
+
+		if (cachecolorenable)
+		{
+			BuildGammaTable16((float) (1 << cacheoverbrightbits), invpow(0.5, 1 - cachegrey[0]), cachewhite[0], cacheblack[0], vid_gammaramps);
+			BuildGammaTable16((float) (1 << cacheoverbrightbits), invpow(0.5, 1 - cachegrey[1]), cachewhite[1], cacheblack[1], vid_gammaramps + 256);
+			BuildGammaTable16((float) (1 << cacheoverbrightbits), invpow(0.5, 1 - cachegrey[2]), cachewhite[2], cacheblack[2], vid_gammaramps + 512);
+		}
+		else
+		{
+			BuildGammaTable16((float) (1 << cacheoverbrightbits), cachegamma, cachecontrast, cachebrightness, vid_gammaramps);
+			BuildGammaTable16((float) (1 << cacheoverbrightbits), cachegamma, cachecontrast, cachebrightness, vid_gammaramps + 256);
+			BuildGammaTable16((float) (1 << cacheoverbrightbits), cachegamma, cachecontrast, cachebrightness, vid_gammaramps + 512);
+		}
+
+		vid_hardwaregammasupported = VID_SetGamma(vid_gammaramps);
+	}
+	else
+	{
+		if (vid_usinghwgamma)
+		{
+			vid_usinghwgamma = false;
+			vid_hardwaregammasupported = VID_SetGamma(vid_systemgammaramps);
+		}
+	}
+}
+
+void VID_RestoreSystemGamma(void)
+{
+	if (vid_usinghwgamma)
+	{
+		vid_usinghwgamma = false;
+		VID_SetGamma(vid_systemgammaramps);
+	}
+}
+
 void VID_Shared_Init(void)
 {
+	Cvar_RegisterVariable(&v_gamma);
+	Cvar_RegisterVariable(&v_brightness);
+	Cvar_RegisterVariable(&v_contrast);
+
+	Cvar_RegisterVariable(&v_color_enable);
+	Cvar_RegisterVariable(&v_color_black_r);
+	Cvar_RegisterVariable(&v_color_black_g);
+	Cvar_RegisterVariable(&v_color_black_b);
+	Cvar_RegisterVariable(&v_color_grey_r);
+	Cvar_RegisterVariable(&v_color_grey_g);
+	Cvar_RegisterVariable(&v_color_grey_b);
+	Cvar_RegisterVariable(&v_color_white_r);
+	Cvar_RegisterVariable(&v_color_white_g);
+	Cvar_RegisterVariable(&v_color_white_b);
+
+	Cvar_RegisterVariable(&v_hwgamma);
+	Cvar_RegisterVariable(&v_overbrightbits);
+
 	Cvar_RegisterVariable(&vid_fullscreen);
 	Cvar_RegisterVariable(&vid_width);
 	Cvar_RegisterVariable(&vid_height);

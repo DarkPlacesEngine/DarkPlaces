@@ -43,6 +43,9 @@ extern void (*vid_menukeyfn)(int key);
 
 extern int vid_hidden;
 extern int vid_activewindow;
+extern int vid_allowhwgamma;
+extern int vid_hardwaregammasupported;
+extern int vid_usinghwgamma;
 
 extern cvar_t vid_fullscreen;
 extern cvar_t vid_width;
@@ -50,6 +53,22 @@ extern cvar_t vid_height;
 extern cvar_t vid_bitsperpixel;
 extern cvar_t vid_mouse;
 extern cvar_t vid_stencil;
+
+extern cvar_t v_gamma;
+extern cvar_t v_contrast;
+extern cvar_t v_brightness;
+extern cvar_t v_color_enable;
+extern cvar_t v_color_black_r;
+extern cvar_t v_color_black_g;
+extern cvar_t v_color_black_b;
+extern cvar_t v_color_grey_r;
+extern cvar_t v_color_grey_g;
+extern cvar_t v_color_grey_b;
+extern cvar_t v_color_white_r;
+extern cvar_t v_color_white_g;
+extern cvar_t v_color_white_b;
+extern cvar_t v_overbrightbits;
+extern cvar_t v_hwgamma;
 
 extern int gl_stencil;
 
@@ -99,7 +118,13 @@ int VID_SetMode (int modenum);
 
 // sets hardware gamma correction, returns false if the device does not
 // support gamma control
-int VID_SetGamma (float prescale, float gamma, float scale, float base);
+int VID_SetGamma (unsigned short *ramps);
+// gets hardware gamma correction, returns false if the device does not
+// support gamma control
+int VID_GetGamma (unsigned short *ramps);
+
+void VID_UpdateGamma(qboolean force);
+void VID_RestoreSystemGamma(void);
 
 void VID_GetWindowSize (int *x, int *y, int *width, int *height);
 

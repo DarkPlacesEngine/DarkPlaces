@@ -62,10 +62,6 @@ static dllfunction_t wglswapintervalfuncs[] =
 	{NULL, NULL}
 };
 
-void VID_RestoreGameGamma(void);
-void VID_GetSystemGamma(void);
-void VID_RestoreSystemGamma(void);
-
 qboolean scr_skipupdate;
 
 static DEVMODE gdevmode;
@@ -427,7 +423,6 @@ void ClearAllStates (void)
 	IN_ClearStates ();
 }
 
-void VID_RestoreGameGamma(void);
 extern qboolean host_loopactive;
 
 void AppActivate(BOOL fActive, BOOL minimize)
@@ -461,6 +456,7 @@ void AppActivate(BOOL fActive, BOOL minimize)
 
 	if (fActive)
 	{
+		vid_allowhwgamma = true;
 		if (vid_isfullscreen)
 		{
 			if (vid_wassuspended)
@@ -473,12 +469,11 @@ void AppActivate(BOOL fActive, BOOL minimize)
 			// LordHavoc: from dabb, fix for alt-tab bug in NVidia drivers
 			MoveWindow(mainwindow,0,0,gdevmode.dmPelsWidth,gdevmode.dmPelsHeight,false);
 		}
-		if (host_loopactive)
-			VID_RestoreGameGamma();
 	}
 
 	if (!fActive)
 	{
+		vid_allowhwgamma = false;
 		vid_usingmouse = false;
 		IN_DeactivateMouse ();
 		IN_ShowMouse ();
@@ -607,51 +602,21 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 	return lRet;
 }
 
-
-//static int grabsysgamma = true;
-WORD systemgammaramps[3][256], currentgammaramps[3][256];
-
-int VID_SetGamma(float prescale, float gamma, float scale, float base)
+int VID_SetGamma(unsigned short *ramps)
 {
-	int i;
-	HDC hdc;
-	hdc = GetDC (NULL);
-
-	BuildGammaTable16(prescale, gamma, scale, base, &currentgammaramps[0][0]);
-	for (i = 0;i < 256;i++)
-		currentgammaramps[1][i] = currentgammaramps[2][i] = currentgammaramps[0][i];
-
-	i = SetDeviceGammaRamp(hdc, &currentgammaramps[0][0]);
-
+	HDC hdc = GetDC (NULL);
+	int i = SetDeviceGammaRamp(hdc, ramps);
 	ReleaseDC (NULL, hdc);
 	return i; // return success or failure
 }
 
-void VID_RestoreGameGamma(void)
+int VID_GetGamma(unsigned short *ramps)
 {
-	VID_UpdateGamma(true);
-}
-
-void VID_GetSystemGamma(void)
-{
-	HDC hdc;
-	hdc = GetDC (NULL);
-
-	GetDeviceGammaRamp(hdc, &systemgammaramps[0][0]);
-
+	HDC hdc = GetDC (NULL);
+	int i = GetDeviceGammaRamp(hdc, ramps);
 	ReleaseDC (NULL, hdc);
+	return i; // return success or failure
 }
-
-void VID_RestoreSystemGamma(void)
-{
-	HDC hdc;
-	hdc = GetDC (NULL);
-
-	SetDeviceGammaRamp(hdc, &systemgammaramps[0][0]);
-
-	ReleaseDC (NULL, hdc);
-}
-
 
 static HINSTANCE gldll;
 
@@ -775,8 +740,6 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int stencil)
 
 	memset(&gdevmode, 0, sizeof(gdevmode));
 
-	VID_GetSystemGamma();
-
 	vid_isfullscreen = false;
 	if (fullscreen)
 	{
@@ -884,7 +847,7 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int stencil)
 
 	// fix the leftover Alt from any Alt-Tab or the like that switched us away
 	ClearAllStates ();
-	
+
 	hdc = GetDC(mainwindow);
 
 	if ((pixelformat = ChoosePixelFormat(hdc, &pfd)) == 0)
@@ -971,6 +934,8 @@ void VID_Shutdown (void)
 	HGLRC hRC = 0;
 	HDC hDC = 0;
 
+	VID_RestoreSystemGamma();
+
 	vid_initialized = false;
 	IN_Shutdown();
 	if (qwglGetCurrentContext)
@@ -989,7 +954,6 @@ void VID_Shutdown (void)
 		ChangeDisplaySettings (NULL, 0);
 	vid_isfullscreen = false;
 	AppActivate(false, false);
-	VID_RestoreSystemGamma();
 	if (mainwindow)
 		DestroyWindow(mainwindow);
 	mainwindow = 0;
@@ -1132,7 +1096,7 @@ qboolean IN_InitDInput (void)
 	if (!hInstDI)
 	{
 		hInstDI = LoadLibrary("dinput.dll");
-		
+
 		if (hInstDI == NULL)
 		{
 			Con_SafePrintf ("Couldn't load dinput.dll\n");
@@ -1209,7 +1173,7 @@ IN_StartupMouse
 */
 void IN_StartupMouse (void)
 {
-	if (COM_CheckParm ("-nomouse") || COM_CheckParm("-safe")) 
+	if (COM_CheckParm ("-nomouse") || COM_CheckParm("-safe"))
 		return;
 
 	mouseinitialized = true;
@@ -1234,16 +1198,16 @@ void IN_StartupMouse (void)
 
 		if (mouseparmsvalid)
 		{
-			if ( COM_CheckParm ("-noforcemspd") ) 
+			if ( COM_CheckParm ("-noforcemspd") )
 				newmouseparms[2] = originalmouseparms[2];
 
-			if ( COM_CheckParm ("-noforcemaccel") ) 
+			if ( COM_CheckParm ("-noforcemaccel") )
 			{
 				newmouseparms[0] = originalmouseparms[0];
 				newmouseparms[1] = originalmouseparms[1];
 			}
 
-			if ( COM_CheckParm ("-noforcemparms") ) 
+			if ( COM_CheckParm ("-noforcemparms") )
 			{
 				newmouseparms[0] = originalmouseparms[0];
 				newmouseparms[1] = originalmouseparms[1];
@@ -1286,8 +1250,8 @@ void IN_MouseEvent (int mstate)
 			{
 				Key_Event (K_MOUSE1 + i, false);
 			}
-		}	
-			
+		}
+
 		mouse_oldbuttonstate = mstate;
 	}
 }
@@ -1459,25 +1423,25 @@ void IN_ClearStates (void)
 }
 
 
-/* 
-=============== 
-IN_StartupJoystick 
+/*
 ===============
-*/  
-void IN_StartupJoystick (void) 
+IN_StartupJoystick
+===============
+*/
+void IN_StartupJoystick (void)
 {
 	int			numdevs;
 	JOYCAPS		jc;
 	MMRESULT	mmr;
 	mmr = 0;
- 
+
  	// assume no joystick
-	joy_avail = false; 
+	joy_avail = false;
 
 	// abort startup if user requests no joystick
-	if (COM_CheckParm ("-nojoy") || COM_CheckParm("-safe")) 
-		return; 
- 
+	if (COM_CheckParm ("-nojoy") || COM_CheckParm("-safe"))
+		return;
+
 	// verify joystick driver is present
 	if ((numdevs = joyGetNumDevs ()) == 0)
 	{
@@ -1494,7 +1458,7 @@ void IN_StartupJoystick (void)
 
 		if ((mmr = joyGetPosEx (joy_id, &ji)) == JOYERR_NOERROR)
 			break;
-	} 
+	}
 
 	// abort startup if we didn't find a valid joystick
 	if (mmr != JOYERR_NOERROR)
@@ -1508,7 +1472,7 @@ void IN_StartupJoystick (void)
 	memset (&jc, 0, sizeof(jc));
 	if ((mmr = joyGetDevCaps (joy_id, &jc, sizeof(jc))) != JOYERR_NOERROR)
 	{
-		Con_Printf ("\njoystick not found -- invalid joystick capabilities (%x)\n\n", mmr); 
+		Con_Printf ("\njoystick not found -- invalid joystick capabilities (%x)\n\n", mmr);
 		return;
 	}
 
@@ -1522,10 +1486,10 @@ void IN_StartupJoystick (void)
 	// mark the joystick as available and advanced initialization not completed
 	// this is needed as cvars are not available during initialization
 
-	joy_avail = true; 
+	joy_avail = true;
 	joy_advancedinit = false;
 
-	Con_Printf ("\njoystick detected\n\n"); 
+	Con_Printf ("\njoystick detected\n\n");
 }
 
 
@@ -1697,11 +1661,11 @@ void IN_Commands (void)
 }
 
 
-/* 
-=============== 
+/*
+===============
 IN_ReadJoystick
-=============== 
-*/  
+===============
+*/
 qboolean IN_ReadJoystick (void)
 {
 
@@ -1752,7 +1716,7 @@ void IN_JoyMove (usercmd_t *cmd)
 	// verify joystick is available and that the user wants to use it
 	if (!joy_avail || !in_joystick.integer)
 	{
-		return; 
+		return;
 	}
 
 	// collect the joystick data, if possible
@@ -1792,7 +1756,7 @@ void IN_JoyMove (usercmd_t *cmd)
 			}
 		}
 
-		// convert range from -32768..32767 to -1..1 
+		// convert range from -32768..32767 to -1..1
 		fAxisValue /= 32768.0;
 
 		switch (dwAxisMap[i])
@@ -1802,7 +1766,7 @@ void IN_JoyMove (usercmd_t *cmd)
 			{
 				// user wants forward control to become look control
 				if (fabs(fAxisValue) > joy_pitchthreshold.value)
-				{		
+				{
 					// if mouse invert is on, invert the joystick pitch value
 					// only absolute control support here (joy_advanced is false)
 					if (m_pitch.value < 0.0)

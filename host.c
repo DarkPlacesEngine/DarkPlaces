@@ -898,7 +898,6 @@ void Host_Init (void)
 
 	if (cls.state != ca_dedicated)
 	{
-		Gamma_Init();
 		Palette_Init();
 		VID_Shared_Init();
 		VID_Init();
