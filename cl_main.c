@@ -506,7 +506,7 @@ static void CL_RelinkNetworkEntities()
 				v2[2] = v[2] * 18 + neworg[2] + 16;
 				TraceLine(neworg, v2, v, NULL, 0, true);
 
-				CL_AllocDlight (NULL, v, 100, 1, 1, 1, 0, 0.1);
+				CL_AllocDlight (NULL, v, 100, 1, 1, 1, 0, 0);
 			}
 			if (effects & EF_DIMLIGHT)
 			{
@@ -626,7 +626,7 @@ static void CL_RelinkNetworkEntities()
 			// hack to make glowing player light shine on their gun
 			if (i == cl.viewentity && !chase_active.integer)
 				vec[2] += 30;
-			CL_AllocDlight (&ent->render, vec, dlightradius, dlightcolor[0] * d, dlightcolor[1] * d, dlightcolor[2] * d, 0, 0);
+			CL_AllocDlight (/*&ent->render*/ NULL, vec, dlightradius, dlightcolor[0] * d, dlightcolor[1] * d, dlightcolor[2] * d, 0, 0);
 		}
 
 		if (chase_active.integer)
@@ -752,6 +752,7 @@ static void CL_RelinkEffects()
 
 void CL_RelinkEntities (void)
 {
+	CL_DecayLights ();
 	CL_LerpPlayerVelocity();
 	CL_RelinkNetworkEntities();
 	TraceLine_ScanForBModels();
