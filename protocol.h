@@ -375,6 +375,19 @@ typedef struct
 }
 entity_frame_t;
 
+/*
+DPPROTOCOL_VERSION4
+server only updates entities according to some (unmentioned) scheme.
+
+a commit consists of all entities changed at server's discretion,
+these entities are stored in a range (start/count) of structs in the
+commitentity[] buffer.
+
+when a commit is confirmed, range_count entity states beginning at
+commitentity[range_start] (this may wrap!) are read and copied into
+currententity according to their .number field, and the commit (and
+any older commits) are deleted.
+*/
 
 // DPPROTOCOL_VERSION4
 #define MAX_ENTITIES_PER_FRAME 1024
@@ -382,19 +395,16 @@ entity_frame_t;
 // DPPROTOCOL_VERSION4
 typedef struct
 {
+	// time of frame
 	double time;
+	// number of frame
 	int framenum;
 
-	// partial updates only update a certain range of entities in one update
-	// note that if end <= start the range wrapped (full update)
-	// note also that this means that the range can not be empty, if there is no update, don't write an update!
+	// range of commmitentity[] items owned by this frame (this may wrap!)
 	int range_start;
-	int range_end;
-
-	// entities
-	entity_state_t entity[MAX_ENTITIES_PER_FRAME];
+	int range_count;
 }
-entity_frame4_t;
+entity_commitframe4_t;
 
 // DPPROTOCOL_VERSION4
 typedef struct
@@ -403,17 +413,22 @@ typedef struct
 	// situations with a high maximum data rate AND large number of entities,
 	// updates may be partial despite a high data rate.
 
-	// current frame number
-	int currentframe;
+	// time of current frame
+	double time;
+	// number of current frame
+	int framenum;
+
 	// number of frames waiting to be committed to database
 	int numframes;
-	// the current state in the database
-	vec3_t currenteye;
+
 	// current entity states
-	entity_state_t currententity[MAX_EDICTS];
-	// frame updates (each one limited in size) that have not yet been
-	// committed to currententitydata
-	entity_frame4_t frames[MAX_ENTITY_HISTORY];
+	entity_state_t entity[MAX_EDICTS];
+
+	// unconfirmed entity states
+	entity_state_t commitentity[MAX_EDICTS];
+
+	// frame updates that have not yet been committed to entity
+	entity_commitframe4_t commitframes[MAX_ENTITY_HISTORY];
 }
 entity_database4_t;
 
@@ -485,27 +500,22 @@ void EntityFrame_Read(entity_database_t *d);
 // (client) returns the frame number of the most recent frame recieved
 int EntityFrame_MostRecentlyRecievedFrameNum(entity_database_t *d);
 
-// (server) clears the database to contain blank entities and no frames (thus
-// delta compression compresses against nothing)
+
+
+// (server and client) clears the database to contain blank entities and no
+// commits (thus delta compression compresses against nothing)
 void EntityFrame4_ClearDatabase(entity_database4_t *d);
-// (server and client) updates database to requested frame by commiting
-// awaiting frames until the desired frame is reached
+// (server) applies commit to database and removes it (and older)
 void EntityFrame4_AckFrame(entity_database4_t *d, int frame);
-// (server) clears frame, to prepare for adding entities
-void EntityFrame4_Clear(entity_frame4_t *f, vec3_t eye);
-// (server) allocates an entity slot in frame, returns NULL if full
-entity_state_t *EntityFrame4_NewEntity(entity_frame4_t *f, int number);
-// (server and client) reads a frame from the database
-void EntityFrame4_FetchFrame(entity_database4_t *d, int framenum, entity_frame4_t *f);
-// (server and client) adds a entity_frame to the database, for future
-// reference
-void EntityFrame4_AddFrame(entity_database4_t *d, entity_frame4_t *f);
-// (server) writes a frame to network stream
-void EntityFrame4_Write(entity_database4_t *d, entity_frame4_t *f, sizebuf_t *msg);
-// (client) reads a frame from network stream
-void EntityFrame4_Read(entity_database4_t *d);
-// (client) returns the frame number of the most recent frame recieved
-int EntityFrame4_MostRecentlyRecievedFrameNum(entity_database4_t *d);
+// (server) prepares for sending entities (maxbytes = bandwidth limit)
+void EntityFrame4_Commit_Begin(entity_database4_t *d, int frame, sizebuf_t *msg, int maxbytes);
+// (server) sends an entity and adds to current commit (may delete old
+// commits to make room), returns success (if false stop sending)
+int EntityFrame4_Commit_Entity(entity_database4_t *d, entity_state_t *s, sizebuf_t *msg);
+// (server) ends commit
+void EntityFrame4_Commit_End(entity_database4_t *d, sizebuf_t *msg);
+// (client) parses a commit from the network stream
+void EntityFrame4_ParseCommit(entity_database4_t *d);
 
 #endif
 
