@@ -1,7 +1,6 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
 -(Baalz) d darkplaces input bug: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
--(MoALTz) d darkplaces client: entities not being removed in quake protocol demos? (MoALTz)
--(Sajt, Randy) d darkplaces renderer: fix loadsky;r_restart;r_restart crashing or showing random textures (Sajt, Randy)
+-(Randy) d darkplaces renderer: fix loadsky;r_restart;r_restart crashing or showing random textures (Sajt, Randy)
 -(fuh) d darkplaces sound: make sound precaching not allocate an sfx if the sound is not found, so it complains only once about missing sounds when you connect, rather than constantly, and also so using "play" commands for non-existent files won't eat up sfx slots (fuh)
 -(jitspoe) d darkplaces console: make typing "; quit " in messagemode NOT quit the game (jitspoe)
 -(mashakos) d darkplaces input: fix the mouse move when console is raised in glx, probably by ignoring the first move after console raise (mashakos)
@@ -333,6 +332,7 @@ d darkplaces client: add two cvars to replace sbar_alpha, one would control back
 d darkplaces client: all glow trails are bright blue (Kinn)
 d darkplaces client: don't disconnect before attempting to connect to another server, so if it fails you remain on the current one (RenegadeC, Urre)
 d darkplaces client: don't draw entities which are tagged to the camera entity; exterior view models and such
+d darkplaces client: entities not being removed in quake protocol demos? (MoALTz)
 d darkplaces client: figure out why tenebrae style dlights are brilliantly blue, PLUS their color
 d darkplaces client: fix disappearing decals bug, it seems that when the smoke disappears so do the decals (Urre)
 d darkplaces client: increase resolution of particlefont to 512x512 (Chillo)
