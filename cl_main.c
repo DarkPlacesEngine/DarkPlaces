@@ -489,8 +489,8 @@ void CL_RelinkWorld (void)
 	if (cl_num_entities < 1)
 		cl_num_entities = 1;
 	cl_brushmodel_entities[cl_num_brushmodel_entities++] = &ent->render;
-	Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, ent->render.origin[0], ent->render.origin[1], ent->render.origin[2], ent->render.angles[0], ent->render.angles[1], ent->render.angles[2], ent->render.scale);
-	Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
+	Matrix4x4_CreateIdentity(&ent->render.matrix);
+	Matrix4x4_CreateIdentity(&ent->render.inversematrix);
 	CL_BoundingBoxForEntity(&ent->render);
 }
 
