@@ -795,6 +795,8 @@ void COM_InitGameType (void)
 
 	if (strstr(name, "transfusion"))
 		gamemode = GAME_TRANSFUSION;
+	else if (strstr(name, "nexiuz"))
+		gamemode = GAME_NEXIUZ;
 	else if (strstr(name, "nehahra"))
 		gamemode = GAME_NEHAHRA;
 	else if (strstr(name, "hipnotic"))
@@ -806,6 +808,8 @@ void COM_InitGameType (void)
 
 	if (COM_CheckParm ("-transfusion"))
 		gamemode = GAME_TRANSFUSION;
+	else if (COM_CheckParm ("-nexiuz"))
+		gamemode = GAME_NEXIUZ;
 	else if (COM_CheckParm ("-nehahra"))
 		gamemode = GAME_NEHAHRA;
 	else if (COM_CheckParm ("-hipnotic"))
@@ -832,6 +836,10 @@ void COM_InitGameType (void)
 	case GAME_NEHAHRA:
 		gamename = "DarkPlaces-Nehahra";
 		gamedirname = "nehahra";
+		break;
+	case GAME_NEXIUZ:
+		gamename = "Nexiuz";
+		gamedirname = "data";
 		break;
 	case GAME_TRANSFUSION:
 		gamename = "Transfusion";
