@@ -31,8 +31,6 @@ extern cvar_t gl_mesh_copyarrays;
 extern cvar_t gl_paranoid;
 extern cvar_t gl_printcheckerror;
 
-extern int c_meshelements, c_meshs;
-
 //input to R_Mesh_State
 typedef struct
 {

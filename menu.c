@@ -156,8 +156,8 @@ float menu_x, menu_y, menu_width, menu_height;
 
 void M_Background(int width, int height)
 {
-	menu_width = width;
-	menu_height = height;
+	menu_width = bound(1, width, vid.conwidth);
+	menu_height = bound(1, height, vid.conheight);
 	menu_x = (vid.conwidth - menu_width) * 0.5;
 	menu_y = (vid.conheight - menu_height) * 0.5;
 	//DrawQ_Fill(menu_x, menu_y, menu_width, menu_height, 0, 0, 0, 0.5, 0);
@@ -1358,7 +1358,7 @@ void M_Options_Draw (void)
 	int visible;
 	cachepic_t	*p;
 
-	M_Background(320, 240);
+	M_Background(320, bound(200, 32 + OPTIONS_ITEMS * 8, vid.conheight));
 
 	M_DrawPic(16, 4, "gfx/qplaque.lmp");
 	p = Draw_CachePic("gfx/p_option.lmp");
@@ -1366,7 +1366,7 @@ void M_Options_Draw (void)
 
 	optnum = 0;
 	optcursor = options_cursor;
-	visible = (vid.conheight - 32) / 8;
+	visible = (menu_height - 32) / 8;
 	opty = 32 - bound(0, optcursor - (visible >> 1), max(0, OPTIONS_ITEMS - visible)) * 8;
 
 	M_Options_PrintCommand( "Customize controls", true);
@@ -1557,7 +1557,7 @@ void M_Options_Effects_Draw (void)
 	int visible;
 	cachepic_t	*p;
 
-	M_Background(320, 200);
+	M_Background(320, bound(200, 32 + OPTIONS_EFFECTS_ITEMS * 8, vid.conheight));
 
 	M_DrawPic(16, 4, "gfx/qplaque.lmp");
 	p = Draw_CachePic("gfx/p_option.lmp");
@@ -1565,7 +1565,7 @@ void M_Options_Effects_Draw (void)
 
 	optcursor = options_effects_cursor;
 	optnum = 0;
-	visible = (vid.conheight - 32) / 8;
+	visible = (menu_height - 32) / 8;
 	opty = 32 - bound(0, optcursor - (visible >> 1), max(0, OPTIONS_EFFECTS_ITEMS - visible)) * 8;
 
 	M_Options_PrintSlider(  "      Lights Per Model", true, r_modellights.value, 0, 8);
@@ -1645,7 +1645,7 @@ void M_Options_Effects_Key (int k, char ascii)
 }
 
 
-#define	OPTIONS_GRAPHICS_ITEMS	7
+#define	OPTIONS_GRAPHICS_ITEMS	12
 
 int options_graphics_cursor;
 
@@ -1663,6 +1663,11 @@ extern cvar_t r_shadow_realtime_world;
 extern cvar_t r_shadow_realtime_world_dlightshadows;
 extern cvar_t r_shadow_realtime_world_lightmaps;
 extern cvar_t r_shadow_realtime_world_shadows;
+extern cvar_t r_bloom;
+extern cvar_t r_bloom_intensity;
+extern cvar_t r_bloom_power;
+extern cvar_t r_bloom_blur;
+extern cvar_t r_bloom_resolution;
 
 void M_Menu_Options_Graphics_AdjustSliders (int dir)
 {
@@ -1678,6 +1683,11 @@ void M_Menu_Options_Graphics_AdjustSliders (int dir)
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_shadow_realtime_world_dlightshadows,	!r_shadow_realtime_world_dlightshadows.integer);
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_shadow_realtime_world_lightmaps,		bound(0, r_shadow_realtime_world_lightmaps.value + dir * 0.1, 1));
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_shadow_realtime_world_shadows,			!r_shadow_realtime_world_shadows.integer);
+	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_bloom,                                 !r_bloom.integer);
+	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_bloom_intensity,                       bound(1, r_bloom_intensity.value + dir * 1, 16));
+	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_bloom_power,                           bound(1, r_bloom_power.value + dir * 1, 16));
+	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_bloom_blur,                            bound(1, r_bloom_blur.value + dir * 1, 16));
+	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_bloom_resolution,                      bound(64, r_bloom_resolution.value + dir * 64, 2048));
 }
 
 
@@ -1686,7 +1696,7 @@ void M_Options_Graphics_Draw (void)
 	int visible;
 	cachepic_t	*p;
 
-	M_Background(320, 200);
+	M_Background(320, bound(200, 32 + OPTIONS_GRAPHICS_ITEMS * 8, vid.conheight));
 
 	M_DrawPic(16, 4, "gfx/qplaque.lmp");
 	p = Draw_CachePic("gfx/p_option.lmp");
@@ -1694,7 +1704,7 @@ void M_Options_Graphics_Draw (void)
 
 	optcursor = options_graphics_cursor;
 	optnum = 0;
-	visible = (vid.conheight - 32) / 8;
+	visible = (menu_height - 32) / 8;
 	opty = 32 - bound(0, optcursor - (visible >> 1), max(0, OPTIONS_GRAPHICS_ITEMS - visible)) * 8;
 
 	M_Options_PrintSlider(  "             Gloss Mode", true, r_shadow_gloss.integer, 0, 2);
@@ -1704,6 +1714,11 @@ void M_Options_Graphics_Draw (void)
 	M_Options_PrintCheckbox("RT World DLight Shadows", true, r_shadow_realtime_world_dlightshadows.integer);
 	M_Options_PrintSlider(  "     RT World Lightmaps", true, r_shadow_realtime_world_lightmaps.value, 0, 1);
 	M_Options_PrintCheckbox("        RT World Shadow", true, r_shadow_realtime_world_shadows.integer);
+	M_Options_PrintCheckbox("           Bloom Effect", true, r_bloom.integer);
+	M_Options_PrintSlider(  "        Bloom Intensity", true, r_bloom_intensity.value, 1, 16);
+	M_Options_PrintSlider(  "            Bloom Power", true, r_bloom_power.value, 1, 16);
+	M_Options_PrintSlider(  "             Bloom Blur", true, r_bloom_blur.value, 1, 16);
+	M_Options_PrintSlider(  "       Bloom Resolution", true, r_bloom_resolution.value, 64, 2048);
 }
 
 
@@ -1872,7 +1887,7 @@ void M_Options_ColorControl_Draw (void)
 
 	optcursor = options_colorcontrol_cursor;
 	optnum = 0;
-	visible = (vid.conheight - 32) / 8;
+	visible = (menu_height - 32) / 8;
 	opty = 32 - bound(0, optcursor - (visible >> 1), max(0, OPTIONS_COLORCONTROL_ITEMS - visible)) * 8;
 
 	M_Options_PrintCommand( "     Reset to defaults", true);
@@ -3813,9 +3828,9 @@ void M_ServerList_Draw (void)
 	s = va("%i/%i masters %i/%i servers", masterreplycount, masterquerycount, serverreplycount, serverquerycount);
 	M_PrintRed((640 - strlen(s) * 8) / 2, 32, s);
 	if (*m_return_reason)
-		M_Print(16, vid.conheight - 8, m_return_reason);
+		M_Print(16, menu_height - 8, m_return_reason);
 	y = 48;
-	visible = (vid.conheight - 16 - y) / 8;
+	visible = (menu_height - 16 - y) / 8;
 	start = bound(0, slist_cursor - (visible >> 1), hostCacheCount - visible);
 	end = min(start + visible, hostCacheCount);
 

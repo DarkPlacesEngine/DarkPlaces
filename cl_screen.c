@@ -340,9 +340,6 @@ void R_TimeReport(char *desc)
 	}
 }
 
-extern int c_rt_lights, c_rt_clears, c_rt_scissored;
-extern int c_rt_shadowmeshes, c_rt_shadowtris, c_rt_lightmeshes, c_rt_lighttris;
-extern int c_rtcached_shadowmeshes, c_rtcached_shadowtris;
 void R_TimeReport_Start(void)
 {
 	r_timereport_active = r_speeds.integer && cls.signon == SIGNONS && cls.state == ca_connected;
@@ -350,23 +347,14 @@ void R_TimeReport_Start(void)
 	if (r_timereport_active)
 	{
 		speedstringcount = 0;
-		sprintf(r_speeds_string,
-			"org:'%+8.2f %+8.2f %+8.2f' dir:'%+2.3f %+2.3f %+2.3f'\n"
-			"world:%6i faces%6i nodes%6i leafs%6i dlitwalls\n"
-			"%5i models%5i bmodels%5i sprites%6i particles%4i dlights\n"
-			"%6i modeltris%6i meshs%6i meshtris\n",
-			r_vieworigin[0], r_vieworigin[1], r_vieworigin[2], r_viewforward[0], r_viewforward[1], r_viewforward[2],
-			c_faces, c_nodes, c_leafs, c_light_polys,
-			c_models, c_bmodels, c_sprites, c_particles, c_dlights,
-			c_alias_polys, c_meshs, c_meshelements / 3);
-
-		sprintf(r_speeds_string + strlen(r_speeds_string),
-			"realtime lighting:%4i lights%4i clears%4i scissored\n"
-			"dynamic: %6i shadowmeshes%6i shadowtris%6i lightmeshes%6i lighttris\n"
-			"precomputed: %6i shadowmeshes%6i shadowtris\n",
-			c_rt_lights, c_rt_clears, c_rt_scissored,
-			c_rt_shadowmeshes, c_rt_shadowtris, c_rt_lightmeshes, c_rt_lighttris,
-			c_rtcached_shadowmeshes, c_rtcached_shadowtris);
+		sprintf(r_speeds_string + strlen(r_speeds_string), "org:'%+8.2f %+8.2f %+8.2f' dir:'%+2.3f %+2.3f %+2.3f'\n", r_vieworigin[0], r_vieworigin[1], r_vieworigin[2], r_viewforward[0], r_viewforward[1], r_viewforward[2]);
+		sprintf(r_speeds_string + strlen(r_speeds_string), "world:%6i faces%6i nodes%6i leafs%6i dlitwalls\n", c_faces, c_nodes, c_leafs, c_light_polys);
+		sprintf(r_speeds_string + strlen(r_speeds_string), "%5i models%5i bmodels%5i sprites%6i particles%4i dlights\n", c_models, c_bmodels, c_sprites, c_particles, c_dlights);
+		sprintf(r_speeds_string + strlen(r_speeds_string), "%6i modeltris%6i meshs%6i meshtris\n", c_alias_polys, c_meshs, c_meshelements / 3);
+		sprintf(r_speeds_string + strlen(r_speeds_string), "bloom %s: %i copies (%i pixels) %i draws (%i pixels)\n", c_bloom ? "active" : "inactive", c_bloomcopies, c_bloomcopypixels, c_bloomdraws, c_bloomdrawpixels);
+		sprintf(r_speeds_string + strlen(r_speeds_string), "realtime lighting:%4i lights%4i clears%4i scissored\n", c_rt_lights, c_rt_clears, c_rt_scissored);
+		sprintf(r_speeds_string + strlen(r_speeds_string), "dynamic: %6i shadowmeshes%6i shadowtris%6i lightmeshes%6i lighttris\n", c_rt_shadowmeshes, c_rt_shadowtris, c_rt_lightmeshes, c_rt_lighttris);
+		sprintf(r_speeds_string + strlen(r_speeds_string), "precomputed: %6i shadowmeshes%6i shadowtris\n", c_rtcached_shadowmeshes, c_rtcached_shadowtris);
 
 		c_alias_polys = 0;
 		c_light_polys = 0;
@@ -377,8 +365,23 @@ void R_TimeReport_Start(void)
 		c_bmodels = 0;
 		c_sprites = 0;
 		c_particles = 0;
+		c_dlights = 0;
 		c_meshs = 0;
 		c_meshelements = 0;
+		c_rt_lights = 0;
+		c_rt_clears = 0;
+		c_rt_scissored = 0;
+		c_rt_shadowmeshes = 0;
+		c_rt_shadowtris = 0;
+		c_rt_lightmeshes = 0;
+		c_rt_lighttris = 0;
+		c_rtcached_shadowmeshes = 0;
+		c_rtcached_shadowtris = 0;
+		c_bloom = 0;
+		c_bloomcopies = 0;
+		c_bloomcopypixels = 0;
+		c_bloomdraws = 0;
+		c_bloomdrawpixels = 0;
 
 		r_timereport_start = Sys_DoubleTime();
 	}

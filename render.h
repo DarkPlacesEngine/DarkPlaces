@@ -77,9 +77,10 @@ void R_FillColors(float *out, int verts, float r, float g, float b, float a);
 
 //=============================================================================
 
-extern	int			r_framecount;
-extern	mplane_t	frustum[4];
-extern	int		c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c_bmodels, c_sprites, c_particles, c_dlights;
+extern int r_framecount;
+extern mplane_t frustum[4];
+
+extern int c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c_bmodels, c_sprites, c_particles, c_dlights, c_meshs, c_meshelements, c_rt_lights, c_rt_clears, c_rt_scissored, c_rt_shadowmeshes, c_rt_shadowtris, c_rt_lightmeshes, c_rt_lighttris, c_rtcached_shadowmeshes, c_rtcached_shadowtris, c_bloom, c_bloomcopies, c_bloomcopypixels, c_bloomdraws, c_bloomdrawpixels;
 
 // brightness of world lightmaps and related lighting
 // (often reduced when world rtlights are enabled)

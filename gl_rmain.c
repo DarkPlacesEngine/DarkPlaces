@@ -32,7 +32,7 @@ mplane_t frustum[4];
 
 matrix4x4_t r_identitymatrix;
 
-int c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c_bmodels, c_sprites, c_particles, c_dlights;
+int c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c_bmodels, c_sprites, c_particles, c_dlights, c_meshs, c_meshelements, c_rt_lights, c_rt_clears, c_rt_scissored, c_rt_shadowmeshes, c_rt_shadowtris, c_rt_lightmeshes, c_rt_lighttris, c_rtcached_shadowmeshes, c_rtcached_shadowtris, c_bloom, c_bloomcopies, c_bloomcopypixels, c_bloomdraws, c_bloomdrawpixels;
 
 // true during envmap command capture
 qboolean envmap;
@@ -101,6 +101,14 @@ cvar_t r_lerpmodels = {CVAR_SAVE, "r_lerpmodels", "1"};
 cvar_t r_waterscroll = {CVAR_SAVE, "r_waterscroll", "1"};
 cvar_t r_watershader = {CVAR_SAVE, "r_watershader", "1"};
 
+cvar_t r_bloom = {CVAR_SAVE, "r_bloom", "0"};
+cvar_t r_bloom_intensity = {CVAR_SAVE, "r_bloom_intensity", "2"};
+cvar_t r_bloom_blur = {CVAR_SAVE, "r_bloom_blur", "8"};
+cvar_t r_bloom_resolution = {CVAR_SAVE, "r_bloom_resolution", "256"};
+cvar_t r_bloom_power = {CVAR_SAVE, "r_bloom_power", "4"};
+rtexturepool_t *r_main_texturepool;
+rtexture_t *r_bloom_texture_screen;
+rtexture_t *r_bloom_texture_bloom;
 
 void R_ModulateColors(float *in, float *out, int verts, float r, float g, float b)
 {
@@ -202,10 +210,18 @@ void FOG_registercvars(void)
 
 void gl_main_start(void)
 {
+	r_main_texturepool = R_AllocTexturePool();
+	r_bloom_texture_screen = NULL;
+	r_bloom_texture_bloom = NULL;
 }
 
 void gl_main_shutdown(void)
 {
+	// this seems to cause a already freed crash after a couple vid_restarts...
+	//R_FreeTexturePool(&r_main_texturepool);
+	r_main_texturepool = NULL;
+	r_bloom_texture_screen = NULL;
+	r_bloom_texture_bloom = NULL;
 }
 
 extern void CL_ParseEntityLump(char *entitystring);
@@ -253,6 +269,11 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_waterscroll);
 	Cvar_RegisterVariable(&r_watershader);
 	Cvar_RegisterVariable(&r_drawcollisionbrushes);
+	Cvar_RegisterVariable(&r_bloom);
+	Cvar_RegisterVariable(&r_bloom_intensity);
+	Cvar_RegisterVariable(&r_bloom_blur);
+	Cvar_RegisterVariable(&r_bloom_resolution);
+	Cvar_RegisterVariable(&r_bloom_power);
 	if (gamemode == GAME_NEHAHRA || gamemode == GAME_NEXUIZ || gamemode == GAME_TENEBRAE)
 		Cvar_SetValue("r_fullbrights", 0);
 	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap);
@@ -506,33 +527,194 @@ static void R_SetFrustum(void)
 static void R_BlendView(void)
 {
 	rmeshstate_t m;
-	float r;
-	float vertex3f[3*3];
 
-	if (r_refdef.viewblend[3] < 0.01f)
+	if (r_refdef.viewblend[3] < 0.01f && !r_bloom.integer)
 		return;
 
-	R_Mesh_Matrix(&r_identitymatrix);
-
-	memset(&m, 0, sizeof(m));
-	m.pointer_vertex = vertex3f;
-	R_Mesh_State(&m);
-
-	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	GL_SetupView_Mode_Ortho(0, 0, 1, 1, -10, 100);
 	GL_DepthMask(true);
-	GL_DepthTest(false); // magic
-	GL_Color(r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
-	r = 64;
-	vertex3f[0] = r_vieworigin[0] + r_viewforward[0] * 1.5 + r_viewleft[0] * r - r_viewup[0] * r;
-	vertex3f[1] = r_vieworigin[1] + r_viewforward[1] * 1.5 + r_viewleft[1] * r - r_viewup[1] * r;
-	vertex3f[2] = r_vieworigin[2] + r_viewforward[2] * 1.5 + r_viewleft[2] * r - r_viewup[2] * r;
-	vertex3f[3] = r_vieworigin[0] + r_viewforward[0] * 1.5 + r_viewleft[0] * r + r_viewup[0] * r * 3;
-	vertex3f[4] = r_vieworigin[1] + r_viewforward[1] * 1.5 + r_viewleft[1] * r + r_viewup[1] * r * 3;
-	vertex3f[5] = r_vieworigin[2] + r_viewforward[2] * 1.5 + r_viewleft[2] * r + r_viewup[2] * r * 3;
-	vertex3f[6] = r_vieworigin[0] + r_viewforward[0] * 1.5 - r_viewleft[0] * r * 3 - r_viewup[0] * r;
-	vertex3f[7] = r_vieworigin[1] + r_viewforward[1] * 1.5 - r_viewleft[1] * r * 3 - r_viewup[1] * r;
-	vertex3f[8] = r_vieworigin[2] + r_viewforward[2] * 1.5 - r_viewleft[2] * r * 3 - r_viewup[2] * r;
-	R_Mesh_Draw(3, 1, polygonelements);
+	GL_DepthTest(false);
+	R_Mesh_Matrix(&r_identitymatrix);
+	varray_vertex3f[0] = 0;varray_vertex3f[1] = 0;varray_vertex3f[2] = 0;
+	varray_vertex3f[3] = 1;varray_vertex3f[4] = 0;varray_vertex3f[5] = 0;
+	varray_vertex3f[6] = 1;varray_vertex3f[7] = 1;varray_vertex3f[8] = 0;
+	varray_vertex3f[9] = 0;varray_vertex3f[10] = 1;varray_vertex3f[11] = 0;
+	if (r_bloom.integer && r_bloom_resolution.value >= 32 && r_bloom_power.integer >= 1 && r_bloom_power.integer < 100 && r_bloom_blur.value >= 0 && r_bloom_blur.value < 512)
+	{
+		int screenwidth, screenheight, bloomwidth, bloomheight, x, dobloomblend, range;
+		float xoffset, yoffset, r;
+		c_bloom++;
+		for (screenwidth = 1;screenwidth < vid.realwidth;screenwidth *= 2);
+		for (screenheight = 1;screenheight < vid.realheight;screenheight *= 2);
+		bloomwidth = min(r_view_width, r_bloom_resolution.integer);
+		bloomheight = min(r_view_height, r_bloom_resolution.integer);
+		varray_texcoord2f[0][0] = 0;
+		varray_texcoord2f[0][1] = (float)r_view_height / (float)screenheight;
+		varray_texcoord2f[0][2] = (float)r_view_width / (float)screenwidth;
+		varray_texcoord2f[0][3] = (float)r_view_height / (float)screenheight;
+		varray_texcoord2f[0][4] = (float)r_view_width / (float)screenwidth;
+		varray_texcoord2f[0][5] = 0;
+		varray_texcoord2f[0][6] = 0;
+		varray_texcoord2f[0][7] = 0;
+		varray_texcoord2f[1][0] = 0;
+		varray_texcoord2f[1][1] = (float)bloomheight / (float)screenheight;
+		varray_texcoord2f[1][2] = (float)bloomwidth / (float)screenwidth;
+		varray_texcoord2f[1][3] = (float)bloomheight / (float)screenheight;
+		varray_texcoord2f[1][4] = (float)bloomwidth / (float)screenwidth;
+		varray_texcoord2f[1][5] = 0;
+		varray_texcoord2f[1][6] = 0;
+		varray_texcoord2f[1][7] = 0;
+		if (!r_bloom_texture_screen)
+			r_bloom_texture_screen = R_LoadTexture2D(r_main_texturepool, "screen", screenwidth, screenheight, NULL, TEXTYPE_RGBA, TEXF_FORCENEAREST | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
+		if (!r_bloom_texture_bloom)
+			r_bloom_texture_bloom = R_LoadTexture2D(r_main_texturepool, "bloom", screenwidth, screenheight, NULL, TEXTYPE_RGBA, TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
+		memset(&m, 0, sizeof(m));
+		m.pointer_vertex = varray_vertex3f;
+		m.pointer_texcoord[0] = varray_texcoord2f[0];
+		m.tex[0] = R_GetTexture(r_bloom_texture_screen);
+		R_Mesh_State(&m);
+		// copy view to a texture
+		GL_ActiveTexture(0);
+		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.realheight - (r_view_y + r_view_height), r_view_width, r_view_height);
+		c_bloomcopies++;
+		c_bloomcopypixels += r_view_width * r_view_height;
+		// now scale it down to the bloom size and raise to a power of itself
+		qglViewport(r_view_x, vid.realheight - (r_view_y + bloomheight), bloomwidth, bloomheight);
+		// TODO: optimize with multitexture or GLSL
+		GL_BlendFunc(GL_ONE, GL_ZERO);
+		GL_Color(1, 1, 1, 1);
+		R_Mesh_Draw(4, 2, polygonelements);
+		c_bloomdraws++;
+		c_bloomdrawpixels += bloomwidth * bloomheight;
+		GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
+		for (x = 1;x < r_bloom_power.integer;x++)
+		{
+			R_Mesh_Draw(4, 2, polygonelements);
+			c_bloomdraws++;
+			c_bloomdrawpixels += bloomwidth * bloomheight;
+		}
+		// copy the bloom view to a texture
+		memset(&m, 0, sizeof(m));
+		m.pointer_vertex = varray_vertex3f;
+		m.tex[0] = R_GetTexture(r_bloom_texture_bloom);
+		m.pointer_texcoord[0] = varray_texcoord2f[2];
+		R_Mesh_State(&m);
+		GL_ActiveTexture(0);
+		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.realheight - (r_view_y + bloomheight), bloomwidth, bloomheight);
+		c_bloomcopies++;
+		c_bloomcopypixels += bloomwidth * bloomheight;
+		// blend on at multiple offsets vertically
+		// TODO: do offset blends using GLSL
+		range = r_bloom_blur.integer;//(int)(r_bloom_blur.value * bloomwidth / 320);
+		GL_BlendFunc(GL_ONE, GL_ZERO);
+		for (x = -range;x <= range;x++)
+		{
+			xoffset = 0 / (float)bloomwidth * (float)bloomwidth / (float)screenwidth;
+			yoffset = x / (float)bloomheight * (float)bloomheight / (float)screenheight;
+			varray_texcoord2f[2][0] = xoffset+0;
+			varray_texcoord2f[2][1] = yoffset+(float)bloomheight / (float)screenheight;
+			varray_texcoord2f[2][2] = xoffset+(float)bloomwidth / (float)screenwidth;
+			varray_texcoord2f[2][3] = yoffset+(float)bloomheight / (float)screenheight;
+			varray_texcoord2f[2][4] = xoffset+(float)bloomwidth / (float)screenwidth;
+			varray_texcoord2f[2][5] = yoffset+0;
+			varray_texcoord2f[2][6] = xoffset+0;
+			varray_texcoord2f[2][7] = yoffset+0;
+			r = r_bloom_intensity.value/(range*2+1)*(1 - fabs(x*x)/(float)(range*range));
+			if (r < 0.01f)
+				continue;
+			GL_Color(r, r, r, 1);
+			R_Mesh_Draw(4, 2, polygonelements);
+			c_bloomdraws++;
+			c_bloomdrawpixels += bloomwidth * bloomheight;
+			GL_BlendFunc(GL_ONE, GL_ONE);
+		}
+		// copy the blurred bloom view to a texture
+		GL_ActiveTexture(0);
+		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.realheight - (r_view_y + bloomheight), bloomwidth, bloomheight);
+		c_bloomcopies++;
+		c_bloomcopypixels += bloomwidth * bloomheight;
+		// blend on at multiple offsets horizontally
+		// TODO: do offset blends using GLSL
+		range = r_bloom_blur.integer * bloomheight / r_view_height;//(int)(r_bloom_blur.value * bloomwidth / 320);
+		GL_BlendFunc(GL_ONE, GL_ZERO);
+		for (x = -range;x <= range;x++)
+		{
+			xoffset = x / (float)bloomwidth * (float)bloomwidth / (float)screenwidth;
+			yoffset = 0 / (float)bloomheight * (float)bloomheight / (float)screenheight;
+			varray_texcoord2f[2][0] = xoffset+0;
+			varray_texcoord2f[2][1] = yoffset+(float)bloomheight / (float)screenheight;
+			varray_texcoord2f[2][2] = xoffset+(float)bloomwidth / (float)screenwidth;
+			varray_texcoord2f[2][3] = yoffset+(float)bloomheight / (float)screenheight;
+			varray_texcoord2f[2][4] = xoffset+(float)bloomwidth / (float)screenwidth;
+			varray_texcoord2f[2][5] = yoffset+0;
+			varray_texcoord2f[2][6] = xoffset+0;
+			varray_texcoord2f[2][7] = yoffset+0;
+			r = r_bloom_intensity.value/(range*2+1)*(1 - fabs(x*x)/(float)(range*range));
+			if (r < 0.01f)
+				continue;
+			GL_Color(r, r, r, 1);
+			R_Mesh_Draw(4, 2, polygonelements);
+			c_bloomdraws++;
+			c_bloomdrawpixels += bloomwidth * bloomheight;
+			GL_BlendFunc(GL_ONE, GL_ONE);
+		}
+		// copy the blurred bloom view to a texture
+		GL_ActiveTexture(0);
+		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.realheight - (r_view_y + bloomheight), bloomwidth, bloomheight);
+		c_bloomcopies++;
+		c_bloomcopypixels += bloomwidth * bloomheight;
+		// go back to full view area
+		qglViewport(r_view_x, vid.realheight - (r_view_y + r_view_height), r_view_width, r_view_height);
+		// put the original view back in place
+		memset(&m, 0, sizeof(m));
+		m.pointer_vertex = varray_vertex3f;
+		m.tex[0] = R_GetTexture(r_bloom_texture_screen);
+		m.pointer_texcoord[0] = varray_texcoord2f[0];
+#if 0
+		dobloomblend = false;
+#else
+		// do both in one pass if possible
+		if (r_textureunits.integer >= 2 && gl_combine.integer)
+		{
+			dobloomblend = false;
+			m.texcombinergb[1] = GL_ADD;
+			m.tex[1] = R_GetTexture(r_bloom_texture_bloom);
+			m.pointer_texcoord[1] = varray_texcoord2f[1];
+		}
+		else
+			dobloomblend = true;
+#endif
+		R_Mesh_State(&m);
+		GL_BlendFunc(GL_ONE, GL_ZERO);
+		GL_Color(1,1,1,1);
+		R_Mesh_Draw(4, 2, polygonelements);
+		c_bloomdraws++;
+		c_bloomdrawpixels += r_view_width * r_view_height;
+		// now blend on the bloom texture if multipass
+		if (dobloomblend)
+		{
+			memset(&m, 0, sizeof(m));
+			m.pointer_vertex = varray_vertex3f;
+			m.tex[0] = R_GetTexture(r_bloom_texture_bloom);
+			m.pointer_texcoord[0] = varray_texcoord2f[1];
+			R_Mesh_State(&m);
+			GL_BlendFunc(GL_ONE, GL_ONE);
+			GL_Color(1,1,1,1);
+			R_Mesh_Draw(4, 2, polygonelements);
+			c_bloomdraws++;
+			c_bloomdrawpixels += r_view_width * r_view_height;
+		}
+	}
+	if (r_refdef.viewblend[3] >= 0.01f)
+	{
+		// apply a color tint to the whole view
+		memset(&m, 0, sizeof(m));
+		m.pointer_vertex = varray_vertex3f;
+		R_Mesh_State(&m);
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		GL_Color(r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
+		R_Mesh_Draw(4, 2, polygonelements);
+	}
 }
 
 void R_RenderScene(void);
