@@ -236,9 +236,9 @@ static int particlepalette[256] =
 
 // these must match r_part.c's textures
 static const int tex_smoke[8] = {0, 1, 2, 3, 4, 5, 6, 7};
-static const int tex_rainsplash[16] = {8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23};
+//static const int tex_rainsplash[16] = {8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23};
 static const int tex_particle = 24;
-static const int tex_rain = 25;
+//static const int tex_rain = 25;
 static const int tex_bubble = 26;
 
 static int			cl_maxparticles;
