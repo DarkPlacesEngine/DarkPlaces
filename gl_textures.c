@@ -494,6 +494,25 @@ void R_Textures_Init (void)
 	R_RegisterModule("R_Textures", r_textures_start, r_textures_shutdown, r_textures_newmap);
 }
 
+void R_Textures_Frame (void)
+{
+	// could do procedural texture animation here, if we keep track of which
+	// textures were accessed this frame...
+
+	// free the resize buffers
+	resizebuffersize = 0;
+	if (resizebuffer)
+	{
+		Mem_Free(resizebuffer);
+		resizebuffer = NULL;
+	}
+	if (colorconvertbuffer)
+	{
+		Mem_Free(colorconvertbuffer);
+		colorconvertbuffer = NULL;
+	}
+}
+
 static void R_Upload(gltexture_t *glt, qbyte *data)
 {
 	int mip, width, height, internalformat;

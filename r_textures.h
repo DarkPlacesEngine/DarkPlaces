@@ -77,5 +77,8 @@ int R_TextureWidth(rtexture_t *rt);
 // returns height of texture, as was specified when it was uploaded
 int R_TextureHeight(rtexture_t *rt);
 
+// frees processing buffers each frame, and may someday animate procedural textures
+void R_Textures_Frame(void);
+
 #endif
 

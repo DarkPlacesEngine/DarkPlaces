@@ -620,6 +620,8 @@ void R_RenderView (void)
 	R_MoveExplosions();
 	R_TimeReport("mexplosion");
 
+	R_Textures_Frame();
+
 	R_SetupFrame();
 	R_SetFrustum();
 	R_SetupFog();
