@@ -750,7 +750,7 @@ static void RSurfShader_Water_Pass_Base(msurface_t *s)
 	}
 	if (s->dlightframe == r_framecount && !(s->flags & SURF_DRAWFULLBRIGHT))
 		RSurf_Light(s->dlightbits, m.numverts);
-	if (fogenabled/* && m.blendfunc2 == GL_ONE_MINUS_SRC_ALPHA*/)
+	if (fogenabled && (s->flags & SURF_DRAWNOALPHA))
 	{
 		for (i = 0, sv = svert;i < m.numverts;i++, sv++)
 		{
@@ -878,9 +878,10 @@ static int RSurfShader_Water(int stage, msurface_t *s)
 			RSurfShader_Water_Pass_Glow(s);
 		return false;
 	case 2:
-		if (fogenabled && (s->flags & SURF_DRAWNOALPHA))
+		if (fogenabled)
 		{
-			RSurfShader_Water_Pass_Fog(s);
+			if (s->flags & SURF_DRAWNOALPHA)
+				RSurfShader_Water_Pass_Fog(s);
 			return false;
 		}
 		else

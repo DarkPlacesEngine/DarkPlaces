@@ -440,7 +440,7 @@ void R_DrawQ1Q2AliasModel (void)
 	else
 		R_DrawModelMesh(0, NULL, 1 - fog, 1 - fog, 1 - fog);
 
-	if (fog && aliasmeshinfo.blendfunc2 != GL_ONE)
+	if (fog && !(currentrenderentity->effects & EF_ADDITIVE))
 	{
 		aliasmeshinfo.tex[0] = R_GetTexture(skinframe->fog);
 		aliasmeshinfo.blendfunc1 = GL_SRC_ALPHA;
