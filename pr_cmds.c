@@ -1977,8 +1977,8 @@ void PF_registercvar (void)
 {
 	char	*name, *value;
 	cvar_t	*variable;
-	name = G_STRING(OFS_PARM1);
-	value = G_STRING(OFS_PARM2);
+	name = G_STRING(OFS_PARM0);
+	value = G_STRING(OFS_PARM1);
 	G_FLOAT(OFS_RETURN) = 0;
 // first check to see if it has already been defined
 	if (Cvar_FindVar (name))
