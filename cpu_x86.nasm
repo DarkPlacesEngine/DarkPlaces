@@ -14,11 +14,11 @@ _Mod_PointInLeaf
 ;       mnode_t         *node;
 ;       node = model->nodes;
 
-        mov     esi, dword [eax+200]
+        mov     esi, dword [eax+200] ; model->nodes
 
 ;       if (node->contents < 0)
 
-        cmp     dword [esi], 0
+        cmp     dword [esi], 0 ; node->contents
         jge     .firstvalid
 
 ;               return (mleaf_t *)node;
@@ -34,29 +34,29 @@ _Mod_PointInLeaf
 
 ;       while (1)
 
-        mov     eax, dword [esi+36]
-        mov     cl, byte [eax+16]
+        xor     ecx, ecx
+        mov     eax, dword [esi+76] ; node->plane
+        mov     cl, byte [eax+16] ; node->plane->type
 
 ;       {
 ;               node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct (p,node->plane->normal)) < node->plane->dist];
 
 	cmp	cl, 3
         jb      .axisplane
-        fld     dword [eax+4]
-        fmul    dword [edx+4]
-        fld     dword [eax+8]
-        fmul    dword [edx+8]
-        fld     dword [eax]
-        fmul    dword [edx]
+        fld     dword [eax+4] ; node->plane->normal[1]
+        fmul    dword [edx+4] ; p[1]
+        fld     dword [eax+8] ; node->plane->normal[2]
+        fmul    dword [edx+8] ; p[2]
+        fld     dword [eax]   ; node->plane->normal[0]
+        fmul    dword [edx]   ; p[0]
         faddp   st1, st0
         faddp   st1, st0
-        fld     dword [eax+12]
+        fld     dword [eax+12] ; node->plane->dist
         fcompp
-	xor	ecx, ecx
 	fnstsw	ax
 	test	ah, 65					; 00000041H
 	sete	cl
-        mov     esi, dword [esi+ecx*4+40]
+        mov     esi, dword [esi+ecx*4+80] ; node = node->children[condition]
 
 ;               if (node->contents < 0)
 
@@ -76,16 +76,13 @@ _Mod_PointInLeaf
 	add	esp, 4
 	ret	0
 .axisplane:
-	xor	ebx, ebx
-	mov	bl, cl
-        fld     dword [edx+ebx*4]
+        fld     dword [edx+ecx*4]
         fld     dword [eax+12]
         fcompp
-	xor	ecx, ecx
-	fnstsw	ax
+        fnstsw  ax
 	test	ah, 65					; 00000041H
 	sete	cl
-        mov     esi, dword [esi+ecx*4+40]
+        mov     esi, dword [esi+ecx*4+80] ; node = node->children[condition]
 
 ;               if (node->contents < 0)
 

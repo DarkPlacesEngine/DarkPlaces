@@ -18,8 +18,8 @@ extern void skypolyend();
 
 #define MAX_TRANSPOLYS 8192
 #define MAX_TRANSVERTS (MAX_TRANSPOLYS*4)
-#define MAX_WALLPOLYS 16384
-#define MAX_WALLVERTS (MAX_WALLPOLYS*4)
+#define MAX_WALLPOLYS 65536
+#define MAX_WALLVERTS (MAX_WALLPOLYS*3)
 #define MAX_SKYPOLYS 2048
 #define MAX_SKYVERTS (MAX_SKYPOLYS*4)
 
@@ -32,8 +32,8 @@ typedef struct
 
 typedef struct
 {
-	vec_t mindistance, maxdistance; // closest and farthest distance along v_forward
-	vec_t distance; // distance to center
+//	vec_t mindistance, maxdistance; // closest and farthest distance along v_forward
+//	vec_t distance; // distance to center
 //	vec3_t n; // normal
 //	vec_t ndist; // distance from origin along that normal
 	unsigned short texnum;
@@ -48,13 +48,15 @@ typedef struct
 {
 	vec3_t vert;
 	vec_t s, t, u, v;
+	byte r,g,b,a;
 } wallvert_t;
 
 typedef struct
 {
 	unsigned short texnum, lighttexnum, glowtexnum;
 	unsigned short firstvert;
-	unsigned short verts;
+	unsigned short numverts;
+	unsigned short lit; // doesn't need to be an unsigned short, but to keep the structure consistent...
 } wallpoly_t;
 
 typedef struct

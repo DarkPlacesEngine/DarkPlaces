@@ -70,18 +70,27 @@ DYNAMIC LIGHTS
 R_MarkLights
 =============
 */
-void R_MarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex, mnode_t *node)
+void R_OldMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex, mnode_t *node)
 {
-	float		dist, l, maxdist;
+	float		dist;
 	msurface_t	*surf;
-	int			i, j, s, t;
-	vec3_t		impact;
-	
+	int			i;
+//	float		l, maxdist;
+//	int			j, s, t;
+//	vec3_t		impact;
+	float cr = light->color[0];
+	float cg = light->color[1];
+	float cb = light->color[2];
+	float radius = light->radius*light->radius*16.0f;
+	float radius2 = radius * 16.0f;
+	radius -= 65536.0f; // for comparisons
+
 loc0:
 	if (node->contents < 0)
 		return;
 
-	dist = DotProduct (lightorigin, node->plane->normal) - node->plane->dist;
+//	dist = DotProduct (lightorigin, node->plane->normal) - node->plane->dist;
+	dist = PlaneDiff(lightorigin, node->plane);
 	
 	if (dist > light->radius)
 	{
@@ -102,12 +111,65 @@ loc0:
 		return;
 	}
 
-	maxdist = light->radius*light->radius;
+	if (node->dlightframe != r_dlightframecount) // not dynamic until now
+	{
+		node->dlightbits[0] = node->dlightbits[1] = node->dlightbits[2] = node->dlightbits[3] = node->dlightbits[4] = node->dlightbits[5] = node->dlightbits[6] = node->dlightbits[7] = 0;
+		node->dlightframe = r_dlightframecount;
+	}
+	node->dlightbits[bitindex] |= bit;
+
+//	maxdist = light->radius*light->radius;
 
 // mark the polygons
 	surf = cl.worldmodel->surfaces + node->firstsurface;
 	for (i=0 ; i<node->numsurfaces ; i++, surf++)
 	{
+		glpoly_t *p;
+		float f;
+		int j;
+		float *v;
+		if (surf->dlightframe != r_dlightframecount) // not dynamic until now
+		{
+//			surf->dlightbits[0] = surf->dlightbits[1] = surf->dlightbits[2] = surf->dlightbits[3] = surf->dlightbits[4] = surf->dlightbits[5] = surf->dlightbits[6] = surf->dlightbits[7] = 0;
+//			surf->dlightframe = r_dlightframecount;
+//			surf->dlightbits[bitindex] = bit;
+			for (p = surf->polys;p;p = p->next)
+			{
+				for (j = 0, v = p->verts[0];j < p->numverts;j++, v += VERTEXSIZE)
+				{
+					f = VectorDistance2(v, lightorigin);
+					if (f < radius)
+					{
+						surf->dlightframe = r_dlightframecount;
+						f = radius2 / (f + 65536.0f);
+						v[ 9] = cr * f;
+						v[10] = cg * f;
+						v[11] = cb * f;
+					}
+					else
+						v[9] = v[10] = v[11] = 0;
+				}
+			}
+		}
+		else
+		{
+//			surf->dlightbits[bitindex] |= bit;
+			for (p = surf->polys;p;p = p->next)
+			{
+				for (j = 0, v = p->verts[0];j < p->numverts;j++, v += VERTEXSIZE)
+				{
+					f = VectorDistance2(v, lightorigin);
+					if (f < radius)
+					{
+						f = radius2 / (f + 65536.0f);
+						v[ 9] += cr * f;
+						v[10] += cg * f;
+						v[11] += cb * f;
+					}
+				}
+			}
+		}
+/*
 		if (surf->flags & SURF_DRAWTURB) // water
 		{
 			if (surf->dlightframe != r_dlightframecount) // not dynamic until now
@@ -118,7 +180,8 @@ loc0:
 			surf->dlightbits[bitindex] |= bit;
 		}
 		// LordHavoc: MAJOR dynamic light speedup here, eliminates marking of surfaces that are too far away from light, thus preventing unnecessary uploads
-		else /*if (r_dynamicbothsides.value || (((surf->flags & SURF_PLANEBACK) && (dist < -BACKFACE_EPSILON)) || (!(surf->flags & SURF_PLANEBACK) && (dist > BACKFACE_EPSILON))))*/
+//		else if (r_dynamicbothsides.value || (((surf->flags & SURF_PLANEBACK) && (dist < -BACKFACE_EPSILON)) || (!(surf->flags & SURF_PLANEBACK) && (dist > BACKFACE_EPSILON))))
+		else if (((surf->flags & SURF_PLANEBACK) != 0) != (dist >= 0))
 		{
 			// passed the plane side check
 			for (j=0 ; j<3 ; j++)
@@ -142,13 +205,14 @@ loc0:
 				surf->dlightbits[bitindex] |= bit;
 			}
 		}
+*/
 	}
 
 	if (node->children[0]->contents >= 0)
 	{
 		if (node->children[1]->contents >= 0)
 		{
-			R_MarkLights (lightorigin, light, bit, bitindex, node->children[0]);
+			R_OldMarkLights (lightorigin, light, bit, bitindex, node->children[0]);
 			node = node->children[1];
 			goto loc0;
 		}
@@ -165,6 +229,125 @@ loc0:
 	}
 }
 
+void R_VisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex, model_t *model)
+{
+	mleaf_t *pvsleaf = Mod_PointInLeaf (lightorigin, model);
+
+	if (!pvsleaf->compressed_vis)
+	{	// no vis info, so make all visible
+		R_OldMarkLights(lightorigin, light, bit, bitindex, model->nodes + model->hulls[0].firstclipnode);
+		return;
+	}
+	else
+	{
+		int		i, j, k, l, m, c;
+		msurface_t *surf, **mark;
+		mleaf_t *leaf;
+		static int lightframe = 0;
+		byte	*in = pvsleaf->compressed_vis;
+		int		row = (model->numleafs+7)>>3;
+		float	cr = light->color[0];
+		float	cg = light->color[1];
+		float	cb = light->color[2];
+		float	radius = light->radius*light->radius*16.0f;
+		float	radius2 = radius * 16.0f;
+		glpoly_t *p;
+		float f;
+		float *v;
+
+		lightframe++;
+		k = 0;
+		while (k < row)
+		{
+			c = *in++;
+			if (c)
+			{
+				l = model->numleafs - (k << 3);
+				if (l > 8)
+					l = 8;
+				for (i=0 ; i<l ; i++)
+				{
+					if (c & (1<<i))
+					{
+						leaf = &model->leafs[(k << 3)+i+1];
+						if (leaf->visframe != r_visframecount)
+							continue;
+						if (leaf->contents == CONTENTS_SOLID)
+							continue;
+						leaf->lightframe = lightframe;
+						if (leaf->dlightframe != r_dlightframecount) // not dynamic until now
+						{
+							leaf->dlightbits[0] = leaf->dlightbits[1] = leaf->dlightbits[2] = leaf->dlightbits[3] = leaf->dlightbits[4] = leaf->dlightbits[5] = leaf->dlightbits[6] = leaf->dlightbits[7] = 0;
+							leaf->dlightframe = r_dlightframecount;
+						}
+						leaf->dlightbits[bitindex] |= bit;
+						if ((m = leaf->nummarksurfaces))
+						{
+							mark = leaf->firstmarksurface;
+							do
+							{
+								surf = *mark++;
+								if (surf->visframe != r_framecount || surf->lightframe == lightframe)
+									continue;
+								surf->lightframe = lightframe;
+//								if (((surf->flags & SURF_PLANEBACK) == 0) == ((PlaneDiff(lightorigin, surf->plane)) >= 0))
+//								{
+									if (surf->dlightframe != r_dlightframecount) // not dynamic until now
+									{
+//										surf->dlightbits[0] = surf->dlightbits[1] = surf->dlightbits[2] = surf->dlightbits[3] = surf->dlightbits[4] = surf->dlightbits[5] = surf->dlightbits[6] = surf->dlightbits[7] = 0;
+//										surf->dlightframe = r_dlightframecount;
+//										surf->dlightbits[bitindex] = bit;
+										for (p = surf->polys;p;p = p->next)
+										{
+											for (j = 0, v = p->verts[0];j < p->numverts;j++, v += VERTEXSIZE)
+											{
+												f = VectorDistance2(v, lightorigin);
+												if (f < radius)
+												{
+													surf->dlightframe = r_dlightframecount;
+													f = radius2 / (f + 65536.0f);
+													v[ 9] = cr * f;
+													v[10] = cg * f;
+													v[11] = cb * f;
+												}
+												else
+													v[9] = v[10] = v[11] = 0;
+											}
+										}
+									}
+									else
+									{
+//										surf->dlightbits[bitindex] |= bit;
+										for (p = surf->polys;p;p = p->next)
+										{
+											for (j = 0, v = p->verts[0];j < p->numverts;j++, v += VERTEXSIZE)
+											{
+												f = VectorDistance2(v, lightorigin);
+												if (f < radius)
+												{
+													f = radius2 / (f + 65536.0f);
+													v[ 9] += cr * f;
+													v[10] += cg * f;
+													v[11] += cb * f;
+												}
+											}
+										}
+									}
+//								}
+							}
+							while (--m);
+						}
+					}
+				}
+				k++;
+				continue;
+			}
+		
+			k += *in++;
+		}
+	}
+}
+
 
 /*
 =============
@@ -178,7 +361,7 @@ void R_PushDlights (void)
 
 	r_dlightframecount = r_framecount + 1;	// because the count hasn't advanced yet for this frame
 
-	if (/*gl_flashblend.value ||*/ !r_dynamic.value)
+	if (!r_dynamic.value)
 		return;
 
 	l = cl_dlights;
@@ -187,7 +370,8 @@ void R_PushDlights (void)
 	{
 		if (l->die < cl.time || !l->radius)
 			continue;
-		R_MarkLights (l->origin, l, 1<<(i&31), i >> 5, cl.worldmodel->nodes );
+//		R_MarkLights (l->origin, l, 1<<(i&31), i >> 5, cl.worldmodel->nodes );
+		R_VisMarkLights (l->origin, l, 1<<(i&31), i >> 5, cl.worldmodel);
 	}
 }
 
@@ -312,28 +496,33 @@ void R_LightPoint (vec3_t color, vec3_t p)
 // LordHavoc: R_DynamicLightPoint - acumulates the dynamic lighting
 void R_DynamicLightPoint(vec3_t color, vec3_t org, int *dlightbits)
 {
-	int		i;
+	int		i, j, k;
 	vec3_t	dist;
 	float	brightness, r, f;
 
-	if (/*gl_flashblend.value ||*/ !r_dynamic.value || (!dlightbits[0] && !dlightbits[1] && !dlightbits[2] && !dlightbits[3] && !dlightbits[4] && !dlightbits[5] && !dlightbits[6] && !dlightbits[7]))
+	if (!r_dynamic.value || (!dlightbits[0] && !dlightbits[1] && !dlightbits[2] && !dlightbits[3] && !dlightbits[4] && !dlightbits[5] && !dlightbits[6] && !dlightbits[7]))
 		return;
 
-	for (i=0 ; i<MAX_DLIGHTS ; i++)
+	for (j = 0;j < (MAX_DLIGHTS >> 5);j++)
 	{
-		if (!((1 << (i&31)) & dlightbits[i>>5]))
-			continue;
-		if (cl_dlights[i].die < cl.time || !cl_dlights[i].radius)
-			continue;
-		VectorSubtract (org, cl_dlights[i].origin, dist);
-		if ((f = DotProduct(dist, dist) + 64.0) < (r = cl_dlights[i].radius*cl_dlights[i].radius))
+		if (dlightbits[j])
 		{
-			brightness = r * 16.0 / f;
-			if (cl_dlights[i].dark)
-				brightness = -brightness;
-			color[0] += brightness * cl_dlights[i].color[0];
-			color[1] += brightness * cl_dlights[i].color[1];
-			color[2] += brightness * cl_dlights[i].color[2];
+			for (i=0 ; i<32 ; i++)
+			{
+				if ((!((1 << (i&31)) & dlightbits[i>>5])) || cl_dlights[i].die < cl.time || !cl_dlights[i].radius)
+					continue;
+				k = (j<<5)+i;
+				VectorSubtract (org, cl_dlights[k].origin, dist);
+				f = DotProduct(dist, dist) + 65536.0f;
+				r = cl_dlights[k].radius*cl_dlights[k].radius*16.0f;
+				if (f < r)
+				{
+					brightness = r * 16.0f / f;
+					color[0] += brightness * cl_dlights[k].color[0];
+					color[1] += brightness * cl_dlights[k].color[1];
+					color[2] += brightness * cl_dlights[k].color[2];
+				}
+			}
 		}
 	}
 }
@@ -345,7 +534,7 @@ void R_DynamicLightPointNoMask(vec3_t color, vec3_t org)
 	vec3_t	dist;
 	float	brightness, r, f;
 
-	if (/*gl_flashblend.value ||*/ !r_dynamic.value)
+	if (!r_dynamic.value)
 		return;
 
 	for (i=0 ; i<MAX_DLIGHTS ; i++)
@@ -353,9 +542,11 @@ void R_DynamicLightPointNoMask(vec3_t color, vec3_t org)
 		if (cl_dlights[i].die < cl.time || !cl_dlights[i].radius)
 			continue;
 		VectorSubtract (org, cl_dlights[i].origin, dist);
-		if ((f = DotProduct(dist, dist) + 64.0) < (r = cl_dlights[i].radius*cl_dlights[i].radius))
+		f = DotProduct(dist, dist) + 65536.0f;
+		r = cl_dlights[i].radius*cl_dlights[i].radius*16.0f;
+		if (f < r)
 		{
-			brightness = r * 16.0 / f;
+			brightness = r * 16.0f / f;
 			if (cl_dlights[i].dark)
 				brightness = -brightness;
 			color[0] += brightness * cl_dlights[i].color[0];
@@ -377,6 +568,7 @@ extern byte *aliasvertcolor;
 extern vec_t shadecolor[];
 extern float modelalpha;
 extern qboolean lighthalf;
+extern int modeldlightbits[8];
 void R_LightModel(int numverts, vec3_t center)
 {
 	int i, j, nearlights = 0;
@@ -424,28 +616,31 @@ void R_LightModel(int numverts, vec3_t center)
 	{
 		for (i = 0;i < MAX_DLIGHTS;i++)
 		{
-			if (cl_dlights[i].die < cl.time || !cl_dlights[i].radius)
+			if (!modeldlightbits[i >> 5])
+			{
+				i |= 31;
 				continue;
+			}
+			if (!(modeldlightbits[i >> 5] & (1 << (i & 31))))
+				continue;
+//			if (cl_dlights[i].die < cl.time || !cl_dlights[i].radius)
+//				continue;
 			VectorSubtract (center, cl_dlights[i].origin, dist);
-			if ((t2 = DotProduct(dist,dist) + 16.0f) + 64.0f < (t1 = cl_dlights[i].radius*cl_dlights[i].radius))
+			t1 = cl_dlights[i].radius*cl_dlights[i].radius*16.0f;
+			t2 = DotProduct(dist,dist) + 65536.0f;
+			if (t2 < t1)
 			{
 				VectorCopy(cl_dlights[i].origin, nearlight[nearlights].origin);
 				nearlight[nearlights].color[0] = cl_dlights[i].color[0] * cl_dlights[i].radius * cl_dlights[i].radius * 0.5f;
 				nearlight[nearlights].color[1] = cl_dlights[i].color[1] * cl_dlights[i].radius * cl_dlights[i].radius * 0.5f;
 				nearlight[nearlights].color[2] = cl_dlights[i].color[2] * cl_dlights[i].radius * cl_dlights[i].radius * 0.5f;
-				if (cl_dlights[i].dark)
-				{
-					nearlight[nearlights].color[0] = -nearlight[nearlights].color[0];
-					nearlight[nearlights].color[1] = -nearlight[nearlights].color[1];
-					nearlight[nearlights].color[2] = -nearlight[nearlights].color[2];
-				}
 				if (lighthalf)
 				{
 					nearlight[nearlights].color[0] *= 0.5f;
 					nearlight[nearlights].color[1] *= 0.5f;
 					nearlight[nearlights].color[2] *= 0.5f;
 				}
-				t1 = 1.0f / t2;
+				t1 = 0.5f / t2;
 				shadecolor[0] += nearlight[nearlights].color[0] * t1;
 				shadecolor[1] += nearlight[nearlights].color[1] * t1;
 				shadecolor[2] += nearlight[nearlights].color[2] * t1;
@@ -460,27 +655,30 @@ void R_LightModel(int numverts, vec3_t center)
 	{
 		for (i = 0;i < MAX_DLIGHTS;i++)
 		{
-			if (cl_dlights[i].die < cl.time || !cl_dlights[i].radius)
+			if (!modeldlightbits[i >> 5])
+			{
+				i |= 31;
 				continue;
+			}
+			if (!(modeldlightbits[i >> 5] & (1 << (i & 31))))
+				continue;
+//			if (cl_dlights[i].die < cl.time || !cl_dlights[i].radius)
+//				continue;
 			VectorSubtract (center, cl_dlights[i].origin, dist);
-			if ((t2 = DotProduct(dist,dist)) + 64.0f < (t1 = cl_dlights[i].radius*cl_dlights[i].radius))
+			t2 = DotProduct(dist,dist) + 65536.0f;
+			t1 = cl_dlights[i].radius*cl_dlights[i].radius*16.0f;
+			if (t2 < t1)
 			{
 				dist[0] = cl_dlights[i].color[0] * cl_dlights[i].radius * cl_dlights[i].radius * 0.5f;
 				dist[1] = cl_dlights[i].color[1] * cl_dlights[i].radius * cl_dlights[i].radius * 0.5f;
 				dist[2] = cl_dlights[i].color[2] * cl_dlights[i].radius * cl_dlights[i].radius * 0.5f;
-				if (cl_dlights[i].dark)
-				{
-					dist[0] = -dist[0];
-					dist[1] = -dist[1];
-					dist[2] = -dist[2];
-				}
 				if (lighthalf)
 				{
 					dist[0] *= 0.5f;
 					dist[1] *= 0.5f;
 					dist[2] *= 0.5f;
 				}
-				t1 = 1.5f / t2;
+				t1 = 0.75f / t2;
 				shadecolor[0] += dist[0] * t1;
 				shadecolor[1] += dist[1] * t1;
 				shadecolor[2] += dist[2] * t1;

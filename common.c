@@ -583,9 +583,51 @@ void MSG_WriteString (sizebuf_t *sb, char *s)
 		SZ_Write (sb, s, strlen(s)+1);
 }
 
+/*
 void MSG_WriteCoord (sizebuf_t *sb, float f)
 {
-	MSG_WriteShort (sb, (int)(f*8));
+	if (dpprotocol)
+	{
+		byte    *buf;
+		int c = (int)f;
+		buf = SZ_GetSpace (sb, 3);
+		buf[0] =  c        & 0xff;
+		buf[1] = (c >>  8) & 0xff;
+		buf[2] = (c >> 16) & 0xff;
+	}
+	else
+		MSG_WriteShort (sb, (int)(f*8));
+}
+*/
+
+void MSG_WriteCoord (sizebuf_t *sb, float f)
+{
+	if (dpprotocol)
+		MSG_WriteFloat(sb, f);
+	/*
+	{
+		int	i = (int) (f * 16.0f), j = 0, k, l;
+		// 1 sign bit, 5bit exponent, 10bit mantissa with implicit 1
+		if (i < 0)
+		{
+			i = -i;
+			j = 0x8000;
+		}
+
+		// LordHavoc: lets hope the compiler is good, if not it will still perform tolerably
+		for (k = 31,l = 0x80000000;!(i & l);k--,l >>= 1);
+		j |= k << 10 | ((i >> (k - 10)) & 0x3FF);
+		
+		MSG_WriteShort(sb, j);
+	}
+	*/
+	else
+		MSG_WriteShort (sb, (int)(f*8));
+}
+
+void MSG_WritePreciseAngle (sizebuf_t *sb, float f)
+{
+	MSG_WriteShort (sb, (int) (f*65536.0f/360) & 65535);
 }
 
 void MSG_WriteAngle (sizebuf_t *sb, float f)
@@ -723,6 +765,95 @@ char *MSG_ReadString (void)
 }
 
 /*
+float MSG_ReadAbsoluteCoord (void)
+{
+	if (dpprotocol)
+	{
+		int     c;
+		
+		if (msg_readcount+3 > net_message.cursize)
+		{
+			msg_badread = true;
+			return 0;
+		}
+			
+		c  = net_message.data[msg_readcount  ];
+		c |= net_message.data[msg_readcount+1] << 8;
+		c |= net_message.data[msg_readcount+2] << 16;
+		if (c & 0x800000)
+			c |= ~0xFFFFFF; // sign extend
+		
+		msg_readcount += 3;
+		
+		return (float) c * (1.0f / 16.0f);
+	}
+	else
+	{
+		int     c;
+		
+		if (msg_readcount+2 > net_message.cursize)
+		{
+			msg_badread = true;
+			return 0;
+		}
+			
+		c  = (short) (net_message.data[msg_readcount  ] |= net_message.data[msg_readcount+1] << 8);
+		
+		msg_readcount += 2;
+		
+		return (float) c * (1.0f / 8.0f);
+//		return MSG_ReadShort() * (1.0f/8.0f);
+	}
+}
+*/
+
+float MSG_ReadCoord (void)
+{
+	if (dpprotocol)
+		return MSG_ReadFloat();
+	/*
+	{
+		int     c, i;
+		
+		if (msg_readcount+2 > net_message.cursize)
+		{
+			msg_badread = true;
+			return 0;
+		}
+			
+		c  = net_message.data[msg_readcount  ] |= net_message.data[msg_readcount+1] << 8;
+		
+		msg_readcount += 2;
+
+		if (!c)
+			return 0.0f;
+		// 1 sign bit, 5bit exponent, 10bit mantissa with implicit 1
+		i = ((c & 0x03FF) | (0x0400)) << (((c & 0x7C00) >> 10) - 10);
+		if (c & 0x8000)
+			i = -i;
+		return i * (1.0f / 16.0f);
+	}
+	*/
+	else
+	{
+		int     c;
+		
+		if (msg_readcount+2 > net_message.cursize)
+		{
+			msg_badread = true;
+			return 0;
+		}
+			
+		c  = (short) (net_message.data[msg_readcount  ] | (net_message.data[msg_readcount+1] << 8));
+		
+		msg_readcount += 2;
+		
+		return ((float) c * (1.0f / 8.0f));
+//		return MSG_ReadShort() * (1.0f/8.0f);
+	}
+}
+
+/*
 float MSG_ReadCoord (void)
 {
 	return MSG_ReadShort() * (1.0f/8.0f);
@@ -734,6 +865,10 @@ float MSG_ReadAngle (void)
 }
 */
 
+float MSG_ReadPreciseAngle (void)
+{
+	return MSG_ReadShort() * (360.0f/65536);
+}
 
 
 //===========================================================================

@@ -75,7 +75,6 @@ void Sbar_ShowScores (void)
 	if (sb_showscores)
 		return;
 	sb_showscores = true;
-//	sb_updates = 0;
 }
 
 /*
@@ -88,18 +87,7 @@ Tab key up
 void Sbar_DontShowScores (void)
 {
 	sb_showscores = false;
-//	sb_updates = 0;
 }
-
-/*
-===============
-Sbar_Changed
-===============
-*/
-//void Sbar_Changed (void)
-//{
-//	sb_updates = 0;	// update next frame
-//}
 
 /*
 ===============
@@ -420,11 +408,6 @@ void Sbar_SortFrags (void)
 			}
 }
 
-int	Sbar_ColorForMap (int m)
-{
-	return m < 128 ? m + 8 : m + 8;
-}
-
 /*
 ===============
 Sbar_UpdateScoreboard
@@ -449,8 +432,8 @@ void Sbar_UpdateScoreboard (void)
 
 		top = s->colors & 0xf0;
 		bottom = (s->colors & 15) <<4;
-		scoreboardtop[i] = Sbar_ColorForMap (top);
-		scoreboardbottom[i] = Sbar_ColorForMap (bottom);
+		scoreboardtop[i] = top + 8;
+		scoreboardbottom[i] = bottom + 8;
 	}
 }
 
@@ -496,51 +479,6 @@ void Sbar_DrawScoreboard (void)
 	Sbar_SoloScoreboard ();
 	if (cl.gametype == GAME_DEATHMATCH)
 		Sbar_DeathmatchOverlay ();
-#if 0
-	int		i, j, c;
-	int		x, y;
-	int		l;
-	int		top, bottom;
-	scoreboard_t	*s;
-
-	if (cl.gametype != GAME_DEATHMATCH)
-	{
-		Sbar_SoloScoreboard ();
-		return;
-	}
-
-	Sbar_UpdateScoreboard ();
-
-	l = scoreboardlines <= 6 ? scoreboardlines : 6;
-
-	for (i=0 ; i<l ; i++)
-	{
-		x = 20*(i&1);
-		y = i/2 * 8;
-
-		s = &cl.scores[fragsort[i]];
-		if (!s->name[0])
-			continue;
-
-	// draw background
-		top = s->colors & 0xf0;
-		bottom = (s->colors & 15)<<4;
-		top = Sbar_ColorForMap (top);
-		bottom = Sbar_ColorForMap (bottom);
-
-		Draw_Fill ( x*8+10 + ((vid.width - 320)>>1), y + vid.height - SBAR_HEIGHT, 28, 4, top);
-		Draw_Fill ( x*8+10 + ((vid.width - 320)>>1), y+4 + vid.height - SBAR_HEIGHT, 28, 4, bottom);
-
-	// draw text
-		for (j=0 ; j<20 ; j++)
-		{
-			c = scoreboardtext[i][j];
-			if (c == 0 || c == ' ')
-				continue;
-			Sbar_DrawCharacter ( (x+j)*8, y, c);
-		}
-	}
-#endif
 }
 
 //=============================================================================
@@ -565,11 +503,9 @@ void Sbar_DrawInventory (void)
 			Sbar_DrawAlphaPic (0, -24, rsb_invbar[1], 0.4);
 	}
 	else
-	{
 		Sbar_DrawAlphaPic (0, -24, sb_ibar, 0.4);
-	}
 
-// weapons
+	// weapons
 	for (i=0 ; i<7 ; i++)
 	{
 		if (cl.items & (IT_SHOTGUN<<i) )
@@ -586,86 +522,69 @@ void Sbar_DrawInventory (void)
 			else
 				flashon = (flashon%5) + 2;
 
-         Sbar_DrawAlphaPic (i*24, -16, sb_weapons[flashon][i], 0.4);
-
-//			if (flashon > 1)
-//				sb_updates = 0;		// force update to remove flash
+			Sbar_DrawAlphaPic (i*24, -16, sb_weapons[flashon][i], 0.4);
 		}
 	}
 
-// MED 01/04/97
-// hipnotic weapons
-    if (hipnotic)
-    {
-      int grenadeflashing=0;
-      for (i=0 ; i<4 ; i++)
-      {
-         if (cl.items & (1<<hipweapons[i]) )
-         {
-            time = cl.item_gettime[hipweapons[i]];
-            flashon = (int)((cl.time - time)*10);
-            if (flashon >= 10)
-            {
-               if ( cl.stats[STAT_ACTIVEWEAPON] == (1<<hipweapons[i])  )
-                  flashon = 1;
-               else
-                  flashon = 0;
-            }
-            else
-               flashon = (flashon%5) + 2;
-
-            // check grenade launcher
-            if (i==2)
-            {
-               if (cl.items & HIT_PROXIMITY_GUN)
-               {
-                  if (flashon)
-                  {
-                     grenadeflashing = 1;
-                     Sbar_DrawPic (96, -16, hsb_weapons[flashon][2]);
-                  }
-               }
-            }
-            else if (i==3)
-            {
-               if (cl.items & (IT_SHOTGUN<<4))
-               {
-                  if (flashon && !grenadeflashing)
-                  {
-                     Sbar_DrawPic (96, -16, hsb_weapons[flashon][3]);
-                  }
-                  else if (!grenadeflashing)
-                  {
-                     Sbar_DrawPic (96, -16, hsb_weapons[0][3]);
-                  }
-               }
-               else
-                  Sbar_DrawPic (96, -16, hsb_weapons[flashon][4]);
-            }
-            else
-               Sbar_DrawPic (176 + (i*24), -16, hsb_weapons[flashon][i]);
-//            if (flashon > 1)
-//               sb_updates = 0;      // force update to remove flash
-         }
-      }
-    }
-
-	if (rogue)
+	// MED 01/04/97
+	// hipnotic weapons
+	if (hipnotic)
 	{
-    // check for powered up weapon.
-		if ( cl.stats[STAT_ACTIVEWEAPON] >= RIT_LAVA_NAILGUN )
+		int grenadeflashing=0;
+		for (i=0 ; i<4 ; i++)
 		{
-			for (i=0;i<5;i++)
+			if (cl.items & (1<<hipweapons[i]) )
 			{
-				if (cl.stats[STAT_ACTIVEWEAPON] == (RIT_LAVA_NAILGUN << i))
+				time = cl.item_gettime[hipweapons[i]];
+				flashon = (int)((cl.time - time)*10);
+				if (flashon >= 10)
 				{
-					Sbar_DrawPic ((i+2)*24, -16, rsb_weapons[i]);
+					if ( cl.stats[STAT_ACTIVEWEAPON] == (1<<hipweapons[i])  )
+						flashon = 1;
+					else
+						flashon = 0;
 				}
+				else
+					flashon = (flashon%5) + 2;
+
+				// check grenade launcher
+				if (i==2)
+				{
+					if (cl.items & HIT_PROXIMITY_GUN)
+					{
+						if (flashon)
+						{
+							grenadeflashing = 1;
+							Sbar_DrawPic (96, -16, hsb_weapons[flashon][2]);
+						}
+					}
+				}
+				else if (i==3)
+				{
+					if (cl.items & (IT_SHOTGUN<<4))
+					{
+						if (!grenadeflashing)
+							Sbar_DrawPic (96, -16, hsb_weapons[flashon][3]);
+					}
+					else
+						Sbar_DrawPic (96, -16, hsb_weapons[flashon][4]);
+				}
+				else
+					Sbar_DrawPic (176 + (i*24), -16, hsb_weapons[flashon][i]);
 			}
 		}
 	}
 
-// ammo counts
+	if (rogue)
+	{
+		// check for powered up weapon.
+		if ( cl.stats[STAT_ACTIVEWEAPON] >= RIT_LAVA_NAILGUN )
+			for (i=0;i<5;i++)
+				if (cl.stats[STAT_ACTIVEWEAPON] == (RIT_LAVA_NAILGUN << i))
+					Sbar_DrawPic ((i+2)*24, -16, rsb_weapons[i]);
+	}
+
+	// ammo counts
 	for (i=0 ; i<4 ; i++)
 	{
 		sprintf (num, "%3i",cl.stats[STAT_SHELLS+i] );
@@ -678,86 +597,53 @@ void Sbar_DrawInventory (void)
 	}
 
 	flashon = 0;
-   // items
-   for (i=0 ; i<6 ; i++)
-      if (cl.items & (1<<(17+i)))
-      {
-         time = cl.item_gettime[17+i];
-         if (time && time > cl.time - 2 && flashon )
-         {  // flash frame
-//            sb_updates = 0;
-         }
-         else
-         {
-         //MED 01/04/97 changed keys
-            if (!hipnotic || (i>1))
-            {
-               Sbar_DrawPic (192 + i*16, -16, sb_items[i]);
-            }
-         }
-//         if (time && time > cl.time - 2)
-//            sb_updates = 0;
-      }
-   //MED 01/04/97 added hipnotic items
-   // hipnotic items
-   if (hipnotic)
-   {
-      for (i=0 ; i<2 ; i++)
-         if (cl.items & (1<<(24+i)))
-         {
-            time = cl.item_gettime[24+i];
-            if (time && time > cl.time - 2 && flashon )
-            {  // flash frame
-//               sb_updates = 0;
-            }
-            else
-            {
-               Sbar_DrawPic (288 + i*16, -16, hsb_items[i]);
-            }
-//            if (time && time > cl.time - 2)
-//               sb_updates = 0;
-         }
-   }
+	// items
+	for (i=0 ; i<6 ; i++)
+		if (cl.items & (1<<(17+i)))
+		{
+			time = cl.item_gettime[17+i];
+			if (time && time > cl.time - 2 && flashon )
+			{  // flash frame
+			}
+			else
+			//MED 01/04/97 changed keys
+				if (!hipnotic || (i>1))
+					Sbar_DrawPic (192 + i*16, -16, sb_items[i]);
+		}
+	//MED 01/04/97 added hipnotic items
+	// hipnotic items
+	if (hipnotic)
+	{
+		for (i=0 ; i<2 ; i++)
+			if (cl.items & (1<<(24+i)))
+			{
+				time = cl.item_gettime[24+i];
+				if (!time || time <= cl.time - 2 || !flashon)
+					Sbar_DrawPic (288 + i*16, -16, hsb_items[i]);
+			}
+	}
 
 	if (rogue)
 	{
-	// new rogue items
+		// new rogue items
 		for (i=0 ; i<2 ; i++)
-		{
 			if (cl.items & (1<<(29+i)))
 			{
 				time = cl.item_gettime[29+i];
-
-				if (time &&	time > cl.time - 2 && flashon )
-				{	// flash frame
-//					sb_updates = 0;
-				}
-				else
-				{
+				if (!time || time <= cl.time - 2 || !flashon)
 					Sbar_DrawPic (288 + i*16, -16, rsb_items[i]);
-				}
-
-//				if (time &&	time > cl.time - 2)
-//					sb_updates = 0;
 			}
-		}
 	}
 	else
 	{
-	// sigils
+		// sigils
 		for (i=0 ; i<4 ; i++)
 		{
 			if (cl.items & (1<<(28+i)))
 			{
 				time = cl.item_gettime[28+i];
-				if (time &&	time > cl.time - 2 && flashon )
-				{	// flash frame
-//					sb_updates = 0;
-				}
-				else
+				if (!time || time <= cl.time - 2 || !flashon)
 					Sbar_DrawPic (320-32 + i*8, -16, sb_sigil[i]);
-//				if (time &&	time > cl.time - 2)
-//					sb_updates = 0;
 			}
 		}
 	}
@@ -799,10 +685,8 @@ void Sbar_DrawFrags (void)
 			continue;
 
 	// draw background
-		top = s->colors & 0xf0;
-		bottom = (s->colors & 15)<<4;
-		top = Sbar_ColorForMap (top);
-		bottom = Sbar_ColorForMap (bottom);
+		top = (s->colors & 0xf0) + 8;
+		bottom = ((s->colors & 15)<<4) + 8;
 
 		Draw_Fill (xofs + x*8 + 10, y, 28, 4, top);
 		Draw_Fill (xofs + x*8 + 10, y+4, 28, 3, bottom);
@@ -850,10 +734,8 @@ void Sbar_DrawFace (void)
 		
 		s = &cl.scores[cl.viewentity - 1];
 		// draw background
-		top = s->colors & 0xf0;
-		bottom = (s->colors & 15)<<4;
-		top = Sbar_ColorForMap (top);
-		bottom = Sbar_ColorForMap (bottom);
+		top = (s->colors & 0xf0) + 8;
+		bottom = ((s->colors & 15)<<4) + 8;
 
 		if (cl.gametype == GAME_DEATHMATCH)
 			xofs = 113;
@@ -1113,10 +995,8 @@ void Sbar_DeathmatchOverlay (void)
 			continue;
 
 	// draw background
-		top = s->colors & 0xf0;
-		bottom = (s->colors & 15)<<4;
-		top = Sbar_ColorForMap (top);
-		bottom = Sbar_ColorForMap (bottom);
+		top = (s->colors & 0xf0) + 8;
+		bottom = ((s->colors & 15)<<4) + 8;
 
 		Draw_Fill ( x, y+1, 88, 3, top);
 		Draw_Fill ( x, y+4, 88, 3, bottom);
@@ -1191,8 +1071,8 @@ void Sbar_MiniDeathmatchOverlay (void)
 			continue;
 
 	// draw background
-		top = Sbar_ColorForMap (s->colors & 0xf0);
-		bottom = Sbar_ColorForMap ((s->colors & 15)<<4);
+		top = (s->colors & 0xf0) + 8;
+		bottom = ((s->colors & 15)<<4) + 8;
 
 		Draw_Fill ( x, y+1, 72, 3, top);
 		Draw_Fill ( x, y+4, 72, 3, bottom);

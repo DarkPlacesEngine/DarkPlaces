@@ -456,12 +456,12 @@ void SV_ReadClientMove (usercmd_t *move)
 	host_client->ping_times[host_client->num_pings%NUM_PING_TIMES]
 		= sv.time - MSG_ReadFloat ();
 	host_client->num_pings++;
+	for (i=0, total = 0;i < NUM_PING_TIMES;i++)
+		total += host_client->ping_times[i];
+	host_client->ping = total / NUM_PING_TIMES; // can be used for prediction
+	host_client->latency = host_client->ping + sv_frametime; // push ahead by ticrate
 	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_ping)))
-	{
-		for (i=0, total = 0;i < NUM_PING_TIMES;i++)
-			total += host_client->ping_times[i];
-		val->_float = 1000.0 / NUM_PING_TIMES;
-	}
+		val->_float = host_client->ping * 1000.0;
 
 // read current angles	
 	for (i=0 ; i<3 ; i++)

@@ -152,7 +152,6 @@ void R_Init (void)
 //	Cvar_RegisterVariable (&gl_cull);
 //	Cvar_RegisterVariable (&gl_affinemodels);
 //	Cvar_RegisterVariable (&gl_polyblend);
-//	Cvar_RegisterVariable (&gl_flashblend);
 	Cvar_RegisterVariable (&gl_playermip);
 //	Cvar_RegisterVariable (&gl_nocolors);
 
@@ -371,11 +370,13 @@ R_TimeRefresh_f
 For program optimization
 ====================
 */
+qboolean intimerefresh = 0;
 void R_TimeRefresh_f (void)
 {
 	int			i;
 	float		start, stop, time;
 
+	intimerefresh = 1;
 	start = Sys_FloatTime ();
 	for (i=0 ; i<128 ; i++)
 	{
@@ -384,12 +385,9 @@ void R_TimeRefresh_f (void)
 	}
 
 	stop = Sys_FloatTime ();
+	intimerefresh = 0;
 	time = stop-start;
 	Con_Printf ("%f seconds (%f fps)\n", time, 128/time);
-}
-
-void D_FlushCaches (void)
-{
 }
 
 

@@ -47,8 +47,6 @@ typedef struct mplane_s
 	vec3_t	normal;
 	float	dist;
 	byte	type;			// for texture axis selection and fast side tests
-//	byte	signbits;		// signx + signy<<1 + signz<<2
-//	byte	pad[2];
 	byte	pad[3];
 	int (*BoxOnPlaneSideFunc) (vec3_t emins, vec3_t emaxs, struct mplane_s *p);
 } mplane_t;
@@ -95,8 +93,8 @@ typedef struct
 	int			flags;
 } mtexinfo_t;
 
-// LordHavoc: was 7, I added two more for raw lightmap coordinates
-#define	VERTEXSIZE	9
+// LordHavoc: was 7, I added two more for raw lightmap coordinates, and then 3 more for light accumulation
+#define	VERTEXSIZE	12
 
 typedef struct glpoly_s
 {
@@ -129,26 +127,34 @@ typedef struct msurface_s
 	
 // lighting info
 	int			dlightframe;
-	int			dlightbits[8];
+//	int			dlightbits[8];
+
+	int			lightframe; // avoid redundent addition of dlights
 
 	int			lightmaptexturenum;
 	byte		styles[MAXLIGHTMAPS];
 	int			cached_light[MAXLIGHTMAPS];	// values currently used in lightmap
-	qboolean	cached_dlight;				// true if dynamic light in cache
+//	qboolean	cached_dlight;				// true if dynamic light in cache
 	qboolean	cached_lighthalf;			// LordHavoc: to cause lightmap to be rerendered when lighthalf changes
 	float		cached_ambient;				// LordHavoc: rerender lightmaps when r_ambient changes
 	byte		*samples;		// [numstyles*surfsize]
 } msurface_t;
 
+// warning: if this is changed, references must be updated in cpu_* assembly files
 typedef struct mnode_s
 {
 // common with leaf
 	int			contents;		// 0, to differentiate from leafs
 	int			visframe;		// node needs to be traversed if current
+	int			lightframe;		// LordHavoc: to avoid redundent parent chasing in R_VisMarkLights
 	
 	float		minmaxs[6];		// for bounding box culling
 
 	struct mnode_s	*parent;
+
+	// LordHavoc: node based dynamic lighting
+	int			dlightbits[8];
+	int			dlightframe;
 
 // node specific
 	mplane_t	*plane;
@@ -165,10 +171,15 @@ typedef struct mleaf_s
 // common with node
 	int			contents;		// wil be a negative contents number
 	int			visframe;		// node needs to be traversed if current
+	int			lightframe;		// LordHavoc: to avoid redundent parent chasing in R_VisMarkLights
 
 	float		minmaxs[6];		// for bounding box culling
 
 	struct mnode_s	*parent;
+
+	// LordHavoc: node based dynamic lighting
+	int			dlightbits[8];
+	int			dlightframe;
 
 // leaf specific
 	byte		*compressed_vis;

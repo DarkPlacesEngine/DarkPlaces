@@ -38,19 +38,16 @@ void Chase_Reset (void)
 //	start position 12 units behind head
 }
 
-qboolean SV_RecursiveHullCheck (hull_t *hull, int num, float p1f, float p2f, vec3_t p1, vec3_t p2, trace_t *trace);
+extern qboolean SV_RecursiveHullCheck (hull_t *hull, int num, float p1f, float p2f, vec3_t p1, vec3_t p2, trace_t *trace);
 
 void TraceLine (vec3_t start, vec3_t end, vec3_t impact)
 {
-	/*
 	trace_t	trace;
 
 	memset (&trace, 0, sizeof(trace));
 	SV_RecursiveHullCheck (cl.worldmodel->hulls, 0, 0, 1, start, end, &trace);
 
 	VectorCopy (trace.endpos, impact);
-	*/
-	VectorCopy (end, impact);
 }
 
 void Chase_Update (void)

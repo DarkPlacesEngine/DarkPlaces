@@ -73,36 +73,10 @@ extern	int glx, gly, glwidth, glheight;
 void R_TimeRefresh_f (void);
 void R_ReadPointFile_f (void);
 
-typedef struct surfcache_s
-{
-	struct surfcache_s	*next;
-	struct surfcache_s 	**owner;		// NULL is an empty chunk of memory
-	int					lightadj[MAXLIGHTMAPS]; // checked for strobe flush
-	int					dlight;
-	int					size;		// including header
-	unsigned			width;
-	unsigned			height;		// DEBUG only needed for debug
-	float				mipscale;
-	struct texture_s	*texture;	// checked for animating textures
-	byte				data[4];	// width*height elements
-} surfcache_t;
-
-
-typedef struct
-{
-	pixel_t		*surfdat;	// destination for generated surface
-	msurface_t	*surf;		// description for surface to generate
-	fixed8_t	lightadj[MAXLIGHTMAPS];
-							// adjust for lightmap levels for dynamic lighting
-	texture_t	*texture;	// corrected for animating textures
-	int			surfmip;	// mipmapped ratio of surface texels / world pixels
-	int			surfwidth;	// in mipmapped texels
-	int			surfheight;	// in mipmapped texels
-} drawsurf_t;
 
 // LordHavoc: added dust, smoke, snow, bloodcloud, and many others
 typedef enum {
-	pt_static, pt_grav, pt_slowgrav, pt_fire, pt_explode, pt_explode2, pt_blob, pt_blob2, pt_dust, pt_smoke, pt_snow, pt_bulletpuff, pt_bloodcloud, pt_fadespark, pt_fadespark2, pt_fallfadespark, pt_fallfadespark2, pt_bubble, pt_fade
+	pt_static, pt_grav, pt_slowgrav, pt_fire, pt_explode, pt_explode2, pt_blob, pt_blob2, pt_dust, pt_smoke, pt_snow, pt_bulletpuff, pt_bloodcloud, pt_fadespark, pt_fadespark2, pt_fallfadespark, pt_fallfadespark2, pt_bubble, pt_fade, pt_smokecloud
 } ptype_t;
 
 // !!! if this is changed, it must be changed in d_ifacea.h too !!!
@@ -123,7 +97,7 @@ typedef struct particle_s
 	float		alpha; // 0-255
 	float		time2; // used for various things (snow fluttering, for example)
 	vec3_t		vel2; // used for snow fluttering (base velocity, wind for instance)
-	vec3_t		pushvel; // temporary boost from explosions
+//	vec3_t		pushvel; // temporary boost from explosions
 } particle_t;
 
 
@@ -137,7 +111,7 @@ extern	entity_t	*currententity;
 extern	int			r_visframecount;	// ??? what difs?
 extern	int			r_framecount;
 extern	mplane_t	frustum[4];
-extern	int		c_brush_polys, c_alias_polys;
+extern	int		c_brush_polys, c_alias_polys, c_light_polys, c_nodes, c_leafs;
 
 
 //
@@ -185,7 +159,6 @@ extern	cvar_t	r_waterripple;
 //extern	cvar_t	gl_polyblend;
 //extern	cvar_t	gl_keeptjunctions;
 //extern	cvar_t	gl_reporttjunctions;
-//extern	cvar_t	gl_flashblend;
 //extern	cvar_t	gl_nocolors;
 //extern	cvar_t	gl_doubleeyes;
 
@@ -306,6 +279,7 @@ extern void (*glColorTableEXT)(int, int, int, int, int, const void*);
 
 // LordHavoc: was a major time waster
 #define R_CullBox(mins,maxs) (frustum[0].BoxOnPlaneSideFunc(mins, maxs, &frustum[0]) == 2 || frustum[1].BoxOnPlaneSideFunc(mins, maxs, &frustum[1]) == 2 || frustum[2].BoxOnPlaneSideFunc(mins, maxs, &frustum[2]) == 2 || frustum[3].BoxOnPlaneSideFunc(mins, maxs, &frustum[3]) == 2)
+#define R_NotCulledBox(mins,maxs) (frustum[0].BoxOnPlaneSideFunc(mins, maxs, &frustum[0]) != 2 && frustum[1].BoxOnPlaneSideFunc(mins, maxs, &frustum[1]) != 2 && frustum[2].BoxOnPlaneSideFunc(mins, maxs, &frustum[2]) != 2 && frustum[3].BoxOnPlaneSideFunc(mins, maxs, &frustum[3]) != 2)
 
 extern qboolean fogenabled;
 extern vec3_t fogcolor;

@@ -26,10 +26,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "conproc.h"
 #include "direct.h"
 
-// LordHavoc: raised min to 24mb (was 8.5mb)
-#define MINIMUM_WIN_MEMORY		0x1800000
-// LordHavoc: raised max to 24mb (was 16mb)
-#define MAXIMUM_WIN_MEMORY		0x1800000
+// LordHavoc: raised min to 64mb (was 8.5mb)
+#define MINIMUM_WIN_MEMORY		0x04000000
+// LordHavoc: raised max to 64mb (was 16mb)
+#define MAXIMUM_WIN_MEMORY		0x04000000
 
 #define CONSOLE_ERROR_TIMEOUT	60.0	// # of seconds to wait on Sys_Error running
 										//  dedicated before exiting

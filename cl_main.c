@@ -288,49 +288,6 @@ void CL_PrintEntities_f (void)
 
 /*
 ===============
-SetPal
-
-Debugging tool, just flashes the screen
-===============
-*/
-void SetPal (int i)
-{
-#if 0
-	static int old;
-	byte	pal[768];
-	int		c;
-	
-	if (i == old)
-		return;
-	old = i;
-
-	if (i==0)
-		VID_SetPalette (host_basepal);
-	else if (i==1)
-	{
-		for (c=0 ; c<768 ; c+=3)
-		{
-			pal[c] = 0;
-			pal[c+1] = 255;
-			pal[c+2] = 0;
-		}
-		VID_SetPalette (pal);
-	}
-	else
-	{
-		for (c=0 ; c<768 ; c+=3)
-		{
-			pal[c] = 0;
-			pal[c+1] = 0;
-			pal[c+2] = 255;
-		}
-		VID_SetPalette (pal);
-	}
-#endif
-}
-
-/*
-===============
 CL_AllocDlight
 
 ===============
@@ -432,7 +389,6 @@ float	CL_LerpPoint (void)
 	{
 		if (frac < -0.01)
 		{
-SetPal(1);
 			cl.time = cl.mtime[1];
 //				Con_Printf ("low frac\n");
 		}
@@ -442,14 +398,11 @@ SetPal(1);
 	{
 		if (frac > 1.01)
 		{
-SetPal(2);
 			cl.time = cl.mtime[0];
 //				Con_Printf ("high frac\n");
 		}
 		frac = 1;
 	}
-	else
-		SetPal(0);
 		
 	return frac;
 }
@@ -649,21 +602,12 @@ void CL_RelinkEntities (void)
 		{
 			dl = CL_AllocDlight (i);
 			VectorCopy (ent->origin, dl->origin);
-			dl->dark = ent->glowsize < 0; // darklight
 			dl->radius = ent->glowsize;
-			if (dl->dark)
-			{
-				if (ent->glowtrail) // LordHavoc: all darklights leave black trails
-					R_RocketTrail2 (oldorg, ent->origin, 0, ent);
-				dl->radius = -ent->glowsize;
-			}
-			else if (ent->glowtrail) // LordHavoc: customizable glow and trail
-				R_RocketTrail2 (oldorg, ent->origin, ent->glowcolor, ent);
 			dl->die = cl.time + 0.001;
 			tempcolor = (byte *)&d_8to24table[ent->glowcolor];
 			dl->color[0] = tempcolor[0]*(1.0/255.0);dl->color[1] = tempcolor[1]*(1.0/255.0);dl->color[2] = tempcolor[2]*(1.0/255.0);
 		}
-		else if (ent->glowtrail) // LordHavoc: customizable glow and trail
+		if (ent->glowtrail) // LordHavoc: customizable glow and trail
 			R_RocketTrail2 (oldorg, ent->origin, ent->glowcolor, ent);
 
 		ent->forcelink = false;

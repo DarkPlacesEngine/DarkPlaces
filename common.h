@@ -130,11 +130,12 @@ char *MSG_ReadString (void);
 //#define MSG_ReadShort() ((msg_readcount + 2) > net_message.cursize ? (msg_badread = true, -1) : (short)net_message.data[msg_readcount+=2, msg_readcount-2] | (net_message.data[msg_readcount-1] << 8))
 //#define MSG_ReadLong() ((msg_readcount + 4) > net_message.cursize ? (msg_badread = true, -1) : (int)net_message.data[msg_readcount+=4, msg_readcount-4] | (net_message.data[msg_readcount-3] << 8) | (net_message.data[msg_readcount-2] << 16) | (net_message.data[msg_readcount-1] << 24))
 
-//float MSG_ReadCoord (void);
+float MSG_ReadCoord (void);
 //float MSG_ReadAngle (void);
 
-#define MSG_ReadAngle() (MSG_ReadByte() * (360.0f / 256.0f))
-#define MSG_ReadCoord() (MSG_ReadShort() * 0.125f)
+#define MSG_ReadAngle() (dpprotocol ? MSG_ReadShort() * (360.0f / 65536.0f) : MSG_ReadByte() * (360.0f / 256.0f))
+
+extern qboolean dpprotocol;
 
 //============================================================================
 

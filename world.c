@@ -586,16 +586,8 @@ loc0:
 	node = hull->clipnodes + num;
 	plane = hull->planes + node->planenum;
 
-	if (plane->type < 3)
-	{
-		t1 = p1[plane->type] - plane->dist;
-		t2 = p2[plane->type] - plane->dist;
-	}
-	else
-	{
-		t1 = DotProduct (plane->normal, p1) - plane->dist;
-		t2 = DotProduct (plane->normal, p2) - plane->dist;
-	}
+	t1 = PlaneDiff(p1, plane);
+	t2 = PlaneDiff(p2, plane);
 	
 #if 1
 	if (t1 >= 0 && t2 >= 0)
@@ -620,17 +612,14 @@ loc0:
 
 // put the crosspoint DIST_EPSILON pixels on the near side
 	if (t1 < 0)
-		frac = (t1 + DIST_EPSILON)/(t1-t2);
+		frac = bound(0, (t1 + DIST_EPSILON)/(t1-t2), 1);
 	else
-		frac = (t1 - DIST_EPSILON)/(t1-t2);
-	if (frac < 0)
-		frac = 0;
-	if (frac > 1)
-		frac = 1;
+		frac = bound(0, (t1 - DIST_EPSILON)/(t1-t2), 1);
 		
 	midf = p1f + (p2f - p1f)*frac;
-	for (i=0 ; i<3 ; i++)
-		mid[i] = p1[i] + frac*(p2[i] - p1[i]);
+	mid[0] = p1[0] + frac*(p2[0] - p1[0]);
+	mid[1] = p1[1] + frac*(p2[1] - p1[1]);
+	mid[2] = p1[2] + frac*(p2[2] - p1[2]);
 
 	side = (t1 < 0);
 
@@ -699,6 +688,74 @@ loc0:
 	VectorCopy (mid, trace->endpos);
 
 	return false;
+}
+
+qboolean SV_TestLine (hull_t *hull, int num, vec3_t p1, vec3_t p2)
+{
+	dclipnode_t	*node;
+	mplane_t	*plane;
+	float		t1, t2, frac;
+	vec3_t		mid;
+	int			side;
+
+loc0:
+// check for empty
+	if (num < 0)
+		return num != CONTENTS_SOLID;
+
+	if (num < hull->firstclipnode || num > hull->lastclipnode)
+		Sys_Error ("SV_RecursiveHullCheck: bad node number");
+
+//
+// find the point distances
+//
+	node = hull->clipnodes + num;
+	plane = hull->planes + node->planenum;
+
+	t1 = PlaneDiff(p1, plane);
+	t2 = PlaneDiff(p2, plane);
+	
+	if (t1 >= 0 && t2 >= 0)
+	{
+		num = node->children[0];
+		goto loc0;
+	}
+	if (t1 < 0 && t2 < 0)
+	{
+		num = node->children[1];
+		goto loc0;
+	}
+
+// put the crosspoint DIST_EPSILON pixels on the near side
+	side = (t1 < 0);
+
+	if (side)
+		frac = bound(0, (t1 + DIST_EPSILON)/(t1-t2), 1);
+	else
+		frac = bound(0, (t1 - DIST_EPSILON)/(t1-t2), 1);
+		
+	mid[0] = p1[0] + frac*(p2[0] - p1[0]);
+	mid[1] = p1[1] + frac*(p2[1] - p1[1]);
+	mid[2] = p1[2] + frac*(p2[2] - p1[2]);
+
+	if (node->children[side] < 0)
+	{
+		if (node->children[side] == CONTENTS_SOLID)
+			return false;
+		return SV_TestLine(hull, node->children[!side], mid, p2);
+//		num = node->children[!side];
+//		VectorCopy(mid, p1);
+//		goto loc0;
+	}
+	else if (SV_TestLine(hull, node->children[side], p1, mid))
+	{
+		return SV_TestLine(hull, node->children[!side], mid, p2);
+//		num = node->children[!side];
+//		VectorCopy(mid, p1);
+//		goto loc0;
+	}
+	else
+		return false;
 }
 
 

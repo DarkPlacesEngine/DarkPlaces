@@ -706,6 +706,7 @@ V_CalcRefdef
 
 ==================
 */
+extern qboolean intimerefresh;
 void V_CalcRefdef (void)
 {
 	entity_t	*ent, *view;
@@ -742,7 +743,10 @@ void V_CalcRefdef (void)
 	r_refdef.vieworg[1] += 1.0/32;
 	r_refdef.vieworg[2] += 1.0/32;
 
-	VectorCopy (cl.viewangles, r_refdef.viewangles);
+	if (!intimerefresh)
+	{
+		VectorCopy (cl.viewangles, r_refdef.viewangles);
+	}
 	V_CalcViewRoll ();
 	V_AddIdle ();
 
@@ -795,7 +799,10 @@ void V_CalcRefdef (void)
 	view->colormap = 0; //vid.colormap;
 
 // set up the refresh position
-	VectorAdd (r_refdef.viewangles, cl.punchangle, r_refdef.viewangles);
+	if (!intimerefresh)
+	{
+		VectorAdd (r_refdef.viewangles, cl.punchangle, r_refdef.viewangles);
+	}
 
 // smooth out stair step ups
 if (cl.onground && ent->origin[2] - oldz > 0)
@@ -844,8 +851,6 @@ void V_RenderView (void)
 		if (!cl.paused /* && (sv.maxclients > 1 || key_dest == key_game) */ )
 			V_CalcRefdef ();
 	}
-
-	R_PushDlights ();
 
 	R_RenderView ();
 }

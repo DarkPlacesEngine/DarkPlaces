@@ -20,7 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-#define MAX_PARTICLES			4096	// default max # of particles at one
+#define MAX_PARTICLES			32768	// default max # of particles at one
 										//  time
 #define ABSOLUTE_MIN_PARTICLES	512		// no fewer than this no matter what's
 										//  on the command line
@@ -348,7 +348,7 @@ avelocities[0][i] = (rand()&255) * 0.01;
 
 		ALLOCPARTICLE
 
-		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = p->vel[0] = p->vel[1] = p->vel[2] = 0;
+//		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = p->vel[0] = p->vel[1] = p->vel[2] = 0;
 		p->texnum = flareparticletexture;
 		p->scale = 2;
 		p->alpha = 255;
@@ -421,7 +421,7 @@ void R_ReadPointFile_f (void)
 		p->die = 99999;
 		p->color = (-c)&15;
 		p->type = pt_static;
-		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = p->vel[0] = p->vel[1] = p->vel[2] = 0;
+//		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = p->vel[0] = p->vel[1] = p->vel[2] = 0;
 		VectorCopy (org, p->org);
 	}
 
@@ -436,6 +436,7 @@ R_BlastParticles
 LordHavoc: blasts away particles in the area, used for explosions to disturb the smoke trail and such
 ===============
 */
+/*
 void R_BlastParticles(vec3_t org, vec_t radius, vec_t power)
 {
 	vec3_t v;
@@ -457,6 +458,7 @@ void R_BlastParticles(vec3_t org, vec_t radius, vec_t power)
 		p = p->next;
 	}
 }
+*/
 
 /*
 ===============
@@ -496,12 +498,13 @@ void R_ParticleExplosion (vec3_t org, int smoke)
 	int			i, j;
 	particle_t	*p;
 	if (!r_particles.value) return; // LordHavoc: particles are optional
-	
+
+	/*
 	for (i=0 ; i<1024 ; i++)
 	{
 		ALLOCPARTICLE
 
-		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
+//		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 		p->texnum = particletexture;
 		p->scale = lhrandom(1,3);
 		p->alpha = rand()&255;
@@ -521,6 +524,7 @@ void R_ParticleExplosion (vec3_t org, int smoke)
 		}
 		p->vel[2] += 160;
 	}
+	*/
 
 	i = Mod_PointInLeaf(org, cl.worldmodel)->contents;
 	if (i == CONTENTS_SLIME || i == CONTENTS_WATER)
@@ -529,7 +533,7 @@ void R_ParticleExplosion (vec3_t org, int smoke)
 		{
 			ALLOCPARTICLE
 
-			p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
+//			p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 			p->texnum = bubbleparticletexture;
 			p->scale = lhrandom(1,2);
 			p->alpha = 255;
@@ -543,26 +547,29 @@ void R_ParticleExplosion (vec3_t org, int smoke)
 			}
 		}
 	}
-	else if (smoke)
+	else // if (smoke)
 	{
-		for (i=0 ; i<32 ; i++)
-		{
+//		for (i=0 ; i<32 ; i++)
+//		{
 			ALLOCPARTICLE
 
-			p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
+//			p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 			p->texnum = smokeparticletexture[rand()&7];
-			p->scale = 12;
-			p->alpha = 80;
+//			p->scale = 12;
+			p->scale = 30;
+			p->alpha = 96;
 			p->die = cl.time + 2;
-			p->type = pt_smoke;
+			p->type = pt_smokecloud;
 			p->color = (rand()&7) + 8;
 			for (j=0 ; j<3 ; j++)
 			{
-				p->org[j] = org[j] + ((rand()%96)-48);
-				p->vel[j] = (rand()&63)-32;
+//				p->org[j] = org[j] + ((rand()%96)-48);
+//				p->vel[j] = (rand()&63)-32;
+				p->org[j] = org[j];
+				p->vel[j] = 0;
 			}
 		}
-	}
+//	}
 }
 
 /*
@@ -582,8 +589,8 @@ void R_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength)
 	{
 		ALLOCPARTICLE
 
-		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
-		p->texnum = smokeparticletexture[rand()&7];
+//		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
+		p->texnum = particletexture;
 		p->scale = 1.5;
 		p->alpha = 255;
 		p->die = cl.time + 0.3;
@@ -615,8 +622,8 @@ void R_BlobExplosion (vec3_t org)
 	{
 		ALLOCPARTICLE
 
-		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
-		p->texnum = smokeparticletexture[rand()&7];
+//		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
+		p->texnum = particletexture;
 		p->scale = 2;
 		p->alpha = 255;
 		p->die = cl.time + 1 + (rand()&8)*0.05;
@@ -677,7 +684,7 @@ void R_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count)
 			count -= 8;
 		}
 
-		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
+//		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 		p->texnum = particletexture;
 		p->scale = 6;
 		p->die = cl.time + 1; //lhrandom(0.1, 0.5);
@@ -705,12 +712,12 @@ void R_SparkShower (vec3_t org, vec3_t dir, int count, int type)
 	if (!r_particles.value) return; // LordHavoc: particles are optional
 
 	ALLOCPARTICLE
-	p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
+//	p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 	if (type == 0) // sparks
 	{
 		p->texnum = smokeparticletexture[rand()&7];
-		p->scale = 15;
-		p->alpha = 64;
+		p->scale = 10;
+		p->alpha = 48;
 		p->color = (rand()&3)+12;
 		p->type = pt_bulletpuff;
 		p->die = cl.time + 1;
@@ -733,10 +740,10 @@ void R_SparkShower (vec3_t org, vec3_t dir, int count, int type)
 	{
 		ALLOCPARTICLE
 
-		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
+//		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 		p->texnum = flareparticletexture;
 		p->scale = 2;
-		p->alpha = 255;
+		p->alpha = 192;
 		p->die = cl.time + 0.0625 * (rand()&15);
 		/*
 		if (type == 0) // sparks
@@ -787,7 +794,7 @@ void R_BloodShower (vec3_t mins, vec3_t maxs, float velspeed, int count)
 	{
 		ALLOCPARTICLE
 
-		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
+//		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 		p->texnum = bloodcloudparticletexture;
 		p->scale = 12;
 		p->alpha = 96 + (rand()&63);
@@ -820,7 +827,7 @@ void R_ParticleCube (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorb
 	{
 		ALLOCPARTICLE
 
-		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
+//		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 		p->texnum = flareparticletexture;
 		p->scale = 6;
 		p->alpha = 255;
@@ -880,7 +887,7 @@ void R_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorb
 		org[1] = diff[1] * (float) (rand()&1023) * (1.0 / 1024.0) + mins[1];
 		org[2] = z;
 
-		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
+//		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 		p->scale = 1.5;
 		p->alpha = 255;
 		p->die = t;
@@ -922,7 +929,7 @@ void R_LavaSplash (vec3_t org)
 			{
 				ALLOCPARTICLE
 		
-				p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
+//				p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 				p->texnum = flareparticletexture;
 				p->scale = 10;
 				p->alpha = 128;
@@ -964,7 +971,7 @@ void R_TeleportSplash (vec3_t org)
 			{
 				ALLOCPARTICLE
 		
-				p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
+//				p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 				p->contents = 0;
 				p->texnum = particletexture;
 				p->scale = 2;
@@ -993,7 +1000,7 @@ void R_TeleportSplash (vec3_t org)
 			{
 				ALLOCPARTICLE
 		
-				p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
+//				p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 				p->texnum = flareparticletexture;
 				p->scale = 4;
 				p->alpha = lhrandom(32,256);
@@ -1045,7 +1052,8 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 	{
 		ALLOCPARTICLE
 		
-		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = p->vel[0] = p->vel[1] = p->vel[2] = 0;
+//		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
+		p->vel[0] = p->vel[1] = p->vel[2] = 0;
 		p->die = cl.time + 2;
 
 		switch (type)
@@ -1071,7 +1079,7 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				{
 					dec = 0.02f;
 					p->texnum = smokeparticletexture[rand()&7];
-					p->scale = lhrandom(6, 10);
+					p->scale = lhrandom(8, 12);
 					p->alpha = 64 + (rand()&31);
 					p->color = (rand()&3)+12;
 					p->type = pt_smoke;
@@ -1103,7 +1111,7 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				p->alpha = 255;
 				p->color = (rand()&3)+68;
 				p->type = pt_bloodcloud;
-				p->die = cl.time + 2;
+				p->die = cl.time + 9999;
 				for (j=0 ; j<3 ; j++)
 				{
 					p->vel[j] = (rand()&15)-8;
@@ -1146,7 +1154,7 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				p->alpha = 192;
 				p->color = (rand()&3)+68;
 				p->type = pt_fadespark2;
-				p->die = cl.time + 2;
+				p->die = cl.time + 9999;
 				for (j=0 ; j<3 ; j++)
 				{
 					p->vel[j] = (rand()&15)-8;
@@ -1204,7 +1212,8 @@ void R_RocketTrail2 (vec3_t start, vec3_t end, int color, entity_t *ent)
 
 		ALLOCPARTICLE
 		
-		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = p->vel[0] = p->vel[1] = p->vel[2] = 0;
+//		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
+		p->vel[0] = p->vel[1] = p->vel[2] = 0;
 
 		p->texnum = flareparticletexture;
 		p->scale = 8;
@@ -1235,9 +1244,9 @@ void R_DrawParticles (void)
 {
 	particle_t		*p, *kill;
 	int				i, r,g,b,a;
-	float			grav, grav1, time1, time2, time3, dvel, frametime, scale, scale2, f1, f2;
+	float			grav, grav1, time1, time2, time3, dvel, frametime, scale, scale2/*, f1, f2*/, minparticledist;
 	byte			*color24;
-	vec3_t			up, right, uprightangles, forward2, up2, right2, v, tempcolor;
+	vec3_t			up, right, uprightangles, forward2, up2, right2, tempcolor;
 
 	// LordHavoc: early out condition
 	if (!active_particles)
@@ -1258,6 +1267,9 @@ void R_DrawParticles (void)
 	grav = (grav1 = frametime * sv_gravity.value) * 0.05;
 	dvel = 1+4*frametime;
 
+	minparticledist = DotProduct(r_refdef.vieworg, vpn) + 16.0f;
+
+	// remove dead particles at beginning of list
 	for ( ;; ) 
 	{
 		kill = active_particles;
@@ -1273,6 +1285,7 @@ void R_DrawParticles (void)
 
 	for (p=active_particles ; p ; p=p->next)
 	{
+		// remove dead particles following this one
 		for ( ;; )
 		{
 			kill = p->next;
@@ -1285,14 +1298,10 @@ void R_DrawParticles (void)
 			}
 			break;
 		}
-		// LordHavoc: 'removed last in list' condition
-		if (!p)
-			break;
 
-		VectorSubtract(p->org, r_refdef.vieworg, v);
-		if (DotProduct(v, v) >= 256.0f)
+		// LordHavoc: only render if not too close
+		if (DotProduct(p->org, vpn) >= minparticledist)
 		{
-			scale = p->scale * -0.5;scale2 = p->scale * 0.5;
 			color24 = (byte *) &d_8to24table[(int)p->color];
 			r = color24[0];
 			g = color24[1];
@@ -1312,6 +1321,7 @@ void R_DrawParticles (void)
 				b = (b * (int) tempcolor[2]) >> 7;
 			}
 			transpolybegin(p->texnum, 0, p->texnum, TPOLYTYPE_ALPHA);
+			scale = p->scale * -0.5;scale2 = p->scale * 0.5;
 			if (p->texnum == rainparticletexture) // rain streak
 			{
 				transpolyvert(p->org[0] + up2[0]*scale  + right2[0]*scale , p->org[1] + up2[1]*scale  + right2[1]*scale , p->org[2] + up2[2]*scale  + right2[2]*scale , 0,1,r,g,b,a);
@@ -1329,6 +1339,7 @@ void R_DrawParticles (void)
 			transpolyend();
 		}
 
+		/*
 		if (p->pushvel[0] || p->pushvel[1] || p->pushvel[2])
 		{
 			p->org[0] += (p->vel[0]+p->pushvel[0])*frametime;
@@ -1348,10 +1359,16 @@ void R_DrawParticles (void)
 		}
 		else
 		{
-			p->org[0] += p->vel[0]*frametime;
-			p->org[1] += p->vel[1]*frametime;
-			p->org[2] += p->vel[2]*frametime;
+			if (p->type != pt_smokecloud)
+			{
+		*/
+				p->org[0] += p->vel[0]*frametime;
+				p->org[1] += p->vel[1]*frametime;
+				p->org[2] += p->vel[2]*frametime;
+		/*
+			}
 		}
+		*/
 		
 		switch (p->type)
 		{
@@ -1413,7 +1430,8 @@ void R_DrawParticles (void)
 		case pt_dust:
 			p->ramp += time1;
 			p->scale -= frametime * 4;
-			if (p->ramp >= 8 || p->scale <= 0)
+			p->alpha -= frametime * 48;
+			if (p->ramp >= 8 || p->scale < 1 || p->alpha < 1)
 				p->die = -1;
 			else
 				p->color = ramp3[(int)p->ramp];
@@ -1421,7 +1439,7 @@ void R_DrawParticles (void)
 			break;
 // LordHavoc: for smoke trails
 		case pt_smoke:
-			p->scale += frametime * 4;
+			p->scale += frametime * 6;
 			p->alpha -= frametime * 128;
 //			p->vel[2] += grav;
 			if (p->alpha < 1)
@@ -1444,6 +1462,11 @@ void R_DrawParticles (void)
 				p->die = -1;
 			break;
 		case pt_bloodcloud:
+			if (Mod_PointInLeaf(p->org, cl.worldmodel)->contents != CONTENTS_EMPTY)
+			{
+				p->die = -1;
+				break;
+			}
 			p->scale += frametime * 4;
 			p->alpha -= frametime * 64;
 			p->vel[2] -= grav;
@@ -1492,6 +1515,12 @@ void R_DrawParticles (void)
 				p->vel[1] = lhrandom(-32,32);
 			}
 			p->alpha -= frametime * 64;
+			if (p->alpha < 1)
+				p->die = -1;
+			break;
+		case pt_smokecloud:
+			p->scale += frametime * 60;
+			p->alpha -= frametime * 96;
 			if (p->alpha < 1)
 				p->die = -1;
 			break;

@@ -838,25 +838,18 @@ SCR_UpdateScreen
 This is called every frame, and can also be called explicitly to flush
 text to the screen.
 
-WARNING: be very careful calling this from elsewhere, because the refresh
-needs almost the entire 256k of stack space!
+LordHavoc: due to my rewrite of R_WorldNode, it no longer takes 256k of stack space :)
 ==================
 */
 extern cvar_t gl_vertexarrays;
 extern qboolean gl_arrays;
 void GL_Finish();
-int c_nodes;
 void SCR_UpdateScreen (void)
 {
 	double	time1 = 0, time2;
 
 	if (r_speeds.value)
-	{
 		time1 = Sys_FloatTime ();
-		c_brush_polys = 0;
-		c_alias_polys = 0;
-		c_nodes = 0;
-	}
 
 	if (!gl_arrays)
 		gl_vertexarrays.value = 0;
@@ -899,7 +892,7 @@ void SCR_UpdateScreen (void)
 	if (vid.recalc_refdef)
 		SCR_CalcRefdef ();
 
-	glClearColor(0,0,0,0);
+	glClearColor(1,0,0,0);
 	glClear (GL_COLOR_BUFFER_BIT); // LordHavoc: clear the screen (around the view as well)
 
 //
@@ -970,7 +963,7 @@ void SCR_UpdateScreen (void)
 	if (r_speeds.value)
 	{
 		time2 = Sys_FloatTime ();
-		Con_Printf ("%3i ms  %4i wpoly %4i epoly %4i transpoly %4i BSPnodes\n", (int)((time2-time1)*1000), c_brush_polys, c_alias_polys, currenttranspoly, c_nodes); 
+		Con_Printf ("%3i ms  %4i wpoly %4i epoly %4i transpoly %4i lightpoly %4i BSPnodes %4i BSPleafs\n", (int)((time2-time1)*1000), c_brush_polys, c_alias_polys, currenttranspoly, c_light_polys, c_nodes, c_leafs);
 	}
 	GL_EndRendering ();
 }

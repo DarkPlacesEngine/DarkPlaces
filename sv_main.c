@@ -435,6 +435,13 @@ void SV_WriteEntitiesToClient (edict_t	*clent, sizebuf_t *msg)
 // find the client's PVS
 	VectorAdd (clent->v.origin, clent->v.view_ofs, org);
 	pvs = SV_FatPVS (org);
+	if (dpprotocol)
+	{
+		MSG_WriteByte(msg, svc_playerposition);
+		MSG_WriteFloat(msg, org[0]);
+		MSG_WriteFloat(msg, org[1]);
+		MSG_WriteFloat(msg, org[2]);
+	}
 
 	clentnum = NUM_FOR_EDICT(clent); // LordHavoc: for comparison purposes
 // send over all entities (except the client) that touch the pvs
@@ -485,9 +492,9 @@ void SV_WriteEntitiesToClient (edict_t	*clent, sizebuf_t *msg)
 		if (alpha > 255) alpha = 255;
 
 		if ((val = GETEDICTFIELDVALUE(ent, eval_glow_size)))
-			glowsize = (int) val->_float >> 3;
-		if (glowsize > 127) glowsize = 127;
-		if (glowsize < -128) glowsize = -128;
+			glowsize = (int) val->_float >> 2;
+		if (glowsize > 255) glowsize = 255;
+		if (glowsize < 0) glowsize = 0;
 
 		if ((val = GETEDICTFIELDVALUE(ent, eval_scale)))
 		if ((scale = (int) (val->_float * 16.0)) == 0) scale = 16;
@@ -593,11 +600,13 @@ void SV_WriteEntitiesToClient (edict_t	*clent, sizebuf_t *msg)
 			angles[0] = angles[0] * movelerp + ent->stepoldangles[0];
 			angles[1] = angles[1] * movelerp + ent->stepoldangles[1];
 			angles[2] = angles[2] * movelerp + ent->stepoldangles[2];
+			VectorMA(origin, host_client->ping, ent->v.velocity, origin);
 		}
 		else // copy as they are
 		{
-			VectorCopy(ent->v.origin, origin);
+//			VectorCopy(ent->v.origin, origin);
 			VectorCopy(ent->v.angles, angles);
+			VectorMA(ent->v.origin, host_client->latency, ent->v.velocity, origin);
 			if (ent->v.movetype == MOVETYPE_STEP) // monster, but airborn, update lerp info
 			{
 				// update lerp positions
@@ -673,7 +682,7 @@ void SV_WriteEntitiesToClient (edict_t	*clent, sizebuf_t *msg)
 		if (bits & U_COLORMAP)	MSG_WriteByte (msg, ent->v.colormap);
 		if (bits & U_SKIN)		MSG_WriteByte (msg, ent->v.skin);
 		if (bits & U_EFFECTS)	MSG_WriteByte (msg, ent->v.effects);
-		if (bits & U_ORIGIN1)	MSG_WriteCoord (msg, origin[0]);		
+		if (bits & U_ORIGIN1)	MSG_WriteCoord (msg, origin[0]);
 		if (bits & U_ANGLE1)	MSG_WriteAngle(msg, angles[0]);
 		if (bits & U_ORIGIN2)	MSG_WriteCoord (msg, origin[1]);
 		if (bits & U_ANGLE2)	MSG_WriteAngle(msg, angles[1]);
