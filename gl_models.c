@@ -49,131 +49,137 @@ void GL_Models_Init(void)
 	R_RegisterModule("GL_Models", gl_models_start, gl_models_shutdown, gl_models_newmap);
 }
 
-void R_AliasLerpVerts(int vertcount, float *vertices, float *normals,
-		float lerp1, const trivertx_t *verts1, const vec3_t fscale1, const vec3_t translate1,
-		float lerp2, const trivertx_t *verts2, const vec3_t fscale2, const vec3_t translate2,
-		float lerp3, const trivertx_t *verts3, const vec3_t fscale3, const vec3_t translate3,
-		float lerp4, const trivertx_t *verts4, const vec3_t fscale4, const vec3_t translate4)
+void R_Model_Alias_GetVerts(const entity_render_t *ent, float *vertices, float *normals, float *svectors, float *tvectors)
 {
-	int i;
-	vec3_t scale1, scale2, scale3, scale4, translate;
-	const float *n1, *n2, *n3, *n4;
-	float *av, *avn;
-	av = vertices;
-	avn = normals;
-	VectorScale(fscale1, lerp1, scale1);
-	if (lerp2)
+	int i, vertcount;
+	float vlerp1, nlerp1, vlerp2, nlerp2, vlerp3, nlerp3, vlerp4, nlerp4;
+	const aliasvertex_t *verts1, *verts2, *verts3, *verts4;
+
+	if (vertices == NULL)
+	 	Host_Error("R_Model_Alias_GetVerts: vertices == NULL.\n");
+	if (svectors != NULL && (tvectors == NULL || normals == NULL))
+	 	Host_Error("R_Model_Alias_GetVerts: svectors requires tvectors and normals.\n");
+	if (tvectors != NULL && (svectors == NULL || normals == NULL))
+	 	Host_Error("R_Model_Alias_GetVerts: tvectors requires svectors and normals.\n");
+
+	vertcount = ent->model->numverts;
+	verts1 = ent->model->mdlmd2data_pose + ent->frameblend[0].frame * vertcount;
+	vlerp1 = ent->frameblend[0].lerp * (1.0f / 16.0f);
+	nlerp1 = ent->frameblend[0].lerp * (1.0f / 127.0f);
+	if (ent->frameblend[1].lerp)
 	{
-		VectorScale(fscale2, lerp2, scale2);
-		if (lerp3)
+		verts2 = ent->model->mdlmd2data_pose + ent->frameblend[1].frame * vertcount;
+		vlerp2 = ent->frameblend[1].lerp * (1.0f / 16.0f);
+		nlerp2 = ent->frameblend[1].lerp * (1.0f / 127.0f);
+		if (ent->frameblend[2].lerp)
 		{
-			VectorScale(fscale3, lerp3, scale3);
-			if (lerp4)
+			verts3 = ent->model->mdlmd2data_pose + ent->frameblend[2].frame * vertcount;
+			vlerp3 = ent->frameblend[2].lerp * (1.0f / 16.0f);
+			nlerp3 = ent->frameblend[2].lerp * (1.0f / 127.0f);
+			if (ent->frameblend[3].lerp)
 			{
-				VectorScale(fscale4, lerp4, scale4);
-				translate[0] = translate1[0] * lerp1 + translate2[0] * lerp2 + translate3[0] * lerp3 + translate4[0] * lerp4;
-				translate[1] = translate1[1] * lerp1 + translate2[1] * lerp2 + translate3[1] * lerp3 + translate4[1] * lerp4;
-				translate[2] = translate1[2] * lerp1 + translate2[2] * lerp2 + translate3[2] * lerp3 + translate4[2] * lerp4;
+				verts4 = ent->model->mdlmd2data_pose + ent->frameblend[3].frame * vertcount;
+				vlerp4 = ent->frameblend[3].lerp * (1.0f / 16.0f);
+				nlerp4 = ent->frameblend[3].lerp * (1.0f / 127.0f);
 				// generate vertices
-				for (i = 0;i < vertcount;i++)
+				if (svectors != NULL)
 				{
-					av[0] = verts1->v[0] * scale1[0] + verts2->v[0] * scale2[0] + verts3->v[0] * scale3[0] + verts4->v[0] * scale4[0] + translate[0];
-					av[1] = verts1->v[1] * scale1[1] + verts2->v[1] * scale2[1] + verts3->v[1] * scale3[1] + verts4->v[1] * scale4[1] + translate[1];
-					av[2] = verts1->v[2] * scale1[2] + verts2->v[2] * scale2[2] + verts3->v[2] * scale3[2] + verts4->v[2] * scale4[2] + translate[2];
-					n1 = m_bytenormals[verts1->lightnormalindex];
-					n2 = m_bytenormals[verts2->lightnormalindex];
-					n3 = m_bytenormals[verts3->lightnormalindex];
-					n4 = m_bytenormals[verts4->lightnormalindex];
-					avn[0] = n1[0] * lerp1 + n2[0] * lerp2 + n3[0] * lerp3 + n4[0] * lerp4;
-					avn[1] = n1[1] * lerp1 + n2[1] * lerp2 + n3[1] * lerp3 + n4[1] * lerp4;
-					avn[2] = n1[2] * lerp1 + n2[2] * lerp2 + n3[2] * lerp3 + n4[2] * lerp4;
-					av += 4;
-					avn += 4;
-					verts1++;verts2++;verts3++;verts4++;
+					for (i = 0;i < vertcount;i++, vertices += 4, normals += 4, svectors += 4, tvectors += 4, verts1++, verts2++, verts3++, verts4++)
+					{
+						VectorMAMAMAM(vlerp1, verts1->origin, vlerp2, verts2->origin, vlerp3, verts3->origin, vlerp4, verts4->origin, vertices);
+						VectorMAMAMAM(nlerp1, verts1->normal, nlerp2, verts2->normal, nlerp3, verts3->normal, nlerp4, verts4->normal, normals);
+						VectorMAMAMAM(nlerp1, verts1->svector, nlerp2, verts2->svector, nlerp3, verts3->svector, nlerp4, verts4->svector, svectors);
+						CrossProduct(svectors, normals, tvectors);
+					}
 				}
+				else if (normals != NULL)
+				{
+					for (i = 0;i < vertcount;i++, vertices += 4, normals += 4, verts1++, verts2++, verts3++, verts4++)
+					{
+						VectorMAMAMAM(vlerp1, verts1->origin, vlerp2, verts2->origin, vlerp3, verts3->origin, vlerp4, verts4->origin, vertices);
+						VectorMAMAMAM(nlerp1, verts1->normal, nlerp2, verts2->normal, nlerp3, verts3->normal, nlerp4, verts4->normal, normals);
+					}
+				}
+				else
+					for (i = 0;i < vertcount;i++, vertices += 4, verts1++, verts2++, verts3++, verts4++)
+						VectorMAMAMAM(vlerp1, verts1->origin, vlerp2, verts2->origin, vlerp3, verts3->origin, vlerp4, verts4->origin, vertices);
 			}
 			else
 			{
-				translate[0] = translate1[0] * lerp1 + translate2[0] * lerp2 + translate3[0] * lerp3;
-				translate[1] = translate1[1] * lerp1 + translate2[1] * lerp2 + translate3[1] * lerp3;
-				translate[2] = translate1[2] * lerp1 + translate2[2] * lerp2 + translate3[2] * lerp3;
 				// generate vertices
-				for (i = 0;i < vertcount;i++)
+				if (svectors != NULL)
 				{
-					av[0] = verts1->v[0] * scale1[0] + verts2->v[0] * scale2[0] + verts3->v[0] * scale3[0] + translate[0];
-					av[1] = verts1->v[1] * scale1[1] + verts2->v[1] * scale2[1] + verts3->v[1] * scale3[1] + translate[1];
-					av[2] = verts1->v[2] * scale1[2] + verts2->v[2] * scale2[2] + verts3->v[2] * scale3[2] + translate[2];
-					n1 = m_bytenormals[verts1->lightnormalindex];
-					n2 = m_bytenormals[verts2->lightnormalindex];
-					n3 = m_bytenormals[verts3->lightnormalindex];
-					avn[0] = n1[0] * lerp1 + n2[0] * lerp2 + n3[0] * lerp3;
-					avn[1] = n1[1] * lerp1 + n2[1] * lerp2 + n3[1] * lerp3;
-					avn[2] = n1[2] * lerp1 + n2[2] * lerp2 + n3[2] * lerp3;
-					av += 4;
-					avn += 4;
-					verts1++;verts2++;verts3++;
+					for (i = 0;i < vertcount;i++, vertices += 4, normals += 4, svectors += 4, tvectors += 4, verts1++, verts2++, verts3++)
+					{
+						VectorMAMAM(vlerp1, verts1->origin, vlerp2, verts2->origin, vlerp3, verts3->origin, vertices);
+						VectorMAMAM(nlerp1, verts1->normal, nlerp2, verts2->normal, nlerp3, verts3->normal, normals);
+						VectorMAMAM(nlerp1, verts1->svector, nlerp2, verts2->svector, nlerp3, verts3->svector, svectors);
+						CrossProduct(svectors, normals, tvectors);
+					}
 				}
+				else if (normals != NULL)
+				{
+					for (i = 0;i < vertcount;i++, vertices += 4, normals += 4, verts1++, verts2++, verts3++)
+					{
+						VectorMAMAM(vlerp1, verts1->origin, vlerp2, verts2->origin, vlerp3, verts3->origin, vertices);
+						VectorMAMAM(nlerp1, verts1->normal, nlerp2, verts2->normal, nlerp3, verts3->normal, normals);
+					}
+				}
+				else
+					for (i = 0;i < vertcount;i++, vertices += 4, verts1++, verts2++, verts3++)
+						VectorMAMAM(vlerp1, verts1->origin, vlerp2, verts2->origin, vlerp3, verts3->origin, vertices);
 			}
 		}
 		else
 		{
-			translate[0] = translate1[0] * lerp1 + translate2[0] * lerp2;
-			translate[1] = translate1[1] * lerp1 + translate2[1] * lerp2;
-			translate[2] = translate1[2] * lerp1 + translate2[2] * lerp2;
 			// generate vertices
-			for (i = 0;i < vertcount;i++)
+			if (svectors != NULL)
 			{
-				av[0] = verts1->v[0] * scale1[0] + verts2->v[0] * scale2[0] + translate[0];
-				av[1] = verts1->v[1] * scale1[1] + verts2->v[1] * scale2[1] + translate[1];
-				av[2] = verts1->v[2] * scale1[2] + verts2->v[2] * scale2[2] + translate[2];
-				n1 = m_bytenormals[verts1->lightnormalindex];
-				n2 = m_bytenormals[verts2->lightnormalindex];
-				avn[0] = n1[0] * lerp1 + n2[0] * lerp2;
-				avn[1] = n1[1] * lerp1 + n2[1] * lerp2;
-				avn[2] = n1[2] * lerp1 + n2[2] * lerp2;
-				av += 4;
-				avn += 4;
-				verts1++;verts2++;
+				for (i = 0;i < vertcount;i++, vertices += 4, normals += 4, svectors += 4, tvectors += 4, verts1++, verts2++)
+				{
+					VectorMAM(vlerp1, verts1->origin, vlerp2, verts2->origin, vertices);
+					VectorMAM(nlerp1, verts1->normal, nlerp2, verts2->normal, normals);
+					VectorMAM(nlerp1, verts1->svector, nlerp2, verts2->svector, svectors);
+					CrossProduct(svectors, normals, tvectors);
+				}
 			}
+			else if (normals != NULL)
+			{
+				for (i = 0;i < vertcount;i++, vertices += 4, normals += 4, verts1++, verts2++)
+				{
+					VectorMAM(vlerp1, verts1->origin, vlerp2, verts2->origin, vertices);
+					VectorMAM(nlerp1, verts1->normal, nlerp2, verts2->normal, normals);
+				}
+			}
+			else
+				for (i = 0;i < vertcount;i++, vertices += 4, verts1++, verts2++)
+					VectorMAM(vlerp1, verts1->origin, vlerp2, verts2->origin, vertices);
 		}
 	}
 	else
 	{
-		translate[0] = translate1[0] * lerp1;
-		translate[1] = translate1[1] * lerp1;
-		translate[2] = translate1[2] * lerp1;
 		// generate vertices
-		if (lerp1 != 1)
+		if (svectors != NULL)
 		{
-			// general but almost never used case
-			for (i = 0;i < vertcount;i++)
+			for (i = 0;i < vertcount;i++, vertices += 4, normals += 4, svectors += 4, tvectors += 4, verts1++)
 			{
-				av[0] = verts1->v[0] * scale1[0] + translate[0];
-				av[1] = verts1->v[1] * scale1[1] + translate[1];
-				av[2] = verts1->v[2] * scale1[2] + translate[2];
-				n1 = m_bytenormals[verts1->lightnormalindex];
-				avn[0] = n1[0] * lerp1;
-				avn[1] = n1[1] * lerp1;
-				avn[2] = n1[2] * lerp1;
-				av += 4;
-				avn += 4;
-				verts1++;
+				VectorM(vlerp1, verts1->origin, vertices);
+				VectorM(nlerp1, verts1->normal, normals);
+				VectorM(nlerp1, verts1->svector, svectors);
+				CrossProduct(svectors, normals, tvectors);
+			}
+		}
+		else if (normals != NULL)
+		{
+			for (i = 0;i < vertcount;i++, vertices += 4, normals += 4, verts1++)
+			{
+				VectorM(vlerp1, verts1->origin, vertices);
+				VectorM(nlerp1, verts1->normal, normals);
 			}
 		}
 		else
-		{
-			// fast normal case
-			for (i = 0;i < vertcount;i++)
-			{
-				av[0] = verts1->v[0] * scale1[0] + translate[0];
-				av[1] = verts1->v[1] * scale1[1] + translate[1];
-				av[2] = verts1->v[2] * scale1[2] + translate[2];
-				VectorCopy(m_bytenormals[verts1->lightnormalindex], avn);
-				av += 4;
-				avn += 4;
-				verts1++;
-			}
-		}
+			for (i = 0;i < vertcount;i++, vertices += 4, verts1++)
+				VectorM(vlerp1, verts1->origin, vertices);
 	}
 }
 
@@ -189,28 +195,7 @@ skinframe_t *R_FetchSkinFrame(const entity_render_t *ent)
 		return &model->skinframes[model->skinscenes[s].firstframe];
 }
 
-void R_LerpMDLMD2Vertices(const entity_render_t *ent, float *vertices, float *normals)
-{
-	const md2frame_t *frame1, *frame2, *frame3, *frame4;
-	const trivertx_t *frame1verts, *frame2verts, *frame3verts, *frame4verts;
-	const model_t *model = ent->model;
-
-	frame1 = &model->mdlmd2data_frames[ent->frameblend[0].frame];
-	frame2 = &model->mdlmd2data_frames[ent->frameblend[1].frame];
-	frame3 = &model->mdlmd2data_frames[ent->frameblend[2].frame];
-	frame4 = &model->mdlmd2data_frames[ent->frameblend[3].frame];
-	frame1verts = &model->mdlmd2data_pose[ent->frameblend[0].frame * model->numverts];
-	frame2verts = &model->mdlmd2data_pose[ent->frameblend[1].frame * model->numverts];
-	frame3verts = &model->mdlmd2data_pose[ent->frameblend[2].frame * model->numverts];
-	frame4verts = &model->mdlmd2data_pose[ent->frameblend[3].frame * model->numverts];
-	R_AliasLerpVerts(model->numverts, vertices, normals,
-		ent->frameblend[0].lerp, frame1verts, frame1->scale, frame1->translate,
-		ent->frameblend[1].lerp, frame2verts, frame2->scale, frame2->translate,
-		ent->frameblend[2].lerp, frame3verts, frame3->scale, frame3->translate,
-		ent->frameblend[3].lerp, frame4verts, frame4->scale, frame4->translate);
-}
-
-void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
+void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 {
 	int i, c, fullbright, pantsfullbright, shirtfullbright, colormapped, tex;
 	float pantscolor[3], shirtcolor[3];
@@ -266,7 +251,7 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		blendfunc2 = GL_ZERO;
 	}
 
-	R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvert_normals);
+	R_Model_Alias_GetVerts(ent, varray_vertex, aliasvert_normals, NULL, NULL);
 	memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[4]));
 	if (!skinframe->base && !skinframe->pants && !skinframe->shirt && !skinframe->glow)
 	{
@@ -431,9 +416,9 @@ void R_Model_Alias_Draw(entity_render_t *ent)
 	c_models++;
 
 	if (ent->effects & EF_ADDITIVE || ent->alpha != 1.0 || R_FetchSkinFrame(ent)->fog != NULL)
-		R_MeshQueue_AddTransparent(ent->origin, R_DrawQ1Q2AliasModelCallback, ent, 0);
+		R_MeshQueue_AddTransparent(ent->origin, R_DrawAliasModelCallback, ent, 0);
 	else
-		R_DrawQ1Q2AliasModelCallback(ent, 0);
+		R_DrawAliasModelCallback(ent, 0);
 }
 
 void R_Model_Alias_DrawFakeShadow (entity_render_t *ent)
@@ -463,7 +448,7 @@ void R_Model_Alias_DrawFakeShadow (entity_render_t *ent)
 	R_Mesh_State(&m);
 
 	c_alias_polys += model->numtris;
-	R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvert_normals);
+	R_Model_Alias_GetVerts(ent, varray_vertex, NULL, NULL, NULL);
 
 	// put a light direction in the entity's coordinate space
 	Matrix4x4_Transform3x3(&ent->inversematrix, lightdirection, projection);
@@ -498,7 +483,7 @@ void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightor
 	{
 		R_Mesh_Matrix(&ent->matrix);
 		R_Mesh_ResizeCheck(ent->model->numverts * 2);
-		R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvert_normals);
+		R_Model_Alias_GetVerts(ent, varray_vertex, NULL, NULL, NULL);
 		R_Shadow_Volume(ent->model->numverts, ent->model->numtris, ent->model->mdlmd2data_indices, ent->model->mdlmd2data_triangleneighbors, relativelightorigin, lightradius, projectdistance);
 	}
 }
@@ -511,8 +496,7 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 	skinframe_t *skinframe;
 	R_Mesh_Matrix(&ent->matrix);
 	R_Mesh_ResizeCheck(ent->model->numverts);
-	R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvert_normals);
-	Mod_BuildTextureVectorsAndNormals(ent->model->numverts, ent->model->numtris, varray_vertex, ent->model->mdlmd2data_texcoords, ent->model->mdlmd2data_indices, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals);
+	R_Model_Alias_GetVerts(ent, varray_vertex, aliasvert_normals, aliasvert_svectors, aliasvert_tvectors);
 	skinframe = R_FetchSkinFrame(ent);
 
 	// note: to properly handle fog this should scale the lightcolor into lightcolor2 according to 1-fog scaling
