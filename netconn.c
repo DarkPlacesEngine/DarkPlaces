@@ -25,7 +25,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define MASTER_PORT 27950
 
-cvar_t sv_maxplayers = {0, "maxplayers", "8"};
 cvar_t sv_public = {0, "sv_public", "0"};
 static cvar_t sv_heartbeatperiod = {CVAR_SAVE, "sv_heartbeatperiod", "180"};
 
@@ -918,7 +917,7 @@ static void NetConn_BuildChallengeString(char *buffer, int bufferlength)
 extern void SV_ConnectClient(int clientnum, netconn_t *netconnection);
 int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, lhnetaddress_t *peeraddress)
 {
-	int i, n, ret, clientnum, responselength, best;
+	int i, n, ret, clientnum, responselength, best, clientcount;
 	double besttime;
 	client_t *client;
 	netconn_t *conn;
@@ -1511,7 +1510,6 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&sv_netport);
 	Cvar_RegisterVariable(&sv_netaddress);
 	Cvar_RegisterVariable(&sv_netaddress_ipv6);
-	Cvar_RegisterVariable(&sv_maxplayers);
 	Cvar_RegisterVariable(&sv_public);
 	Cvar_RegisterVariable(&sv_heartbeatperiod);
 	for (masternum = 0;sv_masters[masternum].name;masternum++)
