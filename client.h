@@ -301,12 +301,17 @@ typedef struct
 	// LordHavoc: pausedemo
 	qboolean demopaused;
 
+	qboolean connect_trying;
+	int connect_remainingtries;
+	double connect_nextsendtime;
+	lhnetsocket_t *connect_mysocket;
+	lhnetaddress_t connect_address;
 
 // connection information
 	// 0 to SIGNONS
 	int signon;
-	// network socket
-	struct qsocket_s *netcon;
+	// network connection
+	netconn_t *netcon;
 	// writing buffer to send to server
 	sizebuf_t message;
 }
@@ -512,7 +517,7 @@ extern void CL_DecayLights (void);
 
 void CL_Init (void);
 
-void CL_EstablishConnection (char *host);
+void CL_EstablishConnection(const char *host);
 
 void CL_Disconnect (void);
 void CL_Disconnect_f (void);
@@ -560,14 +565,15 @@ char *Key_KeynumToString (int keynum);
 //
 // cl_demo.c
 //
-void CL_StopPlayback (void);
-int CL_GetMessage (void);
+void CL_StopPlayback(void);
+void CL_ReadDemoMessage(void);
+void CL_WriteDemoMessage(void);
 
-void CL_NextDemo (void);
-void CL_Stop_f (void);
-void CL_Record_f (void);
-void CL_PlayDemo_f (void);
-void CL_TimeDemo_f (void);
+void CL_NextDemo(void);
+void CL_Stop_f(void);
+void CL_Record_f(void);
+void CL_PlayDemo_f(void);
+void CL_TimeDemo_f(void);
 
 //
 // cl_parse.c

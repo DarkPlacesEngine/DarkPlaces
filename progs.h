@@ -120,6 +120,7 @@ extern int eval_movement;
 extern int eval_pmodel;
 extern int eval_punchvector;
 extern int eval_viewzoom;
+extern int eval_clientcolors;
 
 #define GETEDICTFIELDVALUE(ed, fieldoffset) (fieldoffset ? (eval_t *)((qbyte *)ed->v + fieldoffset) : NULL)
 

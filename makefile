@@ -55,8 +55,7 @@ SERVEROBJECTS=	pr_cmds.o pr_edict.o pr_exec.o sv_light.o sv_main.o sv_move.o \
 SHAREDOBJECTS=	cmd.o collision.o common.o crc.o cvar.o \
 		filematch.o host.o host_cmd.o image.o mathlib.o matrixlib.o \
 		model_alias.o model_brush.o model_shared.o model_sprite.o \
-		net_bsd.o net_dgrm.o net_loop.o net_main.o net_master.o \
-		net_udp.o palette.o portals.o protocol.o fs.o \
+		netconn.o lhnet.o palette.o portals.o protocol.o fs.o \
 		sys_shared.o world.o wad.o zone.o
 COMMONOBJECTS= $(CLIENTOBJECTS) $(SERVEROBJECTS) $(SHAREDOBJECTS)
 

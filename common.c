@@ -832,3 +832,66 @@ int COM_StringBeginsWith(const char *s, const char *match)
 			return false;
 	return true;
 }
+
+// written by Elric, thanks Elric!
+char *SearchInfostring(const char *infostring, const char *key)
+{
+	static char value [256];
+	char crt_key [256];
+	size_t value_ind, key_ind;
+	char c;
+
+	if (*infostring++ != '\\')
+		return NULL;
+
+	value_ind = 0;
+	for (;;)
+	{
+		key_ind = 0;
+
+		// Get the key name
+		for (;;)
+		{
+			c = *infostring++;
+
+			if (c == '\0')
+				return NULL;
+			if (c == '\\')
+			{
+				crt_key[key_ind] = '\0';
+				break;
+			}
+
+			crt_key[key_ind++] = c;
+		}
+
+		// If it's the key we are looking for, save it in "value"
+		if (!strcmp(crt_key, key))
+		{
+			for (;;)
+			{
+				c = *infostring++;
+
+				if (c == '\0' || c == '\\')
+				{
+					value[value_ind] = '\0';
+					return value;
+				}
+
+				value[value_ind++] = c;
+			}
+		}
+
+		// Else, skip the value
+		for (;;)
+		{
+			c = *infostring++;
+
+			if (c == '\0')
+				return NULL;
+			if (c == '\\')
+				break;
+		}
+	}
+}
+

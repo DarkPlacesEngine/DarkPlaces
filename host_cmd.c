@@ -51,7 +51,7 @@ Host_Status_f
 void Host_Status_f (void)
 {
 	client_t *client;
-	int seconds, minutes, hours = 0, j;
+	int seconds, minutes, hours = 0, j, players;
 	void (*print) (const char *fmt, ...);
 
 	if (cmd_source == src_command)
@@ -66,19 +66,18 @@ void Host_Status_f (void)
 	else
 		print = SV_ClientPrintf;
 
+	for (players = 0, j = 0;j < svs.maxclients;j++)
+		if (svs.clients[j].active)
+			players++;
 	print ("host:    %s\n", Cvar_VariableString ("hostname"));
 	print ("version: %s build %s\n", gamename, buildstring);
-	if (tcpipAvailable)
-		print ("tcp/ip:  %s\n", my_tcpip_address);
-	if (ipxAvailable)
-		print ("ipx:     %s\n", my_ipx_address);
 	print ("map:     %s\n", sv.name);
-	print ("players: %i active (%i max)\n\n", net_activeconnections, svs.maxclients);
+	print ("players: %i active (%i max)\n\n", players, svs.maxclients);
 	for (j=0, client = svs.clients ; j<svs.maxclients ; j++, client++)
 	{
 		if (!client->active)
 			continue;
-		seconds = (int)(net_time - client->netconnection->connecttime);
+		seconds = (int)(realtime - client->netconnection->connecttime);
 		minutes = seconds / 60;
 		if (minutes)
 		{
@@ -312,7 +311,7 @@ This is sent just before a server changes levels
 */
 void Host_Reconnect_f (void)
 {
-	SCR_BeginLoadingPlaque ();
+	SCR_BeginLoadingPlaque();
 	cls.signon = 0;		// need new connection messages
 }
 
@@ -325,14 +324,7 @@ User command to connect to server
 */
 void Host_Connect_f (void)
 {
-	char name[MAX_QPATH];
-
-	cls.demonum = -1;		// stop demo loop in case this fails
-	if (cls.demoplayback)
-		CL_Disconnect ();
-	strcpy (name, Cmd_Argv(1));
-	CL_EstablishConnection (name);
-	Host_Reconnect_f ();
+	CL_EstablishConnection(Cmd_Argv(1));
 }
 
 
@@ -543,8 +535,6 @@ void Host_PerformLoadGame(char *name)
 	str = FS_Getline (f);
 	sscanf (str, "%f\n",&time);
 
-	CL_Disconnect_f ();
-
 	SV_SpawnServer (mapname);
 	if (!sv.active)
 	{
@@ -625,11 +615,9 @@ void Host_PerformLoadGame(char *name)
 	for (i = 0;i < NUM_SPAWN_PARMS;i++)
 		svs.clients->spawn_parms[i] = spawn_parms[i];
 
-	if (cls.state != ca_dedicated)
-	{
-		CL_EstablishConnection ("local");
-		Host_Reconnect_f ();
-	}
+	// make sure we're connected to loopback
+	if (cls.state == ca_disconnected || !(cls.state == ca_connected && cls.netcon != NULL && LHNETADDRESS_GetAddressType(&cls.netcon->peeraddress) == LHNETADDRESSTYPE_LOOP))
+		CL_EstablishConnection("local");
 }
 
 //============================================================================
@@ -639,9 +627,10 @@ void Host_PerformLoadGame(char *name)
 Host_Name_f
 ======================
 */
+cvar_t cl_name = {CVAR_SAVE, "_cl_name", "player"};
 void Host_Name_f (void)
 {
-	char newName[64];
+	char newName[sizeof(host_client->name)];
 
 	if (Cmd_Argc () == 1)
 	{
@@ -650,10 +639,10 @@ void Host_Name_f (void)
 	}
 
 	if (Cmd_Argc () == 2)
-		strncpy(newName, Cmd_Argv(1), 15);
+		strncpy(newName, Cmd_Argv(1), sizeof(host_client->name) - 1);
 	else
-		strncpy(newName, Cmd_Args(), 15);
-	newName[15] = 0;
+		strncpy(newName, Cmd_Args(), sizeof(host_client->name) - 1);
+	newName[sizeof(host_client->name) - 1] = 0;
 
 	if (cmd_source == src_command)
 	{
@@ -669,6 +658,7 @@ void Host_Name_f (void)
 		if (strcmp(host_client->name, newName) != 0)
 			Con_Printf ("%s renamed to %s\n", host_client->name, newName);
 	strcpy (host_client->name, newName);
+	strcpy (host_client->old_name, newName);
 	sv_player->v->netname = PR_SetString(host_client->name);
 
 // send notification to all clients
@@ -841,6 +831,7 @@ void Host_Tell_f(void)
 Host_Color_f
 ==================
 */
+cvar_t cl_color = {CVAR_SAVE, "_cl_color", "0"};
 void Host_Color_f(void)
 {
 	int		top, bottom;
@@ -892,7 +883,11 @@ void Host_Color_f(void)
 	}
 	else
 	{
+		eval_t *val;
+		if ((val = GETEDICTFIELDVALUE(sv_player, eval_clientcolors)))
+			val->_float = playercolor;
 		host_client->colors = playercolor;
+		host_client->old_colors = playercolor;
 		sv_player->v->team = bottom + 1;
 
 		// send notification to all clients
@@ -961,6 +956,40 @@ void Host_Pause_f (void)
 	}
 }
 
+/*
+======================
+Host_PModel_f
+LordHavoc: only supported for Nehahra, I personally think this is dumb, but Mindcrime won't listen.
+======================
+*/
+cvar_t cl_pmodel = {CVAR_SAVE, "_cl_pmodel", "0"};
+static void Host_PModel_f (void)
+{
+	int i;
+	eval_t *val;
+
+	if (Cmd_Argc () == 1)
+	{
+		Con_Printf ("\"pmodel\" is \"%s\"\n", cl_pmodel.string);
+		return;
+	}
+	i = atoi(Cmd_Argv(1));
+
+	if (cmd_source == src_command)
+	{
+		if (cl_pmodel.integer == i)
+			return;
+		Cvar_SetValue ("_cl_pmodel", i);
+		if (cls.state == ca_connected)
+			Cmd_ForwardToServer ();
+		return;
+	}
+
+	host_client->pmodel = i;
+	if ((val = GETEDICTFIELDVALUE(sv_player, eval_pmodel)))
+		val->_float = i;
+}
+
 //===========================================================================
 
 
@@ -996,9 +1025,9 @@ Host_Spawn_f
 */
 void Host_Spawn_f (void)
 {
-	int		i;
-	client_t	*client;
-	edict_t	*ent;
+	int i;
+	client_t *client;
+	edict_t *ent;
 	func_t RestoreGame;
 	mfunction_t *f;
 
@@ -1015,12 +1044,12 @@ void Host_Spawn_f (void)
 	}
 
 	// LordHavoc: moved this above the QC calls at FrikaC's request
-// send all current names, colors, and frag counts
+	// send all current names, colors, and frag counts
 	SZ_Clear (&host_client->message);
 
 	ent = sv_player;
 
-// run the entrance script
+	// run the entrance script
 	if (sv.loadgame)
 	{
 		// loaded games are fully initialized already
@@ -1038,22 +1067,11 @@ void Host_Spawn_f (void)
 	}
 	else
 	{
-		eval_t *val;
-		// set up the edict
-		ED_ClearEdict(ent);
-		ent->v->colormap = NUM_FOR_EDICT(ent);
-		ent->v->team = (host_client->colors & 15) + 1;
-		ent->v->netname = PR_SetString(host_client->name);
-		if ((val = GETEDICTFIELDVALUE(ent, eval_pmodel)))
-			val->_float = host_client->pmodel;
-
 		// copy spawn parms out of the client_t
-
 		for (i=0 ; i< NUM_SPAWN_PARMS ; i++)
 			(&pr_global_struct->parm1)[i] = host_client->spawn_parms[i];
 
 		// call the spawn function
-
 		pr_global_struct->time = sv.time;
 		pr_global_struct->self = EDICT_TO_PROG(sv_player);
 		PR_ExecuteProgram (pr_global_struct->ClientConnect, "QC function ClientConnect is missing");
@@ -1065,7 +1083,7 @@ void Host_Spawn_f (void)
 	}
 
 
-// send time of update
+	// send time of update
 	MSG_WriteByte (&host_client->message, svc_time);
 	MSG_WriteFloat (&host_client->message, sv.time);
 
@@ -1073,16 +1091,16 @@ void Host_Spawn_f (void)
 	{
 		MSG_WriteByte (&host_client->message, svc_updatename);
 		MSG_WriteByte (&host_client->message, i);
-		MSG_WriteString (&host_client->message, client->name);
+		MSG_WriteString (&host_client->message, client->old_name);
 		MSG_WriteByte (&host_client->message, svc_updatefrags);
 		MSG_WriteByte (&host_client->message, i);
 		MSG_WriteShort (&host_client->message, client->old_frags);
 		MSG_WriteByte (&host_client->message, svc_updatecolors);
 		MSG_WriteByte (&host_client->message, i);
-		MSG_WriteByte (&host_client->message, client->colors);
+		MSG_WriteByte (&host_client->message, client->old_colors);
 	}
 
-// send all current light styles
+	// send all current light styles
 	for (i=0 ; i<MAX_LIGHTSTYLES ; i++)
 	{
 		MSG_WriteByte (&host_client->message, svc_lightstyle);
@@ -1090,9 +1108,7 @@ void Host_Spawn_f (void)
 		MSG_WriteString (&host_client->message, sv.lightstyles[i]);
 	}
 
-//
-// send some stats
-//
+	// send some stats
 	MSG_WriteByte (&host_client->message, svc_updatestat);
 	MSG_WriteByte (&host_client->message, STAT_TOTALSECRETS);
 	MSG_WriteLong (&host_client->message, pr_global_struct->total_secrets);
@@ -1109,11 +1125,11 @@ void Host_Spawn_f (void)
 	MSG_WriteByte (&host_client->message, STAT_MONSTERS);
 	MSG_WriteLong (&host_client->message, pr_global_struct->killed_monsters);
 
-// send a fixangle
-// Never send a roll angle, because savegames can catch the server
-// in a state where it is expecting the client to correct the angle
-// and it won't happen if the game was just loaded, so you wind up
-// with a permanent head tilt
+	// send a fixangle
+	// Never send a roll angle, because savegames can catch the server
+	// in a state where it is expecting the client to correct the angle
+	// and it won't happen if the game was just loaded, so you wind up
+	// with a permanent head tilt
 	MSG_WriteByte (&host_client->message, svc_setangle);
 	for (i=0 ; i < 2 ; i++)
 		MSG_WriteAngle (&host_client->message, ent->v->angles[i] );
@@ -1612,10 +1628,10 @@ void Host_PerformSpawnServerAndLoadGame(void)
 		Host_PerformLoadGame(sv_loadgame);
 	else if (sv_spawnmap[0])
 		SV_SpawnServer(sv_spawnmap);
-	if (sv.active && cls.state == ca_disconnected)
-		Cmd_ExecuteString ("connect local", src_command);
 	sv_loadgame[0] = 0;
 	sv_spawnmap[0] = 0;
+	if (sv.active && cls.state == ca_disconnected)
+		Cmd_ExecuteString ("connect local", src_command);
 }
 
 //=============================================================================
@@ -1650,17 +1666,12 @@ void Host_InitCommands (void)
 	Cmd_AddCommand ("changelevel", Host_Changelevel_f);
 	Cmd_AddCommand ("connect", Host_Connect_f);
 	Cmd_AddCommand ("reconnect", Host_Reconnect_f);
-	Cmd_AddCommand ("name", Host_Name_f);
 	Cmd_AddCommand ("version", Host_Version_f);
 	Cmd_AddCommand ("say", Host_Say_f);
 	Cmd_AddCommand ("say_team", Host_Say_Team_f);
 	Cmd_AddCommand ("tell", Host_Tell_f);
-	Cmd_AddCommand ("color", Host_Color_f);
 	Cmd_AddCommand ("kill", Host_Kill_f);
 	Cmd_AddCommand ("pause", Host_Pause_f);
-	Cmd_AddCommand ("spawn", Host_Spawn_f);
-	Cmd_AddCommand ("begin", Host_Begin_f);
-	Cmd_AddCommand ("prespawn", Host_PreSpawn_f);
 	Cmd_AddCommand ("kick", Host_Kick_f);
 	Cmd_AddCommand ("ping", Host_Ping_f);
 	Cmd_AddCommand ("load", Host_Loadgame_f);
@@ -1674,5 +1685,18 @@ void Host_InitCommands (void)
 	Cmd_AddCommand ("viewframe", Host_Viewframe_f);
 	Cmd_AddCommand ("viewnext", Host_Viewnext_f);
 	Cmd_AddCommand ("viewprev", Host_Viewprev_f);
+
+	Cvar_RegisterVariable (&cl_name);
+	Cmd_AddCommand ("name", Host_Name_f);
+	Cvar_RegisterVariable (&cl_color);
+	Cmd_AddCommand ("color", Host_Color_f);
+	if (gamemode == GAME_NEHAHRA)
+	{
+		Cvar_RegisterVariable (&cl_pmodel);
+		Cmd_AddCommand ("pmodel", Host_PModel_f);
+	}
+	Cmd_AddCommand ("prespawn", Host_PreSpawn_f);
+	Cmd_AddCommand ("spawn", Host_Spawn_f);
+	Cmd_AddCommand ("begin", Host_Begin_f);
 }
 

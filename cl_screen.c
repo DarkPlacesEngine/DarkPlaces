@@ -168,7 +168,7 @@ void SCR_DrawTurtle (void)
 	if (count < 3)
 		return;
 
-	DrawQ_Pic (0, 0, "turtle", 0, 0, 1, 1, 1, 1, 0);
+	DrawQ_Pic (0, 0, "gfx/turtle.lmp", 0, 0, 1, 1, 1, 1, 0);
 }
 
 /*
@@ -185,7 +185,7 @@ void SCR_DrawNet (void)
 	if (cls.demoplayback)
 		return;
 
-	DrawQ_Pic (64, 0, "net", 0, 0, 1, 1, 1, 1, 0);
+	DrawQ_Pic (64, 0, "gfx/net.lmp", 0, 0, 1, 1, 1, 1, 0);
 }
 
 /*

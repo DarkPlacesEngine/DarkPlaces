@@ -27,11 +27,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // we need to declare some mouse variables here, because the menu system
 // references them even when on a unix system.
 
-// these two are not intended to be set directly
-cvar_t cl_name = {CVAR_SAVE, "_cl_name", "player"};
-cvar_t cl_color = {CVAR_SAVE, "_cl_color", "0"};
-cvar_t cl_pmodel = {CVAR_SAVE, "_cl_pmodel", "0"};
-
 cvar_t cl_shownet = {0, "cl_shownet","0"};
 cvar_t cl_nolerp = {0, "cl_nolerp", "0"};
 
@@ -60,7 +55,6 @@ cvar_t cl_beams_lightatend = {CVAR_SAVE, "cl_beams_lightatend", "0"};
 
 cvar_t cl_noplayershadow = {CVAR_SAVE, "cl_noplayershadow", "0"};
 
-mempool_t *cl_scores_mempool;
 mempool_t *cl_refdef_mempool;
 mempool_t *cl_entities_mempool;
 
@@ -104,7 +98,6 @@ void CL_ClearState (void)
 	if (!sv.active)
 		Host_ClearMemory ();
 
-	Mem_EmptyPool(cl_scores_mempool);
 	Mem_EmptyPool(cl_entities_mempool);
 
 // wipe the entire cl structure
@@ -160,7 +153,7 @@ Sends a disconnect message to the server
 This is also called on Host_Error, so it shouldn't cause any errors
 =====================
 */
-void CL_Disconnect (void)
+void CL_Disconnect(void)
 {
 	if (cls.state == ca_dedicated)
 		return;
@@ -177,22 +170,26 @@ void CL_Disconnect (void)
 	cl.worldmodel = NULL;
 
 	if (cls.demoplayback)
-		CL_StopPlayback ();
-	else if (cls.state == ca_connected)
+		CL_StopPlayback();
+	else if (cls.netcon)
 	{
 		if (cls.demorecording)
-			CL_Stop_f ();
+			CL_Stop_f();
 
-		Con_DPrintf ("Sending clc_disconnect\n");
-		SZ_Clear (&cls.message);
-		MSG_WriteByte (&cls.message, clc_disconnect);
-		NET_SendUnreliableMessage (cls.netcon, &cls.message);
-		SZ_Clear (&cls.message);
-		NET_Close (cls.netcon);
-		cls.state = ca_disconnected; // prevent this code from executing again during Host_ShutdownServer
+		Con_DPrintf("Sending clc_disconnect\n");
+		SZ_Clear(&cls.message);
+		MSG_WriteByte(&cls.message, clc_disconnect);
+		NetConn_SendUnreliableMessage(cls.netcon, &cls.message);
+		SZ_Clear(&cls.message);
+		NetConn_Close(cls.netcon);
+		cls.netcon = NULL;
 		// if running a local server, shut it down
 		if (sv.active)
+		{
+			// prevent this code from executing again during Host_ShutdownServer
+			cls.state = ca_disconnected;
 			Host_ShutdownServer(false);
+		}
 	}
 	cls.state = ca_disconnected;
 
@@ -214,29 +211,38 @@ void CL_Disconnect_f (void)
 =====================
 CL_EstablishConnection
 
-Host should be either "local" or a net address to be passed on
+Host should be either "local" or a net address
 =====================
 */
-void CL_EstablishConnection (char *host)
+void CL_EstablishConnection(const char *host)
 {
 	if (cls.state == ca_dedicated)
 		return;
 
-	if (cls.demoplayback)
-		return;
+	// clear menu's connect error message
+	m_return_reason[0] = 0;
 
-	CL_Disconnect ();
+	// stop demo loop in case this fails
+	cls.demonum = -1;
+	CL_Disconnect();
 
-	cls.netcon = NET_Connect (host);
-	if (!cls.netcon)
-		Host_Error ("CL_Connect: connect failed\n");
-	Con_DPrintf ("CL_EstablishConnection: connected to %s\n", host);
-
-	cls.demonum = -1;			// not in the demo loop now
-	cls.state = ca_connected;
-	cls.signon = 0;				// need all the signon messages before playing
-
-	CL_ClearState ();
+	if (LHNETADDRESS_FromString(&cls.connect_address, host, 26000) && (cls.connect_mysocket = NetConn_ChooseClientSocketForAddress(&cls.connect_address)))
+	{
+		cls.connect_trying = true;
+		cls.connect_remainingtries = 3;
+		cls.connect_nextsendtime = 0;
+		if (sv.active)
+		{
+			NetConn_ClientFrame();
+			NetConn_ServerFrame();
+			NetConn_ClientFrame();
+			NetConn_ServerFrame();
+			NetConn_ClientFrame();
+			NetConn_ServerFrame();
+			NetConn_ClientFrame();
+			NetConn_ServerFrame();
+		}
+	}
 }
 
 /*
@@ -1408,33 +1414,9 @@ CL_ReadFromServer
 Read all incoming data from the server
 ===============
 */
-int CL_ReadFromServer (void)
+int CL_ReadFromServer(void)
 {
-	int ret, netshown;
-
-	cl.oldtime = cl.time;
-	cl.time += cl.frametime;
-
-	netshown = false;
-	do
-	{
-		ret = CL_GetMessage ();
-		if (ret == -1)
-			Host_Error ("CL_ReadFromServer: lost server connection");
-		if (!ret)
-			break;
-
-		cl.last_received_message = realtime;
-
-		if (cl_shownet.integer)
-			netshown = true;
-
-		CL_ParseServerMessage ();
-	}
-	while (ret && cls.state == ca_connected);
-
-	if (netshown)
-		Con_Printf ("\n");
+	CL_ReadDemoMessage();
 
 	r_refdef.numentities = 0;
 	cl_num_entities = 0;
@@ -1442,15 +1424,12 @@ int CL_ReadFromServer (void)
 
 	if (cls.state == ca_connected && cls.signon == SIGNONS)
 	{
-		CL_RelinkEntities ();
+		CL_RelinkEntities();
 
 		// run cgame code (which can add more entities)
 		CL_CGVM_Frame();
 	}
 
-//
-// bring the links up to date
-//
 	return 0;
 }
 
@@ -1459,76 +1438,46 @@ int CL_ReadFromServer (void)
 CL_SendCmd
 =================
 */
-void CL_SendCmd (void)
+void CL_SendCmd(void)
 {
-	usercmd_t		cmd;
-
-	if (cls.state != ca_connected)
-		return;
+	usercmd_t cmd;
 
 	if (cls.signon == SIGNONS)
 	{
-	// get basic movement from keyboard
-		CL_BaseMove (&cmd);
+		// get basic movement from keyboard
+		CL_BaseMove(&cmd);
 
-		IN_PreMove(); // OS independent code
+		// OS independent code
+		IN_PreMove();
 
-	// allow mice or other external controllers to add to the move
-		IN_Move (&cmd);
+		// allow mice or other external controllers to add to the move
+		IN_Move(&cmd);
 
-		IN_PostMove(); // OS independent code
+		// OS independent code
+		IN_PostMove();
 
-	// send the unreliable message
-		CL_SendMove (&cmd);
-	}
-	else if (cls.signon == 0 && !cls.demoplayback)
-	{
-		// LordHavoc: fix for NAT routing of netquake:
-		// bounce back a clc_nop message to the newly allocated server port,
-		// to establish a routing connection for incoming frames,
-		// the server waits for this before sending anything
-		if (realtime > cl.sendnoptime)
-		{
-			cl.sendnoptime = realtime + 3;
-			Con_DPrintf("sending clc_nop to get server's attention\n");
-			{
-				sizebuf_t buf;
-				qbyte data[128];
-				buf.maxsize = 128;
-				buf.cursize = 0;
-				buf.data = data;
-				MSG_WriteByte(&buf, clc_nop);
-				if (NET_SendUnreliableMessage (cls.netcon, &buf) == -1)
-				{
-					Con_Printf ("CL_SendCmd: lost server connection\n");
-					CL_Disconnect ();
-				}
-			}
-		}
+		// send the unreliable message
+		CL_SendMove(&cmd);
 	}
 
 	if (cls.demoplayback)
 	{
-		SZ_Clear (&cls.message);
+		SZ_Clear(&cls.message);
 		return;
 	}
 
-// send the reliable message
-	if (!cls.message.cursize)
-		return;		// no message at all
-
-	if (!NET_CanSendMessage (cls.netcon))
+	// send the reliable message (forwarded commands) if there is one
+	if (cls.message.cursize && NetConn_CanSendMessage(cls.netcon))
 	{
-		Con_DPrintf ("CL_WriteToServer: can't send\n");
 		if (developer.integer)
+		{
+			Con_Printf("CL_SendCmd: sending reliable message:\n");
 			SZ_HexDumpToConsole(&cls.message);
-		return;
+		}
+		if (NetConn_SendReliableMessage(cls.netcon, &cls.message) == -1)
+			Host_Error("CL_WriteToServer: lost server connection");
+		SZ_Clear(&cls.message);
 	}
-
-	if (NET_SendMessage (cls.netcon, &cls.message) == -1)
-		Host_Error ("CL_WriteToServer: lost server connection");
-
-	SZ_Clear (&cls.message);
 }
 
 // LordHavoc: pausedemo command
@@ -1539,39 +1488,6 @@ static void CL_PauseDemo_f (void)
 		Con_Printf("Demo paused\n");
 	else
 		Con_Printf("Demo unpaused\n");
-}
-
-/*
-======================
-CL_PModel_f
-LordHavoc: Intended for Nehahra, I personally think this is dumb, but Mindcrime won't listen.
-======================
-*/
-static void CL_PModel_f (void)
-{
-	int i;
-	eval_t *val;
-
-	if (Cmd_Argc () == 1)
-	{
-		Con_Printf ("\"pmodel\" is \"%s\"\n", cl_pmodel.string);
-		return;
-	}
-	i = atoi(Cmd_Argv(1));
-
-	if (cmd_source == src_command)
-	{
-		if (cl_pmodel.integer == i)
-			return;
-		Cvar_SetValue ("_cl_pmodel", i);
-		if (cls.state == ca_connected)
-			Cmd_ForwardToServer ();
-		return;
-	}
-
-	host_client->pmodel = i;
-	if ((val = GETEDICTFIELDVALUE(sv_player, eval_pmodel)))
-		val->_float = i;
 }
 
 /*
@@ -1599,7 +1515,6 @@ CL_Init
 */
 void CL_Init (void)
 {
-	cl_scores_mempool = Mem_AllocPool("client player info");
 	cl_entities_mempool = Mem_AllocPool("client entities");
 	cl_refdef_mempool = Mem_AllocPool("refdef");
 
@@ -1619,10 +1534,6 @@ void CL_Init (void)
 //
 // register our commands
 //
-	Cvar_RegisterVariable (&cl_name);
-	Cvar_RegisterVariable (&cl_color);
-	if (gamemode == GAME_NEHAHRA)
-		Cvar_RegisterVariable (&cl_pmodel);
 	Cvar_RegisterVariable (&cl_upspeed);
 	Cvar_RegisterVariable (&cl_forwardspeed);
 	Cvar_RegisterVariable (&cl_backspeed);
@@ -1657,8 +1568,6 @@ void CL_Init (void)
 
 	// LordHavoc: added pausedemo
 	Cmd_AddCommand ("pausedemo", CL_PauseDemo_f);
-	if (gamemode == GAME_NEHAHRA)
-		Cmd_AddCommand ("pmodel", CL_PModel_f);
 
 	Cvar_RegisterVariable(&r_draweffects);
 	Cvar_RegisterVariable(&cl_explosions);

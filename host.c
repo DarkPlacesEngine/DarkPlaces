@@ -175,9 +175,6 @@ void Host_Error (const char *error, ...)
 	CL_Disconnect ();
 	cls.demonum = -1;
 
-	// unload any partially loaded models
-	Mod_ClearErrorModels();
-
 	hosterror = false;
 
 	longjmp (host_abortserver, 1);
@@ -342,7 +339,7 @@ Sends text across to be displayed
 FIXME: make this just a stuffed echo?
 =================
 */
-void SV_ClientPrintf (const char *fmt, ...)
+void SV_ClientPrintf(const char *fmt, ...)
 {
 	va_list argptr;
 	char string[1024];
@@ -362,25 +359,25 @@ SV_BroadcastPrintf
 Sends text to all active clients
 =================
 */
-void SV_BroadcastPrintf (const char *fmt, ...)
+void SV_BroadcastPrintf(const char *fmt, ...)
 {
 	va_list argptr;
 	char string[1024];
 	int i;
 
-	va_start (argptr,fmt);
-	vsprintf (string, fmt,argptr);
-	va_end (argptr);
+	va_start(argptr,fmt);
+	vsprintf(string, fmt,argptr);
+	va_end(argptr);
 
 	for (i=0 ; i<svs.maxclients ; i++)
 		if (svs.clients[i].active && svs.clients[i].spawned)
 		{
-			MSG_WriteByte (&svs.clients[i].message, svc_print);
-			MSG_WriteString (&svs.clients[i].message, string);
+			MSG_WriteByte(&svs.clients[i].message, svc_print);
+			MSG_WriteString(&svs.clients[i].message, string);
 		}
 
 	if (sv_echobprint.integer && cls.state == ca_dedicated)
-		Sys_Printf ("%s", string);
+		Sys_Printf("%s", string);
 }
 
 /*
@@ -390,17 +387,17 @@ Host_ClientCommands
 Send text over to the client to be executed
 =================
 */
-void Host_ClientCommands (const char *fmt, ...)
+void Host_ClientCommands(const char *fmt, ...)
 {
 	va_list argptr;
 	char string[1024];
 
-	va_start (argptr,fmt);
-	vsprintf (string, fmt,argptr);
-	va_end (argptr);
+	va_start(argptr,fmt);
+	vsprintf(string, fmt,argptr);
+	va_end(argptr);
 
-	MSG_WriteByte (&host_client->message, svc_stufftext);
-	MSG_WriteString (&host_client->message, string);
+	MSG_WriteByte(&host_client->message, svc_stufftext);
+	MSG_WriteString(&host_client->message, string);
 }
 
 /*
@@ -411,50 +408,42 @@ Called when the player is getting totally kicked off the host
 if (crash = true), don't bother sending signofs
 =====================
 */
-void SV_DropClient (qboolean crash)
+void SV_DropClient(qboolean crash)
 {
 	int saveSelf;
 	int i;
 	client_t *client;
 
-	Con_Printf ("Client \"%s\" dropped\n", host_client->name);
+	Con_Printf("Client \"%s\" dropped\n", host_client->name);
 
-	if (!crash)
+	// send any final messages (don't check for errors)
+	if (host_client->netconnection)
 	{
-		// send any final messages (don't check for errors)
-		if (host_client->netconnection && !host_client->netconnection->disconnected)
+		// free the client (the body stays around)
+		host_client->active = false;
+
+		if (!crash)
 		{
-#if 1
-			// LordHavoc: no opportunity for resending, so reliable is silly
-			MSG_WriteByte (&host_client->message, svc_disconnect);
-			NET_SendUnreliableMessage (host_client->netconnection, &host_client->message);
-#else
-			if (NET_CanSendMessage (host_client->netconnection))
-			{
-				MSG_WriteByte (&host_client->message, svc_disconnect);
-				NET_SendMessage (host_client->netconnection, &host_client->message);
-			}
-#endif
+			// LordHavoc: no opportunity for resending, so use unreliable
+			MSG_WriteByte(&host_client->message, svc_disconnect);
+			NetConn_SendUnreliableMessage(host_client->netconnection, &host_client->message);
 		}
-	}
 
-// break the net connection
-	NET_Close (host_client->netconnection);
-	host_client->netconnection = NULL;
+		// break the net connection
+		NetConn_Close(host_client->netconnection);
+		host_client->netconnection = NULL;
 
-// free the client (the body stays around)
-	host_client->active = false;
-	// note: don't clear name yet
-	net_activeconnections--;
-
-	if (sv.active && host_client->edict && host_client->spawned) // LordHavoc: don't call QC if server is dead (avoids recursive Host_Error in some mods when they run out of edicts)
-	{
-	// call the prog function for removing a client
-	// this will set the body to a dead frame, among other things
-		saveSelf = pr_global_struct->self;
-		pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
-		PR_ExecuteProgram (pr_global_struct->ClientDisconnect, "QC function ClientDisconnect is missing");
-		pr_global_struct->self = saveSelf;
+		// LordHavoc: don't call QC if server is dead (avoids recursive
+		// Host_Error in some mods when they run out of edicts)
+		if (sv.active && host_client->edict && host_client->spawned)
+		{
+			// call the prog function for removing a client
+			// this will set the body to a dead frame, among other things
+			saveSelf = pr_global_struct->self;
+			pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
+			PR_ExecuteProgram(pr_global_struct->ClientDisconnect, "QC function ClientDisconnect is missing");
+			pr_global_struct->self = saveSelf;
+		}
 	}
 
 	// now clear name (after ClientDisconnect was called)
@@ -462,22 +451,22 @@ void SV_DropClient (qboolean crash)
 	host_client->old_frags = -999999;
 
 	// send notification to all clients
-	for (i=0, client = svs.clients ; i<svs.maxclients ; i++, client++)
+	for (i = 0, client = svs.clients;i < svs.maxclients;i++, client++)
 	{
 		if (!client->active)
 			continue;
-		MSG_WriteByte (&client->message, svc_updatename);
-		MSG_WriteByte (&client->message, host_client - svs.clients);
-		MSG_WriteString (&client->message, "");
-		MSG_WriteByte (&client->message, svc_updatefrags);
-		MSG_WriteByte (&client->message, host_client - svs.clients);
-		MSG_WriteShort (&client->message, 0);
-		MSG_WriteByte (&client->message, svc_updatecolors);
-		MSG_WriteByte (&client->message, host_client - svs.clients);
-		MSG_WriteByte (&client->message, 0);
+		MSG_WriteByte(&client->message, svc_updatename);
+		MSG_WriteByte(&client->message, host_client - svs.clients);
+		MSG_WriteString(&client->message, "");
+		MSG_WriteByte(&client->message, svc_updatefrags);
+		MSG_WriteByte(&client->message, host_client - svs.clients);
+		MSG_WriteShort(&client->message, 0);
+		MSG_WriteByte(&client->message, svc_updatecolors);
+		MSG_WriteByte(&client->message, host_client - svs.clients);
+		MSG_WriteByte(&client->message, 0);
 	}
 
-	NET_Heartbeat (1);
+	NetConn_Heartbeat(1);
 }
 
 /*
@@ -503,55 +492,56 @@ void Host_ShutdownServer(qboolean crash)
 	sv.active = false;
 
 // stop all client sounds immediately
-	CL_Disconnect ();
+	CL_Disconnect();
 
-	NET_Heartbeat (2);
-	NET_Heartbeat (2);
+	NetConn_Heartbeat(2);
+	NetConn_Heartbeat(2);
 
 // flush any pending messages - like the score!!!
 	start = Sys_DoubleTime();
 	do
 	{
 		count = 0;
+		NetConn_ClientFrame();
+		NetConn_ServerFrame();
 		for (i=0, host_client = svs.clients ; i<svs.maxclients ; i++, host_client++)
 		{
 			if (host_client->active && host_client->message.cursize)
 			{
-				if (NET_CanSendMessage (host_client->netconnection))
+				if (NetConn_CanSendMessage(host_client->netconnection))
 				{
-					NET_SendMessage(host_client->netconnection, &host_client->message);
-					SZ_Clear (&host_client->message);
+					NetConn_SendReliableMessage(host_client->netconnection, &host_client->message);
+					SZ_Clear(&host_client->message);
 				}
 				else
-				{
-					NET_GetMessage(host_client->netconnection);
 					count++;
-				}
 			}
 		}
 		if ((Sys_DoubleTime() - start) > 3.0)
 			break;
 	}
-	while (count);
+	while(count);
 
 // make sure all the clients know we're disconnecting
 	buf.data = message;
 	buf.maxsize = 4;
 	buf.cursize = 0;
 	MSG_WriteByte(&buf, svc_disconnect);
-	count = NET_SendToAll(&buf, 5);
+	count = NetConn_SendToAll(&buf, 5);
 	if (count)
-		Con_Printf("Host_ShutdownServer: NET_SendToAll failed for %u clients\n", count);
+		Con_Printf("Host_ShutdownServer: NetConn_SendToAll failed for %u clients\n", count);
 
 	for (i=0, host_client = svs.clients ; i<svs.maxclients ; i++, host_client++)
 		if (host_client->active)
 			SV_DropClient(crash); // server shutdown
 
+	NetConn_CloseServerPorts();
+
 //
 // clear structures
 //
-	memset (&sv, 0, sizeof(sv));
-	memset (svs.clients, 0, svs.maxclients * sizeof(client_t));
+	memset(&sv, 0, sizeof(sv));
+	memset(svs.clients, 0, svs.maxclients * sizeof(client_t));
 }
 
 
@@ -678,6 +668,9 @@ void Host_ServerFrame (void)
 	// LordHavoc: cap server at sys_ticrate in listen games
 	if (cls.state != ca_dedicated && svs.maxclients > 1 && ((realtime - lastservertime) < sys_ticrate.value))
 		return;
+
+	NetConn_ServerFrame();
+
 // run the world state
 	if (!sv.paused && (svs.maxclients > 1 || (key_dest == key_game && !key_consoleactive)))
 		sv.frametime = pr_global_struct->frametime = frametimetotal;
@@ -687,24 +680,21 @@ void Host_ServerFrame (void)
 	lastservertime = realtime;
 
 // set the time and clear the general datagram
-	SV_ClearDatagram ();
-
-// check for new clients
-	SV_CheckForNewClients ();
+	SV_ClearDatagram();
 
 // read client messages
-	SV_RunClients ();
+	SV_RunClients();
 
 // move things around and think
 // always pause in single player if in console or menus
 	if (sv.frametime)
-		SV_Physics ();
+		SV_Physics();
 
 // send all messages to the clients
-	SV_SendClientMessages ();
+	SV_SendClientMessages();
 
 // send an heartbeat if enough time has passed since the last one
-	NET_Heartbeat (0);
+	NetConn_Heartbeat(0);
 }
 
 
@@ -722,37 +712,35 @@ void _Host_Frame (float time)
 	static double time3 = 0;
 	int pass1, pass2, pass3;
 
-	if (setjmp (host_abortserver) )
+	if (setjmp(host_abortserver))
 		return;			// something bad happened, or the server disconnected
 
-// keep the random time dependent
-	rand ();
+	// keep the random time dependent
+	rand();
 
-// decide the simulation time
-	if (!Host_FilterTime (time))
+	// decide the simulation time
+	if (!Host_FilterTime(time))
 	{
 		// if time was rejected, don't totally hog the CPU
 		Sys_Sleep();
 		return;
 	}
 
-// get new key events
-	Sys_SendKeyEvents ();
+	// get new key events
+	Sys_SendKeyEvents();
 
-// allow mice or other external controllers to add commands
-	IN_Commands ();
+	// allow mice or other external controllers to add commands
+	IN_Commands();
 
-// process console commands
-	Cbuf_Execute ();
+	// process console commands
+	Cbuf_Execute();
 
 	// LordHavoc: map and load are delayed until video is initialized
 	Host_PerformSpawnServerAndLoadGame();
 
-	NET_Poll();
-
-// if running the server locally, make intentions now
-	if (sv.active)
-		CL_SendCmd ();
+	// if running the server locally, make intentions now
+	if (cls.state == ca_connected && sv.active)
+		CL_SendCmd();
 
 //-------------------
 //
@@ -760,11 +748,11 @@ void _Host_Frame (float time)
 //
 //-------------------
 
-// check for commands typed to the host
-	Host_GetConsoleCommands ();
+	// check for commands typed to the host
+	Host_GetConsoleCommands();
 
 	if (sv.active)
-		Host_ServerFrame ();
+		Host_ServerFrame();
 
 //-------------------
 //
@@ -772,48 +760,53 @@ void _Host_Frame (float time)
 //
 //-------------------
 
-// if running the server remotely, send intentions now after
-// the incoming messages have been read
-	if (!sv.active)
-		CL_SendCmd ();
+	cl.oldtime = cl.time;
+	cl.time += cl.frametime;
 
-// fetch results from server
+	NetConn_ClientFrame();
+
 	if (cls.state == ca_connected)
-		CL_ReadFromServer ();
+	{
+		// if running the server remotely, send intentions now after
+		// the incoming messages have been read
+		if (!sv.active)
+			CL_SendCmd();
+		CL_ReadFromServer();
+	}
 
 	ui_update();
 
 	CL_VideoFrame();
 
-// update video
+	// update video
 	if (host_speeds.integer)
-		time1 = Sys_DoubleTime ();
+		time1 = Sys_DoubleTime();
 
-	CL_UpdateScreen ();
+	CL_UpdateScreen();
 
 	if (host_speeds.integer)
-		time2 = Sys_DoubleTime ();
+		time2 = Sys_DoubleTime();
 
-// update audio
+	// update audio
 	if (cls.signon == SIGNONS)
 	{
 		// LordHavoc: this used to use renderer variables (eww)
 		vec3_t forward, right, up;
 		AngleVectors(cl.viewangles, forward, right, up);
-		S_Update (cl_entities[cl.viewentity].render.origin, forward, right, up);
+		S_Update(cl_entities[cl.viewentity].render.origin, forward, right, up);
 	}
 	else
-		S_Update (vec3_origin, vec3_origin, vec3_origin, vec3_origin);
+		S_Update(vec3_origin, vec3_origin, vec3_origin, vec3_origin);
 
 	CDAudio_Update();
 
 	if (host_speeds.integer)
 	{
 		pass1 = (time1 - time3)*1000000;
-		time3 = Sys_DoubleTime ();
+		time3 = Sys_DoubleTime();
 		pass2 = (time2 - time1)*1000000;
 		pass3 = (time3 - time2)*1000000;
-		Con_Printf ("%6ius total %6ius server %6ius gfx %6ius snd\n",
+		Con_Printf("%6ius total %6ius server %6ius gfx %6ius snd\n",
 					pass1+pass2+pass3, pass1, pass2, pass3);
 	}
 
@@ -879,22 +872,22 @@ void Host_Init (void)
 		developer.value = 1;
 	}
 
-	Cmd_Init ();
+	Cmd_Init();
 	Memory_Init_Commands();
 	R_Modules_Init();
-	Cbuf_Init ();
-	V_Init ();
-	COM_Init ();
-	Host_InitLocal ();
-	W_LoadWadFile ("gfx.wad");
-	Key_Init ();
-	Con_Init ();
-	Chase_Init ();
-	M_Init ();
-	PR_Init ();
-	Mod_Init ();
-	NET_Init ();
-	SV_Init ();
+	Cbuf_Init();
+	V_Init();
+	COM_Init();
+	Host_InitLocal();
+	W_LoadWadFile("gfx.wad");
+	Key_Init();
+	Con_Init();
+	Chase_Init();
+	M_Init();
+	PR_Init();
+	Mod_Init();
+	NetConn_Init();
+	SV_Init();
 
 	Con_Printf ("Builddate: %s\n", buildstring);
 
@@ -905,16 +898,16 @@ void Host_Init (void)
 		VID_Init();
 
 		Render_Init();
-		S_Init ();
-		CDAudio_Init ();
-		CL_Init ();
+		S_Init();
+		CDAudio_Init();
+		CL_Init();
 	}
 
 	Cbuf_InsertText ("exec quake.rc\n");
-	Cbuf_Execute ();
-	Cbuf_Execute ();
-	Cbuf_Execute ();
-	Cbuf_Execute ();
+	Cbuf_Execute();
+	Cbuf_Execute();
+	Cbuf_Execute();
+	Cbuf_Execute();
 
 	host_initialized = true;
 
@@ -947,7 +940,7 @@ void Host_Shutdown(void)
 	Host_WriteConfiguration ();
 
 	CDAudio_Shutdown ();
-	NET_Shutdown ();
+	NetConn_Shutdown ();
 	S_Shutdown();
 
 	if (cls.state != ca_dedicated)
