@@ -876,7 +876,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer)
 		for (j = 0;j < 3;j++)
 		{
 			for (k = 0;k < 3;k++)
-				loadmodel->alias.aliasdata_tags[i].matrix.m[k][j] = LittleLong(pintag->rotationmatrix[j * 3 + k]);
+				loadmodel->alias.aliasdata_tags[i].matrix.m[j][k] = LittleLong(pintag->rotationmatrix[j * 3 + k]);
 			loadmodel->alias.aliasdata_tags[i].matrix.m[j][3] = LittleLong(pintag->origin[j]);
 		}
 	}
