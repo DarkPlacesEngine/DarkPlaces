@@ -343,15 +343,17 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	lpBuffer.dwLength = sizeof(MEMORYSTATUS);
 	GlobalMemoryStatus (&lpBuffer);
 
-	com_argc = 1;
 	program_name[sizeof(program_name)-1] = 0;
 	GetModuleFileNameA(NULL, program_name, sizeof(program_name) - 1);
+
+	com_argc = 1;
+	com_argv = argv;
 	argv[0] = program_name;
 
 	// FIXME: this tokenizer is rather redundent, call a more general one
 	while (*lpCmdLine && (com_argc < MAX_NUM_ARGVS))
 	{
-		while (*lpCmdLine && *lpCmdLine <= 32)
+		while (*lpCmdLine && *lpCmdLine <= ' ')
 			lpCmdLine++;
 
 		if (*lpCmdLine)
@@ -359,19 +361,10 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 			if (*lpCmdLine == '\"')
 			{
 				// quoted string
+				lpCmdLine++;
 				argv[com_argc] = lpCmdLine;
 				com_argc++;
-
 				while (*lpCmdLine && (*lpCmdLine != '\"'))
-					lpCmdLine++;
-
-				if (*lpCmdLine)
-				{
-					*lpCmdLine = 0;
-					lpCmdLine++;
-				}
-
-				if (*lpCmdLine == '\"')
 					lpCmdLine++;
 			}
 			else
@@ -379,19 +372,17 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 				// unquoted word
 				argv[com_argc] = lpCmdLine;
 				com_argc++;
-
-				while (*lpCmdLine && *lpCmdLine > 32)
+				while (*lpCmdLine && *lpCmdLine > ' )
 					lpCmdLine++;
+			}
 
-				if (*lpCmdLine)
-				{
-					*lpCmdLine = 0;
-					lpCmdLine++;
-				}
+			if (*lpCmdLine)
+			{
+				*lpCmdLine = 0;
+				lpCmdLine++;
 			}
 		}
 	}
-	com_argv = argv;
 
 	Sys_Shared_EarlyInit();
 
