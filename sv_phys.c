@@ -1164,7 +1164,7 @@ void SV_Physics_Noclip (edict_t *ent)
 // regular thinking
 	if (!SV_RunThink (ent))
 		return;
-	
+
 	VectorMA (ent->v.angles, sv.frametime, ent->v.avelocity, ent->v.angles);
 	VectorMA (ent->v.origin, sv.frametime, ent->v.velocity, ent->v.origin);
 
@@ -1195,13 +1195,13 @@ void SV_CheckWaterTransition (edict_t *ent)
 		ent->v.waterlevel = 1;
 		return;
 	}
-	
+
 	if (cont <= CONTENTS_WATER)
 	{
 		if (ent->v.watertype == CONTENTS_EMPTY)
 		{	// just crossed into water
 			SV_StartSound (ent, 0, "misc/h2ohit1.wav", 255, 1);
-		}		
+		}
 		ent->v.watertype = cont;
 		ent->v.waterlevel = 1;
 	}
@@ -1210,7 +1210,7 @@ void SV_CheckWaterTransition (edict_t *ent)
 		if (ent->v.watertype != CONTENTS_EMPTY)
 		{	// just crossed into water
 			SV_StartSound (ent, 0, "misc/h2ohit1.wav", 255, 1);
-		}		
+		}
 		ent->v.watertype = CONTENTS_EMPTY;
 		ent->v.waterlevel = cont;
 	}
@@ -1275,11 +1275,30 @@ void SV_Physics_Toss (edict_t *ent)
 	ClipVelocity (ent->v.velocity, trace.plane.normal, ent->v.velocity, backoff);
 
 // stop if on ground
-	if (trace.plane.normal[2] > 0.7)
+	if (ent->v.movetype == MOVETYPE_BOUNCEMISSILE)
+		ent->v.flags = (int)ent->v.flags & ~FL_ONGROUND;
+	else if (ent->v.movetype == MOVETYPE_BOUNCE)
 	{
-		// LordHavoc: fixed grenades not bouncing when fired down a slope
-		if (fabs(ent->v.velocity[2]) < 60 || (ent->v.movetype != MOVETYPE_BOUNCE && ent->v.movetype != MOVETYPE_BOUNCEMISSILE))
-		//if (ent->v.velocity[2] < 60 || (ent->v.movetype != MOVETYPE_BOUNCE && ent->v.movetype != MOVETYPE_BOUNCEMISSILE))
+		if (trace.plane.normal[2] > 0.7)
+		{
+			// LordHavoc: fixed grenades not bouncing when fired down a slope
+			if (DotProduct(trace.plane.normal, ent->v.velocity) < 100)
+			//if (ent->v.velocity[2] < 60)
+			{
+				ent->v.flags = (int)ent->v.flags | FL_ONGROUND;
+				ent->v.groundentity = EDICT_TO_PROG(trace.ent);
+				VectorClear (ent->v.velocity);
+				VectorClear (ent->v.avelocity);
+			}
+			else
+				ent->v.flags = (int)ent->v.flags & ~FL_ONGROUND;
+		}
+		else
+			ent->v.flags = (int)ent->v.flags & ~FL_ONGROUND;
+	}
+	else
+	{
+		if (trace.plane.normal[2] > 0.7)
 		{
 			ent->v.flags = (int)ent->v.flags | FL_ONGROUND;
 			ent->v.groundentity = EDICT_TO_PROG(trace.ent);
@@ -1289,8 +1308,6 @@ void SV_Physics_Toss (edict_t *ent)
 		else
 			ent->v.flags = (int)ent->v.flags & ~FL_ONGROUND;
 	}
-	else
-		ent->v.flags = (int)ent->v.flags & ~FL_ONGROUND;
 
 // check for in water
 	SV_CheckWaterTransition (ent);
@@ -1427,9 +1444,9 @@ void SV_Physics (void)
 			break;
 		}
 	}
-	
+
 	if (pr_global_struct->force_retouch)
-		pr_global_struct->force_retouch--;	
+		pr_global_struct->force_retouch--;
 
 	// LordHavoc: endframe support
 	if (EndFrameQC)
