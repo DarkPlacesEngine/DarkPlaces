@@ -477,7 +477,7 @@ void S_StartSound(int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 	target_chan->master_vol = vol;
 	target_chan->entnum = entnum;
 	target_chan->entchannel = entchannel;
-	SND_Spatialize(target_chan);
+	SND_Spatialize(target_chan, false);
 
 	if (!target_chan->leftvol && !target_chan->rightvol)
 		return;		// not audible at all
@@ -660,7 +660,7 @@ void S_StaticSound (sfx_t *sfx, vec3_t origin, float vol, float attenuation)
 	ss->dist_mult = (attenuation/64) / sound_nominal_clip_dist;
 	ss->end = paintedtime + sc->length;
 
-	SND_Spatialize (ss);
+	SND_Spatialize (ss, true);
 }
 
 
@@ -753,7 +753,7 @@ void S_Update(vec3_t origin, vec3_t forward, vec3_t right, vec3_t up)
 	{
 		if (!ch->sfx)
 			continue;
-		SND_Spatialize(ch, i > MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS);         // respatialize channel
+		SND_Spatialize(ch, i >= MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS);         // respatialize channel
 		if (!ch->leftvol && !ch->rightvol)
 			continue;
 

@@ -24,6 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 cvar_t bgmvolume = {CVAR_SAVE, "bgmvolume", "1"};
 cvar_t volume = {CVAR_SAVE, "volume", "0.7"};
+cvar_t snd_staticvolume = {CVAR_SAVE, "snd_staticvolume", "1"};
 
 qboolean snd_initialized = false;
 
@@ -31,6 +32,7 @@ void S_Init (void)
 {
 	Cvar_RegisterVariable(&bgmvolume);
 	Cvar_RegisterVariable(&volume);
+	Cvar_RegisterVariable(&snd_staticvolume);
 }
 
 void S_AmbientOff (void)
