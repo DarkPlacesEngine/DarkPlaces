@@ -249,7 +249,6 @@ void GL_SetupView_Mode_Perspective (double fovx, double fovy, double zNear, doub
 
 	// set up viewpoint
 	qglMatrixMode(GL_PROJECTION);CHECKGLERROR
-	qglLoadIdentity ();CHECKGLERROR
 	// pyramid slopes
 	xmax = zNear * tan(fovx * M_PI / 360.0);
 	ymax = zNear * tan(fovy * M_PI / 360.0);
@@ -261,14 +260,13 @@ void GL_SetupView_Mode_Perspective (double fovx, double fovy, double zNear, doub
 
 void GL_SetupView_Mode_PerspectiveInfiniteFarClip (double fovx, double fovy, double zNear)
 {
-	double nudge, m[16];
+	float nudge, m[16];
 
 	if (!r_render.integer)
 		return;
 
 	// set up viewpoint
 	qglMatrixMode(GL_PROJECTION);CHECKGLERROR
-	qglLoadIdentity ();CHECKGLERROR
 	// set view pyramid
 	nudge = 1.0 - 1.0 / (1<<23);
 	m[ 0] = 1.0 / tan(fovx * M_PI / 360.0);
@@ -287,7 +285,7 @@ void GL_SetupView_Mode_PerspectiveInfiniteFarClip (double fovx, double fovy, dou
 	m[13] = 0;
 	m[14] = -2 * zNear * nudge;
 	m[15] = 0;
-	qglLoadMatrixd(m);
+	qglLoadMatrixf(m);
 	qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 	GL_SetupView_Orientation_Identity();
 	backend_projectmatrix.m[0][0] = m[0];
@@ -315,7 +313,6 @@ void GL_SetupView_Mode_Ortho (double x1, double y1, double x2, double y2, double
 
 	// set up viewpoint
 	qglMatrixMode(GL_PROJECTION);CHECKGLERROR
-	qglLoadIdentity ();CHECKGLERROR
 	qglOrtho(x1, x2, y2, y1, zNear, zFar);
 	qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 	GL_SetupView_Orientation_Identity();
