@@ -547,7 +547,7 @@ int R_Shadow_ConstructShadowVolume(int innumvertices, int innumtris, const int *
 		memset(vertexupdate, 0, maxvertexupdate * sizeof(int));
 		memset(vertexremap, 0, maxvertexupdate * sizeof(int));
 	}
-	
+
 	for (i = 0;i < numshadowmarktris;i++)
 		shadowmark[shadowmarktris[i]] = shadowmarkcount;
 
@@ -1398,6 +1398,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				m.pointer_texcoord3f[2] = varray_texcoord3f[2];
 				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[2], numverts, vertex3f, matrix_modeltolight);
 #endif
+				GL_BlendFunc(GL_ONE, GL_ONE);
 			}
 			else if (r_shadow_texture3d.integer && !lightcubemap && r_textureunits.integer >= 2)
 			{
@@ -1414,6 +1415,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 #endif
 				m.tex[1] = R_GetTexture(basetexture);
 				m.pointer_texcoord[1] = texcoord2f;
+				GL_BlendFunc(GL_ONE, GL_ONE);
 			}
 			else if (r_textureunits.integer >= 4 && lightcubemap)
 			{
@@ -1449,6 +1451,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[3], numverts, vertex3f, matrix_modeltolight);
 #endif
 				}
+				GL_BlendFunc(GL_ONE, GL_ONE);
 			}
 			else if (r_textureunits.integer >= 3 && !lightcubemap)
 			{
@@ -1473,6 +1476,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 #endif
 				m.tex[2] = R_GetTexture(basetexture);
 				m.pointer_texcoord[2] = texcoord2f;
+				GL_BlendFunc(GL_ONE, GL_ONE);
 			}
 			else
 			{
@@ -1503,7 +1507,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
-	
+
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex[0] = R_GetTexture(basetexture);
@@ -1519,11 +1523,11 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
 #endif
 				}
+				GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 			}
 			// this final code is shared
 			R_Mesh_State(&m);
 			GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 0);
-			GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 			VectorScale(lightcolor, colorscale, color2);
 			GL_LockArrays(0, numverts);
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
@@ -1574,7 +1578,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
-	
+
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex[0] = R_GetTexture(basetexture);
@@ -1590,6 +1594,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
 #endif
 				}
+				GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 			}
 			else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && lightcubemap)
 			{
@@ -1612,7 +1617,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
-	
+
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex[0] = R_GetTexture(bumptexture);
@@ -1629,7 +1634,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
-	
+
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex[0] = R_GetTexture(basetexture);
@@ -1645,6 +1650,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
 #endif
 				}
+				GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 			}
 			else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && !lightcubemap)
 			{
@@ -1666,7 +1672,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
-	
+
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex[0] = R_GetTexture(basetexture);
@@ -1679,6 +1685,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltoattenuationxyz);
 #endif
+				GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 			}
 			else if (r_textureunits.integer >= 4)
 			{
@@ -1716,7 +1723,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
-	
+
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex[0] = R_GetTexture(basetexture);
@@ -1732,6 +1739,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
 #endif
 				}
+				GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 			}
 			else
 			{
@@ -1762,7 +1770,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
-	
+
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex[0] = R_GetTexture(bumptexture);
@@ -1779,7 +1787,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
-	
+
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex[0] = R_GetTexture(basetexture);
@@ -1795,11 +1803,11 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
 #endif
 				}
+				GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 			}
 			// this final code is shared
 			R_Mesh_State(&m);
 			GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 0);
-			GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 			VectorScale(lightcolor, colorscale, color2);
 			GL_LockArrays(0, numverts);
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
@@ -1840,7 +1848,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					GL_LockArrays(0, 0);
 					c_rt_lightmeshes++;
 					c_rt_lighttris += numtriangles;
-		
+
 					memset(&m, 0, sizeof(m));
 					m.pointer_vertex = vertex3f;
 					R_Mesh_State(&m);
@@ -1858,7 +1866,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					c_rt_lightmeshes++;
 					c_rt_lighttris += numtriangles;
 					GL_LockArrays(0, 0);
-		
+
 					memset(&m, 0, sizeof(m));
 					m.pointer_vertex = vertex3f;
 					m.tex3d[0] = R_GetTexture(r_shadow_attenuation3dtexture);
@@ -1876,7 +1884,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					GL_LockArrays(0, 0);
 					c_rt_lightmeshes++;
 					c_rt_lighttris += numtriangles;
-		
+
 					memset(&m, 0, sizeof(m));
 					m.pointer_vertex = vertex3f;
 					m.tex[0] = R_GetTexture(glosstexture);
@@ -1892,6 +1900,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 						R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
 #endif
 					}
+					GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 				}
 				else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && !lightcubemap /*&& gl_support_blendsquare*/) // FIXME: detect blendsquare!
 				{
@@ -1913,7 +1922,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					GL_LockArrays(0, 0);
 					c_rt_lightmeshes++;
 					c_rt_lighttris += numtriangles;
-		
+
 					memset(&m, 0, sizeof(m));
 					m.pointer_vertex = vertex3f;
 					R_Mesh_State(&m);
@@ -1931,7 +1940,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					c_rt_lightmeshes++;
 					c_rt_lighttris += numtriangles;
 					GL_LockArrays(0, 0);
-		
+
 					memset(&m, 0, sizeof(m));
 					m.pointer_vertex = vertex3f;
 					m.tex[0] = R_GetTexture(glosstexture);
@@ -1944,6 +1953,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 					R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltoattenuationxyz);
 #endif
+					GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 				}
 				else
 				{
@@ -1965,7 +1975,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					GL_LockArrays(0, 0);
 					c_rt_lightmeshes++;
 					c_rt_lighttris += numtriangles;
-		
+
 					memset(&m, 0, sizeof(m));
 					m.pointer_vertex = vertex3f;
 					R_Mesh_State(&m);
@@ -1983,7 +1993,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					c_rt_lightmeshes++;
 					c_rt_lighttris += numtriangles;
 					GL_LockArrays(0, 0);
-		
+
 					memset(&m, 0, sizeof(m));
 					m.pointer_vertex = vertex3f;
 					m.tex[0] = R_GetTexture(r_shadow_attenuation2dtexture);
@@ -2009,7 +2019,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					GL_LockArrays(0, 0);
 					c_rt_lightmeshes++;
 					c_rt_lighttris += numtriangles;
-		
+
 					memset(&m, 0, sizeof(m));
 					m.pointer_vertex = vertex3f;
 					m.tex[0] = R_GetTexture(glosstexture);
@@ -2025,10 +2035,10 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 						R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
 #endif
 					}
+					GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 				}
 				R_Mesh_State(&m);
 				GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 0);
-				GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 				VectorScale(lightcolor, colorscale, color2);
 				GL_LockArrays(0, numverts);
 				for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
@@ -2046,7 +2056,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 	{
 		if (ambientscale)
 		{
-			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+			GL_BlendFunc(GL_ONE, GL_ONE);
 			VectorScale(lightcolor, r_shadow_lightintensityscale.value * ambientscale, color2);
 			memset(&m, 0, sizeof(m));
 			m.pointer_vertex = vertex3f;
@@ -2101,7 +2111,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 		}
 		if (diffusescale)
 		{
-			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+			GL_BlendFunc(GL_ONE, GL_ONE);
 			VectorScale(lightcolor, r_shadow_lightintensityscale.value * diffusescale, color2);
 			memset(&m, 0, sizeof(m));
 			m.pointer_vertex = vertex3f;
@@ -2228,7 +2238,7 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 		// this variable directs the DrawShadowVolume and DrawLight code to capture into the mesh chain instead of rendering
 		r_shadow_compilingrtlight = rtlight;
 		R_Shadow_EnlargeClusterBuffer(model->brush.num_pvsclusters);
-		R_Shadow_EnlargeSurfaceBuffer(model->nummodelsurfaces); 
+		R_Shadow_EnlargeSurfaceBuffer(model->nummodelsurfaces);
 		model->GetLightInfo(ent, rtlight->shadoworigin, rtlight->radius, rtlight->cullmins, rtlight->cullmaxs, r_shadow_buffer_clusterlist, r_shadow_buffer_clusterpvs, &numclusters, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces);
 		rtlight->static_numclusterpvsbytes = (model->brush.num_pvsclusters + 7) >> 3;
 		rtlight->static_clusterpvs = Mem_Alloc(r_shadow_mempool, rtlight->static_numclusterpvsbytes);
@@ -2318,7 +2328,7 @@ void R_Shadow_UncompileWorldLights(void)
 
 void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 {
-	int i, shadow;
+	int i, shadow, usestencil;
 	entity_render_t *ent;
 	float f;
 	vec3_t relativelightorigin, relativeeyeorigin, lightcolor, lightcolor2;
@@ -2388,7 +2398,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 			return;
 		// calculate lit surfaces and clusters
 		R_Shadow_EnlargeClusterBuffer(r_refdef.worldmodel->brush.num_pvsclusters);
-		R_Shadow_EnlargeSurfaceBuffer(r_refdef.worldmodel->nummodelsurfaces); 
+		R_Shadow_EnlargeSurfaceBuffer(r_refdef.worldmodel->nummodelsurfaces);
 		r_refdef.worldmodel->GetLightInfo(&cl_entities[0].render, rtlight->shadoworigin, rtlight->radius, cullmins, cullmaxs, r_shadow_buffer_clusterlist, r_shadow_buffer_clusterpvs, &numclusters, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces);
 		clusterlist = r_shadow_buffer_clusterlist;
 		clusterpvs = r_shadow_buffer_clusterpvs;
@@ -2411,11 +2421,15 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 		return;
 
 	shadow = rtlight->shadow && (rtlight->isstatic ? r_rtworldshadows : r_rtdlightshadows);
+	usestencil = false;
 
 	if (shadow && (gl_stencil || visiblevolumes))
 	{
 		if (!visiblevolumes)
+		{
 			R_Shadow_Stage_ShadowVolumes();
+			usestencil = true;
+		}
 		ent = &cl_entities[0].render;
 		if (r_shadow_staticworldlights.integer && rtlight->compiled)
 		{
@@ -2475,7 +2489,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 
 	if (!visiblevolumes)
 	{
-		R_Shadow_Stage_Light(shadow && gl_stencil);
+		R_Shadow_Stage_Light(usestencil);
 
 		ent = &cl_entities[0].render;
 		if (ent->model && ent->model->DrawLight && (ent->flags & RENDER_LIGHT))
@@ -3642,7 +3656,7 @@ void R_Shadow_EditLights_DrawSelectedLightProperties(void)
 	sprintf(temp, "Specular     : %f\n", r_shadow_selectedlight->specularscale);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
 	sprintf(temp, "NormalMode   : %s\n", (r_shadow_selectedlight->flags & LIGHTFLAG_NORMALMODE) ? "yes" : "no");DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
 	sprintf(temp, "RealTimeMode : %s\n", (r_shadow_selectedlight->flags & LIGHTFLAG_REALTIMEMODE) ? "yes" : "no");DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
-}                 
+}
 
 void R_Shadow_EditLights_ToggleShadow_f(void)
 {
