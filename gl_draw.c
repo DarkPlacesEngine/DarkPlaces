@@ -378,7 +378,7 @@ float blendvertex3f[9] = {-5000, -5000, 10, 10000, -5000, 10, -5000, 10000, 10};
 int quadelements[768];
 void R_DrawQueue(void)
 {
-	int pos, num, chartexnum, overbright, texnum, additive, batch;
+	int pos, num, chartexnum, overbright, texnum, batch;
 	float x, y, w, h, s, t, u, v, *av, *at, c[4];
 	cachepic_t *pic;
 	drawqueue_t *dq;
@@ -427,9 +427,15 @@ void R_DrawQueue(void)
 	for (pos = 0;pos < r_refdef.drawqueuesize;pos += ((drawqueue_t *)(r_refdef.drawqueue + pos))->size)
 	{
 		dq = (drawqueue_t *)(r_refdef.drawqueue + pos);
-		additive = (dq->flags & DRAWFLAG_ADDITIVE) != 0;
 		color = dq->color;
-		GL_BlendFunc(GL_SRC_ALPHA, additive ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA);
+		
+		if(dq->flags & DRAWFLAG_ADDITIVE)
+			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+		else if(dq->flags & DRAWFLAG_MODULATE)
+			GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
+		else
+			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		
 		GL_DepthMask(true);
 		GL_DepthTest(false);
 

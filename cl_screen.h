@@ -32,6 +32,7 @@ typedef struct drawqueuemesh_s
 drawqueuemesh_t;
 
 #define DRAWFLAG_ADDITIVE 1
+#define DRAWFLAG_MODULATE 2
 
 // clear the draw queue
 void DrawQ_Clear(void);
