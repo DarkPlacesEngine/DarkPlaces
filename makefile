@@ -69,7 +69,8 @@ OBJ_DED_EXE= builddate.c sys_linux.o vid_null.o cd_null.o snd_null.o $(COMMONOBJ
 
 
 # Compilation
-CFLAGS_NONEXECOMMON=-MD -Wall -Werror
+# CFLAGS_NONEXECOMMON=-MD -Wall -Werror
+CFLAGS_NONEXECOMMON=-MD -Wall
 CFLAGS_EXECOMMON=-MD -Wall
 CFLAGS_DEBUG=-ggdb
 CFLAGS_PROFILE=-g -pg -ggdb
