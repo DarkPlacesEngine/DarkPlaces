@@ -1162,7 +1162,7 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, co
 	}
 }
 
-void R_Mesh_TexBindAll(unsigned int unitnum, unsigned int tex1d, unsigned int tex2d, unsigned int tex3d, unsigned int texcubemap)
+void R_Mesh_TexBindAll(unsigned int unitnum, int tex1d, int tex2d, int tex3d, int texcubemap)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	if (unitnum >= backendunits)
@@ -1253,7 +1253,7 @@ void R_Mesh_TexBindAll(unsigned int unitnum, unsigned int tex1d, unsigned int te
 	}
 }
 
-void R_Mesh_TexBind1D(unsigned int unitnum, unsigned int texnum)
+void R_Mesh_TexBind1D(unsigned int unitnum, int texnum)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	if (unitnum >= backendunits)
@@ -1308,7 +1308,7 @@ void R_Mesh_TexBind1D(unsigned int unitnum, unsigned int texnum)
 	}
 }
 
-void R_Mesh_TexBind(unsigned int unitnum, unsigned int texnum)
+void R_Mesh_TexBind(unsigned int unitnum, int texnum)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	if (unitnum >= backendunits)
@@ -1363,7 +1363,7 @@ void R_Mesh_TexBind(unsigned int unitnum, unsigned int texnum)
 	}
 }
 
-void R_Mesh_TexBind3D(unsigned int unitnum, unsigned int texnum)
+void R_Mesh_TexBind3D(unsigned int unitnum, int texnum)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	if (unitnum >= backendunits)
@@ -1418,7 +1418,7 @@ void R_Mesh_TexBind3D(unsigned int unitnum, unsigned int texnum)
 	}
 }
 
-void R_Mesh_TexBindCubeMap(unsigned int unitnum, unsigned int texnum)
+void R_Mesh_TexBindCubeMap(unsigned int unitnum, int texnum)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	if (unitnum >= backendunits)
