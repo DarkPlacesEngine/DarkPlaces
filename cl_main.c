@@ -786,10 +786,10 @@ void CL_RelinkEntities (void)
 	CL_ClearTempEntities();
 	CL_DecayLights();
 	CL_RelinkWorld();
-	CL_RelinkBeams();
 	CL_RelinkStaticEntities();
 	CL_RelinkNetworkEntities();
 	CL_RelinkEffects();
+	CL_RelinkBeams();
 	CL_MoveParticles();
 
 	CL_LerpPlayer(frac);
