@@ -488,8 +488,9 @@ void S_StartSound(int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 	target_chan->entchannel = entchannel;
 	SND_Spatialize(target_chan, false);
 
-	if (!target_chan->leftvol && !target_chan->rightvol)
-		return;		// not audible at all
+	// LordHavoc: spawn the sound anyway because the player might teleport to it
+	//if (!target_chan->leftvol && !target_chan->rightvol)
+	//	return;		// not audible at all
 
 // new channel
 	sc = S_LoadSound (sfx, true);

@@ -107,7 +107,7 @@ d darkplaces: fix key based turning being affected by slowmo - it should not be
 0 darkplaces: make sure QuakeDoneQuick works (Chris Kemp)
 0 darkplaces: make sure r_fullbright works
 0 darkplaces: make sure that sky works without a valid size (just treat it as single layer clouds or non-animated) (tell Vermeulen)
-0 darkplaces: make sure that sound engine does not remove sounds when volume drops to 0 due to going out of range (SeienAbunae)
+-n darkplaces: make sure that sound engine does not remove sounds when volume drops to 0 due to going out of range - now spawns sounds even if out of range (SeienAbunae)
 0 darkplaces: make v_cshift affect view even if in a liquid, by adding another cshift slot for it
 0 darkplaces: mod_q3bsp_optimizedtraceline bug: shooting through brushes? (Vermeulen)
 0 darkplaces: model interpolation off crashes?  (SeienAbunae)
