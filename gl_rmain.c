@@ -70,6 +70,12 @@ cvar_t gl_fogend = {0, "gl_fogend","0"};
 
 cvar_t r_textureunits = {0, "r_textureunits", "32"};
 
+cvar_t r_lerpsprites = {CVAR_SAVE, "r_lerpsprites", "1"};
+cvar_t r_lerpmodels = {CVAR_SAVE, "r_lerpmodels", "1"};
+cvar_t r_waterscroll = {CVAR_SAVE, "r_waterscroll", "1"};
+
+
+
 void R_ModulateColors(float *in, float *out, int verts, float r, float g, float b)
 {
 	int i;
@@ -230,6 +236,9 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable (&r_fullbright);
 	Cvar_RegisterVariable (&r_textureunits);
 	Cvar_RegisterVariable (&r_shadow_cull);
+	Cvar_RegisterVariable (&r_lerpsprites);
+	Cvar_RegisterVariable (&r_lerpmodels);
+	Cvar_RegisterVariable (&r_waterscroll);
 	if (gamemode == GAME_NEHAHRA || gamemode == GAME_NEXUIZ)
 		Cvar_SetValue("r_fullbrights", 0);
 	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap);

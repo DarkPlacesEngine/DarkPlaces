@@ -787,9 +787,12 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 	texture_t *texture;
 	matrix4x4_t tempmatrix;
 
-	// scrolling in texture matrix
-	Matrix4x4_CreateTranslate(&tempmatrix, sin(cl.time) * 0.125, sin(cl.time * 0.8f) * 0.125, 0);
-	R_Mesh_TextureMatrix(0, &tempmatrix);
+	if (r_waterscroll.value)
+	{
+		// scrolling in texture matrix
+		Matrix4x4_CreateTranslate(&tempmatrix, sin(cl.time) * 0.025 * r_waterscroll.value, sin(cl.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
+		R_Mesh_TextureMatrix(0, &tempmatrix);
+	}
 
 	R_Mesh_Matrix(&ent->matrix);
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
@@ -857,8 +860,11 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 		}
 	}
 
-	Matrix4x4_CreateIdentity(&tempmatrix);
-	R_Mesh_TextureMatrix(0, &tempmatrix);
+	if (r_waterscroll.value)
+	{
+		Matrix4x4_CreateIdentity(&tempmatrix);
+		R_Mesh_TextureMatrix(0, &tempmatrix);
+	}
 }
 
 static void RSurfShader_Water(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)

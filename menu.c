@@ -144,8 +144,8 @@ void M_Background(int width, int height)
 	menu_height = height;
 	menu_x = (vid.conwidth - menu_width) * 0.5;
 	menu_y = (vid.conheight - menu_height) * 0.5;
-	DrawQ_Fill(menu_x, menu_y, menu_width, menu_height, 0, 0, 0, 0.5, 0);
-	//DrawQ_Fill(0, 0, vid.conwidth, vid.conheight, 0, 0, 0, 0.5, 0);
+	//DrawQ_Fill(menu_x, menu_y, menu_width, menu_height, 0, 0, 0, 0.5, 0);
+	DrawQ_Fill(0, 0, vid.conwidth, vid.conheight, 0, 0, 0, 0.5, 0);
 }
 
 /*
@@ -1330,7 +1330,7 @@ void M_Options_Key (int k)
 	}
 }
 
-#define	OPTIONS_EFFECTS_ITEMS	17
+#define	OPTIONS_EFFECTS_ITEMS	20
 
 int options_effects_cursor;
 
@@ -1417,6 +1417,15 @@ void M_Menu_Options_Effects_AdjustSliders (int dir)
 	case 16:
 		Cvar_SetValueQuick (&cl_particles_blood_alpha, bound(0.2, cl_particles_blood_alpha.value + dir * 0.1, 1));
 		break;
+	case 17:
+		Cvar_SetValueQuick (&r_lerpmodels, !r_lerpmodels.integer);
+		break;
+	case 18:
+		Cvar_SetValueQuick (&r_lerpsprites, !r_lerpsprites.integer);
+		break;
+	case 19:
+		Cvar_SetValueQuick (&r_waterscroll, bound(0, r_waterscroll.value + dir * 0.5, 10));
+		break;
 	}
 }
 
@@ -1449,6 +1458,9 @@ void M_Options_Effects_Draw (void)
 	M_Print(16, y, "                 Blood");M_DrawCheckbox(220, y, cl_particles_blood.integer);y += 8;
 	M_Print(16, y, "            Blood Size");M_DrawSlider(220, y, cl_particles_blood_size.value, 2, 20);y += 8;
 	M_Print(16, y, "         Blood Opacity");M_DrawSlider(220, y, cl_particles_blood_alpha.value, 0.2, 1);y += 8;
+	M_Print(16, y, "   Model Interpolation");M_DrawCheckbox(220, y, r_lerpmodels.integer);y += 8;
+	M_Print(16, y, "  Sprite Interpolation");M_DrawCheckbox(220, y, r_lerpsprites.integer);y += 8;
+	M_Print(16, y, "        Water Movement");M_DrawSlider(220, y, r_waterscroll.value, 0, 10);y += 8;
 
 	// cursor
 	M_DrawCharacter(200, 32 + options_effects_cursor*8, 12+((int)(realtime*4)&1));

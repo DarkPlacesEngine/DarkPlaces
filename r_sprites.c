@@ -1,8 +1,6 @@
 
 #include "quakedef.h"
 
-#define LERPSPRITES
-
 static int R_SpriteSetup (const entity_render_t *ent, int type, float org[3], float left[3], float up[3])
 {
 	float matrix1[3][3], matrix2[3][3], matrix3[3][3];
@@ -114,28 +112,31 @@ void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 		fog = 0;
 	ifog = 1 - fog;
 
-#ifdef LERPSPRITES
-	// LordHavoc: interpolated sprite rendering
-	for (i = 0;i < 4;i++)
+	if (r_lerpsprites.integer)
 	{
-		if (ent->frameblend[i].lerp >= 0.01f)
+		// LordHavoc: interpolated sprite rendering
+		for (i = 0;i < 4;i++)
 		{
-			frame = ent->model->sprdata_frames + ent->frameblend[i].frame;
-			R_DrawSpriteImage((ent->effects & EF_ADDITIVE) || (ent->model->flags & EF_ADDITIVE), frame, frame->texture, org, up, left, color[0] * ifog, color[1] * ifog, color[2] * ifog, ent->alpha * ent->frameblend[i].lerp);
-			if (fog * ent->frameblend[i].lerp >= 0.01f)
-				R_DrawSpriteImage(true, frame, frame->fogtexture, org, up, left, fogcolor[0],fogcolor[1],fogcolor[2], fog * ent->alpha * ent->frameblend[i].lerp);
+			if (ent->frameblend[i].lerp >= 0.01f)
+			{
+				frame = ent->model->sprdata_frames + ent->frameblend[i].frame;
+				R_DrawSpriteImage((ent->effects & EF_ADDITIVE) || (ent->model->flags & EF_ADDITIVE), frame, frame->texture, org, up, left, color[0] * ifog, color[1] * ifog, color[2] * ifog, ent->alpha * ent->frameblend[i].lerp);
+				if (fog * ent->frameblend[i].lerp >= 0.01f)
+					R_DrawSpriteImage(true, frame, frame->fogtexture, org, up, left, fogcolor[0],fogcolor[1],fogcolor[2], fog * ent->alpha * ent->frameblend[i].lerp);
+			}
 		}
 	}
-#else
-	// LordHavoc: no interpolation
-	frame = NULL;
-	for (i = 0;i < 4 && ent->frameblend[i].lerp;i++)
-		frame = ent->model->sprdata_frames + ent->frameblend[i].frame;
+	else
+	{
+		// LordHavoc: no interpolation
+		frame = NULL;
+		for (i = 0;i < 4 && ent->frameblend[i].lerp;i++)
+			frame = ent->model->sprdata_frames + ent->frameblend[i].frame;
 
-	R_DrawSpriteImage((ent->effects & EF_ADDITIVE) || (ent->model->flags & EF_ADDITIVE), frame, frame->texture, org, up, left, color[0] * ifog, color[1] * ifog, color[2] * ifog, ent->alpha);
-	if (fog * ent->frameblend[i].lerp >= 0.01f)
-		R_DrawSpriteImage(true, frame, frame->fogtexture, org, up, left, fogcolor[0],fogcolor[1],fogcolor[2], fog * ent->alpha);
-#endif
+		R_DrawSpriteImage((ent->effects & EF_ADDITIVE) || (ent->model->flags & EF_ADDITIVE), frame, frame->texture, org, up, left, color[0] * ifog, color[1] * ifog, color[2] * ifog, ent->alpha);
+		if (fog * ent->frameblend[i].lerp >= 0.01f)
+			R_DrawSpriteImage(true, frame, frame->fogtexture, org, up, left, fogcolor[0],fogcolor[1],fogcolor[2], fog * ent->alpha);
+	}
 }
 
 void R_Model_Sprite_Draw(entity_render_t *ent)
