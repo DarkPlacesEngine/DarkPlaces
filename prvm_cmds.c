@@ -2145,13 +2145,15 @@ void VM_loadfromfile(void)
 		return;
 	}
 
-	data = FS_LoadFile(va("data/%s", filename), false);
+	// not conform with VM_fopen
+	data = FS_LoadFile(filename, false);
 	if (data == NULL)
 		PRVM_G_FLOAT(OFS_RETURN) = -1;
 	
 	PRVM_ED_LoadFromFile(data);
 
-	Mem_Free(data);
+	if(data)
+		Mem_Free(data);
 }
 
 

@@ -3734,6 +3734,7 @@ void M_Shutdown(void)
 
 void M_Restart(void)
 {
+	key_dest = key_game;
 }
 
 //============================================================================
@@ -3765,7 +3766,7 @@ void MP_Error(void)
 	// fall back to the normal menu
 
 	// say it
-	Con_Printf("Falling back to normal menu.\n Error :");
+	Con_Printf("Falling back to normal menu\n");
 
 	// init the normal menu now -> this will also correct the menu router pointers
 	MR_SetRouting (TRUE);
@@ -3874,6 +3875,7 @@ void MP_Init (void)
 
 void MP_Restart(void)
 {
+	key_dest = key_game;
 	MP_Init();
 }
 
