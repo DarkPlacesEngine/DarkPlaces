@@ -2727,7 +2727,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 	if (numclusters)
 	{
 		for (i = 0;i < numclusters;i++)
-			if (r_worldleafvisible[clusterlist[i]])
+			if (CHECKPVSBIT(r_pvsbits, clusterlist[i]))
 				break;
 		if (i == numclusters)
 			return;
