@@ -1922,6 +1922,7 @@ void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 		lightmaxs[2] = relativelightorigin[2] + lightradius;
 		R_Mesh_Matrix(&ent->matrix);
 		Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
+		R_UpdateTextureInfo(ent);
 		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 		{
 			surface = model->brushq1.surfaces + surfacelist[surfacelistindex];
