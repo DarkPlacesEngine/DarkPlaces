@@ -16,14 +16,6 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
-/*
-TODOs until first commit:
-	1. Hide and/or show the mouse whether the mainwindow is focused or not.
-	2. Minimize when losing focus in fullscreen mode.
-d	3. GrabInput while mainwindow is active.
-	4
-
-*/
 #include <SDL.h>
 #include <stdio.h>
 
@@ -35,8 +27,6 @@ static int vid_usingmouse;
 static int vid_isfullscreen;
 
 static SDL_Surface *screen;
-
-static Uint8 in_mouse_buttons;
 
 static void IN_Init( void );
 static void IN_Shutdown( void );
@@ -231,23 +221,13 @@ void IN_Commands (void)
 static void IN_MouseMove (usercmd_t *cmd)
 {
 	int x, y;
-	Uint8 state;
-	int i;
 
 	if( !vid_usingmouse ) {
 		IN_Mouse( cmd, 0, 0 );
 		return;
 	}
 
-	state = SDL_GetRelativeMouseState( &x, &y );
-	for( i = 0; i < 8 ; i++ )
-		if( state & ~in_mouse_buttons & 1 << i  )
-			Key_Event( K_MOUSE1 + i, 0, true );
-		else if( ~state & in_mouse_buttons & 1 << i )
-			Key_Event( K_MOUSE1 + i, 0, false );
-
-	in_mouse_buttons = state;
-    
+	SDL_GetRelativeMouseState( &x, &y );
 	IN_Mouse( cmd, x, y );
 }
 
@@ -262,7 +242,6 @@ static void IN_Init( void )
 	SDL_EnableUNICODE( SDL_ENABLE );
 
 	// init mouse
-	in_mouse_buttons = SDL_GetMouseState( NULL, NULL );
 	vid_usingmouse = false;
 }
 
@@ -307,6 +286,20 @@ void Sys_SendKeyEvents( void )
 					else
 						vid_hidden = true;
 				break;
+			case SDL_MOUSEBUTTONDOWN:
+				if( event.button.button == SDL_BUTTON_MIDDLE ) 
+					event.button.button = SDL_BUTTON_RIGHT;
+				else if( event.button.button == SDL_BUTTON_RIGHT )
+					event.button.button = SDL_BUTTON_MIDDLE;
+				Key_Event( K_MOUSE1 + event.button.button - 1, 0, true );
+				break;
+			case SDL_MOUSEBUTTONUP:
+				if( event.button.button == SDL_BUTTON_MIDDLE ) 
+					event.button.button = SDL_BUTTON_RIGHT;
+				else if( event.button.button == SDL_BUTTON_RIGHT )
+					event.button.button = SDL_BUTTON_MIDDLE;
+				Key_Event( K_MOUSE1 + event.button.button - 1, 0, false );
+				break;
 		}
 }
 
@@ -332,11 +325,51 @@ void VID_Init (void)
 	IN_Init();
 }
 
+// set the icon (we dont use SDL here since it would be too much a PITA)
+#ifdef WIN32
+#include "resource.h"
+#include <SDL_syswm.h>
+static void VID_SetCaption()
+{
+    SDL_SysWMinfo	info;
+	HICON			icon;
+
+	// set the caption
+	//SDL_WM_SetCaption( gamename, NULL );
+
+	// get the HWND handle 
+    SDL_VERSION( &info.version );
+	if( !SDL_GetWMInfo( &info ) )
+		return;
+
+	icon = LoadIcon( GetModuleHandle( NULL ), MAKEINTRESOURCE( IDI_ICON1 ) );
+	//icon = LoadIcon( NULL, IDI_ERROR );
+	SetClassLong( info.window, GCL_HICONSM, (LONG) icon );
+}
+#else
+static void VID_SetCaption()
+{
+	SDL_WM_SetCaption( gamename, NULL );
+}
+#endif
+
+static void VID_OutputVersion()
+{
+	const SDL_version *version;
+	version = SDL_Linked_Version();
+	Con_DPrintf(	"Linked against SDL version %d.%d.%d\n"
+					"Using SDL library version %d.%d.%d\n",
+					SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_PATCHLEVEL,
+					version->major, version->minor, version->patch );	
+}
+
 int VID_InitMode(int fullscreen, int width, int height, int bpp)
 {
 	int i;
 	int flags = SDL_OPENGL;
 	const char *drivername;
+
+	VID_OutputVersion();
 
 	/* 
 	SDL Hack 
@@ -392,6 +425,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 		VID_Shutdown();
 		return false;
 	}
+
 	
 	gl_renderer = qglGetString(GL_RENDERER);
 	gl_vendor = qglGetString(GL_VENDOR);
@@ -409,6 +443,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 	vid_activewindow = false;
 	vid_usingmouse = false;
 	IN_Init();
+	VID_SetCaption();
 	return true;
 }
 
