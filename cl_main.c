@@ -786,10 +786,20 @@ void CL_LinkNetworkEntity(entity_t *e)
 			else if (e->render.model->flags & EF_TRACER3)
 			{
 				trailtype = 6;
-				dlightradius = max(dlightradius, 200);
-				dlightcolor[0] += 1.20f;
-				dlightcolor[1] += 0.50f;
-				dlightcolor[2] += 1.00f;
+				if (gamemode == GAME_PRYDON)
+				{
+					dlightradius = max(dlightradius, 100);
+					dlightcolor[0] += 0.50f;
+					dlightcolor[1] += 0.50f;
+					dlightcolor[2] += 1.20f;
+				}
+				else
+				{
+					dlightradius = max(dlightradius, 200);
+					dlightcolor[0] += 1.20f;
+					dlightcolor[1] += 0.50f;
+					dlightcolor[2] += 1.00f;
+				}
 			}
 		}
 		// LordHavoc: customizable glow
