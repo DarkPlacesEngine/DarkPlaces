@@ -19,7 +19,10 @@
 
 // for Z_Malloc/Z_Free in quake
 #ifndef STANDALONETEST
+#include "quakedef.h"
 #include "zone.h"
+#include "sys.h"
+#include "netconn.h"
 #else
 #define Z_Malloc malloc
 #define Z_Free free
@@ -296,6 +299,9 @@ typedef struct lhnetpacket_s
 	int sourceport;
 	int destinationport;
 	time_t timeout;
+#ifndef STANDALONETEST
+	double sentdoubletime;
+#endif
 	struct lhnetpacket_s *next, *prev;
 }
 lhnetpacket_t;
@@ -481,6 +487,18 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 		for (p = lhnet_packetlist.next;p != &lhnet_packetlist;p = pnext)
 		{
 			pnext = p->next;
+			if (p->timeout < currenttime)
+			{
+				// unlink and free
+				p->next->prev = p->prev;
+				p->prev->next = p->next;
+				Z_Free(p);
+				continue;
+			}
+#ifndef STANDALONETEST
+			if (p->sentdoubletime && Sys_DoubleTime() < p->sentdoubletime)
+				continue;
+#endif
 			if (value == 0 && p->destinationport == lhnetsocket->address.addressdata.loop.port)
 			{
 				if (p->length <= maxcontentlength)
@@ -492,13 +510,6 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 				}
 				else
 					value = -1;
-				// unlink and free
-				p->next->prev = p->prev;
-				p->prev->next = p->next;
-				Z_Free(p);
-			}
-			else if (p->timeout < currenttime)
-			{
 				// unlink and free
 				p->next->prev = p->prev;
 				p->prev->next = p->next;
@@ -576,6 +587,10 @@ int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentleng
 		p->prev = p->next->prev;
 		p->next->prev = p;
 		p->prev->next = p;
+#ifndef STANDALONETEST
+		if (cl_fakelocalping_min.integer || cl_fakelocalping_max.integer)
+			p->sentdoubletime = Sys_DoubleTime() + (cl_fakelocalping_min.integer + ((cl_fakelocalping_max.integer - cl_fakelocalping_min.integer) * (rand() & 255) / 256)) / 1000.0;
+#endif
 		value = contentlength;
 	}
 	else if (lhnetsocket->address.addresstype == LHNETADDRESSTYPE_INET4)
