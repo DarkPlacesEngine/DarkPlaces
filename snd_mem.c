@@ -285,8 +285,6 @@ sfxcache_t *S_LoadSound (sfx_t *s, int complain)
 	if (s->sfxcache && (s->sfxcache->speed == shm->speed))
 		return s->sfxcache;
 
-	s->silentlymissing = !complain;
-
 	len = snprintf (namebuffer, sizeof (namebuffer), "sound/%s", s->name);
 	if (len >= sizeof (namebuffer))
 		return NULL;
@@ -307,6 +305,7 @@ sfxcache_t *S_LoadSound (sfx_t *s, int complain)
 		return sc;
 
 	// Can't load the sound!
+	s->silentlymissing = !complain;
 	if (complain)
 	{
 		if (modified_name)

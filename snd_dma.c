@@ -275,7 +275,7 @@ void S_Init(void)
 
 /*
 =========
-S_IsCached
+S_GetCached
 
 =========
 */
@@ -343,7 +343,33 @@ S_TouchSound
 void S_TouchSound (char *name)
 {
 	S_FindName(name);
+	// TODO: set the "used" flag for this sound
 }
+
+
+/*
+==================
+S_ClearUsed
+
+==================
+*/
+void S_ClearUsed (void)
+{
+	// TODO: reset the "used" flag of all precached sounds
+}
+
+
+/*
+==================
+S_PurgeUnused
+
+==================
+*/
+void S_PurgeUnused (void)
+{
+	// TODO: free all precached sounds without the "used" flag
+}
+
 
 /*
 ==================
@@ -985,21 +1011,6 @@ void S_LocalSound (char *sound)
 		return;
 	}
 	S_StartSound (cl.viewentity, -1, sfx, vec3_origin, 1, 1);
-}
-
-
-void S_ClearPrecache (void)
-{
-}
-
-
-void S_BeginPrecaching (void)
-{
-}
-
-
-void S_EndPrecaching (void)
-{
 }
 
 

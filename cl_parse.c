@@ -405,14 +405,16 @@ void CL_ParseServerInfo (void)
 		CL_KeepaliveMessage();
 		Mod_TouchModel(parse_model_precache[i]);
 	}
+	Mod_PurgeUnused();
+
 	// do the same for sounds
+	S_ClearUsed();
 	for (i = 1;i < numsounds;i++)
 	{
 		CL_KeepaliveMessage();
 		S_TouchSound(parse_sound_precache[i]);
 	}
-	// purge anything that was not touched
-	Mod_PurgeUnused();
+	S_PurgeUnused();
 
 	// now we try to load everything that is new
 
@@ -431,13 +433,11 @@ void CL_ParseServerInfo (void)
 	}
 
 	// sounds
-	S_BeginPrecaching ();
 	for (i=1 ; i<numsounds ; i++)
 	{
 		CL_KeepaliveMessage();
 		cl.sound_precache[i] = S_PrecacheSound(parse_sound_precache[i], true);
 	}
-	S_EndPrecaching ();
 
 	// local state
 	ent = &cl_entities[0];
