@@ -182,7 +182,8 @@ void R_DrawCoronas(void)
 			VectorSubtract(rd->origin, vpn, diff);
 			if (TraceLine(r_origin, diff, NULL, NULL, 0, true) == 1)
 			{
-				scale = 1.0f / 65536.0f;//64.0f / (dist * dist + 1024.0f);
+				//scale = 1.0f / 65536.0f;//64.0f / (dist * dist + 1024.0f);
+				scale = 1.0f / 4096.0f;
 				m.cr = rd->light[0] * scale;
 				m.cg = rd->light[1] * scale;
 				m.cb = rd->light[2] * scale;
@@ -195,7 +196,7 @@ void R_DrawCoronas(void)
 				// make it larger in the distance to keep a consistent size
 				//scale = 0.4f * dist;
 				//scale = 128.0f;
-				scale = rd->cullradius;
+				scale = rd->cullradius * 0.25f;
 				tvxyz[0][0] = rd->origin[0] - vright[0] * scale - vup[0] * scale;
 				tvxyz[0][1] = rd->origin[1] - vright[1] * scale - vup[1] * scale;
 				tvxyz[0][2] = rd->origin[2] - vright[2] * scale - vup[2] * scale;
