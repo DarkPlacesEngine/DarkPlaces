@@ -40,6 +40,9 @@ extern cvar_t vid_mode;
 extern cvar_t vid_mouse;
 extern cvar_t vid_fullscreen;
 
+extern cvar_t in_pitch_min;
+extern cvar_t in_pitch_max;
+
 void VID_InitCvars(void);
 
 void GL_Init (void);
