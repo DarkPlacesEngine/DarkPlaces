@@ -1921,7 +1921,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 				{
 					for (dirfile = dir;dirfile;dirfile = dirfile->next)
 					{
-						if (matchpattern(dirfile->text, (char *)pattern + basepathlength, caseinsensitive || pak->ignorecase))
+						if (matchpattern(dirfile->text, (char *)pattern + basepathlength, caseinsensitive))
 						{
 							if (search)
 							{
