@@ -475,8 +475,14 @@ void RSurf_DrawWater(msurface_t *s, texture_t *t, int transform, int alpha)
 	}
 }
 
-void RSurf_CheckLightmap(msurface_t *s)
+void RSurf_DrawWall(msurface_t *s, texture_t *t, int transform)
 {
+	int		i, lit = false, polys = 0, verts = 0;
+	float	*v, *wv;
+	glpoly_t *p;
+	wallpoly_t *wp;
+	wallvert_t *out;
+	// check for lightmap modification
 	if (r_dynamic.value)
 	{
 		if (r_ambient.value != s->cached_ambient || lighthalf != s->cached_lighthalf
@@ -486,13 +492,8 @@ void RSurf_CheckLightmap(msurface_t *s)
 		|| (s->styles[3] != 255 && d_lightstylevalue[s->styles[3]] != s->cached_light[3]))
 			R_UpdateLightmap(s, s->lightmaptexturenum);
 	}
-}
-
-void RSurf_Transform(glpoly_t *p, int transform)
-{
-	int		i;
-	float	*v, *wv = wvert;
-	for (;p;p = p->next)
+	wv = wvert;
+	for (p = s->polys;p;p = p->next)
 	{
 		for (i = 0, v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
 		{
@@ -503,30 +504,27 @@ void RSurf_Transform(glpoly_t *p, int transform)
 			wv[3] = wv[4] = wv[5] = 0.0f;
 			wv += 6;
 		}
+		verts += p->numverts;
+		polys++;
 	}
-}
-
-void RSurf_EmitWallpolys(int lightmap, glpoly_t *p, texture_t *t, int lit)
-{
-	int		i;
-	float	*v, *wv = wvert;
-	wallpoly_t *wp = &wallpoly[currentwallpoly];
-	wallvert_t *out = &wallvert[currentwallvert];
-	for (;p;p = p->next)
+	if ((currentwallpoly + polys > MAX_WALLPOLYS) || (currentwallvert+verts > MAX_WALLVERTS))
+		return;
+	if (s->dlightframe == r_dlightframecount && r_dynamic.value)
+		lit = RSurf_Light(s->dlightbits, s->polys);
+	wv = wvert;
+	wp = &wallpoly[currentwallpoly];
+	out = &wallvert[currentwallvert];
+	currentwallpoly += polys;
+	for (p = s->polys;p;p = p->next)
 	{
-		if (currentwallpoly >= MAX_WALLPOLYS)
-			break;
-		if (currentwallvert+p->numverts > MAX_WALLVERTS)
-			break;
 		v = p->verts[0];
 		wp->texnum = (unsigned short) t->gl_texturenum;
-		wp->lighttexnum = (unsigned short) lightmap;
+		wp->lighttexnum = (unsigned short) (lightmap_textures + s->lightmaptexturenum);
 		wp->glowtexnum = (unsigned short) t->gl_glowtexturenum;
 		wp->firstvert = currentwallvert;
 		wp->numverts = p->numverts;
 		wp->lit = lit;
 		wp++;
-		currentwallpoly++;
 		currentwallvert += p->numverts;
 		for (i = 0;i < p->numverts;i++, v += VERTEXSIZE, wv += 6, out++)
 		{
@@ -558,57 +556,17 @@ void RSurf_EmitWallpolys(int lightmap, glpoly_t *p, texture_t *t, int lit)
 	}
 }
 
-void RSurf_DrawWall(msurface_t *s, texture_t *t, int transform)
-{
-	int			lit = false;
-	// check for lightmap modification
-	RSurf_CheckLightmap(s);
-	RSurf_Transform(s->polys, transform);
-	if (s->dlightframe == r_dlightframecount && r_dynamic.value)
-		lit = RSurf_Light(s->dlightbits, s->polys);
-	RSurf_EmitWallpolys(lightmap_textures + s->lightmaptexturenum, s->polys, t, lit);
-}
-
 // LordHavoc: transparent brush models
 extern int r_dlightframecount;
 extern float modelalpha;
 
-void RSurf_EmitWallVertex(glpoly_t *p, texture_t *t, int modulate, int alpha)
+void RSurf_DrawWallVertex(msurface_t *s, texture_t *t, int transform, int isbmodel)
 {
-	int i;
-	float *v, *wv = wvert;
-	if (modulate)
-	{
-		for (;p;p = p->next)
-		{
-			v = p->verts[0];
-			transpolybegin(t->gl_texturenum, t->gl_glowtexturenum, 0, currententity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
-			for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE, wv += 6)
-				transpolyvert(wv[0], wv[1], wv[2], v[3], v[4], wv[3] * currententity->colormod[0], wv[4] * currententity->colormod[1], wv[5] * currententity->colormod[2], alpha);
-			transpolyend();
-		}
-	}
-	else
-	{
-		for (;p;p = p->next)
-		{
-			v = p->verts[0];
-			transpolybegin(t->gl_texturenum, t->gl_glowtexturenum, 0, currententity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
-			for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE, wv += 6)
-				transpolyvert(wv[0], wv[1], wv[2], v[3], v[4], wv[3], wv[4], wv[5], alpha);
-			transpolyend();
-		}
-	}
-}
-
-void RSurf_WallVertexTransform(msurface_t *s, texture_t *t, int transform)
-{
-	int			i;
-	glpoly_t	*p;
-	float		*wv, *v;
-	int			size3;
-	float		scale;
-	byte		*lm;
+	int i, alpha, size3;
+	float *v, *wv, scale;
+	glpoly_t *p;
+	byte *lm;
+	alpha = (int) (modelalpha * 255.0f);
 	size3 = ((s->extents[0]>>4)+1)*((s->extents[1]>>4)+1)*3; // *3 for colored lighting
 	wv = wvert;
 	for (p = s->polys;p;p = p->next)
@@ -640,14 +598,31 @@ void RSurf_WallVertexTransform(msurface_t *s, texture_t *t, int transform)
 			wv += 6;
 		}
 	}
-}
-
-void RSurf_DrawWallVertex(msurface_t *s, texture_t *t, int transform, int isbmodel)
-{
-	RSurf_WallVertexTransform(s, t, transform);
 	if (s->dlightframe == r_dlightframecount && r_dynamic.value)
 		RSurf_Light(s->dlightbits, s->polys);
-	RSurf_EmitWallVertex(s->polys, t, isbmodel && (currententity->colormod[0] != 1 || currententity->colormod[1] != 1 || currententity->colormod[2] != 1), (int) (modelalpha * 255.0f));
+	wv = wvert;
+	if (isbmodel && (currententity->colormod[0] != 1 || currententity->colormod[1] != 1 || currententity->colormod[2] != 1))
+	{
+		for (p = s->polys;p;p = p->next)
+		{
+			v = p->verts[0];
+			transpolybegin(t->gl_texturenum, t->gl_glowtexturenum, 0, currententity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
+			for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE, wv += 6)
+				transpolyvert(wv[0], wv[1], wv[2], v[3], v[4], wv[3] * currententity->colormod[0], wv[4] * currententity->colormod[1], wv[5] * currententity->colormod[2], alpha);
+			transpolyend();
+		}
+	}
+	else
+	{
+		for (p = s->polys;p;p = p->next)
+		{
+			v = p->verts[0];
+			transpolybegin(t->gl_texturenum, t->gl_glowtexturenum, 0, currententity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
+			for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE, wv += 6)
+				transpolyvert(wv[0], wv[1], wv[2], v[3], v[4], wv[3], wv[4], wv[5], alpha);
+			transpolyend();
+		}
+	}
 }
 
 /*
