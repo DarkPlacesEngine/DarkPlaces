@@ -518,7 +518,7 @@ void VID_CheckVertexArrays (void)
 	gl_arrays = true;
 }
 
-void VID_CheckMultiTexture(void) 
+void VID_CheckMultitexture(void) 
 {
 	void *prjobj;
 	qglMTexCoord2f = NULL;

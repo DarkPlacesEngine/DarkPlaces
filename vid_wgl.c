@@ -416,7 +416,7 @@ void VID_CheckVertexArrays (void)
 
 int		texture_extension_number = 1;
 
-void VID_CheckMultiTexture(void) 
+void VID_CheckMultitexture(void) 
 {
 	qglMTexCoord2f = NULL;
 	qglSelectTexture = NULL;

@@ -52,7 +52,7 @@ extern qboolean gl_arrays;
 
 void GL_Init (void);
 
-void VID_CheckMultiTexture();
+void VID_CheckMultitexture();
 void VID_CheckVertexArrays();
 
 void	VID_Init ();
