@@ -9,7 +9,7 @@
 #include <winsock.h>
 #else
 #include <netdb.h>
-//#include <netinet/in.h>
+#include <netinet/in.h>
 //#include <arpa/inet.h>
 #include <unistd.h>
 #include <sys/socket.h>

@@ -328,7 +328,7 @@ qboolean PK3_OpenLibrary (void)
 #ifdef WIN32
 	dllname = "zlib.dll";
 #else
-	dllname = "libz.so.1";
+	dllname = "libz.so";
 #endif
 
 	// Initializations
