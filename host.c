@@ -947,6 +947,29 @@ void Host_Init (void)
 		MR_Init();
 	}
 
+	// set up the default startmap_sp and startmap_dm aliases, mods can
+	// override these
+	if (gamemode == GAME_NEHAHRA)
+	{
+		Cbuf_InsertText ("alias startmap_sp \"map nehstart\"\n");
+		Cbuf_InsertText ("alias startmap_dm \"map nehstart\"\n");
+	}
+	else if (gamemode == GAME_TRANSFUSION)
+	{
+		Cbuf_InsertText ("alias startmap_sp \"map e1m1\"\n");
+		Cbuf_InsertText ("alias startmap_dm \"map bb1\"\n");
+	}
+	else if (gamemode == GAME_NEXUIZ)
+	{
+		Cbuf_InsertText ("alias startmap_sp \"map nexdm01\"\n");
+		Cbuf_InsertText ("alias startmap_dm \"map nexdm01\"\n");
+	}
+	else
+	{
+		Cbuf_InsertText ("alias startmap_sp \"map start\"\n");
+		Cbuf_InsertText ("alias startmap_dm \"map start\"\n");
+	}
+
 	// stuff it again so the first host frame will execute it again, this time
 	// in its entirety
 	if (gamemode == GAME_TEU)
@@ -955,14 +978,7 @@ void Host_Init (void)
 		Cbuf_InsertText("exec quake.rc\n");
 
 	if (!sv.active && (cls.state == ca_dedicated || COM_CheckParm("-listen")))
-	{
-		if (gamemode == GAME_TRANSFUSION)
-			Cbuf_InsertText ("map bb1\n");
-		else if (gamemode == GAME_NEXUIZ)
-			Cbuf_InsertText ("map nexdm01\n");
-		else
-			Cbuf_InsertText ("map start\n");
-	}
+		Cbuf_InsertText ("startmap_dm\n");
 
 	// check for special benchmark mode
 // COMMANDLINEOPTION: Client: -benchmark <demoname> runs a timedemo and quits, results of any timedemo can be found in gamedir/benchmark.log (for example id1/benchmark.log)

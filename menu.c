@@ -682,12 +682,7 @@ void M_SinglePlayer_Key (int key, char ascii)
 			Cbuf_AddText ("maxplayers 1\n");
 			Cbuf_AddText ("deathmatch 0\n");
 			Cbuf_AddText ("coop 0\n");
-			if (gamemode == GAME_NEHAHRA)
-				Cbuf_AddText ("map nehstart\n");
-			else if (gamemode == GAME_TRANSFUSION)
-				Cbuf_AddText ("map e1m1\n");
-			else
-				Cbuf_AddText ("map start\n");
+			Cbuf_AddText ("startmap_sp\n");
 			break;
 
 		case 1:
