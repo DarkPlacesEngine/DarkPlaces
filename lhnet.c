@@ -457,9 +457,10 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 					if (ioctl(lhnetsocket->inetsocket, FIONBIO, &_true) != -1)
 #endif
 					{
-						if (bind(lhnetsocket->inetsocket, (void *)&lhnetsocket->address.addressdata, address->addresstype == LHNETADDRESSTYPE_INET6 ? sizeof(lhnetsocket->address.addressdata.inet6) : sizeof(lhnetsocket->address.addressdata.inet4)) != -1)
+						size_t namelen = address->addresstype == LHNETADDRESSTYPE_INET6 ? sizeof(lhnetsocket->address.addressdata.inet6) : sizeof(lhnetsocket->address.addressdata.inet4);
+						if (bind(lhnetsocket->inetsocket, (void *)&lhnetsocket->address.addressdata, namelen) != -1)
 						{
-							getsockname(lhnetsocket->inetsocket, (void *)&lhnetsocket->address.addressdata, address->addresstype == LHNETADDRESSTYPE_INET6 ? sizeof(lhnetsocket->address.addressdata.inet6) : sizeof(lhnetsocket->address.addressdata.inet4));
+							getsockname(lhnetsocket->inetsocket, (void *)&lhnetsocket->address.addressdata, &namelen);
 							lhnetsocket->next = &lhnet_socketlist;
 							lhnetsocket->prev = lhnetsocket->next->prev;
 							lhnetsocket->next->prev = lhnetsocket;
