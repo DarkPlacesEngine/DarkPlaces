@@ -27,6 +27,7 @@
 -d darkplaces: prevent player name changes faster than once every 5 seconds (sublim3)
 -d darkplaces: r_skyscroll1 and r_skyscroll2 cvars (SeienAbunae)
 -d darkplaces: write a readme (Antti)
+-d dpmaster: rename 'interface' variable so it compiles in MSVC, interface is a compiler keyword (Vic)
 -d dpmod: make grapple off-hand (joe hill)
 -f darkplaces: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
 -f darkplaces: model interpolation off crashes?  (SeienAbunae)
@@ -162,7 +163,6 @@
 0 darkplaces: test zlib support with entirely pk3'd id1 data (should crash because of zlib not being setup early enough - fix this) (Mabus)
 0 darkplaces: the new sound engine should have a cvar for random variations of pitch on sounds like in doom (RenegadeC)
 0 dpmaster: add a commandline option to dpmaster that remaps a server ip to another ip, so LordHavoc can make his server show up on his dpmaster
-0 dpmaster: rename 'interface' variable so it compiles in MSVC, interface is a compiler keyword (Vic)
 0 dpmod: add a "monsterwander" cvar and default it off, this would enable the spawnwanderpath code (Zombie13)
 0 dpmod: add back nails in walls, even if only in singleplayer (Zenex)
 0 dpmod: add combo kill detection; rapid burst of kills (SeienAbunae)
