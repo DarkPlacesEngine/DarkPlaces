@@ -156,3 +156,9 @@ void softwaretransformforentity (entity_t *e)
 	angles[2] = e->render.angles[2];
 	softwaretransformset(e->render.origin, angles, e->render.scale);
 }
+
+// brush entities are not backwards like models and sprites are
+void softwaretransformforbrushentity (entity_t *e)
+{
+	softwaretransformset(e->render.origin, e->render.angles, e->render.scale);
+}

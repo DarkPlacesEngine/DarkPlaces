@@ -60,7 +60,7 @@ float m_bytenormals[NUMVERTEXNORMALS][3] =
 {1.000000, 0.000000, 0.000000}, {0.951056, 0.162460, 0.262866}, 
 {0.850651, -0.525731, 0.000000}, {0.955423, -0.295242, 0.000000}, 
 {0.864188, -0.442863, 0.238856}, {0.951056, -0.162460, 0.262866}, 
-{0.809017, -0.309017, 0.500000}, {0.681718, -0.147621, 0.716567}, 
+{0.809017, -0.309017, 0.500000}, {0.681718, -0.147621, 0.716567},
 {0.850651, 0.000000, 0.525731}, {0.864188, 0.442863, -0.238856}, 
 {0.809017, 0.309017, -0.500000}, {0.951056, 0.162460, -0.262866}, 
 {0.525731, 0.000000, -0.850651}, {0.681718, 0.147621, -0.716567}, 
@@ -91,7 +91,7 @@ float m_bytenormals[NUMVERTEXNORMALS][3] =
 {-0.500000, -0.809017, -0.309017}, {-0.262866, -0.951056, -0.162460}, 
 {-0.850651, -0.525731, 0.000000}, {-0.716567, -0.681718, -0.147621}, 
 {-0.716567, -0.681718, 0.147621}, {-0.525731, -0.850651, 0.000000}, 
-{-0.500000, -0.809017, 0.309017}, {-0.238856, -0.864188, 0.442863}, 
+{-0.500000, -0.809017, 0.309017}, {-0.238856, -0.864188, 0.442863},
 {-0.262866, -0.951056, 0.162460}, {-0.864188, -0.442863, 0.238856}, 
 {-0.809017, -0.309017, 0.500000}, {-0.688191, -0.587785, 0.425325}, 
 {-0.681718, -0.147621, 0.716567}, {-0.442863, -0.238856, 0.864188}, 
@@ -140,6 +140,32 @@ void ByteToNormal(byte num, vec3_t n)
 		VectorCopy(m_bytenormals[num], n)
 	else
 		VectorClear(n) // FIXME: complain?
+}
+
+float Q_RSqrt(float number)
+{
+	float y;
+
+	if (number == 0.0f)
+		return 0.0f;
+
+	*((long *)&y) = 0x5f3759df - ((* (long *) &number) >> 1);
+	return y * (1.5f - (number * 0.5f * y * y));
+}
+
+void _VectorNormalizeFast(vec3_t v)
+{
+	float y, number;
+
+	number = DotProduct(v, v);
+
+	if (number != 0.0)
+	{
+		*((long *)&y) = 0x5f3759df - ((* (long *) &number) >> 1);
+		y = y * (1.5f - (number * 0.5f * y * y));
+
+		VectorScale(v, y, v);
+	}
 }
 
 #if 0
@@ -538,6 +564,19 @@ void BoxOnPlaneSideClassify(mplane_t *p)
 	}
 }
 
+void PlaneClassify(mplane_t *p)
+{
+	if (p->normal[0] == 1)
+		p->type = 0;
+	else if (p->normal[1] == 1)
+		p->type = 1;
+	else if (p->normal[2] == 1)
+		p->type = 2;
+	else
+		p->type = 3;
+	BoxOnPlaneSideClassify(p);
+}
+
 void AngleVectors (vec3_t angles, vec3_t forward, vec3_t right, vec3_t up)
 {
 	float		angle;
@@ -641,7 +680,7 @@ vec_t Length(vec3_t v)
 {
 	int		i;
 	float	length;
-	
+
 	length = 0;
 	for (i=0 ; i< 3 ; i++)
 		length += v[i]*v[i];
@@ -691,14 +730,14 @@ float VectorNormalizeLength2 (vec3_t v, vec3_t dest) // LordHavoc: added to allo
 
 }
 
-void VectorInverse (vec3_t v)
+void _VectorInverse (vec3_t v)
 {
 	v[0] = -v[0];
 	v[1] = -v[1];
 	v[2] = -v[2];
 }
 
-void VectorScale (vec3_t in, vec_t scale, vec3_t out)
+void _VectorScale (vec3_t in, vec_t scale, vec3_t out)
 {
 	out[0] = in[0]*scale;
 	out[1] = in[1]*scale;

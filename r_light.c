@@ -234,9 +234,9 @@ void R_NoVisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitind
 	R_OldMarkLights(lightorigin, light, bit, bitindex, model->nodes + model->hulls[0].firstclipnode);
 }
 
-int lightframe = 0;
 void R_VisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex, model_t *model)
 {
+	static int lightframe = 0;
 	mleaf_t *pvsleaf = Mod_PointInLeaf (lightorigin, model);
 
 	if (!r_dynamic.value)
@@ -258,7 +258,7 @@ void R_VisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex
 
 		lightframe++;
 
-		radius = light->radius * 2;
+		radius = light->radius * 3;
 
 		// clamp radius to avoid exceeding 32768 entry division table
 		if (radius > 2048)
@@ -284,10 +284,10 @@ void R_VisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex
 					if (c & (1<<i))
 					{
 						leaf = &model->leafs[(k << 3)+i+1];
-						if (leaf->visframe != r_framecount)
-							continue;
-						if (leaf->contents == CONTENTS_SOLID)
-							continue;
+//						if (leaf->visframe != r_framecount)
+//							continue;
+//						if (leaf->contents == CONTENTS_SOLID)
+//							continue;
 						// if out of the light radius, skip
 						if (leaf->mins[0] > high[0] || leaf->maxs[0] < low[0]
 						 || leaf->mins[1] > high[1] || leaf->maxs[1] < low[1]
@@ -305,14 +305,17 @@ void R_VisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex
 							do
 							{
 								surf = *mark++;
-								if (surf->visframe != r_framecount || surf->lightframe == lightframe)
+								// if not visible in current frame, or already marked because it was in another leaf we passed, skip
+								if (surf->lightframe == lightframe)
 									continue;
 								surf->lightframe = lightframe;
+								if (surf->visframe != r_framecount)
+									continue;
 								dist = PlaneDiff(lightorigin, surf->plane);
 								if (surf->flags & SURF_PLANEBACK)
 									dist = -dist;
 								// LordHavoc: make sure it is infront of the surface and not too far away
-								if ((dist >= -0.25f || (surf->flags & SURF_LIGHTBOTHSIDES)) && dist < radius)
+								if (dist < radius && (dist > -0.25f || ((surf->flags & SURF_LIGHTBOTHSIDES) && dist > -radius)))
 								{
 									int d;
 									float dist2, impact[3];
@@ -405,6 +408,8 @@ void R_PushDlights (void)
 //		R_MarkLights (l->origin, l, 1<<(i&31), i >> 5, cl.worldmodel->nodes );
 		R_VisMarkLights (l->origin, l, 1<<(i&31), i >> 5, cl.worldmodel);
 	}
+
+
 }
 
 
@@ -644,6 +649,34 @@ loc0:
 						r11 += lightmap[line3+3] * scale;g11 += lightmap[line3+4] * scale;b11 += lightmap[line3+5] * scale;
 						lightmap += size3;
 					}
+
+					/*
+					// LordHavoc: here's the readable version of the interpolation
+					// code, not quite as easy for the compiler to optimize...
+
+					// dsfrac is the X position in the lightmap pixel, * 16
+					// dtfrac is the Y position in the lightmap pixel, * 16
+					// r00 is top left corner, r01 is top right corner
+					// r10 is bottom left corner, r11 is bottom right corner
+					// g and b are the same layout.
+					// r0 and r1 are the top and bottom intermediate results
+
+					// first we interpolate the top two points, to get the top
+					// edge sample
+					r0 = (((r01-r00) * dsfrac) >> 4) + r00;
+					g0 = (((g01-g00) * dsfrac) >> 4) + g00;
+					b0 = (((b01-b00) * dsfrac) >> 4) + b00;
+					// then we interpolate the bottom two points, to get the
+					// bottom edge sample
+					r1 = (((r11-r10) * dsfrac) >> 4) + r10;
+					g1 = (((g11-g10) * dsfrac) >> 4) + g10;
+					b1 = (((b11-b10) * dsfrac) >> 4) + b10;
+					// then we interpolate the top and bottom samples to get the
+					// middle sample (the one which was requested)
+					r = (((r1-r0) * dtfrac) >> 4) + r0;
+					g = (((g1-g0) * dtfrac) >> 4) + g0;
+					b = (((b1-b0) * dtfrac) >> 4) + b0;
+					*/
 
 					color[0] += (float) ((((((((r11-r10) * dsfrac) >> 4) + r10)-((((r01-r00) * dsfrac) >> 4) + r00)) * dtfrac) >> 4) + ((((r01-r00) * dsfrac) >> 4) + r00)) * (1.0f / 256.0f);
 					color[1] += (float) ((((((((g11-g10) * dsfrac) >> 4) + g10)-((((g01-g00) * dsfrac) >> 4) + g00)) * dtfrac) >> 4) + ((((g01-g00) * dsfrac) >> 4) + g00)) * (1.0f / 256.0f);

@@ -21,8 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-entity_t	r_worldentity;
-
 qboolean	r_cache_thrash;		// compatability
 
 vec3_t		modelorg, r_entorigin;
@@ -60,6 +58,7 @@ mleaf_t		*r_viewleaf, *r_oldviewleaf;
 
 unsigned short	d_lightstylevalue[256];	// 8.8 fraction of base light value
 
+float ixtable[4096];
 
 void R_MarkLeaves (void);
 
@@ -88,21 +87,23 @@ cvar_t	gl_fogstart = {"gl_fogstart", "0"};
 cvar_t	gl_fogend = {"gl_fogend","0"};
 cvar_t	glfog = {"glfog", "0"};
 
+/*
 int R_VisibleCullBox (vec3_t mins, vec3_t maxs)
 {
 	int sides;
 	mnode_t *nodestack[8192], *node;
 	int stack = 0;
 
-	if (R_CullBox(mins, maxs))
-		return true;
-
 	node = cl.worldmodel->nodes;
 loc0:
 	if (node->contents < 0)
 	{
 		if (((mleaf_t *)node)->visframe == r_framecount)
+		{
+			if (R_CullBox(mins, maxs))
+				return true;
 			return false;
+		}
 		if (!stack)
 			return true;
 		node = nodestack[--stack];
@@ -131,6 +132,7 @@ loc0:
 	node = node->children[1];
 	goto loc0;
 }
+*/
 
 qboolean lighthalf;
 
@@ -263,7 +265,12 @@ void gl_main_newmap(void)
 
 void GL_Main_Init(void)
 {
+	int a;
 	FOG_registercvars();
+	// LordHavoc: setup 1.0f / N table for quick recipricols of integers
+	ixtable[0] = 0;
+	for (a = 1;a < 4096;a++)
+		ixtable[a] = 1.0f / a;
 	Cvar_RegisterVariable (&r_drawentities);
 	Cvar_RegisterVariable (&r_drawviewmodel);
 	Cvar_RegisterVariable (&r_speeds);
@@ -296,10 +303,12 @@ extern void R_Light_Init(void);
 extern void R_Particles_Init(void);
 extern void R_Explosion_Init(void);
 extern void CL_Effects_Init(void);
+extern void R_Clip_Init(void);
 
 void Render_Init(void)
 {
 	R_Modules_Shutdown();
+	R_Clip_Init();
 	GL_Draw_Init();
 	GL_Main_Init();
 	GL_Models_Init();
@@ -372,9 +381,6 @@ float	modelalpha;
 
 //==================================================================================
 
-void R_DrawBrushModel (entity_t *e);
-void R_DrawSpriteModel (entity_t *e, frameblend_t *blend);
-
 void R_LerpUpdate(entity_t *ent)
 {
 	int frame;
@@ -442,12 +448,49 @@ void R_PrepareEntities (void)
 	}
 }
 
+void R_Entity_Callback(void *data, void *junk)
+{
+	((entity_t *)data)->render.visframe = r_framecount;
+}
+
+void R_AddModelEntities (void)
+{
+	int		i;
+	vec3_t	mins, maxs;
+	frameblend_t blend[4];
+
+	if (!r_drawentities.value)
+		return;
+
+	for (i = 0;i < cl_numvisedicts;i++)
+	{
+		currententity = cl_visedicts[i];
+		if (currententity->render.model->type == mod_brush)
+		{
+			modelalpha = currententity->render.alpha;
+			R_DrawBrushModel (currententity);
+		}
+		else if (currententity->render.model->type == mod_alias)
+		{
+			VectorAdd(currententity->render.origin, currententity->render.model->mins, mins);
+			VectorAdd(currententity->render.origin, currententity->render.model->maxs, maxs);
+			R_Clip_AddBox(mins, maxs, R_Entity_Callback, currententity, NULL);
+		}
+		else if (currententity->render.model->type == mod_sprite)
+		{
+			R_LerpUpdate(currententity);
+			R_LerpAnimation(currententity->render.model, currententity->render.frame1, currententity->render.frame2, currententity->render.frame1start, currententity->render.frame2start, currententity->render.framelerp, blend);
+			R_ClipSprite(currententity, blend);
+		}
+	}
+}
+
 /*
 =============
 R_DrawEntitiesOnList
 =============
 */
-// LordHavoc: split so bmodels are rendered before any other objects
+/*
 void R_DrawEntitiesOnList1 (void)
 {
 	int		i;
@@ -457,6 +500,8 @@ void R_DrawEntitiesOnList1 (void)
 
 	for (i = 0;i < cl_numvisedicts;i++)
 	{
+		if (cl_visedicts[i]->render.visframe != r_framecount)
+			continue;
 		if (cl_visedicts[i]->render.model->type != mod_brush)
 			continue;
 		currententity = cl_visedicts[i];
@@ -465,37 +510,55 @@ void R_DrawEntitiesOnList1 (void)
 		R_DrawBrushModel (currententity);
 	}
 }
+*/
 
-void R_DrawEntitiesOnList2 (void)
+void R_DrawModels (void)
 {
 	int		i;
 	frameblend_t blend[4];
+//	vec3_t	mins, maxs;
 
 	if (!r_drawentities.value)
 		return;
 
 	for (i = 0;i < cl_numvisedicts;i++)
 	{
+		if (cl_visedicts[i]->render.visframe != r_framecount)
+			continue;
 		currententity = cl_visedicts[i];
+		if (currententity->render.model->type != mod_alias && currententity->render.model->type != mod_sprite)
+			continue;
+
 		modelalpha = currententity->render.alpha;
 
-		switch (currententity->render.model->type)
+		if (currententity->render.model->type == mod_alias)
 		{
-		case mod_alias:
+			// only lerp models here because sprites were already lerped for their clip polygon
 			R_LerpUpdate(currententity);
 			R_LerpAnimation(currententity->render.model, currententity->render.frame1, currententity->render.frame2, currententity->render.frame1start, currententity->render.frame2start, currententity->render.framelerp, blend);
 			R_DrawAliasModel (currententity, true, modelalpha, currententity->render.model, blend, currententity->render.skinnum, currententity->render.origin, currententity->render.angles, currententity->render.scale, currententity->render.effects, currententity->render.model->flags, currententity->render.colormap);
-			break;
-
-		case mod_sprite:
-			R_LerpUpdate(currententity);
+		}
+		else //if (currententity->render.model->type == mod_sprite)
+		{
+			// build blend array
 			R_LerpAnimation(currententity->render.model, currententity->render.frame1, currententity->render.frame2, currententity->render.frame1start, currententity->render.frame2start, currententity->render.framelerp, blend);
 			R_DrawSpriteModel (currententity, blend);
-			break;
+		}
 
-		default:
+		/*
+		VectorAdd(cl_visedicts[i]->render.origin, cl_visedicts[i]->render.model->mins, mins);
+		VectorAdd(cl_visedicts[i]->render.origin, cl_visedicts[i]->render.model->maxs, maxs);
+
+		switch (cl_visedicts[i]->render.model->type)
+		{
+		case mod_alias:
+			R_Clip_AddBox(mins, maxs, R_DrawModelCallback, cl_visedicts[i], NULL);
+			break;
+		case mod_sprite:
+			R_Clip_AddBox(mins, maxs, R_DrawSpriteCallback, cl_visedicts[i], NULL);
 			break;
 		}
+		*/
 	}
 }
 
@@ -534,7 +597,11 @@ void R_SetFrustum (void)
 {
 	int		i;
 
-	if (r_refdef.fov_x == 90) 
+	// LordHavoc: note to all quake engine coders, this code was making the
+	// view frustum taller than it should have been (it assumed the view is
+	// square; it is not square), so I disabled it
+	/*
+	if (r_refdef.fov_x == 90)
 	{
 		// front side is visible
 
@@ -546,6 +613,7 @@ void R_SetFrustum (void)
 	}
 	else
 	{
+	*/
 		// rotate VPN right by FOV_X/2 degrees
 		RotatePointAroundVector( frustum[0].normal, vup, vpn, -(90-r_refdef.fov_x / 2 ) );
 		// rotate VPN left by FOV_X/2 degrees
@@ -554,14 +622,14 @@ void R_SetFrustum (void)
 		RotatePointAroundVector( frustum[2].normal, vright, vpn, 90-r_refdef.fov_y / 2 );
 		// rotate VPN down by FOV_X/2 degrees
 		RotatePointAroundVector( frustum[3].normal, vright, vpn, -( 90 - r_refdef.fov_y / 2 ) );
-	}
+	//}
 
 	for (i=0 ; i<4 ; i++)
 	{
 		frustum[i].type = PLANE_ANYZ;
 		frustum[i].dist = DotProduct (r_origin, frustum[i].normal);
 //		frustum[i].signbits = SignbitsForPlane (&frustum[i]);
-		BoxOnPlaneSideClassify(&frustum[i]);
+		PlaneClassify(&frustum[i]);
 	}
 }
 
@@ -783,16 +851,6 @@ void GL_BlendView(void)
 	glEnable(GL_TEXTURE_2D);
 }
 
-#define TIMEREPORT(VAR) \
-	if (r_speeds2.value)\
-	{\
-		temptime = currtime;\
-		currtime = Sys_DoubleTime();\
-		VAR = (int) ((currtime - temptime) * 1000000.0);\
-	}\
-	else\
-		VAR = 0;
-
 /*
 ================
 R_RenderView
@@ -802,33 +860,88 @@ r_refdef must be set before the first call
 */
 extern void R_Sky(void);
 extern void UploadLightmaps(void);
-char r_speeds2_string1[81], r_speeds2_string2[81], r_speeds2_string3[81], r_speeds2_string4[81], r_speeds2_string5[81], r_speeds2_string6[81], r_speeds2_string7[81];
+extern void R_DrawSurfaces(void);
+extern void R_DrawPortals(void);
+char r_speeds2_string[1024];
+int speedstringcount;
+
+void timestring(int t, char *desc)
+{
+	char tempbuf[256];
+	int length;
+	if (t < 1000000)
+		sprintf(tempbuf, " %6ius %s", t, desc);
+	else
+		sprintf(tempbuf, " %6ims %s", t / 1000, desc);
+	length = strlen(tempbuf);
+//	while (length < 20)
+//		tempbuf[length++] = ' ';
+//	tempbuf[length] = 0;
+	if (speedstringcount + length > 80)
+	{
+		strcat(r_speeds2_string, "\n");
+		speedstringcount = 0;
+	}
+	// skip the space at the beginning if it's the first on the line
+	if (speedstringcount == 0)
+	{
+		strcat(r_speeds2_string, tempbuf + 1);
+		speedstringcount = length - 1;
+	}
+	else
+	{
+		strcat(r_speeds2_string, tempbuf);
+		speedstringcount += length;
+	}
+}
+
+#define TIMEREPORT(NAME) \
+	if (r_speeds2.value)\
+	{\
+		temptime = currtime;\
+		currtime = Sys_DoubleTime();\
+		timestring((int) ((currtime - temptime) * 1000000.0), NAME);\
+	}
+
 void R_RenderView (void)
 {
 	double starttime, currtime, temptime;
-	int time_clear, time_setup, time_world, time_bmodels, time_upload, time_sky, time_wall, time_models, time_moveparticles, time_drawparticles, time_moveexplosions, time_drawexplosions, time_drawdecals, time_transpoly, time_blend, time_total;
 //	if (r_norefresh.value)
 //		return;
 
-	if (!r_worldentity.render.model || !cl.worldmodel)
+	if (!cl.worldmodel)
 		Host_Error ("R_RenderView: NULL worldmodel");
+
+	if (r_speeds2.value)
+	{
+		starttime = currtime = Sys_DoubleTime();
+
+		speedstringcount = 0;
+		sprintf(r_speeds2_string, "org:'%c%6.2f %c%6.2f %c%6.2f' ang:'%c%3.0f %c%3.0f %c%3.0f' dir:'%c%2.3f %c%2.3f %c%2.3f'\n%6i walls %6i dlitwalls %7i modeltris %7i transpoly\nBSP: %6i faces %6i nodes %6i leafs\n%4i models %4i bmodels %4i sprites %5i particles %3i dlights\n",
+			r_origin[0] < 0 ? '-' : ' ', fabs(r_origin[0]), r_origin[1] < 0 ? '-' : ' ', fabs(r_origin[1]), r_origin[2] < 0 ? '-' : ' ', fabs(r_origin[2]), r_refdef.viewangles[0] < 0 ? '-' : ' ', fabs(r_refdef.viewangles[0]), r_refdef.viewangles[1] < 0 ? '-' : ' ', fabs(r_refdef.viewangles[1]), r_refdef.viewangles[2] < 0 ? '-' : ' ', fabs(r_refdef.viewangles[2]), vpn[0] < 0 ? '-' : ' ', fabs(vpn[0]), vpn[1] < 0 ? '-' : ' ', fabs(vpn[1]), vpn[2] < 0 ? '-' : ' ', fabs(vpn[2]),
+			c_brush_polys, c_light_polys, c_alias_polys, currenttranspoly,
+			c_faces, c_nodes, c_leafs,
+			c_models, c_bmodels, c_sprites, c_particles, c_dlights);
+	}
+	else
+		starttime = currtime = 0;
+
+	R_MoveParticles ();
+	R_MoveExplosions();
 
 	lighthalf = gl_lightmode.value;
 
 	FOG_framebegin();
 
-	if (r_speeds2.value)
-		starttime = currtime = Sys_DoubleTime();
-	else
-		starttime = currtime = 0;
 	R_Clear();
-	TIMEREPORT(time_clear)
+	TIMEREPORT("clear     ")
 
 	// render normal view
 
 	R_SetupFrame ();
 	R_SetFrustum ();
 	R_SetupGL ();
+	R_Clip_StartFrame();
 
 	R_PrepareEntities();
 
@@ -836,60 +949,62 @@ void R_RenderView (void)
 	wallpolyclear();
 	transpolyclear();
 
-	TIMEREPORT(time_setup)
+	TIMEREPORT("setup     ")
 
 	R_DrawWorld ();
-	TIMEREPORT(time_world)
-	R_DrawEntitiesOnList1 (); // BSP models
-	TIMEREPORT(time_bmodels)
+	TIMEREPORT("world     ")
+
+	R_AddModelEntities();
+	TIMEREPORT("addmodels")
+
+	R_Clip_EndFrame();
+	TIMEREPORT("scanedge  ")
+
+	// now mark the lit surfaces
+	R_PushDlights ();
+	// yes this does add the world surfaces after the brush models
+	R_DrawSurfaces ();
+	R_DrawPortals ();
+	TIMEREPORT("surfaces  ");
 
 	UploadLightmaps();
-	TIMEREPORT(time_upload)
+	TIMEREPORT("uploadlmap")
 
-	skypolyrender(); // fogged sky polys, affects depth
+	// fogged sky polys, affects depth
+	skypolyrender();
 
+	// does not affect depth, draws over the sky polys
 	if (currentskypoly)
-		R_Sky(); // does not affect depth, draws over the sky polys
-	TIMEREPORT(time_sky)
+		R_Sky();
+	TIMEREPORT("skypoly   ")
 
 	wallpolyrender();
-	TIMEREPORT(time_wall)
+	TIMEREPORT("wallpoly  ")
 
 	GL_DrawDecals();
-	TIMEREPORT(time_drawdecals)
+	TIMEREPORT("ddecal    ")
 
+	// don't let sound skip if going slow
 	if (!intimerefresh && !r_speeds2.value)
-		S_ExtraUpdate ();	// don't let sound get messed up if going slow
+		S_ExtraUpdate ();
 
-	R_DrawEntitiesOnList2 (); // other models
-//	R_RenderDlights ();
 	R_DrawViewModel ();
-	TIMEREPORT(time_models)
-	R_MoveParticles ();
-	TIMEREPORT(time_moveparticles)
+	R_DrawModels ();
+	TIMEREPORT("models    ")
+
 	R_DrawParticles ();
-	TIMEREPORT(time_drawparticles)
-	R_MoveExplosions();
-	TIMEREPORT(time_moveexplosions)
+	TIMEREPORT("dparticles")
 	R_DrawExplosions();
-	TIMEREPORT(time_drawexplosions)
+	TIMEREPORT("dexplosion")
 
 	transpolyrender();
-	TIMEREPORT(time_transpoly)
+	TIMEREPORT("transpoly ")
 
 	FOG_frameend();
 
 	GL_BlendView();
-	TIMEREPORT(time_blend)
+	TIMEREPORT("blend     ")
+
 	if (r_speeds2.value)
-	{
-		time_total = (int) ((Sys_DoubleTime() - starttime) * 1000000.0);
-		sprintf(r_speeds2_string1, "%6i walls %6i dlitwalls %7i modeltris %7i transpoly\n", c_brush_polys, c_light_polys, c_alias_polys, currenttranspoly);
-		sprintf(r_speeds2_string2, "BSP: %6i faces %6i nodes %6i leafs\n", c_faces, c_nodes, c_leafs);
-		sprintf(r_speeds2_string3, "%4i models %4i bmodels %4i sprites %5i particles %3i dlights\n", c_models, c_bmodels, c_sprites, c_particles, c_dlights);
-		sprintf(r_speeds2_string4, "%6ius clear  %6ius setup  %6ius world  %6ius bmodel %6ius upload", time_clear, time_setup, time_world, time_bmodels, time_upload);
-		sprintf(r_speeds2_string5, "%6ius sky    %6ius wall   %6ius models %6ius mpart  %6ius dpart ", time_sky, time_wall, time_models, time_moveparticles, time_drawparticles);
-		sprintf(r_speeds2_string6, "%6ius mexplo %6ius dexplo %6ius decals %6ius trans  %6ius blend ", time_moveexplosions, time_drawexplosions, time_drawdecals, time_transpoly, time_blend);
-		sprintf(r_speeds2_string7, "%6ius permdl %6ius total ", time_models / max(c_models, 1), time_total);
-	}
+		timestring((int) ((Sys_DoubleTime() - starttime) * 1000000.0), "total    ");
 }

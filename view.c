@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -742,99 +742,105 @@ void V_CalcRefdef (void)
 	ent = &cl_entities[cl.viewentity];
 // view is the weapon model (only visible from inside body)
 	view = &cl.viewent;
-	
 
-// transform the view offset by the model's matrix to get the offset from model origin for the view
-	if (!chase_active.value) // LordHavoc: get rid of angle problems in chase_active mode
-	{
-		ent->render.angles[YAW] = cl.viewangles[YAW];	// the model should face the view dir
-		ent->render.angles[PITCH] = -cl.viewangles[PITCH];	// the model should face the view dir
-	}
-										
-	
-	bob = V_CalcBob ();
-	
-// refresh position
-	VectorCopy (ent->render.origin, r_refdef.vieworg);
-	r_refdef.vieworg[2] += cl.viewheight + bob;
-
-	// LordHavoc: the protocol has changed...  so this is an obsolete approach
-// never let it sit exactly on a node line, because a water plane can
-// dissapear when viewed with the eye exactly on it.
-// the server protocol only specifies to 1/16 pixel, so add 1/32 in each axis
-//	r_refdef.vieworg[0] += 1.0/32;
-//	r_refdef.vieworg[1] += 1.0/32;
-//	r_refdef.vieworg[2] += 1.0/32;
-
-	if (!intimerefresh)
-		VectorCopy (cl.viewangles, r_refdef.viewangles);
-	V_CalcViewRoll ();
-	V_AddIdle ();
-
-// offsets
-	angles[PITCH] = -ent->render.angles[PITCH];	// because entity pitches are actually backward
-	angles[YAW] = ent->render.angles[YAW];
-	angles[ROLL] = ent->render.angles[ROLL];
-
-	AngleVectors (angles, forward, NULL, NULL);
-
-	V_BoundOffsets ();
-		
-// set up gun position
-	VectorCopy (cl.viewangles, view->render.angles);
-	
-	CalcGunAngle ();
-
-	VectorCopy (ent->render.origin, view->render.origin);
-	view->render.origin[2] += cl.viewheight;
-
-	for (i=0 ; i<3 ; i++)
-	{
-		view->render.origin[i] += forward[i]*bob*0.4;
-//		view->render.origin[i] += right[i]*bob*0.4;
-//		view->render.origin[i] += up[i]*bob*0.8;
-	}
-	view->render.origin[2] += bob;
-
-	view->render.model = cl.model_precache[cl.stats[STAT_WEAPON]];
-	view->render.frame = cl.stats[STAT_WEAPONFRAME];
-	view->render.colormap = -1; // no special coloring
-
-// set up the refresh position
-
-	// LordHavoc: this never looked all that good to begin with...
-	/*
-// smooth out stair step ups
-if (cl.onground && ent->render.origin[2] - oldz > 0)
-{
-	float steptime;
-	
-	steptime = cl.time - cl.oldtime;
-	if (steptime < 0)
-//FIXME		I_Error ("steptime < 0");
-		steptime = 0;
-
-	oldz += steptime * 80;
-	if (oldz > ent->render.origin[2])
-		oldz = ent->render.origin[2];
-	if (ent->render.origin[2] - oldz > 12)
-		oldz = ent->render.origin[2] - 12;
-	r_refdef.vieworg[2] += oldz - ent->render.origin[2];
-	view->render.origin[2] += oldz - ent->render.origin[2];
-}
-else
-	oldz = ent->render.origin[2];
-	*/
-
-// LordHavoc: origin view kick added
-	if (!intimerefresh && v_punch.value)
-	{
-		VectorAdd(r_refdef.viewangles, cl.punchangle, r_refdef.viewangles);
-		VectorAdd(r_refdef.vieworg, cl.punchvector, r_refdef.vieworg);
-	}
 
 	if (chase_active.value)
+	{
+		VectorCopy (ent->render.origin, r_refdef.vieworg);
+		VectorCopy (cl.viewangles, r_refdef.viewangles);
 		Chase_Update ();
+		V_AddIdle ();
+	}
+	else
+	{
+	// transform the view offset by the model's matrix to get the offset from model origin for the view
+	//	if (!chase_active.value) // LordHavoc: get rid of angle problems in chase_active mode
+	//	{
+	//		ent->render.angles[YAW] = cl.viewangles[YAW];	// the model should face the view dir
+	//		ent->render.angles[PITCH] = -cl.viewangles[PITCH];	// the model should face the view dir
+	//	}
+
+		bob = V_CalcBob ();
+
+	// refresh position
+		VectorCopy (ent->render.origin, r_refdef.vieworg);
+		r_refdef.vieworg[2] += cl.viewheight + bob;
+
+		// LordHavoc: the protocol has changed...  so this is an obsolete approach
+	// never let it sit exactly on a node line, because a water plane can
+	// dissapear when viewed with the eye exactly on it.
+	// the server protocol only specifies to 1/16 pixel, so add 1/32 in each axis
+	//	r_refdef.vieworg[0] += 1.0/32;
+	//	r_refdef.vieworg[1] += 1.0/32;
+	//	r_refdef.vieworg[2] += 1.0/32;
+
+		if (!intimerefresh)
+			VectorCopy (cl.viewangles, r_refdef.viewangles);
+		V_CalcViewRoll ();
+		V_AddIdle ();
+
+	// offsets
+		angles[PITCH] = -ent->render.angles[PITCH];	// because entity pitches are actually backward
+		angles[YAW] = ent->render.angles[YAW];
+		angles[ROLL] = ent->render.angles[ROLL];
+
+		AngleVectors (angles, forward, NULL, NULL);
+
+		V_BoundOffsets ();
+
+	// set up gun position
+		VectorCopy (cl.viewangles, view->render.angles);
+
+		CalcGunAngle ();
+
+		VectorCopy (ent->render.origin, view->render.origin);
+		view->render.origin[2] += cl.viewheight;
+
+		for (i=0 ; i<3 ; i++)
+		{
+			view->render.origin[i] += forward[i]*bob*0.4;
+	//		view->render.origin[i] += right[i]*bob*0.4;
+	//		view->render.origin[i] += up[i]*bob*0.8;
+		}
+		view->render.origin[2] += bob;
+
+		view->render.model = cl.model_precache[cl.stats[STAT_WEAPON]];
+		view->render.frame = cl.stats[STAT_WEAPONFRAME];
+		view->render.colormap = -1; // no special coloring
+
+	// set up the refresh position
+
+		// LordHavoc: this never looked all that good to begin with...
+		/*
+	// smooth out stair step ups
+	if (cl.onground && ent->render.origin[2] - oldz > 0)
+	{
+		float steptime;
+
+		steptime = cl.time - cl.oldtime;
+		if (steptime < 0)
+	//FIXME		I_Error ("steptime < 0");
+			steptime = 0;
+
+		oldz += steptime * 80;
+		if (oldz > ent->render.origin[2])
+			oldz = ent->render.origin[2];
+		if (ent->render.origin[2] - oldz > 12)
+			oldz = ent->render.origin[2] - 12;
+		r_refdef.vieworg[2] += oldz - ent->render.origin[2];
+		view->render.origin[2] += oldz - ent->render.origin[2];
+	}
+	else
+		oldz = ent->render.origin[2];
+		*/
+
+	// LordHavoc: origin view kick added
+		if (!intimerefresh && v_punch.value)
+		{
+			VectorAdd(r_refdef.viewangles, cl.punchangle, r_refdef.viewangles);
+			VectorAdd(r_refdef.vieworg, cl.punchvector, r_refdef.vieworg);
+		}
+	}
 }
 
 /*

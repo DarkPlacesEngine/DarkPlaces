@@ -152,7 +152,10 @@ int Sys_FileOpenWrite (char *path)
 
 	f = Qopen(path, "wb");
 	if (!f)
-		Host_Error ("Error opening %s: %s", path,strerror(errno));
+	{
+		Con_Printf("Sys_FileOpenWrite: Error opening %s: %s", path, strerror(errno));
+		return 0;
+	}
 	sys_handles[i] = f;
 	
 	return i;
@@ -338,7 +341,7 @@ double Sys_DoubleTime (void)
 	static double oldtime = 0.0, basetime = 0.0, old = 0.0;
 	double newtime, now;
 
-	now = (double) timeGetTime () - basetime;
+	now = (double) timeGetTime () + basetime;
 
 	if (first)
 	{
@@ -350,7 +353,7 @@ double Sys_DoubleTime (void)
 	if (now < old)
 	{
 		// wrapped
-		basetime -= (65536.0 * 65536.0);
+		basetime += (65536.0 * 65536.0);
 		now += (65536.0 * 65536.0);
 	}
 	old = now;

@@ -19,12 +19,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // vid.h -- video driver defs
 
-#define VID_CBITS	6
-#define VID_GRADES	(1 << VID_CBITS)
-
-// a pixel can be one, two, or four bytes
-typedef byte pixel_t;
-
 typedef struct vrect_s
 {
 	int				x,y,width,height;
@@ -33,12 +27,11 @@ typedef struct vrect_s
 
 typedef struct
 {
-	unsigned		width;		
-	unsigned		height;
-	float			aspect;		// width / height -- < 0 is taller than wide
-	int				recalc_refdef;	// if true, recalc vid-based stuff
-	unsigned		conwidth;
-	unsigned		conheight;
+	int		width;		
+	int		height;
+	int		recalc_refdef;	// if true, recalc vid-based stuff
+	int		conwidth;
+	int		conheight;
 } viddef_t;
 
 extern	viddef_t	vid;				// global video state

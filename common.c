@@ -50,10 +50,6 @@ qboolean		msg_suppress_1 = 0;
 
 void COM_InitFilesystem (void);
 
-// if a packfile directory differs from this, it is assumed to be hacked
-#define PAK0_COUNT              339
-#define PAK0_CRC                32981
-
 char	com_token[1024];
 int		com_argc;
 char	**com_argv;
@@ -62,27 +58,6 @@ char	**com_argv;
 char	com_cmdline[CMDLINE_LENGTH];
 
 qboolean		standard_quake = true, rogue = false, hipnotic = false, nehahra = false;
-
-// this graphic needs to be in the pak file to use registered features
-unsigned short pop[] =
-{
- 0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
-,0x0000,0x0000,0x6600,0x0000,0x0000,0x0000,0x6600,0x0000
-,0x0000,0x0066,0x0000,0x0000,0x0000,0x0000,0x0067,0x0000
-,0x0000,0x6665,0x0000,0x0000,0x0000,0x0000,0x0065,0x6600
-,0x0063,0x6561,0x0000,0x0000,0x0000,0x0000,0x0061,0x6563
-,0x0064,0x6561,0x0000,0x0000,0x0000,0x0000,0x0061,0x6564
-,0x0064,0x6564,0x0000,0x6469,0x6969,0x6400,0x0064,0x6564
-,0x0063,0x6568,0x6200,0x0064,0x6864,0x0000,0x6268,0x6563
-,0x0000,0x6567,0x6963,0x0064,0x6764,0x0063,0x6967,0x6500
-,0x0000,0x6266,0x6769,0x6a68,0x6768,0x6a69,0x6766,0x6200
-,0x0000,0x0062,0x6566,0x6666,0x6666,0x6666,0x6562,0x0000
-,0x0000,0x0000,0x0062,0x6364,0x6664,0x6362,0x0000,0x0000
-,0x0000,0x0000,0x0000,0x0062,0x6662,0x0000,0x0000,0x0000
-,0x0000,0x0000,0x0000,0x0061,0x6661,0x0000,0x0000,0x0000
-,0x0000,0x0000,0x0000,0x0000,0x6500,0x0000,0x0000,0x0000
-,0x0000,0x0000,0x0000,0x0000,0x6400,0x0000,0x0000,0x0000
-};
 
 /*
 
@@ -102,38 +77,11 @@ into the cache directory, then opened there.
 
 FIXME:
 The file "parms.txt" will be read out of the game directory and appended to the current command line arguments to allow different games to initialize startup parms differently.  This could be used to add a "-sspeed 22050" for the high quality sound edition.  Because they are added at the end, they will not override an explicit setting on the original command line.
-	
+
 */
 
 //============================================================================
 
-
-// ClearLink is used for new headnodes
-void ClearLink (link_t *l)
-{
-	l->prev = l->next = l;
-}
-
-void RemoveLink (link_t *l)
-{
-	l->next->prev = l->prev;
-	l->prev->next = l->next;
-}
-
-void InsertLinkBefore (link_t *l, link_t *before)
-{
-	l->next = before;
-	l->prev = before->prev;
-	l->prev->next = l;
-	l->next->prev = l;
-}
-void InsertLinkAfter (link_t *l, link_t *after)
-{
-	l->next = after->next;
-	l->prev = after;
-	l->prev->next = l;
-	l->next->prev = l;
-}
 
 /*
 ============================================================================
@@ -147,7 +95,7 @@ void InsertLinkAfter (link_t *l, link_t *after)
 void Q_memset (void *dest, int fill, int count)
 {
 	int             i;
-	
+
 	if ( (((long)dest | count) & 3) == 0)
 	{
 		count >>= 2;
@@ -266,7 +214,7 @@ int Q_strncmp (char *s1, char *s2, int count)
 int Q_strncasecmp (char *s1, char *s2, int n)
 {
 	int             c1, c2;
-	
+
 	while (1)
 	{
 		c1 = *s1++;
@@ -428,7 +376,7 @@ float Q_atof (char *str)
 		val /= 10;
 		total--;
 	}
-	
+
 	return val*sign;
 }
 */
@@ -441,7 +389,7 @@ float Q_atof (char *str)
 ============================================================================
 */
 
-#ifndef WIN32
+#if !defined(ENDIAN_LITTLE) && !defined(ENDIAN_BIG)
 short   (*BigShort) (short l);
 short   (*LittleShort) (short l);
 int     (*BigLong) (int l);
@@ -698,7 +646,7 @@ int MSG_ReadLong (void)
 		msg_badread = true;
 		return -1;
 	}
-		
+
 	c = net_message.data[msg_readcount]
 	+ (net_message.data[msg_readcount+1]<<8)
 	+ (net_message.data[msg_readcount+2]<<16)
@@ -879,11 +827,20 @@ char *COM_SkipPath (char *pathname)
 COM_StripExtension
 ============
 */
+// LordHavoc: replacement for severely broken COM_StripExtension that was used in original quake.
 void COM_StripExtension (char *in, char *out)
 {
-	while (*in && *in != '.')
+	char *last = NULL;
+	while (*in)
+	{
+		if (*in == '.')
+			last = in;
+		if ((*in == '/') || (*in == '\\') || (*in == ':'))
+			last = NULL;
 		*out++ = *in++;
-	*out = 0;
+	}
+	if (last)
+		*last = 0;
 }
 
 /*
@@ -1079,16 +1036,11 @@ being registered.
 */
 void COM_CheckRegistered (void)
 {
-	QFile           *h;
-	unsigned short  check[128];
-	int                     i;
-
 	Cvar_Set ("cmdline", com_cmdline);
 
-	COM_FOpenFile("gfx/pop.lmp", &h, false, true);
 	static_registered = 0;
 
-	if (!h)
+	if (!Sys_FileTime("gfx/pop.lmp"))
 	{
 		if (com_modified)
 			Con_Printf ("Playing shareware version, with modification.\nwarning: most mods require full quake data.\n");
@@ -1102,13 +1054,6 @@ void COM_CheckRegistered (void)
 //			Sys_Error ("You must have the registered version to use modified games");
 		return;
 	}
-
-	Qread (h, check, sizeof(check));
-	Qclose (h);
-	
-	for (i=0 ; i<128 ; i++)
-		if (pop[i] != (unsigned short)BigShort (check[i]))
-			Sys_Error ("Corrupted data file.");
 	
 //	Cvar_Set ("cmdline", com_cmdline);
 	Cvar_Set ("registered", "1");
@@ -1242,7 +1187,7 @@ COM_Init
 */
 void COM_Init (char *basedir)
 {
-#ifndef WIN32
+#if !defined(ENDIAN_LITTLE) && !defined(ENDIAN_BIG)
 	byte    swaptest[2] = {1,0};
 
 // set the byte swapping variables in a portable manner 
@@ -1403,7 +1348,7 @@ LordHavoc: Previously only used for CopyFile, now also used for COM_WriteFile.
 void    COM_CreatePath (char *path)
 {
 	char    *ofs, save;
-	
+
 	for (ofs = path+1 ; *ofs ; ofs++)
 	{
 		if (*ofs == '/' || *ofs == '\\' || *ofs == ':')
@@ -1598,12 +1543,7 @@ int COM_FindFile (char *filename, QFile **file, qboolean quiet, qboolean zip)
 			
 			findtime = Sys_FileTime (netpath);
 			if (findtime == -1)
-			{
-				sprintf (netpath, "%s/%s",search->filename, gzfilename);
-				findtime = Sys_FileTime (netpath);
-				if (findtime == -1)
-					continue;
-			}
+				continue;
 				
 #if CACHEENABLE
 			// see if the file needs to be updated in the cache
@@ -1754,15 +1694,14 @@ of the list so they override previous pack files.
 */
 pack_t *COM_LoadPackFile (char *packfile)
 {
-	dpackheader_t   header;
-	int                             i;
-	packfile_t              *newfiles;
-	int                             numpackfiles;
-	pack_t                  *pack;
-	int                             packhandle;
+	dpackheader_t	header;
+	int				i;
+	packfile_t		*newfiles;
+	int				numpackfiles;
+	pack_t			*pack;
+	int				packhandle;
 	// LordHavoc: changed from stack array to temporary malloc, allowing huge pack directories
-	dpackfile_t             *info;
-	unsigned short          crc;
+	dpackfile_t		*info;
 
 	if (Sys_FileOpenRead (packfile, &packhandle) == -1)
 	{
@@ -1781,23 +1720,11 @@ pack_t *COM_LoadPackFile (char *packfile)
 	if (numpackfiles > MAX_FILES_IN_PACK)
 		Sys_Error ("%s has %i files", packfile, numpackfiles);
 
-	if (numpackfiles != PAK0_COUNT)
-		com_modified = true;    // not the original file
-
 	newfiles = Hunk_AllocName (numpackfiles * sizeof(packfile_t), "pack file-table");
 
 	info = qmalloc(sizeof(*info)*MAX_FILES_IN_PACK);
 	Sys_FileSeek (packhandle, header.dirofs);
 	Sys_FileRead (packhandle, (void *)info, header.dirlen);
-
-// crc the directory to check for modifications
-	CRC_Init (&crc);
-	// LordHavoc: speedup
-	CRC_ProcessBytes(&crc, (byte *)info, header.dirlen);
-//	for (i=0 ; i<header.dirlen ; i++)
-//		CRC_ProcessByte (&crc, ((byte *)info)[i]);
-	if (crc != PAK0_CRC)
-		com_modified = true;
 
 // parse the directory
 	for (i=0 ; i<numpackfiles ; i++)

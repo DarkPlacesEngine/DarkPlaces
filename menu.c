@@ -1236,7 +1236,7 @@ again:
 //=============================================================================
 /* OPTIONS MENU */
 
-#define	OPTIONS_ITEMS	23
+#define	OPTIONS_ITEMS	(vid_menudrawfn ? 23 : 22)
 
 #define	SLIDER_RANGE	10
 
@@ -1410,7 +1410,9 @@ void M_Options_Draw (void)
 	M_Print(16, y, "             Use Mouse");M_DrawCheckbox(220, y, vid_mouse.value);y += 8;
 	M_Print(16, y, "             Crosshair");M_DrawSlider(220, y, crosshair.value / 5);y += 8;
 	M_Print(16, y, "        Show Framerate");M_DrawCheckbox(220, y, showfps.value);y += 8;
-	M_Print(16, y, "         Video Options");y += 8;
+	if (vid_menudrawfn)
+		M_Print(16, y, "         Video Options");
+	y += 8;
 
 	// cursor
 	M_DrawCharacter(200, 32 + options_cursor*8, 12+((int)(realtime*4)&1));
@@ -1440,7 +1442,8 @@ void M_Options_Key (int k)
 			Cbuf_AddText ("exec default.cfg\n");
 			break;
 		case 22:
-			M_Menu_Video_f ();
+			if (vid_menudrawfn)
+				M_Menu_Video_f ();
 			break;
 		default:
 			M_AdjustSliders (1);

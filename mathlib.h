@@ -62,8 +62,19 @@ extern	int nanmask;
 #define VectorDistance2(a, b) ((a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1]) + (a[2] - b[2]) * (a[2] - b[2]))
 #define VectorDistance(a, b) (sqrt(VectorDistance2(a,b)))
 #define VectorLength(a) sqrt(DotProduct(a, a))
-#define VectorScaleQuick(in, scale, out) {(out)[0] = (in)[0] * (scale);(out)[1] = (in)[1] * (scale);(out)[2] = (in)[2] * (scale);}
+#define VectorScale(in, scale, out) {(out)[0] = (in)[0] * (scale);(out)[1] = (in)[1] * (scale);(out)[2] = (in)[2] * (scale);}
 #define VectorMAQuick(a, scale, b, c) {(c)[0] = (a)[0] + (scale) * (b)[0];(c)[1] = (a)[1] + (scale) * (b)[1];(c)[2] = (a)[2] + (scale) * (b)[2];}
+#define VectorNormalizeFast(_v)\
+{\
+	float _y, _number;\
+	_number = DotProduct(_v, _v);\
+	if (_number != 0.0)\
+	{\
+		*((long *)&_y) = 0x5f3759df - ((* (long *) &_number) >> 1);\
+		_y = _y * (1.5f - (_number * 0.5f * _y * _y));\
+		VectorScale(_v, _y, _v);\
+	}\
+}\
 
 
 void VectorMA (vec3_t veca, float scale, vec3_t vecb, vec3_t vecc);
@@ -77,9 +88,12 @@ int VectorCompare (vec3_t v1, vec3_t v2);
 vec_t Length (vec3_t v);
 float VectorNormalizeLength (vec3_t v);		// returns vector length
 float VectorNormalizeLength2 (vec3_t v, vec3_t dest);		// returns vector length
-void VectorInverse (vec3_t v);
-void VectorScale (vec3_t in, vec_t scale, vec3_t out);
+void _VectorInverse (vec3_t v);
+void _VectorScale (vec3_t in, vec_t scale, vec3_t out);
 int Q_log2(int val);
+void _VectorNormalizeFast (vec3_t v);
+
+float Q_RSqrt(float number);
 
 #define NUMVERTEXNORMALS	162
 extern float m_bytenormals[NUMVERTEXNORMALS][3];
@@ -98,7 +112,7 @@ void AngleVectors (vec3_t angles, vec3_t forward, vec3_t right, vec3_t up);
 // LordHavoc: like AngleVectors, but taking a forward vector instead of angles, useful!
 void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up);
 
-void BoxOnPlaneSideClassify(struct mplane_s *p);
+void PlaneClassify(struct mplane_s *p);
 
 #define BOX_ON_PLANE_SIDE(emins, emaxs, p)	\
 	(((p)->type < 3)?						\
@@ -118,6 +132,8 @@ void BoxOnPlaneSideClassify(struct mplane_s *p);
 
 #define PlaneDist(point,plane)  ((plane)->type < 3 ? (point)[(plane)->type] : DotProduct((point), (plane)->normal))
 #define PlaneDiff(point,plane) (((plane)->type < 3 ? (point)[(plane)->type] : DotProduct((point), (plane)->normal)) - (plane)->dist)
+//#define PlaneDist(point,plane)  (DotProduct((point), (plane)->normal))
+//#define PlaneDiff(point,plane) (DotProduct((point), (plane)->normal) - (plane)->dist)
 
 #define lhrandom(MIN,MAX) ((rand() & 32767) * (((MAX)-(MIN)) * (1.0f / 32767.0f)) + (MIN))
 
@@ -125,3 +141,14 @@ void BoxOnPlaneSideClassify(struct mplane_s *p);
 #define min(A,B) (A < B ? A : B)
 #define max(A,B) (A > B ? A : B)
 #endif
+
+// LordHavoc: minimal plane structure
+typedef struct
+{
+	float	normal[3], dist;
+} tinyplane_t;
+
+typedef struct
+{
+	double	normal[3], dist;
+} tinydoubleplane_t;

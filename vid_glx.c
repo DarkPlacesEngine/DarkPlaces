@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -52,16 +52,15 @@ static GLXContext ctx = NULL;
 viddef_t	vid;				// global video state
 
 static qboolean		mouse_avail = true;
-static qboolean		mouse_active = false;
+static qboolean		mouse_active = false, usingmouse = false;
 // static qboolean		dga_active;
 static float	mouse_x, mouse_y;
 static float	old_mouse_x, old_mouse_y;
 static int p_mouse_x, p_mouse_y;
 
-static cvar_t in_mouse = {"in_mouse", "1", false};
-static cvar_t in_dga = {"in_dga", "1", false};
-static cvar_t in_dga_mouseaccel = {"in_dga_mouseaccel", "1", false};
-static cvar_t m_filter = {"m_filter", "0"};
+cvar_t vid_dga = {"vid_dga", "1", true};
+cvar_t vid_dga_mouseaccel = {"vid_dga_mouseaccel", "1", false};
+cvar_t m_filter = {"m_filter", "0"};
 
 qboolean vidmode_ext = false;
 
@@ -93,7 +92,8 @@ XLateKey(XKeyEvent *ev/*, qboolean modified*/)
 
 	keysym = XLookupKeysym(ev, 0);
 
-	switch(keysym) {
+	switch(keysym)
+	{
 		case XK_KP_Page_Up:	key = KP_PGUP; break;
 		case XK_Page_Up:	key = K_PGUP; break;
 
@@ -176,12 +176,12 @@ XLateKey(XKeyEvent *ev/*, qboolean modified*/)
 		case XK_F35:		key = K_PGDN; break;
 
 		default:
-			if (keysym < 128) {
+			if (keysym < 128)
+			{
 				/* ASCII keys */
 				key = keysym;
-				if (/*!modified && */((key >= 'A') && (key <= 'Z'))) {
+				if (/*!modified && */((key >= 'A') && (key <= 'Z')))
 					key = key + ('a' - 'A');
-				}
 			}
 			break;
 	}
@@ -191,58 +191,58 @@ XLateKey(XKeyEvent *ev/*, qboolean modified*/)
 
 static Cursor CreateNullCursor(Display *display, Window root)
 {
-    Pixmap cursormask; 
-    XGCValues xgc;
-    GC gc;
-    XColor dummycolour;
-    Cursor cursor;
+	Pixmap cursormask;
+	XGCValues xgc;
+	GC gc;
+	XColor dummycolour;
+	Cursor cursor;
 
-    cursormask = XCreatePixmap(display, root, 1, 1, 1/*depth*/);
-    xgc.function = GXclear;
-    gc =  XCreateGC(display, cursormask, GCFunction, &xgc);
-    XFillRectangle(display, cursormask, gc, 0, 0, 1, 1);
-    dummycolour.pixel = 0;
-    dummycolour.red = 0;
-    dummycolour.flags = 04;
-    cursor = XCreatePixmapCursor(display, cursormask, cursormask,
-          &dummycolour,&dummycolour, 0,0);
-    XFreePixmap(display,cursormask);
-    XFreeGC(display,gc);
-    return cursor;
+	cursormask = XCreatePixmap(display, root, 1, 1, 1/*depth*/);
+	xgc.function = GXclear;
+	gc =  XCreateGC(display, cursormask, GCFunction, &xgc);
+	XFillRectangle(display, cursormask, gc, 0, 0, 1, 1);
+	dummycolour.pixel = 0;
+	dummycolour.red = 0;
+	dummycolour.flags = 04;
+	cursor = XCreatePixmapCursor(display, cursormask, cursormask, &dummycolour,&dummycolour, 0,0);
+	XFreePixmap(display,cursormask);
+	XFreeGC(display,gc);
+	return cursor;
 }
 
 static void install_grabs(void)
 {
-        XWindowAttributes attribs_1;
-        XSetWindowAttributes attribs_2;
+	XWindowAttributes attribs_1;
+	XSetWindowAttributes attribs_2;
 
-        XGetWindowAttributes(dpy, win, &attribs_1);
-        attribs_2.event_mask = attribs_1.your_event_mask | KEY_MASK | MOUSE_MASK;
-        XChangeWindowAttributes(dpy, win, CWEventMask, &attribs_2);
+	XGetWindowAttributes(dpy, win, &attribs_1);
+	attribs_2.event_mask = attribs_1.your_event_mask | KEY_MASK | MOUSE_MASK;
+	XChangeWindowAttributes(dpy, win, CWEventMask, &attribs_2);
 
 // inviso cursor
 	XDefineCursor(dpy, win, CreateNullCursor(dpy, win));
 
-	XGrabPointer(dpy, win,  True, 0, GrabModeAsync, GrabModeAsync,
-		     win, None, CurrentTime);
+	XGrabPointer(dpy, win,  True, 0, GrabModeAsync, GrabModeAsync, win, None, CurrentTime);
 
-	if (in_dga.value) {
+	if (vid_dga.value)
+	{
 		int MajorVersion, MinorVersion;
 
-		if (!XF86DGAQueryVersion(dpy, &MajorVersion, &MinorVersion)) { 
+		if (!XF86DGAQueryVersion(dpy, &MajorVersion, &MinorVersion))
+		{
 			// unable to query, probalby not supported
 			Con_Printf( "Failed to detect XF86DGA Mouse\n" );
-			in_dga.value = 0;
-		} else {
-			in_dga.value = 1;
+			vid_dga.value = 0;
+		}
+		else
+		{
+			vid_dga.value = 1;
 			XF86DGADirectVideo(dpy, DefaultScreen(dpy), XF86DGADirectMouse);
 			XWarpPointer(dpy, None, win, 0, 0, 0, 0, 0, 0);
 		}
-	} else {
-		XWarpPointer(dpy, None, win,
-					 0, 0, 0, 0,
-					 vid.width / 2, vid.height / 2);
 	}
+	else
+		XWarpPointer(dpy, None, win, 0, 0, 0, 0, vid.width / 2, vid.height / 2);
 
 	XGrabKeyboard(dpy, win, False, GrabModeAsync, GrabModeAsync, CurrentTime);
 
@@ -257,9 +257,8 @@ static void uninstall_grabs(void)
 	if (!dpy || !win)
 		return;
 
-	if (in_dga.value == 1) {
+	if (vid_dga.value == 1)
 		XF86DGADirectVideo(dpy, DefaultScreen(dpy), 0);
-	}
 
 	XUngrabPointer(dpy, CurrentTime);
 	XUngrabKeyboard(dpy, CurrentTime);
@@ -274,70 +273,108 @@ static void HandleEvents(void)
 {
 	XEvent event;
 //	KeySym ks;
-	int b;
 	qboolean dowarp = false;
 
 	if (!dpy)
 		return;
 
-	while (XPending(dpy)) {
+	while (XPending(dpy))
+	{
 		XNextEvent(dpy, &event);
 
-		switch (event.type) {
+		switch (event.type)
+		{
 		case KeyPress:
 		case KeyRelease:
 			Key_Event(XLateKey(&event.xkey), event.type == KeyPress);
 			break;
 
 		case MotionNotify:
-			if (in_dga.value == 1) {
-				mouse_x += event.xmotion.x_root * in_dga_mouseaccel.value;
-				mouse_y += event.xmotion.y_root * in_dga_mouseaccel.value;
-			} else {
-				if (!p_mouse_x && !p_mouse_y) {
-					Con_Printf("event->xmotion.x: %d\n", event.xmotion.x);
-					Con_Printf("event->xmotion.y: %d\n", event.xmotion.y);
+			if (usingmouse)
+			{
+				if (vid_dga.value == 1)
+				{
+					mouse_x += event.xmotion.x_root * vid_dga_mouseaccel.value;
+					mouse_y += event.xmotion.y_root * vid_dga_mouseaccel.value;
 				}
-				if (vid_fullscreen.value || vid_mouse.value) {
-					if (!event.xmotion.send_event) {
-						mouse_x += (event.xmotion.x - p_mouse_x);
-						mouse_y += (event.xmotion.y - p_mouse_y);
-						if (abs(vid.width/2 - event.xmotion.x) > vid.width / 4
-						|| abs(vid.height/2 - event.xmotion.y) > vid.height / 4) {
-							dowarp = true;
+				else
+				{
+					/*
+					if (!p_mouse_x && !p_mouse_y)
+					{
+						Con_Printf("event->xmotion.x: %d\n", event.xmotion.x);
+						Con_Printf("event->xmotion.y: %d\n", event.xmotion.y);
+					}
+					*/
+					//if (usingmouse)
+					{
+						if (!event.xmotion.send_event)
+						{
+							mouse_x += (event.xmotion.x - p_mouse_x);
+							mouse_y += (event.xmotion.y - p_mouse_y);
+							if (abs(vid.width/2 - event.xmotion.x) > vid.width / 4 || abs(vid.height/2 - event.xmotion.y) > vid.height / 4)
+								dowarp = true;
 						}
 					}
-				} else {
-					mouse_x += (event.xmotion.x - p_mouse_x);
-					mouse_y += (event.xmotion.y - p_mouse_y);
+					/*
+					else
+					{
+						mouse_x += (event.xmotion.x - p_mouse_x);
+						mouse_y += (event.xmotion.y - p_mouse_y);
+					}
+					*/
+					p_mouse_x = event.xmotion.x;
+					p_mouse_y = event.xmotion.y;
 				}
-				p_mouse_x = event.xmotion.x;
-				p_mouse_y = event.xmotion.y;
 			}
 			break;
 
 		case ButtonPress:
-			b=-1;
-			if (event.xbutton.button == 1)
-				b = 0;
-			else if (event.xbutton.button == 2)
-				b = 2;
-			else if (event.xbutton.button == 3)
-				b = 1;
-			if (b>=0)
-				Key_Event(K_MOUSE1 + b, true);
+			switch(event.xbutton.button)
+			{
+			case 1:
+				Key_Event(K_MOUSE1, true);
+				break;
+			case 2:
+				Key_Event(K_MOUSE3, true);
+				break;
+			case 3:
+				Key_Event(K_MOUSE2, true);
+				break;
+			case 4:
+				Key_Event(K_MWHEELUP, true);
+				break;
+			case 5:
+				Key_Event(K_MWHEELDOWN, true);
+				break;
+    		default:
+				Con_Printf("HandleEvents: ButtonPress gave value %d, 1-5 expected\n", event.xbutton.button);
+				break;
+			}
 			break;
 
 		case ButtonRelease:
-			b=-1;
-			if (event.xbutton.button == 1)
-				b = 0;
-			else if (event.xbutton.button == 2)
-				b = 2;
-			else if (event.xbutton.button == 3)
-				b = 1;
-			if (b>=0)
-				Key_Event(K_MOUSE1 + b, false);
+			switch(event.xbutton.button)
+			{
+			case 1:
+				Key_Event(K_MOUSE1, false);
+				break;
+			case 2:
+				Key_Event(K_MOUSE3, false);
+				break;
+			case 3:
+				Key_Event(K_MOUSE2, false);
+				break;
+			case 4:
+				Key_Event(K_MWHEELUP, false);
+				break;
+			case 5:
+				Key_Event(K_MWHEELDOWN, false);
+				break;
+    		default:
+				Con_Printf("HandleEvents: ButtonRelease gave value %d, 1-5 expected\n", event.xbutton.button);
+				break;
+			}
 			break;
 
 		case CreateNotify :
@@ -352,7 +389,8 @@ static void HandleEvents(void)
 		}
 	}
 
-	if (dowarp) {
+	if (dowarp)
+	{
 		/* move the mouse to the window center again */
 		p_mouse_x = vid.width / 2;
 		p_mouse_y = vid.height / 2;
@@ -361,23 +399,25 @@ static void HandleEvents(void)
 
 }
 
-static void IN_DeactivateMouse( void ) 
+static void IN_DeactivateMouse( void )
 {
 	if (!mouse_avail || !dpy || !win)
 		return;
 
-	if (mouse_active) {
+	if (mouse_active)
+	{
 		uninstall_grabs();
 		mouse_active = false;
 	}
 }
 
-static void IN_ActivateMouse( void ) 
+static void IN_ActivateMouse( void )
 {
 	if (!mouse_avail || !dpy || !win)
 		return;
 
-	if (!mouse_active) {
+	if (!mouse_active)
+	{
 		mouse_x = mouse_y = 0; // don't spazz
 		install_grabs();
 		mouse_active = true;
@@ -390,7 +430,8 @@ void VID_Shutdown(void)
 	if (!ctx || !dpy)
 		return;
 
-	if (dpy) {
+	if (dpy)
+	{
 		uninstall_grabs();
 
 		if (vidmode_active)
@@ -430,7 +471,7 @@ void InitSig(void)
 	signal(SIGTERM, signal_handler);
 }
 
-void VID_CheckMultitexture(void) 
+void VID_CheckMultitexture(void)
 {
 	void *prjobj;
 	qglMTexCoord2f = NULL;
@@ -512,10 +553,34 @@ void GL_BeginRendering (int *x, int *y, int *width, int *height)
 
 void GL_EndRendering (void)
 {
+	int usemouse;
 	if (!r_render.value)
 		return;
 	glFlush();
 	glXSwapBuffers(dpy, win);
+
+// handle the mouse state when windowed if that's changed
+	usemouse = false;
+	if (vid_mouse.value && key_dest == key_game)
+		usemouse = true;
+	if (vidmode_active)
+		usemouse = true;
+	if (usemouse)
+	{
+		if (!usingmouse)
+		{
+			usingmouse = true;
+			IN_ActivateMouse ();
+		}
+	}
+	else
+	{
+		if (usingmouse)
+		{
+			usingmouse = false;
+			IN_DeactivateMouse ();
+		}
+	}
 }
 
 int VID_SetGamma(float prescale, float gamma, float scale, float base)
@@ -526,7 +591,8 @@ int VID_SetGamma(float prescale, float gamma, float scale, float base)
 void VID_Init(void)
 {
 	int i;
-	int attrib[] = {
+	int attrib[] =
+	{
 		GLX_RGBA,
 		GLX_RED_SIZE, 1,
 		GLX_GREEN_SIZE, 1,
@@ -545,11 +611,11 @@ void VID_Init(void)
 	int MajorVersion, MinorVersion;
 	int actualWidth, actualHeight;
 
-	Cvar_RegisterVariable (&in_mouse);
-	Cvar_RegisterVariable (&in_dga);
-	Cvar_RegisterVariable (&in_dga_mouseaccel);
+	Cvar_RegisterVariable (&vid_mouse);
+	Cvar_RegisterVariable (&vid_dga);
+	Cvar_RegisterVariable (&vid_dga_mouseaccel);
 	Cvar_RegisterVariable (&m_filter);
-	
+
 // interpret command-line params
 
 // set vid parameters
@@ -580,7 +646,8 @@ void VID_Init(void)
 	if (vid.conheight < 200)
 		vid.conheight = 200;
 
-	if (!(dpy = XOpenDisplay(NULL))) {
+	if (!(dpy = XOpenDisplay(NULL)))
+	{
 		fprintf(stderr, "Error couldn't open the X display\n");
 		exit(1);
 	}
@@ -590,44 +657,50 @@ void VID_Init(void)
 
 	// Get video mode list
 	MajorVersion = MinorVersion = 0;
-	if (!XF86VidModeQueryVersion(dpy, &MajorVersion, &MinorVersion)) { 
+	if (!XF86VidModeQueryVersion(dpy, &MajorVersion, &MinorVersion))
 		vidmode_ext = false;
-	} else {
+	else
+	{
 		Con_Printf("Using XFree86-VidModeExtension Version %d.%d\n", MajorVersion, MinorVersion);
 		vidmode_ext = true;
 	}
 
 	visinfo = glXChooseVisual(dpy, scrnum, attrib);
-	if (!visinfo) {
+	if (!visinfo)
+	{
 		fprintf(stderr, "qkHack: Error couldn't get an RGB, Double-buffered, Depth visual\n");
 		exit(1);
 	}
 
-	if (vidmode_ext) {
+	if (vidmode_ext)
+	{
 		int best_fit, best_dist, dist, x, y;
-		
+
 		XF86VidModeGetAllModeLines(dpy, scrnum, &num_vidmodes, &vidmodes);
 
 		// Are we going fullscreen?  If so, let's change video mode
-		if (fullscreen) {
+		if (fullscreen)
+		{
 			best_dist = 9999999;
 			best_fit = -1;
 
-			for (i = 0; i < num_vidmodes; i++) {
-				if (width > vidmodes[i]->hdisplay ||
-					height > vidmodes[i]->vdisplay)
+			for (i = 0; i < num_vidmodes; i++)
+			{
+				if (width > vidmodes[i]->hdisplay || height > vidmodes[i]->vdisplay)
 					continue;
 
 				x = width - vidmodes[i]->hdisplay;
 				y = height - vidmodes[i]->vdisplay;
 				dist = (x * x) + (y * y);
-				if (dist < best_dist) {
+				if (dist < best_dist)
+				{
 					best_dist = dist;
 					best_fit = i;
 				}
 			}
 
-			if (best_fit != -1) {
+			if (best_fit != -1)
+			{
 				actualWidth = vidmodes[best_fit]->hdisplay;
 				actualHeight = vidmodes[best_fit]->vdisplay;
 
@@ -637,7 +710,8 @@ void VID_Init(void)
 
 				// Move the viewport to top left
 				XF86VidModeSetViewPort(dpy, scrnum, 0, 0);
-			} else
+			}
+			else
 				fullscreen = 0;
 		}
 	}
@@ -647,21 +721,22 @@ void VID_Init(void)
 	attr.border_pixel = 0;
 	attr.colormap = XCreateColormap(dpy, root, visinfo->visual, AllocNone);
 	attr.event_mask = X_MASK;
-	if (vidmode_active) {
-		mask = CWBackPixel | CWColormap | CWSaveUnder | CWBackingStore | 
-			CWEventMask | CWOverrideRedirect;
+	if (vidmode_active)
+	{
+		mask = CWBackPixel | CWColormap | CWSaveUnder | CWBackingStore | CWEventMask | CWOverrideRedirect;
 		attr.override_redirect = True;
 		attr.backing_store = NotUseful;
 		attr.save_under = False;
-	} else
+	}
+	else
 		mask = CWBackPixel | CWBorderPixel | CWColormap | CWEventMask;
 
-	win = XCreateWindow(dpy, root, 0, 0, width, height,
-						0, visinfo->depth, InputOutput,
-						visinfo->visual, mask, &attr);
+	win = XCreateWindow(dpy, root, 0, 0, width, height, 0, visinfo->depth, InputOutput, visinfo->visual, mask, &attr);
+	XStoreName(dpy, win, "DarkPlaces-GLX");
 	XMapWindow(dpy, win);
 
-	if (vidmode_active) {
+	if (vidmode_active)
+	{
 		XMoveWindow(dpy, win, 0, 0);
 		XRaiseWindow(dpy, win);
 		XWarpPointer(dpy, None, win, 0, 0, 0, 0, 0, 0);
@@ -686,17 +761,14 @@ void VID_Init(void)
 	vid.width = vid.conwidth;
 	vid.height = vid.conheight;
 
-	vid.aspect = ((float)vid.height / (float)vid.width) * (320.0 / 240.0);
-
 	InitSig(); // trap evil signals
 
 	GL_Init();
 
 	Con_SafePrintf ("Video mode %dx%d initialized.\n", width, height);
 
-	vid.recalc_refdef = 1;				// force a surface cache flush
-
-	install_grabs();
+	// force a surface cache flush
+	vid.recalc_refdef = 1;
 }
 
 void Sys_SendKeyEvents(void)
@@ -724,13 +796,6 @@ IN_Commands
 */
 void IN_Commands (void)
 {
-	if (!dpy || !win)
-		return;
-
-	if (vidmode_active || key_dest == key_game)
-		IN_ActivateMouse();
-	else
-		IN_DeactivateMouse ();
 }
 
 /*
@@ -743,38 +808,39 @@ void IN_MouseMove (usercmd_t *cmd)
 	if (!mouse_avail)
 		return;
 
-        if (!mouse_avail)
-                return;
+	if (m_filter.value)
+	{
+		mouse_x = (mouse_x + old_mouse_x) * 0.5;
+		mouse_y = (mouse_y + old_mouse_y) * 0.5;
 
-        if (m_filter.value) {
-                mouse_x = (mouse_x + old_mouse_x) * 0.5;
-                mouse_y = (mouse_y + old_mouse_y) * 0.5;
+		old_mouse_x = mouse_x;
+		old_mouse_y = mouse_y;
+	}
 
-                old_mouse_x = mouse_x;
-                old_mouse_y = mouse_y;
-        }
+	mouse_x *= sensitivity.value;
+	mouse_y *= sensitivity.value;
 
-        mouse_x *= sensitivity.value;
-        mouse_y *= sensitivity.value;
-        
-        if (in_strafe.state & 1)
-                cmd->sidemove += m_side.value * mouse_x;
-        else
-                cl.viewangles[YAW] -= m_yaw.value * mouse_x;
-                
-/*        if (freelook)*/
-                V_StopPitchDrift ();
+	if (in_strafe.state & 1)
+		cmd->sidemove += m_side.value * mouse_x;
+	else
+		cl.viewangles[YAW] -= m_yaw.value * mouse_x;
 
-        if (/*freelook && */!(in_strafe.state & 1)) {
-                cl.viewangles[PITCH] += m_pitch.value * mouse_y;
-                cl.viewangles[PITCH] = bound (-70, cl.viewangles[PITCH], 80);
-        } else {
-                if ((in_strafe.state & 1) && noclip_anglehack)
-                        cmd->upmove -= m_forward.value * mouse_y;
-                else
-                        cmd->forwardmove -= m_forward.value * mouse_y;
-        }
-        mouse_x = mouse_y = 0.0;
+	//if (freelook)
+		V_StopPitchDrift ();
+
+	if (/*freelook && */!(in_strafe.state & 1))
+	{
+		cl.viewangles[PITCH] += m_pitch.value * mouse_y;
+		cl.viewangles[PITCH] = bound (-70, cl.viewangles[PITCH], 80);
+	}
+	else
+	{
+		if ((in_strafe.state & 1) && noclip_anglehack)
+			cmd->upmove -= m_forward.value * mouse_y;
+		else
+			cmd->forwardmove -= m_forward.value * mouse_y;
+	}
+	mouse_x = mouse_y = 0.0;
 }
 
 void IN_Move (usercmd_t *cmd)

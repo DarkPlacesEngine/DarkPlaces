@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -23,7 +23,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 int		lightmap_textures;
 
-// LordHavoc: skinny but tall lightmaps for quicker subimage uploads
 #define	BLOCK_WIDTH		256
 #define	BLOCK_HEIGHT	256
 // LordHavoc: increased lightmap limit from 64 to 1024
@@ -48,6 +47,8 @@ cvar_t r_ambient = {"r_ambient", "0"};
 cvar_t gl_vertex = {"gl_vertex", "0"};
 cvar_t r_dlightmap = {"r_dlightmap", "1"};
 cvar_t r_drawportals = {"r_drawportals", "0"};
+cvar_t r_testvis = {"r_testvis", "0"};
+cvar_t r_solidworldnode = {"r_solidworldnode", "1"};
 
 qboolean lightmaprgba, nosubimagefragments, nosubimage;
 int lightmapbytes;
@@ -79,11 +80,13 @@ void GL_Surf_Init(void)
 	Cvar_RegisterVariable(&gl_vertex);
 	Cvar_RegisterVariable(&r_dlightmap);
 	Cvar_RegisterVariable(&r_drawportals);
+	Cvar_RegisterVariable(&r_testvis);
+	Cvar_RegisterVariable(&r_solidworldnode);
 
 	R_RegisterModule("GL_Surf", gl_surf_start, gl_surf_shutdown, gl_surf_newmap);
 }
 
-int         dlightdivtable[32768];
+int dlightdivtable[32768];
 
 /*
 	R_AddDynamicLights
@@ -260,12 +263,12 @@ Combine and scale multiple lightmaps into the 8.8 format in blocklights
 */
 void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 {
-	int			smax, tmax;
-	int			i, j, size, size3;
-	byte		*lightmap;
-	int			scale;
-	int			maps;
-	int			*bl;
+	int		smax, tmax;
+	int		i, j, size, size3;
+	byte	*lightmap;
+	int		scale;
+	int		maps;
+	int		*bl;
 
 	surf->cached_dlight = 0;
 	surf->cached_lighthalf = lighthalf;
@@ -660,7 +663,7 @@ void RSurf_DrawWall(msurface_t *s, texture_t *t, int transform)
 	 || (s->styles[2] != 255 && d_lightstylevalue[s->styles[2]] != s->cached_light[2])
 	 || (s->styles[3] != 255 && d_lightstylevalue[s->styles[3]] != s->cached_light[3]))))
 		R_UpdateLightmap(s, s->lightmaptexturenum);
-	if (r_dlightmap.value || s->dlightframe != r_framecount)
+	if (s->dlightframe != r_framecount || r_dlightmap.value)
 	{
 		// LordHavoc: fast path version for no vertex lighting cases
 		wp = &wallpoly[currentwallpoly];
@@ -674,7 +677,7 @@ void RSurf_DrawWall(msurface_t *s, texture_t *t, int transform)
 			wp->glowtexnum = (unsigned short) R_GetTexture(t->glowtexture);
 			wp->firstvert = currentwallvert;
 			wp->numverts = p->numverts;
-			wp->lit = lit;
+			wp->lit = false;
 			wp++;
 			currentwallpoly++;
 			currentwallvert += p->numverts;
@@ -844,6 +847,67 @@ void RSurf_DrawWallVertex(msurface_t *s, texture_t *t, int transform, int isbmod
 
 void R_NoVisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex, model_t *model);
 
+float bmverts[256*3];
+
+int vertexworld;
+
+/*
+void RBrushModelSurf_DoVisible(msurface_t *surf)
+{
+//	float *v, *bmv, *endbmv;
+//	glpoly_t *p;
+//	for (p = surf->polys;p;p = p->next)
+//	{
+//		for (v = p->verts[0], bmv = bmpoints, endbmv = bmv + p->numverts * 3;bmv < endbmv;v += VERTEXSIZE, bmv += 3)
+//			softwaretransform(v, bmv);
+//		if (R_Clip_Polygon(bmpoints, p->numverts, sizeof(float) * 3, surf->flags & SURF_CLIPSOLID))
+			surf->visframe = r_framecount;
+//	}
+}
+*/
+
+void RBrushModelSurf_Callback(void *data, void *data2)
+{
+	entity_t *ent = data2;
+	msurface_t *surf = data;
+	texture_t *t;
+
+	/*
+	// FIXME: implement better dupe prevention in AddPolygon callback code
+	if (ent->render.model->firstmodelsurface != 0)
+	{
+		// it's not an instanced model, so we already rely on there being only one of it (usually a valid assumption, but QC can break this)
+		if (surf->visframe == r_framecount)
+			return;
+	}
+	*/
+	surf->visframe = r_framecount;
+
+	c_faces++;
+
+	currententity = ent;
+	modelalpha = ent->render.alpha;
+
+	softwaretransformforbrushentity (ent);
+
+	if (surf->flags & (SURF_DRAWSKY | SURF_DRAWTURB))
+	{
+		// sky and liquid don't need sorting (skypoly/transpoly)
+		if (surf->flags & SURF_DRAWSKY)
+			RSurf_DrawSky(surf, true);
+		else
+			RSurf_DrawWater(surf, R_TextureAnimation(surf->texinfo->texture), true, surf->flags & SURF_DRAWNOALPHA ? 255 : wateralpha);
+	}
+	else
+	{
+		t = R_TextureAnimation(surf->texinfo->texture);
+		if (surf->texinfo->texture->transparent || vertexworld || ent->render.alpha != 1 || ent->render.model->firstmodelsurface == 0 || (ent->render.effects & EF_FULLBRIGHT) || ent->render.colormod[0] != 1 || ent->render.colormod[2] != 1 || ent->render.colormod[2] != 1)
+			RSurf_DrawWallVertex(surf, t, true, true);
+		else
+			RSurf_DrawWall(surf, t, true);
+	}
+}
+
 /*
 =================
 R_DrawBrushModel
@@ -851,12 +915,13 @@ R_DrawBrushModel
 */
 void R_DrawBrushModel (entity_t *e)
 {
-	int			i;
+	int			i, j;
 	vec3_t		mins, maxs;
 	msurface_t	*s;
 	model_t		*clmodel;
-	int	rotated, vertexlit = false;
+	int			rotated;
 	vec3_t		org;
+	glpoly_t	*p;
 
 	currententity = e;
 
@@ -878,7 +943,7 @@ void R_DrawBrushModel (entity_t *e)
 		VectorAdd (e->render.origin, clmodel->maxs, maxs);
 	}
 
-	if (R_VisibleCullBox (mins, maxs))
+	if (R_CullBox (mins, maxs))
 		return;
 
 	c_bmodels++;
@@ -896,16 +961,16 @@ void R_DrawBrushModel (entity_t *e)
 		modelorg[2] = DotProduct (temp, up);
 	}
 
+	softwaretransformforbrushentity (e);
+
 	for (i = 0, s = &clmodel->surfaces[clmodel->firstmodelsurface];i < clmodel->nummodelsurfaces;i++, s++)
 	{
+		s->visframe = -1;
 		if (((s->flags & SURF_PLANEBACK) == 0) == (PlaneDiff(modelorg, s->plane) >= 0))
 			s->visframe = r_framecount;
-		else
-			s->visframe = -1;
 	}
 
-// calculate dynamic lighting for bmodel if it's not an
-// instanced model
+// calculate dynamic lighting for bmodel if it's not an instanced model
 	for (i = 0;i < MAX_DLIGHTS;i++)
 	{
 		if (!cl_dlights[i].radius)
@@ -914,11 +979,7 @@ void R_DrawBrushModel (entity_t *e)
 		VectorSubtract(cl_dlights[i].origin, currententity->render.origin, org);
 		R_NoVisMarkLights (org, &cl_dlights[i], 1<<(i&31), i >> 5, clmodel);
 	}
-	vertexlit = modelalpha != 1 || clmodel->firstmodelsurface == 0 || (currententity->render.effects & EF_FULLBRIGHT) || currententity->render.colormod[0] != 1 || currententity->render.colormod[2] != 1 || currententity->render.colormod[2] != 1;
-
-	e->render.angles[0] = -e->render.angles[0];	// stupid quake bug
-	softwaretransformforentity (e);
-	e->render.angles[0] = -e->render.angles[0];	// stupid quake bug
+//	vertexlit = modelalpha != 1 || clmodel->firstmodelsurface == 0 || (currententity->render.effects & EF_FULLBRIGHT) || currententity->render.colormod[0] != 1 || currententity->render.colormod[2] != 1 || currententity->render.colormod[2] != 1;
 
 	// draw texture
 	for (i = 0, s = &clmodel->surfaces[clmodel->firstmodelsurface];i < clmodel->nummodelsurfaces;i++, s++)
@@ -926,6 +987,13 @@ void R_DrawBrushModel (entity_t *e)
 		if (s->visframe == r_framecount)
 		{
 //			R_DrawSurf(s, true, vertexlit || s->texinfo->texture->transparent);
+			for (p = s->polys;p;p = p->next)
+			{
+				for (j = 0;j < p->numverts;j++)
+					softwaretransform(&p->verts[j][0], bmverts + j * 3);
+				R_Clip_AddPolygon(bmverts, p->numverts, 3 * sizeof(float), (s->flags & SURF_CLIPSOLID) != 0 && modelalpha == 1, RBrushModelSurf_Callback, s, e, NULL);
+			}
+			/*
 			if (s->flags & (SURF_DRAWSKY | SURF_DRAWTURB))
 			{
 				// sky and liquid don't need sorting (skypoly/transpoly)
@@ -942,6 +1010,7 @@ void R_DrawBrushModel (entity_t *e)
 				else
 					RSurf_DrawWall(s, t, true);
 			}
+			*/
 		}
 	}
 	UploadLightmaps();
@@ -955,6 +1024,7 @@ void R_DrawBrushModel (entity_t *e)
 =============================================================
 */
 
+/*
 static byte *worldvis;
 
 void R_MarkLeaves (void)
@@ -968,72 +1038,310 @@ void R_MarkLeaves (void)
 
 	worldvis = Mod_LeafPVS (r_viewleaf, cl.worldmodel);
 }
+*/
+
+void RSurf_Callback(void *data, void *junk)
+{
+	((msurface_t *)data)->visframe = r_framecount;
+}
+
+/*
+void RSurf_Callback(void *data, void *junk)
+{
+	msurface_t *surf = data;
+	texture_t *t;
+
+//	if (surf->visframe == r_framecount)
+//		return;
+
+	surf->visframe = r_framecount;
+
+	c_faces++;
+
+	if (surf->flags & (SURF_DRAWSKY | SURF_DRAWTURB))
+	{
+		// sky and liquid don't need sorting (skypoly/transpoly)
+		if (surf->flags & SURF_DRAWSKY)
+			RSurf_DrawSky(surf, false);
+		else
+			RSurf_DrawWater(surf, R_TextureAnimation(surf->texinfo->texture), false, surf->flags & SURF_DRAWNOALPHA ? 255 : wateralpha);
+	}
+	else
+	{
+		t = R_TextureAnimation(surf->texinfo->texture);
+		if (vertexworld)
+			RSurf_DrawWallVertex(surf, t, false, false);
+		else
+			RSurf_DrawWall(surf, t, false);
+	}
+}
+*/
+
+/*
+mleaf_t *r_oldviewleaf;
+int r_markvisframecount = 0;
+
+void R_MarkLeaves (void)
+{
+	static float noviscache;
+	int i, l, k, c;
+	mleaf_t *leaf;
+	msurface_t *surf, **mark, **endmark;
+	model_t *model = cl.worldmodel;
+//	mportal_t *portal;
+	glpoly_t *p;
+	byte	*in;
+	int		row;
+
+	// ignore testvis if the map just changed
+	if (r_testvis.value && model->nodes->markvisframe == r_markvisframecount)
+		return;
+
+	if (r_oldviewleaf == r_viewleaf && noviscache == r_novis.value)
+		return;
+
+	r_oldviewleaf = r_viewleaf;
+	noviscache = r_novis.value;
+
+	if ((in = r_viewleaf->compressed_vis))
+	{
+		row = (model->numleafs+7)>>3;
+
+		if (!r_testvis.value)
+			r_markvisframecount++;
+
+		// LordHavoc: mark the root node as visible, it will terminate all other ascensions
+		model->nodes->markvisframe = r_markvisframecount;
+
+		k = 0;
+		while (k < row)
+		{
+			c = *in++;
+			if (c)
+			{
+				l = model->numleafs - (k << 3);
+				if (l > 8)
+					l = 8;
+				for (i=0 ; i<l ; i++)
+				{
+					if (c & (1<<i))
+					{
+						leaf = &model->leafs[(k << 3)+i+1];
+						node = (mnode_t *)leaf;
+						do
+						{
+							node->markvisframe = r_markvisframecount;
+							node = node->parent;
+						}
+						while (node->markvisframecount != r_markvisframecount);
+					}
+				}
+				k++;
+			}
+			else
+				k += *in++;
+		}
+	}
+	else
+	{
+		// LordHavoc: no vis data, mark everything as visible
+		model->nodes->markvisframe = r_markvisframecount;
+
+		for (i = 1;i < model->numleafs;i++)
+		{
+			node = (mnode_t *)&model->leafs[i];
+			do
+			{
+				node->markvisframe = r_markvisframecount;
+				node = node->parent;
+			}
+			while (node->markvisframecount != r_markvisframecount);
+		}
+	}
+}
+*/
 
 void R_SolidWorldNode (void)
 {
-	int l;
-	mleaf_t *leaf;
-	msurface_t *surf, **mark, **endmark;
-
-	for (l = 0, leaf = cl.worldmodel->leafs;l < cl.worldmodel->numleafs;l++, leaf++)
+	if ((int) r_solidworldnode.value == 2)
 	{
-		if (leaf->nummarksurfaces)
+		mnode_t *nodestack[8192], *node = cl.worldmodel->nodes;
+		int nodestackpos = 0;
+		glpoly_t *p;
+
+loc0:
+		if (node->numsurfaces)
+		{
+			msurface_t *surf = cl.worldmodel->surfaces + node->firstsurface, *surfend = surf + node->numsurfaces;
+			tinyplane_t plane;
+			if (PlaneDiff (r_origin, node->plane) < 0)
+			{
+				for (;surf < surfend;surf++)
+				{
+					if (surf->flags & SURF_PLANEBACK)
+					{
+						VectorNegate(surf->plane->normal, plane.normal);
+						plane.dist = -surf->plane->dist;
+						for (p = surf->polys;p;p = p->next)
+							R_Clip_AddPolygon((float *)p->verts, p->numverts, VERTEXSIZE * sizeof(float), surf->flags & SURF_CLIPSOLID, RSurf_Callback, surf, NULL, &plane);
+					}
+				}
+			}
+			else
+			{
+				for (;surf < surfend;surf++)
+				{
+					if (!(surf->flags & SURF_PLANEBACK))
+						for (p = surf->polys;p;p = p->next)
+							R_Clip_AddPolygon((float *)p->verts, p->numverts, VERTEXSIZE * sizeof(float), surf->flags & SURF_CLIPSOLID, RSurf_Callback, surf, NULL, (tinyplane_t *)surf->plane);
+				}
+			}
+		}
+
+		// recurse down the children
+		if (node->children[0]->contents >= 0)
+		{
+			if (node->children[1]->contents >= 0)
+			{
+				if (nodestackpos < 8192)
+					nodestack[nodestackpos++] = node->children[1];
+				node = node->children[0];
+				goto loc0;
+			}
+			node = node->children[0];
+			goto loc0;
+		}
+		else if (node->children[1]->contents >= 0)
+		{
+			node = node->children[1];
+			goto loc0;
+		}
+		else if (nodestackpos > 0)
+		{
+			node = nodestack[--nodestackpos];
+			goto loc0;
+		}
+	}
+	else if ((int) r_solidworldnode.value == 1)
+	{
+		glpoly_t *p;
+		msurface_t *surf, *endsurf;
+		tinyplane_t plane;
+
+
+		surf = &cl.worldmodel->surfaces[cl.worldmodel->firstmodelsurface];
+		endsurf = surf + cl.worldmodel->nummodelsurfaces;
+		for (;surf < endsurf;surf++)
+		{
+			if (PlaneDiff(r_origin, surf->plane) < 0)
+			{
+				if (surf->flags & SURF_PLANEBACK)
+				{
+					VectorNegate(surf->plane->normal, plane.normal);
+					plane.dist = -surf->plane->dist;
+					for (p = surf->polys;p;p = p->next)
+						R_Clip_AddPolygon((float *)p->verts, p->numverts, VERTEXSIZE * sizeof(float), (surf->flags & SURF_CLIPSOLID) != 0, RSurf_Callback, surf, NULL, &plane);
+				}
+			}
+			else
+			{
+				if (!(surf->flags & SURF_PLANEBACK))
+					for (p = surf->polys;p;p = p->next)
+						R_Clip_AddPolygon((float *)p->verts, p->numverts, VERTEXSIZE * sizeof(float), (surf->flags & SURF_CLIPSOLID) != 0, RSurf_Callback, surf, NULL, (tinyplane_t *)&surf->plane);
+			}
+		}
+	}
+	else
+	{
+		int l;
+		mleaf_t *leaf;
+		msurface_t *surf, **mark, **endmark;
+		glpoly_t *p;
+		tinyplane_t plane;
+
+		for (l = 0, leaf = cl.worldmodel->leafs;l < cl.worldmodel->numleafs;l++, leaf++)
 		{
 			if (R_CullBox(leaf->mins, leaf->maxs))
 				continue;
-
+//			leaf->visframe = r_framecount;
 			c_leafs++;
-
-			leaf->visframe = r_framecount;
-
 			if (leaf->nummarksurfaces)
 			{
-				mark = leaf->firstmarksurface;
-				endmark = mark + leaf->nummarksurfaces;
-				do
+//				if (R_CullBox(leaf->mins, leaf->maxs))
+//					continue;
+
+				if (leaf->nummarksurfaces)
 				{
-					surf = *mark++;
-					// make sure surfaces are only processed once
-					if (surf->worldnodeframe == r_framecount)
-						continue;
-					surf->worldnodeframe = r_framecount;
-					if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
+					mark = leaf->firstmarksurface;
+					endmark = mark + leaf->nummarksurfaces;
+					do
 					{
-						if (surf->flags & SURF_PLANEBACK)
-							surf->visframe = r_framecount;
+						surf = *mark++;
+						// make sure surfaces are only processed once
+						if (surf->worldnodeframe == r_framecount)
+							continue;
+						surf->worldnodeframe = r_framecount;
+						if (PlaneDist(r_origin, surf->plane) < surf->plane->dist)
+						{
+							if (surf->flags & SURF_PLANEBACK)
+							{
+								VectorNegate(surf->plane->normal, plane.normal);
+								plane.dist = -surf->plane->dist;
+								for (p = surf->polys;p;p = p->next)
+									R_Clip_AddPolygon((float *)p->verts, p->numverts, VERTEXSIZE * sizeof(float), (surf->flags & SURF_CLIPSOLID) != 0, RSurf_Callback, surf, NULL, &plane);
+							}
+						}
+						else
+						{
+							if (!(surf->flags & SURF_PLANEBACK))
+								for (p = surf->polys;p;p = p->next)
+									R_Clip_AddPolygon((float *)p->verts, p->numverts, VERTEXSIZE * sizeof(float), (surf->flags & SURF_CLIPSOLID) != 0, RSurf_Callback, surf, NULL, (tinyplane_t *)surf->plane);
+						}
 					}
-					else
-					{
-						if (!(surf->flags & SURF_PLANEBACK))
-							surf->visframe = r_framecount;
-					}
+					while (mark < endmark);
 				}
-				while (mark < endmark);
 			}
 		}
 	}
 }
 
 /*
-// experimental and inferior to the other in recursion depth allowances
-void R_PortalWorldNode (void)
+void RSurf_Callback(void *data, void *junk)
 {
-	int i, j;
-	mportal_t *p;
-	msurface_t *surf, **mark, **endmark;
-	mleaf_t *leaf, *llistbuffer[8192], **l, **llist;
+	((msurface_t *)data)->visframe = r_framecount;
+}
 
-	leaf = r_viewleaf;
-	leaf->worldnodeframe = r_framecount;
-	l = llist = &llistbuffer[0];
-	*llist++ = r_viewleaf;
-	while (l < llist)
+int R_FrustumTestPolygon(float *points, int numpoints, int stride);
+
+void RSurf_DoVisible(msurface_t *surf)
+{
+	glpoly_t *p;
+	for (p = surf->polys;p;p = p->next)
+		if (R_FrustumTestPolygon((float *) p->verts, p->numverts, VERTEXSIZE * sizeof(float)) >= 3)
+//		R_Clip_Polygon((float *) p->verts, p->numverts, VERTEXSIZE * sizeof(float), true, RSurf_Callback, surf, 1);
+//		if (R_Clip_Polygon((float *) p->verts, p->numverts, VERTEXSIZE * sizeof(float), surf->flags & SURF_CLIPSOLID))
+			surf->visframe = r_framecount;
+}
+*/
+
+//mleaf_t *llistbuffer[32768], *l, **llist;
+
+/*
+void RSurfLeaf_Callback(void *data)
+{
+	int portalstackpos = 0;
+	mleaf_t *leaf;
+	mportal_t *p, *portalstack[32768];
+	msurface_t *surf, **mark, **endmark;
+	do
 	{
-		leaf = *l++;
+
+		leaf = data;
+		if (leaf->visframe == r_framecount)
+			return;
+		leaf->visframe = r_framecount;
 
 		c_leafs++;
-
-		leaf->visframe = r_framecount;
 
 		if (leaf->nummarksurfaces)
 		{
@@ -1049,47 +1357,488 @@ void R_PortalWorldNode (void)
 				if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
 				{
 					if (surf->flags & SURF_PLANEBACK)
-						surf->visframe = r_framecount;
+						RSurf_DoVisible(surf);
 				}
 				else
 				{
 					if (!(surf->flags & SURF_PLANEBACK))
-						surf->visframe = r_framecount;
+						RSurf_DoVisible(surf);
 				}
 			}
 			while (mark < endmark);
 		}
 
 		// follow portals into other leafs
-		p = leaf->portals;
-		for (;p;p = p->next)
+		for (p = leaf->portals;p;p = p->next)
 		{
-			leaf = p->past;
-			if (leaf->worldnodeframe != r_framecount)
+			if (p->past->visframe != r_framecount && DotProduct(r_origin, p->plane.normal) < p->plane.dist)
 			{
-				leaf->worldnodeframe = r_framecount;
-				i = (leaf - cl.worldmodel->leafs) - 1;
-				if ((worldvis[i>>3] & (1<<(i&7))) && R_NotCulledBox(leaf->mins, leaf->maxs))
-					*llist++ = leaf;
+	//			R_Clip_Portal((float *) p->points, p->numpoints, sizeof(float) * 3, RSurfLeaf_Callback, p->past, 1);
+				if (R_Clip_Portal((float *) p->points, p->numpoints, sizeof(float) * 3))
+					portalstack[portalstackpos++] = p;
 			}
 		}
 	}
-
-	i = 0;
-	j = 0;
-	p = r_viewleaf->portals;
-	for (;p;p = p->next)
-	{
-		j++;
-		if (p->past->worldnodeframe != r_framecount)
-			i++;
-	}
-	if (i)
-		Con_Printf("%i portals of viewleaf (%i portals) were not checked\n", i, j);
+	while(portalstackpos);
+	RSurfLeaf_Callback(p->past);
+	// upon returning, R_ProcessSpans will notice that the spans have changed and restart the line, this is ok because we're not adding any polygons that aren't already behind the portal
 }
 */
 
+/*
+// experimental and inferior to the other in recursion depth allowances
 void R_PortalWorldNode (void)
+{
+//	int i, j;
+	mportal_t *p;
+	msurface_t *surf, **mark, **endmark;
+	mleaf_t *leaf, *llistbuffer[32768], **l, **llist;
+
+	leaf = r_viewleaf;
+	leaf->visframe = r_framecount;
+	l = llist = &llistbuffer[0];
+	*llist++ = r_viewleaf;
+	while (l < llist)
+	{
+		leaf = *l++;
+
+		c_leafs++;
+
+		if (leaf->nummarksurfaces)
+		{
+			mark = leaf->firstmarksurface;
+			endmark = mark + leaf->nummarksurfaces;
+			do
+			{
+				surf = *mark++;
+				// make sure surfaces are only processed once
+				if (surf->worldnodeframe == r_framecount)
+					continue;
+				surf->worldnodeframe = r_framecount;
+				if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
+				{
+					if (surf->flags & SURF_PLANEBACK)
+						RSurf_DoVisible(surf);
+				}
+				else
+				{
+					if (!(surf->flags & SURF_PLANEBACK))
+						RSurf_DoVisible(surf);
+				}
+			}
+			while (mark < endmark);
+		}
+
+		// follow portals into other leafs
+		for (p = leaf->portals;p;p = p->next)
+		{
+			if (p->past->visframe != r_framecount)
+			{
+				if (R_Clip_Portal((float *) p->points, p->numpoints, sizeof(float) * 3))
+				{
+					p->past->visframe = r_framecount;
+					*llist++ = p->past;
+				}
+			}
+		}
+
+//		for (p = leaf->portals;p;p = p->next)
+//		{
+//			leaf = p->past;
+//			if (leaf->worldnodeframe != r_framecount)
+//			{
+//				leaf->worldnodeframe = r_framecount;
+//				i = (leaf - cl.worldmodel->leafs) - 1;
+//				if ((worldvis[i>>3] & (1<<(i&7))) && R_NotCulledBox(leaf->mins, leaf->maxs))
+//					*llist++ = leaf;
+//			}
+//		}
+	}
+
+//	i = 0;
+//	j = 0;
+//	p = r_viewleaf->portals;
+//	for (;p;p = p->next)
+//	{
+//		j++;
+//		if (p->past->worldnodeframe != r_framecount)
+//			i++;
+//	}
+//	if (i)
+//		Con_Printf("%i portals of viewleaf (%i portals) were not checked\n", i, j);
+}
+*/
+
+/*
+#define MAXRECURSIVEPORTALPLANES 1024
+#define MAXRECURSIVEPORTALS 256
+
+tinyplane_t portalplanes[MAXRECURSIVEPORTALPLANES];
+int portalplanestack[MAXRECURSIVEPORTALS];
+int portalplanecount;
+int ranoutofportalplanes;
+int ranoutofportals;
+int ranoutofleafs;
+int portalcantseeself;
+int portalrecursion;
+
+int R_ClipPolygonToPlane(float *in, float *out, int inpoints, int maxoutpoints, tinyplane_t *p)
+{
+	int i, outpoints, prevside, side;
+	float *prevpoint, prevdist, dist, dot;
+
+	if (inpoints < 3)
+		return inpoints;
+	// begin with the last point, then enter the loop with the first point as current
+	prevpoint = in + 3 * (inpoints - 1);
+	prevdist = DotProduct(prevpoint, p->normal) - p->dist;
+	prevside = prevdist >= 0 ? SIDE_FRONT : SIDE_BACK;
+	i = 0;
+	outpoints = 0;
+	goto begin;
+	for (;i < inpoints;i++)
+	{
+		prevpoint = in;
+		prevdist = dist;
+		prevside = side;
+		in += 3;
+
+begin:
+		dist = DotProduct(in, p->normal) - p->dist;
+		side = dist >= 0 ? SIDE_FRONT : SIDE_BACK;
+
+		if (prevside == SIDE_FRONT)
+		{
+			if (outpoints >= maxoutpoints)
+				return -1;
+			VectorCopy(prevpoint, out);
+			out += 3;
+			outpoints++;
+			if (side == SIDE_FRONT)
+				continue;
+		}
+		else if (side == SIDE_BACK)
+			continue;
+
+		// generate a split point
+		if (outpoints >= maxoutpoints)
+			return -1;
+		dot = prevdist / (prevdist - dist);
+		out[0] = prevpoint[0] + dot * (in[0] - prevpoint[0]);
+		out[1] = prevpoint[1] + dot * (in[1] - prevpoint[1]);
+		out[2] = prevpoint[2] + dot * (in[2] - prevpoint[2]);
+		out += 3;
+		outpoints++;
+	}
+
+	return outpoints;
+}
+
+float portaltemppoints[2][256][3];
+float portaltemppoints2[256][3];
+
+int R_FrustumTestPolygon(float *points, int numpoints, int stride)
+{
+	int i;
+	float *out;
+	if (numpoints < 3)
+		return numpoints;
+	out = &portaltemppoints[0][0][0];
+	for (i = 0;i < numpoints;i++)
+	{
+		VectorCopy(points, portaltemppoints[0][i]);
+		(byte *)points += stride;
+	}
+	numpoints = R_ClipPolygonToPlane(&portaltemppoints[0][0][0], &portaltemppoints[1][0][0], numpoints, 256, (tinyplane_t *)&frustum[0]);
+	if (numpoints < 3)
+		return numpoints;
+	numpoints = R_ClipPolygonToPlane(&portaltemppoints[1][0][0], &portaltemppoints[0][0][0], numpoints, 256, (tinyplane_t *)&frustum[1]);
+	if (numpoints < 3)
+		return numpoints;
+	numpoints = R_ClipPolygonToPlane(&portaltemppoints[0][0][0], &portaltemppoints[1][0][0], numpoints, 256, (tinyplane_t *)&frustum[2]);
+	if (numpoints < 3)
+		return numpoints;
+	return      R_ClipPolygonToPlane(&portaltemppoints[1][0][0], &portaltemppoints[0][0][0], numpoints, 256, (tinyplane_t *)&frustum[3]);
+}
+
+void R_TriangleToPlane(vec3_t point1, vec3_t point2, vec3_t point3, tinyplane_t *p)
+{
+	vec3_t v1, v2;
+	VectorSubtract(point1, point2, v1);
+	VectorSubtract(point3, point2, v2);
+	CrossProduct(v1, v2, p->normal);
+//	VectorNormalize(p->normal);
+	VectorNormalizeFast(p->normal);
+	p->dist = DotProduct(point1, p->normal);
+}
+
+int R_PortalThroughPortalPlanes(tinyplane_t *clipplanes, int clipnumplanes, float *targpoints, int targnumpoints, float *out, int maxpoints)
+{
+	int numpoints, i;
+	if (targnumpoints < 3)
+		return targnumpoints;
+	if (maxpoints < 3)
+		return -1;
+	numpoints = targnumpoints;
+	memcpy(&portaltemppoints[0][0][0], targpoints, numpoints * 3 * sizeof(float));
+	for (i = 0;i < clipnumplanes;i++)
+	{
+		numpoints = R_ClipPolygonToPlane(&portaltemppoints[0][0][0], &portaltemppoints[1][0][0], numpoints, 256, clipplanes + i);
+		if (numpoints < 3)
+			return numpoints;
+		memcpy(&portaltemppoints[0][0][0], &portaltemppoints[1][0][0], numpoints * 3 * sizeof(float));
+	}
+	if (numpoints > maxpoints)
+		return -1;
+	memcpy(out, &portaltemppoints[1][0][0], numpoints * 3 * sizeof(float));
+	return numpoints;
+}
+
+#define MAXRECURSIVEPORTALLEAFS 256
+
+//mleaf_t *leafstack[MAXRECURSIVEPORTALLEAFS];
+//int leafstackpos;
+int r_portalframecount;
+
+void R_RecursivePortalWorldNode (mleaf_t *leaf, int firstclipplane, int numclipplanes)
+{
+	mportal_t *p;
+
+//	if (leafstackpos >= MAXRECURSIVEPORTALLEAFS)
+//	{
+//		ranoutofleafs = true;
+//		return;
+//	}
+
+//	leafstack[leafstackpos++] = leaf;
+
+	if (leaf->visframe != r_framecount)
+	{
+		c_leafs++;
+		leaf->visframe = r_framecount;
+		if (leaf->nummarksurfaces)
+		{
+			msurface_t *surf, **mark, **endmark;
+			mark = leaf->firstmarksurface;
+			endmark = mark + leaf->nummarksurfaces;
+			do
+			{
+				surf = *mark++;
+				// make sure surfaces are only processed once
+				if (surf->worldnodeframe == r_framecount)
+					continue;
+				surf->worldnodeframe = r_framecount;
+				if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
+				{
+					if (surf->flags & SURF_PLANEBACK)
+						RSurf_DoVisible(surf);
+				}
+				else
+				{
+					if (!(surf->flags & SURF_PLANEBACK))
+						RSurf_DoVisible(surf);
+				}
+			}
+			while (mark < endmark);
+		}
+	}
+
+	// follow portals into other leafs
+	for (p = leaf->portals;p;p = p->next)
+	{
+		int newpoints, i, prev;
+		vec3_t center;
+		vec3_t v1, v2;
+		tinyplane_t *newplanes;
+		// only flow through portals facing away from the viewer
+		if (PlaneDiff(r_origin, (&p->plane)) < 0)
+		{
+*/
+			/*
+			for (i = 0;i < leafstackpos;i++)
+				if (leafstack[i] == p->past)
+					break;
+			if (i < leafstackpos)
+			{
+				portalrecursion = true;
+				continue;
+			}
+			*/
+/*
+			newpoints = R_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, (float *) p->points, p->numpoints, &portaltemppoints2[0][0], 256);
+			if (newpoints < 3)
+				continue;
+			else if (firstclipplane + numclipplanes + newpoints > MAXRECURSIVEPORTALPLANES)
+				ranoutofportalplanes = true;
+			else
+			{
+				// go ahead and mark the leaf early, nothing can abort here
+				if (!r_testvis.value)
+					p->visframe = r_portalframecount;
+
+				// find the center by averaging
+				VectorClear(center);
+				for (i = 0;i < newpoints;i++)
+					VectorAdd(center, portaltemppoints2[i], center);
+				// ixtable is a 1.0f / N table
+				VectorScale(center, ixtable[newpoints], center);
+				// calculate the planes, and make sure the polygon can see it's own center
+				newplanes = &portalplanes[firstclipplane + numclipplanes];
+				for (prev = newpoints - 1, i = 0;i < newpoints;prev = i, i++)
+				{
+//					R_TriangleToPlane(r_origin, portaltemppoints2[i], portaltemppoints2[prev], newplanes + i);
+					VectorSubtract(r_origin, portaltemppoints2[i], v1);
+					VectorSubtract(portaltemppoints2[prev], portaltemppoints2[i], v2);
+					CrossProduct(v1, v2, newplanes[i].normal);
+					VectorNormalizeFast(newplanes[i].normal);
+					newplanes[i].dist = DotProduct(r_origin, newplanes[i].normal);
+					if (DotProduct(newplanes[i].normal, center) <= newplanes[i].dist)
+					{
+						// polygon can't see it's own center, discard and use parent portal
+						break;
+					}
+				}
+				if (i == newpoints)
+					R_RecursivePortalWorldNode(p->past, firstclipplane + numclipplanes, newpoints);
+				else
+					R_RecursivePortalWorldNode(p->past, firstclipplane, numclipplanes);
+			}
+		}
+	}
+//	leafstackpos--;
+}
+
+//float viewportalpoints[16*3];
+
+*/
+
+int r_portalframecount = 0;
+
+/*
+void R_Portal_Callback(void *data, void *data2)
+{
+	mleaf_t *leaf = data;
+	if (!r_testvis.value)
+		((mportal_t *)data2)->visframe = r_portalframecount;
+	if (leaf->visframe != r_framecount)
+	{
+		c_leafs++;
+		leaf->visframe = r_framecount;
+	}
+}
+*/
+
+void R_PVSWorldNode()
+{
+	int i/*, l*/, k, c, row, numbits, bit, leafnum, numleafs;
+	mleaf_t *leaf;
+	msurface_t *surf, **mark, **endmark;
+	model_t *model = cl.worldmodel;
+	byte *in;
+//	mportal_t *portal;
+	glpoly_t *p;
+	tinyplane_t plane;
+
+//	c_leafs++;
+//	r_viewleaf->visframe = r_framecount;
+	if (!r_testvis.value)
+		r_portalframecount++;
+
+	numleafs = model->numleafs;
+	numbits = numleafs - 1;
+	k = 0;
+	in = r_viewleaf->compressed_vis;
+	row = (numbits + 7) >> 3;
+	while (k < row)
+	{
+		c = *in++;
+		if (c)
+		{
+			for (i = 0, bit = 1;c;i++, bit <<= 1)
+			{
+				if (c & bit)
+				{
+					leafnum = (k << 3)+i+1;
+					if (leafnum >= numleafs)
+						return;
+					c -= bit;
+					leaf = &model->leafs[leafnum];
+					if (R_NotCulledBox(leaf->mins, leaf->maxs))
+					{
+						//for (portal = leaf->portals;portal;portal = portal->next)
+						//	if (DotProduct(r_origin, portal->plane.normal) > portal->plane.dist)
+						//		R_Clip_AddPolygon((float *)portal->points, portal->numpoints, sizeof(mvertex_t), false, R_Portal_Callback, leaf, portal, portal->plane);
+						//leaf->visframe = r_framecount;
+						c_leafs++;
+						if (leaf->nummarksurfaces)
+						{
+							mark = leaf->firstmarksurface;
+							endmark = mark + leaf->nummarksurfaces;
+							do
+							{
+								surf = *mark++;
+								// make sure surfaces are only processed once
+								if (surf->worldnodeframe == r_framecount)
+									continue;
+								surf->worldnodeframe = r_framecount;
+								if (PlaneDist(r_origin, surf->plane) < surf->plane->dist)
+								{
+									if (surf->flags & SURF_PLANEBACK)
+									{
+										VectorNegate(surf->plane->normal, plane.normal);
+										plane.dist = -surf->plane->dist;
+										for (p = surf->polys;p;p = p->next)
+											R_Clip_AddPolygon((float *)p->verts, p->numverts, VERTEXSIZE * sizeof(float), (surf->flags & SURF_CLIPSOLID) != 0, RSurf_Callback, surf, NULL, &plane);
+									}
+								}
+								else
+								{
+									if (!(surf->flags & SURF_PLANEBACK))
+										for (p = surf->polys;p;p = p->next)
+											R_Clip_AddPolygon((float *)p->verts, p->numverts, VERTEXSIZE * sizeof(float), (surf->flags & SURF_CLIPSOLID) != 0, RSurf_Callback, surf, NULL, (tinyplane_t *)surf->plane);
+								}
+							}
+							while (mark < endmark);
+						}
+					}
+				}
+			}
+			k++;
+		}
+		else
+			k += *in++;
+	}
+}
+
+	/*
+	if (!r_testvis.value)
+		r_portalframecount = r_framecount;
+	portalplanecount = 0;
+//	leafstackpos = 0;
+	ranoutofportalplanes = false;
+	ranoutofportals = false;
+	ranoutofleafs = false;
+	portalcantseeself = 0;
+	portalrecursion = false;
+	memcpy(&portalplanes[0], &frustum[0], sizeof(tinyplane_t));
+	memcpy(&portalplanes[1], &frustum[1], sizeof(tinyplane_t));
+	memcpy(&portalplanes[2], &frustum[2], sizeof(tinyplane_t));
+	memcpy(&portalplanes[3], &frustum[3], sizeof(tinyplane_t));
+	R_RecursivePortalWorldNode(r_viewleaf, 0, 4);
+	if (ranoutofportalplanes)
+		Con_Printf("R_RecursivePortalWorldNode: ran out of %d plane stack when recursing through portals\n", MAXRECURSIVEPORTALPLANES);
+	if (ranoutofportals)
+		Con_Printf("R_RecursivePortalWorldNode: ran out of %d portal stack when recursing through portals\n", MAXRECURSIVEPORTALS);
+	if (ranoutofleafs)
+		Con_Printf("R_RecursivePortalWorldNode: ran out of %d leaf stack when recursing through portals\n", MAXRECURSIVEPORTALLEAFS);
+//	if (portalcantseeself)
+//		Con_Printf("R_RecursivePortalWorldNode: %d portals could not see themself during clipping\n", portalcantseeself);
+	if (portalrecursion)
+		Con_Printf("R_RecursivePortalWorldNode: portal saw into previously encountered leaf??\n");
+	*/
+
+/*
+void R_OldPortalWorldNode (void)
 {
 	int portalstack, i;
 	mportal_t *p, *pstack[8192];
@@ -1170,15 +1919,22 @@ loc1:
 	if (i)
 		Con_Printf("%i portals of viewleaf (%i portals) were not checked\n", i, portalstack);
 }
+*/
+
+entity_t clworldent;
 
 void R_DrawSurfaces (void)
 {
 	msurface_t	*surf, *endsurf;
-	texture_t	*t;
+	texture_t	*t, *currentt;
 	int vertex = gl_vertex.value;
 
+	currententity = &clworldent;
+	modelalpha = 1;
+	softwaretransformidentity();
 	surf = &cl.worldmodel->surfaces[cl.worldmodel->firstmodelsurface];
 	endsurf = surf + cl.worldmodel->nummodelsurfaces;
+	t = currentt = NULL;
 	for (;surf < endsurf;surf++)
 	{
 		if (surf->visframe == r_framecount)
@@ -1190,11 +1946,22 @@ void R_DrawSurfaces (void)
 				if (surf->flags & SURF_DRAWSKY)
 					RSurf_DrawSky(surf, false);
 				else
-					RSurf_DrawWater(surf, R_TextureAnimation(surf->texinfo->texture), false, surf->flags & SURF_DRAWNOALPHA ? 255 : wateralpha);
+				{
+					if (currentt != surf->texinfo->texture)
+					{
+						currentt = surf->texinfo->texture;
+						t = R_TextureAnimation(surf->texinfo->texture);
+					}
+					RSurf_DrawWater(surf, t, false, surf->flags & SURF_DRAWNOALPHA ? 255 : wateralpha);
+				}
 			}
 			else
 			{
-				t = R_TextureAnimation(surf->texinfo->texture);
+				if (currentt != surf->texinfo->texture)
+				{
+					currentt = surf->texinfo->texture;
+					t = R_TextureAnimation(surf->texinfo->texture);
+				}
 				if (vertex)
 					RSurf_DrawWallVertex(surf, t, false, false);
 				else
@@ -1207,12 +1974,13 @@ void R_DrawSurfaces (void)
 void R_DrawPortals(void)
 {
 	int drawportals, i, r, g, b;
-	mleaf_t *leaf, *endleaf;
-	mportal_t *portal;
-	mvertex_t *point, *endpoint;
+//	mleaf_t *leaf, *endleaf;
+	mportal_t *portal, *endportal;
+	mvertex_t *point/*, *endpoint*/;
 	drawportals = (int)r_drawportals.value;
 	if (drawportals < 1)
 		return;
+	/*
 	leaf = cl.worldmodel->leafs;
 	endleaf = leaf + cl.worldmodel->numleafs;
 	for (;leaf < endleaf;leaf++)
@@ -1236,6 +2004,32 @@ void R_DrawPortals(void)
 			}
 		}
 	}
+	*/
+	portal = cl.worldmodel->portals;
+	endportal = portal + cl.worldmodel->numportals;
+	for (;portal < endportal;portal++)
+	{
+		if (portal->visframe == r_portalframecount)
+		{
+			i = portal - cl.worldmodel->portals;
+			r = (i & 0x0007) << 5;
+			g = (i & 0x0038) << 2;
+			b = (i & 0x01C0) >> 1;
+			transpolybegin(0, 0, 0, TPOLYTYPE_ALPHA);
+			point = portal->points;
+			if (PlaneDiff(r_origin, (&portal->plane)) > 0)
+			{
+				for (i = portal->numpoints - 1;i >= 0;i--)
+					transpolyvertub(point[i].position[0], point[i].position[1], point[i].position[2], 0, 0, r, g, b, 32);
+			}
+			else
+			{
+				for (i = 0;i < portal->numpoints;i++)
+					transpolyvertub(point[i].position[0], point[i].position[1], point[i].position[2], 0, 0, r, g, b, 32);
+			}
+			transpolyend();
+		}
+	}
 }
 
 /*
@@ -1245,38 +2039,31 @@ R_DrawWorld
 */
 void R_DrawWorld (void)
 {
-	entity_t	ent;
-
 	wateralpha = bound(0, r_wateralpha.value*255.0f, 255);
+	vertexworld = gl_vertex.value;
 
-	memset (&ent, 0, sizeof(ent));
-	ent.render.model = cl.worldmodel;
-	ent.render.colormod[0] = ent.render.colormod[1] = ent.render.colormod[2] = 1;
-	modelalpha = ent.render.alpha = 1;
-	ent.render.scale = 1;
+	memset (&clworldent, 0, sizeof(clworldent));
+	clworldent.render.model = cl.worldmodel;
+	clworldent.render.colormod[0] = clworldent.render.colormod[1] = clworldent.render.colormod[2] = 1;
+	modelalpha = clworldent.render.alpha = 1;
+	clworldent.render.scale = 1;
 
 	VectorCopy (r_origin, modelorg);
 
-	currententity = &ent;
+	currententity = &clworldent;
 
 	softwaretransformidentity(); // LordHavoc: clear transform
 
 	if (cl.worldmodel)
 	{
-		if (r_viewleaf->contents == CONTENTS_SOLID)
+		if (r_novis.value || r_viewleaf->compressed_vis == NULL)
 			R_SolidWorldNode ();
 		else
 		{
-			R_MarkLeaves ();
-			R_PortalWorldNode ();
+//			R_MarkLeaves ();
+			R_PVSWorldNode ();
 		}
 	}
-
-	R_PushDlights (); // now mark the lit surfaces
-
-	R_DrawSurfaces ();
-
-	R_DrawPortals ();
 }
 
 /*
@@ -1355,53 +2142,43 @@ int AllocBlock (int w, int h, short *x, short *y)
 }
 
 
-mvertex_t	*r_pcurrentvertbase;
-model_t		*currentmodel;
-
-int	nColinElim;
+//int	nColinElim;
 
 /*
 ================
 BuildSurfaceDisplayList
 ================
 */
-void BuildSurfaceDisplayList (msurface_t *fa)
+void BuildSurfaceDisplayList (model_t *model, mvertex_t *vertices, msurface_t *fa)
 {
 	int			i, j, lindex, lnumverts;
-	medge_t		*pedges, *r_pedge;
-	int			vertpage;
+	medge_t		*pedges;
 	float		*vec;
 	float		s, t;
 	glpoly_t	*poly;
 
 // reconstruct the polygon
-	pedges = currentmodel->edges;
+	pedges = model->edges;
 	lnumverts = fa->numedges;
-	vertpage = 0;
 
 	//
 	// draw texture
 	//
-	poly = Hunk_AllocName (sizeof(glpoly_t) + (lnumverts-4) * VERTEXSIZE*sizeof(float), "surfaces");
+	poly = Hunk_AllocName (sizeof(glpolysizeof_t) + lnumverts * sizeof(float[VERTEXSIZE]), "surfaces");
 	poly->next = fa->polys;
-	poly->flags = fa->flags;
 	fa->polys = poly;
+//	poly->flags = fa->flags;
 	poly->numverts = lnumverts;
 
 	for (i=0 ; i<lnumverts ; i++)
 	{
-		lindex = currentmodel->surfedges[fa->firstedge + i];
+		lindex = model->surfedges[fa->firstedge + i];
 
 		if (lindex > 0)
-		{
-			r_pedge = &pedges[lindex];
-			vec = r_pcurrentvertbase[r_pedge->v[0]].position;
-		}
+			vec = vertices[pedges[lindex].v[0]].position;
 		else
-		{
-			r_pedge = &pedges[-lindex];
-			vec = r_pcurrentvertbase[r_pedge->v[1]].position;
-		}
+			vec = vertices[pedges[-lindex].v[1]].position;
+
 		s = DotProduct (vec, fa->texinfo->vecs[0]) + fa->texinfo->vecs[0][3];
 		t = DotProduct (vec, fa->texinfo->vecs[1]) + fa->texinfo->vecs[1][3];
 
@@ -1452,7 +2229,7 @@ void BuildSurfaceDisplayList (msurface_t *fa)
 			// skip co-linear points
 			#define COLINEAR_EPSILON 0.001
 			if ((fabs( v1[0] - v2[0] ) <= COLINEAR_EPSILON) &&
-				(fabs( v1[1] - v2[1] ) <= COLINEAR_EPSILON) && 
+				(fabs( v1[1] - v2[1] ) <= COLINEAR_EPSILON) &&
 				(fabs( v1[2] - v2[2] ) <= COLINEAR_EPSILON))
 			{
 				int j;
@@ -1468,9 +2245,9 @@ void BuildSurfaceDisplayList (msurface_t *fa)
 				--i;
 			}
 		}
+		poly->numverts = lnumverts;
 	}
 	*/
-	poly->numverts = lnumverts;
 }
 
 /*
@@ -1574,8 +2351,6 @@ void GL_BuildLightmaps (void)
 			break;
 		if (m->name[0] == '*')
 			continue;
-		r_pcurrentvertbase = m->vertexes;
-		currentmodel = m;
 		for (i=0 ; i<m->numsurfaces ; i++)
 		{
 			if ( m->surfaces[i].flags & SURF_DRAWTURB )
@@ -1583,7 +2358,7 @@ void GL_BuildLightmaps (void)
 			if ( m->surfaces[i].flags & SURF_DRAWSKY )
 				continue;
 			GL_CreateSurfaceLightmap (m->surfaces + i);
-			BuildSurfaceDisplayList (m->surfaces + i);
+			BuildSurfaceDisplayList (m, m->vertexes, m->surfaces + i);
 		}
 	}
 

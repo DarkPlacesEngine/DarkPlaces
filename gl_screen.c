@@ -274,33 +274,30 @@ static void SCR_CalcRefdef (void)
 
 // intermission is always full screen	
 	if (cl.intermission)
-		size = 120;
-	else
-		size = scr_viewsize.value;
-
-	if (size >= 120)
-		sb_lines = 0;		// no status bar at all
-	else if (size >= 110)
-		sb_lines = 24;		// no inventory
-	else
-		sb_lines = 24+16+8;
-
-	if (scr_viewsize.value >= 100.0)
 	{
 		full = true;
-		size = 100.0;
-	}
-	else
-		size = scr_viewsize.value;
-	if (cl.intermission)
-	{
-		full = true;
-		size = 100;
+		size = 1;
 		sb_lines = 0;
 	}
-	size /= 100.0;
+	else
+	{
+		if (scr_viewsize.value >= 120)
+			sb_lines = 0;		// no status bar at all
+		else if (scr_viewsize.value >= 110)
+			sb_lines = 24;		// no inventory
+		else
+			sb_lines = 24+16+8;
 
-	// LordHavoc: always fullyscreen rendering
+		if (scr_viewsize.value >= 100.0)
+		{
+			full = true;
+			size = 1.0f;
+		}
+		else
+			size = scr_viewsize.value * (1.0f / 100.0f);
+	}
+
+	// LordHavoc: always fullscreen rendering
 	h = vid.height/* - sb_lines*/;
 
 	r_refdef.vrect.width = vid.width * size;
@@ -599,7 +596,7 @@ void SCR_ScreenShot_f (void)
 		filename[2] = (i/1000)%10 + '0'; 
 		filename[3] = (i/ 100)%10 + '0'; 
 		filename[4] = (i/  10)%10 + '0'; 
-		filename[5] = (i/   1)%10 + '0'; 
+		filename[5] = (i/   1)%10 + '0';
 		sprintf (checkname, "%s/%s", com_gamedir, filename);
 		if (Sys_FileTime(checkname) == -1)
 			break;	// file doesn't exist
@@ -691,7 +688,7 @@ void SCR_DrawNotifyString (void)
 //		for (j=0 ; j<l ; j++, x+=8)
 //			Draw_Character (x, y, start[j]);	
 		Draw_String (x, y, start, l);
-			
+
 		y += 8;
 
 		while (*start && *start != '\n')
@@ -783,6 +780,7 @@ LordHavoc: due to my rewrite of R_WorldNode, it no longer takes 256k of stack sp
 ==================
 */
 void GL_Finish(void);
+void R_Clip_DisplayBuffer(void);
 void SCR_UpdateScreen (void)
 {
 	double	time1 = 0, time2;
@@ -844,6 +842,8 @@ void SCR_UpdateScreen (void)
 
 	GL_Set2D();
 
+	R_Clip_DisplayBuffer();
+
 	SCR_DrawRam();
 	SCR_DrawNet();
 	SCR_DrawTurtle();
@@ -879,15 +879,27 @@ void SCR_UpdateScreen (void)
 		Draw_String(vid.width - (8*8), vid.height - sb_lines - 8, temp, 9999);
 	}
 
-	if (r_speeds2.value)
+	// LordHavoc: only print info if renderer is being used
+	if (r_speeds2.value && cl.worldmodel != NULL)
 	{
-		Draw_String(0, vid.height - sb_lines - 56, r_speeds2_string1, 80);
-		Draw_String(0, vid.height - sb_lines - 48, r_speeds2_string2, 80);
-		Draw_String(0, vid.height - sb_lines - 40, r_speeds2_string3, 80);
-		Draw_String(0, vid.height - sb_lines - 32, r_speeds2_string4, 80);
-		Draw_String(0, vid.height - sb_lines - 24, r_speeds2_string5, 80);
-		Draw_String(0, vid.height - sb_lines - 16, r_speeds2_string6, 80);
-		Draw_String(0, vid.height - sb_lines -  8, r_speeds2_string7, 80);
+		int i, j, lines, y;
+		lines = 1;
+		for (i = 0;r_speeds2_string[i];i++)
+			if (r_speeds2_string[i] == '\n')
+				lines++;
+		y = vid.height - sb_lines - lines * 8 - 8;
+		i = j = 0;
+		while (r_speeds2_string[i])
+		{
+			j = i;
+			while (r_speeds2_string[i] && r_speeds2_string[i] != '\n')
+				i++;
+			if (i - j > 0)
+				Draw_String(0, y, r_speeds2_string + j, i - j);
+			if (r_speeds2_string[i] == '\n')
+				i++;
+			y += 8;
+		}
 	}
 
 	V_UpdateBlends();

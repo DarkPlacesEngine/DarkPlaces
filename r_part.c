@@ -1348,7 +1348,7 @@ void R_DrawParticles (void)
 	float			scale, scale2, minparticledist;
 	byte			*color24;
 	vec3_t			uprightangles, up2, right2, tempcolor, corner;
-	mleaf_t			*leaf;
+//	mleaf_t			*leaf;
 
 	// LordHavoc: early out condition
 	if ((!numparticles) || (!r_drawparticles.value))
@@ -1377,9 +1377,9 @@ void R_DrawParticles (void)
 			continue;
 
 		// LordHavoc: check if it's in a visible leaf
-		leaf = Mod_PointInLeaf(p->org, cl.worldmodel);
-		if (leaf->visframe != r_framecount)
-			continue;
+//		leaf = Mod_PointInLeaf(p->org, cl.worldmodel);
+//		if (leaf->visframe != r_framecount)
+//			continue;
 
 		/*
 		if (p->type == pt_decal)

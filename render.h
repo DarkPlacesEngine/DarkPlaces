@@ -36,7 +36,7 @@ extern void SHOWLMP_clear(void);
 // render profiling stuff
 extern qboolean intimerefresh;
 extern cvar_t r_speeds2;
-extern char r_speeds2_string1[81], r_speeds2_string2[81], r_speeds2_string3[81], r_speeds2_string4[81], r_speeds2_string5[81], r_speeds2_string6[81], r_speeds2_string7[81];
+extern char r_speeds2_string[1024];
 
 // lighting stuff
 extern vec3_t lightspot;
@@ -53,6 +53,9 @@ extern cvar_t r_novis;
 
 // model transform stuff
 extern cvar_t gl_transform;
+
+// LordHavoc: 1.0f / N table
+extern float ixtable[4096];
 
 #define	TOP_RANGE		16			// soldier uniform colors
 #define	BOTTOM_RANGE	96
@@ -124,7 +127,7 @@ void R_ViewChanged (vrect_t *pvrect, int lineadj, float aspect); // called whene
 // LordHavoc: changed this for sake of GLQuake
 void R_InitSky (byte *src, int bytesperpixel); // called at level load
 
-int R_VisibleCullBox (vec3_t mins, vec3_t maxs);
+//int R_VisibleCullBox (vec3_t mins, vec3_t maxs);
 
 void R_NewMap (void);
 
@@ -155,3 +158,47 @@ void R_DrawParticles (void);
 void R_MoveParticles (void);
 void R_DrawExplosions (void);
 void R_MoveExplosions (void);
+
+#include "r_clip.h"
+
+// LordHavoc: vertex transform
+#include "transform.h"
+
+// LordHavoc: transparent polygon system
+#include "gl_poly.h"
+
+#define gl_solid_format 3
+#define gl_alpha_format 4
+
+//#define PARANOID
+
+// LordHavoc: was a major time waster
+#define R_CullBox(mins,maxs) (frustum[0].BoxOnPlaneSideFunc(mins, maxs, &frustum[0]) == 2 || frustum[1].BoxOnPlaneSideFunc(mins, maxs, &frustum[1]) == 2 || frustum[2].BoxOnPlaneSideFunc(mins, maxs, &frustum[2]) == 2 || frustum[3].BoxOnPlaneSideFunc(mins, maxs, &frustum[3]) == 2)
+#define R_NotCulledBox(mins,maxs) (frustum[0].BoxOnPlaneSideFunc(mins, maxs, &frustum[0]) != 2 && frustum[1].BoxOnPlaneSideFunc(mins, maxs, &frustum[1]) != 2 && frustum[2].BoxOnPlaneSideFunc(mins, maxs, &frustum[2]) != 2 && frustum[3].BoxOnPlaneSideFunc(mins, maxs, &frustum[3]) != 2)
+
+extern qboolean fogenabled;
+extern vec3_t fogcolor;
+extern vec_t fogdensity;
+//#define calcfog(v) (exp(-(fogdensity*fogdensity*(((v)[0] - r_origin[0]) * vpn[0] + ((v)[1] - r_origin[1]) * vpn[1] + ((v)[2] - r_origin[2]) * vpn[2])*(((v)[0] - r_origin[0]) * vpn[0] + ((v)[1] - r_origin[1]) * vpn[1] + ((v)[2] - r_origin[2]) * vpn[2]))))
+#define calcfog(v) (exp(-(fogdensity*fogdensity*(((v)[0] - r_origin[0])*((v)[0] - r_origin[0])+((v)[1] - r_origin[1])*((v)[1] - r_origin[1])+((v)[2] - r_origin[2])*((v)[2] - r_origin[2])))))
+#define calcfogbyte(v) ((byte) (bound(0, ((int) ((float) (calcfog((v)) * 255.0f))), 255)))
+
+#include "r_modules.h"
+
+extern qboolean lighthalf;
+
+#include "r_lerpanim.h"
+
+void GL_LockArray(int first, int count);
+void GL_UnlockArray(void);
+
+void R_DrawBrushModel (entity_t *e);
+void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, frameblend_t *blend, int skin, vec3_t org, vec3_t angles, vec_t scale, int effects, int flags, int colormap);
+void R_DrawSpriteModel (entity_t *e, frameblend_t *blend);
+
+void R_ClipSprite (entity_t *e, frameblend_t *blend);
+void R_Entity_Callback(void *data, void *junk);
+
+extern cvar_t r_render;
+extern cvar_t r_upload;
+#include "image.h"

@@ -364,14 +364,14 @@ void R_ResampleTexture (void *indata, int inwidth, int inheight, void *outdata, 
 			inrow = (int *)indata + inwidth*(i*inheight/outheight);
 			frac = fracstep >> 1;
 			j = outwidth - 4;
-			while(j >= 0)
+			while (j >= 0)
 			{
 				out[0] = inrow[frac >> 16];frac += fracstep;
 				out[1] = inrow[frac >> 16];frac += fracstep;
 				out[2] = inrow[frac >> 16];frac += fracstep;
 				out[3] = inrow[frac >> 16];frac += fracstep;
 				out += 4;
-				j--;
+				j -= 4;
 			}
 			if (j & 2)
 			{
@@ -605,6 +605,8 @@ rtexture_t *R_LoadTexture (char *identifier, int width, int height, byte *data, 
 
 	if (!identifier[0])
 		Host_Error("R_LoadTexture: no identifier\n");
+	if (data == NULL)
+		Host_Error("R_LoadTexture: \"%s\" has no data\n", identifier);
 
 	// clear the alpha flag if the texture has no transparent pixels
 	if (flags & TEXF_ALPHA)

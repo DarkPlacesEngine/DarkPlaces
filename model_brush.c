@@ -817,7 +817,7 @@ void Mod_LoadFaces (lump_t *l)
 		 && (out->texinfo->texture->name[2] == 'y' || out->texinfo->texture->name[2] == 'Y'))
 		{
 			// LordHavoc: for consistency reasons, mark sky as fullbright and solid as well
-			out->flags |= (SURF_DRAWSKY | SURF_DRAWTILED | SURF_DRAWFULLBRIGHT | SURF_DRAWNOALPHA);
+			out->flags |= (SURF_DRAWSKY | SURF_DRAWTILED | SURF_DRAWFULLBRIGHT | SURF_DRAWNOALPHA | SURF_CLIPSOLID);
 			GL_SubdivideSurface (out);	// cut up polygon for warps
 			continue;
 		}
@@ -839,7 +839,8 @@ void Mod_LoadFaces (lump_t *l)
 			GL_SubdivideSurface (out);	// cut up polygon for warps
 			continue;
 		}
-
+		
+		out->flags |= SURF_CLIPSOLID;
 	}
 }
 
@@ -1153,7 +1154,6 @@ void Mod_LoadPlanes (lump_t *l)
 	mplane_t	*out;
 	dplane_t 	*in;
 	int			count;
-	int			bits;
 	
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -1166,18 +1166,13 @@ void Mod_LoadPlanes (lump_t *l)
 
 	for ( i=0 ; i<count ; i++, in++, out++)
 	{
-		bits = 0;
 		for (j=0 ; j<3 ; j++)
-		{
 			out->normal[j] = LittleFloat (in->normal[j]);
-//			if (out->normal[j] < 0)
-//				bits |= 1<<j;
-		}
 
 		out->dist = LittleFloat (in->dist);
-		out->type = LittleLong (in->type);
-//		out->signbits = bits;
-		BoxOnPlaneSideClassify(out);
+		// LordHavoc: recalculated by PlaneClassify, FIXME: validate type and report error if type does not match normal?
+//		out->type = LittleLong (in->type);
+		PlaneClassify(out);
 	}
 }
 
@@ -1574,6 +1569,7 @@ void Mod_FinalizePortals(void)
 					VectorCopy(p->winding->points[j], point->position);
 					point++;
 				}
+				PlaneClassify(&portal->plane);
 
 				// link into leaf's portal chain
 				portal->next = portal->here->portals;
@@ -1595,6 +1591,7 @@ void Mod_FinalizePortals(void)
 					VectorCopy(p->winding->points[j], point->position);
 					point++;
 				}
+				PlaneClassify(&portal->plane);
 
 				// link into leaf's portal chain
 				portal->next = portal->here->portals;

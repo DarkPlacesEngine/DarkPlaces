@@ -259,11 +259,13 @@ int Sys_FileOpenWrite (char *path)
 
 	umask (0);
 	
-	handle = open(path,O_RDWR | O_CREAT | O_TRUNC
-	, 0666);
+	handle = open(path,O_RDWR | O_CREAT | O_TRUNC, 0666);
 
 	if (handle == -1)
-		Sys_Error ("Error opening %s: %s", path,strerror(errno));
+	{
+		Con_Printf("Sys_FileOpenWrite: Error opening %s: %s", path, strerror(errno));
+		return 0;
+	}
 
 	return handle;
 }

@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -29,21 +29,26 @@ typedef union eval_s
 	func_t			function;
 	int				_int;
 	int				edict;
-} eval_t;	
+} eval_t;
+
+typedef struct link_s
+{
+	struct link_s	*prev, *next;
+} link_t;
 
 // LordHavoc: increased number of leafs per entity limit from 16 to 256
 #define	MAX_ENT_LEAFS	256
 typedef struct edict_s
 {
 	qboolean	free;
-	link_t		area;				// linked to a division node or leaf
-	
+	link_t		area;
+
 	int			num_leafs;
 	short		leafnums[MAX_ENT_LEAFS];
 
 	entity_state_t	baseline;
 	entity_state_t	deltabaseline; // LordHavoc: previous frame
-	
+
 	float		freetime;			// sv.time when the object was freed
 	// LordHavoc: for MOVETYPE_STEP interpolation
 	vec3_t		steporigin;
@@ -54,7 +59,8 @@ typedef struct edict_s
 	entvars_t	v;					// C exported fields from progs
 // other fields from progs come immediately after
 } edict_t;
-#define	EDICT_FROM_AREA(l) STRUCT_FROM_LINK(l,edict_t,area)
+//#define	EDICT_FROM_AREA(l) ((edict_t *)((byte *)l - (int)&(((edict_t *)0)->area)))
+//#define	EDICT_FROM_AREA(l) STRUCT_FROM_LINK(l,edict_t,area)
 
 // LordHavoc: in an effort to eliminate time wasted on GetEdictFieldValue...  see pr_edict.c for the functions which use these.
 extern int eval_gravity;

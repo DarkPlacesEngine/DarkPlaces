@@ -539,11 +539,16 @@ qboolean Host_FilterTime (double time)
 			return false;
 	}
 
-	host_realframetime = host_frametime = realtime - oldrealtime; // LordHavoc: copy into host_realframetime as well
+	// LordHavoc: copy into host_realframetime as well
+	host_realframetime = host_frametime = realtime - oldrealtime;
 	oldrealtime = realtime;
 
 	if (cls.timedemo)
-		return true; // disable time effects
+	{
+		// disable time effects
+		cl.frametime = host_frametime;
+		return true;
+	}
 
 	if (host_framerate.value > 0)
 		host_frametime = host_framerate.value;
