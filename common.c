@@ -1690,11 +1690,11 @@ byte *COM_LoadFile (char *path, int usehunk, qboolean quiet)
 //		if (!buf)
 //			Sys_Error ("COM_LoadFile: not enough zone space for %s (size %i)", path, len);
 //		break;
-	case 3:
-		buf = Cache_Alloc (loadcache, len+1, base);
-		if (!buf)
-			Sys_Error ("COM_LoadFile: not enough cache space for %s (size %i)", path, len);
-		break;
+//	case 3:
+//		buf = Cache_Alloc (loadcache, len+1, base);
+//		if (!buf)
+//			Sys_Error ("COM_LoadFile: not enough cache space for %s (size %i)", path, len);
+//		break;
 	case 5:
 		buf = qmalloc (len+1);
 		if (!buf)
@@ -1724,11 +1724,13 @@ byte *COM_LoadMallocFile (char *path, qboolean quiet)
 	return COM_LoadFile (path, 5, quiet);
 }
 
+/*
 void COM_LoadCacheFile (char *path, struct cache_user_s *cu, qboolean quiet)
 {
 	loadcache = cu;
 	COM_LoadFile (path, 3, quiet);
 }
+*/
 
 /*
 =================
