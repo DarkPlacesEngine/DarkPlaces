@@ -315,7 +315,7 @@ shadowmesh_t *Mod_ShadowMesh_ReAlloc(mempool_t *mempool, shadowmesh_t *oldmesh);
 int Mod_ShadowMesh_AddVertex(shadowmesh_t *mesh, float *v);
 void Mod_ShadowMesh_AddTriangle(mempool_t *mempool, shadowmesh_t *mesh, float *vert0, float *vert1, float *vert2);
 void Mod_ShadowMesh_AddPolygon(mempool_t *mempool, shadowmesh_t *mesh, int numverts, float *verts);
-void Mod_ShadowMesh_AddMesh(mempool_t *mempool, shadowmesh_t *mesh, int numverts, float *verts, int numtris, int *elements);
+void Mod_ShadowMesh_AddMesh(mempool_t *mempool, shadowmesh_t *mesh, float *verts, int numtris, int *elements);
 shadowmesh_t *Mod_ShadowMesh_Begin(mempool_t *mempool, int initialnumtriangles);
 shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh);
 void Mod_ShadowMesh_CalcBBox(shadowmesh_t *firstmesh, vec3_t mins, vec3_t maxs, vec3_t center, float *radius);

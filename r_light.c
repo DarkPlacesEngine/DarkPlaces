@@ -141,18 +141,11 @@ void R_BuildLightList(void)
 void R_DrawCoronas(void)
 {
 	int i;
-	rmeshstate_t m;
-	float scale, viewdist, diff[3], dist;
+	float cscale, scale, viewdist, dist;
 	rdlight_t *rd;
 	if (!r_coronas.integer)
 		return;
-	memset(&m, 0, sizeof(m));
-	m.blendfunc1 = GL_ONE;
-	m.blendfunc2 = GL_ONE;
-	m.depthdisable = true; // magic
-	m.tex[0] = R_GetTexture(lightcorona);
 	R_Mesh_Matrix(&r_identitymatrix);
-	R_Mesh_State(&m);
 	viewdist = DotProduct(r_origin, vpn);
 	for (i = 0;i < r_numdlights;i++)
 	{
@@ -160,19 +153,14 @@ void R_DrawCoronas(void)
 		dist = (DotProduct(rd->origin, vpn) - viewdist);
 		if (dist >= 24.0f && CL_TraceLine(rd->origin, r_origin, NULL, NULL, 0, true, NULL) == 1)
 		{
-			scale = r_colorscale * (1.0f / 131072.0f);
-			if (gl_flashblend.integer)
-				scale *= 4.0f;
-			if (fogenabled)
-			{
-				VectorSubtract(rd->origin, r_origin, diff);
-				scale *= 1 - exp(fogdensity/DotProduct(diff,diff));
-			}
-			GL_Color(rd->light[0] * scale, rd->light[1] * scale, rd->light[2] * scale, 1);
+			cscale = (1.0f / 131072.0f);
 			scale = rd->cullradius * 0.25f;
 			if (gl_flashblend.integer)
+			{
+				cscale *= 4.0f;
 				scale *= 2.0f;
-			R_DrawSpriteMesh(rd->origin, vright, vup, scale, -scale, -scale, scale);
+			}
+			R_DrawSprite(GL_ONE, GL_ONE, lightcorona, true, rd->origin, vright, vup, scale, -scale, -scale, scale, rd->light[0] * cscale, rd->light[1] * cscale, rd->light[2] * cscale, 1);
 		}
 	}
 }

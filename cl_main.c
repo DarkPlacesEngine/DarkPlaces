@@ -1251,18 +1251,7 @@ void R_DrawLightningBeamCallback(const void *calldata1, int calldata2)
 	rmeshstate_t m;
 	vec3_t beamdir, right, up, offset;
 	float length, t1, t2;
-	memset(&m, 0, sizeof(m));
-	m.blendfunc1 = GL_SRC_ALPHA;
-	m.blendfunc2 = GL_ONE;
-	if (r_lightningbeam_qmbtexture.integer && r_lightningbeamqmbtexture == NULL)
-		r_lightningbeams_setupqmbtexture();
-	if (!r_lightningbeam_qmbtexture.integer && r_lightningbeamtexture == NULL)
-		r_lightningbeams_setuptexture();
-	if (r_lightningbeam_qmbtexture.integer)
-		m.tex[0] = R_GetTexture(r_lightningbeamqmbtexture);
-	else
-		m.tex[0] = R_GetTexture(r_lightningbeamtexture);
-	R_Mesh_State(&m);
+
 	R_Mesh_Matrix(&r_identitymatrix);
 
 	// calculate beam direction (beamdir) vector and beam length
@@ -1304,29 +1293,42 @@ void R_DrawLightningBeamCallback(const void *calldata1, int calldata2)
 	// (and realize that the whole polygon assembly orients itself to face
 	//  the viewer)
 
-	R_Mesh_GetSpace(12);
+	memset(&m, 0, sizeof(m));
+	if (r_lightningbeam_qmbtexture.integer)
+		m.tex[0] = R_GetTexture(r_lightningbeamqmbtexture);
+	else
+		m.tex[0] = R_GetTexture(r_lightningbeamtexture);
+	m.pointer_texcoord[0] = varray_texcoord2f[0];
+	R_Mesh_State_Texture(&m);
+
+	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+	GL_DepthMask(false);
+	GL_DepthTest(true);
+	if (r_lightningbeam_qmbtexture.integer && r_lightningbeamqmbtexture == NULL)
+		r_lightningbeams_setupqmbtexture();
+	if (!r_lightningbeam_qmbtexture.integer && r_lightningbeamtexture == NULL)
+		r_lightningbeams_setuptexture();
 
 	// polygon 1, verts 0-3
 	VectorScale(right, r_lightningbeam_thickness.value, offset);
-	R_CalcLightningBeamPolygonVertex3f(varray_vertex3f, b->start, b->end, offset);
-	R_CalcLightningBeamPolygonTexCoord2f(varray_texcoord2f[0], t1, t2);
-
+	R_CalcLightningBeamPolygonVertex3f(varray_vertex3f + 0, b->start, b->end, offset);
 	// polygon 2, verts 4-7
 	VectorAdd(right, up, offset);
 	VectorScale(offset, r_lightningbeam_thickness.value * 0.70710681f, offset);
 	R_CalcLightningBeamPolygonVertex3f(varray_vertex3f + 12, b->start, b->end, offset);
-	R_CalcLightningBeamPolygonTexCoord2f(varray_texcoord2f[0] + 8, t1 + 0.33, t2 + 0.33);
-
 	// polygon 3, verts 8-11
 	VectorSubtract(right, up, offset);
 	VectorScale(offset, r_lightningbeam_thickness.value * 0.70710681f, offset);
 	R_CalcLightningBeamPolygonVertex3f(varray_vertex3f + 24, b->start, b->end, offset);
+	R_CalcLightningBeamPolygonTexCoord2f(varray_texcoord2f[0] + 0, t1, t2);
+	R_CalcLightningBeamPolygonTexCoord2f(varray_texcoord2f[0] + 8, t1 + 0.33, t2 + 0.33);
 	R_CalcLightningBeamPolygonTexCoord2f(varray_texcoord2f[0] + 16, t1 + 0.66, t2 + 0.66);
+	GL_VertexPointer(varray_vertex3f);
 
 	if (fogenabled)
 	{
 		// per vertex colors if fog is used
-		GL_UseColorArray();
+		GL_ColorPointer(varray_color4f);
 		R_FogLightningBeam_Vertex3f_Color4f(varray_vertex3f, varray_color4f, 12, r_lightningbeam_color_red.value, r_lightningbeam_color_green.value, r_lightningbeam_color_blue.value, 1);
 	}
 	else

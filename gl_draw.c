@@ -380,8 +380,6 @@ void GL_Draw_Init (void)
 float blendvertex3f[9] = {-5000, -5000, 10, 10000, -5000, 10, -5000, 10000, 10};
 
 int quadelements[768];
-float textverts[128*4*3];
-float texttexcoords[128*4*2];
 void R_DrawQueue(void)
 {
 	int pos, num, chartexnum, overbright, texnum, additive, batch;
@@ -420,7 +418,7 @@ void R_DrawQueue(void)
 
 	memset(&m, 0, sizeof(m));
 	m.tex[0] = 0;
-	R_Mesh_TextureState(&m);
+	R_Mesh_State_Texture(&m);
 
 	currentpic = "";
 	pic = NULL;
@@ -435,12 +433,9 @@ void R_DrawQueue(void)
 		dq = (drawqueue_t *)(r_refdef.drawqueue + pos);
 		additive = (dq->flags & DRAWFLAG_ADDITIVE) != 0;
 		color = dq->color;
-		m.blendfunc1 = GL_SRC_ALPHA;
-		if (additive)
-			m.blendfunc2 = GL_ONE;
-		else
-			m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-		m.depthdisable = true;
+		GL_BlendFunc(GL_SRC_ALPHA, additive ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA);
+		GL_DepthMask(true);
+		GL_DepthTest(false);
 
 		c[0] = (float) ((color >> 24) & 0xFF) * (1.0f / 255.0f) * r_colorscale;
 		c[1] = (float) ((color >> 16) & 0xFF) * (1.0f / 255.0f) * r_colorscale;
@@ -454,6 +449,7 @@ void R_DrawQueue(void)
 		switch(dq->command)
 		{
 		case DRAWQUEUE_STRING:
+			GL_Color(c[0], c[1], c[2], c[3]);
 			str = (char *)(dq + 1);
 			if (strcmp("gfx/conchars", currentpic))
 			{
@@ -461,9 +457,11 @@ void R_DrawQueue(void)
 				m.tex[0] = chartexnum;
 			}
 			batchcount = 0;
-			at = texttexcoords;
-			av = textverts;
-			GL_Color(c[0], c[1], c[2], c[3]);
+			GL_VertexPointer(varray_vertex3f);
+			m.pointer_texcoord[0] = varray_texcoord2f[0];
+			R_Mesh_State_Texture(&m);
+			at = varray_texcoord2f[0];
+			av = varray_vertex3f;
 			while ((num = *str++) && x < vid.conwidth)
 			{
 				if (num != ' ')
@@ -485,81 +483,24 @@ void R_DrawQueue(void)
 					batchcount++;
 					if (batchcount >= 128)
 					{
-						if (gl_mesh_copyarrays.integer)
-						{
-							m.pointervertexcount = 0;
-							m.pointer_vertex = NULL;
-							m.pointer_texcoord[0] = NULL;
-							m.pointer_color = NULL;
-							R_Mesh_State(&m);
-							R_Mesh_GetSpace(batchcount * 4);
-							R_Mesh_CopyVertex3f(textverts, batchcount * 4);
-							R_Mesh_CopyTexCoord2f(0, texttexcoords, batchcount * 4);
-						}
-						else
-						{
-							m.pointervertexcount = batchcount * 4;
-							m.pointer_vertex = textverts;
-							m.pointer_texcoord[0] = texttexcoords;
-							m.pointer_color = NULL;
-							R_Mesh_State(&m);
-						}
 						R_Mesh_Draw(batchcount * 4, batchcount * 2, quadelements);
 						batchcount = 0;
-						at = texttexcoords;
-						av = textverts;
+						at = varray_texcoord2f[0];
+						av = varray_vertex3f;
 					}
 				}
 				x += w;
 			}
 			if (batchcount > 0)
-			{
-				if (gl_mesh_copyarrays.integer)
-				{
-					m.pointervertexcount = 0;
-					m.pointer_vertex = NULL;
-					m.pointer_texcoord[0] = NULL;
-					m.pointer_color = NULL;
-					R_Mesh_State(&m);
-					R_Mesh_GetSpace(batchcount * 4);
-					R_Mesh_CopyVertex3f(textverts, batchcount * 4);
-					R_Mesh_CopyTexCoord2f(0, texttexcoords, batchcount * 4);
-				}
-				else
-				{
-					m.pointervertexcount = batchcount * 4;
-					m.pointer_vertex = textverts;
-					m.pointer_texcoord[0] = texttexcoords;
-					m.pointer_color = NULL;
-					R_Mesh_State(&m);
-				}
 				R_Mesh_Draw(batchcount * 4, batchcount * 2, quadelements);
-			}
 			break;
 		case DRAWQUEUE_MESH:
 			mesh = (void *)(dq + 1);
+			GL_VertexPointer(mesh->vertex3f);
+			GL_ColorPointer(mesh->color4f);
 			m.tex[0] = R_GetTexture(mesh->texture);
-			GL_UseColorArray();
-			if (gl_mesh_copyarrays.integer)
-			{
-				m.pointervertexcount = 0;
-				m.pointer_vertex = NULL;
-				m.pointer_texcoord[0] = NULL;
-				m.pointer_color = NULL;
-				R_Mesh_State(&m);
-				R_Mesh_GetSpace(mesh->numvertices);
-				R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numvertices);
-				R_Mesh_CopyTexCoord2f(0, mesh->texcoord2f, mesh->numvertices);
-				R_Mesh_CopyColor4f(mesh->color4f, mesh->numvertices);
-			}
-			else
-			{
-				m.pointervertexcount = mesh->numvertices;
-				m.pointer_vertex = mesh->vertex3f;
-				m.pointer_texcoord[0] = mesh->texcoord2f;
-				m.pointer_color = mesh->color4f;
-				R_Mesh_State(&m);
-			}
+			m.pointer_texcoord[0] = mesh->texcoord2f;
+			R_Mesh_State_Texture(&m);
 			R_Mesh_Draw(mesh->numvertices, mesh->numtriangles, mesh->element3i);
 			currentpic = "\0";
 			break;
@@ -570,7 +511,9 @@ void R_DrawQueue(void)
 	{
 		// all the blends ignore depth
 		memset(&m, 0, sizeof(m));
-		m.depthdisable = true;
+		R_Mesh_State_Texture(&m);
+		GL_DepthMask(true);
+		GL_DepthTest(false);
 		if (v_color_enable.integer)
 		{
 			c[0] = v_color_white_r.value;
@@ -582,20 +525,8 @@ void R_DrawQueue(void)
 		VectorScale(c, (float) (1 << v_overbrightbits.integer), c);
 		if (c[0] >= 1.01f || c[1] >= 1.01f || c[2] >= 1.01f)
 		{
-			m.blendfunc1 = GL_DST_COLOR;
-			m.blendfunc2 = GL_ONE;
-			if (gl_mesh_copyarrays.integer)
-			{
-				R_Mesh_State(&m);
-				R_Mesh_GetSpace(3);
-				R_Mesh_CopyVertex3f(blendvertex3f, 3);
-			}
-			else
-			{
-				m.pointervertexcount = 3;
-				m.pointer_vertex = blendvertex3f;
-				R_Mesh_State(&m);
-			}
+			GL_BlendFunc(GL_DST_COLOR, GL_ONE);
+			GL_VertexPointer(blendvertex3f);
 			while (c[0] >= 1.01f || c[1] >= 1.01f || c[2] >= 1.01f)
 			{
 				GL_Color(bound(0, c[0] - 1, 1), bound(0, c[1] - 1, 1), bound(0, c[2] - 1, 1), 1);
@@ -613,22 +544,8 @@ void R_DrawQueue(void)
 			c[0] = c[1] = c[2] = v_brightness.value;
 		if (c[0] >= 0.01f || c[1] >= 0.01f || c[2] >= 0.01f)
 		{
-			m.blendfunc1 = GL_ONE;
-			m.blendfunc2 = GL_ONE;
-			if (gl_mesh_copyarrays.integer)
-			{
-				m.pointervertexcount = 0;
-				m.pointer_vertex = NULL;
-				R_Mesh_State(&m);
-				R_Mesh_GetSpace(3);
-				R_Mesh_CopyVertex3f(blendvertex3f, 3);
-			}
-			else
-			{
-				m.pointervertexcount = 3;
-				m.pointer_vertex = blendvertex3f;
-				R_Mesh_State(&m);
-			}
+			GL_BlendFunc(GL_ONE, GL_ONE);
+			GL_VertexPointer(blendvertex3f);
 			GL_Color(c[0], c[1], c[2], 1);
 			R_Mesh_Draw(3, 1, polygonelements);
 		}

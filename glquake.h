@@ -111,6 +111,8 @@ typedef double GLclampd;
 #define GL_TEXTURE_MAG_FILTER			0x2800
 #define GL_TEXTURE_MIN_FILTER			0x2801
 #define GL_UNPACK_ALIGNMENT			0x0CF5
+#define GL_TEXTURE_BINDING_1D                   0x8068
+#define GL_TEXTURE_BINDING_2D                   0x8069
 
 #define GL_NEAREST				0x2600
 #define GL_LINEAR				0x2601
@@ -207,6 +209,7 @@ typedef double GLclampd;
 // GL_ARB_multitexture
 extern int gl_textureunits;
 extern void (GLAPIENTRY *qglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
+extern void (GLAPIENTRY *qglMultiTexCoord3f) (GLenum, GLfloat, GLfloat, GLfloat);
 extern void (GLAPIENTRY *qglActiveTexture) (GLenum);
 extern void (GLAPIENTRY *qglClientActiveTexture) (GLenum);
 #ifndef GL_ACTIVE_TEXTURE_ARB
@@ -377,7 +380,7 @@ extern void (GLAPIENTRY *qglCullFace)(GLenum mode);
 //extern void (GLAPIENTRY *qglReadBuffer)(GLenum mode);
 extern void (GLAPIENTRY *qglEnable)(GLenum cap);
 extern void (GLAPIENTRY *qglDisable)(GLenum cap);
-//extern GLboolean GLAPIENTRY *qglIsEnabled)(GLenum cap);
+extern GLboolean (GLAPIENTRY *qglIsEnabled)(GLenum cap);
 
 extern void (GLAPIENTRY *qglEnableClientState)(GLenum cap);
 extern void (GLAPIENTRY *qglDisableClientState)(GLenum cap);
@@ -395,23 +398,24 @@ extern void (GLAPIENTRY *qglFlush)(void);
 extern void (GLAPIENTRY *qglClearDepth)(GLclampd depth);
 extern void (GLAPIENTRY *qglDepthFunc)(GLenum func);
 extern void (GLAPIENTRY *qglDepthMask)(GLboolean flag);
-//extern void (GLAPIENTRY *qglDepthRange)(GLclampd near_val, GLclampd far_val);
+extern void (GLAPIENTRY *qglDepthRange)(GLclampd near_val, GLclampd far_val);
 extern void (GLAPIENTRY *qglColorMask)(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
 
 extern void (GLAPIENTRY *qglDrawRangeElements)(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices);
 extern void (GLAPIENTRY *qglDrawElements)(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
 extern void (GLAPIENTRY *qglVertexPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-//extern void (GLAPIENTRY *qglNormalPointer)(GLenum type, GLsizei stride, const GLvoid *ptr);
+extern void (GLAPIENTRY *qglNormalPointer)(GLenum type, GLsizei stride, const GLvoid *ptr);
 extern void (GLAPIENTRY *qglColorPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
 extern void (GLAPIENTRY *qglTexCoordPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-//extern void (GLAPIENTRY *qglArrayElement)(GLint i);
+extern void (GLAPIENTRY *qglArrayElement)(GLint i);
 
 extern void (GLAPIENTRY *qglColor4f)(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
-//extern void (GLAPIENTRY *qglTexCoord2f)(GLfloat s, GLfloat t);
-//extern void (GLAPIENTRY *qglVertex2f)(GLfloat x, GLfloat y);
-//extern void (GLAPIENTRY *qglVertex3f)(GLfloat x, GLfloat y, GLfloat z);
-//extern void (GLAPIENTRY *qglBegin)(GLenum mode);
-//extern void (GLAPIENTRY *qglEnd)(void);
+extern void (GLAPIENTRY *qglTexCoord2f)(GLfloat s, GLfloat t);
+extern void (GLAPIENTRY *qglTexCoord3f)(GLfloat s, GLfloat t, GLfloat r);
+extern void (GLAPIENTRY *qglVertex2f)(GLfloat x, GLfloat y);
+extern void (GLAPIENTRY *qglVertex3f)(GLfloat x, GLfloat y, GLfloat z);
+extern void (GLAPIENTRY *qglBegin)(GLenum mode);
+extern void (GLAPIENTRY *qglEnd)(void);
 
 extern void (GLAPIENTRY *qglMatrixMode)(GLenum mode);
 extern void (GLAPIENTRY *qglOrtho)(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near_val, GLdouble far_val);
@@ -480,7 +484,7 @@ extern BOOL (WINAPI *qwglSwapIntervalEXT)(int interval);
 #define DEBUGGL
 
 #ifdef DEBUGGL
-#define CHECKGLERROR if ((errornumber = qglGetError())) GL_PrintError(errornumber, __FILE__, __LINE__);
+#define CHECKGLERROR {if (gl_printcheckerror.integer) Con_Printf("CHECKGLERROR at %s:%d\n", __FILE__, __LINE__);if (gl_paranoid.integer && (errornumber = qglGetError())) GL_PrintError(errornumber, __FILE__, __LINE__);}
 extern int errornumber;
 void GL_PrintError(int errornumber, char *filename, int linenumber);
 #else

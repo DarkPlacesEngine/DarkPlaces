@@ -1663,9 +1663,9 @@ void R_InitParticles(void)
 	CL_Particles_Init();
 	R_Particles_Init();
 }
-
-float varray_vertex3f[12], varray_texcoord2f[1][8];
 #endif
+
+float particle_vertex3f[12], particle_texcoord2f[8];
 
 #ifdef WORKINGLQUAKE
 void R_DrawParticle(particle_t *p)
@@ -1698,26 +1698,6 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	}
 
 #ifndef WORKINGLQUAKE
-	memset(&m, 0, sizeof(m));
-	if (p->blendmode == 0)
-	{
-		m.blendfunc1 = GL_SRC_ALPHA;
-		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-	}
-	else if (p->blendmode == 1)
-	{
-		m.blendfunc1 = GL_SRC_ALPHA;
-		m.blendfunc2 = GL_ONE;
-	}
-	else
-	{
-		m.blendfunc1 = GL_ZERO;
-		m.blendfunc2 = GL_ONE_MINUS_SRC_COLOR;
-	}
-	m.tex[0] = R_GetTexture(tex->texture);
-	R_Mesh_Matrix(&r_identitymatrix);
-	R_Mesh_State(&m);
-
 	if (fogenabled && p->blendmode != PBLEND_MOD)
 	{
 		VectorSubtract(org, r_origin, fogvec);
@@ -1739,7 +1719,22 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 
 	GL_Color(cr, cg, cb, ca);
 
-	R_Mesh_GetSpace(4);
+	R_Mesh_Matrix(&r_identitymatrix);
+
+	memset(&m, 0, sizeof(m));
+	m.tex[0] = R_GetTexture(tex->texture);
+	m.pointer_texcoord[0] = particle_texcoord2f;
+	R_Mesh_State_Texture(&m);
+
+	if (p->blendmode == 0)
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	else if (p->blendmode == 1)
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+	else
+		GL_BlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
+	GL_DepthMask(false);
+	GL_DepthTest(true);
+	GL_VertexPointer(particle_vertex3f);
 #endif
 	if (p->orientation == PARTICLE_BILLBOARD || p->orientation == PARTICLE_ORIENTED_DOUBLESIDED)
 	{
@@ -1761,44 +1756,44 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 			VectorScale(vright, p->scalex, right);
 			VectorScale(vup, p->scaley, up);
 		}
-		varray_vertex3f[ 0] = org[0] - right[0] - up[0];
-		varray_vertex3f[ 1] = org[1] - right[1] - up[1];
-		varray_vertex3f[ 2] = org[2] - right[2] - up[2];
-		varray_vertex3f[ 3] = org[0] - right[0] + up[0];
-		varray_vertex3f[ 4] = org[1] - right[1] + up[1];
-		varray_vertex3f[ 5] = org[2] - right[2] + up[2];
-		varray_vertex3f[ 6] = org[0] + right[0] + up[0];
-		varray_vertex3f[ 7] = org[1] + right[1] + up[1];
-		varray_vertex3f[ 8] = org[2] + right[2] + up[2];
-		varray_vertex3f[ 9] = org[0] + right[0] - up[0];
-		varray_vertex3f[10] = org[1] + right[1] - up[1];
-		varray_vertex3f[11] = org[2] + right[2] - up[2];
-		varray_texcoord2f[0][0] = tex->s1;varray_texcoord2f[0][1] = tex->t2;
-		varray_texcoord2f[0][2] = tex->s1;varray_texcoord2f[0][3] = tex->t1;
-		varray_texcoord2f[0][4] = tex->s2;varray_texcoord2f[0][5] = tex->t1;
-		varray_texcoord2f[0][6] = tex->s2;varray_texcoord2f[0][7] = tex->t2;
+		particle_vertex3f[ 0] = org[0] - right[0] - up[0];
+		particle_vertex3f[ 1] = org[1] - right[1] - up[1];
+		particle_vertex3f[ 2] = org[2] - right[2] - up[2];
+		particle_vertex3f[ 3] = org[0] - right[0] + up[0];
+		particle_vertex3f[ 4] = org[1] - right[1] + up[1];
+		particle_vertex3f[ 5] = org[2] - right[2] + up[2];
+		particle_vertex3f[ 6] = org[0] + right[0] + up[0];
+		particle_vertex3f[ 7] = org[1] + right[1] + up[1];
+		particle_vertex3f[ 8] = org[2] + right[2] + up[2];
+		particle_vertex3f[ 9] = org[0] + right[0] - up[0];
+		particle_vertex3f[10] = org[1] + right[1] - up[1];
+		particle_vertex3f[11] = org[2] + right[2] - up[2];
+		particle_texcoord2f[0] = tex->s1;particle_texcoord2f[1] = tex->t2;
+		particle_texcoord2f[2] = tex->s1;particle_texcoord2f[3] = tex->t1;
+		particle_texcoord2f[4] = tex->s2;particle_texcoord2f[5] = tex->t1;
+		particle_texcoord2f[6] = tex->s2;particle_texcoord2f[7] = tex->t2;
 	}
 	else if (p->orientation == PARTICLE_SPARK)
 	{
 		VectorMA(p->org, -p->scaley, p->vel, v);
 		VectorMA(p->org, p->scaley, p->vel, up2);
-		R_CalcBeam_Vertex3f(varray_vertex3f, v, up2, p->scalex);
-		varray_texcoord2f[0][0] = tex->s1;varray_texcoord2f[0][1] = tex->t2;
-		varray_texcoord2f[0][2] = tex->s1;varray_texcoord2f[0][3] = tex->t1;
-		varray_texcoord2f[0][4] = tex->s2;varray_texcoord2f[0][5] = tex->t1;
-		varray_texcoord2f[0][6] = tex->s2;varray_texcoord2f[0][7] = tex->t2;
+		R_CalcBeam_Vertex3f(particle_vertex3f, v, up2, p->scalex);
+		particle_texcoord2f[0] = tex->s1;particle_texcoord2f[1] = tex->t2;
+		particle_texcoord2f[2] = tex->s1;particle_texcoord2f[3] = tex->t1;
+		particle_texcoord2f[4] = tex->s2;particle_texcoord2f[5] = tex->t1;
+		particle_texcoord2f[6] = tex->s2;particle_texcoord2f[7] = tex->t2;
 	}
 	else if (p->orientation == PARTICLE_BEAM)
 	{
-		R_CalcBeam_Vertex3f(varray_vertex3f, p->org, p->vel2, p->scalex);
+		R_CalcBeam_Vertex3f(particle_vertex3f, p->org, p->vel2, p->scalex);
 		VectorSubtract(p->vel2, p->org, up);
 		VectorNormalizeFast(up);
 		v[0] = DotProduct(p->org, up) * (1.0f / 64.0f) - cl.time * 0.25;
 		v[1] = DotProduct(p->vel2, up) * (1.0f / 64.0f) - cl.time * 0.25;
-		varray_texcoord2f[0][0] = 1;varray_texcoord2f[0][1] = v[0];
-		varray_texcoord2f[0][2] = 0;varray_texcoord2f[0][3] = v[0];
-		varray_texcoord2f[0][4] = 0;varray_texcoord2f[0][5] = v[1];
-		varray_texcoord2f[0][6] = 1;varray_texcoord2f[0][7] = v[1];
+		particle_texcoord2f[0] = 1;particle_texcoord2f[1] = v[0];
+		particle_texcoord2f[2] = 0;particle_texcoord2f[3] = v[0];
+		particle_texcoord2f[4] = 0;particle_texcoord2f[5] = v[1];
+		particle_texcoord2f[6] = 1;particle_texcoord2f[7] = v[1];
 	}
 	else
 		Host_Error("R_DrawParticles: unknown particle orientation %i\n", p->orientation);
@@ -1812,10 +1807,10 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 		glBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
 	glColor4f(cr, cg, cb, ca);
 	glBegin(GL_QUADS);
-	glTexCoord2f(varray_texcoord2f[0][0], varray_texcoord2f[0][1]);glVertex3f(varray_vertex3f[ 0], varray_vertex3f[ 1], varray_vertex3f[ 2]);
-	glTexCoord2f(varray_texcoord2f[0][2], varray_texcoord2f[0][3]);glVertex3f(varray_vertex3f[ 3], varray_vertex3f[ 4], varray_vertex3f[ 5]);
-	glTexCoord2f(varray_texcoord2f[0][4], varray_texcoord2f[0][5]);glVertex3f(varray_vertex3f[ 6], varray_vertex3f[ 7], varray_vertex3f[ 8]);
-	glTexCoord2f(varray_texcoord2f[0][6], varray_texcoord2f[0][7]);glVertex3f(varray_vertex3f[ 9], varray_vertex3f[10], varray_vertex3f[11]);
+	glTexCoord2f(particle_texcoord2f[0], particle_texcoord2f[1]);glVertex3f(particle_vertex3f[ 0], particle_vertex3f[ 1], particle_vertex3f[ 2]);
+	glTexCoord2f(particle_texcoord2f[2], particle_texcoord2f[3]);glVertex3f(particle_vertex3f[ 3], particle_vertex3f[ 4], particle_vertex3f[ 5]);
+	glTexCoord2f(particle_texcoord2f[4], particle_texcoord2f[5]);glVertex3f(particle_vertex3f[ 6], particle_vertex3f[ 7], particle_vertex3f[ 8]);
+	glTexCoord2f(particle_texcoord2f[6], particle_texcoord2f[7]);glVertex3f(particle_vertex3f[ 9], particle_vertex3f[10], particle_vertex3f[11]);
 	glEnd();
 #else
 	R_Mesh_Draw(4, 2, polygonelements);

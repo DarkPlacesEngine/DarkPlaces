@@ -55,6 +55,7 @@ static textypeinfo_t textype_rgba_alpha    = {TEXTYPE_RGBA   , 4, 4, GL_RGBA, 4}
 #define GLTEXTURETYPE_CUBEMAP 3
 
 static int gltexturetypeenums[4] = {GL_TEXTURE_1D, GL_TEXTURE_2D, GL_TEXTURE_3D, GL_TEXTURE_CUBE_MAP_ARB};
+static int gltexturetypebindingenums[4] = {GL_TEXTURE_BINDING_1D, GL_TEXTURE_BINDING_2D, GL_TEXTURE_BINDING_3D, GL_TEXTURE_BINDING_CUBE_MAP_ARB};
 static int gltexturetypedimensions[4] = {1, 2, 3, 2};
 static int cubemapside[6] =
 {
@@ -320,11 +321,10 @@ static glmode_t modes[] =
 	{"GL_LINEAR_MIPMAP_LINEAR", GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR}
 };
 
-extern int gl_backend_rebindtextures;
-
 static void GL_TextureMode_f (void)
 {
 	int i;
+	GLint oldbindtexnum;
 	gltextureimage_t *image;
 	gltexturepool_t *pool;
 
@@ -363,12 +363,14 @@ static void GL_TextureMode_f (void)
 			// only update already uploaded images
 			if (!(image->flags & GLTEXF_UPLOAD))
 			{
-				qglBindTexture(GL_TEXTURE_2D, image->texnum);
+				qglGetIntegerv(gltexturetypebindingenums[image->texturetype], &oldbindtexnum);
+				qglBindTexture(gltexturetypeenums[image->texturetype], image->texnum);
 				if (image->flags & TEXF_MIPMAP)
-					qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
+					qglTexParameteri(gltexturetypeenums[image->texturetype], GL_TEXTURE_MIN_FILTER, gl_filter_min);
 				else
-					qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_mag);
-				qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
+					qglTexParameteri(gltexturetypeenums[image->texturetype], GL_TEXTURE_MIN_FILTER, gl_filter_mag);
+				qglTexParameteri(gltexturetypeenums[image->texturetype], GL_TEXTURE_MAG_FILTER, gl_filter_mag);
+				qglBindTexture(gltexturetypeenums[image->texturetype], oldbindtexnum);
 			}
 		}
 	}
@@ -603,19 +605,19 @@ static void GL_SetupTextureParameters(int flags, int texturetype)
 
 static void R_Upload(gltexture_t *glt, qbyte *data)
 {
-	int i, mip, width, height, depth, internalformat;
+	int i, mip, width, height, depth;
+	GLint oldbindtexnum;
 	qbyte *prevbuffer;
 	prevbuffer = data;
-
-	R_Mesh_EndBatch();
 
 	CHECKGLERROR
 
 	glt->texnum = glt->image->texnum;
+	// we need to restore the texture binding after finishing the upload
+	qglGetIntegerv(gltexturetypebindingenums[glt->image->texturetype], &oldbindtexnum);
 	qglBindTexture(gltexturetypeenums[glt->image->texturetype], glt->image->texnum);
 	CHECKGLERROR
 	glt->flags &= ~GLTEXF_UPLOAD;
-	gl_backend_rebindtextures = true;
 
 	if (glt->flags & TEXF_FRAGMENT)
 	{
@@ -679,111 +681,40 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 			Host_Error("R_Upload: fragment texture of type other than 1D, 2D, or 3D\n");
 			break;
 		}
-		glt->texnum = glt->image->texnum;
-		return;
-	}
-
-	glt->image->flags &= ~GLTEXF_UPLOAD;
-
-	// these are rounded up versions of the size to do better resampling
-	for (width  = 1;width  < glt->width ;width  <<= 1);
-	for (height = 1;height < glt->height;height <<= 1);
-	for (depth  = 1;depth  < glt->depth ;depth  <<= 1);
-
-	R_MakeResizeBufferBigger(width * height * depth * glt->image->sides * glt->image->bytesperpixel);
-
-	if (prevbuffer == NULL)
-	{
-		width = glt->image->width;
-		height = glt->image->height;
-		depth = glt->image->depth;
-		memset(resizebuffer, 255, width * height * depth * glt->image->bytesperpixel);
-		prevbuffer = resizebuffer;
 	}
 	else
 	{
-		if (glt->textype->textype == TEXTYPE_PALETTE)
-		{
-			// promote paletted to RGBA, so we only have to worry about RGB and
-			// RGBA in the rest of this code
-			Image_Copy8bitRGBA(prevbuffer, colorconvertbuffer, glt->width * glt->height * glt->depth * glt->image->sides, glt->palette);
-			prevbuffer = colorconvertbuffer;
-		}
-	}
+		glt->image->flags &= ~GLTEXF_UPLOAD;
 
-	// 3 and 4 are converted by the driver to it's preferred format for the current display mode
-	internalformat = 3;
-	if (glt->flags & TEXF_ALPHA)
-		internalformat = 4;
+		// these are rounded up versions of the size to do better resampling
+		for (width  = 1;width  < glt->width ;width  <<= 1);
+		for (height = 1;height < glt->height;height <<= 1);
+		for (depth  = 1;depth  < glt->depth ;depth  <<= 1);
 
-	// cubemaps contain multiple images and thus get processed a bit differently
-	if (glt->image->texturetype != GLTEXTURETYPE_CUBEMAP)
-	{
-		if (glt->width != width || glt->height != height || glt->depth != depth)
+		R_MakeResizeBufferBigger(width * height * depth * glt->image->sides * glt->image->bytesperpixel);
+
+		if (prevbuffer == NULL)
 		{
-			Image_Resample(prevbuffer, glt->width, glt->height, glt->depth, resizebuffer, width, height, depth, glt->image->bytesperpixel, r_lerpimages.integer);
+			width = glt->image->width;
+			height = glt->image->height;
+			depth = glt->image->depth;
+			memset(resizebuffer, 255, width * height * depth * glt->image->bytesperpixel);
 			prevbuffer = resizebuffer;
 		}
-		// picmip/max_size
-		while (width > glt->image->width || height > glt->image->height || depth > glt->image->depth)
+		else
 		{
-			Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, glt->image->width, glt->image->height, glt->image->depth, glt->image->bytesperpixel);
-			prevbuffer = resizebuffer;
-		}
-	}
-	mip = 0;
-	switch(glt->image->texturetype)
-	{
-	case GLTEXTURETYPE_1D:
-		qglTexImage1D(GL_TEXTURE_1D, mip++, internalformat, width, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
-		CHECKGLERROR
-		if (glt->flags & TEXF_MIPMAP)
-		{
-			while (width > 1 || height > 1 || depth > 1)
+			if (glt->textype->textype == TEXTYPE_PALETTE)
 			{
-				Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1, glt->image->bytesperpixel);
-				prevbuffer = resizebuffer;
-				qglTexImage1D(GL_TEXTURE_1D, mip++, internalformat, width, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
-				CHECKGLERROR
+				// promote paletted to RGBA, so we only have to worry about RGB and
+				// RGBA in the rest of this code
+				Image_Copy8bitRGBA(prevbuffer, colorconvertbuffer, glt->width * glt->height * glt->depth * glt->image->sides, glt->palette);
+				prevbuffer = colorconvertbuffer;
 			}
 		}
-		break;
-	case GLTEXTURETYPE_2D:
-		qglTexImage2D(GL_TEXTURE_2D, mip++, internalformat, width, height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
-		CHECKGLERROR
-		if (glt->flags & TEXF_MIPMAP)
+
+		// cubemaps contain multiple images and thus get processed a bit differently
+		if (glt->image->texturetype != GLTEXTURETYPE_CUBEMAP)
 		{
-			while (width > 1 || height > 1 || depth > 1)
-			{
-				Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1, glt->image->bytesperpixel);
-				prevbuffer = resizebuffer;
-				qglTexImage2D(GL_TEXTURE_2D, mip++, internalformat, width, height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
-				CHECKGLERROR
-			}
-		}
-		break;
-	case GLTEXTURETYPE_3D:
-		qglTexImage3D(GL_TEXTURE_3D, mip++, internalformat, width, height, depth, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
-		CHECKGLERROR
-		if (glt->flags & TEXF_MIPMAP)
-		{
-			while (width > 1 || height > 1 || depth > 1)
-			{
-				Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1, glt->image->bytesperpixel);
-				prevbuffer = resizebuffer;
-				qglTexImage3D(GL_TEXTURE_3D, mip++, internalformat, width, height, depth, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
-				CHECKGLERROR
-			}
-		}
-		break;
-	case GLTEXTURETYPE_CUBEMAP:
-		// convert and upload each side in turn,
-		// from a continuous block of input texels
-		texturebuffer = prevbuffer;
-		for (i = 0;i < 6;i++)
-		{
-			prevbuffer = texturebuffer;
-			texturebuffer += width * height * depth * glt->textype->inputbytesperpixel;
 			if (glt->width != width || glt->height != height || glt->depth != depth)
 			{
 				Image_Resample(prevbuffer, glt->width, glt->height, glt->depth, resizebuffer, width, height, depth, glt->image->bytesperpixel, r_lerpimages.integer);
@@ -795,8 +726,12 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 				Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, glt->image->width, glt->image->height, glt->image->depth, glt->image->bytesperpixel);
 				prevbuffer = resizebuffer;
 			}
-			mip = 0;
-			qglTexImage2D(cubemapside[i], mip++, internalformat, width, height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+		}
+		mip = 0;
+		switch(glt->image->texturetype)
+		{
+		case GLTEXTURETYPE_1D:
+			qglTexImage1D(GL_TEXTURE_1D, mip++, glt->image->glinternalformat, width, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 			CHECKGLERROR
 			if (glt->flags & TEXF_MIPMAP)
 			{
@@ -804,14 +739,77 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 				{
 					Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1, glt->image->bytesperpixel);
 					prevbuffer = resizebuffer;
-					qglTexImage2D(cubemapside[i], mip++, internalformat, width, height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+					qglTexImage1D(GL_TEXTURE_1D, mip++, glt->image->glinternalformat, width, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 					CHECKGLERROR
 				}
 			}
+			break;
+		case GLTEXTURETYPE_2D:
+			qglTexImage2D(GL_TEXTURE_2D, mip++, glt->image->glinternalformat, width, height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+			CHECKGLERROR
+			if (glt->flags & TEXF_MIPMAP)
+			{
+				while (width > 1 || height > 1 || depth > 1)
+				{
+					Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1, glt->image->bytesperpixel);
+					prevbuffer = resizebuffer;
+					qglTexImage2D(GL_TEXTURE_2D, mip++, glt->image->glinternalformat, width, height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+					CHECKGLERROR
+				}
+			}
+			break;
+		case GLTEXTURETYPE_3D:
+			qglTexImage3D(GL_TEXTURE_3D, mip++, glt->image->glinternalformat, width, height, depth, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+			CHECKGLERROR
+			if (glt->flags & TEXF_MIPMAP)
+			{
+				while (width > 1 || height > 1 || depth > 1)
+				{
+					Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1, glt->image->bytesperpixel);
+					prevbuffer = resizebuffer;
+					qglTexImage3D(GL_TEXTURE_3D, mip++, glt->image->glinternalformat, width, height, depth, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+					CHECKGLERROR
+				}
+			}
+			break;
+		case GLTEXTURETYPE_CUBEMAP:
+			// convert and upload each side in turn,
+			// from a continuous block of input texels
+			texturebuffer = prevbuffer;
+			for (i = 0;i < 6;i++)
+			{
+				prevbuffer = texturebuffer;
+				texturebuffer += width * height * depth * glt->textype->inputbytesperpixel;
+				if (glt->width != width || glt->height != height || glt->depth != depth)
+				{
+					Image_Resample(prevbuffer, glt->width, glt->height, glt->depth, resizebuffer, width, height, depth, glt->image->bytesperpixel, r_lerpimages.integer);
+					prevbuffer = resizebuffer;
+				}
+				// picmip/max_size
+				while (width > glt->image->width || height > glt->image->height || depth > glt->image->depth)
+				{
+					Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, glt->image->width, glt->image->height, glt->image->depth, glt->image->bytesperpixel);
+					prevbuffer = resizebuffer;
+				}
+				mip = 0;
+				qglTexImage2D(cubemapside[i], mip++, glt->image->glinternalformat, width, height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+				CHECKGLERROR
+				if (glt->flags & TEXF_MIPMAP)
+				{
+					while (width > 1 || height > 1 || depth > 1)
+					{
+						Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1, glt->image->bytesperpixel);
+						prevbuffer = resizebuffer;
+						qglTexImage2D(cubemapside[i], mip++, glt->image->glinternalformat, width, height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+						CHECKGLERROR
+					}
+				}
+			}
+			break;
 		}
-		break;
+		GL_SetupTextureParameters(glt->image->flags, glt->image->texturetype);
 	}
-	GL_SetupTextureParameters(glt->image->flags, glt->image->texturetype);
+	qglBindTexture(gltexturetypeenums[glt->image->texturetype], oldbindtexnum);
 }
 
 static void R_FindImageForTexture(gltexture_t *glt)

@@ -7,41 +7,44 @@
 #define POLYGONELEMENTS_MAXPOINTS 258
 extern int polygonelements[768];
 
-void GL_SetupView_ViewPort (int x, int y, int width, int height);
-void GL_SetupView_Orientation_Identity (void);
-void GL_SetupView_Orientation_FromEntity (vec3_t origin, vec3_t angles);
-void GL_SetupView_Mode_Perspective (double fovx, double fovy, double zNear, double zFar);
-void GL_SetupView_Mode_PerspectiveInfiniteFarClip (double fovx, double fovy, double zNear);
-void GL_SetupView_Mode_Ortho (double x1, double y1, double x2, double y2, double zNear, double zFar);
-void GL_UseColorArray(void);
+void GL_SetupView_ViewPort(int x, int y, int width, int height);
+void GL_SetupView_Orientation_Identity(void);
+void GL_SetupView_Orientation_FromEntity(vec3_t origin, vec3_t angles);
+void GL_SetupView_Mode_Perspective(double fovx, double fovy, double zNear, double zFar);
+void GL_SetupView_Mode_PerspectiveInfiniteFarClip(double fovx, double fovy, double zNear);
+void GL_SetupView_Mode_Ortho(double x1, double y1, double x2, double y2, double zNear, double zFar);
+void GL_BlendFunc(int blendfunc1, int blendfunc2);
+void GL_DepthMask(int state);
+void GL_DepthTest(int state);
+void GL_VertexPointer(const float *p);
+void GL_ColorPointer(const float *p);
 void GL_Color(float cr, float cg, float cb, float ca);
 void GL_TransformToScreen(const vec4_t in, vec4_t out);
 void GL_LockArrays(int first, int count);
+void GL_ActiveTexture(int num);
+void GL_ClientActiveTexture(int num);
 
 extern cvar_t gl_lockarrays;
 extern cvar_t gl_mesh_copyarrays;
+extern cvar_t gl_paranoid;
+extern cvar_t gl_printcheckerror;
 
 extern int c_meshelements, c_meshs;
 
 //input to R_Mesh_State
 typedef struct
 {
-	int depthwrite; // force depth writing enabled even if polygon is not opaque
-	int depthdisable; // disable depth read/write entirely
-	int blendfunc1;
-	int blendfunc2;
-	//int wantoverbright;
+	// textures
 	int tex1d[MAX_TEXTUREUNITS];
 	int tex[MAX_TEXTUREUNITS];
 	int tex3d[MAX_TEXTUREUNITS];
 	int texcubemap[MAX_TEXTUREUNITS];
+	// texture combine settings
 	int texrgbscale[MAX_TEXTUREUNITS]; // used only if COMBINE is present
 	int texalphascale[MAX_TEXTUREUNITS]; // used only if COMBINE is present
 	int texcombinergb[MAX_TEXTUREUNITS]; // works with or without combine for some operations
 	int texcombinealpha[MAX_TEXTUREUNITS]; // does nothing without combine
-	int pointervertexcount;
-	const float *pointer_vertex;
-	const float *pointer_color;
+	// pointers
 	const float *pointer_texcoord[MAX_TEXTUREUNITS];
 }
 rmeshstate_t;
@@ -49,11 +52,6 @@ rmeshstate_t;
 // overbright rendering scale for the current state
 extern int r_lightmapscalebit;
 extern float r_colorscale;
-extern float *varray_vertex3f;
-extern float *varray_color4f;
-extern float *varray_texcoord3f[MAX_TEXTUREUNITS];
-extern float *varray_texcoord2f[MAX_TEXTUREUNITS];
-extern int mesh_maxverts;
 
 // adds console variables and registers the render module (only call from GL_Init)
 void gl_backend_init(void);
@@ -68,39 +66,21 @@ void R_Mesh_Finish(void);
 // sets up the requested transform matrix
 void R_Mesh_Matrix(const matrix4x4_t *matrix);
 
-// sets up the requested state
-void R_Mesh_State(const rmeshstate_t *m);
+// sets up the requested transform matrix
+void R_Mesh_TextureMatrix(int unitnumber, const matrix4x4_t *matrix);
 
-// sets up the requested main state
-void R_Mesh_MainState(const rmeshstate_t *m);
+// set up the requested state
+void R_Mesh_State_Texture(const rmeshstate_t *m);
 
-// sets up the requested texture state
-void R_Mesh_TextureState(const rmeshstate_t *m);
-
-// forcefully ends a batch (do this before calling any gl functions directly)
-void R_Mesh_EndBatch(void);
-// prepares varray_* buffers for rendering a mesh
-void R_Mesh_GetSpace(int numverts);
-// renders a mesh (optionally with batching)
+// renders a mesh
 void R_Mesh_Draw(int numverts, int numtriangles, const int *elements);
-// renders a mesh without affecting batching
-void R_Mesh_Draw_NoBatching(int numverts, int numtriangles, const int *elements);
-
-// copies a vertex3f array into varray_vertex3f
-void R_Mesh_CopyVertex3f(const float *vertex3f, int numverts);
-// copies a texcoord2f array into varray_texcoord[tmu]
-void R_Mesh_CopyTexCoord2f(int tmu, const float *texcoord2f, int numverts);
-// copies a color4f array into varray_color4f
-void R_Mesh_CopyColor4f(const float *color4f, int numverts);
-// copies a texcoord2f array into another array, with scrolling
-void R_ScrollTexCoord2f (float *out2f, const float *in2f, int numverts, float s, float t);
 
 // saves a section of the rendered frame to a .tga or .jpg file
 qboolean SCR_ScreenShot(char *filename, int x, int y, int width, int height, qboolean jpeg);
 // used by R_Envmap_f and internally in backend, clears the frame
 void R_ClearScreen(void);
 // invoke refresh of frame
-void SCR_UpdateScreen (void);
+void SCR_UpdateScreen(void);
 
 // public structure
 typedef struct rcachearrayrequest_s
@@ -122,6 +102,12 @@ typedef struct rcachearrayrequest_s
 rcachearrayrequest_t;
 
 int R_Mesh_CacheArray(rcachearrayrequest_t *r);
+
+extern float varray_vertex3f[65536*3];
+extern float varray_color4f[65536*4];
+extern float varray_texcoord2f[4][65536*2];
+extern float varray_texcoord3f[4][65536*3];
+extern float varray_normal3f[65536*3];
 
 #endif
 
