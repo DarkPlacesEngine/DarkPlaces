@@ -487,18 +487,20 @@ void NET_Stats_f (void)
 	{
 		for (s = net_activeSockets; s; s = s->next)
 			PrintStats(s);
-		for (s = net_freeSockets; s; s = s->next)
-			PrintStats(s);
+		// LordHavoc: sockets are dynamically allocated now
+		//for (s = net_freeSockets; s; s = s->next)
+		//	PrintStats(s);
 	}
 	else
 	{
 		for (s = net_activeSockets; s; s = s->next)
 			if (Q_strcasecmp(Cmd_Argv(1), s->address) == 0)
 				break;
-		if (s == NULL)
-			for (s = net_freeSockets; s; s = s->next)
-				if (Q_strcasecmp(Cmd_Argv(1), s->address) == 0)
-					break;
+		// LordHavoc: sockets are dynamically allocated now
+		//if (s == NULL)
+		//	for (s = net_freeSockets; s; s = s->next)
+		//		if (Q_strcasecmp(Cmd_Argv(1), s->address) == 0)
+		//			break;
 		if (s == NULL)
 			return;
 		PrintStats(s);

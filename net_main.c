@@ -21,9 +21,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-qsocket_t	*net_activeSockets = NULL;
-qsocket_t	*net_freeSockets = NULL;
-int			net_numsockets = 0;
+qsocket_t *net_activeSockets = NULL;
+//qsocket_t *net_freeSockets = NULL;
+//int net_numsockets = 0;
+mempool_t *net_mempool;
 
 qboolean	ipxAvailable = false;
 qboolean	tcpipAvailable = false;
@@ -89,15 +90,17 @@ qsocket_t *NET_NewQSocket (void)
 {
 	qsocket_t	*sock;
 
-	if (net_freeSockets == NULL)
-		return NULL;
+//	if (net_freeSockets == NULL)
+//		return NULL;
 
 	if (net_activeconnections >= svs.maxclients)
 		return NULL;
 
 	// get one from free list
-	sock = net_freeSockets;
-	net_freeSockets = sock->next;
+//	sock = net_freeSockets;
+//	net_freeSockets = sock->next;
+	// LordHavoc: sockets are dynamically allocated now
+	sock = Mem_Alloc(net_mempool, sizeof(qsocket_t));
 
 	// add it to active list
 	sock->next = net_activeSockets;
@@ -144,9 +147,11 @@ void NET_FreeQSocket(qsocket_t *sock)
 	}
 
 	// add it to free list
-	sock->next = net_freeSockets;
-	net_freeSockets = sock;
-	sock->disconnected = true;
+//	sock->next = net_freeSockets;
+//	net_freeSockets = sock;
+//	sock->disconnected = true;
+	// LordHavoc: sockets are dynamically allocated now
+	Mem_Free(sock);
 }
 
 
@@ -556,7 +561,7 @@ int NET_SendMessage (qsocket_t *sock, sizebuf_t *data)
 	r = sfunc.QSendMessage(sock, data);
 	if (r == 1 && sock->driver)
 		messagesSent++;
-	
+
 	return r;
 }
 
@@ -691,13 +696,12 @@ NET_Init
 ====================
 */
 
-static mempool_t *net_mempool;
-
 void NET_Init (void)
 {
 	int			i;
 	int			controlSocket;
-	qsocket_t	*s;
+	// LordHavoc: sockets are dynamically allocated now
+	//qsocket_t	*s;
 
 	i = COM_CheckParm ("-port");
 	if (!i)
@@ -716,13 +720,16 @@ void NET_Init (void)
 
 	if (COM_CheckParm("-listen") || cls.state == ca_dedicated)
 		listening = true;
-	net_numsockets = svs.maxclientslimit;
-	if (cls.state != ca_dedicated)
-		net_numsockets++;
+	// LordHavoc: sockets are dynamically allocated now
+	//net_numsockets = svs.maxclientslimit;
+	//if (cls.state != ca_dedicated)
+	//	net_numsockets++;
 
 	SetNetTime();
 
 	net_mempool = Mem_AllocPool("qsocket");
+	// LordHavoc: sockets are dynamically allocated now
+	/*
 	s = Mem_Alloc(net_mempool, net_numsockets * sizeof(qsocket_t));
 	for (i = 0; i < net_numsockets; i++)
 	{
@@ -731,6 +738,7 @@ void NET_Init (void)
 		s->disconnected = true;
 		s++;
 	}
+	*/
 
 	// allocate space for network message buffer
 	SZ_Alloc (&net_message, NET_MAXMESSAGE, "net_message");
