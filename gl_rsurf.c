@@ -777,10 +777,9 @@ static void RSurfShader_Sky(const entity_render_t *ent, const texture_t *texture
 
 static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 {
-	int i;
 	const entity_render_t *ent = calldata1;
 	const msurface_t *surf = ent->model->surfaces + calldata2;
-	float f, colorscale, scroll[2], *v, *tc;
+	float f, colorscale;
 	const surfmesh_t *mesh;
 	rmeshstate_t m;
 	float alpha;
@@ -821,13 +820,7 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 	{
 		R_Mesh_GetSpace(mesh->numverts);
 		R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
-		scroll[0] = sin(cl.time) * 0.125f;
-		scroll[1] = sin(cl.time * 0.8f) * 0.125f;
-		for (i = 0, v = varray_texcoord2f[0], tc = mesh->texcoordtexture2f;i < mesh->numverts;i++, v += 2, tc += 2)
-		{
-			v[0] = tc[0] + scroll[0];
-			v[1] = tc[1] + scroll[1];
-		}
+		R_ScrollTexCoord2f(varray_texcoord2f[0], mesh->texcoordtexture2f, mesh->numverts, sin(cl.time) * 0.125f, sin(cl.time * 0.8f) * 0.125f);
 		f = surf->flags & SURF_DRAWFULLBRIGHT ? 1.0f : ((surf->flags & SURF_LIGHTMAP) ? 0 : 0.5f);
 		R_FillColors(varray_color4f, mesh->numverts, f, f, f, alpha);
 		if (!(surf->flags & SURF_DRAWFULLBRIGHT || ent->effects & EF_FULLBRIGHT))
@@ -887,8 +880,10 @@ static void RSurfShader_Wall_Pass_BaseVertex(const entity_render_t *ent, const m
 	float base, colorscale;
 	const surfmesh_t *mesh;
 	rmeshstate_t m;
+	rcachearrayrequest_t request;
 	float modelorg[3];
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+	memset(&request, 0, sizeof(request));
 	memset(&m, 0, sizeof(m));
 	if (rendertype == SURFRENDER_ADD)
 	{
@@ -917,19 +912,49 @@ static void RSurfShader_Wall_Pass_BaseVertex(const entity_render_t *ent, const m
 	GL_UseColorArray();
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
-		R_Mesh_GetSpace(mesh->numverts);
-		R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
-		R_Mesh_CopyTexCoord2f(0, mesh->texcoordtexture2f, mesh->numverts);
-		R_FillColors(varray_color4f, mesh->numverts, base, base, base, currentalpha);
-		if (!(ent->effects & EF_FULLBRIGHT))
+		if (gl_mesh_copyarrays.integer)
 		{
-			if (surf->dlightframe == r_framecount)
-				RSurf_LightSeparate_Vertex3f_Color4f(&ent->inversematrix, surf->dlightbits, mesh->numverts, mesh->vertex3f, varray_color4f, 1);
-			if (surf->flags & SURF_LIGHTMAP)
-				RSurf_AddLightmapToVertexColors_Color4f(mesh->lightmapoffsets, varray_color4f, mesh->numverts, surf->samples, ((surf->extents[0]>>4)+1)*((surf->extents[1]>>4)+1)*3, surf->styles);
+			R_Mesh_GetSpace(mesh->numverts);
+			R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
+			R_Mesh_CopyTexCoord2f(0, mesh->texcoordtexture2f, mesh->numverts);
+			R_FillColors(varray_color4f, mesh->numverts, base, base, base, currentalpha);
+			if (!(ent->effects & EF_FULLBRIGHT))
+			{
+				if (surf->dlightframe == r_framecount)
+					RSurf_LightSeparate_Vertex3f_Color4f(&ent->inversematrix, surf->dlightbits, mesh->numverts, mesh->vertex3f, varray_color4f, 1);
+				if (surf->flags & SURF_LIGHTMAP)
+					RSurf_AddLightmapToVertexColors_Color4f(mesh->lightmapoffsets, varray_color4f, mesh->numverts, surf->samples, ((surf->extents[0]>>4)+1)*((surf->extents[1]>>4)+1)*3, surf->styles);
+			}
+			RSurf_FogColors_Vertex3f_Color4f(mesh->vertex3f, varray_color4f, colorscale, mesh->numverts, modelorg);
+			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
 		}
-		RSurf_FogColors_Vertex3f_Color4f(mesh->vertex3f, varray_color4f, colorscale, mesh->numverts, modelorg);
-		R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
+		else
+		{
+			m.pointervertexcount = mesh->numverts;
+			m.pointer_vertex = mesh->vertex3f;
+			m.pointer_texcoord[0] = mesh->texcoordtexture2f;
+			// LordHavoc: this is not caching at all (difficult to
+			// cache fogging information), it's just (ab)using the
+			// cache system to get some memory
+			request.data_size = mesh->numverts * sizeof(float[4]);
+			request.id_pointer1 = ent;
+			request.id_pointer2 = mesh;
+			request.id_number1 = r_framecount;
+			if (R_Mesh_CacheArray(&request))
+			{
+				R_FillColors(request.data, mesh->numverts, base, base, base, currentalpha);
+				if (!(ent->effects & EF_FULLBRIGHT))
+				{
+					if (surf->dlightframe == r_framecount)
+						RSurf_LightSeparate_Vertex3f_Color4f(&ent->inversematrix, surf->dlightbits, mesh->numverts, mesh->vertex3f, request.data, 1);
+					if (surf->flags & SURF_LIGHTMAP)
+						RSurf_AddLightmapToVertexColors_Color4f(mesh->lightmapoffsets, request.data, mesh->numverts, surf->samples, ((surf->extents[0]>>4)+1)*((surf->extents[1]>>4)+1)*3, surf->styles);
+				}
+				RSurf_FogColors_Vertex3f_Color4f(mesh->vertex3f, request.data, colorscale, mesh->numverts, modelorg);
+			}
+			m.pointer_color = request.data;
+			R_Mesh_State(&m);
+		}
 	}
 }
 
@@ -937,8 +962,10 @@ static void RSurfShader_Wall_Pass_Glow(const entity_render_t *ent, const msurfac
 {
 	const surfmesh_t *mesh;
 	rmeshstate_t m;
+	rcachearrayrequest_t request;
 	float modelorg[3];
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+	memset(&request, 0, sizeof(request));
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
@@ -947,10 +974,31 @@ static void RSurfShader_Wall_Pass_Glow(const entity_render_t *ent, const msurfac
 	GL_UseColorArray();
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
-		R_Mesh_GetSpace(mesh->numverts);
-		R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
-		R_Mesh_CopyTexCoord2f(0, mesh->texcoordtexture2f, mesh->numverts);
-		RSurf_FoggedColors_Vertex3f_Color4f(mesh->vertex3f, varray_color4f, 1, 1, 1, currentalpha, r_colorscale, mesh->numverts, modelorg);
+		if (gl_mesh_copyarrays.integer)
+		{
+			R_Mesh_GetSpace(mesh->numverts);
+			R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
+			R_Mesh_CopyTexCoord2f(0, mesh->texcoordtexture2f, mesh->numverts);
+			RSurf_FoggedColors_Vertex3f_Color4f(mesh->vertex3f, varray_color4f, 1, 1, 1, currentalpha, r_colorscale, mesh->numverts, modelorg);
+		}
+		else
+		{
+			m.pointervertexcount = mesh->numverts;
+			m.pointer_vertex = mesh->vertex3f;
+			if (m.tex[0])
+				m.pointer_texcoord[0] = mesh->texcoordtexture2f;
+			// LordHavoc: this is not caching at all (difficult to
+			// cache fogging information), it's just (ab)using the
+			// cache system to get some memory
+			request.data_size = mesh->numverts * sizeof(float[4]);
+			request.id_pointer1 = ent;
+			request.id_pointer2 = mesh;
+			request.id_number1 = r_framecount;
+			if (R_Mesh_CacheArray(&request))
+				RSurf_FoggedColors_Vertex3f_Color4f(mesh->vertex3f, request.data, 1, 1, 1, currentalpha, r_colorscale, mesh->numverts, modelorg);
+			m.pointer_color = request.data;
+			R_Mesh_State(&m);
+		}
 		R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
 	}
 }
@@ -959,8 +1007,10 @@ static void RSurfShader_Wall_Pass_Fog(const entity_render_t *ent, const msurface
 {
 	const surfmesh_t *mesh;
 	rmeshstate_t m;
+	rcachearrayrequest_t request;
 	float modelorg[3];
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+	memset(&request, 0, sizeof(request));
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
@@ -969,11 +1019,32 @@ static void RSurfShader_Wall_Pass_Fog(const entity_render_t *ent, const msurface
 	GL_UseColorArray();
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
-		R_Mesh_GetSpace(mesh->numverts);
-		R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
-		if (m.tex[0])
-			R_Mesh_CopyTexCoord2f(0, mesh->texcoordtexture2f, mesh->numverts);
-		RSurf_FogPassColors_Vertex3f_Color4f(mesh->vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], currentalpha, r_colorscale, mesh->numverts, modelorg);
+		if (gl_mesh_copyarrays.integer)
+		{
+			R_Mesh_GetSpace(mesh->numverts);
+			R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
+			if (m.tex[0])
+				R_Mesh_CopyTexCoord2f(0, mesh->texcoordtexture2f, mesh->numverts);
+			RSurf_FogPassColors_Vertex3f_Color4f(mesh->vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], currentalpha, r_colorscale, mesh->numverts, modelorg);
+		}
+		else
+		{
+			m.pointervertexcount = mesh->numverts;
+			m.pointer_vertex = mesh->vertex3f;
+			if (m.tex[0])
+				m.pointer_texcoord[0] = mesh->texcoordtexture2f;
+			// LordHavoc: this is not caching at all (difficult to
+			// cache fogging information), it's just (ab)using the
+			// cache system to get some memory
+			request.data_size = mesh->numverts * sizeof(float[4]);
+			request.id_pointer1 = ent;
+			request.id_pointer2 = mesh;
+			request.id_number1 = r_framecount;
+			if (R_Mesh_CacheArray(&request))
+				RSurf_FogPassColors_Vertex3f_Color4f(mesh->vertex3f, request.data, fogcolor[0], fogcolor[1], fogcolor[2], currentalpha, r_colorscale, mesh->numverts, modelorg);
+			m.pointer_color = request.data;
+			R_Mesh_State(&m);
+		}
 		R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
 	}
 }
@@ -985,10 +1056,6 @@ static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render
 	rmeshstate_t m;
 	int lightmaptexturenum;
 	float cl;
-	/*
-	rcachearrayrequest_t request;
-	memset(&request, 0, sizeof(request));
-	*/
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ZERO;
@@ -1001,8 +1068,6 @@ static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render
 	R_Mesh_State(&m);
 	cl = (float) (1 << r_lightmapscalebit) * r_colorscale;
 	GL_Color(cl, cl, cl, 1);
-	if (!gl_mesh_copyarrays.integer)
-		R_Mesh_EndBatch();
 
 	while((surf = *surfchain++) != NULL)
 	{
@@ -1017,30 +1082,22 @@ static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render
 			}
 			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 			{
-				if (!gl_mesh_copyarrays.integer)
-				{
-					m.pointervertexcount = mesh->numverts;
-					m.pointer_vertex = mesh->vertex3f;
-					m.pointer_texcoord[0] = mesh->texcoordtexture2f;
-					m.pointer_texcoord[1] = mesh->texcoordlightmap2f;
-					m.pointer_texcoord[2] = mesh->texcoorddetail2f;
-					/*
-					request.id_pointer1 = ent->model;
-					request.id_pointer2 = mesh->texcoorddetail2f;
-					request.data_size = sizeof(float[2]) * mesh->numverts;
-					if (R_Mesh_CacheArray(&request))
-						memcpy(request.data, mesh->texcoorddetail2f, request.data_size);
-					m.pointer_texcoord[2] = request.data;
-					*/
-					R_Mesh_State(&m);
-				}
-				else
+				if (gl_mesh_copyarrays.integer)
 				{
 					R_Mesh_GetSpace(mesh->numverts);
 					R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
 					R_Mesh_CopyTexCoord2f(0, mesh->texcoordtexture2f, mesh->numverts);
 					R_Mesh_CopyTexCoord2f(1, mesh->texcoordlightmap2f, mesh->numverts);
 					R_Mesh_CopyTexCoord2f(2, mesh->texcoorddetail2f, mesh->numverts);
+				}
+				else
+				{
+					m.pointervertexcount = mesh->numverts;
+					m.pointer_vertex = mesh->vertex3f;
+					m.pointer_texcoord[0] = mesh->texcoordtexture2f;
+					m.pointer_texcoord[1] = mesh->texcoordlightmap2f;
+					m.pointer_texcoord[2] = mesh->texcoorddetail2f;
+					R_Mesh_State(&m);
 				}
 				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
 			}
@@ -1075,10 +1132,21 @@ static void RSurfShader_OpaqueWall_Pass_BaseDoubleTex(const entity_render_t *ent
 			}
 			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 			{
-				R_Mesh_GetSpace(mesh->numverts);
-				R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
-				R_Mesh_CopyTexCoord2f(0, mesh->texcoordtexture2f, mesh->numverts);
-				R_Mesh_CopyTexCoord2f(1, mesh->texcoordlightmap2f, mesh->numverts);
+				if (gl_mesh_copyarrays.integer)
+				{
+					R_Mesh_GetSpace(mesh->numverts);
+					R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
+					R_Mesh_CopyTexCoord2f(0, mesh->texcoordtexture2f, mesh->numverts);
+					R_Mesh_CopyTexCoord2f(1, mesh->texcoordlightmap2f, mesh->numverts);
+				}
+				else
+				{
+					m.pointervertexcount = mesh->numverts;
+					m.pointer_vertex = mesh->vertex3f;
+					m.pointer_texcoord[0] = mesh->texcoordtexture2f;
+					m.pointer_texcoord[1] = mesh->texcoordlightmap2f;
+					R_Mesh_State(&m);
+				}
 				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
 			}
 		}
@@ -1102,9 +1170,19 @@ static void RSurfShader_OpaqueWall_Pass_BaseTexture(const entity_render_t *ent, 
 		{
 			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 			{
-				R_Mesh_GetSpace(mesh->numverts);
-				R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
-				R_Mesh_CopyTexCoord2f(0, mesh->texcoordtexture2f, mesh->numverts);
+				if (gl_mesh_copyarrays.integer)
+				{
+					R_Mesh_GetSpace(mesh->numverts);
+					R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
+					R_Mesh_CopyTexCoord2f(0, mesh->texcoordtexture2f, mesh->numverts);
+				}
+				else
+				{
+					m.pointervertexcount = mesh->numverts;
+					m.pointer_vertex = mesh->vertex3f;
+					m.pointer_texcoord[0] = mesh->texcoordtexture2f;
+					R_Mesh_State(&m);
+				}
 				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
 			}
 		}
@@ -1137,9 +1215,19 @@ static void RSurfShader_OpaqueWall_Pass_BaseLightmap(const entity_render_t *ent,
 			}
 			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 			{
-				R_Mesh_GetSpace(mesh->numverts);
-				R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
-				R_Mesh_CopyTexCoord2f(0, mesh->texcoordlightmap2f, mesh->numverts);
+				if (gl_mesh_copyarrays.integer)
+				{
+					R_Mesh_GetSpace(mesh->numverts);
+					R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
+					R_Mesh_CopyTexCoord2f(0, mesh->texcoordlightmap2f, mesh->numverts);
+				}
+				else
+				{
+					m.pointervertexcount = mesh->numverts;
+					m.pointer_vertex = mesh->vertex3f;
+					m.pointer_texcoord[0] = mesh->texcoordlightmap2f;
+					R_Mesh_State(&m);
+				}
 				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
 			}
 		}
@@ -1151,8 +1239,10 @@ static void RSurfShader_OpaqueWall_Pass_Light(const entity_render_t *ent, const 
 	const msurface_t *surf;
 	const surfmesh_t *mesh;
 	float colorscale;
+	rcachearrayrequest_t request;
 	rmeshstate_t m;
 
+	memset(&request, 0, sizeof(request));
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
@@ -1173,11 +1263,34 @@ static void RSurfShader_OpaqueWall_Pass_Light(const entity_render_t *ent, const 
 			{
 				if (RSurf_LightCheck(&ent->inversematrix, surf->dlightbits, mesh))
 				{
-					R_Mesh_GetSpace(mesh->numverts);
-					R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
-					R_Mesh_CopyTexCoord2f(0, mesh->texcoordtexture2f, mesh->numverts);
-					R_FillColors(varray_color4f, mesh->numverts, 0, 0, 0, 1);
-					RSurf_LightSeparate_Vertex3f_Color4f(&ent->inversematrix, surf->dlightbits, mesh->numverts, mesh->vertex3f, varray_color4f, colorscale);
+					if (gl_mesh_copyarrays.integer)
+					{
+						R_Mesh_GetSpace(mesh->numverts);
+						R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
+						R_Mesh_CopyTexCoord2f(0, mesh->texcoordtexture2f, mesh->numverts);
+						R_FillColors(varray_color4f, mesh->numverts, 0, 0, 0, 1);
+						RSurf_LightSeparate_Vertex3f_Color4f(&ent->inversematrix, surf->dlightbits, mesh->numverts, mesh->vertex3f, varray_color4f, colorscale);
+					}
+					else
+					{
+						m.pointervertexcount = mesh->numverts;
+						m.pointer_vertex = mesh->vertex3f;
+						m.pointer_texcoord[0] = mesh->texcoordtexture2f;
+						// LordHavoc: this is not caching at all (difficult to
+						// cache lighting information), it's just (ab)using the
+						// cache system to get some memory
+						request.data_size = mesh->numverts * sizeof(float[4]);
+						request.id_pointer1 = ent;
+						request.id_pointer2 = mesh;
+						request.id_number1 = r_framecount;
+						if (R_Mesh_CacheArray(&request))
+						{
+							R_FillColors(request.data, mesh->numverts, 0, 0, 0, 1);
+							RSurf_LightSeparate_Vertex3f_Color4f(&ent->inversematrix, surf->dlightbits, mesh->numverts, mesh->vertex3f, request.data, colorscale);
+						}
+						m.pointer_color = request.data;
+						R_Mesh_State(&m);
+					}
 					R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
 				}
 			}
@@ -1189,9 +1302,11 @@ static void RSurfShader_OpaqueWall_Pass_Fog(const entity_render_t *ent, const te
 {
 	const msurface_t *surf;
 	const surfmesh_t *mesh;
+	rcachearrayrequest_t request;
 	rmeshstate_t m;
 	float modelorg[3];
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+	memset(&request, 0, sizeof(request));
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
@@ -1203,11 +1318,32 @@ static void RSurfShader_OpaqueWall_Pass_Fog(const entity_render_t *ent, const te
 		{
 			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 			{
-				R_Mesh_GetSpace(mesh->numverts);
-				R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
-				if (m.tex[0])
-					R_Mesh_CopyTexCoord2f(0, mesh->texcoordtexture2f, mesh->numverts);
-				RSurf_FogPassColors_Vertex3f_Color4f(mesh->vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], 1, r_colorscale, mesh->numverts, modelorg);
+				if (gl_mesh_copyarrays.integer)
+				{
+					R_Mesh_GetSpace(mesh->numverts);
+					R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
+					if (m.tex[0])
+						R_Mesh_CopyTexCoord2f(0, mesh->texcoordtexture2f, mesh->numverts);
+					RSurf_FogPassColors_Vertex3f_Color4f(mesh->vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], 1, r_colorscale, mesh->numverts, modelorg);
+				}
+				else
+				{
+					m.pointervertexcount = mesh->numverts;
+					m.pointer_vertex = mesh->vertex3f;
+					if (m.tex[0])
+						m.pointer_texcoord[0] = mesh->texcoordtexture2f;
+					// LordHavoc: this is not caching at all (difficult to
+					// cache fogging information), it's just (ab)using the
+					// cache system to get some memory
+					request.data_size = mesh->numverts * sizeof(float[4]);
+					request.id_pointer1 = ent;
+					request.id_pointer2 = mesh;
+					request.id_number1 = r_framecount;
+					if (R_Mesh_CacheArray(&request))
+						RSurf_FogPassColors_Vertex3f_Color4f(mesh->vertex3f, request.data, fogcolor[0], fogcolor[1], fogcolor[2], 1, r_colorscale, mesh->numverts, modelorg);
+					m.pointer_color = request.data;
+					R_Mesh_State(&m);
+				}
 				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
 			}
 		}
@@ -1231,9 +1367,19 @@ static void RSurfShader_OpaqueWall_Pass_BaseDetail(const entity_render_t *ent, c
 		{
 			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 			{
-				R_Mesh_GetSpace(mesh->numverts);
-				R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
-				R_Mesh_CopyTexCoord2f(0, mesh->texcoorddetail2f, mesh->numverts);
+				if (gl_mesh_copyarrays.integer)
+				{
+					R_Mesh_GetSpace(mesh->numverts);
+					R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
+					R_Mesh_CopyTexCoord2f(0, mesh->texcoorddetail2f, mesh->numverts);
+				}
+				else
+				{
+					m.pointervertexcount = mesh->numverts;
+					m.pointer_vertex = mesh->vertex3f;
+					m.pointer_texcoord[0] = mesh->texcoorddetail2f;
+					R_Mesh_State(&m);
+				}
 				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
 			}
 		}
@@ -1257,9 +1403,19 @@ static void RSurfShader_OpaqueWall_Pass_Glow(const entity_render_t *ent, const t
 		{
 			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 			{
-				R_Mesh_GetSpace(mesh->numverts);
-				R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
-				R_Mesh_CopyTexCoord2f(0, mesh->texcoordtexture2f, mesh->numverts);
+				if (gl_mesh_copyarrays.integer)
+				{
+					R_Mesh_GetSpace(mesh->numverts);
+					R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
+					R_Mesh_CopyTexCoord2f(0, mesh->texcoordtexture2f, mesh->numverts);
+				}
+				else
+				{
+					m.pointervertexcount = mesh->numverts;
+					m.pointer_vertex = mesh->vertex3f;
+					m.pointer_texcoord[0] = mesh->texcoordtexture2f;
+					R_Mesh_State(&m);
+				}
 				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
 			}
 		}
@@ -1286,9 +1442,19 @@ static void RSurfShader_OpaqueWall_Pass_OpaqueGlow(const entity_render_t *ent, c
 		{
 			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 			{
-				R_Mesh_GetSpace(mesh->numverts);
-				R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
-				R_Mesh_CopyTexCoord2f(0, mesh->texcoordtexture2f, mesh->numverts);
+				if (gl_mesh_copyarrays.integer)
+				{
+					R_Mesh_GetSpace(mesh->numverts);
+					R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numverts);
+					R_Mesh_CopyTexCoord2f(0, mesh->texcoordtexture2f, mesh->numverts);
+				}
+				else
+				{
+					m.pointervertexcount = mesh->numverts;
+					m.pointer_vertex = mesh->vertex3f;
+					m.pointer_texcoord[0] = mesh->texcoordtexture2f;
+					R_Mesh_State(&m);
+				}
 				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
 			}
 		}
