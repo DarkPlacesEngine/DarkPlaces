@@ -25,9 +25,19 @@ cvar_t pr_zone_min_strings = {0, "pr_zone_min_strings", "64"};
 
 mempool_t *pr_strings_mempool;
 
-#define MAX_VARSTRING 4096
+// LordHavoc: added this to semi-fix the problem of using many ftos calls in a print
+#define STRINGTEMP_BUFFERS 16
+#define STRINGTEMP_LENGTH 4096
+static char pr_string_temp[STRINGTEMP_BUFFERS][STRINGTEMP_LENGTH];
+static int pr_string_tempindex = 0;
 
-char pr_varstring_temp[MAX_VARSTRING];
+static char *PR_GetTempString(void)
+{
+	char *s;
+	s = pr_string_temp[pr_string_tempindex];
+	pr_string_tempindex = (pr_string_tempindex + 1) % STRINGTEMP_BUFFERS;
+	return s;
+}
 
 #define	RETURN_EDICT(e) (((int *)pr_globals)[OFS_RETURN] = EDICT_TO_PROG(e))
 
@@ -41,14 +51,13 @@ char pr_varstring_temp[MAX_VARSTRING];
 */
 
 
-char *PF_VarString (int first)
+void PF_VarString(int first, char *out, int outlength)
 {
 	int i;
 	const char *s;
-	char *out, *outend;
+	char *outend;
 
-	out = pr_varstring_temp;
-	outend = pr_varstring_temp + sizeof(pr_varstring_temp) - 1;
+	outend = out + outlength - 1;
 	for (i = first;i < pr_argc && out < outend;i++)
 	{
 		s = G_STRING((OFS_PARM0+i*3));
@@ -56,7 +65,6 @@ char *PF_VarString (int first)
 			*out++ = *s++;
 	}
 	*out++ = 0;
-	return pr_varstring_temp;
 }
 
 char *ENGINE_EXTENSIONS =
@@ -180,11 +188,11 @@ error(value)
 */
 void PF_error (void)
 {
-	char	*s;
 	edict_t	*ed;
+	char string[STRINGTEMP_LENGTH];
 
-	s = PF_VarString(0);
-	Con_Printf ("======SERVER ERROR in %s:\n%s\n", PR_GetString(pr_xfunction->s_name), s);
+	PF_VarString(0, string, sizeof(string));
+	Con_Printf ("======SERVER ERROR in %s:\n%s\n", PR_GetString(pr_xfunction->s_name), string);
 	ed = PROG_TO_EDICT(pr_global_struct->self);
 	ED_Print (ed);
 
@@ -203,11 +211,11 @@ objerror(value)
 */
 void PF_objerror (void)
 {
-	char	*s;
 	edict_t	*ed;
+	char string[STRINGTEMP_LENGTH];
 
-	s = PF_VarString(0);
-	Con_Printf ("======OBJECT ERROR in %s:\n%s\n", PR_GetString(pr_xfunction->s_name), s);
+	PF_VarString(0, string, sizeof(string));
+	Con_Printf ("======OBJECT ERROR in %s:\n%s\n", PR_GetString(pr_xfunction->s_name), string);
 	ed = PROG_TO_EDICT(pr_global_struct->self);
 	ED_Print (ed);
 	ED_Free (ed);
@@ -348,10 +356,9 @@ bprint(value)
 */
 void PF_bprint (void)
 {
-	char		*s;
-
-	s = PF_VarString(0);
-	SV_BroadcastPrintf ("%s", s);
+	char string[STRINGTEMP_LENGTH];
+	PF_VarString(0, string, sizeof(string));
+	SV_BroadcastPrintf("%s", string);
 }
 
 /*
@@ -365,12 +372,11 @@ sprint(clientent, value)
 */
 void PF_sprint (void)
 {
-	char		*s;
 	client_t	*client;
 	int			entnum;
+	char string[STRINGTEMP_LENGTH];
 
 	entnum = G_EDICTNUM(OFS_PARM0);
-	s = PF_VarString(1);
 
 	if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
 	{
@@ -381,8 +387,9 @@ void PF_sprint (void)
 	client = svs.clients + entnum-1;
 	if (!client->netconnection)
 		return;
+	PF_VarString(1, string, sizeof(string));
 	MSG_WriteChar(&client->message,svc_print);
-	MSG_WriteString(&client->message, s );
+	MSG_WriteString(&client->message, string);
 }
 
 
@@ -397,12 +404,11 @@ centerprint(clientent, value)
 */
 void PF_centerprint (void)
 {
-	char		*s;
 	client_t	*client;
 	int			entnum;
+	char string[STRINGTEMP_LENGTH];
 
 	entnum = G_EDICTNUM(OFS_PARM0);
-	s = PF_VarString(1);
 
 	if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
 	{
@@ -413,8 +419,9 @@ void PF_centerprint (void)
 	client = svs.clients + entnum-1;
 	if (!client->netconnection)
 		return;
+	PF_VarString(1, string, sizeof(string));
 	MSG_WriteChar(&client->message,svc_centerprint);
-	MSG_WriteString(&client->message, s );
+	MSG_WriteString(&client->message, string);
 }
 
 
@@ -1041,21 +1048,12 @@ PF_dprint
 */
 void PF_dprint (void)
 {
-	Con_DPrintf ("%s",PF_VarString(0));
-}
-
-// LordHavoc: added this to semi-fix the problem of using many ftos calls in a print
-#define STRINGTEMP_BUFFERS 16
-#define STRINGTEMP_LENGTH 128
-static char pr_string_temp[STRINGTEMP_BUFFERS][STRINGTEMP_LENGTH];
-static int pr_string_tempindex = 0;
-
-static char *PR_GetTempString(void)
-{
-	char *s;
-	s = pr_string_temp[pr_string_tempindex];
-	pr_string_tempindex = (pr_string_tempindex + 1) % STRINGTEMP_BUFFERS;
-	return s;
+	char string[STRINGTEMP_LENGTH];
+	if (developer.integer)
+	{
+		PF_VarString(0, string, sizeof(string));
+		Con_Printf("%s",string);
+	}
 }
 
 void PF_ftos (void)
@@ -2690,8 +2688,9 @@ void PR_Files_CloseAll(void)
 //float(string s) stof = #81; // get numerical value from a string
 void PF_stof(void)
 {
-	char *s = PF_VarString(0);
-	G_FLOAT(OFS_RETURN) = atof(s);
+	char string[STRINGTEMP_LENGTH];
+	PF_VarString(0, string, sizeof(string));
+	G_FLOAT(OFS_RETURN) = atof(string);
 }
 
 //float(string filename, float mode) fopen = #110; // opens a file inside quake/gamedir/data/ (mode is FILE_READ, FILE_APPEND, or FILE_WRITE), returns fhandle >= 0 if successful, or fhandle < 0 if unable to open file for any reason
@@ -2765,7 +2764,7 @@ void PF_fclose(void)
 void PF_fgets(void)
 {
 	int c, end;
-	static char string[MAX_VARSTRING];
+	static char string[STRINGTEMP_LENGTH];
 	int filenum = G_FLOAT(OFS_PARM0);
 	if (filenum < 0 || filenum >= MAX_PRFILES)
 	{
@@ -2783,7 +2782,7 @@ void PF_fgets(void)
 		c = FS_Getc(pr_files[filenum]);
 		if (c == '\r' || c == '\n' || c < 0)
 			break;
-		if (end < MAX_VARSTRING - 1)
+		if (end < STRINGTEMP_LENGTH - 1)
 			string[end++] = c;
 	}
 	string[end] = 0;
@@ -2802,7 +2801,8 @@ void PF_fgets(void)
 void PF_fputs(void)
 {
 	int stringlength;
-	char *s = PF_VarString(1);
+	char string[STRINGTEMP_LENGTH];
+	PF_VarString(1, string, sizeof(string));
 	int filenum = G_FLOAT(OFS_PARM0);
 	if (filenum < 0 || filenum >= MAX_PRFILES)
 	{
@@ -2814,10 +2814,10 @@ void PF_fputs(void)
 		Con_Printf("PF_fputs: no such file handle %i (or file has been closed)\n", filenum);
 		return;
 	}
-	if ((stringlength = strlen(s)))
-		FS_Write(pr_files[filenum], s, stringlength);
+	if ((stringlength = strlen(string)))
+		FS_Write(pr_files[filenum], string, stringlength);
 	if (developer.integer)
-		Con_Printf("fputs: %s\n", s);
+		Con_Printf("fputs: %s\n", string);
 }
 
 //float(string s) strlen = #114; // returns how many characters are in a string
@@ -2834,7 +2834,8 @@ void PF_strlen(void)
 //string(string s1, string s2) strcat = #115; // concatenates two strings (for example "abc", "def" would return "abcdef") and returns as a tempstring
 void PF_strcat(void)
 {
-	char *s = PF_VarString(0);
+	char *s = PR_GetTempString();
+	PF_VarString(0, s, STRINGTEMP_LENGTH);
 	G_INT(OFS_RETURN) = PR_SetString(s);
 }
 
@@ -2858,7 +2859,9 @@ void PF_substring(void)
 //vector(string s) stov = #117; // returns vector value from a string
 void PF_stov(void)
 {
-	Math_atov(PF_VarString(0), G_VECTOR(OFS_RETURN));
+	char string[STRINGTEMP_LENGTH];
+	PF_VarString(0, string, sizeof(string));
+	Math_atov(string, G_VECTOR(OFS_RETURN));
 }
 
 //string(string s) strzone = #118; // makes a copy of a string into the string zone and returns it, this is often used to keep around a tempstring for longer periods of time (tempstrings are replaced often)
