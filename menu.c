@@ -1274,7 +1274,7 @@ void M_DrawCheckbox (int x, int y, int on)
 }
 
 
-#define OPTIONS_ITEMS 27
+#define OPTIONS_ITEMS 28
 
 int options_cursor;
 
@@ -1287,6 +1287,7 @@ void M_Menu_Options_f (void)
 
 extern cvar_t gl_delayfinish;
 extern cvar_t slowmo;
+extern dllhandle_t jpeg_dll;
 
 void M_Menu_Options_AdjustSliders (int dir)
 {
@@ -1301,46 +1302,50 @@ void M_Menu_Options_AdjustSliders (int dir)
 		Cvar_SetValueQuick (&scr_viewsize, bound(30, scr_viewsize.value + dir * 10, 120));
 		break;
 	case 8:
-		Cvar_SetValueQuick (&r_sky, !r_sky.integer);
+		if (jpeg_dll != NULL)
+			Cvar_SetValueQuick (&scr_screenshot_jpeg, !scr_screenshot_jpeg.integer);
 		break;
 	case 9:
-		Cvar_SetValueQuick (&v_overbrightbits, bound(0, v_overbrightbits.integer + dir, 4));
+		Cvar_SetValueQuick (&r_sky, !r_sky.integer);
 		break;
 	case 10:
-		Cvar_SetValueQuick (&gl_combine, !gl_combine.integer);
+		Cvar_SetValueQuick (&v_overbrightbits, bound(0, v_overbrightbits.integer + dir, 4));
 		break;
 	case 11:
-		Cvar_SetValueQuick (&gl_dither, !gl_dither.integer);
+		Cvar_SetValueQuick (&gl_combine, !gl_combine.integer);
 		break;
 	case 12:
-		Cvar_SetValueQuick (&gl_delayfinish, !gl_delayfinish.integer);
+		Cvar_SetValueQuick (&gl_dither, !gl_dither.integer);
 		break;
 	case 13:
+		Cvar_SetValueQuick (&gl_delayfinish, !gl_delayfinish.integer);
+		break;
+	case 14:
 		Cvar_SetValueQuick (&slowmo, bound(0, slowmo.value + dir * 0.25, 5));
 		break;
-	case 14: // music volume
+	case 15: // music volume
 		#ifdef _WIN32
 		Cvar_SetValueQuick (&bgmvolume, bound(0, bgmvolume.value + dir * 1.0, 1));
 		#else
 		Cvar_SetValueQuick (&bgmvolume, bound(0, bgmvolume.value + dir * 0.1, 1));
 		#endif
 		break;
-	case 15: // sfx volume
+	case 16: // sfx volume
 		Cvar_SetValueQuick (&volume, bound(0, volume.value + dir * 0.1, 1));
 		break;
-	case 16:
+	case 17:
 		Cvar_SetValueQuick (&crosshair, bound(0, crosshair.integer + dir, 5));
 		break;
-	case 17:
+	case 18:
 		Cvar_SetValueQuick (&crosshair_size, bound(1, crosshair_size.value + dir, 5));
 		break;
-	case 18: // static crosshair
+	case 19: // static crosshair
 		Cvar_SetValueQuick (&crosshair_static, !crosshair_static.integer);
 		break;
-	case 19: // show framerate
+	case 20: // show framerate
 		Cvar_SetValueQuick (&showfps, !showfps.integer);
 		break;
-	case 20: // always run
+	case 21: // always run
 		if (cl_forwardspeed.value > 200)
 		{
 			Cvar_SetValueQuick (&cl_forwardspeed, 200);
@@ -1352,22 +1357,22 @@ void M_Menu_Options_AdjustSliders (int dir)
 			Cvar_SetValueQuick (&cl_backspeed, 400);
 		}
 		break;
-	case 21: // lookspring
+	case 22: // lookspring
 		Cvar_SetValueQuick (&lookspring, !lookspring.integer);
 		break;
-	case 22: // lookstrafe
+	case 23: // lookstrafe
 		Cvar_SetValueQuick (&lookstrafe, !lookstrafe.integer);
 		break;
-	case 23: // mouse speed
+	case 24: // mouse speed
 		Cvar_SetValueQuick (&sensitivity, bound(1, sensitivity.value + dir * 0.5, 50));
 		break;
-	case 24: // mouse look
+	case 25: // mouse look
 		Cvar_SetValueQuick (&freelook, !freelook.integer);
 		break;
-	case 25: // invert mouse
+	case 26: // invert mouse
 		Cvar_SetValueQuick (&m_pitch, -m_pitch.value);
 		break;
-	case 26: // windowed mouse
+	case 27: // windowed mouse
 		Cvar_SetValueQuick (&vid_mouse, !vid_mouse.integer);
 		break;
 	}
@@ -1391,6 +1396,7 @@ void M_Options_Draw (void)
 	M_Print(16, y, " Color Control Options");y += 8;
 	M_Print(16, y, "         2D Resolution");M_DrawSlider(220, y, scr_2dresolution.value, 0, 1);y += 8;
 	M_Print(16, y, "           Screen size");M_DrawSlider(220, y, scr_viewsize.value, 30, 120);y += 8;
+	M_ItemPrint(16, y, "      JPEG screenshots", jpeg_dll != NULL);M_DrawCheckbox(220, y, scr_screenshot_jpeg.integer);y += 8;
 	M_Print(16, y, "                   Sky");M_DrawCheckbox(220, y, r_sky.integer);y += 8;
 	M_Print(16, y, "       Overbright Bits");M_DrawSlider(220, y, v_overbrightbits.value, 0, 4);y += 8;
 	M_Print(16, y, "       Texture Combine");M_DrawCheckbox(220, y, gl_combine.integer);y += 8;
