@@ -83,25 +83,25 @@ PDWORD	pdwRawValue[JOY_MAX_AXES];
 // each time.  this avoids any problems with getting back to a default usage
 // or when changing from one controller to another.  this way at least something
 // works.
-cvar_t	in_joystick = {"joystick","0", true};
-cvar_t	joy_name = {"joyname", "joystick"};
-cvar_t	joy_advanced = {"joyadvanced", "0"};
-cvar_t	joy_advaxisx = {"joyadvaxisx", "0"};
-cvar_t	joy_advaxisy = {"joyadvaxisy", "0"};
-cvar_t	joy_advaxisz = {"joyadvaxisz", "0"};
-cvar_t	joy_advaxisr = {"joyadvaxisr", "0"};
-cvar_t	joy_advaxisu = {"joyadvaxisu", "0"};
-cvar_t	joy_advaxisv = {"joyadvaxisv", "0"};
-cvar_t	joy_forwardthreshold = {"joyforwardthreshold", "0.15"};
-cvar_t	joy_sidethreshold = {"joysidethreshold", "0.15"};
-cvar_t	joy_pitchthreshold = {"joypitchthreshold", "0.15"};
-cvar_t	joy_yawthreshold = {"joyyawthreshold", "0.15"};
-cvar_t	joy_forwardsensitivity = {"joyforwardsensitivity", "-1.0"};
-cvar_t	joy_sidesensitivity = {"joysidesensitivity", "-1.0"};
-cvar_t	joy_pitchsensitivity = {"joypitchsensitivity", "1.0"};
-cvar_t	joy_yawsensitivity = {"joyyawsensitivity", "-1.0"};
-cvar_t	joy_wwhack1 = {"joywwhack1", "0.0"};
-cvar_t	joy_wwhack2 = {"joywwhack2", "0.0"};
+cvar_t	in_joystick = {CVAR_SAVE, "joystick","0"};
+cvar_t	joy_name = {0, "joyname", "joystick"};
+cvar_t	joy_advanced = {0, "joyadvanced", "0"};
+cvar_t	joy_advaxisx = {0, "joyadvaxisx", "0"};
+cvar_t	joy_advaxisy = {0, "joyadvaxisy", "0"};
+cvar_t	joy_advaxisz = {0, "joyadvaxisz", "0"};
+cvar_t	joy_advaxisr = {0, "joyadvaxisr", "0"};
+cvar_t	joy_advaxisu = {0, "joyadvaxisu", "0"};
+cvar_t	joy_advaxisv = {0, "joyadvaxisv", "0"};
+cvar_t	joy_forwardthreshold = {0, "joyforwardthreshold", "0.15"};
+cvar_t	joy_sidethreshold = {0, "joysidethreshold", "0.15"};
+cvar_t	joy_pitchthreshold = {0, "joypitchthreshold", "0.15"};
+cvar_t	joy_yawthreshold = {0, "joyyawthreshold", "0.15"};
+cvar_t	joy_forwardsensitivity = {0, "joyforwardsensitivity", "-1.0"};
+cvar_t	joy_sidesensitivity = {0, "joysidesensitivity", "-1.0"};
+cvar_t	joy_pitchsensitivity = {0, "joypitchsensitivity", "1.0"};
+cvar_t	joy_yawsensitivity = {0, "joyyawsensitivity", "-1.0"};
+cvar_t	joy_wwhack1 = {0, "joywwhack1", "0.0"};
+cvar_t	joy_wwhack2 = {0, "joywwhack2", "0.0"};
 
 qboolean	joy_avail, joy_advancedinit, joy_haspov;
 DWORD		joy_oldbuttonstate, joy_oldpovstate;
@@ -542,7 +542,7 @@ void IN_MouseMove (usercmd_t *cmd)
 	if (!mouseactive)
 	{
 		GetCursorPos (&current_pos);
-		ui_updatemouse(current_pos.x - window_x, current_pos.y - window_y);
+		ui_mouseupdate(current_pos.x - window_x, current_pos.y - window_y);
 		return;
 	}
 
