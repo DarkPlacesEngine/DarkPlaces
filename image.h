@@ -53,5 +53,20 @@ qbyte *LoadLMPAs8Bit (const qbyte *f, int matchwidth, int matchheight);
 
 void Image_HeightmapToNormalmap(const unsigned char *inpixels, unsigned char *outpixels, int width, int height, int clamp, float bumpscale);
 
+typedef struct imageskin_s
+{
+	qbyte *basepixels;int basepixels_width;int basepixels_height;
+	qbyte *nmappixels;int nmappixels_width;int nmappixels_height;
+	qbyte *glowpixels;int glowpixels_width;int glowpixels_height;
+	qbyte *glosspixels;int glosspixels_width;int glosspixels_height;
+	qbyte *pantspixels;int pantspixels_width;int pantspixels_height;
+	qbyte *shirtpixels;int shirtpixels_width;int shirtpixels_height;
+	qbyte *maskpixels;int maskpixels_width;int maskpixels_height;
+}
+imageskin_t;
+
+int image_loadskin(imageskin_t *s, char *name);
+void image_freeskin(imageskin_t *s);
+
 #endif
 

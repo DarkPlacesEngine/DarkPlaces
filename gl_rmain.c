@@ -915,7 +915,7 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 			for (i = 0;i < r_refdef.numentities;i++)
 			{
 				ent = r_refdef.entities[i];
-				if (ent->model && !strcmp(ent->model->name, "progs/missile.mdl"))
+				if (ent->model)
 					R_TestAndDrawShadowVolume(ent, wl->origin, cullradius, lightradius, wl->mins, wl->maxs, clipmins, clipmaxs);
 			}
 		}

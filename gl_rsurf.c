@@ -817,7 +817,7 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 		m.blendfunc1 = GL_ONE;
 		m.blendfunc2 = GL_ZERO;
 	}
-	m.tex[0] = R_GetTexture(texture->texture);
+	m.tex[0] = R_GetTexture(texture->skin.base);
 	colorscale = r_colorscale;
 	if (gl_combine.integer)
 	{
@@ -856,7 +856,7 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 		memset(&m, 0, sizeof(m));
 		m.blendfunc1 = GL_SRC_ALPHA;
 		m.blendfunc2 = GL_ONE;
-		m.tex[0] = R_GetTexture(texture->fogtexture);
+		m.tex[0] = R_GetTexture(texture->skin.fog);
 		R_Mesh_State(&m);
 		for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 		{
@@ -915,7 +915,7 @@ static void RSurfShader_Wall_Pass_BaseVertex(const entity_render_t *ent, const m
 		m.blendfunc1 = GL_ONE;
 		m.blendfunc2 = GL_ZERO;
 	}
-	m.tex[0] = R_GetTexture(texture->texture);
+	m.tex[0] = R_GetTexture(texture->skin.base);
 	colorscale = r_colorscale;
 	if (gl_combine.integer)
 	{
@@ -952,7 +952,7 @@ static void RSurfShader_Wall_Pass_Glow(const entity_render_t *ent, const msurfac
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
-	m.tex[0] = R_GetTexture(texture->glowtexture);
+	m.tex[0] = R_GetTexture(texture->skin.glow);
 	R_Mesh_State(&m);
 	GL_UseColorArray();
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
@@ -974,7 +974,7 @@ static void RSurfShader_Wall_Pass_Fog(const entity_render_t *ent, const msurface
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
-	m.tex[0] = R_GetTexture(texture->fogtexture);
+	m.tex[0] = R_GetTexture(texture->skin.fog);
 	R_Mesh_State(&m);
 	GL_UseColorArray();
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
@@ -998,9 +998,9 @@ static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ZERO;
-	m.tex[0] = R_GetTexture(texture->texture);
+	m.tex[0] = R_GetTexture(texture->skin.base);
 	m.tex[1] = R_GetTexture((**surfchain).lightmaptexture);
-	m.tex[2] = R_GetTexture(texture->detailtexture);
+	m.tex[2] = R_GetTexture(texture->skin.detail);
 	m.texrgbscale[0] = 1;
 	m.texrgbscale[1] = 4;
 	m.texrgbscale[2] = 2;
@@ -1039,7 +1039,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseDoubleTex(const entity_render_t *ent
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ZERO;
-	m.tex[0] = R_GetTexture(texture->texture);
+	m.tex[0] = R_GetTexture(texture->skin.base);
 	m.tex[1] = R_GetTexture((**surfchain).lightmaptexture);
 	if (gl_combine.integer)
 		m.texrgbscale[1] = 4;
@@ -1075,7 +1075,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseTexture(const entity_render_t *ent, 
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ZERO;
-	m.tex[0] = R_GetTexture(texture->texture);
+	m.tex[0] = R_GetTexture(texture->skin.base);
 	R_Mesh_State(&m);
 	GL_Color(1, 1, 1, 1);
 	while((surf = *surfchain++) != NULL)
@@ -1138,7 +1138,7 @@ static void RSurfShader_OpaqueWall_Pass_Light(const entity_render_t *ent, const 
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
-	m.tex[0] = R_GetTexture(texture->texture);
+	m.tex[0] = R_GetTexture(texture->skin.base);
 	colorscale = r_colorscale;
 	if (gl_combine.integer)
 	{
@@ -1205,7 +1205,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseDetail(const entity_render_t *ent, c
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_DST_COLOR;
 	m.blendfunc2 = GL_SRC_COLOR;
-	m.tex[0] = R_GetTexture(texture->detailtexture);
+	m.tex[0] = R_GetTexture(texture->skin.detail);
 	R_Mesh_State(&m);
 	GL_Color(1, 1, 1, 1);
 	while((surf = *surfchain++) != NULL)
@@ -1231,7 +1231,7 @@ static void RSurfShader_OpaqueWall_Pass_Glow(const entity_render_t *ent, const t
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
-	m.tex[0] = R_GetTexture(texture->glowtexture);
+	m.tex[0] = R_GetTexture(texture->skin.glow);
 	R_Mesh_State(&m);
 	GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
 	while((surf = *surfchain++) != NULL)
@@ -1257,7 +1257,7 @@ static void RSurfShader_OpaqueWall_Pass_OpaqueGlow(const entity_render_t *ent, c
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ZERO;
-	m.tex[0] = R_GetTexture(texture->glowtexture);
+	m.tex[0] = R_GetTexture(texture->skin.glow);
 	R_Mesh_State(&m);
 	if (m.tex[0])
 		GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
@@ -1296,13 +1296,13 @@ static void RSurfShader_Wall_Vertex_Callback(const void *calldata1, int calldata
 		currentalpha *= r_wateralpha.value;
 	if (ent->effects & EF_ADDITIVE)
 		rendertype = SURFRENDER_ADD;
-	else if (currentalpha < 1 || texture->fogtexture != NULL)
+	else if (currentalpha < 1 || texture->skin.fog != NULL)
 		rendertype = SURFRENDER_ALPHA;
 	else
 		rendertype = SURFRENDER_OPAQUE;
 
 	RSurfShader_Wall_Pass_BaseVertex(ent, surf, texture, rendertype, currentalpha);
-	if (texture->glowtexture)
+	if (texture->skin.glow)
 		RSurfShader_Wall_Pass_Glow(ent, surf, texture, rendertype, currentalpha);
 	if (fogenabled)
 		RSurfShader_Wall_Pass_Fog(ent, surf, texture, rendertype, currentalpha);
@@ -1338,7 +1338,7 @@ static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const texture_
 		for (chain = surfchain;(surf = *chain) != NULL;chain++)
 			if (surf->visframe == r_framecount)
 				RSurfShader_Wall_Pass_BaseVertex(ent, surf, texture, texture->rendertype, texture->currentalpha);
-		if (texture->glowtexture)
+		if (texture->skin.glow)
 			for (chain = surfchain;(surf = *chain) != NULL;chain++)
 				if (surf->visframe == r_framecount)
 					RSurfShader_Wall_Pass_Glow(ent, surf, texture, texture->rendertype, texture->currentalpha);
@@ -1370,7 +1370,7 @@ static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const texture_
 		}
 		if (!r_dlightmap.integer && !(ent->effects & EF_FULLBRIGHT))
 			RSurfShader_OpaqueWall_Pass_Light(ent, texture, surfchain);
-		if (texture->glowtexture)
+		if (texture->skin.glow)
 			RSurfShader_OpaqueWall_Pass_Glow(ent, texture, surfchain);
 		if (fogenabled)
 			RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
@@ -1407,7 +1407,7 @@ void R_UpdateTextureInfo(entity_render_t *ent)
 			t->currentalpha *= r_wateralpha.value;
 		if (ent->effects & EF_ADDITIVE)
 			t->rendertype = SURFRENDER_ADD;
-		else if (t->currentalpha < 1 || t->fogtexture != NULL)
+		else if (t->currentalpha < 1 || t->skin.fog != NULL)
 			t->rendertype = SURFRENDER_ALPHA;
 		else
 			t->rendertype = SURFRENDER_OPAQUE;
@@ -1846,8 +1846,8 @@ void R_Model_Brush_DrawLightForSurfaceList(entity_render_t *ent, vec3_t relative
 				{
 					R_Mesh_ResizeCheck(mesh->numverts);
 					memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-					R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, lightradius, lightcolor, t->texture, t->nmaptexture, NULL);
-					R_Shadow_SpecularLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, t->glosstexture, t->nmaptexture, NULL);
+					R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, lightradius, lightcolor, t->skin.base, t->skin.nmap, NULL);
+					R_Shadow_SpecularLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, t->skin.gloss, t->skin.nmap, NULL);
 				}
 			}
 		}
@@ -1891,8 +1891,8 @@ void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 							{
 								R_Mesh_ResizeCheck(mesh->numverts);
 								memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-								R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, lightradius, lightcolor, t->texture, t->nmaptexture, NULL);
-								R_Shadow_SpecularLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, t->glosstexture, t->nmaptexture, NULL);
+								R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, lightradius, lightcolor, t->skin.base, t->skin.nmap, NULL);
+								R_Shadow_SpecularLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, t->skin.gloss, t->skin.nmap, NULL);
 							}
 						}
 					}
@@ -1924,8 +1924,8 @@ void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 							{
 								R_Mesh_ResizeCheck(mesh->numverts);
 								memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-								R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, lightradius, lightcolor, t->texture, t->nmaptexture, NULL);
-								R_Shadow_SpecularLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, t->glosstexture, t->nmaptexture, NULL);
+								R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, lightradius, lightcolor, t->skin.base, t->skin.nmap, NULL);
+								R_Shadow_SpecularLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, t->skin.gloss, t->skin.nmap, NULL);
 							}
 						}
 					}

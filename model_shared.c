@@ -23,6 +23,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // on the same machine.
 
 #include "quakedef.h"
+#include "image.h"
+#include "r_shadow.h"
 
 model_t *loadmodel;
 
@@ -30,8 +32,49 @@ model_t *loadmodel;
 #define	MAX_MOD_KNOWN	2048
 static model_t mod_known[MAX_MOD_KNOWN];
 
+rtexturepool_t *mod_shared_texturepool;
 rtexture_t *r_notexture;
-rtexturepool_t *r_notexturepool;
+rtexture_t *mod_shared_detailtextures[NUM_DETAILTEXTURES];
+
+void Mod_BuildDetailTextures (void)
+{
+	int i, x, y, light;
+	float vc[3], vx[3], vy[3], vn[3], lightdir[3];
+#define DETAILRESOLUTION 256
+	qbyte data[DETAILRESOLUTION][DETAILRESOLUTION][4], noise[DETAILRESOLUTION][DETAILRESOLUTION];
+	lightdir[0] = 0.5;
+	lightdir[1] = 1;
+	lightdir[2] = -0.25;
+	VectorNormalize(lightdir);
+	for (i = 0;i < NUM_DETAILTEXTURES;i++)
+	{
+		fractalnoise(&noise[0][0], DETAILRESOLUTION, DETAILRESOLUTION >> 4);
+		for (y = 0;y < DETAILRESOLUTION;y++)
+		{
+			for (x = 0;x < DETAILRESOLUTION;x++)
+			{
+				vc[0] = x;
+				vc[1] = y;
+				vc[2] = noise[y][x] * (1.0f / 32.0f);
+				vx[0] = x + 1;
+				vx[1] = y;
+				vx[2] = noise[y][(x + 1) % DETAILRESOLUTION] * (1.0f / 32.0f);
+				vy[0] = x;
+				vy[1] = y + 1;
+				vy[2] = noise[(y + 1) % DETAILRESOLUTION][x] * (1.0f / 32.0f);
+				VectorSubtract(vx, vc, vx);
+				VectorSubtract(vy, vc, vy);
+				CrossProduct(vx, vy, vn);
+				VectorNormalize(vn);
+				light = 128 - DotProduct(vn, lightdir) * 128;
+				light = bound(0, light, 255);
+				data[y][x][0] = data[y][x][1] = data[y][x][2] = light;
+				data[y][x][3] = 255;
+			}
+		}
+		mod_shared_detailtextures[i] = R_LoadTexture2D(mod_shared_texturepool, va("detailtexture%i", i), DETAILRESOLUTION, DETAILRESOLUTION, &data[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_PRECACHE, NULL);
+	}
+}
 
 texture_t r_surf_notexture;
 
@@ -62,12 +105,8 @@ void Mod_SetupNoTexture(void)
 		}
 	}
 
-	r_notexturepool = R_AllocTexturePool();
-	r_notexture = R_LoadTexture2D(r_notexturepool, "notexture", 16, 16, &pix[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP, NULL);
+	r_notexture = R_LoadTexture2D(mod_shared_texturepool, "notexture", 16, 16, &pix[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP, NULL);
 }
-
-extern void Mod_BrushStartup (void);
-extern void Mod_BrushShutdown (void);
 
 static void mod_start(void)
 {
@@ -77,8 +116,9 @@ static void mod_start(void)
 			Mod_UnloadModel(&mod_known[i]);
 	Mod_LoadModels();
 
+	mod_shared_texturepool = R_AllocTexturePool();
 	Mod_SetupNoTexture();
-	Mod_BrushStartup();
+	Mod_BuildDetailTextures();
 }
 
 static void mod_shutdown(void)
@@ -88,8 +128,7 @@ static void mod_shutdown(void)
 		if (mod_known[i].name[0])
 			Mod_UnloadModel(&mod_known[i]);
 
-	R_FreeTexturePool(&r_notexturepool);
-	Mod_BrushShutdown();
+	R_FreeTexturePool(&mod_shared_texturepool);
 }
 
 static void mod_newmap(void)
@@ -730,4 +769,85 @@ void Mod_ShadowMesh_Free(shadowmesh_t *mesh)
 		nextmesh = mesh->next;
 		Mem_Free(mesh);
 	}
+}
+
+static rtexture_t *GL_TextureForSkinLayer(const qbyte *in, int width, int height, const char *name, const unsigned int *palette, int textureflags)
+{
+	int i;
+	for (i = 0;i < width*height;i++)
+		if (((qbyte *)&palette[in[i]])[3] > 0)
+			return R_LoadTexture2D (loadmodel->texturepool, name, width, height, in, TEXTYPE_PALETTE, textureflags, palette);
+	return NULL;
+}
+
+static int detailtexturecycle = 0;
+int Mod_LoadSkinFrame (skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int usedetailtexture, int loadglowtexture)
+{
+	imageskin_t s;
+	memset(skinframe, 0, sizeof(*skinframe));
+	if (!image_loadskin(&s, basename))
+		return false;
+	if (usedetailtexture)
+		skinframe->detail = mod_shared_detailtextures[(detailtexturecycle++) % NUM_DETAILTEXTURES];
+	skinframe->base = R_LoadTexture2D (loadmodel->texturepool, basename, s.basepixels_width, s.basepixels_height, s.basepixels, TEXTYPE_RGBA, textureflags, NULL);
+	if (s.nmappixels != NULL)
+		skinframe->nmap = R_LoadTexture2D (loadmodel->texturepool, va("%s_nmap", basename), s.basepixels_width, s.basepixels_height, s.nmappixels, TEXTYPE_RGBA, textureflags, NULL);
+	if (s.glosspixels != NULL)
+		skinframe->gloss = R_LoadTexture2D (loadmodel->texturepool, va("%s_gloss", basename), s.glosspixels_width, s.glosspixels_height, s.glosspixels, TEXTYPE_RGBA, textureflags, NULL);
+	if (s.glowpixels != NULL && loadglowtexture)
+		skinframe->glow = R_LoadTexture2D (loadmodel->texturepool, va("%s_glow", basename), s.glowpixels_width, s.glowpixels_height, s.glowpixels, TEXTYPE_RGBA, textureflags, NULL);
+	if (s.maskpixels != NULL)
+		skinframe->fog = R_LoadTexture2D (loadmodel->texturepool, va("%s_mask", basename), s.maskpixels_width, s.maskpixels_height, s.maskpixels, TEXTYPE_RGBA, textureflags, NULL);
+	if (loadpantsandshirt)
+	{
+		if (s.pantspixels != NULL)
+			skinframe->pants = R_LoadTexture2D (loadmodel->texturepool, va("%s_pants", basename), s.pantspixels_width, s.pantspixels_height, s.pantspixels, TEXTYPE_RGBA, textureflags, NULL);
+		if (s.shirtpixels != NULL)
+			skinframe->shirt = R_LoadTexture2D (loadmodel->texturepool, va("%s_shirt", basename), s.shirtpixels_width, s.shirtpixels_height, s.shirtpixels, TEXTYPE_RGBA, textureflags, NULL);
+	}
+	image_freeskin(&s);
+	return true;
+}
+
+int Mod_LoadSkinFrame_Internal (skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int usedetailtexture, int loadglowtexture, qbyte *skindata, int width, int height)
+{
+	qbyte *temp1, *temp2;
+	memset(skinframe, 0, sizeof(*skinframe));
+	if (!skindata)
+		return false;
+	if (usedetailtexture)
+		skinframe->detail = mod_shared_detailtextures[(detailtexturecycle++) % NUM_DETAILTEXTURES];
+	if (r_shadow_bumpscale_basetexture.value > 0)
+	{
+		temp1 = Mem_Alloc(loadmodel->mempool, width * height * 8);
+		temp2 = temp1 + width * height * 4;
+		Image_Copy8bitRGBA(skindata, temp1, width * height, palette_nofullbrights);
+		Image_HeightmapToNormalmap(temp1, temp2, width, height, false, r_shadow_bumpscale_basetexture.value);
+		skinframe->nmap = R_LoadTexture2D(loadmodel->texturepool, va("%s_nmap", basename), width, height, temp2, TEXTYPE_RGBA, textureflags, NULL);
+		Mem_Free(temp1);
+	}
+	if (loadglowtexture)
+	{
+		skinframe->glow = GL_TextureForSkinLayer(skindata, width, height, va("%s_glow", basename), palette_onlyfullbrights, textureflags); // glow
+		skinframe->base = skinframe->merged = GL_TextureForSkinLayer(skindata, width, height, va("%s_merged", basename), palette_nofullbrights, textureflags); // all but fullbrights
+		if (loadpantsandshirt)
+		{
+			skinframe->pants = GL_TextureForSkinLayer(skindata, width, height, va("%s_pants", basename), palette_pantsaswhite, textureflags); // pants
+			skinframe->shirt = GL_TextureForSkinLayer(skindata, width, height, va("%s_shirt", basename), palette_shirtaswhite, textureflags); // shirt
+			if (skinframe->pants || skinframe->shirt)
+				skinframe->base = GL_TextureForSkinLayer(skindata, width, height, va("%s_nospecial", basename), palette_nocolormapnofullbrights, textureflags); // no special colors
+		}
+	}
+	else
+	{
+		skinframe->base = skinframe->merged = GL_TextureForSkinLayer(skindata, width, height, va("%s_merged", basename), palette_complete, textureflags); // all but fullbrights
+		if (loadpantsandshirt)
+		{
+			skinframe->pants = GL_TextureForSkinLayer(skindata, width, height, va("%s_pants", basename), palette_pantsaswhite, textureflags); // pants
+			skinframe->shirt = GL_TextureForSkinLayer(skindata, width, height, va("%s_shirt", basename), palette_shirtaswhite, textureflags); // shirt
+			if (skinframe->pants || skinframe->shirt)
+				skinframe->base = GL_TextureForSkinLayer(skindata, width, height, va("%s_nospecial", basename), palette_nocolormap, textureflags); // no pants or shirt
+		}
+	}
+	return true;
 }

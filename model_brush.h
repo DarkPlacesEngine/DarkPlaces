@@ -106,18 +106,8 @@ typedef struct texture_s
 	// type of rendering (SURFRENDER_ value)
 	int rendertype;
 
-	// base texture without fullbrights, never NULL
-	rtexture_t *texture;
-	// fullbrights texture, NULL if no fullbrights used
-	rtexture_t *glowtexture;
-	// alpha texture (used for fogging), NULL if opaque
-	rtexture_t *fogtexture;
-	// detail texture (usually not used if transparent)
-	rtexture_t *detailtexture;
-	// normalmap for bumpmap shading
-	rtexture_t *nmaptexture;
-	// color filtering for glossy surfaces
-	rtexture_t *glosstexture;
+	// loaded the same as model skins
+	skinframe_t skin;
 
 	// shader to use for this texture
 	Cshader_t *shader;

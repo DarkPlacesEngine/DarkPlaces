@@ -12,6 +12,7 @@ extern unsigned int palette_complete[256];
 extern unsigned int palette_nofullbrights[256];
 extern unsigned int palette_onlyfullbrights[256];
 extern unsigned int palette_nocolormapnofullbrights[256];
+extern unsigned int palette_nocolormap[256];
 extern unsigned int palette_pantsaswhite[256];
 extern unsigned int palette_shirtaswhite[256];
 extern unsigned int palette_alpha[256];

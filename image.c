@@ -2,6 +2,7 @@
 #include "quakedef.h"
 #include "image.h"
 #include "jpeg.h"
+#include "r_shadow.h"
 
 int		image_width;
 int		image_height;
@@ -1347,7 +1348,6 @@ void Image_MipReduce(const qbyte *in, qbyte *out, int *width, int *height, int *
 	}
 }
 
-extern cvar_t r_shadow_bumpscale;
 void Image_HeightmapToNormalmap(const unsigned char *inpixels, unsigned char *outpixels, int width, int height, int clamp, float bumpscale)
 {
 	int x, y;
@@ -1356,7 +1356,7 @@ void Image_HeightmapToNormalmap(const unsigned char *inpixels, unsigned char *ou
 	float iwidth, iheight, ibumpscale, n[3];
 	iwidth = 1.0f / width;
 	iheight = 1.0f / height;
-	ibumpscale = (255.0f * 3.0f) / (bumpscale * r_shadow_bumpscale.value);
+	ibumpscale = (255.0f * 3.0f) / bumpscale;
 	out = outpixels;
 	for (y = 0;y < height;y++)
 	{
@@ -1404,3 +1404,113 @@ void Image_HeightmapToNormalmap(const unsigned char *inpixels, unsigned char *ou
 		}
 	}
 }
+
+int image_loadskin(imageskin_t *s, char *name)
+{
+	int j;
+	qbyte *bumppixels;
+	int bumppixels_width, bumppixels_height;
+	memset(s, 0, sizeof(*s));
+	s->basepixels = loadimagepixels(name, false, 0, 0);
+	if (s->basepixels == NULL)
+		return false;
+
+	bumppixels = NULL;bumppixels_width = 0;bumppixels_height = 0;
+	for (j = 3;j < s->basepixels_width * s->basepixels_height * 4;j += 4)
+		if (s->basepixels[j] < 255)
+			break;
+	if (j < s->basepixels_width * s->basepixels_height * 4)
+	{
+		s->maskpixels = Mem_Alloc(loadmodel->mempool, s->basepixels_width * s->basepixels_height * 4);
+		s->maskpixels_width = s->basepixels_width;
+		s->maskpixels_height = s->basepixels_height;
+		memcpy(s->maskpixels, s->basepixels, s->maskpixels_width * s->maskpixels_height * 4);
+		for (j = 0;j < s->basepixels_width * s->basepixels_height * 4;j += 4)
+		{
+			s->maskpixels[j+0] = 255;
+			s->maskpixels[j+1] = 255;
+			s->maskpixels[j+2] = 255;
+		}
+	}
+
+	// _luma is supported for tenebrae compatibility
+	// (I think it's a very stupid name, but oh well)
+	if ((s->glowpixels = loadimagepixels(va("%s_glow", name), false, 0, 0)) != NULL
+	 || (s->glowpixels = loadimagepixels(va("%s_luma", name), false, 0, 0)) != NULL)
+	{
+		s->glowpixels_width = image_width;
+		s->glowpixels_height = image_height;
+	}
+	// _norm is the name used by tenebrae
+	// (I don't like the name much)
+	if ((s->nmappixels = loadimagepixels(va("%s_norm", name), false, 0, 0)) != NULL)
+	{
+		s->nmappixels_width = image_width;
+		s->nmappixels_height = image_height;
+	}
+	else if ((bumppixels = loadimagepixels(va("%s_bump", name), false, 0, 0)) != NULL)
+	{
+		bumppixels_width = image_width;
+		bumppixels_height = image_height;
+	}
+	if ((s->glosspixels = loadimagepixels(va("%s_gloss", name), false, 0, 0)) != NULL)
+	{
+		s->glosspixels_width = image_width;
+		s->glosspixels_height = image_height;
+	}
+	if ((s->pantspixels = loadimagepixels(va("%s_pants", name), false, 0, 0)) != NULL)
+	{
+		s->pantspixels_width = image_width;
+		s->pantspixels_height = image_height;
+	}
+	if ((s->shirtpixels = loadimagepixels(va("%s_shirt", name), false, 0, 0)) != NULL)
+	{
+		s->shirtpixels_width = image_width;
+		s->shirtpixels_height = image_height;
+	}
+
+	if (s->nmappixels == NULL)
+	{
+		if (bumppixels != NULL)
+		{
+			if (r_shadow_bumpscale_bumpmap.value > 0)
+			{
+				s->nmappixels = Mem_Alloc(loadmodel->mempool, bumppixels_width * bumppixels_height * 4);
+				s->nmappixels_width = bumppixels_width;
+				s->nmappixels_height = bumppixels_height;
+				Image_HeightmapToNormalmap(bumppixels, s->nmappixels, s->nmappixels_width, s->nmappixels_height, false, r_shadow_bumpscale_bumpmap.value);
+			}
+		}
+		else
+		{
+			if (r_shadow_bumpscale_basetexture.value > 0)
+			{
+				s->nmappixels = Mem_Alloc(loadmodel->mempool, s->basepixels_width * s->basepixels_height * 4);
+				s->nmappixels_width = s->basepixels_width;
+				s->nmappixels_height = s->basepixels_height;
+				Image_HeightmapToNormalmap(s->basepixels, s->nmappixels, s->nmappixels_width, s->nmappixels_height, false, r_shadow_bumpscale_basetexture.value);
+			}
+		}
+	}
+	if (bumppixels != NULL)
+		Mem_Free(bumppixels);
+	return true;
+}
+
+void image_freeskin(imageskin_t *s)
+{
+	if (s->basepixels)
+		Mem_Free(s->basepixels);
+	if (s->nmappixels)
+		Mem_Free(s->nmappixels);
+	if (s->glowpixels)
+		Mem_Free(s->glowpixels);
+	if (s->glosspixels)
+		Mem_Free(s->glosspixels);
+	if (s->pantspixels)
+		Mem_Free(s->pantspixels);
+	if (s->shirtpixels)
+		Mem_Free(s->shirtpixels);
+	memset(s, 0, sizeof(*s));
+}
+
