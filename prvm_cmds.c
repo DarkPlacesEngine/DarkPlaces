@@ -1590,7 +1590,7 @@ void VM_max (void)
 		for (i = 1;i < prog->argc;i++)
 			if (PRVM_G_FLOAT((OFS_PARM0+i*3)) > f)
 				f = PRVM_G_FLOAT((OFS_PARM0+i*3));
-		G_FLOAT(OFS_RETURN) = f;
+		PRVM_G_FLOAT(OFS_RETURN) = f;
 	}
 	else
 		PRVM_ERROR("VM_max: %s must supply at least 2 floats\n", PRVM_NAME);
@@ -2829,6 +2829,14 @@ void VM_Cmd_Init(void)
 void VM_Cmd_Reset(void)
 {
 	//Mem_EmptyPool(VM_STRINGS_MEMPOOL);
+	if( developer.integer >= 2 && VM_STRINGS_MEMPOOL ) {
+		memheader_t *header;
+		int	i;
+
+		for( i = 0, header = VM_STRINGS_MEMPOOL->chain ; header ; header = header->next, i++ )
+			Con_DPrintf( "Leaked string %i (size: %i): %.*s\n", i, header->size, header->size, ((char*)header) + sizeof( memheader_t ) );
+	}
+
 	Mem_FreePool(&VM_STRINGS_MEMPOOL);
 	VM_Search_Reset();
 	VM_Files_CloseAll();
