@@ -37,6 +37,9 @@ d darkplaces: revert noclip movement to match nq for compatibility with mods tha
 d darkplaces: make light_lev dlights from qc require PFLAGS_FULLDYNAMIC flag
 d darkplaces: improve tenebrae compatibility by handling EF_FULLDYNAMIC flag in tenebrae mode, also make all sprites render additive
 d darkplaces: add r_showtris cvar (Riot)
+d darkplaces: fix curve collision bugs, catching on edges of triangles
+0 darkplaces: support ' quoted strings (Electro)
+0 darkplaces: support " as an end token for words in Com_Parse (Electro)
 0 darkplaces: add PF_tokenizeseparator function and DP_QC_TOKENIZESEPARATOR extension (Electro) 
 0 darkplaces: optimize R_Q3BSP_RecursiveWorldNode to take clipflags parameter and do not cull a node against a plane if the parent node is totally on one side of the plane (Vic)
 0 darkplaces: optimize R_Q1BSP_BoxTouchingPVS and R_Q3BSP_BoxTouchingPVS to check pvsframe on nodes as well as leafs (Vic)
@@ -428,7 +431,7 @@ d darkplaces: add a "cmd" command to the client for sending arbitrary commands t
 3 hmap: add tga support to hqbsp (load base texture and _glow/_luma)
 4 LordHavoc: examine .mb (Maya Binary) file from Electro and learn its format (Electro)
 4 darkplaces: add EF_PARTICLESPAWNER extension (FrikaC, [TACO])
-4 darkplaces: add SKM model support with multianimation support using multiple .frame fields on the entities (Vermeulen)
+4 darkplaces: add SKM model support with multianimation support using multiple .frame fields on the entities and animation list loading (Vermeulen)
 4 darkplaces: add builtin to clientside qc for reading triangles of model meshes (useful to orient a ui along a triangle of a model mesh)
 4 darkplaces: add builtins to clientside qc for gl calls
 4 darkplaces: add crude DML model loading with animation list (ask Riot for dml library) (Mitchell)
@@ -438,7 +441,7 @@ d darkplaces: fix whatever is breaking in prydon gate town curig (Uffe)
 4 darkplaces: figure out what is wrong with dedicated server console on win32 and fix it (and tell willis@deathmask.net)
 4 darkplaces: ingame mod switching
 4 darkplaces: make hqbsp save mip textures to bsp if tga textures are found
--n darkplaces: memory pool nesting, allowing pools of pools to be batch freed (Vicious)
+d darkplaces: memory pool nesting, allowing pools of pools to be batch freed (Vicious)
 4 darkplaces: use the memory pool nesting feature ! (Black[,Vicious])
 4 darkplaces: rewrite sound system! (FrikaC, Static_Fiend, SeienAbunae)
 4 darkplaces: use getaddrinfo to support ipv6, add support for winsock2 (or require it), check if winsock2 has ipv6 functions (getaddrinfo)... (|Rain|)
@@ -448,7 +451,6 @@ d darkplaces: fix whatever is breaking in prydon gate town curig (Uffe)
 5 darkplaces: add a "edictedit" command to open up a dialog to edit an edict (allow multiple dialogs to be open at once)
 5 darkplaces: add a new TE_TELEPORTSHELL effect which would take an entity and create a fading plasma shell of its model at the moment of teleportation (tell fuh and Mercury about this)
 5 darkplaces: add back colormod extension (FrikaC, Uffe)
-5 darkplaces: add crude SKM model loading with animation list (Vermeulen)
 5 darkplaces: add dpshader support
 5 darkplaces: add short and long documentation string to each cvar/command (QorpsE)
 5 darkplaces: do a minimap that works by simply using nearclip to sheer off anything above the eye, and draws anything below normally, or via a cvar as height coloring (Supajoe)
