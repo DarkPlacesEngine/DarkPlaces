@@ -40,21 +40,33 @@ typedef struct link_s
 	struct link_s	*prev, *next;
 } link_t;
 
-// LordHavoc: increased number of leafs per entity limit from 16 to 256
-#define	MAX_ENT_LEAFS	256
+// the entire server entity structure
 typedef struct edict_s
 {
-	qboolean free; // true if this edict is unused
-	link_t area; // physics area this edict is linked into
+	// true if this edict is unused
+	qboolean free;
+	// physics area this edict is linked into
+	link_t area;
 
+	// old entity protocol, not used
 #ifdef QUAKEENTITIES
-	entity_state_t baseline; // baseline values
-	entity_state_t deltabaseline; // LordHavoc: previous frame
+	// baseline values
+	entity_state_t baseline;
+	// LordHavoc: previous frame
+	entity_state_t deltabaseline;
 #endif
 
-	int suspendedinairflag; // LordHavoc: gross hack to make floating items still work
-	float freetime; // sv.time when the object was freed
-	entvars_t *v; // edict fields
+	// LordHavoc: gross hack to make floating items still work
+	int suspendedinairflag;
+	// sv.time when the object was freed (to prevent early reuse which could
+	// mess up client interpolation or obscure severe QuakeC bugs)
+	float freetime;
+	// used by PushMove to keep track of where objects were before they were
+	// moved, in case they need to be moved back
+	vec3_t moved_from;
+	vec3_t moved_fromangles;
+	// edict fields (stored in another array)
+	entvars_t *v;
 } edict_t;
 
 // LordHavoc: in an effort to eliminate time wasted on GetEdictFieldValue...  see pr_edict.c for the functions which use these.

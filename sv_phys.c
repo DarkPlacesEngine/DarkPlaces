@@ -459,15 +459,13 @@ SV_PushMove
 trace_t SV_ClipMoveToEntity (edict_t *ent, vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end);
 void SV_PushMove (edict_t *pusher, float movetime)
 {
-	int			i, e, index;
-	edict_t		*check;
-	float		savesolid, movetime2, pushltime;
-	vec3_t		mins, maxs, move, move1, moveangle, pushorig, pushang, a, forward, left, up, org, org2;
-	int			num_moved;
-	edict_t		*moved_edict[MAX_EDICTS];
-	vec3_t		moved_from[MAX_EDICTS], moved_fromangles[MAX_EDICTS];
-	model_t		*pushermodel;
-	trace_t		trace;
+	int i, e, index;
+	edict_t *check, *ed;
+	float savesolid, movetime2, pushltime;
+	vec3_t mins, maxs, move, move1, moveangle, pushorig, pushang, a, forward, left, up, org, org2;
+	int num_moved;
+	model_t *pushermodel;
+	trace_t trace;
 
 	switch ((int) pusher->v->solid)
 	{
@@ -611,9 +609,9 @@ void SV_PushMove (edict_t *pusher, float movetime)
 		if (check->v->movetype != MOVETYPE_WALK)
 			check->v->flags = (int)check->v->flags & ~FL_ONGROUND;
 
-		VectorCopy (check->v->origin, moved_from[num_moved]);
-		VectorCopy (check->v->angles, moved_fromangles[num_moved]);
-		moved_edict[num_moved++] = check;
+		VectorCopy (check->v->origin, check->moved_from);
+		VectorCopy (check->v->angles, check->moved_fromangles);
+		sv.moved_edicts[num_moved++] = check;
 
 		// try moving the contacted entity
 		pusher->v->solid = SOLID_NOT;
@@ -649,11 +647,12 @@ void SV_PushMove (edict_t *pusher, float movetime)
 				SV_LinkEdict (pusher, false);
 
 				// move back any entities we already moved
-				for (i=0 ; i<num_moved ; i++)
+				for (i = 0;i < num_moved;i++)
 				{
-					VectorCopy (moved_from[i], moved_edict[i]->v->origin);
-					VectorCopy (moved_fromangles[i], moved_edict[i]->v->angles);
-					SV_LinkEdict (moved_edict[i], false);
+					ed = sv.moved_edicts[i];
+					VectorCopy (ed->moved_from, ed->v->origin);
+					VectorCopy (ed->moved_fromangles, ed->v->angles);
+					SV_LinkEdict (ed, false);
 				}
 
 				// if the pusher has a "blocked" function, call it, otherwise just stay in place until the obstacle is gone

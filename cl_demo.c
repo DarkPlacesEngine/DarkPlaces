@@ -159,8 +159,8 @@ int CL_GetMessage (void)
 		}
 		
 		net_message.cursize = LittleLong (net_message.cursize);
-		if (net_message.cursize > MAX_MSGLEN)
-			Host_Error ("Demo message > MAX_MSGLEN");
+		if (net_message.cursize > MAX_DATAGRAM)
+			Host_Error ("Demo message > MAX_DATAGRAM");
 		r = Qread (cls.demofile, net_message.data, net_message.cursize);
 		if (r != net_message.cursize)
 		{

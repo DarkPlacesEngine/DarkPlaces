@@ -45,19 +45,18 @@ extern char *buildstring;
 
 #define	ON_EPSILON		0.1			// point on plane side epsilon
 
-// LordHavoc: these were 8000 and 1024 respectively, now 64000 and 8000
-#define	MAX_MSGLEN		64000		// max length of a reliable message
-#define	MAX_DATAGRAM	8000		// max length of unreliable message
+// LordHavoc: this was 1024, now 65536
+#define	MAX_DATAGRAM	65536		// max length of message
 
 //
 // per-level limits
 //
 // LordHavoc: increased entity limit to 2048 from 600
-#define	MAX_EDICTS		2048		// FIXME: ouch! ouch! ouch!
+#define	MAX_EDICTS		32768		// FIXME: ouch! ouch! ouch!
 #define	MAX_LIGHTSTYLES	64
-// LordHavoc: increased model and sound limits from 256 and 256 to 1024 and 1024 (and added protocol extensions accordingly)
-#define	MAX_MODELS		1024			// these are sent over the net as bytes
-#define	MAX_SOUNDS		1024			// so they cannot be blindly increased
+// LordHavoc: increased model and sound limits from 256 and 256 to 4096 and 4096 (and added protocol extensions accordingly to break the 256 barrier)
+#define	MAX_MODELS		4096
+#define	MAX_SOUNDS		4096
 
 #define	SAVEGAME_COMMENT_LENGTH	39
 

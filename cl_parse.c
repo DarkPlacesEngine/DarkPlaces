@@ -113,21 +113,32 @@ void CL_ParseStartSoundPacket(int largesoundindex)
     int 	field_mask;
     float 	attenuation;
  	int		i;
-	           
+
     field_mask = MSG_ReadByte();
 
     if (field_mask & SND_VOLUME)
 		volume = MSG_ReadByte ();
 	else
 		volume = DEFAULT_SOUND_PACKET_VOLUME;
-	
+
     if (field_mask & SND_ATTENUATION)
 		attenuation = MSG_ReadByte () / 64.0;
 	else
 		attenuation = DEFAULT_SOUND_PACKET_ATTENUATION;
-	
-	channel = MSG_ReadShort ();
-	if (largesoundindex)
+
+	if (field_mask & SND_LARGEENTITY)
+	{
+		ent = (unsigned short) MSG_ReadShort ();
+		channel = MSG_ReadByte ();
+	}
+	else
+	{
+		channel = (unsigned short) MSG_ReadShort ();
+		ent = channel >> 3;
+		channel &= 7;
+	}
+
+	if (largesoundindex || field_mask & SND_LARGESOUND)
 		sound_num = (unsigned short) MSG_ReadShort ();
 	else
 		sound_num = MSG_ReadByte ();
@@ -135,13 +146,11 @@ void CL_ParseStartSoundPacket(int largesoundindex)
 	if (sound_num >= MAX_SOUNDS)
 		Host_Error("CL_ParseStartSoundPacket: sound_num (%i) >= MAX_SOUNDS (%i)\n", sound_num, MAX_SOUNDS);
 
-	ent = channel >> 3;
-	channel &= 7;
 
-	if (ent > MAX_EDICTS)
+	if (ent >= MAX_EDICTS)
 		Host_Error ("CL_ParseStartSoundPacket: ent = %i", ent);
-	
-	for (i=0 ; i<3 ; i++)
+
+	for (i = 0;i < 3;i++)
 		pos[i] = MSG_ReadCoord ();
 
     S_StartSound (ent, channel, cl.sound_precache[sound_num], pos, volume/255.0, attenuation);
@@ -163,7 +172,7 @@ void CL_KeepaliveMessage (void)
 	int		c;
 	sizebuf_t	old;
 	qbyte		olddata[8192];
-	
+
 	if (sv.active)
 		return;		// no need if server is local
 	if (cls.demoplayback)
@@ -172,7 +181,7 @@ void CL_KeepaliveMessage (void)
 // read messages from server, should just be nops
 	old = net_message;
 	memcpy (olddata, net_message.data, net_message.cursize);
-	
+
 	do
 	{
 		ret = CL_GetMessage ();
