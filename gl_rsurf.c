@@ -1745,7 +1745,7 @@ void R_PVSWorldNode()
 		r_portalframecount++;
 
 	numleafs = model->numleafs;
-	numbits = numleafs - 1;
+	numbits = numleafs;
 	k = 0;
 	in = r_viewleaf->compressed_vis;
 	row = (numbits + 7) >> 3;
@@ -1762,7 +1762,7 @@ void R_PVSWorldNode()
 					if (leafnum > numleafs)
 						return;
 					c -= bit;
-					leaf = &model->leafs[i];
+					leaf = &model->leafs[leafnum];
 					if (R_NotCulledBox(leaf->mins, leaf->maxs))
 					{
 						//for (portal = leaf->portals;portal;portal = portal->next)
