@@ -1,4 +1,5 @@
 
+#include <string.h>
 #include "cgame_api.h"
 #include "cg_math.h"
 
