@@ -1347,7 +1347,7 @@ void SV_UpdateToReliableMessages (void)
 	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 	{
 		// update the host_client fields we care about according to the entity fields
-		sv_player = host_client->edict;
+		sv_player = EDICT_NUM(i+1);
 		s = PR_GetString(sv_player->v->netname);
 		if (s != host_client->name)
 		{
