@@ -47,6 +47,11 @@ typedef struct
 	// handle connections specially
 	qboolean loadgame;
 
+	// one of the PROTOCOL_ values
+	int protocol;
+	// this disables extensions when using PROTOCOL_QUAKE
+	qboolean netquakecompatible;
+
 	double time;
 
 	double frametime;
@@ -153,16 +158,9 @@ typedef struct client_s
 	// prevent animated names
 	float nametime;
 
-#ifdef QUAKEENTITIES
-	// delta compression state
-	float nextfullupdate[MAX_EDICTS];
-#elif 0
-	entity_database_t entitydatabase;
-	int entityframenumber; // incremented each time an entity frame is sent
-#else
-	entity_database4_t *entitydatabase4;
-	int entityframenumber; // incremented each time an entity frame is sent
-#endif
+	entityframe_database_t *entitydatabase;
+	entityframe4_database_t *entitydatabase4;
+	entityframe5_database_t *entitydatabase5;
 } client_t;
 
 
@@ -256,6 +254,8 @@ extern cvar_t sv_idealpitchscale;
 extern cvar_t sv_aim;
 extern cvar_t sv_stepheight;
 extern cvar_t sv_jumpstep;
+extern cvar_t sv_public;
+extern cvar_t sv_maxrate;
 
 extern cvar_t sv_gameplayfix_grenadebouncedownslopes;
 extern cvar_t sv_gameplayfix_noairborncorpse;

@@ -385,38 +385,33 @@ void CL_SendMove(usercmd_t *cmd)
 
 	MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
 
-	if (cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3)
+	if (cl.protocol == PROTOCOL_QUAKE)
 	{
 		for (i = 0;i < 3;i++)
-			MSG_WriteFloat (&buf, cl.viewangles[i]);
+			MSG_WriteAngle8i (&buf, cl.viewangles[i]);
+	}
+	else if (cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3)
+	{
+		for (i = 0;i < 3;i++)
+			MSG_WriteAngle32f (&buf, cl.viewangles[i]);
 	}
 	else if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5)
 	{
-		for (i=0 ; i<3 ; i++)
-			MSG_WritePreciseAngle (&buf, cl.viewangles[i]);
-	}
-	else
-	{
-		for (i=0 ; i<3 ; i++)
-			MSG_WriteAngle (&buf, cl.viewangles[i]);
+		for (i = 0;i < 3;i++)
+			MSG_WriteAngle16i (&buf, cl.viewangles[i]);
 	}
 
-	MSG_WriteShort (&buf, forwardmove);
-	MSG_WriteShort (&buf, sidemove);
-	MSG_WriteShort (&buf, upmove);
+	MSG_WriteCoord16i (&buf, forwardmove);
+	MSG_WriteCoord16i (&buf, sidemove);
+	MSG_WriteCoord16i (&buf, upmove);
 
 	forwardmove = sidemove = upmove = 0;
 	// send button bits
 	bits = 0;
 
-	if ( in_attack.state & 3 )
-		bits |= 1;
-	in_attack.state &= ~2;
-
-	if (in_jump.state & 3)
-		bits |= 2;
-	in_jump.state &= ~2;
 	// LordHavoc: added 6 new buttons
+	if (in_attack.state  & 3) bits |=   1;in_attack.state  &= ~2;
+	if (in_jump.state    & 3) bits |=   2;in_jump.state    &= ~2;
 	if (in_button3.state & 3) bits |=   4;in_button3.state &= ~2;
 	if (in_button4.state & 3) bits |=   8;in_button4.state &= ~2;
 	if (in_button5.state & 3) bits |=  16;in_button5.state &= ~2;
@@ -432,14 +427,17 @@ void CL_SendMove(usercmd_t *cmd)
 	if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3)
 	{
 		// LordHavoc: should we ack this on receipt instead?  would waste net bandwidth though
-		i = EntityFrame_MostRecentlyRecievedFrameNum(&cl.entitydatabase);
-		if (i > 0)
+		if (cl.entitydatabase)
 		{
-			MSG_WriteByte(&buf, clc_ackentities);
-			MSG_WriteLong(&buf, i);
+			i = EntityFrame_MostRecentlyRecievedFrameNum(cl.entitydatabase);
+			if (i > 0)
+			{
+				MSG_WriteByte(&buf, clc_ackentities);
+				MSG_WriteLong(&buf, i);
+			}
 		}
 	}
-	else
+	else if (cl.protocol == PROTOCOL_DARKPLACES4)
 	{
 		if (cl.entitydatabase4)
 		{
@@ -451,6 +449,16 @@ void CL_SendMove(usercmd_t *cmd)
 			MSG_WriteByte(&buf, clc_ackentities);
 			MSG_WriteLong(&buf, i);
 		}
+	}
+	else if (cl.protocol == PROTOCOL_DARKPLACES5)
+	{
+		i = cl.latestframenum;
+		if (cl_nodelta.integer)
+			i = -1;
+		if (developer_networkentities.integer >= 1)
+			Con_Printf("send clc_ackentities %i\n", i);
+		MSG_WriteByte(&buf, clc_ackentities);
+		MSG_WriteLong(&buf, i);
 	}
 
 	// deliver the message

@@ -57,13 +57,9 @@ typedef struct edict_engineprivate_s
 	// we should avoid extensive checking on entities already encountered
 	int areagridmarknumber;
 
-	// old entity protocol, not used
-#ifdef QUAKEENTITIES
+	// PROTOCOL_QUAKE
 	// baseline values
 	entity_state_t baseline;
-	// LordHavoc: previous frame
-	entity_state_t deltabaseline;
-#endif
 
 	// LordHavoc: gross hack to make floating items still work
 	int suspendedinairflag;

@@ -150,7 +150,7 @@ void CL_ParseStartSoundPacket(int largesoundindex)
 	if (ent >= MAX_EDICTS)
 		Host_Error ("CL_ParseStartSoundPacket: ent = %i", ent);
 
-	MSG_ReadVector(pos);
+	MSG_ReadVector(pos, cl.protocol);
 
 	S_StartSound (ent, channel, cl.sound_precache[sound_num], pos, volume/255.0, attenuation);
 }
@@ -312,7 +312,6 @@ Con_DPrintf("CL_SignonReply: %i\n", cls.signon);
 CL_ParseServerInfo
 ==================
 */
-qbyte entlife[MAX_EDICTS];
 // FIXME: this is a lot of memory to be keeping around, this needs to be dynamically allocated and freed
 static char parse_model_precache[MAX_MODELS][MAX_QPATH];
 static char parse_sound_precache[MAX_SOUNDS][MAX_QPATH];
@@ -449,8 +448,6 @@ void CL_ParseServerInfo (void)
 	Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, 0, 0, 0, 0, 0, 0, 1);
 	Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
 	CL_BoundingBoxForEntity(&ent->render);
-	// clear entlife array
-	memset(entlife, 0, MAX_EDICTS);
 
 	cl_num_entities = 1;
 
@@ -498,6 +495,7 @@ void CL_ValidateState(entity_state_t *s)
 void CL_MoveLerpEntityStates(entity_t *ent)
 {
 	float odelta[3], adelta[3];
+	CL_ValidateState(&ent->state_current);
 	VectorSubtract(ent->state_current.origin, ent->persistent.neworigin, odelta);
 	VectorSubtract(ent->state_current.angles, ent->persistent.newangles, adelta);
 	if (!ent->state_previous.active || cls.timedemo || DotProduct(odelta, odelta) > 1000*1000 || cl_nolerp.integer)
@@ -539,168 +537,14 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 	}
 }
 
-/*
-==================
-CL_ParseUpdate
-
-Parse an entity update message from the server
-If an entities model or origin changes from frame to frame, it must be
-relinked.  Other attributes can change without relinking.
-==================
-*/
-void CL_ParseUpdate (int bits)
-{
-	int num;
-	entity_t *ent;
-	entity_state_t new;
-
-	if (bits & U_MOREBITS)
-		bits |= (MSG_ReadByte()<<8);
-	if ((bits & U_EXTEND1) && cl.protocol != PROTOCOL_NEHAHRAMOVIE)
-	{
-		bits |= MSG_ReadByte() << 16;
-		if (bits & U_EXTEND2)
-			bits |= MSG_ReadByte() << 24;
-	}
-
-	if (bits & U_LONGENTITY)
-		num = (unsigned) MSG_ReadShort ();
-	else
-		num = (unsigned) MSG_ReadByte ();
-
-	if (num >= MAX_EDICTS)
-		Host_Error("CL_ParseUpdate: entity number (%i) >= MAX_EDICTS (%i)\n", num, MAX_EDICTS);
-	if (num < 1)
-		Host_Error("CL_ParseUpdate: invalid entity number (%i)\n", num);
-
-	ent = cl_entities + num;
-
-	// note: this inherits the 'active' state of the baseline chosen
-	// (state_baseline is always active, state_current may not be active if
-	// the entity was missing in the last frame)
-	if (bits & U_DELTA)
-		new = ent->state_current;
-	else
-	{
-		new = ent->state_baseline;
-		new.active = true;
-	}
-
-	new.number = num;
-	new.time = cl.mtime[0];
-	new.flags = 0;
-	if (bits & U_MODEL)		new.modelindex = (new.modelindex & 0xFF00) | MSG_ReadByte();
-	if (bits & U_FRAME)		new.frame = (new.frame & 0xFF00) | MSG_ReadByte();
-	if (bits & U_COLORMAP)	new.colormap = MSG_ReadByte();
-	if (bits & U_SKIN)		new.skin = MSG_ReadByte();
-	if (bits & U_EFFECTS)	new.effects = (new.effects & 0xFF00) | MSG_ReadByte();
-	if (bits & U_ORIGIN1)	new.origin[0] = MSG_ReadCoord();
-	if (bits & U_ANGLE1)	new.angles[0] = MSG_ReadAngle();
-	if (bits & U_ORIGIN2)	new.origin[1] = MSG_ReadCoord();
-	if (bits & U_ANGLE2)	new.angles[1] = MSG_ReadAngle();
-	if (bits & U_ORIGIN3)	new.origin[2] = MSG_ReadCoord();
-	if (bits & U_ANGLE3)	new.angles[2] = MSG_ReadAngle();
-	if (bits & U_STEP)		new.flags |= RENDER_STEP;
-	if (bits & U_ALPHA)		new.alpha = MSG_ReadByte();
-	if (bits & U_SCALE)		new.scale = MSG_ReadByte();
-	if (bits & U_EFFECTS2)	new.effects = (new.effects & 0x00FF) | (MSG_ReadByte() << 8);
-	if (bits & U_GLOWSIZE)	new.glowsize = MSG_ReadByte();
-	if (bits & U_GLOWCOLOR)	new.glowcolor = MSG_ReadByte();
-	// apparently the dpcrush demo uses this (unintended, and it uses white anyway)
-	if (bits & U_COLORMOD)	MSG_ReadByte();
-	if (bits & U_GLOWTRAIL) new.flags |= RENDER_GLOWTRAIL;
-	if (bits & U_FRAME2)	new.frame = (new.frame & 0x00FF) | (MSG_ReadByte() << 8);
-	if (bits & U_MODEL2)	new.modelindex = (new.modelindex & 0x00FF) | (MSG_ReadByte() << 8);
-	if (bits & U_VIEWMODEL)	new.flags |= RENDER_VIEWMODEL;
-	if (bits & U_EXTERIORMODEL)	new.flags |= RENDER_EXTERIORMODEL;
-
-	// LordHavoc: to allow playback of the Nehahra movie
-	if (cl.protocol == PROTOCOL_NEHAHRAMOVIE && (bits & U_EXTEND1))
-	{
-		// LordHavoc: evil format
-		int i = MSG_ReadFloat();
-		int j = MSG_ReadFloat() * 255.0f;
-		if (i == 2)
-		{
-			i = MSG_ReadFloat();
-			if (i)
-				new.effects |= EF_FULLBRIGHT;
-		}
-		if (j < 0)
-			new.alpha = 0;
-		else if (j == 0 || j >= 255)
-			new.alpha = 255;
-		else
-			new.alpha = j;
-	}
-
-	if (new.active)
-		CL_ValidateState(&new);
-
-	ent->state_previous = ent->state_current;
-	ent->state_current = new;
-	if (ent->state_current.active)
-	{
-		CL_MoveLerpEntityStates(ent);
-		cl_entities_active[ent->state_current.number] = true;
-		// mark as visible (no kill this frame)
-		entlife[ent->state_current.number] = 2;
-	}
-}
-
-static entity_frame_t entityframe;
-extern mempool_t *cl_entities_mempool;
 void CL_ReadEntityFrame(void)
 {
 	if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3)
-	{
-		int i;
-		entity_t *ent;
-		EntityFrame_Read(&cl.entitydatabase);
-		EntityFrame_FetchFrame(&cl.entitydatabase, EntityFrame_MostRecentlyRecievedFrameNum(&cl.entitydatabase), &entityframe);
-		for (i = 0;i < entityframe.numentities;i++)
-		{
-			// copy the states
-			ent = &cl_entities[entityframe.entitydata[i].number];
-			ent->state_previous = ent->state_current;
-			ent->state_current = entityframe.entitydata[i];
-			CL_MoveLerpEntityStates(ent);
-			// the entity lives again...
-			entlife[ent->state_current.number] = 2;
-			cl_entities_active[ent->state_current.number] = true;
-		}
-	}
-	else
-	{
-		if (!cl.entitydatabase4)
-			cl.entitydatabase4 = EntityFrame4_AllocDatabase(cl_entities_mempool);
-		EntityFrame4_CL_ReadFrame(cl.entitydatabase4);
-	}
-}
-
-void CL_EntityUpdateSetup(void)
-{
-}
-
-void CL_EntityUpdateEnd(void)
-{
-	if (cl.protocol == PROTOCOL_QUAKE || cl.protocol == PROTOCOL_NEHAHRAMOVIE || cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3)
-	{
-		int i;
-		// disable entities that disappeared this frame
-		for (i = 1;i < MAX_EDICTS;i++)
-		{
-			// clear only the entities that were active last frame but not this
-			// frame, don't waste time clearing all entities (which would cause
-			// cache misses)
-			if (entlife[i])
-			{
-				entlife[i]--;
-				if (!entlife[i])
-					cl_entities[i].state_previous.active = cl_entities[i].state_current.active = 0;
-			}
-		}
-	}
+		EntityFrame_CL_ReadFrame();
+	else if (cl.protocol == PROTOCOL_DARKPLACES4)
+		EntityFrame4_CL_ReadFrame();
+	else if (cl.protocol == PROTOCOL_DARKPLACES5)
+		EntityFrame5_CL_ReadFrame();
 }
 
 /*
@@ -712,7 +556,8 @@ void CL_ParseBaseline (entity_t *ent, int large)
 {
 	int i;
 
-	ClearStateToDefault(&ent->state_baseline);
+	ent->state_baseline = defaultstate;
+	// FIXME: set ent->state_baseline.number?
 	ent->state_baseline.active = true;
 	if (large)
 	{
@@ -728,8 +573,8 @@ void CL_ParseBaseline (entity_t *ent, int large)
 	ent->state_baseline.skin = MSG_ReadByte();
 	for (i = 0;i < 3;i++)
 	{
-		ent->state_baseline.origin[i] = MSG_ReadCoord ();
-		ent->state_baseline.angles[i] = MSG_ReadAngle ();
+		ent->state_baseline.origin[i] = MSG_ReadCoord(cl.protocol);
+		ent->state_baseline.angles[i] = MSG_ReadAngle8i();
 	}
 	CL_ValidateState(&ent->state_baseline);
 	ent->state_previous = ent->state_current = ent->state_baseline;
@@ -764,46 +609,41 @@ void CL_ParseClientdata (int bits)
 		cl.idealpitch = 0;
 
 	VectorCopy (cl.mvelocity[0], cl.mvelocity[1]);
-	if (cl.protocol == PROTOCOL_DARKPLACES5)
+	for (i = 0;i < 3;i++)
 	{
-		for (i = 0;i < 3;i++)
+		if (bits & (SU_PUNCH1<<i) )
 		{
-			if (bits & (SU_PUNCH1<<i) )
-				cl.punchangle[i] = MSG_ReadPreciseAngle();
+			if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5)
+				cl.punchangle[i] = MSG_ReadAngle16i();
+			else if (cl.protocol == PROTOCOL_QUAKE)
+				cl.punchangle[i] = MSG_ReadChar();
 			else
-				cl.punchangle[i] = 0;
-			if (bits & (SU_PUNCHVEC1<<i))
-				cl.punchvector[i] = MSG_ReadFloat();
-			else
-				cl.punchvector[i] = 0;
-			if (bits & (SU_VELOCITY1<<i) )
-				cl.mvelocity[0][i] = MSG_ReadFloat();
-			else
-				cl.mvelocity[0][i] = 0;
+				Host_Error("CL_ParseClientData: unknown cl.protocol\n");
 		}
-	}
-	else
-	{
-		for (i = 0;i < 3;i++)
+		else
+			cl.punchangle[i] = 0;
+		if (bits & (SU_PUNCHVEC1<<i))
 		{
-			if (bits & (SU_PUNCH1<<i) )
-			{
-				if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5)
-					cl.punchangle[i] = MSG_ReadPreciseAngle();
-				else
-					cl.punchangle[i] = MSG_ReadChar();
-			}
+			if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4)
+				cl.punchvector[i] = MSG_ReadCoord16i();
+			else if (cl.protocol == PROTOCOL_DARKPLACES5)
+				cl.punchvector[i] = MSG_ReadCoord32f();
 			else
-				cl.punchangle[i] = 0;
-			if (bits & (SU_PUNCHVEC1<<i))
-				cl.punchvector[i] = MSG_ReadCoord();
-			else
-				cl.punchvector[i] = 0;
-			if (bits & (SU_VELOCITY1<<i) )
+				Host_Error("CL_ParseClientData: unknown cl.protocol\n");
+		}
+		else
+			cl.punchvector[i] = 0;
+		if (bits & (SU_VELOCITY1<<i) )
+		{
+			if (cl.protocol == PROTOCOL_QUAKE || cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4)
 				cl.mvelocity[0][i] = MSG_ReadChar()*16;
+			else if (cl.protocol == PROTOCOL_DARKPLACES5)
+				cl.mvelocity[0][i] = MSG_ReadCoord32f();
 			else
-				cl.mvelocity[0][i] = 0;
+				Host_Error("CL_ParseClientData: unknown cl.protocol\n");
 		}
+		else
+			cl.mvelocity[0][i] = 0;
 	}
 
 	i = MSG_ReadLong ();
@@ -818,21 +658,45 @@ void CL_ParseClientdata (int bits)
 	cl.onground = (bits & SU_ONGROUND) != 0;
 	cl.inwater = (bits & SU_INWATER) != 0;
 
-	cl.stats[STAT_WEAPONFRAME] = (bits & SU_WEAPONFRAME) ? MSG_ReadByte() : 0;
-	cl.stats[STAT_ARMOR] = (bits & SU_ARMOR) ? MSG_ReadByte() : 0;
-	cl.stats[STAT_WEAPON] = (bits & SU_WEAPON) ? MSG_ReadByte() : 0;
-	cl.stats[STAT_HEALTH] = MSG_ReadShort();
-	cl.stats[STAT_AMMO] = MSG_ReadByte();
+	if (cl.protocol == PROTOCOL_DARKPLACES5)
+	{
+		cl.stats[STAT_WEAPONFRAME] = (bits & SU_WEAPONFRAME) ? MSG_ReadShort() : 0;
+		cl.stats[STAT_ARMOR] = (bits & SU_ARMOR) ? MSG_ReadShort() : 0;
+		cl.stats[STAT_WEAPON] = (bits & SU_WEAPON) ? MSG_ReadShort() : 0;
+		cl.stats[STAT_HEALTH] = MSG_ReadShort();
+		cl.stats[STAT_AMMO] = MSG_ReadShort();
 
-	cl.stats[STAT_SHELLS] = MSG_ReadByte();
-	cl.stats[STAT_NAILS] = MSG_ReadByte();
-	cl.stats[STAT_ROCKETS] = MSG_ReadByte();
-	cl.stats[STAT_CELLS] = MSG_ReadByte();
+		cl.stats[STAT_SHELLS] = MSG_ReadShort();
+		cl.stats[STAT_NAILS] = MSG_ReadShort();
+		cl.stats[STAT_ROCKETS] = MSG_ReadShort();
+		cl.stats[STAT_CELLS] = MSG_ReadShort();
+		//cl.stats[STAT_GENERIC1] = MSG_ReadShort();
+		//cl.stats[STAT_GENERIC2] = MSG_ReadShort();
+		//cl.stats[STAT_GENERIC3] = MSG_ReadShort();
+		//cl.stats[STAT_GENERIC4] = MSG_ReadShort();
+		//cl.stats[STAT_GENERIC5] = MSG_ReadShort();
+		//cl.stats[STAT_GENERIC6] = MSG_ReadShort();
 
-	i = MSG_ReadByte ();
+		i = (unsigned short) MSG_ReadShort ();
+	}
+	else
+	{
+		cl.stats[STAT_WEAPONFRAME] = (bits & SU_WEAPONFRAME) ? MSG_ReadByte() : 0;
+		cl.stats[STAT_ARMOR] = (bits & SU_ARMOR) ? MSG_ReadByte() : 0;
+		cl.stats[STAT_WEAPON] = (bits & SU_WEAPON) ? MSG_ReadByte() : 0;
+		cl.stats[STAT_HEALTH] = MSG_ReadShort();
+		cl.stats[STAT_AMMO] = MSG_ReadByte();
+	
+		cl.stats[STAT_SHELLS] = MSG_ReadByte();
+		cl.stats[STAT_NAILS] = MSG_ReadByte();
+		cl.stats[STAT_ROCKETS] = MSG_ReadByte();
+		cl.stats[STAT_CELLS] = MSG_ReadByte();
 
-	if (gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE)
-		i = (1<<i);
+		i = MSG_ReadByte ();
+		if (gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE)
+			i = (1<<i);
+	}
+
 	// GAME_NEXUIZ hud needs weapon change time
 	// GAME_NEXUIZ uses a bit number as it's STAT_ACTIVEWEAPON, not a bitfield
 	// like other modes
@@ -843,7 +707,10 @@ void CL_ParseClientdata (int bits)
 	cl.viewzoomold = cl.viewzoomnew; // for interpolation
 	if (bits & SU_VIEWZOOM)
 	{
-		i = MSG_ReadByte();
+		if (cl.protocol == PROTOCOL_DARKPLACES5)
+			i = (unsigned short) MSG_ReadShort();
+		else
+			i = MSG_ReadByte();
 		if (i < 2)
 			i = 2;
 		cl.viewzoomnew = (float) i * (1.0f / 255.0f);
@@ -901,7 +768,7 @@ void CL_ParseStaticSound (int large)
 	vec3_t		org;
 	int			sound_num, vol, atten;
 
-	MSG_ReadVector(org);
+	MSG_ReadVector(org, cl.protocol);
 	if (large)
 		sound_num = (unsigned short) MSG_ReadShort ();
 	else
@@ -917,7 +784,7 @@ void CL_ParseEffect (void)
 	vec3_t		org;
 	int			modelindex, startframe, framecount, framerate;
 
-	MSG_ReadVector(org);
+	MSG_ReadVector(org, cl.protocol);
 	modelindex = MSG_ReadByte ();
 	startframe = MSG_ReadByte ();
 	framecount = MSG_ReadByte ();
@@ -931,9 +798,9 @@ void CL_ParseEffect2 (void)
 	vec3_t		org;
 	int			modelindex, startframe, framecount, framerate;
 
-	MSG_ReadVector(org);
-	modelindex = MSG_ReadShort ();
-	startframe = MSG_ReadShort ();
+	MSG_ReadVector(org, cl.protocol);
+	modelindex = (unsigned short) MSG_ReadShort ();
+	startframe = (unsigned short) MSG_ReadShort ();
 	framecount = MSG_ReadByte ();
 	framerate = MSG_ReadByte ();
 
@@ -975,9 +842,9 @@ void CL_ParseBeam (model_t *m, int lightning)
 	vec3_t start, end;
 	beam_t *b;
 
-	ent = MSG_ReadShort ();
-	MSG_ReadVector(start);
-	MSG_ReadVector(end);
+	ent = (unsigned short) MSG_ReadShort ();
+	MSG_ReadVector(start, cl.protocol);
+	MSG_ReadVector(end, cl.protocol);
 
 	if (ent >= MAX_EDICTS)
 	{
@@ -1037,7 +904,7 @@ void CL_ParseTempEntity(void)
 	{
 	case TE_WIZSPIKE:
 		// spike hitting wall
-		MSG_ReadVector(pos);
+		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 4);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 100, 0.12f, 0.50f, 0.12f, 500, 0.2, 0, 0, false, 1);
@@ -1047,7 +914,7 @@ void CL_ParseTempEntity(void)
 
 	case TE_KNIGHTSPIKE:
 		// spike hitting wall
-		MSG_ReadVector(pos);
+		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 4);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 100, 0.50f, 0.30f, 0.10f, 500, 0.2, 0, 0, false, 1);
@@ -1057,7 +924,7 @@ void CL_ParseTempEntity(void)
 
 	case TE_SPIKE:
 		// spike hitting wall
-		MSG_ReadVector(pos);
+		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 4);
 		// LordHavoc: changed to spark shower
 		CL_SparkShower(pos, vec3_origin, 15);
@@ -1076,7 +943,7 @@ void CL_ParseTempEntity(void)
 		break;
 	case TE_SPIKEQUAD:
 		// quad spike hitting wall
-		MSG_ReadVector(pos);
+		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 4);
 		// LordHavoc: changed to spark shower
 		CL_SparkShower(pos, vec3_origin, 15);
@@ -1098,7 +965,7 @@ void CL_ParseTempEntity(void)
 		break;
 	case TE_SUPERSPIKE:
 		// super spike hitting wall
-		MSG_ReadVector(pos);
+		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 4);
 		// LordHavoc: changed to dust shower
 		CL_SparkShower(pos, vec3_origin, 30);
@@ -1117,7 +984,7 @@ void CL_ParseTempEntity(void)
 		break;
 	case TE_SUPERSPIKEQUAD:
 		// quad super spike hitting wall
-		MSG_ReadVector(pos);
+		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 4);
 		// LordHavoc: changed to dust shower
 		CL_SparkShower(pos, vec3_origin, 30);
@@ -1139,7 +1006,7 @@ void CL_ParseTempEntity(void)
 		// LordHavoc: added for improved blood splatters
 	case TE_BLOOD:
 		// blood puff
-		MSG_ReadVector(pos);
+		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 4);
 		dir[0] = MSG_ReadChar();
 		dir[1] = MSG_ReadChar();
@@ -1149,7 +1016,7 @@ void CL_ParseTempEntity(void)
 		break;
 	case TE_SPARK:
 		// spark shower
-		MSG_ReadVector(pos);
+		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 4);
 		dir[0] = MSG_ReadChar();
 		dir[1] = MSG_ReadChar();
@@ -1158,7 +1025,7 @@ void CL_ParseTempEntity(void)
 		CL_SparkShower(pos, dir, count);
 		break;
 	case TE_PLASMABURN:
-		MSG_ReadVector(pos);
+		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 4);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 200, 1, 1, 1, 1000, 0.2, 0, 0, true, 1);
@@ -1167,47 +1034,47 @@ void CL_ParseTempEntity(void)
 		// LordHavoc: added for improved gore
 	case TE_BLOODSHOWER:
 		// vaporized body
-		MSG_ReadVector(pos); // mins
-		MSG_ReadVector(pos2); // maxs
-		velspeed = MSG_ReadCoord(); // speed
-		count = MSG_ReadShort(); // number of particles
+		MSG_ReadVector(pos, cl.protocol); // mins
+		MSG_ReadVector(pos2, cl.protocol); // maxs
+		velspeed = MSG_ReadCoord(cl.protocol); // speed
+		count = (unsigned short) MSG_ReadShort(); // number of particles
 		CL_BloodShower(pos, pos2, velspeed, count);
 		break;
 	case TE_PARTICLECUBE:
 		// general purpose particle effect
-		MSG_ReadVector(pos); // mins
-		MSG_ReadVector(pos2); // maxs
-		MSG_ReadVector(dir); // dir
-		count = MSG_ReadShort(); // number of particles
+		MSG_ReadVector(pos, cl.protocol); // mins
+		MSG_ReadVector(pos2, cl.protocol); // maxs
+		MSG_ReadVector(dir, cl.protocol); // dir
+		count = (unsigned short) MSG_ReadShort(); // number of particles
 		colorStart = MSG_ReadByte(); // color
 		colorLength = MSG_ReadByte(); // gravity (1 or 0)
-		velspeed = MSG_ReadCoord(); // randomvel
+		velspeed = MSG_ReadCoord(cl.protocol); // randomvel
 		CL_ParticleCube(pos, pos2, dir, count, colorStart, colorLength, velspeed);
 		break;
 
 	case TE_PARTICLERAIN:
 		// general purpose particle effect
-		MSG_ReadVector(pos); // mins
-		MSG_ReadVector(pos2); // maxs
-		MSG_ReadVector(dir); // dir
-		count = MSG_ReadShort(); // number of particles
+		MSG_ReadVector(pos, cl.protocol); // mins
+		MSG_ReadVector(pos2, cl.protocol); // maxs
+		MSG_ReadVector(dir, cl.protocol); // dir
+		count = (unsigned short) MSG_ReadShort(); // number of particles
 		colorStart = MSG_ReadByte(); // color
 		CL_ParticleRain(pos, pos2, dir, count, colorStart, 0);
 		break;
 
 	case TE_PARTICLESNOW:
 		// general purpose particle effect
-		MSG_ReadVector(pos); // mins
-		MSG_ReadVector(pos2); // maxs
-		MSG_ReadVector(dir); // dir
-		count = MSG_ReadShort(); // number of particles
+		MSG_ReadVector(pos, cl.protocol); // mins
+		MSG_ReadVector(pos2, cl.protocol); // maxs
+		MSG_ReadVector(dir, cl.protocol); // dir
+		count = (unsigned short) MSG_ReadShort(); // number of particles
 		colorStart = MSG_ReadByte(); // color
 		CL_ParticleRain(pos, pos2, dir, count, colorStart, 1);
 		break;
 
 	case TE_GUNSHOT:
 		// bullet hitting wall
-		MSG_ReadVector(pos);
+		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 4);
 		// LordHavoc: changed to dust shower
 		CL_SparkShower(pos, vec3_origin, 15);
@@ -1215,7 +1082,7 @@ void CL_ParseTempEntity(void)
 
 	case TE_GUNSHOTQUAD:
 		// quad bullet hitting wall
-		MSG_ReadVector(pos);
+		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 4);
 		CL_SparkShower(pos, vec3_origin, 15);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
@@ -1224,7 +1091,7 @@ void CL_ParseTempEntity(void)
 
 	case TE_EXPLOSION:
 		// rocket explosion
-		MSG_ReadVector(pos);
+		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 10);
 		CL_ParticleExplosion(pos);
 		// LordHavoc: boosted color from 1.0, 0.8, 0.4 to 1.25, 1.0, 0.5
@@ -1235,7 +1102,7 @@ void CL_ParseTempEntity(void)
 
 	case TE_EXPLOSIONQUAD:
 		// quad rocket explosion
-		MSG_ReadVector(pos);
+		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 10);
 		CL_ParticleExplosion(pos);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
@@ -1245,20 +1112,20 @@ void CL_ParseTempEntity(void)
 
 	case TE_EXPLOSION3:
 		// Nehahra movie colored lighting explosion
-		MSG_ReadVector(pos);
+		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 10);
 		CL_ParticleExplosion(pos);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		color[0] = MSG_ReadCoord() * (2.0f / 1.0f);
-		color[1] = MSG_ReadCoord() * (2.0f / 1.0f);
-		color[2] = MSG_ReadCoord() * (2.0f / 1.0f);
+		color[0] = MSG_ReadCoord(cl.protocol) * (2.0f / 1.0f);
+		color[1] = MSG_ReadCoord(cl.protocol) * (2.0f / 1.0f);
+		color[2] = MSG_ReadCoord(cl.protocol) * (2.0f / 1.0f);
 		CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, 0, true, 1);	
 		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
 	case TE_EXPLOSIONRGB:
 		// colored lighting explosion
-		MSG_ReadVector(pos);
+		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 10);
 		CL_ParticleExplosion(pos);
 		color[0] = MSG_ReadByte() * (2.0f / 255.0f);
@@ -1271,7 +1138,7 @@ void CL_ParseTempEntity(void)
 
 	case TE_TAREXPLOSION:
 		// tarbaby explosion
-		MSG_ReadVector(pos);
+		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 10);
 		CL_BlobExplosion(pos);
 
@@ -1282,14 +1149,14 @@ void CL_ParseTempEntity(void)
 		break;
 
 	case TE_SMALLFLASH:
-		MSG_ReadVector(pos);
+		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 10);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 200, 2, 2, 2, 1000, 0.2, 0, 0, true, 1);
 		break;
 
 	case TE_CUSTOMFLASH:
-		MSG_ReadVector(pos);
+		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 4);
 		radius = MSG_ReadByte() * 8;
 		velspeed = (MSG_ReadByte() + 1) * (1.0 / 256.0);
@@ -1301,8 +1168,8 @@ void CL_ParseTempEntity(void)
 		break;
 
 	case TE_FLAMEJET:
-		MSG_ReadVector(pos);
-		MSG_ReadVector(dir);
+		MSG_ReadVector(pos, cl.protocol);
+		MSG_ReadVector(dir, cl.protocol);
 		count = MSG_ReadByte();
 		CL_Flames(pos, dir, count);
 		break;
@@ -1343,12 +1210,12 @@ void CL_ParseTempEntity(void)
 		break;
 
 	case TE_LAVASPLASH:
-		MSG_ReadVector(pos);
+		MSG_ReadVector(pos, cl.protocol);
 		CL_LavaSplash(pos);
 		break;
 
 	case TE_TELEPORT:
-		MSG_ReadVector(pos);
+		MSG_ReadVector(pos, cl.protocol);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 500, 1.0f, 1.0f, 1.0f, 1500, 99.0f, 0, 0, true, 1);
 //		CL_TeleportSplash(pos);
@@ -1356,7 +1223,7 @@ void CL_ParseTempEntity(void)
 
 	case TE_EXPLOSION2:
 		// color mapped explosion
-		MSG_ReadVector(pos);
+		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 10);
 		colorStart = MSG_ReadByte();
 		colorLength = MSG_ReadByte();
@@ -1371,23 +1238,23 @@ void CL_ParseTempEntity(void)
 		break;
 
 	case TE_TEI_G3:
-		MSG_ReadVector(pos);
-		MSG_ReadVector(pos2);
-		MSG_ReadVector(dir);
+		MSG_ReadVector(pos, cl.protocol);
+		MSG_ReadVector(pos2, cl.protocol);
+		MSG_ReadVector(dir, cl.protocol);
 		CL_BeamParticle(pos, pos2, 12, 1, 0.3, 0.1, 1, 1);
 		CL_BeamParticle(pos, pos2, 5, 1, 0.9, 0.3, 1, 1);
 		break;
 
 	case TE_TEI_SMOKE:
-		MSG_ReadVector(pos);
-		MSG_ReadVector(dir);
+		MSG_ReadVector(pos, cl.protocol);
+		MSG_ReadVector(dir, cl.protocol);
 		count = MSG_ReadByte();
 		CL_FindNonSolidLocation(pos, pos, 4);
 		CL_Tei_Smoke(pos, dir, count);
 		break;
 
 	case TE_TEI_BIGEXPLOSION:
-		MSG_ReadVector(pos);
+		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 10);
 		CL_ParticleExplosion(pos);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
@@ -1396,8 +1263,8 @@ void CL_ParseTempEntity(void)
 		break;
 
 	case TE_TEI_PLASMAHIT:
-		MSG_ReadVector(pos);
-		MSG_ReadVector(dir);
+		MSG_ReadVector(pos, cl.protocol);
+		MSG_ReadVector(dir, cl.protocol);
 		count = MSG_ReadByte();
 		CL_FindNonSolidLocation(pos, pos, 5);
 		CL_Tei_PlasmaHit(pos, dir, count);
@@ -1471,6 +1338,7 @@ void CL_ParseServerMessage(void)
 		// if the high bit of the command byte is set, it is a fast update
 		if (cmd & 128)
 		{
+			entitiesupdated = true;
 			// LordHavoc: fix for bizarre problem in MSVC that I do not understand (if I assign the string pointer directly it ends up storing a NULL pointer)
 			temp = "entity";
 			cmdlogname[cmdindex] = temp;
@@ -1481,7 +1349,7 @@ void CL_ParseServerMessage(void)
 				cls.signon = SIGNONS;
 				CL_SignonReply ();
 			}
-			CL_ParseUpdate (cmd&127);
+			EntityFrameQuake_ReadEntity (cmd&127);
 			continue;
 		}
 
@@ -1527,19 +1395,12 @@ void CL_ParseServerMessage(void)
 			break;
 
 		case svc_time:
-			if (!entitiesupdated)
-			{
-				// this is a new frame, we'll be seeing entities,
-				// so prepare for entity updates
-				CL_EntityUpdateSetup();
-				entitiesupdated = true;
-			}
 			cl.mtime[1] = cl.mtime[0];
 			cl.mtime[0] = MSG_ReadFloat ();
 			break;
 
 		case svc_clientdata:
-			i = MSG_ReadShort ();
+			i = (unsigned short) MSG_ReadShort ();
 			CL_ParseClientdata (i);
 			break;
 
@@ -1583,7 +1444,12 @@ void CL_ParseServerMessage(void)
 
 		case svc_setangle:
 			for (i=0 ; i<3 ; i++)
-				cl.viewangles[i] = MSG_ReadAngle ();
+			{
+				if (cl.protocol == PROTOCOL_DARKPLACES5)
+					cl.viewangles[i] = MSG_ReadAngle16i ();
+				else
+					cl.viewangles[i] = MSG_ReadAngle8i ();
+			}
 			break;
 
 		case svc_setview:
@@ -1613,7 +1479,7 @@ void CL_ParseServerMessage(void)
 			break;
 
 		case svc_stopsound:
-			i = MSG_ReadShort();
+			i = (unsigned short) MSG_ReadShort();
 			S_StopSound(i>>3, i&7);
 			break;
 
@@ -1628,7 +1494,7 @@ void CL_ParseServerMessage(void)
 			i = MSG_ReadByte ();
 			if (i >= cl.maxclients)
 				Host_Error ("CL_ParseServerMessage: svc_updatefrags >= cl.maxclients");
-			cl.scores[i].frags = MSG_ReadShort ();
+			cl.scores[i].frags = (unsigned short) MSG_ReadShort ();
 			break;
 
 		case svc_updatecolors:
@@ -1651,13 +1517,13 @@ void CL_ParseServerMessage(void)
 			break;
 
 		case svc_spawnbaseline:
-			i = MSG_ReadShort ();
+			i = (unsigned short) MSG_ReadShort ();
 			if (i < 0 || i >= MAX_EDICTS)
 				Host_Error ("CL_ParseServerMessage: svc_spawnbaseline: invalid entity number %i", i);
 			CL_ParseBaseline (cl_entities + i, false);
 			break;
 		case svc_spawnbaseline2:
-			i = MSG_ReadShort ();
+			i = (unsigned short) MSG_ReadShort ();
 			if (i < 0 || i >= MAX_EDICTS)
 				Host_Error ("CL_ParseServerMessage: svc_spawnbaseline2: invalid entity number %i", i);
 			CL_ParseBaseline (cl_entities + i, true);
@@ -1750,12 +1616,12 @@ void CL_ParseServerMessage(void)
 			if (gamemode == GAME_TENEBRAE)
 			{
 				// repeating particle effect
-				MSG_ReadCoord();
-				MSG_ReadCoord();
-				MSG_ReadCoord();
-				MSG_ReadCoord();
-				MSG_ReadCoord();
-				MSG_ReadCoord();
+				MSG_ReadCoord(cl.protocol);
+				MSG_ReadCoord(cl.protocol);
+				MSG_ReadCoord(cl.protocol);
+				MSG_ReadCoord(cl.protocol);
+				MSG_ReadCoord(cl.protocol);
+				MSG_ReadCoord(cl.protocol);
 				MSG_ReadByte();
 				MSG_ReadLong();
 				MSG_ReadLong();
@@ -1768,9 +1634,9 @@ void CL_ParseServerMessage(void)
 			if (gamemode == GAME_TENEBRAE)
 			{
 				// particle effect
-				MSG_ReadCoord();
-				MSG_ReadCoord();
-				MSG_ReadCoord();
+				MSG_ReadCoord(cl.protocol);
+				MSG_ReadCoord(cl.protocol);
+				MSG_ReadCoord(cl.protocol);
 				MSG_ReadByte();
 				MSG_ReadString();
 			}
@@ -1803,7 +1669,7 @@ void CL_ParseServerMessage(void)
 	}
 
 	if (entitiesupdated)
-		CL_EntityUpdateEnd();
+		EntityFrameQuake_ISeeDeadEntities();
 
 	parsingerror = false;
 }

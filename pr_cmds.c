@@ -630,7 +630,7 @@ void PF_ambientsound (void)
 	char		*samp;
 	float		*pos;
 	float 		vol, attenuation;
-	int			i, soundnum, large;
+	int			soundnum, large;
 
 	pos = G_VECTOR (OFS_PARM0);
 	samp = G_STRING(OFS_PARM1);
@@ -659,8 +659,7 @@ void PF_ambientsound (void)
 	else
 		MSG_WriteByte (&sv.signon, svc_spawnstaticsound);
 
-	for (i=0 ; i<3 ; i++)
-		MSG_WriteDPCoord(&sv.signon, pos[i]);
+	MSG_WriteVector(&sv.signon, pos, sv.protocol);
 
 	if (large)
 		MSG_WriteShort (&sv.signon, soundnum);
@@ -1352,6 +1351,7 @@ void PF_precache_sound (void)
 {
 	char	*s;
 	int		i;
+	int		limit = (sv.protocol == PROTOCOL_QUAKE ? 256 : MAX_SOUNDS);
 
 	if (sv.state != ss_loading)
 		PF_ERROR("PF_Precache_*: Precache can only be done in spawn functions");
@@ -1360,7 +1360,7 @@ void PF_precache_sound (void)
 	G_INT(OFS_RETURN) = G_INT(OFS_PARM0);
 	PR_CheckEmptyString (s);
 
-	for (i=0 ; i<MAX_SOUNDS ; i++)
+	for (i=0 ; i<limit ; i++)
 	{
 		if (!sv.sound_precache[i])
 		{
@@ -1377,6 +1377,7 @@ void PF_precache_model (void)
 {
 	char	*s;
 	int		i;
+	int		limit = (sv.protocol == PROTOCOL_QUAKE ? 256 : MAX_MODELS);
 
 	if (sv.state != ss_loading)
 		PF_ERROR("PF_Precache_*: Precache can only be done in spawn functions");
@@ -1387,7 +1388,7 @@ void PF_precache_model (void)
 	G_INT(OFS_RETURN) = G_INT(OFS_PARM0);
 	PR_CheckEmptyString (s);
 
-	for (i=0 ; i<MAX_MODELS ; i++)
+	for (i = 0;i < limit;i++)
 	{
 		if (!sv.model_precache[i])
 		{
@@ -1876,12 +1877,15 @@ void PF_WriteLong (void)
 
 void PF_WriteAngle (void)
 {
-	MSG_WriteAngle (WriteDest(), G_FLOAT(OFS_PARM1));
+	if (sv.protocol == PROTOCOL_DARKPLACES5)
+		MSG_WriteAngle16i (WriteDest(), G_FLOAT(OFS_PARM1));
+	else
+		MSG_WriteAngle8i (WriteDest(), G_FLOAT(OFS_PARM1));
 }
 
 void PF_WriteCoord (void)
 {
-	MSG_WriteDPCoord (WriteDest(), G_FLOAT(OFS_PARM1));
+	MSG_WriteCoord (WriteDest(), G_FLOAT(OFS_PARM1), sv.protocol);
 }
 
 void PF_WriteString (void)
@@ -1929,8 +1933,8 @@ void PF_makestatic (void)
 	MSG_WriteByte (&sv.signon, ent->v->skin);
 	for (i=0 ; i<3 ; i++)
 	{
-		MSG_WriteDPCoord(&sv.signon, ent->v->origin[i]);
-		MSG_WriteAngle(&sv.signon, ent->v->angles[i]);
+		MSG_WriteCoord(&sv.signon, ent->v->origin[i], sv.protocol);
+		MSG_WriteAngle8i(&sv.signon, ent->v->angles[i]);
 	}
 
 // throw the entity away now
@@ -2239,12 +2243,16 @@ effect(origin, modelname, startframe, framecount, framerate)
 */
 void PF_effect (void)
 {
+	int i;
 	char *s;
 	s = G_STRING(OFS_PARM1);
 	if (!s || !s[0])
 		PF_WARNING("effect: no model specified\n");
 
-	SV_StartEffect(G_VECTOR(OFS_PARM0), SV_ModelIndex(s), G_FLOAT(OFS_PARM2), G_FLOAT(OFS_PARM3), G_FLOAT(OFS_PARM4));
+	i = SV_ModelIndex(s);
+	if (i < 0)
+		PF_WARNING("effect: model not precached\n");
+	SV_StartEffect(G_VECTOR(OFS_PARM0), i, G_FLOAT(OFS_PARM2), G_FLOAT(OFS_PARM3), G_FLOAT(OFS_PARM4));
 }
 
 void PF_te_blood (void)
@@ -2254,9 +2262,9 @@ void PF_te_blood (void)
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_BLOOD);
 	// origin
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2], sv.protocol);
 	// velocity
 	MSG_WriteByte(&sv.datagram, bound(-128, (int) G_VECTOR(OFS_PARM1)[0], 127));
 	MSG_WriteByte(&sv.datagram, bound(-128, (int) G_VECTOR(OFS_PARM1)[1], 127));
@@ -2272,15 +2280,15 @@ void PF_te_bloodshower (void)
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_BLOODSHOWER);
 	// min
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2], sv.protocol);
 	// max
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[2], sv.protocol);
 	// speed
-	MSG_WriteDPCoord(&sv.datagram, G_FLOAT(OFS_PARM2));
+	MSG_WriteCoord(&sv.datagram, G_FLOAT(OFS_PARM2), sv.protocol);
 	// count
 	MSG_WriteShort(&sv.datagram, bound(0, G_FLOAT(OFS_PARM3), 65535));
 }
@@ -2290,9 +2298,9 @@ void PF_te_explosionrgb (void)
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_EXPLOSIONRGB);
 	// origin
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2], sv.protocol);
 	// color
 	MSG_WriteByte(&sv.datagram, bound(0, (int) (G_VECTOR(OFS_PARM1)[0] * 255), 255));
 	MSG_WriteByte(&sv.datagram, bound(0, (int) (G_VECTOR(OFS_PARM1)[1] * 255), 255));
@@ -2306,17 +2314,17 @@ void PF_te_particlecube (void)
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_PARTICLECUBE);
 	// min
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2], sv.protocol);
 	// max
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[2], sv.protocol);
 	// velocity
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[2], sv.protocol);
 	// count
 	MSG_WriteShort(&sv.datagram, bound(0, G_FLOAT(OFS_PARM3), 65535));
 	// color
@@ -2324,7 +2332,7 @@ void PF_te_particlecube (void)
 	// gravity true/false
 	MSG_WriteByte(&sv.datagram, ((int) G_FLOAT(OFS_PARM5)) != 0);
 	// randomvel
-	MSG_WriteDPCoord(&sv.datagram, G_FLOAT(OFS_PARM6));
+	MSG_WriteCoord(&sv.datagram, G_FLOAT(OFS_PARM6), sv.protocol);
 }
 
 void PF_te_particlerain (void)
@@ -2334,17 +2342,17 @@ void PF_te_particlerain (void)
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_PARTICLERAIN);
 	// min
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2], sv.protocol);
 	// max
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[2], sv.protocol);
 	// velocity
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[2], sv.protocol);
 	// count
 	MSG_WriteShort(&sv.datagram, bound(0, G_FLOAT(OFS_PARM3), 65535));
 	// color
@@ -2358,17 +2366,17 @@ void PF_te_particlesnow (void)
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_PARTICLESNOW);
 	// min
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2], sv.protocol);
 	// max
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[2], sv.protocol);
 	// velocity
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[2], sv.protocol);
 	// count
 	MSG_WriteShort(&sv.datagram, bound(0, G_FLOAT(OFS_PARM3), 65535));
 	// color
@@ -2382,9 +2390,9 @@ void PF_te_spark (void)
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_SPARK);
 	// origin
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2], sv.protocol);
 	// velocity
 	MSG_WriteByte(&sv.datagram, bound(-128, (int) G_VECTOR(OFS_PARM1)[0], 127));
 	MSG_WriteByte(&sv.datagram, bound(-128, (int) G_VECTOR(OFS_PARM1)[1], 127));
@@ -2398,9 +2406,9 @@ void PF_te_gunshotquad (void)
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_GUNSHOTQUAD);
 	// origin
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
 void PF_te_spikequad (void)
@@ -2408,9 +2416,9 @@ void PF_te_spikequad (void)
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_SPIKEQUAD);
 	// origin
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
 void PF_te_superspikequad (void)
@@ -2418,9 +2426,9 @@ void PF_te_superspikequad (void)
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_SUPERSPIKEQUAD);
 	// origin
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
 void PF_te_explosionquad (void)
@@ -2428,9 +2436,9 @@ void PF_te_explosionquad (void)
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_EXPLOSIONQUAD);
 	// origin
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
 void PF_te_smallflash (void)
@@ -2438,9 +2446,9 @@ void PF_te_smallflash (void)
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_SMALLFLASH);
 	// origin
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
 void PF_te_customflash (void)
@@ -2450,9 +2458,9 @@ void PF_te_customflash (void)
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_CUSTOMFLASH);
 	// origin
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2], sv.protocol);
 	// radius
 	MSG_WriteByte(&sv.datagram, bound(0, G_FLOAT(OFS_PARM1) / 8 - 1, 255));
 	// lifetime
@@ -2468,9 +2476,9 @@ void PF_te_gunshot (void)
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_GUNSHOT);
 	// origin
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
 void PF_te_spike (void)
@@ -2478,9 +2486,9 @@ void PF_te_spike (void)
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_SPIKE);
 	// origin
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
 void PF_te_superspike (void)
@@ -2488,9 +2496,9 @@ void PF_te_superspike (void)
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_SUPERSPIKE);
 	// origin
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
 void PF_te_explosion (void)
@@ -2498,9 +2506,9 @@ void PF_te_explosion (void)
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_EXPLOSION);
 	// origin
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
 void PF_te_tarexplosion (void)
@@ -2508,9 +2516,9 @@ void PF_te_tarexplosion (void)
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_TAREXPLOSION);
 	// origin
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
 void PF_te_wizspike (void)
@@ -2518,9 +2526,9 @@ void PF_te_wizspike (void)
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_WIZSPIKE);
 	// origin
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
 void PF_te_knightspike (void)
@@ -2528,9 +2536,9 @@ void PF_te_knightspike (void)
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_KNIGHTSPIKE);
 	// origin
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
 void PF_te_lavasplash (void)
@@ -2538,9 +2546,9 @@ void PF_te_lavasplash (void)
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_LAVASPLASH);
 	// origin
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
 void PF_te_teleport (void)
@@ -2548,9 +2556,9 @@ void PF_te_teleport (void)
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_TELEPORT);
 	// origin
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
 void PF_te_explosion2 (void)
@@ -2558,9 +2566,9 @@ void PF_te_explosion2 (void)
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_EXPLOSION2);
 	// origin
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2], sv.protocol);
 	// color
 	MSG_WriteByte(&sv.datagram, G_FLOAT(OFS_PARM1));
 	MSG_WriteByte(&sv.datagram, G_FLOAT(OFS_PARM2));
@@ -2573,13 +2581,13 @@ void PF_te_lightning1 (void)
 	// owner entity
 	MSG_WriteShort(&sv.datagram, G_EDICTNUM(OFS_PARM0));
 	// start
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[2], sv.protocol);
 	// end
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[2], sv.protocol);
 }
 
 void PF_te_lightning2 (void)
@@ -2589,13 +2597,13 @@ void PF_te_lightning2 (void)
 	// owner entity
 	MSG_WriteShort(&sv.datagram, G_EDICTNUM(OFS_PARM0));
 	// start
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[2], sv.protocol);
 	// end
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[2], sv.protocol);
 }
 
 void PF_te_lightning3 (void)
@@ -2605,13 +2613,13 @@ void PF_te_lightning3 (void)
 	// owner entity
 	MSG_WriteShort(&sv.datagram, G_EDICTNUM(OFS_PARM0));
 	// start
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[2], sv.protocol);
 	// end
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[2], sv.protocol);
 }
 
 void PF_te_beam (void)
@@ -2621,22 +2629,22 @@ void PF_te_beam (void)
 	// owner entity
 	MSG_WriteShort(&sv.datagram, G_EDICTNUM(OFS_PARM0));
 	// start
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[2], sv.protocol);
 	// end
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[2], sv.protocol);
 }
 
 void PF_te_plasmaburn (void)
 {
 	MSG_WriteByte(&sv.datagram, svc_temp_entity);
 	MSG_WriteByte(&sv.datagram, TE_PLASMABURN);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
-	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
 static void clippointtosurface(msurface_t *surf, vec3_t p, vec3_t out)

@@ -540,8 +540,10 @@ typedef struct
 	int protocol;
 
 	// entity database stuff
-	entity_database_t entitydatabase;
-	entity_database4_t *entitydatabase4;
+	// latest received entity frame number
+	int latestframenum;
+	entityframe_database_t *entitydatabase;
+	entityframe4_database_t *entitydatabase4;
 }
 client_state_t;
 
@@ -599,6 +601,7 @@ extern int cl_num_static_entities;
 extern int cl_num_temp_entities;
 extern int cl_num_brushmodel_entities;
 
+extern mempool_t *cl_entities_mempool;
 extern entity_t *cl_entities;
 extern qbyte *cl_entities_active;
 extern entity_t *cl_static_entities;
@@ -652,6 +655,8 @@ void CL_InitInput (void);
 void CL_SendCmd (usercmd_t *cmd);
 void CL_SendMove (usercmd_t *cmd);
 
+void CL_ValidateState(entity_state_t *s);
+void CL_MoveLerpEntityStates(entity_t *ent);
 void CL_LerpUpdate(entity_t *e);
 void CL_ParseTEnt (void);
 void CL_RelinkBeams (void);

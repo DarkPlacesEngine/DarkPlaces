@@ -87,7 +87,7 @@ unsigned char CGVM_MSG_ReadByte(void)
 
 short CGVM_MSG_ReadShort(void)
 {
-	int num;
+	short num;
 	num = CGVM_MSG_ReadByte() | (CGVM_MSG_ReadByte() << 8);
 	return num;
 }

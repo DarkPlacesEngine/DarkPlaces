@@ -3276,9 +3276,6 @@ int maxplayers;
 qboolean m_serverInfoMessage = false;
 double m_serverInfoMessageTime;
 
-extern cvar_t sv_public;
-extern cvar_t sv_maxrate;
-
 void M_Menu_GameOptions_f (void)
 {
 	key_dest = key_menu;

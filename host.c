@@ -455,8 +455,12 @@ void SV_DropClient(qboolean crash)
 	NetConn_Heartbeat(1);
 
 	// free the client now
+	if (host_client->entitydatabase)
+		EntityFrame_FreeDatabase(host_client->entitydatabase);
 	if (host_client->entitydatabase4)
 		EntityFrame4_FreeDatabase(host_client->entitydatabase4);
+	if (host_client->entitydatabase5)
+		EntityFrame5_FreeDatabase(host_client->entitydatabase5);
 	// clear the client struct (this sets active to false)
 	memset(host_client, 0, sizeof(*host_client));
 }

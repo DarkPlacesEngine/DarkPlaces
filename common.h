@@ -115,10 +115,14 @@ void MSG_WriteShort (sizebuf_t *sb, int c);
 void MSG_WriteLong (sizebuf_t *sb, int c);
 void MSG_WriteFloat (sizebuf_t *sb, float f);
 void MSG_WriteString (sizebuf_t *sb, const char *s);
-void MSG_WriteCoord (sizebuf_t *sb, float f);
-void MSG_WriteAngle (sizebuf_t *sb, float f);
-void MSG_WritePreciseAngle (sizebuf_t *sb, float f);
-void MSG_WriteDPCoord (sizebuf_t *sb, float f);
+void MSG_WriteAngle8i (sizebuf_t *sb, float f);
+void MSG_WriteAngle16i (sizebuf_t *sb, float f);
+void MSG_WriteAngle32f (sizebuf_t *sb, float f);
+void MSG_WriteCoord13i (sizebuf_t *sb, float f);
+void MSG_WriteCoord16i (sizebuf_t *sb, float f);
+void MSG_WriteCoord32f (sizebuf_t *sb, float f);
+void MSG_WriteCoord (sizebuf_t *sb, float f, int protocol);
+void MSG_WriteVector (sizebuf_t *sb, float *v, int protocol);
 
 extern	int			msg_readcount;
 extern	qboolean	msg_badread;		// set if a read goes beyond end of message
@@ -139,12 +143,14 @@ int MSG_ReadBytes (int numbytes, unsigned char *out);
 #define MSG_ReadLong MSG_ReadLittleLong
 #define MSG_ReadFloat MSG_ReadLittleFloat
 
-float MSG_ReadCoord (void);
-
-#define MSG_ReadAngle() (MSG_ReadByte() * (360.0f / 256.0f))
-#define MSG_ReadPreciseAngle() (MSG_ReadShort() * (360.0f / 65536.0f))
-
-#define MSG_ReadVector(v) ((v)[0] = MSG_ReadCoord(), (v)[1] = MSG_ReadCoord(), (v)[2] = MSG_ReadCoord())
+float MSG_ReadAngle8i (void);
+float MSG_ReadAngle16i (void);
+float MSG_ReadAngle32f (void);
+float MSG_ReadCoord13i (void);
+float MSG_ReadCoord16i (void);
+float MSG_ReadCoord32f (void);
+float MSG_ReadCoord (int protocol);
+void MSG_ReadVector (float *v, int protocol);
 
 //============================================================================
 
