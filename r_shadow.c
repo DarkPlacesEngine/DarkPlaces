@@ -2468,7 +2468,7 @@ void R_Shadow_LoadWorldLights(void)
 	}
 	FS_StripExtension (cl.worldmodel->name, name, sizeof (name));
 	strlcat (name, ".rtlights", sizeof (name));
-	lightsstring = FS_LoadFile(name, false);
+	lightsstring = FS_LoadFile(name, tempmempool, false);
 	if (lightsstring)
 	{
 		s = lightsstring;
@@ -2586,7 +2586,7 @@ void R_Shadow_LoadLightsFile(void)
 	}
 	FS_StripExtension (cl.worldmodel->name, name, sizeof (name));
 	strlcat (name, ".lights", sizeof (name));
-	lightsstring = FS_LoadFile(name, false);
+	lightsstring = FS_LoadFile(name, tempmempool, false);
 	if (lightsstring)
 	{
 		s = lightsstring;

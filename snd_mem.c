@@ -221,7 +221,7 @@ sfxcache_t *S_LoadWavFile (const char *filename, sfx_t *s)
 	sfxcache_t *sc;
 
 	// Load the file
-	data = FS_LoadFile(filename, false);
+	data = FS_LoadFile(filename, tempmempool, false);
 	if (!data)
 		return NULL;
 

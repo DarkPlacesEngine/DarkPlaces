@@ -1209,7 +1209,7 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 		strlcpy (litfilename, loadmodel->name, sizeof (litfilename));
 		FS_StripExtension (litfilename, litfilename, sizeof (litfilename));
 		strlcat (litfilename, ".lit", sizeof (litfilename));
-		data = (qbyte*) FS_LoadFile(litfilename, false);
+		data = (qbyte*) FS_LoadFile(litfilename, tempmempool, false);
 		if (data)
 		{
 			if (fs_filesize > 8 && data[0] == 'Q' && data[1] == 'L' && data[2] == 'I' && data[3] == 'T')
@@ -1264,7 +1264,7 @@ static void Mod_Q1BSP_LoadLightList(void)
 	strlcpy (lightsfilename, loadmodel->name, sizeof (lightsfilename));
 	FS_StripExtension (lightsfilename, lightsfilename, sizeof(lightsfilename));
 	strlcat (lightsfilename, ".lights", sizeof (lightsfilename));
-	s = lightsstring = (char *) FS_LoadFile(lightsfilename, false);
+	s = lightsstring = (char *) FS_LoadFile(lightsfilename, tempmempool, false);
 	if (s)
 	{
 		numlights = 0;
@@ -3592,7 +3592,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 	{
 		for (i = 0;i < search->numfilenames;i++)
 		{
-			if ((f = FS_LoadFile(search->filenames[i], false)))
+			if ((f = FS_LoadFile(search->filenames[i], tempmempool, false)))
 			{
 				text = f;
 				while (COM_ParseToken(&text, false))

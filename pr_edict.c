@@ -1251,7 +1251,6 @@ void PR_LoadProgs (void)
 	int i;
 	dstatement_t *st;
 	ddef_t *infielddefs;
-	void *temp;
 	dfunction_t *dfunctions;
 
 // flush the non-C variable lookup cache
@@ -1261,14 +1260,9 @@ void PR_LoadProgs (void)
 	Mem_EmptyPool(progs_mempool);
 	Mem_EmptyPool(edictstring_mempool);
 
-	temp = FS_LoadFile ("progs.dat", false);
-	if (!temp)
+	progs = (dprograms_t *)FS_LoadFile ("progs.dat", progs_mempool, false);
+	if (!progs)
 		Host_Error ("PR_LoadProgs: couldn't load progs.dat");
-
-	progs = (dprograms_t *)Mem_Alloc(progs_mempool, fs_filesize);
-
-	memcpy(progs, temp, fs_filesize);
-	Mem_Free(temp);
 
 	Con_DPrintf("Programs occupy %iK.\n", fs_filesize/1024);
 
