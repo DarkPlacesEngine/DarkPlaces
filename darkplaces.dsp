@@ -464,10 +464,6 @@ SOURCE=.\cl_collision.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\cl_light.h
-# End Source File
-# Begin Source File
-
 SOURCE=.\cl_screen.h
 # End Source File
 # Begin Source File
