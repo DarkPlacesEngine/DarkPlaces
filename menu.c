@@ -2690,16 +2690,16 @@ void M_Reset_Key (int key, char ascii)
 {
 	switch (key)
 	{
+	case 'Y':
+	case 'y':
+		Cbuf_AddText ("exec default.cfg\n");
+		// no break here since we also exit the menu
+
 	case K_ESCAPE:
 	case 'n':
 	case 'N':
 		m_state = m_options;
 		m_entersound = true;
-		break;
-
-	case 'Y':
-	case 'y':
-		Cbuf_AddText ("exec default.cfg\n");
 		break;
 
 	default:
@@ -2722,7 +2722,7 @@ void M_Reset_Draw (void)
 #define VIDEO_ITEMS 5
 
 int video_cursor = 0;
-int video_cursor_table[] = {56, 68, 80, 100, 120};
+int video_cursor_table[] = {56, 68, 80, 100, 130};
 // note: if modes are added to the beginning of this list, update the
 // video_resolution = x; in M_Menu_Video_f below
 unsigned short video_resolutions[][2] = {{320,240}, {400,300}, {512,384}, {640,480}, {800,600}, {1024,768}, {1152,864}, {1280,960}, {1280,1024}, {1600,1200}, {1792,1344}, {1920,1440}, {2048,1536}, {0,0}};
