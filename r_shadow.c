@@ -2273,7 +2273,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 {
 	int entnum, style, islight;
 	char key[256], value[1024];
-	float origin[3], radius, color[3], light, scale, originhack[3], overridecolor[3];
+	float origin[3], radius, color[3], light, fadescale, lightscale, originhack[3], overridecolor[3];
 	const char *data;
 
 	if (cl.worldmodel == NULL)
@@ -2291,7 +2291,8 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 		originhack[0] = originhack[1] = originhack[2] = 0;
 		color[0] = color[1] = color[2] = 1;
 		overridecolor[0] = overridecolor[1] = overridecolor[2] = 1;
-		scale = 1;
+		fadescale = 1;
+		lightscale = 1;
 		style = 0;
 		islight = false;
 		while (1)
@@ -2318,7 +2319,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 			else if (!strcmp("color", key))
 				sscanf(value, "%f %f %f", &color[0], &color[1], &color[2]);
 			else if (!strcmp("wait", key))
-				scale = atof(value);
+				fadescale = atof(value);
 			else if (!strcmp("classname", key))
 			{
 				if (!strncmp(value, "light", 5))
@@ -2391,10 +2392,21 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 			}
 			else if (!strcmp("style", key))
 				style = atoi(value);
+			else if (cl.worldmodel->type == mod_brushq3)
+			{
+				if (!strcmp("scale", key))
+					lightscale = atof(value);
+				if (!strcmp("fade", key))
+					fadescale = atof(value);
+			}
 		}
 		if (light <= 0 && islight)
 			light = 300;
-		radius = min(light * r_editlights_quakelightsizescale.value / scale, 1048576);
+		if (lightscale <= 0)
+			lightscale = 1;
+		if (fadescale <= 0)
+			fadescale = 1;
+		radius = min(light * r_editlights_quakelightsizescale.value * lightscale / fadescale, 1048576);
 		light = sqrt(bound(0, light, 1048576)) * (1.0f / 16.0f);
 		if (color[0] == 1 && color[1] == 1 && color[2] == 1)
 			VectorCopy(overridecolor, color);
