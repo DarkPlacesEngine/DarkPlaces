@@ -217,10 +217,10 @@ void CL_KeepaliveMessage (void)
 
 extern qboolean isworldmodel;
 extern char skyname[];
-extern cvar_t r_fogdensity;
-extern cvar_t r_fogred;
-extern cvar_t r_foggreen;
-extern cvar_t r_fogblue;
+extern float fog_density;
+extern float fog_red;
+extern float fog_green;
+extern float fog_blue;
 extern void R_SetSkyBox (char *sky);
 extern void FOG_clear();
 
@@ -268,13 +268,13 @@ void CL_ParseEntityLump(char *entdata)
 //				r_skyboxsize.value = 64;
 //		}
 		else if (!strcmp("fog_density", key))
-			r_fogdensity.value = atof(value);
+			fog_density = atof(value);
 		else if (!strcmp("fog_red", key))
-			r_fogred.value = atof(value);
+			fog_red = atof(value);
 		else if (!strcmp("fog_green", key))
-			r_foggreen.value = atof(value);
+			fog_green = atof(value);
 		else if (!strcmp("fog_blue", key))
-			r_fogblue.value = atof(value);
+			fog_blue = atof(value);
 		else if (!strcmp("wad", key)) // for HalfLife maps
 		{
 			j = 0;
@@ -840,10 +840,10 @@ extern void SHOWLMP_decodehide();
 extern void SHOWLMP_decodeshow();
 extern void R_SetSkyBox(char* sky);
 
-extern cvar_t r_fogdensity;
-extern cvar_t r_fogred;
-extern cvar_t r_foggreen;
-extern cvar_t r_fogblue;
+extern float fog_density;
+extern float fog_red;
+extern float fog_green;
+extern float fog_blue;
 
 /*
 =====================
@@ -1107,13 +1107,13 @@ void CL_ParseServerMessage (void)
 		case svc_fog:
 			if (MSG_ReadByte())
 			{
-				r_fogdensity.value = MSG_ReadShort() * (1.0f / 4096.0f);
-				r_fogred.value = MSG_ReadByte() * (1.0 / 255.0);
-				r_foggreen.value = MSG_ReadByte() * (1.0 / 255.0);
-				r_fogblue.value = MSG_ReadByte() * (1.0 / 255.0);
+				fog_density = MSG_ReadShort() * (1.0f / 4096.0f);
+				fog_red = MSG_ReadByte() * (1.0 / 255.0);
+				fog_green = MSG_ReadByte() * (1.0 / 255.0);
+				fog_blue = MSG_ReadByte() * (1.0 / 255.0);
 			}
 			else
-				r_fogdensity.value = 0.0f;
+				fog_density = 0.0f;
 			break;
 		}
 	}
