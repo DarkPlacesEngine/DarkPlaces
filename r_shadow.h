@@ -14,6 +14,7 @@ extern cvar_t r_shadow_bumpscale_bumpmap;
 extern cvar_t r_shadow_bumpscale_basetexture;
 extern cvar_t r_shadow_worldshadows;
 extern cvar_t r_shadow_dlightshadows;
+extern cvar_t r_shadow_projectdistance;
 
 extern mempool_t *r_shadow_mempool;
 
