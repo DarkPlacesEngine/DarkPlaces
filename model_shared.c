@@ -26,6 +26,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "image.h"
 #include "r_shadow.h"
 
+cvar_t r_mipskins = {CVAR_SAVE, "r_mipskins", "0"};
+
 model_t *loadmodel;
 
 // LordHavoc: increased from 512 to 2048
@@ -148,6 +150,7 @@ void Mod_Init (void)
 	Mod_AliasInit();
 	Mod_SpriteInit();
 
+	Cvar_RegisterVariable(&r_mipskins);
 	Cmd_AddCommand ("modellist", Mod_Print);
 	Cmd_AddCommand ("modelprecache", Mod_Precache);
 }
@@ -898,4 +901,77 @@ void Mod_ConstructTerrainPatchFromRGBA(const qbyte *imagepixels, int imagewidth,
 		for (x = 0, ix = x1;x < width + 1;x++, ix++, vertex3f += 3, texcoord2f += 2, svector3f += 3, tvector3f += 3, normal3f += 3)
 			Mod_GetTerrainVertexFromRGBA(imagepixels, imagewidth, imageheight, ix, iy, vertex3f, texcoord2f, svector3f, tvector3f, normal3f, pixelstepmatrix, pixeltexturestepmatrix);
 }
+
+skinfile_t *Mod_LoadSkinFiles(void)
+{
+	int i;
+	char *text;
+	const char *data;
+	skinfile_t *skinfile, *first = NULL;
+	skinfileitem_t *skinfileitem;
+	char command[MAX_QPATH], name[MAX_QPATH], replacement[MAX_QPATH];
+	for (i = 0;(data = text = FS_LoadFile(va("%s_%i.skin", loadmodel->name, i), true));i++)
+	{
+		skinfile = Mem_Alloc(tempmempool, sizeof(skinfile_t));
+		skinfile->next = first;
+		first = skinfile;
+		for(;;)
+		{
+			if (!COM_ParseToken(&data))
+				break;
+			strncpy(command, com_token, sizeof(command) - 1);
+			command[sizeof(command) - 1] = 0;
+			if (!strcmp(command, "replace"))
+			{
+				if (!COM_ParseToken(&data))
+				{
+					Con_Printf("Mod_LoadSkinFiles: parsing error (insufficient parameters to command \"%s\" in file \"%s_%i.skin\")\n", command, loadmodel->name, i);
+					break;
+				}
+				strncpy(name, com_token, sizeof(name) - 1);
+				name[sizeof(name) - 1] = 0;
+				if (!COM_ParseToken(&data))
+				{
+					Con_Printf("Mod_LoadSkinFiles: parsing error (insufficient parameters to command \"%s\" in file \"%s_%i.skin\")\n", command, loadmodel->name, i);
+					break;
+				}
+				strncpy(replacement, com_token, sizeof(replacement) - 1);
+				replacement[sizeof(replacement) - 1] = 0;
+				skinfileitem = Mem_Alloc(tempmempool, sizeof(skinfileitem_t));
+				skinfileitem->next = skinfile->items;
+				skinfile->items = skinfileitem;
+				strncpy(skinfileitem->name, name, sizeof(skinfileitem->name) - 1);
+				strncpy(skinfileitem->replacement, replacement, sizeof(skinfileitem->replacement) - 1);
+			}
+			else
+				Con_Printf("Mod_LoadSkinFiles: parsing error (unknown command \"%s\" in file \"%s_%i.skin\")\n", command, loadmodel->name, i);
+		}
+		Mem_Free(text);
+	}
+	return first;
+}
+
+void Mod_FreeSkinFiles(skinfile_t *skinfile)
+{
+	skinfile_t *next;
+	skinfileitem_t *skinfileitem, *nextitem;
+	for (;skinfile;skinfile = next)
+	{
+		next = skinfile->next;
+		for (skinfileitem = skinfile->items;skinfileitem;skinfileitem = nextitem)
+		{
+			nextitem = skinfileitem->next;
+			Mem_Free(skinfileitem);
+		}
+		Mem_Free(skinfile);
+	}
+}
+
+int Mod_CountSkinFiles(skinfile_t *skinfile)
+{
+	int i;
+	for (i = 0;skinfile;skinfile = skinfile->next, i++);
+	return i;
+}
+
 

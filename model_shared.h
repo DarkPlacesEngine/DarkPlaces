@@ -453,8 +453,6 @@ typedef struct model_s
 	float			radius2;
 	// skin animation info
 	animscene_t		*skinscenes; // [numskins]
-	// skin frame info
-	skinframe_t		*skinframes;
 	// skin animation info
 	animscene_t		*animscenes; // [numframes]
 	// draw the model's sky polygons (only used by brush models)
@@ -529,6 +527,27 @@ void Mod_ShadowMesh_Free(shadowmesh_t *mesh);
 
 int Mod_LoadSkinFrame(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int usedetailtexture, int loadglowtexture);
 int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int usedetailtexture, int loadglowtexture, qbyte *skindata, int width, int height);
+
+extern cvar_t r_mipskins;
+
+typedef struct skinfileitem_s
+{
+	struct skinfileitem_s *next;
+	char name[MAX_QPATH];
+	char replacement[MAX_QPATH];
+}
+skinfileitem_t;
+
+typedef struct skinfile_s
+{
+	struct skinfile_s *next;
+	skinfileitem_t *items;
+}
+skinfile_t;
+
+skinfile_t *Mod_LoadSkinFiles(void);
+void Mod_FreeSkinFiles(skinfile_t *skinfile);
+int Mod_CountSkinFiles(skinfile_t *skinfile);
 
 #endif	// __MODEL__
 

@@ -7,7 +7,8 @@ stuff left to do on tags: make server write entities sequentially
 
 
 
-
+0 darkplaces: make reliable message splitting use a different limit than unreliable message size (yummyluv)
+1 darkplaces: add a string function that returns a character value from a string, mainly for csqc printing its own text (SeienAbunae)
 1 darkplaces: add EndGame function (called on server shutdown or level change) (SeienAbunae, Nexuiz)
 0 darkplaces: document how polygon collision works in the code (KrimZon)
 0 darkplaces: fix particle trails! (Supajoe)

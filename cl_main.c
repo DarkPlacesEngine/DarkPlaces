@@ -532,7 +532,6 @@ void CL_LinkNetworkEntity(entity_t *e)
 			if (e->state_current.tagentity && e->state_current.tagindex >= 1 && (model = t->render.model) && e->state_current.tagindex <= t->render.model->alias.aliasnum_tags)
 			{
 				// blend the matrices
-				R_LerpAnimation(&t->render);
 				memset(&blendmatrix, 0, sizeof(blendmatrix));
 				for (j = 0;j < 4 && t->render.frameblend[j].lerp > 0;j++)
 				{
@@ -582,7 +581,17 @@ void CL_LinkNetworkEntity(entity_t *e)
 				VectorCopy(e->persistent.newangles, angles);
 			}
 			// animation lerp
-			if (e->render.frame2 != e->state_current.frame)
+			if (e->render.frame2 == e->state_current.frame)
+			{
+				// update frame lerp fraction
+				e->render.framelerp = 1;
+				if (e->render.frame2time > e->render.frame1time)
+				{
+					e->render.framelerp = (cl.time - e->render.frame2time) / (e->render.frame2time - e->render.frame1time);
+					e->render.framelerp = bound(0, e->render.framelerp, 1);
+				}
+			}
+			else
 			{
 				// begin a new frame lerp
 				e->render.frame1 = e->render.frame2;
@@ -590,12 +599,6 @@ void CL_LinkNetworkEntity(entity_t *e)
 				e->render.frame = e->render.frame2 = e->state_current.frame;
 				e->render.frame2time = cl.time;
 				e->render.framelerp = 0;
-			}
-			else
-			{
-				// update frame lerp fraction
-				e->render.framelerp = e->render.frame2time > e->render.frame1time ? ((cl.time - e->render.frame2time) / (e->render.frame2time - e->render.frame1time)) : 1;
-				e->render.framelerp = bound(0, e->render.framelerp, 1);
 			}
 		}
 		else
@@ -621,6 +624,8 @@ void CL_LinkNetworkEntity(entity_t *e)
 					origin[2] += (cos(cl.time * cl_itembobspeed.value * (2.0 * M_PI)) + 1.0) * 0.5 * cl_itembobheight.value;
 			}
 		}
+
+		R_LerpAnimation(&e->render);
 
 		// FIXME: e->render.scale should go away
 		Matrix4x4_CreateFromQuakeEntity(&matrix2, origin[0], origin[1], origin[2], angles[0], angles[1], angles[2], e->render.scale);
