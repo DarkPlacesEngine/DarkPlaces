@@ -381,7 +381,7 @@ Mod_LoadAliasModel
 =================
 */
 #define BOUNDI(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid VALUE (%d exceeds %d - %d)\n", mod->name, VALUE, MIN, MAX);
-#define BOUNDF(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid VALUE (%g exceeds %g - %g)\n", mod->name, VALUE, MIN, MAX);
+#define BOUNDF(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid VALUE (%f exceeds %f - %f)\n", mod->name, VALUE, MIN, MAX);
 void Mod_LoadAliasModel (model_t *mod, void *buffer)
 {
 	int					i, j, version, numframes, size, start, end, total;
@@ -499,10 +499,11 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 			pouttexcoords[i*2] -= 0.5;
 			pouttexcoords[(i+pheader->numverts)*2] -= 0.5;
 		}
-		BOUNDF(pouttexcoords[i*2],0,1);
-		BOUNDF(pouttexcoords[i*2+1],0,1);
-		BOUNDF(pouttexcoords[(i+pheader->numverts)*2],0,1);
-		BOUNDF(pouttexcoords[(i+pheader->numverts)*2+1],0,1);
+		// LordHavoc: CTF's v_star.mdl failed these checks
+//		BOUNDF(pouttexcoords[i*2],0.0,1.0);
+//		BOUNDF(pouttexcoords[i*2+1],0.0,1.0);
+//		BOUNDF(pouttexcoords[(i+pheader->numverts)*2],0.0,1.0);
+//		BOUNDF(pouttexcoords[(i+pheader->numverts)*2+1],0.0,1.0);
 	}
 
 // load triangle data
