@@ -333,6 +333,7 @@
 4 darkplaces client: add decals on models (Urre)
 4 darkplaces client: add qw protocol support (making darkplaces work as a qwcl client) (tell Fuh)
 4 darkplaces client: figure out why intermission camera pitch changes after a moment (Tomaz)
+4 darkplaces console: add setlock command which marks a cvar as locked, and sends it over network to connected clients as a setlock command, the clients will not allow the user to modify the cvars while locked (and will only accept setlock commands over the network), and cvars are unlocked when level ends - the server will send the locks again on next level (VorteX)
 4 darkplaces csqc: add builtin to clientside qc for reading triangles of model meshes (useful to orient a ui along a triangle of a model mesh)
 4 darkplaces csqc: add builtins to clientside qc for gl calls
 4 darkplaces loader: add SKM model support (Vermeulen)
