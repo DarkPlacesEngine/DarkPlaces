@@ -135,7 +135,15 @@ void Matrix4x4_Invert_Simple (matrix4x4_t *out, const matrix4x4_t *in1)
 	// (note the lack of sqrt here, because we're trying to undo the scaling,
 	// this means multiplying by the inverse scale twice - squaring it, which
 	// makes the sqrt a waste of time)
+#if 1
 	double scale = 1.0 / (in1->m[0][0] * in1->m[0][0] + in1->m[0][1] * in1->m[0][1] + in1->m[0][2] * in1->m[0][2]);
+#else
+	double scale = 3.0 / sqrt
+		 (in1->m[0][0] * in1->m[0][0] + in1->m[0][1] * in1->m[0][1] + in1->m[0][2] * in1->m[0][2]
+		+ in1->m[1][0] * in1->m[1][0] + in1->m[1][1] * in1->m[1][1] + in1->m[1][2] * in1->m[1][2]
+		+ in1->m[2][0] * in1->m[2][0] + in1->m[2][1] * in1->m[2][1] + in1->m[2][2] * in1->m[2][2]);
+#endif
+	scale *= scale;
 
 	// invert the rotation by transposing and multiplying by the squared
 	// recipricol of the input matrix scale as described above
@@ -287,17 +295,17 @@ void Matrix4x4_CreateFromQuakeEntity(matrix4x4_t *out, float x, float y, float z
 	angle = roll * (M_PI*2 / 360);
 	sr = sin(angle);
 	cr = cos(angle);
-	out->m[0][0] = cp*cy * scale;
-	out->m[0][1] = sr*sp*cy+cr*-sy * scale;
-	out->m[0][2] = cr*sp*cy+-sr*-sy * scale;
+	out->m[0][0] = (cp*cy) * scale;
+	out->m[0][1] = (sr*sp*cy+cr*-sy) * scale;
+	out->m[0][2] = (cr*sp*cy+-sr*-sy) * scale;
 	out->m[0][3] = x;
-	out->m[1][0] = cp*sy * scale;
-	out->m[1][1] = sr*sp*sy+cr*cy * scale;
-	out->m[1][2] = cr*sp*sy+-sr*cy * scale;
+	out->m[1][0] = (cp*sy) * scale;
+	out->m[1][1] = (sr*sp*sy+cr*cy) * scale;
+	out->m[1][2] = (cr*sp*sy+-sr*cy) * scale;
 	out->m[1][3] = y;
-	out->m[2][0] = -sp * scale;
-	out->m[2][1] = sr*cp * scale;
-	out->m[2][2] = cr*cp * scale;
+	out->m[2][0] = (-sp) * scale;
+	out->m[2][1] = (sr*cp) * scale;
+	out->m[2][2] = (cr*cp) * scale;
 	out->m[2][3] = z;
 	out->m[3][0] = 0;
 	out->m[3][1] = 0;
@@ -503,7 +511,14 @@ void Matrix3x4_Invert_Simple (matrix3x4_t *out, const matrix3x4_t *in1)
 	// (note the lack of sqrt here, because we're trying to undo the scaling,
 	// this means multiplying by the inverse scale twice - squaring it, which
 	// makes the sqrt a waste of time)
+#if 1
 	double scale = 1.0 / (in1->m[0][0] * in1->m[0][0] + in1->m[0][1] * in1->m[0][1] + in1->m[0][2] * in1->m[0][2]);
+#else
+	double scale = 3.0 / sqrt
+		 (in1->m[0][0] * in1->m[0][0] + in1->m[0][1] * in1->m[0][1] + in1->m[0][2] * in1->m[0][2]
+		+ in1->m[1][0] * in1->m[1][0] + in1->m[1][1] * in1->m[1][1] + in1->m[1][2] * in1->m[1][2]
+		+ in1->m[2][0] * in1->m[2][0] + in1->m[2][1] * in1->m[2][1] + in1->m[2][2] * in1->m[2][2]);
+#endif
 
 	// invert the rotation by transposing and multiplying by the squared
 	// recipricol of the input matrix scale as described above
@@ -630,17 +645,17 @@ void Matrix3x4_CreateFromQuakeEntity(matrix3x4_t *out, float x, float y, float z
 	angle = roll * (M_PI*2 / 360);
 	sr = sin(angle);
 	cr = cos(angle);
-	out->m[0][0] = cp*cy * scale;
-	out->m[0][1] = sr*sp*cy+cr*-sy * scale;
-	out->m[0][2] = cr*sp*cy+-sr*-sy * scale;
+	out->m[0][0] = (cp*cy) * scale;
+	out->m[0][1] = (sr*sp*cy+cr*-sy) * scale;
+	out->m[0][2] = (cr*sp*cy+-sr*-sy) * scale;
 	out->m[0][3] = x;
-	out->m[1][0] = cp*sy * scale;
-	out->m[1][1] = sr*sp*sy+cr*cy * scale;
-	out->m[1][2] = cr*sp*sy+-sr*cy * scale;
+	out->m[1][0] = (cp*sy) * scale;
+	out->m[1][1] = (sr*sp*sy+cr*cy) * scale;
+	out->m[1][2] = (cr*sp*sy+-sr*cy) * scale;
 	out->m[1][3] = y;
-	out->m[2][0] = -sp * scale;
-	out->m[2][1] = sr*cp * scale;
-	out->m[2][2] = cr*cp * scale;
+	out->m[2][0] = (-sp) * scale;
+	out->m[2][1] = (sr*cp) * scale;
+	out->m[2][2] = (cr*cp) * scale;
 	out->m[2][3] = z;
 }
 

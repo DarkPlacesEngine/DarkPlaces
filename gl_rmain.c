@@ -505,6 +505,9 @@ void R_DrawViewModel (void)
 
 	R_LerpAnimation(ent);
 
+	Matrix4x4_CreateFromQuakeEntity(&ent->matrix, ent->origin[0], ent->origin[1], ent->origin[2], -ent->angles[0], ent->angles[1], ent->angles[2], ent->scale);
+	Matrix4x4_Invert_Simple(&ent->inversematrix, &ent->matrix);
+
 	ent->model->Draw(ent);
 }
 
