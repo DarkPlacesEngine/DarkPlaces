@@ -959,10 +959,11 @@ static void CL_RelinkNetworkEntities(void)
 
 	// start on the entity after the world
 	entitylinkframenumber++;
-	for (i = 1, ent = cl_entities + 1;i < MAX_EDICTS;i++, ent++)
+	for (i = 1;i < MAX_EDICTS;i++)
 	{
 		if (cl_entities_active[i])
 		{
+			ent = cl_entities + i;
 			if (ent->state_current.active)
 				CL_LinkNetworkEntity(ent);
 			else
