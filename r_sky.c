@@ -164,7 +164,6 @@ static void R_SkyBox(void)
 	m.texcoords[0][i * 2 + 1] = (t) * (254.0f/256.0f) + (1.0f/256.0f);
 
 	memset(&m, 0, sizeof(m));
-	m.transparent = false;
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ZERO;
 	m.depthdisable = true; // don't modify or read zbuffer
@@ -340,7 +339,6 @@ static void R_SkySphere(void)
 	speedscale2 -= (int)speedscale2;
 
 	memset(&m, 0, sizeof(m));
-	m.transparent = false;
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ZERO;
 	m.depthdisable = true; // don't modify or read zbuffer

@@ -1266,7 +1266,6 @@ void R_DrawParticleCallback(void *calldata1, int calldata2)
 	}
 
 	memset(&m, 0, sizeof(m));
-	m.transparent = false;
 	m.blendfunc1 = GL_SRC_ALPHA;
 	if (additive)
 		m.blendfunc2 = GL_ONE;

@@ -641,7 +641,6 @@ static void RSurfShader_Sky(entity_render_t *ent, msurface_t *firstsurf)
 	{
 		// draw depth-only polys
 		memset(&m, 0, sizeof(m));
-		m.transparent = false;
 		if (skyrendermasked)
 		{
 			m.blendfunc1 = GL_ZERO;
@@ -652,7 +651,6 @@ static void RSurfShader_Sky(entity_render_t *ent, msurface_t *firstsurf)
 		{
 			m.blendfunc1 = GL_ONE;
 			m.blendfunc2 = GL_ZERO;
-			m.depthwrite = false;
 		}
 		for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 		{
@@ -757,12 +755,9 @@ static void RSurfShader_Water_Pass_Base(entity_render_t *ent, msurface_t *surf)
 	}
 	else
 	{
-		m.transparent = false;
 		m.blendfunc1 = GL_ONE;
 		m.blendfunc2 = GL_ZERO;
 	}
-	m.depthwrite = false;
-	m.depthdisable = false;
 	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
 	if (surf->flags & SURF_DRAWFULLBRIGHT || ent->effects & EF_FULLBRIGHT)
 	{
@@ -871,8 +866,6 @@ static void RSurfShader_Water_Pass_Fog(entity_render_t *ent, msurface_t *surf)
 	m.transparent = ent->effects & EF_ADDITIVE || surf->currenttexture->fogtexture != NULL || alpha < 1;
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
-	m.depthwrite = false;
-	m.depthdisable = false;
 	m.tex[0] = R_GetTexture(surf->currenttexture->fogtexture);
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
@@ -938,12 +931,9 @@ static void RSurfShader_Wall_Pass_BaseVertex(entity_render_t *ent, msurface_t *s
 	}
 	else
 	{
-		m.transparent = false;
 		m.blendfunc1 = GL_ONE;
 		m.blendfunc2 = GL_ZERO;
 	}
-	m.depthwrite = false;
-	m.depthdisable = false;
 	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
 
 	size3 = ((surf->extents[0]>>4)+1)*((surf->extents[1]>>4)+1)*3;
@@ -1052,12 +1042,9 @@ static void RSurfShader_Wall_Pass_BaseFullbright(entity_render_t *ent, msurface_
 	}
 	else
 	{
-		m.transparent = false;
 		m.blendfunc1 = GL_ONE;
 		m.blendfunc2 = GL_ZERO;
 	}
-	m.depthwrite = false;
-	m.depthdisable = false;
 	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
 	ca = ent->alpha;
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
@@ -1176,11 +1163,8 @@ static void RSurfShader_OpaqueWall_Pass_TripleTexCombine(entity_render_t *ent, m
 	surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
 	memset(&m, 0, sizeof(m));
-	m.transparent = false;
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ZERO;
-	m.depthwrite = false;
-	m.depthdisable = false;
 	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
 	m.texrgbscale[0] = 1.0f;
 	m.tex[1] = R_GetTexture(surf->lightmaptexture);
@@ -1222,11 +1206,8 @@ static void RSurfShader_OpaqueWall_Pass_BaseMTex(entity_render_t *ent, msurface_
 	surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
 	memset(&m, 0, sizeof(m));
-	m.transparent = false;
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ZERO;
-	m.depthwrite = false;
-	m.depthdisable = false;
 	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
 	m.tex[1] = R_GetTexture(surf->lightmaptexture);
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
@@ -1262,11 +1243,8 @@ static void RSurfShader_OpaqueWall_Pass_BaseTexture(entity_render_t *ent, msurfa
 	surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
 	memset(&m, 0, sizeof(m));
-	m.transparent = false;
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ZERO;
-	m.depthwrite = false;
-	m.depthdisable = false;
 	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
@@ -1299,11 +1277,8 @@ static void RSurfShader_OpaqueWall_Pass_BaseLightmap(entity_render_t *ent, msurf
 	surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
 	memset(&m, 0, sizeof(m));
-	m.transparent = false;
 	m.blendfunc1 = GL_ZERO;
 	m.blendfunc2 = GL_SRC_COLOR;
-	m.depthwrite = false;
-	m.depthdisable = false;
 	m.tex[0] = R_GetTexture(surf->lightmaptexture);
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
@@ -1342,11 +1317,8 @@ static void RSurfShader_OpaqueWall_Pass_Light(entity_render_t *ent, msurface_t *
 		return;
 
 	memset(&m, 0, sizeof(m));
-	m.transparent = false;
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
-	m.depthwrite = false;
-	m.depthdisable = false;
 	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
@@ -1386,7 +1358,6 @@ static void RSurfShader_OpaqueWall_Pass_Fog(entity_render_t *ent, msurface_t *su
 	surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
 	memset(&m, 0, sizeof(m));
-	m.transparent = false;
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
@@ -1420,11 +1391,8 @@ static void RSurfShader_OpaqueWall_Pass_BaseDetail(entity_render_t *ent, msurfac
 	surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
 	memset(&m, 0, sizeof(m));
-	m.transparent = false;
 	m.blendfunc1 = GL_DST_COLOR;
 	m.blendfunc2 = GL_SRC_COLOR;
-	m.depthwrite = false;
-	m.depthdisable = false;
 	m.tex[0] = R_GetTexture(surf->currenttexture->detailtexture);
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
@@ -1455,7 +1423,6 @@ static void RSurfShader_OpaqueWall_Pass_Glow(entity_render_t *ent, msurface_t *s
 	surfmesh_t *mesh;
 	rmeshbufferinfo_t m;
 	memset(&m, 0, sizeof(m));
-	m.transparent = false;
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
 	m.tex[0] = R_GetTexture(surf->currenttexture->glowtexture);
