@@ -1,4 +1,6 @@
 
+extern cvar_t r_skyquality;
+
 #define TPOLYTYPE_ALPHA 0
 #define TPOLYTYPE_ADD 1
 

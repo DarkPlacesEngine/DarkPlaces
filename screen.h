@@ -46,3 +46,4 @@ extern cvar_t r_contrast;
 extern cvar_t gl_lightmode;
 extern cvar_t scr_viewsize;
 extern cvar_t crosshair;
+extern cvar_t showfps;
