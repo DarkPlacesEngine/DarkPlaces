@@ -41,8 +41,7 @@ typedef struct
 	float	sl, tl, sh, th;
 } glpic_t;
 
-byte		conback_buffer[sizeof(qpic_t) + sizeof(glpic_t)];
-qpic_t		*conback = (qpic_t *)&conback_buffer;
+int			conbacktexnum;
 
 /*
 =============================================================================
@@ -247,17 +246,12 @@ extern int buildnumber;
 void gl_draw_start()
 {
 	int		i;
-	glpic_t	*gl;
 
-	// load the console background and the charset
-	// by hand, because we need to write the version
-	// string into the background before turning
-	// it into a texture
 	char_texture = loadtextureimage ("conchars", 0, 0, false, false);
 	if (!char_texture)
 	{
 		draw_chars = W_GetLumpName ("conchars");
-		for (i=0 ; i<256*64 ; i++)
+		for (i=0 ; i<128*128 ; i++)
 			if (draw_chars[i] == 0)
 				draw_chars[i] = 255;	// proper transparent color
 
@@ -265,14 +259,7 @@ void gl_draw_start()
 		char_texture = GL_LoadTexture ("charset", 128, 128, draw_chars, false, true, 1);
 	}
 
-	gl = (glpic_t *)conback->data;
-	gl->texnum = loadtextureimage("gfx/conback", 0, 0, false, false);
-	gl->sl = 0;
-	gl->sh = 1;
-	gl->tl = 0;
-	gl->th = 1;
-	conback->width = vid.width;
-	conback->height = vid.height;
+	conbacktexnum = loadtextureimage("gfx/conback", 0, 0, false, false);
 
 	memset(scraptexnum, 0, sizeof(scraptexnum));
 
@@ -413,14 +400,10 @@ void Draw_String (int x, int y, char *str, int maxlen)
 		{
 			frow = (float) ((int) num >> 4)*0.0625;
 			fcol = (float) ((int) num & 15)*0.0625;
-			glTexCoord2f (fcol, frow);
-			glVertex2f (x, y);
-			glTexCoord2f (fcol + 0.0625, frow);
-			glVertex2f (x+8, y);
-			glTexCoord2f (fcol + 0.0625, frow + 0.0625);
-			glVertex2f (x+8, y+8);
-			glTexCoord2f (fcol, frow + 0.0625);
-			glVertex2f (x, y+8);
+			glTexCoord2f (fcol         , frow         );glVertex2f (x, y);
+			glTexCoord2f (fcol + 0.0625, frow         );glVertex2f (x+8, y);
+			glTexCoord2f (fcol + 0.0625, frow + 0.0625);glVertex2f (x+8, y+8);
+			glTexCoord2f (fcol         , frow + 0.0625);glVertex2f (x, y+8);
 		}
 		x += 8;
 	}
@@ -431,26 +414,18 @@ void Draw_String (int x, int y, char *str, int maxlen)
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 }
 
-void Draw_GenericPic (int texnum, float red, float green, float blue, float alpha, float x, float y, float width, float height)
+void Draw_GenericPic (int texnum, float red, float green, float blue, float alpha, int x, int y, int width, int height)
 {
 	if (!r_render.value)
 		return;
-	glDisable(GL_ALPHA_TEST);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glColor4f(red,green,blue,alpha);
 	glBindTexture(GL_TEXTURE_2D, texnum);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glBegin (GL_QUADS);
-	glTexCoord2f (0, 0);
-	glVertex2f (x, y);
-	glTexCoord2f (1, 0);
-	glVertex2f (x+width, y);
-	glTexCoord2f (1, 1);
-	glVertex2f (x+width, y+height);
-	glTexCoord2f (0, 1);
-	glVertex2f (x, y+height);
+	glTexCoord2f (0, 0);glVertex2f (x, y);
+	glTexCoord2f (1, 0);glVertex2f (x+width, y);
+	glTexCoord2f (1, 1);glVertex2f (x+width, y+height);
+	glTexCoord2f (0, 1);glVertex2f (x, y+height);
 	glEnd ();
-	glColor3f(1,1,1);
 }
 
 /*
@@ -470,14 +445,10 @@ void Draw_AlphaPic (int x, int y, qpic_t *pic, float alpha)
 	glColor4f(1,1,1,alpha);
 	glBindTexture(GL_TEXTURE_2D, gl->texnum);
 	glBegin (GL_QUADS);
-	glTexCoord2f (gl->sl, gl->tl);
-	glVertex2f (x, y);
-	glTexCoord2f (gl->sh, gl->tl);
-	glVertex2f (x+pic->width, y);
-	glTexCoord2f (gl->sh, gl->th);
-	glVertex2f (x+pic->width, y+pic->height);
-	glTexCoord2f (gl->sl, gl->th);
-	glVertex2f (x, y+pic->height);
+	glTexCoord2f (gl->sl, gl->tl);glVertex2f (x, y);
+	glTexCoord2f (gl->sh, gl->tl);glVertex2f (x+pic->width, y);
+	glTexCoord2f (gl->sh, gl->th);glVertex2f (x+pic->width, y+pic->height);
+	glTexCoord2f (gl->sl, gl->th);glVertex2f (x, y+pic->height);
 	glEnd ();
 }
 
@@ -499,14 +470,10 @@ void Draw_Pic (int x, int y, qpic_t *pic)
 	glColor3f(1,1,1);
 	glBindTexture(GL_TEXTURE_2D, gl->texnum);
 	glBegin (GL_QUADS);
-	glTexCoord2f (gl->sl, gl->tl);
-	glVertex2f (x, y);
-	glTexCoord2f (gl->sh, gl->tl);
-	glVertex2f (x+pic->width, y);
-	glTexCoord2f (gl->sh, gl->th);
-	glVertex2f (x+pic->width, y+pic->height);
-	glTexCoord2f (gl->sl, gl->th);
-	glVertex2f (x, y+pic->height);
+	glTexCoord2f (gl->sl, gl->tl);glVertex2f (x, y);
+	glTexCoord2f (gl->sh, gl->tl);glVertex2f (x+pic->width, y);
+	glTexCoord2f (gl->sh, gl->th);glVertex2f (x+pic->width, y+pic->height);
+	glTexCoord2f (gl->sl, gl->th);glVertex2f (x, y+pic->height);
 	glEnd ();
 }
 
@@ -534,18 +501,17 @@ void Draw_PicTranslate (int x, int y, qpic_t *pic, byte *translation)
 
 	if (!r_render.value)
 		return;
+	Draw_GenericPic (c, 1,1,1,1, x, y, pic->width, pic->height);
+	/*
 	glBindTexture(GL_TEXTURE_2D, c);
 	glColor3f(1,1,1);
 	glBegin (GL_QUADS);
-	glTexCoord2f (0, 0);
-	glVertex2f (x, y);
-	glTexCoord2f (1, 0);
-	glVertex2f (x+pic->width, y);
-	glTexCoord2f (1, 1);
-	glVertex2f (x+pic->width, y+pic->height);
-	glTexCoord2f (0, 1);
-	glVertex2f (x, y+pic->height);
+	glTexCoord2f (0, 0);glVertex2f (x, y);
+	glTexCoord2f (1, 0);glVertex2f (x+pic->width, y);
+	glTexCoord2f (1, 1);glVertex2f (x+pic->width, y+pic->height);
+	glTexCoord2f (0, 1);glVertex2f (x, y+pic->height);
 	glEnd ();
+	*/
 }
 
 
@@ -557,10 +523,7 @@ Draw_ConsoleBackground
 */
 void Draw_ConsoleBackground (int lines)
 {
-	if (lines >= (int) vid.height)
-		Draw_Pic(0, lines - vid.height, conback);
-	else
-		Draw_AlphaPic (0, lines - vid.height, conback, scr_conalpha.value*lines/vid.height);
+	Draw_GenericPic (conbacktexnum, 1,1,1,scr_conalpha.value*lines/vid.height, 0, lines - vid.height, vid.width, vid.height);
 	// LordHavoc: draw version
 	Draw_String(engineversionx, lines - vid.height + engineversiony, engineversion, 9999);
 }
