@@ -141,8 +141,6 @@ void R_DrawExplosions(void);
 #define gl_solid_format 3
 #define gl_alpha_format 4
 
-//#define PARANOID 1
-
 int R_CullBox(const vec3_t mins, const vec3_t maxs);
 #define VIS_CullBox(mins,maxs) (R_CullBox((mins), (maxs)) || (cl.worldmodel && cl.worldmodel->brush.BoxTouchingPVS && !cl.worldmodel->brush.BoxTouchingPVS(cl.worldmodel, r_pvsbits, (mins), (maxs))))
 

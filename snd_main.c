@@ -82,9 +82,13 @@ cvar_t snd_show = {0, "snd_show", "0"};
 cvar_t _snd_mixahead = {CVAR_SAVE, "_snd_mixahead", "0.1"};
 cvar_t snd_swapstereo = {CVAR_SAVE, "snd_swapstereo", "0"};
 
+// Ambient sounds
+sfx_t* ambient_sfxs [2] = { NULL, NULL };
+const char* ambient_names [2] = { "sound/ambience/water1.wav", "sound/ambience/wind2.wav" };
+
 
 // ====================================================================
-// User-setable variables
+// Functions
 // ====================================================================
 
 void S_SoundInfo_f(void)
@@ -263,7 +267,7 @@ S_FreeSfx
 void S_FreeSfx (sfx_t *sfx)
 {
 	// Never free a locked sfx
-	if (sfx->locks > 0)
+	if (sfx->locks > 0 || (sfx->flags & SFXFLAG_PERMANENTLOCK))
 		return;
 
 	Con_DPrintf ("S_FreeSfx: freeing %s\n", sfx->name);
@@ -303,16 +307,27 @@ void S_ServerSounds (char serversound [][MAX_QPATH], unsigned int numsounds)
 	unsigned int i;
 
 	// Start the ambient sounds and make them loop
-	channels[AMBIENT_WATER].sfx = S_PrecacheSound ("sound/ambience/water1.wav", false, true);
-	channels[AMBIENT_SKY].sfx = S_PrecacheSound ("sound/ambience/wind2.wav", false, true);
-	for (i = 0; i < NUM_AMBIENTS; i++)
-		channels[i].flags |= CHANNELFLAG_FORCELOOP;
+	for (i = 0; i < sizeof (ambient_sfxs) / sizeof (ambient_sfxs[0]); i++)
+	{
+		// Precache it if it's not done (request a lock to make sure it will never be freed)
+		if (ambient_sfxs[i] == NULL)
+			ambient_sfxs[i] = S_PrecacheSound (ambient_names[i], false, true);
+		if (ambient_sfxs[i] != NULL)
+		{
+			// Add a lock to the SFX while playing. It will be
+			// removed by S_StopAllSounds at the end of the level
+			S_LockSfx (ambient_sfxs[i]);
+
+			channels[i].sfx = ambient_sfxs[i];
+			channels[i].flags |= CHANNELFLAG_FORCELOOP;
+		}
+	}
 
 	// Remove 1 lock from all sfx with the SFXFLAG_SERVERSOUND flag, and remove the flag
 	for (sfx = known_sfx; sfx != NULL; sfx = sfx->next)
 		if (sfx->flags & SFXFLAG_SERVERSOUND)
 		{
-			sfx->locks--;
+			S_UnlockSfx (sfx);
 			sfx->flags &= ~SFXFLAG_SERVERSOUND;
 		}
 
@@ -320,9 +335,9 @@ void S_ServerSounds (char serversound [][MAX_QPATH], unsigned int numsounds)
 	for (i = 1; i < numsounds; i++)
 	{
 		sfx = S_FindName (serversound[i]);
-		if (sfx != NULL && !(sfx->flags & SFXFLAG_SERVERSOUND))
+		if (sfx != NULL)
 		{
-			sfx->locks++;
+			S_LockSfx (sfx);
 			sfx->flags |= SFXFLAG_SERVERSOUND;
 		}
 	}
@@ -359,11 +374,8 @@ sfx_t *S_PrecacheSound (const char *name, qboolean complain, qboolean lock)
 	if (sfx == NULL)
 		return NULL;
 
-	if (lock && !(sfx->flags & SFXFLAG_PERMANENT))
-	{
-		sfx->flags |= SFXFLAG_PERMANENT;
-		sfx->locks++;
-	}
+	if (lock)
+		S_LockSfx (sfx);
 
 	if (!nosound.integer && snd_precache.integer)
 		S_LoadSound(sfx, complain);
@@ -373,15 +385,26 @@ sfx_t *S_PrecacheSound (const char *name, qboolean complain, qboolean lock)
 
 /*
 ==================
+S_LockSfx
+
+Add a lock to a SFX
+==================
+*/
+void S_LockSfx (sfx_t *sfx)
+{
+	sfx->locks++;
+}
+
+/*
+==================
 S_UnlockSfx
 
-Remove a lock from a SFX and freed it if possible
+Remove a lock from a SFX
 ==================
 */
 void S_UnlockSfx (sfx_t *sfx)
 {
 	sfx->locks--;
-	S_FreeSfx (sfx);
 }
 
 
@@ -520,7 +543,7 @@ void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags,
 		target_chan->dist_mult = attenuation / sound_nominal_clip_dist;
 
 	// Lock the SFX during play
-	sfx->locks++;
+	S_LockSfx (sfx);
 }
 
 
@@ -532,14 +555,16 @@ int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 
 	if (!sound_started || !sfx || nosound.integer)
 		return -1;
+	if (!sfx->fetcher)
+	{
+		Con_DPrintf ("S_StartSound: \"%s\" hasn't been precached\n", sfx->name);
+		return -1;
+	}
 
 	// Pick a channel to play on
 	target_chan = SND_PickChannel(entnum, entchannel);
 	if (!target_chan)
 		return -1;
-
-	if (!S_LoadSound (sfx, true))
-		return -1;		// couldn't load the sound's data
 
 	S_PlaySfxOnChannel (sfx, target_chan, CHANNELFLAG_NONE, origin, fvol, attenuation, false);
 	target_chan->entnum = entnum;
@@ -701,17 +726,19 @@ void S_StaticSound (sfx_t *sfx, vec3_t origin, float fvol, float attenuation)
 {
 	channel_t	*target_chan;
 
-	if (!sfx)
+	if (!sound_started || !sfx || nosound.integer)
 		return;
-
-	if (total_channels == MAX_CHANNELS)
+	if (!sfx->fetcher)
 	{
-		Con_Print("total_channels == MAX_CHANNELS\n");
+		Con_DPrintf ("S_StaticSound: \"%s\" hasn't been precached\n", sfx->name);
 		return;
 	}
 
-	if (!S_LoadSound (sfx, true))
+	if (total_channels == MAX_CHANNELS)
+	{
+		Con_Print("S_StaticSound: total_channels == MAX_CHANNELS\n");
 		return;
+	}
 
 	target_chan = &channels[total_channels++];
 	S_PlaySfxOnChannel (sfx, target_chan, CHANNELFLAG_FORCELOOP, origin, fvol, attenuation, true);
@@ -937,19 +964,11 @@ static void S_Play_Common(float fvol, float attenuation)
 	i = 1;
 	while (i<Cmd_Argc())
 	{
+		// Get the name
 		strlcpy(name, Cmd_Argv(i), sizeof(name));
 		if (!strrchr(name, '.'))
 			strlcat(name, ".wav", sizeof(name));
 		i++;
-		sfx = S_PrecacheSound (name, true, false);
-		// add a lock and the serversound flag to the sfx so it will be kept
-		// until level change
-		if (sfx && !(sfx->flags & SFXFLAG_SERVERSOUND))
-		{
-			sfx->flags |= SFXFLAG_SERVERSOUND;
-			sfx->locks++;
-		}
-
 
 		// If we need to get the volume from the command line
 		if (fvol == -1.0f)
@@ -958,13 +977,17 @@ static void S_Play_Common(float fvol, float attenuation)
 			i++;
 		}
 
-		ch_ind = S_StartSound(-1, 0, sfx, listener_origin, fvol, attenuation);
+		sfx = S_PrecacheSound (name, true, false);
+		if (sfx)
+		{
+			ch_ind = S_StartSound(-1, 0, sfx, listener_origin, fvol, attenuation);
 
-		// Free the sfx if the file didn't exist
-		if (ch_ind < 0)
-			S_FreeSfx (sfx);
-		else
-			channels[ch_ind].flags |= CHANNELFLAG_LOCALSOUND;
+			// Free the sfx if the file didn't exist
+			if (ch_ind < 0)
+				S_FreeSfx (sfx);
+			else
+				channels[ch_ind].flags |= CHANNELFLAG_LOCALSOUND;
+		}
 	}
 }
 
@@ -996,14 +1019,18 @@ void S_SoundList(void)
 		{
 			size = sfx->mempool->totalsize;
 			total += size;
-			Con_Printf ("%c%c(%2db, %6s) %8i : %s\n",
+			Con_Printf ("%c%c%c%c(%2db, %6s) %8i : %s\n",
 						(sfx->loopstart >= 0) ? 'L' : ' ',
 						(sfx->flags & SFXFLAG_STREAMED) ? 'S' : ' ',
+						(sfx->locks > 0) ? 'K' : ' ',
+						(sfx->flags & SFXFLAG_PERMANENTLOCK) ? 'P' : ' ',
 						sfx->format.width * 8,
 						(sfx->format.channels == 1) ? "mono" : "stereo",
 						size,
 						sfx->name);
 		}
+		else
+			Con_Printf ("    (  unknown  ) unloaded : %s\n", sfx->name);
 	}
 	Con_Printf("Total resident: %i\n", total);
 }
@@ -1017,12 +1044,15 @@ qboolean S_LocalSound (const char *sound)
 	if (!snd_initialized.integer || nosound.integer)
 		return true;
 
-	sfx = S_PrecacheSound (sound, true, true);
+	sfx = S_PrecacheSound (sound, true, false);
 	if (!sfx)
 	{
 		Con_Printf("S_LocalSound: can't precache %s\n", sound);
 		return false;
 	}
+
+	// Local sounds must not be freed
+	sfx->flags |= SFXFLAG_PERMANENTLOCK;
 
 	ch_ind = S_StartSound (cl.viewentity, 0, sfx, vec3_origin, 1, 1);
 	if (ch_ind < 0)

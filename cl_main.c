@@ -1298,7 +1298,6 @@ void CL_Init (void)
 	SZ_Alloc (&cls.message, 1024, "cls.message");
 
 	CL_InitInput ();
-	CL_InitTEnts ();
 
 //
 // register our commands

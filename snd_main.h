@@ -43,7 +43,7 @@ typedef struct
 #define SFXFLAG_FILEMISSING		(1 << 0) // wasn't able to load the associated sound file
 #define SFXFLAG_SERVERSOUND		(1 << 1) // the sfx is part of the server precache list
 #define SFXFLAG_STREAMED		(1 << 2) // informative only. You shouldn't need to know that
-#define SFXFLAG_PERMANENT		(1 << 3) // the sfx is used by the client code and should not be purged (even if it is also in the server precache list)
+#define SFXFLAG_PERMANENTLOCK	(1 << 3) // can never be freed (ex: used by the client code)
 
 typedef struct snd_fetcher_s snd_fetcher_t;
 struct sfx_s
@@ -51,9 +51,11 @@ struct sfx_s
 	char				name[MAX_QPATH];
 	sfx_t				*next;
 	mempool_t			*mempool;
-	unsigned int		locks;			// A locked sfx_t must not be freed.
-										// Locks are added by S_PrecacheSound and S_ServerSounds.
-										// SFX can be freed by S_UnlockSfx or S_ServerSounds.
+	int					locks;			// One lock is automatically granted while the sfx is
+										// playing (and removed when stopped). Locks can also be
+										// added by S_PrecacheSound and S_ServerSounds.
+										// A SFX with no lock and no SFXFLAG_PERMANENTLOCK is
+										// freed at level change by S_ServerSounds.
 	unsigned int		flags;			// cf SFXFLAG_* defines
 	snd_format_t		format;
 	int					loopstart;
@@ -111,6 +113,9 @@ void SNDDMA_Shutdown(void);
 
 qboolean S_LoadSound (sfx_t *s, qboolean complain);
 void S_UnloadSound(sfx_t *s);
+
+void S_LockSfx (sfx_t *sfx);
+void S_UnlockSfx (sfx_t *sfx);
 
 void *S_LockBuffer(void);
 void S_UnlockBuffer(void);

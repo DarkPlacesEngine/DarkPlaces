@@ -83,10 +83,6 @@ sfx_t *S_PrecacheSound (const char *sample, qboolean complain, qboolean lock)
 	return NULL;
 }
 
-void S_UnlockSfx (sfx_t *sfx)
-{
-}
-
 void S_Update(const matrix4x4_t *matrix)
 {
 }

@@ -825,11 +825,7 @@ sfx_t *cl_sfx_ric2;
 sfx_t *cl_sfx_ric3;
 sfx_t *cl_sfx_r_exp3;
 
-/*
-=================
-CL_ParseTEnt
-=================
-*/
+
 void CL_InitTEnts (void)
 {
 	cl_sfx_wizhit = S_PrecacheSound ("sound/wizard/hit.wav", false, true);
