@@ -126,7 +126,8 @@ static int Mod_Q1BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3
 			else
 			{
 				// box crosses plane, take one path and remember the other
-				nodestack[nodestackindex++] = node->children[0];
+				if (nodestackindex < 1024)
+					nodestack[nodestackindex++] = node->children[0];
 				node = node->children[1];
 			}
 		}
@@ -5343,7 +5344,8 @@ static int Mod_Q3BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3
 			else
 			{
 				// box crosses plane, take one path and remember the other
-				nodestack[nodestackindex++] = node->children[0];
+				if (nodestackindex < 1024)
+					nodestack[nodestackindex++] = node->children[0];
 				node = node->children[1];
 			}
 		}
