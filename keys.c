@@ -282,7 +282,7 @@ void Key_Console (int key)
 
 	if (key == K_PGUP || key==K_MWHEELUP)
 	{
-		con_backscroll += 2;
+		con_backscroll += ((int) scr_conlines >> 4);
 		if (con_backscroll > con_totallines - (vid.conheight>>3) - 1)
 			con_backscroll = con_totallines - (vid.conheight>>3) - 1;
 		return;
@@ -290,7 +290,7 @@ void Key_Console (int key)
 
 	if (key == K_PGDN || key==K_MWHEELDOWN)
 	{
-		con_backscroll -= 2;
+		con_backscroll -= ((int) scr_conlines >> 4);
 		if (con_backscroll < 0)
 			con_backscroll = 0;
 		return;

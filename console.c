@@ -37,7 +37,7 @@ int 		con_linewidth;
 
 float		con_cursorspeed = 4;
 
-#define		CON_TEXTSIZE	16384
+#define		CON_TEXTSIZE	131072
 
 int			con_totallines;		// total lines in console scrollback
 int			con_backscroll;		// lines up from bottom to display
