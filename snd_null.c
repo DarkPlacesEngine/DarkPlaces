@@ -78,6 +78,10 @@ void S_PauseGameSounds (qboolean toggle)
 {
 }
 
+void S_ClearBuffer (void)
+{
+}
+
 void S_SetChannelVolume (unsigned int ch_ind, float fvol)
 {
 }
