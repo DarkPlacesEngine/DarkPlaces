@@ -605,7 +605,10 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 				testorigin[1] = lhrandom(entmins[1], entmaxs[1]);
 				testorigin[2] = lhrandom(entmins[2], entmaxs[2]);
 
-				Collision_ClipTrace(&trace, NULL, sv.worldmodel, vec3_origin, vec3_origin, vec3_origin, testeye, vec3_origin, vec3_origin, testorigin);
+				if (sv.worldmodel && sv.worldmodel->brush.TraceBox)
+					sv.worldmodel->brush.TraceBox(sv.worldmodel, vec3_origin, vec3_origin, &trace, testeye, vec3_origin, vec3_origin, testorigin);
+				else
+					Collision_ClipTrace(&trace, NULL, sv.worldmodel, vec3_origin, vec3_origin, vec3_origin, testeye, vec3_origin, vec3_origin, testorigin);
 
 				if (trace.fraction == 1)
 					client->visibletime[e] = realtime + 1;
@@ -616,7 +619,10 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 					testorigin[1] = bound(entmins[1], testeye[1], entmaxs[1]);
 					testorigin[2] = bound(entmins[2], testeye[2], entmaxs[2]);
 
-					Collision_ClipTrace(&trace, NULL, sv.worldmodel, vec3_origin, vec3_origin, vec3_origin, testeye, vec3_origin, vec3_origin, testorigin);
+					if (sv.worldmodel && sv.worldmodel->brush.TraceBox)
+						sv.worldmodel->brush.TraceBox(sv.worldmodel, vec3_origin, vec3_origin, &trace, testeye, vec3_origin, vec3_origin, testorigin);
+					else
+						Collision_ClipTrace(&trace, NULL, sv.worldmodel, vec3_origin, vec3_origin, vec3_origin, testeye, vec3_origin, vec3_origin, testorigin);
 
 					if (trace.fraction == 1)
 						client->visibletime[e] = realtime + 1;
@@ -982,7 +988,10 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 				testorigin[0] = (entmins[0] + entmaxs[0]) * 0.5f;
 				testorigin[1] = (entmins[1] + entmaxs[1]) * 0.5f;
 				testorigin[2] = (entmins[2] + entmaxs[2]) * 0.5f;
-				Collision_ClipTrace(&trace, NULL, sv.worldmodel, vec3_origin, vec3_origin, vec3_origin, vec3_origin, testeye, vec3_origin, vec3_origin, testorigin);
+				if (sv.worldmodel && sv.worldmodel->brush.TraceBox)
+					sv.worldmodel->brush.TraceBox(sv.worldmodel, vec3_origin, vec3_origin, &trace, NULL, testeye, vec3_origin, vec3_origin, testorigin);
+				else
+					Collision_ClipTrace(&trace, NULL, sv.worldmodel, vec3_origin, vec3_origin, vec3_origin, vec3_origin, testeye, vec3_origin, vec3_origin, testorigin);
 				if (trace.fraction == 1)
 					client->visibletime[e] = realtime + 1;
 				else
@@ -991,7 +1000,10 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 					testorigin[0] = lhrandom(entmins[0], entmaxs[0]);
 					testorigin[1] = lhrandom(entmins[1], entmaxs[1]);
 					testorigin[2] = lhrandom(entmins[2], entmaxs[2]);
-					Collision_ClipTrace(&trace, NULL, sv.worldmodel, vec3_origin, vec3_origin, vec3_origin, vec3_origin, testeye, vec3_origin, vec3_origin, testorigin);
+					if (sv.worldmodel && sv.worldmodel->brush.TraceBox)
+						sv.worldmodel->brush.TraceBox(sv.worldmodel, vec3_origin, vec3_origin, &trace, NULL, testeye, vec3_origin, vec3_origin, testorigin);
+					else
+						Collision_ClipTrace(&trace, NULL, sv.worldmodel, vec3_origin, vec3_origin, vec3_origin, vec3_origin, testeye, vec3_origin, vec3_origin, testorigin);
 					if (trace.fraction == 1)
 						client->visibletime[e] = realtime + 1;
 					else
@@ -1002,7 +1014,10 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 							testorigin[0] = lhrandom(lightmins[0], lightmaxs[0]);
 							testorigin[1] = lhrandom(lightmins[1], lightmaxs[1]);
 							testorigin[2] = lhrandom(lightmins[2], lightmaxs[2]);
-							Collision_ClipTrace(&trace, NULL, sv.worldmodel, vec3_origin, vec3_origin, vec3_origin, vec3_origin, testeye, vec3_origin, vec3_origin, testorigin);
+							if (sv.worldmodel && sv.worldmodel->brush.TraceBox)
+								sv.worldmodel->brush.TraceBox(sv.worldmodel, vec3_origin, vec3_origin, &trace, NULL, testeye, vec3_origin, vec3_origin, testorigin);
+							else
+								Collision_ClipTrace(&trace, NULL, sv.worldmodel, vec3_origin, vec3_origin, vec3_origin, vec3_origin, testeye, vec3_origin, vec3_origin, testorigin);
 							if (trace.fraction == 1)
 								client->visibletime[e] = realtime + 1;
 							else

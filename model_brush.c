@@ -2678,9 +2678,9 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 		Host_Error("Mod_Q1BSP_Load: %s has wrong version number(%i should be %i(Quake) or 30(HalfLife))", mod->name, i, BSPVERSION);
 	mod->brushq1.ishlbsp = i == 30;
 
-	mod->brushq1.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
+	mod->brush.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
+	mod->brush.PointContents = Mod_Q1BSP_PointContents;
 	mod->brushq1.PointInLeaf = Mod_Q1BSP_PointInLeaf;
-	mod->brushq1.PointContents = Mod_Q1BSP_PointContents;
 	mod->brushq1.LeafPVS = Mod_Q1BSP_LeafPVS;
 	mod->brushq1.BuildPVSTextureChains = Mod_Q1BSP_BuildPVSTextureChains;
 
@@ -3548,7 +3548,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		 && out->type != Q3FACETYPE_MESH
 		 && out->type != Q3FACETYPE_FLARE)
 		{
-			Con_Printf("Mod_Q3BSP_LoadFaces: face #%i: unknown face type %i\n", i, n);
+			Con_Printf("Mod_Q3BSP_LoadFaces: face #%i: unknown face type %i\n", i, out->type);
 			out->type = 0; // error
 			continue;
 		}
