@@ -182,6 +182,33 @@ void Sys_Sleep(int milliseconds)
 	SDL_Delay(milliseconds);
 }
 
+char *Sys_GetClipboardData (void)
+{
+#ifdef WIN32
+	char *data = NULL;
+	char *cliptext;
+
+	if (OpenClipboard (NULL) != 0)
+	{
+		HANDLE hClipboardData;
+
+		if ((hClipboardData = GetClipboardData (CF_TEXT)) != 0)
+		{
+			if ((cliptext = GlobalLock (hClipboardData)) != 0) 
+			{
+				data = malloc (GlobalSize(hClipboardData)+1);
+				strcpy (data, cliptext);
+				GlobalUnlock (hClipboardData);
+			}
+		}
+		CloseClipboard ();
+	}
+	return data;
+#else
+	return NULL;
+#endif
+}
+
 int SDL_main (int argc, char *argv[])
 {
 	double frameoldtime, framenewtime;
