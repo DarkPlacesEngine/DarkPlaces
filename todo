@@ -210,7 +210,7 @@ d darkplaces: q1bsp trace bug: scrags frequently fly through ceilings - this nee
 1 lhfire: get lhfire_gui build from Tomaz.
 1 lhfire: post lhfire_gui build.
 1 lhfire: prepare example scripts for release.
-2 darkplaces: add a "edictset" command to console to set a single field of an edict to the specified value
+-n darkplaces: add a "edictset" command to console to set a single field of an edict to the specified value
 2 darkplaces: add a flag/effect/whatever for double sided entity rendering (disable cull face for this entity) (yummyluv)
 2 darkplaces: add and document DP_SOUND_DIRECTIONLESSATTNNONE extension
 2 darkplaces: add and document DP_SOUND_STEREOWAV extension
