@@ -36,6 +36,7 @@ static mempool_t *sv_edicts_mempool = NULL;
 //============================================================================
 
 extern void SV_Phys_Init (void);
+extern void SV_World_Init (void);
 
 /*
 ===============
@@ -64,6 +65,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_cullentities_stats);
 
 	SV_Phys_Init();
+	SV_World_Init();
 
 	for (i = 0;i < MAX_MODELS;i++)
 		sprintf (localmodels[i], "*%i", i);
