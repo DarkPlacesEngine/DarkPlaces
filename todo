@@ -1,8 +1,8 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
 -d (Baalz) darkplaces input bug: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
--d (Gilgamesh, Wazat) darkplaces protocol: add back colormod extension (FrikaC, Uffe, Gilgamesh, Wazat)
+-d (Gilgamesh) darkplaces protocol: add back colormod extension (FrikaC, Uffe, Gilgamesh, Wazat)
+-d (Kinn, romi) darkplaces WGL client: default WGL input back to GDI, the DirectInput driver is malfunctioning, losing key release messages, stuttering mouse input, and lacks mouse wheel support (Wazat, Kinn)
 -d (Mabus) darkplaces loading: test zlib support with entirely pk3'd id1 data (should crash because of zlib not being setup early enough - fix this) (Mabus)
--d (Wazat, Kinn, romi) darkplaces WGL client: default WGL input back to GDI, the DirectInput driver is malfunctioning, losing key release messages, stuttering mouse input, and lacks mouse wheel support (Wazat, Kinn)
 -d (mashakos) darkplaces input: fix the mouse move when console is raised in glx, probably by ignoring the first move after console raise (mashakos)
 -d (ryan[sg]) darkplaces loader: halflife wad loading is unable to seek to lump table (ryan[sg], Elric)
 -f (VorteX) darkplaces protocol: add DP_EF_HIGHPRECISION to send float origins instead of shorts (VorteX)
@@ -10,6 +10,7 @@
 -f (yummyluv) darkplaces protocol: add buttons 9-16 (yummyluv)
 0 darkplaces SDL client: add key emulated repeat
 0 darkplaces WGL client: figure out why GDI input has stuttering problems with gl_finish 0 mode (Kinn, Urre, romi, Spike, Black)
+0 darkplaces client bug: te_customflash isn't working? (Wazat)
 0 darkplaces client: GAME_NEXUIZ: cvar for console text size (Vermeulen)
 0 darkplaces client: GAME_NEXUIZ: implement new hud and scoreboard based on http://www.quirkybastards.net/qmods/scoreboard.jpg except with deaths instead of lives, and map name instead of "be the last one alive" and remove the time string and map string at the bottom, instead showing the hud (Vermeulen)
 0 darkplaces client: PRYDON_CLIENTCURSOR should be able to click on sprites, make sure it uses a minimal bounding box for viewmodelforclient sprites to avoid 'slop' area around a sprite (FrikaC)
@@ -98,7 +99,7 @@
 0 darkplaces server: add an extension to check if a file exists outside the data directory, FRIK_FILE can do this but only inside data directory (Error)
 0 darkplaces server: add filename/line number reporting to progs stack and opcode printouts (Spike)
 0 darkplaces server: add sv_playerphysicsqc cvar to allow engine to ignore SV_PlayerPhysics function, this would also have to change the reported extensions (Gleeb)
-d darkplaces server: add sv_progs cvar, defaulted to "progs.dat", can be set from console or by menu to choose a mod (Black)
+0 darkplaces server: figure out what's breaking RenegadeC's TAOV monster jump code (RenegadeC)
 0 darkplaces server: make dedicated server not load images (maybe all fail?)
 0 darkplaces server: make fopen have the ability to disable fopen builtin access to read /, read data/, write data/, or disable fopen builtin entirely
 0 darkplaces sound: Lordhavoc needs to talk to fuh about snd_macos.c (fuh)
@@ -142,6 +143,7 @@ d darkplaces server: add sv_progs cvar, defaulted to "progs.dat", can be set fro
 1 darkplaces cleanup: make Host_Error call error reset functions on renderer subsystems?  (models are already flushed)
 1 darkplaces client: add cl_particles_blood_color_r and g and b cvars to control blood color (Asaki)
 1 darkplaces client: add some particles to teleportsplash (Uffe)
+1 darkplaces client: change sort key in server browser using left/right arrows
 1 darkplaces console: add con_dump command to dump history to a file
 1 darkplaces docs: fix lots of bugs and then retitle the website to get more publicity: DarkPlaces: Re-live Quake again...
 1 darkplaces input: finish porting Quake2 keyboard stuff (Rick, FrikaC)
@@ -454,6 +456,7 @@ d darkplaces renderer: water shader not working with fog (Tomaz)
 d darkplaces renderer: zym model rtlight support (Vermeulen)
 d darkplaces server: "edict -1" and other invalid numbers cause an error, should just complain (Supajoe)
 d darkplaces server: add findflag and findchainflag builtins (Sajt)
+d darkplaces server: add sv_progs cvar, defaulted to "progs.dat", can be set from console or by menu to choose a mod (Black)
 d darkplaces server: client colors are being reset to "15 15" each level in prydon gate and dpmod (FrikaC, LordHavoc)
 d darkplaces server: don't use popup error window in windows dedicated server crashes (FrikaC)
 d darkplaces server: figure out what is wrong with dedicated server console on win32 and fix it (and tell Willis)
