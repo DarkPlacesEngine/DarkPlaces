@@ -855,7 +855,7 @@ static void CL_RelinkNetworkEntities(void)
 	else if (cl.items & IT_INVISIBILITY)
 	{
 		if (gamemode == GAME_TRANSFUSION)
-			ent->state_current.alpha = 0.5;
+			ent->state_current.alpha = 128;
 		else
 			ent->state_current.modelindex = 0;
 	}
