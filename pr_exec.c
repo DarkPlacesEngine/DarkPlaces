@@ -24,7 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 typedef struct
 {
 	int				s;
-	dfunction_t		*f;
+	mfunction_t		*f;
 } prstack_t;
 
 #define	MAX_STACK_DEPTH		256
@@ -37,7 +37,7 @@ int			localstack_used;
 
 
 int			pr_trace;
-dfunction_t	*pr_xfunction;
+mfunction_t	*pr_xfunction;
 int			pr_xstatement;
 
 
@@ -185,7 +185,7 @@ PR_StackTrace
 */
 void PR_StackTrace (void)
 {
-	dfunction_t	*f;
+	mfunction_t	*f;
 	int			i;
 
 	pr_stack[pr_depth].s = pr_xstatement;
@@ -210,11 +210,12 @@ PR_Profile_f
 */
 void PR_Profile_f (void)
 {
-	dfunction_t	*f, *best;
-	int			max;
-	int			num;
-	int			i;
+	mfunction_t *f, *best;
+	int i, num, max/*, howmany*/;
 
+	//howmany = 10;
+	//if (Cmd_Argc() == 2)
+	//	howmany = atoi(Cmd_Argv(1));
 	num = 0;
 	do
 	{
@@ -231,10 +232,11 @@ void PR_Profile_f (void)
 		}
 		if (best)
 		{
-			if (num < 10)
-				Con_Printf ("%7i %s\n", best->profile, PR_GetString(best->s_name));
+			//if (num < howmany)
+				Con_Printf ("%7i %7i %s\n", best->profile, best->builtinsprofile, PR_GetString(best->s_name));
 			num++;
 			best->profile = 0;
+			best->builtinsprofile = 0;
 		}
 	} while (best);
 }
@@ -282,7 +284,7 @@ PR_EnterFunction
 Returns the new program statement counter
 ====================
 */
-int PR_EnterFunction (dfunction_t *f)
+int PR_EnterFunction (mfunction_t *f)
 {
 	int		i, j, c, o;
 
@@ -372,7 +374,7 @@ extern cvar_t pr_traceqc;
 void PR_ExecuteProgram (func_t fnum, const char *errormessage)
 {
 	dstatement_t	*st;
-	dfunction_t	*f, *newf;
+	mfunction_t	*f, *newf;
 	edict_t	*ed;
 	eval_t	*ptr;
 	int		profile, startprofile, cachedpr_trace, exitdepth;

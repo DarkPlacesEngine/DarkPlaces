@@ -108,13 +108,13 @@ extern int eval_viewzoom;
 #define GETEDICTFIELDVALUE(ed, fieldoffset) (fieldoffset ? (eval_t *)((qbyte *)ed->v + fieldoffset) : NULL)
 
 
-extern dfunction_t *SV_PlayerPhysicsQC;
-extern dfunction_t *EndFrameQC;
+extern mfunction_t *SV_PlayerPhysicsQC;
+extern mfunction_t *EndFrameQC;
 
 //============================================================================
 
 extern	dprograms_t		*progs;
-extern	dfunction_t		*pr_functions;
+extern	mfunction_t		*pr_functions;
 extern	char			*pr_strings;
 extern	ddef_t			*pr_globaldefs;
 extern	ddef_t			*pr_fielddefs;
@@ -186,7 +186,7 @@ extern int pr_numbuiltins;
 extern int		pr_argc;
 
 extern	int			pr_trace;
-extern	dfunction_t	*pr_xfunction;
+extern	mfunction_t	*pr_xfunction;
 extern	int			pr_xstatement;
 
 extern	unsigned short		pr_crc;
