@@ -237,11 +237,15 @@ void SCR_SetUpToDrawConsole (void)
 {
 	Con_CheckResize ();
 
-	//if (key_dest == key_game && (!cl.worldmodel || cls.signon != SIGNONS))
-	//	key_dest = key_console;
+	if (key_dest == key_game && cls.signon != SIGNONS)
+		key_consoleactive |= KEY_CONSOLEACTIVE_FORCED;
+	else
+		key_consoleactive &= ~KEY_CONSOLEACTIVE_FORCED;
 
 // decide on the height of the console
-	if (key_consoleactive)
+	if (key_consoleactive & KEY_CONSOLEACTIVE_FORCED)
+		scr_conlines = vid.conheight; // full screen
+	else if (key_consoleactive & KEY_CONSOLEACTIVE_USER)
 		scr_conlines = vid.conheight/2;	// half screen
 	else
 		scr_conlines = 0;				// none visible
@@ -348,7 +352,7 @@ void R_TimeReport(char *desc)
 
 void R_TimeReport_Start(void)
 {
-	r_timereport_active = r_speeds.integer && cl.worldmodel && cls.state == ca_connected;
+	r_timereport_active = r_speeds.integer && cls.signon == SIGNONS && cls.state == ca_connected;
 	r_speeds_string[0] = 0;
 	if (r_timereport_active)
 	{
@@ -356,15 +360,14 @@ void R_TimeReport_Start(void)
 		AngleVectors (r_refdef.viewangles, vpn, NULL, NULL);
 		sprintf(r_speeds_string,
 			"org:'%+8.2f %+8.2f %+8.2f' ang:'%+4.0f %+4.0f %+4.0f' dir:'%+2.3f %+2.3f %+2.3f'\n"
-			"world:%6i faces%6i nodes%6i leafs%6i walls%6i dlitwalls\n"
+			"world:%6i faces%6i nodes%6i leafs%6i dlitwalls\n"
 			"%5i models%5i bmodels%5i sprites%6i particles%4i dlights\n"
 			"%6i modeltris%6i meshs%6i meshtris\n",
 			r_refdef.vieworg[0], r_refdef.vieworg[1], r_refdef.vieworg[2], r_refdef.viewangles[0], r_refdef.viewangles[1], r_refdef.viewangles[2], vpn[0], vpn[1], vpn[2],
-			c_faces, c_nodes, c_leafs, c_brush_polys, c_light_polys,
+			c_faces, c_nodes, c_leafs, c_light_polys,
 			c_models, c_bmodels, c_sprites, c_particles, c_dlights,
 			c_alias_polys, c_meshs, c_meshtris);
 
-		c_brush_polys = 0;
 		c_alias_polys = 0;
 		c_light_polys = 0;
 		c_faces = 0;
@@ -478,7 +481,7 @@ void DrawQ_Pic(float x, float y, char *picname, float width, float height, float
 {
 	int size;
 	drawqueue_t *dq;
-	if (alpha < (1.0f / 255.0f))
+	if (alpha < (1.0f / 255.0f) || !picname || !picname[0])
 		return;
 	size = sizeof(*dq) + ((strlen(picname) + 1 + 3) & ~3);
 	if (r_refdef.drawqueuesize + size > r_refdef.maxdrawqueuesize)
@@ -684,7 +687,7 @@ static void SCR_CalcRefdef (void)
 	if (cl.worldmodel)
 	{
 		Mod_CheckLoaded(cl.worldmodel);
-		contents = Mod_PointInLeaf(r_refdef.vieworg, cl.worldmodel)->contents;
+		contents = Mod_PointContents(r_refdef.vieworg, cl.worldmodel);
 		if (contents != CONTENTS_EMPTY && contents != CONTENTS_SOLID)
 		{
 			r_refdef.fov_x *= (sin(cl.time * 4.7) * 0.015 + 0.985);
@@ -880,10 +883,9 @@ void SHOWLMP_decodeshow(void)
 void SHOWLMP_drawall(void)
 {
 	int i;
-	if (cl.worldmodel)
-		for (i = 0;i < SHOWLMP_MAXLABELS;i++)
-			if (showlmp[i].isactive)
-				DrawQ_Pic(showlmp[i].x, showlmp[i].y, showlmp[i].pic, 0, 0, 1, 1, 1, 1, 0);
+	for (i = 0;i < SHOWLMP_MAXLABELS;i++)
+		if (showlmp[i].isactive)
+			DrawQ_Pic(showlmp[i].x, showlmp[i].y, showlmp[i].pic, 0, 0, 1, 1, 1, 1, 0);
 }
 
 void SHOWLMP_clear(void)
@@ -939,7 +941,7 @@ void CL_UpdateScreen(void)
 	else
 		cl_avidemo_frame = 0;
 
-	if (cl.worldmodel)
+	if (cls.signon == SIGNONS)
 		R_TimeReport("other");
 
 	CL_SetupScreenSize();
@@ -949,11 +951,11 @@ void CL_UpdateScreen(void)
 	V_UpdateBlends();
 	V_CalcRefdef ();
 
-	if (cl.worldmodel)
+	if (cls.signon == SIGNONS)
 		R_TimeReport("setup");
 
 	//FIXME: force menu if nothing else to look at?
-	//if (key_dest == key_game && !cl.worldmodel && cls.state == ca_disconnected)
+	//if (key_dest == key_game && cls.signon != SIGNONS && cls.state == ca_disconnected)
 
 	if (scr_drawloading)
 	{
@@ -962,19 +964,19 @@ void CL_UpdateScreen(void)
 	}
 	else
 	{
-		if (cl.worldmodel)
+		if (cls.signon == SIGNONS)
 		{
 			SCR_DrawNet ();
 			SCR_DrawTurtle ();
 			SCR_DrawPause ();
 			Sbar_Draw();
+			SHOWLMP_drawall();
+			SCR_CheckDrawCenterString();
 		}
-		SCR_CheckDrawCenterString();
-		SHOWLMP_drawall();
 		ui_draw();
 		CL_DrawVideo();
 		M_Draw();
-		if (cl.worldmodel)
+		if (cls.signon == SIGNONS)
 		{
 			R_TimeReport("2d");
 			R_TimeReport_End();

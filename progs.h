@@ -122,6 +122,8 @@ void PR_LoadProgs (void);
 
 void PR_Profile_f (void);
 
+void PR_Crash (void);
+
 edict_t *ED_Alloc (void);
 void ED_Free (edict_t *ed);
 
@@ -176,7 +178,6 @@ extern	int			pr_xstatement;
 
 extern	unsigned short		pr_crc;
 
-void PR_RunError (char *error, ...);
 void PR_Execute_ProgsLoaded(void);
 
 void ED_PrintEdicts (void);

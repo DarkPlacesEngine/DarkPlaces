@@ -7,7 +7,7 @@
 			if (++profile > 1000000) // LordHavoc: increased runaway loop limit 10x
 			{
 				pr_xstatement = st - pr_statements;
-				PR_RunError ("runaway loop error");
+				Host_Error ("runaway loop error");
 			}
 
 #if PRTRACE
@@ -144,13 +144,13 @@
 				if (OPB->_int < 0 || OPB->_int + 4 > pr_edictareasize)
 				{
 					pr_xstatement = st - pr_statements;
-					PR_RunError("Progs attempted to write to an out of bounds edict\n");
+					Host_Error("Progs attempted to write to an out of bounds edict\n");
 					return;
 				}
 				if (OPB->_int % pr_edict_size < ((qbyte *)&sv.edicts->v - (qbyte *)sv.edicts))
 				{
 					pr_xstatement = st - pr_statements;
-					PR_RunError("Progs attempted to write to an engine edict field\n");
+					Host_Error("Progs attempted to write to an engine edict field\n");
 					return;
 				}
 #endif
@@ -162,7 +162,7 @@
 				if (OPB->_int < 0 || OPB->_int + 12 > pr_edictareasize)
 				{
 					pr_xstatement = st - pr_statements;
-					PR_RunError("Progs attempted to write to an out of bounds edict\n");
+					Host_Error("Progs attempted to write to an out of bounds edict\n");
 					return;
 				}
 #endif
@@ -179,33 +179,33 @@
 					if (OPA->edict == 0 && sv.state == ss_active)
 					{
 						pr_xstatement = st - pr_statements;
-						PR_RunError ("assignment to world entity");
+						Host_Error ("assignment to world entity");
 						return;
 					}
 					else
 					{
 						pr_xstatement = st - pr_statements;
-						PR_RunError("Progs attempted to address an out of bounds edict\n");
+						Host_Error("Progs attempted to address an out of bounds edict\n");
 						return;
 					}
 				}
 				else if (OPA->edict >= pr_edictareasize)
 				{
 					pr_xstatement = st - pr_statements;
-					PR_RunError("Progs attempted to address an out of bounds edict\n");
+					Host_Error("Progs attempted to address an out of bounds edict\n");
 					return;
 				}
 				if (OPB->_int < 0 || OPB->_int >= progs->entityfields)
 				{
 					pr_xstatement = st - pr_statements;
-					PR_RunError("Progs attempted to address an invalid field in an edict\n");
+					Host_Error("Progs attempted to address an invalid field in an edict\n");
 					return;
 				}
 #else
 				if (OPA->edict == 0 && sv.state == ss_active)
 				{
 					pr_xstatement = st - pr_statements;
-					PR_RunError ("assignment to world entity");
+					Host_Error ("assignment to world entity");
 					return;
 				}
 #endif
@@ -222,13 +222,13 @@
 				if (OPA->edict < 0 || OPA->edict >= pr_edictareasize)
 				{
 					pr_xstatement = st - pr_statements;
-					PR_RunError("Progs attempted to read an out of bounds edict number\n");
+					Host_Error("Progs attempted to read an out of bounds edict number\n");
 					return;
 				}
 				if (OPB->_int < 0 || OPB->_int >= progs->entityfields)
 				{
 					pr_xstatement = st - pr_statements;
-					PR_RunError("Progs attempted to read an invalid field in an edict\n");
+					Host_Error("Progs attempted to read an invalid field in an edict\n");
 					return;
 				}
 #endif
@@ -241,13 +241,13 @@
 				if (OPA->edict < 0 || OPA->edict >= pr_edictareasize)
 				{
 					pr_xstatement = st - pr_statements;
-					PR_RunError("Progs attempted to read an out of bounds edict number\n");
+					Host_Error("Progs attempted to read an out of bounds edict number\n");
 					return;
 				}
 				if (OPB->_int < 0 || OPB->_int + 2 >= progs->entityfields)
 				{
 					pr_xstatement = st - pr_statements;
-					PR_RunError("Progs attempted to read an invalid field in an edict\n");
+					Host_Error("Progs attempted to read an invalid field in an edict\n");
 					return;
 				}
 #endif
@@ -287,7 +287,7 @@
 				pr_xstatement = st - pr_statements;
 				pr_argc = st->op - OP_CALL0;
 				if (!OPA->function)
-					PR_RunError ("NULL function");
+					Host_Error ("NULL function");
 
 				newf = &pr_functions[OPA->function];
 
@@ -295,7 +295,7 @@
 				{
 					// negative statements are built in functions
 					if ((-newf->first_statement) >= pr_numbuiltins)
-						PR_RunError ("Bad builtin call number");
+						Host_Error ("Bad builtin call number");
 					pr_builtins[-newf->first_statement] ();
 				}
 				else
@@ -480,13 +480,13 @@
 				if (OPB->_int < 0 || OPB->_int + 4 > pr_edictareasize)
 				{
 					pr_xstatement = st - pr_statements;
-					PR_RunError("Progs attempted to write to an out of bounds edict\n");
+					Host_Error("Progs attempted to write to an out of bounds edict\n");
 					return;
 				}
 				if (OPB->_int % pr_edict_size < ((qbyte *)&sv.edicts->v - (qbyte *)sv.edicts))
 				{
 					pr_xstatement = st - pr_statements;
-					PR_RunError("Progs attempted to write to an engine edict field\n");
+					Host_Error("Progs attempted to write to an engine edict field\n");
 					return;
 				}
 #endif
@@ -498,13 +498,13 @@
 				if (OPA->edict < 0 || OPA->edict >= pr_edictareasize)
 				{
 					pr_xstatement = st - pr_statements;
-					PR_RunError("Progs attempted to read an out of bounds edict number\n");
+					Host_Error("Progs attempted to read an out of bounds edict number\n");
 					return;
 				}
 				if (OPB->_int < 0 || OPB->_int >= progs->entityfields)
 				{
 					pr_xstatement = st - pr_statements;
-					PR_RunError("Progs attempted to read an invalid field in an edict\n");
+					Host_Error("Progs attempted to read an invalid field in an edict\n");
 					return;
 				}
 #endif
@@ -522,7 +522,7 @@
 				if (OPB->_int < 0 || OPB->_int >= pr_globaldefs)
 				{
 					pr_xstatement = st - pr_statements;
-					PR_RunError("Progs attempted to write to an invalid indexed global\n");
+					Host_Error("Progs attempted to write to an invalid indexed global\n");
 					return;
 				}
 #endif
@@ -533,7 +533,7 @@
 				if (OPB->_int < 0 || OPB->_int + 2 >= pr_globaldefs)
 				{
 					pr_xstatement = st - pr_statements;
-					PR_RunError("Progs attempted to write to an invalid indexed global\n");
+					Host_Error("Progs attempted to write to an invalid indexed global\n");
 					return;
 				}
 #endif
@@ -548,7 +548,7 @@
 				if (i < 0 || i >= pr_globaldefs)
 				{
 					pr_xstatement = st - pr_statements;
-					PR_RunError("Progs attempted to address an out of bounds global\n");
+					Host_Error("Progs attempted to address an out of bounds global\n");
 					return;
 				}
 #endif
@@ -565,7 +565,7 @@
 				if (OPA->_int < 0 || OPA->_int >= pr_globaldefs)
 				{
 					pr_xstatement = st - pr_statements;
-					PR_RunError("Progs attempted to read an invalid indexed global\n");
+					Host_Error("Progs attempted to read an invalid indexed global\n");
 					return;
 				}
 #endif
@@ -577,7 +577,7 @@
 				if (OPA->_int < 0 || OPA->_int + 2 >= pr_globaldefs)
 				{
 					pr_xstatement = st - pr_statements;
-					PR_RunError("Progs attempted to read an invalid indexed global\n");
+					Host_Error("Progs attempted to read an invalid indexed global\n");
 					return;
 				}
 #endif
@@ -590,7 +590,7 @@
 				if (OPA->_int < 0 || OPA->_int >= st->b)
 				{
 					pr_xstatement = st - pr_statements;
-					PR_RunError("Progs boundcheck failed at line number %d, value is < 0 or >= %d\n", st->b, st->c);
+					Host_Error("Progs boundcheck failed at line number %d, value is < 0 or >= %d\n", st->b, st->c);
 					return;
 				}
 				break;
@@ -599,7 +599,7 @@
 
 			default:
 				pr_xstatement = st - pr_statements;
-				PR_RunError ("Bad opcode %i", st->op);
+				Host_Error ("Bad opcode %i", st->op);
 			}
 		}
 

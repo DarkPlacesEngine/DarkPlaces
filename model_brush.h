@@ -139,6 +139,8 @@ typedef struct msurface_s
 {
 	// should be drawn if visframe == r_framecount (set by WorldNode functions)
 	int			visframe;
+	// should be drawn if onscreen and not a backface (used for setting visframe)
+	int			pvsframe;
 
 	// the node plane this is on, backwards if SURF_PLANEBACK flag set
 	mplane_t	*plane;
@@ -176,8 +178,8 @@ typedef struct msurface_s
 	// no texcoord info (that can be generated from these)
 	int			poly_numverts;
 	float		*poly_verts;
-	// the center is useful for sorting
-	float		poly_center[3];
+	// bounding box for onscreen checks, and center for sorting
+	vec3_t		poly_mins, poly_maxs, poly_center;
 
 	// these are regenerated every frame
 	// lighting info
@@ -187,8 +189,6 @@ typedef struct msurface_s
 	int			lightframe;
 	// only render each surface once
 	int			worldnodeframe;
-	// marked when surface is prepared for the frame
-	int			insertframe;
 
 	// these cause lightmap updates if regenerated
 	// values currently used in lightmap
@@ -235,6 +235,8 @@ typedef struct mnode_s
 	vec3_t				mins;
 	vec3_t				maxs;
 
+	int					pvsframe;		// potentially visible if current (r_pvsframecount)
+
 // node specific
 	mplane_t			*plane;
 	struct mnode_s		*children[2];
@@ -256,14 +258,12 @@ typedef struct mleaf_s
 	vec3_t				mins;
 	vec3_t				maxs;
 
+	int					pvsframe;		// potentially visible if current (r_pvsframecount)
+
 // leaf specific
 	int					visframe;		// visible if current (r_framecount)
 	int					worldnodeframe; // used by certain worldnode variants to avoid processing the same leaf twice in a frame
 	int					portalmarkid;	// used by polygon-through-portals visibility checker
-
-	// LordHavoc: leaf based dynamic lighting
-	int					dlightbits[8];
-	int					dlightframe;
 
 	qbyte				*compressed_vis;
 
@@ -317,7 +317,11 @@ extern texture_t r_notexture_mip;
 struct model_s;
 void Mod_LoadBrushModel (struct model_s *mod, void *buffer);
 void Mod_BrushInit(void);
+
 void Mod_FindNonSolidLocation(vec3_t pos, struct model_s *mod);
+mleaf_t *Mod_PointInLeaf (const float *p, struct model_s *model);
+int Mod_PointContents (const float *p, struct model_s *model);
+qbyte *Mod_LeafPVS (mleaf_t *leaf, struct model_s *model);
 
 #endif
 

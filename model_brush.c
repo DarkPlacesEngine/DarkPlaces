@@ -111,7 +111,10 @@ Mod_PointInLeaf
 */
 mleaf_t *Mod_PointInLeaf (const vec3_t p, model_t *model)
 {
-	mnode_t		*node;
+	mnode_t *node;
+
+	if (model == NULL)
+		return NULL;
 
 	Mod_CheckLoaded(model);
 
@@ -124,17 +127,35 @@ mleaf_t *Mod_PointInLeaf (const vec3_t p, model_t *model)
 	return (mleaf_t *)node;
 }
 
+int Mod_PointContents (const vec3_t p, model_t *model)
+{
+	mnode_t *node;
+
+	if (model == NULL)
+		return CONTENTS_EMPTY;
+
+	Mod_CheckLoaded(model);
+
+	// LordHavoc: modified to start at first clip node,
+	// in other words: first node of the (sub)model
+	node = model->nodes + model->hulls[0].firstclipnode;
+	while (node->contents == 0)
+		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct (p,node->plane->normal)) < node->plane->dist];
+
+	return ((mleaf_t *)node)->contents;
+}
+
 void Mod_FindNonSolidLocation(vec3_t pos, model_t *mod)
 {
-	if (Mod_PointInLeaf(pos, mod)->contents != CONTENTS_SOLID) return;
-	pos[0]-=1;if (Mod_PointInLeaf(pos, mod)->contents != CONTENTS_SOLID) return;
-	pos[0]+=2;if (Mod_PointInLeaf(pos, mod)->contents != CONTENTS_SOLID) return;
+	if (Mod_PointContents(pos, mod) != CONTENTS_SOLID) return;
+	pos[0]-=1;if (Mod_PointContents(pos, mod) != CONTENTS_SOLID) return;
+	pos[0]+=2;if (Mod_PointContents(pos, mod) != CONTENTS_SOLID) return;
 	pos[0]-=1;
-	pos[1]-=1;if (Mod_PointInLeaf(pos, mod)->contents != CONTENTS_SOLID) return;
-	pos[1]+=2;if (Mod_PointInLeaf(pos, mod)->contents != CONTENTS_SOLID) return;
+	pos[1]-=1;if (Mod_PointContents(pos, mod) != CONTENTS_SOLID) return;
+	pos[1]+=2;if (Mod_PointContents(pos, mod) != CONTENTS_SOLID) return;
 	pos[1]-=1;
-	pos[2]-=1;if (Mod_PointInLeaf(pos, mod)->contents != CONTENTS_SOLID) return;
-	pos[2]+=2;if (Mod_PointInLeaf(pos, mod)->contents != CONTENTS_SOLID) return;
+	pos[2]-=1;if (Mod_PointContents(pos, mod) != CONTENTS_SOLID) return;
+	pos[2]+=2;if (Mod_PointContents(pos, mod) != CONTENTS_SOLID) return;
 	pos[2]-=1;
 }
 
@@ -1275,6 +1296,8 @@ void Mod_GenerateSurfacePolygon (msurface_t *surf)
 		if (mins[2] > vert[2]) mins[2] = vert[2];if (maxs[2] < vert[2]) maxs[2] = vert[2];
 		vert += 3;
 	}
+	VectorCopy(mins, surf->poly_mins);
+	VectorCopy(maxs, surf->poly_maxs);
 	surf->poly_center[0] = (mins[0] + maxs[0]) * 0.5f;
 	surf->poly_center[1] = (mins[1] + maxs[1]) * 0.5f;
 	surf->poly_center[2] = (mins[2] + maxs[2]) * 0.5f;
@@ -2485,7 +2508,11 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 		Host_Error ("Mod_LoadBrushModel: %s has wrong version number (%i should be %i (Quake) or 30 (HalfLife))", mod->name, i, BSPVERSION);
 	mod->ishlbsp = i == 30;
 	if (loadmodel->isworldmodel)
+	{
 		Cvar_SetValue("halflifebsp", mod->ishlbsp);
+		// until we get a texture for it...
+		R_ResetQuakeSky();
+	}
 
 // swap all the lumps
 	mod_base = (qbyte *)header;

@@ -166,7 +166,7 @@ void PF_objerror (void)
 {
 	char	*s;
 	edict_t	*ed;
-	
+
 	s = PF_VarString(0);
 	Con_Printf ("======OBJECT ERROR in %s:\n%s\n", pr_strings + pr_xfunction->s_name, s);
 	ed = PROG_TO_EDICT(pr_global_struct->self);
@@ -229,7 +229,7 @@ void SetMinMaxSize (edict_t *e, float *min, float *max, qboolean rotate)
 	
 	for (i=0 ; i<3 ; i++)
 		if (min[i] > max[i])
-			PR_RunError ("backwards mins/maxs");
+			Host_Error ("backwards mins/maxs");
 
 // set derived values
 	VectorCopy (min, e->v.mins);
@@ -284,7 +284,7 @@ void PF_setmodel (void)
 			break;
 
 	if (!*check)
-		PR_RunError ("no precache: %s\n", m);
+		Host_Error ("no precache: %s\n", m);
 
 
 	e->v.model = m - pr_strings;
@@ -646,7 +646,7 @@ break()
 */
 void PF_break (void)
 {
-	PR_RunError ("break statement");
+	Host_Error ("break statement");
 }
 
 /*
@@ -849,15 +849,15 @@ void PF_checkclient (void)
 	mleaf_t	*leaf;
 	int		l;
 	vec3_t	view;
-	
-// find a new check if on a new frame
+
+	// find a new check if on a new frame
 	if (sv.time - sv.lastchecktime >= 0.1)
 	{
 		sv.lastcheck = PF_newcheckclient (sv.lastcheck);
 		sv.lastchecktime = sv.time;
 	}
 
-// return check if it might be visible	
+	// return check if it might be visible
 	ent = EDICT_NUM(sv.lastcheck);
 	if (ent->free || ent->v.health <= 0)
 	{
@@ -865,20 +865,23 @@ void PF_checkclient (void)
 		return;
 	}
 
-// if current entity can't possibly see the check entity, return 0
+	// if current entity can't possibly see the check entity, return 0
 	self = PROG_TO_EDICT(pr_global_struct->self);
 	VectorAdd (self->v.origin, self->v.view_ofs, view);
 	leaf = Mod_PointInLeaf (view, sv.worldmodel);
-	l = (leaf - sv.worldmodel->leafs) - 1;
-	if ( (l<0) || !(checkpvs[l>>3] & (1<<(l&7)) ) )
+	if (leaf)
 	{
-c_notvis++;
-		RETURN_EDICT(sv.edicts);
-		return;
+		l = (leaf - sv.worldmodel->leafs) - 1;
+		if ( (l<0) || !(checkpvs[l>>3] & (1<<(l&7)) ) )
+		{
+			c_notvis++;
+			RETURN_EDICT(sv.edicts);
+			return;
+		}
 	}
 
-// might be able to see it
-c_invis++;
+	// might be able to see it
+	c_invis++;
 	RETURN_EDICT(ent);
 }
 
@@ -902,7 +905,7 @@ void PF_stuffcmd (void)
 	
 	entnum = G_EDICTNUM(OFS_PARM0);
 	if (entnum < 1 || entnum > svs.maxclients)
-		PR_RunError ("Parm 0 not a client");
+		Host_Error ("Parm 0 not a client");
 	str = G_STRING(OFS_PARM1);	
 	
 	old = host_client;
@@ -1081,9 +1084,9 @@ void PF_Remove (void)
 
 	ed = G_EDICT(OFS_PARM0);
 	if (ed == sv.edicts)
-		PR_RunError("remove: tried to remove world\n");
+		Host_Error("remove: tried to remove world\n");
 	if (NUM_FOR_EDICT(ed) <= svs.maxclients)
-		PR_RunError("remove: tried to remove a client\n");
+		Host_Error("remove: tried to remove a client\n");
 	ED_Free (ed);
 }
 
@@ -1219,7 +1222,7 @@ void PF_findchainfloat (void)
 void PR_CheckEmptyString (char *s)
 {
 	if (s[0] <= ' ')
-		PR_RunError ("Bad string");
+		Host_Error ("Bad string");
 }
 
 void PF_precache_file (void)
@@ -1233,7 +1236,7 @@ void PF_precache_sound (void)
 	int		i;
 
 	if (sv.state != ss_loading)
-		PR_RunError ("PF_Precache_*: Precache can only be done in spawn functions");
+		Host_Error ("PF_Precache_*: Precache can only be done in spawn functions");
 
 	s = G_STRING(OFS_PARM0);
 	G_INT(OFS_RETURN) = G_INT(OFS_PARM0);
@@ -1249,7 +1252,7 @@ void PF_precache_sound (void)
 		if (!strcmp(sv.sound_precache[i], s))
 			return;
 	}
-	PR_RunError ("PF_precache_sound: overflow");
+	Host_Error ("PF_precache_sound: overflow");
 }
 
 void PF_precache_model (void)
@@ -1258,7 +1261,7 @@ void PF_precache_model (void)
 	int		i;
 	
 	if (sv.state != ss_loading)
-		PR_RunError ("PF_Precache_*: Precache can only be done in spawn functions");
+		Host_Error ("PF_Precache_*: Precache can only be done in spawn functions");
 
 	s = G_STRING(OFS_PARM0);
 	if (sv.worldmodel->ishlbsp && ((!s) || (!s[0])))
@@ -1277,7 +1280,7 @@ void PF_precache_model (void)
 		if (!strcmp(sv.model_precache[i], s))
 			return;
 	}
-	PR_RunError ("PF_precache_model: overflow");
+	Host_Error ("PF_precache_model: overflow");
 }
 
 
@@ -1447,7 +1450,7 @@ PF_pointcontents
 */
 void PF_pointcontents (void)
 {
-	G_FLOAT(OFS_RETURN) = Mod_PointInLeaf(G_VECTOR(OFS_PARM0), sv.worldmodel)->contents;
+	G_FLOAT(OFS_RETURN) = Mod_PointContents(G_VECTOR(OFS_PARM0), sv.worldmodel);
 }
 
 /*
@@ -1621,14 +1624,14 @@ void PF_changepitch (void)
 		ideal = val->_float;
 	else
 	{
-		PR_RunError ("PF_changepitch: .float idealpitch and .float pitch_speed must be defined to use changepitch");
+		Host_Error ("PF_changepitch: .float idealpitch and .float pitch_speed must be defined to use changepitch");
 		return;
 	}
 	if ((val = GETEDICTFIELDVALUE(ent, eval_pitch_speed)))
 		speed = val->_float;
 	else
 	{
-		PR_RunError ("PF_changepitch: .float idealpitch and .float pitch_speed must be defined to use changepitch");
+		Host_Error ("PF_changepitch: .float idealpitch and .float pitch_speed must be defined to use changepitch");
 		return;
 	}
 
@@ -1688,7 +1691,7 @@ sizebuf_t *WriteDest (void)
 		ent = PROG_TO_EDICT(pr_global_struct->msg_entity);
 		entnum = NUM_FOR_EDICT(ent);
 		if (entnum < 1 || entnum > svs.maxclients)
-			PR_RunError ("WriteDest: not a client");
+			Host_Error ("WriteDest: not a client");
 		return &svs.clients[entnum-1].message;
 
 	case MSG_ALL:
@@ -1698,7 +1701,7 @@ sizebuf_t *WriteDest (void)
 		return &sv.signon;
 
 	default:
-		PR_RunError ("WriteDest: bad destination");
+		Host_Error ("WriteDest: bad destination");
 		break;
 	}
 
@@ -1802,7 +1805,7 @@ void PF_setspawnparms (void)
 	ent = G_EDICT(OFS_PARM0);
 	i = NUM_FOR_EDICT(ent);
 	if (i < 1 || i > svs.maxclients)
-		PR_RunError ("Entity is not a client");
+		Host_Error ("Entity is not a client");
 
 	// copy spawn parms out of the client_t
 	client = svs.clients + (i-1);
@@ -1911,7 +1914,7 @@ void PF_registercvar (void)
 	}
 
 	if (currentqc_cvar >= MAX_QC_CVARS)
-		PR_RunError ("PF_registercvar: ran out of cvar slots (%i)\n", MAX_QC_CVARS);
+		Host_Error ("PF_registercvar: ran out of cvar slots (%i)\n", MAX_QC_CVARS);
 
 // copy the name and value
 	variable = &qc_cvar[currentqc_cvar++];
@@ -1949,7 +1952,7 @@ void PF_min (void)
 		G_FLOAT(OFS_RETURN) = f;
 	}
 	else
-		PR_RunError("min: must supply at least 2 floats\n");
+		Host_Error("min: must supply at least 2 floats\n");
 }
 
 /*
@@ -1976,7 +1979,7 @@ void PF_max (void)
 		G_FLOAT(OFS_RETURN) = f;
 	}
 	else
-		PR_RunError("max: must supply at least 2 floats\n");
+		Host_Error("max: must supply at least 2 floats\n");
 }
 
 /*
@@ -2068,7 +2071,7 @@ void PF_effect (void)
 	char *s;
 	s = G_STRING(OFS_PARM1);
 	if (!s || !s[0])
-		PR_RunError("effect: no model specified\n");
+		Host_Error("effect: no model specified\n");
 
 	SV_StartEffect(G_VECTOR(OFS_PARM0), SV_ModelIndex(s), G_FLOAT(OFS_PARM2), G_FLOAT(OFS_PARM3), G_FLOAT(OFS_PARM4));
 }
@@ -2464,9 +2467,152 @@ void PF_te_plasmaburn (void)
 	MSG_WriteDPCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
 }
 
+static void clippointtosurface(msurface_t *surf, vec3_t p, vec3_t out)
+{
+	int i, j;
+	vec3_t v1, clipplanenormal, normal;
+	vec_t clipplanedist, clipdist;
+	VectorCopy(p, out);
+	if (surf->flags & SURF_PLANEBACK)
+		VectorNegate(surf->plane->normal, normal);
+	else
+		VectorCopy(surf->plane->normal, normal);
+	for (i = 0, j = surf->poly_numverts - 1;i < surf->poly_numverts;j = i, i++)
+	{
+		VectorSubtract(&surf->poly_verts[j * 3], &surf->poly_verts[i * 3], v1);
+		VectorNormalizeFast(v1);
+		CrossProduct(v1, normal, clipplanenormal);
+		clipplanedist = DotProduct(&surf->poly_verts[i * 3], clipplanenormal);
+		clipdist = DotProduct(out, clipplanenormal) - clipplanedist;
+		if (clipdist > 0)
+		{
+			clipdist = -clipdist;
+			VectorMA(out, clipdist, clipplanenormal, out);
+		}
+	}
+}
+
+static msurface_t *getsurface(edict_t *ed, int surfnum)
+{
+	int modelindex;
+	model_t *model;
+	if (!ed || ed->free)
+		return NULL;
+	modelindex = ed->v.modelindex;
+	if (modelindex < 1 || modelindex >= MAX_MODELS)
+		return NULL;
+	model = sv.models[modelindex];
+	if (model->type != mod_brush)
+		return NULL;
+	if (surfnum < 0 || surfnum >= model->nummodelsurfaces)
+		return NULL;
+	return model->surfaces + surfnum + model->firstmodelsurface;
+}
+
+
+//PF_getsurfacenumpoints, // #434 float(entity e, float s) getsurfacenumpoints = #434;
+void PF_getsurfacenumpoints(void)
+{
+	msurface_t *surf;
+	// return 0 if no such surface
+	if (!(surf = getsurface(G_EDICT(OFS_PARM0), G_FLOAT(OFS_PARM1))))
+	{
+		G_FLOAT(OFS_RETURN) = 0;
+		return;
+	}
+
+	G_FLOAT(OFS_RETURN) = surf->poly_numverts;
+}
+//PF_getsurfacepoint,     // #435 vector(entity e, float s, float n) getsurfacepoint = #435;
+void PF_getsurfacepoint(void)
+{
+	edict_t *ed;
+	msurface_t *surf;
+	int pointnum;
+	VectorClear(G_VECTOR(OFS_RETURN));
+	ed = G_EDICT(OFS_PARM0);
+	if (!ed || ed->free)
+		return;
+	if (!(surf = getsurface(ed, G_FLOAT(OFS_PARM1))))
+		return;
+	pointnum = G_FLOAT(OFS_PARM2);
+	if (pointnum < 0 || pointnum >= surf->poly_numverts)
+		return;
+	// FIXME: implement rotation/scaling
+	VectorAdd(&surf->poly_verts[pointnum * 3], ed->v.origin, G_VECTOR(OFS_RETURN));
+}
+//PF_getsurfacenormal,    // #436 vector(entity e, float s) getsurfacenormal = #436;
+void PF_getsurfacenormal(void)
+{
+	msurface_t *surf;
+	VectorClear(G_VECTOR(OFS_RETURN));
+	if (!(surf = getsurface(G_EDICT(OFS_PARM0), G_FLOAT(OFS_PARM1))))
+		return;
+	// FIXME: implement rotation/scaling
+	if (surf->flags & SURF_PLANEBACK)
+		VectorNegate(surf->plane->normal, G_VECTOR(OFS_RETURN));
+	else
+		VectorCopy(surf->plane->normal, G_VECTOR(OFS_RETURN));
+}
+//PF_getsurfacetexture,   // #437 string(entity e, float s) getsurfacetexture = #437;
+void PF_getsurfacetexture(void)
+{
+	msurface_t *surf;
+	G_INT(OFS_RETURN) = 0;
+	if (!(surf = getsurface(G_EDICT(OFS_PARM0), G_FLOAT(OFS_PARM1))))
+		return;
+	G_INT(OFS_RETURN) = surf->texinfo->texture->name - pr_strings;
+}
+//PF_getsurfacenearpoint, // #438 void(entity e, vector p) getsurfacenearpoint = #438;
+void PF_getsurfacenearpoint(void)
+{
+	int surfnum, best, modelindex;
+	vec3_t clipped, p;
+	vec_t dist, bestdist;
+	edict_t *ed;
+	model_t *model;
+	msurface_t *surf;
+	vec_t *point;
+	G_FLOAT(OFS_RETURN) = -1;
+	ed = G_EDICT(OFS_PARM0);
+	point = G_VECTOR(OFS_PARM1);
+
+	if (!ed || ed->free)
+		return;
+	modelindex = ed->v.modelindex;
+	if (modelindex < 1 || modelindex >= MAX_MODELS)
+		return;
+	model = sv.models[modelindex];
+	if (model->type != mod_brush)
+		return;
+
+	// FIXME: implement rotation/scaling
+	VectorSubtract(point, ed->v.origin, p);
+	best = -1;
+	bestdist = 1000000000;
+	for (surfnum = 0;surfnum < model->nummodelsurfaces;surfnum++)
+	{
+		surf = model->surfaces + surfnum + model->firstmodelsurface;
+		dist = PlaneDiff(p, surf->plane);
+		dist = dist * dist;
+		if (dist < bestdist)
+		{
+			clippointtosurface(surf, p, clipped);
+			VectorSubtract(clipped, p, clipped);
+			dist += DotProduct(clipped, clipped);
+			if (dist < bestdist)
+			{
+				best = surfnum;
+				bestdist = dist;
+			}
+		}
+	}
+	G_FLOAT(OFS_RETURN) = best;
+}
+
 void PF_Fixme (void)
 {
-	PR_RunError ("unimplemented builtin"); // LordHavoc: was misspelled (bulitin)
+	Host_Error ("unimplemented QC builtin"); // LordHavoc: was misspelled (bulitin)
 }
 
 
@@ -2622,6 +2768,11 @@ PF_te_lightning3,		// #430
 PF_te_beam,				// #431
 PF_vectorvectors,		// #432
 PF_te_plasmaburn,		// #433
+PF_getsurfacenumpoints, // #434 float(entity e, float s) getsurfacenumpoints = #434;
+PF_getsurfacepoint,     // #435 vector(entity e, float s, float n) getsurfacepoint = #435;
+PF_getsurfacenormal,    // #436 vector(entity e, float s) getsurfacenormal = #436;
+PF_getsurfacetexture,   // #437 string(entity e, float s) getsurfacetexture = #437;
+PF_getsurfacenearpoint, // #438 float(entity e, vector p) getsurfacenearpoint = #438;
 };
 
 builtin_t *pr_builtins = pr_builtin;

@@ -434,13 +434,13 @@ void *SZ_GetSpace (sizebuf_t *buf, int length)
 	if (buf->cursize + length > buf->maxsize)
 	{
 		if (!buf->allowoverflow)
-			Host_Error ("SZ_GetSpace: overflow without allowoverflow set");
+			Host_Error ("SZ_GetSpace: overflow without allowoverflow set\n");
 
 		if (length > buf->maxsize)
-			Host_Error ("SZ_GetSpace: %i is > full buffer size", length);
+			Host_Error ("SZ_GetSpace: %i is > full buffer size\n", length);
 
 		buf->overflowed = true;
-		Con_Printf ("SZ_GetSpace: overflow");
+		Con_Printf ("SZ_GetSpace: overflow\n");
 		SZ_Clear (buf);
 	}
 
@@ -458,7 +458,7 @@ void SZ_Write (sizebuf_t *buf, void *data, int length)
 void SZ_Print (sizebuf_t *buf, char *data)
 {
 	int             len;
-	
+
 	len = strlen(data)+1;
 
 // byte * cast to keep VC++ happy
@@ -466,6 +466,55 @@ void SZ_Print (sizebuf_t *buf, char *data)
 		memcpy ((qbyte *)SZ_GetSpace(buf, len),data,len); // no trailing 0
 	else
 		memcpy ((qbyte *)SZ_GetSpace(buf, len-1)-1,data,len); // write over trailing 0
+}
+
+static char *hexchar = "0123456789ABCDEF";
+void SZ_HexDumpToConsole(sizebuf_t *buf)
+{
+	int i;
+	char text[1024];
+	char *cur, *flushpointer;
+	cur = text;
+	flushpointer = text + 512;
+	for (i = 0;i < buf->cursize;i++)
+	{
+		if ((i & 15) == 0)
+		{
+			*cur++ = hexchar[(i >> 12) & 15];
+			*cur++ = hexchar[(i >>  8) & 15];
+			*cur++ = hexchar[(i >>  4) & 15];
+			*cur++ = hexchar[(i >>  0) & 15];
+			*cur++ = ':';
+			*cur++ = ' ';
+		}
+		else if ((i & 15) == 15)
+			*cur++ = '\n';
+		else
+			*cur++ = ' ';
+		if (i & 1)
+		{
+			*cur++ = hexchar[(buf->data[i] >> 4) & 15] | 0x80;
+			*cur++ = hexchar[(buf->data[i] >> 0) & 15] | 0x80;
+		}
+		else
+		{
+			*cur++ = hexchar[(buf->data[i] >> 4) & 15];
+			*cur++ = hexchar[(buf->data[i] >> 0) & 15];
+		}
+		if (cur >= flushpointer)
+		{
+			*cur++ = 0;
+			Con_Printf("%s", text);
+			cur = text;
+		}
+	}
+	if ((i & 15) != 0)
+		*cur++ = '\n';
+	if (cur > text)
+	{
+		*cur++ = 0;
+		Con_Printf("%s", text);
+	}
 }
 
 

@@ -483,7 +483,7 @@ extern cvar_t r_draweffects;
 extern cvar_t cl_explosions;
 extern cvar_t cl_stainmaps;
 
-// these are updated by
+// these are updated by CL_ClearState
 extern int cl_num_entities;
 extern int cl_num_static_entities;
 extern int cl_num_temp_entities;
@@ -517,6 +517,8 @@ void CL_EstablishConnection (char *host);
 
 void CL_Disconnect (void);
 void CL_Disconnect_f (void);
+
+void CL_BoundingBoxForEntity(entity_render_t *ent);
 
 //
 // cl_input

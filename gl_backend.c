@@ -1044,7 +1044,7 @@ void SCR_UpdateScreen (void)
 
 	R_TimeReport("clear");
 
-	if (scr_conlines < vid.conheight)
+	if (scr_conlines < vid.conheight && cls.signon == SIGNONS)
 		R_RenderView();
 
 	// draw 2D stuff

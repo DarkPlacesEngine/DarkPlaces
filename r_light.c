@@ -64,6 +64,9 @@ void r_light_shutdown(void)
 
 void r_light_newmap(void)
 {
+	int i;
+	for (i = 0;i < 256;i++)
+		d_lightstylevalue[i] = 264;		// normal light value
 }
 
 void R_Light_Init(void)
@@ -90,7 +93,7 @@ void R_AnimateLight (void)
 	i = (int)(cl.time * 10);
 	for (j = 0;j < MAX_LIGHTSTYLES;j++)
 	{
-		if (!cl_lightstyle[j].length)
+		if (!cl_lightstyle || !cl_lightstyle[j].length)
 		{
 			d_lightstylevalue[j] = 256;
 			continue;
@@ -112,7 +115,7 @@ void R_BuildLightList(void)
 	r_numdlights = 0;
 	c_dlights = 0;
 
-	if (!r_dynamic.integer)
+	if (!r_dynamic.integer || !cl_dlights)
 		return;
 
 	for (i = 0;i < MAX_DLIGHTS;i++)
@@ -226,8 +229,9 @@ static void R_OldMarkLights (entity_render_t *ent, vec3_t lightorigin, rdlight_t
 {
 	float ndist, maxdist;
 	msurface_t *surf;
-	mleaf_t *leaf;
 	int i;
+	int d, impacts, impactt;
+	float dist, dist2, impact[3];
 
 	if (!r_dynamic.integer)
 		return;
@@ -237,19 +241,7 @@ static void R_OldMarkLights (entity_render_t *ent, vec3_t lightorigin, rdlight_t
 
 loc0:
 	if (node->contents < 0)
-	{
-		if (node->contents != CONTENTS_SOLID)
-		{
-			leaf = (mleaf_t *)node;
-			if (leaf->dlightframe != r_framecount) // not dynamic until now
-			{
-				leaf->dlightbits[0] = leaf->dlightbits[1] = leaf->dlightbits[2] = leaf->dlightbits[3] = leaf->dlightbits[4] = leaf->dlightbits[5] = leaf->dlightbits[6] = leaf->dlightbits[7] = 0;
-				leaf->dlightframe = r_framecount;
-			}
-			leaf->dlightbits[bitindex] |= bit;
-		}
 		return;
-	}
 
 	ndist = PlaneDiff(lightorigin, node->plane);
 
@@ -266,10 +258,8 @@ loc0:
 
 // mark the polygons
 	surf = ent->model->surfaces + node->firstsurface;
-	for (i=0 ; i<node->numsurfaces ; i++, surf++)
+	for (i = 0;i < node->numsurfaces;i++, surf++)
 	{
-		int d, impacts, impactt;
-		float dist, dist2, impact[3];
 		if (surf->visframe != r_framecount)
 			continue;
 		dist = ndist;
@@ -285,14 +275,14 @@ loc0:
 
 		if (node->plane->type < 3)
 		{
-			VectorCopy(rd->origin, impact);
+			VectorCopy(lightorigin, impact);
 			impact[node->plane->type] -= dist;
 		}
 		else
 		{
-			impact[0] = rd->origin[0] - surf->plane->normal[0] * dist;
-			impact[1] = rd->origin[1] - surf->plane->normal[1] * dist;
-			impact[2] = rd->origin[2] - surf->plane->normal[2] * dist;
+			impact[0] = lightorigin[0] - surf->plane->normal[0] * dist;
+			impact[1] = lightorigin[1] - surf->plane->normal[1] * dist;
+			impact[2] = lightorigin[2] - surf->plane->normal[2] * dist;
 		}
 
 		impacts = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
@@ -355,28 +345,17 @@ static void R_VisMarkLights (entity_render_t *ent, rdlight_t *rd, int bit, int b
 	if (!r_dynamic.integer)
 		return;
 
-	model = ent->model;
-	//softwareuntransform(rd->origin, lightorigin);
 	Matrix4x4_Transform(&ent->inversematrix, rd->origin, lightorigin);
 
-	if (!r_vismarklights.integer)
-	{
-		R_OldMarkLights(ent, lightorigin, rd, bit, bitindex, model->nodes + model->hulls[0].firstclipnode);
-		return;
-	}
-
+	model = ent->model;
 	pvsleaf = Mod_PointInLeaf (lightorigin, model);
 	if (pvsleaf == NULL)
-	{
-		Con_Printf("R_VisMarkLights: NULL leaf??\n");
-		R_OldMarkLights(ent, lightorigin, rd, bit, bitindex, model->nodes + model->hulls[0].firstclipnode);
 		return;
-	}
 
 	in = pvsleaf->compressed_vis;
-	if (!in)
+	if (!r_vismarklights.integer || !in)
 	{
-		// no vis info, so make all visible
+		// told not to use pvs, or there's no pvs to use
 		R_OldMarkLights(ent, lightorigin, rd, bit, bitindex, model->nodes + model->hulls[0].firstclipnode);
 		return;
 	}
@@ -406,19 +385,10 @@ static void R_VisMarkLights (entity_render_t *ent, rdlight_t *rd, int bit, int b
 					if (leafnum > model->numleafs)
 						return;
 					leaf = &model->leafs[leafnum];
-					if (leaf->visframe != r_framecount
-					 || leaf->contents == CONTENTS_SOLID
-					 || leaf->mins[0] > high[0] || leaf->maxs[0] < low[0]
+					if (leaf->mins[0] > high[0] || leaf->maxs[0] < low[0]
 					 || leaf->mins[1] > high[1] || leaf->maxs[1] < low[1]
 					 || leaf->mins[2] > high[2] || leaf->maxs[2] < low[2])
 						continue;
-					if (leaf->dlightframe != r_framecount)
-					{
-						// not dynamic until now
-						leaf->dlightbits[0] = leaf->dlightbits[1] = leaf->dlightbits[2] = leaf->dlightbits[3] = leaf->dlightbits[4] = leaf->dlightbits[5] = leaf->dlightbits[6] = leaf->dlightbits[7] = 0;
-						leaf->dlightframe = r_framecount;
-					}
-					leaf->dlightbits[bitindex] |= bit;
 					if ((m = leaf->nummarksurfaces))
 					{
 						mark = leaf->firstmarksurface;
@@ -445,14 +415,14 @@ static void R_VisMarkLights (entity_render_t *ent, rdlight_t *rd, int bit, int b
 
 								if (surf->plane->type < 3)
 								{
-									VectorCopy(rd->origin, impact);
+									VectorCopy(lightorigin, impact);
 									impact[surf->plane->type] -= dist;
 								}
 								else
 								{
-									impact[0] = rd->origin[0] - surf->plane->normal[0] * dist;
-									impact[1] = rd->origin[1] - surf->plane->normal[1] * dist;
-									impact[2] = rd->origin[2] - surf->plane->normal[2] * dist;
+									impact[0] = lightorigin[0] - surf->plane->normal[0] * dist;
+									impact[1] = lightorigin[1] - surf->plane->normal[1] * dist;
+									impact[2] = lightorigin[2] - surf->plane->normal[2] * dist;
 								}
 
 								impacts = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
@@ -646,23 +616,15 @@ middle sample (the one which was requested)
 void R_CompleteLightPoint (vec3_t color, const vec3_t p, int dynamic, const mleaf_t *leaf)
 {
 	int i;
-	const int *dlightbits;
 	vec3_t v;
 	float f;
 	rdlight_t *rd;
 	mlight_t *sl;
 	if (leaf == NULL)
 		leaf = Mod_PointInLeaf(p, cl.worldmodel);
-
-	if (leaf->contents == CONTENTS_SOLID)
+	if (!leaf || leaf->contents == CONTENTS_SOLID || r_fullbright.integer || !cl.worldmodel->lightdata)
 	{
-		color[0] = color[1] = color[2] = 0;
-		return;
-	}
-
-	if (r_fullbright.integer || !cl.worldmodel->lightdata)
-	{
-		color[0] = color[1] = color[2] = 2;
+		color[0] = color[1] = color[2] = 1;
 		return;
 	}
 
@@ -687,17 +649,14 @@ void R_CompleteLightPoint (vec3_t color, const vec3_t p, int dynamic, const mlea
 	else
 		RecursiveLightPoint (color, cl.worldmodel->nodes, p[0], p[1], p[2], p[2] - 65536);
 
-	if (dynamic && leaf->dlightframe == r_framecount)
+	if (dynamic)
 	{
-		dlightbits = leaf->dlightbits;
 		for (i = 0;i < r_numdlights;i++)
 		{
-			if (!(dlightbits[i >> 5] & (1 << (i & 31))))
-				continue;
 			rd = r_dlight + i;
 			VectorSubtract (p, rd->origin, v);
 			f = DotProduct(v, v);
-			if (f < rd->cullradius2)
+			if (f < rd->cullradius2 && CL_TraceLine(p, rd->origin, NULL, NULL, 0, false) == 1)
 			{
 				f = (1.0f / (f + LIGHTOFFSET)) - rd->subtract;
 				VectorMA(color, f, rd->light, color);
@@ -706,41 +665,19 @@ void R_CompleteLightPoint (vec3_t color, const vec3_t p, int dynamic, const mlea
 	}
 }
 
-void R_ModelLightPoint (const entity_render_t *ent, vec3_t color, const vec3_t p, int *dlightbits)
+void R_ModelLightPoint (const entity_render_t *ent, vec3_t color, const vec3_t p)
 {
 	mleaf_t *leaf;
 	leaf = Mod_PointInLeaf(p, cl.worldmodel);
-	if (leaf->contents == CONTENTS_SOLID)
+	if (!leaf || leaf->contents == CONTENTS_SOLID || r_fullbright.integer || !cl.worldmodel->lightdata || ent->effects & EF_FULLBRIGHT)
 	{
-		color[0] = color[1] = color[2] = 0;
-		dlightbits[0] = dlightbits[1] = dlightbits[2] = dlightbits[3] = dlightbits[4] = dlightbits[5] = dlightbits[6] = dlightbits[7] = 0;
-		return;
-	}
-
-	if (r_fullbright.integer || !cl.worldmodel->lightdata || ent->effects & EF_FULLBRIGHT)
-	{
-		color[0] = color[1] = color[2] = 2;
-		dlightbits[0] = dlightbits[1] = dlightbits[2] = dlightbits[3] = dlightbits[4] = dlightbits[5] = dlightbits[6] = dlightbits[7] = 0;
+		color[0] = color[1] = color[2] = 1;
 		return;
 	}
 
 	color[0] = color[1] = color[2] = r_ambient.value * (2.0f / 128.0f);
 	if (!cl.worldmodel->numlights)
 		RecursiveLightPoint (color, cl.worldmodel->nodes, p[0], p[1], p[2], p[2] - 65536);
-
-	if (leaf->dlightframe == r_framecount)
-	{
-		dlightbits[0] = leaf->dlightbits[0];
-		dlightbits[1] = leaf->dlightbits[1];
-		dlightbits[2] = leaf->dlightbits[2];
-		dlightbits[3] = leaf->dlightbits[3];
-		dlightbits[4] = leaf->dlightbits[4];
-		dlightbits[5] = leaf->dlightbits[5];
-		dlightbits[6] = leaf->dlightbits[6];
-		dlightbits[7] = leaf->dlightbits[7];
-	}
-	else
-		dlightbits[0] = dlightbits[1] = dlightbits[2] = dlightbits[3] = dlightbits[4] = dlightbits[5] = dlightbits[6] = dlightbits[7] = 0;
 }
 
 void R_LightModel(const entity_render_t *ent, int numverts, float colorr, float colorg, float colorb, int worldcoords)
@@ -761,7 +698,6 @@ void R_LightModel(const entity_render_t *ent, int numverts, float colorr, float 
 		vec_t intensity;
 	}
 	nearlight[MAX_DLIGHTS], *nl;
-	int modeldlightbits[8];
 	mlight_t *sl;
 	rdlight_t *rd;
 	a = ent->alpha;
@@ -770,7 +706,7 @@ void R_LightModel(const entity_render_t *ent, int numverts, float colorr, float 
 	mscale = ent->scale * ent->scale;
 	if ((maxnearlights != 0) && !r_fullbright.integer && !(ent->effects & EF_FULLBRIGHT))
 	{
-		R_ModelLightPoint(ent, basecolor, ent->origin, modeldlightbits);
+		R_ModelLightPoint(ent, basecolor, ent->origin);
 
 		nl = &nearlight[0];
 		for (i = 0;i < ent->numentlights;i++)
@@ -812,7 +748,6 @@ void R_LightModel(const entity_render_t *ent, int numverts, float colorr, float 
 				if (worldcoords)
 					VectorCopy(sl->origin, nl->origin);
 				else
-					//softwareuntransform(sl->origin, nl->origin);
 					Matrix4x4_Transform(&ent->inversematrix, sl->origin, nl->origin);
 				// integrate mscale into falloff, for maximum speed
 				nl->falloff = sl->falloff * mscale;
@@ -826,66 +761,73 @@ void R_LightModel(const entity_render_t *ent, int numverts, float colorr, float 
 		}
 		for (i = 0;i < r_numdlights;i++)
 		{
-			if (!(modeldlightbits[i >> 5] & (1 << (i & 31))))
-				continue;
 			rd = r_dlight + i;
-			VectorSubtract (ent->origin, rd->origin, v);
-			f = ((1.0f / (DotProduct(v, v) + LIGHTOFFSET)) - rd->subtract);
-			VectorScale(rd->light, f, ambientcolor);
-			intensity = DotProduct(ambientcolor, ambientcolor);
-			if (f < 0)
-				intensity *= -1.0f;
-			if (nearlights < maxnearlights)
-				j = nearlights++;
-			else
+			VectorCopy(rd->origin, v);
+			if (v[0] < ent->mins[0]) v[0] = ent->mins[0];if (v[0] > ent->maxs[0]) v[0] = ent->maxs[0];
+			if (v[1] < ent->mins[1]) v[1] = ent->mins[1];if (v[1] > ent->maxs[1]) v[1] = ent->maxs[1];
+			if (v[2] < ent->mins[2]) v[2] = ent->mins[2];if (v[2] > ent->maxs[2]) v[2] = ent->maxs[2];
+			VectorSubtract (v, rd->origin, v);
+			if (DotProduct(v, v) < rd->cullradius2)
 			{
-				for (j = 0;j < maxnearlights;j++)
-				{
-					if (nearlight[j].intensity < intensity)
-					{
-						if (nearlight[j].intensity > 0)
-							VectorAdd(basecolor, nearlight[j].ambientlight, basecolor);
-						break;
-					}
-				}
-			}
-			if (j >= maxnearlights)
-			{
-				// this light is less significant than all others,
-				// add it to ambient
-				if (intensity > 0)
-					VectorAdd(basecolor, ambientcolor, basecolor);
-			}
-			else
-			{
-				nl = nearlight + j;
-				nl->intensity = intensity;
-				// transform the light into the model's coordinate system
-				if (worldcoords)
-					VectorCopy(rd->origin, nl->origin);
+				if (CL_TraceLine(ent->origin, rd->origin, NULL, NULL, 0, false) != 1)
+					continue;
+				VectorSubtract (ent->origin, rd->origin, v);
+				f = ((1.0f / (DotProduct(v, v) + LIGHTOFFSET)) - rd->subtract);
+				VectorScale(rd->light, f, ambientcolor);
+				intensity = DotProduct(ambientcolor, ambientcolor);
+				if (f < 0)
+					intensity *= -1.0f;
+				if (nearlights < maxnearlights)
+					j = nearlights++;
 				else
 				{
-					//softwareuntransform(rd->origin, nl->origin);
-					Matrix4x4_Transform(&ent->inversematrix, rd->origin, nl->origin);
-					/*
-					Con_Printf("%i %s : %f %f %f : %f %f %f\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n"
-					, rd - r_dlight, ent->model->name
-					, rd->origin[0], rd->origin[1], rd->origin[2]
-					, nl->origin[0], nl->origin[1], nl->origin[2]
-					, ent->inversematrix.m[0][0], ent->inversematrix.m[0][1], ent->inversematrix.m[0][2], ent->inversematrix.m[0][3]
-					, ent->inversematrix.m[1][0], ent->inversematrix.m[1][1], ent->inversematrix.m[1][2], ent->inversematrix.m[1][3]
-					, ent->inversematrix.m[2][0], ent->inversematrix.m[2][1], ent->inversematrix.m[2][2], ent->inversematrix.m[2][3]
-					, ent->inversematrix.m[3][0], ent->inversematrix.m[3][1], ent->inversematrix.m[3][2], ent->inversematrix.m[3][3]);
-					*/
+					for (j = 0;j < maxnearlights;j++)
+					{
+						if (nearlight[j].intensity < intensity)
+						{
+							if (nearlight[j].intensity > 0)
+								VectorAdd(basecolor, nearlight[j].ambientlight, basecolor);
+							break;
+						}
+					}
 				}
-				// integrate mscale into falloff, for maximum speed
-				nl->falloff = mscale;
-				VectorCopy(ambientcolor, nl->ambientlight);
-				nl->light[0] = rd->light[0] * colorr * 4.0f;
-				nl->light[1] = rd->light[1] * colorg * 4.0f;
-				nl->light[2] = rd->light[2] * colorb * 4.0f;
-				nl->subtract = rd->subtract;
-				nl->offset = LIGHTOFFSET;
+				if (j >= maxnearlights)
+				{
+					// this light is less significant than all others,
+					// add it to ambient
+					if (intensity > 0)
+						VectorAdd(basecolor, ambientcolor, basecolor);
+				}
+				else
+				{
+					nl = nearlight + j;
+					nl->intensity = intensity;
+					// transform the light into the model's coordinate system
+					if (worldcoords)
+						VectorCopy(rd->origin, nl->origin);
+					else
+					{
+						Matrix4x4_Transform(&ent->inversematrix, rd->origin, nl->origin);
+						/*
+						Con_Printf("%i %s : %f %f %f : %f %f %f\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n"
+						, rd - r_dlight, ent->model->name
+						, rd->origin[0], rd->origin[1], rd->origin[2]
+						, nl->origin[0], nl->origin[1], nl->origin[2]
+						, ent->inversematrix.m[0][0], ent->inversematrix.m[0][1], ent->inversematrix.m[0][2], ent->inversematrix.m[0][3]
+						, ent->inversematrix.m[1][0], ent->inversematrix.m[1][1], ent->inversematrix.m[1][2], ent->inversematrix.m[1][3]
+						, ent->inversematrix.m[2][0], ent->inversematrix.m[2][1], ent->inversematrix.m[2][2], ent->inversematrix.m[2][3]
+						, ent->inversematrix.m[3][0], ent->inversematrix.m[3][1], ent->inversematrix.m[3][2], ent->inversematrix.m[3][3]);
+						*/
+					}
+					// integrate mscale into falloff, for maximum speed
+					nl->falloff = mscale;
+					VectorCopy(ambientcolor, nl->ambientlight);
+					nl->light[0] = rd->light[0] * colorr * 4.0f;
+					nl->light[1] = rd->light[1] * colorg * 4.0f;
+					nl->light[2] = rd->light[2] * colorb * 4.0f;
+					nl->subtract = rd->subtract;
+					nl->offset = LIGHTOFFSET;
+				}
 			}
 		}
 	}
@@ -967,9 +909,10 @@ void R_UpdateEntLights(entity_render_t *ent)
 		ent->entlightstime = realtime + 0.1;
 		VectorCopy(ent->origin, ent->entlightsorigin);
 		ent->numentlights = 0;
-		for (i = 0, sl = cl.worldmodel->lights;i < cl.worldmodel->numlights && ent->numentlights < MAXENTLIGHTS;i++, sl++)
-			if (CL_TraceLine(ent->origin, sl->origin, NULL, NULL, 0, false) == 1)
-				ent->entlights[ent->numentlights++] = i;
+		if (cl.worldmodel)
+			for (i = 0, sl = cl.worldmodel->lights;i < cl.worldmodel->numlights && ent->numentlights < MAXENTLIGHTS;i++, sl++)
+				if (CL_TraceLine(ent->origin, sl->origin, NULL, NULL, 0, false) == 1)
+					ent->entlights[ent->numentlights++] = i;
 	}
 	ent->entlightsframe = r_framecount;
 }

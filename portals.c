@@ -187,6 +187,10 @@ int Portal_CheckPolygon(model_t *model, vec3_t eye, float *polypoints, int numpo
 	mleaf_t *eyeleaf;
 	vec3_t center, v1, v2;
 
+	// if there is no model, it can not block visibility
+	if (model == NULL)
+		return true;
+
 	portal_markid++;
 
 	Mod_CheckLoaded(model);

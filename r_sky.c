@@ -1,52 +1,21 @@
 
 #include "quakedef.h"
 
-void LoadSky_f(void);
-
 cvar_t r_sky = {CVAR_SAVE, "r_sky", "1"};
-
-static char skyworldname[1024];
-rtexture_t *solidskytexture;
-rtexture_t *alphaskytexture;
-static qboolean skyavailable_quake;
-static qboolean skyavailable_box;
-static rtexturepool_t *skytexturepool;
-
+qboolean skyavailable_quake;
+qboolean skyavailable_box;
 int skyrendernow;
 int skyrendermasked;
 
-static void r_sky_start(void)
-{
-	skytexturepool = R_AllocTexturePool();
-	solidskytexture = NULL;
-	alphaskytexture = NULL;
-}
-
-static void r_sky_shutdown(void)
-{
-	R_FreeTexturePool(&skytexturepool);
-	solidskytexture = NULL;
-	alphaskytexture = NULL;
-}
-
-int R_SetSkyBox(char *sky);
-
-static void r_sky_newmap(void)
-{
-	skyavailable_quake = false;
-	if (!strcmp(skyworldname, cl.worldmodel->name))
-		skyavailable_quake = true;
-}
-
-void R_Sky_Init(void)
-{
-	Cmd_AddCommand ("loadsky", &LoadSky_f);
-	Cvar_RegisterVariable (&r_sky);
-	R_RegisterModule("R_Sky", r_sky_start, r_sky_shutdown, r_sky_newmap);
-}
-
+static rtexture_t *solidskytexture;
+static rtexture_t *alphaskytexture;
 static int skyrendersphere;
 static int skyrenderbox;
+static rtexturepool_t *skytexturepool;
+static char skyname[256];
+static char *suf[6] = {"rt", "bk", "lf", "ft", "up", "dn"};
+static rtexture_t *skyboxside[6];
+int R_SetSkyBox(char *sky);
 
 void R_SkyStartFrame(void)
 {
@@ -66,15 +35,11 @@ void R_SkyStartFrame(void)
 	}
 }
 
-static char skyname[256];
-
 /*
 ==================
 R_SetSkyBox
 ==================
 */
-static char *suf[6] = {"rt", "bk", "lf", "ft", "up", "dn"};
-static rtexture_t *skyboxside[6];
 int R_SetSkyBox(char *sky)
 {
 	int i;
@@ -405,7 +370,7 @@ void R_InitSky (qbyte *src, int bytesperpixel)
 	qbyte skyupperlayerpixels[128*128*4], skylowerlayerpixels[128*128*4];
 	unsigned trans[128*128], transpix, *rgba;
 
-	strcpy(skyworldname, loadmodel->name);
+	skyavailable_quake = true;
 
 	// flush skytexturepool so we won't build up a leak from uploading textures multiple times
 	R_FreeTexturePool(&skytexturepool);
@@ -473,3 +438,39 @@ void R_InitSky (qbyte *src, int bytesperpixel)
 	alphaskytexture = R_LoadTexture (skytexturepool, "sky_alphatexture", 128, 128, (qbyte *) trans, TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE);
 }
 
+void R_ResetQuakeSky(void)
+{
+	skyavailable_quake = false;
+}
+
+void R_ResetSkyBox(void)
+{
+	skyboxside[0] = skyboxside[1] = skyboxside[2] = skyboxside[3] = skyboxside[4] = skyboxside[5] = NULL;
+	skyname[0] = 0;
+	skyavailable_box = false;
+}
+
+static void r_sky_start(void)
+{
+	skytexturepool = R_AllocTexturePool();
+	solidskytexture = NULL;
+	alphaskytexture = NULL;
+}
+
+static void r_sky_shutdown(void)
+{
+	R_FreeTexturePool(&skytexturepool);
+	solidskytexture = NULL;
+	alphaskytexture = NULL;
+}
+
+static void r_sky_newmap(void)
+{
+}
+
+void R_Sky_Init(void)
+{
+	Cmd_AddCommand ("loadsky", &LoadSky_f);
+	Cvar_RegisterVariable (&r_sky);
+	R_RegisterModule("R_Sky", r_sky_start, r_sky_shutdown, r_sky_newmap);
+}

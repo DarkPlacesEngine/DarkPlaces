@@ -226,9 +226,6 @@ model_t *Mod_ForName (char *name, qboolean crash, qboolean checkdisk, qboolean i
 void Mod_TouchModel (char *name);
 void Mod_UnloadModel (model_t *mod);
 
-mleaf_t *Mod_PointInLeaf (const float *p, model_t *model);
-qbyte *Mod_LeafPVS (mleaf_t *leaf, model_t *model);
-
 void Mod_ClearUsed(void);
 void Mod_PurgeUnused(void);
 

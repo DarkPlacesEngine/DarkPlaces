@@ -17,8 +17,7 @@ typedef struct
 	int numverts;
 	int tex[MAX_TEXTUREUNITS];
 	int texrgbscale[MAX_TEXTUREUNITS]; // used only if COMBINE is present
-	// model to world transform matrix
-	matrix4x4_t matrix;
+	matrix4x4_t matrix; // model to world transform matrix
 
 	// output
 	int *index;
