@@ -918,7 +918,8 @@ void Host_Shutdown(void)
 	isdown = true;
 
 	// Shutdown menu
-	MR_Shutdown();
+	if(MR_Shutdown)
+		MR_Shutdown();
 
 	// AK shutdown PRVM
 	// AK hmm, no PRVM_Shutdown(); yet
