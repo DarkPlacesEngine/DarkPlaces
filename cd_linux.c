@@ -31,10 +31,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 
 
-extern qboolean cdPlaying;
-extern qboolean cdPlayLooping;
-extern qbyte cdPlayTrack;
-
 static int cdfile = -1;
 static char cd_dev[64] = "/dev/cdrom";
 
