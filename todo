@@ -119,7 +119,6 @@
 0 darkplaces: make findradius use areagrid scans to speed up searching (Urre, Sajt)
 0 darkplaces: make fopen have the ability to disable fopen builtin access to read /, read data/, write data/, or disable fopen builtin entirely
 0 darkplaces: make gl_picmip affect only maps, models, and sprites by setting their TEXF_PICMIP flag (Zenex, Urre)
-0 darkplaces: make gl_picmip only affect textures with TEXF_PICMIP set (Zenex, Urre)
 0 darkplaces: make gl_texture_anisotropy take effect immediately like gl_texturemode rather than needing an r_restart (metlslime, zinx)
 0 darkplaces: make it only reload rtlights when current map changes, not when restarting renderer or reloading same map (Stribbs)
 0 darkplaces: make memory pools have a flag to print them as temporary pools (I.E. consider them leaks if anything is in them) (Vicious)
