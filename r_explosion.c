@@ -29,7 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define EXPLOSIONFADESTART (1.5f)
 #define EXPLOSIONFADERATE (3.0f)
 
-float explosiontexcoords[EXPLOSIONVERTS][2];
+float explosiontexcoords[EXPLOSIONVERTS][4];
 int explosiontris[EXPLOSIONTRIS][3];
 int explosionnoiseindex[EXPLOSIONVERTS];
 vec3_t explosionpoint[EXPLOSIONVERTS];
@@ -198,7 +198,7 @@ void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 		v[1] = e->vert[i][1];
 		v[2] = e->vert[i][2];
 	}
-	memcpy(varray_texcoord[0], explosiontexcoords, numverts * sizeof(float[2]));
+	memcpy(varray_texcoord[0], explosiontexcoords, numverts * sizeof(float[4]));
 	alpha = e->alpha;
 	VectorSubtract(r_origin, e->origin, centerdir);
 	VectorNormalizeFast(centerdir);

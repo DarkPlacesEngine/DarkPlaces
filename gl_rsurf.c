@@ -844,7 +844,7 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 	{
 		R_Mesh_ResizeCheck(mesh->numverts);
 		memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-		memcpy(varray_texcoord[0], mesh->st, mesh->numverts * sizeof(float[2]));
+		memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
 		f = surf->flags & SURF_DRAWFULLBRIGHT ? 1.0f : ((surf->flags & SURF_LIGHTMAP) ? 0 : 0.5f);
 		R_FillColors(varray_color, mesh->numverts, f, f, f, alpha);
 		if (!(surf->flags & SURF_DRAWFULLBRIGHT || ent->effects & EF_FULLBRIGHT))
@@ -870,7 +870,7 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 			R_Mesh_ResizeCheck(mesh->numverts);
 			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 			if (m.tex[0])
-				memcpy(varray_texcoord[0], mesh->st, mesh->numverts * sizeof(float[2]));
+				memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
 			RSurf_FogPassColors(varray_vertex, varray_color, fogcolor[0], fogcolor[1], fogcolor[2], alpha, r_colorscale, mesh->numverts, modelorg);
 			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
 		}
@@ -931,7 +931,7 @@ static void RSurfShader_Wall_Pass_BaseVertex(const entity_render_t *ent, const m
 	{
 		R_Mesh_ResizeCheck(mesh->numverts);
 		memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-		memcpy(varray_texcoord[0], mesh->st, mesh->numverts * sizeof(float[2]));
+		memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
 		R_FillColors(varray_color, mesh->numverts, base, base, base, ent->alpha);
 		if (!(ent->effects & EF_FULLBRIGHT))
 		{
@@ -974,7 +974,7 @@ static void RSurfShader_Wall_Pass_BaseFullbright(const entity_render_t *ent, con
 	{
 		R_Mesh_ResizeCheck(mesh->numverts);
 		memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-		memcpy(varray_texcoord[0], mesh->st, mesh->numverts * sizeof(float[2]));
+		memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
 		RSurf_FoggedColors(varray_vertex, varray_color, 1, 1, 1, ent->alpha, r_colorscale, mesh->numverts, modelorg);
 		R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
 	}
@@ -996,7 +996,7 @@ static void RSurfShader_Wall_Pass_Glow(const entity_render_t *ent, const msurfac
 	{
 		R_Mesh_ResizeCheck(mesh->numverts);
 		memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-		memcpy(varray_texcoord[0], mesh->st, mesh->numverts * sizeof(float[2]));
+		memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
 		RSurf_FoggedColors(varray_vertex, varray_color, 1, 1, 1, ent->alpha, r_colorscale, mesh->numverts, modelorg);
 		R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
 	}
@@ -1019,7 +1019,7 @@ static void RSurfShader_Wall_Pass_Fog(const entity_render_t *ent, const msurface
 		R_Mesh_ResizeCheck(mesh->numverts);
 		memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 		if (m.tex[0])
-			memcpy(varray_texcoord[0], mesh->st, mesh->numverts * sizeof(float[2]));
+			memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
 		RSurf_FogPassColors(varray_vertex, varray_color, fogcolor[0], fogcolor[1], fogcolor[2], ent->alpha, r_colorscale, mesh->numverts, modelorg);
 		R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
 	}
@@ -1056,9 +1056,9 @@ static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render
 		{
 			R_Mesh_ResizeCheck(mesh->numverts);
 			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-			memcpy(varray_texcoord[0], mesh->st, mesh->numverts * sizeof(float[2]));
-			memcpy(varray_texcoord[1], mesh->uv, mesh->numverts * sizeof(float[2]));
-			memcpy(varray_texcoord[2], mesh->ab, mesh->numverts * sizeof(float[2]));
+			memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
+			memcpy(varray_texcoord[1], mesh->uvw, mesh->numverts * sizeof(float[4]));
+			memcpy(varray_texcoord[2], mesh->abc, mesh->numverts * sizeof(float[4]));
 			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
 		}
 	}
@@ -1091,8 +1091,8 @@ static void RSurfShader_OpaqueWall_Pass_BaseDoubleTex(const entity_render_t *ent
 		{
 			R_Mesh_ResizeCheck(mesh->numverts);
 			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-			memcpy(varray_texcoord[0], mesh->st, mesh->numverts * sizeof(float[2]));
-			memcpy(varray_texcoord[1], mesh->uv, mesh->numverts * sizeof(float[2]));
+			memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
+			memcpy(varray_texcoord[1], mesh->uvw, mesh->numverts * sizeof(float[4]));
 			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
 		}
 	}
@@ -1115,7 +1115,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseTexture(const entity_render_t *ent, 
 		{
 			R_Mesh_ResizeCheck(mesh->numverts);
 			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-			memcpy(varray_texcoord[0], mesh->st, mesh->numverts * sizeof(float[2]));
+			memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
 			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
 		}
 	}
@@ -1147,7 +1147,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseLightmap(const entity_render_t *ent,
 		{
 			R_Mesh_ResizeCheck(mesh->numverts);
 			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-			memcpy(varray_texcoord[0], mesh->uv, mesh->numverts * sizeof(float[2]));
+			memcpy(varray_texcoord[0], mesh->uvw, mesh->numverts * sizeof(float[4]));
 			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
 		}
 	}
@@ -1182,7 +1182,7 @@ static void RSurfShader_OpaqueWall_Pass_Light(const entity_render_t *ent, const 
 				{
 					R_Mesh_ResizeCheck(mesh->numverts);
 					memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-					memcpy(varray_texcoord[0], mesh->st, mesh->numverts * sizeof(float[2]));
+					memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
 					R_FillColors(varray_color, mesh->numverts, 0, 0, 0, 1);
 					RSurf_LightSeparate(&ent->inversematrix, surf->dlightbits, mesh->numverts, varray_vertex, varray_color);
 					RSurf_ScaleColors(varray_color, colorscale, mesh->numverts);
@@ -1212,7 +1212,7 @@ static void RSurfShader_OpaqueWall_Pass_Fog(const entity_render_t *ent, const te
 			R_Mesh_ResizeCheck(mesh->numverts);
 			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 			if (m.tex[0])
-				memcpy(varray_texcoord[0], mesh->st, mesh->numverts * sizeof(float[2]));
+				memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
 			RSurf_FogPassColors(varray_vertex, varray_color, fogcolor[0], fogcolor[1], fogcolor[2], 1, r_colorscale, mesh->numverts, modelorg);
 			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
 		}
@@ -1236,7 +1236,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseDetail(const entity_render_t *ent, c
 		{
 			R_Mesh_ResizeCheck(mesh->numverts);
 			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-			memcpy(varray_texcoord[0], mesh->ab, mesh->numverts * sizeof(float[2]));
+			memcpy(varray_texcoord[0], mesh->abc, mesh->numverts * sizeof(float[4]));
 			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
 		}
 	}
@@ -1259,7 +1259,7 @@ static void RSurfShader_OpaqueWall_Pass_Glow(const entity_render_t *ent, const t
 		{
 			R_Mesh_ResizeCheck(mesh->numverts);
 			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-			memcpy(varray_texcoord[0], mesh->st, mesh->numverts * sizeof(float[2]));
+			memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
 			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
 		}
 	}

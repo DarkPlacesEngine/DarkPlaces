@@ -507,11 +507,11 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 		loadmodel->mdlmd2data_indices[i*3+2] = vertremap[temptris[i][2]];
 	}
 	// store the texture coordinates
-	loadmodel->mdlmd2data_texcoords = Mem_Alloc(loadmodel->mempool, sizeof(float[2]) * totalverts);
+	loadmodel->mdlmd2data_texcoords = Mem_Alloc(loadmodel->mempool, sizeof(float[4]) * totalverts);
 	for (i = 0;i < totalverts;i++)
 	{
-		loadmodel->mdlmd2data_texcoords[i*2+0] = vertst[i][0];
-		loadmodel->mdlmd2data_texcoords[i*2+1] = vertst[i][1];
+		loadmodel->mdlmd2data_texcoords[i*4+0] = vertst[i][0];
+		loadmodel->mdlmd2data_texcoords[i*4+1] = vertst[i][1];
 	}
 
 // load the frames
@@ -739,13 +739,13 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 
 	loadmodel->numverts = num;
 	vertremap = Mem_Alloc(loadmodel->mempool, num * sizeof(int));
-	loadmodel->mdlmd2data_texcoords = Mem_Alloc(loadmodel->mempool, num * sizeof(float[2]));
+	loadmodel->mdlmd2data_texcoords = Mem_Alloc(loadmodel->mempool, num * sizeof(float[4]));
 	for (i = 0;i < num;i++)
 	{
 		hash = md2verthashdata + i;
 		vertremap[i] = hash->xyz;
-		loadmodel->mdlmd2data_texcoords[i*2+0] = hash->st[0];
-		loadmodel->mdlmd2data_texcoords[i*2+1] = hash->st[1];
+		loadmodel->mdlmd2data_texcoords[i*4+0] = hash->st[0];
+		loadmodel->mdlmd2data_texcoords[i*4+1] = hash->st[1];
 	}
 
 	Mem_Free(md2verthash);
@@ -825,198 +825,16 @@ extern void R_Model_Zymotic_DrawLight(entity_render_t *ent, vec3_t relativelight
 extern void R_Model_Zymotic_DrawOntoLight(entity_render_t *ent);
 void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 {
-	int i, pbase, *bonecount, numposes;
-	unsigned int count, a, b, c, *renderlist, *renderlistend;
-	rtexture_t **texture;
-	char *shadername;
 	zymtype1header_t *pinmodel, *pheader;
-	zymscene_t *scene;
-	zymbone_t *bone;
-	float corner[2], modelradius;
 
 	pinmodel = (void *)buffer;
-
 	if (memcmp(pinmodel->id, "ZYMOTICMODEL", 12))
 		Host_Error ("Mod_LoadZymoticModel: %s is not a zymotic model\n");
-
 	if (BigLong(pinmodel->type) != 1)
 		Host_Error ("Mod_LoadZymoticModel: only type 1 (skeletal pose) models are currently supported (name = %s)\n", loadmodel->name);
 
 	loadmodel->type = mod_alias;
 	loadmodel->aliastype = ALIASTYPE_ZYM;
-
-	loadmodel->zymdata_header = pheader = Mem_Alloc(loadmodel->mempool, BigLong(pinmodel->filesize));
-
-	pbase = (int) pheader;
-
-	memcpy(pheader, pinmodel, BigLong(pinmodel->filesize));
-
-	// byteswap header
-#define SWAPLONG(var) var = BigLong(var)
-#define SWAPFLOAT(var) var = BigFloat(var)
-#define SWAPVEC(var) SWAPFLOAT(var[0]);SWAPFLOAT(var[1]);SWAPFLOAT(var[2])
-	SWAPLONG(pheader->type);
-	SWAPLONG(pheader->filesize);
-	SWAPVEC(pheader->mins);
-	SWAPVEC(pheader->maxs);
-	SWAPFLOAT(pheader->radius);
-	SWAPLONG(pheader->numverts);
-	SWAPLONG(pheader->numtris);
-	SWAPLONG(pheader->numshaders);
-	SWAPLONG(pheader->numbones);
-	SWAPLONG(pheader->numscenes);
-
-#define SWAPLUMPINFO(var) SWAPLONG(pheader->lump_##var.start);SWAPLONG(pheader->lump_##var.length)
-	SWAPLUMPINFO(scenes);
-	SWAPLUMPINFO(poses);
-	SWAPLUMPINFO(bones);
-	SWAPLUMPINFO(vertbonecounts);
-	SWAPLUMPINFO(verts);
-	SWAPLUMPINFO(texcoords);
-	SWAPLUMPINFO(render);
-	SWAPLUMPINFO(shaders);
-	SWAPLUMPINFO(trizone);
-
-	loadmodel->flags = 0; // there are no flags
-	loadmodel->numframes = pheader->numscenes;
-	loadmodel->synctype = ST_SYNC;
-	loadmodel->numtris = pheader->numtris;
-
-	// FIXME: add skin support and texturing and shaders and...
-	loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) + sizeof(skinframe_t));
-	loadmodel->skinscenes[0].firstframe = 0;
-	loadmodel->skinscenes[0].framecount = 1;
-	loadmodel->skinscenes[0].loop = true;
-	loadmodel->skinscenes[0].framerate = 10;
-	loadmodel->skinframes = (void *)(loadmodel->skinscenes + 1);
-	loadmodel->skinframes->base = NULL;
-	loadmodel->skinframes->fog = NULL;
-	loadmodel->skinframes->pants = NULL;
-	loadmodel->skinframes->shirt = NULL;
-	loadmodel->skinframes->glow = NULL;
-	loadmodel->skinframes->merged = NULL;
-	loadmodel->numskins = 1;
-	numposes = pheader->lump_poses.length / sizeof(float[3][4]) / pheader->numbones;
-
-	// go through the lumps, swapping things
-
-//	zymlump_t lump_scenes; // zymscene_t scene[numscenes]; // name and other information for each scene (see zymscene struct)
-	scene = (void *) (pheader->lump_scenes.start + pbase);
-	loadmodel->animscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numframes);
-	for (i = 0;i < pheader->numscenes;i++)
-	{
-		SWAPVEC(scene->mins);
-		SWAPVEC(scene->maxs);
-		SWAPFLOAT(scene->radius);
-		SWAPFLOAT(scene->framerate);
-		SWAPLONG(scene->flags);
-		SWAPLONG(scene->start);
-		SWAPLONG(scene->length);
-
-		memcpy(loadmodel->animscenes[i].name, scene->name, 32);
-		loadmodel->animscenes[i].firstframe = scene->start;
-		loadmodel->animscenes[i].framecount = scene->length;
-		loadmodel->animscenes[i].framerate = scene->framerate;
-		loadmodel->animscenes[i].loop = (scene->flags & ZYMSCENEFLAG_NOLOOP) == 0;
-
-		if ((unsigned int) loadmodel->animscenes[i].firstframe >= numposes)
-			Host_Error("Mod_LoadZymoticModel: scene firstframe (%i) >= numposes (%i)\n", loadmodel->animscenes[i].firstframe, numposes);
-		if ((unsigned int) loadmodel->animscenes[i].firstframe + (unsigned int) loadmodel->animscenes[i].framecount > numposes)
-			Host_Error("Mod_LoadZymoticModel: scene firstframe (%i) + framecount (%i) >= numposes (%i)\n", loadmodel->animscenes[i].firstframe, loadmodel->animscenes[i].framecount, numposes);
-		if (loadmodel->animscenes[i].framerate < 0)
-			Host_Error("Mod_LoadZymoticModel: scene framerate (%f) < 0\n", loadmodel->animscenes[i].framerate);
-		scene++;
-	}
-
-//	zymlump_t lump_poses; // float pose[numposes][numbones][3][4]; // animation data
-	zymswapintblock((void *) (pheader->lump_poses.start + pbase), pheader->lump_poses.length);
-
-//	zymlump_t lump_bones; // zymbone_t bone[numbones];
-	bone = (void *) (pheader->lump_bones.start + pbase);
-	for (i = 0;i < pheader->numbones;i++)
-	{
-		SWAPLONG(bone[i].flags);
-		SWAPLONG(bone[i].parent);
-		if (bone[i].parent >= i)
-			Host_Error("Mod_LoadZymoticModel: bone[i].parent >= i in %s\n", loadmodel->name);
-	}
-
-//	zymlump_t lump_vertbonecounts; // int vertbonecounts[numvertices]; // how many bones influence each vertex (separate mainly to make this compress better)
-	zymswapintblock((void *) (pheader->lump_vertbonecounts.start + pbase), pheader->lump_vertbonecounts.length);
-	bonecount = (void *) (pheader->lump_vertbonecounts.start + pbase);
-	for (i = 0;i < pheader->numbones;i++)
-		if (bonecount[i] < 1)
-			Host_Error("Mod_LoadZymoticModel: bone vertex count < 1 in %s\n", loadmodel->name);
-
-//	zymlump_t lump_verts; // zymvertex_t vert[numvertices]; // see vertex struct
-	zymswapintblock((void *) (pheader->lump_verts.start + pbase), pheader->lump_verts.length);
-
-//	zymlump_t lump_texcoords; // float texcoords[numvertices][2];
-	zymswapintblock((void *) (pheader->lump_texcoords.start + pbase), pheader->lump_texcoords.length);
-
-//	zymlump_t lump_render; // int renderlist[rendersize]; // sorted by shader with run lengths (int count), shaders are sequentially used, each run can be used with glDrawElements (each triangle is 3 int indices)
-	zymswapintblock((void *) (pheader->lump_render.start + pbase), pheader->lump_render.length);
-	// validate renderlist and swap winding order of tris
-	renderlist = (void *) (pheader->lump_render.start + pbase);
-	renderlistend = (void *) ((qbyte *) renderlist + pheader->lump_render.length);
-	i = pheader->numshaders * sizeof(int) + pheader->numtris * sizeof(int[3]);
-	if (pheader->lump_render.length != i)
-		Host_Error("Mod_LoadZymoticModel: renderlist is wrong size in %s (is %i bytes, should be %i bytes)\n", loadmodel->name, pheader->lump_render.length, i);
-	for (i = 0;i < pheader->numshaders;i++)
-	{
-		if (renderlist >= renderlistend)
-			Host_Error("Mod_LoadZymoticModel: corrupt renderlist in %s (wrong size)\n", loadmodel->name);
-		count = *renderlist++;
-		if (renderlist + count * 3 > renderlistend)
-			Host_Error("Mod_LoadZymoticModel: corrupt renderlist in %s (wrong size)\n", loadmodel->name);
-		while (count--)
-		{
-			a = renderlist[0];
-			b = renderlist[1];
-			c = renderlist[2];
-			if (a >= pheader->numverts || b >= pheader->numverts || c >= pheader->numverts)
-				Host_Error("Mod_LoadZymoticModel: corrupt renderlist in %s (out of bounds index)\n", loadmodel->name);
-			renderlist[0] = c;
-			renderlist[1] = b;
-			renderlist[2] = a;
-			renderlist += 3;
-		}
-	}
-
-//	zymlump_t lump_shaders; // char shadername[numshaders][32]; // shaders used on this model
-	shadername = (void *) (pheader->lump_shaders.start + pbase);
-	texture = (void *) shadername;
-	for (i = 0;i < pheader->numshaders;i++)
-	{
-		rtexture_t *rt;
-		rt = loadtextureimage(loadmodel->texturepool, shadername, 0, 0, true, r_mipskins.integer, true);
-		shadername += 32;
-		*texture++ = rt; // reuse shader name list for texture pointers
-	}
-
-//	zymlump_t lump_trizone; // byte trizone[numtris]; // see trizone explanation
-	zymswapintblock((void *) (pheader->lump_trizone.start + pbase), pheader->lump_trizone.length);
-
-	// model bbox
-	modelradius = pheader->radius;
-	for (i = 0;i < 3;i++)
-	{
-		loadmodel->normalmins[i] = pheader->mins[i];
-		loadmodel->normalmaxs[i] = pheader->maxs[i];
-		loadmodel->rotatedmins[i] = -modelradius;
-		loadmodel->rotatedmaxs[i] = modelradius;
-	}
-	corner[0] = max(fabs(loadmodel->normalmins[0]), fabs(loadmodel->normalmaxs[0]));
-	corner[1] = max(fabs(loadmodel->normalmins[1]), fabs(loadmodel->normalmaxs[1]));
-	loadmodel->yawmaxs[0] = loadmodel->yawmaxs[1] = sqrt(corner[0]*corner[0]+corner[1]*corner[1]);
-	if (loadmodel->yawmaxs[0] > modelradius)
-		loadmodel->yawmaxs[0] = loadmodel->yawmaxs[1] = modelradius;
-	loadmodel->yawmins[0] = loadmodel->yawmins[1] = -loadmodel->yawmaxs[0];
-	loadmodel->yawmins[2] = loadmodel->normalmins[2];
-	loadmodel->yawmaxs[2] = loadmodel->normalmaxs[2];
-	loadmodel->radius = modelradius;
-	loadmodel->radius2 = modelradius * modelradius;
-
 	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Model_Zymotic_Draw;
 	loadmodel->DrawFakeShadow = NULL;//R_Model_Zymotic_DrawFakeShadow;
@@ -1024,4 +842,229 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 	loadmodel->DrawShadowVolume = NULL;//R_Model_Zymotic_DrawShadowVolume;
 	loadmodel->DrawLight = NULL;//R_Model_Zymotic_DrawLight;
 	loadmodel->DrawOntoLight = NULL;//R_Model_Zymotic_DrawOntoLight;
+
+	// byteswap header
+	pheader = pinmodel;
+	pheader->type = BigLong(pinmodel->type);
+	pheader->filesize = BigLong(pinmodel->filesize);
+	pheader->mins[0] = BigFloat(pinmodel->mins[0]);
+	pheader->mins[1] = BigFloat(pinmodel->mins[1]);
+	pheader->mins[2] = BigFloat(pinmodel->mins[2]);
+	pheader->maxs[0] = BigFloat(pinmodel->maxs[0]);
+	pheader->maxs[1] = BigFloat(pinmodel->maxs[1]);
+	pheader->maxs[2] = BigFloat(pinmodel->maxs[2]);
+	pheader->radius = BigFloat(pinmodel->radius);
+	pheader->numverts = loadmodel->zymnum_verts = BigLong(pinmodel->numverts);
+	pheader->numtris = loadmodel->zymnum_tris = BigLong(pinmodel->numtris);
+	pheader->numshaders = loadmodel->zymnum_shaders = BigLong(pinmodel->numshaders);
+	pheader->numbones = loadmodel->zymnum_bones = BigLong(pinmodel->numbones);
+	pheader->numscenes = loadmodel->zymnum_scenes = BigLong(pinmodel->numscenes);
+	pheader->lump_scenes.start = BigLong(pinmodel->lump_scenes.start);
+	pheader->lump_scenes.length = BigLong(pinmodel->lump_scenes.length);
+	pheader->lump_poses.start = BigLong(pinmodel->lump_poses.start);
+	pheader->lump_poses.length = BigLong(pinmodel->lump_poses.length);
+	pheader->lump_bones.start = BigLong(pinmodel->lump_bones.start);
+	pheader->lump_bones.length = BigLong(pinmodel->lump_bones.length);
+	pheader->lump_vertbonecounts.start = BigLong(pinmodel->lump_vertbonecounts.start);
+	pheader->lump_vertbonecounts.length = BigLong(pinmodel->lump_vertbonecounts.length);
+	pheader->lump_verts.start = BigLong(pinmodel->lump_verts.start);
+	pheader->lump_verts.length = BigLong(pinmodel->lump_verts.length);
+	pheader->lump_texcoords.start = BigLong(pinmodel->lump_texcoords.start);
+	pheader->lump_texcoords.length = BigLong(pinmodel->lump_texcoords.length);
+	pheader->lump_render.start = BigLong(pinmodel->lump_render.start);
+	pheader->lump_render.length = BigLong(pinmodel->lump_render.length);
+	pheader->lump_shaders.start = BigLong(pinmodel->lump_shaders.start);
+	pheader->lump_shaders.length = BigLong(pinmodel->lump_shaders.length);
+	pheader->lump_trizone.start = BigLong(pinmodel->lump_trizone.start);
+	pheader->lump_trizone.length = BigLong(pinmodel->lump_trizone.length);
+
+	loadmodel->flags = 0; // there are no flags
+	loadmodel->numframes = pheader->numscenes;
+	loadmodel->synctype = ST_SYNC;
+	loadmodel->numtris = pheader->numtris;
+	loadmodel->numverts = 0;
+
+	{
+		unsigned int i;
+		float modelradius, corner[2];
+		// model bbox
+		modelradius = pheader->radius;
+		for (i = 0;i < 3;i++)
+		{
+			loadmodel->normalmins[i] = pheader->mins[i];
+			loadmodel->normalmaxs[i] = pheader->maxs[i];
+			loadmodel->rotatedmins[i] = -modelradius;
+			loadmodel->rotatedmaxs[i] = modelradius;
+		}
+		corner[0] = max(fabs(loadmodel->normalmins[0]), fabs(loadmodel->normalmaxs[0]));
+		corner[1] = max(fabs(loadmodel->normalmins[1]), fabs(loadmodel->normalmaxs[1]));
+		loadmodel->yawmaxs[0] = loadmodel->yawmaxs[1] = sqrt(corner[0]*corner[0]+corner[1]*corner[1]);
+		if (loadmodel->yawmaxs[0] > modelradius)
+			loadmodel->yawmaxs[0] = loadmodel->yawmaxs[1] = modelradius;
+		loadmodel->yawmins[0] = loadmodel->yawmins[1] = -loadmodel->yawmaxs[0];
+		loadmodel->yawmins[2] = loadmodel->normalmins[2];
+		loadmodel->yawmaxs[2] = loadmodel->normalmaxs[2];
+		loadmodel->radius = modelradius;
+		loadmodel->radius2 = modelradius * modelradius;
+	}
+
+	{
+		// FIXME: add shaders, and make them switchable shader sets and...
+		loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) + sizeof(skinframe_t));
+		loadmodel->skinscenes[0].firstframe = 0;
+		loadmodel->skinscenes[0].framecount = 1;
+		loadmodel->skinscenes[0].loop = true;
+		loadmodel->skinscenes[0].framerate = 10;
+		loadmodel->skinframes = (void *)(loadmodel->skinscenes + 1);
+		loadmodel->skinframes->base = NULL;
+		loadmodel->skinframes->fog = NULL;
+		loadmodel->skinframes->pants = NULL;
+		loadmodel->skinframes->shirt = NULL;
+		loadmodel->skinframes->glow = NULL;
+		loadmodel->skinframes->merged = NULL;
+		loadmodel->numskins = 1;
+	}
+
+	// go through the lumps, swapping things
+
+	{
+		unsigned int i, numposes;
+		zymscene_t *scene;
+	//	zymlump_t lump_scenes; // zymscene_t scene[numscenes]; // name and other information for each scene (see zymscene struct)
+		loadmodel->animscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numframes);
+		scene = (void *) (pheader->lump_scenes.start + buffer);
+		numposes = pheader->lump_poses.length / pheader->numbones / sizeof(float[3][4]);
+		for (i = 0;i < pheader->numscenes;i++)
+		{
+			memcpy(loadmodel->animscenes[i].name, scene->name, 32);
+			loadmodel->animscenes[i].firstframe = BigLong(scene->start);
+			loadmodel->animscenes[i].framecount = BigLong(scene->length);
+			loadmodel->animscenes[i].framerate = BigFloat(scene->framerate);
+			loadmodel->animscenes[i].loop = (BigLong(scene->flags) & ZYMSCENEFLAG_NOLOOP) == 0;
+			if ((unsigned int) loadmodel->animscenes[i].firstframe >= numposes)
+				Host_Error("Mod_LoadZymoticModel: scene firstframe (%i) >= numposes (%i)\n", loadmodel->animscenes[i].firstframe, numposes);
+			if ((unsigned int) loadmodel->animscenes[i].firstframe + (unsigned int) loadmodel->animscenes[i].framecount > numposes)
+				Host_Error("Mod_LoadZymoticModel: scene firstframe (%i) + framecount (%i) >= numposes (%i)\n", loadmodel->animscenes[i].firstframe, loadmodel->animscenes[i].framecount, numposes);
+			if (loadmodel->animscenes[i].framerate < 0)
+				Host_Error("Mod_LoadZymoticModel: scene framerate (%f) < 0\n", loadmodel->animscenes[i].framerate);
+			scene++;
+		}
+	}
+
+	{
+		unsigned int i;
+		float *poses;
+	//	zymlump_t lump_poses; // float pose[numposes][numbones][3][4]; // animation data
+		loadmodel->zymdata_poses = Mem_Alloc(loadmodel->mempool, pheader->lump_poses.length);
+		poses = (void *) (pheader->lump_poses.start + buffer);
+		for (i = 0;i < pheader->lump_poses.length / 4;i++)
+			loadmodel->zymdata_poses[i] = BigFloat(poses[i]);
+	}
+
+	{
+		unsigned int i;
+		zymbone_t *bone;
+	//	zymlump_t lump_bones; // zymbone_t bone[numbones];
+		loadmodel->zymdata_bones = Mem_Alloc(loadmodel->mempool, pheader->numbones * sizeof(zymbone_t));
+		bone = (void *) (pheader->lump_bones.start + buffer);
+		for (i = 0;i < pheader->numbones;i++)
+		{
+			memcpy(loadmodel->zymdata_bones[i].name, bone[i].name, sizeof(bone[i].name));
+			loadmodel->zymdata_bones[i].flags = BigLong(bone[i].flags);
+			loadmodel->zymdata_bones[i].parent = BigLong(bone[i].parent);
+			if (bone[i].parent >= i)
+				Host_Error("Mod_LoadZymoticModel: bone[i].parent >= i in %s\n", loadmodel->name);
+		}
+	}
+
+	{
+		unsigned int i, *bonecount;
+	//	zymlump_t lump_vertbonecounts; // int vertbonecounts[numvertices]; // how many bones influence each vertex (separate mainly to make this compress better)
+		loadmodel->zymdata_vertbonecounts = Mem_Alloc(loadmodel->mempool, pheader->numbones * sizeof(int));
+		bonecount = (void *) (pheader->lump_vertbonecounts.start + buffer);
+		for (i = 0;i < pheader->numbones;i++)
+		{
+			loadmodel->zymdata_vertbonecounts[i] = BigLong(bonecount[i]);
+			if (loadmodel->zymdata_vertbonecounts[i] < 1)
+				Host_Error("Mod_LoadZymoticModel: bone vertex count < 1 in %s\n", loadmodel->name);
+		}
+	}
+
+	{
+		unsigned int i;
+		zymvertex_t *vertdata;
+	//	zymlump_t lump_verts; // zymvertex_t vert[numvertices]; // see vertex struct
+		loadmodel->zymdata_verts = Mem_Alloc(loadmodel->mempool, pheader->lump_verts.length);
+		vertdata = (void *) (pheader->lump_verts.start + buffer);
+		for (i = 0;i < pheader->lump_verts.length / 4;i++)
+		{
+			loadmodel->zymdata_verts[i].bonenum = BigLong(vertdata[i].bonenum);
+			loadmodel->zymdata_verts[i].origin[0] = BigLong(vertdata[i].origin[0]);
+			loadmodel->zymdata_verts[i].origin[1] = BigLong(vertdata[i].origin[1]);
+			loadmodel->zymdata_verts[i].origin[2] = BigLong(vertdata[i].origin[2]);
+		}
+	}
+
+	{
+		unsigned int i;
+		float *intexcoord, *outtexcoord;
+	//	zymlump_t lump_texcoords; // float texcoords[numvertices][2];
+		loadmodel->zymdata_texcoords = outtexcoord = Mem_Alloc(loadmodel->mempool, pheader->numverts * sizeof(float[4]));
+		intexcoord = (void *) (pheader->lump_texcoords.start + buffer);
+		for (i = 0;i < pheader->numverts;i++);
+		{
+			outtexcoord[i*4+0] = BigFloat(intexcoord[i*2+0]);
+			// flip T coordinate for OpenGL
+			outtexcoord[i*4+1] = 1 - BigFloat(intexcoord[i*2+1]);
+		}
+	}
+
+	{
+		unsigned int i, count, a, b, c, *renderlist, *renderlistend, *outrenderlist;
+	//	zymlump_t lump_render; // int renderlist[rendersize]; // sorted by shader with run lengths (int count), shaders are sequentially used, each run can be used with glDrawElements (each triangle is 3 int indices)
+		loadmodel->zymdata_renderlist = Mem_Alloc(loadmodel->mempool, pheader->lump_render.length);
+		// byteswap, validate, and swap winding order of tris
+		count = pheader->numshaders * sizeof(int) + pheader->numtris * sizeof(int[3]);
+		if (pheader->lump_render.length != count)
+			Host_Error("Mod_LoadZymoticModel: renderlist is wrong size in %s (is %i bytes, should be %i bytes)\n", loadmodel->name, pheader->lump_render.length, count);
+		outrenderlist = loadmodel->zymdata_renderlist = Mem_Alloc(loadmodel->mempool, count);
+		renderlist = (void *) (pheader->lump_render.start + buffer);
+		renderlistend = (void *) ((qbyte *) renderlist + pheader->lump_render.length);
+		for (i = 0;i < pheader->numshaders;i++)
+		{
+			if (renderlist >= renderlistend)
+				Host_Error("Mod_LoadZymoticModel: corrupt renderlist in %s (wrong size)\n", loadmodel->name);
+			count = BigLong(*renderlist);renderlist++;
+			if (renderlist + count * 3 > renderlistend)
+				Host_Error("Mod_LoadZymoticModel: corrupt renderlist in %s (wrong size)\n", loadmodel->name);
+			*outrenderlist++ = count;
+			while (count--)
+			{
+				a = BigLong(renderlist[0]);
+				b = BigLong(renderlist[1]);
+				c = BigLong(renderlist[2]);
+				renderlist += 3;
+				if (a >= pheader->numverts || b >= pheader->numverts || c >= pheader->numverts)
+					Host_Error("Mod_LoadZymoticModel: corrupt renderlist in %s (out of bounds index)\n", loadmodel->name);
+				*outrenderlist++ = c;
+				*outrenderlist++ = b;
+				*outrenderlist++ = a;
+			}
+		}
+	}
+
+	{
+		unsigned int i;
+		char *shadername;
+	//	zymlump_t lump_shaders; // char shadername[numshaders][32]; // shaders used on this model
+		shadername = (void *) (pheader->lump_shaders.start + buffer);
+		for (i = 0;i < pheader->numshaders;i++)
+			loadmodel->zymdata_textures[i] = loadtextureimage(loadmodel->texturepool, shadername + i * 32, 0, 0, true, r_mipskins.integer, true);
+	}
+
+	{
+	//	zymlump_t lump_trizone; // byte trizone[numtris]; // see trizone explanation
+		loadmodel->zymdata_trizone = Mem_Alloc(loadmodel->mempool, pheader->numtris);
+		memcpy(loadmodel->zymdata_trizone, (void *) (pheader->lump_trizone.start + buffer), pheader->numtris);
+	}
 }

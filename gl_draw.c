@@ -459,10 +459,10 @@ void R_DrawQueue(void)
 				if (h == 0)
 					h = pic->height;
 			}
-			varray_texcoord[0][0] = 0;varray_texcoord[0][1] = 0;
-			varray_texcoord[0][2] = 1;varray_texcoord[0][3] = 0;
-			varray_texcoord[0][4] = 1;varray_texcoord[0][5] = 1;
-			varray_texcoord[0][6] = 0;varray_texcoord[0][7] = 1;
+			varray_texcoord[0][ 0] = 0;varray_texcoord[0][ 1] = 0;
+			varray_texcoord[0][ 4] = 1;varray_texcoord[0][ 5] = 0;
+			varray_texcoord[0][ 8] = 1;varray_texcoord[0][ 9] = 1;
+			varray_texcoord[0][12] = 0;varray_texcoord[0][13] = 1;
 			varray_vertex[ 0] = x  ;varray_vertex[ 1] = y  ;varray_vertex[ 2] = 10;
 			varray_vertex[ 4] = x+w;varray_vertex[ 5] = y  ;varray_vertex[ 6] = 10;
 			varray_vertex[ 8] = x+w;varray_vertex[ 9] = y+h;varray_vertex[10] = 10;
@@ -490,15 +490,15 @@ void R_DrawQueue(void)
 					t = (num >> 4)*0.0625f + (0.5f / 256.0f);
 					u = 0.0625f - (1.0f / 256.0f);
 					v = 0.0625f - (1.0f / 256.0f);
-					at[0] = s  ;at[1] = t  ;
-					at[2] = s+u;at[3] = t  ;
-					at[4] = s+u;at[5] = t+v;
-					at[6] = s  ;at[7] = t+v;
+					at[ 0] = s  ;at[ 1] = t  ;
+					at[ 4] = s+u;at[ 5] = t  ;
+					at[ 8] = s+u;at[ 9] = t+v;
+					at[12] = s  ;at[13] = t+v;
 					av[ 0] = x  ;av[ 1] = y  ;av[ 2] = 10;
 					av[ 4] = x+w;av[ 5] = y  ;av[ 6] = 10;
 					av[ 8] = x+w;av[ 9] = y+h;av[10] = 10;
 					av[12] = x  ;av[13] = y+h;av[14] = 10;
-					at += 8;
+					at += 16;
 					av += 16;
 					batchcount++;
 					if (batchcount >= 128)
@@ -520,7 +520,7 @@ void R_DrawQueue(void)
 			R_Mesh_TextureState(&m);
 			R_Mesh_ResizeCheck(mesh->numvertices);
 			memcpy(varray_vertex, mesh->vertices, sizeof(float[4]) * mesh->numvertices);
-			memcpy(varray_texcoord[0], mesh->texcoords, sizeof(float[2]) * mesh->numvertices);
+			memcpy(varray_texcoord[0], mesh->texcoords, sizeof(float[4]) * mesh->numvertices);
 			memcpy(varray_color, mesh->colors, sizeof(float[4]) * mesh->numvertices);
 			GL_UseColorArray();
 			R_Mesh_Draw(mesh->numvertices, mesh->numtriangles, mesh->indices);
@@ -533,8 +533,8 @@ void R_DrawQueue(void)
 	{
 		// we use one big triangle for all the screen blends
 		varray_texcoord[0][0] = 0;varray_texcoord[0][1] = 0;
-		varray_texcoord[0][2] = 0;varray_texcoord[0][3] = 0;
 		varray_texcoord[0][4] = 0;varray_texcoord[0][5] = 0;
+		varray_texcoord[0][8] = 0;varray_texcoord[0][9] = 0;
 		varray_vertex[0] = -5000;varray_vertex[1] = -5000;varray_vertex[2] = 10;
 		varray_vertex[4] = 10000;varray_vertex[5] = -5000;varray_vertex[6] = 10;
 		varray_vertex[8] = -5000;varray_vertex[9] = 10000;varray_vertex[10] = 10;

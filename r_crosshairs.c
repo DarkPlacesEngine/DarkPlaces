@@ -42,14 +42,10 @@ void R_DrawCrosshairSprite(rtexture_t *texture, vec3_t origin, vec_t scale, floa
 	R_Mesh_State(&m);
 
 	GL_Color(cr * r_colorscale, cg * r_colorscale, cb * r_colorscale, ca);
-	varray_texcoord[0][0] = 0;
-	varray_texcoord[0][1] = 0;
-	varray_texcoord[0][2] = 0;
-	varray_texcoord[0][3] = 1;
-	varray_texcoord[0][4] = 1;
-	varray_texcoord[0][5] = 1;
-	varray_texcoord[0][6] = 1;
-	varray_texcoord[0][7] = 0;
+	varray_texcoord[0][ 0] = 0;varray_texcoord[0][ 1] = 0;
+	varray_texcoord[0][ 4] = 0;varray_texcoord[0][ 5] = 1;
+	varray_texcoord[0][ 8] = 1;varray_texcoord[0][ 9] = 1;
+	varray_texcoord[0][12] = 1;varray_texcoord[0][13] = 0;
 	varray_vertex[0] = origin[0] - vright[0] * scale - vup[0] * scale;
 	varray_vertex[1] = origin[1] - vright[1] * scale - vup[1] * scale;
 	varray_vertex[2] = origin[2] - vright[2] * scale - vup[2] * scale;

@@ -2091,14 +2091,14 @@ void Mod_GenerateWallMesh (msurface_t *surf, int vertexonly)
 		vscale = (vscale - vbase) * 16.0 / ((surf->extents[1] & ~15) + 16);
 	}
 
-	surf->mesh = mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + (surf->poly_numverts - 2) * sizeof(int[6]) + surf->poly_numverts * (4 + 2 + 2 + 2 + 1 + 3) * sizeof(float));
+	surf->mesh = mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + (surf->poly_numverts - 2) * sizeof(int[6]) + surf->poly_numverts * (4 + 4 + 4 + 4 + 1 + 3) * sizeof(float));
 	mesh->numverts = surf->poly_numverts;
 	mesh->numtriangles = surf->poly_numverts - 2;
 	mesh->verts = (float *)(mesh + 1);
-	mesh->st = mesh->verts + mesh->numverts * 4;
-	mesh->uv = mesh->st + mesh->numverts * 2;
-	mesh->ab = mesh->uv + mesh->numverts * 2;
-	mesh->lightmapoffsets = (int *)(mesh->ab + mesh->numverts * 2);
+	mesh->str = mesh->verts + mesh->numverts * 4;
+	mesh->uvw = mesh->str + mesh->numverts * 4;
+	mesh->abc = mesh->uvw + mesh->numverts * 4;
+	mesh->lightmapoffsets = (int *)(mesh->abc + mesh->numverts * 4);
 	mesh->index = mesh->lightmapoffsets + mesh->numverts;
 	mesh->triangleneighbors = mesh->index + mesh->numtriangles * 3;
 	mesh->normals = (float *)(mesh->triangleneighbors + mesh->numtriangles * 3);
@@ -2132,12 +2132,12 @@ void Mod_GenerateWallMesh (msurface_t *surf, int vertexonly)
 		mesh->verts[i * 4 + 0] = in[0];
 		mesh->verts[i * 4 + 1] = in[1];
 		mesh->verts[i * 4 + 2] = in[2];
-		mesh->st[i * 2 + 0] = s / surf->texinfo->texture->width;
-		mesh->st[i * 2 + 1] = t / surf->texinfo->texture->height;
-		mesh->uv[i * 2 + 0] = u;
-		mesh->uv[i * 2 + 1] = v;
-		mesh->ab[i * 2 + 0] = s * (1.0f / 16.0f);
-		mesh->ab[i * 2 + 1] = t * (1.0f / 16.0f);
+		mesh->str[i * 4 + 0] = s / surf->texinfo->texture->width;
+		mesh->str[i * 4 + 1] = t / surf->texinfo->texture->height;
+		mesh->uvw[i * 4 + 0] = u;
+		mesh->uvw[i * 4 + 1] = v;
+		mesh->abc[i * 4 + 0] = s * (1.0f / 16.0f);
+		mesh->abc[i * 4 + 1] = t * (1.0f / 16.0f);
 		mesh->lightmapoffsets[i] = ((iv * (smax+1) + iu) * 3);
 		mesh->normals[i * 3 + 0] = normal[0];
 		mesh->normals[i * 3 + 1] = normal[1];
@@ -2154,13 +2154,13 @@ void Mod_GenerateVertexMesh (msurface_t *surf)
 	surf->lightmaptexturestride = 0;
 	surf->lightmaptexture = NULL;
 
-	surf->mesh = mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + (surf->poly_numverts - 2) * sizeof(int[6]) + surf->poly_numverts * (4 + 2 + 2 + 3) * sizeof(float));
+	surf->mesh = mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + (surf->poly_numverts - 2) * sizeof(int[6]) + surf->poly_numverts * (4 + 4 + 4 + 3) * sizeof(float));
 	mesh->numverts = surf->poly_numverts;
 	mesh->numtriangles = surf->poly_numverts - 2;
 	mesh->verts = (float *)(mesh + 1);
-	mesh->st = mesh->verts + mesh->numverts * 4;
-	mesh->ab = mesh->st + mesh->numverts * 2;
-	mesh->index = (int *)(mesh->ab + mesh->numverts * 2);
+	mesh->str = mesh->verts + mesh->numverts * 4;
+	mesh->abc = mesh->str + mesh->numverts * 4;
+	mesh->index = (int *)(mesh->abc + mesh->numverts * 4);
 	mesh->triangleneighbors = mesh->index + mesh->numtriangles * 3;
 	mesh->normals = (float *)(mesh->triangleneighbors + mesh->numtriangles * 3);
 
@@ -2183,10 +2183,10 @@ void Mod_GenerateVertexMesh (msurface_t *surf)
 		mesh->verts[i * 4 + 0] = in[0];
 		mesh->verts[i * 4 + 1] = in[1];
 		mesh->verts[i * 4 + 2] = in[2];
-		mesh->st[i * 2 + 0] = s / surf->texinfo->texture->width;
-		mesh->st[i * 2 + 1] = t / surf->texinfo->texture->height;
-		mesh->ab[i * 2 + 0] = s * (1.0f / 16.0f);
-		mesh->ab[i * 2 + 1] = t * (1.0f / 16.0f);
+		mesh->str[i * 4 + 0] = s / surf->texinfo->texture->width;
+		mesh->str[i * 4 + 1] = t / surf->texinfo->texture->height;
+		mesh->abc[i * 4 + 0] = s * (1.0f / 16.0f);
+		mesh->abc[i * 4 + 1] = t * (1.0f / 16.0f);
 		mesh->normals[i * 3 + 0] = normal[0];
 		mesh->normals[i * 3 + 1] = normal[1];
 		mesh->normals[i * 3 + 2] = normal[2];

@@ -145,9 +145,9 @@ typedef struct surfmesh_s
 	float *verts;
 	float *normals;
 	int *lightmapoffsets;
-	float *st;
-	float *uv;
-	float *ab;
+	float *str;
+	float *uvw;
+	float *abc;
 	int *index;
 	int *triangleneighbors;
 }

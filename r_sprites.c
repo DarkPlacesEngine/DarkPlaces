@@ -89,14 +89,10 @@ static void R_DrawSpriteImage (int additive, mspriteframe_t *frame, int texture,
 	m.tex[0] = texture;
 	R_Mesh_State(&m);
 
-	varray_texcoord[0][0] = 0;
-	varray_texcoord[0][1] = 1;
-	varray_texcoord[0][2] = 0;
-	varray_texcoord[0][3] = 0;
-	varray_texcoord[0][4] = 1;
-	varray_texcoord[0][5] = 0;
-	varray_texcoord[0][6] = 1;
-	varray_texcoord[0][7] = 1;
+	varray_texcoord[0][ 0] = 0;varray_texcoord[0][ 1] = 1;
+	varray_texcoord[0][ 4] = 0;varray_texcoord[0][ 5] = 0;
+	varray_texcoord[0][ 8] = 1;varray_texcoord[0][ 9] = 0;
+	varray_texcoord[0][12] = 1;varray_texcoord[0][13] = 1;
 	// FIXME: negate left and right in loader
 	varray_vertex[0] = origin[0] + frame->down * up[0] - frame->left  * left[0];
 	varray_vertex[1] = origin[1] + frame->down * up[1] - frame->left  * left[1];

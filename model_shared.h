@@ -207,7 +207,19 @@ typedef struct model_s
 	int				*mdlmd2data_triangleneighbors;
 
 	// for Zymotic models
-	void			*zymdata_header;
+	int				zymnum_verts;
+	int				zymnum_tris;
+	int				zymnum_shaders;
+	int				zymnum_bones;
+	int				zymnum_scenes;
+	float			*zymdata_texcoords;
+	rtexture_t		**zymdata_textures;
+	qbyte			*zymdata_trizone;
+	zymbone_t		*zymdata_bones;
+	unsigned int	*zymdata_vertbonecounts;
+	zymvertex_t		*zymdata_verts;
+	unsigned int	*zymdata_renderlist;
+	float			*zymdata_poses;
 
 	int				sprnum_type;
 	mspriteframe_t	*sprdata_frames;

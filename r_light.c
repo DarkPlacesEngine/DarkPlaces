@@ -153,6 +153,10 @@ void R_DrawCoronas(void)
 	R_Mesh_Matrix(&r_identitymatrix);
 	R_Mesh_State(&m);
 	viewdist = DotProduct(r_origin, vpn);
+	varray_texcoord[0][ 0] = 0;varray_texcoord[0][ 1] = 0;
+	varray_texcoord[0][ 4] = 0;varray_texcoord[0][ 5] = 1;
+	varray_texcoord[0][ 8] = 1;varray_texcoord[0][ 9] = 1;
+	varray_texcoord[0][12] = 1;varray_texcoord[0][13] = 0;
 	for (i = 0;i < r_numdlights;i++)
 	{
 		rd = r_dlight + i;
@@ -168,14 +172,6 @@ void R_DrawCoronas(void)
 				scale *= 1 - exp(fogdensity/DotProduct(diff,diff));
 			}
 			GL_Color(rd->light[0] * scale, rd->light[1] * scale, rd->light[2] * scale, 1);
-			varray_texcoord[0][0] = 0;
-			varray_texcoord[0][1] = 0;
-			varray_texcoord[0][2] = 0;
-			varray_texcoord[0][3] = 1;
-			varray_texcoord[0][4] = 1;
-			varray_texcoord[0][5] = 1;
-			varray_texcoord[0][6] = 1;
-			varray_texcoord[0][7] = 0;
 			scale = rd->cullradius * 0.25f;
 			if (gl_flashblend.integer)
 				scale *= 2.0f;
