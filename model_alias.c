@@ -981,8 +981,8 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
 	loadmodel->flags = 0; // there are no flags
 	loadmodel->numframes = pheader->numscenes;
 	loadmodel->synctype = ST_SYNC;
-	//loadmodel->numtris = pheader->numtris;
-	//loadmodel->numverts = 0;
+	//loadmodel->num_triangles = pheader->num_triangles;
+	//loadmodel->num_vertices = 0;
 
 	{
 		unsigned int i;

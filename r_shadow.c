@@ -1711,7 +1711,6 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 	shadowmesh_t *mesh, *castmesh;
 	mleaf_t *leaf;
 	msurface_t *surf;
-	surfmesh_t *surfmesh;
 
 	if (radius < 15 || DotProduct(color, color) < 0.03)
 	{
@@ -1840,9 +1839,8 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 			// make a mesh to cast a shadow volume from
 			castmesh = Mod_ShadowMesh_Begin(r_shadow_mempool, 32768);
 			for (j = 0;j < e->numsurfaces;j++)
-				if (e->surfaces[j]->castshadow == castshadowcount)
-					for (surfmesh = e->surfaces[j]->mesh;surfmesh;surfmesh = surfmesh->chain)
-						Mod_ShadowMesh_AddMesh(r_shadow_mempool, castmesh, surfmesh->vertex3f, surfmesh->numtriangles, surfmesh->element3i);
+				if ((surf = e->surfaces[j])->castshadow == castshadowcount)
+					Mod_ShadowMesh_AddMesh(r_shadow_mempool, castmesh, surf->mesh.data_vertex3f, surf->mesh.num_triangles, surf->mesh.data_element3i);
 			castmesh = Mod_ShadowMesh_Finish(r_shadow_mempool, castmesh);
 
 			// cast shadow volume from castmesh

@@ -497,12 +497,12 @@ void R_DrawQueue(void)
 			break;
 		case DRAWQUEUE_MESH:
 			mesh = (void *)(dq + 1);
-			GL_VertexPointer(mesh->vertex3f);
-			GL_ColorPointer(mesh->color4f);
+			GL_VertexPointer(mesh->data_vertex3f);
+			GL_ColorPointer(mesh->data_color4f);
 			m.tex[0] = R_GetTexture(mesh->texture);
-			m.pointer_texcoord[0] = mesh->texcoord2f;
+			m.pointer_texcoord[0] = mesh->data_texcoord2f;
 			R_Mesh_State_Texture(&m);
-			R_Mesh_Draw(mesh->numvertices, mesh->numtriangles, mesh->element3i);
+			R_Mesh_Draw(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
 			currentpic = "\0";
 			break;
 		}

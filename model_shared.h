@@ -202,7 +202,6 @@ typedef struct model_brushq1_s
 	int				*surfacepvsframes;
 	msurface_t		*surfacepvsnext;
 	surfmesh_t		*entiremesh;
-	surfmesh_t		*surfmeshes;
 
 	int				numsurfedges;
 	int				*surfedges;
@@ -358,9 +357,7 @@ typedef struct q3mface_s
 	int collisionmarkframe; // don't collide twice in one trace
 	int type;
 	int firstvertex;
-	int numvertices;
 	int firstelement;
-	int numelements;
 	int patchsize[2];
 	// used for processing
 	int markframe;
@@ -370,6 +367,8 @@ typedef struct q3mface_s
 	float mins[3];
 	float maxs[3];
 
+	int num_vertices;
+	int num_triangles;
 	float *data_vertex3f;
 	float *data_texcoordtexture2f;
 	float *data_texcoordlightmap2f;
@@ -377,7 +376,6 @@ typedef struct q3mface_s
 	float *data_tvector3f;
 	float *data_normal3f;
 	float *data_color4f;
-	int numtriangles;
 	int *data_element3i;
 	int *data_neighbor3i;
 }
