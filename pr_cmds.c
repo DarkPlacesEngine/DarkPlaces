@@ -112,6 +112,7 @@ char *ENGINE_EXTENSIONS =
 "DP_QC_FS_SEARCH " // Black: same as in the menu qc
 "DP_QC_GETLIGHT "
 "DP_QC_GETSURFACE "
+"DP_QC_GETTAGINFO "
 "DP_QC_MINMAXBOUND "
 "DP_QC_MULTIPLETEMPSTRINGS "
 "DP_QC_RANDOMVEC "
@@ -3130,6 +3131,180 @@ void PF_setattachment (void)
 	}
 }
 
+/////////////////////////////////////////
+// DP_MD3_TAGINFO extension coded by VorteX
+
+//float(entity ent, string tagname) gettagindex;
+void PF_gettagindex (void)
+{
+	edict_t *e = G_EDICT(OFS_PARM0);
+	const char *tagname = G_STRING(OFS_PARM1);
+	int modelindex, tagindex, i;
+	model_t *model;
+
+	if (e == sv.edicts)
+		PF_WARNING("gettagindex: can't affect world entity\n");
+	if (e->e->free)
+		PF_WARNING("gettagindex: can't affect free entity\n");
+
+	modelindex = (int)e->v->modelindex;
+	if (modelindex <= 0 || modelindex > MAX_MODELS)
+	{
+		Con_DPrintf("gettagindex(entity #%i): null or non-precached model\n", NUM_FOR_EDICT(e));
+		return;
+	}
+	model = sv.models[modelindex];
+
+	tagindex = -1;
+	if (model->data_overridetagnamesforskin && (unsigned int)e->v->skin < (unsigned int)model->numskins && model->data_overridetagnamesforskin[(unsigned int)e->v->skin].num_overridetagnames)
+	{
+		for (i = 0; i < model->data_overridetagnamesforskin[(unsigned int)e->v->skin].num_overridetagnames; i++)
+		{
+			if (!strcmp(tagname, model->data_overridetagnamesforskin[(unsigned int)e->v->skin].data_overridetagnames[i].name))
+			{
+				tagindex = i;
+				break;
+			}
+		}
+	}
+	if (tagindex == -1)
+	{
+		for (i = 0;i < model->alias.aliasnum_tags; i++)
+		{
+			if (!(strcmp(tagname, model->alias.aliasdata_tags[i].name)))
+			{
+				tagindex = i;
+				break;
+			}
+		}
+	}
+	if (tagindex == -1)
+		Con_DPrintf("gettagindex(entity #%i): tag \"%s\" not found\n", NUM_FOR_EDICT(e), tagname);
+	G_FLOAT(OFS_RETURN) = tagindex + 1;
+};
+
+// Warnings/errors code:
+// 0 - normal (everything all-right)
+// 1 - world entity
+// 2 - free entity
+// 3 - null or non-precached model
+// 4 - no tags with requested index
+int SV_GetTagMatrix (matrix4x4_t *out, edict_t *ent, int tagindex)
+{
+	eval_t *val;
+	float scale;
+	int modelindex, tagsnum, reqframe;
+	matrix4x4_t entitymatrix, tagmatrix;
+	model_t *model;
+
+	Matrix4x4_CreateIdentity(out); // warnings and errors return identical matrix
+
+	if (ent == sv.edicts)
+		return 1;
+	if (ent->e->free)
+		return 2;
+
+	modelindex = (int)ent->v->modelindex;
+	if (modelindex <= 0 || modelindex > MAX_MODELS)
+		return 3;
+
+	model = sv.models[modelindex];
+	tagsnum = model->alias.aliasnum_tags;
+
+	if (tagindex <= 0 || tagindex > tagsnum)
+	{
+		if (tagsnum && tagindex) // Only appear if model has no tags or not-null tag requested
+			return 4;
+		return 0;
+	}
+
+	if (ent->v->frame < 0 || ent->v->frame > model->alias.aliasnum_tagframes)
+		reqframe = 0; // if model has wrong frame, engine automatically switches to model first frame
+	else
+		reqframe = ent->v->frame;
+
+	// just reusing a temp
+	modelindex = (tagindex - 1) + ent->v->frame*tagsnum;
+
+	// transform tag by its own entity matrix
+	Matrix4x4_Copy(&tagmatrix, &model->alias.aliasdata_tags[modelindex].matrix);
+	// FIXME: add scale parameter
+	scale = 1;
+	// Alias models have inverse pitch, bmodels can't have tags, so don't check for modeltype...
+	Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2], -ent->v->angles[0], ent->v->angles[1], ent->v->angles[2], scale);
+	Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
+	// True origin for rotation (Matrix4x4_Concat creates wrong), this is done using all rotation matrix
+	out->m[0][3] = entitymatrix.m[0][3] + scale*tagmatrix.m[0][3]*(entitymatrix.m[0][0] + entitymatrix.m[0][1] + entitymatrix.m[0][2]);
+	out->m[1][3] = entitymatrix.m[1][3] + scale*tagmatrix.m[1][3]*(entitymatrix.m[1][0] + entitymatrix.m[1][1] + entitymatrix.m[1][2]);
+	out->m[2][3] = entitymatrix.m[2][3] + scale*tagmatrix.m[2][3]*(entitymatrix.m[2][0] + entitymatrix.m[2][1] + entitymatrix.m[2][2]);
+	/* Optimised variant with only v_forward using
+	out->m[0][3] = entitymatrix.m[0][3] + scale*entitymatrix.m[0][0]*tagmatrix.m[0][3];
+	out->m[1][3] = entitymatrix.m[1][3] + scale*entitymatrix.m[1][0]*tagmatrix.m[1][3];
+	out->m[2][3] = entitymatrix.m[2][3] + scale*entitymatrix.m[2][0]*tagmatrix.m[2][3];
+	*/
+
+	// additional actions for render-view entities
+	if ((val = GETEDICTFIELDVALUE(ent, eval_viewmodelforclient)) && val->edict)
+	{// RENDER_VIEWMODEL
+		ent = EDICT_NUM(val->edict);
+		// FIXME: "circle" bug, add bobbing (cl_bob), add scale parameter
+		scale = 1;
+		Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2] + ent->v->view_ofs[2], ent->v->v_angle[0], ent->v->v_angle[1], ent->v->v_angle[2], scale);
+		Matrix4x4_Concat(out, &entitymatrix, out);
+		out->m[0][3] = entitymatrix.m[0][3] + scale*entitymatrix.m[0][0]*out->m[0][3];
+		out->m[1][3] = entitymatrix.m[1][3] + scale*entitymatrix.m[1][0]*out->m[1][3];
+		out->m[2][3] = entitymatrix.m[2][3] + scale*entitymatrix.m[2][0]*out->m[2][3];
+		Con_DPrintf("SV_GetTagMatrix: returned origin is %f %f %f\n", out->m[0][3], out->m[1][3], out->m[2][3]);
+		return 0;
+	}
+	// RENDER_VIEWMODEL can't be attached by tag, right?
+	val = GETEDICTFIELDVALUE(ent, eval_tag_entity);
+	if (val->edict)
+	{// DP_GFX_QUAKE3MODELTAGS
+		do
+		{
+			ent = EDICT_NUM(val->edict);
+			// FIXME: add scale parameter
+			Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2], -ent->v->angles[0], ent->v->angles[1], ent->v->angles[2], scale);
+			Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
+			// True origin for rotation (Matrix4x4_Concat creates wrong), this is done using all rotation matrix
+			out->m[0][3] = entitymatrix.m[0][3] + scale*tagmatrix.m[0][3]*(entitymatrix.m[0][0] + entitymatrix.m[0][1] + entitymatrix.m[0][2]);
+			out->m[1][3] = entitymatrix.m[1][3] + scale*tagmatrix.m[1][3]*(entitymatrix.m[1][0] + entitymatrix.m[1][1] + entitymatrix.m[1][2]);
+			out->m[2][3] = entitymatrix.m[2][3] + scale*tagmatrix.m[2][3]*(entitymatrix.m[2][0] + entitymatrix.m[2][1] + entitymatrix.m[2][2]);
+		}
+		while ((val = GETEDICTFIELDVALUE(ent, eval_tag_entity)) && val->edict);
+	}
+	return 0;
+}
+
+//vector(entity ent, float tagindex) gettaginfo;
+void PF_gettaginfo (void)
+{
+	edict_t *e = G_EDICT(OFS_PARM0);
+	int tagindex = (int)G_FLOAT(OFS_PARM1);
+	matrix4x4_t tag_matrix;
+	int returncode;
+
+	returncode = SV_GetTagMatrix(&tag_matrix, e, tagindex);
+	Matrix4x4_ToVectors(&tag_matrix, pr_global_struct->v_forward, pr_global_struct->v_right, pr_global_struct->v_up, G_VECTOR(OFS_RETURN));
+
+	switch(returncode)
+	{
+		case 1:
+			PF_WARNING("gettagindex: can't affect world entity\n");
+			break;
+		case 2:
+			PF_WARNING("gettagindex: can't affect free entity\n");
+			break;
+		case 3:
+			Con_DPrintf("SV_GetTagMatrix(entity #%i): null or non-precached model\n", NUM_FOR_EDICT(e));
+			break;
+		case 4:
+			Con_DPrintf("SV_GetTagMatrix(entity #%i): model has no tag with requested index %i\n", NUM_FOR_EDICT(e), tagindex);
+			break;
+	}
+}
+
 
 /////////////////////////////////////////
 // DP_QC_FS_SEARCH extension
@@ -3480,8 +3655,8 @@ PF_search_getfilename,		// #447
 PF_cvar_string,				// #448 string(string s) cvar_string (DP_QC_CVAR_STRING)
 PF_findflags,				// #449 entity(entity start, .float fld, float match) findflags (DP_QC_FINDFLAGS)
 PF_findchainflags,			// #450 entity(.float fld, float match) findchainflags (DP_QC_FINDCHAINFLAGS)
-NULL,						// #451
-NULL,						// #452
+PF_gettagindex,				// #451 float(entity ent, string tagname) gettagindex (DP_QC_GETTAGINFO)
+PF_gettaginfo,				// #452 vector(entity ent, float tagindex) gettaginfo (DP_QC_GETTAGINFO)
 NULL,						// #453
 NULL,						// #454
 NULL,						// #455
