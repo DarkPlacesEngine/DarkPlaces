@@ -48,6 +48,7 @@ void ResampleSfx (sfxcache_t *sc, qbyte *data, char *name)
 
 	if (fracstep == 256)
 	{
+		// fast case for direct transfer
 		if (sc->width == 1) // 8bit
 			for (i = 0;i < srclength;i++)
 				((signed char *)sc->data)[i] = ((unsigned char *)data)[i] - 128;
@@ -57,7 +58,7 @@ void ResampleSfx (sfxcache_t *sc, qbyte *data, char *name)
 	}
 	else
 	{
-// general case
+		// general case
 		Con_DPrintf("ResampleSfx: resampling sound %s\n", name);
 		samplefrac = 0;
 		if ((fracstep & 255) == 0) // skipping points on perfect multiple
@@ -201,7 +202,7 @@ void ResampleSfx (sfxcache_t *sc, qbyte *data, char *name)
 	}
 
 	// LordHavoc: use this for testing if it ever becomes useful again
-//	COM_WriteFile (va("sound/%s.pcm", name), sc->data, (sc->length << sc->stereo) * sc->width);
+	//COM_WriteFile (va("sound/%s.pcm", name), sc->data, (sc->length << sc->stereo) * sc->width);
 }
 
 //=============================================================================
@@ -213,17 +214,17 @@ S_LoadSound
 */
 sfxcache_t *S_LoadSound (sfx_t *s, int complain)
 {
-    char	namebuffer[256];
-	qbyte	*data;
-	wavinfo_t	info;
-	int		len;
-	sfxcache_t	*sc;
+    char namebuffer[256];
+	qbyte *data;
+	wavinfo_t info;
+	int len;
+	sfxcache_t *sc;
 
-// see if still in memory
+	// see if still in memory
 	if (s->sfxcache)
 		return s->sfxcache;
 
-// load it in
+	// load it in
 	strcpy(namebuffer, "sound/");
 	strcat(namebuffer, s->name);
 
@@ -283,11 +284,11 @@ WAV loading
 */
 
 
-qbyte	*data_p;
-qbyte 	*iff_end;
-qbyte 	*last_chunk;
-qbyte 	*iff_data;
-int 	iff_chunk_len;
+qbyte *data_p;
+qbyte *iff_end;
+qbyte *last_chunk;
+qbyte *iff_data;
+int iff_chunk_len;
 
 
 short GetLittleShort(void)
@@ -345,8 +346,8 @@ void FindChunk(char *name)
 
 void DumpChunks(void)
 {
-	char	str[5];
-	
+	char str[5];
+
 	str[4] = 0;
 	data_p=iff_data;
 	do
@@ -366,10 +367,10 @@ GetWavinfo
 */
 wavinfo_t GetWavinfo (char *name, qbyte *wav, int wavlength)
 {
-	wavinfo_t	info;
-	int     i;
-	int     format;
-	int		samples;
+	wavinfo_t info;
+	int i;
+	int format;
+	int samples;
 
 	memset (&info, 0, sizeof(info));
 
@@ -379,7 +380,7 @@ wavinfo_t GetWavinfo (char *name, qbyte *wav, int wavlength)
 	iff_data = wav;
 	iff_end = wav + wavlength;
 
-// find "RIFF" chunk
+	// find "RIFF" chunk
 	FindChunk("RIFF");
 	if (!(data_p && !strncmp(data_p+8, "WAVE", 4)))
 	{
@@ -387,9 +388,9 @@ wavinfo_t GetWavinfo (char *name, qbyte *wav, int wavlength)
 		return info;
 	}
 
-// get "fmt " chunk
+	// get "fmt " chunk
 	iff_data = data_p + 12;
-// DumpChunks ();
+	//DumpChunks ();
 
 	FindChunk("fmt ");
 	if (!data_p)
@@ -410,14 +411,14 @@ wavinfo_t GetWavinfo (char *name, qbyte *wav, int wavlength)
 	data_p += 4+2;
 	info.width = GetLittleShort() / 8;
 
-// get cue chunk
+	// get cue chunk
 	FindChunk("cue ");
 	if (data_p)
 	{
 		data_p += 32;
 		info.loopstart = GetLittleLong();
 
-	// if the next chunk is a LIST chunk, look for a cue length marker
+		// if the next chunk is a LIST chunk, look for a cue length marker
 		FindNextChunk ("LIST");
 		if (data_p)
 		{
@@ -432,7 +433,7 @@ wavinfo_t GetWavinfo (char *name, qbyte *wav, int wavlength)
 	else
 		info.loopstart = -1;
 
-// find data chunk
+	// find data chunk
 	FindChunk("data");
 	if (!data_p)
 	{
