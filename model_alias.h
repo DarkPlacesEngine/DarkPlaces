@@ -144,7 +144,7 @@ extern void Mod_AliasInit(void);
 #define MD3NAME 64
 #define MD3FRAMENAME 16
 
-// the origin is at 1/16th scale
+// the origin is at 1/64th scale
 // the pitch and yaw are encoded as 8 bits each
 typedef struct md3vertex_s
 {
@@ -229,11 +229,70 @@ md3modelheader_t;
 // LordHavoc: all quake series 'alias' models (mdl, md2, md3) are converted to this vertex format
 typedef struct aliasvertex_s
 {
-	short origin[3];
-	signed char normal[3];
-	signed char svector[3];
+	// location
+	float origin[3];
+	// surface normal
+	float normal[3];
+	// S texture vector
+	float svector[3];
 }
 aliasvertex_t;
+
+// this layer is fog
+#define ALIASLAYER_FOG 1
+// alpha blending
+#define ALIASLAYER_ALPHA 2
+// additive blending
+#define ALIASLAYER_ADD 4
+// apply diffuse lighting
+#define ALIASLAYER_DIFFUSE 8
+// apply specular lighting
+#define ALIASLAYER_SPECULAR 16
+// tint with pants color
+#define ALIASLAYER_COLORMAP_DIFFUSE_PANTS 32
+// tint with shirt color
+#define ALIASLAYER_COLORMAP_DIFFUSE_SHIRT 64
+// don't draw this layer if colormap is used
+#define ALIASLAYER_COLORMAP_NODRAW 128
+// only draw this layer if colormap is used
+#define ALIASLAYER_COLORMAP_DRAW 256
+// don't draw this layer for realtime lighting passes
+#define ALIASLAYER_REALTIME_NODRAW 512
+// only draw this layer for realtime lighting passes
+#define ALIASLAYER_REALTIME_DRAW 1024
+
+typedef struct aliaslayer_s
+{
+	int flags;
+	rtexture_t *texture;
+	rtexture_t *nmap;
+}
+aliaslayer_t;
+
+// indicates this skin is transparent
+#define ALIASSKIN_TRANSPARENT 1
+
+typedef struct aliasskin_s
+{
+	int flags;
+	int num_layers;
+	aliaslayer_t *data_layers;
+}
+aliasskin_t;
+
+typedef struct aliasmesh_s
+{
+	int num_skins;
+	int num_triangles;
+	int num_frames;
+	int num_vertices;
+	aliasskin_t *data_skins;
+	int *data_elements;
+	int *data_neighbors;
+	float *data_texcoords;
+	aliasvertex_t *data_vertices;
+}
+aliasmesh_t;
 
 #endif
 
