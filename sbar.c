@@ -90,6 +90,10 @@ sbarpic_t *somsb_ammo[4];
 sbarpic_t *somsb_armor[3];
 
 cvar_t	showfps = {CVAR_SAVE, "showfps", "0"};
+cvar_t	showtime = {CVAR_SAVE, "showtime", "0"};
+cvar_t	showtime_format = {CVAR_SAVE, "showtime_format", "%H:%M:%S"};
+cvar_t	showdate = {CVAR_SAVE, "showdate", "0"};
+cvar_t	showdate_format = {CVAR_SAVE, "showdate_format", "%Y-%m-%d"};
 cvar_t	sbar_alpha = {CVAR_SAVE, "sbar_alpha", "1"};
 
 void Sbar_MiniDeathmatchOverlay (int x, int y);
@@ -309,6 +313,10 @@ void Sbar_Init (void)
 	Cmd_AddCommand ("+showscores", Sbar_ShowScores);
 	Cmd_AddCommand ("-showscores", Sbar_DontShowScores);
 	Cvar_RegisterVariable (&showfps);
+	Cvar_RegisterVariable (&showtime);
+	Cvar_RegisterVariable (&showtime_format);
+	Cvar_RegisterVariable (&showdate);
+	Cvar_RegisterVariable (&showdate_format);
 	Cvar_RegisterVariable (&sbar_alpha);
 
 	R_RegisterModule("sbar", sbar_start, sbar_shutdown, sbar_newmap);
@@ -782,11 +790,16 @@ void Sbar_DrawFace (void)
 
 void Sbar_ShowFPS(void)
 {
+	float fps_x, fps_y, fps_scalex, fps_scaley, fps_height;
+	char fpsstring[32];
+	char timestring[32];
+	char datestring[32];
+	fpsstring[0] = 0;
+	timestring[0] = 0;
+	datestring[0] = 0;
 	if (showfps.integer)
 	{
 		int calc;
-		char temp[32];
-		float fps_x, fps_y, fps_scalex, fps_scaley;
 		if (showfps.integer > 1)
 		{
 			static double currtime, frametimes[32];
@@ -828,15 +841,41 @@ void Sbar_ShowFPS(void)
 			}
 			calc = framerate;
 		}
-		sprintf(temp, "%4i", calc);
+		snprintf(fpsstring, sizeof(fpsstring), "%4i fps", calc);
+	}
+	if (showtime.integer)
+		strlcpy(timestring, Sys_TimeString(showtime_format.string), sizeof(timestring));
+	if (showdate.integer)
+		strlcpy(datestring, Sys_TimeString(showdate_format.string), sizeof(datestring));
+	if (fpsstring[0] || timestring[0])
+	{
 		fps_scalex = 12;
 		fps_scaley = 12;
-		fps_x = vid.conwidth - (fps_scalex * strlen(temp));
-		fps_y = vid.conheight - sb_lines/* - 8*/; // yes this might draw over the sbar
-		if (fps_y > vid.conheight - fps_scaley)
-			fps_y = vid.conheight - fps_scaley;
-		DrawQ_Fill(fps_x, fps_y, fps_scalex * strlen(temp), fps_scaley, 0, 0, 0, 0.5 * sbar_alpha.value, 0);
-		DrawQ_String(fps_x, fps_y, temp, 0, fps_scalex, fps_scaley, 1, 1, 1, 1 * sbar_alpha.value, 0);
+		fps_height = fps_scaley * ((fpsstring[0] != 0) + (timestring[0] != 0) + (datestring[0] != 0));
+		//fps_y = vid.conheight - sb_lines; // yes this may draw over the sbar
+		//fps_y = bound(0, fps_y, vid.conheight - fps_height);
+		fps_y = vid.conheight - fps_height;
+		if (fpsstring[0])
+		{
+			fps_x = vid.conwidth - fps_scalex * strlen(fpsstring);
+			DrawQ_Fill(fps_x, fps_y, fps_scalex * strlen(fpsstring), fps_scaley, 0, 0, 0, 0.5 * sbar_alpha.value, 0);
+			DrawQ_String(fps_x, fps_y, fpsstring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1 * sbar_alpha.value, 0);
+			fps_y += fps_scaley;
+		}
+		if (timestring[0])
+		{
+			fps_x = vid.conwidth - fps_scalex * strlen(timestring);
+			DrawQ_Fill(fps_x, fps_y, fps_scalex * strlen(timestring), fps_scaley, 0, 0, 0, 0.5 * sbar_alpha.value, 0);
+			DrawQ_String(fps_x, fps_y, timestring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1 * sbar_alpha.value, 0);
+			fps_y += fps_scaley;
+		}
+		if (datestring[0])
+		{
+			fps_x = vid.conwidth - fps_scalex * strlen(datestring);
+			DrawQ_Fill(fps_x, fps_y, fps_scalex * strlen(datestring), fps_scaley, 0, 0, 0, 0.5 * sbar_alpha.value, 0);
+			DrawQ_String(fps_x, fps_y, datestring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1 * sbar_alpha.value, 0);
+			fps_y += fps_scaley;
+		}
 	}
 }
 

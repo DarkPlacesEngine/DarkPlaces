@@ -1164,7 +1164,7 @@ void M_DrawCheckbox (int x, int y, int on)
 }
 
 
-#define OPTIONS_ITEMS 34
+#define OPTIONS_ITEMS 36
 
 int options_cursor;
 
@@ -1233,6 +1233,10 @@ void M_Menu_Options_AdjustSliders (int dir)
 		Cvar_SetValueQuick (&crosshair_static, !crosshair_static.integer);
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&showfps, !showfps.integer);
+	else if (options_cursor == optnum++)
+		Cvar_SetValueQuick (&showtime, !showtime.integer);
+	else if (options_cursor == optnum++)
+		Cvar_SetValueQuick (&showdate, !showdate.integer);
 	else if (options_cursor == optnum++)
 	{
 		if (cl_forwardspeed.value > 200)
@@ -1342,6 +1346,8 @@ void M_Options_Draw (void)
 	M_Options_PrintSlider(  "    Crosshair Size", true, crosshair_size.value, 1, 5);
 	M_Options_PrintCheckbox("  Static Crosshair", true, crosshair_static.integer);
 	M_Options_PrintCheckbox("    Show Framerate", true, showfps.integer);
+	M_Options_PrintCheckbox("         Show Time", true, showtime.integer);
+	M_Options_PrintCheckbox("         Show Date", true, showdate.integer);
 	M_Options_PrintCheckbox("        Always Run", true, cl_forwardspeed.value > 200);
 	M_Options_PrintCheckbox("        Lookspring", true, lookspring.integer);
 	M_Options_PrintCheckbox("        Lookstrafe", true, lookstrafe.integer);
