@@ -365,12 +365,8 @@ static void R_BuildLightMap (msurface_t *surf, int dlightchanged)
 	if ((currentrenderentity->effects & EF_FULLBRIGHT) || !cl.worldmodel->lightdata)
 	{
 		bl = blocklights;
-		for (i = 0;i < size;i++)
-		{
-			*bl++ = 255*256;
-			*bl++ = 255*256;
-			*bl++ = 255*256;
-		}
+		for (i = 0;i < size3;i++)
+			bl[i] = 255*256;
 	}
 	else
 	{
@@ -396,21 +392,19 @@ static void R_BuildLightMap (msurface_t *surf, int dlightchanged)
 
 // add all the lightmaps
 		if (lightmap)
-			for (maps = 0;maps < MAXLIGHTMAPS && surf->styles[maps] != 255;maps++)
-				for (scale = d_lightstylevalue[surf->styles[maps]], bl = blocklights, i = 0;i < size3;i++)
-					*bl++ += *lightmap++ * scale;
+		{
+			bl = blocklights;
+			for (maps = 0;maps < MAXLIGHTMAPS && surf->styles[maps] != 255;maps++, lightmap += size3)
+				for (scale = d_lightstylevalue[surf->styles[maps]], i = 0;i < size3;i++)
+					bl[i] += lightmap[i] * scale;
+		}
 	}
 
 	stain = surf->stainsamples;
-	if (stain)
-		for (bl = blocklights, i = 0;i < size3;i++)
-			if (stain[i] < 255)
-				bl[i] = (bl[i] * stain[i]) >> 8;
-
 	bl = blocklights;
 	out = templight;
 	// deal with lightmap brightness scale
-	shift = 7 + lightscalebit;
+	shift = 15 + lightscalebit;
 	if (currentrenderentity->model->lightmaprgba)
 	{
 		stride = (surf->lightmaptexturestride - smax) * 4;
@@ -418,9 +412,9 @@ static void R_BuildLightMap (msurface_t *surf, int dlightchanged)
 		{
 			for (j = 0;j < smax;j++)
 			{
-				l = *bl++ >> shift;*out++ = min(l, 255);
-				l = *bl++ >> shift;*out++ = min(l, 255);
-				l = *bl++ >> shift;*out++ = min(l, 255);
+				l = (*bl++ * *stain++) >> shift;*out++ = min(l, 255);
+				l = (*bl++ * *stain++) >> shift;*out++ = min(l, 255);
+				l = (*bl++ * *stain++) >> shift;*out++ = min(l, 255);
 				*out++ = 255;
 			}
 		}
@@ -432,9 +426,9 @@ static void R_BuildLightMap (msurface_t *surf, int dlightchanged)
 		{
 			for (j = 0;j < smax;j++)
 			{
-				l = *bl++ >> shift;*out++ = min(l, 255);
-				l = *bl++ >> shift;*out++ = min(l, 255);
-				l = *bl++ >> shift;*out++ = min(l, 255);
+				l = (*bl++ * *stain++) >> shift;*out++ = min(l, 255);
+				l = (*bl++ * *stain++) >> shift;*out++ = min(l, 255);
+				l = (*bl++ * *stain++) >> shift;*out++ = min(l, 255);
 			}
 		}
 	}
