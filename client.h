@@ -272,20 +272,20 @@ extern	beam_t			cl_beams[MAX_BEAMS];
 //
 // cl_main
 //
-void CL_AllocDlight (entity_t *ent, vec3_t org, float radius, float red, float green, float blue, float decay, float lifetime);
-void CL_DecayLights (void);
+extern void CL_AllocDlight (entity_t *ent, vec3_t org, float radius, float red, float green, float blue, float decay, float lifetime);
+extern void CL_DecayLights (void);
 
-void CL_Init (void);
+extern void CL_Init (void);
 
-void CL_EstablishConnection (char *host);
-void CL_Signon1 (void);
-void CL_Signon2 (void);
-void CL_Signon3 (void);
-void CL_Signon4 (void);
+extern void CL_EstablishConnection (char *host);
+extern void CL_Signon1 (void);
+extern void CL_Signon2 (void);
+extern void CL_Signon3 (void);
+extern void CL_Signon4 (void);
 
-void CL_Disconnect (void);
-void CL_Disconnect_f (void);
-void CL_NextDemo (void);
+extern void CL_Disconnect (void);
+extern void CL_Disconnect_f (void);
+extern void CL_NextDemo (void);
 
 // LordHavoc: raised this from 256 to the maximum possible number of entities visible
 #define MAX_VISEDICTS (MAX_EDICTS + MAX_STATIC_ENTITIES + MAX_TEMP_ENTITIES)
@@ -306,61 +306,62 @@ extern	kbutton_t	in_mlook, in_klook;
 extern 	kbutton_t 	in_strafe;
 extern 	kbutton_t 	in_speed;
 
-void CL_InitInput (void);
-void CL_SendCmd (void);
-void CL_SendMove (usercmd_t *cmd);
+extern void CL_InitInput (void);
+extern void CL_SendCmd (void);
+extern void CL_SendMove (usercmd_t *cmd);
 
-void CL_ParseTEnt (void);
-void CL_UpdateTEnts (void);
-void CL_DoEffects (void);
+extern void CL_ParseTEnt (void);
+extern void CL_UpdateTEnts (void);
+extern void CL_DoEffects (void);
 
-entity_t *CL_NewTempEntity (void);
+extern entity_t *CL_NewTempEntity (void);
 
-void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float framerate);
+extern void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float framerate);
 
-void CL_ClearState (void);
-
-
-int  CL_ReadFromServer (void);
-void CL_WriteToServer (usercmd_t *cmd);
-void CL_BaseMove (usercmd_t *cmd);
+extern void CL_ClearState (void);
 
 
-float CL_KeyState (kbutton_t *key);
-char *Key_KeynumToString (int keynum);
+extern int  CL_ReadFromServer (void);
+extern void CL_WriteToServer (usercmd_t *cmd);
+extern void CL_BaseMove (usercmd_t *cmd);
+
+
+extern float CL_KeyState (kbutton_t *key);
+extern char *Key_KeynumToString (int keynum);
 
 //
 // cl_demo.c
 //
-void CL_StopPlayback (void);
-int CL_GetMessage (void);
+extern void CL_StopPlayback (void);
+extern int CL_GetMessage (void);
 
-void CL_Stop_f (void);
-void CL_Record_f (void);
-void CL_PlayDemo_f (void);
-void CL_TimeDemo_f (void);
+extern void CL_Stop_f (void);
+extern void CL_Record_f (void);
+extern void CL_PlayDemo_f (void);
+extern void CL_TimeDemo_f (void);
 
 //
 // cl_parse.c
 //
-void CL_ParseServerMessage (void);
-void CL_BitProfile_f(void);
+extern void CL_Parse_Init(void);
+extern void CL_ParseServerMessage(void);
+extern void CL_BitProfile_f(void);
 
 //
 // view
 //
-void V_StartPitchDrift (void);
-void V_StopPitchDrift (void);
+extern void V_StartPitchDrift (void);
+extern void V_StopPitchDrift (void);
 
-void V_RenderView (void);
-void V_UpdateBlends (void);
-void V_Register (void);
-void V_ParseDamage (void);
-void V_SetContentsColor (int contents);
+extern void V_RenderView (void);
+extern void V_UpdateBlends (void);
+extern void V_Register (void);
+extern void V_ParseDamage (void);
+extern void V_SetContentsColor (int contents);
 
 
 //
 // cl_tent
 //
-void CL_InitTEnts (void);
-void CL_SignonReply (void);
+extern void CL_InitTEnts (void);
+extern void CL_SignonReply (void);

@@ -188,7 +188,7 @@ extern qboolean lighthalf;
 #include "r_lerpanim.h"
 
 void GL_LockArray(int first, int count);
-void GL_UnlockArray();
+void GL_UnlockArray(void);
 
 void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, frameblend_t *blend, int skin, vec3_t org, vec3_t angles, vec_t scale, int effects, int flags, int colormap);
 

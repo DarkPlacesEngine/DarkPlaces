@@ -20,7 +20,7 @@ void (GLAPIENTRY *qglSelectTexture) (GLenum);
 void (GLAPIENTRY *qglLockArraysEXT) (GLint first, GLint count);
 void (GLAPIENTRY *qglUnlockArraysEXT) (void);
 
-void VID_InitCvars()
+void VID_InitCvars(void)
 {
 	Cvar_RegisterVariable(&vid_mode);
 	Cvar_RegisterVariable(&vid_mouse);

@@ -61,8 +61,6 @@ cvar_t	gl_polyblend = {"gl_polyblend", "1", true};
 
 float	v_dmg_time, v_dmg_roll, v_dmg_pitch;
 
-extern	int			in_forward, in_forward2, in_back;
-
 
 /*
 ===============
@@ -729,7 +727,6 @@ V_CalcRefdef
 
 ==================
 */
-extern qboolean intimerefresh;
 void V_CalcRefdef (void)
 {
 	entity_t	*ent, *view;

@@ -355,18 +355,18 @@ void SCR_SizeDown_f (void)
 
 //============================================================================
 
-void gl_screen_start()
+void gl_screen_start(void)
 {
 	scr_ram = Draw_PicFromWad ("ram");
 	scr_net = Draw_PicFromWad ("net");
 	scr_turtle = Draw_PicFromWad ("turtle");
 }
 
-void gl_screen_shutdown()
+void gl_screen_shutdown(void)
 {
 }
 
-void gl_screen_newmap()
+void gl_screen_newmap(void)
 {
 }
 
@@ -708,10 +708,7 @@ void SCR_DrawNotifyString (void)
 void DrawCrosshair(int num);
 void GL_Set2D (void);
 
-extern void SHOWLMP_drawall();
-extern cvar_t r_speeds2;
-
-void GL_BrightenScreen()
+void GL_BrightenScreen(void)
 {
 	float f;
 
@@ -785,7 +782,7 @@ text to the screen.
 LordHavoc: due to my rewrite of R_WorldNode, it no longer takes 256k of stack space :)
 ==================
 */
-void GL_Finish();
+void GL_Finish(void);
 void SCR_UpdateScreen (void)
 {
 	double	time1 = 0, time2;
@@ -884,7 +881,6 @@ void SCR_UpdateScreen (void)
 
 	if (r_speeds2.value)
 	{
-		extern char r_speeds2_string1[81], r_speeds2_string2[81], r_speeds2_string3[81], r_speeds2_string4[81], r_speeds2_string5[81], r_speeds2_string6[81], r_speeds2_string7[81];
 		Draw_String(0, vid.height - sb_lines - 56, r_speeds2_string1, 80);
 		Draw_String(0, vid.height - sb_lines - 48, r_speeds2_string2, 80);
 		Draw_String(0, vid.height - sb_lines - 40, r_speeds2_string3, 80);
@@ -909,7 +905,7 @@ void SCR_UpdateScreen (void)
 }
 
 // for profiling, this is separated
-void GL_Finish()
+void GL_Finish(void)
 {
 	if (!r_render.value)
 		return;

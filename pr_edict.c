@@ -127,7 +127,7 @@ int FindFieldOffset(char *field)
 	return d->ofs*4;
 }
 
-void FindEdictFieldOffsets()
+void FindEdictFieldOffsets(void)
 {
 	eval_gravity = FindFieldOffset("gravity");
 	eval_button3 = FindFieldOffset("button3");

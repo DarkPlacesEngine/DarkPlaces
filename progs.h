@@ -94,6 +94,10 @@ extern int eval_punchvector;
 
 #define GETEDICTFIELDVALUE(ed, fieldoffset) (fieldoffset ? (eval_t*)((char*)&ed->v + fieldoffset) : NULL)
 
+
+extern dfunction_t *SV_PlayerPhysicsQC;
+extern dfunction_t *EndFrameQC;
+
 //============================================================================
 
 extern	dprograms_t		*progs;

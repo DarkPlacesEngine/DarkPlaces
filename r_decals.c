@@ -41,25 +41,25 @@ int currentdecal; // wraps around in decal array, replacing old ones when a new 
 cvar_t r_drawdecals = {"r_drawdecals", "1"};
 cvar_t r_decals_lighting = {"r_decals_lighting", "1"};
 
-void r_decals_start()
+void r_decals_start(void)
 {
 	decals = (decal_t *) qmalloc(MAX_DECALS * sizeof(decal_t));
 	memset(decals, 0, MAX_DECALS * sizeof(decal_t));
 	currentdecal = 0;
 }
 
-void r_decals_shutdown()
+void r_decals_shutdown(void)
 {
 	qfree(decals);
 }
 
-void r_decals_newmap()
+void r_decals_newmap(void)
 {
 	memset(decals, 0, MAX_DECALS * sizeof(decal_t));
 	currentdecal = 0;
 }
 
-void R_Decals_Init()
+void R_Decals_Init(void)
 {
 	Cvar_RegisterVariable (&r_drawdecals);
 	Cvar_RegisterVariable (&r_decals_lighting);

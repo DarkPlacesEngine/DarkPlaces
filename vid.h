@@ -49,14 +49,14 @@ extern cvar_t vid_mode;
 extern cvar_t vid_mouse;
 extern cvar_t vid_fullscreen;
 
-void VID_InitCvars();
+void VID_InitCvars(void);
 
 void GL_Init (void);
 
-void VID_CheckMultitexture();
-void VID_CheckCVA();
+void VID_CheckMultitexture(void);
+void VID_CheckCVA(void);
 
-void	VID_Init ();
+void	VID_Init (void);
 // Called at startup
 
 void	VID_Shutdown (void);

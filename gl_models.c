@@ -29,7 +29,7 @@ void GL_LockArray(int first, int count)
 	}
 }
 
-void GL_UnlockArray()
+void GL_UnlockArray(void)
 {
 	if (arraylocked)
 	{
@@ -52,7 +52,7 @@ void GL_SetupModelTransform (vec3_t origin, vec3_t angles, vec_t scale)
 	    glRotatef (angles[2],  1, 0, 0);
 }
 
-void makechrometexture()
+void makechrometexture(void)
 {
 	int i;
 	byte noise[64*64];
@@ -70,7 +70,7 @@ void makechrometexture()
 	chrometexture = R_LoadTexture ("chrometexture", 64, 64, &data[0][0], TEXF_MIPMAP | TEXF_RGBA | TEXF_PRECACHE);
 }
 
-void gl_models_start()
+void gl_models_start(void)
 {
 	// allocate vertex processing arrays
 	aliasvert = qmalloc(sizeof(float[MD2MAX_VERTS][3]));
@@ -82,7 +82,7 @@ void gl_models_start()
 	makechrometexture();
 }
 
-void gl_models_shutdown()
+void gl_models_shutdown(void)
 {
 	qfree(aliasvert);
 	qfree(aliasvertnorm);
@@ -92,11 +92,11 @@ void gl_models_shutdown()
 	qfree(aliasvertusage);
 }
 
-void gl_models_newmap()
+void gl_models_newmap(void)
 {
 }
 
-void GL_Models_Init()
+void GL_Models_Init(void)
 {
 	Cvar_RegisterVariable(&gl_transform);
 	Cvar_RegisterVariable(&gl_lockarrays);
@@ -104,11 +104,6 @@ void GL_Models_Init()
 	R_RegisterModule("GL_Models", gl_models_start, gl_models_shutdown, gl_models_newmap);
 }
 
-extern vec3_t softwaretransform_x;
-extern vec3_t softwaretransform_y;
-extern vec3_t softwaretransform_z;
-extern vec_t softwaretransform_scale;
-extern vec3_t softwaretransform_offset;
 void R_AliasTransformVerts(int vertcount)
 {
 	int i;
@@ -321,7 +316,6 @@ R_DrawAliasFrame
 
 =================
 */
-extern vec3_t lightspot;
 void R_LightModel(entity_t *ent, int numverts, vec3_t center, vec3_t basecolor);
 void R_DrawAliasFrame (maliashdr_t *maliashdr, float alpha, vec3_t color, entity_t *ent, int shadow, vec3_t org, vec3_t angles, vec_t scale, frameblend_t *blend, rtexture_t **skin, int colormap, int effects, int flags)
 {

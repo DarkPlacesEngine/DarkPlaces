@@ -15,5 +15,5 @@ void VID_UpdateGamma(qboolean force);
 void BuildGammaTable8(float prescale, float gamma, float scale, float base, byte *out);
 void BuildGammaTable16(float prescale, float gamma, float scale, float base, unsigned short *out);
 
-void Gamma_Init();
-void Palette_Init();
+void Gamma_Init(void);
+void Palette_Init(void);

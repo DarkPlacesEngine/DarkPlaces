@@ -12,7 +12,7 @@ cvar_t vid_gamma = {"vid_gamma", "1", true};
 cvar_t vid_brightness = {"vid_brightness", "1", true};
 cvar_t vid_contrast = {"vid_contrast", "1", true};
 
-void Palette_Setup8to24()
+void Palette_Setup8to24(void)
 {
 	byte *in, *out;
 	unsigned short i;
@@ -30,7 +30,7 @@ void Palette_Setup8to24()
 }
 
 /*
-void	Palette_Setup15to8()
+void	Palette_Setup15to8(void)
 {
 	byte	*pal;
 	unsigned r,g,b;
@@ -116,7 +116,7 @@ void BuildGammaTable16(float prescale, float gamma, float scale, float base, uns
 	}
 }
 
-void Texture_Gamma ()
+void Texture_Gamma (void)
 {
 	int i, adjusted;
 	double invgamma;
@@ -174,14 +174,14 @@ void VID_UpdateGamma(qboolean force)
 		Con_Printf("Hardware gamma not supported.\n");
 }
 
-void Gamma_Init()
+void Gamma_Init(void)
 {
 	Cvar_RegisterVariable(&vid_gamma);
 	Cvar_RegisterVariable(&vid_brightness);
 	Cvar_RegisterVariable(&vid_contrast);
 }
 
-void Palette_Init()
+void Palette_Init(void)
 {
 	byte *pal;
 	pal = (byte *)COM_LoadMallocFile ("gfx/palette.lmp", false);

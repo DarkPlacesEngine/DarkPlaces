@@ -26,8 +26,6 @@ server_static_t	svs;
 
 char	localmodels[MAX_MODELS][5];			// inline model names for precache
 
-extern	cvar_t	sv_deltacompress;
-
 //============================================================================
 
 /*
@@ -37,18 +35,7 @@ SV_Init
 */
 void SV_Init (void)
 {
-	int		i;
-	extern	cvar_t	sv_maxvelocity;
-	extern	cvar_t	sv_gravity;
-	extern	cvar_t	sv_nostep;
-	extern	cvar_t	sv_friction;
-	extern	cvar_t	sv_edgefriction;
-	extern	cvar_t	sv_stopspeed;
-	extern	cvar_t	sv_maxspeed;
-	extern	cvar_t	sv_accelerate;
-	extern	cvar_t	sv_idealpitchscale;
-	extern	cvar_t	sv_aim;
-	extern	cvar_t	sv_predict;
+	int i;
 
 	Cvar_RegisterVariable (&sv_maxvelocity);
 	Cvar_RegisterVariable (&sv_gravity);
@@ -63,7 +50,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_predict);
 	Cvar_RegisterVariable (&sv_deltacompress);
 
-	for (i=0 ; i<MAX_MODELS ; i++)
+	for (i = 0;i < MAX_MODELS;i++)
 		sprintf (localmodels[i], "*%i", i);
 }
 

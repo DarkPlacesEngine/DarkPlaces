@@ -139,7 +139,7 @@ vec_t fogdensity;
 float fog_density, fog_red, fog_green, fog_blue;
 qboolean fogenabled;
 qboolean oldgl_fogenable;
-void FOG_framebegin()
+void FOG_framebegin(void)
 {
 	if (nehahra)
 	{
@@ -215,13 +215,13 @@ void FOG_framebegin()
 	}
 }
 
-void FOG_frameend()
+void FOG_frameend(void)
 {
 	if (glfog.value)
 		glDisable(GL_FOG);
 }
 
-void FOG_clear()
+void FOG_clear(void)
 {
 	if (nehahra)
 	{
@@ -234,7 +234,7 @@ void FOG_clear()
 	fog_density = fog_red = fog_green = fog_blue = 0.0f;
 }
 
-void FOG_registercvars()
+void FOG_registercvars(void)
 {
 	Cvar_RegisterVariable (&glfog);
 	if (nehahra)
@@ -249,19 +249,19 @@ void FOG_registercvars()
 	}
 }
 
-void gl_main_start()
+void gl_main_start(void)
 {
 }
 
-void gl_main_shutdown()
+void gl_main_shutdown(void)
 {
 }
 
-void gl_main_newmap()
+void gl_main_newmap(void)
 {
 }
 
-void GL_Main_Init()
+void GL_Main_Init(void)
 {
 	FOG_registercvars();
 	Cvar_RegisterVariable (&r_drawentities);
@@ -283,20 +283,20 @@ void GL_Main_Init()
 	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap);
 }
 
-extern void GL_Draw_Init();
-extern void GL_Main_Init();
-extern void GL_Models_Init();
-extern void GL_Poly_Init();
-extern void GL_Surf_Init();
-extern void GL_Screen_Init();
-extern void GL_Misc_Init();
-extern void R_Crosshairs_Init();
-extern void R_Light_Init();
-extern void R_Particles_Init();
-extern void R_Explosion_Init();
-extern void CL_Effects_Init();
+extern void GL_Draw_Init(void);
+extern void GL_Main_Init(void);
+extern void GL_Models_Init(void);
+extern void GL_Poly_Init(void);
+extern void GL_Surf_Init(void);
+extern void GL_Screen_Init(void);
+extern void GL_Misc_Init(void);
+extern void R_Crosshairs_Init(void);
+extern void R_Light_Init(void);
+extern void R_Particles_Init(void);
+extern void R_Explosion_Init(void);
+extern void CL_Effects_Init(void);
 
-void Render_Init()
+void Render_Init(void)
 {
 	R_Modules_Shutdown();
 	GL_Draw_Init();
@@ -627,8 +627,6 @@ void MYgluPerspective( GLdouble fovy, GLdouble aspect, GLdouble zNear, GLdouble 
 }
 
 
-extern char skyname[];
-
 /*
 =============
 R_SetupGL
@@ -637,7 +635,6 @@ R_SetupGL
 void R_SetupGL (void)
 {
 	float	screenaspect;
-	extern	int glwidth, glheight;
 	int		x, x2, y2, y, w, h;
 
 	if (!r_render.value)
@@ -724,7 +721,7 @@ void R_Clear (void)
 }
 
 // LordHavoc: my trick to *FIX* GLQuake lighting once and for all :)
-void GL_Brighten()
+void GL_Brighten(void)
 {
 	if (!r_render.value)
 		return;
@@ -751,7 +748,7 @@ void GL_Brighten()
 	glEnable (GL_CULL_FACE);
 }
 
-void GL_BlendView()
+void GL_BlendView(void)
 {
 	if (!r_render.value)
 		return;
@@ -802,9 +799,8 @@ R_RenderView
 r_refdef must be set before the first call
 ================
 */
-extern qboolean intimerefresh;
-extern void R_Sky();
-extern void UploadLightmaps();
+extern void R_Sky(void);
+extern void UploadLightmaps(void);
 char r_speeds2_string1[81], r_speeds2_string2[81], r_speeds2_string3[81], r_speeds2_string4[81], r_speeds2_string5[81], r_speeds2_string6[81], r_speeds2_string7[81];
 void R_RenderView (void)
 {

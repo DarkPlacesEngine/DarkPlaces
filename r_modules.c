@@ -7,22 +7,22 @@ typedef struct rendermodule_s
 {
 	int active; // set by start, cleared by shutdown
 	char *name;
-	void(*start)();
-	void(*shutdown)();
-	void(*newmap)();
+	void(*start)(void);
+	void(*shutdown)(void);
+	void(*newmap)(void);
 }
 rendermodule_t;
 
 rendermodule_t rendermodule[MAXRENDERMODULES];
 
-void R_Modules_Init()
+void R_Modules_Init(void)
 {
 	int i;
 	for (i = 0;i < MAXRENDERMODULES;i++)
 		rendermodule[i].name = NULL;
 }
 
-void R_RegisterModule(char *name, void(*start)(), void(*shutdown)(), void(*newmap)())
+void R_RegisterModule(char *name, void(*start)(void), void(*shutdown)(void), void(*newmap)(void))
 {
 	int i;
 	for (i = 0;i < MAXRENDERMODULES;i++)
@@ -41,7 +41,7 @@ void R_RegisterModule(char *name, void(*start)(), void(*shutdown)(), void(*newma
 	rendermodule[i].newmap = newmap;
 }
 
-void R_Modules_Start ()
+void R_Modules_Start(void)
 {
 	int i;
 	for (i = 0;i < MAXRENDERMODULES;i++)
@@ -55,7 +55,7 @@ void R_Modules_Start ()
 	}
 }
 
-void R_Modules_Shutdown ()
+void R_Modules_Shutdown(void)
 {
 	int i;
 	for (i = 0;i < MAXRENDERMODULES;i++)
@@ -69,13 +69,13 @@ void R_Modules_Shutdown ()
 	}
 }
 
-void R_Modules_Restart ()
+void R_Modules_Restart(void)
 {
 	R_Modules_Shutdown();
 	R_Modules_Start();
 }
 
-void R_Modules_NewMap ()
+void R_Modules_NewMap(void)
 {
 	int i;
 	for (i = 0;i < MAXRENDERMODULES;i++)

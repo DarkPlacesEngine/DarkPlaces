@@ -42,21 +42,21 @@ effect_t effect[MAX_EFFECTS];
 
 cvar_t r_draweffects = {"r_draweffects", "1"};
 
-void r_effects_start()
+void r_effects_start(void)
 {
 	memset(effect, 0, sizeof(effect));
 }
 
-void r_effects_shutdown()
+void r_effects_shutdown(void)
 {
 }
 
-void r_effects_newmap()
+void r_effects_newmap(void)
 {
 	memset(effect, 0, sizeof(effect));
 }
 
-void CL_Effects_Init()
+void CL_Effects_Init(void)
 {
 	Cvar_RegisterVariable(&r_draweffects);
 

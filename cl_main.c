@@ -43,8 +43,6 @@ cvar_t	m_side = {"m_side","0.8", true};
 
 cvar_t freelook = {"freelook", "1", true};
 
-cvar_t demo_nehahra = {"demo_nehahra", "0"};
-
 client_static_t	cls;
 client_state_t	cl;
 // FIXME: put these on hunk?
@@ -422,7 +420,7 @@ float CL_EntityLerpPoint (entity_t *ent)
 	return bound(0, f, 1);
 }
 
-void CL_RelinkStaticEntities()
+void CL_RelinkStaticEntities(void)
 {
 	entity_t *ent, *endent;
 	if (cl.num_statics > MAX_VISEDICTS)
@@ -683,9 +681,6 @@ void CL_RelinkEntities (void)
 }
 
 
-// used by cl_shownet
-int netshown;
-
 /*
 ===============
 CL_ReadFromServer
@@ -695,7 +690,7 @@ Read all incoming data from the server
 */
 int CL_ReadFromServer (void)
 {
-	int		ret;
+	int ret, netshown;
 
 	cl.oldtime = cl.time;
 	cl.time += cl.frametime;
@@ -710,8 +705,13 @@ int CL_ReadFromServer (void)
 			break;
 		
 		cl.last_received_message = realtime;
+
+		if (cl_shownet.value)
+			netshown = true;
+
 		CL_ParseServerMessage ();
-	} while (ret && cls.state == ca_connected);
+	}
+	while (ret && cls.state == ca_connected);
 	
 	if (netshown)
 		Con_Printf ("\n");
@@ -887,9 +887,7 @@ void CL_Init (void)
 	Cmd_AddCommand ("pausedemo", CL_PauseDemo_f);
 	// LordHavoc: added pmodel command (like name, etc, only intended for Nehahra)
 	Cmd_AddCommand ("pmodel", CL_PModel_f);
-	// LordHavoc: added demo_nehahra cvar
-	Cvar_RegisterVariable (&demo_nehahra);
-	if (nehahra)
-		Cvar_SetValue("demo_nehahra", 1);
+
+	CL_Parse_Init();
 }
 

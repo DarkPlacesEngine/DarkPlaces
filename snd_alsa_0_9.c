@@ -218,7 +218,7 @@ qboolean SNDDMA_Init(void)
 }
 
 static inline int
-get_hw_ptr()
+get_hw_ptr(void)
 {
 	size_t app_ptr;
 	snd_pcm_sframes_t delay;

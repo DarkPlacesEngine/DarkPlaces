@@ -36,7 +36,6 @@ short	*snd_out;
 
 void Snd_WriteLinearBlastStereo16 (void);
 
-extern cvar_t snd_swapstereo;
 void Snd_WriteLinearBlastStereo16 (void)
 {
 	int		i;

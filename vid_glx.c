@@ -523,7 +523,7 @@ int VID_SetGamma(float prescale, float gamma, float scale, float base)
 	return FALSE;
 }
 
-void VID_Init()
+void VID_Init(void)
 {
 	int i;
 	int attrib[] = {

@@ -109,7 +109,7 @@ void InitSig(void)
 
 	Check for ARB, SGIS, or EXT multitexture support
 */
-void VID_CheckMultitexture()
+void VID_CheckMultitexture(void)
 {
 	Con_Printf ("Checking for multitexture... ");
 	if (COM_CheckParm ("-nomtex"))
@@ -175,7 +175,7 @@ void VID_CheckCVA(void)
 
 typedef void (GLAPIENTRY *gl3DfxSetDitherModeEXT_FUNC) (GrDitherMode_t mode);
 
-void VID_SetupDithering()
+void VID_SetupDithering(void)
 {
 	Con_Printf ("Dithering: ");
 
@@ -309,7 +309,7 @@ int VID_SetGamma(float prescale, float gamma, float scale, float base)
 	return FALSE;
 }
 
-void VID_Init()
+void VID_Init(void)
 {
 	int i;
 	GLint attribs[32];

@@ -93,15 +93,15 @@ void R_Envmap_f (void)
 
 void R_InitParticles (void);
 
-void gl_misc_start()
+void gl_misc_start(void)
 {
 }
 
-void gl_misc_shutdown()
+void gl_misc_shutdown(void)
 {
 }
 
-void gl_misc_newmap()
+void gl_misc_newmap(void)
 {
 }
 
@@ -118,15 +118,14 @@ void GL_Misc_Init (void)
 	R_RegisterModule("GL_Misc", gl_misc_start, gl_misc_shutdown, gl_misc_newmap);
 }
 
-void R_ClearParticles (void);
-void GL_BuildLightmaps (void);
+extern void R_ClearParticles (void);
+extern void GL_BuildLightmaps (void);
 
 /*
 ===============
 R_NewMap
 ===============
 */
-void SHOWLMP_clear();
 void R_NewMap (void)
 {
 	int		i;

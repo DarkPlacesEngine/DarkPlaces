@@ -141,14 +141,10 @@ byte *Mod_LeafPVS (mleaf_t *leaf, model_t *model)
 	return Mod_DecompressVis (leaf->compressed_vis, model);
 }
 
-extern byte	*mod_base;
-
-extern cvar_t r_fullbrights;
-
 rtexture_t *r_notexture;
 texture_t r_notexture_mip;
 
-void Mod_SetupNoTexture()
+void Mod_SetupNoTexture(void)
 {
 	int		x, y;
 	byte	pix[16][16][4];
@@ -546,10 +542,6 @@ void Mod_LoadVisibility (lump_t *l)
 	memcpy (loadmodel->visdata, mod_base + l->fileofs, l->filelen);
 }
 
-void CL_ParseEntityLump(char *entdata);
-
-extern qboolean isworldmodel;
-
 /*
 =================
 Mod_LoadEntities
@@ -765,8 +757,6 @@ void CalcSurfaceExtents (msurface_t *s)
 }
 
 void GL_SubdivideSurface (msurface_t *fa);
-
-extern char skyname[];
 
 /*
 =================
@@ -1497,7 +1487,7 @@ portal_t *AllocPortal (void)
 	return p;
 }
 
-void Mod_FinalizePortals()
+void Mod_FinalizePortals(void)
 {
 	int i, j, numportals, numpoints;
 	portal_t *p, *pnext;
@@ -1854,7 +1844,7 @@ void Mod_MakeOutsidePortals(mnode_t *node)
 }
 */
 
-void Mod_MakePortals()
+void Mod_MakePortals(void)
 {
 //	Con_Printf("building portals for %s\n", loadmodel->name);
 

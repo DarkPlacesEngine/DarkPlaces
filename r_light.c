@@ -23,21 +23,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 cvar_t r_lightmodels = {"r_lightmodels", "1"};
 
-extern cvar_t gl_transform;
-
-void r_light_start()
+void r_light_start(void)
 {
 }
 
-void r_light_shutdown()
+void r_light_shutdown(void)
 {
 }
 
-void r_light_newmap()
+void r_light_newmap(void)
 {
 }
 
-void R_Light_Init()
+void R_Light_Init(void)
 {
 	Cvar_RegisterVariable(&r_lightmodels);
 	R_RegisterModule("R_Light", r_light_start, r_light_shutdown, r_light_newmap);
@@ -421,8 +419,6 @@ LIGHT SAMPLING
 mplane_t		*lightplane;
 vec3_t			lightspot;
 
-extern cvar_t r_ambient;
-
 /*
 int RecursiveLightPoint (vec3_t color, mnode_t *node, vec3_t start, vec3_t end)
 {
@@ -790,10 +786,6 @@ void R_DynamicLightPointNoMask(vec3_t color, vec3_t org)
 }
 */
 
-extern float *aliasvert;
-extern float *aliasvertnorm;
-extern byte *aliasvertcolor;
-extern float modelalpha;
 void R_LightModel(entity_t *ent, int numverts, vec3_t center, vec3_t basecolor)
 {
 	// LordHavoc: warning: reliance on int being 4 bytes here (of course the d_8to24table relies on that too...)

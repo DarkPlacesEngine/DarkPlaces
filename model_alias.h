@@ -198,4 +198,9 @@ typedef struct
 #define ALIASTYPE_MD2 2
 #define ALIASTYPE_ZYM 3
 
+extern void Mod_LoadAliasModel (struct model_s *mod, void *buffer);
+extern void Mod_LoadQ2AliasModel (struct model_s *mod, void *buffer);
+
+extern void Mod_AliasInit(void);
+
 #include "model_zymotic.h"

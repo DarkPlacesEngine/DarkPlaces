@@ -81,7 +81,7 @@ void softwareuntransform (vec3_t in, vec3_t out)
 }
 
 // to save time on transforms, choose the appropriate function
-void softwaretransform_classify()
+void softwaretransform_classify(void)
 {
 	if (softwaretransform_offset[0] != 0 || softwaretransform_offset[1] != 0 || softwaretransform_offset[2] != 0)
 	{
@@ -127,7 +127,7 @@ void softwaretransform_classify()
 	}
 }
 
-void softwaretransformidentity ()
+void softwaretransformidentity(void)
 {
 	softwaretransform_offset[0] = softwaretransform_offset[1] = softwaretransform_offset[2] = softwaretransform_x[1] = softwaretransform_x[2] = softwaretransform_y[0] = softwaretransform_y[2] = softwaretransform_z[0] = softwaretransform_z[1] = 0;
 	softwaretransform_x[0] = softwaretransform_y[1] = softwaretransform_z[2] = 1;
