@@ -255,6 +255,7 @@ static void R_SkySphere(void)
 	const float *in2f;
 	static qboolean skysphereinitialized = false;
 	rmeshstate_t m;
+	rcachearrayrequest_t request;
 	if (!skysphereinitialized)
 	{
 		skysphereinitialized = true;
@@ -266,40 +267,105 @@ static void R_SkySphere(void)
 	// wrap the scroll just to be extra kind to float accuracy
 	speedscale -= (int)speedscale;
 
-	memset(&m, 0, sizeof(m));
-	m.blendfunc1 = GL_ONE;
-	m.blendfunc2 = GL_ZERO;
-	m.depthdisable = true; // don't modify or read zbuffer
-	m.tex[0] = R_GetTexture(solidskytexture);
-	R_Mesh_State(&m);
-
-	GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
-
-	R_Mesh_GetSpace(skysphere_numverts);
-	R_Mesh_CopyVertex3f(skysphere_vertex3f, skysphere_numverts);
-	for (i = 0, out2f = varray_texcoord2f[0], in2f = skysphere_texcoord2f;i < skysphere_numverts;i++)
+	if (r_colorscale == 1 && r_textureunits.integer >= 2)
 	{
-		*out2f++ = *in2f++ + speedscale;
-		*out2f++ = *in2f++ + speedscale;
+		// one pass using GL_DECAL or GL_INTERPOLATE_ARB for alpha layer
+		// LordHavoc: note that color is not set here because it does not
+		// matter with GL_REPLACE
+		memset(&m, 0, sizeof(m));
+		m.blendfunc1 = GL_ONE;
+		m.blendfunc2 = GL_ZERO;
+		m.depthdisable = true; // don't modify or read zbuffer
+		m.tex[0] = R_GetTexture(solidskytexture);
+		m.tex[1] = R_GetTexture(alphaskytexture);
+		m.texcombinergb[0] = GL_REPLACE;
+		m.texcombinergb[1] = gl_combine.integer ? GL_INTERPOLATE_ARB : GL_DECAL;
+		if (gl_mesh_copyarrays.integer)
+		{
+			R_Mesh_State(&m);
+			R_Mesh_GetSpace(skysphere_numverts);
+			R_Mesh_CopyVertex3f(skysphere_vertex3f, skysphere_numverts);
+			R_ScrollTexCoord2f(varray_texcoord2f[0], skysphere_texcoord2f, skysphere_numverts, speedscale, speedscale);
+			R_ScrollTexCoord2f(varray_texcoord2f[1], skysphere_texcoord2f, skysphere_numverts, speedscale*2, speedscale*2);
+		}
+		else
+		{
+			m.pointervertexcount = skysphere_numverts;
+			m.pointer_vertex = skysphere_vertex3f;
+			memset(&request, 0, sizeof(request));
+			request.data_size = skysphere_numverts * sizeof(float[2]);
+			request.id_pointer1 = skysphere_texcoord2f;
+			request.id_number1 = CRC_Block((void *)&speedscale, sizeof(speedscale));
+			if (R_Mesh_CacheArray(&request))
+				R_ScrollTexCoord2f(request.data, skysphere_texcoord2f, skysphere_numverts, speedscale, speedscale);
+			m.pointer_texcoord[0] = request.data;
+			speedscale *= 2;
+			request.id_number1 = CRC_Block((void *)&speedscale, sizeof(speedscale));
+			if (R_Mesh_CacheArray(&request))
+				R_ScrollTexCoord2f(request.data, skysphere_texcoord2f, skysphere_numverts, speedscale, speedscale);
+			m.pointer_texcoord[1] = request.data;
+			R_Mesh_State(&m);
+		}
+		R_Mesh_Draw(skysphere_numverts, skysphere_numtriangles, skysphere_element3i);
 	}
-	R_Mesh_Draw(skysphere_numverts, skysphere_numtriangles, skysphere_element3i);
-
-	m.blendfunc1 = GL_SRC_ALPHA;
-	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-	m.tex[0] = R_GetTexture(alphaskytexture);
-	R_Mesh_State(&m);
-
-	// scroll the lower cloud layer twice as fast (just like quake did)
-	speedscale *= 2;
-
-	R_Mesh_GetSpace(skysphere_numverts);
-	R_Mesh_CopyVertex3f(skysphere_vertex3f, skysphere_numverts);
-	for (i = 0, out2f = varray_texcoord2f[0], in2f = skysphere_texcoord2f;i < skysphere_numverts;i++)
+	else
 	{
-		*out2f++ = *in2f++ + speedscale;
-		*out2f++ = *in2f++ + speedscale;
+		// two pass
+		GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
+		memset(&m, 0, sizeof(m));
+		m.blendfunc1 = GL_ONE;
+		m.blendfunc2 = GL_ZERO;
+		m.depthdisable = true; // don't modify or read zbuffer
+		m.tex[0] = R_GetTexture(solidskytexture);
+		if (gl_mesh_copyarrays.integer)
+		{
+			R_Mesh_State(&m);
+			R_Mesh_GetSpace(skysphere_numverts);
+			R_Mesh_CopyVertex3f(skysphere_vertex3f, skysphere_numverts);
+			R_ScrollTexCoord2f(varray_texcoord2f[0], skysphere_texcoord2f, skysphere_numverts, speedscale, speedscale);
+		}
+		else
+		{
+			m.pointervertexcount = skysphere_numverts;
+			m.pointer_vertex = skysphere_vertex3f;
+			memset(&request, 0, sizeof(request));
+			request.data_size = skysphere_numverts * sizeof(float[2]);
+			request.id_pointer1 = skysphere_texcoord2f;
+			request.id_number1 = CRC_Block((void *)&speedscale, sizeof(speedscale));
+			if (R_Mesh_CacheArray(&request))
+				R_ScrollTexCoord2f(request.data, skysphere_texcoord2f, skysphere_numverts, speedscale, speedscale);
+			m.pointer_texcoord[0] = request.data;
+			R_Mesh_State(&m);
+		}
+		R_Mesh_Draw(skysphere_numverts, skysphere_numtriangles, skysphere_element3i);
+
+		// scroll the lower cloud layer twice as fast (just like quake did)
+		speedscale *= 2;
+
+		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+		m.tex[0] = R_GetTexture(alphaskytexture);
+		if (gl_mesh_copyarrays.integer)
+		{
+			R_Mesh_State(&m);
+			R_Mesh_GetSpace(skysphere_numverts);
+			R_Mesh_CopyVertex3f(skysphere_vertex3f, skysphere_numverts);
+			R_ScrollTexCoord2f(varray_texcoord2f[0], skysphere_texcoord2f, skysphere_numverts, speedscale, speedscale);
+		}
+		else
+		{
+			m.pointervertexcount = skysphere_numverts;
+			m.pointer_vertex = skysphere_vertex3f;
+			request.data_size = skysphere_numverts * sizeof(float[2]);
+			request.id_pointer1 = skysphere_texcoord2f;
+			request.id_number1 = CRC_Block((void *)&speedscale, sizeof(speedscale));
+			if (R_Mesh_CacheArray(&request))
+				R_ScrollTexCoord2f(request.data, skysphere_texcoord2f, skysphere_numverts, speedscale, speedscale);
+			m.pointer_texcoord[0] = request.data;
+			R_Mesh_State(&m);
+		}
+		R_Mesh_Draw(skysphere_numverts, skysphere_numtriangles, skysphere_element3i);
 	}
-	R_Mesh_Draw(skysphere_numverts, skysphere_numtriangles, skysphere_element3i);
 }
 
 void R_Sky(void)

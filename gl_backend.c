@@ -560,7 +560,7 @@ void GL_SetupTextureState(void)
 			qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, GL_MODULATE);CHECKGLERROR
 			qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);CHECKGLERROR
 			qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB);CHECKGLERROR
-			qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_RGB_ARB, GL_CONSTANT_ARB);CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_RGB_ARB, GL_TEXTURE);CHECKGLERROR // for GL_INTERPOLATE_ARB mode
 			qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);CHECKGLERROR
 			qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);CHECKGLERROR
 			qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_RGB_ARB, GL_SRC_ALPHA);CHECKGLERROR
@@ -1583,7 +1583,7 @@ void R_Mesh_CopyTexCoord2f(int tmu, const float *texcoord2f, int numverts)
 	if (mesh_var)
 	{
 		float *out = varray_texcoord2f[tmu];
-		while (--numverts)
+		while (numverts--)
 		{
 			*out++ = *texcoord2f++;
 			*out++ = *texcoord2f++;
@@ -1600,7 +1600,7 @@ void R_Mesh_CopyColor4f(const float *color4f, int numverts)
 	if (mesh_var)
 	{
 		float *out = varray_color4f;
-		while (--numverts)
+		while (numverts--)
 		{
 			*out++ = *color4f++;
 			*out++ = *color4f++;
@@ -1611,6 +1611,15 @@ void R_Mesh_CopyColor4f(const float *color4f, int numverts)
 	else
 #endif
 		memcpy(varray_color4f, color4f, numverts * sizeof(float[4]));
+}
+
+void R_ScrollTexCoord2f (float *out2f, const float *in2f, int numverts, float s, float t)
+{
+	while (numverts--)
+	{
+		*out2f++ = *in2f++ + s;
+		*out2f++ = *in2f++ + t;
+	}
 }
 
 //===========================================================================
