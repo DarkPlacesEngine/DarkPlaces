@@ -442,7 +442,7 @@ void V_CalcViewBlend(void)
 	r_refdef.viewblend[1] = 0;
 	r_refdef.viewblend[2] = 0;
 	r_refdef.viewblend[3] = 0;
-	if (cls.state == ca_connected && cls.signon == SIGNONS)
+	if (cls.state == ca_connected && cls.signon == SIGNONS && gl_polyblend.value > 0)
 	{
 		// set contents color
 		switch (CL_PointQ1Contents(r_vieworigin))
@@ -519,7 +519,7 @@ void V_CalcViewBlend(void)
 			if (a2 > 0)
 			{
 				VectorLerp(r_refdef.viewblend, a2, cl.cshifts[j].destcolor, r_refdef.viewblend);
-				r_refdef.viewblend[3] = 1 - (1 - r_refdef.viewblend[3]) * (1 - a2); // correct alpha multiply...  took a while to find it on the web
+				r_refdef.viewblend[3] = (1 - (1 - r_refdef.viewblend[3]) * (1 - a2)); // correct alpha multiply...  took a while to find it on the web
 			}
 		}
 		// saturate color (to avoid blending in black)
@@ -532,7 +532,7 @@ void V_CalcViewBlend(void)
 		r_refdef.viewblend[0] = bound(0.0f, r_refdef.viewblend[0] * (1.0f/255.0f), 1.0f);
 		r_refdef.viewblend[1] = bound(0.0f, r_refdef.viewblend[1] * (1.0f/255.0f), 1.0f);
 		r_refdef.viewblend[2] = bound(0.0f, r_refdef.viewblend[2] * (1.0f/255.0f), 1.0f);
-		r_refdef.viewblend[3] = bound(0.0f, r_refdef.viewblend[3]                , 1.0f);
+		r_refdef.viewblend[3] = bound(0.0f, r_refdef.viewblend[3] * gl_polyblend.value, 1.0f);
 	}
 }
 
