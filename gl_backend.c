@@ -19,7 +19,6 @@ static int max_verts; // always max_meshs * 3
 //static cvar_t gl_mesh_maxtriangles = {0, "gl_mesh_maxtriangles", "21760"};
 static cvar_t gl_mesh_maxtriangles = {0, "gl_mesh_maxtriangles", "8192"};
 static cvar_t gl_mesh_batchtriangles = {0, "gl_mesh_batchtriangles", "1024"};
-static cvar_t gl_mesh_merge = {0, "gl_mesh_merge", "1"};
 static cvar_t gl_mesh_floatcolors = {0, "gl_mesh_floatcolors", "0"};
 
 typedef struct buf_mesh_s
@@ -210,7 +209,6 @@ void gl_backend_init(void)
 
 	Cvar_RegisterVariable(&gl_mesh_maxtriangles);
 	Cvar_RegisterVariable(&gl_mesh_batchtriangles);
-	Cvar_RegisterVariable(&gl_mesh_merge);
 	Cvar_RegisterVariable(&gl_mesh_floatcolors);
 	R_RegisterModule("GL_Backend", gl_backend_start, gl_backend_shutdown, gl_backend_newmap);
 	gl_backend_bufferchanges(true);
@@ -522,10 +520,8 @@ CHECKGLERROR
 	GL_LockArray(0, currentvertex);
 CHECKGLERROR
 
-	for (k = 0;k < currentmesh;)
+	for (k = 0, mesh = buf_mesh;k < currentmesh;k++, mesh++)
 	{
-		mesh = &buf_mesh[k];
-
 		if (backendunits > 1)
 		{
 //			int topunit = 0;
@@ -668,34 +664,6 @@ CHECKGLERROR
 		firstvert = mesh->firstvert;
 		endtriangle = firsttriangle + mesh->triangles;
 		endvert = firstvert + mesh->verts;
-
-		mesh = &buf_mesh[++k];
-		if (gl_mesh_merge.integer)
-		{
-			#if MAX_TEXTUREUNITS != 4
-			#error update this code
-			#endif
-			while (k < currentmesh
-				&& mesh->firsttriangle == endtriangle
-				&& mesh->firstvert == endvert
-				&& mesh->depthmask == depthmask
-				&& mesh->depthtest == depthtest
-				&& mesh->blendfunc1 == blendfunc1
-				&& mesh->blendfunc2 == blendfunc2
-				&& mesh->textures[0] == texture[0]
-				&& mesh->textures[1] == texture[1]
-				&& mesh->textures[2] == texture[2]
-				&& mesh->textures[3] == texture[3]
-				&& mesh->texturergbscale[0] == texturergbscale[0]
-				&& mesh->texturergbscale[1] == texturergbscale[1]
-				&& mesh->texturergbscale[2] == texturergbscale[2]
-				&& mesh->texturergbscale[3] == texturergbscale[3])
-			{
-				endtriangle += mesh->triangles;
-				endvert += mesh->verts;
-				mesh = &buf_mesh[++k];
-			}
-		}
 
 		indexcount = (endtriangle - firsttriangle) * 3;
 		index = (unsigned int *)&buf_tri[firsttriangle].index[0];
