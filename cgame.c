@@ -21,13 +21,14 @@ typedef struct localentity_s
 	vec3_t worldmaxs;
 	vec3_t entitymins;
 	vec3_t entitymaxs;
+	vec3_t lastimpactorigin; // updated by physics code, used by gib blood stains
 	float bouncescale;
 	float airfrictionscale;
 	float gravityscale;
 	void (*framethink)(struct localentity_s *e);
 	//int solid;
 	//void (*touch)(struct localentity_s *self, struct localentity_s *other);
-	//void (*touchnetwork)(struct *localentity_s *self);
+	void (*touchnetwork)(struct localentity_s *self);
 	cgdrawentity_t draw;
 }
 localentity_t;
@@ -133,13 +134,17 @@ static void phys_update(localentity_t *e)
 	{
 		bounce = DotProduct(e->velocity, impactnormal) * -e->bouncescale;
 		VectorMA(e->velocity, bounce, impactnormal, e->velocity);
-		// FIXME: do some kind of touch code here if physentities get implemented
-
 		if (impactnormal[2] >= 0.7 && DotProduct(e->velocity, e->velocity) < 100*100)
 		{
 			VectorClear(e->velocity);
 			VectorClear(e->avelocity);
 		}
+
+		if (e->touchnetwork)
+			e->touchnetwork(e);
+		// FIXME: do some kind of touch code here if physentities get implemented
+
+		VectorCopy(impactpos, e->lastimpactorigin);
 	}
 
 	if (e->airfrictionscale)
@@ -179,7 +184,7 @@ static void explosiondebris_framethink(localentity_t *self)
 {
 	if (gametime > self->dietime)
 	{
-		self->draw.scale -= (float)frametime * 3.0f;
+		self->draw.scale -= frametime * 3;
 		if (self->draw.scale < 0.05f)
 		{
 			entremove(self);
@@ -187,6 +192,33 @@ static void explosiondebris_framethink(localentity_t *self)
 		}
 	}
 	phys_update(self);
+}
+
+static void gib_framethink(localentity_t *self)
+{
+	if (gametime > self->dietime)
+	{
+		self->draw.scale -= (float)frametime * 3.0f;
+		if (self->draw.scale < 0.05f)
+		{
+			entremove(self);
+			return;
+		}
+	}
+	/*
+	if (gametime > self->trailnexttime)
+	{
+		self->trailnexttime = gametime + 0.1f;
+		CGVM_BloodParticle(self->draw.origin, self->velocity);
+	}
+	*/
+	phys_update(self);
+}
+
+static void gib_touchnetwork(localentity_t *self)
+{
+	if (VectorDistance2(self->draw.origin, self->lastimpactorigin) >= 5*5)
+		CGVM_Stain(self->draw.origin, 64, 64, 24, 24, 48, 192, 48, 48, 48);
 }
 
 static void net_explosion(unsigned char num)
@@ -242,12 +274,69 @@ static void net_explosion(unsigned char num)
 	}
 }
 
+static void net_gibshower(unsigned char num)
+{
+	int i, count;
+	float r, velocityscale;
+	vec3_t org;
+	double time;
+	localentity_t *e;
+	// need the time to know when the gibs should fade
+	time = CGVM_Time();
+	// read the network data
+	count = CGVM_MSG_ReadByte();
+	velocityscale = CGVM_MSG_ReadByte() * 100;
+	readvector(org);
+
+	for (i = 0;i < count;i++)
+	{
+		e = entspawn();
+		if (!e)
+			return;
+
+		VectorCopy(org, e->draw.origin);
+		e->draw.angles[0] = CGVM_RandomRange(0, 360);
+		e->draw.angles[1] = CGVM_RandomRange(0, 360);
+		e->draw.angles[2] = CGVM_RandomRange(0, 360);
+		VectorRandom(e->velocity);
+		VectorScale(e->velocity, velocityscale, e->velocity);
+		e->velocity[2] -= cg_gravity * 0.1;
+		e->avelocity[0] = CGVM_RandomRange(0, 1440);
+		e->avelocity[1] = CGVM_RandomRange(0, 1440);
+		e->avelocity[2] = CGVM_RandomRange(0, 1440);
+		r = CGVM_RandomRange(0, 3);
+		if (r < 1)
+			e->draw.model = CGVM_Model("progs/gib1.mdl");
+		else if (r < 2)
+			e->draw.model = CGVM_Model("progs/gib2.mdl");
+		else
+			e->draw.model = CGVM_Model("progs/gib3.mdl");
+		e->draw.alpha = 1;
+		e->draw.scale = 1;
+		e->draw.frame1 = 0;
+		e->draw.frame2 = 0;
+		e->draw.framelerp = 0;
+		e->draw.skinnum = 0;
+		VectorSet(e->worldmins, 0, 0, -8);
+		VectorSet(e->worldmaxs, 0, 0, -8);
+		VectorSet(e->entitymins, -8, -8, -8);
+		VectorSet(e->entitymaxs, 8, 8, 8);
+		e->bouncescale = 1.5;
+		e->gravityscale = 1;
+		e->airfrictionscale = 1;
+		e->framethink = gib_framethink;
+		e->touchnetwork = gib_touchnetwork;
+		e->dietime = (float)time + CGVM_RandomRange(3.0f, 5.0f);
+	}
+}
+
 // called by engine
 void CG_Init(void)
 {
 	localentity = CGVM_Malloc(sizeof(localentity_t) * MAX_LOCALENTITIES);
 	phys_entity = CGVM_Malloc(sizeof(cgphysentity_t) * MAX_LOCALENTITIES);
 	CGVM_RegisterNetworkCode(1, net_explosion);
+	CGVM_RegisterNetworkCode(2, net_gibshower);
 	gametime = 0;
 }
 
