@@ -2022,7 +2022,7 @@ void PF_copyentity (void)
 	edict_t *in, *out;
 	in = G_EDICT(OFS_PARM0);
 	out = G_EDICT(OFS_PARM1);
-	memcpy(out, in, pr_edict_size);
+	memcpy(&out->v, &in->v, progs->entityfields * 4);
 }
 
 /*
