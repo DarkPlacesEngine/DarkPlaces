@@ -81,14 +81,14 @@ void Sys_PageIn (void *ptr, int size)
 /*
 ===============================================================================
 
-FILE IO
+QFile IO
 
 ===============================================================================
 */
 
 // LordHavoc: 256 pak files (was 10)
 #define	MAX_HANDLES		256
-FILE	*sys_handles[MAX_HANDLES];
+QFile	*sys_handles[MAX_HANDLES];
 
 int		findhandle (void)
 {
@@ -106,27 +106,27 @@ int		findhandle (void)
 filelength
 ================
 */
-int filelength (FILE *f)
+int filelength (QFile *f)
 {
 	int		pos;
 	int		end;
 
-	pos = ftell (f);
-	fseek (f, 0, SEEK_END);
-	end = ftell (f);
-	fseek (f, pos, SEEK_SET);
+	pos = Qtell (f);
+	Qseek (f, 0, SEEK_END);
+	end = Qtell (f);
+	Qseek (f, pos, SEEK_SET);
 
 	return end;
 }
 
 int Sys_FileOpenRead (char *path, int *hndl)
 {
-	FILE	*f;
+	QFile	*f;
 	int		i, retval;
 
 	i = findhandle ();
 
-	f = fopen(path, "rb");
+	f = Qopen(path, "rbz");
 
 	if (!f)
 	{
@@ -145,12 +145,12 @@ int Sys_FileOpenRead (char *path, int *hndl)
 
 int Sys_FileOpenWrite (char *path)
 {
-	FILE	*f;
+	QFile	*f;
 	int		i;
 
 	i = findhandle ();
 
-	f = fopen(path, "wb");
+	f = Qopen(path, "wb");
 	if (!f)
 		Host_Error ("Error opening %s: %s", path,strerror(errno));
 	sys_handles[i] = f;
@@ -160,33 +160,33 @@ int Sys_FileOpenWrite (char *path)
 
 void Sys_FileClose (int handle)
 {
-	fclose (sys_handles[handle]);
+	Qclose (sys_handles[handle]);
 	sys_handles[handle] = NULL;
 }
 
 void Sys_FileSeek (int handle, int position)
 {
-	fseek (sys_handles[handle], position, SEEK_SET);
+	Qseek (sys_handles[handle], position, SEEK_SET);
 }
 
 int Sys_FileRead (int handle, void *dest, int count)
 {
-	return fread (dest, 1, count, sys_handles[handle]);
+	return Qread (dest, 1, count, sys_handles[handle]);
 }
 
 int Sys_FileWrite (int handle, void *data, int count)
 {
-	return fwrite (data, 1, count, sys_handles[handle]);
+	return Qwrite (data, 1, count, sys_handles[handle]);
 }
 
 int	Sys_FileTime (char *path)
 {
-	FILE	*f;
+	QFile	*f;
 	
-	f = fopen(path, "rb");
+	f = Qopen(path, "rb");
 	if (f)
 	{
-		fclose(f);
+		Qclose(f);
 		return 1;
 	}
 	

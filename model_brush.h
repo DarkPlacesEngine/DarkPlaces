@@ -206,5 +206,6 @@ extern void CL_ParseEntityLump(char *entdata);
 extern rtexture_t *r_notexture;
 extern texture_t r_notexture_mip;
 
+struct model_s;
 extern void Mod_LoadBrushModel (struct model_s *mod, void *buffer);
 extern void Mod_BrushInit(void);

@@ -86,7 +86,7 @@ typedef struct
 LoadPCX
 ============
 */
-byte* LoadPCX (FILE *f, int matchwidth, int matchheight)
+byte* LoadPCX (QFile *f, int matchwidth, int matchheight)
 {
 	pcx_t	*pcx, pcxbuf;
 	byte	palette[768];
@@ -98,7 +98,7 @@ byte* LoadPCX (FILE *f, int matchwidth, int matchheight)
 //
 // parse the PCX file
 //
-	fread (&pcxbuf, 1, sizeof(pcxbuf), f);
+	Qread (f, &pcxbuf, sizeof(pcxbuf));
 
 	pcx = &pcxbuf;
 
@@ -124,10 +124,10 @@ byte* LoadPCX (FILE *f, int matchwidth, int matchheight)
 		return NULL;
 
 	// seek to palette
-	fseek (f, -768, SEEK_END);
-	fread (palette, 1, 768, f);
+	Qseek (f, -768, SEEK_END);
+	Qread (f, palette, 768);
 
-	fseek (f, sizeof(pcxbuf) - 4, SEEK_SET);
+	Qseek (f, sizeof(pcxbuf) - 4, SEEK_SET);
 
 	count = (pcx->xmax+1) * (pcx->ymax+1);
 	image_rgba = qmalloc( count * 4);
@@ -137,12 +137,12 @@ byte* LoadPCX (FILE *f, int matchwidth, int matchheight)
 		pix = image_rgba + 4*y*(pcx->xmax+1);
 		for (x=0 ; x<=pcx->xmax ; )
 		{
-			dataByte = fgetc(f);
+			dataByte = Qgetc(f);
 
 			if((dataByte & 0xC0) == 0xC0)
 			{
 				runLength = dataByte & 0x3F;
-				dataByte = fgetc(f);
+				dataByte = Qgetc(f);
 				if (runLength)
 				{
 					x += runLength;
@@ -168,7 +168,7 @@ byte* LoadPCX (FILE *f, int matchwidth, int matchheight)
 
 		}
 	}
-	fclose(f);
+	Qclose(f);
 	image_width = pcx->xmax+1;
 	image_height = pcx->ymax+1;
 	return image_rgba;
@@ -193,24 +193,24 @@ typedef struct _TargaHeader {
 
 TargaHeader		targa_header;
 
-int fgetLittleShort (FILE *f)
+int fgetLittleShort (QFile *f)
 {
 	byte	b1, b2;
 
-	b1 = fgetc(f);
-	b2 = fgetc(f);
+	b1 = Qgetc(f);
+	b2 = Qgetc(f);
 
 	return (short)(b1 + b2*256);
 }
 
-int fgetLittleLong (FILE *f)
+int fgetLittleLong (QFile *f)
 {
 	byte	b1, b2, b3, b4;
 
-	b1 = fgetc(f);
-	b2 = fgetc(f);
-	b3 = fgetc(f);
-	b4 = fgetc(f);
+	b1 = Qgetc(f);
+	b2 = Qgetc(f);
+	b3 = Qgetc(f);
+	b4 = Qgetc(f);
 
 	return b1 + (b2<<8) + (b3<<16) + (b4<<24);
 }
@@ -221,20 +221,20 @@ int fgetLittleLong (FILE *f)
 LoadTGA
 =============
 */
-byte* LoadTGA (FILE *fin, int matchwidth, int matchheight)
+byte* LoadTGA (QFile *fin, int matchwidth, int matchheight)
 {
 	int				columns, rows, numPixels;
 	byte			*pixbuf;
 	int				row, column;
 	byte			*image_rgba;
 
-	targa_header.id_length = fgetc(fin);
-	targa_header.colormap_type = fgetc(fin);
-	targa_header.image_type = fgetc(fin);
+	targa_header.id_length = Qgetc(fin);
+	targa_header.colormap_type = Qgetc(fin);
+	targa_header.image_type = Qgetc(fin);
 	
 	targa_header.colormap_index = fgetLittleShort(fin);
 	targa_header.colormap_length = fgetLittleShort(fin);
-	targa_header.colormap_size = fgetc(fin);
+	targa_header.colormap_size = Qgetc(fin);
 	targa_header.x_origin = fgetLittleShort(fin);
 	targa_header.y_origin = fgetLittleShort(fin);
 	targa_header.width = fgetLittleShort(fin);
@@ -243,8 +243,8 @@ byte* LoadTGA (FILE *fin, int matchwidth, int matchheight)
 		return NULL;
 	if (matchheight && targa_header.height != matchheight)
 		return NULL;
-	targa_header.pixel_size = fgetc(fin);
-	targa_header.attributes = fgetc(fin);
+	targa_header.pixel_size = Qgetc(fin);
+	targa_header.attributes = Qgetc(fin);
 
 	if (targa_header.image_type!=2 
 		&& targa_header.image_type!=10) 
@@ -261,7 +261,7 @@ byte* LoadTGA (FILE *fin, int matchwidth, int matchheight)
 	image_rgba = qmalloc(numPixels*4);
 	
 	if (targa_header.id_length != 0)
-		fseek(fin, targa_header.id_length, SEEK_CUR);  // skip TARGA image comment
+		Qseek(fin, targa_header.id_length, SEEK_CUR);  // skip TARGA image comment
 	
 	if (targa_header.image_type==2) {  // Uncompressed, RGB images
 		for(row=rows-1; row>=0; row--) {
@@ -271,19 +271,19 @@ byte* LoadTGA (FILE *fin, int matchwidth, int matchheight)
 				switch (targa_header.pixel_size) {
 					case 24:
 							
-							blue = getc(fin);
-							green = getc(fin);
-							red = getc(fin);
+							blue = Qgetc(fin);
+							green = Qgetc(fin);
+							red = Qgetc(fin);
 							*pixbuf++ = red;
 							*pixbuf++ = green;
 							*pixbuf++ = blue;
 							*pixbuf++ = 255;
 							break;
 					case 32:
-							blue = getc(fin);
-							green = getc(fin);
-							red = getc(fin);
-							alphabyte = getc(fin);
+							blue = Qgetc(fin);
+							green = Qgetc(fin);
+							red = Qgetc(fin);
+							alphabyte = Qgetc(fin);
 							*pixbuf++ = red;
 							*pixbuf++ = green;
 							*pixbuf++ = blue;
@@ -298,21 +298,21 @@ byte* LoadTGA (FILE *fin, int matchwidth, int matchheight)
 		for(row=rows-1; row>=0; row--) {
 			pixbuf = image_rgba + row*columns*4;
 			for(column=0; column<columns; ) {
-				packetHeader=getc(fin);
+				packetHeader=Qgetc(fin);
 				packetSize = 1 + (packetHeader & 0x7f);
 				if (packetHeader & 0x80) {        // run-length packet
 					switch (targa_header.pixel_size) {
 						case 24:
-								blue = getc(fin);
-								green = getc(fin);
-								red = getc(fin);
+								blue = Qgetc(fin);
+								green = Qgetc(fin);
+								red = Qgetc(fin);
 								alphabyte = 255;
 								break;
 						case 32:
-								blue = getc(fin);
-								green = getc(fin);
-								red = getc(fin);
-								alphabyte = getc(fin);
+								blue = Qgetc(fin);
+								green = Qgetc(fin);
+								red = Qgetc(fin);
+								alphabyte = Qgetc(fin);
 								break;
 					}
 	
@@ -336,19 +336,19 @@ byte* LoadTGA (FILE *fin, int matchwidth, int matchheight)
 					for(j=0;j<packetSize;j++) {
 						switch (targa_header.pixel_size) {
 							case 24:
-									blue = getc(fin);
-									green = getc(fin);
-									red = getc(fin);
+									blue = Qgetc(fin);
+									green = Qgetc(fin);
+									red = Qgetc(fin);
 									*pixbuf++ = red;
 									*pixbuf++ = green;
 									*pixbuf++ = blue;
 									*pixbuf++ = 255;
 									break;
 							case 32:
-									blue = getc(fin);
-									green = getc(fin);
-									red = getc(fin);
-									alphabyte = getc(fin);
+									blue = Qgetc(fin);
+									green = Qgetc(fin);
+									red = Qgetc(fin);
+									alphabyte = Qgetc(fin);
 									*pixbuf++ = red;
 									*pixbuf++ = green;
 									*pixbuf++ = blue;
@@ -371,7 +371,7 @@ byte* LoadTGA (FILE *fin, int matchwidth, int matchheight)
 		}
 	}
 	
-	fclose(fin);
+	Qclose(fin);
 	image_width = columns;
 	image_height = rows;
 	return image_rgba;
@@ -382,7 +382,7 @@ byte* LoadTGA (FILE *fin, int matchwidth, int matchheight)
 LoadLMP
 ============
 */
-byte* LoadLMP (FILE *f, int matchwidth, int matchheight)
+byte* LoadLMP (QFile *f, int matchwidth, int matchheight)
 {
 	byte	*image_rgba;
 	int		width, height;
@@ -398,8 +398,8 @@ byte* LoadLMP (FILE *f, int matchwidth, int matchheight)
 		return NULL;
 
 	image_rgba = qmalloc(width*height*4);
-	fread(image_rgba + width*height*3, 1, width*height, f);
-	fclose(f);
+	Qread(f, image_rgba + width*height*3, width*height);
+	Qclose(f);
 
 	Image_Copy8bitRGBA(image_rgba + width*height*3, image_rgba, width*height, d_8to24table);
 	image_width = width;
@@ -426,7 +426,7 @@ void Image_StripImageExtension (char *in, char *out)
 
 byte* loadimagepixels (char* filename, qboolean complain, int matchwidth, int matchheight)
 {
-	FILE	*f;
+	QFile	*f;
 	char	basename[256], name[256];
 	byte	*c;
 	Image_StripImageExtension(filename, basename); // strip .tga, .pcx and .lmp extensions to allow replacement by other types
@@ -435,23 +435,23 @@ byte* loadimagepixels (char* filename, qboolean complain, int matchwidth, int ma
 		if (*c == '*')
 			*c = '#';
 	sprintf (name, "textures/%s.tga", basename);
-	COM_FOpenFile (name, &f, true);
+	COM_FOpenFile (name, &f, true, true);
 	if (f)
 		return LoadTGA (f, matchwidth, matchheight);
 	sprintf (name, "textures/%s.pcx", basename);
-	COM_FOpenFile (name, &f, true);
+	COM_FOpenFile (name, &f, true, true);
 	if (f)
 		return LoadPCX (f, matchwidth, matchheight);
 	sprintf (name, "%s.tga", basename);
-	COM_FOpenFile (name, &f, true);
+	COM_FOpenFile (name, &f, true, true);
 	if (f)
 		return LoadTGA (f, matchwidth, matchheight);
 	sprintf (name, "%s.pcx", basename);
-	COM_FOpenFile (name, &f, true);
+	COM_FOpenFile (name, &f, true, true);
 	if (f)
 		return LoadPCX (f, matchwidth, matchheight);
 	sprintf (name, "%s.lmp", basename);
-	COM_FOpenFile (name, &f, true);
+	COM_FOpenFile (name, &f, true, true);
 	if (f)
 		return LoadLMP (f, matchwidth, matchheight);
 	if (complain)

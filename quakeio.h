@@ -64,7 +64,5 @@ long Qtell(QFile *file);
 int Qflush(QFile *file);
 int Qeof(QFile *file);
 char *Qgetline(QFile *file);
-int Qgetpos(QFile *file, fpos_t *pos);
-int Qsetpos(QFile *file, fpos_t *pos);
 
 #endif /*__quakeio_h*/

@@ -87,7 +87,7 @@ void Sys_Printf (char *fmt, ...)
 	va_start (argptr,fmt);
 	vsprintf (text,fmt,argptr);
 	va_end (argptr);
-	fprintf(stderr, "%s", text);
+	Qprintf(stderr, "%s", text);
 	
 	Con_Print (text);
 }
