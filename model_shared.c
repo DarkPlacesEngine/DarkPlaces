@@ -479,108 +479,106 @@ void Mod_ValidateElements(const int *elements, int numtriangles, int numverts, c
 			Con_Printf("Mod_ValidateElements: out of bounds element detected at %s:%d\n", filename, fileline);
 }
 
-/*
-a note on the cost of executing this function:
-per triangle: 188 (83 42 13 45 4 1)
-assignments: 83 (20 3 3 3 1 4 4 1 3 4 3 4 30)
-adds: 42 (2 2 2 2 3 2 2 27)
-subtracts: 13 (3 3 3 1 3)
-multiplies: 45 (6 3 6 6 3 3 6 6 6)
-rsqrts: 4 (1 1 1 1)
-compares: 1 (1)
-per vertex: 39 (12 6 18 3)
-assignments: 12 (4 4 4)
-adds: 6 (2 2 2)
-multiplies: 18 (6 6 6)
-rsqrts: 3 (1 1 1)
-*/
-
+// warning: this is an expensive function!
 void Mod_BuildTextureVectorsAndNormals(int numverts, int numtriangles, const float *vertex3f, const float *texcoord2f, const int *elements, float *svector3f, float *tvector3f, float *normal3f)
 {
-	int i, tnum, voffset;
-	float vert[3][4], vec[3][4], sdir[3], tdir[3], normal[3], f, *v;
+	int i, tnum;
+	float sdir[3], tdir[3], normal[3], f, *v;
 	const int *e;
 	// clear the vectors
-	memset(svector3f, 0, numverts * sizeof(float[3]));
-	memset(tvector3f, 0, numverts * sizeof(float[3]));
-	memset(normal3f, 0, numverts * sizeof(float[3]));
+	if (svector3f)
+		memset(svector3f, 0, numverts * sizeof(float[3]));
+	if (tvector3f)
+		memset(tvector3f, 0, numverts * sizeof(float[3]));
+	if (normal3f)
+		memset(normal3f, 0, numverts * sizeof(float[3]));
 	// process each vertex of each triangle and accumulate the results
 	for (tnum = 0, e = elements;tnum < numtriangles;tnum++, e += 3)
 	{
 		// calculate texture matrix for triangle
-		// 20 assignments
-		voffset = e[0];
-		vert[0][0] = vertex3f[voffset*3+0];
-		vert[0][1] = vertex3f[voffset*3+1];
-		vert[0][2] = vertex3f[voffset*3+2];
-		vert[0][3] = texcoord2f[voffset*2];
-		voffset = e[1];
-		vert[1][0] = vertex3f[voffset*3+0];
-		vert[1][1] = vertex3f[voffset*3+1];
-		vert[1][2] = vertex3f[voffset*3+2];
-		vert[1][3] = texcoord2f[voffset*2];
-		voffset = e[2];
-		vert[2][0] = vertex3f[voffset*3+0];
-		vert[2][1] = vertex3f[voffset*3+1];
-		vert[2][2] = vertex3f[voffset*3+2];
-		vert[2][3] = texcoord2f[voffset*2];
+		// and then accumulate matrix onto verts used by triangle
+#if 0
 		// 3 assignments, 3 subtracts
-		VectorSubtract(vert[1], vert[0], vec[0]);
+		VectorSubtract(vertex3f + e[1] * 3, vertex3f + e[0] * 3, edgedir1);
 		// 3 assignments, 3 subtracts
-		VectorSubtract(vert[2], vert[0], vec[1]);
+		VectorSubtract(vertex3f + e[2] * 3, vertex3f + e[0] * 3, edgedir2);
 		// 3 assignments, 3 subtracts, 6 multiplies
-		CrossProduct(vec[0], vec[1], normal);
+		CrossProduct(edgedir1, edgedir2, normal);
+#else
+		// 3 assignments, 15 subtracts, 6 multiplies
+		normal[0] = (vertex3f[e[1] * 3 + 1] - vertex3f[e[0] * 3 + 1]) * (vertex3f[e[2] * 3 + 2] - vertex3f[e[0] * 3 + 2]) - (vertex3f[e[1] * 3 + 2] - vertex3f[e[0] * 3 + 2]) * (vertex3f[e[2] * 3 + 1] - vertex3f[e[0] * 3 + 1]);
+		normal[1] = (vertex3f[e[1] * 3 + 2] - vertex3f[e[0] * 3 + 2]) * (vertex3f[e[2] * 3 + 0] - vertex3f[e[0] * 3 + 0]) - (vertex3f[e[1] * 3 + 0] - vertex3f[e[0] * 3 + 0]) * (vertex3f[e[2] * 3 + 2] - vertex3f[e[0] * 3 + 2]);
+		normal[2] = (vertex3f[e[1] * 3 + 0] - vertex3f[e[0] * 3 + 0]) * (vertex3f[e[2] * 3 + 1] - vertex3f[e[0] * 3 + 1]) - (vertex3f[e[1] * 3 + 1] - vertex3f[e[0] * 3 + 1]) * (vertex3f[e[2] * 3 + 0] - vertex3f[e[0] * 3 + 0]);
+#endif
+
 		// 1 assignment, 2 adds, 3 multiplies, 1 compare
-		if (DotProduct(normal, normal) >= 0.001)
+		f = DotProduct(normal, normal);
+		if (f >= 0.001)
 		{
-			// 4 assignments, 1 rsqrt, 2 adds, 6 multiplies
-			VectorNormalize(normal);
-			tdir[0] = ((vert[1][3] - vert[0][3]) * (vert[2][0] - vert[0][0]) - (vert[2][3] - vert[0][3]) * (vert[1][0] - vert[0][0]));
-			tdir[1] = ((vert[1][3] - vert[0][3]) * (vert[2][1] - vert[0][1]) - (vert[2][3] - vert[0][3]) * (vert[1][1] - vert[0][1]));
-			tdir[2] = ((vert[1][3] - vert[0][3]) * (vert[2][2] - vert[0][2]) - (vert[2][3] - vert[0][3]) * (vert[1][2] - vert[0][2]));
-			// 4 assignments, 1 rsqrt, 2 adds, 6 multiplies
-			VectorNormalize(tdir);
-			// 1 assignments, 1 negates, 2 adds, 3 multiplies
-			f = -DotProduct(tdir, normal);
-			// 3 assignments, 3 adds, 3 multiplies
-			VectorMA(tdir, f, normal, tdir);
-			// 4 assignments, 1 rsqrt, 2 adds, 6 multiplies
-			VectorNormalize(tdir);
-			// 3 assignments, 3 subtracts, 6 multiplies
-			CrossProduct(tdir, normal, sdir);
-			// this is probably not necessary
-			// 4 assignments, 1 rsqrt, 2 adds, 6 multiplies
-			VectorNormalize(sdir);
-			//
-			VectorNegate(sdir, sdir);
-			// accumulate matrix onto verts used by triangle
-			// 30 assignments, 27 adds
-			for (i = 0;i < 3;i++)
+			// 4 assignments, 1 divide, 1 sqrt, 3 multiplies
+			f = 1.0f / f;
+			VectorScale(normal, f, normal);
+			if (normal3f)
 			{
-				voffset = e[i];
-				svector3f[voffset*3  ] += sdir[0];
-				svector3f[voffset*3+1] += sdir[1];
-				svector3f[voffset*3+2] += sdir[2];
-				tvector3f[voffset*3  ] += tdir[0];
-				tvector3f[voffset*3+1] += tdir[1];
-				tvector3f[voffset*3+2] += tdir[2];
-				normal3f[voffset*3  ] += normal[0];
-				normal3f[voffset*3+1] += normal[1];
-				normal3f[voffset*3+2] += normal[2];
+				// 9 assignments, 9 adds
+				for (i = 0;i < 3;i++)
+				{
+					normal3f[e[i]*3  ] += normal[0];
+					normal3f[e[i]*3+1] += normal[1];
+					normal3f[e[i]*3+2] += normal[2];
+				}
+			}
+			if (tvector3f || svector3f)
+			{
+				// 3 assignments, 15 subtracts, 6 multiplies
+				tdir[0] = ((texcoord2f[e[1] * 3] - texcoord2f[e[0] * 3]) * (vertex3f[e[2]*3+0] - vertex3f[e[0]*3+0]) - (texcoord2f[e[2] * 3] - texcoord2f[e[0] * 3]) * (vertex3f[e[1]*3+0] - vertex3f[e[0]*3+0]));
+				tdir[1] = ((texcoord2f[e[1] * 3] - texcoord2f[e[0] * 3]) * (vertex3f[e[2]*3+1] - vertex3f[e[0]*3+1]) - (texcoord2f[e[2] * 3] - texcoord2f[e[0] * 3]) * (vertex3f[e[1]*3+1] - vertex3f[e[0]*3+1]));
+				tdir[2] = ((texcoord2f[e[1] * 3] - texcoord2f[e[0] * 3]) * (vertex3f[e[2]*3+2] - vertex3f[e[0]*3+2]) - (texcoord2f[e[2] * 3] - texcoord2f[e[0] * 3]) * (vertex3f[e[1]*3+2] - vertex3f[e[0]*3+2]));
+				// 1 assignments, 1 negates, 2 adds, 3 multiplies
+				f = -DotProduct(tdir, normal);
+				// 3 assignments, 3 adds, 3 multiplies
+				VectorMA(tdir, f, normal, tdir);
+				// 4 assignments, 1 divide, 1 sqrt, 2 adds, 6 multiplies
+				VectorNormalize(tdir);
+				if (tvector3f)
+				{
+					// 9 assignments, 9 adds
+					for (i = 0;i < 3;i++)
+					{
+						tvector3f[e[i]*3  ] += tdir[0];
+						tvector3f[e[i]*3+1] += tdir[1];
+						tvector3f[e[i]*3+2] += tdir[2];
+					}
+				}
+				if (svector3f)
+				{
+					// 3 assignments, 3 subtracts, 6 multiplies
+					CrossProduct(normal, tdir, sdir);
+					// 9 assignments, 9 adds
+					for (i = 0;i < 3;i++)
+					{
+						svector3f[e[i]*3  ] += sdir[0];
+						svector3f[e[i]*3+1] += sdir[1];
+						svector3f[e[i]*3+2] += sdir[2];
+					}
+				}
 			}
 		}
 	}
 	// now we could divide the vectors by the number of averaged values on
 	// each vertex...  but instead normalize them
-	for (i = 0, v = svector3f;i < numverts;i++, v += 3)
-		// 4 assignments, 1 rsqrt, 2 adds, 6 multiplies
-		VectorNormalize(v);
-	for (i = 0, v = tvector3f;i < numverts;i++, v += 3)
-		// 4 assignments, 1 rsqrt, 2 adds, 6 multiplies
-		VectorNormalize(v);
-	for (i = 0, v = normal3f;i < numverts;i++, v += 3)
-		// 4 assignments, 1 rsqrt, 2 adds, 6 multiplies
-		VectorNormalize(v);
+	// 4 assignments, 1 divide, 1 sqrt, 2 adds, 6 multiplies
+	if (svector3f)
+		for (i = 0, v = svector3f;i < numverts;i++, v += 3)
+			VectorNormalize(v);
+	// 4 assignments, 1 divide, 1 sqrt, 2 adds, 6 multiplies
+	if (tvector3f)
+		for (i = 0, v = tvector3f;i < numverts;i++, v += 3)
+			VectorNormalize(v);
+	// 4 assignments, 1 divide, 1 sqrt, 2 adds, 6 multiplies
+	if (normal3f)
+		for (i = 0, v = normal3f;i < numverts;i++, v += 3)
+			VectorNormalize(v);
 }
 
 shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts)
