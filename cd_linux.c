@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -56,7 +56,7 @@ static void CDAudio_Eject(void)
 	if (cdfile == -1 || !enabled)
 		return; // no cd init'd
 
-	if ( ioctl(cdfile, CDROMEJECT) == -1 ) 
+	if ( ioctl(cdfile, CDROMEJECT) == -1 )
 		Con_DPrintf("ioctl cdromeject failed\n");
 }
 
@@ -66,7 +66,7 @@ static void CDAudio_CloseDoor(void)
 	if (cdfile == -1 || !enabled)
 		return; // no cd init'd
 
-	if ( ioctl(cdfile, CDROMCLOSETRAY) == -1 ) 
+	if ( ioctl(cdfile, CDROMCLOSETRAY) == -1 )
 		Con_DPrintf("ioctl cdromclosetray failed\n");
 }
 
@@ -76,7 +76,7 @@ static int CDAudio_GetAudioDiskInfo(void)
 
 	cdValid = false;
 
-	if ( ioctl(cdfile, CDROMREADTOCHDR, &tochdr) == -1 ) 
+	if ( ioctl(cdfile, CDROMREADTOCHDR, &tochdr) == -1 )
     {
       Con_DPrintf("ioctl cdromreadtochdr failed\n");
 	  return -1;
@@ -102,7 +102,7 @@ void CDAudio_Play(qbyte track, qboolean looping)
 
 	if (cdfile == -1 || !enabled)
 		return;
-	
+
 	if (!cdValid)
 	{
 		CDAudio_GetAudioDiskInfo();
@@ -144,13 +144,13 @@ void CDAudio_Play(qbyte track, qboolean looping)
 	ti.cdti_ind0 = 1;
 	ti.cdti_ind1 = 99;
 
-	if ( ioctl(cdfile, CDROMPLAYTRKIND, &ti) == -1 ) 
+	if ( ioctl(cdfile, CDROMPLAYTRKIND, &ti) == -1 )
     {
 		Con_DPrintf("ioctl cdromplaytrkind failed\n");
 		return;
     }
 
-	if ( ioctl(cdfile, CDROMRESUME) == -1 ) 
+	if ( ioctl(cdfile, CDROMRESUME) == -1 )
 		Con_DPrintf("ioctl cdromresume failed\n");
 
 	playLooping = looping;
@@ -166,7 +166,7 @@ void CDAudio_Stop(void)
 {
 	if (cdfile == -1 || !enabled)
 		return;
-	
+
 	if (!playing)
 		return;
 
@@ -185,7 +185,7 @@ void CDAudio_Pause(void)
 	if (!playing)
 		return;
 
-	if ( ioctl(cdfile, CDROMPAUSE) == -1 ) 
+	if ( ioctl(cdfile, CDROMPAUSE) == -1 )
 		Con_DPrintf("ioctl cdrompause failed\n");
 
 	wasPlaying = playing;
@@ -197,13 +197,13 @@ void CDAudio_Resume(void)
 {
 	if (cdfile == -1 || !enabled)
 		return;
-	
+
 	if (!cdValid)
 		return;
 
 	if (!wasPlaying)
 		return;
-	
+
 	if ( ioctl(cdfile, CDROMRESUME) == -1 )
 		Con_DPrintf("ioctl cdromresume failed\n");
 	playing = true;
@@ -384,7 +384,7 @@ int CDAudio_Init(void)
 	}
 
 	if ((cdfile = open(cd_dev, O_RDONLY)) == -1) {
-		Con_Printf("CDAudio_Init: open of \"%s\" failed (%i)\n", cd_dev, errno);
+		Con_DPrintf("CDAudio_Init: open of \"%s\" failed (%i)\n", cd_dev, errno);
 		cdfile = -1;
 		return -1;
 	}
@@ -397,13 +397,13 @@ int CDAudio_Init(void)
 
 	if (CDAudio_GetAudioDiskInfo())
 	{
-		Con_Printf("CDAudio_Init: No CD in player.\n");
+		Con_DPrintf("CDAudio_Init: No CD in player.\n");
 		cdValid = false;
 	}
 
 	Cmd_AddCommand ("cd", CD_f);
 
-	Con_Printf("CD Audio Initialized\n");
+	Con_DPrintf("CD Audio Initialized\n");
 
 	return 0;
 }

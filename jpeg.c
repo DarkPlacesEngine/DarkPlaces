@@ -414,7 +414,7 @@ qboolean JPEG_OpenLibrary (void)
 	// Load the DLL
 	if (! (jpeg_dll = Sys_LoadLibrary (dllname)))
 	{
-		Con_Printf ("Can't find %s. JPEG support disabled\n", dllname);
+		Con_DPrintf("Can't find %s. JPEG support disabled\n", dllname);
 		return false;
 	}
 
@@ -422,12 +422,12 @@ qboolean JPEG_OpenLibrary (void)
 	for (func = jpegfuncs; func && func->name != NULL; func++)
 		if (!(*func->funcvariable = (void *) Sys_GetProcAddress (jpeg_dll, func->name)))
 		{
-			Con_Printf ("missing function \"%s\" - broken JPEG library!\n", func->name);
+			Con_Printf("missing function \"%s\" - broken JPEG library!\n", func->name);
 			JPEG_CloseLibrary ();
 			return false;
 		}
 
-	Con_Printf ("%s loaded. JPEG support enabled\n", dllname);
+	Con_DPrintf("%s loaded. JPEG support enabled\n", dllname);
 	return true;
 }
 

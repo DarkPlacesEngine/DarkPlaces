@@ -71,6 +71,7 @@ int sound_started = 0;
 
 cvar_t bgmvolume = {CVAR_SAVE, "bgmvolume", "1"};
 cvar_t volume = {CVAR_SAVE, "volume", "0.7"};
+cvar_t snd_staticvolume = {CVAR_SAVE, "snd_staticvolume", "1"};
 
 cvar_t nosound = {0, "nosound", "0"};
 cvar_t snd_precache = {0, "snd_precache", "1"};
@@ -163,12 +164,13 @@ S_Init
 */
 void S_Init (void)
 {
-	Con_Printf("\nSound Initialization\n");
+	Con_DPrintf("\nSound Initialization\n");
 
 	S_RawSamples_ClearQueue();
 
 	Cvar_RegisterVariable(&volume);
 	Cvar_RegisterVariable(&bgmvolume);
+	Cvar_RegisterVariable(&snd_staticvolume);
 
 	if (COM_CheckParm("-nosound") || COM_CheckParm("-safe"))
 		return;
@@ -224,7 +226,7 @@ void S_Init (void)
 	if (!sound_started)
 		return;
 
-	Con_Printf ("Sound sampling rate: %i\n", shm->speed);
+	Con_DPrintf ("Sound sampling rate: %i\n", shm->speed);
 
 	// provides a tick sound until washed clean
 
@@ -342,15 +344,15 @@ SND_PickChannel
 */
 channel_t *SND_PickChannel(int entnum, int entchannel)
 {
-    int ch_idx;
-    int first_to_die;
-    int life_left;
+	int ch_idx;
+	int first_to_die;
+	int life_left;
 
 // Check for replacement sound, or find the best one to replace
-    first_to_die = -1;
-    life_left = 0x7fffffff;
-    for (ch_idx=NUM_AMBIENTS ; ch_idx < NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS ; ch_idx++)
-    {
+	first_to_die = -1;
+	life_left = 0x7fffffff;
+	for (ch_idx=NUM_AMBIENTS ; ch_idx < NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS ; ch_idx++)
+	{
 		if (entchannel != 0		// channel 0 never overrides
 		&& channels[ch_idx].entnum == entnum
 		&& (channels[ch_idx].entchannel == entchannel || entchannel == -1) )
@@ -368,7 +370,7 @@ channel_t *SND_PickChannel(int entnum, int entchannel)
 			life_left = channels[ch_idx].end - paintedtime;
 			first_to_die = ch_idx;
 		}
-   }
+	}
 
 	if (first_to_die == -1)
 		return NULL;
@@ -376,7 +378,7 @@ channel_t *SND_PickChannel(int entnum, int entchannel)
 	if (channels[first_to_die].sfx)
 		channels[first_to_die].sfx = NULL;
 
-    return &channels[first_to_die];
+	return &channels[first_to_die];
 }
 
 /*
@@ -384,12 +386,12 @@ channel_t *SND_PickChannel(int entnum, int entchannel)
 SND_Spatialize
 =================
 */
-void SND_Spatialize(channel_t *ch)
+void SND_Spatialize(channel_t *ch, int isstatic)
 {
-    vec_t dot;
-    vec_t dist;
-    vec_t lscale, rscale, scale;
-    vec3_t source_vec;
+	vec_t dot;
+	vec_t dist;
+	vec_t lscale, rscale, scale;
+	vec3_t source_vec;
 	sfx_t *snd;
 
 // anything coming from the view entity will always be full volume
@@ -398,39 +400,45 @@ void SND_Spatialize(channel_t *ch)
 	{
 		ch->leftvol = ch->master_vol;
 		ch->rightvol = ch->master_vol;
-		return;
-	}
-
-// calculate stereo seperation and distance attenuation
-
-	snd = ch->sfx;
-	VectorSubtract(ch->origin, listener_origin, source_vec);
-
-	dist = VectorNormalizeLength(source_vec) * ch->dist_mult;
-
-	dot = DotProduct(listener_right, source_vec);
-
-	if (shm->channels == 1)
-	{
-		rscale = 1.0;
-		lscale = 1.0;
 	}
 	else
 	{
-		rscale = 1.0 + dot;
-		lscale = 1.0 - dot;
+		// calculate stereo seperation and distance attenuation
+		snd = ch->sfx;
+		VectorSubtract(ch->origin, listener_origin, source_vec);
+
+		dist = VectorNormalizeLength(source_vec) * ch->dist_mult;
+
+		dot = DotProduct(listener_right, source_vec);
+
+		if (shm->channels == 1)
+		{
+			rscale = 1.0;
+			lscale = 1.0;
+		}
+		else
+		{
+			rscale = 1.0 + dot;
+			lscale = 1.0 - dot;
+		}
+
+	// add in distance effect
+		scale = (1.0 - dist) * rscale;
+		ch->rightvol = (int) (ch->master_vol * scale);
+		if (ch->rightvol < 0)
+			ch->rightvol = 0;
+
+		scale = (1.0 - dist) * lscale;
+		ch->leftvol = (int) (ch->master_vol * scale);
+		if (ch->leftvol < 0)
+			ch->leftvol = 0;
 	}
-
-// add in distance effect
-	scale = (1.0 - dist) * rscale;
-	ch->rightvol = (int) (ch->master_vol * scale);
-	if (ch->rightvol < 0)
-		ch->rightvol = 0;
-
-	scale = (1.0 - dist) * lscale;
-	ch->leftvol = (int) (ch->master_vol * scale);
-	if (ch->leftvol < 0)
-		ch->leftvol = 0;
+	// LordHavoc: allow adjusting volume of static sounds
+	if (isstatic)
+	{
+		ch->leftvol *= snd_staticvolume.value;
+		ch->rightvol *= snd_staticvolume.value;
+	}
 }
 
 
@@ -484,13 +492,13 @@ void S_StartSound(int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 
 	target_chan->sfx = sfx;
 	target_chan->pos = 0.0;
-    target_chan->end = paintedtime + sc->length;
+	target_chan->end = paintedtime + sc->length;
 
 // if an identical sound has also been started this frame, offset the pos
 // a bit to keep it from just making the first one louder
 	check = &channels[NUM_AMBIENTS];
-    for (ch_idx=NUM_AMBIENTS ; ch_idx < NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS ; ch_idx++, check++)
-    {
+	for (ch_idx=NUM_AMBIENTS ; ch_idx < NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS ; ch_idx++, check++)
+	{
 		if (check == target_chan)
 			continue;
 		if (check->sfx == sfx && !check->pos)
@@ -650,7 +658,7 @@ void S_StaticSound (sfx_t *sfx, vec3_t origin, float vol, float attenuation)
 	VectorCopy (origin, ss->origin);
 	ss->master_vol = vol;
 	ss->dist_mult = (attenuation/64) / sound_nominal_clip_dist;
-    ss->end = paintedtime + sc->length;
+	ss->end = paintedtime + sc->length;
 
 	SND_Spatialize (ss);
 }
@@ -745,7 +753,7 @@ void S_Update(vec3_t origin, vec3_t forward, vec3_t right, vec3_t up)
 	{
 		if (!ch->sfx)
 			continue;
-		SND_Spatialize(ch);         // respatialize channel
+		SND_Spatialize(ch, i > MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS);         // respatialize channel
 		if (!ch->leftvol && !ch->rightvol)
 			continue;
 

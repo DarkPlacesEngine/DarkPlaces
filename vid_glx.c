@@ -707,7 +707,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int stencil)
 		vidmode_ext = false;
 	else
 	{
-		Con_Printf("Using XFree86-VidModeExtension Version %d.%d\n", MajorVersion, MinorVersion);
+		Con_DPrintf("Using XFree86-VidModeExtension Version %d.%d\n", MajorVersion, MinorVersion);
 		vidmode_ext = true;
 	}
 
@@ -873,7 +873,7 @@ static void *prjobj = NULL;
 
 int GL_OpenLibrary(const char *name)
 {
-	Con_Printf("Loading GL driver %s\n", name);
+	Con_Printf("Loading OpenGL driver %s\n", name);
 	GL_CloseLibrary();
 	if (!(prjobj = dlopen(name, RTLD_LAZY)))
 	{

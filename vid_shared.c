@@ -228,14 +228,14 @@ int GL_CheckExtension(const char *name, const dllfunction_t *funcs, const char *
 	int failed = false;
 	const dllfunction_t *func;
 
-	Con_Printf("checking for %s...  ", name);
+	Con_DPrintf("checking for %s...  ", name);
 
 	for (func = funcs;func && func->name;func++)
 		*func->funcvariable = NULL;
 
 	if (disableparm && COM_CheckParm(disableparm))
 	{
-		Con_Printf("disabled by commandline\n");
+		Con_DPrintf("disabled by commandline\n");
 		return false;
 	}
 
@@ -247,19 +247,19 @@ int GL_CheckExtension(const char *name, const dllfunction_t *funcs, const char *
 			if (!(*func->funcvariable = (void *) GL_GetProcAddress(func->name)))
 			{
 				if (!silent)
-					Con_Printf("missing function \"%s\" - broken driver!\n", func->name);
+					Con_Printf("OpenGL extension \"%s\" is missing function \"%s\" - broken driver!\n", name, func->name);
 				failed = true;
 			}
 		}
 		// delay the return so it prints all missing functions
 		if (failed)
 			return false;
-		Con_Printf("enabled\n");
+		Con_DPrintf("enabled\n");
 		return true;
 	}
 	else
 	{
-		Con_Printf("not detected\n");
+		Con_DPrintf("not detected\n");
 		return false;
 	}
 }
@@ -421,13 +421,13 @@ void VID_CheckExtensions(void)
 	if (!GL_CheckExtension("OpenGL 1.1.0", opengl110funcs, NULL, false))
 		Sys_Error("OpenGL 1.1.0 functions not found\n");
 
-	Con_Printf ("GL_VENDOR: %s\n", gl_vendor);
-	Con_Printf ("GL_RENDERER: %s\n", gl_renderer);
-	Con_Printf ("GL_VERSION: %s\n", gl_version);
-	Con_Printf ("GL_EXTENSIONS: %s\n", gl_extensions);
-	Con_Printf ("%s_EXTENSIONS: %s\n", gl_platform, gl_platformextensions);
+	Con_DPrintf ("GL_VENDOR: %s\n", gl_vendor);
+	Con_DPrintf ("GL_RENDERER: %s\n", gl_renderer);
+	Con_DPrintf ("GL_VERSION: %s\n", gl_version);
+	Con_DPrintf ("GL_EXTENSIONS: %s\n", gl_extensions);
+	Con_DPrintf ("%s_EXTENSIONS: %s\n", gl_platform, gl_platformextensions);
 
-	Con_Printf("Checking OpenGL extensions...\n");
+	Con_DPrintf("Checking OpenGL extensions...\n");
 
 	if (!GL_CheckExtension("glDrawRangeElements", drawrangeelementsfuncs, "-nodrawrangeelements", true))
 		GL_CheckExtension("GL_EXT_draw_range_elements", drawrangeelementsextfuncs, "-nodrawrangeelements", false);
@@ -669,6 +669,8 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&m_filter);
 	Cmd_AddCommand("force_centerview", Force_CenterView_f);
 	Cmd_AddCommand("vid_restart", VID_Restart_f);
+	if (gamemode == GAME_GOODVSBAD2)
+		Cvar_Set("gl_combine", "0");
 }
 
 int current_vid_fullscreen;
@@ -767,7 +769,7 @@ void VID_Open(void)
 		Cvar_SetValueQuick(&vid_stencil, 0);
 	}
 
-	Con_Printf("Starting video system\n");
+	Con_DPrintf("Starting video system\n");
 	if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_stencil.integer))
 	{
 		Con_Printf("Desired video mode fail, trying fallbacks...\n");

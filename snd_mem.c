@@ -232,7 +232,7 @@ sfxcache_t *S_LoadSound (sfx_t *s, int complain)
 	{
 		s->silentlymissing = !complain;
 		if (complain)
-			Con_Printf ("Couldn't load %s\n", namebuffer);
+			Con_DPrintf ("Couldn't load %s\n", namebuffer);
 		return NULL;
 	}
 

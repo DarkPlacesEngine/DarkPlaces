@@ -911,7 +911,7 @@ void Host_Init (void)
 
 	host_initialized = true;
 
-	Con_Printf ("========Quake Initialized=========\n");
+	Con_DPrintf ("========Initialized=========\n");
 
 	if (cls.state != ca_dedicated)
 		VID_Open();
