@@ -1222,10 +1222,6 @@ void SV_Physics_Toss (edict_t *ent)
 	vec3_t move;
 	edict_t *groundentity;
 
-	// regular thinking
-	if (!SV_RunThink (ent))
-		return;
-
 	// don't stick to ground if onground and moving upward
 	if (ent->v->velocity[2] >= (1.0 / 32.0) && ((int)ent->v->flags & FL_ONGROUND))
 		ent->v->flags = (int)ent->v->flags & ~FL_ONGROUND;
@@ -1385,6 +1381,7 @@ void SV_Physics (void)
 {
 	int i;
 	edict_t *ent;
+	qbyte runmove[MAX_EDICTS];
 
 // let the progs know that a new frame has started
 	pr_global_struct->self = EDICT_TO_PROG(sv.edicts);
@@ -1392,11 +1389,14 @@ void SV_Physics (void)
 	pr_global_struct->time = sv.time;
 	PR_ExecuteProgram (pr_global_struct->StartFrame, "QC function StartFrame is missing");
 
+	for (i = 0, ent = sv.edicts;i < sv.num_edicts;i++, ent = NEXT_EDICT(ent))
+		runmove[i] = !ent->e->free;
+
 //
 // treat each object in turn
 //
-	ent = sv.edicts;
-	for (i=0 ; i<sv.num_edicts ; i++, ent = NEXT_EDICT(ent))
+
+	for (i = 0, ent = sv.edicts;i < sv.num_edicts;i++, ent = NEXT_EDICT(ent))
 	{
 		if (ent->e->free)
 			continue;
@@ -1462,19 +1462,21 @@ void SV_Physics (void)
 		case MOVETYPE_BOUNCE:
 		case MOVETYPE_BOUNCEMISSILE:
 		case MOVETYPE_FLYMISSILE:
-			SV_Physics_Toss (ent);
+			// regular thinking
+			if (SV_RunThink (ent) && runmove[i])
+				SV_Physics_Toss (ent);
 			break;
 		case MOVETYPE_FLY:
-			if (i > 0 && i <= svs.maxclients)
+			if (SV_RunThink (ent) && runmove[i])
 			{
-				if (SV_RunThink (ent))
+				if (i > 0 && i <= svs.maxclients)
 				{
 					SV_CheckWater (ent);
 					SV_WalkMove (ent);
 				}
+				else
+					SV_Physics_Toss (ent);
 			}
-			else
-				SV_Physics_Toss (ent);
 			break;
 		default:
 			Host_Error ("SV_Physics: bad movetype %i", (int)ent->v->movetype);
