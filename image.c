@@ -1428,10 +1428,7 @@ int image_loadskin(imageskin_t *s, char *name)
 	s->basepixels_height = image_height;
 
 	bumppixels = NULL;bumppixels_width = 0;bumppixels_height = 0;
-	for (j = 3;j < s->basepixels_width * s->basepixels_height * 4;j += 4)
-		if (s->basepixels[j] < 255)
-			break;
-	if (j < s->basepixels_width * s->basepixels_height * 4)
+	if (Image_HasAlpha(s->basepixels, s->basepixels_width * s->basepixels_height, true))
 	{
 		s->maskpixels = Mem_Alloc(loadmodel->mempool, s->basepixels_width * s->basepixels_height * 4);
 		s->maskpixels_width = s->basepixels_width;
@@ -1513,6 +1510,8 @@ void image_freeskin(imageskin_t *s)
 {
 	if (s->basepixels)
 		Mem_Free(s->basepixels);
+	if (s->maskpixels)
+		Mem_Free(s->maskpixels);
 	if (s->nmappixels)
 		Mem_Free(s->nmappixels);
 	if (s->glowpixels)
