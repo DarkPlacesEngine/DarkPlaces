@@ -724,6 +724,7 @@ void PRVM_ED_PrintEdict_f (void)
 	if (i >= prog->num_edicts)
 	{
 		Con_Printf("Bad edict number\n");
+		PRVM_End;
 		return;
 	}
 	PRVM_ED_PrintNum (i);
@@ -1606,7 +1607,7 @@ void PRVM_Globals_f (void)
 	Con_Printf("%s :", PRVM_NAME);
 
 	for (i = 0;i < prog->progs->numglobaldefs;i++)
-		Con_Printf("%s\n", PRVM_GetString(pr_globaldefs[i].s_name));
+		Con_Printf("%s\n", PRVM_GetString(prog->globaldefs[i].s_name));
 	Con_Printf("%i global variables, totalling %i bytes\n", prog->progs->numglobals, prog->progs->numglobals * 4);
 
 	PRVM_End;
@@ -1629,7 +1630,7 @@ void PRVM_Init (void)
 	Cvar_RegisterVariable (&prvm_boundscheck);
 	Cvar_RegisterVariable (&prvm_traceqc);
 
-	VM_Cmd_Init();
+	//VM_Cmd_Init();
 }
 
 /*
@@ -1659,6 +1660,12 @@ prvm_edict_t *PRVM_EDICT_NUM_ERROR(int n, char *filename, int fileline)
 {
 	PRVM_ERROR ("PRVM_EDICT_NUM: %s: bad number %i (called at %s:%i)", PRVM_NAME, n, filename, fileline);
 	return NULL;
+}
+
+void PRVM_ProcessError(void)
+{
+	if(prog)
+		PRVM_GCALL(error_cmd)();
 }
 
 /*

@@ -5,7 +5,8 @@
 // also applies here
 
 
-/*============================================================================
+/*
+============================================================================
 common cmd list:
 =================
 
@@ -13,6 +14,8 @@ common cmd list:
 		error(...[string])
 		objerror(...[string)
 		print(...[strings])
+		bprint(...[string])
+		sprint(float clientnum,...[string])
 		centerprint(...[string])
 vector	normalize(vector)
 float	vlen(vector)
@@ -39,11 +42,13 @@ entity	findchain(.string field, string match)
 
 entity	findchainfloat(.string field, float match)
 entity	findchainentity(.string field, entity match)
-
+  
+string	precache_file(string)
+string	precache_sound (string sample)
 		coredump()
 		traceon()
 		traceoff()
-		eprint()
+		eprint(entity float)
 float	rint(float)
 float	floor(float)
 float	ceil(float)
@@ -73,6 +78,31 @@ float	clientcount()
 float	clientstate()
 		clientcommand(float client, string s) (for client and menu)
 float	tokenize(string s)
+		changelevel(string map)
+		localsound(string sample)
+
+perhaps only : Menu : WriteMsg 
+===============================
+
+		WriteByte(float data, float dest, float desto)
+		WriteChar(float data, float dest, float desto)
+		WriteShort(float data, float dest, float desto)
+		WriteLong(float data, float dest, float desto)
+		WriteAngle(float data, float dest, float desto)
+		WriteCoord(float data, float dest, float desto)
+		WriteString(string data, float dest, float desto)
+		WriteEntity(entity data, float dest, float desto)
+		
+Client & Menu : draw functions 
+===============================
+
+float	iscachedpic(string pic)
+string	precache_pic(string pic) 
+		freepic(string s)
+float	drawcharacter(vector position, float character, vector scale, vector rgb, float alpha, float flag)
+float	drawstring(vector position, string text, vector scale, vector rgb, float alpha, float flag)
+float	drawpic(vector position, string pic, vector size, vector rgb, float alpha, float flag)
+float	drawfill(vector position, vector size, vector rgb, float alpha, float flag)
 
 */
 
@@ -100,24 +130,28 @@ float	tokenize(string s)
 
 //============================================================================
 // Common
-cvar_t vm_zone_min_strings = {0, "prvm_zone_min_strings", "64"};
 
+// string zone mempool
 mempool_t *vm_strings_mempool[PRVM_MAXPROGS];
 
-/*
-typedef struct vm_string_s
-{
-	int prog_id;
-	// here follows everything else
-	char string[0];
-} vm_string_t;
-*/
-
+// temp string handling
 // LordHavoc: added this to semi-fix the problem of using many ftos calls in a print
 #define STRINGTEMP_BUFFERS 16
 #define STRINGTEMP_LENGTH 4096
 static char vm_string_temp[STRINGTEMP_BUFFERS][STRINGTEMP_LENGTH];
 static int vm_string_tempindex = 0;
+
+// qc cvar 
+#define MAX_QC_CVARS 128 * PRVM_MAXPROGS
+cvar_t vm_qc_cvar[MAX_QC_CVARS];
+int vm_currentqc_cvar;
+
+// qc file handling
+#define MAX_VMFILES		256
+#define MAX_PRVMFILES	MAX_VMFILES * PRVM_MAXPROGS
+#define VM_FILES ((qfile_t**)(vm_files + PRVM_GetProgNr() * MAX_VMFILES))
+
+qfile_t *vm_files[MAX_PRVMFILES];
 
 static char *VM_GetTempString(void)
 {
@@ -126,7 +160,6 @@ static char *VM_GetTempString(void)
 	vm_string_tempindex = (vm_string_tempindex + 1) % STRINGTEMP_BUFFERS;
 	return s;
 }
-
 
 void VM_CheckEmptyString (char *s)
 {
@@ -205,7 +238,7 @@ Dumps self.
 error(value)
 =================
 */
-void VM_Error (void)
+void VM_error (void)
 {
 	prvm_edict_t	*ed;
 	char string[STRINGTEMP_LENGTH];
@@ -242,6 +275,7 @@ void VM_objerror (void)
 	{
 		ed = PRVM_G_EDICT (prog->self->ofs);
 		PRVM_ED_Print (ed);
+
 		PRVM_ED_Free (ed);
 	}
 	else
@@ -264,6 +298,60 @@ void VM_print (void)
 
 	VM_VarString(0, string, sizeof(string));
 	Con_Print(string);
+}
+
+/*
+=================
+VM_bprint
+
+broadcast print to everyone on server
+
+bprint(...[string])
+=================
+*/
+void VM_bprint (void)
+{
+	char string[STRINGTEMP_LENGTH];
+
+	if(!sv.active)
+	{
+		Con_Printf("VM_bprint: game is not server(%s) !", PRVM_NAME);
+		return;
+	}
+
+	VM_VarString(0, string, sizeof(string));
+	SV_BroadcastPrintf("%s", string);
+}
+
+/*
+=================
+VM_sprint (menu & client but only if server.active == true)
+
+single print to a specific client
+
+sprint(float clientnum,...[string])
+=================
+*/
+void VM_sprint (void)
+{
+	client_t	*client;
+	int			clientnum;
+	char string[STRINGTEMP_LENGTH];
+
+	//find client for this entity
+	clientnum = PRVM_G_FLOAT(OFS_PARM0);
+	if (!sv.active  || clientnum < 0 || clientnum >= svs.maxclients || !svs.clients[clientnum].active)
+	{
+		Con_Printf("VM_sprint: %s: invalid client or server is not active !", PRVM_NAME);
+		return;
+	}
+	
+	client = svs.clients + clientnum;
+	if (!client->netconnection)
+		return;
+	VM_VarString(1, string, sizeof(string));
+	MSG_WriteChar(&client->message,svc_print);
+	MSG_WriteString(&client->message, string);
 }
 
 /*
@@ -481,6 +569,32 @@ void PF_sound (void)
 */
 
 /*
+=========
+VM_localsound
+
+localsound(string sample)
+=========
+*/
+void VM_localsound(void)
+{
+	char *s;
+	
+	VM_SAFEPARMCOUNT(1,VM_localsound);
+
+	s = PRVM_G_STRING(OFS_PARM0);
+
+	if(!S_GetCached(s))
+	{
+		Con_Printf("VM_localsound: %s : %s not cached !\n", PRVM_NAME, s);
+		PRVM_G_FLOAT(OFS_RETURN) = -4;
+		return;
+	}		
+
+	S_LocalSound(s);
+	PRVM_G_FLOAT(OFS_RETURN) = 1;
+}
+
+/*
 =================
 VM_break
 
@@ -491,11 +605,6 @@ void VM_break (void)
 {
 	PRVM_ERROR ("%s: break statement", PRVM_NAME);
 }
-
-//============================================================================
-
-int checkpvsbytes;
-qbyte checkpvs[MAX_MAP_LEAFS/8];
 
 //============================================================================
 
@@ -664,7 +773,7 @@ entity spawn()
 =========
 */
 
-void VM_Spawn (void)
+void VM_spawn (void)
 {
 	prvm_edict_t	*ed;
 	prog->xfunction->builtinsprofile += 20;
@@ -885,7 +994,7 @@ void VM_findchainfloat (void)
 =========
 VM_precache_file
 
-precache_file
+string	precache_file(string)
 =========
 */
 void VM_precache_file (void)
@@ -912,32 +1021,28 @@ void VM_precache_error (void)
 =========
 VM_precache_sound
 
+string	precache_sound (string sample)
 =========
 */
-/*
 void VM_precache_sound (void)
 {
 	char	*s;
-	int		i;
 
 	VM_SAFEPARMCOUNT(1, VM_precache_sound);
 
 	s = PRVM_G_STRING(OFS_PARM0);
 	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
 	VM_CheckEmptyString (s);
-
-	for (i=0 ; i < MAX_SOUNDS ; i++)
+	
+	if(S_GetCached(s))
 	{
-		if (!sv.sound_precache[i])
-		{
-			sv.sound_precache[i] = s;
-			return;
-		}
-		if (!strcmp(sv.sound_precache[i], s))
-			return;
+		Con_Printf("VM_precache_sound: %s already cached (%s)\n", s, PRVM_NAME);
+		return;
 	}
-	Host_Error ("PF_precache_sound: overflow");
-}*/
+	
+	if(!S_PrecacheSound(s,true))
+		Con_Printf("VM_prache_sound: Failed to load %s for %s\n", s, PRVM_NAME);
+}
 
 /*
 =========
@@ -985,7 +1090,7 @@ void VM_traceoff (void)
 =========
 VM_eprint
 
-eprint()
+eprint(entity float)
 =========
 */
 void VM_eprint (void)
@@ -1075,16 +1180,119 @@ void VM_nextent (void)
 	}
 }
 
+/*
+===============================================================================
+MESSAGE WRITING
+
+used only for client and menu
+severs uses VM_SV_...
+
+Write*(* data, float type, float to)
+
+===============================================================================
+*/
+
+#define	MSG_BROADCAST	0		// unreliable to all
+#define	MSG_ONE			1		// reliable to one (msg_entity)
+#define	MSG_ALL			2		// reliable to all
+#define	MSG_INIT		3		// write to the init string
+
+sizebuf_t *VM_WriteDest (void)
+{
+	int		dest;
+	int		destclient;
+
+	if(!sv.active)
+		PRVM_ERROR("VM_WriteDest: game is not server (%s)\n", PRVM_NAME);
+
+	dest = G_FLOAT(OFS_PARM1);
+	switch (dest)
+	{
+	case MSG_BROADCAST:
+		return &sv.datagram;
+
+	case MSG_ONE:
+		destclient = (int) PRVM_G_FLOAT(OFS_PARM2);
+		if (!sv.active  || destclient < 0 || destclient >= svs.maxclients || !svs.clients[destclient].active)
+			PRVM_ERROR("VM_clientcommand: %s: invalid client/server is not active !", PRVM_NAME);
+
+		return &svs.clients[destclient].message;
+
+	case MSG_ALL:
+		return &sv.reliable_datagram;
+
+	case MSG_INIT:
+		return &sv.signon;
+
+	default:
+		PRVM_ERROR ("WriteDest: bad destination");
+		break;
+	}
+
+	return NULL;
+}
+
+void VM_WriteByte (void)
+{
+	MSG_WriteByte (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0));
+}
+
+void VM_WriteChar (void)
+{
+	MSG_WriteChar (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0));
+}
+
+void VM_WriteShort (void)
+{
+	MSG_WriteShort (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0));
+}
+
+void VM_WriteLong (void)
+{
+	MSG_WriteLong (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0));
+}
+
+void VM_WriteAngle (void)
+{
+	MSG_WriteAngle (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0));
+}
+
+void VM_WriteCoord (void)
+{
+	MSG_WriteDPCoord (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0));
+}
+
+void VM_WriteString (void)
+{
+	MSG_WriteString (VM_WriteDest(), PRVM_G_STRING(OFS_PARM0));
+}
+
+void VM_WriteEntity (void)
+{
+	MSG_WriteShort (VM_WriteDest(), PRVM_G_EDICTNUM(OFS_PARM0));
+}
+
 //=============================================================================
 
 /*
 ==============
-PF_changelevel
+VM_changelevel
+server and menu
+
+changelevel(string map)
 ==============
 */
-/*void PF_changelevel (void)
+void VM_changelevel (void)
 {
 	char	*s;
+
+	VM_SAFEPARMCOUNT(1, VM_changelevel);
+
+	if(!sv.active)
+	{
+		Con_Printf("VM_changelevel: game is not server (%s)\n", PRVM_NAME); 
+		return;
+	}
 
 // make sure we don't issue two changelevels
 	if (svs.changelevel_issued)
@@ -1093,7 +1301,7 @@ PF_changelevel
 
 	s = G_STRING(OFS_PARM0);
 	Cbuf_AddText (va("changelevel %s\n",s));
-}*/
+}
 
 /*
 =========
@@ -1135,7 +1343,7 @@ void VM_sqrt (void)
 
 /*
 =================
-VM_RandomVec
+VM_randomvec
 
 Returns a vector of length < 1 and > 0
 
@@ -1166,13 +1374,10 @@ void VM_randomvec (void)
 	// length returned always > 0
 	length = (rand()&32766 + 1) * (1.0 / 32767.0) / VectorLength(temp);
 	VectorScale(temp,length, temp);*/
-	VectorCopy(temp, PRVM_G_VECTOR(OFS_RETURN));
+	//VectorCopy(temp, PRVM_G_VECTOR(OFS_RETURN));
 }
 
 //=============================================================================
-#define MAX_QC_CVARS 128 * PRVM_MAXPROGS
-cvar_t vm_qc_cvar[MAX_QC_CVARS];
-int vm_currentqc_cvar;
 
 /*
 =========
@@ -1355,16 +1560,9 @@ setcolor(clientent, value)
 	MSG_WriteByte (&sv.reliable_datagram, i);
 }*/
 
-#define MAX_VMFILES		256
-#define MAX_PRVMFILES	MAX_VMFILES * PRVM_MAXPROGS
-// old #define VM_FILES(index) vm_files[PRVM_GetProgNr()+(index)]
-#define VM_FILES ((qfile_t**)(vm_files + PRVM_GetProgNr() * MAX_VMFILES))
-
-qfile_t *vm_files[MAX_PRVMFILES];
-
 void VM_Files_Init(void)
 {
-	memset(vm_files, 0, sizeof(qfile_t*[MAX_VMFILES]));
+	memset(VM_FILES, 0, sizeof(qfile_t*[MAX_VMFILES]));
 }
 
 void VM_Files_CloseAll(void)
@@ -1691,7 +1889,6 @@ void VM_clcommand (void)
 
 	VM_SAFEPARMCOUNT(2,VM_clcommand);
 
-	//find client for this entity
 	i = PRVM_G_FLOAT(OFS_PARM0);
 	if (!sv.active  || i < 0 || i >= svs.maxclients || !svs.clients[i].active)
 	{
@@ -1856,12 +2053,266 @@ void VM_clientstate(void)
 	PRVM_G_FLOAT(OFS_RETURN) = cls.state;
 }
 
+//=============================================================================
+// Draw builtins (client & menu)
+
+/*
+=========
+VM_iscachedpic
+
+float	iscachedpic(string pic)
+=========
+*/
+void VM_iscachedpic(void)
+{
+	VM_SAFEPARMCOUNT(1,VM_iscachedpic);
+
+	// drawq hasnt such a function, thus always return true 
+	PRVM_G_FLOAT(OFS_RETURN) = TRUE;
+}
+
+/*
+=========
+VM_precache_pic
+
+string	precache_pic(string pic) 
+=========
+*/
+void VM_precache_pic(void)
+{
+	char	*s;
+	
+	VM_SAFEPARMCOUNT(1, VM_precache_pic);
+	
+	s = PRVM_G_STRING(OFS_PARM0);
+	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
+	
+	if(!s)
+		PRVM_ERROR ("VM_precache_pic: %s: NULL\n");
+
+	VM_CheckEmptyString (s);
+	
+	Draw_CachePic(s); 
+}
+
+/*
+=========
+VM_freepic
+
+freepic(string s)
+=========
+*/
+void VM_freepic(void)
+{
+	char *s;
+
+	VM_SAFEPARMCOUNT(1,VM_freepic);
+
+	s = PRVM_G_STRING(OFS_PARM0);
+	
+	if(!s)
+		PRVM_ERROR ("VM_freepic: %s: NULL\n");
+	
+	VM_CheckEmptyString (s);
+	
+	Draw_FreePic(s);
+}
+
+/*
+=========
+VM_drawcharacter
+
+float	drawcharacter(vector position, float character, vector scale, vector rgb, float alpha, float flag)
+=========
+*/
+void VM_drawcharacter(void)
+{
+	float *pos,*scale,*rgb;
+	char   character;
+	int flag;
+	VM_SAFEPARMCOUNT(6,VM_drawcharacter);
+
+	character = (char) PRVM_G_FLOAT(OFS_PARM1);
+	if(character == 0)
+	{
+		Con_Printf("VM_drawcharacter: %s passed null character !\n",PRVM_NAME);
+		PRVM_G_FLOAT(OFS_RETURN) = -1;
+		return;
+	}
+	
+	pos = PRVM_G_VECTOR(OFS_PARM0);
+	scale = PRVM_G_VECTOR(OFS_PARM2);
+	rgb = PRVM_G_VECTOR(OFS_PARM3);
+	flag = (int)PRVM_G_FLOAT(OFS_PARM5);
+	
+	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
+	{
+		Con_Printf("VM_drawcharacter: %s: wrong DRAWFLAG %i !\n",PRVM_NAME,flag);
+		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		return;
+	}
+	
+	if(pos[2] || scale[2])
+		Con_Printf("VM_drawcharacter: z value%c from %s discarded",(pos[2] && scale[2]) ? 's' : 0,((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale"))); 
+
+	if(!scale[0] || !scale[1])
+	{
+		Con_Printf("VM_drawcharacter: scale %s is null !\n", (scale[0] == 0) ? ((scale[1] == 0) ? "x and y" : "x") : "y");
+		PRVM_G_FLOAT(OFS_RETURN) = -3;
+		return;
+	}
+
+	DrawQ_String (pos[0], pos[1], &character, 1, scale[0], scale[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag);
+	PRVM_G_FLOAT(OFS_RETURN) = 1;
+}	
+
+/*
+=========
+VM_drawstring
+
+float	drawstring(vector position, string text, vector scale, vector rgb, float alpha, float flag)
+=========
+*/
+void VM_drawstring(void)
+{
+	float *pos,*scale,*rgb;
+	char  *string;
+	int flag;
+	VM_SAFEPARMCOUNT(6,VM_drawstring);
+	
+	string = PRVM_G_STRING(OFS_PARM1);
+	if(!string)
+	{
+		Con_Printf("VM_drawstring: %s passed null string !\n",PRVM_NAME);
+		PRVM_G_FLOAT(OFS_RETURN) = -1;
+		return;
+	}
+	
+	VM_CheckEmptyString(string);
+	
+	pos = PRVM_G_VECTOR(OFS_PARM0);
+	scale = PRVM_G_VECTOR(OFS_PARM2);
+	rgb = PRVM_G_VECTOR(OFS_PARM3);
+	flag = (int)PRVM_G_FLOAT(OFS_PARM5);
+	
+	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
+	{
+		Con_Printf("VM_drawstring: %s: wrong DRAWFLAG %i !\n",PRVM_NAME,flag);
+		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		return;
+	}
+	
+	if(!scale[0] || !scale[1])
+	{
+		Con_Printf("VM_drawstring: scale %s is null !\n", (scale[0] == 0) ? ((scale[1] == 0) ? "x and y" : "x") : "y");
+		PRVM_G_FLOAT(OFS_RETURN) = -3;
+		return;
+	}
+
+	if(pos[2] || scale[2])
+		Con_Printf("VM_drawstring: z value%c from %s discarded",(pos[2] && scale[2]) ? 's' : 0,((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale"))); 
+	
+	DrawQ_String (pos[0], pos[1], string, 0, scale[0], scale[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag);
+	PRVM_G_FLOAT(OFS_RETURN) = 1;
+}
+/*
+=========
+VM_drawpic
+
+float	drawpic(vector position, string pic, vector size, vector rgb, float alpha, float flag)
+=========
+*/
+void VM_drawpic(void)
+{
+	char *pic;
+	float *size, *pos, *rgb;
+	int flag;
+
+	VM_SAFEPARMCOUNT(6,VM_drawpic);
+
+	pic = PRVM_G_STRING(OFS_PARM1);
+
+	if(!pic)
+	{
+		Con_Printf("VM_drawpic: %s passed null picture name !\n", PRVM_NAME);
+		PRVM_G_FLOAT(OFS_RETURN) = -1;	
+		return;
+	}
+
+	VM_CheckEmptyString (pic);
+
+	// is pic cached ?
+	if(!1)
+	{
+		Con_Printf("VM_drawpic: %s: %s not cached !\n", PRVM_NAME, pic);
+		PRVM_G_FLOAT(OFS_RETURN) = -4;
+		return;
+	}
+	
+	pos = PRVM_G_VECTOR(OFS_PARM0);
+	size = PRVM_G_VECTOR(OFS_PARM2);
+	rgb = PRVM_G_VECTOR(OFS_PARM3);
+	flag = (int) PRVM_G_FLOAT(OFS_PARM5);
+
+	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
+	{
+		Con_Printf("VM_drawstring: %s: wrong DRAWFLAG %i !\n",PRVM_NAME,flag);
+		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		return;
+	}
+
+	if(pos[2] || size[2])
+		Con_Printf("VM_drawstring: z value%c from %s discarded",(pos[2] && size[2]) ? 's' : 0,((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size"))); 
+	
+	DrawQ_Pic(pos[0], pos[1], pic, size[0], size[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag);
+	PRVM_G_FLOAT(OFS_RETURN) = 1;
+}
+
+/*
+=========
+VM_drawfill
+
+float drawfill(vector position, vector size, vector rgb, float alpha, float flag)
+=========
+*/
+void VM_drawfill(void)
+{
+	float *size, *pos, *rgb;
+	int flag;
+	
+	VM_SAFEPARMCOUNT(5,VM_drawfill);
+	
+	
+	pos = PRVM_G_VECTOR(OFS_PARM0);
+	size = PRVM_G_VECTOR(OFS_PARM1);
+	rgb = PRVM_G_VECTOR(OFS_PARM2);
+	flag = (int) PRVM_G_FLOAT(OFS_PARM4);
+	
+	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
+	{
+		Con_Printf("VM_drawstring: %s: wrong DRAWFLAG %i !\n",PRVM_NAME,flag);
+		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		return;
+	}
+	
+	if(pos[2] || size[2])
+		Con_Printf("VM_drawstring: z value%c from %s discarded",(pos[2] && size[2]) ? 's' : 0,((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size"))); 
+	
+	DrawQ_Pic(pos[0], pos[1], 0, size[0], size[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM3), flag);
+	PRVM_G_FLOAT(OFS_RETURN) = 1;
+}
+
 void VM_Cmd_Init(void)
 {
+	// only init the stuff for the current prog
+	VM_STRINGS_MEMPOOL = Mem_AllocPool(va("vm_stringsmempool[%s]",PRVM_NAME));
+	VM_Files_Init();		
 }
 
 void VM_Cmd_Reset(void)
 {
+	Mem_EmptyPool(VM_STRINGS_MEMPOOL);
+	VM_Files_CloseAll();
 }
 
 //============================================================================
@@ -1911,7 +2362,7 @@ char *vm_m_extensions =
 "";
 
 // void setkeydest(float dest)
-void VM_M_SetKeyDest(void)
+void VM_M_setkeydest(void)
 {
 	VM_SAFEPARMCOUNT(1,VM_M_SetKeyDest);
 
@@ -1937,7 +2388,7 @@ void VM_M_SetKeyDest(void)
 }
 
 // float getkeydest(void)
-void VM_M_GetKeyDest(void)
+void VM_M_getkeydest(void)
 {
 	VM_SAFEPARMCOUNT(0,VM_M_GetKeyDest);
 
@@ -1960,19 +2411,127 @@ void VM_M_GetKeyDest(void)
 }
 
 prvm_builtin_t vm_m_builtins[] = {
-0, // to be consistent with the old vm
-e1000,
-VM_M_SetKeyDest,
-VM_M_GetKeyDest
+	0, // to be consistent with the old vm
+	// common builtings (mostly)
+	VM_checkextension,
+	VM_error,
+	VM_objerror,
+	VM_print,
+	VM_bprint,
+	VM_sprint,
+	VM_centerprint,
+	VM_normalize,
+	VM_vlen,
+	VM_vectoyaw,	// #10
+	VM_vectoangles,
+	VM_random,
+	VM_localcmd,
+	VM_cvar,
+	VM_cvar_set,
+	VM_dprint,
+	VM_ftos,
+	VM_fabs,
+	VM_vtos,
+	VM_etos,		// 20
+	VM_stof,
+	VM_spawn,
+	VM_remove,
+	VM_find,
+	VM_findfloat,
+	VM_findchain,
+	VM_findchainfloat,
+	VM_precache_file,
+	VM_precache_sound,
+	VM_coredump,	// 30
+	VM_traceon,
+	VM_traceoff,
+	VM_eprint,
+	VM_rint,
+	VM_floor,
+	VM_ceil,
+	VM_nextent,
+	VM_sin,
+	VM_cos,
+	VM_sqrt,		// 40
+	VM_randomvec,
+	VM_registercvar,
+	VM_min,
+	VM_max,
+	VM_bound,
+	VM_pow,
+	VM_copyentity,
+	VM_fopen,
+	VM_fclose,
+	VM_fgets,		// 50
+	VM_fputs,
+	VM_strlen,
+	VM_strcat,
+	VM_substring,
+	VM_stov,
+	VM_strzone,
+	VM_strunzone,
+	VM_isserver,
+	VM_clientcount,
+	VM_clientstate,	// 60
+	VM_clcommand,
+	VM_tokenize,
+	VM_changelevel,
+	VM_localsound,	// 64
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,				// 70
+	e10,			// 80
+	e10,			// 90
+	e10,			// 100
+	e100,			// 200
+	e100,			// 300
+	e100,			// 400
+	// msg functions
+	VM_WriteByte,
+	VM_WriteChar,
+	VM_WriteShort,
+	VM_WriteLong,
+	VM_WriteAngle,
+	VM_WriteCoord,
+	VM_WriteString,
+	VM_WriteEntity,
+	0,
+	0,				// 410
+	e10,			// 420
+	e10,			// 430
+	e10,			// 440
+	e10,			// 450
+	// draw functions
+	VM_iscachedpic,
+	VM_precache_pic,
+	VM_freepic,
+	VM_drawcharacter,
+	VM_drawstring,
+	VM_drawpic,
+	VM_drawfill,	// 457
+	0,
+	0,
+	0,				// 460
+	e10,			// 470
+	e10,			// 480
+	e10,			// 490
+	e10,			// 500
+	// menu functions
+
 };
 
 const int vm_m_numbuiltins = sizeof(vm_m_builtins) / sizeof(prvm_builtin_t);
 
 void VM_M_Cmd_Init(void)
 {
+	VM_Cmd_Init();
 }
 
 void VM_M_Cmd_Reset(void)
 {
+	VM_Cmd_Init();
 }
 

@@ -671,9 +671,7 @@ void SNDDMA_Submit(void)
 	{
 		if ( snd_completed == snd_sent )
 		{
-#ifndef AKVERSION
 			Con_DPrintf ("Sound overrun\n");
-#endif
 			break;
 		}
 
