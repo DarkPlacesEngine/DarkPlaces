@@ -675,8 +675,8 @@ void COM_InitArgv (void)
 void COM_InitGameType (void)
 {
 	char name[MAX_OSPATH];
-	FS_StripExtension(com_argv[0], name);
-	COM_ToLowerString(name, name);
+	FS_StripExtension (com_argv[0], name, sizeof (name));
+	COM_ToLowerString (name, name, sizeof (name));
 
 	if (strstr(name, "transfusion"))
 		gamemode = GAME_TRANSFUSION;
@@ -843,28 +843,37 @@ char *va(const char *format, ...)
 
 
 //======================================
-// LordHavoc: added these because they are useful
 
-void COM_ToLowerString(const char *in, char *out)
+void COM_ToLowerString (const char *in, char *out, size_t size_out)
 {
-	while (*in)
+	if (size_out == 0)
+		return;
+
+	while (*in && size_out > 1)
 	{
 		if (*in >= 'A' && *in <= 'Z')
 			*out++ = *in++ + 'a' - 'A';
 		else
 			*out++ = *in++;
+		size_out--;
 	}
+	*out = '\0';
 }
 
-void COM_ToUpperString(const char *in, char *out)
+void COM_ToUpperString (const char *in, char *out, size_t size_out)
 {
-	while (*in)
+	if (size_out == 0)
+		return;
+
+	while (*in && size_out > 1)
 	{
 		if (*in >= 'a' && *in <= 'z')
 			*out++ = *in++ + 'A' - 'a';
 		else
 			*out++ = *in++;
+		size_out--;
 	}
+	*out = '\0';
 }
 
 int COM_StringBeginsWith(const char *s, const char *match)

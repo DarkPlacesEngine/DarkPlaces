@@ -1038,9 +1038,9 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 	else // LordHavoc: bsp version 29 (normal white lighting)
 	{
 		// LordHavoc: hope is not lost yet, check for a .lit file to load
-		strcpy(litfilename, loadmodel->name);
-		FS_StripExtension(litfilename, litfilename);
-		strcat(litfilename, ".lit");
+		strlcpy (litfilename, loadmodel->name, sizeof (litfilename));
+		FS_StripExtension (litfilename, litfilename, sizeof (litfilename));
+		strlcat (litfilename, ".lit", sizeof (litfilename));
 		data = (qbyte*) FS_LoadFile(litfilename, false);
 		if (data)
 		{
@@ -1093,9 +1093,9 @@ static void Mod_Q1BSP_LoadLightList(void)
 	char lightsfilename[1024], *s, *t, *lightsstring;
 	mlight_t *e;
 
-	strcpy(lightsfilename, loadmodel->name);
-	FS_StripExtension(lightsfilename, lightsfilename);
-	strcat(lightsfilename, ".lights");
+	strlcpy (lightsfilename, loadmodel->name, sizeof (lightsfilename));
+	FS_StripExtension (lightsfilename, lightsfilename, sizeof(lightsfilename));
+	strlcat (lightsfilename, ".lights", sizeof (lightsfilename));
 	s = lightsstring = (char *) FS_LoadFile(lightsfilename, false);
 	if (s)
 	{

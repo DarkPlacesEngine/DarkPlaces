@@ -1635,16 +1635,21 @@ OTHERS PUBLIC FUNCTIONS
 FS_StripExtension
 ============
 */
-void FS_StripExtension (const char *in, char *out)
+void FS_StripExtension (const char *in, char *out, size_t size_out)
 {
 	char *last = NULL;
-	while (*in)
+
+	if (size_out == 0)
+		return;
+
+	while (*in && size_out > 1)
 	{
 		if (*in == '.')
 			last = out;
 		else if (*in == '/' || *in == '\\' || *in == ':')
 			last = NULL;
 		*out++ = *in++;
+		size_out--;
 	}
 	if (last)
 		*last = 0;

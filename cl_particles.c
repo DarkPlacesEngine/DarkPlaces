@@ -509,8 +509,8 @@ void CL_ReadPointFile_f (void)
 	if (!cl.worldmodel)
 		return;
 
-	FS_StripExtension(cl.worldmodel->name, name);
-	strcat(name, ".pts");
+	FS_StripExtension (cl.worldmodel->name, name, sizeof (name));
+	strlcat (name, ".pts", sizeof (name));
 #if WORKINGLQUAKE
 	pointfile = COM_LoadTempFile (name);
 #else
