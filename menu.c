@@ -2497,6 +2497,12 @@ int M_ChooseQuitMessage(int request)
 		if (request-- == 0) return M_QuitMessage("Your mech here is way more impressive","than your car out there...","Press Y to quit, N to keep fraggin'",NULL,NULL,NULL,NULL,NULL);
 		if (request-- == 0) return M_QuitMessage("Quitting won't reduce your debt","Press Y to quit, N to keep fraggin'",NULL,NULL,NULL,NULL,NULL,NULL);
 		break;
+	case GAME_OPENQUARTZ:
+		if (request-- == 0) return M_QuitMessage("There is nothing like free beer!","Press Y to quit, N to stay",NULL,NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("GNU is not Unix!","Press Y to quit, N to stay",NULL,NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("You prefer free beer over free speech?","Press Y to quit, N to stay",NULL,NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Is OpenQuartz Propaganda?","Press Y to quit, N to stay",NULL,NULL,NULL,NULL,NULL,NULL);
+		break;
 	default:
 		if (request-- == 0) return M_QuitMessage("Tired of fragging already?",NULL,NULL,NULL,NULL,NULL,NULL,NULL);
 		if (request-- == 0) return M_QuitMessage("Quit now and forfeit your bodycount?",NULL,NULL,NULL,NULL,NULL,NULL,NULL);
@@ -3048,6 +3054,32 @@ episode_t battlemechepisodes[] =
 	{"Time for Battle", 0, 7},
 };
 
+level_t openquartzlevels[] =
+{
+	{"start", "Welcome to Openquartz"},
+
+	{"void1", "The center of nowhere"},                        // 1
+	{"void2", "The place with no name"},
+	{"void3", "The lost supply base"},
+	{"void4", "Past the outer limits"},
+	{"void5", "Into the nonexistance"},
+	{"void6", "Void walk"},
+
+	{"vtest", "Warp Central"},
+	{"box", "The deathmatch box"},
+	{"bunkers", "Void command"},
+	{"house", "House of chaos"},
+	{"office", "Overnight office kill"},
+	{"am1", "The nameless chambers"},
+};
+
+episode_t openquartzepisodes[] =
+{
+	{"Single Player", 0, 1},
+	{"Void Deathmatch", 1, 6},
+	{"Contrib", 7, 6},
+};
+
 gamelevels_t sharewarequakegame = {"Shareware Quake", quakelevels, quakeepisodes, 2};
 gamelevels_t registeredquakegame = {"Quake", quakelevels, quakeepisodes, 7};
 gamelevels_t hipnoticgame = {"Scourge of Armagon", hipnoticlevels, hipnoticepisodes, 6};
@@ -3056,6 +3088,7 @@ gamelevels_t nehahragame = {"Nehahra", nehahralevels, nehahraepisodes, 4};
 gamelevels_t transfusiongame = {"Transfusion", transfusionlevels, transfusionepisodes, 7};
 gamelevels_t goodvsbad2game = {"Good Vs. Bad 2", goodvsbad2levels, goodvsbad2episodes, 1};
 gamelevels_t battlemechgame = {"Battlemech", battlemechlevels, battlemechepisodes, 1};
+gamelevels_t openquartzgame = {"OpenQuartz", openquartzlevels, openquartzepisodes, 3};
 
 typedef struct
 {
@@ -3074,6 +3107,7 @@ gameinfo_t gamelist[] =
 	{GAME_TRANSFUSION, &transfusiongame, &transfusiongame},
 	{GAME_GOODVSBAD2, &goodvsbad2game, &goodvsbad2game},
 	{GAME_BATTLEMECH, &battlemechgame, &battlemechgame},
+	{GAME_OPENQUARTZ, &openquartzgame, &openquartzgame},
 	{-1, &sharewarequakegame, &registeredquakegame} // final fallback
 };
 
