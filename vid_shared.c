@@ -92,7 +92,7 @@ static void gl_getfuncs_end(void)
 static void *gl_getfuncaddress(char *name)
 {
 #ifdef WIN32
-	return (void *) wglGetProcAddress(func->name);
+	return (void *) wglGetProcAddress(name);
 #else
 	return (void *) dlsym(prjobj, name);
 #endif
