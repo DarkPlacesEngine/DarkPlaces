@@ -1236,7 +1236,7 @@ again:
 //=============================================================================
 /* OPTIONS MENU */
 
-#define	OPTIONS_ITEMS	21
+#define	OPTIONS_ITEMS	23
 
 #define	SLIDER_RANGE	10
 
@@ -1264,22 +1264,31 @@ void M_AdjustSliders (int dir)
 		Cvar_SetValue ("gl_lightmode", !gl_lightmode.value);
 		break;
 
-	case 5:	// hardware gamma
+	case 5: // sky quality
+		Cvar_SetValue ("r_skyquality", bound(0, r_skyquality.value + dir, 4));
+		break;
+
+	case 6:	// hardware gamma
 		Cvar_SetValue ("vid_gamma", bound(1, vid_gamma.value + dir * 0.25, 5));
 		break;
-	case 6:	// hardware brightness
+
+	case 7:	// hardware brightness
 		Cvar_SetValue ("vid_brightness", bound(1, vid_brightness.value + dir * 0.25, 5));
 		break;
-	case 7:	// hardware contrast
+
+	case 8:	// hardware contrast
 		Cvar_SetValue ("vid_contrast", bound(0.2, vid_contrast.value + dir * 0.08, 1));
 		break;
-	case 8:	// software brightness
+
+	case 9:	// software brightness
 		Cvar_SetValue ("r_brightness", bound(1, r_brightness.value + dir * 0.25, 5));
 		break;
-	case 9: // software base brightness
+
+	case 10: // software base brightness
 		Cvar_SetValue ("r_contrast", bound(0.2, r_contrast.value + dir * 0.08, 1));
 		break;
-	case 10: // music volume
+
+	case 11: // music volume
 #ifdef _WIN32
 		bgmvolume.value += dir * 1.0;
 #else
@@ -1287,11 +1296,12 @@ void M_AdjustSliders (int dir)
 #endif
 		Cvar_SetValue ("bgmvolume", bound(1, bgmvolume.value, 5));
 		break;
-	case 11: // sfx volume
+
+	case 12: // sfx volume
 		Cvar_SetValue ("volume", bound(1, volume.value + dir * 0.1, 5));
 		break;
 
-	case 12: // always run
+	case 13: // always run
 		if (cl_forwardspeed.value > 200)
 		{
 			Cvar_SetValue ("cl_forwardspeed", 200);
@@ -1304,32 +1314,36 @@ void M_AdjustSliders (int dir)
 		}
 		break;
 
-	case 13: // lookspring
+	case 14: // lookspring
 		Cvar_SetValue ("lookspring", !lookspring.value);
 		break;
 
-	case 14: // lookstrafe
+	case 15: // lookstrafe
 		Cvar_SetValue ("lookstrafe", !lookstrafe.value);
 		break;
 
-	case 15: // mouse speed
+	case 16: // mouse speed
 		Cvar_SetValue ("sensitivity", bound(1, sensitivity.value + dir * 0.5, 50));
 		break;
 
-	case 16: // mouse look
+	case 17: // mouse look
 		Cvar_SetValue ("freelook", !freelook.value);
 		break;
 
-	case 17: // invert mouse
+	case 18: // invert mouse
 		Cvar_SetValue ("m_pitch", -m_pitch.value);
 		break;
 
-	case 18: // windowed mouse
+	case 19: // windowed mouse
 		Cvar_SetValue ("vid_mouse", !vid_mouse.value);
 		break;
 
-	case 19:
+	case 20:
 		Cvar_SetValue ("crosshair", bound(0, crosshair.value + dir, 5));
+		break;
+
+	case 21: // show framerate
+		Cvar_SetValue ("showfps", !showfps.value);
 		break;
 	}
 }
@@ -1379,6 +1393,7 @@ void M_Options_Draw (void)
 	M_Print(16, y, "     Reset to defaults");y += 8;
 	M_Print(16, y, "           Screen size");M_DrawSlider(220, y, (scr_viewsize.value - 30) /(120 - 30));y += 8;
 	M_Print(16, y, "  Overbright Rendering");M_DrawCheckbox(220, y, gl_lightmode.value);y += 8;
+	M_Print(16, y, "           Sky Quality");M_DrawSlider(220, y, r_skyquality.value / 4);y += 8;
 	M_Print(16, y, "        Hardware Gamma");M_DrawSlider(220, y, (vid_gamma.value - 1) / 4);y += 8;
 	M_Print(16, y, "   Hardware Brightness");M_DrawSlider(220, y, (vid_brightness.value - 1) / 4);y += 8;
 	M_Print(16, y, "     Hardware Contrast");M_DrawSlider(220, y, (vid_contrast.value - 0.2) / 0.8);y += 8;
@@ -1394,6 +1409,7 @@ void M_Options_Draw (void)
 	M_Print(16, y, "          Invert Mouse");M_DrawCheckbox(220, y, m_pitch.value < 0);y += 8;
 	M_Print(16, y, "             Use Mouse");M_DrawCheckbox(220, y, vid_mouse.value);y += 8;
 	M_Print(16, y, "             Crosshair");M_DrawSlider(220, y, crosshair.value / 5);y += 8;
+	M_Print(16, y, "        Show Framerate");M_DrawCheckbox(220, y, showfps.value);y += 8;
 	M_Print(16, y, "         Video Options");y += 8;
 
 	// cursor
@@ -1423,7 +1439,7 @@ void M_Options_Key (int k)
 		case 2:
 			Cbuf_AddText ("exec default.cfg\n");
 			break;
-		case 20:
+		case 22:
 			M_Menu_Video_f ();
 			break;
 		default:
