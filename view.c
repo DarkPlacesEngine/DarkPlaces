@@ -122,7 +122,7 @@ Drifting is enabled when the center view key is hit, mlook is released and
 lookspring is non 0, or when
 ===============
 */
-static void V_DriftPitch (void)
+void V_DriftPitch (void)
 {
 	float		delta, move;
 
@@ -291,9 +291,7 @@ static void V_BonusFlash_f (void)
 ==============================================================================
 */
 
-#define MAXVIEWMODELS 32
-extern int numviewmodels;
-extern entity_t *viewmodels[MAXVIEWMODELS];
+extern matrix4x4_t viewmodelmatrix;
 
 /*
 ==================
@@ -303,14 +301,11 @@ V_CalcRefdef
 */
 void V_CalcRefdef (void)
 {
-	float r, g, b, a, a2;
-	int j;
 	entity_t *ent;
 	if (cls.state == ca_connected && cls.signon == SIGNONS)
 	{
 		// ent is the player model (visible when out of body)
 		ent = &cl_entities[cl.viewentity];
-		V_DriftPitch();
 		if (cl.intermission)
 		{
 			// entity is a fixed camera
@@ -349,57 +344,55 @@ void V_CalcRefdef (void)
 			// origin
 			VectorAdd(r_refdef.vieworg, cl.punchvector, r_refdef.vieworg);
 			r_refdef.vieworg[2] += cl.viewheight;
-			if (cl.stats[STAT_HEALTH] > 0)
+			if (cl.stats[STAT_HEALTH] > 0 && cl_bob.value && cl_bobcycle.value)
 			{
-				if (cl_bob.value && cl_bobcycle.value)
-				{
-					double bob, cycle;
-					// LordHavoc: this code is *weird*, but not replacable (I think it
-					// should be done in QC on the server, but oh well, quake is quake)
-					// LordHavoc: figured out bobup: the time at which the sin is at 180
-					// degrees (which allows lengthening or squishing the peak or valley)
-					cycle = cl.time / cl_bobcycle.value;
-					cycle -= (int) cycle;
-					if (cycle < cl_bobup.value)
-						cycle = sin(M_PI * cycle / cl_bobup.value);
-					else
-						cycle = sin(M_PI + M_PI * (cycle-cl_bobup.value)/(1.0 - cl_bobup.value));
-					// bob is proportional to velocity in the xy plane
-					// (don't count Z, or jumping messes it up)
-					bob = sqrt(cl.velocity[0]*cl.velocity[0] + cl.velocity[1]*cl.velocity[1]) * cl_bob.value;
-					bob = bob*0.3 + bob*0.7*cycle;
-					r_refdef.vieworg[2] += bound(-7, bob, 4);
-				}
-				// link the delayed viewmodel entities
-				if (numviewmodels > 0 && r_drawviewmodel.integer && !chase_active.integer && !envmap && r_drawentities.integer && !(cl.items & IT_INVISIBILITY))
-				{
-					int i;
-					entity_t *ent;
-					matrix4x4_t matrix, matrix2;
-					Matrix4x4_CreateFromQuakeEntity(&matrix, r_refdef.vieworg[0], r_refdef.vieworg[1], r_refdef.vieworg[2], r_refdef.viewangles[0] + v_idlescale.value * sin(cl.time*v_iyaw_cycle.value) * v_iyaw_level.value, r_refdef.viewangles[1] - v_idlescale.value * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value, r_refdef.viewangles[2] - v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value, 0.3);
-					for (i = 0;i < numviewmodels && r_refdef.numentities < r_refdef.maxentities;i++)
-					{
-						ent = viewmodels[i];
-						r_refdef.entities[r_refdef.numentities++] = &ent->render;
-						matrix2 = ent->render.matrix;
-						Matrix4x4_Concat(&ent->render.matrix, &matrix, &matrix2);
-						Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
-						CL_BoundingBoxForEntity(&ent->render);
-					}
-				}
+				double bob, cycle;
+				// LordHavoc: this code is *weird*, but not replacable (I think it
+				// should be done in QC on the server, but oh well, quake is quake)
+				// LordHavoc: figured out bobup: the time at which the sin is at 180
+				// degrees (which allows lengthening or squishing the peak or valley)
+				cycle = cl.time / cl_bobcycle.value;
+				cycle -= (int) cycle;
+				if (cycle < cl_bobup.value)
+					cycle = sin(M_PI * cycle / cl_bobup.value);
+				else
+					cycle = sin(M_PI + M_PI * (cycle-cl_bobup.value)/(1.0 - cl_bobup.value));
+				// bob is proportional to velocity in the xy plane
+				// (don't count Z, or jumping messes it up)
+				bob = sqrt(cl.velocity[0]*cl.velocity[0] + cl.velocity[1]*cl.velocity[1]) * cl_bob.value;
+				bob = bob*0.3 + bob*0.7*cycle;
+				r_refdef.vieworg[2] += bound(-7, bob, 4);
 			}
 		}
+		// calculate a viewmodel matrix for use in view-attached entities
+		Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, r_refdef.vieworg[0], r_refdef.vieworg[1], r_refdef.vieworg[2], r_refdef.viewangles[0] + v_idlescale.value * sin(cl.time*v_iyaw_cycle.value) * v_iyaw_level.value, r_refdef.viewangles[1] - v_idlescale.value * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value, r_refdef.viewangles[2] - v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value, 0.3);
+	}
+	else
+		Matrix4x4_CreateIdentity(&viewmodelmatrix);
+}
 
-		// drop the damage value
-		cl.cshifts[CSHIFT_DAMAGE].percent -= (cl.time - cl.oldtime)*150;
-		if (cl.cshifts[CSHIFT_DAMAGE].percent <= 0)
-			cl.cshifts[CSHIFT_DAMAGE].percent = 0;
+void V_FadeViewFlashs(void)
+{
+	// drop the damage value
+	cl.cshifts[CSHIFT_DAMAGE].percent -= (cl.time - cl.oldtime)*150;
+	if (cl.cshifts[CSHIFT_DAMAGE].percent <= 0)
+		cl.cshifts[CSHIFT_DAMAGE].percent = 0;
+	// drop the bonus value
+	cl.cshifts[CSHIFT_BONUS].percent -= (cl.time - cl.oldtime)*100;
+	if (cl.cshifts[CSHIFT_BONUS].percent <= 0)
+		cl.cshifts[CSHIFT_BONUS].percent = 0;
+}
 
-		// drop the bonus value
-		cl.cshifts[CSHIFT_BONUS].percent -= (cl.time - cl.oldtime)*100;
-		if (cl.cshifts[CSHIFT_BONUS].percent <= 0)
-			cl.cshifts[CSHIFT_BONUS].percent = 0;
-
+void V_CalcViewBlend(void)
+{
+	float a2;
+	int j;
+	r_refdef.viewblend[0] = 0;
+	r_refdef.viewblend[1] = 0;
+	r_refdef.viewblend[2] = 0;
+	r_refdef.viewblend[3] = 0;
+	if (cls.state == ca_connected && cls.signon == SIGNONS)
+	{
 		// set contents color
 		switch (CL_PointContents(r_refdef.vieworg))
 		{
@@ -461,48 +454,26 @@ void V_CalcRefdef (void)
 			cl.cshifts[CSHIFT_POWERUP].percent = 0;
 
 		// LordHavoc: fixed V_CalcBlend
-		r = 0;
-		g = 0;
-		b = 0;
-		a = 0;
-
-		for (j=0 ; j<NUM_CSHIFTS ; j++)
+		for (j = 0;j < NUM_CSHIFTS;j++)
 		{
-			a2 = cl.cshifts[j].percent * (1.0f / 255.0f);
-
-			if (a2 < 0)
-				continue;
-			if (a2 > 1)
-				a2 = 1;
-			r += (cl.cshifts[j].destcolor[0]-r) * a2;
-			g += (cl.cshifts[j].destcolor[1]-g) * a2;
-			b += (cl.cshifts[j].destcolor[2]-b) * a2;
-			a = 1 - (1 - a) * (1 - a2); // correct alpha multiply...  took a while to find it on the web
+			a2 = bound(0.0f, cl.cshifts[j].percent * (1.0f / 255.0f), 1.0f);
+			if (a2 > 0)
+			{
+				VectorLerp(r_refdef.viewblend, a2, cl.cshifts[j].destcolor, r_refdef.viewblend);
+				r_refdef.viewblend[3] = 1 - (1 - r_refdef.viewblend[3]) * (1 - a2); // correct alpha multiply...  took a while to find it on the web
+			}
 		}
 		// saturate color (to avoid blending in black)
-		if (a)
+		if (r_refdef.viewblend[3])
 		{
-			a2 = 1 / a;
-			r *= a2;
-			g *= a2;
-			b *= a2;
+			a2 = 1 / r_refdef.viewblend[3];
+			VectorScale(r_refdef.viewblend, a2, r_refdef.viewblend);
 		}
 
-		r_refdef.viewblend[0] = bound(0, r * (1.0/255.0), 1);
-		r_refdef.viewblend[1] = bound(0, g * (1.0/255.0), 1);
-		r_refdef.viewblend[2] = bound(0, b * (1.0/255.0), 1);
-		r_refdef.viewblend[3] = bound(0, a              , 1);
-	}
-	else
-	{
-		cl.cshifts[CSHIFT_DAMAGE].percent = 0;
-		cl.cshifts[CSHIFT_BONUS].percent = 0;
-		cl.cshifts[CSHIFT_CONTENTS].percent = 0;
-		cl.cshifts[CSHIFT_POWERUP].percent = 0;
-		r_refdef.viewblend[0] = 0;
-		r_refdef.viewblend[1] = 0;
-		r_refdef.viewblend[2] = 0;
-		r_refdef.viewblend[3] = 0;
+		r_refdef.viewblend[0] = bound(0.0f, r_refdef.viewblend[0] * (1.0f/255.0f), 1.0f);
+		r_refdef.viewblend[1] = bound(0.0f, r_refdef.viewblend[1] * (1.0f/255.0f), 1.0f);
+		r_refdef.viewblend[2] = bound(0.0f, r_refdef.viewblend[2] * (1.0f/255.0f), 1.0f);
+		r_refdef.viewblend[3] = bound(0.0f, r_refdef.viewblend[3]                , 1.0f);
 	}
 }
 

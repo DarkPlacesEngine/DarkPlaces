@@ -120,6 +120,8 @@ int eval_pmodel;
 int eval_punchvector;
 int eval_viewzoom;
 int eval_clientcolors;
+int eval_tag_entity;
+int eval_tag_index;
 
 mfunction_t *SV_PlayerPhysicsQC;
 mfunction_t *EndFrameQC;
@@ -172,6 +174,8 @@ void FindEdictFieldOffsets(void)
 	eval_punchvector = FindFieldOffset("punchvector");
 	eval_viewzoom = FindFieldOffset("viewzoom");
 	eval_clientcolors = FindFieldOffset("clientcolors");
+	eval_tag_entity = FindFieldOffset("tag_entity");
+	eval_tag_index = FindFieldOffset("tag_index");
 
 	// LordHavoc: allowing QuakeC to override the player movement code
 	SV_PlayerPhysicsQC = ED_FindFunction ("SV_PlayerPhysics");
@@ -1189,7 +1193,9 @@ dpfield_t dpfields[] =
 	{ev_vector, "movement"},
 	{ev_float, "pmodel"},
 	{ev_vector, "punchvector"},
-	{ev_float, "clientcolors"}
+	{ev_float, "clientcolors"},
+	{ev_entity, "tag_entity"},
+	{ev_float, "tag_index"}
 };
 
 /*

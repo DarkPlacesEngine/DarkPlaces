@@ -121,6 +121,8 @@ extern int eval_pmodel;
 extern int eval_punchvector;
 extern int eval_viewzoom;
 extern int eval_clientcolors;
+extern int eval_tag_entity;
+extern int eval_tag_index;
 
 #define GETEDICTFIELDVALUE(ed, fieldoffset) (fieldoffset ? (eval_t *)((qbyte *)ed->v + fieldoffset) : NULL)
 

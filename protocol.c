@@ -3,20 +3,10 @@
 
 void ClearStateToDefault(entity_state_t *s)
 {
-	s->active = 0;
-	s->time = 0;
-	VectorClear(s->origin);
-	VectorClear(s->angles);
-	s->effects = 0;
-	s->modelindex = 0;
-	s->frame = 0;
-	s->colormap = 0;
-	s->skin = 0;
+	memset(s, 0, sizeof(*s));
 	s->alpha = 255;
 	s->scale = 16;
-	s->glowsize = 0;
 	s->glowcolor = 254;
-	s->flags = 0;
 }
 
 // (server) clears the database to contain no frames (thus delta compression compresses against nothing)
@@ -42,10 +32,10 @@ void EntityFrame_AckFrame(entity_database_t *d, int frame)
 }
 
 // (server) clears frame, to prepare for adding entities
-void EntityFrame_Clear(entity_frame_t *f, vec3_t eye)
+void EntityFrame_Clear(entity_frame_t *f, vec3_t eye, int framenum)
 {
 	f->time = 0;
-	f->framenum = 0;
+	f->framenum = framenum;
 	f->numentities = 0;
 	if (eye == NULL)
 	{
@@ -57,23 +47,21 @@ void EntityFrame_Clear(entity_frame_t *f, vec3_t eye)
 	}
 }
 
-// (server) allocates an entity slot in frame, returns NULL if full
-entity_state_t *EntityFrame_NewEntity(entity_frame_t *f, int number)
+// (server) adds an entity to frame
+void EntityFrame_AddEntity(entity_frame_t *f, entity_state_t *s)
 {
-	entity_state_t *e;
-	if (f->numentities >= MAX_ENTITY_DATABASE)
-		return NULL;
-	e = &f->entitydata[f->numentities++];
-	e->active = true;
-	e->number = number;
-	return e;
+	if (f->numentities < MAX_ENTITY_DATABASE)
+	{
+		f->entitydata[f->numentities] = *s;
+		f->entitydata[f->numentities++].active = true;
+	}
 }
 
 // (server and client) reads a frame from the database
 void EntityFrame_FetchFrame(entity_database_t *d, int framenum, entity_frame_t *f)
 {
 	int i, n;
-	EntityFrame_Clear(f, NULL);
+	EntityFrame_Clear(f, NULL, -1);
 	for (i = 0;i < d->numframes && d->frames[i].framenum < framenum;i++);
 	if (i < d->numframes && framenum == d->frames[i].framenum)
 	{
@@ -87,8 +75,6 @@ void EntityFrame_FetchFrame(entity_database_t *d, int framenum, entity_frame_t *
 			memcpy(f->entitydata + n, d->entitydata, sizeof(*f->entitydata) * (f->numentities - n));
 		VectorCopy(d->eye, f->eye);
 	}
-	else
-		f->framenum = -1;
 }
 
 // (server and client) adds a entity_frame to the database, for future reference
@@ -256,6 +242,8 @@ void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, sizebuf_t *msg)
 			bits |= E_GLOWCOLOR;
 		if (ent->flags != delta->flags)
 			bits |= E_FLAGS;
+		if (ent->tagindex != delta->tagindex || ent->tagentity != delta->tagentity)
+			bits |= E_TAGATTACHMENT;
 
 		if (bits) // don't send anything if it hasn't changed
 		{
@@ -329,6 +317,11 @@ void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, sizebuf_t *msg)
 				MSG_WriteByte(msg, ent->glowsize);
 			if (bits & E_GLOWCOLOR)
 				MSG_WriteByte(msg, ent->glowcolor);
+			if (bits & E_TAGATTACHMENT)
+			{
+				MSG_WriteShort(msg, ent->tagentity);
+				MSG_WriteByte(msg, ent->tagindex);
+			}
 		}
 	}
 	for (;onum < o->numentities;onum++)
@@ -349,7 +342,7 @@ void EntityFrame_Read(entity_database_t *d)
 
 	ClearStateToDefault(&baseline);
 
-	EntityFrame_Clear(f, NULL);
+	EntityFrame_Clear(f, NULL, -1);
 
 	// read the frame header info
 	f->time = cl.mtime[0];
@@ -489,6 +482,11 @@ void EntityFrame_Read(entity_database_t *d)
 			if (dpprotocol == DPPROTOCOL_VERSION2)
 				if (bits & E_FLAGS)
 					e->flags = MSG_ReadByte();
+			if (bits & E_TAGATTACHMENT)
+			{
+				e->tagentity = MSG_ReadShort();
+				e->tagindex = MSG_ReadByte();
+			}
 		}
 	}
 	while (old < oldend)

@@ -1,4 +1,25 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, n = done but have not notified the people who asked for it, f = failed
+
+
+
+stuff left to do on tags: make server write entities sequentially
+4 darkplaces: tags support on md3 (Electro needs this urgently)
+
+
+
+
+1 darkplaces: add EndGame function (called on server shutdown or level change) (SeienAbunae, Nexuiz)
+0 darkplaces: document how polygon collision works in the code (KrimZon)
+0 darkplaces: fix particle trails! (Supajoe)
+2 darkplaces: .skin loading for models (override skins - not exactly shaders, but adequate, one would be common/nodraw for quake3 compatibility) (Electro)
+0 darkplaces: rename r_picmip and r_max_size and such to glquake names
+1 darkplaces: look at and integrate Vic's updated zone.[ch] (Vic)
+1 darkplaces: add a .modelflags variable which if non-zero overrides model flags (Electro, Arwing)
+1 darkplaces: make r_fogsky cvar to allow use of sky instead of fog when fog is used (SeienAbunae)
+0 darkplaces: document the TEI stuff used in Nexuiz?  check telejano site first (SeienAbunae)
+3 darkplaces: skyroom needs to be added ("info_skyroom" entity sets view origin, scanned by client at load, and by server to send all entities in skyroom) (SeienAbunae)
+0 darkplaces: r_skyscroll1 and r_skyscroll2 cvars (SeienAbunae)
+5 darkplaces: do a minimap that works by simply using nearclip to sheer off anything above the eye, and draws anything below normally, or via a cvar as height coloring (Supajoe)
 0 darkplaces: add DP_SV_ROTATINGBMODEL extension to explain that MOVETYPE_PUSH/SOLID_BSP support rotation in darkplaces and a demonstration of how to use it without qc modifications (Uffe, Supajoe)
 0 darkplaces: add cvars for sbar alpha (background and foreground) (Throvold@uboot.com)
 0 darkplaces: add lightning beam settings to menu (romi)
@@ -29,7 +50,6 @@
 0 darkplaces: make sure that textureless models are white and not invisible, apparently creating a .bmp texture (not supported) made the models black, even more odd... (McKilled, QorpsE)
 0 darkplaces: r_shadow should load .ent when importing light entities
 0 darkplaces: reset zoom on connect (Rick)
-0 darkplaces: revert nice noclip to nq noclip because it can break mods that trap player input and expect nq movement (MauveBib)
 0 darkplaces: revert noclip movement to match nq for compatibility with mods that trap movement as input (MauveBib)
 0 darkplaces: segfault reading memory in windows when starting a new server from menu (yummyluv)
 0 darkplaces: test TecnoX and find the frikbot crash in SV_Physics (KrimZon)
@@ -188,12 +208,14 @@
 6 darkplaces: add water refraction like HalfLife2 (Mitchell)
 6 darkplaces: figure out an LOD scheme for really large outdoor environments (Uffe)
 7 darkplaces: Quake3 bsp support (Vermeulen, Mitchell, SeienAbunae)
-7 darkplaces: add DP_ENT_DISTORTIONFIELD which visually pulls things inward/outward around an entity (Supajoe)
+7 darkplaces: add DP_ENT_DISTORTIONFIELD which visually pulls things inward/outward around an entity (Supajoe, SeienAbunae)
 7 darkplaces: add clientside quakec (KrimZon, FrikaC)
 7 darkplaces: make it work on Savage4 again (Ender)
 7 darkplaces: should add quake3 shader support
 ? darkplaces: fix colormapping (Demonix)
 ? darkplaces: fix connecting to proquake servers through routers (Demonix)
+d darkplaces: figure out why quad is creating two coronas, one at player and one at 0 0 0 - answer: viewmodel dlight (Tomaz)
+d darkplaces: gl_flashblend 1 should disable dlighting of models (Tomaz)
 d darkplaces: 12bit color textures in 16bit mode?? (Tomaz)
 d darkplaces: TEXF_CLAMP needs to use GL_CLAMP_TO_EDGE (if not supported just use REPEAT as a fallback, not aware of any cards that lack this)
 d darkplaces: add DP_GFX_EXTERNALTEXTURES extension (Electro)

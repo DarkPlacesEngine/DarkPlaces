@@ -317,6 +317,12 @@ typedef struct
 	unsigned short modelindex;
 	unsigned short frame;
 	unsigned short effects;
+	unsigned short tagentity;
+	unsigned short specialvisibilityradius;
+	unsigned short viewmodelforclient;
+	unsigned short exteriormodelforclient;
+	unsigned short nodrawtoclient;
+	unsigned short drawonlytoclient;
 	qbyte colormap;
 	qbyte skin;
 	qbyte alpha;
@@ -324,6 +330,7 @@ typedef struct
 	qbyte glowsize;
 	qbyte glowcolor;
 	qbyte flags;
+	qbyte tagindex;
 }
 entity_state_t;
 
@@ -470,7 +477,7 @@ entity_frame_t;
 #define E_SOUND1		(1<<24)
 #define E_SOUNDVOL		(1<<25)
 #define E_SOUNDATTEN	(1<<26)
-#define E_UNUSED4		(1<<27)
+#define E_TAGATTACHMENT	(1<<27)
 #define E_UNUSED5		(1<<28)
 #define E_UNUSED6		(1<<29)
 #define E_UNUSED7		(1<<30)
@@ -484,9 +491,9 @@ void EntityFrame_ClearDatabase(entity_database_t *d);
 // (server and client) removes frames older than 'frame' from database
 void EntityFrame_AckFrame(entity_database_t *d, int frame);
 // (server) clears frame, to prepare for adding entities
-void EntityFrame_Clear(entity_frame_t *f, vec3_t eye);
-// (server) allocates an entity slot in frame, returns NULL if full
-entity_state_t *EntityFrame_NewEntity(entity_frame_t *f, int number);
+void EntityFrame_Clear(entity_frame_t *f, vec3_t eye, int framenum);
+// (server) adds an entity to frame
+void EntityFrame_AddEntity(entity_frame_t *f, entity_state_t *s);
 // (server and client) reads a frame from the database
 void EntityFrame_FetchFrame(entity_database_t *d, int framenum, entity_frame_t *f);
 // (server and client) adds a entity_frame to the database, for future
