@@ -90,6 +90,8 @@ typedef struct
 void S_Init (void);
 void S_Startup (void);
 void S_Shutdown (void);
+void S_Open (void);
+void S_Close (void);
 void S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol,  float attenuation);
 void S_StaticSound (sfx_t *sfx, vec3_t origin, float vol, float attenuation);
 void S_StopSound (int entnum, int entchannel);

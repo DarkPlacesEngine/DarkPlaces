@@ -475,3 +475,11 @@ void CDAudio_Shutdown(void)
 		Con_DPrintf("CDAudio_Shutdown: MCI_CLOSE failed\n");
 }
 
+
+void CDAudio_Open(void)
+{
+}
+
+void CDAudio_Close(void)
+{
+}

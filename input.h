@@ -25,10 +25,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 extern cvar_t in_pitch_min;
 extern cvar_t in_pitch_max;
 
-void IN_Init (void);
-
-void IN_Shutdown (void);
-
 void IN_Commands (void);
 // oportunity for devices to stick commands on the script buffer
 

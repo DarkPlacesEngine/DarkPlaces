@@ -474,6 +474,7 @@ void VID_Shutdown(void)
 	if (!ctx || !vidx11_display)
 		return;
 
+	vid_hidden = true;
 	if (vidx11_display)
 	{
 		uninstall_grabs();
@@ -639,6 +640,8 @@ void VID_Init(void)
 	Cvar_RegisterVariable (&vid_dga);
 	Cvar_RegisterVariable (&vid_dga_mouseaccel);
 	InitSig(); // trap evil signals
+	if (COM_CheckParm ("-nomouse") || COM_CheckParm("-safe"))
+		mouse_avail = false;
 }
 
 int VID_InitMode(int fullscreen, int width, int height, int bpp)
@@ -840,16 +843,6 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 void Sys_SendKeyEvents(void)
 {
 	HandleEvents();
-}
-
-void IN_Init(void)
-{
-	if (COM_CheckParm ("-nomouse") || COM_CheckParm("-safe"))
-		mouse_avail = false;
-}
-
-void IN_Shutdown(void)
-{
 }
 
 /*

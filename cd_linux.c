@@ -418,3 +418,10 @@ void CDAudio_Shutdown(void)
 	cdfile = -1;
 }
 
+void CDAudio_Open(void)
+{
+}
+
+void CDAudio_Close(void)
+{
+}

@@ -56,3 +56,11 @@ void CDAudio_Shutdown(void)
 {
 }
 
+
+void CDAudio_Open(void)
+{
+}
+
+void CDAudio_Close(void)
+{
+}

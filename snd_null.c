@@ -123,3 +123,12 @@ int S_RawSamples_SampleRate(void)
 {
 	return 0;
 }
+
+
+void S_Open(void)
+{
+}
+
+void S_Close(void)
+{
+}
