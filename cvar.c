@@ -144,7 +144,7 @@ Cvar_CompleteBuildList (char *partial)
 	char	**buf;
 
 	len = strlen(partial);
-	buf = malloc(sizeofbuf + sizeof (char *));
+	buf = qmalloc(sizeofbuf + sizeof (char *));
 	// Loop through the alias list and print all matches
 	for (cvar = cvar_vars; cvar; cvar = cvar->next)
 		if (!strncasecmp(partial, cvar->name, len))
