@@ -743,7 +743,7 @@ void		NET_Shutdown (void)
 
 	SetNetTime();
 
-	for (sock = net_activeSockets; sock; sock = sock->next)
+	for (sock = net_activeSockets;sock;sock = net_activeSockets)
 		NET_Close(sock);
 
 //
