@@ -17,7 +17,7 @@ darkplaces-glx: $(OBJECTS) vid_glx.o
 	gcc -o $@ $^ $(LDFLAGS)
 
 darkplaces-3dfx: $(OBJECTS) in_svgalib.o vid_3dfxsvga.o
-	gcc -o $@ $^ $(LIBS)
+	gcc -o $@ $^ $(LDFLAGS)
 
 
 clean:
