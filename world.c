@@ -568,8 +568,7 @@ LINE TESTING IN HULLS
 */
 
 // 1/32 epsilon to keep floating point happy
-//#define	DIST_EPSILON	(0.03125)
-#define DIST_EPSILON (0.125)
+#define DIST_EPSILON (0.03125)
 
 #define HULLCHECKSTATE_EMPTY 0
 #define HULLCHECKSTATE_SOLID 1
@@ -614,7 +613,7 @@ void SV_RecursiveHullCheck_Impact (mplane_t *plane, int side)
 	}
 
 	frac = t1 / (t1 - t2);
-	frac = bound(0.0f, frac, 1.0f);
+	frac = bound(0.0f, frac, 1.0);
 
 	RHC.trace->fraction = frac;
 	RHC.trace->endpos[0] = RHC.start[0] + frac * RHC.dist[0];
@@ -622,17 +621,16 @@ void SV_RecursiveHullCheck_Impact (mplane_t *plane, int side)
 	RHC.trace->endpos[2] = RHC.start[2] + frac * RHC.dist[2];
 }
 
-int SV_RecursiveHullCheck (int num, float p1f, float p2f, vec3_t p1, vec3_t p2)
+int SV_RecursiveHullCheck (int num, double p1f, double p2f, double p1[3], double p2[3])
 {
 	dclipnode_t	*node;
-	vec3_t		mid;
 	int			side;
-	float		midf;
+	double		midf, mid[3];
 	// LordHavoc: FIXME: this is not thread safe...  if threading matters here,
 	// remove the static prefixes
 	static int ret;
 	static mplane_t *plane;
-	static float t1, t2, frac;
+	static double t1, t2, frac;
 
 	// LordHavoc: a goto!  everyone flee in terror... :)
 loc0:
@@ -712,7 +710,7 @@ loc0:
 	}
 
 	frac = t1 / (t1 - t2);
-	frac = bound(0.0f, frac, 1.0f);
+	frac = bound(0.0f, frac, 1.0);
 
 	midf = p1f + ((p2f - p1f) * frac);
 	mid[0] = RHC.start[0] + midf * RHC.dist[0];
@@ -734,271 +732,6 @@ loc0:
 }
 
 /*
-qboolean SV_RecursiveHullCheckContentBoundary (hull_t *hull, int num, float p1f, float p2f, vec3_t p1, vec3_t p2, trace_t *trace)
-{
-	dclipnode_t	*node;
-	mplane_t	*plane;
-	float		t1, t2;
-	float		frac;
-	int			i;
-	vec3_t		mid;
-	int			side;
-	float		midf;
-
-	// LordHavoc: a goto!  everyone flee in terror... :)
-loc0:
-// check for empty
-	if (num < 0)
-	{
-		if (num != trace->startcontents)
-			trace->startsolid = true;
-		else
-			trace->allsolid = false;
-		return true;		// empty
-	}
-
-// find the point distances
-	node = hull->clipnodes + num;
-	plane = hull->planes + node->planenum;
-
-	if (plane->type < 3)
-	{
-		t1 = p1[plane->type] - plane->dist;
-		t2 = p2[plane->type] - plane->dist;
-	}
-	else
-	{
-		t1 = DotProduct (plane->normal, p1) - plane->dist;
-		t2 = DotProduct (plane->normal, p2) - plane->dist;
-	}
-
-	// LordHavoc: rearranged the side/frac code
-	// LordHavoc: recursion optimization
-	if (t1 >= 0)
-	{
-		if (t2 >= 0)
-		{
-			num = node->children[0];
-			goto loc0;
-		}
-		// put the crosspoint DIST_EPSILON pixels on the near side
-		side = 0;
-	}
-	else
-	{
-		if (t2 < 0)
-		{
-			num = node->children[1];
-			goto loc0;
-		}
-		// put the crosspoint DIST_EPSILON pixels on the near side
-		side = 1;
-	}
-
-	frac = t1 / (t1 - t2);
-	frac = bound(0.0f, frac, 1.0f);
-
-	midf = p1f + ((p2f - p1f) * frac);
-	mid[0] = p1[0] + ((p2[0] - p1[0]) * frac);
-	mid[1] = p1[1] + ((p2[1] - p1[1]) * frac);
-	mid[2] = p1[2] + ((p2[2] - p1[2]) * frac);
-
-// move up to the node
-	if (!SV_RecursiveHullCheck (hull, node->children[side], p1f, midf, p1, mid, trace) )
-		return false;
-
-*/
-	/*
-#ifdef PARANOID
-	if (SV_HullPointContents (pm_hullmodel, mid, node->children[side]) != trace->startcontents)
-	{
-		Con_Printf ("mid PointInHullSolid\n");
-		return false;
-	}
-#endif
-	*/
-/*
-
-	// LordHavoc: warning to the clumsy, this recursion can not be optimized because mid would need to be duplicated on a stack
-	if (SV_HullPointContents (hull, node->children[side^1], mid) == trace->startcontents)
-// go past the node
-		return SV_RecursiveHullCheck (hull, node->children[side^1], midf, p2f, mid, p2, trace);
-
-	if (trace->allsolid)
-		return false;		// never got out of the solid area
-
-//==================
-// the other side of the node is solid, this is the impact point
-//==================
-	if (!side)
-	{
-		VectorCopy (plane->normal, trace->plane.normal);
-		trace->plane.dist = plane->dist;
-	}
-	else
-	{
-		VectorNegate (plane->normal, trace->plane.normal);
-		trace->plane.dist = -plane->dist;
-	}
-
-*/
-	/*
-	while (SV_HullPointContents (hull, hull->firstclipnode, mid) != trace->startcontents)
-	{
-		// shouldn't really happen, but does occasionally
-		frac -= 0.1;
-		if (frac < 0)
-		{
-			trace->fraction = midf;
-			VectorCopy (mid, trace->endpos);
-			Con_DPrintf ("backup past 0\n");
-			return false;
-		}
-		midf = p1f + (p2f - p1f)*frac;
-		mid[0] = p1[0] + frac*(p2[0] - p1[0]);
-		mid[1] = p1[1] + frac*(p2[1] - p1[1]);
-		mid[2] = p1[2] + frac*(p2[2] - p1[2]);
-	}
-	*/
-/*
-
-	frac = t1;
-	if (side)
-		frac += DIST_EPSILON;
-	else
-		frac -= DIST_EPSILON;
-
-	frac /= (t1 - t2);
-	frac = bound(0.0f, frac, 1.0f);
-
-	trace->fraction = p1f + (p2f - p1f)*frac;
-	trace->endpos[0] = p1[0] + frac*(p2[0] - p1[0]);
-	trace->endpos[1] = p1[1] + frac*(p2[1] - p1[1]);
-	trace->endpos[2] = p1[2] + frac*(p2[2] - p1[2]);
-
-	return false;
-}
-*/
-
-/*
-// FIXME: this is broken and I'm not interested in figuring out what is broken about it right now
-qboolean SV_TestLine (hull_t *hull, int num, vec3_t p1, vec3_t p2)
-{
-	dclipnode_t	*node;
-	mplane_t	*plane;
-	float		t1, t2, frac;
-	vec3_t		mid;
-	int			side;
-
-loc0:
-// check for empty
-	if (num < 0)
-		return num != CONTENTS_SOLID;
-
-	if (num < hull->firstclipnode || num > hull->lastclipnode)
-		Sys_Error ("SV_RecursiveHullCheck: bad node number");
-
-//
-// find the point distances
-//
-	node = hull->clipnodes + num;
-	if (node->children[0] < 0)
-	{
-		if (node->children[0] == CONTENTS_SOLID)
-			return false;
-		if (node->children[1] < 0)
-			return node->children[1] != CONTENTS_SOLID;
-	}
-	else if (node->children[1] == CONTENTS_SOLID)
-		return false;
-
-	plane = hull->planes + node->planenum;
-
-	if (plane->type < 3)
-	{
-		t1 = p1[plane->type] - plane->dist;
-		t2 = p2[plane->type] - plane->dist;
-	}
-	else
-	{
-		t1 = DotProduct (plane->normal, p1) - plane->dist;
-		t2 = DotProduct (plane->normal, p2) - plane->dist;
-	}
-
-	if (t1 >= 0)
-	{
-		if (t2 >= 0)
-		{
-			num = node->children[0];
-			goto loc0;
-		}
-		side = 0;
-	}
-	else
-	{
-		if (t2 < 0)
-		{
-			num = node->children[1];
-			goto loc0;
-		}
-		side = 1;
-	}
-
-	if (node->children[side] < 0)
-	{
-		if (node->children[side] == CONTENTS_SOLID)
-			return false;
-
-		if (node->children[!side] < 0)
-			return node->children[!side] != CONTENTS_SOLID;
-		else
-		{
-			frac = t1 / (t1 - t2);
-			frac = bound(0, frac, 1);
-
-			mid[0] = p1[0] + frac*(p2[0] - p1[0]);
-			mid[1] = p1[1] + frac*(p2[1] - p1[1]);
-			mid[2] = p1[2] + frac*(p2[2] - p1[2]);
-
-			return SV_TestLine(hull, node->children[!side], mid, p2);
-		}
-	}
-	else
-	{
-		if (node->children[!side] < 0)
-		{
-			if (node->children[!side] == CONTENTS_SOLID)
-				return false;
-
-			frac = t1 / (t1 - t2);
-			frac = bound(0, frac, 1);
-
-			mid[0] = p1[0] + frac*(p2[0] - p1[0]);
-			mid[1] = p1[1] + frac*(p2[1] - p1[1]);
-			mid[2] = p1[2] + frac*(p2[2] - p1[2]);
-
-			return SV_TestLine(hull, node->children[side], p1, mid);
-		}
-		else
-		{
-			frac = t1 / (t1 - t2);
-			frac = bound(0, frac, 1);
-
-			mid[0] = p1[0] + frac*(p2[0] - p1[0]);
-			mid[1] = p1[1] + frac*(p2[1] - p1[1]);
-			mid[2] = p1[2] + frac*(p2[2] - p1[2]);
-
-			if (SV_TestLine(hull, node->children[side], p1, mid))
-				return SV_TestLine(hull, node->children[!side], mid, p2);
-			else
-				return false;
-		}
-	}
-}
-*/
-
-
-/*
 ==================
 SV_ClipMoveToEntity
 
@@ -1008,10 +741,10 @@ eventually rotation) of the end points
 */
 trace_t SV_ClipMoveToEntity (edict_t *ent, vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end)
 {
-	trace_t		trace;
-	vec3_t		offset;
-	vec3_t		start_l, end_l;
-	hull_t		*hull;
+	trace_t trace;
+	vec3_t offset, start_l, end_l;
+	double startd[3], endd[3];
+	hull_t *hull;
 
 // fill in a default trace
 	memset (&trace, 0, sizeof(trace_t));
@@ -1045,12 +778,15 @@ trace_t SV_ClipMoveToEntity (edict_t *ent, vec3_t start, vec3_t mins, vec3_t max
 		end_l[2] = DotProduct (temp, up);
 	}
 
+	VectorCopy(start_l, startd);
+	VectorCopy(end_l, endd);
+
 // trace a line through the appropriate clipping hull
-	VectorCopy(start_l, RecursiveHullCheckInfo.start);
-	VectorSubtract(end_l, start_l, RecursiveHullCheckInfo.dist);
+	VectorCopy(startd, RecursiveHullCheckInfo.start);
+	VectorSubtract(endd, startd, RecursiveHullCheckInfo.dist);
 	RecursiveHullCheckInfo.hull = hull;
 	RecursiveHullCheckInfo.trace = &trace;
-	SV_RecursiveHullCheck (hull->firstclipnode, 0, 1, start_l, end_l);
+	SV_RecursiveHullCheck (hull->firstclipnode, 0, 1, startd, endd);
 
 // LordHavoc: enabling rotating bmodels
 	// rotate endpos back to world frame of reference
@@ -1200,7 +936,7 @@ boxmins[0] = boxmins[1] = boxmins[2] = -9999;
 boxmaxs[0] = boxmaxs[1] = boxmaxs[2] = 9999;
 #else
 	int		i;
-	
+
 	for (i=0 ; i<3 ; i++)
 	{
 		if (end[i] > start[i])
