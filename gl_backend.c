@@ -161,7 +161,7 @@ void GL_Backend_FreeArrays(void)
 
 static void gl_backend_start(void)
 {
-	Con_DPrint("OpenGL Backend started\n");
+	Con_Print("OpenGL Backend started\n");
 	if (qglDrawRangeElements != NULL)
 	{
 		CHECKGLERROR
@@ -169,7 +169,7 @@ static void gl_backend_start(void)
 		CHECKGLERROR
 		qglGetIntegerv(GL_MAX_ELEMENTS_INDICES, &gl_maxdrawrangeelementsindices);
 		CHECKGLERROR
-		Con_DPrintf("glDrawRangeElements detected (max vertices %i, max indices %i)\n", gl_maxdrawrangeelementsvertices, gl_maxdrawrangeelementsindices);
+		Con_Printf("glDrawRangeElements detected (max vertices %i, max indices %i)\n", gl_maxdrawrangeelementsvertices, gl_maxdrawrangeelementsindices);
 	}
 
 	backendunits = min(MAX_TEXTUREUNITS, gl_textureunits);
@@ -184,7 +184,7 @@ static void gl_backend_shutdown(void)
 	backendunits = 0;
 	backendactive = false;
 
-	Con_DPrint("OpenGL Backend shutting down\n");
+	Con_Print("OpenGL Backend shutting down\n");
 
 	GL_Backend_FreeArrays();
 }

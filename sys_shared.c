@@ -7,47 +7,7 @@
 # include <dlfcn.h>
 #endif
 
-extern cvar_t	timestamps;
-extern cvar_t	timeformat;
-
-static int sys_nostdout = false;
-
-/* The translation table between the graphical font and plain ASCII  --KB */
-static char qfont_table[256] = {
-	'\0', '#',  '#',  '#',  '#',  '.',  '#',  '#',
-	'#',  9,    10,   '#',  ' ',  13,   '.',  '.',
-	'[',  ']',  '0',  '1',  '2',  '3',  '4',  '5',
-	'6',  '7',  '8',  '9',  '.',  '<',  '=',  '>',
-	' ',  '!',  '"',  '#',  '$',  '%',  '&',  '\'',
-	'(',  ')',  '*',  '+',  ',',  '-',  '.',  '/',
-	'0',  '1',  '2',  '3',  '4',  '5',  '6',  '7',
-	'8',  '9',  ':',  ';',  '<',  '=',  '>',  '?',
-	'@',  'A',  'B',  'C',  'D',  'E',  'F',  'G',
-	'H',  'I',  'J',  'K',  'L',  'M',  'N',  'O',
-	'P',  'Q',  'R',  'S',  'T',  'U',  'V',  'W',
-	'X',  'Y',  'Z',  '[',  '\\', ']',  '^',  '_',
-	'`',  'a',  'b',  'c',  'd',  'e',  'f',  'g',
-	'h',  'i',  'j',  'k',  'l',  'm',  'n',  'o',
-	'p',  'q',  'r',  's',  't',  'u',  'v',  'w',
-	'x',  'y',  'z',  '{',  '|',  '}',  '~',  '<',
-
-	'<',  '=',  '>',  '#',  '#',  '.',  '#',  '#',
-	'#',  '#',  ' ',  '#',  ' ',  '>',  '.',  '.',
-	'[',  ']',  '0',  '1',  '2',  '3',  '4',  '5',
-	'6',  '7',  '8',  '9',  '.',  '<',  '=',  '>',
-	' ',  '!',  '"',  '#',  '$',  '%',  '&',  '\'',
-	'(',  ')',  '*',  '+',  ',',  '-',  '.',  '/',
-	'0',  '1',  '2',  '3',  '4',  '5',  '6',  '7',
-	'8',  '9',  ':',  ';',  '<',  '=',  '>',  '?',
-	'@',  'A',  'B',  'C',  'D',  'E',  'F',  'G',
-	'H',  'I',  'J',  'K',  'L',  'M',  'N',  'O',
-	'P',  'Q',  'R',  'S',  'T',  'U',  'V',  'W',
-	'X',  'Y',  'Z',  '[',  '\\', ']',  '^',  '_',
-	'`',  'a',  'b',  'c',  'd',  'e',  'f',  'g',
-	'h',  'i',  'j',  'k',  'l',  'm',  'n',  'o',
-	'p',  'q',  'r',  's',  't',  'u',  'v',  'w',
-	'x',  'y',  'z',  '{',  '|',  '}',  '~',  '<'
-};
+qboolean sys_nostdout = false;
 
 static char sys_timestring[128];
 char *Sys_TimeString(const char *timeformat)
@@ -57,41 +17,6 @@ char *Sys_TimeString(const char *timeformat)
 	return sys_timestring;
 }
 
-
-#define MAXPRINTMSG 16384
-
-void Sys_Print(const char *msg)
-{
-	unsigned char *p;
-	// String we print
-	char final[MAXPRINTMSG];
-
-	if (sys_nostdout)
-		return;
-
-	if (timestamps.integer)
-		snprintf(final, sizeof(final), "%s%s", Sys_TimeString(timeformat.string), msg);
-	else
-		strlcpy (final, msg, sizeof (final));
-
-	// LordHavoc: make sure the string is terminated
-	final[MAXPRINTMSG-1] = 0;
-	for (p = (unsigned char *) final;*p; p++)
-		*p = qfont_table[*p];
-	Sys_PrintToTerminal(final);
-}
-
-void Sys_Printf(const char *fmt, ...)
-{
-	va_list argptr;
-	char msg[MAXPRINTMSG];	// String we started with
-
-	va_start(argptr,fmt);
-	vsnprintf(msg,sizeof(msg),fmt,argptr);
-	va_end(argptr);
-
-	Sys_Print(msg);
-}
 
 extern qboolean host_shuttingdown;
 void Sys_Quit (void)
@@ -180,7 +105,7 @@ qboolean Sys_LoadLibrary (const char* dllname, dllhandle_t* handle, const dllfun
 		}
 
 	*handle = dllhandle;
-	Con_DPrintf("\"%s\" loaded.\n", dllname);
+	Con_Printf("\"%s\" loaded.\n", dllname);
 	return true;
 }
 

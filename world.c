@@ -320,7 +320,7 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 		int modelindex = ent->v->modelindex;
 		if (modelindex < 0 || modelindex > MAX_MODELS)
 		{
-			Con_DPrintf("edict %i: SOLID_BSP with invalid modelindex!\n", NUM_FOR_EDICT(ent));
+			Con_Printf("edict %i: SOLID_BSP with invalid modelindex!\n", NUM_FOR_EDICT(ent));
 			modelindex = 0;
 		}
 		model = sv.models[modelindex];
@@ -328,7 +328,7 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 		{
 			Mod_CheckLoaded(model);
 			if (!model->TraceBox)
-				Con_DPrintf("edict %i: SOLID_BSP with non-collidable model\n", NUM_FOR_EDICT(ent));
+				Con_Printf("edict %i: SOLID_BSP with non-collidable model\n", NUM_FOR_EDICT(ent));
 
 			if (ent->v->angles[0] || ent->v->angles[2] || ent->v->avelocity[0] || ent->v->avelocity[2])
 			{
@@ -451,18 +451,18 @@ trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins,
 		// if the modelindex is 0, it shouldn't be SOLID_BSP!
 		if (modelindex == 0)
 		{
-			Con_DPrintf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with no model\n", NUM_FOR_EDICT(ent));
+			Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with no model\n", NUM_FOR_EDICT(ent));
 			return trace;
 		}
 		if (modelindex >= MAX_MODELS)
 		{
-			Con_DPrintf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with invalid modelindex\n", NUM_FOR_EDICT(ent));
+			Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with invalid modelindex\n", NUM_FOR_EDICT(ent));
 			return trace;
 		}
 		model = sv.models[modelindex];
 		if (modelindex != 0 && model == NULL)
 		{
-			Con_DPrintf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with invalid modelindex\n", NUM_FOR_EDICT(ent));
+			Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with invalid modelindex\n", NUM_FOR_EDICT(ent));
 			return trace;
 		}
 
@@ -471,12 +471,12 @@ trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins,
 		{
 			if (!model->TraceBox)
 			{
-				Con_DPrintf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with a non-collidable model\n", NUM_FOR_EDICT(ent));
+				Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with a non-collidable model\n", NUM_FOR_EDICT(ent));
 				return trace;
 			}
 			//if (ent->v->movetype != MOVETYPE_PUSH)
 			//{
-			//	Con_DPrintf("SV_ClipMoveToEntity: edict %i: SOLID_BSP without MOVETYPE_PUSH\n", NUM_FOR_EDICT(ent));
+			//	Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP without MOVETYPE_PUSH\n", NUM_FOR_EDICT(ent));
 			//	return trace;
 			//}
 		}

@@ -335,14 +335,14 @@ int GL_CheckExtension(const char *name, const dllfunction_t *funcs, const char *
 	int failed = false;
 	const dllfunction_t *func;
 
-	Con_DPrintf("checking for %s...  ", name);
+	Con_Printf("checking for %s...  ", name);
 
 	for (func = funcs;func && func->name;func++)
 		*func->funcvariable = NULL;
 
 	if (disableparm && (COM_CheckParm(disableparm) || COM_CheckParm("-safe")))
 	{
-		Con_DPrint("disabled by commandline\n");
+		Con_Print("disabled by commandline\n");
 		return false;
 	}
 
@@ -361,12 +361,12 @@ int GL_CheckExtension(const char *name, const dllfunction_t *funcs, const char *
 		// delay the return so it prints all missing functions
 		if (failed)
 			return false;
-		Con_DPrint("enabled\n");
+		Con_Print("enabled\n");
 		return true;
 	}
 	else
 	{
-		Con_DPrint("not detected\n");
+		Con_Print("not detected\n");
 		return false;
 	}
 }
@@ -623,13 +623,13 @@ void VID_CheckExtensions(void)
 	if (!GL_CheckExtension("OpenGL 1.1.0", opengl110funcs, NULL, false))
 		Sys_Error("OpenGL 1.1.0 functions not found\n");
 
-	Con_DPrintf("GL_VENDOR: %s\n", gl_vendor);
-	Con_DPrintf("GL_RENDERER: %s\n", gl_renderer);
-	Con_DPrintf("GL_VERSION: %s\n", gl_version);
-	Con_DPrintf("GL_EXTENSIONS: %s\n", gl_extensions);
-	Con_DPrintf("%s_EXTENSIONS: %s\n", gl_platform, gl_platformextensions);
+	Con_Printf("GL_VENDOR: %s\n", gl_vendor);
+	Con_Printf("GL_RENDERER: %s\n", gl_renderer);
+	Con_Printf("GL_VERSION: %s\n", gl_version);
+	Con_Printf("GL_EXTENSIONS: %s\n", gl_extensions);
+	Con_Printf("%s_EXTENSIONS: %s\n", gl_platform, gl_platformextensions);
 
-	Con_DPrint("Checking OpenGL extensions...\n");
+	Con_Print("Checking OpenGL extensions...\n");
 
 // COMMANDLINEOPTION: GL: -nodrawrangeelements disables GL_EXT_draw_range_elements (renders faster)
 	if (!GL_CheckExtension("glDrawRangeElements", drawrangeelementsfuncs, "-nodrawrangeelements", true))
@@ -1069,7 +1069,7 @@ void VID_Open(void)
 			Cvar_SetQuick(&vid_bitsperpixel, com_argv[i+1]);
 	}
 
-	Con_DPrint("Starting video system\n");
+	Con_Print("Starting video system\n");
 	success = VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer);
 	if (!success)
 	{

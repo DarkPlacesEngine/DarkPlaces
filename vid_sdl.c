@@ -359,7 +359,7 @@ static void VID_OutputVersion()
 {
 	const SDL_version *version;
 	version = SDL_Linked_Version();
-	Con_DPrintf(	"Linked against SDL version %d.%d.%d\n"
+	Con_Printf(	"Linked against SDL version %d.%d.%d\n"
 					"Using SDL library version %d.%d.%d\n",
 					SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_PATCHLEVEL,
 					version->major, version->minor, version->patch );	

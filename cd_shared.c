@@ -105,7 +105,7 @@ void CDAudio_Play (qbyte track, qboolean looping)
 	track = remap[track];
 	if (track < 1)
 	{
-		Con_DPrintf("CDAudio: Bad track number %u.\n", track);
+		Con_Printf("CDAudio: Bad track number %u.\n", track);
 		return;
 	}
 
@@ -125,7 +125,7 @@ void CDAudio_Play (qbyte track, qboolean looping)
 			if (looping)
 				S_SetChannelFlag (faketrack, CHANNELFLAG_FORCELOOP, true);
 			S_SetChannelFlag (faketrack, CHANNELFLAG_FULLVOLUME, true);
-			Con_DPrintf ("Fake CD track %u playing...\n", track);
+			Con_Printf ("Fake CD track %u playing...\n", track);
 		}
 	}
 
@@ -382,22 +382,22 @@ int CDAudio_Startup (void)
 
 	if (CDAudio_GetAudioDiskInfo())
 	{
-		Con_DPrint("CDAudio_Init: No CD in player.\n");
+		Con_Print("CDAudio_Init: No CD in player.\n");
 		cdValid = false;
 	}
 
 	saved_vol = CDAudio_SysGetVolume ();
 	if (saved_vol < 0.0f)
 	{
-		Con_DPrint ("Can't get initial CD volume\n");
+		Con_Print ("Can't get initial CD volume\n");
 		saved_vol = 1.0f;
 	}
 	else
-		Con_DPrintf ("Initial CD volume: %g\n", saved_vol);
+		Con_Printf ("Initial CD volume: %g\n", saved_vol);
 
 	initialized = true;
 
-	Con_DPrint("CD Audio Initialized\n");
+	Con_Print("CD Audio Initialized\n");
 
 	return 0;
 }

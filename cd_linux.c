@@ -42,7 +42,7 @@ void CDAudio_SysEject (void)
 		return;
 
 	if (ioctl(cdfile, CDROMEJECT) == -1)
-		Con_DPrint("ioctl CDROMEJECT failed\n");
+		Con_Print("ioctl CDROMEJECT failed\n");
 }
 
 
@@ -52,7 +52,7 @@ void CDAudio_SysCloseDoor (void)
 		return;
 
 	if (ioctl(cdfile, CDROMCLOSETRAY) == -1)
-		Con_DPrint("ioctl CDROMCLOSETRAY failed\n");
+		Con_Print("ioctl CDROMCLOSETRAY failed\n");
 }
 
 int CDAudio_SysGetAudioDiskInfo (void)
@@ -64,13 +64,13 @@ int CDAudio_SysGetAudioDiskInfo (void)
 
 	if (ioctl(cdfile, CDROMREADTOCHDR, &tochdr) == -1)
 	{
-		Con_DPrint("ioctl CDROMREADTOCHDR failed\n");
+		Con_Print("ioctl CDROMREADTOCHDR failed\n");
 		return -1;
 	}
 
 	if (tochdr.cdth_trk0 < 1)
 	{
-		Con_DPrint("CDAudio: no music tracks\n");
+		Con_Print("CDAudio: no music tracks\n");
 		return -1;
 	}
 
@@ -87,7 +87,7 @@ float CDAudio_SysGetVolume (void)
 
 	if (ioctl (cdfile, CDROMVOLREAD, &vol) == -1)
 	{
-		Con_DPrint("ioctl CDROMVOLREAD failed\n");
+		Con_Print("ioctl CDROMVOLREAD failed\n");
 		return -1.0f;
 	}
 
@@ -106,7 +106,7 @@ void CDAudio_SysSetVolume (float volume)
 	vol.channel2 = vol.channel3 = 0;
 
 	if (ioctl (cdfile, CDROMVOLCTRL, &vol) == -1)
-		Con_DPrint("ioctl CDROMVOLCTRL failed\n");
+		Con_Print("ioctl CDROMVOLCTRL failed\n");
 }
 
 
@@ -123,7 +123,7 @@ int CDAudio_SysPlay (qbyte track)
 	entry.cdte_format = CDROM_MSF;
 	if (ioctl(cdfile, CDROMREADTOCENTRY, &entry) == -1)
 	{
-		Con_DPrint("ioctl CDROMREADTOCENTRY failed\n");
+		Con_Print("ioctl CDROMREADTOCENTRY failed\n");
 		return -1;
 	}
 	if (entry.cdte_ctrl == CDROM_DATA_TRACK)
@@ -142,13 +142,13 @@ int CDAudio_SysPlay (qbyte track)
 
 	if (ioctl(cdfile, CDROMPLAYTRKIND, &ti) == -1)
 	{
-		Con_DPrint("ioctl CDROMPLAYTRKIND failed\n");
+		Con_Print("ioctl CDROMPLAYTRKIND failed\n");
 		return -1;
 	}
 
 	if (ioctl(cdfile, CDROMRESUME) == -1)
 	{
-		Con_DPrint("ioctl CDROMRESUME failed\n");
+		Con_Print("ioctl CDROMRESUME failed\n");
 		return -1;
 	}
 
@@ -163,7 +163,7 @@ int CDAudio_SysStop (void)
 
 	if (ioctl(cdfile, CDROMSTOP) == -1)
 	{
-		Con_DPrintf("ioctl CDROMSTOP failed (%d)\n", errno);
+		Con_Printf("ioctl CDROMSTOP failed (%d)\n", errno);
 		return -1;
 	}
 
@@ -177,7 +177,7 @@ int CDAudio_SysPause (void)
 
 	if (ioctl(cdfile, CDROMPAUSE) == -1)
 	{
-		Con_DPrint("ioctl CDROMPAUSE failed\n");
+		Con_Print("ioctl CDROMPAUSE failed\n");
 		return -1;
 	}
 
@@ -191,7 +191,7 @@ int CDAudio_SysResume (void)
 		return -1;
 
 	if (ioctl(cdfile, CDROMRESUME) == -1)
-		Con_DPrint("ioctl CDROMRESUME failed\n");
+		Con_Print("ioctl CDROMRESUME failed\n");
 
 	return 0;
 }
@@ -207,7 +207,7 @@ int CDAudio_SysUpdate (void)
 		subchnl.cdsc_format = CDROM_MSF;
 		if (ioctl(cdfile, CDROMSUBCHNL, &subchnl) == -1)
 		{
-			Con_DPrint("ioctl CDROMSUBCHNL failed\n");
+			Con_Print("ioctl CDROMSUBCHNL failed\n");
 			cdPlaying = false;
 			return -1;
 		}
@@ -238,7 +238,7 @@ int CDAudio_SysStartup (void)
 {
 	if ((cdfile = open(cd_dev, O_RDONLY | O_NONBLOCK)) == -1)
 	{
-		Con_DPrintf("CDAudio_SysStartup: open of \"%s\" failed (%i)\n",
+		Con_Printf("CDAudio_SysStartup: open of \"%s\" failed (%i)\n",
 					cd_dev, errno);
 		cdfile = -1;
 		return -1;

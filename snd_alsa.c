@@ -86,14 +86,14 @@ qboolean SNDDMA_Init (void)
 	err = snd_pcm_open (&pcm, pcmname, SND_PCM_STREAM_PLAYBACK,
 						  SND_PCM_NONBLOCK);
 	if (0 > err) {
-		Sys_Printf ("Error: audio open error: %s\n", snd_strerror (err));
+		Con_Printf ("Error: audio open error: %s\n", snd_strerror (err));
 		return 0;
 	}
-	Sys_Printf ("ALSA: Using PCM %s.\n", pcmname);
+	Con_Printf ("ALSA: Using PCM %s.\n", pcmname);
 
 	err = snd_pcm_hw_params_any (pcm, hw);
 	if (0 > err) {
-		Sys_Printf ("ALSA: error setting hw_params_any. %s\n",
+		Con_Printf ("ALSA: error setting hw_params_any. %s\n",
 					snd_strerror (err));
 		goto error;
 	}
@@ -101,7 +101,7 @@ qboolean SNDDMA_Init (void)
 	err = snd_pcm_hw_params_set_access (pcm, hw,
 										  SND_PCM_ACCESS_MMAP_INTERLEAVED);
 	if (0 > err) {
-		Sys_Printf ("ALSA: Failure to set noninterleaved PCM access. %s\n"
+		Con_Printf ("ALSA: Failure to set noninterleaved PCM access. %s\n"
 					"Note: Interleaved is not supported\n",
 					snd_strerror (err));
 		goto error;
@@ -117,7 +117,7 @@ qboolean SNDDMA_Init (void)
 														 SND_PCM_FORMAT_U8))) {
 				bps = 8;
 			} else {
-				Sys_Printf ("ALSA: no useable formats. %s\n",
+				Con_Printf ("ALSA: no useable formats. %s\n",
 							snd_strerror (err));
 				goto error;
 			}
@@ -128,13 +128,13 @@ qboolean SNDDMA_Init (void)
 												  SND_PCM_FORMAT_U8 :
 												  SND_PCM_FORMAT_S16);
 			if (0 > err) {
-				Sys_Printf ("ALSA: no usable formats. %s\n",
+				Con_Printf ("ALSA: no usable formats. %s\n",
 							snd_strerror (err));
 				goto error;
 			}
 			break;
 		default:
-			Sys_Printf ("ALSA: desired format not supported\n");
+			Con_Printf ("ALSA: desired format not supported\n");
 			goto error;
 	}
 
@@ -147,7 +147,7 @@ qboolean SNDDMA_Init (void)
 																	 1))) {
 				stereo = 0;
 			} else {
-				Sys_Printf ("ALSA: no usable channels. %s\n",
+				Con_Printf ("ALSA: no usable channels. %s\n",
 							snd_strerror (err));
 				goto error;
 			}
@@ -156,13 +156,13 @@ qboolean SNDDMA_Init (void)
 		case 1:
 			err = snd_pcm_hw_params_set_channels (pcm, hw, stereo ? 2 : 1);
 			if (0 > err) {
-				Sys_Printf ("ALSA: no usable channels. %s\n",
+				Con_Printf ("ALSA: no usable channels. %s\n",
 							snd_strerror (err));
 				goto error;
 			}
 			break;
 		default:
-			Sys_Printf ("ALSA: desired channels not supported\n");
+			Con_Printf ("ALSA: desired channels not supported\n");
 			goto error;
 	}
 
@@ -184,7 +184,7 @@ qboolean SNDDMA_Init (void)
 					if (0 <= err) {
 						frag_size = 8 * bps;
 					} else {
-						Sys_Printf ("ALSA: no usable rates. %s\n",
+						Con_Printf ("ALSA: no usable rates. %s\n",
 									snd_strerror (err));
 						goto error;
 					}
@@ -196,50 +196,50 @@ qboolean SNDDMA_Init (void)
 		case 44100:
 			err = snd_pcm_hw_params_set_rate_near (pcm, hw, &rate, 0);
 			if (0 > err) {
-				Sys_Printf ("ALSA: desired rate %i not supported. %s\n", rate,
+				Con_Printf ("ALSA: desired rate %i not supported. %s\n", rate,
 							snd_strerror (err));
 				goto error;
 			}
 			frag_size = 8 * bps * rate / 11025;
 			break;
 		default:
-			Sys_Printf ("ALSA: desired rate %i not supported.\n", rate);
+			Con_Printf ("ALSA: desired rate %i not supported.\n", rate);
 			goto error;
 	}
 
 	err = snd_pcm_hw_params_set_period_size_near (pcm, hw, &frag_size, 0);
 	if (0 > err) {
-		Sys_Printf ("ALSA: unable to set period size near %i. %s\n",
+		Con_Printf ("ALSA: unable to set period size near %i. %s\n",
 					(int) frag_size, snd_strerror (err));
 		goto error;
 	}
 	err = snd_pcm_hw_params (pcm, hw);
 	if (0 > err) {
-		Sys_Printf ("ALSA: unable to install hw params: %s\n",
+		Con_Printf ("ALSA: unable to install hw params: %s\n",
 					snd_strerror (err));
 		goto error;
 	}
 	err = snd_pcm_sw_params_current (pcm, sw);
 	if (0 > err) {
-		Sys_Printf ("ALSA: unable to determine current sw params. %s\n",
+		Con_Printf ("ALSA: unable to determine current sw params. %s\n",
 					snd_strerror (err));
 		goto error;
 	}
 	err = snd_pcm_sw_params_set_start_threshold (pcm, sw, ~0U);
 	if (0 > err) {
-		Sys_Printf ("ALSA: unable to set playback threshold. %s\n",
+		Con_Printf ("ALSA: unable to set playback threshold. %s\n",
 					snd_strerror (err));
 		goto error;
 	}
 	err = snd_pcm_sw_params_set_stop_threshold (pcm, sw, ~0U);
 	if (0 > err) {
-		Sys_Printf ("ALSA: unable to set playback stop threshold. %s\n",
+		Con_Printf ("ALSA: unable to set playback stop threshold. %s\n",
 					snd_strerror (err));
 		goto error;
 	}
 	err = snd_pcm_sw_params (pcm, sw);
 	if (0 > err) {
-		Sys_Printf ("ALSA: unable to install sw params. %s\n",
+		Con_Printf ("ALSA: unable to install sw params. %s\n",
 					snd_strerror (err));
 		goto error;
 	}
@@ -250,7 +250,7 @@ qboolean SNDDMA_Init (void)
 
 	err = snd_pcm_hw_params_get_buffer_size (hw, &buffer_size);
 	if (0 > err) {
-		Sys_Printf ("ALSA: unable to get buffer size. %s\n",
+		Con_Printf ("ALSA: unable to get buffer size. %s\n",
 					snd_strerror (err));
 		goto error;
 	}

@@ -38,8 +38,8 @@ size_t ResampleSfx (const qbyte *in_data, size_t in_length, const snd_format_t* 
 	srclength = in_length * in_format->channels;
 	outcount = (double)in_length * shm->format.speed / in_format->speed;
 
-	Con_DPrintf("ResampleSfx(%s): %d samples @ %dHz -> %d samples @ %dHz\n",
-				sfxname, in_length, in_format->speed, outcount, shm->format.speed);
+	//Con_DPrintf("ResampleSfx(%s): %d samples @ %dHz -> %d samples @ %dHz\n",
+	//			sfxname, in_length, in_format->speed, outcount, shm->format.speed);
 
 	// Trivial case (direct transfer)
 	if (in_format->speed == shm->format.speed)
@@ -178,7 +178,7 @@ qboolean S_LoadSound (sfx_t *s, qboolean complain)
 		if (len >= sizeof (namebuffer))
 		{
 			// name too long
-			Con_DPrintf("S_LoadSound: name \"%s\" is too long\n", s->name);
+			Con_Printf("S_LoadSound: name \"%s\" is too long\n", s->name);
 			return false;
 		}
 		if (S_LoadWavFile (namebuffer, s))
@@ -194,7 +194,7 @@ qboolean S_LoadSound (sfx_t *s, qboolean complain)
 	if (len >= sizeof (namebuffer))
 	{
 		// name too long
-		Con_DPrintf("S_LoadSound: name \"%s\" is too long\n", s->name);
+		Con_Printf("S_LoadSound: name \"%s\" is too long\n", s->name);
 		return false;
 	}
 	if (S_LoadWavFile (namebuffer, s))

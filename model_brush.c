@@ -880,7 +880,7 @@ static void Mod_Q1BSP_DecompressVis(const qbyte *in, const qbyte *inend, qbyte *
 	{
 		if (in == inend)
 		{
-			Con_DPrintf("Mod_Q1BSP_DecompressVis: input underrun on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, out - outstart, outend - outstart);
+			Con_Printf("Mod_Q1BSP_DecompressVis: input underrun on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, out - outstart, outend - outstart);
 			return;
 		}
 		c = *in++;
@@ -890,14 +890,14 @@ static void Mod_Q1BSP_DecompressVis(const qbyte *in, const qbyte *inend, qbyte *
 		{
 			if (in == inend)
 			{
-				Con_DPrintf("Mod_Q1BSP_DecompressVis: input underrun (during zero-run) on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, out - outstart, outend - outstart);
+				Con_Printf("Mod_Q1BSP_DecompressVis: input underrun (during zero-run) on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, out - outstart, outend - outstart);
 				return;
 			}
 			for (c = *in++;c > 0;c--)
 			{
 				if (out == outend)
 				{
-					Con_DPrintf("Mod_Q1BSP_DecompressVis: output overrun on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, out - outstart, outend - outstart);
+					Con_Printf("Mod_Q1BSP_DecompressVis: output overrun on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, out - outstart, outend - outstart);
 					return;
 				}
 				*out++ = 0;
