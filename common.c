@@ -353,16 +353,10 @@ int MSG_ReadBytes (int numbytes, unsigned char *out)
 	return l;
 }
 
-// used by server (always latest PROTOCOL_DARKPLACES)
-float MSG_ReadDPCoord (void)
-{
-	return (signed short) MSG_ReadLittleShort();
-}
-
 // used by client
 float MSG_ReadCoord (void)
 {
-	if (cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4)
+	if (cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5)
 		return (signed short) MSG_ReadLittleShort();
 	else if (cl.protocol == PROTOCOL_DARKPLACES1)
 		return MSG_ReadLittleFloat();

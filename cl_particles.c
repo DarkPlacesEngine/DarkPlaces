@@ -603,8 +603,7 @@ void CL_ParseParticleEffect (void)
 	vec3_t org, dir;
 	int i, count, msgcount, color;
 
-	for (i=0 ; i<3 ; i++)
-		org[i] = MSG_ReadCoord ();
+	MSG_ReadVector(org);
 	for (i=0 ; i<3 ; i++)
 		dir[i] = MSG_ReadChar () * (1.0/16);
 	msgcount = MSG_ReadByte ();

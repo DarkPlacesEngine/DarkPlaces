@@ -390,7 +390,7 @@ void CL_SendMove(usercmd_t *cmd)
 		for (i = 0;i < 3;i++)
 			MSG_WriteFloat (&buf, cl.viewangles[i]);
 	}
-	else if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES4)
+	else if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5)
 	{
 		for (i=0 ; i<3 ; i++)
 			MSG_WritePreciseAngle (&buf, cl.viewangles[i]);
