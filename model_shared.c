@@ -842,7 +842,7 @@ int Mod_LoadSkinFrame_Internal (skinframe_t *skinframe, char *basename, int text
 	}
 	else
 	{
-		skinframe->base = skinframe->merged = GL_TextureForSkinLayer(skindata, width, height, va("%s_merged", basename), palette_complete, textureflags); // all but fullbrights
+		skinframe->base = skinframe->merged = GL_TextureForSkinLayer(skindata, width, height, va("%s_merged", basename), palette_complete, textureflags); // all
 		if (loadpantsandshirt)
 		{
 			skinframe->pants = GL_TextureForSkinLayer(skindata, width, height, va("%s_pants", basename), palette_pantsaswhite, textureflags); // pants
