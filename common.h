@@ -197,26 +197,31 @@ extern int dpvsnprintf (char *buffer, size_t buffersize, const char *format, va_
 extern	struct cvar_s	registered;
 extern	struct cvar_s	cmdline;
 
-#define GAME_NORMAL 0
-#define GAME_HIPNOTIC 1
-#define GAME_ROGUE 2
-#define GAME_NEHAHRA 3
-#define GAME_NEXUIZ 4
-#define GAME_TRANSFUSION 5
-#define GAME_GOODVSBAD2 6
-#define GAME_TEU 7
-#define GAME_BATTLEMECH 8
-#define GAME_ZYMOTIC 9
-#define GAME_FNIGGIUM 10
-#define GAME_SETHERAL 11
-#define GAME_SOM 12
-#define GAME_TENEBRAE 13 // full of evil hackery
-#define GAME_NEOTERIC 14
-#define GAME_OPENQUARTZ 15 //this game sucks
-#define GAME_PRYDON 16
-#define GAME_NETHERWORLD 17
+typedef enum gamemode_e
+{
+	GAME_NORMAL,
+	GAME_HIPNOTIC,
+	GAME_ROGUE,
+	GAME_NEHAHRA,
+	GAME_NEXUIZ,
+	GAME_TRANSFUSION,
+	GAME_GOODVSBAD2,
+	GAME_TEU,
+	GAME_BATTLEMECH,
+	GAME_ZYMOTIC,
+	GAME_FNIGGIUM,
+	GAME_SETHERAL,
+	GAME_SOM,
+	GAME_TENEBRAE, // full of evil hackery
+	GAME_NEOTERIC,
+	GAME_OPENQUARTZ, //this game sucks
+	GAME_PRYDON,
+	GAME_NETHERWORLD,
+	GAME_THEHUNTED,
+}
+gamemode_t;
 
-extern int gamemode;
+extern gamemode_t gamemode;
 extern const char *gamename;
 extern const char *gamedirname1;
 extern const char *gamedirname2;

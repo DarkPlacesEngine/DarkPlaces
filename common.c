@@ -40,7 +40,7 @@ const char **com_argv;
 #define CMDLINE_LENGTH	1024
 char com_cmdline[CMDLINE_LENGTH];
 
-int gamemode;
+gamemode_t gamemode;
 const char *gamename;
 const char *gamedirname1;
 const char *gamedirname2;
@@ -982,6 +982,9 @@ static const gamemode_info_t gamemode_info [] =
 // GAME_NETHERWORLD
 // COMMANDLINEOPTION: Game: -netherworld runs the game Netherworld: Dark Masters
 { "netherworld",	"-netherworld",	"Dark Masters",			"id1",		"netherworld", 	"nw",			"darkplaces"},
+// GAME_THEHUNTED
+// COMMANDLINEOPTION: Game: -netherworld runs the game The Hunted
+{ "thehunted",		"-thehunted",	"The Hunted",			"thdata",	NULL, 			"th",			"thehunted"},
 };
 
 void COM_InitGameType (void)
