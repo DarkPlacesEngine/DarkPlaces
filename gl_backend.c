@@ -248,6 +248,7 @@ void GL_SetupView_Orientation_FromEntity(matrix4x4_t *matrix)
 void GL_SetupView_Mode_Perspective (double fovx, double fovy, double zNear, double zFar)
 {
 	double xmax, ymax;
+	double m[16];
 
 	if (!r_render.integer)
 		return;
@@ -260,13 +261,30 @@ void GL_SetupView_Mode_Perspective (double fovx, double fovy, double zNear, doub
 	ymax = zNear * tan(fovy * M_PI / 360.0);
 	// set view pyramid
 	qglFrustum(-xmax, xmax, -ymax, ymax, zNear, zFar);CHECKGLERROR
+	qglGetDoublev(GL_PROJECTION_MATRIX, &m);
+	backend_projectmatrix.m[0][0] = m[0];
+	backend_projectmatrix.m[1][0] = m[1];
+	backend_projectmatrix.m[2][0] = m[2];
+	backend_projectmatrix.m[3][0] = m[3];
+	backend_projectmatrix.m[0][1] = m[4];
+	backend_projectmatrix.m[1][1] = m[5];
+	backend_projectmatrix.m[2][1] = m[6];
+	backend_projectmatrix.m[3][1] = m[7];
+	backend_projectmatrix.m[0][2] = m[8];
+	backend_projectmatrix.m[1][2] = m[9];
+	backend_projectmatrix.m[2][2] = m[10];
+	backend_projectmatrix.m[3][2] = m[11];
+	backend_projectmatrix.m[0][3] = m[12];
+	backend_projectmatrix.m[1][3] = m[13];
+	backend_projectmatrix.m[2][3] = m[14];
+	backend_projectmatrix.m[3][3] = m[15];
 	qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 	GL_SetupView_Orientation_Identity();
 }
 
 void GL_SetupView_Mode_PerspectiveInfiniteFarClip (double fovx, double fovy, double zNear)
 {
-	float nudge, m[16];
+	double nudge, m[16];
 
 	if (!r_render.integer)
 		return;
@@ -292,7 +310,7 @@ void GL_SetupView_Mode_PerspectiveInfiniteFarClip (double fovx, double fovy, dou
 	m[13] = 0;
 	m[14] = -2 * zNear * nudge;
 	m[15] = 0;
-	qglLoadMatrixf(m);
+	qglLoadMatrixd(m);
 	qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 	GL_SetupView_Orientation_Identity();
 	backend_projectmatrix.m[0][0] = m[0];
@@ -315,6 +333,8 @@ void GL_SetupView_Mode_PerspectiveInfiniteFarClip (double fovx, double fovy, dou
 
 void GL_SetupView_Mode_Ortho (double x1, double y1, double x2, double y2, double zNear, double zFar)
 {
+	double m[16];
+
 	if (!r_render.integer)
 		return;
 
@@ -322,6 +342,23 @@ void GL_SetupView_Mode_Ortho (double x1, double y1, double x2, double y2, double
 	qglMatrixMode(GL_PROJECTION);CHECKGLERROR
 	qglLoadIdentity();CHECKGLERROR
 	qglOrtho(x1, x2, y2, y1, zNear, zFar);
+	qglGetDoublev(GL_PROJECTION_MATRIX, &m);
+	backend_projectmatrix.m[0][0] = m[0];
+	backend_projectmatrix.m[1][0] = m[1];
+	backend_projectmatrix.m[2][0] = m[2];
+	backend_projectmatrix.m[3][0] = m[3];
+	backend_projectmatrix.m[0][1] = m[4];
+	backend_projectmatrix.m[1][1] = m[5];
+	backend_projectmatrix.m[2][1] = m[6];
+	backend_projectmatrix.m[3][1] = m[7];
+	backend_projectmatrix.m[0][2] = m[8];
+	backend_projectmatrix.m[1][2] = m[9];
+	backend_projectmatrix.m[2][2] = m[10];
+	backend_projectmatrix.m[3][2] = m[11];
+	backend_projectmatrix.m[0][3] = m[12];
+	backend_projectmatrix.m[1][3] = m[13];
+	backend_projectmatrix.m[2][3] = m[14];
+	backend_projectmatrix.m[3][3] = m[15];
 	qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 	GL_SetupView_Orientation_Identity();
 }
