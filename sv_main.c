@@ -338,18 +338,10 @@ void SV_ConnectClient (int clientnum)
 			client->spawn_parms[i] = (&pr_global_struct->parm1)[i];
 	}
 
+	client->spawned = false;		// need prespawn, spawn, etc
+	client->waitingforconnect = true;
 	client->sendserverinfo = false;
 	client->sendsignon = true;
-	client->spawned = false;		// need prespawn, spawn, etc
-	// LordHavoc: 1 = attempt to work through NAT routers
-#if 0
-	// send serverinfo immediately (may get lost if client is behind a NAT router)
-	client->waitingforconnect = false;
-	SV_SendServerinfo (client);
-#else
-	// send serverinfo only after receiving a nop from client
-	client->waitingforconnect = true;
-#endif
 }
 
 
@@ -1511,14 +1503,14 @@ void SV_SendClientMessages (void)
 		// send a full message when the next signon stage has been requested
 		// some other message data (name changes, etc) may accumulate
 		// between signon stages
+			if (host_client->sendserverinfo)
+			{
+				Con_DPrintf("SV_SendClientMessages: sending server info to new client\n");
+				SV_SendServerinfo (host_client);
+				host_client->sendserverinfo = false;
+			}
 			if (!host_client->sendsignon)
 			{
-				if (host_client->sendserverinfo)
-				{
-					host_client->sendserverinfo = false;
-					SV_SendServerinfo (host_client);
-				}
-
 				if (realtime - host_client->last_message > 5)
 					SV_SendNop (host_client);
 				continue;	// don't send out non-signon messages
