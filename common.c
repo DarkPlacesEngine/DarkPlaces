@@ -500,7 +500,6 @@ Parse a token out of a string
 */
 int COM_ParseToken(const char **datapointer, int returnnewline)
 {
-	int c;
 	int len;
 	const char *data = *datapointer;
 
@@ -515,79 +514,74 @@ int COM_ParseToken(const char **datapointer, int returnnewline)
 
 // skip whitespace
 skipwhite:
-	while ((c = *data) <= ' ' && (c != '\n' || !returnnewline))
+	for (;*data <= ' ' && (*data != '\n' || !returnnewline);data++)
 	{
-		if (c == 0)
+		if (*data == 0)
 		{
 			// end of file
 			*datapointer = NULL;
 			return false;
 		}
-		data++;
 	}
 
-	// check if it's a comment
-	if (c == '/')
+	if (data[0] == '/' && data[1] == '/')
 	{
-		// skip // comments
-		if (data[1] == '/')
-		{
-			while (*data && *data != '\n')
-				data++;
-			goto skipwhite;
-		}
-		// skip /* comments
-		if (data[1] == '*')
-		{
-			while (*data && (*data != '*' || data[1] != '/'))
-				data++;
-			data+=2;
-			goto skipwhite;
-		}
+		// comment
+		while (*data && *data != '\n')
+			data++;
+		goto skipwhite;
 	}
-
-// handle quoted strings specially
-	if (c == '\"')
+	else if (data[0] == '/' && data[1] == '*')
 	{
+		// comment
 		data++;
-		while (1)
+		while (*data && (data[0] != '*' || data[1] != '/'))
+			data++;
+		data += 2;
+		goto skipwhite;
+	}
+	else if (*data == '\"')
+	{
+		// quoted string
+		for (data++;*data != '\"';data++)
 		{
-			c = *data++;
-			if (c == '\"' || !c)
+			if (!*data || len >= (int)sizeof(com_token) - 1)
 			{
-				com_token[len] = 0;
-				*datapointer = data;
-				return true;
+				com_token[0] = 0;
+				*datapointer = NULL;
+				return false;
 			}
-			com_token[len] = c;
-			len++;
+			com_token[len++] = *data;
 		}
-	}
-
-// parse single characters
-	if (c == '{' || c == '}' || c == ')' || c == '(' || c == ']' || c == '[' || c == '\'' || c == ':' || c == ',' || c == ';' || c == '\n')
-	{
-		com_token[len] = c;
-		len++;
 		com_token[len] = 0;
 		*datapointer = data+1;
 		return true;
 	}
-
-// parse a regular word
-	do
+	else if (*data == '\n' || *data == '{' || *data == '}' || *data == ')' || *data == '(' || *data == ']' || *data == '[' || *data == '\'' || *data == ':' || *data == ',' || *data == ';')
 	{
-		com_token[len] = c;
-		data++;
-		len++;
-		c = *data;
-		if (c == '{' || c == '}' || c == ')' || c == '(' || c == ']' || c == '[' || c == '\'' || c == ':' || c == ',' || c == ';')
-			break;
-	} while (c>32);
-
-	com_token[len] = 0;
-	*datapointer = data;
-	return true;
+		// single character
+		com_token[len++] = *data++;
+		com_token[len] = 0;
+		*datapointer = data;
+		return true;
+	}
+	else
+	{
+		// regular word
+		for (;*data > ' ' && *data != '{' && *data != '}' && *data != ')' && *data != '(' && *data != ']' && *data != '[' && *data != '\'' && *data != ':' && *data != ',' && *data != ';';data++)
+		{
+			if (len >= (int)sizeof(com_token) - 1)
+			{
+				com_token[0] = 0;
+				*datapointer = NULL;
+				return false;
+			}
+			com_token[len++] = *data;
+		}
+		com_token[len] = 0;
+		*datapointer = data;
+		return true;
+	}
 }
 
 /*
@@ -599,7 +593,6 @@ Parse a token out of a string, behaving like the qwcl console
 */
 int COM_ParseTokenConsole(const char **datapointer)
 {
-	int c;
 	int len;
 	const char *data = *datapointer;
 
@@ -614,55 +607,57 @@ int COM_ParseTokenConsole(const char **datapointer)
 
 // skip whitespace
 skipwhite:
-	while ((c = *data) <= ' ')
+	for (;*data <= ' ';data++)
 	{
-		if (c == 0)
+		if (*data == 0)
 		{
 			// end of file
 			*datapointer = NULL;
 			return false;
 		}
-		data++;
 	}
 
-	// skip // comments
-	if (c == '/' && data[1] == '/')
+	if (*data == '/' && data[1] == '/')
 	{
+		// comment
 		while (*data && *data != '\n')
 			data++;
 		goto skipwhite;
 	}
-
-// handle quoted strings specially
-	if (c == '\"')
+	else if (*data == '\"')
 	{
-		data++;
-		while (1)
+		// quoted string
+		for (data++;*data != '\"';data++)
 		{
-			c = *data++;
-			if (c == '\"' || !c)
+			if (!*data || len >= (int)sizeof(com_token) - 1)
 			{
-				com_token[len] = 0;
-				*datapointer = data;
-				return true;
+				com_token[0] = 0;
+				*datapointer = NULL;
+				return false;
 			}
-			com_token[len] = c;
-			len++;
+			com_token[len++] = *data;
 		}
+		com_token[len] = 0;
+		*datapointer = data+1;
+		return true;
 	}
-
-// parse a regular word
-	do
+	else
 	{
-		com_token[len] = c;
-		data++;
-		len++;
-		c = *data;
-	} while (c>32);
-
-	com_token[len] = 0;
-	*datapointer = data;
-	return true;
+		// regular word
+		for (;*data > ' ';data++)
+		{
+			if (len >= (int)sizeof(com_token) - 1)
+			{
+				com_token[0] = 0;
+				*datapointer = NULL;
+				return false;
+			}
+			com_token[len++] = *data;
+		}
+		com_token[len] = 0;
+		*datapointer = data;
+		return true;
+	}
 }
 
 
