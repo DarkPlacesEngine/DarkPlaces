@@ -1201,7 +1201,7 @@ void M_DrawCheckbox (int x, int y, int on)
 }
 
 
-#define OPTIONS_ITEMS 38
+#define OPTIONS_ITEMS 40
 
 int options_cursor;
 
@@ -1234,6 +1234,10 @@ void M_Menu_Options_AdjustSliders (int dir)
 		Cvar_SetValueQuick (&scr_conalpha, bound(0, scr_conalpha.value + dir * 0.2, 1));
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&scr_conbrightness, bound(0, scr_conbrightness.value + dir * 0.2, 1));
+	else if (options_cursor == optnum++)
+		Cvar_SetValueQuick (&sbar_alpha_bg, bound(0, sbar_alpha_bg.value + dir * 0.1, 1));
+	else if (options_cursor == optnum++)
+		Cvar_SetValueQuick (&sbar_alpha_fg, bound(0, sbar_alpha_fg.value + dir * 0.1, 1));
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&scr_viewsize, bound(30, scr_viewsize.value + dir * 10, 120));
 	else if (options_cursor == optnum++)
@@ -1366,6 +1370,8 @@ void M_Options_Draw (void)
 	M_Options_PrintSlider(  "     Console Speed", true, scr_conspeed.value, 0, 1000);
 	M_Options_PrintSlider(  "     Console Alpha", true, scr_conalpha.value, 0, 1);
 	M_Options_PrintSlider(  "Conback Brightness", true, scr_conbrightness.value, 0, 1);
+	M_Options_PrintSlider(  "     Sbar Alpha BG", true, sbar_alpha_bg.value, 0, 1);
+	M_Options_PrintSlider(  "     Sbar Alpha FG", true, sbar_alpha_fg.value, 0, 1);
 	M_Options_PrintSlider(  "       Screen size", true, scr_viewsize.value, 30, 120);
 	M_Options_PrintSlider(  "     Field of View", true, scr_fov.integer, 1, 170);
 	M_Options_PrintCheckbox("  JPEG screenshots", jpeg_dll != NULL, scr_screenshot_jpeg.integer);

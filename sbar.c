@@ -94,7 +94,8 @@ cvar_t	showtime = {CVAR_SAVE, "showtime", "0"};
 cvar_t	showtime_format = {CVAR_SAVE, "showtime_format", "%H:%M:%S"};
 cvar_t	showdate = {CVAR_SAVE, "showdate", "0"};
 cvar_t	showdate_format = {CVAR_SAVE, "showdate_format", "%Y-%m-%d"};
-cvar_t	sbar_alpha = {CVAR_SAVE, "sbar_alpha", "1"};
+cvar_t	sbar_alpha_bg = {CVAR_SAVE, "sbar_alpha_bg", "0.4"};
+cvar_t	sbar_alpha_fg = {CVAR_SAVE, "sbar_alpha_fg", "1"};
 
 void Sbar_MiniDeathmatchOverlay (int x, int y);
 void Sbar_DeathmatchOverlay (void);
@@ -317,7 +318,8 @@ void Sbar_Init (void)
 	Cvar_RegisterVariable (&showtime_format);
 	Cvar_RegisterVariable (&showdate);
 	Cvar_RegisterVariable (&showdate_format);
-	Cvar_RegisterVariable (&sbar_alpha);
+	Cvar_RegisterVariable (&sbar_alpha_bg);
+	Cvar_RegisterVariable (&sbar_alpha_fg);
 
 	R_RegisterModule("sbar", sbar_start, sbar_shutdown, sbar_newmap);
 }
@@ -336,12 +338,12 @@ Sbar_DrawPic
 */
 void Sbar_DrawPic (int x, int y, sbarpic_t *sbarpic)
 {
-	DrawQ_Pic (sbar_x + x, sbar_y + y, sbarpic->name, 0, 0, 1, 1, 1, sbar_alpha.value, 0);
+	DrawQ_Pic (sbar_x + x, sbar_y + y, sbarpic->name, 0, 0, 1, 1, 1, sbar_alpha_fg.value, 0);
 }
 
 void Sbar_DrawAlphaPic (int x, int y, sbarpic_t *sbarpic, float alpha)
 {
-	DrawQ_Pic (sbar_x + x, sbar_y + y, sbarpic->name, 0, 0, 1, 1, 1, alpha * sbar_alpha.value, 0);
+	DrawQ_Pic (sbar_x + x, sbar_y + y, sbarpic->name, 0, 0, 1, 1, 1, alpha, 0);
 }
 
 /*
@@ -353,7 +355,7 @@ Draws one solid graphics character
 */
 void Sbar_DrawCharacter (int x, int y, int num)
 {
-	DrawQ_String (sbar_x + x + 4 , sbar_y + y, va("%c", num), 0, 8, 8, 1, 1, 1, sbar_alpha.value, 0);
+	DrawQ_String (sbar_x + x + 4 , sbar_y + y, va("%c", num), 0, 8, 8, 1, 1, 1, sbar_alpha_fg.value, 0);
 }
 
 /*
@@ -363,7 +365,7 @@ Sbar_DrawString
 */
 void Sbar_DrawString (int x, int y, char *str)
 {
-	DrawQ_String (sbar_x + x, sbar_y + y, str, 0, 8, 8, 1, 1, 1, sbar_alpha.value, 0);
+	DrawQ_String (sbar_x + x, sbar_y + y, str, 0, 8, 8, 1, 1, 1, sbar_alpha_fg.value, 0);
 }
 
 /*
@@ -422,7 +424,7 @@ void Sbar_DrawXNum (int x, int y, int num, int digits, int lettersize, float r, 
 		else
 			frame = *ptr -'0';
 
-		DrawQ_Pic (sbar_x + x, sbar_y + y, sb_nums[0][frame]->name,lettersize,lettersize,r,g,b,a * sbar_alpha.value,flags);
+		DrawQ_Pic (sbar_x + x, sbar_y + y, sb_nums[0][frame]->name,lettersize,lettersize,r,g,b,a * sbar_alpha_fg.value,flags);
 		x += lettersize;
 
 		ptr++;
@@ -515,11 +517,11 @@ static void Sbar_DrawWeapon(int nr, float fade, int active)
 	const int w_width = 300, w_height = 100, w_space = 10, font_size = 10;
 	const float w_scale = 0.4;
 
-	DrawQ_Pic(vid.conwidth - (w_width + w_space) * w_scale, (w_height + w_space) * w_scale * nr + w_space, sb_weapons[0][nr]->name, w_width * w_scale, w_height * w_scale, (active) ? 1 : 0.6, active ? 1 : 0.6, active ? 1 : 1, fade * sbar_alpha.value, DRAWFLAG_ADDITIVE);
+	DrawQ_Pic(vid.conwidth - (w_width + w_space) * w_scale, (w_height + w_space) * w_scale * nr + w_space, sb_weapons[0][nr]->name, w_width * w_scale, w_height * w_scale, (active) ? 1 : 0.6, active ? 1 : 0.6, active ? 1 : 1, fade * sbar_alpha_fg.value, DRAWFLAG_ADDITIVE);
 	DrawQ_String(vid.conwidth - (w_space + font_size ), (w_height + w_space) * w_scale * nr + w_space, va("%i",nr+1), 0, font_size, font_size, 1, 0, 0, fade, 0);
 
 	if (active)
-		DrawQ_Fill(vid.conwidth - (w_width + w_space) * w_scale, (w_height + w_space) * w_scale * nr + w_space, w_width * w_scale, w_height * w_scale, 0.3, 0.3, 0.3, fade * sbar_alpha.value, DRAWFLAG_ADDITIVE);
+		DrawQ_Fill(vid.conwidth - (w_width + w_space) * w_scale, (w_height + w_space) * w_scale * nr + w_space, w_width * w_scale, w_height * w_scale, 0.3, 0.3, 0.3, fade * sbar_alpha_fg.value, DRAWFLAG_ADDITIVE);
 }
 
 /*
@@ -537,12 +539,12 @@ void Sbar_DrawInventory (void)
 	if (gamemode == GAME_ROGUE)
 	{
 		if ( cl.stats[STAT_ACTIVEWEAPON] >= RIT_LAVA_NAILGUN )
-			Sbar_DrawAlphaPic (0, -24, rsb_invbar[0], 0.4);
+			Sbar_DrawAlphaPic (0, -24, rsb_invbar[0], sbar_alpha_bg.value);
 		else
-			Sbar_DrawAlphaPic (0, -24, rsb_invbar[1], 0.4);
+			Sbar_DrawAlphaPic (0, -24, rsb_invbar[1], sbar_alpha_bg.value);
 	}
 	else
-		Sbar_DrawAlphaPic (0, -24, sb_ibar, 0.4);
+		Sbar_DrawAlphaPic (0, -24, sb_ibar, sbar_alpha_bg.value);
 
 	// weapons
 	for (i=0 ; i<7 ; i++)
@@ -561,7 +563,7 @@ void Sbar_DrawInventory (void)
 			else
 				flashon = (flashon%5) + 2;
 
-			Sbar_DrawAlphaPic (i*24, -16, sb_weapons[flashon][i], 0.4);
+			Sbar_DrawAlphaPic (i*24, -16, sb_weapons[flashon][i], sbar_alpha_bg.value);
 		}
 	}
 
@@ -699,9 +701,9 @@ void Sbar_DrawFrags (void)
 
 		// draw background
 		c = (qbyte *)&palette_complete[(s->colors & 0xf0) + 8];
-		DrawQ_Fill (sbar_x + x + 10, sbar_y     - 23, 28, 4, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha.value, 0);
+		DrawQ_Fill (sbar_x + x + 10, sbar_y     - 23, 28, 4, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
 		c = (qbyte *)&palette_complete[((s->colors & 15)<<4) + 8];
-		DrawQ_Fill (sbar_x + x + 10, sbar_y + 4 - 23, 28, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha.value, 0);
+		DrawQ_Fill (sbar_x + x + 10, sbar_y + 4 - 23, 28, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
 
 		// draw number
 		f = s->frags;
@@ -744,9 +746,9 @@ void Sbar_DrawFace (void)
 		// draw background
 		Sbar_DrawPic (112, 0, rsb_teambord);
 		c = (qbyte *)&palette_complete[(s->colors & 0xf0) + 8];
-		DrawQ_Fill (sbar_x + 113, vid.conheight-SBAR_HEIGHT+3, 22, 9, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha.value, 0);
+		DrawQ_Fill (sbar_x + 113, vid.conheight-SBAR_HEIGHT+3, 22, 9, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
 		c = (qbyte *)&palette_complete[((s->colors & 15)<<4) + 8];
-		DrawQ_Fill (sbar_x + 113, vid.conheight-SBAR_HEIGHT+12, 22, 9, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha.value, 0);
+		DrawQ_Fill (sbar_x + 113, vid.conheight-SBAR_HEIGHT+12, 22, 9, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
 
 		// draw number
 		f = s->frags;
@@ -858,22 +860,22 @@ void Sbar_ShowFPS(void)
 		if (fpsstring[0])
 		{
 			fps_x = vid.conwidth - fps_scalex * strlen(fpsstring);
-			DrawQ_Fill(fps_x, fps_y, fps_scalex * strlen(fpsstring), fps_scaley, 0, 0, 0, 0.5 * sbar_alpha.value, 0);
-			DrawQ_String(fps_x, fps_y, fpsstring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1 * sbar_alpha.value, 0);
+			DrawQ_Fill(fps_x, fps_y, fps_scalex * strlen(fpsstring), fps_scaley, 0, 0, 0, 0.5, 0);
+			DrawQ_String(fps_x, fps_y, fpsstring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0);
 			fps_y += fps_scaley;
 		}
 		if (timestring[0])
 		{
 			fps_x = vid.conwidth - fps_scalex * strlen(timestring);
-			DrawQ_Fill(fps_x, fps_y, fps_scalex * strlen(timestring), fps_scaley, 0, 0, 0, 0.5 * sbar_alpha.value, 0);
-			DrawQ_String(fps_x, fps_y, timestring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1 * sbar_alpha.value, 0);
+			DrawQ_Fill(fps_x, fps_y, fps_scalex * strlen(timestring), fps_scaley, 0, 0, 0, 0.5, 0);
+			DrawQ_String(fps_x, fps_y, timestring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0);
 			fps_y += fps_scaley;
 		}
 		if (datestring[0])
 		{
 			fps_x = vid.conwidth - fps_scalex * strlen(datestring);
-			DrawQ_Fill(fps_x, fps_y, fps_scalex * strlen(datestring), fps_scaley, 0, 0, 0, 0.5 * sbar_alpha.value, 0);
-			DrawQ_String(fps_x, fps_y, datestring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1 * sbar_alpha.value, 0);
+			DrawQ_Fill(fps_x, fps_y, fps_scalex * strlen(datestring), fps_scaley, 0, 0, 0, 0.5, 0);
+			DrawQ_String(fps_x, fps_y, datestring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0);
 			fps_y += fps_scaley;
 		}
 	}
@@ -947,7 +949,7 @@ void Sbar_Draw (void)
 
 		if (sb_showscores || cl.stats[STAT_HEALTH] <= 0)
 		{
-			Sbar_DrawAlphaPic (0, 0, sb_scorebar, 0.4);
+			Sbar_DrawAlphaPic (0, 0, sb_scorebar, sbar_alpha_bg.value);
 			Sbar_DrawScoreboard ();
 		}
 		else if (sb_lines)
@@ -976,9 +978,9 @@ void Sbar_Draw (void)
 			//	Sbar_DrawFrags ();
 
 			if (sb_lines > 24)
-				Sbar_DrawAlphaPic (0, 0, sb_sbar, sbar_alpha.value);
+				Sbar_DrawAlphaPic (0, 0, sb_sbar, sbar_alpha_fg.value);
 			else
-				Sbar_DrawAlphaPic (0, 0, sb_sbar_minimal, sbar_alpha.value);
+				Sbar_DrawAlphaPic (0, 0, sb_sbar_minimal, sbar_alpha_fg.value);
 
 			// special items
 			if (cl.items & IT_INVULNERABILITY)
@@ -1043,12 +1045,12 @@ void Sbar_Draw (void)
 		if (sb_showscores || cl.stats[STAT_HEALTH] <= 0)
 		{
 			if (gamemode != GAME_GOODVSBAD2)
-				Sbar_DrawAlphaPic (0, 0, sb_scorebar, 0.4);
+				Sbar_DrawAlphaPic (0, 0, sb_scorebar, sbar_alpha_bg.value);
 			Sbar_DrawScoreboard ();
 		}
 		else if (sb_lines)
 		{
-			Sbar_DrawAlphaPic (0, 0, sb_sbar, 0.4);
+			Sbar_DrawAlphaPic (0, 0, sb_sbar, sbar_alpha_bg.value);
 
 			// keys (hipnotic only)
 			//MED 01/04/97 moved keys here so they would not be overwritten
@@ -1161,11 +1163,11 @@ float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
 	{
 		// draw colors behind score
 		c = (qbyte *)&palette_complete[(s->colors & 0xf0) + 8];
-		DrawQ_Fill(x + 8, y+1, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha.value, 0);
+		DrawQ_Fill(x + 8, y+1, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
 		c = (qbyte *)&palette_complete[((s->colors & 15)<<4) + 8];
-		DrawQ_Fill(x + 8, y+4, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha.value, 0);
+		DrawQ_Fill(x + 8, y+4, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
 		// print the text
-		DrawQ_String(x, y, va("%c%4i %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha.value, 0);
+		DrawQ_String(x, y, va("%c%4i %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
 		return 8;
 	}
 	else
@@ -1178,7 +1180,7 @@ void Sbar_DeathmatchOverlay (void)
 	cachepic_t *pic;
 
 	pic = Draw_CachePic ("gfx/ranking.lmp");
-	DrawQ_Pic ((vid.conwidth - pic->width)/2, 8, "gfx/ranking.lmp", 0, 0, 1, 1, 1, 1 * sbar_alpha.value, 0);
+	DrawQ_Pic ((vid.conwidth - pic->width)/2, 8, "gfx/ranking.lmp", 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
 
 	// scores
 	Sbar_SortFrags ();
@@ -1253,8 +1255,8 @@ void Sbar_IntermissionOverlay (void)
 	sbar_x = (vid.conwidth - 320) >> 1;
 	sbar_y = (vid.conheight - 200) >> 1;
 
-	DrawQ_Pic (sbar_x + 64, sbar_y + 24, "gfx/complete.lmp", 0, 0, 1, 1, 1, 1 * sbar_alpha.value, 0);
-	DrawQ_Pic (sbar_x + 0, sbar_y + 56, "gfx/inter.lmp", 0, 0, 1, 1, 1, 1 * sbar_alpha.value, 0);
+	DrawQ_Pic (sbar_x + 64, sbar_y + 24, "gfx/complete.lmp", 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
+	DrawQ_Pic (sbar_x + 0, sbar_y + 56, "gfx/inter.lmp", 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
 
 // time
 	dig = cl.completed_time/60;
@@ -1286,6 +1288,6 @@ void Sbar_FinaleOverlay (void)
 	cachepic_t	*pic;
 
 	pic = Draw_CachePic ("gfx/finale.lmp");
-	DrawQ_Pic((vid.conwidth - pic->width)/2, 16, "gfx/finale.lmp", 0, 0, 1, 1, 1, 1 * sbar_alpha.value, 0);
+	DrawQ_Pic((vid.conwidth - pic->width)/2, 16, "gfx/finale.lmp", 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
 }
 
