@@ -143,15 +143,31 @@ typedef struct
 	int		first_statement;	// negative numbers are builtins
 	int		parm_start;
 	int		locals;				// total ints of parms + locals
-	
+
 	int		profile;		// runtime
-	
+
 	int		s_name;
 	int		s_file;			// source file defined in
-	
+
 	int		numparms;
 	qbyte	parm_size[MAX_PARMS];
 } dfunction_t;
+
+typedef struct
+{
+	int		first_statement;	// negative numbers are builtins
+	int		parm_start;
+	int		locals;				// total ints of parms + locals
+
+	int		profile;		// runtime
+	int		builtinsprofile; // cost of builtin functions called by this function
+
+	int		s_name;
+	int		s_file;			// source file defined in
+
+	int		numparms;
+	qbyte	parm_size[MAX_PARMS];
+} mfunction_t;
 
 
 #define	PROG_VERSION	6
@@ -159,25 +175,25 @@ typedef struct
 {
 	int		version;
 	int		crc;			// check of header file
-	
+
 	int		ofs_statements;
 	int		numstatements;	// statement 0 is an error
 
 	int		ofs_globaldefs;
 	int		numglobaldefs;
-	
+
 	int		ofs_fielddefs;
 	int		numfielddefs;
-	
+
 	int		ofs_functions;
 	int		numfunctions;	// function 0 is an empty
-	
+
 	int		ofs_strings;
 	int		numstrings;		// first string is a null string
 
 	int		ofs_globals;
 	int		numglobals;
-	
+
 	int		entityfields;
 } dprograms_t;
 

@@ -255,6 +255,7 @@
 					// negative statements are built in functions
 					if ((-newf->first_statement) >= pr_numbuiltins)
 						Host_Error ("Bad builtin call number");
+					pr_xfunction->builtinsprofile++;
 					pr_builtins[-newf->first_statement] ();
 				}
 				else

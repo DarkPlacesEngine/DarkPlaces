@@ -371,7 +371,7 @@ void PF_centerprint (void)
 	}
 		
 	client = &svs.clients[entnum-1];
-		
+
 	MSG_WriteChar (&client->message,svc_centerprint);
 	MSG_WriteString (&client->message, s );
 }
@@ -515,7 +515,7 @@ random()
 void PF_random (void)
 {
 	float		num;
-		
+
 	num = (rand ()&0x7fff) / ((float)0x7fff);
 
 	G_FLOAT(OFS_RETURN) = num;
@@ -667,6 +667,8 @@ void PF_traceline (void)
 	int		nomonsters;
 	edict_t	*ent;
 
+	pr_xfunction->builtinsprofile += 30;
+
 	v1 = G_VECTOR(OFS_PARM0);
 	v2 = G_VECTOR(OFS_PARM1);
 	nomonsters = G_FLOAT(OFS_PARM2);
@@ -709,6 +711,8 @@ void PF_tracebox (void)
 	int		nomonsters;
 	edict_t	*ent;
 
+	pr_xfunction->builtinsprofile += 30;
+
 	v1 = G_VECTOR(OFS_PARM0);
 	m1 = G_VECTOR(OFS_PARM1);
 	m2 = G_VECTOR(OFS_PARM2);
@@ -725,7 +729,7 @@ void PF_tracebox (void)
 	pr_global_struct->trace_inopen = trace.inopen;
 	VectorCopy (trace.endpos, pr_global_struct->trace_endpos);
 	VectorCopy (trace.plane.normal, pr_global_struct->trace_plane_normal);
-	pr_global_struct->trace_plane_dist =  trace.plane.dist;	
+	pr_global_struct->trace_plane_dist =  trace.plane.dist;
 	if (trace.ent)
 		pr_global_struct->trace_ent = EDICT_TO_PROG(trace.ent);
 	else
@@ -739,6 +743,8 @@ void PF_TraceToss (void)
 	edict_t	*ent;
 	edict_t	*ignore;
 
+	pr_xfunction->builtinsprofile += 600;
+
 	ent = G_EDICT(OFS_PARM0);
 	ignore = G_EDICT(OFS_PARM1);
 
@@ -751,7 +757,7 @@ void PF_TraceToss (void)
 	pr_global_struct->trace_inopen = trace.inopen;
 	VectorCopy (trace.endpos, pr_global_struct->trace_endpos);
 	VectorCopy (trace.plane.normal, pr_global_struct->trace_plane_normal);
-	pr_global_struct->trace_plane_dist =  trace.plane.dist;	
+	pr_global_struct->trace_plane_dist =  trace.plane.dist;
 	if (trace.ent)
 		pr_global_struct->trace_ent = EDICT_TO_PROG(trace.ent);
 	else
@@ -799,6 +805,7 @@ int PF_newcheckclient (int check)
 
 	for ( ;  ; i++)
 	{
+		pr_xfunction->builtinsprofile++;
 		if (i == svs.maxclients+1)
 			i = 1;
 
@@ -902,11 +909,11 @@ void PF_stuffcmd (void)
 	int		entnum;
 	char	*str;
 	client_t	*old;
-	
+
 	entnum = G_EDICTNUM(OFS_PARM0);
 	if (entnum < 1 || entnum > svs.maxclients)
 		Host_Error ("Parm 0 not a client");
-	str = G_STRING(OFS_PARM1);	
+	str = G_STRING(OFS_PARM1);
 
 	old = host_client;
 	host_client = &svs.clients[entnum-1];
@@ -927,7 +934,7 @@ void PF_localcmd (void)
 {
 	char	*str;
 
-	str = G_STRING(OFS_PARM0);	
+	str = G_STRING(OFS_PARM0);
 	Cbuf_AddText (str);
 }
 
@@ -941,7 +948,7 @@ float cvar (string)
 void PF_cvar (void)
 {
 	char	*str;
-	
+
 	str = G_STRING(OFS_PARM0);
 
 	G_FLOAT(OFS_RETURN) = Cvar_VariableValue (str);
@@ -957,10 +964,10 @@ float cvar (string)
 void PF_cvar_set (void)
 {
 	char	*var, *val;
-	
+
 	var = G_STRING(OFS_PARM0);
 	val = G_STRING(OFS_PARM1);
-	
+
 	Cvar_Set (var, val);
 }
 
@@ -991,6 +998,7 @@ void PF_findradius (void)
 	ent = NEXT_EDICT(sv.edicts);
 	for (i=1 ; i<sv.num_edicts ; i++, ent = NEXT_EDICT(ent))
 	{
+		pr_xfunction->builtinsprofile++;
 		if (ent->free)
 			continue;
 		if (ent->v->solid == SOLID_NOT)
@@ -1074,6 +1082,7 @@ void PF_etos (void)
 void PF_Spawn (void)
 {
 	edict_t	*ed;
+	pr_xfunction->builtinsprofile += 20;
 	ed = ED_Alloc();
 	RETURN_EDICT(ed);
 }
@@ -1081,6 +1090,7 @@ void PF_Spawn (void)
 void PF_Remove (void)
 {
 	edict_t	*ed;
+	pr_xfunction->builtinsprofile += 20;
 
 	ed = G_EDICT(OFS_PARM0);
 	if (ed == sv.edicts)
@@ -1110,6 +1120,7 @@ void PF_Find (void)
 
 	for (e++ ; e < sv.num_edicts ; e++)
 	{
+		pr_xfunction->builtinsprofile++;
 		ed = EDICT_NUM(e);
 		if (ed->free)
 			continue;
@@ -1140,6 +1151,7 @@ void PF_FindFloat (void)
 
 	for (e++ ; e < sv.num_edicts ; e++)
 	{
+		pr_xfunction->builtinsprofile++;
 		ed = EDICT_NUM(e);
 		if (ed->free)
 			continue;
@@ -1175,6 +1187,7 @@ void PF_findchain (void)
 	ent = NEXT_EDICT(sv.edicts);
 	for (i = 1;i < sv.num_edicts;i++, ent = NEXT_EDICT(ent))
 	{
+		pr_xfunction->builtinsprofile++;
 		if (ent->free)
 			continue;
 		t = E_STRING(ent,f);
@@ -1207,6 +1220,7 @@ void PF_findchainfloat (void)
 	ent = NEXT_EDICT(sv.edicts);
 	for (i = 1;i < sv.num_edicts;i++, ent = NEXT_EDICT(ent))
 	{
+		pr_xfunction->builtinsprofile++;
 		if (ent->free)
 			continue;
 		if (E_FLOAT(ent,f) != s)
@@ -1316,7 +1330,7 @@ void PF_walkmove (void)
 	edict_t	*ent;
 	float	yaw, dist;
 	vec3_t	move;
-	dfunction_t	*oldf;
+	mfunction_t	*oldf;
 	int 	oldself;
 
 	ent = PROG_TO_EDICT(pr_global_struct->self);
@@ -1468,6 +1482,7 @@ void PF_nextent (void)
 	i = G_EDICTNUM(OFS_PARM0);
 	while (1)
 	{
+		pr_xfunction->builtinsprofile++;
 		i++;
 		if (i == sv.num_edicts)
 		{
@@ -1526,6 +1541,7 @@ void PF_aim (void)
 	check = NEXT_EDICT(sv.edicts);
 	for (i=1 ; i<sv.num_edicts ; i++, check = NEXT_EDICT(check) )
 	{
+		pr_xfunction->builtinsprofile++;
 		if (check->v->takedamage != DAMAGE_AIM)
 			continue;
 		if (check == ent)
@@ -2027,14 +2043,14 @@ void PF_copyentity (void)
 
 /*
 =================
-PF_setcolor
+PF_setcolors
 
 sets the color of a client and broadcasts the update to all connected clients
 
-setcolor(clientent, value)
+setcolors(clientent, value)
 =================
 */
-void PF_setcolor (void)
+void PF_setcolors (void)
 {
 	client_t	*client;
 	int			entnum, i;
@@ -2751,7 +2767,7 @@ aa // #200
 aa // #300
 aa // #400
 PF_copyentity,			// #400 LordHavoc: builtin range (4xx)
-PF_setcolor,			// #401
+PF_setcolors,			// #401
 PF_findchain,			// #402
 PF_findchainfloat,		// #403
 PF_effect,				// #404

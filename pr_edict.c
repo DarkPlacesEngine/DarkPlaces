@@ -22,7 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 
 dprograms_t		*progs;
-dfunction_t		*pr_functions;
+mfunction_t		*pr_functions;
 char			*pr_strings;
 ddef_t			*pr_fielddefs;
 ddef_t			*pr_globaldefs;
@@ -82,7 +82,7 @@ typedef struct {
 static gefv_cache	gefvCache[GEFV_CACHESIZE] = {{NULL, ""}, {NULL, ""}};
 
 ddef_t *ED_FindField (const char *name);
-dfunction_t *ED_FindFunction (const char *name);
+mfunction_t *ED_FindFunction (const char *name);
 
 // LordHavoc: in an effort to eliminate time wasted on GetEdictFieldValue...  these are defined as externs in progs.h
 int eval_gravity;
@@ -120,8 +120,8 @@ int eval_pmodel;
 int eval_punchvector;
 int eval_viewzoom;
 
-dfunction_t *SV_PlayerPhysicsQC;
-dfunction_t *EndFrameQC;
+mfunction_t *SV_PlayerPhysicsQC;
+mfunction_t *EndFrameQC;
 
 int FindFieldOffset(const char *field)
 {
@@ -337,9 +337,9 @@ ddef_t *ED_FindGlobal (const char *name)
 ED_FindFunction
 ============
 */
-dfunction_t *ED_FindFunction (const char *name)
+mfunction_t *ED_FindFunction (const char *name)
 {
-	dfunction_t		*func;
+	mfunction_t		*func;
 	int				i;
 
 	for (i=0 ; i<progs->numfunctions ; i++)
@@ -364,7 +364,7 @@ char *PR_ValueString (etype_t type, eval_t *val)
 {
 	static char line[1024]; // LordHavoc: enlarged a bit (was 256)
 	ddef_t *def;
-	dfunction_t *f;
+	mfunction_t *f;
 	int n;
 
 	type &= ~DEF_SAVEGLOBAL;
@@ -425,7 +425,7 @@ char *PR_UglyValueString (etype_t type, eval_t *val)
 	int i;
 	char *s;
 	ddef_t *def;
-	dfunction_t *f;
+	mfunction_t *f;
 
 	type &= ~DEF_SAVEGLOBAL;
 
@@ -868,7 +868,7 @@ qboolean	ED_ParseEpair (void *base, ddef_t *key, const char *s)
 	ddef_t	*def;
 	char	*v, *w;
 	void	*d;
-	dfunction_t	*func;
+	mfunction_t	*func;
 
 	d = (void *)((int *)base + key->ofs);
 
@@ -1042,7 +1042,7 @@ void ED_LoadFromFile (const char *data)
 {
 	edict_t *ent;
 	int inhibit;
-	dfunction_t *func;
+	mfunction_t *func;
 
 	ent = NULL;
 	inhibit = 0;
@@ -1172,6 +1172,7 @@ void PR_LoadProgs (void)
 	dstatement_t *st;
 	ddef_t *infielddefs;
 	void *temp;
+	dfunction_t *dfunctions;
 
 // flush the non-C variable lookup cache
 	for (i=0 ; i<GEFV_CACHESIZE ; i++)
@@ -1202,7 +1203,8 @@ void PR_LoadProgs (void)
 	if (progs->crc != PROGHEADER_CRC)
 		Host_Error ("progs.dat system vars have been modified, progdefs.h is out of date");
 
-	pr_functions = (dfunction_t *)((qbyte *)progs + progs->ofs_functions);
+	//pr_functions = (dfunction_t *)((qbyte *)progs + progs->ofs_functions);
+	dfunctions = (dfunction_t *)((qbyte *)progs + progs->ofs_functions);
 	pr_strings = (char *)progs + progs->ofs_strings;
 	pr_globaldefs = (ddef_t *)((qbyte *)progs + progs->ofs_globaldefs);
 
@@ -1227,14 +1229,16 @@ void PR_LoadProgs (void)
 		pr_statements[i].c = LittleShort(pr_statements[i].c);
 	}
 
-	for (i=0 ; i<progs->numfunctions; i++)
+	pr_functions = Mem_Alloc(progs_mempool, sizeof(mfunction_t) * progs->numfunctions);
+	for (i = 0;i < progs->numfunctions;i++)
 	{
-		pr_functions[i].first_statement = LittleLong (pr_functions[i].first_statement);
-		pr_functions[i].parm_start = LittleLong (pr_functions[i].parm_start);
-		pr_functions[i].s_name = LittleLong (pr_functions[i].s_name);
-		pr_functions[i].s_file = LittleLong (pr_functions[i].s_file);
-		pr_functions[i].numparms = LittleLong (pr_functions[i].numparms);
-		pr_functions[i].locals = LittleLong (pr_functions[i].locals);
+		pr_functions[i].first_statement = LittleLong (dfunctions[i].first_statement);
+		pr_functions[i].parm_start = LittleLong (dfunctions[i].parm_start);
+		pr_functions[i].s_name = LittleLong (dfunctions[i].s_name);
+		pr_functions[i].s_file = LittleLong (dfunctions[i].s_file);
+		pr_functions[i].numparms = LittleLong (dfunctions[i].numparms);
+		pr_functions[i].locals = LittleLong (dfunctions[i].locals);
+		memcpy(pr_functions[i].parm_size, dfunctions[i].parm_size, sizeof(dfunctions[i].parm_size));
 	}
 
 	for (i=0 ; i<progs->numglobaldefs ; i++)

@@ -24,7 +24,7 @@ int current_skill;
 char sv_spawnmap[MAX_QPATH];
 char sv_loadgame[MAX_OSPATH];
 
-dfunction_t *ED_FindFunction (char *name);
+mfunction_t *ED_FindFunction (char *name);
 
 /*
 ==================
@@ -840,7 +840,7 @@ void Host_Color_f(void)
 {
 	int		top, bottom;
 	int		playercolor;
-	dfunction_t *f;
+	mfunction_t *f;
 	func_t	SV_ChangeTeam;
 
 	if (Cmd_Argc() == 1)
@@ -995,7 +995,7 @@ void Host_Spawn_f (void)
 	client_t	*client;
 	edict_t	*ent;
 	func_t RestoreGame;
-	dfunction_t *f;
+	mfunction_t *f;
 
 	if (cmd_source == src_command)
 	{
