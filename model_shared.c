@@ -185,8 +185,9 @@ Mod_LoadModel
 Loads a model
 ==================
 */
-static model_t *Mod_LoadModel (model_t *mod, qboolean crash, qboolean checkdisk, qboolean isworldmodel)
+static model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolean isworldmodel)
 {
+	int num;
 	unsigned int crc;
 	void *buf;
 
@@ -254,13 +255,16 @@ static model_t *Mod_LoadModel (model_t *mod, qboolean crash, qboolean checkdisk,
 		mod->texturepool = R_AllocTexturePool();
 
 	// call the apropriate loader
-	     if (!memcmp(buf, "IDPO"    , 4)) Mod_LoadQ1AliasModel(mod, buf);
-	else if (!memcmp(buf, "IDP2"    , 4)) Mod_LoadQ2AliasModel(mod, buf);
-	else if (!memcmp(buf, "IDP3"    , 4)) Mod_LoadQ3AliasModel(mod, buf);
-	else if (!memcmp(buf, "ZYMOTIC" , 7)) Mod_LoadZymoticModel(mod, buf);
-	else if (!memcmp(buf, "IDSP"    , 4)) Mod_LoadSpriteModel (mod, buf);
-	else if (!memcmp(buf, "IBSP"    , 4)) Mod_LoadBrushModelIBSP (mod, buf);
-	else                                  Mod_LoadBrushModelQ1orHL (mod, buf);
+	num = LittleLong(*((int *)buf));
+	     if (!memcmp(buf, "IDPO", 4)) Mod_IDP0_Load(mod, buf);
+	else if (!memcmp(buf, "IDP2", 4)) Mod_IDP2_Load(mod, buf);
+	else if (!memcmp(buf, "IDP3", 4)) Mod_IDP3_Load(mod, buf);
+	else if (!memcmp(buf, "IDSP", 4)) Mod_IDSP_Load(mod, buf);
+	else if (!memcmp(buf, "IBSP", 4)) Mod_IBSP_Load(mod, buf);
+	else if (!memcmp(buf, "ZYMOTICMODEL", 12)) Mod_ZYMOTICMODEL_Load(mod, buf);
+	else if (strlen(mod->name) >= 4 && !strcmp(mod->name - 4, ".map")) Mod_MAP_Load(mod, buf);
+	else if (num == BSPVERSION || num == 30) Mod_Q1BSP_Load(mod, buf);
+	else Host_Error("Mod_LoadModel: model \"%s\" is of unknown/unsupported type\n", mod->name);
 
 	Mem_Free(buf);
 
@@ -269,7 +273,7 @@ static model_t *Mod_LoadModel (model_t *mod, qboolean crash, qboolean checkdisk,
 	return mod;
 }
 
-void Mod_CheckLoaded (model_t *mod)
+void Mod_CheckLoaded(model_t *mod)
 {
 	if (mod)
 	{
@@ -290,7 +294,7 @@ void Mod_CheckLoaded (model_t *mod)
 Mod_ClearAll
 ===================
 */
-void Mod_ClearAll (void)
+void Mod_ClearAll(void)
 {
 }
 
@@ -332,7 +336,7 @@ Mod_FindName
 
 ==================
 */
-model_t *Mod_FindName (const char *name)
+model_t *Mod_FindName(const char *name)
 {
 	int i;
 	model_t *mod, *freemod;
@@ -375,11 +379,11 @@ Mod_TouchModel
 
 ==================
 */
-void Mod_TouchModel (const char *name)
+void Mod_TouchModel(const char *name)
 {
 	model_t	*mod;
 
-	mod = Mod_FindName (name);
+	mod = Mod_FindName(name);
 	mod->used = true;
 }
 
@@ -390,9 +394,9 @@ Mod_ForName
 Loads in a model for the given name
 ==================
 */
-model_t *Mod_ForName (const char *name, qboolean crash, qboolean checkdisk, qboolean isworldmodel)
+model_t *Mod_ForName(const char *name, qboolean crash, qboolean checkdisk, qboolean isworldmodel)
 {
-	return Mod_LoadModel (Mod_FindName (name), crash, checkdisk, isworldmodel);
+	return Mod_LoadModel(Mod_FindName(name), crash, checkdisk, isworldmodel);
 }
 
 qbyte *mod_base;
@@ -405,7 +409,7 @@ qbyte *mod_base;
 Mod_Print
 ================
 */
-static void Mod_Print (void)
+static void Mod_Print(void)
 {
 	int		i;
 	model_t	*mod;
@@ -421,7 +425,7 @@ static void Mod_Print (void)
 Mod_Precache
 ================
 */
-static void Mod_Precache (void)
+static void Mod_Precache(void)
 {
 	if (Cmd_Argc() == 2)
 		Mod_ForName(Cmd_Argv(1), false, true, cl.worldmodel && !strcasecmp(Cmd_Argv(1), cl.worldmodel->name));
@@ -788,7 +792,7 @@ static rtexture_t *GL_TextureForSkinLayer(const qbyte *in, int width, int height
 }
 
 static int detailtexturecycle = 0;
-int Mod_LoadSkinFrame (skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int usedetailtexture, int loadglowtexture)
+int Mod_LoadSkinFrame(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int usedetailtexture, int loadglowtexture)
 {
 	imageskin_t s;
 	memset(skinframe, 0, sizeof(*skinframe));
@@ -816,7 +820,7 @@ int Mod_LoadSkinFrame (skinframe_t *skinframe, char *basename, int textureflags,
 	return true;
 }
 
-int Mod_LoadSkinFrame_Internal (skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int usedetailtexture, int loadglowtexture, qbyte *skindata, int width, int height)
+int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int usedetailtexture, int loadglowtexture, qbyte *skindata, int width, int height)
 {
 	qbyte *temp1, *temp2;
 	memset(skinframe, 0, sizeof(*skinframe));

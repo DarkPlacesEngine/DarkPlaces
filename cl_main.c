@@ -452,7 +452,7 @@ dlightsetup:
 	//Con_Printf("dlight %i : %f %f %f : %f %f %f\n", i, org[0], org[1], org[2], red * radius, green * radius, blue * radius);
 	memset (dl, 0, sizeof(*dl));
 	dl->ent = ent;
-	Mod_FindNonSolidLocation(org, dl->origin, cl.worldmodel, 6);
+	cl.worldmodel->FindNonSolidLocation(cl.worldmodel, org, dl->origin, 6);
 	//VectorCopy(org, dl->origin);
 	dl->radius = radius;
 	dl->color[0] = red;

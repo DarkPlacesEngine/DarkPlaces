@@ -230,13 +230,8 @@ static void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette
 	loadmodel->radius2 = modelradius * modelradius;
 }
 
-/*
-=================
-Mod_LoadSpriteModel
-=================
-*/
 extern void R_Model_Sprite_Draw(entity_render_t *ent);
-void Mod_LoadSpriteModel (model_t *mod, void *buffer)
+void Mod_IDSP_Load(model_t *mod, void *buffer)
 {
 	int version, i, rendermode;
 	qbyte palette[256][4], *in;
@@ -278,7 +273,7 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 		datapointer += 2;
 		i = in[0] + in[1] * 256;
 		if (i != 256)
-			Host_Error ("Mod_LoadHLSprite: unexpected number of palette colors %i (should be 256)", i);
+			Host_Error ("Mod_IDSP_Load: unexpected number of palette colors %i (should be 256)", i);
 		in = datapointer;
 		datapointer += 768;
 		switch(rendermode)
@@ -324,13 +319,13 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 			palette[0][0] = palette[0][1] = palette[0][2] = palette[0][3] = 0;
 			break;
 		default:
-			Host_Error("Mod_LoadHLSprite: unknown texFormat (%i, should be 0, 1, 2, or 3)\n", i);
+			Host_Error("Mod_IDSP_Load: unknown texFormat (%i, should be 0, 1, 2, or 3)\n", i);
 			return;
 		}
 
 		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinhlsprite->version), (int *)(&palette[0][0]));
 	}
 	else
-		Host_Error ("Mod_LoadSpriteModel: %s has wrong version number (%i should be 1 (quake) or 32 (sprite32) or 2 (halflife)", loadmodel->name, version);
+		Host_Error("Mod_IDSP_Load: %s has wrong version number (%i should be 1 (quake) or 32 (sprite32) or 2 (halflife)", loadmodel->name, version);
 }
 

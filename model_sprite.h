@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -38,7 +38,7 @@ typedef struct mspriteframe_s
 	rtexture_t *texture, *fogtexture;
 } mspriteframe_t;
 
-extern void Mod_LoadSpriteModel (struct model_s *mod, void *buffer);
+extern void Mod_IDSP_Load(struct model_s *mod, void *buffer);
 extern void Mod_SpriteInit(void);
 
 #endif

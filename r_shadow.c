@@ -1855,7 +1855,7 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 	if (cl.worldmodel)
 	{
 		castshadowcount++;
-		i = Mod_PointContents(e->origin, cl.worldmodel);
+		i = cl.worldmodel->PointContents(cl.worldmodel, e->origin);
 		if (r_shadow_portallight.integer && i != CONTENTS_SOLID && i != CONTENTS_SKY)
 		{
 			qbyte *byteleafpvs;
@@ -1879,8 +1879,8 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 		}
 		else
 		{
-			leaf = Mod_PointInLeaf(origin, cl.worldmodel);
-			pvs = Mod_LeafPVS(leaf, cl.worldmodel);
+			leaf = cl.worldmodel->PointInLeaf(cl.worldmodel, origin);
+			pvs = cl.worldmodel->LeafPVS(cl.worldmodel, leaf);
 			for (i = 0, leaf = cl.worldmodel->leafs + 1;i < cl.worldmodel->numleafs;i++, leaf++)
 			{
 				if (pvs[i >> 3] & (1 << (i & 7)) && BoxesOverlap(leaf->mins, leaf->maxs, e->mins, e->maxs))

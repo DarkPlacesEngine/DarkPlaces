@@ -391,7 +391,7 @@ void SV_AddToFatPVS (vec3_t org, mnode_t *node)
 		{
 			if (node->contents != CONTENTS_SOLID)
 			{
-				pvs = Mod_LeafPVS ( (mleaf_t *)node, sv.worldmodel);
+				pvs = sv.worldmodel->LeafPVS(sv.worldmodel, (mleaf_t *)node);
 				for (i=0 ; i<fatbytes ; i++)
 					fatpvs[i] |= pvs[i];
 			}

@@ -693,7 +693,7 @@ static void SCR_CalcRefdef (void)
 	if (cl.worldmodel)
 	{
 		Mod_CheckLoaded(cl.worldmodel);
-		contents = Mod_PointContents(r_refdef.vieworg, cl.worldmodel);
+		contents = cl.worldmodel ? cl.worldmodel->PointContents(cl.worldmodel, r_refdef.vieworg) : CONTENTS_EMPTY;
 		if (contents != CONTENTS_EMPTY && contents != CONTENTS_SOLID)
 		{
 			r_refdef.fov_x *= (sin(cl.time * 4.7) * 0.015 + 0.985);

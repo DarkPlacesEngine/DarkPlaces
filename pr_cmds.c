@@ -826,9 +826,7 @@ qbyte checkpvs[MAX_MAP_LEAFS/8];
 int PF_newcheckclient (int check)
 {
 	int		i;
-	qbyte	*pvs;
 	edict_t	*ent;
-	mleaf_t	*leaf;
 	vec3_t	org;
 
 // cycle to the next one
@@ -867,9 +865,7 @@ int PF_newcheckclient (int check)
 
 // get the PVS for the entity
 	VectorAdd (ent->v->origin, ent->v->view_ofs, org);
-	leaf = Mod_PointInLeaf (org, sv.worldmodel);
-	pvs = Mod_LeafPVS (leaf, sv.worldmodel);
-	memcpy (checkpvs, pvs, (sv.worldmodel->numleafs+7)>>3 );
+	memcpy (checkpvs, sv.worldmodel->LeafPVS(sv.worldmodel, sv.worldmodel->PointInLeaf(sv.worldmodel, org)), (sv.worldmodel->numleafs+7)>>3 );
 
 	return i;
 }
@@ -915,7 +911,7 @@ void PF_checkclient (void)
 	// if current entity can't possibly see the check entity, return 0
 	self = PROG_TO_EDICT(pr_global_struct->self);
 	VectorAdd (self->v->origin, self->v->view_ofs, view);
-	leaf = Mod_PointInLeaf (view, sv.worldmodel);
+	leaf = sv.worldmodel->PointInLeaf(sv.worldmodel, view);
 	if (leaf)
 	{
 		l = (leaf - sv.worldmodel->leafs) - 1;
@@ -1504,7 +1500,7 @@ PF_pointcontents
 */
 void PF_pointcontents (void)
 {
-	G_FLOAT(OFS_RETURN) = Mod_PointContents(G_VECTOR(OFS_PARM0), sv.worldmodel);
+	G_FLOAT(OFS_RETURN) = sv.worldmodel->PointContents(sv.worldmodel, G_VECTOR(OFS_PARM0));
 }
 
 /*

@@ -223,7 +223,7 @@ extern void R_Model_Alias_Draw(entity_render_t *ent);
 extern void R_Model_Alias_DrawFakeShadow(entity_render_t *ent);
 extern void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius);
 extern void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz);
-void Mod_LoadQ1AliasModel (model_t *mod, void *buffer)
+void Mod_IDP0_Load(model_t *mod, void *buffer)
 {
 	int i, j, version, totalskins, skinwidth, skinheight, groupframes, groupskins, numverts;
 	float scales, scalet, scale[3], translate[3], interval;
@@ -365,7 +365,7 @@ void Mod_LoadQ1AliasModel (model_t *mod, void *buffer)
 
 			interval = LittleFloat(pinskinintervals[0].interval);
 			if (interval < 0.01f)
-				Host_Error("Mod_LoadQ1AliasModel: invalid interval\n");
+				Host_Error("Mod_IDP0_Load: invalid interval\n");
 		}
 
 		sprintf(loadmodel->skinscenes[i].name, "skin %i", i);
@@ -391,7 +391,7 @@ void Mod_LoadQ1AliasModel (model_t *mod, void *buffer)
 	for (;;)
 	{
 		sprintf (name, "%s_%i", loadmodel->name, loadmodel->numskins);
-		if (Mod_LoadSkinFrame (&tempskinframe, name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_ALPHA, true, false, true))
+		if (Mod_LoadSkinFrame(&tempskinframe, name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_ALPHA, true, false, true))
 		{
 			// expand the arrays to make room
 			tempskinscenes = loadmodel->skinscenes;
@@ -515,7 +515,7 @@ static void Mod_MD2_ConvertVerts (vec3_t scale, vec3_t translate, trivertx_t *v,
 	}
 }
 
-void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
+void Mod_IDP2_Load(model_t *mod, void *buffer)
 {
 	int i, j, k, hashindex, num, numxyz, numst, xyz, st, skinwidth, skinheight, *vertremap, version, end, numverts;
 	float *stverts, s, t, scale[3], translate[3];
@@ -591,7 +591,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 		// skins found (most likely not a player model)
 		loadmodel->skinframes = Mem_Alloc(loadmodel->mempool, sizeof(skinframe_t) * loadmodel->numskins);
 		for (i = 0;i < loadmodel->numskins;i++, inskin += MD2_SKINNAME)
-			Mod_LoadSkinFrame (loadmodel->skinframes + i, inskin, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE, true, false, true);
+			Mod_LoadSkinFrame(loadmodel->skinframes + i, inskin, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE, true, false, true);
 	}
 	else
 	{
@@ -726,7 +726,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	Mod_CalcAliasModelBBoxes();
 }
 
-void Mod_LoadQ3AliasModel(model_t *mod, void *buffer)
+void Mod_IDP3_Load(model_t *mod, void *buffer)
 {
 	int i, j, version;
 	md3modelheader_t *pinmodel;
@@ -782,7 +782,7 @@ void Mod_LoadQ3AliasModel(model_t *mod, void *buffer)
 	for (i = 0, pinmesh = (md3mesh_t *)((qbyte *)pinmodel + LittleLong(pinmodel->lump_meshes));i < loadmodel->aliasnum_meshes;i++, pinmesh = (md3mesh_t *)((qbyte *)pinmesh + LittleLong(pinmesh->lump_end)))
 	{
 		if (memcmp(pinmesh->identifier, "IDP3", 4))
-			Host_Error("Mod_LoadQ3AliasModel: invalid mesh identifier (not IDP3)\n");
+			Host_Error("Mod_IDP3_Load: invalid mesh identifier (not IDP3)\n");
 		mesh = loadmodel->aliasdata_meshes + i;
 		mesh->num_skins = loadmodel->numskins;
 		mesh->num_frames = LittleLong(pinmesh->num_frames);
@@ -814,7 +814,7 @@ void Mod_LoadQ3AliasModel(model_t *mod, void *buffer)
 
 		memset(&tempskinframe, 0, sizeof(tempskinframe));
 		if (LittleLong(pinmesh->num_shaders) >= 1 && ((md3shader_t *)((qbyte *) pinmesh + pinmesh->lump_shaders))->name[0])
-			Mod_LoadSkinFrame (&tempskinframe, ((md3shader_t *)((qbyte *) pinmesh + pinmesh->lump_shaders))->name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE, true, false, true);
+			Mod_LoadSkinFrame(&tempskinframe, ((md3shader_t *)((qbyte *) pinmesh + pinmesh->lump_shaders))->name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE, true, false, true);
 		Mod_ValidateElements(mesh->data_element3i, mesh->num_triangles, mesh->num_vertices, __FILE__, __LINE__);
 		Mod_BuildTriangleNeighbors(mesh->data_neighbor3i, mesh->data_element3i, mesh->num_triangles);
 		Mod_BuildAliasSkinFromSkinFrame(mesh->data_skins, &tempskinframe);
@@ -827,7 +827,7 @@ extern void R_Model_Zymotic_Draw(entity_render_t *ent);
 extern void R_Model_Zymotic_DrawFakeShadow(entity_render_t *ent);
 extern void R_Model_Zymotic_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius);
 extern void R_Model_Zymotic_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz);
-void Mod_LoadZymoticModel(model_t *mod, void *buffer)
+void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
 {
 	zymtype1header_t *pinmodel, *pheader;
 	qbyte *pbase;
@@ -835,9 +835,9 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 	pinmodel = (void *)buffer;
 	pbase = buffer;
 	if (memcmp(pinmodel->id, "ZYMOTICMODEL", 12))
-		Host_Error ("Mod_LoadZymoticModel: %s is not a zymotic model\n");
+		Host_Error ("Mod_ZYMOTICMODEL_Load: %s is not a zymotic model\n");
 	if (BigLong(pinmodel->type) != 1)
-		Host_Error ("Mod_LoadZymoticModel: only type 1 (skeletal pose) models are currently supported (name = %s)\n", loadmodel->name);
+		Host_Error ("Mod_ZYMOTICMODEL_Load: only type 1 (skeletal pose) models are currently supported (name = %s)\n", loadmodel->name);
 
 	loadmodel->type = mod_alias;
 	loadmodel->aliastype = ALIASTYPE_ZYM;
@@ -940,11 +940,11 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 			loadmodel->animscenes[i].framerate = BigFloat(scene->framerate);
 			loadmodel->animscenes[i].loop = (BigLong(scene->flags) & ZYMSCENEFLAG_NOLOOP) == 0;
 			if ((unsigned int) loadmodel->animscenes[i].firstframe >= (unsigned int) numposes)
-				Host_Error("Mod_LoadZymoticModel: scene firstframe (%i) >= numposes (%i)\n", loadmodel->animscenes[i].firstframe, numposes);
+				Host_Error("Mod_ZYMOTICMODEL_Load: scene firstframe (%i) >= numposes (%i)\n", loadmodel->animscenes[i].firstframe, numposes);
 			if ((unsigned int) loadmodel->animscenes[i].firstframe + (unsigned int) loadmodel->animscenes[i].framecount > (unsigned int) numposes)
-				Host_Error("Mod_LoadZymoticModel: scene firstframe (%i) + framecount (%i) >= numposes (%i)\n", loadmodel->animscenes[i].firstframe, loadmodel->animscenes[i].framecount, numposes);
+				Host_Error("Mod_ZYMOTICMODEL_Load: scene firstframe (%i) + framecount (%i) >= numposes (%i)\n", loadmodel->animscenes[i].firstframe, loadmodel->animscenes[i].framecount, numposes);
 			if (loadmodel->animscenes[i].framerate < 0)
-				Host_Error("Mod_LoadZymoticModel: scene framerate (%f) < 0\n", loadmodel->animscenes[i].framerate);
+				Host_Error("Mod_ZYMOTICMODEL_Load: scene framerate (%f) < 0\n", loadmodel->animscenes[i].framerate);
 			scene++;
 		}
 	}
@@ -971,7 +971,7 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 			loadmodel->zymdata_bones[i].flags = BigLong(bone[i].flags);
 			loadmodel->zymdata_bones[i].parent = BigLong(bone[i].parent);
 			if (loadmodel->zymdata_bones[i].parent >= i)
-				Host_Error("Mod_LoadZymoticModel: bone[%i].parent >= %i in %s\n", i, i, loadmodel->name);
+				Host_Error("Mod_ZYMOTICMODEL_Load: bone[%i].parent >= %i in %s\n", i, i, loadmodel->name);
 		}
 	}
 
@@ -984,7 +984,7 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 		{
 			loadmodel->zymdata_vertbonecounts[i] = BigLong(bonecount[i]);
 			if (loadmodel->zymdata_vertbonecounts[i] < 1)
-				Host_Error("Mod_LoadZymoticModel: bone vertex count < 1 in %s\n", loadmodel->name);
+				Host_Error("Mod_ZYMOTICMODEL_Load: bone vertex count < 1 in %s\n", loadmodel->name);
 		}
 	}
 
@@ -1024,17 +1024,17 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 		// byteswap, validate, and swap winding order of tris
 		count = pheader->numshaders * sizeof(int) + pheader->numtris * sizeof(int[3]);
 		if (pheader->lump_render.length != count)
-			Host_Error("Mod_LoadZymoticModel: renderlist is wrong size in %s (is %i bytes, should be %i bytes)\n", loadmodel->name, pheader->lump_render.length, count);
+			Host_Error("Mod_ZYMOTICMODEL_Load: renderlist is wrong size in %s (is %i bytes, should be %i bytes)\n", loadmodel->name, pheader->lump_render.length, count);
 		outrenderlist = loadmodel->zymdata_renderlist = Mem_Alloc(loadmodel->mempool, count);
 		renderlist = (void *) (pheader->lump_render.start + pbase);
 		renderlistend = (void *) ((qbyte *) renderlist + pheader->lump_render.length);
 		for (i = 0;i < pheader->numshaders;i++)
 		{
 			if (renderlist >= renderlistend)
-				Host_Error("Mod_LoadZymoticModel: corrupt renderlist in %s (wrong size)\n", loadmodel->name);
+				Host_Error("Mod_ZYMOTICMODEL_Load: corrupt renderlist in %s (wrong size)\n", loadmodel->name);
 			count = BigLong(*renderlist);renderlist++;
 			if (renderlist + count * 3 > renderlistend)
-				Host_Error("Mod_LoadZymoticModel: corrupt renderlist in %s (wrong size)\n", loadmodel->name);
+				Host_Error("Mod_ZYMOTICMODEL_Load: corrupt renderlist in %s (wrong size)\n", loadmodel->name);
 			*outrenderlist++ = count;
 			while (count--)
 			{
@@ -1044,7 +1044,7 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 				if ((unsigned int)outrenderlist[0] >= (unsigned int)pheader->numverts
 				 || (unsigned int)outrenderlist[1] >= (unsigned int)pheader->numverts
 				 || (unsigned int)outrenderlist[2] >= (unsigned int)pheader->numverts)
-					Host_Error("Mod_LoadZymoticModel: corrupt renderlist in %s (out of bounds index)\n", loadmodel->name);
+					Host_Error("Mod_ZYMOTICMODEL_Load: corrupt renderlist in %s (out of bounds index)\n", loadmodel->name);
 				renderlist += 3;
 				outrenderlist += 3;
 			}
