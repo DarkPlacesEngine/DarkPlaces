@@ -2,19 +2,32 @@
 #ifndef R_SHADOW_H
 #define R_SHADOW_H
 
+extern cvar_t r_shadow_bumpscale_basetexture;
+extern cvar_t r_shadow_bumpscale_bumpmap;
+extern cvar_t r_shadow_cull;
+extern cvar_t r_shadow_debuglight;
+extern cvar_t r_shadow_gloss;
+extern cvar_t r_shadow_gloss2intensity;
+extern cvar_t r_shadow_glossintensity;
+extern cvar_t r_shadow_lightattenuationpower;
 extern cvar_t r_shadow_lightattenuationscale;
 extern cvar_t r_shadow_lightintensityscale;
-extern cvar_t r_shadow_realtime_world;
-extern cvar_t r_shadow_realtime_world_lightmaps;
-extern cvar_t r_shadow_realtime_dlight;
-extern cvar_t r_shadow_visiblevolumes;
-extern cvar_t r_shadow_gloss;
-extern cvar_t r_shadow_debuglight;
-extern cvar_t r_shadow_bumpscale_bumpmap;
-extern cvar_t r_shadow_bumpscale_basetexture;
-extern cvar_t r_shadow_worldshadows;
-extern cvar_t r_shadow_dlightshadows;
+extern cvar_t r_shadow_polygonfactor;
+extern cvar_t r_shadow_polygonoffset;
+extern cvar_t r_shadow_portallight;
 extern cvar_t r_shadow_projectdistance;
+extern cvar_t r_shadow_realtime_dlight;
+extern cvar_t r_shadow_realtime_dlight_shadows;
+extern cvar_t r_shadow_realtime_world;
+extern cvar_t r_shadow_realtime_world_dlightshadows;
+extern cvar_t r_shadow_realtime_world_lightmaps;
+extern cvar_t r_shadow_realtime_world_shadows;
+extern cvar_t r_shadow_scissor;
+extern cvar_t r_shadow_singlepassvolumegeneration;
+extern cvar_t r_shadow_staticworldlights;
+extern cvar_t r_shadow_texture3d;
+extern cvar_t r_shadow_visiblevolumes;
+extern cvar_t gl_ext_stenciltwoside;
 
 extern mempool_t *r_shadow_mempool;
 

@@ -662,7 +662,7 @@ void R_RenderScene(void)
 	R_SetFrustum();
 
 	r_farclip = R_FarClip(r_vieworigin, r_viewforward, 768.0f) + 256.0f;
-	if (gl_stencil && ((r_shadow_realtime_world.integer && r_shadow_worldshadows.integer) || ((r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer) && r_shadow_dlightshadows.integer)))
+	if (gl_stencil && (r_shadow_realtime_world.integer || (r_shadow_realtime_dlight.integer && r_shadow_realtime_dlight_shadows.integer)))
 		GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_view_fov_x, r_view_fov_y, 1.0f);
 	else
 		GL_SetupView_Mode_Perspective(r_view_fov_x, r_view_fov_y, 1.0f, r_farclip);
