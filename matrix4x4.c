@@ -98,6 +98,7 @@ void Matrix4x4_CreateRotate (matrix4x4_t *out, float angle, float x, float y, fl
 	y *= len;
 	z *= len;
 
+	angle *= M_PI / 180.0;
 	c = cos(angle);
 	s = sin(angle);
 
