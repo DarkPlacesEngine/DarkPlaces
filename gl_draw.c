@@ -34,6 +34,41 @@ static int numcachepics;
 
 static rtexturepool_t *drawtexturepool;
 
+static qbyte concharimage[11356] =
+{
+#include "lhfont.h"
+};
+
+extern qbyte *LoadTGA (qbyte *f, int matchwidth, int matchheight);
+
+static rtexture_t *draw_generateconchars(void)
+{
+	int i;
+	qbyte buffer[65536][4], *data = NULL;
+
+	fs_filesize = 11356;
+	data = LoadTGA (concharimage, 256, 256);
+	fs_filesize = -1;
+
+	for (i = 0;i < 32768;i++)
+	{
+		buffer[i][0] = 255;
+		buffer[i][1] = 255;
+		buffer[i][2] = 255;
+		buffer[i][3] = data[i*4+0];
+	}
+
+	for (i = 32768;i < 65536;i++)
+	{
+		buffer[i][0] = 255;
+		buffer[i][1] = 0;
+		buffer[i][2] = 0;
+		buffer[i][3] = data[i*4+0];
+	}
+	Mem_Free(data);
+	return R_LoadTexture2D(drawtexturepool, "conchars", 256, 256, &buffer[0][0], TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
+}
+
 static qbyte pointerimage[256] =
 {
 	"333333332......."
@@ -266,6 +301,9 @@ cachepic_t	*Draw_CachePic (char *path)
 				pic->tex = R_LoadTexture2D(drawtexturepool, path, p->width, p->height, p->data, TEXTYPE_PALETTE, TEXF_ALPHA | TEXF_PRECACHE, palette_complete);
 		}
 	}
+
+	if (pic->tex == NULL && !strcmp(path, "gfx/conchars"))
+		pic->tex = draw_generateconchars();
 	if (pic->tex == NULL && !strcmp(path, "ui/mousepointer.tga"))
 		pic->tex = draw_generatemousepointer();
 	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair1.tga"))
