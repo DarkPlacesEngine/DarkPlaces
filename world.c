@@ -478,9 +478,11 @@ trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins,
 			if (ent->v->movetype != MOVETYPE_PUSH)
 				Host_Error("SV_ClipMoveToEntity: SOLID_BSP without MOVETYPE_PUSH");
 		}
+		Matrix4x4_CreateFromQuakeEntity(&matrix, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2], ent->v->angles[0], ent->v->angles[1], ent->v->angles[2], 1);
 	}
+	else
+		Matrix4x4_CreateTranslate(&matrix, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2]);
 
-	Matrix4x4_CreateFromQuakeEntity(&matrix, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2], ent->v->angles[0], ent->v->angles[1], ent->v->angles[2], 1);
 	Matrix4x4_Invert_Simple(&imatrix, &matrix);
 	Matrix4x4_Transform(&imatrix, start, starttransformed);
 	Matrix4x4_Transform(&imatrix, end, endtransformed);
@@ -502,9 +504,8 @@ trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins,
 	else
 		Collision_ClipTrace_Box(&trace, ent->v->mins, ent->v->maxs, starttransformed, mins, maxs, endtransformed, SUPERCONTENTS_SOLID, SUPERCONTENTS_SOLID);
 
-	if (trace.fraction < 1 || trace.startsolid)
+	if (trace.fraction < 1)
 	{
-		trace.ent = ent;
 		VectorLerp(start, trace.fraction, end, trace.endpos);
 		VectorCopy(trace.plane.normal, tempnormal);
 		Matrix4x4_Transform3x3(&matrix, tempnormal, trace.plane.normal);
@@ -534,6 +535,8 @@ void SV_ClipToNode(moveclip_t *clip, link_t *list)
 		touch->e->areagridmarknumber = sv_areagrid_marknumber;
 		sv_areagrid_stats_entitychecks++;
 
+		// LordHavoc: this box comparison isn't much use with the high resolution areagrid
+		/*
 		if (clip->boxmins[0] > touch->v->absmax[0]
 		 || clip->boxmaxs[0] < touch->v->absmin[0]
 		 || clip->boxmins[1] > touch->v->absmax[1]
@@ -541,6 +544,7 @@ void SV_ClipToNode(moveclip_t *clip, link_t *list)
 		 || clip->boxmins[2] > touch->v->absmax[2]
 		 || clip->boxmaxs[2] < touch->v->absmin[2])
 			continue;
+		*/
 
 		if (clip->type == MOVE_NOMONSTERS && touch->v->solid != SOLID_BSP)
 			continue;
@@ -550,6 +554,8 @@ void SV_ClipToNode(moveclip_t *clip, link_t *list)
 
 		if (clip->passedict)
 		{
+			if (touch == clip->passedict)
+				continue;
 			if (!clip->passedict->v->size[0] && !touch->v->size[0])
 				continue;	// points never interact
 			if (PROG_TO_EDICT(touch->v->owner) == clip->passedict)
@@ -563,8 +569,6 @@ void SV_ClipToNode(moveclip_t *clip, link_t *list)
 				continue;
 		}
 
-		if (touch == clip->passedict)
-			continue;
 		if (touch->v->solid == SOLID_TRIGGER)
 		{
 			ED_Print(touch);
@@ -572,9 +576,7 @@ void SV_ClipToNode(moveclip_t *clip, link_t *list)
 		}
 
 		// might interact, so do an exact clip
-		if (touch->v->solid == SOLID_BSP)
-			trace = SV_ClipMoveToEntity(touch, clip->start, clip->mins, clip->maxs, clip->end, clip->type);
-		else if ((int)touch->v->flags & FL_MONSTER)
+		if ((int)touch->v->flags & FL_MONSTER)
 			trace = SV_ClipMoveToEntity(touch, clip->start, clip->mins2, clip->maxs2, clip->end, clip->type);
 		else
 			trace = SV_ClipMoveToEntity(touch, clip->start, clip->mins, clip->maxs, clip->end, clip->type);
@@ -584,8 +586,8 @@ void SV_ClipToNode(moveclip_t *clip, link_t *list)
 		if (trace.startsolid)
 		{
 			clip->trace.startsolid = true;
-			//if (!clip->trace.ent)
-			//	clip->trace.ent = trace.ent;
+			if (clip->trace.fraction == 1)
+				clip->trace.ent = touch;
 		}
 		if (trace.inopen)
 			clip->trace.inopen = true;
@@ -599,8 +601,6 @@ void SV_ClipToNode(moveclip_t *clip, link_t *list)
 			clip->trace.ent = touch;
 		}
 		clip->trace.startsupercontents |= trace.startsupercontents;
-		//if (clip->trace.allsolid)
-		//	return;
 	}
 }
 
@@ -609,7 +609,11 @@ void SV_ClipToNode(moveclip_t *clip, link_t *list)
 SV_Move
 ==================
 */
+#if COLLISIONPARANOID >= 1
+trace_t SV_Move_(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, edict_t *passedict)
+#else
 trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, edict_t *passedict)
+#endif
 {
 	moveclip_t clip;
 	vec3_t hullmins, hullmaxs;
@@ -632,8 +636,8 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 
 	// clip to world
 	clip.trace = SV_ClipMoveToEntity(sv.edicts, clip.start, clip.mins, clip.maxs, clip.end, clip.type);
+	clip.trace.ent = sv.edicts;
 	if (clip.type == MOVE_WORLDONLY)
-	//if (clip.trace.allsolid)
 		return clip.trace;
 
 	if (clip.type == MOVE_MISSILE)
@@ -695,6 +699,26 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 
 	return clip.trace;
 }
+
+#if COLLISIONPARANOID >= 1
+trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, edict_t *passedict)
+{
+	int endstuck;
+	trace_t trace;
+	vec3_t temp;
+	trace = SV_Move_(start, mins, maxs, end, type, passedict);
+	if (passedict)
+	{
+		VectorCopy(trace.endpos, temp);
+		endstuck = SV_Move_(temp, mins, maxs, temp, type, passedict).startsolid;
+#if COLLISIONPARANOID < 3
+		if (trace.startsolid || endstuck)
+#endif
+			Con_Printf("%s{e%i:%f %f %f:%f %f %f:%f:%f %f %f%s%s}\n", (trace.startsolid || endstuck) ? "\002" : "", passedict ? passedict - sv.edicts : -1, passedict->v->origin[0], passedict->v->origin[1], passedict->v->origin[2], end[0] - passedict->v->origin[0], end[1] - passedict->v->origin[1], end[2] - passedict->v->origin[2], trace.fraction, trace.endpos[0] - passedict->v->origin[0], trace.endpos[1] - passedict->v->origin[1], trace.endpos[2] - passedict->v->origin[2], trace.startsolid ? " startstuck" : "", endstuck ? " endstuck" : "");
+	}
+	return trace;
+}
+#endif
 
 int SV_PointSuperContents(const vec3_t point)
 {

@@ -134,23 +134,6 @@ qboolean SV_movestep (edict_t *ent, vec3_t move, qboolean relink)
 					neworg[2] += 8;
 			}
 			trace = SV_Move (ent->v->origin, ent->v->mins, ent->v->maxs, neworg, MOVE_NORMAL, ent);
-#if COLLISIONPARANOID >= 1
-	{
-		int endstuck;
-		vec3_t temp;
-		VectorCopy(trace.endpos, temp);
-		endstuck = SV_Move(temp, ent->v->mins, ent->v->maxs, temp, MOVE_WORLDONLY, ent).startsolid;
-#if COLLISIONPARANOID < 2
-		if (trace.startsolid || endstuck)
-#endif
-		{
-			Con_Printf("%s{e%i:%f %f %f:%f %f %f:%f:%f %f %f%s%s}\n", (trace.startsolid || endstuck) ? "\002" : "", ent - sv.edicts, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2], neworg[0] - ent->v->origin[0], neworg[1] - ent->v->origin[1], neworg[2] - ent->v->origin[2], trace.fraction, trace.endpos[0] - ent->v->origin[0], trace.endpos[1] - ent->v->origin[1], trace.endpos[2] - ent->v->origin[2], trace.startsolid ? " startstuck" : "", endstuck ? " endstuck" : "");
-			//Con_Printf("trace %f %f %f : %f : %f %f %f\n", trace.endpos[0], trace.endpos[1], trace.endpos[2], trace.fraction, trace.plane.normal[0], trace.plane.normal[1], trace.plane.normal[2]);
-			if (endstuck)
-				Cbuf_AddText("disconnect\n");
-		}
-	}
-#endif
 
 			if (trace.fraction == 1)
 			{
