@@ -316,8 +316,8 @@ CHECKGLERROR
 	blend = 0;
 	glDisable(GL_BLEND);
 CHECKGLERROR
-	depthmask = 1;
-	glDepthMask(depthmask);
+	depthmask = true;
+	glDepthMask((GLuint) depthmask);
 CHECKGLERROR
 
 CHECKGLERROR
@@ -342,7 +342,7 @@ CHECKGLERROR
 	{
 		for (i = 0;i < backendunits;i++)
 		{
-			glActiveTextureARB(GL_TEXTURE0_ARB + (unit = i));
+			qglActiveTexture(GL_TEXTURE0_ARB + (unit = i));
 CHECKGLERROR
 			glBindTexture(GL_TEXTURE_2D, (texture[i] = 0));
 CHECKGLERROR
@@ -391,7 +391,7 @@ CHECKGLERROR
 CHECKGLERROR
 			}
 
-			glClientActiveTextureARB(GL_TEXTURE0_ARB + (clientunit = i));
+			qglClientActiveTexture(GL_TEXTURE0_ARB + (clientunit = i));
 CHECKGLERROR
 			glTexCoordPointer(2, GL_FLOAT, sizeof(buf_texcoord_t), buf_texcoord[i]);
 CHECKGLERROR
@@ -431,7 +431,7 @@ CHECKGLERROR
 				{
 					if (unit != i)
 					{
-						glActiveTextureARB(GL_TEXTURE0_ARB + (unit = i));
+						qglActiveTexture(GL_TEXTURE0_ARB + (unit = i));
 CHECKGLERROR
 					}
 					if (texture[i] == 0)
@@ -443,7 +443,7 @@ CHECKGLERROR
 						// compiled_vertex_array
 						if (clientunit != i)
 						{
-							glClientActiveTextureARB(GL_TEXTURE0_ARB + (clientunit = i));
+							qglClientActiveTexture(GL_TEXTURE0_ARB + (clientunit = i));
 CHECKGLERROR
 						}
 						glEnableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -460,7 +460,7 @@ CHECKGLERROR
 						// compiled_vertex_array
 						if (clientunit != i)
 						{
-							glClientActiveTextureARB(GL_TEXTURE0_ARB + (clientunit = i));
+							qglClientActiveTexture(GL_TEXTURE0_ARB + (clientunit = i));
 CHECKGLERROR
 						}
 						glDisableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -471,7 +471,7 @@ CHECKGLERROR
 				{
 					if (unit != i)
 					{
-						glActiveTextureARB(GL_TEXTURE0_ARB + (unit = i));
+						qglActiveTexture(GL_TEXTURE0_ARB + (unit = i));
 CHECKGLERROR
 					}
 					glTexEnvf(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, (texturergbscale[i] = mesh->texturergbscale[i]));
@@ -482,7 +482,7 @@ CHECKGLERROR
 			}
 //			if (unit != topunit)
 //			{
-//				glActiveTextureARB(GL_TEXTURE0_ARB + (unit = topunit));
+//				qglActiveTexture(GL_TEXTURE0_ARB + (unit = topunit));
 //CHECKGLERROR
 //			}
 		}
@@ -548,7 +548,7 @@ CHECKGLERROR
 		if (depthmask != mesh->depthmask)
 		{
 			depthmask = mesh->depthmask;
-			glDepthMask(depthmask);
+			glDepthMask((GLuint) depthmask);
 CHECKGLERROR
 		}
 
@@ -594,7 +594,7 @@ CHECKGLERROR
 	{
 		for (i = backendunits - 1;i >= 0;i--)
 		{
-			glActiveTextureARB(GL_TEXTURE0_ARB + (unit = i));
+			qglActiveTexture(GL_TEXTURE0_ARB + (unit = i));
 CHECKGLERROR
 			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 CHECKGLERROR
@@ -616,7 +616,7 @@ CHECKGLERROR
 			glBindTexture(GL_TEXTURE_2D, 0);
 CHECKGLERROR
 
-			glClientActiveTextureARB(GL_TEXTURE0_ARB + (clientunit = i));
+			qglClientActiveTexture(GL_TEXTURE0_ARB + (clientunit = i));
 CHECKGLERROR
 			glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 CHECKGLERROR
@@ -638,7 +638,7 @@ CHECKGLERROR
 
 	glDisable(GL_BLEND);
 CHECKGLERROR
-	glDepthMask(1);
+	glDepthMask(true);
 CHECKGLERROR
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 CHECKGLERROR
