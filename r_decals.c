@@ -287,49 +287,51 @@ void R_DrawDecals (void)
 			VectorCopy(r->dir, dir);
 		}
 
-		dist = -PlaneDiff(r->org, surf->plane);
-		VectorMA(r->org, dist, surf->plane->normal, impact);
-
-		ds = (int) (DotProduct(impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3]) - surf->texturemins[0];
-		dt = (int) (DotProduct(impact, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3]) - surf->texturemins[1];
-
-		if (ds < 0 || dt < 0 || ds > surf->extents[0] || dt > surf->extents[1])
-		{
-			// this should never happen
-			continue;
-		}
-
-		tex = &particletexture[r->tex][1];
-		VectorVectors(dir, right, up);
-		VectorScale(right, r->scale, right);
-		VectorScale(up, r->scale, up);
-		tvertex[0][0] = org[0] - right[0] - up[0];
-		tvertex[0][1] = org[1] - right[1] - up[1];
-		tvertex[0][2] = org[2] - right[2] - up[2];
-		tvertex[0][3] = tex->s1;
-		tvertex[0][4] = tex->t1;
-		tvertex[1][0] = org[0] - right[0] + up[0];
-		tvertex[1][1] = org[1] - right[1] + up[1];
-		tvertex[1][2] = org[2] - right[2] + up[2];
-		tvertex[1][3] = tex->s1;
-		tvertex[1][4] = tex->t2;
-		tvertex[2][0] = org[0] + right[0] + up[0];
-		tvertex[2][1] = org[1] + right[1] + up[1];
-		tvertex[2][2] = org[2] + right[2] + up[2];
-		tvertex[2][3] = tex->s2;
-		tvertex[2][4] = tex->t2;
-		tvertex[3][0] = org[0] + right[0] - up[0];
-		tvertex[3][1] = org[1] + right[1] - up[1];
-		tvertex[3][2] = org[2] + right[2] - up[2];
-		tvertex[3][3] = tex->s2;
-		tvertex[3][4] = tex->t1;
-
-		// if the surface is transparent, render as transparent
-		m.transparent = !(surf->flags & SURF_CLIPSOLID);
 		m.ca = r->color[3] * exp(fogdensity/DotProduct(v,v));
 
-		if (m.ca >= (1.0f / 255.0f))
+		if (m.ca >= 0.01f)
+		{
+			dist = -PlaneDiff(r->org, surf->plane);
+			VectorMA(r->org, dist, surf->plane->normal, impact);
+
+			ds = (int) (DotProduct(impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3]) - surf->texturemins[0];
+			dt = (int) (DotProduct(impact, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3]) - surf->texturemins[1];
+
+			if (ds < 0 || dt < 0 || ds > surf->extents[0] || dt > surf->extents[1])
+			{
+				// this should never happen
+				continue;
+			}
+
+			tex = &particletexture[r->tex][1];
+			VectorVectors(dir, right, up);
+			VectorScale(right, r->scale, right);
+			VectorScale(up, r->scale, up);
+			tvertex[0][0] = org[0] - right[0] - up[0];
+			tvertex[0][1] = org[1] - right[1] - up[1];
+			tvertex[0][2] = org[2] - right[2] - up[2];
+			tvertex[0][3] = tex->s1;
+			tvertex[0][4] = tex->t1;
+			tvertex[1][0] = org[0] - right[0] + up[0];
+			tvertex[1][1] = org[1] - right[1] + up[1];
+			tvertex[1][2] = org[2] - right[2] + up[2];
+			tvertex[1][3] = tex->s1;
+			tvertex[1][4] = tex->t2;
+			tvertex[2][0] = org[0] + right[0] + up[0];
+			tvertex[2][1] = org[1] + right[1] + up[1];
+			tvertex[2][2] = org[2] + right[2] + up[2];
+			tvertex[2][3] = tex->s2;
+			tvertex[2][4] = tex->t2;
+			tvertex[3][0] = org[0] + right[0] - up[0];
+			tvertex[3][1] = org[1] + right[1] - up[1];
+			tvertex[3][2] = org[2] + right[2] - up[2];
+			tvertex[3][3] = tex->s2;
+			tvertex[3][4] = tex->t1;
+
+			// if the surface is transparent, render as transparent
+			m.transparent = !(surf->flags & SURF_CLIPSOLID);
 			R_Mesh_Draw(&m);
+		}
 	}
 }
 
