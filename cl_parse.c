@@ -766,7 +766,7 @@ void CL_ParseServerMessage (void)
 	int			cmd;
 	int			i;
 	byte		cmdlog[32];
-	char		*cmdlogname[32];
+	char		*cmdlogname[32], *temp;
 	int			cmdindex, cmdcount = 0;
 	
 //
@@ -803,7 +803,9 @@ void CL_ParseServerMessage (void)
 		// if the high bit of the command byte is set, it is a fast update
 		if (cmd & 128)
 		{
-			cmdlogname[cmdindex] = "svc_entity";
+			// LordHavoc: fix for bizarre problem in MSVC that I do not understand (if I assign the string pointer directly it ends up storing a NULL pointer)
+			temp = "svc_entity";
+			cmdlogname[cmdindex] = temp;
 			SHOWNET("fast update");
 			CL_ParseUpdate (cmd&127);
 			continue;
@@ -812,7 +814,11 @@ void CL_ParseServerMessage (void)
 		SHOWNET(svc_strings[cmd]);
 		cmdlogname[cmdindex] = svc_strings[cmd];
 		if (!cmdlogname[cmdindex])
-			cmdlogname[cmdindex] = "<unknown>";
+		{
+			// LordHavoc: fix for bizarre problem in MSVC that I do not understand (if I assign the string pointer directly it ends up storing a NULL pointer)
+			temp = "<unknown>";
+			cmdlogname[cmdindex] = temp;
+		}
 	
 		// other commands
 		switch (cmd)
