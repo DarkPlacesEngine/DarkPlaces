@@ -1,5 +1,5 @@
 /*
-	Quake file system
+	DarkPlaces file system
 
 	Copyright (C) 2003 Mathieu Olivier
 
@@ -36,13 +36,13 @@ typedef struct qfile_s qfile_t;
 extern char fs_gamedir [MAX_OSPATH];
 extern char fs_basedir [MAX_OSPATH];
 
-extern int fs_filesize;  // set by FS_Open and FS_LoadFile
+extern int fs_filesize;  // set by FS_Open (in "read" mode) and FS_LoadFile
 
 
 // ------ Main functions ------ //
 
-// NOTE: the file path is automatically prefixed by the current game directory for each
-// file created by FS_WriteFile, or opened in "write" or "append" mode by FS_Open
+// IMPORTANT: the file path is automatically prefixed by the current game directory for
+// each file created by FS_WriteFile, or opened in "write" or "append" mode by FS_Open
 
 qfile_t *FS_Open (const char* filepath, const char* mode, qboolean quiet);
 int FS_Close (qfile_t* file);

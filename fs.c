@@ -1,5 +1,5 @@
 /*
-	Quake file system
+	DarkPlaces file system
 
 	Copyright (C) 2003 Mathieu Olivier
 	Copyright (C) 1999,2000  contributors of the QuakeForge project
@@ -45,6 +45,7 @@
 
 #include "fs.h"
 
+
 /*
 
 All of Quake's data access is through a hierchal file system, but the contents
@@ -85,6 +86,13 @@ CONSTANTS
 #define ZIP_CDIR_CHUNK_BASE_SIZE	46
 #define ZIP_LOCAL_CHUNK_BASE_SIZE	30
 
+// Zlib constants (from zlib.h)
+#define Z_SYNC_FLUSH	2
+#define MAX_WBITS		15
+#define Z_OK			0
+#define Z_STREAM_END	1
+#define ZLIB_VERSION	"1.1.4"
+
 
 /*
 =============================================================================
@@ -94,12 +102,52 @@ TYPES
 =============================================================================
 */
 
+// Zlib stream (from zlib.h)
+// Warning: some pointers we don't use directly have
+// been cast to "void*" for a matter of simplicity
+typedef struct
+{
+	qbyte			*next_in;	// next input byte
+	unsigned int	avail_in;	// number of bytes available at next_in
+	unsigned long	total_in;	// total nb of input bytes read so far
+
+	qbyte			*next_out;	// next output byte should be put there
+	unsigned int	avail_out;	// remaining free space at next_out
+	unsigned long	total_out;	// total nb of bytes output so far
+
+	char			*msg;		// last error message, NULL if no error
+	void			*state;		// not visible by applications
+
+	void			*zalloc;	// used to allocate the internal state
+	void			*zfree;		// used to free the internal state
+	void			*opaque;	// private data object passed to zalloc and zfree
+
+	int				data_type;	// best guess about the data type: ascii or binary
+	unsigned long	adler;		// adler32 value of the uncompressed data
+	unsigned long	reserved;	// reserved for future use
+} z_stream;
+
+
 // Our own file structure on top of FILE
 typedef enum
 {
 	FS_FLAG_NONE		= 0,
-	FS_FLAG_PACKED		= (1 << 0)	// inside a package (PAK or PK3)
+	FS_FLAG_PACKED		= (1 << 0),	// inside a package (PAK or PK3)
+	FS_FLAG_DEFLATED	= (1 << 1)	// file is compressed using the deflate algorithm (PK3 only)
 } fs_flags_t;
+
+#define ZBUFF_SIZE 1024
+typedef struct
+{
+	z_stream	zstream;
+	size_t		real_length;			// length of the uncompressed file
+	size_t		in_ind, in_max;
+//	size_t		in_position;			// we use "file->position" directly instead
+	size_t		out_ind, out_max;
+	size_t		out_position;			// virtual position in the uncompressed file
+	qbyte		input [ZBUFF_SIZE];
+	qbyte		output [ZBUFF_SIZE];
+} ztoolkit_t;
 
 struct qfile_s
 {
@@ -108,6 +156,7 @@ struct qfile_s
 	size_t		length;		// file size (PACKED only)
 	size_t		offset;		// offset into a package (PACKED only)
 	size_t		position;	// current position in the file (PACKED only)
+	ztoolkit_t*	z;			// used for inflating (DEFLATED only)
 };
 
 
@@ -214,6 +263,98 @@ PRIVATE FUNCTIONS - PK3 HANDLING
 
 =============================================================================
 */
+
+// Functions exported from zlib
+#ifdef WIN32
+# define ZEXPORT WINAPI
+#else
+# define ZEXPORT
+#endif
+
+static int (ZEXPORT *qz_inflate) (z_stream* strm, int flush);
+static int (ZEXPORT *qz_inflateEnd) (z_stream* strm);
+static int (ZEXPORT *qz_inflateInit2_) (z_stream* strm, int windowBits, const char *version, int stream_size);
+static int (ZEXPORT *qz_inflateReset) (z_stream* strm);
+
+#define qz_inflateInit2(strm, windowBits) \
+        qz_inflateInit2_((strm), (windowBits), ZLIB_VERSION, sizeof(z_stream))
+
+static dllfunction_t zlibfuncs[] =
+{
+	{"inflate",			(void **) &qz_inflate},
+	{"inflateEnd",		(void **) &qz_inflateEnd},
+	{"inflateInit2_",	(void **) &qz_inflateInit2_},
+	{"inflateReset",	(void **) &qz_inflateReset},
+	{NULL, NULL}
+};
+
+// Handle for Zlib DLL
+static dllhandle_t zlib_dll = NULL;
+
+
+/*
+====================
+PK3_CloseLibrary
+
+Unload the Zlib DLL
+====================
+*/
+void PK3_CloseLibrary (void)
+{
+	if (!zlib_dll)
+		return;
+
+	Sys_UnloadLibrary (zlib_dll);
+	zlib_dll = NULL;
+}
+
+
+/*
+====================
+PK3_OpenLibrary
+
+Try to load the Zlib DLL
+====================
+*/
+qboolean PK3_OpenLibrary (void)
+{
+	const char* dllname;
+	const dllfunction_t *func;
+
+	// Already loaded?
+	if (zlib_dll)
+		return true;
+
+#ifdef WIN32
+	dllname = "zlib.dll";
+#else
+	dllname = "libz.so.1";
+#endif
+
+	// Initializations
+	for (func = zlibfuncs; func && func->name != NULL; func++)
+		*func->funcvariable = NULL;
+
+	// Load the DLL
+	if (! (zlib_dll = Sys_LoadLibrary (dllname)))
+	{
+		Con_Printf("Can't find %s. Compressed files support disabled\n", dllname);
+		return false;
+	}
+
+	// Get the function adresses
+	for (func = zlibfuncs; func && func->name != NULL; func++)
+		if (!(*func->funcvariable = (void *) Sys_GetProcAddress (zlib_dll, func->name)))
+		{
+			Con_Printf("missing function \"%s\" - broken Zlib library!\n", func->name);
+			PK3_CloseLibrary ();
+			return false;
+		}
+
+	Con_Printf("%s loaded. Compressed files support enabled\n", dllname);
+	return true;
+}
+
 
 /*
 ====================
@@ -679,6 +820,8 @@ void FS_Init (void)
 
 	strcpy(fs_basedir, ".");
 
+	PK3_OpenLibrary ();
+
 	// -basedir <path>
 	// Overrides the system supplied base directory (under GAMENAME)
 	i = COM_CheckParm ("-basedir");
@@ -744,16 +887,8 @@ void FS_Init (void)
 
 
 /*
-=============================================================================
-
-MAIN PUBLIC FUNCTIONS
-
-=============================================================================
-*/
-
-/*
 ====================
-FS_Open
+FS_SysOpen
 
 Internal function used to create a qfile_t and open the relevant file on disk
 ====================
@@ -795,22 +930,21 @@ qfile_t *FS_OpenRead (const char *path, int offs, int len)
 	// Normal file
 	if (offs < 0 || len < 0)
 	{
-		FS_Seek (file, 0, SEEK_END);
-		len = FS_Tell (file);
-		FS_Seek (file, 0, SEEK_SET);
+		// We set fs_filesize here for normal files
+		fseek (file->stream, 0, SEEK_END);
+		fs_filesize = ftell (file->stream);
+		fseek (file->stream, 0, SEEK_SET);
 	}
 	// Packed file
 	else
 	{
-		FS_Seek (file, offs, SEEK_SET);
+		fseek (file->stream, offs, SEEK_SET);
 
 		file->flags |= FS_FLAG_PACKED;
 		file->length = len;
 		file->offset = offs;
 		file->position = 0;
 	}
-
-	fs_filesize = len;
 
 	return file;
 }
@@ -847,13 +981,7 @@ qfile_t *FS_FOpenFile (const char *filename, qboolean quiet)
 			for (i=0 ; i<pak->numfiles ; i++)
 				if (!strcmp (pak->files[i].name, filename))  // found it?
 				{
-					// TODO: compressed files are NOT supported yet
-					if (pak->files[i].flags & FILE_FLAG_DEFLATED)
-					{
-						Con_Printf ("WARNING: %s is a compressed file and so cannot be opened\n");
-						fs_filesize = -1;
-						return NULL;
-					}
+					qfile_t *file;
 
 					if (!quiet)
 						Sys_Printf ("PackFile: %s : %s\n",pak->filename, pak->files[i].name);
@@ -862,8 +990,53 @@ qfile_t *FS_FOpenFile (const char *filename, qboolean quiet)
 					if (! (pak->files[i].flags & FILE_FLAG_TRUEOFFS))
 						PK3_GetTrueFileOffset (&pak->files[i], pak);
 
+					// No Zlib DLL = no compressed files
+					if (!zlib_dll && (pak->files[i].flags & FILE_FLAG_DEFLATED))
+					{
+						Con_Printf ("WARNING: can't open the compressed file %s\n"
+									"You need the Zlib DLL to use compressed files\n", filename);
+						fs_filesize = -1;
+						return NULL;
+					}
+
 					// open a new file in the pakfile
-					return FS_OpenRead (pak->filename, pak->files[i].offset, pak->files[i].packsize);
+					file = FS_OpenRead (pak->filename, pak->files[i].offset, pak->files[i].packsize);
+					fs_filesize = pak->files[i].realsize;
+
+					if (pak->files[i].flags & FILE_FLAG_DEFLATED)
+					{
+						ztoolkit_t *ztk;
+
+						file->flags |= FS_FLAG_DEFLATED;
+
+						// We need some more variables
+						ztk = Mem_Alloc (fs_mempool, sizeof (*file->z));
+
+						ztk->real_length = pak->files[i].realsize;
+
+						// Initialize zlib stream
+						ztk->zstream.next_in = ztk->input;
+						ztk->zstream.avail_in = 0;
+
+						/* From Zlib's "unzip.c":
+						 *
+						 * windowBits is passed < 0 to tell that there is no zlib header.
+						 * Note that in this case inflate *requires* an extra "dummy" byte
+						 * after the compressed stream in order to complete decompression and
+						 * return Z_STREAM_END. 
+						 * In unzip, i don't wait absolutely Z_STREAM_END because I known the 
+						 * size of both compressed and uncompressed data
+						 */
+						if (qz_inflateInit2 (&ztk->zstream, -MAX_WBITS) != Z_OK)
+							Sys_Error ("inflate init error (file: %s)", filename);
+
+						ztk->zstream.next_out = ztk->output;
+						ztk->zstream.avail_out = sizeof (ztk->output);
+
+						file->z = ztk;
+					}
+
+					return file;
 				}
 		}
 		else
@@ -886,6 +1059,14 @@ qfile_t *FS_FOpenFile (const char *filename, qboolean quiet)
 	return NULL;
 }
 
+
+/*
+=============================================================================
+
+MAIN PUBLIC FUNCTIONS
+
+=============================================================================
+*/
 
 /*
 ====================
@@ -927,6 +1108,12 @@ int FS_Close (qfile_t* file)
 	if (fclose (file->stream))
 		return EOF;
 
+	if (file->z)
+	{
+		qz_inflateEnd (&file->z->zstream);
+		Mem_Free (file->z);
+	}
+
 	Mem_Free (file);
 	return 0;
 }
@@ -954,22 +1141,120 @@ Read up to "buffersize" bytes from a file
 */
 size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 {
-	size_t nb;
+	size_t count, nb;
+	ztoolkit_t *ztk;
 
-	// If the file belongs to a package, we must take care
-	// to not read after the end of the file
-	if (file->flags & FS_FLAG_PACKED)
+	// Quick path for unpacked files
+	if (! (file->flags & FS_FLAG_PACKED))
+		return fread (buffer, 1, buffersize, file->stream);
+
+	// If the file isn't compressed
+	if (! (file->flags & FS_FLAG_DEFLATED))
 	{
-		size_t remain = file->length - file->position;
-		if (buffersize > remain)
-			buffersize = remain;
+		// We must take care to not read after the end of the file
+		count = file->length - file->position;
+		if (buffersize > count)
+			buffersize = count;
+
+		nb = fread (buffer, 1, buffersize, file->stream);
+
+		// Update the position index if the file is packed
+		file->position += nb;
+
+		return nb;
 	}
 
-	nb = fread (buffer, 1, buffersize, file->stream);
+	// If the file is compressed, it's more complicated...
+	ztk = file->z;
 
-	// Update the position index if the file is packed
-	if ((file->flags & FS_FLAG_PACKED) && nb > 0)
-		file->position += nb;
+	// First, we copy as many bytes as we can from "output"
+	if (ztk->out_ind < ztk->out_max)
+	{
+		count = ztk->out_max - ztk->out_ind;
+
+		nb = (buffersize > count) ? count : buffersize;
+		memcpy (buffer, &ztk->output[ztk->out_ind], nb);
+		ztk->out_ind += nb;
+	}
+	else
+		nb = 0;
+
+	// We cycle through a few operations until we have inflated enough data
+	while (nb < buffersize)
+	{
+		// NOTE: at this point, "output" should always be empty
+
+		// If "input" is also empty, we need to fill it
+		if (ztk->in_ind == ztk->in_max)
+		{
+			size_t remain = file->length - file->position;
+
+			// If we are at the end of the file
+			if (!remain)
+				return nb;
+
+			count = (remain > sizeof (ztk->input)) ? sizeof (ztk->input) : remain;
+			fread (ztk->input, 1, count, file->stream);
+
+			// Update indexes and counters
+			ztk->in_ind = 0;
+			ztk->in_max = count;
+			file->position += count;
+		}
+
+		// Now that we are sure we have compressed data available, we need to determine
+		// if it's better to inflate it in "output" or directly in "buffer" (we are in this
+		// case if we still need more bytes than "output" can contain)
+
+		ztk->zstream.next_in = &ztk->input[ztk->in_ind];
+		ztk->zstream.avail_in = ztk->in_max - ztk->in_ind;
+
+		// If output will be able to contain at least 1 more byte than the data we need
+		if (buffersize - nb < sizeof (ztk->output))
+		{
+			int error;
+
+			// Inflate the data in "output"
+			ztk->zstream.next_out = ztk->output;
+			ztk->zstream.avail_out = sizeof (ztk->output);
+			error = qz_inflate (&ztk->zstream, Z_SYNC_FLUSH);
+			if (error != Z_OK && error != Z_STREAM_END)
+				Sys_Error ("Can't inflate file");
+			ztk->in_ind = ztk->in_max - ztk->zstream.avail_in;
+			ztk->out_max = sizeof (ztk->output) - ztk->zstream.avail_out;
+			ztk->out_ind = 0;
+			ztk->out_position += ztk->out_max;
+
+			// Copy the requested data in "buffer" (as much as we can)
+			count = (buffersize - nb > ztk->out_max) ? ztk->out_max : buffersize - nb;
+			memcpy (&((qbyte*)buffer)[nb], ztk->output, count);
+			ztk->out_ind = count;
+		}
+
+		// Else, we inflate directly in "buffer"
+		else
+		{
+			int error;
+
+			// Inflate the data in "buffer"
+			ztk->zstream.next_out = &((qbyte*)buffer)[nb];
+			ztk->zstream.avail_out = buffersize - nb;
+			error = qz_inflate (&ztk->zstream, Z_SYNC_FLUSH);
+			if (error != Z_OK && error != Z_STREAM_END)
+				Sys_Error ("Can't inflate file");
+			ztk->in_ind = ztk->in_max - ztk->zstream.avail_in;
+
+			// Invalidate the output data (for FS_Seek)
+			ztk->out_max = 0;
+			ztk->out_ind = 0;
+
+			// How much data did it inflate?
+			count = buffersize - nb - ztk->zstream.avail_out;
+			ztk->out_position += count;
+		}
+
+		nb += count;
+	}
 
 	return nb;
 }
@@ -1017,21 +1302,10 @@ Get the next character of a file
 */
 int FS_Getc (qfile_t* file)
 {
-	int c;
+	char c;
 
-	// If the file belongs to a package, we must take care
-	// to not read after the end of the file
-	if (file->flags & FS_FLAG_PACKED)
-	{
-		if (file->position >= file->length)
-			return EOF;
-	}
-
-	c = fgetc (file->stream);
-
-	// Update the position index if the file is packed
-	if ((file->flags & FS_FLAG_PACKED) && c != EOF)
-		file->position++;
+	if (FS_Read (file, &c, 1) != 1)
+		return EOF;
 
 	return c;
 }
@@ -1046,37 +1320,104 @@ Move the position index in a file
 */
 int FS_Seek (qfile_t* file, long offset, int whence)
 {
-	// Packed files receive a special treatment
-	if (file->flags & FS_FLAG_PACKED)
+	// Quick path for unpacked files
+	if (! (file->flags & FS_FLAG_PACKED))
+		return fseek (file->stream, offset, whence);
+
+	// Seeking in compressed files is more a hack than anything else,
+	// but we need to support it, so here it is.
+	if (file->flags & FS_FLAG_DEFLATED)
 	{
+		ztoolkit_t *ztk = file->z;
+		size_t crt_offset;
+		qbyte buffer [sizeof (ztk->output)];  // it's big to force inflating into buffer directly
+		
+		crt_offset = ztk->out_position - ztk->out_max + ztk->out_ind;
+
 		switch (whence)
 		{
 			case SEEK_CUR:
-				offset += file->position;
-				// It continues on the next case (no break)
+				offset += crt_offset;
+				break;
 
 			case SEEK_SET:
-				if (offset < 0 || offset > file->length)
-					return -1;
-				if (fseek (file->stream, file->offset + offset, SEEK_SET) == -1)
-					return -1;
-				file->position = offset;
-				return 0;
+				break;
 
 			case SEEK_END:
-				if (offset > 0 || -offset > file->length)
-					return -1;
-				if (fseek (file->stream, file->offset + file->length + offset, SEEK_SET) == -1)
-					return -1;
-				file->position = file->length + offset;
-				return 0;
+				offset += ztk->real_length;
+				break;
 
 			default:
 				return -1;
 		}
+
+		// If we need to go back in the file
+		if (offset <= crt_offset)
+		{
+			// If we still have the data we need in the output buffer
+			if (crt_offset - offset <= ztk->out_ind)
+			{
+				ztk->out_ind -= crt_offset - offset;
+				return 0;
+			}
+
+			// Else, we restart from the beginning of the file
+			file->position = 0;
+			ztk->in_ind = 0;
+			ztk->in_max = 0;
+			ztk->out_ind = 0;
+			ztk->out_max = 0;
+			ztk->out_position = 0;
+			crt_offset = 0;
+			fseek (file->stream, file->offset, SEEK_SET);
+
+			// Reset the Zlib stream
+			ztk->zstream.next_in = ztk->input;
+			ztk->zstream.avail_in = 0;
+			qz_inflateReset (&ztk->zstream);
+		}
+
+		// Skip all data until we reach the requested offset
+		while (crt_offset < offset)
+		{
+			size_t diff = offset - crt_offset;
+			size_t count, len;
+			
+			count = (diff > sizeof (buffer)) ? sizeof (buffer) : diff;
+			len = FS_Read (file, buffer, count);
+			if (len != count)
+				return -1;
+			crt_offset += len;
+		}
+
+		return 0;
 	}
 
-	return fseek (file->stream, offset, whence);
+	// Packed files receive a special treatment too, because
+	// we need to make sure it doesn't go outside of the file
+	switch (whence)
+	{
+		case SEEK_CUR:
+			offset += file->position;
+			break;
+
+		case SEEK_SET:
+			break;
+
+		case SEEK_END:
+			offset += file->length;
+			break;
+
+		default:
+			return -1;
+	}
+	if (offset < 0 || offset > file->length)
+		return -1;
+
+	if (fseek (file->stream, file->offset + offset, SEEK_SET) == -1)
+		return -1;
+	file->position = offset;
+	return 0;
 }
 
 
@@ -1090,7 +1431,15 @@ Give the current position in a file
 long FS_Tell (qfile_t* file)
 {
 	if (file->flags & FS_FLAG_PACKED)
+	{
+		if (file->flags & FS_FLAG_DEFLATED)
+		{
+			ztoolkit_t *ztk = file->z;
+			return ztk->out_position - ztk->out_max + ztk->out_ind;
+		}
+
 		return file->position;
+	}
 
 	return ftell (file->stream);
 }
@@ -1105,24 +1454,39 @@ Extract a line from a file
 */
 char* FS_Gets (qfile_t* file, char* buffer, int buffersize)
 {
-	if (!fgets (buffer, buffersize, file->stream))
-		return NULL;
+	size_t ind;
 
-	// Check that we didn't read after the end of a packed file, and update the position
-	if (file->flags & FS_FLAG_PACKED)
+	// Quick path for unpacked files
+	if (! (file->flags & FS_FLAG_PACKED))
+		return fgets (buffer, buffersize, file->stream);
+
+	for (ind = 0; ind < buffersize - 1; ind++)
 	{
-		size_t len = strlen (buffer);
-		size_t max = file->length - file->position;
-
-		if (len > max)
+		int c = FS_Getc (file);
+		switch (c)
 		{
-			buffer[max] = '\0';
-			file->position = file->length;
+			// End of file
+			case -1:
+				if (!ind)
+					return NULL;
+
+				buffer[ind] = '\0';
+				return buffer;
+
+			// End of line
+			case '\r':
+			case '\n':
+				buffer[ind] = '\n';
+				buffer[ind + 1] = '\0';
+				return buffer;
+
+			default:
+				buffer[ind] = c;
 		}
-		else
-			file->position += len;
+
 	}
 
+	buffer[buffersize - 1] = '\0';
 	return buffer;
 }
 
@@ -1175,7 +1539,15 @@ Extract a line from a file
 int FS_Eof (qfile_t* file)
 {
 	if (file->flags & FS_FLAG_PACKED)
+	{
+		if (file->flags & FS_FLAG_DEFLATED)
+		{
+			ztoolkit_t *ztk = file->z;
+			return (ztk->out_position - ztk->out_max + ztk->out_ind == ztk->real_length);
+		}
+
 		return (file->position == file->length);
+	}
 	
 	return feof (file->stream);
 }
