@@ -90,6 +90,7 @@ void R_Shadow_Volume(int numverts, int numtris, float *vertex, int *elements, in
 		Con_Printf("R_Shadow_Volume: projectdistance %f\n");
 		return;
 	}
+	projectdistance = lightradius;
 // terminology:
 //
 // frontface:
@@ -133,10 +134,10 @@ void R_Shadow_Volume(int numverts, int numtris, float *vertex, int *elements, in
 	// the unprojected vertices and these projected vertices
 	for (i = 0, v0 = vertex, v1 = vertex + numverts * 4;i < numverts;i++, v0 += 4, v1 += 4)
 	{
-#if 1
-		v1[0] = v0[0] + 50.0f * (v0[0] - relativelightorigin[0]);
-		v1[1] = v0[1] + 50.0f * (v0[1] - relativelightorigin[1]);
-		v1[2] = v0[2] + 50.0f * (v0[2] - relativelightorigin[2]);
+#if 0
+		v1[0] = v0[0] + 250.0f * (v0[0] - relativelightorigin[0]);
+		v1[1] = v0[1] + 250.0f * (v0[1] - relativelightorigin[1]);
+		v1[2] = v0[2] + 250.0f * (v0[2] - relativelightorigin[2]);
 #elif 0
 		VectorSubtract(v0, relativelightorigin, temp);
 		f = lightradius / sqrt(DotProduct(temp,temp));
@@ -210,6 +211,66 @@ void R_Shadow_Volume(int numverts, int numtris, float *vertex, int *elements, in
 	// also create front and back caps for shadow volume
 	for (i = 0, e = elements, n = neighbors;i < numtris;i++, e += 3, n += 3)
 	{
+#if 1
+		if (trianglefacinglight[i])
+		{
+			// triangle is backface and therefore casts shadow,
+			// output front and back caps for shadow volume
+#if 1
+			// front cap
+			out[0] = e[0];
+			out[1] = e[1];
+			out[2] = e[2];
+			// rear cap (with flipped winding order)
+			out[3] = e[0] + numverts;
+			out[4] = e[2] + numverts;
+			out[5] = e[1] + numverts;
+			out += 6;
+			tris += 2;
+#elif 1
+			// rear cap
+			out[0] = e[0] + numverts;
+			out[1] = e[2] + numverts;
+			out[2] = e[1] + numverts;
+			out += 3;
+			tris += 1;
+#endif
+			// check the edges
+			if (n[0] < 0 || !trianglefacinglight[n[0]])
+			{
+				out[0] = e[1];
+				out[1] = e[0];
+				out[2] = e[0] + numverts;
+				out[3] = e[1];
+				out[4] = e[0] + numverts;
+				out[5] = e[1] + numverts;
+				out += 6;
+				tris += 2;
+			}
+			if (n[1] < 0 || !trianglefacinglight[n[1]])
+			{
+				out[0] = e[2];
+				out[1] = e[1];
+				out[2] = e[1] + numverts;
+				out[3] = e[2];
+				out[4] = e[1] + numverts;
+				out[5] = e[2] + numverts;
+				out += 6;
+				tris += 2;
+			}
+			if (n[2] < 0 || !trianglefacinglight[n[2]])
+			{
+				out[0] = e[0];
+				out[1] = e[2];
+				out[2] = e[2] + numverts;
+				out[3] = e[0];
+				out[4] = e[2] + numverts;
+				out[5] = e[0] + numverts;
+				out += 6;
+				tris += 2;
+			}
+		}
+#else
 		if (!trianglefacinglight[i])
 		{
 			// triangle is backface and therefore casts shadow,
@@ -268,6 +329,7 @@ void R_Shadow_Volume(int numverts, int numtris, float *vertex, int *elements, in
 				tris += 2;
 			}
 		}
+#endif
 	}
 	R_Shadow_RenderVolume(numverts * 2, tris, shadowelements);
 }
