@@ -18,6 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 #include "quakedef.h"
+#include <ctype.h>
 
 /*
 
@@ -515,7 +516,7 @@ int Key_StringToKeynum (const char *str)
 	if (!str || !str[0])
 		return -1;
 	if (!str[1])
-		return str[0];
+		return tolower(str[0]);
 
 	for (kn=keynames ; kn->name ; kn++)
 		if (!strcasecmp(str,kn->name))
