@@ -253,11 +253,11 @@ void R_DrawLightningBeamCallback(const void *calldata1, int calldata2)
 	// (this leaves only a vector pointing directly away from the beam)
 	t1 = -DotProduct(up, beamdir);
 	VectorMA(up, t1, beamdir, up);
-	// now we have a vector pointing away from the beam, now we need to normalize it
-	VectorNormalizeFast(up);
-	// generate right vector from forward and up, the result is already normalized
-	// (CrossProduct returns a vector of multiplied length of the two inputs)
+	// generate right vector from forward and up, the result is unnormalized
 	CrossProduct(beamdir, up, right);
+	// now normalize the right vector and up vector
+	VectorNormalize(right);
+	VectorNormalize(up);
 
 	// calculate T coordinate scrolling (start and end texcoord along the beam)
 	t1 = r_refdef.time * -r_lightningbeam_scroll.value;// + beamrepeatscale * DotProduct(b->start, beamdir);
