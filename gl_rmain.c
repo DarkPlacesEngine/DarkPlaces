@@ -256,6 +256,7 @@ extern void GL_Misc_Init();
 extern void R_Crosshairs_Init();
 extern void R_Light_Init();
 extern void R_Particles_Init();
+extern void R_Explosion_Init();
 
 void Render_Init()
 {
@@ -270,6 +271,7 @@ void Render_Init()
 	R_Crosshairs_Init();
 	R_Light_Init();
 	R_Particles_Init();
+	R_Explosion_Init();
 	R_StartModules();
 }
 
@@ -380,7 +382,7 @@ void R_DrawEntitiesOnList2 (void)
 		switch (currententity->model->type)
 		{
 		case mod_alias:
-			R_DrawAliasModel (currententity, true, modelalpha, currententity->model, currententity->frame, currententity->skinnum, currententity->origin, currententity->effects, currententity->model->flags, currententity->colormap);
+			R_DrawAliasModel (currententity, true, modelalpha, currententity->model, currententity->frame, currententity->skinnum, currententity->origin, currententity->angles, currententity->effects, currententity->model->flags, currententity->colormap);
 			break;
 
 		case mod_sprite:
@@ -411,7 +413,7 @@ void R_DrawViewModel (void)
 
 	// hack the depth range to prevent view model from poking into walls
 	glDepthRange (gldepthmin, gldepthmin + 0.3*(gldepthmax-gldepthmin));
-	R_DrawAliasModel (currententity, FALSE, modelalpha, currententity->model, currententity->frame, currententity->skinnum, currententity->origin, currententity->effects, currententity->model->flags, currententity->colormap);
+	R_DrawAliasModel (currententity, FALSE, modelalpha, currententity->model, currententity->frame, currententity->skinnum, currententity->origin, currententity->angles, currententity->effects, currententity->model->flags, currententity->colormap);
 	glDepthRange (gldepthmin, gldepthmax);
 }
 
@@ -499,8 +501,7 @@ void R_SetupFrame (void)
 	c_bmodels = 0;
 	c_sprites = 0;
 	c_particles = 0;
-	c_dlights = 0;
-
+//	c_dlights = 0;
 }
 
 
@@ -725,7 +726,7 @@ char r_speeds2_string1[81], r_speeds2_string2[81], r_speeds2_string3[81], r_spee
 void R_RenderView (void)
 {
 	double starttime, currtime, temptime;
-	int time_clear, time_setup, time_world, time_bmodels, time_upload, time_sky, time_wall, time_models, time_moveparticles, time_drawparticles, time_transpoly, time_blend, time_total;
+	int time_clear, time_setup, time_world, time_bmodels, time_upload, time_sky, time_wall, time_models, time_moveparticles, time_drawparticles, time_moveexplosions, time_drawexplosions, time_transpoly, time_blend, time_total;
 //	double currtime, temptime;
 //	if (r_norefresh.value)
 //		return;
@@ -787,6 +788,10 @@ void R_RenderView (void)
 	TIMEREPORT(time_moveparticles)
 	R_DrawParticles ();
 	TIMEREPORT(time_drawparticles)
+	R_MoveExplosions();
+	TIMEREPORT(time_moveexplosions)
+	R_DrawExplosions();
+	TIMEREPORT(time_drawexplosions)
 
 	transpolyrender();
 	TIMEREPORT(time_transpoly)

@@ -27,10 +27,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 model_t	*loadmodel;
 char	loadname[32];	// for hunk tags
 
-void Mod_LoadSpriteModel (model_t *mod, void *buffer);
-void Mod_LoadBrushModel (model_t *mod, void *buffer);
-void Mod_LoadAliasModel (model_t *mod, void *buffer);
-void Mod_LoadQ2AliasModel (model_t *mod, void *buffer);
+extern void Mod_LoadSpriteModel (model_t *mod, void *buffer);
+extern void Mod_LoadBrushModel (model_t *mod, void *buffer);
+extern void Mod_LoadAliasModel (model_t *mod, void *buffer);
+extern void Mod_LoadQ2AliasModel (model_t *mod, void *buffer);
+extern void Mod_LoadZymoticModel (model_t *mod, void *buffer);
 model_t *Mod_LoadModel (model_t *mod, qboolean crash);
 
 #define	MAX_MOD_KNOWN	512
@@ -193,6 +194,10 @@ model_t *Mod_LoadModel (model_t *mod, qboolean crash)
 
 	case MD2IDALIASHEADER: // LordHavoc: added Quake2 model support
 		Mod_LoadQ2AliasModel (mod, buf);
+		break;
+
+	case (('O'<<24)+('M'<<16)+('Y'<<8)+'Z'):
+		Mod_LoadZymoticModel(mod, buf);
 		break;
 		
 	case IDSPRITEHEADER:

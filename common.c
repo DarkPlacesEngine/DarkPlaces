@@ -1175,6 +1175,8 @@ void *qmalloc(unsigned int size)
 	qmalloctotal_alloc += size;
 	qmalloctotal_alloccount++;
 	mem = malloc(size+sizeof(unsigned int));
+	if (!mem)
+		return mem;
 	*mem = size;
 	return (void *)(mem + 1);
 }
@@ -1182,6 +1184,8 @@ void *qmalloc(unsigned int size)
 void qfree(void *mem)
 {
 	unsigned int *m;
+	if (!mem)
+		return;
 	m = mem;
 	m--; // back up to size
 	qmalloctotal_free += *m; // size
@@ -1621,7 +1625,7 @@ byte *COM_LoadFile (char *path, int usehunk, qboolean quiet)
 {
 	int             h;
 	byte    *buf;
-	char    base[32];
+	char    base[1024];
 	int             len;
 
 	buf = NULL;     // quiet compiler warning
@@ -1638,24 +1642,29 @@ byte *COM_LoadFile (char *path, int usehunk, qboolean quiet)
 	{
 	case 1:
 		buf = Hunk_AllocName (len+1, va("%s (file)", path));
+		if (!buf)
+			Sys_Error ("COM_LoadFile: not enough hunk space for %s (size %i)", path, len);
 		break;
 //	case 0:
 //		buf = Z_Malloc (len+1);
+//		if (!buf)
+//			Sys_Error ("COM_LoadFile: not enough zone space for %s (size %i)", path, len);
 //		break;
 	case 3:
 		buf = Cache_Alloc (loadcache, len+1, base);
+		if (!buf)
+			Sys_Error ("COM_LoadFile: not enough cache space for %s (size %i)", path, len);
 		break;
 	case 5:
 		buf = qmalloc (len+1);
+		if (!buf)
+			Sys_Error ("COM_LoadFile: not enough available memory for %s (size %i)", path, len);
 		break;
-//	default:
-//		Sys_Error ("COM_LoadFile: bad usehunk");
-//		break;
+	default:
+		Sys_Error ("COM_LoadFile: bad usehunk");
+		break;
 	}
 
-	if (!buf)
-		Sys_Error ("COM_LoadFile: not enough space for %s", path);
-		
 	((byte *)buf)[len] = 0;
 
 	Sys_FileRead (h, buf, len);                     
@@ -1937,4 +1946,30 @@ int COM_FileExists(char *filename)
 	}
 
 	return false;
+}
+
+
+//======================================
+// LordHavoc: added these because they are useful
+
+void COM_ToLowerString(char *in, char *out)
+{
+	while (*in)
+	{
+		if (*in >= 'A' && *in <= 'Z')
+			*out++ = *in++ + 'a' - 'A';
+		else
+			*out++ = *in++;
+	}
+}
+
+void COM_ToUpperString(char *in, char *out)
+{
+	while (*in)
+	{
+		if (*in >= 'a' && *in <= 'z')
+			*out++ = *in++ + 'A' - 'a';
+		else
+			*out++ = *in++;
+	}
 }

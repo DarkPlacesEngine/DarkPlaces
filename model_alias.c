@@ -275,12 +275,86 @@ int GL_SkinSplit(byte *in, byte *out, int width, int height, unsigned short bits
 		return 0;
 }
 
+int GL_SkinCheck(byte *in, int width, int height, unsigned short bits)
+{
+	int i, pixels, passed;
+	byte pixeltest[16];
+	for (i = 0;i < 16;i++)
+		pixeltest[i] = (bits & (1 << i)) != 0;
+	pixels = width*height;
+	passed = 0;
+	while(pixels--)
+	{
+		if (pixeltest[*in >> 4] && *in != 0 && *in != 255)
+			return true;
+		in++;
+	}
+	return false;
+}
+
+void Mod_LoadSkin (maliashdr_t *mheader, char *basename, byte *skindata, byte *skintemp, int width, int height, int *skintexnum)
+{
+#if 0
+	int skin_normal, skin_pants, skin_shirt, skin_glow, skin_body, temp;
+	skin_normal = loadtextureimage(va("%s_normal", basename));
+	skin_pants  = loadtextureimage(va("%s_pants" , basename));
+	skin_shirt  = loadtextureimage(va("%s_shirt" , basename));
+	skin_glow   = loadtextureimage(va("%s_glow"  , basename));
+	skin_body   = loadtextureimage(va("%s_body"  , basename));
+	if (!(skin_normal || skin_pants || skin_shirt || skin_glow || skin_body))
+		skin_body = loadtextureimage(name);
+	if (skin_normal || skin_pants || skin_shirt || skin_glow || skin_body)
+	{
+		skintexnum[0] = skin_normal;
+		skintexnum[1] = skin_pants;
+		skintexnum[2] = skin_shirt;
+		skintexnum[3] = skin_glow;
+		skintexnum[4] = skin_body;
+	}
+	else
+	{
+		Mod_FloodFillSkin(skin, width, height);
+		skin_normal = GL_SkinCheck((byte *)pskintype, width, height, 0x3FBD);
+		skin_pants = GL_SkinCheck((byte *)pskintype, width, height, 0x0040);
+		skin_shirt = GL_SkinCheck((byte *)pskintype, width, height, 0x0002);
+		skin_glow = GL_SkinCheck((byte *)pskintype, width, height, 0xC000);
+		skin_body = GL_SkinCheck((byte *)pskintype, width, height, 0x3FFF);
+		if (skin_pants || skin_shirt)
+		{
+			byte *saveskin;
+			saveskin = Hunk_AllocName(width*height, va("%s skin", loadname));
+			memcpy((saveskin, byte *)pskintype, width*height);
+			temp = (int) saveskin - (int) mheader;
+			skintexnum[0] = skin_normal ? -temp : 0;
+			skintexnum[1] = skin_pants ? -temp : 0;
+			skintexnum[2] = skin_shirt ? -temp : 0;
+			skintexnum[3] = GL_SkinSplit((byte *)pskintype, skintemp, width, height, 0xC000, va("%s_glow", basename)); // glow
+			skintexnum[4] = GL_SkinSplit((byte *)pskintype, skintemp, width, height, 0x3FFF, va("%s_body", basename)); // body (normal + pants + shirt, but not glow)
+		}
+		else
+		{
+			skintexnum[0] = 0;
+			skintexnum[1] = 0;
+			skintexnum[2] = 0;
+			skintexnum[3] = GL_SkinSplit((byte *)pskintype, skintemp, width, height, 0xC000, va("%s_glow", basename)); // glow
+			skintexnum[4] = GL_SkinSplit((byte *)pskintype, skintemp, width, height, 0x3FFF, va("%s_body", basename)); // body (normal + pants + shirt, but not glow)
+		}
+	}
+#else
+	skintexnum[0] = GL_SkinSplit(skindata, skintemp, width, height, 0x3FBD, va("&%s_normal", basename)); // normal (no special colors)
+	skintexnum[1] = GL_SkinSplitShirt(skindata, skintemp, width, height, 0x0040, va("&%s_pants", basename)); // pants
+	skintexnum[2] = GL_SkinSplitShirt(skindata, skintemp, width, height, 0x0002, va("&%s_shirt", basename)); // shirt
+	skintexnum[3] = GL_SkinSplit(skindata, skintemp, width, height, 0xC000, va("%s_glow", basename)); // glow
+	skintexnum[4] = GL_SkinSplit(skindata, skintemp, width, height, 0x3FFF, va("%s_body", basename)); // body (normal + pants + shirt, but not glow)
+#endif
+}
+
 /*
 ===============
 Mod_LoadAllSkins
 ===============
 */
-void *Mod_LoadAllSkins (int numskins, daliasskintype_t *pskintype, int width, int height)
+void *Mod_LoadAllSkins (maliashdr_t *mheader, int numskins, daliasskintype_t *pskintype, int width, int height)
 {
 	int		i, j;
 	char	name[32];
@@ -338,13 +412,8 @@ void *Mod_LoadAllSkins (int numskins, daliasskintype_t *pskintype, int width, in
 			*skinrange++ = 1; // single skin
 			skinnum++;
 			sprintf (name, "%s_%i", loadmodel->name, i);
-
-			Mod_FloodFillSkin( skin, width, height );
-			*skintexnum++ = GL_SkinSplit((byte *)pskintype, skintemp, width, height, 0x3FBD, va("&%s_normal", name)); // normal (no special colors)
-			*skintexnum++ = GL_SkinSplitShirt((byte *)pskintype, skintemp, width, height, 0x0040, va("&%s_pants",  name)); // pants
-			*skintexnum++ = GL_SkinSplitShirt((byte *)pskintype, skintemp, width, height, 0x0002, va("&%s_shirt",  name)); // shirt
-			*skintexnum++ = GL_SkinSplit((byte *)pskintype, skintemp, width, height, 0xC000, va("%s_glow",   name)); // glow
-			*skintexnum++ = GL_SkinSplit((byte *)pskintype, skintemp, width, height, 0x3FFF, va("%s_body",   name)); // body (normal + pants + shirt, but not glow)
+			Mod_LoadSkin(mheader, name, (byte *)pskintype, skintemp, width, height, skintexnum);
+			skintexnum += 5;
 			pskintype = (daliasskintype_t *)((byte *)(pskintype) + s);
 		}
 		else
@@ -360,14 +429,9 @@ void *Mod_LoadAllSkins (int numskins, daliasskintype_t *pskintype, int width, in
 			skinnum += groupskins;
 			for (j = 0;j < groupskins;j++)
 			{
-				sprintf (name, "%s_%i_%i", loadmodel->name, i,j);
-
-				Mod_FloodFillSkin( skin, width, height );
-				*skintexnum++ = GL_SkinSplit((byte *)pskintype, skintemp, width, height, 0x3FBD, va("&%s_normal", name)); // normal (no special colors)
-				*skintexnum++ = GL_SkinSplitShirt((byte *)pskintype, skintemp, width, height, 0x0040, va("&%s_pants",  name)); // pants
-				*skintexnum++ = GL_SkinSplitShirt((byte *)pskintype, skintemp, width, height, 0x0002, va("&%s_shirt",  name)); // shirt
-				*skintexnum++ = GL_SkinSplit((byte *)pskintype, skintemp, width, height, 0xC000, va("%s_glow",   name)); // glow
-				*skintexnum++ = GL_SkinSplit((byte *)pskintype, skintemp, width, height, 0x3FFF, va("%s_body",   name)); // body (normal + pants + shirt, but not glow)
+				sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
+				Mod_LoadSkin(mheader, name, (byte *)pskintype, skintemp, width, height, skintexnum);
+				skintexnum += 5;
 				pskintype = (daliasskintype_t *)((byte *)(pskintype) + s);
 			}
 		}
@@ -426,7 +490,8 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 		Host_Error ("%s has wrong version number (%i should be %i)",
 				 mod->name, version, ALIAS_VERSION);
 
-	mod->type = ALIASTYPE_MDL;
+	mod->type = mod_alias;
+	mod->aliastype = ALIASTYPE_MDL;
 
 	numframes = LittleLong(pinmodel->numframes);
 	BOUNDI(numframes,0,65536);
@@ -483,7 +548,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 
 	// load the skins
 	pskintype = (daliasskintype_t *)&pinmodel[1];
-	pskintype = Mod_LoadAllSkins(numskins, pskintype, skinwidth, skinheight);
+	pskintype = Mod_LoadAllSkins(mheader, numskins, pskintype, skinwidth, skinheight);
 
 	// store texture coordinates into temporary array, they will be stored after usage is determined (triangle data)
 	pinstverts = (stvert_t *)pskintype;
@@ -805,6 +870,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	{
 		for (j = 0;j < 3;j++)
 		{
+			strcpy(poutframe->name, pinframe->name);
 			poutframe->scale[j] = LittleFloat(pinframe->scale[j]);
 			poutframe->translate[j] = LittleFloat(pinframe->translate[j]);
 		}
@@ -826,6 +892,167 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	pheader->ofs_glcmds = (int) poutglcmd - (int) pheader;
 	for (i = 0;i < pheader->num_glcmds;i++)
 		*poutglcmd++ = LittleLong(*pinglcmd++);
+
+// move the complete, relocatable alias model to the cache
+	end = Hunk_LowMark ();
+	total = end - start;
+	
+	Cache_Alloc (&mod->cache, total, loadname);
+	if (!mod->cache.data)
+		return;
+	memcpy (mod->cache.data, pheader, total);
+
+	Hunk_FreeToLowMark (start);
+}
+
+void swapintblock(int *m, int size)
+{
+	size /= 4;
+	while(size--)
+		*m++ = BigLong(*m);
+}
+
+void Mod_LoadZymoticModel (model_t *mod, void *buffer)
+{
+	int i, pbase, start, end, total, *skin, *skinrange, *texturenum;
+	char *shadername;
+	zymtype1header_t *pinmodel, *pheader;
+	zymscene_t *scene;
+	zymbone_t *bone;
+
+	start = Hunk_LowMark ();
+
+	pinmodel = (void *)buffer;
+
+	if (memcmp(pinmodel->id, "ZYMOTICMODEL", 12))
+		Host_Error ("Mod_LoadZymoticModel: %s is not a zymotic model\n");
+
+	if (BigLong(pinmodel->type) != 1)
+		Host_Error ("Mod_LoadZymoticModel: only type 1 (skeletal pose) models are currently supported\n");
+
+	mod->type = mod_alias;
+	mod->aliastype = ALIASTYPE_ZYM;
+
+	pheader = Hunk_AllocName (BigLong(pinmodel->filesize), va("%s Zymotic model", loadname));
+
+	pbase = (int) pheader;
+
+	memcpy(pheader, pinmodel, BigLong(pinmodel->filesize));
+
+	// byteswap header
+	memcpy(pheader->id, pinmodel->id, 12);
+	pheader->type = BigLong(pheader->type);
+	pheader->filesize = BigLong(pheader->filesize);
+	pheader->mins[0] = BigFloat(pheader->mins[0]);
+	pheader->mins[1] = BigFloat(pheader->mins[1]);
+	pheader->mins[2] = BigFloat(pheader->mins[2]);
+	pheader->maxs[0] = BigFloat(pheader->maxs[0]);
+	pheader->maxs[1] = BigFloat(pheader->maxs[1]);
+	pheader->maxs[2] = BigFloat(pheader->maxs[2]);
+	pheader->radius = BigFloat(pheader->radius);
+	pheader->numverts = BigLong(pheader->numverts);
+	pheader->numtris = BigLong(pheader->numtris);
+	pheader->numshaders = BigLong(pheader->numshaders);
+	pheader->numbones = BigLong(pheader->numbones);
+	pheader->numscenes = BigLong(pheader->numscenes);
+
+
+	pheader->lump_scenes.start = BigLong(pheader->lump_scenes.start);pheader->lump_scenes.length = BigLong(pheader->lump_scenes.length);
+	pheader->lump_poses.start = BigLong(pheader->lump_poses.start);pheader->lump_poses.length = BigLong(pheader->lump_poses.length);
+	pheader->lump_bones.start = BigLong(pheader->lump_bones.start);pheader->lump_bones.length = BigLong(pheader->lump_bones.length);
+	pheader->lump_vertbonecounts.start = BigLong(pheader->lump_vertbonecounts.start);pheader->lump_vertbonecounts.length = BigLong(pheader->lump_vertbonecounts.length);
+	pheader->lump_verts.start = BigLong(pheader->lump_verts.start);pheader->lump_verts.length = BigLong(pheader->lump_verts.length);
+	pheader->lump_texcoords.start = BigLong(pheader->lump_texcoords.start);pheader->lump_texcoords.length = BigLong(pheader->lump_texcoords.length);
+	pheader->lump_render.start = BigLong(pheader->lump_render.start);pheader->lump_render.length = BigLong(pheader->lump_render.length);
+	pheader->lump_shaders.start = BigLong(pheader->lump_shaders.start);pheader->lump_shaders.length = BigLong(pheader->lump_shaders.length);
+	pheader->lump_trizone.start = BigLong(pheader->lump_trizone.start);pheader->lump_trizone.length = BigLong(pheader->lump_trizone.length);
+
+	mod->flags = 0; // there are no flags
+	mod->numframes = pheader->numscenes;
+	mod->synctype = ST_SYNC;
+	mod->numtris = pheader->numtris;
+
+	// FIXME: add skin support and texturing and shaders and...
+// load the skins
+	skinrange = loadmodel->skinanimrange;
+	skin = loadmodel->skinanim;
+//	skinrange = Hunk_AllocName (sizeof(int) * (pheader->num_skins * 2), loadname);	
+//	skin = skinrange + pheader->num_skins * 2;
+//	loadmodel->skinanimrange = (int) skinrange - (int) pheader;
+//	loadmodel->skinanim = (int) skin - (int) pheader;
+	*skinrange++ = 0;
+	*skinrange++ = 1;
+	*skin++ = 0;
+	*skin++ = 0;
+	*skin++ = 0;
+	*skin++ = 0;
+	*skin++ = 0;
+	loadmodel->numskins = 1;
+
+	// go through the lumps, swapping things
+
+//	zymlump_t lump_scenes; // zymscene_t scene[numscenes]; // name and other information for each scene (see zymscene struct)
+	scene = (void *) (pheader->lump_scenes.start + pbase);
+	for (i = 0;i < pheader->numscenes;i++)
+	{
+		scene->mins[0] = BigFloat(scene->mins[0]);
+		scene->mins[1] = BigFloat(scene->mins[1]);
+		scene->mins[2] = BigFloat(scene->mins[2]);
+		scene->maxs[0] = BigFloat(scene->maxs[0]);
+		scene->maxs[1] = BigFloat(scene->maxs[1]);
+		scene->maxs[2] = BigFloat(scene->maxs[2]);
+		scene->radius = BigFloat(scene->radius);
+		scene->framerate = BigFloat(scene->framerate);
+		scene->flags = BigLong(scene->flags);
+		scene->start = BigLong(scene->start);
+		scene->length = BigLong(scene->length);
+		scene++;
+	}
+
+//	zymlump_t lump_poses; // float pose[numposes][numbones][6]; // animation data
+	swapintblock((void *) (pheader->lump_poses.start + pbase), pheader->lump_poses.length);
+
+//	zymlump_t lump_bones; // zymbone_t bone[numbones];
+	bone = (void *) (pheader->lump_bones.start + pbase);
+	for (i = 0;i < pheader->numbones;i++)
+	{
+		bone->flags = BigLong(bone->flags);
+		bone->parent = BigLong(bone->parent);
+		bone++;
+	}
+
+//	zymlump_t lump_vertbonecounts; // int vertbonecounts[numvertices]; // how many bones influence each vertex (separate mainly to make this compress better)
+	swapintblock((void *) (pheader->lump_vertbonecounts.start + pbase), pheader->lump_vertbonecounts.length);
+
+//	zymlump_t lump_verts; // zymvertex_t vert[numvertices]; // see vertex struct
+	swapintblock((void *) (pheader->lump_verts.start + pbase), pheader->lump_verts.length);
+
+//	zymlump_t lump_texcoords; // float texcoords[numvertices][2];
+	swapintblock((void *) (pheader->lump_texcoords.start + pbase), pheader->lump_texcoords.length);
+
+//	zymlump_t lump_render; // int renderlist[rendersize]; // sorted by shader with run lengths (int shader, count), each run can be used with glDrawElements (each triangle is 3 int indices)
+	swapintblock((void *) (pheader->lump_render.start + pbase), pheader->lump_render.length);
+
+//	zymlump_t lump_shaders; // char shadername[numshaders][32]; // shaders used on this model
+	shadername = (void *) (pheader->lump_shaders.start + pbase);
+	texturenum = (void *) shadername;
+	for (i = 0;i < pheader->numshaders;i++)
+	{
+		int j;
+		j = loadtextureimage(shadername, 0, 0, true, true);
+		shadername += 32;
+		*texturenum++ = j; // reuse shader name list for texture numbers
+	}
+
+//	zymlump_t lump_trizone; // byte trizone[numtris]; // see trizone explanation
+	swapintblock((void *) (pheader->lump_trizone.start + pbase), pheader->lump_trizone.length);
+
+	// model bbox
+	for (i = 0;i < 3;i++)
+	{
+		mod->mins[i] = pheader->mins[i];
+		mod->maxs[i] = pheader->maxs[i];
+	}
 
 // move the complete, relocatable alias model to the cache
 	end = Hunk_LowMark ();

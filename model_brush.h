@@ -135,7 +135,8 @@ typedef struct msurface_s
 	int			lightmaptexturenum;
 	byte		styles[MAXLIGHTMAPS];
 	unsigned short	cached_light[MAXLIGHTMAPS];	// values currently used in lightmap
-	int			cached_lighthalf;			// LordHavoc: to cause lightmap to be rerendered when lighthalf changes
+	short		cached_dlight;				// LordHavoc: if lightmap was lit by dynamic lights, update on frame after end of effect to erase it
+	short		cached_lighthalf;			// LordHavoc: to cause lightmap to be rerendered when lighthalf changes
 	float		cached_ambient;				// LordHavoc: rerender lightmaps when r_ambient changes
 	byte		*samples;		// [numstyles*surfsize]
 } msurface_t;

@@ -968,7 +968,7 @@ void SCR_UpdateScreen (void)
 	GL_EndRendering ();
 }
 
-// for profiling, this is seperated
+// for profiling, this is separated
 void GL_Finish()
 {
 	if (!r_render.value)

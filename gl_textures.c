@@ -1,6 +1,6 @@
 #include "quakedef.h"
 
-cvar_t		gl_max_size = {"gl_max_size", "1024"};
+cvar_t		gl_max_size = {"gl_max_size", "2048"};
 cvar_t		gl_picmip = {"gl_picmip", "0"};
 cvar_t		gl_lerpimages = {"gl_lerpimages", "1"};
 cvar_t		r_upload = {"r_upload", "1"};
@@ -11,27 +11,29 @@ int		gl_filter_max = GL_LINEAR;
 
 int		texels;
 
-// 4096x4096
-#define MAXMIPS 12
+// 65536x65536
+#define MAXMIPS 16
 
 typedef struct
 {
+	char	identifier[64];
 	int		texnum;
 	int		texeldatasize;
 	byte	*texels[MAXMIPS];
 	unsigned short texelsize[MAXMIPS][2];
-	char	identifier[64];
-	short	width, height;
+	unsigned short width, height;
 // LordHavoc: CRC to identify cache mismatchs
 	unsigned short crc;
 	char	mipmap;
 	char	alpha;
 	char	bytesperpixel;
 	char	lerped; // whether this texture was uploaded with or without interpolation
+	char	inuse; // cleared during texture purge when loading new level
+	char	pad; // unused
 } gltexture_t;
 
 #define	MAX_GLTEXTURES	4096
-gltexture_t	gltextures[MAX_GLTEXTURES];
+gltexture_t	*gltextures;
 int			numgltextures;
 
 typedef struct
@@ -150,13 +152,13 @@ void GL_TextureStats_PrintTotal(void)
 
 char engineversion[40];
 
-void GL_UploadTexture (gltexture_t *glt);
+//void GL_UploadTexture (gltexture_t *glt);
 void gl_textures_start()
 {
-	int i;
-	gltexture_t *glt;
-	for (i=0, glt=gltextures ; i<numgltextures ; i++, glt++)
-		GL_UploadTexture(glt);
+//	int i;
+//	gltexture_t *glt;
+//	for (i=0, glt=gltextures ; i<numgltextures ; i++, glt++)
+//		GL_UploadTexture(glt);
 }
 
 void gl_textures_shutdown()
@@ -178,6 +180,8 @@ void GL_Textures_Init (void)
 	if (!Q_strncasecmp ((char *)gl_renderer, "3dfx",4) || strstr((char *)gl_renderer, "Glide"))
 		Cvar_Set ("gl_max_size", "256");
 
+	gltextures = qmalloc(sizeof(gltexture_t) * MAX_GLTEXTURES);
+	memset(gltextures, 0, sizeof(gltexture_t) * MAX_GLTEXTURES);
 	Cmd_AddCommand ("gl_texturemode", &Draw_TextureMode_f);
 
 	R_RegisterModule("GL_Textures", gl_textures_start, gl_textures_shutdown);
@@ -479,10 +483,14 @@ int GL_LoadTexture (char *identifier, int width, int height, byte *data, qboolea
 {
 	unsigned short	crc;
 	int				i, width2, height2, width3, height3, w, h, mip;
-	gltexture_t		*glt;
+	gltexture_t		*glt, *freeglt;
+	// LordHavoc: texture caching, turned out to be a waste of time (and immense waste of diskspace)
+	//char			cachefilename[1024], *cachefile;
 
 	if (isDedicated)
 		return 1;
+
+	freeglt = NULL;
 
 	// LordHavoc: do a CRC to confirm the data really is the same as previous occurances.
 	crc = CRC_Block(data, width*height*bytesperpixel);
@@ -491,30 +499,45 @@ int GL_LoadTexture (char *identifier, int width, int height, byte *data, qboolea
 	{
 		for (i=0, glt=gltextures ; i<numgltextures ; i++, glt++)
 		{
-			if (!strcmp (identifier, glt->identifier))
+			if (glt->inuse)
 			{
-				// LordHavoc: everyone hates cache mismatchs, so I fixed it
-				if (crc != glt->crc || width != glt->width || height != glt->height)
+				if (!strcmp (identifier, glt->identifier))
 				{
-					Con_DPrintf("GL_LoadTexture: cache mismatch, replacing old texture\n");
-					goto GL_LoadTexture_setup; // drop out with glt pointing to the texture to replace
+					// LordHavoc: everyone hates cache mismatchs, so I fixed it
+					if (crc != glt->crc || width != glt->width || height != glt->height)
+					{
+						Con_DPrintf("GL_LoadTexture: cache mismatch, replacing old texture\n");
+						goto GL_LoadTexture_setup; // drop out with glt pointing to the texture to replace
+					}
+					if ((gl_lerpimages.value != 0) != glt->lerped)
+						goto GL_LoadTexture_setup; // drop out with glt pointing to the texture to replace
+					return glt->texnum;
 				}
-				if ((gl_lerpimages.value != 0) != glt->lerped)
-					goto GL_LoadTexture_setup; // drop out with glt pointing to the texture to replace
-				return glt->texnum;
 			}
+			else
+				freeglt = glt;
 		}
 	}
+	else
+		i = 0;
 	// LordHavoc: although this could be an else condition as it was in the original id code,
 	//            it is more clear this way
-	// LordHavoc: check if there are still slots available
-	if (numgltextures >= MAX_GLTEXTURES)
-		Sys_Error ("GL_LoadTexture: ran out of texture slots (%d)\n", MAX_GLTEXTURES);
-	glt = &gltextures[numgltextures++];
+	if (freeglt)
+	{
+		glt = freeglt;
+		strcpy (glt->identifier, identifier);
+	}
+	else
+	{
+		// LordHavoc: check if there are still slots available
+		if (numgltextures >= MAX_GLTEXTURES)
+			Sys_Error ("GL_LoadTexture: ran out of texture slots (%d)\n", MAX_GLTEXTURES);
+		glt = &gltextures[numgltextures++];
+		glt->texnum = texture_extension_number;
+		texture_extension_number++;
+		strcpy (glt->identifier, identifier);
+	}
 
-	strcpy (glt->identifier, identifier);
-	glt->texnum = texture_extension_number;
-	texture_extension_number++;
 // LordHavoc: label to drop out of the loop into the setup code
 GL_LoadTexture_setup:
 	// calculate power of 2 size
@@ -537,6 +560,31 @@ GL_LoadTexture_setup:
 	glt->bytesperpixel = bytesperpixel;
 	glt->lerped = gl_lerpimages.value != 0;
 	glt->alpha = false; // updated later
+	glt->inuse = true;
+	/*
+	// LordHavoc: texture caching, turned out to be a waste of time (and immense waste of diskspace)
+	sprintf(cachefilename, "%s%x%x%x.texels", identifier, width3, height3, crc);
+	for (i = 0;cachefilename[i];i++)
+	{
+		if (cachefilename[i] <= ' ' || cachefilename[i] >= 127 || cachefilename[i] == '/' || cachefilename[i] == '\\' || cachefilename[i] == ':' || cachefilename[i] == '*' || cachefilename[i] == '?')
+			cachefilename[i] = '@';
+		if (cachefilename[i] >= 'A' && cachefilename[i] <= 'Z')
+			cachefilename[i] += 'a' - 'A';
+	}
+	cachefile = COM_LoadMallocFile(cachefilename, true);
+	if (cachefile)
+	{
+		if (cachefile[0] == 'D' && cachefile[1] == 'P' && cachefile[2] == 'C' && cachefile[3] == 'T')
+		{
+			memcpy(glt->texels[0], cachefile + 4, width3*height3*4);
+			qfree(cachefile);
+//			Con_Printf("loaded cache texture %s\n", cachefilename);
+			goto cacheloaded;
+		}
+		else
+			qfree(cachefile);
+	}
+	*/
 	if (width == width3 && height == height3) // perfect match
 	{
 		if (bytesperpixel == 1) // 8bit
@@ -594,6 +642,19 @@ GL_LoadTexture_setup:
 			GL_ResampleTexture(temptexels, width, height, glt->texels[0], width2, height2);
 		qfree(temptexels);
 	}
+	/*
+	// LordHavoc: texture caching, turned out to be a waste of time (and immense waste of diskspace)
+	Con_Printf("writing cache texture %s\n", cachefilename);
+	cachefile = qmalloc(width3*height3*4 + 4);
+	cachefile[0] = 'D';
+	cachefile[1] = 'P';
+	cachefile[2] = 'C';
+	cachefile[3] = 'T';
+	memcpy(cachefile + 4, glt->texels[0], width3*height3*4);
+	COM_WriteFile(cachefilename, cachefile, width3*height3*4 + 4);
+	qfree(cachefile);
+cacheloaded:
+	*/
 	if (alpha)
 	{
 		byte	*in = glt->texels[0] + 3;
@@ -616,23 +677,4 @@ GL_LoadTexture_setup:
 //		GL_Upload32 (data, width, height, mipmap, true);
 
 	return glt->texnum;
-}
-
-int GL_GetTextureSlots (int count)
-{
-	gltexture_t		*glt, *first;
-
-	first = glt = &gltextures[numgltextures];
-	while (count--)
-	{
-		glt->identifier[0] = 0;
-		glt->texnum = texture_extension_number++;
-		glt->crc = 0;
-		glt->width = 0;
-		glt->height = 0;
-		glt->bytesperpixel = 0;
-		glt++;
-		numgltextures++;
-	}
-	return first->texnum;
 }

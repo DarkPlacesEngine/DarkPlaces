@@ -1086,7 +1086,7 @@ void ED_LoadFromFile (char *data)
 		}
 
 		pr_global_struct->self = EDICT_TO_PROG(ent);
-		PR_ExecuteProgram (func - pr_functions);
+		PR_ExecuteProgram (func - pr_functions, "");
 	}	
 
 	Con_DPrintf ("%i entities inhibited\n", inhibit);

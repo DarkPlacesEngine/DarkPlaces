@@ -894,7 +894,7 @@ void Host_Color_f(void)
 		pr_global_struct->time = sv.time;
 		pr_globals[0] = playercolor;
 		pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
-		PR_ExecuteProgram (SV_ChangeTeam);
+		PR_ExecuteProgram (SV_ChangeTeam, "");
 	}
 	else
 	{
@@ -929,7 +929,7 @@ void Host_Kill_f (void)
 	
 	pr_global_struct->time = sv.time;
 	pr_global_struct->self = EDICT_TO_PROG(sv_player);
-	PR_ExecuteProgram (pr_global_struct->ClientKill);
+	PR_ExecuteProgram (pr_global_struct->ClientKill, "QC function ClientKill is missing");
 }
 
 
@@ -1036,7 +1036,7 @@ void Host_Spawn_f (void)
 			Con_DPrintf("Calling RestoreGame\n");
 			pr_global_struct->time = sv.time;
 			pr_global_struct->self = EDICT_TO_PROG(sv_player);
-			PR_ExecuteProgram (RestoreGame);
+			PR_ExecuteProgram (RestoreGame, "");
 		}
 	}
 	else
@@ -1061,12 +1061,12 @@ void Host_Spawn_f (void)
 
 		pr_global_struct->time = sv.time;
 		pr_global_struct->self = EDICT_TO_PROG(sv_player);
-		PR_ExecuteProgram (pr_global_struct->ClientConnect);
+		PR_ExecuteProgram (pr_global_struct->ClientConnect, "QC function ClientConnect is missing");
 
 		if ((Sys_FloatTime() - host_client->netconnection->connecttime) <= sv.time)
 			Sys_Printf ("%s entered the game\n", host_client->name);
 
-		PR_ExecuteProgram (pr_global_struct->PutClientInServer);	
+		PR_ExecuteProgram (pr_global_struct->PutClientInServer, "QC function PutClientInServer is missing");
 	}
 
 
@@ -1469,15 +1469,59 @@ void Host_Viewframe_f (void)
 
 void PrintFrameName (model_t *m, int frame)
 {
-	maliashdr_t 	*mheader;
-	maliasframe_t	*frameinfo;
-
-	mheader = (maliashdr_t *)Mod_Extradata (m);
-	if (!mheader)
+	if (m->type != mod_alias)
 		return;
-	frameinfo = &((maliasframe_t *)(mheader->framedata + (int) mheader))[frame];
-	
-	Con_Printf ("frame %i: %s\n", frame, frameinfo->name);
+	switch(m->aliastype)
+	{
+	case ALIASTYPE_MDL:
+		{
+			maliashdr_t *mheader;
+			maliasframe_t *frameinfo;
+
+			mheader = (maliashdr_t *)Mod_Extradata (m);
+			if (!mheader)
+				return;
+			if (frame < 0 || frame >= mheader->numframes)
+				frame = 0;
+			frameinfo = &((maliasframe_t *)(mheader->framedata + (int) mheader))[frame];
+			
+			Con_Printf ("frame %i: %s\n", frame, frameinfo->name);
+		}
+		break;
+	case ALIASTYPE_MD2:
+		{
+			md2mem_t *mheader;
+			md2memframe_t *frameinfo;
+
+			mheader = (md2mem_t *)Mod_Extradata (m);
+			if (!mheader)
+				return;
+			if (frame < 0 || frame >= mheader->num_frames)
+				frame = 0;
+			frameinfo = (md2memframe_t *)(mheader->ofs_frames + (int) mheader) + frame;
+			
+			Con_Printf ("frame %i: %s\n", frame, frameinfo->name);
+		}
+		break;
+	case ALIASTYPE_ZYM:
+		{
+			zymtype1header_t *mheader;
+			zymscene_t *scene;
+
+			mheader = (zymtype1header_t *)Mod_Extradata (m);
+			if (!mheader)
+				return;
+			if (frame < 0 || frame >= mheader->numscenes)
+				frame = 0;
+			scene = (zymscene_t *)(mheader->lump_scenes.start + (int) mheader) + frame;
+			
+			Con_Printf ("frame %i: %s\n", frame, scene->name);
+		}
+		break;
+	default:
+		Con_Printf("frame %i: (unknown alias model type)\n", frame);
+		break;
+	}
 }
 
 /*

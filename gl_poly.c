@@ -413,14 +413,14 @@ void transpolyrender()
 						glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 				}
 			}
-			qglDrawArrays(GL_TRIANGLE_FAN, p->firstvert, p->verts);
+			qglDrawArrays(GL_POLYGON, p->firstvert, p->verts);
 			if (p->glowtexnum)
 			{
 				texnum = p->glowtexnum; // highly unlikely to match next poly, but...
 				glBindTexture(GL_TEXTURE_2D, texnum);
 				tpolytype = TPOLYTYPE_ADD; // might match next poly
 				glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-				qglDrawArrays(GL_TRIANGLE_FAN, p->firstvert, p->verts);
+				qglDrawArrays(GL_POLYGON, p->firstvert, p->verts);
 			}
 		}
 		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -473,7 +473,7 @@ void transpolyrender()
 						glBegin(GL_QUADS);
 						break;
 					default:
-						glBegin(GL_TRIANGLE_FAN);
+						glBegin(GL_POLYGON);
 						points = -1; // to force a reinit on the next poly
 						break;
 					}
@@ -497,7 +497,7 @@ void transpolyrender()
 						glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 					}
 					points = -1;
-					glBegin(GL_TRIANGLE_FAN);
+					glBegin(GL_POLYGON);
 					for (j = 0,vert = &transvert[p->firstvert];j < p->verts;j++, vert++)
 					{
 						glColor4ub(255,255,255,vert->a);
@@ -524,7 +524,7 @@ void transpolyrender()
 							texnum = p->fogtexnum;
 							glBindTexture(GL_TEXTURE_2D, texnum);
 						}
-						glBegin(GL_TRIANGLE_FAN);
+						glBegin(GL_POLYGON);
 						for (j = 0,vert = &transvert[p->firstvert];j < p->verts;j++, vert++)
 						{
 							VectorSubtract(vert->v, r_refdef.vieworg,diff);
@@ -537,7 +537,7 @@ void transpolyrender()
 					else
 					{
 						glDisable(GL_TEXTURE_2D);
-						glBegin(GL_TRIANGLE_FAN);
+						glBegin(GL_POLYGON);
 						for (j = 0,vert = &transvert[p->firstvert];j < p->verts;j++, vert++)
 						{
 							VectorSubtract(vert->v, r_refdef.vieworg,diff);

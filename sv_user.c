@@ -650,7 +650,7 @@ void SV_RunClients (void)
 			{
 				pr_global_struct->time = sv.time;
 				pr_global_struct->self = EDICT_TO_PROG(sv_player);
-				PR_ExecuteProgram ((func_t)(SV_PlayerPhysicsQC - pr_functions));
+				PR_ExecuteProgram ((func_t)(SV_PlayerPhysicsQC - pr_functions), "");
 			}
 			else
 				SV_ClientThink ();

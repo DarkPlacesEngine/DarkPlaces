@@ -1,11 +1,19 @@
 
 #include "quakedef.h"
 
+typedef struct
+{
+	float m[3][4];
+} zymbonematrix;
+
 // LordHavoc: vertex array
 float *aliasvert;
+float *modelaliasvert;
 float *aliasvertnorm;
 byte *aliasvertcolor;
 byte *aliasvertcolor2;
+zymbonematrix *zymbonepose;
+int *aliasvertusage;
 
 int chrometexture;
 
@@ -31,9 +39,12 @@ void gl_models_start()
 {
 	// allocate vertex processing arrays
 	aliasvert = qmalloc(sizeof(float[MD2MAX_VERTS][3]));
+	modelaliasvert = qmalloc(sizeof(float[MD2MAX_VERTS][3]));
 	aliasvertnorm = qmalloc(sizeof(float[MD2MAX_VERTS][3]));
 	aliasvertcolor = qmalloc(sizeof(byte[MD2MAX_VERTS][4]));
 	aliasvertcolor2 = qmalloc(sizeof(byte[MD2MAX_VERTS][4])); // used temporarily for tinted coloring
+	zymbonepose = qmalloc(sizeof(zymbonematrix[256]));
+	aliasvertusage = qmalloc(sizeof(int[MD2MAX_VERTS]));
 	makechrometexture();
 }
 
@@ -43,6 +54,8 @@ void gl_models_shutdown()
 	qfree(aliasvertnorm);
 	qfree(aliasvertcolor);
 	qfree(aliasvertcolor2);
+	qfree(zymbonepose);
+	qfree(aliasvertusage);
 }
 
 void GL_Models_Init()
@@ -55,6 +68,7 @@ extern vec3_t softwaretransform_y;
 extern vec3_t softwaretransform_z;
 extern vec_t softwaretransform_scale;
 extern vec3_t softwaretransform_offset;
+extern cvar_t r_modelsdonttransformnormals;
 void R_AliasLerpVerts(int vertcount, float lerp, trivert2 *verts1, vec3_t scale1, vec3_t translate1, trivert2 *verts2, vec3_t scale2, vec3_t translate2)
 {
 	int i;
@@ -78,45 +92,107 @@ void R_AliasLerpVerts(int vertcount, float lerp, trivert2 *verts1, vec3_t scale1
 		scaley1 = scale1[1] * ilerp;scaley2 = scale2[1] *  lerp;translatey = translate1[1] * ilerp + translate2[1] *  lerp;
 		scalez1 = scale1[2] * ilerp;scalez2 = scale2[2] *  lerp;translatez = translate1[2] * ilerp + translate2[2] *  lerp;
 		// generate vertices
-		for (i = 0;i < vertcount;i++)
+		if (r_modelsdonttransformnormals.value)
 		{
-			// rotate, scale, and translate the vertex locations
-			point[0] = verts1->v[0] * scalex1 + verts2->v[0] * scalex2 + translatex;
-			point[1] = verts1->v[1] * scaley1 + verts2->v[1] * scaley2 + translatey;
-			point[2] = verts1->v[2] * scalez1 + verts2->v[2] * scalez2 + translatez;
-			*av++ = point[0] * matrix_x[0] + point[1] * matrix_y[0] + point[2] * matrix_z[0] + softwaretransform_offset[0];
-			*av++ = point[0] * matrix_x[1] + point[1] * matrix_y[1] + point[2] * matrix_z[1] + softwaretransform_offset[1];
-			*av++ = point[0] * matrix_x[2] + point[1] * matrix_y[2] + point[2] * matrix_z[2] + softwaretransform_offset[2];
-			// rotate the normals
-			point[0] = verts1->n[0] * ilerp127 + verts2->n[0] * lerp127;
-			point[1] = verts1->n[1] * ilerp127 + verts2->n[1] * lerp127;
-			point[2] = verts1->n[2] * ilerp127 + verts2->n[2] * lerp127;
-			*avn++ = point[0] * softwaretransform_x[0] + point[1] * softwaretransform_y[0] + point[2] * softwaretransform_z[0];
-			*avn++ = point[0] * softwaretransform_x[1] + point[1] * softwaretransform_y[1] + point[2] * softwaretransform_z[1];
-			*avn++ = point[0] * softwaretransform_x[2] + point[1] * softwaretransform_y[2] + point[2] * softwaretransform_z[2];
-			verts1++;verts2++;
+			float *modelav = modelaliasvert;
+			for (i = 0;i < vertcount;i++)
+			{
+				// rotate, scale, and translate the vertex locations
+				point[0] = verts1->v[0] * scalex1 + verts2->v[0] * scalex2 + translatex;
+				point[1] = verts1->v[1] * scaley1 + verts2->v[1] * scaley2 + translatey;
+				point[2] = verts1->v[2] * scalez1 + verts2->v[2] * scalez2 + translatez;
+				// save mostly un-transformed copy for lighting
+				modelav[0] = point[0] * softwaretransform_scale;
+				modelav[1] = point[1] * softwaretransform_scale;
+				modelav[2] = point[2] * softwaretransform_scale;
+				av[0] = point[0] * matrix_x[0] + point[1] * matrix_y[0] + point[2] * matrix_z[0] + softwaretransform_offset[0];
+				av[1] = point[0] * matrix_x[1] + point[1] * matrix_y[1] + point[2] * matrix_z[1] + softwaretransform_offset[1];
+				av[2] = point[0] * matrix_x[2] + point[1] * matrix_y[2] + point[2] * matrix_z[2] + softwaretransform_offset[2];
+				// decompress but do not transform the normals
+				avn[0] = verts1->n[0] * ilerp127 + verts2->n[0] * lerp127;
+				avn[1] = verts1->n[1] * ilerp127 + verts2->n[1] * lerp127;
+				avn[2] = verts1->n[2] * ilerp127 + verts2->n[2] * lerp127;
+				modelav += 3;
+				av += 3;
+				avn += 3;
+				verts1++;verts2++;
+			}
+		}
+		else
+		{
+			for (i = 0;i < vertcount;i++)
+			{
+				// rotate, scale, and translate the vertex locations
+				point[0] = verts1->v[0] * scalex1 + verts2->v[0] * scalex2 + translatex;
+				point[1] = verts1->v[1] * scaley1 + verts2->v[1] * scaley2 + translatey;
+				point[2] = verts1->v[2] * scalez1 + verts2->v[2] * scalez2 + translatez;
+				av[0] = point[0] * matrix_x[0] + point[1] * matrix_y[0] + point[2] * matrix_z[0] + softwaretransform_offset[0];
+				av[1] = point[0] * matrix_x[1] + point[1] * matrix_y[1] + point[2] * matrix_z[1] + softwaretransform_offset[1];
+				av[2] = point[0] * matrix_x[2] + point[1] * matrix_y[2] + point[2] * matrix_z[2] + softwaretransform_offset[2];
+				// rotate the normals
+				point[0] = verts1->n[0] * ilerp127 + verts2->n[0] * lerp127;
+				point[1] = verts1->n[1] * ilerp127 + verts2->n[1] * lerp127;
+				point[2] = verts1->n[2] * ilerp127 + verts2->n[2] * lerp127;
+				avn[0] = point[0] * softwaretransform_x[0] + point[1] * softwaretransform_y[0] + point[2] * softwaretransform_z[0];
+				avn[1] = point[0] * softwaretransform_x[1] + point[1] * softwaretransform_y[1] + point[2] * softwaretransform_z[1];
+				avn[2] = point[0] * softwaretransform_x[2] + point[1] * softwaretransform_y[2] + point[2] * softwaretransform_z[2];
+				av += 3;
+				avn += 3;
+				verts1++;verts2++;
+			}
 		}
 	}
 	else
 	{
 		// generate vertices
-		for (i = 0;i < vertcount;i++)
+		if (r_modelsdonttransformnormals.value)
 		{
-			// rotate, scale, and translate the vertex locations
-			point[0] = verts1->v[0] * scale1[0] + translate1[0];
-			point[1] = verts1->v[1] * scale1[1] + translate1[1];
-			point[2] = verts1->v[2] * scale1[2] + translate1[2];
-			*av++ = point[0] * matrix_x[0] + point[1] * matrix_y[0] + point[2] * matrix_z[0] + softwaretransform_offset[0];
-			*av++ = point[0] * matrix_x[1] + point[1] * matrix_y[1] + point[2] * matrix_z[1] + softwaretransform_offset[1];
-			*av++ = point[0] * matrix_x[2] + point[1] * matrix_y[2] + point[2] * matrix_z[2] + softwaretransform_offset[2];
-			// rotate the normals
-			point[0] = verts1->n[0] * (1.0f / 127.0f);
-			point[1] = verts1->n[1] * (1.0f / 127.0f);
-			point[2] = verts1->n[2] * (1.0f / 127.0f);
-			*avn++ = point[0] * softwaretransform_x[0] + point[1] * softwaretransform_y[0] + point[2] * softwaretransform_z[0];
-			*avn++ = point[0] * softwaretransform_x[1] + point[1] * softwaretransform_y[1] + point[2] * softwaretransform_z[1];
-			*avn++ = point[0] * softwaretransform_x[2] + point[1] * softwaretransform_y[2] + point[2] * softwaretransform_z[2];
-			verts1++;
+			float *modelav = modelaliasvert;
+			for (i = 0;i < vertcount;i++)
+			{
+				// rotate, scale, and translate the vertex locations
+				point[0] = verts1->v[0] * scale1[0] + translate1[0];
+				point[1] = verts1->v[1] * scale1[1] + translate1[1];
+				point[2] = verts1->v[2] * scale1[2] + translate1[2];
+				// save mostly un-transformed copy for lighting
+				modelav[0] = point[0] * softwaretransform_scale;
+				modelav[1] = point[1] * softwaretransform_scale;
+				modelav[2] = point[2] * softwaretransform_scale;
+				av[0] = point[0] * matrix_x[0] + point[1] * matrix_y[0] + point[2] * matrix_z[0] + softwaretransform_offset[0];
+				av[1] = point[0] * matrix_x[1] + point[1] * matrix_y[1] + point[2] * matrix_z[1] + softwaretransform_offset[1];
+				av[2] = point[0] * matrix_x[2] + point[1] * matrix_y[2] + point[2] * matrix_z[2] + softwaretransform_offset[2];
+				// decompress normal but do not rotate it
+				avn[0] = verts1->n[0] * (1.0f / 127.0f);
+				avn[1] = verts1->n[1] * (1.0f / 127.0f);
+				avn[2] = verts1->n[2] * (1.0f / 127.0f);
+				modelav += 3;
+				av += 3;
+				avn += 3;
+				verts1++;
+			}
+		}
+		else
+		{
+			for (i = 0;i < vertcount;i++)
+			{
+				// rotate, scale, and translate the vertex locations
+				point[0] = verts1->v[0] * scale1[0] + translate1[0];
+				point[1] = verts1->v[1] * scale1[1] + translate1[1];
+				point[2] = verts1->v[2] * scale1[2] + translate1[2];
+				av[0] = point[0] * matrix_x[0] + point[1] * matrix_y[0] + point[2] * matrix_z[0] + softwaretransform_offset[0];
+				av[1] = point[0] * matrix_x[1] + point[1] * matrix_y[1] + point[2] * matrix_z[1] + softwaretransform_offset[1];
+				av[2] = point[0] * matrix_x[2] + point[1] * matrix_y[2] + point[2] * matrix_z[2] + softwaretransform_offset[2];
+				// rotate the normals
+				point[0] = verts1->n[0] * (1.0f / 127.0f);
+				point[1] = verts1->n[1] * (1.0f / 127.0f);
+				point[2] = verts1->n[2] * (1.0f / 127.0f);
+				avn[0] = point[0] * softwaretransform_x[0] + point[1] * softwaretransform_y[0] + point[2] * softwaretransform_z[0];
+				avn[1] = point[0] * softwaretransform_x[1] + point[1] * softwaretransform_y[1] + point[2] * softwaretransform_z[1];
+				avn[2] = point[0] * softwaretransform_x[2] + point[1] * softwaretransform_y[2] + point[2] * softwaretransform_z[2];
+				av += 3;
+				avn += 3;
+				verts1++;
+			}
 		}
 	}
 }
@@ -223,7 +299,7 @@ R_DrawAliasFrame
 */
 extern vec3_t lightspot;
 void R_LightModel(int numverts, vec3_t center, vec3_t basecolor);
-void R_DrawAliasFrame (maliashdr_t *maliashdr, float alpha, vec3_t color, entity_t *ent, int shadow, vec3_t org, int frame, int *skin, int colormap, int effects, int flags)
+void R_DrawAliasFrame (maliashdr_t *maliashdr, float alpha, vec3_t color, entity_t *ent, int shadow, vec3_t org, vec3_t angles, int frame, int *skin, int colormap, int effects, int flags)
 {
 	int		i, pose;
 	float	lerpscale, lerp;
@@ -398,7 +474,7 @@ R_DrawQ2AliasFrame
 
 =================
 */
-void R_DrawQ2AliasFrame (md2mem_t *pheader, float alpha, vec3_t color, entity_t *ent, int shadow, vec3_t org, int frame, int skin, int effects, int flags)
+void R_DrawQ2AliasFrame (md2mem_t *pheader, float alpha, vec3_t color, entity_t *ent, int shadow, vec3_t org, vec3_t angles, int frame, int skin, int effects, int flags)
 {
 	int *order, count;
 	float lerp;
@@ -624,6 +700,420 @@ void R_DrawQ2AliasFrame (md2mem_t *pheader, float alpha, vec3_t color, entity_t 
 	glDepthMask(1);
 }
 
+void ZymoticLerpBones(int count, float lerp2, zymbonematrix *bone1, zymbonematrix *bone2, zymbone_t *bone, float rootorigin[3], float rootangles[3])
+{
+	float lerp1;
+	zymbonematrix *out, rootmatrix, m;
+	lerp1 = 1 - lerp2;
+	out = zymbonepose;
+	AngleVectors(rootangles, rootmatrix.m[0], rootmatrix.m[1], rootmatrix.m[2]);
+	rootmatrix.m[0][3] = rootorigin[0];
+	rootmatrix.m[1][3] = rootorigin[1];
+	rootmatrix.m[2][3] = rootorigin[2];
+	if (lerp1 != 1) // interpolation
+	{
+		while(count--)
+		{
+			// interpolate matrices
+			m.m[0][0] = bone1->m[0][0] * lerp1 + bone2->m[0][0] * lerp2;
+			m.m[0][1] = bone1->m[0][1] * lerp1 + bone2->m[0][1] * lerp2;
+			m.m[0][2] = bone1->m[0][2] * lerp1 + bone2->m[0][2] * lerp2;
+			m.m[0][3] = bone1->m[0][3] * lerp1 + bone2->m[0][3] * lerp2;
+			m.m[1][0] = bone1->m[1][0] * lerp1 + bone2->m[1][0] * lerp2;
+			m.m[1][1] = bone1->m[1][1] * lerp1 + bone2->m[1][1] * lerp2;
+			m.m[1][2] = bone1->m[1][2] * lerp1 + bone2->m[1][2] * lerp2;
+			m.m[1][3] = bone1->m[1][3] * lerp1 + bone2->m[1][3] * lerp2;
+			m.m[2][0] = bone1->m[2][0] * lerp1 + bone2->m[2][0] * lerp2;
+			m.m[2][1] = bone1->m[2][1] * lerp1 + bone2->m[2][1] * lerp2;
+			m.m[2][2] = bone1->m[2][2] * lerp1 + bone2->m[2][2] * lerp2;
+			m.m[2][3] = bone1->m[2][3] * lerp1 + bone2->m[2][3] * lerp2;
+			if (bone->parent >= 0)
+				R_ConcatTransforms(&zymbonepose[bone->parent].m[0], &m.m[0], &out->m[0]);
+			else
+				R_ConcatTransforms(&rootmatrix.m[0], &m.m[0], &out->m[0]);
+			bone1++;
+			bone2++;
+			bone++;
+			out++;
+		}
+	}
+	else // no interpolation
+	{
+		while(count--)
+		{
+			if (bone->parent >= 0)
+				R_ConcatTransforms(&zymbonepose[bone->parent].m[0], &bone1->m[0], &out->m[0]);
+			else
+				R_ConcatTransforms(&rootmatrix.m[0], &bone1->m[0], &out->m[0]);
+			bone1++;
+			bone++;
+			out++;
+		}
+	}
+}
+
+void ZymoticTransformVerts(int vertcount, int *bonecounts, zymvertex_t *vert)
+{
+	int c;
+	float *out = aliasvert;
+	zymbonematrix *matrix;
+	while(vertcount--)
+	{
+		c = *bonecounts++;
+		if (c == 1)
+		{
+			matrix = &zymbonepose[vert->bonenum];
+			out[0] = vert->origin[0] * matrix->m[0][0] + vert->origin[1] * matrix->m[0][1] + vert->origin[2] * matrix->m[0][2] + matrix->m[0][3];
+			out[1] = vert->origin[0] * matrix->m[1][0] + vert->origin[1] * matrix->m[1][1] + vert->origin[2] * matrix->m[1][2] + matrix->m[1][3];
+			out[2] = vert->origin[0] * matrix->m[2][0] + vert->origin[1] * matrix->m[2][1] + vert->origin[2] * matrix->m[2][2] + matrix->m[2][3];
+			vert++;
+		}
+		else
+		{
+			VectorClear(out);
+			while(c--)
+			{
+				matrix = &zymbonepose[vert->bonenum];
+				out[0] += vert->origin[0] * matrix->m[0][0] + vert->origin[1] * matrix->m[0][1] + vert->origin[2] * matrix->m[0][2] + matrix->m[0][3];
+				out[1] += vert->origin[0] * matrix->m[1][0] + vert->origin[1] * matrix->m[1][1] + vert->origin[2] * matrix->m[1][2] + matrix->m[1][3];
+				out[2] += vert->origin[0] * matrix->m[2][0] + vert->origin[1] * matrix->m[2][1] + vert->origin[2] * matrix->m[2][2] + matrix->m[2][3];
+				vert++;
+			}
+		}
+		out += 3;
+	}
+}
+
+float ixtable[4096];
+
+void ZymoticCalcNormals(int vertcount, int shadercount, int *renderlist)
+{
+	int a, b, c, d;
+	float *out, v1[3], v2[3], normal[3];
+	int *u;
+	if (!ixtable[1])
+	{
+		ixtable[0] = 0;
+		for (a = 1;a < 4096;a++)
+			ixtable[a] = 1.0f / a;
+	}
+	// clear normals
+	memset(aliasvertnorm, 0, sizeof(float[3]) * vertcount);
+	memset(aliasvertusage, 0, sizeof(int) * vertcount);
+	// parse render list and accumulate surface normals
+	while(shadercount--)
+	{
+		d = *renderlist++;
+		while (d--)
+		{
+			a = renderlist[0]*3;
+			b = renderlist[1]*3;
+			c = renderlist[2]*3;
+			v1[0] = aliasvert[a+0] - aliasvert[b+0];
+			v1[1] = aliasvert[a+1] - aliasvert[b+1];
+			v1[2] = aliasvert[a+2] - aliasvert[b+2];
+			v2[0] = aliasvert[c+0] - aliasvert[b+0];
+			v2[1] = aliasvert[c+1] - aliasvert[b+1];
+			v2[2] = aliasvert[c+2] - aliasvert[b+2];
+			CrossProduct(v1, v2, normal);
+			VectorNormalize(normal);
+			// add surface normal to vertices
+			aliasvertnorm[a+0] += normal[0];
+			aliasvertnorm[a+1] += normal[1];
+			aliasvertnorm[a+2] += normal[2];
+			aliasvertusage[a]++;
+			aliasvertnorm[b+0] += normal[0];
+			aliasvertnorm[b+1] += normal[1];
+			aliasvertnorm[b+2] += normal[2];
+			aliasvertusage[b]++;
+			aliasvertnorm[c+0] += normal[0];
+			aliasvertnorm[c+1] += normal[1];
+			aliasvertnorm[c+2] += normal[2];
+			aliasvertusage[c]++;
+			renderlist += 3;
+		}
+	}
+	// average surface normals
+	out = aliasvertnorm;
+	u = aliasvertusage;
+	while(vertcount--)
+	{
+		if (*u > 1)
+		{
+			a = ixtable[*u];
+			out[0] *= a;
+			out[1] *= a;
+			out[2] *= a;
+		}
+		u++;
+		out += 3;
+	}
+}
+
+void GL_DrawZymoticModelMesh(byte *colors, zymtype1header_t *m)
+{
+	int i, c, *renderlist, *texturenum;
+	if (!r_render.value)
+		return;
+	renderlist = (int *)(m->lump_render.start + (int) m);
+	texturenum = (int *)(m->lump_shaders.start + (int) m);
+	if (gl_vertexarrays.value)
+	{
+		qglVertexPointer(3, GL_FLOAT, 0, aliasvert);
+		glEnableClientState(GL_VERTEX_ARRAY);
+
+		qglColorPointer(4, GL_UNSIGNED_BYTE, 0, colors);
+		glEnableClientState(GL_COLOR_ARRAY);
+
+		qglTexCoordPointer(2, GL_FLOAT, 0, (float *)(m->lump_texcoords.start + (int) m));
+		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+		for (i = 0;i < m->numshaders;i++)
+		{
+			c = (*renderlist++) * 3;
+			glBindTexture(GL_TEXTURE_2D, *texturenum++);
+			qglDrawElements(GL_TRIANGLES, c, GL_UNSIGNED_INT, renderlist);
+			renderlist += c;
+		}
+
+		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+
+		glDisableClientState(GL_COLOR_ARRAY);
+
+		glDisableClientState(GL_VERTEX_ARRAY);
+	}
+	else
+	{
+		int index;
+		float *tex;
+		tex = (float *)(m->lump_texcoords.start + (int) m);
+
+		for (i = 0;i < m->numshaders;i++)
+		{
+			c = *renderlist++;
+			glBindTexture(GL_TEXTURE_2D, *texturenum++);
+			glBegin(GL_TRIANGLES);
+			while (c--)
+			{
+				index = *renderlist++;
+				glTexCoord2fv(tex + index*2);
+				glColor4ubv(colors + index*4);
+				glVertex3fv(aliasvert + index*3);
+				index = *renderlist++;
+				glTexCoord2fv(tex + index*2);
+				glColor4ubv(colors + index*4);
+				glVertex3fv(aliasvert + index*3);
+				index = *renderlist++;
+				glTexCoord2fv(tex + index*2);
+				glColor4ubv(colors + index*4);
+				glVertex3fv(aliasvert + index*3);
+			}
+			glEnd();
+		}
+	}
+}
+
+void GL_DrawZymoticModelMeshFog(vec3_t org, zymtype1header_t *m)
+{
+	vec3_t diff;
+	int i, c, *renderlist;
+	if (!r_render.value)
+		return;
+	renderlist = (int *)(m->lump_render.start + (int) m);
+	glDisable(GL_TEXTURE_2D);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable (GL_BLEND);
+	glDepthMask(0); // disable zbuffer updates
+
+	VectorSubtract(org, r_refdef.vieworg, diff);
+	glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], exp(fogdensity/DotProduct(diff,diff)));
+	if (gl_vertexarrays.value)
+	{
+		qglVertexPointer(3, GL_FLOAT, 0, aliasvert);
+		glEnableClientState(GL_VERTEX_ARRAY);
+
+		for (i = 0;i < m->numshaders;i++)
+		{
+			c = (*renderlist++) * 3;
+			qglDrawElements(GL_TRIANGLES, c, GL_UNSIGNED_INT, renderlist);
+			renderlist += c;
+		}
+
+		glDisableClientState(GL_VERTEX_ARRAY);
+	}
+	else
+	{
+		int index;
+		float *tex;
+		tex = (float *)(m->lump_texcoords.start + (int) m);
+
+		glBegin(GL_TRIANGLES);
+		for (i = 0;i < m->numshaders;i++)
+		{
+			c = *renderlist++;
+			while (c--)
+			{
+				index = *renderlist++;
+				glVertex3fv(aliasvert + index*3);
+				index = *renderlist++;
+				glVertex3fv(aliasvert + index*3);
+				index = *renderlist++;
+				glVertex3fv(aliasvert + index*3);
+			}
+		}
+		glEnd();
+	}
+	glEnable(GL_TEXTURE_2D);
+	glColor3f (1,1,1);
+}
+
+void GL_DrawZymoticModelMeshShadow(zymtype1header_t *m)
+{
+	int i, c, *renderlist;
+	float *av, l;
+	if (!r_render.value)
+		return;
+
+	// flatten it to make a shadow
+	av = aliasvert + 2;
+	l = lightspot[2] + 0.125;
+	for (i = 0;i < m->numverts;i++, av+=3)
+		if (*av > l)
+			*av = l;
+
+	renderlist = (int *)(m->lump_render.start + (int) m);
+	glDisable(GL_TEXTURE_2D);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable (GL_BLEND);
+	glDepthMask(0); // disable zbuffer updates
+
+	glColor4f(0.0f, 0.0f, 0.0f, 0.5f);
+	if (gl_vertexarrays.value)
+	{
+		qglVertexPointer(3, GL_FLOAT, 0, aliasvert);
+		glEnableClientState(GL_VERTEX_ARRAY);
+
+		for (i = 0;i < m->numshaders;i++)
+		{
+			c = (*renderlist++) * 3;
+			qglDrawElements(GL_TRIANGLES, c, GL_UNSIGNED_INT, renderlist);
+			renderlist += c;
+		}
+
+		glDisableClientState(GL_VERTEX_ARRAY);
+	}
+	else
+	{
+		int index;
+		float *tex;
+		tex = (float *)(m->lump_texcoords.start + (int) m);
+
+		glBegin(GL_TRIANGLES);
+		for (i = 0;i < m->numshaders;i++)
+		{
+			c = *renderlist++;
+			while (c--)
+			{
+				index = *renderlist++;
+				glVertex3fv(aliasvert + index*3);
+				index = *renderlist++;
+				glVertex3fv(aliasvert + index*3);
+				index = *renderlist++;
+				glVertex3fv(aliasvert + index*3);
+			}
+		}
+		glEnd();
+	}
+	glEnable(GL_TEXTURE_2D);
+	glColor3f (1,1,1);
+}
+
+/*
+=================
+R_DrawZymoticFrame
+=================
+*/
+void R_DrawZymoticFrame (zymtype1header_t *m, float alpha, vec3_t color, entity_t *ent, int shadow, vec3_t org, vec3_t angles, int frame, int skinblah, int effects, int flags)
+{
+	zymscene_t *scene;
+	float scenetime, scenefrac;
+	int sceneframe1, sceneframe2;
+	zymbonematrix *basebonepose;
+	if ((frame >= m->numscenes) || (frame < 0))
+	{
+		Con_DPrintf ("R_ZymoticSetupFrame: no such frame %d\n", frame);
+		frame = 0;
+	}
+
+	scene = (zymscene_t *)(m->lump_scenes.start + (int) m) + frame;
+	if (ent->draw_lastmodel != ent->model || ent->draw_pose != frame || ent->draw_lerpstart >= cl.time)
+	{
+		ent->draw_lastmodel = ent->model;
+		ent->draw_lastpose = -1;
+		ent->draw_pose = frame;
+		ent->draw_lerpstart = cl.time;
+	}
+	scenetime = (cl.time - ent->draw_lerpstart) * scene->framerate;
+	sceneframe1 = (int) scenetime;
+	sceneframe2 = sceneframe1 + 1;
+	scenefrac = scenetime - sceneframe1;
+	if (scene->flags & ZYMSCENEFLAG_NOLOOP)
+	{
+		if (sceneframe1 > (scene->length - 1))
+			sceneframe1 = (scene->length - 1);
+		if (sceneframe2 > (scene->length - 1))
+			sceneframe2 = (scene->length - 1);
+	}
+	else
+	{
+		sceneframe1 %= scene->length;
+		sceneframe2 %= scene->length;
+	}
+	if (sceneframe2 == sceneframe1)
+		scenefrac = 0;
+
+	basebonepose = (zymbonematrix *)(m->lump_poses.start + (int) m);
+	ZymoticLerpBones(m->numbones, scenefrac, basebonepose + sceneframe1 * m->numbones, basebonepose + sceneframe2 * m->numbones, (zymbone_t *)(m->lump_bones.start + (int) m), org, angles);
+	ZymoticTransformVerts(m->numverts, (int *)(m->lump_vertbonecounts.start + (int) m), (zymvertex_t *)(m->lump_verts.start + (int) m));
+	ZymoticCalcNormals(m->numverts, m->numshaders, (int *)(m->lump_render.start + (int) m));
+
+	R_LightModel(m->numverts, org, color);
+
+	if (!r_render.value)
+		return;
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	glShadeModel(GL_SMOOTH);
+	if (effects & EF_ADDITIVE)
+	{
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE); // additive rendering
+		glEnable(GL_BLEND);
+		glDepthMask(0);
+	}
+	else if (alpha != 1.0)
+	{
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glEnable(GL_BLEND);
+		glDepthMask(0);
+	}
+	else
+	{
+		glDisable(GL_BLEND);
+		glDepthMask(1);
+	}
+
+	GL_DrawZymoticModelMesh(aliasvertcolor, m);
+
+	if (fogenabled)
+		GL_DrawZymoticModelMeshFog(org, m);
+
+	if (!fogenabled && r_shadows.value && !(effects & EF_ADDITIVE) && shadow)
+		GL_DrawZymoticModelMeshShadow(m);
+
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable (GL_BLEND);
+	glDepthMask(1);
+}
+
 int modeldlightbits[8];
 extern int r_dlightframecount;
 
@@ -633,7 +1123,7 @@ R_DrawAliasModel
 
 =================
 */
-void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, int frame, int skin, vec3_t org, int effects, int flags, int colormap)
+void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, int frame, int skin, vec3_t org, vec3_t angles, int effects, int flags, int colormap)
 {
 	int			i;
 	vec3_t		mins, maxs, color;
@@ -699,8 +1189,10 @@ void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, i
 		glEnable (GL_TEXTURE_2D);
 
 	c_alias_polys += clmodel->numtris;
-	if (clmodel->aliastype == ALIASTYPE_MD2)
-		R_DrawQ2AliasFrame (modelheader, alpha, color, ent, ent != &cl.viewent, org, frame, skinset[0], effects, flags);
+	if (clmodel->aliastype == ALIASTYPE_ZYM)
+		R_DrawZymoticFrame (modelheader, alpha, color, ent, ent != &cl.viewent, org, angles, frame, 0, effects, flags);
+	else if (clmodel->aliastype == ALIASTYPE_MD2)
+		R_DrawQ2AliasFrame (modelheader, alpha, color, ent, ent != &cl.viewent, org, angles, frame, skinset[0], effects, flags);
 	else
-		R_DrawAliasFrame (modelheader, alpha, color, ent, ent != &cl.viewent, org, frame, skinset, colormap, effects, flags);
+		R_DrawAliasFrame (modelheader, alpha, color, ent, ent != &cl.viewent, org, angles, frame, skinset, colormap, effects, flags);
 }

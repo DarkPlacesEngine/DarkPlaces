@@ -13,6 +13,9 @@ typedef struct
 } dlight_t;
 
 // LordHavoc: this affects the lighting scale of the whole game
-#define LIGHTOFFSET 16384.0f
-#define LIGHTSCALE 4.0f
-#define LIGHTSCALE2 4.0f
+//#define LIGHTOFFSET 16384.0f
+//#define LIGHTSCALE1 2.0f
+#define LIGHTOFFSET 4096.0f
+#define LIGHTSCALE1 1.0f
+#define LIGHTSCALE (LIGHTSCALE1*LIGHTSCALE1)
+#define LIGHTSCALE2 LIGHTSCALE
