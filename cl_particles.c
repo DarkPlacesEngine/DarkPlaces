@@ -180,7 +180,7 @@ float CL_TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int 
 
 typedef enum
 {
-	pt_dead, pt_static, pt_rain, pt_bubble, pt_blood, pt_grow, pt_decal, pt_ember
+	pt_dead, pt_static, pt_rain, pt_raindecal, pt_snow, pt_bubble, pt_blood, pt_grow, pt_decal, pt_ember
 }
 ptype_t;
 
@@ -954,11 +954,11 @@ void CL_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int color
 			k = particlepalette[colorbase + (rand()&3)];
 			if (gamemode == GAME_GOODVSBAD2)
 			{
-				particle(pt_rain, PARTICLE_SPARK, k, k, tex_particle, true, PBLEND_ADD, 20, 20, lhrandom(8, 16) / cl_particles_quality.value, 0, t, 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], cl.time + 9999, dir[0], dir[1], dir[2], 0, 0);
+				particle(pt_rain, PARTICLE_SPARK, k, k, tex_particle, true, PBLEND_ADD, 20, 20, lhrandom(8, 16) / cl_particles_quality.value, 0, t, 0, -1, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], cl.time + 9999, dir[0], dir[1], dir[2], 0, 0);
 			}
 			else
 			{
-				particle(pt_rain, PARTICLE_SPARK, k, k, tex_particle, true, PBLEND_ADD, 0.5, 0.02, lhrandom(8, 16) / cl_particles_quality.value, 0, t, 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], cl.time + 9999, dir[0], dir[1], dir[2], 0, 0);
+				particle(pt_rain, PARTICLE_SPARK, k, k, tex_particle, true, PBLEND_ADD, 0.5, 0.02, lhrandom(8, 16) / cl_particles_quality.value, 0, t, 0, -1, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], cl.time + 9999, dir[0], dir[1], dir[2], 0, 0);
 			}
 		}
 		break;
@@ -968,11 +968,11 @@ void CL_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int color
 			k = particlepalette[colorbase + (rand()&3)];
 			if (gamemode == GAME_GOODVSBAD2)
 			{
-				particle(pt_rain, PARTICLE_BILLBOARD, k, k, tex_particle, false, PBLEND_ADD, 20, 20, lhrandom(64, 128) / cl_particles_quality.value, 0, t, 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], 0, dir[0], dir[1], dir[2], 0, 0);
+				particle(pt_snow, PARTICLE_BILLBOARD, k, k, tex_particle, false, PBLEND_ADD, 20, 20, lhrandom(64, 128) / cl_particles_quality.value, 0, t, 0, -1, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], 0, dir[0], dir[1], dir[2], 0, 0);
 			}
 			else
 			{
-				particle(pt_rain, PARTICLE_BILLBOARD, k, k, tex_particle, false, PBLEND_ADD, 1, 1, lhrandom(64, 128) / cl_particles_quality.value, 0, t, 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], 0, dir[0], dir[1], dir[2], 0, 0);
+				particle(pt_snow, PARTICLE_BILLBOARD, k, k, tex_particle, false, PBLEND_ADD, 1, 1, lhrandom(64, 128) / cl_particles_quality.value, 0, t, 0, -1, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], 0, dir[0], dir[1], dir[2], 0, 0);
 			}
 		}
 		break;
@@ -1331,12 +1331,36 @@ void CL_MoveParticles (void)
 		VectorCopy(p->org, org);
 		if (p->bounce)
 		{
-			if (CL_TraceLine(p->oldorg, p->org, v, normal, true, &hitent, SUPERCONTENTS_SOLID) < 1)
+			if (p->type == pt_rain)
 			{
-				VectorCopy(v, p->org);
-				if (p->bounce < 0)
+				// raindrop - splash on solid/water/slime/lava
+				if (CL_TraceLine(p->oldorg, p->org, v, normal, true, &hitent, SUPERCONTENTS_SOLID | SUPERCONTENTS_LIQUIDSMASK) < 1)
 				{
-					// assume it's blood (lame, but...)
+					VectorCopy(v, p->org);
+					// splash
+					p->type = pt_raindecal;
+					p->orientation = PARTICLE_ORIENTED_DOUBLESIDED;
+					// convert from a raindrop particle to a rainsplash decal
+					p->texnum = tex_rainsplash[0];
+					p->time2 = cl.time;
+					p->die = p->time2 + 0.4;
+					p->alphafade = p->alpha / 0.4;
+					VectorCopy(normal, p->vel2);
+					VectorClear(p->vel);
+					VectorAdd(p->org, normal, p->org);
+					p->bounce = 0;
+					p->friction = 0;
+					p->gravity = 0;
+					p->scalex = 8.0;
+					p->scaley = 8.0;
+				}
+			}
+			else if (p->type == pt_blood)
+			{
+				// blood - splash on solid
+				if (CL_TraceLine(p->oldorg, p->org, v, normal, true, &hitent, SUPERCONTENTS_SOLID) < 1)
+				{
+					VectorCopy(v, p->org);
 #ifndef WORKINGLQUAKE
 					if (cl_stainmaps.integer)
 						R_Stain(v, 32, 32, 16, 16, p->alpha * p->scalex * (1.0f / 40.0f), 192, 48, 48, p->alpha * p->scalex * (1.0f / 40.0f));
@@ -1370,12 +1394,24 @@ void CL_MoveParticles (void)
 					p->scalex *= 2.0f;
 					p->scaley *= 2.0f;
 				}
-				else
+			}
+			else
+			{
+				if (CL_TraceLine(p->oldorg, p->org, v, normal, true, &hitent, SUPERCONTENTS_SOLID) < 1)
 				{
-					dist = DotProduct(p->vel, normal) * -p->bounce;
-					VectorMA(p->vel, dist, normal, p->vel);
-					if (DotProduct(p->vel, p->vel) < 0.03)
-						VectorClear(p->vel);
+					VectorCopy(v, p->org);
+					if (p->bounce < 0)
+					{
+						p->type = pt_dead;
+						continue;
+					}
+					else
+					{
+						dist = DotProduct(p->vel, normal) * -p->bounce;
+						VectorMA(p->vel, dist, normal, p->vel);
+						if (DotProduct(p->vel, p->vel) < 0.03)
+							VectorClear(p->vel);
+					}
 				}
 			}
 		}
@@ -1433,6 +1469,13 @@ void CL_MoveParticles (void)
 				}
 				break;
 			case pt_rain:
+				if (!content)
+					content = CL_PointQ1Contents(p->org);
+				a = content;
+				if (a != CONTENTS_EMPTY && a != CONTENTS_SKY)
+					p->type = pt_dead;
+				break;
+			case pt_snow:
 				if (cl.time > p->time2)
 				{
 					// snow flutter
@@ -1462,6 +1505,13 @@ void CL_MoveParticles (void)
 				else
 					p->type = pt_dead;
 #endif
+				break;
+			case pt_raindecal:
+				a = max(0, (cl.time - p->time2) * 40);
+				if (a < 16)
+					p->texnum = tex_rainsplash[a];
+				else
+					p->type = pt_dead;
 				break;
 			case pt_ember:
 				while (cl.time > p->time2)
