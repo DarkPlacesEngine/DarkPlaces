@@ -827,6 +827,7 @@ Host_Init
 */
 void Host_Init ()
 {
+	int i;
 	/*
 	if (standard_quake)
 		minimum_memory = MINIMUM_MEMORY;
@@ -839,6 +840,24 @@ void Host_Init ()
 	if (host_parms.memsize < minimum_memory)
 		Sys_Error ("Only %4.1f megs of memory available, can't execute game", host_parms.memsize / (float)0x100000);
 	*/
+
+	host_parms.memsize = DEFAULTMEM * 1024 * 1024;
+
+	i = COM_CheckParm("-mem");
+	if (i)
+		host_parms.memsize = (int) (atof(com_argv[i+1]) * 1024 * 1024);
+
+	i = COM_CheckParm("-winmem");
+	if (i)
+		host_parms.memsize = (int) (atof(com_argv[i+1]) * 1024 * 1024);
+
+	i = COM_CheckParm("-heapsize");
+	if (i)
+		host_parms.memsize = (int) (atof(com_argv[i+1]) * 1024);
+
+	host_parms.membase = qmalloc(host_parms.memsize);
+	if (!host_parms.membase)
+		Sys_Error("Not enough memory free, close some programs and try again, or free disk space\n");
 
 	com_argc = host_parms.argc;
 	com_argv = host_parms.argv;
@@ -926,7 +945,7 @@ void Host_Shutdown(void)
 
 	if (cls.state != ca_dedicated)
 	{
-		R_ShutdownModules();
+		R_Modules_Shutdown();
 		VID_Shutdown();
 	}
 }

@@ -378,6 +378,10 @@ void gl_screen_shutdown()
 {
 }
 
+void gl_screen_newmap()
+{
+}
+
 /*
 ==================
 SCR_Init
@@ -409,7 +413,7 @@ void GL_Screen_Init (void)
 
 	scr_initialized = true;
 
-	R_RegisterModule("GL_Screen", gl_screen_start, gl_screen_shutdown);
+	R_RegisterModule("GL_Screen", gl_screen_start, gl_screen_shutdown, gl_screen_newmap);
 }
 
 
@@ -940,13 +944,14 @@ void SCR_UpdateScreen (void)
 
 	if (r_speeds2.value)
 	{
-		extern char r_speeds2_string1[81], r_speeds2_string2[81], r_speeds2_string3[81], r_speeds2_string4[81], r_speeds2_string5[81], r_speeds2_string6[81];
-		Draw_String(0, vid.height - sb_lines - 48, r_speeds2_string1, 80);
-		Draw_String(0, vid.height - sb_lines - 40, r_speeds2_string2, 80);
-		Draw_String(0, vid.height - sb_lines - 32, r_speeds2_string3, 80);
-		Draw_String(0, vid.height - sb_lines - 24, r_speeds2_string4, 80);
-		Draw_String(0, vid.height - sb_lines - 16, r_speeds2_string5, 80);
-		Draw_String(0, vid.height - sb_lines -  8, r_speeds2_string6, 80);
+		extern char r_speeds2_string1[81], r_speeds2_string2[81], r_speeds2_string3[81], r_speeds2_string4[81], r_speeds2_string5[81], r_speeds2_string6[81], r_speeds2_string7[81];
+		Draw_String(0, vid.height - sb_lines - 56, r_speeds2_string1, 80);
+		Draw_String(0, vid.height - sb_lines - 48, r_speeds2_string2, 80);
+		Draw_String(0, vid.height - sb_lines - 40, r_speeds2_string3, 80);
+		Draw_String(0, vid.height - sb_lines - 32, r_speeds2_string4, 80);
+		Draw_String(0, vid.height - sb_lines - 24, r_speeds2_string5, 80);
+		Draw_String(0, vid.height - sb_lines - 16, r_speeds2_string6, 80);
+		Draw_String(0, vid.height - sb_lines -  8, r_speeds2_string7, 80);
 	}
 
 	V_UpdateBlends ();

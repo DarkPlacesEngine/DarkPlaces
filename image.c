@@ -630,3 +630,23 @@ void Image_WriteTGARGBA (char *filename, int width, int height, byte *data)
 
 	qfree(buffer);
 }
+
+qboolean Image_CheckAlpha(byte *data, int size, qboolean rgba)
+{
+	byte *end;
+	if (rgba)
+	{
+		// check alpha bytes
+		for (end = data + size * 4, data += 3;data < end;data += 4)
+			if (*data < 255)
+				return 1;
+	}
+	else
+	{
+		// color 255 is transparent
+		for (end = data + size;data < end;data++)
+			if (*data == 255)
+				return 1;
+	}
+	return 0;
+}

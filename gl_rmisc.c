@@ -136,6 +136,10 @@ void gl_misc_shutdown()
 {
 }
 
+void gl_misc_newmap()
+{
+}
+
 /*
 ===============
 R_Init
@@ -146,7 +150,7 @@ void GL_Misc_Init (void)
 	Cmd_AddCommand ("envmap", R_Envmap_f);	
 	Cmd_AddCommand ("timerefresh", R_TimeRefresh_f);	
 
-	R_RegisterModule("GL_Misc", gl_misc_start, gl_misc_shutdown);
+	R_RegisterModule("GL_Misc", gl_misc_start, gl_misc_shutdown, gl_misc_newmap);
 }
 
 void R_ClearParticles (void);
@@ -175,7 +179,7 @@ void R_NewMap (void)
 		cl.worldmodel->leafs[i].efrags = NULL;
 		 	
 	r_viewleaf = NULL;
-	R_ClearParticles ();
+	R_Modules_NewMap();
 
 	GL_BuildLightmaps ();
 

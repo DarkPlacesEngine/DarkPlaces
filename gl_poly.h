@@ -18,7 +18,7 @@ extern void skypolybegin();
 extern void skypolyvert(float x, float y, float z);
 extern void skypolyend();
 
-#define MAX_TRANSPOLYS 8192
+#define MAX_TRANSPOLYS 65536
 #define MAX_TRANSVERTS (MAX_TRANSPOLYS*4)
 #define MAX_WALLPOLYS 65536
 #define MAX_WALLVERTS (MAX_WALLPOLYS*3)

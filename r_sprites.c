@@ -56,7 +56,7 @@ void R_DrawSpriteModel (entity_t *e, frameblend_t *blend)
 		color[2] = e->colormod[2] * 255;
 	}
 	else
-		R_CompleteLightPoint(color, e->origin);
+		R_CompleteLightPoint(color, e->origin, true);
 
 	colorub[0] = bound(0, color[0], 255);
 	colorub[1] = bound(0, color[1], 255);

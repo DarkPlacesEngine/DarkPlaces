@@ -49,6 +49,7 @@ void gl_poly_start()
 	for (i = 1;i < 256;i++)
 		transreciptable[i] = 1.0f / i;
 }
+
 void gl_poly_shutdown()
 {
 	qfree(transvert);
@@ -61,10 +62,14 @@ void gl_poly_shutdown()
 	qfree(skypoly);
 }
 
+void gl_poly_newmap()
+{
+}
+
 void GL_Poly_Init()
 {
 	Cvar_RegisterVariable (&gl_multitexture);
-	R_RegisterModule("GL_Poly", gl_poly_start, gl_poly_shutdown);
+	R_RegisterModule("GL_Poly", gl_poly_start, gl_poly_shutdown, gl_poly_newmap);
 }
 
 void transpolyclear()
@@ -786,7 +791,7 @@ extern char skyname[];
 extern rtexture_t *solidskytexture, *alphaskytexture;
 void skypolyrender()
 {
-	int i, j, numskyverts;
+	int i, j;
 	skypoly_t *p;
 	skyvert_t *vert;
 	float length, speedscale;
@@ -805,9 +810,9 @@ void skypolyrender()
 	if (!fogenabled && !skyname[0]) // normal quake sky
 	{
 		glInterleavedArrays(GL_T2F_V3F, 0, skyvert);
-//		glTexCoordPointer(2, GL_FLOAT, sizeof(skyvert_t) - sizeof(float) * 2, &skyvert[0].tex[0]);
+//		glTexCoordPointer(2, GL_FLOAT, sizeof(skyvert_t), &skyvert[0].tex[0]);
 //		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-//		glVertexPointer(3, GL_FLOAT, sizeof(skyvert_t) - sizeof(float) * 3, &skyvert[0].v[0]);
+//		glVertexPointer(3, GL_FLOAT, sizeof(skyvert_t), &skyvert[0].v[0]);
 //		glEnableClientState(GL_VERTEX_ARRAY);
 		if(lighthalf)
 			glColor3f(0.5f, 0.5f, 0.5f);
@@ -820,7 +825,6 @@ void skypolyrender()
 		glBindTexture(GL_TEXTURE_2D, R_GetTexture(solidskytexture)); // upper clouds
 		speedscale = cl.time*8;
 		speedscale -= (int)speedscale & ~127 ;
-		numskyverts = 0;
 		for (i = 0, p = &skypoly[0];i < currentskypoly;i++, p++)
 		{
 			vert = skyvert + p->firstvert;
@@ -836,9 +840,8 @@ void skypolyrender()
 				vert->tex[0] = (speedscale + dir[0] * length) * (1.0/128);
 				vert->tex[1] = (speedscale + dir[1] * length) * (1.0/128);
 			}
-			numskyverts += p->verts;
 		}
-		GL_LockArray(0, numskyverts);
+		GL_LockArray(0, currentskyvert);
 		for (i = 0, p = &skypoly[0];i < currentskypoly;i++, p++)
 			glDrawArrays(GL_POLYGON, p->firstvert, p->verts);
 		GL_UnlockArray();
@@ -863,7 +866,7 @@ void skypolyrender()
 				vert->tex[1] = (speedscale + dir[1] * length) * (1.0/128);
 			}
 		}
-		GL_LockArray(0, numskyverts);
+		GL_LockArray(0, currentskyvert);
 		for (i = 0, p = &skypoly[0];i < currentskypoly;i++, p++)
 			glDrawArrays(GL_POLYGON, p->firstvert, p->verts);
 		GL_UnlockArray();
@@ -875,15 +878,12 @@ void skypolyrender()
 	}
 	else
 	{
-		glVertexPointer(3, GL_FLOAT, sizeof(skyvert_t) - sizeof(float) * 3, &skyvert[0].v[0]);
+		glVertexPointer(3, GL_FLOAT, sizeof(skyvert_t), &skyvert[0].v[0]);
 		glEnableClientState(GL_VERTEX_ARRAY);
 		glDisable(GL_TEXTURE_2D);
 		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 		glColor3fv(fogcolor); // note: gets rendered over by skybox if fog is not enabled
-		numskyverts = 0;
-		for (i = 0, p = &skypoly[0];i < currentskypoly;i++, p++)
-			numskyverts += p->verts;
-		GL_LockArray(0, numskyverts);
+		GL_LockArray(0, currentskyvert);
 		for (i = 0, p = &skypoly[0];i < currentskypoly;i++, p++)
 			glDrawArrays(GL_POLYGON, p->firstvert, p->verts);
 		GL_UnlockArray();

@@ -127,10 +127,9 @@ void CL_ParseTEnt (void)
 	vec3_t	pos;
 	vec3_t	dir;
 	vec3_t	pos2;
-	dlight_t	*dl;
 	int		rnd;
 	int		colorStart, colorLength, count;
-	float	velspeed;
+	float	velspeed, radius;
 	byte *tempcolor;
 
 	type = MSG_ReadByte ();
@@ -171,12 +170,7 @@ void CL_ParseTEnt (void)
 		// LordHavoc: changed to spark shower
 		R_SparkShower(pos, vec3_origin, 15);
 		//R_RunParticleEffect (pos, vec3_origin, 0, 10);
-		dl = CL_AllocDlight (0);
-		VectorCopy (pos, dl->origin);
-		dl->radius = 200;
-		dl->die = cl.time + 0.2;
-		dl->decay = 1000;
-		dl->color[0] = 0.05;dl->color[1] = 0.05;dl->color[2] = 0.8;
+		CL_AllocDlight (NULL, pos, 200, 0.1f, 0.1f, 1.0f, 1000, 0.2);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		if ( rand() % 5 )
 			S_StartSound (-1, 0, cl_sfx_tink1, pos, 1, 1);
@@ -214,12 +208,7 @@ void CL_ParseTEnt (void)
 		// LordHavoc: changed to dust shower
 		R_SparkShower(pos, vec3_origin, 30);
 		//R_RunParticleEffect (pos, vec3_origin, 0, 20);
-		dl = CL_AllocDlight (0);
-		VectorCopy (pos, dl->origin);
-		dl->radius = 200;
-		dl->die = cl.time + 0.2;
-		dl->decay = 1000;
-		dl->color[0] = 0.05;dl->color[1] = 0.05;dl->color[2] = 0.8;
+		CL_AllocDlight (NULL, pos, 200, 0.1f, 0.1f, 1.0f, 1000, 0.2);
 		if ( rand() % 5 )
 			S_StartSound (-1, 0, cl_sfx_tink1, pos, 1, 1);
 		else
@@ -301,12 +290,7 @@ void CL_ParseTEnt (void)
 	case TE_GUNSHOTQUAD:			// quad bullet hitting wall
 		MSG_ReadVector(pos);
 		R_SparkShower(pos, vec3_origin, 15);
-		dl = CL_AllocDlight (0);
-		VectorCopy (pos, dl->origin);
-		dl->radius = 200;
-		dl->die = cl.time + 0.2;
-		dl->decay = 1000;
-		dl->color[0] = 0.05;dl->color[1] = 0.05;dl->color[2] = 0.8;
+		CL_AllocDlight (NULL, pos, 200, 0.1f, 0.1f, 1.0f, 1000, 0.2);
 		break;
 
 	case TE_EXPLOSION:			// rocket explosion
@@ -314,12 +298,7 @@ void CL_ParseTEnt (void)
 		FindNonSolidLocation(pos);
 		R_ParticleExplosion (pos, false);
 //		R_BlastParticles (pos, 120, 120);
-		dl = CL_AllocDlight (0);
-		VectorCopy (pos, dl->origin);
-		dl->radius = 350;
-		dl->die = cl.time + 0.5;
-		dl->decay = 700;
-		dl->color[0] = 1.0;dl->color[1] = 0.8;dl->color[2] = 0.4;
+		CL_AllocDlight (NULL, pos, 350, 1.0f, 0.8f, 0.4f, 700, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
@@ -328,12 +307,7 @@ void CL_ParseTEnt (void)
 		FindNonSolidLocation(pos);
 		R_ParticleExplosion (pos, false);
 //		R_BlastParticles (pos, 120, 480);
-		dl = CL_AllocDlight (0);
-		VectorCopy (pos, dl->origin);
-		dl->radius = 600;
-		dl->die = cl.time + 0.5;
-		dl->decay = 1200;
-		dl->color[0] = 0.5;dl->color[1] = 0.4;dl->color[2] = 1.0;
+		CL_AllocDlight (NULL, pos, 600, 0.5f, 0.4f, 1.0f, 1200, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
@@ -342,12 +316,7 @@ void CL_ParseTEnt (void)
 		MSG_ReadVector(pos);
 		FindNonSolidLocation(pos);
 		R_ParticleExplosion (pos, true);
-		dl = CL_AllocDlight (0);
-		VectorCopy (pos, dl->origin);
-		dl->radius = 350;
-		dl->die = cl.time + 0.5;
-		dl->decay = 300;
-		dl->color[0] = 1.0;dl->color[1] = 0.8;dl->color[2] = 0.4;
+		CL_AllocDlight (NULL, pos, 350, 1.0f, 0.8f, 0.4f, 700, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 		*/
@@ -357,12 +326,7 @@ void CL_ParseTEnt (void)
 		FindNonSolidLocation(pos);
 		R_ParticleExplosion (pos, false);
 //		R_BlastParticles (pos, 120, 120);
-		dl = CL_AllocDlight (0);
-		VectorCopy (pos, dl->origin);
-		dl->radius = 350;
-		dl->die = cl.time + 0.5;
-		dl->decay = 700;
-		dl->color[0] = MSG_ReadCoord();dl->color[1] = MSG_ReadCoord();dl->color[2] = MSG_ReadCoord();
+		CL_AllocDlight (NULL, pos, 350, MSG_ReadCoord(), MSG_ReadCoord(), MSG_ReadCoord(), 700, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
@@ -371,12 +335,7 @@ void CL_ParseTEnt (void)
 		FindNonSolidLocation(pos);
 		R_ParticleExplosion (pos, false);
 //		R_BlastParticles (pos, 120, 120);
-		dl = CL_AllocDlight (0);
-		VectorCopy (pos, dl->origin);
-		dl->radius = 350;
-		dl->die = cl.time + 0.5;
-		dl->decay = 700;
-		dl->color[0] = MSG_ReadByte() * (1.0 / 255.0);dl->color[1] = MSG_ReadByte() * (1.0 / 255.0);dl->color[2] = MSG_ReadByte() * (1.0 / 255.0);
+		CL_AllocDlight (NULL, pos, 350, MSG_ReadByte() * (1.0 / 255.0), MSG_ReadByte() * (1.0 / 255.0), MSG_ReadByte() * (1.0 / 255.0), 700, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
@@ -387,36 +346,22 @@ void CL_ParseTEnt (void)
 //		R_BlastParticles (pos, 120, 120);
 
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
-		dl = CL_AllocDlight (0);
-		VectorCopy (pos, dl->origin);
-		dl->radius = 600;
-		dl->die = cl.time + 0.5;
-		dl->decay = 1200;
-		dl->color[0] = 0.8;dl->color[1] = 0.4;dl->color[2] = 1.0;
+		CL_AllocDlight (NULL, pos, 600, 0.8f, 0.4f, 1.0f, 1200, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
 	case TE_SMALLFLASH:
 		MSG_ReadVector(pos);
 		FindNonSolidLocation(pos);
-		dl = CL_AllocDlight (0);
-		VectorCopy (pos, dl->origin);
-		dl->radius = 200;
-		dl->die = cl.time + 0.2;
-		dl->decay = 1000;
-		dl->color[0] = dl->color[1] = dl->color[2] = 1;
+		CL_AllocDlight (NULL, pos, 200, 1, 1, 1, 1000, 0.2);
 		break;
 
 	case TE_CUSTOMFLASH:
 		MSG_ReadVector(pos);
 		FindNonSolidLocation(pos);
-		dl = CL_AllocDlight (0);
-		VectorCopy (pos, dl->origin);
-		dl->radius = MSG_ReadByte() * 8;
+		radius = MSG_ReadByte() * 8;
 		velspeed = (MSG_ReadByte() + 1) * (1.0 / 256.0);
-		dl->die = cl.time + velspeed;
-		dl->decay = dl->radius / velspeed;
-		dl->color[0] = MSG_ReadByte() * (1.0 / 255.0);dl->color[1] = MSG_ReadByte() * (1.0 / 255.0);dl->color[2] = MSG_ReadByte() * (1.0 / 255.0);
+		CL_AllocDlight (NULL, pos, radius, MSG_ReadByte() * (1.0 / 255.0), MSG_ReadByte() * (1.0 / 255.0), MSG_ReadByte() * (1.0 / 255.0), radius / velspeed, velspeed);
 		break;
 
 	case TE_FLAMEJET:
@@ -470,13 +415,8 @@ void CL_ParseTEnt (void)
 		colorLength = MSG_ReadByte ();
 		R_ParticleExplosion2 (pos, colorStart, colorLength);
 //		R_BlastParticles (pos, 80, 80);
-		dl = CL_AllocDlight (0);
-		VectorCopy (pos, dl->origin);
-		dl->radius = 350;
-		dl->die = cl.time + 0.5;
-		dl->decay = 700;
 		tempcolor = (byte *)&d_8to24table[(rand()%colorLength) + colorStart];
-		dl->color[0] = tempcolor[0] * (1.0f / 255.0f);dl->color[1] = tempcolor[1] * (1.0f / 255.0f);dl->color[2] = tempcolor[2] * (1.0f / 255.0f);
+		CL_AllocDlight (NULL, pos, 350, tempcolor[0] * (1.0f / 255.0f), tempcolor[1] * (1.0f / 255.0f), tempcolor[2] * (1.0f / 255.0f), 700, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 		
@@ -525,7 +465,6 @@ void CL_UpdateTEnts (void)
 	entity_t	*ent;
 	float		yaw, pitch;
 	float		forward;
-	dlight_t	*dl;
 
 	num_temp_entities = 0;
 
@@ -579,20 +518,14 @@ void CL_UpdateTEnts (void)
 			ent->angles[1] = yaw;
 			ent->angles[2] = rand()%360;
 
-			if (r_glowinglightning.value)
-			{
-				dl = CL_AllocDlight (0);
-				VectorCopy (ent->origin,  dl->origin);
-				dl->radius = 100 + (rand()&31);
-				dl->die = cl.time + 0.001;
-				dl->color[0] = dl->color[1] = dl->color[2] = r_glowinglightning.value * 0.25f;
-			}
+			if (r_glowinglightning.value > 0)
+				CL_AllocDlight(ent, ent->origin, lhrandom(100, 120), r_glowinglightning.value * 0.25f, r_glowinglightning.value * 0.25f, r_glowinglightning.value * 0.25f, 0, 0);
 
 			VectorMA(org, 30, dist, org);
 			d -= 30;
 		}
 	}
-	
+
 }
 
 

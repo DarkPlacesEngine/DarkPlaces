@@ -33,10 +33,14 @@ void r_light_shutdown()
 {
 }
 
+void r_light_newmap()
+{
+}
+
 void R_Light_Init()
 {
 	Cvar_RegisterVariable(&r_lightmodels);
-	R_RegisterModule("R_Light", r_light_start, r_light_shutdown);
+	R_RegisterModule("R_Light", r_light_start, r_light_shutdown, r_light_newmap);
 }
 
 int	r_dlightframecount;
@@ -403,7 +407,7 @@ void R_PushDlights (void)
 
 	for (i=0 ; i<MAX_DLIGHTS ; i++, l++)
 	{
-		if (l->die < cl.time || !l->radius)
+		if (!l->radius)
 			continue;
 //		R_MarkLights (l->origin, l, 1<<(i&31), i >> 5, cl.worldmodel->nodes );
 		R_VisMarkLights (l->origin, l, 1<<(i&31), i >> 5, cl.worldmodel);
@@ -685,7 +689,7 @@ void R_DynamicLightPoint(vec3_t color, vec3_t org, int *dlightbits)
 				if (!((1 << i) & dlightbits[j]))
 					continue;
 				k = (j<<5)+i;
-				if (cl_dlights[k].die < cl.time || !cl_dlights[k].radius)
+				if (!cl_dlights[k].radius)
 					continue;
 				VectorSubtract (org, cl_dlights[k].origin, dist);
 				f = DotProduct(dist, dist) + LIGHTOFFSET;
@@ -702,7 +706,7 @@ void R_DynamicLightPoint(vec3_t color, vec3_t org, int *dlightbits)
 	}
 }
 
-void R_CompleteLightPoint (vec3_t color, vec3_t p)
+void R_CompleteLightPoint (vec3_t color, vec3_t p, int dynamic)
 {
 	mleaf_t *leaf;
 	leaf = Mod_PointInLeaf(p, cl.worldmodel);
@@ -721,7 +725,8 @@ void R_CompleteLightPoint (vec3_t color, vec3_t p)
 	color[0] = color[1] = color[2] = r_ambient.value * 2.0f;
 	RecursiveLightPoint (color, cl.worldmodel->nodes, p[0], p[1], p[2], p[2] - 65536);
 
-	R_DynamicLightPoint(color, p, leaf->dlightbits);
+	if (dynamic)
+		R_DynamicLightPoint(color, p, leaf->dlightbits);
 }
 
 void R_ModelLightPoint (vec3_t color, vec3_t p, int *dlightbits)
@@ -772,7 +777,7 @@ void R_DynamicLightPointNoMask(vec3_t color, vec3_t org)
 
 	for (i=0 ; i<MAX_DLIGHTS ; i++)
 	{
-		if (cl_dlights[i].die < cl.time || !cl_dlights[i].radius)
+		if (!cl_dlights[i].radius)
 			continue;
 		VectorSubtract (org, cl_dlights[i].origin, dist);
 		f = DotProduct(dist, dist) + LIGHTOFFSET;
@@ -794,7 +799,7 @@ extern float *aliasvert;
 extern float *aliasvertnorm;
 extern byte *aliasvertcolor;
 extern float modelalpha;
-void R_LightModel(int numverts, vec3_t center, vec3_t basecolor)
+void R_LightModel(entity_t *ent, int numverts, vec3_t center, vec3_t basecolor)
 {
 	// LordHavoc: warning: reliance on int being 4 bytes here (of course the d_8to24table relies on that too...)
 	int i, j, nearlights = 0, color;
@@ -812,17 +817,17 @@ void R_LightModel(int numverts, vec3_t center, vec3_t basecolor)
 	a = (byte) bound((int) 0, (int) (modelalpha * 255.0f), (int) 255);
 	if (lighthalf)
 	{
-		mod[0] = currententity->colormod[0] * 0.5f;
-		mod[1] = currententity->colormod[1] * 0.5f;
-		mod[2] = currententity->colormod[2] * 0.5f;
+		mod[0] = ent->colormod[0] * 0.5f;
+		mod[1] = ent->colormod[1] * 0.5f;
+		mod[2] = ent->colormod[2] * 0.5f;
 	}
 	else
 	{
-		mod[0] = currententity->colormod[0];
-		mod[1] = currententity->colormod[1];
-		mod[2] = currententity->colormod[2];
+		mod[0] = ent->colormod[0];
+		mod[1] = ent->colormod[1];
+		mod[2] = ent->colormod[2];
 	}
-	if (currententity->effects & EF_FULLBRIGHT)
+	if (ent->effects & EF_FULLBRIGHT)
 	{
 		((byte *)&color)[0] = (byte) (255.0f * mod[0]);
 		((byte *)&color)[1] = (byte) (255.0f * mod[1]);
@@ -864,7 +869,7 @@ void R_LightModel(int numverts, vec3_t center, vec3_t basecolor)
 			nearlight[nearlights].color[0] = cl_dlights[i].color[0] * t1 * mod[0];
 			nearlight[nearlights].color[1] = cl_dlights[i].color[1] * t1 * mod[1];
 			nearlight[nearlights].color[2] = cl_dlights[i].color[2] * t1 * mod[2];
-			if (r_lightmodels.value)
+			if (r_lightmodels.value && (ent == NULL || ent != cl_dlights[i].ent))
 				nearlights++;
 			else
 			{

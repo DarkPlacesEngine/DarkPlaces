@@ -286,42 +286,39 @@ CL_AllocDlight
 
 ===============
 */
-dlight_t *CL_AllocDlight (int key)
+void CL_AllocDlight (entity_t *ent, vec3_t org, float radius, float red, float green, float blue, float decay, float lifetime)
 {
 	int		i;
 	dlight_t	*dl;
 
 // first look for an exact key match
-	if (key)
+	if (ent)
 	{
 		dl = cl_dlights;
-		for (i=0 ; i<MAX_DLIGHTS ; i++, dl++)
-		{
-			if (dl->key == key)
-			{
-				memset (dl, 0, sizeof(*dl));
-				dl->key = key;
-				return dl;
-			}
-		}
+		for (i = 0;i < MAX_DLIGHTS;i++, dl++)
+			if (dl->ent == ent)
+				goto dlightsetup;
 	}
 
 // then look for anything else
 	dl = cl_dlights;
-	for (i=0 ; i<MAX_DLIGHTS ; i++, dl++)
-	{
-		if (dl->die < cl.time)
-		{
-			memset (dl, 0, sizeof(*dl));
-			dl->key = key;
-			return dl;
-		}
-	}
+	for (i = 0;i < MAX_DLIGHTS;i++, dl++)
+		if (!dl->radius)
+			goto dlightsetup;
 
-	dl = &cl_dlights[0];
+	// unable to find one
+	return;
+
+dlightsetup:
 	memset (dl, 0, sizeof(*dl));
-	dl->key = key;
-	return dl;
+	dl->ent = ent;
+	VectorCopy(org, dl->origin);
+	dl->radius = radius;
+	dl->color[0] = red;
+	dl->color[1] = green;
+	dl->color[2] = blue;
+	dl->decay = decay;
+	dl->die = cl.time + lifetime;
 }
 
 
@@ -343,8 +340,13 @@ void CL_DecayLights (void)
 	dl = cl_dlights;
 	for (i=0 ; i<MAX_DLIGHTS ; i++, dl++)
 	{
-		if (dl->die < cl.time || !dl->radius)
+		if (!dl->radius)
 			continue;
+		if (dl->die < cl.time)
+		{
+			dl->radius = 0;
+			continue;
+		}
 
 		c_dlights++; // count every dlight in use
 
@@ -420,8 +422,6 @@ void CL_RelinkEntities (void)
 	vec3_t		delta;
 	float		bobjrotate;
 	vec3_t		oldorg;
-	dlight_t	*dl;
-	byte		*tempcolor;
 
 // determine partial update time	
 	frac = CL_LerpPoint ();
@@ -481,7 +481,7 @@ void CL_RelinkEntities (void)
 		else
 		{	// if the delta is large, assume a teleport and don't lerp
 			f = frac;
-			for (j=0 ; j<3 ; j++)
+			for (j = 0;j < 3;j++)
 			{
 				delta[j] = ent->msg_origins[0][j] - ent->msg_origins[1][j];
 				// LordHavoc: increased lerp tolerance from 100 to 200
@@ -490,7 +490,7 @@ void CL_RelinkEntities (void)
 			}
 
 		// interpolate the origin and angles
-			for (j=0 ; j<3 ; j++)
+			for (j = 0;j < 3;j++)
 			{
 				ent->origin[j] = ent->msg_origins[1][j] + f*delta[j];
 
@@ -508,63 +508,30 @@ void CL_RelinkEntities (void)
 			R_EntityParticles (ent);
 		if (ent->effects & EF_MUZZLEFLASH)
 		{
-			vec3_t		fv;
+			vec3_t v;
 
-			dl = CL_AllocDlight (i);
-			VectorCopy (ent->origin,  dl->origin);
-			dl->origin[2] += 16;
-			AngleVectors (ent->angles, fv, NULL, NULL);
-			 
-			VectorMA (dl->origin, 18, fv, dl->origin);
-			dl->radius = 100 + (rand()&31);
-			dl->die = cl.time + 0.1;
-			dl->color[0] = 1.0;dl->color[1] = 1.0;dl->color[2] = 1.0;
+			AngleVectors (ent->angles, v, NULL, NULL);
+
+			v[0] = v[0] * 18 + ent->origin[0];
+			v[1] = v[1] * 18 + ent->origin[1];
+			v[2] = v[2] * 18 + ent->origin[2] + 16;
+
+			CL_AllocDlight (ent, v, 100, 1, 1, 1, 0, 0.1);
 		}
 		if (ent->effects & EF_BRIGHTLIGHT)
-		{			
-			dl = CL_AllocDlight (i);
-			VectorCopy (ent->origin,  dl->origin);
-			dl->origin[2] += 16;
-			dl->radius = 400 + (rand()&31);
-			dl->die = cl.time + 0.001;
-			dl->color[0] = 1.0;dl->color[1] = 1.0;dl->color[2] = 1.0;
-		}
+			CL_AllocDlight (ent, ent->origin, 400, 1, 1, 1, 0, 0);
 		if (ent->effects & EF_DIMLIGHT)
-		{			
-			dl = CL_AllocDlight (i);
-			VectorCopy (ent->origin,  dl->origin);
-			dl->radius = 200 + (rand()&31);
-			dl->die = cl.time + 0.001;
-			dl->color[0] = 1.0;dl->color[1] = 1.0;dl->color[2] = 1.0;
-		}
+			CL_AllocDlight (ent, ent->origin, 200, 1, 1, 1, 0, 0);
 		// LordHavoc: added EF_RED and EF_BLUE
 		if (ent->effects & EF_RED) // red
 		{			
 			if (ent->effects & EF_BLUE) // magenta
-			{
-				dl = CL_AllocDlight (i);
-				VectorCopy (ent->origin,  dl->origin);
-				dl->radius = 200 + (rand()&31);
-				dl->die = cl.time + 0.001;
-				dl->color[0] = 0.7;dl->color[1] = 0.07;dl->color[2] = 0.7;
-			}
+				CL_AllocDlight (ent, ent->origin, 200, 1.0f, 0.2f, 1.0f, 0, 0);
 			else // red
-			{
-				dl = CL_AllocDlight (i);
-				VectorCopy (ent->origin,  dl->origin);
-				dl->radius = 200 + (rand()&31);
-				dl->die = cl.time + 0.001;
-				dl->color[0] = 0.8;dl->color[1] = 0.05;dl->color[2] = 0.05;
-			}
+				CL_AllocDlight (ent, ent->origin, 200, 1.0f, 0.1f, 0.1f, 0, 0);
 		}
 		else if (ent->effects & EF_BLUE) // blue
-		{
-			dl = CL_AllocDlight (i);
-			VectorCopy (ent->origin,  dl->origin);
-			dl->radius = 200 + (rand()&31);
-			dl->die = cl.time + 0.001;
-			dl->color[0] = 0.05;dl->color[1] = 0.05;dl->color[2] = 0.8;
-		}
+			CL_AllocDlight (ent, ent->origin, 200, 0.1f, 0.1f, 1.0f, 0, 0);
 		else if (ent->effects & EF_FLAME)
 		{
 			if (ent->model)
@@ -574,15 +541,10 @@ void CL_RelinkEntities (void)
 				VectorAdd(ent->origin, ent->model->mins, mins);
 				VectorAdd(ent->origin, ent->model->maxs, maxs);
 				// how many flames to make
-				temp = (int) (cl.time * 30) - (int) (cl.oldtime * 30);
+				temp = (int) (cl.time * 300) - (int) (cl.oldtime * 300);
 				R_FlameCube(mins, maxs, temp);
 			}
-			dl = CL_AllocDlight (i);
-			VectorCopy (ent->origin, dl->origin);
-			dl->radius = 200 + (rand()&31);
-			dl->die = cl.time + 0.25;
-			dl->decay = dl->radius * 4;
-			dl->color[0] = 1.0;dl->color[1] = 0.7;dl->color[2] = 0.3;
+			CL_AllocDlight (ent, ent->origin, lhrandom(200, 250), 1.0f, 0.7f, 0.3f, 0, 0);
 		}
 
 		if (ent->model->flags) // LordHavoc: if the model has no flags, don't check each
@@ -601,11 +563,7 @@ void CL_RelinkEntities (void)
 			else if (ent->model->flags & EF_ROCKET)
 			{
 				R_RocketTrail (oldorg, ent->origin, 0, ent);
-				dl = CL_AllocDlight (i);
-				VectorCopy (ent->origin, dl->origin);
-				dl->radius = 200;
-				dl->die = cl.time + 0.001;
-				dl->color[0] = 1.0;dl->color[1] = 0.8;dl->color[2] = 0.4;
+				CL_AllocDlight (ent, ent->origin, 200, 1.0f, 0.8f, 0.4f, 0, 0);
 			}
 			else if (ent->model->flags & EF_GRENADE)
 			{
@@ -619,12 +577,8 @@ void CL_RelinkEntities (void)
 		}
 		if (ent->glowsize) // LordHavoc: customizable glow
 		{
-			dl = CL_AllocDlight (i);
-			VectorCopy (ent->origin, dl->origin);
-			dl->radius = ent->glowsize;
-			dl->die = cl.time + 0.001;
-			tempcolor = (byte *)&d_8to24table[ent->glowcolor];
-			dl->color[0] = tempcolor[0]*(1.0/255.0);dl->color[1] = tempcolor[1]*(1.0/255.0);dl->color[2] = tempcolor[2]*(1.0/255.0);
+			byte *tempcolor = (byte *)&d_8to24table[ent->glowcolor];
+			CL_AllocDlight (ent, ent->origin, ent->glowsize, tempcolor[0]*(1.0/255.0), tempcolor[1]*(1.0/255.0), tempcolor[2]*(1.0/255.0), 0, 0);
 		}
 		if (ent->glowtrail) // LordHavoc: customizable glow and trail
 			R_RocketTrail2 (oldorg, ent->origin, ent->glowcolor, ent);
@@ -640,9 +594,11 @@ void CL_RelinkEntities (void)
 		if (cl_numvisedicts < MAX_VISEDICTS)
 			cl_visedicts[cl_numvisedicts++] = ent;
 	}
-
 }
 
+
+// used by cl_shownet
+int netshown;
 
 /*
 ===============
@@ -658,6 +614,7 @@ int CL_ReadFromServer (void)
 	cl.oldtime = cl.time;
 	cl.time += cl.frametime;
 	
+	netshown = false;
 	do
 	{
 		ret = CL_GetMessage ();
@@ -670,7 +627,7 @@ int CL_ReadFromServer (void)
 		CL_ParseServerMessage ();
 	} while (ret && cls.state == ca_connected);
 	
-	if (cl_shownet.value)
+	if (netshown)
 		Con_Printf ("\n");
 
 	CL_RelinkEntities ();

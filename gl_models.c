@@ -92,12 +92,16 @@ void gl_models_shutdown()
 	qfree(aliasvertusage);
 }
 
+void gl_models_newmap()
+{
+}
+
 void GL_Models_Init()
 {
 	Cvar_RegisterVariable(&gl_transform);
 	Cvar_RegisterVariable(&gl_lockarrays);
 
-	R_RegisterModule("GL_Models", gl_models_start, gl_models_shutdown);
+	R_RegisterModule("GL_Models", gl_models_start, gl_models_shutdown, gl_models_newmap);
 }
 
 extern vec3_t softwaretransform_x;
@@ -318,7 +322,7 @@ R_DrawAliasFrame
 =================
 */
 extern vec3_t lightspot;
-void R_LightModel(int numverts, vec3_t center, vec3_t basecolor);
+void R_LightModel(entity_t *ent, int numverts, vec3_t center, vec3_t basecolor);
 void R_DrawAliasFrame (maliashdr_t *maliashdr, float alpha, vec3_t color, entity_t *ent, int shadow, vec3_t org, vec3_t angles, vec_t scale, frameblend_t *blend, rtexture_t **skin, int colormap, int effects, int flags)
 {
 	if (gl_transform.value)
@@ -350,7 +354,7 @@ void R_DrawAliasFrame (maliashdr_t *maliashdr, float alpha, vec3_t color, entity
 		GL_LockArray(0, maliashdr->numverts);
 	}
 
-	R_LightModel(maliashdr->numverts, org, color);
+	R_LightModel(ent, maliashdr->numverts, org, color);
 
 	if (!r_render.value)
 		return;
@@ -473,7 +477,7 @@ void R_DrawQ2AliasFrame (md2mem_t *pheader, float alpha, vec3_t color, entity_t 
 	if (!gl_transform.value)
 		R_AliasTransformVerts(pheader->num_xyz);
 
-	R_LightModel(pheader->num_xyz, org, color);
+	R_LightModel(ent, pheader->num_xyz, org, color);
 
 	if (!r_render.value)
 		return;
@@ -895,7 +899,7 @@ void R_DrawZymoticFrame (zymtype1header_t *m, float alpha, vec3_t color, entity_
 	ZymoticTransformVerts(m->numverts, (int *)(m->lump_vertbonecounts.start + (int) m), (zymvertex_t *)(m->lump_verts.start + (int) m));
 	ZymoticCalcNormals(m->numverts, m->numshaders, (int *)(m->lump_render.start + (int) m));
 
-	R_LightModel(m->numverts, org, color);
+	R_LightModel(ent, m->numverts, org, color);
 
 	if (!r_render.value)
 		return;
@@ -928,8 +932,6 @@ void R_DrawZymoticFrame (zymtype1header_t *m, float alpha, vec3_t color, entity_
 	glEnable (GL_BLEND);
 	glDepthMask(1);
 }
-
-extern int r_dlightframecount;
 
 /*
 =================

@@ -147,6 +147,7 @@ void R_RemoveEfrags (entity_t *ent);
 
 void R_NewMap (void);
 
+#include "r_decals.h"
 
 void R_ParseParticleEffect (void);
 void R_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count);

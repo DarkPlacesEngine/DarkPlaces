@@ -399,7 +399,6 @@ int main (int c, char **v)
 	double		time, oldtime, newtime;
 	extern int vcrFile;
 	extern int recording;
-	int j;
 
 //	static char cwd[1024];
 
@@ -413,16 +412,6 @@ int main (int c, char **v)
 	host_parms.argv = com_argv;
 
 	host_parms.memsize = DEFAULTMEM * 1024*1024;
-
-	j = COM_CheckParm("-mem");
-	if (j)
-		host_parms.memsize = (int) (atof(com_argv[j+1]) * 1024 * 1024);
-	host_parms.membase = qmalloc(host_parms.memsize);
-	if (!host_parms.membase)
-	{
-		printf("Unable to allocate heap memory\n");
-		return 1;
-	}
 
 	host_parms.basedir = basedir;
 // caching is disabled by default, use -cachedir to enable

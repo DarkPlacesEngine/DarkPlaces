@@ -17,7 +17,7 @@ void fractalnoise(byte *noise, int size, int startgrid)
 
 	startgrid = bound(0, startgrid, size);
 
-	amplitude = 32767;
+	amplitude = 0xFFFF; // this gets halved before use
 	noisebuf = qmalloc(size*size*sizeof(int));
 	memset(noisebuf, 0, size*size*sizeof(int));
 
@@ -55,10 +55,11 @@ void fractalnoise(byte *noise, int size, int startgrid)
 			if (n(x,y) > max) max = n(x,y);
 		}
 	max -= min;
+	max++;
 	// normalize noise and copy to output
 	for (y = 0;y < size;y++)
 		for (x = 0;x < size;x++)
-			*noise++ = (n(x,y) - min) * 255 / max;
+			*noise++ = (byte) (((n(x,y) - min) * 256) / max);
 	qfree(noisebuf);
 #undef n
 }
