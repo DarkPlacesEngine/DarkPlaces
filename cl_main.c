@@ -91,7 +91,7 @@ CL_ClearState
 
 =====================
 */
-void CL_ClearState (void)
+void CL_ClearState(void)
 {
 	int i;
 
@@ -197,7 +197,7 @@ void CL_Disconnect(void)
 	cls.signon = 0;
 }
 
-void CL_Disconnect_f (void)
+void CL_Disconnect_f(void)
 {
 	CL_Disconnect ();
 	if (sv.active)
@@ -250,7 +250,7 @@ void CL_EstablishConnection(const char *host)
 CL_PrintEntities_f
 ==============
 */
-static void CL_PrintEntities_f (void)
+static void CL_PrintEntities_f(void)
 {
 	entity_t *ent;
 	int i, j;
@@ -329,47 +329,6 @@ void CL_BoundingBoxForEntity(entity_render_t *ent)
 	}
 }
 
-void CL_LerpUpdate(entity_t *e)
-{
-	entity_persistent_t *p;
-	entity_render_t *r;
-	p = &e->persistent;
-	r = &e->render;
-
-	if (p->modelindex != e->state_current.modelindex)
-	{
-		// reset all interpolation information
-		p->modelindex = e->state_current.modelindex;
-		p->frame1 = p->frame2 = e->state_current.frame;
-		p->frame1time = p->frame2time = cl.time;
-		p->framelerp = 1;
-	}
-	else if (p->frame2 != e->state_current.frame)
-	{
-		// transition to new frame
-		p->frame1 = p->frame2;
-		p->frame1time = p->frame2time;
-		p->frame2 = e->state_current.frame;
-		p->frame2time = cl.time;
-		p->framelerp = 0;
-	}
-	else
-	{
-		// update transition
-		p->framelerp = (cl.time - p->frame2time) * 10;
-		p->framelerp = bound(0, p->framelerp, 1);
-	}
-
-	r->model = cl.model_precache[e->state_current.modelindex];
-	Mod_CheckLoaded(r->model);
-	r->frame = e->state_current.frame;
-	r->frame1 = p->frame1;
-	r->frame2 = p->frame2;
-	r->framelerp = p->framelerp;
-	r->frame1time = p->frame1time;
-	r->frame2time = p->frame2time;
-}
-
 /*
 ===============
 CL_LerpPoint
@@ -378,7 +337,7 @@ Determines the fraction between the last two messages that the objects
 should be put at.
 ===============
 */
-static float CL_LerpPoint (void)
+static float CL_LerpPoint(void)
 {
 	float f;
 
@@ -405,7 +364,7 @@ void CL_ClearTempEntities (void)
 	cl_num_temp_entities = 0;
 }
 
-entity_t *CL_NewTempEntity (void)
+entity_t *CL_NewTempEntity(void)
 {
 	entity_t *ent;
 
@@ -423,7 +382,32 @@ entity_t *CL_NewTempEntity (void)
 	return ent;
 }
 
-void CL_AllocDlight (entity_render_t *ent, vec3_t org, float radius, float red, float green, float blue, float decay, float lifetime)
+void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float framerate)
+{
+	int i;
+	cl_effect_t *e;
+	if (!modelindex) // sanity check
+		return;
+	for (i = 0, e = cl_effects;i < cl_max_effects;i++, e++)
+	{
+		if (e->active)
+			continue;
+		e->active = true;
+		VectorCopy(org, e->origin);
+		e->modelindex = modelindex;
+		e->starttime = cl.time;
+		e->startframe = startframe;
+		e->endframe = startframe + framecount;
+		e->framerate = framerate;
+
+		e->frame = 0;
+		e->frame1time = cl.time;
+		e->frame2time = cl.time;
+		break;
+	}
+}
+
+void CL_AllocDlight(entity_render_t *ent, vec3_t org, float radius, float red, float green, float blue, float decay, float lifetime)
 {
 	int i;
 	dlight_t *dl;
@@ -466,7 +450,7 @@ dlightsetup:
 		dl->die = 0;
 }
 
-void CL_DecayLights (void)
+void CL_DecayLights(void)
 {
 	int i;
 	dlight_t *dl;
@@ -488,6 +472,297 @@ void CL_DecayLights (void)
 		dl->radius -= time*dl->decay;
 		if (dl->radius < 0)
 			dl->radius = 0;
+	}
+}
+
+extern qboolean Nehahrademcompatibility;
+#define MAXVIEWMODELS 32
+entity_t *viewmodels[MAXVIEWMODELS];
+int numviewmodels;
+void CL_RelinkNetworkEntity(entity_t *e)
+{
+	int trailtype, temp;
+	float oldorg[3], delta[3], lerp, dlightcolor[3], mins[3], maxs[3], v[3], v2[3], d;
+	entity_persistent_t *p;
+	entity_render_t *r;
+	p = &e->persistent;
+	r = &e->render;
+
+	if (e->state_previous.active && e->state_current.modelindex == e->state_previous.modelindex)
+	{
+		// movement lerp
+		if (p->lerpdeltatime > 0 && (lerp = (cl.time - p->lerpstarttime) / p->lerpdeltatime) < 1)
+		{
+			// read the old origin
+			VectorCopy(r->origin, oldorg);
+			// interpolate the origin and angles
+			r->origin[0] = p->oldorigin[0] + lerp * (p->neworigin[0] - p->oldorigin[0]);
+			r->origin[1] = p->oldorigin[1] + lerp * (p->neworigin[1] - p->oldorigin[1]);
+			r->origin[2] = p->oldorigin[2] + lerp * (p->neworigin[2] - p->oldorigin[2]);
+			VectorSubtract(p->newangles, p->oldangles, delta);
+			if (delta[0] < -180) delta[0] += 360;else if (delta[0] >= 180) delta[0] -= 360;
+			if (delta[1] < -180) delta[1] += 360;else if (delta[1] >= 180) delta[1] -= 360;
+			if (delta[2] < -180) delta[2] += 360;else if (delta[2] >= 180) delta[2] -= 360;
+			VectorMA(p->oldangles, lerp, delta, r->angles);
+		}
+		else
+		{
+			// no interpolation
+			VectorCopy(p->neworigin, r->origin);
+			VectorCopy(p->neworigin, oldorg);
+			VectorCopy(p->newangles, r->angles);
+		}
+		// animation lerp
+		if (r->frame2 != e->state_current.frame)
+		{
+			// begin a new frame lerp
+			r->frame1 = r->frame2;
+			r->frame1time = r->frame2time;
+			r->frame = r->frame2 = e->state_current.frame;
+			r->frame2time = cl.time;
+			r->framelerp = 0;
+		}
+		else
+		{
+			// update frame lerp fraction
+			r->framelerp = r->frame2time > r->frame1time ? ((cl.time - r->frame2time) / (r->frame2time - r->frame1time)) : 1;
+			r->framelerp = bound(0, r->framelerp, 1);
+		}
+	}
+	else
+	{
+		// no interpolation
+		VectorCopy(p->neworigin, r->origin);
+		VectorCopy(p->neworigin, oldorg);
+		VectorCopy(p->newangles, r->angles);
+		r->frame = r->frame1 = r->frame2 = e->state_current.frame;
+		r->frame1time = r->frame2time = cl.time;
+		r->framelerp = 1;
+	}
+
+	r->alpha = e->state_current.alpha * (1.0f / 255.0f); // FIXME: interpolate?
+	r->scale = e->state_current.scale * (1.0f / 16.0f); // FIXME: interpolate?
+	r->flags = e->state_current.flags;
+	if (e - cl_entities == cl.viewentity)
+		r->flags |= RENDER_EXTERIORMODEL;
+	r->effects = e->state_current.effects;
+	if (e->state_current.flags & RENDER_COLORMAPPED)
+		r->colormap = e->state_current.colormap;
+	else if (cl.scores != NULL && e->state_current.colormap)
+		r->colormap = cl.scores[e->state_current.colormap - 1].colors; // color it
+	else
+		r->colormap = -1; // no special coloring
+	r->skinnum = e->state_current.skin;
+
+	// handle effects now...
+	trailtype = -1;
+	dlightcolor[0] = 0;
+	dlightcolor[1] = 0;
+	dlightcolor[2] = 0;
+
+	// LordHavoc: if the entity has no effects, don't check each
+	if (r->effects)
+	{
+		if (r->effects & EF_BRIGHTFIELD)
+		{
+			if (gamemode == GAME_NEXUIZ)
+			{
+				dlightcolor[0] += 100.0f;
+				dlightcolor[1] += 200.0f;
+				dlightcolor[2] += 400.0f;
+				trailtype = 8;
+			}
+			else
+				CL_EntityParticles(e);
+		}
+		if (r->effects & EF_MUZZLEFLASH)
+			p->muzzleflash = 100.0f;
+		if (r->effects & EF_DIMLIGHT)
+		{
+			dlightcolor[0] += 200.0f;
+			dlightcolor[1] += 200.0f;
+			dlightcolor[2] += 200.0f;
+		}
+		if (r->effects & EF_BRIGHTLIGHT)
+		{
+			dlightcolor[0] += 400.0f;
+			dlightcolor[1] += 400.0f;
+			dlightcolor[2] += 400.0f;
+		}
+		// LordHavoc: added EF_RED and EF_BLUE
+		if (r->effects & EF_RED) // red
+		{
+			dlightcolor[0] += 200.0f;
+			dlightcolor[1] +=  20.0f;
+			dlightcolor[2] +=  20.0f;
+		}
+		if (r->effects & EF_BLUE) // blue
+		{
+			dlightcolor[0] +=  20.0f;
+			dlightcolor[1] +=  20.0f;
+			dlightcolor[2] += 200.0f;
+		}
+		if (r->effects & EF_FLAME)
+		{
+			mins[0] = r->origin[0] - 16.0f;
+			mins[1] = r->origin[1] - 16.0f;
+			mins[2] = r->origin[2] - 16.0f;
+			maxs[0] = r->origin[0] + 16.0f;
+			maxs[1] = r->origin[1] + 16.0f;
+			maxs[2] = r->origin[2] + 16.0f;
+			// how many flames to make
+			temp = (int) (cl.time * 300) - (int) (cl.oldtime * 300);
+			CL_FlameCube(mins, maxs, temp);
+			d = lhrandom(200, 250);
+			dlightcolor[0] += d * 1.0f;
+			dlightcolor[1] += d * 0.7f;
+			dlightcolor[2] += d * 0.3f;
+		}
+		if (r->effects & EF_STARDUST)
+		{
+			mins[0] = r->origin[0] - 16.0f;
+			mins[1] = r->origin[1] - 16.0f;
+			mins[2] = r->origin[2] - 16.0f;
+			maxs[0] = r->origin[0] + 16.0f;
+			maxs[1] = r->origin[1] + 16.0f;
+			maxs[2] = r->origin[2] + 16.0f;
+			// how many particles to make
+			temp = (int) (cl.time * 200) - (int) (cl.oldtime * 200);
+			CL_Stardust(mins, maxs, temp);
+			d = 100;
+			dlightcolor[0] += d * 1.0f;
+			dlightcolor[1] += d * 0.7f;
+			dlightcolor[2] += d * 0.3f;
+		}
+	}
+
+	r->model = cl.model_precache[e->state_current.modelindex];
+	if (r->model)
+	{
+		Mod_CheckLoaded(r->model);
+		if (r->model->type != mod_brush)
+			r->angles[0] = -r->angles[0];
+		// LordHavoc: if the model has no flags, don't check each
+		if (r->model->flags & EF_ROTATE)
+		{
+			r->angles[1] = ANGLEMOD(100*cl.time);
+			if (cl_itembobheight.value)
+				r->origin[2] += (cos(cl.time * cl_itembobspeed.value * (2.0 * M_PI)) + 1.0) * 0.5 * cl_itembobheight.value;
+		}
+	}
+
+	Matrix4x4_CreateFromQuakeEntity(&r->matrix, r->origin[0], r->origin[1], r->origin[2], r->angles[0], r->angles[1], r->angles[2], r->scale);
+	Matrix4x4_Invert_Simple(&r->inversematrix, &r->matrix);
+	CL_BoundingBoxForEntity(&e->render);
+
+	// LordHavoc: if the model has no flags, don't check each
+	if (r->model && r->model->flags)
+	{
+		if (r->model->flags & EF_GIB)
+			trailtype = 2;
+		else if (r->model->flags & EF_ZOMGIB)
+			trailtype = 4;
+		else if (r->model->flags & EF_TRACER)
+		{
+			trailtype = 3;
+			dlightcolor[0] += 0x10;
+			dlightcolor[1] += 0x40;
+			dlightcolor[2] += 0x10;
+		}
+		else if (r->model->flags & EF_TRACER2)
+		{
+			trailtype = 5;
+			dlightcolor[0] += 0x50;
+			dlightcolor[1] += 0x30;
+			dlightcolor[2] += 0x10;
+		}
+		else if (r->model->flags & EF_ROCKET)
+		{
+			trailtype = 0;
+			dlightcolor[0] += 200.0f;
+			dlightcolor[1] += 160.0f;
+			dlightcolor[2] +=  80.0f;
+		}
+		else if (r->model->flags & EF_GRENADE)
+		{
+			// LordHavoc: r->alpha == -1 is for Nehahra dem compatibility (cigar smoke)
+			trailtype = r->alpha == -1 ? 7 : 1;
+		}
+		else if (r->model->flags & EF_TRACER3)
+		{
+			trailtype = 6;
+			dlightcolor[0] += 0x50;
+			dlightcolor[1] += 0x20;
+			dlightcolor[2] += 0x40;
+		}
+	}
+
+	// LordHavoc: customizable glow
+	if (e->state_current.glowsize)
+	{
+		// * 4 for the expansion from 0-255 to 0-1023 range,
+		// / 255 to scale down byte colors
+		VectorMA(dlightcolor, e->state_current.glowsize * (4.0f / 255.0f), (qbyte *)&palette_complete[e->state_current.glowcolor], dlightcolor);
+	}
+
+	// trails need a previous frame...
+	if (e->state_previous.active)
+	{
+		// LordHavoc: customizable trail
+		if (r->flags & RENDER_GLOWTRAIL)
+			CL_RocketTrail2(oldorg, r->origin, e->state_current.glowcolor, e);
+		else if (trailtype >= 0)
+			CL_RocketTrail(oldorg, r->origin, trailtype, e);
+	}
+
+	if (dlightcolor[0] || dlightcolor[1] || dlightcolor[2])
+	{
+		VectorCopy(r->origin, v);
+		// hack to make glowing player light shine on their gun
+		if ((e - cl_entities) == cl.viewentity/* && !chase_active.integer*/)
+			v[2] += 30;
+		CL_AllocDlight(r, v, 1, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0);
+	}
+
+	if (p->muzzleflash > 0)
+	{
+		v2[0] = r->matrix.m[0][0] * 18 + r->matrix.m[0][3];
+		v2[1] = r->matrix.m[0][1] * 18 + r->matrix.m[1][3];
+		v2[2] = r->matrix.m[0][2] * 18 + r->matrix.m[2][3];
+		CL_TraceLine(r->origin, v2, v, NULL, 0, true, NULL);
+
+		CL_AllocDlight(NULL, v, p->muzzleflash, 1, 1, 1, 0, 0);
+		p->muzzleflash -= cl.frametime * 1000;
+	}
+
+	// note: the cl.viewentity and intermission check is to hide player
+	// shadow during intermission and during the Nehahra movie and
+	// Nehahra cinematics
+	if (!(r->effects & (EF_NOSHADOW | EF_ADDITIVE))
+	 && (r->alpha == 1)
+	 && !(r->flags & RENDER_VIEWMODEL)
+	 && ((e - cl_entities) != cl.viewentity || (!cl.intermission && !Nehahrademcompatibility && !cl_noplayershadow.integer)))
+		r->flags |= RENDER_SHADOW;
+
+	// don't show entities with no modelindex (note: this still shows
+	// entities which have a modelindex that resolved to a NULL model)
+	if (r->model && !(r->effects & EF_NODRAW))
+	{
+		if (r->flags & RENDER_VIEWMODEL)
+		{
+			// store a list of view-relative entities for later adjustment in view code
+			if (numviewmodels < MAXVIEWMODELS)
+				viewmodels[numviewmodels++] = e;
+		}
+		else
+		{
+			if (r->model->name[0] == '*' && r->model->type == mod_brush)
+				cl_brushmodel_entities[cl_num_brushmodel_entities++] = &e->render;
+			if (r_refdef.numentities < r_refdef.maxentities)
+				r_refdef.entities[r_refdef.numentities++] = &e->render;
+			if (cl_num_entities < e->state_current.number + 1)
+				cl_num_entities = e->state_current.number + 1;
+		}
 	}
 }
 
@@ -517,344 +792,21 @@ static void CL_RelinkStaticEntities(void)
 CL_RelinkEntities
 ===============
 */
-extern qboolean Nehahrademcompatibility;
-#define MAXVIEWMODELS 32
-entity_t *viewmodels[MAXVIEWMODELS];
-int numviewmodels;
 static void CL_RelinkNetworkEntities(void)
 {
 	entity_t *ent;
-	int i, effects, temp;
-	float d, bobjrotate, bobjoffset, lerp;
-	vec3_t oldorg, neworg, delta, dlightcolor, v, v2, mins, maxs;
-
-	numviewmodels = 0;
-
-	bobjrotate = ANGLEMOD(100*cl.time);
-	if (cl_itembobheight.value)
-		bobjoffset = (cos(cl.time * cl_itembobspeed.value * (2.0 * M_PI)) + 1.0) * 0.5 * cl_itembobheight.value;
-	else
-		bobjoffset = 0;
+	int i;
 
 	// start on the entity after the world
 	for (i = 1, ent = cl_entities + 1;i < MAX_EDICTS;i++, ent++)
 	{
-		// if the object isn't active in the current network frame, skip it
-		if (!cl_entities_active[i])
-			continue;
-		if (!ent->state_current.active)
+		if (cl_entities_active[i])
 		{
-			cl_entities_active[i] = false;
-			continue;
-		}
-
-		VectorCopy(ent->persistent.trail_origin, oldorg);
-
-		if (!ent->state_previous.active)
-		{
-			// only one state available
-			VectorCopy (ent->persistent.neworigin, neworg);
-			VectorCopy (ent->persistent.newangles, ent->render.angles);
-			VectorCopy (neworg, oldorg);
-		}
-		else
-		{
-			// if the delta is large, assume a teleport and don't lerp
-			VectorSubtract(ent->persistent.neworigin, ent->persistent.oldorigin, delta);
-			if (ent->persistent.lerpdeltatime > 0)
-			{
-				lerp = (cl.time - ent->persistent.lerpstarttime) / ent->persistent.lerpdeltatime;
-				if (lerp < 1)
-				{
-					// interpolate the origin and angles
-					VectorMA(ent->persistent.oldorigin, lerp, delta, neworg);
-					VectorSubtract(ent->persistent.newangles, ent->persistent.oldangles, delta);
-					if (delta[0] < -180) delta[0] += 360;else if (delta[0] >= 180) delta[0] -= 360;
-					if (delta[1] < -180) delta[1] += 360;else if (delta[1] >= 180) delta[1] -= 360;
-					if (delta[2] < -180) delta[2] += 360;else if (delta[2] >= 180) delta[2] -= 360;
-					VectorMA(ent->persistent.oldangles, lerp, delta, ent->render.angles);
-				}
-				else
-				{
-					// no interpolation
-					VectorCopy (ent->persistent.neworigin, neworg);
-					VectorCopy (ent->persistent.newangles, ent->render.angles);
-				}
-			}
+			if (ent->state_current.active)
+				CL_RelinkNetworkEntity(ent);
 			else
-			{
-				// no interpolation
-				VectorCopy (ent->persistent.neworigin, neworg);
-				VectorCopy (ent->persistent.newangles, ent->render.angles);
-			}
+				cl_entities_active[i] = false;
 		}
-
-		if (!ent->render.model || ent->render.model->type != mod_brush)
-			ent->render.angles[0] = -ent->render.angles[0];
-
-		VectorCopy (neworg, ent->persistent.trail_origin);
-		// persistent.modelindex will be updated by CL_LerpUpdate
-		if (ent->state_current.modelindex != ent->persistent.modelindex || !ent->state_previous.active)
-			VectorCopy(neworg, oldorg);
-
-		VectorCopy (neworg, ent->render.origin);
-		ent->render.flags = ent->state_current.flags;
-		if (i == cl.viewentity)
-			ent->render.flags |= RENDER_EXTERIORMODEL;
-		ent->render.effects = effects = ent->state_current.effects;
-		if (ent->state_current.flags & RENDER_COLORMAPPED)
-			ent->render.colormap = ent->state_current.colormap;
-		else if (cl.scores == NULL || !ent->state_current.colormap)
-			ent->render.colormap = -1; // no special coloring
-		else
-			ent->render.colormap = cl.scores[ent->state_current.colormap - 1].colors; // color it
-		ent->render.skinnum = ent->state_current.skin;
-		ent->render.alpha = ent->state_current.alpha * (1.0f / 255.0f); // FIXME: interpolate?
-		ent->render.scale = ent->state_current.scale * (1.0f / 16.0f); // FIXME: interpolate?
-
-		if (ent->render.model && ent->render.model->flags & EF_ROTATE)
-		{
-			ent->render.angles[1] = bobjrotate;
-			ent->render.origin[2] += bobjoffset;
-		}
-
-		Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, ent->render.origin[0], ent->render.origin[1], ent->render.origin[2], ent->render.angles[0], ent->render.angles[1], ent->render.angles[2], ent->render.scale);
-
-		// update interpolation info
-		CL_LerpUpdate(ent);
-
-		// handle effects now...
-		dlightcolor[0] = 0;
-		dlightcolor[1] = 0;
-		dlightcolor[2] = 0;
-
-		// LordHavoc: if the entity has no effects, don't check each
-		if (effects)
-		{
-			if (effects & EF_BRIGHTFIELD)
-			{
-				if (gamemode == GAME_NEXUIZ)
-				{
-					dlightcolor[0] += 100.0f;
-					dlightcolor[1] += 200.0f;
-					dlightcolor[2] += 400.0f;
-					// don't do trail if we have no previous location
-					if (ent->state_previous.active)
-						CL_RocketTrail (oldorg, neworg, 8, ent);
-				}
-				else
-					CL_EntityParticles (ent);
-			}
-			if (effects & EF_MUZZLEFLASH)
-				ent->persistent.muzzleflash = 100.0f;
-			if (effects & EF_DIMLIGHT)
-			{
-				dlightcolor[0] += 200.0f;
-				dlightcolor[1] += 200.0f;
-				dlightcolor[2] += 200.0f;
-			}
-			if (effects & EF_BRIGHTLIGHT)
-			{
-				dlightcolor[0] += 400.0f;
-				dlightcolor[1] += 400.0f;
-				dlightcolor[2] += 400.0f;
-			}
-			// LordHavoc: added EF_RED and EF_BLUE
-			if (effects & EF_RED) // red
-			{
-				dlightcolor[0] += 200.0f;
-				dlightcolor[1] +=  20.0f;
-				dlightcolor[2] +=  20.0f;
-			}
-			if (effects & EF_BLUE) // blue
-			{
-				dlightcolor[0] +=  20.0f;
-				dlightcolor[1] +=  20.0f;
-				dlightcolor[2] += 200.0f;
-			}
-			if (effects & EF_FLAME)
-			{
-				if (ent->render.model)
-				{
-					mins[0] = neworg[0] - 16.0f;
-					mins[1] = neworg[1] - 16.0f;
-					mins[2] = neworg[2] - 16.0f;
-					maxs[0] = neworg[0] + 16.0f;
-					maxs[1] = neworg[1] + 16.0f;
-					maxs[2] = neworg[2] + 16.0f;
-					// how many flames to make
-					temp = (int) (cl.time * 300) - (int) (cl.oldtime * 300);
-					CL_FlameCube(mins, maxs, temp);
-				}
-				d = lhrandom(200, 250);
-				dlightcolor[0] += d * 1.0f;
-				dlightcolor[1] += d * 0.7f;
-				dlightcolor[2] += d * 0.3f;
-			}
-			if (effects & EF_STARDUST)
-			{
-				if (ent->render.model)
-				{
-					mins[0] = neworg[0] - 16.0f;
-					mins[1] = neworg[1] - 16.0f;
-					mins[2] = neworg[2] - 16.0f;
-					maxs[0] = neworg[0] + 16.0f;
-					maxs[1] = neworg[1] + 16.0f;
-					maxs[2] = neworg[2] + 16.0f;
-					// how many particles to make
-					temp = (int) (cl.time * 200) - (int) (cl.oldtime * 200);
-					CL_Stardust(mins, maxs, temp);
-				}
-				d = 100;
-				dlightcolor[0] += d * 1.0f;
-				dlightcolor[1] += d * 0.7f;
-				dlightcolor[2] += d * 0.3f;
-			}
-		}
-
-		if (ent->persistent.muzzleflash > 0)
-		{
-			v2[0] = ent->render.matrix.m[0][0] * 18 + neworg[0];
-			v2[1] = ent->render.matrix.m[0][1] * 18 + neworg[1];
-			v2[2] = ent->render.matrix.m[0][2] * 18 + neworg[2] + 16;
-			CL_TraceLine(neworg, v2, v, NULL, 0, true, NULL);
-
-			CL_AllocDlight (NULL, v, ent->persistent.muzzleflash, 1, 1, 1, 0, 0);
-			ent->persistent.muzzleflash -= cl.frametime * 1000;
-		}
-
-		// LordHavoc: if the model has no flags, don't check each
-		if (ent->render.model && ent->render.model->flags)
-		{
-			// note: EF_ROTATE handled above, above matrix calculation
-			// only do trails if present in the previous frame as well
-			if (ent->state_previous.active)
-			{
-				if (ent->render.model->flags & EF_GIB)
-					CL_RocketTrail (oldorg, neworg, 2, ent);
-				else if (ent->render.model->flags & EF_ZOMGIB)
-					CL_RocketTrail (oldorg, neworg, 4, ent);
-				else if (ent->render.model->flags & EF_TRACER)
-				{
-					CL_RocketTrail (oldorg, neworg, 3, ent);
-					dlightcolor[0] += 0x10;
-					dlightcolor[1] += 0x40;
-					dlightcolor[2] += 0x10;
-				}
-				else if (ent->render.model->flags & EF_TRACER2)
-				{
-					CL_RocketTrail (oldorg, neworg, 5, ent);
-					dlightcolor[0] += 0x50;
-					dlightcolor[1] += 0x30;
-					dlightcolor[2] += 0x10;
-				}
-				else if (ent->render.model->flags & EF_ROCKET)
-				{
-					CL_RocketTrail (oldorg, ent->render.origin, 0, ent);
-					dlightcolor[0] += 200.0f;
-					dlightcolor[1] += 160.0f;
-					dlightcolor[2] +=  80.0f;
-				}
-				else if (ent->render.model->flags & EF_GRENADE)
-				{
-					if (ent->render.alpha == -1) // LordHavoc: Nehahra dem compatibility (cigar smoke)
-						CL_RocketTrail (oldorg, neworg, 7, ent);
-					else
-						CL_RocketTrail (oldorg, neworg, 1, ent);
-				}
-				else if (ent->render.model->flags & EF_TRACER3)
-				{
-					CL_RocketTrail (oldorg, neworg, 6, ent);
-					dlightcolor[0] += 0x50;
-					dlightcolor[1] += 0x20;
-					dlightcolor[2] += 0x40;
-				}
-			}
-		}
-		// LordHavoc: customizable glow
-		if (ent->state_current.glowsize)
-		{
-			// * 4 for the expansion from 0-255 to 0-1023 range,
-			// / 255 to scale down byte colors
-			VectorMA(dlightcolor, ent->state_current.glowsize * (4.0f / 255.0f), (qbyte *)&palette_complete[ent->state_current.glowcolor], dlightcolor);
-		}
-		// LordHavoc: customizable trail
-		if (ent->render.flags & RENDER_GLOWTRAIL)
-			CL_RocketTrail2 (oldorg, neworg, ent->state_current.glowcolor, ent);
-
-		if (dlightcolor[0] || dlightcolor[1] || dlightcolor[2])
-		{
-			VectorCopy(neworg, v);
-			// hack to make glowing player light shine on their gun
-			if (i == cl.viewentity/* && !chase_active.integer*/)
-				v[2] += 30;
-			CL_AllocDlight (&ent->render, v, 1, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0);
-		}
-
-		if (chase_active.integer && (ent->render.flags & RENDER_VIEWMODEL))
-			continue;
-
-		// don't show entities with no modelindex (note: this still shows
-		// entities which have a modelindex that resolved to a NULL model)
-		if (!ent->state_current.modelindex)
-			continue;
-		if (effects & EF_NODRAW)
-			continue;
-
-		// store a list of view-relative entities for later adjustment in view code
-		if (ent->render.flags & RENDER_VIEWMODEL)
-		{
-			if (numviewmodels < MAXVIEWMODELS)
-				viewmodels[numviewmodels++] = ent;
-			continue;
-		}
-
-		Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
-
-		CL_BoundingBoxForEntity(&ent->render);
-		if (ent->render.model && ent->render.model->name[0] == '*' && ent->render.model->type == mod_brush)
-			cl_brushmodel_entities[cl_num_brushmodel_entities++] = &ent->render;
-
-		// note: the cl.viewentity and intermission check is to hide player
-		// shadow during intermission and during the Nehahra movie and
-		// Nehahra cinematics
-		if (!(ent->state_current.effects & EF_NOSHADOW)
-		 && !(ent->state_current.effects & EF_ADDITIVE)
-		 && (ent->state_current.alpha == 255)
-		 && !(ent->render.flags & RENDER_VIEWMODEL)
-		 && (i != cl.viewentity || (!cl.intermission && !Nehahrademcompatibility && !cl_noplayershadow.integer)))
-			ent->render.flags |= RENDER_SHADOW;
-
-		if (r_refdef.numentities < r_refdef.maxentities)
-			r_refdef.entities[r_refdef.numentities++] = &ent->render;
-
-		if (cl_num_entities < i + 1)
-			cl_num_entities = i + 1;
-	}
-}
-
-void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float framerate)
-{
-	int i;
-	cl_effect_t *e;
-	if (!modelindex) // sanity check
-		return;
-	for (i = 0, e = cl_effects;i < cl_max_effects;i++, e++)
-	{
-		if (e->active)
-			continue;
-		e->active = true;
-		VectorCopy(org, e->origin);
-		e->modelindex = modelindex;
-		e->starttime = cl.time;
-		e->startframe = startframe;
-		e->endframe = startframe + framecount;
-		e->framerate = framerate;
-
-		e->frame = 0;
-		e->frame1time = cl.time;
-		e->frame2time = cl.time;
-		break;
 	}
 }
 
@@ -873,7 +825,6 @@ static void CL_RelinkEffects(void)
 			intframe = frame;
 			if (intframe < 0 || intframe >= e->endframe)
 			{
-				e->active = false;
 				memset(e, 0, sizeof(*e));
 				continue;
 			}
@@ -899,11 +850,9 @@ static void CL_RelinkEffects(void)
 				ent->render.frame2time = e->frame2time;
 
 				// normal stuff
-				//VectorCopy(e->origin, ent->render.origin);
 				ent->render.model = cl.model_precache[e->modelindex];
 				ent->render.frame = ent->render.frame2;
 				ent->render.colormap = -1; // no special coloring
-				//ent->render.scale = 1;
 				ent->render.alpha = 1;
 
 				Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, e->origin[0], e->origin[1], e->origin[2], 0, 0, 0, 1);
@@ -914,7 +863,7 @@ static void CL_RelinkEffects(void)
 	}
 }
 
-void CL_RelinkBeams (void)
+void CL_RelinkBeams(void)
 {
 	int i;
 	beam_t *b;
@@ -1021,353 +970,11 @@ void CL_RelinkBeams (void)
 	}
 }
 
-cvar_t r_lightningbeam_thickness = {CVAR_SAVE, "r_lightningbeam_thickness", "4"};
-cvar_t r_lightningbeam_scroll = {CVAR_SAVE, "r_lightningbeam_scroll", "5"};
-cvar_t r_lightningbeam_repeatdistance = {CVAR_SAVE, "r_lightningbeam_repeatdistance", "1024"};
-cvar_t r_lightningbeam_color_red = {CVAR_SAVE, "r_lightningbeam_color_red", "1"};
-cvar_t r_lightningbeam_color_green = {CVAR_SAVE, "r_lightningbeam_color_green", "1"};
-cvar_t r_lightningbeam_color_blue = {CVAR_SAVE, "r_lightningbeam_color_blue", "1"};
-cvar_t r_lightningbeam_qmbtexture = {CVAR_SAVE, "r_lightningbeam_qmbtexture", "0"};
-
-rtexture_t *r_lightningbeamtexture;
-rtexture_t *r_lightningbeamqmbtexture;
-rtexturepool_t *r_lightningbeamtexturepool;
-
-int r_lightningbeamelements[18] = {0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11};
-
-void r_lightningbeams_start(void)
-{
-	r_lightningbeamtexturepool = R_AllocTexturePool();
-	r_lightningbeamtexture = NULL;
-	r_lightningbeamqmbtexture = NULL;
-}
-
-void r_lightningbeams_setupqmbtexture(void)
-{
-	r_lightningbeamqmbtexture = loadtextureimage(r_lightningbeamtexturepool, "textures/particles/lightning.pcx", 0, 0, false, TEXF_ALPHA | TEXF_PRECACHE);
-	if (r_lightningbeamqmbtexture == NULL)
-		Cvar_SetValueQuick(&r_lightningbeam_qmbtexture, false);
-}
-
-void r_lightningbeams_setuptexture(void)
-{
-#if 0
-#define BEAMWIDTH 128
-#define BEAMHEIGHT 64
-#define PATHPOINTS 8
-	int i, j, px, py, nearestpathindex, imagenumber;
-	float particlex, particley, particlexv, particleyv, dx, dy, s, maxpathstrength;
-	qbyte *pixels;
-	int *image;
-	struct {float x, y, strength;} path[PATHPOINTS], temppath;
-
-	image = Mem_Alloc(tempmempool, BEAMWIDTH * BEAMHEIGHT * sizeof(int));
-	pixels = Mem_Alloc(tempmempool, BEAMWIDTH * BEAMHEIGHT * sizeof(qbyte[4]));
-
-	for (imagenumber = 0, maxpathstrength = 0.0339476;maxpathstrength < 0.5;imagenumber++, maxpathstrength += 0.01)
-	{
-	for (i = 0;i < PATHPOINTS;i++)
-	{
-		path[i].x = lhrandom(0, 1);
-		path[i].y = lhrandom(0.2, 0.8);
-		path[i].strength = lhrandom(0, 1);
-	}
-	for (i = 0;i < PATHPOINTS;i++)
-	{
-		for (j = i + 1;j < PATHPOINTS;j++)
-		{
-			if (path[j].x < path[i].x)
-			{
-				temppath = path[j];
-				path[j] = path[i];
-				path[i] = temppath;
-			}
-		}
-	}
-	particlex = path[0].x;
-	particley = path[0].y;
-	particlexv = lhrandom(0, 0.02);
-	particlexv = lhrandom(-0.02, 0.02);
-	memset(image, 0, BEAMWIDTH * BEAMHEIGHT * sizeof(int));
-	for (i = 0;i < 65536;i++)
-	{
-		for (nearestpathindex = 0;nearestpathindex < PATHPOINTS;nearestpathindex++)
-			if (path[nearestpathindex].x > particlex)
-				break;
-		nearestpathindex %= PATHPOINTS;
-		dx = path[nearestpathindex].x + lhrandom(-0.01, 0.01);dx = bound(0, dx, 1) - particlex;if (dx < 0) dx += 1;
-		dy = path[nearestpathindex].y + lhrandom(-0.01, 0.01);dy = bound(0, dy, 1) - particley;
-		s = path[nearestpathindex].strength / sqrt(dx*dx+dy*dy);
-		particlexv = particlexv /* (1 - lhrandom(0.08, 0.12))*/ + dx * s;
-		particleyv = particleyv /* (1 - lhrandom(0.08, 0.12))*/ + dy * s;
-		particlex += particlexv * maxpathstrength;particlex -= (int) particlex;
-		particley += particleyv * maxpathstrength;particley = bound(0, particley, 1);
-		px = particlex * BEAMWIDTH;
-		py = particley * BEAMHEIGHT;
-		if (px >= 0 && py >= 0 && px < BEAMWIDTH && py < BEAMHEIGHT)
-			image[py*BEAMWIDTH+px] += 16;
-	}
-
-	for (py = 0;py < BEAMHEIGHT;py++)
-	{
-		for (px = 0;px < BEAMWIDTH;px++)
-		{
-			pixels[(py*BEAMWIDTH+px)*4+0] = bound(0, image[py*BEAMWIDTH+px] * 1.0f, 255.0f);
-			pixels[(py*BEAMWIDTH+px)*4+1] = bound(0, image[py*BEAMWIDTH+px] * 1.0f, 255.0f);
-			pixels[(py*BEAMWIDTH+px)*4+2] = bound(0, image[py*BEAMWIDTH+px] * 1.0f, 255.0f);
-			pixels[(py*BEAMWIDTH+px)*4+3] = 255;
-		}
-	}
-
-	Image_WriteTGARGBA(va("lightningbeam%i.tga", imagenumber), BEAMWIDTH, BEAMHEIGHT, pixels);
-	}
-
-	r_lightningbeamtexture = R_LoadTexture2D(r_lightningbeamtexturepool, "lightningbeam", BEAMWIDTH, BEAMHEIGHT, pixels, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
-
-	Mem_Free(pixels);
-	Mem_Free(image);
-#else
-#define BEAMWIDTH 64
-#define BEAMHEIGHT 128
-	float r, g, b, intensity, fx, width, center;
-	int x, y;
-	qbyte *data, *noise1, *noise2;
-
-	data = Mem_Alloc(tempmempool, BEAMWIDTH * BEAMHEIGHT * 4);
-	noise1 = Mem_Alloc(tempmempool, BEAMHEIGHT * BEAMHEIGHT);
-	noise2 = Mem_Alloc(tempmempool, BEAMHEIGHT * BEAMHEIGHT);
-	fractalnoise(noise1, BEAMHEIGHT, BEAMHEIGHT / 8);
-	fractalnoise(noise2, BEAMHEIGHT, BEAMHEIGHT / 16);
-
-	for (y = 0;y < BEAMHEIGHT;y++)
-	{
-		width = 0.15;//((noise1[y * BEAMHEIGHT] * (1.0f / 256.0f)) * 0.1f + 0.1f);
-		center = (noise1[y * BEAMHEIGHT + (BEAMHEIGHT / 2)] / 256.0f) * (1.0f - width * 2.0f) + width;
-		for (x = 0;x < BEAMWIDTH;x++, fx++)
-		{
-			fx = (((float) x / BEAMWIDTH) - center) / width;
-			intensity = 1.0f - sqrt(fx * fx);
-			if (intensity > 0)
-				intensity = pow(intensity, 2) * ((noise2[y * BEAMHEIGHT + x] * (1.0f / 256.0f)) * 0.33f + 0.66f);
-			intensity = bound(0, intensity, 1);
-			r = intensity * 1.0f;
-			g = intensity * 1.0f;
-			b = intensity * 1.0f;
-			data[(y * BEAMWIDTH + x) * 4 + 0] = (qbyte)(bound(0, r, 1) * 255.0f);
-			data[(y * BEAMWIDTH + x) * 4 + 1] = (qbyte)(bound(0, g, 1) * 255.0f);
-			data[(y * BEAMWIDTH + x) * 4 + 2] = (qbyte)(bound(0, b, 1) * 255.0f);
-			data[(y * BEAMWIDTH + x) * 4 + 3] = (qbyte)255;
-		}
-	}
-
-	r_lightningbeamtexture = R_LoadTexture2D(r_lightningbeamtexturepool, "lightningbeam", BEAMWIDTH, BEAMHEIGHT, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
-	Mem_Free(noise1);
-	Mem_Free(noise2);
-	Mem_Free(data);
-#endif
-}
-
-void r_lightningbeams_shutdown(void)
-{
-	r_lightningbeamtexture = NULL;
-	r_lightningbeamqmbtexture = NULL;
-	R_FreeTexturePool(&r_lightningbeamtexturepool);
-}
-
-void r_lightningbeams_newmap(void)
-{
-}
-
-void R_LightningBeams_Init(void)
-{
-	Cvar_RegisterVariable(&r_lightningbeam_thickness);
-	Cvar_RegisterVariable(&r_lightningbeam_scroll);
-	Cvar_RegisterVariable(&r_lightningbeam_repeatdistance);
-	Cvar_RegisterVariable(&r_lightningbeam_color_red);
-	Cvar_RegisterVariable(&r_lightningbeam_color_green);
-	Cvar_RegisterVariable(&r_lightningbeam_color_blue);
-	Cvar_RegisterVariable(&r_lightningbeam_qmbtexture);
-	R_RegisterModule("R_LightningBeams", r_lightningbeams_start, r_lightningbeams_shutdown, r_lightningbeams_newmap);
-}
-
-void R_CalcLightningBeamPolygonVertex3f(float *v, const float *start, const float *end, const float *offset)
-{
-	// near right corner
-	VectorAdd     (start, offset, (v + 0));
-	// near left corner
-	VectorSubtract(start, offset, (v + 3));
-	// far left corner
-	VectorSubtract(end  , offset, (v + 6));
-	// far right corner
-	VectorAdd     (end  , offset, (v + 9));
-}
-
-void R_CalcLightningBeamPolygonTexCoord2f(float *tc, float t1, float t2)
-{
-	if (r_lightningbeam_qmbtexture.integer)
-	{
-		// near right corner
-		tc[0] = t1;tc[1] = 0;
-		// near left corner
-		tc[2] = t1;tc[3] = 1;
-		// far left corner
-		tc[4] = t2;tc[5] = 1;
-		// far right corner
-		tc[6] = t2;tc[7] = 0;
-	}
-	else
-	{
-		// near right corner
-		tc[0] = 0;tc[1] = t1;
-		// near left corner
-		tc[2] = 1;tc[3] = t1;
-		// far left corner
-		tc[4] = 1;tc[5] = t2;
-		// far right corner
-		tc[6] = 0;tc[7] = t2;
-	}
-}
-
-void R_FogLightningBeam_Vertex3f_Color4f(const float *v, float *c, int numverts, float r, float g, float b, float a)
-{
-	int i;
-	vec3_t fogvec;
-	float ifog;
-	for (i = 0;i < numverts;i++, v += 3, c += 4)
-	{
-		VectorSubtract(v, r_origin, fogvec);
-		ifog = 1 - exp(fogdensity/DotProduct(fogvec,fogvec));
-		c[0] = r * ifog;
-		c[1] = g * ifog;
-		c[2] = b * ifog;
-		c[3] = a;
-	}
-}
-
-float beamrepeatscale;
-
-void R_DrawLightningBeamCallback(const void *calldata1, int calldata2)
-{
-	const beam_t *b = calldata1;
-	rmeshstate_t m;
-	vec3_t beamdir, right, up, offset;
-	float length, t1, t2;
-
-	R_Mesh_Matrix(&r_identitymatrix);
-
-	// calculate beam direction (beamdir) vector and beam length
-	// get difference vector
-	VectorSubtract(b->end, b->start, beamdir);
-	// find length of difference vector
-	length = sqrt(DotProduct(beamdir, beamdir));
-	// calculate scale to make beamdir a unit vector (normalized)
-	t1 = 1.0f / length;
-	// scale beamdir so it is now normalized
-	VectorScale(beamdir, t1, beamdir);
-
-	// calculate up vector such that it points toward viewer, and rotates around the beamdir
-	// get direction from start of beam to viewer
-	VectorSubtract(r_origin, b->start, up);
-	// remove the portion of the vector that moves along the beam
-	// (this leaves only a vector pointing directly away from the beam)
-	t1 = -DotProduct(up, beamdir);
-	VectorMA(up, t1, beamdir, up);
-	// now we have a vector pointing away from the beam, now we need to normalize it
-	VectorNormalizeFast(up);
-	// generate right vector from forward and up, the result is already normalized
-	// (CrossProduct returns a vector of multiplied length of the two inputs)
-	CrossProduct(beamdir, up, right);
-
-	// calculate T coordinate scrolling (start and end texcoord along the beam)
-	t1 = cl.time * -r_lightningbeam_scroll.value;// + beamrepeatscale * DotProduct(b->start, beamdir);
-	t1 = t1 - (int) t1;
-	t2 = t1 + beamrepeatscale * length;
-
-	// the beam is 3 polygons in this configuration:
-	//  *   2
-	//   * *
-	// 1******
-	//   * *
-	//  *   3
-	// they are showing different portions of the beam texture, creating an
-	// illusion of a beam that appears to curl around in 3D space
-	// (and realize that the whole polygon assembly orients itself to face
-	//  the viewer)
-
-	memset(&m, 0, sizeof(m));
-	if (r_lightningbeam_qmbtexture.integer)
-		m.tex[0] = R_GetTexture(r_lightningbeamqmbtexture);
-	else
-		m.tex[0] = R_GetTexture(r_lightningbeamtexture);
-	m.pointer_texcoord[0] = varray_texcoord2f[0];
-	R_Mesh_State_Texture(&m);
-
-	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-	GL_DepthMask(false);
-	GL_DepthTest(true);
-	if (r_lightningbeam_qmbtexture.integer && r_lightningbeamqmbtexture == NULL)
-		r_lightningbeams_setupqmbtexture();
-	if (!r_lightningbeam_qmbtexture.integer && r_lightningbeamtexture == NULL)
-		r_lightningbeams_setuptexture();
-
-	// polygon 1, verts 0-3
-	VectorScale(right, r_lightningbeam_thickness.value, offset);
-	R_CalcLightningBeamPolygonVertex3f(varray_vertex3f + 0, b->start, b->end, offset);
-	// polygon 2, verts 4-7
-	VectorAdd(right, up, offset);
-	VectorScale(offset, r_lightningbeam_thickness.value * 0.70710681f, offset);
-	R_CalcLightningBeamPolygonVertex3f(varray_vertex3f + 12, b->start, b->end, offset);
-	// polygon 3, verts 8-11
-	VectorSubtract(right, up, offset);
-	VectorScale(offset, r_lightningbeam_thickness.value * 0.70710681f, offset);
-	R_CalcLightningBeamPolygonVertex3f(varray_vertex3f + 24, b->start, b->end, offset);
-	R_CalcLightningBeamPolygonTexCoord2f(varray_texcoord2f[0] + 0, t1, t2);
-	R_CalcLightningBeamPolygonTexCoord2f(varray_texcoord2f[0] + 8, t1 + 0.33, t2 + 0.33);
-	R_CalcLightningBeamPolygonTexCoord2f(varray_texcoord2f[0] + 16, t1 + 0.66, t2 + 0.66);
-	GL_VertexPointer(varray_vertex3f);
-
-	if (fogenabled)
-	{
-		// per vertex colors if fog is used
-		GL_ColorPointer(varray_color4f);
-		R_FogLightningBeam_Vertex3f_Color4f(varray_vertex3f, varray_color4f, 12, r_lightningbeam_color_red.value, r_lightningbeam_color_green.value, r_lightningbeam_color_blue.value, 1);
-	}
-	else
-	{
-		// solid color if fog is not used
-		GL_Color(r_lightningbeam_color_red.value, r_lightningbeam_color_green.value, r_lightningbeam_color_blue.value, 1);
-	}
-
-	// draw the 3 polygons as one batch of 6 triangles using the 12 vertices
-	R_Mesh_Draw(12, 6, r_lightningbeamelements);
-}
-
-void R_DrawLightningBeams (void)
-{
-	int i;
-	beam_t *b;
-	vec3_t org;
-
-	if (!cl_beams_polygons.integer)
-		return;
-
-	beamrepeatscale = 1.0f / r_lightningbeam_repeatdistance.value;
-	for (i = 0, b = cl_beams;i < cl_max_beams;i++, b++)
-	{
-		if (b->model && b->endtime >= cl.time && b->lightning)
-		{
-			VectorAdd(b->start, b->end, org);
-			VectorScale(org, 0.5f, org);
-			R_MeshQueue_AddTransparent(org, R_DrawLightningBeamCallback, b, 0);
-		}
-	}
-}
-
-
 void CL_LerpPlayer(float frac)
 {
 	int i;
 	float d;
+	entity_t *ent;
 
 	cl.viewzoom = cl.viewzoomold + frac * (cl.viewzoomnew - cl.viewzoomold);
 
@@ -1387,11 +994,30 @@ void CL_LerpPlayer(float frac)
 			cl.viewangles[i] = cl.mviewangles[1][i] + frac * d;
 		}
 	}
+
+	// set up gun
+	ent = &cl.viewent;
+	ent->state_previous = ent->state_current;
+	ClearStateToDefault(&ent->state_current);
+	ent->state_current.time = cl.time;
+	ent->state_current.number = -1;
+	ent->state_current.active = true;
+	ent->state_current.modelindex = cl.stats[STAT_WEAPON];
+	ent->state_current.frame = cl.stats[STAT_WEAPONFRAME];
+	if (cl.viewentity >= 0 && cl.viewentity < MAX_EDICTS && cl_entities[cl.viewentity].state_current.active)
+	{
+		ent->state_current.alpha = cl_entities[cl.viewentity].state_current.alpha;
+		ent->state_current.effects = cl_entities[cl.viewentity].state_current.effects;
+	}
+	ent->state_current.flags = RENDER_VIEWMODEL;
+	CL_RelinkNetworkEntity(ent);
 }
 
-void CL_RelinkEntities (void)
+void CL_RelinkEntities(void)
 {
 	float frac;
+
+	numviewmodels = 0;
 
 	// fraction from previous network update to current
 	frac = CL_LerpPoint();
@@ -1579,8 +1205,6 @@ void CL_Init (void)
 	Cvar_RegisterVariable(&cl_beams_relative);
 	Cvar_RegisterVariable(&cl_beams_lightatend);
 	Cvar_RegisterVariable(&cl_noplayershadow);
-
-	R_LightningBeams_Init();
 
 	CL_Parse_Init();
 	CL_Particles_Init();

@@ -965,8 +965,8 @@ void CL_UpdateScreen(void)
 
 	DrawQ_Clear();
 
-	V_UpdateBlends();
-	V_CalcRefdef ();
+	if (!intimerefresh)
+		V_CalcRefdef();
 
 	if (cls.signon == SIGNONS)
 		R_TimeReport("setup");

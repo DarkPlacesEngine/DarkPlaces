@@ -313,6 +313,7 @@ extern void R_Explosion_Init(void);
 extern void ui_init(void);
 extern void gl_backend_init(void);
 extern void Sbar_Init(void);
+extern void R_LightningBeams_Init(void);
 
 void Render_Init(void)
 {
@@ -332,6 +333,7 @@ void Render_Init(void)
 	R_Explosion_Init();
 	ui_init();
 	Sbar_Init();
+	R_LightningBeams_Init();
 }
 
 /*

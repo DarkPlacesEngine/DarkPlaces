@@ -88,34 +88,6 @@ float V_CalcRoll (vec3_t angles, vec3_t velocity)
 
 }
 
-static float V_CalcBob (void)
-{
-	double bob, cycle;
-
-	// LordHavoc: easy case
-	if (cl_bob.value == 0)
-		return 0;
-	if (cl_bobcycle.value == 0)
-		return 0;
-
-	// LordHavoc: FIXME: this code is *weird*, redesign it sometime
-	cycle = cl.time  / cl_bobcycle.value;
-	cycle -= (int) cycle;
-	if (cycle < cl_bobup.value)
-		cycle = M_PI * cycle / cl_bobup.value;
-	else
-		cycle = M_PI + M_PI*(cycle-cl_bobup.value)/(1.0 - cl_bobup.value);
-
-	// bob is proportional to velocity in the xy plane
-	// (don't count Z, or jumping messes it up)
-
-	bob = sqrt(cl.velocity[0]*cl.velocity[0] + cl.velocity[1]*cl.velocity[1]) * cl_bob.value;
-	bob = bob*0.3 + bob*0.7*sin(cycle);
-	bob = bound(-7, bob, 4);
-	return bob;
-
-}
-
 void V_StartPitchDrift (void)
 {
 	if (cl.laststop == cl.time)
@@ -267,28 +239,16 @@ void V_ParseDamage (void)
 		cl.cshifts[CSHIFT_DAMAGE].destcolor[2] = 0;
 	}
 
-//
-// calculate view angle kicks
-//
-	ent = &cl_entities[cl.viewentity];
-	Matrix4x4_Transform(&ent->render.inversematrix, from, localfrom);
-	VectorNormalize(localfrom);
-	v_dmg_pitch = count * localfrom[0] * v_kickpitch.value;
-	v_dmg_roll = count * localfrom[1] * v_kickroll.value;
-	v_dmg_time = v_kicktime.value;
-
-	//VectorSubtract (from, ent->render.origin, from);
-	//VectorNormalize (from);
-
-	//AngleVectors (ent->render.angles, forward, right, NULL);
-
-	//side = DotProduct (from, right);
-	//v_dmg_roll = count*side*v_kickroll.value;
-
-	//side = DotProduct (from, forward);
-	//v_dmg_pitch = count*side*v_kickpitch.value;
-
-	//v_dmg_time = v_kicktime.value;
+	// calculate view angle kicks
+	if (cl.viewentity >= 0 && cl.viewentity < MAX_EDICTS && cl_entities[cl.viewentity].state_current.active)
+	{
+		ent = &cl_entities[cl.viewentity];
+		Matrix4x4_Transform(&ent->render.inversematrix, from, localfrom);
+		VectorNormalize(localfrom);
+		v_dmg_pitch = count * localfrom[0] * v_kickpitch.value;
+		v_dmg_roll = count * localfrom[1] * v_kickroll.value;
+		v_dmg_time = v_kicktime.value;
+	}
 }
 
 static cshift_t v_cshift;
@@ -323,133 +283,6 @@ static void V_BonusFlash_f (void)
 }
 
 /*
-=============
-V_UpdateBlends
-=============
-*/
-void V_UpdateBlends (void)
-{
-	float	r, g, b, a, a2;
-	int		j;
-
-	if (cls.signon != SIGNONS)
-	{
-		cl.cshifts[CSHIFT_DAMAGE].percent = 0;
-		cl.cshifts[CSHIFT_BONUS].percent = 0;
-		cl.cshifts[CSHIFT_CONTENTS].percent = 0;
-		cl.cshifts[CSHIFT_POWERUP].percent = 0;
-		r_refdef.viewblend[0] = 0;
-		r_refdef.viewblend[1] = 0;
-		r_refdef.viewblend[2] = 0;
-		r_refdef.viewblend[3] = 0;
-		return;
-	}
-
-	// drop the damage value
-	cl.cshifts[CSHIFT_DAMAGE].percent -= (cl.time - cl.oldtime)*150;
-	if (cl.cshifts[CSHIFT_DAMAGE].percent <= 0)
-		cl.cshifts[CSHIFT_DAMAGE].percent = 0;
-
-	// drop the bonus value
-	cl.cshifts[CSHIFT_BONUS].percent -= (cl.time - cl.oldtime)*100;
-	if (cl.cshifts[CSHIFT_BONUS].percent <= 0)
-		cl.cshifts[CSHIFT_BONUS].percent = 0;
-
-	// set contents color
-	switch (cl.worldmodel ? cl.worldmodel->PointContents(cl.worldmodel, r_refdef.vieworg) : CONTENTS_EMPTY)
-	{
-	case CONTENTS_EMPTY:
-	case CONTENTS_SOLID:
-		cl.cshifts[CSHIFT_CONTENTS].destcolor[0] = v_cshift.destcolor[0];
-		cl.cshifts[CSHIFT_CONTENTS].destcolor[1] = v_cshift.destcolor[1];
-		cl.cshifts[CSHIFT_CONTENTS].destcolor[2] = v_cshift.destcolor[2];
-		cl.cshifts[CSHIFT_CONTENTS].percent = v_cshift.percent;
-		break;
-	case CONTENTS_LAVA:
-		cl.cshifts[CSHIFT_CONTENTS].destcolor[0] = 255;
-		cl.cshifts[CSHIFT_CONTENTS].destcolor[1] = 80;
-		cl.cshifts[CSHIFT_CONTENTS].destcolor[2] = 0;
-		cl.cshifts[CSHIFT_CONTENTS].percent = 150 >> 1;
-		break;
-	case CONTENTS_SLIME:
-		cl.cshifts[CSHIFT_CONTENTS].destcolor[0] = 0;
-		cl.cshifts[CSHIFT_CONTENTS].destcolor[1] = 25;
-		cl.cshifts[CSHIFT_CONTENTS].destcolor[2] = 5;
-		cl.cshifts[CSHIFT_CONTENTS].percent = 150 >> 1;
-		break;
-	default:
-		cl.cshifts[CSHIFT_CONTENTS].destcolor[0] = 130;
-		cl.cshifts[CSHIFT_CONTENTS].destcolor[1] = 80;
-		cl.cshifts[CSHIFT_CONTENTS].destcolor[2] = 50;
-		cl.cshifts[CSHIFT_CONTENTS].percent = 128 >> 1;
-	}
-
-	if (cl.items & IT_QUAD)
-	{
-		cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 0;
-		cl.cshifts[CSHIFT_POWERUP].destcolor[1] = 0;
-		cl.cshifts[CSHIFT_POWERUP].destcolor[2] = 255;
-		cl.cshifts[CSHIFT_POWERUP].percent = 30;
-	}
-	else if (cl.items & IT_SUIT)
-	{
-		cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 0;
-		cl.cshifts[CSHIFT_POWERUP].destcolor[1] = 255;
-		cl.cshifts[CSHIFT_POWERUP].destcolor[2] = 0;
-		cl.cshifts[CSHIFT_POWERUP].percent = 20;
-	}
-	else if (cl.items & IT_INVISIBILITY)
-	{
-		cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 100;
-		cl.cshifts[CSHIFT_POWERUP].destcolor[1] = 100;
-		cl.cshifts[CSHIFT_POWERUP].destcolor[2] = 100;
-		cl.cshifts[CSHIFT_POWERUP].percent = 100;
-	}
-	else if (cl.items & IT_INVULNERABILITY)
-	{
-		cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 255;
-		cl.cshifts[CSHIFT_POWERUP].destcolor[1] = 255;
-		cl.cshifts[CSHIFT_POWERUP].destcolor[2] = 0;
-		cl.cshifts[CSHIFT_POWERUP].percent = 30;
-	}
-	else
-		cl.cshifts[CSHIFT_POWERUP].percent = 0;
-
-	// LordHavoc: fixed V_CalcBlend
-	r = 0;
-	g = 0;
-	b = 0;
-	a = 0;
-
-	for (j=0 ; j<NUM_CSHIFTS ; j++)
-	{
-		a2 = cl.cshifts[j].percent * (1.0f / 255.0f);
-
-		if (a2 < 0)
-			continue;
-		if (a2 > 1)
-			a2 = 1;
-		r += (cl.cshifts[j].destcolor[0]-r) * a2;
-		g += (cl.cshifts[j].destcolor[1]-g) * a2;
-		b += (cl.cshifts[j].destcolor[2]-b) * a2;
-		a = 1 - (1 - a) * (1 - a2); // correct alpha multiply...  took a while to find it on the web
-	}
-	// saturate color (to avoid blending in black)
-	if (a)
-	{
-		a2 = 1 / a;
-		r *= a2;
-		g *= a2;
-		b *= a2;
-	}
-
-	r_refdef.viewblend[0] = bound(0, r * (1.0/255.0), 1);
-	r_refdef.viewblend[1] = bound(0, g * (1.0/255.0), 1);
-	r_refdef.viewblend[2] = bound(0, b * (1.0/255.0), 1);
-	r_refdef.viewblend[3] = bound(0, a              , 1);
-}
-
-/*
 ==============================================================================
 
 						VIEW RENDERING
@@ -457,58 +290,9 @@ void V_UpdateBlends (void)
 ==============================================================================
 */
 
-/*
-==============
-V_AddIdle
-
-Idle swaying
-==============
-*/
-static void V_AddIdle (float idle)
-{
-	r_refdef.viewangles[ROLL] += idle * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value;
-	r_refdef.viewangles[PITCH] += idle * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value;
-	r_refdef.viewangles[YAW] += idle * sin(cl.time*v_iyaw_cycle.value) * v_iyaw_level.value;
-}
-
 #define MAXVIEWMODELS 32
 extern int numviewmodels;
 extern entity_t *viewmodels[MAXVIEWMODELS];
-void V_LinkViewEntities(void)
-{
-	int i;
-	//float v[3];
-	entity_t *ent;
-	matrix4x4_t matrix, matrix2;
-
-	if (numviewmodels <= 0)
-		return;
-
-	//Matrix4x4_CreateRotate(&matrix, 1, 0, 0, r_refdef.viewangles[0]);
-	//Matrix4x4_CreateRotate(&matrix, 0, 1, 0, r_refdef.viewangles[0]);
-	//Matrix4x4_CreateRotate(&matrix, 0, 0, 1, r_refdef.viewangles[0]);
-	Matrix4x4_CreateFromQuakeEntity(&matrix, r_refdef.vieworg[0], r_refdef.vieworg[1], r_refdef.vieworg[2], r_refdef.viewangles[0], r_refdef.viewangles[1], r_refdef.viewangles[2], 0.3);
-	for (i = 0;i < numviewmodels && r_refdef.numentities < r_refdef.maxentities;i++)
-	{
-		ent = viewmodels[i];
-		r_refdef.entities[r_refdef.numentities++] = &ent->render;
-
-		//VectorCopy(ent->render.origin, v);
-		//ent->render.origin[0] = v[0] * vpn[0] + v[1] * vright[0] + v[2] * vup[0] + r_refdef.vieworg[0];
-		//ent->render.origin[1] = v[0] * vpn[1] + v[1] * vright[1] + v[2] * vup[1] + r_refdef.vieworg[1];
-		//ent->render.origin[2] = v[0] * vpn[2] + v[1] * vright[2] + v[2] * vup[2] + r_refdef.vieworg[2];
-		//ent->render.angles[0] = ent->render.angles[0] + r_refdef.viewangles[0];
-		//ent->render.angles[1] = ent->render.angles[1] + r_refdef.viewangles[1];
-		//ent->render.angles[2] = ent->render.angles[2] + r_refdef.viewangles[2];
-		//ent->render.scale *= 0.3;
-
-		//Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, ent->render.origin[0], ent->render.origin[1], ent->render.origin[2], ent->render.angles[0], ent->render.angles[1], ent->render.angles[2], ent->render.scale);
-		matrix2 = ent->render.matrix;
-		Matrix4x4_Concat(&ent->render.matrix, &matrix, &matrix2);
-		Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
-		CL_BoundingBoxForEntity(&ent->render);
-	}
-}
 
 /*
 ==================
@@ -518,86 +302,203 @@ V_CalcRefdef
 */
 void V_CalcRefdef (void)
 {
-	entity_t *ent, *view;
-
-	if (cls.state != ca_connected || cls.signon != SIGNONS)
-		return;
-
-	// ent is the player model (visible when out of body)
-	ent = &cl_entities[cl.viewentity];
-	// view is the weapon model (only visible from inside body)
-	view = &cl.viewent;
-
-	V_DriftPitch ();
-
-	VectorCopy (ent->render.origin, r_refdef.vieworg);
-	if (!intimerefresh)
-		VectorCopy (cl.viewangles, r_refdef.viewangles);
-
-	if (cl.intermission)
+	float r, g, b, a, a2;
+	int j;
+	entity_t *ent;
+	if (cls.state == ca_connected && cls.signon == SIGNONS)
 	{
-		view->render.model = NULL;
-		VectorCopy (ent->render.angles, r_refdef.viewangles);
-		V_AddIdle (1);
-	}
-	else if (chase_active.value)
-	{
-		view->render.model = NULL;
-		r_refdef.vieworg[2] += cl.viewheight;
-		Chase_Update ();
-		V_AddIdle (v_idlescale.value);
+		// ent is the player model (visible when out of body)
+		ent = &cl_entities[cl.viewentity];
+		V_DriftPitch();
+		if (cl.intermission)
+		{
+			// entity is a fixed camera
+			VectorCopy(ent->render.origin, r_refdef.vieworg);
+			VectorCopy(ent->render.angles, r_refdef.viewangles);
+		}
+		else if (chase_active.value)
+		{
+			// observing entity from third person
+			VectorCopy(ent->render.origin, r_refdef.vieworg);
+			VectorCopy(cl.viewangles, r_refdef.viewangles);
+			Chase_Update();
+		}
+		else
+		{
+			// first person view from entity
+			VectorCopy(ent->render.origin, r_refdef.vieworg);
+			VectorCopy(cl.viewangles, r_refdef.viewangles);
+			// angles
+			if (cl.stats[STAT_HEALTH] <= 0)
+				r_refdef.viewangles[ROLL] = 80;	// dead view angle
+			VectorAdd(r_refdef.viewangles, cl.punchangle, r_refdef.viewangles);
+			r_refdef.viewangles[ROLL] += V_CalcRoll(cl.viewangles, cl.velocity);
+			if (v_dmg_time > 0)
+			{
+				r_refdef.viewangles[ROLL] += v_dmg_time/v_kicktime.value*v_dmg_roll;
+				r_refdef.viewangles[PITCH] += v_dmg_time/v_kicktime.value*v_dmg_pitch;
+				v_dmg_time -= cl.frametime;
+			}
+			if (v_idlescale.value)
+			{
+				r_refdef.viewangles[ROLL] += v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value;
+				r_refdef.viewangles[PITCH] += v_idlescale.value * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value;
+				r_refdef.viewangles[YAW] += v_idlescale.value * sin(cl.time*v_iyaw_cycle.value) * v_iyaw_level.value;
+			}
+			// origin
+			VectorAdd(r_refdef.vieworg, cl.punchvector, r_refdef.vieworg);
+			r_refdef.vieworg[2] += cl.viewheight;
+			if (cl_bob.value && cl_bobcycle.value)
+			{
+				double bob, cycle;
+				// LordHavoc: this code is *weird*, but not replacable (I think it
+				// should be done in QC on the server, but oh well, quake is quake)
+				// LordHavoc: figured out bobup: the time at which the sin is at 180
+				// degrees (which allows lengthening or squishing the peak or valley)
+				cycle = cl.time / cl_bobcycle.value;
+				cycle -= (int) cycle;
+				if (cycle < cl_bobup.value)
+					cycle = sin(M_PI * cycle / cl_bobup.value);
+				else
+					cycle = sin(M_PI + M_PI * (cycle-cl_bobup.value)/(1.0 - cl_bobup.value));
+				// bob is proportional to velocity in the xy plane
+				// (don't count Z, or jumping messes it up)
+				bob = sqrt(cl.velocity[0]*cl.velocity[0] + cl.velocity[1]*cl.velocity[1]) * cl_bob.value;
+				bob = bob*0.3 + bob*0.7*cycle;
+				r_refdef.vieworg[2] += bound(-7, bob, 4);
+			}
+			// link the delayed viewmodel entities
+			if (numviewmodels > 0 && r_drawviewmodel.integer && !chase_active.integer && !envmap && r_drawentities.integer && !(cl.items & IT_INVISIBILITY) && cl.stats[STAT_HEALTH] > 0)
+			{
+				int i;
+				entity_t *ent;
+				matrix4x4_t matrix, matrix2;
+				Matrix4x4_CreateFromQuakeEntity(&matrix, r_refdef.vieworg[0], r_refdef.vieworg[1], r_refdef.vieworg[2], r_refdef.viewangles[0] + v_idlescale.value * sin(cl.time*v_iyaw_cycle.value) * v_iyaw_level.value, r_refdef.viewangles[1] - v_idlescale.value * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value, r_refdef.viewangles[2] - v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value, 0.3);
+				for (i = 0;i < numviewmodels && r_refdef.numentities < r_refdef.maxentities;i++)
+				{
+					ent = viewmodels[i];
+					r_refdef.entities[r_refdef.numentities++] = &ent->render;
+					matrix2 = ent->render.matrix;
+					Matrix4x4_Concat(&ent->render.matrix, &matrix, &matrix2);
+					Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
+					CL_BoundingBoxForEntity(&ent->render);
+				}
+			}
+		}
+
+		// drop the damage value
+		cl.cshifts[CSHIFT_DAMAGE].percent -= (cl.time - cl.oldtime)*150;
+		if (cl.cshifts[CSHIFT_DAMAGE].percent <= 0)
+			cl.cshifts[CSHIFT_DAMAGE].percent = 0;
+
+		// drop the bonus value
+		cl.cshifts[CSHIFT_BONUS].percent -= (cl.time - cl.oldtime)*100;
+		if (cl.cshifts[CSHIFT_BONUS].percent <= 0)
+			cl.cshifts[CSHIFT_BONUS].percent = 0;
+
+		// set contents color
+		switch (cl.worldmodel ? cl.worldmodel->PointContents(cl.worldmodel, r_refdef.vieworg) : CONTENTS_EMPTY)
+		{
+		case CONTENTS_EMPTY:
+		case CONTENTS_SOLID:
+			cl.cshifts[CSHIFT_CONTENTS].destcolor[0] = v_cshift.destcolor[0];
+			cl.cshifts[CSHIFT_CONTENTS].destcolor[1] = v_cshift.destcolor[1];
+			cl.cshifts[CSHIFT_CONTENTS].destcolor[2] = v_cshift.destcolor[2];
+			cl.cshifts[CSHIFT_CONTENTS].percent = v_cshift.percent;
+			break;
+		case CONTENTS_LAVA:
+			cl.cshifts[CSHIFT_CONTENTS].destcolor[0] = 255;
+			cl.cshifts[CSHIFT_CONTENTS].destcolor[1] = 80;
+			cl.cshifts[CSHIFT_CONTENTS].destcolor[2] = 0;
+			cl.cshifts[CSHIFT_CONTENTS].percent = 150 >> 1;
+			break;
+		case CONTENTS_SLIME:
+			cl.cshifts[CSHIFT_CONTENTS].destcolor[0] = 0;
+			cl.cshifts[CSHIFT_CONTENTS].destcolor[1] = 25;
+			cl.cshifts[CSHIFT_CONTENTS].destcolor[2] = 5;
+			cl.cshifts[CSHIFT_CONTENTS].percent = 150 >> 1;
+			break;
+		default:
+			cl.cshifts[CSHIFT_CONTENTS].destcolor[0] = 130;
+			cl.cshifts[CSHIFT_CONTENTS].destcolor[1] = 80;
+			cl.cshifts[CSHIFT_CONTENTS].destcolor[2] = 50;
+			cl.cshifts[CSHIFT_CONTENTS].percent = 128 >> 1;
+		}
+
+		if (cl.items & IT_QUAD)
+		{
+			cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 0;
+			cl.cshifts[CSHIFT_POWERUP].destcolor[1] = 0;
+			cl.cshifts[CSHIFT_POWERUP].destcolor[2] = 255;
+			cl.cshifts[CSHIFT_POWERUP].percent = 30;
+		}
+		else if (cl.items & IT_SUIT)
+		{
+			cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 0;
+			cl.cshifts[CSHIFT_POWERUP].destcolor[1] = 255;
+			cl.cshifts[CSHIFT_POWERUP].destcolor[2] = 0;
+			cl.cshifts[CSHIFT_POWERUP].percent = 20;
+		}
+		else if (cl.items & IT_INVISIBILITY)
+		{
+			cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 100;
+			cl.cshifts[CSHIFT_POWERUP].destcolor[1] = 100;
+			cl.cshifts[CSHIFT_POWERUP].destcolor[2] = 100;
+			cl.cshifts[CSHIFT_POWERUP].percent = 100;
+		}
+		else if (cl.items & IT_INVULNERABILITY)
+		{
+			cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 255;
+			cl.cshifts[CSHIFT_POWERUP].destcolor[1] = 255;
+			cl.cshifts[CSHIFT_POWERUP].destcolor[2] = 0;
+			cl.cshifts[CSHIFT_POWERUP].percent = 30;
+		}
+		else
+			cl.cshifts[CSHIFT_POWERUP].percent = 0;
+
+		// LordHavoc: fixed V_CalcBlend
+		r = 0;
+		g = 0;
+		b = 0;
+		a = 0;
+
+		for (j=0 ; j<NUM_CSHIFTS ; j++)
+		{
+			a2 = cl.cshifts[j].percent * (1.0f / 255.0f);
+
+			if (a2 < 0)
+				continue;
+			if (a2 > 1)
+				a2 = 1;
+			r += (cl.cshifts[j].destcolor[0]-r) * a2;
+			g += (cl.cshifts[j].destcolor[1]-g) * a2;
+			b += (cl.cshifts[j].destcolor[2]-b) * a2;
+			a = 1 - (1 - a) * (1 - a2); // correct alpha multiply...  took a while to find it on the web
+		}
+		// saturate color (to avoid blending in black)
+		if (a)
+		{
+			a2 = 1 / a;
+			r *= a2;
+			g *= a2;
+			b *= a2;
+		}
+
+		r_refdef.viewblend[0] = bound(0, r * (1.0/255.0), 1);
+		r_refdef.viewblend[1] = bound(0, g * (1.0/255.0), 1);
+		r_refdef.viewblend[2] = bound(0, b * (1.0/255.0), 1);
+		r_refdef.viewblend[3] = bound(0, a              , 1);
 	}
 	else
 	{
-		r_refdef.viewangles[ROLL] += V_CalcRoll (cl.viewangles, cl.velocity);
-
-		if (v_dmg_time > 0)
-		{
-			r_refdef.viewangles[ROLL] += v_dmg_time/v_kicktime.value*v_dmg_roll;
-			r_refdef.viewangles[PITCH] += v_dmg_time/v_kicktime.value*v_dmg_pitch;
-			v_dmg_time -= cl.frametime;
-		}
-
-		if (cl.stats[STAT_HEALTH] <= 0)
-			r_refdef.viewangles[ROLL] = 80;	// dead view angle
-
-		V_AddIdle (v_idlescale.value);
-
-		r_refdef.vieworg[2] += cl.viewheight + V_CalcBob ();
-
-		// LordHavoc: origin view kick added
-		if (!intimerefresh)
-		{
-			VectorAdd(r_refdef.viewangles, cl.punchangle, r_refdef.viewangles);
-			VectorAdd(r_refdef.vieworg, cl.punchvector, r_refdef.vieworg);
-		}
-
-		// set up gun
-		// (FIXME! this should be in cl_main.c with the other linking code, not view.c!)
-		view->state_current.modelindex = cl.stats[STAT_WEAPON];
-		view->state_current.frame = cl.stats[STAT_WEAPONFRAME];
-		//VectorCopy(r_refdef.vieworg, view->render.origin);
-		//view->render.angles[PITCH] = r_refdef.viewangles[PITCH] + v_idlescale.value * sin(cl.time*v_iyaw_cycle.value) * v_iyaw_level.value;
-		//view->render.angles[YAW] = r_refdef.viewangles[YAW] - v_idlescale.value * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value;
-		//view->render.angles[ROLL] = r_refdef.viewangles[ROLL] - v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value;
-		//view->render.scale = 1.0 / 3.0;
-		Matrix4x4_CreateFromQuakeEntity(&view->render.matrix, r_refdef.vieworg[0], r_refdef.vieworg[1], r_refdef.vieworg[2], r_refdef.viewangles[PITCH] + v_idlescale.value * sin(cl.time*v_iyaw_cycle.value) * v_iyaw_level.value, r_refdef.viewangles[YAW] - v_idlescale.value * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value, r_refdef.viewangles[ROLL] - v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value, 0.3);
-		Matrix4x4_Invert_Simple(&view->render.inversematrix, &view->render.matrix);
-		CL_BoundingBoxForEntity(&view->render);
-		// FIXME: this setup code is somewhat evil (CL_LerpUpdate should be private?)
-		CL_LerpUpdate(view);
-		view->render.colormap = -1; // no special coloring
-		view->render.alpha = ent->render.alpha; // LordHavoc: if the player is transparent, so is the gun
-		view->render.effects = ent->render.effects;
-		AngleVectors(r_refdef.viewangles, vpn, vright, vup);
-
-		// link into render entities list
-		if (r_drawviewmodel.integer && !chase_active.integer && !envmap && r_drawentities.integer && !(cl.items & IT_INVISIBILITY) && cl.stats[STAT_HEALTH] > 0)
-		{
-			if (r_refdef.numentities < r_refdef.maxentities && view->render.model != NULL)
-				r_refdef.entities[r_refdef.numentities++] = &view->render;
-			V_LinkViewEntities();
-		}
+		cl.cshifts[CSHIFT_DAMAGE].percent = 0;
+		cl.cshifts[CSHIFT_BONUS].percent = 0;
+		cl.cshifts[CSHIFT_CONTENTS].percent = 0;
+		cl.cshifts[CSHIFT_POWERUP].percent = 0;
+		r_refdef.viewblend[0] = 0;
+		r_refdef.viewblend[1] = 0;
+		r_refdef.viewblend[2] = 0;
+		r_refdef.viewblend[3] = 0;
 	}
 }
 
