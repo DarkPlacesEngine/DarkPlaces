@@ -48,6 +48,7 @@ Zombie for making great levels and general DarkPlaces publicity.
 FrikaC for FrikQCC and FrikBot and general community support.
 Transfusion Project for recreating Blood in the world of Quake.
 de-we for the great icons.
+|Rain| for running my favorite anynet IRC server and his bot feh (which although a bit antisocial never seems to grow tired of being my calculator).
 
 Questions/comments/bugreports/suggestions?
 Send email to havoc@telefragged.com.
