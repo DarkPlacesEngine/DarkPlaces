@@ -122,7 +122,7 @@ void sbar_start(void)
 	int i;
 
 	numsbarpics = 0;
-		
+
 	sb_disc = Sbar_NewPic("gfx/disc");
 
 	for (i = 0;i < 10;i++)
@@ -141,12 +141,12 @@ void sbar_start(void)
 		sb_ammo[1] = Sbar_NewPic ("gfx/sb_bullets");
 		sb_ammo[2] = Sbar_NewPic ("gfx/sb_rocket");
 		sb_ammo[3] = Sbar_NewPic ("gfx/sb_cells");
-		
+
 		sb_items[2] = Sbar_NewPic ("gfx/sb_slowmo");
 		sb_items[3] = Sbar_NewPic ("gfx/sb_invinc");
 		sb_items[4] = Sbar_NewPic ("gfx/sb_energy");
 		sb_items[5] = Sbar_NewPic ("gfx/sb_str");
-		
+
 		sb_sbar = Sbar_NewPic("gfx/sbar");
 		sb_sbar_overlay = Sbar_NewPic("gfx/sbar_overlay");
 
@@ -154,7 +154,7 @@ void sbar_start(void)
 			sb_weapons[0][i] = Sbar_NewPic(va("gfx/inv_weapon%i",i));
 
 		return;
-	}	
+	}
 
 	sb_weapons[0][0] = Sbar_NewPic ("gfx/inv_shotgun");
 	sb_weapons[0][1] = Sbar_NewPic ("gfx/inv_sshotgun");
@@ -377,21 +377,21 @@ void Sbar_DrawXNum (int x, int y, int num, int digits, int lettersize, float r, 
 {
 	char str[32], *ptr;
 	int l, frame;
-	
+
 	l = sprintf(str, "%i", num);
 	ptr = str;
 	if (l > digits)
 		ptr += (l-digits);
 	if (l < digits)
 		x += (digits-l) * lettersize;
-		
+
 	while (*ptr)
 	{
 		if (*ptr == '-')
 			frame = STAT_MINUS;
 		else
 			frame = *ptr -'0';
-		
+
 		DrawQ_Pic (sbar_x + x, sbar_y + y, sb_nums[0][frame]->name,lettersize,lettersize,r,g,b,a,flags);
 		x += lettersize;
 
@@ -851,7 +851,7 @@ void Sbar_Draw (void)
 {
 	if (scr_con_current == vid.conheight)
 		return;		// console is full screen
-	
+
 	if (cl.intermission == 1)
 	{
 		Sbar_IntermissionOverlay();
@@ -867,14 +867,14 @@ void Sbar_Draw (void)
 	{
 		sbar_y = vid.conheight - 47;
 		sbar_x = (vid.conwidth - 640)/2;
-		
+
 		if (sb_lines)
 		{
-			Sbar_DrawInventory(); 
+			Sbar_DrawInventory();
 			if (!cl.islocalgame)
 				Sbar_DrawFrags ();
 		}
-		
+
 		if (sb_showscores || cl.stats[STAT_HEALTH] <= 0)
 		{
 			Sbar_DrawAlphaPic (0, 0, sb_scorebar, 0.4);
@@ -883,7 +883,7 @@ void Sbar_Draw (void)
 		else if (sb_lines)
 		{
 			Sbar_DrawPic (0, 0, sb_sbar);
-			
+
 			// special items
 			if (cl.items & IT_INVULNERABILITY)
 			{
@@ -893,13 +893,13 @@ void Sbar_Draw (void)
 
 			// armor
 			Sbar_DrawXNum ((340-3*24), 12, cl.stats[STAT_ARMOR], 3, 24, 0.6,0.7,0.8,1,0);
-			
+
 			// health
 			if(cl.stats[STAT_HEALTH] > 100)
 				Sbar_DrawXNum((154-3*24),12,cl.stats[STAT_HEALTH],3,24,1,1,1,1,0);
 			else if(cl.stats[STAT_HEALTH] <= 25 && cl.time - (int)cl.time > 0.5)
 				Sbar_DrawXNum((154-3*24),12,cl.stats[STAT_HEALTH],3,24,0.7,0,0,1,0);
-			else	
+			else
 				Sbar_DrawXNum((154-3*24),12,cl.stats[STAT_HEALTH],3,24,0.6,0.7,0.8,1,0);
 
 			// AK dont draw ammo for the laser
@@ -913,12 +913,12 @@ void Sbar_Draw (void)
 					Sbar_DrawPic (519, 0, sb_ammo[2]);
 				else if (cl.items & NEX_IT_CELLS)
 					Sbar_DrawPic (519, 0, sb_ammo[3]);
-				
-				if(cl.stats[STAT_AMMO] <= 10) 
+
+				if(cl.stats[STAT_AMMO] <= 10)
 					Sbar_DrawXNum ((519-3*24), 12, cl.stats[STAT_AMMO], 3, 24, 0.7, 0,0,1,0);
 				else
 					Sbar_DrawXNum ((519-3*24), 12, cl.stats[STAT_AMMO], 3, 24, 0.6, 0.7,0.8,1,0);
-				
+
 			}
 
 			DrawQ_Pic(sbar_x,sbar_y,sb_sbar_overlay->name,0,0,1,1,1,1,DRAWFLAG_MODULATE);
@@ -1095,12 +1095,17 @@ void Sbar_MiniDeathmatchOverlay (void)
 	int i, x, y, numlines;
 
 	// decide where to print
-	x = 0;
 	// AK Nex wants its scores on the upper left
 	if(gamemode == GAME_NEXUIZ)
-		y = 0; 
+	{
+		x = 0;
+		y = 0;
+	}
 	else
+	{
+		x = 320;
 		y = vid.conheight - sb_lines;
+	}
 
 	numlines = (vid.conheight - y) / 8;
 	// give up if there isn't room
