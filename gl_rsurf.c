@@ -747,7 +747,7 @@ static int RSurf_LightCheck(const matrix4x4_t *matrix, const int *dlightbits, co
 	return false;
 }
 
-static void RSurfShader_Sky(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
+static void RSurfShader_Sky(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
 {
 	const msurface_t *surf;
 	const surfmesh_t *mesh;
@@ -784,7 +784,7 @@ static void RSurfShader_Sky(const entity_render_t *ent, const texture_t *texture
 	}
 	m.depthwrite = true;
 	R_Mesh_State(&m);
-	for (surf = firstsurf;surf;surf = surf->texturechain)
+	while((surf = *surfchain++) != NULL)
 	{
 		if (surf->visframe == r_framecount)
 		{
@@ -878,13 +878,14 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 	}
 }
 
-static void RSurfShader_Water(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
+static void RSurfShader_Water(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
 {
 	const msurface_t *surf;
+	msurface_t **chain;
 	vec3_t center;
 	if (texture->rendertype != SURFRENDER_OPAQUE)
 	{
-		for (surf = firstsurf;surf;surf = surf->texturechain)
+		for (chain = surfchain;(surf = *chain) != NULL;*chain++)
 		{
 			if (surf->visframe == r_framecount)
 			{
@@ -894,7 +895,7 @@ static void RSurfShader_Water(const entity_render_t *ent, const texture_t *textu
 		}
 	}
 	else
-		for (surf = firstsurf;surf;surf = surf->texturechain)
+		for (chain = surfchain;(surf = *chain) != NULL;*chain++)
 			if (surf->visframe == r_framecount)
 				RSurfShader_Water_Callback(ent, surf - ent->model->surfaces);
 }
@@ -995,7 +996,7 @@ static void RSurfShader_Wall_Pass_Fog(const entity_render_t *ent, const msurface
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
+static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
 {
 	const msurface_t *surf;
 	const surfmesh_t *mesh;
@@ -1006,7 +1007,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ZERO;
 	m.tex[0] = R_GetTexture(texture->texture);
-	m.tex[1] = R_GetTexture(firstsurf->lightmaptexture);
+	m.tex[1] = R_GetTexture((**surfchain).lightmaptexture);
 	m.tex[2] = R_GetTexture(texture->detailtexture);
 	m.texrgbscale[0] = 1;
 	m.texrgbscale[1] = 4;
@@ -1014,7 +1015,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render
 	R_Mesh_State(&m);
 	cl = (float) (1 << r_lightmapscalebit) * r_colorscale;
 	GL_Color(cl, cl, cl, 1);
-	for (surf = firstsurf;surf;surf = surf->texturechain)
+	while((surf = *surfchain++) != NULL)
 	{
 		if (surf->visframe == r_framecount)
 		{
@@ -1037,7 +1038,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_BaseDoubleTex(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
+static void RSurfShader_OpaqueWall_Pass_BaseDoubleTex(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
 {
 	const msurface_t *surf;
 	const surfmesh_t *mesh;
@@ -1047,12 +1048,12 @@ static void RSurfShader_OpaqueWall_Pass_BaseDoubleTex(const entity_render_t *ent
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ZERO;
 	m.tex[0] = R_GetTexture(texture->texture);
-	m.tex[1] = R_GetTexture(firstsurf->lightmaptexture);
+	m.tex[1] = R_GetTexture((**surfchain).lightmaptexture);
 	if (gl_combine.integer)
 		m.texrgbscale[1] = 4;
 	R_Mesh_State(&m);
 	GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
-	for (surf = firstsurf;surf;surf = surf->texturechain)
+	while((surf = *surfchain++) != NULL)
 	{
 		if (surf->visframe == r_framecount)
 		{
@@ -1074,7 +1075,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseDoubleTex(const entity_render_t *ent
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_BaseTexture(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
+static void RSurfShader_OpaqueWall_Pass_BaseTexture(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
 {
 	const msurface_t *surf;
 	const surfmesh_t *mesh;
@@ -1085,7 +1086,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseTexture(const entity_render_t *ent, 
 	m.tex[0] = R_GetTexture(texture->texture);
 	R_Mesh_State(&m);
 	GL_Color(1, 1, 1, 1);
-	for (surf = firstsurf;surf;surf = surf->texturechain)
+	while((surf = *surfchain++) != NULL)
 	{
 		if (surf->visframe == r_framecount)
 		{
@@ -1100,7 +1101,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseTexture(const entity_render_t *ent, 
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_BaseLightmap(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
+static void RSurfShader_OpaqueWall_Pass_BaseLightmap(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
 {
 	const msurface_t *surf;
 	const surfmesh_t *mesh;
@@ -1109,12 +1110,12 @@ static void RSurfShader_OpaqueWall_Pass_BaseLightmap(const entity_render_t *ent,
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_ZERO;
 	m.blendfunc2 = GL_SRC_COLOR;
-	m.tex[0] = R_GetTexture(firstsurf->lightmaptexture);
+	m.tex[0] = R_GetTexture((**surfchain).lightmaptexture);
 	if (gl_combine.integer)
 		m.texrgbscale[0] = 4;
 	R_Mesh_State(&m);
 	GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
-	for (surf = firstsurf;surf;surf = surf->texturechain)
+	while((surf = *surfchain++) != NULL)
 	{
 		if (surf->visframe == r_framecount)
 		{
@@ -1135,7 +1136,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseLightmap(const entity_render_t *ent,
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_Light(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
+static void RSurfShader_OpaqueWall_Pass_Light(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
 {
 	const msurface_t *surf;
 	const surfmesh_t *mesh;
@@ -1154,7 +1155,7 @@ static void RSurfShader_OpaqueWall_Pass_Light(const entity_render_t *ent, const 
 	}
 	R_Mesh_State(&m);
 	GL_UseColorArray();
-	for (surf = firstsurf;surf;surf = surf->texturechain)
+	while((surf = *surfchain++) != NULL)
 	{
 		if (surf->visframe == r_framecount && surf->dlightframe == r_framecount)
 		{
@@ -1175,7 +1176,7 @@ static void RSurfShader_OpaqueWall_Pass_Light(const entity_render_t *ent, const 
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_Fog(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
+static void RSurfShader_OpaqueWall_Pass_Fog(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
 {
 	const msurface_t *surf;
 	const surfmesh_t *mesh;
@@ -1187,7 +1188,7 @@ static void RSurfShader_OpaqueWall_Pass_Fog(const entity_render_t *ent, const te
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 	R_Mesh_State(&m);
 	GL_UseColorArray();
-	for (surf = firstsurf;surf;surf = surf->texturechain)
+	while((surf = *surfchain++) != NULL)
 	{
 		if (surf->visframe == r_framecount)
 		{
@@ -1204,7 +1205,7 @@ static void RSurfShader_OpaqueWall_Pass_Fog(const entity_render_t *ent, const te
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_BaseDetail(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
+static void RSurfShader_OpaqueWall_Pass_BaseDetail(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
 {
 	const msurface_t *surf;
 	const surfmesh_t *mesh;
@@ -1215,7 +1216,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseDetail(const entity_render_t *ent, c
 	m.tex[0] = R_GetTexture(texture->detailtexture);
 	R_Mesh_State(&m);
 	GL_Color(1, 1, 1, 1);
-	for (surf = firstsurf;surf;surf = surf->texturechain)
+	while((surf = *surfchain++) != NULL)
 	{
 		if (surf->visframe == r_framecount)
 		{
@@ -1230,7 +1231,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseDetail(const entity_render_t *ent, c
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_Glow(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
+static void RSurfShader_OpaqueWall_Pass_Glow(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
 {
 	const msurface_t *surf;
 	const surfmesh_t *mesh;
@@ -1241,7 +1242,7 @@ static void RSurfShader_OpaqueWall_Pass_Glow(const entity_render_t *ent, const t
 	m.tex[0] = R_GetTexture(texture->glowtexture);
 	R_Mesh_State(&m);
 	GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
-	for (surf = firstsurf;surf;surf = surf->texturechain)
+	while((surf = *surfchain++) != NULL)
 	{
 		if (surf->visframe == r_framecount)
 		{
@@ -1256,7 +1257,7 @@ static void RSurfShader_OpaqueWall_Pass_Glow(const entity_render_t *ent, const t
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_OpaqueGlow(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
+static void RSurfShader_OpaqueWall_Pass_OpaqueGlow(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
 {
 	const msurface_t *surf;
 	const surfmesh_t *mesh;
@@ -1270,7 +1271,7 @@ static void RSurfShader_OpaqueWall_Pass_OpaqueGlow(const entity_render_t *ent, c
 		GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
 	else
 		GL_Color(0, 0, 0, 1);
-	for (surf = firstsurf;surf;surf = surf->texturechain)
+	while((surf = *surfchain++) != NULL)
 	{
 		if (surf->visframe == r_framecount)
 		{
@@ -1315,14 +1316,15 @@ static void RSurfShader_Wall_Vertex_Callback(const void *calldata1, int calldata
 		RSurfShader_Wall_Pass_Fog(ent, surf, texture, rendertype, currentalpha);
 }
 
-static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
+static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
 {
 	const msurface_t *surf;
+	msurface_t **chain;
 	vec3_t center;
 	if (texture->rendertype != SURFRENDER_OPAQUE)
 	{
 		// transparent vertex shaded from lightmap
-		for (surf = firstsurf;surf;surf = surf->texturechain)
+		for (chain = surfchain;(surf = *chain) != NULL;chain++)
 		{
 			if (surf->visframe == r_framecount)
 			{
@@ -1334,22 +1336,22 @@ static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const texture_
 	else if (r_shadow_lightingmode >= 2)
 	{
 		// opaque base lighting
-		RSurfShader_OpaqueWall_Pass_OpaqueGlow(ent, texture, firstsurf);
+		RSurfShader_OpaqueWall_Pass_OpaqueGlow(ent, texture, surfchain);
 		if (fogenabled)
-			RSurfShader_OpaqueWall_Pass_Fog(ent, texture, firstsurf);
+			RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
 	}
 	else if (r_vertexsurfaces.integer)
 	{
 		// opaque vertex shaded from lightmap
-		for (surf = firstsurf;surf;surf = surf->texturechain)
+		for (chain = surfchain;(surf = *chain) != NULL;chain++)
 			if (surf->visframe == r_framecount)
 				RSurfShader_Wall_Pass_BaseVertex(ent, surf, texture, texture->rendertype, texture->currentalpha);
 		if (texture->glowtexture)
-			for (surf = firstsurf;surf;surf = surf->texturechain)
+			for (chain = surfchain;(surf = *chain) != NULL;chain++)
 				if (surf->visframe == r_framecount)
 					RSurfShader_Wall_Pass_Glow(ent, surf, texture, texture->rendertype, texture->currentalpha);
 		if (fogenabled)
-			for (surf = firstsurf;surf;surf = surf->texturechain)
+			for (chain = surfchain;(surf = *chain) != NULL;chain++)
 				if (surf->visframe == r_framecount)
 					RSurfShader_Wall_Pass_Fog(ent, surf, texture, texture->rendertype, texture->currentalpha);
 	}
@@ -1359,27 +1361,27 @@ static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const texture_
 		if (r_textureunits.integer >= 2)
 		{
 			if (r_textureunits.integer >= 3 && gl_combine.integer && r_detailtextures.integer)
-				RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(ent, texture, firstsurf);
+				RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(ent, texture, surfchain);
 			else
 			{
-				RSurfShader_OpaqueWall_Pass_BaseDoubleTex(ent, texture, firstsurf);
+				RSurfShader_OpaqueWall_Pass_BaseDoubleTex(ent, texture, surfchain);
 				if (r_detailtextures.integer)
-					RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, firstsurf);
+					RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, surfchain);
 			}
 		}
 		else
 		{
-			RSurfShader_OpaqueWall_Pass_BaseTexture(ent, texture, firstsurf);
-			RSurfShader_OpaqueWall_Pass_BaseLightmap(ent, texture, firstsurf);
+			RSurfShader_OpaqueWall_Pass_BaseTexture(ent, texture, surfchain);
+			RSurfShader_OpaqueWall_Pass_BaseLightmap(ent, texture, surfchain);
 			if (r_detailtextures.integer)
-				RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, firstsurf);
+				RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, surfchain);
 		}
 		if (!r_dlightmap.integer && !(ent->effects & EF_FULLBRIGHT))
-			RSurfShader_OpaqueWall_Pass_Light(ent, texture, firstsurf);
+			RSurfShader_OpaqueWall_Pass_Light(ent, texture, surfchain);
 		if (texture->glowtexture)
-			RSurfShader_OpaqueWall_Pass_Glow(ent, texture, firstsurf);
+			RSurfShader_OpaqueWall_Pass_Glow(ent, texture, surfchain);
 		if (fogenabled)
-			RSurfShader_OpaqueWall_Pass_Fog(ent, texture, firstsurf);
+			RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
 	}
 }
 
@@ -1488,14 +1490,14 @@ void R_PrepareSurfaces(entity_render_t *ent)
 	}
 }
 
-void R_DrawSurfaces(entity_render_t *ent, int type)
+void R_DrawSurfaces(entity_render_t *ent, int type, msurface_t ***chains)
 {
 	int i;
 	texture_t *t;
 	R_Mesh_Matrix(&ent->matrix);
 	for (i = 0, t = ent->model->textures;i < ent->model->numtextures;i++, t++)
-		if (t->shader->shaderfunc[type] && t->currentframe && ent->model->texturesurfacechains[i])
-			t->shader->shaderfunc[type](ent, t->currentframe, ent->model->texturesurfacechains[i]);
+		if (t->shader->shaderfunc[type] && t->currentframe && chains[i] != NULL)
+			t->shader->shaderfunc[type](ent, t->currentframe, chains[i]);
 }
 
 static void R_DrawPortal_Callback(const void *calldata1, int calldata2)
@@ -1532,24 +1534,17 @@ static void R_DrawPortals(entity_render_t *ent)
 	int i;
 	mportal_t *portal, *endportal;
 	float temp[3], center[3], f;
-
-	if (r_drawportals.integer < 1)
-		return;
-
 	for (portal = ent->model->portals, endportal = portal + ent->model->numportals;portal < endportal;portal++)
 	{
-		if (portal->here->pvsframe == ent->model->pvsframecount || portal->past->pvsframe == ent->model->pvsframecount)
+		if ((portal->here->pvsframe == ent->model->pvsframecount || portal->past->pvsframe == ent->model->pvsframecount) && portal->numpoints <= POLYGONELEMENTS_MAXPOINTS)
 		{
-			if (portal->numpoints <= POLYGONELEMENTS_MAXPOINTS)
-			{
-				VectorClear(temp);
-				for (i = 0;i < portal->numpoints;i++)
-					VectorAdd(temp, portal->points[i].position, temp);
-				f = ixtable[portal->numpoints];
-				VectorScale(temp, f, temp);
-				Matrix4x4_Transform(&ent->matrix, temp, center);
-				R_MeshQueue_AddTransparent(center, R_DrawPortal_Callback, ent, portal - ent->model->portals);
-			}
+			VectorClear(temp);
+			for (i = 0;i < portal->numpoints;i++)
+				VectorAdd(temp, portal->points[i].position, temp);
+			f = ixtable[portal->numpoints];
+			VectorScale(temp, f, temp);
+			Matrix4x4_Transform(&ent->matrix, temp, center);
+			R_MeshQueue_AddTransparent(center, R_DrawPortal_Callback, ent, portal - ent->model->portals);
 		}
 	}
 }
@@ -1580,22 +1575,12 @@ void R_PrepareBrushModel(entity_render_t *ent)
 		if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
 		{
 			if ((surf->flags & SURF_PLANEBACK))
-			{
 				surfacevisframes[i] = r_framecount;
-				surfacepvsframes[i] = model->pvsframecount;
-			}
 		}
-		else
-		{
-			if (!(surf->flags & SURF_PLANEBACK))
-			{
-				surfacevisframes[i] = r_framecount;
-				surfacepvsframes[i] = model->pvsframecount;
-			}
-		}
+		else if (!(surf->flags & SURF_PLANEBACK))
+			surfacevisframes[i] = r_framecount;
 #else
 		surfacevisframes[i] = r_framecount;
-		surfacepvsframes[i] = model->pvsframecount;
 #endif
 		surf->dlightframe = -1;
 	}
@@ -1757,20 +1742,12 @@ void R_PVSUpdate (entity_render_t *ent, mleaf_t *viewleaf)
 							leaf->pvsframe = model->pvsframecount;
 							// mark surfaces bounding this leaf as visible
 							for (c = leaf->nummarksurfaces, mark = leaf->firstmarksurface;c;c--, mark++)
-							{
-								//if (surfacepvsframes[*mark] != model->pvsframecount)
-								//{
-									surfacepvsframes[*mark] = model->pvsframecount;
-								//	model->pvssurflist[model->pvssurflistlength++] = *mark;
-								//}
-							}
+								surfacepvsframes[*mark] = model->pvsframecount;
 						}
 					}
 				}
 			}
-			for (i = 0, j = model->firstmodelsurface;i < model->nummodelsurfaces;i++, j++)
-				if (model->surfacepvsframes[j] == model->pvsframecount)
-					model->pvssurflist[model->pvssurflistlength++] = j;
+			Mod_BuildPVSTextureChains(model);
 		}
 	}
 }
@@ -1796,15 +1773,15 @@ void R_WorldVisibility (entity_render_t *ent)
 void R_DrawWorld (entity_render_t *ent)
 {
 	R_PrepareSurfaces(ent);
-	R_DrawSurfaces(ent, SHADERSTAGE_SKY);
-	R_DrawSurfaces(ent, SHADERSTAGE_NORMAL);
+	R_DrawSurfaces(ent, SHADERSTAGE_SKY, ent->model->pvstexturechains);
+	R_DrawSurfaces(ent, SHADERSTAGE_NORMAL, ent->model->pvstexturechains);
 }
 
 void R_Model_Brush_DrawSky (entity_render_t *ent)
 {
 	if (ent != &cl_entities[0].render)
 		R_PrepareBrushModel(ent);
-	R_DrawSurfaces(ent, SHADERSTAGE_SKY);
+	R_DrawSurfaces(ent, SHADERSTAGE_SKY, ent->model->pvstexturechains);
 }
 
 void R_Model_Brush_Draw (entity_render_t *ent)
@@ -1812,7 +1789,7 @@ void R_Model_Brush_Draw (entity_render_t *ent)
 	c_bmodels++;
 	if (ent != &cl_entities[0].render)
 		R_PrepareBrushModel(ent);
-	R_DrawSurfaces(ent, SHADERSTAGE_NORMAL);
+	R_DrawSurfaces(ent, SHADERSTAGE_NORMAL, ent->model->pvstexturechains);
 }
 
 void R_Model_Brush_DrawShadowVolume (entity_render_t *ent, vec3_t relativelightorigin, float lightradius)

@@ -82,7 +82,7 @@ struct msurface_s;
 // change this stuff when real shaders are added
 typedef struct Cshader_s
 {
-	void (*shaderfunc[SHADERSTAGE_COUNT])(const struct entity_render_s *ent, const struct texture_s *texture, const struct msurface_s *firstsurf);
+	void (*shaderfunc[SHADERSTAGE_COUNT])(const struct entity_render_s *ent, const struct texture_s *texture, struct msurface_s **surfchain);
 	int flags;
 }
 Cshader_t;
@@ -99,6 +99,9 @@ typedef struct texture_s
 	unsigned int width, height;
 	// SURF_ flags
 	unsigned int flags;
+
+	// position in the model's textures array
+	int number;
 
 	// type of rendering (SURFRENDER_ value)
 	int rendertype;
@@ -380,6 +383,7 @@ void Mod_FindNonSolidLocation(vec3_t pos, struct model_s *mod);
 mleaf_t *Mod_PointInLeaf (const float *p, struct model_s *model);
 int Mod_PointContents (const float *p, struct model_s *model);
 qbyte *Mod_LeafPVS (mleaf_t *leaf, struct model_s *model);
+void Mod_BuildPVSTextureChains(struct model_s *model);
 
 #endif
 

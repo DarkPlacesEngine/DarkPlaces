@@ -236,6 +236,7 @@ static void Mod_LoadTextures (lump_t *l)
 	// fill out all slots with notexture
 	for (i = 0, tx = loadmodel->textures;i < loadmodel->numtextures;i++, tx++)
 	{
+		tx->number = i;
 		tx->width = 16;
 		tx->height = 16;
 		tx->texture = r_notexture;
@@ -2738,6 +2739,42 @@ static void Mod_BuildSurfaceNeighbors (msurface_t *surfaces, int numsurfaces, me
 #endif
 }
 
+void Mod_BuildPVSTextureChains(model_t *model)
+{
+	int i, j;
+	for (i = 0;i < model->numtextures;i++)
+		model->pvstexturechainslength[i] = 0;
+	for (i = 0, j = model->firstmodelsurface;i < model->nummodelsurfaces;i++, j++)
+	{
+		if (model->surfacepvsframes[j] == model->pvsframecount)
+		{
+			model->pvssurflist[model->pvssurflistlength++] = j;
+			model->pvstexturechainslength[model->surfaces[j].texinfo->texture->number]++;
+		}
+	}
+	for (i = 0, j = 0;i < model->numtextures;i++)
+	{
+		if (model->pvstexturechainslength[i])
+		{
+			model->pvstexturechains[i] = model->pvstexturechainsbuffer + j;
+			j += model->pvstexturechainslength[i] + 1;
+		}
+		else
+			model->pvstexturechains[i] = NULL;
+	}
+	for (i = 0, j = model->firstmodelsurface;i < model->nummodelsurfaces;i++, j++)
+		if (model->surfacepvsframes[j] == model->pvsframecount)
+			*model->pvstexturechains[model->surfaces[j].texinfo->texture->number]++ = model->surfaces + j;
+	for (i = 0;i < model->numtextures;i++)
+	{
+		if (model->pvstexturechainslength[i])
+		{
+			*model->pvstexturechains[i] = NULL;
+			model->pvstexturechains[i] -= model->pvstexturechainslength[i];
+		}
+	}
+}
+
 /*
 =================
 Mod_LoadBrushModel
@@ -2818,11 +2855,6 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 		float dist, modelyawradius, modelradius, *vec;
 		msurface_t *surf;
 
-		mod->normalmins[0] = mod->normalmins[1] = mod->normalmins[2] = 1000000000.0f;
-		mod->normalmaxs[0] = mod->normalmaxs[1] = mod->normalmaxs[2] = -1000000000.0f;
-		modelyawradius = 0;
-		modelradius = 0;
-
 		bm = &mod->submodels[i];
 
 		mod->hulls[0].firstclipnode = bm->headnode[0];
@@ -2841,18 +2873,22 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 		mod->DrawFakeShadow = NULL;
 		mod->DrawShadowVolume = R_Model_Brush_DrawShadowVolume;
 		mod->DrawLight = R_Model_Brush_DrawLight;
-		mod->texturesurfacechains = Mem_Alloc(originalloadmodel->mempool, mod->numtextures * sizeof(msurface_t *));
+		mod->pvstexturechains = Mem_Alloc(originalloadmodel->mempool, mod->numtextures * sizeof(msurface_t **));
+		mod->pvstexturechainsbuffer = Mem_Alloc(originalloadmodel->mempool, (mod->nummodelsurfaces + mod->numtextures) * sizeof(msurface_t *));
+		mod->pvstexturechainslength = Mem_Alloc(originalloadmodel->mempool, mod->numtextures * sizeof(int));
+		Mod_BuildPVSTextureChains(mod);
 		if (mod->nummodelsurfaces)
 		{
 			// LordHavoc: calculate bmodel bounding box rather than trusting what it says
+			mod->normalmins[0] = mod->normalmins[1] = mod->normalmins[2] = 1000000000.0f;
+			mod->normalmaxs[0] = mod->normalmaxs[1] = mod->normalmaxs[2] = -1000000000.0f;
+			modelyawradius = 0;
+			modelradius = 0;
 			for (j = 0, surf = &mod->surfaces[mod->firstmodelsurface];j < mod->nummodelsurfaces;j++, surf++)
 			{
 				// we only need to have a drawsky function if it is used (usually only on world model)
 				if (surf->texinfo->texture->shader == &Cshader_sky)
 					mod->DrawSky = R_Model_Brush_DrawSky;
-				// link into texture chain
-				surf->texturechain = mod->texturesurfacechains[surf->texinfo->texture - mod->textures];
-				mod->texturesurfacechains[surf->texinfo->texture - mod->textures] = surf;
 				// calculate bounding shapes
 				for (k = 0;k < surf->numedges;k++)
 				{
@@ -2884,28 +2920,11 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 			mod->rotatedmaxs[0] = mod->rotatedmaxs[1] = mod->rotatedmaxs[2] = modelradius;
 			mod->radius = modelradius;
 			mod->radius2 = modelradius * modelradius;
-			// LordHavoc: build triangle meshs for entire model's geometry
-			// (only used for shadow volumes)
-			mod->shadowmesh = Mod_ShadowMesh_Begin(originalloadmodel->mempool, 1024);
-			for (j = 0, surf = &mod->surfaces[mod->firstmodelsurface];j < mod->nummodelsurfaces;j++, surf++)
-				if (surf->flags & SURF_SHADOWCAST)
-					Mod_ShadowMesh_AddPolygon(originalloadmodel->mempool, mod->shadowmesh, surf->poly_numverts, surf->poly_verts);
-			mod->shadowmesh = Mod_ShadowMesh_Finish(originalloadmodel->mempool, mod->shadowmesh);
-			Mod_ShadowMesh_CalcBBox(mod->shadowmesh, mod->shadowmesh_mins, mod->shadowmesh_maxs, mod->shadowmesh_center, &mod->shadowmesh_radius);
 		}
 		else
 		{
 			// LordHavoc: empty submodel (lacrima.bsp has such a glitch)
 			Con_Printf("warning: empty submodel *%i in %s\n", i+1, loadname);
-			VectorClear(mod->normalmins);
-			VectorClear(mod->normalmaxs);
-			VectorClear(mod->yawmins);
-			VectorClear(mod->yawmaxs);
-			VectorClear(mod->rotatedmins);
-			VectorClear(mod->rotatedmaxs);
-			mod->radius = 0;
-			mod->radius2 = 0;
-			mod->shadowmesh = NULL;
 		}
 		Mod_BuildSurfaceNeighbors(mod->surfaces + mod->firstmodelsurface, mod->nummodelsurfaces, originalloadmodel->mempool);
 

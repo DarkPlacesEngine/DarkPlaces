@@ -188,8 +188,6 @@ typedef struct model_s
 	int				numtextures;
 	texture_t		*textures;
 
-	msurface_t		**texturesurfacechains;
-
 	qbyte			*visdata;
 	qbyte			*lightdata;
 	char			*entities;
@@ -203,11 +201,6 @@ typedef struct model_s
 	int				numlights;
 	mlight_t		*lights;
 
-	// used only for casting dynamic shadow volumes
-	shadowmesh_t	*shadowmesh;
-	vec3_t			shadowmesh_mins, shadowmesh_maxs, shadowmesh_center;
-	float			shadowmesh_radius;
-
 	// pvs visibility marking
 	mleaf_t			*pvsviewleaf;
 	int				pvsviewleafnovis;
@@ -215,6 +208,12 @@ typedef struct model_s
 	mleaf_t			*pvsleafchain;
 	int				*pvssurflist;
 	int				pvssurflistlength;
+	// these get rebuilt as the player moves around if this is the world,
+	// otherwise they are left alone (no pvs for bmodels)
+	msurface_t		***pvstexturechains;
+	msurface_t		**pvstexturechainsbuffer;
+	int				*pvstexturechainslength;
+
 
 	// skin animation info
 	animscene_t		*skinscenes; // [numskins]
