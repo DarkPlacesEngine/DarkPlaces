@@ -4260,7 +4260,7 @@ void Call_MR_ToggleMenu_f(void)
 		MR_ToggleMenu_f();
 }
 
-void MR_Init()
+void MR_Init_Commands(void)
 {
 	// set router console commands
 	Cvar_RegisterVariable (&forceqmenu);
@@ -4268,7 +4268,10 @@ void MR_Init()
 		Cmd_AddCommand ("menu_fallback", MP_Error); //Force to old-style menu
 	Cmd_AddCommand ("menu_restart",MR_Restart);
 	Cmd_AddCommand ("togglemenu", Call_MR_ToggleMenu_f);
+}
 
+void MR_Init(void)
+{
 	// use -forceqmenu to use always the normal quake menu (it sets forceqmenu to 1)
 	if(COM_CheckParm("-forceqmenu"))
 		Cvar_SetValueQuick(&forceqmenu,1);

@@ -180,11 +180,6 @@ mempool_t *vm_strings_mempool[PRVM_MAXPROGS];
 static char vm_string_temp[VM_STRINGTEMP_BUFFERS][VM_STRINGTEMP_LENGTH];
 static int vm_string_tempindex = 0;
 
-// qc cvar 
-#define MAX_QC_CVARS 128 * PRVM_MAXPROGS
-cvar_t vm_qc_cvar[MAX_QC_CVARS];
-int vm_currentqc_cvar;
-
 // qc file handling
 #define MAX_VMFILES		256
 #define MAX_PRVMFILES	MAX_VMFILES * PRVM_MAXPROGS
@@ -1496,8 +1491,7 @@ float	registercvar (string name, string value, float flags)
 void VM_registercvar (void)
 {
 	char *name, *value;
-	cvar_t *variable;
-	int	flags;	
+	int	flags;
 
 	VM_SAFEPARMCOUNT(3,VM_registercvar);
 
@@ -1520,19 +1514,8 @@ void VM_registercvar (void)
 		return;
 	}
 
-	if (vm_currentqc_cvar >= MAX_QC_CVARS)
-		PRVM_ERROR ("VM_registercvar: ran out of cvar slots (%i)\n", MAX_QC_CVARS);
+	Cvar_Get(name, value, 0);
 
-// copy the name and value
-	variable = &vm_qc_cvar[vm_currentqc_cvar++];
-	variable->flags = flags;
-	variable->name = Z_Malloc (strlen(name)+1);
-	strcpy (variable->name, name);
-	variable->string = Z_Malloc (strlen(value)+1);
-	strcpy (variable->string, value);
-	variable->value = atof (value);
-
-	Cvar_RegisterVariable(variable);
 	PRVM_G_FLOAT(OFS_RETURN) = 1; // success
 }
 

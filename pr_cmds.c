@@ -2044,17 +2044,13 @@ void PF_GetLight (void)
 	VectorMA(ambientcolor, 0.5, diffusecolor, G_VECTOR(OFS_RETURN));
 }
 
-#define MAX_QC_CVARS 128
-cvar_t qc_cvar[MAX_QC_CVARS];
-int currentqc_cvar;
-
 void PF_registercvar (void)
 {
 	char *name, *value;
-	cvar_t *variable;
 	name = G_STRING(OFS_PARM0);
 	value = G_STRING(OFS_PARM1);
 	G_FLOAT(OFS_RETURN) = 0;
+
 // first check to see if it has already been defined
 	if (Cvar_FindVar (name))
 		return;
@@ -2066,18 +2062,8 @@ void PF_registercvar (void)
 		return;
 	}
 
-	if (currentqc_cvar >= MAX_QC_CVARS)
-		PF_ERROR("PF_registercvar: ran out of cvar slots\n");
+	Cvar_Get(name, value, 0);
 
-// copy the name and value
-	variable = &qc_cvar[currentqc_cvar++];
-	variable->name = Z_Malloc (strlen(name)+1);
-	strcpy (variable->name, name);
-	variable->string = Z_Malloc (strlen(value)+1);
-	strcpy (variable->string, value);
-	variable->value = atof (value);
-
-	Cvar_RegisterVariable(variable);
 	G_FLOAT(OFS_RETURN) = 1; // success
 }
 
