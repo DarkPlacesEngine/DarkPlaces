@@ -27,6 +27,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // * pass data from one to the other via model files.      *
 // *********************************************************
 
+#ifndef MODELGEN_H
+#define MODELGEN_H
+
 #define ALIAS_VERSION	6
 
 #define ALIAS_ONSEAM				0x0020
@@ -107,3 +110,6 @@ typedef struct {
 typedef struct {
 	aliasskintype_t	type;
 } daliasskintype_t;
+
+#endif
+

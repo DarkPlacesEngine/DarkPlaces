@@ -46,3 +46,4 @@ void Image_Resample (void *indata, int inwidth, int inheight, void *outdata, int
 void Image_MipReduce(qbyte *in, qbyte *out, int *width, int *height, int destwidth, int destheight, int bytesperpixel);
 
 #endif
+

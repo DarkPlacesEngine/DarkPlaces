@@ -99,3 +99,4 @@ void AngleMatrix (vec3_t angles, vec3_t translate, vec_t matrix[][4]);
 void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up);
 
 #endif
+

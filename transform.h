@@ -1,4 +1,7 @@
 
+#ifndef TRANSFORM_H
+#define TRANSFORM_H
+
 extern vec_t softwaretransform_rotatematrix[3][4];
 extern vec_t softwaretransform_matrix[3][4];
 extern vec_t softwaretransform_invmatrix[3][4];
@@ -64,3 +67,6 @@ void softwaretransformforentity (entity_render_t *r);
 		out[2] = DotProduct(soft_v, softwaretransform_invmatrix[2]);\
 	}\
 }
+
+#endif
+

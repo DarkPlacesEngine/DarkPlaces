@@ -17,7 +17,9 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
-// comndef.h  -- general definitions
+
+#ifndef COMMON_H
+#define COMMON_H
 
 // LordHavoc: MSVC has a different name for snprintf
 #ifdef WIN32
@@ -99,8 +101,6 @@ extern	int			msg_readcount;
 extern	qboolean	msg_badread;		// set if a read goes beyond end of message
 
 void MSG_BeginReading (void);
-//int MSG_ReadChar (void);
-//int MSG_ReadByte (void);
 int MSG_ReadShort (void);
 int MSG_ReadLong (void);
 float MSG_ReadFloat (void);
@@ -108,11 +108,8 @@ char *MSG_ReadString (void);
 
 #define MSG_ReadChar() (msg_readcount >= net_message.cursize ? (msg_badread = true, -1) : (signed char)net_message.data[msg_readcount++])
 #define MSG_ReadByte() (msg_readcount >= net_message.cursize ? (msg_badread = true, -1) : (unsigned char)net_message.data[msg_readcount++])
-//#define MSG_ReadShort() ((msg_readcount + 2) > net_message.cursize ? (msg_badread = true, -1) : (short)net_message.data[msg_readcount+=2, msg_readcount-2] | (net_message.data[msg_readcount-1] << 8))
-//#define MSG_ReadLong() ((msg_readcount + 4) > net_message.cursize ? (msg_badread = true, -1) : (int)net_message.data[msg_readcount+=4, msg_readcount-4] | (net_message.data[msg_readcount-3] << 8) | (net_message.data[msg_readcount-2] << 16) | (net_message.data[msg_readcount-1] << 24))
 
 float MSG_ReadCoord (void);
-//float MSG_ReadAngle (void);
 
 float MSG_ReadDPCoord (void);
 
@@ -125,24 +122,8 @@ extern int dpprotocol;
 
 //============================================================================
 
-/*
-void Q_memset (void *dest, int fill, int count);
-void Q_memcpy (void *dest, void *src, int count);
-int Q_memcmp (void *m1, void *m2, int count);
-void Q_strcpy (char *dest, char *src);
-void Q_strncpy (char *dest, char *src, int count);
-int Q_strlen (char *str);
-char *Q_strrchr (char *s, char c);
-void Q_strcat (char *dest, char *src);
-int Q_strcmp (char *s1, char *s2);
-int Q_strncmp (char *s1, char *s2, int count);
-*/
 int Q_strcasecmp (char *s1, char *s2);
 int Q_strncasecmp (char *s1, char *s2, int n);
-/*
-int	Q_atoi (char *str);
-float Q_atof (char *str);
-*/
 
 //============================================================================
 
@@ -209,3 +190,6 @@ typedef struct stringlist_s
 int matchpattern(char *in, char *pattern);
 stringlist_t *listdirectory(char *path);
 void freedirectory(stringlist_t *list);
+
+#endif
+

@@ -19,6 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // client.h
 
+#ifndef CLIENT_H
+#define CLIENT_H
+
 typedef struct frameblend_s
 {
 	int frame;
@@ -306,7 +309,6 @@ typedef struct
 
 // refresh related state
 	struct model_s	*worldmodel;	// cl_entitites[0].model
-//	int			num_entities;	// held in cl_entities array
 	int			num_statics;	// held in cl_staticentities array
 	entity_t	viewent;			// the gun model
 
@@ -474,22 +476,6 @@ void CL_InitTEnts (void);
 #define PARTICLE_UPRIGHT_FACING 2
 #define PARTICLE_ORIENTED_DOUBLESIDED 3
 
-/*
-typedef struct renderparticle_s
-{
-	int tex;
-	int orientation;
-	int additive;
-	int dynlight;
-	float scalex;
-	float scaley;
-	float org[3];
-	float dir[3];
-	float color[4];
-}
-renderparticle_t;
-*/
-
 void CL_Particles_Clear(void);
 void CL_Particles_Init(void);
 
@@ -539,9 +525,6 @@ typedef struct
 	int numentities;
 	entity_render_t **entities;
 
-	//int numparticles;
-	//struct renderparticle_s *particles;
-
 	qbyte drawqueue[MAX_DRAWQUEUE];
 	int drawqueuesize;
 }
@@ -552,3 +535,6 @@ refdef_t r_refdef;
 extern mempool_t *cl_refdef_mempool;
 
 #include "cgamevm.h"
+
+#endif
+

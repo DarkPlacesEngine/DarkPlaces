@@ -1,4 +1,7 @@
 
+#ifndef MODEL_ZYMOTIC_H
+#define MODEL_ZYMOTIC_H
+
 typedef struct zymlump_s
 {
 	int start;
@@ -62,3 +65,6 @@ typedef struct zymvertex_s
 zymvertex_t;
 
 extern void Mod_LoadZymoticModel (struct model_s *mod, void *buffer);
+
+#endif
+

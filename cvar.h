@@ -53,6 +53,9 @@ Cvars are restricted from having the same names as commands to keep this
 interface from being ambiguous.
 */
 
+#ifndef CVAR_H
+#define CVAR_H
+
 // cvar flags
 #define CVAR_SAVE 1
 #define CVAR_NOTIFY 2
@@ -95,8 +98,6 @@ typedef struct cvar_s
 	int				flags;
 	char			*name;
 	char			*string;
-//	qboolean		archive;		// set to true to cause it to be saved to vars.rc
-//	qboolean		server;		// notifies players when changed
 	int				integer;
 	float			value;
 	float			vector[3];
@@ -158,4 +159,6 @@ void	Cvar_List_f (void);
 // Referenced in cmd.c in Cmd_Init hence it's inclusion here
 // Added by EvilTypeGuy eviltypeguy@qeradiant.com
 // Thanks to Matthias "Maddes" Buecher, http://www.inside3d.com/qip/
+
+#endif
 

@@ -1,4 +1,7 @@
 
+#ifndef R_TEXTURES_H
+#define R_TEXTURES_H
+
 // transparent
 #define TEXF_ALPHA 0x00000001
 // mipmapped
@@ -68,3 +71,6 @@ int R_TextureWidth(rtexture_t *rt);
 
 // returns height of texture, as was specified when it was uploaded
 int R_TextureHeight(rtexture_t *rt);
+
+#endif
+

@@ -1,4 +1,7 @@
 
+#ifndef R_LIGHT_H
+#define R_LIGHT_H
+
 typedef struct
 {
 	vec3_t origin;
@@ -19,3 +22,6 @@ void R_MarkLights(void);
 void R_DrawCoronas(void);
 void R_CompleteLightPoint(vec3_t color, vec3_t p, int dynamic, mleaf_t *leaf);
 void R_LightModel(int numverts, float colorr, float colorg, float colorb, int worldcoords);
+
+#endif
+

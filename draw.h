@@ -21,6 +21,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // draw.h -- these are the only functions outside the refresh allowed
 // to touch the vid buffer
 
+#ifndef DRAW_H
+#define DRAW_H
+
 // FIXME: move this stuff to cl_screen
 typedef struct cachepic_s
 {
@@ -39,3 +42,6 @@ void Draw_Init (void);
 cachepic_t *Draw_CachePic (char *path);
 
 void R_DrawQueue(void);
+
+#endif
+

@@ -19,6 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // mathlib.h
 
+#ifndef MATHLIB_H
+#define MATHLIB_H
+
 #ifndef M_PI
 #define M_PI		3.14159265358979323846	// matches value in gcc v2 math.h
 #endif
@@ -167,8 +170,6 @@ void PlaneClassify(struct mplane_s *p);
 
 #define PlaneDist(point,plane)  ((plane)->type < 3 ? (point)[(plane)->type] : DotProduct((point), (plane)->normal))
 #define PlaneDiff(point,plane) (((plane)->type < 3 ? (point)[(plane)->type] : DotProduct((point), (plane)->normal)) - (plane)->dist)
-//#define PlaneDist(point,plane)  (DotProduct((point), (plane)->normal))
-//#define PlaneDiff(point,plane) (DotProduct((point), (plane)->normal) - (plane)->dist)
 
 // LordHavoc: minimal plane structure
 typedef struct
@@ -184,3 +185,6 @@ typedef struct
 tinydoubleplane_t;
 
 void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t point, float degrees);
+
+#endif
+

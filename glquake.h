@@ -17,12 +17,13 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
+
+#ifndef GLQUAKE_H
+#define GLQUAKE_H
+
 // disable data conversion warnings
 
 #ifdef _MSC_VER
-//#pragma warning(disable : 4244)     // MIPS
-//#pragma warning(disable : 4136)     // X86
-//#pragma warning(disable : 4051)     // ALPHA
 #pragma warning(disable : 4244)     // LordHavoc: MSVC++ 4 x86, double/float
 #pragma warning(disable : 4305)		// LordHavoc: MSVC++ 6 x86, double/float
 #pragma warning(disable : 4018)		// LordHavoc: MSVC++ 4 x86, signed/unsigned mismatch
@@ -35,7 +36,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 
 #include <GL/gl.h>
-//#include <GL/glu.h>
 
 extern qboolean isG200;
 extern qboolean isRagePro;
@@ -251,3 +251,6 @@ void GL_PrintError(int errornumber, char *filename, int linenumber);
 #else
 #define CHECKGLERROR
 #endif
+
+#endif
+

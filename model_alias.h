@@ -18,6 +18,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
+#ifndef MODEL_ALIAS_H
+#define MODEL_ALIAS_H
+
 /*
 ==============================================================================
 
@@ -28,38 +31,6 @@ Alias models are position independent, so the cache manager can move them.
 */
 
 #include "modelgen.h"
-
-/*
-typedef struct
-{
-	int					firstpose;
-	int					numposes;
-	float				interval;
-	trivertx_t			bboxmin;
-	trivertx_t			bboxmax;
-	int					frame;
-	char				name[16];
-} maliasframedesc_t;
-
-typedef struct
-{
-	trivertx_t			bboxmin;
-	trivertx_t			bboxmax;
-	int					frame;
-} maliasgroupframedesc_t;
-
-typedef struct
-{
-	int						numframes;
-	int						intervals;
-	maliasgroupframedesc_t	frames[1];
-} maliasgroup_t;
-
-typedef struct mtriangle_s {
-	int					facesfront;
-	int					vertindex[3];
-} mtriangle_t;
-*/
 
 typedef struct {
 	int			ident;
@@ -165,3 +136,6 @@ extern void Mod_LoadQ2AliasModel (struct model_s *mod, void *buffer);
 extern void Mod_AliasInit(void);
 
 #include "model_zymotic.h"
+
+#endif
+

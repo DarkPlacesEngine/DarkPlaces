@@ -1,3 +1,6 @@
+
+// This code isn't #ifdef/#define protectable, don't try.
+
 		while (1)
 		{
 			st++;
@@ -599,3 +602,4 @@
 				PR_RunError ("Bad opcode %i", st->op);
 			}
 		}
+

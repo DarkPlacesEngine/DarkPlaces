@@ -19,6 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // world.h
 
+#ifndef WORLD_H
+#define WORLD_H
+
 #include "collision.h"
 
 #define	MOVE_NORMAL		0
@@ -41,8 +44,6 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers);
 // if touchtriggers, calls prog functions for the intersected triggers
 
 extern int SV_HullPointContents (hull_t *hull, int num, vec3_t p);
-// LordHavoc: waste of time to wrap it
-//int SV_PointContents (vec3_t p);
 #define SV_PointContents(testpoint) SV_HullPointContents(&sv.worldmodel->hulls[0], 0, (testpoint))
 // returns the CONTENTS_* value from the world at the given point.
 // does not check any entities at all
@@ -62,3 +63,6 @@ trace_t SV_Move (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, int type, e
 // shouldn't be considered solid objects
 
 // passedict is explicitly excluded from clipping checks (normally NULL)
+
+#endif
+

@@ -1,4 +1,7 @@
 
+#ifndef GL_BACKEND_H
+#define GL_BACKEND_H
+
 #define MAX_TEXTUREUNITS 8
 
 extern int c_meshtris, c_meshs, c_transtris, c_transmeshs;
@@ -92,3 +95,6 @@ qboolean SCR_ScreenShot(char *filename, int x, int y, int width, int height);
 void R_ClearScreen(void);
 // invoke refresh of frame
 void SCR_UpdateScreen (void);
+
+#endif
+

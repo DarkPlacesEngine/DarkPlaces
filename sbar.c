@@ -84,6 +84,9 @@ cvar_t	showfps = {CVAR_SAVE, "showfps", "0"};
 
 void Sbar_MiniDeathmatchOverlay (void);
 void Sbar_DeathmatchOverlay (void);
+void Sbar_IntermissionOverlay (void);
+void Sbar_FinaleOverlay (void);
+
 
 /*
 ===============

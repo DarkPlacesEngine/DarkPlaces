@@ -236,9 +236,7 @@ void Mod_PurgeUnused(void);
 extern model_t *loadmodel;
 extern char loadname[32];	// for hunk tags
 
-//extern model_t *Mod_LoadModel (model_t *mod, qboolean crash);
-
-//extern float RadiusFromBounds (vec3_t mins, vec3_t maxs);
 extern model_t *Mod_FindName (char *name);
 
 #endif	// __MODEL__
+

@@ -19,6 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // screen.h
 
+#ifndef SCREEN_H
+#define SCREEN_H
+
 void CL_Screen_Init (void);
 void CL_UpdateScreen (void);
 void SCR_CenterPrint (char *str);
@@ -40,3 +43,6 @@ extern cvar_t showfps;
 
 extern cvar_t crosshair;
 extern cvar_t crosshair_size;
+
+#endif
+

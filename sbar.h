@@ -18,6 +18,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
+#ifndef SBAR_H
+#define SBAR_H
+
 #define	SBAR_HEIGHT		24
 
 extern	int			sb_lines;			// scan lines to draw
@@ -27,7 +30,5 @@ void Sbar_Init (void);
 void Sbar_Draw (void);
 // called every frame by screen
 
-void Sbar_IntermissionOverlay (void);
-// called each frame after the level has been completed
+#endif
 
-void Sbar_FinaleOverlay (void);

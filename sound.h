@@ -178,3 +178,4 @@ void S_AmbientOff (void);
 void S_AmbientOn (void);
 
 #endif
+

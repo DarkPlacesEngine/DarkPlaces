@@ -18,6 +18,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
+#ifndef MODEL_BRUSH_H
+#define MODEL_BRUSH_H
+
 /*
 ==============================================================================
 
@@ -71,11 +74,8 @@ texture_t;
 
 #define	SURF_PLANEBACK		2
 #define	SURF_DRAWSKY		4
-//#define SURF_DRAWSPRITE		8
 #define SURF_DRAWTURB		0x10
 #define SURF_LIGHTMAP		0x20
-//#define SURF_DRAWBACKGROUND	0x40
-//#define SURF_UNDERWATER		0x80
 #define SURF_DRAWNOALPHA	0x100
 #define SURF_DRAWFULLBRIGHT	0x200
 #define SURF_LIGHTBOTHSIDES	0x400
@@ -300,3 +300,6 @@ struct model_s;
 void Mod_LoadBrushModel (struct model_s *mod, void *buffer);
 void Mod_BrushInit(void);
 void Mod_FindNonSolidLocation(vec3_t pos, struct model_s *mod);
+
+#endif
+

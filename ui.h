@@ -81,3 +81,4 @@ int ui_uiactive(ui_t *ui);
 void ui_activate(ui_t *ui, int yes);
 
 #endif
+

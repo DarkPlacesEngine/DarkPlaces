@@ -19,6 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // sys.h -- non-portable functions
 
+#ifndef SYS_H
+#define SYS_H
+
 //
 // file IO
 //
@@ -64,3 +67,6 @@ void Sys_SendKeyEvents (void);
 void Sys_Shared_EarlyInit (void);
 // called after Host_init
 void Sys_Shared_LateInit (void);
+
+#endif
+
