@@ -224,7 +224,7 @@ static void gl_backend_shutdown(void)
 
 static void gl_backend_bufferchanges(int init)
 {
-	if (gl_mesh_drawmode.integer == 3)
+	if (gl_mesh_drawmode.integer == 3 && qglDrawRangeElements != NULL)
 	{
 		if (gl_mesh_maxtriangles.integer * 3 > gl_maxdrawrangeelementsindices)
 			Cvar_SetValueQuick(&gl_mesh_maxtriangles, (int) (gl_maxdrawrangeelementsindices / 3));
@@ -233,13 +233,13 @@ static void gl_backend_bufferchanges(int init)
 	}
 
 	// 21760 is (65536 / 3) rounded off to a multiple of 128
-	if (gl_mesh_maxtriangles.integer < 256)
-		Cvar_SetValueQuick(&gl_mesh_maxtriangles, 256);
+	if (gl_mesh_maxtriangles.integer < 1024)
+		Cvar_SetValueQuick(&gl_mesh_maxtriangles, 1024);
 	if (gl_mesh_maxtriangles.integer > 21760)
 		Cvar_SetValueQuick(&gl_mesh_maxtriangles, 21760);
 
-	if (gl_mesh_transtriangles.integer < 256)
-		Cvar_SetValueQuick(&gl_mesh_transtriangles, 256);
+	if (gl_mesh_transtriangles.integer < 1024)
+		Cvar_SetValueQuick(&gl_mesh_transtriangles, 1024);
 	if (gl_mesh_transtriangles.integer > 65536)
 		Cvar_SetValueQuick(&gl_mesh_transtriangles, 65536);
 
@@ -1253,6 +1253,9 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 	for (;j < backendunits;j++)
 		memset(&texcoord[j][0].t[0], 0, m->numverts * sizeof(buf_texcoord_t));
 	#endif
+
+	if (currenttriangle >= max_batch)
+		R_Mesh_Render();
 }
 
 void R_Mesh_Draw_NativeOnly(const rmeshinfo_t *m)
@@ -1425,6 +1428,9 @@ void R_Mesh_Draw_NativeOnly(const rmeshinfo_t *m)
 			fcolor[i].c[2] *= scaler;
 		}
 	}
+
+	if (currenttriangle >= max_batch)
+		R_Mesh_Render();
 }
 
 // allocates space in geometry buffers, and fills in pointers to the buffers in passsed struct
