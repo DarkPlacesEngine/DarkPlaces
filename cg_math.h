@@ -32,6 +32,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define M_PI		3.14159265358979323846	// matches value in gcc v2 math.h
 #endif
 
+#ifndef NULL
+#define NULL ((void *)0)
+#endif
+
 typedef float vec_t;
 typedef vec_t vec2_t[2];
 typedef vec_t vec3_t[3];
@@ -46,11 +50,11 @@ extern vec3_t vec3_origin;
 #define nanmask (255<<23)
 #define	IS_NAN(x) (((*(int *)&x)&nanmask)==nanmask)
 
-#define bound(min,num,max) (num >= min ? (num < max ? num : max) : min)
+#define bound(min,num,max) ((num) >= (min) ? ((num) < (max) ? (num) : (max)) : (min))
 
 #ifndef min
-#define min(A,B) (A < B ? A : B)
-#define max(A,B) (A > B ? A : B)
+#define min(A,B) ((A) < (B) ? (A) : (B))
+#define max(A,B) ((A) > (B) ? (A) : (B))
 #endif
 
 #define lhrandom(MIN,MAX) ((rand() & 32767) * (((MAX)-(MIN)) * (1.0f / 32767.0f)) + (MIN))

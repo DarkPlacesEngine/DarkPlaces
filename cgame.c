@@ -3,18 +3,11 @@
 #include "cgame_api.h"
 #include "cg_math.h"
 
-
-#ifndef NULL
-#define NULL ((void *)0)
-#endif
-
 static double gametime, frametime;
 
 struct localentity_s;
 typedef struct localentity_s
 {
-	int active; // true if the entity is alive (not freed)
-	float freetime; // time this entity was freed
 	float dietime;
 	vec3_t velocity;
 	vec3_t avelocity;
@@ -34,6 +27,10 @@ localentity_t;
 
 #define MAX_LOCALENTITIES 1024
 static localentity_t *localentity;
+// true if the entity is alive (not freed)
+static unsigned char *localentityactive;
+// time the entity was freed
+static float *localentityfreetime;
 
 static cgphysentity_t *phys_entity;
 static int phys_entities;
@@ -49,35 +46,38 @@ static void readvector(vec3_t v)
 
 static localentity_t *entspawn(void)
 {
-	int i;
-	localentity_t *l;
+	int i, best;
+	float bestfreetime;
+	bestfreetime = gametime + 100.0f;
+	best = -1;
 	for (i = 0;i < MAX_LOCALENTITIES;i++)
 	{
-		l = localentity + i;
-		if (!l->active && l->freetime < gametime)
+		if (!localentityactive[i] && bestfreetime > localentityfreetime[i])
 		{
-			memset(l, 0, sizeof(*l));
-			l->active = true;
-			return l;
+			bestfreetime = localentityfreetime[i];
+			best = i;
+			if (bestfreetime < gametime)
+				break;
 		}
 	}
-	for (i = 0;i < MAX_LOCALENTITIES;i++)
+	if (best >= 0)
 	{
-		l = localentity + i;
-		if (!l->active)
-		{
-			memset(l, 0, sizeof(*l));
-			l->active = true;
-			return l;
-		}
+		memset(localentity + best, 0, sizeof(*localentity));
+		localentityactive[best] = true;
+		return localentity + best;
 	}
 	return NULL;
 }
 
 static void entremove(localentity_t *e)
 {
-	memset(e, 0, sizeof(*e));
-	e->freetime = (float)gametime + 1.0f;
+	int i;
+	i = (e - localentity) / sizeof(localentity_t);
+	if (i < 0 || i >= MAX_LOCALENTITIES)
+		return; // this should be an error
+	//memset(e, 0, sizeof(*e));
+	localentityactive[i] = false;
+	localentityfreetime[i] = (float)gametime + 1.0f;
 }
 
 static void phys_setupphysentities(void)
@@ -86,9 +86,9 @@ static void phys_setupphysentities(void)
 	/*
 	for (i = 0;i < MAX_LOCALENTITIES;i++)
 	{
-		l = localentities + i;
-		if (l->active && l->solid)
+		if (localentityactive[i] && localentities[i].solid)
 		{
+			l = localentities + i;
 		}
 	}
 	*/
@@ -100,12 +100,16 @@ static void phys_moveentities(void)
 	localentity_t *l;
 	for (i = 0;i < MAX_LOCALENTITIES;i++)
 	{
-		l = localentity + i;
-		if (l->active)
+		if (localentityactive[i])
 		{
+			l = localentity + i;
 			if (l->framethink)
+			{
 				l->framethink(l);
-			if (l->active && l->draw.model)
+				if (!localentityactive[i])
+					continue;
+			}
+			if (l->draw.model)
 				CGVM_Draw_Entity(&l->draw);
 		}
 	}
@@ -332,8 +336,10 @@ static void net_gibshower(unsigned char num)
 // called by engine
 void CG_Init(void)
 {
-	localentity = CGVM_Malloc(sizeof(localentity_t) * MAX_LOCALENTITIES);
-	phys_entity = CGVM_Malloc(sizeof(cgphysentity_t) * MAX_LOCALENTITIES);
+	localentity = CGVM_Malloc(sizeof(*localentity) * MAX_LOCALENTITIES);
+	localentityactive = CGVM_Malloc(sizeof(*localentityactive) * MAX_LOCALENTITIES);
+	localentityfreetime = CGVM_Malloc(sizeof(*localentityfreetime) * MAX_LOCALENTITIES);
+	phys_entity = CGVM_Malloc(sizeof(*phys_entity) * MAX_LOCALENTITIES);
 	CGVM_RegisterNetworkCode(1, net_explosion);
 	CGVM_RegisterNetworkCode(2, net_gibshower);
 	gametime = 0;
