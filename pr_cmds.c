@@ -39,7 +39,9 @@ static char *PR_GetTempString(void)
 	return s;
 }
 
-#define	RETURN_EDICT(e) (((int *)pr_globals)[OFS_RETURN] = EDICT_TO_PROG(e))
+#define	RETURN_EDICT(e) (G_INT(OFS_RETURN) = EDICT_TO_PROG(e))
+#define PF_WARNING(s) do{Con_Printf(s);PR_PrintState();return;}while(0)
+#define PF_ERROR(s) do{Host_Error(s);return;}while(0)
 
 
 /*
@@ -201,7 +203,7 @@ void PF_error (void)
 	ed = PROG_TO_EDICT(pr_global_struct->self);
 	ED_Print (ed);
 
-	Host_Error ("Program error");
+	PF_ERROR("Program error");
 }
 
 /*
@@ -270,9 +272,9 @@ void PF_setorigin (void)
 
 	e = G_EDICT(OFS_PARM0);
 	if (e == sv.edicts)
-		Host_Error("setorigin: can not modify world entity\n");
+		PF_WARNING("setorigin: can not modify world entity\n");
 	if (e->e->free)
-		Host_Error("setorigin: can not modify free entity\n");
+		PF_WARNING("setorigin: can not modify free entity\n");
 	org = G_VECTOR(OFS_PARM1);
 	VectorCopy (org, e->v->origin);
 	SV_LinkEdict (e, false);
@@ -285,7 +287,7 @@ void SetMinMaxSize (edict_t *e, float *min, float *max, qboolean rotate)
 
 	for (i=0 ; i<3 ; i++)
 		if (min[i] > max[i])
-			Host_Error ("backwards mins/maxs");
+			PF_ERROR("SetMinMaxSize: backwards mins/maxs\n");
 
 // set derived values
 	VectorCopy (min, e->v->mins);
@@ -312,9 +314,9 @@ void PF_setsize (void)
 
 	e = G_EDICT(OFS_PARM0);
 	if (e == sv.edicts)
-		Host_Error("setsize: can not modify world entity\n");
+		PF_WARNING("setsize: can not modify world entity\n");
 	if (e->e->free)
-		Host_Error("setsize: can not modify free entity\n");
+		PF_WARNING("setsize: can not modify free entity\n");
 	min = G_VECTOR(OFS_PARM1);
 	max = G_VECTOR(OFS_PARM2);
 	SetMinMaxSize (e, min, max, false);
@@ -337,9 +339,9 @@ void PF_setmodel (void)
 
 	e = G_EDICT(OFS_PARM0);
 	if (e == sv.edicts)
-		Host_Error("setmodel: can not modify world entity\n");
+		PF_WARNING("setmodel: can not modify world entity\n");
 	if (e->e->free)
-		Host_Error("setmodel: can not modify free entity\n");
+		PF_WARNING("setmodel: can not modify free entity\n");
 	m = G_STRING(OFS_PARM1);
 
 // check to see if model was properly precached
@@ -348,7 +350,7 @@ void PF_setmodel (void)
 			break;
 
 	if (!*check)
-		Host_Error ("no precache: %s\n", m);
+		PF_WARNING("setmodel: no precache\n");
 
 
 	e->v->model = PR_SetString(*check);
@@ -691,13 +693,13 @@ void PF_sound (void)
 	attenuation = G_FLOAT(OFS_PARM4);
 
 	if (volume < 0 || volume > 255)
-		Host_Error ("SV_StartSound: volume = %i", volume);
+		PF_WARNING("SV_StartSound: volume must be in range 0-1\n");
 
 	if (attenuation < 0 || attenuation > 4)
-		Host_Error ("SV_StartSound: attenuation = %f", attenuation);
+		PF_WARNING("SV_StartSound: attenuation must be in range 0-4\n");
 
 	if (channel < 0 || channel > 7)
-		Host_Error ("SV_StartSound: channel = %i", channel);
+		PF_WARNING("SV_StartSound: channel must be in range 0-7\n");
 
 	SV_StartSound (entity, channel, sample, volume, attenuation);
 }
@@ -711,7 +713,7 @@ break()
 */
 void PF_break (void)
 {
-	Host_Error ("break statement");
+	PF_ERROR("break: break statement\n");
 }
 
 /*
@@ -812,7 +814,7 @@ void PF_TraceToss (void)
 
 	ent = G_EDICT(OFS_PARM0);
 	if (ent == sv.edicts)
-		Host_Error("tracetoss: can not use world entity\n");
+		PF_WARNING("tracetoss: can not use world entity\n");
 	ignore = G_EDICT(OFS_PARM1);
 
 	trace = SV_Trace_Toss (ent, ignore);
@@ -1127,12 +1129,12 @@ void PF_Remove (void)
 
 	ed = G_EDICT(OFS_PARM0);
 	if (ed == sv.edicts)
-		Host_Error("remove: tried to remove world\n");
+		PF_WARNING("remove: tried to remove world\n");
 	if (NUM_FOR_EDICT(ed) <= svs.maxclients)
-		Host_Error("remove: tried to remove a client\n");
+		PF_WARNING("remove: tried to remove a client\n");
 	// LordHavoc: not an error because id1 progs did this in some cases (killtarget removes entities, even if they are already removed in some cases...)
 	if (ed->e->free && developer.integer)
-		Con_Printf("remove: tried to remove an entity that was already removed\n");
+		PF_WARNING("remove: tried to remove an entity that was already removed\n");
 	ED_Free (ed);
 }
 
@@ -1272,7 +1274,7 @@ void PF_findchainfloat (void)
 void PR_CheckEmptyString (char *s)
 {
 	if (s[0] <= ' ')
-		Host_Error ("Bad string");
+		PF_ERROR("Bad string");
 }
 
 void PF_precache_file (void)
@@ -1286,7 +1288,7 @@ void PF_precache_sound (void)
 	int		i;
 
 	if (sv.state != ss_loading)
-		Host_Error ("PF_Precache_*: Precache can only be done in spawn functions");
+		PF_ERROR("PF_Precache_*: Precache can only be done in spawn functions");
 
 	s = G_STRING(OFS_PARM0);
 	G_INT(OFS_RETURN) = G_INT(OFS_PARM0);
@@ -1302,7 +1304,7 @@ void PF_precache_sound (void)
 		if (!strcmp(sv.sound_precache[i], s))
 			return;
 	}
-	Host_Error ("PF_precache_sound: overflow");
+	PF_ERROR("PF_precache_sound: overflow");
 }
 
 void PF_precache_model (void)
@@ -1311,7 +1313,7 @@ void PF_precache_model (void)
 	int		i;
 
 	if (sv.state != ss_loading)
-		Host_Error ("PF_Precache_*: Precache can only be done in spawn functions");
+		PF_ERROR("PF_Precache_*: Precache can only be done in spawn functions");
 
 	s = G_STRING(OFS_PARM0);
 	if (sv.worldmodel->brush.ishlbsp && ((!s) || (!s[0])))
@@ -1330,7 +1332,7 @@ void PF_precache_model (void)
 		if (!strcmp(sv.model_precache[i], s))
 			return;
 	}
-	Host_Error ("PF_precache_model: overflow");
+	PF_ERROR("PF_precache_model: overflow");
 }
 
 
@@ -1369,19 +1371,19 @@ void PF_walkmove (void)
 	mfunction_t	*oldf;
 	int 	oldself;
 
+	// assume failure if it returns early
+	G_FLOAT(OFS_RETURN) = 0;
+	
 	ent = PROG_TO_EDICT(pr_global_struct->self);
 	if (ent == sv.edicts)
-		Host_Error("walkmove: can not modify world entity\n");
+		PF_WARNING("walkmove: can not modify world entity\n");
 	if (ent->e->free)
-		Host_Error("walkmove: can not modify free entity\n");
+		PF_WARNING("walkmove: can not modify free entity\n");
 	yaw = G_FLOAT(OFS_PARM0);
 	dist = G_FLOAT(OFS_PARM1);
 
 	if ( !( (int)ent->v->flags & (FL_ONGROUND|FL_FLY|FL_SWIM) ) )
-	{
-		G_FLOAT(OFS_RETURN) = 0;
 		return;
-	}
 
 	yaw = yaw*M_PI*2 / 360;
 
@@ -1414,20 +1416,21 @@ void PF_droptofloor (void)
 	vec3_t		end;
 	trace_t		trace;
 
+	// assume failure if it returns early
+	G_FLOAT(OFS_RETURN) = 0;
+
 	ent = PROG_TO_EDICT(pr_global_struct->self);
 	if (ent == sv.edicts)
-		Host_Error("droptofloor: can not modify world entity\n");
+		PF_WARNING("droptofloor: can not modify world entity\n");
 	if (ent->e->free)
-		Host_Error("droptofloor: can not modify free entity\n");
+		PF_WARNING("droptofloor: can not modify free entity\n");
 
 	VectorCopy (ent->v->origin, end);
 	end[2] -= 256;
 
 	trace = SV_Move (ent->v->origin, ent->v->mins, ent->v->maxs, end, MOVE_NORMAL, ent);
 
-	if (trace.fraction == 1)
-		G_FLOAT(OFS_RETURN) = 0;
-	else
+	if (trace.fraction != 1)
 	{
 		VectorCopy (trace.endpos, ent->v->origin);
 		SV_LinkEdict (ent, false);
@@ -1561,11 +1564,14 @@ void PF_aim (void)
 	float	dist, bestdist;
 	float	speed;
 
+	// assume failure if it returns early
+	VectorClear(G_VECTOR(OFS_RETURN));
+
 	ent = G_EDICT(OFS_PARM0);
 	if (ent == sv.edicts)
-		Host_Error("aim: can not use world entity\n");
+		PF_WARNING("aim: can not use world entity\n");
 	if (ent->e->free)
-		Host_Error("aim: can not use free entity\n");
+		PF_WARNING("aim: can not use free entity\n");
 	speed = G_FLOAT(OFS_PARM1);
 
 	VectorCopy (ent->v->origin, start);
@@ -1643,9 +1649,9 @@ void PF_changeyaw (void)
 
 	ent = PROG_TO_EDICT(pr_global_struct->self);
 	if (ent == sv.edicts)
-		Host_Error("changeyaw: can not modify world entity\n");
+		PF_WARNING("changeyaw: can not modify world entity\n");
 	if (ent->e->free)
-		Host_Error("changeyaw: can not modify free entity\n");
+		PF_WARNING("changeyaw: can not modify free entity\n");
 	current = ANGLEMOD(ent->v->angles[1]);
 	ideal = ent->v->ideal_yaw;
 	speed = ent->v->yaw_speed;
@@ -1690,22 +1696,22 @@ void PF_changepitch (void)
 
 	ent = G_EDICT(OFS_PARM0);
 	if (ent == sv.edicts)
-		Host_Error("changepitch: can not modify world entity\n");
+		PF_WARNING("changepitch: can not modify world entity\n");
 	if (ent->e->free)
-		Host_Error("changepitch: can not modify free entity\n");
+		PF_WARNING("changepitch: can not modify free entity\n");
 	current = ANGLEMOD( ent->v->angles[0] );
 	if ((val = GETEDICTFIELDVALUE(ent, eval_idealpitch)))
 		ideal = val->_float;
 	else
 	{
-		Host_Error ("PF_changepitch: .float idealpitch and .float pitch_speed must be defined to use changepitch");
+		PF_WARNING("PF_changepitch: .float idealpitch and .float pitch_speed must be defined to use changepitch\n");
 		return;
 	}
 	if ((val = GETEDICTFIELDVALUE(ent, eval_pitch_speed)))
 		speed = val->_float;
 	else
 	{
-		Host_Error ("PF_changepitch: .float idealpitch and .float pitch_speed must be defined to use changepitch");
+		PF_WARNING("PF_changepitch: .float idealpitch and .float pitch_speed must be defined to use changepitch\n");
 		return;
 	}
 
@@ -1775,7 +1781,7 @@ sizebuf_t *WriteDest (void)
 		return &sv.signon;
 
 	default:
-		Host_Error ("WriteDest: bad destination");
+		Host_Error("WriteDest: bad destination");
 		break;
 	}
 
@@ -1832,9 +1838,9 @@ void PF_makestatic (void)
 
 	ent = G_EDICT(OFS_PARM0);
 	if (ent == sv.edicts)
-		Host_Error("makestatic: can not modify world entity\n");
+		PF_WARNING("makestatic: can not modify world entity\n");
 	if (ent->e->free)
-		Host_Error("makestatic: can not modify free entity\n");
+		PF_WARNING("makestatic: can not modify free entity\n");
 
 	large = false;
 	if (ent->v->modelindex >= 256 || ent->v->frame >= 256)
@@ -1995,7 +2001,7 @@ void PF_registercvar (void)
 	}
 
 	if (currentqc_cvar >= MAX_QC_CVARS)
-		Host_Error ("PF_registercvar: ran out of cvar slots (%i)\n", MAX_QC_CVARS);
+		PF_ERROR("PF_registercvar: ran out of cvar slots\n");
 
 // copy the name and value
 	variable = &qc_cvar[currentqc_cvar++];
@@ -2033,7 +2039,10 @@ void PF_min (void)
 		G_FLOAT(OFS_RETURN) = f;
 	}
 	else
-		Host_Error("min: must supply at least 2 floats\n");
+	{
+		G_FLOAT(OFS_RETURN) = 0;
+		PF_WARNING("min: must supply at least 2 floats\n");
+	}
 }
 
 /*
@@ -2060,7 +2069,10 @@ void PF_max (void)
 		G_FLOAT(OFS_RETURN) = f;
 	}
 	else
-		Host_Error("max: must supply at least 2 floats\n");
+	{
+		G_FLOAT(OFS_RETURN) = 0;
+		PF_WARNING("max: must supply at least 2 floats\n");
+	}
 }
 
 /*
@@ -2105,14 +2117,14 @@ void PF_copyentity (void)
 	edict_t *in, *out;
 	in = G_EDICT(OFS_PARM0);
 	if (in == sv.edicts)
-		Host_Error("copyentity: can not read world entity\n");
+		PF_WARNING("copyentity: can not read world entity\n");
 	if (in->e->free)
-		Host_Error("copyentity: can not read free entity\n");
+		PF_WARNING("copyentity: can not read free entity\n");
 	out = G_EDICT(OFS_PARM1);
 	if (out == sv.edicts)
-		Host_Error("copyentity: can not modify world entity\n");
+		PF_WARNING("copyentity: can not modify world entity\n");
 	if (out->e->free)
-		Host_Error("copyentity: can not modify free entity\n");
+		PF_WARNING("copyentity: can not modify free entity\n");
 	memcpy(out->v, in->v, progs->entityfields * 4);
 }
 
@@ -2164,7 +2176,7 @@ void PF_effect (void)
 	char *s;
 	s = G_STRING(OFS_PARM1);
 	if (!s || !s[0])
-		Host_Error("effect: no model specified\n");
+		PF_WARNING("effect: no model specified\n");
 
 	SV_StartEffect(G_VECTOR(OFS_PARM0), SV_ModelIndex(s), G_FLOAT(OFS_PARM2), G_FLOAT(OFS_PARM3), G_FLOAT(OFS_PARM4));
 }
@@ -3008,9 +3020,9 @@ void PF_setattachment (void)
 	model_t *model;
 
 	if (e == sv.edicts)
-		Host_Error("setattachment: can not modify world entity\n");
+		PF_WARNING("setattachment: can not modify world entity\n");
 	if (e->e->free)
-		Host_Error("setattachment: can not modify free entity\n");
+		PF_WARNING("setattachment: can not modify free entity\n");
 
 	if (tagentity == NULL)
 		tagentity = sv.edicts;

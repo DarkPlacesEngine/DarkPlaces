@@ -246,19 +246,9 @@ void PRVM_CrashAll()
 	prog = oldprog;
 }
 
-void PRVM_Crash()
+void PRVM_PrintState(void)
 {
 	int i;
-	
-	if (prog->depth < 1)
-	{
-		// kill the stack just to be sure
-		prog->depth = 0;
-		prog->localstack_used = 0;
-		return;
-	}
-
-	Con_Printf("QuakeC crash report for %s:\n", PRVM_NAME);
 	if (prog->xfunction)
 	{
 		for (i = -4;i <= 0;i++)
@@ -268,6 +258,20 @@ void PRVM_Crash()
 	else
 		Con_Printf("null function executing??\n");
 	PRVM_StackTrace ();
+}
+
+void PRVM_Crash()
+{
+	if (prog->depth < 1)
+	{
+		// kill the stack just to be sure
+		prog->depth = 0;
+		prog->localstack_used = 0;
+		return;
+	}
+
+	Con_Printf("QuakeC crash report for %s:\n", PRVM_NAME);
+	PRVM_PrintState();
 
 	// dump the stack so host_error can shutdown functions
 	prog->depth = 0;

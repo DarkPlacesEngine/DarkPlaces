@@ -364,6 +364,7 @@ void PRVM_LoadProgs (const char *filename, int numrequiredfunc, char **required_
 
 void PRVM_Profile_f (void);
 
+void PRVM_PrintState(void);
 void PRVM_CrashAll (void);
 void PRVM_Crash (void);
 
