@@ -3,9 +3,9 @@
 #include "image.h"
 #include "jpeg.h"
 
-cvar_t	r_max_size = {CVAR_SAVE, "r_max_size", "2048"};
-cvar_t	r_max_scrapsize = {CVAR_SAVE, "r_max_scrapsize", "256"};
-cvar_t	r_picmip = {CVAR_SAVE, "r_picmip", "0"};
+cvar_t	gl_max_size = {CVAR_SAVE, "gl_max_size", "2048"};
+cvar_t	gl_max_scrapsize = {CVAR_SAVE, "gl_max_scrapsize", "256"};
+cvar_t	gl_picmip = {CVAR_SAVE, "gl_picmip", "0"};
 cvar_t	r_lerpimages = {CVAR_SAVE, "r_lerpimages", "1"};
 cvar_t	r_precachetextures = {CVAR_SAVE, "r_precachetextures", "1"};
 cvar_t  gl_texture_anisotropy = {CVAR_SAVE, "gl_texture_anisotropy", "1"};
@@ -387,15 +387,15 @@ static int R_CalcTexelDataSize (gltexture_t *glt)
 		size = glt->width * glt->height * glt->depth;
 	else
 	{
-		if (r_max_size.integer > realmaxsize)
-			Cvar_SetValue("r_max_size", realmaxsize);
+		if (gl_max_size.integer > realmaxsize)
+			Cvar_SetValue("gl_max_size", realmaxsize);
 		// calculate final size
 		for (width2 = 1;width2 < glt->width;width2 <<= 1);
 		for (height2 = 1;height2 < glt->height;height2 <<= 1);
 		for (depth2 = 1;depth2 < glt->depth;depth2 <<= 1);
-		for (width2 >>= r_picmip.integer;width2 > r_max_size.integer;width2 >>= 1);
-		for (height2 >>= r_picmip.integer;height2 > r_max_size.integer;height2 >>= 1);
-		for (depth2 >>= r_picmip.integer;depth2 > r_max_size.integer;depth2 >>= 1);
+		for (width2 >>= gl_picmip.integer;width2 > gl_max_size.integer;width2 >>= 1);
+		for (height2 >>= gl_picmip.integer;height2 > gl_max_size.integer;height2 >>= 1);
+		for (depth2 >>= gl_picmip.integer;depth2 > gl_max_size.integer;depth2 >>= 1);
 		if (width2 < 1) width2 = 1;
 		if (height2 < 1) height2 = 1;
 		if (depth2 < 1) depth2 = 1;
@@ -477,7 +477,7 @@ static void r_textures_start(void)
 	CHECKGLERROR
 
 	// use the largest scrap texture size we can (not sure if this is really a good idea)
-	for (block_size = 1;block_size < realmaxsize && block_size < r_max_scrapsize.integer;block_size <<= 1);
+	for (block_size = 1;block_size < realmaxsize && block_size < gl_max_scrapsize.integer;block_size <<= 1);
 
 	texturemempool = Mem_AllocPool("Texture Info");
 	texturedatamempool = Mem_AllocPool("Texture Storage (not yet uploaded)");
@@ -518,9 +518,9 @@ void R_Textures_Init (void)
 {
 	Cmd_AddCommand("gl_texturemode", &GL_TextureMode_f);
 	Cmd_AddCommand("r_texturestats", R_TextureStats_f);
-	Cvar_RegisterVariable (&r_max_scrapsize);
-	Cvar_RegisterVariable (&r_max_size);
-	Cvar_RegisterVariable (&r_picmip);
+	Cvar_RegisterVariable (&gl_max_scrapsize);
+	Cvar_RegisterVariable (&gl_max_size);
+	Cvar_RegisterVariable (&gl_picmip);
 	Cvar_RegisterVariable (&r_lerpimages);
 	Cvar_RegisterVariable (&r_precachetextures);
 	Cvar_RegisterVariable (&gl_texture_anisotropy);
@@ -939,14 +939,14 @@ static void R_FindImageForTexture(gltexture_t *glt)
 		image->blockallocation = NULL;
 
 		// calculate final size
-		if (r_max_size.integer > realmaxsize)
-			Cvar_SetValue("r_max_size", realmaxsize);
+		if (gl_max_size.integer > realmaxsize)
+			Cvar_SetValue("gl_max_size", realmaxsize);
 		for (image->width = 1;image->width < glt->width;image->width <<= 1);
 		for (image->height = 1;image->height < glt->height;image->height <<= 1);
 		for (image->depth = 1;image->depth < glt->depth;image->depth <<= 1);
-		for (image->width >>= r_picmip.integer;image->width > r_max_size.integer;image->width >>= 1);
-		for (image->height >>= r_picmip.integer;image->height > r_max_size.integer;image->height >>= 1);
-		for (image->depth >>= r_picmip.integer;image->depth > r_max_size.integer;image->depth >>= 1);
+		for (image->width >>= gl_picmip.integer;image->width > gl_max_size.integer;image->width >>= 1);
+		for (image->height >>= gl_picmip.integer;image->height > gl_max_size.integer;image->height >>= 1);
+		for (image->depth >>= gl_picmip.integer;image->depth > gl_max_size.integer;image->depth >>= 1);
 		if (image->width < 1) image->width = 1;
 		if (image->height < 1) image->height = 1;
 		if (image->depth < 1) image->depth = 1;
