@@ -56,6 +56,8 @@ cvar_t cl_stainmaps = {CVAR_SAVE, "cl_stainmaps", "1"};
 cvar_t cl_beams_polygons = {CVAR_SAVE, "cl_beams_polygons", "1"};
 cvar_t cl_beams_relative = {CVAR_SAVE, "cl_beams_relative", "1"};
 
+cvar_t cl_noplayershadow = {CVAR_SAVE, "cl_noplayershadow", "0"};
+
 mempool_t *cl_scores_mempool;
 mempool_t *cl_refdef_mempool;
 mempool_t *cl_entities_mempool;
@@ -761,7 +763,7 @@ static void CL_RelinkNetworkEntities(void)
 		 && !(ent->state_current.effects & EF_ADDITIVE)
 		 && (ent->state_current.alpha == 255)
 		 && !(ent->render.flags & RENDER_VIEWMODEL)
-		 && (i != cl.viewentity || (!cl.intermission && !Nehahrademcompatibility)))
+		 && (i != cl.viewentity || (!cl.intermission && !Nehahrademcompatibility && !cl_noplayershadow.integer)))
 			ent->render.flags |= RENDER_SHADOW;
 
 		if (r_refdef.numentities < r_refdef.maxentities)
@@ -1480,6 +1482,7 @@ void CL_Init (void)
 	Cvar_RegisterVariable(&cl_stainmaps);
 	Cvar_RegisterVariable(&cl_beams_polygons);
 	Cvar_RegisterVariable(&cl_beams_relative);
+	Cvar_RegisterVariable(&cl_noplayershadow);
 
 	R_LightningBeams_Init();
 
