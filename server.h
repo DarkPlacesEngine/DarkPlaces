@@ -42,10 +42,10 @@ typedef struct
 	double		time;
 
 	double		frametime;
-	
+
 	int			lastcheck;			// used by PF_checkclient
 	double		lastchecktime;
-	
+
 	char		name[64];			// map name
 	char		modelname[64];		// maps/<name>.bsp, for model_precache[0]
 	struct model_s 	*worldmodel;
@@ -80,10 +80,6 @@ typedef struct client_s
 	qboolean		spawned;			// false = don't send datagrams
 	qboolean		dropasap;			// has been told to go to another level
 	qboolean		sendsignon;			// only valid before spawned
-
-	// LordHavoc: to make netquake protocol get through NAT routers, have to wait for client to ack
-	qboolean		waitingforconnect;	// waiting for connect from client (stage 1)
-	qboolean		sendserverinfo;		// send server info in next datagram (stage 2)
 
 	double			last_message;		// reliable messages must be sent
 										// periodically
