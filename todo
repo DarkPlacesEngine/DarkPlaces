@@ -30,6 +30,7 @@
 0 darkplaces editlights: split rtlight drawshadows option into drawworldshadows and drawentityshadows options, this allows combinations like no world shadows (for speed) but still having entity shadows (Mitchell, romi)
 0 darkplaces input: centerview command isn't doing anything until console is activated, it should begin the pitch drift immediately as in quake (Sajt)
 0 darkplaces input: ignore first mouse move in windows fullscreen when coming back from an alt-tab (sublim3)
+0 darkplaces loader: only load .lit if the file size matches lumpsize * 3 + 8, as a rough check that the lit is for the correct bsp file (Spike)
 0 darkplaces loading: add hud_clearprecache and hud_precachepic commands to preload pics by name, these get reloaded by r_restart as well, mods can put a lot of these commands in their default.cfg to precache needed hud art (Tomaz)
 0 darkplaces loading: check for out of bounds lump data ranges in maps (FrikaC)
 0 darkplaces loading: check for truncated sound files (FrikaC)
