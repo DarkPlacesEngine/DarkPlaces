@@ -447,6 +447,9 @@ Con_Linefeed
 */
 void Con_Linefeed (void)
 {
+	if (con_backscroll)
+		con_backscroll++;
+
 	con_x = 0;
 	con_current++;
 	memset (&con_text[(con_current%con_totallines)*con_linewidth], ' ', con_linewidth);
@@ -465,8 +468,6 @@ void Con_PrintToHistory(const char *txt)
 {
 	int y, c, l, mask;
 	static int cr;
-
-	con_backscroll = 0;
 
 	if (txt[0] == 1)
 	{
