@@ -52,6 +52,7 @@ int			conbacktexnum;
 =============================================================================
 */
 
+/*
 #define	MAX_SCRAPS		2
 #define	BLOCK_WIDTH		256
 #define	BLOCK_HEIGHT	256
@@ -115,6 +116,7 @@ void Scrap_Upload (void)
 		scraptexnum[texnum] = GL_LoadTexture (va("scrapslot%d", texnum), BLOCK_WIDTH, BLOCK_HEIGHT, scrap_texels[texnum], false, true, 1);
 	scrap_dirty = false;
 }
+*/
 
 //=============================================================================
 /* Support Routines */
@@ -146,6 +148,7 @@ qpic_t *Draw_PicFromWad (char *name)
 	gl = (glpic_t *)p->data;
 
 	// load little ones into the scrap
+	/*
 	if (p->width < 64 && p->height < 64)
 	{
 		int		x, y;
@@ -171,12 +174,13 @@ qpic_t *Draw_PicFromWad (char *name)
 	}
 	else
 	{
+	*/
 		gl->texnum = GL_LoadPicTexture (p);
 		gl->sl = 0;
 		gl->sh = 1;
 		gl->tl = 0;
 		gl->th = 1;
-	}
+	//}
 	return p;
 }
 
@@ -259,7 +263,7 @@ void gl_draw_start()
 
 	conbacktexnum = loadtextureimage("gfx/conback", 0, 0, false, false);
 
-	memset(scraptexnum, 0, sizeof(scraptexnum));
+//	memset(scraptexnum, 0, sizeof(scraptexnum));
 
 	// get the other pics we need
 	draw_disc = Draw_PicFromWad ("disc");
@@ -330,7 +334,7 @@ void Draw_Character (int x, int y, int num)
 		return;
 	glBindTexture(GL_TEXTURE_2D, char_texture);
 	// LordHavoc: NEAREST mode on text if not scaling up
-	if ((int) vid.width < glwidth)
+	if (glwidth < (int) vid.width)
 	{
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -374,7 +378,7 @@ void Draw_String (int x, int y, char *str, int maxlen)
 	glBindTexture(GL_TEXTURE_2D, char_texture);
 
 	// LordHavoc: NEAREST mode on text if not scaling up
-	if ((int) vid.width < glwidth)
+	if (glwidth < (int) vid.width)
 	{
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -425,8 +429,8 @@ void Draw_AlphaPic (int x, int y, qpic_t *pic, float alpha)
 {
 	glpic_t			*gl;
 
-	if (scrap_dirty)
-		Scrap_Upload ();
+//	if (scrap_dirty)
+//		Scrap_Upload ();
 	gl = (glpic_t *)pic->data;
 	if (!r_render.value)
 		return;
@@ -450,8 +454,8 @@ void Draw_Pic (int x, int y, qpic_t *pic)
 {
 	glpic_t			*gl;
 
-	if (scrap_dirty)
-		Scrap_Upload ();
+//	if (scrap_dirty)
+//		Scrap_Upload ();
 	gl = (glpic_t *)pic->data;
 	if (!r_render.value)
 		return;
