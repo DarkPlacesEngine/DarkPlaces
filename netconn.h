@@ -159,7 +159,9 @@ extern int playercolor;
 typedef struct
 {
 	// ping time for sorting servers
-	double ping;
+	int ping;
+	// used to calculate ping when update comes in
+	double querytime;
 	// address for connecting
 	char cname[128];
 	// description (seen by user)
@@ -190,6 +192,12 @@ extern unsigned short ntohs (unsigned short netshort);
 // public network functions
 //
 //============================================================================
+
+extern double masterquerytime;
+extern int masterquerycount;
+extern int masterreplycount;
+extern int serverquerycount;
+extern int serverreplycount;
 
 extern sizebuf_t net_message;
 

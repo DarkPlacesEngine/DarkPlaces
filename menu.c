@@ -3363,26 +3363,38 @@ void M_ServerList_Draw (void)
 {
 	int n, y, visible, start, end;
 	cachepic_t *p;
+	const char *s;
 
 	// use as much vertical space as available
 	M_Background(640, vid.conheight);
 	// scroll the list as the cursor moves
-	visible = (vid.conheight - 16 - 32) / 8;
+	s = va("%i/%i masters %i/%i servers", masterreplycount, masterquerycount, serverreplycount, serverquerycount);
+	M_PrintRed((640 - strlen(s) * 8) / 2, 32, s);
+	if (*m_return_reason)
+		M_Print(16, vid.conheight - 8, m_return_reason);
+	y = 48;
+	visible = (vid.conheight - 16 - y) / 8;
 	start = bound(0, slist_cursor - (visible >> 1), hostCacheCount - visible);
 	end = min(start + visible, hostCacheCount);
 
 	p = Draw_CachePic("gfx/p_multi.lmp");
 	M_DrawPic((640 - p->width) / 2, 4, "gfx/p_multi.lmp");
-	y = 32;
-	for (n = start;n < end;n++)
+	if (end > start)
 	{
-		M_Print(0, y, hostcache[n].line1);y += 8;
-		M_Print(0, y, hostcache[n].line2);y += 8;
+		for (n = start;n < end;n++)
+		{
+			DrawQ_Fill(menu_x, menu_y + y, 640, 16, n == slist_cursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
+			M_Print(0, y, hostcache[n].line1);y += 8;
+			M_Print(0, y, hostcache[n].line2);y += 8;
+		}
 	}
-	M_DrawCharacter(0, 32 + (slist_cursor - start) * 16, 12+((int)(realtime*4)&1));
-
-	if (*m_return_reason)
-		M_Print(16, vid.conheight - 8, m_return_reason);
+	else if (realtime - masterquerytime < 3)
+	{
+		if (masterquerycount)
+			M_Print(0, y, "No servers found");
+		else
+			M_Print(0, y, "No master servers found (network problem?)");
+	}
 }
 
 

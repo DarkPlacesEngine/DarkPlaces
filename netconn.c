@@ -68,6 +68,12 @@ static int unreliableMessagesReceived = 0;
 static int reliableMessagesSent = 0;
 static int reliableMessagesReceived = 0;
 
+double masterquerytime = -1000;
+int masterquerycount = 0;
+int masterreplycount = 0;
+int serverquerycount = 0;
+int serverreplycount = 0;
+
 int hostCacheCount = 0;
 hostcache_t hostcache[HOSTCACHESIZE];
 
@@ -468,17 +474,17 @@ static int clientport2 = -1;
 static int hostport = -1;
 static void NetConn_UpdateServerStuff(void)
 {
-	if (clientport2 != cl_netport.integer)
-	{
-		clientport2 = cl_netport.integer;
-		if (cls.state == ca_connected)
-			Con_Printf("Changing \"cl_port\" will not take effect until you reconnect.\n");
-	}
 	if (cls.state != ca_dedicated)
 	{
-		if (cls.state == ca_disconnected && clientport != cl_netport.integer)
+		if (clientport2 != cl_netport.integer)
 		{
-			clientport = cl_netport.integer;
+			clientport2 = cl_netport.integer;
+			if (cls.state == ca_connected)
+				Con_Printf("Changing \"cl_port\" will not take effect until you reconnect.\n");
+		}
+		if (cls.state == ca_disconnected && clientport != clientport2)
+		{
+			clientport = clientport2;
 			NetConn_CloseClientPorts();
 		}
 		if (cl_numsockets == 0)
@@ -689,21 +695,6 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 			string += 13;
 			// hostcache only uses text addresses
 			LHNETADDRESS_ToString(peeraddress, cname, sizeof(cname), true);
-			// search the cache for this server
-			for (n = 0; n < hostCacheCount; n++)
-				if (!strcmp(cname, hostcache[n].cname))
-					break;
-			// add it or update it
-			if (n == hostCacheCount)
-			{
-				// if cache is full replace highest ping server (the list is
-				// kept sorted so this is always the last, and if this server
-				// is good it will be sorted into an early part of the list)
-				if (hostCacheCount >= HOSTCACHESIZE)
-					n = hostCacheCount - 1;
-				else
-					hostCacheCount++;
-			}
 			if ((s = SearchInfostring(string, "gamename"     )) != NULL) strncpy(game, s, sizeof(game) - 1);else game[0] = 0;
 			if ((s = SearchInfostring(string, "modname"      )) != NULL) strncpy(mod , s, sizeof(mod ) - 1);else mod[0] = 0;
 			if ((s = SearchInfostring(string, "mapname"      )) != NULL) strncpy(map , s, sizeof(map ) - 1);else map[0] = 0;
@@ -711,59 +702,67 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 			if ((s = SearchInfostring(string, "protocol"     )) != NULL) c = atoi(s);else c = -1;
 			if ((s = SearchInfostring(string, "clients"      )) != NULL) users = atoi(s);else users = 0;
 			if ((s = SearchInfostring(string, "sv_maxclients")) != NULL) maxusers = atoi(s);else maxusers = 0;
-			pingtime = 9999;
-			for (i = 0;i < HOSTCACHESIZE;i++)
-				if (!LHNETADDRESS_Compare(peeraddress, &pingcache[i].peeraddress))
-					pingtime = (int)(realtime - pingcache[i].senttime);
-			pingtime = bound(0, pingtime, 9999);
-			memset(&hostcache[n], 0, sizeof(hostcache[n]));
-			// store the data the engine cares about (address and ping)
-			strcpy(hostcache[n].cname, cname);
-			hostcache[n].ping = pingtime;
-			// build description strings for the things users care about
-			snprintf(hostcache[n].line1, sizeof(hostcache[n].line1), "%5d%c%3u/%3u %-65.65s", (int)pingtime, c != NET_PROTOCOL_VERSION ? '*' : ' ', users, maxusers, name);
-			snprintf(hostcache[n].line2, sizeof(hostcache[n].line2), "%-21.21s %-19.19s %-17.17s %-20.20s", cname, game, mod, map);
-			// if ping is especially high, display it as such
-			if (pingtime >= 300)
+			// search the cache for this server and update it
+			for (n = 0; n < hostCacheCount; n++)
 			{
-				// orange numbers (lower block)
-				for (i = 0;i < 5;i++)
-					if (hostcache[n].line1[i] != ' ')
-						hostcache[n].line1[i] += 128;
-			}
-			else if (pingtime >= 200)
-			{
-				// yellow numbers (in upper block)
-				for (i = 0;i < 5;i++)
-					if (hostcache[n].line1[i] != ' ')
-						hostcache[n].line1[i] -= 30;
-			}
-			// if not in the slist menu we should print the server to console
-			if (m_state != m_slist)
-				Con_Printf("%s\n%s\n", hostcache[n].line1, hostcache[n].line2);
-			// and finally, re-sort the list
-			for (i = 0;i < hostCacheCount;i++)
-			{
-				for (j = i + 1;j < hostCacheCount;j++)
+				if (!strcmp(cname, hostcache[n].cname))
 				{
-					//if (strcmp(hostcache[j].name, hostcache[i].name) < 0)
-					if (hostcache[i].ping > hostcache[j].ping)
+					if (hostcache[n].ping == 100000)
+						serverreplycount++;
+					pingtime = (int)((realtime - hostcache[n].querytime) * 1000.0);
+					pingtime = bound(0, pingtime, 9999);
+					// update the ping
+					hostcache[n].ping = pingtime;
+					// build description strings for the things users care about
+					snprintf(hostcache[n].line1, sizeof(hostcache[n].line1), "%5d%c%3u/%3u %-65.65s", (int)pingtime, c != NET_PROTOCOL_VERSION ? '*' : ' ', users, maxusers, name);
+					snprintf(hostcache[n].line2, sizeof(hostcache[n].line2), "%-21.21s %-19.19s %-17.17s %-20.20s", cname, game, mod, map);
+					// if ping is especially high, display it as such
+					if (pingtime >= 300)
 					{
-						memcpy(&temp, &hostcache[j], sizeof(hostcache_t));
-						memcpy(&hostcache[j], &hostcache[i], sizeof(hostcache_t));
-						memcpy(&hostcache[i], &temp, sizeof(hostcache_t));
+						// orange numbers (lower block)
+						for (i = 0;i < 5;i++)
+							if (hostcache[n].line1[i] != ' ')
+								hostcache[n].line1[i] += 128;
 					}
+					else if (pingtime >= 200)
+					{
+						// yellow numbers (in upper block)
+						for (i = 0;i < 5;i++)
+							if (hostcache[n].line1[i] != ' ')
+								hostcache[n].line1[i] -= 30;
+					}
+					// if not in the slist menu we should print the server to console
+					if (m_state != m_slist)
+						Con_Printf("%s\n%s\n", hostcache[n].line1, hostcache[n].line2);
+					// and finally, re-sort the list
+					for (i = 0;i < hostCacheCount;i++)
+					{
+						for (j = i + 1;j < hostCacheCount;j++)
+						{
+							//if (strcmp(hostcache[j].name, hostcache[i].name) < 0)
+							if (hostcache[i].ping > hostcache[j].ping)
+							{
+								memcpy(&temp, &hostcache[j], sizeof(hostcache_t));
+								memcpy(&hostcache[j], &hostcache[i], sizeof(hostcache_t));
+								memcpy(&hostcache[i], &temp, sizeof(hostcache_t));
+							}
+						}
+					}
+					break;
 				}
 			}
 			return true;
 		}
 		if (!strncmp(string, "getserversResponse\\", 19) && hostCacheCount < HOSTCACHESIZE)
 		{
-			int i, best;
-			double besttime;
+			int i, n, j;
+			hostcache_t temp;
 			// Extract the IP addresses
 			data += 18;
 			length -= 18;
+			masterreplycount++;
+			if (m_state != m_slist)
+				Con_Printf("received server list...\n");
 			while (length >= 7 && data[0] == '\\' && (data[1] != 0xFF || data[2] != 0xFF || data[3] != 0xFF || data[4] != 0xFF) && data[5] * 256 + data[6] != 0)
 			{
 				sprintf(ipstring, "%u.%u.%u.%u:%u", data[1], data[2], data[3], data[4], (data[5] << 8) | data[6]);
@@ -771,28 +770,54 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 					Con_Printf("Requesting info from server %s\n", ipstring);
 				LHNETADDRESS_FromString(&svaddress, ipstring, 0);
 				NetConn_WriteString(mysocket, "\377\377\377\377getinfo", &svaddress);
-				// replace oldest or matching entry in ping cache
-				// we scan this later when getting a reply to see how long it took
-				besttime = realtime;
-				best = 0;
-				for (i = 0;i < HOSTCACHESIZE;i++)
-				{
-					if (!LHNETADDRESS_Compare(&svaddress, &pingcache[i].peeraddress))
-					{
-						best = i;
+
+
+				// add to slist (hostCache)
+				// search the cache for this server
+				for (n = 0; n < hostCacheCount; n++)
+					if (!strcmp(ipstring, hostcache[n].cname))
 						break;
-					}
-					if (besttime > pingcache[i].senttime)
+				// add it or update it
+				if (n == hostCacheCount)
+				{
+					// if cache is full replace highest ping server (the list is
+					// kept sorted so this is always the last, and if this server
+					// is good it will be sorted into an early part of the list)
+					if (hostCacheCount >= HOSTCACHESIZE)
+						n = hostCacheCount - 1;
+					else
 					{
-						besttime = pingcache[i].senttime;
-						best = i;
-						// if ping cache isn't full yet we can skip out early
-						if (!besttime)
-							break;
+						serverquerycount++;
+						hostCacheCount++;
 					}
 				}
-				pingcache[best].peeraddress = svaddress;
-				pingcache[best].senttime = realtime;
+				memset(&hostcache[n], 0, sizeof(hostcache[n]));
+				// store the data the engine cares about (address and ping)
+				strcpy(hostcache[n].cname, ipstring);
+				hostcache[n].ping = 100000;
+				hostcache[n].querytime = realtime;
+				// build description strings for the things users care about
+				snprintf(hostcache[n].line1, sizeof(hostcache[n].line1), "?");
+				snprintf(hostcache[n].line2, sizeof(hostcache[n].line2), "%s", ipstring);
+				// if not in the slist menu we should print the server to console
+				if (m_state != m_slist)
+					Con_Printf("querying %s\n", ipstring);
+				// and finally, re-sort the list
+				for (i = 0;i < hostCacheCount;i++)
+				{
+					for (j = i + 1;j < hostCacheCount;j++)
+					{
+						//if (strcmp(hostcache[j].name, hostcache[i].name) < 0)
+						if (hostcache[i].ping > hostcache[j].ping)
+						{
+							memcpy(&temp, &hostcache[j], sizeof(hostcache_t));
+							memcpy(&hostcache[j], &hostcache[i], sizeof(hostcache_t));
+							memcpy(&hostcache[i], &temp, sizeof(hostcache_t));
+						}
+					}
+				}
+
+
 				// move on to next address in packet
 				data += 7;
 				length -= 7;
@@ -918,13 +943,26 @@ void NetConn_ClientFrame(void)
 		if (cls.connect_remainingtries == 0)
 		{
 			cls.connect_trying = false;
-			Con_Printf("Connect failed\n");
+			if (m_state == m_slist)
+				strcpy(m_return_reason, "Connect: Failed");
+			else
+				Con_Printf("Connect failed\n");
 			return;
 		}
 		if (cls.connect_nextsendtime)
-			Con_Printf("Still trying...\n");
+		{
+			if (m_state == m_slist)
+				strcpy(m_return_reason, "Connect: Still trying");
+			else
+				Con_Printf("Still trying...\n");
+		}
 		else
-			Con_Printf("Trying...\n");
+		{
+			if (m_state == m_slist)
+				strcpy(m_return_reason, "Connect: Trying");
+			else
+				Con_Printf("Trying...\n");
+		}
 		cls.connect_nextsendtime = realtime + 1;
 		cls.connect_remainingtries--;
 		// try challenge first (newer server)
@@ -1371,7 +1409,8 @@ void NetConn_ServerFrame(void)
 			NetConn_ServerParsePacket(sv_sockets[i], readbuffer, length, &peeraddress);
 	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 	{
-		if (host_client->netconnection && realtime > host_client->netconnection->timeout)
+		// never timeout loopback connections
+		if (host_client->netconnection && realtime > host_client->netconnection->timeout && LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(host_client->netconnection->mysocket)) != LHNETADDRESSTYPE_LOOP)
 		{
 			Con_Printf("Client \"%s\" connection timed out\n", host_client->name);
 			sv_player = host_client->edict;
@@ -1418,9 +1457,19 @@ void NetConn_QueryMasters(void)
 
 			// search internet
 			for (masternum = 0;sv_masters[masternum].name;masternum++)
+			{
 				if (sv_masters[masternum].string && LHNETADDRESS_FromString(&masteraddress, sv_masters[masternum].string, MASTER_PORT) && LHNETADDRESS_GetAddressType(&masteraddress) == LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i])))
+				{
+					masterquerycount++;
 					NetConn_WriteString(cl_sockets[i], request, &masteraddress);
+				}
+			}
 		}
+	}
+	if (!masterquerycount)
+	{
+		Con_Printf("Unable to query master servers, no suitable network sockets active.\n");
+		strcpy(m_return_reason, "No network");
 	}
 }
 
@@ -1494,7 +1543,10 @@ int NetConn_SendToAll(sizebuf_t *data, double blocktime)
 
 static void Net_Heartbeat_f(void)
 {
-	NetConn_Heartbeat(2);
+	if (sv.active)
+		NetConn_Heartbeat(2);
+	else
+		Con_Printf("No server running, can not heartbeat to master server.\n");
 }
 
 void PrintStats(netconn_t *conn)
@@ -1521,6 +1573,11 @@ void Net_Stats_f(void)
 
 void Net_Slist_f(void)
 {
+	masterquerytime = realtime;
+	masterquerycount = 0;
+	masterreplycount = 0;
+	serverquerycount = 0;
+	serverreplycount = 0;
 	hostCacheCount = 0;
 	memset(&pingcache, 0, sizeof(pingcache));
 	if (m_state != m_slist)

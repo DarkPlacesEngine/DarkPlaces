@@ -221,7 +221,7 @@ static void R_SkyBox(void)
 	{
 		m.tex[0] = R_GetTexture(skyboxside[i]);
 		R_Mesh_State_Texture(&m);
-		R_Mesh_Draw(4, 2, skyboxelements + i * 6);
+		R_Mesh_Draw(6*4, 2, skyboxelements + i * 6);
 	}
 }
 

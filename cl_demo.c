@@ -308,6 +308,9 @@ void CL_PlayDemo_f (void)
 	// disconnect from server
 	CL_Disconnect ();
 
+	// update networking ports (this is mainly just needed at startup)
+	NetConn_ClientFrame();
+
 	// open the demo file
 	strcpy (name, Cmd_Argv(1));
 	FS_DefaultExtension (name, ".dem");

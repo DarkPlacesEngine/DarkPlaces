@@ -541,7 +541,7 @@ Returns false if the time is too short to run a frame
 extern cvar_t cl_avidemo;
 qboolean Host_FilterTime (double time)
 {
-	double timecap;
+	double timecap, timeleft;
 	realtime += time;
 
 	if (slowmo.value < 0.0f)
@@ -554,21 +554,24 @@ qboolean Host_FilterTime (double time)
 		Cvar_SetValue("cl_avidemo", 0.0f);
 
 	// check if framerate is too high
-	if (cl_avidemo.value >= 0.1f)
+	if (!cls.timedemo)
 	{
-		timecap = 1.0 / (double)cl_avidemo.value;
-		if ((realtime - oldrealtime) < timecap)
-			return false;
-	}
-	else if (!cls.timedemo)
-	{
-		// default to sys_ticrate (server framerate - presumably low) unless we're the active window and either connected to a server or playing a video
+		// default to sys_ticrate (server framerate - presumably low) unless we
+		// have a good reason to run faster
 		timecap = sys_ticrate.value;
-		if (vid_activewindow && (cls.state == ca_connected || cl_videoplaying))
+		if (cl_avidemo.value >= 0.1f)
+			timecap = 1.0 / (double)cl_avidemo.value;
+		else if (vid_activewindow && !scr_con_current)
 			timecap = 1.0 / host_maxfps.value;
 
-		if ((realtime - oldrealtime) < timecap)
+		timeleft = oldrealtime + timecap - realtime;
+		if (timeleft > 0)
+		{
+			// don't totally hog the CPU
+			if (timeleft >= 0.02)
+				Sys_Sleep();
 			return false;
+		}
 	}
 
 	// LordHavoc: copy into host_realframetime as well
@@ -685,11 +688,7 @@ void _Host_Frame (float time)
 
 	// decide the simulation time
 	if (!Host_FilterTime(time))
-	{
-		// if time was rejected, don't totally hog the CPU
-		Sys_Sleep();
 		return;
-	}
 
 	cl.islocalgame = NetConn_IsLocalGame();
 
@@ -880,7 +879,10 @@ void Host_Init (void)
 	Con_DPrintf ("========Initialized=========\n");
 
 	if (cls.state != ca_dedicated)
+	{
 		VID_Open();
+		SCR_BeginLoadingPlaque();
+	}
 }
 
 
