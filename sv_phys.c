@@ -966,6 +966,8 @@ void SV_WalkMove (edict_t *ent)
 	vec3_t upmove, downmove, oldorg, oldvel, nosteporg, nostepvel, stepnormal;
 	trace_t downtrace;
 
+	SV_CheckVelocity(ent);
+
 	// do a regular slide move unless it looks like you ran into a step
 	oldonground = (int)ent->v->flags & FL_ONGROUND;
 	ent->v->flags = (int)ent->v->flags & ~FL_ONGROUND;
@@ -974,6 +976,8 @@ void SV_WalkMove (edict_t *ent)
 	VectorCopy (ent->v->velocity, oldvel);
 
 	clip = SV_FlyMove (ent, sv.frametime, NULL);
+
+	SV_CheckVelocity(ent);
 
 	// if move didn't block on a step, return
 	if ( !(clip & 2) )
@@ -990,10 +994,9 @@ void SV_WalkMove (edict_t *ent)
 			return;
 	}
 
-	if (sv_nostep.integer)
-		return;
+	SV_CheckVelocity(ent);
 
-	if ( (int)ent->v->flags & FL_WATERJUMP )
+	if (sv_nostep.integer || (int)ent->v->flags & FL_WATERJUMP )
 		return;
 
 	VectorCopy (ent->v->origin, nosteporg);
@@ -1052,6 +1055,8 @@ void SV_WalkMove (edict_t *ent)
 		VectorCopy (nosteporg, ent->v->origin);
 		VectorCopy (nostepvel, ent->v->velocity);
 	}
+
+	SV_CheckVelocity(ent);
 }
 
 //============================================================================
