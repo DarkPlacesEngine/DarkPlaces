@@ -353,9 +353,9 @@ void Mem_PrintList(int listallocations)
 	for (pool = poolchain;pool;pool = pool->next)
 	{
 		if (pool->lastchecksize != 0 && pool->totalsize != pool->lastchecksize)
-			Con_Printf("%6ik (%6ik actual) %s (%i byte change)\n", (pool->totalsize + 1023) / 1024, (pool->realsize + 1023) / 1024, pool->name, pool->totalsize - pool->lastchecksize);
+			Con_Printf("%10ik (%10ik actual) %s (%i byte change)\n", (pool->totalsize + 1023) / 1024, (pool->realsize + 1023) / 1024, pool->name, pool->totalsize - pool->lastchecksize);
 		else
-			Con_Printf("%6ik (%6ik actual) %s\n", (pool->totalsize + 1023) / 1024, (pool->realsize + 1023) / 1024, pool->name);
+			Con_Printf("%10ik (%10ik actual) %s\n", (pool->totalsize + 1023) / 1024, (pool->realsize + 1023) / 1024, pool->name);
 		pool->lastchecksize = pool->totalsize;
 		if (listallocations)
 			for (mem = pool->chain;mem;mem = mem->next)
