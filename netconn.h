@@ -200,8 +200,7 @@ extern int serverreplycount;
 
 extern sizebuf_t net_message;
 
-extern cvar_t cl_netlocalping_min;
-extern cvar_t cl_netlocalping_max;
+extern cvar_t cl_netlocalping;
 
 int NetConn_SendReliableMessage(netconn_t *conn, sizebuf_t *data);
 //void NetConn_SendMessageNext(netconn_t *conn);

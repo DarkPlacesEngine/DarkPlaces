@@ -49,12 +49,8 @@ cvar_t net_connecttimeout = {0, "net_connecttimeout","10"};
 cvar_t hostname = {CVAR_SAVE, "hostname", "UNNAMED"};
 cvar_t developer_networking = {0, "developer_networking", "0"};
 
-cvar_t cl_netlocalping_min = {0, "cl_netlocalping_min","0"};
-cvar_t cl_netlocalping_max = {0, "cl_netlocalping_max","0"};
-static cvar_t cl_netpacketloss_receive = {0, "cl_netpacketloss_receive","0"};
-static cvar_t cl_netpacketloss_send = {0, "cl_netpacketloss_send","0"};
-static cvar_t sv_netpacketloss_receive = {0, "sv_netpacketloss_receive","0"};
-static cvar_t sv_netpacketloss_send = {0, "sv_netpacketloss_send","0"};
+cvar_t cl_netlocalping = {0, "cl_netlocalping","0"};
+static cvar_t cl_netpacketloss = {0, "cl_netpacketloss","0"};
 
 
 /* statistic counters */
@@ -98,13 +94,9 @@ int NetConn_Read(lhnetsocket_t *mysocket, void *data, int maxlength, lhnetaddres
 {
 	int length = LHNET_Read(mysocket, data, maxlength, peeraddress);
 	int i;
-	if (cl_netpacketloss_receive.integer)
+	if (cl_netpacketloss.integer)
 		for (i = 0;i < cl_numsockets;i++)
-			if (cl_sockets[i] == mysocket && (rand() % 100) < cl_netpacketloss_receive.integer)
-				return 0;
-	if (sv_netpacketloss_receive.integer)
-		for (i = 0;i < cl_numsockets;i++)
-			if (sv_sockets[i] == mysocket && (rand() % 100) < sv_netpacketloss_receive.integer)
+			if (cl_sockets[i] == mysocket && (rand() % 100) < cl_netpacketloss.integer)
 				return 0;
 	if (developer_networking.integer && length != 0)
 	{
@@ -126,13 +118,9 @@ int NetConn_Write(lhnetsocket_t *mysocket, const void *data, int length, const l
 {
 	int ret;
 	int i;
-	if (cl_netpacketloss_send.integer)
+	if (cl_netpacketloss.integer)
 		for (i = 0;i < cl_numsockets;i++)
-			if (cl_sockets[i] == mysocket && (rand() % 100) < cl_netpacketloss_send.integer)
-				return length;
-	if (sv_netpacketloss_send.integer)
-		for (i = 0;i < cl_numsockets;i++)
-			if (sv_sockets[i] == mysocket && (rand() % 100) < sv_netpacketloss_send.integer)
+			if (cl_sockets[i] == mysocket && (rand() % 100) < cl_netpacketloss.integer)
 				return length;
 	ret = LHNET_Write(mysocket, data, length, peeraddress);
 	if (developer_networking.integer)
@@ -1597,12 +1585,8 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&net_messagetimeout);
 	Cvar_RegisterVariable(&net_messagerejointimeout);
 	Cvar_RegisterVariable(&net_connecttimeout);
-	Cvar_RegisterVariable(&cl_netlocalping_min);
-	Cvar_RegisterVariable(&cl_netlocalping_max);
-	Cvar_RegisterVariable(&cl_netpacketloss_receive);
-	Cvar_RegisterVariable(&cl_netpacketloss_send);
-	Cvar_RegisterVariable(&sv_netpacketloss_receive);
-	Cvar_RegisterVariable(&sv_netpacketloss_send);
+	Cvar_RegisterVariable(&cl_netlocalping);
+	Cvar_RegisterVariable(&cl_netpacketloss);
 	Cvar_RegisterVariable(&hostname);
 	Cvar_RegisterVariable(&developer_networking);
 	Cvar_RegisterVariable(&cl_netport);
