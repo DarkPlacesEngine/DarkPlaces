@@ -866,7 +866,7 @@ void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f,
 	R_Shadow_RenderVolume(outverts, tris, varray_vertex3f2, shadowelements);
 }
 
-void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *invertex3f, const int *elements, const vec3_t projectorigin, vec3_t lightmins, vec3_t lightmaxs, vec3_t surfacemins, vec3_t surfacemaxs)
+void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *invertex3f, const int *elements, const vec3_t projectorigin, const vec3_t lightmins, const vec3_t lightmaxs, const vec3_t surfacemins, const vec3_t surfacemaxs)
 {
 	int t, tend;
 	const int *e;
@@ -2533,8 +2533,8 @@ void R_RTLight_UpdateFromDLight(rtlight_t *rtlight, const dlight_t *light, int i
 void R_RTLight_Compile(rtlight_t *rtlight)
 {
 	int shadowmeshes, shadowtris, lightmeshes, lighttris, numclusters, numsurfaces;
-	entity_render_t *ent = &cl_entities[0].render;
-	model_t *model = ent->model;
+	entity_render_t *ent = r_refdef.worldentity;
+	model_t *model = r_refdef.worldmodel;
 
 	// compile the light
 	rtlight->compiled = true;
@@ -2568,7 +2568,7 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 		if (model->DrawShadowVolume && rtlight->shadow)
 		{
 			rtlight->static_meshchain_shadow = Mod_ShadowMesh_Begin(r_shadow_mempool, 32768, 32768, NULL, NULL, NULL, false, false, true);
-			model->DrawShadowVolume(ent, rtlight->shadoworigin, rtlight->radius, numsurfaces, r_shadow_buffer_surfacelist);
+			model->DrawShadowVolume(ent, rtlight->shadoworigin, rtlight->radius, numsurfaces, r_shadow_buffer_surfacelist, rtlight->cullmins, rtlight->cullmaxs);
 			rtlight->static_meshchain_shadow = Mod_ShadowMesh_Finish(r_shadow_mempool, rtlight->static_meshchain_shadow, false, false);
 		}
 		if (model->DrawLight)
@@ -2653,7 +2653,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 	int numclusters, numsurfaces;
 	int *clusterlist, *surfacelist;
 	qbyte *clusterpvs;
-	vec3_t cullmins, cullmaxs;
+	vec3_t cullmins, cullmaxs, relativelightmins, relativelightmaxs;
 	shadowmesh_t *mesh;
 	rmeshstate_t m;
 
@@ -2777,7 +2777,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 		else if (numsurfaces)
 		{
 			Matrix4x4_Transform(&ent->inversematrix, rtlight->shadoworigin, relativelightorigin);
-			ent->model->DrawShadowVolume(ent, relativelightorigin, rtlight->radius, numsurfaces, surfacelist);
+			ent->model->DrawShadowVolume(ent, relativelightorigin, rtlight->radius, numsurfaces, surfacelist, rtlight->cullmins, rtlight->cullmaxs);
 		}
 		if (r_drawentities.integer)
 		{
@@ -2798,7 +2798,13 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 				// light emitting entities should not cast their own shadow
 				if (VectorLength2(relativelightorigin) < 0.1)
 					continue;
-				ent->model->DrawShadowVolume(ent, relativelightorigin, rtlight->radius, ent->model->nummodelsurfaces, ent->model->surfacelist);
+				relativelightmins[0] = relativelightorigin[0] - rtlight->radius;
+				relativelightmins[1] = relativelightorigin[1] - rtlight->radius;
+				relativelightmins[2] = relativelightorigin[2] - rtlight->radius;
+				relativelightmaxs[0] = relativelightorigin[0] + rtlight->radius;
+				relativelightmaxs[1] = relativelightorigin[1] + rtlight->radius;
+				relativelightmaxs[2] = relativelightorigin[2] + rtlight->radius;
+				ent->model->DrawShadowVolume(ent, relativelightorigin, rtlight->radius, ent->model->nummodelsurfaces, ent->model->surfacelist, relativelightmins, relativelightmaxs);
 			}
 		}
 	}
