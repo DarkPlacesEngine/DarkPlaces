@@ -354,7 +354,7 @@ void SND_PaintChannelFrom8 (channel_t *ch, sfxcache_t *sc, int count)
 {
 	int *lscale, *rscale;
 	unsigned char *sfx;
-	int i;
+	int i, n;
 
 	if (ch->leftvol > 255)
 		ch->leftvol = 255;
@@ -367,22 +367,20 @@ void SND_PaintChannelFrom8 (channel_t *ch, sfxcache_t *sc, int count)
 	{
 		// LordHavoc: stereo sound support, and optimizations
 		sfx = (unsigned char *)sc->data + ch->pos * 2;
-
-		for (i=0 ; i<count ; i++)
+		for (i = 0;i < count;i++)
 		{
 			paintbuffer[i].left += lscale[*sfx++];
 			paintbuffer[i].right += rscale[*sfx++];
 		}
-		
 	}
 	else
 	{
 		sfx = (unsigned char *)sc->data + ch->pos;
-
-		for (i=0 ; i<count ; i++)
+		for (i = 0;i < count;i++)
 		{
-			paintbuffer[i].left += lscale[*sfx];
-			paintbuffer[i].right += rscale[*sfx++];
+			n = *sfx++;
+			paintbuffer[i].left += lscale[n];
+			paintbuffer[i].right += rscale[n];
 		}
 
 	}
