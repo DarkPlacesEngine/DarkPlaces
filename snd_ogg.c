@@ -347,8 +347,9 @@ static qbyte resampling_buffer [48000 * 2 * 2];
 // Per-sfx data structure
 typedef struct
 {
-	qbyte	*file;
-	size_t	filesize;
+	qbyte			*file;
+	size_t			filesize;
+	snd_format_t	format;
 } ogg_stream_persfx_t;
 
 // Per-channel data structure
@@ -357,7 +358,6 @@ typedef struct
 	OggVorbis_File	vf;
 	ov_decode_t		ov_decode;
 	int				bs;
-	snd_format_t	format;
 	sfxbuffer_t		sb;		// must be at the end due to its dynamically allocated size
 } ogg_stream_perchannel_t;
 
@@ -374,18 +374,19 @@ static const sfxbuffer_t* OGG_FetchSound (channel_t* ch, unsigned int start, uns
 	ogg_stream_perchannel_t* per_ch;
 	sfxbuffer_t* sb;
 	sfx_t* sfx;
+	ogg_stream_persfx_t* per_sfx;
 	int newlength, done, ret, bigendian;
 	unsigned int factor;
 	size_t buff_len;
 
 	per_ch = ch->fetcher_data;
 	sfx = ch->sfx;
+	per_sfx = sfx->fetcher_data;
 	buff_len = ceil (STREAM_BUFFER_DURATION * (sfx->format.speed * sfx->format.width * sfx->format.channels));
 
 	// If there's no fetcher structure attached to the channel yet
 	if (per_ch == NULL)
 	{
-		vorbis_info *vi;
 		ogg_stream_persfx_t* per_sfx;
 
 		per_ch = Mem_Alloc (sfx->mempool, sizeof (*per_ch) - sizeof (per_ch->sb.data) + buff_len);
@@ -402,12 +403,6 @@ static const sfxbuffer_t* OGG_FetchSound (channel_t* ch, unsigned int start, uns
 			return NULL;
 		}
 
-		// Get the stream information
-		vi = qov_info (&per_ch->vf, -1);
-		per_ch->format.speed = vi->rate;
-		per_ch->format.width = sfx->format.width;
-		per_ch->format.channels = sfx->format.channels;
-
 		per_ch->sb.offset = 0;
 		per_ch->sb.length = 0;
 		per_ch->bs = 0;
@@ -416,7 +411,7 @@ static const sfxbuffer_t* OGG_FetchSound (channel_t* ch, unsigned int start, uns
 	}
 
 	sb = &per_ch->sb;
-	factor = per_ch->format.width * per_ch->format.channels;
+	factor = per_sfx->format.width * per_sfx->format.channels;
 
 	// If the stream buffer can't contain that much samples anyway
 	if (nbsamples * factor > buff_len)
@@ -449,16 +444,16 @@ static const sfxbuffer_t* OGG_FetchSound (channel_t* ch, unsigned int start, uns
 		sb->length = newlength;
 	}
 
-	// We add exactly "per_ch->format.speed" samples per channel to the buffer (i.e. 1 sec of sound):
+	// We add exactly 1 sec of sound to the buffer:
 	// 1- to ensure we won't lose any sample during the resampling process
 	// 2- to force one call to OGG_FetchSound per second to regulate the workload
-	newlength = per_ch->format.speed * factor;
-	if (newlength + sb->length * factor > buff_len)
+	if ((sfx->format.speed + sb->length) * factor > buff_len)
 	{
 		Con_Printf ("OGG_FetchSound: stream buffer overflow (%u bytes / %u)\n",
-					newlength + sb->length * factor, buff_len);
+					(sfx->format.speed + sb->length) * factor, buff_len);
 		return NULL;
 	}
+	newlength = per_sfx->format.speed * factor;  // 1 sec of sound before resampling
 
 	// Decompress in the resampling_buffer
 #if BYTE_ORDER == LITTLE_ENDIAN
@@ -471,7 +466,7 @@ static const sfxbuffer_t* OGG_FetchSound (channel_t* ch, unsigned int start, uns
 		done += ret;
 
 	// Resample in the sfxbuffer
-	newlength = ResampleSfx (resampling_buffer, (size_t)done / factor, &per_ch->format, sb->data + sb->length * factor, sfx->name);
+	newlength = ResampleSfx (resampling_buffer, (size_t)done / factor, &per_sfx->format, sb->data + sb->length * factor, sfx->name);
  	sb->length += newlength;
 
 	return sb;
@@ -566,14 +561,19 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 		per_sfx = Mem_Alloc (s->mempool, sizeof (*per_sfx));
 		per_sfx->file = data;
 		per_sfx->filesize = fs_filesize;
+
+		per_sfx->format.speed = vi->rate;
+		per_sfx->format.width = 2;  // We always work with 16 bits samples
+		per_sfx->format.channels = vi->channels;
+		s->format.speed = shm->format.speed;
+		s->format.width = per_sfx->format.width;
+		s->format.channels = per_sfx->format.channels;
+
 		s->fetcher_data = per_sfx;
 		s->fetcher = &ogg_fetcher;
-		s->format.speed = shm->format.speed;
-		s->format.width = 2;  // We always work with 16 bits samples
-		s->format.channels = vi->channels;
 		s->loopstart = -1;
 		s->flags |= SFXFLAG_STREAMED;
-		s->total_length = (size_t)len / (vi->channels * 2) * ((float)shm->format.speed / vi->rate);
+		s->total_length = (size_t)len / per_sfx->format.channels / 2 * ((float)s->format.speed / per_sfx->format.speed);
 	}
 	else
 	{
