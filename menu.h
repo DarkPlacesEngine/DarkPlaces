@@ -43,6 +43,7 @@ enum m_state_e {
 	m_gameoptions,
 	m_slist,
 	m_options_effects,
+	m_options_graphics,
 	m_options_colorcontrol
 };
 
