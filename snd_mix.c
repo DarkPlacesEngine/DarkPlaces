@@ -32,83 +32,29 @@ typedef struct
 #define	PAINTBUFFER_SIZE 2048
 portable_samplepair_t paintbuffer[PAINTBUFFER_SIZE];
 
-// FIXME: it desyncs with the video too easily
-extern cvar_t cl_avidemo;
-static qfile_t *cl_avidemo_soundfile = NULL;
+// FIXME: this desyncs with the video too easily
+extern qboolean cl_capturevideo_active;
+extern void SCR_CaptureVideo_SoundFrame(qbyte *bufstereo16le, size_t length, int rate);
 void S_CaptureAVISound(portable_samplepair_t *buf, size_t length)
 {
 	int n;
 	size_t i;
 	qbyte out[PAINTBUFFER_SIZE * 4];
-
-	if (cl_avidemo.value >= 0.1f)
+	if (!cl_capturevideo_active)
+		return;
+	// write the sound buffer as little endian 16bit interleaved stereo
+	for(i = 0;i < length;i++)
 	{
-		if (cl_avidemo_soundfile == NULL)
-		{
-			cl_avidemo_soundfile = FS_Open ("video/dpavi.wav", "wb", false);
-			memset(out, 0, 44);
-			FS_Write (cl_avidemo_soundfile, out, 44);
-			// header will be filled out when file is closed
-		}
-		FS_Seek (cl_avidemo_soundfile, 0, SEEK_END);
-		// write the sound buffer as little endian 16bit interleaved stereo
-		for(i = 0;i < length;i++)
-		{
-			n = buf[i].left >> 2; // quiet enough to prevent clipping most of the time
-			n = bound(-32768, n, 32767);
-			out[i*4+0] = n & 0xFF;
-			out[i*4+1] = (n >> 8) & 0xFF;
-			n = buf[i].right >> 2; // quiet enough to prevent clipping most of the time
-			n = bound(-32768, n, 32767);
-			out[i*4+2] = n & 0xFF;
-			out[i*4+3] = (n >> 8) & 0xFF;
-		}
-		if (FS_Write (cl_avidemo_soundfile, out, 4 * length) < 4 * length)
-		{
-			Cvar_SetValueQuick(&cl_avidemo, 0);
-			Con_Print("avi saving sound failed, out of disk space?  stopping avi demo capture.\n");
-		}
+		n = buf[i].left >> 2; // quiet enough to prevent clipping most of the time
+		n = bound(-32768, n, 32767);
+		out[i*4+0] = n & 0xFF;
+		out[i*4+1] = (n >> 8) & 0xFF;
+		n = buf[i].right >> 2; // quiet enough to prevent clipping most of the time
+		n = bound(-32768, n, 32767);
+		out[i*4+2] = n & 0xFF;
+		out[i*4+3] = (n >> 8) & 0xFF;
 	}
-	else if (cl_avidemo_soundfile)
-	{
-		// file has not been closed yet, close it
-		FS_Seek (cl_avidemo_soundfile, 0, SEEK_END);
-		i = FS_Tell (cl_avidemo_soundfile);
-
-		//"RIFF", (int) unknown (chunk size), "WAVE",
-		//"fmt ", (int) 16 (chunk size), (short) format 1 (uncompressed PCM), (short) 2 channels, (int) unknown rate, (int) unknown bytes per second, (short) 4 bytes per sample (channels * bytes per channel), (short) 16 bits per channel
-		//"data", (int) unknown (chunk size)
-		memcpy (out, "RIFF****WAVEfmt \x10\x00\x00\x00\x01\x00\x02\x00********\x04\x00\x10\0data****", 44);
-		// the length of the whole RIFF chunk
-		n = i - 8;
-		out[4] = (n) & 0xFF;
-		out[5] = (n >> 8) & 0xFF;
-		out[6] = (n >> 16) & 0xFF;
-		out[7] = (n >> 24) & 0xFF;
-		// rate
-		n = shm->format.speed;
-		out[24] = (n) & 0xFF;
-		out[25] = (n >> 8) & 0xFF;
-		out[26] = (n >> 16) & 0xFF;
-		out[27] = (n >> 24) & 0xFF;
-		// bytes per second (rate * channels * bytes per channel)
-		n = shm->format.speed * 2 * 2;
-		out[28] = (n) & 0xFF;
-		out[29] = (n >> 8) & 0xFF;
-		out[30] = (n >> 16) & 0xFF;
-		out[31] = (n >> 24) & 0xFF;
-		// the length of the data chunk
-		n = i - 44;
-		out[40] = (n) & 0xFF;
-		out[41] = (n >> 8) & 0xFF;
-		out[42] = (n >> 16) & 0xFF;
-		out[43] = (n >> 24) & 0xFF;
-
-		FS_Seek (cl_avidemo_soundfile, 0, SEEK_SET);
-		FS_Write (cl_avidemo_soundfile, out, 44);
-		FS_Close (cl_avidemo_soundfile);
-		cl_avidemo_soundfile = NULL;
-	}
+	SCR_CaptureVideo_SoundFrame(out, length, shm->format.speed);
 }
 
 // TODO: rewrite this function
