@@ -20,7 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-#define MAX_PARTICLES			32768	// default max # of particles at one time
+#define MAX_PARTICLES			4096	// default max # of particles at one time
 #define ABSOLUTE_MIN_PARTICLES	512		// no fewer than this no matter what's on the command line
 
 // LordHavoc: added dust, smoke, snow, bloodcloud, and many others
@@ -1214,7 +1214,7 @@ void R_DrawParticles (void)
 	float			grav, grav1, time1, time2, time3, dvel, frametime, scale, scale2, minparticledist;
 	byte			*color24;
 	vec3_t			up, right, uprightangles, forward2, up2, right2, tempcolor;
-	int				activeparticles, maxparticle, j;
+	int				activeparticles, maxparticle, j, k;
 
 	// LordHavoc: early out condition
 	if (!numparticles)
@@ -1240,14 +1240,14 @@ void R_DrawParticles (void)
 	activeparticles = 0;
 	maxparticle = -1;
 	j = 0;
-	for (i = 0, p = particles;i < numparticles;i++, p++)
+	for (k = 0, p = particles;k < numparticles;k++, p++)
 	{
 		if (p->die < cl.time)
 		{
 			freeparticles[j++] = p;
 			continue;
 		}
-		maxparticle = i;
+		maxparticle = k;
 		activeparticles++;
 
 		// LordHavoc: only render if not too close
