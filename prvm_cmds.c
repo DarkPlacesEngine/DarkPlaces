@@ -126,7 +126,7 @@ float	getmousetarget(void)
 // nice helper macros
 
 #ifndef VM_NOPARMCHECK
-#define VM_SAFEPARMCOUNT(p,f)	if(prog->argc != p) PRVM_ERROR(#f "wrong parameter count (" #p "expected ) !\n")
+#define VM_SAFEPARMCOUNT(p,f)	if(prog->argc != p) PRVM_ERROR(#f " wrong parameter count (" #p " expected ) !\n")
 #else
 #define VM_SAFEPARMCOUNT(p,f)
 #endif
@@ -188,7 +188,7 @@ void VM_VarString(int first, char *out, int outlength)
 	char *outend;
 
 	outend = out + outlength - 1;
-	for (i = first;i < pr_argc && out < outend;i++)
+	for (i = first;i < prog->argc && out < outend;i++)
 	{
 		s = PRVM_G_STRING((OFS_PARM0+i*3));
 		while (out < outend && *s)
@@ -1472,13 +1472,13 @@ float	max(float a, float b, ...[float])
 void VM_max (void)
 {
 	// LordHavoc: 3+ argument enhancement suggested by FrikaC
-	if (pr_argc == 2)
+	if (prog->argc == 2)
 		PRVM_G_FLOAT(OFS_RETURN) = max(PRVM_G_FLOAT(OFS_PARM0), PRVM_G_FLOAT(OFS_PARM1));
-	else if (pr_argc >= 3)
+	else if (prog->argc >= 3)
 	{
 		int i;
 		float f = PRVM_G_FLOAT(OFS_PARM0);
-		for (i = 1;i < pr_argc;i++)
+		for (i = 1;i < prog->argc;i++)
 			if (PRVM_G_FLOAT((OFS_PARM0+i*3)) > f)
 				f = PRVM_G_FLOAT((OFS_PARM0+i*3));
 		G_FLOAT(OFS_RETURN) = f;
@@ -2442,7 +2442,7 @@ setkeydest(float dest)
 */
 void VM_M_setkeydest(void)
 {
-	VM_SAFEPARMCOUNT(1,VM_M_SetKeyDest);
+	VM_SAFEPARMCOUNT(1,VM_M_setkeydest);
 
 	switch((int)PRVM_G_FLOAT(OFS_PARM0))
 	{
@@ -2472,7 +2472,7 @@ float	getkeydest
 */
 void VM_M_getkeydest(void)
 {
-	VM_SAFEPARMCOUNT(0,VM_M_GetKeyDest);
+	VM_SAFEPARMCOUNT(0,VM_M_getkeydest);
 
 	// key_game = 0, key_message = 1, key_menu = 2, unknown = 3
 	switch(key_dest)
@@ -2579,7 +2579,7 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_WriteAngle,
 	VM_WriteCoord,
 	VM_WriteString,
-	VM_WriteEntity,
+	VM_WriteEntity,	// 408
 	0,
 	0,				// 410
 	e10,			// 420
