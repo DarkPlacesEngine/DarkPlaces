@@ -511,8 +511,7 @@ static void Mod_LoadTextures (lump_t *l)
 		}
 
 		// start out with no animation
-		tx->currentframe[0] = tx;
-		tx->currentframe[1] = tx;
+		tx->currentframe = tx;
 	}
 
 	// sequence the animations
@@ -745,6 +744,7 @@ void Mod_LoadLightList(void)
 	}
 }
 
+/*
 static int castshadowcount = 0;
 void Mod_ProcessLightList(void)
 {
@@ -845,7 +845,7 @@ void Mod_ProcessLightList(void)
 			float *verts = Mem_Alloc(loadmodel->mempool, maxverts * sizeof(float[3]));
 			float f, *v0, *v1, projectdistance;
 
-			e->shadowvolume = Mod_ShadowMesh_Begin(loadmodel->mempool);
+			e->shadowvolume = Mod_ShadowMesh_Begin(loadmodel->mempool, 1024);
 #if 0
 			{
 			vec3_t outermins, outermaxs, innermins, innermaxs;
@@ -998,6 +998,7 @@ void Mod_ProcessLightList(void)
 		}
 	}
 }
+*/
 
 
 /*
@@ -2702,16 +2703,18 @@ static void Mod_MakePortals(void)
 
 static void Mod_BuildSurfaceNeighbors (msurface_t *surfaces, int numsurfaces, mempool_t *mempool)
 {
-	int surfnum, vertnum, snum, vnum;
+#if 0
+	int surfnum, vertnum, vertnum2, snum, vnum, vnum2;
 	msurface_t *surf, *s;
 	float *v0, *v1, *v2, *v3;
 	for (surf = surfaces, surfnum = 0;surfnum < numsurfaces;surf++, surfnum++)
-	{
 		surf->neighborsurfaces = Mem_Alloc(mempool, surf->poly_numverts * sizeof(msurface_t *));
-		for (vertnum = 0;vertnum < surf->poly_numverts;vertnum++)
+	for (surf = surfaces, surfnum = 0;surfnum < numsurfaces;surf++, surfnum++)
+	{
+		for (vertnum = surf->poly_numverts - 1, vertnum2 = 0, v0 = surf->poly_verts + (surf->poly_numverts - 1) * 3, v1 = surf->poly_verts;vertnum2 < surf->poly_numverts;vertnum = vertnum2, vertnum2++, v0 = v1, v1 += 3)
 		{
-			v0 = surf->poly_verts + ((vertnum + 1) % surf->poly_numverts) * 3;
-			v1 = surf->poly_verts + vertnum * 3;
+			if (surf->neighborsurfaces[vertnum])
+				continue;
 			surf->neighborsurfaces[vertnum] = NULL;
 			for (s = surfaces, snum = 0;snum < numsurfaces;s++, snum++)
 			{
@@ -2720,11 +2723,19 @@ static void Mod_BuildSurfaceNeighbors (msurface_t *surfaces, int numsurfaces, me
 				 || s->poly_mins[2] > (surf->poly_maxs[2] + 1) || s->poly_maxs[2] < (surf->poly_mins[2] - 1)
 				 || s == surf)
 					continue;
-				for (vnum = 0, v2 = s->poly_verts + (s->poly_numverts - 1) * 3, v3 = s->poly_verts;vnum < s->poly_numverts;vnum++, v2 = v3, v3 += 3)
+				for (vnum = 0;vnum < s->poly_numverts;vnum++)
+					if (s->neighborsurfaces[vnum] == surf)
+						break;
+				if (vnum < s->poly_numverts)
+					continue;
+				for (vnum = s->poly_numverts - 1, vnum2 = 0, v2 = s->poly_verts + (s->poly_numverts - 1) * 3, v3 = s->poly_verts;vnum2 < s->poly_numverts;vnum = vnum2, vnum2++, v2 = v3, v3 += 3)
 				{
-					if (v0[0] == v2[0] && v0[1] == v2[1] && v0[2] == v2[2] && v1[0] == v3[0] && v1[1] == v3[1] && v1[2] == v3[2])
+					if (s->neighborsurfaces[vnum] == NULL
+					 && ((v0[0] == v2[0] && v0[1] == v2[1] && v0[2] == v2[2] && v1[0] == v3[0] && v1[1] == v3[1] && v1[2] == v3[2])
+					  || (v1[0] == v2[0] && v1[1] == v2[1] && v1[2] == v2[2] && v0[0] == v3[0] && v0[1] == v3[1] && v0[2] == v3[2])))
 					{
 						surf->neighborsurfaces[vertnum] = s;
+						s->neighborsurfaces[vnum] = surf;
 						break;
 					}
 				}
@@ -2733,6 +2744,7 @@ static void Mod_BuildSurfaceNeighbors (msurface_t *surfaces, int numsurfaces, me
 			}
 		}
 	}
+#endif
 }
 
 /*
@@ -2743,7 +2755,7 @@ Mod_LoadBrushModel
 extern void R_Model_Brush_DrawSky(entity_render_t *ent);
 extern void R_Model_Brush_Draw(entity_render_t *ent);
 extern void R_Model_Brush_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius);
-extern void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius2, float lightdistbias, float lightsubtract, float *lightcolor);
+extern void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor);
 void Mod_LoadBrushModel (model_t *mod, void *buffer)
 {
 	int			i, j;
@@ -2883,7 +2895,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 			mod->radius2 = modelradius * modelradius;
 			// LordHavoc: build triangle meshs for entire model's geometry
 			// (only used for shadow volumes)
-			mod->shadowmesh = Mod_ShadowMesh_Begin(originalloadmodel->mempool);
+			mod->shadowmesh = Mod_ShadowMesh_Begin(originalloadmodel->mempool, 1024);
 			for (j = 0, surf = &mod->surfaces[mod->firstmodelsurface];j < mod->nummodelsurfaces;j++, surf++)
 				if (surf->flags & SURF_SHADOWCAST)
 					Mod_ShadowMesh_AddPolygon(originalloadmodel->mempool, mod->shadowmesh, surf->poly_numverts, surf->poly_verts);
@@ -2926,6 +2938,6 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 	}
 
 	loadmodel = originalloadmodel;
-	Mod_ProcessLightList ();
+	//Mod_ProcessLightList ();
 }
 

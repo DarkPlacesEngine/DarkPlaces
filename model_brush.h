@@ -127,9 +127,10 @@ typedef struct texture_s
 	// set if animated or there is an alternate frame set
 	// (this is an optimization in the renderer)
 	int animated;
-	// the current texture frames in animation
-	// (index with entity frame != 0)
-	struct texture_s *currentframe[2];
+	// the current texture frame in animation
+	struct texture_s *currentframe;
+	// current alpha of the texture
+	float currentalpha;
 }
 texture_t;
 
@@ -356,6 +357,7 @@ typedef struct mlight_s
 	// maximum extent of the light for culling purposes
 	float cullradius;
 	float cullradius2;
+	/*
 	// surfaces this shines on
 	int numsurfaces;
 	msurface_t **surfaces;
@@ -365,6 +367,7 @@ typedef struct mlight_s
 	//svbspmesh_t *shadowvolume;
 	//vec3_t shadowvolumemins, shadowvolumemaxs;
 	shadowmesh_t *shadowvolume;
+	*/
 }
 mlight_t;
 

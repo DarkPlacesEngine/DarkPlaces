@@ -436,7 +436,6 @@ void R_Model_Alias_Draw(entity_render_t *ent)
 		R_DrawQ1Q2AliasModelCallback(ent, 0);
 }
 
-extern cvar_t r_shadows;
 void R_Model_Alias_DrawFakeShadow (entity_render_t *ent)
 {
 	int i;
@@ -500,19 +499,63 @@ void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightor
 		R_Mesh_Matrix(&ent->matrix);
 		R_Mesh_ResizeCheck(ent->model->numverts * 2);
 		R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvert_normals);
-		R_Shadow_Volume(ent->model->numverts, ent->model->numtris, varray_vertex, ent->model->mdlmd2data_indices, ent->model->mdlmd2data_triangleneighbors, relativelightorigin, lightradius, projectdistance);
+		R_Shadow_Volume(ent->model->numverts, ent->model->numtris, ent->model->mdlmd2data_indices, ent->model->mdlmd2data_triangleneighbors, relativelightorigin, lightradius, projectdistance);
 	}
 }
 
-void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float lightdistbias, float lightsubtract, float *lightcolor)
+void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor)
 {
+	int c;
+	float lightcolor2[3];
+	qbyte *bcolor;
 	skinframe_t *skinframe;
 	R_Mesh_Matrix(&ent->matrix);
-	skinframe = R_FetchSkinFrame(ent);
 	R_Mesh_ResizeCheck(ent->model->numverts);
 	R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvert_normals);
 	Mod_BuildTextureVectorsAndNormals(ent->model->numverts, ent->model->numtris, varray_vertex, ent->model->mdlmd2data_texcoords, ent->model->mdlmd2data_indices, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals);
-	R_Shadow_RenderLighting(ent->model->numverts, ent->model->numtris, ent->model->mdlmd2data_indices, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals, ent->model->mdlmd2data_texcoords, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, skinframe->base, skinframe->gloss, skinframe->nmap, NULL);
+	skinframe = R_FetchSkinFrame(ent);
+
+	// note: to properly handle fog this should scale the lightcolor into lightcolor2 according to 1-fog scaling
+
+	R_Shadow_SpecularLighting(ent->model->numverts, ent->model->numtris, ent->model->mdlmd2data_indices, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals, ent->model->mdlmd2data_texcoords, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, NULL, NULL, NULL);
+
+	if (!skinframe->base && !skinframe->pants && !skinframe->shirt && !skinframe->glow)
+	{
+		R_Shadow_DiffuseLighting(ent->model->numverts, ent->model->numtris, ent->model->mdlmd2data_indices, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals, ent->model->mdlmd2data_texcoords, relativelightorigin, lightradius, lightcolor, r_notexture, NULL, NULL);
+		return;
+	}
+
+	if (!skinframe->merged || (ent->colormap >= 0 && skinframe->base && (skinframe->pants || skinframe->shirt)))
+	{
+		// 128-224 are backwards ranges
+		// we only render non-fullbright ranges here
+		if (skinframe->pants && (ent->colormap & 0xF) < 0xE)
+		{
+			c = (ent->colormap & 0xF) << 4;c += (c >= 128 && c < 224) ? 4 : 12;
+			bcolor = (qbyte *) (&palette_complete[c]);
+			lightcolor2[0] = lightcolor[0] * bcolor[0] * (1.0f / 255.0f);
+			lightcolor2[1] = lightcolor[1] * bcolor[1] * (1.0f / 255.0f);
+			lightcolor2[2] = lightcolor[2] * bcolor[2] * (1.0f / 255.0f);
+			R_Shadow_DiffuseLighting(ent->model->numverts, ent->model->numtris, ent->model->mdlmd2data_indices, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals, ent->model->mdlmd2data_texcoords, relativelightorigin, lightradius, lightcolor2, skinframe->pants, skinframe->nmap, NULL);
+		}
+
+		// we only render non-fullbright ranges here
+		if (skinframe->shirt && (ent->colormap & 0xF0) < 0xE0)
+		{
+			c = (ent->colormap & 0xF0);c += (c >= 128 && c < 224) ? 4 : 12;
+			bcolor = (qbyte *) (&palette_complete[c]);
+			lightcolor2[0] = lightcolor[0] * bcolor[0] * (1.0f / 255.0f);
+			lightcolor2[1] = lightcolor[1] * bcolor[1] * (1.0f / 255.0f);
+			lightcolor2[2] = lightcolor[2] * bcolor[2] * (1.0f / 255.0f);
+			R_Shadow_DiffuseLighting(ent->model->numverts, ent->model->numtris, ent->model->mdlmd2data_indices, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals, ent->model->mdlmd2data_texcoords, relativelightorigin, lightradius, lightcolor2, skinframe->shirt, skinframe->nmap, NULL);
+		}
+
+		if (skinframe->base)
+			R_Shadow_DiffuseLighting(ent->model->numverts, ent->model->numtris, ent->model->mdlmd2data_indices, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals, ent->model->mdlmd2data_texcoords, relativelightorigin, lightradius, lightcolor, skinframe->base, skinframe->nmap, NULL);
+	}
+	else
+		if (skinframe->merged)
+			R_Shadow_DiffuseLighting(ent->model->numverts, ent->model->numtris, ent->model->mdlmd2data_indices, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals, ent->model->mdlmd2data_texcoords, relativelightorigin, lightradius, lightcolor, skinframe->merged, skinframe->nmap, NULL);
 }
 
 int ZymoticLerpBones(int count, const zymbonematrix *bonebase, const frameblend_t *blend, const zymbone_t *bone)
