@@ -628,7 +628,6 @@ void VID_CheckExtensions(void)
 	gl_textureunits = 1;
 	gl_combine_extension = false;
 	gl_supportslockarrays = false;
-	gl_videosyncavailable = false;
 	gl_texture3d = false;
 	gl_texturecubemap = false;
 	gl_dot3arb = false;

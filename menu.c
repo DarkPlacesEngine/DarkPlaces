@@ -2480,7 +2480,7 @@ void M_Video_Draw (void)
 	M_Print(220, video_cursor_table[3], "Apply");
 
 	// Vertical Sync
-	M_Print(16, video_cursor_table[4], "         Vertical Sync");
+	M_ItemPrint (0, video_cursor_table[4], "         Vertical Sync", gl_videosyncavailable);
 	M_DrawCheckbox(220, video_cursor_table[4], vid_vsync.integer);
 
 	// Cursor
