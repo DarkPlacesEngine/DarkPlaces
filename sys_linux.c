@@ -393,6 +393,11 @@ char *Sys_ConsoleInput(void)
 	return NULL;
 }
 
+void Sys_Sleep(void)
+{
+	usleep(1);
+}
+
 int main (int c, char **v)
 {
 
