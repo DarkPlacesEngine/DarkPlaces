@@ -650,10 +650,10 @@ void CL_ParseUpdate (int bits)
 	}
 }
 
+static entity_frame_t entityframe;
 void CL_ReadEntityFrame(void)
 {
 	entity_t *ent;
-	entity_frame_t entityframe;
 	int i;
 	EntityFrame_Read(&cl.entitydatabase);
 	EntityFrame_FetchFrame(&cl.entitydatabase, EntityFrame_MostRecentlyRecievedFrameNum(&cl.entitydatabase), &entityframe);
