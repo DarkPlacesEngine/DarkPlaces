@@ -12,15 +12,12 @@
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 -n dpmod: make grapple off-hand (joe hill)
-0 darkplaces: server should send sv_gravity to client somehow (Vermeulen)
-0 darkplaces: server should send slowmo to client somehow (Vermeulen)
-0 darkplaces: make a getattachmentvectors qc builtin (Supajoe)
-0 darkplaces: add _reflect textures which filter use of skybox as a cubemap reflection (FrikaC)
 0 darkplaces: ability to disable fopen builtin access to read /, read data/, write data/, or disable fopen builtin entirely
 0 darkplaces: add DP_GFX_QUAKE3MODELTAGS, DP_GFX_SKINFILES, and any other new extensions to the wiki
 0 darkplaces: add DP_LITSUPPORT extension and document it
 0 darkplaces: add DP_SV_ROTATINGBMODEL extension to explain that MOVETYPE_PUSH/SOLID_BSP support rotation in darkplaces and a demonstration of how to use it without qc modifications (Uffe, Supajoe)
 0 darkplaces: add Draw2D function to model struct to make it easy to draw models without an entity (Tomaz)
+0 darkplaces: add _reflect textures which filter use of skybox as a cubemap reflection (FrikaC)
 0 darkplaces: add a .collision_cancollide QC function call to decide if an entity should collide with another, or pass through it (Uffe)
 0 darkplaces: add a clipmask thingy to allow QC to mask off collisions as it wishes (Uffe)
 0 darkplaces: add a scr_screenshot_jpeg_quality cvar (Electro)
@@ -81,6 +78,7 @@
 0 darkplaces: make DP_EF_FULLBRIGHT extension (FrikaC)
 0 darkplaces: make S_Update take a matrix4x4_t *
 0 darkplaces: make a flag for rtlights that makes them appear in normal mode (not just r_shadow_realtime_world mode) (Vermeulen)
+0 darkplaces: make a getattachmentvectors qc builtin (Supajoe)
 0 darkplaces: make cl_beams_relative only affect view-attached beams
 0 darkplaces: make dedicated server not load images (maybe all fail?)
 0 darkplaces: make fopen builtin check / as well as data/ when reading (writing would always go in data/)
@@ -106,6 +104,8 @@
 0 darkplaces: rename r_picmip and r_max_size and such to glquake names
 0 darkplaces: reset zoom on connect (Rick)
 0 darkplaces: scrags frequently fly through ceilings - this needs to be fixed
+0 darkplaces: server should send slowmo to client somehow (Vermeulen)
+0 darkplaces: server should send sv_gravity to client somehow (Vermeulen)
 0 darkplaces: shadows are not working with model tag attachments (Electro)
 0 darkplaces: test TecnoX and find the frikbot crash in SV_Physics (KrimZon)
 0 darkplaces: test zlib support with entirely pk3'd id1 data (should crash because of zlib not being setup early enough - fix this) (Mabus)
@@ -117,6 +117,7 @@
 0 dpmod: add flame thrower enforcers back (scar3crow)
 0 dpmod: add flame thrower weapon, and make its altfire drop a canister of fuel (10 fuel units?), which can be ignited to set off as a bomb about the size of a rocket blast, plus some fireballs raining down (scar3crow)
 0 dpmod: add killing spree reporting; how many kills since spawn when you die, as well as announcing when you hit certain numbers of kills (SeienAbunae)
+0 dpmod: add rotfish to spawnmonsters code (only spawn if they land in water) (Zombie)
 0 dpmod: add support for info_player_deathmatch in singleplayer for q3 compatibility (Static_Fiend)
 0 dpmod: add target_position entity for a touch of q3 compatibility on jumppads (Static_Fiend)
 0 dpmod: crash when dog attacks you in dpdm2 deathmatch 7 with bots present (Zombie13)
