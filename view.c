@@ -204,7 +204,7 @@ V_ParseDamage
 */
 void V_ParseDamage (void)
 {
-	int i, armor, blood;
+	int armor, blood;
 	vec3_t from;
 	//vec3_t forward, right;
 	vec3_t localfrom;
