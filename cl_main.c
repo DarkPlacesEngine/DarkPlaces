@@ -116,7 +116,7 @@ void CL_ClearState(void)
 	cl_max_static_entities = 256;
 	cl_max_temp_entities = 512;
 	cl_max_effects = 256;
-	cl_max_beams = 24;
+	cl_max_beams = 256;
 	cl_max_dlights = MAX_DLIGHTS;
 	cl_max_lightstyle = MAX_LIGHTSTYLES;
 	cl_max_brushmodel_entities = MAX_EDICTS;
