@@ -385,7 +385,7 @@ int WINS_CheckNewConnections (void)
 	if (net_acceptsocket == -1)
 		return -1;
 
-	if (precvfrom (net_acceptsocket, buf, sizeof(buf), MSG_PEEK, NULL, NULL) > 0)
+	if (precvfrom (net_acceptsocket, buf, sizeof(buf), MSG_PEEK, NULL, NULL) >= 0)
 	{
 		return net_acceptsocket;
 	}

@@ -229,6 +229,9 @@ int UDP_Connect (int socket, struct qsockaddr *addr)
 int UDP_CheckNewConnections (void)
 {
 	unsigned long	available;
+	struct sockaddr_in	from;
+	socklen_t			fromlen;
+	char buff[1];
 
 	if (net_acceptsocket == -1)
 		return -1;
@@ -237,6 +240,7 @@ int UDP_CheckNewConnections (void)
 		Sys_Error ("UDP: ioctlsocket (FIONREAD) failed\n");
 	if (available)
 		return net_acceptsocket;
+	recvfrom (net_acceptsocket, buff, 0, 0, &from, &fromlen);
 	return -1;
 }
 
