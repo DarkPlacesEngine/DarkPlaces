@@ -924,8 +924,8 @@ void R_DrawSurfaceList(entity_render_t *ent, texture_t *texture, int texturenums
 {
 	int texturesurfaceindex;
 	vec3_t center, modelorg;
-	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 	rmeshstate_t m;
+	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 	if (gl_lightmaps.integer)
 	{
 		GL_BlendFunc(GL_ONE, GL_ZERO);
