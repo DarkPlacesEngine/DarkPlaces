@@ -159,14 +159,13 @@ float CL_TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int 
 #else
 	trace_t trace;
 #endif
-	vec3_t start_l, end_l;
 	memset (&trace, 0, sizeof(trace));
 	trace.fraction = 1;
 	VectorCopy (end, trace.endpos);
 #if QW
-	PM_RecursiveHullCheck (cl.model_precache[1]->hulls, 0, 0, 1, start_l, end_l, &trace);
+	PM_RecursiveHullCheck (cl.model_precache[1]->hulls, 0, 0, 1, start, end, &trace);
 #else
-	RecursiveHullCheck (cl.worldmodel->hulls, 0, 0, 1, start_l, end_l, &trace);
+	RecursiveHullCheck (cl.worldmodel->hulls, 0, 0, 1, start, end, &trace);
 #endif
 	VectorCopy(trace.endpos, impact);
 	VectorCopy(trace.plane.normal, normal);
