@@ -802,6 +802,34 @@ void ED_WriteGlobals (qfile_t *f)
 
 /*
 =============
+ED_EdictSet_f
+
+Console command to set a field of a specified edict
+=============
+*/
+void ED_EdictSet_f(void)
+{
+	edict_t *ed;
+	ddef_t *key;
+
+	if(Cmd_Argc() != 4)
+	{
+		Con_Printf("edictset <edict number> <field> <value>\n");
+		return;
+	}
+	ed = EDICT_NUM(atoi(Cmd_Argv(1)));
+
+	if((key = ED_FindField(Cmd_Argv(2))) == 0)
+	{
+		Con_Printf("Key %s not found !\n", Cmd_Argv(2));
+		return;
+	}
+
+	ED_ParseEpair(ed, key, Cmd_Argv(3));
+}
+
+/*
+=============
 ED_ParseGlobals
 =============
 */
@@ -1553,6 +1581,7 @@ void PR_Init (void)
 	Cmd_AddCommand ("edict", ED_PrintEdict_f);
 	Cmd_AddCommand ("edicts", ED_PrintEdicts);
 	Cmd_AddCommand ("edictcount", ED_Count);
+	Cmd_AddCommand ("edictset", ED_EdictSet_f);
 	Cmd_AddCommand ("profile", PR_Profile_f);
 	Cmd_AddCommand ("pr_fields", PR_Fields_f);
 	Cmd_AddCommand ("pr_globals", PR_Globals_f);

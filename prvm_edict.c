@@ -896,7 +896,6 @@ char *PRVM_ED_NewString (const char *string)
 	return new;
 }
 
-
 /*
 =============
 PRVM_ED_ParseEval
@@ -983,6 +982,44 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s)
 		return false;
 	}
 	return true;
+}
+
+/*
+=============
+PRVM_ED_EdictSet_f
+
+Console command to set a field of a specified edict
+=============
+*/
+void PRVM_ED_EdictSet_f(void)
+{
+	prvm_edict_t *ed;
+	ddef_t *key;
+
+	if(Cmd_Argc() != 5)
+	{
+		Con_Printf("prvm_edictset <program name> <edict number> <field> <value>\n");
+		return;
+	}
+
+	PRVM_Begin;
+	if(!PRVM_SetProgFromString(Cmd_Argv(1)))
+	{
+		Con_Printf("Wrong program name %s !\n", Cmd_Argv(1));
+		return;
+	}
+
+	ed = PRVM_EDICT_NUM(atoi(Cmd_Argv(2)));
+
+	if((key = PRVM_ED_FindField(Cmd_Argv(3))) == 0)
+	{
+		Con_Printf("Key %s not found !\n", Cmd_Argv(3));
+		return;
+	}
+
+	PRVM_ED_ParseEpair(ed, key, Cmd_Argv(4));
+
+	PRVM_End;
 }
 
 /*
@@ -1635,6 +1672,7 @@ void PRVM_Init (void)
 	Cmd_AddCommand ("prvm_profile", PRVM_Profile_f);
 	Cmd_AddCommand ("prvm_fields", PRVM_Fields_f);
 	Cmd_AddCommand ("prvm_globals", PRVM_Globals_f);
+	Cmd_AddCommand ("prvm_edictset", PRVM_ED_EdictSet_f);
 	// LordHavoc: optional runtime bounds checking (speed drain, but worth it for security, on by default - breaks most QCCX features (used by CRMod and others))
 	Cvar_RegisterVariable (&prvm_boundscheck);
 	Cvar_RegisterVariable (&prvm_traceqc);
