@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-#ifdef _WIN32
+#ifdef USE_DSOUND
 #include <windows.h>
 #include <dsound.h>
 extern DWORD gSndBufSize;
@@ -694,7 +694,7 @@ void S_ClearBuffer(void)
 	else
 		clear = 0;
 
-#ifdef _WIN32
+#ifdef USE_DSOUND
 	if (pDSBuf)
 	{
 		DWORD	dwSize;
@@ -959,7 +959,7 @@ void IN_Accumulate (void);
 void S_ExtraUpdate (void)
 {
 
-#ifdef _WIN32
+#ifdef USE_DSOUND
 	IN_Accumulate ();
 #endif
 
@@ -989,7 +989,7 @@ void S_Update_(void)
 	if (endtime > (unsigned int)(soundtime + samps))
 		endtime = soundtime + samps;
 
-#ifdef _WIN32
+#ifdef USE_DSOUND
 // if the buffer was lost or stopped, restore it and/or restart it
 	{
 		DWORD	dwStatus;

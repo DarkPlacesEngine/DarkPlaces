@@ -335,16 +335,16 @@ static void VID_SetCaption()
 	HICON			icon;
 
 	// set the caption
-	//SDL_WM_SetCaption( gamename, NULL );
+	SDL_WM_SetCaption( gamename, NULL );
 
 	// get the HWND handle 
     SDL_VERSION( &info.version );
 	if( !SDL_GetWMInfo( &info ) )
 		return;
 
-	icon = LoadIcon( GetModuleHandle( NULL ), MAKEINTRESOURCE( IDI_ICON1 ) );
-	//icon = LoadIcon( NULL, IDI_ERROR );
-	SetClassLong( info.window, GCL_HICONSM, (LONG) icon );
+	//icon = LoadIcon( GetModuleHandle( NULL ), MAKEINTRESOURCE( IDI_ICON1 ) );
+	icon = LoadIcon( NULL, IDI_ERROR );
+	SetClassLong( info.window, GCL_HICON, (LONG) icon );
 }
 #else
 static void VID_SetCaption()
@@ -425,7 +425,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 		VID_Shutdown();
 		return false;
 	}
-
+	VID_SetCaption();
 	
 	gl_renderer = qglGetString(GL_RENDERER);
 	gl_vendor = qglGetString(GL_VENDOR);
@@ -443,7 +443,6 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 	vid_activewindow = false;
 	vid_usingmouse = false;
 	IN_Init();
-	VID_SetCaption();
 	return true;
 }
 
