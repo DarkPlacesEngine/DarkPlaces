@@ -33,7 +33,6 @@ cvar_t		scr_conalpha = {"scr_conalpha", "1"};
 byte		*draw_chars;				// 8*8 graphic characters
 qpic_t		*draw_disc;
 
-//int			translate_texture;
 int			char_texture;
 
 typedef struct
@@ -232,32 +231,6 @@ qpic_t	*Draw_CachePic (char *path)
 
 	return &pic->pic;
 }
-
-/*
-void Draw_CharToConback (int num, byte *dest)
-{
-	int		row, col;
-	byte	*source;
-	int		drawline;
-	int		x;
-
-	row = num>>4;
-	col = num&15;
-	source = draw_chars + (row<<10) + (col<<3);
-
-	drawline = 8;
-
-	while (drawline--)
-	{
-		for (x=0 ; x<8 ; x++)
-			if (source[x] != 255)
-				dest[x] = 0x60 + source[x];
-		source += 128;
-		dest += 320;
-	}
-
-}
-*/
 
 extern void LoadSky_f(void);
 
@@ -463,9 +436,7 @@ void Draw_GenericPic (int texnum, float red, float green, float blue, float alph
 	if (!r_render.value)
 		return;
 	glDisable(GL_ALPHA_TEST);
-//	glEnable (GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-//	glCullFace(GL_FRONT);
 	glColor4f(red,green,blue,alpha);
 	glBindTexture(GL_TEXTURE_2D, texnum);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
@@ -480,8 +451,6 @@ void Draw_GenericPic (int texnum, float red, float green, float blue, float alph
 	glVertex2f (x, y+height);
 	glEnd ();
 	glColor3f(1,1,1);
-//	glEnable(GL_ALPHA_TEST);
-//	glDisable (GL_BLEND);
 }
 
 /*
@@ -588,14 +557,10 @@ Draw_ConsoleBackground
 */
 void Draw_ConsoleBackground (int lines)
 {
-	// LordHavoc: changed alpha
-	//int y = (vid.height >> 1);
-
 	if (lines >= (int) vid.height)
 		Draw_Pic(0, lines - vid.height, conback);
 	else
 		Draw_AlphaPic (0, lines - vid.height, conback, scr_conalpha.value*lines/vid.height);
-	//	Draw_AlphaPic (0, lines - vid.height, conback, (float)(1.2 * lines)/y);
 	// LordHavoc: draw version
 	Draw_String(engineversionx, lines - vid.height + engineversiony, engineversion, 9999);
 }
@@ -651,8 +616,7 @@ void GL_Set2D (void)
 
 	glDisable (GL_DEPTH_TEST);
 	glDisable (GL_CULL_FACE);
-	glEnable (GL_BLEND); // was Disable
-//	glEnable (GL_ALPHA_TEST);
+	glEnable (GL_BLEND);
 	glDisable (GL_ALPHA_TEST);
 	glEnable(GL_TEXTURE_2D);
 
