@@ -402,9 +402,10 @@ void R_DrawQueue(void)
 	R_Mesh_Start();
 	R_Mesh_Matrix(&r_identitymatrix);
 
-	memset(&m, 0, sizeof(m));
 	chartexnum = R_GetTexture(char_texture);
-	m.tex[0] = chartexnum;
+
+	memset(&m, 0, sizeof(m));
+	m.tex[0] = 0;
 	R_Mesh_TextureState(&m);
 
 	currentpic = "";
