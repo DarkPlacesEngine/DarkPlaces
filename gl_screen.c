@@ -76,18 +76,18 @@ float	scr_con_current;
 float	scr_conlines;		// lines of console to display
 
 float	oldscreensize, oldfov;
-cvar_t	scr_viewsize = {"viewsize","100", true};
-cvar_t	scr_fov = {"fov","90"};	// 10 - 170
-cvar_t	scr_conspeed = {"scr_conspeed","300"};
-cvar_t	scr_centertime = {"scr_centertime","2"};
-cvar_t	scr_showram = {"showram","1"};
-cvar_t	scr_showturtle = {"showturtle","0"};
-cvar_t	scr_showpause = {"showpause","1"};
-cvar_t	scr_printspeed = {"scr_printspeed","8"};
-cvar_t	showfps = {"showfps", "0", true};
-cvar_t	r_render = {"r_render", "1"};
-cvar_t	r_brightness = {"r_brightness", "1", true}; // LordHavoc: a method of operating system independent color correction
-cvar_t	r_contrast = {"r_contrast", "1", true}; // LordHavoc: a method of operating system independent color correction
+cvar_t	scr_viewsize = {CVAR_SAVE, "viewsize","100"};
+cvar_t	scr_fov = {CVAR_SAVE, "fov","90"};	// 10 - 170
+cvar_t	scr_conspeed = {CVAR_SAVE, "scr_conspeed","900"}; // LordHavoc: quake used 300
+cvar_t	scr_centertime = {0, "scr_centertime","2"};
+cvar_t	scr_showram = {CVAR_SAVE, "showram","1"};
+cvar_t	scr_showturtle = {CVAR_SAVE, "showturtle","0"};
+cvar_t	scr_showpause = {CVAR_SAVE, "showpause","1"};
+cvar_t	scr_printspeed = {0, "scr_printspeed","8"};
+cvar_t	showfps = {CVAR_SAVE, "showfps", "0"};
+cvar_t	r_render = {0, "r_render", "1"};
+cvar_t	r_brightness = {CVAR_SAVE, "r_brightness", "1"}; // LordHavoc: a method of operating system independent color correction
+cvar_t	r_contrast = {CVAR_SAVE, "r_contrast", "1"}; // LordHavoc: a method of operating system independent color correction
 
 qboolean	scr_initialized;		// ready to draw
 
@@ -208,7 +208,7 @@ void SCR_CheckDrawCenterString (void)
 		scr_erase_lines = scr_center_lines;
 
 	scr_centertime_off -= host_frametime;
-	
+
 	if (scr_centertime_off <= 0 && !cl.intermission)
 		return;
 	if (key_dest != key_game)
@@ -586,7 +586,7 @@ void SCR_ScreenShot_f (void)
 	char		filename[80]; 
 	char		checkname[MAX_OSPATH];
 	int			i;
-// 
+//
 // find a file name to save it to 
 // 
 	strcpy(filename,"dp0000.tga");
@@ -808,7 +808,7 @@ void SCR_UpdateScreen (void)
 
 
 	GL_BeginRendering (&glx, &gly, &glwidth, &glheight);
-	
+
 	//
 	// determine size of refresh window
 	//
@@ -860,8 +860,10 @@ void SCR_UpdateScreen (void)
 	else if (cl.intermission == 2)
 		Sbar_FinaleOverlay();
 
-	SCR_DrawConsole();	
+	SCR_DrawConsole();
 	M_Draw();
+
+	ui_draw();
 
 //	if (scr_drawloading)
 //		SCR_DrawLoading();
@@ -880,7 +882,7 @@ void SCR_UpdateScreen (void)
 	}
 
 	// LordHavoc: only print info if renderer is being used
-	if (r_speeds2.value && cl.worldmodel != NULL)
+	if (r_speeds2.value && !con_forcedup)
 	{
 		int i, j, lines, y;
 		lines = 1;

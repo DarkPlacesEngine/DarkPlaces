@@ -8,9 +8,9 @@ byte texgamma[256];
 
 static float texture_gamma = 1.0;
 
-cvar_t vid_gamma = {"vid_gamma", "1", true};
-cvar_t vid_brightness = {"vid_brightness", "1", true};
-cvar_t vid_contrast = {"vid_contrast", "1", true};
+cvar_t vid_gamma = {CVAR_SAVE, "vid_gamma", "1"};
+cvar_t vid_brightness = {CVAR_SAVE, "vid_brightness", "1"};
+cvar_t vid_contrast = {CVAR_SAVE, "vid_contrast", "1"};
 
 void Palette_Setup8to24(void)
 {

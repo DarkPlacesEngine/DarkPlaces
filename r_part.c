@@ -74,14 +74,14 @@ vec3_t			r_pright, r_pup, r_ppn;
 int			numparticles;
 particle_t	**freeparticles; // list used only in compacting particles array
 
-cvar_t r_particles = {"r_particles", "1", true};
-cvar_t r_drawparticles = {"r_drawparticles", "1"};
-cvar_t r_particles_lighting = {"r_particles_lighting", "1", true};
-cvar_t r_particles_bloodshowers = {"r_particles_bloodshowers", "1", true};
-cvar_t r_particles_blood = {"r_particles_blood", "1", true};
-cvar_t r_particles_smoke = {"r_particles_smoke", "1", true};
-cvar_t r_particles_sparks = {"r_particles_sparks", "1", true};
-cvar_t r_particles_bubbles = {"r_particles_bubbles", "1", true};
+cvar_t r_particles = {CVAR_SAVE, "r_particles", "1"};
+cvar_t r_drawparticles = {0, "r_drawparticles", "1"};
+cvar_t r_particles_lighting = {CVAR_SAVE, "r_particles_lighting", "1"};
+cvar_t r_particles_bloodshowers = {CVAR_SAVE, "r_particles_bloodshowers", "1"};
+cvar_t r_particles_blood = {CVAR_SAVE, "r_particles_blood", "1"};
+cvar_t r_particles_smoke = {CVAR_SAVE, "r_particles_smoke", "1"};
+cvar_t r_particles_sparks = {CVAR_SAVE, "r_particles_sparks", "1"};
+cvar_t r_particles_bubbles = {CVAR_SAVE, "r_particles_bubbles", "1"};
 
 byte shadebubble(float dx, float dy, vec3_t light)
 {

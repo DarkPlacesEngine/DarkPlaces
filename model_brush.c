@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -24,9 +24,9 @@ byte	mod_novis[MAX_MAP_LEAFS/8];
 
 qboolean	hlbsp; // LordHavoc: true if it is a HalfLife BSP file (version 30)
 
-cvar_t gl_subdivide_size = {"gl_subdivide_size", "128", true};
-cvar_t halflifebsp = {"halflifebsp", "0"};
-cvar_t r_novis = {"r_novis", "0"};
+cvar_t gl_subdivide_size = {CVAR_SAVE, "gl_subdivide_size", "128"};
+cvar_t halflifebsp = {0, "halflifebsp", "0"};
+cvar_t r_novis = {0, "r_novis", "0"};
 
 /*
 ===============

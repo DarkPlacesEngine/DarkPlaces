@@ -62,30 +62,30 @@ float ixtable[4096];
 
 void R_MarkLeaves (void);
 
-//cvar_t	r_norefresh = {"r_norefresh","0"};
-cvar_t	r_drawentities = {"r_drawentities","1"};
-cvar_t	r_drawviewmodel = {"r_drawviewmodel","1"};
-cvar_t	r_speeds = {"r_speeds","0"};
-cvar_t	r_speeds2 = {"r_speeds2","0"};
-cvar_t	r_fullbright = {"r_fullbright","0"};
-//cvar_t	r_lightmap = {"r_lightmap","0"};
-cvar_t	r_wateralpha = {"r_wateralpha","1"};
-cvar_t	r_dynamic = {"r_dynamic","1"};
-cvar_t	r_waterripple = {"r_waterripple","0"};
-cvar_t	r_fullbrights = {"r_fullbrights", "1"};
+//cvar_t	r_norefresh = {0, "r_norefresh","0"};
+cvar_t	r_drawentities = {0, "r_drawentities","1"};
+cvar_t	r_drawviewmodel = {0, "r_drawviewmodel","1"};
+cvar_t	r_speeds = {0, "r_speeds","0"};
+cvar_t	r_speeds2 = {0, "r_speeds2","0"};
+cvar_t	r_fullbright = {0, "r_fullbright","0"};
+//cvar_t	r_lightmap = {0, "r_lightmap","0"};
+cvar_t	r_wateralpha = {CVAR_SAVE, "r_wateralpha","1"};
+cvar_t	r_dynamic = {CVAR_SAVE, "r_dynamic","1"};
+cvar_t	r_waterripple = {CVAR_SAVE, "r_waterripple","0"};
+cvar_t	r_fullbrights = {CVAR_SAVE, "r_fullbrights", "1"};
 
-cvar_t	gl_lightmode = {"gl_lightmode", "1", true}; // LordHavoc: overbright lighting
-//cvar_t	r_dynamicbothsides = {"r_dynamicbothsides", "1"}; // LordHavoc: can disable dynamic lighting of backfaces, but quake maps are weird so it doesn't always work right...
-cvar_t	r_farclip = {"r_farclip", "6144"};
+cvar_t	gl_lightmode = {CVAR_SAVE, "gl_lightmode", "1"}; // LordHavoc: overbright lighting
+//cvar_t	r_dynamicbothsides = {CVAR_SAVE, "r_dynamicbothsides", "1"}; // LordHavoc: can disable dynamic lighting of backfaces, but quake maps are weird so it doesn't always work right...
+cvar_t	r_farclip = {0, "r_farclip", "6144"}; // FIXME: make this go away (calculate based on farthest visible object/polygon)
 
-cvar_t	gl_fogenable = {"gl_fogenable", "0"};
-cvar_t	gl_fogdensity = {"gl_fogdensity", "0.25"};
-cvar_t	gl_fogred = {"gl_fogred","0.3"};
-cvar_t	gl_foggreen = {"gl_foggreen","0.3"};
-cvar_t	gl_fogblue = {"gl_fogblue","0.3"};
-cvar_t	gl_fogstart = {"gl_fogstart", "0"};
-cvar_t	gl_fogend = {"gl_fogend","0"};
-cvar_t	glfog = {"glfog", "0"};
+cvar_t	gl_fogenable = {0, "gl_fogenable", "0"};
+cvar_t	gl_fogdensity = {0, "gl_fogdensity", "0.25"};
+cvar_t	gl_fogred = {0, "gl_fogred","0.3"};
+cvar_t	gl_foggreen = {0, "gl_foggreen","0.3"};
+cvar_t	gl_fogblue = {0, "gl_fogblue","0.3"};
+cvar_t	gl_fogstart = {0, "gl_fogstart", "0"};
+cvar_t	gl_fogend = {0, "gl_fogend","0"};
+cvar_t	glfog = {0, "glfog", "0"};
 
 /*
 int R_VisibleCullBox (vec3_t mins, vec3_t maxs)
@@ -109,9 +109,9 @@ loc0:
 		node = nodestack[--stack];
 		goto loc0;
 	}
-	
+
 	sides = BOX_ON_PLANE_SIDE(mins, maxs, node->plane);
-	
+
 // recurse down the contacted sides
 	if (sides & 1)
 	{
@@ -244,7 +244,7 @@ void FOG_registercvars(void)
 		Cvar_RegisterVariable (&gl_fogenable);
 		Cvar_RegisterVariable (&gl_fogdensity);
 		Cvar_RegisterVariable (&gl_fogred);
-		Cvar_RegisterVariable (&gl_foggreen); 
+		Cvar_RegisterVariable (&gl_foggreen);
 		Cvar_RegisterVariable (&gl_fogblue);
 		Cvar_RegisterVariable (&gl_fogstart);
 		Cvar_RegisterVariable (&gl_fogend);
@@ -304,6 +304,7 @@ extern void R_Particles_Init(void);
 extern void R_Explosion_Init(void);
 extern void CL_Effects_Init(void);
 extern void R_Clip_Init(void);
+extern void ui_init(void);
 
 void Render_Init(void)
 {
@@ -322,6 +323,7 @@ void Render_Init(void)
 	R_Explosion_Init();
 	CL_Effects_Init();
 	R_Decals_Init();
+	ui_init();
 	R_Modules_Start();
 }
 

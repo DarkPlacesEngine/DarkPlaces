@@ -32,7 +32,7 @@ Cvar_FindVar
 cvar_t *Cvar_FindVar (char *var_name)
 {
 	cvar_t	*var;
-	
+
 	for (var=cvar_vars ; var ; var=var->next)
 		if (!strcmp (var_name, var->name))
 			return var;
@@ -48,7 +48,7 @@ Cvar_VariableValue
 float	Cvar_VariableValue (char *var_name)
 {
 	cvar_t	*var;
-	
+
 	var = Cvar_FindVar (var_name);
 	if (!var)
 		return 0;
@@ -64,7 +64,7 @@ Cvar_VariableString
 char *Cvar_VariableString (char *var_name)
 {
 	cvar_t *var;
-	
+
 	var = Cvar_FindVar (var_name);
 	if (!var)
 		return cvar_null_string;
@@ -81,12 +81,12 @@ char *Cvar_CompleteVariable (char *partial)
 {
 	cvar_t		*cvar;
 	int			len;
-	
+
 	len = strlen(partial);
-	
+
 	if (!len)
 		return NULL;
-		
+
 // check functions
 	for (cvar=cvar_vars ; cvar ; cvar=cvar->next)
 		if (!strncmp (partial,cvar->name, len))
@@ -110,18 +110,18 @@ Cvar_CompleteCountPossible (char *partial)
 	cvar_t	*cvar;
 	int		len;
 	int		h;
-	
+
 	h = 0;
 	len = strlen(partial);
-	
+
 	if (!len)
 		return	0;
-	
+
 	// Loop through the cvars and count all possible matches
 	for (cvar = cvar_vars; cvar; cvar = cvar->next)
 		if (!strncasecmp(partial, cvar->name, len))
 			h++;
-	
+
 	return h;
 }
 
@@ -152,7 +152,7 @@ Cvar_CompleteBuildList (char *partial)
 
 	buf[bpos] = NULL;
 	return buf;
-}	
+}
 
 /*
 ============
@@ -163,7 +163,7 @@ void Cvar_Set (char *var_name, char *value)
 {
 	cvar_t	*var;
 	qboolean changed;
-	
+
 	var = Cvar_FindVar (var_name);
 	if (!var)
 	{	// there is an error in C code if this happens
@@ -172,13 +172,13 @@ void Cvar_Set (char *var_name, char *value)
 	}
 
 	changed = strcmp(var->string, value);
-	
+
 	Z_Free (var->string);	// free the old value string
-	
+
 	var->string = Z_Malloc (strlen(value)+1);
 	strcpy (var->string, value);
 	var->value = atof (var->string);
-	if (var->server && changed)
+	if ((var->flags & CVAR_NOTIFY) && changed)
 	{
 		if (sv.active)
 			SV_BroadcastPrintf ("\"%s\" changed to \"%s\"\n", var->name, var->string);
@@ -193,12 +193,11 @@ Cvar_SetValue
 void Cvar_SetValue (char *var_name, float value)
 {
 	char	val[32];
-	
+
 	// LordHavoc: changed from %f to %g to use shortest representation
 	sprintf (val, "%g",value);
 	Cvar_Set (var_name, val);
 }
-
 
 /*
 ============
@@ -210,27 +209,27 @@ Adds a freestanding variable to the variable list.
 void Cvar_RegisterVariable (cvar_t *variable)
 {
 	char	*oldstr;
-	
+
 // first check to see if it has already been defined
 	if (Cvar_FindVar (variable->name))
 	{
 		Con_Printf ("Can't register variable %s, already defined\n", variable->name);
 		return;
 	}
-	
+
 // check for overlap with a command
 	if (Cmd_Exists (variable->name))
 	{
 		Con_Printf ("Cvar_RegisterVariable: %s is a command\n", variable->name);
 		return;
 	}
-		
+
 // copy the value off, because future sets will Z_Free it
 	oldstr = variable->string;
-	variable->string = Z_Malloc (strlen(variable->string)+1);	
+	variable->string = Z_Malloc (strlen(variable->string)+1);
 	strcpy (variable->string, oldstr);
 	variable->value = atof (variable->string);
-	
+
 // link the variable in
 	variable->next = cvar_vars;
 	cvar_vars = variable;
@@ -251,7 +250,7 @@ qboolean	Cvar_Command (void)
 	v = Cvar_FindVar (Cmd_Argv(0));
 	if (!v)
 		return false;
-		
+
 // perform a variable print or set
 	if (Cmd_Argc() == 1)
 	{
@@ -275,9 +274,9 @@ with the archive flag set to true.
 void Cvar_WriteVariables (QFile *f)
 {
 	cvar_t	*var;
-	
+
 	for (var = cvar_vars ; var ; var = var->next)
-		if (var->archive)
+		if (var->flags & CVAR_SAVE)
 			Qprintf (f, "%s \"%s\"\n", var->name, var->string);
 }
 

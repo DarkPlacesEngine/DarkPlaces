@@ -1,9 +1,9 @@
 #include "quakedef.h"
 
-cvar_t crosshair_brightness = {"crosshair_brightness", "1.0", true};
-cvar_t crosshair_alpha = {"crosshair_alpha", "1.0", true};
-cvar_t crosshair_flashspeed = {"crosshair_flashspeed", "2", true};
-cvar_t crosshair_flashrange = {"crosshair_flashrange", "0.1", true};
+cvar_t crosshair_brightness = {CVAR_SAVE, "crosshair_brightness", "1.0"};
+cvar_t crosshair_alpha = {CVAR_SAVE, "crosshair_alpha", "1.0"};
+cvar_t crosshair_flashspeed = {CVAR_SAVE, "crosshair_flashspeed", "2"};
+cvar_t crosshair_flashrange = {CVAR_SAVE, "crosshair_flashrange", "0.1"};
 
 #define NUMCROSSHAIRS 5
 

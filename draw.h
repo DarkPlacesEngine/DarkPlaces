@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -27,6 +27,7 @@ void Draw_Init (void);
 void Draw_Character (int x, int y, int num);
 void Draw_GenericPic (rtexture_t *tex, float red, float green, float blue, float alpha, int x, int y, int width, int height);
 void Draw_Pic (int x, int y, qpic_t *pic);
+void Draw_AdditivePic (int x, int y, qpic_t *pic);
 void Draw_PicTranslate (int x, int y, qpic_t *pic, byte *translation);
 void Draw_ConsoleBackground (int lines);
 void Draw_Fill (int x, int y, int w, int h, int c);

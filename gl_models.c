@@ -1,8 +1,8 @@
 
 #include "quakedef.h"
 
-cvar_t gl_transform = {"gl_transform", "1"};
-cvar_t gl_lockarrays = {"gl_lockarrays", "1"};
+cvar_t gl_transform = {0, "gl_transform", "1"};
+cvar_t gl_lockarrays = {0, "gl_lockarrays", "1"};
 
 typedef struct
 {

@@ -40,7 +40,7 @@ effect_t;
 
 effect_t effect[MAX_EFFECTS];
 
-cvar_t r_draweffects = {"r_draweffects", "1"};
+cvar_t r_draweffects = {0, "r_draweffects", "1"};
 
 void r_effects_start(void)
 {

@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 //#define GL_COLOR_INDEX8_EXT     0x80E5
 
-cvar_t		scr_conalpha = {"scr_conalpha", "1"};
+cvar_t		scr_conalpha = {CVAR_SAVE, "scr_conalpha", "1"};
 
 byte		*draw_chars;				// 8*8 graphic characters
 qpic_t		*draw_disc;
@@ -330,7 +330,8 @@ Draw_AlphaPic
 */
 void Draw_AlphaPic (int x, int y, qpic_t *pic, float alpha)
 {
-	Draw_GenericPic(((glpic_t *)pic->data)->tex, 1,1,1,alpha, x,y,pic->width, pic->height);
+	if (pic)
+		Draw_GenericPic(((glpic_t *)pic->data)->tex, 1,1,1,alpha, x,y,pic->width, pic->height);
 }
 
 
@@ -341,7 +342,19 @@ Draw_Pic
 */
 void Draw_Pic (int x, int y, qpic_t *pic)
 {
-	Draw_GenericPic(((glpic_t *)pic->data)->tex, 1,1,1,1, x,y,pic->width, pic->height);
+	if (pic)
+		Draw_GenericPic(((glpic_t *)pic->data)->tex, 1,1,1,1, x,y,pic->width, pic->height);
+}
+
+
+void Draw_AdditivePic (int x, int y, qpic_t *pic)
+{
+	if (pic)
+	{
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		Draw_GenericPic(((glpic_t *)pic->data)->tex, 1,1,1,1, x,y,pic->width, pic->height);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	}
 }
 
 
@@ -357,6 +370,9 @@ void Draw_PicTranslate (int x, int y, qpic_t *pic, byte *translation)
 	int				i, c;
 	byte			*trans, *src, *dest;
 	rtexture_t		*rt;
+
+	if (pic == NULL)
+		return;
 
 	c = pic->width * pic->height;
 	src = menuplyr_pixels;

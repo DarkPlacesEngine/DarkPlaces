@@ -11,9 +11,9 @@ qboolean gl_supportslockarrays = false;
 qboolean gl_mtexable = false;
 int gl_mtex_enum = 0;
 
-cvar_t vid_mode = {"vid_mode", "0", false};
-cvar_t vid_mouse = {"vid_mouse", "1", true};
-cvar_t vid_fullscreen = {"vid_fullscreen", "1"};
+cvar_t vid_mode = {0, "vid_mode", "0"};
+cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1"};
+cvar_t vid_fullscreen = {0, "vid_fullscreen", "1"};
 
 void (GLAPIENTRY *qglMTexCoord2f) (GLenum, GLfloat, GLfloat);
 void (GLAPIENTRY *qglSelectTexture) (GLenum);

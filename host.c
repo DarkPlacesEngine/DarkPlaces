@@ -53,34 +53,34 @@ client_t	*host_client;			// current client
 
 jmp_buf 	host_abortserver;
 
-cvar_t	host_framerate = {"host_framerate","0"};	// set for slow motion
-cvar_t	host_speeds = {"host_speeds","0"};			// set for running times
-cvar_t	slowmo = {"slowmo", "1.0"};					// LordHavoc: framerate independent slowmo
-cvar_t	host_minfps = {"host_minfps", "10"};		// LordHavoc: game logic lower cap on framerate (if framerate is below this is, it pretends it is this, so game logic will run normally)
-cvar_t	host_maxfps = {"host_maxfps", "1000"};		// LordHavoc: framerate upper cap
+cvar_t	host_framerate = {0, "host_framerate","0"};	// set for slow motion
+cvar_t	host_speeds = {0, "host_speeds","0"};			// set for running times
+cvar_t	slowmo = {0, "slowmo", "1.0"};					// LordHavoc: framerate independent slowmo
+cvar_t	host_minfps = {CVAR_SAVE, "host_minfps", "10"};		// LordHavoc: game logic lower cap on framerate (if framerate is below this is, it pretends it is this, so game logic will run normally)
+cvar_t	host_maxfps = {CVAR_SAVE, "host_maxfps", "1000"};		// LordHavoc: framerate upper cap
 
-cvar_t	sys_ticrate = {"sys_ticrate","0.05"};
-cvar_t	serverprofile = {"serverprofile","0"};
+cvar_t	sys_ticrate = {CVAR_SAVE, "sys_ticrate","0.05"};
+cvar_t	serverprofile = {0, "serverprofile","0"};
 
-cvar_t	fraglimit = {"fraglimit","0",false,true};
-cvar_t	timelimit = {"timelimit","0",false,true};
-cvar_t	teamplay = {"teamplay","0",false,true};
+cvar_t	fraglimit = {CVAR_NOTIFY, "fraglimit","0"};
+cvar_t	timelimit = {CVAR_NOTIFY, "timelimit","0"};
+cvar_t	teamplay = {CVAR_NOTIFY, "teamplay","0"};
 
-cvar_t	samelevel = {"samelevel","0"};
-cvar_t	noexit = {"noexit","0",false,true};
+cvar_t	samelevel = {0, "samelevel","0"};
+cvar_t	noexit = {CVAR_NOTIFY, "noexit","0"};
 
-cvar_t	developer = {"developer","0"};
+cvar_t	developer = {0, "developer","0"};
 
-cvar_t	skill = {"skill","1"};						// 0 - 3
-cvar_t	deathmatch = {"deathmatch","0"};			// 0, 1, or 2
-cvar_t	coop = {"coop","0"};			// 0 or 1
+cvar_t	skill = {0, "skill","1"};						// 0 - 3
+cvar_t	deathmatch = {0, "deathmatch","0"};			// 0, 1, or 2
+cvar_t	coop = {0, "coop","0"};			// 0 or 1
 
-cvar_t	pausable = {"pausable","1"};
+cvar_t	pausable = {0, "pausable","1"};
 
-cvar_t	temp1 = {"temp1","0"};
+cvar_t	temp1 = {0, "temp1","0"};
 
-cvar_t	timestamps = {"timestamps", "0", true};
-cvar_t	timeformat = {"timeformat", "[%b %e %X] ", true};
+cvar_t	timestamps = {CVAR_SAVE, "timestamps", "0"};
+cvar_t	timeformat = {CVAR_SAVE, "timeformat", "[%b %e %X] "};
 
 /*
 ================
@@ -91,18 +91,18 @@ void Host_EndGame (char *message, ...)
 {
 	va_list		argptr;
 	char		string[1024];
-	
+
 	va_start (argptr,message);
 	vsprintf (string,message,argptr);
 	va_end (argptr);
 	Con_DPrintf ("Host_EndGame: %s\n",string);
-	
+
 	if (sv.active)
 		Host_ShutdownServer (false);
 
 	if (cls.state == ca_dedicated)
 		Sys_Error ("Host_EndGame: %s\n",string);	// dedicated servers exit
-	
+
 	if (cls.demonum != -1)
 		CL_NextDemo ();
 	else
@@ -644,7 +644,7 @@ void _Host_Frame (float time)
 
 // keep the random time dependent
 	rand ();
-	
+
 // decide the simulation time
 	if (!Host_FilterTime (time))
 	{
@@ -652,7 +652,7 @@ void _Host_Frame (float time)
 		Sys_Sleep();
 		return;
 	}
-		
+
 // get new key events
 	Sys_SendKeyEvents ();
 
@@ -667,7 +667,7 @@ void _Host_Frame (float time)
 // if running the server locally, make intentions now
 	if (sv.active)
 		CL_SendCmd ();
-	
+
 //-------------------
 //
 // server operations
@@ -676,7 +676,7 @@ void _Host_Frame (float time)
 
 // check for commands typed to the host
 	Host_GetConsoleCommands ();
-	
+
 	if (sv.active)
 		Host_ServerFrame ();
 
@@ -695,15 +695,17 @@ void _Host_Frame (float time)
 	if (cls.state == ca_connected)
 		CL_ReadFromServer ();
 
+	ui_update();
+
 // update video
 	if (host_speeds.value)
 		time1 = Sys_DoubleTime ();
-		
+
 	SCR_UpdateScreen ();
 
 	if (host_speeds.value)
 		time2 = Sys_DoubleTime ();
-		
+
 // update audio
 	if (cls.signon == SIGNONS)
 	{
@@ -712,7 +714,7 @@ void _Host_Frame (float time)
 	}
 	else
 		S_Update (vec3_origin, vec3_origin, vec3_origin, vec3_origin);
-	
+
 	CDAudio_Update();
 
 	if (host_speeds.value)
@@ -724,7 +726,7 @@ void _Host_Frame (float time)
 		Con_Printf ("%6ius total %6ius server %6ius gfx %6ius snd\n",
 					pass1+pass2+pass3, pass1, pass2, pass3);
 	}
-	
+
 	host_framecount++;
 }
 

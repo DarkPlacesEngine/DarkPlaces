@@ -43,11 +43,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //-------------------------------------------------------
 
 #define SPRITE_VERSION	1
-#define HALFLIFESPRITE_VERSION	2
+#define SPRITEHL_VERSION	2
 #define SPRITE32_VERSION	32
 
-// TODO: shorten these?
-typedef struct {
+typedef struct
+{
 	int			ident;
 	int			version;
 	int			type;
@@ -59,11 +59,31 @@ typedef struct {
 	synctype_t	synctype;
 } dsprite_t;
 
+typedef struct
+{
+	int			ident;
+	int			version;
+	int			type;
+	int			rendermode;
+	float		boundingradius;
+	int			width;
+	int			height;
+	int			numframes;
+	float		beamlength;
+	synctype_t	synctype;
+} dspritehl_t;
+
 #define SPR_VP_PARALLEL_UPRIGHT		0
 #define SPR_FACING_UPRIGHT			1
 #define SPR_VP_PARALLEL				2
 #define SPR_ORIENTED				3
 #define SPR_VP_PARALLEL_ORIENTED	4
+
+#define SPRHL_NORMAL	0
+#define SPRHL_ADDITIVE	1
+// no idea how to handle these two rendering modes
+#define SPRHL_INDEXALPHA	2
+#define SPRHL_ALPHATEST	3
 
 typedef struct {
 	int			origin[2];

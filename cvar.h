@@ -53,21 +53,69 @@ Cvars are restricted from having the same names as commands to keep this
 interface from being ambiguous.
 */
 
+// cvar flags
+#define CVAR_SAVE 1
+#define CVAR_NOTIFY 2
+
+// type of a cvar for menu purposes
+#define CVARMENUTYPE_FLOAT 1
+#define CVARMENUTYPE_INTEGER 2
+#define CVARMENUTYPE_SLIDER 3
+#define CVARMENUTYPE_BOOL 4
+#define CVARMENUTYPE_STRING 5
+#define CVARMENUTYPE_OPTION 6
+
+// which menu to put a cvar in
+#define CVARMENU_GRAPHICS 1
+#define CVARMENU_SOUND 2
+#define CVARMENU_INPUT 3
+#define CVARMENU_NETWORK 4
+#define CVARMENU_SERVER 5
+
+#define MAX_CVAROPTIONS 16
+
+typedef struct
+{
+	int value;
+	char *name;
+}
+cvaroption_t;
+
+typedef struct
+{
+	int				type;
+	float			valuemin, valuemax, valuestep;
+	int				numoptions;
+	cvaroption_t	optionlist[MAX_CVAROPTIONS];
+}
+menucvar_t;
+
 typedef struct cvar_s
 {
-	char	*name;
-	char	*string;
-	qboolean archive;		// set to true to cause it to be saved to vars.rc
-	qboolean server;		// notifies players when changed
-	float	value;
-	struct cvar_s *next;
+	int				flags;
+	char			*name;
+	char			*string;
+//	qboolean		archive;		// set to true to cause it to be saved to vars.rc
+//	qboolean		server;		// notifies players when changed
+	int				intvalue;
+	float			value;
+	float			vector[3];
+	menucvar_t		menuinfo;
+	struct cvar_s	*next;
 } cvar_t;
 
-void 	Cvar_RegisterVariable (cvar_t *variable);
+void	Cvar_MenuSlider(cvar_t *variable, int menu, float slider_min, float slider_max, float slider_step);
+void	Cvar_MenuBool(cvar_t *variable, int menu, char *name_false, char *name_true);
+void	Cvar_MenuFloat(cvar_t *variable, int menu, float range_min, float range_max);
+void	Cvar_MenuInteger(cvar_t *variable, int menu, int range_min, int range_max);
+void	Cvar_MenuString(cvar_t *variable, int menu);
+void	Cvar_MenuOption(cvar_t *variable, int menu, int value[16], char *name[16]);
+
+void	Cvar_RegisterVariable (cvar_t *variable);
 // registers a cvar that already has the name, string, and optionally the
 // archive elements set.
 
-void 	Cvar_Set (char *var_name, char *value);
+void	Cvar_Set (char *var_name, char *value);
 // equivelant to "<name> <variable>" typed at the console
 
 void	Cvar_SetValue (char *var_name, float value);

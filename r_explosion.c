@@ -52,8 +52,8 @@ explosion_t explosion[128];
 rtexture_t	*explosiontexture;
 rtexture_t	*explosiontexturefog;
 
-cvar_t r_explosionclip = {"r_explosionclip", "0", true};
-cvar_t r_drawexplosions = {"r_drawexplosions", "1"};
+cvar_t r_explosionclip = {CVAR_SAVE, "r_explosionclip", "1"};
+cvar_t r_drawexplosions = {0, "r_drawexplosions", "1"};
 
 int R_ExplosionVert(int column, int row)
 {

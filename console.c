@@ -47,8 +47,8 @@ int			con_current;		// where next message will be printed
 int			con_x;				// offset in current line for next print
 char		*con_text = 0;
 
-cvar_t		con_notifytime = {"con_notifytime","3"};	//seconds
-cvar_t		logfile = {"logfile","0"};
+cvar_t		con_notifytime = {CVAR_SAVE, "con_notifytime","3"};	//seconds
+cvar_t		logfile = {0, "logfile","0"};
 
 #define	NUM_CON_TIMES 4
 float		con_times[NUM_CON_TIMES];	// realtime time the line was generated
