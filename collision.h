@@ -65,9 +65,9 @@ colbrushf_t;
 colbrushf_t *Collision_AllocBrushFloat(mempool_t *mempool, int numpoints, int numplanes);
 void Collision_CalcPlanesForPolygonBrushFloat(colbrushf_t *brush);
 colbrushf_t *Collision_AllocBrushFromPermanentPolygonFloat(mempool_t *mempool, int numpoints, float *points);
-float Collision_TraceBrushBrushFloat(const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, const colbrushf_t *thatbrush_start, const colbrushf_t *thatbrush_end, float *impactnormal, int *startsolid, int *allsolid);
-float Collision_TraceBrushPolygonFloat(const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int numpoints, const float *points, float *impactnormal, int *startsolid, int *allsolid);
-float Collision_TraceBrushPolygonTransformFloat(const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int numpoints, const float *points, float *impactnormal, const matrix4x4_t *polygonmatrixstart, const matrix4x4_t *polygonmatrixend, int *startsolid, int *allsolid);
+void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, const colbrushf_t *thatbrush_start, const colbrushf_t *thatbrush_end);
+void Collision_TraceBrushPolygonFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int numpoints, const float *points);
+void Collision_TraceBrushPolygonTransformFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int numpoints, const float *points, const matrix4x4_t *polygonmatrixstart, const matrix4x4_t *polygonmatrixend);
 
 typedef struct colpointd_s
 {
@@ -94,12 +94,14 @@ colbrushd_t;
 colbrushd_t *Collision_AllocBrushDouble(mempool_t *mempool, int numpoints, int numplanes);
 void Collision_CalcPlanesForPolygonBrushDouble(colbrushd_t *brush);
 colbrushd_t *Collision_AllocBrushFromPermanentPolygonDouble(mempool_t *mempool, int numpoints, double *points);
-double Collision_TraceBrushBrushDouble(const colbrushd_t *thisbrush_start, const colbrushd_t *thisbrush_end, const colbrushd_t *thatbrush_start, const colbrushd_t *thatbrush_end, double *impactnormal);
-double Collision_TraceBrushPolygonDouble(const colbrushd_t *thisbrush_start, const colbrushd_t *thisbrush_end, int numpoints, const double *points, double *impactnormal);
+void Collision_TraceBrushBrushDouble(trace_t *trace, const colbrushd_t *thisbrush_start, const colbrushd_t *thisbrush_end, const colbrushd_t *thatbrush_start, const colbrushd_t *thatbrush_end);
+void Collision_TraceBrushPolygonDouble(trace_t *trace, const colbrushd_t *thisbrush_start, const colbrushd_t *thisbrush_end, int numpoints, const double *points);
 
-float Collision_TraceBrushBModel(const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, model_t *model, float *impactnormal, int *startsolid, int *allsolid);
-float Collision_TraceBrushBModelTransform(const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, model_t *model, float *impactnormal, const matrix4x4_t *modelmatrixstart, const matrix4x4_t *modelmatrixend, int *startsolid, int *allsolid);
+void Collision_TraceBrushBModel(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, model_t *model);
+void Collision_TraceBrushBModelTransform(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, model_t *model, const matrix4x4_t *modelmatrixstart, const matrix4x4_t *modelmatrixend);
 
 void Collision_PolygonClipTrace(trace_t *trace, const void *cent, model_t *cmodel, const vec3_t corigin, const vec3_t cangles, const vec3_t cmins, const vec3_t cmaxs, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end);
+
+colbrushf_t *Collision_BrushForBox(const matrix4x4_t *matrix, const vec3_t mins, const vec3_t maxs);
 
 #endif

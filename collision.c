@@ -429,7 +429,7 @@ float furthestplanedist_float(const float *normal, const colpointf_t *points, in
 #define COLLISIONEPSILON2 0//(1.0f / 32.0f)
 
 // NOTE: start and end of each brush pair must have same numplanes/numpoints
-float Collision_TraceBrushBrushFloat(const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, const colbrushf_t *thatbrush_start, const colbrushf_t *thatbrush_end, float *impactnormal, int *startsolid, int *allsolid)
+void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, const colbrushf_t *thatbrush_start, const colbrushf_t *thatbrush_end)
 {
 	int nplane, nplane2, fstartsolid, fendsolid;
 	float enterfrac, leavefrac, d1, d2, f, newimpactnormal[3];
@@ -463,7 +463,7 @@ float Collision_TraceBrushBrushFloat(const colbrushf_t *thisbrush_start, const c
 		{
 			// moving into brush
 			if (d2 > 0)
-				return 1;
+				return;
 			if (d1 < 0)
 				continue;
 			// enter
@@ -480,7 +480,7 @@ float Collision_TraceBrushBrushFloat(const colbrushf_t *thisbrush_start, const c
 		{
 			// moving out of brush
 			if (d1 > 0)
-				return 1;
+				return;
 			if (d2 < 0)
 				continue;
 			// leave
@@ -494,36 +494,31 @@ float Collision_TraceBrushBrushFloat(const colbrushf_t *thisbrush_start, const c
 
 	if (fstartsolid)
 	{
-		if (startsolid)
-			*startsolid = true;
-		if (fendsolid && allsolid)
-			*allsolid = true;
+		trace->startsolid = true;
+		if (fendsolid)
+			trace->allsolid = true;
 	}
 
 	// LordHavoc: we need an epsilon nudge here because for a point trace the
 	// penetrating line segment is normally zero length if this brush was
 	// generated from a polygon (infinitely thin), and could even be slightly
 	// positive or negative due to rounding errors in that case.
-	if (enterfrac > -1 && enterfrac < 1 && enterfrac - (1.0f / 1024.0f) <= leavefrac)
+	if (enterfrac > -1 && enterfrac < trace->fraction && enterfrac - (1.0f / 1024.0f) <= leavefrac)
 	{
-		//if (enterfrac < (1.0f / 1024.0f))
-		//	enterfrac = 0;
-		enterfrac = bound(0, enterfrac, 1);
-		VectorCopy(newimpactnormal, impactnormal);
-		return enterfrac;
+		trace->fraction = bound(0, enterfrac, 1);
+		VectorCopy(newimpactnormal, trace->plane.normal);
 	}
-	return 1;
 }
 
 static colplanef_t polyf_planes[256 + 2];
 static colbrushf_t polyf_brush;
 
-float Collision_TraceBrushPolygonFloat(const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int numpoints, const float *points, float *impactnormal, int *startsolid, int *allsolid)
+void Collision_TraceBrushPolygonFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int numpoints, const float *points)
 {
 	if (numpoints > 256)
 	{
 		Con_Printf("Polygon with more than 256 points not supported yet (fixme!)\n");
-		return 1;
+		return;
 	}
 	polyf_brush.numpoints = numpoints;
 	polyf_brush.numplanes = numpoints + 2;
@@ -531,20 +526,20 @@ float Collision_TraceBrushPolygonFloat(const colbrushf_t *thisbrush_start, const
 	polyf_brush.planes = polyf_planes;
 	Collision_CalcPlanesForPolygonBrushFloat(&polyf_brush);
 	//Collision_PrintBrushAsQHull(&polyf_brush, "polyf_brush");
-	return Collision_TraceBrushBrushFloat(thisbrush_start, thisbrush_end, &polyf_brush, &polyf_brush, impactnormal, startsolid, allsolid);
+	Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, &polyf_brush, &polyf_brush);
 }
 
 static colpointf_t polyf_pointsstart[256], polyf_pointsend[256];
 static colplanef_t polyf_planesstart[256 + 2], polyf_planesend[256 + 2];
 static colbrushf_t polyf_brushstart, polyf_brushend;
 
-float Collision_TraceBrushPolygonTransformFloat(const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int numpoints, const float *points, float *impactnormal, const matrix4x4_t *polygonmatrixstart, const matrix4x4_t *polygonmatrixend, int *startsolid, int *allsolid)
+void Collision_TraceBrushPolygonTransformFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int numpoints, const float *points, const matrix4x4_t *polygonmatrixstart, const matrix4x4_t *polygonmatrixend)
 {
 	int i;
 	if (numpoints > 256)
 	{
 		Con_Printf("Polygon with more than 256 points not supported yet (fixme!)\n");
-		return 1;
+		return;
 	}
 	polyf_brushstart.numpoints = numpoints;
 	polyf_brushstart.numplanes = numpoints + 2;
@@ -564,7 +559,7 @@ float Collision_TraceBrushPolygonTransformFloat(const colbrushf_t *thisbrush_sta
 	//Collision_PrintBrushAsQHull(&polyf_brushstart, "polyf_brushstart");
 	//Collision_PrintBrushAsQHull(&polyf_brushend, "polyf_brushend");
 
-	return Collision_TraceBrushBrushFloat(thisbrush_start, thisbrush_end, &polyf_brushstart, &polyf_brushend, impactnormal, startsolid, allsolid);
+	Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, &polyf_brushstart, &polyf_brushend);
 }
 
 colbrushd_t *Collision_AllocBrushDouble(mempool_t *mempool, int numpoints, int numplanes)
@@ -668,120 +663,102 @@ double furthestplanedist_double(const double *normal, const colpointd_t *points,
 }
 
 // NOTE: start and end of each brush pair must have same numplanes/numpoints
-double Collision_TraceBrushBrushDouble(const colbrushd_t *thisbrush_start, const colbrushd_t *thisbrush_end, const colbrushd_t *thatbrush_start, const colbrushd_t *thatbrush_end, double *impactnormal)
+void Collision_TraceBrushBrushDouble(trace_t *trace, const colbrushd_t *thisbrush_start, const colbrushd_t *thisbrush_end, const colbrushd_t *thatbrush_start, const colbrushd_t *thatbrush_end)
 {
-	int nplane;
+	int nplane, nplane2, fstartsolid, fendsolid;
 	double enterfrac, leavefrac, d1, d2, f, newimpactnormal[3];
 	const colplaned_t *startplane, *endplane;
 
 	enterfrac = -1;
 	leavefrac = 1;
+	fstartsolid = true;
+	fendsolid = true;
 
-	for (nplane = 0;nplane < thatbrush_start->numplanes;nplane++)
+	for (nplane = 0;nplane < thatbrush_start->numplanes + thisbrush_start->numplanes;nplane++)
 	{
-		startplane = thatbrush_start->planes + nplane;
-		endplane = thatbrush_end->planes + nplane;
+		nplane2 = nplane;
+		if (nplane2 >= thatbrush_start->numplanes)
+		{
+			nplane2 -= thatbrush_start->numplanes;
+			startplane = thisbrush_start->planes + nplane2;
+			endplane = thisbrush_end->planes + nplane2;
+		}
+		else
+		{
+			startplane = thatbrush_start->planes + nplane2;
+			endplane = thatbrush_end->planes + nplane2;
+		}
 		d1 = nearestplanedist_double(startplane->normal, thisbrush_start->points, thisbrush_start->numpoints) - furthestplanedist_double(startplane->normal, thatbrush_start->points, thatbrush_start->numpoints);
-		d2 = nearestplanedist_double(endplane->normal, thisbrush_end->points, thisbrush_start->numpoints) - furthestplanedist_double(endplane->normal, thatbrush_end->points, thatbrush_start->numpoints) - (1.0 / 32.0);
+		d2 = nearestplanedist_double(endplane->normal, thisbrush_end->points, thisbrush_end->numpoints) - furthestplanedist_double(endplane->normal, thatbrush_end->points, thatbrush_end->numpoints) - COLLISIONEPSILON2;
+		//Con_Printf("%c%i: d1 = %f, d2 = %f, d1 / (d1 - d2) = %f\n", nplane2 != nplane ? 'b' : 'a', nplane2, d1, d2, d1 / (d1 - d2));
 
 		f = d1 - d2;
 		if (f >= 0)
 		{
 			// moving into brush
 			if (d2 > 0)
-				return 1;
+				return;
 			if (d1 < 0)
 				continue;
 			// enter
-			f = d1 / f;
+			fstartsolid = false;
+			f = (d1 - COLLISIONEPSILON) / f;
+			f = bound(0, f, 1);
 			if (enterfrac < f)
 			{
 				enterfrac = f;
-				VectorSubtract(endplane->normal, startplane->normal, newimpactnormal);
-				VectorMA(startplane->normal, enterfrac, impactnormal, newimpactnormal);
+				VectorBlend(startplane->normal, endplane->normal, enterfrac, newimpactnormal);
 			}
 		}
-		else
+		else if (f < 0)
 		{
 			// moving out of brush
 			if (d1 > 0)
-				return 1;
+				return;
 			if (d2 < 0)
 				continue;
 			// leave
-			f = d1 / f;
+			fendsolid = false;
+			f = (d1 + COLLISIONEPSILON) / f;
+			f = bound(0, f, 1);
 			if (leavefrac > f)
 				leavefrac = f;
 		}
 	}
 
-	for (nplane = 0;nplane < thisbrush_start->numplanes;nplane++)
+	if (fstartsolid)
 	{
-		startplane = thisbrush_start->planes + nplane;
-		endplane = thisbrush_end->planes + nplane;
-		d1 = nearestplanedist_double(startplane->normal, thisbrush_start->points, thisbrush_start->numpoints) - furthestplanedist_double(startplane->normal, thatbrush_start->points, thatbrush_start->numpoints);
-		d2 = nearestplanedist_double(endplane->normal, thisbrush_end->points, thisbrush_start->numpoints) - furthestplanedist_double(endplane->normal, thatbrush_end->points, thatbrush_start->numpoints) - (1.0 / 32.0);
-
-		f = d1 - d2;
-		if (f >= 0)
-		{
-			// moving into brush
-			if (d2 > 0)
-				return 1;
-			if (d1 < 0)
-				continue;
-			// enter
-			f = d1 / f;
-			if (enterfrac < f)
-			{
-				enterfrac = f;
-				VectorSubtract(endplane->normal, startplane->normal, newimpactnormal);
-				VectorMA(startplane->normal, enterfrac, impactnormal, newimpactnormal);
-			}
-		}
-		else
-		{
-			// moving out of brush
-			if (d1 > 0)
-				return 1;
-			if (d2 < 0)
-				continue;
-			// leave
-			f = d1 / f;
-			if (leavefrac > f)
-				leavefrac = f;
-		}
+		trace->startsolid = true;
+		if (fendsolid)
+			trace->allsolid = true;
 	}
 
 	// LordHavoc: we need an epsilon nudge here because for a point trace the
 	// penetrating line segment is normally zero length if this brush was
 	// generated from a polygon (infinitely thin), and could even be slightly
 	// positive or negative due to rounding errors in that case.
-	enterfrac -= (1.0 / 16384.0);
-	if (leavefrac - enterfrac >= 0 && enterfrac > -1)
+	if (enterfrac > -1 && enterfrac < trace->fraction && enterfrac - (1.0f / 1024.0f) <= leavefrac)
 	{
-		VectorCopy(newimpactnormal, impactnormal);
-		enterfrac = bound(0, enterfrac, 1);
-		return enterfrac;
+		trace->fraction = bound(0, enterfrac, 1);
+		VectorCopy(newimpactnormal, trace->plane.normal);
 	}
-	return 1;
 }
 
 static colplaned_t polyd_planes[256 + 2];
 static colbrushd_t polyd_brush;
-double Collision_TraceBrushPolygonDouble(const colbrushd_t *thisbrush_start, const colbrushd_t *thisbrush_end, int numpoints, const double *points, double *impactnormal)
+void Collision_TraceBrushPolygonDouble(trace_t *trace, const colbrushd_t *thisbrush_start, const colbrushd_t *thisbrush_end, int numpoints, const double *points)
 {
 	if (numpoints > 256)
 	{
 		Con_Printf("Polygon with more than 256 points not supported yet (fixme!)\n");
-		return 1;
+		return;
 	}
 	polyd_brush.numpoints = numpoints;
 	polyd_brush.numplanes = numpoints + 2;
 	polyd_brush.points = (colpointd_t *)points;
 	polyd_brush.planes = polyd_planes;
 	Collision_CalcPlanesForPolygonBrushDouble(&polyd_brush);
-	return Collision_TraceBrushBrushDouble(thisbrush_start, thisbrush_end, &polyd_brush, &polyd_brush, impactnormal);
+	Collision_TraceBrushBrushDouble(trace, thisbrush_start, thisbrush_end, &polyd_brush, &polyd_brush);
 }
 
 
@@ -790,15 +767,11 @@ double Collision_TraceBrushPolygonDouble(const colbrushd_t *thisbrush_start, con
 typedef struct colbrushbmodelinfo_s
 {
 	model_t *model;
+	trace_t *trace;
 	const matrix4x4_t *modelmatrixstart;
 	const matrix4x4_t *modelmatrixend;
 	const colbrushf_t *thisbrush_start;
 	const colbrushf_t *thisbrush_end;
-	float impactnormal[3];
-	float tempimpactnormal[3];
-	float fraction;
-	int startsolid;
-	int allsolid;
 }
 colbrushbmodelinfo_t;
 
@@ -810,7 +783,6 @@ void Collision_RecursiveTraceBrushNode(colbrushbmodelinfo_t *info, mnode_t *node
 	{
 		// collide with surfaces marked by this leaf
 		int i, *mark;
-		float result;
 		mleaf_t *leaf = (mleaf_t *)node;
 		msurface_t *surf;
 		for (i = 0, mark = leaf->firstmarksurface;i < leaf->nummarksurfaces;i++, mark++)
@@ -822,22 +794,8 @@ void Collision_RecursiveTraceBrushNode(colbrushbmodelinfo_t *info, mnode_t *node
 				surf->colframe = colframecount;
 				if (surf->flags & SURF_SOLIDCLIP)
 				{
-					result = Collision_TraceBrushPolygonFloat(info->thisbrush_start, info->thisbrush_end, surf->poly_numverts, surf->poly_verts, info->tempimpactnormal, &info->startsolid, &info->allsolid);
-					//result = Collision_TraceBrushPolygonTransformFloat(info->thisbrush_start, info->thisbrush_end, surf->poly_numverts, surf->poly_verts, info->tempimpactnormal, info->modelmatrixstart, info->modelmatrixend, &info->startsolid, &info->allsolid);
-					if (info->fraction > result)
-					{
-						info->fraction = result;
-						// use the surface's plane instead of the actual
-						// collision plane because the actual collision plane
-						// might be to the side (on a seam between polygons)
-						// or something, we want objects to bounce off the
-						// front...
-						//if (surf->flags & SURF_PLANEBACK)
-						//	VectorNegate(surf->plane->normal, info->impactnormal);
-						//else
-						//	VectorCopy(surf->plane->normal, info->impactnormal);
-						VectorCopy(info->tempimpactnormal, info->impactnormal);
-					}
+					Collision_TraceBrushPolygonFloat(info->trace, info->thisbrush_start, info->thisbrush_end, surf->poly_numverts, surf->poly_verts);
+					//Collision_TraceBrushPolygonTransformFloat(info->trace, info->thisbrush_start, info->thisbrush_end, surf->poly_numverts, surf->poly_verts, info->modelmatrixstart, info->modelmatrixend);
 				}
 			}
 		}
@@ -871,46 +829,32 @@ void Collision_RecursiveTraceBrushNode(colbrushbmodelinfo_t *info, mnode_t *node
 	}
 }
 
-float Collision_TraceBrushBModel(const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, model_t *model, float *impactnormal, int *startsolid, int *allsolid)
+void Collision_TraceBrushBModel(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, model_t *model)
 {
 	colbrushbmodelinfo_t info;
 	colframecount++;
+	memset(trace, 0, sizeof(*trace));
+	trace->fraction = 1;
+	info.trace = trace;
 	info.model = model;
 	info.thisbrush_start = thisbrush_start;
 	info.thisbrush_end = thisbrush_end;
-	info.fraction = 1;
-	info.startsolid = false;
-	info.allsolid = false;
 	Collision_RecursiveTraceBrushNode(&info, model->brushq1.nodes + model->brushq1.hulls[0].firstclipnode);
-	if (info.fraction < 1)
-		VectorCopy(info.impactnormal, impactnormal);
-	if (startsolid)
-		*startsolid = info.startsolid;
-	if (allsolid)
-		*allsolid = info.allsolid;
-	return info.fraction;
 }
 
-float Collision_TraceBrushBModelTransform(const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, model_t *model, float *impactnormal, const matrix4x4_t *modelmatrixstart, const matrix4x4_t *modelmatrixend, int *startsolid, int *allsolid)
+void Collision_TraceBrushBModelTransform(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, model_t *model, const matrix4x4_t *modelmatrixstart, const matrix4x4_t *modelmatrixend)
 {
 	colbrushbmodelinfo_t info;
 	colframecount++;
+	memset(trace, 0, sizeof(*trace));
+	trace->fraction = 1;
+	info.trace = trace;
 	info.model = model;
 	info.modelmatrixstart = modelmatrixstart;
 	info.modelmatrixend = modelmatrixend;
 	info.thisbrush_start = thisbrush_start;
 	info.thisbrush_end = thisbrush_end;
-	info.fraction = 1;
-	info.startsolid = false;
-	info.allsolid = false;
-	Collision_RecursiveTraceBrushNode(&info, model->brushq1.nodes);
-	if (info.fraction < 1)
-		VectorCopy(info.impactnormal, impactnormal);
-	if (startsolid)
-		*startsolid = info.startsolid;
-	if (allsolid)
-		*allsolid = info.allsolid;
-	return info.fraction;
+	Collision_RecursiveTraceBrushNode(&info, model->brushq1.nodes + model->brushq1.hulls[0].firstclipnode);
 }
 
 
@@ -988,31 +932,30 @@ void Collision_PolygonClipTrace (trace_t *trace, const void *cent, model_t *cmod
 	if (cmodel && cmodel->type == mod_brush)
 	{
 		// brush model
-		trace->fraction = Collision_TraceBrushBModel(thisbrush_start, thisbrush_end, cmodel, impactnormal, &trace->startsolid, &trace->allsolid);
-		//trace->fraction = Collision_TraceBrushBModelTransform(thisbrush_start, thisbrush_end, cmodel, trace->plane.normal, &cmatrix, &cmatrix, &trace->startsolid, &trace->allsolid);
+		Collision_TraceBrushBModel(trace, thisbrush_start, thisbrush_end, cmodel);
+		//Collision_TraceBrushBModelTransform(trace, thisbrush_start, thisbrush_end, cmodel, &cmatrix, &cmatrix);
 	}
 	else
 	{
 		// bounding box
 		cbrush = Collision_BrushForBox(&identitymatrix, cmins, cmaxs);
-		trace->fraction = Collision_TraceBrushBrushFloat(thisbrush_start, thisbrush_end, cbrush, cbrush, impactnormal, &trace->startsolid, &trace->allsolid);
+		Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, cbrush, cbrush);
 		//cbrush = Collision_BrushForBox(&cmatrix, cmins, cmaxs);
-		//trace->fraction = Collision_TraceBrushBrushFloat(thisbrush_start, thisbrush_end, cbrush, cbrush, trace->plane.normal, &trace->startsolid, &trace->allsolid);
+		//trace->fraction = Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, cbrush, cbrush);
 	}
 
 	if (trace->fraction < 0 || trace->fraction > 1)
 		Con_Printf("fraction out of bounds %f %s:%d\n", trace->fraction, __FILE__, __LINE__);
 
+	VectorBlend(start, end, trace->fraction, trace->endpos);
 	if (trace->fraction < 1)
 	{
 		trace->ent = (void *) cent;
-		VectorBlend(start, end, trace->fraction, trace->endpos);
+		VectorCopy(trace->plane.normal, impactnormal);
 		Matrix4x4_Transform(&cmatrix, impactnormal, trace->plane.normal);
 		VectorNormalize(trace->plane.normal);
 		//Con_Printf("fraction %f normal %f %f %f\n", trace->fraction, trace->plane.normal[0], trace->plane.normal[1], trace->plane.normal[2]);
 	}
-	else
-		VectorCopy(end, trace->endpos);
 }
 
 
