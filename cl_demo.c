@@ -19,7 +19,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "quakedef.h"
-#include "menu.h"
 
 void CL_FinishTimeDemo (void);
 
@@ -43,6 +42,7 @@ CL_NextDemo
 Called to play the next demo in the demo loop
 =====================
 */
+extern void Call_MR_ToggleMenu_f (void);
 void CL_NextDemo (void)
 {
 	char	str[1024];
@@ -59,7 +59,7 @@ void CL_NextDemo (void)
 			cls.demonum = -1;
 			// put up menu instead of staring at console
 			if (key_dest != key_menu)
-				M_ToggleMenu_f();
+				Call_MR_ToggleMenu_f();
 			return;
 		}
 	}
