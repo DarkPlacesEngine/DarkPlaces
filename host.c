@@ -161,6 +161,8 @@ void Host_ServerOptions (void)
 	// general default
 	numplayers = 8;
 
+// COMMANDLINEOPTION: -dedicated [playerlimit] starts a dedicated server (with a command console), default playerlimit is 8
+// COMMANDLINEOPTION: -listen [playerlimit] starts a multiplayer server with graphical client, like singleplayer but other players can connect, default playerlimit is 8
 	if (cl_available)
 	{
 		// client exists, check what mode the user wants
@@ -840,6 +842,7 @@ void Host_Init (void)
 	srand(time(NULL));
 
 	// FIXME: this is evil, but possibly temporary
+// COMMANDLINEOPTION: -developer enables warnings and other notices (RECOMMENDED for mod developers)
 	if (COM_CheckParm("-developer"))
 	{
 		forcedeveloper = true;
@@ -903,6 +906,7 @@ void Host_Init (void)
 		Cbuf_InsertText("exec quake.rc\n");
 
 	// check for special benchmark mode
+// COMMANDLINEOPTION: -benchmark <demoname> runs a timedemo and quits, results of any timedemo can be found in gamedir/benchmark.log (for example id1/benchmark.log)
 	i = COM_CheckParm("-benchmark");
 	if (i && i + 1 < com_argc)
 		Cbuf_InsertText(va("timedemo %s\n", com_argv[i + 1]));

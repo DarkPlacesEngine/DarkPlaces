@@ -828,40 +828,58 @@ static const gamemode_info_t gamemode_info [] =
 {// prog_name		cmdline			gamename				gamedirname	gamescreenshotname
 
 // GAME_NORMAL
+// COMMANDLINEOPTION: -quake runs the game Quake (default)
 { "",				"-quake",		"DarkPlaces-Quake",		"",			"dp" },
 // GAME_HIPNOTIC
+// COMMANDLINEOPTION: -hipnotic runs Quake mission pack 1: The Scourge of Armagon
 { "hipnotic",		"-hipnotic",	"Darkplaces-Hipnotic",	"hipnotic",	"dp" },
 // GAME_ROGUE
+// COMMANDLINEOPTION: -rogue runs Quake mission pack 2: The Dissolution of Eternity
 { "rogue",			"-rogue",		"Darkplaces-Rogue",		"rogue",	"dp" },
 // GAME_NEHAHRA
+// COMMANDLINEOPTION: -nehahra runs The Seal of Nehahra movie and game
 { "nehahra",		"-nehahra",		"DarkPlaces-Nehahra",	"nehahra",	"dp" },
 // GAME_NEXUIZ
+// COMMANDLINEOPTION: -nexuiz runs the multiplayer game Nexuiz
 { "nexuiz",			"-nexuiz",		"Nexuiz",				"data",		"nexuiz" },
 // GAME_TRANSFUSION
+// COMMANDLINEOPTION: -transfusion runs Transfusion (the recreation of Blood in Quake)
 { "transfusion",	"-transfusion",	"Transfusion",			"basetf",	"transfusion" },
 // GAME_GOODVSBAD2
+// COMMANDLINEOPTION: -goodvsbad2 runs the psychadelic RTS FPS game Good Vs Bad 2
 { "gvb2",			"-goodvsbad2",	"GoodVs.Bad2",			"rts",		"gvb2" },
 // GAME_TEU
+// COMMANDLINEOPTION: -teu runs The Evil Unleashed (this option is obsolete as they are not using darkplaces)
 { "teu",			"-teu",			"TheEvilUnleashed",		"baseteu",	"teu" },
 // GAME_BATTLEMECH
+// COMMANDLINEOPTION: -battlemech runs the multiplayer topdown deathmatch game BattleMech 
 { "battlemech",		"-battlemech",	"Battlemech",			"base",		"battlemech" },
 // GAME_ZYMOTIC
+// COMMANDLINEOPTION: -zymotic runs the singleplayer game Zymotic
 { "zymotic",		"-zymotic",		"Zymotic",				"data",		"zymotic" },
 // GAME_FNIGGIUM
+// COMMANDLINEOPTION: -fniggium runs the post apocalyptic melee RPG Fniggium 
 { "fniggium",		"-fniggium",	"Fniggium",				"data",		"fniggium" },
 // GAME_SETHERAL
+// COMMANDLINEOPTION: -setheral runs the multiplayer game Setheral 
 { "setheral",		"-setheral",	"Setheral",				"data",		"setheral" },
 // GAME_SOM
+// COMMANDLINEOPTION: -som runs the multiplayer game Son Of Man 
 { "som",			"-som",			"Son of Man",			"sonofman",	"som" },
 // GAME_TENEBRAE
+// COMMANDLINEOPTION: -tenebrae runs the graphics test mod known as Tenebrae (some features not implemented)
 { "tenebrae",		"-tenebrae",	"DarkPlaces-Tenebrae",	"tenebrae",	"dp" },
 // GAME_NEOTERIC
+// COMMANDLINEOPTION: -neoteric runs the game Neoteric
 { "neoteric",		"-neoteric",	"Neoteric",				"neobase",	"neo" },
 // GAME_OPENQUARTZ
+// COMMANDLINEOPTION: -openquartz runs the game OpenQuartz, a standalone GPL replacement of the quake content
 { "openquartz",		"-openquartz",	"OpenQuartz",			"id1",		"openquartz"},
 // GAME_PRYDON
+// COMMANDLINEOPTION: -prydon runs the topdown point and click action-RPG Prydon Gate
 { "prydon",			"-prydon",		"PrydonGate",			"prydon",	"prydon"},
 // GAME_NETHERWORLD
+// COMMANDLINEOPTION: -netherworld runs the game Netherworld: Dark Masters
 { "netherworld",	"-netherworld",	"Dark Masters",			"netherworld", 	"nw"},
 };
 

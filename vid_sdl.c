@@ -386,6 +386,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 	drivername = "libGL.so.1";
 #endif
 
+// COMMANDLINEOPTION: -gl_driver <drivername> selects a GL driver library, default is libGL.so.1 (Linux/BSD) or opengl32.dll (windows) or /usr/X11R6/lib/libGL.1.dylib (MacOSX), if you don't know what this is for, you don't need it
 	i = COM_CheckParm("-gl_driver");
 	if (i && i < com_argc - 1)
 		drivername = com_argv[i + 1];

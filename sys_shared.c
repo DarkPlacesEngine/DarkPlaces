@@ -123,6 +123,7 @@ void Sys_Shared_EarlyInit(void)
 #endif
 	snprintf (engineversion, sizeof (engineversion), "%s %s %s", gamename, os, buildstring);
 
+// COMMANDLINEOPTION: -nostdout disables text output to the terminal the game was launched from
 	if (COM_CheckParm("-nostdout"))
 		sys_nostdout = 1;
 	else

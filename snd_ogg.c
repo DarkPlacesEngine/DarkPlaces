@@ -298,6 +298,7 @@ qboolean OGG_OpenLibrary (void)
 	if (vf_dll)
 		return true;
 
+// COMMANDLINEOPTION: -novorbis disables ogg vorbis sound support
 	if (COM_CheckParm("-novorbis"))
 		return false;
 

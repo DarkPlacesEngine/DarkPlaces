@@ -327,6 +327,7 @@ void CL_Particles_Init (void)
 {
 	int		i;
 
+// COMMANDLINEOPTION: -particles <number> changes maximum number of particles at once, default 32768
 	i = COM_CheckParm ("-particles");
 
 	if (i && i < com_argc - 1)

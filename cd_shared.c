@@ -351,6 +351,7 @@ int CDAudio_Init (void)
 	if (cls.state == ca_dedicated)
 		return -1;
 
+// COMMANDLINEOPTION: -nocdaudio disables CD audio support
 	if (COM_CheckParm("-nocdaudio") || COM_CheckParm("-safe"))
 		return -1;
 
