@@ -532,11 +532,23 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 		{
 #ifdef WIN32
 			int e = WSAGetLastError();
-			if (e == WSAEWOULDBLOCK || e == WSAECONNREFUSED)
+			if (e == WSAEWOULDBLOCK)
 				return 0;
+			switch (e)
+			{
+				case WSAECONNREFUSED:
+					Con_Printf("Connection refused\n");
+					return 0;
+			}
 #else
-			if (errno == EWOULDBLOCK || errno == ECONNREFUSED)
+			if (errno == EWOULDBLOCK)
 				return 0;
+			switch (errno)
+			{
+				case ECONNREFUSED:
+					Con_Printf("Connection refused\n");
+					return 0;
+			}
 #endif
 		}
 	}
@@ -555,11 +567,23 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 		{
 #ifdef WIN32
 			int e = WSAGetLastError();
-			if (e == WSAEWOULDBLOCK || e == WSAECONNREFUSED)
+			if (e == WSAEWOULDBLOCK)
 				return 0;
+			switch (e)
+			{
+				case WSAECONNREFUSED:
+					Con_Printf("Connection refused\n");
+					return 0;
+			}
 #else
-			if (errno == EWOULDBLOCK || errno == ECONNREFUSED)
+			if (errno == EWOULDBLOCK)
 				return 0;
+			switch (errno)
+			{
+				case ECONNREFUSED:
+					Con_Printf("Connection refused\n");
+					return 0;
+			}
 #endif
 		}
 	}
