@@ -18,6 +18,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
+#ifndef ZONE_H
+#define ZONE_H
 #define POOLNAMESIZE 128
 // give malloc padding so we can't waste most of a page at the end
 #define MEMCLUMPSIZE (65536 - 1536)
@@ -89,18 +91,20 @@ typedef struct mempool_s
 mempool_t;
 
 #define Mem_Alloc(pool,size) _Mem_Alloc(pool, size, __FILE__, __LINE__)
+#define Mem_Free(mem) _Mem_Free(mem, __FILE__, __LINE__)
 #define Mem_CheckSentinels(data) _Mem_CheckSentinels(data, __FILE__, __LINE__)
 #define Mem_CheckSentinelsGlobal() _Mem_CheckSentinelsGlobal(__FILE__, __LINE__)
+#define Mem_AllocPool(name) _Mem_AllocPool(name, __FILE__, __LINE__)
+#define Mem_FreePool(pool) _Mem_FreePool(pool, __FILE__, __LINE__)
+#define Mem_EmptyPool(pool) _Mem_EmptyPool(pool, __FILE__, __LINE__)
 
 void *_Mem_Alloc(mempool_t *pool, int size, char *filename, int fileline);
-void Mem_Free(void *data);
-mempool_t *Mem_AllocPool(char *name);
-void Mem_FreePool(mempool_t **pool);
-void Mem_EmptyPool(mempool_t *pool);
+void _Mem_Free(void *data, char *filename, int fileline);
+mempool_t *_Mem_AllocPool(char *name, char *filename, int fileline);
+void _Mem_FreePool(mempool_t **pool, char *filename, int fileline);
+void _Mem_EmptyPool(mempool_t *pool, char *filename, int fileline);
 void _Mem_CheckSentinels(void *data, char *filename, int fileline);
 void _Mem_CheckSentinelsGlobal(char *filename, int fileline);
-void Mem_PrintStats(void);
-void Mem_PrintList(void);
 
 // used for temporary allocations
 mempool_t *tempmempool;
@@ -111,3 +115,4 @@ void Memory_Init_Commands (void);
 extern mempool_t *zonemempool;
 #define Z_Malloc(size) Mem_Alloc(zonemempool,size)
 #define Z_Free(data) Mem_Free(data)
+#endif

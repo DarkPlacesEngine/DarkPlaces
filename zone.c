@@ -31,7 +31,7 @@ void *_Mem_Alloc(mempool_t *pool, int size, char *filename, int fileline)
 	if (size <= 0)
 		return NULL;
 	if (pool == NULL)
-		Host_Error("Mem_Alloc: pool == NULL");
+		Sys_Error("Mem_Alloc: pool == NULL (alloc at %s:%i)", filename, fileline);
 	pool->totalsize += size;
 	if (size < 4096)
 	{
@@ -42,9 +42,9 @@ void *_Mem_Alloc(mempool_t *pool, int size, char *filename, int fileline)
 		{
 			clump = *clumpchainpointer;
 			if (clump->sentinel1 != MEMCLUMP_SENTINEL)
-				Sys_Error("Mem_Alloc: trashed clump sentinel 1\n");
+				Sys_Error("Mem_Alloc: trashed clump sentinel 1 (alloc at %s:%d)", filename, fileline);
 			if (clump->sentinel2 != MEMCLUMP_SENTINEL)
-				Sys_Error("Mem_Alloc: trashed clump sentinel 2\n");
+				Sys_Error("Mem_Alloc: trashed clump sentinel 2 (alloc at %s:%d)", filename, fileline);
 			if (clump->largestavailable >= needed)
 			{
 				largest = 0;
@@ -70,7 +70,7 @@ void *_Mem_Alloc(mempool_t *pool, int size, char *filename, int fileline)
 		pool->realsize += sizeof(memclump_t);
 		clump = malloc(sizeof(memclump_t));
 		if (clump == NULL)
-			Host_Error("Mem_Alloc: out of memory");
+			Sys_Error("Mem_Alloc: out of memory (alloc at %s:%i)", filename, fileline);
 		memset(clump, 0, sizeof(memclump_t));
 		*clumpchainpointer = clump;
 		clump->sentinel1 = MEMCLUMP_SENTINEL;
@@ -92,7 +92,7 @@ choseclump:
 		pool->realsize += sizeof(memheader_t) + size + sizeof(int);
 		mem = malloc(sizeof(memheader_t) + size + sizeof(int));
 		if (mem == NULL)
-			Host_Error("Mem_Alloc: out of memory");
+			Sys_Error("Mem_Alloc: out of memory (alloc at %s:%i)", filename, fileline);
 		mem->clump = NULL;
 	}
 	mem->filename = filename;
@@ -108,21 +108,21 @@ choseclump:
 	return (void *)((long) mem + sizeof(memheader_t));
 }
 
-void Mem_Free(void *data)
+void _Mem_Free(void *data, char *filename, int fileline)
 {
 	int i, firstblock, endblock;
 	memclump_t *clump, **clumpchainpointer;
 	memheader_t *mem, **memchainpointer;
 	mempool_t *pool;
 	if (data == NULL)
-		Host_Error("Mem_Free: data == NULL");
+		Sys_Error("Mem_Free: data == NULL (called at %s:%i)", filename, fileline);
 
 
 	mem = (memheader_t *)((long) data - sizeof(memheader_t));
 	if (mem->sentinel1 != MEMHEADER_SENTINEL)
-		Sys_Error("Mem_Free: trashed header sentinel 1 (block allocated in %s:%i)\n", mem->filename, mem->fileline);
+		Sys_Error("Mem_Free: trashed header sentinel 1 (alloc at %s:%i, free at %s:%i)", mem->filename, mem->fileline, filename, fileline);
 	if (*((int *)((long) mem + sizeof(memheader_t) + mem->size)) != MEMHEADER_SENTINEL)
-		Sys_Error("Mem_Free: trashed header sentinel 2 (block allocated in %s:%i)\n", mem->filename, mem->fileline);
+		Sys_Error("Mem_Free: trashed header sentinel 2 (alloc at %s:%i, free at %s:%i)", mem->filename, mem->fileline, filename, fileline);
 	pool = mem->pool;
 	for (memchainpointer = &pool->chain;*memchainpointer;memchainpointer = &(*memchainpointer)->chain)
 	{
@@ -133,12 +133,12 @@ void Mem_Free(void *data)
 			if ((clump = mem->clump))
 			{
 				if (clump->sentinel1 != MEMCLUMP_SENTINEL)
-					Sys_Error("Mem_Alloc: trashed clump sentinel 1\n");
+					Sys_Error("Mem_Free: trashed clump sentinel 1 (free at %s:%i)", filename, fileline);
 				if (clump->sentinel2 != MEMCLUMP_SENTINEL)
-					Sys_Error("Mem_Alloc: trashed clump sentinel 2\n");
+					Sys_Error("Mem_Free: trashed clump sentinel 2 (free at %s:%i)", filename, fileline);
 				firstblock = ((long) mem - (long) clump->block);
 				if (firstblock & (MEMUNIT - 1))
-					Host_Error("Mem_Free: address not valid in clump\n");
+					Sys_Error("Mem_Free: address not valid in clump (free at %s:%i)", filename, fileline);
 				firstblock /= MEMUNIT;
 				endblock = firstblock + ((sizeof(memheader_t) + mem->size + sizeof(int) + (MEMUNIT - 1)) / MEMUNIT);
 				clump->blocksinuse -= endblock - firstblock;
@@ -176,16 +176,16 @@ void Mem_Free(void *data)
 			return;
 		}
 	}
-	Host_Error("Mem_Free: not allocated\n");
+	Sys_Error("Mem_Free: not allocated (free at %s:%i)", filename, fileline);
 }
 
-mempool_t *Mem_AllocPool(char *name)
+mempool_t *_Mem_AllocPool(char *name, char *filename, int fileline)
 {
 //	int i;
 	mempool_t *pool;
 	pool = malloc(sizeof(mempool_t));
 	if (pool == NULL)
-		Host_Error("Mem_AllocPool: out of memory");
+		Sys_Error("Mem_AllocPool: out of memory (allocpool at %s:%i)", filename, fileline);
 	memset(pool, 0, sizeof(mempool_t));
 	pool->chain = NULL;
 	pool->totalsize = 0;
@@ -200,7 +200,7 @@ mempool_t *Mem_AllocPool(char *name)
 	return pool;
 }
 
-void Mem_FreePool(mempool_t **pool)
+void _Mem_FreePool(mempool_t **pool, char *filename, int fileline)
 {
 	mempool_t **chainaddress;
 	if (*pool)
@@ -208,7 +208,7 @@ void Mem_FreePool(mempool_t **pool)
 		// unlink pool from chain
 		for (chainaddress = &poolchain;*chainaddress && *chainaddress != *pool;chainaddress = &((*chainaddress)->next));
 		if (*chainaddress != *pool)
-			Host_Error("Mem_FreePool: pool already free");
+			Sys_Error("Mem_FreePool: pool already free (freepool at %s:%i)", filename, fileline);
 		*chainaddress = (*pool)->next;
 
 		// free memory owned by the pool
@@ -222,10 +222,10 @@ void Mem_FreePool(mempool_t **pool)
 	}
 }
 
-void Mem_EmptyPool(mempool_t *pool)
+void _Mem_EmptyPool(mempool_t *pool, char *filename, int fileline)
 {
 	if (pool == NULL)
-		Con_Printf("Mem_EmptyPool: pool == NULL\n");
+		Sys_Error("Mem_EmptyPool: pool == NULL (emptypool at %s:%i)", filename, fileline);
 
 	// free memory owned by the pool
 	while (pool->chain)
@@ -237,22 +237,22 @@ void _Mem_CheckSentinels(void *data, char *filename, int fileline)
 	memheader_t *mem;
 
 	if (data == NULL)
-		Host_Error("Mem_CheckSentinels: data == NULL\n");
+		Sys_Error("Mem_CheckSentinels: data == NULL (sentinel check at %s:%i)", filename, fileline);
 
 	mem = (memheader_t *)((long) data - sizeof(memheader_t));
 	if (mem->sentinel1 != MEMHEADER_SENTINEL)
-		Host_Error("Mem_CheckSentinels: trashed header sentinel 1 (block allocated at %s:%i, sentinel check at %s:%i)\n", mem->filename, mem->fileline, filename, fileline);
+		Sys_Error("Mem_CheckSentinels: trashed header sentinel 1 (block allocated at %s:%i, sentinel check at %s:%i)", mem->filename, mem->fileline, filename, fileline);
 	if (*((int *)((long) mem + sizeof(memheader_t) + mem->size)) != MEMHEADER_SENTINEL)
-		Host_Error("Mem_CheckSentinels: trashed header sentinel 2 (block allocated at %s:%i, sentinel check at %s:%i)\n", mem->filename, mem->fileline, filename, fileline);
+		Sys_Error("Mem_CheckSentinels: trashed header sentinel 2 (block allocated at %s:%i, sentinel check at %s:%i)", mem->filename, mem->fileline, filename, fileline);
 }
 
 static void _Mem_CheckClumpSentinels(memclump_t *clump, char *filename, int fileline)
 {
 	// this isn't really very useful
 	if (clump->sentinel1 != MEMCLUMP_SENTINEL)
-		Host_Error("Mem_CheckClumpSentinels: trashed sentinel 1 (sentinel check at %s:%i)\n", filename, fileline);
+		Sys_Error("Mem_CheckClumpSentinels: trashed sentinel 1 (sentinel check at %s:%i)", filename, fileline);
 	if (clump->sentinel2 != MEMCLUMP_SENTINEL)
-		Host_Error("Mem_CheckClumpSentinels: trashed sentinel 2 (sentinel check at %s:%i)\n", filename, fileline);
+		Sys_Error("Mem_CheckClumpSentinels: trashed sentinel 2 (sentinel check at %s:%i)", filename, fileline);
 }
 
 void _Mem_CheckSentinelsGlobal(char *filename, int fileline)
@@ -269,7 +269,9 @@ void _Mem_CheckSentinelsGlobal(char *filename, int fileline)
 	}
 }
 
-// used for temporary memory allocations around the engine, not for longterm storage
+// used for temporary memory allocations around the engine, not for longterm
+// storage, if anything in this pool stays allocated during gameplay, it is
+// considered a leak
 mempool_t *tempmempool;
 // only for zone
 mempool_t *zonemempool;
@@ -278,6 +280,8 @@ void Mem_PrintStats(void)
 {
 	int count = 0, size = 0;
 	mempool_t *pool;
+	memheader_t *mem;
+	Mem_CheckSentinelsGlobal();
 	for (pool = poolchain;pool;pool = pool->next)
 	{
 		count++;
@@ -287,12 +291,19 @@ void Mem_PrintStats(void)
 	if (tempmempool == NULL)
 		Con_Printf("Error: no tempmempool allocated\n");
 	else if (tempmempool->chain)
+	{
 		Con_Printf("%i bytes (%.3fMB) of temporary memory still allocated (Leak!)\n", tempmempool->totalsize, tempmempool->totalsize / 1048576.0);
+		Con_Printf("listing temporary memory allocations:\n");
+		for (mem = tempmempool->chain;mem;mem = mem->chain)
+			Con_Printf("%10i bytes allocated at %s:%i\n", mem->size, mem->filename, mem->fileline);
+	}
 }
 
-void Mem_PrintList_f(void)
+void Mem_PrintList(int listallocations)
 {
 	mempool_t *pool;
+	memheader_t *mem;
+	Mem_CheckSentinelsGlobal();
 	Con_Printf("memory pool list:\n"
 	           "size    name\n");
 	for (pool = poolchain;pool;pool = pool->next)
@@ -302,13 +313,38 @@ void Mem_PrintList_f(void)
 		else
 			Con_Printf("%6ik (%6ik actual) %s\n", (pool->totalsize + 1023) / 1024, (pool->realsize + 1023) / 1024, pool->name);
 		pool->lastchecksize = pool->totalsize;
+		if (listallocations)
+			for (mem = pool->chain;mem;mem = mem->chain)
+				Con_Printf("%10i bytes allocated at %s:%i\n", mem->size, mem->filename, mem->fileline);
 	}
-	Mem_PrintStats();
+}
+
+void MemList_f(void)
+{
+	switch(Cmd_Argc())
+	{
+	case 1:
+		Mem_PrintList(false);
+		Mem_PrintStats();
+		break;
+	case 2:
+		if (!strcmp(Cmd_Argv(1), "all"))
+		{
+			Mem_PrintList(true);
+			Mem_PrintStats();
+			break;
+		}
+		// drop through
+	default:
+		Con_Printf("MemList_f: unrecognized options\nusage: memlist [all]\n");
+		break;
+	}
 }
 
 extern void R_TextureStats_PrintTotal(void);
-void Memstats_f(void)
+void MemStats_f(void)
 {
+	Mem_CheckSentinelsGlobal();
 	R_TextureStats_PrintTotal();
 	Mem_PrintStats();
 }
@@ -327,7 +363,7 @@ void Memory_Init (void)
 
 void Memory_Init_Commands (void)
 {
-	Cmd_AddCommand ("memstats", Memstats_f);
-	Cmd_AddCommand ("memlist", Mem_PrintList_f);
+	Cmd_AddCommand ("memstats", MemStats_f);
+	Cmd_AddCommand ("memlist", MemList_f);
 }
 
