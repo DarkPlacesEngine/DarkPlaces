@@ -35,15 +35,15 @@ entity_state_t defaultstate =
 	{0,0,0,0}//unsigned char unused[4]; // !
 };
 
-double entityframequake_mtime = 0;
+// keep track of quake entities because they need to be killed if they get stale
+int cl_lastquakeentity = 0;
+qbyte cl_isquakeentity[MAX_EDICTS];
 
 void EntityFrameQuake_ReadEntity(int bits)
 {
 	int num;
 	entity_t *ent;
 	entity_state_t s;
-
-	entityframequake_mtime = cl.mtime[0];
 
 	if (bits & U_MOREBITS)
 		bits |= (MSG_ReadByte()<<8);
@@ -77,6 +77,9 @@ void EntityFrameQuake_ReadEntity(int bits)
 		s.active = true;
 	}
 
+	cl_isquakeentity[num] = true;
+	if (cl_lastquakeentity < num)
+		cl_lastquakeentity = num;
 	s.number = num;
 	s.time = cl.mtime[0];
 	s.flags = 0;
@@ -85,12 +88,12 @@ void EntityFrameQuake_ReadEntity(int bits)
 	if (bits & U_COLORMAP)	s.colormap = MSG_ReadByte();
 	if (bits & U_SKIN)		s.skin = MSG_ReadByte();
 	if (bits & U_EFFECTS)	s.effects = (s.effects & 0xFF00) | MSG_ReadByte();
-	if (bits & U_ORIGIN1)	s.origin[0] = MSG_ReadCoord13i();
-	if (bits & U_ANGLE1)	s.angles[0] = MSG_ReadAngle8i();
-	if (bits & U_ORIGIN2)	s.origin[1] = MSG_ReadCoord13i();
-	if (bits & U_ANGLE2)	s.angles[1] = MSG_ReadAngle8i();
-	if (bits & U_ORIGIN3)	s.origin[2] = MSG_ReadCoord13i();
-	if (bits & U_ANGLE3)	s.angles[2] = MSG_ReadAngle8i();
+	if (bits & U_ORIGIN1)	s.origin[0] = MSG_ReadCoord(cl.protocol);
+	if (bits & U_ANGLE1)	s.angles[0] = MSG_ReadAngle(cl.protocol);
+	if (bits & U_ORIGIN2)	s.origin[1] = MSG_ReadCoord(cl.protocol);
+	if (bits & U_ANGLE2)	s.angles[1] = MSG_ReadAngle(cl.protocol);
+	if (bits & U_ORIGIN3)	s.origin[2] = MSG_ReadCoord(cl.protocol);
+	if (bits & U_ANGLE3)	s.angles[2] = MSG_ReadAngle(cl.protocol);
 	if (bits & U_STEP)		s.flags |= RENDER_STEP;
 	if (bits & U_ALPHA)		s.alpha = MSG_ReadByte();
 	if (bits & U_SCALE)		s.scale = MSG_ReadByte();
@@ -138,14 +141,31 @@ void EntityFrameQuake_ReadEntity(int bits)
 
 void EntityFrameQuake_ISeeDeadEntities(void)
 {
-	int i;
-	for (i = 0;i < cl_max_entities;i++)
+	int num, lastentity;
+	if (cl_lastquakeentity == 0)
+		return;
+	lastentity = cl_lastquakeentity;
+	cl_lastquakeentity = 0;
+	for (num = 0;num < lastentity;num++)
 	{
-		if (cl_entities_active[i] && cl_entities[i].state_current.time != cl.mtime[0])
+		if (cl_isquakeentity[num])
 		{
-			cl_entities_active[i] = false;
-			cl_entities[i].state_current = defaultstate;
-			cl_entities[i].state_current.number = i;
+			cl_isquakeentity[num] = false;
+			if (cl_entities_active[num])
+			{
+				if (cl_entities[num].state_current.time == cl.mtime[0])
+				{
+					cl_isquakeentity[num] = true;
+					cl_lastquakeentity = num;
+				}
+				else
+				{
+					cl_isquakeentity[num] = false;
+					cl_entities_active[num] = false;
+					cl_entities[num].state_current = defaultstate;
+					cl_entities[num].state_current.number = num;
+				}
+			}
 		}
 	}
 }
@@ -251,12 +271,12 @@ void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int numstates, const entity_sta
 		if (bits & U_COLORMAP)		MSG_WriteByte(&buf, s->colormap);
 		if (bits & U_SKIN)			MSG_WriteByte(&buf, s->skin);
 		if (bits & U_EFFECTS)		MSG_WriteByte(&buf, s->effects);
-		if (bits & U_ORIGIN1)		MSG_WriteCoord13i(&buf, s->origin[0]);
-		if (bits & U_ANGLE1)		MSG_WriteAngle8i(&buf, s->angles[0]);
-		if (bits & U_ORIGIN2)		MSG_WriteCoord13i(&buf, s->origin[1]);
-		if (bits & U_ANGLE2)		MSG_WriteAngle8i(&buf, s->angles[1]);
-		if (bits & U_ORIGIN3)		MSG_WriteCoord13i(&buf, s->origin[2]);
-		if (bits & U_ANGLE3)		MSG_WriteAngle8i(&buf, s->angles[2]);
+		if (bits & U_ORIGIN1)		MSG_WriteCoord(&buf, s->origin[0], sv.protocol);
+		if (bits & U_ANGLE1)		MSG_WriteAngle(&buf, s->angles[0], sv.protocol);
+		if (bits & U_ORIGIN2)		MSG_WriteCoord(&buf, s->origin[1], sv.protocol);
+		if (bits & U_ANGLE2)		MSG_WriteAngle(&buf, s->angles[1], sv.protocol);
+		if (bits & U_ORIGIN3)		MSG_WriteCoord(&buf, s->origin[2], sv.protocol);
+		if (bits & U_ANGLE3)		MSG_WriteAngle(&buf, s->angles[2], sv.protocol);
 		if (bits & U_ALPHA)			MSG_WriteByte(&buf, s->alpha);
 		if (bits & U_SCALE)			MSG_WriteByte(&buf, s->scale);
 		if (bits & U_EFFECTS2)		MSG_WriteByte(&buf, s->effects >> 8);

@@ -1216,18 +1216,9 @@ void Host_Spawn_f (void)
 	// and it won't happen if the game was just loaded, so you wind up
 	// with a permanent head tilt
 	MSG_WriteByte (&host_client->message, svc_setangle);
-	if (sv.protocol == PROTOCOL_DARKPLACES5)
-	{
-		MSG_WriteAngle16i (&host_client->message, sv_player->v->angles[0]);
-		MSG_WriteAngle16i (&host_client->message, sv_player->v->angles[1]);
-		MSG_WriteAngle16i (&host_client->message, 0);
-	}
-	else
-	{
-		MSG_WriteAngle8i (&host_client->message, sv_player->v->angles[0]);
-		MSG_WriteAngle8i (&host_client->message, sv_player->v->angles[1]);
-		MSG_WriteAngle8i (&host_client->message, 0);
-	}
+	MSG_WriteAngle (&host_client->message, sv_player->v->angles[0], sv.protocol);
+	MSG_WriteAngle (&host_client->message, sv_player->v->angles[1], sv.protocol);
+	MSG_WriteAngle (&host_client->message, 0, sv.protocol);
 
 	SV_WriteClientdataToMessage (sv_player, &host_client->message);
 

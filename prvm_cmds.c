@@ -1356,7 +1356,7 @@ void VM_WriteLong (void)
 
 void VM_WriteAngle (void)
 {
-	MSG_WriteAngle16i (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0));
+	MSG_WriteAngle (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0), sv.protocol);
 }
 
 void VM_WriteCoord (void)

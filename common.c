@@ -252,6 +252,13 @@ void MSG_WriteAngle32f (sizebuf_t *sb, float f)
 	MSG_WriteFloat (sb, f);
 }
 
+void MSG_WriteAngle (sizebuf_t *sb, float f, int protocol)
+{
+	if (protocol == PROTOCOL_DARKPLACES5)
+		MSG_WriteAngle16i (sb, f);
+	else
+		MSG_WriteAngle8i (sb, f);
+}
 
 //
 // reading functions
@@ -403,12 +410,20 @@ float MSG_ReadAngle8i (void)
 
 float MSG_ReadAngle16i (void)
 {
-	return MSG_ReadShort () * (360.0/65536.0);
+	return (unsigned short)MSG_ReadShort () * (360.0/65536.0);
 }
 
 float MSG_ReadAngle32f (void)
 {
 	return MSG_ReadFloat ();
+}
+
+float MSG_ReadAngle (int protocol)
+{
+	if (protocol == PROTOCOL_DARKPLACES5)
+		return MSG_ReadAngle16i ();
+	else
+		return MSG_ReadAngle8i ();
 }
 
 
@@ -504,7 +519,7 @@ void Com_HexDumpToConsole(const qbyte *data, int size)
 				*cur++ = ' ';
 				*cur++ = ' ';
 			}
-			if ((j & 3) == 0)
+			if ((j & 3) == 3)
 				*cur++ = ' ';
 		}
 		// print text
