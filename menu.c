@@ -1340,12 +1340,12 @@ extern cvar_t r_dlightmap;
 extern cvar_t r_modellights;
 extern cvar_t r_coronas;
 extern cvar_t gl_flashblend;
+extern cvar_t cl_particles_quality;
 extern cvar_t cl_particles_bulletimpacts;
 extern cvar_t cl_particles_smoke;
 extern cvar_t cl_particles_sparks;
 extern cvar_t cl_particles_bubbles;
 extern cvar_t cl_particles_blood;
-extern cvar_t cl_particles_blood_size;
 extern cvar_t cl_particles_blood_alpha;
 
 void M_Menu_Options_Effects_AdjustSliders (int dir)
@@ -1364,6 +1364,8 @@ void M_Menu_Options_Effects_AdjustSliders (int dir)
 		Cvar_SetValueQuick (&gl_flashblend, !gl_flashblend.integer);
 	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&cl_particles, !cl_particles.integer);
+	else if (options_effects_cursor == optnum++)
+		Cvar_SetValueQuick (&cl_particles_quality, bound(1, cl_particles_quality.value + dir * 0.5, 4));
 	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&cl_explosions, !cl_explosions.integer);
 	else if (options_effects_cursor == optnum++)
@@ -1384,8 +1386,6 @@ void M_Menu_Options_Effects_AdjustSliders (int dir)
 		Cvar_SetValueQuick (&cl_particles_bubbles, !cl_particles_bubbles.integer);
 	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&cl_particles_blood, !cl_particles_blood.integer);
-	else if (options_effects_cursor == optnum++)
-		Cvar_SetValueQuick (&cl_particles_blood_size, bound(2, cl_particles_blood_size.value + dir * 1, 20));
 	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&cl_particles_blood_alpha, bound(0.2, cl_particles_blood_alpha.value + dir * 0.1, 1));
 	else if (options_effects_cursor == optnum++)
@@ -1413,6 +1413,7 @@ void M_Options_Effects_Draw (void)
 	M_Print(16, y, "               Coronas");M_DrawCheckbox(220, y, r_coronas.integer);y += 8;
 	M_Print(16, y, "      Use Only Coronas");M_DrawCheckbox(220, y, gl_flashblend.integer);y += 8;
 	M_Print(16, y, "             Particles");M_DrawCheckbox(220, y, cl_particles.integer);y += 8;
+	M_Print(16, y, "     Particles Quality");M_DrawSlider(220, y, cl_particles_quality.value, 1, 4);y += 8;
 	M_Print(16, y, "            Explosions");M_DrawCheckbox(220, y, cl_explosions.integer);y += 8;
 	M_Print(16, y, "    Explosion Clipping");M_DrawCheckbox(220, y, r_explosionclip.integer);y += 8;
 	M_Print(16, y, "             Stainmaps");M_DrawCheckbox(220, y, cl_stainmaps.integer);y += 8;
@@ -1423,7 +1424,6 @@ void M_Options_Effects_Draw (void)
 	M_Print(16, y, "                Sparks");M_DrawCheckbox(220, y, cl_particles_sparks.integer);y += 8;
 	M_Print(16, y, "               Bubbles");M_DrawCheckbox(220, y, cl_particles_bubbles.integer);y += 8;
 	M_Print(16, y, "                 Blood");M_DrawCheckbox(220, y, cl_particles_blood.integer);y += 8;
-	M_Print(16, y, "            Blood Size");M_DrawSlider(220, y, cl_particles_blood_size.value, 2, 20);y += 8;
 	M_Print(16, y, "         Blood Opacity");M_DrawSlider(220, y, cl_particles_blood_alpha.value, 0.2, 1);y += 8;
 	M_Print(16, y, "   Model Interpolation");M_DrawCheckbox(220, y, r_lerpmodels.integer);y += 8;
 	M_Print(16, y, "  Sprite Interpolation");M_DrawCheckbox(220, y, r_lerpsprites.integer);y += 8;
