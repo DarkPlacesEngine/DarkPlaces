@@ -1363,6 +1363,15 @@ void SCR_UpdateScreen (void)
 	if (gl_combine.integer && (!gl_combine_extension || r_textureunits.integer < 2))
 		Cvar_SetValueQuick(&gl_combine, 0);
 
+	// don't allow cheats in multiplayer
+	if (!cl.islocalgame && cl.worldmodel)
+	{
+		if (r_fullbright.integer != 0)
+			Cvar_Set ("r_fullbright", "0");
+		if (r_ambient.value != 0)
+			Cvar_Set ("r_ambient", "0");
+	}
+
 	// bound viewsize
 	if (scr_viewsize.value < 30)
 		Cvar_Set ("viewsize","30");
