@@ -1856,11 +1856,12 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 	fssearch_t *search;
 	searchpath_t *searchpath;
 	pack_t *pak;
-	int i, basepathlength, numfiles, numchars, step;
-	stringlist_t *dir, *dirfile;
+	int i, basepathlength, numfiles, numchars;
+	stringlist_t *dir, *dirfile, *liststart, *listcurrent, *listtemp;
 	const char *slash, *backslash, *colon, *separator;
 	char *basepath;
 	char netpath[MAX_OSPATH];
+	char temp[MAX_OSPATH];
 
 	while(!strncmp(pattern, "./", 2))
 		pattern += 2;
@@ -1868,94 +1869,123 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 		pattern += 2;
 
 	search = NULL;
-	numfiles = 0;
-	numchars = 0;
+	liststart = NULL;
+	listcurrent = NULL;
+	listtemp = NULL;
 	slash = strrchr(pattern, '/');
 	backslash = strrchr(pattern, '\\');
 	colon = strrchr(pattern, ':');
-	separator = slash;
+	separator = pattern;
+	if (separator < slash)
+		separator = slash;
 	if (separator < backslash)
 		separator = backslash;
 	if (separator < colon)
 		separator = colon;
-	if (separator)
-		basepathlength = separator + 1 - pattern;
-	else
-		basepathlength = 0;
+	basepathlength = separator - pattern;
 	basepath = Z_Malloc(basepathlength + 1);
 	if (basepathlength)
 		memcpy(basepath, pattern, basepathlength);
 	basepath[basepathlength] = 0;
 
-	for (step = 0;step < 2;step++)
+	// search through the path, one element at a time
+	for (searchpath = fs_searchpaths;searchpath;searchpath = searchpath->next)
 	{
-		// search through the path, one element at a time
-		for (searchpath = fs_searchpaths;searchpath;searchpath = searchpath->next)
+		// is the element a pak file?
+		if (searchpath->pack)
 		{
-			// is the element a pak file?
-			if (searchpath->pack)
+			// look through all the pak file elements
+			pak = searchpath->pack;
+			for (i = 0;i < pak->numfiles;i++)
 			{
-				// look through all the pak file elements
-				pak = searchpath->pack;
-				for (i = 0;i < pak->numfiles;i++)
+				strcpy(temp, pak->files[i].name);
+				while (temp[0])
 				{
-					if (matchpattern(pak->files[i].name, (char *)pattern, caseinsensitive || pak->ignorecase))
+					if (matchpattern(temp, (char *)pattern, true))
 					{
-						if (search)
+						for (listtemp = liststart;listtemp;listtemp = listtemp->next)
+							if (!strcmp(listtemp->text, temp))
+								break;
+						if (listtemp == NULL)
 						{
-							search->filenames[numfiles] = search->filenamesbuffer + numchars;
-							strcpy(search->filenames[numfiles], pak->files[i].name);
-						}
-						numfiles++;
-						numchars += strlen(pak->files[i].name) + 1;
-						if (!quiet)
-							Sys_Printf("SearchPackFile: %s : %s\n", pak->filename, pak->files[i].name);
-					}
-				}
-			}
-			else
-			{
-				// get a directory listing and look at each name
-				snprintf(netpath, sizeof (netpath), "%s/%s", searchpath->filename, pattern);
-				if ((dir = listdirectory(netpath)))
-				{
-					for (dirfile = dir;dirfile;dirfile = dirfile->next)
-					{
-						if (matchpattern(dirfile->text, (char *)pattern + basepathlength, caseinsensitive))
-						{
-							if (search)
-							{
-								search->filenames[numfiles] = search->filenamesbuffer + numchars;
-								memcpy(search->filenames[numfiles], basepath, basepathlength);
-								strcpy(search->filenames[numfiles] + basepathlength, dirfile->text);
-							}
-							numfiles++;
-							numchars += basepathlength + strlen(dirfile->text) + 1;
+							listcurrent = stringlistappend(listcurrent, temp);
+							if (liststart == NULL)
+								liststart = listcurrent;
 							if (!quiet)
-								Sys_Printf("SearchDirFile: %s\n", dirfile->text);
+								Sys_Printf("SearchPackFile: %s : %s\n", pak->filename, temp);
 						}
 					}
-					freedirectory(dir);
+					// strip off one path element at a time until empty
+					// this way directories are added to the listing if they match the pattern
+					slash = strrchr(temp, '/');
+					backslash = strrchr(temp, '\\');
+					colon = strrchr(temp, ':');
+					separator = temp;
+					if (separator < slash)
+						separator = slash;
+					if (separator < backslash)
+						separator = backslash;
+					if (separator < colon)
+						separator = colon;
+					*((char *)separator) = 0;
 				}
 			}
 		}
-
-		if (step == 0)
+		else
 		{
-			if (!numfiles || !numchars)
+			// get a directory listing and look at each name
+			snprintf(netpath, sizeof (netpath), "%s/%s", searchpath->filename, basepath);
+			if ((dir = listdirectory(netpath)))
 			{
-				Z_Free(basepath);
-				return NULL;
+				for (dirfile = dir;dirfile;dirfile = dirfile->next)
+				{
+					memcpy(temp, basepath, basepathlength);
+					strcpy(temp + basepathlength, dirfile->text);
+					if (matchpattern(temp, (char *)pattern, true))
+					{
+						for (listtemp = liststart;listtemp;listtemp = listtemp->next)
+							if (!strcmp(listtemp->text, temp))
+								break;
+						if (listtemp == NULL)
+						{
+							listcurrent = stringlistappend(listcurrent, temp);
+							if (liststart == NULL)
+								liststart = listcurrent;
+							if (!quiet)
+								Sys_Printf("SearchDirFile: %s\n", temp);
+						}
+					}
+				}
+				freedirectory(dir);
 			}
-			// prepare for second pass (allocate the memory to fill in)
-			search = Z_Malloc(sizeof(fssearch_t) + numchars + numfiles * sizeof(char *));
-			search->filenames = (char **)((char *)search + sizeof(fssearch_t));
-			search->filenamesbuffer = (char *)((char *)search + sizeof(fssearch_t) + numfiles * sizeof(char *));
-			search->numfilenames = numfiles;
-			// these are used for tracking as the buffers are written on the second pass
-			numfiles = 0;
-			numchars = 0;
 		}
+	}
+
+	if (liststart)
+	{
+		liststart = stringlistsort(liststart);
+		numfiles = 0;
+		numchars = 0;
+		for (listtemp = liststart;listtemp;listtemp = listtemp->next)
+		{
+			numfiles++;
+			numchars += strlen(listtemp->text) + 1;
+		}
+		search = Z_Malloc(sizeof(fssearch_t) + numchars + numfiles * sizeof(char *));
+		search->filenames = (char **)((char *)search + sizeof(fssearch_t));
+		search->filenamesbuffer = (char *)((char *)search + sizeof(fssearch_t) + numfiles * sizeof(char *));
+		search->numfilenames = numfiles;
+		numfiles = 0;
+		numchars = 0;
+		for (listtemp = liststart;listtemp;listtemp = listtemp->next)
+		{
+			search->filenames[numfiles] = search->filenamesbuffer + numchars;
+			strcpy(search->filenames[numfiles], listtemp->text);
+			numfiles++;
+			numchars += strlen(listtemp->text) + 1;
+		}
+		if (liststart)
+			stringlistfree(liststart);
 	}
 
 	Z_Free(basepath);
@@ -2044,21 +2074,11 @@ void FS_Dir_f(void)
 		Con_Printf("usage:\ndir [path/pattern]\n");
 		return;
 	}
+	strcpy(pattern, "*");
 	if (Cmd_Argc() == 2)
-	{
 		snprintf(pattern, sizeof(pattern), "%s", Cmd_Argv(1));
-		if (!FS_ListDirectory(pattern, true))
-		{
-			snprintf(pattern, sizeof(pattern), "%s/*", Cmd_Argv(1));
-			if (!FS_ListDirectory(pattern, true))
-				Con_Printf("No files found.\n");
-		}
-	}
-	else
-	{
-		if (!FS_ListDirectory("*", true))
-			Con_Printf("No files found.\n");
-	}
+	if (!FS_ListDirectory(pattern, true))
+		Con_Printf("No files found.\n");
 }
 
 void FS_Ls_f(void)
@@ -2069,16 +2089,9 @@ void FS_Ls_f(void)
 		Con_Printf("usage:\nls [path/pattern]\n");
 		return;
 	}
+	strcpy(pattern, "*");
 	if (Cmd_Argc() == 2)
-	{
 		snprintf(pattern, sizeof(pattern), "%s", Cmd_Argv(1));
-		if (!FS_ListDirectory(pattern, false))
-		{
-			snprintf(pattern, sizeof(pattern), "%s/*", Cmd_Argv(1));
-			FS_ListDirectory(pattern, false);
-		}
-	}
-	else
-		FS_ListDirectory("*", false);
+	FS_ListDirectory(pattern, false);
 }
 
