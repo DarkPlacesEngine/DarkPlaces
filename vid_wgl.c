@@ -234,6 +234,7 @@ static DIDATAFORMAT	df = {
 void IN_StartupJoystick (void);
 void Joy_AdvancedUpdate_f (void);
 void IN_JoyMove (usercmd_t *cmd);
+void IN_StartupMouse (void);
 
 /*
 ================
