@@ -825,7 +825,7 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 					return;
 				}
 				f = furthestplanedist_float(startplane->normal, thisbrush_start->points, thisbrush_start->numpoints);
-				if (fabs(f - startplane->dist) > 0.01f)
+				if (fabs(f - startplane->dist) > 0.125f)
 					Con_Printf("startplane->dist %f != calculated %f (thisbrush_start)\n", startplane->dist, f);
 			}
 			d1 = nearestplanedist_float(startplane->normal, thisbrush_start->points, thisbrush_start->numpoints) - furthestplanedist_float(startplane->normal, thatbrush_start->points, thatbrush_start->numpoints) - collision_startnudge.value;
@@ -844,7 +844,7 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 					return;
 				}
 				f = furthestplanedist_float(startplane->normal, thatbrush_start->points, thatbrush_start->numpoints);
-				if (fabs(f - startplane->dist) > 0.01f)
+				if (fabs(f - startplane->dist) > 0.125f)
 					Con_Printf("startplane->dist %f != calculated %f (thatbrush_start)\n", startplane->dist, f);
 			}
 			d1 = nearestplanedist_float(startplane->normal, thisbrush_start->points, thisbrush_start->numpoints) - startplane->dist - collision_startnudge.value;
@@ -973,7 +973,7 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 			if (thatbrush_start->numpoints)
 			{
 				f = furthestplanedist_float(startplane->normal, thatbrush_start->points, thatbrush_start->numpoints);
-				if (fabs(f - startplane->dist) > 0.01f)
+				if (fabs(f - startplane->dist) > 0.125f)
 					Con_Printf("startplane->dist %f != calculated %f\n", startplane->dist, f);
 			}
 		}
