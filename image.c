@@ -571,11 +571,6 @@ static qbyte *LoadLMPRGBA (const qbyte *f, int matchwidth, int matchheight)
 	return LoadLMP(f, matchwidth, matchheight, false);
 }
 
-qbyte *LoadLMPAs8Bit (const qbyte *f, int matchwidth, int matchheight)
-{
-	return LoadLMP(f, matchwidth, matchheight, true);
-}
-
 
 typedef struct
 {
