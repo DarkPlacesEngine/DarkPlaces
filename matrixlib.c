@@ -431,6 +431,6 @@ void Matrix4x4_OriginFromMatrix (const matrix4x4_t *in, float *out)
 float Matrix4x4_ScaleFromMatrix (const matrix4x4_t *in)
 {
 	// we only support uniform scaling, so assume the first row is enough
-	return sqrt(in->m[0][0] * in->m[0][0] + in->m[0][1] * in->m[0][1] + in->m[0][2] * in->m[0][2]);
+	return (float)sqrt(in->m[0][0] * in->m[0][0] + in->m[0][1] * in->m[0][1] + in->m[0][2] * in->m[0][2]);
 }
 
