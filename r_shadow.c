@@ -2,6 +2,7 @@
 #include "quakedef.h"
 #include "r_shadow.h"
 #include "cl_collision.h"
+#include "portals.h"
 
 extern void R_Shadow_EditLights_Init(void);
 
@@ -39,6 +40,7 @@ cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1"};
 cvar_t r_shadow_bumpscale_bumpmap = {0, "r_shadow_bumpscale_bumpmap", "4"};
 cvar_t r_shadow_bumpscale_basetexture = {0, "r_shadow_bumpscale_basetexture", "0"};
 cvar_t r_shadow_shadownudge = {0, "r_shadow_shadownudge", "1"};
+cvar_t r_shadow_portallight = {0, "r_shadow_portallight", "1"};
 
 int c_rt_lights, c_rt_clears, c_rt_scissored;
 int c_rt_shadowmeshes, c_rt_shadowtris, c_rt_lightmeshes, c_rt_lighttris;
@@ -103,6 +105,7 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_bumpscale_bumpmap);
 	Cvar_RegisterVariable(&r_shadow_bumpscale_basetexture);
 	Cvar_RegisterVariable(&r_shadow_shadownudge);
+	Cvar_RegisterVariable(&r_shadow_portallight);
 	R_Shadow_EditLights_Init();
 	R_RegisterModule("R_Shadow", r_shadow_start, r_shadow_shutdown, r_shadow_newmap);
 }
@@ -1051,7 +1054,7 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 	e->style = style;
 	if (e->style < 0 || e->style >= MAX_LIGHTSTYLES)
 	{
-		Con_Printf("R_Shadow_NewWorldLight: invalid light style number %i, must be > = 0 and < %i\n", e->style, MAX_LIGHTSTYLES);
+		Con_Printf("R_Shadow_NewWorldLight: invalid light style number %i, must be >= 0 and < %i\n", e->style, MAX_LIGHTSTYLES);
 		e->style = 0;
 	}
 	e->castshadows = castshadow;
@@ -1075,38 +1078,82 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 	if (cl.worldmodel)
 	{
 		castshadowcount++;
-		leaf = Mod_PointInLeaf(origin, cl.worldmodel);
-		pvs = Mod_LeafPVS(leaf, cl.worldmodel);
-		for (i = 0, leaf = cl.worldmodel->leafs + 1;i < cl.worldmodel->numleafs;i++, leaf++)
+		if (r_shadow_portallight.integer)
 		{
-			if (pvs[i >> 3] & (1 << (i & 7)))
+			qbyte *byteleafpvs;
+			qbyte *bytesurfacepvs;
+			byteleafpvs = Mem_Alloc(tempmempool, cl.worldmodel->numleafs + 1);
+			bytesurfacepvs = Mem_Alloc(tempmempool, cl.worldmodel->numsurfaces);
+			Portal_Visibility(cl.worldmodel, e->origin, byteleafpvs, bytesurfacepvs, NULL, 0, true, e->lightradius);
+
+			for (i = 0, leaf = cl.worldmodel->leafs + 1;i < cl.worldmodel->numleafs;i++, leaf++)
 			{
-				VectorCopy(origin, temp);
-				if (temp[0] < leaf->mins[0]) temp[0] = leaf->mins[0];
-				if (temp[0] > leaf->maxs[0]) temp[0] = leaf->maxs[0];
-				if (temp[1] < leaf->mins[1]) temp[1] = leaf->mins[1];
-				if (temp[1] > leaf->maxs[1]) temp[1] = leaf->maxs[1];
-				if (temp[2] < leaf->mins[2]) temp[2] = leaf->mins[2];
-				if (temp[2] > leaf->maxs[2]) temp[2] = leaf->maxs[2];
-				VectorSubtract(temp, origin, temp);
-				if (DotProduct(temp, temp) < e->lightradius * e->lightradius)
+				if (byteleafpvs[i+1])
 				{
-					leaf->worldnodeframe = castshadowcount;
-					for (j = 0, mark = leaf->firstmarksurface;j < leaf->nummarksurfaces;j++, mark++)
+					temp[0] = bound(leaf->mins[0], e->origin[0], leaf->maxs[0]) - e->origin[0];
+					temp[1] = bound(leaf->mins[1], e->origin[1], leaf->maxs[1]) - e->origin[1];
+					temp[2] = bound(leaf->mins[2], e->origin[2], leaf->maxs[2]) - e->origin[2];
+					if (DotProduct(temp, temp) < e->lightradius * e->lightradius)
+						leaf->worldnodeframe = castshadowcount;
+				}
+			}
+
+			for (i = 0, surf = cl.worldmodel->surfaces;i < cl.worldmodel->numsurfaces;i++, surf++)
+			{
+				if (bytesurfacepvs[i])
+				{
+					f = DotProduct(e->origin, surf->plane->normal) - surf->plane->dist;
+					if (surf->flags & SURF_PLANEBACK)
+						f = -f;
+					if (f > 0 && f < e->lightradius)
 					{
-						surf = cl.worldmodel->surfaces + *mark;
-						if (surf->castshadow != castshadowcount)
+						temp[0] = bound(surf->poly_mins[0], e->origin[0], surf->poly_maxs[0]) - e->origin[0];
+						temp[1] = bound(surf->poly_mins[1], e->origin[1], surf->poly_maxs[1]) - e->origin[1];
+						temp[2] = bound(surf->poly_mins[2], e->origin[2], surf->poly_maxs[2]) - e->origin[2];
+						if (DotProduct(temp, temp) < e->lightradius * e->lightradius)
+							surf->castshadow = castshadowcount;
+					}
+				}
+			}
+
+			Mem_Free(byteleafpvs);
+			Mem_Free(bytesurfacepvs);
+		}
+		else
+		{
+			leaf = Mod_PointInLeaf(origin, cl.worldmodel);
+			pvs = Mod_LeafPVS(leaf, cl.worldmodel);
+			for (i = 0, leaf = cl.worldmodel->leafs + 1;i < cl.worldmodel->numleafs;i++, leaf++)
+			{
+				if (pvs[i >> 3] & (1 << (i & 7)))
+				{
+					VectorCopy(origin, temp);
+					if (temp[0] < leaf->mins[0]) temp[0] = leaf->mins[0];
+					if (temp[0] > leaf->maxs[0]) temp[0] = leaf->maxs[0];
+					if (temp[1] < leaf->mins[1]) temp[1] = leaf->mins[1];
+					if (temp[1] > leaf->maxs[1]) temp[1] = leaf->maxs[1];
+					if (temp[2] < leaf->mins[2]) temp[2] = leaf->mins[2];
+					if (temp[2] > leaf->maxs[2]) temp[2] = leaf->maxs[2];
+					VectorSubtract(temp, origin, temp);
+					if (DotProduct(temp, temp) < e->lightradius * e->lightradius)
+					{
+						leaf->worldnodeframe = castshadowcount;
+						for (j = 0, mark = leaf->firstmarksurface;j < leaf->nummarksurfaces;j++, mark++)
 						{
-							f = DotProduct(e->origin, surf->plane->normal) - surf->plane->dist;
-							if (surf->flags & SURF_PLANEBACK)
-								f = -f;
-							if (f > 0 && f < e->lightradius)
+							surf = cl.worldmodel->surfaces + *mark;
+							if (surf->castshadow != castshadowcount)
 							{
-								temp[0] = bound(surf->poly_mins[0], e->origin[0], surf->poly_maxs[0]) - e->origin[0];
-								temp[1] = bound(surf->poly_mins[1], e->origin[1], surf->poly_maxs[1]) - e->origin[1];
-								temp[2] = bound(surf->poly_mins[2], e->origin[2], surf->poly_maxs[2]) - e->origin[2];
-								if (DotProduct(temp, temp) < e->lightradius * e->lightradius)
-									surf->castshadow = castshadowcount;
+								f = DotProduct(e->origin, surf->plane->normal) - surf->plane->dist;
+								if (surf->flags & SURF_PLANEBACK)
+									f = -f;
+								if (f > 0 && f < e->lightradius)
+								{
+									temp[0] = bound(surf->poly_mins[0], e->origin[0], surf->poly_maxs[0]) - e->origin[0];
+									temp[1] = bound(surf->poly_mins[1], e->origin[1], surf->poly_maxs[1]) - e->origin[1];
+									temp[2] = bound(surf->poly_mins[2], e->origin[2], surf->poly_maxs[2]) - e->origin[2];
+									if (DotProduct(temp, temp) < e->lightradius * e->lightradius)
+										surf->castshadow = castshadowcount;
+								}
 							}
 						}
 					}

@@ -192,8 +192,6 @@ extern char *buildstring;
 
 #include "ui.h"
 
-#include "portals.h"
-
 extern qboolean noclip_anglehack;
 
 //
