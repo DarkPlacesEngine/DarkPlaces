@@ -2739,6 +2739,59 @@ static void Mod_BuildSurfaceNeighbors (msurface_t *surfaces, int numsurfaces, me
 #endif
 }
 
+void Mod_BuildLightmapUpdateChains(mempool_t *mempool, model_t *model)
+{
+	int i, j, stylecounts[256], totalcount, remapstyles[256];
+	msurface_t *surf;
+	memset(stylecounts, 0, sizeof(stylecounts));
+	for (i = 0;i < model->nummodelsurfaces;i++)
+	{
+		surf = model->surfaces + model->firstmodelsurface + i;
+		for (j = 0;j < MAXLIGHTMAPS;j++)
+			stylecounts[surf->styles[j]]++;
+	}
+	totalcount = 0;
+	model->light_styles = 0;
+	for (i = 0;i < 255;i++)
+	{
+		if (stylecounts[i])
+		{
+			remapstyles[i] = model->light_styles++;
+			totalcount += stylecounts[i] + 1;
+		}
+	}
+	if (!totalcount)
+		return;
+	model->light_style = Mem_Alloc(mempool, model->light_styles * sizeof(qbyte));
+	model->light_stylevalue = Mem_Alloc(mempool, model->light_styles * sizeof(int));
+	model->light_styleupdatechains = Mem_Alloc(mempool, model->light_styles * sizeof(msurface_t **));
+	model->light_styleupdatechainsbuffer = Mem_Alloc(mempool, totalcount * sizeof(msurface_t *));
+	model->light_styles = 0;
+	for (i = 0;i < 255;i++)
+		if (stylecounts[i])
+			model->light_style[model->light_styles++] = i;
+	j = 0;
+	for (i = 0;i < model->light_styles;i++)
+	{
+		model->light_styleupdatechains[i] = model->light_styleupdatechainsbuffer + j;
+		j += stylecounts[model->light_style[i]] + 1;
+	}
+	for (i = 0;i < model->nummodelsurfaces;i++)
+	{
+		surf = model->surfaces + model->firstmodelsurface + i;
+		for (j = 0;j < MAXLIGHTMAPS;j++)
+			if (surf->styles[j] != 255)
+				*model->light_styleupdatechains[remapstyles[surf->styles[j]]]++ = surf;
+	}
+	j = 0;
+	for (i = 0;i < model->light_styles;i++)
+	{
+		*model->light_styleupdatechains[i] = NULL;
+		model->light_styleupdatechains[i] = model->light_styleupdatechainsbuffer + j;
+		j += stylecounts[model->light_style[i]] + 1;
+	}
+}
+
 void Mod_BuildPVSTextureChains(model_t *model)
 {
 	int i, j;
@@ -2877,6 +2930,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 		mod->pvstexturechainsbuffer = Mem_Alloc(originalloadmodel->mempool, (mod->nummodelsurfaces + mod->numtextures) * sizeof(msurface_t *));
 		mod->pvstexturechainslength = Mem_Alloc(originalloadmodel->mempool, mod->numtextures * sizeof(int));
 		Mod_BuildPVSTextureChains(mod);
+		Mod_BuildLightmapUpdateChains(originalloadmodel->mempool, mod);
 		if (mod->nummodelsurfaces)
 		{
 			// LordHavoc: calculate bmodel bounding box rather than trusting what it says

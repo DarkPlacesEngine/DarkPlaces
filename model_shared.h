@@ -214,6 +214,14 @@ typedef struct model_s
 	msurface_t		**pvstexturechainsbuffer;
 	int				*pvstexturechainslength;
 
+	// lightmap update chains for light styles
+	int				light_styles;
+	qbyte			*light_style;
+	int				*light_stylevalue;
+	msurface_t		***light_styleupdatechains;
+	msurface_t		**light_styleupdatechainsbuffer;
+	int				light_scalebit;
+	float			light_ambient;
 
 	// skin animation info
 	animscene_t		*skinscenes; // [numskins]
