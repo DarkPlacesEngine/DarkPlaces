@@ -172,8 +172,6 @@ cvar_t r_shadow_glossintensity = {0, "r_shadow_glossintensity", "1"};
 cvar_t r_shadow_lightattenuationpower = {0, "r_shadow_lightattenuationpower", "0.5"};
 cvar_t r_shadow_lightattenuationscale = {0, "r_shadow_lightattenuationscale", "1"};
 cvar_t r_shadow_lightintensityscale = {0, "r_shadow_lightintensityscale", "1"};
-cvar_t r_shadow_polygonfactor = {0, "r_shadow_polygonfactor", "0"};
-cvar_t r_shadow_polygonoffset = {0, "r_shadow_polygonoffset", "1"};
 cvar_t r_shadow_portallight = {0, "r_shadow_portallight", "1"};
 cvar_t r_shadow_projectdistance = {0, "r_shadow_projectdistance", "1000000"};
 cvar_t r_shadow_realtime_dlight = {0, "r_shadow_realtime_dlight", "1"};
@@ -183,6 +181,8 @@ cvar_t r_shadow_realtime_world_dlightshadows = {0, "r_shadow_realtime_world_dlig
 cvar_t r_shadow_realtime_world_lightmaps = {0, "r_shadow_realtime_world_lightmaps", "0"};
 cvar_t r_shadow_realtime_world_shadows = {0, "r_shadow_realtime_world_shadows", "1"};
 cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1"};
+cvar_t r_shadow_shadow_polygonfactor = {0, "r_shadow_shadow_polygonfactor", "0"};
+cvar_t r_shadow_shadow_polygonoffset = {0, "r_shadow_shadow_polygonoffset", "1"};
 cvar_t r_shadow_singlepassvolumegeneration = {0, "r_shadow_singlepassvolumegeneration", "1"};
 cvar_t r_shadow_staticworldlights = {0, "r_shadow_staticworldlights", "1"};
 cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1"};
@@ -284,8 +284,6 @@ void R_Shadow_Help_f(void)
 "r_shadow_lightattenuationpower : used to generate attenuation texture\n"
 "r_shadow_lightattenuationscale : used to generate attenuation texture\n"
 "r_shadow_lightintensityscale : scale rendering brightness of all lights\n"
-"r_shadow_polygonfactor : nudge shadow volumes closer/further\n"
-"r_shadow_polygonoffset : nudge shadow volumes closer/further\n"
 "r_shadow_portallight : use portal visibility for static light precomputation\n"
 "r_shadow_projectdistance : shadow volume projection distance\n"
 "r_shadow_realtime_dlight : use high quality dynamic lights in normal mode\n"
@@ -295,6 +293,8 @@ void R_Shadow_Help_f(void)
 "r_shadow_realtime_world_lightmaps : use lightmaps in addition to lights\n"
 "r_shadow_realtime_world_shadows : cast shadows from world lights\n"
 "r_shadow_scissor : use scissor optimization\n"
+"r_shadow_shadow_polygonfactor : nudge shadow volumes closer/further\n"
+"r_shadow_shadow_polygonoffset : nudge shadow volumes closer/further\n"
 "r_shadow_singlepassvolumegeneration : selects shadow volume algorithm\n"
 "r_shadow_texture3d : use 3d attenuation texture (if hardware supports)\n"
 "r_shadow_visiblevolumes : useful for performance testing; bright = slow!\n"
@@ -315,8 +315,6 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_lightattenuationpower);
 	Cvar_RegisterVariable(&r_shadow_lightattenuationscale);
 	Cvar_RegisterVariable(&r_shadow_lightintensityscale);
-	Cvar_RegisterVariable(&r_shadow_polygonfactor);
-	Cvar_RegisterVariable(&r_shadow_polygonoffset);
 	Cvar_RegisterVariable(&r_shadow_portallight);
 	Cvar_RegisterVariable(&r_shadow_projectdistance);
 	Cvar_RegisterVariable(&r_shadow_realtime_dlight);
@@ -326,6 +324,8 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_realtime_world_lightmaps);
 	Cvar_RegisterVariable(&r_shadow_realtime_world_shadows);
 	Cvar_RegisterVariable(&r_shadow_scissor);
+	Cvar_RegisterVariable(&r_shadow_shadow_polygonfactor);
+	Cvar_RegisterVariable(&r_shadow_shadow_polygonoffset);
 	Cvar_RegisterVariable(&r_shadow_singlepassvolumegeneration);
 	Cvar_RegisterVariable(&r_shadow_staticworldlights);
 	Cvar_RegisterVariable(&r_shadow_texture3d);
@@ -806,10 +806,10 @@ void R_Shadow_Stage_ShadowVolumes(void)
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
-	qglPolygonOffset(r_shadow_polygonfactor.value, r_shadow_polygonoffset.value);
-	//if (r_shadow_polygonoffset.value != 0)
+	qglPolygonOffset(r_shadow_shadow_polygonfactor.value, r_shadow_shadow_polygonoffset.value);
+	//if (r_shadow_shadow_polygonoffset.value != 0)
 	//{
-	//	qglPolygonOffset(r_shadow_polygonfactor.value, r_shadow_polygonoffset.value);
+	//	qglPolygonOffset(r_shadow_shadow_polygonfactor.value, r_shadow_shadow_polygonoffset.value);
 	//	qglEnable(GL_POLYGON_OFFSET_FILL);
 	//}
 	//else
