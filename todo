@@ -9,6 +9,7 @@
 -d darkplaces client: add gl_polyblend cvar to control amount of viewblend effect (Andrew A. Gilevsky)
 -d darkplaces client: add r_waterwarp cvar to control amount of viewwarping underwater (Andrew A. Gilevsky)
 -d darkplaces client: lerp lightstyles (Mitchell)
+-d darkplaces client: reset cl.viewzoom on connect (Rick)
 -d darkplaces docs: add de-we to credits page for the great icons (de-we)
 -d darkplaces docs: write a readme (Antti)
 -d darkplaces editlights: add r_editlights_editall command, same as _edit but affects all lights (mashakos) 
@@ -48,7 +49,6 @@
 0 darkplaces client: make cl_beams_relative only affect view-attached beams
 0 darkplaces client: make server queries use a queue to avoid flooding out queries too fast (Willis)
 0 darkplaces client: mini scoreboard (the deathmatch overlay) shows player names multiple times in some cases, fix this!
-0 darkplaces client: reset cl.viewzoom on connect (Rick)
 0 darkplaces client: skybox should not be reset by r_restart (Stribbs)
 0 darkplaces collision: Mod_Q3BSP_TraceBrush_RecursiveBSPNode can be optimized to take a clipflags parameter like R_Q3BSP_RecursiveworldNode (Vic)
 0 darkplaces collision: mod_q3bsp_optimizedtraceline going through brushes? (Vermeulen)
