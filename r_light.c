@@ -151,7 +151,7 @@ void R_DrawCoronas(void)
 	{
 		rd = r_dlight + i;
 		dist = (DotProduct(rd->origin, vpn) - viewdist);
-		if (dist >= 24.0f && CL_TraceLine(rd->origin, r_origin, NULL, NULL, 0, true, NULL) == 1)
+		if (dist >= 24.0f && CL_TraceLine(rd->origin, r_origin, NULL, NULL, true, NULL, SUPERCONTENTS_SOLID) == 1)
 		{
 			cscale = (1.0f / 131072.0f);
 			scale = rd->cullradius * 0.25f;
@@ -315,7 +315,7 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 			{
 				VectorSubtract (p, sl->origin, v);
 				f = ((1.0f / (DotProduct(v, v) * sl->falloff + sl->distbias)) - sl->subtract);
-				if (f > 0 && CL_TraceLine(p, sl->origin, NULL, NULL, 0, false, NULL) == 1)
+				if (f > 0 && CL_TraceLine(p, sl->origin, NULL, NULL, false, NULL, SUPERCONTENTS_SOLID) == 1)
 				{
 					f *= d_lightstylevalue[sl->style] * (1.0f / 65536.0f);
 					VectorMA(ambientcolor, f, sl->light, ambientcolor);
@@ -335,7 +335,7 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 			rd = r_dlight + i;
 			VectorSubtract(p, rd->origin, v);
 			f = DotProduct(v, v);
-			if (f < rd->cullradius2 && CL_TraceLine(p, rd->origin, NULL, NULL, 0, false, NULL) == 1)
+			if (f < rd->cullradius2 && CL_TraceLine(p, rd->origin, NULL, NULL, false, NULL, SUPERCONTENTS_SOLID) == 1)
 			{
 				f = (1.0f / (f + LIGHTOFFSET)) - rd->subtract;
 				VectorMA(ambientcolor, f, rd->light, ambientcolor);
@@ -458,7 +458,7 @@ int R_LightModel(float *ambient4f, float *diffusecolor, float *diffusenormal, co
 			VectorSubtract (v, rd->origin, v);
 			if (DotProduct(v, v) < rd->cullradius2)
 			{
-				if (CL_TraceLine(ent->origin, rd->origin, NULL, NULL, 0, false, NULL) != 1)
+				if (CL_TraceLine(ent->origin, rd->origin, NULL, NULL, false, NULL, SUPERCONTENTS_SOLID) != 1)
 					continue;
 				VectorSubtract (ent->origin, rd->origin, v);
 				f = ((1.0f / (DotProduct(v, v) + LIGHTOFFSET)) - rd->subtract);
@@ -595,7 +595,7 @@ void R_UpdateEntLights(entity_render_t *ent)
 		ent->numentlights = 0;
 		if (cl.worldmodel)
 			for (i = 0, sl = cl.worldmodel->brushq1.lights;i < cl.worldmodel->brushq1.numlights && ent->numentlights < MAXENTLIGHTS;i++, sl++)
-				if (CL_TraceLine(ent->origin, sl->origin, NULL, NULL, 0, false, NULL) == 1)
+				if (CL_TraceLine(ent->origin, sl->origin, NULL, NULL, false, NULL, SUPERCONTENTS_SOLID) == 1)
 					ent->entlights[ent->numentlights++] = i;
 	}
 	ent->entlightsframe = r_framecount;

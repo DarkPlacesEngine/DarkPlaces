@@ -400,6 +400,10 @@ SOURCE=.\wavefile.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\winding.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\world.c
 # End Source File
 # Begin Source File
@@ -657,6 +661,10 @@ SOURCE=.\wad.h
 # Begin Source File
 
 SOURCE=.\wavefile.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\winding.h
 # End Source File
 # Begin Source File
 

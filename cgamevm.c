@@ -196,7 +196,7 @@ float CGVM_TracePhysics(const float *start, const float *end, const float *world
 	middle[2] = (worldmins[2] + worldmaxs[2]) * 0.5f;
 	VectorAdd(start, middle, start2);
 	VectorAdd(end, middle, end2);
-	frac = CL_TraceLine((float *)start2, (float *)end2, impactpos, impactnormal, 0, true, NULL);
+	frac = CL_TraceLine((float *)start2, (float *)end2, impactpos, impactnormal, true, NULL, SUPERCONTENTS_SOLID);
 	VectorSubtract(impactpos, middle, impactpos);
 	*impactentnum = -1;
 	return frac;

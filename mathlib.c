@@ -215,9 +215,7 @@ void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up)
 	right[2] = forward[1];
 
 	d = DotProduct(forward, right);
-	right[0] -= d * forward[0];
-	right[1] -= d * forward[1];
-	right[2] -= d * forward[2];
+	VectorMA(right, -d, forward, right);
 	VectorNormalizeFast(right);
 	CrossProduct(right, forward, up);
 }
@@ -231,9 +229,7 @@ void VectorVectorsDouble(const double *forward, double *right, double *up)
 	right[2] = forward[1];
 
 	d = DotProduct(forward, right);
-	right[0] -= d * forward[0];
-	right[1] -= d * forward[1];
-	right[2] -= d * forward[2];
+	VectorMA(right, -d, forward, right);
 	VectorNormalize(right);
 	CrossProduct(right, forward, up);
 }

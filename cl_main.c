@@ -710,7 +710,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 		if (e->persistent.muzzleflash > 0)
 		{
 			Matrix4x4_Transform(&e->render.matrix, muzzleflashorigin, v2);
-			CL_TraceLine(origin, v2, v, NULL, 0, true, NULL);
+			CL_TraceLine(origin, v2, v, NULL, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY);
 			CL_AllocDlight(NULL, v, e->persistent.muzzleflash, 1, 1, 1, 0, 0);
 			e->persistent.muzzleflash -= cl.frametime * 1000;
 		}

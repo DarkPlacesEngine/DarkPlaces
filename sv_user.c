@@ -103,8 +103,8 @@ void SV_SetIdealPitch (void)
 	sv_player->v->idealpitch = -dir * sv_idealpitchscale.value;
 }
 
-#if 0
-static vec3_t wishdir;
+#if 1
+static vec3_t wishdir, forward, right, up;
 static float wishspeed;
 
 static qboolean onground;

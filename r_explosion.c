@@ -222,7 +222,7 @@ void R_MoveExplosion(explosion_t *e)
 			VectorMA(e->vert[i], frametime, e->vertvel[i], end);
 			if (r_explosionclip.integer)
 			{
-				if (CL_TraceLine(e->vert[i], end, impact, normal, 0, true, NULL) < 1)
+				if (CL_TraceLine(e->vert[i], end, impact, normal, true, NULL, SUPERCONTENTS_SOLID) < 1)
 				{
 					// clip velocity against the wall
 					dot = DotProduct(e->vertvel[i], normal) * -1.125f;

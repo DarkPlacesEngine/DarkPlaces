@@ -29,9 +29,9 @@ typedef struct physentity_s
 physentity_t;
 */
 
-int cl_traceline_endcontents;
+int cl_traceline_startsupercontents;
 
-float CL_TraceLine (const vec3_t start, const vec3_t end, vec3_t impact, vec3_t normal, int contents, int hitbmodels, entity_render_t **hitent)
+float CL_TraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t normal, int hitbmodels, entity_render_t **hitent, int hitsupercontentsmask)
 {
 	float maxfrac;
 	int n;
@@ -45,13 +45,13 @@ float CL_TraceLine (const vec3_t start, const vec3_t end, vec3_t impact, vec3_t 
 		*hitent = NULL;
 	Mod_CheckLoaded(cl.worldmodel);
 	if (cl.worldmodel && cl.worldmodel->brush.TraceBox)
-		cl.worldmodel->brush.TraceBox(cl.worldmodel, &trace, start, start, end, end);
+		cl.worldmodel->brush.TraceBox(cl.worldmodel, &trace, start, start, end, end, hitsupercontentsmask);
 
 	if (impact)
 		VectorLerp(start, trace.fraction, end, impact);
 	if (normal)
 		VectorCopy(trace.plane.normal, normal);
-	cl_traceline_endcontents = trace.endcontents;
+	cl_traceline_startsupercontents = trace.startsupercontents;
 	maxfrac = trace.fraction;
 	if (hitent && trace.fraction < 1)
 		*hitent = &cl_entities[0].render;
@@ -80,11 +80,11 @@ float CL_TraceLine (const vec3_t start, const vec3_t end, vec3_t impact, vec3_t 
 			Matrix4x4_Transform(&imatrix, end, endtransformed);
 
 			if (ent->model && ent->model->brush.TraceBox)
-				ent->model->brush.TraceBox(ent->model, &trace, starttransformed, starttransformed, endtransformed, endtransformed);
+				ent->model->brush.TraceBox(ent->model, &trace, starttransformed, starttransformed, endtransformed, endtransformed, hitsupercontentsmask);
 
 			if (trace.allsolid || trace.startsolid || maxfrac > trace.fraction)
 			{
-				cl_traceline_endcontents = trace.endcontents;
+				cl_traceline_startsupercontents = trace.startsupercontents;
 				if (hitent)
 					*hitent = ent;
 				if (maxfrac > trace.fraction)
@@ -112,10 +112,22 @@ void CL_FindNonSolidLocation(const vec3_t in, vec3_t out, vec_t radius)
 		cl.worldmodel->brush.FindNonSolidLocation(cl.worldmodel, in, out, radius);
 }
 
-int CL_PointContents(const vec3_t p)
+int CL_PointQ1Contents(const vec3_t p)
 {
-	CL_TraceLine (p, p, NULL, NULL, 0, true, NULL);
-	return cl_traceline_endcontents;
+	CL_TraceLine(p, p, NULL, NULL, true, NULL, 0);
+	return Mod_Q1BSP_NativeContentsFromSuperContents(NULL, cl_traceline_startsupercontents);
+	/*
+	// FIXME: check multiple brush models
+	if (cl.worldmodel && cl.worldmodel->brush.PointContentsQ1)
+		return cl.worldmodel->brush.PointContentsQ1(cl.worldmodel, p);
+	return 0;
+	*/
+}
+
+int CL_PointSuperContents(const vec3_t p)
+{
+	CL_TraceLine(p, p, NULL, NULL, true, NULL, 0);
+	return cl_traceline_startsupercontents;
 	/*
 	// FIXME: check multiple brush models
 	if (cl.worldmodel && cl.worldmodel->brush.PointContentsQ1)

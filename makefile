@@ -56,7 +56,7 @@ SHAREDOBJECTS=	cmd.o collision.o common.o crc.o cvar.o \
 		filematch.o host.o host_cmd.o image.o mathlib.o matrixlib.o \
 		model_alias.o model_brush.o model_shared.o model_sprite.o \
 		netconn.o lhnet.o palette.o portals.o protocol.o fs.o \
-		sys_shared.o world.o wad.o zone.o
+		sys_shared.o winding.o world.o wad.o zone.o
 COMMONOBJECTS= $(CLIENTOBJECTS) $(SERVEROBJECTS) $(SHAREDOBJECTS)
 
 # note that builddate.c is very intentionally not compiled to a .o before
