@@ -270,6 +270,38 @@ int *R_Shadow_ResizeShadowElements(int numtris)
 	return shadowelements;
 }
 
+/*
+// readable version of some code found below
+int checkcastshadowfromedge(int t, int i)
+{
+	int *te;
+	float *v[3];
+	if (t >= trianglerange_start && t < trianglerange_end)
+	{
+		if (t < i && !trianglefacinglight[t])
+			return true;
+		else
+			return false;
+	}
+	else
+	{
+		if (t < 0)
+			return true;
+		else
+		{
+			te = inelement3i + t * 3;
+			v[0] = invertex3f + te[0] * 3;
+			v[1] = invertex3f + te[1] * 3;
+			v[2] = invertex3f + te[2] * 3;
+			if (!PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]))))
+				return true;
+			else
+				return false;
+		}
+	}
+}
+*/
+
 int R_Shadow_ConstructShadowVolume(int innumvertices, int trianglerange_start, int trianglerange_end, const int *inelement3i, const int *inneighbor3i, const float *invertex3f, int *outnumvertices, int *outelement3i, float *outvertex3f, const float *relativelightorigin, float projectdistance)
 {
 	int i, j, tris = 0, numfacing = 0, vr[3], t, outvertices = 0;
