@@ -399,7 +399,8 @@ void CL_ParseTEnt (void)
 		pos[0] = MSG_ReadCoord ();
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
-		CL_TeleportSplash (pos);
+		CL_AllocDlight (NULL, pos, 1000, 1.25f, 1.25f, 1.25f, 3000, 99.0f);
+//		CL_TeleportSplash (pos);
 		break;
 
 	case TE_EXPLOSION2:				// color mapped explosion
