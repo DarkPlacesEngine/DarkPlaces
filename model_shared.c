@@ -102,7 +102,6 @@ Mod_Init
 ===============
 */
 static void Mod_Print (void);
-static void Mod_Flush (void);
 void Mod_Init (void)
 {
 	Mod_BrushInit();
@@ -110,7 +109,6 @@ void Mod_Init (void)
 	Mod_SpriteInit();
 
 	Cmd_AddCommand ("modellist", Mod_Print);
-	Cmd_AddCommand ("modelflush", Mod_Flush);
 }
 
 void Mod_RenderInit(void)
@@ -206,6 +204,8 @@ static model_t *Mod_LoadModel (model_t *mod, qboolean crash, qboolean checkdisk,
 	mod->needload = false;
 	mod->used = true;
 	mod->crc = crc;
+	// errors can prevent the corresponding mod->error = false;
+	mod->error = true;
 
 	// all models use memory, so allocate a memory pool
 	mod->mempool = Mem_AllocPool(mod->name);
@@ -222,6 +222,8 @@ static model_t *Mod_LoadModel (model_t *mod, qboolean crash, qboolean checkdisk,
 
 	Mem_Free(buf);
 
+	// no errors occurred
+	mod->error = false;
 	return mod;
 }
 
@@ -248,6 +250,16 @@ Mod_ClearAll
 */
 void Mod_ClearAll (void)
 {
+}
+
+void Mod_ClearErrorModels (void)
+{
+	int i;
+	model_t *mod;
+
+	for (i = 0, mod = mod_known;i < MAX_MOD_KNOWN;i++, mod++)
+		if (mod->error)
+			Mod_FreeModel(mod);
 }
 
 void Mod_ClearUsed(void)
@@ -370,17 +382,6 @@ static void Mod_Print (void)
 	for (i = 0, mod = mod_known;i < MAX_MOD_KNOWN;i++, mod++)
 		if (mod->name[0])
 			Con_Printf ("%4iK %s\n", mod->mempool ? (mod->mempool->totalsize + 1023) / 1024 : 0, mod->name);
-}
-
-static void Mod_Flush (void)
-{
-	int		i;
-
-	Con_Printf ("Unloading models\n");
-	for (i = 0;i < MAX_MOD_KNOWN;i++)
-		if (mod_known[i].name[0])
-			Mod_UnloadModel(&mod_known[i]);
-	Mod_LoadModels();
 }
 
 int Mod_FindTriangleWithEdge(const int *elements, int numtriangles, int start, int end)

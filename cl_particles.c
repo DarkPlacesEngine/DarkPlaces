@@ -163,21 +163,16 @@ ptype_t;
 
 #define PARTICLE_INVALID 0
 #define PARTICLE_BILLBOARD 1
-#define PARTICLE_BEAM 2
+#define PARTICLE_SPARK 2
 #define PARTICLE_ORIENTED_DOUBLESIDED 3
-
-#define P_TEXNUM_FIRSTBIT 0
-#define P_TEXNUM_BITS 6
-#define P_ORIENTATION_FIRSTBIT (P_TEXNUM_FIRSTBIT + P_TEXNUM_BITS)
-#define P_ORIENTATION_BITS 2
-#define P_FLAGS_FIRSTBIT (P_ORIENTATION_FIRSTBIT + P_ORIENTATION_BITS)
-//#define P_DYNLIGHT (1 << (P_FLAGS_FIRSTBIT + 0))
-#define P_ADDITIVE (1 << (P_FLAGS_FIRSTBIT + 1))
+#define PARTICLE_BEAM 4
 
 typedef struct particle_s
 {
 	ptype_t		type;
-	unsigned int	flags; // dynamically lit, orientation, additive blending, texnum
+	int			orientation;
+	int			texnum;
+	int			additive;
 	vec3_t		org;
 	vec3_t		vel;
 	float		die;
@@ -234,12 +229,13 @@ static int particlepalette[256] =
 
 //static int explosparkramp[8] = {0x4b0700, 0x6f0f00, 0x931f07, 0xb7330f, 0xcf632b, 0xe3974f, 0xffe7b5, 0xffffff};
 
-// these must match r_part.c's textures
+// texture numbers in particle font
 static const int tex_smoke[8] = {0, 1, 2, 3, 4, 5, 6, 7};
-//static const int tex_rainsplash[16] = {8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23};
+static const int tex_rainsplash[16] = {8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23};
 static const int tex_particle = 24;
-//static const int tex_rain = 25;
+static const int tex_raindrop = 25;
 static const int tex_bubble = 26;
+static const int tex_beam = 27;
 
 static int			cl_maxparticles;
 static int			cl_numparticles;
@@ -317,35 +313,31 @@ void CL_Particles_Init (void)
 		return;\
 	{\
 		particle_t	*part;\
-		int tempcolor, tempcolor2, cr1, cg1, cb1, cr2, cg2, cb2;\
-		unsigned int partflags;\
-		partflags = ((porientation) << P_ORIENTATION_FIRSTBIT) | ((ptex) << P_TEXNUM_FIRSTBIT);\
-		if (padditive)\
-			partflags |= P_ADDITIVE;\
-		/*if (plight)*/\
-		/*	partflags |= P_DYNLIGHT;*/\
-		tempcolor = (pcolor1);\
-		tempcolor2 = (pcolor2);\
-		cr2 = ((tempcolor2) >> 16) & 0xFF;\
-		cg2 = ((tempcolor2) >> 8) & 0xFF;\
-		cb2 = (tempcolor2) & 0xFF;\
-		if (tempcolor != tempcolor2)\
+		int ptempcolor, ptempcolor2, pcr1, pcg1, pcb1, pcr2, pcg2, pcb2;\
+		ptempcolor = (pcolor1);\
+		ptempcolor2 = (pcolor2);\
+		pcr2 = ((ptempcolor2) >> 16) & 0xFF;\
+		pcg2 = ((ptempcolor2) >> 8) & 0xFF;\
+		pcb2 = (ptempcolor2) & 0xFF;\
+		if (ptempcolor != ptempcolor2)\
 		{\
-			cr1 = ((tempcolor) >> 16) & 0xFF;\
-			cg1 = ((tempcolor) >> 8) & 0xFF;\
-			cb1 = (tempcolor) & 0xFF;\
-			tempcolor = rand() & 0xFF;\
-			cr2 = (((cr2 - cr1) * tempcolor) >> 8) + cr1;\
-			cg2 = (((cg2 - cg1) * tempcolor) >> 8) + cg1;\
-			cb2 = (((cb2 - cb1) * tempcolor) >> 8) + cb1;\
+			pcr1 = ((ptempcolor) >> 16) & 0xFF;\
+			pcg1 = ((ptempcolor) >> 8) & 0xFF;\
+			pcb1 = (ptempcolor) & 0xFF;\
+			ptempcolor = rand() & 0xFF;\
+			pcr2 = (((pcr2 - pcr1) * ptempcolor) >> 8) + pcr1;\
+			pcg2 = (((pcg2 - pcg1) * ptempcolor) >> 8) + pcg1;\
+			pcb2 = (((pcb2 - pcb1) * ptempcolor) >> 8) + pcb1;\
 		}\
 		part = &particles[cl_numparticles++];\
 		part->type = (ptype);\
-		part->color[0] = cr2;\
-		part->color[1] = cg2;\
-		part->color[2] = cb2;\
+		part->color[0] = pcr2;\
+		part->color[1] = pcg2;\
+		part->color[2] = pcb2;\
 		part->color[3] = 0xFF;\
-		part->flags = partflags;\
+		part->orientation = porientation;\
+		part->texnum = ptex;\
+		part->additive = padditive;\
 		part->scalex = (pscalex);\
 		part->scaley = (pscaley);\
 		part->alpha = (palpha);\
@@ -565,7 +557,7 @@ void CL_ParticleExplosion (vec3_t org)
 			for (i = 0;i < 256;i++)
 			{
 				k = particlepalette[0x68 + (rand() & 7)];
-				particle(pt_static, PARTICLE_BEAM, k, k, tex_particle, false, true, 1.5f, 0.05f, lhrandom(0, 255), 512, 9999, 1, 0, org[0], org[1], org[2], lhrandom(-192, 192), lhrandom(-192, 192), lhrandom(-192, 192) + 160, 0, 0, 0, 0, 0, 0);
+				particle(pt_static, PARTICLE_SPARK, k, k, tex_particle, false, true, 1.5f, 0.05f, lhrandom(0, 255), 512, 9999, 1, 0, org[0], org[1], org[2], lhrandom(-192, 192), lhrandom(-192, 192), lhrandom(-192, 192) + 160, 0, 0, 0, 0, 0, 0);
 			}
 		}
 	}
@@ -662,7 +654,7 @@ void CL_SparkShower (vec3_t org, vec3_t dir, int count)
 			while(count--)
 			{
 				k = particlepalette[0x68 + (rand() & 7)];
-				particle(pt_static, PARTICLE_BEAM, k, k, tex_particle, false, true, 0.4f, 0.015f, lhrandom(64, 255), 512, 9999, 1, 0, org[0], org[1], org[2], lhrandom(-64, 64) + dir[0], lhrandom(-64, 64) + dir[1], lhrandom(0, 128) + dir[2], 0, 0, 0, 0, 0, 0);
+				particle(pt_static, PARTICLE_SPARK, k, k, tex_particle, false, true, 0.4f, 0.015f, lhrandom(64, 255), 512, 9999, 1, 0, org[0], org[1], org[2], lhrandom(-64, 64) + dir[0], lhrandom(-64, 64) + dir[1], lhrandom(0, 128) + dir[2], 0, 0, 0, 0, 0, 0);
 			}
 		}
 	}
@@ -781,7 +773,7 @@ void CL_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int color
 		while(count--)
 		{
 			k = particlepalette[colorbase + (rand()&3)];
-			particle(pt_rain, PARTICLE_BEAM, k, k, tex_particle, true, true, 0.5, 0.02, lhrandom(8, 16), 0, t, 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], cl.time + 9999, dir[0], dir[1], dir[2], 0, 0);
+			particle(pt_rain, PARTICLE_SPARK, k, k, tex_particle, true, true, 0.5, 0.02, lhrandom(8, 16), 0, t, 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], cl.time + 9999, dir[0], dir[1], dir[2], 0, 0);
 		}
 		break;
 	case 1:
@@ -1020,6 +1012,13 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 					particle(pt_static, PARTICLE_BILLBOARD, 0x303030, 0x606060, tex_smoke[rand()&7], true, false, dec, dec, 64, 320, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-4, 4), lhrandom(-4, 4), lhrandom(0, 16), 0, 0, 0, 0, 0, 0);
 				}
 				break;
+			case 8: // Nexiuz plasma trail
+				dec = 4;
+				if (smoke)
+				{
+					//particle(pt_static, PARTICLE_BILLBOARD, 0x2030FF, 0x80C0FF, tex_particle, false, true, 3.0f, 3.0f, lhrandom(64, 255), 512, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-32, 32) + dir[0] * -64.0f, lhrandom(-32, 32) + dir[1] * -64.0f, lhrandom(-32, 32) + dir[2] * -64.0f, 0, 0, 0, 0, 0, 0);
+					particle(pt_static, PARTICLE_BILLBOARD, 0x283880, 0x283880, tex_particle, false, true, dec, dec, 255, 1024, 9999, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
+				}
 		}
 
 		// advance to next time and position
@@ -1054,6 +1053,59 @@ void CL_RocketTrail2 (vec3_t start, vec3_t end, int color, entity_t *ent)
 	}
 }
 
+void CL_BeamParticle (const vec3_t start, const vec3_t end, vec_t radius, float red, float green, float blue, float alpha, float lifetime)
+{
+	int tempcolor2, cr, cg, cb;
+	cr = red * 255;
+	cg = green * 255;
+	cb = blue * 255;
+	tempcolor2 = (bound(0, cr, 255) << 16) | (bound(0, cg, 255) << 8) | bound(0, cb, 255);
+	particle(pt_static, PARTICLE_BEAM, tempcolor2, tempcolor2, tex_beam, false, true, radius, radius, alpha * 255, alpha * 255 / lifetime, 9999, 0, 0, start[0], start[1], start[2], 0, 0, 0, 0, end[0], end[1], end[2], 0, 0);
+}
+
+void CL_Tei_Smoke(const vec3_t org, const vec3_t dir, int count)
+{
+	int k;
+	if (!cl_particles.integer) return;
+
+	// smoke puff
+	if (cl_particles_smoke.integer)
+	{
+		k = count / 4;
+		while(k--)
+		{
+			particle(pt_grow, PARTICLE_BILLBOARD, 0x202020, 0x404040, tex_smoke[rand()&7], true, true, 5, 5, 255, 512, 9999, 0, 0, org[0] + 0.125f * lhrandom(-count, count), org[1] + 0.125f * lhrandom (-count, count), org[2] + 0.125f * lhrandom(-count, count), dir[0] + lhrandom(-count, count) * 0.5f, dir[1] + lhrandom(-count, count) * 0.5f, dir[2] + lhrandom(-count, count) * 0.5f, 15, 0, 0, 0, 0, 0);
+		}
+	}
+}
+
+void CL_Tei_PlasmaHit(const vec3_t org, const vec3_t dir, int count)
+{
+	int k;
+	if (!cl_particles.integer) return;
+
+	if (cl_stainmaps.integer)
+		R_Stain(org, 40, 96, 96, 96, 40, 128, 128, 128, 40);
+
+	// smoke puff
+	if (cl_particles_smoke.integer)
+	{
+		k = count / 4;
+		while(k--)
+		{
+			particle(pt_grow, PARTICLE_BILLBOARD, 0x202020, 0x404040, tex_smoke[rand()&7], true, true, 5, 5, 255, 512, 9999, 0, 0, org[0] + 0.125f * lhrandom(-count, count), org[1] + 0.125f * lhrandom (-count, count), org[2] + 0.125f * lhrandom(-count, count), dir[0] + lhrandom(-count, count), dir[1] + lhrandom(-count, count), dir[2] + lhrandom(-count, count), 15, 0, 0, 0, 0, 0);
+		}
+	}
+
+	if (cl_particles_sparks.integer)
+	{
+		// sparks
+		while(count--)
+		{
+			particle(pt_static, PARTICLE_SPARK, 0x2030FF, 0x80C0FF, tex_particle, false, true, 2.0f, 0.1f, lhrandom(64, 255), 512, 9999, 0, 0, org[0], org[1], org[2], lhrandom(-count, count) * 3.0f + dir[0], lhrandom(-count, count) * 3.0f + dir[1], lhrandom(-count, count) * 3.0f + dir[2], 0, 0, 0, 0, 0, 0);
+		}
+	}
+}
 
 /*
 ===============
@@ -1238,6 +1290,7 @@ void CL_MoveParticles (void)
 // particletexture_t is a rectangle in the particlefonttexture
 typedef struct
 {
+	rtexture_t *texture;
 	float s1, t1, s2, t2;
 }
 particletexture_t;
@@ -1285,15 +1338,15 @@ static qbyte shadebubble(float dx, float dy, vec3_t light)
 		return 0;
 }
 
-static void setuptex(int cltexnum, int rtexnum, qbyte *data, qbyte *particletexturedata)
+static void setuptex(int texnum, qbyte *data, qbyte *particletexturedata)
 {
 	int basex, basey, y;
-	basex = ((rtexnum >> 0) & 7) * 32;
-	basey = ((rtexnum >> 3) & 7) * 32;
-	particletexture[cltexnum].s1 = (basex + 1) / 256.0f;
-	particletexture[cltexnum].t1 = (basey + 1) / 256.0f;
-	particletexture[cltexnum].s2 = (basex + 31) / 256.0f;
-	particletexture[cltexnum].t2 = (basey + 31) / 256.0f;
+	basex = ((texnum >> 0) & 7) * 32;
+	basey = ((texnum >> 3) & 7) * 32;
+	particletexture[texnum].s1 = (basex + 1) / 256.0f;
+	particletexture[texnum].t1 = (basey + 1) / 256.0f;
+	particletexture[texnum].s2 = (basex + 31) / 256.0f;
+	particletexture[texnum].t2 = (basey + 31) / 256.0f;
 	for (y = 0;y < 32;y++)
 		memcpy(particletexturedata + ((basey + y) * 256 + basex) * 4, data + y * 32 * 4, 32 * 4);
 }
@@ -1302,13 +1355,13 @@ static void R_InitParticleTexture (void)
 {
 	int x,y,d,i,m;
 	float dx, dy, radius, f, f2;
-	qbyte data[32][32][4], noise1[64][64], noise2[64][64];
+	qbyte data[32][32][4], noise1[64][64], noise2[64][64], data2[64][16][4];
 	vec3_t light;
 	qbyte particletexturedata[256*256*4];
 
 	memset(particletexturedata, 255, sizeof(particletexturedata));
 
-	// the particletexture[][] array numbers must match the cl_part.c textures
+	// the second setuptex parameter must match the tex_ numbers
 	// smoke/blood
 	for (i = 0;i < 8;i++)
 	{
@@ -1337,7 +1390,7 @@ static void R_InitParticleTexture (void)
 		}
 		while (m < 224);
 
-		setuptex(i + 0, i + 0, &data[0][0][0], particletexturedata);
+		setuptex(tex_smoke[i], &data[0][0][0], particletexturedata);
 	}
 
 	// rain splash
@@ -1357,7 +1410,7 @@ static void R_InitParticleTexture (void)
 				data[y][x][3] = (int) f;
 			}
 		}
-		setuptex(i + 8, i + 16, &data[0][0][0], particletexturedata);
+		setuptex(tex_rainsplash[i], &data[0][0][0], particletexturedata);
 	}
 
 	// normal particle
@@ -1373,7 +1426,7 @@ static void R_InitParticleTexture (void)
 			data[y][x][3] = (qbyte) d;
 		}
 	}
-	setuptex(24, 32, &data[0][0][0], particletexturedata);
+	setuptex(tex_particle, &data[0][0][0], particletexturedata);
 
 	// rain
 	light[0] = 1;light[1] = 1;light[2] = 1;
@@ -1386,7 +1439,7 @@ static void R_InitParticleTexture (void)
 			data[y][x][3] = shadebubble((x - 16) * (1.0 / 8.0), y < 24 ? (y - 24) * (1.0 / 24.0) : (y - 24) * (1.0 / 8.0), light);
 		}
 	}
-	setuptex(25, 33, &data[0][0][0], particletexturedata);
+	setuptex(tex_raindrop, &data[0][0][0], particletexturedata);
 
 	// bubble
 	light[0] = 1;light[1] = 1;light[2] = 1;
@@ -1399,7 +1452,7 @@ static void R_InitParticleTexture (void)
 			data[y][x][3] = shadebubble((x - 16) * (1.0 / 16.0), (y - 16) * (1.0 / 16.0), light);
 		}
 	}
-	setuptex(26, 34, &data[0][0][0], particletexturedata);
+	setuptex(tex_bubble, &data[0][0][0], particletexturedata);
 
 #if WORKINGLQUAKE
 	glBindTexture(GL_TEXTURE_2D, (particlefonttexture = gl_extension_number++));
@@ -1407,6 +1460,31 @@ static void R_InitParticleTexture (void)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 #else
 	particlefonttexture = R_LoadTexture2D(particletexturepool, "particlefont", 256, 256, particletexturedata, TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
+	for (i = 0;i < MAX_PARTICLETEXTURES;i++)
+		particletexture[i].texture = particlefonttexture;
+
+	// beam
+	fractalnoise(&noise1[0][0], 64, 4);
+	m = 0;
+	for (y = 0;y < 64;y++)
+	{
+		for (x = 0;x < 16;x++)
+		{
+			if (x < 8)
+				d = x;
+			else
+				d = (15 - x);
+			d = d * d * noise1[y][x] / (7 * 7);
+			data2[y][x][0] = data2[y][x][1] = data2[y][x][2] = (qbyte) bound(0, d, 255);
+			data2[y][x][3] = 255;
+		}
+	}
+
+	particletexture[tex_beam].texture = R_LoadTexture2D(particletexturepool, "beam", 16, 64, &data2[0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
+	particletexture[tex_beam].s1 = 0;
+	particletexture[tex_beam].t1 = 0;
+	particletexture[tex_beam].s2 = 1;
+	particletexture[tex_beam].t2 = 1;
 #endif
 }
 
@@ -1448,7 +1526,6 @@ float varray_vertex[16];
 
 void R_DrawParticleCallback(const void *calldata1, int calldata2)
 {
-	int additive, texnum, orientation;
 	float org[3], up2[3], v[3], right[3], up[3], fog, ifog, fogvec[3], cr, cg, cb, ca;
 	particletexture_t *tex;
 #ifndef WORKINGLQUAKE
@@ -1457,66 +1534,8 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	const particle_t *p = calldata1;
 
 	VectorCopy(p->org, org);
-	orientation = (p->flags >> P_ORIENTATION_FIRSTBIT) & ((1 << P_ORIENTATION_BITS) - 1);
-	texnum = (p->flags >> P_TEXNUM_FIRSTBIT) & ((1 << P_TEXNUM_BITS) - 1);
-	//dynlight = p->flags & P_DYNLIGHT;
-	additive = p->flags & P_ADDITIVE;
 
-#ifdef WORKINGLQUAKE
-	if (additive)
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-	else
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-#else
-	memset(&m, 0, sizeof(m));
-	m.blendfunc1 = GL_SRC_ALPHA;
-	if (additive)
-		m.blendfunc2 = GL_ONE;
-	else
-		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-	m.tex[0] = R_GetTexture(particlefonttexture);
-	R_Mesh_Matrix(&r_identitymatrix);
-	R_Mesh_State(&m);
-#endif
-
-	tex = &particletexture[texnum];
-	cr = p->color[0] * (1.0f / 255.0f);
-	cg = p->color[1] * (1.0f / 255.0f);
-	cb = p->color[2] * (1.0f / 255.0f);
-	ca = p->alpha * (1.0f / 255.0f);
-#ifndef WORKINGLQUAKE
-	if (fogenabled)
-	{
-		VectorSubtract(org, r_origin, fogvec);
-		fog = exp(fogdensity/DotProduct(fogvec,fogvec));
-		ifog = 1 - fog;
-		cr = cr * ifog;
-		cg = cg * ifog;
-		cb = cb * ifog;
-		if (!additive)
-		{
-			cr += fogcolor[0] * fog;
-			cg += fogcolor[1] * fog;
-			cb += fogcolor[2] * fog;
-		}
-	}
-	cr *= r_colorscale;
-	cg *= r_colorscale;
-	cb *= r_colorscale;
-
-	varray_texcoord[0][0] = tex->s2;varray_texcoord[0][1] = tex->t1;
-	varray_texcoord[0][4] = tex->s1;varray_texcoord[0][5] = tex->t1;
-	varray_texcoord[0][8] = tex->s1;varray_texcoord[0][9] = tex->t2;
-	varray_texcoord[0][12] = tex->s2;varray_texcoord[0][13] = tex->t2;
-#endif
-
-	if (orientation == PARTICLE_BEAM)
-	{
-		VectorMA(p->org, -p->scaley, p->vel, v);
-		VectorMA(p->org, p->scaley, p->vel, up2);
-		R_CalcBeamVerts(varray_vertex, v, up2, p->scalex);
-	}
-	else if (orientation == PARTICLE_BILLBOARD)
+	if (p->orientation == PARTICLE_BILLBOARD)
 	{
 		VectorScale(vright, p->scalex, right);
 		VectorScale(vup, p->scaley, up);
@@ -1533,7 +1552,15 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 		varray_vertex[13] = org[1] + right[1] + up[1];
 		varray_vertex[14] = org[2] + right[2] + up[2];
 	}
-	else if (orientation == PARTICLE_ORIENTED_DOUBLESIDED)
+	else if (p->orientation == PARTICLE_SPARK)
+	{
+		VectorMA(p->org, -p->scaley, p->vel, v);
+		VectorMA(p->org, p->scaley, p->vel, up2);
+		R_CalcBeamVerts(varray_vertex, v, up2, p->scalex);
+	}
+	else if (p->orientation == PARTICLE_BEAM)
+		R_CalcBeamVerts(varray_vertex, p->org, p->vel2, p->scalex);
+	else if (p->orientation == PARTICLE_ORIENTED_DOUBLESIDED)
 	{
 		// double-sided
 		if (DotProduct(p->vel2, r_origin) > DotProduct(p->vel2, org))
@@ -1559,8 +1586,19 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 		varray_vertex[14] = org[2] + right[2] + up[2];
 	}
 	else
-		Host_Error("R_DrawParticles: unknown particle orientation %i\n", orientation);
+		Host_Error("R_DrawParticles: unknown particle orientation %i\n", p->orientation);
+
+	tex = &particletexture[p->texnum];
+	cr = p->color[0] * (1.0f / 255.0f);
+	cg = p->color[1] * (1.0f / 255.0f);
+	cb = p->color[2] * (1.0f / 255.0f);
+	ca = p->alpha * (1.0f / 255.0f);
+
 #if WORKINGLQUAKE
+	if (p->additive)
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	else
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glBegin(GL_QUADS);
 	glColor4f(cr, cg, cb, ca);
 	glTexCoord2f(tex->s2, tex->t1);glVertex3f(varray_vertex[ 0], varray_vertex[ 1], varray_vertex[ 2]);
@@ -1569,6 +1607,54 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	glTexCoord2f(tex->s2, tex->t2);glVertex3f(varray_vertex[12], varray_vertex[13], varray_vertex[14]);
 	glEnd();
 #else
+	memset(&m, 0, sizeof(m));
+	m.blendfunc1 = GL_SRC_ALPHA;
+	if (p->additive)
+		m.blendfunc2 = GL_ONE;
+	else
+		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+	m.tex[0] = R_GetTexture(tex->texture);
+	R_Mesh_Matrix(&r_identitymatrix);
+	R_Mesh_State(&m);
+
+	if (fogenabled)
+	{
+		VectorSubtract(org, r_origin, fogvec);
+		fog = exp(fogdensity/DotProduct(fogvec,fogvec));
+		ifog = 1 - fog;
+		cr = cr * ifog;
+		cg = cg * ifog;
+		cb = cb * ifog;
+		if (!p->additive)
+		{
+			cr += fogcolor[0] * fog;
+			cg += fogcolor[1] * fog;
+			cb += fogcolor[2] * fog;
+		}
+	}
+	cr *= r_colorscale;
+	cg *= r_colorscale;
+	cb *= r_colorscale;
+
+	if (p->orientation == PARTICLE_BEAM)
+	{
+		VectorSubtract(p->vel2, p->org, up);
+		VectorNormalizeFast(up);
+		v[0] = DotProduct(p->org, up) * (1.0f / 64.0f) - cl.time * 0.25;
+		v[1] = DotProduct(p->vel2, up) * (1.0f / 64.0f) - cl.time * 0.25;
+		varray_texcoord[0][0] = 1;varray_texcoord[0][1] = v[0];
+		varray_texcoord[0][4] = 0;varray_texcoord[0][5] = v[0];
+		varray_texcoord[0][8] = 0;varray_texcoord[0][9] = v[1];
+		varray_texcoord[0][12] = 1;varray_texcoord[0][13] = v[1];
+	}
+	else
+	{
+		varray_texcoord[0][0] = tex->s2;varray_texcoord[0][1] = tex->t1;
+		varray_texcoord[0][4] = tex->s1;varray_texcoord[0][5] = tex->t1;
+		varray_texcoord[0][8] = tex->s1;varray_texcoord[0][9] = tex->t2;
+		varray_texcoord[0][12] = tex->s2;varray_texcoord[0][13] = tex->t2;
+	}
+
 	GL_Color(cr, cg, cb, ca);
 	R_Mesh_Draw(4, 2, polygonelements);
 #endif
@@ -1606,7 +1692,7 @@ void R_DrawParticles (void)
 	// LordHavoc: only render if not too close
 	c_particles += cl_numparticles;
 	for (i = 0, p = particles;i < cl_numparticles;i++, p++)
-		if (DotProduct(p->org, vpn) >= minparticledist)
+		if (DotProduct(p->org, vpn) >= minparticledist || p->orientation == PARTICLE_BEAM)
 			R_MeshQueue_AddTransparent(p->org, R_DrawParticleCallback, p, 0);
 #endif
 }

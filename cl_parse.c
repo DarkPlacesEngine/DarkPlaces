@@ -1309,8 +1309,41 @@ void CL_ParseTempEntity (void)
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
+	case TE_TEI_G3:
+		MSG_ReadVector(pos);
+		MSG_ReadVector(pos2);
+		MSG_ReadVector(dir);
+		CL_BeamParticle(pos, pos2, 12, 1, 0.3, 0.1, 1, 1);
+		CL_BeamParticle(pos, pos2, 5, 1, 0.9, 0.3, 1, 1);
+		break;
+
+	case TE_TEI_SMOKE:
+		MSG_ReadVector(pos);
+		MSG_ReadVector(dir);
+		count = MSG_ReadByte ();
+		Mod_FindNonSolidLocation(pos, cl.worldmodel);
+		CL_Tei_Smoke(pos, dir, count);
+		break;
+
+	case TE_TEI_BIGEXPLOSION:
+		MSG_ReadVector(pos);
+		Mod_FindNonSolidLocation(pos, cl.worldmodel);
+		CL_ParticleExplosion (pos);
+		CL_AllocDlight (NULL, pos, 500, 1.25f, 1.0f, 0.5f, 500, 9999);
+		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
+		break;
+
+	case TE_TEI_PLASMAHIT:
+		MSG_ReadVector(pos);
+		MSG_ReadVector(dir);
+		count = MSG_ReadByte ();
+		Mod_FindNonSolidLocation(pos, cl.worldmodel);
+		CL_Tei_PlasmaHit(pos, dir, count);
+		CL_AllocDlight (NULL, pos, 500, 0.3, 0.6, 1.0f, 2000, 9999);
+		break;
+
 	default:
-		Host_Error ("CL_ParseTempEntity: bad type %d", type);
+		Host_Error ("CL_ParseTempEntity: bad type %d (hex %02X)", type, type);
 	}
 }
 
@@ -1323,6 +1356,7 @@ static qbyte cgamenetbuffer[65536];
 CL_ParseServerMessage
 =====================
 */
+int parsingerror = false;
 void CL_ParseServerMessage (void)
 {
 	int			cmd;
@@ -1346,6 +1380,8 @@ void CL_ParseServerMessage (void)
 	MSG_BeginReading ();
 
 	entitiesupdated = false;
+
+	parsingerror = true;
 
 	while (1)
 	{
@@ -1667,6 +1703,17 @@ void CL_ParseServerMessage (void)
 
 	if (entitiesupdated)
 		CL_EntityUpdateEnd();
+
+	parsingerror = false;
+}
+
+void CL_Parse_DumpPacket(void)
+{
+	if (!parsingerror)
+		return;
+	Con_Printf("Packet dump:\n");
+	SZ_HexDumpToConsole(&net_message);
+	parsingerror = false;
 }
 
 void CL_Parse_Init(void)

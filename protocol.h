@@ -286,6 +286,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define TE_CUSTOMFLASH		73 // [vector] origin [byte] radius / 8 - 1 [byte] lifetime / 256 - 1 [byte] red [byte] green [byte] blue
 #define TE_FLAMEJET			74 // [vector] origin [vector] velocity [byte] count
 #define TE_PLASMABURN		75 // [vector] origin
+// LordHavoc: Tei grabbed these codes
+#define TE_TEI_G3			76 // [vector] start [vector] end [vector] angles
+#define TE_TEI_SMOKE		77 // [vector] origin [vector] dir [byte] count
+#define TE_TEI_BIGEXPLOSION	78 // [vector] origin
+#define TE_TEI_PLASMAHIT	79 // [vector} origin [vector] dir [byte] count
+
 
 // these are bits for the 'flags' field of the entity_state_t
 #define RENDER_STEP 1

@@ -541,7 +541,7 @@ static void CL_RelinkNetworkEntities(void)
 
 		VectorCopy (neworg, ent->persistent.trail_origin);
 		// persistent.modelindex will be updated by CL_LerpUpdate
-		if (ent->state_current.modelindex != ent->persistent.modelindex)
+		if (ent->state_current.modelindex != ent->persistent.modelindex || !ent->state_previous.active)
 			VectorCopy(neworg, oldorg);
 
 		VectorCopy (neworg, ent->render.origin);
@@ -571,7 +571,19 @@ static void CL_RelinkNetworkEntities(void)
 		if (effects)
 		{
 			if (effects & EF_BRIGHTFIELD)
-				CL_EntityParticles (ent);
+			{
+				if (gamemode == GAME_NEXIUZ)
+				{
+					dlightcolor[0] += 100.0f;
+					dlightcolor[1] += 200.0f;
+					dlightcolor[2] += 400.0f;
+					// don't do trail if we have no previous location
+					if (ent->state_previous.active)
+						CL_RocketTrail (oldorg, neworg, 8, ent);
+				}
+				else
+					CL_EntityParticles (ent);
+			}
 			if (effects & EF_MUZZLEFLASH)
 				ent->persistent.muzzleflash = 100.0f;
 			if (effects & EF_DIMLIGHT)
