@@ -382,8 +382,16 @@ void CL_SendMove (usercmd_t *cmd)
 
 	MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
 
-	for (i=0 ; i<3 ; i++)
-		MSG_WriteAngle (&buf, cl.viewangles[i]);
+	if (dpprotocol)
+	{
+		for (i=0 ; i<3 ; i++)
+			MSG_WritePreciseAngle (&buf, cl.viewangles[i]);
+	}
+	else
+	{
+		for (i=0 ; i<3 ; i++)
+			MSG_WriteAngle (&buf, cl.viewangles[i]);
+	}
 	
     MSG_WriteShort (&buf, forwardmove);
     MSG_WriteShort (&buf, sidemove);
