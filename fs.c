@@ -405,10 +405,10 @@ qboolean PK3_GetEndOfCentralDir (const char *packfile, FILE *packhandle, pk3_end
 	buffer = Mem_Alloc (tempmempool, maxsize);
 #ifdef FS_USESYSCALLS
 	lseek (packhandle, filesize - maxsize, SEEK_SET);
-	if (read (packhandle, buffer, maxsize) != (int) maxsize)
+	if (read (packhandle, buffer, maxsize) != (ssize_t) maxsize)
 #else
 	fseek (packhandle, filesize - maxsize, SEEK_SET);
-	if (fread (buffer, 1, maxsize, packhandle) != (unsigned int) maxsize)
+	if (fread (buffer, 1, maxsize, packhandle) != (size_t) maxsize)
 #endif
 	{
 		Mem_Free (buffer);

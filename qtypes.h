@@ -9,6 +9,10 @@ typedef unsigned char qbyte;
 
 typedef enum {false, true} qboolean;
 
+#ifdef WIN32
+# define ssize_t long
+#endif
+
 #ifndef NULL
 #define NULL ((void *)0)
 #endif
@@ -16,13 +20,6 @@ typedef enum {false, true} qboolean;
 #ifndef FALSE
 #define FALSE 0
 #define TRUE 1
-#endif
-
-//define	PARANOID			// speed sapping error checking
-#ifdef _DEBUG
-#define ASSERT(condition) if (!(condition)) Sys_Error("assertion (##condition) failed at " __FILE__ ":" __LINE__ "\n");
-#else
-#define ASSERT(condition)
 #endif
 
 // up / down
