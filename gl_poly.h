@@ -1,4 +1,5 @@
 
+extern int R_SetSkyBox(char* sky);
 extern cvar_t r_skyquality;
 
 #define TPOLYTYPE_ALPHA 0

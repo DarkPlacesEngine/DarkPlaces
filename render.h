@@ -20,9 +20,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // refresh.h -- public interface to refresh functions
 
-// sky stuff
-extern void R_SetSkyBox(char* sky);
-
 // far clip distance for scene
 extern cvar_t r_farclip;
 
