@@ -245,6 +245,7 @@ static void Mod_LoadTextures (lump_t *l)
 			tx->flags = SURF_DRAWTURB | SURF_LIGHTBOTHSIDES;
 			tx->shader = &Cshader_water;
 		}
+		tx->currentframe = tx;
 	}
 
 	// just to work around bounds checking when debugging with it (array index out of bounds error thing)
