@@ -1105,7 +1105,7 @@ static qboolean Datagram_HandleServerInfo (struct qsockaddr *readaddr)
 {
 	//struct qsockaddr myaddr;
 	int control;
-	int c, n, i;
+	int c, n;
 	char cname[256];
 
 	if (net_message.cursize < (int)sizeof(int))
