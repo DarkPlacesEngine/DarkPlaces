@@ -284,6 +284,7 @@ cvar_t cl_particles_size = {CVAR_SAVE, "cl_particles_size", "1"};
 cvar_t cl_particles_bloodshowers = {CVAR_SAVE, "cl_particles_bloodshowers", "1"};
 cvar_t cl_particles_blood = {CVAR_SAVE, "cl_particles_blood", "1"};
 cvar_t cl_particles_blood_alpha = {CVAR_SAVE, "cl_particles_blood_alpha", "0.5"};
+cvar_t cl_particles_blood_bloodhack = {CVAR_SAVE, "cl_particles_blood_bloodhack", "1"};
 cvar_t cl_particles_bulletimpacts = {CVAR_SAVE, "cl_particles_bulletimpacts", "1"};
 cvar_t cl_particles_smoke = {CVAR_SAVE, "cl_particles_smoke", "1"};
 cvar_t cl_particles_smoke_alpha = {CVAR_SAVE, "cl_particles_smoke_alpha", "0.5"};
@@ -332,6 +333,7 @@ void CL_Particles_Init (void)
 	Cvar_RegisterVariable (&cl_particles_bloodshowers);
 	Cvar_RegisterVariable (&cl_particles_blood);
 	Cvar_RegisterVariable (&cl_particles_blood_alpha);
+	Cvar_RegisterVariable (&cl_particles_blood_bloodhack);
 	Cvar_RegisterVariable (&cl_particles_bulletimpacts);
 	Cvar_RegisterVariable (&cl_particles_smoke);
 	Cvar_RegisterVariable (&cl_particles_smoke_alpha);
@@ -587,6 +589,21 @@ void CL_ParseParticleEffect (void)
 	else
 		count = msgcount;
 
+	if (cl_particles_blood_bloodhack.integer)
+	{
+		if (color == 73)
+		{
+			// regular blood
+			CL_BloodPuff(org, dir, count / 2);
+			return;
+		}
+		if (color == 225)
+		{
+			// lightning blood
+			CL_BloodPuff(org, dir, count / 2);
+			return;
+		}
+	}
 	CL_RunParticleEffect (org, dir, color, count);
 }
 
@@ -779,7 +796,7 @@ void CL_BloodPuff (vec3_t org, vec3_t vel, int count)
 	if (!cl_particles.integer) return;
 	if (!cl_particles_blood.integer) return;
 
-	s = count + 32.0f;
+	s = count + 64.0f;
 	count *= 5.0f;
 	if (count > 1000)
 		count = 1000;

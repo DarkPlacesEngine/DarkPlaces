@@ -1362,7 +1362,7 @@ void M_Options_Key (int k, char ascii)
 	}
 }
 
-#define	OPTIONS_EFFECTS_ITEMS	21
+#define	OPTIONS_EFFECTS_ITEMS	22
 
 int options_effects_cursor;
 
@@ -1390,6 +1390,7 @@ extern cvar_t cl_particles_sparks;
 extern cvar_t cl_particles_bubbles;
 extern cvar_t cl_particles_blood;
 extern cvar_t cl_particles_blood_alpha;
+extern cvar_t cl_particles_blood_bloodhack;
 
 void M_Menu_Options_Effects_AdjustSliders (int dir)
 {
@@ -1429,6 +1430,8 @@ void M_Menu_Options_Effects_AdjustSliders (int dir)
 		Cvar_SetValueQuick (&cl_particles_blood, !cl_particles_blood.integer);
 	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&cl_particles_blood_alpha, bound(0.2, cl_particles_blood_alpha.value + dir * 0.1, 1));
+	else if (options_effects_cursor == optnum++)
+		Cvar_SetValueQuick (&cl_particles_blood_bloodhack, !cl_particles_blood_bloodhack.integer);
 	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&r_lerpmodels, !r_lerpmodels.integer);
 	else if (options_effects_cursor == optnum++)
@@ -1473,6 +1476,7 @@ void M_Options_Effects_Draw (void)
 	M_Options_PrintCheckbox("               Bubbles", true, cl_particles_bubbles.integer);
 	M_Options_PrintCheckbox("                 Blood", true, cl_particles_blood.integer);
 	M_Options_PrintSlider(  "         Blood Opacity", true, cl_particles_blood_alpha.value, 0.2, 1);
+	M_Options_PrintCheckbox("Force New Blood Effect", true, cl_particles_blood_bloodhack.integer);
 	M_Options_PrintCheckbox("   Model Interpolation", true, r_lerpmodels.integer);
 	M_Options_PrintCheckbox("  Sprite Interpolation", true, r_lerpsprites.integer);
 	M_Options_PrintSlider(  " Water Alpha (opacity)", true, r_wateralpha.value, 0, 1);

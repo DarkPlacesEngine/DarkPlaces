@@ -51,8 +51,8 @@ d darkplaces: add DP_LITSUPPORT extension and document it
 0 darkplaces: add ability to load gfx/particlefont.tga (Vermeulen, frightfan, Error)
 0 darkplaces: add automatic binding to whatever address the machine's hostname resolves to (in addition to 0.0.0.0); see original quake code for examples (yummyluv)
 0 darkplaces: add chase_pitch cvar to control pitch angle of chase camera, and chase_angle cvar to control yaw angle of chase camera, and add back chase_right cvar (Electro)
-0 darkplaces: add cl_particles_particleffect_bloodhack cvar to enable converting id1 blood effects to TE_BLOOD style (Alex Boveri)
-0 darkplaces: add cl_particles_particleffect_bloodhack cvar to menu (Alex Boveri)
+-n darkplaces: add cl_particles_particleffect_bloodhack cvar to enable converting id1 blood effects to TE_BLOOD style (Alex Boveri)
+-n darkplaces: add cl_particles_particleffect_bloodhack cvar to menu (Alex Boveri)
 0 darkplaces: add cvars for sbar alpha (background and foreground) (Throvold@uboot.com)
 0 darkplaces: add cvars to control lighting quality to allow performance tradeoffs
 0 darkplaces: add graphics options menu and put realtime lighting stuff in it (Antti)
