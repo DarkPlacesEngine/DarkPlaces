@@ -655,13 +655,18 @@ qbyte *loadimagepixels (const char *filename, qboolean complain, int matchwidth,
 	for (i = 0;imageformats[i].formatstring;i++)
 	{
 		sprintf (name, imageformats[i].formatstring, basename);
-		if ((f = FS_LoadFile(name, true)) && (data = imageformats[i].loadfunc(f, matchwidth, matchheight)))
+		f = FS_LoadFile(name, true);
+		if (f)
 		{
+			data = imageformats[i].loadfunc(f, matchwidth, matchheight);
 			Mem_Free(f);
-			Con_DPrintf("loaded image %s (%dx%d)\n", name, image_width, image_height);
-			if (developer_memorydebug.integer)
-				Mem_CheckSentinelsGlobal();
-			return data;
+			if (data)
+			{
+				Con_DPrintf("loaded image %s (%dx%d)\n", name, image_width, image_height);
+				if (developer_memorydebug.integer)
+					Mem_CheckSentinelsGlobal();
+				return data;
+			}
 		}
 	}
 	if (complain)
