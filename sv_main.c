@@ -94,7 +94,7 @@ void SV_StartParticle (vec3_t org, vec3_t dir, int color, int count)
 {
 	int		i, v;
 
-	if (sv.datagram.cursize > MAX_DATAGRAM-16)
+	if (sv.datagram.cursize > MAX_PACKETFRAGMENT-18)
 		return;
 	MSG_WriteByte (&sv.datagram, svc_particle);
 	MSG_WriteDPCoord (&sv.datagram, org[0]);
@@ -122,10 +122,10 @@ Make sure the event gets sent to all clients
 */
 void SV_StartEffect (vec3_t org, int modelindex, int startframe, int framecount, int framerate)
 {
-	if (sv.datagram.cursize > MAX_DATAGRAM-18)
-		return;
 	if (modelindex >= 256 || startframe >= 256)
 	{
+		if (sv.datagram.cursize > MAX_PACKETFRAGMENT-19)
+			return;
 		MSG_WriteByte (&sv.datagram, svc_effect2);
 		MSG_WriteDPCoord (&sv.datagram, org[0]);
 		MSG_WriteDPCoord (&sv.datagram, org[1]);
@@ -137,6 +137,8 @@ void SV_StartEffect (vec3_t org, int modelindex, int startframe, int framecount,
 	}
 	else
 	{
+		if (sv.datagram.cursize > MAX_PACKETFRAGMENT-17)
+			return;
 		MSG_WriteByte (&sv.datagram, svc_effect);
 		MSG_WriteDPCoord (&sv.datagram, org[0]);
 		MSG_WriteDPCoord (&sv.datagram, org[1]);
@@ -176,7 +178,7 @@ void SV_StartSound (edict_t *entity, int channel, char *sample, int volume, floa
 	if (channel < 0 || channel > 7)
 		Host_Error ("SV_StartSound: channel = %i", channel);
 
-	if (sv.datagram.cursize > MAX_DATAGRAM-16)
+	if (sv.datagram.cursize > MAX_PACKETFRAGMENT-21)
 		return;
 
 // find precache number for sound
