@@ -73,7 +73,7 @@ float FloatSwap (float f);
 #define LittleLong(l) (l)
 #define BigFloat(l) FloatSwap(l)
 #define LittleFloat(l) (l)
-#elif ENDIAN_BIG
+#elif defined(ENDIAN_BIG)
 // big endian
 #define BigShort(l) (l)
 #define LittleShort(l) ShortSwap(l)
