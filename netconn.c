@@ -289,7 +289,7 @@ void HostCache_RebuildViewSet(void)
 void HostCache_ResetMasks(void)
 {
 	memset( &hostcache_andmasks, 0, sizeof( hostcache_andmasks ) );
-	memset( &hostcache_andmasks, 0, sizeof( hostcache_andmasks ) );
+	memset( &hostcache_ormasks, 0, sizeof( hostcache_ormasks ) );
 }
 
 
@@ -304,6 +304,8 @@ void HostCache_QueryList(void)
 	hostcache_viewcount = 0;
 	hostcache_consoleoutput = false;
 	NetConn_QueryMasters();
+	
+	//_HostCache_PingTest(); 
 }
 
 #if 0
@@ -1740,8 +1742,6 @@ void Net_Slist_f(void)
 		Con_Print("Listening for replies...\n");
 	} else
 		HostCache_QueryList();
-
-	//_HostCache_PingTest(); 
 }
 
 void NetConn_Init(void)
