@@ -527,7 +527,7 @@ int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 	int		ch_idx;
 	size_t	skip;
 
-	if (!sound_started || !sfx || !sfx->fetcher || nosound.integer)
+	if (!sound_started || !sfx || nosound.integer)
 		return -1;
 
 	// Pick a channel to play on
