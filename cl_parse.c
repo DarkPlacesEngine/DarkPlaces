@@ -1487,7 +1487,7 @@ void CL_ParseServerMessage(void)
 			i = MSG_ReadByte ();
 			if (i >= cl.maxclients)
 				Host_Error ("CL_ParseServerMessage: svc_updatefrags >= cl.maxclients");
-			cl.scores[i].frags = (unsigned short) MSG_ReadShort ();
+			cl.scores[i].frags = (signed short) MSG_ReadShort ();
 			break;
 
 		case svc_updatecolors:
