@@ -3902,7 +3902,8 @@ void M_ServerList_Key(int k, char ascii)
 
 	case K_ENTER:
 		S_LocalSound ("sound/misc/menu2.wav");
-		Cbuf_AddText(va("connect \"%s\"\n", hostcache_viewset[slist_cursor]->info.cname));
+		if (hostcache_viewcount)
+			Cbuf_AddText(va("connect \"%s\"\n", hostcache_viewset[slist_cursor]->info.cname));
 		break;
 
 	default:
