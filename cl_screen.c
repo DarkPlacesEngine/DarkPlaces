@@ -366,7 +366,7 @@ void R_TimeReport_Start(void)
 			r_refdef.vieworg[0], r_refdef.vieworg[1], r_refdef.vieworg[2], r_refdef.viewangles[0], r_refdef.viewangles[1], r_refdef.viewangles[2], vpn[0], vpn[1], vpn[2],
 			c_faces, c_nodes, c_leafs, c_light_polys,
 			c_models, c_bmodels, c_sprites, c_particles, c_dlights,
-			c_alias_polys, c_meshs, c_meshtris);
+			c_alias_polys, c_meshs, c_meshelements / 3);
 
 		c_alias_polys = 0;
 		c_light_polys = 0;
@@ -377,6 +377,8 @@ void R_TimeReport_Start(void)
 		c_bmodels = 0;
 		c_sprites = 0;
 		c_particles = 0;
+		c_meshs = 0;
+		c_meshelements = 0;
 
 		r_timereport_start = Sys_DoubleTime();
 	}

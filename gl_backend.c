@@ -3,7 +3,7 @@
 
 cvar_t gl_mesh_maxverts = {0, "gl_mesh_maxverts", "1024"};
 cvar_t gl_mesh_floatcolors = {0, "gl_mesh_floatcolors", "1"};
-cvar_t gl_mesh_drawmode = {CVAR_SAVE, "gl_mesh_drawmode", "3"};
+cvar_t gl_mesh_drawrangeelements = {0, "gl_mesh_drawrangeelements", "1"};
 
 cvar_t r_render = {0, "r_render", "1"};
 cvar_t gl_dither = {CVAR_SAVE, "gl_dither", "1"}; // whether or not to use dithering
@@ -65,11 +65,7 @@ void GL_PrintError(int errornumber, char *filename, int linenumber)
 
 float r_mesh_farclip;
 
-static float viewdist;
-// sign bits (true if negative) for vpn[] entries, so quick integer compares can be used instead of float compares
-static int vpnbit0, vpnbit1, vpnbit2;
-
-int c_meshs, c_meshtris;
+int c_meshs, c_meshelements;
 
 int lightscalebit;
 float lightscale;
@@ -167,15 +163,6 @@ static void gl_backend_shutdown(void)
 
 void GL_Backend_CheckCvars(void)
 {
-	if (gl_mesh_drawmode.integer < 0)
-		Cvar_SetValueQuick(&gl_mesh_drawmode, 0);
-	if (gl_mesh_drawmode.integer > 3)
-		Cvar_SetValueQuick(&gl_mesh_drawmode, 3);
-
-	// change drawmode 3 to 2 if 3 won't work
-	if (gl_mesh_drawmode.integer >= 3 && qglDrawRangeElements == NULL)
-		Cvar_SetValueQuick(&gl_mesh_drawmode, 2);
-
 	// 21760 is (65536 / 3) rounded off to a multiple of 128
 	if (gl_mesh_maxverts.integer < 1024)
 		Cvar_SetValueQuick(&gl_mesh_maxverts, 1024);
@@ -207,7 +194,7 @@ void gl_backend_init(void)
 
 	Cvar_RegisterVariable(&gl_mesh_maxverts);
 	Cvar_RegisterVariable(&gl_mesh_floatcolors);
-	Cvar_RegisterVariable(&gl_mesh_drawmode);
+	Cvar_RegisterVariable(&gl_mesh_drawrangeelements);
 	GL_Backend_CheckCvars();
 	R_RegisterModule("GL_Backend", gl_backend_start, gl_backend_shutdown, gl_backend_newmap);
 }
@@ -340,18 +327,15 @@ void GL_SetupTextureState(void)
 			{
 				qglDisable(GL_TEXTURE_2D);CHECKGLERROR
 			}
-			if (gl_mesh_drawmode.integer > 0)
+			qglClientActiveTexture(GL_TEXTURE0_ARB + (gl_state.clientunit = i));CHECKGLERROR
+			qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), varray_texcoord[i]);CHECKGLERROR
+			if (gl_state.texture[i])
 			{
-				qglClientActiveTexture(GL_TEXTURE0_ARB + (gl_state.clientunit = i));CHECKGLERROR
-				qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), varray_texcoord[i]);CHECKGLERROR
-				if (gl_state.texture[i])
-				{
-					qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
-				}
-				else
-				{
-					qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
-				}
+				qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+			}
+			else
+			{
+				qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 			}
 		}
 	}
@@ -367,17 +351,14 @@ void GL_SetupTextureState(void)
 		{
 			qglDisable(GL_TEXTURE_2D);CHECKGLERROR
 		}
-		if (gl_mesh_drawmode.integer > 0)
+		qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), varray_texcoord[0]);CHECKGLERROR
+		if (gl_state.texture[0])
 		{
-			qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), varray_texcoord[0]);CHECKGLERROR
-			if (gl_state.texture[0])
-			{
-				qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
-			}
-			else
-			{
-				qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
-			}
+			qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+		}
+		else
+		{
+			qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 		}
 	}
 }
@@ -412,21 +393,18 @@ void GL_Backend_ResetState(void)
 	qglDepthMask(gl_state.depthmask);CHECKGLERROR
 
 	usedarrays = false;
-	if (gl_mesh_drawmode.integer > 0)
+	usedarrays = true;
+	qglVertexPointer(3, GL_FLOAT, sizeof(float[4]), varray_vertex);CHECKGLERROR
+	qglEnableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
+	if (gl_mesh_floatcolors.integer)
 	{
-		usedarrays = true;
-		qglVertexPointer(3, GL_FLOAT, sizeof(float[4]), varray_vertex);CHECKGLERROR
-		qglEnableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
-		if (gl_mesh_floatcolors.integer)
-		{
-			qglColorPointer(4, GL_FLOAT, sizeof(float[4]), varray_color);CHECKGLERROR
-		}
-		else
-		{
-			qglColorPointer(4, GL_UNSIGNED_BYTE, sizeof(qbyte[4]), varray_bcolor);CHECKGLERROR
-		}
-		qglEnableClientState(GL_COLOR_ARRAY);CHECKGLERROR
+		qglColorPointer(4, GL_FLOAT, sizeof(float[4]), varray_color);CHECKGLERROR
 	}
+	else
+	{
+		qglColorPointer(4, GL_UNSIGNED_BYTE, sizeof(qbyte[4]), varray_bcolor);CHECKGLERROR
+	}
+	qglEnableClientState(GL_COLOR_ARRAY);CHECKGLERROR
 
 	GL_SetupTextureState();
 }
@@ -439,13 +417,6 @@ void R_Mesh_Start(float farclip)
 	CHECKGLERROR
 
 	r_mesh_farclip = farclip;
-	viewdist = DotProduct(r_origin, vpn);
-	vpnbit0 = vpn[0] < 0;
-	vpnbit1 = vpn[1] < 0;
-	vpnbit2 = vpn[2] < 0;
-
-	c_meshs = 0;
-	c_meshtris = 0;
 
 	GL_Backend_CheckCvars();
 	if (mesh_maxverts != gl_mesh_maxverts.integer)
@@ -521,84 +492,22 @@ void GL_TransformVertices(int numverts)
 }
 */
 
-void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, GLuint *index)
+void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, int *index)
 {
-	unsigned int i, j, in;
-	qbyte *c;
-	float *v;
 	int arraylocked = false;
-	if (gl_supportslockarrays && gl_lockarrays.integer && gl_mesh_drawmode.integer > 0)
+	c_meshs++;
+	c_meshelements += indexcount;
+	if (gl_supportslockarrays && gl_lockarrays.integer)
 	{
 		qglLockArraysEXT(firstvert, endvert - firstvert);
 		CHECKGLERROR
 		arraylocked = true;
 	}
-	if (gl_mesh_drawmode.integer >= 3/* && (endvert - firstvert) <= gl_maxdrawrangeelementsvertices && (indexcount) <= gl_maxdrawrangeelementsindices*/)
-	{
-		// GL 1.2 or GL 1.1 with extension
-		qglDrawRangeElements(GL_TRIANGLES, firstvert, endvert, indexcount, GL_UNSIGNED_INT, index);
-		CHECKGLERROR
-	}
-	else if (gl_mesh_drawmode.integer >= 2)
-	{
-		// GL 1.1
-		qglDrawElements(GL_TRIANGLES, indexcount, GL_UNSIGNED_INT, index);
-		CHECKGLERROR
-	}
-	else if (gl_mesh_drawmode.integer >= 1)
-	{
-		// GL 1.1
-		// feed it manually using glArrayElement
-		qglBegin(GL_TRIANGLES);
-		for (i = 0;i < indexcount;i++)
-			qglArrayElement(index[i]);
-		qglEnd();
-		CHECKGLERROR
-	}
+	if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
+		qglDrawRangeElements(GL_TRIANGLES, firstvert, endvert, indexcount, GL_UNSIGNED_INT, (GLuint *) index);
 	else
-	{
-		// GL 1.1 but not using vertex arrays - 3dfx glquake minigl driver
-		// feed it manually
-		qglBegin(GL_TRIANGLES);
-		if (gl_state.texture[1]) // if the mesh uses multiple textures
-		{
-			// the minigl doesn't have this (because it does not have ARB_multitexture)
-			for (i = 0;i < indexcount;i++)
-			{
-				in = index[i];
-				c = varray_bcolor + in * 4;
-				qglColor4ub(c[0], c[1], c[2], c[3]);
-				for (j = 0;j < backendunits;j++)
-				{
-					if (gl_state.texture[j])
-					{
-						v = varray_texcoord[j] + in * 2;
-						qglMultiTexCoord2f(GL_TEXTURE0_ARB + j, v[0], v[1]);
-					}
-				}
-				v = varray_vertex + in * 4;
-				qglVertex3f(v[0], v[1], v[2]);
-			}
-		}
-		else
-		{
-			for (i = 0;i < indexcount;i++)
-			{
-				in = index[i];
-				c = varray_bcolor + in * 4;
-				qglColor4ub(c[0], c[1], c[2], c[3]);
-				if (gl_state.texture[0])
-				{
-					v = varray_texcoord[0] + in * 2;
-					qglTexCoord2f(v[0], v[1]);
-				}
-				v = varray_vertex + in * 4;
-				qglVertex3f(v[0], v[1], v[2]);
-			}
-		}
-		qglEnd();
-		CHECKGLERROR
-	}
+		qglDrawElements(GL_TRIANGLES, indexcount, GL_UNSIGNED_INT, (GLuint *) index);
+	CHECKGLERROR
 	if (arraylocked)
 	{
 		qglUnlockArraysEXT();
@@ -623,13 +532,9 @@ void R_Mesh_Draw(int numverts, int numtriangles, int *elements)
 {
 	BACKENDACTIVECHECK
 
-	c_meshs++;
-	c_meshtris += numtriangles;
-
 	CHECKGLERROR
 
-	// drawmode 0 always uses byte colors
-	if (!gl_mesh_floatcolors.integer || gl_mesh_drawmode.integer <= 0)
+	if (!gl_mesh_floatcolors.integer)
 		GL_ConvertColorsFloatToByte(numverts);
 	//GL_TransformVertices(numverts);
 	if (!r_render.integer)

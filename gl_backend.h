@@ -7,9 +7,11 @@
 #define POLYGONELEMENTS_MAXPOINTS 258
 extern int polygonelements[768];
 
+void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, int *index);
+
 extern cvar_t gl_lockarrays;
 
-extern int c_meshtris, c_meshs;
+extern int c_meshelements, c_meshs;
 
 //input to R_Mesh_State
 typedef struct
