@@ -124,12 +124,12 @@ void (GLAPIENTRY *qglClearColor)(GLclampf red, GLclampf green, GLclampf blue, GL
 
 void (GLAPIENTRY *qglClear)(GLbitfield mask);
 
-//void (GLAPIENTRY *qglAlphaFunc)(GLenum func, GLclampf ref);
+void (GLAPIENTRY *qglAlphaFunc)(GLenum func, GLclampf ref);
 void (GLAPIENTRY *qglBlendFunc)(GLenum sfactor, GLenum dfactor);
 void (GLAPIENTRY *qglCullFace)(GLenum mode);
 
-//void (GLAPIENTRY *qglDrawBuffer)(GLenum mode);
-//void (GLAPIENTRY *qglReadBuffer)(GLenum mode);
+void (GLAPIENTRY *qglDrawBuffer)(GLenum mode);
+void (GLAPIENTRY *qglReadBuffer)(GLenum mode);
 void (GLAPIENTRY *qglEnable)(GLenum cap);
 void (GLAPIENTRY *qglDisable)(GLenum cap);
 GLboolean (GLAPIENTRY *qglIsEnabled)(GLenum cap);
@@ -137,9 +137,9 @@ GLboolean (GLAPIENTRY *qglIsEnabled)(GLenum cap);
 void (GLAPIENTRY *qglEnableClientState)(GLenum cap);
 void (GLAPIENTRY *qglDisableClientState)(GLenum cap);
 
-//void (GLAPIENTRY *qglGetBooleanv)(GLenum pname, GLboolean *params);
-//void (GLAPIENTRY *qglGetDoublev)(GLenum pname, GLdouble *params);
-//void (GLAPIENTRY *qglGetFloatv)(GLenum pname, GLfloat *params);
+void (GLAPIENTRY *qglGetBooleanv)(GLenum pname, GLboolean *params);
+void (GLAPIENTRY *qglGetDoublev)(GLenum pname, GLdouble *params);
+void (GLAPIENTRY *qglGetFloatv)(GLenum pname, GLfloat *params);
 void (GLAPIENTRY *qglGetIntegerv)(GLenum pname, GLint *params);
 
 GLenum (GLAPIENTRY *qglGetError)(void);
@@ -174,19 +174,19 @@ void (GLAPIENTRY *qglMatrixMode)(GLenum mode);
 void (GLAPIENTRY *qglOrtho)(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near_val, GLdouble far_val);
 void (GLAPIENTRY *qglFrustum)(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near_val, GLdouble far_val);
 void (GLAPIENTRY *qglViewport)(GLint x, GLint y, GLsizei width, GLsizei height);
-//void (GLAPIENTRY *qglPushMatrix)(void);
-//void (GLAPIENTRY *qglPopMatrix)(void);
+void (GLAPIENTRY *qglPushMatrix)(void);
+void (GLAPIENTRY *qglPopMatrix)(void);
 void (GLAPIENTRY *qglLoadIdentity)(void);
-//void (GLAPIENTRY *qglLoadMatrixd)(const GLdouble *m);
+void (GLAPIENTRY *qglLoadMatrixd)(const GLdouble *m);
 void (GLAPIENTRY *qglLoadMatrixf)(const GLfloat *m);
-//void (GLAPIENTRY *qglMultMatrixd)(const GLdouble *m);
-//void (GLAPIENTRY *qglMultMatrixf)(const GLfloat *m);
-//void (GLAPIENTRY *qglRotated)(GLdouble angle, GLdouble x, GLdouble y, GLdouble z);
-//void (GLAPIENTRY *qglRotatef)(GLfloat angle, GLfloat x, GLfloat y, GLfloat z);
-//void (GLAPIENTRY *qglScaled)(GLdouble x, GLdouble y, GLdouble z);
-//void (GLAPIENTRY *qglScalef)(GLfloat x, GLfloat y, GLfloat z);
-//void (GLAPIENTRY *qglTranslated)(GLdouble x, GLdouble y, GLdouble z);
-//void (GLAPIENTRY *qglTranslatef)(GLfloat x, GLfloat y, GLfloat z);
+void (GLAPIENTRY *qglMultMatrixd)(const GLdouble *m);
+void (GLAPIENTRY *qglMultMatrixf)(const GLfloat *m);
+void (GLAPIENTRY *qglRotated)(GLdouble angle, GLdouble x, GLdouble y, GLdouble z);
+void (GLAPIENTRY *qglRotatef)(GLfloat angle, GLfloat x, GLfloat y, GLfloat z);
+void (GLAPIENTRY *qglScaled)(GLdouble x, GLdouble y, GLdouble z);
+void (GLAPIENTRY *qglScalef)(GLfloat x, GLfloat y, GLfloat z);
+void (GLAPIENTRY *qglTranslated)(GLdouble x, GLdouble y, GLdouble z);
+void (GLAPIENTRY *qglTranslatef)(GLfloat x, GLfloat y, GLfloat z);
 
 void (GLAPIENTRY *qglReadPixels)(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels);
 
@@ -195,11 +195,11 @@ void (GLAPIENTRY *qglStencilMask)(GLuint mask);
 void (GLAPIENTRY *qglStencilOp)(GLenum fail, GLenum zfail, GLenum zpass);
 void (GLAPIENTRY *qglClearStencil)(GLint s);
 
-//void (GLAPIENTRY *qglTexEnvf)(GLenum target, GLenum pname, GLfloat param);
+void (GLAPIENTRY *qglTexEnvf)(GLenum target, GLenum pname, GLfloat param);
 void (GLAPIENTRY *qglTexEnvfv)(GLenum target, GLenum pname, const GLfloat *params);
 void (GLAPIENTRY *qglTexEnvi)(GLenum target, GLenum pname, GLint param);
 void (GLAPIENTRY *qglTexParameterf)(GLenum target, GLenum pname, GLfloat param);
-//void (GLAPIENTRY *qglTexParameterfv)(GLenum target, GLenum pname, GLfloat *params);
+void (GLAPIENTRY *qglTexParameterfv)(GLenum target, GLenum pname, GLfloat *params);
 void (GLAPIENTRY *qglTexParameteri)(GLenum target, GLenum pname, GLint param);
 
 void (GLAPIENTRY *qglGenTextures)(GLsizei n, GLuint *textures);
@@ -208,7 +208,7 @@ void (GLAPIENTRY *qglBindTexture)(GLenum target, GLuint texture);
 //void (GLAPIENTRY *qglPrioritizeTextures)(GLsizei n, const GLuint *textures, const GLclampf *priorities);
 //GLboolean (GLAPIENTRY *qglAreTexturesResident)(GLsizei n, const GLuint *textures, GLboolean *residences);
 GLboolean (GLAPIENTRY *qglIsTexture)(GLuint texture);
-//void (GLAPIENTRY *qglPixelStoref)(GLenum pname, GLfloat param);
+void (GLAPIENTRY *qglPixelStoref)(GLenum pname, GLfloat param);
 void (GLAPIENTRY *qglPixelStorei)(GLenum pname, GLint param);
 
 void (GLAPIENTRY *qglTexImage1D)(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
@@ -280,19 +280,19 @@ static dllfunction_t opengl110funcs[] =
 {
 	{"glClearColor", (void **) &qglClearColor},
 	{"glClear", (void **) &qglClear},
-//	{"glAlphaFunc", (void **) &qglAlphaFunc},
+	{"glAlphaFunc", (void **) &qglAlphaFunc},
 	{"glBlendFunc", (void **) &qglBlendFunc},
 	{"glCullFace", (void **) &qglCullFace},
-//	{"glDrawBuffer", (void **) &qglDrawBuffer},
-//	{"glReadBuffer", (void **) &qglReadBuffer},
+	{"glDrawBuffer", (void **) &qglDrawBuffer},
+	{"glReadBuffer", (void **) &qglReadBuffer},
 	{"glEnable", (void **) &qglEnable},
 	{"glDisable", (void **) &qglDisable},
 	{"glIsEnabled", (void **) &qglIsEnabled},
 	{"glEnableClientState", (void **) &qglEnableClientState},
 	{"glDisableClientState", (void **) &qglDisableClientState},
-//	{"glGetBooleanv", (void **) &qglGetBooleanv},
-//	{"glGetDoublev", (void **) &qglGetDoublev},
-//	{"glGetFloatv", (void **) &qglGetFloatv},
+	{"glGetBooleanv", (void **) &qglGetBooleanv},
+	{"glGetDoublev", (void **) &qglGetDoublev},
+	{"glGetFloatv", (void **) &qglGetFloatv},
 	{"glGetIntegerv", (void **) &qglGetIntegerv},
 	{"glGetError", (void **) &qglGetError},
 	{"glGetString", (void **) &qglGetString},
@@ -320,31 +320,31 @@ static dllfunction_t opengl110funcs[] =
 	{"glOrtho", (void **) &qglOrtho},
 	{"glFrustum", (void **) &qglFrustum},
 	{"glViewport", (void **) &qglViewport},
-//	{"glPushMatrix", (void **) &qglPushMatrix},
-//	{"glPopMatrix", (void **) &qglPopMatrix},
+	{"glPushMatrix", (void **) &qglPushMatrix},
+	{"glPopMatrix", (void **) &qglPopMatrix},
 	{"glLoadIdentity", (void **) &qglLoadIdentity},
-//	{"glLoadMatrixd", (void **) &qglLoadMatrixd},
+	{"glLoadMatrixd", (void **) &qglLoadMatrixd},
 	{"glLoadMatrixf", (void **) &qglLoadMatrixf},
-//	{"glMultMatrixd", (void **) &qglMultMatrixd},
-//	{"glMultMatrixf", (void **) &qglMultMatrixf},
-//	{"glRotated", (void **) &qglRotated},
-//	{"glRotatef", (void **) &qglRotatef},
-//	{"glScaled", (void **) &qglScaled},
-//	{"glScalef", (void **) &qglScalef},
-//	{"glTranslated", (void **) &qglTranslated},
-//	{"glTranslatef", (void **) &qglTranslatef},
+	{"glMultMatrixd", (void **) &qglMultMatrixd},
+	{"glMultMatrixf", (void **) &qglMultMatrixf},
+	{"glRotated", (void **) &qglRotated},
+	{"glRotatef", (void **) &qglRotatef},
+	{"glScaled", (void **) &qglScaled},
+	{"glScalef", (void **) &qglScalef},
+	{"glTranslated", (void **) &qglTranslated},
+	{"glTranslatef", (void **) &qglTranslatef},
 	{"glReadPixels", (void **) &qglReadPixels},
 	{"glStencilFunc", (void **) &qglStencilFunc},
 	{"glStencilMask", (void **) &qglStencilMask},
 	{"glStencilOp", (void **) &qglStencilOp},
 	{"glClearStencil", (void **) &qglClearStencil},
-//	{"glTexEnvf", (void **) &qglTexEnvf},
+	{"glTexEnvf", (void **) &qglTexEnvf},
 	{"glTexEnvfv", (void **) &qglTexEnvfv},
 	{"glTexEnvi", (void **) &qglTexEnvi},
 	{"glTexParameterf", (void **) &qglTexParameterf},
-//	{"glTexParameterfv", (void **) &qglTexParameterfv},
+	{"glTexParameterfv", (void **) &qglTexParameterfv},
 	{"glTexParameteri", (void **) &qglTexParameteri},
-//	{"glPixelStoref", (void **) &qglPixelStoref},
+	{"glPixelStoref", (void **) &qglPixelStoref},
 	{"glPixelStorei", (void **) &qglPixelStorei},
 	{"glGenTextures", (void **) &qglGenTextures},
 	{"glDeleteTextures", (void **) &qglDeleteTextures},
