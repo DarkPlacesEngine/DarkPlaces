@@ -626,16 +626,44 @@ OTHER PRIVATE FUNCTIONS
 ====================
 FS_AddFileToPack
 
-Add a file to the list of files contained into a package 
-
-TODO: do some sorting here to allow faster file searching afterwards
+Add a file to the list of files contained into a package
 ====================
 */
 static packfile_t* FS_AddFileToPack (const char* name, pack_t* pack,
 									 size_t offset, size_t packsize,
 									 size_t realsize, file_flags_t flags)
 {
-	packfile_t *file = &pack->files[pack->numfiles++];
+	int (*strcmp_funct) (const char* str1, const char* str2);
+	size_t left, right, middle;
+	int diff;
+	packfile_t *file;
+
+	strcmp_funct = pack->ignorecase ? strcasecmp : strcmp;
+
+	// Look for the slot we should put that file into (binary search)
+	left = 0;
+	right = pack->numfiles;
+	while (left != right)
+	{
+		middle = (left + right - 1) / 2;
+		diff = strcmp_funct (pack->files[middle].name, name);
+
+		// If we found the file, there's a problem
+		if (!diff)
+			Sys_Error ("Package %s contains several time the file %s\n",
+					   pack->filename, name);
+
+		// If we're too far in the list
+		if (diff > 0)
+			right = middle;
+		else
+			left = middle + 1;
+	}
+
+	// We have to move the right of the list by one slot to free the one we need
+	file = &pack->files[left];
+	memmove (file + 1, file, (pack->numfiles - left) * sizeof (*file));
+	pack->numfiles++;
 
 	strlcpy (file->name, name, sizeof (file->name));
 	file->offset = offset;
@@ -827,7 +855,7 @@ void FS_AddGameDirectory (char *dir)
 	}
 	freedirectory(list);
 
-// Unpacked files have the priority over packed files in AKVERSION is defined
+// Unpacked files have the priority over packed files if AKVERSION is defined
 #ifdef AKVERSION
 	// add the directory to the search path
 	search = Mem_Alloc(pak_mempool, sizeof(searchpath_t));
@@ -1016,6 +1044,89 @@ qfile_t *FS_OpenRead (const char *path, int offs, int len)
 	return file;
 }
 
+
+/*
+====================
+FS_FindFile
+
+Look for a file in the packages and in the filesystem
+
+Return the searchpath where the file was found (or NULL)
+and the file index in the package if relevant
+====================
+*/
+static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet)
+{
+	searchpath_t *search;
+	pack_t *pak;
+	int (*strcmp_funct) (const char* str1, const char* str2);
+
+	// search through the path, one element at a time
+	for (search = fs_searchpaths;search;search = search->next)
+	{
+		// is the element a pak file?
+		if (search->pack)
+		{
+			size_t left, right, middle;
+
+			pak = search->pack;
+			strcmp_funct = pak->ignorecase ? strcasecmp : strcmp;
+
+			// Look for the file (binary search)
+			left = 0;
+			right = pak->numfiles;
+			while (left != right)
+			{
+				int diff;
+
+				middle = (left + right - 1) / 2;
+				diff = strcmp_funct (pak->files[middle].name, name);
+
+				// Found it
+				if (!diff)
+				{
+					if (!quiet)
+						Sys_Printf ("FS_FindFile: %s in %s\n",
+									pak->files[middle].name, pak->filename);
+
+					if (index != NULL)
+						*index = middle;
+					return search;
+				}
+
+				// If we're too far in the list
+				if (diff > 0)
+					right = middle;
+				else
+					left = middle + 1;
+			}
+		}
+		else
+		{
+			char* netpath;
+
+			netpath = va ("%s/%s", search->filename, name);
+			if (FS_SysFileExists (netpath))
+			{
+				if (!quiet)
+					Sys_Printf ("FS_FindFile: %s\n", netpath);
+
+				if (index != NULL)
+					*index = -1;
+				return search;
+			}
+		}
+	}
+
+	if (!quiet)
+		Sys_Printf ("FS_FindFile: can't find %s\n", name);
+
+	if (index != NULL)
+		*index = -1;
+	return NULL;
+}
+
+
 /*
 ===========
 FS_FOpenFile
@@ -1029,107 +1140,78 @@ Sets fs_filesize
 qfile_t *FS_FOpenFile (const char *filename, qboolean quiet)
 {
 	searchpath_t *search;
-	char netpath[MAX_OSPATH];
-	pack_t *pak;
-	int i, filenamelen, matched;
+	packfile_t *packfile;
+	int i;
+	qfile_t *file;
 
-	filenamelen = strlen (filename);
+	search = FS_FindFile (filename, &i, quiet);
 
-	// search through the path, one element at a time
-	search = fs_searchpaths;
-
-	for ( ; search ; search = search->next)
+	// Not found?
+	if (search == NULL)
 	{
-		// is the element a pak file?
-		if (search->pack)
-		{
-			// look through all the pak file elements
-			pak = search->pack;
-			for (i=0 ; i<pak->numfiles ; i++)
-			{
-				if (pak->ignorecase)
-					matched = !strcasecmp (pak->files[i].name, filename);
-				else
-					matched = !strcmp (pak->files[i].name, filename);
-				if (matched)  // found it?
-				{
-					qfile_t *file;
-
-					if (!quiet)
-						Sys_Printf ("PackFile: %s : %s\n",pak->filename, pak->files[i].name);
-
-					// If we don't have the true offset, get it now
-					if (! (pak->files[i].flags & FILE_FLAG_TRUEOFFS))
-						PK3_GetTrueFileOffset (&pak->files[i], pak);
-
-					// No Zlib DLL = no compressed files
-					if (!zlib_dll && (pak->files[i].flags & FILE_FLAG_DEFLATED))
-					{
-						Con_Printf ("WARNING: can't open the compressed file %s\n"
-									"You need the Zlib DLL to use compressed files\n", filename);
-						fs_filesize = -1;
-						return NULL;
-					}
-
-					// open a new file in the pakfile
-					file = FS_OpenRead (pak->filename, pak->files[i].offset, pak->files[i].packsize);
-					fs_filesize = pak->files[i].realsize;
-
-					if (pak->files[i].flags & FILE_FLAG_DEFLATED)
-					{
-						ztoolkit_t *ztk;
-
-						file->flags |= FS_FLAG_DEFLATED;
-
-						// We need some more variables
-						ztk = Mem_Alloc (fs_mempool, sizeof (*file->z));
-
-						ztk->real_length = pak->files[i].realsize;
-
-						// Initialize zlib stream
-						ztk->zstream.next_in = ztk->input;
-						ztk->zstream.avail_in = 0;
-
-						/* From Zlib's "unzip.c":
-						 *
-						 * windowBits is passed < 0 to tell that there is no zlib header.
-						 * Note that in this case inflate *requires* an extra "dummy" byte
-						 * after the compressed stream in order to complete decompression and
-						 * return Z_STREAM_END.
-						 * In unzip, i don't wait absolutely Z_STREAM_END because I known the
-						 * size of both compressed and uncompressed data
-						 */
-						if (qz_inflateInit2 (&ztk->zstream, -MAX_WBITS) != Z_OK)
-							Sys_Error ("inflate init error (file: %s)", filename);
-
-						ztk->zstream.next_out = ztk->output;
-						ztk->zstream.avail_out = sizeof (ztk->output);
-
-						file->z = ztk;
-					}
-
-					return file;
-				}
-			}
-		}
-		else
-		{
-			snprintf (netpath, sizeof (netpath), "%s/%s",search->filename, filename);
-
-			if (!FS_SysFileExists (netpath))
-				continue;
-
-			if (!quiet)
-				Sys_Printf ("FindFile: %s\n",netpath);
-			return FS_OpenRead (netpath, -1, -1);
-		}
+		fs_filesize = -1;
+		return NULL;
 	}
 
-	if (!quiet)
-		Sys_Printf ("FindFile: can't find %s\n", filename);
+	// Found in the filesystem?
+	if (i < 0)
+		return FS_OpenRead (va ("%s/%s", search->filename, filename), -1, -1);
 
-	fs_filesize = -1;
-	return NULL;
+	// So, we found it in a package...
+	packfile = &search->pack->files[i];
+
+	// If we don't have the true offset, get it now
+	if (! (packfile->flags & FILE_FLAG_TRUEOFFS))
+		PK3_GetTrueFileOffset (packfile, search->pack);
+
+	// No Zlib DLL = no compressed files
+	if (!zlib_dll && (packfile->flags & FILE_FLAG_DEFLATED))
+	{
+		Con_Printf ("WARNING: can't open the compressed file %s\n"
+					"You need the Zlib DLL to use compressed files\n",
+					filename);
+		fs_filesize = -1;
+		return NULL;
+	}
+
+	// open a new file in the pakfile
+	file = FS_OpenRead (search->pack->filename, packfile->offset, packfile->packsize);
+	fs_filesize = packfile->realsize;
+
+	if (packfile->flags & FILE_FLAG_DEFLATED)
+	{
+		ztoolkit_t *ztk;
+
+		file->flags |= FS_FLAG_DEFLATED;
+
+		// We need some more variables
+		ztk = Mem_Alloc (fs_mempool, sizeof (*file->z));
+
+		ztk->real_length = packfile->realsize;
+
+		// Initialize zlib stream
+		ztk->zstream.next_in = ztk->input;
+		ztk->zstream.avail_in = 0;
+
+		/* From Zlib's "unzip.c":
+		 *
+		 * windowBits is passed < 0 to tell that there is no zlib header.
+		 * Note that in this case inflate *requires* an extra "dummy" byte
+		 * after the compressed stream in order to complete decompression and
+		 * return Z_STREAM_END.
+		 * In unzip, i don't wait absolutely Z_STREAM_END because I known the
+		 * size of both compressed and uncompressed data
+		 */
+		if (qz_inflateInit2 (&ztk->zstream, -MAX_WBITS) != Z_OK)
+			Sys_Error ("inflate init error (file: %s)", filename);
+
+		ztk->zstream.next_out = ztk->output;
+		ztk->zstream.avail_out = sizeof (ztk->output);
+
+		file->z = ztk;
+	}
+
+	return file;
 }
 
 
@@ -1653,24 +1735,18 @@ The filename will be prefixed by the current game directory
 */
 qboolean FS_WriteFile (const char *filename, void *data, int len)
 {
-	FILE *handle;
-	char name[MAX_OSPATH];
+	qfile_t *handle;
 
-	snprintf (name, sizeof (name), "%s/%s", fs_gamedir, filename);
-
-	// Create directories up to the file
-	FS_CreatePath (name);
-
-	handle = fopen (name, "wb");
+	handle = FS_Open (filename, "wb", false);
 	if (!handle)
 	{
-		Con_Printf ("FS_WriteFile: failed on %s\n", name);
+		Con_Printf ("FS_WriteFile: failed on %s\n", filename);
 		return false;
 	}
 
-	Con_DPrintf ("FS_WriteFile: %s\n", name);
-	fwrite (data, 1, len, handle);
-	fclose (handle);
+	Con_DPrintf ("FS_WriteFile: %s\n", filename);
+	FS_Write (handle, data, len);
+	FS_Close (handle);
 	return true;
 }
 
@@ -1735,34 +1811,26 @@ void FS_DefaultExtension (char *path, const char *extension, size_t size_path)
 }
 
 
+/*
+==================
+FS_FileExists
+
+Look for a file in the packages and in the filesystem
+==================
+*/
 qboolean FS_FileExists (const char *filename)
 {
-	searchpath_t *search;
-	char netpath[MAX_OSPATH];
-	pack_t *pak;
-	int i;
-
-	for (search = fs_searchpaths;search;search = search->next)
-	{
-		if (search->pack)
-		{
-			pak = search->pack;
-			for (i = 0;i < pak->numfiles;i++)
-				if (!strcmp (pak->files[i].name, filename))
-					return true;
-		}
-		else
-		{
-			snprintf (netpath, sizeof (netpath), "%s/%s",search->filename, filename);
-			if (FS_SysFileExists (netpath))
-				return true;
-		}
-	}
-
-	return false;
+	return (FS_FindFile (filename, NULL, true) != NULL);
 }
 
 
+/*
+==================
+FS_SysFileExists
+
+Look for a file in the filesystem only
+==================
+*/
 qboolean FS_SysFileExists (const char *path)
 {
 #if WIN32
