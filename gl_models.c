@@ -416,7 +416,7 @@ void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightor
 	}
 }
 
-void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor)
+void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz)
 {
 	int c, meshnum, layernum;
 	float fog, ifog, lightcolor2[3];
@@ -468,7 +468,7 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 			if (layer->flags & ALIASLAYER_SPECULAR)
 			{
 				c_alias_polys += mesh->num_triangles;
-				R_Shadow_SpecularLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_elements, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals, mesh->data_texcoords, relativelightorigin, relativeeyeorigin, lightradius, lightcolor2, layer->texture, layer->nmap, NULL);
+				R_Shadow_SpecularLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_elements, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals, mesh->data_texcoords, relativelightorigin, relativeeyeorigin, lightradius, lightcolor2, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, layer->texture, layer->nmap, NULL);
 			}
 			else if (layer->flags & ALIASLAYER_DIFFUSE)
 			{
@@ -497,7 +497,7 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 					lightcolor2[2] *= bcolor[2] * (1.0f / 255.0f);
 				}
 				c_alias_polys += mesh->num_triangles;
-				R_Shadow_DiffuseLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_elements, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals, mesh->data_texcoords, relativelightorigin, lightradius, lightcolor2, layer->texture, layer->nmap, NULL);
+				R_Shadow_DiffuseLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_elements, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals, mesh->data_texcoords, relativelightorigin, lightradius, lightcolor2, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, layer->texture, layer->nmap, NULL);
 			}
 		}
 	}

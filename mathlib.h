@@ -90,6 +90,7 @@ extern vec3_t vec3_origin;
 }
 #define VectorRandom(v) do{(v)[0] = lhrandom(-1, 1);(v)[1] = lhrandom(-1, 1);(v)[2] = lhrandom(-1, 1);}while(DotProduct(v, v) > 1)
 #define VectorBlend(b1, b2, blend, c) do{float iblend = 1 - (blend);VectorMAM(iblend, b1, blend, b2, c);}while(0)
+#define BoxesOverlap(a,b,c,d) ((a)[0] <= (d)[0] && (b)[0] >= (c)[0] && (a)[1] <= (d)[1] && (b)[1] >= (c)[1] && (a)[2] <= (d)[2] && (b)[2] >= (c)[2])
 
 /*
 // LordHavoc: quaternion math, untested, don't know if these are correct,
@@ -181,6 +182,9 @@ typedef struct
 tinydoubleplane_t;
 
 void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t point, float degrees);
+
+float RadiusFromBounds (const vec3_t mins, const vec3_t maxs);
+float RadiusFromBoundsAndOrigin (const vec3_t mins, const vec3_t maxs, const vec3_t origin);
 
 // print a matrix to the console
 struct matrix4x4_s;

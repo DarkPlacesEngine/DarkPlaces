@@ -87,6 +87,8 @@ shadowmesh_t;
 #include "model_sprite.h"
 #include "model_alias.h"
 
+#include "matrixlib.h"
+
 typedef struct model_s
 {
 	char			name[MAX_QPATH];
@@ -264,7 +266,7 @@ typedef struct model_s
 	// draw a shadow volume for the model based on light source
 	void(*DrawShadowVolume)(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius);
 	// draw the lighting on a model (through stencil)
-	void(*DrawLight)(struct entity_render_s *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor);
+	void(*DrawLight)(struct entity_render_s *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz);
 
 	// memory pool for allocations
 	mempool_t		*mempool;

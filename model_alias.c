@@ -309,7 +309,7 @@ void Mod_BuildMDLMD2MeshInfo(int numverts, int numtris, int *elements, float *te
 extern void R_Model_Alias_Draw(entity_render_t *ent);
 extern void R_Model_Alias_DrawFakeShadow(entity_render_t *ent);
 extern void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius);
-extern void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor);
+extern void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz);
 void Mod_LoadQ1AliasModel (model_t *mod, void *buffer)
 {
 	int i, j, version, totalposes, totalskins, skinwidth, skinheight, totalverts, groupframes, groupskins, *elements, numverts, numtris;
@@ -881,7 +881,7 @@ extern void R_Model_Zymotic_DrawSky(entity_render_t *ent);
 extern void R_Model_Zymotic_Draw(entity_render_t *ent);
 extern void R_Model_Zymotic_DrawFakeShadow(entity_render_t *ent);
 extern void R_Model_Zymotic_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius);
-extern void R_Model_Zymotic_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor);
+extern void R_Model_Zymotic_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz);
 void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 {
 	zymtype1header_t *pinmodel, *pheader;
