@@ -532,6 +532,8 @@ void R_Stain (const vec3_t origin, float radius, int cr1, int cg1, int cb1, int 
 	entity_render_t *ent;
 	model_t *model;
 	vec3_t org;
+	if (cl.worldmodel == NULL)
+		return;
 	fcolor[0] = cr1;
 	fcolor[1] = cg1;
 	fcolor[2] = cb1;
@@ -541,9 +543,7 @@ void R_Stain (const vec3_t origin, float radius, int cr1, int cg1, int cb1, int 
 	fcolor[6] = cb2 - cb1;
 	fcolor[7] = (ca2 - ca1) * (1.0f / 64.0f);
 
-	model = cl.worldmodel;
-	if (model)
-		R_StainNode(model->nodes + model->hulls[0].firstclipnode, model, origin, radius, fcolor);
+	R_StainNode(cl.worldmodel->nodes + cl.worldmodel->hulls[0].firstclipnode, cl.worldmodel, origin, radius, fcolor);
 
 	// look for embedded bmodels
 	for (n = 0;n < cl_num_brushmodel_entities;n++)
@@ -1491,6 +1491,8 @@ void R_DrawSurfaces(entity_render_t *ent, int type, msurface_t ***chains)
 {
 	int i;
 	texture_t *t;
+	if (ent->model == NULL)
+		return;
 	R_Mesh_Matrix(&ent->matrix);
 	for (i = 0, t = ent->model->textures;i < ent->model->numtextures;i++, t++)
 		if (t->shader->shaderfunc[type] && t->currentframe && chains[i] != NULL)
@@ -1531,6 +1533,8 @@ static void R_DrawPortals(entity_render_t *ent)
 	int i;
 	mportal_t *portal, *endportal;
 	float temp[3], center[3], f;
+	if (ent->model == NULL)
+		return;
 	for (portal = ent->model->portals, endportal = portal + ent->model->numportals;portal < endportal;portal++)
 	{
 		if ((portal->here->pvsframe == ent->model->pvsframecount || portal->past->pvsframe == ent->model->pvsframecount) && portal->numpoints <= POLYGONELEMENTS_MAXPOINTS)
@@ -1558,6 +1562,8 @@ void R_PrepareBrushModel(entity_render_t *ent)
 	// because bmodels can be reused, we have to decide which things to render
 	// from scratch every time
 	model = ent->model;
+	if (model == NULL)
+		return;
 #if WORLDNODECULLBACKFACES
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
 #endif
@@ -1592,7 +1598,10 @@ void R_SurfaceWorldNode (entity_render_t *ent)
 	model_t *model;
 	vec3_t modelorg;
 
+	// equivilant to quake's RecursiveWorldNode but faster and more effective
 	model = ent->model;
+	if (model == NULL)
+		return;
 	surfacevisframes = model->surfacevisframes + model->firstmodelsurface;
 	surfacepvsframes = model->surfacepvsframes + model->firstmodelsurface;
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
@@ -1639,6 +1648,8 @@ static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
 	mportal_t *p;
 	vec3_t modelorg;
 	msurface_t *surfaces;
+	if (ent->model == NULL)
+		return;
 	// LordHavoc: portal-passage worldnode with PVS;
 	// follows portals leading outward from viewleaf, does not venture
 	// offscreen or into leafs that are not visible, faster than Quake's
@@ -1769,6 +1780,8 @@ void R_WorldVisibility (entity_render_t *ent)
 
 void R_DrawWorld (entity_render_t *ent)
 {
+	if (ent->model == NULL)
+		return;
 	R_PrepareSurfaces(ent);
 	R_DrawSurfaces(ent, SHADERSTAGE_SKY, ent->model->pvstexturechains);
 	R_DrawSurfaces(ent, SHADERSTAGE_NORMAL, ent->model->pvstexturechains);
@@ -1776,6 +1789,8 @@ void R_DrawWorld (entity_render_t *ent)
 
 void R_Model_Brush_DrawSky (entity_render_t *ent)
 {
+	if (ent->model == NULL)
+		return;
 	if (ent != &cl_entities[0].render)
 		R_PrepareBrushModel(ent);
 	R_DrawSurfaces(ent, SHADERSTAGE_SKY, ent->model->pvstexturechains);
@@ -1783,6 +1798,8 @@ void R_Model_Brush_DrawSky (entity_render_t *ent)
 
 void R_Model_Brush_Draw (entity_render_t *ent)
 {
+	if (ent->model == NULL)
+		return;
 	c_bmodels++;
 	if (ent != &cl_entities[0].render)
 		R_PrepareBrushModel(ent);
@@ -1795,6 +1812,8 @@ void R_Model_Brush_DrawShadowVolume (entity_render_t *ent, vec3_t relativelighto
 	msurface_t *surf;
 	float projectdistance, f, temp[3], lightradius2;
 	surfmesh_t *mesh;
+	if (ent->model == NULL)
+		return;
 	R_Mesh_Matrix(&ent->matrix);
 	lightradius2 = lightradius * lightradius;
 	R_UpdateTextureInfo(ent);
@@ -1832,6 +1851,8 @@ void R_Model_Brush_DrawLightForSurfaceList(entity_render_t *ent, vec3_t relative
 	msurface_t *surf;
 	texture_t *t;
 	surfmesh_t *mesh;
+	if (ent->model == NULL)
+		return;
 	R_Mesh_Matrix(&ent->matrix);
 	R_UpdateTextureInfo(ent);
 	for (surfnum = 0;surfnum < numsurfaces;surfnum++)
@@ -1861,6 +1882,8 @@ void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 	texture_t *t;
 	float f, lightradius2, temp[3];
 	surfmesh_t *mesh;
+	if (ent->model == NULL)
+		return;
 	R_Mesh_Matrix(&ent->matrix);
 	lightradius2 = lightradius * lightradius;
 	R_UpdateTextureInfo(ent);
