@@ -666,8 +666,8 @@ void CL_ParticleExplosion (vec3_t org)
 		R_Stain(org, 96, 80, 80, 80, 64, 176, 176, 176, 64);
 	CL_SpawnDecalParticleForPoint(org, 40, 48, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
 
-	i = CL_PointQ1Contents(org);
-	if (i == CONTENTS_SLIME || i == CONTENTS_WATER)
+	i = CL_PointSuperContents(org);
+	if (i & (SUPERCONTENTS_SLIME | SUPERCONTENTS_WATER))
 	{
 		if (cl_particles.integer && cl_particles_bubbles.integer && cl_particles_explosions_bubbles.integer)
 			for (i = 0;i < 128 * cl_particles_quality.value;i++)
@@ -1113,7 +1113,10 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, int color, entity_t *en
 {
 	vec3_t vec, dir, vel, pos;
 	float len, dec, speed, qd;
-	int contents, smoke, blood, bubbles;
+	int smoke, blood, bubbles;
+#ifdef WORKINGLQUAKE
+	int contents;
+#endif
 
 	if (end[0] == start[0] && end[1] == start[1] && end[2] == start[2])
 		return;
@@ -1149,13 +1152,14 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, int color, entity_t *en
 	VectorMA(start, dec, vec, pos);
 	len -= dec;
 
-	contents = CL_PointQ1Contents(pos);
-	if (contents == CONTENTS_SKY || contents == CONTENTS_LAVA)
-		return;
-
 	smoke = cl_particles.integer && cl_particles_smoke.integer;
 	blood = cl_particles.integer && cl_particles_blood.integer;
+#ifdef WORKINGLQUAKE
+	contents = CL_PointQ1Contents(pos);
 	bubbles = cl_particles.integer && cl_particles_bubbles.integer && (contents == CONTENTS_WATER || contents == CONTENTS_SLIME);
+#else
+	bubbles = cl_particles.integer && cl_particles_bubbles.integer && (CL_PointSuperContents(pos) & (SUPERCONTENTS_WATER | SUPERCONTENTS_SLIME));
+#endif
 	qd = 1.0f / cl_particles_quality.value;
 
 	while (len >= 0)
@@ -1429,9 +1433,11 @@ void CL_MoveParticles (void)
 		if (p->friction)
 		{
 			f = p->friction * frametime;
-			if (!content)
-				content = CL_PointQ1Contents(p->org);
-			if (content != CONTENTS_EMPTY)
+#ifdef WORKINGLQUAKE
+			if (CL_PointQ1Contents(p->org) != CONTENTS_EMPTY)
+#else
+			if (CL_PointSuperContents(p->org) & SUPERCONTENTS_LIQUIDSMASK)
+#endif
 				f *= 4;
 			f = 1.0f - f;
 			VectorScale(p->vel, f, p->vel);
@@ -1442,37 +1448,48 @@ void CL_MoveParticles (void)
 			switch (p->type)
 			{
 			case pt_blood:
-				if (!content)
-					content = CL_PointQ1Contents(p->org);
-				a = content;
-				if (a != CONTENTS_EMPTY)
+#ifdef WORKINGLQUAKE
+				a = CL_PointQ1Contents(p->org);
+				if (a <= CONTENTS_WATER)
+#else
+				a = CL_PointSuperContents(p->org);
+				if (a & (SUPERCONTENTS_WATER | SUPERCONTENTS_SLIME))
+#endif
 				{
-					if (a == CONTENTS_WATER || a == CONTENTS_SLIME)
-					{
-						p->scalex += frametime * 8;
-						p->scaley += frametime * 8;
-						//p->alpha -= bloodwaterfade;
-					}
-					else
-						p->type = pt_dead;
+					p->scalex += frametime * 8;
+					p->scaley += frametime * 8;
+					//p->alpha -= bloodwaterfade;
 				}
 				else
 					p->vel[2] -= gravity;
+#ifdef WORKINGLQUAKE
+				if (a == CONTENTS_SOLID || a == CONTENTS_LAVA)
+#else
+				if (a & (SUPERCONTENTS_SOLID | SUPERCONTENTS_LAVA | SUPERCONTENTS_NODROP))
+#endif
+					p->type = pt_dead;
 				break;
 			case pt_bubble:
-				if (!content)
-					content = CL_PointQ1Contents(p->org);
-				if (content != CONTENTS_WATER && content != CONTENTS_SLIME)
+#ifdef WORKINGLQUAKE
+				a = CL_PointQ1Contents(p->org);
+				if (a != CONTENTS_WATER && a != CONTENTS_SLIME)
+#else
+				a = CL_PointSuperContents(p->org);
+				if (!(a & (SUPERCONTENTS_WATER | SUPERCONTENTS_SLIME)))
+#endif
 				{
 					p->type = pt_dead;
 					break;
 				}
 				break;
 			case pt_rain:
-				if (!content)
-					content = CL_PointQ1Contents(p->org);
-				a = content;
+#ifdef WORKINGLQUAKE
+				a = CL_PointQ1Contents(p->org);
 				if (a != CONTENTS_EMPTY && a != CONTENTS_SKY)
+#else
+				a = CL_PointSuperContents(p->org);
+				if (a & (SUPERCONTENTS_SOLID | SUPERCONTENTS_LIQUIDSMASK))
+#endif
 					p->type = pt_dead;
 				break;
 			case pt_snow:
@@ -1484,10 +1501,13 @@ void CL_MoveParticles (void)
 					p->vel[1] = lhrandom(-32, 32) + p->vel2[1];
 					p->vel[2] = /*lhrandom(-32, 32) +*/ p->vel2[2];
 				}
-				if (!content)
-					content = CL_PointQ1Contents(p->org);
-				a = content;
+#ifdef WORKINGLQUAKE
+				a = CL_PointQ1Contents(p->org);
 				if (a != CONTENTS_EMPTY && a != CONTENTS_SKY)
+#else
+				a = CL_PointSuperContents(p->org);
+				if (a & (SUPERCONTENTS_SOLID | SUPERCONTENTS_LIQUIDSMASK))
+#endif
 					p->type = pt_dead;
 				break;
 			case pt_grow:
