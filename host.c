@@ -77,6 +77,8 @@ cvar_t	pausable = {"pausable","1"};
 
 cvar_t	temp1 = {"temp1","0"};
 
+cvar_t	timestamps = {"timestamps", "0", true};
+cvar_t	timeformat = {"timeformat", "[%b %e %X] ", true};
 
 /*
 ================
@@ -226,6 +228,9 @@ void Host_InitLocal (void)
 	Cvar_RegisterVariable (&pausable);
 
 	Cvar_RegisterVariable (&temp1);
+
+	Cvar_RegisterVariable (&timestamps);
+	Cvar_RegisterVariable (&timeformat);
 
 	Host_FindMaxClients ();
 	
