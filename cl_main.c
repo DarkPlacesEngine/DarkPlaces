@@ -758,25 +758,25 @@ void CL_LinkNetworkEntity(entity_t *e)
 			{
 				trailtype = 3;
 				dlightradius = max(dlightradius, 100);
-				dlightcolor[0] += 0.12f;
-				dlightcolor[1] += 0.50f;
-				dlightcolor[2] += 0.12f;
+				dlightcolor[0] += 0.25f;
+				dlightcolor[1] += 1.00f;
+				dlightcolor[2] += 0.25f;
 			}
 			else if (e->render.model->flags & EF_TRACER2)
 			{
 				trailtype = 5;
 				dlightradius = max(dlightradius, 100);
-				dlightcolor[0] += 0.50f;
-				dlightcolor[1] += 0.30f;
-				dlightcolor[2] += 0.10f;
+				dlightcolor[0] += 1.00f;
+				dlightcolor[1] += 0.60f;
+				dlightcolor[2] += 0.20f;
 			}
 			else if (e->render.model->flags & EF_ROCKET)
 			{
 				trailtype = 0;
 				dlightradius = max(dlightradius, 200);
-				dlightcolor[0] += 1.50f;
-				dlightcolor[1] += 1.20f;
-				dlightcolor[2] += 0.60f;
+				dlightcolor[0] += 3.00f;
+				dlightcolor[1] += 1.50f;
+				dlightcolor[2] += 0.50f;
 			}
 			else if (e->render.model->flags & EF_GRENADE)
 			{
@@ -787,9 +787,9 @@ void CL_LinkNetworkEntity(entity_t *e)
 			{
 				trailtype = 6;
 				dlightradius = max(dlightradius, 200);
-				dlightcolor[0] += 0.60f;
-				dlightcolor[1] += 0.25f;
-				dlightcolor[2] += 0.50f;
+				dlightcolor[0] += 1.20f;
+				dlightcolor[1] += 0.50f;
+				dlightcolor[2] += 1.00f;
 			}
 		}
 		// LordHavoc: customizable glow
