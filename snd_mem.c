@@ -105,8 +105,8 @@ void ResampleSfx (sfx_t *sfx, int inrate, byte *data)
 		fracstep = stepscale*256;
 		if ((fracstep & 255) == 0) // skipping points on perfect multiple
 		{
-			samplefrac >> 8;
 			srcsample = 0;
+			fracstep >>= 8;
 			if (sc->width == 2)
 			{
 				short *out = (void *)sc->data, *in = (void *)data;
@@ -154,6 +154,7 @@ void ResampleSfx (sfx_t *sfx, int inrate, byte *data)
 		}
 		else
 		{
+			int sample;
 			if (sc->width == 2)
 			{
 				short *out = (void *)sc->data, *in = (void *)data;
@@ -163,8 +164,10 @@ void ResampleSfx (sfx_t *sfx, int inrate, byte *data)
 					{
 						srcsample = (samplefrac >> 7) & ~1;
 						samplefrac += fracstep;
-						*out++ = (short) ((int) ((LittleShort (in[srcsample  ]) * (256 - (samplefrac & 255)) + LittleShort (in[srcsample+2]) * (samplefrac & 255)) >> 8));
-						*out++ = (short) ((int) ((LittleShort (in[srcsample+1]) * (256 - (samplefrac & 255)) + LittleShort (in[srcsample+3]) * (samplefrac & 255)) >> 8));
+						sample = (LittleShort (in[srcsample  ]) * (256 - (samplefrac & 255)) + LittleShort (in[srcsample+2]) * (samplefrac & 255)) >> 8;
+						*out++ = (short) sample;
+						sample = (LittleShort (in[srcsample+1]) * (256 - (samplefrac & 255)) + LittleShort (in[srcsample+3]) * (samplefrac & 255)) >> 8;
+						*out++ = (short) sample;
 					}
 				}
 				else
@@ -173,7 +176,8 @@ void ResampleSfx (sfx_t *sfx, int inrate, byte *data)
 					{
 						srcsample = samplefrac >> 8;
 						samplefrac += fracstep;
-						*out++ = (short) ((int) ((LittleShort (in[srcsample]  ) * (256 - (samplefrac & 255)) + LittleShort (in[srcsample+1]) * (samplefrac & 255)) >> 8));
+						sample = (LittleShort (in[srcsample  ]) * (256 - (samplefrac & 255)) + LittleShort (in[srcsample+1]) * (samplefrac & 255)) >> 8;
+						*out++ = (short) sample;
 					}
 				}
 			}
@@ -186,8 +190,10 @@ void ResampleSfx (sfx_t *sfx, int inrate, byte *data)
 					{
 						srcsample = (samplefrac >> 7) & ~1;
 						samplefrac += fracstep;
-						*out++ = (signed char) ((int) (((((unsigned char) in[srcsample  ] - 128) * (256 - (samplefrac & 255))) + (((unsigned char) in[srcsample+2] - 128) * (samplefrac & 255))) >> 8));
-						*out++ = (signed char) ((int) (((((unsigned char) in[srcsample+1] - 128) * (256 - (samplefrac & 255))) + (((unsigned char) in[srcsample+3] - 128) * (samplefrac & 255))) >> 8));
+						sample = ((((unsigned char) in[srcsample  ] - 128) * (256 - (samplefrac & 255))) + (((unsigned char) in[srcsample+2] - 128) * (samplefrac & 255))) >> 8;
+						*out++ = (signed char) sample;
+						sample = ((((unsigned char) in[srcsample+1] - 128) * (256 - (samplefrac & 255))) + (((unsigned char) in[srcsample+3] - 128) * (samplefrac & 255))) >> 8;
+						*out++ = (signed char) sample;
 					}
 				}
 				else
@@ -196,7 +202,8 @@ void ResampleSfx (sfx_t *sfx, int inrate, byte *data)
 					{
 						srcsample = samplefrac >> 8;
 						samplefrac += fracstep;
-						*out++ = (signed char) ((int) (((((unsigned char) in[srcsample  ] - 128) * (256 - (samplefrac & 255))) + (((unsigned char) in[srcsample+1] - 128) * (samplefrac & 255))) >> 8));
+						sample = ((((unsigned char) in[srcsample  ] - 128) * (256 - (samplefrac & 255))) + (((unsigned char) in[srcsample+1] - 128) * (samplefrac & 255))) >> 8;
+						*out++ = (signed char) sample;
 					}
 				}
 			}
