@@ -214,9 +214,26 @@ void gl_main_shutdown(void)
 extern void CL_ParseEntityLump(char *entitystring);
 void gl_main_newmap(void)
 {
-	if (cl.worldmodel && cl.worldmodel->entities)
-		CL_ParseEntityLump(cl.worldmodel->entities);
+	int l;
+	char *entities, entname[MAX_QPATH];
 	r_framecount = 1;
+	if (cl.worldmodel)
+	{
+		strcpy(entname, cl.worldmodel->name);
+		l = strlen(entname) - 4;
+		if (l >= 0 && !strcmp(entname + l, ".bsp"))
+		{
+			strcpy(entname + l, ".ent");
+			if ((entities = FS_LoadFile(entname, true)))
+			{
+				CL_ParseEntityLump(entities);
+				Mem_Free(entities);
+				return;
+			}
+		}
+		if (cl.worldmodel->entities)
+			CL_ParseEntityLump(cl.worldmodel->entities);
+	}
 }
 
 void GL_Main_Init(void)
