@@ -2,6 +2,8 @@
 *.o
 ChangeLog
 darkplaces-glx
+darkplaces-3dfx
+gmon.out
 *.ncb
 *.opt
 *.plg
