@@ -1766,6 +1766,13 @@ void SV_SpawnServer (const char *server)
 	// clear the edict memory pool
 	Mem_EmptyPool(sv_edicts_mempool);
 	sv.edicts = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * pr_edict_size);
+	sv.edictstable = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * sizeof(edict_t *));
+	for (i = 0;i < MAX_EDICTS;i++)
+	{
+		ent = (edict_t *)((qbyte *)sv.edicts + (i * pr_edict_size));
+		ent->number = i;
+		sv.edictstable[i] = ent;
+	}
 
 	sv.datagram.maxsize = sizeof(sv.datagram_buf);
 	sv.datagram.cursize = 0;

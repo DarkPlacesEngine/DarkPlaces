@@ -69,6 +69,8 @@ typedef struct
 	int max_edicts;
 	// can NOT be array indexed, because edict_t is variable sized, but can be used to reference the world ent
 	edict_t *edicts;
+	// can be array indexed
+	edict_t **edictstable;
 	// some actions are only valid during load
 	server_state_t state;
 

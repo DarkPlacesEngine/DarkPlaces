@@ -1556,22 +1556,13 @@ edict_t *EDICT_NUM_ERROR(int n)
 
 int NUM_FOR_EDICT(edict_t *e)
 {
-	int		b;
-
-	b = (qbyte *)e - (qbyte *)sv.edicts;
-	b = b / pr_edict_size;
-
-	if (b < 0 || b >= sv.num_edicts)
+	if ((qbyte *)e < (qbyte *)sv.edicts || (qbyte *)e > (qbyte *)sv.edicts + pr_edictareasize)
 		Host_Error ("NUM_FOR_EDICT: bad pointer");
-	return b;
+	return e->number;
 }
 
 int NoCrash_NUM_FOR_EDICT(edict_t *e)
 {
-	int		b;
-
-	b = (qbyte *)e - (qbyte *)sv.edicts;
-	b = b / pr_edict_size;
-	return b;
+	return e->number;
 }
 
