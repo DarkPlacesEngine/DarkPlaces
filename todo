@@ -82,6 +82,7 @@
 0 darkplaces renderer: make sure that the texture fragment allocator can upload a full size block that uses the entire image, this may involve width/height comparisons needing a + 1 (fuh)
 0 darkplaces server: PF_vectorvectors is broken, given a v_forward from makevectors (not using roll) it does not give the same v_right and v_up vectors (VorteX)
 0 darkplaces server: add DP_HALFLIFESPRITE extension (Urre)
+0 darkplaces server: add DP_QC_STRTOKEN extension with these functions: float strtokens(string s, string separator) = #;string strtoken(string s, string separator, float index) = #; (FrikaC)
 0 darkplaces server: add DP_QC_WRITESTRING2 extension, same as writestring but does not write trailing 0 (shadowalker)
 0 darkplaces server: add DP_SV_DRAWONLYTOTEAM extension (Supajoe)
 0 darkplaces server: add PF_tokenizeseparator function and DP_QC_TOKENIZESEPARATOR extension
@@ -760,6 +761,7 @@ d dpzoo.map: snow
 d dpzoo.map: transparent glass bmodels (DP_ENT_ALPHA)
 d hmap2: add -ambientlight option, with warning that it does not produce a .light file (Harb)
 d hmap2: add -minlight option, with warning that it does not produce a .lights file (Harb)
+d hmap2: add a -harshshade option which would not have the 90 degrees incidence = grey hack seen in light.exe (Urre)
 d hmap2: add tyrlite compatible "delay" settings, with the interpretation of no specified delay being dependent on a -tyrlite option, and add a new type which is a sun light; light cast in a direction, from sky polygons or the void, these light types would warn that they disable .lights files
 d hmap2: light not properly figuring out the origin of rotating objects - it should take the "origin" key (FrikaC)
 d hmap2: make LoadBrush reject incomplete brushes - they produce bogus polygon boundaries (Tomaz)
