@@ -4534,7 +4534,7 @@ static void Mod_Q3BSP_LoadModels(lump_t *l)
 static void Mod_Q3BSP_LoadLeafBrushes(lump_t *l)
 {
 	int *in;
-	q3mbrush_t **out;
+	int *out;
 	int i, n, count;
 
 	in = (void *)(mod_base + l->fileofs);
@@ -4551,7 +4551,7 @@ static void Mod_Q3BSP_LoadLeafBrushes(lump_t *l)
 		n = LittleLong(*in);
 		if (n < 0 || n >= loadmodel->brushq3.num_brushes)
 			Host_Error("Mod_Q3BSP_LoadLeafBrushes: invalid brush index %i (%i brushes)\n", n, loadmodel->brushq3.num_brushes);
-		*out = loadmodel->brushq3.data_brushes + n;
+		*out = n;
 	}
 }
 
@@ -4856,11 +4856,11 @@ static void Mod_Q3BSP_TracePoint_RecursiveBSPNode(trace_t *trace, model_t *model
 	leaf = (q3mleaf_t *)node;
 	for (i = 0;i < leaf->numleafbrushes;i++)
 	{
-		brush = leaf->firstleafbrush[i]->colbrushf;
+		brush = model->brushq3.data_brushes[leaf->firstleafbrush[i]].colbrushf;
 		if (brush && brush->markframe != markframe && BoxesOverlap(point, point, brush->mins, brush->maxs))
 		{
 			brush->markframe = markframe;
-			Collision_TracePointBrushFloat(trace, point, leaf->firstleafbrush[i]->colbrushf);
+			Collision_TracePointBrushFloat(trace, point, brush);
 		}
 	}
 	// can't do point traces on curves (they have no thickness)
@@ -4921,11 +4921,11 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, model_t *model,
 	leaf = (q3mleaf_t *)node;
 	for (i = 0;i < leaf->numleafbrushes;i++)
 	{
-		brush = leaf->firstleafbrush[i]->colbrushf;
+		brush = model->brushq3.data_brushes[leaf->firstleafbrush[i]].colbrushf;
 		if (brush && brush->markframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, brush->mins, brush->maxs))
 		{
 			brush->markframe = markframe;
-			Collision_TraceLineBrushFloat(trace, linestart, lineend, leaf->firstleafbrush[i]->colbrushf, leaf->firstleafbrush[i]->colbrushf);
+			Collision_TraceLineBrushFloat(trace, linestart, lineend, brush, brush);
 			if (startfrac > trace->realfraction)
 				return;
 		}
@@ -5305,11 +5305,11 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, model_t *model
 	leaf = (q3mleaf_t *)node;
 	for (i = 0;i < leaf->numleafbrushes;i++)
 	{
-		brush = leaf->firstleafbrush[i]->colbrushf;
+		brush = model->brushq3.data_brushes[leaf->firstleafbrush[i]].colbrushf;
 		if (brush && brush->markframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, brush->mins, brush->maxs))
 		{
 			brush->markframe = markframe;
-			Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, leaf->firstleafbrush[i]->colbrushf, leaf->firstleafbrush[i]->colbrushf);
+			Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, brush, brush);
 		}
 	}
 	if (mod_q3bsp_curves_collisions.integer)
