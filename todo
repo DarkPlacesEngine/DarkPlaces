@@ -1,6 +1,5 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
 -(Baalz) d darkplaces input bug: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
--(Zombie13) d dpmod: add a "monsterwander" cvar and default it off, this would enable the spawnwanderpath code (Zombie13)
 0 darkplaces client: add a swinging weapon motion to replace the removed forward/back movement of the weapon (Joel Murdoch)
 0 darkplaces client: add back cl_particles_lighting cvar and add back the particle lighting (romi)
 0 darkplaces client: add back random framegroup animation sync for sprites and models so torch flames don't play in sync (Elric)
@@ -39,6 +38,7 @@
 0 darkplaces parse: support ' quoted strings
 0 darkplaces physics: figure out why monsters keep making fall pain sound after they've landed in dpmod (Cruaich)
 0 darkplaces physics: test TecnoX and find the frikbot crash in SV_Physics (KrimZon)
+0 darkplaces protocol bug: model colormap is showing white on client, is it even being sent? 
 0 darkplaces protocol: add DP_SENSITIVITYSCALE extension which scales sensitivity on client like viewzoom does, but without affecting fov, note if this is non-zero it overrides viewzoom sensitivity entirely, it does not scale it (Urre)
 0 darkplaces protocol: add DP_TE_BUBBLES extension to spawn a puff of bubbles (shadowalker)
 0 darkplaces protocol: add DP_WEAPONSKIN extension which would add a .float weaponskin field (protoplasmatic, Kazashi)
@@ -87,6 +87,7 @@
 0 dpmod: add flame thrower weapon, and make its altfire drop a canister of fuel (10 fuel units?), which can be ignited to set off as a bomb about the size of a rocket blast, plus some fireballs raining down (scar3crow)
 0 dpmod: change kill awards to use DP_SV_CLIENTFLASHPIC (Tomaz)
 0 dpmod: crash when dog attacks you in dpdm2 deathmatch 7 with bots present (Zombie13)
+0 dpmod: figure out what's wrong with the bots
 0 dpmod: figure out why the dbsg isn't selectable in deathmatch 7 mode
 0 dpmod: find a way to make deathmatch 7 get more difficult as kills increase?  (Zombie13)
 0 dpmod: fix the 'shell casing spawning at wrong player' bug somehow
@@ -667,6 +668,7 @@ d darkplaces: upgrade punchangle protocol to 16bit angles for smoother motion (U
 d darkplaces: worked around Intel precision bug with view blends (they were not covering one line of the screen, due to being so huge that it had precision problems, on ATI and NVIDIA) (Sajt)
 d dpmaster: add a commandline option to dpmaster that remaps a server ip to another ip, so LordHavoc can make his server show up on his dpmaster
 d dpmaster: rename 'interface' variable so it compiles in MSVC, interface is a compiler keyword (Vic)
+d dpmod: add a "monsterwander" cvar and default it off, this would enable the spawnwanderpath code (Zombie13)
 d dpmod: add back charge-up on plasma rifle alt-fire and increase the max charge to 50 cells
 d dpmod: add back nails in walls, even if only in singleplayer (Zenex)
 d dpmod: add back tarbaby gibs (scar3crow)
