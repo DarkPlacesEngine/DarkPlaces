@@ -49,33 +49,33 @@ void GL_Models_Init(void)
 	R_RegisterModule("GL_Models", gl_models_start, gl_models_shutdown, gl_models_newmap);
 }
 
-void R_Model_Alias_GetVerts(const entity_render_t *ent, float *vertices, float *normals, float *svectors, float *tvectors)
+void R_Model_Alias_GetMeshVerts(const entity_render_t *ent, aliasmesh_t *mesh, float *vertices, float *normals, float *svectors, float *tvectors)
 {
 	int i, vertcount;
 	float lerp1, lerp2, lerp3, lerp4;
 	const aliasvertex_t *verts1, *verts2, *verts3, *verts4;
 
 	if (vertices == NULL)
-	 	Host_Error("R_Model_Alias_GetVerts: vertices == NULL.\n");
+	 	Host_Error("R_Model_Alias_GetMeshVerts: vertices == NULL.\n");
 	if (svectors != NULL && (tvectors == NULL || normals == NULL))
-	 	Host_Error("R_Model_Alias_GetVerts: svectors requires tvectors and normals.\n");
+	 	Host_Error("R_Model_Alias_GetMeshVerts: svectors requires tvectors and normals.\n");
 	if (tvectors != NULL && (svectors == NULL || normals == NULL))
-	 	Host_Error("R_Model_Alias_GetVerts: tvectors requires svectors and normals.\n");
+	 	Host_Error("R_Model_Alias_GetMeshVerts: tvectors requires svectors and normals.\n");
 
-	vertcount = ent->model->numverts;
-	verts1 = ent->model->mdlmd2data_pose + ent->frameblend[0].frame * vertcount;
+	vertcount = mesh->num_vertices;
+	verts1 = mesh->data_vertices + ent->frameblend[0].frame * vertcount;
 	lerp1 = ent->frameblend[0].lerp;
 	if (ent->frameblend[1].lerp)
 	{
-		verts2 = ent->model->mdlmd2data_pose + ent->frameblend[1].frame * vertcount;
+		verts2 = mesh->data_vertices + ent->frameblend[1].frame * vertcount;
 		lerp2 = ent->frameblend[1].lerp;
 		if (ent->frameblend[2].lerp)
 		{
-			verts3 = ent->model->mdlmd2data_pose + ent->frameblend[2].frame * vertcount;
+			verts3 = mesh->data_vertices + ent->frameblend[2].frame * vertcount;
 			lerp3 = ent->frameblend[2].lerp;
 			if (ent->frameblend[3].lerp)
 			{
-				verts4 = ent->model->mdlmd2data_pose + ent->frameblend[3].frame * vertcount;
+				verts4 = mesh->data_vertices + ent->frameblend[3].frame * vertcount;
 				lerp4 = ent->frameblend[3].lerp;
 				// generate vertices
 				if (svectors != NULL)
@@ -214,7 +214,7 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 	qbyte *bcolor;
 	rmeshstate_t m;
 	const entity_render_t *ent = calldata1;
-	aliasmesh_t *mesh = ent->model->mdlmd2data_meshes + calldata2;
+	aliasmesh_t *mesh = ent->model->aliasdata_meshes + calldata2;
 	aliaslayer_t *layer;
 	aliasskin_t *skin;
 
@@ -241,7 +241,7 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 	memset(&m, 0, sizeof(m));
 	skin = R_FetchAliasSkin(ent, mesh);
 	R_Mesh_ResizeCheck(mesh->num_vertices);
-	R_Model_Alias_GetVerts(ent, varray_vertex, aliasvert_normals, NULL, NULL);
+	R_Model_Alias_GetMeshVerts(ent, mesh, varray_vertex, aliasvert_normals, NULL, NULL);
 	memcpy(varray_texcoord[0], mesh->data_texcoords, mesh->num_vertices * sizeof(float[4]));
 	for (layernum = 0, layer = skin->data_layers;layernum < skin->num_layers;layernum++, layer++)
 	{
@@ -330,7 +330,7 @@ void R_Model_Alias_Draw(entity_render_t *ent)
 
 	c_models++;
 
-	for (meshnum = 0, mesh = ent->model->mdlmd2data_meshes;meshnum < ent->model->mdlmd2num_meshes;meshnum++, mesh++)
+	for (meshnum = 0, mesh = ent->model->aliasdata_meshes;meshnum < ent->model->aliasnum_meshes;meshnum++, mesh++)
 	{
 		if (ent->effects & EF_ADDITIVE || ent->alpha != 1.0 || R_FetchAliasSkin(ent, mesh)->flags & ALIASSKIN_TRANSPARENT)
 			R_MeshQueue_AddTransparent(ent->origin, R_DrawAliasModelCallback, ent, meshnum);
@@ -381,13 +381,13 @@ void R_Model_Alias_DrawFakeShadow (entity_render_t *ent)
 
 	dist = -1.0f / DotProduct(projection, planenormal);
 	VectorScale(projection, dist, projection);
-	for (meshnum = 0, mesh = ent->model->mdlmd2data_meshes;meshnum < ent->model->mdlmd2num_meshes;meshnum++)
+	for (meshnum = 0, mesh = ent->model->aliasdata_meshes;meshnum < ent->model->aliasnum_meshes;meshnum++)
 	{
 		skin = R_FetchAliasSkin(ent, mesh);
 		if (skin->flags & ALIASSKIN_TRANSPARENT)
 			continue;
 		R_Mesh_ResizeCheck(mesh->num_vertices);
-		R_Model_Alias_GetVerts(ent, varray_vertex, NULL, NULL, NULL);
+		R_Model_Alias_GetMeshVerts(ent, mesh, varray_vertex, NULL, NULL, NULL);
 		for (i = 0, v = varray_vertex;i < mesh->num_vertices;i++, v += 4)
 		{
 			dist = DotProduct(v, planenormal) - planedist;
@@ -411,13 +411,13 @@ void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightor
 	if (projectdistance > 0.1)
 	{
 		R_Mesh_Matrix(&ent->matrix);
-		for (meshnum = 0, mesh = ent->model->mdlmd2data_meshes;meshnum < ent->model->mdlmd2num_meshes;meshnum++)
+		for (meshnum = 0, mesh = ent->model->aliasdata_meshes;meshnum < ent->model->aliasnum_meshes;meshnum++)
 		{
 			skin = R_FetchAliasSkin(ent, mesh);
 			if (skin->flags & ALIASSKIN_TRANSPARENT)
 				continue;
 			R_Mesh_ResizeCheck(mesh->num_vertices * 2);
-			R_Model_Alias_GetVerts(ent, varray_vertex, NULL, NULL, NULL);
+			R_Model_Alias_GetMeshVerts(ent, mesh, varray_vertex, NULL, NULL, NULL);
 			R_Shadow_Volume(mesh->num_vertices, mesh->num_triangles, mesh->data_elements, mesh->data_neighbors, relativelightorigin, lightradius, projectdistance);
 		}
 	}
@@ -456,13 +456,13 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 	}
 	ifog = 1 - fog;
 
-	for (meshnum = 0, mesh = ent->model->mdlmd2data_meshes;meshnum < ent->model->mdlmd2num_meshes;meshnum++, mesh++)
+	for (meshnum = 0, mesh = ent->model->aliasdata_meshes;meshnum < ent->model->aliasnum_meshes;meshnum++, mesh++)
 	{
 		skin = R_FetchAliasSkin(ent, mesh);
 		if (skin->flags & ALIASSKIN_TRANSPARENT)
 			continue;
 		R_Mesh_ResizeCheck(mesh->num_vertices);
-		R_Model_Alias_GetVerts(ent, varray_vertex, aliasvert_normals, aliasvert_svectors, aliasvert_tvectors);
+		R_Model_Alias_GetMeshVerts(ent, mesh, varray_vertex, aliasvert_normals, aliasvert_svectors, aliasvert_tvectors);
 		for (layernum = 0, layer = skin->data_layers;layernum < skin->num_layers;layernum++, layer++)
 		{
 			if (!(layer->flags & ALIASLAYER_DRAW_PER_LIGHT)
@@ -508,58 +508,6 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 			}
 		}
 	}
-/*
-	int c;
-	float lightcolor2[3];
-	qbyte *bcolor;
-	skinframe_t *skinframe;
-	R_Mesh_Matrix(&ent->matrix);
-	R_Mesh_ResizeCheck(ent->model->numverts);
-	R_Model_Alias_GetVerts(ent, varray_vertex, aliasvert_normals, aliasvert_svectors, aliasvert_tvectors);
-	skinframe = R_FetchSkinFrame(ent);
-
-	// note: to properly handle fog this should scale the lightcolor into lightcolor2 according to 1-fog scaling
-
-	R_Shadow_SpecularLighting(ent->model->numverts, ent->model->numtris, ent->model->mdlmd2data_indices, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals, ent->model->mdlmd2data_texcoords, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, NULL, NULL, NULL);
-
-	if (!skinframe->base && !skinframe->pants && !skinframe->shirt && !skinframe->glow)
-	{
-		R_Shadow_DiffuseLighting(ent->model->numverts, ent->model->numtris, ent->model->mdlmd2data_indices, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals, ent->model->mdlmd2data_texcoords, relativelightorigin, lightradius, lightcolor, r_notexture, NULL, NULL);
-		return;
-	}
-
-	if (!skinframe->merged || (ent->colormap >= 0 && skinframe->base && (skinframe->pants || skinframe->shirt)))
-	{
-		// 128-224 are backwards ranges
-		// we only render non-fullbright ranges here
-		if (skinframe->pants && (ent->colormap & 0xF) < 0xE)
-		{
-			c = (ent->colormap & 0xF) << 4;c += (c >= 128 && c < 224) ? 4 : 12;
-			bcolor = (qbyte *) (&palette_complete[c]);
-			lightcolor2[0] = lightcolor[0] * bcolor[0] * (1.0f / 255.0f);
-			lightcolor2[1] = lightcolor[1] * bcolor[1] * (1.0f / 255.0f);
-			lightcolor2[2] = lightcolor[2] * bcolor[2] * (1.0f / 255.0f);
-			R_Shadow_DiffuseLighting(ent->model->numverts, ent->model->numtris, ent->model->mdlmd2data_indices, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals, ent->model->mdlmd2data_texcoords, relativelightorigin, lightradius, lightcolor2, skinframe->pants, skinframe->nmap, NULL);
-		}
-
-		// we only render non-fullbright ranges here
-		if (skinframe->shirt && (ent->colormap & 0xF0) < 0xE0)
-		{
-			c = (ent->colormap & 0xF0);c += (c >= 128 && c < 224) ? 4 : 12;
-			bcolor = (qbyte *) (&palette_complete[c]);
-			lightcolor2[0] = lightcolor[0] * bcolor[0] * (1.0f / 255.0f);
-			lightcolor2[1] = lightcolor[1] * bcolor[1] * (1.0f / 255.0f);
-			lightcolor2[2] = lightcolor[2] * bcolor[2] * (1.0f / 255.0f);
-			R_Shadow_DiffuseLighting(ent->model->numverts, ent->model->numtris, ent->model->mdlmd2data_indices, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals, ent->model->mdlmd2data_texcoords, relativelightorigin, lightradius, lightcolor2, skinframe->shirt, skinframe->nmap, NULL);
-		}
-
-		if (skinframe->base)
-			R_Shadow_DiffuseLighting(ent->model->numverts, ent->model->numtris, ent->model->mdlmd2data_indices, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals, ent->model->mdlmd2data_texcoords, relativelightorigin, lightradius, lightcolor, skinframe->base, skinframe->nmap, NULL);
-	}
-	else
-		if (skinframe->merged)
-			R_Shadow_DiffuseLighting(ent->model->numverts, ent->model->numtris, ent->model->mdlmd2data_indices, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals, ent->model->mdlmd2data_texcoords, relativelightorigin, lightradius, lightcolor, skinframe->merged, skinframe->nmap, NULL);
-*/
 }
 
 int ZymoticLerpBones(int count, const zymbonematrix *bonebase, const frameblend_t *blend, const zymbone_t *bone)
