@@ -485,7 +485,8 @@ static float turbsin[256] =
 };
 #define TURBSCALE (256.0 / (2 * M_PI))
 
-#define MAX_SURFVERTS 1024
+// only need to hold as many verts as the mesh splitter will allow in model_brush.c
+#define MAX_SURFVERTS 3072
 typedef struct
 {
 	float v[4];
