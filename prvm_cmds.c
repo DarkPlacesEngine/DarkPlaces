@@ -153,22 +153,22 @@ float	isfunction(string function_name)
 vector	getresolution(float number)
 string	keynumtostring(float keynum)
 string	findkeysforcommand(string command)
-float	gethostcachestat(float type)
-string	gethostcachestring(float fld, float hostnr)
+float	getserverliststat(float type)
+string	getserverliststring(float fld, float hostnr)
 
 		parseentitydata(entity ent, string data)
 
 float	stringtokeynum(string key)
 
-		resethostcachemasks()
-		sethostcachemaskstring(float mask, float fld, string str)
-		sethostcachemasknumber(float mask, float fld, float num, float op)
-		resorthostcache()
-		sethostcachesort(float field, float descending)
-		refreshhostcache()
-float	gethostcachenumber(float fld, float hostnr)
-float	gethostcacheindexforkey(string key)
-		addwantedhostcachekey(string key)
+		resetserverlistmasks()
+		setserverlistmaskstring(float mask, float fld, string str)
+		setserverlistmasknumber(float mask, float fld, float num, float op)
+		resortserverlist()
+		setserverlistsort(float field, float descending)
+		refreshserverlist()
+float	getserverlistnumber(float fld, float hostnr)
+float	getserverlistindexforkey(string key)
+		addwantedserverlistkey(string key)
 */
 
 #include "quakedef.h"
@@ -3538,15 +3538,15 @@ void VM_M_findkeysforcommand(void)
 
 /*
 =========
-VM_M_gethostcachestat
+VM_M_getserverliststat
 
-float	gethostcachestat(float type)
+float	getserverliststat(float type)
 =========
 */
 /*
 	type:
-0	hostcache_viewcount
-1   hostcache_totalcount
+0	serverlist_viewcount
+1   serverlist_totalcount
 2	masterquerycount
 3	masterreplycount
 4	serverquerycount
@@ -3554,10 +3554,10 @@ float	gethostcachestat(float type)
 6	sortfield
 7	sortdescending
 */
-void VM_M_gethostcachestat( void )
+void VM_M_getserverliststat( void )
 {
 	int type;
-	VM_SAFEPARMCOUNT ( 1, VM_M_gethostcachestat );
+	VM_SAFEPARMCOUNT ( 1, VM_M_getserverliststat );
 
 	PRVM_G_FLOAT( OFS_RETURN ) = 0;
 
@@ -3565,10 +3565,10 @@ void VM_M_gethostcachestat( void )
 	switch(type)
 	{
 	case 0:
-		PRVM_G_FLOAT ( OFS_RETURN ) = hostcache_viewcount;
+		PRVM_G_FLOAT ( OFS_RETURN ) = serverlist_viewcount;
 		return;
 	case 1:
-		PRVM_G_FLOAT ( OFS_RETURN ) = hostcache_cachecount;
+		PRVM_G_FLOAT ( OFS_RETURN ) = serverlist_cachecount;
 	case 2:
 		PRVM_G_FLOAT ( OFS_RETURN ) = masterquerycount;
 		return;
@@ -3582,80 +3582,80 @@ void VM_M_gethostcachestat( void )
 		PRVM_G_FLOAT ( OFS_RETURN ) = serverreplycount;
 		return;
 	case 6:
-		PRVM_G_FLOAT ( OFS_RETURN ) = hostcache_sortbyfield;
+		PRVM_G_FLOAT ( OFS_RETURN ) = serverlist_sortbyfield;
 		return;
 	case 7:
-		PRVM_G_FLOAT ( OFS_RETURN ) = hostcache_sortdescending;
+		PRVM_G_FLOAT ( OFS_RETURN ) = serverlist_sortdescending;
 		return;
 	default:
-		Con_Printf( "VM_M_gethostcachestat: bad type %i!\n", type );
+		Con_Printf( "VM_M_getserverliststat: bad type %i!\n", type );
 	}
 }
 
 /*
 ========================
-VM_M_resethostcachemasks
+VM_M_resetserverlistmasks
 
-resethostcachemasks()
+resetserverlistmasks()
 ========================
 */
-void VM_M_resethostcachemasks( void )
+void VM_M_resetserverlistmasks( void )
 {
-	HostCache_ResetMasks();
+	ServerList_ResetMasks();
 }
 
 
 /*
 ========================
-VM_M_sethostcachemaskstring
+VM_M_setserverlistmaskstring
 
-sethostcachemaskstring(float mask, float fld, string str, float op)
+setserverlistmaskstring(float mask, float fld, string str, float op)
 0-511		and
 512 - 1024	or
 ========================
 */
-void VM_M_sethostcachemaskstring( void )
+void VM_M_setserverlistmaskstring( void )
 {
 	char *str;
 	int masknr;
-	hostcache_mask_t *mask;
+	serverlist_mask_t *mask;
 	int field;
 
-	VM_SAFEPARMCOUNT( 4, VM_M_sethostcachemaskstring );
+	VM_SAFEPARMCOUNT( 4, VM_M_setserverlistmaskstring );
 	str = PRVM_G_STRING( OFS_PARM1 );
 	if( !str )
-		PRVM_ERROR( "VM_M_sethostcachemaskstring: null string passed!" );
+		PRVM_ERROR( "VM_M_setserverlistmaskstring: null string passed!" );
 
 	masknr = PRVM_G_FLOAT( OFS_PARM0 );
-	if( masknr >= 0 && masknr <= HOSTCACHE_ANDMASKCOUNT )
-		mask = &hostcache_andmasks[masknr];
-	else if( masknr >= 512 && masknr - 512 <= HOSTCACHE_ORMASKCOUNT )
-		mask = &hostcache_ormasks[masknr - 512 ];
+	if( masknr >= 0 && masknr <= SERVERLIST_ANDMASKCOUNT )
+		mask = &serverlist_andmasks[masknr];
+	else if( masknr >= 512 && masknr - 512 <= SERVERLIST_ORMASKCOUNT )
+		mask = &serverlist_ormasks[masknr - 512 ];
 	else {
-		Con_Printf( "VM_M_sethostcachemaskstring: invalid mask number %i\n", masknr );
+		Con_Printf( "VM_M_setserverlistmaskstring: invalid mask number %i\n", masknr );
 		return;
 	}
 
 	field = (int) PRVM_G_FLOAT( OFS_PARM1 );
 
 	switch( field ) {
-		case HCIF_CNAME:
+		case SLIF_CNAME:
 			strncpy( mask->info.cname, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.cname) );
 			break;
-		case HCIF_NAME:
+		case SLIF_NAME:
 			strncpy( mask->info.name, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.name)  );
 			break;
-		case HCIF_MAP:
+		case SLIF_MAP:
 			strncpy( mask->info.map, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.map)  );
 			break;
-		case HCIF_MOD:
+		case SLIF_MOD:
 			strncpy( mask->info.mod, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.mod)  );
 			break;
-		case HCIF_GAME:
+		case SLIF_GAME:
 			strncpy( mask->info.game, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.game)  );
 			break;
 		default:
-			Con_Printf( "VM_M_sethostcachemaskstring: Bad field number %i passed!\n", field );
+			Con_Printf( "VM_M_setserverlistmaskstring: Bad field number %i passed!\n", field );
 			return;
 	}
 
@@ -3665,29 +3665,29 @@ void VM_M_sethostcachemaskstring( void )
 
 /*
 ========================
-VM_M_sethostcachemasknumber
+VM_M_setserverlistmasknumber
 
-sethostcachemasknumber(float mask, float fld, float num, float op)
+setserverlistmasknumber(float mask, float fld, float num, float op)
 
 0-511		and
 512 - 1024	or
 ========================
 */
-void VM_M_sethostcachemasknumber( void )
+void VM_M_setserverlistmasknumber( void )
 {
 	int number;
-	hostcache_mask_t *mask;
+	serverlist_mask_t *mask;
 	int	masknr;
 	int field;
-	VM_SAFEPARMCOUNT( 4, VM_M_sethostcachemasknumber );
+	VM_SAFEPARMCOUNT( 4, VM_M_setserverlistmasknumber );
 
 	masknr = PRVM_G_FLOAT( OFS_PARM0 );
-	if( masknr >= 0 && masknr <= HOSTCACHE_ANDMASKCOUNT )
-		mask = &hostcache_andmasks[masknr];
-	else if( masknr >= 512 && masknr - 512 <= HOSTCACHE_ORMASKCOUNT )
-		mask = &hostcache_ormasks[masknr - 512 ];
+	if( masknr >= 0 && masknr <= SERVERLIST_ANDMASKCOUNT )
+		mask = &serverlist_andmasks[masknr];
+	else if( masknr >= 512 && masknr - 512 <= SERVERLIST_ORMASKCOUNT )
+		mask = &serverlist_ormasks[masknr - 512 ];
 	else {
-		Con_Printf( "VM_M_sethostcachemasknumber: invalid mask number %i\n", masknr );
+		Con_Printf( "VM_M_setserverlistmasknumber: invalid mask number %i\n", masknr );
 		return;
 	}
 
@@ -3695,20 +3695,20 @@ void VM_M_sethostcachemasknumber( void )
 	field = (int) PRVM_G_FLOAT( OFS_PARM1 );
 
 	switch( field ) {
-		case HCIF_MAXPLAYERS:
+		case SLIF_MAXPLAYERS:
 			mask->info.maxplayers = number;
 			break;
-		case HCIF_NUMPLAYERS:
+		case SLIF_NUMPLAYERS:
 			mask->info.numplayers = number;
 			break;
-		case HCIF_PING:
+		case SLIF_PING:
 			mask->info.ping = number;
 			break;
-		case HCIF_PROTOCOL:
+		case SLIF_PROTOCOL:
 			mask->info.protocol = number;
 			break;
 		default:
-			Con_Printf( "VM_M_sethostcachemasknumber: Bad field number %i passed!\n", field );
+			Con_Printf( "VM_M_setserverlistmasknumber: Bad field number %i passed!\n", field );
 			return;
 	}
 
@@ -3719,54 +3719,54 @@ void VM_M_sethostcachemasknumber( void )
 
 /*
 ========================
-VM_M_resorthostcache
+VM_M_resortserverlist
 
-resorthostcache
+resortserverlist
 ========================
 */
-void VM_M_resorthostcache( void )
+void VM_M_resortserverlist( void )
 {
-	HostCache_RebuildViewSet();
+	ServerList_RebuildViewList();
 }
 
 /*
 =========
-VM_M_gethostcachestring
+VM_M_getserverliststring
 
-string	gethostcachestring(float field, float hostnr)
+string	getserverliststring(float field, float hostnr)
 =========
 */
-void VM_M_gethostcachestring(void)
+void VM_M_getserverliststring(void)
 {
-	hostcache_t *cache;
+	serverlist_entry_t *cache;
 	int hostnr;
 
-	VM_SAFEPARMCOUNT(2, VM_M_gethostcachestring);
+	VM_SAFEPARMCOUNT(2, VM_M_getserverliststring);
 
 	PRVM_G_INT(OFS_RETURN) = 0;
 
 	hostnr = PRVM_G_FLOAT(OFS_PARM1);
 
-	if(hostnr < 0 || hostnr >= hostcache_viewcount)
+	if(hostnr < 0 || hostnr >= serverlist_viewcount)
 	{
-		Con_Print("VM_M_gethostcachestring: bad hostnr passed!\n");
+		Con_Print("VM_M_getserverliststring: bad hostnr passed!\n");
 		return;
 	}
-	cache = hostcache_viewset[hostnr];
+	cache = serverlist_viewlist[hostnr];
 	switch( (int) PRVM_G_FLOAT(OFS_PARM0) ) {
-		case HCIF_CNAME:
+		case SLIF_CNAME:
 			PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( cache->info.cname );
 			break;
-		case HCIF_NAME:
+		case SLIF_NAME:
 			PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( cache->info.name );
 			break;
-		case HCIF_GAME:
+		case SLIF_GAME:
 			PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( cache->info.game );
 			break;
-		case HCIF_MOD:
+		case SLIF_MOD:
 			PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( cache->info.mod );
 			break;
-		case HCIF_MAP:
+		case SLIF_MAP:
 			PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( cache->info.map );
 			break;
 		// TODO remove this again
@@ -3777,127 +3777,127 @@ void VM_M_gethostcachestring(void)
 			PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( cache->line2 );
 			break;
 		default:
-			Con_Print("VM_M_gethostcachestring: bad field number passed!\n");
+			Con_Print("VM_M_getserverliststring: bad field number passed!\n");
 	}
 }
 
 /*
 =========
-VM_M_gethostcachenumber
+VM_M_getserverlistnumber
 
-float	gethostcachenumber(float field, float hostnr)
+float	getserverlistnumber(float field, float hostnr)
 =========
 */
-void VM_M_gethostcachenumber(void)
+void VM_M_getserverlistnumber(void)
 {
-	hostcache_t *cache;
+	serverlist_entry_t *cache;
 	int hostnr;
 
-	VM_SAFEPARMCOUNT(2, VM_M_gethostcachestring);
+	VM_SAFEPARMCOUNT(2, VM_M_getserverliststring);
 
 	PRVM_G_INT(OFS_RETURN) = 0;
 
 	hostnr = PRVM_G_FLOAT(OFS_PARM1);
 
-	if(hostnr < 0 || hostnr >= hostcache_viewcount)
+	if(hostnr < 0 || hostnr >= serverlist_viewcount)
 	{
-		Con_Print("VM_M_gethostcachestring: bad hostnr passed!\n");
+		Con_Print("VM_M_getserverliststring: bad hostnr passed!\n");
 		return;
 	}
-	cache = hostcache_viewset[hostnr];
+	cache = serverlist_viewlist[hostnr];
 	switch( (int) PRVM_G_FLOAT(OFS_PARM0) ) {
-		case HCIF_MAXPLAYERS:
+		case SLIF_MAXPLAYERS:
 			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.maxplayers;
 			break;
-		case HCIF_NUMPLAYERS:
+		case SLIF_NUMPLAYERS:
 			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.numplayers;
 			break;
-		case HCIF_PING:
+		case SLIF_PING:
 			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.ping;
 			break;
-		case HCIF_PROTOCOL:
+		case SLIF_PROTOCOL:
 			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.protocol;
 			break;
 		default:
-			Con_Print("VM_M_gethostcachenumber: bad field number passed!\n");
+			Con_Print("VM_M_getserverlistnumber: bad field number passed!\n");
 	}
 }
 
 /*
 ========================
-VM_M_sethostcachesort
+VM_M_setserverlistsort
 
-sethostcachesort(float field, float descending)
+setserverlistsort(float field, float descending)
 ========================
 */
-void VM_M_sethostcachesort( void )
+void VM_M_setserverlistsort( void )
 {
-	VM_SAFEPARMCOUNT( 2, VM_M_sethostcachesort );
+	VM_SAFEPARMCOUNT( 2, VM_M_setserverlistsort );
 
-	hostcache_sortbyfield = (int) PRVM_G_FLOAT( OFS_PARM0 );
-	hostcache_sortdescending = (qboolean) PRVM_G_FLOAT( OFS_PARM1 );
+	serverlist_sortbyfield = (int) PRVM_G_FLOAT( OFS_PARM0 );
+	serverlist_sortdescending = (qboolean) PRVM_G_FLOAT( OFS_PARM1 );
 }
 
 /*
 ========================
-VM_M_refreshhostcache
+VM_M_refreshserverlist
 
-refreshhostcache()
+refreshserverlist()
 ========================
 */
-void VM_M_refreshhostcache( void )
+void VM_M_refreshserverlist( void )
 {
-	VM_SAFEPARMCOUNT( 0, VM_M_refreshhostcache );
-	HostCache_QueryList();
+	VM_SAFEPARMCOUNT( 0, VM_M_refreshserverlist );
+	ServerList_QueryList();
 }
 
 /*
 ========================
-VM_M_gethostcacheindexforkey
+VM_M_getserverlistindexforkey
 
-float gethostcacheindexforkey(string key)
+float getserverlistindexforkey(string key)
 ========================
 */
-void VM_M_gethostcacheindexforkey( void )
+void VM_M_getserverlistindexforkey( void )
 {
 	char *key;
-	VM_SAFEPARMCOUNT( 1, VM_M_gethostcacheindexforkey );
+	VM_SAFEPARMCOUNT( 1, VM_M_getserverlistindexforkey );
 
 	key = PRVM_G_STRING( OFS_PARM0 );
 	VM_CheckEmptyString( key );
 
 	if( !strcmp( key, "cname" ) )
-		PRVM_G_FLOAT( OFS_RETURN ) = HCIF_CNAME;
+		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_CNAME;
 	else if( !strcmp( key, "ping" ) )
-		PRVM_G_FLOAT( OFS_RETURN ) = HCIF_PING;
+		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_PING;
 	else if( !strcmp( key, "game" ) )
-		PRVM_G_FLOAT( OFS_RETURN ) = HCIF_GAME;
+		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_GAME;
 	else if( !strcmp( key, "mod" ) )
-		PRVM_G_FLOAT( OFS_RETURN ) = HCIF_MOD;
+		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_MOD;
 	else if( !strcmp( key, "map" ) )
-		PRVM_G_FLOAT( OFS_RETURN ) = HCIF_MAP;
+		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_MAP;
 	else if( !strcmp( key, "name" ) )
-		PRVM_G_FLOAT( OFS_RETURN ) = HCIF_NAME;
+		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_NAME;
 	else if( !strcmp( key, "maxplayers" ) )
-		PRVM_G_FLOAT( OFS_RETURN ) = HCIF_MAXPLAYERS;
+		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_MAXPLAYERS;
 	else if( !strcmp( key, "numplayers" ) )
-		PRVM_G_FLOAT( OFS_RETURN ) = HCIF_NUMPLAYERS;
+		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_NUMPLAYERS;
 	else if( !strcmp( key, "protocol" ) )
-		PRVM_G_FLOAT( OFS_RETURN ) = HCIF_PROTOCOL;
+		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_PROTOCOL;
 	else
 		PRVM_G_FLOAT( OFS_RETURN ) = -1;
 }
 
 /*
 ========================
-VM_M_addwantedhostcachekey
+VM_M_addwantedserverlistkey
 
-addwantedhostcachekey(string key)
+addwantedserverlistkey(string key)
 ========================
 */
-void VM_M_addwantedhostcachekey( void )
+void VM_M_addwantedserverlistkey( void )
 {
-	VM_SAFEPARMCOUNT( 1, VM_M_addwantedhostcachekey );
+	VM_SAFEPARMCOUNT( 1, VM_M_addwantedserverlistkey );
 }
 
 prvm_builtin_t vm_m_builtins[] = {
@@ -4041,19 +4041,19 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_M_getresolution,
 	VM_M_keynumtostring,
 	VM_M_findkeysforcommand,// 610
-	VM_M_gethostcachestat,
-	VM_M_gethostcachestring,
+	VM_M_getserverliststat,
+	VM_M_getserverliststring,
 	VM_M_parseentitydata,
 	VM_M_stringtokeynum,
-	VM_M_resethostcachemasks,
-	VM_M_sethostcachemaskstring,
-	VM_M_sethostcachemasknumber,
-	VM_M_resorthostcache,
-	VM_M_sethostcachesort,
-	VM_M_refreshhostcache,
-	VM_M_gethostcachenumber,
-	VM_M_gethostcacheindexforkey,
-	VM_M_addwantedhostcachekey // 623
+	VM_M_resetserverlistmasks,
+	VM_M_setserverlistmaskstring,
+	VM_M_setserverlistmasknumber,
+	VM_M_resortserverlist,
+	VM_M_setserverlistsort,
+	VM_M_refreshserverlist,
+	VM_M_getserverlistnumber,
+	VM_M_getserverlistindexforkey,
+	VM_M_addwantedserverlistkey // 623
 };
 
 const int vm_m_numbuiltins = sizeof(vm_m_builtins) / sizeof(prvm_builtin_t);
