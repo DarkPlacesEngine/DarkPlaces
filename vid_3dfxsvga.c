@@ -287,6 +287,8 @@ void VID_Init(void)
 
 	VID_SetupDithering(); // 3DFX specific
 
+	vid_hidden = false;
+
 	Con_SafePrintf ("Video mode %dx%d initialized.\n", width, height);
 }
 

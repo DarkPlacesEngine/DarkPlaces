@@ -25,18 +25,22 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 typedef struct
 {
 	// these are set with VID_GetWindowSize and can change from frame to frame
-	int		realx;
-	int		realy;
-	int		realwidth;
-	int		realheight;
+	int realx;
+	int realy;
+	int realwidth;
+	int realheight;
 
-	int		conwidth;
-	int		conheight;
+	int conwidth;
+	int conheight;
 } viddef_t;
 
-extern	viddef_t	vid;				// global video state
+// global video state
+extern viddef_t vid;
 extern void (*vid_menudrawfn)(void);
 extern void (*vid_menukeyfn)(int key);
+
+extern int vid_hidden;
+extern int vid_activewindow;
 
 extern cvar_t vid_mode;
 extern cvar_t vid_mouse;
@@ -48,17 +52,18 @@ void GL_Init (void);
 
 void VID_CheckExtensions(void);
 
-void	VID_Init (void);
+void VID_Init (void);
 // Called at startup
 
-void	VID_Shutdown (void);
+void VID_Shutdown (void);
 // Called at shutdown
 
 int VID_SetMode (int modenum);
 // sets the mode; only used by the Quake engine for resetting to mode 0 (the
 // base mode) on memory allocation failures
 
-// sets hardware gamma correction, returns false if the device does not support gamma control
+// sets hardware gamma correction, returns false if the device does not
+// support gamma control
 int VID_SetGamma (float prescale, float gamma, float scale, float base);
 
 void VID_GetWindowSize (int *x, int *y, int *width, int *height);

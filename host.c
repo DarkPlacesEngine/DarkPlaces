@@ -358,7 +358,7 @@ void Host_ClientCommands (char *fmt, ...)
 	va_start (argptr,fmt);
 	vsprintf (string, fmt,argptr);
 	va_end (argptr);
-	
+
 	MSG_WriteByte (&host_client->message, svc_stufftext);
 	MSG_WriteString (&host_client->message, string);
 }
@@ -548,8 +548,9 @@ qboolean Host_FilterTime (double time)
 	}
 	else if (!cls.timedemo)
 	{
+		// default to sys_ticrate (server framerate - presumably low) unless we're the active window and either connected to a server or playing a video
 		timecap = sys_ticrate.value;
-		if (cls.state == ca_connected)
+		if (vid_activewindow && (cls.state == ca_connected || cl_videoplaying))
 			timecap = 1.0 / host_maxfps.value;
 
 		if ((realtime - oldrealtime) < timecap)

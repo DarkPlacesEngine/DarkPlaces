@@ -930,7 +930,7 @@ void CL_SetupScreenSize(void)
 
 void CL_UpdateScreen(void)
 {
-	if (!scr_initialized || !con_initialized)
+	if (!scr_initialized || !con_initialized || vid_hidden)
 		return;				// not initialized yet
 
 	if (cl_avidemo.integer)
