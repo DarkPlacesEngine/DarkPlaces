@@ -219,7 +219,7 @@ void MSG_WriteString (sizebuf_t *sb, const char *s)
 		SZ_Write (sb, s, strlen(s)+1);
 }
 
-// used by server (always latest dpprotocol)
+// used by server (always latest PROTOCOL_DARKPLACES)
 void MSG_WriteDPCoord (sizebuf_t *sb, float f)
 {
 	if (f >= 0)
@@ -353,7 +353,7 @@ int MSG_ReadBytes (int numbytes, unsigned char *out)
 	return l;
 }
 
-// used by server (always latest dpprotocol)
+// used by server (always latest PROTOCOL_DARKPLACES)
 float MSG_ReadDPCoord (void)
 {
 	return (signed short) MSG_ReadLittleShort();
@@ -362,9 +362,9 @@ float MSG_ReadDPCoord (void)
 // used by client
 float MSG_ReadCoord (void)
 {
-	if (dpprotocol == DPPROTOCOL_VERSION2 || dpprotocol == DPPROTOCOL_VERSION3 || dpprotocol == DPPROTOCOL_VERSION4)
+	if (cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4)
 		return (signed short) MSG_ReadLittleShort();
-	else if (dpprotocol == DPPROTOCOL_VERSION1)
+	else if (cl.protocol == PROTOCOL_DARKPLACES1)
 		return MSG_ReadLittleFloat();
 	else
 		return MSG_ReadLittleShort() * (1.0f/8.0f);
@@ -748,7 +748,7 @@ void COM_InitGameType (void)
 		break;
 	case GAME_TEU:
 		gamename = "TheEvilUnleashed";
-		gamedirname = "teu";
+		gamedirname = "baseteu";
 		break;
 	case GAME_BATTLEMECH:
 		gamename = "Battlemech";
