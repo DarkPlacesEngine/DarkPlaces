@@ -941,10 +941,10 @@ static void R_Shadow_MakeTextures(void)
 #define ATTEN2DSIZE 64
 #define ATTEN3DSIZE 32
 	data = Mem_Alloc(tempmempool, max(6*NORMSIZE*NORMSIZE*4, max(ATTEN3DSIZE*ATTEN3DSIZE*ATTEN3DSIZE*4, ATTEN2DSIZE*ATTEN2DSIZE*4)));
-	data[0] = 128;
-	data[1] = 128;
-	data[2] = 255;
-	data[3] = 255;
+	data[0] = 128; // normal X
+	data[1] = 128; // normal Y
+	data[2] = 255; // normal Z
+	data[3] = 128; // height
 	r_shadow_blankbumptexture = R_LoadTexture2D(r_shadow_texturepool, "blankbump", 1, 1, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
 	data[0] = 255;
 	data[1] = 255;
