@@ -2196,22 +2196,53 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, q3mtexture_t *t, int texturenumf
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(t->skin.base);
+		GL_Color(r_lightmapintensity * ent->colormod[0], r_lightmapintensity * ent->colormod[1], r_lightmapintensity * ent->colormod[2], 1);
+		m.pointer_color = NULL;
 		for (texturefaceindex = 0;texturefaceindex < texturenumfaces;texturefaceindex++)
 		{
 			q3msurface_t *face = texturefacelist[texturefaceindex];
+			if (!face->lightmaptexture)
+				continue;
 			m.tex[1] = R_GetTexture(face->lightmaptexture);
 			m.pointer_texcoord[0] = face->mesh.data_texcoordtexture2f;
 			m.pointer_texcoord[1] = face->mesh.data_texcoordlightmap2f;
 			m.texrgbscale[1] = 2;
-			if (face->lightmaptexture)
+			m.pointer_vertex = face->mesh.data_vertex3f;
+			R_Mesh_State(&m);
+			GL_LockArrays(0, face->mesh.num_vertices);
+			R_Mesh_Draw(face->mesh.num_vertices, face->mesh.num_triangles, face->mesh.data_element3i);
+			GL_LockArrays(0, 0);
+		}
+		if (r_lightmapintensity == 1 && ent->colormod[0] == 1 && ent->colormod[1] == 1 && ent->colormod[2] == 1)
+		{
+			for (texturefaceindex = 0;texturefaceindex < texturenumfaces;texturefaceindex++)
 			{
-				GL_Color(r_lightmapintensity * ent->colormod[0], r_lightmapintensity * ent->colormod[1], r_lightmapintensity * ent->colormod[2], 1);
-				m.pointer_color = NULL;
-			}
-			else if (r_lightmapintensity == 1 && ent->colormod[0] == 1 && ent->colormod[1] == 1 && ent->colormod[2] == 1)
+				q3msurface_t *face = texturefacelist[texturefaceindex];
+				if (face->lightmaptexture)
+					continue;
+				m.tex[1] = R_GetTexture(face->lightmaptexture);
+				m.pointer_texcoord[0] = face->mesh.data_texcoordtexture2f;
+				m.pointer_texcoord[1] = face->mesh.data_texcoordlightmap2f;
+				m.texrgbscale[1] = 2;
 				m.pointer_color = face->mesh.data_lightmapcolor4f;
-			else
+				m.pointer_vertex = face->mesh.data_vertex3f;
+				R_Mesh_State(&m);
+				GL_LockArrays(0, face->mesh.num_vertices);
+				R_Mesh_Draw(face->mesh.num_vertices, face->mesh.num_triangles, face->mesh.data_element3i);
+				GL_LockArrays(0, 0);
+			}
+		}
+		else
+		{
+			for (texturefaceindex = 0;texturefaceindex < texturenumfaces;texturefaceindex++)
 			{
+				q3msurface_t *face = texturefacelist[texturefaceindex];
+				if (face->lightmaptexture)
+					continue;
+				m.tex[1] = R_GetTexture(face->lightmaptexture);
+				m.pointer_texcoord[0] = face->mesh.data_texcoordtexture2f;
+				m.pointer_texcoord[1] = face->mesh.data_texcoordlightmap2f;
+				m.texrgbscale[1] = 2;
 				m.pointer_color = varray_color4f;
 				for (i = 0;i < face->mesh.num_vertices;i++)
 				{
@@ -2220,12 +2251,12 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, q3mtexture_t *t, int texturenumf
 					varray_color4f[i*4+2] = face->mesh.data_lightmapcolor4f[i*4+2] * ent->colormod[2] * r_lightmapintensity;
 					varray_color4f[i*4+3] = face->mesh.data_lightmapcolor4f[i*4+3];
 				}
+				m.pointer_vertex = face->mesh.data_vertex3f;
+				R_Mesh_State(&m);
+				GL_LockArrays(0, face->mesh.num_vertices);
+				R_Mesh_Draw(face->mesh.num_vertices, face->mesh.num_triangles, face->mesh.data_element3i);
+				GL_LockArrays(0, 0);
 			}
-			m.pointer_vertex = face->mesh.data_vertex3f;
-			R_Mesh_State(&m);
-			GL_LockArrays(0, face->mesh.num_vertices);
-			R_Mesh_Draw(face->mesh.num_vertices, face->mesh.num_triangles, face->mesh.data_element3i);
-			GL_LockArrays(0, 0);
 		}
 	}
 	else
@@ -2346,7 +2377,8 @@ void R_Q3BSP_DrawFaces(entity_render_t *ent, int skyfaces)
 					if (r_surf_surfacevisible[t->facenumlist[i]])
 					{
 						face = t->facelist[i];
-						if (!R_CullBox(face->mins, face->maxs) && face->mesh.num_triangles)
+						//if (!R_CullBox(face->mins, face->maxs))
+						if (face->mesh.num_triangles)
 						{
 							if (numfaces >= maxfaces)
 							{
