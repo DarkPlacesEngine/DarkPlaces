@@ -400,8 +400,11 @@ qboolean JPEG_OpenLibrary (void)
 	if (jpeg_dll)
 		return true;
 
+// TODO: make Sys_LoadLibrary support multiple names
 #ifdef WIN32
 	dllname = "libjpeg.dll";
+#elif defined(__FreeBSD__)
+	dllname = "libjpeg.so";
 #else
 	dllname = "libjpeg.so.62";
 #endif

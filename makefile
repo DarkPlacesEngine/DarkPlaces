@@ -9,7 +9,7 @@ else
 
 # UNIXes
 DP_ARCH:=$(shell uname)
-ifeq ($(DP_ARCH),NetBSD)
+ifneq ($(filter %BSD,$(DP_ARCH)),)
 	DP_MAKE_TARGET=bsd
 else
 	DP_MAKE_TARGET=linux
@@ -17,6 +17,12 @@ endif
 
 endif
 
+endif
+
+# If we're not on compiling for Win32, we need additional information
+ifneq ($(DP_MAKE_TARGET), mingw)
+	DP_ARCH:=$(shell uname)
+	DP_MACHINE:=$(shell uname -m)
 endif
 
 
@@ -27,8 +33,7 @@ else
 	CMD_RM=$(CMD_UNIXRM)
 endif
 
-
-DP_MACHINE:=$(shell uname -m)
+# 64bits AMD CPUs use another lib directory
 ifeq ($(DP_MACHINE),x86_64)
 	UNIX_X11LIBPATH:=-L/usr/X11R6/lib64
 else
@@ -55,8 +60,13 @@ endif
 
 # BSD configuration
 ifeq ($(DP_MAKE_TARGET), bsd)
+ifeq ($(DP_ARCH),FreeBSD)
+	OBJ_SOUND=$(OBJ_OSSSOUND)
+	LIB_SOUND=$(LIB_OSSSOUND)
+else
 	OBJ_SOUND=$(OBJ_BSDSOUND)
 	LIB_SOUND=$(LIB_BSDSOUND)
+endif
 	OBJ_CD=$(OBJ_BSDCD)
 
 	OBJ_CL=$(OBJ_GLX)

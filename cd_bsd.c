@@ -17,8 +17,6 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
-// Quake is a trademark of Id Software, Inc., (c) 1996 Id Software, Inc. All
-// rights reserved.
 
 #include <sys/types.h>
 #include <sys/cdio.h>
@@ -28,13 +26,22 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <fcntl.h>
 #include <paths.h>
 #include <unistd.h>
-#include <util.h>
+#include <time.h>
+#ifndef __FreeBSD__
+# include <util.h>
+#endif
 
 #include "quakedef.h"
 
 
+#ifndef __FreeBSD__
+# define DEFAULT_CD_DEVICE _PATH_DEV "cd0"
+#else
+# define DEFAULT_CD_DEVICE "/dev/acd0c"
+#endif
+
 static int cdfile = -1;
-static char cd_dev[64] = _PATH_DEV "cd0";
+static char cd_dev[64] = DEFAULT_CD_DEVICE;
 
 
 void CDAudio_SysEject (void)
@@ -250,9 +257,13 @@ void CDAudio_SysInit (void)
 
 int CDAudio_SysStartup (void)
 {
+#ifndef __FreeBSD__
 	char buff [80];
 
 	if ((cdfile = opendisk(cd_dev, O_RDONLY, buff, sizeof(buff), 0)) == -1)
+#else
+	if ((cdfile = open(cd_dev, O_RDONLY)) < 0)
+#endif
 	{
 		Con_DPrintf("CDAudio_SysStartup: open of \"%s\" failed (%i)\n",
 					cd_dev, errno);

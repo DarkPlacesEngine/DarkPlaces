@@ -20,6 +20,8 @@ CPUOPTIMIZATIONS=
 # Sound objects
 OBJ_COMMONSOUND=snd_main.o snd_mem.o snd_mix.o snd_ogg.o snd_wav.o
 OBJ_NOSOUND=snd_null.o
+OBJ_OSSSOUND=$(OBJ_COMMONSOUND) snd_oss.o
+LIB_OSSSOUND=
 
 # CD objects
 OBJ_NOCD=cd_null.o
@@ -146,8 +148,8 @@ CMD_UNIXRM=rm -rf
 ##### Linux specific variables #####
 
 # Recommended for: anyone not using ALSA
-OBJ_LINUXSOUND=$(OBJ_COMMONSOUND) snd_oss.o
-LIB_LINUXSOUND=
+OBJ_LINUXSOUND=$(OBJ_OSSSOUND)
+LIB_LINUXSOUND=$(LIB_OSSSOUND)
 # Recommended for: anyone using ALSA
 #OBJ_LINUXSOUND=$(OBJ_COMMONSOUND) snd_alsa.o
 #LIB_LINUXSOUND=-lasound

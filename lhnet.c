@@ -8,13 +8,13 @@
 #ifdef WIN32
 #include <winsock.h>
 #else
-#include <netdb.h>
-#include <netinet/in.h>
-//#include <arpa/inet.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <errno.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #endif
 
 // for Z_Malloc/Z_Free in quake

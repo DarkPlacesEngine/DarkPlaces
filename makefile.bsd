@@ -16,7 +16,12 @@ UNIX_X11LIBPATH=-L/usr/X11R6/lib
 # BSD configuration
 .if $(DP_MAKE_TARGET) == "bsd"
 
+# FreeBSD uses OSS
+.if exists(/usr/include/sys/soundcard.h)
+OBJ_SOUND=$(OBJ_OSSSOUND)
+.else
 OBJ_SOUND=$(OBJ_BSDSOUND)
+.endif
 LIB_SOUND=$(LIB_BSDSOUND)
 OBJ_CD=$(OBJ_BSDCD)
 
