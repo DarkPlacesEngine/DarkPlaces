@@ -82,7 +82,7 @@ mleaf_t *Mod_PointInLeaf (vec3_t p, model_t *model)
 		else
 			node = node->children[1];
 	}
-	
+
 	return NULL;	// never reached
 }
 */
@@ -613,7 +613,8 @@ void Mod_LoadSubmodels (lump_t *l)
 	for ( i=0 ; i<count ; i++, in++, out++)
 	{
 		for (j=0 ; j<3 ; j++)
-		{	// spread the mins / maxs by a pixel
+		{
+			// spread the mins / maxs by a pixel
 			out->mins[j] = LittleFloat (in->mins[j]) - 1;
 			out->maxs[j] = LittleFloat (in->maxs[j]) + 1;
 			out->origin[j] = LittleFloat (in->origin[j]);
@@ -795,7 +796,7 @@ void Mod_LoadFaces (lump_t *l)
 		out->texinfo = loadmodel->texinfo + LittleShort (in->texinfo);
 
 		CalcSurfaceExtents (out);
-				
+
 	// lighting info
 
 		for (i=0 ; i<MAXLIGHTMAPS ; i++)
@@ -881,11 +882,11 @@ void Mod_LoadNodes (lump_t *l)
 
 	for ( i=0 ; i<count ; i++, in++, out++)
 	{
-//		for (j=0 ; j<3 ; j++)
-//		{
-//			out->mins[j] = LittleShort (in->mins[j]);
-//			out->maxs[j] = LittleShort (in->maxs[j]);
-//		}
+		for (j=0 ; j<3 ; j++)
+		{
+			out->mins[j] = LittleShort (in->mins[j]);
+			out->maxs[j] = LittleShort (in->maxs[j]);
+		}
 	
 		p = LittleLong(in->planenum);
 		out->plane = loadmodel->planes + p;
@@ -1482,6 +1483,23 @@ portal_t *AllocPortal (void)
 	return p;
 }
 
+void Mod_RecursiveRecalcNodeBBox(mnode_t *node)
+{
+	// calculate children first
+	if (node->children[0]->contents >= 0)
+		Mod_RecursiveRecalcNodeBBox(node->children[0]);
+	if (node->children[1]->contents >= 0)
+		Mod_RecursiveRecalcNodeBBox(node->children[1]);
+
+	// make combined bounding box from children
+	node->mins[0] = min(node->children[0]->mins[0], node->children[1]->mins[0]);
+	node->mins[1] = min(node->children[0]->mins[1], node->children[1]->mins[1]);
+	node->mins[2] = min(node->children[0]->mins[2], node->children[1]->mins[2]);
+	node->maxs[0] = max(node->children[0]->maxs[0], node->children[1]->maxs[0]);
+	node->maxs[1] = max(node->children[0]->maxs[1], node->children[1]->maxs[1]);
+	node->maxs[2] = max(node->children[0]->maxs[2], node->children[1]->maxs[2]);
+}
+
 void Mod_FinalizePortals(void)
 {
 	int i, j, numportals, numpoints;
@@ -1522,13 +1540,23 @@ void Mod_FinalizePortals(void)
 		p = p->chain;
 	}
 
+//	Hunk_Check();
+
+	Mod_RecursiveRecalcNodeBBox(loadmodel->nodes);
+
+//	Hunk_Check();
+
 	// tally up portal and point counts
 	p = portalchain;
 	numportals = 0;
 	numpoints = 0;
 	while(p)
 	{
-		if (p->winding && p->nodes[0] != p->nodes[1] && p->nodes[0]->contents != CONTENTS_SOLID && p->nodes[1]->contents != CONTENTS_SOLID)
+		// note: this check must match the one below or it will usually corrupt the hunk
+		// the nodes[0] != nodes[1] check is because leaf 0 is the shared solid leaf, it can have many portals inside with leaf 0 on both sides
+		if (p->winding && p->nodes[0] != p->nodes[1]
+		 && p->nodes[0]->contents != CONTENTS_SOLID && p->nodes[1]->contents != CONTENTS_SOLID
+		 && p->nodes[0]->contents != CONTENTS_SKY && p->nodes[1]->contents != CONTENTS_SKY)
 		{
 			numportals += 2;
 			numpoints += p->winding->numpoints * 2;
@@ -1553,8 +1581,11 @@ void Mod_FinalizePortals(void)
 
 		if (p->winding)
 		{
+			// note: this check must match the one below or it will usually corrupt the hunk
 			// the nodes[0] != nodes[1] check is because leaf 0 is the shared solid leaf, it can have many portals inside with leaf 0 on both sides
-			if (p->nodes[0] != p->nodes[1] && p->nodes[0]->contents != CONTENTS_SOLID && p->nodes[1]->contents != CONTENTS_SOLID)
+			if (p->nodes[0] != p->nodes[1]
+			 && p->nodes[0]->contents != CONTENTS_SOLID && p->nodes[1]->contents != CONTENTS_SOLID
+			 && p->nodes[0]->contents != CONTENTS_SKY && p->nodes[1]->contents != CONTENTS_SKY)
 			{
 				// first make the back to front portal (forward portal)
 				portal->points = point;
@@ -1662,7 +1693,7 @@ void RemovePortalFromNodes(portal_t *portal)
 				}
 				else if (portal->nodes[1] == node)
 				{
-					*portalpointer = portal->next[1];	
+					*portalpointer = portal->next[1];
 					portal->nodes[1] = NULL;
 				}
 				else
@@ -1861,9 +1892,9 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 	int			i, j;
 	dheader_t	*header;
 	dmodel_t 	*bm;
-	
+
 	loadmodel->type = mod_brush;
-	
+
 	header = (dheader_t *)buffer;
 
 	i = LittleLong (header->version);
@@ -1879,7 +1910,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 		((int *)header)[i] = LittleLong ( ((int *)header)[i]);
 
 // load into heap
-	
+
 	// LordHavoc: had to move entity loading above everything to allow parsing various settings from worldspawn
 	Mod_LoadEntities (&header->lumps[LUMP_ENTITIES]);
 
@@ -1902,9 +1933,9 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 	Mod_MakeHull0 ();
 
 	Mod_MakePortals();
-	
+
 	mod->numframes = 2;		// regular and alternate animation
-	
+
 //
 // set up the submodels (FIXME: this is confusing)
 //
@@ -1918,10 +1949,10 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 			mod->hulls[j].firstclipnode = bm->headnode[j];
 			mod->hulls[j].lastclipnode = mod->numclipnodes - 1;
 		}
-		
+
 		mod->firstmodelsurface = bm->firstface;
 		mod->nummodelsurfaces = bm->numfaces;
-		
+
 		VectorCopy (bm->maxs, mod->maxs);
 		VectorCopy (bm->mins, mod->mins);
 

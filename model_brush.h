@@ -149,6 +149,10 @@ typedef struct mnode_s
 	struct mnode_s	*parent;
 	struct mportal_s *portals;
 
+	// for bounding box culling
+	vec3_t		mins;
+	vec3_t		maxs;
+
 // node specific
 	mplane_t	*plane;
 	struct mnode_s	*children[2];
@@ -167,14 +171,14 @@ typedef struct mleaf_s
 	struct mnode_s	*parent;
 	struct mportal_s *portals;
 
-// leaf specific
-//	int			visframe;		// visible if current (r_framecount)
-//	int			worldnodeframe; // used by certain worldnode variants to avoid processing the same leaf twice in a frame
-	int			portalmarkid;	// used by polygon-through-portals visibility checker
-
 	// for bounding box culling
 	vec3_t		mins;
 	vec3_t		maxs;
+
+// leaf specific
+	int			visframe;		// visible if current (r_framecount)
+	int			worldnodeframe; // used by certain worldnode variants to avoid processing the same leaf twice in a frame
+	int			portalmarkid;	// used by polygon-through-portals visibility checker
 
 	// LordHavoc: leaf based dynamic lighting
 	int			dlightbits[8];

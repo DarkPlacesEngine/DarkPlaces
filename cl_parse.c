@@ -390,6 +390,8 @@ void CL_ParseServerInfo (void)
 // needlessly purge it
 //
 
+	Hunk_Check ();
+
 // precache models
 	memset (cl.model_precache, 0, sizeof(cl.model_precache));
 	for (nummodels=1 ; ; nummodels++)
@@ -406,6 +408,9 @@ void CL_ParseServerInfo (void)
 			Host_Error ("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
 		strcpy (model_precache[nummodels], str);
 		Mod_TouchModel (str);
+
+//		Hunk_Check ();
+
 	}
 
 // precache sounds
@@ -430,10 +435,15 @@ void CL_ParseServerInfo (void)
 // now we try to load everything else until a cache allocation fails
 //
 
+	Hunk_Check ();
+
 	for (i=1 ; i<nummodels ; i++)
 	{
 		isworldmodel = i == 1; // LordHavoc: first model is the world model
 		cl.model_precache[i] = Mod_ForName (model_precache[i], false);
+
+//		Hunk_Check ();
+
 		if (cl.model_precache[i] == NULL)
 		{
 			Con_Printf("Model %s not found\n", model_precache[i]);
@@ -441,6 +451,8 @@ void CL_ParseServerInfo (void)
 		}
 		CL_KeepaliveMessage ();
 	}
+
+	Hunk_Check ();
 
 	S_BeginPrecaching ();
 	for (i=1 ; i<numsounds ; i++)
@@ -453,12 +465,14 @@ void CL_ParseServerInfo (void)
 
 // local state
 	cl_entities[0].render.model = cl.worldmodel = cl.model_precache[1];
-	
+
+//	Hunk_Check ();
+
 	R_NewMap ();
 
 	Hunk_Check ();		// make sure nothing is hurt
-	
-	noclip_anglehack = false;		// noclip is turned off at start	
+
+	noclip_anglehack = false;		// noclip is turned off at start
 }
 
 void CL_ValidateState(entity_state_t *s)
