@@ -452,10 +452,12 @@ Easier to parse than PR_ValueString
 */
 char *PR_UglyValueString (etype_t type, eval_t *val)
 {
-	static char	line[256];
-	ddef_t		*def;
-	dfunction_t	*f;
-	
+	static char line[4096];
+	int i;
+	char *s;
+	ddef_t *def;
+	dfunction_t *f;
+
 	type &= ~DEF_SAVEGLOBAL;
 
 	switch (type)
@@ -472,7 +474,28 @@ char *PR_UglyValueString (etype_t type, eval_t *val)
 		break;
 	case ev_field:
 		def = ED_FieldAtOfs ( val->_int );
-		sprintf (line, "%s", pr_strings + def->s_name);
+		// LordHavoc: parse the string a bit to turn special characters
+		// (like newline, specifically) into escape codes,
+		// this fixes saving games from various mods
+		//sprintf (line, "%s", pr_strings + def->s_name);
+		s = pr_strings + def->s_name;
+		for (i = 0;i < 4095 && *s;)
+		{
+			if (*s == '\n')
+			{
+				line[i++] = '\\';
+				line[i++] = 'n';
+			}
+			else if (*s == '\r')
+			{
+				line[i++] = '\\';
+				line[i++] = 'r';
+			}
+			else
+				line[i] = *s;
+			s++;
+		}
+		line[i++] = 0;
 		break;
 	case ev_void:
 		sprintf (line, "void");
@@ -487,7 +510,7 @@ char *PR_UglyValueString (etype_t type, eval_t *val)
 		sprintf (line, "bad type %i", type);
 		break;
 	}
-	
+
 	return line;
 }
 
@@ -645,7 +668,7 @@ void ED_Write (QFile *f, edict_t *ed)
 		Qprintf (f, "}\n");
 		return;
 	}
-	
+
 	for (i=1 ; i<progs->numfielddefs ; i++)
 	{
 		d = &pr_fielddefs[i];
