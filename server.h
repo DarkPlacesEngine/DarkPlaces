@@ -257,6 +257,11 @@ extern cvar_t sv_aim;
 extern cvar_t sv_stepheight;
 extern cvar_t sv_jumpstep;
 
+extern cvar_t sv_gameplayfix_grenadebouncedownslopes;
+extern cvar_t sv_gameplayfix_noairborncorpse;
+extern cvar_t sv_gameplayfix_stepwhilejumping;
+extern cvar_t sv_gameplayfix_swiminbmodels;
+
 extern mempool_t *sv_clients_mempool;
 extern mempool_t *sv_edicts_mempool;
 
