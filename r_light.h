@@ -8,7 +8,7 @@ typedef struct
 	vec_t cullradius2; // only for culling comparisons, squared version
 	vec3_t light; // the brightness of the light
 	vec_t cullradius; // only for culling comparisons
-	vec_t lightsubtract; // to avoid sudden brightness change at cullradius, subtract this
+	vec_t subtract; // to avoid sudden brightness change at cullradius, subtract this
 //	entity_render_t *ent; // owner of this light
 }
 rdlight_t;

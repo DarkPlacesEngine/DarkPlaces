@@ -104,7 +104,7 @@ static int R_IntAddDynamicLights (msurface_t *surf)
 		red = r_dlight[lnum].light[0];
 		green = r_dlight[lnum].light[1];
 		blue = r_dlight[lnum].light[2];
-		subtract = (int) (r_dlight[lnum].lightsubtract * 4194304.0f);
+		subtract = (int) (r_dlight[lnum].subtract * 4194304.0f);
 		bl = intblocklights;
 
 		i = impactt;
@@ -122,9 +122,9 @@ static int R_IntAddDynamicLights (msurface_t *surf)
 						k = dlightdivtable[(sdtable[s] + td) >> 7] - subtract;
 						if (k > 0)
 						{
-							bl[0] += (red   * k) >> 8;
-							bl[1] += (green * k) >> 8;
-							bl[2] += (blue  * k) >> 8;
+							bl[0] += (red   * k) >> 7;
+							bl[1] += (green * k) >> 7;
+							bl[2] += (blue  * k) >> 7;
 							lit = true;
 						}
 					}
@@ -197,7 +197,7 @@ static int R_FloatAddDynamicLights (msurface_t *surf)
 		red = r_dlight[lnum].light[0];
 		green = r_dlight[lnum].light[1];
 		blue = r_dlight[lnum].light[2];
-		subtract = r_dlight[lnum].lightsubtract * 16384.0f;
+		subtract = r_dlight[lnum].subtract * 32768.0f;
 		bl = floatblocklights;
 
 		td1 = impactt;
@@ -212,7 +212,7 @@ static int R_FloatAddDynamicLights (msurface_t *surf)
 				{
 					if (sdtable[s] < maxdist2)
 					{
-						k = (16384.0f / (sdtable[s] + td)) - subtract;
+						k = (32768.0f / (sdtable[s] + td)) - subtract;
 						bl[0] += red   * k;
 						bl[1] += green * k;
 						bl[2] += blue  * k;
@@ -816,11 +816,11 @@ static void RSurfShader_Sky(msurface_t *firstsurf)
 
 static int RSurf_Light(int *dlightbits, int numverts)
 {
-	float		f;
-	int			i, l, lit = false;
-	rdlight_t	*rd;
-	vec3_t		lightorigin;
-	surfvert_t	*sv;
+	float f;
+	int i, l, lit = false;
+	rdlight_t *rd;
+	vec3_t lightorigin;
+	surfvert_t *sv;
 	for (l = 0;l < r_numdlights;l++)
 	{
 		if (dlightbits[l >> 5] & (1 << (l & 31)))
@@ -830,10 +830,10 @@ static int RSurf_Light(int *dlightbits, int numverts)
 			VectorCopy(rd->origin, lightorigin);
 			for (i = 0, sv = svert;i < numverts;i++, sv++)
 			{
-				f = VectorDistance2(sv->v, lightorigin) + LIGHTOFFSET;
+				f = VectorDistance2(sv->v, lightorigin);
 				if (f < rd->cullradius2)
 				{
-					f = (1.0f / f) - rd->lightsubtract;
+					f = (1.0f / f) - rd->subtract;
 					sv->c[0] += rd->light[0] * f;
 					sv->c[1] += rd->light[1] * f;
 					sv->c[2] += rd->light[2] * f;
@@ -845,8 +845,215 @@ static int RSurf_Light(int *dlightbits, int numverts)
 	return lit;
 }
 
+static int RSurf_LightSeparate(int *dlightbits, int numverts, float *vert, float *color)
+{
+	float f, *v, *c;
+	int i, l, lit = false;
+	rdlight_t *rd;
+	vec3_t lightorigin;
+	for (l = 0;l < r_numdlights;l++)
+	{
+		if (dlightbits[l >> 5] & (1 << (l & 31)))
+		{
+			rd = &r_dlight[l];
+			// FIXME: support softwareuntransform here and make bmodels use hardware transform?
+			VectorCopy(rd->origin, lightorigin);
+			for (i = 0, v = vert, c = color;i < numverts;i++, v += 4, c += 4)
+			{
+				f = VectorDistance2(v, lightorigin) + LIGHTOFFSET;
+				if (f < rd->cullradius2)
+				{
+					f = (1.0f / f) - rd->subtract;
+					VectorMA(c, f, rd->light, c);
+					lit = true;
+				}
+			}
+		}
+	}
+	return lit;
+}
+
+// note: this untransforms lights to do the checking,
+// and takes surf->mesh->vertex data
+static int RSurf_LightCheck(int *dlightbits, surfmesh_t *mesh)
+{
+	int i, l;
+	rdlight_t *rd;
+	vec3_t lightorigin;
+	surfvertex_t *sv;
+	for (l = 0;l < r_numdlights;l++)
+	{
+		if (dlightbits[l >> 5] & (1 << (l & 31)))
+		{
+			rd = &r_dlight[l];
+			softwareuntransform(rd->origin, lightorigin);
+			for (i = 0, sv = mesh->vertex;i < mesh->numverts;i++, sv++)
+				if (VectorDistance2(sv->v, lightorigin) < rd->cullradius2)
+					return true;
+		}
+	}
+	return false;
+}
+
 static void RSurfShader_Water_Pass_Base(msurface_t *surf)
 {
+#if 0
+	int i, size3;
+	surfvertex_t *v;
+	float *outv, *outc, *outst, *outuv, cl, ca, diff[3];
+	float base[3], scale, f;
+	qbyte *lm;
+	surfmesh_t *mesh;
+	rmeshbufferinfo_t m;
+	memset(&m, 0, sizeof(m));
+	if (currentrenderentity->effects & EF_ADDITIVE)
+	{
+		m.transparent = true;
+		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE;
+	}
+	else if (surf->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1)
+	{
+		m.transparent = true;
+		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+	}
+	else
+	{
+		m.transparent = false;
+		m.blendfunc1 = GL_ONE;
+		m.blendfunc2 = GL_ZERO;
+	}
+	m.depthwrite = false;
+	m.depthdisable = false;
+	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
+
+	size3 = ((surf->extents[0]>>4)+1)*((surf->extents[1]>>4)+1)*3;
+
+	base[0] = base[1] = base[2] = currentrenderentity->effects & EF_FULLBRIGHT ? 2.0f : r_ambient.value * (1.0f / 64.0f) + surf->flags & SURF_LIGHTMAP ? 0 : ;
+
+	ca = currentrenderentity->alpha;
+	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+	{
+		m.numtriangles = mesh->numtriangles;
+		m.numverts = mesh->numverts;
+
+		if (R_Mesh_Draw_GetBuffer(&m))
+		{
+			cl = m.colorscale;
+			memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
+
+			for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outst = m.texcoords[0], outuv = m.texcoords[1];i < m.numverts;i++, v++, outv += 4, outc += 4, outst += 2, outuv += 2)
+			{
+				softwaretransform(v->v, outv);
+				outv[3] = 1;
+				VectorCopy(base, outc);
+				outc[3] = ca;
+				outst[0] = v->st[0];
+				outst[1] = v->st[1];
+			}
+
+			if (surf->dlightframe == r_framecount)
+				RSurf_LightSeparate(surf->dlightbits, m.numverts, m.vertex, m.color);
+
+			for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color;i < m.numverts;i++, v++, outv += 4, outc += 4)
+			{
+				if (surf->flags & SURF_LIGHTMAP)
+				if (surf->styles[0] != 255)
+				{
+					lm = surf->samples + v->lightmapoffset;
+					scale = d_lightstylevalue[surf->styles[0]] * (1.0f / 32768.0f);
+					VectorMA(outc, scale, lm, outc);
+					if (surf->styles[1] != 255)
+					{
+						lm += size3;
+						scale = d_lightstylevalue[surf->styles[1]] * (1.0f / 32768.0f);
+						VectorMA(outc, scale, lm, outc);
+						if (surf->styles[2] != 255)
+						{
+							lm += size3;
+							scale = d_lightstylevalue[surf->styles[2]] * (1.0f / 32768.0f);
+							VectorMA(outc, scale, lm, outc);
+							if (surf->styles[3] != 255)
+							{
+								lm += size3;
+								scale = d_lightstylevalue[surf->styles[3]] * (1.0f / 32768.0f);
+								VectorMA(outc, scale, lm, outc);
+							}
+						}
+					}
+				}
+				if (fogenabled)
+				{
+					VectorSubtract(outv, r_origin, diff);
+					f = cl * (1 - exp(fogdensity/DotProduct(diff, diff)));
+					VectorScale(outc, f, outc);
+				}
+				else
+					VectorScale(outc, cl, outc);
+			}
+		}
+	}
+	int i;
+	surfvertex_t *v;
+	float *outv, *outc, *outst, *outuv, cl, ca, diff[3];
+	surfmesh_t *mesh;
+	rmeshbufferinfo_t m;
+	memset(&m, 0, sizeof(m));
+	if (currentrenderentity->effects & EF_ADDITIVE)
+	{
+		m.transparent = true;
+		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE;
+	}
+	else if (surf->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1)
+	{
+		m.transparent = true;
+		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+	}
+	else
+	{
+		m.transparent = false;
+		m.blendfunc1 = GL_ONE;
+		m.blendfunc2 = GL_ZERO;
+	}
+	m.depthwrite = false;
+	m.depthdisable = false;
+	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
+	m.tex[1] = R_GetTexture(surf->lightmaptexture);
+	ca = currentrenderentity->alpha;
+	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+	{
+		m.numtriangles = mesh->numtriangles;
+		m.numverts = mesh->numverts;
+
+		if (R_Mesh_Draw_GetBuffer(&m))
+		{
+			cl = (float) (1 << lightscalebit) * m.colorscale;
+			memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
+			for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outst = m.texcoords[0], outuv = m.texcoords[1];i < m.numverts;i++, v++, outv += 4, outc += 4, outst += 2, outuv += 2)
+			{
+				softwaretransform(v->v, outv);
+				if (r_waterripple.value)
+					outv[2] += r_waterripple.value * (1.0f / 64.0f) * turbsin[(int)((v->v[0]*(1.0f/32.0f)+cl.time) * TURBSCALE) & 255] * turbsin[(int)((v->v[1]*(1.0f/32.0f)+cl.time) * TURBSCALE) & 255];
+				outv[3] = 1;
+				if (fogenabled)
+				{
+					VectorSubtract(outv, r_origin, diff);
+					outc[0] = outc[1] = outc[2] = cl * (1 - exp(fogdensity/DotProduct(diff, diff)));
+				}
+				else
+					outc[0] = outc[1] = outc[2] = cl;
+				outc[3] = ca;
+				outst[0] = v->st[0];
+				outst[1] = v->st[1];
+				outuv[0] = v->uv[0];
+				outuv[1] = v->uv[1];
+			}
+		}
+	}
+#else
 	int i;
 	float diff[3], alpha, ifog;
 	surfvertex_t *v;
@@ -917,72 +1124,13 @@ static void RSurfShader_Water_Pass_Base(msurface_t *surf)
 		}
 		R_Mesh_Draw(&m);
 	}
-}
-
-static void RSurfShader_Water_Pass_Glow(msurface_t *surf)
-{
-	int i;
-	float diff[3], alpha, ifog;
-	surfvertex_t *v;
-	surfvert_t *sv;
-	surfmesh_t *mesh;
-	rmeshinfo_t m;
-	alpha = currentrenderentity->alpha * (surf->flags & SURF_DRAWNOALPHA ? 1 : r_wateralpha.value);
-
-	memset(&m, 0, sizeof(m));
-	m.transparent = alpha != 1 || surf->currenttexture->fogtexture != NULL;
-	m.blendfunc1 = GL_SRC_ALPHA;
-	m.blendfunc2 = GL_ONE;
-	m.vertex = &svert[0].v[0];
-	m.vertexstep = sizeof(surfvert_t);
-	m.cr = 1;
-	m.cg = 1;
-	m.cb = 1;
-	m.ca = alpha;
-	m.tex[0] = R_GetTexture(surf->currenttexture->glowtexture);
-	m.texcoords[0] = &svert[0].st[0];
-	m.texcoordstep[0] = sizeof(surfvert_t);
-	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
-	{
-		m.numtriangles = mesh->numtriangles;
-		m.numverts = mesh->numverts;
-		m.index = mesh->index;
-		if (fogenabled)
-		{
-			m.color = &svert[0].c[0];
-			m.colorstep = sizeof(surfvert_t);
-			for (i = 0, sv = svert, v = mesh->vertex;i < m.numverts;i++, sv++, v++)
-			{
-				softwaretransform(v->v, sv->v);
-				if (r_waterripple.value)
-					sv->v[2] += r_waterripple.value * (1.0f / 64.0f) * turbsin[(int)((v->v[0]*(1.0f/32.0f)+cl.time) * TURBSCALE) & 255] * turbsin[(int)((v->v[1]*(1.0f/32.0f)+cl.time) * TURBSCALE) & 255];
-				sv->st[0] = (v->st[0] + turbsin[(int)((v->st[1]*0.125f+cl.time) * TURBSCALE) & 255]) * (1.0f / 64.0f);
-				sv->st[1] = (v->st[1] + turbsin[(int)((v->st[0]*0.125f+cl.time) * TURBSCALE) & 255]) * (1.0f / 64.0f);
-				VectorSubtract(sv->v, r_origin, diff);
-				ifog = 1 - exp(fogdensity/DotProduct(diff, diff));
-				sv->c[0] = m.cr * ifog;
-				sv->c[1] = m.cg * ifog;
-				sv->c[2] = m.cb * ifog;
-				sv->c[3] = m.ca;
-			}
-		}
-		else
-		{
-			for (i = 0, sv = svert, v = mesh->vertex;i < m.numverts;i++, sv++, v++)
-			{
-				softwaretransform(v->v, sv->v);
-				if (r_waterripple.value)
-					sv->v[2] += r_waterripple.value * (1.0f / 64.0f) * turbsin[(int)((v->v[0]*(1.0f/32.0f)+cl.time) * TURBSCALE) & 255] * turbsin[(int)((v->v[1]*(1.0f/32.0f)+cl.time) * TURBSCALE) & 255];
-				sv->st[0] = (v->st[0] + turbsin[(int)((v->st[1]*0.125f+cl.time) * TURBSCALE) & 255]) * (1.0f / 64.0f);
-				sv->st[1] = (v->st[1] + turbsin[(int)((v->st[0]*0.125f+cl.time) * TURBSCALE) & 255]) * (1.0f / 64.0f);
-			}
-		}
-		R_Mesh_Draw(&m);
-	}
+#endif
 }
 
 static void RSurfShader_Water_Pass_Fog(msurface_t *surf)
 {
+#if 0
+#else
 	int i;
 	float alpha;
 	surfvertex_t *v;
@@ -1027,6 +1175,7 @@ static void RSurfShader_Water_Pass_Fog(msurface_t *surf)
 		}
 		R_Mesh_Draw(&m);
 	}
+#endif
 }
 
 static void RSurfShader_Water(msurface_t *firstsurf)
@@ -1034,9 +1183,6 @@ static void RSurfShader_Water(msurface_t *firstsurf)
 	msurface_t *surf;
 	for (surf = firstsurf;surf;surf = surf->chain)
 		RSurfShader_Water_Pass_Base(surf);
-	for (surf = firstsurf;surf;surf = surf->chain)
-		if (surf->currenttexture->glowtexture)
-			RSurfShader_Water_Pass_Glow(surf);
 	if (fogenabled)
 		for (surf = firstsurf;surf;surf = surf->chain)
 			RSurfShader_Water_Pass_Fog(surf);
@@ -1044,6 +1190,112 @@ static void RSurfShader_Water(msurface_t *firstsurf)
 
 static void RSurfShader_Wall_Pass_BaseMTex(msurface_t *surf)
 {
+#if 1
+	int i;
+	surfvertex_t *v;
+	float *outv, *outc, *outst, *outuv, cl, ca, diff[3];
+	surfmesh_t *mesh;
+	rmeshbufferinfo_t m;
+	memset(&m, 0, sizeof(m));
+	if (currentrenderentity->effects & EF_ADDITIVE)
+	{
+		m.transparent = true;
+		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE;
+	}
+	else if (surf->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1)
+	{
+		m.transparent = true;
+		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+	}
+	else
+	{
+		m.transparent = false;
+		m.blendfunc1 = GL_ONE;
+		m.blendfunc2 = GL_ZERO;
+	}
+	m.depthwrite = false;
+	m.depthdisable = false;
+	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
+	m.tex[1] = R_GetTexture(surf->lightmaptexture);
+	ca = currentrenderentity->alpha;
+	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+	{
+		m.numtriangles = mesh->numtriangles;
+		m.numverts = mesh->numverts;
+
+		if (R_Mesh_Draw_GetBuffer(&m))
+		{
+			cl = (float) (1 << lightscalebit) * m.colorscale;
+			memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
+			if (fogenabled)
+			{
+				if (softwaretransform_complexity)
+				{
+					for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outst = m.texcoords[0], outuv = m.texcoords[1];i < m.numverts;i++, v++, outv += 4, outc += 4, outst += 2, outuv += 2)
+					{
+						softwaretransform(v->v, outv);
+						outv[3] = 1;
+						VectorSubtract(outv, r_origin, diff);
+						outc[0] = outc[1] = outc[2] = cl * (1 - exp(fogdensity/DotProduct(diff, diff)));
+						outc[3] = ca;
+						outst[0] = v->st[0];
+						outst[1] = v->st[1];
+						outuv[0] = v->uv[0];
+						outuv[1] = v->uv[1];
+					}
+				}
+				else
+				{
+					for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outst = m.texcoords[0], outuv = m.texcoords[1];i < m.numverts;i++, v++, outv += 4, outc += 4, outst += 2, outuv += 2)
+					{
+						VectorCopy(v->v, outv);
+						outv[3] = 1;
+						VectorSubtract(outv, r_origin, diff);
+						outc[0] = outc[1] = outc[2] = cl * (1 - exp(fogdensity/DotProduct(diff, diff)));
+						outc[3] = ca;
+						outst[0] = v->st[0];
+						outst[1] = v->st[1];
+						outuv[0] = v->uv[0];
+						outuv[1] = v->uv[1];
+					}
+				}
+			}
+			else
+			{
+				if (softwaretransform_complexity)
+				{
+					for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outst = m.texcoords[0], outuv = m.texcoords[1];i < m.numverts;i++, v++, outv += 4, outc += 4, outst += 2, outuv += 2)
+					{
+						softwaretransform(v->v, outv);
+						outv[3] = 1;
+						outc[0] = outc[1] = outc[2] = cl;
+						outc[3] = ca;
+						outst[0] = v->st[0];
+						outst[1] = v->st[1];
+						outuv[0] = v->uv[0];
+						outuv[1] = v->uv[1];
+					}
+				}
+				else
+				{
+					for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outst = m.texcoords[0], outuv = m.texcoords[1];i < m.numverts;i++, v++, outv += 4, outc += 4, outst += 2, outuv += 2)
+					{
+						VectorCopy(v->v, outv);
+						outv[3] = 1;
+						outc[0] = outc[1] = outc[2] = cl;
+						outc[3] = ca;
+						outst[0] = v->st[0];
+						outst[1] = v->st[1];
+						outuv[0] = v->uv[0];
+						outuv[1] = v->uv[1];
+					}
+				}
+			}
+		}
+	}
+#else
 	int i;
 	float diff[3], ifog;
 	surfvertex_t *v;
@@ -1134,10 +1386,61 @@ static void RSurfShader_Wall_Pass_BaseMTex(msurface_t *surf)
 		}
 		R_Mesh_Draw(&m);
 	}
+#endif
 }
 
 static void RSurfShader_Wall_Pass_BaseTexture(msurface_t *surf)
 {
+#if 1
+	int i;
+	surfvertex_t *v;
+	float *outv, *outc, *outst, cl, ca;
+	surfmesh_t *mesh;
+	rmeshbufferinfo_t m;
+	memset(&m, 0, sizeof(m));
+	m.transparent = false;
+	m.blendfunc1 = GL_ONE;
+	m.blendfunc2 = GL_ZERO;
+	m.depthwrite = false;
+	m.depthdisable = false;
+	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
+	ca = currentrenderentity->alpha;
+	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+	{
+		m.numtriangles = mesh->numtriangles;
+		m.numverts = mesh->numverts;
+
+		if (R_Mesh_Draw_GetBuffer(&m))
+		{
+			cl = (float) (1 << lightscalebit) * m.colorscale;
+			memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
+			if (softwaretransform_complexity)
+			{
+				for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outst = m.texcoords[0];i < m.numverts;i++, v++, outv += 4, outc += 4, outst += 2)
+				{
+					softwaretransform(v->v, outv);
+					outv[3] = 1;
+					outc[0] = outc[1] = outc[2] = cl;
+					outc[3] = ca;
+					outst[0] = v->st[0];
+					outst[1] = v->st[1];
+				}
+			}
+			else
+			{
+				for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outst = m.texcoords[0];i < m.numverts;i++, v++, outv += 4, outc += 4, outst += 2)
+				{
+					VectorCopy(v->v, outv);
+					outv[3] = 1;
+					outc[0] = outc[1] = outc[2] = cl;
+					outc[3] = ca;
+					outst[0] = v->st[0];
+					outst[1] = v->st[1];
+				}
+			}
+		}
+	}
+#else
 	int i;
 	surfvertex_t *v;
 	surfvert_t *sv;
@@ -1172,10 +1475,93 @@ static void RSurfShader_Wall_Pass_BaseTexture(msurface_t *surf)
 		}
 		R_Mesh_Draw(&m);
 	}
+#endif
 }
 
 static void RSurfShader_Wall_Pass_BaseLightmap(msurface_t *surf)
 {
+#if 1
+	int i;
+	surfvertex_t *v;
+	float *outv, *outc, *outuv, cl, ca, diff[3];
+	surfmesh_t *mesh;
+	rmeshbufferinfo_t m;
+	memset(&m, 0, sizeof(m));
+	m.transparent = false;
+	m.blendfunc1 = GL_ZERO;
+	m.blendfunc2 = GL_SRC_COLOR;
+	m.depthwrite = false;
+	m.depthdisable = false;
+	m.tex[0] = R_GetTexture(surf->lightmaptexture);
+	ca = currentrenderentity->alpha;
+	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+	{
+		m.numtriangles = mesh->numtriangles;
+		m.numverts = mesh->numverts;
+
+		if (R_Mesh_Draw_GetBuffer(&m))
+		{
+			cl = (float) (1 << lightscalebit) * m.colorscale;
+			memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
+			if (fogenabled)
+			{
+				if (softwaretransform_complexity)
+				{
+					for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outuv = m.texcoords[0];i < m.numverts;i++, v++, outv += 4, outc += 4, outuv += 2)
+					{
+						softwaretransform(v->v, outv);
+						outv[3] = 1;
+						VectorSubtract(outv, r_origin, diff);
+						outc[0] = outc[1] = outc[2] = cl * (1 - exp(fogdensity/DotProduct(diff, diff)));
+						outc[3] = ca;
+						outuv[0] = v->uv[0];
+						outuv[1] = v->uv[1];
+					}
+				}
+				else
+				{
+					for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outuv = m.texcoords[0];i < m.numverts;i++, v++, outv += 4, outc += 4, outuv += 2)
+					{
+						VectorCopy(v->v, outv);
+						outv[3] = 1;
+						VectorSubtract(outv, r_origin, diff);
+						outc[0] = outc[1] = outc[2] = cl * (1 - exp(fogdensity/DotProduct(diff, diff)));
+						outc[3] = ca;
+						outuv[0] = v->uv[0];
+						outuv[1] = v->uv[1];
+					}
+				}
+			}
+			else
+			{
+				if (softwaretransform_complexity)
+				{
+					for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outuv = m.texcoords[0];i < m.numverts;i++, v++, outv += 4, outc += 4, outuv += 2)
+					{
+						softwaretransform(v->v, outv);
+						outv[3] = 1;
+						outc[0] = outc[1] = outc[2] = cl;
+						outc[3] = ca;
+						outuv[0] = v->uv[0];
+						outuv[1] = v->uv[1];
+					}
+				}
+				else
+				{
+					for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outuv = m.texcoords[0];i < m.numverts;i++, v++, outv += 4, outc += 4, outuv += 2)
+					{
+						VectorCopy(v->v, outv);
+						outv[3] = 1;
+						outc[0] = outc[1] = outc[2] = cl;
+						outc[3] = ca;
+						outuv[0] = v->uv[0];
+						outuv[1] = v->uv[1];
+					}
+				}
+			}
+		}
+	}
+#else
 	int i;
 	float diff[3], ifog;
 	surfvertex_t *v;
@@ -1248,10 +1634,155 @@ static void RSurfShader_Wall_Pass_BaseLightmap(msurface_t *surf)
 		}
 		R_Mesh_Draw(&m);
 	}
+#endif
 }
 
 static void RSurfShader_Wall_Pass_BaseVertex(msurface_t *surf)
 {
+#if 1
+	int i, size3;
+	surfvertex_t *v;
+	float *outv, *outc, *outst, *outuv, cl, ca, diff[3];
+	float base[3], scale, f;
+	qbyte *lm;
+	surfmesh_t *mesh;
+	rmeshbufferinfo_t m;
+	memset(&m, 0, sizeof(m));
+	if (currentrenderentity->effects & EF_ADDITIVE)
+	{
+		m.transparent = true;
+		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE;
+	}
+	else if (surf->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1)
+	{
+		m.transparent = true;
+		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+	}
+	else
+	{
+		m.transparent = false;
+		m.blendfunc1 = GL_ONE;
+		m.blendfunc2 = GL_ZERO;
+	}
+	m.depthwrite = false;
+	m.depthdisable = false;
+	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
+
+	size3 = ((surf->extents[0]>>4)+1)*((surf->extents[1]>>4)+1)*3;
+
+	base[0] = base[1] = base[2] = currentrenderentity->effects & EF_FULLBRIGHT ? 2.0f : r_ambient.value * (1.0f / 64.0f);
+
+	ca = currentrenderentity->alpha;
+	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+	{
+		m.numtriangles = mesh->numtriangles;
+		m.numverts = mesh->numverts;
+
+		if (R_Mesh_Draw_GetBuffer(&m))
+		{
+			cl = m.colorscale;
+			memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
+
+			if (currentrenderentity->effects & EF_FULLBRIGHT)
+			{
+				if (softwaretransform_complexity)
+				{
+					for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outst = m.texcoords[0], outuv = m.texcoords[1];i < m.numverts;i++, v++, outv += 4, outc += 4, outst += 2, outuv += 2)
+					{
+						softwaretransform(v->v, outv);
+						outv[3] = 1;
+						VectorSubtract(outv, r_origin, diff);
+						outc[0] = outc[1] = outc[2] = 2.0f * cl * (1 - exp(fogdensity/DotProduct(diff, diff)));
+						outc[3] = ca;
+						outst[0] = v->st[0];
+						outst[1] = v->st[1];
+					}
+				}
+				else
+				{
+					for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outst = m.texcoords[0], outuv = m.texcoords[1];i < m.numverts;i++, v++, outv += 4, outc += 4, outst += 2, outuv += 2)
+					{
+						VectorCopy(v->v, outv);
+						outv[3] = 1;
+						VectorSubtract(outv, r_origin, diff);
+						outc[0] = outc[1] = outc[2] = 2.0f * cl * (1 - exp(fogdensity/DotProduct(diff, diff)));
+						outc[3] = ca;
+						outst[0] = v->st[0];
+						outst[1] = v->st[1];
+					}
+				}
+			}
+			else
+			{
+				if (softwaretransform_complexity)
+				{
+					for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outst = m.texcoords[0], outuv = m.texcoords[1];i < m.numverts;i++, v++, outv += 4, outc += 4, outst += 2, outuv += 2)
+					{
+						softwaretransform(v->v, outv);
+						outv[3] = 1;
+						VectorCopy(base, outc);
+						outc[3] = ca;
+						outst[0] = v->st[0];
+						outst[1] = v->st[1];
+					}
+				}
+				else
+				{
+					for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outst = m.texcoords[0], outuv = m.texcoords[1];i < m.numverts;i++, v++, outv += 4, outc += 4, outst += 2, outuv += 2)
+					{
+						VectorCopy(v->v, outv);
+						outv[3] = 1;
+						VectorCopy(base, outc);
+						outc[3] = ca;
+						outst[0] = v->st[0];
+						outst[1] = v->st[1];
+					}
+				}
+
+				if (surf->dlightframe == r_framecount)
+					RSurf_LightSeparate(surf->dlightbits, m.numverts, m.vertex, m.color);
+
+				for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color;i < m.numverts;i++, v++, outv += 4, outc += 4)
+				{
+					if (surf->styles[0] != 255)
+					{
+						lm = surf->samples + v->lightmapoffset;
+						scale = d_lightstylevalue[surf->styles[0]] * (1.0f / 32768.0f);
+						VectorMA(outc, scale, lm, outc);
+						if (surf->styles[1] != 255)
+						{
+							lm += size3;
+							scale = d_lightstylevalue[surf->styles[1]] * (1.0f / 32768.0f);
+							VectorMA(outc, scale, lm, outc);
+							if (surf->styles[2] != 255)
+							{
+								lm += size3;
+								scale = d_lightstylevalue[surf->styles[2]] * (1.0f / 32768.0f);
+								VectorMA(outc, scale, lm, outc);
+								if (surf->styles[3] != 255)
+								{
+									lm += size3;
+									scale = d_lightstylevalue[surf->styles[3]] * (1.0f / 32768.0f);
+									VectorMA(outc, scale, lm, outc);
+								}
+							}
+						}
+					}
+					if (fogenabled)
+					{
+						VectorSubtract(outv, r_origin, diff);
+						f = cl * (1 - exp(fogdensity/DotProduct(diff, diff)));
+						VectorScale(outc, f, outc);
+					}
+					else
+						VectorScale(outc, cl, outc);
+				}
+			}
+		}
+	}
+#else
 	int i, size3;
 	float c[3], base[3], scale, diff[3], ifog;
 	surfvertex_t *v;
@@ -1262,7 +1793,7 @@ static void RSurfShader_Wall_Pass_BaseVertex(msurface_t *surf)
 
 	size3 = ((surf->extents[0]>>4)+1)*((surf->extents[1]>>4)+1)*3;
 
-	base[0] = base[1] = base[2] = r_ambient.value * (1.0f / 128.0f);
+	base[0] = base[1] = base[2] = currentrenderentity->effects & EF_FULLBRIGHT ? 2.0f : r_ambient.value * (1.0f / 128.0f);
 
 	memset(&m, 0, sizeof(m));
 	if (currentrenderentity->effects & EF_ADDITIVE)
@@ -1343,10 +1874,108 @@ static void RSurfShader_Wall_Pass_BaseVertex(msurface_t *surf)
 		}
 		R_Mesh_Draw(&m);
 	}
+#endif
 }
 
 static void RSurfShader_Wall_Pass_BaseFullbright(msurface_t *surf)
 {
+#if 1
+	int i;
+	surfvertex_t *v;
+	float *outv, *outc, *outst, cl, ca, diff[3];
+	surfmesh_t *mesh;
+	rmeshbufferinfo_t m;
+	memset(&m, 0, sizeof(m));
+	if (currentrenderentity->effects & EF_ADDITIVE)
+	{
+		m.transparent = true;
+		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE;
+	}
+	else if (surf->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1)
+	{
+		m.transparent = true;
+		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+	}
+	else
+	{
+		m.transparent = false;
+		m.blendfunc1 = GL_ONE;
+		m.blendfunc2 = GL_ZERO;
+	}
+	m.depthwrite = false;
+	m.depthdisable = false;
+	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
+	ca = currentrenderentity->alpha;
+	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+	{
+		m.numtriangles = mesh->numtriangles;
+		m.numverts = mesh->numverts;
+
+		if (R_Mesh_Draw_GetBuffer(&m))
+		{
+			cl = m.colorscale;
+			memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
+			if (fogenabled)
+			{
+				if (softwaretransform_complexity)
+				{
+					for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outst = m.texcoords[0];i < m.numverts;i++, v++, outv += 4, outc += 4, outst += 2)
+					{
+						softwaretransform(v->v, outv);
+						outv[3] = 1;
+						VectorSubtract(outv, r_origin, diff);
+						outc[0] = outc[1] = outc[2] = cl * (1 - exp(fogdensity/DotProduct(diff, diff)));
+						outc[3] = ca;
+						outst[0] = v->st[0];
+						outst[1] = v->st[1];
+					}
+				}
+				else
+				{
+					for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outst = m.texcoords[0];i < m.numverts;i++, v++, outv += 4, outc += 4, outst += 2)
+					{
+						VectorCopy(v->v, outv);
+						outv[3] = 1;
+						VectorSubtract(outv, r_origin, diff);
+						outc[0] = outc[1] = outc[2] = cl * (1 - exp(fogdensity/DotProduct(diff, diff)));
+						outc[3] = ca;
+						outst[0] = v->st[0];
+						outst[1] = v->st[1];
+					}
+				}
+			}
+			else
+			{
+				if (softwaretransform_complexity)
+				{
+					for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outst = m.texcoords[0];i < m.numverts;i++, v++, outv += 4, outc += 4, outst += 2)
+					{
+						softwaretransform(v->v, outv);
+						outv[3] = 1;
+						outc[0] = outc[1] = outc[2] = cl;
+						outc[3] = ca;
+						outst[0] = v->st[0];
+						outst[1] = v->st[1];
+					}
+				}
+				else
+				{
+					for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outst = m.texcoords[0];i < m.numverts;i++, v++, outv += 4, outc += 4, outst += 2)
+					{
+						VectorCopy(v->v, outv);
+						outv[3] = 1;
+						outc[0] = outc[1] = outc[2] = cl;
+						outc[3] = ca;
+						outst[0] = v->st[0];
+						outst[1] = v->st[1];
+					}
+				}
+			}
+		}
+	}
+#else
 	int i;
 	float diff[3], ifog;
 	surfvertex_t *v;
@@ -1407,10 +2036,83 @@ static void RSurfShader_Wall_Pass_BaseFullbright(msurface_t *surf)
 		}
 		R_Mesh_Draw(&m);
 	}
+#endif
 }
 
 static void RSurfShader_Wall_Pass_Light(msurface_t *surf)
 {
+#if 1
+	int i;
+	surfvertex_t *v;
+	float *outv, *outc, *outst, *outuv, cl, ca, diff[3], f;
+	surfmesh_t *mesh;
+	rmeshbufferinfo_t m;
+
+	if (surf->dlightframe != r_framecount)
+		return;
+	if (currentrenderentity->effects & EF_FULLBRIGHT)
+		return;
+
+	memset(&m, 0, sizeof(m));
+	if (currentrenderentity->effects & EF_ADDITIVE)
+	{
+		m.transparent = true;
+		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE;
+	}
+	else if (surf->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1)
+	{
+		m.transparent = true;
+		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+	}
+	else
+	{
+		m.transparent = false;
+		m.blendfunc1 = GL_ONE;
+		m.blendfunc2 = GL_ZERO;
+	}
+	m.depthwrite = false;
+	m.depthdisable = false;
+	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
+	ca = currentrenderentity->alpha;
+	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+	{
+		if (RSurf_LightCheck(surf->dlightbits, mesh))
+		{
+			m.numtriangles = mesh->numtriangles;
+			m.numverts = mesh->numverts;
+
+			if (R_Mesh_Draw_GetBuffer(&m))
+			{
+				cl = m.colorscale;
+				memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
+				for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outst = m.texcoords[0], outuv = m.texcoords[1];i < m.numverts;i++, v++, outv += 4, outc += 4, outst += 2, outuv += 2)
+				{
+					softwaretransform(v->v, outv);
+					outv[3] = 1;
+					VectorClear(outc);
+					outc[3] = ca;
+					outst[0] = v->st[0];
+					outst[1] = v->st[1];
+				}
+				RSurf_LightSeparate(surf->dlightbits, m.numverts, m.vertex, m.color);
+				if (fogenabled)
+				{
+					for (i = 0, outv = m.vertex, outc = m.color;i < m.numverts;i++, outv += 4, outc += 4)
+					{
+						VectorSubtract(outv, r_origin, diff);
+						f = cl * (1 - exp(fogdensity/DotProduct(diff, diff)));
+						VectorScale(outc, f, outc);
+					}
+				}
+				else if (cl != 1)
+					for (i = 0, outc = m.color;i < m.numverts;i++, outc += 4)
+						VectorScale(outc, cl, outc);
+			}
+		}
+	}
+#else
 	int i;
 	float diff[3], ifog;
 	surfvertex_t *v;
@@ -1463,10 +2165,60 @@ static void RSurfShader_Wall_Pass_Light(msurface_t *surf)
 			R_Mesh_Draw(&m);
 		}
 	}
+#endif
 }
 
 static void RSurfShader_Wall_Pass_Glow(msurface_t *surf)
 {
+#if 1
+	int i;
+	surfvertex_t *v;
+	float *outv, *outc, *outst, cl, ca, diff[3];
+	surfmesh_t *mesh;
+	rmeshbufferinfo_t m;
+	memset(&m, 0, sizeof(m));
+	m.transparent = currentrenderentity->effects & EF_ADDITIVE || surf->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1;
+	m.blendfunc1 = GL_SRC_ALPHA;
+	m.blendfunc2 = GL_ONE;
+	m.tex[0] = R_GetTexture(surf->currenttexture->glowtexture);
+	ca = currentrenderentity->alpha;
+	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+	{
+		m.numtriangles = mesh->numtriangles;
+		m.numverts = mesh->numverts;
+
+		if (R_Mesh_Draw_GetBuffer(&m))
+		{
+			cl = m.colorscale;
+			memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
+			if (fogenabled)
+			{
+				for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outst = m.texcoords[0];i < m.numverts;i++, v++, outv += 4, outc += 4, outst += 2)
+				{
+					softwaretransform(v->v, outv);
+					outv[3] = 1;
+					VectorSubtract(outv, r_origin, diff);
+					outc[0] = outc[1] = outc[2] = cl * (1 - exp(fogdensity/DotProduct(diff, diff)));
+					outc[3] = ca;
+					outst[0] = v->st[0];
+					outst[1] = v->st[1];
+				}
+			}
+			else
+			{
+				for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outst = m.texcoords[0];i < m.numverts;i++, v++, outv += 4, outc += 4, outst += 2)
+				{
+					softwaretransform(v->v, outv);
+					outv[3] = 1;
+					outc[0] = outc[1] = outc[2] = cl;
+					outc[3] = ca;
+					outst[0] = v->st[0];
+					outst[1] = v->st[1];
+				}
+			}
+		}
+	}
+#else
 	int i;
 	float diff[3], ifog;
 	surfvertex_t *v;
@@ -1475,12 +2227,7 @@ static void RSurfShader_Wall_Pass_Glow(msurface_t *surf)
 	rmeshinfo_t m;
 
 	memset(&m, 0, sizeof(m));
-	if (currentrenderentity->effects & EF_ADDITIVE)
-		m.transparent = true;
-	else if (surf->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1)
-		m.transparent = true;
-	else
-		m.transparent = false;
+	m.transparent = currentrenderentity->effects & EF_ADDITIVE || surf->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1;
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
 	m.cr = 1;
@@ -1546,10 +2293,63 @@ static void RSurfShader_Wall_Pass_Glow(msurface_t *surf)
 		}
 		R_Mesh_Draw(&m);
 	}
+#endif
 }
 
 static void RSurfShader_Wall_Pass_Fog(msurface_t *surf)
 {
+#if 1
+	int i;
+	surfvertex_t *v;
+	float *outv, *outc, *outst, cl, ca, diff[3], f;
+	surfmesh_t *mesh;
+	rmeshbufferinfo_t m;
+	memset(&m, 0, sizeof(m));
+	m.transparent = currentrenderentity->effects & EF_ADDITIVE || surf->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1;
+	m.blendfunc1 = GL_SRC_ALPHA;
+	m.blendfunc2 = GL_ONE;
+	ca = currentrenderentity->alpha;
+	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+	{
+		m.numtriangles = mesh->numtriangles;
+		m.numverts = mesh->numverts;
+
+		if (R_Mesh_Draw_GetBuffer(&m))
+		{
+			cl = m.colorscale;
+			memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
+			if (softwaretransform_complexity)
+			{
+				for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outst = m.texcoords[0];i < m.numverts;i++, v++, outv += 4, outc += 4, outst += 2)
+				{
+					softwaretransform(v->v, outv);
+					outv[3] = 1;
+					VectorSubtract(outv, r_origin, diff);
+					f = cl * exp(fogdensity/DotProduct(diff, diff));
+					VectorScale(fogcolor, f, outc);
+					outc[3] = ca;
+					outst[0] = v->st[0];
+					outst[1] = v->st[1];
+				}
+			}
+			else
+			{
+				for (i = 0, v = mesh->vertex, outv = m.vertex, outc = m.color, outst = m.texcoords[0];i < m.numverts;i++, v++, outv += 4, outc += 4, outst += 2)
+				{
+					VectorCopy(v->v, outv);
+					outv[3] = 1;
+					VectorSubtract(outv, r_origin, diff);
+					VectorSubtract(outv, r_origin, diff);
+					f = cl * exp(fogdensity/DotProduct(diff, diff));
+					VectorScale(fogcolor, f, outc);
+					outc[3] = ca;
+					outst[0] = v->st[0];
+					outst[1] = v->st[1];
+				}
+			}
+		}
+	}
+#else
 	int i;
 	surfvertex_t *v;
 	surfvert_t *sv;
@@ -1558,12 +2358,7 @@ static void RSurfShader_Wall_Pass_Fog(msurface_t *surf)
 	vec3_t diff;
 
 	memset(&m, 0, sizeof(m));
-	if (currentrenderentity->effects & EF_ADDITIVE)
-		m.transparent = true;
-	else if (surf->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1)
-		m.transparent = true;
-	else
-		m.transparent = false;
+	m.transparent = currentrenderentity->effects & EF_ADDITIVE || surf->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1;
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
 	m.color = &svert[0].c[0];
@@ -1605,6 +2400,7 @@ static void RSurfShader_Wall_Pass_Fog(msurface_t *surf)
 		}
 		R_Mesh_Draw(&m);
 	}
+#endif
 }
 
 static void RSurfShader_Wall_Fullbright(msurface_t *firstsurf)

@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 rdlight_t r_dlight[MAX_DLIGHTS];
 int r_numdlights = 0;
 
-cvar_t r_lightmodels = {CVAR_SAVE, "r_lightmodels", "1"};
+cvar_t r_modellights = {CVAR_SAVE, "r_modellights", "4"};
 cvar_t r_vismarklights = {0, "r_vismarklights", "1"};
 
 static rtexture_t *lightcorona;
@@ -66,7 +66,7 @@ void r_light_newmap(void)
 
 void R_Light_Init(void)
 {
-	Cvar_RegisterVariable(&r_lightmodels);
+	Cvar_RegisterVariable(&r_modellights);
 	Cvar_RegisterVariable(&r_vismarklights);
 	R_RegisterModule("R_Light", r_light_start, r_light_shutdown, r_light_newmap);
 }
@@ -101,9 +101,9 @@ void R_AnimateLight (void)
 
 void R_BuildLightList(void)
 {
-	int			i;
-	dlight_t	*cd;
-	rdlight_t	*rd;
+	int i;
+	dlight_t *cd;
+	rdlight_t *rd;
 
 	r_numdlights = 0;
 	c_dlights = 0;
@@ -118,13 +118,13 @@ void R_BuildLightList(void)
 			continue;
 		rd = &r_dlight[r_numdlights++];
 		VectorCopy(cd->origin, rd->origin);
-		VectorScale(cd->color, cd->radius * 128.0f, rd->light);
-		rd->cullradius = (1.0f / 128.0f) * sqrt(DotProduct(rd->light, rd->light));
+		VectorScale(cd->color, cd->radius * 64.0f, rd->light);
+		rd->cullradius2 = DotProduct(rd->light, rd->light) * (0.25f / (64.0f * 64.0f)) + 4096.0f;
 		// clamp radius to avoid overflowing division table in lightmap code
-		if (rd->cullradius > 2048.0f)
-			rd->cullradius = 2048.0f;
-		rd->cullradius2 = rd->cullradius * rd->cullradius;
-		rd->lightsubtract = 1.0f / rd->cullradius2;
+		if (rd->cullradius2 > (2048.0f * 2048.0f))
+			rd->cullradius2 = (2048.0f * 2048.0f);
+		rd->cullradius = sqrt(rd->cullradius2);
+		rd->subtract = 1.0f / rd->cullradius2;
 		//rd->ent = cd->ent;
 		r_numdlights++;
 		c_dlights++; // count every dlight in use
@@ -215,10 +215,10 @@ R_MarkLights
 */
 static void R_OldMarkLights (vec3_t lightorigin, rdlight_t *rd, int bit, int bitindex, mnode_t *node)
 {
-	float		ndist, maxdist;
-	msurface_t	*surf;
-	mleaf_t		*leaf;
-	int			i;
+	float ndist, maxdist;
+	msurface_t *surf;
+	mleaf_t *leaf;
+	int i;
 
 	if (!r_dynamic.integer)
 		return;
@@ -336,12 +336,12 @@ static void R_VisMarkLights (rdlight_t *rd, int bit, int bitindex)
 	mleaf_t *pvsleaf;
 	vec3_t lightorigin;
 	model_t *model;
-	int		i, k, m, c, leafnum;
+	int i, k, m, c, leafnum;
 	msurface_t *surf, **mark;
 	mleaf_t *leaf;
-	qbyte	*in;
-	int		row;
-	float	low[3], high[3], dist, maxdist;
+	qbyte *in;
+	int row;
+	float low[3], high[3], dist, maxdist;
 
 	if (!r_dynamic.integer)
 		return;
@@ -494,9 +494,9 @@ LIGHT SAMPLING
 
 static int RecursiveLightPoint (vec3_t color, mnode_t *node, float x, float y, float startz, float endz)
 {
-	int		side, distz = endz - startz;
-	float	front, back;
-	float	mid;
+	int side, distz = endz - startz;
+	float front, back;
+	float mid;
 
 loc0:
 	if (node->contents < 0)
@@ -634,8 +634,8 @@ middle sample (the one which was requested)
 
 void R_CompleteLightPoint (vec3_t color, vec3_t p, int dynamic, mleaf_t *leaf)
 {
-	int	 i, *dlightbits;
-	vec3_t dist;
+	int i, *dlightbits;
+	vec3_t v;
 	float f;
 	rdlight_t *rd;
 	mlight_t *sl;
@@ -662,19 +662,14 @@ void R_CompleteLightPoint (vec3_t color, vec3_t p, int dynamic, mleaf_t *leaf)
 			sl = cl.worldmodel->lights + i;
 			if (d_lightstylevalue[sl->style] > 0)
 			{
-				VectorSubtract (p, sl->origin, dist);
-				f = DotProduct(dist, dist) + sl->distbias;
-				f = (1.0f / f) - sl->subtract;
-				if (f > 0)
+				VectorSubtract (p, sl->origin, v);
+				f = ((1.0f / (DotProduct(v, v) * sl->falloff + sl->distbias)) - sl->subtract);
+				if (f > 0 && CL_TraceLine(p, sl->origin, NULL, NULL, 0, false) == 1)
 				{
-					if (CL_TraceLine(p, sl->origin, NULL, NULL, 0, false) == 1)
-					{
-						f *= d_lightstylevalue[sl->style] * (1.0f / 16384.0f);
-						VectorMA(color, f, sl->light, color);
-					}
+					f *= d_lightstylevalue[sl->style] * (1.0f / 65536.0f);
+					VectorMA(color, f, sl->light, color);
 				}
 			}
-
 		}
 	}
 	else
@@ -688,13 +683,12 @@ void R_CompleteLightPoint (vec3_t color, vec3_t p, int dynamic, mleaf_t *leaf)
 			if (!(dlightbits[i >> 5] & (1 << (i & 31))))
 				continue;
 			rd = r_dlight + i;
-			VectorSubtract (p, rd->origin, dist);
-			f = DotProduct(dist, dist) + LIGHTOFFSET;
+			VectorSubtract (p, rd->origin, v);
+			f = DotProduct(v, v);
 			if (f < rd->cullradius2)
 			{
-				f = (1.0f / f) - rd->lightsubtract;
-				if (f > 0)
-					VectorMA(color, f, rd->light, color);
+				f = (1.0f / (f + LIGHTOFFSET)) - rd->subtract;
+				VectorMA(color, f, rd->light, color);
 			}
 		}
 	}
@@ -711,7 +705,7 @@ void R_ModelLightPoint (vec3_t color, vec3_t p, int *dlightbits)
 		return;
 	}
 
-	if (r_fullbright.integer || !cl.worldmodel->lightdata)
+	if (r_fullbright.integer || !cl.worldmodel->lightdata || currentrenderentity->effects & EF_FULLBRIGHT)
 	{
 		color[0] = color[1] = color[2] = 2;
 		dlightbits[0] = dlightbits[1] = dlightbits[2] = dlightbits[3] = dlightbits[4] = dlightbits[5] = dlightbits[6] = dlightbits[7] = 0;
@@ -739,128 +733,149 @@ void R_ModelLightPoint (vec3_t color, vec3_t p, int *dlightbits)
 
 void R_LightModel(int numverts, float colorr, float colorg, float colorb, int worldcoords)
 {
-	int i, j, nearlights = 0;
-	float color[3], basecolor[3], v[3], t, *av, *avn, *avc, a, f, dist2, mscale, dot;
+	int i, j, nearlights = 0, maxnearlights = r_modellights.integer;
+	float color[3], basecolor[3], v[3], t, *av, *avn, *avc, a, f, dist2, mscale, dot, stylescale, intensity, ambientcolor[3];
 	struct
 	{
 		vec3_t origin;
 		//vec_t cullradius2;
 		vec3_t light;
-		vec_t lightsubtract;
+		// how much this light would contribute to ambient if replaced
+		vec3_t ambientlight;
+		vec_t subtract;
 		vec_t falloff;
 		vec_t offset;
+		// used for choosing only the brightest lights
+		vec_t intensity;
 	}
 	nearlight[MAX_DLIGHTS], *nl;
 	int modeldlightbits[8];
 	mlight_t *sl;
+	rdlight_t *rd;
 	a = currentrenderentity->alpha;
 	// scale of the model's coordinate space, to alter light attenuation to match
 	// make the mscale squared so it can scale the squared distance results
 	mscale = currentrenderentity->scale * currentrenderentity->scale;
-	if (r_fullbright.integer || r_ambient.value > 128.0f || currentrenderentity->effects & EF_FULLBRIGHT)
+	if ((maxnearlights != 0) && !r_fullbright.integer && !(currentrenderentity->effects & EF_FULLBRIGHT))
 	{
-		basecolor[0] = colorr * 2.0f;
-		basecolor[1] = colorg * 2.0f;
-		basecolor[2] = colorb * 2.0f;
-	}
-	else
-	{
-		if (r_lightmodels.integer)
+		R_ModelLightPoint(basecolor, currentrenderentity->origin, modeldlightbits);
+
+		nl = &nearlight[0];
+		VectorSubtract(currentrenderentity->origin, currentrenderentity->entlightsorigin, v);
+		if ((realtime > currentrenderentity->entlightstime && DotProduct(v,v) >= 1.0f))
 		{
-			R_ModelLightPoint(basecolor, currentrenderentity->origin, modeldlightbits);
-
-			nl = &nearlight[0];
-			VectorSubtract(currentrenderentity->origin, currentrenderentity->entlightsorigin, v);
-			if ((realtime > currentrenderentity->entlightstime && DotProduct(v,v) >= 1.0f) || currentrenderentity->numentlights >= MAXENTLIGHTS)
+			currentrenderentity->numentlights = 0;
+			currentrenderentity->entlightstime = realtime + 0.2;
+			VectorCopy(currentrenderentity->origin, currentrenderentity->entlightsorigin);
+			for (i = 0, sl = cl.worldmodel->lights;i < cl.worldmodel->numlights && currentrenderentity->numentlights < MAXENTLIGHTS;i++, sl++)
+				if (CL_TraceLine(currentrenderentity->origin, sl->origin, NULL, NULL, 0, false) == 1)
+					currentrenderentity->entlights[currentrenderentity->numentlights++] = i;
+		}
+		for (i = 0;i < currentrenderentity->numentlights;i++)
+		{
+			sl = cl.worldmodel->lights + currentrenderentity->entlights[i];
+			stylescale = d_lightstylevalue[sl->style] * (1.0f / 65536.0f);
+			VectorSubtract (currentrenderentity->origin, sl->origin, v);
+			f = ((1.0f / (DotProduct(v, v) * sl->falloff + sl->distbias)) - sl->subtract) * stylescale;
+			VectorScale(sl->light, f, ambientcolor);
+			intensity = DotProduct(ambientcolor, ambientcolor);
+			if (f < 0)
+				intensity *= -1.0f;
+			if (nearlights < maxnearlights)
+				j = nearlights++;
+			else
 			{
-				currentrenderentity->numentlights = 0;
-				currentrenderentity->entlightstime = realtime + 0.2;
-				VectorCopy(currentrenderentity->origin, currentrenderentity->entlightsorigin);
-				for (i = 0, sl = cl.worldmodel->lights;i < cl.worldmodel->numlights && nearlights < MAX_DLIGHTS;i++, sl++)
+				for (j = 0;j < maxnearlights;j++)
 				{
-					if (CL_TraceLine(currentrenderentity->origin, sl->origin, NULL, NULL, 0, false) == 1)
+					if (nearlight[j].intensity < intensity)
 					{
-						if (currentrenderentity->numentlights < MAXENTLIGHTS)
-							currentrenderentity->entlights[currentrenderentity->numentlights++] = i;
-
-						// integrate mscale into falloff, for maximum speed
-						nl->falloff = mscale * sl->falloff;
-						// transform the light into the model's coordinate system
-						if (worldcoords)
-							VectorCopy(sl->origin, nl->origin);
-						else
-							softwareuntransform(sl->origin, nl->origin);
-						f = d_lightstylevalue[sl->style] * (1.0f / 65536.0f);
-						nl->light[0] = sl->light[0] * f * colorr;
-						nl->light[1] = sl->light[1] * f * colorg;
-						nl->light[2] = sl->light[2] * f * colorb;
-						//nl->cullradius2 = 99999999;
-						nl->lightsubtract = sl->subtract;
-						nl->offset = sl->distbias;
-						nl++;
-						nearlights++;
+						if (nearlight[j].intensity > 0)
+							VectorAdd(basecolor, nearlight[j].ambientlight, basecolor);
+						break;
 					}
 				}
 			}
+			if (j >= maxnearlights)
+			{
+				// this light is less significant than all others,
+				// add it to ambient
+				if (intensity > 0)
+					VectorAdd(basecolor, ambientcolor, basecolor);
+			}
 			else
 			{
-				for (i = 0;i < currentrenderentity->numentlights && nearlights < MAX_DLIGHTS;i++)
-				{
-					sl = cl.worldmodel->lights + currentrenderentity->entlights[i];
-
-					// integrate mscale into falloff, for maximum speed
-					nl->falloff = mscale * sl->falloff;
-					// transform the light into the model's coordinate system
-					if (worldcoords)
-						VectorCopy(sl->origin, nl->origin);
-					else
-						softwareuntransform(sl->origin, nl->origin);
-					f = d_lightstylevalue[sl->style] * (1.0f / 65536.0f);
-					nl->light[0] = sl->light[0] * f * colorr;
-					nl->light[1] = sl->light[1] * f * colorg;
-					nl->light[2] = sl->light[2] * f * colorb;
-					//nl->cullradius2 = 99999999;
-					nl->lightsubtract = sl->subtract;
-					nl->offset = sl->distbias;
-					nl++;
-					nearlights++;
-				}
-			}
-			for (i = 0;i < r_numdlights && nearlights < MAX_DLIGHTS;i++)
-			{
-				if (!(modeldlightbits[i >> 5] & (1 << (i & 31))))
-					continue;
-				/*
-				if (currentrenderentity == r_dlight[i].ent)
-				{
-					f = (1.0f / LIGHTOFFSET) - nl->lightsubtract;
-					if (f > 0)
-						VectorMA(basecolor, f, r_dlight[i].light, basecolor);
-				}
+				nl = nearlight + j;
+				nl->intensity = intensity;
+				// transform the light into the model's coordinate system
+				if (worldcoords)
+					VectorCopy(sl->origin, nl->origin);
 				else
-				{
-				*/
-					// transform the light into the model's coordinate system
-					if (worldcoords)
-						VectorCopy(r_dlight[i].origin, nl->origin);
-					else
-						softwareuntransform(r_dlight[i].origin, nl->origin);
-					// integrate mscale into falloff, for maximum speed
-					nl->falloff = mscale;
-					// scale the cullradius so culling by distance is done before mscale is applied
-					//nl->cullradius2 = r_dlight[i].cullradius2 * currentrenderentity->scale * currentrenderentity->scale;
-					nl->light[0] = r_dlight[i].light[0] * colorr;
-					nl->light[1] = r_dlight[i].light[1] * colorg;
-					nl->light[2] = r_dlight[i].light[2] * colorb;
-					nl->lightsubtract = r_dlight[i].lightsubtract;
-					nl->offset = LIGHTOFFSET;
-					nl++;
-					nearlights++;
-				//}
+					softwareuntransform(sl->origin, nl->origin);
+				// integrate mscale into falloff, for maximum speed
+				nl->falloff = sl->falloff * mscale;
+				VectorCopy(ambientcolor, nl->ambientlight);
+				nl->light[0] = sl->light[0] * stylescale * colorr * 4.0f;
+				nl->light[1] = sl->light[1] * stylescale * colorg * 4.0f;
+				nl->light[2] = sl->light[2] * stylescale * colorb * 4.0f;
+				nl->subtract = sl->subtract;
+				nl->offset = sl->distbias;
 			}
 		}
-		else
-			R_CompleteLightPoint (basecolor, currentrenderentity->origin, true, NULL);
+		for (i = 0;i < r_numdlights;i++)
+		{
+			if (!(modeldlightbits[i >> 5] & (1 << (i & 31))))
+				continue;
+			rd = r_dlight + i;
+			VectorSubtract (currentrenderentity->origin, rd->origin, v);
+			f = ((1.0f / (DotProduct(v, v) + LIGHTOFFSET)) - rd->subtract);
+			VectorScale(rd->light, f, ambientcolor);
+			intensity = DotProduct(ambientcolor, ambientcolor);
+			if (f < 0)
+				intensity *= -1.0f;
+			if (nearlights < maxnearlights)
+				j = nearlights++;
+			else
+			{
+				for (j = 0;j < maxnearlights;j++)
+				{
+					if (nearlight[j].intensity < intensity)
+					{
+						if (nearlight[j].intensity > 0)
+							VectorAdd(basecolor, nearlight[j].ambientlight, basecolor);
+						break;
+					}
+				}
+			}
+			if (j >= maxnearlights)
+			{
+				// this light is less significant than all others,
+				// add it to ambient
+				if (intensity > 0)
+					VectorAdd(basecolor, ambientcolor, basecolor);
+			}
+			else
+			{
+				nl = nearlight + j;
+				nl->intensity = intensity;
+				// transform the light into the model's coordinate system
+				if (worldcoords)
+					VectorCopy(rd->origin, nl->origin);
+				else
+					softwareuntransform(rd->origin, nl->origin);
+				// integrate mscale into falloff, for maximum speed
+				nl->falloff = mscale;
+				VectorCopy(ambientcolor, nl->ambientlight);
+				nl->light[0] = rd->light[0] * colorr * 4.0f;
+				nl->light[1] = rd->light[1] * colorg * 4.0f;
+				nl->light[2] = rd->light[2] * colorb * 4.0f;
+				nl->subtract = rd->subtract;
+				nl->offset = LIGHTOFFSET;
+			}
+		}
+	}
+	else
+	{
+		R_CompleteLightPoint (basecolor, currentrenderentity->origin, true, NULL);
 	}
 	basecolor[0] *= colorr;
 	basecolor[1] *= colorg;
@@ -884,7 +899,7 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 
 					// do the distance attenuation
 					dist2 = DotProduct(v,v);
-					f = (1.0f / (dist2 * nl->falloff + nl->offset)) - nl->lightsubtract;
+					f = (1.0f / (dist2 * nl->falloff + nl->offset)) - nl->subtract;
 					if (f > 0)
 					{
 						#if SLOWMATH
@@ -901,7 +916,7 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 						// the hardness variables are for backlighting/shinyness
 						// these have been hardwired at * 0.5 + 0.5 to match
 						// the quake map lighting utility's equations
-						f *= dot * t * 0.5f + 0.5f;// * hardness + hardnessoffset;
+						f *= dot * t;// * 0.5f + 0.5f;// * hardness + hardnessoffset;
 						VectorMA(color, f, nl->light, color);
 					}
 				}
