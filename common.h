@@ -176,9 +176,8 @@ extern char *gamename;
 extern char *gamedirname;
 extern char com_modname[MAX_OSPATH];
 
-// LordHavoc: useful...
-void COM_ToLowerString(const char *in, char *out);
-void COM_ToUpperString(const char *in, char *out);
+void COM_ToLowerString (const char *in, char *out, size_t size_out);
+void COM_ToUpperString (const char *in, char *out, size_t size_out);
 int COM_StringBeginsWith(const char *s, const char *match);
 
 typedef struct stringlist_s
