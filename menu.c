@@ -3830,7 +3830,7 @@ void M_ServerList_Draw (void)
 	if (*m_return_reason)
 		M_Print(16, menu_height - 8, m_return_reason);
 	y = 48;
-	visible = (menu_height - 16 - y) / 8;
+	visible = (menu_height - 16 - y) / 8 / 2;
 	start = bound(0, slist_cursor - (visible >> 1), hostcache_viewcount - visible);
 	end = min(start + visible, hostcache_viewcount);
 
