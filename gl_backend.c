@@ -401,7 +401,7 @@ typedef struct gltextureunit_s
 	int t1d, t2d, t3d, tcubemap;
 	int arrayenabled;
 	unsigned int arraycomponents;
-	const void *pointer_texcoord;
+	const float *pointer_texcoord;
 	float rgbscale, alphascale;
 	int combinergb, combinealpha;
 	// FIXME: add more combine stuff
@@ -426,8 +426,8 @@ static struct
 	float color4f[4];
 	int lockrange_first;
 	int lockrange_count;
-	const void *pointer_vertex;
-	const void *pointer_color;
+	const float *pointer_vertex;
+	const float *pointer_color;
 }
 gl_state;
 
