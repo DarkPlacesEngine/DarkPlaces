@@ -690,7 +690,7 @@ void PRVM_ED_PrintEdicts_f (void)
 
 	if(Cmd_Argc() != 2)
 	{
-		Con_Print("prvm_edicts <program name>\n");
+		Con_Printf("prvm_edicts <program name>\n");
 		return;
 	}
 	
@@ -718,7 +718,7 @@ void PRVM_ED_PrintEdict_f (void)
 
 	if(Cmd_Argc() != 3)
 	{
-		Con_Print("prvm_edict <program name> <edict number>\n");
+		Con_Printf("prvm_edict <program name> <edict number>\n");
 		return;
 	}
 
@@ -755,7 +755,7 @@ void PRVM_ED_Count_f (void)
 
 	if(Cmd_Argc() != 2)
 	{
-		Con_Print("prvm_count <program name>\n");
+		Con_Printf("prvm_count <program name>\n");
 		return;
 	}
 
@@ -1465,6 +1465,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 		prog->flag |= PRVM_OP_STATE;
 	
 	PRVM_GCALL(reset_cmd)();
+	PRVM_GCALL(init_cmd)();
 
 	// init mempools
 	PRVM_MEM_Alloc();
@@ -1491,7 +1492,7 @@ void PRVM_Fields_f (void)
 
 	if(Cmd_Argc() != 2)
 	{
-		Con_Print("prvm_fields <program name>\n");
+		Con_Printf("prvm_fields <program name>\n");
 		return;
 	}
 
@@ -1604,7 +1605,7 @@ void PRVM_Globals_f (void)
 	}*/
 	if(Cmd_Argc () != 2)
 	{
-		Con_Print ("prvm_globals <program name>\n");
+		Con_Printf("prvm_globals <program name>\n");
 		return;
 	}
 
@@ -1659,8 +1660,6 @@ void PRVM_InitProg(int prognr)
 	memset(prog, 0, sizeof(prvm_prog_t));
 
 	prog->time = &prog->_time;
-
-	PRVM_GCALL(init_cmd)();
 }
 
 int PRVM_GetProgNr()

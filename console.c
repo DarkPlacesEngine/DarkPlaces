@@ -267,7 +267,7 @@ void Con_Linefeed (void)
 Con_Print
 
 Handles cursor positioning, line wrapping, etc
-All console printing must go through this in order to be logged to disk
+All console printing must go through this in order to be displayed
 If no console is visible, the notify window will pop up.
 ================
 */

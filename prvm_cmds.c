@@ -318,7 +318,7 @@ void VM_print (void)
 	char string[VM_STRINGTEMP_LENGTH];
 
 	VM_VarString(0, string, sizeof(string));
-	Con_Print(string);
+	Con_Printf(string);
 }
 
 /*
