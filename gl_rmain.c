@@ -57,7 +57,6 @@ cvar_t r_speeds = {0, "r_speeds","0"};
 cvar_t r_fullbright = {0, "r_fullbright","0"};
 cvar_t r_wateralpha = {CVAR_SAVE, "r_wateralpha","1"};
 cvar_t r_dynamic = {CVAR_SAVE, "r_dynamic","1"};
-cvar_t r_waterripple = {CVAR_SAVE, "r_waterripple","0"};
 cvar_t r_fullbrights = {CVAR_SAVE, "r_fullbrights", "1"};
 
 cvar_t gl_fogenable = {0, "gl_fogenable", "0"};
@@ -240,7 +239,6 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable (&r_fullbrights);
 	Cvar_RegisterVariable (&r_wateralpha);
 	Cvar_RegisterVariable (&r_dynamic);
-	Cvar_RegisterVariable (&r_waterripple);
 	Cvar_RegisterVariable (&r_fullbright);
 	Cvar_RegisterVariable (&r_multitexture);
 	if (gamemode == GAME_NEHAHRA)

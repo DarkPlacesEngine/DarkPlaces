@@ -24,7 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 qbyte mod_novis[(MAX_MAP_LEAFS + 7)/ 8];
 
-cvar_t r_subdivide_size = {CVAR_SAVE, "r_subdivide_size", "128"};
+//cvar_t r_subdivide_size = {CVAR_SAVE, "r_subdivide_size", "128"};
 cvar_t halflifebsp = {0, "halflifebsp", "0"};
 cvar_t r_novis = {0, "r_novis", "0"};
 cvar_t r_miplightmaps = {CVAR_SAVE, "r_miplightmaps", "0"};
@@ -40,7 +40,7 @@ Mod_BrushInit
 */
 void Mod_BrushInit (void)
 {
-	Cvar_RegisterVariable(&r_subdivide_size);
+//	Cvar_RegisterVariable(&r_subdivide_size);
 	Cvar_RegisterVariable(&halflifebsp);
 	Cvar_RegisterVariable(&r_novis);
 	Cvar_RegisterVariable(&r_miplightmaps);
@@ -892,6 +892,7 @@ void BoundPoly (int numverts, float *verts, vec3_t mins, vec3_t maxs)
 	}
 }
 
+#if 0
 #define MAX_SUBDIVPOLYTRIANGLES 4096
 #define MAX_SUBDIVPOLYVERTS (MAX_SUBDIVPOLYTRIANGLES * 3)
 
@@ -1027,6 +1028,7 @@ void Mod_GenerateWarpMesh (msurface_t *surf)
 		v->st[1] = DotProduct (v->v, surf->texinfo->vecs[1]);
 	}
 }
+#endif
 
 void Mod_GenerateVertexLitMesh (msurface_t *surf)
 {
@@ -1323,13 +1325,13 @@ static void Mod_LoadFaces (lump_t *l)
 		{
 			out->shader = &Cshader_sky;
 			out->samples = NULL;
-			Mod_GenerateWarpMesh (out);
+			Mod_GenerateVertexMesh (out);
 		}
 		else if (out->texinfo->texture->flags & SURF_DRAWTURB)
 		{
 			out->shader = &Cshader_water;
 			out->samples = NULL;
-			Mod_GenerateWarpMesh (out);
+			Mod_GenerateVertexMesh (out);
 		}
 		else
 		{
@@ -1341,9 +1343,9 @@ static void Mod_LoadFaces (lump_t *l)
 				out->shader = &Cshader_water;
 				out->shader = &Cshader_water;
 				out->samples = NULL;
-				Mod_GenerateWarpMesh (out);
+				Mod_GenerateVertexMesh (out);
 			}
-			else if ((out->extents[0]+1) > (256*16) || (out->extents[1]+1) > (256*16))
+			else if ((out->extents[0] >> 4) + 1 > (256) || (out->extents[1] >> 4) + 1 > (256))
 			{
 				Con_Printf ("Bad surface extents, converting to fullbright polygon");
 				out->shader = &Cshader_wall_fullbright;
