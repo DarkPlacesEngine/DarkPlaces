@@ -1398,6 +1398,14 @@ void Image_HeightmapToNormalmap(const unsigned char *inpixels, unsigned char *ou
 			n[1] = ((p0[0] + p0[1] + p0[2]) - (p2[0] + p2[1] + p2[2]));
 			n[2] = ibumpscale;
 			VectorNormalize(n);
+			/*
+			// this should work for the bottom right triangle if anyone wants
+			// code for that for some reason
+			n[0] = ((p1[0] + p1[1] + p1[2]) - (p3[0] + p3[1] + p3[2]));
+			n[1] = ((p2[0] + p2[1] + p2[2]) - (p3[0] + p3[1] + p3[2]));
+			n[2] = ibumpscale;
+			VectorNormalize(n);
+			*/
 			out[0] = 128.0f + n[0] * 127.0f;
 			out[1] = 128.0f + n[1] * 127.0f;
 			out[2] = 128.0f + n[2] * 127.0f;
