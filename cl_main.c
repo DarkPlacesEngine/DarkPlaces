@@ -112,7 +112,7 @@ void CL_ClearState(void)
 // wipe the entire cl structure
 	memset (&cl, 0, sizeof(cl));
 	// reset the view zoom interpolation
-	cl.viewzoomold = cl.viewzoomnew = 1;
+	cl.mviewzoom[0] = cl.mviewzoom[1] = 1;
 
 	SZ_Clear (&cls.message);
 
@@ -233,7 +233,7 @@ void CL_EstablishConnection(const char *host)
 	CL_Disconnect();
 	NetConn_ClientFrame();
 	NetConn_ServerFrame();
-	
+
 	if (LHNETADDRESS_FromString(&cls.connect_address, host, 26000) && (cls.connect_mysocket = NetConn_ChooseClientSocketForAddress(&cls.connect_address)))
 	{
 		cls.connect_trying = true;
@@ -1146,10 +1146,13 @@ void CL_LerpPlayer(float frac)
 	int i;
 	float d;
 
-	cl.viewzoom = cl.viewzoomold + frac * (cl.viewzoomnew - cl.viewzoomold);
-
+	cl.viewzoom = cl.mviewzoom[1] + frac * (cl.mviewzoom[0] - cl.mviewzoom[1]);
 	for (i = 0;i < 3;i++)
+	{
+		cl.punchangle[i] = cl.mpunchangle[1][i] + frac * (cl.mpunchangle[0][i] - cl.mpunchangle[1][i]);
+		cl.punchvector[i] = cl.mpunchvector[1][i] + frac * (cl.mpunchvector[0][i] - cl.mpunchvector[1][i]);
 		cl.velocity[i] = cl.mvelocity[1][i] + frac * (cl.mvelocity[0][i] - cl.mvelocity[1][i]);
+	}
 
 	if (cls.demoplayback)
 	{

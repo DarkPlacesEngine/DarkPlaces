@@ -76,7 +76,7 @@ beam_t;
 
 typedef struct rtlight_s
 {
-	// shadow volumes are done entirely in model space, so there are no matrices for dealing with them...  they just use the origin 
+	// shadow volumes are done entirely in model space, so there are no matrices for dealing with them...  they just use the origin
 
 	// note that the world to light matrices are inversely scaled (divided) by lightradius
 
@@ -110,7 +110,7 @@ typedef struct rtlight_s
 	vec_t specularscale;
 	// LIGHTFLAG_* flags
 	int flags;
-	
+
 	// generated properties
 	// used only for shadow volumes
 	vec3_t shadoworigin;
@@ -213,7 +213,7 @@ typedef struct dlight_s
 	// (worldlight only)
 	struct dlight_s *next;
 	// embedded rtlight struct for renderer
-	// (renderer only)	
+	// (renderer only)
 	rtlight_t rtlight;
 }
 dlight_t;
@@ -494,20 +494,17 @@ typedef struct
 // the view is temporarily offset, and an angle reset commands at the start
 // of each level and after teleporting.
 
-	// during demo playback viewangles is lerped between these
-	vec3_t mviewangles[2];
-	// either client controlled, or lerped from demo mviewangles
-	vec3_t viewangles;
-
+	// mviewangles is read from demo
+	// viewangles is either client controlled or lerped from mviewangles
+	vec3_t mviewangles[2], viewangles;
+	// update by server, used by qc to do weapon recoil
+	vec3_t mpunchangle[2], punchangle;
+	// update by server, can be used by mods to kick view around
+	vec3_t mpunchvector[2], punchvector;
 	// update by server, used for lean+bob (0 is newest)
-	vec3_t mvelocity[2];
-	// lerped between mvelocity[0] and [1]
-	vec3_t velocity;
-
-	// temporary offset
-	vec3_t punchangle;
-	// LordHavoc: origin view kick
-	vec3_t punchvector;
+	vec3_t mvelocity[2], velocity;
+	// update by server, can be used by mods for zooming
+	vec_t mviewzoom[2], viewzoom;
 
 // pitch drifting vars
 	float idealpitch;
@@ -571,11 +568,6 @@ typedef struct
 
 	// [cl.maxclients]
 	scoreboard_t *scores;
-
-	// LordHavoc: sniping zoom, QC controlled
-	float viewzoom;
-	// for interpolation
-	float viewzoomold, viewzoomnew;
 
 	// protocol version of the server we're connected to
 	int protocol;
