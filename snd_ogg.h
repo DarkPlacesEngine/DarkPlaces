@@ -27,7 +27,7 @@
 
 qboolean OGG_OpenLibrary (void);
 void OGG_CloseLibrary (void);
-sfxcache_t *OGG_LoadVorbisFile (const char *filename, sfx_t *s);
+qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s);
 
 
 #endif

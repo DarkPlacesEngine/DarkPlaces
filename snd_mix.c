@@ -121,11 +121,11 @@ void S_TransferPaintBuffer(int endtime)
 		snd_p = (int *) paintbuffer;
 		snd_vol = volume.value*256;
 		lpaintedtime = paintedtime;
-		if (shm->samplebits == 16)
+		if (shm->format.width == 2)
 		{
 			// 16bit
 			short *snd_out;
-			if (shm->channels == 2)
+			if (shm->format.channels == 2)
 			{
 				// 16bit 2 channels (stereo)
 				while (lpaintedtime < endtime)
@@ -186,7 +186,7 @@ void S_TransferPaintBuffer(int endtime)
 		{
 			// 8bit
 			unsigned char *snd_out;
-			if (shm->channels == 2)
+			if (shm->format.channels == 2)
 			{
 				// 8bit 2 channels (stereo)
 				while (lpaintedtime < endtime)
@@ -257,15 +257,15 @@ CHANNEL MIXING
 ===============================================================================
 */
 
-void SND_PaintChannelFrom8 (channel_t *ch, sfxcache_t *sc, int endtime);
-void SND_PaintChannelFrom16 (channel_t *ch, sfxcache_t *sc, int endtime);
+qboolean SND_PaintChannelFrom8 (channel_t *ch, int endtime);
+qboolean SND_PaintChannelFrom16 (channel_t *ch, int endtime);
 
 void S_PaintChannels(int endtime)
 {
-	int i;
+	unsigned int i;
 	int end;
 	channel_t *ch;
-	sfxcache_t *sc;
+	sfx_t *sfx;
 	int ltime, count;
 
 	while (paintedtime < endtime)
@@ -282,18 +282,20 @@ void S_PaintChannels(int endtime)
 		ch = channels;
 		for (i=0; i<total_channels ; i++, ch++)
 		{
-			if (!ch->sfx)
+			sfx = ch->sfx;
+			if (!sfx)
 				continue;
 			if (!ch->leftvol && !ch->rightvol)
 				continue;
-			sc = S_LoadSound (ch->sfx, true);
-			if (!sc)
+			if (!S_LoadSound (sfx, true))
 				continue;
 
 			ltime = paintedtime;
 
 			while (ltime < end)
 			{
+				qboolean stop_paint;
+
 				// paint up to end
 				if (ch->end < end)
 					count = ch->end - ltime;
@@ -302,28 +304,35 @@ void S_PaintChannels(int endtime)
 
 				if (count > 0)
 				{
-					if (sc->width == 1)
-						SND_PaintChannelFrom8(ch, sc, count);
+					if (sfx->format.width == 1)
+						stop_paint = !SND_PaintChannelFrom8(ch, count);
 					else
-						SND_PaintChannelFrom16(ch, sc, count);
+						stop_paint = !SND_PaintChannelFrom16(ch, count);
 
 					ltime += count;
 				}
+				else
+					stop_paint = false;
 
-				// if at end of loop, restart
 				if (ltime >= ch->end)
 				{
-					if (sc->loopstart >= 0 || ch->forceloop)
+					// if at end of loop, restart
+					if ((sfx->loopstart >= 0 || ch->forceloop) && !stop_paint)
 					{
-						ch->pos = bound(0, sc->loopstart, sc->length - 1);
-						ch->end = ltime + sc->length - ch->pos;
+						ch->pos = bound(0, sfx->loopstart, (int)sfx->total_length - 1);
+						ch->end = ltime + sfx->total_length - ch->pos;
 					}
+					// channel just stopped
 					else
-					{
-						// channel just stopped
-						ch->sfx = NULL;
-						break;
-					}
+						stop_paint = true;
+				}
+
+				if (stop_paint)
+				{
+					if (ch->sfx->fetcher->end != NULL)
+						ch->sfx->fetcher->end (ch);
+					ch->sfx = NULL;
+					break;
 				}
 			}
 		}
@@ -345,10 +354,11 @@ void SND_InitScaletable (void)
 }
 
 
-void SND_PaintChannelFrom8 (channel_t *ch, sfxcache_t *sc, int count)
+qboolean SND_PaintChannelFrom8 (channel_t *ch, int count)
 {
 	int *lscale, *rscale;
 	unsigned char *sfx;
+	const sfxbuffer_t *sb;
 	int i, n;
 
 	if (ch->leftvol > 255)
@@ -358,10 +368,15 @@ void SND_PaintChannelFrom8 (channel_t *ch, sfxcache_t *sc, int count)
 
 	lscale = snd_scaletable[ch->leftvol >> 3];
 	rscale = snd_scaletable[ch->rightvol >> 3];
-	if (sc->stereo)
+
+	sb = ch->sfx->fetcher->getsb (ch, ch->pos, count);
+	if (sb == NULL)
+		return false;
+
+	if (ch->sfx->format.channels == 2)
 	{
 		// LordHavoc: stereo sound support, and optimizations
-		sfx = (unsigned char *)sc->data + ch->pos * 2;
+		sfx = (unsigned char *)sb->data + (ch->pos - sb->offset) * 2;
 		for (i = 0;i < count;i++)
 		{
 			paintbuffer[i].left += lscale[*sfx++];
@@ -370,7 +385,7 @@ void SND_PaintChannelFrom8 (channel_t *ch, sfxcache_t *sc, int count)
 	}
 	else
 	{
-		sfx = (unsigned char *)sc->data + ch->pos;
+		sfx = (unsigned char *)sb->data + ch->pos - sb->offset;
 		for (i = 0;i < count;i++)
 		{
 			n = *sfx++;
@@ -380,20 +395,27 @@ void SND_PaintChannelFrom8 (channel_t *ch, sfxcache_t *sc, int count)
 
 	}
 	ch->pos += count;
+	return true;
 }
 
-void SND_PaintChannelFrom16 (channel_t *ch, sfxcache_t *sc, int count)
+qboolean SND_PaintChannelFrom16 (channel_t *ch, int count)
 {
 	int leftvol, rightvol;
 	signed short *sfx;
+	const sfxbuffer_t *sb;
 	int i;
 
 	leftvol = ch->leftvol;
 	rightvol = ch->rightvol;
-	if (sc->stereo)
+
+	sb = ch->sfx->fetcher->getsb (ch, ch->pos, count);
+	if (sb == NULL)
+		return false;
+
+	if (ch->sfx->format.channels == 2)
 	{
 		// LordHavoc: stereo sound support, and optimizations
-		sfx = (signed short *)sc->data + ch->pos * 2;
+		sfx = (signed short *)sb->data + (ch->pos - sb->offset) * 2;
 
 		for (i=0 ; i<count ; i++)
 		{
@@ -403,7 +425,7 @@ void SND_PaintChannelFrom16 (channel_t *ch, sfxcache_t *sc, int count)
 	}
 	else
 	{
-		sfx = (signed short *)sc->data + ch->pos;
+		sfx = (signed short *)sb->data + ch->pos - sb->offset;
 
 		for (i=0 ; i<count ; i++)
 		{
@@ -413,5 +435,6 @@ void SND_PaintChannelFrom16 (channel_t *ch, sfxcache_t *sc, int count)
 	}
 
 	ch->pos += count;
+	return true;
 }
 

@@ -32,7 +32,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 int audio_fd;
 int snd_inited;
 
-static int tryrates[] = {44100, 22051, 11025, 8000};
+static int tryrates[] = {44100, 22050, 11025, 8000};
 
 qboolean SNDDMA_Init(void)
 {
@@ -95,44 +95,44 @@ qboolean SNDDMA_Init(void)
 	// set sample bits & speed
 	s = getenv("QUAKE_SOUND_SAMPLEBITS");
 	if (s)
-		shm->samplebits = atoi(s);
+		shm->format.width = atoi(s) / 8;
 	else if ((i = COM_CheckParm("-sndbits")) != 0)
-		shm->samplebits = atoi(com_argv[i+1]);
+		shm->format.width = atoi(com_argv[i+1]) / 8;
 
-	if (shm->samplebits != 16 && shm->samplebits != 8)
+	if (shm->format.width != 2 && shm->format.width != 1)
 	{
 		ioctl(audio_fd, SNDCTL_DSP_GETFMTS, &fmt);
 		if (fmt & format16bit)
-			shm->samplebits = 16;
+			shm->format.width = 2;
 		else if (fmt & AFMT_U8)
-			shm->samplebits = 8;
+			shm->format.width = 1;
     }
 
 	s = getenv("QUAKE_SOUND_SPEED");
 	if (s)
-		shm->speed = atoi(s);
+		shm->format.speed = atoi(s);
 	else if ((i = COM_CheckParm("-sndspeed")) != 0)
-		shm->speed = atoi(com_argv[i+1]);
+		shm->format.speed = atoi(com_argv[i+1]);
 	else
 	{
 		for (i = 0;i < (int) sizeof(tryrates) / 4;i++)
 			if (!ioctl(audio_fd, SNDCTL_DSP_SPEED, &tryrates[i]))
 				break;
 
-		shm->speed = tryrates[i];
+		shm->format.speed = tryrates[i];
     }
 
 	s = getenv("QUAKE_SOUND_CHANNELS");
 	if (s)
-		shm->channels = atoi(s);
+		shm->format.channels = atoi(s);
 	else if ((i = COM_CheckParm("-sndmono")) != 0)
-		shm->channels = 1;
+		shm->format.channels = 1;
 	else if ((i = COM_CheckParm("-sndstereo")) != 0)
-		shm->channels = 2;
+		shm->format.channels = 2;
 	else
-		shm->channels = 2;
+		shm->format.channels = 2;
 
-	shm->samples = info.fragstotal * info.fragsize / (shm->samplebits/8);
+	shm->samples = info.fragstotal * info.fragsize / shm->format.width;
 
 	// memory map the dma buffer
 	shm->bufferlength = info.fragstotal * info.fragsize;
@@ -146,32 +146,32 @@ qboolean SNDDMA_Init(void)
 	}
 
 	tmp = 0;
-	if (shm->channels == 2)
+	if (shm->format.channels == 2)
 		tmp = 1;
 
 	rc = ioctl(audio_fd, SNDCTL_DSP_STEREO, &tmp);
 	if (rc < 0)
 	{
 		perror("/dev/dsp");
-		Con_Printf("Could not set /dev/dsp to stereo=%d\n", shm->channels);
+		Con_Printf("Could not set /dev/dsp to stereo=%d\n", shm->format.channels);
 		close(audio_fd);
 		return 0;
 	}
 	if (tmp)
-		shm->channels = 2;
+		shm->format.channels = 2;
 	else
-		shm->channels = 1;
+		shm->format.channels = 1;
 
-	rc = ioctl(audio_fd, SNDCTL_DSP_SPEED, &shm->speed);
+	rc = ioctl(audio_fd, SNDCTL_DSP_SPEED, &shm->format.speed);
 	if (rc < 0)
 	{
 		perror("/dev/dsp");
-		Con_Printf("Could not set /dev/dsp speed to %d\n", shm->speed);
+		Con_Printf("Could not set /dev/dsp speed to %d\n", shm->format.speed);
 		close(audio_fd);
 		return 0;
 	}
 
-	if (shm->samplebits == 16)
+	if (shm->format.width == 2)
 	{
 		rc = format16bit;
 		rc = ioctl(audio_fd, SNDCTL_DSP_SETFMT, &rc);
@@ -183,7 +183,7 @@ qboolean SNDDMA_Init(void)
 			return 0;
 		}
 	}
-	else if (shm->samplebits == 8)
+	else if (shm->format.width == 1)
 	{
 		rc = AFMT_U8;
 		rc = ioctl(audio_fd, SNDCTL_DSP_SETFMT, &rc);
@@ -198,7 +198,7 @@ qboolean SNDDMA_Init(void)
 	else
 	{
 		perror("/dev/dsp");
-		Con_Printf("%d-bit sound not supported.\n", shm->samplebits);
+		Con_Printf("%d-bit sound not supported.\n", shm->format.width * 8);
 		close(audio_fd);
 		return 0;
 	}
@@ -244,7 +244,7 @@ int SNDDMA_GetDMAPos(void)
 		snd_inited = 0;
 		return 0;
 	}
-	shm->samplepos = count.ptr / (shm->samplebits / 8);
+	shm->samplepos = count.ptr / shm->format.width;
 
 	return shm->samplepos;
 }

@@ -19,8 +19,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // sound.h -- client sound i/o functions
 
-#ifndef __SOUND__
-#define __SOUND__
+#ifndef SOUND_H
+#define SOUND_H
 
 #define DEFAULT_SOUND_PACKET_VOLUME 255
 #define DEFAULT_SOUND_PACKET_ATTENUATION 1.0
@@ -33,35 +33,42 @@ typedef struct
 
 typedef struct
 {
-	int 	length;
-	int 	loopstart;
-	int 	speed;
-	int 	width;
-	int 	stereo;
-	qbyte	data[1];		// variable sized
-} sfxcache_t;
+	size_t	length;
+	size_t	offset;
+	qbyte	data[4];	// variable sized
+} sfxbuffer_t;
+
+typedef struct
+{
+	unsigned int	speed;
+	unsigned int	width;
+	unsigned int	channels;
+} snd_format_t;
 
 // sfx_t flags
 #define SFXFLAG_SILENTLYMISSING	(1 << 0) // if the sfx is missing and loaded with complain = false
 #define SFXFLAG_USED			(1 << 1)
 
+typedef struct snd_fetcher_s snd_fetcher_t;
 typedef struct sfx_s
 {
-	char 	name[MAX_QPATH];
-	mempool_t	*mempool;
-	sfxcache_t	*sfxcache;
-	unsigned int flags;  // cf SFXFLAG_* defines
+	char				name[MAX_QPATH];
+	mempool_t			*mempool;
+	unsigned int		flags;			// cf SFXFLAG_* defines
+	snd_format_t		format;
+	int					loopstart;
+	size_t				total_length;
+	const snd_fetcher_t	*fetcher;
+	void				*fetcher_data;	// Per-sfx data for the sound fetching functions
 } sfx_t;
 
 typedef struct
 {
-	int				channels;
-	int				samples;				// mono samples in buffer
-	int				samplepos;				// in mono samples
-	int				samplebits;
-	int				speed;
+	snd_format_t	format;
+	int				samples;		// mono samples in buffer
+	int				samplepos;		// in mono samples
 	unsigned char	*buffer;
-	int				bufferlength; // used only by certain drivers
+	int				bufferlength;	// used only by certain drivers
 } dma_t;
 
 typedef struct
@@ -74,11 +81,20 @@ typedef struct
 	int 	pos;			// sample position in sfx
 	int		looping;		// where to loop, -1 = no looping
 	int		entnum;			// to allow overriding a specific sound
-	int		entchannel;		//
+	int		entchannel;
 	vec3_t	origin;			// origin of sound effect
 	vec_t	dist_mult;		// distance multiplier (attenuation/clipK)
 	int		master_vol;		// 0-255 master volume
+	void	*fetcher_data;	// Per-channel data for the sound fetching function
 } channel_t;
+
+typedef const sfxbuffer_t* (*snd_fetcher_getsb_t) (channel_t* ch, unsigned int start, unsigned int nbsamples);
+typedef void (*snd_fetcher_end_t) (channel_t* ch);
+struct snd_fetcher_s
+{
+	snd_fetcher_getsb_t	getsb;
+	snd_fetcher_end_t	end;
+};
 
 typedef struct
 {
@@ -124,6 +140,8 @@ int SNDDMA_GetDMAPos(void);
 // shutdown the DMA xfer.
 void SNDDMA_Shutdown(void);
 
+extern size_t ResampleSfx (const qbyte *in_data, size_t in_length, const snd_format_t* in_format, qbyte *out_data, const char* sfxname);
+
 // ====================================================================
 // User-setable variables
 // ====================================================================
@@ -139,7 +157,7 @@ extern channel_t channels[MAX_CHANNELS];
 // MAX_DYNAMIC_CHANNELS to MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS -1 = water, etc
 // MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS to total_channels = static sounds
 
-extern int total_channels;
+extern unsigned int total_channels;
 
 //
 // Fake dma is a synchronous faking of the DMA progress used for
@@ -165,15 +183,14 @@ extern cvar_t volume;
 extern cvar_t snd_swapstereo;
 
 extern cvar_t cdaudioinitialized;
-extern cvar_t	snd_initialized;
+extern cvar_t snd_initialized;
+extern cvar_t snd_streaming;
 
 extern int snd_blocked;
 
 void S_LocalSound (char *s);
-sfxcache_t *S_LoadSound (sfx_t *s, int complain);
+qboolean S_LoadSound (sfx_t *s, int complain);
 void S_UnloadSound(sfx_t *s);
-
-wavinfo_t GetWavinfo (char *name, qbyte *wav, int wavlength);
 
 void SND_InitScaletable (void);
 void SNDDMA_Submit(void);
