@@ -1075,7 +1075,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 					particle(pt_static, PARTICLE_BILLBOARD, 0x303030, 0x606060, tex_smoke[rand()&7], true, PBLEND_ALPHA, dec, dec, 64, 320, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-4, 4), lhrandom(-4, 4), lhrandom(0, 16), 0, 0, 0, 0, 0, 0);
 				}
 				break;
-			case 8: // Nexiuz plasma trail
+			case 8: // Nexuiz plasma trail
 				dec = 4;
 				if (smoke)
 				{

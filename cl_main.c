@@ -625,7 +625,7 @@ static void CL_RelinkNetworkEntities(void)
 		{
 			if (effects & EF_BRIGHTFIELD)
 			{
-				if (gamemode == GAME_NEXIUZ)
+				if (gamemode == GAME_NEXUIZ)
 				{
 					dlightcolor[0] += 100.0f;
 					dlightcolor[1] += 200.0f;
