@@ -446,7 +446,7 @@ void CL_SparkShower (vec3_t org, vec3_t dir, int count)
 			while(count--)
 			{
 				k = particlepalette[0x68 + (rand() & 7)];
-				particle(pt_static, PARTICLE_BILLBOARD, k, k, tex_particle, false, true, 1, 1, lhrandom(64, 255), 512, 9999, 1, 0, org[0], org[1], org[2], lhrandom(-64, 64) + dir[0], lhrandom(-64, 64) + dir[1], lhrandom(0, 128) + dir[2], 0, 0, 0, 0, 1, 0);
+				particle(pt_static, PARTICLE_BILLBOARD, k, k, tex_particle, false, true, 1, 1, lhrandom(64, 255), 512, 9999, 1, 0, org[0], org[1], org[2], lhrandom(-64, 64) + dir[0], lhrandom(-64, 64) + dir[1], lhrandom(0, 128) + dir[2], 0, 0, 0, 0, 0, 0);
 			}
 		}
 	}
@@ -838,8 +838,6 @@ void CL_MoveParticles (void)
 		return;
 
 	frametime = cl.time - cl.oldtime;
-	if (!frametime)
-		return; // if absolutely still, don't update particles
 	gravity = frametime * sv_gravity.value;
 	dvel = 1+4*frametime;
 	bloodwaterfade = max(cl_particles_blood_alpha.value, 0.01f) * frametime * 128.0f;
@@ -889,57 +887,57 @@ void CL_MoveParticles (void)
 			VectorScale(p->vel, f, p->vel);
 		}
 
-		switch (p->type)
+		if (p->type != pt_static)
 		{
-		case pt_static:
-			break;
-
-		case pt_blood:
-			if (!content)
-				content = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
-			a = content;
-			if (a != CONTENTS_EMPTY)
+			switch (p->type)
 			{
-				if (a == CONTENTS_WATER || a == CONTENTS_SLIME)
+			case pt_blood:
+				if (!content)
+					content = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
+				a = content;
+				if (a != CONTENTS_EMPTY)
 				{
-					p->scalex += frametime * cl_particles_blood_size.value;
-					p->scaley += frametime * cl_particles_blood_size.value;
-					//p->alpha -= bloodwaterfade;
+					if (a == CONTENTS_WATER || a == CONTENTS_SLIME)
+					{
+						p->scalex += frametime * cl_particles_blood_size.value;
+						p->scaley += frametime * cl_particles_blood_size.value;
+						//p->alpha -= bloodwaterfade;
+					}
+					else
+						p->die = -1;
 				}
 				else
+					p->vel[2] -= gravity;
+				break;
+			case pt_bubble:
+				if (!content)
+					content = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
+				if (content != CONTENTS_WATER && content != CONTENTS_SLIME)
+				{
 					p->die = -1;
-			}
-			else
-				p->vel[2] -= gravity;
-			break;
-		case pt_bubble:
-			if (!content)
-				content = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
-			if (content != CONTENTS_WATER && content != CONTENTS_SLIME)
-			{
+					break;
+				}
+				break;
+			case pt_rain:
+				if (cl.time > p->time2)
+				{
+					// snow flutter
+					p->time2 = cl.time + (rand() & 3) * 0.1;
+					p->vel[0] = lhrandom(-32, 32) + p->vel2[0];
+					p->vel[1] = lhrandom(-32, 32) + p->vel2[1];
+					p->vel[2] = /*lhrandom(-32, 32) +*/ p->vel2[2];
+				}
+				if (!content)
+					content = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
+				a = content;
+				if (a != CONTENTS_EMPTY && a != CONTENTS_SKY)
+					p->die = -1;
+				break;
+			default:
+				printf("unknown particle type %i\n", p->type);
 				p->die = -1;
 				break;
 			}
-			break;
-		case pt_rain:
-			if (cl.time > p->time2)
-			{
-				// snow flutter
-				p->time2 = cl.time + (rand() & 3) * 0.1;
-				p->vel[0] = lhrandom(-32, 32) + p->vel2[0];
-				p->vel[1] = lhrandom(-32, 32) + p->vel2[1];
-				p->vel[2] = /*lhrandom(-32, 32) +*/ p->vel2[2];
-			}
-			if (!content)
-				content = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
-			a = content;
-			if (a != CONTENTS_EMPTY && a != CONTENTS_SKY)
-				p->die = -1;
-			break;
-		default:
-			printf("unknown particle type %i\n", p->type);
-			p->die = -1;
-			break;
 		}
 
 		// remove dead particles
