@@ -60,7 +60,7 @@ void R_SkyStartFrame(void)
 	{
 		if (skyboxside[0] || skyboxside[1] || skyboxside[2] || skyboxside[3] || skyboxside[4] || skyboxside[5])
 			skyrenderbox = true;
-		else if (cl.worldmodel->brush.solidskytexture)
+		else if (r_refdef.worldmodel->brush.solidskytexture)
 			skyrendersphere = true;
 		// for depth-masked sky, render the sky on the first sky surface encountered
 		skyrendernow = true;
@@ -361,11 +361,11 @@ static void R_SkySphere(void)
 	// wrap the scroll values just to be extra kind to float accuracy
 
 	// scroll speed for upper layer
-	speedscale = cl.time*r_skyscroll1.value*8.0/128.0;
+	speedscale = r_refdef.time*r_skyscroll1.value*8.0/128.0;
 	speedscale -= (int)speedscale;
 	Matrix4x4_CreateTranslate(&scroll1matrix, speedscale, speedscale, 0);
 	// scroll speed for lower layer (transparent layer)
-	speedscale = cl.time*r_skyscroll2.value*8.0/128.0;
+	speedscale = r_refdef.time*r_skyscroll2.value*8.0/128.0;
 	speedscale -= (int)speedscale;
 	Matrix4x4_CreateTranslate(&scroll2matrix, speedscale, speedscale, 0);
 
@@ -375,13 +375,13 @@ static void R_SkySphere(void)
 	GL_DepthTest(false); // don't modify or read zbuffer
 	memset(&m, 0, sizeof(m));
 	m.pointer_vertex = skysphere_vertex3f;
-	m.tex[0] = R_GetTexture(cl.worldmodel->brush.solidskytexture);
+	m.tex[0] = R_GetTexture(r_refdef.worldmodel->brush.solidskytexture);
 	m.pointer_texcoord[0] = skysphere_texcoord2f;
 	m.texmatrix[0] = scroll1matrix;
 	if (r_textureunits.integer >= 2)
 	{
 		// one pass using GL_DECAL or GL_INTERPOLATE_ARB for alpha layer
-		m.tex[1] = R_GetTexture(cl.worldmodel->brush.alphaskytexture);
+		m.tex[1] = R_GetTexture(r_refdef.worldmodel->brush.alphaskytexture);
 		m.texcombinergb[1] = gl_combine.integer ? GL_INTERPOLATE_ARB : GL_DECAL;
 		m.pointer_texcoord[1] = skysphere_texcoord2f;
 		m.texmatrix[1] = scroll2matrix;
@@ -399,7 +399,7 @@ static void R_SkySphere(void)
 		GL_LockArrays(0, 0);
 
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		m.tex[0] = R_GetTexture(cl.worldmodel->brush.alphaskytexture);
+		m.tex[0] = R_GetTexture(r_refdef.worldmodel->brush.alphaskytexture);
 		m.texmatrix[0] = scroll2matrix;
 		R_Mesh_State(&m);
 		GL_LockArrays(0, skysphere_numverts);

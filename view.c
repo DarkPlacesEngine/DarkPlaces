@@ -308,7 +308,6 @@ V_CalcRefdef
 
 ==================
 */
-extern float timerefreshangle;
 void V_CalcRefdef (void)
 {
 	static float oldz;
@@ -449,35 +448,45 @@ void V_CalcViewBlend(void)
 	r_refdef.viewblend[1] = 0;
 	r_refdef.viewblend[2] = 0;
 	r_refdef.viewblend[3] = 0;
+	r_refdef.fovscale_x = cl.viewzoom;
+	r_refdef.fovscale_y = cl.viewzoom;
 	if (cls.state == ca_connected && cls.signon == SIGNONS && gl_polyblend.value > 0)
 	{
 		// set contents color
-		switch (CL_PointQ1Contents(r_vieworigin))
+		int supercontents;
+		vec3_t vieworigin;
+		Matrix4x4_OriginFromMatrix(&r_refdef.viewentitymatrix, vieworigin);
+		supercontents = CL_PointSuperContents(vieworigin);
+		if (supercontents & SUPERCONTENTS_LIQUIDSMASK)
 		{
-		case CONTENTS_EMPTY:
-		case CONTENTS_SOLID:
+			r_refdef.fovscale_x *= 1 - (((sin(cl.time * 4.7) + 1) * 0.015) * r_waterwarp.value);
+			r_refdef.fovscale_y *= 1 - (((sin(cl.time * 3.0) + 1) * 0.015) * r_waterwarp.value);
+			if (supercontents & SUPERCONTENTS_LAVA)
+			{
+				cl.cshifts[CSHIFT_CONTENTS].destcolor[0] = 255;
+				cl.cshifts[CSHIFT_CONTENTS].destcolor[1] = 80;
+				cl.cshifts[CSHIFT_CONTENTS].destcolor[2] = 0;
+			}
+			else if (supercontents & SUPERCONTENTS_SLIME)
+			{
+				cl.cshifts[CSHIFT_CONTENTS].destcolor[0] = 0;
+				cl.cshifts[CSHIFT_CONTENTS].destcolor[1] = 25;
+				cl.cshifts[CSHIFT_CONTENTS].destcolor[2] = 5;
+			}
+			else
+			{
+				cl.cshifts[CSHIFT_CONTENTS].destcolor[0] = 130;
+				cl.cshifts[CSHIFT_CONTENTS].destcolor[1] = 80;
+				cl.cshifts[CSHIFT_CONTENTS].destcolor[2] = 50;
+			}
+			cl.cshifts[CSHIFT_CONTENTS].percent = 150 >> 1;
+		}
+		else
+		{
 			cl.cshifts[CSHIFT_CONTENTS].destcolor[0] = 0;
 			cl.cshifts[CSHIFT_CONTENTS].destcolor[1] = 0;
 			cl.cshifts[CSHIFT_CONTENTS].destcolor[2] = 0;
 			cl.cshifts[CSHIFT_CONTENTS].percent = 0;
-			break;
-		case CONTENTS_LAVA:
-			cl.cshifts[CSHIFT_CONTENTS].destcolor[0] = 255;
-			cl.cshifts[CSHIFT_CONTENTS].destcolor[1] = 80;
-			cl.cshifts[CSHIFT_CONTENTS].destcolor[2] = 0;
-			cl.cshifts[CSHIFT_CONTENTS].percent = 150 >> 1;
-			break;
-		case CONTENTS_SLIME:
-			cl.cshifts[CSHIFT_CONTENTS].destcolor[0] = 0;
-			cl.cshifts[CSHIFT_CONTENTS].destcolor[1] = 25;
-			cl.cshifts[CSHIFT_CONTENTS].destcolor[2] = 5;
-			cl.cshifts[CSHIFT_CONTENTS].percent = 150 >> 1;
-			break;
-		default:
-			cl.cshifts[CSHIFT_CONTENTS].destcolor[0] = 130;
-			cl.cshifts[CSHIFT_CONTENTS].destcolor[1] = 80;
-			cl.cshifts[CSHIFT_CONTENTS].destcolor[2] = 50;
-			cl.cshifts[CSHIFT_CONTENTS].percent = 128 >> 1;
 		}
 
 		if (gamemode != GAME_TRANSFUSION)

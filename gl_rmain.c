@@ -129,36 +129,6 @@ void R_FillColors(float *out, int verts, float r, float g, float b, float a)
 	}
 }
 
-/*
-====================
-R_TimeRefresh_f
-
-For program optimization
-====================
-*/
-qboolean intimerefresh = 0;
-static void R_TimeRefresh_f (void)
-{
-	int i;
-	float timestart, timedelta, oldangles[3];
-
-	intimerefresh = 1;
-	VectorCopy(cl.viewangles, oldangles);
-	VectorClear(cl.viewangles);
-
-	timestart = Sys_DoubleTime();
-	for (i = 0;i < 128;i++)
-	{
-		Matrix4x4_CreateFromQuakeEntity(&r_refdef.viewentitymatrix, r_vieworigin[0], r_vieworigin[1], r_vieworigin[2], 0, i / 128.0 * 360.0, 0, 1);
-		CL_UpdateScreen();
-	}
-	timedelta = Sys_DoubleTime() - timestart;
-
-	VectorCopy(oldangles, cl.viewangles);
-	intimerefresh = 0;
-	Con_Printf("%f seconds (%f fps)\n", timedelta, 128/timedelta);
-}
-
 vec3_t fogcolor;
 vec_t fogdensity;
 float fog_density, fog_red, fog_green, fog_blue;
@@ -241,12 +211,13 @@ void gl_main_shutdown(void)
 extern void CL_ParseEntityLump(char *entitystring);
 void gl_main_newmap(void)
 {
+	// FIXME: move this code to client
 	int l;
 	char *entities, entname[MAX_QPATH];
 	r_framecount = 1;
 	if (cl.worldmodel)
 	{
-		strcpy(entname, cl.worldmodel->name);
+		strlcpy(entname, cl.worldmodel->name, sizeof(entname));
 		l = strlen(entname) - 4;
 		if (l >= 0 && !strcmp(entname + l, ".bsp"))
 		{
@@ -268,7 +239,6 @@ void GL_Main_Init(void)
 	Matrix4x4_CreateIdentity(&r_identitymatrix);
 // FIXME: move this to client?
 	FOG_registercvars();
-	Cmd_AddCommand("timerefresh", R_TimeRefresh_f);
 	Cvar_RegisterVariable(&r_showtris);
 	Cvar_RegisterVariable(&r_drawentities);
 	Cvar_RegisterVariable(&r_drawviewmodel);
@@ -320,8 +290,8 @@ static float R_FarClip(vec3_t origin, vec3_t direction, vec_t startfarclip)
 	r_farclip_directionbit2 = r_farclip_direction[2] < 0;
 	r_farclip_meshfarclip = r_farclip_directiondist + startfarclip;
 
-	if (cl.worldmodel)
-		R_FarClip_Box(cl.worldmodel->normalmins, cl.worldmodel->normalmaxs);
+	if (r_refdef.worldmodel)
+		R_FarClip_Box(r_refdef.worldmodel->normalmins, r_refdef.worldmodel->normalmaxs);
 	for (i = 0;i < r_refdef.numentities;i++)
 		R_FarClip_Box(r_refdef.entities[i]->mins, r_refdef.entities[i]->maxs);
 	
@@ -438,10 +408,6 @@ static void R_MarkEntities (void)
 {
 	int i;
 	entity_render_t *ent;
-
-	ent = &cl_entities[0].render;
-	Matrix4x4_CreateIdentity(&ent->matrix);
-	Matrix4x4_CreateIdentity(&ent->inversematrix);
 
 	if (!r_drawentities.integer)
 		return;
@@ -578,7 +544,7 @@ R_RenderView
 */
 void R_RenderView(void)
 {
-	if (!r_refdef.entities/* || !cl.worldmodel*/)
+	if (!r_refdef.entities/* || !r_refdef.worldmodel*/)
 		return; //Host_Error ("R_RenderView: NULL worldmodel");
 
 	r_view_width = bound(0, r_refdef.width, vid.realwidth);
@@ -627,10 +593,8 @@ void R_RenderView(void)
 extern void R_DrawLightningBeams (void);
 void R_RenderScene(void)
 {
-	entity_render_t *world;
-	
 	// don't let sound skip if going slow
-	if (!intimerefresh && !r_speeds.integer)
+	if (r_refdef.extraupdate)
 		S_ExtraUpdate ();
 
 	r_framecount++;
@@ -651,10 +615,9 @@ void R_RenderScene(void)
 
 	R_SkyStartFrame();
 
-	if (cl.worldmodel && cl.worldmodel->brush.FatPVS)
-		cl.worldmodel->brush.FatPVS(cl.worldmodel, r_vieworigin, 2, r_pvsbits, sizeof(r_pvsbits));
-	world = &cl_entities[0].render;
-	R_WorldVisibility(world);
+	if (r_refdef.worldmodel && r_refdef.worldmodel->brush.FatPVS)
+		r_refdef.worldmodel->brush.FatPVS(r_refdef.worldmodel, r_vieworigin, 2, r_pvsbits, sizeof(r_pvsbits));
+	R_WorldVisibility();
 	R_TimeReport("worldvis");
 
 	R_MarkEntities();
@@ -663,13 +626,13 @@ void R_RenderScene(void)
 	R_Shadow_UpdateWorldLightSelection();
 
 	// don't let sound skip if going slow
-	if (!intimerefresh && !r_speeds.integer)
+	if (r_refdef.extraupdate)
 		S_ExtraUpdate ();
 
 	GL_ShowTrisColor(0.025, 0.025, 0, 1);
-	if (world->model && world->model->DrawSky)
+	if (r_refdef.worldmodel && r_refdef.worldmodel->DrawSky)
 	{
-		world->model->DrawSky(world);
+		r_refdef.worldmodel->DrawSky(r_refdef.worldentity);
 		R_TimeReport("worldsky");
 	}
 
@@ -677,14 +640,14 @@ void R_RenderScene(void)
 		R_TimeReport("bmodelsky");
 
 	GL_ShowTrisColor(0.05, 0.05, 0.05, 1);
-	if (world->model && world->model->Draw)
+	if (r_refdef.worldmodel && r_refdef.worldmodel->Draw)
 	{
-		world->model->Draw(world);
+		r_refdef.worldmodel->Draw(r_refdef.worldentity);
 		R_TimeReport("world");
 	}
 
 	// don't let sound skip if going slow
-	if (!intimerefresh && !r_speeds.integer)
+	if (r_refdef.extraupdate)
 		S_ExtraUpdate ();
 
 	GL_ShowTrisColor(0, 0.015, 0, 1);
@@ -693,7 +656,7 @@ void R_RenderScene(void)
 	R_TimeReport("models");
 
 	// don't let sound skip if going slow
-	if (!intimerefresh && !r_speeds.integer)
+	if (r_refdef.extraupdate)
 		S_ExtraUpdate ();
 
 	GL_ShowTrisColor(0, 0, 0.033, 1);
@@ -701,7 +664,7 @@ void R_RenderScene(void)
 	R_TimeReport("rtlights");
 
 	// don't let sound skip if going slow
-	if (!intimerefresh && !r_speeds.integer)
+	if (r_refdef.extraupdate)
 		S_ExtraUpdate ();
 
 	GL_ShowTrisColor(0.1, 0, 0, 1);
@@ -736,7 +699,7 @@ void R_RenderScene(void)
 	GL_ShowTrisColor(0.05, 0.05, 0.05, 1);
 
 	// don't let sound skip if going slow
-	if (!intimerefresh && !r_speeds.integer)
+	if (r_refdef.extraupdate)
 		S_ExtraUpdate ();
 }
 

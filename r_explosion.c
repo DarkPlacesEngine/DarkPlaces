@@ -259,7 +259,7 @@ void R_DrawExplosions(void)
 	if (!r_drawexplosions.integer)
 		return;
 	for (i = 0;i < MAX_EXPLOSIONS;i++)
-		if (cl.time < explosion[i].endtime)
+		if (r_refdef.time < explosion[i].endtime)
 			R_MeshQueue_AddTransparent(explosion[i].origin, R_DrawExplosionCallback, &explosion[i], 0);
 }
 

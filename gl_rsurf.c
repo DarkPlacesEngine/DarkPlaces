@@ -563,7 +563,7 @@ void R_Stain (const vec3_t origin, float radius, int cr1, int cg1, int cb1, int 
 	entity_render_t *ent;
 	model_t *model;
 	vec3_t org;
-	if (cl.worldmodel == NULL || !cl.worldmodel->brushq1.nodes)
+	if (r_refdef.worldmodel == NULL || !r_refdef.worldmodel->brushq1.nodes)
 		return;
 	fcolor[0] = cr1;
 	fcolor[1] = cg1;
@@ -574,7 +574,7 @@ void R_Stain (const vec3_t origin, float radius, int cr1, int cg1, int cb1, int 
 	fcolor[6] = cb2 - cb1;
 	fcolor[7] = (ca2 - ca1) * (1.0f / 64.0f);
 
-	R_StainNode(cl.worldmodel->brushq1.nodes + cl.worldmodel->brushq1.hulls[0].firstclipnode, cl.worldmodel, origin, radius, fcolor);
+	R_StainNode(r_refdef.worldmodel->brushq1.nodes + r_refdef.worldmodel->brushq1.hulls[0].firstclipnode, r_refdef.worldmodel, origin, radius, fcolor);
 
 	// look for embedded bmodels
 	for (n = 0;n < cl_num_brushmodel_entities;n++)
@@ -802,7 +802,7 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 
 	texture = surf->texinfo->texture;
 	if (texture->animated)
-		texture = texture->anim_frames[ent->frame != 0][(texture->anim_total[ent->frame != 0] >= 2) ? ((int) (cl.time * 5.0f) % texture->anim_total[ent->frame != 0]) : 0];
+		texture = texture->anim_frames[ent->frame != 0][(texture->anim_total[ent->frame != 0] >= 2) ? ((int) (r_refdef.time * 5.0f) % texture->anim_total[ent->frame != 0]) : 0];
 	currentalpha = ent->alpha;
 	if (surf->flags & SURF_WATERALPHA)
 		currentalpha *= r_wateralpha.value;
@@ -838,14 +838,14 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 		GL_Color(1, 1, 1, currentalpha);
 		memset(&m, 0, sizeof(m));
 		m.pointer_vertex = surf->mesh.data_vertex3f;
-		m.tex[0] = R_GetTexture(mod_shared_distorttexture[(int)(cl.time * 16)&63]);
+		m.tex[0] = R_GetTexture(mod_shared_distorttexture[(int)(r_refdef.time * 16)&63]);
 		m.tex[1] = R_GetTexture(texture->skin.base);
 		m.texcombinergb[0] = GL_REPLACE;
 		m.texcombinergb[1] = GL_REPLACE;
 		m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
 		m.pointer_texcoord[1] = surf->mesh.data_texcoordtexture2f;
 		Matrix4x4_CreateFromQuakeEntity(&m.texmatrix[0], 0, 0, 0, 0, 0, 0, r_watershader.value);
-		Matrix4x4_CreateTranslate(&m.texmatrix[1], sin(cl.time) * 0.025 * r_waterscroll.value, sin(cl.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
+		Matrix4x4_CreateTranslate(&m.texmatrix[1], sin(r_refdef.time) * 0.025 * r_waterscroll.value, sin(r_refdef.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
 		R_Mesh_State(&m);
 
 		GL_ActiveTexture(0);
@@ -874,7 +874,7 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 		if (turb)
 		{
 			// scrolling in texture matrix
-			Matrix4x4_CreateTranslate(&m.texmatrix[0], sin(cl.time) * 0.025 * r_waterscroll.value, sin(cl.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
+			Matrix4x4_CreateTranslate(&m.texmatrix[0], sin(r_refdef.time) * 0.025 * r_waterscroll.value, sin(r_refdef.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
 		}
 		colorscale = 1;
 		if (gl_combine.integer)
@@ -909,7 +909,7 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 				if (turb)
 				{
 					// scrolling in texture matrix
-					Matrix4x4_CreateTranslate(&m.texmatrix[0], sin(cl.time) * 0.025 * r_waterscroll.value, sin(cl.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
+					Matrix4x4_CreateTranslate(&m.texmatrix[0], sin(r_refdef.time) * 0.025 * r_waterscroll.value, sin(r_refdef.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
 				}
 			}
 			R_Mesh_State(&m);
@@ -932,7 +932,7 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 				if (turb)
 				{
 					// scrolling in texture matrix
-					Matrix4x4_CreateTranslate(&m.texmatrix[0], sin(cl.time) * 0.025 * r_waterscroll.value, sin(cl.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
+					Matrix4x4_CreateTranslate(&m.texmatrix[0], sin(r_refdef.time) * 0.025 * r_waterscroll.value, sin(r_refdef.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
 				}
 			}
 			R_Mesh_State(&m);
@@ -1265,7 +1265,7 @@ void R_UpdateTextureInfo(entity_render_t *ent)
 		return;
 
 	alttextures = ent->frame != 0;
-	texframe = (int)(cl.time * 5.0f);
+	texframe = (int)(r_refdef.time * 5.0f);
 	for (i = 0;i < ent->model->brushq1.numtextures;i++)
 	{
 		t = ent->model->brushq1.textures + i;
@@ -1447,18 +1447,17 @@ static void R_DrawPortal_Callback(const void *calldata1, int calldata2)
 	int i;
 	float *v;
 	rmeshstate_t m;
-	const entity_render_t *ent = calldata1;
-	const mportal_t *portal = ent->model->brushq1.portals + calldata2;
+	const mportal_t *portal = calldata1;
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
-	R_Mesh_Matrix(&ent->matrix);
+	R_Mesh_Matrix(&r_identitymatrix);
 
 	memset(&m, 0, sizeof(m));
 	m.pointer_vertex = varray_vertex3f;
 	R_Mesh_State(&m);
 
-	i = portal - ent->model->brushq1.portals;
+	i = calldata2;
 	GL_Color(((i & 0x0007) >> 0) * (1.0f / 7.0f),
 			 ((i & 0x0038) >> 3) * (1.0f / 7.0f),
 			 ((i & 0x01C0) >> 6) * (1.0f / 7.0f),
@@ -1477,24 +1476,24 @@ static void R_DrawPortal_Callback(const void *calldata1, int calldata2)
 }
 
 // LordHavoc: this is just a nice debugging tool, very slow
-static void R_DrawPortals(entity_render_t *ent)
+static void R_DrawPortals(void)
 {
-	int i;
-	mportal_t *portal, *endportal;
-	float temp[3], center[3], f;
-	if (ent->model == NULL)
+	int i, portalnum;
+	mportal_t *portal;
+	float center[3], f;
+	model_t *model = r_refdef.worldmodel;
+	if (model == NULL)
 		return;
-	for (portal = ent->model->brushq1.portals, endportal = portal + ent->model->brushq1.numportals;portal < endportal;portal++)
+	for (portalnum = 0, portal = model->brushq1.portals;portalnum < model->brushq1.numportals;portalnum++, portal++)
 	{
 		if (portal->numpoints <= POLYGONELEMENTS_MAXPOINTS)
 		{
-			VectorClear(temp);
+			VectorClear(center);
 			for (i = 0;i < portal->numpoints;i++)
-				VectorAdd(temp, portal->points[i].position, temp);
+				VectorAdd(center, portal->points[i].position, center);
 			f = ixtable[portal->numpoints];
-			VectorScale(temp, f, temp);
-			Matrix4x4_Transform(&ent->matrix, temp, center);
-			R_MeshQueue_AddTransparent(center, R_DrawPortal_Callback, ent, portal - ent->model->brushq1.portals);
+			VectorScale(center, f, center);
+			R_MeshQueue_AddTransparent(center, R_DrawPortal_Callback, portal, portalnum);
 		}
 	}
 }
@@ -1540,21 +1539,19 @@ void R_PrepareBrushModel(entity_render_t *ent)
 	R_UpdateLightmapInfo(ent);
 }
 
-void R_SurfaceWorldNode (entity_render_t *ent)
+void R_SurfaceWorldNode (void)
 {
 	int i, *surfacevisframes, *surfacepvsframes, surfnum;
 	msurface_t *surf;
 	mleaf_t *leaf;
 	model_t *model;
-	vec3_t modelorg;
 
 	// equivilant to quake's RecursiveWorldNode but faster and more effective
-	model = ent->model;
+	model = r_refdef.worldmodel;
 	if (model == NULL)
 		return;
 	surfacevisframes = model->brushq1.surfacevisframes + model->firstmodelsurface;
 	surfacepvsframes = model->brushq1.surfacepvsframes + model->firstmodelsurface;
-	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 
 	for (leaf = model->brushq1.pvsleafchain;leaf;leaf = leaf->pvschain)
 	{
@@ -1570,7 +1567,7 @@ void R_SurfaceWorldNode (entity_render_t *ent)
 		surfnum = model->brushq1.pvssurflist[i];
 		surf = model->brushq1.surfaces + surfnum;
 #if WORLDNODECULLBACKFACES
-		if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
+		if (PlaneDist(r_vieworigin, surf->plane) < surf->plane->dist)
 		{
 			if ((surf->flags & SURF_PLANEBACK) && !R_CullBox (surf->poly_mins, surf->poly_maxs))
 				surfacevisframes[surfnum] = r_framecount;
@@ -1587,7 +1584,7 @@ void R_SurfaceWorldNode (entity_render_t *ent)
 	}
 }
 
-static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
+static void R_PortalWorldNode(mleaf_t *viewleaf)
 {
 	int c, leafstackpos, *mark, *surfacevisframes;
 #if WORLDNODECULLBACKFACES
@@ -1596,17 +1593,16 @@ static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
 #endif
 	mleaf_t *leaf, *leafstack[8192];
 	mportal_t *p;
-	vec3_t modelorg;
 	msurface_t *surfaces;
-	if (ent->model == NULL)
+	model_t *model = r_refdef.worldmodel;
+	if (model == NULL)
 		return;
 	// LordHavoc: portal-passage worldnode with PVS;
 	// follows portals leading outward from viewleaf, does not venture
 	// offscreen or into leafs that are not visible, faster than Quake's
 	// RecursiveWorldNode
-	surfaces = ent->model->brushq1.surfaces;
-	surfacevisframes = ent->model->brushq1.surfacevisframes;
-	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
+	surfaces = model->brushq1.surfaces;
+	surfacevisframes = model->brushq1.surfacevisframes;
 	viewleaf->worldnodeframe = r_framecount;
 	leafstack[0] = viewleaf;
 	leafstackpos = 1;
@@ -1625,7 +1621,7 @@ static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
 				if (surfacevisframes[n] != r_framecount)
 				{
 					surf = surfaces + n;
-					if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
+					if (PlaneDist(r_vieworigin, surf->plane) < surf->plane->dist)
 					{
 						if ((surf->flags & SURF_PLANEBACK))
 							surfacevisframes[n] = r_framecount;
@@ -1646,7 +1642,7 @@ static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
 		{
 			// LordHavoc: this DotProduct hurts less than a cache miss
 			// (which is more likely to happen if backflowing through leafs)
-			if (DotProduct(modelorg, p->plane.normal) < (p->plane.dist + 1))
+			if (DotProduct(r_vieworigin, p->plane.normal) < (p->plane.dist + 1))
 			{
 				leaf = p->past;
 				if (leaf->worldnodeframe != r_framecount)
@@ -1661,13 +1657,13 @@ static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
 	}
 }
 
-void R_PVSUpdate (entity_render_t *ent, mleaf_t *viewleaf)
+void R_PVSUpdate (mleaf_t *viewleaf)
 {
 	int j, c, *surfacepvsframes, *mark;
 	mleaf_t *leaf;
 	model_t *model;
 
-	model = ent->model;
+	model = r_refdef.worldmodel;
 	if (model && (model->brushq1.pvsviewleaf != viewleaf || model->brushq1.pvsviewleafnovis != r_novis.integer))
 	{
 		model->brushq1.pvsframecount++;
@@ -1695,32 +1691,30 @@ void R_PVSUpdate (entity_render_t *ent, mleaf_t *viewleaf)
 	}
 }
 
-void R_WorldVisibility(entity_render_t *ent)
+void R_WorldVisibility(void)
 {
-	vec3_t modelorg;
 	mleaf_t *viewleaf;
 
-	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
-	viewleaf = (ent->model && ent->model->brushq1.PointInLeaf) ? ent->model->brushq1.PointInLeaf(ent->model, modelorg) : NULL;
-	R_PVSUpdate(ent, viewleaf);
+	viewleaf = (r_refdef.worldmodel && r_refdef.worldmodel->brushq1.PointInLeaf) ? r_refdef.worldmodel->brushq1.PointInLeaf(r_refdef.worldmodel, r_vieworigin) : NULL;
+	R_PVSUpdate(viewleaf);
 
 	if (!viewleaf)
 		return;
 
 	if (r_surfaceworldnode.integer || viewleaf->contents == CONTENTS_SOLID)
-		R_SurfaceWorldNode (ent);
+		R_SurfaceWorldNode();
 	else
-		R_PortalWorldNode (ent, viewleaf);
+		R_PortalWorldNode(viewleaf);
 
 	if (r_drawportals.integer)
-		R_DrawPortals(ent);
+		R_DrawPortals();
 }
 
 void R_Q1BSP_DrawSky(entity_render_t *ent)
 {
 	if (ent->model == NULL)
 		return;
-	if (ent != &cl_entities[0].render)
+	if (ent != r_refdef.worldentity)
 		R_PrepareBrushModel(ent);
 	R_PrepareSurfaces(ent);
 	R_DrawSurfaces(ent, SURF_DRAWSKY);
@@ -1731,7 +1725,7 @@ void R_Q1BSP_Draw(entity_render_t *ent)
 	if (ent->model == NULL)
 		return;
 	c_bmodels++;
-	if (ent != &cl_entities[0].render)
+	if (ent != r_refdef.worldentity)
 		R_PrepareBrushModel(ent);
 	R_PrepareSurfaces(ent);
 	R_UpdateTextureInfo(ent);
@@ -1884,7 +1878,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t 
 				if (t->flags & SURF_LIGHTMAP && t->skin.fog == NULL)
 					Mod_ShadowMesh_AddMesh(r_shadow_mempool, r_shadow_compilingrtlight->static_meshchain_light, surface->texinfo->texture->skin.base, surface->texinfo->texture->skin.gloss, surface->texinfo->texture->skin.nmap, surface->mesh.data_vertex3f, surface->mesh.data_svector3f, surface->mesh.data_tvector3f, surface->mesh.data_normal3f, surface->mesh.data_texcoordtexture2f, surface->mesh.num_triangles, surface->mesh.data_element3i);
 			}
-			else if (ent != &cl_entities[0].render || surface->visframe == r_framecount)
+			else if (ent != r_refdef.worldentity || surface->visframe == r_framecount)
 			{
 				t = surface->texinfo->texture->currentframe;
 				// FIXME: transparent surfaces need to be lit later
@@ -2328,12 +2322,12 @@ void R_Q3BSP_DrawFaces(entity_render_t *ent, int skyfaces)
 		flags = Q3SURFACEFLAG_SKY;
 	else
 		flags = 0;
-	if (ent == &cl_entities[0].render)
+	if (ent == r_refdef.worldentity)
 	{
 		int j;
 		q3mleaf_t *leaf;
-		R_Surf_ClearSurfaceVisible(cl.worldmodel->brushq3.num_faces);
-		for (j = 0, leaf = cl.worldmodel->brushq3.data_leafs;j < cl.worldmodel->brushq3.num_leafs;j++, leaf++)
+		R_Surf_ClearSurfaceVisible(r_refdef.worldmodel->brushq3.num_faces);
+		for (j = 0, leaf = r_refdef.worldmodel->brushq3.data_leafs;j < r_refdef.worldmodel->brushq3.num_leafs;j++, leaf++)
 		{
 			if (CHECKPVSBIT(r_pvsbits, leaf->clusterindex) && !R_CullBox(leaf->mins, leaf->maxs))
 			{

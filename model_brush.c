@@ -788,7 +788,7 @@ loc0:
 			int i, ds, dt;
 			msurface_t *surf;
 
-			surf = cl.worldmodel->brushq1.surfaces + node->firstsurface;
+			surf = r_refdef.worldmodel->brushq1.surfaces + node->firstsurface;
 			for (i = 0;i < node->numsurfaces;i++, surf++)
 			{
 				if (!(surf->flags & SURF_LIGHTMAP) || !surf->samples)
@@ -869,7 +869,7 @@ middle sample (the one which was requested)
 
 void Mod_Q1BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal)
 {
-	Mod_Q1BSP_LightPoint_RecursiveBSPNode(ambientcolor, diffusecolor, diffusenormal, cl.worldmodel->brushq1.nodes + cl.worldmodel->brushq1.hulls[0].firstclipnode, p[0], p[1], p[2], p[2] - 65536);
+	Mod_Q1BSP_LightPoint_RecursiveBSPNode(ambientcolor, diffusecolor, diffusenormal, model->brushq1.nodes + model->brushq1.hulls[0].firstclipnode, p[0], p[1], p[2], p[2] - 65536);
 }
 
 static void Mod_Q1BSP_DecompressVis(const qbyte *in, const qbyte *inend, qbyte *out, qbyte *outend)

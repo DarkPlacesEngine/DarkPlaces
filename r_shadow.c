@@ -2372,16 +2372,16 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 		VectorCopy(rtlight->cullmins, cullmins);
 		VectorCopy(rtlight->cullmaxs, cullmaxs);
 	}
-	else if (cl.worldmodel && cl.worldmodel->GetLightInfo)
+	else if (r_refdef.worldmodel && r_refdef.worldmodel->GetLightInfo)
 	{
 		// dynamic light, world available and can receive realtime lighting
 		// if the light box is offscreen, skip it right away
 		if (R_CullBox(cullmins, cullmaxs))
 			return;
 		// calculate lit surfaces and clusters
-		R_Shadow_EnlargeClusterBuffer(cl.worldmodel->brush.num_pvsclusters);
-		R_Shadow_EnlargeSurfaceBuffer(cl.worldmodel->nummodelsurfaces); 
-		cl.worldmodel->GetLightInfo(&cl_entities[0].render, rtlight->shadoworigin, rtlight->radius, cullmins, cullmaxs, r_shadow_buffer_clusterlist, r_shadow_buffer_clusterpvs, &numclusters, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces);
+		R_Shadow_EnlargeClusterBuffer(r_refdef.worldmodel->brush.num_pvsclusters);
+		R_Shadow_EnlargeSurfaceBuffer(r_refdef.worldmodel->nummodelsurfaces); 
+		r_refdef.worldmodel->GetLightInfo(&cl_entities[0].render, rtlight->shadoworigin, rtlight->radius, cullmins, cullmaxs, r_shadow_buffer_clusterlist, r_shadow_buffer_clusterpvs, &numclusters, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces);
 		clusterlist = r_shadow_buffer_clusterlist;
 		clusterpvs = r_shadow_buffer_clusterpvs;
 		surfacelist = r_shadow_buffer_surfacelist;
@@ -2461,7 +2461,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 				{
 					if (!BoxesOverlap(ent->mins, ent->maxs, cullmins, cullmaxs))
 						continue;
-					if (cl.worldmodel != NULL && cl.worldmodel->brush.BoxTouchingPVS != NULL && !cl.worldmodel->brush.BoxTouchingPVS(cl.worldmodel, clusterpvs, ent->mins, ent->maxs))
+					if (r_refdef.worldmodel != NULL && r_refdef.worldmodel->brush.BoxTouchingPVS != NULL && !r_refdef.worldmodel->brush.BoxTouchingPVS(r_refdef.worldmodel, clusterpvs, ent->mins, ent->maxs))
 						continue;
 				}
 				if (!(ent->flags & RENDER_SHADOW) || !ent->model || !ent->model->DrawShadowVolume)
@@ -2529,7 +2529,7 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 	dlight_t *light;
 	rmeshstate_t m;
 
-	if (cl.worldmodel && strncmp(cl.worldmodel->name, r_shadow_mapname, sizeof(r_shadow_mapname)))
+	if (r_refdef.worldmodel && strncmp(r_refdef.worldmodel->name, r_shadow_mapname, sizeof(r_shadow_mapname)))
 		R_Shadow_EditLights_Reload_f();
 
 	if (visiblevolumes)
@@ -2820,12 +2820,12 @@ void R_Shadow_LoadWorldLights(void)
 	int n, a, style, shadow, flags;
 	char name[MAX_QPATH], cubemapname[MAX_QPATH], *lightsstring, *s, *t;
 	float origin[3], radius, color[3], angles[3], corona, coronasizescale, ambientscale, diffusescale, specularscale;
-	if (cl.worldmodel == NULL)
+	if (r_refdef.worldmodel == NULL)
 	{
 		Con_Print("No map loaded.\n");
 		return;
 	}
-	FS_StripExtension (cl.worldmodel->name, name, sizeof (name));
+	FS_StripExtension (r_refdef.worldmodel->name, name, sizeof (name));
 	strlcat (name, ".rtlights", sizeof (name));
 	lightsstring = FS_LoadFile(name, tempmempool, false);
 	if (lightsstring)
@@ -2907,12 +2907,12 @@ void R_Shadow_SaveWorldLights(void)
 	char line[1024];
 	if (!r_shadow_worldlightchain)
 		return;
-	if (cl.worldmodel == NULL)
+	if (r_refdef.worldmodel == NULL)
 	{
 		Con_Print("No map loaded.\n");
 		return;
 	}
-	FS_StripExtension (cl.worldmodel->name, name, sizeof (name));
+	FS_StripExtension (r_refdef.worldmodel->name, name, sizeof (name));
 	strlcat (name, ".rtlights", sizeof (name));
 	bufchars = bufmaxchars = 0;
 	buf = NULL;
@@ -2953,12 +2953,12 @@ void R_Shadow_LoadLightsFile(void)
 	int n, a, style;
 	char name[MAX_QPATH], *lightsstring, *s, *t;
 	float origin[3], radius, color[3], subtract, spotdir[3], spotcone, falloff, distbias;
-	if (cl.worldmodel == NULL)
+	if (r_refdef.worldmodel == NULL)
 	{
 		Con_Print("No map loaded.\n");
 		return;
 	}
-	FS_StripExtension (cl.worldmodel->name, name, sizeof (name));
+	FS_StripExtension (r_refdef.worldmodel->name, name, sizeof (name));
 	strlcat (name, ".lights", sizeof (name));
 	lightsstring = FS_LoadFile(name, tempmempool, false);
 	if (lightsstring)
@@ -3004,18 +3004,18 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 	float origin[3], angles[3], radius, color[3], light[4], fadescale, lightscale, originhack[3], overridecolor[3], vec[4];
 	char key[256], value[1024];
 
-	if (cl.worldmodel == NULL)
+	if (r_refdef.worldmodel == NULL)
 	{
 		Con_Print("No map loaded.\n");
 		return;
 	}
 	// try to load a .ent file first
-	FS_StripExtension (cl.worldmodel->name, key, sizeof (key));
+	FS_StripExtension (r_refdef.worldmodel->name, key, sizeof (key));
 	strlcat (key, ".ent", sizeof (key));
 	data = entfiledata = FS_LoadFile(key, tempmempool, true);
 	// and if that is not found, fall back to the bsp file entity string
 	if (!data)
-		data = cl.worldmodel->brush.entities;
+		data = r_refdef.worldmodel->brush.entities;
 	if (!data)
 		return;
 	for (entnum = 0;COM_ParseToken(&data, false) && com_token[0] == '{';entnum++)
@@ -3155,7 +3155,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 			}
 			else if (!strcmp("style", key))
 				style = atoi(value);
-			else if (cl.worldmodel->type == mod_brushq3)
+			else if (r_refdef.worldmodel->type == mod_brushq3)
 			{
 				if (!strcmp("scale", key))
 					lightscale = atof(value);
@@ -3254,9 +3254,9 @@ void R_Shadow_EditLights_Clear_f(void)
 
 void R_Shadow_EditLights_Reload_f(void)
 {
-	if (!cl.worldmodel)
+	if (!r_refdef.worldmodel)
 		return;
-	strlcpy(r_shadow_mapname, cl.worldmodel->name, sizeof(r_shadow_mapname));
+	strlcpy(r_shadow_mapname, r_refdef.worldmodel->name, sizeof(r_shadow_mapname));
 	R_Shadow_ClearWorldLights();
 	R_Shadow_LoadWorldLights();
 	if (r_shadow_worldlightchain == NULL)
@@ -3269,7 +3269,7 @@ void R_Shadow_EditLights_Reload_f(void)
 
 void R_Shadow_EditLights_Save_f(void)
 {
-	if (!cl.worldmodel)
+	if (!r_refdef.worldmodel)
 		return;
 	R_Shadow_SaveWorldLights();
 }

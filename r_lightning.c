@@ -260,7 +260,7 @@ void R_DrawLightningBeamCallback(const void *calldata1, int calldata2)
 	CrossProduct(beamdir, up, right);
 
 	// calculate T coordinate scrolling (start and end texcoord along the beam)
-	t1 = cl.time * -r_lightningbeam_scroll.value;// + beamrepeatscale * DotProduct(b->start, beamdir);
+	t1 = r_refdef.time * -r_lightningbeam_scroll.value;// + beamrepeatscale * DotProduct(b->start, beamdir);
 	t1 = t1 - (int) t1;
 	t2 = t1 + beamrepeatscale * length;
 
@@ -337,7 +337,7 @@ void R_DrawLightningBeams(void)
 	beamrepeatscale = 1.0f / r_lightningbeam_repeatdistance.value;
 	for (i = 0, b = cl_beams;i < cl_max_beams;i++, b++)
 	{
-		if (b->model && b->endtime >= cl.time && b->lightning)
+		if (b->model && b->endtime >= r_refdef.time && b->lightning)
 		{
 			VectorAdd(b->start, b->end, org);
 			VectorScale(org, 0.5f, org);

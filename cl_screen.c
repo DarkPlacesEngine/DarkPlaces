@@ -1206,6 +1206,44 @@ void CL_UpdateScreen(void)
 	if (!scr_initialized || !con_initialized || vid_hidden)
 		return;				// not initialized yet
 
+	// don't allow cheats in multiplayer
+	if (!cl.islocalgame && cl.worldmodel)
+	{
+		if (r_fullbright.integer != 0)
+			Cvar_Set ("r_fullbright", "0");
+		if (r_ambient.value != 0)
+			Cvar_Set ("r_ambient", "0");
+	}
+
+	// bound viewsize
+	if (scr_viewsize.value < 30)
+		Cvar_Set ("viewsize","30");
+	if (scr_viewsize.value > 120)
+		Cvar_Set ("viewsize","120");
+
+	// bound field of view
+	if (scr_fov.value < 1)
+		Cvar_Set ("fov","1");
+	if (scr_fov.value > 170)
+		Cvar_Set ("fov","170");
+
+	// intermission is always full screen
+	if (cl.intermission)
+		sb_lines = 0;
+	else
+	{
+		if (scr_viewsize.value >= 120)
+			sb_lines = 0;		// no status bar at all
+		else if (scr_viewsize.value >= 110)
+			sb_lines = 24;		// no inventory
+		else
+			sb_lines = 24+16+8;
+	}
+
+	r_refdef.colormask[0] = 1;
+	r_refdef.colormask[1] = 1;
+	r_refdef.colormask[2] = 1;
+
 	SCR_CaptureVideo();
 
 	if (cls.signon == SIGNONS)
