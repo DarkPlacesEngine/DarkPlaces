@@ -86,7 +86,7 @@ typedef struct
 LoadPCX
 ============
 */
-qbyte* LoadPCX (const qbyte *f, int matchwidth, int matchheight)
+qbyte* LoadPCX (qbyte *f, int matchwidth, int matchheight)
 {
 	pcx_t pcx;
 	qbyte *a, *b, *image_rgba, *pbuf;
@@ -114,23 +114,15 @@ qbyte* LoadPCX (const qbyte *f, int matchwidth, int matchheight)
 	pcx.bytes_per_line = LittleShort (pcx.bytes_per_line);
 	pcx.palette_type = LittleShort (pcx.palette_type);
 
-	if (pcx.manufacturer != 0x0a || pcx.version != 5 || pcx.encoding != 1 || pcx.bits_per_pixel != 8 || pcx.xmax > 320 || pcx.ymax > 256)
+	image_width = pcx.xmax + 1 - pcx.xmin;
+	image_height = pcx.ymax + 1 - pcx.ymin;
+	if (pcx.manufacturer != 0x0a || pcx.version != 5 || pcx.encoding != 1 || pcx.bits_per_pixel != 8 || image_width > 4096 || image_height > 4096 || image_width <= 0 || image_height <= 0)
 	{
 		Con_Printf ("Bad pcx file\n");
 		return NULL;
 	}
-
-	if (matchwidth && (pcx.xmax+1) != matchwidth)
-	{
+	if ((matchwidth && image_width != matchwidth) || (matchheight && image_height != matchheight))
 		return NULL;
-	}
-	if (matchheight && (pcx.ymax+1) != matchheight)
-	{
-		return NULL;
-	}
-
-	image_width = pcx.xmax+1;
-	image_height = pcx.ymax+1;
 
 	palette = f + fs_filesize - 768;
 
@@ -223,11 +215,11 @@ void PrintTargaHeader(TargaHeader *t)
 LoadTGA
 =============
 */
-qbyte *LoadTGA (const qbyte *f, int matchwidth, int matchheight)
+qbyte *LoadTGA (qbyte *f, int matchwidth, int matchheight)
 {
 	int x, y, row_inc, compressed, readpixelcount, red, green, blue, alpha, runlen;
 	qbyte *pixbuf, *image_rgba;
-	const qbyte *fin, *enddata;
+	qbyte *fin, *enddata;
 	TargaHeader targa_header;
 	unsigned char palette[256*4], *p;
 
@@ -245,17 +237,18 @@ qbyte *LoadTGA (const qbyte *f, int matchwidth, int matchheight)
 	targa_header.colormap_size = f[7];
 	targa_header.x_origin = f[8] + f[9] * 256;
 	targa_header.y_origin = f[10] + f[11] * 256;
-	targa_header.width = f[12] + f[13] * 256;
-	targa_header.height = f[14] + f[15] * 256;
-	if (matchwidth && targa_header.width != matchwidth)
+	targa_header.width = image_width = f[12] + f[13] * 256;
+	targa_header.height = image_height = f[14] + f[15] * 256;
+	if (image_width > 4096 || image_height > 4096 || image_width <= 0 || image_height <= 0)
+	{
+		Con_Printf("LoadTGA: invalid size\n");
+		PrintTargaHeader(&targa_header);
 		return NULL;
-	if (matchheight && targa_header.height != matchheight)
+	}
+	if ((matchwidth && image_width != matchwidth) || (matchheight && image_height != matchheight))
 		return NULL;
 	targa_header.pixel_size = f[16];
 	targa_header.attributes = f[17];
-
-	image_width = targa_header.width;
-	image_height = targa_header.height;
 
 	fin = f + 18;
 	if (targa_header.id_length != 0)
@@ -436,10 +429,9 @@ qbyte *LoadTGA (const qbyte *f, int matchwidth, int matchheight)
 LoadLMP
 ============
 */
-qbyte *LoadLMP (const qbyte *f, int matchwidth, int matchheight)
+qbyte *LoadLMP (qbyte *f, int matchwidth, int matchheight)
 {
 	qbyte *image_rgba;
-	int width, height;
 
 	if (fs_filesize < 9)
 	{
@@ -448,24 +440,21 @@ qbyte *LoadLMP (const qbyte *f, int matchwidth, int matchheight)
 	}
 
 	// parse the very complicated header *chuckle*
-	width = f[0] + f[1] * 256 + f[2] * 65536 + f[3] * 16777216;
-	height = f[4] + f[5] * 256 + f[6] * 65536 + f[7] * 16777216;
-	if ((unsigned) width > 4096 || (unsigned) height > 4096)
+	image_width = f[0] + f[1] * 256 + f[2] * 65536 + f[3] * 16777216;
+	image_height = f[4] + f[5] * 256 + f[6] * 65536 + f[7] * 16777216;
+	if (image_width > 4096 || image_height > 4096 || image_width <= 0 || image_height <= 0)
 	{
-		Con_Printf("LoadLMP: invalid size\n");
+		Con_Printf("LoadLMP: invalid size %ix%i\n", image_width, image_height);
 		return NULL;
 	}
-	if ((matchwidth && width != matchwidth) || (matchheight && height != matchheight))
+	if ((matchwidth && image_width != matchwidth) || (matchheight && image_height != matchheight))
 		return NULL;
 
-	if (fs_filesize < 8 + width * height)
+	if (fs_filesize < 8 + image_width * image_height)
 	{
 		Con_Printf("LoadLMP: invalid LMP file\n");
 		return NULL;
 	}
-
-	image_width = width;
-	image_height = height;
 
 	image_rgba = Mem_Alloc(tempmempool, image_width * image_height * 4);
 	if (!image_rgba)
@@ -477,15 +466,64 @@ qbyte *LoadLMP (const qbyte *f, int matchwidth, int matchheight)
 	return image_rgba;
 }
 
+typedef struct
+{
+	char		name[32];
+	unsigned	width, height;
+	unsigned	offsets[MIPLEVELS];		// four mip maps stored
+	char		animname[32];			// next frame in animation chain
+	int			flags;
+	int			contents;
+	int			value;
+} q2wal_t;
+
+qbyte *LoadWAL (qbyte *f, int matchwidth, int matchheight)
+{
+	qbyte *image_rgba;
+	const q2wal_t *inwal = (const void *)f;
+
+	if (fs_filesize < sizeof(q2wal_t))
+	{
+		Con_Printf("LoadWAL: invalid WAL file\n");
+		return NULL;
+	}
+
+	image_width = LittleLong(inwal->width);
+	image_height = LittleLong(inwal->height);
+	if (image_width > 4096 || image_height > 4096 || image_width <= 0 || image_height <= 0)
+	{
+		Con_Printf("LoadWAL: invalid size %ix%i\n", image_width, image_height);
+		return NULL;
+	}
+	if ((matchwidth && image_width != matchwidth) || (matchheight && image_height != matchheight))
+		return NULL;
+
+	if (fs_filesize < sizeof(q2wal_t) + LittleLong(inwal->offsets[0]) + image_width * image_height)
+	{
+		Con_Printf("LoadWAL: invalid WAL file\n");
+		return NULL;
+	}
+
+	image_rgba = Mem_Alloc(tempmempool, image_width * image_height * 4);
+	if (!image_rgba)
+	{
+		Con_Printf("LoadLMP: not enough memory for %i by %i image\n", image_width, image_height);
+		return NULL;
+	}
+	Image_Copy8bitRGBA(f + LittleLong(inwal->offsets[0]), image_rgba, image_width * image_height, palette_complete);
+	return image_rgba;
+}
+
+
+
 /*
 ============
 LoadLMP
 ============
 */
-qbyte *LoadLMPAs8Bit (const qbyte *f, int matchwidth, int matchheight)
+qbyte *LoadLMPAs8Bit (qbyte *f, int matchwidth, int matchheight)
 {
 	qbyte *image_8bit;
-	int width, height;
 
 	if (fs_filesize < 9)
 	{
@@ -494,24 +532,21 @@ qbyte *LoadLMPAs8Bit (const qbyte *f, int matchwidth, int matchheight)
 	}
 
 	// parse the very complicated header *chuckle*
-	width = f[0] + f[1] * 256 + f[2] * 65536 + f[3] * 16777216;
-	height = f[4] + f[5] * 256 + f[6] * 65536 + f[7] * 16777216;
-	if ((unsigned) width > 4096 || (unsigned) height > 4096)
+	image_width = f[0] + f[1] * 256 + f[2] * 65536 + f[3] * 16777216;
+	image_height = f[4] + f[5] * 256 + f[6] * 65536 + f[7] * 16777216;
+	if (image_width > 4096 || image_height > 4096 || image_width <= 0 || image_height <= 0)
 	{
-		Con_Printf("LoadLMPAs8Bit: invalid size\n");
+		Con_Printf("LoadLMPAs8Bit: invalid size %ix%i\n", image_width, image_height);
 		return NULL;
 	}
-	if ((matchwidth && width != matchwidth) || (matchheight && height != matchheight))
+	if ((matchwidth && image_width != matchwidth) || (matchheight && image_height != matchheight))
 		return NULL;
 
-	if (fs_filesize < 8 + width * height)
+	if (fs_filesize < 8 + image_width * image_height)
 	{
 		Con_Printf("LoadLMPAs8Bit: invalid LMP file\n");
 		return NULL;
 	}
-
-	image_width = width;
-	image_height = height;
 
 	image_8bit = Mem_Alloc(tempmempool, image_width * image_height);
 	if (!image_8bit)
@@ -540,92 +575,56 @@ void Image_StripImageExtension (const char *in, char *out)
 		strcpy(out, in);
 }
 
+struct
+{
+	const char *formatstring;
+	qbyte *(*loadfunc)(qbyte *f, int matchwidth, int matchheight);
+}
+imageformats[] =
+{
+	{"override/%s.tga", LoadTGA},
+	{"override/%s.jpg", JPEG_LoadImage},
+	{"textures/%s.tga", LoadTGA},
+	{"textures/%s.jpg", JPEG_LoadImage},
+	{"textures/%s.pcx", LoadPCX},
+	{"textures/%s.wal", LoadWAL},
+	{"%s.tga", LoadTGA},
+	{"%s.jpg", JPEG_LoadImage},
+	{"%s.pcx", LoadPCX},
+	{"%s.lmp", LoadLMP},
+	{NULL, NULL}
+};
+
 qbyte *loadimagepixels (const char *filename, qboolean complain, int matchwidth, int matchheight)
 {
-	qbyte *f, *data;
+	int i;
+	qbyte *f, *data = NULL;
 	char basename[MAX_QPATH], name[MAX_QPATH], *c;
 	Image_StripImageExtension(filename, basename); // strip filename extensions to allow replacement by other types
 	// replace *'s with #, so commandline utils don't get confused when dealing with the external files
 	for (c = basename;*c;c++)
 		if (*c == '*')
 			*c = '#';
-	sprintf (name, "override/%s.tga", basename);
-	f = FS_LoadFile(name, true);
-	if (f)
+	for (i = 0;imageformats[i].formatstring;i++)
 	{
-		data = LoadTGA (f, matchwidth, matchheight);
-		goto loaded;
-	}
-	sprintf (name, "override/%s.jpg", basename);
-	f = FS_LoadFile(name, true);
-	if (f)
-	{
-		data = JPEG_LoadImage (f, matchwidth, matchheight);
-		goto loaded;
-	}
-	sprintf (name, "textures/%s.tga", basename);
-	f = FS_LoadFile(name, true);
-	if (f)
-	{
-		data = LoadTGA (f, matchwidth, matchheight);
-		goto loaded;
-	}
-	sprintf (name, "textures/%s.jpg", basename);
-	f = FS_LoadFile(name, true);
-	if (f)
-	{
-		data = JPEG_LoadImage (f, matchwidth, matchheight);
-		goto loaded;
-	}
-	sprintf (name, "textures/%s.pcx", basename);
-	f = FS_LoadFile(name, true);
-	if (f)
-	{
-		data = LoadPCX (f, matchwidth, matchheight);
-		goto loaded;
-	}
-	sprintf (name, "%s.tga", basename);
-	f = FS_LoadFile(name, true);
-	if (f)
-	{
-		data = LoadTGA (f, matchwidth, matchheight);
-		goto loaded;
-	}
-	sprintf (name, "%s.jpg", basename);
-	f = FS_LoadFile(name, true);
-	if (f)
-	{
-		data = JPEG_LoadImage (f, matchwidth, matchheight);
-		goto loaded;
-	}
-	sprintf (name, "%s.pcx", basename);
-	f = FS_LoadFile(name, true);
-	if (f)
-	{
-		data = LoadPCX (f, matchwidth, matchheight);
-		goto loaded;
-	}
-	sprintf (name, "%s.lmp", basename);
-	f = FS_LoadFile(name, true);
-	if (f)
-	{
-		data = LoadLMP (f, matchwidth, matchheight);
-		goto loaded;
+		sprintf (name, imageformats[i].formatstring, basename);
+		if ((f = FS_LoadFile(name, true)) && (data = imageformats[i].loadfunc(f, matchwidth, matchheight)))
+		{
+			Mem_Free(f);
+			Con_DPrintf("loaded image %s (%dx%d)\n", name, image_width, image_height);
+			return data;
+		}
 	}
 	if (complain)
-		Con_Printf ("Couldn't load %s.tga, .jpg, .pcx, .lmp\n", filename);
-	return NULL;
-loaded:
-	Mem_Free(f);
-	Con_DPrintf("loaded image %s (%dx%d)\n", name, image_width, image_height);
-	if (image_width == 0 || image_height == 0)
 	{
-		Con_Printf("error loading image %s - it is a %dx%d pixel image!\n", name);
-		if (data != NULL)
-			Mem_Free(data);
-		data = NULL;
+		Con_Printf ("Couldn't load %s using ", filename);
+		for (i = 0;imageformats[i].formatstring;i++)
+		{
+			sprintf (name, imageformats[i].formatstring, basename);
+			Con_Printf (i == 0 ? "\"%s\"" : (imageformats[i+1].formatstring ? ", \"%s\"" : " or \"%s\".\n"), imageformats[i].formatstring);
+		}
 	}
-	return data;
+	return NULL;
 }
 
 int image_makemask (const qbyte *in, qbyte *out, int size)
