@@ -18,7 +18,6 @@
 -d (Mitchell) darkplaces client: lerp lightstyles (Mitchell)
 -d (Mitchell) darkplaces menu: player setup menu network speed is never applying to rate (Mitchell)
 -d (QorpsE) darkplaces renderer: figure out what's wrong with gloss rendering vertex calculations, which may be GF2 related (QorpsE)
--d (Sajt) darkplaces menu: add confirm question to "Reset to Defaults" option, with No selected (Sajt)
 -d (Speeds) darkplaces client: add a config saving command (Speeds)
 -d (Throvold@uboot.com) darkplaces client: add cvars for sbar alpha (background and foreground) (Throvold@uboot.com)
 -d (avirox) darkplaces editlights: light entity loader is broken, it ends up with scrambled colors (avirox, Tomaz)
@@ -375,6 +374,7 @@ d darkplaces loading: make hl map loading halve the lightmap samples, to fit hl'
 d darkplaces loading: make it only reload rtlights when current map changes, not when restarting renderer or reloading same map (Stribbs)
 d darkplaces loading: make sure .skin files work on md3 models that have no default shaders but do have mesh names (VorteX)
 d darkplaces loading: missing triangles in q3bsp patches, appears only one of the two triangles per cell is being rendered (Zombie)
+d darkplaces menu: add confirm question to "Reset to Defaults" option, with No selected (Sajt)
 d darkplaces menu: add sv_maxrate cvar to server setup menu
 d darkplaces physics: disable sv_gameplayfix_stepdown while underwater (Sajt)
 d darkplaces physics: make players step down stairs rather than just flying off (Riot) 
