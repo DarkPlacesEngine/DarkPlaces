@@ -129,7 +129,6 @@ void Log_Init (void)
 	{
 		Cvar_SetQuick (&log_file, "qconsole.log");
 		Cvar_SetValueQuick (&log_sync, 1);
-		unlink (va("%s/qconsole.log", fs_gamedir));
 	}
 }
 
@@ -433,8 +432,6 @@ void Con_Init (void)
 	con_linewidth = -1;
 	Con_CheckResize ();
 
-	Con_Print("Console initialized.\n");
-
 	// register our cvars
 	Cvar_RegisterVariable (&con_notifytime);
 	Cvar_RegisterVariable (&con_notify);
@@ -444,7 +441,9 @@ void Con_Init (void)
 	Cmd_AddCommand ("messagemode", Con_MessageMode_f);
 	Cmd_AddCommand ("messagemode2", Con_MessageMode2_f);
 	Cmd_AddCommand ("clear", Con_Clear_f);
+
 	con_initialized = true;
+	Con_Print("Console initialized.\n");
 }
 
 
@@ -695,38 +694,6 @@ void Con_DPrintf(const char *fmt, ...)
 
 	if (!developer.integer)
 		return;			// don't confuse non-developers with techie stuff...
-
-	va_start(argptr,fmt);
-	vsprintf(msg,fmt,argptr);
-	va_end(argptr);
-
-	Con_Print(msg);
-}
-
-
-/*
-================
-Con_SafePrint
-
-Okay to call even when the screen can't be updated
-==================
-*/
-void Con_SafePrint(const char *msg)
-{
-	Con_Print(msg);
-}
-
-/*
-==================
-Con_SafePrintf
-
-Okay to call even when the screen can't be updated
-==================
-*/
-void Con_SafePrintf(const char *fmt, ...)
-{
-	va_list argptr;
-	char msg[MAXPRINTMSG];
 
 	va_start(argptr,fmt);
 	vsprintf(msg,fmt,argptr);

@@ -130,7 +130,7 @@ int CDAudio_SysUpdate (void)
 void CDAudio_SysInit (void)
 {
 	if( SDL_InitSubSystem( SDL_INIT_CDROM ) == -1 ) 
-		Con_SafePrint( "Failed to init the CDROM SDL subsystem!\n" );
+		Con_Print( "Failed to init the CDROM SDL subsystem!\n" );
 
 	Cmd_AddCommand( "cddrive", CDAudio_SDL_CDDrive_f );
 }

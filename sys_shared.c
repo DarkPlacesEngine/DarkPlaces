@@ -33,6 +33,7 @@ void Sys_Shared_EarlyInit(void)
 	const char* os;
 
 	Memory_Init ();
+	Log_Init ();
 
 	COM_InitArgv();
 	COM_InitGameType();

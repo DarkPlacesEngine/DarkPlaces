@@ -27,7 +27,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 extern int con_totallines;
 extern int con_backscroll;
 extern qboolean con_initialized;
-extern qbyte *con_chars;
 
 void Con_CheckResize (void);
 void Con_Init (void);
@@ -36,8 +35,6 @@ void Con_Print(const char *txt);
 void Con_Printf(const char *fmt, ...);
 void Con_DPrint(const char *msg);
 void Con_DPrintf(const char *fmt, ...);
-void Con_SafePrint(const char *msg);
-void Con_SafePrintf(const char *fmt, ...);
 void Con_Clear_f (void);
 void Con_DrawNotify (void);
 void Con_ClearNotify (void);
@@ -60,7 +57,7 @@ void Con_DisplayList(const char **list);
 void Log_Init (void);
 void Log_Close (void);
 void Log_Start (void);
-// Log_Print and Log_Printf can be used as soon as the FS initialization is done
+
 void Log_Print(const char *logfilename, const char *msg);
 void Log_Printf(const char *logfilename, const char *fmt, ...);
 
