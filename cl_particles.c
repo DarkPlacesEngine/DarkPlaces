@@ -261,7 +261,7 @@ void CL_EntityParticles (entity_t *ent)
 		forward[1] = cp*sy;
 		forward[2] = -sp;
 
-		particle(pt_static, PARTICLE_BILLBOARD, particlepalette[0x6f], particlepalette[0x6f], tex_particle, false, false, 2, 2, 255, 0, -19999, 0, 0, ent->render.origin[0] + m_bytenormals[i][0]*dist + forward[0]*beamlength, ent->render.origin[1] + m_bytenormals[i][1]*dist + forward[1]*beamlength, ent->render.origin[2] + m_bytenormals[i][2]*dist + forward[2]*beamlength, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+		particle(pt_static, PARTICLE_BILLBOARD, particlepalette[0x6f], particlepalette[0x6f], tex_particle, false, false, 2, 2, 255, 0, 0, 0, 0, ent->render.origin[0] + m_bytenormals[i][0]*dist + forward[0]*beamlength, ent->render.origin[1] + m_bytenormals[i][1]*dist + forward[1]*beamlength, ent->render.origin[2] + m_bytenormals[i][2]*dist + forward[2]*beamlength, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 	}
 }
 
@@ -877,6 +877,7 @@ void CL_MoveParticles (void)
 			}
 		}
 		p->vel[2] -= p->gravity * gravity;
+		p->alpha -= p->alphafade * frametime;
 		if (p->friction)
 		{
 			f = p->friction * frametime;
@@ -940,7 +941,6 @@ void CL_MoveParticles (void)
 			p->die = -1;
 			break;
 		}
-		p->alpha -= p->alphafade * frametime;
 
 		// remove dead particles
 		if (p->alpha < 1 || p->die < cl.time)
