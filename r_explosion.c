@@ -25,23 +25,23 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define EXPLOSIONGRID 8
 #define EXPLOSIONVERTS ((EXPLOSIONGRID+1)*(EXPLOSIONGRID+1))
 #define EXPLOSIONTRIS (EXPLOSIONGRID*EXPLOSIONGRID*2)
-#define EXPLOSIONSTARTVELOCITY (256.0f)
 
 float explosiontexcoord2f[EXPLOSIONVERTS][2];
 int explosiontris[EXPLOSIONTRIS][3];
 int explosionnoiseindex[EXPLOSIONVERTS];
 vec3_t explosionpoint[EXPLOSIONVERTS];
-vec3_t explosionspherevertvel[EXPLOSIONVERTS];
 
 typedef struct explosion_s
 {
 	float starttime;
+	float endtime;
 	float time;
 	float alpha;
 	float fade;
 	vec3_t origin;
 	vec3_t vert[EXPLOSIONVERTS];
 	vec3_t vertvel[EXPLOSIONVERTS];
+	qboolean clipping;
 }
 explosion_t;
 
@@ -110,9 +110,6 @@ int R_ExplosionVert(int column, int row)
 	explosionpoint[i][0] = cos(yaw) *  cos(pitch);
 	explosionpoint[i][1] = sin(yaw) *  cos(pitch);
 	explosionpoint[i][2] =        1 * -sin(pitch);
-	explosionspherevertvel[i][0] = explosionpoint[i][0] * EXPLOSIONSTARTVELOCITY;
-	explosionspherevertvel[i][1] = explosionpoint[i][1] * EXPLOSIONSTARTVELOCITY;
-	explosionspherevertvel[i][2] = explosionpoint[i][2] * EXPLOSIONSTARTVELOCITY;
 	explosiontexcoord2f[i][0] = (float) column / (float) EXPLOSIONGRID;
 	explosiontexcoord2f[i][1] = (float) row / (float) EXPLOSIONGRID;
 	explosionnoiseindex[i] = (row % EXPLOSIONGRID) * EXPLOSIONGRID + (column % EXPLOSIONGRID);
@@ -147,25 +144,36 @@ void R_Explosion_Init(void)
 void R_NewExplosion(vec3_t org)
 {
 	int i, j;
-	float dist;
+	float dist, n;
+	vec3_t impact;
+	explosion_t *e;
 	qbyte noise[EXPLOSIONGRID*EXPLOSIONGRID];
 	fractalnoisequick(noise, EXPLOSIONGRID, 4); // adjust noise grid size according to explosion
-	for (i = 0;i < MAX_EXPLOSIONS;i++)
+	for (i = 0, e = explosion;i < MAX_EXPLOSIONS;i++, e++)
 	{
-		if (explosion[i].alpha <= cl_explosions_alpha_end.value)
+		if (e->alpha <= cl_explosions_alpha_end.value)
 		{
-			explosion[i].starttime = cl.time;
-			explosion[i].time = explosion[i].starttime - 0.1;
-			explosion[i].alpha = cl_explosions_alpha_start.value;
-			explosion[i].fade = (cl_explosions_alpha_start.value - cl_explosions_alpha_end.value) / cl_explosions_lifetime.value;
-			VectorCopy(org, explosion[i].origin);
+			e->starttime = cl.time;
+			e->endtime = cl.time + cl_explosions_lifetime.value;
+			e->time = e->starttime;
+			e->alpha = cl_explosions_alpha_start.value;
+			e->fade = (cl_explosions_alpha_start.value - cl_explosions_alpha_end.value) / cl_explosions_lifetime.value;
+			e->clipping = r_explosionclip.integer != 0;
+			VectorCopy(org, e->origin);
 			for (j = 0;j < EXPLOSIONVERTS;j++)
 			{
-				// calculate start
-				VectorCopy(explosion[i].origin, explosion[i].vert[j]);
-				// calculate velocity
-				dist = noise[explosionnoiseindex[j]] * (1.0f / 255.0f) + 0.5;
-				VectorScale(explosionspherevertvel[j], dist, explosion[i].vertvel[j]);
+				// calculate start origin and velocity
+				n = noise[explosionnoiseindex[j]] * (1.0f / 255.0f) + 0.5;
+				dist = n * cl_explosions_size_start.value;
+				VectorMA(e->origin, dist, explosionpoint[j], e->vert[j]);
+				dist = n * (cl_explosions_size_end.value - cl_explosions_size_start.value) / cl_explosions_lifetime.value;
+				VectorScale(explosionpoint[j], dist, e->vertvel[j]);
+				// clip start origin
+				if (e->clipping)
+				{
+					CL_TraceLine(e->origin, e->vert[j], impact, NULL, true, NULL, SUPERCONTENTS_SOLID);
+					VectorCopy(impact, e->vert[i]);
+				}
 			}
 			break;
 		}
@@ -205,30 +213,22 @@ void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 void R_MoveExplosion(explosion_t *e)
 {
 	int i;
-	float dot, frictionscale, end[3], impact[3], normal[3], frametime;
+	float dot, end[3], impact[3], normal[3], frametime;
 
 	frametime = cl.time - e->time;
 	e->time = cl.time;
 	e->alpha = e->alpha - (e->fade * frametime);
-	if (e->alpha <= cl_explosions_alpha_end.value)
-	{
-		e->alpha = -1;
-		return;
-	}
-	frictionscale = 1 - frametime;
-	frictionscale = bound(0, frictionscale, 1);
 	for (i = 0;i < EXPLOSIONVERTS;i++)
 	{
 		if (e->vertvel[i][0] || e->vertvel[i][1] || e->vertvel[i][2])
 		{
-			VectorScale(e->vertvel[i], frictionscale, e->vertvel[i]);
 			VectorMA(e->vert[i], frametime, e->vertvel[i], end);
-			if (r_explosionclip.integer)
+			if (e->clipping)
 			{
 				if (CL_TraceLine(e->vert[i], end, impact, normal, true, NULL, SUPERCONTENTS_SOLID) < 1)
 				{
 					// clip velocity against the wall
-					dot = DotProduct(e->vertvel[i], normal) * -1.125f;
+					dot = -DotProduct(e->vertvel[i], normal);
 					VectorMA(e->vertvel[i], dot, normal, e->vertvel[i]);
 				}
 				VectorCopy(impact, e->vert[i]);
@@ -248,7 +248,7 @@ void R_MoveExplosions(void)
 	frametime = cl.time - cl.oldtime;
 
 	for (i = 0;i < MAX_EXPLOSIONS;i++)
-		if (explosion[i].alpha > cl_explosions_alpha_end.value)
+		if (cl.time < explosion[i].endtime)
 			R_MoveExplosion(&explosion[i]);
 }
 
@@ -259,7 +259,7 @@ void R_DrawExplosions(void)
 	if (!r_drawexplosions.integer)
 		return;
 	for (i = 0;i < MAX_EXPLOSIONS;i++)
-		if (explosion[i].alpha > cl_explosions_alpha_end.value)
+		if (cl.time < explosion[i].endtime)
 			R_MeshQueue_AddTransparent(explosion[i].origin, R_DrawExplosionCallback, &explosion[i], 0);
 }
 
