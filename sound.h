@@ -40,6 +40,7 @@ typedef struct
 } snd_format_t;
 
 // sfx_t flags
+#define SFXFLAG_NONE			0
 #define SFXFLAG_SILENTLYMISSING	(1 << 0) // if the sfx is missing and loaded with complain = false
 #define SFXFLAG_USED			(1 << 1)
 
@@ -65,22 +66,26 @@ typedef struct
 	int				bufferlength;	// used only by certain drivers
 } dma_t;
 
+// channel_t flags
+#define CHANNELFLAG_NONE		0
+#define CHANNELFLAG_FORCELOOP	(1 << 0) // force looping even if the sound is not looped
+
 typedef struct
 {
-	sfx_t	*sfx;			// sfx number
-	int		forceloop;		// force looping even if the sound is not looped
-	int		leftvol;		// 0-255 volume
-	int		rightvol;		// 0-255 volume
-	int		end;			// end time in global paintsamples
-	int		lastptime;		// last time this channel was painted
-	int		pos;			// sample position in sfx
-	int		looping;		// where to loop, -1 = no looping
-	int		entnum;			// to allow overriding a specific sound
-	int		entchannel;
-	vec3_t	origin;			// origin of sound effect
-	vec_t	dist_mult;		// distance multiplier (attenuation/clipK)
-	int		master_vol;		// 0-255 master volume
-	void	*fetcher_data;	// Per-channel data for the sound fetching function
+	sfx_t			*sfx;			// sfx number
+	unsigned int	flags;			// cf CHANNELFLAG_* defines
+	int				leftvol;		// 0-255 volume
+	int				rightvol;		// 0-255 volume
+	int				end;			// end time in global paintsamples
+	int				lastptime;		// last time this channel was painted
+	int				pos;			// sample position in sfx
+	int				looping;		// where to loop, -1 = no looping
+	int				entnum;			// to allow overriding a specific sound
+	int				entchannel;
+	vec3_t			origin;			// origin of sound effect
+	vec_t			dist_mult;		// distance multiplier (attenuation/clipK)
+	int				master_vol;		// 0-255 master volume
+	void			*fetcher_data;	// Per-channel data for the sound fetching function
 } channel_t;
 
 typedef const sfxbuffer_t* (*snd_fetcher_getsb_t) (channel_t* ch, unsigned int start, unsigned int nbsamples);

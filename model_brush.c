@@ -3597,7 +3597,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 				text = f;
 				while (COM_ParseToken(&text, false))
 				{
-					strncpy(shadername, com_token, sizeof(shadername));
+					strlcpy (shadername, com_token, sizeof (shadername));
 					flags = 0;
 					sky[0] = 0;
 					if (COM_ParseToken(&text, false) && !strcasecmp(com_token, "{"))

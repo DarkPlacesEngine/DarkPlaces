@@ -72,7 +72,7 @@ void Sys_Print(const char *msg)
 	if (timestamps.integer)
 		snprintf(final, sizeof(final), "%s%s", Sys_TimeString(timeformat.string), msg);
 	else
-		strncpy(final, msg, sizeof(final));
+		strlcpy (final, msg, sizeof (final));
 
 	// LordHavoc: make sure the string is terminated
 	final[MAXPRINTMSG-1] = 0;

@@ -800,8 +800,8 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 				hostcache[n].ping = 100000;
 				hostcache[n].querytime = realtime;
 				// build description strings for the things users care about
-				strncpy(hostcache[n].line1, "?", sizeof(hostcache[n].line1));
-				strncpy(hostcache[n].line2, ipstring, sizeof(hostcache[n].line2));
+				strlcpy (hostcache[n].line1, "?", sizeof (hostcache[n].line1));
+				strlcpy (hostcache[n].line2, ipstring, sizeof (hostcache[n].line2));
 				// if not in the slist menu we should print the server to console
 				if (m_state != m_slist)
 					Con_Printf("querying %s\n", ipstring);

@@ -401,7 +401,7 @@ char *PR_ValueString (etype_t type, eval_t *val)
 	switch (type)
 	{
 	case ev_string:
-		strncpy(line, PR_GetString(val->string), sizeof(line));
+		strlcpy (line, PR_GetString (val->string), sizeof (line));
 		break;
 	case ev_entity:
 		//n = NoCrash_NUM_FOR_EDICT(PROG_TO_EDICT(val->edict));
@@ -489,7 +489,7 @@ char *PR_UglyValueString (etype_t type, eval_t *val)
 		break;
 	case ev_function:
 		f = pr_functions + val->function;
-		strncpy(line, PR_GetString(f->s_name), sizeof(line));
+		strlcpy (line, PR_GetString (f->s_name), sizeof (line));
 		break;
 	case ev_field:
 		def = ED_FieldAtOfs ( val->_int );
@@ -614,7 +614,7 @@ void ED_Print(edict_t *ed)
 
 		if (strlen(name) > 256)
 		{
-			strncpy(tempstring2, name, 256);
+			memcpy (tempstring2, name, 256);
 			tempstring2[256] = tempstring2[257] = tempstring2[258] = '.';
 			tempstring2[259] = 0;
 			name = tempstring2;
@@ -627,7 +627,7 @@ void ED_Print(edict_t *ed)
 		name = PR_ValueString(d->type, (eval_t *)v);
 		if (strlen(name) > 256)
 		{
-			strncpy(tempstring2, name, 256);
+			memcpy(tempstring2, name, 256);
 			tempstring2[256] = tempstring2[257] = tempstring2[258] = '.';
 			tempstring2[259] = 0;
 			name = tempstring2;
@@ -1537,7 +1537,7 @@ void PR_Fields_f (void)
 		}
 		if (strlen(name) > 256)
 		{
-			strncpy(tempstring2, name, 256);
+			memcpy(tempstring2, name, 256);
 			tempstring2[256] = tempstring2[257] = tempstring2[258] = '.';
 			tempstring2[259] = 0;
 			name = tempstring2;
