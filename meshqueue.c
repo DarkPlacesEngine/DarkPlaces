@@ -31,7 +31,7 @@ void R_MeshQueue_Init(void)
 
 	meshqueuemempool = Mem_AllocPool("R_MeshQueue", 0, NULL);
 	mq_total = 0;
-	mqt_total = 1000;
+	mqt_total = 0;
 	mq_array = NULL;
 	mqt_array = NULL;
 }
