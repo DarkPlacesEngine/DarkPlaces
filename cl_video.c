@@ -122,10 +122,12 @@ clvideo_t* CL_GetVideo( char *name )
 	video = &videoarray[ i ];
 
 	if( video->suspended )
+	{
 		if( !WakeVideo( video ) )
 			return NULL;
 		else if( video->state == CLVIDEO_RESETONWAKEUP ) 
 			video->framenum = -1;
+	}
 
 	video->lasttime = realtime;
 
@@ -205,12 +207,14 @@ void CL_VideoFrame( void ) // update all videos
 
 	for( video = videoarray, i = 0 ; i < MAXCLVIDEOS ; video++, i++ )
 		if( video->state != CLVIDEO_UNUSED && !video->suspended )
+		{
 			if( realtime - video->lasttime > CLTHRESHOLD )
 				SuspendVideo( video );
 			else if( video->state == CLVIDEO_PAUSE )
 				video->starttime = realtime - video->framenum * video->framerate;
 			else 
 				VideoFrame( video );
+		}
 
 	if( videoarray->state == CLVIDEO_FIRSTFRAME )
 		CL_VideoStop();
