@@ -617,7 +617,7 @@ qbyte *loadimagepixels (const char *filename, qboolean complain, int matchwidth,
 	return NULL;
 loaded:
 	Mem_Free(f);
-	Con_DPrintf("loaded image %s (%dx%d)\n", name);
+	Con_DPrintf("loaded image %s (%dx%d)\n", name, image_width, image_height);
 	if (image_width == 0 || image_height == 0)
 	{
 		Con_Printf("error loading image %s - it is a %dx%d pixel image!\n", name);
