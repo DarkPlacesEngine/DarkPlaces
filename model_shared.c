@@ -484,7 +484,7 @@ shadowmesh_t *Mod_ShadowMesh_Begin(mempool_t *mempool)
 
 shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh)
 {
-	int i;
+	//int i;
 	shadowmesh_t *mesh, *newmesh, *nextmesh;
 	// reallocate meshs to conserve space
 	for (mesh = firstmesh, firstmesh = NULL;mesh;mesh = nextmesh)
@@ -494,9 +494,9 @@ shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh)
 		newmesh->next = firstmesh;
 		firstmesh = newmesh;
 		Mem_Free(mesh);
-		Con_Printf("mesh\n");
-		for (i = 0;i < newmesh->numtriangles;i++)
-			Con_Printf("tri %d %d %d\n", newmesh->elements[i * 3 + 0], newmesh->elements[i * 3 + 1], newmesh->elements[i * 3 + 2]);
+		//Con_Printf("mesh\n");
+		//for (i = 0;i < newmesh->numtriangles;i++)
+		//	Con_Printf("tri %d %d %d\n", newmesh->elements[i * 3 + 0], newmesh->elements[i * 3 + 1], newmesh->elements[i * 3 + 2]);
 		Mod_BuildTriangleNeighbors(newmesh->neighbors, newmesh->elements, newmesh->numtriangles);
 	}
 	return firstmesh;

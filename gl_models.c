@@ -438,20 +438,21 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 	}
 }
 
-void R_DrawQ1Q2AliasModelShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int visiblevolume)
+void R_Model_Alias_Draw(entity_render_t *ent)
 {
-	float projectdistance;
-	projectdistance = lightradius + ent->model->radius - sqrt(DotProduct(relativelightorigin, relativelightorigin));
-	if (projectdistance > 0.1)
-	{
-		R_Mesh_ResizeCheck(ent->model->numverts * 2);
-		R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
-		R_Shadow_Volume(ent->model->numverts, ent->model->numtris, varray_vertex, ent->model->mdlmd2data_indices, ent->model->mdlmd2data_triangleneighbors, relativelightorigin, lightradius, projectdistance, visiblevolume);
-	}
+	if (ent->alpha < (1.0f / 64.0f))
+		return; // basically completely transparent
+
+	c_models++;
+
+	if (ent->effects & EF_ADDITIVE || ent->alpha != 1.0 || R_FetchSkinFrame(ent)->fog != NULL)
+		R_MeshQueue_AddTransparent(ent->origin, R_DrawQ1Q2AliasModelCallback, ent, 0);
+	else
+		R_DrawQ1Q2AliasModelCallback(ent, 0);
 }
 
 extern cvar_t r_shadows;
-void R_DrawQ1Q2AliasModelFakeShadow (entity_render_t *ent)
+void R_Model_Alias_DrawFakeShadow (entity_render_t *ent)
 {
 	int i;
 	rmeshstate_t m;
@@ -561,6 +562,39 @@ void R_DrawQ1Q2AliasModelFakeShadow (entity_render_t *ent)
 	}
 	GL_Color(0, 0, 0, 0.5);
 	R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
+}
+
+void R_Model_Alias_DrawDepth(entity_render_t *ent)
+{
+	R_Mesh_ResizeCheck(ent->model->numverts);
+	R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
+	R_Mesh_Draw(ent->model->numverts, ent->model->numtris, ent->model->mdlmd2data_indices);
+}
+
+void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int visiblevolume)
+{
+	float projectdistance;
+	projectdistance = lightradius + ent->model->radius - sqrt(DotProduct(relativelightorigin, relativelightorigin));
+	if (projectdistance > 0.1)
+	{
+		R_Mesh_ResizeCheck(ent->model->numverts * 2);
+		R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
+		R_Shadow_Volume(ent->model->numverts, ent->model->numtris, varray_vertex, ent->model->mdlmd2data_indices, ent->model->mdlmd2data_triangleneighbors, relativelightorigin, lightradius, projectdistance, visiblevolume);
+	}
+}
+
+void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, float lightdistbias, float lightsubtract, float *lightcolor)
+{
+	R_Mesh_ResizeCheck(ent->model->numverts);
+	R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
+	R_Shadow_VertexLight(ent->model->numverts, varray_vertex, aliasvertnorm, relativelightorigin, lightradius * lightradius, lightdistbias, lightsubtract, lightcolor);
+	GL_UseColorArray();
+	R_Mesh_Draw(ent->model->numverts, ent->model->numtris, ent->model->mdlmd2data_indices);
+}
+
+void R_Model_Alias_DrawOntoLight(entity_render_t *ent)
+{
+	// FIXME
 }
 
 int ZymoticLerpBones(int count, const zymbonematrix *bonebase, const frameblend_t *blend, const zymbone_t *bone)
@@ -914,7 +948,7 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 	}
 }
 
-void R_DrawZymoticModel (entity_render_t *ent)
+void R_Model_Zymotic_Draw(entity_render_t *ent)
 {
 	int i;
 	zymtype1header_t *m;
@@ -936,15 +970,17 @@ void R_DrawZymoticModel (entity_render_t *ent)
 	}
 }
 
-void R_DrawQ1Q2AliasModel(entity_render_t *ent)
+void R_Model_Zymotic_DrawFakeShadow(entity_render_t *ent)
 {
-	if (ent->alpha < (1.0f / 64.0f))
-		return; // basically completely transparent
+	// FIXME
+}
 
-	c_models++;
+void R_Model_Zymotic_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, float lightradius2, float lightdistbias, float lightsubtract, float *lightcolor)
+{
+	// FIXME
+}
 
-	if (ent->effects & EF_ADDITIVE || ent->alpha != 1.0 || R_FetchSkinFrame(ent)->fog != NULL)
-		R_MeshQueue_AddTransparent(ent->origin, R_DrawQ1Q2AliasModelCallback, ent, 0);
-	else
-		R_DrawQ1Q2AliasModelCallback(ent, 0);
+void R_Model_Zymotic_DrawOntoLight(entity_render_t *ent)
+{
+	// FIXME
 }

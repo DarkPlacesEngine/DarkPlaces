@@ -234,6 +234,7 @@ static void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette
 Mod_LoadSpriteModel
 =================
 */
+extern void R_Model_Sprite_Draw(entity_render_t *ent);
 void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 {
 	int version, i, rendermode;
@@ -244,10 +245,13 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 
 	datapointer = buffer;
 
-	loadmodel->Draw = R_DrawSpriteModel;
 	loadmodel->DrawSky = NULL;
+	loadmodel->Draw = R_Model_Sprite_Draw;
 	loadmodel->DrawFakeShadow = NULL;
+	loadmodel->DrawDepth = NULL;
 	loadmodel->DrawShadowVolume = NULL;
+	loadmodel->DrawLight = NULL;
+	loadmodel->DrawOntoLight = NULL;
 
 	version = LittleLong(((dsprite_t *)buffer)->version);
 	if (version == SPRITE_VERSION || SPRITE32_VERSION)

@@ -212,14 +212,25 @@ typedef struct model_s
 	int				sprnum_type;
 	mspriteframe_t	*sprdata_frames;
 
-	// draw the model
-	void(*Draw)(struct entity_render_s *ent);
+
+	// functions used in both rendering modes
 	// draw the model's sky polygons (only used by brush models)
 	void(*DrawSky)(struct entity_render_s *ent);
+
+	// functions used only in normal rendering mode
+	// draw the model
+	void(*Draw)(struct entity_render_s *ent);
 	// draw a fake shadow for the model
 	void(*DrawFakeShadow)(struct entity_render_s *ent);
+
+	// functions used only in shadow volume rendering mode
+	void(*DrawDepth)(struct entity_render_s *ent);
 	// draw a shadow volume for the model based on light source
 	void(*DrawShadowVolume)(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, int visiblevolume);
+	// draw the lighting on a model (through stencil)
+	void(*DrawLight)(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, float lightdistbias, float lightsubtract, float *lightcolor);
+	// draw the model with lighting already in framebuffer
+	void(*DrawOntoLight)(struct entity_render_s *ent);
 
 	// memory pool for allocations
 	mempool_t		*mempool;
