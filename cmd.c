@@ -36,6 +36,10 @@ static qboolean cmd_wait;
 
 static mempool_t *cmd_mempool;
 
+#define CMD_TOKENIZELENGTH 4096
+static char cmd_tokenizebuffer[CMD_TOKENIZELENGTH];
+static int cmd_tokenizebufferpos = 0;
+
 //=============================================================================
 
 /*
@@ -144,6 +148,9 @@ void Cbuf_Execute (void)
 	char *text;
 	char line[1024];
 	int quotes;
+
+	// LordHavoc: making sure the tokenizebuffer doesn't get filled up by repeated crashes
+	cmd_tokenizebufferpos = 0;
 
 	while (cmd_text.cursize)
 	{
@@ -512,9 +519,6 @@ const char *Cmd_Args (void)
 }
 
 
-#define CMD_TOKENIZELENGTH 4096
-char cmd_tokenizebuffer[CMD_TOKENIZELENGTH];
-
 /*
 ============
 Cmd_TokenizeString
@@ -525,22 +529,19 @@ Parses the given string into command line tokens.
 static void Cmd_TokenizeString (const char *text)
 {
 	int l;
-	int pos;
-	pos = 0;
 
 	cmd_argc = 0;
 	cmd_args = NULL;
 
 	while (1)
 	{
-// skip whitespace up to a /n
+		// skip whitespace up to a /n
 		while (*text && *text <= ' ' && *text != '\n')
-		{
 			text++;
-		}
 
 		if (*text == '\n')
-		{	// a newline seperates commands in the buffer
+		{
+			// a newline seperates commands in the buffer
 			text++;
 			break;
 		}
@@ -557,11 +558,11 @@ static void Cmd_TokenizeString (const char *text)
 		if (cmd_argc < MAX_ARGS)
 		{
 			l = strlen(com_token) + 1;
-			if (pos + l > CMD_TOKENIZELENGTH)
+			if (cmd_tokenizebufferpos + l > CMD_TOKENIZELENGTH)
 				Sys_Error("Cmd_TokenizeString: ran out of %i character buffer space for command arguements\n", CMD_TOKENIZELENGTH);
-			strcpy (cmd_tokenizebuffer + pos, com_token);
-			cmd_argv[cmd_argc] = cmd_tokenizebuffer + pos;
-			pos += l;
+			strcpy (cmd_tokenizebuffer + cmd_tokenizebufferpos, com_token);
+			cmd_argv[cmd_argc] = cmd_tokenizebuffer + cmd_tokenizebufferpos;
+			cmd_tokenizebufferpos += l;
 			cmd_argc++;
 		}
 	}
@@ -793,15 +794,20 @@ FIXME: lookupnoadd the token to speed search?
 */
 void Cmd_ExecuteString (const char *text, cmd_source_t src)
 {
+	int oldpos;
 	cmd_function_t *cmd;
 	cmdalias_t *a;
 
+	oldpos = cmd_tokenizebufferpos;
 	cmd_source = src;
 	Cmd_TokenizeString (text);
 
 // execute the command line
 	if (!Cmd_Argc())
+	{
+		cmd_tokenizebufferpos = oldpos;
 		return;		// no tokens
+	}
 
 // check functions
 	for (cmd=cmd_functions ; cmd ; cmd=cmd->next)
@@ -809,6 +815,7 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 		if (!strcasecmp (cmd_argv[0],cmd->name))
 		{
 			cmd->function ();
+			cmd_tokenizebufferpos = oldpos;
 			return;
 		}
 	}
@@ -819,6 +826,7 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 		if (!strcasecmp (cmd_argv[0], a->name))
 		{
 			Cbuf_InsertText (a->value);
+			cmd_tokenizebufferpos = oldpos;
 			return;
 		}
 	}
@@ -826,6 +834,8 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 // check cvars
 	if (!Cvar_Command ())
 		Con_Printf ("Unknown command \"%s\"\n", Cmd_Argv(0));
+
+	cmd_tokenizebufferpos = oldpos;
 }
 
 
