@@ -363,6 +363,7 @@ void GL_SetupTextureState(void)
 {
 	int i;
 	gltextureunit_t *unit;
+	CHECKGLERROR
 	gl_state.unit = -1;
 	gl_state.clientunit = -1;
 	for (i = 0;i < backendunits;i++)
@@ -374,11 +375,14 @@ void GL_SetupTextureState(void)
 		unit->t2d = 0;
 		unit->t3d = 0;
 		unit->tcubemap = 0;
+		unit->arrayenabled = false;
+		unit->arrayis3d = false;
 		unit->pointer_texcoord = NULL;
 		unit->rgbscale = 1;
 		unit->alphascale = 1;
 		unit->combinergb = GL_MODULATE;
 		unit->combinealpha = GL_MODULATE;
+		unit->matrix = r_identitymatrix;
 
 		qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), NULL);CHECKGLERROR
 		qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
@@ -418,6 +422,7 @@ void GL_SetupTextureState(void)
 			qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);CHECKGLERROR
 		}
 	}
+	CHECKGLERROR
 }
 
 void GL_Backend_ResetState(void)
@@ -708,7 +713,7 @@ void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 			{
 				if (gl_state.units[i].arrayenabled && !(gl_state.units[i].t1d || gl_state.units[i].t2d || gl_state.units[i].t3d || gl_state.units[i].tcubemap))
 					Con_Print("R_Mesh_Draw: array enabled but no texture bound\n");
-				GL_ActiveTexture(i);
+				GL_ClientActiveTexture(i);
 				if (!qglIsEnabled(GL_TEXTURE_COORD_ARRAY))
 					Con_Print("R_Mesh_Draw: texcoord array set but not enabled\n");
 				for (j = 0, size = numverts * ((gl_state.units[i].t3d || gl_state.units[i].tcubemap) ? (int)sizeof(float[3]) : (int)sizeof(float[2])), p = gl_state.units[i].pointer_texcoord;j < size;j += sizeof(int), p++)
@@ -854,24 +859,13 @@ void R_Mesh_Matrix(const matrix4x4_t *matrix)
 	}
 }
 
-void R_Mesh_TextureMatrix(int unitnumber, const matrix4x4_t *matrix)
-{
-	if (memcmp(&gl_state.units[unitnumber].matrix, matrix, sizeof(matrix4x4_t)))
-	{
-		matrix4x4_t tempmatrix;
-		gl_state.units[unitnumber].matrix = *matrix;
-		Matrix4x4_Transpose(&tempmatrix, &gl_state.units[unitnumber].matrix);
-		qglMatrixMode(GL_TEXTURE);
-		GL_ActiveTexture(unitnumber);
-		qglLoadMatrixf(&tempmatrix.m[0][0]);
-		qglMatrixMode(GL_MODELVIEW);
-	}
-}
-
 void R_Mesh_State(const rmeshstate_t *m)
 {
 	int i, combinergb, combinealpha, scale, arrayis3d;
 	gltextureunit_t *unit;
+	const matrix4x4_t *texmatrix;
+	matrix4x4_t tempmatrix;
+	const float *texcoords;
 
 	BACKENDACTIVECHECK
 
@@ -1016,10 +1010,13 @@ void R_Mesh_State(const rmeshstate_t *m)
 			qglTexEnvi(GL_TEXTURE_ENV, GL_ALPHA_SCALE, (unit->alphascale = scale));CHECKGLERROR
 		}
 		arrayis3d = unit->t3d || unit->tcubemap;
-		if (unit->pointer_texcoord != m->pointer_texcoord[i] || unit->arrayis3d != arrayis3d)
+		texcoords = m->pointer_texcoord[i];
+		if (texcoords && !unit->t1d && !unit->t2d && !unit->t3d && !unit->tcubemap)
+			texcoords = NULL;
+		if (unit->pointer_texcoord != texcoords || unit->arrayis3d != arrayis3d)
 		{
 			GL_ClientActiveTexture(i);
-			if (m->pointer_texcoord[i])
+			if (texcoords)
 			{
 				if (!unit->arrayenabled)
 				{
@@ -1035,13 +1032,27 @@ void R_Mesh_State(const rmeshstate_t *m)
 					qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 				}
 			}
-			unit->pointer_texcoord = m->pointer_texcoord[i];
+			unit->pointer_texcoord = texcoords;
 			unit->arrayis3d = arrayis3d;
 			if (unit->arrayis3d)
 				qglTexCoordPointer(3, GL_FLOAT, sizeof(float[3]), unit->pointer_texcoord);
 			else
 				qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), unit->pointer_texcoord);
 			CHECKGLERROR
+		}
+		// if texmatrix is not set (3,3 should always be 1 in a texture matrix) just compare to the identity matrix
+		if (m->texmatrix[i].m[3][3])
+			texmatrix = &m->texmatrix[i];
+		else
+			texmatrix = &r_identitymatrix;
+		if (memcmp(&unit->matrix, texmatrix, sizeof(matrix4x4_t)))
+		{
+			unit->matrix = *texmatrix;
+			Matrix4x4_Transpose(&tempmatrix, &unit->matrix);
+			qglMatrixMode(GL_TEXTURE);
+			GL_ActiveTexture(i);
+			qglLoadMatrixf(&tempmatrix.m[0][0]);
+			qglMatrixMode(GL_MODELVIEW);
 		}
 	}
 }

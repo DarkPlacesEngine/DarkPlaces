@@ -46,6 +46,8 @@ typedef struct
 	int texalphascale[MAX_TEXTUREUNITS]; // used only if COMBINE is present
 	int texcombinergb[MAX_TEXTUREUNITS]; // works with or without combine for some operations
 	int texcombinealpha[MAX_TEXTUREUNITS]; // does nothing without combine
+	// matrices
+	matrix4x4_t texmatrix[MAX_TEXTUREUNITS];
 	// pointers
 	const float *pointer_texcoord[MAX_TEXTUREUNITS];
 
@@ -67,9 +69,6 @@ void R_Mesh_Finish(void);
 
 // sets up the requested transform matrix
 void R_Mesh_Matrix(const matrix4x4_t *matrix);
-
-// sets up the requested transform matrix
-void R_Mesh_TextureMatrix(int unitnumber, const matrix4x4_t *matrix);
 
 // set up the requested state
 void R_Mesh_State(const rmeshstate_t *m);

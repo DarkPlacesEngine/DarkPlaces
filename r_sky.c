@@ -311,7 +311,7 @@ static void R_SkySphere(void)
 	float speedscale;
 	static qboolean skysphereinitialized = false;
 	rmeshstate_t m;
-	matrix4x4_t scroll1matrix, scroll2matrix, identitymatrix;
+	matrix4x4_t scroll1matrix, scroll2matrix;
 	if (!skysphereinitialized)
 	{
 		skysphereinitialized = true;
@@ -326,7 +326,6 @@ static void R_SkySphere(void)
 	// scroll the lower cloud layer twice as fast (just like quake did)
 	Matrix4x4_CreateTranslate(&scroll1matrix, speedscale, speedscale, 0);
 	Matrix4x4_CreateTranslate(&scroll2matrix, speedscale * 2, speedscale * 2, 0);
-	Matrix4x4_CreateIdentity(&identitymatrix);
 
 	GL_Color(1, 1, 1, 1);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
@@ -336,19 +335,18 @@ static void R_SkySphere(void)
 	m.pointer_vertex = skysphere_vertex3f;
 	m.tex[0] = R_GetTexture(solidskytexture);
 	m.pointer_texcoord[0] = skysphere_texcoord2f;
-	R_Mesh_TextureMatrix(0, &scroll1matrix);
+	m.texmatrix[0] = scroll1matrix;
 	if (r_textureunits.integer >= 2)
 	{
 		// one pass using GL_DECAL or GL_INTERPOLATE_ARB for alpha layer
 		m.tex[1] = R_GetTexture(alphaskytexture);
 		m.texcombinergb[1] = gl_combine.integer ? GL_INTERPOLATE_ARB : GL_DECAL;
 		m.pointer_texcoord[1] = skysphere_texcoord2f;
+		m.texmatrix[1] = scroll2matrix;
 		R_Mesh_State(&m);
-		R_Mesh_TextureMatrix(1, &scroll2matrix);
 		GL_LockArrays(0, skysphere_numverts);
 		R_Mesh_Draw(skysphere_numverts, skysphere_numtriangles, skysphere_element3i);
 		GL_LockArrays(0, 0);
-		R_Mesh_TextureMatrix(1, &identitymatrix);
 	}
 	else
 	{
@@ -360,13 +358,12 @@ static void R_SkySphere(void)
 
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		m.tex[0] = R_GetTexture(alphaskytexture);
+		m.texmatrix[0] = scroll2matrix;
 		R_Mesh_State(&m);
-		R_Mesh_TextureMatrix(0, &scroll2matrix);
 		GL_LockArrays(0, skysphere_numverts);
 		R_Mesh_Draw(skysphere_numverts, skysphere_numtriangles, skysphere_element3i);
 		GL_LockArrays(0, 0);
 	}
-	R_Mesh_TextureMatrix(0, &identitymatrix);
 }
 
 void R_Sky(void)
