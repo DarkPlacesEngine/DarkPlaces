@@ -365,28 +365,25 @@ void VID_UpdateWindowStatus (void)
 
 /*
 =================
-GL_BeginRendering
-
+VID_GetWindowSize
 =================
 */
-void GL_BeginRendering (int *x, int *y, int *width, int *height)
+void VID_GetWindowSize (int *x, int *y, int *width, int *height)
 {
 	*x = *y = 0;
 	*width = WindowRect.right - WindowRect.left;
 	*height = WindowRect.bottom - WindowRect.top;
-
-//	if (!wglMakeCurrent( maindc, baseRC ))
-//		Sys_Error ("wglMakeCurrent failed");
-
-//	glViewport (*x, *y, *width, *height);
 }
 
 
-void GL_EndRendering (void)
+void VID_Finish (void)
 {
 	int usemouse;
 	if (r_render.integer && !scr_skipupdate)
+	{
+		glFinish();
 		SwapBuffers(maindc);
+	}
 
 // handle the mouse state when windowed if that's changed
 	usemouse = false;

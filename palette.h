@@ -1,7 +1,9 @@
 
-extern cvar_t vid_gamma;
-extern cvar_t vid_brightness;
-extern cvar_t vid_contrast;
+extern cvar_t v_gamma;
+extern cvar_t v_contrast;
+extern cvar_t v_brightness;
+extern cvar_t v_overbrightbits;
+extern cvar_t v_hwgamma;
 
 extern unsigned int d_8to24table[256];
 //extern byte d_15to8table[32768];

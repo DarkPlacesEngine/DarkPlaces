@@ -301,85 +301,9 @@ void GL_Draw_Init (void)
 	R_RegisterModule("GL_Draw", gl_draw_start, gl_draw_shutdown, gl_draw_newmap);
 }
 
-void GL_BrightenScreen(void)
-{
-	float f;
-
-	if (r_brightness.value < 0.1f)
-		Cvar_SetValue("r_brightness", 0.1f);
-	if (r_brightness.value > 5.0f)
-		Cvar_SetValue("r_brightness", 5.0f);
-
-	if (r_contrast.value < 0.2f)
-		Cvar_SetValue("r_contrast", 0.2f);
-	if (r_contrast.value > 1.0f)
-		Cvar_SetValue("r_contrast", 1.0f);
-
-	if (!(lighthalf && !hardwaregammasupported) && r_brightness.value < 1.01f && r_contrast.value > 0.99f)
-		return;
-
-	if (!r_render.integer)
-		return;
-
-	glDisable(GL_TEXTURE_2D);
-	CHECKGLERROR
-	glEnable(GL_BLEND);
-	CHECKGLERROR
-	f = r_brightness.value;
-	// only apply lighthalf using software color correction if hardware is not available (speed reasons)
-	if (lighthalf && !hardwaregammasupported)
-		f *= 2;
-	if (f >= 1.01f)
-	{
-		glBlendFunc (GL_DST_COLOR, GL_ONE);
-		CHECKGLERROR
-		glBegin (GL_TRIANGLES);
-		while (f >= 1.01f)
-		{
-			if (f >= 2)
-				glColor3f (1, 1, 1);
-			else
-				glColor3f (f-1, f-1, f-1);
-			glVertex2f (-5000, -5000);
-			glVertex2f (10000, -5000);
-			glVertex2f (-5000, 10000);
-			f *= 0.5;
-		}
-		glEnd ();
-		CHECKGLERROR
-	}
-	if (r_contrast.value <= 0.99f)
-	{
-		glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		CHECKGLERROR
-		if (lighthalf && hardwaregammasupported)
-			glColor4f (0.5, 0.5, 0.5, 1 - r_contrast.value);
-		else
-			glColor4f (1, 1, 1, 1 - r_contrast.value);
-		CHECKGLERROR
-		glBegin (GL_TRIANGLES);
-		glVertex2f (-5000, -5000);
-		glVertex2f (10000, -5000);
-		glVertex2f (-5000, 10000);
-		glEnd ();
-		CHECKGLERROR
-	}
-	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	CHECKGLERROR
-
-	glEnable (GL_CULL_FACE);
-	CHECKGLERROR
-	glEnable (GL_DEPTH_TEST);
-	CHECKGLERROR
-	glDisable(GL_BLEND);
-	CHECKGLERROR
-	glEnable(GL_TEXTURE_2D);
-	CHECKGLERROR
-}
-
 void R_DrawQueue(void)
 {
-	int pos, num, chartexnum;
+	int pos, num, chartexnum, overbright;
 	float x, y, w, h, s, t, u, v;
 	cachepic_t *pic;
 	drawqueue_t *dq;
@@ -401,7 +325,6 @@ void R_DrawQueue(void)
 
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
-	glDisable(GL_ALPHA_TEST);
 	glEnable(GL_BLEND);
 	glEnable(GL_TEXTURE_2D);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
@@ -434,6 +357,7 @@ void R_DrawQueue(void)
 	}
 	*/
 
+	overbright = v_overbrightbits.integer;
 	batch = false;
 	for (pos = 0;pos < r_refdef.drawqueuesize;pos += ((drawqueue_t *)(r_refdef.drawqueue + pos))->size)
 	{
@@ -467,10 +391,7 @@ void R_DrawQueue(void)
 		if (color != dq->color)
 		{
 			color = dq->color;
-			if (lighthalf)
-				glColor4ub((byte)((color >> 25) & 0x7F), (byte)((color >> 17) & 0x7F), (byte)((color >> 9) & 0x7F), (byte)(color & 0xFF));
-			else
-				glColor4ub((byte)((color >> 24) & 0xFF), (byte)((color >> 16) & 0xFF), (byte)((color >> 8) & 0xFF), (byte)(color & 0xFF));
+			glColor4ub((byte)((color >> 24) & 0xFF) >> overbright, (byte)((color >> 16) & 0xFF) >> overbright, (byte)((color >> 8) & 0xFF) >> overbright, (byte)(color & 0xFF));
 		}
 		x = dq->x;
 		y = dq->y;
@@ -571,11 +492,68 @@ void R_DrawQueue(void)
 	if (batch)
 		glEnd();
 	CHECKGLERROR
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	if (!v_hwgamma.integer)
+	{
+		glDisable(GL_TEXTURE_2D);
+		CHECKGLERROR
+		t = v_contrast.value * (float) (1 << v_overbrightbits.integer);
+		if (t >= 1.01f)
+		{
+			glBlendFunc (GL_DST_COLOR, GL_ONE);
+			CHECKGLERROR
+			glBegin (GL_TRIANGLES);
+			while (t >= 1.01f)
+			{
+				if (t >= 2)
+					glColor3f (1, 1, 1);
+				else
+					glColor3f (t-1, t-1, t-1);
+				glVertex2f (-5000, -5000);
+				glVertex2f (10000, -5000);
+				glVertex2f (-5000, 10000);
+				t *= 0.5;
+			}
+			glEnd ();
+			CHECKGLERROR
+		}
+		else if (t <= 0.99f)
+		{
+			glBlendFunc(GL_ZERO, GL_SRC_COLOR);
+			CHECKGLERROR
+			glBegin(GL_TRIANGLES);
+			glColor3f(t, t, t);
+			glVertex2f(-5000, -5000);
+			glVertex2f(10000, -5000);
+			glVertex2f(-5000, 10000);
+			glEnd();
+			CHECKGLERROR
+		}
+		if (v_brightness.value >= 0.01f)
+		{
+			glBlendFunc (GL_ONE, GL_ONE);
+			CHECKGLERROR
+			glColor3f (v_brightness.value, v_brightness.value, v_brightness.value);
+			CHECKGLERROR
+			glBegin (GL_TRIANGLES);
+			glVertex2f (-5000, -5000);
+			glVertex2f (10000, -5000);
+			glVertex2f (-5000, 10000);
+			glEnd ();
+			CHECKGLERROR
+		}
+		glEnable(GL_TEXTURE_2D);
+		CHECKGLERROR
+	}
+
+	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	CHECKGLERROR
-
-	GL_BrightenScreen();
-
+	glEnable (GL_CULL_FACE);
+	CHECKGLERROR
+	glEnable (GL_DEPTH_TEST);
+	CHECKGLERROR
+	glDisable(GL_BLEND);
+	CHECKGLERROR
 	glColor3f(1,1,1);
 	CHECKGLERROR
 }

@@ -478,27 +478,24 @@ void InitSig(void)
 
 /*
 =================
-GL_BeginRendering
-
+VID_GetWindowSize
 =================
 */
-void GL_BeginRendering (int *x, int *y, int *width, int *height)
+void VID_GetWindowSize (int *x, int *y, int *width, int *height)
 {
 	*x = *y = 0;
 	*width = scr_width;
 	*height = scr_height;
-
-//	glViewport (*x, *y, *width, *height);
 }
 
-
-void GL_EndRendering (void)
+void VID_Finish (void)
 {
 	int usemouse;
-	if (!r_render.integer)
-		return;
-	glFlush();
-	glXSwapBuffers(vidx11_display, win);
+	if (r_render.integer)
+	{
+		glFinish();
+		glXSwapBuffers(vidx11_display, win);
+	}
 
 // handle the mouse state when windowed if that's changed
 	usemouse = false;

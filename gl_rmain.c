@@ -68,7 +68,6 @@ cvar_t	r_dynamic = {CVAR_SAVE, "r_dynamic","1"};
 cvar_t	r_waterripple = {CVAR_SAVE, "r_waterripple","0"};
 cvar_t	r_fullbrights = {CVAR_SAVE, "r_fullbrights", "1"};
 
-cvar_t	gl_lightmode = {CVAR_SAVE, "gl_lightmode", "1"}; // LordHavoc: overbright lighting
 //cvar_t	r_dynamicbothsides = {CVAR_SAVE, "r_dynamicbothsides", "1"}; // LordHavoc: can disable dynamic lighting of backfaces, but quake maps are weird so it doesn't always work right...
 
 cvar_t	gl_fogenable = {0, "gl_fogenable", "0"};
@@ -160,8 +159,6 @@ loc0:
 	node = node->children[1];
 	goto loc0;
 }
-
-qboolean lighthalf;
 
 vec3_t fogcolor;
 vec_t fogdensity;
@@ -255,7 +252,6 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable (&r_drawentities);
 	Cvar_RegisterVariable (&r_drawviewmodel);
 	Cvar_RegisterVariable (&r_speeds);
-	Cvar_RegisterVariable (&gl_lightmode);
 //	Cvar_RegisterVariable (&r_dynamicwater);
 //	Cvar_RegisterVariable (&r_dynamicbothsides);
 	Cvar_RegisterVariable (&r_fullbrights);
@@ -297,7 +293,6 @@ extern void GL_Main_Init(void);
 extern void GL_Models_Init(void);
 extern void R_Sky_Init(void);
 extern void GL_Surf_Init(void);
-extern void GL_Screen_Init(void);
 extern void R_Crosshairs_Init(void);
 extern void R_Light_Init(void);
 extern void R_Particles_Init(void);
@@ -318,7 +313,6 @@ void Render_Init(void)
 	GL_Models_Init();
 	R_Sky_Init();
 	GL_Surf_Init();
-	GL_Screen_Init();
 	R_Crosshairs_Init();
 	R_Light_Init();
 	R_Particles_Init();
@@ -544,87 +538,45 @@ static void R_SetupFrame (void)
 }
 
 
-static void MYgluPerspective(GLdouble fovx, GLdouble fovy, GLdouble aspect, GLdouble zNear, GLdouble zFar )
-{
-	GLdouble xmax, ymax;
-
-	xmax = zNear * tan( fovx * M_PI / 360.0 ) * aspect;
-	ymax = zNear * tan( fovy * M_PI / 360.0 );
-
-	if (r_viewleaf->contents != CONTENTS_EMPTY && r_viewleaf->contents != CONTENTS_SOLID)
-	{
-		xmax *= (sin(cl.time * 4.7) * 0.03 + 0.97);
-		ymax *= (sin(cl.time * 3.0) * 0.03 + 0.97);
-	}
-
-	glFrustum(-xmax, xmax, -ymax, ymax, zNear, zFar );
-}
-
-
-/*
-=============
-R_SetupGL
-=============
-*/
-static void R_SetupGL (void)
-{
-	if (!r_render.integer)
-		return;
-
-//	glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // LordHavoc: moved to SCR_UpdateScreen
-	gldepthmin = 0;
-	gldepthmax = 1;
-	glDepthFunc (GL_LEQUAL);
-
-	glDepthRange (gldepthmin, gldepthmax);
-
-	// update farclip based on previous frame
-	r_farclip = r_newfarclip;
-
-	// set up viewpoint
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity ();
-
-	// y is weird beause OpenGL is bottom to top, we use top to bottom
-	glViewport(r_refdef.x, vid.realheight - (r_refdef.y + r_refdef.height), r_refdef.width, r_refdef.height);
-//	yfov = 2*atan((float)r_refdef.height/r_refdef.width)*180/M_PI;
-	MYgluPerspective (r_refdef.fov_x, r_refdef.fov_y, r_refdef.width/r_refdef.height, 4, r_farclip);
-
-	glCullFace(GL_FRONT);
-
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity ();
-
-	glRotatef (-90,  1, 0, 0);	    // put Z going up
-	glRotatef (90,  0, 0, 1);	    // put Z going up
-	glRotatef (-r_refdef.viewangles[2],  1, 0, 0);
-	glRotatef (-r_refdef.viewangles[0],  0, 1, 0);
-	glRotatef (-r_refdef.viewangles[1],  0, 0, 1);
-	glTranslatef (-r_refdef.vieworg[0],  -r_refdef.vieworg[1],  -r_refdef.vieworg[2]);
-
-//	glGetFloatv (GL_MODELVIEW_MATRIX, r_world_matrix);
-
-	//
-	// set drawing parms
-	//
-//	if (gl_cull.integer)
-		glEnable(GL_CULL_FACE);
-//	else
-//		glDisable(GL_CULL_FACE);
-
-	glEnable(GL_BLEND); // was Disable
-	glEnable(GL_DEPTH_TEST);
-	glDepthMask(1);
-}
+static int blendviewpolyindex[3] = {0, 1, 2};
 
 static void R_BlendView(void)
 {
+	rmeshinfo_t m;
+	float tvxyz[3][4];
+
 	if (!r_render.integer)
 		return;
 
 	if (r_refdef.viewblend[3] < 0.01f)
 		return;
 
+	memset(&m, 0, sizeof(m));
+	m.transparent = false;
+	m.blendfunc1 = GL_SRC_ALPHA;
+	m.blendfunc2 = GL_ONE;
+	m.depthdisable = true; // magic
+	m.numtriangles = 1;
+	m.numverts = 3;
+	m.index = blendviewpolyindex;
+	m.vertex = &tvxyz[0][0];
+	m.vertexstep = sizeof(float[4]);
+	m.cr = r_refdef.viewblend[0];
+	m.cg = r_refdef.viewblend[1];
+	m.cb = r_refdef.viewblend[2];
+	m.ca = r_refdef.viewblend[3];
+	tvxyz[0][0] = r_origin[0] + vpn[0] * 8 - vright[0] * 16 - vup[0] * 16;
+	tvxyz[0][1] = r_origin[1] + vpn[1] * 8 - vright[1] * 16 - vup[1] * 16;
+	tvxyz[0][2] = r_origin[2] + vpn[2] * 8 - vright[2] * 16 - vup[2] * 16;
+	tvxyz[1][0] = tvxyz[0][0] + vup[0] * 48;
+	tvxyz[1][1] = tvxyz[0][1] + vup[1] * 48;
+	tvxyz[1][2] = tvxyz[0][2] + vup[2] * 48;
+	tvxyz[2][0] = tvxyz[0][0] + vright[0] * 48;
+	tvxyz[2][1] = tvxyz[0][1] + vright[1] * 48;
+	tvxyz[2][2] = tvxyz[0][2] + vright[2] * 48;
+	R_Mesh_Draw(&m);
+
+	/*
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity ();
 	glOrtho  (0, 1, 1, 0, -99999, 99999);
@@ -636,10 +588,7 @@ static void R_BlendView(void)
 	glEnable(GL_BLEND);
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glBegin (GL_TRIANGLES);
-	if (lighthalf)
-		glColor4f (r_refdef.viewblend[0] * 0.5f, r_refdef.viewblend[1] * 0.5f, r_refdef.viewblend[2] * 0.5f, r_refdef.viewblend[3]);
-	else
-		glColor4fv (r_refdef.viewblend);
+	glColor4f (r_refdef.viewblend[0] * overbrightscale, r_refdef.viewblend[1] * overbrightscale, r_refdef.viewblend[2] * overbrightscale, r_refdef.viewblend[3]);
 	glVertex2f (-5, -5);
 	glVertex2f (10, -5);
 	glVertex2f (-5, 10);
@@ -649,6 +598,7 @@ static void R_BlendView(void)
 	glEnable (GL_DEPTH_TEST);
 	glDisable(GL_BLEND);
 	glEnable(GL_TEXTURE_2D);
+	*/
 }
 
 /*
@@ -669,13 +619,13 @@ void R_RenderView (void)
 
 	R_SetupFrame();
 	R_SetFrustum();
-	R_SetupGL();
 	R_SetupFog();
 	R_SkyStartFrame();
-	R_Mesh_Clear();
 	if (r_ser.integer)
 		R_Clip_StartFrame();
 	R_BuildLightList();
+
+	R_Mesh_Clear();
 
 	R_TimeReport("setup");
 
@@ -746,12 +696,12 @@ void R_RenderView (void)
 	R_DrawCoronas();
 	R_TimeReport("coronas");
 
+	R_BlendView();
+	R_TimeReport("blendview");
+
 	// render any queued meshs
 	R_Mesh_Render();
 	R_TimeReport("meshrender");
-
-	R_BlendView();
-	R_TimeReport("blendview");
 
 	//Mem_CheckSentinelsGlobal();
 	//R_TimeReport("memtest");

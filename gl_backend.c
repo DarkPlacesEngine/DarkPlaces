@@ -1,6 +1,16 @@
 
 #include "quakedef.h"
 
+cvar_t		r_render = {0, "r_render", "1"};
+cvar_t		gl_dither = {CVAR_SAVE, "gl_dither", "1"}; // whether or not to use dithering
+
+int			lightscalebit;
+float		lightscale;
+float		overbrightscale;
+
+void SCR_ScreenShot_f (void);
+static void R_Envmap_f (void);
+
 static int max_meshs;
 static int max_batch;
 static int max_verts; // always max_meshs * 3
@@ -245,6 +255,16 @@ int polyindexarray[768];
 void gl_backend_init(void)
 {
 	int i;
+
+	Cvar_RegisterVariable (&r_render);
+	Cvar_RegisterVariable (&gl_dither);
+#ifdef NORENDER
+	Cvar_SetValue("r_render", 0);
+#endif
+
+	Cmd_AddCommand ("screenshot",SCR_ScreenShot_f);
+	Cmd_AddCommand ("envmap", R_Envmap_f);
+
 	Cvar_RegisterVariable(&gl_mesh_maxtriangles);
 	Cvar_RegisterVariable(&gl_mesh_batchtriangles);
 	Cvar_RegisterVariable(&gl_mesh_merge);
@@ -261,6 +281,73 @@ void gl_backend_init(void)
 		polyindexarray[i*3+1] = i + 1;
 		polyindexarray[i*3+2] = i + 2;
 	}
+}
+
+static void MYgluPerspective(GLdouble fovx, GLdouble fovy, GLdouble aspect, GLdouble zNear, GLdouble zFar )
+{
+	GLdouble xmax, ymax;
+
+	xmax = zNear * tan( fovx * M_PI / 360.0 ) * aspect;
+	ymax = zNear * tan( fovy * M_PI / 360.0 );
+
+	glFrustum(-xmax, xmax, -ymax, ymax, zNear, zFar );
+}
+
+
+/*
+=============
+GL_SetupFrame
+=============
+*/
+static void GL_SetupFrame (void)
+{
+	if (!r_render.integer)
+		return;
+
+//	glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // LordHavoc: moved to SCR_UpdateScreen
+	gldepthmin = 0;
+	gldepthmax = 1;
+	glDepthFunc (GL_LEQUAL);
+
+	glDepthRange (gldepthmin, gldepthmax);
+
+	// update farclip based on previous frame
+	r_farclip = r_newfarclip;
+
+	// set up viewpoint
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity ();
+
+	// y is weird beause OpenGL is bottom to top, we use top to bottom
+	glViewport(r_refdef.x, vid.realheight - (r_refdef.y + r_refdef.height), r_refdef.width, r_refdef.height);
+//	yfov = 2*atan((float)r_refdef.height/r_refdef.width)*180/M_PI;
+	MYgluPerspective (r_refdef.fov_x, r_refdef.fov_y, r_refdef.width/r_refdef.height, 4, r_farclip);
+
+	glCullFace(GL_FRONT);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity ();
+
+	glRotatef (-90,  1, 0, 0);	    // put Z going up
+	glRotatef (90,  0, 0, 1);	    // put Z going up
+	glRotatef (-r_refdef.viewangles[2],  1, 0, 0);
+	glRotatef (-r_refdef.viewangles[0],  0, 1, 0);
+	glRotatef (-r_refdef.viewangles[1],  0, 0, 1);
+	glTranslatef (-r_refdef.vieworg[0],  -r_refdef.vieworg[1],  -r_refdef.vieworg[2]);
+
+//	glGetFloatv (GL_MODELVIEW_MATRIX, r_world_matrix);
+
+	//
+	// set drawing parms
+	//
+//	if (gl_cull.integer)
+		glEnable(GL_CULL_FACE);
+//	else
+//		glDisable(GL_CULL_FACE);
+
+	glEnable(GL_BLEND); // was Disable
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(1);
 }
 
 static float viewdist;
@@ -293,6 +380,8 @@ void R_Mesh_Clear(void)
 	c_meshtris = 0;
 	c_transmeshs = 0;
 	c_transtris = 0;
+
+	GL_SetupFrame();
 }
 
 #ifdef DEBUGGL
@@ -1157,8 +1246,7 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 			if (overbright)
 				scaler *= 0.25f;
 		}
-		if (lighthalf)
-			scaler *= 0.5f;
+		scaler *= overbrightscale;
 	}
 
 	if (m->transparent)
@@ -1391,8 +1479,7 @@ void R_Mesh_DrawDecal(const rmeshinfo_t *m)
 		if (overbright)
 			scaler *= 0.25f;
 	}
-	if (lighthalf)
-		scaler *= 0.5f;
+	scaler *= overbrightscale;
 
 	if (m->transparent)
 	{
@@ -1543,4 +1630,200 @@ void R_Mesh_DrawDecal(const rmeshinfo_t *m)
 
 	// buf_texcoord_t must be the same size as the decal texcoord array (or vice versa)
 	memcpy(&texcoord[0].t[0], m->texcoords[0], 4 * sizeof(buf_texcoord_t));
+}
+
+/*
+==============================================================================
+
+						SCREEN SHOTS
+
+==============================================================================
+*/
+
+float CalcFov (float fov_x, float width, float height);
+void R_ClearScreen(void);
+
+void SCR_ScreenShot(char *filename, int x, int y, int width, int height)
+{
+	int i;
+	byte *buffer;
+
+	buffer = Mem_Alloc(tempmempool, width*height*3);
+	glReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer);
+	CHECKGLERROR
+
+	// LordHavoc: compensate for v_overbrightbits when using hardware gamma
+	if (v_hwgamma.integer)
+		for (i = 0;i < width * height * 3;i++)
+			buffer[i] <<= v_overbrightbits.integer;
+
+	Image_WriteTGARGB_preflipped(filename, width, height, buffer);
+
+	Mem_Free(buffer);
+}
+
+/*
+==================
+SCR_ScreenShot_f
+==================
+*/
+void SCR_ScreenShot_f (void)
+{
+	int i;
+	char filename[16];
+	char checkname[MAX_OSPATH];
+//
+// find a file name to save it to
+//
+	strcpy(filename, "dp0000.tga");
+
+	for (i=0 ; i<=9999 ; i++)
+	{
+		filename[2] = (i/1000)%10 + '0';
+		filename[3] = (i/ 100)%10 + '0';
+		filename[4] = (i/  10)%10 + '0';
+		filename[5] = (i/   1)%10 + '0';
+		sprintf (checkname, "%s/%s", com_gamedir, filename);
+		if (Sys_FileTime(checkname) == -1)
+			break;	// file doesn't exist
+	}
+	if (i==10000)
+	{
+		Con_Printf ("SCR_ScreenShot_f: Couldn't create a TGA file\n");
+		return;
+ 	}
+
+	SCR_ScreenShot(filename, vid.realx, vid.realy, vid.realwidth, vid.realheight);
+	Con_Printf ("Wrote %s\n", filename);
+}
+
+/*
+===============
+R_Envmap_f
+
+Grab six views for environment mapping tests
+===============
+*/
+struct
+{
+	float angles[3];
+	char *name;
+}
+envmapinfo[6] =
+{
+	{{  0,   0, 0}, "ft"},
+	{{  0,  90, 0}, "rt"},
+	{{  0, 180, 0}, "bk"},
+	{{  0, 270, 0}, "lf"},
+	{{-90,  90, 0}, "up"},
+	{{ 90,  90, 0}, "dn"}
+};
+static void R_Envmap_f (void)
+{
+	int j, size;
+	char filename[256], basename[256];
+
+	if (Cmd_Argc() != 3)
+	{
+		Con_Printf ("envmap <basename> <size>: save out 6 cubic environment map images, usable with loadsky, note that size must one of 128, 256, 512, or 1024 and can't be bigger than your current resolution\n");
+		return;
+	}
+
+	if (!r_render.integer)
+		return;
+
+	strcpy(basename, Cmd_Argv(1));
+	size = atoi(Cmd_Argv(2));
+	if (size != 128 && size != 256 && size != 512 && size != 1024)
+	{
+		Con_Printf("envmap: size must be one of 128, 256, 512, or 1024\n");
+		return;
+	}
+	if (size > vid.realwidth || size > vid.realheight)
+	{
+		Con_Printf("envmap: your resolution is not big enough to render that size\n");
+		return;
+	}
+
+	envmap = true;
+
+	r_refdef.x = 0;
+	r_refdef.y = 0;
+	r_refdef.width = size;
+	r_refdef.height = size;
+
+	r_refdef.fov_x = 90;
+	r_refdef.fov_y = 90;
+
+	for (j = 0;j < 6;j++)
+	{
+		sprintf(filename, "env/%s%s.tga", basename, envmapinfo[j].name);
+		VectorCopy(envmapinfo[j].angles, r_refdef.viewangles);
+		R_ClearScreen();
+		R_RenderView ();
+		SCR_ScreenShot(filename, vid.realx, vid.realy, size, size);
+	}
+
+	envmap = false;
+}
+
+//=============================================================================
+
+void R_ClearScreen(void)
+{
+	if (r_render.integer)
+	{
+		glClearColor(0,0,0,0);
+		CHECKGLERROR
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // LordHavoc: clear the screen (around the view as well)
+		CHECKGLERROR
+		if (gl_dither.integer)
+			glEnable(GL_DITHER);
+		else
+			glDisable(GL_DITHER);
+		CHECKGLERROR
+	}
+}
+
+/*
+==================
+SCR_UpdateScreen
+
+This is called every frame, and can also be called explicitly to flush
+text to the screen.
+==================
+*/
+void SCR_UpdateScreen (void)
+{
+	//Mem_CheckSentinelsGlobal();
+	//R_TimeReport("memtest");
+
+	glFinish ();
+	CHECKGLERROR
+
+	VID_Finish ();
+
+	R_TimeReport("finish");
+
+	if (gl_combine.integer && !gl_combine_extension)
+		Cvar_SetValue("gl_combine", 0);
+
+	lightscalebit = v_overbrightbits.integer;
+	if (gl_combine.integer && r_multitexture.integer)
+		lightscalebit += 2;
+
+	lightscale = 1.0f / (float) (1 << lightscalebit);
+	overbrightscale = 1.0f / (float) (1 << v_overbrightbits.integer);
+
+	R_TimeReport("setup");
+
+	R_ClearScreen();
+
+	R_TimeReport("clear");
+
+	if (scr_conlines < vid.conheight)
+		R_RenderView();
+
+	// draw 2D stuff
+	R_DrawQueue();
 }

@@ -28,6 +28,8 @@ void SHOWLMP_decodeshow(void);
 void SHOWLMP_drawall(void);
 void SHOWLMP_clear(void);
 
+extern cvar_t scr_2dresolution;
+
 void CL_Screen_NewMap(void);
 void CL_Screen_Init(void);
 void CL_UpdateScreen(void);

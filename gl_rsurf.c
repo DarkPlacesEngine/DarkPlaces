@@ -923,13 +923,7 @@ static void RSurfShader_Wall_Pass_BaseMTex(msurface_t *s)
 	m.numtriangles = s->mesh.numtriangles;
 	m.numverts = s->mesh.numverts;
 	m.index = s->mesh.index;
-	m.cr = 1;
-	if (lighthalf)
-		m.cr *= 2;
-	if (gl_combine.integer)
-		m.cr *= 4;
-	m.cg = m.cr;
-	m.cb = m.cr;
+	m.cr = m.cg = m.cb = (float) (1 << lightscalebit);
 	m.ca = currentrenderentity->alpha;
 	m.tex[0] = R_GetTexture(s->currenttexture->texture);
 	m.tex[1] = R_GetTexture(s->lightmaptexture);
@@ -1003,18 +997,7 @@ static void RSurfShader_Wall_Pass_BaseTexture(msurface_t *s)
 	m.numtriangles = s->mesh.numtriangles;
 	m.numverts = s->mesh.numverts;
 	m.index = s->mesh.index;
-	if (lighthalf)
-	{
-		m.cr = 2;
-		m.cg = 2;
-		m.cb = 2;
-	}
-	else
-	{
-		m.cr = 1;
-		m.cg = 1;
-		m.cb = 1;
-	}
+	m.cr = m.cg = m.cb = (float) (1 << v_overbrightbits.integer);
 	m.ca = 1;
 	m.tex[0] = R_GetTexture(s->currenttexture->texture);
 	m.texcoords[0] = &s->mesh.vertex->st[0];
@@ -1049,11 +1032,7 @@ static void RSurfShader_Wall_Pass_BaseLightmap(msurface_t *s)
 	m.numtriangles = s->mesh.numtriangles;
 	m.numverts = s->mesh.numverts;
 	m.index = s->mesh.index;
-	m.cr = 1;
-	if (lighthalf)
-		m.cr *= 2.0f;
-	m.cg = m.cr;
-	m.cb = m.cr;
+	m.cr = m.cg = m.cb = (float) (1 << v_overbrightbits.integer);
 	m.ca = 1;
 	m.tex[0] = R_GetTexture(s->lightmaptexture);
 	m.texcoords[0] = &s->mesh.vertex->uv[0];

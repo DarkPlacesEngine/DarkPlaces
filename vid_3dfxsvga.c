@@ -139,29 +139,23 @@ void VID_SetupDithering(void)
 
 /*
 =================
-GL_BeginRendering
-
+VID_GetWindowSize
 =================
 */
-void GL_BeginRendering (int *x, int *y, int *width, int *height)
+void VID_GetWindowSize (int *x, int *y, int *width, int *height)
 {
 	*x = *y = 0;
 	*width = scr_width;
 	*height = scr_height;
-
-//    if (!wglMakeCurrent( maindc, baseRC ))
-//		Sys_Error ("wglMakeCurrent failed");
-
-//	glViewport (*x, *y, *width, *height);
 }
 
-
-void GL_EndRendering (void)
+void VID_Finish (void)
 {
-	if (!r_render.integer)
-		return;
-	glFlush();
-	fxMesaSwapBuffers();
+	if (r_render.integer)
+	{
+		glFinish();
+		fxMesaSwapBuffers();
+	}
 }
 
 static int resolutions[][3]={

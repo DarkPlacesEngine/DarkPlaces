@@ -41,9 +41,7 @@ extern qboolean	scr_disabled_for_loading;
 extern qboolean	scr_skipupdate;
 
 extern cvar_t scr_viewsize;
-extern cvar_t r_brightness;
-extern cvar_t r_contrast;
-extern cvar_t gl_lightmode;
 extern cvar_t scr_viewsize;
 extern cvar_t crosshair;
+extern cvar_t crosshair_size;
 extern cvar_t showfps;

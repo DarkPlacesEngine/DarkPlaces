@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 typedef struct
 {
-	// these are set with GL_BeginRendering and can change from frame to frame
+	// these are set with VID_GetWindowSize and can change from frame to frame
 	int		realx;
 	int		realy;
 	int		realwidth;
@@ -58,3 +58,7 @@ int VID_SetMode (int modenum);
 
 // sets hardware gamma correction, returns false if the device does not support gamma control
 int VID_SetGamma (float prescale, float gamma, float scale, float base);
+
+void VID_GetWindowSize (int *x, int *y, int *width, int *height);
+
+void VID_Finish (void);
