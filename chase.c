@@ -21,9 +21,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-cvar_t	chase_back = {CVAR_SAVE, "chase_back", "48"};
-cvar_t	chase_up = {CVAR_SAVE, "chase_up", "48"};
-cvar_t	chase_active = {CVAR_SAVE, "chase_active", "0"};
+cvar_t chase_back = {CVAR_SAVE, "chase_back", "48"};
+cvar_t chase_up = {CVAR_SAVE, "chase_up", "48"};
+cvar_t chase_active = {CVAR_SAVE, "chase_active", "0"};
 
 void Chase_Init (void)
 {
@@ -86,23 +86,26 @@ void TraceLine_ScanForBModels(void)
 
 float TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int contents, int hitbmodels)
 {
-	float maxfrac;
+	double maxfrac, startd[3], endd[3];
 	trace_t trace;
 
 // FIXME: broken, fix it
 //	if (impact == NULL && normal == NULL && contents == 0)
 //		return SV_TestLine (cl.worldmodel->hulls, 0, start, end);
 
+	VectorCopy(start, startd);
+	VectorCopy(end, endd);
+
 	Mod_CheckLoaded(cl.worldmodel);
 	memset (&trace, 0, sizeof(trace));
-	VectorCopy (end, trace.endpos);
+	VectorCopy (endd, trace.endpos);
 	trace.fraction = 1;
 	trace.startcontents = contents;
-	VectorCopy(start, RecursiveHullCheckInfo.start);
-	VectorSubtract(end, start, RecursiveHullCheckInfo.dist);
+	VectorCopy(startd, RecursiveHullCheckInfo.start);
+	VectorSubtract(endd, startd, RecursiveHullCheckInfo.dist);
 	RecursiveHullCheckInfo.hull = cl.worldmodel->hulls;
 	RecursiveHullCheckInfo.trace = &trace;
-	SV_RecursiveHullCheck (0, 0, 1, start, end);
+	SV_RecursiveHullCheck (0, 0, 1, startd, endd);
 	if (impact)
 		VectorCopy (trace.endpos, impact);
 	if (normal)
@@ -114,7 +117,7 @@ float TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int con
 	{
 		int n;
 		entity_render_t *ent;
-		vec3_t start2, end2, tracemins, tracemaxs;
+		double start2[3], end2[3], tracemins[3], tracemaxs[3];
 		tracemins[0] = min(start[0], end[0]);
 		tracemaxs[0] = max(start[0], end[0]);
 		tracemins[1] = min(start[1], end[1]);
