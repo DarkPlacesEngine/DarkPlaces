@@ -347,7 +347,7 @@ WinMain
 HINSTANCE	global_hInstance;
 int			global_nCmdShow;
 char		*argv[MAX_NUM_ARGVS];
-static char	*empty_string = "";
+char		program_name[MAX_OSPATH];
 
 int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
@@ -366,7 +366,9 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	GlobalMemoryStatus (&lpBuffer);
 
 	com_argc = 1;
-	argv[0] = empty_string;
+	program_name[sizeof(program_name)-1] = 0;
+	GetModuleFileNameA(NULL, &program_name, sizeof(program_name - 1));
+	argv[0] = program_name;
 
 	while (*lpCmdLine && (com_argc < MAX_NUM_ARGVS))
 	{
