@@ -56,9 +56,17 @@ cl_effect_t;
 typedef struct
 {
 	int		entity;
+	// draw this as lightning polygons, or a model?
+	int		lightning;
 	struct model_s	*model;
 	float	endtime;
 	vec3_t	start, end;
+	// if this beam is owned by an entity, this is the beam start relative to
+	// that entity's matrix for per frame start updates
+	vec3_t	relativestart;
+	vec3_t	relativeend;
+	// indicates whether relativestart is valid
+	int	relativestartvalid;
 }
 beam_t;
 

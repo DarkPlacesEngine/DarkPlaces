@@ -929,7 +929,7 @@ void CL_InitTEnts (void)
 	cl_sfx_r_exp3 = S_PrecacheSound ("weapons/r_exp3.wav", false);
 }
 
-void CL_ParseBeam (model_t *m)
+void CL_ParseBeam (model_t *m, int lightning)
 {
 	int i, ent;
 	vec3_t start, end;
@@ -939,12 +939,20 @@ void CL_ParseBeam (model_t *m)
 	MSG_ReadVector(start);
 	MSG_ReadVector(end);
 
+	if (ent >= MAX_EDICTS)
+	{
+		Con_Printf("CL_ParseBeam: invalid entity number %i\n", ent);
+		ent = 0;
+	}
+
 	// override any beam with the same entity
 	for (i = 0, b = cl_beams;i < cl_max_beams;i++, b++)
 	{
 		if (b->entity == ent)
 		{
 			//b->entity = ent;
+			b->lightning = lightning;
+			b->relativestartvalid = (ent && cl_entities[ent].state_current.active) ? 2 : 0;
 			b->model = m;
 			b->endtime = cl.time + 0.2;
 			VectorCopy (start, b->start);
@@ -959,6 +967,8 @@ void CL_ParseBeam (model_t *m)
 		if (!b->model || b->endtime < cl.time)
 		{
 			b->entity = ent;
+			b->lightning = lightning;
+			b->relativestartvalid = (ent && cl_entities[ent].state_current.active) ? 2 : 0;
 			b->model = m;
 			b->endtime = cl.time + 0.2;
 			VectorCopy (start, b->start);
@@ -1246,21 +1256,21 @@ void CL_ParseTempEntity (void)
 		// lightning bolts
 		if (!cl_model_bolt)
 			cl_model_bolt = Mod_ForName("progs/bolt.mdl", true, false, false);
-		CL_ParseBeam (cl_model_bolt);
+		CL_ParseBeam (cl_model_bolt, true);
 		break;
 
 	case TE_LIGHTNING2:
 		// lightning bolts
 		if (!cl_model_bolt2)
 			cl_model_bolt2 = Mod_ForName("progs/bolt2.mdl", true, false, false);
-		CL_ParseBeam (cl_model_bolt2);
+		CL_ParseBeam (cl_model_bolt2, true);
 		break;
 
 	case TE_LIGHTNING3:
 		// lightning bolts
 		if (!cl_model_bolt3)
 			cl_model_bolt3 = Mod_ForName("progs/bolt3.mdl", true, false, false);
-		CL_ParseBeam (cl_model_bolt3);
+		CL_ParseBeam (cl_model_bolt3, true);
 		break;
 
 // PGM 01/21/97
@@ -1268,13 +1278,13 @@ void CL_ParseTempEntity (void)
 		// grappling hook beam
 		if (!cl_model_beam)
 			cl_model_beam = Mod_ForName("progs/beam.mdl", true, false, false);
-		CL_ParseBeam (cl_model_beam);
+		CL_ParseBeam (cl_model_beam, false);
 		break;
 // PGM 01/21/97
 
 // LordHavoc: for compatibility with the Nehahra movie...
 	case TE_LIGHTNING4NEH:
-		CL_ParseBeam (Mod_ForName(MSG_ReadString(), true, false, false));
+		CL_ParseBeam (Mod_ForName(MSG_ReadString(), true, false, false), false);
 		break;
 
 	case TE_LAVASPLASH:
