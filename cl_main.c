@@ -85,7 +85,7 @@ cl_effect_t *cl_effects;
 beam_t *cl_beams;
 dlight_t *cl_dlights;
 lightstyle_t *cl_lightstyle;
-entity_render_t **cl_brushmodel_entities;
+int *cl_brushmodel_entities;
 
 int cl_num_entities;
 int cl_num_static_entities;
@@ -148,7 +148,7 @@ void CL_ClearState(void)
 	cl_beams = Mem_Alloc(cl_mempool, cl_max_beams * sizeof(beam_t));
 	cl_dlights = Mem_Alloc(cl_mempool, cl_max_dlights * sizeof(dlight_t));
 	cl_lightstyle = Mem_Alloc(cl_mempool, cl_max_lightstyle * sizeof(lightstyle_t));
-	cl_brushmodel_entities = Mem_Alloc(cl_mempool, cl_max_brushmodel_entities * sizeof(entity_render_t *));
+	cl_brushmodel_entities = Mem_Alloc(cl_mempool, cl_max_brushmodel_entities * sizeof(int));
 
 	// LordHavoc: have to set up the baseline info for alpha and other stuff
 	for (i = 0;i < cl_max_entities;i++)
@@ -650,7 +650,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			}
 			// transfer certain model flags to effects
 			e->render.effects |= e->render.model->flags2 & (EF_FULLBRIGHT | EF_ADDITIVE);
-			if (cl_prydoncursor.integer && (e->render.effects & EF_SELECTABLE) && cl.cmd.cursor_entitynumber == e - cl_entities)
+			if (cl_prydoncursor.integer && (e->render.effects & EF_SELECTABLE) && cl.cmd.cursor_entitynumber == e->state_current.number)
 				VectorScale(e->render.colormod, 2, e->render.colormod);
 		}
 
@@ -858,7 +858,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 		{
 			//dlightmatrix = e->render.matrix;
 			// hack to make glowing player light shine on their gun
-			//if ((e - cl_entities) == cl.viewentity/* && !chase_active.integer*/)
+			//if (e->state_current.number == cl.viewentity/* && !chase_active.integer*/)
 			//	dlightmatrix.m[2][3] += 30;
 			CL_AllocDlight(&e->render, &e->render.matrix, dlightradius, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		}
@@ -885,7 +885,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 		if (gamemode == GAME_TENEBRAE && e->render.model && e->render.model->type == mod_sprite)
 			e->render.effects |= EF_ADDITIVE;
 		// player model is only shown with chase_active on
-		if (e - cl_entities == cl.viewentity)
+		if (e->state_current.number == cl.viewentity)
 			e->render.flags |= RENDER_EXTERIORMODEL;
 		// transparent stuff can't be lit during the opaque stage
 		if (e->render.effects & (EF_ADDITIVE | EF_NODEPTHTEST) || e->render.alpha < 1)
@@ -899,15 +899,15 @@ void CL_LinkNetworkEntity(entity_t *e)
 		 && (!(e->render.flags & RENDER_EXTERIORMODEL) || (!cl.intermission && cl.protocol != PROTOCOL_NEHAHRAMOVIE && !cl_noplayershadow.integer)))
 			e->render.flags |= RENDER_SHADOW;
 		// as soon as player is known we can call V_CalcRefDef
-		if ((e - cl_entities) == cl.viewentity)
+		if (e->state_current.number == cl.viewentity)
 			V_CalcRefdef();
 		if (e->render.model && e->render.model->name[0] == '*' && e->render.model->TraceBox)
-			cl_brushmodel_entities[cl_num_brushmodel_entities++] = &e->render;
+			cl_brushmodel_entities[cl_num_brushmodel_entities++] = e->state_current.number;
 		// don't show entities with no modelindex (note: this still shows
 		// entities which have a modelindex that resolved to a NULL model)
 		if (e->render.model && !(e->render.effects & EF_NODRAW) && r_refdef.numentities < r_refdef.maxentities)
 			r_refdef.entities[r_refdef.numentities++] = &e->render;
-		//if (cl.viewentity && e - cl_entities == cl.viewentity)
+		//if (cl.viewentity && e->state_current.number == cl.viewentity)
 		//	Matrix4x4_Print(&e->render.matrix);
 	}
 }
@@ -915,7 +915,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 void CL_RelinkWorld(void)
 {
 	entity_t *ent = &cl_entities[0];
-	cl_brushmodel_entities[cl_num_brushmodel_entities++] = &ent->render;
+	cl_brushmodel_entities[cl_num_brushmodel_entities++] = 0;
 	// FIXME: this should be done at load
 	Matrix4x4_CreateIdentity(&ent->render.matrix);
 	Matrix4x4_CreateIdentity(&ent->render.inversematrix);

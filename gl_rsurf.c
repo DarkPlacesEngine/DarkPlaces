@@ -272,7 +272,7 @@ void R_Stain (const vec3_t origin, float radius, int cr1, int cg1, int cb1, int 
 	// look for embedded bmodels
 	for (n = 0;n < cl_num_brushmodel_entities;n++)
 	{
-		ent = cl_brushmodel_entities[n];
+		ent = &cl_entities[cl_brushmodel_entities[n]].render;
 		model = ent->model;
 		if (model && model->name[0] == '*')
 		{

@@ -644,7 +644,7 @@ extern entity_t *cl_entities;
 extern qbyte *cl_entities_active;
 extern entity_t *cl_static_entities;
 extern entity_t *cl_temp_entities;
-extern entity_render_t **cl_brushmodel_entities;
+extern int *cl_brushmodel_entities;
 extern cl_effect_t *cl_effects;
 extern beam_t *cl_beams;
 extern dlight_t *cl_dlights;
