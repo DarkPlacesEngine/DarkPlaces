@@ -93,8 +93,8 @@ typedef struct
 	int			flags;
 } mtexinfo_t;
 
-// LordHavoc: was 7, I added two more for raw lightmap coordinates
-#define	VERTEXSIZE	9
+// LordHavoc: was 7, I added one more for raw lightmap position
+#define	VERTEXSIZE	8
 
 typedef struct glpoly_s
 {
