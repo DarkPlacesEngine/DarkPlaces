@@ -916,17 +916,17 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 			memcpy(loadmodel->zymdata_bones[i].name, bone[i].name, sizeof(bone[i].name));
 			loadmodel->zymdata_bones[i].flags = BigLong(bone[i].flags);
 			loadmodel->zymdata_bones[i].parent = BigLong(bone[i].parent);
-			if (bone[i].parent >= i)
-				Host_Error("Mod_LoadZymoticModel: bone[i].parent >= i in %s\n", loadmodel->name);
+			if (loadmodel->zymdata_bones[i].parent >= i)
+				Host_Error("Mod_LoadZymoticModel: bone[%i].parent >= %i in %s\n", i, i, loadmodel->name);
 		}
 	}
 
 	{
 		int i, *bonecount;
 	//	zymlump_t lump_vertbonecounts; // int vertbonecounts[numvertices]; // how many bones influence each vertex (separate mainly to make this compress better)
-		loadmodel->zymdata_vertbonecounts = Mem_Alloc(loadmodel->mempool, pheader->numbones * sizeof(int));
+		loadmodel->zymdata_vertbonecounts = Mem_Alloc(loadmodel->mempool, pheader->numverts * sizeof(int));
 		bonecount = (void *) (pheader->lump_vertbonecounts.start + pbase);
-		for (i = 0;i < pheader->numbones;i++)
+		for (i = 0;i < pheader->numverts;i++)
 		{
 			loadmodel->zymdata_vertbonecounts[i] = BigLong(bonecount[i]);
 			if (loadmodel->zymdata_vertbonecounts[i] < 1)
@@ -940,12 +940,12 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 	//	zymlump_t lump_verts; // zymvertex_t vert[numvertices]; // see vertex struct
 		loadmodel->zymdata_verts = Mem_Alloc(loadmodel->mempool, pheader->lump_verts.length);
 		vertdata = (void *) (pheader->lump_verts.start + pbase);
-		for (i = 0;i < pheader->lump_verts.length / 4;i++)
+		for (i = 0;i < pheader->lump_verts.length / (int) sizeof(zymvertex_t);i++)
 		{
 			loadmodel->zymdata_verts[i].bonenum = BigLong(vertdata[i].bonenum);
-			loadmodel->zymdata_verts[i].origin[0] = BigLong(vertdata[i].origin[0]);
-			loadmodel->zymdata_verts[i].origin[1] = BigLong(vertdata[i].origin[1]);
-			loadmodel->zymdata_verts[i].origin[2] = BigLong(vertdata[i].origin[2]);
+			loadmodel->zymdata_verts[i].origin[0] = BigFloat(vertdata[i].origin[0]);
+			loadmodel->zymdata_verts[i].origin[1] = BigFloat(vertdata[i].origin[1]);
+			loadmodel->zymdata_verts[i].origin[2] = BigFloat(vertdata[i].origin[2]);
 		}
 	}
 
@@ -955,7 +955,7 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 	//	zymlump_t lump_texcoords; // float texcoords[numvertices][2];
 		loadmodel->zymdata_texcoords = outtexcoord = Mem_Alloc(loadmodel->mempool, pheader->numverts * sizeof(float[4]));
 		intexcoord = (void *) (pheader->lump_texcoords.start + pbase);
-		for (i = 0;i < pheader->numverts;i++);
+		for (i = 0;i < pheader->numverts;i++)
 		{
 			outtexcoord[i*4+0] = BigFloat(intexcoord[i*2+0]);
 			// flip T coordinate for OpenGL
@@ -964,7 +964,7 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 	}
 
 	{
-		int i, count, a, b, c, *renderlist, *renderlistend, *outrenderlist;
+		int i, count, *renderlist, *renderlistend, *outrenderlist;
 	//	zymlump_t lump_render; // int renderlist[rendersize]; // sorted by shader with run lengths (int count), shaders are sequentially used, each run can be used with glDrawElements (each triangle is 3 int indices)
 		loadmodel->zymdata_renderlist = Mem_Alloc(loadmodel->mempool, pheader->lump_render.length);
 		// byteswap, validate, and swap winding order of tris
@@ -984,15 +984,15 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 			*outrenderlist++ = count;
 			while (count--)
 			{
-				a = BigLong(renderlist[0]);
-				b = BigLong(renderlist[1]);
-				c = BigLong(renderlist[2]);
-				renderlist += 3;
-				if (a >= pheader->numverts || b >= pheader->numverts || c >= pheader->numverts)
+				outrenderlist[2] = BigLong(renderlist[0]);
+				outrenderlist[1] = BigLong(renderlist[1]);
+				outrenderlist[0] = BigLong(renderlist[2]);
+				if ((unsigned int)outrenderlist[0] >= (unsigned int)pheader->numverts
+				 || (unsigned int)outrenderlist[1] >= (unsigned int)pheader->numverts
+				 || (unsigned int)outrenderlist[2] >= (unsigned int)pheader->numverts)
 					Host_Error("Mod_LoadZymoticModel: corrupt renderlist in %s (out of bounds index)\n", loadmodel->name);
-				*outrenderlist++ = c;
-				*outrenderlist++ = b;
-				*outrenderlist++ = a;
+				renderlist += 3;
+				outrenderlist += 3;
 			}
 		}
 	}
@@ -1001,6 +1001,7 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 		int i;
 		char *shadername;
 	//	zymlump_t lump_shaders; // char shadername[numshaders][32]; // shaders used on this model
+		loadmodel->zymdata_textures = Mem_Alloc(loadmodel->mempool, pheader->numshaders * sizeof(rtexture_t *));
 		shadername = (void *) (pheader->lump_shaders.start + pbase);
 		for (i = 0;i < pheader->numshaders;i++)
 			loadmodel->zymdata_textures[i] = loadtextureimage(loadmodel->texturepool, shadername + i * 32, 0, 0, true, TEXF_ALPHA | TEXF_PRECACHE | (r_mipskins.integer ? TEXF_MIPMAP : 0));
