@@ -178,17 +178,11 @@ static void mod_newmap(void)
 		{
 			for (surfacenum = 0, surface = mod_known[i].brush.data_surfaces;surfacenum < mod_known[i].brush.num_surfaces;surfacenum++, surface++)
 			{
-				if (surface->stainsamples)
+				if (surface->lightmapinfo && surface->lightmapinfo->stainsamples)
 				{
-					ssize = (surface->extents[0] >> 4) + 1;
-					tsize = (surface->extents[1] >> 4) + 1;
-
-					if (ssize > 256 || tsize > 256)
-						Host_Error("Bad surface extents");
-
-					if (surface->stainsamples)
-						memset(surface->stainsamples, 255, ssize * tsize * 3);
-
+					ssize = (surface->lightmapinfo->extents[0] >> 4) + 1;
+					tsize = (surface->lightmapinfo->extents[1] >> 4) + 1;
+					memset(surface->lightmapinfo->stainsamples, 255, ssize * tsize * 3);
 					surface->cached_dlight = true;
 				}
 			}
@@ -758,15 +752,13 @@ void Mod_BuildTextureVectorsAndNormals(int numverts, int numtriangles, const flo
 			VectorNormalize(v);
 }
 
-surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, int numcollisionvertices, int numcollisiontriangles, qboolean detailtexcoords, qboolean lightmapoffsets, qboolean vertexcolors)
+surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qboolean detailtexcoords, qboolean lightmapoffsets, qboolean vertexcolors)
 {
 	surfmesh_t *mesh;
 	qbyte *data;
-	mesh = Mem_Alloc(mempool, sizeof(surfmesh_t) + numvertices * (3 + 3 + 3 + 3 + 2 + 2 + (detailtexcoords ? 2 : 0) + (vertexcolors ? 4 : 0)) * sizeof(float) + numvertices * (lightmapoffsets ? 1 : 0) * sizeof(int) + numtriangles * (3 + 3) * sizeof(int) + numcollisionvertices * sizeof(float[3]) + numcollisiontriangles * sizeof(int[3]));
+	mesh = Mem_Alloc(mempool, sizeof(surfmesh_t) + numvertices * (3 + 3 + 3 + 3 + 2 + 2 + (detailtexcoords ? 2 : 0) + (vertexcolors ? 4 : 0)) * sizeof(float) + numvertices * (lightmapoffsets ? 1 : 0) * sizeof(int) + numtriangles * (3 + 3) * sizeof(int));
 	mesh->num_vertices = numvertices;
 	mesh->num_triangles = numtriangles;
-	mesh->num_collisionvertices = numcollisionvertices;
-	mesh->num_collisiontriangles = numcollisiontriangles;
 	data = (qbyte *)(mesh + 1);
 	if (mesh->num_vertices)
 	{
@@ -788,10 +780,6 @@ surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriang
 		mesh->data_element3i = (int *)data, data += sizeof(int[3]) * mesh->num_triangles;
 		mesh->data_neighbor3i = (int *)data, data += sizeof(int[3]) * mesh->num_triangles;
 	}
-	if (mesh->num_collisionvertices)
-		mesh->data_collisionvertex3f = (float *)data, data += sizeof(float[3]) * mesh->num_collisionvertices;
-	if (mesh->num_collisiontriangles)
-		mesh->data_collisionelement3i = (int *)data, data += sizeof(int[3]) * mesh->num_collisiontriangles;
 	return mesh;
 }
 

@@ -788,26 +788,26 @@ loc0:
 			surface = r_refdef.worldmodel->brush.data_surfaces + node->firstsurface;
 			for (i = 0;i < node->numsurfaces;i++, surface++)
 			{
-				if (!(surface->texture->basematerialflags & MATERIALFLAG_WALL) || !surface->samples)
+				if (!(surface->texture->basematerialflags & MATERIALFLAG_WALL) || !surface->lightmapinfo->samples)
 					continue;	// no lightmaps
 
-				ds = (int) (x * surface->texinfo->vecs[0][0] + y * surface->texinfo->vecs[0][1] + mid * surface->texinfo->vecs[0][2] + surface->texinfo->vecs[0][3]) - surface->texturemins[0];
-				dt = (int) (x * surface->texinfo->vecs[1][0] + y * surface->texinfo->vecs[1][1] + mid * surface->texinfo->vecs[1][2] + surface->texinfo->vecs[1][3]) - surface->texturemins[1];
+				ds = (int) (x * surface->lightmapinfo->texinfo->vecs[0][0] + y * surface->lightmapinfo->texinfo->vecs[0][1] + mid * surface->lightmapinfo->texinfo->vecs[0][2] + surface->lightmapinfo->texinfo->vecs[0][3]) - surface->lightmapinfo->texturemins[0];
+				dt = (int) (x * surface->lightmapinfo->texinfo->vecs[1][0] + y * surface->lightmapinfo->texinfo->vecs[1][1] + mid * surface->lightmapinfo->texinfo->vecs[1][2] + surface->lightmapinfo->texinfo->vecs[1][3]) - surface->lightmapinfo->texturemins[1];
 
-				if (ds >= 0 && ds < surface->extents[0] && dt >= 0 && dt < surface->extents[1])
+				if (ds >= 0 && ds < surface->lightmapinfo->extents[0] && dt >= 0 && dt < surface->lightmapinfo->extents[1])
 				{
 					qbyte *lightmap;
 					int lmwidth, lmheight, maps, line3, size3, dsfrac = ds & 15, dtfrac = dt & 15, scale = 0, r00 = 0, g00 = 0, b00 = 0, r01 = 0, g01 = 0, b01 = 0, r10 = 0, g10 = 0, b10 = 0, r11 = 0, g11 = 0, b11 = 0;
-					lmwidth = ((surface->extents[0]>>4)+1);
-					lmheight = ((surface->extents[1]>>4)+1);
+					lmwidth = ((surface->lightmapinfo->extents[0]>>4)+1);
+					lmheight = ((surface->lightmapinfo->extents[1]>>4)+1);
 					line3 = lmwidth * 3; // LordHavoc: *3 for colored lighting
 					size3 = lmwidth * lmheight * 3; // LordHavoc: *3 for colored lighting
 
-					lightmap = surface->samples + ((dt>>4) * lmwidth + (ds>>4))*3; // LordHavoc: *3 for colored lighting
+					lightmap = surface->lightmapinfo->samples + ((dt>>4) * lmwidth + (ds>>4))*3; // LordHavoc: *3 for colored lighting
 
-					for (maps = 0;maps < MAXLIGHTMAPS && surface->styles[maps] != 255;maps++)
+					for (maps = 0;maps < MAXLIGHTMAPS && surface->lightmapinfo->styles[maps] != 255;maps++)
 					{
-						scale = d_lightstylevalue[surface->styles[maps]];
+						scale = d_lightstylevalue[surface->lightmapinfo->styles[maps]];
 						r00 += lightmap[      0] * scale;g00 += lightmap[      1] * scale;b00 += lightmap[      2] * scale;
 						r01 += lightmap[      3] * scale;g01 += lightmap[      4] * scale;b01 += lightmap[      5] * scale;
 						r10 += lightmap[line3+0] * scale;g10 += lightmap[line3+1] * scale;b10 += lightmap[line3+2] * scale;
@@ -1754,8 +1754,8 @@ static void Mod_Q1BSP_GenerateWarpMesh(msurface_t *surface)
 	for (i = 0, v = mesh->vertex;i < subdivpolyverts;i++, v++)
 	{
 		VectorCopy(subdivpolyvert[i], v->v);
-		v->st[0] = DotProduct(v->v, surface->texinfo->vecs[0]);
-		v->st[1] = DotProduct(v->v, surface->texinfo->vecs[1]);
+		v->st[0] = DotProduct(v->v, surface->lightmapinfo->texinfo->vecs[0]);
+		v->st[1] = DotProduct(v->v, surface->lightmapinfo->texinfo->vecs[1]);
 	}
 }
 #endif
@@ -1772,6 +1772,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		Host_Error("Mod_Q1BSP_LoadFaces: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	loadmodel->brush.data_surfaces = Mem_Alloc(loadmodel->mempool, count*sizeof(msurface_t));
+	loadmodel->brush.data_surfaces_lightmapinfo = Mem_Alloc(loadmodel->mempool, count*sizeof(msurface_lightmapinfo_t));
 
 	loadmodel->brush.num_surfaces = count;
 
@@ -1788,12 +1789,14 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 	// vertex limit
 	loadmodel->nummeshes = 1;
 	loadmodel->meshlist = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t *));
-	loadmodel->meshlist[0] = Mod_AllocSurfMesh(loadmodel->mempool, totalverts, totaltris, 0, 0, true, true, false);
+	loadmodel->meshlist[0] = Mod_AllocSurfMesh(loadmodel->mempool, totalverts, totaltris, true, true, false);
 
 	totalverts = 0;
 	totaltris = 0;
 	for (surfacenum = 0, in = (void *)(mod_base + l->fileofs), surface = loadmodel->brush.data_surfaces;surfacenum < count;surfacenum++, in++, surface++)
 	{
+		surface->lightmapinfo = loadmodel->brush.data_surfaces_lightmapinfo + surfacenum;
+
 		// FIXME: validate edges, texinfo, etc?
 		firstedge = LittleLong(in->firstedge);
 		numedges = LittleShort(in->numedges);
@@ -1802,8 +1805,8 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		i = LittleShort(in->texinfo);
 		if ((unsigned int) i >= (unsigned int) loadmodel->brushq1.numtexinfo)
 			Host_Error("Mod_Q1BSP_LoadFaces: invalid texinfo index %i(model has %i texinfos)\n", i, loadmodel->brushq1.numtexinfo);
-		surface->texinfo = loadmodel->brushq1.texinfo + i;
-		surface->texture = surface->texinfo->texture;
+		surface->lightmapinfo->texinfo = loadmodel->brushq1.texinfo + i;
+		surface->texture = surface->lightmapinfo->texinfo->texture;
 
 		planenum = LittleShort(in->planenum);
 		if ((unsigned int) planenum >= (unsigned int) loadmodel->brush.num_planes)
@@ -1838,8 +1841,8 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 				VectorCopy(loadmodel->brushq1.vertexes[loadmodel->brushq1.edges[lindex].v[0]].position, surface->mesh.data_vertex3f + i * 3);
 			else
 				VectorCopy(loadmodel->brushq1.vertexes[loadmodel->brushq1.edges[-lindex].v[1]].position, surface->mesh.data_vertex3f + i * 3);
-			s = DotProduct((surface->mesh.data_vertex3f + i * 3), surface->texinfo->vecs[0]) + surface->texinfo->vecs[0][3];
-			t = DotProduct((surface->mesh.data_vertex3f + i * 3), surface->texinfo->vecs[1]) + surface->texinfo->vecs[1][3];
+			s = DotProduct((surface->mesh.data_vertex3f + i * 3), surface->lightmapinfo->texinfo->vecs[0]) + surface->lightmapinfo->texinfo->vecs[0][3];
+			t = DotProduct((surface->mesh.data_vertex3f + i * 3), surface->lightmapinfo->texinfo->vecs[1]) + surface->lightmapinfo->texinfo->vecs[1][3];
 			surface->mesh.data_texcoordtexture2f[i * 2 + 0] = s / surface->texture->width;
 			surface->mesh.data_texcoordtexture2f[i * 2 + 1] = t / surface->texture->height;
 			surface->mesh.data_texcoorddetail2f[i * 2 + 0] = s * (1.0f / 16.0f);
@@ -1862,53 +1865,53 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		BoxFromPoints(surface->mins, surface->maxs, surface->mesh.num_vertices, surface->mesh.data_vertex3f);
 
 		// generate surface extents information
-		texmins[0] = texmaxs[0] = DotProduct(surface->mesh.data_vertex3f, surface->texinfo->vecs[0]) + surface->texinfo->vecs[0][3];
-		texmins[1] = texmaxs[1] = DotProduct(surface->mesh.data_vertex3f, surface->texinfo->vecs[1]) + surface->texinfo->vecs[1][3];
+		texmins[0] = texmaxs[0] = DotProduct(surface->mesh.data_vertex3f, surface->lightmapinfo->texinfo->vecs[0]) + surface->lightmapinfo->texinfo->vecs[0][3];
+		texmins[1] = texmaxs[1] = DotProduct(surface->mesh.data_vertex3f, surface->lightmapinfo->texinfo->vecs[1]) + surface->lightmapinfo->texinfo->vecs[1][3];
 		for (i = 1;i < surface->mesh.num_vertices;i++)
 		{
 			for (j = 0;j < 2;j++)
 			{
-				val = DotProduct(surface->mesh.data_vertex3f + i * 3, surface->texinfo->vecs[j]) + surface->texinfo->vecs[j][3];
+				val = DotProduct(surface->mesh.data_vertex3f + i * 3, surface->lightmapinfo->texinfo->vecs[j]) + surface->lightmapinfo->texinfo->vecs[j][3];
 				texmins[j] = min(texmins[j], val);
 				texmaxs[j] = max(texmaxs[j], val);
 			}
 		}
 		for (i = 0;i < 2;i++)
 		{
-			surface->texturemins[i] = (int) floor(texmins[i] / 16.0) * 16;
-			surface->extents[i] = (int) ceil(texmaxs[i] / 16.0) * 16 - surface->texturemins[i];
+			surface->lightmapinfo->texturemins[i] = (int) floor(texmins[i] / 16.0) * 16;
+			surface->lightmapinfo->extents[i] = (int) ceil(texmaxs[i] / 16.0) * 16 - surface->lightmapinfo->texturemins[i];
 		}
 
-		smax = surface->extents[0] >> 4;
-		tmax = surface->extents[1] >> 4;
-		ssize = (surface->extents[0] >> 4) + 1;
-		tsize = (surface->extents[1] >> 4) + 1;
+		smax = surface->lightmapinfo->extents[0] >> 4;
+		tmax = surface->lightmapinfo->extents[1] >> 4;
+		ssize = (surface->lightmapinfo->extents[0] >> 4) + 1;
+		tsize = (surface->lightmapinfo->extents[1] >> 4) + 1;
 
 		// lighting info
 		for (i = 0;i < MAXLIGHTMAPS;i++)
-			surface->styles[i] = in->styles[i];
+			surface->lightmapinfo->styles[i] = in->styles[i];
 		// force lightmap upload on first time seeing the surface
 		surface->cached_dlight = true;
-		surface->lightmaptexturestride = 0;
+		surface->lightmapinfo->lightmaptexturestride = 0;
 		surface->lightmaptexture = NULL;
 		i = LittleLong(in->lightofs);
 		if (i == -1)
 		{
-			surface->samples = NULL;
+			surface->lightmapinfo->samples = NULL;
 			// give non-lightmapped water a 1x white lightmap
-			if ((surface->texture->basematerialflags & MATERIALFLAG_WATER) && (surface->texinfo->flags & TEX_SPECIAL) && ssize <= 256 && tsize <= 256)
+			if ((surface->texture->basematerialflags & MATERIALFLAG_WATER) && (surface->lightmapinfo->texinfo->flags & TEX_SPECIAL) && ssize <= 256 && tsize <= 256)
 			{
-				surface->samples = Mem_Alloc(loadmodel->mempool, ssize * tsize * 3);
-				surface->styles[0] = 0;
-				memset(surface->samples, 128, ssize * tsize * 3);
+				surface->lightmapinfo->samples = Mem_Alloc(loadmodel->mempool, ssize * tsize * 3);
+				surface->lightmapinfo->styles[0] = 0;
+				memset(surface->lightmapinfo->samples, 128, ssize * tsize * 3);
 			}
 		}
 		else if (loadmodel->brush.ishlbsp) // LordHavoc: HalfLife map (bsp version 30)
-			surface->samples = loadmodel->brushq1.lightdata + i;
+			surface->lightmapinfo->samples = loadmodel->brushq1.lightdata + i;
 		else // LordHavoc: white lighting (bsp version 29)
-			surface->samples = loadmodel->brushq1.lightdata + (i * 3);
+			surface->lightmapinfo->samples = loadmodel->brushq1.lightdata + (i * 3);
 
-		if (!(surface->texinfo->flags & TEX_SPECIAL) || surface->samples)
+		if (!(surface->lightmapinfo->texinfo->flags & TEX_SPECIAL) || surface->lightmapinfo->samples)
 		{
 			int i, iu, iv;
 			float u, v, ubase, vbase, uscale, vscale;
@@ -1916,19 +1919,19 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 			if (ssize > 256 || tsize > 256)
 				Host_Error("Bad surface extents");
 			// stainmap for permanent marks on walls
-			surface->stainsamples = Mem_Alloc(loadmodel->mempool, ssize * tsize * 3);
+			surface->lightmapinfo->stainsamples = Mem_Alloc(loadmodel->mempool, ssize * tsize * 3);
 			// clear to white
-			memset(surface->stainsamples, 255, ssize * tsize * 3);
+			memset(surface->lightmapinfo->stainsamples, 255, ssize * tsize * 3);
 
 			if (r_miplightmaps.integer)
 			{
-				surface->lightmaptexturestride = ssize;
-				surface->lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, NULL, surface->lightmaptexturestride, tsize, NULL, loadmodel->brushq1.lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_MIPMAP | TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+				surface->lightmapinfo->lightmaptexturestride = ssize;
+				surface->lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, NULL, surface->lightmapinfo->lightmaptexturestride, tsize, NULL, loadmodel->brushq1.lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_MIPMAP | TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
 			}
 			else
 			{
-				surface->lightmaptexturestride = R_CompatibleFragmentWidth(ssize, loadmodel->brushq1.lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, 0);
-				surface->lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, NULL, surface->lightmaptexturestride, tsize, NULL, loadmodel->brushq1.lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_FRAGMENT | TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+				surface->lightmapinfo->lightmaptexturestride = R_CompatibleFragmentWidth(ssize, loadmodel->brushq1.lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, 0);
+				surface->lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, NULL, surface->lightmapinfo->lightmaptexturestride, tsize, NULL, loadmodel->brushq1.lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_FRAGMENT | TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
 			}
 			R_FragmentLocation(surface->lightmaptexture, NULL, NULL, &ubase, &vbase, &uscale, &vscale);
 			uscale = (uscale - ubase) / ssize;
@@ -1936,8 +1939,8 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 
 			for (i = 0;i < surface->mesh.num_vertices;i++)
 			{
-				u = ((DotProduct((surface->mesh.data_vertex3f + i * 3), surface->texinfo->vecs[0]) + surface->texinfo->vecs[0][3]) + 8 - surface->texturemins[0]) * (1.0 / 16.0);
-				v = ((DotProduct((surface->mesh.data_vertex3f + i * 3), surface->texinfo->vecs[1]) + surface->texinfo->vecs[1][3]) + 8 - surface->texturemins[1]) * (1.0 / 16.0);
+				u = ((DotProduct((surface->mesh.data_vertex3f + i * 3), surface->lightmapinfo->texinfo->vecs[0]) + surface->lightmapinfo->texinfo->vecs[0][3]) + 8 - surface->lightmapinfo->texturemins[0]) * (1.0 / 16.0);
+				v = ((DotProduct((surface->mesh.data_vertex3f + i * 3), surface->lightmapinfo->texinfo->vecs[1]) + surface->lightmapinfo->texinfo->vecs[1][3]) + 8 - surface->lightmapinfo->texturemins[1]) * (1.0 / 16.0);
 				surface->mesh.data_texcoordlightmap2f[i * 2 + 0] = u * uscale + ubase;
 				surface->mesh.data_texcoordlightmap2f[i * 2 + 1] = v * vscale + vbase;
 				// LordHavoc: calc lightmap data offset for vertex lighting to use
@@ -2741,7 +2744,7 @@ static void Mod_Q1BSP_BuildLightmapUpdateChains(mempool_t *mempool, model_t *mod
 	{
 		surface = model->brush.data_surfaces + model->firstmodelsurface + i;
 		for (j = 0;j < MAXLIGHTMAPS;j++)
-			stylecounts[surface->styles[j]]++;
+			stylecounts[surface->lightmapinfo->styles[j]]++;
 	}
 	totalcount = 0;
 	model->brushq1.light_styles = 0;
@@ -2773,8 +2776,8 @@ static void Mod_Q1BSP_BuildLightmapUpdateChains(mempool_t *mempool, model_t *mod
 	{
 		surface = model->brush.data_surfaces + model->firstmodelsurface + i;
 		for (j = 0;j < MAXLIGHTMAPS;j++)
-			if (surface->styles[j] != 255)
-				*model->brushq1.light_styleupdatechains[remapstyles[surface->styles[j]]]++ = surface;
+			if (surface->lightmapinfo->styles[j] != 255)
+				*model->brushq1.light_styleupdatechains[remapstyles[surface->lightmapinfo->styles[j]]]++ = surface;
 	}
 	j = 0;
 	for (i = 0;i < model->brushq1.light_styles;i++)
@@ -4247,7 +4250,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		i = oldi;
 		in = oldin;
 		out = oldout;
-		mesh = tempmeshlist[meshnum] = Mod_AllocSurfMesh(loadmodel->mempool, meshvertices, meshtriangles, 0, 0, false, false, true);
+		mesh = tempmeshlist[meshnum] = Mod_AllocSurfMesh(loadmodel->mempool, meshvertices, meshtriangles, false, false, true);
 		meshvertices = 0;
 		meshtriangles = 0;
 		for (;i < count && meshvertices + out->mesh.num_vertices <= mesh->num_vertices;i++, in++, out++)
@@ -4356,21 +4359,21 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				finalvertices = finalwidth * finalheight;
 				finaltriangles = (finalwidth - 1) * (finalheight - 1) * 2;
 
-				out->mesh.data_collisionvertex3f = Mem_Alloc(loadmodel->mempool, sizeof(float[3]) * finalvertices);
-				out->mesh.data_collisionelement3i = Mem_Alloc(loadmodel->mempool, sizeof(int[3]) * finaltriangles);
-				out->mesh.num_collisionvertices = finalvertices;
-				out->mesh.num_collisiontriangles = finaltriangles;
-				Q3PatchTesselateFloat(3, sizeof(float[3]), out->mesh.data_collisionvertex3f, patchsize[0], patchsize[1], sizeof(float[3]), originalvertex3f, xtess, ytess);
-				Q3PatchTriangleElements(out->mesh.data_collisionelement3i, finalwidth, finalheight);
+				out->data_collisionvertex3f = Mem_Alloc(loadmodel->mempool, sizeof(float[3]) * finalvertices);
+				out->data_collisionelement3i = Mem_Alloc(loadmodel->mempool, sizeof(int[3]) * finaltriangles);
+				out->num_collisionvertices = finalvertices;
+				out->num_collisiontriangles = finaltriangles;
+				Q3PatchTesselateFloat(3, sizeof(float[3]), out->data_collisionvertex3f, patchsize[0], patchsize[1], sizeof(float[3]), originalvertex3f, xtess, ytess);
+				Q3PatchTriangleElements(out->data_collisionelement3i, finalwidth, finalheight);
 
 				//Mod_SnapVertices(3, out->mesh.num_vertices, out->mesh.data_vertex3f, 0.25);
-				Mod_SnapVertices(3, out->mesh.num_collisionvertices, out->mesh.data_collisionvertex3f, 1);
+				Mod_SnapVertices(3, out->num_collisionvertices, out->data_collisionvertex3f, 1);
 
 				oldnumtriangles = out->mesh.num_triangles;
-				oldnumtriangles2 = out->mesh.num_collisiontriangles;
-				out->mesh.num_collisiontriangles = Mod_RemoveDegenerateTriangles(out->mesh.num_collisiontriangles, out->mesh.data_collisionelement3i, out->mesh.data_collisionelement3i, out->mesh.data_collisionvertex3f);
+				oldnumtriangles2 = out->num_collisiontriangles;
+				out->num_collisiontriangles = Mod_RemoveDegenerateTriangles(out->num_collisiontriangles, out->data_collisionelement3i, out->data_collisionelement3i, out->data_collisionvertex3f);
 				if (developer.integer)
-					Con_Printf("Mod_Q3BSP_LoadFaces: %ix%i curve became %i:%i vertices / %i:%i triangles (%i:%i degenerate)\n", patchsize[0], patchsize[1], out->mesh.num_vertices, out->mesh.num_collisionvertices, oldnumtriangles, oldnumtriangles2, oldnumtriangles - out->mesh.num_triangles, oldnumtriangles2 - out->mesh.num_collisiontriangles);
+					Con_Printf("Mod_Q3BSP_LoadFaces: %ix%i curve became %i:%i vertices / %i:%i triangles (%i:%i degenerate)\n", patchsize[0], patchsize[1], out->mesh.num_vertices, out->num_collisionvertices, oldnumtriangles, oldnumtriangles2, oldnumtriangles - out->mesh.num_triangles, oldnumtriangles2 - out->num_collisiontriangles);
 				break;
 			default:
 				break;
@@ -4419,10 +4422,10 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				out->maxs[2] += 1.0f;
 			}
 			// set lightmap styles for consistency with q1bsp
-			out->styles[0] = 0;
-			out->styles[1] = 255;
-			out->styles[2] = 255;
-			out->styles[3] = 255;
+			//out->lightmapinfo->styles[0] = 0;
+			//out->lightmapinfo->styles[1] = 255;
+			//out->lightmapinfo->styles[2] = 255;
+			//out->lightmapinfo->styles[3] = 255;
 		}
 	}
 
@@ -4872,10 +4875,10 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, model_t *model,
 		for (i = 0;i < leaf->numleafsurfaces;i++)
 		{
 			surface = model->brush.data_surfaces + leaf->firstleafsurface[i];
-			if (surface->mesh.num_collisiontriangles && surface->collisionmarkframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, surface->mins, surface->maxs))
+			if (surface->num_collisiontriangles && surface->collisionmarkframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, surface->mins, surface->maxs))
 			{
 				surface->collisionmarkframe = markframe;
-				Collision_TraceLineTriangleMeshFloat(trace, linestart, lineend, surface->mesh.num_collisiontriangles, surface->mesh.data_collisionelement3i, surface->mesh.data_collisionvertex3f, surface->texture->supercontents, segmentmins, segmentmaxs);
+				Collision_TraceLineTriangleMeshFloat(trace, linestart, lineend, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->texture->supercontents, segmentmins, segmentmaxs);
 				if (startfrac > trace->realfraction)
 					return;
 			}
@@ -5252,10 +5255,10 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, model_t *model
 		for (i = 0;i < leaf->numleafsurfaces;i++)
 		{
 			surface = model->brush.data_surfaces + leaf->firstleafsurface[i];
-			if (surface->mesh.num_collisiontriangles && surface->collisionmarkframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, surface->mins, surface->maxs))
+			if (surface->num_collisiontriangles && surface->collisionmarkframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, surface->mins, surface->maxs))
 			{
 				surface->collisionmarkframe = markframe;
-				Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, surface->mesh.num_collisiontriangles, surface->mesh.data_collisionelement3i, surface->mesh.data_collisionvertex3f, surface->texture->supercontents, segmentmins, segmentmaxs);
+				Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->texture->supercontents, segmentmins, segmentmaxs);
 			}
 		}
 	}
@@ -5306,8 +5309,8 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 						Collision_TraceLineBrushFloat(trace, boxstartmins, boxendmins, brush->colbrushf, brush->colbrushf);
 				if (mod_q3bsp_curves_collisions.integer)
 					for (i = 0, surface = model->brush.data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
-						if (surface->mesh.num_collisiontriangles)
-							Collision_TraceLineTriangleMeshFloat(trace, boxstartmins, boxendmins, surface->mesh.num_collisiontriangles, surface->mesh.data_collisionelement3i, surface->mesh.data_collisionvertex3f, surface->texture->supercontents, segmentmins, segmentmaxs);
+						if (surface->num_collisiontriangles)
+							Collision_TraceLineTriangleMeshFloat(trace, boxstartmins, boxendmins, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->texture->supercontents, segmentmins, segmentmaxs);
 			}
 			else
 				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, model->brush.data_nodes, boxstartmins, boxendmins, 0, 1, boxstartmins, boxendmins, ++markframe, segmentmins, segmentmaxs);
@@ -5325,8 +5328,8 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 					Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, brush->colbrushf, brush->colbrushf);
 			if (mod_q3bsp_curves_collisions.integer)
 				for (i = 0, surface = model->brush.data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
-					if (surface->mesh.num_collisiontriangles)
-						Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, surface->mesh.num_collisiontriangles, surface->mesh.data_collisionelement3i, surface->mesh.data_collisionvertex3f, surface->texture->supercontents, segmentmins, segmentmaxs);
+					if (surface->num_collisiontriangles)
+						Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->texture->supercontents, segmentmins, segmentmaxs);
 		}
 		else
 			Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model, model->brush.data_nodes, thisbrush_start, thisbrush_end, ++markframe, segmentmins, segmentmaxs);

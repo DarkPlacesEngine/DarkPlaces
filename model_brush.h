@@ -148,6 +148,23 @@ typedef struct
 }
 mtexinfo_t;
 
+typedef struct msurface_lightmapinfo_s
+{
+	// texture mapping properties used by this surface
+	mtexinfo_t *texinfo; // q1bsp
+	// index into d_lightstylevalue array, 255 means not used (black)
+	qbyte styles[MAXLIGHTMAPS]; // q1bsp
+	// RGB lighting data [numstyles][height][width][3]
+	qbyte *samples; // q1bsp
+	// stain to apply on lightmap (soot/dirt/blood/whatever)
+	qbyte *stainsamples; // q1bsp
+	// the stride when building lightmaps to comply with fragment update
+	int lightmaptexturestride; // q1bsp
+	int texturemins[2]; // q1bsp
+	int extents[2]; // q1bsp
+}
+msurface_lightmapinfo_t;
+
 struct q3deffect_s;
 typedef struct msurface_s
 {
@@ -162,25 +179,16 @@ typedef struct msurface_s
 	int cached_dlight; // q1bsp
 	// mesh for rendering
 	surfmesh_t mesh;
+
+	int num_collisiontriangles;
+	int *data_collisionelement3i;
+	int num_collisionvertices;
+	float *data_collisionvertex3f;
+
 	// index into model->brush.shadowmesh
 	int num_firstshadowmeshtriangle;
 
-	// the node plane this is on, backwards if SURF_PLANEBACK flag set
-	//mplane_t *plane; // q1bsp
-	// SURF_ flags
-	//int flags; // q1bsp
-	// texture mapping properties used by this surface
-	mtexinfo_t *texinfo; // q1bsp
-	// index into d_lightstylevalue array, 255 means not used (black)
-	qbyte styles[MAXLIGHTMAPS]; // q1bsp
-	// RGB lighting data [numstyles][height][width][3]
-	qbyte *samples; // q1bsp
-	// stain to apply on lightmap (soot/dirt/blood/whatever)
-	qbyte *stainsamples; // q1bsp
-	// the stride when building lightmaps to comply with fragment update
-	int lightmaptexturestride; // q1bsp
-	int texturemins[2]; // q1bsp
-	int extents[2]; // q1bsp
+	msurface_lightmapinfo_t *lightmapinfo;
 
 	struct q3deffect_s *effect; // q3bsp
 	// FIXME: collisionmarkframe should be kept in a separate array

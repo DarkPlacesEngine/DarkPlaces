@@ -61,11 +61,11 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 	// update cached lighting info
 	surface->cached_dlight = 0;
 
-	smax = (surface->extents[0]>>4)+1;
-	tmax = (surface->extents[1]>>4)+1;
+	smax = (surface->lightmapinfo->extents[0]>>4)+1;
+	tmax = (surface->lightmapinfo->extents[1]>>4)+1;
 	size = smax*tmax;
 	size3 = size*3;
-	lightmap = surface->samples;
+	lightmap = surface->lightmapinfo->samples;
 
 // set to full bright if no light data
 	bl = intblocklights;
@@ -83,13 +83,13 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 		if (lightmap)
 		{
 			bl = intblocklights;
-			for (maps = 0;maps < MAXLIGHTMAPS && surface->styles[maps] != 255;maps++, lightmap += size3)
-				for (scale = d_lightstylevalue[surface->styles[maps]], i = 0;i < size3;i++)
+			for (maps = 0;maps < MAXLIGHTMAPS && surface->lightmapinfo->styles[maps] != 255;maps++, lightmap += size3)
+				for (scale = d_lightstylevalue[surface->lightmapinfo->styles[maps]], i = 0;i < size3;i++)
 					bl[i] += lightmap[i] * scale;
 		}
 	}
 
-	stain = surface->stainsamples;
+	stain = surface->lightmapinfo->stainsamples;
 	bl = intblocklights;
 	out = templight;
 	// the >> 16 shift adjusts down 8 bits to account for the stainmap
@@ -98,7 +98,7 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 	// (0 = 0.0, 128 = 1.0, 256 = 2.0)
 	if (ent->model->brushq1.lightmaprgba)
 	{
-		stride = (surface->lightmaptexturestride - smax) * 4;
+		stride = (surface->lightmapinfo->lightmaptexturestride - smax) * 4;
 		for (i = 0;i < tmax;i++, out += stride)
 		{
 			for (j = 0;j < smax;j++)
@@ -112,7 +112,7 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 	}
 	else
 	{
-		stride = (surface->lightmaptexturestride - smax) * 3;
+		stride = (surface->lightmapinfo->lightmaptexturestride - smax) * 3;
 		for (i = 0;i < tmax;i++, out += stride)
 		{
 			for (j = 0;j < smax;j++)
@@ -170,13 +170,13 @@ loc0:
 
 	for (surface = model->brush.data_surfaces + node->firstsurface, endsurface = surface + node->numsurfaces;surface < endsurface;surface++)
 	{
-		if (surface->stainsamples)
+		if (surface->lightmapinfo->stainsamples)
 		{
-			smax = (surface->extents[0] >> 4) + 1;
-			tmax = (surface->extents[1] >> 4) + 1;
+			smax = (surface->lightmapinfo->extents[0] >> 4) + 1;
+			tmax = (surface->lightmapinfo->extents[1] >> 4) + 1;
 
-			impacts = DotProduct (impact, surface->texinfo->vecs[0]) + surface->texinfo->vecs[0][3] - surface->texturemins[0];
-			impactt = DotProduct (impact, surface->texinfo->vecs[1]) + surface->texinfo->vecs[1][3] - surface->texturemins[1];
+			impacts = DotProduct (impact, surface->lightmapinfo->texinfo->vecs[0]) + surface->lightmapinfo->texinfo->vecs[0][3] - surface->lightmapinfo->texturemins[0];
+			impactt = DotProduct (impact, surface->lightmapinfo->texinfo->vecs[1]) + surface->lightmapinfo->texinfo->vecs[1][3] - surface->lightmapinfo->texturemins[1];
 
 			s = bound(0, impacts, smax * 16) - impacts;
 			t = bound(0, impactt, tmax * 16) - impactt;
@@ -188,7 +188,7 @@ loc0:
 			for (s = 0, i = impacts; s < smax; s++, i -= 16)
 				sdtable[s] = i * i + dist2;
 
-			bl = surface->stainsamples;
+			bl = surface->lightmapinfo->stainsamples;
 			smax3 = smax * 3;
 			stained = false;
 
@@ -256,7 +256,7 @@ void R_Stain (const vec3_t origin, float radius, int cr1, int cg1, int cb1, int 
 	entity_render_t *ent;
 	model_t *model;
 	vec3_t org;
-	if (r_refdef.worldmodel == NULL || !r_refdef.worldmodel->brush.data_nodes)
+	if (r_refdef.worldmodel == NULL || !r_refdef.worldmodel->brush.data_nodes || !r_refdef.worldmodel->brushq1.lightdata)
 		return;
 	fcolor[0] = cr1;
 	fcolor[1] = cg1;
@@ -564,6 +564,16 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 				b = ent->colormod[2] * colorscale;
 				a = texture->currentalpha;
 				base = r_ambient.value * (1.0f / 64.0f);
+				// q3bsp has no lightmap updates, so the lightstylevalue that
+				// would normally be baked into the lightmaptexture must be
+				// applied to the color
+				if (ent->model->brushq1.lightdata)
+				{
+					float scale = d_lightstylevalue[0] * (1.0f / 128.0f);
+					r *= scale;
+					g *= scale;
+					b *= scale;
+				}
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
 					surface = texturesurfacelist[texturesurfaceindex];
@@ -597,78 +607,29 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 					{
 						R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
 						R_Mesh_ColorPointer(varray_color4f);
-						if (surface->styles[0] != 255)
+						if (surface->mesh.data_lightmapcolor4f)
 						{
-							for (i = 0, v = vertex3f, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
+							for (i = 0, c = varray_color4f;i < surface->mesh.num_vertices;i++, c += 4)
 							{
-								c[0] = 0;
-								c[1] = 0;
-								c[2] = 0;
-								if (surface->styles[0] != 255)
-								{
-									if (surface->mesh.data_lightmapcolor4f)
-									{
-										float scale = d_lightstylevalue[surface->styles[0]] * (1.0f / 128.0f);
-										VectorMA(c, scale, surface->mesh.data_lightmapcolor4f + i*4, c);
-									}
-									else if (surface->mesh.data_lightmapoffsets)
-									{
-										const qbyte *lm = surface->samples + surface->mesh.data_lightmapoffsets[i];
-										float scale = d_lightstylevalue[surface->styles[0]] * (1.0f / 32768.0f);
-										VectorMA(c, scale, lm, c);
-										if (surface->styles[1] != 255)
-										{
-											int size3 = ((surface->extents[0]>>4)+1)*((surface->extents[1]>>4)+1)*3;
-											lm += size3;
-											scale = d_lightstylevalue[surface->styles[1]] * (1.0f / 32768.0f);
-											VectorMA(c, scale, lm, c);
-											if (surface->styles[2] != 255)
-											{
-												lm += size3;
-												scale = d_lightstylevalue[surface->styles[2]] * (1.0f / 32768.0f);
-												VectorMA(c, scale, lm, c);
-												if (surface->styles[3] != 255)
-												{
-													lm += size3;
-													scale = d_lightstylevalue[surface->styles[3]] * (1.0f / 32768.0f);
-													VectorMA(c, scale, lm, c);
-												}
-											}
-										}
-									}
-								}
-								c[0] *= r;
-								c[1] *= g;
-								c[2] *= b;
-								if (fogallpasses)
+								c[0] = surface->mesh.data_lightmapcolor4f[i*4+0] * r;
+								c[1] = surface->mesh.data_lightmapcolor4f[i*4+1] * g;
+								c[2] = surface->mesh.data_lightmapcolor4f[i*4+2] * b;
+								c[3] = surface->mesh.data_lightmapcolor4f[i*4+3] * a;
+							}
+							if (fogallpasses)
+							{
+								for (i = 0, v = vertex3f, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
 								{
 									VectorSubtract(v, modelorg, diff);
 									f = 1 - exp(fogdensity/DotProduct(diff, diff));
 									VectorScale(c, f, c);
 								}
-								if (surface->mesh.data_lightmapcolor4f && (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
-									c[3] = surface->mesh.data_lightmapcolor4f[i*4+3] * a;
-								else
-									c[3] = a;
 							}
 						}
 						else
 						{
-							if (surface->mesh.data_lightmapcolor4f && (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
-							{
-								for (i = 0, v = vertex3f, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
-								{
-									c[0] = 0;
-									c[1] = 0;
-									c[2] = 0;
-									c[3] = surface->mesh.data_lightmapcolor4f[i*4+3] * a;
-								}
-							}
-							else
-							{
-								R_Mesh_ColorPointer(NULL);
-								GL_Color(0, 0, 0, a);
-							}
+							R_Mesh_ColorPointer(NULL);
+							GL_Color(0, 0, 0, a);
 						}
 					}
 					GL_LockArrays(0, surface->mesh.num_vertices);
@@ -698,6 +659,16 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 				a = texture->currentalpha;
 				if (dolightmap)
 				{
+					// q3bsp has no lightmap updates, so the lightstylevalue that
+					// would normally be baked into the lightmaptexture must be
+					// applied to the color
+					if (!ent->model->brushq1.lightdata)
+					{
+						float scale = d_lightstylevalue[0] * (1.0f / 128.0f);
+						r *= scale;
+						g *= scale;
+						b *= scale;
+					}
 					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 					{
 						surface = texturesurfacelist[texturesurfaceindex];
@@ -709,35 +680,29 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 							c[0] = 0;
 							c[1] = 0;
 							c[2] = 0;
-							if (surface->styles[0] != 255)
+							if (surface->mesh.data_lightmapcolor4f)
+								VectorCopy(surface->mesh.data_lightmapcolor4f + i*4, c);
+							else if (surface->lightmapinfo)
 							{
-								if (surface->mesh.data_lightmapcolor4f)
+								const qbyte *lm = surface->lightmapinfo->samples + surface->mesh.data_lightmapoffsets[i];
+								float scale = d_lightstylevalue[surface->lightmapinfo->styles[0]] * (1.0f / 32768.0f);
+								VectorMA(c, scale, lm, c);
+								if (surface->lightmapinfo->styles[1] != 255)
 								{
-									float scale = d_lightstylevalue[surface->styles[0]] * (1.0f / 128.0f);
-									VectorMA(c, scale, surface->mesh.data_lightmapcolor4f + i*4, c);
-								}
-								else if (surface->mesh.data_lightmapoffsets)
-								{
-									const qbyte *lm = surface->samples + surface->mesh.data_lightmapoffsets[i];
-									float scale = d_lightstylevalue[surface->styles[0]] * (1.0f / 32768.0f);
+									int size3 = ((surface->lightmapinfo->extents[0]>>4)+1)*((surface->lightmapinfo->extents[1]>>4)+1)*3;
+									lm += size3;
+									scale = d_lightstylevalue[surface->lightmapinfo->styles[1]] * (1.0f / 32768.0f);
 									VectorMA(c, scale, lm, c);
-									if (surface->styles[1] != 255)
+									if (surface->lightmapinfo->styles[2] != 255)
 									{
-										int size3 = ((surface->extents[0]>>4)+1)*((surface->extents[1]>>4)+1)*3;
 										lm += size3;
-										scale = d_lightstylevalue[surface->styles[1]] * (1.0f / 32768.0f);
+										scale = d_lightstylevalue[surface->lightmapinfo->styles[2]] * (1.0f / 32768.0f);
 										VectorMA(c, scale, lm, c);
-										if (surface->styles[2] != 255)
+										if (surface->lightmapinfo->styles[3] != 255)
 										{
 											lm += size3;
-											scale = d_lightstylevalue[surface->styles[2]] * (1.0f / 32768.0f);
+											scale = d_lightstylevalue[surface->lightmapinfo->styles[3]] * (1.0f / 32768.0f);
 											VectorMA(c, scale, lm, c);
-											if (surface->styles[3] != 255)
-											{
-												lm += size3;
-												scale = d_lightstylevalue[surface->styles[3]] * (1.0f / 32768.0f);
-												VectorMA(c, scale, lm, c);
-											}
 										}
 									}
 								}
@@ -1396,7 +1361,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 			if (f && surface->mesh.num_triangles)
 			{
 				// if lightmap parameters changed, rebuild lightmap texture
-				if (surface->cached_dlight && surface->samples)
+				if (surface->cached_dlight && surface->lightmapinfo->samples)
 					R_BuildLightMap(ent, surface);
 				// add face to draw list
 				surfacelist[numsurfacelist++] = surface;
@@ -1426,7 +1391,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 			if (f && surface->mesh.num_triangles)
 			{
 				// if lightmap parameters changed, rebuild lightmap texture
-				if (surface->cached_dlight && surface->samples)
+				if (surface->cached_dlight && surface->lightmapinfo->samples)
 					R_BuildLightMap(ent, surface);
 				// add face to draw list
 				surfacelist[numsurfacelist++] = surface;
@@ -1517,15 +1482,15 @@ static void R_DrawCollisionSurface(entity_render_t *ent, msurface_t *surface)
 {
 	int i;
 	rmeshstate_t m;
-	if (!surface->mesh.num_collisiontriangles)
+	if (!surface->num_collisiontriangles)
 		return;
 	memset(&m, 0, sizeof(m));
-	m.pointer_vertex = surface->mesh.data_collisionvertex3f;
+	m.pointer_vertex = surface->data_collisionvertex3f;
 	R_Mesh_State(&m);
 	i = (int)(((size_t)surface) / sizeof(msurface_t));
 	GL_Color((i & 31) * (1.0f / 32.0f), ((i >> 5) & 31) * (1.0f / 32.0f), ((i >> 10) & 31) * (1.0f / 32.0f), 0.2f);
-	GL_LockArrays(0, surface->mesh.num_collisionvertices);
-	R_Mesh_Draw(surface->mesh.num_collisionvertices, surface->mesh.num_collisiontriangles, surface->mesh.data_collisionelement3i);
+	GL_LockArrays(0, surface->num_collisionvertices);
+	R_Mesh_Draw(surface->num_collisionvertices, surface->num_collisiontriangles, surface->data_collisionelement3i);
 	GL_LockArrays(0, 0);
 }
 
@@ -1636,7 +1601,7 @@ void R_Q1BSP_Draw(entity_render_t *ent)
 			if (brush->colbrushf && brush->colbrushf->numtriangles)
 				R_DrawCollisionBrush(brush->colbrushf);
 		for (i = 0, surface = model->brush.data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
-			if (surface->mesh.num_collisiontriangles)
+			if (surface->num_collisiontriangles)
 				R_DrawCollisionSurface(ent, surface);
 		qglPolygonOffset(0, 0);
 	}
