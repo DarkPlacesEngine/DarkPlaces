@@ -558,7 +558,6 @@ void SV_PushMove (edict_t *pusher, float movetime)
 	vec3_t mins, maxs, move, move1, moveangle, pushorig, pushang, a, forward, left, up, org, org2;
 	int num_moved;
 	model_t *pushermodel;
-	trace_t trace;
 
 	switch ((int) pusher->v->solid)
 	{
@@ -681,12 +680,11 @@ void SV_PushMove (edict_t *pusher, float movetime)
 			 || check->v->absmax[2] <= mins[2])
 				continue;
 
-			trace = SV_ClipMoveToEntity (pusher, check->v->origin, check->v->mins, check->v->maxs, check->v->origin);
-			if (!trace.startsolid)
+			if (!SV_ClipMoveToEntity(pusher, check->v->origin, check->v->mins, check->v->maxs, check->v->origin).startsolid)
 				continue;
 		}
 
-		if (forward[0] < 0.999f) // quick way to check if any rotation is used
+		if (forward[0] != 1) // quick way to check if any rotation is used
 		{
 			VectorSubtract (check->v->origin, pusher->v->origin, org);
 			org2[0] = DotProduct (org, forward);
@@ -708,18 +706,18 @@ void SV_PushMove (edict_t *pusher, float movetime)
 
 		// try moving the contacted entity
 		pusher->v->solid = SOLID_NOT;
-		trace = SV_PushEntity (check, move, moveangle);
+		SV_PushEntity (check, move, moveangle);
 		pusher->v->solid = savesolid; // was SOLID_BSP
 
 		// if it is still inside the pusher, block
-		if (SV_TestEntityPosition (check))
+		if (SV_ClipMoveToEntity(pusher, check->v->origin, check->v->mins, check->v->maxs, check->v->origin).startsolid)
 		{
 			// try moving the contacted entity a tiny bit further to account for precision errors
 			pusher->v->solid = SOLID_NOT;
 			VectorScale(move, 0.1, move);
-			trace = SV_PushEntity (check, move, vec3_origin);
+			SV_PushEntity (check, move, vec3_origin);
 			pusher->v->solid = savesolid;
-			if (SV_TestEntityPosition (check))
+			if (SV_ClipMoveToEntity(pusher, check->v->origin, check->v->mins, check->v->maxs, check->v->origin).startsolid)
 			{
 				// still inside pusher, so it's really blocked
 
