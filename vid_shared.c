@@ -333,15 +333,6 @@ void VID_CheckExtensions(void)
 		qglDrawRangeElements = qglDrawRangeElementsEXT;
 }
 
-double VID_CompareMode(int width1, int height1, int bpp1, int width2, int height2, int bpp2)
-{
-	double dw, dh, db;
-	dw = ((width2 - width1) / 2048) * 16;
-	dh = ((height2 - height1) / 1536) * 4;
-	db = (bpp2 - bpp1) / 32;
-	return dw * dw + dh * dh + db * db;
-}
-
 void Force_CenterView_f (void)
 {
 	cl.viewangles[PITCH] = 0;
