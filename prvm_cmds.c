@@ -3162,10 +3162,13 @@ void VM_M_gethostcachevalue( void )
 		return;
 	case 2:
 		PRVM_G_FLOAT ( OFS_RETURN ) = masterreplycount;
+		return;
 	case 3:
 		PRVM_G_FLOAT ( OFS_RETURN ) = serverquerycount;
+		return;
 	case 4:
 		PRVM_G_FLOAT ( OFS_RETURN ) = serverreplycount;
+		return;
 	}
 }
 
