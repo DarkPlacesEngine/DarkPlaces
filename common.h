@@ -91,6 +91,12 @@ extern float (*BigFloat) (float l);
 extern float (*LittleFloat) (float l);
 #endif
 
+unsigned int BuffBigLong (const qbyte *buffer);
+unsigned short BuffBigShort (const qbyte *buffer);
+unsigned int BuffLittleLong (const qbyte *buffer);
+unsigned short BuffLittleShort (const qbyte *buffer);
+
+
 //============================================================================
 
 void MSG_WriteChar (sizebuf_t *sb, int c);

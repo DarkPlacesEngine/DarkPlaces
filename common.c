@@ -123,6 +123,30 @@ float FloatNoSwap (float f)
 }
 #endif
 
+
+// Extract integers from buffers
+
+unsigned int BuffBigLong (const qbyte *buffer)
+{
+	return (buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
+}
+
+unsigned short BuffBigShort (const qbyte *buffer)
+{
+	return (buffer[0] << 8) | buffer[1];
+}
+
+unsigned int BuffLittleLong (const qbyte *buffer)
+{
+	return (buffer[3] << 24) | (buffer[2] << 16) | (buffer[1] << 8) | buffer[0];
+}
+
+unsigned short BuffLittleShort (const qbyte *buffer)
+{
+	return (buffer[1] << 8) | buffer[0];
+}
+
+
 /*
 ==============================================================================
 
