@@ -64,7 +64,7 @@ DO_CC=$(CC) $(CFLAGS) -c $< -o $@
 
 # Link
 LDFLAGS_WGL=-mwindows -luser32 -lgdi32 -lwinmm -ldxguid -ldinput -lcomctl32 -lwsock32
-LDFLAGS_DED=-mwindows -lwinmm -lwsock32
+LDFLAGS_DED=-mconsole -lwinmm -lwsock32
 LDFLAGS_DEBUG=-g -ggdb
 LDFLAGS_PROFILE=-g -pg
 LDFLAGS_RELEASE=
