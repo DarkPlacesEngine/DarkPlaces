@@ -789,9 +789,6 @@ void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, i
 		skinset = skinanim + i*5;
 	}
 
-//	glBindTexture(GL_TEXTURE_2D, paliashdr->gl_texturenum[skin][(int)(cl.time*10) & 3]);
-//	glBindTexture(GL_TEXTURE_2D, pheader->gl_texturenum[skin]);
-
 	glEnable (GL_TEXTURE_2D);
 
 	c_alias_polys += clmodel->numtris;
