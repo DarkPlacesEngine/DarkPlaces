@@ -59,7 +59,6 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_idealpitchscale);
 	Cvar_RegisterVariable (&sv_aim);
 	Cvar_RegisterVariable (&sv_nostep);
-	Cvar_RegisterVariable (&sv_predict);
 	Cvar_RegisterVariable (&sv_deltacompress);
 	Cvar_RegisterVariable (&sv_cullentities_pvs);
 	Cvar_RegisterVariable (&sv_cullentities_portal);
@@ -555,17 +554,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		}
 
 		VectorCopy(ent->v->angles, angles);
-		if (DotProduct(ent->v->velocity, ent->v->velocity) >= 1.0f)
-		{
-			VectorMA(ent->v->origin, host_client->latency, ent->v->velocity, origin);
-			// LordHavoc: trace predicted movement to avoid putting things in walls
-			trace = SV_Move (ent->v->origin, ent->v->mins, ent->v->maxs, origin, MOVE_NORMAL, ent);
-			VectorCopy(trace.endpos, origin);
-		}
-		else
-		{
-			VectorCopy(ent->v->origin, origin);
-		}
+		VectorCopy(ent->v->origin, origin);
 
 		// ent has survived every check so far, check if it is visible
 		if (ent != clent && ((bits & U_VIEWMODEL) == 0))
@@ -937,17 +926,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		}
 
 		VectorCopy(ent->v->angles, angles);
-		if (DotProduct(ent->v->velocity, ent->v->velocity) >= 1.0f && host_client->latency >= 0.01f)
-		{
-			VectorMA(ent->v->origin, host_client->latency, ent->v->velocity, origin);
-			// LordHavoc: trace predicted movement to avoid putting things in walls
-			trace = SV_Move (ent->v->origin, ent->v->mins, ent->v->maxs, origin, MOVE_NORMAL, ent);
-			VectorCopy(trace.endpos, origin);
-		}
-		else
-		{
-			VectorCopy(ent->v->origin, origin);
-		}
+		VectorCopy(ent->v->origin, origin);
 
 		// ent has survived every check so far, check if it is visible
 		// always send embedded brush models, they don't generate much traffic

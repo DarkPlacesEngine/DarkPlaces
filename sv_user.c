@@ -24,7 +24,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 edict_t *sv_player;
 
 cvar_t sv_edgefriction = {0, "edgefriction", "2"};
-cvar_t sv_predict = {0, "sv_predict", "1"};
 cvar_t sv_deltacompress = {0, "sv_deltacompress", "1"};
 cvar_t sv_idealpitchscale = {0, "sv_idealpitchscale","0.8"};
 cvar_t sv_maxspeed = {CVAR_NOTIFY, "sv_maxspeed", "320"};
@@ -472,10 +471,6 @@ void SV_ReadClientMove (usercmd_t *move)
 		total += host_client->ping_times[i];
 	// can be used for prediction
 	host_client->ping = total / NUM_PING_TIMES;
-	host_client->latency = 0;
-	// if paused or a local game, don't predict
-	if (sv_predict.integer && (svs.maxclients > 1) && (!sv.paused))
-		host_client->latency = host_client->ping;
 	if ((val = GETEDICTFIELDVALUE(sv_player, eval_ping)))
 		val->_float = host_client->ping * 1000.0;
 

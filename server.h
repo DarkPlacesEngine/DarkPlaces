@@ -133,8 +133,6 @@ typedef struct client_s
 	int num_pings;
 	// LordHavoc: can be used for prediction or whatever...
 	float ping;
-	// LordHavoc: specifically used for prediction, accounts for sys_ticrate too
-	float latency;
 
 // spawn parms are carried from level to level
 	float spawn_parms[NUM_SPAWN_PARMS];
@@ -245,7 +243,6 @@ extern cvar_t sv_maxspeed;
 extern cvar_t sv_accelerate;
 extern cvar_t sv_idealpitchscale;
 extern cvar_t sv_aim;
-extern cvar_t sv_predict;
 extern cvar_t sv_stepheight;
 extern cvar_t sv_jumpstep;
 
