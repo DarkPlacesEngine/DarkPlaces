@@ -154,6 +154,7 @@ model_t *Mod_LoadModel (model_t *mod, qboolean crash)
 	void	*d;
 	unsigned *buf;
 //	byte	stackbuf[1024];		// avoid dirtying the cache heap
+	int		blah = 0;
 
 	if (!mod->needload)
 	{
@@ -166,6 +167,8 @@ model_t *Mod_LoadModel (model_t *mod, qboolean crash)
 		else
 			return mod;		// not cached at all
 	}
+
+	Con_DPrintf("loading model %s\n", mod->name);
 
 // load the file
 	buf = (unsigned *)COM_LoadMallocFile (mod->name, false);
