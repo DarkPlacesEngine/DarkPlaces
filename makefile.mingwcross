@@ -36,14 +36,15 @@ SERVEROBJECTS=	pr_cmds.o pr_edict.o pr_exec.o sv_light.o sv_main.o sv_move.o \
 SHAREDOBJECTS=	builddate.o cmd.o collision.o common.o crc.o cvar.o \
 		filematch.o host.o host_cmd.o image.o mathlib.o matrixlib.o \
 		model_alias.o model_brush.o model_shared.o model_sprite.o \
-		net_dgrm.o net_loop.o net_main.o net_master.o \
-		palette.o portals.o protocol.o fs.o \
+		net_bsd.o net_dgrm.o net_loop.o net_main.o net_master.o \
+		net_udp.o palette.o portals.o protocol.o fs.o \
 		sys_shared.o world.o wad.o zone.o
+COMMONOBJECTS= $(CLIENTOBJECTS) $(SERVEROBJECTS) $(SHAREDOBJECTS)
 
-
-OBJ_COMMON= $(CLIENTOBJECTS) $(SERVEROBJECTS) $(SHAREDOBJECTS)
-OBJ_WGL= vid_wgl.o $(OBJ_CD) $(OBJ_SND) net_bsd.o net_udp.o sys_win.o
-OBJ_DED= vid_null.o cd_null.o snd_null.o net_bsd.o net_udp.o sys_win.o
+# objects used by wgl target
+OBJ_WGL= sys_win.o vid_wgl.o $(OBJ_CD) $(OBJ_SND) $(COMMONOBJECTS)
+# objects used by dedicated target
+OBJ_DED= sys_linux.o vid_null.o cd_null.o snd_null.o $(COMMONOBJECTS)
 
 
 # Compilation
@@ -62,7 +63,8 @@ DO_CC=$(CC) $(CFLAGS) -c $< -o $@
 
 
 # Link
-LDFLAGS_COMMON=--mwindows -luser32 -lgdi32 -lwinmm -ldxguid -ldinput -lopengl32 -lcomctl32 -lwsock32
+LDFLAGS_WGL=-mwindows -luser32 -lgdi32 -lwinmm -ldxguid -ldinput -lcomctl32 -lwsock32
+LDFLAGS_DED=-mwindows -lwinmm -lwsock32
 LDFLAGS_DEBUG=-g -ggdb
 LDFLAGS_PROFILE=-g -pg
 LDFLAGS_RELEASE=
@@ -108,22 +110,22 @@ release :
 	$(MAKE) -f makefile.mingwcross wgl-release ded-release
 
 wgl-debug :
-	$(MAKE) -f makefile.mingwcross bin-debug EXE="$(EXE_WGL)"
+	$(MAKE) -f makefile.mingwcross bin-debug EXE="$(EXE_WGL)" LDFLAGS_COMMON="$(LDFLAGS_WGL)"
 
 wgl-profile :
-	$(MAKE) -f makefile.mingwcross bin-profile EXE="$(EXE_WGL)"
+	$(MAKE) -f makefile.mingwcross bin-profile EXE="$(EXE_WGL)" LDFLAGS_COMMON="$(LDFLAGS_WGL)"
 
 wgl-release :
-	$(MAKE) -f makefile.mingwcross bin-release EXE="$(EXE_WGL)"
+	$(MAKE) -f makefile.mingwcross bin-release EXE="$(EXE_WGL)" LDFLAGS_COMMON="$(LDFLAGS_WGL)"
 
 ded-debug :
-	$(MAKE) -f makefile.mingwcross bin-debug EXE="$(EXE_DED)"
+	$(MAKE) -f makefile.mingwcross bin-debug EXE="$(EXE_DED)" LDFLAGS_COMMON="$(LDFLAGS_DED)"
 
 ded-profile :
-	$(MAKE) -f makefile.mingwcross bin-profile EXE="$(EXE_DED)"
+	$(MAKE) -f makefile.mingwcross bin-profile EXE="$(EXE_DED)" LDFLAGS_COMMON="$(LDFLAGS_DED)"
 
 ded-release :
-	$(MAKE) -f makefile.mingwcross bin-release EXE="$(EXE_DED)"
+	$(MAKE) -f makefile.mingwcross bin-release EXE="$(EXE_DED)" LDFLAGS_COMMON="$(LDFLAGS_DED)"
 
 bin-debug :
 	@echo
@@ -156,10 +158,10 @@ builddate:
 .c.o:
 	$(DO_CC)
 
-$(EXE_WGL):  $(OBJ_COMMON) $(OBJ_WGL)
+$(EXE_WGL):  $(OBJ_WGL)
 	$(DO_LD) $(WGL_LIB)
 
-$(EXE_DED): $(OBJ_COMMON) $(OBJ_DED)
+$(EXE_DED): $(OBJ_DED)
 	$(DO_LD)
 
 clean:
