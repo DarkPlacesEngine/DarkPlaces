@@ -797,7 +797,15 @@ void Con_DrawNotify (void)
 			continue;
 		text = con_text + (i % con_totallines)*con_linewidth;
 
-		DrawQ_String(0, v, text, con_linewidth, 8, 8, 1, 1, 1, 1, 0);
+		if (gamemode == GAME_NEXUIZ) {
+			int linewidth;
+
+			for (linewidth = con_linewidth; text[--linewidth] == ' ' && linewidth; linewidth--);
+			x = (vid.conwidth - ++linewidth * 8) / 2;
+		} else 
+			x = 0;
+
+		DrawQ_String(x, v, text, con_linewidth, 8, 8, 1, 1, 1, 1, 0);
 
 		v += 8;
 	}
