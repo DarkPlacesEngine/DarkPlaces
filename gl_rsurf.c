@@ -880,7 +880,7 @@ static int RSurfShader_Water(int stage, msurface_t *s)
 	case 2:
 		if (fogenabled)
 		{
-			if (s->flags & SURF_DRAWNOALPHA)
+			if (currentrenderentity->alpha * (s->flags & SURF_DRAWNOALPHA ? 1 : r_wateralpha.value) >= 1.0f)
 				RSurfShader_Water_Pass_Fog(s);
 			return false;
 		}
