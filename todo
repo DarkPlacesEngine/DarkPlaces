@@ -20,7 +20,6 @@
 -d darkplaces menu: add slowmo to options menu (Cristian Beltramo)
 -d darkplaces menu: player setup menu network speed is never applying to rate (Mitchell)
 -d darkplaces physics: bmodels (doors, etc) hurt player if player pushes against it, and sometimes gets stuck for a frame when falling onto it (Andrew A. Gilevsky)
--d darkplaces physics: repeatedly jumping against a wall can cause a fall to your death (MoALTz)
 -d darkplaces protocol: add rate command and sv_maxrate cvar (and _cl_rate cvar to save to config) to control client rate (rate is sent to server on connect as a command, like other properties) (protoplasmatic)
 -d darkplaces renderer: check out qe1 textures and make sure they load in all the e1 maps, report of crashing in most but not all maps (Linny Amore)
 -d darkplaces renderer: figure out what's wrong with gloss rendering vertex calculations, which may be GF2 related (QorpsE)
@@ -31,7 +30,6 @@
 -d darkplaces: fix 'fall to death in wedge corner' glitch from quake (Zombie)
 -d dpmod: make grapple off-hand (joe hill)
 -f darkplaces client: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
--f darkplaces physics: walking backward toward the cage in e4m2, it's 'sticky' (MoALTz)
 -f darkplaces: add crude DML model loading with animation list (ask Riot for dml library) (Mitchell)
 -f darkplaces: crashes on radeon in rare situations that seem to occur in dpmod dm 7 mode? (Option42)
 0 darkplaces cleanup: port DarkWar polygon.c to darkplaces, as it is more optimized than winding.c
@@ -385,6 +383,7 @@ d darkplaces input: allow typing characters > 128 into console to allow Latin1 f
 d darkplaces loading: fix bumpmapping, there's something quite mixed up about the svectors and tvectors (Randi)
 d darkplaces menu: add sv_maxrate cvar to server setup menu
 d darkplaces physics: make players step down stairs rather than just flying off (Riot) 
+d darkplaces physics: repeatedly jumping against a wall can cause a fall to your death (MoALTz)
 d darkplaces physics: standing on a slope that slopes into an obstacle causes a 'falling' condition, velocity keeps increasing (VorteX)
 d darkplaces renderer: examine the surface rendering code to make sure it has no bugs regarding texture selection for any of the passes (sublim3)
 d darkplaces renderer: figure out the 'inverted bumps' bug on some texture orientations (see crate tops at end of e1m1, tenebrae1 does not suffer this problem somehow) (U8Poo) 
@@ -700,6 +699,7 @@ f LordHavoc: examine .mb (Maya Binary) file from Electro and learn its format (E
 f darkplaces client: add chase_pitch cvar to control pitch angle of chase camera, and chase_angle cvar to control yaw angle of chase camera, and add back chase_right cvar (Electro)
 f darkplaces client: figure out why dlights are flashing on/off in TEU, particularly test the flashlight (Electro)
 f darkplaces physics: can't move when stuck in a monster (Sajt)
+f darkplaces physics: walking backward toward the cage in e4m2, it's 'sticky' (MoALTz)
 f darkplaces server: Mem_Alloc crash when entities are spawning, sv_main line 1760 (VorteX)
 f darkplaces server: add automatic binding to whatever address the machine's hostname resolves to (in addition to 0.0.0.0); see original quake code for examples (yummyluv)
 f darkplaces: add DP_EF_PRECISEANGLES extension (sends short angles instead of byte), failed because network protocol was upgraded by default (Wazat for Battlemech, FrikaC, mashakos, RenegadeC, Sajt)
