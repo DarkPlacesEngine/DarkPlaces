@@ -378,7 +378,7 @@ MapKey
 Map from windows to quake keynums
 =======
 */
-int MapKey (int key, int virtualkey)
+static int MapKey (int key, int virtualkey)
 {
 	int result;
 	int modified = (key >> 16) & 255;
