@@ -476,10 +476,14 @@ void R_DrawQ1Q2AliasModelFakeShadow (entity_render_t *ent)
 	int i;
 	rmeshstate_t m;
 	model_t *model;
-	float *v, lightdirection[3], surfnormal[3], planenormal[3], planedist, floororigin[3], v2[3], offset[3], dist1, dist2, frac;
+	float *v, planenormal[3], planedist, dist, projection[3], floororigin[3], surfnormal[3], lightdirection[3], v2[3];
 
-	VectorCopy(ent->origin, v2);
-	v2[2] -= 65536.0f;
+	lightdirection[0] = 0.5;
+	lightdirection[1] = 0.2;
+	lightdirection[2] = -1;
+	VectorNormalizeFast(lightdirection);
+
+	VectorMA(ent->origin, 65536.0f, lightdirection, v2);
 	if (CL_TraceLine(ent->origin, v2, floororigin, surfnormal, 0, false, NULL) == 1)
 		return;
 
@@ -498,12 +502,8 @@ void R_DrawQ1Q2AliasModelFakeShadow (entity_render_t *ent)
 	R_FillColors(varray_color, model->numverts, 0, 0, 0, 0.5);
 
 	// put a light direction in the entity's coordinate space
-	lightdirection[0] = 0.3;
-	lightdirection[1] = 0.1;
-	lightdirection[2] = -1;
-	Matrix4x4_Transform3x3(&ent->inversematrix, lightdirection, offset);
-	VectorNormalizeFast(offset);
-	VectorScale(offset, 65536.0f, offset);
+	Matrix4x4_Transform3x3(&ent->inversematrix, lightdirection, projection);
+	VectorNormalizeFast(projection);
 
 	// put the plane's normal in the entity's coordinate space
 	Matrix4x4_Transform3x3(&ent->inversematrix, surfnormal, planenormal);
@@ -511,33 +511,16 @@ void R_DrawQ1Q2AliasModelFakeShadow (entity_render_t *ent)
 
 	// put the plane's distance in the entity's coordinate space
 	VectorSubtract(floororigin, ent->origin, floororigin);
-	planedist = DotProduct(floororigin, surfnormal) + 1;
+	planedist = DotProduct(floororigin, surfnormal) + 2;
 
-	//Con_Printf("sn: %f %f %f pn: %f %f %f pd: %f\n", surfnormal[0], surfnormal[1], surfnormal[2], planenormal[0], planenormal[1], planenormal[2], planedist);
-	{
-	//int count1 = 0, count2 = 0, count3 = 0;
+	dist = -1.0f / DotProduct(projection, planenormal);
+	VectorScale(projection, dist, projection);
 	for (i = 0, v = varray_vertex;i < model->numverts;i++, v += 4)
 	{
-		v2[0] = v[0] + offset[0];
-		v2[1] = v[1] + offset[1];
-		v2[2] = v[2] + offset[2];
-		dist1 = DotProduct(v, planenormal) - planedist;
-		dist2 = DotProduct(v2, planenormal) - planedist;
-		//if (dist1 > 0)
-		//	count1++;
-		//if (dist2 > 0)
-		//	count2++;
-		//if (dist1 > 0 != dist2 > 0)
-		//	count3++;
-		if (dist1 > 0 && dist2 < 0)
+		dist = DotProduct(v, planenormal) - planedist;
+		if (dist > 0)
 		//if (i & 1)
-		{
-			// clipped
-			frac = dist1 / (dist1 - dist2);
-			VectorMA(v, frac, offset, v);
-		}
-	}
-	//Con_Printf("counts %d %d %d\n", count1, count2, count3);
+			VectorMA(v, dist, projection, v);
 	}
 	R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
 }
