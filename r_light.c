@@ -193,6 +193,7 @@ void R_DrawCoronas(void)
 				m.vertex[12] = rd->origin[0] + vright[0] * scale - vup[0] * scale;
 				m.vertex[13] = rd->origin[1] + vright[1] * scale - vup[1] * scale;
 				m.vertex[14] = rd->origin[2] + vright[2] * scale - vup[2] * scale;
+				R_Mesh_Render();
 			}
 		}
 	}

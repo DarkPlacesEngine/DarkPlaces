@@ -205,6 +205,7 @@ void R_DrawCrosshairSprite(rtexture_t *texture, vec3_t origin, vec_t scale, floa
 		m.vertex[12] = origin[0] + vright[0] * scale - vup[0] * scale;
 		m.vertex[13] = origin[1] + vright[1] * scale - vup[1] * scale;
 		m.vertex[14] = origin[2] + vright[2] * scale - vup[2] * scale;
+		R_Mesh_Render();
 	}
 }
 

@@ -556,6 +556,7 @@ static void R_BlendView(void)
 		m.vertex[8] = m.vertex[0] + vright[0] * r;
 		m.vertex[9] = m.vertex[1] + vright[1] * r;
 		m.vertex[10] = m.vertex[2] + vright[2] * r;
+		R_Mesh_Render();
 	}
 }
 

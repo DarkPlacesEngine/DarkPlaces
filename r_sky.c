@@ -182,6 +182,7 @@ static void R_SkyBox(void)
 		R_SkyBoxPolyVec(1, 1, 1,  1, -1, -1);
 		R_SkyBoxPolyVec(2, 0, 1,  1,  1, -1);
 		R_SkyBoxPolyVec(3, 0, 0,  1,  1,  1);
+		R_Mesh_Render();
 	}
 	m.tex[0] = R_GetTexture(skyboxside[1]); // back
 	if (R_Mesh_Draw_GetBuffer(&m, false))
@@ -195,6 +196,7 @@ static void R_SkyBox(void)
 		R_SkyBoxPolyVec(1, 1, 1, -1,  1, -1);
 		R_SkyBoxPolyVec(2, 0, 1, -1, -1, -1);
 		R_SkyBoxPolyVec(3, 0, 0, -1, -1,  1);
+		R_Mesh_Render();
 	}
 	m.tex[0] = R_GetTexture(skyboxside[0]); // right
 	if (R_Mesh_Draw_GetBuffer(&m, false))
@@ -208,6 +210,7 @@ static void R_SkyBox(void)
 		R_SkyBoxPolyVec(1, 1, 1,  1,  1, -1);
 		R_SkyBoxPolyVec(2, 0, 1, -1,  1, -1);
 		R_SkyBoxPolyVec(3, 0, 0, -1,  1,  1);
+		R_Mesh_Render();
 	}
 	m.tex[0] = R_GetTexture(skyboxside[2]); // left
 	if (R_Mesh_Draw_GetBuffer(&m, false))
@@ -221,6 +224,7 @@ static void R_SkyBox(void)
 		R_SkyBoxPolyVec(1, 1, 1, -1, -1, -1);
 		R_SkyBoxPolyVec(2, 0, 1,  1, -1, -1);
 		R_SkyBoxPolyVec(3, 0, 0,  1, -1,  1);
+		R_Mesh_Render();
 	}
 	m.tex[0] = R_GetTexture(skyboxside[4]); // up
 	if (R_Mesh_Draw_GetBuffer(&m, false))
@@ -234,6 +238,7 @@ static void R_SkyBox(void)
 		R_SkyBoxPolyVec(1, 1, 1,  1,  1,  1);
 		R_SkyBoxPolyVec(2, 0, 1, -1,  1,  1);
 		R_SkyBoxPolyVec(3, 0, 0, -1, -1,  1);
+		R_Mesh_Render();
 	}
 	m.tex[0] = R_GetTexture(skyboxside[5]); // down
 	if (R_Mesh_Draw_GetBuffer(&m, false))
@@ -247,6 +252,7 @@ static void R_SkyBox(void)
 		R_SkyBoxPolyVec(1, 1, 1,  1, -1, -1);
 		R_SkyBoxPolyVec(2, 0, 1, -1, -1, -1);
 		R_SkyBoxPolyVec(3, 0, 0, -1,  1, -1);
+		R_Mesh_Render();
 	}
 }
 
@@ -345,6 +351,7 @@ static void R_SkySphere(void)
 	{
 		memcpy(m.index, skysphereindices, m.numtriangles * sizeof(int[3]));
 		skyspherearrays(m.vertex, m.texcoords[0], m.color, skysphere, speedscale, m.colorscale);
+		R_Mesh_Render();
 	}
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
@@ -353,6 +360,7 @@ static void R_SkySphere(void)
 	{
 		memcpy(m.index, skysphereindices, m.numtriangles * sizeof(int[3]));
 		skyspherearrays(m.vertex, m.texcoords[0], m.color, skysphere, speedscale2, m.colorscale);
+		R_Mesh_Render();
 	}
 }
 

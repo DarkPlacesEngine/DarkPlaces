@@ -214,6 +214,7 @@ void R_DrawModelMesh(rtexture_t *skin, float *colors, float cred, float cgreen, 
 
 	c_alias_polys += aliasmeshinfo.numtriangles;
 	R_Mesh_Draw(&aliasmeshinfo);
+	R_Mesh_Render();
 
 	// leave it in a state for additional passes
 	aliasmeshinfo.blendfunc1 = GL_SRC_ALPHA;
@@ -372,6 +373,7 @@ void R_DrawQ1Q2AliasModel (float fog)
 
 		c_alias_polys += aliasmeshinfo.numtriangles;
 		R_Mesh_Draw(&aliasmeshinfo);
+		R_Mesh_Render();
 	}
 	else if (currentrenderentity->colormap >= 0 || !skinframe->merged || skinframe->glow || !r_quickmodels.integer)
 	{
@@ -494,6 +496,7 @@ void R_DrawQ1Q2AliasModel (float fog)
 
 		aliasvert = aliasvertbuf;
 		aliasvertcolor = aliasvertcolorbuf;
+		R_Mesh_Render();
 	}
 }
 
@@ -798,6 +801,7 @@ void R_DrawZymoticModelMesh(zymtype1header_t *m)
 		aliasmeshinfo.index = renderlist;
 		c_alias_polys += aliasmeshinfo.numtriangles;
 		R_Mesh_Draw(&aliasmeshinfo);
+		R_Mesh_Render();
 		renderlist += aliasmeshinfo.numtriangles * 3;
 	}
 }
@@ -824,6 +828,7 @@ void R_DrawZymoticModelMeshFog(vec3_t org, zymtype1header_t *m, float fog)
 		aliasmeshinfo.index = renderlist;
 		c_alias_polys += aliasmeshinfo.numtriangles;
 		R_Mesh_Draw(&aliasmeshinfo);
+		R_Mesh_Render();
 		renderlist += aliasmeshinfo.numtriangles * 3;
 	}
 }
