@@ -878,6 +878,21 @@ void CL_SendCmd (void)
 	// send the unreliable message
 		CL_SendMove (&cmd);
 	}
+#ifndef NOROUTINGFIX
+	else
+	{
+		// LordHavoc: fix for NAT routing of netquake:
+		// bounce back a clc_nop message to the newly allocated server port,
+		// to establish a routing connection for incoming frames,
+		// the server waits for this before sending anything
+		if (realtime > cl.sendnoptime)
+		{
+			Con_DPrintf("sending clc_nop to get server's attention\n");
+			cl.sendnoptime = realtime + 3;
+			MSG_WriteByte(&cls.message, clc_nop);
+		}
+	}
+#endif
 
 	if (cls.demoplayback)
 	{

@@ -333,7 +333,14 @@ void SV_ConnectClient (int clientnum)
 			client->spawn_parms[i] = (&pr_global_struct->parm1)[i];
 	}
 
+#if NOROUTINGFIX
 	SV_SendServerinfo (client);
+#else
+	// send serverinfo on first nop
+	client->waitingforconnect = true;
+	client->sendsignon = true;
+	client->spawned = false;		// need prespawn, spawn, etc
+#endif
 }
 
 
@@ -1345,7 +1352,7 @@ qboolean SV_SendClientDatagram (client_t *client)
 	MSG_WriteByte (&msg, svc_time);
 	MSG_WriteFloat (&msg, sv.time);
 
-	if (!client->sendsignon)
+	if (client->spawned)
 	{
 		// add the client specific data to the datagram
 		SV_WriteClientdataToMessage (client->edict, &msg);
@@ -1447,6 +1454,14 @@ void SV_SendClientMessages (void)
 	{
 		if (!host_client->active)
 			continue;
+
+#ifndef NOROUTINGFIX
+		if (host_client->sendserverinfo)
+		{
+			host_client->sendserverinfo = false;
+			SV_SendServerinfo (host_client);
+		}
+#endif
 
 		if (host_client->spawned)
 		{
