@@ -534,6 +534,11 @@ qbyte* JPEG_LoadImage (qbyte *f, int matchwidth, int matchheight)
 		qjpeg_destroy_decompress (&cinfo);
 		return NULL;
 	}
+	if (image_width > 4096 || image_height > 4096 || image_width <= 0 || image_height <= 0)
+	{
+		Con_Printf("JPEG_LoadImage: invalid image size %ix%i\n", image_width, image_height);
+		return NULL;
+	}
 
 	image_rgba = Mem_Alloc(tempmempool, image_width * image_height * 4);
 	scanline = Mem_Alloc(tempmempool, image_width * cinfo.output_components);
