@@ -454,22 +454,10 @@ char *PR_UglyValueString (etype_t type, eval_t *val)
 	switch (type)
 	{
 	case ev_string:
-		snprintf (line, sizeof (line), "%s", PR_GetString(val->string));
-		break;
-	case ev_entity:
-		snprintf (line, sizeof (line), "%i", NUM_FOR_EDICT(PROG_TO_EDICT(val->edict)));
-		break;
-	case ev_function:
-		f = pr_functions + val->function;
-		snprintf (line, sizeof (line), "%s", PR_GetString(f->s_name));
-		break;
-	case ev_field:
-		def = ED_FieldAtOfs ( val->_int );
-		// LordHavoc: parse the string a bit to turn special characters
+		// Parse the string a bit to turn special characters
 		// (like newline, specifically) into escape codes,
 		// this fixes saving games from various mods
-		//sprintf (line, "%s", PR_GetString(def->s_name));
-		s = PR_GetString(def->s_name);
+		s = PR_GetString (val->string);
 		for (i = 0;i < sizeof (line) - 2 && *s;)
 		{
 			if (*s == '\n')
@@ -487,6 +475,17 @@ char *PR_UglyValueString (etype_t type, eval_t *val)
 			s++;
 		}
 		line[i] = '\0';
+		break;
+	case ev_entity:
+		snprintf (line, sizeof (line), "%i", NUM_FOR_EDICT(PROG_TO_EDICT(val->edict)));
+		break;
+	case ev_function:
+		f = pr_functions + val->function;
+		snprintf (line, sizeof (line), "%s", PR_GetString(f->s_name));
+		break;
+	case ev_field:
+		def = ED_FieldAtOfs ( val->_int );
+		snprintf (line, sizeof (line), ".%s", PR_GetString(def->s_name));
 		break;
 	case ev_void:
 		snprintf (line, sizeof (line), "void");
