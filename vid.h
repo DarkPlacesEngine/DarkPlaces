@@ -52,6 +52,9 @@ extern cvar_t vid_height;
 extern cvar_t vid_bitsperpixel;
 extern cvar_t vid_mouse;
 
+extern cvar_t gl_combine;
+extern cvar_t gl_finish;
+
 extern cvar_t v_gamma;
 extern cvar_t v_contrast;
 extern cvar_t v_brightness;

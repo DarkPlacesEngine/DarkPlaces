@@ -65,6 +65,7 @@ cvar_t vid_bitsperpixel = {CVAR_SAVE, "vid_bitsperpixel", "32"};
 
 cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1"};
 cvar_t gl_combine = {CVAR_SAVE, "gl_combine", "1"};
+cvar_t gl_finish = {0, "gl_finish", "0"};
 
 cvar_t in_pitch_min = {0, "in_pitch_min", "-70"};
 cvar_t in_pitch_max = {0, "in_pitch_max", "80"};
@@ -773,6 +774,7 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&vid_bitsperpixel);
 	Cvar_RegisterVariable(&vid_mouse);
 	Cvar_RegisterVariable(&gl_combine);
+	Cvar_RegisterVariable(&gl_finish);
 	Cvar_RegisterVariable(&in_pitch_min);
 	Cvar_RegisterVariable(&in_pitch_max);
 	Cvar_RegisterVariable(&m_filter);
