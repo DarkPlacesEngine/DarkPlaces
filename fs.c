@@ -234,6 +234,22 @@ typedef struct searchpath_s
 /*
 =============================================================================
 
+FUNCTION PROTOTYPES
+
+=============================================================================
+*/
+
+void FS_Dir_f(void);
+void FS_Ls_f(void);
+
+static packfile_t* FS_AddFileToPack (const char* name, pack_t* pack,
+									 size_t offset, size_t packsize,
+									 size_t realsize, file_flags_t flags);
+
+
+/*
+=============================================================================
+
 VARIABLES
 
 =============================================================================
@@ -447,7 +463,6 @@ int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 	for (ind = 0; ind < eocd->nbentries; ind++)
 	{
 		size_t namesize, count;
-		packfile_t *file;
 
 		// Checking the remaining size
 		if (remaining < ZIP_CDIR_CHUNK_BASE_SIZE)
@@ -483,19 +498,24 @@ int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 			// WinZip doesn't use the "directory" attribute, so we need to check the name directly
 			if (ptr[ZIP_CDIR_CHUNK_BASE_SIZE + namesize - 1] != '/')
 			{
-				// Extract the name
-				file = &pack->files[pack->numfiles];
-				memcpy (file->name, &ptr[ZIP_CDIR_CHUNK_BASE_SIZE], namesize);
-				file->name[namesize] = '\0';
+				char filename [sizeof (pack->files[0].name)];
+				size_t offset, packsize, realsize;
+				file_flags_t flags;
 
-				// Compression, sizes and offset
+				// Extract the name (strip it if necessary)
+				if (namesize >= sizeof (filename))
+					namesize = sizeof (filename) - 1;
+				memcpy (filename, &ptr[ZIP_CDIR_CHUNK_BASE_SIZE], namesize);
+				filename[namesize] = '\0';
+
 				if (BuffLittleShort (&ptr[10]))
-					file->flags = FILE_FLAG_DEFLATED;
-				file->packsize = BuffLittleLong (&ptr[20]);
-				file->realsize = BuffLittleLong (&ptr[24]);
-				file->offset = BuffLittleLong (&ptr[42]);
-
-				pack->numfiles++;
+					flags = FILE_FLAG_DEFLATED;
+				else
+					flags = 0;
+				offset = BuffLittleLong (&ptr[42]);
+				packsize = BuffLittleLong (&ptr[20]);
+				realsize = BuffLittleLong (&ptr[24]);
+				FS_AddFileToPack (filename, pack, offset, packsize, realsize, flags);
 			}
 		}
 
@@ -603,6 +623,31 @@ OTHER PRIVATE FUNCTIONS
 
 
 /*
+====================
+FS_AddFileToPack
+
+Add a file to the list of files contained into a package 
+
+TODO: do some sorting here to allow faster file searching afterwards
+====================
+*/
+static packfile_t* FS_AddFileToPack (const char* name, pack_t* pack,
+									 size_t offset, size_t packsize,
+									 size_t realsize, file_flags_t flags)
+{
+	packfile_t *file = &pack->files[pack->numfiles++];
+
+	strlcpy (file->name, name, sizeof (file->name));
+	file->offset = offset;
+	file->packsize = packsize;
+	file->realsize = realsize;
+	file->flags = flags;
+
+	return file;
+}
+
+
+/*
 ============
 FS_CreatePath
 
@@ -690,7 +735,7 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 	pack->ignorecase = false; // PAK is case sensitive
 	strlcpy (pack->filename, packfile, sizeof (pack->filename));
 	pack->handle = packhandle;
-	pack->numfiles = numpackfiles;
+	pack->numfiles = 0;
 	pack->mempool = Mem_AllocPool(packfile);
 	pack->files = Mem_Alloc(pack->mempool, numpackfiles * sizeof(packfile_t));
 	pack->next = packlist;
@@ -703,15 +748,10 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 	// parse the directory
 	for (i = 0;i < numpackfiles;i++)
 	{
-		size_t size;
-		packfile_t *file = &pack->files[i];
+		size_t offset = LittleLong (info[i].filepos);
+		size_t size = LittleLong (info[i].filelen);
 
-		strlcpy (file->name, info[i].name, sizeof (file->name));
-		file->offset = LittleLong(info[i].filepos);
-		size = LittleLong (info[i].filelen);
-		file->packsize = size;
-		file->realsize = size;
-		file->flags = FILE_FLAG_TRUEOFFS;
+		FS_AddFileToPack (info[i].name, pack, offset, size, size, FILE_FLAG_TRUEOFFS);
 	}
 
 	Mem_Free(info);
@@ -827,8 +867,6 @@ char *FS_FileExtension (const char *in)
 	return exten;
 }
 
-void FS_Dir_f(void);
-void FS_Ls_f(void);
 
 /*
 ================
