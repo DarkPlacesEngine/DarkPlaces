@@ -93,8 +93,10 @@ void Sys_Printf(const char *fmt, ...)
 	Sys_Print(msg);
 }
 
+extern qboolean host_shuttingdown;
 void Sys_Quit (void)
 {
+	host_shuttingdown = true;
 	Host_Shutdown();
 	exit(0);
 }
