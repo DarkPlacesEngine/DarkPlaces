@@ -931,6 +931,7 @@ void Image_WriteTGARGBA (const char *filename, int width, int height, const qbyt
 	buffer[14] = (height >> 0) & 0xFF;
 	buffer[15] = (height >> 8) & 0xFF;
 	buffer[16] = 32;	// pixel size
+	buffer[17] = 8; // transparent flag? (seems to be needed by gimp)
 
 	// swap rgba to bgra and flip upside down
 	out = buffer + 18;
