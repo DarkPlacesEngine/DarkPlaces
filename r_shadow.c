@@ -14,8 +14,6 @@ extern void R_Shadow_EditLights_Init(void);
 int r_shadowstage = SHADOWSTAGE_NONE;
 int r_shadow_reloadlights = false;
 
-int r_shadow_lightingmode = 0;
-
 mempool_t *r_shadow_mempool;
 
 int maxshadowelements;
@@ -41,7 +39,9 @@ rtexture_t *r_shadow_blankwhitetexture;
 cvar_t r_shadow_lightattenuationpower = {0, "r_shadow_lightattenuationpower", "0.5"};
 cvar_t r_shadow_lightattenuationscale = {0, "r_shadow_lightattenuationscale", "1"};
 cvar_t r_shadow_lightintensityscale = {0, "r_shadow_lightintensityscale", "1"};
-cvar_t r_shadow_realtime = {0, "r_shadow_realtime", "0"};
+cvar_t r_shadow_realtime_world = {0, "r_shadow_realtime_world", "0"};
+cvar_t r_shadow_realtime_dlight = {0, "r_shadow_realtime_dlight", "0"};
+cvar_t r_shadow_visiblevolumes = {0, "r_shadow_visiblevolumes", "0"};
 cvar_t r_shadow_gloss = {0, "r_shadow_gloss", "1"};
 cvar_t r_shadow_debuglight = {0, "r_shadow_debuglight", "-1"};
 cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1"};
@@ -122,7 +122,9 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_lightattenuationpower);
 	Cvar_RegisterVariable(&r_shadow_lightattenuationscale);
 	Cvar_RegisterVariable(&r_shadow_lightintensityscale);
-	Cvar_RegisterVariable(&r_shadow_realtime);
+	Cvar_RegisterVariable(&r_shadow_realtime_world);
+	Cvar_RegisterVariable(&r_shadow_realtime_dlight);
+	Cvar_RegisterVariable(&r_shadow_visiblevolumes);
 	Cvar_RegisterVariable(&r_shadow_gloss);
 	Cvar_RegisterVariable(&r_shadow_debuglight);
 	Cvar_RegisterVariable(&r_shadow_scissor);
@@ -534,6 +536,21 @@ void R_Shadow_Stage_Begin(void)
 	 || r_shadow_lightattenuationpower.value != r_shadow_attenpower
 	 || r_shadow_lightattenuationscale.value != r_shadow_attenscale)
 		R_Shadow_MakeTextures();
+
+	memset(&m, 0, sizeof(m));
+	m.blendfunc1 = GL_ONE;
+	m.blendfunc2 = GL_ZERO;
+	R_Mesh_State(&m);
+	GL_Color(0, 0, 0, 1);
+	r_shadowstage = SHADOWSTAGE_NONE;
+
+	c_rt_lights = c_rt_clears = c_rt_scissored = 0;
+	c_rt_shadowmeshes = c_rt_shadowtris = c_rt_lightmeshes = c_rt_lighttris = 0;
+	c_rtcached_shadowmeshes = c_rtcached_shadowtris = 0;
+}
+
+void R_Shadow_LoadWorldLightsIfNeeded(void)
+{
 	if (r_shadow_reloadlights && cl.worldmodel)
 	{
 		R_Shadow_ClearWorldLights();
@@ -546,17 +563,6 @@ void R_Shadow_Stage_Begin(void)
 				R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite();
 		}
 	}
-
-	memset(&m, 0, sizeof(m));
-	m.blendfunc1 = GL_ONE;
-	m.blendfunc2 = GL_ZERO;
-	R_Mesh_State(&m);
-	GL_Color(0, 0, 0, 1);
-	r_shadowstage = SHADOWSTAGE_NONE;
-
-	c_rt_lights = c_rt_clears = c_rt_scissored = 0;
-	c_rt_shadowmeshes = c_rt_shadowtris = c_rt_lightmeshes = c_rt_lighttris = 0;
-	c_rtcached_shadowmeshes = c_rtcached_shadowtris = 0;
 }
 
 void R_Shadow_Stage_ShadowVolumes(void)
@@ -972,19 +978,28 @@ int R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	return false;
 }
 
-void R_Shadow_VertexLighting(int numverts, const float *vertex3f, const float *normal3f, const float *lightcolor, const float *relativelightorigin, float lightradius)
+void R_Shadow_VertexLighting(int numverts, const float *vertex3f, const float *normal3f, const float *lightcolor, const matrix4x4_t *m)
 {
 	float *color4f = varray_color4f;
-	float dist, dot, intensity, iradius = 1.0f / lightradius, radius2 = lightradius * lightradius, v[3];
+	float dist, dot, intensity, v[3], n[3];
 	for (;numverts > 0;numverts--, vertex3f += 3, normal3f += 3, color4f += 4)
 	{
-		VectorSubtract(vertex3f, relativelightorigin, v);
-		if ((dot = DotProduct(normal3f, v)) > 0 && (dist = DotProduct(v, v)) < radius2)
+		Matrix4x4_Transform(m, vertex3f, v);
+		if ((dist = DotProduct(v, v)) < 1)
 		{
-			dist = sqrt(dist);
-			intensity = pow(1 - (dist * iradius), r_shadow_attenpower) * r_shadow_attenscale * dot / dist;
-			VectorScale(lightcolor, intensity, color4f);
-			color4f[3] = 1;
+			Matrix4x4_Transform3x3(m, normal3f, n);
+			if ((dot = DotProduct(n, v)) > 0)
+			{
+				dist = sqrt(dist);
+				intensity = pow(1 - dist, r_shadow_attenpower) * r_shadow_attenscale * dot / sqrt(DotProduct(n,n));
+				VectorScale(lightcolor, intensity, color4f);
+				color4f[3] = 1;
+			}
+			else
+			{
+				VectorClear(color4f);
+				color4f[3] = 1;
+			}
 		}
 		else
 		{
@@ -994,18 +1009,27 @@ void R_Shadow_VertexLighting(int numverts, const float *vertex3f, const float *n
 	}
 }
 
-void R_Shadow_VertexLightingWithXYAttenuationTexture(int numverts, const float *vertex3f, const float *normal3f, const float *lightcolor, const float *relativelightorigin, float lightradius, const float *zdir)
+void R_Shadow_VertexLightingWithXYAttenuationTexture(int numverts, const float *vertex3f, const float *normal3f, const float *lightcolor, const matrix4x4_t *m)
 {
 	float *color4f = varray_color4f;
-	float dist, dot, intensity, iradius = 1.0f / lightradius, v[3];
+	float dist, dot, intensity, v[3], n[3];
 	for (;numverts > 0;numverts--, vertex3f += 3, normal3f += 3, color4f += 4)
 	{
-		VectorSubtract(vertex3f, relativelightorigin, v);
-		if ((dot = DotProduct(normal3f, v)) > 0 && (dist = fabs(DotProduct(zdir, v))) < lightradius)
+		Matrix4x4_Transform(m, vertex3f, v);
+		if ((dist = fabs(v[2])) < 1)
 		{
-			intensity = pow(1 - (dist * iradius), r_shadow_attenpower) * r_shadow_attenscale * dot / sqrt(DotProduct(v,v));
-			VectorScale(lightcolor, intensity, color4f);
-			color4f[3] = 1;
+			Matrix4x4_Transform3x3(m, normal3f, n);
+			if ((dot = DotProduct(n, v)) > 0)
+			{
+				intensity = pow(1 - dist, r_shadow_attenpower) * r_shadow_attenscale * dot / sqrt(DotProduct(n,n));
+				VectorScale(lightcolor, intensity, color4f);
+				color4f[3] = 1;
+			}
+			else
+			{
+				VectorClear(color4f);
+				color4f[3] = 1;
+			}
 		}
 		else
 		{
@@ -1377,7 +1401,7 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 				R_Mesh_CopyVertex3f(vertex3f, numverts);
 				R_Mesh_CopyTexCoord2f(0, texcoord2f, numverts);
 				R_Shadow_Transform_Vertex3f_TexCoord2f(varray_texcoord2f[1], numverts, vertex3f, matrix_modeltoattenuationxyz);
-				R_Shadow_VertexLightingWithXYAttenuationTexture(numverts, vertex3f, normal3f, color2, relativelightorigin, lightradius, matrix_modeltofilter->m[2]);
+				R_Shadow_VertexLightingWithXYAttenuationTexture(numverts, vertex3f, normal3f, color, relativelightorigin, lightradius, matrix_modeltofilter);
 				R_Mesh_Draw(numverts, numtriangles, elements);
 			}
 		}
@@ -1405,8 +1429,7 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 				R_Mesh_GetSpace(numverts);
 				R_Mesh_CopyVertex3f(vertex3f, numverts);
 				R_Mesh_CopyTexCoord2f(0, texcoord2f, numverts);
-				VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
-				R_Shadow_VertexLighting(numverts, vertex3f, normal3f, color, relativelightorigin, lightradius);
+				R_Shadow_VertexLighting(numverts, vertex3f, normal3f, color, relativelightorigin, lightradius, matrix_modeltofilter);
 				R_Mesh_Draw(numverts, numtriangles, elements);
 			}
 		}
@@ -2271,18 +2294,6 @@ void R_Shadow_SetCursorLocationForView(void)
 	r_editlights_cursorlocation[0] = floor(endpos[0] / r_editlights_cursorgrid.value + 0.5f) * r_editlights_cursorgrid.value;
 	r_editlights_cursorlocation[1] = floor(endpos[1] / r_editlights_cursorgrid.value + 0.5f) * r_editlights_cursorgrid.value;
 	r_editlights_cursorlocation[2] = floor(endpos[2] / r_editlights_cursorgrid.value + 0.5f) * r_editlights_cursorgrid.value;
-}
-
-void R_Shadow_UpdateLightingMode(void)
-{
-	r_shadow_lightingmode = 0;
-	if (r_shadow_realtime.integer)
-	{
-		if (r_shadow_worldlightchain)
-			r_shadow_lightingmode = 2;
-		else
-			r_shadow_lightingmode = 1;
-	}
 }
 
 void R_Shadow_UpdateWorldLightSelection(void)

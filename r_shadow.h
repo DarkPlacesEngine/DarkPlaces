@@ -4,7 +4,9 @@
 
 extern cvar_t r_shadow_lightattenuationscale;
 extern cvar_t r_shadow_lightintensityscale;
-extern cvar_t r_shadow_realtime;
+extern cvar_t r_shadow_realtime_world;
+extern cvar_t r_shadow_realtime_dlight;
+extern cvar_t r_shadow_visiblevolumes;
 extern cvar_t r_shadow_gloss;
 extern cvar_t r_shadow_debuglight;
 extern cvar_t r_shadow_bumpscale_bumpmap;
@@ -21,6 +23,7 @@ float *R_Shadow_VertexBuffer(int numvertices);
 
 void R_Shadow_RenderShadowMeshVolume(shadowmesh_t *mesh);
 void R_Shadow_Stage_Begin(void);
+void R_Shadow_LoadWorldLightsIfNeeded(void);
 void R_Shadow_Stage_ShadowVolumes(void);
 void R_Shadow_Stage_LightWithShadows(void);
 void R_Shadow_Stage_LightWithoutShadows(void);
@@ -67,10 +70,6 @@ typedef struct worldlight_s
 worldlight_t;
 
 extern worldlight_t *r_shadow_worldlightchain;
-
-// 0 = normal, 1 = dynamic light shadows, 2 = world and dynamic light shadows
-extern int r_shadow_lightingmode;
-void R_Shadow_UpdateLightingMode(void);
 
 void R_Shadow_UpdateWorldLightSelection(void);
 
