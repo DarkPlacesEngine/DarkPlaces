@@ -110,6 +110,7 @@ void R_UpdateLights(void)
 	if (!r_dynamic.integer || !cl_dlights)
 		return;
 
+	// TODO: optimize to not scan whole cl_dlights array if possible
 	for (i = 0;i < MAX_DLIGHTS;i++)
 	{
 		if (cl_dlights[i].radius > 0)
