@@ -1214,7 +1214,7 @@ void M_Options_PrintCommand(char *s, int enabled)
 {
 	if (opty >= 32)
 	{
-		DrawQ_Fill(menu_x, menu_y + opty, 640, 8, optnum == optcursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
+		DrawQ_Fill(menu_x, menu_y + opty, 320, 8, optnum == optcursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
 		M_ItemPrint(0, opty, s, enabled);
 	}
 	opty += 8;
@@ -1225,7 +1225,7 @@ void M_Options_PrintCheckbox(char *s, int enabled, int yes)
 {
 	if (opty >= 32)
 	{
-		DrawQ_Fill(menu_x, menu_y + opty, 640, 8, optnum == optcursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
+		DrawQ_Fill(menu_x, menu_y + opty, 320, 8, optnum == optcursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
 		M_ItemPrint(0, opty, s, enabled);
 		M_DrawCheckbox(0 + strlen(s) * 8 + 8, opty, yes);
 	}
@@ -1237,7 +1237,7 @@ void M_Options_PrintSlider(char *s, int enabled, float value, float minvalue, fl
 {
 	if (opty >= 32)
 	{
-		DrawQ_Fill(menu_x, menu_y + opty, 640, 8, optnum == optcursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
+		DrawQ_Fill(menu_x, menu_y + opty, 320, 8, optnum == optcursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
 		M_ItemPrint(0, opty, s, enabled);
 		M_DrawSlider(0 + strlen(s) * 8 + 8, opty, value, minvalue, maxvalue);
 	}
