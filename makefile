@@ -42,7 +42,6 @@ CMD_RM=rm -f
 endif
 
 # Objects
-# AK added the new prvm stuff - LordHavoc please correct it !
 CLIENTOBJECTS=	cgame.o cgamevm.o chase.o cl_collision.o cl_demo.o cl_input.o \
 		cl_main.o cl_parse.o cl_particles.o cl_screen.o cl_video.o \
 		console.o dpvsimpledecode.o fractalnoise.o gl_backend.o \
