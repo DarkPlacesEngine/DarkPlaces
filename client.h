@@ -461,6 +461,7 @@ void CL_RocketTrail2 (vec3_t start, vec3_t end, int color, entity_t *ent);
 void CL_SparkShower (vec3_t org, vec3_t dir, int count);
 void CL_PlasmaBurn (vec3_t org);
 void CL_BloodPuff (vec3_t org, vec3_t vel, int count);
+void CL_Stardust (vec3_t mins, vec3_t maxs, int count);
 void CL_FlameCube (vec3_t mins, vec3_t maxs, int count);
 void CL_Flames (vec3_t org, vec3_t vel, int count);
 void CL_BloodShower (vec3_t mins, vec3_t maxs, float velspeed, int count);

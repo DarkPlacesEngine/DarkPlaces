@@ -526,26 +526,72 @@ static void CL_RelinkNetworkEntities()
 				{
 					vec3_t mins, maxs;
 					int temp;
+					/*
 					if (ent->render.angles[0] || ent->render.angles[2])
 					{
-						VectorAdd(neworg, ent->render.model->rotatedmins, mins);
-						VectorAdd(neworg, ent->render.model->rotatedmaxs, maxs);
+						VectorMA(neworg, 0.25f, ent->render.model->rotatedmins, mins);
+						VectorMA(neworg, 0.25f, ent->render.model->rotatedmaxs, maxs);
 					}
 					else if (ent->render.angles[1])
 					{
-						VectorAdd(neworg, ent->render.model->yawmins, mins);
-						VectorAdd(neworg, ent->render.model->yawmaxs, maxs);
+						VectorMA(neworg, 0.25f, ent->render.model->yawmins, mins);
+						VectorMA(neworg, 0.25f, ent->render.model->yawmaxs, maxs);
 					}
 					else
 					{
-						VectorAdd(neworg, ent->render.model->normalmins, mins);
-						VectorAdd(neworg, ent->render.model->normalmaxs, maxs);
+						VectorMA(neworg, 0.25f, ent->render.model->normalmins, mins);
+						VectorMA(neworg, 0.25f, ent->render.model->normalmaxs, maxs);
 					}
+					*/
+					mins[0] = neworg[0] - 16.0f;
+					mins[1] = neworg[1] - 16.0f;
+					mins[2] = neworg[2] - 16.0f;
+					maxs[0] = neworg[0] + 16.0f;
+					maxs[1] = neworg[1] + 16.0f;
+					maxs[2] = neworg[2] + 16.0f;
 					// how many flames to make
 					temp = (int) (cl.time * 300) - (int) (cl.oldtime * 300);
 					CL_FlameCube(mins, maxs, temp);
 				}
 				d = lhrandom(200, 250);
+				dlightcolor[0] += d * 1.0f;
+				dlightcolor[1] += d * 0.7f;
+				dlightcolor[2] += d * 0.3f;
+			}
+			if (effects & EF_STARDUST)
+			{
+				if (ent->render.model)
+				{
+					vec3_t mins, maxs;
+					int temp;
+					/*
+					if (ent->render.angles[0] || ent->render.angles[2])
+					{
+						VectorMA(neworg, 0.25f, ent->render.model->rotatedmins, mins);
+						VectorMA(neworg, 0.25f, ent->render.model->rotatedmaxs, maxs);
+					}
+					else if (ent->render.angles[1])
+					{
+						VectorMA(neworg, 0.25f, ent->render.model->yawmins, mins);
+						VectorMA(neworg, 0.25f, ent->render.model->yawmaxs, maxs);
+					}
+					else
+					{
+						VectorMA(neworg, 0.25f, ent->render.model->normalmins, mins);
+						VectorMA(neworg, 0.25f, ent->render.model->normalmaxs, maxs);
+					}
+					*/
+					mins[0] = neworg[0] - 16.0f;
+					mins[1] = neworg[1] - 16.0f;
+					mins[2] = neworg[2] - 16.0f;
+					maxs[0] = neworg[0] + 16.0f;
+					maxs[1] = neworg[1] + 16.0f;
+					maxs[2] = neworg[2] + 16.0f;
+					// how many particles to make
+					temp = (int) (cl.time * 200) - (int) (cl.oldtime * 200);
+					CL_Stardust(mins, maxs, temp);
+				}
+				d = 100;
 				dlightcolor[0] += d * 1.0f;
 				dlightcolor[1] += d * 0.7f;
 				dlightcolor[2] += d * 0.3f;
@@ -574,10 +620,9 @@ static void CL_RelinkNetworkEntities()
 				else if (ent->render.model->flags & EF_ROCKET)
 				{
 					CL_RocketTrail (oldorg, ent->render.origin, 0, ent);
-					// LordHavoc: changed from 200, 160, 80 to 250, 200, 100
-					dlightcolor[0] += 250.0f;
-					dlightcolor[1] += 200.0f;
-					dlightcolor[2] += 100.0f;
+					dlightcolor[0] += 200.0f;
+					dlightcolor[1] += 160.0f;
+					dlightcolor[2] +=  80.0f;
 				}
 				else if (ent->render.model->flags & EF_GRENADE)
 				{
@@ -591,14 +636,15 @@ static void CL_RelinkNetworkEntities()
 			}
 		}
 		// LordHavoc: customizable glow
-		glowsize = ent->state_current.glowsize * 4.0f; // FIXME: interpolate?
+		glowsize = ent->state_current.glowsize; // FIXME: interpolate?
 		glowcolor = ent->state_current.glowcolor;
 		if (glowsize)
 		{
 			qbyte *tempcolor = (qbyte *)&d_8to24table[glowcolor];
-			dlightcolor[0] += glowsize * tempcolor[0] * (1.0f / 255.0f);
-			dlightcolor[1] += glowsize * tempcolor[1] * (1.0f / 255.0f);
-			dlightcolor[2] += glowsize * tempcolor[2] * (1.0f / 255.0f);
+			// * 4 for the expansion from 0-255 to 0-1023 range,
+			// / 255 to scale down byte colors
+			glowsize *= (4.0f / 255.0f);
+			VectorMA(dlightcolor, glowsize, tempcolor, dlightcolor);
 		}
 		// LordHavoc: customizable trail
 		if (ent->render.flags & RENDER_GLOWTRAIL)
@@ -607,13 +653,11 @@ static void CL_RelinkNetworkEntities()
 		if (dlightcolor[0] || dlightcolor[1] || dlightcolor[2])
 		{
 			vec3_t vec;
-			dlightradius = VectorLength(dlightcolor);
-			d = 1.0f / dlightradius;
 			VectorCopy(neworg, vec);
 			// hack to make glowing player light shine on their gun
 			if (i == cl.viewentity && !chase_active.integer)
 				vec[2] += 30;
-			CL_AllocDlight (/*&ent->render*/ NULL, vec, dlightradius, dlightcolor[0] * d, dlightcolor[1] * d, dlightcolor[2] * d, 0, 0);
+			CL_AllocDlight (/*&ent->render*/ NULL, vec, 1, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0);
 		}
 
 		if (chase_active.integer)
