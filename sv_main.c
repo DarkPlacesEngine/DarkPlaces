@@ -1858,7 +1858,7 @@ void SV_SpawnServer (const char *server)
 	ent->v->solid = SOLID_BSP;
 	ent->v->movetype = MOVETYPE_PUSH;
 
-	if (coop.integer)
+	if (coop.value)
 		pr_global_struct->coop = coop.integer;
 	else
 		pr_global_struct->deathmatch = deathmatch.integer;
