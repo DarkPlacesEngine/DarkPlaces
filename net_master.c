@@ -19,7 +19,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // net_master.c
 
-#include <malloc.h>
 #include "quakedef.h"
 
 cvar_t sv_masters [] =
@@ -185,6 +184,7 @@ void Master_ParseServerList (net_landriver_t* dfunc)
 {
 	int control;
 	qbyte* servers;
+	qbyte* crtserver;
 	int ipaddr;
 	struct qsockaddr svaddr;
 	char ipstring [32];
@@ -205,17 +205,17 @@ void Master_ParseServerList (net_landriver_t* dfunc)
 	if (strncmp (net_message.data + 4, "getserversResponse\\", 19))	
 		return;
 
-	// Skip the next 18 bytes
+	// Skip the next 19 bytes
 	MSG_ReadLong(); MSG_ReadLong(); MSG_ReadLong(); MSG_ReadLong();
 	MSG_ReadShort(); MSG_ReadByte();
 
-	servers = alloca (net_message.cursize - 23);
+	crtserver = servers = Z_Malloc (net_message.cursize - 23);
 	memcpy (servers , net_message.data + 23, net_message.cursize - 23);
 
 	// Extract the IP addresses
-	while ((ipaddr = (servers[3] << 24) + (servers[2] << 16) + (servers[1] << 8) + servers[0]) != -1)
+	while ((ipaddr = (crtserver[3] << 24) | (crtserver[2] << 16) | (crtserver[1] << 8) | crtserver[0]) != -1)
 	{
-		int port = (servers[5] << 8) + servers[4];
+		int port = (crtserver[5] << 8) | crtserver[4];
 
 		if (port == -1 || port == 0)
 			break;
@@ -238,8 +238,10 @@ void Master_ParseServerList (net_landriver_t* dfunc)
 		dfunc->Write(dfunc->controlSock, net_message.data, net_message.cursize, &svaddr);
 		SZ_Clear(&net_message);
 
-		if (servers[6] != '\\')
+		if (crtserver[6] != '\\')
 			break;
-		servers += 7;
+		crtserver += 7;
 	}
+
+	Z_Free (servers);
 }
