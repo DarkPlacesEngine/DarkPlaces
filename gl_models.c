@@ -3,6 +3,8 @@
 
 //cvar_t gl_transform = {0, "gl_transform", "1"};
 cvar_t gl_lockarrays = {0, "gl_lockarrays", "1"};
+cvar_t r_zymdebug = {0, "r_zymdebug", "0"};
+cvar_t r_zymdebug_dist = {0, "r_zymdebug_dist", "4"};
 
 typedef struct
 {
@@ -43,7 +45,7 @@ void GL_UnlockArray(void)
 /*
 void GL_SetupModelTransform (vec3_t origin, vec3_t angles, vec_t scale)
 {
-    glTranslatef (origin[0], origin[1], origin[2]);
+	glTranslatef (origin[0], origin[1], origin[2]);
 
 	if (scale != 1)
 		glScalef (scale, scale, scale);
@@ -107,6 +109,8 @@ void GL_Models_Init(void)
 {
 //	Cvar_RegisterVariable(&gl_transform);
 	Cvar_RegisterVariable(&gl_lockarrays);
+	Cvar_RegisterVariable(&r_zymdebug);
+	Cvar_RegisterVariable(&r_zymdebug_dist);
 
 	R_RegisterModule("GL_Models", gl_models_start, gl_models_shutdown, gl_models_newmap);
 }
@@ -265,7 +269,7 @@ void R_AliasLerpVerts(int vertcount,
 	}
 }
 
-void GL_DrawModelMesh(rtexture_t *skin, float *colors, float cred, float cgreen, float cblue)
+void R_DrawModelMesh(rtexture_t *skin, float *colors, float cred, float cgreen, float cblue)
 {
 	aliasmeshinfo.tex[0] = R_GetTexture(skin);
 	aliasmeshinfo.color = colors;
@@ -310,8 +314,6 @@ void R_SetupMDLMD2Frames(skinframe_t **skinframe)
 		*skinframe = &model->skinframes[model->skinscenes[currentrenderentity->skinnum].firstframe + (int) (cl.time * 10) % model->skinscenes[currentrenderentity->skinnum].framecount];
 	else
 		*skinframe = &model->skinframes[model->skinscenes[currentrenderentity->skinnum].firstframe];
-
-	softwaretransformforentity(currentrenderentity);
 
 	frame1 = &model->mdlmd2data_frames[currentrenderentity->frameblend[0].frame];
 	frame2 = &model->mdlmd2data_frames[currentrenderentity->frameblend[1].frame];
@@ -410,17 +412,17 @@ void R_DrawQ1AliasModel (void)
 			int c;
 			byte *color;
 			if (skinframe->base)
-				GL_DrawModelMesh(skinframe->base, aliasvertcolor, 0, 0, 0);
+				R_DrawModelMesh(skinframe->base, aliasvertcolor, 0, 0, 0);
 			if (skinframe->pants)
 			{
 				c = (currentrenderentity->colormap & 0xF) << 4;c += (c >= 128 && c < 224) ? 4 : 12; // 128-224 are backwards ranges
 				color = (byte *) (&d_8to24table[c]);
 				if (c >= 224) // fullbright ranges
-					GL_DrawModelMesh(skinframe->pants, NULL, color[0] * (1.0f / 255.0f), color[1] * (1.0f / 255.0f), color[2] * (1.0f / 255.0f));
+					R_DrawModelMesh(skinframe->pants, NULL, color[0] * (1.0f / 255.0f), color[1] * (1.0f / 255.0f), color[2] * (1.0f / 255.0f));
 				else
 				{
 					R_TintModel(aliasvertcolor, aliasvertcolor2, model->numverts, color[0] * (1.0f / 255.0f), color[1] * (1.0f / 255.0f), color[2] * (1.0f / 255.0f));
-					GL_DrawModelMesh(skinframe->pants, aliasvertcolor2, 0, 0, 0);
+					R_DrawModelMesh(skinframe->pants, aliasvertcolor2, 0, 0, 0);
 				}
 			}
 			if (skinframe->shirt)
@@ -428,29 +430,29 @@ void R_DrawQ1AliasModel (void)
 				c = currentrenderentity->colormap & 0xF0      ;c += (c >= 128 && c < 224) ? 4 : 12; // 128-224 are backwards ranges
 				color = (byte *) (&d_8to24table[c]);
 				if (c >= 224) // fullbright ranges
-					GL_DrawModelMesh(skinframe->shirt, NULL, color[0] * (1.0f / 255.0f), color[1] * (1.0f / 255.0f), color[2] * (1.0f / 255.0f));
+					R_DrawModelMesh(skinframe->shirt, NULL, color[0] * (1.0f / 255.0f), color[1] * (1.0f / 255.0f), color[2] * (1.0f / 255.0f));
 				else
 				{
 					R_TintModel(aliasvertcolor, aliasvertcolor2, model->numverts, color[0] * (1.0f / 255.0f), color[1] * (1.0f / 255.0f), color[2] * (1.0f / 255.0f));
-					GL_DrawModelMesh(skinframe->shirt, aliasvertcolor2, 0, 0, 0);
+					R_DrawModelMesh(skinframe->shirt, aliasvertcolor2, 0, 0, 0);
 				}
 			}
 		}
 		else
 		{
 			if (skinframe->merged)
-				GL_DrawModelMesh(skinframe->merged, aliasvertcolor, 0, 0, 0);
+				R_DrawModelMesh(skinframe->merged, aliasvertcolor, 0, 0, 0);
 			else
 			{
-				if (skinframe->base) GL_DrawModelMesh(skinframe->base, aliasvertcolor, 0, 0, 0);
-				if (skinframe->pants) GL_DrawModelMesh(skinframe->pants, aliasvertcolor, 0, 0, 0);
-				if (skinframe->shirt) GL_DrawModelMesh(skinframe->shirt, aliasvertcolor, 0, 0, 0);
+				if (skinframe->base) R_DrawModelMesh(skinframe->base, aliasvertcolor, 0, 0, 0);
+				if (skinframe->pants) R_DrawModelMesh(skinframe->pants, aliasvertcolor, 0, 0, 0);
+				if (skinframe->shirt) R_DrawModelMesh(skinframe->shirt, aliasvertcolor, 0, 0, 0);
 			}
 		}
-		if (skinframe->glow) GL_DrawModelMesh(skinframe->glow, NULL, 1 - fog, 1 - fog, 1 - fog);
+		if (skinframe->glow) R_DrawModelMesh(skinframe->glow, NULL, 1 - fog, 1 - fog, 1 - fog);
 	}
 	else
-		GL_DrawModelMesh(0, NULL, 1 - fog, 1 - fog, 1 - fog);
+		R_DrawModelMesh(0, NULL, 1 - fog, 1 - fog, 1 - fog);
 
 	if (fog)
 	{
@@ -591,18 +593,143 @@ void R_DrawQ2AliasModel (void)
 	glDepthMask(1);
 }
 
-void ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, zymbone_t *bone, float rootorigin[3], float rootangles[3], float rootscale)
+static int zymdebug;
+static float bestdist;
+
+int ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, zymbone_t *bone/*, float rootorigin[3], float rootangles[3], float rootscale*/)
 {
-	float lerp1, lerp2, lerp3, lerp4;
-	zymbonematrix *out, rootmatrix, m, *bone1, *bone2, *bone3, *bone4;
-	out = zymbonepose;
-	AngleVectors(rootangles, rootmatrix.m[0], rootmatrix.m[1], rootmatrix.m[2]);
-	VectorScale(rootmatrix.m[0], rootscale, rootmatrix.m[0]);
-	VectorScale(rootmatrix.m[1], rootscale, rootmatrix.m[1]);
-	VectorScale(rootmatrix.m[2], rootscale, rootmatrix.m[2]);
-	rootmatrix.m[0][3] = rootorigin[0];
-	rootmatrix.m[1][3] = rootorigin[1];
-	rootmatrix.m[2][3] = rootorigin[2];
+	int i/*, j*/;
+	float lerp1, lerp2, lerp3, lerp4/*, ang[3]*/;
+	zymbonematrix *out, modelmatrix, swapmatrix, m, *bone1, *bone2, *bone3, *bone4;
+	//int a, b, c;
+
+	memset(&swapmatrix, 0, sizeof(zymbonematrix));
+
+	//ang[0] = (zymdebug & 3) * 90;zymdebug /= 4;
+	//ang[1] = (zymdebug & 3) * 90;zymdebug /= 4;
+	//ang[2] = (zymdebug & 3) * 90;zymdebug /= 4;
+	/*
+	ang[0] = 0;
+	ang[1] = -90;
+	ang[2] = 0;
+	AngleVectorsFLU(ang, swapmatrix.m[0], swapmatrix.m[1], swapmatrix.m[2]);
+	*/
+	/*
+	i = zymdebug % 3;zymdebug /= 3;
+	j = zymdebug % 3;zymdebug /= 3;
+	lerp1 = (zymdebug & 1) ? -1 : 1;zymdebug /= 2;
+	if (swapmatrix.m[i][j])
+		return false;
+	swapmatrix.m[i][j] = lerp1;
+	i = zymdebug % 3;zymdebug /= 3;
+	j = zymdebug % 3;zymdebug /= 3;
+	lerp1 = (zymdebug & 1) ? -1 : 1;zymdebug /= 2;
+	if (swapmatrix.m[i][j])
+		return false;
+	swapmatrix.m[i][j] = lerp1;
+	i = zymdebug % 3;zymdebug /= 3;
+	j = zymdebug % 3;zymdebug /= 3;
+	lerp1 = (zymdebug & 1) ? -1 : 1;zymdebug /= 2;
+	if (swapmatrix.m[i][j])
+		return false;
+	swapmatrix.m[i][j] = lerp1;
+	*/
+	/*
+	lerp1 = (zymdebug & 1) ? -1 : 1;zymdebug /= 2;
+	swapmatrix.m[0][zymdebug % 3] = lerp1;zymdebug /= 3;
+	lerp1 = (zymdebug & 1) ? -1 : 1;zymdebug /= 2;
+	swapmatrix.m[1][zymdebug % 3] = lerp1;zymdebug /= 3;
+	lerp1 = (zymdebug & 1) ? -1 : 1;zymdebug /= 2;
+	swapmatrix.m[2][zymdebug % 3] = lerp1;zymdebug /= 3;
+	*/
+	/*
+	for (i = 0;i < 3;i++)
+	{
+		for (j = 0;j < 3;j++)
+		{
+			swapmatrix.m[i][j] = (zymdebug % 3) - 1;
+			zymdebug /= 3;
+		}
+	}
+	*/
+	/*
+	for (i = 0;i < 3;i++)
+	{
+		if (fabs(swapmatrix.m[i][0] * swapmatrix.m[i][0] + swapmatrix.m[i][1] * swapmatrix.m[i][1] + swapmatrix.m[i][2] * swapmatrix.m[i][2] - 1) > 0.01f)
+			return false;
+		if (fabs(swapmatrix.m[0][i] * swapmatrix.m[0][i] + swapmatrix.m[1][i] * swapmatrix.m[1][i] + swapmatrix.m[2][i] * swapmatrix.m[2][i] - 1) > 0.01f)
+			return false;
+	}
+	*/
+	//if (fabs(DotProduct(swapmatrix.m[0], swapmatrix.m[0]) + DotProduct(swapmatrix.m[0], swapmatrix.m[0]) + DotProduct(swapmatrix.m[0], swapmatrix.m[0]) - 3) > 0.01f)
+	//	return false;
+
+	swapmatrix.m[0][1] = -1;
+	swapmatrix.m[1][0] = 1;
+	swapmatrix.m[2][2] = 1;
+
+	memset(&modelmatrix, 0, sizeof(zymbonematrix));
+
+	/*
+	a = b = c = 0;
+	switch (zymdebug % 6)
+	{
+	case 0: a = 0;b = 1;c = 2;break;
+	case 1: a = 1;b = 0;c = 2;break;
+	case 2: a = 2;b = 0;c = 1;break;
+	case 3: a = 0;b = 2;c = 1;break;
+	case 4: a = 1;b = 2;c = 0;break;
+	case 5: a = 2;b = 1;c = 0;break;
+	}
+	zymdebug /= 6;
+	AngleVectors(rootangles, m.m[a], m.m[b], m.m[c]);
+	if (zymdebug & 1)
+		VectorNegate(m.m[0], m.m[0]);
+	zymdebug /= 2;
+	if (zymdebug & 1)
+		VectorNegate(m.m[1], m.m[1]);
+	zymdebug /= 2;
+	if (zymdebug & 1)
+		VectorNegate(m.m[2], m.m[2]);
+	zymdebug /= 2;
+	if (zymdebug & 1)
+	{
+		for (a = 0;a < 3;a++)
+			for (b = 0;b < 3;b++)
+				modelmatrix.m[a][b] = m.m[b][a];
+	}
+	else
+	{
+		for (a = 0;a < 3;a++)
+			for (b = 0;b < 3;b++)
+				modelmatrix.m[a][b] = m.m[a][b];
+	}
+	zymdebug /= 2;
+	VectorScale(modelmatrix.m[0], rootscale, modelmatrix.m[0]);
+	VectorScale(modelmatrix.m[1], rootscale, modelmatrix.m[1]);
+	VectorScale(modelmatrix.m[2], rootscale, modelmatrix.m[2]);
+	*/
+
+	/*
+	AngleVectors(rootangles, modelmatrix.m[0], modelmatrix.m[1], modelmatrix.m[2]);
+	VectorScale(modelmatrix.m[0], rootscale, modelmatrix.m[0]);
+	VectorScale(modelmatrix.m[1], rootscale, modelmatrix.m[1]);
+	VectorScale(modelmatrix.m[2], rootscale, modelmatrix.m[2]);
+	modelmatrix.m[0][3] = rootorigin[0];
+	modelmatrix.m[1][3] = rootorigin[1];
+	modelmatrix.m[2][3] = rootorigin[2];
+
+	memcpy(&m, &swapmatrix, sizeof(zymbonematrix));
+	if (zymdebug & 1)
+		R_ConcatTransforms(&m.m[0], &modelmatrix.m[0], &swapmatrix.m[0]);
+	else
+		R_ConcatTransforms(&modelmatrix.m[0], &m.m[0], &swapmatrix.m[0]);
+	zymdebug /= 2;
+	*/
+
+	memcpy(&m, &swapmatrix, sizeof(zymbonematrix));
+	R_ConcatTransforms(&softwaretransform_matrix[0], &m.m[0], &swapmatrix.m[0]);
+
 	bone1 = bonebase + blend[0].frame * count;
 	lerp1 = blend[0].lerp;
 	if (blend[1].lerp)
@@ -618,7 +745,7 @@ void ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, z
 				// 4 poses
 				bone4 = bonebase + blend[3].frame * count;
 				lerp4 = blend[3].lerp;
-				while(count--)
+				for (i = 0, out = zymbonepose;i < count;i++, out++)
 				{
 					// interpolate matrices
 					m.m[0][0] = bone1->m[0][0] * lerp1 + bone2->m[0][0] * lerp2 + bone3->m[0][0] * lerp3 + bone4->m[0][0] * lerp4;
@@ -636,19 +763,18 @@ void ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, z
 					if (bone->parent >= 0)
 						R_ConcatTransforms(&zymbonepose[bone->parent].m[0], &m.m[0], &out->m[0]);
 					else
-						R_ConcatTransforms(&rootmatrix.m[0], &m.m[0], &out->m[0]);
+						R_ConcatTransforms(&swapmatrix.m[0], &m.m[0], &out->m[0]);
 					bone1++;
 					bone2++;
 					bone3++;
 					bone4++;
 					bone++;
-					out++;
 				}
 			}
 			else
 			{
 				// 3 poses
-				while(count--)
+				for (i = 0, out = zymbonepose;i < count;i++, out++)
 				{
 					// interpolate matrices
 					m.m[0][0] = bone1->m[0][0] * lerp1 + bone2->m[0][0] * lerp2 + bone3->m[0][0] * lerp3;
@@ -666,19 +792,18 @@ void ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, z
 					if (bone->parent >= 0)
 						R_ConcatTransforms(&zymbonepose[bone->parent].m[0], &m.m[0], &out->m[0]);
 					else
-						R_ConcatTransforms(&rootmatrix.m[0], &m.m[0], &out->m[0]);
+						R_ConcatTransforms(&swapmatrix.m[0], &m.m[0], &out->m[0]);
 					bone1++;
 					bone2++;
 					bone3++;
 					bone++;
-					out++;
 				}
 			}
 		}
 		else
 		{
 			// 2 poses
-			while(count--)
+			for (i = 0, out = zymbonepose;i < count;i++, out++)
 			{
 				// interpolate matrices
 				m.m[0][0] = bone1->m[0][0] * lerp1 + bone2->m[0][0] * lerp2;
@@ -696,11 +821,10 @@ void ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, z
 				if (bone->parent >= 0)
 					R_ConcatTransforms(&zymbonepose[bone->parent].m[0], &m.m[0], &out->m[0]);
 				else
-					R_ConcatTransforms(&rootmatrix.m[0], &m.m[0], &out->m[0]);
+					R_ConcatTransforms(&swapmatrix.m[0], &m.m[0], &out->m[0]);
 				bone1++;
 				bone2++;
 				bone++;
-				out++;
 			}
 		}
 	}
@@ -710,7 +834,7 @@ void ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, z
 		if (lerp1 != 1)
 		{
 			// lerp != 1.0
-			while(count--)
+			for (i = 0, out = zymbonepose;i < count;i++, out++)
 			{
 				// interpolate matrices
 				m.m[0][0] = bone1->m[0][0] * lerp1;
@@ -728,58 +852,65 @@ void ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, z
 				if (bone->parent >= 0)
 					R_ConcatTransforms(&zymbonepose[bone->parent].m[0], &m.m[0], &out->m[0]);
 				else
-					R_ConcatTransforms(&rootmatrix.m[0], &m.m[0], &out->m[0]);
+					R_ConcatTransforms(&swapmatrix.m[0], &m.m[0], &out->m[0]);
 				bone1++;
 				bone++;
-				out++;
 			}
 		}
 		else
 		{
 			// lerp == 1.0
-			while(count--)
+			for (i = 0, out = zymbonepose;i < count;i++, out++)
 			{
 				if (bone->parent >= 0)
 					R_ConcatTransforms(&zymbonepose[bone->parent].m[0], &bone1->m[0], &out->m[0]);
 				else
-					R_ConcatTransforms(&rootmatrix.m[0], &bone1->m[0], &out->m[0]);
+					R_ConcatTransforms(&swapmatrix.m[0], &bone1->m[0], &out->m[0]);
 				bone1++;
 				bone++;
-				out++;
 			}
 		}
 	}
+	return true;
 }
 
 void ZymoticTransformVerts(int vertcount, int *bonecounts, zymvertex_t *vert)
 {
 	int c;
 	float *out = aliasvert;
+	float v[3];
+	float dist;
 	zymbonematrix *matrix;
 	while(vertcount--)
 	{
 		c = *bonecounts++;
 		// FIXME: validate bonecounts at load time (must be >= 1)
+		// FIXME: need 4th component in origin, for how much of the translate to blend in
 		if (c == 1)
 		{
 			matrix = &zymbonepose[vert->bonenum];
-			out[0] = vert->origin[0] * matrix->m[0][0] + vert->origin[1] * matrix->m[0][1] + vert->origin[2] * matrix->m[0][2] + matrix->m[0][3];
-			out[1] = vert->origin[0] * matrix->m[1][0] + vert->origin[1] * matrix->m[1][1] + vert->origin[2] * matrix->m[1][2] + matrix->m[1][3];
-			out[2] = vert->origin[0] * matrix->m[2][0] + vert->origin[1] * matrix->m[2][1] + vert->origin[2] * matrix->m[2][2] + matrix->m[2][3];
+			v[0] = vert->origin[0] * matrix->m[0][0] + vert->origin[1] * matrix->m[0][1] + vert->origin[2] * matrix->m[0][2] + matrix->m[0][3];
+			v[1] = vert->origin[0] * matrix->m[1][0] + vert->origin[1] * matrix->m[1][1] + vert->origin[2] * matrix->m[1][2] + matrix->m[1][3];
+			v[2] = vert->origin[0] * matrix->m[2][0] + vert->origin[1] * matrix->m[2][1] + vert->origin[2] * matrix->m[2][2] + matrix->m[2][3];
 			vert++;
 		}
 		else
 		{
-			VectorClear(out);
+			VectorClear(v);
 			while(c--)
 			{
 				matrix = &zymbonepose[vert->bonenum];
-				out[0] += vert->origin[0] * matrix->m[0][0] + vert->origin[1] * matrix->m[0][1] + vert->origin[2] * matrix->m[0][2] + matrix->m[0][3];
-				out[1] += vert->origin[0] * matrix->m[1][0] + vert->origin[1] * matrix->m[1][1] + vert->origin[2] * matrix->m[1][2] + matrix->m[1][3];
-				out[2] += vert->origin[0] * matrix->m[2][0] + vert->origin[1] * matrix->m[2][1] + vert->origin[2] * matrix->m[2][2] + matrix->m[2][3];
+				v[0] += vert->origin[0] * matrix->m[0][0] + vert->origin[1] * matrix->m[0][1] + vert->origin[2] * matrix->m[0][2] + matrix->m[0][3];
+				v[1] += vert->origin[0] * matrix->m[1][0] + vert->origin[1] * matrix->m[1][1] + vert->origin[2] * matrix->m[1][2] + matrix->m[1][3];
+				v[2] += vert->origin[0] * matrix->m[2][0] + vert->origin[1] * matrix->m[2][1] + vert->origin[2] * matrix->m[2][2] + matrix->m[2][3];
 				vert++;
 			}
 		}
+		//softwaretransform(v, out);
+		VectorCopy(v, out);
+		dist = DotProduct(out, vpn) - DotProduct(r_origin, vpn);
+		if (dist > bestdist)
+			bestdist = dist;
 		out += 3;
 	}
 }
@@ -842,7 +973,7 @@ void ZymoticCalcNormals(int vertcount, int shadercount, int *renderlist)
 	}
 }
 
-void GL_DrawZymoticModelMesh(zymtype1header_t *m)
+void R_DrawZymoticModelMesh(zymtype1header_t *m)
 {
 	int i, *renderlist;
 	rtexture_t **texture;
@@ -860,15 +991,14 @@ void GL_DrawZymoticModelMesh(zymtype1header_t *m)
 
 	for (i = 0;i < m->numshaders;i++)
 	{
-		aliasmeshinfo.tex[0] = R_GetTexture(*texture);
-		aliasmeshinfo.tex[1] = 0;
+		aliasmeshinfo.tex[0] = R_GetTexture(texture[i]);
 		if (currentrenderentity->effects & EF_ADDITIVE)
 		{
 			aliasmeshinfo.transparent = true;
 			aliasmeshinfo.blendfunc1 = GL_SRC_ALPHA;
 			aliasmeshinfo.blendfunc2 = GL_ONE;
 		}
-		else if (currentrenderentity->alpha != 1.0 || R_TextureHasAlpha(*texture))
+		else if (currentrenderentity->alpha != 1.0 || R_TextureHasAlpha(texture[i]))
 		{
 			aliasmeshinfo.transparent = true;
 			aliasmeshinfo.blendfunc1 = GL_SRC_ALPHA;
@@ -888,7 +1018,7 @@ void GL_DrawZymoticModelMesh(zymtype1header_t *m)
 	}
 }
 
-void GL_DrawZymoticModelMeshFog(vec3_t org, zymtype1header_t *m)
+void R_DrawZymoticModelMeshFog(vec3_t org, zymtype1header_t *m)
 {
 	int i, *renderlist;
 	vec3_t diff;
@@ -918,12 +1048,72 @@ void GL_DrawZymoticModelMeshFog(vec3_t org, zymtype1header_t *m)
 
 void R_DrawZymoticModel (void)
 {
+	//int a, b, c;
+	int keeptrying;
 	zymtype1header_t *m;
+	//vec3_t angles;
 
 	// FIXME: do better fog
 	m = currentrenderentity->model->zymdata_header;
-	ZymoticLerpBones(m->numbones, (zymbonematrix *)(m->lump_poses.start + (int) m), currentrenderentity->frameblend, (zymbone_t *)(m->lump_bones.start + (int) m), currentrenderentity->origin, currentrenderentity->angles, currentrenderentity->scale);
-	ZymoticTransformVerts(m->numverts, (int *)(m->lump_vertbonecounts.start + (int) m), (zymvertex_t *)(m->lump_verts.start + (int) m));
+	keeptrying = true;
+	while(keeptrying)
+	{
+		keeptrying = false;
+		zymdebug = r_zymdebug.integer;
+		/*
+		angles[0] = currentrenderentity->angles[1];
+		angles[1] = currentrenderentity->angles[0] + 180;
+		angles[2] = -currentrenderentity->angles[2];
+		*/
+		/*
+		angles[0] = currentrenderentity->angles[0];
+		angles[1] = currentrenderentity->angles[1];
+		angles[2] = currentrenderentity->angles[2];
+		*/
+		/*
+		a = b = c = 0;
+		switch (zymdebug % 6)
+		{
+		case 0: a = 0;b = 1;c = 2;break;
+		case 1: a = 1;b = 0;c = 2;break;
+		case 2: a = 2;b = 0;c = 1;break;
+		case 3: a = 0;b = 2;c = 1;break;
+		case 4: a = 1;b = 2;c = 0;break;
+		case 5: a = 2;b = 1;c = 0;break;
+		}
+		zymdebug /= 6;
+		angles[0] = currentrenderentity->angles[a];
+		angles[1] = currentrenderentity->angles[b];
+		angles[2] = currentrenderentity->angles[c];
+		if (zymdebug & 1)
+			angles[0] = -angles[0];
+		zymdebug /= 2;
+		if (zymdebug & 1)
+			angles[1] = -angles[1];
+		zymdebug /= 2;
+		if (zymdebug & 1)
+			angles[2] = -angles[2];
+		zymdebug /= 2;
+		angles[0] += (zymdebug & 3) * 90;
+		zymdebug /= 4;
+		angles[1] += (zymdebug & 3) * 90;
+		zymdebug /= 4;
+		angles[2] += (zymdebug & 3) * 90;
+		zymdebug /= 4;
+		*/
+		bestdist = -1000;
+		if (ZymoticLerpBones(m->numbones, (zymbonematrix *)(m->lump_poses.start + (int) m), currentrenderentity->frameblend, (zymbone_t *)(m->lump_bones.start + (int) m)/*, currentrenderentity->origin, angles, currentrenderentity->scale*/))
+			ZymoticTransformVerts(m->numverts, (int *)(m->lump_vertbonecounts.start + (int) m), (zymvertex_t *)(m->lump_verts.start + (int) m));
+		if (bestdist < r_zymdebug_dist.value)
+		{
+			Cvar_SetValueQuick(&r_zymdebug, r_zymdebug.integer + 1);
+			if (zymdebug) // if there is some leftover, unclaimed, don't repeat
+				Cvar_SetValueQuick(&r_zymdebug, 0);
+			else
+				keeptrying = true;
+			Con_Printf("trying %i, bestdist was: %f\n", r_zymdebug.integer, bestdist);
+		}
+	}
 	ZymoticCalcNormals(m->numverts, m->numshaders, (int *)(m->lump_render.start + (int) m));
 
 	R_LightModel(m->numverts);
@@ -931,10 +1121,10 @@ void R_DrawZymoticModel (void)
 	memset(&aliasmeshinfo, 0, sizeof(aliasmeshinfo));
 	aliasmeshinfo.numverts = m->numverts;
 
-	GL_DrawZymoticModelMesh(m);
+	R_DrawZymoticModelMesh(m);
 
 	if (fogenabled)
-		GL_DrawZymoticModelMeshFog(currentrenderentity->origin, m);
+		R_DrawZymoticModelMeshFog(currentrenderentity->origin, m);
 }
 
 void R_DrawAliasModel (void)
@@ -944,10 +1134,12 @@ void R_DrawAliasModel (void)
 
 	c_models++;
 
+	softwaretransformforentity(currentrenderentity);
+
 	if (currentrenderentity->model->aliastype == ALIASTYPE_ZYM)
-		R_DrawZymoticModel ();
+		R_DrawZymoticModel();
 	else if (currentrenderentity->model->aliastype == ALIASTYPE_MD2)
-		R_DrawQ2AliasModel ();
+		R_DrawQ2AliasModel();
 	else
-		R_DrawQ1AliasModel   ();
+		R_DrawQ1AliasModel();
 }
