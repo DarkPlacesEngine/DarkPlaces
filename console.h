@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -31,6 +31,7 @@ extern qbyte *con_chars;
 extern int con_notifylines;		// scan lines to clear for notify lines
 
 void Con_CheckResize (void);
+void Con_InitLogging (void);
 void Con_Init (void);
 void Con_DrawConsole (int lines);
 void Con_Print (const char *txt);

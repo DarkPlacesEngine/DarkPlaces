@@ -767,6 +767,7 @@ void COM_Init (void)
 	Mathlib_Init();
 
 	FS_Init ();
+	Con_InitLogging();
 	COM_CheckRegistered ();
 
 	COM_InitGameType();

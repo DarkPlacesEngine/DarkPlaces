@@ -201,20 +201,13 @@ void Con_CheckResize (void)
 }
 
 
-/*
-================
-Con_Init
-================
-*/
-void Con_Init (void)
+void Con_InitLogging (void)
 {
 #define MAXGAMEDIRLEN 1000
 	char temp[MAXGAMEDIRLEN+1];
 	char *t2 = "/qconsole.log";
 
-	Cvar_RegisterVariable(&logfile);
 	con_debuglog = COM_CheckParm("-condebug");
-
 	if (con_debuglog)
 	{
 		if (strlen (fs_gamedir) < (MAXGAMEDIRLEN - strlen (t2)))
@@ -224,6 +217,16 @@ void Con_Init (void)
 		}
 		logfile.integer = 1;
 	}
+}
+
+/*
+================
+Con_Init
+================
+*/
+void Con_Init (void)
+{
+	Cvar_RegisterVariable(&logfile);
 
 	console_mempool = Mem_AllocPool("console");
 	con_text = Mem_Alloc(console_mempool, CON_TEXTSIZE);
