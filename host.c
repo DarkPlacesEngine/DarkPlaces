@@ -569,7 +569,7 @@ qboolean Host_FilterTime (double time)
 		timecap = sys_ticrate.value;
 		if (cl_avidemo.value >= 0.1f)
 			timecap = 1.0 / (double)cl_avidemo.value;
-		else if (vid_activewindow && !scr_con_current)
+		else if (vid_activewindow)
 			timecap = 1.0 / host_maxfps.value;
 
 		timeleft = oldrealtime + timecap - realtime;
