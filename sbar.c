@@ -188,7 +188,7 @@ void sbar_start(void)
 		sb_weapons[0][4] = Sbar_NewPic ("gfx/inv_rlaunch");
 		sb_weapons[0][5] = Sbar_NewPic ("gfx/inv_srlaunch");
 		sb_weapons[0][6] = Sbar_NewPic ("gfx/inv_lightng");
-	
+
 		sb_weapons[1][0] = Sbar_NewPic ("gfx/inv2_shotgun");
 		sb_weapons[1][1] = Sbar_NewPic ("gfx/inv2_sshotgun");
 		sb_weapons[1][2] = Sbar_NewPic ("gfx/inv2_nailgun");
@@ -196,7 +196,7 @@ void sbar_start(void)
 		sb_weapons[1][4] = Sbar_NewPic ("gfx/inv2_rlaunch");
 		sb_weapons[1][5] = Sbar_NewPic ("gfx/inv2_srlaunch");
 		sb_weapons[1][6] = Sbar_NewPic ("gfx/inv2_lightng");
-	
+
 		for (i = 0;i < 5;i++)
 		{
 			sb_weapons[2+i][0] = Sbar_NewPic (va("gfx/inva%i_shotgun",i+1));
@@ -207,28 +207,28 @@ void sbar_start(void)
 			sb_weapons[2+i][5] = Sbar_NewPic (va("gfx/inva%i_srlaunch",i+1));
 			sb_weapons[2+i][6] = Sbar_NewPic (va("gfx/inva%i_lightng",i+1));
 		}
-	
+
 		sb_ammo[0] = Sbar_NewPic ("gfx/sb_shells");
 		sb_ammo[1] = Sbar_NewPic ("gfx/sb_nails");
 		sb_ammo[2] = Sbar_NewPic ("gfx/sb_rocket");
 		sb_ammo[3] = Sbar_NewPic ("gfx/sb_cells");
-	
+
 		sb_armor[0] = Sbar_NewPic ("gfx/sb_armor1");
 		sb_armor[1] = Sbar_NewPic ("gfx/sb_armor2");
 		sb_armor[2] = Sbar_NewPic ("gfx/sb_armor3");
-	
+
 		sb_items[0] = Sbar_NewPic ("gfx/sb_key1");
 		sb_items[1] = Sbar_NewPic ("gfx/sb_key2");
 		sb_items[2] = Sbar_NewPic ("gfx/sb_invis");
 		sb_items[3] = Sbar_NewPic ("gfx/sb_invuln");
 		sb_items[4] = Sbar_NewPic ("gfx/sb_suit");
 		sb_items[5] = Sbar_NewPic ("gfx/sb_quad");
-	
+
 		sb_sigil[0] = Sbar_NewPic ("gfx/sb_sigil1");
 		sb_sigil[1] = Sbar_NewPic ("gfx/sb_sigil2");
 		sb_sigil[2] = Sbar_NewPic ("gfx/sb_sigil3");
 		sb_sigil[3] = Sbar_NewPic ("gfx/sb_sigil4");
-	
+
 		sb_faces[4][0] = Sbar_NewPic ("gfx/face1");
 		sb_faces[4][1] = Sbar_NewPic ("gfx/face_p1");
 		sb_faces[3][0] = Sbar_NewPic ("gfx/face2");
@@ -239,16 +239,16 @@ void sbar_start(void)
 		sb_faces[1][1] = Sbar_NewPic ("gfx/face_p4");
 		sb_faces[0][0] = Sbar_NewPic ("gfx/face5");
 		sb_faces[0][1] = Sbar_NewPic ("gfx/face_p5");
-	
+
 		sb_face_invis = Sbar_NewPic ("gfx/face_invis");
 		sb_face_invuln = Sbar_NewPic ("gfx/face_invul2");
 		sb_face_invis_invuln = Sbar_NewPic ("gfx/face_inv2");
 		sb_face_quad = Sbar_NewPic ("gfx/face_quad");
-	
+
 		sb_sbar = Sbar_NewPic ("gfx/sbar");
 		sb_ibar = Sbar_NewPic ("gfx/ibar");
 		sb_scorebar = Sbar_NewPic ("gfx/scorebar");
-	
+
 	//MED 01/04/97 added new hipnotic weapons
 		if (gamemode == GAME_HIPNOTIC)
 		{
@@ -257,13 +257,13 @@ void sbar_start(void)
 			hsb_weapons[0][2] = Sbar_NewPic ("gfx/inv_gren_prox");
 			hsb_weapons[0][3] = Sbar_NewPic ("gfx/inv_prox_gren");
 			hsb_weapons[0][4] = Sbar_NewPic ("gfx/inv_prox");
-	
+
 			hsb_weapons[1][0] = Sbar_NewPic ("gfx/inv2_laser");
 			hsb_weapons[1][1] = Sbar_NewPic ("gfx/inv2_mjolnir");
 			hsb_weapons[1][2] = Sbar_NewPic ("gfx/inv2_gren_prox");
 			hsb_weapons[1][3] = Sbar_NewPic ("gfx/inv2_prox_gren");
 			hsb_weapons[1][4] = Sbar_NewPic ("gfx/inv2_prox");
-	
+
 			for (i = 0;i < 5;i++)
 			{
 				hsb_weapons[2+i][0] = Sbar_NewPic (va("gfx/inva%i_laser",i+1));
@@ -272,7 +272,7 @@ void sbar_start(void)
 				hsb_weapons[2+i][3] = Sbar_NewPic (va("gfx/inva%i_prox_gren",i+1));
 				hsb_weapons[2+i][4] = Sbar_NewPic (va("gfx/inva%i_prox",i+1));
 			}
-	
+
 			hsb_items[0] = Sbar_NewPic ("gfx/sb_wsuit");
 			hsb_items[1] = Sbar_NewPic ("gfx/sb_eshld");
 		}
@@ -280,20 +280,20 @@ void sbar_start(void)
 		{
 			rsb_invbar[0] = Sbar_NewPic ("gfx/r_invbar1");
 			rsb_invbar[1] = Sbar_NewPic ("gfx/r_invbar2");
-	
+
 			rsb_weapons[0] = Sbar_NewPic ("gfx/r_lava");
 			rsb_weapons[1] = Sbar_NewPic ("gfx/r_superlava");
 			rsb_weapons[2] = Sbar_NewPic ("gfx/r_gren");
 			rsb_weapons[3] = Sbar_NewPic ("gfx/r_multirock");
 			rsb_weapons[4] = Sbar_NewPic ("gfx/r_plasma");
-	
+
 			rsb_items[0] = Sbar_NewPic ("gfx/r_shield1");
 			rsb_items[1] = Sbar_NewPic ("gfx/r_agrav1");
-	
+
 	// PGM 01/19/97 - team color border
 			rsb_teambord = Sbar_NewPic ("gfx/r_teambord");
 	// PGM 01/19/97 - team color border
-	
+
 			rsb_ammo[0] = Sbar_NewPic ("gfx/r_ammolava");
 			rsb_ammo[1] = Sbar_NewPic ("gfx/r_ammomulti");
 			rsb_ammo[2] = Sbar_NewPic ("gfx/r_ammoplasma");
@@ -521,7 +521,7 @@ void Sbar_DrawScoreboard (void)
 static void Sbar_DrawWeapon(int nr, float fade, int active)
 {
 	// width = 300, height = 100
-	const int w_width = 300, w_height = 100, w_space = 10, font_size = 10;
+	const int w_width = 300, w_height = 100, w_space = 10;
 	const float w_scale = 0.4;
 
 	DrawQ_Pic(vid.conwidth - (w_width + w_space) * w_scale, (w_height + w_space) * w_scale * nr + w_space, sb_weapons[0][nr]->name, w_width * w_scale, w_height * w_scale, (active) ? 1 : 0.6, active ? 1 : 0.6, active ? 1 : 1, fade * sbar_alpha_fg.value, DRAWFLAG_ADDITIVE);
@@ -967,7 +967,7 @@ void Sbar_Draw (void)
 				for (i = 0; i < 8;i++)
 					if (cl.stats[STAT_ITEMS] & (1 << i))
 						Sbar_DrawWeapon(i + 1, fade, (i + 2 == cl.stats[STAT_ACTIVEWEAPON]));
-			
+
 				if((cl.stats[STAT_ITEMS] & (1<<12)))
 					Sbar_DrawWeapon(0, fade, (cl.stats[STAT_ACTIVEWEAPON] == 1));
 			}
