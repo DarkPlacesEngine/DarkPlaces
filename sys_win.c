@@ -404,18 +404,21 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 		houtput = GetStdHandle (STD_OUTPUT_HANDLE);
 
 	// give QHOST a chance to hook into the console
+// COMMANDLINEOPTION: -HFILE is used by QHOST to hook into the windows dedicated server console window
 		if ((t = COM_CheckParm ("-HFILE")) > 0)
 		{
 			if (t < com_argc)
 				hFile = (HANDLE)atoi (com_argv[t+1]);
 		}
 
+// COMMANDLINEOPTION: -HPARENT is used by QHOST to hook into the windows dedicated server console window
 		if ((t = COM_CheckParm ("-HPARENT")) > 0)
 		{
 			if (t < com_argc)
 				heventParent = (HANDLE)atoi (com_argv[t+1]);
 		}
 
+// COMMANDLINEOPTION: -HCHILD is used by QHOST to hook into the windows dedicated server console window
 		if ((t = COM_CheckParm ("-HCHILD")) > 0)
 		{
 			if (t < com_argc)

@@ -212,11 +212,13 @@ void S_Init(void)
 	Cvar_RegisterVariable(&bgmvolume);
 	Cvar_RegisterVariable(&snd_staticvolume);
 
+// COMMANDLINEOPTION: -nosound disables sound (including CD audio)
 	if (COM_CheckParm("-nosound") || COM_CheckParm("-safe"))
 		return;
 
 	snd_mempool = Mem_AllocPool("sound", 0, NULL);
 
+// COMMANDLINEOPTION: -simsound runs sound mixing but with no output
 	if (COM_CheckParm("-simsound"))
 		fakedma = true;
 

@@ -4327,10 +4327,12 @@ void MR_Init_Commands(void)
 void MR_Init(void)
 {
 	// use -forceqmenu to use always the normal quake menu (it sets forceqmenu to 1)
+// COMMANDLINEOPTION: -forceqmenu disables menu.dat (same as +forceqmenu 1)
 	if(COM_CheckParm("-forceqmenu"))
 		Cvar_SetValueQuick(&forceqmenu,1);
 	// use -useqmenu for debugging proposes, cause it starts
 	// the normal quake menu only the first time
+// COMMANDLINEOPTION: -useqmenu causes the first time you open the menu to use the quake menu, then reverts to menu.dat (if forceqmenu is 0)
 	if(COM_CheckParm("-useqmenu"))
 		MR_SetRouting (TRUE);
 	else 

@@ -243,6 +243,7 @@ void CDAudio_SysInit (void)
 {
 	int i;
 
+// COMMANDLINEOPTION: -cddev <devicepath> chooses which CD drive to use (bsd and Linux only)
 	if ((i = COM_CheckParm("-cddev")) != 0 && i < com_argc - 1)
 		strlcpy(cd_dev, com_argv[i + 1], sizeof(cd_dev));
 }

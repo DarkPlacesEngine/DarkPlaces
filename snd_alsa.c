@@ -49,11 +49,13 @@ qboolean SNDDMA_Init (void)
 	snd_pcm_hw_params_alloca (&hw);
 	snd_pcm_sw_params_alloca (&sw);
 
+// COMMANDLINEOPTION: -sndpcm <devicename> selects which pcm device to us, default is "default" (ALSA sound driver only)
 	if ((i=COM_CheckParm("-sndpcm"))!=0)
 		pcmname=com_argv[i+1];
 	if (!pcmname)
 		pcmname = "default";
 
+// COMMANDLINEOPTION: -sndbits <number> sets sound precision to 8 or 16 bit (email me if you want others added)
 	if ((i=COM_CheckParm("-sndbits")) != 0)
 	{
 		bps = atoi(com_argv[i+1]);
@@ -64,6 +66,7 @@ qboolean SNDDMA_Init (void)
 		}
 	}
 
+// COMMANDLINEOPTION: -sndspeed <hz> chooses 44100 hz, 22100 hz, or 11025 hz sound output rate
 	if ((i=COM_CheckParm("-sndspeed")) != 0)
 	{
 		rate = atoi(com_argv[i+1]);
@@ -74,8 +77,10 @@ qboolean SNDDMA_Init (void)
 		}
 	}
 
+// COMMANDLINEOPTION: -sndmono sets sound output to mono
 	if ((i=COM_CheckParm("-sndmono")) != 0)
 		stereo=0;
+// COMMANDLINEOPTION: -sndstereo sets sound output to stereo
 	if ((i=COM_CheckParm("-sndstereo")) != 0)
 		stereo=1;
 

@@ -124,6 +124,7 @@ void Log_Init (void)
 	Cvar_RegisterVariable (&log_sync);
 
 	// support for the classic Quake option
+// COMMANDLINEOPTION: -condebug logs console messages to qconsole.log with sync on (so it keeps every message up to a crash), see also log_file and log_sync
 	if (COM_CheckParm ("-condebug") != 0)
 	{
 		Cvar_SetQuick (&log_file, "qconsole.log");
