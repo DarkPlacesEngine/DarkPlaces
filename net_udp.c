@@ -57,8 +57,8 @@ WSADATA		winsockdata;
 
 int UDP_Init (void)
 {
-	int i;
-	struct hostent *local = NULL;
+	int i, j;
+	struct hostent *local;
 	char buff[MAXHOSTNAMELEN];
 
 	if (COM_CheckParm ("-noudp"))
@@ -73,30 +73,55 @@ int UDP_Init (void)
 #endif
 
 	// loopback as a worst case fallback
-	myAddr.d[0] = 127;myAddr.d[1] = 0;myAddr.d[2] = 0;myAddr.d[3] = 1;
+	myAddr.i = htonl(INADDR_ANY);
 
-	if ((i = COM_CheckParm("-ip")) != 0 && i < com_argc)
+	net_controlsocket = -1;
+	for (j = 0;net_controlsocket == -1;j++)
 	{
-		myAddr.i = inet_addr(com_argv[i+1]);
-		Con_Printf("Binding to IP Interface Address of %i.%i.%i.%i\n", myAddr.d[0], myAddr.d[1], myAddr.d[2], myAddr.d[3]);
-	}
-	else if (gethostname(buff, MAXHOSTNAMELEN) != -1)
-	{
-		buff[MAXHOSTNAMELEN - 1] = 0;
-		local = gethostbyname(buff);
-		if (local != NULL)
-			myAddr.i = *((int *)local->h_addr_list[0]);
-	}
-
-	sprintf(my_tcpip_address, "%d.%d.%d.%d", myAddr.d[0], myAddr.d[1], myAddr.d[2], myAddr.d[3]);
-
-	if ((net_controlsocket = UDP_OpenSocket (0)) == -1)
-	{
-		Con_Printf("UDP_Init: Unable to open control socket\n");
+		myAddr.d[0] = 127;
+		myAddr.d[1] = 0;
+		myAddr.d[2] = 0;
+		myAddr.d[3] = 1;
+		switch(j)
+		{
+		case 0:
+			if ((i = COM_CheckParm("-ip")) != 0 && i < com_argc)
+				myAddr.i = inet_addr(com_argv[i+1]);
+			break;
+		case 1:
+			myAddr.i = htonl(INADDR_ANY);
+			break;
+		case 2:
+			if (gethostname(buff, MAXHOSTNAMELEN) != -1)
+			{
+				buff[MAXHOSTNAMELEN - 1] = 0;
+				local = gethostbyname(buff);
+				if (local != NULL)
+					myAddr.i = *((int *)local->h_addr_list[0]);
+			}
+			break;
+		default:
+			Con_Printf("UDP_Init: Giving up, UDP networking support disabled.\n");
 #ifdef WIN32
-		WSACleanup ();
+			WSACleanup ();
 #endif
-		return -1;
+			return -1;
+		}
+
+		if (myAddr.i != htonl(INADDR_LOOPBACK))
+		{
+			if (myAddr.i == htonl(INADDR_LOOPBACK))
+				sprintf(my_tcpip_address, "INADDR_LOOPBACK");
+			else if (myAddr.i == htonl(INADDR_ANY))
+				sprintf(my_tcpip_address, "INADDR_ANY");
+			else
+				sprintf(my_tcpip_address, "%d.%d.%d.%d", myAddr.d[0], myAddr.d[1], myAddr.d[2], myAddr.d[3]);
+			Con_Printf("UDP_Init: Binding to IP Interface Address of %s...  ", my_tcpip_address);
+			if ((net_controlsocket = UDP_OpenSocket (0)) == -1)
+				Con_Printf("failed\n");
+			else
+				Con_Printf("succeeded\n");
+		}
 	}
 
 	((struct sockaddr_in *)&broadcastaddr)->sin_family = AF_INET;
