@@ -467,31 +467,33 @@ static void HandleEvents(void)
 		case MapNotify:
 			// window restored
 			vid_hidden = false;
-			vid_allowhwgamma = true;
+			vid_activewindow = false;
+			vid_allowhwgamma = false;
+			VID_RestoreSystemGamma();
 			break;
 		case UnmapNotify:
 			// window iconified/rolledup/whatever
 			vid_hidden = true;
+			vid_activewindow = false;
 			vid_allowhwgamma = false;
 			VID_RestoreSystemGamma();
 			break;
 		case FocusIn:
 			// window is now the input focus
 			vid_allowhwgamma = true;
+			vid_activewindow = true;
 			break;
 		case FocusOut:
 			// window is no longer the input focus
 			vid_allowhwgamma = false;
+			vid_activewindow = false;
 			VID_RestoreSystemGamma();
 			break;
 		case EnterNotify:
 			// mouse entered window
-			vid_allowhwgamma = true;
 			break;
 		case LeaveNotify:
 			// mouse left window
-			vid_allowhwgamma = false;
-			VID_RestoreSystemGamma();
 			break;
 		}
 	}
