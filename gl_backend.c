@@ -380,15 +380,19 @@ static void GL_SetupFrame (void)
 	qglTranslatef (-r_refdef.vieworg[0],  -r_refdef.vieworg[1],  -r_refdef.vieworg[2]);CHECKGLERROR
 }
 
-static int mesh_blendfunc1;
-static int mesh_blendfunc2;
-static int mesh_blend;
-static GLboolean mesh_depthmask;
-static int mesh_depthtest;
-static int mesh_unit;
-static int mesh_clientunit;
-static int mesh_texture[MAX_TEXTUREUNITS];
-static float mesh_texturergbscale[MAX_TEXTUREUNITS];
+static struct
+{
+	int blendfunc1;
+	int blendfunc2;
+	int blend;
+	GLboolean depthmask;
+	int depthtest;
+	int unit;
+	int clientunit;
+	int texture[MAX_TEXTUREUNITS];
+	float texturergbscale[MAX_TEXTUREUNITS];
+}
+gl_state;
 
 void GL_SetupTextureState(void)
 {
@@ -397,8 +401,8 @@ void GL_SetupTextureState(void)
 	{
 		for (i = 0;i < backendunits;i++)
 		{
-			qglActiveTexture(GL_TEXTURE0_ARB + (mesh_unit = i));CHECKGLERROR
-			qglBindTexture(GL_TEXTURE_2D, mesh_texture[i]);CHECKGLERROR
+			qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
+			qglBindTexture(GL_TEXTURE_2D, gl_state.texture[i]);CHECKGLERROR
 			if (gl_combine.integer)
 			{
 				qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);CHECKGLERROR
@@ -416,14 +420,14 @@ void GL_SetupTextureState(void)
 				qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA_ARB, GL_SRC_ALPHA);CHECKGLERROR
 				qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_ALPHA_ARB, GL_SRC_ALPHA);CHECKGLERROR
 				qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_ALPHA_ARB, GL_SRC_ALPHA);CHECKGLERROR
-				qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, mesh_texturergbscale[i]);CHECKGLERROR
+				qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, gl_state.texturergbscale[i]);CHECKGLERROR
 				qglTexEnvi(GL_TEXTURE_ENV, GL_ALPHA_SCALE, 1);CHECKGLERROR
 			}
 			else
 			{
 				qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);CHECKGLERROR
 			}
-			if (mesh_texture[i])
+			if (gl_state.texture[i])
 			{
 				qglEnable(GL_TEXTURE_2D);CHECKGLERROR
 			}
@@ -433,9 +437,9 @@ void GL_SetupTextureState(void)
 			}
 			if (gl_mesh_drawmode.integer > 0)
 			{
-				qglClientActiveTexture(GL_TEXTURE0_ARB + (mesh_clientunit = i));CHECKGLERROR
+				qglClientActiveTexture(GL_TEXTURE0_ARB + (gl_state.clientunit = i));CHECKGLERROR
 				qglTexCoordPointer(2, GL_FLOAT, sizeof(buf_texcoord_t), buf_texcoord[i]);CHECKGLERROR
-				if (mesh_texture[i])
+				if (gl_state.texture[i])
 				{
 					qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 				}
@@ -448,9 +452,9 @@ void GL_SetupTextureState(void)
 	}
 	else
 	{
-		qglBindTexture(GL_TEXTURE_2D, mesh_texture[0]);CHECKGLERROR
+		qglBindTexture(GL_TEXTURE_2D, gl_state.texture[0]);CHECKGLERROR
 		qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);CHECKGLERROR
-		if (mesh_texture[0])
+		if (gl_state.texture[0])
 		{
 			qglEnable(GL_TEXTURE_2D);CHECKGLERROR
 		}
@@ -461,7 +465,7 @@ void GL_SetupTextureState(void)
 		if (gl_mesh_drawmode.integer > 0)
 		{
 			qglTexCoordPointer(2, GL_FLOAT, sizeof(buf_texcoord_t), buf_texcoord[0]);CHECKGLERROR
-			if (mesh_texture[0])
+			if (gl_state.texture[0])
 			{
 				qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 			}
@@ -505,30 +509,30 @@ void R_Mesh_Start(float farclip)
 
 	GL_SetupFrame();
 
-	mesh_unit = 0;
-	mesh_clientunit = 0;
+	gl_state.unit = 0;
+	gl_state.clientunit = 0;
 
 	for (i = 0;i < backendunits;i++)
 	{
-		mesh_texture[i] = 0;
-		mesh_texturergbscale[i] = 1;
+		gl_state.texture[i] = 0;
+		gl_state.texturergbscale[i] = 1;
 	}
 
 	qglEnable(GL_CULL_FACE);CHECKGLERROR
 	qglCullFace(GL_FRONT);CHECKGLERROR
 
-	mesh_depthtest = true;
+	gl_state.depthtest = true;
 	qglEnable(GL_DEPTH_TEST);CHECKGLERROR
 
-	mesh_blendfunc1 = GL_ONE;
-	mesh_blendfunc2 = GL_ZERO;
-	qglBlendFunc(mesh_blendfunc1, mesh_blendfunc2);CHECKGLERROR
+	gl_state.blendfunc1 = GL_ONE;
+	gl_state.blendfunc2 = GL_ZERO;
+	qglBlendFunc(gl_state.blendfunc1, gl_state.blendfunc2);CHECKGLERROR
 
-	mesh_blend = 0;
+	gl_state.blend = 0;
 	qglDisable(GL_BLEND);CHECKGLERROR
 
-	mesh_depthmask = GL_TRUE;
-	qglDepthMask(mesh_depthmask);CHECKGLERROR
+	gl_state.depthmask = GL_TRUE;
+	qglDepthMask(gl_state.depthmask);CHECKGLERROR
 
 	usedarrays = false;
 	if (gl_mesh_drawmode.integer > 0)
@@ -595,107 +599,107 @@ void GL_MeshState(buf_mesh_t *mesh)
 	{
 		for (i = 0;i < backendunits;i++)
 		{
-			if (mesh_texture[i] != mesh->textures[i])
+			if (gl_state.texture[i] != mesh->textures[i])
 			{
-				if (mesh_unit != i)
+				if (gl_state.unit != i)
 				{
-					qglActiveTexture(GL_TEXTURE0_ARB + (mesh_unit = i));CHECKGLERROR
+					qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
 				}
-				if (mesh_texture[i] == 0)
+				if (gl_state.texture[i] == 0)
 				{
 					qglEnable(GL_TEXTURE_2D);CHECKGLERROR
 					// have to disable texcoord array on disabled texture
 					// units due to NVIDIA driver bug with
 					// compiled_vertex_array
-					if (mesh_clientunit != i)
+					if (gl_state.clientunit != i)
 					{
-						qglClientActiveTexture(GL_TEXTURE0_ARB + (mesh_clientunit = i));CHECKGLERROR
+						qglClientActiveTexture(GL_TEXTURE0_ARB + (gl_state.clientunit = i));CHECKGLERROR
 					}
 					qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 				}
-				qglBindTexture(GL_TEXTURE_2D, (mesh_texture[i] = mesh->textures[i]));CHECKGLERROR
-				if (mesh_texture[i] == 0)
+				qglBindTexture(GL_TEXTURE_2D, (gl_state.texture[i] = mesh->textures[i]));CHECKGLERROR
+				if (gl_state.texture[i] == 0)
 				{
 					qglDisable(GL_TEXTURE_2D);CHECKGLERROR
 					// have to disable texcoord array on disabled texture
 					// units due to NVIDIA driver bug with
 					// compiled_vertex_array
-					if (mesh_clientunit != i)
+					if (gl_state.clientunit != i)
 					{
-						qglClientActiveTexture(GL_TEXTURE0_ARB + (mesh_clientunit = i));CHECKGLERROR
+						qglClientActiveTexture(GL_TEXTURE0_ARB + (gl_state.clientunit = i));CHECKGLERROR
 					}
 					qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 				}
 			}
-			if (mesh_texturergbscale[i] != mesh->texturergbscale[i])
+			if (gl_state.texturergbscale[i] != mesh->texturergbscale[i])
 			{
-				if (mesh_unit != i)
+				if (gl_state.unit != i)
 				{
-					qglActiveTexture(GL_TEXTURE0_ARB + (mesh_unit = i));CHECKGLERROR
+					qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
 				}
-				qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, (mesh_texturergbscale[i] = mesh->texturergbscale[i]));CHECKGLERROR
+				qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, (gl_state.texturergbscale[i] = mesh->texturergbscale[i]));CHECKGLERROR
 			}
 		}
 	}
 	else
 	{
-		if (mesh_texture[0] != mesh->textures[0])
+		if (gl_state.texture[0] != mesh->textures[0])
 		{
-			if (mesh_texture[0] == 0)
+			if (gl_state.texture[0] == 0)
 			{
 				qglEnable(GL_TEXTURE_2D);CHECKGLERROR
 				qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 			}
-			qglBindTexture(GL_TEXTURE_2D, (mesh_texture[0] = mesh->textures[0]));CHECKGLERROR
-			if (mesh_texture[0] == 0)
+			qglBindTexture(GL_TEXTURE_2D, (gl_state.texture[0] = mesh->textures[0]));CHECKGLERROR
+			if (gl_state.texture[0] == 0)
 			{
 				qglDisable(GL_TEXTURE_2D);CHECKGLERROR
 				qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 			}
 		}
 	}
-	if (mesh_blendfunc1 != mesh->blendfunc1 || mesh_blendfunc2 != mesh->blendfunc2)
+	if (gl_state.blendfunc1 != mesh->blendfunc1 || gl_state.blendfunc2 != mesh->blendfunc2)
 	{
-		qglBlendFunc(mesh_blendfunc1 = mesh->blendfunc1, mesh_blendfunc2 = mesh->blendfunc2);CHECKGLERROR
-		if (mesh_blendfunc2 == GL_ZERO)
+		qglBlendFunc(gl_state.blendfunc1 = mesh->blendfunc1, gl_state.blendfunc2 = mesh->blendfunc2);CHECKGLERROR
+		if (gl_state.blendfunc2 == GL_ZERO)
 		{
-			if (mesh_blendfunc1 == GL_ONE)
+			if (gl_state.blendfunc1 == GL_ONE)
 			{
-				if (mesh_blend)
+				if (gl_state.blend)
 				{
-					mesh_blend = 0;
+					gl_state.blend = 0;
 					qglDisable(GL_BLEND);CHECKGLERROR
 				}
 			}
 			else
 			{
-				if (!mesh_blend)
+				if (!gl_state.blend)
 				{
-					mesh_blend = 1;
+					gl_state.blend = 1;
 					qglEnable(GL_BLEND);CHECKGLERROR
 				}
 			}
 		}
 		else
 		{
-			if (!mesh_blend)
+			if (!gl_state.blend)
 			{
-				mesh_blend = 1;
+				gl_state.blend = 1;
 				qglEnable(GL_BLEND);CHECKGLERROR
 			}
 		}
 	}
-	if (mesh_depthtest != mesh->depthtest)
+	if (gl_state.depthtest != mesh->depthtest)
 	{
-		mesh_depthtest = mesh->depthtest;
-		if (mesh_depthtest)
+		gl_state.depthtest = mesh->depthtest;
+		if (gl_state.depthtest)
 			qglEnable(GL_DEPTH_TEST);
 		else
 			qglDisable(GL_DEPTH_TEST);
 	}
-	if (mesh_depthmask != mesh->depthmask)
+	if (gl_state.depthmask != mesh->depthmask)
 	{
-		qglDepthMask(mesh_depthmask = mesh->depthmask);CHECKGLERROR
+		qglDepthMask(gl_state.depthmask = mesh->depthmask);CHECKGLERROR
 	}
 }
 
@@ -726,7 +730,7 @@ void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, GLuint *in
 		// GL 1.1 but not using vertex arrays - 3dfx glquake minigl driver
 		// feed it manually
 		qglBegin(GL_TRIANGLES);
-		if (mesh_texture[1]) // if the mesh uses multiple textures
+		if (gl_state.texture[1]) // if the mesh uses multiple textures
 		{
 			// the minigl doesn't have this (because it does not have ARB_multitexture)
 			for (i = 0;i < indexcount;i++)
@@ -734,7 +738,7 @@ void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, GLuint *in
 				in = index[i];
 				qglColor4ub(buf_bcolor[in].c[0], buf_bcolor[in].c[1], buf_bcolor[in].c[2], buf_bcolor[in].c[3]);
 				for (j = 0;j < backendunits;j++)
-					if (mesh_texture[j])
+					if (gl_state.texture[j])
 						qglMultiTexCoord2f(GL_TEXTURE0_ARB + j, buf_texcoord[j][in].t[0], buf_texcoord[j][in].t[1]);
 				qglVertex3f(buf_vertex[in].v[0], buf_vertex[in].v[1], buf_vertex[in].v[2]);
 			}
@@ -745,7 +749,7 @@ void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, GLuint *in
 			{
 				in = index[i];
 				qglColor4ub(buf_bcolor[in].c[0], buf_bcolor[in].c[1], buf_bcolor[in].c[2], buf_bcolor[in].c[3]);
-				if (mesh_texture[0])
+				if (gl_state.texture[0])
 					qglTexCoord2f(buf_texcoord[0][in].t[0], buf_texcoord[0][in].t[1]);
 				qglVertex3f(buf_vertex[in].v[0], buf_vertex[in].v[1], buf_vertex[in].v[2]);
 			}
