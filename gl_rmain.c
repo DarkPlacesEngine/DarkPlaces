@@ -310,16 +310,6 @@ GL_Init
 extern char *ENGINE_EXTENSIONS;
 void GL_Init (void)
 {
-	gl_vendor = glGetString (GL_VENDOR);
-	Con_Printf ("GL_VENDOR: %s\n", gl_vendor);
-	gl_renderer = glGetString (GL_RENDERER);
-	Con_Printf ("GL_RENDERER: %s\n", gl_renderer);
-
-	gl_version = glGetString (GL_VERSION);
-	Con_Printf ("GL_VERSION: %s\n", gl_version);
-	gl_extensions = glGetString (GL_EXTENSIONS);
-	Con_Printf ("GL_EXTENSIONS: %s\n", gl_extensions);
-
 	VID_CheckExtensions();
 
 	// LordHavoc: report supported extensions

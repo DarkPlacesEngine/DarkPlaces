@@ -28,6 +28,11 @@ cvar_t in_pitch_max = {0, "in_pitch_max", "90"};
 
 cvar_t m_filter = {CVAR_SAVE, "m_filter","0"};
 
+const char *gl_vendor;
+const char *gl_renderer;
+const char *gl_version;
+const char *gl_extensions;
+
 // GL_ARB_multitexture
 void (GLAPIENTRY *qglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
 void (GLAPIENTRY *qglActiveTexture) (GLenum);
@@ -289,27 +294,26 @@ static HINSTANCE gldll;
 static void *prjobj = NULL;
 #endif
 
-static void gl_getfuncs_begin(void)
+void GL_OpenLibrary(void)
 {
 #ifdef WIN32
-	gldll = LoadLibrary("opengl32.dll");
+	if (gldll)
+		FreeLibrary(gldll);
+	if (!(gldll = LoadLibrary("opengl32.dll")))
+		Sys_Error("Unable to LoadLibrary opengl32.dll\n");
 #else
 	if (prjobj)
 		dlclose(prjobj);
-
-	prjobj = dlopen(NULL, RTLD_LAZY);
-	if (prjobj == NULL)
-	{
-		Con_Printf("Unable to open symbol list for main program.\n");
-		return;
-	}
+	if (!(prjobj = dlopen("libGL.so.1", RTLD_LAZY)))
+		Sys_Error("Unable to open symbol list for libGL.so.1\n");
 #endif
 }
 
-static void gl_getfuncs_end(void)
+void GL_CloseLibrary(void)
 {
 #ifdef WIN32
 	FreeLibrary(gldll);
+	gldll = 0;
 #else
 	if (prjobj)
 		dlclose(prjobj);
@@ -317,7 +321,7 @@ static void gl_getfuncs_end(void)
 #endif
 }
 
-static void *gl_getfuncaddress(char *name)
+void *GL_GetProcAddress(char *name)
 {
 	void *p = NULL;
 #ifdef WIN32
@@ -352,7 +356,7 @@ static int gl_checkextension(char *name, gl_extensionfunctionlist_t *funcs, char
 		for (func = funcs;func && func->name != NULL;func++)
 		{
 			// functions are cleared before all the extensions are evaluated
-			if (!(*func->funcvariable = (void *) gl_getfuncaddress(func->name)))
+			if (!(*func->funcvariable = (void *) GL_GetProcAddress(func->name)))
 			{
 				if (!silent)
 					Con_Printf("missing function \"%s\" - broken driver!\n", func->name);
@@ -374,9 +378,12 @@ static int gl_checkextension(char *name, gl_extensionfunctionlist_t *funcs, char
 
 void VID_CheckExtensions(void)
 {
-	Con_Printf("Checking OpenGL extensions...\n");
+	gl_vendor = NULL;
+	gl_renderer = NULL;
+	gl_version = NULL;
+	gl_extensions = NULL;
 
-	gl_getfuncs_begin();
+	Con_Printf("Opening OpenGL library to retrieve functions\n");
 
 	gl_combine_extension = false;
 	gl_supportslockarrays = false;
@@ -390,6 +397,18 @@ void VID_CheckExtensions(void)
 
 	if (!gl_checkextension("OpenGL 1.1.0", opengl110funcs, NULL, false))
 		Sys_Error("OpenGL 1.1.0 functions not found\n");
+
+	gl_vendor = qglGetString (GL_VENDOR);
+	gl_renderer = qglGetString (GL_RENDERER);
+	gl_version = qglGetString (GL_VERSION);
+	gl_extensions = qglGetString (GL_EXTENSIONS);
+
+	Con_Printf ("GL_VENDOR: %s\n", gl_vendor);
+	Con_Printf ("GL_RENDERER: %s\n", gl_renderer);
+	Con_Printf ("GL_VERSION: %s\n", gl_version);
+	Con_Printf ("GL_EXTENSIONS: %s\n", gl_extensions);
+
+	Con_Printf("Checking OpenGL extensions...\n");
 
 	if (!gl_checkextension("glDrawRangeElements", drawrangeelementsfuncs, "-nodrawrangeelements", true))
 		gl_checkextension("GL_EXT_draw_range_elements", drawrangeelementsextfuncs, "-nodrawrangeelements", true);
@@ -407,8 +426,6 @@ void VID_CheckExtensions(void)
 	}
 
 	gl_supportslockarrays = gl_checkextension("GL_EXT_compiled_vertex_array", compiledvertexarrayfuncs, "-nocva", false);
-
-	gl_getfuncs_end();
 
 	// we don't care if it's an extension or not, they are identical functions, so keep it simple in the rendering code
 	if (qglDrawRangeElements == NULL)
