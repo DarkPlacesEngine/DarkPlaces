@@ -103,7 +103,7 @@ void Sys_Error (const char *error, ...)
 		if (!in_sys_error0)
 		{
 			in_sys_error0 = 1;
-			VID_SetDefaultMode ();
+			VID_Shutdown();
 			MessageBox(NULL, text, "Quake Error", MB_OK | MB_SETFOREGROUND | MB_ICONSTOP);
 		}
 		else
