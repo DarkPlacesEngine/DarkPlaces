@@ -507,7 +507,7 @@ typedef struct
 	int numparticles;
 	struct renderparticle_s *particles;
 
-	byte drawqueue[MAX_DRAWQUEUE];
+	qbyte drawqueue[MAX_DRAWQUEUE];
 	int drawqueuesize;
 }
 refdef_t;

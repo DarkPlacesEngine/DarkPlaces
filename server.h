@@ -61,13 +61,13 @@ typedef struct
 	server_state_t	state;			// some actions are only valid during load
 
 	sizebuf_t	datagram;
-	byte		datagram_buf[MAX_DATAGRAM];
+	qbyte		datagram_buf[MAX_DATAGRAM];
 
 	sizebuf_t	reliable_datagram;	// copied to all clients at end of frame
-	byte		reliable_datagram_buf[MAX_DATAGRAM];
+	qbyte		reliable_datagram_buf[MAX_DATAGRAM];
 
 	sizebuf_t	signon;
-	byte		signon_buf[32768]; // LordHavoc: increased signon message buffer from 8192 to 32768
+	qbyte		signon_buf[32768]; // LordHavoc: increased signon message buffer from 8192 to 32768
 } server_t;
 
 
@@ -95,7 +95,7 @@ typedef struct client_s
 
 	sizebuf_t		message;			// can be added to at any time,
 										// copied and clear once per frame
-	byte			msgbuf[MAX_MSGLEN];
+	qbyte			msgbuf[MAX_MSGLEN];
 	edict_t			*edict;				// EDICT_NUM(clientnum+1)
 	char			name[32];			// for printing to other people
 	int				colors;

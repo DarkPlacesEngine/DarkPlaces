@@ -181,11 +181,11 @@ void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, sizebuf_t *msg)
 			bits |= E_ORIGIN2;
 		if ((int) ent->origin[2] != (int) delta->origin[2])
 			bits |= E_ORIGIN3;
-		if ((byte) (ent->angles[0] * (256.0f / 360.0f)) != (byte) (delta->angles[0] * (256.0f / 360.0f)))
+		if ((qbyte) (ent->angles[0] * (256.0f / 360.0f)) != (qbyte) (delta->angles[0] * (256.0f / 360.0f)))
 			bits |= E_ANGLE1;
-		if ((byte) (ent->angles[1] * (256.0f / 360.0f)) != (byte) (delta->angles[1] * (256.0f / 360.0f)))
+		if ((qbyte) (ent->angles[1] * (256.0f / 360.0f)) != (qbyte) (delta->angles[1] * (256.0f / 360.0f)))
 			bits |= E_ANGLE2;
-		if ((byte) (ent->angles[2] * (256.0f / 360.0f)) != (byte) (delta->angles[2] * (256.0f / 360.0f)))
+		if ((qbyte) (ent->angles[2] * (256.0f / 360.0f)) != (qbyte) (delta->angles[2] * (256.0f / 360.0f)))
 			bits |= E_ANGLE3;
 		if ((ent->modelindex ^ delta->modelindex) & 0x00FF)
 			bits |= E_MODEL1;

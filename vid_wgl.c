@@ -66,7 +66,7 @@ qboolean		scr_skipupdate;
 
 static vmode_t	modelist[MAX_MODE_LIST];
 static int		nummodes;
-static vmode_t	*pcurrentmode;
+//static vmode_t	*pcurrentmode;
 static vmode_t	badmode;
 
 static DEVMODE	gdevmode;
@@ -252,7 +252,7 @@ qboolean VID_SetFullDIBMode (int modenum)
 int VID_SetMode (int modenum)
 {
 	int				original_mode, temp;
-	qboolean		stat;
+	qboolean		stat = 0;
     MSG				msg;
 
 	if ((windowed && (modenum != 0)) || (!windowed && (modenum < 1)) || (!windowed && (modenum >= nummodes)))
@@ -503,7 +503,7 @@ BOOL bSetupPixelFormat(HDC hDC)
 
 
 
-byte scantokey[128] =
+qbyte scantokey[128] =
 {
 //	0           1      2     3     4     5       6       7      8         9      A       B           C     D            E           F
 	0          ,27    ,'1'  ,'2'  ,'3'  ,'4'    ,'5'    ,'6'   ,'7'      ,'8'   ,'9'    ,'0'        ,'-'  ,'='         ,K_BACKSPACE,9     , // 0
@@ -517,7 +517,7 @@ byte scantokey[128] =
 };
 
 /*
-byte shiftscantokey[128] =
+qbyte shiftscantokey[128] =
 { 
 //	0           1      2     3     4     5       6       7      8         9      A       B           C    D            E           F 
 	0          ,27    ,'!'  ,'@'  ,'#'  ,'$'    ,'%'    ,'^'   ,'&'      ,'*'   ,'('    ,')'        ,'_' ,'+'         ,K_BACKSPACE,9    , // 0
@@ -1178,7 +1178,7 @@ void VID_InitFullDIB (HINSTANCE hInstance)
 		Con_SafePrintf ("No fullscreen DIB modes found\n");
 }
 
-static int grabsysgamma = true;
+//static int grabsysgamma = true;
 WORD systemgammaramps[3][256], currentgammaramps[3][256];
 
 int VID_SetGamma(float prescale, float gamma, float scale, float base)
@@ -1231,7 +1231,7 @@ void	VID_Init (void)
 {
 	int		i;
 //	int		existingmode;
-	int		basenummodes, width, height, bpp, findbpp, done;
+	int		basenummodes, width, height = 0, bpp, findbpp, done;
 	HDC		hdc;
 	DEVMODE	devmode;
 
@@ -1457,7 +1457,7 @@ extern void M_PrintWhite (int cx, int cy, char *str);
 extern void M_DrawCharacter (int cx, int line, int num);
 extern void M_DrawPic (int x, int y, char *picname);
 
-static int	vid_line, vid_wmodes;
+static int	vid_wmodes;
 
 typedef struct
 {

@@ -141,11 +141,11 @@ typedef struct msurface_s
 	texture_t	*currenttexture; // updated (animated) during early surface processing each frame
 
 	// index into d_lightstylevalue array, 255 means not used (black)
-	byte		styles[MAXLIGHTMAPS];
+	qbyte		styles[MAXLIGHTMAPS];
 	// RGB lighting data [numstyles][height][width][3]
-	byte		*samples;
+	qbyte		*samples;
 	// stain to apply on lightmap (soot/dirt/blood/whatever)
-	byte		*stainsamples;
+	qbyte		*stainsamples;
 
 	// these fields are generated during model loading
 	// the lightmap texture fragment to use on the surface
@@ -246,11 +246,11 @@ typedef struct mleaf_s
 	int					dlightbits[8];
 	int					dlightframe;
 
-	byte				*compressed_vis;
+	qbyte				*compressed_vis;
 
 	msurface_t			**firstmarksurface;
 	int					nummarksurfaces;
-	byte				ambient_sound_level[NUM_AMBIENTS];
+	qbyte				ambient_sound_level[NUM_AMBIENTS];
 }
 mleaf_t;
 

@@ -1204,7 +1204,7 @@ void PR_LoadProgs (void)
 
 	Con_DPrintf ("Programs occupy %iK.\n", com_filesize/1024);
 
-	pr_crc = CRC_Block((byte *)progs, com_filesize);
+	pr_crc = CRC_Block((qbyte *)progs, com_filesize);
 
 // byte swap the header
 	for (i=0 ; i<sizeof(*progs)/4 ; i++)
@@ -1215,20 +1215,20 @@ void PR_LoadProgs (void)
 	if (progs->crc != PROGHEADER_CRC)
 		Host_Error ("progs.dat system vars have been modified, progdefs.h is out of date");
 
-	pr_functions = (dfunction_t *)((byte *)progs + progs->ofs_functions);
+	pr_functions = (dfunction_t *)((qbyte *)progs + progs->ofs_functions);
 	pr_strings = (char *)progs + progs->ofs_strings;
-	pr_globaldefs = (ddef_t *)((byte *)progs + progs->ofs_globaldefs);
+	pr_globaldefs = (ddef_t *)((qbyte *)progs + progs->ofs_globaldefs);
 
 	// we need to expand the fielddefs list to include all the engine fields,
 	// so allocate a new place for it
-	infielddefs = (ddef_t *)((byte *)progs + progs->ofs_fielddefs);
+	infielddefs = (ddef_t *)((qbyte *)progs + progs->ofs_fielddefs);
 	pr_fielddefs = Mem_Alloc(progs_mempool, (progs->numfielddefs + DPFIELDS) * sizeof(ddef_t));
 
-	pr_statements = (dstatement_t *)((byte *)progs + progs->ofs_statements);
+	pr_statements = (dstatement_t *)((qbyte *)progs + progs->ofs_statements);
 
 	// moved edict_size calculation down below field adding code
 
-	pr_global_struct = (globalvars_t *)((byte *)progs + progs->ofs_globals);
+	pr_global_struct = (globalvars_t *)((qbyte *)progs + progs->ofs_globals);
 	pr_globals = (float *)pr_global_struct;
 
 // byte swap the lumps
@@ -1477,7 +1477,7 @@ edict_t *EDICT_NUM(int n)
 {
 	if (n < 0 || n >= sv.max_edicts)
 		Sys_Error ("EDICT_NUM: bad number %i", n);
-	return (edict_t *)((byte *)sv.edicts+ (n)*pr_edict_size);
+	return (edict_t *)((qbyte *)sv.edicts+ (n)*pr_edict_size);
 }
 */
 
@@ -1485,7 +1485,7 @@ int NUM_FOR_EDICT(edict_t *e)
 {
 	int		b;
 
-	b = (byte *)e - (byte *)sv.edicts;
+	b = (qbyte *)e - (qbyte *)sv.edicts;
 	b = b / pr_edict_size;
 
 	if (b < 0 || b >= sv.num_edicts)
@@ -1497,7 +1497,7 @@ int NoCrash_NUM_FOR_EDICT(edict_t *e)
 {
 	int		b;
 
-	b = (byte *)e - (byte *)sv.edicts;
+	b = (qbyte *)e - (qbyte *)sv.edicts;
 	b = b / pr_edict_size;
 	return b;
 }

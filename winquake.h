@@ -22,11 +22,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #pragma warning( disable : 4229 )  // mgraph gets this
 
 #include <windows.h>
-#define WM_MOUSEWHEEL                   0x020A
 
 #ifndef SERVERONLY
 #include <ddraw.h>
 #include <dsound.h>
+#endif
+
+#ifndef WM_MOUSEWHEEL
+#define WM_MOUSEWHEEL                   0x020A
 #endif
 
 extern	HINSTANCE	global_hInstance;

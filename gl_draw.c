@@ -37,7 +37,7 @@ static int numcachepics;
 
 static rtexturepool_t *drawtexturepool;
 
-static byte pointerimage[256] =
+static qbyte pointerimage[256] =
 {
 	"333333332......."
 	"26777761........"
@@ -60,7 +60,7 @@ static byte pointerimage[256] =
 static rtexture_t *draw_generatemousepointer(void)
 {
 	int i;
-	byte buffer[256][4];
+	qbyte buffer[256][4];
 	for (i = 0;i < 256;i++)
 	{
 		if (pointerimage[i] == '.')
@@ -84,7 +84,7 @@ static rtexture_t *draw_generatemousepointer(void)
 // must match NUMCROSSHAIRS in r_crosshairs.c
 #define NUMCROSSHAIRS 5
 
-static byte *crosshairtexdata[NUMCROSSHAIRS] =
+static qbyte *crosshairtexdata[NUMCROSSHAIRS] =
 {
 	"................"
 	"................"
@@ -176,7 +176,7 @@ static rtexture_t *draw_generatecrosshair(int num)
 {
 	int i;
 	char *in;
-	byte data[16*16][4];
+	qbyte data[16*16][4];
 	in = crosshairtexdata[num];
 	for (i = 0;i < 16*16;i++)
 	{
@@ -192,7 +192,7 @@ static rtexture_t *draw_generatecrosshair(int num)
 			data[i][0] = 255;
 			data[i][1] = 255;
 			data[i][2] = 255;
-			data[i][3] = (byte) ((int) (in[i] - '0') * 255 / 7);
+			data[i][3] = (qbyte) ((int) (in[i] - '0') * 255 / 7);
 		}
 	}
 	return R_LoadTexture(drawtexturepool, va("crosshair%i", num), 16, 16, &data[0][0], TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE);
@@ -233,9 +233,9 @@ cachepic_t	*Draw_CachePic (char *path)
 	{
 		if (!strcmp(path, "conchars"))
 		{
-			byte *pix;
+			qbyte *pix;
 			// conchars is a raw image and with the wrong transparent color
-			pix = (byte *)p;
+			pix = (qbyte *)p;
 			for (i = 0;i < 128 * 128;i++)
 				if (pix[i] == 0)
 					pix[i] = 255;
@@ -391,7 +391,7 @@ void R_DrawQueue(void)
 		if (color != dq->color)
 		{
 			color = dq->color;
-			glColor4ub((byte)(((color >> 24) & 0xFF) >> overbright), (byte)(((color >> 16) & 0xFF) >> overbright), (byte)(((color >> 8) & 0xFF) >> overbright), (byte)(color & 0xFF));
+			glColor4ub((qbyte)(((color >> 24) & 0xFF) >> overbright), (qbyte)(((color >> 16) & 0xFF) >> overbright), (qbyte)(((color >> 8) & 0xFF) >> overbright), (qbyte)(color & 0xFF));
 		}
 		x = dq->x;
 		y = dq->y;

@@ -94,9 +94,9 @@ static char *suf[6] = {"rt", "bk", "lf", "ft", "up", "dn"};
 static rtexture_t *skyboxside[6];
 int R_SetSkyBox(char *sky)
 {
-	int		i;
-	char	name[1024];
-	byte*	image_rgba;
+	int i;
+	char name[1024];
+	qbyte *image_rgba;
 
 	if (strcmp(sky, skyname) == 0) // no change
 		return true;
@@ -361,9 +361,6 @@ void R_Sky(void)
 
 //===============================================================
 
-static byte skyupperlayerpixels[128*128*4];
-static byte skylowerlayerpixels[128*128*4];
-
 /*
 =============
 R_InitSky
@@ -371,13 +368,11 @@ R_InitSky
 A sky texture is 256*128, with the right side being a masked overlay
 ==============
 */
-void R_InitSky (byte *src, int bytesperpixel)
+void R_InitSky (qbyte *src, int bytesperpixel)
 {
-	int			i, j, p;
-	unsigned	trans[128*128];
-	unsigned	transpix;
-	int			r, g, b;
-	unsigned	*rgba;
+	int i, j, p, r, g, b;
+	qbyte skyupperlayerpixels[128*128*4], skylowerlayerpixels[128*128*4];
+	unsigned trans[128*128], transpix, *rgba;
 
 	strcpy(skyworldname, loadmodel->name);
 
@@ -405,29 +400,29 @@ void R_InitSky (byte *src, int bytesperpixel)
 				p = src[i*256 + j + 128];
 				rgba = &d_8to24table[p];
 				trans[(i*128) + j] = *rgba;
-				r += ((byte *)rgba)[0];
-				g += ((byte *)rgba)[1];
-				b += ((byte *)rgba)[2];
+				r += ((qbyte *)rgba)[0];
+				g += ((qbyte *)rgba)[1];
+				b += ((qbyte *)rgba)[2];
 			}
 		}
 
-		((byte *)&transpix)[0] = r/(128*128);
-		((byte *)&transpix)[1] = g/(128*128);
-		((byte *)&transpix)[2] = b/(128*128);
-		((byte *)&transpix)[3] = 0;
+		((qbyte *)&transpix)[0] = r/(128*128);
+		((qbyte *)&transpix)[1] = g/(128*128);
+		((qbyte *)&transpix)[2] = b/(128*128);
+		((qbyte *)&transpix)[3] = 0;
 	}
 
 	memcpy(skyupperlayerpixels, trans, 128*128*4);
 
-	solidskytexture = R_LoadTexture (skytexturepool, "sky_solidtexture", 128, 128, (byte *) trans, TEXTYPE_RGBA, TEXF_PRECACHE);
+	solidskytexture = R_LoadTexture (skytexturepool, "sky_solidtexture", 128, 128, (qbyte *) trans, TEXTYPE_RGBA, TEXF_PRECACHE);
 	/*
 	for (i = 0;i < 128*128;i++)
 	{
-		((byte *)&trans[i])[0] >>= 1;
-		((byte *)&trans[i])[1] >>= 1;
-		((byte *)&trans[i])[2] >>= 1;
+		((qbyte *)&trans[i])[0] >>= 1;
+		((qbyte *)&trans[i])[1] >>= 1;
+		((qbyte *)&trans[i])[2] >>= 1;
 	}
-	solidskytexture_half = R_LoadTexture (skytexturepool, "sky_solidtexture_half", 128, 128, (byte *) trans, TEXTYPE_RGBA, TEXF_PRECACHE);
+	solidskytexture_half = R_LoadTexture (skytexturepool, "sky_solidtexture_half", 128, 128, (qbyte *) trans, TEXTYPE_RGBA, TEXF_PRECACHE);
 	*/
 
 	if (bytesperpixel == 4)
@@ -453,14 +448,14 @@ void R_InitSky (byte *src, int bytesperpixel)
 
 	memcpy(skylowerlayerpixels, trans, 128*128*4);
 
-	alphaskytexture = R_LoadTexture (skytexturepool, "sky_alphatexture", 128, 128, (byte *) trans, TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE);
+	alphaskytexture = R_LoadTexture (skytexturepool, "sky_alphatexture", 128, 128, (qbyte *) trans, TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE);
 	/*
 	for (i = 0;i < 128*128;i++)
 	{
-		((byte *)&trans[i])[0] >>= 1;
-		((byte *)&trans[i])[1] >>= 1;
-		((byte *)&trans[i])[2] >>= 1;
+		((qbyte *)&trans[i])[0] >>= 1;
+		((qbyte *)&trans[i])[1] >>= 1;
+		((qbyte *)&trans[i])[2] >>= 1;
 	}
-	alphaskytexture_half = R_LoadTexture (skytexturepool, "sky_alphatexture_half", 128, 128, (byte *) trans, TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE);
+	alphaskytexture_half = R_LoadTexture (skytexturepool, "sky_alphatexture_half", 128, 128, (qbyte *) trans, TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE);
 	*/
 }

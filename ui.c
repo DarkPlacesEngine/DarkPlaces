@@ -233,7 +233,7 @@ int ui_isactive(void)
 }
 
 #define UI_QUEUE_SIZE 256
-static byte ui_keyqueue[UI_QUEUE_SIZE];
+static qbyte ui_keyqueue[UI_QUEUE_SIZE];
 static int ui_keyqueuepos = 0;
 
 void ui_leftkeyupdate(int pressed)

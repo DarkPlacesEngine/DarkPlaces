@@ -153,8 +153,8 @@ int Loop_GetMessage (qsocket_t *sock)
 
 int Loop_SendMessage (qsocket_t *sock, sizebuf_t *data)
 {
-	byte *buffer;
-	int  *bufferLength;
+	qbyte *buffer;
+	int *bufferLength;
 
 	if (!sock->driverdata)
 		return -1;
@@ -187,16 +187,16 @@ int Loop_SendMessage (qsocket_t *sock, sizebuf_t *data)
 
 int Loop_SendUnreliableMessage (qsocket_t *sock, sizebuf_t *data)
 {
-	byte *buffer;
-	int  *bufferLength;
+	qbyte *buffer;
+	int *bufferLength;
 
 	if (!sock->driverdata)
 		return -1;
 
 	bufferLength = &((qsocket_t *)sock->driverdata)->receiveMessageLength;
 
-	// LordHavoc: added an extra sizeof(byte) to account for alignment
-	if ((*bufferLength + data->cursize + sizeof(byte) + sizeof(short) + sizeof(byte)) > NET_MAXMESSAGE)
+	// LordHavoc: added an extra sizeof(qbyte) to account for alignment
+	if ((*bufferLength + data->cursize + sizeof(qbyte) + sizeof(short) + sizeof(qbyte)) > NET_MAXMESSAGE)
 		return 0;
 
 	buffer = ((qsocket_t *)sock->driverdata)->receiveMessage + *bufferLength;

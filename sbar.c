@@ -607,7 +607,7 @@ void Sbar_DrawFrags (void)
 	int i, k, l, x, f;
 	char num[12];
 	scoreboard_t *s;
-	byte *c;
+	qbyte *c;
 
 	Sbar_SortFrags ();
 
@@ -624,9 +624,9 @@ void Sbar_DrawFrags (void)
 			continue;
 
 		// draw background
-		c = (byte *)&d_8to24table[(s->colors & 0xf0) + 8];
+		c = (qbyte *)&d_8to24table[(s->colors & 0xf0) + 8];
 		DrawQ_Fill (sbar_x + x + 10, sbar_y     - 23, 28, 4, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f), 0);
-		c = (byte *)&d_8to24table[((s->colors & 15)<<4) + 8];
+		c = (qbyte *)&d_8to24table[((s->colors & 15)<<4) + 8];
 		DrawQ_Fill (sbar_x + x + 10, sbar_y + 4 - 23, 28, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f), 0);
 
 		// draw number
@@ -664,14 +664,14 @@ void Sbar_DrawFace (void)
 	{
 		char num[12];
 		scoreboard_t *s;
-		byte *c;
+		qbyte *c;
 
 		s = &cl.scores[cl.viewentity - 1];
 		// draw background
 		Sbar_DrawPic (112, 0, rsb_teambord);
-		c = (byte *)&d_8to24table[(s->colors & 0xf0) + 8];
+		c = (qbyte *)&d_8to24table[(s->colors & 0xf0) + 8];
 		DrawQ_Fill (sbar_x + 113, vid.conheight-SBAR_HEIGHT+3, 22, 9, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f), 0);
-		c = (byte *)&d_8to24table[((s->colors & 15)<<4) + 8];
+		c = (qbyte *)&d_8to24table[((s->colors & 15)<<4) + 8];
 		DrawQ_Fill (sbar_x + 113, vid.conheight-SBAR_HEIGHT+12, 22, 9, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f), 0);
 
 		// draw number
@@ -892,7 +892,7 @@ void Sbar_DeathmatchOverlay (void)
 	int i, k, l, x, y, total, n, minutes, tens, units, fph;
 	char num[128];
 	scoreboard_t *s;
-	byte *c;
+	qbyte *c;
 
 	pic = Draw_CachePic ("gfx/ranking.lmp");
 	DrawQ_Pic ((vid.conwidth - pic->width)/2, 8, "gfx/ranking.lmp", 0, 0, 1, 1, 1, 1, 0);
@@ -913,9 +913,9 @@ void Sbar_DeathmatchOverlay (void)
 			continue;
 
 	// draw background
-		c = (byte *)&d_8to24table[(s->colors & 0xf0) + 8];
+		c = (qbyte *)&d_8to24table[(s->colors & 0xf0) + 8];
 		DrawQ_Fill ( x, y+1, 88, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f), 0);
-		c = (byte *)&d_8to24table[((s->colors & 15)<<4) + 8];
+		c = (qbyte *)&d_8to24table[((s->colors & 15)<<4) + 8];
 		DrawQ_Fill ( x, y+4, 88, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f), 0);
 
 		total = cl.time - s->entertime;
@@ -947,7 +947,7 @@ void Sbar_MiniDeathmatchOverlay (void)
 	int i, l, k, x, y, fph, numlines;
 	char num[128];
 	scoreboard_t *s;
-	byte *c;
+	qbyte *c;
 
 	if (vid.conwidth < 512 || !sb_lines)
 		return;
@@ -986,9 +986,9 @@ void Sbar_MiniDeathmatchOverlay (void)
 			continue;
 
 		// draw background
-		c = (byte *)&d_8to24table[(s->colors & 0xf0) + 8];
+		c = (qbyte *)&d_8to24table[(s->colors & 0xf0) + 8];
 		DrawQ_Fill ( x, y+1, 72, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f), 0);
-		c = (byte *)&d_8to24table[((s->colors & 15)<<4) + 8];
+		c = (qbyte *)&d_8to24table[((s->colors & 15)<<4) + 8];
 		DrawQ_Fill ( x, y+4, 72, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f), 0);
 
 		fph = (cl.time - s->entertime) ? (int) ((float) s->frags * 3600.0 / (cl.time - s->entertime)) : 0;

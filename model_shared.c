@@ -309,7 +309,7 @@ model_t *Mod_ForName (char *name, qboolean crash, qboolean checkdisk, qboolean i
 	return Mod_LoadModel (Mod_FindName (name), crash, checkdisk, isworldmodel);
 }
 
-byte	*mod_base;
+qbyte *mod_base;
 
 /*
 =================

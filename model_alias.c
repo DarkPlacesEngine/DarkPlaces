@@ -160,10 +160,10 @@ static void Mod_MDL_LoadFrames (long datapointer, int inverts, int outverts, vec
 	}
 }
 
-static rtexture_t *GL_SkinSplitShirt(byte *in, byte *out, int width, int height, int bits, char *name, int precache)
+static rtexture_t *GL_SkinSplitShirt(qbyte *in, qbyte *out, int width, int height, int bits, char *name, int precache)
 {
 	int i, pixels, passed;
-	byte pixeltest[16];
+	qbyte pixeltest[16];
 	for (i = 0;i < 16;i++)
 		pixeltest[i] = (bits & (1 << i)) != 0;
 	pixels = width*height;
@@ -190,10 +190,10 @@ static rtexture_t *GL_SkinSplitShirt(byte *in, byte *out, int width, int height,
 		return NULL;
 }
 
-static rtexture_t *GL_SkinSplit(byte *in, byte *out, int width, int height, int bits, char *name, int precache)
+static rtexture_t *GL_SkinSplit(qbyte *in, qbyte *out, int width, int height, int bits, char *name, int precache)
 {
 	int i, pixels, passed;
-	byte pixeltest[16];
+	qbyte pixeltest[16];
 	for (i = 0;i < 16;i++)
 		pixeltest[i] = (bits & (1 << i)) != 0;
 	pixels = width*height;
@@ -216,7 +216,7 @@ static rtexture_t *GL_SkinSplit(byte *in, byte *out, int width, int height, int 
 		return NULL;
 }
 
-static void Mod_LoadSkin (char *basename, byte *skindata, byte *skintemp, int width, int height, skinframe_t *skinframe, int precache)
+static void Mod_LoadSkin (char *basename, qbyte *skindata, qbyte *skintemp, int width, int height, skinframe_t *skinframe, int precache)
 {
 	skinframe->base   = loadtextureimagewithmask(loadmodel->texturepool, va("%s_normal", basename), 0, 0, false, r_mipskins.integer, precache);
 	skinframe->fog    = image_masktex;
@@ -267,7 +267,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	float					scales, scalet, scale[3], translate[3], interval;
 	long					datapointer, startframes, startskins;
 	char					name[MAX_QPATH];
-	byte					*skintemp = NULL;
+	qbyte					*skintemp = NULL;
 	modelyawradius = 0;
 	modelradius = 0;
 
@@ -401,7 +401,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 				sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
 			else
 				sprintf (name, "%s_%i", loadmodel->name, i);
-			Mod_LoadSkin(name, (byte *)datapointer, skintemp, skinwidth, skinheight, loadmodel->skinframes + totalskins, i == 0);
+			Mod_LoadSkin(name, (qbyte *)datapointer, skintemp, skinwidth, skinheight, loadmodel->skinframes + totalskins, i == 0);
 			datapointer += skinwidth * skinheight;
 			totalskins++;
 		}
@@ -900,7 +900,7 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 	zymswapintblock((void *) (pheader->lump_render.start + pbase), pheader->lump_render.length);
 	// validate renderlist and swap winding order of tris
 	renderlist = (void *) (pheader->lump_render.start + pbase);
-	renderlistend = (void *) ((byte *) renderlist + pheader->lump_render.length);
+	renderlistend = (void *) ((qbyte *) renderlist + pheader->lump_render.length);
 	i = pheader->numshaders * sizeof(int) + pheader->numtris * sizeof(int[3]);
 	if (pheader->lump_render.length != i)
 		Host_Error("Mod_LoadZymoticModel: renderlist is wrong size in %s (is %i bytes, should be %i bytes)\n", loadmodel->name, pheader->lump_render.length, i);

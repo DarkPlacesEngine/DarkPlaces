@@ -144,14 +144,14 @@
 					PR_RunError("Progs attempted to write to an out of bounds edict\n");
 					return;
 				}
-				if (OPB->_int % pr_edict_size < ((byte *)&sv.edicts->v - (byte *)sv.edicts))
+				if (OPB->_int % pr_edict_size < ((qbyte *)&sv.edicts->v - (qbyte *)sv.edicts))
 				{
 					pr_xstatement = st - pr_statements;
 					PR_RunError("Progs attempted to write to an engine edict field\n");
 					return;
 				}
 #endif
-				ptr = (eval_t *)((byte *)sv.edicts + OPB->_int);
+				ptr = (eval_t *)((qbyte *)sv.edicts + OPB->_int);
 				ptr->_int = OPA->_int;
 				break;
 			case OP_STOREP_V:
@@ -163,7 +163,7 @@
 					return;
 				}
 #endif
-				ptr = (eval_t *)((byte *)sv.edicts + OPB->_int);
+				ptr = (eval_t *)((qbyte *)sv.edicts + OPB->_int);
 				ptr->vector[0] = OPA->vector[0];
 				ptr->vector[1] = OPA->vector[1];
 				ptr->vector[2] = OPA->vector[2];
@@ -207,7 +207,7 @@
 				}
 #endif
 				ed = PROG_TO_EDICT(OPA->edict);
-				OPC->_int = (byte *)((int *)&ed->v + OPB->_int) - (byte *)sv.edicts;
+				OPC->_int = (qbyte *)((int *)&ed->v + OPB->_int) - (qbyte *)sv.edicts;
 				break;
 
 			case OP_LOAD_F:
@@ -480,14 +480,14 @@
 					PR_RunError("Progs attempted to write to an out of bounds edict\n");
 					return;
 				}
-				if (OPB->_int % pr_edict_size < ((byte *)&sv.edicts->v - (byte *)sv.edicts))
+				if (OPB->_int % pr_edict_size < ((qbyte *)&sv.edicts->v - (qbyte *)sv.edicts))
 				{
 					pr_xstatement = st - pr_statements;
 					PR_RunError("Progs attempted to write to an engine edict field\n");
 					return;
 				}
 #endif
-				ptr = (eval_t *)((byte *)sv.edicts + OPB->_int);
+				ptr = (eval_t *)((qbyte *)sv.edicts + OPB->_int);
 				ptr->_int = OPA->_int;
 				break;
 			case OP_LOAD_I:

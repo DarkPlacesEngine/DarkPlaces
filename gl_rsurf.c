@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 static signed int blocklights[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*3]; // LordHavoc: *3 for colored lighting
 
-static byte templight[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*4];
+static qbyte templight[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*4];
 
 cvar_t r_ambient = {0, "r_ambient", "0"};
 cvar_t r_vertexsurfaces = {0, "r_vertexsurfaces", "0"};
@@ -168,7 +168,7 @@ void R_StainNode (mnode_t *node, model_t *model, vec3_t origin, float radius, in
 	float ndist;
 	msurface_t *surf, *endsurf;
 	int sdtable[256], td, maxdist, maxdist2, maxdist3, i, s, t, smax, tmax, smax3, dist2, impacts, impactt, subtract, a, stained, cr, cg, cb, ca, ratio;
-	byte *bl;
+	qbyte *bl;
 	vec3_t impact;
 	// LordHavoc: use 64bit integer...  shame it's not very standardized...
 #if _MSC_VER || __BORLANDC__
@@ -262,9 +262,9 @@ loc0:
 										cr = (((icolor[4] - icolor[0]) * ratio) >> 8) + icolor[0];
 										cg = (((icolor[5] - icolor[1]) * ratio) >> 8) + icolor[1];
 										cb = (((icolor[6] - icolor[2]) * ratio) >> 8) + icolor[2];
-										bl[0] = (byte) ((((cr - (int) bl[0]) * a) >> 8) + (int) bl[0]);
-										bl[1] = (byte) ((((cg - (int) bl[1]) * a) >> 8) + (int) bl[1]);
-										bl[2] = (byte) ((((cb - (int) bl[2]) * a) >> 8) + (int) bl[2]);
+										bl[0] = (qbyte) ((((cr - (int) bl[0]) * a) >> 8) + (int) bl[0]);
+										bl[1] = (qbyte) ((((cg - (int) bl[1]) * a) >> 8) + (int) bl[1]);
+										bl[2] = (qbyte) ((((cb - (int) bl[2]) * a) >> 8) + (int) bl[2]);
 										stained = true;
 									}
 								}
@@ -349,8 +349,8 @@ Combine and scale multiple lightmaps into the 8.8 format in blocklights
 */
 static void R_BuildLightMap (msurface_t *surf, int dlightchanged)
 {
-	int		smax, tmax, i, j, size, size3, shift, scale, maps, *bl, stride, l;
-	byte	*lightmap, *out, *stain;
+	int smax, tmax, i, j, size, size3, shift, scale, maps, *bl, stride, l;
+	qbyte *lightmap, *out, *stain;
 
 	// update cached lighting info
 	surf->cached_dlight = 0;
@@ -1088,12 +1088,12 @@ static void RSurfShader_Wall_Pass_BaseLightmap(msurface_t *s)
 
 static void RSurfShader_Wall_Pass_BaseVertex(msurface_t *s)
 {
-	int				i, size3;
-	float			c[3], base[3], scale, diff[3], ifog;
-	surfvertex_t	*v;
-	surfvert_t		*sv;
-	rmeshinfo_t		m;
-	byte			*lm;
+	int i, size3;
+	float c[3], base[3], scale, diff[3], ifog;
+	surfvertex_t *v;
+	surfvert_t *sv;
+	rmeshinfo_t m;
+	qbyte *lm;
 
 	size3 = ((s->extents[0]>>4)+1)*((s->extents[1]>>4)+1)*3;
 
@@ -1813,7 +1813,7 @@ static void R_PVSWorldNode()
 	msurface_t *surf, **mark, **endmark;
 	mleaf_t *leaf;
 	tinyplane_t plane;
-	byte *worldvis;
+	qbyte *worldvis;
 
 	worldvis = Mod_LeafPVS (r_viewleaf, cl.worldmodel);
 

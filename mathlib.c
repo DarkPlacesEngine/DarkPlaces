@@ -114,7 +114,7 @@ float m_bytenormals[NUMVERTEXNORMALS][3] =
 {-0.587785, -0.425325, -0.688191}, {-0.688191, -0.587785, -0.425325}, 
 };
 
-byte NormalToByte(vec3_t n)
+qbyte NormalToByte(vec3_t n)
 {
 	int i, best;
 	float bestdistance, distance;
@@ -134,7 +134,7 @@ byte NormalToByte(vec3_t n)
 }
 
 // note: uses byte partly to force unsigned for the validity check
-void ByteToNormal(byte num, vec3_t n)
+void ByteToNormal(qbyte num, vec3_t n)
 {
 	if (num < NUMVERTEXNORMALS)
 		VectorCopy(m_bytenormals[num], n);

@@ -21,14 +21,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-byte *S_Alloc (int size);
+qbyte *S_Alloc (int size);
 
 /*
 ================
 ResampleSfx
 ================
 */
-void ResampleSfx (sfx_t *sfx, int inrate, byte *data, char *name)
+void ResampleSfx (sfx_t *sfx, int inrate, qbyte *data, char *name)
 {
 	int		outcount;
 	int		srcsample, srclength;
@@ -251,7 +251,7 @@ S_LoadSound
 sfxcache_t *S_LoadSound (sfx_t *s)
 {
     char	namebuffer[256];
-	byte	*data;
+	qbyte	*data;
 	wavinfo_t	info;
 	int		len;
 	float	stepscale;
@@ -330,10 +330,10 @@ WAV loading
 */
 
 
-byte	*data_p;
-byte 	*iff_end;
-byte 	*last_chunk;
-byte 	*iff_data;
+qbyte	*data_p;
+qbyte 	*iff_end;
+qbyte 	*last_chunk;
+qbyte 	*iff_data;
 int 	iff_chunk_len;
 
 
@@ -413,7 +413,7 @@ void DumpChunks(void)
 GetWavinfo
 ============
 */
-wavinfo_t GetWavinfo (char *name, byte *wav, int wavlength)
+wavinfo_t GetWavinfo (char *name, qbyte *wav, int wavlength)
 {
 	wavinfo_t	info;
 	int     i;

@@ -11,7 +11,7 @@ static mempool_t *cgvm_mempool;
 
 static void (*cgvm_networkcode[256])(unsigned char num);
 
-static byte *cgvm_netbuffer;
+static qbyte *cgvm_netbuffer;
 static int cgvm_netbufferlength;
 static int cgvm_netbufferpos;
 
@@ -46,7 +46,7 @@ void CL_CGVM_Start(void)
 	CG_Init(); // API call
 }
 
-void CL_CGVM_ParseNetwork(byte *netbuffer, int length)
+void CL_CGVM_ParseNetwork(qbyte *netbuffer, int length)
 {
 	int num;
 	cgvm_netbuffer = netbuffer;
@@ -56,7 +56,7 @@ void CL_CGVM_ParseNetwork(byte *netbuffer, int length)
 	{
 		num = CGVM_MSG_ReadByte();
 		if (cgvm_networkcode[num])
-			cgvm_networkcode[num]((byte)num);
+			cgvm_networkcode[num]((qbyte)num);
 		else
 			Host_Error("CL_CGVM_ParseNetwork: unregistered network code %i", num);
 	}

@@ -350,7 +350,7 @@ void CL_SendMove (usercmd_t *cmd)
 	int		i;
 	int		bits;
 	sizebuf_t	buf;
-	byte	data[128];
+	qbyte	data[128];
 	static double lastmovetime;
 	static float forwardmove, sidemove, upmove, total; // accumulation
 

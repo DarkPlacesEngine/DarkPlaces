@@ -29,7 +29,7 @@ static particletexture_t particletexture[MAX_PARTICLETEXTURES][2];
 static cvar_t r_drawparticles = {0, "r_drawparticles", "1"};
 static cvar_t r_particles_lighting = {0, "r_particles_lighting", "1"};
 
-static byte shadebubble(float dx, float dy, vec3_t light)
+static qbyte shadebubble(float dx, float dy, vec3_t light)
 {
 	float	dz, f, dot;
 	vec3_t	normal;
@@ -56,13 +56,13 @@ static byte shadebubble(float dx, float dy, vec3_t light)
 		f *= 128;
 		f += 16; // just to give it a haze so you can see the outline
 		f = bound(0, f, 255);
-		return (byte) f;
+		return (qbyte) f;
 	}
 	else
 		return 0;
 }
 
-static void setuptex(int cltexnum, int fog, int rtexnum, byte *data, byte *particletexturedata)
+static void setuptex(int cltexnum, int fog, int rtexnum, qbyte *data, qbyte *particletexturedata)
 {
 	int basex, basey, y;
 	basex = ((rtexnum >> 0) & 7) * 32;
@@ -79,9 +79,9 @@ static void R_InitParticleTexture (void)
 {
 	int		x,y,d,i,m;
 	float	dx, dy, radius, f, f2;
-	byte	data[32][32][4], noise1[64][64], noise2[64][64];
+	qbyte	data[32][32][4], noise1[64][64], noise2[64][64];
 	vec3_t	light;
-	byte	particletexturedata[256*256*4];
+	qbyte	particletexturedata[256*256*4];
 
 	memset(particletexturedata, 255, sizeof(particletexturedata));
 
@@ -107,7 +107,7 @@ static void R_InitParticleTexture (void)
 					if (d > 0)
 				 		d = (d * (256 - (int) (dx*dx+dy*dy))) >> 8;
 					d = bound(0, d, 255);
-					data[y][x][3] = (byte) d;
+					data[y][x][3] = (qbyte) d;
 					if (m < d)
 						m = d;
 				}
@@ -153,7 +153,7 @@ static void R_InitParticleTexture (void)
 			dx = x - 16;
 			d = (256 - (dx*dx+dy*dy));
 			d = bound(0, d, 255);
-			data[y][x][3] = (byte) d;
+			data[y][x][3] = (qbyte) d;
 		}
 	}
 	setuptex(24, 0, 32, &data[0][0][0], particletexturedata);

@@ -23,7 +23,7 @@ qboolean	scr_disabled_for_loading;
 //qboolean	scr_drawloading;
 //float		scr_disabled_time;
 
-static byte menuplyr_pixels[4096];
+static qbyte menuplyr_pixels[4096];
 
 /*
 ===============================================================================
@@ -634,7 +634,7 @@ void DrawQ_Fill (float x, float y, float w, float h, float red, float green, flo
 }
 
 //only used for the player color selection menu
-void DrawQ_PicTranslate (int x, int y, char *picname, byte *translation)
+void DrawQ_PicTranslate (int x, int y, char *picname, qbyte *translation)
 {
 	int i, c;
 	unsigned int trans[4096];
@@ -655,7 +655,7 @@ void DrawQ_PicTranslate (int x, int y, char *picname, byte *translation)
 		trans[i] = d_8to24table[translation[menuplyr_pixels[i]]];
 
 	// FIXME: this is renderer stuff?
-	R_UpdateTexture (pic->tex, (byte *)trans);
+	R_UpdateTexture (pic->tex, (qbyte *)trans);
 
 	DrawQ_Pic(x, y, picname, 0, 0, 1, 1, 1, 1, 0);
 }
@@ -774,7 +774,7 @@ showlmp_t showlmp[SHOWLMP_MAXLABELS];
 void SHOWLMP_decodehide(void)
 {
 	int i;
-	byte *lmplabel;
+	qbyte *lmplabel;
 	lmplabel = MSG_ReadString();
 	for (i = 0;i < SHOWLMP_MAXLABELS;i++)
 		if (showlmp[i].isactive && strcmp(showlmp[i].label, lmplabel) == 0)
@@ -787,7 +787,7 @@ void SHOWLMP_decodehide(void)
 void SHOWLMP_decodeshow(void)
 {
 	int i, k;
-	byte lmplabel[256], picname[256];
+	qbyte lmplabel[256], picname[256];
 	float x, y;
 	strcpy(lmplabel,MSG_ReadString());
 	strcpy(picname, MSG_ReadString());

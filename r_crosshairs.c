@@ -21,7 +21,7 @@ void R_Crosshairs_Init(void)
 void DrawCrosshair(int num)
 {
 	int i;
-	byte *color;
+	qbyte *color;
 	float scale, base;
 	char *picname;
 	cachepic_t *pic;
@@ -37,7 +37,7 @@ void DrawCrosshair(int num)
 	}
 	else
 		i = 15;
-	color = (byte *) &d_8to24table[i];
+	color = (qbyte *) &d_8to24table[i];
 	if (crosshair_flashspeed.value >= 0.01f)
 		base = (sin(realtime * crosshair_flashspeed.value * (M_PI*2.0f)) * crosshair_flashrange.value);
 	else

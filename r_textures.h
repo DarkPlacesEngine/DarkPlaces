@@ -46,13 +46,13 @@ int R_CompatibleFragmentWidth(int width, int textype, int flags);
 
 // these two functions add a texture to a pool, and may precache (upload) it
 // a normal static texture
-rtexture_t *R_LoadTexture (rtexturepool_t *rtexturepool, char *identifier, int width, int height, byte *data, int textype, int flags);
+rtexture_t *R_LoadTexture (rtexturepool_t *rtexturepool, char *identifier, int width, int height, qbyte *data, int textype, int flags);
 // a procedurally generated texture, often animated over time, note: generate can be NULL (for odd uses)
-rtexture_t *R_ProceduralTexture (rtexturepool_t *rtexturepool, char *identifier, int width, int height, int textype, int flags, int (*generate)(byte *buffer, int width, int height, void *parameterdata, int parameterdatasize), void *parameterdata, int parameterdatasize);
+rtexture_t *R_ProceduralTexture (rtexturepool_t *rtexturepool, char *identifier, int width, int height, int textype, int flags, int (*generate)(qbyte *buffer, int width, int height, void *parameterdata, int parameterdatasize), void *parameterdata, int parameterdatasize);
 
 // update the image data of a texture, used by lightmap updates and procedural
 // textures.
-void R_UpdateTexture(rtexture_t *rt, byte *data);
+void R_UpdateTexture(rtexture_t *rt, qbyte *data);
 
 // location of the fragment in the texture (note: any parameter except rt can be NULL)
 void R_FragmentLocation(rtexture_t *rt, int *x, int *y, float *fx1, float *fy1, float *fx2, float *fy2);

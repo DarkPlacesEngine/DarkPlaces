@@ -70,13 +70,13 @@ void CRC_Init(unsigned short *crcvalue)
 	*crcvalue = CRC_INIT_VALUE;
 }
 
-void CRC_ProcessByte(unsigned short *crcvalue, byte data)
+void CRC_ProcessByte(unsigned short *crcvalue, qbyte data)
 {
 	*crcvalue = (*crcvalue << 8) ^ crctable[(*crcvalue >> 8) ^ data];
 }
 
 // LordHavoc: added for speed reasons
-void CRC_ProcessBytes(unsigned short *crcvalue, byte *data, int size)
+void CRC_ProcessBytes(unsigned short *crcvalue, qbyte *data, int size)
 {
 	unsigned short crc;
 	crc = *crcvalue;
@@ -91,7 +91,7 @@ unsigned short CRC_Value(unsigned short crcvalue)
 }
 
 // LordHavoc: further speed and usability improvement
-unsigned short CRC_Block(byte *data, int size)
+unsigned short CRC_Block(qbyte *data, int size)
 {
 	unsigned short crc = CRC_INIT_VALUE;
 	while (size--)

@@ -248,7 +248,7 @@ int R_Clip_ClipPolygonToPlane(float *in, float *out, int inpoints, int stride, t
 	float *prevpoint, prevdist, dist, dot;
 
 	// begin with the last point, then enter the loop with the first point as current
-	prevpoint = (float *) ((byte *)in + stride * (inpoints - 1));
+	prevpoint = (float *) ((qbyte *)in + stride * (inpoints - 1));
 	prevdist = DotProduct(prevpoint, plane->normal) - plane->dist;
 	prevside = prevdist >= 0 ? SIDE_FRONT : SIDE_BACK;
 	i = 0;
@@ -259,7 +259,7 @@ int R_Clip_ClipPolygonToPlane(float *in, float *out, int inpoints, int stride, t
 		prevpoint = in;
 		prevdist = dist;
 		prevside = side;
-		(byte *)in += stride;
+		(qbyte *)in += stride;
 
 begin:
 		dist = DotProduct(in, plane->normal) - plane->dist;
@@ -313,12 +313,12 @@ void R_Clip_AddPolygon (vec_t *points, int numverts, int stride, int solid, void
 	{
 		polyplane = &localplane;
 		// calculate the plane for the polygon
-		if (!R_Clip_TriangleToPlane((float *) points, (float *) ((byte *)points + stride), (float *) ((byte *)points + 2 * stride), polyplane))
+		if (!R_Clip_TriangleToPlane((float *) points, (float *) ((qbyte *)points + stride), (float *) ((qbyte *)points + 2 * stride), polyplane))
 		{
 			for (i = 0;i < numverts;i++)
 				for (j = i + 1;j < numverts;j++)
 					for (k = j + 1;k < numverts;k++)
-						if (R_Clip_TriangleToPlane((float *) ((byte *)points + i * stride), (float *) ((byte *)points + j * stride), (float *) ((byte *)points + k * stride), polyplane))
+						if (R_Clip_TriangleToPlane((float *) ((qbyte *)points + i * stride), (float *) ((qbyte *)points + j * stride), (float *) ((qbyte *)points + k * stride), polyplane))
 							goto valid1;
 			return; // gave up
 			valid1:;
@@ -332,12 +332,12 @@ void R_Clip_AddPolygon (vec_t *points, int numverts, int stride, int solid, void
 	else
 	{
 		// calculate the plane for the polygon
-		if (!R_Clip_TriangleToPlane((float *) points, (float *) ((byte *)points + stride), (float *) ((byte *)points + 2 * stride), &localplane))
+		if (!R_Clip_TriangleToPlane((float *) points, (float *) ((qbyte *)points + stride), (float *) ((qbyte *)points + 2 * stride), &localplane))
 		{
 			for (i = 0;i < numverts;i++)
 				for (j = i + 1;j < numverts;j++)
 					for (k = j + 1;k < numverts;k++)
-						if (R_Clip_TriangleToPlane((float *) ((byte *)points + i * stride), (float *) ((byte *)points + j * stride), (float *) ((byte *)points + k * stride), &localplane))
+						if (R_Clip_TriangleToPlane((float *) ((qbyte *)points + i * stride), (float *) ((qbyte *)points + j * stride), (float *) ((qbyte *)points + k * stride), &localplane))
 							goto valid4;
 			return; // gave up
 			valid4:;
@@ -874,7 +874,7 @@ void R_Clip_DisplayBuffer(void)
 #if CLIPTEST
 	int i;
 	static int firstupload = true;
-	byte clipbuffertex[256*256], *b;
+	qbyte clipbuffertex[256*256], *b;
 	if (!r_render.integer)
 		return;
 	if (clipwidth > 256 || clipheight > 256)

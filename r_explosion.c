@@ -77,7 +77,7 @@ cvar_t r_drawexplosions = {0, "r_drawexplosions", "1"};
 void r_explosion_start(void)
 {
 	int x, y;
-	byte noise1[128][128], noise2[128][128], noise3[128][128], data[128][128][4];
+	qbyte noise1[128][128], noise2[128][128], noise3[128][128], data[128][128][4];
 	explosiontexturepool = R_AllocTexturePool();
 	fractalnoise(&noise1[0][0], 128, 32);
 	fractalnoise(&noise2[0][0], 128, 4);
@@ -169,7 +169,7 @@ void R_NewExplosion(vec3_t org)
 {
 	int i, j;
 	float dist;
-	byte noise[EXPLOSIONGRID*EXPLOSIONGRID];
+	qbyte noise[EXPLOSIONGRID*EXPLOSIONGRID];
 	fractalnoisequick(noise, EXPLOSIONGRID, 4);
 	for (i = 0;i < MAX_EXPLOSIONS;i++)
 	{
