@@ -952,7 +952,7 @@ void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, f
 	VectorAdd (org, clmodel->mins, mins);
 	VectorAdd (org, clmodel->maxs, maxs);
 
-	if (cull && R_CullBox (mins, maxs))
+	if (cull && R_VisibleCullBox (mins, maxs))
 		return;
 
 	c_models++;

@@ -45,7 +45,7 @@ cvar_t	m_side = {"m_side","0.8", true};
 client_static_t	cls;
 client_state_t	cl;
 // FIXME: put these on hunk?
-efrag_t			cl_efrags[MAX_EFRAGS];
+//efrag_t			cl_efrags[MAX_EFRAGS];
 entity_t		cl_entities[MAX_EDICTS];
 entity_t		cl_static_entities[MAX_STATIC_ENTITIES];
 lightstyle_t	cl_lightstyle[MAX_LIGHTSTYLES];
@@ -73,7 +73,7 @@ void CL_ClearState (void)
 	SZ_Clear (&cls.message);
 
 // clear other arrays	
-	memset (cl_efrags, 0, sizeof(cl_efrags));
+//	memset (cl_efrags, 0, sizeof(cl_efrags));
 	memset (cl_entities, 0, sizeof(cl_entities));
 	memset (cl_dlights, 0, sizeof(cl_dlights));
 	memset (cl_lightstyle, 0, sizeof(cl_lightstyle));
@@ -89,13 +89,13 @@ void CL_ClearState (void)
 		cl_entities[i].state_baseline.colormod = 255;
 	}
 
-//
-// allocate the efrags and chain together into a free list
-//
-	cl.free_efrags = cl_efrags;
-	for (i=0 ; i<MAX_EFRAGS-1 ; i++)
-		cl.free_efrags[i].entnext = &cl.free_efrags[i+1];
-	cl.free_efrags[i].entnext = NULL;
+////
+//// allocate the efrags and chain together into a free list
+////
+//	cl.free_efrags = cl_efrags;
+//	for (i=0 ; i<MAX_EFRAGS-1 ; i++)
+//		cl.free_efrags[i].entnext = &cl.free_efrags[i+1];
+//	cl.free_efrags[i].entnext = NULL;
 }
 
 /*
@@ -110,9 +110,12 @@ void CL_Disconnect (void)
 {
 // stop sounds (especially looping!)
 	S_StopAllSounds (true);
-	
-// bring the console down and fade the colors back to normal
-//	SCR_BringDownConsole ();
+
+	// clear contents blends
+	cl.cshifts[0].percent = 0;
+	cl.cshifts[1].percent = 0;
+	cl.cshifts[2].percent = 0;
+	cl.cshifts[3].percent = 0;
 
 // if running a local server, shut it down
 	if (cls.demoplayback)
@@ -220,7 +223,8 @@ Con_DPrintf ("CL_SignonReply: %i\n", cls.signon);
 		break;
 		
 	case 4:
-		SCR_EndLoadingPlaque ();		// allow normal screen updates
+//		SCR_EndLoadingPlaque ();		// allow normal screen updates
+		Con_ClearNotify();
 		break;
 	}
 }
@@ -239,7 +243,7 @@ void CL_NextDemo (void)
 	if (cls.demonum == -1)
 		return;		// don't play demos
 
-	SCR_BeginLoadingPlaque ();
+//	SCR_BeginLoadingPlaque ();
 
 	if (!cls.demos[cls.demonum][0] || cls.demonum == MAX_DEMOS)
 	{
@@ -427,6 +431,17 @@ float CL_EntityLerpPoint (entity_t *ent)
 	return bound(0, f, 1);
 }
 
+void CL_RelinkStaticEntities()
+{
+	entity_t *ent, *endent;
+	if (cl.num_statics > MAX_VISEDICTS)
+		Host_Error("CL_RelinkStaticEntities: cl.num_statics > MAX_VISEDICTS??\n");
+
+	ent = cl_static_entities;
+	endent = ent + cl.num_statics;
+	for (;ent < endent;ent++)
+		cl_visedicts[cl_numvisedicts++] = ent;
+}
 
 /*
 ===============
@@ -448,6 +463,8 @@ void CL_RelinkEntities (void)
 	frac = CL_LerpPoint ();
 
 	cl_numvisedicts = 0;
+
+	CL_RelinkStaticEntities();
 
 //
 // interpolate player info
@@ -476,12 +493,12 @@ void CL_RelinkEntities (void)
 	for (i = 1, ent = cl_entities + 1;i < MAX_EDICTS /*cl.num_entities*/;i++, ent++)
 	{
 		// if the object wasn't included in the latest packet, remove it
-		if (!ent->state_current.modelindex)
+		if (!ent->state_current.active)
 			continue;
 
 		VectorCopy (ent->render.origin, oldorg);
 
-		if (!ent->state_previous.modelindex)
+		if (!ent->state_previous.active)
 		{
 			// only one state available
 			VectorCopy (ent->state_current.origin, ent->render.origin);
@@ -598,7 +615,7 @@ void CL_RelinkEntities (void)
 //				ent->render.origin[2] += bobjoffset;
 			}
 			// only do trails if present in the previous frame as well
-			if (ent->state_previous.modelindex)
+			if (ent->state_previous.active)
 			{
 				if (ent->render.model->flags & EF_GIB)
 					R_RocketTrail (oldorg, ent->render.origin, 2, ent);

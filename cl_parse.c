@@ -459,6 +459,9 @@ void CL_ValidateState(entity_state_t *s)
 {
 	model_t *model;
 
+	if (!s->active)
+		return;
+
 	if (s->modelindex >= MAX_MODELS)
 		Host_Error("CL_ValidateState: modelindex (%i) >= MAX_MODELS (%i)\n", s->modelindex, MAX_MODELS);
 
@@ -523,7 +526,7 @@ void CL_ParseUpdate (int bits)
 	deltadie = false;
 	if (bits & U_DELTA)
 	{
-		if (!ent->state_current.modelindex)
+		if (!ent->state_current.active)
 			deltadie = true; // was not present in previous frame, leave hidden until next full update
 	}
 	else
@@ -532,6 +535,7 @@ void CL_ParseUpdate (int bits)
 	ent->state_current.time = cl.mtime[0];
 
 	ent->state_current.flags = 0;
+	ent->state_current.active = true;
 	if (bits & U_MODEL)		ent->state_current.modelindex = (ent->state_current.modelindex & 0xFF00) | MSG_ReadByte();
 	if (bits & U_FRAME)		ent->state_current.frame = (ent->state_current.frame & 0xFF00) | MSG_ReadByte();
 	if (bits & U_COLORMAP)	ent->state_current.colormap = MSG_ReadByte();
@@ -577,14 +581,14 @@ void CL_ParseUpdate (int bits)
 	if (deltadie)
 	{
 		// hide the entity
-		ent->state_current.modelindex = 0;
+		ent->state_current.active = false;
 	}
 	else
 	{
 		CL_ValidateState(&ent->state_current);
 
 		/*
-		if (!ent->state_current.modelindex)
+		if (!ent->state_current.active)
 		{
 			if (bits & U_DELTA)
 			{
@@ -621,7 +625,7 @@ void CL_EntityUpdateEnd(int end)
 		Host_Error("CL_EntityUpdateEnd: end (%i) < 0 or > MAX_EDICTS (%i)\n", end, MAX_EDICTS);
 	for (i = entityupdatestart;i < end;i++)
 		if (entkill[i])
-			cl_entities[i].state_current.modelindex = 0;
+			cl_entities[i].state_current.active = 0;
 }
 
 /*
@@ -634,6 +638,7 @@ void CL_ParseBaseline (entity_t *ent, int largemodelindex)
 	int i;
 
 	memset(&ent->state_baseline, 0, sizeof(entity_state_t));
+	ent->state_baseline.active = true;
 	if (largemodelindex)
 		ent->state_baseline.modelindex = (unsigned short) MSG_ReadShort ();
 	else
@@ -770,7 +775,7 @@ void CL_ParseStatic (int largemodelindex)
 
 	VectorCopy (ent->state_baseline.origin, ent->render.origin);
 	VectorCopy (ent->state_baseline.angles, ent->render.angles);	
-	R_AddEfrags (ent);
+//	R_AddEfrags (ent);
 }
 
 /*

@@ -56,6 +56,7 @@ typedef struct
 	byte	glowcolor;
 	byte	colormod;
 	byte	flags;
+	byte	active;
 } entity_state_t;
 
 typedef struct entity_s
@@ -79,7 +80,7 @@ typedef struct entity_s
 
 		struct model_s			*model;			// NULL = no model
 		int						frame;			// current desired frame (usually identical to frame2, but frame2 is not always used)
-		struct efrag_s			*efrag;			// linked list of efrags
+//		struct efrag_s			*efrag;			// linked list of efrags
 		int						colormap;
 		int						effects;		// light, particles, etc
 		int						skinnum;		// for Alias models
@@ -101,14 +102,11 @@ typedef struct entity_s
 		float					trail_time;
 	// FIXME: could turn these into a union
 //		int						trivial_accept;
-		struct mnode_s			*topnode;		// for bmodels, first world node
-												//  that splits bmodel, or NULL if
-												//  not split
+//		struct mnode_s			*topnode;		// for bmodels, first world node that splits bmodel, or NULL if not split
 	}
 	render;
 } entity_t;
 
-// !!! if this is changed, it must be changed in asm_draw.h too !!!
 typedef struct
 {
 	vrect_t		vrect;				// subwindow in video for refresh
@@ -150,20 +148,19 @@ typedef struct
 extern	refdef_t	r_refdef;
 extern vec3_t	r_origin, vpn, vright, vup;
 
-extern	struct texture_s	*r_notexture_mip;
-
 void R_Init (void);
-void R_InitTextures (void);
-void R_InitEfrags (void);
-void R_RenderView (void);		// must set r_refdef first
-void R_ViewChanged (vrect_t *pvrect, int lineadj, float aspect);
-								// called whenever r_refdef or vid change
-// LordHavoc: changed this for sake of GLQuake
-void R_InitSky (byte *src, int bytesperpixel);	// called at level load
-//void R_InitSky (struct texture_s *mt);	// called at level load
+void R_RenderView (void); // must set r_refdef first
+void R_ViewChanged (vrect_t *pvrect, int lineadj, float aspect); // called whenever r_refdef or vid change
 
-void R_AddEfrags (entity_t *ent);
-void R_RemoveEfrags (entity_t *ent);
+// LordHavoc: changed this for sake of GLQuake
+void R_InitSky (byte *src, int bytesperpixel); // called at level load
+
+//void R_InitEfrags (void);
+//void R_AddEfrags (entity_t *ent);
+//void R_RemoveEfrags (entity_t *ent);
+//void R_StoreEfrags (efrag_t **ppefrag);
+
+int R_VisibleCullBox (vec3_t mins, vec3_t maxs);
 
 void R_NewMap (void);
 

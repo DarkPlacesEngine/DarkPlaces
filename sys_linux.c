@@ -26,9 +26,13 @@ qboolean			isDedicated;
 int nostdout = 0;
 
 char *basedir = ".";
+#if CACHEENABLE
 char *cachedir = "/tmp";
+#endif
 
+#if NOTUSED
 cvar_t  sys_linerefresh = {"sys_linerefresh","0"};// set for entity display
+#endif
 
 extern cvar_t	timestamps;
 extern cvar_t	timeformat;
@@ -307,6 +311,7 @@ void Sys_DebugLog(char *file, char *fmt, ...)
     close(fd);
 }
 
+#if NOTUSED
 void Sys_EditFile(char *filename)
 {
 
@@ -327,8 +332,8 @@ void Sys_EditFile(char *filename)
 		sprintf(cmd, "xterm -e %s %s", editor, filename);
 		system(cmd);
 	}
-
 }
+#endif
 
 double Sys_FloatTime (void)
 {
@@ -358,9 +363,11 @@ void alarm_handler(int x)
 	oktogo=1;
 }
 
+#if NOTUSED
 void Sys_LineRefresh(void)
 {
 }
+#endif
 
 void floating_point_exception_handler(int whatever)
 {
@@ -417,8 +424,6 @@ int main (int c, char **v)
 	host_parms.memsize = DEFAULTMEM * 1024*1024;
 
 	host_parms.basedir = basedir;
-// caching is disabled by default, use -cachedir to enable
-//	host_parms.cachedir = cachedir;
 
 	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | FNDELAY);
 
@@ -458,14 +463,17 @@ int main (int c, char **v)
 
 		Host_Frame (time);
 
+#if NOTUSED
 		// graphic debugging aids
 		if (sys_linerefresh.value)
 			Sys_LineRefresh ();
+#endif
 	}
 	return 0;
 }
 
 
+#if NOTUSED
 /*
 ================
 Sys_MakeCodeWriteable
@@ -489,4 +497,5 @@ void Sys_MakeCodeWriteable (unsigned long startaddr, unsigned long length)
     		Sys_Error("Protection change failed\n");
 
 }
+#endif
 

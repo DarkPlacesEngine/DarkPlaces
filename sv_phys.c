@@ -1154,11 +1154,14 @@ SV_Physics_None
 Non moving objects can only think
 =============
 */
+// LordHavoc: inlined manually because it was a real time waster
+/*
 void SV_Physics_None (edict_t *ent)
 {
 // regular thinking
 	SV_RunThink (ent);
 }
+*/
 
 /*
 =============
@@ -1431,7 +1434,10 @@ void SV_Physics (void)
 			SV_Physics_Pusher (ent);
 			break;
 		case MOVETYPE_NONE:
-			SV_Physics_None (ent);
+//			SV_Physics_None (ent);
+			// LordHavoc: manually inlined the thinktime check here because MOVETYPE_NONE is used on so many objects
+			if (ent->v.nextthink > 0 && ent->v.nextthink <= sv.time + sv.frametime)
+				SV_RunThink (ent);
 			break;
 		case MOVETYPE_FOLLOW:
 			SV_Physics_Follow (ent);

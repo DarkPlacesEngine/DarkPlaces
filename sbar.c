@@ -807,8 +807,6 @@ void Sbar_Draw (void)
 	if (scr_con_current == vid.height)
 		return;		// console is full screen
 
-	scr_copyeverything = 1;
-
 //	sb_updates++;
 
 	if (sb_lines > 24)
@@ -963,9 +961,6 @@ void Sbar_DeathmatchOverlay (void)
 	char			num[128];
 	scoreboard_t	*s;
 
-	scr_copyeverything = 1;
-	scr_fullupdate = 0;
-
 	pic = Draw_CachePic ("gfx/ranking.lmp");
 	M_DrawPic ((320-pic->width)/2, 8, pic);
 
@@ -1023,9 +1018,6 @@ void Sbar_MiniDeathmatchOverlay (void)
 
 	if (vid.width < 512 || !sb_lines)
 		return;
-
-	scr_copyeverything = 1;
-	scr_fullupdate = 0;
 
 // scores
 	Sbar_SortFrags ();
@@ -1091,9 +1083,6 @@ void Sbar_IntermissionOverlay (void)
 	int		dig;
 	int		num;
 
-	scr_copyeverything = 1;
-	scr_fullupdate = 0;
-
 	if (cl.gametype == GAME_DEATHMATCH)
 	{
 		Sbar_DeathmatchOverlay ();
@@ -1134,8 +1123,6 @@ Sbar_FinaleOverlay
 void Sbar_FinaleOverlay (void)
 {
 	qpic_t	*pic;
-
-	scr_copyeverything = 1;
 
 	pic = Draw_CachePic ("gfx/finale.lmp");
 	Draw_Pic ( (vid.width-pic->width)/2, 16, pic);

@@ -87,7 +87,7 @@ void M_ServerList_Key (int key);
 
 qboolean	m_entersound;		// play after drawing a frame, so caching
 								// won't disrupt the sound
-qboolean	m_recursiveDraw;
+//qboolean	m_recursiveDraw;
 
 int			m_return_state;
 qboolean	m_return_onerror;
@@ -388,7 +388,7 @@ void M_Demo_Key (int k)
 		S_LocalSound ("misc/menu2.wav");
 		m_state = m_none;
 		key_dest = key_game;
-		SCR_BeginLoadingPlaque ();
+//		SCR_BeginLoadingPlaque ();
 		Cbuf_AddText (va ("playdemo %s\n", Demos[demo_cursor].name));
 		return;
 
@@ -464,7 +464,7 @@ void M_Main_Draw (void)
 	else
 		M_DrawPic (72, 32, Draw_CachePic ("gfx/mainmenu.lmp"));
 
-	f = (int)(host_time * 10)%6;
+	f = (int)(realtime * 10)%6;
 
 	M_DrawPic (54, 32 + m_main_cursor * 20,Draw_CachePic( va("gfx/menudot%i.lmp", f+1 ) ) );
 }
@@ -637,7 +637,7 @@ void M_SinglePlayer_Draw (void)
 	M_DrawPic ( (320-p->width)/2, 4, p);
 	M_DrawPic (72, 32, Draw_CachePic ("gfx/sp_menu.lmp") );
 
-	f = (int)(host_time * 10)%6;
+	f = (int)(realtime * 10)%6;
 
 	M_DrawPic (54, 32 + m_singleplayer_cursor * 20,Draw_CachePic( va("gfx/menudot%i.lmp", f+1 ) ) );
 }
@@ -669,9 +669,6 @@ void M_SinglePlayer_Key (int key)
 		switch (m_singleplayer_cursor)
 		{
 		case 0:
-			if (sv.active)
-				if (!SCR_ModalMessage("Are you sure you want to\nstart a new game?\n"))
-					break;
 			key_dest = key_game;
 			if (sv.active)
 				Cbuf_AddText ("disconnect\n");
@@ -801,11 +798,12 @@ void M_Load_Key (int k)
 		m_state = m_none;
 		key_dest = key_game;
 
-	// Host_Loadgame_f can't bring up the loading plaque because too much
-	// stack space has been used, so do it now
-		SCR_BeginLoadingPlaque ();
+		// LordHavoc: made SCR_UpdateScreen use a great deal less stack space, no longer an issue
+		//// Host_Loadgame_f can't bring up the loading plaque because too much
+		//// stack space has been used, so do it now
+////		SCR_BeginLoadingPlaque ();
 
-	// issue the load command
+		// issue the load command
 		Cbuf_AddText (va ("load s%i\n", load_cursor) );
 		return;
 
@@ -885,7 +883,7 @@ void M_MultiPlayer_Draw (void)
 	M_DrawPic ( (320-p->width)/2, 4, p);
 	M_DrawPic (72, 32, Draw_CachePic ("gfx/mp_menu.lmp") );
 
-	f = (int)(host_time * 10)%6;
+	f = (int)(realtime * 10)%6;
 
 	M_DrawPic (54, 32 + m_multiplayer_cursor * 20,Draw_CachePic( va("gfx/menudot%i.lmp", f+1 ) ) );
 
@@ -1182,7 +1180,7 @@ void M_Net_Draw (void)
 	M_Print (f, 142, net_helpMessage[m_net_cursor*4+0]);
 	M_Print (f, 150, net_helpMessage[m_net_cursor*4+1]);
 
-	f = (int)(host_time * 10)%6;
+	f = (int)(realtime * 10)%6;
 	M_DrawPic (54, 32 + m_net_cursor * 20,Draw_CachePic( va("gfx/menudot%i.lmp", f+1 ) ) );
 }
 
@@ -1780,10 +1778,11 @@ int		msgNumber;
 int		m_quit_prevstate;
 qboolean	wasInMenus;
 
-#ifndef	_WIN32
+//#ifndef	_WIN32
 char *quitMessage [] = 
 {
 /* .........1.........2.... */
+/*
   "  Are you gonna quit    ",
   "  this game just like   ",
   "   everything else?     ",
@@ -1823,8 +1822,30 @@ char *quitMessage [] =
   "  throw a blanket-party ",
   "   for you next time!   ",
   "                        "
+  */
+
+/* .........1.........2.... */
+  "                        ",
+  "    Tired of fragging   ",
+  "        already?        ",
+  "                        ",
+
+  "                        ",
+  "  Quit now and forfeit  ",
+  "     your bodycount?    ",
+  "                        ",
+
+  "                        ",
+  "    Are you sure you    ",
+  "      want to quit?     ",
+  "                        ",
+
+  "                        ",
+  "   Off to do something  ",
+  "      constructive?     ",
+  "                        ",
 };
-#endif
+//#endif
 
 void M_Menu_Quit_f (void)
 {
@@ -1835,7 +1856,7 @@ void M_Menu_Quit_f (void)
 	m_quit_prevstate = m_state;
 	m_state = m_quit;
 	m_entersound = true;
-	msgNumber = rand()&7;
+	msgNumber = rand()&3; //&7;
 }
 
 
@@ -1876,11 +1897,12 @@ void M_Quit_Draw (void)
 	if (wasInMenus)
 	{
 		m_state = m_quit_prevstate;
-		m_recursiveDraw = true;
+//		m_recursiveDraw = true;
 		M_Draw ();
 		m_state = m_quit;
 	}
 
+/*
 #ifdef _WIN32
 	M_DrawTextBox (0, 0, 38, 23);
 	M_PrintWhite (16, 12,  "  Quake version 1.09 by id Software\n\n");
@@ -1905,12 +1927,13 @@ void M_Quit_Draw (void)
 	M_PrintWhite (16, 172, "Nothing Interactive, Inc. All rights\n");
 	M_PrintWhite (16, 180, "reserved. Press y to exit\n");
 #else
+*/
 	M_DrawTextBox (56, 76, 24, 4);
 	M_Print (64, 84,  quitMessage[msgNumber*4+0]);
 	M_Print (64, 92,  quitMessage[msgNumber*4+1]);
 	M_Print (64, 100, quitMessage[msgNumber*4+2]);
 	M_Print (64, 108, quitMessage[msgNumber*4+3]);
-#endif
+//#endif
 }
 
 //=============================================================================
@@ -2616,7 +2639,7 @@ void M_GameOptions_Key (int key)
 				Cbuf_AddText ("disconnect\n");
 			Cbuf_AddText ("listen 0\n");	// so host_netport will be re-examined
 			Cbuf_AddText ( va ("maxplayers %u\n", maxplayers) );
-			SCR_BeginLoadingPlaque ();
+//			SCR_BeginLoadingPlaque ();
 
 			if (hipnotic)
 				Cbuf_AddText ( va ("map %s\n", hipnoticlevels[hipnoticepisodes[startepisode].firstLevel + startlevel].name) );
@@ -2855,24 +2878,20 @@ void M_Draw (void)
 	if (m_state == m_none || key_dest != key_menu)
 		return;
 
+	/*
 	if (!m_recursiveDraw)
 	{
-		scr_copyeverything = 1;
-
 		if (scr_con_current)
 		{
 			Draw_ConsoleBackground (vid.height);
 			S_ExtraUpdate ();
 		}
-//		else
-//			Draw_FadeScreen ();
-
-		scr_fullupdate = 0;
 	}
 	else
 	{
 		m_recursiveDraw = false;
 	}
+	*/
 
 	switch (m_state)
 	{

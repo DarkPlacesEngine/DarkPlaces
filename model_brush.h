@@ -30,7 +30,6 @@ BRUSH MODELS
 //
 // in memory representation
 //
-// !!! if this is changed, it must be changed in asm_draw.h too !!!
 typedef struct
 {
 	vec3_t		position;
@@ -46,24 +45,21 @@ typedef struct mplane_s
 {
 	vec3_t	normal;
 	float	dist;
-	byte	type;			// for texture axis selection and fast side tests
-	byte	pad[3];
+	int		type;			// for texture axis selection and fast side tests
+	// LordHavoc: faster than id's signbits system
 	int (*BoxOnPlaneSideFunc) (vec3_t emins, vec3_t emaxs, struct mplane_s *p);
 } mplane_t;
 
 typedef struct texture_s
 {
-	char		name[16];
-	unsigned	width, height;
-	rtexture_t	*texture;
-	rtexture_t	*glowtexture; // LordHavoc: fullbrights on walls
-	struct msurface_s	*texturechain;	// for gl_texsort drawing
-	int			anim_total;				// total tenths in sequence ( 0 = no)
-	int			anim_min, anim_max;		// time for this frame min <=time< max
-	struct texture_s *anim_next;		// in the animation sequence
-	struct texture_s *alternate_anims;	// bmodels in frame 1 use these
-	unsigned	offsets[MIPLEVELS];		// four mip maps stored
-	int			transparent;	// LordHavoc: transparent texture support
+	char				name[16];
+	unsigned			width, height;
+	rtexture_t			*texture;
+	rtexture_t			*glowtexture;		// LordHavoc: fullbrights on walls
+	int					anim_total;			// total frames in sequence (0 = not animated)
+	struct texture_s	*anim_frames[10];	// LordHavoc: direct pointers to each of the frames in the sequence
+	struct texture_s	*alternate_anims;	// bmodels in frame 1 use these
+	int					transparent;		// LordHavoc: transparent texture support
 } texture_t;
 
 
@@ -80,17 +76,14 @@ typedef struct texture_s
 // LordHavoc: light both sides
 #define SURF_LIGHTBOTHSIDES		0x400
 
-// !!! if this is changed, it must be changed in asm_draw.h too !!!
 typedef struct
 {
 	unsigned short	v[2];
-	unsigned int	cachededgeoffset;
 } medge_t;
 
 typedef struct
 {
 	float		vecs[2][4];
-	float		mipadjust;
 	texture_t	*texture;
 	int			flags;
 } mtexinfo_t;
@@ -123,7 +116,6 @@ typedef struct msurface_s
 	short		light_s, light_t;	// gl lightmap coordinates
 
 	glpoly_t	*polys;				// multiple if warped
-	struct	msurface_s	*texturechain;
 
 	mtexinfo_t	*texinfo;
 	
@@ -148,16 +140,14 @@ typedef struct mnode_s
 {
 // common with leaf
 	int			contents;		// 0, to differentiate from leafs
-	int			visframe;		// node needs to be traversed if current
-	int			lightframe;		// LordHavoc: to avoid redundent parent chasing in R_VisMarkLights
-	
-	float		minmaxs[6];		// for bounding box culling
+	int			vismarkframe;	// node needs to be traversed if current (r_vismarkframecount)
+
+	// for bounding box culling
+	vec3_t		mins;
+	vec3_t		maxs;
 
 	struct mnode_s	*parent;
-
-	// LordHavoc: node based dynamic lighting
-	int			dlightbits[8];
-	int			dlightframe;
+	struct mportal_s *portals;
 
 // node specific
 	mplane_t	*plane;
@@ -173,24 +163,28 @@ typedef struct mleaf_s
 {
 // common with node
 	int			contents;		// wil be a negative contents number
-	int			visframe;		// node needs to be traversed if current
-	int			lightframe;		// LordHavoc: to avoid redundent parent chasing in R_VisMarkLights
+	int			vismarkframe;	// node needs to be traversed if current (r_vismarkframecount)
 
-	float		minmaxs[6];		// for bounding box culling
+	// for bounding box culling
+	vec3_t		mins;
+	vec3_t		maxs;
 
 	struct mnode_s	*parent;
+	struct mportal_s *portals;
 
-	// LordHavoc: node based dynamic lighting
+// leaf specific
+	int			visframe;		// visible if current (r_framecount)
+	int			worldnodeframe; // used by certain worldnode variants to avoid processing the same leaf twice in a frame
+
+	// LordHavoc: leaf based dynamic lighting
 	int			dlightbits[8];
 	int			dlightframe;
 
-// leaf specific
 	byte		*compressed_vis;
-	efrag_t		*efrags;
+//	efrag_t		*efrags;
 
 	msurface_t	**firstmarksurface;
 	int			nummarksurfaces;
-	int			key;			// BSP sequence number for leaf's contents
 	byte		ambient_sound_level[NUM_AMBIENTS];
 } mleaf_t;
 
@@ -203,3 +197,17 @@ typedef struct
 	vec3_t		clip_mins;
 	vec3_t		clip_maxs;
 } hull_t;
+
+typedef struct mportal_s
+{
+	struct mportal_s *next; // the next portal on this leaf
+	mleaf_t *here; // the leaf this portal is on
+	mleaf_t *past; // the leaf through this portal (infront)
+	mvertex_t *points;
+	int numpoints;
+	mplane_t plane;
+}
+mportal_t;
+
+extern rtexture_t *r_notexture;
+extern texture_t r_notexture_mip;

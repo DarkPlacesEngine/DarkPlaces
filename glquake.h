@@ -77,7 +77,6 @@ extern	entity_t	r_worldentity;
 extern	qboolean	r_cache_thrash;		// compatability
 extern	vec3_t		modelorg, r_entorigin;
 extern	entity_t	*currententity;
-extern	int			r_visframecount;	// ??? what difs?
 extern	int			r_framecount;
 extern	mplane_t	frustum[4];
 extern	int		c_brush_polys, c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c_bmodels, c_sprites, c_particles, c_dlights;
@@ -96,7 +95,6 @@ extern	vec3_t	r_origin;
 //
 extern	refdef_t	r_refdef;
 extern	mleaf_t		*r_viewleaf, *r_oldviewleaf;
-extern	texture_t	*r_notexture_mip;
 extern	unsigned short	d_lightstylevalue[256];	// 8.8 fraction of base light value
 
 extern	qboolean	envmap;
@@ -109,7 +107,6 @@ extern	cvar_t	r_speeds;
 extern	cvar_t	r_fullbright;
 extern	cvar_t	r_wateralpha;
 extern	cvar_t	r_dynamic;
-extern	cvar_t	r_novis;
 extern	cvar_t	r_waterripple;
 
 extern	float	r_world_matrix[16];

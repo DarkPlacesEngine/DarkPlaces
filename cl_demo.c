@@ -286,6 +286,8 @@ void CL_PlayDemo_f (void)
 		return;
 	}
 
+//	SCR_BeginLoadingPlaque();
+
 //
 // disconnect from server
 //

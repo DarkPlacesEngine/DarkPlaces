@@ -611,18 +611,14 @@ void Key_Event (int key, qboolean down)
 	key_lastpress = key;
 	key_count++;
 	if (key_count <= 0)
-	{
 		return;		// just catching keys for Con_NotifyBox
-	}
 
 // update auto-repeat status
 	if (down)
 	{
 		key_repeats[key]++;
 		if (key != K_BACKSPACE && key != K_PAUSE && key_repeats[key] > 1)
-		{
 			return;	// ignore most autorepeats
-		}
 			
 		if (key >= 200 && !keybindings[key])
 			Con_Printf ("%s is unbound, hit F4 to set.\n", Key_KeynumToString (key) );
@@ -660,7 +656,7 @@ void Key_Event (int key, qboolean down)
 // key up events only generate commands if the game key binding is
 // a button command (leading + sign).  These will occur even in console mode,
 // to keep the character from continuing an action started before a console
-// switch.  Button commands include the kenum as a parameter, so multiple
+// switch.  Button commands include the keynum as a parameter, so multiple
 // downs can be matched with ups
 //
 	if (!down)

@@ -22,41 +22,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 
 
-
-/*
-==================
-R_InitTextures
-==================
-*/
-void	R_InitTextures (void)
-{
-	int		x,y, m;
-	byte	*dest;
-
-// create a simple checkerboard texture for the default
-	r_notexture_mip = Hunk_AllocName (sizeof(texture_t) + 16*16+8*8+4*4+2*2, "notexture");
-	
-	r_notexture_mip->width = r_notexture_mip->height = 16;
-	r_notexture_mip->offsets[0] = sizeof(texture_t);
-	r_notexture_mip->offsets[1] = r_notexture_mip->offsets[0] + 16*16;
-	r_notexture_mip->offsets[2] = r_notexture_mip->offsets[1] + 8*8;
-	r_notexture_mip->offsets[3] = r_notexture_mip->offsets[2] + 4*4;
-	r_notexture_mip->transparent = false;
-	
-	for (m=0 ; m<4 ; m++)
-	{
-		dest = (byte *)r_notexture_mip + r_notexture_mip->offsets[m];
-		for (y=0 ; y< (16>>m) ; y++)
-			for (x=0 ; x< (16>>m) ; x++)
-			{
-				if (  (y< (8>>m) ) ^ (x< (8>>m) ) )
-					*dest++ = 0;
-				else
-					*dest++ = 0xff;
-			}
-	}	
-}
-
 /*
 ===============
 R_Envmap_f
@@ -175,8 +140,8 @@ void R_NewMap (void)
 
 // clear out efrags in case the level hasn't been reloaded
 // FIXME: is this one short?
-	for (i=0 ; i<cl.worldmodel->numleafs ; i++)
-		cl.worldmodel->leafs[i].efrags = NULL;
+//	for (i=0 ; i<cl.worldmodel->numleafs ; i++)
+//		cl.worldmodel->leafs[i].efrags = NULL;
 		 	
 	r_viewleaf = NULL;
 	R_Modules_NewMap();
@@ -191,7 +156,6 @@ void R_NewMap (void)
 			continue;
 		if (!strncmp(cl.worldmodel->textures[i]->name,"sky",3) )
 			skytexturenum = i;
- 		cl.worldmodel->textures[i]->texturechain = NULL;
 	}
 	SHOWLMP_clear();
 }
@@ -212,9 +176,11 @@ void R_TimeRefresh_f (void)
 
 	intimerefresh = 1;
 	start = Sys_FloatTime ();
-	for (i=0 ; i<128 ; i++)
+	for (i = 0;i < 128;i++)
 	{
+		r_refdef.viewangles[0] = 0;
 		r_refdef.viewangles[1] = i/128.0*360.0;
+		r_refdef.viewangles[2] = 0;
 		SCR_UpdateScreen();
 	}
 

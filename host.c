@@ -39,7 +39,6 @@ qboolean	hostloopactive = 0;		// LordHavoc: used to turn Host_Error into Sys_Err
 
 double		host_frametime;
 double		host_realframetime;		// LordHavoc: the real frametime, before slowmo and clamping are applied (used for console scrolling)
-double		host_time;
 double		realtime;				// without any filtering or bounding
 double		oldrealtime;			// last frame run
 int			host_framecount;
@@ -146,7 +145,7 @@ void Host_Error (char *error, ...)
 	}
 	inerror = true;
 	
-	SCR_EndLoadingPlaque ();		// reenable screen updates
+//	SCR_EndLoadingPlaque ();		// reenable screen updates
 
 	va_start (argptr,error);
 	vsprintf (hosterrorstring,error,argptr);
@@ -255,8 +254,6 @@ void Host_InitLocal (void)
 	Cvar_RegisterVariable (&timeformat);
 
 	Host_FindMaxClients ();
-	
-	host_time = 1.0;		// so a think at time 0 won't get called
 }
 
 
@@ -691,8 +688,6 @@ void _Host_Frame (float time)
 	if (!sv.active)
 		CL_SendCmd ();
 
-	host_time += host_frametime;
-
 // fetch results from server
 	if (cls.state == ca_connected)
 		CL_ReadFromServer ();
@@ -831,8 +826,6 @@ void Host_Init ()
 	Con_Printf ("Exe: "__TIME__" "__DATE__"\n");
 	Con_Printf ("%4.1f megabyte heap\n",host_parms.memsize/(1024*1024.0));
 	
-	R_InitTextures ();		// needed even for dedicated servers
- 
 	if (cls.state != ca_dedicated)
 	{
 		Palette_Init("gfx/palette.lmp");

@@ -212,6 +212,7 @@ SYSTEM IO
 ===============================================================================
 */
 
+#if NOTUSED
 /*
 ================
 Sys_MakeCodeWriteable
@@ -224,6 +225,7 @@ void Sys_MakeCodeWriteable (unsigned long startaddr, unsigned long length)
 	if (!VirtualProtect((LPVOID)startaddr, length, PAGE_READWRITE, &flOldProtect))
 		Sys_Error("Protection change failed\n");
 }
+#endif
 
 
 /*
@@ -643,8 +645,9 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	if (cwd[strlen(cwd)-1] == '/')
 		cwd[strlen(cwd)-1] = 0;
 
+	memset(&host_parms, 0, sizeof(host_parms));
+
 	host_parms.basedir = cwd;
-	host_parms.cachedir = NULL;
 
 	host_parms.argc = 1;
 	argv[0] = empty_string;
