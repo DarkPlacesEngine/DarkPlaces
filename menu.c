@@ -3369,7 +3369,6 @@ void M_Menu_Search_f (void)
 
 void M_Search_Draw (void)
 {
-	const char* string;
 	cachepic_t	*p;
 	int x;
 
@@ -3397,11 +3396,7 @@ void M_Search_Draw (void)
 		return;
 	}
 
-	if (gamemode == GAME_TRANSFUSION)
-		string = "No Transfusion servers found";
-	else
-		string = "No Quake servers found";
-	M_PrintWhite ((320/2) - ((22*8)/2), 64, string);
+	M_PrintWhite ((320/2) - ((22*8)/2), 64, va("No %s servers found", gamename));
 	if ((realtime - searchCompleteTime) < 3.0)
 		return;
 

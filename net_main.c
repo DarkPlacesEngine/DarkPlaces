@@ -362,12 +362,7 @@ static void PrintSlistTrailer(void)
 	if (hostCacheCount)
 		Con_Printf("== end list ==\n\n");
 	else
-	{
-		if (gamemode == GAME_TRANSFUSION)
-			Con_Printf("No Transfusion servers found.\n\n");
-		else
-			Con_Printf("No Quake servers found.\n\n");
-	}
+		Con_Printf("No %s servers found.\n\n", gamename);
 }
 
 
@@ -378,10 +373,7 @@ void NET_SlistCommon (PollProcedure *sendProcedure, PollProcedure *pollProcedure
 
 	if (! slistSilent)
 	{
-		if (gamemode == GAME_TRANSFUSION)
-			Con_Printf("Looking for Transfusion servers...\n");
-		else
-			Con_Printf("Looking for Quake servers...\n");
+		Con_Printf("Looking for %s servers...\n", gamename);
 		PrintSlistHeader();
 	}
 
