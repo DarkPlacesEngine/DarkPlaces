@@ -412,7 +412,7 @@ void CL_AllocDlight (entity_render_t *ent, vec3_t org, float radius, float red, 
 dlightsetup:
 	//Con_Printf("dlight %i : %f %f %f : %f %f %f\n", i, org[0], org[1], org[2], red * radius, green * radius, blue * radius);
 	memset (dl, 0, sizeof(*dl));
-	//dl->ent = ent;
+	dl->ent = ent;
 	VectorCopy(org, dl->origin);
 	dl->radius = radius;
 	dl->color[0] = red;
@@ -719,7 +719,7 @@ static void CL_RelinkNetworkEntities()
 			// hack to make glowing player light shine on their gun
 			if (i == cl.viewentity && !chase_active.integer)
 				v[2] += 30;
-			CL_AllocDlight (NULL, v, 1, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0);
+			CL_AllocDlight (&ent->render, v, 1, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0);
 		}
 
 		if (chase_active.integer)

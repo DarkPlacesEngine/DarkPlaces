@@ -132,7 +132,7 @@ void R_BuildLightList(void)
 			rd->cullradius2 = (2048.0f * 2048.0f);
 		rd->cullradius = sqrt(rd->cullradius2);
 		rd->subtract = 1.0f / rd->cullradius2;
-		//rd->ent = cd->ent;
+		rd->ent = cd->ent;
 		c_dlights++; // count every dlight in use
 	}
 }
