@@ -52,8 +52,8 @@ extern vec3_t vec3_origin;
 #define lhrandom(MIN,MAX) ((rand() & 32767) * (((MAX)-(MIN)) * (1.0f / 32767.0f)) + (MIN))
 
 #define invpow(base,number) (log(number) / log(base))
-#define bit2i(n) (((n & 0x55555555) != 0 ? 1 : 0) | ((n & 0x66666666) !=0 ? 2 : 0) | ((n & 0x78787878) != 0 ? 4 : 0) | ((n & 0x7F807F80) != 0 ? 8 : 0) | ((n & 0x7FFF8000) != 0 ? 16 : 0))  
-#define log2i(n) (((n & 0xAAAAAAAA) != 0 ? 1 : 0) | ((n & 0xCCCCCCCC) != 0 ? 2 : 0) | ((n & 0xF0F0F0F0) != 0 ? 4 : 0) | ((n & 0xFF00FF00) != 0 ? 8 : 0) | ((n & 0xFFFF0000) != 0 ? 16 : 0))
+#define log2i(n) ((((n) & 0xAAAAAAAA) != 0 ? 1 : 0) | (((n) & 0xCCCCCCCC) != 0 ? 2 : 0) | (((n) & 0xF0F0F0F0) != 0 ? 4 : 0) | (((n) & 0xFF00FF00) != 0 ? 8 : 0) | (((n) & 0xFFFF0000) != 0 ? 16 : 0))
+#define bit2i(n) log2i((n) << 1)
 
 #define DEG2RAD(a) ((a) * ((float) M_PI / 180.0f))
 #define RAD2DEG(a) ((a) * (180.0f / (float) M_PI))
