@@ -510,7 +510,7 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 		VectorCopy(ent->state_current.origin, ent->persistent.neworigin);
 		VectorCopy(ent->state_current.angles, ent->persistent.newangles);
 	}
-	else// if (ent->state_current.flags & RENDER_STEP)
+	else if (ent->state_current.flags & RENDER_STEP)
 	{
 		// monster interpolation
 		if (DotProduct(odelta, odelta) + DotProduct(adelta, adelta) > 0.01)
@@ -523,22 +523,20 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 			VectorCopy(ent->state_current.angles, ent->persistent.newangles);
 		}
 	}
-	/*
 	else
 	{
 		// not a monster
 		ent->persistent.lerpstarttime = cl.mtime[1];
 		// no lerp if it's singleplayer
-		//if (sv.active && svs.maxclients == 1 && !ent->state_current.flags & RENDER_STEP)
-		//	ent->persistent.lerpdeltatime = 0;
-		//else
+		if (sv.active && svs.maxclients == 1 && !ent->state_current.flags & RENDER_STEP)
+			ent->persistent.lerpdeltatime = 0;
+		else
 			ent->persistent.lerpdeltatime = cl.mtime[0] - cl.mtime[1];
 		VectorCopy(ent->persistent.neworigin, ent->persistent.oldorigin);
 		VectorCopy(ent->persistent.newangles, ent->persistent.oldangles);
 		VectorCopy(ent->state_current.origin, ent->persistent.neworigin);
 		VectorCopy(ent->state_current.angles, ent->persistent.newangles);
 	}
-	*/
 }
 
 /*
