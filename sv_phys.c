@@ -268,11 +268,13 @@ int SV_FlyMove (edict_t *ent, float time, trace_t *steptrace)
 
 		trace = SV_Move (ent->v.origin, ent->v.mins, ent->v.maxs, end, MOVE_NORMAL, ent);
 
+		/*
 		if (trace.allsolid)
 		{	// entity is trapped in another solid
 			VectorClear(ent->v.velocity);
 			return 3;
 		}
+		*/
 
 		if (trace.fraction > 0)
 		{	// actually covered some distance
@@ -443,7 +445,7 @@ trace_t SV_PushEntity (edict_t *ent, vec3_t push, vec3_t pushangles)
 	ent->v.angles[1] += trace.fraction * pushangles[1];
 	SV_LinkEdict (ent, true);
 
-	if (trace.ent)
+	if (trace.ent && (!((int)ent->v.flags & FL_ONGROUND) || ent->v.groundentity != EDICT_TO_PROG(trace.ent)))
 		SV_Impact (ent, trace.ent);
 	return trace;
 }
@@ -898,7 +900,7 @@ int SV_TryUnstick (edict_t *ent, vec3_t oldvel)
 			case 6:	dir[0] = 2; dir[1] = -2; break;
 			case 7:	dir[0] = -2; dir[1] = -2; break;
 		}
-		
+
 		SV_PushEntity (ent, dir, vec3_origin);
 
 // retry the original move
@@ -944,7 +946,7 @@ void SV_WalkMove (edict_t *ent)
 //
 	oldonground = (int)ent->v.flags & FL_ONGROUND;
 	ent->v.flags = (int)ent->v.flags & ~FL_ONGROUND;
-	
+
 	VectorCopy (ent->v.origin, oldorg);
 	VectorCopy (ent->v.velocity, oldvel);
 
@@ -955,13 +957,13 @@ void SV_WalkMove (edict_t *ent)
 
 	if (!oldonground && ent->v.waterlevel == 0)
 		return;		// don't stair up while jumping
-	
+
 	if (ent->v.movetype != MOVETYPE_WALK)
 		return;		// gibbed by a trigger
 
 	if (sv_nostep.integer)
 		return;
-	
+
 	if ( (int)sv_player->v.flags & FL_WATERJUMP )
 		return;
 
@@ -1038,11 +1040,11 @@ void SV_Physics_Client (edict_t	*ent, int num)
 
 //
 // call standard client pre-think
-//	
+//
 	pr_global_struct->time = sv.time;
 	pr_global_struct->self = EDICT_TO_PROG(ent);
 	PR_ExecuteProgram (pr_global_struct->PlayerPreThink, "QC function PlayerPreThink is missing");
-	
+
 //
 // do a move
 //
@@ -1066,7 +1068,7 @@ void SV_Physics_Client (edict_t	*ent, int num)
 		SV_CheckStuck (ent);
 		SV_WalkMove (ent);
 		break;
-		
+
 	case MOVETYPE_TOSS:
 	case MOVETYPE_BOUNCE:
 		SV_Physics_Toss (ent);
@@ -1078,21 +1080,21 @@ void SV_Physics_Client (edict_t	*ent, int num)
 		SV_CheckWater (ent);
 		SV_FlyMove (ent, sv.frametime, NULL);
 		break;
-		
+
 	case MOVETYPE_NOCLIP:
 		if (!SV_RunThink (ent))
 			return;
 		SV_CheckWater (ent);
 		VectorMA (ent->v.origin, sv.frametime, ent->v.velocity, ent->v.origin);
 		break;
-		
+
 	default:
 		Host_Error ("SV_Physics_client: bad movetype %i", (int)ent->v.movetype);
 	}
 
 //
 // call standard player post-think
-//		
+//
 	SV_LinkEdict (ent, true);
 
 	pr_global_struct->time = sv.time;
@@ -1241,7 +1243,6 @@ void SV_Physics_Toss (edict_t *ent)
 {
 	trace_t	trace;
 	vec3_t	move;
-	float	backoff;
 	//edict_t *groundentity;
 	// regular thinking
 	if (!SV_RunThink (ent))
@@ -1280,20 +1281,14 @@ void SV_Physics_Toss (edict_t *ent)
 	if (trace.fraction == 1)
 		return;
 
-	if (ent->v.movetype == MOVETYPE_BOUNCE)
-		backoff = 1.5;
-	else if (ent->v.movetype == MOVETYPE_BOUNCEMISSILE)
-		backoff = 2.0;
-	else
-		backoff = 1;
-
-	ClipVelocity (ent->v.velocity, trace.plane.normal, ent->v.velocity, backoff);
-
-// stop if on ground
 	if (ent->v.movetype == MOVETYPE_BOUNCEMISSILE)
+	{
+		ClipVelocity (ent->v.velocity, trace.plane.normal, ent->v.velocity, 2.0);
 		ent->v.flags = (int)ent->v.flags & ~FL_ONGROUND;
+	}
 	else if (ent->v.movetype == MOVETYPE_BOUNCE)
 	{
+		ClipVelocity (ent->v.velocity, trace.plane.normal, ent->v.velocity, 1.5);
 		// LordHavoc: fixed grenades not bouncing when fired down a slope
 		if (trace.plane.normal[2] > 0.7 && DotProduct(trace.plane.normal, ent->v.velocity) < 60)
 		//if (trace.plane.normal[2] > 0.7 && ent->v.velocity[2] < 60)
@@ -1308,6 +1303,7 @@ void SV_Physics_Toss (edict_t *ent)
 	}
 	else
 	{
+		ClipVelocity (ent->v.velocity, trace.plane.normal, ent->v.velocity, 1.0);
 		if (trace.plane.normal[2] > 0.7)
 		{
 			ent->v.flags = (int)ent->v.flags | FL_ONGROUND;
