@@ -1053,8 +1053,10 @@ static qfile_t* FS_SysOpen (const char* filepath, const char* mode, qboolean non
 		}
 	}
 
+#ifndef WIN32
 	if (nonblocking)
 		opt |= O_NONBLOCK;
+#endif
 
 	file = Mem_Alloc (fs_mempool, sizeof (*file));
 	memset (file, 0, sizeof (*file));
