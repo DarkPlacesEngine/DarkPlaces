@@ -268,7 +268,9 @@ void PR_RunError (char *error, ...)
 	PR_StackTrace ();
 	Con_Printf ("%s\n", string);
 
-	pr_depth = 0;		// dump the stack so host_error can shutdown functions
+	// dump the stack so host_error can shutdown functions
+	pr_depth = 0;
+	localstack_used = 0;
 
 	Host_Error ("Program error");
 }
@@ -352,6 +354,13 @@ int PR_LeaveFunction (void)
 	pr_depth--;
 	pr_xfunction = pr_stack[pr_depth].f;
 	return pr_stack[pr_depth].s;
+}
+
+void PR_Execute_ProgsLoaded(void)
+{
+	// dump the stack
+	pr_depth = 0;
+	localstack_used = 0;
 }
 
 /*
