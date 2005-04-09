@@ -250,7 +250,6 @@
 3 darkplaces client: add back r_waterripple (Vermeulen)
 3 darkplaces client: add clientside entity prediction similar to qw based on ping, and add cl_prediction and cl_prediction_lockping
 3 darkplaces client: add direct xvid recording using the xvid library (Error, Vermeulen)
-3 darkplaces client: change server browser listing structures to store the real data returned from the server, rather than the current processed strings suited only to the menu, menu qc needs to look at the original data (Black)
 3 darkplaces client: figure out why multimap demos are skipping the later portions, it's probably related to the time seeking, probably not being reset (Urre)
 3 darkplaces client: make "wait" command wait for next network frame somehow when connected, to make frikbot .way files load properly (Nexuiz, Transfusion, FrikaC)
 3 darkplaces client: make a new caching system with handles (which can be purged) and give every entity a cache handle to a model instance, which contains cache handles for each mesh/array
@@ -340,6 +339,7 @@
 7 darkplaces renderer: make it work on Savage4 again (Ender)
 7 darkplaces renderer: mirrors (Sajt)
 7 darkplaces renderer: shadow volume clipping (romi)
+d darkplaces client: change server browser listing structures to store the real data returned from the server, rather than the current processed strings suited only to the menu, menu qc needs to look at the original data (Black)
 d darkplaces GLX client: make sure that vid_vsync is taking effect immediately
 d darkplaces SDL client: add key repeat
 d darkplaces WGL client: if gamma setting fails, restore system gamma (RenegadeC)
