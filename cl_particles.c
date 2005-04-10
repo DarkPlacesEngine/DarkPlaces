@@ -1475,7 +1475,7 @@ void CL_MoveParticles (void)
 					p->type = NULL;
 				break;
 			case pt_smoke:
-				p->size += frametime * 15;
+				//p->size += frametime * 15;
 				break;
 			case pt_decal:
 				// FIXME: this has fairly wacky handling of alpha
