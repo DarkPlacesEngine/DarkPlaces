@@ -200,30 +200,31 @@ typedef struct particletype_s
 {
 	pblend_t blendmode;
 	porientation_t orientation;
+	qboolean lighting;
 }
 particletype_t;
 
 typedef enum
 {
-	pt_alphastatic, pt_static, pt_spark, pt_beam, pt_rain, pt_raindecal, pt_snow, pt_bubble, pt_blood, pt_grow, pt_decal, pt_entityparticle, pt_total
+	pt_alphastatic, pt_static, pt_spark, pt_beam, pt_rain, pt_raindecal, pt_snow, pt_bubble, pt_blood, pt_smoke, pt_decal, pt_entityparticle, pt_total
 }
 ptype_t;
 
 // must match ptype_t values
 particletype_t particletype[pt_total] =
 {
-	{PBLEND_ALPHA, PARTICLE_BILLBOARD}, //pt_alphastatic
-	{PBLEND_ADD, PARTICLE_BILLBOARD}, //pt_static
-	{PBLEND_ADD, PARTICLE_SPARK}, //pt_spark
-	{PBLEND_ADD, PARTICLE_BEAM}, //pt_beam
-	{PBLEND_ADD, PARTICLE_SPARK}, //pt_rain
-	{PBLEND_ADD, PARTICLE_ORIENTED_DOUBLESIDED}, //pt_raindecal
-	{PBLEND_ADD, PARTICLE_BILLBOARD}, //pt_snow
-	{PBLEND_ADD, PARTICLE_BILLBOARD}, //pt_bubble
-	{PBLEND_MOD, PARTICLE_BILLBOARD}, //pt_blood
-	{PBLEND_ADD, PARTICLE_BILLBOARD}, //pt_grow
-	{PBLEND_MOD, PARTICLE_ORIENTED_DOUBLESIDED}, //pt_decal
-	{PBLEND_ALPHA, PARTICLE_BILLBOARD}, //pt_entityparticle
+	{PBLEND_ALPHA, PARTICLE_BILLBOARD, false}, //pt_alphastatic
+	{PBLEND_ADD, PARTICLE_BILLBOARD, false}, //pt_static
+	{PBLEND_ADD, PARTICLE_SPARK, false}, //pt_spark
+	{PBLEND_ADD, PARTICLE_BEAM, false}, //pt_beam
+	{PBLEND_ADD, PARTICLE_SPARK, false}, //pt_rain
+	{PBLEND_ADD, PARTICLE_ORIENTED_DOUBLESIDED, false}, //pt_raindecal
+	{PBLEND_ADD, PARTICLE_BILLBOARD, false}, //pt_snow
+	{PBLEND_ADD, PARTICLE_BILLBOARD, false}, //pt_bubble
+	{PBLEND_MOD, PARTICLE_BILLBOARD, false}, //pt_blood
+	{PBLEND_ADD, PARTICLE_BILLBOARD, false}, //pt_smoke
+	{PBLEND_MOD, PARTICLE_ORIENTED_DOUBLESIDED, false}, //pt_decal
+	{PBLEND_ALPHA, PARTICLE_BILLBOARD, false}, //pt_entityparticle
 };
 
 typedef struct particle_s
@@ -810,7 +811,7 @@ void CL_Smoke (vec3_t org, vec3_t dir, int count)
 			org2[1] = org[1] + 0.125f * lhrandom(-count, count);
 			org2[2] = org[2] + 0.125f * lhrandom(-count, count);
 			CL_TraceLine(org, org2, org3, NULL, true, NULL, SUPERCONTENTS_SOLID);
-			particle(particletype + pt_grow, 0x101010, 0x202020, tex_smoke[rand()&7], 3, (1.0f / cl_particles_quality.value) * 255, (1.0f / cl_particles_quality.value) * 1024, 0, 0, org3[0], org3[1], org3[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0);
+			particle(particletype + pt_smoke, 0x101010, 0x202020, tex_smoke[rand()&7], 3, (1.0f / cl_particles_quality.value) * 255, (1.0f / cl_particles_quality.value) * 1024, 0, 0, org3[0], org3[1], org3[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0);
 		}
 	}
 }
@@ -1136,7 +1137,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, int color, entity_t *en
 				dec = qd*3;
 				if (smoke)
 				{
-					particle(particletype + pt_grow, 0x303030, 0x606060, tex_smoke[rand()&7], 3, qd*cl_particles_smoke_alpha.value*125, qd*cl_particles_smoke_alphafade.value*125, 0, 0, pos[0], pos[1], pos[2], lhrandom(-5, 5), lhrandom(-5, 5), lhrandom(-5, 5), 0);
+					particle(particletype + pt_smoke, 0x303030, 0x606060, tex_smoke[rand()&7], 3, qd*cl_particles_smoke_alpha.value*125, qd*cl_particles_smoke_alphafade.value*125, 0, 0, pos[0], pos[1], pos[2], lhrandom(-5, 5), lhrandom(-5, 5), lhrandom(-5, 5), 0);
 					particle(particletype + pt_static, 0x801010, 0xFFA020, tex_smoke[rand()&7], 3, qd*cl_particles_smoke_alpha.value*288, qd*cl_particles_smoke_alphafade.value*1400, 0, 0, pos[0], pos[1], pos[2], lhrandom(-20, 20), lhrandom(-20, 20), lhrandom(-20, 20), 0);
 				}
 				if (bubbles)
@@ -1147,7 +1148,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, int color, entity_t *en
 				// FIXME: make it gradually stop smoking
 				dec = qd*3;
 				if (smoke)
-					particle(particletype + pt_grow, 0x303030, 0x606060, tex_smoke[rand()&7], 3, qd*cl_particles_smoke_alpha.value*100, qd*cl_particles_smoke_alphafade.value*100, 0, 0, pos[0], pos[1], pos[2], lhrandom(-5, 5), lhrandom(-5, 5), lhrandom(-5, 5), 0);
+					particle(particletype + pt_smoke, 0x303030, 0x606060, tex_smoke[rand()&7], 3, qd*cl_particles_smoke_alpha.value*100, qd*cl_particles_smoke_alphafade.value*100, 0, 0, pos[0], pos[1], pos[2], lhrandom(-5, 5), lhrandom(-5, 5), lhrandom(-5, 5), 0);
 				break;
 
 
@@ -1233,7 +1234,7 @@ void CL_Tei_Smoke(const vec3_t org, const vec3_t dir, int count)
 	// smoke puff
 	if (cl_particles_smoke.integer)
 		for (f = 0;f < count;f += 4.0f / cl_particles_quality.value)
-			particle(particletype + pt_grow, 0x202020, 0x404040, tex_smoke[rand()&7], 5, 255 / cl_particles_quality.value, 512 / cl_particles_quality.value, 0, 0, org[0] + 0.125f * lhrandom(-count, count), org[1] + 0.125f * lhrandom (-count, count), org[2] + 0.125f * lhrandom(-count, count), dir[0] + lhrandom(-count, count) * 0.5f, dir[1] + lhrandom(-count, count) * 0.5f, dir[2] + lhrandom(-count, count) * 0.5f, 0);
+			particle(particletype + pt_smoke, 0x202020, 0x404040, tex_smoke[rand()&7], 5, 255 / cl_particles_quality.value, 512 / cl_particles_quality.value, 0, 0, org[0] + 0.125f * lhrandom(-count, count), org[1] + 0.125f * lhrandom (-count, count), org[2] + 0.125f * lhrandom(-count, count), dir[0] + lhrandom(-count, count) * 0.5f, dir[1] + lhrandom(-count, count) * 0.5f, dir[2] + lhrandom(-count, count) * 0.5f, 0);
 }
 
 void CL_Tei_PlasmaHit(const vec3_t org, const vec3_t dir, int count)
@@ -1248,7 +1249,7 @@ void CL_Tei_PlasmaHit(const vec3_t org, const vec3_t dir, int count)
 	// smoke puff
 	if (cl_particles_smoke.integer)
 		for (f = 0;f < count;f += 4.0f / cl_particles_quality.value)
-			particle(particletype + pt_grow, 0x202020, 0x404040, tex_smoke[rand()&7], 5, 255 / cl_particles_quality.value, 512 / cl_particles_quality.value, 0, 0, org[0] + 0.125f * lhrandom(-count, count), org[1] + 0.125f * lhrandom (-count, count), org[2] + 0.125f * lhrandom(-count, count), dir[0] + lhrandom(-count, count), dir[1] + lhrandom(-count, count), dir[2] + lhrandom(-count, count), 0);
+			particle(particletype + pt_smoke, 0x202020, 0x404040, tex_smoke[rand()&7], 5, 255 / cl_particles_quality.value, 512 / cl_particles_quality.value, 0, 0, org[0] + 0.125f * lhrandom(-count, count), org[1] + 0.125f * lhrandom (-count, count), org[2] + 0.125f * lhrandom(-count, count), dir[0] + lhrandom(-count, count), dir[1] + lhrandom(-count, count), dir[2] + lhrandom(-count, count), 0);
 
 	// sparks
 	if (cl_particles_sparks.integer)
@@ -1473,7 +1474,7 @@ void CL_MoveParticles (void)
 #endif
 					p->type = NULL;
 				break;
-			case pt_grow:
+			case pt_smoke:
 				p->size += frametime * 15;
 				break;
 			case pt_decal:
@@ -1909,6 +1910,14 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 		ca = 1;
 	}
 #ifndef WORKINGLQUAKE
+	if (p->type->lighting)
+	{
+		float ambient[3], diffuse[3], diffusenormal[3];
+		R_CompleteLightPoint(ambient, diffuse, diffusenormal, org, true);
+		cr *= (ambient[0] + 0.5 * diffuse[0]);
+		cg *= (ambient[1] + 0.5 * diffuse[1]);
+		cb *= (ambient[2] + 0.5 * diffuse[2]);
+	}
 	if (fogenabled)
 	{
 		VectorSubtract(org, r_vieworigin, fogvec);
@@ -1917,7 +1926,7 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 		cr = cr * ifog;
 		cg = cg * ifog;
 		cb = cb * ifog;
-		if (blendmode == PBLEND_ADD)
+		if (blendmode == PBLEND_ALPHA)
 		{
 			cr += fogcolor[0] * fog;
 			cg += fogcolor[1] * fog;
