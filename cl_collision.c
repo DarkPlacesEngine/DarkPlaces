@@ -31,7 +31,7 @@ physentity_t;
 
 int cl_traceline_startsupercontents;
 
-float CL_TraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t normal, int hitbmodels, entity_render_t **hitent, int hitsupercontentsmask)
+float CL_TraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t normal, int hitbmodels, int *hitent, int hitsupercontentsmask)
 {
 	float maxfrac, maxrealfrac;
 	int n;
@@ -46,7 +46,7 @@ float CL_TraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t n
 	VectorCopy (end, trace.endpos);
 
 	if (hitent)
-		*hitent = &cl_entities[0].render;
+		*hitent = 0;
 	Mod_CheckLoaded(cl.worldmodel);
 	if (cl.worldmodel && cl.worldmodel->TraceBox)
 		cl.worldmodel->TraceBox(cl.worldmodel, 0, &trace, start, start, end, end, hitsupercontentsmask);
@@ -83,7 +83,7 @@ float CL_TraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t n
 			if (maxrealfrac > trace.realfraction)
 			{
 				if (hitent)
-					*hitent = ent;
+					*hitent = cl_brushmodel_entities[n];
 				maxfrac = trace.fraction;
 				maxrealfrac = trace.realfraction;
 				if (normal)
