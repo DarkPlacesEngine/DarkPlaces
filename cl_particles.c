@@ -152,7 +152,7 @@ void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up)
 #include "pmove.h"
 extern qboolean PM_RecursiveHullCheck (hull_t *hull, int num, float p1f, float p2f, vec3_t p1, vec3_t p2, pmtrace_t *trace);
 #endif
-float CL_TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int hitbmodels, void **hitent, int hitsupercontentsmask)
+float CL_TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int hitbmodels, int *hitent, int hitsupercontentsmask)
 {
 #if QW
 	pmtrace_t trace;
@@ -241,7 +241,7 @@ typedef struct particle_s
 	float		friction; // how much air friction affects this object (objects with a low mass/size ratio tend to get more air friction)
 	qbyte		color[4];
 #ifndef WORKINGLQUAKE
-	entity_render_t	*owner; // decal stuck to this entity
+	unsigned short owner; // decal stuck to this entity
 	model_t		*ownermodel; // model the decal is stuck to (used to make sure the entity is still alive)
 	vec3_t		relativeorigin; // decal at this location in entity's coordinate space
 	vec3_t		relativedirection; // decal oriented this way relative to entity's coordinate space
@@ -452,7 +452,7 @@ particle_t *particle(particletype_t *ptype, int pcolor1, int pcolor2, int ptex, 
 	return part;
 }
 
-void CL_SpawnDecalParticleForSurface(void *hitent, const vec3_t org, const vec3_t normal, int color1, int color2, int texnum, float size, float alpha)
+void CL_SpawnDecalParticleForSurface(int hitent, const vec3_t org, const vec3_t normal, int color1, int color2, int texnum, float size, float alpha)
 {
 	particle_t *p;
 	if (!cl_decals.integer)
@@ -463,9 +463,9 @@ void CL_SpawnDecalParticleForSurface(void *hitent, const vec3_t org, const vec3_
 		p->time2 = cl.time;
 #ifndef WORKINGLQUAKE
 		p->owner = hitent;
-		p->ownermodel = p->owner->model;
-		Matrix4x4_Transform(&p->owner->inversematrix, org, p->relativeorigin);
-		Matrix4x4_Transform3x3(&p->owner->inversematrix, normal, p->relativedirection);
+		p->ownermodel = cl_entities[p->owner].render.model;
+		Matrix4x4_Transform(&cl_entities[p->owner].render.inversematrix, org, p->relativeorigin);
+		Matrix4x4_Transform3x3(&cl_entities[p->owner].render.inversematrix, normal, p->relativedirection);
 		VectorAdd(p->relativeorigin, p->relativedirection, p->relativeorigin);
 #endif
 	}
@@ -476,11 +476,7 @@ void CL_SpawnDecalParticleForPoint(const vec3_t org, float maxdist, float size, 
 	int i;
 	float bestfrac, bestorg[3], bestnormal[3];
 	float frac, v[3], normal[3], org2[3];
-#ifdef WORKINGLQUAKE
-	void *besthitent = NULL, *hitent;
-#else
-	entity_render_t *besthitent = NULL, *hitent;
-#endif
+	int besthitent = 0, hitent;
 	bestfrac = 10;
 	for (i = 0;i < 32;i++)
 	{
@@ -1270,11 +1266,7 @@ void CL_MoveParticles (void)
 	particle_t *p;
 	int i, maxparticle, j, a, content;
 	float gravity, dvel, bloodwaterfade, frametime, f, dist, normal[3], v[3], org[3], oldorg[3];
-#ifdef WORKINGLQUAKE
-	void *hitent;
-#else
-	entity_render_t *hitent;
-#endif
+	int hitent;
 
 	// LordHavoc: early out condition
 	if (!cl_numparticles)
@@ -1319,7 +1311,7 @@ void CL_MoveParticles (void)
 				if (p->type == particletype + pt_rain)
 				{
 					// raindrop - splash on solid/water/slime/lava
-					if (CL_TraceLine(oldorg, p->org, v, normal, true, &hitent, SUPERCONTENTS_SOLID | SUPERCONTENTS_LIQUIDSMASK) < 1)
+					if (CL_TraceLine(oldorg, p->org, v, normal, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_LIQUIDSMASK) < 1)
 					{
 						VectorCopy(v, p->org);
 						// splash
@@ -1357,9 +1349,9 @@ void CL_MoveParticles (void)
 						p->texnum = tex_blooddecal[rand()&7];
 #ifndef WORKINGLQUAKE
 						p->owner = hitent;
-						p->ownermodel = hitent->model;
-						Matrix4x4_Transform(&hitent->inversematrix, v, p->relativeorigin);
-						Matrix4x4_Transform3x3(&hitent->inversematrix, normal, p->relativedirection);
+						p->ownermodel = cl_entities[hitent].render.model;
+						Matrix4x4_Transform(&cl_entities[hitent].render.inversematrix, v, p->relativeorigin);
+						Matrix4x4_Transform3x3(&cl_entities[hitent].render.inversematrix, normal, p->relativedirection);
 						VectorAdd(p->relativeorigin, p->relativedirection, p->relativeorigin);
 #endif
 						p->time2 = cl.time;
@@ -1374,7 +1366,7 @@ void CL_MoveParticles (void)
 				}
 				else
 				{
-					if (CL_TraceLine(oldorg, p->org, v, normal, true, &hitent, SUPERCONTENTS_SOLID) < 1)
+					if (CL_TraceLine(oldorg, p->org, v, normal, true, NULL, SUPERCONTENTS_SOLID) < 1)
 					{
 						VectorCopy(v, p->org);
 						if (p->bounce < 0)
@@ -1488,10 +1480,10 @@ void CL_MoveParticles (void)
 				// FIXME: this has fairly wacky handling of alpha
 				p->alphafade = cl.time > (p->time2 + cl_decals_time.value) ? (255 / cl_decals_fadetime.value) : 0;
 #ifndef WORKINGLQUAKE
-				if (p->owner->model == p->ownermodel)
+				if (cl_entities[p->owner].render.model == p->ownermodel)
 				{
-					Matrix4x4_Transform(&p->owner->matrix, p->relativeorigin, p->org);
-					Matrix4x4_Transform3x3(&p->owner->matrix, p->relativedirection, p->vel);
+					Matrix4x4_Transform(&cl_entities[p->owner].render.matrix, p->relativeorigin, p->org);
+					Matrix4x4_Transform3x3(&cl_entities[p->owner].render.matrix, p->relativedirection, p->vel);
 				}
 				else
 					p->type = NULL;
