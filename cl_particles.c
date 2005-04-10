@@ -694,7 +694,7 @@ void CL_ParticleExplosion (vec3_t org)
 				VectorSubtract(v2, org, v2);
 #endif
 				VectorScale(v2, 2.0f, v2);
-				particle(particletype + pt_static, 0xFFFFFF, 0xFFFFFF, tex_smoke[rand()&7], 12, 32, 64, 0, 0, org[0], org[1], org[2], v2[0], v2[1], v2[2], 0);
+				particle(particletype + pt_smoke, 0x202020, 0x404040, tex_smoke[rand()&7], 12, 32, 64, 0, 0, org[0], org[1], org[2], v2[0], v2[1], v2[2], 0);
 			}
 		}
 
