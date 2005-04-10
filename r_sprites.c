@@ -95,7 +95,7 @@ void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 		color[0] = color[1] = color[2] = 1;
 	else
 	{
-		R_CompleteLightPoint(color, diffusecolor, diffusenormal, ent->origin, true, NULL);
+		R_CompleteLightPoint(color, diffusecolor, diffusenormal, ent->origin, true);
 		VectorMA(color, 0.5f, diffusecolor, color);
 	}
 	color[0] *= ent->colormod[0];

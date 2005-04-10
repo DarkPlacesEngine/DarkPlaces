@@ -169,7 +169,7 @@ LIGHT SAMPLING
 =============================================================================
 */
 
-void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const vec3_t p, int dynamic, const mleaf_t *leaf)
+void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const vec3_t p, int dynamic)
 {
 	VectorClear(diffusecolor);
 	VectorClear(diffusenormal);
