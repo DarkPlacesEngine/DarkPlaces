@@ -5337,6 +5337,12 @@ static int Mod_Q3BSP_SuperContentsFromNativeContents(model_t *model, int nativec
 		supercontents |= SUPERCONTENTS_CORPSE;
 	if (nativecontents & CONTENTSQ3_NODROP)
 		supercontents |= SUPERCONTENTS_NODROP;
+	if (nativecontents & CONTENTSQ3_PLAYERCLIP)
+		supercontents |= SUPERCONTENTS_PLAYERCLIP;
+	if (nativecontents & CONTENTSQ3_MONSTERCLIP)
+		supercontents |= SUPERCONTENTS_MONSTERCLIP;
+	if (nativecontents & CONTENTSQ3_DONOTENTER)
+		supercontents |= SUPERCONTENTS_DONOTENTER;
 	return supercontents;
 }
 
@@ -5357,6 +5363,12 @@ static int Mod_Q3BSP_NativeContentsFromSuperContents(model_t *model, int superco
 		nativecontents |= CONTENTSQ3_CORPSE;
 	if (supercontents & SUPERCONTENTS_NODROP)
 		nativecontents |= CONTENTSQ3_NODROP;
+	if (supercontents & SUPERCONTENTS_PLAYERCLIP)
+		nativecontents |= CONTENTSQ3_PLAYERCLIP;
+	if (supercontents & SUPERCONTENTS_MONSTERCLIP)
+		nativecontents |= CONTENTSQ3_MONSTERCLIP;
+	if (supercontents & SUPERCONTENTS_DONOTENTER)
+		nativecontents |= CONTENTSQ3_DONOTENTER;
 	return nativecontents;
 }
 
