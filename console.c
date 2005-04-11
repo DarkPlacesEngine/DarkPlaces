@@ -449,14 +449,12 @@ void Con_PrintToHistory(const char *txt)
 	int y, c, l, mask;
 	static int cr;
 
-	if (txt[0] == 1)
+	if (txt[0] == 1 || txt[0] == 2)
 	{
-		mask = 128;		// go to colored text
-		txt++;
-	}
-	else if (txt[0] == 2)
-	{
-		mask = 128;		// go to colored text
+		if (gamemode == GAME_NEXUIZ)
+			mask = 0;
+		else
+			mask = 128;		// go to colored text
 		txt++;
 	}
 	else
@@ -587,7 +585,16 @@ void Con_Print(const char *msg)
 			// special color codes for chat messages must always come first
 			// for Con_PrintToHistory to work properly
 			if (*msg <= 2)
-				line[index++] = *msg++;
+			{
+				if (gamemode == GAME_NEXUIZ)
+				{
+					line[index++] = '^';
+					line[index++] = '3';
+					msg++;
+				}
+				else
+					line[index++] = *msg++;
+			}
 			// store timestamp
 			for (;*timestamp;index++, timestamp++)
 				if (index < sizeof(line) - 2)
@@ -689,14 +696,26 @@ DRAWING
 
 static vec4_t _con_colors[] =
 {
-	{1.0, 1.0, 1.0, 1.0},
-	{1.0, 0.0, 0.0, 1.0},
-	{0.0, 1.0, 0.0, 1.0},
-	{0.0, 0.0, 1.0, 1.0},
-	{1.0, 1.0, 0.0, 1.0},
-	{0.0, 1.0, 1.0, 1.0},
-	{1.0, 0.0, 1.0, 1.0},
-	{0.1, 0.1, 0.1, 1.0}
+	// Quake3 colors
+	// LordHavoc: why on earth is cyan before magenta in Quake3?
+	// LordHavoc: note: Doom3 uses white for [0] and [7]
+	{0.0, 0.0, 0.0, 1.0}, // black
+	{1.0, 0.0, 0.0, 1.0}, // red
+	{0.0, 1.0, 0.0, 1.0}, // green
+	{1.0, 1.0, 0.0, 1.0}, // yellow
+	{0.0, 0.0, 1.0, 1.0}, // blue
+	{0.0, 1.0, 1.0, 1.0}, // cyan
+	{1.0, 0.0, 1.0, 1.0}, // magenta
+	{1.0, 1.0, 1.0, 1.0}  // white
+	// Black's color table
+	//{1.0, 1.0, 1.0, 1.0},
+	//{1.0, 0.0, 0.0, 1.0},
+	//{0.0, 1.0, 0.0, 1.0},
+	//{0.0, 0.0, 1.0, 1.0},
+	//{1.0, 1.0, 0.0, 1.0},
+	//{0.0, 1.0, 1.0, 1.0},
+	//{1.0, 0.0, 1.0, 1.0},
+	//{0.1, 0.1, 0.1, 1.0}
 };
 
 #define _con_colors_count	(sizeof(_con_colors) / sizeof(vec3_t))
@@ -709,7 +728,7 @@ static void _Con_DrawString( float x, float y, const char *text, int maxlen, flo
 	const char *first, *last;
 	int len;
 
-	color = _con_colors[0];
+	color = _con_colors[7];
 	if( maxlen < 1)
 		len = strlen( text );
 	else
