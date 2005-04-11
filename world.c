@@ -495,7 +495,6 @@ trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins,
 	if (model && model->TraceBox)
 	{
 		int frame;
-		int hitcontents;
 		frame = (int)ent->v->frame;
 		frame = bound(0, frame, (model->numframes - 1));
 		VectorAdd(starttransformed, maxs, starttransformedmaxs);
