@@ -433,7 +433,7 @@ Handles selection or creation of a clipping hull, and offseting (and
 eventually rotation) of the end points
 ==================
 */
-trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int movetype)
+trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int movetype, int hitsupercontents)
 {
 	trace_t trace;
 	model_t *model = NULL;
@@ -495,16 +495,17 @@ trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins,
 	if (model && model->TraceBox)
 	{
 		int frame;
+		int hitcontents;
 		frame = (int)ent->v->frame;
 		frame = bound(0, frame, (model->numframes - 1));
 		VectorAdd(starttransformed, maxs, starttransformedmaxs);
 		VectorAdd(endtransformed, maxs, endtransformedmaxs);
 		VectorAdd(starttransformed, mins, starttransformedmins);
 		VectorAdd(endtransformed, mins, endtransformedmins);
-		model->TraceBox(model, frame, &trace, starttransformedmins, starttransformedmaxs, endtransformedmins, endtransformedmaxs, SUPERCONTENTS_SOLID);
+		model->TraceBox(model, frame, &trace, starttransformedmins, starttransformedmaxs, endtransformedmins, endtransformedmaxs, hitsupercontents);
 	}
 	else
-		Collision_ClipTrace_Box(&trace, ent->v->mins, ent->v->maxs, starttransformed, mins, maxs, endtransformed, SUPERCONTENTS_SOLID, SUPERCONTENTS_SOLID);
+		Collision_ClipTrace_Box(&trace, ent->v->mins, ent->v->maxs, starttransformed, mins, maxs, endtransformed, hitsupercontents, SUPERCONTENTS_SOLID);
 	trace.fraction = bound(0, trace.fraction, 1);
 	trace.realfraction = bound(0, trace.realfraction, 1);
 
@@ -536,6 +537,7 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 {
 	vec3_t hullmins, hullmaxs;
 	int i;
+	int hitsupercontentsmask;
 	int passedictprog;
 	qboolean pointtrace;
 	edict_t *traceowner, *touch;
@@ -563,8 +565,17 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	Con_Printf("move(%f %f %f,%f %f %f)", clipstart[0], clipstart[1], clipstart[2], clipend[0], clipend[1], clipend[2]);
 #endif
 
+	hitsupercontentsmask = SUPERCONTENTS_SOLID;
+	if (passedict)
+	{
+		if (passedict->v->solid == SOLID_SLIDEBOX)
+			hitsupercontentsmask |= SUPERCONTENTS_PLAYERCLIP;
+		if ((int)passedict->v->flags & FL_MONSTER)
+			hitsupercontentsmask |= SUPERCONTENTS_MONSTERCLIP;
+	}
+
 	// clip to world
-	cliptrace = SV_ClipMoveToEntity(sv.edicts, clipstart, clipmins, clipmaxs, clipend, type);
+	cliptrace = SV_ClipMoveToEntity(sv.edicts, clipstart, clipmins, clipmaxs, clipend, type, hitsupercontentsmask);
 	if (cliptrace.startsolid || cliptrace.fraction < 1)
 		cliptrace.ent = sv.edicts;
 	if (type == MOVE_WORLDONLY)
@@ -654,9 +665,9 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 
 		// might interact, so do an exact clip
 		if ((int)touch->v->flags & FL_MONSTER)
-			trace = SV_ClipMoveToEntity(touch, clipstart, clipmins2, clipmaxs2, clipend, type);
+			trace = SV_ClipMoveToEntity(touch, clipstart, clipmins2, clipmaxs2, clipend, type, hitsupercontentsmask);
 		else
-			trace = SV_ClipMoveToEntity(touch, clipstart, clipmins, clipmaxs, clipend, type);
+			trace = SV_ClipMoveToEntity(touch, clipstart, clipmins, clipmaxs, clipend, type, hitsupercontentsmask);
 		// LordHavoc: take the 'best' answers from the new trace and combine with existing data
 		if (trace.allsolid)
 			cliptrace.allsolid = true;
