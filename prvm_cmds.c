@@ -2576,7 +2576,7 @@ void VM_precache_pic(void)
 
 	VM_CheckEmptyString (s);
 
-	if(!Draw_CachePic(s))
+	if(!Draw_CachePic(s, false))
 		PRVM_G_INT(OFS_RETURN) = PRVM_SetString("");
 }
 
@@ -2842,7 +2842,7 @@ void VM_getimagesize(void)
 
 	VM_CheckEmptyString (p);
 
-	pic = Draw_CachePic (p);
+	pic = Draw_CachePic (p, false);
 
 	PRVM_G_VECTOR(OFS_RETURN)[0] = pic->width;
 	PRVM_G_VECTOR(OFS_RETURN)[1] = pic->height;

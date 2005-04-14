@@ -1793,7 +1793,7 @@ void SCR_UpdateLoadingScreen (void)
 	R_Mesh_Start();
 	R_Mesh_Matrix(&r_identitymatrix);
 	// draw the loading plaque
-	pic = Draw_CachePic("gfx/loading.lmp");
+	pic = Draw_CachePic("gfx/loading.lmp", false);
 	x = (vid_conwidth.integer - pic->width)/2;
 	y = (vid_conheight.integer - pic->height)/2;
 	GL_Color(1,1,1,1);

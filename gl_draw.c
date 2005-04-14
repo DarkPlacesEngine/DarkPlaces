@@ -262,18 +262,25 @@ Draw_CachePic
 ================
 */
 // FIXME: move this to client somehow
-cachepic_t	*Draw_CachePic (char *path)
+cachepic_t	*Draw_CachePic (char *path, qboolean persistent)
 {
 	int i, crc, hashkey;
 	cachepic_t *pic;
 	qpic_t *p;
+	int persistentflag;
 
-	if (!strncmp(CLVIDEOPREFIX, path, sizeof(CLVIDEOPREFIX) - 1)) {
+    if (!strncmp(CLVIDEOPREFIX, path, sizeof(CLVIDEOPREFIX) - 1)) {
 		clvideo_t *video;
 
 		video = CL_GetVideo(path);
 		if( video )
 			return &video->cpif;
+	}
+
+	if (persistent) {
+		persistentflag = TEXF_PRECACHE;
+	} else {
+		persistentflag = 0;
 	}
 
 	crc = CRC_Block(path, strlen(path));
@@ -291,11 +298,11 @@ cachepic_t	*Draw_CachePic (char *path)
 	cachepichash[hashkey] = pic;
 
 	// load the pic from disk
-	pic->tex = loadtextureimage(drawtexturepool, path, 0, 0, false, TEXF_ALPHA | TEXF_PRECACHE);
+	pic->tex = loadtextureimage(drawtexturepool, path, 0, 0, false, TEXF_ALPHA | persistentflag);
 	if (pic->tex == NULL && !strncmp(path, "gfx/", 4))
 	{
 		// compatibility with older versions
-		pic->tex = loadtextureimage(drawtexturepool, path + 4, 0, 0, false, TEXF_ALPHA | TEXF_PRECACHE);
+		pic->tex = loadtextureimage(drawtexturepool, path + 4, 0, 0, false, TEXF_ALPHA | persistentflag);
 		// failed to find gfx/whatever.tga or similar, try the wad
 		if (pic->tex == NULL && (p = W_GetLumpName (path + 4)))
 		{
@@ -307,10 +314,10 @@ cachepic_t	*Draw_CachePic (char *path)
 				for (i = 0;i < 128 * 128;i++)
 					if (pix[i] == 0)
 						pix[i] = 255;
-				pic->tex = R_LoadTexture2D(drawtexturepool, path, 128, 128, pix, TEXTYPE_PALETTE, TEXF_ALPHA | TEXF_PRECACHE, palette_complete);
+				pic->tex = R_LoadTexture2D(drawtexturepool, path, 128, 128, pix, TEXTYPE_PALETTE, TEXF_ALPHA | persistentflag, palette_complete);
 			}
 			else
-				pic->tex = R_LoadTexture2D(drawtexturepool, path, p->width, p->height, p->data, TEXTYPE_PALETTE, TEXF_ALPHA | TEXF_PRECACHE, palette_complete);
+				pic->tex = R_LoadTexture2D(drawtexturepool, path, p->width, p->height, p->data, TEXTYPE_PALETTE, TEXF_ALPHA | persistentflag, palette_complete);
 		}
 	}
 
@@ -416,7 +423,7 @@ static void gl_draw_start(void)
 	numcachepics = 0;
 	memset(cachepichash, 0, sizeof(cachepichash));
 
-	char_texture = Draw_CachePic("gfx/conchars")->tex;
+	char_texture = Draw_CachePic("gfx/conchars", true)->tex;
 }
 
 static void gl_draw_shutdown(void)

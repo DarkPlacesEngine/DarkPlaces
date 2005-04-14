@@ -150,7 +150,7 @@ extern cvar_t developer_networking;
 extern char playername[];
 extern int playercolor;
 
-#define SERVERLIST_TOTALSIZE			2048
+#define SERVERLIST_TOTALSIZE		2048
 #define SERVERLIST_VIEWLISTSIZE		128
 #define SERVERLIST_ANDMASKCOUNT		5
 #define SERVERLIST_ORMASKCOUNT		5
