@@ -35,7 +35,7 @@ static sbarpic_t *Sbar_NewPic(const char *name)
 	strcpy(sbarpics[numsbarpics].name, name);
 	// precache it
 	// FIXME: precache on every renderer restart (or move this to client)
-	Draw_CachePic(sbarpics[numsbarpics].name);
+	Draw_CachePic(sbarpics[numsbarpics].name, true);
 	return sbarpics + (numsbarpics++);
 }
 
@@ -1175,7 +1175,7 @@ void Sbar_DeathmatchOverlay (void)
 	int i, x, y;
 	cachepic_t *pic;
 
-	pic = Draw_CachePic ("gfx/ranking.lmp");
+	pic = Draw_CachePic ("gfx/ranking.lmp", true);
 	DrawQ_Pic ((vid.conwidth - pic->width)/2, 8, "gfx/ranking.lmp", 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
 
 	// scores
@@ -1284,7 +1284,7 @@ void Sbar_FinaleOverlay (void)
 {
 	cachepic_t	*pic;
 
-	pic = Draw_CachePic ("gfx/finale.lmp");
+	pic = Draw_CachePic ("gfx/finale.lmp", true);
 	DrawQ_Pic((vid.conwidth - pic->width)/2, 16, "gfx/finale.lmp", 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
 }
 

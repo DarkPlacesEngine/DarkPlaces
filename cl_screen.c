@@ -215,7 +215,7 @@ void SCR_DrawPause (void)
 	if (!cl.paused)
 		return;
 
-	pic = Draw_CachePic ("gfx/pause.lmp");
+	pic = Draw_CachePic ("gfx/pause.lmp", true);
 	DrawQ_Pic ((vid.conwidth - pic->width)/2, (vid.conheight - pic->height)/2, "gfx/pause.lmp", 0, 0, 1, 1, 1, 1, 0);
 }
 
@@ -551,7 +551,7 @@ void DrawQ_SuperPic(float x, float y, char *picname, float width, float height, 
 	memset(&mesh, 0, sizeof(mesh));
 	if (picname && picname[0])
 	{
-		pic = Draw_CachePic(picname);
+		pic = Draw_CachePic(picname, false);
 		if (width == 0)
 			width = pic->width;
 		if (height == 0)

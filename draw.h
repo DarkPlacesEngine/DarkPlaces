@@ -39,7 +39,7 @@ typedef struct cachepic_s
 cachepic_t;
 
 void Draw_Init (void);
-cachepic_t *Draw_CachePic (char *path);
+cachepic_t *Draw_CachePic (char *path, qboolean persistent);
 // create or update a pic's image
 cachepic_t *Draw_NewPic(char *picname, int width, int height, int alpha, qbyte *pixels);
 // free the texture memory used by a pic
