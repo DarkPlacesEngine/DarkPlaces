@@ -311,7 +311,7 @@ LoadTGA
 */
 qbyte *LoadTGA (const qbyte *f, int matchwidth, int matchheight)
 {
-	int x, y, row_inc, compressed, readpixelcount, red, green, blue, alpha, runlen, pindex;
+	int x, y, row_inc, compressed, readpixelcount, red, green, blue, alpha, runlen, pindex, alphabits;
 	qbyte *pixbuf, *image_rgba;
 	const qbyte *fin, *enddata;
 	TargaHeader targa_header;
@@ -344,26 +344,17 @@ qbyte *LoadTGA (const qbyte *f, int matchwidth, int matchheight)
 	targa_header.pixel_size = f[16];
 	targa_header.attributes = f[17];
 
+	// advance to end of header
 	fin = f + 18;
-	if (targa_header.id_length != 0)
-		fin += targa_header.id_length;  // skip TARGA image comment
-	if (targa_header.image_type == 2 || targa_header.image_type == 10)
+
+	// skip TARGA image comment (usually 0 bytes)
+	fin += targa_header.id_length;
+
+	// read/skip the colormap if present (note: according to the TARGA spec it
+	// can be present even on truecolor or greyscale images, just not used by
+	// the image data)
+	if (targa_header.colormap_type)
 	{
-		if (targa_header.pixel_size != 24 && targa_header.pixel_size != 32)
-		{
-			Con_Print("LoadTGA: only 24bit and 32bit pixel sizes supported for type 2 and type 10 images\n");
-			PrintTargaHeader(&targa_header);
-			return NULL;
-		}
-	}
-	else if (targa_header.image_type == 1 || targa_header.image_type == 9)
-	{
-		if (targa_header.pixel_size != 8)
-		{
-			Con_Print("LoadTGA: only 8bit pixel size for type 1, 3, 9, and 11 images supported\n");
-			PrintTargaHeader(&targa_header);
-			return NULL;
-		}
 		if (targa_header.colormap_length > 256)
 		{
 			Con_Print("LoadTGA: only up to 256 colormap_length supported\n");
@@ -399,6 +390,26 @@ qbyte *LoadTGA (const qbyte *f, int matchwidth, int matchheight)
 		else
 		{
 			Con_Print("LoadTGA: Only 32 and 24 bit colormap_size supported\n");
+			PrintTargaHeader(&targa_header);
+			return NULL;
+		}
+	}
+
+	// check our pixel_size restrictions according to image_type
+	if (targa_header.image_type == 2 || targa_header.image_type == 10)
+	{
+		if (targa_header.pixel_size != 24 && targa_header.pixel_size != 32)
+		{
+			Con_Print("LoadTGA: only 24bit and 32bit pixel sizes supported for type 2 and type 10 images\n");
+			PrintTargaHeader(&targa_header);
+			return NULL;
+		}
+	}
+	else if (targa_header.image_type == 1 || targa_header.image_type == 9)
+	{
+		if (targa_header.pixel_size != 8)
+		{
+			Con_Print("LoadTGA: only 8bit pixel size for type 1, 3, 9, and 11 images supported\n");
 			PrintTargaHeader(&targa_header);
 			return NULL;
 		}
@@ -442,6 +453,14 @@ qbyte *LoadTGA (const qbyte *f, int matchwidth, int matchheight)
 	{
 		pixbuf = image_rgba;
 		row_inc = 0;
+	}
+
+	// number of attribute bits per pixel, we only support 0 or 8
+	alphabits = targa_header.attributes & 0x0F;
+	if (alphabits != 8 && alphabits != 0)
+	{
+		Con_Print("LoadTGA: only 0 or 8 attribute (alpha) bits supported\n");
+		return NULL;
 	}
 
 	compressed = targa_header.image_type == 9 || targa_header.image_type == 10 || targa_header.image_type == 11;
@@ -501,6 +520,8 @@ qbyte *LoadTGA (const qbyte *f, int matchwidth, int matchheight)
 						red = green = blue = *fin++;
 						break;
 					}
+					if (!alphabits)
+						alpha = 255;
 				}
 			}
 			*pixbuf++ = red;
