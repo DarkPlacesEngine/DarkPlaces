@@ -1357,7 +1357,7 @@ void SV_Physics_Step (edict_t *ent)
 		SV_LinkEdict(ent, true);
 
 		// just hit ground
-		if (hitsound && (int)ent->v->flags & FL_ONGROUND)
+		if (hitsound && (int)ent->v->flags & FL_ONGROUND && gamemode != GAME_NEXUIZ)
 			SV_StartSound(ent, 0, "demon/dland2.wav", 255, 1);
 	}
 
@@ -1405,8 +1405,11 @@ void SV_Physics (void)
 		if (pr_global_struct->force_retouch)
 			SV_LinkEdict (ent, true);	// force retouch even for stationary
 
-		if (i >= 1 && i <= svs.maxclients && svs.clients[i-1].spawned)
+		if (i >= 1 && i <= svs.maxclients)
 		{
+			// don't do physics on disconnected clients, FrikBot relies on this
+			if (!svs.clients[i-1].spawned)
+				continue;
 			// connected slot
 			// call standard client pre-think
 			SV_CheckVelocity (ent);
@@ -1484,7 +1487,7 @@ void SV_Physics (void)
 			break;
 		}
 
-		if (i >= 1 && i <= svs.maxclients && svs.clients[i-1].spawned)
+		if (i >= 1 && i <= svs.maxclients)
 		{
 			SV_CheckVelocity (ent);
 
