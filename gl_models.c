@@ -387,14 +387,7 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 			Mod_BuildTextureVectorsAndNormals(0, mesh->num_vertices, mesh->num_triangles, vertex3f, mesh->data_texcoord2f, mesh->data_element3i, svector3f, tvector3f, normal3f);
 		}
 		c_alias_polys += mesh->num_triangles;
-		R_Shadow_RenderLighting(0, mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, vertex3f, svector3f, tvector3f, normal3f, mesh->data_texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorbase, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, (ent->colormap >= 0 || !texture->skin.merged) ? texture->skin.base : texture->skin.merged, texture->skin.nmap, texture->skin.gloss, lightcubemap, ambientscale, diffusescale, specularscale);
-		if (ent->colormap >= 0)
-		{
-			if (texture->skin.pants && VectorLength2(lightcolorpants) >= 0.001)
-				R_Shadow_RenderLighting(0, mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, vertex3f, svector3f, tvector3f, normal3f, mesh->data_texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorpants, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, texture->skin.pants, texture->skin.nmap, NULL, lightcubemap, ambientscale, diffusescale, 0);
-			if (texture->skin.shirt && VectorLength2(lightcolorshirt) >= 0.001)
-				R_Shadow_RenderLighting(0, mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, vertex3f, svector3f, tvector3f, normal3f, mesh->data_texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorshirt, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, texture->skin.shirt, texture->skin.nmap, NULL, lightcubemap, ambientscale, diffusescale, 0);
-		}
+		R_Shadow_RenderLighting(0, mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, vertex3f, svector3f, tvector3f, normal3f, mesh->data_texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorbase, lightcolorpants, lightcolorshirt, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, (ent->colormap >= 0 || !texture->skin.merged) ? texture->skin.base : texture->skin.merged, ent->colormap >= 0 ? texture->skin.pants : 0, ent->colormap >= 0 ? texture->skin.shirt : 0, texture->skin.nmap, texture->skin.gloss, lightcubemap, ambientscale, diffusescale, specularscale);
 	}
 }
 

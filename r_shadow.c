@@ -670,9 +670,10 @@ int *R_Shadow_ResizeShadowElements(int numtris)
 	return shadowelements;
 }
 
-void R_Shadow_EnlargeClusterBuffer(int numclusters)
+void R_Shadow_EnlargeClusterSurfaceBuffer(int numclusters, int numsurfaces)
 {
 	int numclusterpvsbytes = (((numclusters + 7) >> 3) + 255) & ~255;
+	int numsurfacepvsbytes = (((numsurfaces + 7) >> 3) + 255) & ~255;
 	if (r_shadow_buffer_numclusterpvsbytes < numclusterpvsbytes)
 	{
 		if (r_shadow_buffer_clusterpvs)
@@ -683,11 +684,6 @@ void R_Shadow_EnlargeClusterBuffer(int numclusters)
 		r_shadow_buffer_clusterpvs = Mem_Alloc(r_shadow_mempool, r_shadow_buffer_numclusterpvsbytes);
 		r_shadow_buffer_clusterlist = Mem_Alloc(r_shadow_mempool, r_shadow_buffer_numclusterpvsbytes * 8 * sizeof(*r_shadow_buffer_clusterlist));
 	}
-}
-
-void R_Shadow_EnlargeSurfaceBuffer(int numsurfaces)
-{
-	int numsurfacepvsbytes = (((numsurfaces + 7) >> 3) + 255) & ~255;
 	if (r_shadow_buffer_numsurfacepvsbytes < numsurfacepvsbytes)
 	{
 		if (r_shadow_buffer_surfacepvs)
@@ -1552,16 +1548,19 @@ static void R_Shadow_GenTexCoords_Specular_NormalCubeMap(float *out3f, int numve
 	}
 }
 
-void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles, const int *elements, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *texcoord2f, const float *relativelightorigin, const float *relativeeyeorigin, const float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *basetexture, rtexture_t *bumptexture, rtexture_t *glosstexture, rtexture_t *lightcubemap, vec_t ambientscale, vec_t diffusescale, vec_t specularscale)
+void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles, const int *elements, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *texcoord2f, const float *relativelightorigin, const float *relativeeyeorigin, const float *lightcolorbase, const float *lightcolorpants, const float *lightcolorshirt, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *basetexture, rtexture_t *pantstexture, rtexture_t *shirttexture, rtexture_t *bumptexture, rtexture_t *glosstexture, rtexture_t *lightcubemap, vec_t ambientscale, vec_t diffusescale, vec_t specularscale)
 {
 	int renders;
 	float color[3], color2[3], colorscale;
 	rmeshstate_t m;
-	// FIXME: support EF_NODEPTHTEST
-	GL_DepthMask(false);
-	GL_DepthTest(true);
 	if (!bumptexture)
 		bumptexture = r_texture_blanknormalmap;
+	if (!lightcolorbase)
+		lightcolorbase = vec3_origin;
+	if (!lightcolorpants)
+		lightcolorpants = vec3_origin;
+	if (!lightcolorshirt)
+		lightcolorshirt = vec3_origin;
 	specularscale *= r_shadow_glossintensity.value;
 	if (!glosstexture)
 	{
@@ -1580,8 +1579,11 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 		specularscale = 0;
 	if (!lightcubemap)
 		lightcubemap = r_shadow_blankwhitecubetexture;
-	if (ambientscale + diffusescale + specularscale < 0.01)
+	if ((ambientscale + diffusescale) * (VectorLength2(lightcolorbase) + VectorLength2(lightcolorpants) + VectorLength2(lightcolorshirt)) + specularscale * VectorLength2(lightcolorbase) <= 0.001)
 		return;
+	// FIXME: support EF_NODEPTHTEST
+	GL_DepthMask(false);
+	GL_DepthTest(true);
 	if (r_shadow_glsl.integer && r_shadow_program_light[0])
 	{
 		unsigned int perm, prog;
@@ -1629,7 +1631,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 			qglUniform1fARB(qglGetUniformLocationARB(prog, "SpecularPower"), 8);CHECKGLERROR
 			qglUniform1fARB(qglGetUniformLocationARB(prog, "SpecularScale"), specularscale);CHECKGLERROR
 		}
-		qglUniform3fARB(qglGetUniformLocationARB(prog, "LightColor"), lightcolor[0], lightcolor[1], lightcolor[2]);CHECKGLERROR
+		qglUniform3fARB(qglGetUniformLocationARB(prog, "LightColor"), lightcolorbase[0], lightcolorbase[1], lightcolorbase[2]);CHECKGLERROR
 		qglUniform3fARB(qglGetUniformLocationARB(prog, "LightPosition"), relativelightorigin[0], relativelightorigin[1], relativelightorigin[2]);CHECKGLERROR
 		if (perm & (SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_FOG | SHADERPERMUTATION_OFFSETMAPPING))
 		{
@@ -1645,6 +1647,23 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 		R_Mesh_Draw(firstvertex, numvertices, numtriangles, elements);
 		c_rt_lightmeshes++;
 		c_rt_lighttris += numtriangles;
+		// TODO: add direct pants/shirt rendering
+		if (pantstexture && (ambientscale + diffusescale) * VectorLength2(lightcolorpants) > 0.001)
+		{
+			R_Mesh_TexBind(1, R_GetTexture(pantstexture));
+			qglUniform3fARB(qglGetUniformLocationARB(prog, "LightColor"), lightcolorpants[0], lightcolorpants[1], lightcolorpants[2]);CHECKGLERROR
+			R_Mesh_Draw(firstvertex, numvertices, numtriangles, elements);
+			c_rt_lightmeshes++;
+			c_rt_lighttris += numtriangles;
+		}
+		if (shirttexture && (ambientscale + diffusescale) * VectorLength2(lightcolorshirt) > 0.001)
+		{
+			R_Mesh_TexBind(1, R_GetTexture(shirttexture));
+			qglUniform3fARB(qglGetUniformLocationARB(prog, "LightColor"), lightcolorshirt[0], lightcolorshirt[1], lightcolorshirt[2]);CHECKGLERROR
+			R_Mesh_Draw(firstvertex, numvertices, numtriangles, elements);
+			c_rt_lightmeshes++;
+			c_rt_lighttris += numtriangles;
+		}
 		GL_LockArrays(0, 0);
 		qglUseProgramObjectARB(0);
 		// HACK HACK HACK: work around for stupid NVIDIA bug that causes GL_OUT_OF_MEMORY and/or software rendering
@@ -1654,6 +1673,11 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 	}
 	else if (gl_dot3arb && gl_texturecubemap && gl_combine.integer && gl_stencil)
 	{
+		// TODO: add direct pants/shirt rendering
+		if (pantstexture && (ambientscale + diffusescale) * VectorLength2(lightcolorpants) > 0.001)
+			R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorpants, NULL, NULL, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, pantstexture, NULL, NULL, bumptexture, NULL, lightcubemap, ambientscale, diffusescale, specularscale);
+		if (shirttexture && (ambientscale + diffusescale) * VectorLength2(lightcolorshirt) > 0.001)
+			R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorshirt, NULL, NULL, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, shirttexture, NULL, NULL, bumptexture, NULL, lightcubemap, ambientscale, diffusescale, specularscale);
 		if (!bumptexture)
 			bumptexture = r_texture_blanknormalmap;
 		if (!glosstexture)
@@ -1822,7 +1846,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 			// this final code is shared
 			R_Mesh_State(&m);
 			GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 0);
-			VectorScale(lightcolor, colorscale, color2);
+			VectorScale(lightcolorbase, colorscale, color2);
 			GL_LockArrays(firstvertex, numvertices);
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
 			{
@@ -2102,7 +2126,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 			// this final code is shared
 			R_Mesh_State(&m);
 			GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 0);
-			VectorScale(lightcolor, colorscale, color2);
+			VectorScale(lightcolorbase, colorscale, color2);
 			GL_LockArrays(firstvertex, numvertices);
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
 			{
@@ -2331,7 +2355,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 				}
 				R_Mesh_State(&m);
 				GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 0);
-				VectorScale(lightcolor, colorscale, color2);
+				VectorScale(lightcolorbase, colorscale, color2);
 				GL_LockArrays(firstvertex, numvertices);
 				for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
 				{
@@ -2346,10 +2370,15 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 	}
 	else
 	{
+		// TODO: add direct pants/shirt rendering
+		if (pantstexture && (ambientscale + diffusescale) * VectorLength2(lightcolorpants) > 0.001)
+			R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorpants, NULL, NULL, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, pantstexture, NULL, NULL, bumptexture, NULL, lightcubemap, ambientscale, diffusescale, specularscale);
+		if (shirttexture && (ambientscale + diffusescale) * VectorLength2(lightcolorshirt) > 0.001)
+			R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorshirt, NULL, NULL, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, shirttexture, NULL, NULL, bumptexture, NULL, lightcubemap, ambientscale, diffusescale, specularscale);
 		if (ambientscale)
 		{
 			GL_BlendFunc(GL_ONE, GL_ONE);
-			VectorScale(lightcolor, ambientscale, color2);
+			VectorScale(lightcolorbase, ambientscale, color2);
 			memset(&m, 0, sizeof(m));
 			m.pointer_vertex = vertex3f;
 			m.tex[0] = R_GetTexture(basetexture);
@@ -2404,7 +2433,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 		if (diffusescale)
 		{
 			GL_BlendFunc(GL_ONE, GL_ONE);
-			VectorScale(lightcolor, diffusescale, color2);
+			VectorScale(lightcolorbase, diffusescale, color2);
 			memset(&m, 0, sizeof(m));
 			m.pointer_vertex = vertex3f;
 			m.pointer_color = varray_color4f;
@@ -2529,8 +2558,7 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 	{
 		// this variable directs the DrawShadowVolume and DrawLight code to capture into the mesh chain instead of rendering
 		r_shadow_compilingrtlight = rtlight;
-		R_Shadow_EnlargeClusterBuffer(model->brush.num_pvsclusters);
-		R_Shadow_EnlargeSurfaceBuffer(model->nummodelsurfaces);
+		R_Shadow_EnlargeClusterSurfaceBuffer(model->brush.num_pvsclusters, model->nummodelsurfaces);
 		model->GetLightInfo(ent, rtlight->shadoworigin, rtlight->radius, rtlight->cullmins, rtlight->cullmaxs, r_shadow_buffer_clusterlist, r_shadow_buffer_clusterpvs, &numclusters, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces);
 		rtlight->static_numclusterpvsbytes = (model->brush.num_pvsclusters + 7) >> 3;
 		rtlight->static_clusterpvs = Mem_Alloc(r_shadow_mempool, rtlight->static_numclusterpvsbytes);
@@ -2689,8 +2717,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 		if (R_CullBox(cullmins, cullmaxs))
 			return;
 		// calculate lit surfaces and clusters
-		R_Shadow_EnlargeClusterBuffer(r_refdef.worldmodel->brush.num_pvsclusters);
-		R_Shadow_EnlargeSurfaceBuffer(r_refdef.worldmodel->nummodelsurfaces);
+		R_Shadow_EnlargeClusterSurfaceBuffer(r_refdef.worldmodel->brush.num_pvsclusters, r_refdef.worldmodel->nummodelsurfaces);
 		r_refdef.worldmodel->GetLightInfo(r_refdef.worldentity, rtlight->shadoworigin, rtlight->radius, cullmins, cullmaxs, r_shadow_buffer_clusterlist, r_shadow_buffer_clusterpvs, &numclusters, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces);
 		clusterlist = r_shadow_buffer_clusterlist;
 		clusterpvs = r_shadow_buffer_clusterpvs;
@@ -2804,7 +2831,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 			{
 				R_Mesh_Matrix(&ent->matrix);
 				for (mesh = rtlight->static_meshchain_light;mesh;mesh = mesh->next)
-					R_Shadow_RenderLighting(0, mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->vertex3f, mesh->svector3f, mesh->tvector3f, mesh->normal3f, mesh->texcoord2f, relativelightorigin, relativeeyeorigin, lightcolor2, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, mesh->map_diffuse, mesh->map_normal, mesh->map_specular, cubemaptexture, rtlight->ambientscale, rtlight->diffusescale, rtlight->specularscale);
+					R_Shadow_RenderLighting(0, mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->vertex3f, mesh->svector3f, mesh->tvector3f, mesh->normal3f, mesh->texcoord2f, relativelightorigin, relativeeyeorigin, lightcolor2, NULL, NULL, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, mesh->map_diffuse, NULL, NULL, mesh->map_normal, mesh->map_specular, cubemaptexture, rtlight->ambientscale, rtlight->diffusescale, rtlight->specularscale);
 			}
 			else
 				ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, rtlight->radius, lightcolor2, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, cubemaptexture, rtlight->ambientscale, rtlight->diffusescale, rtlight->specularscale, numsurfaces, surfacelist);
