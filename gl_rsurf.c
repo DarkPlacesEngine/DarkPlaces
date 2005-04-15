@@ -1787,6 +1787,14 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outclusterlist, qbyte *outclusterpvs, int *outnumclusterspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer)
 {
 	r_q1bsp_getlightinfo_t info;
+	VectorCopy(relativelightorigin, info.relativelightorigin);
+	info.lightradius = lightradius;
+	info.lightmins[0] = info.relativelightorigin[0] - info.lightradius;
+	info.lightmins[1] = info.relativelightorigin[1] - info.lightradius;
+	info.lightmins[2] = info.relativelightorigin[2] - info.lightradius;
+	info.lightmaxs[0] = info.relativelightorigin[0] + info.lightradius;
+	info.lightmaxs[1] = info.relativelightorigin[1] + info.lightradius;
+	info.lightmaxs[2] = info.relativelightorigin[2] + info.lightradius;
 	if (ent->model == NULL)
 	{
 		VectorCopy(info.lightmins, outmins);
@@ -1796,20 +1804,12 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 		return;
 	}
 	info.model = ent->model;
-	VectorCopy(relativelightorigin, info.relativelightorigin);
-	info.lightradius = lightradius;
 	info.outclusterlist = outclusterlist;
 	info.outclusterpvs = outclusterpvs;
 	info.outnumclusters = 0;
 	info.outsurfacelist = outsurfacelist;
 	info.outsurfacepvs = outsurfacepvs;
 	info.outnumsurfaces = 0;
-	info.lightmins[0] = info.relativelightorigin[0] - lightradius;
-	info.lightmins[1] = info.relativelightorigin[1] - lightradius;
-	info.lightmins[2] = info.relativelightorigin[2] - lightradius;
-	info.lightmaxs[0] = info.relativelightorigin[0] + lightradius;
-	info.lightmaxs[1] = info.relativelightorigin[1] + lightradius;
-	info.lightmaxs[2] = info.relativelightorigin[2] + lightradius;
 	VectorCopy(info.relativelightorigin, info.outmins);
 	VectorCopy(info.relativelightorigin, info.outmaxs);
 	memset(outclusterpvs, 0, info.model->brush.num_pvsclusterbytes);
