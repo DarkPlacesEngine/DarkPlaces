@@ -1409,11 +1409,11 @@ void EntityFrame5_ExpandEdicts(entityframe5_database_t *d, int newmax)
 		d->visiblebits = (void *)data;data += (d->maxedicts+7)/8 * sizeof(qbyte);
 		if (oldmaxedicts)
 		{
-			memcpy(d->deltabits, olddeltabits, d->maxedicts * sizeof(int));
-			memcpy(d->priorities, oldpriorities, d->maxedicts * sizeof(qbyte));
-			memcpy(d->updateframenum, oldupdateframenum, d->maxedicts * sizeof(int));
-			memcpy(d->states, oldstates, d->maxedicts * sizeof(entity_state_t));
-			memcpy(d->visiblebits, oldvisiblebits, (d->maxedicts+7)/8 * sizeof(qbyte));
+			memcpy(d->deltabits, olddeltabits, oldmaxedicts * sizeof(int));
+			memcpy(d->priorities, oldpriorities, oldmaxedicts * sizeof(qbyte));
+			memcpy(d->updateframenum, oldupdateframenum, oldmaxedicts * sizeof(int));
+			memcpy(d->states, oldstates, oldmaxedicts * sizeof(entity_state_t));
+			memcpy(d->visiblebits, oldvisiblebits, (oldmaxedicts+7)/8 * sizeof(qbyte));
 			// the previous buffers were a single allocation, so just one free
 			Mem_Free(olddeltabits);
 		}
