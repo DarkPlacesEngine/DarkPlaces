@@ -1420,18 +1420,26 @@ void EntityFrame5_ExpandEdicts(entityframe5_database_t *d, int newmax)
 	}
 }
 
-int EntityState5_Priority(entityframe5_database_t *d, entity_state_t *view, entity_state_t *s, int changedbits, int age)
+int EntityState5_Priority(entityframe5_database_t *d, int stateindex)
 {
 	int lowprecision, limit, priority;
 	double distance;
+	int changedbits;
+	int age;
+	entity_state_t *view, *s;
+	changedbits = d->deltabits[stateindex];
 	if (!changedbits)
 		return 0;
-	if (!s->active/* && changedbits & E5_FULLUPDATE*/)
+	if (!d->states[stateindex].active/* && changedbits & E5_FULLUPDATE*/)
 		return E5_PROTOCOL_PRIORITYLEVELS - 1;
 	// check whole attachment chain to judge relevance to player
+	view = d->states + d->viewentnum;
 	lowprecision = false;
 	for (limit = 0;limit < 256;limit++)
 	{
+		if (d->maxedicts < stateindex)
+			EntityFrame5_ExpandEdicts(d, (stateindex+256)&~255);
+		s = d->states + stateindex;
 		if (s == view)
 			return E5_PROTOCOL_PRIORITYLEVELS - 1;
 		if (s->flags & RENDER_VIEWMODEL)
@@ -1444,12 +1452,16 @@ int EntityState5_Priority(entityframe5_database_t *d, entity_state_t *view, enti
 				return E5_PROTOCOL_PRIORITYLEVELS - 1;
 			break;
 		}
-		s = d->states + s->tagentity;
+		stateindex = s->tagentity;
 	}
 	if (limit >= 256)
-		Con_Printf("Protocol: Runaway loop recursing tagentity links on entity %i\n", s->number);
+	{
+		Con_Printf("Protocol: Runaway loop recursing tagentity links on entity %i\n", stateindex);
+		return 0;
+	}
 	// it's not a viewmodel for this client
 	distance = VectorDistance(view->origin, s->origin);
+	age = d->latestframenum - d->updateframenum[stateindex];
 	priority = (E5_PROTOCOL_PRIORITYLEVELS / 2) + age - (int)(distance * (E5_PROTOCOL_PRIORITYLEVELS / 16384.0f));
 	if (lowprecision)
 		priority -= (E5_PROTOCOL_PRIORITYLEVELS / 4);
@@ -1852,7 +1864,7 @@ void EntityFrame5_CL_ReadFrame(void)
 	}
 }
 
-void EntityFrame5_LostFrame(entityframe5_database_t *d, int framenum, int viewentnum)
+void EntityFrame5_LostFrame(entityframe5_database_t *d, int framenum)
 {
 	int i, j, k, l, bits;
 	entityframe5_changestate_t *s, *s2;
@@ -1889,10 +1901,7 @@ void EntityFrame5_LostFrame(entityframe5_database_t *d, int framenum, int viewen
 				// if the bits haven't all been cleared, there were some bits
 				// lost with this packet, so set them again now
 				if (bits)
-				{
 					d->deltabits[s->number] |= bits;
-					d->priorities[s->number] = EntityState5_Priority(d, d->states + viewentnum, d->states + s->number, d->deltabits[s->number], d->latestframenum - d->updateframenum[s->number]);
-				}
 			}
 			// mark lost stats
 			for (j = 0;j < MAX_CL_STATS;j++)
@@ -1936,6 +1945,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 		EntityFrame5_ExpandEdicts(d, (sv.num_edicts + 255) & ~255);
 
 	framenum = d->latestframenum + 1;
+	d->viewentnum = viewentnum;
 
 	// if packet log is full, mark all frames as lost, this will cause
 	// it to send the lost data again
@@ -1944,7 +1954,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 			break;
 	if (packetlognumber == ENTITYFRAME5_MAXPACKETLOGS)
 	{
-		EntityFrame5_LostFrame(d, framenum, viewentnum);
+		EntityFrame5_LostFrame(d, framenum);
 		packetlognumber = 0;
 	}
 
@@ -1975,7 +1985,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 			{
 				CLEARPVSBIT(d->visiblebits, num);
 				d->deltabits[num] = E5_FULLUPDATE;
-				d->priorities[num] = EntityState5_Priority(d, d->states + viewentnum, d->states + num, d->deltabits[num], framenum - d->updateframenum[num]);
+				d->priorities[num] = EntityState5_Priority(d, num);
 				d->states[num] = defaultstate;
 				d->states[num].number = num;
 			}
@@ -1989,7 +1999,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 		}
 		SETPVSBIT(d->visiblebits, num);
 		d->deltabits[num] |= EntityState5_DeltaBits(d->states + num, n);
-		d->priorities[num] = EntityState5_Priority(d, d->states + viewentnum, d->states + num, d->deltabits[num], framenum - d->updateframenum[num]);
+		d->priorities[num] = EntityState5_Priority(d, num);
 		d->states[num] = *n;
 		d->states[num].number = num;
 		// advance to next entity so the next iteration doesn't immediately remove it
@@ -2002,7 +2012,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 		{
 			CLEARPVSBIT(d->visiblebits, num);
 			d->deltabits[num] = E5_FULLUPDATE;
-			d->priorities[num] = EntityState5_Priority(d, d->states + viewentnum, d->states + num, d->deltabits[num], framenum - d->updateframenum[num]);
+			d->priorities[num] = EntityState5_Priority(d, num);
 			d->states[num] = defaultstate;
 			d->states[num].number = num;
 		}

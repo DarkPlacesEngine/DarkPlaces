@@ -716,6 +716,8 @@ typedef struct entityframe5_database_s
 {
 	// number of the latest message sent to client
 	int latestframenum;
+	// updated by WriteFrame for internal use
+	int viewentnum;
 
 	// logs of all recently sent messages (between acked and latest)
 	entityframe5_packetlog_t packetlog[ENTITYFRAME5_MAXPACKETLOGS];
@@ -760,11 +762,10 @@ entityframe5_database_t;
 entityframe5_database_t *EntityFrame5_AllocDatabase(mempool_t *pool);
 void EntityFrame5_FreeDatabase(entityframe5_database_t *d);
 void EntityFrame5_ResetDatabase(entityframe5_database_t *d);
-int EntityState5_Priority(entityframe5_database_t *d, entity_state_t *view, entity_state_t *s, int changedbits, int age);
 void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbits, sizebuf_t *msg);
 int EntityState5_DeltaBitsForState(entity_state_t *o, entity_state_t *n);
 void EntityFrame5_CL_ReadFrame(void);
-void EntityFrame5_LostFrame(entityframe5_database_t *d, int framenum, int viewentnum);
+void EntityFrame5_LostFrame(entityframe5_database_t *d, int framenum);
 void EntityFrame5_AckFrame(entityframe5_database_t *d, int framenum);
 void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum, int *stats);
 
