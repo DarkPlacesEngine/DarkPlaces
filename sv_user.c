@@ -709,7 +709,7 @@ void SV_ReadClientMove (usercmd_t *move)
 void SV_FrameLost(int framenum)
 {
 	if (host_client->entitydatabase5)
-		EntityFrame5_LostFrame(host_client->entitydatabase5, framenum, host_client - svs.clients + 1);
+		EntityFrame5_LostFrame(host_client->entitydatabase5, framenum);
 }
 
 void SV_FrameAck(int framenum)
