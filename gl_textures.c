@@ -552,7 +552,7 @@ void R_Textures_Frame (void)
 			for (image = pool->imagechain;image;image = image->imagechain)
 			{
 				// only update already uploaded images
-				if (!(image->flags & GLTEXF_UPLOAD))
+				if (!(image->flags & GLTEXF_UPLOAD) && (image->flags & TEXF_MIPMAP))
 				{
 					qglGetIntegerv(gltexturetypebindingenums[image->texturetype], &oldbindtexnum);
 
@@ -589,7 +589,7 @@ static void GL_SetupTextureParameters(int flags, int texturetype)
 
 	CHECKGLERROR
 
-	if (gl_support_anisotropy)
+	if (gl_support_anisotropy && (flags & TEXF_MIPMAP))
 	{
 		int aniso = bound(1, gl_texture_anisotropy.integer, gl_max_anisotropy);
 		if (gl_texture_anisotropy.integer != aniso)
