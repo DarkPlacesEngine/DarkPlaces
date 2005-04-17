@@ -606,9 +606,9 @@ CL_ParseClientdata
 Server information pertaining to this client only
 ==================
 */
-void CL_ParseClientdata (int bits)
+void CL_ParseClientdata (void)
 {
-	int i, j;
+	int i, j, bits;
 
 	VectorCopy (cl.mpunchangle[0], cl.mpunchangle[1]);
 	VectorCopy (cl.mpunchvector[0], cl.mpunchvector[1]);
@@ -633,7 +633,7 @@ void CL_ParseClientdata (int bits)
 	cl.mvelocity[0][2] = 0;
 	cl.mviewzoom[0] = 1;
 
-	bits &= 0xFFFF;
+	bits = (unsigned short) MSG_ReadShort ();
 	if (bits & SU_EXTEND1)
 		bits |= (MSG_ReadByte() << 16);
 	if (bits & SU_EXTEND2)
@@ -676,7 +676,8 @@ void CL_ParseClientdata (int bits)
 		}
 	}
 
-	if (bits & SU_ITEMS)
+	// LordHavoc: hipnotic demos don't have this bit set
+// [always sent]	if (bits & SU_ITEMS)
 		cl.stats[STAT_ITEMS] = MSG_ReadLong ();
 
 	cl.onground = (bits & SU_ONGROUND) != 0;
@@ -1442,8 +1443,7 @@ void CL_ParseServerMessage(void)
 			break;
 
 		case svc_clientdata:
-			i = (unsigned short) MSG_ReadShort ();
-			CL_ParseClientdata (i);
+			CL_ParseClientdata();
 			break;
 
 		case svc_version:
