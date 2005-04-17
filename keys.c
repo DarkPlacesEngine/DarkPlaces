@@ -32,7 +32,7 @@ char		key_lines[32][MAX_INPUTLINE];
 int			key_linepos;
 static int	ctrl_down = false;
 static int	key_lastpress;
-int			key_insert;	// insert key toggle (for editing)
+int			key_insert = true;	// insert key toggle (for editing)
 
 int         edit_line = 0;
 int         history_line = 0;
@@ -368,16 +368,7 @@ Key_Console (int key, char ascii)
 	// otherwise just go right one
 	if (key == K_RIGHTARROW || key == K_KP_RIGHTARROW)
 	{
-		if (strlen(key_lines[edit_line]) == (size_t)key_linepos)
-		{
-			if (strlen(key_lines[(edit_line + 31) & 31]) <= (size_t)key_linepos)
-				return; // no character to get
-
-			key_lines[edit_line][key_linepos] = key_lines[(edit_line + 31) & 31][key_linepos];
-			key_linepos++;
-			key_lines[edit_line][key_linepos] = 0;
-		}
-		else
+		if ((size_t)key_linepos < strlen(key_lines[edit_line]))
 			key_linepos++;
 
 		return;
@@ -456,7 +447,7 @@ Key_Console (int key, char ascii)
 	}
 
 	// non printable
-	if (ascii < 32 || ascii > 126)
+	if (ascii < 32)
 		return;
 
 	if (key_linepos < MAX_INPUTLINE-1)
