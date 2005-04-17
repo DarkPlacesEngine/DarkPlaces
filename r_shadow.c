@@ -1553,6 +1553,8 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 	int renders;
 	float color[3], color2[3], colorscale;
 	rmeshstate_t m;
+	if (!basetexture)
+		basetexture = r_texture_white;
 	if (!bumptexture)
 		bumptexture = r_texture_blanknormalmap;
 	if (!lightcolorbase)
