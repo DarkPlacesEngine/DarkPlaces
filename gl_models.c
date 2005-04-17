@@ -222,13 +222,13 @@ static void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 
 	colorscale = 1;
 	m.texrgbscale[0] = 0;
+	m.pointer_color = NULL;
 
-	if (texture->skin.glow)
+	if (doglow)
 	{
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 		GL_DepthMask(false);
 		m.tex[0] = R_GetTexture(texture->skin.glow);
-		m.pointer_color = NULL;
 		GL_Color(1, 1, 1, ent->alpha);
 		R_Mesh_State(&m);
 		c_alias_polys += mesh->num_triangles;
@@ -242,7 +242,6 @@ static void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 		GL_DepthMask(false);
 		m.tex[0] = R_GetTexture(texture->skin.fog);
-		m.pointer_color = NULL;
 		GL_Color(fogcolor[0], fogcolor[1], fogcolor[2], fog * ent->alpha);
 		R_Mesh_State(&m);
 		c_alias_polys += mesh->num_triangles;
