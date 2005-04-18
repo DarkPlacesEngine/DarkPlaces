@@ -7,7 +7,7 @@ cvar_t crosshair_alpha = {CVAR_SAVE, "crosshair_alpha", "1"};
 cvar_t crosshair_flashspeed = {CVAR_SAVE, "crosshair_flashspeed", "2"};
 cvar_t crosshair_flashrange = {CVAR_SAVE, "crosshair_flashrange", "0.1"};
 cvar_t crosshair_size = {CVAR_SAVE, "crosshair_size", "1"};
-cvar_t crosshair_static = {CVAR_SAVE, "crosshair_static", "0"};
+cvar_t crosshair_static = {CVAR_SAVE, "crosshair_static", "1"};
 
 // must match NUMCROSSHAIRS in gl_draw.c
 #define NUMCROSSHAIRS 5
