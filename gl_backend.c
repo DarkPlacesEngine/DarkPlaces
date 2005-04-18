@@ -1648,7 +1648,11 @@ void R_ClearScreen(void)
 	if (r_render.integer)
 	{
 		// clear to black
-		qglClearColor(0,0,0,0);CHECKGLERROR
+		if (fogenabled)
+			qglClearColor(fogcolor[0],fogcolor[1],fogcolor[2],0);
+		else
+			qglClearColor(0,0,0,0);
+		CHECKGLERROR
 		qglClearDepth(1);CHECKGLERROR
 		if (gl_stencil)
 		{
