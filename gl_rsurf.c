@@ -469,7 +469,7 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 				R_Sky();
 		}
 		// LordHavoc: HalfLife maps have freaky skypolys...
-		if (!ent->model->brush.ishlbsp)
+		//if (!ent->model->brush.ishlbsp)
 		{
 			R_Mesh_Matrix(&ent->matrix);
 			GL_Color(fogcolor[0], fogcolor[1], fogcolor[2], 1);
