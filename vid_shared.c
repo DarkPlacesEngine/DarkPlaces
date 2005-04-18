@@ -73,8 +73,8 @@ cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1"};
 cvar_t gl_combine = {CVAR_SAVE, "gl_combine", "1"};
 cvar_t gl_finish = {0, "gl_finish", "0"};
 
-cvar_t in_pitch_min = {0, "in_pitch_min", "-70"};
-cvar_t in_pitch_max = {0, "in_pitch_max", "80"};
+cvar_t in_pitch_min = {0, "in_pitch_min", "-90"}; // quake used -70
+cvar_t in_pitch_max = {0, "in_pitch_max", "90"}; // quake used 80
 
 cvar_t m_filter = {CVAR_SAVE, "m_filter","0"};
 
