@@ -676,8 +676,8 @@ void CL_ParseClientdata (void)
 		}
 	}
 
-	// LordHavoc: hipnotic demos don't have this bit set
-// [always sent]	if (bits & SU_ITEMS)
+	// LordHavoc: hipnotic demos don't have this bit set but should
+	if (bits & SU_ITEMS || cl.protocol != PROTOCOL_DARKPLACES6)
 		cl.stats[STAT_ITEMS] = MSG_ReadLong ();
 
 	cl.onground = (bits & SU_ONGROUND) != 0;
