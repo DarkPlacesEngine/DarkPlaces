@@ -924,11 +924,16 @@ void Host_Init (void)
 		CL_Init();
 	}
 
+	Cbuf_Execute();
+
 	// only cvars are executed when host_initialized == false
 	if (gamemode == GAME_TEU)
 		Cbuf_InsertText("exec teu.rc\n");
 	else
 		Cbuf_InsertText("exec quake.rc\n");
+
+	Cbuf_Execute();
+	Cbuf_Execute();
 	Cbuf_Execute();
 
 	host_initialized = true;
@@ -978,22 +983,37 @@ void Host_Init (void)
 	Cbuf_Execute();
 	Cbuf_Execute();
 
-	if (!sv.active && (cls.state == ca_dedicated || COM_CheckParm("-listen")))
+	// We must wait for the log_file cvar to be initialized to start the log
+	Log_Start ();
+
+	if (cls.state == ca_dedicated || COM_CheckParm("-listen"))
+	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 		Cbuf_InsertText ("startmap_dm\n");
+
+	Cbuf_Execute();
 
 	// check for special benchmark mode
 // COMMANDLINEOPTION: Client: -benchmark <demoname> runs a timedemo and quits, results of any timedemo can be found in gamedir/benchmark.log (for example id1/benchmark.log)
 	i = COM_CheckParm("-benchmark");
-	if (i && i + 1 < com_argc && !sv.active)
-		Cbuf_InsertText(va("timedemo %s\n", com_argv[i + 1]));
-
+	if (i && i + 1 < com_argc)
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
-		Cbuf_InsertText("togglemenu\n");
+		Cbuf_InsertText(va("timedemo %s\n", com_argv[i + 1]));
 
 	Cbuf_Execute();
 
-	// We must wait for the log_file cvar to be initialized to start the log
-	Log_Start ();
+	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
+	{
+		Cbuf_InsertText("togglemenu\n");
+		if (gamemode == GAME_NEXUIZ)
+		{
+			Cbuf_InsertText("playvideo logo\n");
+			Cbuf_InsertText("cd loop 1\n");
+		}
+	}
+
+	Cbuf_Execute();
+	Cbuf_Execute();
+	Cbuf_Execute();
 }
 
 
