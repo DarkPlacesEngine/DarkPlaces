@@ -3666,7 +3666,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 											Con_Printf(" %s", parameter[j]);
 										Con_Print("\n");
 									}
-									if (passnumber == 0 && numparameters >= 1)
+									if (passnumber == 0 && numparameters >= 1 && (flags & Q3SURFACEPARM_TRANS))
 									{
 										if (!strcasecmp(parameter[0], "blendfunc"))
 										{
@@ -3681,9 +3681,9 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 											strlcpy(firstpasstexturename, parameter[1], sizeof(firstpasstexturename));
 										else if (numparameters >= 3 && !strcasecmp(parameter[0], "animmap"))
 											strlcpy(firstpasstexturename, parameter[2], sizeof(firstpasstexturename));
+										else if (numparameters >= 2 && !strcasecmp(parameter[0], "alphafunc"))
+											flags2 |= Q3TEXTUREFLAG_ALPHATEST;
 									}
-									if (!strcasecmp(parameter[0], "alphafunc"))
-										flags2 |= Q3TEXTUREFLAG_ALPHATEST;
 									// break out a level if it was }
 									if (!strcasecmp(com_token, "}"))
 										break;
@@ -3796,11 +3796,6 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 									flags2 |= Q3TEXTUREFLAG_AUTOSPRITE2;
 							}
 						}
-						// force transparent render path for a number of odd
-						// shader effects to avoid bogging down the normal
-						// render path unnecessarily
-						if (flags2 & (Q3TEXTUREFLAG_ADDITIVE | Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2 | Q3TEXTUREFLAG_ALPHATEST))
-							flags |= Q3SURFACEPARM_TRANS;
 						// add shader to list (shadername and flags)
 						// actually here we just poke into the texture settings
 						for (j = 0, out = loadmodel->brush.data_textures;j < loadmodel->brush.num_textures;j++, out++)
@@ -3823,9 +3818,12 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 								else
 									out->basematerialflags |= MATERIALFLAG_WALL;
 								if (out->surfaceparms & Q3SURFACEPARM_TRANS)
-									out->basematerialflags |= MATERIALFLAG_TRANSPARENT;
-								if (out->textureflags & Q3TEXTUREFLAG_ADDITIVE)
-									out->basematerialflags |= MATERIALFLAG_ADD | MATERIALFLAG_TRANSPARENT;
+								{
+									if (out->textureflags & Q3TEXTUREFLAG_ADDITIVE)
+										out->basematerialflags |= MATERIALFLAG_ADD | MATERIALFLAG_TRANSPARENT;
+									else
+										out->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_TRANSPARENT;
+								}
 								strlcpy(out->firstpasstexturename, firstpasstexturename, sizeof(out->firstpasstexturename));
 								if ((flags & Q3SURFACEPARM_SKY) && sky[0])
 								{
@@ -3873,8 +3871,6 @@ parseerror:
 		if (!Mod_LoadSkinFrame(&out->skin, out->name, (((out->textureflags & Q3TEXTUREFLAG_NOMIPMAPS) || (out->surfaceparms & Q3SURFACEPARM_NOMIPMAPS)) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (out->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP), false, false, true))
 			if (!Mod_LoadSkinFrame(&out->skin, out->firstpasstexturename, (((out->textureflags & Q3TEXTUREFLAG_NOMIPMAPS) || (out->surfaceparms & Q3SURFACEPARM_NOMIPMAPS)) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (out->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP), false, false, true))
 				Con_Printf("%s: texture loading for shader \"%s\" failed (first layer \"%s\" not found either)\n", loadmodel->name, out->name, out->firstpasstexturename);
-		if (out->skin.fog)
-			out->basematerialflags |= (MATERIALFLAG_ALPHA | MATERIALFLAG_TRANSPARENT);
 		// no animation
 		out->currentframe = out;
 	}
