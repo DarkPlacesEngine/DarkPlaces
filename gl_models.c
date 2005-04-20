@@ -304,7 +304,7 @@ void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightor
 	}
 }
 
-void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int numsurfaces, const int *surfacelist)
+void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int numsurfaces, const int *surfacelist, int visiblelighting)
 {
 	int c, meshnum;
 	float fog, ifog, lightcolorbase[3], lightcolorpants[3], lightcolorshirt[3];
@@ -386,7 +386,7 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 			Mod_BuildTextureVectorsAndNormals(0, mesh->num_vertices, mesh->num_triangles, vertex3f, mesh->data_texcoord2f, mesh->data_element3i, svector3f, tvector3f, normal3f);
 		}
 		c_alias_polys += mesh->num_triangles;
-		R_Shadow_RenderLighting(0, mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, vertex3f, svector3f, tvector3f, normal3f, mesh->data_texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorbase, lightcolorpants, lightcolorshirt, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, (ent->colormap >= 0 || !texture->skin.merged) ? texture->skin.base : texture->skin.merged, ent->colormap >= 0 ? texture->skin.pants : 0, ent->colormap >= 0 ? texture->skin.shirt : 0, texture->skin.nmap, texture->skin.gloss, lightcubemap, ambientscale, diffusescale, specularscale);
+		R_Shadow_RenderLighting(0, mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, vertex3f, svector3f, tvector3f, normal3f, mesh->data_texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorbase, lightcolorpants, lightcolorshirt, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, (ent->colormap >= 0 || !texture->skin.merged) ? texture->skin.base : texture->skin.merged, ent->colormap >= 0 ? texture->skin.pants : 0, ent->colormap >= 0 ? texture->skin.shirt : 0, texture->skin.nmap, texture->skin.gloss, lightcubemap, ambientscale, diffusescale, specularscale, visiblelighting);
 	}
 }
 
