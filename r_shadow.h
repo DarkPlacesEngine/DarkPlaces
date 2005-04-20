@@ -16,6 +16,7 @@ extern cvar_t r_shadow_portallight;
 extern cvar_t r_shadow_projectdistance;
 extern cvar_t r_shadow_realtime_dlight;
 extern cvar_t r_shadow_realtime_dlight_shadows;
+extern cvar_t r_shadow_realtime_dlight_portalculling;
 extern cvar_t r_shadow_realtime_world;
 extern cvar_t r_shadow_realtime_world_dlightshadows;
 extern cvar_t r_shadow_realtime_world_lightmaps;
