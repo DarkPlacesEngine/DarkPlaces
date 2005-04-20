@@ -2906,7 +2906,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	mod->brush.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
 	mod->brush.AmbientSoundLevelsForPoint = Mod_Q1BSP_AmbientSoundLevelsForPoint;
 	mod->brush.RoundUpToHullSize = Mod_Q1BSP_RoundUpToHullSize;
-	mod->brushq1.PointInLeaf = Mod_Q1BSP_PointInLeaf;
+	mod->brush.PointInLeaf = Mod_Q1BSP_PointInLeaf;
 
 	if (loadmodel->isworldmodel)
 		Cvar_SetValue("halflifebsp", mod->brush.ishlbsp);
@@ -5410,6 +5410,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 	mod->brush.BoxTouchingVisibleLeafs = Mod_Q1BSP_BoxTouchingVisibleLeafs;
 	mod->brush.LightPoint = Mod_Q3BSP_LightPoint;
 	mod->brush.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
+	mod->brush.PointInLeaf = Mod_Q1BSP_PointInLeaf;
 	mod->Draw = R_Q1BSP_Draw;
 	mod->GetLightInfo = R_Q1BSP_GetLightInfo;
 	mod->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
@@ -5444,6 +5445,9 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 	Mod_Q3BSP_LoadLightGrid(&header->lumps[Q3LUMP_LIGHTGRID]);
 	Mod_Q3BSP_LoadPVS(&header->lumps[Q3LUMP_PVS]);
 	loadmodel->brush.numsubmodels = loadmodel->brushq3.num_models;
+
+	// the MakePortals code works fine on the q3bsp data as well
+	Mod_Q1BSP_MakePortals();
 
 	// make a single combined shadow mesh to allow optimized shadow volume creation
 	numshadowmeshtriangles = 0;

@@ -187,7 +187,7 @@ int Portal_CheckPolygon(model_t *model, vec3_t eye, float *polypoints, int numpo
 	vec3_t center, v1, v2;
 
 	// if there is no model, it can not block visibility
-	if (model == NULL || !model->brushq1.PointInLeaf)
+	if (model == NULL || !model->brush.PointInLeaf)
 		return true;
 
 	portal_markid++;
@@ -195,7 +195,7 @@ int Portal_CheckPolygon(model_t *model, vec3_t eye, float *polypoints, int numpo
 	Mod_CheckLoaded(model);
 	Portal_PolygonRecursiveMarkLeafs(model->brush.data_nodes, polypoints, numpoints);
 
-	eyeleaf = model->brushq1.PointInLeaf(model, eye);
+	eyeleaf = model->brush.PointInLeaf(model, eye);
 
 	// find the center by averaging
 	VectorClear(center);

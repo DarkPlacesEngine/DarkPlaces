@@ -239,6 +239,7 @@ typedef struct model_brush_s
 	int (*BoxTouchingVisibleLeafs)(struct model_s *model, const qbyte *visibleleafs, const vec3_t mins, const vec3_t maxs);
 	void (*LightPoint)(struct model_s *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal);
 	void (*FindNonSolidLocation)(struct model_s *model, const vec3_t in, vec3_t out, vec_t radius);
+	mleaf_t *(*PointInLeaf)(struct model_s *model, const float *p);
 	// these are actually only found on brushq1, but NULL is handled gracefully
 	void (*AmbientSoundLevelsForPoint)(struct model_s *model, const vec3_t p, qbyte *out, int outsize);
 	void (*RoundUpToHullSize)(struct model_s *cmodel, const vec3_t inmins, const vec3_t inmaxs, vec3_t outmins, vec3_t outmaxs);
@@ -289,8 +290,6 @@ typedef struct model_brushq1_s
 	int				*light_stylevalue;
 	msurface_t		***light_styleupdatechains;
 	msurface_t		**light_styleupdatechainsbuffer;
-
-	mleaf_t *(*PointInLeaf)(struct model_s *model, const float *p);
 }
 model_brushq1_t;
 
