@@ -145,6 +145,9 @@ typedef struct rtlight_s
 	int static_numclusterpvsbytes;
 	int *static_clusterlist;
 	qbyte *static_clusterpvs;
+	// surfaces seen by light
+	int static_numsurfaces;
+	int *static_surfacelist;
 }
 rtlight_t;
 

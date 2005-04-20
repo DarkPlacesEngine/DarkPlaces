@@ -180,12 +180,15 @@ cvar_t r_shadow_realtime_world = {CVAR_SAVE, "r_shadow_realtime_world", "0"};
 cvar_t r_shadow_realtime_world_dlightshadows = {CVAR_SAVE, "r_shadow_realtime_world_dlightshadows", "1"};
 cvar_t r_shadow_realtime_world_lightmaps = {CVAR_SAVE, "r_shadow_realtime_world_lightmaps", "0"};
 cvar_t r_shadow_realtime_world_shadows = {CVAR_SAVE, "r_shadow_realtime_world_shadows", "1"};
+cvar_t r_shadow_realtime_world_compile = {0, "r_shadow_realtime_world_compile", "1"};
+cvar_t r_shadow_realtime_world_compilelight = {0, "r_shadow_realtime_world_compilelight", "1"};
+cvar_t r_shadow_realtime_world_compileshadow = {0, "r_shadow_realtime_world_compileshadow", "1"};
 cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1"};
 cvar_t r_shadow_shadow_polygonfactor = {0, "r_shadow_shadow_polygonfactor", "0"};
 cvar_t r_shadow_shadow_polygonoffset = {0, "r_shadow_shadow_polygonoffset", "1"};
 cvar_t r_shadow_singlepassvolumegeneration = {0, "r_shadow_singlepassvolumegeneration", "1"};
-cvar_t r_shadow_staticworldlights = {0, "r_shadow_staticworldlights", "1"};
 cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1"};
+cvar_t r_shadow_visiblelighting = {0, "r_shadow_visiblelighting", "0"};
 cvar_t r_shadow_visiblevolumes = {0, "r_shadow_visiblevolumes", "0"};
 cvar_t r_shadow_glsl = {0, "r_shadow_glsl", "1"};
 cvar_t r_shadow_glsl_offsetmapping = {0, "r_shadow_glsl_offsetmapping", "1"};
@@ -561,6 +564,9 @@ void R_Shadow_Help_f(void)
 "r_shadow_realtime_world_dlightshadows : cast shadows from dlights\n"
 "r_shadow_realtime_world_lightmaps : use lightmaps in addition to lights\n"
 "r_shadow_realtime_world_shadows : cast shadows from world lights\n"
+"r_shadow_realtime_world_compile : compile surface/visibility information\n"
+"r_shadow_realtime_world_compilelight : compile lighting geometry\n"
+"r_shadow_realtime_world_compileshadow : compile shadow geometry\n"
 "r_shadow_glsl : use OpenGL Shading Language for lighting\n"
 "r_shadow_glsl_offsetmapping : enables Offset Mapping bumpmap enhancement\n"
 "r_shadow_glsl_offsetmapping_scale : controls depth of Offset Mapping\n"
@@ -570,6 +576,7 @@ void R_Shadow_Help_f(void)
 "r_shadow_shadow_polygonoffset : nudge shadow volumes closer/further\n"
 "r_shadow_singlepassvolumegeneration : selects shadow volume algorithm\n"
 "r_shadow_texture3d : use 3d attenuation texture (if hardware supports)\n"
+"r_shadow_visiblelighting : useful for performance testing; bright = slow!\n"
 "r_shadow_visiblevolumes : useful for performance testing; bright = slow!\n"
 "Commands:\n"
 "r_shadow_help : this help\n"
@@ -596,12 +603,15 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_realtime_world_dlightshadows);
 	Cvar_RegisterVariable(&r_shadow_realtime_world_lightmaps);
 	Cvar_RegisterVariable(&r_shadow_realtime_world_shadows);
+	Cvar_RegisterVariable(&r_shadow_realtime_world_compile);
+	Cvar_RegisterVariable(&r_shadow_realtime_world_compilelight);
+	Cvar_RegisterVariable(&r_shadow_realtime_world_compileshadow);
 	Cvar_RegisterVariable(&r_shadow_scissor);
 	Cvar_RegisterVariable(&r_shadow_shadow_polygonfactor);
 	Cvar_RegisterVariable(&r_shadow_shadow_polygonoffset);
 	Cvar_RegisterVariable(&r_shadow_singlepassvolumegeneration);
-	Cvar_RegisterVariable(&r_shadow_staticworldlights);
 	Cvar_RegisterVariable(&r_shadow_texture3d);
+	Cvar_RegisterVariable(&r_shadow_visiblelighting);
 	Cvar_RegisterVariable(&r_shadow_visiblevolumes);
 	Cvar_RegisterVariable(&r_shadow_glsl);
 	Cvar_RegisterVariable(&r_shadow_glsl_offsetmapping);
@@ -1548,7 +1558,7 @@ static void R_Shadow_GenTexCoords_Specular_NormalCubeMap(float *out3f, int numve
 	}
 }
 
-void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles, const int *elements, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *texcoord2f, const float *relativelightorigin, const float *relativeeyeorigin, const float *lightcolorbase, const float *lightcolorpants, const float *lightcolorshirt, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *basetexture, rtexture_t *pantstexture, rtexture_t *shirttexture, rtexture_t *bumptexture, rtexture_t *glosstexture, rtexture_t *lightcubemap, vec_t ambientscale, vec_t diffusescale, vec_t specularscale)
+void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles, const int *elements, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *texcoord2f, const float *relativelightorigin, const float *relativeeyeorigin, const float *lightcolorbase, const float *lightcolorpants, const float *lightcolorshirt, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *basetexture, rtexture_t *pantstexture, rtexture_t *shirttexture, rtexture_t *bumptexture, rtexture_t *glosstexture, rtexture_t *lightcubemap, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int visiblelighting)
 {
 	int renders;
 	float color[3], color2[3], colorscale;
@@ -1583,6 +1593,124 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 		lightcubemap = r_shadow_blankwhitecubetexture;
 	if ((ambientscale + diffusescale) * (VectorLength2(lightcolorbase) + VectorLength2(lightcolorpants) + VectorLength2(lightcolorshirt)) + specularscale * VectorLength2(lightcolorbase) <= 0.001)
 		return;
+	if (visiblelighting)
+	{
+		int passes = 0;
+		if (r_shadow_glsl.integer && r_shadow_program_light[0])
+			passes++; // GLSL shader path (GFFX5200, Radeon 9500)
+		else if (gl_dot3arb && gl_texturecubemap && gl_combine.integer && gl_stencil)
+		{
+			// TODO: add direct pants/shirt rendering
+			if (pantstexture && (ambientscale + diffusescale) * VectorLength2(lightcolorpants) > 0.001)
+				R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorpants, NULL, NULL, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, pantstexture, NULL, NULL, bumptexture, NULL, lightcubemap, ambientscale, diffusescale, specularscale, visiblelighting);
+			if (shirttexture && (ambientscale + diffusescale) * VectorLength2(lightcolorshirt) > 0.001)
+				R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorshirt, NULL, NULL, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, shirttexture, NULL, NULL, bumptexture, NULL, lightcubemap, ambientscale, diffusescale, specularscale, visiblelighting);
+			if (!bumptexture)
+				bumptexture = r_texture_blanknormalmap;
+			if (!glosstexture)
+				glosstexture = r_texture_white;
+			if (ambientscale)
+			{
+				colorscale = ambientscale;
+				if (r_shadow_texture3d.integer && lightcubemap && r_textureunits.integer >= 4)
+				{
+				}
+				else if (r_shadow_texture3d.integer && !lightcubemap && r_textureunits.integer >= 2)
+				{
+				}
+				else if (r_textureunits.integer >= 4 && lightcubemap)
+				{
+				}
+				else if (r_textureunits.integer >= 3 && !lightcubemap)
+				{
+				}
+				else
+					passes++;
+				VectorScale(lightcolorbase, colorscale, color2);
+				for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
+					passes++;
+			}
+			if (diffusescale)
+			{
+				colorscale = diffusescale;
+				if (r_shadow_texture3d.integer && r_textureunits.integer >= 4)
+				{
+					// 3/2 3D combine path (Geforce3, Radeon 8500)
+					passes++;
+				}
+				else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && lightcubemap)
+				{
+					// 1/2/2 3D combine path (original Radeon)
+					passes += 2;
+				}
+				else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && !lightcubemap)
+				{
+					// 2/2 3D combine path (original Radeon)
+					passes++;
+				}
+				else if (r_textureunits.integer >= 4)
+				{
+					// 4/2 2D combine path (Geforce3, Radeon 8500)
+					passes++;
+				}
+				else
+				{
+					// 2/2/2 2D combine path (any dot3 card)
+					passes += 2;
+				}
+				VectorScale(lightcolorbase, colorscale, color2);
+				for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
+					passes++;
+			}
+			if (specularscale && glosstexture != r_texture_black)
+			{
+				//if (gl_support_blendsquare)
+				{
+					colorscale = specularscale;
+					if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && lightcubemap /*&& gl_support_blendsquare*/) // FIXME: detect blendsquare!
+						passes += 4;
+					else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && !lightcubemap /*&& gl_support_blendsquare*/) // FIXME: detect blendsquare!
+						passes += 3;
+					else
+						passes += 4;
+					VectorScale(lightcolorbase, colorscale, color2);
+					for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
+						passes++;
+				}
+			}
+		}
+		else
+		{
+			// TODO: add direct pants/shirt rendering
+			if (pantstexture && (ambientscale + diffusescale) * VectorLength2(lightcolorpants) > 0.001)
+				R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorpants, NULL, NULL, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, pantstexture, NULL, NULL, bumptexture, NULL, lightcubemap, ambientscale, diffusescale, specularscale, visiblelighting);
+			if (shirttexture && (ambientscale + diffusescale) * VectorLength2(lightcolorshirt) > 0.001)
+				R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorshirt, NULL, NULL, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, shirttexture, NULL, NULL, bumptexture, NULL, lightcubemap, ambientscale, diffusescale, specularscale, visiblelighting);
+			if (ambientscale)
+			{
+				VectorScale(lightcolorbase, ambientscale, color2);
+				for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
+					passes++;
+			}
+			if (diffusescale)
+			{
+				VectorScale(lightcolorbase, diffusescale, color2);
+				for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
+					passes++;
+			}
+		}
+		if (passes)
+		{
+			GL_Color(0.1*passes, 0.025*passes, 0, 1);
+			memset(&m, 0, sizeof(m));
+			m.pointer_vertex = vertex3f;
+			R_Mesh_State(&m);
+			GL_LockArrays(firstvertex, numvertices);
+			R_Mesh_Draw(firstvertex, numvertices, numtriangles, elements);
+			GL_LockArrays(0, 0);
+		}
+		return;
+	}
 	// FIXME: support EF_NODEPTHTEST
 	GL_DepthMask(false);
 	GL_DepthTest(true);
@@ -1677,9 +1805,9 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 	{
 		// TODO: add direct pants/shirt rendering
 		if (pantstexture && (ambientscale + diffusescale) * VectorLength2(lightcolorpants) > 0.001)
-			R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorpants, NULL, NULL, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, pantstexture, NULL, NULL, bumptexture, NULL, lightcubemap, ambientscale, diffusescale, specularscale);
+			R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorpants, NULL, NULL, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, pantstexture, NULL, NULL, bumptexture, NULL, lightcubemap, ambientscale, diffusescale, specularscale, visiblelighting);
 		if (shirttexture && (ambientscale + diffusescale) * VectorLength2(lightcolorshirt) > 0.001)
-			R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorshirt, NULL, NULL, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, shirttexture, NULL, NULL, bumptexture, NULL, lightcubemap, ambientscale, diffusescale, specularscale);
+			R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorshirt, NULL, NULL, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, shirttexture, NULL, NULL, bumptexture, NULL, lightcubemap, ambientscale, diffusescale, specularscale, visiblelighting);
 		if (!bumptexture)
 			bumptexture = r_texture_blanknormalmap;
 		if (!glosstexture)
@@ -2374,9 +2502,9 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 	{
 		// TODO: add direct pants/shirt rendering
 		if (pantstexture && (ambientscale + diffusescale) * VectorLength2(lightcolorpants) > 0.001)
-			R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorpants, NULL, NULL, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, pantstexture, NULL, NULL, bumptexture, NULL, lightcubemap, ambientscale, diffusescale, specularscale);
+			R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorpants, NULL, NULL, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, pantstexture, NULL, NULL, bumptexture, NULL, lightcubemap, ambientscale, diffusescale, specularscale, visiblelighting);
 		if (shirttexture && (ambientscale + diffusescale) * VectorLength2(lightcolorshirt) > 0.001)
-			R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorshirt, NULL, NULL, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, shirttexture, NULL, NULL, bumptexture, NULL, lightcubemap, ambientscale, diffusescale, specularscale);
+			R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorshirt, NULL, NULL, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, shirttexture, NULL, NULL, bumptexture, NULL, lightcubemap, ambientscale, diffusescale, specularscale, visiblelighting);
 		if (ambientscale)
 		{
 			GL_BlendFunc(GL_ONE, GL_ONE);
@@ -2539,9 +2667,10 @@ void R_RTLight_UpdateFromDLight(rtlight_t *rtlight, const dlight_t *light, int i
 // (undone by R_FreeCompiledRTLight, which R_UpdateLight calls)
 void R_RTLight_Compile(rtlight_t *rtlight)
 {
-	int shadowmeshes, shadowtris, lightmeshes, lighttris, numclusters, numsurfaces;
+	int shadowmeshes, shadowtris, lightmeshes, lighttris, numclusters, numclusterpvsbytes, numsurfaces;
 	entity_render_t *ent = r_refdef.worldentity;
 	model_t *model = r_refdef.worldmodel;
+	qbyte *data;
 
 	// compile the light
 	rtlight->compiled = true;
@@ -2549,6 +2678,8 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 	rtlight->static_numclusterpvsbytes = 0;
 	rtlight->static_clusterlist = NULL;
 	rtlight->static_clusterpvs = NULL;
+	rtlight->static_numsurfaces = 0;
+	rtlight->static_surfacelist = NULL;
 	rtlight->cullmins[0] = rtlight->shadoworigin[0] - rtlight->radius;
 	rtlight->cullmins[1] = rtlight->shadoworigin[1] - rtlight->radius;
 	rtlight->cullmins[2] = rtlight->shadoworigin[2] - rtlight->radius;
@@ -2562,15 +2693,20 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 		r_shadow_compilingrtlight = rtlight;
 		R_Shadow_EnlargeClusterSurfaceBuffer(model->brush.num_pvsclusters, model->nummodelsurfaces);
 		model->GetLightInfo(ent, rtlight->shadoworigin, rtlight->radius, rtlight->cullmins, rtlight->cullmaxs, r_shadow_buffer_clusterlist, r_shadow_buffer_clusterpvs, &numclusters, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces);
-		rtlight->static_numclusterpvsbytes = (model->brush.num_pvsclusters + 7) >> 3;
-		rtlight->static_clusterpvs = Mem_Alloc(r_shadow_mempool, rtlight->static_numclusterpvsbytes);
+		numclusterpvsbytes = (model->brush.num_pvsclusters + 7) >> 3;
+		data = Mem_Alloc(r_shadow_mempool, sizeof(int) * numclusters + numclusterpvsbytes + sizeof(int) * numsurfaces);
+		rtlight->static_numclusters = numclusters;
+		rtlight->static_numclusterpvsbytes = numclusterpvsbytes;
+		rtlight->static_clusterlist = (void *)data;data += sizeof(int) * numclusters;
+		rtlight->static_clusterpvs = (void *)data;data += numclusterpvsbytes;
+		rtlight->static_numsurfaces = numsurfaces;
+		rtlight->static_surfacelist = (void *)data;data += sizeof(int) * numsurfaces;
 		if (numclusters)
-		{
-			rtlight->static_numclusters = numclusters;
-			rtlight->static_clusterlist = Mem_Alloc(r_shadow_mempool, rtlight->static_numclusters * sizeof(*rtlight->static_clusterlist));
 			memcpy(rtlight->static_clusterlist, r_shadow_buffer_clusterlist, rtlight->static_numclusters * sizeof(*rtlight->static_clusterlist));
+		if (numclusterpvsbytes)
 			memcpy(rtlight->static_clusterpvs, r_shadow_buffer_clusterpvs, rtlight->static_numclusterpvsbytes);
-		}
+		if (numsurfaces)
+			memcpy(rtlight->static_surfacelist, r_shadow_buffer_surfacelist, rtlight->static_numsurfaces * sizeof(*rtlight->static_surfacelist));
 		if (model->DrawShadowVolume && rtlight->shadow)
 		{
 			rtlight->static_meshchain_shadow = Mod_ShadowMesh_Begin(r_shadow_mempool, 32768, 32768, NULL, NULL, NULL, false, false, true);
@@ -2580,7 +2716,7 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 		if (model->DrawLight)
 		{
 			rtlight->static_meshchain_light = Mod_ShadowMesh_Begin(r_shadow_mempool, 32768, 32768, NULL, NULL, NULL, true, false, true);
-			model->DrawLight(ent, rtlight->shadoworigin, vec3_origin, rtlight->radius, vec3_origin, &r_identitymatrix, &r_identitymatrix, &r_identitymatrix, NULL, 0, 0, 0, numsurfaces, r_shadow_buffer_surfacelist);
+			model->DrawLight(ent, rtlight->shadoworigin, vec3_origin, rtlight->radius, vec3_origin, &r_identitymatrix, &r_identitymatrix, &r_identitymatrix, NULL, 0, 0, 0, numsurfaces, r_shadow_buffer_surfacelist, 0);
 			rtlight->static_meshchain_light = Mod_ShadowMesh_Finish(r_shadow_mempool, rtlight->static_meshchain_light, true, false);
 		}
 		// switch back to rendering when DrawShadowVolume or DrawLight is called
@@ -2629,14 +2765,15 @@ void R_RTLight_Uncompile(rtlight_t *rtlight)
 		if (rtlight->static_meshchain_light)
 			Mod_ShadowMesh_Free(rtlight->static_meshchain_light);
 		rtlight->static_meshchain_light = NULL;
+		// these allocations are grouped
 		if (rtlight->static_clusterlist)
 			Mem_Free(rtlight->static_clusterlist);
-		rtlight->static_clusterlist = NULL;
-		if (rtlight->static_clusterpvs)
-			Mem_Free(rtlight->static_clusterpvs);
-		rtlight->static_clusterpvs = NULL;
 		rtlight->static_numclusters = 0;
 		rtlight->static_numclusterpvsbytes = 0;
+		rtlight->static_clusterlist = NULL;
+		rtlight->static_clusterpvs = NULL;
+		rtlight->static_numsurfaces = 0;
+		rtlight->static_surfacelist = NULL;
 		rtlight->compiled = false;
 	}
 }
@@ -2648,7 +2785,7 @@ void R_Shadow_UncompileWorldLights(void)
 		R_RTLight_Uncompile(&light->rtlight);
 }
 
-void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
+void R_DrawRTLight(rtlight_t *rtlight, int visiblelighting, int visiblevolumes)
 {
 	int i, shadow, usestencil;
 	entity_render_t *ent;
@@ -2682,7 +2819,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 	// loading is done before visibility checks because loading should happen
 	// all at once at the start of a level, not when it stalls gameplay.
 	// (especially important to benchmarks)
-	if (rtlight->isstatic && !rtlight->compiled && r_shadow_staticworldlights.integer)
+	if (rtlight->isstatic && !rtlight->compiled && r_shadow_realtime_world_compile.integer)
 		R_RTLight_Compile(rtlight);
 	if (rtlight->cubemapname[0])
 		cubemaptexture = R_Shadow_Cubemap(rtlight->cubemapname);
@@ -2702,13 +2839,15 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 	clusterpvs = NULL;
 	numsurfaces = 0;
 	surfacelist = NULL;
-	if (rtlight->compiled && r_shadow_staticworldlights.integer)
+	if (rtlight->compiled && r_shadow_realtime_world_compile.integer)
 	{
 		// compiled light, world available and can receive realtime lighting
 		// retrieve cluster information
 		numclusters = rtlight->static_numclusters;
 		clusterlist = rtlight->static_clusterlist;
 		clusterpvs = rtlight->static_clusterpvs;
+		numsurfaces = rtlight->static_numsurfaces;
+		surfacelist = rtlight->static_surfacelist;
 		VectorCopy(rtlight->cullmins, cullmins);
 		VectorCopy(rtlight->cullmaxs, cullmaxs);
 	}
@@ -2744,15 +2883,21 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 	shadow = rtlight->shadow && (rtlight->isstatic ? r_rtworldshadows : r_rtdlightshadows);
 	usestencil = false;
 
-	if (shadow && (gl_stencil || visiblevolumes))
+	if (shadow && ((gl_stencil && !visiblelighting) || visiblevolumes))
 	{
-		if (!visiblevolumes)
+		if (visiblevolumes)
+		{
+			qglDisable(GL_CULL_FACE);
+			GL_DepthTest(visiblevolumes < 2);
+			GL_Color(0.0, 0.0125, 0.1, 1);
+		}
+		else
 		{
 			R_Shadow_Stage_ShadowVolumes();
 			usestencil = true;
 		}
 		ent = r_refdef.worldentity;
-		if (r_shadow_staticworldlights.integer && rtlight->compiled)
+		if (rtlight->compiled && r_shadow_realtime_world_compile.integer && r_shadow_realtime_world_compileshadow.integer)
 		{
 			memset(&m, 0, sizeof(m));
 			R_Mesh_Matrix(&ent->matrix);
@@ -2814,9 +2959,16 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 		}
 	}
 
-	if (!visiblevolumes)
+	if (visiblelighting || !visiblevolumes)
 	{
-		R_Shadow_Stage_Light(usestencil);
+		if (visiblelighting)
+		{
+			qglEnable(GL_CULL_FACE);
+			GL_DepthTest(visiblelighting < 2);
+			GL_Color(0.1, 0.0125, 0, 1);
+		}
+		else
+			R_Shadow_Stage_Light(usestencil);
 
 		ent = r_refdef.worldentity;
 		if (ent->model && ent->model->DrawLight && (ent->flags & RENDER_LIGHT))
@@ -2829,14 +2981,14 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 			Matrix4x4_Concat(&matrix_modeltolight, &rtlight->matrix_worldtolight, &ent->matrix);
 			Matrix4x4_Concat(&matrix_modeltoattenuationxyz, &rtlight->matrix_worldtoattenuationxyz, &ent->matrix);
 			Matrix4x4_Concat(&matrix_modeltoattenuationz, &rtlight->matrix_worldtoattenuationz, &ent->matrix);
-			if (r_shadow_staticworldlights.integer && rtlight->compiled)
+			if (rtlight->compiled && r_shadow_realtime_world_compile.integer && r_shadow_realtime_world_compilelight.integer)
 			{
 				R_Mesh_Matrix(&ent->matrix);
 				for (mesh = rtlight->static_meshchain_light;mesh;mesh = mesh->next)
-					R_Shadow_RenderLighting(0, mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->vertex3f, mesh->svector3f, mesh->tvector3f, mesh->normal3f, mesh->texcoord2f, relativelightorigin, relativeeyeorigin, lightcolor2, NULL, NULL, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, mesh->map_diffuse, NULL, NULL, mesh->map_normal, mesh->map_specular, cubemaptexture, rtlight->ambientscale, rtlight->diffusescale, rtlight->specularscale);
+					R_Shadow_RenderLighting(0, mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->vertex3f, mesh->svector3f, mesh->tvector3f, mesh->normal3f, mesh->texcoord2f, relativelightorigin, relativeeyeorigin, lightcolor2, NULL, NULL, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, mesh->map_diffuse, NULL, NULL, mesh->map_normal, mesh->map_specular, cubemaptexture, rtlight->ambientscale, rtlight->diffusescale, rtlight->specularscale, visiblelighting);
 			}
 			else
-				ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, rtlight->radius, lightcolor2, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, cubemaptexture, rtlight->ambientscale, rtlight->diffusescale, rtlight->specularscale, numsurfaces, surfacelist);
+				ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, rtlight->radius, lightcolor2, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, cubemaptexture, rtlight->ambientscale, rtlight->diffusescale, rtlight->specularscale, numsurfaces, surfacelist, visiblelighting);
 		}
 		if (r_drawentities.integer)
 		{
@@ -2855,14 +3007,14 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 					Matrix4x4_Concat(&matrix_modeltolight, &rtlight->matrix_worldtolight, &ent->matrix);
 					Matrix4x4_Concat(&matrix_modeltoattenuationxyz, &rtlight->matrix_worldtoattenuationxyz, &ent->matrix);
 					Matrix4x4_Concat(&matrix_modeltoattenuationz, &rtlight->matrix_worldtoattenuationz, &ent->matrix);
-					ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, rtlight->radius, lightcolor2, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, cubemaptexture, rtlight->ambientscale, rtlight->diffusescale, rtlight->specularscale, ent->model->nummodelsurfaces, ent->model->surfacelist);
+					ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, rtlight->radius, lightcolor2, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, cubemaptexture, rtlight->ambientscale, rtlight->diffusescale, rtlight->specularscale, ent->model->nummodelsurfaces, ent->model->surfacelist, visiblelighting);
 				}
 			}
 		}
 	}
 }
 
-void R_ShadowVolumeLighting(int visiblevolumes)
+void R_ShadowVolumeLighting(int visiblelighting, int visiblevolumes)
 {
 	int lnum, flag;
 	dlight_t *light;
@@ -2871,16 +3023,14 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 	if (r_refdef.worldmodel && strncmp(r_refdef.worldmodel->name, r_shadow_mapname, sizeof(r_shadow_mapname)))
 		R_Shadow_EditLights_Reload_f();
 
-	if (visiblevolumes)
+	if (visiblelighting || visiblevolumes)
 	{
 		memset(&m, 0, sizeof(m));
 		R_Mesh_State(&m);
 
 		GL_BlendFunc(GL_ONE, GL_ONE);
 		GL_DepthMask(false);
-		GL_DepthTest(r_shadow_visiblevolumes.integer < 2);
-		qglDisable(GL_CULL_FACE);
-		GL_Color(0.0, 0.0125, 0.1, 1);
+		qglCullFace(GL_FRONT); // this culls back
 	}
 	else
 		R_Shadow_Stage_Begin();
@@ -2889,17 +3039,17 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 	{
 		for (lnum = 0, light = r_shadow_worldlightchain;light;lnum++, light = light->next)
 			if (lnum == r_shadow_debuglight.integer && (light->flags & flag))
-				R_DrawRTLight(&light->rtlight, visiblevolumes);
+				R_DrawRTLight(&light->rtlight, visiblelighting, visiblevolumes);
 	}
 	else
 		for (lnum = 0, light = r_shadow_worldlightchain;light;lnum++, light = light->next)
 			if (light->flags & flag)
-				R_DrawRTLight(&light->rtlight, visiblevolumes);
+				R_DrawRTLight(&light->rtlight, visiblelighting, visiblevolumes);
 	if (r_rtdlight)
 		for (lnum = 0, light = r_dlight;lnum < r_numdlights;lnum++, light++)
-			R_DrawRTLight(&light->rtlight, visiblevolumes);
+			R_DrawRTLight(&light->rtlight, visiblelighting, visiblevolumes);
 
-	if (visiblevolumes)
+	if (visiblelighting || visiblevolumes)
 	{
 		qglEnable(GL_CULL_FACE);
 		GL_Scissor(r_view_x, r_view_y, r_view_width, r_view_height);
