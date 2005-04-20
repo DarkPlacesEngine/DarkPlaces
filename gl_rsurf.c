@@ -1593,7 +1593,7 @@ void R_WorldVisibility(void)
 		return;
 
 	// if possible find the leaf the view origin is in
-	viewleaf = model->brushq1.PointInLeaf ? model->brushq1.PointInLeaf(model, r_vieworigin) : NULL;
+	viewleaf = model->brush.PointInLeaf ? model->brush.PointInLeaf(model, r_vieworigin) : NULL;
 	// if possible fetch the visible cluster bits
 	if (model->brush.FatPVS)
 		model->brush.FatPVS(model, r_vieworigin, 2, r_pvsbits, sizeof(r_pvsbits));
