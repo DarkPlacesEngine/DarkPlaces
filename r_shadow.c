@@ -176,6 +176,7 @@ cvar_t r_shadow_portallight = {0, "r_shadow_portallight", "1"};
 cvar_t r_shadow_projectdistance = {0, "r_shadow_projectdistance", "1000000"};
 cvar_t r_shadow_realtime_dlight = {CVAR_SAVE, "r_shadow_realtime_dlight", "1"};
 cvar_t r_shadow_realtime_dlight_shadows = {CVAR_SAVE, "r_shadow_realtime_dlight_shadows", "0"};
+cvar_t r_shadow_realtime_dlight_portalculling = {0, "r_shadow_realtime_dlight_portalculling", "0"};
 cvar_t r_shadow_realtime_world = {CVAR_SAVE, "r_shadow_realtime_world", "0"};
 cvar_t r_shadow_realtime_world_dlightshadows = {CVAR_SAVE, "r_shadow_realtime_world_dlightshadows", "1"};
 cvar_t r_shadow_realtime_world_lightmaps = {CVAR_SAVE, "r_shadow_realtime_world_lightmaps", "0"};
@@ -560,6 +561,7 @@ void R_Shadow_Help_f(void)
 "r_shadow_projectdistance : shadow volume projection distance\n"
 "r_shadow_realtime_dlight : use high quality dynamic lights in normal mode\n"
 "r_shadow_realtime_dlight_shadows : cast shadows from dlights\n"
+"r_shadow_realtime_dlight_portalculling : work hard to reduce graphics work\n"
 "r_shadow_realtime_world : use high quality world lighting mode\n"
 "r_shadow_realtime_world_dlightshadows : cast shadows from dlights\n"
 "r_shadow_realtime_world_lightmaps : use lightmaps in addition to lights\n"
@@ -599,6 +601,7 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_projectdistance);
 	Cvar_RegisterVariable(&r_shadow_realtime_dlight);
 	Cvar_RegisterVariable(&r_shadow_realtime_dlight_shadows);
+	Cvar_RegisterVariable(&r_shadow_realtime_dlight_portalculling);
 	Cvar_RegisterVariable(&r_shadow_realtime_world);
 	Cvar_RegisterVariable(&r_shadow_realtime_world_dlightshadows);
 	Cvar_RegisterVariable(&r_shadow_realtime_world_lightmaps);

@@ -325,8 +325,12 @@ typedef struct portalrecursioninfo_s
 	int numfrustumplanes;
 	vec3_t boxmins;
 	vec3_t boxmaxs;
-	qbyte *surfacemark;
-	qbyte *leafmark;
+	int numsurfaces;
+	int *surfacelist;
+	qbyte *surfacepvs;
+	int numleafs;
+	int *leaflist;
+	qbyte *leafpvs;
 	model_t *model;
 	vec3_t eye;
 	float *updateleafsmins;
@@ -337,35 +341,39 @@ portalrecursioninfo_t;
 void Portal_RecursiveFlow_ExactLeafFaces(portalrecursioninfo_t *info, int *mark, int numleafsurfaces, int firstclipplane, int numclipplanes)
 {
 	int i, j, *elements;
+	float *v[3], *vertex3f;
 	vec3_t trimins, trimaxs;
 	msurface_t *surface;
 	for (i = 0;i < numleafsurfaces;i++, mark++)
 	{
-		if (!info->surfacemark[*mark])
+		if (!CHECKPVSBIT(info->surfacepvs, *mark))
 		{
-			// FIXME?  this assumes q1bsp polygon surfaces
 			surface = info->model->brush.data_surfaces + *mark;
+			if (!BoxesOverlap(surface->mins, surface->maxs, info->boxmins, info->boxmaxs))
+				continue;
+			vertex3f = surface->groupmesh->data_vertex3f;
 			for (j = 0, elements = (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle);j < surface->num_triangles;j++, elements += 3)
 			{
-				VectorCopy((surface->groupmesh->data_vertex3f + elements[0] * 3), trianglepoints[0]);
-				VectorCopy((surface->groupmesh->data_vertex3f + elements[1] * 3), trianglepoints[1]);
-				VectorCopy((surface->groupmesh->data_vertex3f + elements[2] * 3), trianglepoints[2]);
-				if (PointInfrontOfTriangle(info->eye, trianglepoints[0], trianglepoints[1], trianglepoints[2]))
+				v[0] = vertex3f + elements[0] * 3;
+				v[1] = vertex3f + elements[1] * 3;
+				v[2] = vertex3f + elements[2] * 3;
+				if (PointInfrontOfTriangle(info->eye, v[0], v[1], v[2]))
 				{
-					trimins[0] = min(trianglepoints[0][0], min(trianglepoints[1][0], trianglepoints[2][0]));
-					trimaxs[0] = max(trianglepoints[0][0], max(trianglepoints[1][0], trianglepoints[2][0]));
-					trimins[1] = min(trianglepoints[0][1], min(trianglepoints[1][1], trianglepoints[2][1]));
-					trimaxs[1] = max(trianglepoints[0][1], max(trianglepoints[1][1], trianglepoints[2][1]));
-					trimins[2] = min(trianglepoints[0][2], min(trianglepoints[1][2], trianglepoints[2][2]));
-					trimaxs[2] = max(trianglepoints[0][2], max(trianglepoints[1][2], trianglepoints[2][2]));
+					trimins[0] = min(v[0][0], min(v[1][0], v[2][0]));
+					trimaxs[0] = max(v[0][0], max(v[1][0], v[2][0]));
+					trimins[1] = min(v[0][1], min(v[1][1], v[2][1]));
+					trimaxs[1] = max(v[0][1], max(v[1][1], v[2][1]));
+					trimins[2] = min(v[0][2], min(v[1][2], v[2][2]));
+					trimaxs[2] = max(v[0][2], max(v[1][2], v[2][2]));
 					if (BoxesOverlap(trimins, trimaxs, info->boxmins, info->boxmaxs))
-						if (Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, trianglepoints[0], 3, &portaltemppoints2[0][0], 256) >= 3)
+						if (Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, v[0], 3, &portaltemppoints2[0][0], 256) >= 3)
 							break;
 				}
 			}
 			if (j == surface->num_triangles)
 				continue;
-			info->surfacemark[*mark] = true;
+			SETPVSBIT(info->surfacepvs, *mark);
+			info->surfacelist[info->numsurfaces++] = *mark;
 		}
 	}
 }
@@ -384,17 +392,38 @@ void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, int first
 		if (info->updateleafsmaxs && info->updateleafsmaxs[i] < leaf->maxs[i]) info->updateleafsmaxs[i] = leaf->maxs[i];
 	}
 
-	if (info->leafmark)
-		info->leafmark[leaf - info->model->brush.data_leafs] = true;
+
+	if (info->leafpvs)
+	{
+		int leafindex = leaf - info->model->brush.data_leafs;
+		if (!CHECKPVSBIT(info->leafpvs, leafindex))
+		{
+			SETPVSBIT(info->leafpvs, leafindex);
+			info->leaflist[info->numleafs++] = leafindex;
+		}
+	}
 
 	// mark surfaces in leaf that can be seen through portal
-	if (leaf->numleafsurfaces && info->surfacemark)
+	if (leaf->numleafsurfaces && info->surfacepvs)
 	{
 		if (info->exact)
 			Portal_RecursiveFlow_ExactLeafFaces(info, leaf->firstleafsurface, leaf->numleafsurfaces, firstclipplane, numclipplanes);
 		else
+		{
 			for (i = 0;i < leaf->numleafsurfaces;i++)
-				info->surfacemark[leaf->firstleafsurface[i]] = true;
+			{
+				int surfaceindex = leaf->firstleafsurface[i];
+				if (!CHECKPVSBIT(info->surfacepvs, surfaceindex))
+				{
+					msurface_t *surface = info->model->brush.data_surfaces + surfaceindex;
+					if (BoxesOverlap(surface->mins, surface->maxs, info->boxmins, info->boxmaxs))
+					{
+						SETPVSBIT(info->surfacepvs, surfaceindex);
+						info->surfacelist[info->numsurfaces++] = surfaceindex;
+					}
+				}
+			}
+		}
 	}
 
 	// follow portals into other leafs
@@ -459,7 +488,7 @@ void Portal_RecursiveFindLeafForFlow(portalrecursioninfo_t *info, mnode_t *node)
 	}
 }
 
-void Portal_Visibility(model_t *model, const vec3_t eye, qbyte *leafmark, qbyte *surfacemark, const mplane_t *frustumplanes, int numfrustumplanes, int exact, const float *boxmins, const float *boxmaxs, float *updateleafsmins, float *updateleafsmaxs)
+void Portal_Visibility(model_t *model, const vec3_t eye, int *leaflist, qbyte *leafpvs, int *numleafspointer, int *surfacelist, qbyte *surfacepvs, int *numsurfacespointer, const mplane_t *frustumplanes, int numfrustumplanes, int exact, const float *boxmins, const float *boxmaxs, float *updateleafsmins, float *updateleafsmaxs)
 {
 	int i;
 	portalrecursioninfo_t info;
@@ -492,8 +521,12 @@ void Portal_Visibility(model_t *model, const vec3_t eye, qbyte *leafmark, qbyte 
 	VectorCopy(boxmins, info.boxmins);
 	VectorCopy(boxmaxs, info.boxmaxs);
 	info.exact = exact;
-	info.surfacemark = surfacemark;
-	info.leafmark = leafmark;
+	info.numsurfaces = 0;
+	info.surfacelist = surfacelist;
+	info.surfacepvs = surfacepvs;
+	info.numleafs = 0;
+	info.leaflist = leaflist;
+	info.leafpvs = leafpvs;
 	info.model = model;
 	VectorCopy(eye, info.eye);
 	info.numfrustumplanes = numfrustumplanes;
@@ -506,5 +539,9 @@ void Portal_Visibility(model_t *model, const vec3_t eye, qbyte *leafmark, qbyte 
 		Con_Printf("Portal_RecursiveFlow: ran out of %d plane stack when recursing through portals\n", MAXRECURSIVEPORTALPLANES);
 	if (ranoutofportals)
 		Con_Printf("Portal_RecursiveFlow: ran out of %d portal stack when recursing through portals\n", MAXRECURSIVEPORTALS);
+	if (numsurfacespointer)
+		*numsurfacespointer = info.numsurfaces;
+	if (numleafspointer)
+		*numleafspointer = info.numleafs;
 }
 

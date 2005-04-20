@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include "r_shadow.h"
+#include "portals.h"
 
 #define MAX_LIGHTMAP_SIZE 256
 
@@ -1771,7 +1772,7 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 							v[0] = info->model->brush.shadowmesh->vertex3f + e[0] * 3;
 							v[1] = info->model->brush.shadowmesh->vertex3f + e[1] * 3;
 							v[2] = info->model->brush.shadowmesh->vertex3f + e[2] * 3;
-							if (info->lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && info->lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && info->lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && info->lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && info->lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && info->lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+							if (PointInfrontOfTriangle(info->relativelightorigin, v[0], v[1], v[2]) && info->lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && info->lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && info->lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && info->lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && info->lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && info->lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
 							{
 								SETPVSBIT(info->outsurfacepvs, surfaceindex);
 								info->outsurfacelist[info->outnumsurfaces++] = surfaceindex;
@@ -1820,25 +1821,29 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 	else
 		info.pvs = NULL;
 	R_UpdateAllTextureInfo(ent);
-	/*
 	if (r_shadow_compilingrtlight)
 	{
-		Portal_Visibility(info.model, info.relativelightorigin, leafmark, surfacemark, const mplane_t *frustumplanes, int numfrustumplanes, int exact, const float *boxmins, const float *boxmaxs, float *updateleafsmins, float *updateleafsmaxs)
+		// use portal recursion for exact light volume culling, and exact surface checking
+		Portal_Visibility(info.model, info.relativelightorigin, info.outleaflist, info.outleafpvs, &info.outnumleafs, info.outsurfacelist, info.outsurfacepvs, &info.outnumsurfaces, NULL, 0, true, info.lightmins, info.lightmaxs, info.outmins, info.outmaxs);
+	}
+	else if (r_shadow_realtime_dlight_portalculling.integer)
+	{
+		// use portal recursion for exact light volume culling, but not the expensive exact surface checking
+		Portal_Visibility(info.model, info.relativelightorigin, info.outleaflist, info.outleafpvs, &info.outnumleafs, info.outsurfacelist, info.outsurfacepvs, &info.outnumsurfaces, NULL, 0, r_shadow_realtime_dlight_portalculling.integer >= 2, info.lightmins, info.lightmaxs, info.outmins, info.outmaxs);
 	}
 	else
-	*/
 	{
 		// use BSP recursion as lights are often small
 		R_Q1BSP_RecursiveGetLightInfo(&info, info.model->brush.data_nodes);
 	}
 
 	// limit combined leaf box to light boundaries
-	outmins[0] = max(info.outmins[0], info.lightmins[0]);
-	outmins[1] = max(info.outmins[1], info.lightmins[1]);
-	outmins[2] = max(info.outmins[2], info.lightmins[2]);
-	outmaxs[0] = min(info.outmaxs[0], info.lightmaxs[0]);
-	outmaxs[1] = min(info.outmaxs[1], info.lightmaxs[1]);
-	outmaxs[2] = min(info.outmaxs[2], info.lightmaxs[2]);
+	outmins[0] = max(info.outmins[0] - 1, info.lightmins[0]);
+	outmins[1] = max(info.outmins[1] - 1, info.lightmins[1]);
+	outmins[2] = max(info.outmins[2] - 1, info.lightmins[2]);
+	outmaxs[0] = min(info.outmaxs[0] + 1, info.lightmaxs[0]);
+	outmaxs[1] = min(info.outmaxs[1] + 1, info.lightmaxs[1]);
+	outmaxs[2] = min(info.outmaxs[2] + 1, info.lightmaxs[2]);
 
 	*outnumleafspointer = info.outnumleafs;
 	*outnumsurfacespointer = info.outnumsurfaces;
@@ -1889,7 +1894,27 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t 
 				// if compiling an rtlight, capture the mesh
 				t = surface->texture;
 				if ((t->basematerialflags & (MATERIALFLAG_WALL | MATERIALFLAG_TRANSPARENT)) == MATERIALFLAG_WALL)
+				{
+#if 1
+					int tri;
+					int *e;
+					float *lightmins, *lightmaxs, *v[3], *vertex3f;
+					e = surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle;
+					vertex3f = surface->groupmesh->data_vertex3f;
+					lightmins = r_shadow_compilingrtlight->cullmins;
+					lightmaxs = r_shadow_compilingrtlight->cullmaxs;
+					for (tri = 0;tri < surface->num_triangles;tri++, e += 3)
+					{
+						v[0] = vertex3f + e[0] * 3;
+						v[1] = vertex3f + e[1] * 3;
+						v[2] = vertex3f + e[2] * 3;
+						if (PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+							Mod_ShadowMesh_AddMesh(r_shadow_mempool, r_shadow_compilingrtlight->static_meshchain_light, surface->texture->skin.base, surface->texture->skin.gloss, surface->texture->skin.nmap, surface->groupmesh->data_vertex3f, surface->groupmesh->data_svector3f, surface->groupmesh->data_tvector3f, surface->groupmesh->data_normal3f, surface->groupmesh->data_texcoordtexture2f, 1, e);
+					}
+#else
 					Mod_ShadowMesh_AddMesh(r_shadow_mempool, r_shadow_compilingrtlight->static_meshchain_light, surface->texture->skin.base, surface->texture->skin.gloss, surface->texture->skin.nmap, surface->groupmesh->data_vertex3f, surface->groupmesh->data_svector3f, surface->groupmesh->data_tvector3f, surface->groupmesh->data_normal3f, surface->groupmesh->data_texcoordtexture2f, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
+#endif
+				}
 			}
 			else if (ent != r_refdef.worldentity || r_worldsurfacevisible[surfacelist[surfacelistindex]])
 			{
