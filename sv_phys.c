@@ -677,7 +677,7 @@ void SV_PushMove (edict_t *pusher, float movetime)
 	num_moved = 0;
 
 	numcheckentities = SV_EntitiesInBox(mins, maxs, MAX_EDICTS, checkentities);
-	for (e = 1;e < numcheckentities;e++)
+	for (e = 0;e < numcheckentities;e++)
 	{
 		check = checkentities[e];
 		if (check->v->movetype == MOVETYPE_PUSH
@@ -692,7 +692,7 @@ void SV_PushMove (edict_t *pusher, float movetime)
 			if (!SV_ClipMoveToEntity(pusher, check->v->origin, check->v->mins, check->v->maxs, check->v->origin).startsolid)
 				continue;
 
-		if (forward[0] != 1) // quick way to check if any rotation is used
+		if (forward[0] != 1 || left[1] != 1) // quick way to check if any rotation is used
 		{
 			VectorSubtract (check->v->origin, pusher->v->origin, org);
 			org2[0] = DotProduct (org, forward);
