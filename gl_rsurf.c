@@ -1700,9 +1700,9 @@ typedef struct r_q1bsp_getlightinfo_s
 	model_t *model;
 	vec3_t relativelightorigin;
 	float lightradius;
-	int *outclusterlist;
-	qbyte *outclusterpvs;
-	int outnumclusters;
+	int *outleaflist;
+	qbyte *outleafpvs;
+	int outnumleafs;
 	int *outsurfacelist;
 	qbyte *outsurfacepvs;
 	int outnumsurfaces;
@@ -1742,12 +1742,13 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 		info->outmaxs[0] = max(info->outmaxs[0], leaf->maxs[0]);
 		info->outmaxs[1] = max(info->outmaxs[1], leaf->maxs[1]);
 		info->outmaxs[2] = max(info->outmaxs[2], leaf->maxs[2]);
-		if (info->outclusterpvs)
+		if (info->outleafpvs)
 		{
-			if (!CHECKPVSBIT(info->outclusterpvs, leaf->clusterindex))
+			int leafindex = leaf - info->model->brush.data_leafs;
+			if (!CHECKPVSBIT(info->outleafpvs, leafindex))
 			{
-				SETPVSBIT(info->outclusterpvs, leaf->clusterindex);
-				info->outclusterlist[info->outnumclusters++] = leaf->clusterindex;
+				SETPVSBIT(info->outleafpvs, leafindex);
+				info->outleaflist[info->outnumleafs++] = leafindex;
 			}
 		}
 		if (info->outsurfacepvs)
@@ -1784,7 +1785,7 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 	}
 }
 
-void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outclusterlist, qbyte *outclusterpvs, int *outnumclusterspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer)
+void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, qbyte *outleafpvs, int *outnumleafspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer)
 {
 	r_q1bsp_getlightinfo_t info;
 	VectorCopy(relativelightorigin, info.relativelightorigin);
@@ -1799,28 +1800,37 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 	{
 		VectorCopy(info.lightmins, outmins);
 		VectorCopy(info.lightmaxs, outmaxs);
-		*outnumclusterspointer = 0;
+		*outnumleafspointer = 0;
 		*outnumsurfacespointer = 0;
 		return;
 	}
 	info.model = ent->model;
-	info.outclusterlist = outclusterlist;
-	info.outclusterpvs = outclusterpvs;
-	info.outnumclusters = 0;
+	info.outleaflist = outleaflist;
+	info.outleafpvs = outleafpvs;
+	info.outnumleafs = 0;
 	info.outsurfacelist = outsurfacelist;
 	info.outsurfacepvs = outsurfacepvs;
 	info.outnumsurfaces = 0;
 	VectorCopy(info.relativelightorigin, info.outmins);
 	VectorCopy(info.relativelightorigin, info.outmaxs);
-	memset(outclusterpvs, 0, info.model->brush.num_pvsclusterbytes);
+	memset(outleafpvs, 0, (info.model->brush.num_leafs + 7) >> 3);
 	memset(outsurfacepvs, 0, (info.model->nummodelsurfaces + 7) >> 3);
 	if (info.model->brush.GetPVS)
 		info.pvs = info.model->brush.GetPVS(info.model, info.relativelightorigin);
 	else
 		info.pvs = NULL;
 	R_UpdateAllTextureInfo(ent);
-	// use BSP recursion as lights are often small
-	R_Q1BSP_RecursiveGetLightInfo(&info, info.model->brush.data_nodes);
+	/*
+	if (r_shadow_compilingrtlight)
+	{
+		Portal_Visibility(info.model, info.relativelightorigin, leafmark, surfacemark, const mplane_t *frustumplanes, int numfrustumplanes, int exact, const float *boxmins, const float *boxmaxs, float *updateleafsmins, float *updateleafsmaxs)
+	}
+	else
+	*/
+	{
+		// use BSP recursion as lights are often small
+		R_Q1BSP_RecursiveGetLightInfo(&info, info.model->brush.data_nodes);
+	}
 
 	// limit combined leaf box to light boundaries
 	outmins[0] = max(info.outmins[0], info.lightmins[0]);
@@ -1830,7 +1840,7 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 	outmaxs[1] = min(info.outmaxs[1], info.lightmaxs[1]);
 	outmaxs[2] = min(info.outmaxs[2], info.lightmaxs[2]);
 
-	*outnumclusterspointer = info.outnumclusters;
+	*outnumleafspointer = info.outnumleafs;
 	*outnumsurfacespointer = info.outnumsurfaces;
 }
 

@@ -141,10 +141,10 @@ typedef struct rtlight_s
 	shadowmesh_t *static_meshchain_shadow;
 	shadowmesh_t *static_meshchain_light;
 	// used for visibility testing (more exact than bbox)
-	int static_numclusters;
-	int static_numclusterpvsbytes;
-	int *static_clusterlist;
-	qbyte *static_clusterpvs;
+	int static_numleafs;
+	int static_numleafpvsbytes;
+	int *static_leaflist;
+	qbyte *static_leafpvs;
 	// surfaces seen by light
 	int static_numsurfaces;
 	int *static_surfacelist;

@@ -142,9 +142,9 @@ int *vertexupdate;
 int *vertexremap;
 int vertexupdatenum;
 
-int r_shadow_buffer_numclusterpvsbytes;
-qbyte *r_shadow_buffer_clusterpvs;
-int *r_shadow_buffer_clusterlist;
+int r_shadow_buffer_numleafpvsbytes;
+qbyte *r_shadow_buffer_leafpvs;
+int *r_shadow_buffer_leaflist;
 
 int r_shadow_buffer_numsurfacepvsbytes;
 qbyte *r_shadow_buffer_surfacepvs;
@@ -409,9 +409,9 @@ void r_shadow_start(void)
 	shadowmark = NULL;
 	shadowmarklist = NULL;
 	shadowmarkcount = 0;
-	r_shadow_buffer_numclusterpvsbytes = 0;
-	r_shadow_buffer_clusterpvs = NULL;
-	r_shadow_buffer_clusterlist = NULL;
+	r_shadow_buffer_numleafpvsbytes = 0;
+	r_shadow_buffer_leafpvs = NULL;
+	r_shadow_buffer_leaflist = NULL;
 	r_shadow_buffer_numsurfacepvsbytes = 0;
 	r_shadow_buffer_surfacepvs = NULL;
 	r_shadow_buffer_surfacelist = NULL;
@@ -522,13 +522,13 @@ void r_shadow_shutdown(void)
 		Mem_Free(shadowmarklist);
 	shadowmarklist = NULL;
 	shadowmarkcount = 0;
-	r_shadow_buffer_numclusterpvsbytes = 0;
-	if (r_shadow_buffer_clusterpvs)
-		Mem_Free(r_shadow_buffer_clusterpvs);
-	r_shadow_buffer_clusterpvs = NULL;
-	if (r_shadow_buffer_clusterlist)
-		Mem_Free(r_shadow_buffer_clusterlist);
-	r_shadow_buffer_clusterlist = NULL;
+	r_shadow_buffer_numleafpvsbytes = 0;
+	if (r_shadow_buffer_leafpvs)
+		Mem_Free(r_shadow_buffer_leafpvs);
+	r_shadow_buffer_leafpvs = NULL;
+	if (r_shadow_buffer_leaflist)
+		Mem_Free(r_shadow_buffer_leaflist);
+	r_shadow_buffer_leaflist = NULL;
 	r_shadow_buffer_numsurfacepvsbytes = 0;
 	if (r_shadow_buffer_surfacepvs)
 		Mem_Free(r_shadow_buffer_surfacepvs);
@@ -638,16 +638,16 @@ void R_Shadow_Init(void)
 	shadowmark = NULL;
 	shadowmarklist = NULL;
 	shadowmarkcount = 0;
-	r_shadow_buffer_numclusterpvsbytes = 0;
-	r_shadow_buffer_clusterpvs = NULL;
-	r_shadow_buffer_clusterlist = NULL;
+	r_shadow_buffer_numleafpvsbytes = 0;
+	r_shadow_buffer_leafpvs = NULL;
+	r_shadow_buffer_leaflist = NULL;
 	r_shadow_buffer_numsurfacepvsbytes = 0;
 	r_shadow_buffer_surfacepvs = NULL;
 	r_shadow_buffer_surfacelist = NULL;
 	R_RegisterModule("R_Shadow", r_shadow_start, r_shadow_shutdown, r_shadow_newmap);
 }
 
-matrix4x4_t matrix_attenuationxyz =
+static matrix4x4_t matrix_attenuationxyz =
 {
 	{
 		{0.5, 0.0, 0.0, 0.5},
@@ -657,7 +657,7 @@ matrix4x4_t matrix_attenuationxyz =
 	}
 };
 
-matrix4x4_t matrix_attenuationz =
+static matrix4x4_t matrix_attenuationz =
 {
 	{
 		{0.0, 0.0, 0.5, 0.5},
@@ -680,19 +680,19 @@ int *R_Shadow_ResizeShadowElements(int numtris)
 	return shadowelements;
 }
 
-void R_Shadow_EnlargeClusterSurfaceBuffer(int numclusters, int numsurfaces)
+static void R_Shadow_EnlargeLeafSurfaceBuffer(int numleafs, int numsurfaces)
 {
-	int numclusterpvsbytes = (((numclusters + 7) >> 3) + 255) & ~255;
+	int numleafpvsbytes = (((numleafs + 7) >> 3) + 255) & ~255;
 	int numsurfacepvsbytes = (((numsurfaces + 7) >> 3) + 255) & ~255;
-	if (r_shadow_buffer_numclusterpvsbytes < numclusterpvsbytes)
+	if (r_shadow_buffer_numleafpvsbytes < numleafpvsbytes)
 	{
-		if (r_shadow_buffer_clusterpvs)
-			Mem_Free(r_shadow_buffer_clusterpvs);
-		if (r_shadow_buffer_clusterlist)
-			Mem_Free(r_shadow_buffer_clusterlist);
-		r_shadow_buffer_numclusterpvsbytes = numclusterpvsbytes;
-		r_shadow_buffer_clusterpvs = Mem_Alloc(r_shadow_mempool, r_shadow_buffer_numclusterpvsbytes);
-		r_shadow_buffer_clusterlist = Mem_Alloc(r_shadow_mempool, r_shadow_buffer_numclusterpvsbytes * 8 * sizeof(*r_shadow_buffer_clusterlist));
+		if (r_shadow_buffer_leafpvs)
+			Mem_Free(r_shadow_buffer_leafpvs);
+		if (r_shadow_buffer_leaflist)
+			Mem_Free(r_shadow_buffer_leaflist);
+		r_shadow_buffer_numleafpvsbytes = numleafpvsbytes;
+		r_shadow_buffer_leafpvs = Mem_Alloc(r_shadow_mempool, r_shadow_buffer_numleafpvsbytes);
+		r_shadow_buffer_leaflist = Mem_Alloc(r_shadow_mempool, r_shadow_buffer_numleafpvsbytes * 8 * sizeof(*r_shadow_buffer_leaflist));
 	}
 	if (r_shadow_buffer_numsurfacepvsbytes < numsurfacepvsbytes)
 	{
@@ -2667,17 +2667,17 @@ void R_RTLight_UpdateFromDLight(rtlight_t *rtlight, const dlight_t *light, int i
 // (undone by R_FreeCompiledRTLight, which R_UpdateLight calls)
 void R_RTLight_Compile(rtlight_t *rtlight)
 {
-	int shadowmeshes, shadowtris, lightmeshes, lighttris, numclusters, numclusterpvsbytes, numsurfaces;
+	int shadowmeshes, shadowtris, lightmeshes, lighttris, numleafs, numleafpvsbytes, numsurfaces;
 	entity_render_t *ent = r_refdef.worldentity;
 	model_t *model = r_refdef.worldmodel;
 	qbyte *data;
 
 	// compile the light
 	rtlight->compiled = true;
-	rtlight->static_numclusters = 0;
-	rtlight->static_numclusterpvsbytes = 0;
-	rtlight->static_clusterlist = NULL;
-	rtlight->static_clusterpvs = NULL;
+	rtlight->static_numleafs = 0;
+	rtlight->static_numleafpvsbytes = 0;
+	rtlight->static_leaflist = NULL;
+	rtlight->static_leafpvs = NULL;
 	rtlight->static_numsurfaces = 0;
 	rtlight->static_surfacelist = NULL;
 	rtlight->cullmins[0] = rtlight->shadoworigin[0] - rtlight->radius;
@@ -2691,20 +2691,20 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 	{
 		// this variable directs the DrawShadowVolume and DrawLight code to capture into the mesh chain instead of rendering
 		r_shadow_compilingrtlight = rtlight;
-		R_Shadow_EnlargeClusterSurfaceBuffer(model->brush.num_pvsclusters, model->nummodelsurfaces);
-		model->GetLightInfo(ent, rtlight->shadoworigin, rtlight->radius, rtlight->cullmins, rtlight->cullmaxs, r_shadow_buffer_clusterlist, r_shadow_buffer_clusterpvs, &numclusters, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces);
-		numclusterpvsbytes = (model->brush.num_pvsclusters + 7) >> 3;
-		data = Mem_Alloc(r_shadow_mempool, sizeof(int) * numclusters + numclusterpvsbytes + sizeof(int) * numsurfaces);
-		rtlight->static_numclusters = numclusters;
-		rtlight->static_numclusterpvsbytes = numclusterpvsbytes;
-		rtlight->static_clusterlist = (void *)data;data += sizeof(int) * numclusters;
-		rtlight->static_clusterpvs = (void *)data;data += numclusterpvsbytes;
+		R_Shadow_EnlargeLeafSurfaceBuffer(model->brush.num_leafs, model->brush.num_surfaces);
+		model->GetLightInfo(ent, rtlight->shadoworigin, rtlight->radius, rtlight->cullmins, rtlight->cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces);
+		numleafpvsbytes = (model->brush.num_leafs + 7) >> 3;
+		data = Mem_Alloc(r_shadow_mempool, sizeof(int) * numleafs + numleafpvsbytes + sizeof(int) * numsurfaces);
+		rtlight->static_numleafs = numleafs;
+		rtlight->static_numleafpvsbytes = numleafpvsbytes;
+		rtlight->static_leaflist = (void *)data;data += sizeof(int) * numleafs;
+		rtlight->static_leafpvs = (void *)data;data += numleafpvsbytes;
 		rtlight->static_numsurfaces = numsurfaces;
 		rtlight->static_surfacelist = (void *)data;data += sizeof(int) * numsurfaces;
-		if (numclusters)
-			memcpy(rtlight->static_clusterlist, r_shadow_buffer_clusterlist, rtlight->static_numclusters * sizeof(*rtlight->static_clusterlist));
-		if (numclusterpvsbytes)
-			memcpy(rtlight->static_clusterpvs, r_shadow_buffer_clusterpvs, rtlight->static_numclusterpvsbytes);
+		if (numleafs)
+			memcpy(rtlight->static_leaflist, r_shadow_buffer_leaflist, rtlight->static_numleafs * sizeof(*rtlight->static_leaflist));
+		if (numleafpvsbytes)
+			memcpy(rtlight->static_leafpvs, r_shadow_buffer_leafpvs, rtlight->static_numleafpvsbytes);
 		if (numsurfaces)
 			memcpy(rtlight->static_surfacelist, r_shadow_buffer_surfacelist, rtlight->static_numsurfaces * sizeof(*rtlight->static_surfacelist));
 		if (model->DrawShadowVolume && rtlight->shadow)
@@ -2766,12 +2766,12 @@ void R_RTLight_Uncompile(rtlight_t *rtlight)
 			Mod_ShadowMesh_Free(rtlight->static_meshchain_light);
 		rtlight->static_meshchain_light = NULL;
 		// these allocations are grouped
-		if (rtlight->static_clusterlist)
-			Mem_Free(rtlight->static_clusterlist);
-		rtlight->static_numclusters = 0;
-		rtlight->static_numclusterpvsbytes = 0;
-		rtlight->static_clusterlist = NULL;
-		rtlight->static_clusterpvs = NULL;
+		if (rtlight->static_leaflist)
+			Mem_Free(rtlight->static_leaflist);
+		rtlight->static_numleafs = 0;
+		rtlight->static_numleafpvsbytes = 0;
+		rtlight->static_leaflist = NULL;
+		rtlight->static_leafpvs = NULL;
 		rtlight->static_numsurfaces = 0;
 		rtlight->static_surfacelist = NULL;
 		rtlight->compiled = false;
@@ -2793,9 +2793,9 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblelighting, int visiblevolumes)
 	vec3_t relativelightorigin, relativeeyeorigin, lightcolor, lightcolor2;
 	rtexture_t *cubemaptexture;
 	matrix4x4_t matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz;
-	int numclusters, numsurfaces;
-	int *clusterlist, *surfacelist;
-	qbyte *clusterpvs;
+	int numleafs, numsurfaces;
+	int *leaflist, *surfacelist;
+	qbyte *leafpvs;
 	vec3_t cullmins, cullmaxs, relativelightmins, relativelightmaxs;
 	shadowmesh_t *mesh;
 	rmeshstate_t m;
@@ -2834,18 +2834,18 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblelighting, int visiblevolumes)
 	cullmaxs[2] = rtlight->shadoworigin[2] + rtlight->radius;
 	if (rtlight->style >= 0 && d_lightstylevalue[rtlight->style] <= 0)
 		return;
-	numclusters = 0;
-	clusterlist = NULL;
-	clusterpvs = NULL;
+	numleafs = 0;
+	leaflist = NULL;
+	leafpvs = NULL;
 	numsurfaces = 0;
 	surfacelist = NULL;
 	if (rtlight->compiled && r_shadow_realtime_world_compile.integer)
 	{
 		// compiled light, world available and can receive realtime lighting
-		// retrieve cluster information
-		numclusters = rtlight->static_numclusters;
-		clusterlist = rtlight->static_clusterlist;
-		clusterpvs = rtlight->static_clusterpvs;
+		// retrieve leaf information
+		numleafs = rtlight->static_numleafs;
+		leaflist = rtlight->static_leaflist;
+		leafpvs = rtlight->static_leafpvs;
 		numsurfaces = rtlight->static_numsurfaces;
 		surfacelist = rtlight->static_surfacelist;
 		VectorCopy(rtlight->cullmins, cullmins);
@@ -2857,23 +2857,23 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblelighting, int visiblevolumes)
 		// if the light box is offscreen, skip it right away
 		if (R_CullBox(cullmins, cullmaxs))
 			return;
-		// calculate lit surfaces and clusters
-		R_Shadow_EnlargeClusterSurfaceBuffer(r_refdef.worldmodel->brush.num_pvsclusters, r_refdef.worldmodel->nummodelsurfaces);
-		r_refdef.worldmodel->GetLightInfo(r_refdef.worldentity, rtlight->shadoworigin, rtlight->radius, cullmins, cullmaxs, r_shadow_buffer_clusterlist, r_shadow_buffer_clusterpvs, &numclusters, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces);
-		clusterlist = r_shadow_buffer_clusterlist;
-		clusterpvs = r_shadow_buffer_clusterpvs;
+		// calculate lit surfaces and leafs
+		R_Shadow_EnlargeLeafSurfaceBuffer(r_refdef.worldmodel->brush.num_leafs, r_refdef.worldmodel->brush.num_surfaces);
+		r_refdef.worldmodel->GetLightInfo(r_refdef.worldentity, rtlight->shadoworigin, rtlight->radius, cullmins, cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces);
+		leaflist = r_shadow_buffer_leaflist;
+		leafpvs = r_shadow_buffer_leafpvs;
 		surfacelist = r_shadow_buffer_surfacelist;
 	}
-	// if the reduced cluster bounds are offscreen, skip it
+	// if the reduced leaf bounds are offscreen, skip it
 	if (R_CullBox(cullmins, cullmaxs))
 		return;
-	// check if light is illuminating any visible clusters
-	if (numclusters)
+	// check if light is illuminating any visible leafs
+	if (numleafs)
 	{
-		for (i = 0;i < numclusters;i++)
-			if (CHECKPVSBIT(r_pvsbits, clusterlist[i]))
+		for (i = 0;i < numleafs;i++)
+			if (r_worldleafvisible[leaflist[i]])
 				break;
-		if (i == numclusters)
+		if (i == numleafs)
 			return;
 	}
 	// set up a scissor rectangle for this light
@@ -2939,7 +2939,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblelighting, int visiblevolumes)
 				{
 					if (!BoxesOverlap(ent->mins, ent->maxs, cullmins, cullmaxs))
 						continue;
-					if (r_refdef.worldmodel != NULL && r_refdef.worldmodel->brush.BoxTouchingPVS != NULL && !r_refdef.worldmodel->brush.BoxTouchingPVS(r_refdef.worldmodel, clusterpvs, ent->mins, ent->maxs))
+					if (r_refdef.worldmodel != NULL && r_refdef.worldmodel->brush.BoxTouchingLeafPVS != NULL && !r_refdef.worldmodel->brush.BoxTouchingLeafPVS(r_refdef.worldmodel, leafpvs, ent->mins, ent->maxs))
 						continue;
 				}
 				if (!(ent->flags & RENDER_SHADOW) || !ent->model || !ent->model->DrawShadowVolume)
