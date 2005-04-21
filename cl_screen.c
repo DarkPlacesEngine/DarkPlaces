@@ -23,6 +23,7 @@ cvar_t scr_screenshot_jpeg_quality = {CVAR_SAVE, "scr_screenshot_jpeg_quality","
 cvar_t scr_screenshot_gamma = {CVAR_SAVE, "scr_screenshot_gamma","2.2"};
 cvar_t scr_screenshot_name = {0, "scr_screenshot_name","dp"};
 cvar_t cl_capturevideo = {0, "cl_capturevideo", "0"};
+cvar_t cl_capturevideo_sound = {0, "cl_capturevideo_sound", "0"};
 cvar_t cl_capturevideo_fps = {0, "cl_capturevideo_fps", "30"};
 cvar_t cl_capturevideo_rawrgb = {0, "cl_capturevideo_rawrgb", "0"};
 cvar_t cl_capturevideo_rawyv12 = {0, "cl_capturevideo_rawyv12", "0"};
@@ -466,6 +467,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_screenshot_jpeg_quality);
 	Cvar_RegisterVariable (&scr_screenshot_gamma);
 	Cvar_RegisterVariable (&cl_capturevideo);
+	Cvar_RegisterVariable (&cl_capturevideo_sound);
 	Cvar_RegisterVariable (&cl_capturevideo_fps);
 	Cvar_RegisterVariable (&cl_capturevideo_rawrgb);
 	Cvar_RegisterVariable (&cl_capturevideo_rawyv12);
@@ -722,7 +724,7 @@ static int cl_capturevideo_soundrate = 0;
 static int cl_capturevideo_frame = 0;
 static qbyte *cl_capturevideo_buffer = NULL;
 static qfile_t *cl_capturevideo_videofile = NULL;
-static qfile_t *cl_capturevideo_soundfile = NULL;
+qfile_t *cl_capturevideo_soundfile = NULL;
 static short cl_capturevideo_rgbtoyuvscaletable[3][3][256];
 static unsigned char cl_capturevideo_yuvnormalizetable[3][256];
 //static unsigned char cl_capturevideo_rgbgammatable[3][256];
@@ -802,11 +804,15 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 		cl_capturevideo_videofile = NULL;
 	}
 
-	cl_capturevideo_soundfile = FS_Open ("video/dpvideo.wav", "wb", false, true);
-
-	// wave header will be filled out when video ends
-	memset(out, 0, 44);
-	FS_Write (cl_capturevideo_soundfile, out, 44);
+	if (cl_capturevideo_sound.integer)
+	{
+		cl_capturevideo_soundfile = FS_Open ("video/dpvideo.wav", "wb", false, true);
+		// wave header will be filled out when video ends
+		memset(out, 0, 44);
+		FS_Write (cl_capturevideo_soundfile, out, 44);
+	}
+	else
+		cl_capturevideo_soundfile = NULL;
 }
 
 void SCR_CaptureVideo_EndVideo(void)
@@ -967,6 +973,8 @@ qboolean SCR_CaptureVideo_VideoFrame(int newframenum)
 
 void SCR_CaptureVideo_SoundFrame(qbyte *bufstereo16le, size_t length, int rate)
 {
+	if (!cl_capturevideo_soundfile)
+		return;
 	cl_capturevideo_soundrate = rate;
 	if (FS_Write (cl_capturevideo_soundfile, bufstereo16le, 4 * length) < 4 * length)
 	{
@@ -988,7 +996,13 @@ void SCR_CaptureVideo(void)
 			Con_Printf("You can not change the video framerate while recording a video.\n");
 			Cvar_SetValueQuick(&cl_capturevideo_fps, cl_capturevideo_framerate);
 		}
-		newframenum = (Sys_DoubleTime() - cl_capturevideo_starttime) * cl_capturevideo_framerate;
+		if (cl_capturevideo_soundfile)
+		{
+			// preserve sound sync by duplicating frames when running slow
+			newframenum = (Sys_DoubleTime() - cl_capturevideo_starttime) * cl_capturevideo_framerate;
+		}
+		else
+			newframenum = cl_capturevideo_frame + 1;
 		// if falling behind more than one second, stop
 		if (newframenum - cl_capturevideo_frame > (int)ceil(cl_capturevideo_framerate))
 		{

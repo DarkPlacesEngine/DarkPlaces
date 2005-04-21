@@ -556,6 +556,7 @@ Returns false if the time is too short to run a frame
 */
 extern qboolean cl_capturevideo_active;
 extern double cl_capturevideo_framerate;
+extern qfile_t *cl_capturevideo_soundfile;
 qboolean Host_FilterTime (double time)
 {
 	double timecap, timeleft;
@@ -592,7 +593,7 @@ qboolean Host_FilterTime (double time)
 			timecap = 1.0 / cl_maxfps.value;
 	}
 
-	timeleft = (oldrealtime - realtime) + timecap;
+	timeleft = timecap - (realtime - oldrealtime);
 	if (timeleft > 0)
 	{
 		int msleft;
@@ -618,6 +619,9 @@ qboolean Host_FilterTime (double time)
 	// LordHavoc: copy into host_realframetime as well
 	host_realframetime = host_frametime = realtime - oldrealtime;
 	oldrealtime = realtime;
+
+	if (cl_capturevideo_active && !cl_capturevideo_soundfile)
+		host_frametime = timecap;
 
 	// apply slowmo scaling
 	host_frametime *= slowmo.value;
