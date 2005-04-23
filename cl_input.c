@@ -414,7 +414,7 @@ void CL_SendMove(void)
 	int bits;
 	sizebuf_t buf;
 	qbyte data[128];
-	static double lastmovetime = 0;
+	static double nextmovetime = 0;
 #define MOVEAVERAGING 0
 #if MOVEAVERAGING
 	static float forwardmove, sidemove, upmove, total; // accumulation
@@ -432,9 +432,10 @@ void CL_SendMove(void)
 	total++;
 #endif
 	// LordHavoc: cap outgoing movement messages to sys_ticrate
-	if (!cl.islocalgame && (realtime - lastmovetime < sys_ticrate.value))
+	nextmovetime = bound(realtime - sys_ticrate.value, nextmovetime, realtime + sys_ticrate.value);
+	if (!cl.islocalgame && realtime < nextmovetime)
 		return;
-	lastmovetime = max(lastmovetime + sys_ticrate.value, realtime);
+	nextmovetime += sys_ticrate.value;
 #if MOVEAVERAGING
 	// average the accumulated changes
 	total = 1.0f / total;
