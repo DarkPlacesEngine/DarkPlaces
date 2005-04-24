@@ -331,7 +331,7 @@ int R_LightModel(float *ambient4f, float *diffusecolor, float *diffusenormal, co
 			nl->offset = sl->distbias;
 		}
 	}
-	if (!r_rtdlight || (ent->flags & RENDER_TRANSPARENT))
+	if (ent->flags & RENDER_TRANSPARENT)
 	{
 		// FIXME: this dlighting doesn't look like rtlights
 		for (i = 0;i < r_numdlights;i++)
