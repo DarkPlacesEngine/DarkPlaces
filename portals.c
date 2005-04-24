@@ -349,31 +349,32 @@ void Portal_RecursiveFlow_ExactLeafFaces(portalrecursioninfo_t *info, int *mark,
 		if (!CHECKPVSBIT(info->surfacepvs, *mark))
 		{
 			surface = info->model->brush.data_surfaces + *mark;
-			if (!BoxesOverlap(surface->mins, surface->maxs, info->boxmins, info->boxmaxs))
-				continue;
-			vertex3f = surface->groupmesh->data_vertex3f;
-			for (j = 0, elements = (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle);j < surface->num_triangles;j++, elements += 3)
+			if (BoxesOverlap(surface->mins, surface->maxs, info->boxmins, info->boxmaxs))
 			{
-				v[0] = vertex3f + elements[0] * 3;
-				v[1] = vertex3f + elements[1] * 3;
-				v[2] = vertex3f + elements[2] * 3;
-				if (PointInfrontOfTriangle(info->eye, v[0], v[1], v[2]))
+				vertex3f = surface->groupmesh->data_vertex3f;
+				elements = (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle);
+				for (j = 0;j < surface->num_triangles;j++, elements += 3)
 				{
-					trimins[0] = min(v[0][0], min(v[1][0], v[2][0]));
-					trimaxs[0] = max(v[0][0], max(v[1][0], v[2][0]));
-					trimins[1] = min(v[0][1], min(v[1][1], v[2][1]));
-					trimaxs[1] = max(v[0][1], max(v[1][1], v[2][1]));
-					trimins[2] = min(v[0][2], min(v[1][2], v[2][2]));
-					trimaxs[2] = max(v[0][2], max(v[1][2], v[2][2]));
-					if (BoxesOverlap(trimins, trimaxs, info->boxmins, info->boxmaxs))
-						if (Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, v[0], 3, &portaltemppoints2[0][0], 256) >= 3)
+					v[0] = vertex3f + elements[0] * 3;
+					v[1] = vertex3f + elements[1] * 3;
+					v[2] = vertex3f + elements[2] * 3;
+					if (PointInfrontOfTriangle(info->eye, v[0], v[1], v[2]))
+					{
+						trimins[0] = min(v[0][0], min(v[1][0], v[2][0]));
+						trimaxs[0] = max(v[0][0], max(v[1][0], v[2][0]));
+						trimins[1] = min(v[0][1], min(v[1][1], v[2][1]));
+						trimaxs[1] = max(v[0][1], max(v[1][1], v[2][1]));
+						trimins[2] = min(v[0][2], min(v[1][2], v[2][2]));
+						trimaxs[2] = max(v[0][2], max(v[1][2], v[2][2]));
+						if (BoxesOverlap(trimins, trimaxs, info->boxmins, info->boxmaxs) && Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, v[0], 3, &portaltemppoints2[0][0], 256) >= 3)
+						{
+							SETPVSBIT(info->surfacepvs, *mark);
+							info->surfacelist[info->numsurfaces++] = *mark;
 							break;
+						}
+					}
 				}
 			}
-			if (j == surface->num_triangles)
-				continue;
-			SETPVSBIT(info->surfacepvs, *mark);
-			info->surfacelist[info->numsurfaces++] = *mark;
 		}
 	}
 }
@@ -406,17 +407,45 @@ void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, int first
 	// mark surfaces in leaf that can be seen through portal
 	if (leaf->numleafsurfaces && info->surfacepvs)
 	{
-		if (info->exact)
-			Portal_RecursiveFlow_ExactLeafFaces(info, leaf->firstleafsurface, leaf->numleafsurfaces, firstclipplane, numclipplanes);
-		else
+		for (i = 0;i < leaf->numleafsurfaces;i++)
 		{
-			for (i = 0;i < leaf->numleafsurfaces;i++)
+			int surfaceindex = leaf->firstleafsurface[i];
+			if (!CHECKPVSBIT(info->surfacepvs, surfaceindex))
 			{
-				int surfaceindex = leaf->firstleafsurface[i];
-				if (!CHECKPVSBIT(info->surfacepvs, surfaceindex))
+				msurface_t *surface = info->model->brush.data_surfaces + surfaceindex;
+				if (BoxesOverlap(surface->mins, surface->maxs, info->boxmins, info->boxmaxs))
 				{
-					msurface_t *surface = info->model->brush.data_surfaces + surfaceindex;
-					if (BoxesOverlap(surface->mins, surface->maxs, info->boxmins, info->boxmaxs))
+					if (info->exact)
+					{
+						int j;
+						const int *elements;
+						const float *vertex3f;
+						float v[9], trimins[3], trimaxs[3];
+						vertex3f = surface->groupmesh->data_vertex3f;
+						elements = (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle);
+						for (j = 0;j < surface->num_triangles;j++, elements += 3)
+						{
+							VectorCopy(vertex3f + elements[0] * 3, v + 0);
+							VectorCopy(vertex3f + elements[1] * 3, v + 3);
+							VectorCopy(vertex3f + elements[2] * 3, v + 6);
+							if (PointInfrontOfTriangle(info->eye, v + 0, v + 3, v + 6))
+							{
+								trimins[0] = min(v[0], min(v[3], v[6]));
+								trimaxs[0] = max(v[0], max(v[3], v[6]));
+								trimins[1] = min(v[1], min(v[4], v[7]));
+								trimaxs[1] = max(v[1], max(v[4], v[7]));
+								trimins[2] = min(v[2], min(v[5], v[8]));
+								trimaxs[2] = max(v[2], max(v[5], v[8]));
+								if (BoxesOverlap(trimins, trimaxs, info->boxmins, info->boxmaxs) && Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, v, 3, &portaltemppoints2[0][0], 256) >= 3)
+								{
+									SETPVSBIT(info->surfacepvs, surfaceindex);
+									info->surfacelist[info->numsurfaces++] = surfaceindex;
+									break;
+								}
+							}
+						}
+					}
+					else
 					{
 						SETPVSBIT(info->surfacepvs, surfaceindex);
 						info->surfacelist[info->numsurfaces++] = surfaceindex;
