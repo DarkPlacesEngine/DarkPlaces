@@ -338,47 +338,6 @@ typedef struct portalrecursioninfo_s
 }
 portalrecursioninfo_t;
 
-void Portal_RecursiveFlow_ExactLeafFaces(portalrecursioninfo_t *info, int *mark, int numleafsurfaces, int firstclipplane, int numclipplanes)
-{
-	int i, j, *elements;
-	float *v[3], *vertex3f;
-	vec3_t trimins, trimaxs;
-	msurface_t *surface;
-	for (i = 0;i < numleafsurfaces;i++, mark++)
-	{
-		if (!CHECKPVSBIT(info->surfacepvs, *mark))
-		{
-			surface = info->model->brush.data_surfaces + *mark;
-			if (BoxesOverlap(surface->mins, surface->maxs, info->boxmins, info->boxmaxs))
-			{
-				vertex3f = surface->groupmesh->data_vertex3f;
-				elements = (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle);
-				for (j = 0;j < surface->num_triangles;j++, elements += 3)
-				{
-					v[0] = vertex3f + elements[0] * 3;
-					v[1] = vertex3f + elements[1] * 3;
-					v[2] = vertex3f + elements[2] * 3;
-					if (PointInfrontOfTriangle(info->eye, v[0], v[1], v[2]))
-					{
-						trimins[0] = min(v[0][0], min(v[1][0], v[2][0]));
-						trimaxs[0] = max(v[0][0], max(v[1][0], v[2][0]));
-						trimins[1] = min(v[0][1], min(v[1][1], v[2][1]));
-						trimaxs[1] = max(v[0][1], max(v[1][1], v[2][1]));
-						trimins[2] = min(v[0][2], min(v[1][2], v[2][2]));
-						trimaxs[2] = max(v[0][2], max(v[1][2], v[2][2]));
-						if (BoxesOverlap(trimins, trimaxs, info->boxmins, info->boxmaxs) && Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, v[0], 3, &portaltemppoints2[0][0], 256) >= 3)
-						{
-							SETPVSBIT(info->surfacepvs, *mark);
-							info->surfacelist[info->numsurfaces++] = *mark;
-							break;
-						}
-					}
-				}
-			}
-		}
-	}
-}
-
 void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, int firstclipplane, int numclipplanes)
 {
 	mportal_t *p;
