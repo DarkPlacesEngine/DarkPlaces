@@ -444,22 +444,10 @@ All console printing must go through this in order to be displayed
 If no console is visible, the notify window will pop up.
 ================
 */
-void Con_PrintToHistory(const char *txt)
+void Con_PrintToHistory(const char *txt, int mask)
 {
-	int y, c, l, mask;
+	int y, c, l;
 	static int cr;
-
-	if (txt[0] == 1 || txt[0] == 2)
-	{
-		if (gamemode == GAME_NEXUIZ)
-			mask = 0;
-		else
-			mask = 128;		// go to colored text
-		txt++;
-	}
-	else
-		mask = 0;
-
 
 	while ( (c = *txt) )
 	{
@@ -517,11 +505,6 @@ void Con_PrintToHistory(const char *txt)
 		}
 
 	}
-
-	if( txt[0] == 1 ) {
-		// play talk wav
-		S_LocalSound ("sound/misc/talk.wav");
-	}
 }
 
 /* The translation table between the graphical font and plain ASCII  --KB */
@@ -573,6 +556,7 @@ extern cvar_t timeformat;
 extern qboolean sys_nostdout;
 void Con_Print(const char *msg)
 {
+	int mask = 0;
 	static int index = 0;
 	static char line[16384];
 
@@ -586,14 +570,22 @@ void Con_Print(const char *msg)
 			// for Con_PrintToHistory to work properly
 			if (*msg <= 2)
 			{
+				if (*msg == 1)
+				{
+					// play talk wav
+					S_LocalSound ("sound/misc/talk.wav");
+				}
 				if (gamemode == GAME_NEXUIZ)
 				{
 					line[index++] = '^';
 					line[index++] = '3';
-					msg++;
 				}
 				else
-					line[index++] = *msg++;
+				{
+					// go to colored text
+					mask = 128;
+				}
+				msg++;
 			}
 			// store timestamp
 			for (;*timestamp;index++, timestamp++)
@@ -609,9 +601,6 @@ void Con_Print(const char *msg)
 			line[index] = 0;
 			// send to log file
 			Log_ConPrint(line);
-			// send to scrollable buffer
-			if (con_initialized && cls.state != ca_dedicated)
-				Con_PrintToHistory(line);
 			// send to terminal or dedicated server window
 			if (!sys_nostdout)
 			{
@@ -620,6 +609,9 @@ void Con_Print(const char *msg)
 					*p = qfont_table[*p];
 				Sys_PrintToTerminal(line);
 			}
+			// send to scrollable buffer
+			if (con_initialized && cls.state != ca_dedicated)
+				Con_PrintToHistory(line, mask);
 			// empty the line buffer
 			index = 0;
 		}
