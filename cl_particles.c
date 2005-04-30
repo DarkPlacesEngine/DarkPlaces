@@ -152,7 +152,7 @@ void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up)
 #include "pmove.h"
 extern qboolean PM_RecursiveHullCheck (hull_t *hull, int num, float p1f, float p2f, vec3_t p1, vec3_t p2, pmtrace_t *trace);
 #endif
-float CL_TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int hitbmodels, int *hitent, int hitsupercontentsmask)
+trace_t CL_TraceBox (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, int hitbmodels, int *hitent, int hitsupercontentsmask, qboolean hitplayers)
 {
 #if QW
 	pmtrace_t trace;
@@ -167,9 +167,7 @@ float CL_TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int 
 #else
 	RecursiveHullCheck (cl.worldmodel->hulls, 0, 0, 1, start, end, &trace);
 #endif
-	VectorCopy(trace.endpos, impact);
-	VectorCopy(trace.plane.normal, normal);
-	return trace.fraction;
+	return trace;
 }
 #else
 #include "cl_collision.h"
@@ -476,20 +474,21 @@ void CL_SpawnDecalParticleForPoint(const vec3_t org, float maxdist, float size, 
 {
 	int i;
 	float bestfrac, bestorg[3], bestnormal[3];
-	float frac, v[3], normal[3], org2[3];
+	float org2[3];
 	int besthitent = 0, hitent;
+	trace_t trace;
 	bestfrac = 10;
 	for (i = 0;i < 32;i++)
 	{
 		VectorRandom(org2);
 		VectorMA(org, maxdist, org2, org2);
-		frac = CL_TraceLine(org, org2, v, normal, true, &hitent, SUPERCONTENTS_SOLID);
-		if (bestfrac > frac)
+		trace = CL_TraceBox(org, vec3_origin, vec3_origin, org2, true, &hitent, SUPERCONTENTS_SOLID, false);
+		if (bestfrac > trace.fraction)
 		{
-			bestfrac = frac;
+			bestfrac = trace.fraction;
 			besthitent = hitent;
-			VectorCopy(v, bestorg);
-			VectorCopy(normal, bestnormal);
+			VectorCopy(trace.endpos, bestorg);
+			VectorCopy(trace.plane.normal, bestnormal);
 		}
 	}
 	if (bestfrac < 1)
@@ -655,6 +654,7 @@ CL_ParticleExplosion
 void CL_ParticleExplosion (vec3_t org)
 {
 	int i;
+	trace_t trace;
 	//vec3_t v;
 	//vec3_t v2;
 	if (cl_stainmaps.integer)
@@ -688,10 +688,11 @@ void CL_ParticleExplosion (vec3_t org)
 					v[0] = org[0] + lhrandom(-48, 48);
 					v[1] = org[1] + lhrandom(-48, 48);
 					v[2] = org[2] + lhrandom(-48, 48);
-					if (CL_TraceLine(org, v, v2, NULL, true, NULL, SUPERCONTENTS_SOLID) >= 0.1)
+					trace = CL_TraceBox(org, vec3_origin, vec3_origin, v, true, NULL, SUPERCONTENTS_SOLID, false);
+					if (trace.fraction >= 0.1)
 						break;
 				}
-				VectorSubtract(v2, org, v2);
+				VectorSubtract(trace.endpos, org, v2);
 #endif
 				VectorScale(v2, 2.0f, v2);
 				particle(particletype + pt_smoke, 0x202020, 0x404040, tex_smoke[rand()&7], 12, 32, 64, 0, 0, org[0], org[1], org[2], v2[0], v2[1], v2[2], 0);
@@ -796,8 +797,9 @@ void CL_SparkShower (vec3_t org, vec3_t dir, int count, vec_t gravityscale)
 
 void CL_Smoke (vec3_t org, vec3_t dir, int count)
 {
-	vec3_t org2, org3;
+	vec3_t org2;
 	int k;
+	trace_t trace;
 
 	if (!cl_particles.integer) return;
 
@@ -810,8 +812,8 @@ void CL_Smoke (vec3_t org, vec3_t dir, int count)
 			org2[0] = org[0] + 0.125f * lhrandom(-count, count);
 			org2[1] = org[1] + 0.125f * lhrandom(-count, count);
 			org2[2] = org[2] + 0.125f * lhrandom(-count, count);
-			CL_TraceLine(org, org2, org3, NULL, true, NULL, SUPERCONTENTS_SOLID);
-			particle(particletype + pt_smoke, 0x101010, 0x202020, tex_smoke[rand()&7], 3, (1.0f / cl_particles_quality.value) * 255, (1.0f / cl_particles_quality.value) * 1024, 0, 0, org3[0], org3[1], org3[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0);
+			trace = CL_TraceBox(org, vec3_origin, vec3_origin, org2, true, NULL, SUPERCONTENTS_SOLID, false);
+			particle(particletype + pt_smoke, 0x101010, 0x202020, tex_smoke[rand()&7], 3, (1.0f / cl_particles_quality.value) * 255, (1.0f / cl_particles_quality.value) * 1024, 0, 0, trace.endpos[0], trace.endpos[1], trace.endpos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0);
 		}
 	}
 }
@@ -834,7 +836,8 @@ static float bloodcount = 0;
 void CL_BloodPuff (vec3_t org, vec3_t vel, int count)
 {
 	float s;
-	vec3_t org2, org3;
+	vec3_t org2;
+	trace_t trace;
 	// bloodcount is used to accumulate counts too small to cause a blood particle
 	if (!cl_particles.integer) return;
 	if (!cl_particles_blood.integer) return;
@@ -849,8 +852,8 @@ void CL_BloodPuff (vec3_t org, vec3_t vel, int count)
 		org2[0] = org[0] + 0.125f * lhrandom(-bloodcount, bloodcount);
 		org2[1] = org[1] + 0.125f * lhrandom(-bloodcount, bloodcount);
 		org2[2] = org[2] + 0.125f * lhrandom(-bloodcount, bloodcount);
-		CL_TraceLine(org, org2, org3, NULL, true, NULL, SUPERCONTENTS_SOLID);
-		particle(particletype + pt_blood, 0xFFFFFF, 0xFFFFFF, tex_bloodparticle[rand()&7], 8, cl_particles_blood_alpha.value * 768 / cl_particles_quality.value, cl_particles_blood_alpha.value * 384 / cl_particles_quality.value, 0, -1, org3[0], org3[1], org3[2], vel[0] + lhrandom(-s, s), vel[1] + lhrandom(-s, s), vel[2] + lhrandom(-s, s), 1);
+		trace = CL_TraceBox(org, vec3_origin, vec3_origin, org2, true, NULL, SUPERCONTENTS_SOLID, false);
+		particle(particletype + pt_blood, 0xFFFFFF, 0xFFFFFF, tex_bloodparticle[rand()&7], 8, cl_particles_blood_alpha.value * 768 / cl_particles_quality.value, cl_particles_blood_alpha.value * 384 / cl_particles_quality.value, 0, -1, trace.endpos[0], trace.endpos[1], trace.endpos[2], vel[0] + lhrandom(-s, s), vel[1] + lhrandom(-s, s), vel[2] + lhrandom(-s, s), 1);
 		bloodcount -= 16 / cl_particles_quality.value;
 	}
 }
@@ -1266,8 +1269,9 @@ void CL_MoveParticles (void)
 {
 	particle_t *p;
 	int i, maxparticle, j, a, content;
-	float gravity, dvel, bloodwaterfade, frametime, f, dist, normal[3], v[3], org[3], oldorg[3];
+	float gravity, dvel, bloodwaterfade, frametime, f, dist, org[3], oldorg[3];
 	int hitent;
+	trace_t trace;
 
 	// LordHavoc: early out condition
 	if (!cl_numparticles)
@@ -1312,17 +1316,17 @@ void CL_MoveParticles (void)
 				if (p->type == particletype + pt_rain)
 				{
 					// raindrop - splash on solid/water/slime/lava
-					if (CL_TraceLine(oldorg, p->org, v, normal, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_LIQUIDSMASK) < 1)
+					trace = CL_TraceBox(oldorg, vec3_origin, vec3_origin, p->org, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_LIQUIDSMASK, false);
+					if (trace.fraction < 1)
 					{
-						VectorCopy(v, p->org);
-						// splash
-						p->type = particletype + pt_raindecal;
 						// convert from a raindrop particle to a rainsplash decal
+						VectorCopy(trace.endpos, p->org);
+						VectorCopy(trace.plane.normal, p->vel);
+						VectorAdd(p->org, p->vel, p->org);
+						p->type = particletype + pt_raindecal;
 						p->texnum = tex_rainsplash[0];
 						p->time2 = cl.time;
 						p->alphafade = p->alpha / 0.4;
-						VectorCopy(normal, p->vel);
-						VectorAdd(p->org, normal, p->org);
 						p->bounce = 0;
 						p->friction = 0;
 						p->gravity = 0;
@@ -1332,12 +1336,16 @@ void CL_MoveParticles (void)
 				else if (p->type == particletype + pt_blood)
 				{
 					// blood - splash on solid
-					if (CL_TraceLine(oldorg, p->org, v, normal, true, &hitent, SUPERCONTENTS_SOLID) < 1)
+					trace = CL_TraceBox(oldorg, vec3_origin, vec3_origin, p->org, true, &hitent, SUPERCONTENTS_SOLID, false);
+					if (trace.fraction < 1)
 					{
-						VectorCopy(v, p->org);
+						// convert from a blood particle to a blood decal
+						VectorCopy(trace.endpos, p->org);
+						VectorCopy(trace.plane.normal, p->vel);
+						VectorAdd(p->org, p->vel, p->org);
 #ifndef WORKINGLQUAKE
 						if (cl_stainmaps.integer)
-							R_Stain(v, 32, 32, 16, 16, p->alpha * p->size * (1.0f / 40.0f), 192, 48, 48, p->alpha * p->size * (1.0f / 40.0f));
+							R_Stain(p->org, 32, 32, 16, 16, p->alpha * p->size * (1.0f / 40.0f), 192, 48, 48, p->alpha * p->size * (1.0f / 40.0f));
 #endif
 						if (!cl_decals.integer)
 						{
@@ -1346,19 +1354,15 @@ void CL_MoveParticles (void)
 						}
 
 						p->type = particletype + pt_decal;
-						// convert from a blood particle to a blood decal
 						p->texnum = tex_blooddecal[rand()&7];
 #ifndef WORKINGLQUAKE
 						p->owner = hitent;
 						p->ownermodel = cl_entities[hitent].render.model;
-						Matrix4x4_Transform(&cl_entities[hitent].render.inversematrix, v, p->relativeorigin);
-						Matrix4x4_Transform3x3(&cl_entities[hitent].render.inversematrix, normal, p->relativedirection);
-						VectorAdd(p->relativeorigin, p->relativedirection, p->relativeorigin);
+						Matrix4x4_Transform(&cl_entities[hitent].render.inversematrix, p->org, p->relativeorigin);
+						Matrix4x4_Transform3x3(&cl_entities[hitent].render.inversematrix, p->vel, p->relativedirection);
 #endif
 						p->time2 = cl.time;
 						p->alphafade = 0;
-						VectorCopy(normal, p->vel);
-						VectorAdd(p->org, normal, p->org);
 						p->bounce = 0;
 						p->friction = 0;
 						p->gravity = 0;
@@ -1367,9 +1371,10 @@ void CL_MoveParticles (void)
 				}
 				else
 				{
-					if (CL_TraceLine(oldorg, p->org, v, normal, true, NULL, SUPERCONTENTS_SOLID) < 1)
+					trace = CL_TraceBox(oldorg, vec3_origin, vec3_origin, p->org, true, NULL, SUPERCONTENTS_SOLID, false);
+					if (trace.fraction < 1)
 					{
-						VectorCopy(v, p->org);
+						VectorCopy(trace.endpos, p->org);
 						if (p->bounce < 0)
 						{
 							p->type = NULL;
@@ -1377,8 +1382,8 @@ void CL_MoveParticles (void)
 						}
 						else
 						{
-							dist = DotProduct(p->vel, normal) * -p->bounce;
-							VectorMA(p->vel, dist, normal, p->vel);
+							dist = DotProduct(p->vel, trace.plane.normal) * -p->bounce;
+							VectorMA(p->vel, dist, trace.plane.normal, p->vel);
 							if (DotProduct(p->vel, p->vel) < 0.03)
 								VectorClear(p->vel);
 						}

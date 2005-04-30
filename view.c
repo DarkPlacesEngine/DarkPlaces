@@ -313,6 +313,7 @@ void V_CalcRefdef (void)
 	static float oldz;
 	entity_t *ent;
 	float vieworg[3], viewangles[3];
+	trace_t trace;
 	Matrix4x4_CreateIdentity(&viewmodelmatrix);
 	Matrix4x4_CreateIdentity(&r_refdef.viewentitymatrix);
 	if (cls.state == ca_connected && cls.signon == SIGNONS)
@@ -352,7 +353,7 @@ void V_CalcRefdef (void)
 			if (chase_active.value)
 			{
 				// observing entity from third person
-				vec_t camback, camup, dist, forward[3], stop[3], chase_dest[3], normal[3];
+				vec_t camback, camup, dist, forward[3], chase_dest[3];
 
 				camback = bound(0, chase_back.value, 128);
 				if (chase_back.value != camback)
@@ -377,10 +378,8 @@ void V_CalcRefdef (void)
 				chase_dest[0] = vieworg[0] + forward[0] * dist;
 				chase_dest[1] = vieworg[1] + forward[1] * dist;
 				chase_dest[2] = vieworg[2] + forward[2] * dist + camup;
-				CL_TraceLine(vieworg, chase_dest, stop, normal, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY);
-				vieworg[0] = stop[0] + forward[0] * 8 + normal[0] * 4;
-				vieworg[1] = stop[1] + forward[1] * 8 + normal[1] * 4;
-				vieworg[2] = stop[2] + forward[2] * 8 + normal[2] * 4;
+				trace = CL_TraceBox(vieworg, vec3_origin, vec3_origin, chase_dest, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY, false);
+				VectorMAMAM(1, trace.endpos, 8, forward, 4, trace.plane.normal, vieworg);
 			}
 			else
 			{
