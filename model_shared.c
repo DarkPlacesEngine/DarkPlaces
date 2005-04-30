@@ -30,8 +30,8 @@ cvar_t r_mipskins = {CVAR_SAVE, "r_mipskins", "0"};
 
 model_t *loadmodel;
 
-// LordHavoc: increased from 512 to 2048
-#define	MAX_MOD_KNOWN	2048
+// LordHavoc: was 512
+#define MAX_MOD_KNOWN (MAX_MODELS + 256)
 static model_t mod_known[MAX_MOD_KNOWN];
 
 rtexturepool_t *mod_shared_texturepool;

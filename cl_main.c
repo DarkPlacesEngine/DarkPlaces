@@ -63,6 +63,11 @@ cvar_t cl_noplayershadow = {CVAR_SAVE, "cl_noplayershadow", "0"};
 
 cvar_t cl_prydoncursor = {0, "cl_prydoncursor", "0"};
 
+vec3_t cl_playerstandmins;
+vec3_t cl_playerstandmaxs;
+vec3_t cl_playercrouchmins;
+vec3_t cl_playercrouchmaxs;
+
 mempool_t *cl_mempool;
 
 client_static_t	cls;
@@ -156,6 +161,21 @@ void CL_ClearState(void)
 		cl_entities[i].state_baseline = defaultstate;
 		cl_entities[i].state_previous = defaultstate;
 		cl_entities[i].state_current = defaultstate;
+	}
+
+	if (gamemode == GAME_NEXUIZ)
+	{
+		VectorSet(cl_playerstandmins, -16, -16, -24);
+		VectorSet(cl_playerstandmaxs, 16, 16, 45);
+		VectorSet(cl_playercrouchmins, -16, -16, -24);
+		VectorSet(cl_playercrouchmaxs, 16, 16, 25);
+	}
+	else
+	{
+		VectorSet(cl_playerstandmins, -16, -16, -24);
+		VectorSet(cl_playerstandmaxs, 16, 16, 24);
+		VectorSet(cl_playercrouchmins, -16, -16, -24);
+		VectorSet(cl_playercrouchmaxs, 16, 16, 24);
 	}
 
 	CL_Screen_NewMap();
@@ -543,9 +563,10 @@ void CL_LinkNetworkEntity(entity_t *e)
 	matrix4x4_t *matrix, blendmatrix, tempmatrix, matrix2;
 	//matrix4x4_t dlightmatrix;
 	int j, k, l, trailtype, temp;
-	float origin[3], angles[3], delta[3], lerp, dlightcolor[3], dlightradius, mins[3], maxs[3], v[3], v2[3], d;
+	float origin[3], angles[3], delta[3], lerp, dlightcolor[3], dlightradius, mins[3], maxs[3], v2[3], d;
 	entity_t *t;
 	model_t *model;
+	trace_t trace;
 	//entity_persistent_t *p = &e->persistent;
 	//entity_render_t *r = &e->render;
 	if (e->persistent.linkframe != entitylinkframenumber)
@@ -617,7 +638,15 @@ void CL_LinkNetworkEntity(entity_t *e)
 		}
 
 		// movement lerp
-		if (e->persistent.lerpdeltatime > 0 && (lerp = (cl.time - e->persistent.lerpstarttime) / e->persistent.lerpdeltatime) < 1)
+		// if it's the player entity, update according to client movement
+		if (e == cl_entities + cl.playerentity && cl.movement)
+		{
+			lerp = (cl.time - cl.mtime[0]) / (cl.mtime[0] - cl.mtime[1]);
+			lerp = bound(0, lerp, 1);
+			VectorLerp(cl.movement_oldorigin, lerp, cl.movement_origin, origin);
+			VectorSet(angles, 0, cl.viewangles[1], 0);
+		}
+		else if (e->persistent.lerpdeltatime > 0 && (lerp = (cl.time - e->persistent.lerpstarttime) / e->persistent.lerpdeltatime) < 1)
 		{
 			// interpolate the origin and angles
 			VectorLerp(e->persistent.oldorigin, lerp, e->persistent.neworigin, origin);
@@ -782,11 +811,11 @@ void CL_LinkNetworkEntity(entity_t *e)
 		if (e->persistent.muzzleflash > 0)
 		{
 			Matrix4x4_Transform(&e->render.matrix, muzzleflashorigin, v2);
-			CL_TraceLine(origin, v2, v, NULL, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY);
+			trace = CL_TraceBox(origin, vec3_origin, vec3_origin, v2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY, false);
 			tempmatrix = e->render.matrix;
-			tempmatrix.m[0][3] = v[0];
-			tempmatrix.m[1][3] = v[1];
-			tempmatrix.m[2][3] = v[2];
+			tempmatrix.m[0][3] = trace.endpos[0];
+			tempmatrix.m[1][3] = trace.endpos[1];
+			tempmatrix.m[2][3] = trace.endpos[2];
 			CL_AllocDlight(NULL, &tempmatrix, 100, e->persistent.muzzleflash, e->persistent.muzzleflash, e->persistent.muzzleflash, 0, 0, 0, -1, true, 0, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 			e->persistent.muzzleflash -= cl.frametime * 10;
 		}
@@ -1254,10 +1283,11 @@ int CL_ReadFromServer(void)
 CL_SendCmd
 =================
 */
+void CL_UpdatePrydonCursor(void);
 void CL_SendCmd(void)
 {
 	if (cls.signon == SIGNONS)
-		CL_SendMove();
+		CL_UpdatePrydonCursor();
 
 	if (cls.demoplayback)
 	{

@@ -194,19 +194,13 @@ float CGVM_RandomRange(const float r1, const float r2)
 
 float CGVM_TracePhysics(const float *start, const float *end, const float *worldmins, const float *worldmaxs, const float *entitymins, const float *entitymaxs, const cgphysentity_t *physentities, const int numphysentities, float *impactpos, float *impactnormal, int *impactentnum)
 {
-	float frac;
-	vec3_t start2, end2, middle;
+	trace_t trace;
 	// FIXME: do tracing agains network entities and physentities here
-	// placeholder world only code assuming 0 size
-	middle[0] = (worldmins[0] + worldmaxs[0]) * 0.5f;
-	middle[1] = (worldmins[1] + worldmaxs[1]) * 0.5f;
-	middle[2] = (worldmins[2] + worldmaxs[2]) * 0.5f;
-	VectorAdd(start, middle, start2);
-	VectorAdd(end, middle, end2);
-	frac = CL_TraceLine((float *)start2, (float *)end2, impactpos, impactnormal, true, NULL, SUPERCONTENTS_SOLID);
-	VectorSubtract(impactpos, middle, impactpos);
+	trace = CL_TraceBox(start, vec3_origin, vec3_origin, end, true, NULL, SUPERCONTENTS_SOLID, false);
+	VectorCopy(trace.endpos, impactpos);
+	VectorCopy(trace.plane.normal, impactnormal);
 	*impactentnum = -1;
-	return frac;
+	return trace.fraction;
 }
 
 char *CGVM_GetCvarString(const char *name)

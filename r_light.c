@@ -138,7 +138,7 @@ void R_DrawCoronas(void)
 	flag = r_rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
 	for (lnum = 0, light = r_shadow_worldlightchain;light;light = light->next, lnum++)
 	{
-		if ((light->flags & flag) && light->corona * r_coronas.value > 0 && (r_shadow_debuglight.integer < 0 || r_shadow_debuglight.integer == lnum) && (dist = (DotProduct(light->rtlight.shadoworigin, r_viewforward) - viewdist)) >= 24.0f && CL_TraceLine(light->rtlight.shadoworigin, r_vieworigin, NULL, NULL, true, NULL, SUPERCONTENTS_SOLID) == 1)
+		if ((light->flags & flag) && light->corona * r_coronas.value > 0 && (r_shadow_debuglight.integer < 0 || r_shadow_debuglight.integer == lnum) && (dist = (DotProduct(light->rtlight.shadoworigin, r_viewforward) - viewdist)) >= 24.0f && CL_TraceBox(light->rtlight.shadoworigin, vec3_origin, vec3_origin, r_vieworigin, true, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
 		{
 			cscale = light->rtlight.corona * r_coronas.value * 0.25f;
 			scale = light->rtlight.radius * light->rtlight.coronasizescale;
@@ -147,7 +147,7 @@ void R_DrawCoronas(void)
 	}
 	for (i = 0, light = r_dlight;i < r_numdlights;i++, light++)
 	{
-		if ((light->flags & flag) && light->corona * r_coronas.value > 0 && (dist = (DotProduct(light->origin, r_viewforward) - viewdist)) >= 24.0f && CL_TraceLine(light->origin, r_vieworigin, NULL, NULL, true, NULL, SUPERCONTENTS_SOLID) == 1)
+		if ((light->flags & flag) && light->corona * r_coronas.value > 0 && (dist = (DotProduct(light->origin, r_viewforward) - viewdist)) >= 24.0f && CL_TraceBox(light->origin, vec3_origin, vec3_origin, r_vieworigin, true, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
 		{
 			cscale = light->corona * r_coronas.value * 0.25f;
 			scale = light->rtlight.radius * light->rtlight.coronasizescale;
@@ -196,7 +196,7 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 			{
 				VectorSubtract (p, sl->origin, v);
 				f = ((1.0f / (DotProduct(v, v) * sl->falloff + sl->distbias)) - sl->subtract);
-				if (f > 0 && CL_TraceLine(p, sl->origin, NULL, NULL, false, NULL, SUPERCONTENTS_SOLID) == 1)
+				if (f > 0 && CL_TraceBox(p, vec3_origin, vec3_origin, sl->origin, false, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
 				{
 					f *= d_lightstylevalue[sl->style] * (1.0f / 65536.0f);
 					VectorMA(ambientcolor, f, sl->light, ambientcolor);
@@ -216,7 +216,7 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 			light = r_dlight + i;
 			VectorSubtract(p, light->origin, v);
 			f = DotProduct(v, v);
-			if (f < light->rtlight.lightmap_cullradius2 && CL_TraceLine(p, light->origin, NULL, NULL, false, NULL, SUPERCONTENTS_SOLID) == 1)
+			if (f < light->rtlight.lightmap_cullradius2 && CL_TraceBox(p, vec3_origin, vec3_origin, light->origin, false, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
 			{
 				f = (1.0f / (f + LIGHTOFFSET)) - light->rtlight.lightmap_subtract;
 				VectorMA(ambientcolor, f, light->rtlight.lightmap_light, ambientcolor);
@@ -344,7 +344,7 @@ int R_LightModel(float *ambient4f, float *diffusecolor, float *diffusenormal, co
 			VectorSubtract (v, light->origin, v);
 			if (DotProduct(v, v) < light->rtlight.lightmap_cullradius2)
 			{
-				if (CL_TraceLine(ent->origin, light->origin, NULL, NULL, false, NULL, SUPERCONTENTS_SOLID) != 1)
+				if (CL_TraceBox(ent->origin, vec3_origin, vec3_origin, light->origin, false, NULL, SUPERCONTENTS_SOLID, false).fraction != 1)
 					continue;
 				VectorSubtract (ent->origin, light->origin, v);
 				f = ((1.0f / (DotProduct(v, v) + LIGHTOFFSET)) - light->rtlight.lightmap_subtract);
@@ -483,7 +483,7 @@ void R_UpdateEntLights(entity_render_t *ent)
 		ent->numentlights = 0;
 		if (r_refdef.worldmodel)
 			for (i = 0, sl = r_refdef.worldmodel->brushq1.lights;i < r_refdef.worldmodel->brushq1.numlights && ent->numentlights < MAXENTLIGHTS;i++, sl++)
-				if (CL_TraceLine(ent->origin, sl->origin, NULL, NULL, false, NULL, SUPERCONTENTS_SOLID) == 1)
+				if (CL_TraceBox(ent->origin, vec3_origin, vec3_origin, sl->origin, false, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
 					ent->entlights[ent->numentlights++] = i;
 	}
 	ent->entlightsframe = r_framecount;

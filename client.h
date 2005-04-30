@@ -455,6 +455,16 @@ client_static_t;
 
 extern client_static_t	cls;
 
+typedef struct client_movementqueue_s
+{
+	double time;
+	float viewangles[3];
+	float move[3];
+	qboolean jump;
+	qboolean crouch;
+}
+client_movementqueue_t;
+
 //
 // the client_state_t structure is wiped completely at every
 // server signon
@@ -509,6 +519,16 @@ typedef struct
 	vec3_t mvelocity[2], velocity;
 	// update by server, can be used by mods for zooming
 	vec_t mviewzoom[2], viewzoom;
+
+	// client movement simulation
+	// these fields are only updated by CL_ClientMovement (called by CL_SendMove after parsing each network packet)
+	qboolean movement;
+	// simulated origin
+	vec3_t movement_origin;
+	vec3_t movement_oldorigin;
+	// queue of proposed moves
+	int movement_numqueue;
+	client_movementqueue_t movement_queue[256];
 
 // pitch drifting vars
 	float idealpitch;
@@ -635,6 +655,11 @@ extern cvar_t cl_stainmaps;
 extern cvar_t cl_stainmaps_clearonload;
 
 extern cvar_t cl_prydoncursor;
+
+extern vec3_t cl_playerstandmins;
+extern vec3_t cl_playerstandmaxs;
+extern vec3_t cl_playercrouchmins;
+extern vec3_t cl_playercrouchmaxs;
 
 // these are updated by CL_ClearState
 extern int cl_num_entities;

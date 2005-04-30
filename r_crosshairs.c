@@ -62,6 +62,7 @@ void R_DrawWorldCrosshair(void)
 	vec3_t v1, v2, spriteorigin;
 	vec_t spritescale;
 	vec4_t color;
+	trace_t trace;
 	if (r_letterbox.value)
 		return;
 	if (crosshair_static.integer)
@@ -84,7 +85,9 @@ void R_DrawWorldCrosshair(void)
 	AngleVectors(cl.viewangles, v2, NULL, NULL);
 	//VectorCopy(r_vieworigin, v1);
 	VectorMA(v1, 8192, v2, v2);
-	spritescale = CL_TraceLine(v1, v2, spriteorigin, NULL, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY) * (8192.0f / 40.0f) * crosshair_size.value;
+	trace = CL_TraceBox(v1, vec3_origin, vec3_origin, v2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY, false);
+	spritescale = trace.fraction * (8192.0f / 40.0f) * crosshair_size.value;
+	VectorCopy(trace.endpos, spriteorigin);
 
 	// draw the sprite
 	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, pic->tex, true, spriteorigin, r_viewright, r_viewup, spritescale, -spritescale, -spritescale, spritescale, color[0], color[1], color[2], color[3]);

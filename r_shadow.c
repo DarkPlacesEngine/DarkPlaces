@@ -3297,7 +3297,7 @@ void R_Shadow_SelectLightInView(void)
 		if (rating >= 0.95)
 		{
 			rating /= (1 + 0.0625f * sqrt(DotProduct(temp, temp)));
-			if (bestrating < rating && CL_TraceLine(light->origin, r_vieworigin, NULL, NULL, true, NULL, SUPERCONTENTS_SOLID) == 1.0f)
+			if (bestrating < rating && CL_TraceBox(light->origin, vec3_origin, vec3_origin, r_vieworigin, true, NULL, SUPERCONTENTS_SOLID, false).fraction == 1.0f)
 			{
 				bestrating = rating;
 				best = light;
@@ -3722,19 +3722,20 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 
 void R_Shadow_SetCursorLocationForView(void)
 {
-	vec_t dist, push, frac;
-	vec3_t dest, endpos, normal;
+	vec_t dist, push;
+	vec3_t dest, endpos;
+	trace_t trace;
 	VectorMA(r_vieworigin, r_editlights_cursordistance.value, r_viewforward, dest);
-	frac = CL_TraceLine(r_vieworigin, dest, endpos, normal, true, NULL, SUPERCONTENTS_SOLID);
-	if (frac < 1)
+	trace = CL_TraceBox(r_vieworigin, vec3_origin, vec3_origin, dest, true, NULL, SUPERCONTENTS_SOLID, false);
+	if (trace.fraction < 1)
 	{
-		dist = frac * r_editlights_cursordistance.value;
+		dist = trace.fraction * r_editlights_cursordistance.value;
 		push = r_editlights_cursorpushback.value;
 		if (push > dist)
 			push = dist;
 		push = -push;
-		VectorMA(endpos, push, r_viewforward, endpos);
-		VectorMA(endpos, r_editlights_cursorpushoff.value, normal, endpos);
+		VectorMA(trace.endpos, push, r_viewforward, endpos);
+		VectorMA(endpos, r_editlights_cursorpushoff.value, trace.plane.normal, endpos);
 	}
 	r_editlights_cursorlocation[0] = floor(endpos[0] / r_editlights_cursorgrid.value + 0.5f) * r_editlights_cursorgrid.value;
 	r_editlights_cursorlocation[1] = floor(endpos[1] / r_editlights_cursorgrid.value + 0.5f) * r_editlights_cursorgrid.value;

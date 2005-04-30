@@ -1167,13 +1167,15 @@ void NetConn_ClientFrame(void)
 	if (cls.connect_trying && cls.connect_nextsendtime < realtime)
 	{
 		if (cls.connect_remainingtries == 0)
+			M_Update_Return_Reason("Connect: Waiting 10 seconds for reply");
+		cls.connect_nextsendtime = realtime + 1;
+		cls.connect_remainingtries--;
+		if (cls.connect_remainingtries <= -10)
 		{
 			cls.connect_trying = false;
 			M_Update_Return_Reason("Connect: Failed");
 			return;
 		}
-		cls.connect_nextsendtime = realtime + 1;
-		cls.connect_remainingtries--;
 		// try challenge first (newer server)
 		NetConn_WriteString(cls.connect_mysocket, "\377\377\377\377getchallenge", &cls.connect_address);
 		// then try netquake as a fallback (old server, or netquake)

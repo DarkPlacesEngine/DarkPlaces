@@ -145,8 +145,8 @@ void R_NewExplosion(vec3_t org)
 {
 	int i, j;
 	float dist, n;
-	vec3_t impact;
 	explosion_t *e;
+	trace_t trace;
 	qbyte noise[EXPLOSIONGRID*EXPLOSIONGRID];
 	fractalnoisequick(noise, EXPLOSIONGRID, 4); // adjust noise grid size according to explosion
 	for (i = 0, e = explosion;i < MAX_EXPLOSIONS;i++, e++)
@@ -171,8 +171,8 @@ void R_NewExplosion(vec3_t org)
 				// clip start origin
 				if (e->clipping)
 				{
-					CL_TraceLine(e->origin, e->vert[j], impact, NULL, true, NULL, SUPERCONTENTS_SOLID);
-					VectorCopy(impact, e->vert[i]);
+					trace = CL_TraceBox(e->origin, vec3_origin, vec3_origin, e->vert[j], true, NULL, SUPERCONTENTS_SOLID, false);
+					VectorCopy(trace.endpos, e->vert[i]);
 				}
 			}
 			break;
@@ -213,7 +213,8 @@ void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 void R_MoveExplosion(explosion_t *e)
 {
 	int i;
-	float dot, end[3], impact[3], normal[3], frametime;
+	float dot, end[3], frametime;
+	trace_t trace;
 
 	frametime = cl.time - e->time;
 	e->time = cl.time;
@@ -225,13 +226,14 @@ void R_MoveExplosion(explosion_t *e)
 			VectorMA(e->vert[i], frametime, e->vertvel[i], end);
 			if (e->clipping)
 			{
-				if (CL_TraceLine(e->vert[i], end, impact, normal, true, NULL, SUPERCONTENTS_SOLID) < 1)
+				trace = CL_TraceBox(e->vert[i], vec3_origin, vec3_origin, end, true, NULL, SUPERCONTENTS_SOLID, false);
+				if (trace.fraction < 1)
 				{
 					// clip velocity against the wall
-					dot = -DotProduct(e->vertvel[i], normal);
-					VectorMA(e->vertvel[i], dot, normal, e->vertvel[i]);
+					dot = -DotProduct(e->vertvel[i], trace.plane.normal);
+					VectorMA(e->vertvel[i], dot, trace.plane.normal, e->vertvel[i]);
 				}
-				VectorCopy(impact, e->vert[i]);
+				VectorCopy(trace.endpos, e->vert[i]);
 			}
 			else
 				VectorCopy(end, e->vert[i]);
