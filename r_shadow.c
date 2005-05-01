@@ -1064,15 +1064,6 @@ void R_Shadow_Stage_ShadowVolumes(void)
 		// this is changed by every shadow render so its value here is unimportant
 		qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 	}
-	GL_Clear(GL_STENCIL_BUFFER_BIT);
-	c_rt_clears++;
-	// LordHavoc note: many shadow volumes reside entirely inside the world
-	// (that is to say they are entirely bounded by their lit surfaces),
-	// which can be optimized by handling things as an inverted light volume,
-	// with the shadow boundaries of the world being simulated by an altered
-	// (129) bias to stencil clearing on such lights
-	// FIXME: generate inverted light volumes for use as shadow volumes and
-	// optimize for them as noted above
 }
 
 void R_Shadow_Stage_Light(int shadowtest)
@@ -1102,7 +1093,6 @@ void R_Shadow_Stage_Light(int shadowtest)
 	// stencil is 128 (values other than this mean shadow)
 	qglStencilFunc(GL_EQUAL, 128, ~0);
 	r_shadowstage = SHADOWSTAGE_LIGHT;
-	c_rt_lights++;
 }
 
 void R_Shadow_Stage_End(void)
@@ -1497,6 +1487,20 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 	int renders;
 	float color[3], color2[3], colorscale;
 	rmeshstate_t m;
+	if (glosstexture && r_shadow_gloss.integer >= 1 && r_shadow_glossintensity.value > 0 && specularscale > 0)
+		specularscale = specularscale * r_shadow_glossintensity.value;
+	else if (!glosstexture && r_shadow_gloss.integer >= 2 && r_shadow_gloss2intensity.value > 0 && r_shadow_glossintensity.value > 0 && specularscale > 0)
+	{
+		glosstexture = r_texture_white;
+		specularscale = specularscale * r_shadow_gloss2intensity.value;
+	}
+	else
+	{
+		glosstexture = r_texture_black;
+		specularscale = 0;
+	}
+	if ((ambientscale + diffusescale) * (VectorLength2(lightcolorbase) + VectorLength2(lightcolorpants) + VectorLength2(lightcolorshirt)) + specularscale * VectorLength2(lightcolorbase) <= 0.001)
+		return;
 	if (!basetexture)
 		basetexture = r_texture_white;
 	if (!bumptexture)
@@ -1507,26 +1511,6 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 		lightcolorpants = vec3_origin;
 	if (!lightcolorshirt)
 		lightcolorshirt = vec3_origin;
-	specularscale *= r_shadow_glossintensity.value;
-	if (!glosstexture)
-	{
-		if (r_shadow_gloss.integer >= 2)
-		{
-			glosstexture = r_texture_white;
-			specularscale *= r_shadow_gloss2intensity.value;
-		}
-		else
-		{
-			glosstexture = r_texture_black;
-			specularscale = 0;
-		}
-	}
-	if (r_shadow_gloss.integer < 1)
-		specularscale = 0;
-	if (!lightcubemap)
-		lightcubemap = r_texture_whitecube;
-	if ((ambientscale + diffusescale) * (VectorLength2(lightcolorbase) + VectorLength2(lightcolorpants) + VectorLength2(lightcolorshirt)) + specularscale * VectorLength2(lightcolorbase) <= 0.001)
-		return;
 	if (visiblelighting)
 	{
 		int passes = 0;
@@ -2814,6 +2798,8 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblelighting, int visiblevolumes)
 	if (R_Shadow_ScissorForBBox(cullmins, cullmaxs))
 		return;
 
+	c_rt_lights++;
+
 	shadow = rtlight->shadow && (rtlight->isstatic ? r_rtworldshadows : r_rtdlightshadows);
 	usestencil = false;
 
@@ -2828,6 +2814,8 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblelighting, int visiblevolumes)
 		else
 		{
 			R_Shadow_Stage_ShadowVolumes();
+			GL_Clear(GL_STENCIL_BUFFER_BIT);
+			c_rt_clears++;
 			usestencil = true;
 		}
 		ent = r_refdef.worldentity;
