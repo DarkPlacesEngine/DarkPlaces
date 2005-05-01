@@ -110,6 +110,8 @@ rtexture_t *r_texture_blanknormalmap;
 rtexture_t *r_texture_white;
 rtexture_t *r_texture_black;
 rtexture_t *r_texture_notexture;
+rtexture_t *r_texture_whitecube;
+rtexture_t *r_texture_normalizationcube;
 
 void R_ModulateColors(float *in, float *out, int verts, float r, float g, float b)
 {
@@ -211,9 +213,12 @@ void FOG_registercvars(void)
 
 void gl_main_start(void)
 {
-	int x, y;
+	int x, y, side;
+	vec3_t v;
+	vec_t s, t, intensity;
 	qbyte pix[16][16][4];
-	qbyte data[4];
+#define NORMSIZE 64
+	qbyte data[6*NORMSIZE*NORMSIZE*4];
 	r_main_texturepool = R_AllocTexturePool();
 	r_bloom_texture_screen = NULL;
 	r_bloom_texture_bloom = NULL;
@@ -253,7 +258,67 @@ void gl_main_start(void)
 			}
 		}
 	}
-	r_texture_notexture = R_LoadTexture2D(mod_shared_texturepool, "notexture", 16, 16, &pix[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP, NULL);
+	r_texture_notexture = R_LoadTexture2D(r_main_texturepool, "notexture", 16, 16, &pix[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP, NULL);
+	if (gl_texturecubemap)
+	{
+		data[ 0] = 255;data[ 1] = 255;data[ 2] = 255;data[ 3] = 255;
+		data[ 4] = 255;data[ 5] = 255;data[ 6] = 255;data[ 7] = 255;
+		data[ 8] = 255;data[ 9] = 255;data[10] = 255;data[11] = 255;
+		data[12] = 255;data[13] = 255;data[14] = 255;data[15] = 255;
+		data[16] = 255;data[17] = 255;data[18] = 255;data[19] = 255;
+		data[20] = 255;data[21] = 255;data[22] = 255;data[23] = 255;
+		r_texture_whitecube = R_LoadTextureCubeMap(r_main_texturepool, "whitecube", 1, data, TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP, NULL);
+		for (side = 0;side < 6;side++)
+		{
+			for (y = 0;y < NORMSIZE;y++)
+			{
+				for (x = 0;x < NORMSIZE;x++)
+				{
+					s = (x + 0.5f) * (2.0f / NORMSIZE) - 1.0f;
+					t = (y + 0.5f) * (2.0f / NORMSIZE) - 1.0f;
+					switch(side)
+					{
+					case 0:
+						v[0] = 1;
+						v[1] = -t;
+						v[2] = -s;
+						break;
+					case 1:
+						v[0] = -1;
+						v[1] = -t;
+						v[2] = s;
+						break;
+					case 2:
+						v[0] = s;
+						v[1] = 1;
+						v[2] = t;
+						break;
+					case 3:
+						v[0] = s;
+						v[1] = -1;
+						v[2] = -t;
+						break;
+					case 4:
+						v[0] = s;
+						v[1] = -t;
+						v[2] = 1;
+						break;
+					case 5:
+						v[0] = -s;
+						v[1] = -t;
+						v[2] = -1;
+						break;
+					}
+					intensity = 127.0f / sqrt(DotProduct(v, v));
+					data[((side*NORMSIZE+y)*NORMSIZE+x)*4+0] = 128.0f + intensity * v[0];
+					data[((side*NORMSIZE+y)*NORMSIZE+x)*4+1] = 128.0f + intensity * v[1];
+					data[((side*NORMSIZE+y)*NORMSIZE+x)*4+2] = 128.0f + intensity * v[2];
+					data[((side*NORMSIZE+y)*NORMSIZE+x)*4+3] = 255;
+				}
+			}
+		}
+		r_texture_normalizationcube = R_LoadTextureCubeMap(r_main_texturepool, "normalcube", NORMSIZE, data, TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP, NULL);
+	}
 }
 
 void gl_main_shutdown(void)
@@ -264,6 +329,8 @@ void gl_main_shutdown(void)
 	r_texture_blanknormalmap = NULL;
 	r_texture_white = NULL;
 	r_texture_black = NULL;
+	r_texture_whitecube = NULL;
+	r_texture_normalizationcube = NULL;
 }
 
 extern void CL_ParseEntityLump(char *entitystring);

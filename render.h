@@ -177,6 +177,8 @@ extern rtexture_t *r_texture_blanknormalmap;
 extern rtexture_t *r_texture_white;
 extern rtexture_t *r_texture_black;
 extern rtexture_t *r_texture_notexture;
+extern rtexture_t *r_texture_whitecube;
+extern rtexture_t *r_texture_normalizationcube;
 
 void R_TimeReport(char *name);
 void R_TimeReport_Start(void);

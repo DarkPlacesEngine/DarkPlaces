@@ -151,10 +151,8 @@ qbyte *r_shadow_buffer_surfacepvs;
 int *r_shadow_buffer_surfacelist;
 
 rtexturepool_t *r_shadow_texturepool;
-rtexture_t *r_shadow_normalcubetexture;
 rtexture_t *r_shadow_attenuation2dtexture;
 rtexture_t *r_shadow_attenuation3dtexture;
-rtexture_t *r_shadow_blankwhitecubetexture;
 
 // lights are reloaded when this changes
 char r_shadow_mapname[MAX_QPATH];
@@ -391,10 +389,8 @@ void r_shadow_start(void)
 	int i;
 	// allocate vertex processing arrays
 	numcubemaps = 0;
-	r_shadow_normalcubetexture = NULL;
 	r_shadow_attenuation2dtexture = NULL;
 	r_shadow_attenuation3dtexture = NULL;
-	r_shadow_blankwhitecubetexture = NULL;
 	r_shadow_texturepool = NULL;
 	r_shadow_filters_texturepool = NULL;
 	R_Shadow_ValidateCvars();
@@ -496,10 +492,8 @@ void r_shadow_shutdown(void)
 		}
 	}
 	numcubemaps = 0;
-	r_shadow_normalcubetexture = NULL;
 	r_shadow_attenuation2dtexture = NULL;
 	r_shadow_attenuation3dtexture = NULL;
-	r_shadow_blankwhitecubetexture = NULL;
 	R_FreeTexturePool(&r_shadow_texturepool);
 	R_FreeTexturePool(&r_shadow_filters_texturepool);
 	maxshadowelements = 0;
@@ -941,79 +935,16 @@ void R_Shadow_RenderVolume(int numvertices, int numtriangles, const float *verte
 
 static void R_Shadow_MakeTextures(void)
 {
-	int x, y, z, d, side;
-	float v[3], s, t, intensity;
+	int x, y, z, d;
+	float v[3], intensity;
 	qbyte *data;
 	R_FreeTexturePool(&r_shadow_texturepool);
 	r_shadow_texturepool = R_AllocTexturePool();
 	r_shadow_attenpower = r_shadow_lightattenuationpower.value;
 	r_shadow_attenscale = r_shadow_lightattenuationscale.value;
-#define NORMSIZE 64
 #define ATTEN2DSIZE 64
 #define ATTEN3DSIZE 32
-	data = Mem_Alloc(tempmempool, max(6*NORMSIZE*NORMSIZE*4, max(ATTEN3DSIZE*ATTEN3DSIZE*ATTEN3DSIZE*4, ATTEN2DSIZE*ATTEN2DSIZE*4)));
-	r_shadow_blankwhitecubetexture = NULL;
-	r_shadow_normalcubetexture = NULL;
-	if (gl_texturecubemap)
-	{
-		data[ 0] = 255;data[ 1] = 255;data[ 2] = 255;data[ 3] = 255;
-		data[ 4] = 255;data[ 5] = 255;data[ 6] = 255;data[ 7] = 255;
-		data[ 8] = 255;data[ 9] = 255;data[10] = 255;data[11] = 255;
-		data[12] = 255;data[13] = 255;data[14] = 255;data[15] = 255;
-		data[16] = 255;data[17] = 255;data[18] = 255;data[19] = 255;
-		data[20] = 255;data[21] = 255;data[22] = 255;data[23] = 255;
-		r_shadow_blankwhitecubetexture = R_LoadTextureCubeMap(r_shadow_texturepool, "blankwhitecube", 1, data, TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP, NULL);
-		for (side = 0;side < 6;side++)
-		{
-			for (y = 0;y < NORMSIZE;y++)
-			{
-				for (x = 0;x < NORMSIZE;x++)
-				{
-					s = (x + 0.5f) * (2.0f / NORMSIZE) - 1.0f;
-					t = (y + 0.5f) * (2.0f / NORMSIZE) - 1.0f;
-					switch(side)
-					{
-					case 0:
-						v[0] = 1;
-						v[1] = -t;
-						v[2] = -s;
-						break;
-					case 1:
-						v[0] = -1;
-						v[1] = -t;
-						v[2] = s;
-						break;
-					case 2:
-						v[0] = s;
-						v[1] = 1;
-						v[2] = t;
-						break;
-					case 3:
-						v[0] = s;
-						v[1] = -1;
-						v[2] = -t;
-						break;
-					case 4:
-						v[0] = s;
-						v[1] = -t;
-						v[2] = 1;
-						break;
-					case 5:
-						v[0] = -s;
-						v[1] = -t;
-						v[2] = -1;
-						break;
-					}
-					intensity = 127.0f / sqrt(DotProduct(v, v));
-					data[((side*NORMSIZE+y)*NORMSIZE+x)*4+0] = 128.0f + intensity * v[0];
-					data[((side*NORMSIZE+y)*NORMSIZE+x)*4+1] = 128.0f + intensity * v[1];
-					data[((side*NORMSIZE+y)*NORMSIZE+x)*4+2] = 128.0f + intensity * v[2];
-					data[((side*NORMSIZE+y)*NORMSIZE+x)*4+3] = 255;
-				}
-			}
-		}
-		r_shadow_normalcubetexture = R_LoadTextureCubeMap(r_shadow_texturepool, "normalcube", NORMSIZE, data, TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP, NULL);
-	}
+	data = Mem_Alloc(tempmempool, max(ATTEN3DSIZE*ATTEN3DSIZE*ATTEN3DSIZE*4, ATTEN2DSIZE*ATTEN2DSIZE*4));
 	for (y = 0;y < ATTEN2DSIZE;y++)
 	{
 		for (x = 0;x < ATTEN2DSIZE;x++)
@@ -1593,7 +1524,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 	if (r_shadow_gloss.integer < 1)
 		specularscale = 0;
 	if (!lightcubemap)
-		lightcubemap = r_shadow_blankwhitecubetexture;
+		lightcubemap = r_texture_whitecube;
 	if ((ambientscale + diffusescale) * (VectorLength2(lightcolorbase) + VectorLength2(lightcolorpants) + VectorLength2(lightcolorshirt)) + specularscale * VectorLength2(lightcolorbase) <= 0.001)
 		return;
 	if (visiblelighting)
@@ -2009,7 +1940,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 				m.tex[0] = R_GetTexture(bumptexture);
 				m.texcombinergb[0] = GL_REPLACE;
 				m.pointer_texcoord[0] = texcoord2f;
-				m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
+				m.texcubemap[1] = R_GetTexture(r_texture_normalizationcube);
 				m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
 				m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 				R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord3f[1] + 3 * firstvertex, numvertices, vertex3f + 3 * firstvertex, svector3f + 3 * firstvertex, tvector3f + 3 * firstvertex, normal3f + 3 * firstvertex, relativelightorigin);
@@ -2074,7 +2005,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 				m.tex[0] = R_GetTexture(bumptexture);
 				m.texcombinergb[0] = GL_REPLACE;
 				m.pointer_texcoord[0] = texcoord2f;
-				m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
+				m.texcubemap[1] = R_GetTexture(r_texture_normalizationcube);
 				m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
 				m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 				R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord3f[1] + 3 * firstvertex, numvertices, vertex3f + 3 * firstvertex, svector3f + 3 * firstvertex, tvector3f + 3 * firstvertex, normal3f + 3 * firstvertex, relativelightorigin);
@@ -2111,7 +2042,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 				m.tex[0] = R_GetTexture(bumptexture);
 				m.texcombinergb[0] = GL_REPLACE;
 				m.pointer_texcoord[0] = texcoord2f;
-				m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
+				m.texcubemap[1] = R_GetTexture(r_texture_normalizationcube);
 				m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
 				m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 				R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord3f[1] + 3 * firstvertex, numvertices, vertex3f + 3 * firstvertex, svector3f + 3 * firstvertex, tvector3f + 3 * firstvertex, normal3f + 3 * firstvertex, relativelightorigin);
@@ -2146,7 +2077,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 				m.tex[0] = R_GetTexture(bumptexture);
 				m.texcombinergb[0] = GL_REPLACE;
 				m.pointer_texcoord[0] = texcoord2f;
-				m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
+				m.texcubemap[1] = R_GetTexture(r_texture_normalizationcube);
 				m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
 				m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 				R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord3f[1] + 3 * firstvertex, numvertices, vertex3f + 3 * firstvertex, svector3f + 3 * firstvertex, tvector3f + 3 * firstvertex, normal3f + 3 * firstvertex, relativelightorigin);
@@ -2227,7 +2158,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 				m.tex[0] = R_GetTexture(bumptexture);
 				m.texcombinergb[0] = GL_REPLACE;
 				m.pointer_texcoord[0] = texcoord2f;
-				m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
+				m.texcubemap[1] = R_GetTexture(r_texture_normalizationcube);
 				m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
 				m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 				R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord3f[1] + 3 * firstvertex, numvertices, vertex3f + 3 * firstvertex, svector3f + 3 * firstvertex, tvector3f + 3 * firstvertex, normal3f + 3 * firstvertex, relativelightorigin);
@@ -2284,7 +2215,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 					m.pointer_vertex = vertex3f;
 					m.tex[0] = R_GetTexture(bumptexture);
 					m.pointer_texcoord[0] = texcoord2f;
-					m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
+					m.texcubemap[1] = R_GetTexture(r_texture_normalizationcube);
 					m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
 					m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 					R_Shadow_GenTexCoords_Specular_NormalCubeMap(varray_texcoord3f[1] + 3 * firstvertex, numvertices, vertex3f + 3 * firstvertex, svector3f + 3 * firstvertex, tvector3f + 3 * firstvertex, normal3f + 3 * firstvertex, relativelightorigin, relativeeyeorigin);
@@ -2358,7 +2289,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 					m.pointer_vertex = vertex3f;
 					m.tex[0] = R_GetTexture(bumptexture);
 					m.pointer_texcoord[0] = texcoord2f;
-					m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
+					m.texcubemap[1] = R_GetTexture(r_texture_normalizationcube);
 					m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
 					m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 					R_Shadow_GenTexCoords_Specular_NormalCubeMap(varray_texcoord3f[1] + 3 * firstvertex, numvertices, vertex3f + 3 * firstvertex, svector3f + 3 * firstvertex, tvector3f + 3 * firstvertex, normal3f + 3 * firstvertex, relativelightorigin, relativeeyeorigin);
@@ -2411,7 +2342,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 					m.pointer_vertex = vertex3f;
 					m.tex[0] = R_GetTexture(bumptexture);
 					m.pointer_texcoord[0] = texcoord2f;
-					m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
+					m.texcubemap[1] = R_GetTexture(r_texture_normalizationcube);
 					m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
 					m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 					R_Shadow_GenTexCoords_Specular_NormalCubeMap(varray_texcoord3f[1] + 3 * firstvertex, numvertices, vertex3f + 3 * firstvertex, svector3f + 3 * firstvertex, tvector3f + 3 * firstvertex, normal3f + 3 * firstvertex, relativelightorigin, relativeeyeorigin);
