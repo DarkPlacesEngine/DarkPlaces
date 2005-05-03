@@ -2922,7 +2922,7 @@ extern void R_Q1BSP_DrawSky(entity_render_t *ent);
 extern void R_Q1BSP_Draw(entity_render_t *ent);
 extern void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, qbyte *outleafpvs, int *outnumleafspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer);
 extern void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs);
-extern void R_Q1BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int numsurfaces, const int *surfacelist, int visiblelighting);
+extern void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolor, int numsurfaces, const int *surfacelist);
 void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 {
 	int i, j, k;

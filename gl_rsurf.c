@@ -1856,7 +1856,6 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 	int surfacelistindex;
 	if (r_drawcollisionbrushes.integer < 2)
 	{
-		R_Mesh_Matrix(&ent->matrix);
 		R_Shadow_PrepareShadowMark(model->brush.shadowmesh->numtriangles);
 		if (!r_shadow_compilingrtlight)
 			R_UpdateAllTextureInfo(ent);
@@ -1873,7 +1872,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 	}
 }
 
-void R_Q1BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int numsurfaces, const int *surfacelist, int visiblelighting)
+void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolor, int numsurfaces, const int *surfacelist)
 {
 	model_t *model = ent->model;
 	msurface_t *surface;
@@ -1908,7 +1907,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t 
 						v[0] = vertex3f + e[0] * 3;
 						v[1] = vertex3f + e[1] * 3;
 						v[2] = vertex3f + e[2] * 3;
-						if (PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+						if (PointInfrontOfTriangle(r_shadow_compilingrtlight->shadoworigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
 							Mod_ShadowMesh_AddMesh(r_shadow_mempool, r_shadow_compilingrtlight->static_meshchain_light, surface->texture->skin.base, surface->texture->skin.gloss, surface->texture->skin.nmap, surface->groupmesh->data_vertex3f, surface->groupmesh->data_svector3f, surface->groupmesh->data_tvector3f, surface->groupmesh->data_normal3f, surface->groupmesh->data_texcoordtexture2f, 1, e);
 					}
 #else
@@ -1924,7 +1923,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t 
 				{
 					if (surface->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
 						qglDisable(GL_CULL_FACE);
-					R_Shadow_RenderLighting(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle), surface->groupmesh->data_vertex3f, surface->groupmesh->data_svector3f, surface->groupmesh->data_tvector3f, surface->groupmesh->data_normal3f, surface->groupmesh->data_texcoordtexture2f, relativelightorigin, relativeeyeorigin, lightcolor, NULL, NULL, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.base, NULL, NULL, t->skin.nmap, t->skin.gloss, lightcubemap, ambientscale, diffusescale, specularscale, visiblelighting);
+					R_Shadow_RenderLighting(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle), surface->groupmesh->data_vertex3f, surface->groupmesh->data_svector3f, surface->groupmesh->data_tvector3f, surface->groupmesh->data_normal3f, surface->groupmesh->data_texcoordtexture2f, lightcolor, vec3_origin, vec3_origin, t->skin.base, NULL, NULL, t->skin.nmap, t->skin.gloss);
 					if (surface->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
 						qglEnable(GL_CULL_FACE);
 				}
