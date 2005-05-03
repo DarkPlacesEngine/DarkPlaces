@@ -218,6 +218,10 @@ extern int gl_max_anisotropy;
 #define GL_POLYGON_OFFSET_POINT           0x2A01
 #define GL_POLYGON_OFFSET_LINE            0x2A02
 #define GL_POLYGON_OFFSET_FILL            0x8037
+
+#define GL_POINT_SMOOTH                         0x0B10
+#define GL_LINE_SMOOTH                          0x0B20
+#define GL_POLYGON_SMOOTH                       0x0B41
 #endif
 
 // GL_ARB_multitexture
