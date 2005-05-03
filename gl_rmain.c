@@ -1002,7 +1002,7 @@ void R_RenderScene(void)
 		S_ExtraUpdate ();
 
 	GL_ShowTrisColor(0, 0, 0.033, 1);
-	R_ShadowVolumeLighting(false, false);
+	R_ShadowVolumeLighting(false);
 	R_TimeReport("rtlights");
 
 	// don't let sound skip if going slow
@@ -1034,8 +1034,8 @@ void R_RenderScene(void)
 
 	if ((r_shadow_visiblelighting.integer || r_shadow_visiblevolumes.integer) && !r_showtrispass)
 	{
-		R_ShadowVolumeLighting(r_shadow_visiblelighting.integer, r_shadow_visiblevolumes.integer);
-		R_TimeReport("shadowvolume");
+		R_ShadowVolumeLighting(true);
+		R_TimeReport("visiblevolume");
 	}
 
 	GL_ShowTrisColor(0.05, 0.05, 0.05, 1);

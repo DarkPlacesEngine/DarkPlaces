@@ -83,11 +83,6 @@ typedef struct rtlight_s
 	// core properties
 	// matrix for transforming world coordinates to light filter coordinates
 	matrix4x4_t matrix_worldtolight;
-	// based on worldtolight this transforms -1 to +1 to 0 to 1 for purposes
-	// of attenuation texturing in full 3D (Z result often ignored)
-	matrix4x4_t matrix_worldtoattenuationxyz;
-	// this transforms only the Z to S, and T is always 0.5
-	matrix4x4_t matrix_worldtoattenuationz;
 	// typically 1 1 1, can be lower (dim) or higher (overbright)
 	vec3_t color;
 	// size of the light (remove?)
