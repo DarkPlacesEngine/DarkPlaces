@@ -316,7 +316,7 @@ void R_TimeReport(char *desc)
 	int length;
 	int t;
 
-	if (!r_timereport_active)
+	if (!r_timereport_active || r_showtrispass)
 		return;
 
 	r_timereport_temp = r_timereport_current;
