@@ -690,6 +690,8 @@ qbyte *loadimagepixels (const char *filename, qboolean complain, int matchwidth,
 	char basename[MAX_QPATH], name[MAX_QPATH], *c;
 	if (developer_memorydebug.integer)
 		Mem_CheckSentinelsGlobal();
+	if (developer_texturelogging.integer)
+		Log_Printf("textures.log", "%s\n", filename);
 	Image_StripImageExtension(filename, basename); // strip filename extensions to allow replacement by other types
 	// replace *'s with #, so commandline utils don't get confused when dealing with the external files
 	for (c = basename;*c;c++)

@@ -103,6 +103,9 @@ cvar_t r_bloom_intensity = {CVAR_SAVE, "r_bloom_intensity", "2"};
 cvar_t r_bloom_blur = {CVAR_SAVE, "r_bloom_blur", "8"};
 cvar_t r_bloom_resolution = {CVAR_SAVE, "r_bloom_resolution", "320"};
 cvar_t r_bloom_power = {CVAR_SAVE, "r_bloom_power", "4"};
+
+cvar_t developer_texturelogging = {0, "developer_texturelogging", "1"};
+
 rtexturepool_t *r_main_texturepool;
 rtexture_t *r_bloom_texture_screen;
 rtexture_t *r_bloom_texture_bloom;
@@ -383,6 +386,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_bloom_blur);
 	Cvar_RegisterVariable(&r_bloom_resolution);
 	Cvar_RegisterVariable(&r_bloom_power);
+	Cvar_RegisterVariable(&developer_texturelogging);
 	if (gamemode == GAME_NEHAHRA || gamemode == GAME_NEXUIZ || gamemode == GAME_TENEBRAE)
 		Cvar_SetValue("r_fullbrights", 0);
 	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap);
@@ -542,6 +546,7 @@ static void R_MarkEntities (void)
 	if (!r_drawentities.integer)
 		return;
 
+	r_refdef.worldentity->visframe = r_framecount;
 	renderimask = envmap ? (RENDER_EXTERIORMODEL | RENDER_VIEWMODEL) : (chase_active.integer ? 0 : RENDER_EXTERIORMODEL);
 	if (r_refdef.worldmodel && r_refdef.worldmodel->brush.BoxTouchingVisibleLeafs)
 	{
