@@ -1705,6 +1705,7 @@ void SCR_DrawScreen (void)
 			GL_DepthMask(GL_FALSE);
 			memset(&m, 0, sizeof(m));
 			R_Mesh_State(&m);
+			//qglEnable(GL_LINE_SMOOTH);
 			GL_ShowTrisColor(0.2,0.2,0.2,1);
 			r_showtrispass = 1;
 		}
@@ -1770,6 +1771,7 @@ void SCR_DrawScreen (void)
 		R_TimeReport("meshfinish");
 	}
 	r_showtrispass = 0;
+	//qglDisable(GL_LINE_SMOOTH);
 }
 
 void SCR_UpdateLoadingScreen (void)
