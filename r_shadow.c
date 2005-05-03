@@ -1499,8 +1499,6 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 		glosstexture = r_texture_black;
 		specularscale = 0;
 	}
-	if ((ambientscale + diffusescale) * (VectorLength2(lightcolorbase) + VectorLength2(lightcolorpants) + VectorLength2(lightcolorshirt)) + specularscale * VectorLength2(lightcolorbase) <= 0.001)
-		return;
 	if (!basetexture)
 		basetexture = r_texture_white;
 	if (!bumptexture)
@@ -1511,6 +1509,8 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 		lightcolorpants = vec3_origin;
 	if (!lightcolorshirt)
 		lightcolorshirt = vec3_origin;
+	if ((ambientscale + diffusescale) * (VectorLength2(lightcolorbase) + VectorLength2(lightcolorpants) + VectorLength2(lightcolorshirt)) + specularscale * VectorLength2(lightcolorbase) <= 0.001)
+		return;
 	if (visiblelighting)
 	{
 		int passes = 0;
