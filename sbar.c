@@ -1146,7 +1146,7 @@ void Sbar_Draw (void)
 	R_Draw2DCrosshair();
 
 	if (cl_prydoncursor.integer)
-		DrawQ_Pic((cl.cmd.cursor_screen[0] + 1) * 0.5 * vid.conwidth, (cl.cmd.cursor_screen[1] + 1) * 0.5 * vid.conheight, va("gfx/prydoncursor%03i.lmp", cl_prydoncursor.integer), 0, 0, 1, 1, 1, 1, 0);
+		DrawQ_Pic((cl.cmd.cursor_screen[0] + 1) * 0.5 * vid.conwidth, (cl.cmd.cursor_screen[1] + 1) * 0.5 * vid.conheight, va("gfx/prydoncursor%03i", cl_prydoncursor.integer), 0, 0, 1, 1, 1, 1, 0);
 }
 
 //=============================================================================
@@ -1175,8 +1175,8 @@ void Sbar_DeathmatchOverlay (void)
 	int i, x, y;
 	cachepic_t *pic;
 
-	pic = Draw_CachePic ("gfx/ranking.lmp", true);
-	DrawQ_Pic ((vid.conwidth - pic->width)/2, 8, "gfx/ranking.lmp", 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
+	pic = Draw_CachePic ("gfx/ranking", true);
+	DrawQ_Pic ((vid.conwidth - pic->width)/2, 8, "gfx/ranking", 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
 
 	// scores
 	Sbar_SortFrags ();
@@ -1252,8 +1252,8 @@ void Sbar_IntermissionOverlay (void)
 	sbar_x = (vid.conwidth - 320) >> 1;
 	sbar_y = (vid.conheight - 200) >> 1;
 
-	DrawQ_Pic (sbar_x + 64, sbar_y + 24, "gfx/complete.lmp", 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
-	DrawQ_Pic (sbar_x + 0, sbar_y + 56, "gfx/inter.lmp", 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
+	DrawQ_Pic (sbar_x + 64, sbar_y + 24, "gfx/complete", 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
+	DrawQ_Pic (sbar_x + 0, sbar_y + 56, "gfx/inter", 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
 
 // time
 	dig = cl.completed_time/60;
@@ -1284,7 +1284,7 @@ void Sbar_FinaleOverlay (void)
 {
 	cachepic_t	*pic;
 
-	pic = Draw_CachePic ("gfx/finale.lmp", true);
-	DrawQ_Pic((vid.conwidth - pic->width)/2, 16, "gfx/finale.lmp", 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
+	pic = Draw_CachePic ("gfx/finale", true);
+	DrawQ_Pic((vid.conwidth - pic->width)/2, 16, "gfx/finale", 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
 }
 

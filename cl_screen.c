@@ -178,7 +178,7 @@ void SCR_DrawTurtle (void)
 	if (count < 3)
 		return;
 
-	DrawQ_Pic (0, 0, "gfx/turtle.lmp", 0, 0, 1, 1, 1, 1, 0);
+	DrawQ_Pic (0, 0, "gfx/turtle", 0, 0, 1, 1, 1, 1, 0);
 }
 
 /*
@@ -195,7 +195,7 @@ void SCR_DrawNet (void)
 	if (cls.demoplayback)
 		return;
 
-	DrawQ_Pic (64, 0, "gfx/net.lmp", 0, 0, 1, 1, 1, 1, 0);
+	DrawQ_Pic (64, 0, "gfx/net", 0, 0, 1, 1, 1, 1, 0);
 }
 
 /*
@@ -216,8 +216,8 @@ void SCR_DrawPause (void)
 	if (!cl.paused)
 		return;
 
-	pic = Draw_CachePic ("gfx/pause.lmp", true);
-	DrawQ_Pic ((vid.conwidth - pic->width)/2, (vid.conheight - pic->height)/2, "gfx/pause.lmp", 0, 0, 1, 1, 1, 1, 0);
+	pic = Draw_CachePic ("gfx/pause", true);
+	DrawQ_Pic ((vid.conwidth - pic->width)/2, (vid.conheight - pic->height)/2, "gfx/pause", 0, 0, 1, 1, 1, 1, 0);
 }
 
 
