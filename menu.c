@@ -4264,7 +4264,6 @@ void M_Init (void)
 	Cmd_AddCommand ("menu_options_effects", M_Menu_Options_Effects_f);
 	Cmd_AddCommand ("menu_options_graphics", M_Menu_Options_Graphics_f);
 	Cmd_AddCommand ("menu_options_colorcontrol", M_Menu_Options_ColorControl_f);
-	Cvar_RegisterVariable (&menu_options_colorcontrol_correctionvalue);
 	Cmd_AddCommand ("menu_keys", M_Menu_Keys_f);
 	Cmd_AddCommand ("menu_video", M_Menu_Video_f);
 	Cmd_AddCommand ("menu_reset", M_Menu_Reset_f);
@@ -4799,6 +4798,7 @@ void MR_Init_Commands(void)
 {
 	// set router console commands
 	Cvar_RegisterVariable (&forceqmenu);
+	Cvar_RegisterVariable (&menu_options_colorcontrol_correctionvalue);
 	if (gamemode == GAME_NETHERWORLD)
 		Cmd_AddCommand ("menu_fallback", MP_Error); //Force to old-style menu
 	Cmd_AddCommand ("menu_restart",MR_Restart);
