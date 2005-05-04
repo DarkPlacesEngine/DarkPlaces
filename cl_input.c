@@ -419,7 +419,8 @@ void CL_UpdatePrydonCursor(void)
 void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 {
 	int i, n, bump, contents, crouch;
-	//double simulatedtime;
+	double edgefriction;
+	double simulatedtime;
 	double currenttime;
 	double newtime;
 	double frametime;
@@ -431,14 +432,16 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 	// remove stale queue items
 	n = cl.movement_numqueue;
 	cl.movement_numqueue = 0;
+	// calculate time to execute for
+	simulatedtime = cl.mtime[0] + cl_movement_latency.value / 1000.0;
 	for (i = 0;i < n;i++)
-		if (cl.movement_queue[i].time >= cl.mtime[0])
+		if (cl.movement_queue[i].time >= cl.mtime[0] && cl.movement_queue[i].time <= simulatedtime)
 			cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
 	// add to input queue if there is room
 	if (cl.movement_numqueue < sizeof(cl.movement_queue)/sizeof(cl.movement_queue[0]))
 	{
 		// add to input queue
-		cl.movement_queue[cl.movement_numqueue].time = cl.mtime[0] + cl_movement_latency.value;
+		cl.movement_queue[cl.movement_numqueue].time = simulatedtime;
 		VectorCopy(cl.viewangles, cl.movement_queue[cl.movement_numqueue].viewangles);
 		cl.movement_queue[cl.movement_numqueue].move[0] = cl.cmd.forwardmove;
 		cl.movement_queue[cl.movement_numqueue].move[1] = cl.cmd.sidemove;
@@ -455,8 +458,6 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 	currenttime = cl.mtime[0];
 	VectorCopy(cl_entities[cl.playerentity].state_current.origin, currentorigin);
 	VectorCopy(cl.mvelocity[0], currentvelocity);
-	// calculate time to execute for
-	//simulatedtime = currenttime + cl_movement_latency.value;
 	// FIXME: try minor nudges in various directions if startsolid to find a
 	// safe place to start the walk (due to network compression in some
 	// protocols this starts in solid)
@@ -594,11 +595,17 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 				{
 					// apply ground friction
 					f = sqrt(currentvelocity[0] * currentvelocity[0] + currentvelocity[1] * currentvelocity[1]);
-					VectorSet(currentorigin2, currentorigin[0] + currentvelocity[0]*(16/f), currentorigin[1] + currentvelocity[1]*(16/f), currentorigin[2] + playermins[2]);
-					VectorSet(neworigin2, currentorigin2[0], currentorigin2[1], currentorigin2[2] - 34);
-					trace = CL_TraceBox(currentorigin2, vec3_origin, vec3_origin, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
+					edgefriction = 1;
+					if (f > 0)
+					{
+						VectorSet(currentorigin2, currentorigin[0] + currentvelocity[0]*(16/f), currentorigin[1] + currentvelocity[1]*(16/f), currentorigin[2] + playermins[2]);
+						VectorSet(neworigin2, currentorigin2[0], currentorigin2[1], currentorigin2[2] - 34);
+						trace = CL_TraceBox(currentorigin2, vec3_origin, vec3_origin, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
+						if (trace.fraction < 1)
+							edgefriction = cl_movement_edgefriction.value;
+					}
 					// apply friction
-					f = 1 - frametime * (trace.fraction == 1 ? cl_movement_edgefriction.value : 1) * ((f < cl_movement_stopspeed.value) ? (cl_movement_stopspeed.value / f) : 1) * cl_movement_friction.value;
+					f = 1 - frametime * edgefriction * ((f < cl_movement_stopspeed.value) ? (cl_movement_stopspeed.value / f) : 1) * cl_movement_friction.value;
 					f = max(f, 0);
 					VectorScale(currentvelocity, f, currentvelocity);
 				}
