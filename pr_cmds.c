@@ -2417,7 +2417,7 @@ void PF_te_customflash (void)
 	// radius
 	MSG_WriteByte(&sv.datagram, bound(0, G_FLOAT(OFS_PARM1) / 8 - 1, 255));
 	// lifetime
-	MSG_WriteByte(&sv.datagram, bound(0, G_FLOAT(OFS_PARM2) / 256 - 1, 255));
+	MSG_WriteByte(&sv.datagram, bound(0, G_FLOAT(OFS_PARM2) * 256 - 1, 255));
 	// color
 	MSG_WriteByte(&sv.datagram, bound(0, G_VECTOR(OFS_PARM3)[0] * 255, 255));
 	MSG_WriteByte(&sv.datagram, bound(0, G_VECTOR(OFS_PARM3)[1] * 255, 255));
