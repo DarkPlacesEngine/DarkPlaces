@@ -1205,7 +1205,7 @@ void CL_ParseTempEntity(void)
 	case TE_CUSTOMFLASH:
 		MSG_ReadVector(pos, cl.protocol);
 		CL_FindNonSolidLocation(pos, pos, 4);
-		radius = MSG_ReadByte() * 8;
+		radius = (MSG_ReadByte() + 1) * 8;
 		velspeed = (MSG_ReadByte() + 1) * (1.0 / 256.0);
 		color[0] = MSG_ReadByte() * (2.0f / 255.0f);
 		color[1] = MSG_ReadByte() * (2.0f / 255.0f);
