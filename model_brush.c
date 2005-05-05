@@ -3920,7 +3920,8 @@ parseerror:
 		}
 		if (!Mod_LoadSkinFrame(&out->skin, out->name, (((out->textureflags & Q3TEXTUREFLAG_NOMIPMAPS) || (out->surfaceparms & Q3SURFACEPARM_NOMIPMAPS)) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (out->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP), false, false, true))
 			if (!Mod_LoadSkinFrame(&out->skin, out->firstpasstexturename, (((out->textureflags & Q3TEXTUREFLAG_NOMIPMAPS) || (out->surfaceparms & Q3SURFACEPARM_NOMIPMAPS)) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (out->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP), false, false, true))
-				Con_Printf("%s: texture loading for shader \"%s\" failed (first layer \"%s\" not found either)\n", loadmodel->name, out->name, out->firstpasstexturename);
+				if (cls.state != ca_dedicated)
+					Con_Printf("%s: texture loading for shader \"%s\" failed (first layer \"%s\" not found either)\n", loadmodel->name, out->name, out->firstpasstexturename);
 		// no animation
 		out->currentframe = out;
 	}
