@@ -355,11 +355,21 @@ static void Cmd_Alias_f (void)
 
 	if (!a)
 	{
+		cmdalias_t *prev, *current;
+
 		a = Z_Malloc (sizeof(cmdalias_t));
-		a->next = cmd_alias;
-		cmd_alias = a;
+		strlcpy (a->name, s, sizeof (a->name));
+		// insert it at the right alphanumeric position
+		for( prev = NULL, current = cmd_alias ; current && strcmp( current->name, a->name ) < 0 ; prev = current, current = current->next )
+			;
+		if( prev ) {
+			prev->next = a;
+		} else {
+			cmd_alias = a;
+		}
+		a->next = current;
 	}
-	strlcpy (a->name, s, sizeof (a->name));
+	
 
 // copy the rest of the command line
 	cmd[0] = 0;		// start out with a null string
@@ -579,6 +589,7 @@ Cmd_AddCommand
 void Cmd_AddCommand (const char *cmd_name, xcommand_t function)
 {
 	cmd_function_t *cmd;
+	cmd_function_t *prev, *current;
 
 // fail if the command is a variable name
 	if (Cvar_VariableString(cmd_name)[0])
@@ -601,7 +612,16 @@ void Cmd_AddCommand (const char *cmd_name, xcommand_t function)
 	cmd->name = cmd_name;
 	cmd->function = function;
 	cmd->next = cmd_functions;
-	cmd_functions = cmd;
+
+// insert it at the right alphanumeric position
+	for( prev = NULL, current = cmd_functions ; current && strcmp( current->name, cmd->name ) < 0 ; prev = current, current = current->next )
+		;
+	if( prev ) {
+		prev->next = cmd;
+	} else {
+		cmd_functions = cmd;
+	}
+	cmd->next = current;
 }
 
 /*
