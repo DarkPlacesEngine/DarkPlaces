@@ -269,6 +269,8 @@ qboolean S_LoadWavFile (const char *filename, sfx_t *s)
 		Mem_FreePool (&s->mempool);
 		return false;
 	}
+	//if (info.channels == 2)
+	//	Log_Printf("stereosounds.log", "%s\n", s->name);
 
 	// calculate resampled length
 	len = (int) ((double) info.samples * (double) shm->format.speed / (double) info.rate);
