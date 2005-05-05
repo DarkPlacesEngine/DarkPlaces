@@ -329,8 +329,15 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	variable->integer = (int) variable->value;
 
 // link the variable in
-	variable->next = cvar_vars;
-	cvar_vars = variable;
+// alphanumerical order
+	for( cvar = NULL, cvar2 = cvar_vars ; cvar2 && strcmp( cvar2->name, variable->name ) < 0 ; cvar = cvar2, cvar2 = cvar->next )
+		;
+	if( cvar ) {
+		cvar->next = variable;
+	} else {
+		cvar_vars = variable;
+	}
+	variable->next = cvar2;
 }
 
 /*

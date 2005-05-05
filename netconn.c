@@ -186,6 +186,8 @@ static qboolean _ServerList_CompareInt( int A, serverlist_maskop_t op, int B )
 		case SLMO_NOTEQUAL:
 			return A != B;
 		case SLMO_GREATEREQUAL:
+		case SLMO_CONTAINS:
+		case SLMO_NOTCONTAIN:
 			return A >= B;
 		default:
 			Con_DPrint( "_ServerList_CompareInt: Bad op!\n" );
@@ -332,7 +334,7 @@ static void _ServerList_Test(void)
 {
 	int i;
 	for( i = 0 ; i < 1024 ; i++ ) {
-		memset( &serverlist_cache[serverlist_cachecount], 0, sizeof( serverlist_t ) );
+		memset( &serverlist_cache[serverlist_cachecount], 0, sizeof( serverlist_entry_t ) );
 		serverlist_cache[serverlist_cachecount].info.ping = rand() % 450 + 250;
 		dpsnprintf( serverlist_cache[serverlist_cachecount].info.name, 128, "Black's ServerList Test %i", i );
 		serverlist_cache[serverlist_cachecount].finished = true;

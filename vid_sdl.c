@@ -346,8 +346,7 @@ static void VID_SetCaption()
 	if( !SDL_GetWMInfo( &info ) )
 		return;
 
-	//icon = LoadIcon( GetModuleHandle( NULL ), MAKEINTRESOURCE( IDI_ICON1 ) );
-	icon = LoadIcon( NULL, IDI_ERROR );
+	icon = LoadIcon( GetModuleHandle( NULL ), MAKEINTRESOURCE( IDI_ICON1 ) );
 	SetClassLong( info.window, GCL_HICON, (LONG) icon );
 }
 #else
