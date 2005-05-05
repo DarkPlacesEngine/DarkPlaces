@@ -384,12 +384,14 @@ static void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfi
 						Mod_BuildAliasSkinFromSkinFrame(skin, &tempskinframe);
 					else
 					{
-						Con_Printf("mesh \"%s\": failed to load skin #%i \"%s\", falling back to mesh's internal shader name \"%s\"\n", meshname, i, skinfileitem->replacement, shadername);
+						if (cls.state != ca_dedicated)
+							Con_Printf("mesh \"%s\": failed to load skin #%i \"%s\", falling back to mesh's internal shader name \"%s\"\n", meshname, i, skinfileitem->replacement, shadername);
 						if (Mod_LoadSkinFrame(&tempskinframe, shadername, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, true, false, true))
 							Mod_BuildAliasSkinFromSkinFrame(skin, &tempskinframe);
 						else
 						{
-							Con_Printf("failed to load skin \"%s\"\n", shadername);
+							if (cls.state != ca_dedicated)
+								Con_Printf("failed to load skin \"%s\"\n", shadername);
 							Mod_BuildAliasSkinFromSkinFrame(skin, NULL);
 						}
 					}
@@ -404,7 +406,8 @@ static void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfi
 			Mod_BuildAliasSkinFromSkinFrame(skin, &tempskinframe);
 		else
 		{
-			Con_Printf("failed to load mesh \"%s\" shader \"%s\"\n", meshname, shadername);
+			if (cls.state != ca_dedicated)
+				Con_Printf("failed to load mesh \"%s\" shader \"%s\"\n", meshname, shadername);
 			Mod_BuildAliasSkinFromSkinFrame(skin, NULL);
 		}
 	}
