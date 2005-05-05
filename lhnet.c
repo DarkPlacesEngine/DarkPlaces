@@ -568,7 +568,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 				continue;
 			}
 #ifndef STANDALONETEST
-			if (cl_netlocalping.value && (Sys_DoubleTime() - cl_netlocalping.value * (1.0 / 1000.0)) < p->sentdoubletime)
+			if (cl_netlocalping.value && (Sys_DoubleTime() - cl_netlocalping.value * (1.0 / 2000.0)) < p->sentdoubletime)
 				continue;
 #endif
 			if (value == 0 && p->destinationport == lhnetsocket->address.addressdata.loop.port)
