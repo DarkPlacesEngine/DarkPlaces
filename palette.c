@@ -11,8 +11,6 @@ unsigned int palette_shirtaswhite[256];
 unsigned int palette_alpha[256];
 unsigned int palette_font[256];
 
-qbyte host_basepal[768];
-
 // John Carmack said the quake palette.lmp can be considered public domain because it is not an important asset to id, so I include it here as a fallback if no external palette file is found.
 qbyte host_quakepal[768] =
 {
@@ -24,28 +22,15 @@ qbyte host_quakepal[768] =
 43,175,47,47,159,47,47,143,47,47,127,47,47,111,47,47,95,43,43,79,35,35,63,27,27,47,19,19,31,11,11,15,43,0,0,59,0,0,75,7,0,95,7,0,111,15,0,127,23,7,147,31,7,163,39,11,183,51,15,195,75,27,207,99,43,219,127,59,227,151,79,231,171,95,239,191,119,247,211,139,167,123,59,183,155,55,199,195,55,231,227,87,127,191,255,171,231,255,215,255,255,103,0,0,139,0,0,179,0,0,215,0,0,255,0,0,255,243,147,255,247,199,255,255,255,159,91,83
 };
 
-void Palette_Setup8to24(void)
+void Palette_SetupSpecialPalettes(void)
 {
 	int i;
 	int fullbright_start, fullbright_end;
 	int pants_start, pants_end;
 	int shirt_start, shirt_end;
 	int reversed_start, reversed_end;
-	qbyte *in, *out;
 	qbyte *colormap;
 
-	in = host_basepal;
-	out = (qbyte *) palette_complete; // palette is accessed as 32bit for speed reasons, but is created as 8bit bytes
-	for (i = 0;i < 255;i++)
-	{
-		*out++ = *in++;
-		*out++ = *in++;
-		*out++ = *in++;
-		*out++ = 255;
-	}
-	palette_complete[255] = 0; // completely transparent black
-
-	// FIXME: fullbright_start should be read from colormap.lmp
 	colormap = FS_LoadFile("gfx/colormap.lmp", tempmempool, true);
 	if (colormap && fs_filesize >= 16385)
 		fullbright_start = 256 - colormap[16384];
@@ -179,20 +164,8 @@ void Palette_Init(void)
 {
 	int i;
 	float gamma, scale, base;
-	qbyte *pal;
-	qbyte temp[256];
-	pal = (qbyte *)FS_LoadFile ("gfx/palette.lmp", tempmempool, false);
-	if (pal && fs_filesize >= 768)
-	{
-		memcpy(host_basepal, pal, 765);
-		Mem_Free(pal);
-	}
-	else
-	{
-		Con_DPrint("Couldn't load gfx/palette.lmp, falling back on internal palette\n");
-		memcpy(host_basepal, host_quakepal, 765);
-	}
-	host_basepal[765] = host_basepal[766] = host_basepal[767] = 0; // LordHavoc: force the transparent color to black
+	qbyte *in, *out, *palfile;
+	qbyte texturegammaramp[256];
 
 	gamma = 1;
 	scale = 1;
@@ -213,10 +186,28 @@ void Palette_Init(void)
 	scale = bound(0.01, scale, 10.0);
 	base = bound(0, base, 0.95);
 
-	BuildGammaTable8(1.0f, gamma, scale, base, temp);
-	for (i = 3;i < 765;i++)
-		host_basepal[i] = temp[host_basepal[i]];
+	BuildGammaTable8(1.0f, gamma, scale, base, texturegammaramp);
 
-	Palette_Setup8to24();
+	palfile = (qbyte *)FS_LoadFile ("gfx/palette.lmp", tempmempool, false);
+	if (palfile && fs_filesize >= 768)
+		in = palfile;
+	else
+	{
+		Con_DPrint("Couldn't load gfx/palette.lmp, falling back on internal palette\n");
+		in = host_quakepal;
+	}
+	out = (qbyte *) palette_complete; // palette is accessed as 32bit for speed reasons, but is created as 8bit bytes
+	for (i = 0;i < 255;i++)
+	{
+		*out++ = texturegammaramp[*in++];
+		*out++ = texturegammaramp[*in++];
+		*out++ = texturegammaramp[*in++];
+		*out++ = 255;
+	}
+	palette_complete[255] = 0; // completely transparent black
+	if (palfile)
+		Mem_Free(palfile);
+
+	Palette_SetupSpecialPalettes();
 }
 
