@@ -17,10 +17,7 @@ rendermodule_t rendermodule[MAXRENDERMODULES];
 
 void R_Modules_Init(void)
 {
-	int i;
 	Cmd_AddCommand("r_restart", R_Modules_Restart);
-	for (i = 0;i < MAXRENDERMODULES;i++)
-		rendermodule[i].name = NULL;
 }
 
 void R_RegisterModule(char *name, void(*start)(void), void(*shutdown)(void), void(*newmap)(void))
