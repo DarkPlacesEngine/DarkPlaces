@@ -1033,7 +1033,8 @@ void VID_Restart_f(void)
 	Con_Printf("VID_Restart: changing from %s %dx%dx%dbpp, to %s %dx%dx%dbpp.\n",
 		current_vid_fullscreen ? "fullscreen" : "window", current_vid_width, current_vid_height, current_vid_bitsperpixel,
 		vid_fullscreen.integer ? "fullscreen" : "window", vid_width.integer, vid_height.integer, vid_bitsperpixel.integer);
-	VID_Close();
+	VID_CloseSystems();
+	VID_Shutdown();
 	if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer))
 	{
 		Con_Print("Video mode change failed\n");
@@ -1043,7 +1044,8 @@ void VID_Restart_f(void)
 	VID_OpenSystems();
 }
 
-void VID_Open(void)
+// this is only called once by Host_StartVideo
+void VID_Start(void)
 {
 	int i, width, height, success;
 	if (vid_commandlinecheck)
@@ -1092,11 +1094,5 @@ void VID_Open(void)
 			Sys_Error("Video modes failed\n");
 	}
 	VID_OpenSystems();
-}
-
-void VID_Close(void)
-{
-	VID_CloseSystems();
-	VID_Shutdown();
 }
 
