@@ -245,7 +245,7 @@ void _Mem_FreePool(mempool_t **pool, const char *filename, int fileline)
 
 		// free memory owned by the pool
 		while ((*pool)->chain)
-			Mem_Free((void *)((qbyte *) (*pool)->chain + sizeof(memheader_t)));
+			_Mem_Free((void *)((qbyte *) (*pool)->chain + sizeof(memheader_t)), filename, fileline);
 
 		// free child pools, too
 		for(iter = poolchain; iter; temp = iter = iter->next)
@@ -272,7 +272,7 @@ void _Mem_EmptyPool(mempool_t *pool, const char *filename, int fileline)
 
 	// free memory owned by the pool
 	while (pool->chain)
-		Mem_Free((void *)((qbyte *) pool->chain + sizeof(memheader_t)));
+		_Mem_Free((void *)((qbyte *) pool->chain + sizeof(memheader_t)), filename, fileline);
 
 	// empty child pools, too
 	for(chainaddress = poolchain; chainaddress; chainaddress = chainaddress->next)
