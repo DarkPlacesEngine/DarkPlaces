@@ -279,7 +279,7 @@ char *Sys_GetClipboardData (void)
 
 		if ((hClipboardData = GetClipboardData (CF_TEXT)) != 0)
 		{
-			if ((cliptext = GlobalLock (hClipboardData)) != 0) 
+			if ((cliptext = GlobalLock (hClipboardData)) != 0)
 			{
 				data = malloc (GlobalSize(hClipboardData)+1);
 				strcpy (data, cliptext);
@@ -289,6 +289,55 @@ char *Sys_GetClipboardData (void)
 		CloseClipboard ();
 	}
 	return data;
+}
+
+void Sys_InitConsole (void)
+{
+	// initialize the windows dedicated server console if needed
+	tevent = CreateEvent(NULL, false, false, NULL);
+
+	if (!tevent)
+		Sys_Error ("Couldn't create event");
+
+	// LordHavoc: can't check cls.state because it hasn't been initialized yet
+	// if (cls.state == ca_dedicated)
+	if (COM_CheckParm("-dedicated"))
+	{
+		if (!AllocConsole ())
+			Sys_Error ("Couldn't create dedicated server console");
+
+		hinput = GetStdHandle (STD_INPUT_HANDLE);
+		houtput = GetStdHandle (STD_OUTPUT_HANDLE);
+
+	// give QHOST a chance to hook into the console
+		if ((t = COM_CheckParm ("-HFILE")) > 0)
+		{
+			if (t < com_argc)
+				hFile = (HANDLE)atoi (com_argv[t+1]);
+		}
+
+		if ((t = COM_CheckParm ("-HPARENT")) > 0)
+		{
+			if (t < com_argc)
+				heventParent = (HANDLE)atoi (com_argv[t+1]);
+		}
+
+		if ((t = COM_CheckParm ("-HCHILD")) > 0)
+		{
+			if (t < com_argc)
+				heventChild = (HANDLE)atoi (com_argv[t+1]);
+		}
+
+		InitConProc (hFile, heventParent, heventChild);
+	}
+
+// because sound is off until we become active
+	S_BlockSound ();
+}
+
+void Sys_Init_Commands (void)
+{
+	Cvar_RegisterVariable(&sys_usetimegettime);
 }
 
 /*
@@ -365,56 +414,10 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 		}
 	}
 
-	Sys_Shared_EarlyInit();
-
-	Cvar_RegisterVariable(&sys_usetimegettime);
-
-	tevent = CreateEvent(NULL, false, false, NULL);
-
-	if (!tevent)
-		Sys_Error ("Couldn't create event");
-
-	// LordHavoc: can't check cls.state because it hasn't been initialized yet
-	// if (cls.state == ca_dedicated)
-	if (COM_CheckParm("-dedicated"))
-	{
-		if (!AllocConsole ())
-			Sys_Error ("Couldn't create dedicated server console");
-
-		hinput = GetStdHandle (STD_INPUT_HANDLE);
-		houtput = GetStdHandle (STD_OUTPUT_HANDLE);
-
-	// give QHOST a chance to hook into the console
-		if ((t = COM_CheckParm ("-HFILE")) > 0)
-		{
-			if (t < com_argc)
-				hFile = (HANDLE)atoi (com_argv[t+1]);
-		}
-
-		if ((t = COM_CheckParm ("-HPARENT")) > 0)
-		{
-			if (t < com_argc)
-				heventParent = (HANDLE)atoi (com_argv[t+1]);
-		}
-
-		if ((t = COM_CheckParm ("-HCHILD")) > 0)
-		{
-			if (t < com_argc)
-				heventChild = (HANDLE)atoi (com_argv[t+1]);
-		}
-
-		InitConProc (hFile, heventParent, heventChild);
-	}
-
-// because sound is off until we become active
-	S_BlockSound ();
-
 	Host_Init ();
 
-	Sys_Shared_LateInit();
-
 	frameoldtime = Sys_DoubleTime ();
-	
+
 	/* main window message loop */
 	while (1)
 	{

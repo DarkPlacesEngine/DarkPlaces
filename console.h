@@ -30,6 +30,7 @@ extern qboolean con_initialized;
 
 void Con_CheckResize (void);
 void Con_Init (void);
+void Con_Init_Commands (void);
 void Con_DrawConsole (int lines);
 void Con_Print(const char *txt);
 void Con_Printf(const char *fmt, ...);

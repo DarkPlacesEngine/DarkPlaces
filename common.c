@@ -1001,35 +1001,15 @@ void COM_InitGameType (void)
 }
 
 
-extern void Mathlib_Init(void);
-extern void FS_Init (void);
-
 /*
 ================
 COM_Init
 ================
 */
-void COM_Init (void)
+void COM_Init_Commands (void)
 {
 	Cvar_RegisterVariable (&registered);
 	Cvar_RegisterVariable (&cmdline);
-
-	Mathlib_Init();
-
-	FS_Init ();
-	COM_CheckRegistered ();
-}
-
-extern void FS_Shutdown (void);
-
-/*
-================
-COM_Shutdown
-================
-*/
-void COM_Shutdown (void)
-{
-	FS_Shutdown ();
 }
 
 /*

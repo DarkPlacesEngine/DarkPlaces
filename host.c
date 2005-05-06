@@ -36,10 +36,9 @@ Memory is cleared / released when a server or client begins, not when they end.
 
 */
 
-// true if into command execution
-qboolean host_initialized;
-// LordHavoc: used to turn Host_Error into Sys_Error if starting up or shutting down
-qboolean host_loopactive = false;
+// how many frames have occurred
+// (checked by Host_Error and Host_SaveConfig_f)
+int host_framecount;
 // LordHavoc: set when quit is executed
 qboolean host_shuttingdown = false;
 
@@ -50,8 +49,6 @@ double host_realframetime;
 double realtime;
 // realtime from previous frame
 double oldrealtime;
-// how many frames have occurred
-int host_framecount;
 
 // used for -developer commandline parameter, hacky hacky
 int forcedeveloper;
@@ -117,9 +114,9 @@ void Host_Error (const char *error, ...)
 
 	Con_Printf("Host_Error: %s\n", hosterrorstring1);
 
-	// LordHavoc: if first frame has not been shown, or currently shutting
-	// down, do Sys_Error instead
-	if (!host_loopactive || host_shuttingdown)
+	// LordHavoc: if crashing very early, or currently shutting down, do
+	// Sys_Error instead
+	if (host_framecount < 3 || host_shuttingdown)
 		Sys_Error ("Host_Error: %s", hosterrorstring1);
 
 	if (hosterror)
@@ -154,10 +151,10 @@ void Host_Error (const char *error, ...)
 
 void Host_ServerOptions (void)
 {
-	int i, numplayers;
+	int i;
 
 	// general default
-	numplayers = 8;
+	svs.maxclients = 8;
 
 // COMMANDLINEOPTION: Server: -dedicated [playerlimit] starts a dedicated server (with a command console), default playerlimit is 8
 // COMMANDLINEOPTION: Server: -listen [playerlimit] starts a multiplayer server with graphical client, like singleplayer but other players can connect, default playerlimit is 8
@@ -169,8 +166,8 @@ void Host_ServerOptions (void)
 		{
 			cls.state = ca_dedicated;
 			// default players unless specified
-			if (i != (com_argc - 1))
-				numplayers = atoi (com_argv[i+1]);
+			if (i + 1 < com_argc && atoi (com_argv[i+1]) >= 1)
+				svs.maxclients = atoi (com_argv[i+1]);
 			if (COM_CheckParm ("-listen"))
 				Sys_Error ("Only one of -dedicated or -listen can be specified");
 		}
@@ -181,14 +178,14 @@ void Host_ServerOptions (void)
 			if (i)
 			{
 				// default players unless specified
-				if (i != (com_argc - 1))
-					numplayers = atoi (com_argv[i+1]);
+				if (i + 1 < com_argc && atoi (com_argv[i+1]) >= 1)
+					svs.maxclients = atoi (com_argv[i+1]);
 			}
 			else
 			{
 				// default players in some games, singleplayer in most
 				if (gamemode != GAME_TRANSFUSION && gamemode != GAME_GOODVSBAD2 && gamemode != GAME_NEXUIZ && gamemode != GAME_BATTLEMECH)
-					numplayers = 1;
+					svs.maxclients = 1;
 			}
 		}
 	}
@@ -201,20 +198,16 @@ void Host_ServerOptions (void)
 		// check for -dedicated specifying how many players
 		i = COM_CheckParm ("-dedicated");
 		// default players unless specified
-		if (i && i != (com_argc - 1))
-			numplayers = atoi (com_argv[i+1]);
+		if (i && i + 1 < com_argc && atoi (com_argv[i+1]) >= 1)
+			svs.maxclients = atoi (com_argv[i+1]);
 	}
 
-	if (numplayers < 1)
-		numplayers = 8;
+	svs.maxclients = bound(1, svs.maxclients, MAX_SCOREBOARD);
 
-	numplayers = bound(1, numplayers, MAX_SCOREBOARD);
-
-	if (numplayers > 1 && !deathmatch.integer)
-		Cvar_SetValueQuick(&deathmatch, 1);
-
-	svs.maxclients = numplayers;
 	svs.clients = Mem_Alloc(sv_mempool, sizeof(client_t) * svs.maxclients);
+
+	if (svs.maxclients > 1 && !deathmatch.integer)
+		Cvar_SetValueQuick(&deathmatch, 1);
 }
 
 /*
@@ -225,8 +218,6 @@ Host_InitLocal
 void Host_SaveConfig_f(void);
 void Host_InitLocal (void)
 {
-	Host_InitCommands ();
-
 	Cmd_AddCommand("saveconfig", Host_SaveConfig_f);
 
 	Cvar_RegisterVariable (&host_framerate);
@@ -257,8 +248,6 @@ void Host_InitLocal (void)
 
 	Cvar_RegisterVariable (&timestamps);
 	Cvar_RegisterVariable (&timeformat);
-
-	Host_ServerOptions ();
 }
 
 
@@ -275,8 +264,8 @@ void Host_SaveConfig_f(void)
 
 // dedicated servers initialize the host but don't parse and set the
 // config.cfg cvars
-	// LordHavoc: save a config only after Host_Frame finished the first frame
-	if (host_initialized && host_loopactive && cls.state != ca_dedicated)
+	// LordHavoc: don't save a config if it crashed in startup
+	if (host_framecount >= 3 && cls.state != ca_dedicated)
 	{
 		f = FS_Open ("config.cfg", "wb", false, false);
 		if (!f)
@@ -833,8 +822,6 @@ void _Host_Frame (float time)
 	}
 
 	host_framecount++;
-	host_loopactive = true;
-
 }
 
 void Host_Frame (float time)
@@ -875,7 +862,33 @@ void Host_Frame (float time)
 
 //============================================================================
 
-void Render_Init(void);
+qboolean vid_opened = false;
+void Host_StartVideo(void)
+{
+	if (!vid_opened && cls.state != ca_dedicated)
+	{
+		vid_opened = true;
+		VID_Open();
+		CDAudio_Startup();
+		CL_InitTEnts();  // We must wait after sound startup to load tent sounds
+		MR_Init();
+		SCR_BeginLoadingPlaque();
+	}
+}
+
+char engineversion[128];
+
+qboolean sys_nostdout = false;
+
+extern void Render_Init(void);
+extern void Mathlib_Init(void);
+extern void FS_Init(void);
+extern void FS_Shutdown(void);
+extern void PR_Cmd_Init(void);
+extern void COM_Init_Commands(void);
+extern void FS_Init_Commands(void);
+extern void COM_CheckRegistered(void);
+extern qboolean host_stuffcmdsrun;
 
 /*
 ====================
@@ -885,9 +898,52 @@ Host_Init
 void Host_Init (void)
 {
 	int i;
+	const char* os;
 
 	// LordHavoc: quake never seeded the random number generator before... heh
 	srand(time(NULL));
+
+	// used by everything
+	Memory_Init();
+
+	// initialize console and logging
+	Con_Init();
+
+	// initialize console command/cvar/alias/command execution systems
+	Cmd_Init();
+
+	// parse commandline
+	COM_InitArgv();
+
+	// initialize console window (only used by sys_win.c)
+	Sys_InitConsole();
+
+	// detect gamemode from commandline options or executable name
+	COM_InitGameType();
+
+	// construct a version string for the corner of the console
+#if defined(__linux__)
+	os = "Linux";
+#elif defined(WIN32)
+	os = "Windows";
+#elif defined(__FreeBSD__)
+	os = "FreeBSD";
+#elif defined(__NetBSD__)
+	os = "NetBSD";
+#elif defined(__OpenBSD__)
+	os = "OpenBSD";
+#elif defined(MACOSX)
+	os = "Mac OS X";
+#else
+	os = "Unknown";
+#endif
+	dpsnprintf (engineversion, sizeof (engineversion), "%s %s %s", gamename, os, buildstring);
+
+// COMMANDLINEOPTION: Console: -nostdout disables text output to the terminal the game was launched from
+	if (COM_CheckParm("-nostdout"))
+		sys_nostdout = 1;
+	else
+		Con_Printf("%s\n", engineversion);
 
 	// FIXME: this is evil, but possibly temporary
 // COMMANDLINEOPTION: Console: -developer enables warnings and other notices (RECOMMENDED for mod developers)
@@ -898,112 +954,88 @@ void Host_Init (void)
 		developer.value = 1;
 	}
 
-	Cmd_Init();
+	// initialize filesystem (including fs_basedir, fs_gamedir, -path, -game, scr_screenshot_name)
+	FS_Init();
+
+	// initialize various cvars that could not be initialized earlier
 	Memory_Init_Commands();
-	Con_Init();
-	Cbuf_Init();
-	R_Modules_Init();
-	V_Init();
-	COM_Init();
-	Key_Init();
+	Con_Init_Commands();
+	Cmd_Init_Commands();
+	Sys_Init_Commands();
+	COM_Init_Commands();
+	FS_Init_Commands();
+	COM_CheckRegistered();
+
+	// initialize ixtable
+	Mathlib_Init();
+
+	NetConn_Init();
 	PR_Init();
+	PR_Cmd_Init();
 	PRVM_Init();
 	Mod_Init();
-	NetConn_Init();
 	SV_Init();
+	Host_InitCommands();
 	Host_InitLocal();
-
-	Con_Printf("Builddate: %s\n", buildstring);
+	Host_ServerOptions();
 
 	if (cls.state != ca_dedicated)
 	{
+		Con_Printf("Initializing client\n");
+
+		R_Modules_Init();
 		Palette_Init();
 		MR_Init_Commands();
 		VID_Shared_Init();
 		VID_Init();
-
 		Render_Init();
 		S_Init();
 		CDAudio_Init();
+		Key_Init();
+		V_Init();
 		CL_Init();
 	}
 
-	Cbuf_Execute();
-
-	// only cvars are executed when host_initialized == false
-	if (gamemode == GAME_TEU)
-		Cbuf_InsertText("exec teu.rc\n");
-	else
-		Cbuf_InsertText("exec quake.rc\n");
-
-	Cbuf_Execute();
-	Cbuf_Execute();
-	Cbuf_Execute();
-
-	host_initialized = true;
-
-	Con_DPrint("========Initialized=========\n");
-
-	if (cls.state != ca_dedicated)
-	{
-		VID_Open();
-		CDAudio_Startup();
-		CL_InitTEnts ();  // We must wait after sound startup to load tent sounds
-		SCR_BeginLoadingPlaque();
-		MR_Init();
-	}
-
-	// set up the default startmap_sp and startmap_dm aliases, mods can
-	// override these
+	// set up the default startmap_sp and startmap_dm aliases (mods can
+	// override these) and then execute the quake.rc startup script
 	if (gamemode == GAME_NEHAHRA)
-	{
-		Cbuf_InsertText ("alias startmap_sp \"map nehstart\"\n");
-		Cbuf_InsertText ("alias startmap_dm \"map nehstart\"\n");
-	}
+		Cbuf_InsertText("alias startmap_sp \"map nehstart\"\nalias startmap_dm \"map nehstart\"\nexec quake.rc\n");
 	else if (gamemode == GAME_TRANSFUSION)
-	{
-		Cbuf_InsertText ("alias startmap_sp \"map e1m1\"\n");
-		Cbuf_InsertText ("alias startmap_dm \"map bb1\"\n");
-	}
+		Cbuf_InsertText("alias startmap_sp \"map e1m1\"\n""alias startmap_dm \"map bb1\"\nexec quake.rc\n");
 	else if (gamemode == GAME_NEXUIZ)
-	{
-		Cbuf_InsertText ("alias startmap_sp \"map nexdm01\"\n");
-		Cbuf_InsertText ("alias startmap_dm \"map nexdm01\"\n");
-	}
+		Cbuf_InsertText("alias startmap_sp \"map nexdm01\"\nalias startmap_dm \"map nexdm01\"\nexec quake.rc\n");
+	else if (gamemode == GAME_TEU)
+		Cbuf_InsertText("alias startmap_sp \"map start\"\nalias startmap_dm \"map start\"\nexec teu.rc\n");
 	else
-	{
-		Cbuf_InsertText ("alias startmap_sp \"map start\"\n");
-		Cbuf_InsertText ("alias startmap_dm \"map start\"\n");
-	}
+		Cbuf_InsertText("alias startmap_sp \"map start\"\nalias startmap_dm \"map start\"\nexec quake.rc\n");
 
-	// stuff it again so the first host frame will execute it again, this time
-	// in its entirety
-	if (gamemode == GAME_TEU)
-		Cbuf_InsertText("exec teu.rc\n");
-	else
-		Cbuf_InsertText("exec quake.rc\n");
+	// if stuffcmds wasn't run, then quake.rc is probably missing, use default
+	if (!host_stuffcmdsrun)
+		Cbuf_InsertText("exec default.cfg\nexec config.cfg\nexec autoexec.cfg\nstuffcmds\nstartdemos\n");
 
 	Cbuf_Execute();
 	Cbuf_Execute();
 	Cbuf_Execute();
 
-	// We must wait for the log_file cvar to be initialized to start the log
-	Log_Start ();
-
-	if (cls.state == ca_dedicated || COM_CheckParm("-listen"))
-	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
-		Cbuf_InsertText ("startmap_dm\n");
-
-	Cbuf_Execute();
+	// save console log up to this point to log_file if it was set by configs
+	Log_Start();
 
 	// check for special benchmark mode
 // COMMANDLINEOPTION: Client: -benchmark <demoname> runs a timedemo and quits, results of any timedemo can be found in gamedir/benchmark.log (for example id1/benchmark.log)
 	i = COM_CheckParm("-benchmark");
 	if (i && i + 1 < com_argc)
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
+	{
 		Cbuf_InsertText(va("timedemo %s\n", com_argv[i + 1]));
+		Cbuf_Execute();
+	}
 
-	Cbuf_Execute();
+	if (cls.state == ca_dedicated || COM_CheckParm("-listen"))
+	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
+	{
+		Cbuf_InsertText("startmap_dm\n");
+		Cbuf_Execute();
+	}
 
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
@@ -1013,11 +1045,12 @@ void Host_Init (void)
 			Cbuf_InsertText("playvideo logo\n");
 			Cbuf_InsertText("cd loop 1\n");
 		}
+		Cbuf_Execute();
 	}
 
-	Cbuf_Execute();
-	Cbuf_Execute();
-	Cbuf_Execute();
+	Con_DPrint("========Initialized=========\n");
+
+	Host_StartVideo();
 }
 
 
@@ -1061,7 +1094,6 @@ void Host_Shutdown(void)
 	S_Terminate ();
 	NetConn_Shutdown ();
 	PR_Shutdown ();
-	Cbuf_Shutdown ();
 
 	if (cls.state != ca_dedicated)
 	{
@@ -1072,8 +1104,8 @@ void Host_Shutdown(void)
 	Cmd_Shutdown();
 	CL_Shutdown();
 	Sys_Shutdown();
-	Log_Close ();
-	COM_Shutdown ();
+	Log_Close();
+	FS_Shutdown();
 	Memory_Shutdown();
 }
 

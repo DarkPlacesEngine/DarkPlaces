@@ -49,10 +49,11 @@ qboolean Sys_LoadLibrary (const char** dllnames, dllhandle_t* handle, const dllf
 void Sys_UnloadLibrary (dllhandle_t* handle);
 void* Sys_GetProcAddress (dllhandle_t handle, const char* name);
 
-// called after Com_InitArgv
-void Sys_Shared_EarlyInit (void);
-// called after Host_init
-void Sys_Shared_LateInit (void);
+// called early in Host_Init
+void Sys_InitConsole (void);
+// called after command system is initialized but before first Con_Print
+void Sys_Init_Commands (void);
+
 
 // returns current timestamp
 char *Sys_TimeString(const char *timeformat);

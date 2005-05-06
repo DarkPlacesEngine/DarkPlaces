@@ -23,8 +23,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // Tell startup code that we have a client
 int cl_available = true;
-static int vid_usingmouse;
-static int vid_isfullscreen;
+static qboolean vid_usingmouse;
+static qboolean vid_isfullscreen;
 
 static SDL_Surface *screen;
 
@@ -42,7 +42,7 @@ static void IN_Shutdown( void );
 #define tenoh	0,0,0,0,0, 0,0,0,0,0
 #define fiftyoh tenoh, tenoh, tenoh, tenoh, tenoh
 #define hundredoh fiftyoh, fiftyoh
-static unsigned int tbl_sdltoquake[] = 
+static unsigned int tbl_sdltoquake[] =
 {
 	0,0,0,0,		//SDLK_UNKNOWN		= 0,
 	0,0,0,0,		//SDLK_FIRST		= 0,
@@ -233,7 +233,7 @@ static void IN_MouseMove (void)
 
 void IN_Move( void )
 {
-	IN_MouseMove();	
+	IN_MouseMove();
 }
 
 static void IN_Init( void )
@@ -255,13 +255,13 @@ static void IN_Shutdown( void )
 // Message Handling
 ////
 
-static int Sys_EventFilter( SDL_Event *event ) 
+static int Sys_EventFilter( SDL_Event *event )
 {
 	//TODO: Add a quit query in linux, too - though linux user are more likely to know what they do
 #ifdef WIN32
 	if( event->type == SDL_QUIT && MessageBox( NULL, "Are you sure you want to quit?", "Confirm Exit", MB_YESNO | MB_SETFOREGROUND | MB_ICONQUESTION ) == IDNO )
 		return 0;
-	else 
+	else
 		return 1;
 #else
 	return 1;
@@ -282,7 +282,7 @@ void Sys_SendKeyEvents( void )
 				Key_Event( MapKey( event.key.keysym.sym ), (char)event.key.keysym.unicode, (event.key.state == SDL_PRESSED) );
 				break;
 			case SDL_ACTIVEEVENT:
-				if( event.active.state == SDL_APPACTIVE ) 
+				if( event.active.state == SDL_APPACTIVE )
 				{
 					if( event.active.gain )
 						vid_hidden = false;
@@ -291,14 +291,14 @@ void Sys_SendKeyEvents( void )
 				}
 				break;
 			case SDL_MOUSEBUTTONDOWN:
-				if( event.button.button == SDL_BUTTON_MIDDLE ) 
+				if( event.button.button == SDL_BUTTON_MIDDLE )
 					event.button.button = SDL_BUTTON_RIGHT;
 				else if( event.button.button == SDL_BUTTON_RIGHT )
 					event.button.button = SDL_BUTTON_MIDDLE;
 				Key_Event( K_MOUSE1 + event.button.button - 1, 0, true );
 				break;
 			case SDL_MOUSEBUTTONUP:
-				if( event.button.button == SDL_BUTTON_MIDDLE ) 
+				if( event.button.button == SDL_BUTTON_MIDDLE )
 					event.button.button = SDL_BUTTON_RIGHT;
 				else if( event.button.button == SDL_BUTTON_RIGHT )
 					event.button.button = SDL_BUTTON_MIDDLE;
@@ -341,7 +341,7 @@ static void VID_SetCaption()
 	// set the caption
 	SDL_WM_SetCaption( gamename, NULL );
 
-	// get the HWND handle 
+	// get the HWND handle
     SDL_VERSION( &info.version );
 	if( !SDL_GetWMInfo( &info ) )
 		return;
@@ -363,7 +363,7 @@ static void VID_OutputVersion()
 	Con_Printf(	"Linked against SDL version %d.%d.%d\n"
 					"Using SDL library version %d.%d.%d\n",
 					SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_PATCHLEVEL,
-					version->major, version->minor, version->patch );	
+					version->major, version->minor, version->patch );
 }
 
 int VID_InitMode(int fullscreen, int width, int height, int bpp)
@@ -374,8 +374,8 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 
 	VID_OutputVersion();
 
-	/* 
-	SDL Hack 
+	/*
+	SDL Hack
 		We cant switch from one OpenGL video mode to another.
 		Thus we first switch to some stupid 2D mode and then back to OpenGL.
 	*/
@@ -391,13 +391,13 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 	if (i && i < com_argc - 1)
 		drivername = com_argv[i + 1];
 	if (SDL_GL_LoadLibrary(drivername) < 0)
-	{   
+	{
 		Con_Printf("Unable to load GL driver \"%s\": %s\n", drivername, SDL_GetError());
 		return false;
 	}
 
 	qglGetString = GL_GetProcAddress("glGetString");
-	
+
 	// Knghtbrd: should do platform-specific extension string function here
 
 	if (qglGetString == NULL)
@@ -439,7 +439,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 		return false;
 	}
 	VID_SetCaption();
-	
+
 	gl_renderer = qglGetString(GL_RENDERER);
 	gl_vendor = qglGetString(GL_VENDOR);
 	gl_version = qglGetString(GL_VERSION);
@@ -449,7 +449,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 	//TODO: maybe ;)
 	gl_platformextensions = "";
 	gl_videosyncavailable = false;
-	
+
 	GL_Init();
 
 	vid_hidden = false;
@@ -485,7 +485,7 @@ void VID_GetWindowSize (int *x, int *y, int *width, int *height)
 void VID_Finish (void)
 {
 	Uint8 appstate;
-	int vid_usemouse;
+	qboolean vid_usemouse;
 
 	if (r_speeds.integer || gl_finish.integer)
 		qglFinish();
@@ -496,11 +496,11 @@ void VID_Finish (void)
 
 	if( !( appstate & SDL_APPMOUSEFOCUS ) || !( appstate & SDL_APPINPUTFOCUS ) )
 		vid_activewindow = false;
-	else 
+	else
 		vid_activewindow = true;
 
 	vid_usemouse = false;
-	if( vid_mouse.integer && !key_consoleactive )
+	if( vid_mouse.integer && !key_consoleactive && !cls.demoplayback )
 		vid_usemouse = true;
 	if( vid_isfullscreen )
 		vid_usemouse = true;

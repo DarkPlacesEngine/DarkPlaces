@@ -88,7 +88,7 @@ static HGLRC baseRC;
 
 //HWND WINAPI InitializeWindow (HINSTANCE hInstance, int nCmdShow);
 
-static int vid_isfullscreen;
+static qboolean vid_isfullscreen;
 
 //void VID_MenuDraw (void);
 //void VID_MenuKey (int key);
@@ -314,7 +314,7 @@ void VID_Finish (void)
 
 // handle the mouse state when windowed if that's changed
 	vid_usemouse = false;
-	if (vid_mouse.integer && !key_consoleactive)
+	if (vid_mouse.integer && !key_consoleactive && !cls.demoplayback)
 		vid_usemouse = true;
 	if (vid_isfullscreen)
 		vid_usemouse = true;
@@ -451,8 +451,6 @@ void ClearAllStates (void)
 	Key_ClearStates ();
 	IN_ClearStates ();
 }
-
-extern qboolean host_loopactive;
 
 void AppActivate(BOOL fActive, BOOL minimize)
 /****************************************************************************

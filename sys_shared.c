@@ -7,8 +7,6 @@
 # include <dlfcn.h>
 #endif
 
-qboolean sys_nostdout = false;
-
 static char sys_timestring[128];
 char *Sys_TimeString(const char *timeformat)
 {
@@ -24,46 +22,6 @@ void Sys_Quit (void)
 	host_shuttingdown = true;
 	Host_Shutdown();
 	exit(0);
-}
-
-char engineversion[128];
-
-void Sys_Shared_EarlyInit(void)
-{
-	const char* os;
-
-	Memory_Init ();
-	Log_Init ();
-
-	COM_InitArgv();
-	COM_InitGameType();
-
-#if defined(__linux__)
-	os = "Linux";
-#elif defined(WIN32)
-	os = "Windows";
-#elif defined(__FreeBSD__)
-	os = "FreeBSD";
-#elif defined(__NetBSD__)
-	os = "NetBSD";
-#elif defined(__OpenBSD__)
-	os = "OpenBSD";
-#elif defined(MACOSX)
-	os = "Mac OS X";
-#else
-	os = "Unknown";
-#endif
-	dpsnprintf (engineversion, sizeof (engineversion), "%s %s %s", gamename, os, buildstring);
-
-// COMMANDLINEOPTION: Console: -nostdout disables text output to the terminal the game was launched from
-	if (COM_CheckParm("-nostdout"))
-		sys_nostdout = 1;
-	else
-		Con_Printf("%s\n", engineversion);
-}
-
-void Sys_Shared_LateInit(void)
-{
 }
 
 /*

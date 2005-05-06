@@ -222,8 +222,6 @@ extern qboolean noclip_anglehack;
 
 extern cvar_t developer;
 
-// true if into command execution
-extern qboolean host_initialized;
 extern double host_frametime;
 // the real frametime, before slowmo and clamping are applied (used for console scrolling)
 extern double host_realframetime;
@@ -236,6 +234,7 @@ void Host_ClearMemory(void);
 void Host_InitCommands(void);
 void Host_Init(void);
 void Host_Shutdown(void);
+void Host_StartVideo(void);
 void Host_Error(const char *error, ...);
 void Host_Frame(float time);
 void Host_Quit_f(void);

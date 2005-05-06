@@ -107,27 +107,6 @@ const char* Log_Timestamp (const char *desc)
 
 /*
 ====================
-Log_Init
-====================
-*/
-void Log_Init (void)
-{
-	// Allocate a log queue
-	logq_size = 512;
-	logqueue = Mem_Alloc (tempmempool, logq_size);
-	logq_ind = 0;
-
-	Cvar_RegisterVariable (&log_file);
-
-	// support for the classic Quake option
-// COMMANDLINEOPTION: Console: -condebug logs console messages to qconsole.log, see also log_file
-	if (COM_CheckParm ("-condebug") != 0)
-		Cvar_SetQuick (&log_file, "qconsole.log");
-}
-
-
-/*
-====================
 Log_Open
 ====================
 */
@@ -351,44 +330,34 @@ void Con_CheckResize (void)
 	if (width == con_linewidth)
 		return;
 
-	if (width < 1)			// video hasn't been initialized yet
+	oldwidth = con_linewidth;
+	con_linewidth = width;
+	oldtotallines = con_totallines;
+	con_totallines = CON_TEXTSIZE / con_linewidth;
+	numlines = oldtotallines;
+
+	if (con_totallines < numlines)
+		numlines = con_totallines;
+
+	numchars = oldwidth;
+
+	if (con_linewidth < numchars)
+		numchars = con_linewidth;
+
+	memcpy (tbuf, con_text, CON_TEXTSIZE);
+	memset (con_text, ' ', CON_TEXTSIZE);
+
+	for (i=0 ; i<numlines ; i++)
 	{
-		width = 80;
-		con_linewidth = width;
-		con_totallines = CON_TEXTSIZE / con_linewidth;
-		memset (con_text, ' ', CON_TEXTSIZE);
-	}
-	else
-	{
-		oldwidth = con_linewidth;
-		con_linewidth = width;
-		oldtotallines = con_totallines;
-		con_totallines = CON_TEXTSIZE / con_linewidth;
-		numlines = oldtotallines;
-
-		if (con_totallines < numlines)
-			numlines = con_totallines;
-
-		numchars = oldwidth;
-
-		if (con_linewidth < numchars)
-			numchars = con_linewidth;
-
-		memcpy (tbuf, con_text, CON_TEXTSIZE);
-		memset (con_text, ' ', CON_TEXTSIZE);
-
-		for (i=0 ; i<numlines ; i++)
+		for (j=0 ; j<numchars ; j++)
 		{
-			for (j=0 ; j<numchars ; j++)
-			{
-				con_text[(con_totallines - 1 - i) * con_linewidth + j] =
-						tbuf[((con_current - i + oldtotallines) %
-							  oldtotallines) * oldwidth + j];
-			}
+			con_text[(con_totallines - 1 - i) * con_linewidth + j] =
+					tbuf[((con_current - i + oldtotallines) %
+						  oldtotallines) * oldwidth + j];
 		}
-
-		Con_ClearNotify ();
 	}
+
+	Con_ClearNotify ();
 
 	con_backscroll = 0;
 	con_current = con_totallines - 1;
@@ -402,9 +371,24 @@ Con_Init
 void Con_Init (void)
 {
 	memset (con_text, ' ', CON_TEXTSIZE);
-	con_linewidth = -1;
-	Con_CheckResize ();
+	con_linewidth = 80;
+	con_totallines = CON_TEXTSIZE / con_linewidth;
 
+	// Allocate a log queue
+	logq_size = 512;
+	logqueue = Mem_Alloc (tempmempool, logq_size);
+	logq_ind = 0;
+
+	Cvar_RegisterVariable (&log_file);
+
+	// support for the classic Quake option
+// COMMANDLINEOPTION: Console: -condebug logs console messages to qconsole.log, see also log_file
+	if (COM_CheckParm ("-condebug") != 0)
+		Cvar_SetQuick (&log_file, "qconsole.log");
+}
+
+void Con_Init_Commands (void)
+{
 	// register our cvars
 	Cvar_RegisterVariable (&con_notifytime);
 	Cvar_RegisterVariable (&con_notify);

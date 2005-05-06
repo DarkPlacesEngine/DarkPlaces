@@ -300,7 +300,8 @@ SCR_BeginLoadingPlaque
 */
 void SCR_BeginLoadingPlaque (void)
 {
-	S_StopAllSounds ();
+	Host_StartVideo();
+	S_StopAllSounds();
 	SCR_UpdateLoadingScreen();
 }
 
