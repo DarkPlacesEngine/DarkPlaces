@@ -2,10 +2,6 @@
 #include "quakedef.h"
 #include "r_shadow.h"
 
-void GL_Models_Init(void)
-{
-}
-
 static texture_t r_aliasnotexture;
 static texture_t *R_FetchAliasSkin(const entity_render_t *ent, const aliasmesh_t *mesh)
 {

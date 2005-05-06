@@ -548,39 +548,35 @@ static float R_FarClip(vec3_t origin, vec3_t direction, vec_t startfarclip)
 }
 
 extern void R_Textures_Init(void);
-extern void Mod_RenderInit(void);
 extern void GL_Draw_Init(void);
 extern void GL_Main_Init(void);
 extern void R_Shadow_Init(void);
-extern void GL_Models_Init(void);
 extern void R_Sky_Init(void);
 extern void GL_Surf_Init(void);
 extern void R_Crosshairs_Init(void);
 extern void R_Light_Init(void);
 extern void R_Particles_Init(void);
 extern void R_Explosion_Init(void);
-extern void ui_init(void);
 extern void gl_backend_init(void);
 extern void Sbar_Init(void);
 extern void R_LightningBeams_Init(void);
+extern void Mod_RenderInit(void);
 
 void Render_Init(void)
 {
+	gl_backend_init();
 	R_Textures_Init();
 	Mod_RenderInit();
-	gl_backend_init();
 	R_MeshQueue_Init();
-	GL_Draw_Init();
 	GL_Main_Init();
+	GL_Draw_Init();
 	R_Shadow_Init();
-	GL_Models_Init();
 	R_Sky_Init();
 	GL_Surf_Init();
 	R_Crosshairs_Init();
 	R_Light_Init();
 	R_Particles_Init();
 	R_Explosion_Init();
-	//ui_init();
 	UI_Init();
 	Sbar_Init();
 	R_LightningBeams_Init();
