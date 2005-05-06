@@ -293,6 +293,8 @@ char *Sys_GetClipboardData (void)
 
 void Sys_InitConsole (void)
 {
+	int t;
+
 	// initialize the windows dedicated server console if needed
 	tevent = CreateEvent(NULL, false, false, NULL);
 
@@ -362,7 +364,6 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 {
 	double frameoldtime, framenewtime;
 	MEMORYSTATUS lpBuffer;
-	int t;
 
 	/* previous instances do not exist in Win32 */
 	if (hPrevInstance)
