@@ -140,8 +140,7 @@ void VID_Finish (void);
 
 void VID_Restart_f(void);
 
-void VID_Open (void);
-void VID_Close (void);
+void VID_Start(void);
 
 #endif
 

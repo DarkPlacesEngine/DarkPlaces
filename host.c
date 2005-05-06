@@ -868,11 +868,10 @@ void Host_StartVideo(void)
 	if (!vid_opened && cls.state != ca_dedicated)
 	{
 		vid_opened = true;
-		VID_Open();
+		VID_Start();
 		CDAudio_Startup();
 		CL_InitTEnts();  // We must wait after sound startup to load tent sounds
 		MR_Init();
-		SCR_BeginLoadingPlaque();
 	}
 }
 
