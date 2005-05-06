@@ -41,10 +41,10 @@ extern viddef_t vid;
 extern void (*vid_menudrawfn)(void);
 extern void (*vid_menukeyfn)(int key);
 
-extern int vid_hidden;
-extern int vid_activewindow;
+extern qboolean vid_hidden;
+extern qboolean vid_activewindow;
 extern cvar_t vid_hardwaregammasupported;
-extern int vid_usinghwgamma;
+extern qboolean vid_usinghwgamma;
 
 extern cvar_t vid_fullscreen;
 extern cvar_t vid_width;

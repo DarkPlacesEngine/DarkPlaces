@@ -853,8 +853,6 @@ void FS_AddGameHierarchy (const char *dir)
 	const char *homedir;
 #endif
 
-	strlcpy (com_modname, dir, sizeof (com_modname));
-
 	// Add the common game directory
 	FS_AddGameDirectory (va("%s/%s", fs_basedir, dir));
 
@@ -903,12 +901,6 @@ void FS_Init (void)
 	searchpath_t *search;
 
 	fs_mempool = Mem_AllocPool("file management", 0, NULL);
-
-	Cvar_RegisterVariable (&scr_screenshot_name);
-
-	Cmd_AddCommand ("path", FS_Path_f);
-	Cmd_AddCommand ("dir", FS_Dir_f);
-	Cmd_AddCommand ("ls", FS_Ls_f);
 
 	strcpy(fs_basedir, ".");
 	strcpy(fs_gamedir, ".");
@@ -963,7 +955,6 @@ void FS_Init (void)
 	// add the game-specific paths
 	// gamedirname1 (typically id1)
 	FS_AddGameHierarchy (gamedirname1);
-	Cvar_SetQuick (&scr_screenshot_name, gamescreenshotname);
 
 	// add the game-specific path, if any
 	if (gamedirname2)
@@ -971,6 +962,9 @@ void FS_Init (void)
 		fs_modified = true;
 		FS_AddGameHierarchy (gamedirname2);
 	}
+
+	// set the com_modname (reported in server info)
+	strlcpy(com_modname, gamedirname1, sizeof(com_modname));
 
 	// -game <gamedir>
 	// Adds basedir/gamedir as an override game
@@ -984,13 +978,30 @@ void FS_Init (void)
 			i++;
 			fs_modified = true;
 			FS_AddGameHierarchy (com_argv[i]);
-			Cvar_SetQuick (&scr_screenshot_name, com_modname);
+			// update the com_modname
+			strlcpy (com_modname, com_argv[i], sizeof (com_modname));
 		}
 	}
 
 	// If "-condebug" is in the command line, remove the previous log file
 	if (COM_CheckParm ("-condebug") != 0)
 		unlink (va("%s/qconsole.log", fs_gamedir));
+}
+
+void FS_Init_Commands(void)
+{
+	Cvar_RegisterVariable (&scr_screenshot_name);
+
+	Cmd_AddCommand ("path", FS_Path_f);
+	Cmd_AddCommand ("dir", FS_Dir_f);
+	Cmd_AddCommand ("ls", FS_Ls_f);
+
+	// set the default screenshot name to either the mod name or the
+	// gamemode screenshot name
+	if (fs_modified)
+		Cvar_SetQuick (&scr_screenshot_name, com_modname);
+	else
+		Cvar_SetQuick (&scr_screenshot_name, gamescreenshotname);
 }
 
 /*

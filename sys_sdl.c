@@ -13,10 +13,6 @@
 
 #include <SDL.h>
 
-#ifdef WIN32
-cvar_t sys_usetimegettime = {CVAR_SAVE, "sys_usetimegettime", "1"};
-#endif
-
 // =======================================================================
 // General routines
 // =======================================================================
@@ -29,7 +25,7 @@ void Sys_Shutdown (void)
 	fflush(stdout);
 	SDL_Quit();
 }
-	
+
 
 void Sys_Error (const char *error, ...)
 {
@@ -64,35 +60,6 @@ double Sys_DoubleTime (void)
 	static int first = true;
 	static double oldtime = 0.0, curtime = 0.0;
 	double newtime;
-#ifdef WIN32
-	// LordHavoc: note to people modifying this code, DWORD is specifically defined as an unsigned 32bit number, therefore the 65536.0 * 65536.0 is fine.
-	if (!sys_usetimegettime.integer)
-	{
-		// QueryPerformanceCounter
-		// platform:
-		// Windows 95/98/ME/NT/2000/XP
-		// features:
-		// very accurate (CPU cycles)
-		// known issues:
-		// does not necessarily match realtime too well (tends to get faster and faster in win98)
-		// wraps around occasionally on some platforms (depends on CPU speed and probably other unknown factors)
-		double timescale;
-		LARGE_INTEGER PerformanceFreq;
-		LARGE_INTEGER PerformanceCount;
-
-		if (!QueryPerformanceFrequency (&PerformanceFreq))
-			Sys_Error ("No hardware timer available");
-		QueryPerformanceCounter (&PerformanceCount);
-
-		#ifdef __BORLANDC__
-		timescale = 1.0 / ((double) PerformanceFreq.u.LowPart + (double) PerformanceFreq.u.HighPart * 65536.0 * 65536.0);
-		newtime = ((double) PerformanceCount.u.LowPart + (double) PerformanceCount.u.HighPart * 65536.0 * 65536.0) * timescale;
-		#else
-		timescale = 1.0 / ((double) PerformanceFreq.LowPart + (double) PerformanceFreq.HighPart * 65536.0 * 65536.0);
-		newtime = ((double) PerformanceCount.LowPart + (double) PerformanceCount.HighPart * 65536.0 * 65536.0) * timescale;
-		#endif
-	} else
-#endif
 	newtime = (double) SDL_GetTicks() / 1000.0;
 
 
@@ -194,7 +161,7 @@ char *Sys_GetClipboardData (void)
 
 		if ((hClipboardData = GetClipboardData (CF_TEXT)) != 0)
 		{
-			if ((cliptext = GlobalLock (hClipboardData)) != 0) 
+			if ((cliptext = GlobalLock (hClipboardData)) != 0)
 			{
 				data = malloc (GlobalSize(hClipboardData)+1);
 				strcpy (data, cliptext);
@@ -207,6 +174,14 @@ char *Sys_GetClipboardData (void)
 #else
 	return NULL;
 #endif
+}
+
+void Sys_InitConsole (void)
+{
+}
+
+void Sys_Init_Commands (void)
+{
 }
 
 int main (int argc, char *argv[])
@@ -222,15 +197,7 @@ int main (int argc, char *argv[])
 	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | FNDELAY);
 #endif
 
-	Sys_Shared_EarlyInit();
-
-#ifdef WIN32
-	Cvar_RegisterVariable(&sys_usetimegettime);
-#endif
-
 	Host_Init();
-
-	Sys_Shared_LateInit();
 
 	frameoldtime = Sys_DoubleTime () - 0.1;
 	while (1)

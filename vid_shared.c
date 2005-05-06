@@ -50,15 +50,15 @@ int gl_support_vertex_shader = false;
 int gl_support_fragment_shader = false;
 
 // LordHavoc: if window is hidden, don't update screen
-int vid_hidden = true;
+qboolean vid_hidden = true;
 // LordHavoc: if window is not the active window, don't hog as much CPU time,
 // let go of the mouse, turn off sound, and restore system gamma ramps...
-int vid_activewindow = true;
+qboolean vid_activewindow = true;
 
 // we don't know until we try it!
 cvar_t vid_hardwaregammasupported = {CVAR_READONLY,"vid_hardwaregammasupported","1"};
 // whether hardware gamma ramps are currently in effect
-int vid_usinghwgamma = false;
+qboolean vid_usinghwgamma = false;
 
 unsigned short vid_gammaramps[768];
 unsigned short vid_systemgammaramps[768];
@@ -686,7 +686,7 @@ void VID_CheckExtensions(void)
 				gl_support_fragment_shader = GL_CheckExtension("GL_ARB_fragment_shader", NULL, "-nofragmentshader", false);
 }
 
-int vid_vertexarrays_are_var = false;
+qboolean vid_vertexarrays_are_var = false;
 void *VID_AllocVertexArrays(mempool_t *pool, int size, int fast, float readfrequency, float writefrequency, float priority)
 {
 	void *m;
@@ -1022,7 +1022,7 @@ static void VID_CloseSystems(void)
 	R_Modules_Shutdown();
 }
 
-int vid_commandlinecheck = true;
+qboolean vid_commandlinecheck = true;
 
 void VID_Restart_f(void)
 {

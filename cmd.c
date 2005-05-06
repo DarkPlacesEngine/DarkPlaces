@@ -70,28 +70,6 @@ static qbyte		cmd_text_buf[32768];
 
 /*
 ============
-Cbuf_Init
-============
-*/
-void Cbuf_Init (void)
-{
-	// space for commands and script files
-	cmd_text.data = cmd_text_buf;
-	cmd_text.maxsize = sizeof(cmd_text_buf);
-	cmd_text.cursize = 0;
-}
-
-/*
-============
-Cbuf_Shutdown
-============
-*/
-void Cbuf_Shutdown (void)
-{
-}
-
-/*
-============
 Cbuf_AddText
 
 Adds command text at the end of the buffer
@@ -226,6 +204,7 @@ quake +prog jctest.qp +cmd amlev1
 quake -nosound +cmd amlev1
 ===============
 */
+qboolean host_stuffcmdsrun = false;
 void Cmd_StuffCmds_f (void)
 {
 	int		i, j, l;
@@ -238,6 +217,7 @@ void Cmd_StuffCmds_f (void)
 		return;
 	}
 
+	host_stuffcmdsrun = true;
 	for (i = 0;i < com_argc;i++)
 	{
 		if (com_argv[i] && com_argv[i][0] == '+' && (com_argv[i][1] < '0' || com_argv[i][1] > '9'))
@@ -369,7 +349,7 @@ static void Cmd_Alias_f (void)
 		}
 		a->next = current;
 	}
-	
+
 
 // copy the rest of the command line
 	cmd[0] = 0;		// start out with a null string
@@ -464,7 +444,14 @@ Cmd_Init
 void Cmd_Init (void)
 {
 	cmd_mempool = Mem_AllocPool("commands", 0, NULL);
+	// space for commands and script files
+	cmd_text.data = cmd_text_buf;
+	cmd_text.maxsize = sizeof(cmd_text_buf);
+	cmd_text.cursize = 0;
+}
 
+void Cmd_Init_Commands (void)
+{
 //
 // register our commands
 //
@@ -830,36 +817,30 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 		return;		// no tokens
 	}
 
-// check functions (only after host_initialized)
-	if (host_initialized || !strcasecmp(cmd_argv[0], "exec") || !strcasecmp(cmd_argv[0], "set") || !strcasecmp(cmd_argv[0], "seta"))
+// check functions
+	for (cmd=cmd_functions ; cmd ; cmd=cmd->next)
 	{
-		for (cmd=cmd_functions ; cmd ; cmd=cmd->next)
+		if (!strcasecmp (cmd_argv[0],cmd->name))
 		{
-			if (!strcasecmp (cmd_argv[0],cmd->name))
-			{
-				cmd->function ();
-				cmd_tokenizebufferpos = oldpos;
-				return;
-			}
+			cmd->function ();
+			cmd_tokenizebufferpos = oldpos;
+			return;
 		}
 	}
 
-// check alias (only after host_initialized)
-	if (host_initialized)
+// check alias
+	for (a=cmd_alias ; a ; a=a->next)
 	{
-		for (a=cmd_alias ; a ; a=a->next)
+		if (!strcasecmp (cmd_argv[0], a->name))
 		{
-			if (!strcasecmp (cmd_argv[0], a->name))
-			{
-				Cbuf_InsertText (a->value);
-				cmd_tokenizebufferpos = oldpos;
-				return;
-			}
+			Cbuf_InsertText (a->value);
+			cmd_tokenizebufferpos = oldpos;
+			return;
 		}
 	}
 
-// check cvars (always)
-	if (!Cvar_Command () && host_initialized)
+// check cvars
+	if (!Cvar_Command ())
 		Con_Printf("Unknown command \"%s\"\n", Cmd_Argv(0));
 
 	cmd_tokenizebufferpos = oldpos;

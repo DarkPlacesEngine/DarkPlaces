@@ -211,6 +211,14 @@ char *Sys_GetClipboardData (void)
 	return NULL;
 }
 
+void Sys_InitConsole (void)
+{
+}
+
+void Sys_Init_Commands (void)
+{
+}
+
 int main (int argc, char **argv)
 {
 	double frameoldtime, framenewtime;
@@ -224,11 +232,7 @@ int main (int argc, char **argv)
 	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | FNDELAY);
 #endif
 
-	Sys_Shared_EarlyInit();
-
 	Host_Init();
-
-	Sys_Shared_LateInit();
 
 	frameoldtime = Sys_DoubleTime () - 0.1;
 	while (1)

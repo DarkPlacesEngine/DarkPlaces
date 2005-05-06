@@ -109,7 +109,7 @@ static int scr_width, scr_height;
 
 static XF86VidModeModeInfo **vidmodes;
 static int num_vidmodes;
-static qboolean vidmode_active = false;
+static qboolean vid_isfullscreen = false;
 
 static Visual *vidx11_visual;
 static Colormap vidx11_colormap;
@@ -601,13 +601,13 @@ void VID_Shutdown(void)
 		uninstall_grabs();
 
 		// FIXME: glXDestroyContext here?
-		if (vidmode_active)
+		if (vid_isfullscreen)
 			XF86VidModeSwitchToMode(vidx11_display, vidx11_screen, vidmodes[0]);
 		if (win)
 			XDestroyWindow(vidx11_display, win);
 		XCloseDisplay(vidx11_display);
 	}
-	vidmode_active = false;
+	vid_isfullscreen = false;
 	vidx11_display = NULL;
 	win = 0;
 	ctx = NULL;
@@ -662,10 +662,12 @@ void VID_Finish (void)
 
 // handle the mouse state when windowed if that's changed
 	vid_usemouse = false;
-	if (vid_mouse.integer && !key_consoleactive)
+	if (vid_mouse.integer && !key_consoleactive && !cls.demoplayback)
 		vid_usemouse = true;
-	if (vidmode_active)
+	if (vid_isfullscreen)
 		vid_usemouse = true;
+	if (!vid_activewindow)
+		vid_usemouse = false;
 	if (vid_usemouse)
 	{
 		if (!vid_usingmouse)
@@ -831,7 +833,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 
 				// change to the mode
 				XF86VidModeSwitchToMode(vidx11_display, vidx11_screen, vidmodes[best_fit]);
-				vidmode_active = true;
+				vid_isfullscreen = true;
 
 				// Move the viewport to top left
 				XF86VidModeSetViewPort(vidx11_display, vidx11_screen, 0, 0);
@@ -850,7 +852,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 	// LordHavoc: save the colormap for later, too
 	vidx11_colormap = attr.colormap = XCreateColormap(vidx11_display, root, visinfo->visual, AllocNone);
 	attr.event_mask = X_MASK;
-	if (vidmode_active)
+	if (vid_isfullscreen)
 	{
 		mask = CWBackPixel | CWColormap | CWSaveUnder | CWBackingStore | CWEventMask | CWOverrideRedirect;
 		attr.override_redirect = True;
@@ -869,7 +871,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 	wm_delete_window_atom = XInternAtom(vidx11_display, "WM_DELETE_WINDOW", false);
 	XSetWMProtocols(vidx11_display, win, &wm_delete_window_atom, 1);
 
-	if (vidmode_active)
+	if (vid_isfullscreen)
 	{
 		XMoveWindow(vidx11_display, win, 0, 0);
 		XRaiseWindow(vidx11_display, win);

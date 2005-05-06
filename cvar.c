@@ -353,7 +353,7 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags)
 
 	if (developer.integer)
 		Con_Printf("Cvar_Get(\"%s\", \"%s\", %i);\n", name, value, flags);
-	
+
 // first check to see if it has already been defined
 	cvar = Cvar_FindVar (name);
 	if (cvar)
@@ -407,9 +407,7 @@ qboolean	Cvar_Command (void)
 // perform a variable print or set
 	if (Cmd_Argc() == 1)
 	{
-		// only print if host_initialized (otherwise it could print twice if this is in a script)
-		if (host_initialized)
-			Con_Printf("\"%s\" is \"%s\"\n", v->name, v->string);
+		Con_Printf("\"%s\" is \"%s\"\n", v->name, v->string);
 		return true;
 	}
 
