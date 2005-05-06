@@ -614,7 +614,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			// make relative to the entity
 			matrix = &t->render.matrix;
 			// some properties of the tag entity carry over
-			e->render.flags |= t->render.flags & RENDER_EXTERIORMODEL;
+			e->render.flags |= t->render.flags & (RENDER_EXTERIORMODEL | RENDER_VIEWMODEL);
 			// if a valid tagindex is used, make it relative to that tag instead
 			// FIXME: use a model function to get tag info (need to handle skeletal)
 			if (e->state_current.tagentity && e->state_current.tagindex >= 1 && (model = t->render.model))
