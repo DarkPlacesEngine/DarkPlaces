@@ -244,6 +244,8 @@ void CL_DrawVideo(void)
 
 void CL_VideoStart(char *filename)
 {
+	Host_StartVideo();
+
 	if( videoarray->state != CLVIDEO_UNUSED )
 		CL_CloseVideo( videoarray );
 	if( !OpenVideo( videoarray, filename, va( CLVIDEOPREFIX "%s", filename ), 0 ) )
