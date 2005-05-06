@@ -34,112 +34,6 @@ model_t *loadmodel;
 #define MAX_MOD_KNOWN (MAX_MODELS + 256)
 static model_t mod_known[MAX_MOD_KNOWN];
 
-rtexturepool_t *mod_shared_texturepool;
-rtexture_t *r_texture_notexture;
-rtexture_t *mod_shared_detailtextures[NUM_DETAILTEXTURES];
-rtexture_t *mod_shared_distorttexture[64];
-
-void Mod_BuildDetailTextures (void)
-{
-	int i, x, y, light;
-	float vc[3], vx[3], vy[3], vn[3], lightdir[3];
-#define DETAILRESOLUTION 256
-	qbyte data[DETAILRESOLUTION][DETAILRESOLUTION][4], noise[DETAILRESOLUTION][DETAILRESOLUTION];
-	lightdir[0] = 0.5;
-	lightdir[1] = 1;
-	lightdir[2] = -0.25;
-	VectorNormalize(lightdir);
-	for (i = 0;i < NUM_DETAILTEXTURES;i++)
-	{
-		fractalnoise(&noise[0][0], DETAILRESOLUTION, DETAILRESOLUTION >> 4);
-		for (y = 0;y < DETAILRESOLUTION;y++)
-		{
-			for (x = 0;x < DETAILRESOLUTION;x++)
-			{
-				vc[0] = x;
-				vc[1] = y;
-				vc[2] = noise[y][x] * (1.0f / 32.0f);
-				vx[0] = x + 1;
-				vx[1] = y;
-				vx[2] = noise[y][(x + 1) % DETAILRESOLUTION] * (1.0f / 32.0f);
-				vy[0] = x;
-				vy[1] = y + 1;
-				vy[2] = noise[(y + 1) % DETAILRESOLUTION][x] * (1.0f / 32.0f);
-				VectorSubtract(vx, vc, vx);
-				VectorSubtract(vy, vc, vy);
-				CrossProduct(vx, vy, vn);
-				VectorNormalize(vn);
-				light = 128 - DotProduct(vn, lightdir) * 128;
-				light = bound(0, light, 255);
-				data[y][x][0] = data[y][x][1] = data[y][x][2] = light;
-				data[y][x][3] = 255;
-			}
-		}
-		mod_shared_detailtextures[i] = R_LoadTexture2D(mod_shared_texturepool, va("detailtexture%i", i), DETAILRESOLUTION, DETAILRESOLUTION, &data[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_PRECACHE, NULL);
-	}
-}
-
-qbyte Mod_MorphDistortTexture (double y0, double y1, double y2, double y3, double morph)
-{
-	int	value =	(int)(((y1 + y3 - (y0 + y2)) * morph * morph * morph) +
-				((2 * (y0 - y1) + y2 - y3) * morph * morph) +
-				((y2 - y0) * morph) +
-				(y1));
-
-	if (value > 255)
-		value = 255;
-	if (value < 0)
-		value = 0;
-
-	return (qbyte)value;
-}
-
-void Mod_BuildDistortTexture (void)
-{
-	int x, y, i, j;
-#define DISTORTRESOLUTION 32
-	qbyte data[5][DISTORTRESOLUTION][DISTORTRESOLUTION][2];
-
-	for (i=0; i<4; i++)
-	{
-		for (y=0; y<DISTORTRESOLUTION; y++)
-		{
-			for (x=0; x<DISTORTRESOLUTION; x++)
-			{
-				data[i][y][x][0] = rand () & 255;
-				data[i][y][x][1] = rand () & 255;
-			}
-		}
-	}
-
-
-	for (i=0; i<4; i++)
-	{
-		for (j=0; j<16; j++)
-		{
-			mod_shared_distorttexture[i*16+j] = NULL;
-			if (gl_textureshader)
-			{
-				for (y=0; y<DISTORTRESOLUTION; y++)
-				{
-					for (x=0; x<DISTORTRESOLUTION; x++)
-					{
-						data[4][y][x][0] = Mod_MorphDistortTexture (data[(i-1)&3][y][x][0], data[i][y][x][0], data[(i+1)&3][y][x][0], data[(i+2)&3][y][x][0], 0.0625*j);
-						data[4][y][x][1] = Mod_MorphDistortTexture (data[(i-1)&3][y][x][1], data[i][y][x][1], data[(i+1)&3][y][x][1], data[(i+2)&3][y][x][1], 0.0625*j);
-					}
-				}
-				mod_shared_distorttexture[i*16+j] = R_LoadTexture2D(mod_shared_texturepool, va("distorttexture%i", i*16+j), DISTORTRESOLUTION, DISTORTRESOLUTION, &data[4][0][0][0], TEXTYPE_DSDT, TEXF_PRECACHE, NULL);
-			}
-		}
-	}
-
-	return;
-}
-
-void Mod_SetupNoTexture(void)
-{
-}
-
 static void mod_start(void)
 {
 	int i;
@@ -147,11 +41,6 @@ static void mod_start(void)
 		if (mod_known[i].name[0])
 			Mod_UnloadModel(&mod_known[i]);
 	Mod_LoadModels();
-
-	mod_shared_texturepool = R_AllocTexturePool();
-	Mod_SetupNoTexture();
-	Mod_BuildDetailTextures();
-	Mod_BuildDistortTexture();
 }
 
 static void mod_shutdown(void)
@@ -160,8 +49,6 @@ static void mod_shutdown(void)
 	for (i = 0;i < MAX_MOD_KNOWN;i++)
 		if (mod_known[i].name[0])
 			Mod_UnloadModel(&mod_known[i]);
-
-	R_FreeTexturePool(&mod_shared_texturepool);
 }
 
 static void mod_newmap(void)
@@ -226,11 +113,14 @@ void Mod_UnloadModel (model_t *mod)
 {
 	char name[MAX_QPATH];
 	qboolean isworldmodel;
+	qboolean used;
 	strcpy(name, mod->name);
 	isworldmodel = mod->isworldmodel;
+	used = mod->used;
 	Mod_FreeModel(mod);
 	strcpy(mod->name, name);
 	mod->isworldmodel = isworldmodel;
+	mod->used = used;
 	mod->loaded = false;
 }
 
@@ -1043,7 +933,7 @@ int Mod_LoadSkinFrame(skinframe_t *skinframe, char *basename, int textureflags, 
 	if (!image_loadskin(&s, basename))
 		return false;
 	if (usedetailtexture)
-		skinframe->detail = mod_shared_detailtextures[(detailtexturecycle++) % NUM_DETAILTEXTURES];
+		skinframe->detail = r_texture_detailtextures[(detailtexturecycle++) % NUM_DETAILTEXTURES];
 	skinframe->base = R_LoadTexture2D (loadmodel->texturepool, basename, s.basepixels_width, s.basepixels_height, s.basepixels, TEXTYPE_RGBA, textureflags, NULL);
 	if (s.nmappixels != NULL)
 		skinframe->nmap = R_LoadTexture2D (loadmodel->texturepool, va("%s_nmap", basename), s.nmappixels_width, s.nmappixels_height, s.nmappixels, TEXTYPE_RGBA, textureflags, NULL);
@@ -1071,7 +961,7 @@ int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, char *basename, int textu
 	if (!skindata)
 		return false;
 	if (usedetailtexture)
-		skinframe->detail = mod_shared_detailtextures[(detailtexturecycle++) % NUM_DETAILTEXTURES];
+		skinframe->detail = r_texture_detailtextures[(detailtexturecycle++) % NUM_DETAILTEXTURES];
 	if (r_shadow_bumpscale_basetexture.value > 0)
 	{
 		temp1 = Mem_Alloc(loadmodel->mempool, width * height * 8);

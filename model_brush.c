@@ -26,8 +26,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "wad.h"
 
 
-qbyte mod_q1bsp_novis[(MAX_MAP_LEAFS + 7)/ 8];
-
 //cvar_t r_subdivide_size = {CVAR_SAVE, "r_subdivide_size", "128"};
 cvar_t halflifebsp = {0, "halflifebsp", "0"};
 cvar_t r_novis = {0, "r_novis", "0"};
@@ -46,7 +44,6 @@ cvar_t mod_q3bsp_curves_collisions = {0, "mod_q3bsp_curves_collisions", "1"};
 cvar_t mod_q3bsp_optimizedtraceline = {0, "mod_q3bsp_optimizedtraceline", "1"};
 cvar_t mod_q3bsp_debugtracebrush = {0, "mod_q3bsp_debugtracebrush", "0"};
 
-static void Mod_Q1BSP_Collision_Init (void);
 void Mod_BrushInit(void)
 {
 //	Cvar_RegisterVariable(&r_subdivide_size);
@@ -66,8 +63,6 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&mod_q3bsp_curves_collisions);
 	Cvar_RegisterVariable(&mod_q3bsp_optimizedtraceline);
 	Cvar_RegisterVariable(&mod_q3bsp_debugtracebrush);
-	memset(mod_q1bsp_novis, 0xff, sizeof(mod_q1bsp_novis));
-	Mod_Q1BSP_Collision_Init();
 }
 
 static mleaf_t *Mod_Q1BSP_PointInLeaf(model_t *model, const vec3_t p)
@@ -680,40 +675,6 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace,
 #endif
 }
 
-static hull_t box_hull;
-static dclipnode_t box_clipnodes[6];
-static mplane_t box_planes[6];
-
-static void Mod_Q1BSP_Collision_Init (void)
-{
-	int		i;
-	int		side;
-
-	//Set up the planes and clipnodes so that the six floats of a bounding box
-	//can just be stored out and get a proper hull_t structure.
-
-	box_hull.clipnodes = box_clipnodes;
-	box_hull.planes = box_planes;
-	box_hull.firstclipnode = 0;
-	box_hull.lastclipnode = 5;
-
-	for (i = 0;i < 6;i++)
-	{
-		box_clipnodes[i].planenum = i;
-
-		side = i&1;
-
-		box_clipnodes[i].children[side] = CONTENTS_EMPTY;
-		if (i != 5)
-			box_clipnodes[i].children[side^1] = i + 1;
-		else
-			box_clipnodes[i].children[side^1] = CONTENTS_SOLID;
-
-		box_planes[i].type = i>>1;
-		box_planes[i].normal[i>>1] = 1;
-	}
-}
-
 void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cmaxs, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask, int boxsupercontents)
 {
 #if 1
@@ -746,6 +707,9 @@ void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cm
 	Collision_TraceLineBrushFloat(trace, start, end, &cbox, &cbox);
 #else
 	RecursiveHullCheckTraceInfo_t rhc;
+	static hull_t box_hull;
+	static dclipnode_t box_clipnodes[6];
+	static mplane_t box_planes[6];
 	// fill in a default trace
 	memset(&rhc, 0, sizeof(rhc));
 	memset(trace, 0, sizeof(trace_t));
@@ -761,6 +725,36 @@ void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cm
 #if COLLISIONPARANOID >= 3
 	Con_Printf("box_planes %f:%f %f:%f %f:%f\ncbox %f %f %f:%f %f %f\nbox %f %f %f:%f %f %f\n", box_planes[0].dist, box_planes[1].dist, box_planes[2].dist, box_planes[3].dist, box_planes[4].dist, box_planes[5].dist, cmins[0], cmins[1], cmins[2], cmaxs[0], cmaxs[1], cmaxs[2], mins[0], mins[1], mins[2], maxs[0], maxs[1], maxs[2]);
 #endif
+
+	if (box_hull.clipnodes == NULL)
+	{
+		int i, side;
+
+		//Set up the planes and clipnodes so that the six floats of a bounding box
+		//can just be stored out and get a proper hull_t structure.
+
+		box_hull.clipnodes = box_clipnodes;
+		box_hull.planes = box_planes;
+		box_hull.firstclipnode = 0;
+		box_hull.lastclipnode = 5;
+
+		for (i = 0;i < 6;i++)
+		{
+			box_clipnodes[i].planenum = i;
+
+			side = i&1;
+
+			box_clipnodes[i].children[side] = CONTENTS_EMPTY;
+			if (i != 5)
+				box_clipnodes[i].children[side^1] = i + 1;
+			else
+				box_clipnodes[i].children[side^1] = CONTENTS_SOLID;
+
+			box_planes[i].type = i>>1;
+			box_planes[i].normal[i>>1] = 1;
+		}
+	}
+
 	// trace a line through the generated clipping hull
 	//rhc.boxsupercontents = boxsupercontents;
 	rhc.hull = &box_hull;
