@@ -418,22 +418,43 @@ void CL_UpdatePrydonCursor(void)
 
 void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 {
-	int i, n, bump, contents, crouch;
+	int i;
+	int n;
+	int bump;
+	int contents;
+	int crouch;
 	double edgefriction;
 	double simulatedtime;
 	double currenttime;
 	double newtime;
 	double frametime;
 	double t;
-	vec_t wishspeed, addspeed, accelspeed, f, *playermins, *playermaxs;
-	client_movementqueue_t *q;
-	vec3_t currentorigin, currentvelocity, forward, right, up, wishvel, wishdir, neworigin, currentorigin2, neworigin2, yawangles;
-	trace_t trace, trace2, trace3;
+	vec_t wishspeed;
+	vec_t addspeed;
+	vec_t accelspeed;
+	vec_t f;
+	vec_t *playermins;
+	vec_t *playermaxs;
+	vec3_t currentorigin;
+	vec3_t currentvelocity;
+	vec3_t forward;
+	vec3_t right;
+	vec3_t up;
+	vec3_t wishvel;
+	vec3_t wishdir;
+	vec3_t neworigin;
+	vec3_t currentorigin2;
+	vec3_t neworigin2;
+	vec3_t yawangles;
+	trace_t trace;
+	trace_t trace2;
+	trace_t trace3;
 	// remove stale queue items
 	n = cl.movement_numqueue;
 	cl.movement_numqueue = 0;
 	// calculate time to execute for
-	simulatedtime = cl.mtime[0] + cl_movement_latency.value / 1000.0;
+	currenttime = cl.mtime[0];
+	simulatedtime = currenttime + cl_movement_latency.value / 1000.0;
 	for (i = 0;i < n;i++)
 		if (cl.movement_queue[i].time >= cl.mtime[0] && cl.movement_queue[i].time <= simulatedtime)
 			cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
@@ -450,12 +471,7 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 		cl.movement_queue[cl.movement_numqueue].crouch = buttoncrouch;
 		cl.movement_numqueue++;
 	}
-	cl.movement = false;
-	// abort if client movement is disabled
-	if (!cl_movement.integer || cl.stats[STAT_HEALTH] <= 0)
-		return;
 	// fetch current starting values
-	currenttime = cl.mtime[0];
 	VectorCopy(cl_entities[cl.playerentity].state_current.origin, currentorigin);
 	VectorCopy(cl.mvelocity[0], currentvelocity);
 	// FIXME: try minor nudges in various directions if startsolid to find a
@@ -466,61 +482,23 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 	//Con_Printf("%f: ", currenttime);
 	// replay input queue, and remove any stale queue items
 	// note: this relies on the fact there's always one queue item at the end
-	for (i = 0, q = cl.movement_queue;i < cl.movement_numqueue;i++, q++)
+	// abort if client movement is disabled
+	cl.movement = cl_movement.integer && cl.stats[STAT_HEALTH] > 0 && !cls.demoplayback;
+	if (!cl.movement)
+		cl.movement_numqueue = 0;
+	for (i = 0;i <= cl.movement_numqueue;i++)
 	{
-		//newtime = (i == cl.movement_numqueue) ? simulatedtime : q->time;
-		newtime = q->time;
+		newtime = (i >= cl.movement_numqueue) ? simulatedtime : cl.movement_queue[i].time;
 		frametime = newtime - currenttime;
-		if (frametime < 0)
+		if (frametime <= 0)
 			continue;
 		//Con_Printf(" %f", frametime);
 		currenttime = newtime;
-		if (crouch)
+		if (i >= 1 && i <= cl.movement_numqueue)
+		if (i > 0 || (cl_movement.integer & 8))
+		if (i < cl.movement_numqueue - 1 || (cl_movement.integer & 16))
 		{
-			playermins = cl_playercrouchmins;
-			playermaxs = cl_playercrouchmaxs;
-		}
-		else
-		{
-			playermins = cl_playerstandmins;
-			playermaxs = cl_playerstandmaxs;
-		}
-		for (bump = 0, t = frametime;bump < 8 && VectorLength2(currentvelocity) > 0;bump++)
-		{
-			VectorMA(currentorigin, t, currentvelocity, neworigin);
-			trace = CL_TraceBox(currentorigin, playermins, playermaxs, neworigin, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
-			if (trace.fraction < 1 && trace.plane.normal[2] == 0)
-			{
-				// may be a step or wall, try stepping up
-				// first move forward at a higher level
-				VectorSet(currentorigin2, currentorigin[0], currentorigin[1], currentorigin[2] + cl_movement_stepheight.value);
-				VectorSet(neworigin2, neworigin[0], neworigin[1], currentorigin[2] + cl_movement_stepheight.value);
-				trace2 = CL_TraceBox(currentorigin2, playermins, playermaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
-				// then move down from there
-				VectorCopy(trace2.endpos, currentorigin2);
-				VectorSet(neworigin2, trace2.endpos[0], trace2.endpos[1], currentorigin[2]);
-				trace3 = CL_TraceBox(currentorigin2, playermins, playermaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
-				//Con_Printf("%f %f %f %f : %f %f %f %f : %f %f %f %f\n", trace.fraction, trace.endpos[0], trace.endpos[1], trace.endpos[2], trace2.fraction, trace2.endpos[0], trace2.endpos[1], trace2.endpos[2], trace3.fraction, trace3.endpos[0], trace3.endpos[1], trace3.endpos[2]);
-				// accept the new trace if it made some progress
-				if (fabs(trace3.endpos[0] - trace.endpos[0]) >= 0.03125 || fabs(trace3.endpos[1] - trace.endpos[1]) >= 0.03125)
-				{
-					trace = trace2;
-					VectorCopy(trace3.endpos, trace.endpos);
-				}
-			}
-			if (trace.fraction == 1)
-			{
-				VectorCopy(trace.endpos, currentorigin);
-				break;
-			}
-			t *= 1 - trace.fraction;
-			if (trace.fraction >= 0.001)
-				VectorCopy(trace.endpos, currentorigin);
-			f = DotProduct(currentvelocity, trace.plane.normal);
-			VectorMA(currentvelocity, -f, trace.plane.normal, currentvelocity);
-		}
-		if (i < cl.movement_numqueue)
-		{
+			client_movementqueue_t *q = cl.movement_queue + i - 1;
 			if (q->crouch)
 			{
 				// wants to crouch, this always works...
@@ -537,6 +515,16 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 					if (!trace.startsolid)
 						crouch = false;
 				}
+			}
+			if (crouch)
+			{
+				playermins = cl_playercrouchmins;
+				playermaxs = cl_playercrouchmaxs;
+			}
+			else
+			{
+				playermins = cl_playerstandmins;
+				playermaxs = cl_playerstandmaxs;
 			}
 			// change velocity according to q->viewangles and q->move
 			contents = CL_PointSuperContents(currentorigin);
@@ -601,7 +589,7 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 						VectorSet(currentorigin2, currentorigin[0] + currentvelocity[0]*(16/f), currentorigin[1] + currentvelocity[1]*(16/f), currentorigin[2] + playermins[2]);
 						VectorSet(neworigin2, currentorigin2[0], currentorigin2[1], currentorigin2[2] - 34);
 						trace = CL_TraceBox(currentorigin2, vec3_origin, vec3_origin, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
-						if (trace.fraction < 1)
+						if (trace.fraction == 1)
 							edgefriction = cl_movement_edgefriction.value;
 					}
 					// apply friction
@@ -626,12 +614,60 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 				currentvelocity[2] -= cl_gravity.value * frametime;
 			}
 		}
+		if (i > 0 || (cl_movement.integer & 2))
+		if (i < cl.movement_numqueue - 1 || (cl_movement.integer & 4))
+		{
+			if (crouch)
+			{
+				playermins = cl_playercrouchmins;
+				playermaxs = cl_playercrouchmaxs;
+			}
+			else
+			{
+				playermins = cl_playerstandmins;
+				playermaxs = cl_playerstandmaxs;
+			}
+			for (bump = 0, t = frametime;bump < 8 && VectorLength2(currentvelocity) > 0;bump++)
+			{
+				VectorMA(currentorigin, t, currentvelocity, neworigin);
+				trace = CL_TraceBox(currentorigin, playermins, playermaxs, neworigin, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
+				if (trace.fraction < 1 && trace.plane.normal[2] == 0)
+				{
+					// may be a step or wall, try stepping up
+					// first move forward at a higher level
+					VectorSet(currentorigin2, currentorigin[0], currentorigin[1], currentorigin[2] + cl_movement_stepheight.value);
+					VectorSet(neworigin2, neworigin[0], neworigin[1], currentorigin[2] + cl_movement_stepheight.value);
+					trace2 = CL_TraceBox(currentorigin2, playermins, playermaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
+					// then move down from there
+					VectorCopy(trace2.endpos, currentorigin2);
+					VectorSet(neworigin2, trace2.endpos[0], trace2.endpos[1], currentorigin[2]);
+					trace3 = CL_TraceBox(currentorigin2, playermins, playermaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
+					//Con_Printf("%f %f %f %f : %f %f %f %f : %f %f %f %f\n", trace.fraction, trace.endpos[0], trace.endpos[1], trace.endpos[2], trace2.fraction, trace2.endpos[0], trace2.endpos[1], trace2.endpos[2], trace3.fraction, trace3.endpos[0], trace3.endpos[1], trace3.endpos[2]);
+					// accept the new trace if it made some progress
+					if (fabs(trace3.endpos[0] - trace.endpos[0]) >= 0.03125 || fabs(trace3.endpos[1] - trace.endpos[1]) >= 0.03125)
+					{
+						trace = trace2;
+						VectorCopy(trace3.endpos, trace.endpos);
+					}
+				}
+				if (trace.fraction == 1)
+				{
+					VectorCopy(trace.endpos, currentorigin);
+					break;
+				}
+				t *= 1 - trace.fraction;
+				if (trace.fraction >= 0.001)
+					VectorCopy(trace.endpos, currentorigin);
+				f = DotProduct(currentvelocity, trace.plane.normal);
+				VectorMA(currentvelocity, -f, trace.plane.normal, currentvelocity);
+			}
+		}
 	}
 	//Con_Printf(" :%f\n", currenttime);
 	// store replay location
-	cl.movement = true;
 	VectorCopy(cl.movement_origin, cl.movement_oldorigin);
 	VectorCopy(currentorigin, cl.movement_origin);
+	VectorCopy(currentvelocity, cl.movement_velocity);
 	//VectorCopy(currentorigin, cl_entities[cl.playerentity].state_current.origin);
 	//VectorSet(cl_entities[cl.playerentity].state_current.angles, 0, cl.viewangles[1], 0);
 }
