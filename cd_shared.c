@@ -99,6 +99,8 @@ void CDAudio_Play (qbyte track, qboolean looping)
 {
 	sfx_t* sfx;
 
+	Host_StartVideo();
+
 	if (!enabled)
 		return;
 
