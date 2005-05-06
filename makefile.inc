@@ -256,13 +256,13 @@ help:
 	@echo
 
 debug :
-	$(MAKE) cl-debug sv-debug DP_MAKE_TARGET=$(DP_MAKE_TARGET)
+	$(MAKE) sdl-debug cl-debug sv-debug DP_MAKE_TARGET=$(DP_MAKE_TARGET)
 
 profile :
-	$(MAKE) cl-profile sv-profile DP_MAKE_TARGET=$(DP_MAKE_TARGET)
+	$(MAKE) sdl-profile cl-profile sv-profile DP_MAKE_TARGET=$(DP_MAKE_TARGET)
 
 release :
-	$(MAKE) cl-release sv-release DP_MAKE_TARGET=$(DP_MAKE_TARGET)
+	$(MAKE) sdl-release cl-release sv-release DP_MAKE_TARGET=$(DP_MAKE_TARGET)
 
 cl-debug :
 	$(MAKE) bin-debug DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
