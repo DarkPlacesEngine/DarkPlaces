@@ -388,7 +388,7 @@ void V_CalcRefdef (void)
 				if (cl.stats[STAT_HEALTH] <= 0 && gamemode != GAME_FNIGGIUM)
 					viewangles[ROLL] = 80;	// dead view angle
 				VectorAdd(viewangles, cl.punchangle, viewangles);
-				viewangles[ROLL] += V_CalcRoll(cl.viewangles, cl.velocity);
+				viewangles[ROLL] += V_CalcRoll(cl.viewangles, cl.movement_velocity);
 				if (v_dmg_time > 0)
 				{
 					viewangles[ROLL] += v_dmg_time/v_kicktime.value*v_dmg_roll;
@@ -413,7 +413,7 @@ void V_CalcRefdef (void)
 						cycle = sin(M_PI + M_PI * (cycle-cl_bobup.value)/(1.0 - cl_bobup.value));
 					// bob is proportional to velocity in the xy plane
 					// (don't count Z, or jumping messes it up)
-					bob = sqrt(cl.velocity[0]*cl.velocity[0] + cl.velocity[1]*cl.velocity[1]) * cl_bob.value;
+					bob = sqrt(cl.movement_velocity[0]*cl.movement_velocity[0] + cl.movement_velocity[1]*cl.movement_velocity[1]) * cl_bob.value;
 					bob = bob*0.3 + bob*0.7*cycle;
 					vieworg[2] += bound(-7, bob, 4);
 				}
