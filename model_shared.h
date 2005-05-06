@@ -427,15 +427,6 @@ model_t;
 
 //============================================================================
 
-// this can be used for anything without a valid texture
-extern rtexture_t *r_texture_notexture;
-#define NUM_DETAILTEXTURES 1
-extern rtexture_t *mod_shared_detailtextures[NUM_DETAILTEXTURES];
-// every texture must be in a pool...
-extern rtexturepool_t *mod_shared_texturepool;
-
-extern rtexture_t *mod_shared_distorttexture[64];
-
 // model loading
 extern model_t *loadmodel;
 extern qbyte *mod_base;

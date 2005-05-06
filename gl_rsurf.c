@@ -507,7 +507,7 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 		// NVIDIA Geforce3 distortion texture shader on water
 		float args[4] = {0.05f,0,0,0.04f};
 		memset(&m, 0, sizeof(m));
-		m.tex[0] = R_GetTexture(mod_shared_distorttexture[(int)(r_refdef.time * 16)&63]);
+		m.tex[0] = R_GetTexture(r_texture_distorttexture[(int)(r_refdef.time * 16)&63]);
 		m.tex[1] = R_GetTexture(texture->skin.base);
 		m.texcombinergb[0] = GL_REPLACE;
 		m.texcombinergb[1] = GL_REPLACE;

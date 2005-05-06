@@ -115,6 +115,8 @@ rtexture_t *r_texture_black;
 rtexture_t *r_texture_notexture;
 rtexture_t *r_texture_whitecube;
 rtexture_t *r_texture_normalizationcube;
+rtexture_t *r_texture_detailtextures[NUM_DETAILTEXTURES];
+rtexture_t *r_texture_distorttexture[64];
 
 void R_ModulateColors(float *in, float *out, int verts, float r, float g, float b)
 {
@@ -214,17 +216,97 @@ void FOG_registercvars(void)
 	}
 }
 
-void gl_main_start(void)
+static void R_BuildDetailTextures (void)
 {
-	int x, y, side;
-	vec3_t v;
-	vec_t s, t, intensity;
-	qbyte pix[16][16][4];
-#define NORMSIZE 64
-	qbyte data[6*NORMSIZE*NORMSIZE*4];
-	r_main_texturepool = R_AllocTexturePool();
-	r_bloom_texture_screen = NULL;
-	r_bloom_texture_bloom = NULL;
+	int i, x, y, light;
+	float vc[3], vx[3], vy[3], vn[3], lightdir[3];
+#define DETAILRESOLUTION 256
+	qbyte data[DETAILRESOLUTION][DETAILRESOLUTION][4], noise[DETAILRESOLUTION][DETAILRESOLUTION];
+	lightdir[0] = 0.5;
+	lightdir[1] = 1;
+	lightdir[2] = -0.25;
+	VectorNormalize(lightdir);
+	for (i = 0;i < NUM_DETAILTEXTURES;i++)
+	{
+		fractalnoise(&noise[0][0], DETAILRESOLUTION, DETAILRESOLUTION >> 4);
+		for (y = 0;y < DETAILRESOLUTION;y++)
+		{
+			for (x = 0;x < DETAILRESOLUTION;x++)
+			{
+				vc[0] = x;
+				vc[1] = y;
+				vc[2] = noise[y][x] * (1.0f / 32.0f);
+				vx[0] = x + 1;
+				vx[1] = y;
+				vx[2] = noise[y][(x + 1) % DETAILRESOLUTION] * (1.0f / 32.0f);
+				vy[0] = x;
+				vy[1] = y + 1;
+				vy[2] = noise[(y + 1) % DETAILRESOLUTION][x] * (1.0f / 32.0f);
+				VectorSubtract(vx, vc, vx);
+				VectorSubtract(vy, vc, vy);
+				CrossProduct(vx, vy, vn);
+				VectorNormalize(vn);
+				light = 128 - DotProduct(vn, lightdir) * 128;
+				light = bound(0, light, 255);
+				data[y][x][0] = data[y][x][1] = data[y][x][2] = light;
+				data[y][x][3] = 255;
+			}
+		}
+		r_texture_detailtextures[i] = R_LoadTexture2D(r_main_texturepool, va("detailtexture%i", i), DETAILRESOLUTION, DETAILRESOLUTION, &data[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_PRECACHE, NULL);
+	}
+}
+
+static qbyte R_MorphDistortTexture (double y0, double y1, double y2, double y3, double morph)
+{
+	int m =	(int)(((y1 + y3 - (y0 + y2)) * morph * morph * morph) +
+			((2 * (y0 - y1) + y2 - y3) * morph * morph) +
+			((y2 - y0) * morph) +
+			(y1));
+	return (qbyte)bound(0, m, 255);
+}
+
+static void R_BuildDistortTexture (void)
+{
+	int x, y, i, j;
+#define DISTORTRESOLUTION 32
+	qbyte data[5][DISTORTRESOLUTION][DISTORTRESOLUTION][2];
+
+	for (i=0; i<4; i++)
+	{
+		for (y=0; y<DISTORTRESOLUTION; y++)
+		{
+			for (x=0; x<DISTORTRESOLUTION; x++)
+			{
+				data[i][y][x][0] = rand () & 255;
+				data[i][y][x][1] = rand () & 255;
+			}
+		}
+	}
+
+	for (i=0; i<4; i++)
+	{
+		for (j=0; j<16; j++)
+		{
+			r_texture_distorttexture[i*16+j] = NULL;
+			if (gl_textureshader)
+			{
+				for (y=0; y<DISTORTRESOLUTION; y++)
+				{
+					for (x=0; x<DISTORTRESOLUTION; x++)
+					{
+						data[4][y][x][0] = R_MorphDistortTexture (data[(i-1)&3][y][x][0], data[i][y][x][0], data[(i+1)&3][y][x][0], data[(i+2)&3][y][x][0], 0.0625*j);
+						data[4][y][x][1] = R_MorphDistortTexture (data[(i-1)&3][y][x][1], data[i][y][x][1], data[(i+1)&3][y][x][1], data[(i+2)&3][y][x][1], 0.0625*j);
+					}
+				}
+				r_texture_distorttexture[i*16+j] = R_LoadTexture2D(r_main_texturepool, va("distorttexture%i", i*16+j), DISTORTRESOLUTION, DISTORTRESOLUTION, &data[4][0][0][0], TEXTYPE_DSDT, TEXF_PRECACHE, NULL);
+			}
+		}
+	}
+}
+
+static void R_BuildBlankTextures(void)
+{
+	qbyte data[4];
 	data[0] = 128; // normal X
 	data[1] = 128; // normal Y
 	data[2] = 255; // normal Z
@@ -240,6 +322,12 @@ void gl_main_start(void)
 	data[2] = 0;
 	data[3] = 255;
 	r_texture_black = R_LoadTexture2D(r_main_texturepool, "blankblack", 1, 1, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
+}
+
+static void R_BuildNoTexture(void)
+{
+	int x, y;
+	qbyte pix[16][16][4];
 	// this makes a light grey/dark grey checkerboard texture
 	for (y = 0;y < 16;y++)
 	{
@@ -262,65 +350,92 @@ void gl_main_start(void)
 		}
 	}
 	r_texture_notexture = R_LoadTexture2D(r_main_texturepool, "notexture", 16, 16, &pix[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP, NULL);
-	if (gl_texturecubemap)
+}
+
+static void R_BuildWhiteCube(void)
+{
+	qbyte data[6*1*1*4];
+	data[ 0] = 255;data[ 1] = 255;data[ 2] = 255;data[ 3] = 255;
+	data[ 4] = 255;data[ 5] = 255;data[ 6] = 255;data[ 7] = 255;
+	data[ 8] = 255;data[ 9] = 255;data[10] = 255;data[11] = 255;
+	data[12] = 255;data[13] = 255;data[14] = 255;data[15] = 255;
+	data[16] = 255;data[17] = 255;data[18] = 255;data[19] = 255;
+	data[20] = 255;data[21] = 255;data[22] = 255;data[23] = 255;
+	r_texture_whitecube = R_LoadTextureCubeMap(r_main_texturepool, "whitecube", 1, data, TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP, NULL);
+}
+
+static void R_BuildNormalizationCube(void)
+{
+	int x, y, side;
+	vec3_t v;
+	vec_t s, t, intensity;
+#define NORMSIZE 64
+	qbyte data[6][NORMSIZE][NORMSIZE][4];
+	for (side = 0;side < 6;side++)
 	{
-		data[ 0] = 255;data[ 1] = 255;data[ 2] = 255;data[ 3] = 255;
-		data[ 4] = 255;data[ 5] = 255;data[ 6] = 255;data[ 7] = 255;
-		data[ 8] = 255;data[ 9] = 255;data[10] = 255;data[11] = 255;
-		data[12] = 255;data[13] = 255;data[14] = 255;data[15] = 255;
-		data[16] = 255;data[17] = 255;data[18] = 255;data[19] = 255;
-		data[20] = 255;data[21] = 255;data[22] = 255;data[23] = 255;
-		r_texture_whitecube = R_LoadTextureCubeMap(r_main_texturepool, "whitecube", 1, data, TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP, NULL);
-		for (side = 0;side < 6;side++)
+		for (y = 0;y < NORMSIZE;y++)
 		{
-			for (y = 0;y < NORMSIZE;y++)
+			for (x = 0;x < NORMSIZE;x++)
 			{
-				for (x = 0;x < NORMSIZE;x++)
+				s = (x + 0.5f) * (2.0f / NORMSIZE) - 1.0f;
+				t = (y + 0.5f) * (2.0f / NORMSIZE) - 1.0f;
+				switch(side)
 				{
-					s = (x + 0.5f) * (2.0f / NORMSIZE) - 1.0f;
-					t = (y + 0.5f) * (2.0f / NORMSIZE) - 1.0f;
-					switch(side)
-					{
-					case 0:
-						v[0] = 1;
-						v[1] = -t;
-						v[2] = -s;
-						break;
-					case 1:
-						v[0] = -1;
-						v[1] = -t;
-						v[2] = s;
-						break;
-					case 2:
-						v[0] = s;
-						v[1] = 1;
-						v[2] = t;
-						break;
-					case 3:
-						v[0] = s;
-						v[1] = -1;
-						v[2] = -t;
-						break;
-					case 4:
-						v[0] = s;
-						v[1] = -t;
-						v[2] = 1;
-						break;
-					case 5:
-						v[0] = -s;
-						v[1] = -t;
-						v[2] = -1;
-						break;
-					}
-					intensity = 127.0f / sqrt(DotProduct(v, v));
-					data[((side*NORMSIZE+y)*NORMSIZE+x)*4+0] = 128.0f + intensity * v[0];
-					data[((side*NORMSIZE+y)*NORMSIZE+x)*4+1] = 128.0f + intensity * v[1];
-					data[((side*NORMSIZE+y)*NORMSIZE+x)*4+2] = 128.0f + intensity * v[2];
-					data[((side*NORMSIZE+y)*NORMSIZE+x)*4+3] = 255;
+				case 0:
+					v[0] = 1;
+					v[1] = -t;
+					v[2] = -s;
+					break;
+				case 1:
+					v[0] = -1;
+					v[1] = -t;
+					v[2] = s;
+					break;
+				case 2:
+					v[0] = s;
+					v[1] = 1;
+					v[2] = t;
+					break;
+				case 3:
+					v[0] = s;
+					v[1] = -1;
+					v[2] = -t;
+					break;
+				case 4:
+					v[0] = s;
+					v[1] = -t;
+					v[2] = 1;
+					break;
+				case 5:
+					v[0] = -s;
+					v[1] = -t;
+					v[2] = -1;
+					break;
 				}
+				intensity = 127.0f / sqrt(DotProduct(v, v));
+				data[side][y][x][0] = 128.0f + intensity * v[0];
+				data[side][y][x][1] = 128.0f + intensity * v[1];
+				data[side][y][x][2] = 128.0f + intensity * v[2];
+				data[side][y][x][3] = 255;
 			}
 		}
-		r_texture_normalizationcube = R_LoadTextureCubeMap(r_main_texturepool, "normalcube", NORMSIZE, data, TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP, NULL);
+	}
+	r_texture_normalizationcube = R_LoadTextureCubeMap(r_main_texturepool, "normalcube", NORMSIZE, &data[0][0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP, NULL);
+}
+
+void gl_main_start(void)
+{
+	r_main_texturepool = R_AllocTexturePool();
+	r_bloom_texture_screen = NULL;
+	r_bloom_texture_bloom = NULL;
+	R_BuildBlankTextures();
+	R_BuildNoTexture();
+	R_BuildDetailTextures();
+	R_BuildDistortTexture();
+	if (gl_texturecubemap)
+	{
+		R_BuildWhiteCube();
+		R_BuildNormalizationCube();
 	}
 }
 
