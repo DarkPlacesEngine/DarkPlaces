@@ -840,7 +840,7 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 	}
 
 // check cvars
-	if (!Cvar_Command ())
+	if (!Cvar_Command () && host_framecount > 0)
 		Con_Printf("Unknown command \"%s\"\n", Cmd_Argv(0));
 
 	cmd_tokenizebufferpos = oldpos;
