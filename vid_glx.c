@@ -664,10 +664,10 @@ void VID_Finish (void)
 	vid_usemouse = false;
 	if (vid_mouse.integer && !key_consoleactive && !cls.demoplayback)
 		vid_usemouse = true;
-	if (vid_isfullscreen)
-		vid_usemouse = true;
 	if (!vid_activewindow)
 		vid_usemouse = false;
+	if (vid_isfullscreen)
+		vid_usemouse = true;
 	if (vid_usemouse)
 	{
 		if (!vid_usingmouse)
