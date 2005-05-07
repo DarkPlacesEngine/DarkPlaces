@@ -12,59 +12,6 @@ static float portaltemppoints2[256][3];
 static int portal_markid = 0;
 static float boxpoints[4*3];
 
-int Portal_ClipPolygonToPlane(float *in, float *out, int inpoints, int maxoutpoints, tinyplane_t *p)
-{
-	int i, outpoints, prevside, side;
-	float *prevpoint, prevdist, dist, dot;
-
-	if (inpoints < 3)
-		return inpoints;
-	// begin with the last point, then enter the loop with the first point as current
-	prevpoint = in + 3 * (inpoints - 1);
-	prevdist = DotProduct(prevpoint, p->normal) - p->dist;
-	prevside = prevdist >= 0 ? SIDE_FRONT : SIDE_BACK;
-	i = 0;
-	outpoints = 0;
-	goto begin;
-	for (;i < inpoints;i++)
-	{
-		prevpoint = in;
-		prevdist = dist;
-		prevside = side;
-		in += 3;
-
-begin:
-		dist = DotProduct(in, p->normal) - p->dist;
-		side = dist >= 0 ? SIDE_FRONT : SIDE_BACK;
-
-		if (prevside == SIDE_FRONT)
-		{
-			if (outpoints >= maxoutpoints)
-				return -1;
-			VectorCopy(prevpoint, out);
-			out += 3;
-			outpoints++;
-			if (side == SIDE_FRONT)
-				continue;
-		}
-		else if (side == SIDE_BACK)
-			continue;
-
-		// generate a split point
-		if (outpoints >= maxoutpoints)
-			return -1;
-		dot = prevdist / (prevdist - dist);
-		out[0] = prevpoint[0] + dot * (in[0] - prevpoint[0]);
-		out[1] = prevpoint[1] + dot * (in[1] - prevpoint[1]);
-		out[2] = prevpoint[2] + dot * (in[2] - prevpoint[2]);
-		out += 3;
-		outpoints++;
-	}
-
-	return outpoints;
-}
-
-
 int Portal_PortalThroughPortalPlanes(tinyplane_t *clipplanes, int clipnumplanes, float *targpoints, int targnumpoints, float *out, int maxpoints)
 {
 	int numpoints, i;
@@ -76,7 +23,7 @@ int Portal_PortalThroughPortalPlanes(tinyplane_t *clipplanes, int clipnumplanes,
 	memcpy(&portaltemppoints[0][0][0], targpoints, numpoints * 3 * sizeof(float));
 	for (i = 0;i < clipnumplanes;i++)
 	{
-		numpoints = Portal_ClipPolygonToPlane(&portaltemppoints[0][0][0], &portaltemppoints[1][0][0], numpoints, 256, clipplanes + i);
+		PolygonF_Divide(numpoints, &portaltemppoints[0][0][0], clipplanes[i].normal[0], clipplanes[i].normal[1], clipplanes[i].normal[2], clipplanes[i].dist, 1.0f/32.0f, 256, &portaltemppoints[1][0][0], &numpoints, 0, NULL, NULL);
 		if (numpoints < 3)
 			return numpoints;
 		memcpy(&portaltemppoints[0][0][0], &portaltemppoints[1][0][0], numpoints * 3 * sizeof(float));
