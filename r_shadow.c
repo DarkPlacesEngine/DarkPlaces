@@ -7,26 +7,25 @@ as far as the light's radius, if the light has a radius at all), capped at
 both front and back to avoid any problems (extrusion from dark faces also
 works but has a different set of problems)
 
-This is rendered using Carmack's Reverse technique, in which backfaces behind
-zbuffer (zfail) increment the stencil, and frontfaces behind zbuffer (zfail)
-decrement the stencil, the result is a stencil value of zero where shadows
-did not intersect the visible geometry, suitable as a stencil mask for
-rendering lighting everywhere but shadow.
+This is normally rendered using Carmack's Reverse technique, in which
+backfaces behind zbuffer (zfail) increment the stencil, and frontfaces behind
+zbuffer (zfail) decrement the stencil, the result is a stencil value of zero
+where shadows did not intersect the visible geometry, suitable as a stencil
+mask for rendering lighting everywhere but shadow.
 
-In our case to hopefully avoid the Creative Labs patent on Carmack's Reverse,
-we use a biased stencil clear of 128 (which also negates the need for the
-stencil wrap extension), we draw the frontfaces first and backfaces second
-(decrement, increment), and we redefine the DepthFunc to zpass when behind of
-surfaces and zfail when infront (this means zpass is decr/incr during volume
-rendering, not zfail).
+In our case to hopefully avoid the Creative Labs patent, we draw the backfaces
+as decrement and the frontfaces as increment, and we redefine the DepthFunc to
+GL_LESS (the patent uses GL_GEQUAL) which causes zfail when behind surfaces
+and zpass when infront (the patent draws where zpass with a GL_GEQUAL test),
+additionally we clear stencil to 128 to avoid the need for the unclamped
+incr/decr extension (not related to patent).
 
 Patent warning:
-This algorithm may be covered by Creative's patent (US Patent #6384822)
-on Carmack's Reverse paper (which I have not read), however that patent
-seems to be about drawing a stencil shadow from a model in an otherwise
-unshadowed scene, where as realtime lighting technology draws light where
-shadows do not lie, additionally the stencil clear, zfail/zpass rules and
-incr/decr order are different in this implementation.
+This algorithm may be covered by Creative's patent (US Patent #6384822),
+however that patent is quite specific about increment on backfaces and
+decrement on frontfaces where zpass with GL_GEQUAL depth test, which is
+opposite this implementation and partially opposite Carmack's Reverse paper
+(which uses GL_LESS, but increments on backfaces and decrements on frontfaces).
 
 
 
@@ -947,15 +946,15 @@ void R_Shadow_RenderVolume(int numvertices, int numtriangles, const float *verte
 	GL_LockArrays(0, numvertices);
 	if (r_shadowstage == R_SHADOWSTAGE_STENCIL)
 	{
-		// increment stencil if backface is behind depthbuffer
+		// decrement stencil if backface is behind depthbuffer
 		qglCullFace(GL_BACK); // quake is backwards, this culls front faces
-		qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
+		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
 		R_Mesh_Draw(0, numvertices, numtriangles, element3i);
 		c_rt_shadowmeshes++;
 		c_rt_shadowtris += numtriangles;
-		// decrement stencil if frontface is behind depthbuffer
+		// increment stencil if frontface is behind depthbuffer
 		qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
-		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
+		qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
 	}
 	R_Mesh_Draw(0, numvertices, numtriangles, element3i);
 	c_rt_shadowmeshes++;
@@ -1113,7 +1112,7 @@ void R_Shadow_Stage_StencilShadowVolumes(void)
 	//}
 	//else
 	//	qglDisable(GL_POLYGON_OFFSET_FILL);
-	qglDepthFunc(GL_GEQUAL);
+	qglDepthFunc(GL_LESS);
 	qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 	qglEnable(GL_STENCIL_TEST);
 	qglStencilFunc(GL_ALWAYS, 128, ~0);
@@ -1122,12 +1121,12 @@ void R_Shadow_Stage_StencilShadowVolumes(void)
 		r_shadowstage = R_SHADOWSTAGE_STENCILTWOSIDE;
 		qglDisable(GL_CULL_FACE);
 		qglEnable(GL_STENCIL_TEST_TWO_SIDE_EXT);
-		qglActiveStencilFaceEXT(GL_BACK); // quake is backwards, this is front faces
-		qglStencilMask(~0);
-		qglStencilOp(GL_KEEP, GL_KEEP, GL_DECR);
 		qglActiveStencilFaceEXT(GL_FRONT); // quake is backwards, this is back faces
 		qglStencilMask(~0);
-		qglStencilOp(GL_KEEP, GL_KEEP, GL_INCR);
+		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
+		qglActiveStencilFaceEXT(GL_BACK); // quake is backwards, this is front faces
+		qglStencilMask(~0);
+		qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
 	}
 	else
 	{
@@ -2743,15 +2742,15 @@ void R_Shadow_DrawEntityShadow(entity_render_t *ent, rtlight_t *rtlight, int num
 				GL_LockArrays(0, mesh->numverts);
 				if (r_shadowstage == R_SHADOWSTAGE_STENCIL)
 				{
-					// increment stencil if backface is behind depthbuffer
+					// decrement stencil if backface is behind depthbuffer
 					qglCullFace(GL_BACK); // quake is backwards, this culls front faces
-					qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
+					qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
 					R_Mesh_Draw(0, mesh->numverts, mesh->numtriangles, mesh->element3i);
 					c_rtcached_shadowmeshes++;
 					c_rtcached_shadowtris += mesh->numtriangles;
-					// decrement stencil if frontface is behind depthbuffer
+					// increment stencil if frontface is behind depthbuffer
 					qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
-					qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
+					qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
 				}
 				R_Mesh_Draw(0, mesh->numverts, mesh->numtriangles, mesh->element3i);
 				c_rtcached_shadowmeshes++;
