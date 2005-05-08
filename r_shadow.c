@@ -13,17 +13,20 @@ decrement the stencil, the result is a stencil value of zero where shadows
 did not intersect the visible geometry, suitable as a stencil mask for
 rendering lighting everywhere but shadow.
 
-In our case we use a biased stencil clear of 128 to avoid requiring the
-stencil wrap extension (but probably should support it), and to address
-Creative's patent on this sort of technology we also draw the frontfaces
-first, and backfaces second (decrement, increment).
+In our case to hopefully avoid the Creative Labs patent on Carmack's Reverse,
+we use a biased stencil clear of 128 (which also negates the need for the
+stencil wrap extension), we draw the frontfaces first and backfaces second
+(decrement, increment), and we redefine the DepthFunc to zpass when behind of
+surfaces and zfail when infront (this means zpass is decr/incr during volume
+rendering, not zfail).
 
 Patent warning:
 This algorithm may be covered by Creative's patent (US Patent #6384822)
 on Carmack's Reverse paper (which I have not read), however that patent
 seems to be about drawing a stencil shadow from a model in an otherwise
 unshadowed scene, where as realtime lighting technology draws light where
-shadows do not lie.
+shadows do not lie, additionally the stencil clear, zfail/zpass rules and
+incr/decr order are different in this implementation.
 
 
 
@@ -53,7 +56,8 @@ NormalMap) if supported by hardware; in our case there is support for cards
 which are incapable of DOT3, the quality is quite poor however.  Additionally
 it is desirable to have specular evaluation per pixel, per vertex
 normalization of specular halfangle vectors causes noticable distortion but
-is unavoidable on hardware without GL_ARB_fragment_program.
+is unavoidable on hardware without GL_ARB_fragment_program or
+GL_ARB_fragment_shader.
 
 
 
@@ -61,18 +65,29 @@ Terminology: Normalization CubeMap
 A cubemap containing normalized dot3-encoded (vectors of length 1 or less
 encoded as RGB colors) for any possible direction, this technique allows per
 pixel calculation of incidence vector for per pixel lighting purposes, which
-would not otherwise be possible per pixel without GL_ARB_fragment_program.
+would not otherwise be possible per pixel without GL_ARB_fragment_program or
+GL_ARB_fragment_shader.
 
 
 
-Terminology: 2D Attenuation Texturing
+Terminology: 2D+1D Attenuation Texturing
 A very crude approximation of light attenuation with distance which results
 in cylindrical light shapes which fade vertically as a streak (some games
 such as Doom3 allow this to be rotated to be less noticable in specific
 cases), the technique is simply modulating lighting by two 2D textures (which
 can be the same) on different axes of projection (XY and Z, typically), this
-is the best technique available without 3D Attenuation Texturing or
-GL_ARB_fragment_program technology.
+is the second best technique available without 3D Attenuation Texturing,
+GL_ARB_fragment_program or GL_ARB_fragment_shader technology.
+
+
+
+Terminology: 2D+1D Inverse Attenuation Texturing
+A clever method described in papers on the Abducted engine, this has a squared
+distance texture (bright on the outside, black in the middle), which is used
+twice using GL_ADD blending, the result of this is used in an inverse modulate
+(GL_ONE_MINUS_DST_ALPHA, GL_ZERO) to implement the equation
+lighting*=(1-((X*X+Y*Y)+(Z*Z))) which is spherical (unlike 2D+1D attenuation
+texturing).
 
 
 
@@ -91,8 +106,13 @@ diffuse lighting if 3D Attenuation Textures are already used.
 
 Terminology: Light Cubemap Filtering
 A technique for modeling non-uniform light distribution according to
-direction, for example projecting a stained glass window image onto a wall,
-this is done by texturing the lighting with a cubemap.
+direction, for example a lantern may use a cubemap to describe the light
+emission pattern of the cage around the lantern (as well as soot buildup
+discoloring the light in certain areas), often also used for softened grate
+shadows and light shining through a stained glass window (done crudely by
+texturing the lighting with a cubemap), another good example would be a disco
+light.  This technique is used heavily in many games (Doom3 does not support
+this however).
 
 
 
@@ -101,14 +121,18 @@ A technique for modeling shadowing of light passing through translucent
 surfaces, allowing stained glass windows and other effects to be done more
 elegantly than possible with Light Cubemap Filtering by applying an occluder
 texture to the lighting combined with a stencil light volume to limit the lit
-area (this allows evaluating multiple translucent occluders in a scene).
+area, this technique is used by Doom3 for spotlights and flashlights, among
+other things, this can also be used more generally to render light passing
+through multiple translucent occluders in a scene (using a light volume to
+describe the area beyond the occluder, and thus mask off rendering of all
+other areas).
 
 
 
 Terminology: Doom3 Lighting
 A combination of Stencil Shadow Volume, Per Pixel Lighting, Normalization
-CubeMap, 2D Attenuation Texturing, and Light Filtering, as demonstrated by
-the (currently upcoming) game Doom3.
+CubeMap, 2D+1D Attenuation Texturing, and Light Projection Filtering, as
+demonstrated by the game Doom3.
 */
 
 #include "quakedef.h"
