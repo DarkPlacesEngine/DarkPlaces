@@ -164,9 +164,12 @@ void PR_Shutdown (void);
 void PR_ExecuteProgram (func_t fnum, const char *errormessage);
 void PR_LoadProgs (const char *progsname);
 
-void *PR_Alloc (size_t buffersize);
-void PR_Free (void *buffer);
-void PR_FreeAll (void);
+#define PR_Alloc(buffersize) _PR_Alloc(buffersize, __FILE__, __LINE__)
+#define PR_Free(buffer) _PR_Free(buffer, __FILE__, __LINE__)
+#define PR_FreeAll() _PR_FreeAll(__FILE__, __LINE__)
+void *_PR_Alloc (size_t buffersize, const char *filename, int fileline);
+void _PR_Free (void *buffer, const char *filename, int fileline);
+void _PR_FreeAll (const char *filename, int fileline);
 
 void PR_Profile_f (void);
 
