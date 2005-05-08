@@ -1055,7 +1055,7 @@ qboolean S_LocalSound (const char *sound)
 	// Local sounds must not be freed
 	sfx->flags |= SFXFLAG_PERMANENTLOCK;
 
-	ch_ind = S_StartSound (cl.viewentity, 0, sfx, vec3_origin, 1, 1);
+	ch_ind = S_StartSound (cl.viewentity, 0, sfx, vec3_origin, 1, 0);
 	if (ch_ind < 0)
 		return false;
 
