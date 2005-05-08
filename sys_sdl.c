@@ -40,11 +40,8 @@ void Sys_Error (const char *error, ...)
 	va_start (argptr,error);
 	dpvsnprintf (string, sizeof (string), error, argptr);
 	va_end (argptr);
-	fprintf(stderr, "Error: %s\n", string);
 
-	Con_Print ("Quake Error: ");
-	Con_Print (string);
-	Con_Print ("\n");
+	Con_Printf ("Quake Error: %s\n", string);
 
 	Host_Shutdown ();
 	exit (1);
@@ -52,7 +49,7 @@ void Sys_Error (const char *error, ...)
 
 void Sys_PrintToTerminal(const char *text)
 {
-	printf("%s", text);
+	fprintf(stdout, "%s", text);
 }
 
 double Sys_DoubleTime (void)
