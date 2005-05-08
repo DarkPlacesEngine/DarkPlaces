@@ -78,9 +78,34 @@ extern cvar_t r_watershader;
 
 extern cvar_t developer_texturelogging;
 
+typedef struct rmesh_s
+{
+	// vertices of this mesh
+	int maxvertices;
+	int numvertices;
+	float *vertex3f;
+	float *svector3f;
+	float *tvector3f;
+	float *normal3f;
+	float *texcoord2f;
+	float *texcoordlightmap2f;
+	float *color4f;
+	// triangles of this mesh
+	int maxtriangles;
+	int numtriangles;
+	int *element3i;
+	int *neighbor3i;
+	// snapping epsilon
+	float epsilon2;
+}
+rmesh_t;
+
 // useful functions for rendering
 void R_ModulateColors(float *in, float *out, int verts, float r, float g, float b);
 void R_FillColors(float *out, int verts, float r, float g, float b, float a);
+int R_Mesh_AddVertex3f(rmesh_t *mesh, const float *v);
+void R_Mesh_AddPolygon3f(rmesh_t *mesh, int numvertices, float *vertex3f);
+void R_Mesh_AddBrushMeshFromPlanes(rmesh_t *mesh, int numplanes, mplane_t *planes);
 
 #define	TOP_RANGE		16			// soldier uniform colors
 #define	BOTTOM_RANGE	96
@@ -88,7 +113,7 @@ void R_FillColors(float *out, int verts, float r, float g, float b, float a);
 //=============================================================================
 
 extern int r_framecount;
-extern mplane_t frustum[4];
+extern mplane_t frustum[5];
 
 extern int c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c_bmodels, c_sprites, c_particles, c_dlights, c_meshs, c_meshelements, c_rt_lights, c_rt_clears, c_rt_scissored, c_rt_shadowmeshes, c_rt_shadowtris, c_rt_lightmeshes, c_rt_lighttris, c_rtcached_shadowmeshes, c_rtcached_shadowtris, c_bloom, c_bloomcopies, c_bloomcopypixels, c_bloomdraws, c_bloomdrawpixels;
 

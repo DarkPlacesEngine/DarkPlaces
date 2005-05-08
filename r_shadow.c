@@ -1262,170 +1262,89 @@ void R_Shadow_Stage_End(void)
 	r_shadowstage = R_SHADOWSTAGE_NONE;
 }
 
-int R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
+qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 {
 	int i, ix1, iy1, ix2, iy2;
-	float x1, y1, x2, y2, x, y, f;
-	vec3_t smins, smaxs;
+	float x1, y1, x2, y2;
 	vec4_t v, v2;
-	if (!r_shadow_scissor.integer)
-		return false;
-	// if view is inside the box, just say yes it's visible
+	rmesh_t mesh;
+	mplane_t planes[11];
+	float vertex3f[256*3];
+
+	// if view is inside the light box, just say yes it's visible
 	if (BoxesOverlap(r_vieworigin, r_vieworigin, mins, maxs))
 	{
 		GL_Scissor(r_view_x, r_view_y, r_view_width, r_view_height);
 		return false;
 	}
-	for (i = 0;i < 3;i++)
+
+	// create a temporary brush describing the area the light can affect in worldspace
+	VectorNegate(frustum[0].normal, planes[ 0].normal);planes[ 0].dist = -frustum[0].dist;
+	VectorNegate(frustum[1].normal, planes[ 1].normal);planes[ 1].dist = -frustum[1].dist;
+	VectorNegate(frustum[2].normal, planes[ 2].normal);planes[ 2].dist = -frustum[2].dist;
+	VectorNegate(frustum[3].normal, planes[ 3].normal);planes[ 3].dist = -frustum[3].dist;
+	VectorNegate(frustum[4].normal, planes[ 4].normal);planes[ 4].dist = -frustum[4].dist;
+	VectorSet   (planes[ 5].normal,  1, 0, 0);         planes[ 5].dist =  maxs[0];
+	VectorSet   (planes[ 6].normal, -1, 0, 0);         planes[ 6].dist = -mins[0];
+	VectorSet   (planes[ 7].normal, 0,  1, 0);         planes[ 7].dist =  maxs[1];
+	VectorSet   (planes[ 8].normal, 0, -1, 0);         planes[ 8].dist = -mins[1];
+	VectorSet   (planes[ 9].normal, 0, 0,  1);         planes[ 9].dist =  maxs[2];
+	VectorSet   (planes[10].normal, 0, 0, -1);         planes[10].dist = -mins[2];
+
+	// turn the brush into a mesh
+	memset(&mesh, 0, sizeof(rmesh_t));
+	mesh.maxvertices = 256;
+	mesh.vertex3f = vertex3f;
+	mesh.epsilon2 = (1.0f / (32.0f * 32.0f));
+	R_Mesh_AddBrushMeshFromPlanes(&mesh, 11, planes);
+
+	// if that mesh is empty, the light is not visible at all
+	if (!mesh.numvertices)
+		return true;
+
+	if (!r_shadow_scissor.integer)
+		return false;
+
+	// if that mesh is not empty, check what area of the screen it covers
+	x1 = y1 = x2 = y2 = 0;
+	v[3] = 1.0f;
+	for (i = 0;i < mesh.numvertices;i++)
 	{
-		if (r_viewforward[i] >= 0)
+		VectorCopy(mesh.vertex3f + i * 3, v);
+		GL_TransformToScreen(v, v2);
+		//Con_Printf("%.3f %.3f %.3f %.3f transformed to %.3f %.3f %.3f %.3f\n", v[0], v[1], v[2], v[3], v2[0], v2[1], v2[2], v2[3]);
+		if (i)
 		{
-			v[i] = mins[i];
-			v2[i] = maxs[i];
+			if (x1 > v2[0]) x1 = v2[0];
+			if (x2 < v2[0]) x2 = v2[0];
+			if (y1 > v2[1]) y1 = v2[1];
+			if (y2 < v2[1]) y2 = v2[1];
 		}
 		else
 		{
-			v[i] = maxs[i];
-			v2[i] = mins[i];
+			x1 = x2 = v2[0];
+			y1 = y2 = v2[1];
 		}
 	}
-	f = DotProduct(r_viewforward, r_vieworigin) + 1;
-	if (DotProduct(r_viewforward, v2) <= f)
-	{
-		// entirely behind nearclip plane
-		return true;
-	}
-	if (DotProduct(r_viewforward, v) >= f)
-	{
-		// entirely infront of nearclip plane
-		x1 = y1 = x2 = y2 = 0;
-		for (i = 0;i < 8;i++)
-		{
-			v[0] = (i & 1) ? mins[0] : maxs[0];
-			v[1] = (i & 2) ? mins[1] : maxs[1];
-			v[2] = (i & 4) ? mins[2] : maxs[2];
-			v[3] = 1.0f;
-			GL_TransformToScreen(v, v2);
-			//Con_Printf("%.3f %.3f %.3f %.3f transformed to %.3f %.3f %.3f %.3f\n", v[0], v[1], v[2], v[3], v2[0], v2[1], v2[2], v2[3]);
-			x = v2[0];
-			y = v2[1];
-			if (i)
-			{
-				if (x1 > x) x1 = x;
-				if (x2 < x) x2 = x;
-				if (y1 > y) y1 = y;
-				if (y2 < y) y2 = y;
-			}
-			else
-			{
-				x1 = x2 = x;
-				y1 = y2 = y;
-			}
-		}
-	}
-	else
-	{
-		// clipped by nearclip plane
-		// this is nasty and crude...
-		// create viewspace bbox
-		for (i = 0;i < 8;i++)
-		{
-			v[0] = ((i & 1) ? mins[0] : maxs[0]) - r_vieworigin[0];
-			v[1] = ((i & 2) ? mins[1] : maxs[1]) - r_vieworigin[1];
-			v[2] = ((i & 4) ? mins[2] : maxs[2]) - r_vieworigin[2];
-			v2[0] = -DotProduct(v, r_viewleft);
-			v2[1] = DotProduct(v, r_viewup);
-			v2[2] = DotProduct(v, r_viewforward);
-			if (i)
-			{
-				if (smins[0] > v2[0]) smins[0] = v2[0];
-				if (smaxs[0] < v2[0]) smaxs[0] = v2[0];
-				if (smins[1] > v2[1]) smins[1] = v2[1];
-				if (smaxs[1] < v2[1]) smaxs[1] = v2[1];
-				if (smins[2] > v2[2]) smins[2] = v2[2];
-				if (smaxs[2] < v2[2]) smaxs[2] = v2[2];
-			}
-			else
-			{
-				smins[0] = smaxs[0] = v2[0];
-				smins[1] = smaxs[1] = v2[1];
-				smins[2] = smaxs[2] = v2[2];
-			}
-		}
-		// now we have a bbox in viewspace
-		// clip it to the view plane
-		if (smins[2] < 1)
-			smins[2] = 1;
-		// return true if that culled the box
-		if (smins[2] >= smaxs[2])
-			return true;
-		// ok some of it is infront of the view, transform each corner back to
-		// worldspace and then to screenspace and make screen rect
-		// initialize these variables just to avoid compiler warnings
-		x1 = y1 = x2 = y2 = 0;
-		for (i = 0;i < 8;i++)
-		{
-			v2[0] = (i & 1) ? smins[0] : smaxs[0];
-			v2[1] = (i & 2) ? smins[1] : smaxs[1];
-			v2[2] = (i & 4) ? smins[2] : smaxs[2];
-			v[0] = v2[0] * -r_viewleft[0] + v2[1] * r_viewup[0] + v2[2] * r_viewforward[0] + r_vieworigin[0];
-			v[1] = v2[0] * -r_viewleft[1] + v2[1] * r_viewup[1] + v2[2] * r_viewforward[1] + r_vieworigin[1];
-			v[2] = v2[0] * -r_viewleft[2] + v2[1] * r_viewup[2] + v2[2] * r_viewforward[2] + r_vieworigin[2];
-			v[3] = 1.0f;
-			GL_TransformToScreen(v, v2);
-			//Con_Printf("%.3f %.3f %.3f %.3f transformed to %.3f %.3f %.3f %.3f\n", v[0], v[1], v[2], v[3], v2[0], v2[1], v2[2], v2[3]);
-			x = v2[0];
-			y = v2[1];
-			if (i)
-			{
-				if (x1 > x) x1 = x;
-				if (x2 < x) x2 = x;
-				if (y1 > y) y1 = y;
-				if (y2 < y) y2 = y;
-			}
-			else
-			{
-				x1 = x2 = x;
-				y1 = y2 = y;
-			}
-		}
-		/*
-		// this code doesn't handle boxes with any points behind view properly
-		x1 = 1000;x2 = -1000;
-		y1 = 1000;y2 = -1000;
-		for (i = 0;i < 8;i++)
-		{
-			v[0] = (i & 1) ? mins[0] : maxs[0];
-			v[1] = (i & 2) ? mins[1] : maxs[1];
-			v[2] = (i & 4) ? mins[2] : maxs[2];
-			v[3] = 1.0f;
-			GL_TransformToScreen(v, v2);
-			//Con_Printf("%.3f %.3f %.3f %.3f transformed to %.3f %.3f %.3f %.3f\n", v[0], v[1], v[2], v[3], v2[0], v2[1], v2[2], v2[3]);
-			if (v2[2] > 0)
-			{
-				x = v2[0];
-				y = v2[1];
 
-				if (x1 > x) x1 = x;
-				if (x2 < x) x2 = x;
-				if (y1 > y) y1 = y;
-				if (y2 < y) y2 = y;
-			}
-		}
-		*/
-	}
+	// now convert the scissor rectangle to integer screen coordinates
 	ix1 = x1 - 1.0f;
 	iy1 = y1 - 1.0f;
 	ix2 = x2 + 1.0f;
 	iy2 = y2 + 1.0f;
 	//Con_Printf("%f %f %f %f\n", x1, y1, x2, y2);
+
+	// clamp it to the screen
 	if (ix1 < r_view_x) ix1 = r_view_x;
 	if (iy1 < r_view_y) iy1 = r_view_y;
 	if (ix2 > r_view_x + r_view_width) ix2 = r_view_x + r_view_width;
 	if (iy2 > r_view_y + r_view_height) iy2 = r_view_y + r_view_height;
+
+	// if it is inside out, it's not visible
 	if (ix2 <= ix1 || iy2 <= iy1)
 		return true;
-	// set up the scissor rectangle
+
+	// the light area is visible, set up the scissor rectangle
 	GL_Scissor(ix1, vid.realheight - iy2, ix2 - ix1, iy2 - iy1);
 	//qglScissor(ix1, iy1, ix2 - ix1, iy2 - iy1);
 	//qglEnable(GL_SCISSOR_TEST);

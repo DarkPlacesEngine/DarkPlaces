@@ -40,7 +40,7 @@ void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *inv
 void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles, const int *elements, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *texcoord2f, const float *lightcolorbase, const float *lightcolorpants, const float *lightcolorshirt, rtexture_t *basetexture, rtexture_t *pantstexture, rtexture_t *shirttexture, rtexture_t *bumptexture, rtexture_t *glosstexture);
 
 void R_Shadow_RenderVolume(int numvertices, int numtriangles, const float *vertex3f, const int *element3i);
-int R_Shadow_ScissorForBBox(const float *mins, const float *maxs);
+qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs);
 
 // these never change, they are used to create attenuation matrices
 extern matrix4x4_t matrix_attenuationxyz;

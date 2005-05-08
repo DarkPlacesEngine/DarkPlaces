@@ -21,11 +21,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include "r_shadow.h"
+#include "polygon.h"
 
 // used for dlight push checking and other things
 int r_framecount;
 
-mplane_t frustum[4];
+mplane_t frustum[5];
 
 matrix4x4_t r_identitymatrix;
 
@@ -770,6 +771,11 @@ static void R_SetFrustum(void)
 	RotatePointAroundVector( frustum[3].normal, r_viewleft, r_viewforward, (90 - r_view_fov_y / 2));
 	frustum[3].dist = DotProduct (r_vieworigin, frustum[3].normal);
 	PlaneClassify(&frustum[3]);
+
+	// nearclip plane
+	VectorCopy(r_viewforward, frustum[4].normal);
+	frustum[4].dist = DotProduct (r_vieworigin, frustum[4].normal) + 1.0f;
+	PlaneClassify(&frustum[4]);
 }
 
 static void R_BlendView(void)
@@ -1361,4 +1367,72 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, int depth
 	GL_Color(cr, cg, cb, ca);
 	R_Mesh_Draw(0, 4, 2, polygonelements);
 }
+
+int R_Mesh_AddVertex3f(rmesh_t *mesh, const float *v)
+{
+	int i;
+	float *vertex3f;
+	for (i = 0, vertex3f = mesh->vertex3f;i < mesh->numvertices;i++, vertex3f += 3)
+		if (VectorDistance2(v, vertex3f) < mesh->epsilon2)
+			break;
+	if (i == mesh->numvertices)
+	{
+		if (mesh->numvertices < mesh->maxvertices)
+		{
+			VectorCopy(v, vertex3f);
+			mesh->numvertices++;
+		}
+		return mesh->numvertices;
+	}
+	else
+		return i;
+}
+
+void R_Mesh_AddPolygon3f(rmesh_t *mesh, int numvertices, float *vertex3f)
+{
+	int i;
+	int *e, element[3];
+	element[0] = R_Mesh_AddVertex3f(mesh, vertex3f);vertex3f += 3;
+	element[1] = R_Mesh_AddVertex3f(mesh, vertex3f);vertex3f += 3;
+	e = mesh->element3i + mesh->numtriangles * 3;
+	for (i = 0;i < numvertices - 2;i++, vertex3f += 3)
+	{
+		element[2] = R_Mesh_AddVertex3f(mesh, vertex3f);
+		if (mesh->numtriangles < mesh->maxtriangles)
+		{
+			*e++ = element[0];
+			*e++ = element[1];
+			*e++ = element[2];
+			mesh->numtriangles++;
+		}
+		element[1] = element[2];
+	}
+}
+
+void R_Mesh_AddBrushMeshFromPlanes(rmesh_t *mesh, int numplanes, mplane_t *planes)
+{
+	int planenum, planenum2;
+	int w;
+	int tempnumpoints;
+	mplane_t *plane, *plane2;
+	float temppoints[2][256*3];
+	for (planenum = 0, plane = planes;planenum < numplanes;planenum++, plane++)
+	{
+		w = 0;
+		tempnumpoints = 4;
+		PolygonF_QuadForPlane(temppoints[w], plane->normal[0], plane->normal[1], plane->normal[2], plane->normal[3], 1024.0*1024.0*1024.0);
+		for (planenum2 = 0, plane2 = planes;planenum2 < numplanes && tempnumpoints >= 3;planenum2++, plane2++)
+		{
+			if (planenum2 == planenum)
+				continue;
+			PolygonF_Divide(tempnumpoints, temppoints[w], plane2->normal[0], plane2->normal[1], plane2->normal[2], plane2->dist, 1.0/32.0, 0, NULL, NULL, 256, temppoints[!w], &tempnumpoints);
+			w = !w;
+		}
+		if (tempnumpoints < 3)
+			continue;
+		// generate elements forming a triangle fan for this polygon
+		R_Mesh_AddPolygon3f(mesh, tempnumpoints, temppoints[w]);
+	}
+}
+
 
