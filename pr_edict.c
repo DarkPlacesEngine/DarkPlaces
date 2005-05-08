@@ -1690,22 +1690,22 @@ void PR_Shutdown (void)
 	Mem_FreePool(&serverprogs_mempool);
 }
 
-void *PR_Alloc(size_t buffersize)
+void *_PR_Alloc(size_t buffersize, const char *filename, int fileline)
 {
-	return Mem_Alloc(serverprogs_mempool, buffersize);
+	return _Mem_Alloc(serverprogs_mempool, buffersize, filename, fileline);
 }
 
-void PR_Free(void *buffer)
+void _PR_Free(void *buffer, const char *filename, int fileline)
 {
-	Mem_Free(buffer);
+	_Mem_Free(buffer, filename, fileline);
 }
 
-void PR_FreeAll(void)
+void _PR_FreeAll(const char *filename, int fileline)
 {
 	progs = NULL;
 	pr_fielddefs = NULL;
 	pr_functions = NULL;
-	Mem_EmptyPool(serverprogs_mempool);
+	_Mem_EmptyPool(serverprogs_mempool, filename, fileline);
 }
 
 // LordHavoc: turned EDICT_NUM into a #define for speed reasons
