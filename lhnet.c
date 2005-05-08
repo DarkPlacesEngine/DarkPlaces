@@ -32,6 +32,16 @@
 
 #include "lhnet.h"
 
+// to make LHNETADDRESS_FromString resolve repeated hostnames faster, cache them
+#define MAX_NAMECACHE 64
+static struct namecache_s
+{
+	lhnetaddress_t address;
+	char name[64];
+}
+namecache[MAX_NAMECACHE];
+static int namecacheposition = 0;
+
 int LHNETADDRESS_FromPort(lhnetaddress_t *address, int addresstype, int port)
 {
 	if (!address)
@@ -64,7 +74,7 @@ int LHNETADDRESS_FromPort(lhnetaddress_t *address, int addresstype, int port)
 
 int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int defaultport)
 {
-	int port, namelen, d1, d2, d3, d4;
+	int i, port, namelen, d1, d2, d3, d4;
 	struct hostent *hostentry;
 	const char *colon;
 	char name[128];
@@ -113,6 +123,24 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 #endif
 		return 1;
 	}
+	for (i = 0;i < MAX_NAMECACHE;i++)
+		if (!strcmp(namecache[i].name, name))
+			break;
+	if (i < MAX_NAMECACHE)
+	{
+		*address = namecache[i].address;
+		if (address->addresstype == LHNETADDRESSTYPE_INET6)
+		{
+			address->addressdata.inet6.port = htons((unsigned short)port);
+			return 1;
+		}
+		else if (address->addresstype == LHNETADDRESSTYPE_INET4)
+		{
+			address->addressdata.inet4.port = htons((unsigned short)port);
+			return 1;
+		}
+		return false;
+	}
 	// try gethostbyname (handles dns and other ip formats)
 	hostentry = gethostbyname(name);
 	if (hostentry)
@@ -124,6 +152,11 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 			address->addressdata.inet6.family = hostentry->h_addrtype;
 			address->addressdata.inet6.port = htons((unsigned short)port);
 			memcpy(address->addressdata.inet6.address, hostentry->h_addr_list[0], sizeof(address->addressdata.inet6.address));
+			for (i = 0;i < sizeof(namecache[namecacheposition].name)-1 && name[i];i++)
+				namecache[namecacheposition].name[i] = name[i];
+			namecache[namecacheposition].name[i] = 0;
+			namecache[namecacheposition].address = *address;
+			namecacheposition = (namecacheposition + 1) % MAX_NAMECACHE;
 #ifdef STANDALONETEST
 			printf("gethostbyname(\"%s\") returned ipv6 address [%x:%x:%x:%x:%x:%x:%x:%x]:%d\n", name, (int)address->addressdata.inet6.address[0], (int)address->addressdata.inet6.address[1], (int)address->addressdata.inet6.address[2], (int)address->addressdata.inet6.address[3], (int)address->addressdata.inet6.address[4], (int)address->addressdata.inet6.address[5], (int)address->addressdata.inet6.address[6], (int)address->addressdata.inet6.address[7], (int)ntohs(address->addressdata.inet6.port));
 #endif
@@ -136,6 +169,11 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 			address->addressdata.inet4.family = hostentry->h_addrtype;
 			address->addressdata.inet4.port = htons((unsigned short)port);
 			memcpy(address->addressdata.inet4.address, hostentry->h_addr_list[0], sizeof(address->addressdata.inet4.address));
+			for (i = 0;i < sizeof(namecache[namecacheposition].name)-1 && name[i];i++)
+				namecache[namecacheposition].name[i] = name[i];
+			namecache[namecacheposition].name[i] = 0;
+			namecache[namecacheposition].address = *address;
+			namecacheposition = (namecacheposition + 1) % MAX_NAMECACHE;
 #ifdef STANDALONETEST
 			printf("gethostbyname(\"%s\") returned ipv4 address %d.%d.%d.%d:%d\n", name, (int)address->addressdata.inet4.address[0], (int)address->addressdata.inet4.address[1], (int)address->addressdata.inet4.address[2], (int)address->addressdata.inet4.address[3], (int)ntohs(address->addressdata.inet4.port));
 #endif
@@ -145,6 +183,11 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 #ifdef STANDALONETEST
 	printf("gethostbyname failed on address \"%s\"\n", name);
 #endif
+	for (i = 0;i < sizeof(namecache[namecacheposition].name)-1 && name[i];i++)
+		namecache[namecacheposition].name[i] = name[i];
+	namecache[namecacheposition].name[i] = 0;
+	namecache[namecacheposition].address.addresstype = LHNETADDRESSTYPE_NONE;
+	namecacheposition = (namecacheposition + 1) % MAX_NAMECACHE;
 	return 0;
 }
 
