@@ -3582,10 +3582,10 @@ level_t		transfusionlevels[] =
 	{"fragm",		"Frag'M"},
 	{"maim",		"Maim"},
 	{"qe1m7",		"The House of Chthon"},
-	{"qdm1",		"Dm-Place of Two Deaths"},
-	{"qdm4",		"Dm-The Bad Place"},
-	{"qdm5",		"Dm-The Cistern"},
-	{"qmorbias",	"Dm-Morbias"},
+	{"qdm1",		"Place of Two Deaths"},
+	{"qdm4",		"The Bad Place"},
+	{"qdm5",		"The Cistern"},
+	{"qmorbias",	"DM-Morbias"},
 	{"simple",		"Dead Simple"}
 };
 
