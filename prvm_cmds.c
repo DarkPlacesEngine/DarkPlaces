@@ -2252,8 +2252,8 @@ void VM_getmousepos(void)
 
 	VM_SAFEPARMCOUNT(0,VM_getmousepos);
 
-	PRVM_G_VECTOR(OFS_RETURN)[0] = in_mouse_x;
-	PRVM_G_VECTOR(OFS_RETURN)[1] = in_mouse_y;
+	PRVM_G_VECTOR(OFS_RETURN)[0] = in_mouse_x * vid.conwidth / vid.realwidth;
+	PRVM_G_VECTOR(OFS_RETURN)[1] = in_mouse_y * vid.conheight / vid.realheight;
 	PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
 }
 
@@ -3145,8 +3145,8 @@ void VM_altstr_ins(void)
 	in = instr = PRVM_G_STRING( OFS_PARM0 );
 	num = PRVM_G_FLOAT( OFS_PARM1 );
 	set = setstr = PRVM_G_STRING( OFS_PARM2 );
-	
-	out = outstr = VM_GetTempString();	
+
+	out = outstr = VM_GetTempString();
 	for( num = num * 2 + 2 ; *in && num > 0 ; *out++ = *in++ )
 		if( *in == '\\' && !*++in )
 			break;

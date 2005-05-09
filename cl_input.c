@@ -261,6 +261,11 @@ cvar_t cl_movement_accelerate = {0, "cl_movement_accelerate", "10"};
 cvar_t cl_gravity = {0, "cl_gravity", "800"};
 cvar_t cl_slowmo = {0, "cl_slowmo", "1"};
 
+cvar_t in_pitch_min = {0, "in_pitch_min", "-90"}; // quake used -70
+cvar_t in_pitch_max = {0, "in_pitch_max", "90"}; // quake used 80
+
+cvar_t m_filter = {CVAR_SAVE, "m_filter","0"};
+
 
 /*
 ================
@@ -316,19 +321,21 @@ void CL_AdjustAngles (void)
 
 /*
 ================
-CL_BaseMove
+CL_Move
 
 Send the intended movement message to the server
 ================
 */
-void CL_BaseMove (void)
+void CL_Move (void)
 {
 	vec3_t temp;
-	if (cls.signon != SIGNONS)
-		return;
+	float mx, my;
+	static float old_mouse_x = 0, old_mouse_y = 0;
 
+	// clamp before the move to prevent starting with bad angles
 	CL_AdjustAngles ();
 
+	// get basic movement from keyboard
 	// PRYDON_CLIENTCURSOR needs to survive basemove resets
 	VectorCopy (cl.cmd.cursor_screen, temp);
 	memset (&cl.cmd, 0, sizeof(cl.cmd));
@@ -352,17 +359,72 @@ void CL_BaseMove (void)
 		cl.cmd.forwardmove -= cl_backspeed.value * CL_KeyState (&in_back);
 	}
 
-//
-// adjust for speed key
-//
+	// adjust for speed key
 	if (in_speed.state & 1)
 	{
 		cl.cmd.forwardmove *= cl_movespeedkey.value;
 		cl.cmd.sidemove *= cl_movespeedkey.value;
 		cl.cmd.upmove *= cl_movespeedkey.value;
 	}
-}
 
+	in_mouse_x = 0;
+	in_mouse_y = 0;
+
+	// allow mice or other external controllers to add to the move
+	IN_Move ();
+
+	// apply m_filter if it is on
+	mx = in_mouse_x;
+	my = in_mouse_y;
+	if (m_filter.integer)
+	{
+		in_mouse_x = (mx + old_mouse_x) * 0.5;
+		in_mouse_y = (my + old_mouse_y) * 0.5;
+	}
+	old_mouse_x = mx;
+	old_mouse_y = my;
+
+	// if not in menu, apply mouse move to viewangles/movement
+	if (in_client_mouse)
+	{
+		if (cl_prydoncursor.integer)
+		{
+			// mouse interacting with the scene, mostly stationary view
+			V_StopPitchDrift();
+			cl.cmd.cursor_screen[0] += in_mouse_x * sensitivity.value / vid.realwidth;
+			cl.cmd.cursor_screen[1] += in_mouse_y * sensitivity.value / vid.realheight;
+		}
+		else if (in_strafe.state & 1)
+		{
+			// strafing mode, all looking is movement
+			V_StopPitchDrift();
+			cl.cmd.sidemove += m_side.value * in_mouse_x * sensitivity.value * cl.viewzoom;
+			if (noclip_anglehack)
+				cl.cmd.upmove -= m_forward.value * in_mouse_y * sensitivity.value * cl.viewzoom;
+			else
+				cl.cmd.forwardmove -= m_forward.value * in_mouse_y * sensitivity.value * cl.viewzoom;
+		}
+		else if ((in_mlook.state & 1) || freelook.integer)
+		{
+			// mouselook, lookstrafe causes turning to become strafing
+			V_StopPitchDrift();
+			if (lookstrafe.integer)
+				cl.cmd.sidemove += m_side.value * in_mouse_x * sensitivity.value * cl.viewzoom;
+			else
+				cl.viewangles[YAW] -= m_yaw.value * in_mouse_x * sensitivity.value * cl.viewzoom;
+			cl.viewangles[PITCH] += m_pitch.value * in_mouse_y * sensitivity.value * cl.viewzoom;
+		}
+		else
+		{
+			// non-mouselook, yaw turning and forward/back movement
+			cl.viewangles[YAW] -= m_yaw.value * in_mouse_x * sensitivity.value * cl.viewzoom;
+			cl.cmd.forwardmove -= m_forward.value * in_mouse_y * sensitivity.value * cl.viewzoom;
+		}
+	}
+
+	// clamp after the move to prevent rendering with bad angles
+	CL_AdjustAngles ();
+}
 
 #include "cl_collision.h"
 
@@ -917,5 +979,9 @@ void CL_InitInput (void)
 	Cvar_RegisterVariable(&cl_movement_accelerate);
 	Cvar_RegisterVariable(&cl_gravity);
 	Cvar_RegisterVariable(&cl_slowmo);
+
+	Cvar_RegisterVariable(&in_pitch_min);
+	Cvar_RegisterVariable(&in_pitch_max);
+	Cvar_RegisterVariable(&m_filter);
 }
 

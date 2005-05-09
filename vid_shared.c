@@ -73,11 +73,6 @@ cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1"};
 cvar_t gl_combine = {CVAR_SAVE, "gl_combine", "1"};
 cvar_t gl_finish = {0, "gl_finish", "0"};
 
-cvar_t in_pitch_min = {0, "in_pitch_min", "-90"}; // quake used -70
-cvar_t in_pitch_max = {0, "in_pitch_max", "90"}; // quake used 80
-
-cvar_t m_filter = {CVAR_SAVE, "m_filter","0"};
-
 cvar_t v_gamma = {CVAR_SAVE, "v_gamma", "1"};
 cvar_t v_contrast = {CVAR_SAVE, "v_contrast", "1"};
 cvar_t v_brightness = {CVAR_SAVE, "v_brightness", "0"};
@@ -723,98 +718,6 @@ void Force_CenterView_f (void)
 	cl.viewangles[PITCH] = 0;
 }
 
-void IN_PreMove(void)
-{
-}
-
-void CL_AdjustAngles(void);
-void IN_PostMove(void)
-{
-	// clamp after the move as well to prevent messed up rendering angles
-	CL_AdjustAngles();
-}
-
-/*
-===========
-IN_DoMove
-===========
-*/
-void IN_ProcessMove(void)
-{
-	// get basic movement from keyboard
-	CL_BaseMove();
-
-	// OS independent code
-	IN_PreMove();
-
-	// allow mice or other external controllers to add to the move
-	IN_Move();
-
-	// OS independent code
-	IN_PostMove();
-}
-
-
-void IN_Mouse(float mx, float my)
-{
-	int mouselook = (in_mlook.state & 1) || freelook.integer;
-	float mouse_x, mouse_y;
-	static float old_mouse_x = 0, old_mouse_y = 0;
-
-	if (m_filter.integer)
-	{
-		mouse_x = (mx + old_mouse_x) * 0.5;
-		mouse_y = (my + old_mouse_y) * 0.5;
-	}
-	else
-	{
-		mouse_x = mx;
-		mouse_y = my;
-	}
-
-	old_mouse_x = mx;
-	old_mouse_y = my;
-
-	in_mouse_x = (float) mouse_x * vid.conwidth / vid.realwidth;
-	in_mouse_y = (float) mouse_y * vid.conheight / vid.realheight;
-
-	// AK: eveything else is client stuff
-	// BTW, this should be seperated somewhen
-	if(!in_client_mouse)
-		return;
-
-	if (cl_prydoncursor.integer)
-	{
-		cl.cmd.cursor_screen[0] += mouse_x * sensitivity.value / vid.realwidth;
-		cl.cmd.cursor_screen[1] += mouse_y * sensitivity.value / vid.realheight;
-		V_StopPitchDrift();
-		return;
-	}
-
-	// LordHavoc: viewzoom affects mouse sensitivity for sniping
-	mouse_x *= sensitivity.value * cl.viewzoom;
-	mouse_y *= sensitivity.value * cl.viewzoom;
-
-	// Add mouse X/Y movement to cmd
-	if ((in_strafe.state & 1) || (lookstrafe.integer && mouselook))
-		cl.cmd.sidemove += m_side.value * mouse_x;
-	else
-		cl.viewangles[YAW] -= m_yaw.value * mouse_x;
-
-	if (mouselook)
-		V_StopPitchDrift();
-
-	if (mouselook && !(in_strafe.state & 1))
-		cl.viewangles[PITCH] += m_pitch.value * mouse_y;
-	else
-	{
-		if ((in_strafe.state & 1) && noclip_anglehack)
-			cl.cmd.upmove -= m_forward.value * mouse_y;
-		else
-			cl.cmd.forwardmove -= m_forward.value * mouse_y;
-	}
-}
-
 static float cachegamma, cachebrightness, cachecontrast, cacheblack[3], cachegrey[3], cachewhite[3];
 static int cachecolorenable, cachehwgamma;
 #define BOUNDCVAR(cvar, m1, m2) c = &(cvar);f = bound(m1, c->value, m2);if (c->value != f) Cvar_SetValueQuick(c, f);
@@ -978,9 +881,6 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&vid_mouse);
 	Cvar_RegisterVariable(&gl_combine);
 	Cvar_RegisterVariable(&gl_finish);
-	Cvar_RegisterVariable(&in_pitch_min);
-	Cvar_RegisterVariable(&in_pitch_max);
-	Cvar_RegisterVariable(&m_filter);
 	Cmd_AddCommand("force_centerview", Force_CenterView_f);
 	Cmd_AddCommand("vid_restart", VID_Restart_f);
 	if (gamemode == GAME_GOODVSBAD2)

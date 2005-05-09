@@ -89,10 +89,6 @@ void Sys_SendKeyEvents(void)
 {
 }
 
-void IN_Commands(void)
-{
-}
-
 void IN_Move(void)
 {
 }

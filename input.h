@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -30,22 +30,8 @@ extern float in_mouse_x, in_mouse_y;
 
 //enum {input_game,input_message,input_menu} input_dest;
 
-void IN_Commands (void);
-// oportunity for devices to stick commands on the script buffer
-
-// AK added to allow mouse movement for the menu
-void IN_ProcessMove(void);
-
 void IN_Move (void);
 // add additional movement on top of the keyboard move cmd
-
-void IN_PreMove(void);
-void IN_PostMove(void);
-
-void IN_Mouse(float mx, float my);
-
-void IN_ClearStates (void);
-// restores all button and position states to defaults
 
 #endif
 
