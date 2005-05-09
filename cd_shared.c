@@ -213,6 +213,8 @@ static void CD_f (void)
 	int ret;
 	int n;
 
+	Host_StartVideo();
+
 	if (Cmd_Argc() < 2)
 		return;
 

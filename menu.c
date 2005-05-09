@@ -4790,6 +4790,7 @@ void MR_Restart(void)
 
 void Call_MR_ToggleMenu_f(void)
 {
+	Host_StartVideo();
 	if(MR_ToggleMenu_f)
 		MR_ToggleMenu_f();
 }

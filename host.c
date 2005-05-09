@@ -184,7 +184,7 @@ void Host_ServerOptions (void)
 			else
 			{
 				// default players in some games, singleplayer in most
-				if (gamemode != GAME_TRANSFUSION && gamemode != GAME_GOODVSBAD2 && gamemode != GAME_NEXUIZ && gamemode != GAME_BATTLEMECH)
+				if (gamemode != GAME_GOODVSBAD2 && gamemode != GAME_NEXUIZ && gamemode != GAME_BATTLEMECH)
 					svs.maxclients = 1;
 			}
 		}
@@ -998,23 +998,23 @@ void Host_Init (void)
 	// set up the default startmap_sp and startmap_dm aliases (mods can
 	// override these) and then execute the quake.rc startup script
 	if (gamemode == GAME_NEHAHRA)
-		Cbuf_InsertText("alias startmap_sp \"map nehstart\"\nalias startmap_dm \"map nehstart\"\nexec quake.rc\n");
+		Cbuf_AddText("alias startmap_sp \"map nehstart\"\nalias startmap_dm \"map nehstart\"\nexec quake.rc\n");
 	else if (gamemode == GAME_TRANSFUSION)
-		Cbuf_InsertText("alias startmap_sp \"map e1m1\"\n""alias startmap_dm \"map bb1\"\nexec quake.rc\n");
+		Cbuf_AddText("alias startmap_sp \"map e1m1\"\n""alias startmap_dm \"map bb1\"\nexec quake.rc\n");
 	else if (gamemode == GAME_NEXUIZ)
-		Cbuf_InsertText("alias startmap_sp \"map nexdm01\"\nalias startmap_dm \"map nexdm01\"\nexec quake.rc\n");
+		Cbuf_AddText("alias startmap_sp \"map nexdm01\"\nalias startmap_dm \"map nexdm01\"\nexec quake.rc\n");
 	else if (gamemode == GAME_TEU)
-		Cbuf_InsertText("alias startmap_sp \"map start\"\nalias startmap_dm \"map start\"\nexec teu.rc\n");
+		Cbuf_AddText("alias startmap_sp \"map start\"\nalias startmap_dm \"map start\"\nexec teu.rc\n");
 	else
-		Cbuf_InsertText("alias startmap_sp \"map start\"\nalias startmap_dm \"map start\"\nexec quake.rc\n");
+		Cbuf_AddText("alias startmap_sp \"map start\"\nalias startmap_dm \"map start\"\nexec quake.rc\n");
+	Cbuf_Execute();
 
 	// if stuffcmds wasn't run, then quake.rc is probably missing, use default
 	if (!host_stuffcmdsrun)
-		Cbuf_InsertText("exec default.cfg\nexec config.cfg\nexec autoexec.cfg\nstuffcmds\nstartdemos\n");
-
-	Cbuf_Execute();
-	Cbuf_Execute();
-	Cbuf_Execute();
+	{
+		Cbuf_AddText("exec default.cfg\nexec config.cfg\nexec autoexec.cfg\nstuffcmds\n");
+		Cbuf_Execute();
+	}
 
 	// save console log up to this point to log_file if it was set by configs
 	Log_Start();
@@ -1025,25 +1025,23 @@ void Host_Init (void)
 	if (i && i + 1 < com_argc)
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
-		Cbuf_InsertText(va("timedemo %s\n", com_argv[i + 1]));
+		Cbuf_AddText(va("timedemo %s\n", com_argv[i + 1]));
 		Cbuf_Execute();
 	}
 
 	if (cls.state == ca_dedicated || COM_CheckParm("-listen"))
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
-		Cbuf_InsertText("startmap_dm\n");
+		Cbuf_AddText("startmap_dm\n");
 		Cbuf_Execute();
 	}
 
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
-		Cbuf_InsertText("togglemenu\n");
 		if (gamemode == GAME_NEXUIZ)
-		{
-			Cbuf_InsertText("playvideo logo\n");
-			Cbuf_InsertText("cd loop 1\n");
-		}
+			Cbuf_AddText("togglemenu\nplayvideo logo\ncd loop 1\n");
+		else
+			Cbuf_AddText("togglemenu\n");
 		Cbuf_Execute();
 	}
 
