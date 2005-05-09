@@ -1121,12 +1121,12 @@ void R_Shadow_Stage_StencilShadowVolumes(void)
 		r_shadowstage = R_SHADOWSTAGE_STENCILTWOSIDE;
 		qglDisable(GL_CULL_FACE);
 		qglEnable(GL_STENCIL_TEST_TWO_SIDE_EXT);
-		qglActiveStencilFaceEXT(GL_FRONT); // quake is backwards, this is back faces
-		qglStencilMask(~0);
-		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
 		qglActiveStencilFaceEXT(GL_BACK); // quake is backwards, this is front faces
 		qglStencilMask(~0);
 		qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
+		qglActiveStencilFaceEXT(GL_FRONT); // quake is backwards, this is back faces
+		qglStencilMask(~0);
+		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
 	}
 	else
 	{
