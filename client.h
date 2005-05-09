@@ -735,7 +735,7 @@ void CL_ExpandEntities(int num);
 
 int  CL_ReadFromServer (void);
 void CL_WriteToServer (void);
-void CL_BaseMove (void);
+void CL_Move (void);
 
 
 float CL_KeyState (kbutton_t *key);

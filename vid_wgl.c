@@ -37,19 +37,19 @@ extern HINSTANCE global_hInstance;
 // Tell startup code that we have a client
 int cl_available = true;
 
-int (WINAPI *qwglChoosePixelFormat)(HDC, CONST PIXELFORMATDESCRIPTOR *);
-int (WINAPI *qwglDescribePixelFormat)(HDC, int, UINT, LPPIXELFORMATDESCRIPTOR);
-//int (WINAPI *qwglGetPixelFormat)(HDC);
-BOOL (WINAPI *qwglSetPixelFormat)(HDC, int, CONST PIXELFORMATDESCRIPTOR *);
-BOOL (WINAPI *qwglSwapBuffers)(HDC);
-HGLRC (WINAPI *qwglCreateContext)(HDC);
-BOOL (WINAPI *qwglDeleteContext)(HGLRC);
-HGLRC (WINAPI *qwglGetCurrentContext)(VOID);
-HDC (WINAPI *qwglGetCurrentDC)(VOID);
-PROC (WINAPI *qwglGetProcAddress)(LPCSTR);
-BOOL (WINAPI *qwglMakeCurrent)(HDC, HGLRC);
-BOOL (WINAPI *qwglSwapIntervalEXT)(int interval);
-const char *(WINAPI *qwglGetExtensionsStringARB)(HDC hdc);
+static int (WINAPI *qwglChoosePixelFormat)(HDC, CONST PIXELFORMATDESCRIPTOR *);
+static int (WINAPI *qwglDescribePixelFormat)(HDC, int, UINT, LPPIXELFORMATDESCRIPTOR);
+//static int (WINAPI *qwglGetPixelFormat)(HDC);
+static BOOL (WINAPI *qwglSetPixelFormat)(HDC, int, CONST PIXELFORMATDESCRIPTOR *);
+static BOOL (WINAPI *qwglSwapBuffers)(HDC);
+static HGLRC (WINAPI *qwglCreateContext)(HDC);
+static BOOL (WINAPI *qwglDeleteContext)(HGLRC);
+static HGLRC (WINAPI *qwglGetCurrentContext)(VOID);
+static HDC (WINAPI *qwglGetCurrentDC)(VOID);
+static PROC (WINAPI *qwglGetProcAddress)(LPCSTR);
+static BOOL (WINAPI *qwglMakeCurrent)(HDC, HGLRC);
+static BOOL (WINAPI *qwglSwapIntervalEXT)(int interval);
+static const char *(WINAPI *qwglGetExtensionsStringARB)(HDC hdc);
 
 static dllfunction_t wglfuncs[] =
 {
@@ -82,7 +82,9 @@ static qboolean vid_usemouse = false;
 static qboolean vid_usevsync = false;
 static HICON hIcon;
 
+// used by cd_win.c and snd_win.c
 HWND mainwindow;
+
 static HDC	 baseDC;
 static HGLRC baseRC;
 
@@ -100,17 +102,12 @@ static qboolean vid_isfullscreen;
 
 //====================================
 
-int window_x, window_y, window_width, window_height;
-int window_center_x, window_center_y;
+static int window_x, window_y, window_width, window_height;
+static int window_center_x, window_center_y;
 
-void IN_ShowMouse (void);
-void IN_DeactivateMouse (void);
-void IN_HideMouse (void);
-void IN_ActivateMouse (void);
-void IN_MouseEvent (int mstate);
-void IN_UpdateClipCursor (void);
+static void IN_Activate (qboolean grab);
 
-qboolean mouseinitialized;
+static qboolean mouseinitialized;
 static qboolean dinput;
 
 // input code
@@ -120,8 +117,7 @@ static qboolean dinput;
 #define DINPUT_BUFFERSIZE           16
 #define iDirectInputCreate(a,b,c,d)	pDirectInputCreate(a,b,c,d)
 
-HRESULT (WINAPI *pDirectInputCreate)(HINSTANCE hinst, DWORD dwVersion,
-	LPDIRECTINPUT * lplpDirectInput, LPUNKNOWN punkOuter);
+static HRESULT (WINAPI *pDirectInputCreate)(HINSTANCE hinst, DWORD dwVersion, LPDIRECTINPUT * lplpDirectInput, LPUNKNOWN punkOuter);
 
 // LordHavoc: thanks to backslash for this support for mouse buttons 4 and 5
 /* backslash :: imouse explorer buttons */
@@ -144,19 +140,14 @@ HRESULT (WINAPI *pDirectInputCreate)(HINSTANCE hinst, DWORD dwVersion,
 /* :: backslash */
 
 // mouse variables
-int			mouse_buttons;
-int			mouse_oldbuttonstate;
-POINT		current_pos;
-int			mouse_x, mouse_y, old_mouse_x, old_mouse_y;
+static int			mouse_buttons;
+static int			mouse_oldbuttonstate;
 
 static qboolean	restore_spi;
 static int		originalmouseparms[3], newmouseparms[3] = {0, 0, 1};
 
-unsigned int uiWheelMessage;
-qboolean	mouseactive;
-//qboolean		mouseinitialized;
+static unsigned int uiWheelMessage;
 static qboolean	mouseparmsvalid, mouseactivatetoggle;
-static qboolean	mouseshowtoggle = 1;
 static qboolean	dinput_acquired;
 
 static unsigned int		mstate_di;
@@ -178,46 +169,46 @@ enum _ControlList
 	AxisNada = 0, AxisForward, AxisLook, AxisSide, AxisTurn
 };
 
-DWORD	dwAxisFlags[JOY_MAX_AXES] =
+static DWORD	dwAxisFlags[JOY_MAX_AXES] =
 {
 	JOY_RETURNX, JOY_RETURNY, JOY_RETURNZ, JOY_RETURNR, JOY_RETURNU, JOY_RETURNV
 };
 
-DWORD	dwAxisMap[JOY_MAX_AXES];
-DWORD	dwControlMap[JOY_MAX_AXES];
-PDWORD	pdwRawValue[JOY_MAX_AXES];
+static DWORD	dwAxisMap[JOY_MAX_AXES];
+static DWORD	dwControlMap[JOY_MAX_AXES];
+static PDWORD	pdwRawValue[JOY_MAX_AXES];
 
 // none of these cvars are saved over a session
 // this means that advanced controller configuration needs to be executed
 // each time.  this avoids any problems with getting back to a default usage
 // or when changing from one controller to another.  this way at least something
 // works.
-cvar_t	in_joystick = {CVAR_SAVE, "joystick","0"};
-cvar_t	joy_name = {0, "joyname", "joystick"};
-cvar_t	joy_advanced = {0, "joyadvanced", "0"};
-cvar_t	joy_advaxisx = {0, "joyadvaxisx", "0"};
-cvar_t	joy_advaxisy = {0, "joyadvaxisy", "0"};
-cvar_t	joy_advaxisz = {0, "joyadvaxisz", "0"};
-cvar_t	joy_advaxisr = {0, "joyadvaxisr", "0"};
-cvar_t	joy_advaxisu = {0, "joyadvaxisu", "0"};
-cvar_t	joy_advaxisv = {0, "joyadvaxisv", "0"};
-cvar_t	joy_forwardthreshold = {0, "joyforwardthreshold", "0.15"};
-cvar_t	joy_sidethreshold = {0, "joysidethreshold", "0.15"};
-cvar_t	joy_pitchthreshold = {0, "joypitchthreshold", "0.15"};
-cvar_t	joy_yawthreshold = {0, "joyyawthreshold", "0.15"};
-cvar_t	joy_forwardsensitivity = {0, "joyforwardsensitivity", "-1.0"};
-cvar_t	joy_sidesensitivity = {0, "joysidesensitivity", "-1.0"};
-cvar_t	joy_pitchsensitivity = {0, "joypitchsensitivity", "1.0"};
-cvar_t	joy_yawsensitivity = {0, "joyyawsensitivity", "-1.0"};
-cvar_t	joy_wwhack1 = {0, "joywwhack1", "0.0"};
-cvar_t	joy_wwhack2 = {0, "joywwhack2", "0.0"};
+static cvar_t	in_joystick = {CVAR_SAVE, "joystick","0"};
+static cvar_t	joy_name = {0, "joyname", "joystick"};
+static cvar_t	joy_advanced = {0, "joyadvanced", "0"};
+static cvar_t	joy_advaxisx = {0, "joyadvaxisx", "0"};
+static cvar_t	joy_advaxisy = {0, "joyadvaxisy", "0"};
+static cvar_t	joy_advaxisz = {0, "joyadvaxisz", "0"};
+static cvar_t	joy_advaxisr = {0, "joyadvaxisr", "0"};
+static cvar_t	joy_advaxisu = {0, "joyadvaxisu", "0"};
+static cvar_t	joy_advaxisv = {0, "joyadvaxisv", "0"};
+static cvar_t	joy_forwardthreshold = {0, "joyforwardthreshold", "0.15"};
+static cvar_t	joy_sidethreshold = {0, "joysidethreshold", "0.15"};
+static cvar_t	joy_pitchthreshold = {0, "joypitchthreshold", "0.15"};
+static cvar_t	joy_yawthreshold = {0, "joyyawthreshold", "0.15"};
+static cvar_t	joy_forwardsensitivity = {0, "joyforwardsensitivity", "-1.0"};
+static cvar_t	joy_sidesensitivity = {0, "joysidesensitivity", "-1.0"};
+static cvar_t	joy_pitchsensitivity = {0, "joypitchsensitivity", "1.0"};
+static cvar_t	joy_yawsensitivity = {0, "joyyawsensitivity", "-1.0"};
+static cvar_t	joy_wwhack1 = {0, "joywwhack1", "0.0"};
+static cvar_t	joy_wwhack2 = {0, "joywwhack2", "0.0"};
 
-qboolean	joy_avail, joy_advancedinit, joy_haspov;
-DWORD		joy_oldbuttonstate, joy_oldpovstate;
+static qboolean	joy_avail, joy_advancedinit, joy_haspov;
+static DWORD		joy_oldbuttonstate, joy_oldpovstate;
 
-int			joy_id;
-DWORD		joy_flags;
-DWORD		joy_numbuttons;
+static int			joy_id;
+static DWORD		joy_flags;
+static DWORD		joy_numbuttons;
 
 static LPDIRECTINPUT		g_pdi;
 static LPDIRECTINPUTDEVICE	g_pMouse;
@@ -260,22 +251,22 @@ static DIDATAFORMAT	df = {
 };
 
 // forward-referenced functions
-void IN_StartupJoystick (void);
-void Joy_AdvancedUpdate_f (void);
-void IN_JoyMove (void);
-void IN_StartupMouse (void);
+static void IN_StartupJoystick (void);
+static void Joy_AdvancedUpdate_f (void);
+static void IN_JoyMove (void);
+static void IN_StartupMouse (void);
 
 /*
 ================
 VID_UpdateWindowStatus
 ================
 */
-void VID_UpdateWindowStatus (void)
+static void VID_UpdateWindowStatus (void)
 {
 	window_center_x = window_x + window_width / 2;
 	window_center_y = window_y + window_height / 2;
 
-	if (mouseinitialized && mouseactive && !dinput)
+	if (mouseinitialized && vid_usingmouse && !dinput_acquired)
 	{
 		RECT window_rect;
 		window_rect.left = window_x;
@@ -325,8 +316,7 @@ void VID_Finish (void)
 		if (!vid_usingmouse)
 		{
 			vid_usingmouse = true;
-			IN_ActivateMouse ();
-			IN_HideMouse();
+			IN_Activate (true);
 		}
 	}
 	else
@@ -334,8 +324,7 @@ void VID_Finish (void)
 		if (vid_usingmouse)
 		{
 			vid_usingmouse = false;
-			IN_DeactivateMouse ();
-			IN_ShowMouse();
+			IN_Activate (false);
 		}
 	}
 
@@ -352,7 +341,7 @@ void VID_Finish (void)
 
 
 
-qbyte scantokey[128] =
+static qbyte scantokey[128] =
 {
 //  0           1       2    3     4     5       6       7      8         9      A          B           C       D           E           F
 	0          ,27    ,'1'  ,'2'  ,'3'  ,'4'    ,'5'    ,'6'   ,'7'      ,'8'   ,'9'       ,'0'        ,'-'   ,'='         ,K_BACKSPACE,9    ,//0
@@ -446,10 +435,11 @@ MAIN WINDOW
 ClearAllStates
 ================
 */
-void ClearAllStates (void)
+static void ClearAllStates (void)
 {
 	Key_ClearStates ();
-	IN_ClearStates ();
+	if (vid_usingmouse)
+		mouse_oldbuttonstate = 0;
 }
 
 void AppActivate(BOOL fActive, BOOL minimize)
@@ -500,8 +490,7 @@ void AppActivate(BOOL fActive, BOOL minimize)
 	if (!fActive)
 	{
 		vid_usingmouse = false;
-		IN_DeactivateMouse ();
-		IN_ShowMouse ();
+		IN_Activate (false);
 		if (vid_isfullscreen)
 		{
 			ChangeDisplaySettings (NULL, 0);
@@ -537,8 +526,6 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 	char	asciichar[4];
 	int		vkey;
 	qboolean down = false;
-
-	extern unsigned int uiWheelMessage;
 
 	if ( uMsg == uiWheelMessage )
 		uMsg = WM_MOUSEWHEEL;
@@ -619,7 +606,15 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 			if (wParam & MK_XBUTTON7)
 				temp |= 512;
 
-			IN_MouseEvent (temp);
+			if (vid_usingmouse && !dinput_acquired)
+			{
+				// perform button actions
+				int i;
+				for (i=0 ; i<mouse_buttons ; i++)
+					if ((temp ^ mouse_oldbuttonstate) & (1<<i))
+						Key_Event (K_MOUSE1 + i, 0, (temp & (1<<i)) != 0);
+				mouse_oldbuttonstate = temp;
+			}
 
 			break;
 
@@ -1039,60 +1034,21 @@ void VID_Shutdown (void)
 
 /*
 ===========
-IN_ShowMouse
+IN_Activate
 ===========
 */
-void IN_ShowMouse (void)
+static void IN_Activate (qboolean grab)
 {
-	if (!mouseshowtoggle)
+	if (!mouseinitialized)
+		return;
+
+	if (grab)
 	{
-		ShowCursor (true);
-		mouseshowtoggle = 1;
-	}
-}
-
-
-/*
-===========
-IN_HideMouse
-===========
-*/
-void IN_HideMouse (void)
-{
-	if (mouseshowtoggle)
-	{
-		ShowCursor (false);
-		mouseshowtoggle = 0;
-	}
-}
-
-
-/*
-===========
-IN_ActivateMouse
-===========
-*/
-void IN_ActivateMouse (void)
-{
-
-	mouseactivatetoggle = true;
-
-	if (mouseinitialized)
-	{
-		if (dinput)
+		mouseactivatetoggle = true;
+		if (dinput && g_pMouse)
 		{
-			if (g_pMouse)
-			{
-				if (!dinput_acquired)
-				{
-					IDirectInputDevice_Acquire(g_pMouse);
-					dinput_acquired = true;
-				}
-			}
-			else
-			{
-				return;
-			}
+			IDirectInputDevice_Acquire(g_pMouse);
+			dinput_acquired = true;
 		}
 		else
 		{
@@ -1101,53 +1057,32 @@ void IN_ActivateMouse (void)
 			window_rect.top = window_y;
 			window_rect.right = window_x + window_width;
 			window_rect.bottom = window_y + window_height;
-
 			if (mouseparmsvalid)
 				restore_spi = SystemParametersInfo (SPI_SETMOUSE, 0, newmouseparms, 0);
-
 			SetCursorPos (window_center_x, window_center_y);
 			SetCapture (mainwindow);
 			ClipCursor (&window_rect);
 		}
-
-		mouseactive = true;
+		vid_usingmouse = true;
+		ShowCursor (false);
 	}
-}
-
-
-/*
-===========
-IN_DeactivateMouse
-===========
-*/
-void IN_DeactivateMouse (void)
-{
-
-	mouseactivatetoggle = false;
-
-	if (mouseinitialized)
+	else
 	{
-		if (dinput)
+		mouseactivatetoggle = false;
+		if (dinput_acquired)
 		{
-			if (g_pMouse)
-			{
-				if (dinput_acquired)
-				{
-					IDirectInputDevice_Unacquire(g_pMouse);
-					dinput_acquired = false;
-				}
-			}
+			IDirectInputDevice_Unacquire(g_pMouse);
+			dinput_acquired = false;
 		}
 		else
 		{
 			if (restore_spi)
 				SystemParametersInfo (SPI_SETMOUSE, 0, originalmouseparms, 0);
-
 			ClipCursor (NULL);
 			ReleaseCapture ();
 		}
-
-		mouseactive = false;
+		vid_usingmouse = false;
+		ShowCursor (true);
 	}
 }
 
@@ -1157,7 +1092,7 @@ void IN_DeactivateMouse (void)
 IN_InitDInput
 ===========
 */
-qboolean IN_InitDInput (void)
+static qboolean IN_InitDInput (void)
 {
     HRESULT		hr;
 	DIPROPDWORD	dipdw = {
@@ -1248,7 +1183,7 @@ qboolean IN_InitDInput (void)
 IN_StartupMouse
 ===========
 */
-void IN_StartupMouse (void)
+static void IN_StartupMouse (void)
 {
 	if (COM_CheckParm ("-nomouse") || COM_CheckParm("-safe"))
 		return;
@@ -1257,43 +1192,34 @@ void IN_StartupMouse (void)
 
 // COMMANDLINEOPTION: Windows Input: -dinput enables DirectInput for mouse/joystick input
 	if (COM_CheckParm ("-dinput"))
-	{
 		dinput = IN_InitDInput ();
 
-		if (dinput)
-		{
-			Con_Print("DirectInput initialized\n");
-		}
-		else
-		{
-			Con_Print("DirectInput not initialized\n");
-		}
-	}
+	if (dinput)
+		Con_Print("DirectInput initialized\n");
+	else
+		Con_Print("DirectInput not initialized\n");
 
-	if (!dinput)
+	mouseparmsvalid = SystemParametersInfo (SPI_GETMOUSE, 0, originalmouseparms, 0);
+
+	if (mouseparmsvalid)
 	{
-		mouseparmsvalid = SystemParametersInfo (SPI_GETMOUSE, 0, originalmouseparms, 0);
-
-		if (mouseparmsvalid)
-		{
 // COMMANDLINEOPTION: Windows GDI Input: -noforcemspd disables setting of mouse speed (not used with -dinput, windows only)
-			if ( COM_CheckParm ("-noforcemspd") )
-				newmouseparms[2] = originalmouseparms[2];
+		if ( COM_CheckParm ("-noforcemspd") )
+			newmouseparms[2] = originalmouseparms[2];
 
 // COMMANDLINEOPTION: Windows GDI Input: -noforcemaccel disables setting of mouse acceleration (not used with -dinput, windows only)
-			if ( COM_CheckParm ("-noforcemaccel") )
-			{
-				newmouseparms[0] = originalmouseparms[0];
-				newmouseparms[1] = originalmouseparms[1];
-			}
+		if ( COM_CheckParm ("-noforcemaccel") )
+		{
+			newmouseparms[0] = originalmouseparms[0];
+			newmouseparms[1] = originalmouseparms[1];
+		}
 
 // COMMANDLINEOPTION: Windows GDI Input: -noforcemparms disables setting of mouse parameters (not used with -dinput, windows only)
-			if ( COM_CheckParm ("-noforcemparms") )
-			{
-				newmouseparms[0] = originalmouseparms[0];
-				newmouseparms[1] = originalmouseparms[1];
-				newmouseparms[2] = originalmouseparms[2];
-			}
+		if ( COM_CheckParm ("-noforcemparms") )
+		{
+			newmouseparms[0] = originalmouseparms[0];
+			newmouseparms[1] = originalmouseparms[1];
+			newmouseparms[2] = originalmouseparms[2];
 		}
 	}
 
@@ -1302,39 +1228,7 @@ void IN_StartupMouse (void)
 // if a fullscreen video mode was set before the mouse was initialized,
 // set the mouse state appropriately
 	if (mouseactivatetoggle)
-		IN_ActivateMouse ();
-}
-
-
-/*
-===========
-IN_MouseEvent
-===========
-*/
-void IN_MouseEvent (int mstate)
-{
-	int	i;
-
-	if (mouseactive && !dinput)
-	{
-	// perform button actions
-		for (i=0 ; i<mouse_buttons ; i++)
-		{
-			if ( (mstate & (1<<i)) &&
-				!(mouse_oldbuttonstate & (1<<i)) )
-			{
-				Key_Event (K_MOUSE1 + i, 0, true);
-			}
-
-			if ( !(mstate & (1<<i)) &&
-				(mouse_oldbuttonstate & (1<<i)) )
-			{
-				Key_Event (K_MOUSE1 + i, 0, false);
-			}
-		}
-
-		mouse_oldbuttonstate = mstate;
-	}
+		IN_Activate (true);
 }
 
 
@@ -1343,23 +1237,23 @@ void IN_MouseEvent (int mstate)
 IN_MouseMove
 ===========
 */
-void IN_MouseMove (void)
+static void IN_MouseMove (void)
 {
-	int					i, mx, my;
-	DIDEVICEOBJECTDATA	od;
-	DWORD				dwElements;
-	HRESULT				hr;
+	int i, mx, my;
+	POINT current_pos;
 
-	if (!mouseactive)
+	if (!vid_usingmouse)
 	{
-		GetCursorPos (&current_pos);
+		//GetCursorPos (&current_pos);
 		//ui_mouseupdate(current_pos.x - window_x, current_pos.y - window_y);
-		IN_Mouse( 0, 0 );
 		return;
 	}
 
-	if (dinput)
+	if (dinput_acquired)
 	{
+		DIDEVICEOBJECTDATA	od;
+		DWORD				dwElements;
+		HRESULT				hr;
 		mx = 0;
 		my = 0;
 
@@ -1372,7 +1266,6 @@ void IN_MouseMove (void)
 
 			if ((hr == DIERR_INPUTLOST) || (hr == DIERR_NOTACQUIRED))
 			{
-				dinput_acquired = true;
 				IDirectInputDevice_Acquire(g_pMouse);
 				break;
 			}
@@ -1416,36 +1309,28 @@ void IN_MouseMove (void)
 			}
 		}
 
-	// perform button actions
+		// perform button actions
 		for (i=0 ; i<mouse_buttons ; i++)
-		{
-			if ( (mstate_di & (1<<i)) &&
-				!(mouse_oldbuttonstate & (1<<i)) )
-			{
-				Key_Event (K_MOUSE1 + i, 0, true);
-			}
-
-			if ( !(mstate_di & (1<<i)) &&
-				(mouse_oldbuttonstate & (1<<i)) )
-			{
-				Key_Event (K_MOUSE1 + i, 0, false);
-			}
-		}
-
+			if ((mstate_di ^ mouse_oldbuttonstate) & (1<<i))
+				Key_Event (K_MOUSE1 + i, 0, (mstate_di & (1<<i)) != 0);
 		mouse_oldbuttonstate = mstate_di;
+
+		in_mouse_x = mx;
+		in_mouse_y = my;
 	}
 	else
 	{
 		GetCursorPos (&current_pos);
 		mx = current_pos.x - window_center_x;
 		my = current_pos.y - window_center_y;
+
+		in_mouse_x = mx;
+		in_mouse_y = my;
+
+		// if the mouse has moved, force it to the center, so there's room to move
+		if (mx || my)
+			SetCursorPos (window_center_x, window_center_y);
 	}
-
-	IN_Mouse(mx, my);
-
-	// if the mouse has moved, force it to the center, so there's room to move
-	if (!dinput && (mx || my))
-		SetCursorPos (window_center_x, window_center_y);
 }
 
 
@@ -1465,23 +1350,11 @@ void IN_Move (void)
 
 
 /*
-===================
-IN_ClearStates
-===================
-*/
-void IN_ClearStates (void)
-{
-	if (mouseactive)
-		mouse_oldbuttonstate = 0;
-}
-
-
-/*
 ===============
 IN_StartupJoystick
 ===============
 */
-void IN_StartupJoystick (void)
+static void IN_StartupJoystick (void)
 {
 	int			numdevs;
 	JOYCAPS		jc;
@@ -1552,7 +1425,7 @@ void IN_StartupJoystick (void)
 RawValuePointer
 ===========
 */
-PDWORD RawValuePointer (int axis)
+static PDWORD RawValuePointer (int axis)
 {
 	switch (axis)
 	{
@@ -1578,7 +1451,7 @@ PDWORD RawValuePointer (int axis)
 Joy_AdvancedUpdate_f
 ===========
 */
-void Joy_AdvancedUpdate_f (void)
+static void Joy_AdvancedUpdate_f (void)
 {
 
 	// called once by IN_ReadJoystick and by user whenever an update is needed
@@ -1645,81 +1518,11 @@ void Joy_AdvancedUpdate_f (void)
 }
 
 /*
-===========
-IN_Commands
-===========
-*/
-void IN_Commands (void)
-{
-	int		i, key_index;
-	DWORD	buttonstate, povstate;
-
-	if (!joy_avail)
-	{
-		return;
-	}
-
-
-	// loop through the joystick buttons
-	// key a joystick event or auxillary event for higher number buttons for each state change
-	buttonstate = ji.dwButtons;
-	for (i=0 ; i < (int) joy_numbuttons ; i++)
-	{
-		if ( (buttonstate & (1<<i)) && !(joy_oldbuttonstate & (1<<i)) )
-		{
-			key_index = (i < 16) ? K_JOY1 : K_AUX1;
-			Key_Event (key_index + i, 0, true);
-		}
-
-		if ( !(buttonstate & (1<<i)) && (joy_oldbuttonstate & (1<<i)) )
-		{
-			key_index = (i < 16) ? K_JOY1 : K_AUX1;
-			Key_Event (key_index + i, 0, false);
-		}
-	}
-	joy_oldbuttonstate = buttonstate;
-
-	if (joy_haspov)
-	{
-		// convert POV information into 4 bits of state information
-		// this avoids any potential problems related to moving from one
-		// direction to another without going through the center position
-		povstate = 0;
-		if(ji.dwPOV != JOY_POVCENTERED)
-		{
-			if (ji.dwPOV == JOY_POVFORWARD)
-				povstate |= 0x01;
-			if (ji.dwPOV == JOY_POVRIGHT)
-				povstate |= 0x02;
-			if (ji.dwPOV == JOY_POVBACKWARD)
-				povstate |= 0x04;
-			if (ji.dwPOV == JOY_POVLEFT)
-				povstate |= 0x08;
-		}
-		// determine which bits have changed and key an auxillary event for each change
-		for (i=0 ; i < 4 ; i++)
-		{
-			if ( (povstate & (1<<i)) && !(joy_oldpovstate & (1<<i)) )
-			{
-				Key_Event (K_AUX29 + i, 0, true);
-			}
-
-			if ( !(povstate & (1<<i)) && (joy_oldpovstate & (1<<i)) )
-			{
-				Key_Event (K_AUX29 + i, 0, false);
-			}
-		}
-		joy_oldpovstate = povstate;
-	}
-}
-
-
-/*
 ===============
 IN_ReadJoystick
 ===============
 */
-qboolean IN_ReadJoystick (void)
+static qboolean IN_ReadJoystick (void)
 {
 
 	memset (&ji, 0, sizeof(ji));
@@ -1752,7 +1555,7 @@ qboolean IN_ReadJoystick (void)
 IN_JoyMove
 ===========
 */
-void IN_JoyMove (void)
+static void IN_JoyMove (void)
 {
 	float	speed, aspeed;
 	float	fAxisValue, fTemp;
@@ -1764,6 +1567,64 @@ void IN_JoyMove (void)
 	{
 		Joy_AdvancedUpdate_f();
 		joy_advancedinit = true;
+	}
+
+	if (joy_avail)
+	{
+		int		i, key_index;
+		DWORD	buttonstate, povstate;
+
+		// loop through the joystick buttons
+		// key a joystick event or auxillary event for higher number buttons for each state change
+		buttonstate = ji.dwButtons;
+		for (i=0 ; i < (int) joy_numbuttons ; i++)
+		{
+			if ( (buttonstate & (1<<i)) && !(joy_oldbuttonstate & (1<<i)) )
+			{
+				key_index = (i < 16) ? K_JOY1 : K_AUX1;
+				Key_Event (key_index + i, 0, true);
+			}
+
+			if ( !(buttonstate & (1<<i)) && (joy_oldbuttonstate & (1<<i)) )
+			{
+				key_index = (i < 16) ? K_JOY1 : K_AUX1;
+				Key_Event (key_index + i, 0, false);
+			}
+		}
+		joy_oldbuttonstate = buttonstate;
+
+		if (joy_haspov)
+		{
+			// convert POV information into 4 bits of state information
+			// this avoids any potential problems related to moving from one
+			// direction to another without going through the center position
+			povstate = 0;
+			if(ji.dwPOV != JOY_POVCENTERED)
+			{
+				if (ji.dwPOV == JOY_POVFORWARD)
+					povstate |= 0x01;
+				if (ji.dwPOV == JOY_POVRIGHT)
+					povstate |= 0x02;
+				if (ji.dwPOV == JOY_POVBACKWARD)
+					povstate |= 0x04;
+				if (ji.dwPOV == JOY_POVLEFT)
+					povstate |= 0x08;
+			}
+			// determine which bits have changed and key an auxillary event for each change
+			for (i=0 ; i < 4 ; i++)
+			{
+				if ( (povstate & (1<<i)) && !(joy_oldpovstate & (1<<i)) )
+				{
+					Key_Event (K_AUX29 + i, 0, true);
+				}
+
+				if ( !(povstate & (1<<i)) && (joy_oldpovstate & (1<<i)) )
+				{
+					Key_Event (K_AUX29 + i, 0, false);
+				}
+			}
+			joy_oldpovstate = povstate;
+		}
 	}
 
 	// verify joystick is available and that the user wants to use it
@@ -1949,8 +1810,7 @@ static void IN_Init(void)
 
 static void IN_Shutdown(void)
 {
-	IN_DeactivateMouse ();
-	IN_ShowMouse ();
+	IN_Activate (false);
 
 	if (g_pMouse)
 		IDirectInputDevice_Release(g_pMouse);

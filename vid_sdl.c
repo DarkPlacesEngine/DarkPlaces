@@ -202,38 +202,37 @@ static int MapKey( unsigned int sdlkey )
     return tbl_sdltoquake[ sdlkey ];
 }
 
-static void IN_Activate( void )
+static void IN_Activate( qboolean grab )
 {
-	SDL_WM_GrabInput( SDL_GRAB_ON );
-	SDL_ShowCursor( SDL_DISABLE );
-}
-
-static void IN_Deactivate( void )
-{
-	SDL_WM_GrabInput( SDL_GRAB_OFF );
-	SDL_ShowCursor( SDL_ENABLE );
-}
-
-void IN_Commands (void)
-{
-}
-
-static void IN_MouseMove (void)
-{
-	int x, y;
-
-	if( !vid_usingmouse ) {
-		IN_Mouse( 0, 0 );
-		return;
+	if (grab)
+	{
+		if (!vid_usingmouse)
+		{
+			vid_usingmouse = true;
+			SDL_WM_GrabInput( SDL_GRAB_ON );
+			SDL_ShowCursor( SDL_DISABLE );
+		}
 	}
-
-	SDL_GetRelativeMouseState( &x, &y );
-	IN_Mouse( x, y );
+	else
+	{
+		if (vid_usingmouse)
+		{
+			vid_usingmouse = false;
+			SDL_WM_GrabInput( SDL_GRAB_OFF );
+			SDL_ShowCursor( SDL_ENABLE );
+		}
+	}
 }
 
 void IN_Move( void )
 {
-	IN_MouseMove();
+	if( vid_usingmouse )
+	{
+		int x, y;
+		SDL_GetRelativeMouseState( &x, &y );
+		in_mouse_x = x;
+		in_mouse_y = y;
+	}
 }
 
 static void IN_Init( void )
@@ -507,11 +506,5 @@ void VID_Finish (void)
 	if( !vid_activewindow )
 		vid_usemouse = false;
 
-	if( vid_usemouse && !vid_usingmouse ) {
-		vid_usingmouse = true;
-		IN_Activate();
-	} else if( !vid_usemouse && vid_usingmouse ) {
-		vid_usingmouse = false;
-		IN_Deactivate();
-	}
+	IN_Activate(vid_usemouse);
 }

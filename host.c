@@ -742,11 +742,8 @@ void _Host_Frame (float time)
 	// get new key events
 	Sys_SendKeyEvents();
 
-	// allow mice or other external controllers to add commands
-	IN_Commands();
-
 	// Collect input into cmd
-	IN_ProcessMove();
+	CL_Move();
 
 	// process console commands
 	Cbuf_Execute();

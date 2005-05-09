@@ -87,7 +87,6 @@ Atom wm_delete_window_atom;
 
 
 static qboolean mouse_avail = true;
-static qboolean mouse_active = false;
 static qboolean vid_usingmouse = false;
 static qboolean vid_usemouse = false;
 static qboolean vid_usingvsync = false;
@@ -248,67 +247,75 @@ static Cursor CreateNullCursor(Display *display, Window root)
 	return cursor;
 }
 
-static void install_grabs(void)
+static void IN_Activate (qboolean grab)
 {
-	XWindowAttributes attribs_1;
-	XSetWindowAttributes attribs_2;
+	if (!mouse_avail || !vidx11_display || !win)
+		return;
 
-	XGetWindowAttributes(vidx11_display, win, &attribs_1);
-	attribs_2.event_mask = attribs_1.your_event_mask | KEY_MASK | MOUSE_MASK;
-	XChangeWindowAttributes(vidx11_display, win, CWEventMask, &attribs_2);
+	if (grab)
+	{
+		if (!vid_usingmouse)
+		{
+			XWindowAttributes attribs_1;
+			XSetWindowAttributes attribs_2;
 
-// inviso cursor
-	XDefineCursor(vidx11_display, win, CreateNullCursor(vidx11_display, win));
+			XGetWindowAttributes(vidx11_display, win, &attribs_1);
+			attribs_2.event_mask = attribs_1.your_event_mask | KEY_MASK | MOUSE_MASK;
+			XChangeWindowAttributes(vidx11_display, win, CWEventMask, &attribs_2);
 
-	XGrabPointer(vidx11_display, win,  True, 0, GrabModeAsync, GrabModeAsync, win, None, CurrentTime);
+		// inviso cursor
+			XDefineCursor(vidx11_display, win, CreateNullCursor(vidx11_display, win));
+
+			XGrabPointer(vidx11_display, win,  True, 0, GrabModeAsync, GrabModeAsync, win, None, CurrentTime);
 
 #ifndef __APPLE__
-	if (vid_dga.integer)
-	{
-		int MajorVersion, MinorVersion;
+			if (vid_dga.integer)
+			{
+				int MajorVersion, MinorVersion;
 
-		if (!XF86DGAQueryVersion(vidx11_display, &MajorVersion, &MinorVersion))
-		{
-			// unable to query, probalby not supported
-			Con_Print( "Failed to detect XF86DGA Mouse\n" );
-			vid_dga.integer = 0;
-		}
-		else
-		{
-			vid_dga.integer = 1;
-			XF86DGADirectVideo(vidx11_display, DefaultScreen(vidx11_display), XF86DGADirectMouse);
-			XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, 0, 0);
+				if (!XF86DGAQueryVersion(vidx11_display, &MajorVersion, &MinorVersion))
+				{
+					// unable to query, probably not supported
+					Con_Print( "Failed to detect XF86DGA Mouse\n" );
+					Cvar_SetValueQuick(&vid_dga, 0);
+					XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, scr_width / 2, scr_height / 2);
+				}
+				else
+				{
+					XF86DGADirectVideo(vidx11_display, DefaultScreen(vidx11_display), XF86DGADirectMouse);
+					XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, 0, 0);
+				}
+			}
+			else
+#endif
+				XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, scr_width / 2, scr_height / 2);
+
+			XGrabKeyboard(vidx11_display, win, False, GrabModeAsync, GrabModeAsync, CurrentTime);
+
+			mouse_x = mouse_y = 0;
+			ignoremousemove = true;
+			vid_usingmouse = true;
 		}
 	}
 	else
-#endif
-		XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, scr_width / 2, scr_height / 2);
-
-	XGrabKeyboard(vidx11_display, win, False, GrabModeAsync, GrabModeAsync, CurrentTime);
-
-	mouse_active = true;
-	mouse_x = mouse_y = 0;
-	ignoremousemove = true;
-}
-
-static void uninstall_grabs(void)
-{
-	if (!vidx11_display || !win)
-		return;
-
+	{
+		if (vid_usingmouse)
+		{
 #ifndef __APPLE__
-	if (vid_dga.integer == 1)
-		XF86DGADirectVideo(vidx11_display, DefaultScreen(vidx11_display), 0);
+			if (vid_dga.integer == 1)
+				XF86DGADirectVideo(vidx11_display, DefaultScreen(vidx11_display), 0);
 #endif
 
-	XUngrabPointer(vidx11_display, CurrentTime);
-	XUngrabKeyboard(vidx11_display, CurrentTime);
+			XUngrabPointer(vidx11_display, CurrentTime);
+			XUngrabKeyboard(vidx11_display, CurrentTime);
 
-// inviso cursor
-	XUndefineCursor(vidx11_display, win);
+		// inviso cursor
+			XUndefineCursor(vidx11_display, win);
 
-	mouse_active = false;
-	ignoremousemove = true;
+			ignoremousemove = true;
+			vid_usingmouse = false;
+		}
+	}
 }
 
 static void HandleEvents(void)
@@ -527,30 +534,6 @@ static void HandleEvents(void)
 	}
 }
 
-static void IN_DeactivateMouse( void )
-{
-	if (!mouse_avail || !vidx11_display || !win)
-		return;
-
-	if (mouse_active)
-	{
-		uninstall_grabs();
-		mouse_active = false;
-	}
-}
-
-static void IN_ActivateMouse( void )
-{
-	if (!mouse_avail || !vidx11_display || !win)
-		return;
-
-	if (!mouse_active)
-	{
-		install_grabs();
-		mouse_active = true;
-	}
-}
-
 static void *prjobj = NULL;
 
 static void GL_CloseLibrary(void)
@@ -598,7 +581,7 @@ void VID_Shutdown(void)
 	if (vidx11_display)
 	{
 		VID_RestoreSystemGamma();
-		uninstall_grabs();
+		IN_Activate(false);
 
 		// FIXME: glXDestroyContext here?
 		if (vid_isfullscreen)
@@ -668,22 +651,7 @@ void VID_Finish (void)
 		vid_usemouse = false;
 	if (vid_isfullscreen)
 		vid_usemouse = true;
-	if (vid_usemouse)
-	{
-		if (!vid_usingmouse)
-		{
-			vid_usingmouse = true;
-			IN_ActivateMouse ();
-		}
-	}
-	else
-	{
-		if (vid_usingmouse)
-		{
-			vid_usingmouse = false;
-			IN_DeactivateMouse ();
-		}
-	}
+	IN_Activate(vid_usemouse);
 
 	if (r_render.integer)
 	{
@@ -930,19 +898,13 @@ void Sys_SendKeyEvents(void)
 	HandleEvents();
 }
 
-/*
-===========
-IN_Commands
-===========
-*/
-void IN_Commands (void)
-{
-}
-
 void IN_Move (void)
 {
 	if (mouse_avail)
-		IN_Mouse(mouse_x, mouse_y);
+	{
+		in_mouse_x = mouse_x;
+		in_mouse_y = mouse_y;
+	}
 	mouse_x = 0;
 	mouse_y = 0;
 }
