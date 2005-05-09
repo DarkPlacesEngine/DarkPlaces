@@ -2,8 +2,6 @@
 -d (Baalz) darkplaces input bug: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
 -d (Carni) darkplaces client: rain drops should splash when they hit (Tomaz, Carni)
 -d (Elric, Vermeulen) darkplaces console: add a cvar which sets the start map name so that mods can set their own instead of using "start" or needing to modify the engine (Urre, Elric, Vermeulen)
--d (FrikaC) darkplaces console: exec is broken, it requires two newlines around it, which is breaking the prydon quake.rc (FrikaC)
--d (FrikaC) darkplaces filesystem: make FS_Open fail to open paths that contain parent directory links (/../ and such, depending on platform) to prevent console commands from doing damage, this is similar to the FRIK_FILE qc extension checking the path (FrikaC, Spike)
 -d (Gilgamesh) darkplaces protocol: add back colormod extension (FrikaC, Uffe, Gilgamesh, Wazat)
 -d (Kazashi) darkplaces client: figure out why startdemos is listed twice (once as 0 demos and once as 3 demos) in startup of id1 (Kazashi)
 -d (Kinn, romi) darkplaces WGL client: default WGL input back to GDI, the DirectInput driver is malfunctioning, losing key release messages, stuttering mouse input, and lacks mouse wheel support (Wazat, Kinn)
@@ -458,6 +456,7 @@ d darkplaces console: add "set" and "seta" commands (DP_CONSOLE_SET and DP_CONSO
 d darkplaces console: add DP_CON_SET and DP_CON_SETA extensions to describe the set and seta commands
 d darkplaces console: allow typing characters > 126 (LordHavoc)
 d darkplaces console: default to insert mode (LordHavoc)
+d darkplaces console: exec is broken, it requires two newlines around it, which is breaking the prydon quake.rc (FrikaC)
 d darkplaces console: get rid of stupid cursor right at end of line behavior in console, repeating characters from the previous edit line is just annoying (LordHavoc)
 d darkplaces console: make typing "; quit " in messagemode NOT quit the game (jitspoe)
 d darkplaces console: redesign startup script handling to scan scripts for cvars (ignoring commands) and then init video and then run the scripts for real
@@ -469,6 +468,7 @@ d darkplaces editlights: fix positioning of light editing display, it's not foll
 d darkplaces editlights: light entity loader is broken, it ends up with scrambled colors (avirox, Tomaz)
 d darkplaces editlights: r_shadow should load .ent when importing light entities
 d darkplaces filesystem: darkplaces-glx -path transfusion crashes, fix the crash even though it's not going to work anyway (Todd)
+d darkplaces filesystem: make FS_Open fail to open paths that contain parent directory links (/../ and such, depending on platform) to prevent console commands from doing damage, this is similar to the FRIK_FILE qc extension checking the path (FrikaC, Spike)
 d darkplaces game: GAME_FNIGGIUM: "data" directory (not "id1" at all)
 d darkplaces game: GAME_FNIGGIUM: 22050/44100 khz sound default
 d darkplaces game: GAME_FNIGGIUM: console doesn't show unless you manually pull it down (Sajt)
