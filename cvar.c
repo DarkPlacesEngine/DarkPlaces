@@ -411,8 +411,7 @@ qboolean	Cvar_Command (void)
 		return true;
 	}
 
-	if (developer.integer)
-		Con_Print("Cvar_Command: ");
+	Con_DPrint("Cvar_Command: ");
 
 	if (v->flags & CVAR_READONLY)
 	{
@@ -502,8 +501,7 @@ void Cvar_Set_f (void)
 		return;
 	}
 
-	if (developer.integer)
-		Con_Print("Set: ");
+	Con_DPrint("Set: ");
 
 	// all looks ok, create/modify the cvar
 	Cvar_Get(Cmd_Argv(1), Cmd_Argv(2), 0);
@@ -528,8 +526,7 @@ void Cvar_SetA_f (void)
 		return;
 	}
 
-	if (developer.integer)
-		Con_Print("SetA: ");
+	Con_DPrint("SetA: ");
 
 	// all looks ok, create/modify the cvar
 	Cvar_Get(Cmd_Argv(1), Cmd_Argv(2), CVAR_SAVE);
