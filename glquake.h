@@ -491,19 +491,6 @@ extern void (GLAPIENTRY *qglCopyTexSubImage2D)(GLenum target, GLint level, GLint
 
 extern void (GLAPIENTRY *qglPolygonOffset)(GLfloat factor, GLfloat units);
 
-#if WIN32
-extern int (WINAPI *qwglChoosePixelFormat)(HDC, CONST PIXELFORMATDESCRIPTOR *);
-extern int (WINAPI *qwglDescribePixelFormat)(HDC, int, UINT, LPPIXELFORMATDESCRIPTOR);
-//extern int (WINAPI *qwglGetPixelFormat)(HDC);
-extern BOOL (WINAPI *qwglSetPixelFormat)(HDC, int, CONST PIXELFORMATDESCRIPTOR *);
-extern BOOL (WINAPI *qwglSwapBuffers)(HDC);
-extern HGLRC (WINAPI *qwglCreateContext)(HDC);
-extern BOOL (WINAPI *qwglDeleteContext)(HGLRC);
-extern PROC (WINAPI *qwglGetProcAddress)(LPCSTR);
-extern BOOL (WINAPI *qwglMakeCurrent)(HDC, HGLRC);
-extern BOOL (WINAPI *qwglSwapIntervalEXT)(int interval);
-#endif
-
 // GL_ARB_shader_objects
 extern int gl_support_shader_objects;
 #ifndef GL_PROGRAM_OBJECT_ARB
