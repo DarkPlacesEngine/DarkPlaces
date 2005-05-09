@@ -151,7 +151,7 @@ void R_NewExplosion(vec3_t org)
 	fractalnoisequick(noise, EXPLOSIONGRID, 4); // adjust noise grid size according to explosion
 	for (i = 0, e = explosion;i < MAX_EXPLOSIONS;i++, e++)
 	{
-		if (e->alpha <= cl_explosions_alpha_end.value)
+		if (cl.time >= e->endtime)
 		{
 			e->starttime = cl.time;
 			e->endtime = cl.time + cl_explosions_lifetime.value;
