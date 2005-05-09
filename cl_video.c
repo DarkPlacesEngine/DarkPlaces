@@ -268,6 +268,8 @@ static void CL_PlayVideo_f(void)
 {
 	char name[1024];
 
+	Host_StartVideo();
+
 	if (Cmd_Argc() != 2)
 	{
 		Con_Print("usage: playvideo <videoname>\nplays video named video/<videoname>.dpv\n");
