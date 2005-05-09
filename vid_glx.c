@@ -249,12 +249,11 @@ static Cursor CreateNullCursor(Display *display, Window root)
 
 static void IN_Activate (qboolean grab)
 {
-	if (!mouse_avail || !vidx11_display || !win)
+	if (!vidx11_display)
 		return;
-
 	if (grab)
 	{
-		if (!vid_usingmouse)
+		if (!vid_usingmouse && mouse_avail && win)
 		{
 			XWindowAttributes attribs_1;
 			XSetWindowAttributes attribs_2;
@@ -302,15 +301,16 @@ static void IN_Activate (qboolean grab)
 		if (vid_usingmouse)
 		{
 #ifndef __APPLE__
-			if (vid_dga.integer == 1)
+			if (vid_dga.integer)
 				XF86DGADirectVideo(vidx11_display, DefaultScreen(vidx11_display), 0);
 #endif
 
 			XUngrabPointer(vidx11_display, CurrentTime);
 			XUngrabKeyboard(vidx11_display, CurrentTime);
 
-		// inviso cursor
-			XUndefineCursor(vidx11_display, win);
+			// inviso cursor
+			if (win)
+				XUndefineCursor(vidx11_display, win);
 
 			ignoremousemove = true;
 			vid_usingmouse = false;
@@ -576,12 +576,10 @@ void VID_Shutdown(void)
 	if (!ctx || !vidx11_display)
 		return;
 
-	vid_hidden = true;
-	vid_usingmouse = false;
 	if (vidx11_display)
 	{
-		VID_RestoreSystemGamma();
 		IN_Activate(false);
+		VID_RestoreSystemGamma();
 
 		// FIXME: glXDestroyContext here?
 		if (vid_isfullscreen)
@@ -590,6 +588,7 @@ void VID_Shutdown(void)
 			XDestroyWindow(vidx11_display, win);
 		XCloseDisplay(vidx11_display);
 	}
+	vid_hidden = true;
 	vid_isfullscreen = false;
 	vidx11_display = NULL;
 	win = 0;
