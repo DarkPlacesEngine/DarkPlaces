@@ -40,6 +40,8 @@ cvar_t sv_gameplayfix_stepdown = {0, "sv_gameplayfix_stepdown", "1"};
 cvar_t sv_gameplayfix_stepwhilejumping = {0, "sv_gameplayfix_stepwhilejumping", "1"};
 cvar_t sv_gameplayfix_swiminbmodels = {0, "sv_gameplayfix_swiminbmodels", "1"};
 cvar_t sv_gameplayfix_setmodelrealbox = {0, "sv_gameplayfix_setmodelrealbox", "1"};
+cvar_t sv_gameplayfix_blowupfallenzombies = {0, "sv_gameplayfix_blowupfallenzombies", "1"};
+cvar_t sv_gameplayfix_findradiusdistancetobox = {0, "sv_gameplayfix_findradiusdistancetobox", "1"};
 
 cvar_t sv_progs = {0, "sv_progs", "progs.dat" };
 
@@ -83,6 +85,8 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_gameplayfix_stepwhilejumping);
 	Cvar_RegisterVariable (&sv_gameplayfix_swiminbmodels);
 	Cvar_RegisterVariable (&sv_gameplayfix_setmodelrealbox);
+	Cvar_RegisterVariable (&sv_gameplayfix_blowupfallenzombies);
+	Cvar_RegisterVariable (&sv_gameplayfix_findradiusdistancetobox);
 	Cvar_RegisterVariable (&sv_protocolname);
 	Cvar_RegisterVariable (&sv_ratelimitlocalplayer);
 	Cvar_RegisterVariable (&sv_maxrate);

@@ -1039,12 +1039,12 @@ void PF_findradius (void)
 	radius = G_FLOAT(OFS_PARM1);
 	radius2 = radius * radius;
 
-	mins[0] = org[0] - radius;
-	mins[1] = org[1] - radius;
-	mins[2] = org[2] - radius;
-	maxs[0] = org[0] + radius;
-	maxs[1] = org[1] + radius;
-	maxs[2] = org[2] + radius;
+	mins[0] = org[0] - (radius + 1);
+	mins[1] = org[1] - (radius + 1);
+	mins[2] = org[2] - (radius + 1);
+	maxs[0] = org[0] + (radius + 1);
+	maxs[1] = org[1] + (radius + 1);
+	maxs[2] = org[2] + (radius + 1);
 	numtouchedicts = SV_EntitiesInBox(mins, maxs, MAX_EDICTS, touchedicts);
 	if (numtouchedicts > MAX_EDICTS)
 	{
@@ -1056,12 +1056,22 @@ void PF_findradius (void)
 	{
 		ent = touchedicts[i];
 		pr_xfunction->builtinsprofile++;
+		// Quake did not return non-solid entities but darkplaces does
+		// (note: this is the reason you can't blow up fallen zombies)
+		if (ent->v->solid == SOLID_NOT && !sv_gameplayfix_blowupfallenzombies.integer)
+			continue;
 		// LordHavoc: compare against bounding box rather than center so it
 		// doesn't miss large objects, and use DotProduct instead of Length
 		// for a major speedup
-		eorg[0] = (org[0] - ent->v->origin[0]) - bound(ent->v->mins[0], (org[0] - ent->v->origin[0]), ent->v->maxs[0]);
-		eorg[1] = (org[1] - ent->v->origin[1]) - bound(ent->v->mins[1], (org[1] - ent->v->origin[1]), ent->v->maxs[1]);
-		eorg[2] = (org[2] - ent->v->origin[2]) - bound(ent->v->mins[2], (org[2] - ent->v->origin[2]), ent->v->maxs[2]);
+		VectorSubtract(org, ent->v->origin, eorg);
+		if (sv_gameplayfix_findradiusdistancetobox.integer)
+		{
+			eorg[0] -= bound(ent->v->mins[0], eorg[0], ent->v->maxs[0]);
+			eorg[1] -= bound(ent->v->mins[1], eorg[1], ent->v->maxs[1]);
+			eorg[2] -= bound(ent->v->mins[2], eorg[2], ent->v->maxs[2]);
+		}
+		else
+			VectorMAMAM(1, eorg, 0.5f, ent->v->mins, 0.5f, ent->v->maxs, eorg);
 		if (DotProduct(eorg, eorg) < radius2)
 		{
 			ent->v->chain = EDICT_TO_PROG(chain);
