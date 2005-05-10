@@ -277,6 +277,8 @@ extern cvar_t sv_gameplayfix_stepdown;
 extern cvar_t sv_gameplayfix_stepwhilejumping;
 extern cvar_t sv_gameplayfix_swiminbmodels;
 extern cvar_t sv_gameplayfix_setmodelrealbox;
+extern cvar_t sv_gameplayfix_blowupfallenzombies;
+extern cvar_t sv_gameplayfix_findradiusdistancetobox;
 
 extern mempool_t *sv_mempool;
 
