@@ -222,7 +222,13 @@ static void R_BuildDetailTextures (void)
 	int i, x, y, light;
 	float vc[3], vx[3], vy[3], vn[3], lightdir[3];
 #define DETAILRESOLUTION 256
-	qbyte data[DETAILRESOLUTION][DETAILRESOLUTION][4], noise[DETAILRESOLUTION][DETAILRESOLUTION];
+	qbyte (*data)[DETAILRESOLUTION][4];
+	qbyte (*noise)[DETAILRESOLUTION];
+
+	// Allocate the buffers dynamically to avoid having such big guys on the stack
+	data = Mem_Alloc(tempmempool, DETAILRESOLUTION * sizeof(*data));
+	noise = Mem_Alloc(tempmempool, DETAILRESOLUTION * sizeof(*noise));
+
 	lightdir[0] = 0.5;
 	lightdir[1] = 1;
 	lightdir[2] = -0.25;
@@ -255,6 +261,9 @@ static void R_BuildDetailTextures (void)
 		}
 		r_texture_detailtextures[i] = R_LoadTexture2D(r_main_texturepool, va("detailtexture%i", i), DETAILRESOLUTION, DETAILRESOLUTION, &data[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_PRECACHE, NULL);
 	}
+
+	Mem_Free(noise);
+	Mem_Free(data);
 }
 
 static qbyte R_MorphDistortTexture (double y0, double y1, double y2, double y3, double morph)
