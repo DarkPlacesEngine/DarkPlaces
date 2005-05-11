@@ -47,7 +47,7 @@ cvar_t sv_nostep = {CVAR_NOTIFY, "sv_nostep","0"};
 cvar_t sv_stepheight = {CVAR_NOTIFY, "sv_stepheight", "18"};
 cvar_t sv_jumpstep = {CVAR_NOTIFY, "sv_jumpstep", "1"};
 cvar_t sv_wallfriction = {CVAR_NOTIFY, "sv_wallfriction", "1"};
-cvar_t sv_newflymove = {CVAR_NOTIFY, "sv_newflymove", "1"};
+cvar_t sv_newflymove = {CVAR_NOTIFY, "sv_newflymove", "0"};
 cvar_t sv_freezenonclients = {CVAR_NOTIFY, "sv_freezenonclients", "0"};
 
 #define	MOVE_EPSILON	0.01
@@ -228,12 +228,11 @@ Returns the clipflags if the velocity was modified (hit something solid)
 If stepnormal is not NULL, the plane normal of any vertical wall hit will be stored
 ============
 */
-// LordHavoc: increased from 5 to 20
-#define MAX_CLIP_PLANES 20
+// LordHavoc: increased from 5 to 32
+#define MAX_CLIP_PLANES 32
 int SV_FlyMove (edict_t *ent, float time, float *stepnormal)
 {
 	int blocked, bumpcount;
-	edict_t *hackongroundentity;
 	int i, j, impact, numplanes;
 	float d, time_left;
 	vec3_t dir, end, planes[MAX_CLIP_PLANES], primal_velocity, original_velocity, new_velocity;
@@ -243,8 +242,7 @@ int SV_FlyMove (edict_t *ent, float time, float *stepnormal)
 	VectorCopy(ent->v->velocity, primal_velocity);
 	numplanes = 0;
 	time_left = time;
-	hackongroundentity = NULL;
-	for (bumpcount = 0;bumpcount < 8;bumpcount++)
+	for (bumpcount = 0;bumpcount < MAX_CLIP_PLANES;bumpcount++)
 	{
 		if (!ent->v->velocity[0] && !ent->v->velocity[1] && !ent->v->velocity[2])
 			break;
@@ -317,18 +315,13 @@ int SV_FlyMove (edict_t *ent, float time, float *stepnormal)
 		if (!trace.ent)
 			Host_Error("SV_FlyMove: !trace.ent");
 
-		if ((int) ent->v->flags & FL_ONGROUND)
-		{
-			if (ent->v->groundentity == EDICT_TO_PROG(trace.ent))
-				impact = false;
-			else
-			{
-				ent->v->flags = (int)ent->v->flags & ~FL_ONGROUND;
-				impact = true;
-			}
-		}
+		if (((int) ent->v->flags & FL_ONGROUND) && ent->v->groundentity == EDICT_TO_PROG(trace.ent))
+			impact = false;
 		else
+		{
+			ent->v->flags = (int)ent->v->flags & ~FL_ONGROUND;
 			impact = true;
+		}
 
 		if (trace.plane.normal[2])
 		{
@@ -339,8 +332,6 @@ int SV_FlyMove (edict_t *ent, float time, float *stepnormal)
 				ent->v->flags = (int)ent->v->flags | FL_ONGROUND;
 				ent->v->groundentity = EDICT_TO_PROG(trace.ent);
 			}
-			else if (trace.fraction < 0.001)
-				hackongroundentity = trace.ent;
 		}
 		else
 		{
@@ -437,7 +428,7 @@ int SV_FlyMove (edict_t *ent, float time, float *stepnormal)
 			}
 		}
 
-		// if original velocity is against the original velocity,
+		// if current velocity is against the original velocity,
 		// stop dead to avoid tiny occilations in sloping corners
 		if (DotProduct(ent->v->velocity, primal_velocity) <= 0)
 		{
@@ -447,18 +438,6 @@ int SV_FlyMove (edict_t *ent, float time, float *stepnormal)
 	}
 
 	//Con_Printf("entity %i final: blocked %i velocity %f %f %f\n", ent - sv.edicts, blocked, ent->v->velocity[0], ent->v->velocity[1], ent->v->velocity[2]);
-
-	/*
-	// FIXME: this doesn't work well at all, find another solution
-	// if player is ontop of a non-onground floor and made no progress,
-	// set onground anyway (this tends to happen if standing in a wedge)
-	if (bumpcount == 8 && hackongroundentity)
-	{
-		blocked |= 1;
-		ent->v->flags = (int)ent->v->flags | FL_ONGROUND;
-		ent->v->groundentity = EDICT_TO_PROG(hackongroundentity);
-	}
-	*/
 
 	/*
 	if ((blocked & 1) == 0 && bumpcount > 1)
