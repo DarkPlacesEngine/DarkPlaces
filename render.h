@@ -27,7 +27,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 qbyte r_pvsbits[(32768+7)>>3];
 // TODO: dynamic resize according to r_refdef.worldmodel->brush.num_leafs
 qbyte r_worldleafvisible[32768];
-// TODO: dynamic resize according to r_refdef.worldmodel->brush.num_surfaces
+// TODO: dynamic resize according to r_refdef.worldmodel->num_surfaces
 qbyte r_worldsurfacevisible[262144];
 
 extern matrix4x4_t r_identitymatrix;
@@ -222,6 +222,14 @@ void R_Draw2DCrosshair(void);
 
 void R_CalcBeam_Vertex3f(float *vert, const vec3_t org1, const vec3_t org2, float width);
 void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, int depthdisable, const vec3_t origin, const vec3_t left, const vec3_t up, float scalex1, float scalex2, float scaley1, float scaley2, float cr, float cg, float cb, float ca);
+
+struct entity_render_s;
+struct texture_s;
+struct msurface_s;
+void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t);
+void R_UpdateAllTextureInfo(entity_render_t *ent);
+void R_QueueTextureSurfaceList(entity_render_t *ent, struct texture_s *texture, int texturenumsurfaces, const struct msurface_s **texturesurfacelist, const vec3_t modelorg);
+void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces);
 
 #endif
 

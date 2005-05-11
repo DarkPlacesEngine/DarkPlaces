@@ -213,47 +213,6 @@ typedef struct md3modelheader_s
 }
 md3modelheader_t;
 
-typedef struct aliasvertexboneweight_s
-{
-	unsigned int vertexindex;
-	unsigned int boneindex;
-	float origin[3];
-	float weight;
-}
-aliasvertexboneweight_t;
-
-typedef struct aliasmesh_s
-{
-	// skins to choose from (indexed by entity skin)
-	int num_skins;
-	texture_t *data_skins;
-
-	// triangles comprising the mesh
-	int num_triangles;
-	int *data_element3i;
-	int *data_neighbor3i;
-
-	// skin texcoords do not change
-	int num_vertices;
-	float *data_texcoord2f;
-
-	// morph blending, these are zero if model is skeletal
-	int num_morphframes;
-	float *data_morphvertex3f;
-
-	// base frame (frame zero typically)
-	// since most models do not animate, caching the base frame helps
-	float *data_basevertex3f;
-	float *data_basesvector3f;
-	float *data_basetvector3f;
-	float *data_basenormal3f;
-
-	// skeletal blending, these are zero if model is morph
-	int num_vertexboneweights;
-	aliasvertexboneweight_t *data_vertexboneweights;
-}
-aliasmesh_t;
-
 typedef struct aliastag_s
 {
 	char name[MD3NAME];
@@ -270,7 +229,7 @@ typedef struct aliasbone_s
 aliasbone_t;
 
 struct frameblend_s;
-void Mod_Alias_GetMesh_Vertex3f(const struct model_s *model, const struct frameblend_s *frameblend, const struct aliasmesh_s *mesh, float *out3f);
+void Mod_Alias_GetMesh_Vertex3f(const struct model_s *model, const struct frameblend_s *frameblend, const struct surfmesh_s *mesh, float *out3f);
 int Mod_Alias_GetTagMatrix(const struct model_s *model, int poseframe, int tagindex, matrix4x4_t *outmatrix);
 int Mod_Alias_GetTagIndexForName(const struct model_s *model, unsigned int skin, const char *tagname);
 

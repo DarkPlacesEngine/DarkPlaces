@@ -2658,7 +2658,7 @@ static msurface_t *getsurface(edict_t *ed, int surfacenum)
 	model = sv.models[modelindex];
 	if (surfacenum < 0 || surfacenum >= model->nummodelsurfaces)
 		return NULL;
-	return model->brush.data_surfaces + surfacenum + model->firstmodelsurface;
+	return model->data_surfaces + surfacenum + model->firstmodelsurface;
 }
 
 
@@ -2740,7 +2740,7 @@ void PF_getsurfacenearpoint(void)
 	if (modelindex < 1 || modelindex >= MAX_MODELS)
 		return;
 	model = sv.models[modelindex];
-	if (!model->brush.num_surfaces)
+	if (!model->num_surfaces)
 		return;
 
 	// FIXME: implement rotation/scaling
@@ -2749,7 +2749,7 @@ void PF_getsurfacenearpoint(void)
 	bestdist = 1000000000;
 	for (surfacenum = 0;surfacenum < model->nummodelsurfaces;surfacenum++)
 	{
-		surface = model->brush.data_surfaces + surfacenum + model->firstmodelsurface;
+		surface = model->data_surfaces + surfacenum + model->firstmodelsurface;
 		// first see if the nearest point on the surface's box is closer than the previous match
 		clipped[0] = bound(surface->mins[0], p[0], surface->maxs[0]) - p[0];
 		clipped[1] = bound(surface->mins[1], p[1], surface->maxs[1]) - p[1];

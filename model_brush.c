@@ -260,7 +260,7 @@ static void Mod_Q1BSP_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *in
 	msurface_t *surface;
 	for (surfacenum = 0, mark = leaf->firstleafsurface;surfacenum < leaf->numleafsurfaces;surfacenum++, mark++)
 	{
-		surface = info->model->brush.data_surfaces + *mark;
+		surface = info->model->data_surfaces + *mark;
 		if (surface->texture->supercontents & SUPERCONTENTS_SOLID)
 		{
 			for (k = 0;k < surface->num_triangles;k++)
@@ -827,7 +827,7 @@ loc0:
 			int i, ds, dt;
 			msurface_t *surface;
 
-			surface = r_refdef.worldmodel->brush.data_surfaces + node->firstsurface;
+			surface = r_refdef.worldmodel->data_surfaces + node->firstsurface;
 			for (i = 0;i < node->numsurfaces;i++, surface++)
 			{
 				if (!(surface->texture->basematerialflags & MATERIALFLAG_WALL) || !surface->lightmapinfo->samples)
@@ -1025,32 +1025,32 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 	qbyte *data, *mtdata;
 	char name[256];
 
-	loadmodel->brush.data_textures = NULL;
+	loadmodel->data_textures = NULL;
 
 	// add two slots for notexture walls and notexture liquids
 	if (l->filelen)
 	{
 		m = (dmiptexlump_t *)(mod_base + l->fileofs);
 		m->nummiptex = LittleLong (m->nummiptex);
-		loadmodel->brush.num_textures = m->nummiptex + 2;
+		loadmodel->num_textures = m->nummiptex + 2;
 	}
 	else
 	{
 		m = NULL;
-		loadmodel->brush.num_textures = 2;
+		loadmodel->num_textures = 2;
 	}
 
-	loadmodel->brush.data_textures = Mem_Alloc(loadmodel->mempool, loadmodel->brush.num_textures * sizeof(texture_t));
+	loadmodel->data_textures = Mem_Alloc(loadmodel->mempool, loadmodel->num_textures * sizeof(texture_t));
 
 	// fill out all slots with notexture
-	for (i = 0, tx = loadmodel->brush.data_textures;i < loadmodel->brush.num_textures;i++, tx++)
+	for (i = 0, tx = loadmodel->data_textures;i < loadmodel->num_textures;i++, tx++)
 	{
 		strcpy(tx->name, "NO TEXTURE FOUND");
 		tx->width = 16;
 		tx->height = 16;
 		tx->skin.base = r_texture_notexture;
 		tx->basematerialflags = 0;
-		if (i == loadmodel->brush.num_textures - 1)
+		if (i == loadmodel->num_textures - 1)
 		{
 			tx->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES;
 			tx->supercontents = SUPERCONTENTS_WATER;
@@ -1104,7 +1104,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			if (name[j] >= 'A' && name[j] <= 'Z')
 				name[j] += 'a' - 'A';
 
-		tx = loadmodel->brush.data_textures + i;
+		tx = loadmodel->data_textures + i;
 		strcpy(tx->name, name);
 		tx->width = mtwidth;
 		tx->height = mtheight;
@@ -1217,7 +1217,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 	// sequence the animations
 	for (i = 0;i < m->nummiptex;i++)
 	{
-		tx = loadmodel->brush.data_textures + i;
+		tx = loadmodel->data_textures + i;
 		if (!tx || tx->name[0] != '+' || tx->name[1] == 0 || tx->name[2] == 0)
 			continue;
 		if (tx->anim_total[0] || tx->anim_total[1])
@@ -1229,7 +1229,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 
 		for (j = i;j < m->nummiptex;j++)
 		{
-			tx2 = loadmodel->brush.data_textures + j;
+			tx2 = loadmodel->data_textures + j;
 			if (!tx2 || tx2->name[0] != '+' || strcmp(tx2->name+2, tx->name+2))
 				continue;
 
@@ -1627,25 +1627,25 @@ static void Mod_Q1BSP_LoadTexinfo(lump_t *l)
 		out->flags = LittleLong(in->flags);
 
 		out->texture = NULL;
-		if (loadmodel->brush.data_textures)
+		if (loadmodel->data_textures)
 		{
-			if ((unsigned int) miptex >= (unsigned int) loadmodel->brush.num_textures)
-				Con_Printf("error in model \"%s\": invalid miptex index %i(of %i)\n", loadmodel->name, miptex, loadmodel->brush.num_textures);
+			if ((unsigned int) miptex >= (unsigned int) loadmodel->num_textures)
+				Con_Printf("error in model \"%s\": invalid miptex index %i(of %i)\n", loadmodel->name, miptex, loadmodel->num_textures);
 			else
-				out->texture = loadmodel->brush.data_textures + miptex;
+				out->texture = loadmodel->data_textures + miptex;
 		}
 		if (out->flags & TEX_SPECIAL)
 		{
 			// if texture chosen is NULL or the shader needs a lightmap,
 			// force to notexture water shader
 			if (out->texture == NULL || out->texture->basematerialflags & MATERIALFLAG_WALL)
-				out->texture = loadmodel->brush.data_textures + (loadmodel->brush.num_textures - 1);
+				out->texture = loadmodel->data_textures + (loadmodel->num_textures - 1);
 		}
 		else
 		{
 			// if texture chosen is NULL, force to notexture
 			if (out->texture == NULL)
-				out->texture = loadmodel->brush.data_textures + (loadmodel->brush.num_textures - 2);
+				out->texture = loadmodel->data_textures + (loadmodel->num_textures - 2);
 		}
 	}
 }
@@ -1813,10 +1813,10 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q1BSP_LoadFaces: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	loadmodel->brush.data_surfaces = Mem_Alloc(loadmodel->mempool, count*sizeof(msurface_t));
-	loadmodel->brush.data_surfaces_lightmapinfo = Mem_Alloc(loadmodel->mempool, count*sizeof(msurface_lightmapinfo_t));
+	loadmodel->data_surfaces = Mem_Alloc(loadmodel->mempool, count*sizeof(msurface_t));
+	loadmodel->data_surfaces_lightmapinfo = Mem_Alloc(loadmodel->mempool, count*sizeof(msurface_lightmapinfo_t));
 
-	loadmodel->brush.num_surfaces = count;
+	loadmodel->num_surfaces = count;
 
 	totalverts = 0;
 	totaltris = 0;
@@ -1835,9 +1835,9 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 
 	totalverts = 0;
 	totaltris = 0;
-	for (surfacenum = 0, in = (void *)(mod_base + l->fileofs), surface = loadmodel->brush.data_surfaces;surfacenum < count;surfacenum++, in++, surface++)
+	for (surfacenum = 0, in = (void *)(mod_base + l->fileofs), surface = loadmodel->data_surfaces;surfacenum < count;surfacenum++, in++, surface++)
 	{
-		surface->lightmapinfo = loadmodel->brush.data_surfaces_lightmapinfo + surfacenum;
+		surface->lightmapinfo = loadmodel->data_surfaces_lightmapinfo + surfacenum;
 
 		// FIXME: validate edges, texinfo, etc?
 		firstedge = LittleLong(in->firstedge);
@@ -2237,7 +2237,7 @@ static void Mod_Q1BSP_LoadLeaffaces(lump_t *l)
 	for (i = 0;i < loadmodel->brush.num_leafsurfaces;i++)
 	{
 		j = (unsigned) LittleShort(in[i]);
-		if (j >= loadmodel->brush.num_surfaces)
+		if (j >= loadmodel->num_surfaces)
 			Host_Error("Mod_Q1BSP_LoadLeaffaces: bad surface number");
 		loadmodel->brush.data_leafsurfaces[i] = j;
 	}
@@ -2776,7 +2776,7 @@ static void Mod_Q1BSP_BuildLightmapUpdateChains(mempool_t *mempool, model_t *mod
 	memset(stylecounts, 0, sizeof(stylecounts));
 	for (i = 0;i < model->nummodelsurfaces;i++)
 	{
-		surface = model->brush.data_surfaces + model->firstmodelsurface + i;
+		surface = model->data_surfaces + model->firstmodelsurface + i;
 		for (j = 0;j < MAXLIGHTMAPS;j++)
 			stylecounts[surface->lightmapinfo->styles[j]]++;
 	}
@@ -2808,7 +2808,7 @@ static void Mod_Q1BSP_BuildLightmapUpdateChains(mempool_t *mempool, model_t *mod
 	}
 	for (i = 0;i < model->nummodelsurfaces;i++)
 	{
-		surface = model->brush.data_surfaces + model->firstmodelsurface + i;
+		surface = model->data_surfaces + model->firstmodelsurface + i;
 		for (j = 0;j < MAXLIGHTMAPS;j++)
 			if (surface->lightmapinfo->styles[j] != 255)
 				*model->brushq1.light_styleupdatechains[remapstyles[surface->lightmapinfo->styles[j]]]++ = surface;
@@ -3006,13 +3006,13 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 
 	// make a single combined shadow mesh to allow optimized shadow volume creation
 	numshadowmeshtriangles = 0;
-	for (j = 0, surface = loadmodel->brush.data_surfaces;j < loadmodel->brush.num_surfaces;j++, surface++)
+	for (j = 0, surface = loadmodel->data_surfaces;j < loadmodel->num_surfaces;j++, surface++)
 	{
 		surface->num_firstshadowmeshtriangle = numshadowmeshtriangles;
 		numshadowmeshtriangles += surface->num_triangles;
 	}
 	loadmodel->brush.shadowmesh = Mod_ShadowMesh_Begin(loadmodel->mempool, numshadowmeshtriangles * 3, numshadowmeshtriangles, NULL, NULL, NULL, false, false, true);
-	for (j = 0, surface = loadmodel->brush.data_surfaces;j < loadmodel->brush.num_surfaces;j++, surface++)
+	for (j = 0, surface = loadmodel->data_surfaces;j < loadmodel->num_surfaces;j++, surface++)
 		Mod_ShadowMesh_AddMesh(loadmodel->mempool, loadmodel->brush.shadowmesh, NULL, NULL, NULL, surface->groupmesh->data_vertex3f, NULL, NULL, NULL, NULL, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 	loadmodel->brush.shadowmesh = Mod_ShadowMesh_Finish(loadmodel->mempool, loadmodel->brush.shadowmesh, false, true);
 	Mod_BuildTriangleNeighbors(loadmodel->brush.shadowmesh->neighbor3i, loadmodel->brush.shadowmesh->element3i, loadmodel->brush.shadowmesh->numtriangles);
@@ -3113,7 +3113,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 			mod->normalmaxs[0] = mod->normalmaxs[1] = mod->normalmaxs[2] = -1000000000.0f;
 			modelyawradius = 0;
 			modelradius = 0;
-			for (j = 0, surface = &mod->brush.data_surfaces[mod->firstmodelsurface];j < mod->nummodelsurfaces;j++, surface++)
+			for (j = 0, surface = &mod->data_surfaces[mod->firstmodelsurface];j < mod->nummodelsurfaces;j++, surface++)
 			{
 				// we only need to have a drawsky function if it is used(usually only on world model)
 				if (surface->texture->basematerialflags & MATERIALFLAG_SKY)
@@ -3158,7 +3158,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	//Mod_Q1BSP_ProcessLightList();
 
 	if (developer.integer)
-		Con_Printf("Some stats for q1bsp model \"%s\": %i faces, %i nodes, %i leafs, %i visleafs, %i visleafportals\n", loadmodel->name, loadmodel->brush.num_surfaces, loadmodel->brush.num_nodes, loadmodel->brush.num_leafs, mod->brushq1.submodels[i].visleafs, loadmodel->brush.num_portals);
+		Con_Printf("Some stats for q1bsp model \"%s\": %i faces, %i nodes, %i leafs, %i visleafs, %i visleafportals\n", loadmodel->name, loadmodel->num_surfaces, loadmodel->brush.num_nodes, loadmodel->brush.num_leafs, mod->brushq1.submodels[i].visleafs, loadmodel->brush.num_portals);
 }
 
 static void Mod_Q2BSP_LoadEntities(lump_t *l)
@@ -3651,8 +3651,8 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
-	loadmodel->brush.data_textures = out;
-	loadmodel->brush.num_textures = count;
+	loadmodel->data_textures = out;
+	loadmodel->num_textures = count;
 
 	for (i = 0;i < count;i++, in++, out++)
 	{
@@ -3842,7 +3842,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 						}
 						// add shader to list (shadername and flags)
 						// actually here we just poke into the texture settings
-						for (j = 0, out = loadmodel->brush.data_textures;j < loadmodel->brush.num_textures;j++, out++)
+						for (j = 0, out = loadmodel->data_textures;j < loadmodel->num_textures;j++, out++)
 						{
 							if (!strcasecmp(out->name, shadername))
 							{
@@ -3890,7 +3890,7 @@ parseerror:
 	}
 
 	c = 0;
-	for (j = 0, out = loadmodel->brush.data_textures;j < loadmodel->brush.num_textures;j++, out++)
+	for (j = 0, out = loadmodel->data_textures;j < loadmodel->num_textures;j++, out++)
 	{
 		if (out->surfaceparms == -1)
 		{
@@ -3970,9 +3970,9 @@ static void Mod_Q3BSP_LoadBrushSides(lump_t *l)
 			Host_Error("Mod_Q3BSP_LoadBrushSides: invalid planeindex %i (%i planes)\n", n, loadmodel->brush.num_planes);
 		out->plane = loadmodel->brush.data_planes + n;
 		n = LittleLong(in->textureindex);
-		if (n < 0 || n >= loadmodel->brush.num_textures)
-			Host_Error("Mod_Q3BSP_LoadBrushSides: invalid textureindex %i (%i textures)\n", n, loadmodel->brush.num_textures);
-		out->texture = loadmodel->brush.data_textures + n;
+		if (n < 0 || n >= loadmodel->num_textures)
+			Host_Error("Mod_Q3BSP_LoadBrushSides: invalid textureindex %i (%i textures)\n", n, loadmodel->num_textures);
+		out->texture = loadmodel->data_textures + n;
 	}
 }
 
@@ -4004,9 +4004,9 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 		out->firstbrushside = loadmodel->brush.data_brushsides + n;
 		out->numbrushsides = c;
 		n = LittleLong(in->textureindex);
-		if (n < 0 || n >= loadmodel->brush.num_textures)
-			Host_Error("Mod_Q3BSP_LoadBrushes: invalid textureindex %i (%i textures)\n", n, loadmodel->brush.num_textures);
-		out->texture = loadmodel->brush.data_textures + n;
+		if (n < 0 || n >= loadmodel->num_textures)
+			Host_Error("Mod_Q3BSP_LoadBrushes: invalid textureindex %i (%i textures)\n", n, loadmodel->num_textures);
+		out->texture = loadmodel->data_textures + n;
 
 		// make a list of mplane_t structs to construct a colbrush from
 		if (maxplanes < out->numbrushsides)
@@ -4155,8 +4155,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
-	loadmodel->brush.data_surfaces = out;
-	loadmodel->brush.num_surfaces = count;
+	loadmodel->data_surfaces = out;
+	loadmodel->num_surfaces = count;
 
 	i = 0;
 	for (meshnum = 0;i < count;meshnum++)
@@ -4180,12 +4180,12 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			}
 
 			n = LittleLong(in->textureindex);
-			if (n < 0 || n >= loadmodel->brush.num_textures)
+			if (n < 0 || n >= loadmodel->num_textures)
 			{
-				Con_DPrintf("Mod_Q3BSP_LoadFaces: face #%i: invalid textureindex %i (%i textures)\n", i, n, loadmodel->brush.num_textures);
+				Con_DPrintf("Mod_Q3BSP_LoadFaces: face #%i: invalid textureindex %i (%i textures)\n", i, n, loadmodel->num_textures);
 				continue;
 			}
-			out->texture = loadmodel->brush.data_textures + n;
+			out->texture = loadmodel->data_textures + n;
 			n = LittleLong(in->effectindex);
 			if (n < -1 || n >= loadmodel->brushq3.num_effects)
 			{
@@ -4499,8 +4499,8 @@ static void Mod_Q3BSP_LoadModels(lump_t *l)
 		}
 		n = LittleLong(in->firstface);
 		c = LittleLong(in->numfaces);
-		if (n < 0 || n + c > loadmodel->brush.num_surfaces)
-			Host_Error("Mod_Q3BSP_LoadModels: invalid face range %i : %i (%i faces)\n", n, n + c, loadmodel->brush.num_surfaces);
+		if (n < 0 || n + c > loadmodel->num_surfaces)
+			Host_Error("Mod_Q3BSP_LoadModels: invalid face range %i : %i (%i faces)\n", n, n + c, loadmodel->num_surfaces);
 		out->firstface = n;
 		out->numfaces = c;
 		n = LittleLong(in->firstbrush);
@@ -4554,8 +4554,8 @@ static void Mod_Q3BSP_LoadLeafFaces(lump_t *l)
 	for (i = 0;i < count;i++, in++, out++)
 	{
 		n = LittleLong(*in);
-		if (n < 0 || n >= loadmodel->brush.num_surfaces)
-			Host_Error("Mod_Q3BSP_LoadLeafFaces: invalid face index %i (%i faces)\n", n, loadmodel->brush.num_surfaces);
+		if (n < 0 || n >= loadmodel->num_surfaces)
+			Host_Error("Mod_Q3BSP_LoadLeafFaces: invalid face index %i (%i faces)\n", n, loadmodel->num_surfaces);
 		*out = n;
 	}
 }
@@ -4899,7 +4899,7 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, model_t *model,
 		// line trace the curves
 		for (i = 0;i < leaf->numleafsurfaces;i++)
 		{
-			surface = model->brush.data_surfaces + leaf->firstleafsurface[i];
+			surface = model->data_surfaces + leaf->firstleafsurface[i];
 			if (surface->num_collisiontriangles && surface->collisionmarkframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, surface->mins, surface->maxs))
 			{
 				surface->collisionmarkframe = markframe;
@@ -5279,7 +5279,7 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, model_t *model
 	{
 		for (i = 0;i < leaf->numleafsurfaces;i++)
 		{
-			surface = model->brush.data_surfaces + leaf->firstleafsurface[i];
+			surface = model->data_surfaces + leaf->firstleafsurface[i];
 			if (surface->num_collisiontriangles && surface->collisionmarkframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, surface->mins, surface->maxs))
 			{
 				surface->collisionmarkframe = markframe;
@@ -5333,7 +5333,7 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 					if (brush->colbrushf)
 						Collision_TraceLineBrushFloat(trace, boxstartmins, boxendmins, brush->colbrushf, brush->colbrushf);
 				if (mod_q3bsp_curves_collisions.integer)
-					for (i = 0, surface = model->brush.data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
+					for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
 						if (surface->num_collisiontriangles)
 							Collision_TraceLineTriangleMeshFloat(trace, boxstartmins, boxendmins, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->texture->supercontents, segmentmins, segmentmaxs);
 			}
@@ -5352,7 +5352,7 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 				if (brush->colbrushf)
 					Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, brush->colbrushf, brush->colbrushf);
 			if (mod_q3bsp_curves_collisions.integer)
-				for (i = 0, surface = model->brush.data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
+				for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
 					if (surface->num_collisiontriangles)
 						Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->texture->supercontents, segmentmins, segmentmaxs);
 		}
@@ -5497,13 +5497,13 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 
 	// make a single combined shadow mesh to allow optimized shadow volume creation
 	numshadowmeshtriangles = 0;
-	for (j = 0, surface = loadmodel->brush.data_surfaces;j < loadmodel->brush.num_surfaces;j++, surface++)
+	for (j = 0, surface = loadmodel->data_surfaces;j < loadmodel->num_surfaces;j++, surface++)
 	{
 		surface->num_firstshadowmeshtriangle = numshadowmeshtriangles;
 		numshadowmeshtriangles += surface->num_triangles;
 	}
 	loadmodel->brush.shadowmesh = Mod_ShadowMesh_Begin(loadmodel->mempool, numshadowmeshtriangles * 3, numshadowmeshtriangles, NULL, NULL, NULL, false, false, true);
-	for (j = 0, surface = loadmodel->brush.data_surfaces;j < loadmodel->brush.num_surfaces;j++, surface++)
+	for (j = 0, surface = loadmodel->data_surfaces;j < loadmodel->num_surfaces;j++, surface++)
 		Mod_ShadowMesh_AddMesh(loadmodel->mempool, loadmodel->brush.shadowmesh, NULL, NULL, NULL, surface->groupmesh->data_vertex3f, NULL, NULL, NULL, NULL, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 	loadmodel->brush.shadowmesh = Mod_ShadowMesh_Finish(loadmodel->mempool, loadmodel->brush.shadowmesh, false, true);
 	Mod_BuildTriangleNeighbors(loadmodel->brush.shadowmesh->neighbor3i, loadmodel->brush.shadowmesh->element3i, loadmodel->brush.shadowmesh->numtriangles);
@@ -5574,7 +5574,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 		mod->radius2 = modelradius * modelradius;
 
 		for (j = 0;j < mod->nummodelsurfaces;j++)
-			if (mod->brush.data_surfaces[j + mod->firstmodelsurface].texture->surfaceflags & Q3SURFACEFLAG_SKY)
+			if (mod->data_surfaces[j + mod->firstmodelsurface].texture->surfaceflags & Q3SURFACEFLAG_SKY)
 				break;
 		if (j < mod->nummodelsurfaces)
 			mod->DrawSky = R_Q1BSP_DrawSky;

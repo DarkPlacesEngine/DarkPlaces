@@ -63,7 +63,7 @@ static void mod_newmap(void)
 	{
 		if (mod_known[i].name[0])
 		{
-			for (surfacenum = 0, surface = mod_known[i].brush.data_surfaces;surfacenum < mod_known[i].brush.num_surfaces;surfacenum++, surface++)
+			for (surfacenum = 0, surface = mod_known[i].data_surfaces;surfacenum < mod_known[i].num_surfaces;surfacenum++, surface++)
 			{
 				if (surface->lightmapinfo && surface->lightmapinfo->stainsamples)
 				{

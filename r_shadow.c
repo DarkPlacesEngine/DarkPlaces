@@ -2632,7 +2632,7 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 	{
 		// this variable directs the DrawShadowVolume and DrawLight code to capture into the mesh chain instead of rendering
 		r_shadow_compilingrtlight = rtlight;
-		R_Shadow_EnlargeLeafSurfaceBuffer(model->brush.num_leafs, model->brush.num_surfaces);
+		R_Shadow_EnlargeLeafSurfaceBuffer(model->brush.num_leafs, model->num_surfaces);
 		model->GetLightInfo(ent, rtlight->shadoworigin, rtlight->radius, rtlight->cullmins, rtlight->cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces);
 		numleafpvsbytes = (model->brush.num_leafs + 7) >> 3;
 		data = Mem_Alloc(r_shadow_mempool, sizeof(int) * numleafs + numleafpvsbytes + sizeof(int) * numsurfaces);
@@ -2872,7 +2872,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	{
 		// dynamic light, world available and can receive realtime lighting
 		// calculate lit surfaces and leafs
-		R_Shadow_EnlargeLeafSurfaceBuffer(r_refdef.worldmodel->brush.num_leafs, r_refdef.worldmodel->brush.num_surfaces);
+		R_Shadow_EnlargeLeafSurfaceBuffer(r_refdef.worldmodel->brush.num_leafs, r_refdef.worldmodel->num_surfaces);
 		r_refdef.worldmodel->GetLightInfo(r_refdef.worldentity, rtlight->shadoworigin, rtlight->radius, rtlight->cullmins, rtlight->cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces);
 		leaflist = r_shadow_buffer_leaflist;
 		leafpvs = r_shadow_buffer_leafpvs;

@@ -319,7 +319,7 @@ void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, int first
 			int surfaceindex = leaf->firstleafsurface[i];
 			if (!CHECKPVSBIT(info->surfacepvs, surfaceindex))
 			{
-				msurface_t *surface = info->model->brush.data_surfaces + surfaceindex;
+				msurface_t *surface = info->model->data_surfaces + surfaceindex;
 				if (BoxesOverlap(surface->mins, surface->maxs, info->boxmins, info->boxmaxs))
 				{
 					if (info->exact)
