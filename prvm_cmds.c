@@ -2576,7 +2576,8 @@ void VM_precache_pic(void)
 
 	VM_CheckEmptyString (s);
 
-	if(!Draw_CachePic(s, false))
+	// AK Draw_CachePic is supposed to always return a valid pointer
+	if( Draw_CachePic(s, false)->tex == r_texture_notexture )
 		PRVM_G_INT(OFS_RETURN) = PRVM_SetString("");
 }
 
