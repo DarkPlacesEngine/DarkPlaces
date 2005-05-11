@@ -87,119 +87,15 @@ mplane_t;
 // probably used only on q1bsp water
 #define MATERIALFLAG_LIGHTBOTHSIDES 1024
 
-struct entity_render_s;
-struct texture_s;
-struct msurface_s;
-
-typedef struct texture_s
-{
-	// q1bsp
-	// name
-	//char name[16];
-	// size
-	unsigned int width, height;
-	// SURF_ flags
-	//unsigned int flags;
-
-	// base material flags
-	int basematerialflags;
-	// current material flags (updated each bmodel render)
-	int currentmaterialflags;
-
-	// loaded the same as model skins
-	skinframe_t skin;
-
-	// total frames in sequence and alternate sequence
-	int anim_total[2];
-	// direct pointers to each of the frames in the sequences
-	// (indexed as [alternate][frame])
-	struct texture_s *anim_frames[2][10];
-	// set if animated or there is an alternate frame set
-	// (this is an optimization in the renderer)
-	int animated;
-	// the current texture frame in animation
-	struct texture_s *currentframe;
-	// current alpha of the texture
-	float currentalpha;
-
-	// q3bsp
-	char name[Q3PATHLENGTH];
-	char firstpasstexturename[Q3PATHLENGTH]; // used only during loading
-	int surfaceflags;
-	int supercontents;
-	int surfaceparms;
-	int textureflags;
-
-	//skinframe_t skin;
-}
-texture_t;
-
 typedef struct
 {
 	unsigned short v[2];
 }
 medge_t;
 
-typedef struct
-{
-	float vecs[2][4];
-	texture_t *texture;
-	int flags;
-}
-mtexinfo_t;
-
-typedef struct msurface_lightmapinfo_s
-{
-	// texture mapping properties used by this surface
-	mtexinfo_t *texinfo; // q1bsp
-	// index into d_lightstylevalue array, 255 means not used (black)
-	qbyte styles[MAXLIGHTMAPS]; // q1bsp
-	// RGB lighting data [numstyles][height][width][3]
-	qbyte *samples; // q1bsp
-	// stain to apply on lightmap (soot/dirt/blood/whatever)
-	qbyte *stainsamples; // q1bsp
-	// the stride when building lightmaps to comply with fragment update
-	int lightmaptexturestride; // q1bsp
-	int texturemins[2]; // q1bsp
-	int extents[2]; // q1bsp
-}
-msurface_lightmapinfo_t;
-
-struct q3deffect_s;
-typedef struct msurface_s
-{
-	// bounding box for onscreen checks
-	vec3_t mins;
-	vec3_t maxs;
-	// the texture to use on the surface
-	texture_t *texture;
-	// the lightmap texture fragment to use on the rendering mesh
-	rtexture_t *lightmaptexture;
-
-	// this surface is part of this mesh
-	surfmesh_t *groupmesh;
-	int num_triangles; // number of triangles in the mesh
-	int num_firsttriangle; // first triangle in the mesh (index into groupmesh)
-	int num_vertices; // number of vertices in the mesh
-	int num_firstvertex; // first vertex in the mesh (index into groupmesh)
-
-	// shadow volume building information
-	int num_firstshadowmeshtriangle; // index into model->brush.shadowmesh
-
-	// lightmaptexture rebuild information not used in q3bsp
-	int cached_dlight; // q1bsp // forces rebuild of lightmaptexture
-	msurface_lightmapinfo_t *lightmapinfo; // q1bsp
-
-	// mesh information for collisions (only used by q3bsp curves)
-	int num_collisiontriangles; // q3bsp
-	int *data_collisionelement3i; // q3bsp
-	int num_collisionvertices; // q3bsp
-	float *data_collisionvertex3f; // q3bsp
-	struct q3deffect_s *effect; // q3bsp
-	// FIXME: collisionmarkframe should be kept in a separate array
-	int collisionmarkframe; // q3bsp // don't collide twice in one trace
-}
-msurface_t;
+struct entity_render_s;
+struct texture_s;
+struct msurface_s;
 
 typedef struct mnode_s
 {

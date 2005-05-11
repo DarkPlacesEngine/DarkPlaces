@@ -2160,9 +2160,9 @@ void PF_setattachment (void)
 					if (!strcmp(tagname, model->data_overridetagnamesforskin[(unsigned int)tagentity->v->skin].data_overridetagnames[i].name))
 						v->_float = i + 1;
 			// FIXME: use a model function to get tag info (need to handle skeletal)
-			if (v->_float == 0 && model->alias.aliasnum_tags)
-				for (i = 0;i < model->alias.aliasnum_tags;i++)
-					if (!strcmp(tagname, model->alias.aliasdata_tags[i].name))
+			if (v->_float == 0 && model->num_tags)
+				for (i = 0;i < model->num_tags;i++)
+					if (!strcmp(tagname, model->data_tags[i].name))
 						v->_float = i + 1;
 			if (v->_float == 0)
 				Con_DPrintf("setattachment(edict %i, edict %i, string \"%s\"): tried to find tag named \"%s\" on entity %i (model \"%s\") but could not find it\n", NUM_FOR_EDICT(e), NUM_FOR_EDICT(tagentity), tagname, tagname, NUM_FOR_EDICT(tagentity), model->name);

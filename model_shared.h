@@ -73,6 +73,15 @@ typedef struct overridetagnameset_s
 }
 overridetagnameset_t;
 
+typedef struct surfmeshvertexboneweight_s
+{
+	unsigned int vertexindex;
+	unsigned int boneindex;
+	float origin[3];
+	float weight;
+}
+surfmeshvertexboneweight_t;
+
 // used for mesh lists in q1bsp/q3bsp map models
 // (the surfaces reference portions of these meshes)
 typedef struct surfmesh_s
@@ -82,14 +91,23 @@ typedef struct surfmesh_s
 	int *data_neighbor3i; // int[tris*3] neighboring triangle on each edge (-1 if none)
 	int num_vertices; // number of vertices in the mesh
 	float *data_vertex3f; // float[verts*3] vertex locations
-	float *data_texcoordtexture2f; // float[verts*2] texcoords for surface texture
-	float *data_texcoordlightmap2f; // float[verts*2] texcoords for lightmap texture
-	float *data_lightmapcolor4f;
 	float *data_svector3f; // float[verts*3] direction of 'S' (right) texture axis for each vertex
 	float *data_tvector3f; // float[verts*3] direction of 'T' (down) texture axis for each vertex
 	float *data_normal3f; // float[verts*3] direction of 'R' (out) texture axis for each vertex
+	float *data_texcoordtexture2f; // float[verts*2] texcoords for surface texture
+	float *data_texcoordlightmap2f; // float[verts*2] texcoords for lightmap texture
 	float *data_texcoorddetail2f; // float[verts*2] texcoords for detail texture
+	float *data_lightmapcolor4f;
 	int *data_lightmapoffsets; // index into surface's lightmap samples for vertex lighting
+	// if a model these will be a skin list to choose from
+	int num_skins;
+	struct texture_s *data_skins;
+	// morph blending, these are zero if model is skeletal or static
+	int num_morphframes;
+	float *data_morphvertex3f;
+	// skeletal blending, these are zero if model is morph or static
+	int num_vertexboneweights;
+	surfmeshvertexboneweight_t *data_vertexboneweights;
 }
 surfmesh_t;
 
@@ -128,33 +146,115 @@ typedef struct shadowmesh_s
 }
 shadowmesh_t;
 
+typedef struct texture_s
+{
+	// q1bsp
+	// name
+	//char name[16];
+	// size
+	unsigned int width, height;
+	// SURF_ flags
+	//unsigned int flags;
+
+	// base material flags
+	int basematerialflags;
+	// current material flags (updated each bmodel render)
+	int currentmaterialflags;
+
+	// loaded the same as model skins
+	skinframe_t skin;
+
+	// total frames in sequence and alternate sequence
+	int anim_total[2];
+	// direct pointers to each of the frames in the sequences
+	// (indexed as [alternate][frame])
+	struct texture_s *anim_frames[2][10];
+	// set if animated or there is an alternate frame set
+	// (this is an optimization in the renderer)
+	int animated;
+	// the current texture frame in animation
+	struct texture_s *currentframe;
+	// current alpha of the texture
+	float currentalpha;
+
+	// q3bsp
+	char name[64];
+	char firstpasstexturename[64]; // used only during loading
+	int surfaceflags;
+	int supercontents;
+	int surfaceparms;
+	int textureflags;
+
+	//skinframe_t skin;
+}
+texture_t;
+
+typedef struct
+{
+	float vecs[2][4];
+	texture_t *texture;
+	int flags;
+}
+mtexinfo_t;
+
+typedef struct msurface_lightmapinfo_s
+{
+	// texture mapping properties used by this surface
+	mtexinfo_t *texinfo; // q1bsp
+	// index into d_lightstylevalue array, 255 means not used (black)
+	qbyte styles[MAXLIGHTMAPS]; // q1bsp
+	// RGB lighting data [numstyles][height][width][3]
+	qbyte *samples; // q1bsp
+	// stain to apply on lightmap (soot/dirt/blood/whatever)
+	qbyte *stainsamples; // q1bsp
+	// the stride when building lightmaps to comply with fragment update
+	int lightmaptexturestride; // q1bsp
+	int texturemins[2]; // q1bsp
+	int extents[2]; // q1bsp
+}
+msurface_lightmapinfo_t;
+
+struct q3deffect_s;
+typedef struct msurface_s
+{
+	// bounding box for onscreen checks
+	vec3_t mins;
+	vec3_t maxs;
+	// the texture to use on the surface
+	texture_t *texture;
+	// the lightmap texture fragment to use on the rendering mesh
+	rtexture_t *lightmaptexture;
+
+	// this surface is part of this mesh
+	surfmesh_t *groupmesh;
+	int num_triangles; // number of triangles in the mesh
+	int num_firsttriangle; // first triangle in the mesh (index into groupmesh)
+	int num_vertices; // number of vertices in the mesh
+	int num_firstvertex; // first vertex in the mesh (index into groupmesh)
+
+	// shadow volume building information
+	int num_firstshadowmeshtriangle; // index into model->brush.shadowmesh
+
+	// lightmaptexture rebuild information not used in q3bsp
+	int cached_dlight; // q1bsp // forces rebuild of lightmaptexture
+	msurface_lightmapinfo_t *lightmapinfo; // q1bsp
+
+	// mesh information for collisions (only used by q3bsp curves)
+	int num_collisiontriangles; // q3bsp
+	int *data_collisionelement3i; // q3bsp
+	int num_collisionvertices; // q3bsp
+	float *data_collisionvertex3f; // q3bsp
+	struct q3deffect_s *effect; // q3bsp
+	// FIXME: collisionmarkframe should be kept in a separate array
+	int collisionmarkframe; // q3bsp // don't collide twice in one trace
+}
+msurface_t;
 
 #include "matrixlib.h"
 
 #include "model_brush.h"
 #include "model_sprite.h"
 #include "model_alias.h"
-
-typedef struct model_alias_s
-{
-	// mdl/md2/md3/zym model formats are treated the same after loading
-
-	// the shader meshes comprising this model
-	int				aliasnum_meshes;
-	aliasmesh_t		*aliasdata_meshes;
-
-	// for md3 models
-	int				aliasnum_tags;
-	int				aliasnum_tagframes;
-	aliastag_t		*aliasdata_tags;
-
-	// for skeletal models
-	int				aliasnum_bones;
-	aliasbone_t		*aliasdata_bones;
-	int				aliasnum_poses;
-	float			*aliasdata_poses;
-}
-model_alias_t;
 
 typedef struct model_sprite_s
 {
@@ -205,13 +305,6 @@ typedef struct model_brush_s
 
 	int num_portalpoints;
 	mvertex_t *data_portalpoints;
-
-	int num_textures;
-	texture_t *data_textures;
-
-	int num_surfaces;
-	msurface_t *data_surfaces;
-	msurface_lightmapinfo_t *data_surfaces_lightmapinfo;
 
 	int num_brushes;
 	q3mbrush_t *data_brushes;
@@ -392,6 +485,23 @@ typedef struct model_s
 	int				nummodelbrushes;
 	// list of surface numbers in this (sub)model
 	int				*surfacelist;
+	// for md3 models
+	int				num_tags;
+	int				num_tagframes;
+	aliastag_t		*data_tags;
+	// for skeletal models
+	int				num_bones;
+	aliasbone_t		*data_bones;
+	int				num_poses;
+	float			*data_poses;
+	// textures of this model
+	int				num_textures;
+	texture_t		*data_textures;
+	// surfaces of this model
+	int				num_surfaces;
+	msurface_t		*data_surfaces;
+	// optional lightmapinfo data for surface lightmap updates
+	msurface_lightmapinfo_t *data_surfaces_lightmapinfo;
 	// surface meshes are merged to a smaller set of meshes to allow reduced
 	// vertex array switching, the meshes are limited to 65536 vertices each
 	// to play nice with Geforce1 hardware
@@ -409,8 +519,7 @@ typedef struct model_s
 	void(*DrawLight)(struct entity_render_s *ent, float *lightcolor, int numsurfaces, const int *surfacelist);
 	// trace a box against this model
 	void (*TraceBox)(struct model_s *model, int frame, struct trace_s *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs, int hitsupercontentsmask);
-	// fields belonging to each type of model
-	model_alias_t	alias;
+	// fields belonging to some types of model
 	model_sprite_t	sprite;
 	model_brush_t	brush;
 	model_brushq1_t	brushq1;
