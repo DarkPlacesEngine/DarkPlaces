@@ -1,9 +1,6 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
 -d (Baalz) darkplaces input bug: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
--d (Carni) darkplaces client: rain drops should splash when they hit (Tomaz, Carni)
--d (Elric, Vermeulen) darkplaces console: add a cvar which sets the start map name so that mods can set their own instead of using "start" or needing to modify the engine (Urre, Elric, Vermeulen)
 -d (Gilgamesh) darkplaces protocol: add back colormod extension (FrikaC, Uffe, Gilgamesh, Wazat)
--d (Kazashi) darkplaces client: figure out why startdemos is listed twice (once as 0 demos and once as 3 demos) in startup of id1 (Kazashi)
 -d (Kinn, romi) darkplaces WGL client: default WGL input back to GDI, the DirectInput driver is malfunctioning, losing key release messages, stuttering mouse input, and lacks mouse wheel support (Wazat, Kinn)
 -d (Mabus) darkplaces loading: test zlib support with entirely pk3'd id1 data (should crash because of zlib not being setup early enough - fix this) (Mabus)
 -d (Toddd) darkplaces client: fix gl_flashblend, it's still drawing rtdlights even when gl_flashblend is on (Toddd)
@@ -14,8 +11,11 @@
 -d (mashakos) darkplaces input: fix the mouse move when console is raised in glx, probably by ignoring the first move after console raise (mashakos)
 -d (romi) darkplaces editlights: add coronasize setting to rtlights (romi)
 -d (ryan[sg]) darkplaces loader: halflife wad loading is unable to seek to lump table (ryan[sg], Elric)
+-d (up2nogood) darkplaces console: change commandline history to clear the commandline when cursoring below the most recent history, and not allow cursoring back more than the oldest history (up2nogood)
+-d (up2nogood) darkplaces sound: make Host_Shutdown clear sound buffer to avoid looping while quitting (up2nogood)
 -f (sublim3) darkplaces protocol: fix cl_nodelta 1, it's halting updates after you move away from an area (Tomaz, sublim3)
 0 darkplaces WGL client: figure out why GDI input has stuttering problems with gl_finish 0 mode (Kinn, Urre, romi, Spike, Black)
+0 darkplaces WGL client: fix GDI input init/shutdown, it is using weird mouse acceleration and not restoring it on exit (innovati)
 0 darkplaces WGL/GLX/SDL client bug: if sound is unavailable (causing a freeze waiting for it to become available), the config is reset (SavageX)
 0 darkplaces client/server: unable to control player in TAoV multiplayer (RenegadeC)
 0 darkplaces client: GAME_NEXUIZ: implement new hud and scoreboard based on http://www.quirkybastards.net/qmods/scoreboard.jpg except with deaths instead of lives, and map name instead of "be the last one alive" and remove the time string and map string at the bottom, instead showing the hud (Vermeulen)
@@ -24,8 +24,11 @@
 0 darkplaces client: add cvars to control lighting quality to allow performance tradeoffs; r_shadow_ options for use of dot3 shading, etc
 0 darkplaces client: add scr_showbrand cvar which would show gfx/brand.tga in the left/right top/bottom corner (depending on value of scr_showbrand) all the time, this would be useful for screenshots (Spirit_of_85)
 0 darkplaces client: cvar for console text size (Vermeulen)
+0 darkplaces client: interpolate scale and alpha changes (Cheapy)
 0 darkplaces client: make envmap command work with the corrected layout
 0 darkplaces client: make server queries use a queue to avoid flooding out queries too fast (Willis)
+0 darkplaces client: occasionally when level changes on remote server, Host_Error occurs (LordHavoc)
+0 darkplaces client: occasionally when level changes on remote server, connection stops and console scrolls wildly without user intervention, and it does not print any kind of error to the terminal, vid_restart in this state causes a crash (LordHavoc)
 0 darkplaces client: reduce number of particles used, and particle limit, to save some memory (LordHavoc)
 0 darkplaces client: variable width font support using a character width file (FrikaC)
 0 darkplaces collision: Mod_Q3BSP_TraceBrush_RecursiveBSPNode can be optimized to take a clipflags parameter like R_Q3BSP_RecursiveWorldNode (Vic)
@@ -48,6 +51,7 @@
 0 darkplaces loading: check for out of bounds lump data ranges in maps (FrikaC)
 0 darkplaces loading: check for truncated sound files (FrikaC)
 0 darkplaces makefile: add icon to windows sdl builds (RenegadeC)
+0 darkplaces makefile: build nexuiz.exe using nexuiz.rc (Vermeulen)
 0 darkplaces memory: add Mem_AllocNoClear function, and use it where possible, if developer is on it should clear with random garbage
 0 darkplaces menu: add gl_picmip setting to graphics options menu, and an r_restart button (LordHavoc)
 0 darkplaces menu: move all options into a submenu so that people won't keep ignoring the other submenus
@@ -60,6 +64,7 @@
 0 darkplaces optimize: put patches on a delayed queue in q3bsp collision code so the trace is first clipped by brushes
 0 darkplaces optimize: remove the loop unrolling in Image_Resample32LerpLine and Image_Resample24LerpLine and related functions, as the loop is really too long to get much benefit, and it might even not fit in the L1 instruction cache on Pentium1 (fuh)
 0 darkplaces optimize: support GL_ATI_separate_stencil since ATI does not support GL_EXT_stencil_two_side yet (romi)
+0 darkplaces particles: make pt_rain spawning do a single downward trace and set a timer for the impact, to reduce collision load (LordHavoc)
 0 darkplaces physics: figure out why monsters keep making fall pain sound after they've landed in dpmod (Cruaich)
 0 darkplaces physics: q3bsp collisions are still glitchy, particularly gunshots hitting thin air near brushes, even with mod_q3bsp_optimizedtraceline 0, test in dpdm2r by shooting down through gaps in the architecture around the top platform (Vermeulen)
 0 darkplaces physics: test TecnoX and find the frikbot crash in SV_Physics (KrimZon)
@@ -92,7 +97,7 @@
 0 darkplaces renderer: add a vertical splash effect to raindrop splashes, not just the ring (Stribbs)
 0 darkplaces renderer: add per-entity PolygonOffset to renderer, to allow zfighting bmodel/world glitches to be fixed, this has to affect all rendering involving the entity, including light/shadow (Tomaz)
 0 darkplaces renderer: add procedural ripple distortion texture of some sort for use with envmap reflections (FrikaC)
-0 darkplaces renderer: add r_shadow_glsl_usehalffloats cvar to make make GLSL shaders use "half" data type, automatically set this if on GFFX (MauveBib)
+0 darkplaces renderer: add r_shadow_glsl_usehalffloats cvar to make make GLSL shaders use "half" data type, automatically set this if on GFFX (MauveBib, SavageX)
 0 darkplaces renderer: add r_shadow_light_polygonoffset and polygonfactor cvars for lighting polygons (Diablo-D3)
 0 darkplaces renderer: add r_shadow_realtime_world 2 mode (and update menu), make 1 only render rtlights if they came from a .rtlights file and mode 2 render them even if they were imported from the map, always render imported ones if editing mode is turned on (Willis)
 0 darkplaces renderer: add r_shadow_visiblelighting cvar which draws redish orange polygons similar to visiblevolumes for measuring number of light passes per pixel (Harbish)
@@ -104,6 +109,7 @@
 0 darkplaces renderer: build a temporary msurface_t struct in model renderer and call map surface list renderer, eliminating model surface renderer (LordHavoc)
 0 darkplaces renderer: change water distortion textures from multiple 2D textures to one 3D texture for smoother animation (Tomaz)
 0 darkplaces renderer: colormod is not affecting bmodels (Urre)
+0 darkplaces renderer: compiled rtlights aren't working in modeltest.bsp which is a one cluster map (LordHavoc)
 0 darkplaces renderer: do bloom effect before world crosshair and coronas and things (KrimZon)
 0 darkplaces renderer: don't shut off gl_combine when r_textureunits goes below 2, and don't save gl_combine either
 0 darkplaces renderer: envmap command includes the hud in the screenshots, bad!
@@ -153,6 +159,7 @@
 0 darkplaces sound: spatialization bug occurs in The Ascension of Vigil, making all player and monster sounds far to the right (RenegadeC)
 0 darkplaces sound: the new sound engine should have a cvar for random variations of pitch on sounds like in doom (RenegadeC)
 0 darkplaces: make loadimagepixels take a string of space separated path patterns to check for a file in, to cut down on the number of wasted file checks for things that never occur (Spike, Up2nOgOoD)
+0 dpmod: add knight/hell knight swords as player weapons (TimeServ)
 0 dpmod: allow selection of weapons with secondary ammo but no primary ammo, and switch away if trying to fire primary ammo you don't have (romi)
 0 dpmod: change kill awards to use DP_SV_CLIENTFLASHPIC (Tomaz)
 0 dpmod: crash when dog attacks you in dpdm2 deathmatch 7 with bots present (Zombie13)
@@ -245,8 +252,6 @@
 2 darkplaces client: 'status' command player ip logging by nickname (sublim3)
 2 darkplaces client: add a net_graph cvar which would show incoming and outgoing packet ping times, packet sizes, dropped packets, etc (avirox)
 2 darkplaces client: add cl_censor cvar which would replace 'swearing' with humorous messages (Deej)
-2 darkplaces client: add cl_netlag (ping, like cl_netlocalping_* but no range) and cl_netpacketloss/sv_netpacketloss cvars (packetloss percentage, half of this each way)
-2 darkplaces client: add color codes to console, but first need to decide on a prefix character, this can be used to color code stuff in the engine too, but the prefix must be chosen carefully not to mess up most text (Up2nOgOoD)
 2 darkplaces client: add support for stereo shutter glasses
 2 darkplaces client: cl_particles_maximum cvar (default 32768) which would change number of particles allowed at once (TheBeast)
 2 darkplaces client: decal clipping (romi, Sajt)
@@ -257,7 +262,9 @@
 2 darkplaces collision: modify Collision_ClipTrace_Line_Sphere to have a slight backoff on impact, like all other collision functions (tell TheBurningRed)
 2 darkplaces collision: use larger of model box or collision box for linking into areagrid so that bullet tracing can use the model bounding box instead of the collision one?  (Urre)
 2 darkplaces console: add a "maps" command which takes the list from "dir maps/*.bsp" and prints the actual names of all the levels according to their worldspawn.message keys (RPG)
+2 darkplaces console: expand parameters such as $cvar to use the value of the cvar, DP_CON_EXPANDCVAR (up2nogood)
 2 darkplaces console: figure out how to prevent "alias a a" - infinite loop when executed, this should be detected when executing it (Vicious)
+2 darkplaces console: make aliases given parameters insert the parameters in place of $1, $2, $* macros in the alias string, add this as DP_CON_ALIASPARAMETERS (up2nogood)
 2 darkplaces console: review the whole set of console commands and cvars carefully and identify interactions, known interactions include sequences such as +sv_cheats 1 +map e1m1, or +maxplayers 8 +deathmatch 7 +map dpdm2, but for some reason this works with the cvar after the map command, and also if you do -window it does not affect the value saved to config, because the configs are executed again after the -window, perhaps it is not executing the commandline a second time?  apparently also -dedicated without +map does not load a map automatically in transfusion (Wazat, Willis)
 2 darkplaces image: add scaling capabilities to Image_CopyMux
 2 darkplaces loader: add support for fuhquake naming of map textures (textures/start/quake.tga style)
@@ -411,8 +418,10 @@ d darkplaces client: add GAME_PRYDON mode which would make vore spike trails blu
 d darkplaces client: add a config saving command (Speeds)
 d darkplaces client: add ability to load gfx/particlefont.tga (Vermeulen, frightfan, Error)
 d darkplaces client: add back random framegroup animation sync for sprites and models so torch flames don't play in sync (Elric)
+d darkplaces client: add cl_netlag (ping, like cl_netlocalping_* but no range) and cl_netpacketloss/sv_netpacketloss cvars (packetloss percentage, half of this each way)
 d darkplaces client: add cl_particles_particleffect_bloodhack cvar to enable converting id1 blood effects to TE_BLOOD style (Alex Boveri)
 d darkplaces client: add color code support to console printing (Vermeulen)
+d darkplaces client: add color codes to console, but first need to decide on a prefix character, this can be used to color code stuff in the engine too, but the prefix must be chosen carefully not to mess up most text (Up2nOgOoD)
 d darkplaces client: add cvars for sbar alpha (background and foreground) (Throvold@uboot.com)
 d darkplaces client: add gl_polyblend cvar to control amount of viewblend effect (Andrew A. Gilevsky)
 d darkplaces client: add r_waterwarp cvar to control amount of viewwarping underwater (Andrew A. Gilevsky)
@@ -429,6 +438,7 @@ d darkplaces client: don't query servers twice in slist, only add new unique ser
 d darkplaces client: dynamic allocation of entity_t structures to save memory (LordHavoc)
 d darkplaces client: entities not being removed in quake protocol demos? (MoALTz)
 d darkplaces client: figure out why r_editlights_edit cubemap is not setting the light's cubemap name
+d darkplaces client: figure out why startdemos is listed twice (once as 0 demos and once as 3 demos) in startup of id1 (Kazashi)
 d darkplaces client: figure out why tenebrae style dlights are brilliantly blue, PLUS their color
 d darkplaces client: fix 'no such frame 0' warnings in prydon when examining wands in stores
 d darkplaces client: fix disappearing decals bug, it seems that when the smoke disappears so do the decals (Urre)
@@ -444,6 +454,7 @@ d darkplaces client: make colormap > cl.maxclients error be only a warning, to p
 d darkplaces client: make sure that menu sounds are ATTN_NONE (DarkSnow)
 d darkplaces client: make sure the join game menu shows status on a connection attempt, such as connecting or failed (RenegadeC)
 d darkplaces client: mini scoreboard (the deathmatch overlay) shows player names multiple times in some cases, fix this!
+d darkplaces client: rain drops should splash when they hit (Tomaz, Carni)
 d darkplaces client: remove GAME_NETHERWORLD cvars, as they have been added to the default.cfg (VorteX)
 d darkplaces client: reset cl.viewzoom on connect (Rick)
 d darkplaces client: send one input message per server message instead of using sys_ticrate (LordHavoc)
@@ -454,6 +465,7 @@ d darkplaces commandline: make commandline parser ignore + and - if they were no
 d darkplaces compatibility: add a sv_gameplayfix_setmodeluserealbox to allow people to use the +-16 box hack for running some mods (Spike)
 d darkplaces console: add "set" and "seta" commands (DP_CONSOLE_SET and DP_CONSOLE_SETA extensions) to create a cvar and set its value (seta makes a saved cvar) (VorteX)
 d darkplaces console: add DP_CON_SET and DP_CON_SETA extensions to describe the set and seta commands
+d darkplaces console: add a cvar which sets the start map name so that mods can set their own instead of using "start" or needing to modify the engine (Urre, Elric, Vermeulen)
 d darkplaces console: allow typing characters > 126 (LordHavoc)
 d darkplaces console: default to insert mode (LordHavoc)
 d darkplaces console: exec is broken, it requires two newlines around it, which is breaking the prydon quake.rc (FrikaC)
@@ -553,6 +565,7 @@ d darkplaces renderer: zym model rtlight support (Vermeulen)
 d darkplaces server: "edict -1" and other invalid numbers cause an error, should just complain (Supajoe)
 d darkplaces server: add DP_HALFLIFE_SPRITE extension (Urre)
 d darkplaces server: add findflag and findchainflag builtins (Sajt)
+d darkplaces server: add sv_gameplayfix_blowupfallenzombies and sv_gameplayfix_findradiusdistancetobox (LordHavoc)
 d darkplaces server: add sv_progs cvar, defaulted to "progs.dat", can be set from console or by menu to choose a mod (Black)
 d darkplaces server: client colors are being reset to "15 15" each level in prydon gate and dpmod (FrikaC, LordHavoc)
 d darkplaces server: don't use popup error window in windows dedicated server crashes (FrikaC)
