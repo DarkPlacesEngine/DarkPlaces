@@ -1067,6 +1067,9 @@ void Host_Shutdown(void)
 	}
 	isdown = true;
 
+	// be quiet while shutting down
+	S_StopAllSounds();
+
 	// disconnect client from server if active
 	CL_Disconnect();
 
