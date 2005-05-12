@@ -28,14 +28,13 @@ key up events are sent even if in console mode
 */
 
 #define MAX_INPUTLINE 256
+int			edit_line = 31;
+int			history_line = 31;
 char		key_lines[32][MAX_INPUTLINE];
 int			key_linepos;
 static int	ctrl_down = false;
 static int	key_lastpress;
 int			key_insert = true;	// insert key toggle (for editing)
-
-int         edit_line = 0;
-int         history_line = 0;
 
 keydest_t	key_dest;
 int			key_consoleactive;
@@ -312,8 +311,10 @@ Key_Console (int key, char ascii)
 		Cbuf_AddText (key_lines[edit_line]+1);	// skip the ]
 		Cbuf_AddText ("\n");
 		Con_Printf("%s\n",key_lines[edit_line]);
-		edit_line = (edit_line + 1) & 31;
+		// LordHavoc: redesigned edit_line/history_line
+		edit_line = 31;
 		history_line = edit_line;
+		memmove(key_lines[0], key_lines[1], sizeof(key_lines[0]) * edit_line);
 		key_lines[edit_line][0] = ']';
 		key_lines[edit_line][1] = 0;	// EvilTypeGuy: null terminate
 		key_linepos = 1;
@@ -384,30 +385,23 @@ Key_Console (int key, char ascii)
 
 	if (key == K_UPARROW || key == K_KP_UPARROW || (key == 'p' && keydown[K_CTRL]))
 	{
-		do
+		if (history_line > 0 && key_lines[history_line-1][1])
 		{
-			history_line = (history_line - 1) & 31;
-		} while (history_line != edit_line
-				&& !key_lines[history_line][1]);
-		if (history_line == edit_line)
-			history_line = (edit_line+1)&31;
-		strcpy(key_lines[edit_line], key_lines[history_line]);
-		key_linepos = strlen(key_lines[edit_line]);
+			history_line--;
+			strcpy(key_lines[edit_line], key_lines[history_line]);
+			key_linepos = strlen(key_lines[edit_line]);
+		}
 		return;
 	}
 
 	if (key == K_DOWNARROW || key == K_KP_DOWNARROW || (key == 'n' && keydown[K_CTRL]))
 	{
-		if (history_line == edit_line) return;
-		do
+		history_line++;
+		if (history_line >= edit_line)
 		{
-			history_line = (history_line + 1) & 31;
-		}
-		while (history_line != edit_line
-			&& !key_lines[history_line][1]);
-		if (history_line == edit_line)
-		{
+			history_line = edit_line;
 			key_lines[edit_line][0] = ']';
+			key_lines[edit_line][1] = 0;
 			key_linepos = 1;
 		}
 		else
