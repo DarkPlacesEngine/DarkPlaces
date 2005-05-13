@@ -24,6 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 dprograms_t		*progs;
 mfunction_t		*pr_functions;
 char			*pr_strings;
+int				pr_stringssize;
 ddef_t			*pr_fielddefs;
 ddef_t			*pr_globaldefs;
 dstatement_t	*pr_statements;
@@ -31,6 +32,10 @@ globalvars_t	*pr_global_struct;
 float			*pr_globals;			// same as pr_global_struct
 int				pr_edict_size;			// in bytes
 int				pr_edictareasize;		// LordHavoc: in bytes
+
+int				pr_maxknownstrings;
+int				pr_numknownstrings;
+const char		**pr_knownstrings;
 
 unsigned short	pr_crc;
 
@@ -235,14 +240,14 @@ void ED_ClearEdict (edict_t *e)
 		// set netname/clientcolors back to client values so that
 		// DP_SV_CLIENTNAME and DPV_SV_CLIENTCOLORS will not immediately
 		// reset them
-		e->v->netname = PR_SetString(svs.clients[num].name);
+		e->v->netname = PR_SetEngineString(svs.clients[num].name);
 		if ((val = GETEDICTFIELDVALUE(e, eval_clientcolors)))
 			val->_float = svs.clients[num].colors;
 		// NEXUIZ_PLAYERMODEL and NEXUIZ_PLAYERSKIN
 		if( eval_playermodel )
-			GETEDICTFIELDVALUE(host_client->edict, eval_playermodel)->string = PR_SetString(svs.clients[num].playermodel);
+			GETEDICTFIELDVALUE(host_client->edict, eval_playermodel)->string = PR_SetEngineString(svs.clients[num].playermodel);
 		if( eval_playerskin )
-			GETEDICTFIELDVALUE(host_client->edict, eval_playerskin)->string = PR_SetString(svs.clients[num].playerskin);
+			GETEDICTFIELDVALUE(host_client->edict, eval_playerskin)->string = PR_SetEngineString(svs.clients[num].playerskin);
 	}
 }
 
@@ -484,7 +489,7 @@ char *PR_UglyValueString (etype_t type, eval_t *val)
 {
 	static char line[4096];
 	int i;
-	char *s;
+	const char *s;
 	ddef_t *def;
 	mfunction_t *f;
 
@@ -613,7 +618,7 @@ void ED_Print(edict_t *ed)
 	ddef_t	*d;
 	int		*v;
 	int		i, j;
-	char	*name;
+	const char	*name;
 	int		type;
 	char	tempstring[8192], tempstring2[260]; // temporary string buffers
 
@@ -687,7 +692,7 @@ void ED_Write (qfile_t *f, edict_t *ed)
 	ddef_t	*d;
 	int		*v;
 	int		i, j;
-	char	*name;
+	const char	*name;
 	int		type;
 
 	FS_Print(f, "{\n");
@@ -817,7 +822,7 @@ void ED_WriteGlobals (qfile_t *f)
 {
 	ddef_t		*def;
 	int			i;
-	char		*name;
+	const char		*name;
 	int			type;
 
 	FS_Print(f,"{\n");
@@ -911,40 +916,6 @@ void ED_ParseGlobals (const char *data)
 
 /*
 =============
-ED_NewString
-=============
-*/
-char *ED_NewString (const char *string)
-{
-	char *new, *new_p;
-	int i,l;
-
-	l = strlen(string) + 1;
-	new = PR_Alloc(l);
-	new_p = new;
-
-	for (i=0 ; i< l ; i++)
-	{
-		if (string[i] == '\\' && i < l-1)
-		{
-			i++;
-			if (string[i] == 'n')
-				*new_p++ = '\n';
-			else if (string[i] == 'r')
-				*new_p++ = '\r';
-			else
-				*new_p++ = '\\';
-		}
-		else
-			*new_p++ = string[i];
-	}
-
-	return new;
-}
-
-
-/*
-=============
 ED_ParseEval
 
 Can parse either fields or globals
@@ -953,7 +924,8 @@ returns false if error
 */
 qboolean ED_ParseEpair(edict_t *ent, ddef_t *key, const char *s)
 {
-	int i;
+	int i, l;
+	char *new_p;
 	ddef_t *def;
 	eval_t *val;
 	mfunction_t *func;
@@ -965,7 +937,24 @@ qboolean ED_ParseEpair(edict_t *ent, ddef_t *key, const char *s)
 	switch (key->type & ~DEF_SAVEGLOBAL)
 	{
 	case ev_string:
-		val->string = PR_SetString(ED_NewString(s));
+		l = strlen(s) + 1;
+		new_p = PR_AllocString(l);
+		val->string = PR_SetQCString(new_p);
+		for (i = 0;i < l;i++)
+		{
+			if (s[i] == '\\' && i < l-1)
+			{
+				i++;
+				if (s[i] == 'n')
+					*new_p++ = '\n';
+				else if (s[i] == 'r')
+					*new_p++ = '\r';
+				else
+					*new_p++ = s[i];
+			}
+			else
+				*new_p++ = s[i];
+		}
 		break;
 
 	case ev_float:
@@ -1327,7 +1316,19 @@ void PR_LoadProgs (const char *progsname)
 
 	//pr_functions = (dfunction_t *)((qbyte *)progs + progs->ofs_functions);
 	dfunctions = (dfunction_t *)((qbyte *)progs + progs->ofs_functions);
+
 	pr_strings = (char *)progs + progs->ofs_strings;
+	pr_stringssize = 0;
+	for (i = 0;i < progs->numstrings;i++)
+	{
+		if (progs->ofs_strings + pr_stringssize >= fs_filesize)
+			Host_Error ("progs.dat strings go past end of file\n");
+		pr_stringssize += strlen (pr_strings + pr_stringssize) + 1;
+	}
+	pr_numknownstrings = 0;
+	pr_maxknownstrings = 0;
+	pr_knownstrings = NULL;
+
 	pr_globaldefs = (ddef_t *)((qbyte *)progs + progs->ofs_globaldefs);
 
 	// we need to expand the fielddefs list to include all the engine fields,
@@ -1385,7 +1386,7 @@ void PR_LoadProgs (const char *progsname)
 	{
 		pr_fielddefs[progs->numfielddefs].type = dpfields[i].type;
 		pr_fielddefs[progs->numfielddefs].ofs = progs->entityfields;
-		pr_fielddefs[progs->numfielddefs].s_name = PR_SetString(dpfields[i].string);
+		pr_fielddefs[progs->numfielddefs].s_name = PR_SetEngineString(dpfields[i].string);
 		if (pr_fielddefs[progs->numfielddefs].type == ev_vector)
 			progs->entityfields += 3;
 		else
@@ -1510,7 +1511,8 @@ void PR_Fields_f (void)
 {
 	int i, j, ednum, used, usedamount;
 	int *counts;
-	char tempstring[5000], tempstring2[260], *name;
+	const char *name;
+	char tempstring[5000], tempstring2[260];
 	edict_t *ed;
 	ddef_t *d;
 	int *v;
@@ -1755,4 +1757,107 @@ edict_t *PROG_TO_EDICT(int n)
 	//return sv.edicts + ((n) / (progs->entityfields * 4));
 }
 */
+
+const char *PR_GetString(int num)
+{
+	if (num >= 0 && num < pr_stringssize)
+		return pr_strings + num;
+	else if (num < 0 && num >= -pr_numknownstrings)
+	{
+		num = -1 - num;
+		if (!pr_knownstrings[num])
+			Host_Error("PR_GetString: attempt to get string that is already freed\n");
+		return pr_knownstrings[num];
+	}
+	else
+	{
+		Host_Error("PR_GetString: invalid string offset %i\n", num);
+		return "";
+	}
+}
+
+int PR_SetQCString(const char *s)
+{
+	int i;
+	if (!s)
+		return 0;
+	if (s >= pr_strings && s <= pr_strings + pr_stringssize)
+		return s - pr_strings;
+	for (i = 0;i < pr_numknownstrings;i++)
+		if (pr_knownstrings[i] == s)
+			return -1 - i;
+	Host_Error("PR_SetQCString: unknown string\n");
+	return -1 - i;
+}
+
+int PR_SetEngineString(const char *s)
+{
+	int i;
+	if (!s)
+		return 0;
+	if (s >= pr_strings && s <= pr_strings + pr_stringssize)
+		Host_Error("PR_SetEngineString: s in pr_strings area\n");
+	for (i = 0;i < pr_numknownstrings;i++)
+		if (pr_knownstrings[i] == s)
+			return -1 - i;
+	// new unknown engine string
+	if (developer.integer >= 3)
+		Con_Printf("new engine string %p\n", s);
+	for (i = 0;i < pr_numknownstrings;i++)
+		if (!pr_knownstrings[i])
+			break;
+	if (i >= pr_numknownstrings)
+	{
+		if (i >= pr_maxknownstrings)
+		{
+			const char **oldstrings = pr_knownstrings;
+			pr_maxknownstrings += 128;
+			pr_knownstrings = PR_Alloc(pr_maxknownstrings * sizeof(char *));
+			if (pr_numknownstrings)
+				memcpy(pr_knownstrings, oldstrings, pr_numknownstrings * sizeof(char *));
+		}
+		pr_numknownstrings++;
+	}
+	pr_knownstrings[i] = s;
+	return -1 - i;
+}
+
+char *PR_AllocString(int bufferlength)
+{
+	int i;
+	if (!bufferlength)
+		return 0;
+	for (i = 0;i < pr_numknownstrings;i++)
+		if (!pr_knownstrings[i])
+			break;
+	if (i >= pr_numknownstrings)
+	{
+		if (i >= pr_maxknownstrings)
+		{
+			const char **oldstrings = pr_knownstrings;
+			pr_maxknownstrings += 128;
+			pr_knownstrings = PR_Alloc(pr_maxknownstrings * sizeof(char *));
+			if (pr_numknownstrings)
+				memcpy(pr_knownstrings, oldstrings, pr_numknownstrings * sizeof(char *));
+		}
+		pr_numknownstrings++;
+	}
+	return (char *)(pr_knownstrings[i] = PR_Alloc(bufferlength));
+}
+
+void PR_FreeString(char *s)
+{
+	int i;
+	if (!s)
+		Host_Error("PR_FreeString: attempt to free a NULL string\n");
+	if (s >= pr_strings && s <= pr_strings + pr_stringssize)
+		Host_Error("PR_FreeString: attempt to free a constant string\n");
+	for (i = 0;i < pr_numknownstrings;i++)
+		if (pr_knownstrings[i] == s)
+			break;
+	if (i == pr_numknownstrings)
+		Host_Error("PR_FreeString: attempt to free a non-existent or already freed string\n");
+	PR_Free((char *)pr_knownstrings[i]);
+	pr_knownstrings[i] = NULL;
+}
 

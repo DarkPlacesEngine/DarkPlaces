@@ -175,7 +175,7 @@ char *ENGINE_EXTENSIONS =
 "NEXUIZ_PLAYERSKIN "
 ;
 
-qboolean checkextension(char *name)
+qboolean checkextension(const char *name)
 {
 	int len;
 	char *e, *start;
@@ -370,7 +370,7 @@ void PF_setmodel (void)
 	if (e->e->free)
 		PF_WARNING("setmodel: can not modify free entity\n");
 	i = SV_ModelIndex(G_STRING(OFS_PARM1), 1);
-	e->v->model = PR_SetString(sv.model_precache[i]);
+	e->v->model = PR_SetEngineString(sv.model_precache[i]);
 	e->v->modelindex = i;
 
 	mod = sv.models[i];
@@ -627,7 +627,7 @@ PF_ambientsound
 */
 void PF_ambientsound (void)
 {
-	char		*samp;
+	const char	*samp;
 	float		*pos;
 	float 		vol, attenuation;
 	int			soundnum, large;
@@ -682,7 +682,7 @@ Larger attenuations will drop off.
 */
 void PF_sound (void)
 {
-	char		*sample;
+	const char	*sample;
 	int			channel;
 	edict_t		*entity;
 	int 		volume;
@@ -960,7 +960,7 @@ stuffcmd (clientent, value)
 void PF_stuffcmd (void)
 {
 	int		entnum;
-	char	*str;
+	const char	*str;
 	client_t	*old;
 
 	entnum = G_EDICTNUM(OFS_PARM0);
@@ -1109,7 +1109,7 @@ void PF_ftos (void)
 		sprintf(s, "%i", (int)v);
 	else
 		sprintf(s, "%f", v);
-	G_INT(OFS_RETURN) = PR_SetString(s);
+	G_INT(OFS_RETURN) = PR_SetEngineString(s);
 }
 
 void PF_fabs (void)
@@ -1124,7 +1124,7 @@ void PF_vtos (void)
 	char *s;
 	s = PR_GetTempString();
 	sprintf (s, "'%5.1f %5.1f %5.1f'", G_VECTOR(OFS_PARM0)[0], G_VECTOR(OFS_PARM0)[1], G_VECTOR(OFS_PARM0)[2]);
-	G_INT(OFS_RETURN) = PR_SetString(s);
+	G_INT(OFS_RETURN) = PR_SetEngineString(s);
 }
 
 void PF_etos (void)
@@ -1132,7 +1132,7 @@ void PF_etos (void)
 	char *s;
 	s = PR_GetTempString();
 	sprintf (s, "entity %i", G_EDICTNUM(OFS_PARM0));
-	G_INT(OFS_RETURN) = PR_SetString(s);
+	G_INT(OFS_RETURN) = PR_SetEngineString(s);
 }
 
 void PF_Spawn (void)
@@ -1165,7 +1165,7 @@ void PF_Find (void)
 {
 	int		e;
 	int		f;
-	char	*s, *t;
+	const char	*s, *t;
 	edict_t	*ed;
 
 	e = G_EDICTNUM(OFS_PARM0);
@@ -1230,7 +1230,7 @@ void PF_findchain (void)
 {
 	int		i;
 	int		f;
-	char	*s, *t;
+	const char	*s, *t;
 	edict_t	*ent, *chain;
 
 	chain = (edict_t *)sv.edicts;
@@ -1347,12 +1347,6 @@ void PF_findchainflags (void)
 	}
 
 	RETURN_EDICT(chain);
-}
-
-void PR_CheckEmptyString (char *s)
-{
-	if (s[0] <= ' ')
-		PF_ERROR("Bad string");
 }
 
 void PF_precache_file (void)
@@ -1490,7 +1484,7 @@ void(float style, string value) lightstyle
 void PF_lightstyle (void)
 {
 	int		style;
-	char	*val;
+	const char	*val;
 	client_t	*client;
 	int			j;
 
@@ -1498,7 +1492,7 @@ void PF_lightstyle (void)
 	val = G_STRING(OFS_PARM1);
 
 // change the string in sv
-	sv.lightstyles[style] = val;
+	strlcpy(sv.lightstyles[style], val, sizeof(sv.lightstyles[style]));
 
 // send message to all clients on this server
 	if (sv.state != ss_active)
@@ -1946,7 +1940,7 @@ PF_changelevel
 */
 void PF_changelevel (void)
 {
-	char	*s;
+	const char	*s;
 
 // make sure we don't issue two changelevels
 	if (svs.changelevel_issued)
@@ -2021,7 +2015,7 @@ void PF_GetLight (void)
 
 void PF_registercvar (void)
 {
-	char *name, *value;
+	const char *name, *value;
 	name = G_STRING(OFS_PARM0);
 	value = G_STRING(OFS_PARM1);
 	G_FLOAT(OFS_RETURN) = 0;
@@ -2207,7 +2201,7 @@ effect(origin, modelname, startframe, framecount, framerate)
 void PF_effect (void)
 {
 	int i;
-	char *s;
+	const char *s;
 	s = G_STRING(OFS_PARM1);
 	if (!s || !s[0])
 		PF_WARNING("effect: no model specified\n");
@@ -2718,7 +2712,7 @@ void PF_getsurfacetexture(void)
 	G_INT(OFS_RETURN) = 0;
 	if (!(surface = getsurface(G_EDICT(OFS_PARM0), G_FLOAT(OFS_PARM1))))
 		return;
-	G_INT(OFS_RETURN) = PR_SetString(surface->texture->name);
+	G_INT(OFS_RETURN) = PR_SetEngineString(surface->texture->name);
 }
 //PF_getsurfacenearpoint, // #438 float(entity e, vector p) getsurfacenearpoint = #438;
 void PF_getsurfacenearpoint(void)
@@ -2822,7 +2816,7 @@ void PF_stof(void)
 void PF_fopen(void)
 {
 	int filenum, mode;
-	char *modestring, *filename;
+	const char *modestring, *filename;
 	for (filenum = 0;filenum < MAX_PRFILES;filenum++)
 		if (pr_files[filenum] == NULL)
 			break;
@@ -2916,7 +2910,7 @@ void PF_fgets(void)
 	if (developer.integer)
 		Con_Printf("fgets: %s\n", string);
 	if (c >= 0 || end)
-		G_INT(OFS_RETURN) = PR_SetString(string);
+		G_INT(OFS_RETURN) = PR_SetEngineString(string);
 	else
 		G_INT(OFS_RETURN) = 0;
 }
@@ -2947,7 +2941,7 @@ void PF_fputs(void)
 //float(string s) strlen = #114; // returns how many characters are in a string
 void PF_strlen(void)
 {
-	char *s;
+	const char *s;
 	s = G_STRING(OFS_PARM0);
 	if (s)
 		G_FLOAT(OFS_RETURN) = strlen(s);
@@ -2960,14 +2954,15 @@ void PF_strcat(void)
 {
 	char *s = PR_GetTempString();
 	PF_VarString(0, s, STRINGTEMP_LENGTH);
-	G_INT(OFS_RETURN) = PR_SetString(s);
+	G_INT(OFS_RETURN) = PR_SetEngineString(s);
 }
 
 //string(string s, float start, float length) substring = #116; // returns a section of a string as a tempstring
 void PF_substring(void)
 {
 	int i, start, length;
-	char *s, *string = PR_GetTempString();
+	const char *s;
+	char *string = PR_GetTempString();
 	s = G_STRING(OFS_PARM0);
 	start = G_FLOAT(OFS_PARM1);
 	length = G_FLOAT(OFS_PARM2);
@@ -2977,7 +2972,7 @@ void PF_substring(void)
 	for (i = 0;i < STRINGTEMP_LENGTH - 1 && *s && i < length;i++, s++)
 		string[i] = *s;
 	string[i] = 0;
-	G_INT(OFS_RETURN) = PR_SetString(string);
+	G_INT(OFS_RETURN) = PR_SetEngineString(string);
 }
 
 //vector(string s) stov = #117; // returns vector value from a string
@@ -2991,17 +2986,18 @@ void PF_stov(void)
 //string(string s) strzone = #118; // makes a copy of a string into the string zone and returns it, this is often used to keep around a tempstring for longer periods of time (tempstrings are replaced often)
 void PF_strzone(void)
 {
-	char *in, *out;
+	const char *in;
+	char *out;
 	in = G_STRING(OFS_PARM0);
-	out = PR_Alloc(strlen(in) + 1);
+	out = PR_AllocString(strlen(in) + 1);
 	strcpy(out, in);
-	G_INT(OFS_RETURN) = PR_SetString(out);
+	G_INT(OFS_RETURN) = PR_SetQCString(out);
 }
 
 //void(string s) strunzone = #119; // removes a copy of a string from the string zone (you can not use that string again or it may crash!!!)
 void PF_strunzone(void)
 {
-	PR_Free(G_STRING(OFS_PARM0));
+	PR_FreeString((char *)G_STRING(OFS_PARM0));
 }
 
 //void(entity e, string s) clientcommand = #440; // executes a command string as if it came from the specified client
@@ -3058,9 +3054,9 @@ void PF_argv (void)
 {
 	int token_num = G_FLOAT(OFS_PARM0);
 	if (token_num >= 0 && token_num < num_tokens)
-		G_INT(OFS_RETURN) = PR_SetString(tokens[token_num]);
+		G_INT(OFS_RETURN) = PR_SetEngineString(tokens[token_num]);
 	else
-		G_INT(OFS_RETURN) = PR_SetString("");
+		G_INT(OFS_RETURN) = PR_SetEngineString(NULL);
 }
 
 //void(entity e, entity tagentity, string tagname) setattachment = #443; // attachs e to a tag on tagentity (note: use "" to attach to entity origin/angles instead of a tag)
@@ -3068,7 +3064,7 @@ void PF_setattachment (void)
 {
 	edict_t *e = G_EDICT(OFS_PARM0);
 	edict_t *tagentity = G_EDICT(OFS_PARM1);
-	char *tagname = G_STRING(OFS_PARM2);
+	const char *tagname = G_STRING(OFS_PARM2);
 	eval_t *v;
 	int modelindex;
 	model_t *model;
@@ -3105,7 +3101,7 @@ void PF_setattachment (void)
 /////////////////////////////////////////
 // DP_MD3_TAGINFO extension coded by VorteX
 
-int SV_GetTagIndex (edict_t *e, char *tagname)
+int SV_GetTagIndex (edict_t *e, const char *tagname)
 {
 	int i;
 	model_t *model;
@@ -3259,7 +3255,7 @@ int SV_GetTagMatrix (matrix4x4_t *out, edict_t *ent, int tagindex)
 void PF_gettagindex (void)
 {
 	edict_t *ent = G_EDICT(OFS_PARM0);
-	char *tag_name = G_STRING(OFS_PARM1);
+	const char *tag_name = G_STRING(OFS_PARM1);
 	int modelindex, tag_index;
 
 	if (ent == sv.edicts)
@@ -3345,12 +3341,12 @@ float search_begin(string pattern, float caseinsensitive, float quiet)
 void PF_search_begin(void)
 {
 	int handle;
-	char *pattern;
+	const char *pattern;
 	int caseinsens, quiet;
 
 	pattern = G_STRING(OFS_PARM0);
-
-	PR_CheckEmptyString(pattern);
+	if (!pattern || pattern[0] <= ' ')
+		PF_ERROR("PF_search_begin: Bad string");
 
 	caseinsens = G_FLOAT(OFS_PARM1);
 	quiet = G_FLOAT(OFS_PARM2);
@@ -3461,12 +3457,12 @@ void PF_search_getfilename(void)
 	tmp = PR_GetTempString();
 	strcpy(tmp, pr_fssearchlist[handle]->filenames[filenum]);
 
-	G_INT(OFS_RETURN) = PR_SetString(tmp);
+	G_INT(OFS_RETURN) = PR_SetEngineString(tmp);
 }
 
 void PF_cvar_string (void)
 {
-	char *str;
+	const char *str;
 	cvar_t *var;
 	char *tmp;
 
@@ -3478,8 +3474,8 @@ void PF_cvar_string (void)
 		strcpy(tmp, var->string);
 	}
 	else
-		tmp = "";
-	G_INT(OFS_RETURN) = PR_SetString(tmp);
+		tmp = NULL;
+	G_INT(OFS_RETURN) = PR_SetEngineString(tmp);
 }
 
 //void(entity clent) dropclient (DP_SV_DROPCLIENT)

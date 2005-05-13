@@ -69,7 +69,7 @@ extern	int			wad_numlumps;
 extern	lumpinfo_t	*wad_lumps;
 extern	qbyte		*wad_base;
 
-void	*W_GetLumpName (char *name);
+void	*W_GetLumpName (const char *name);
 
 
 // LordHavoc: added alternate texture WAD2/WAD3 system for easier loading of HalfLife texture wads

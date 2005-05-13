@@ -435,7 +435,7 @@ char *PRVM_UglyValueString (etype_t type, prvm_eval_t *val)
 {
 	static char line[4096];
 	int i;
-	char *s;
+	const char *s;
 	ddef_t *def;
 	mfunction_t *f;
 
@@ -564,7 +564,7 @@ void PRVM_ED_Print(prvm_edict_t *ed)
 	ddef_t	*d;
 	int		*v;
 	int		i, j;
-	char	*name;
+	const char	*name;
 	int		type;
 	char	tempstring[8192], tempstring2[260]; // temporary string buffers
 
@@ -638,7 +638,7 @@ void PRVM_ED_Write (qfile_t *f, prvm_edict_t *ed)
 	ddef_t	*d;
 	int		*v;
 	int		i, j;
-	char	*name;
+	const char	*name;
 	int		type;
 
 	FS_Print(f, "{\n");
@@ -802,7 +802,7 @@ void PRVM_ED_WriteGlobals (qfile_t *f)
 {
 	ddef_t		*def;
 	int			i;
-	char		*name;
+	const char		*name;
 	int			type;
 
 	FS_Print(f,"{\n");
@@ -868,37 +868,6 @@ void PRVM_ED_ParseGlobals (const char *data)
 
 /*
 =============
-PRVM_ED_NewString
-=============
-*/
-char *PRVM_ED_NewString (const char *string)
-{
-	char *new, *new_p;
-	int i,l;
-
-	l = strlen(string) + 1;
-	new = Mem_Alloc(prog->progs_mempool, l);
-	new_p = new;
-
-	for (i=0 ; i< l ; i++)
-	{
-		if (string[i] == '\\' && i < l-1)
-		{
-			i++;
-			if (string[i] == 'n')
-				*new_p++ = '\n';
-			else
-				*new_p++ = '\\';
-		}
-		else
-			*new_p++ = string[i];
-	}
-
-	return new;
-}
-
-/*
-=============
 PRVM_ED_ParseEval
 
 Can parse either fields or globals
@@ -907,7 +876,8 @@ returns false if error
 */
 qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s)
 {
-	int i;
+	int i, l;
+	char *new_p;
 	ddef_t *def;
 	prvm_eval_t *val;
 	mfunction_t *func;
@@ -919,7 +889,24 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s)
 	switch (key->type & ~DEF_SAVEGLOBAL)
 	{
 	case ev_string:
-		val->string = PRVM_SetString(PRVM_ED_NewString(s));
+		l = strlen(s) + 1;
+		new_p = PRVM_AllocString(l);
+		val->string = PRVM_SetQCString(new_p);
+		for (i = 0;i < l;i++)
+		{
+			if (s[i] == '\\' && i < l-1)
+			{
+				i++;
+				if (s[i] == 'n')
+					*new_p++ = '\n';
+				else if (s[i] == 'r')
+					*new_p++ = '\r';
+				else
+					*new_p++ = s[i];
+			}
+			else
+				*new_p++ = s[i];
+		}
 		break;
 
 	case ev_float:
@@ -1233,19 +1220,8 @@ PRVM_ResetProg
 
 void PRVM_ResetProg()
 {
-	/*mempool_t *t1;
-
-	t1 = prog->progs_mempool;
-
-	Mem_EmptyPool(prog->progs_mempool);*/
 	Mem_FreePool(&prog->progs_mempool);
-
 	memset(prog,0,sizeof(prvm_prog_t));
-
-	/*prog->time = &prog->_time;
-
-	prog->progs_mempool = t1;*/
-
 	PRVM_GCALL(reset_cmd)();
 }
 
@@ -1282,7 +1258,19 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 
 	//pr_functions = (dfunction_t *)((qbyte *)progs + progs->ofs_functions);
 	dfunctions = (dfunction_t *)((qbyte *)prog->progs + prog->progs->ofs_functions);
+
 	prog->strings = (char *)prog->progs + prog->progs->ofs_strings;
+	prog->stringssize = 0;
+	for (i = 0;i < prog->progs->numstrings;i++)
+	{
+		if (prog->progs->ofs_strings + prog->stringssize >= fs_filesize)
+			PRVM_ERROR ("%s: %s strings go past end of file\n", PRVM_NAME, filename);
+		prog->stringssize += strlen (prog->strings + prog->stringssize) + 1;
+	}
+	prog->numknownstrings = 0;
+	prog->maxknownstrings = 0;
+	prog->knownstrings = NULL;
+
 	prog->globaldefs = (ddef_t *)((qbyte *)prog->progs + prog->progs->ofs_globaldefs);
 
 	// we need to expand the fielddefs list to include all the engine fields,
@@ -1341,7 +1329,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	{
 		pr_fielddefs[progs->numfielddefs].type = dpfields[i].type;
 		pr_fielddefs[progs->numfielddefs].ofs = progs->entityfields;
-		pr_fielddefs[progs->numfielddefs].s_name = PR_SetString(dpfields[i].string);
+		pr_fielddefs[progs->numfielddefs].s_name = PR_SetEngineString(dpfields[i].string);
 		if (pr_fielddefs[progs->numfielddefs].type == ev_vector)
 			progs->entityfields += 3;
 		else
@@ -1496,7 +1484,8 @@ void PRVM_Fields_f (void)
 {
 	int i, j, ednum, used, usedamount;
 	int *counts;
-	char tempstring[5000], tempstring2[260], *name;
+	char tempstring[5000], tempstring2[260];
+	const char *name;
 	prvm_edict_t *ed;
 	ddef_t *d;
 	int *v;
@@ -1740,6 +1729,24 @@ int PRVM_GetProgNr()
 	return prog - prog_list;
 }
 
+void *_PRVM_Alloc(size_t buffersize, const char *filename, int fileline)
+{
+	return _Mem_Alloc(prog->progs_mempool, buffersize, filename, fileline);
+}
+
+void _PRVM_Free(void *buffer, const char *filename, int fileline)
+{
+	_Mem_Free(buffer, filename, fileline);
+}
+
+void _PRVM_FreeAll(const char *filename, int fileline)
+{
+	prog->progs = NULL;
+	prog->fielddefs = NULL;
+	prog->functions = NULL;
+	_Mem_EmptyPool(prog->progs_mempool, filename, fileline);
+}
+
 // LordHavoc: turned PRVM_EDICT_NUM into a #define for speed reasons
 prvm_edict_t *PRVM_EDICT_NUM_ERROR(int n, char *filename, int fileline)
 {
@@ -1793,4 +1800,108 @@ edict_t *PROG_TO_EDICT(int n)
 	//return sv.edicts + ((n) / (progs->entityfields * 4));
 }
 */
+
+
+const char *PRVM_GetString(int num)
+{
+	if (num >= 0 && num < prog->stringssize)
+		return prog->strings + num;
+	else if (num < 0 && num >= -prog->numknownstrings)
+	{
+		num = -1 - num;
+		if (!prog->knownstrings[num])
+			Host_Error("PRVM_GetString: attempt to get string that is already freed\n");
+		return prog->knownstrings[num];
+	}
+	else
+	{
+		Host_Error("PRVM_GetString: invalid string offset %i\n", num);
+		return "";
+	}
+}
+
+int PRVM_SetQCString(const char *s)
+{
+	int i;
+	if (!s)
+		return 0;
+	if (s >= prog->strings && s <= prog->strings + prog->stringssize)
+		return s - prog->strings;
+	for (i = 0;i < prog->numknownstrings;i++)
+		if (prog->knownstrings[i] == s)
+			return -1 - i;
+	Host_Error("PRVM_SetQCString: unknown string\n");
+	return -1 - i;
+}
+
+int PRVM_SetEngineString(const char *s)
+{
+	int i;
+	if (!s)
+		return 0;
+	if (s >= prog->strings && s <= prog->strings + prog->stringssize)
+		Host_Error("PRVM_SetEngineString: s in prog->strings area\n");
+	for (i = 0;i < prog->numknownstrings;i++)
+		if (prog->knownstrings[i] == s)
+			return -1 - i;
+	// new unknown engine string
+	if (developer.integer >= 3)
+		Con_Printf("new engine string %p\n", s);
+	for (i = 0;i < prog->numknownstrings;i++)
+		if (!prog->knownstrings[i])
+			break;
+	if (i >= prog->numknownstrings)
+	{
+		if (i >= prog->maxknownstrings)
+		{
+			const char **oldstrings = prog->knownstrings;
+			prog->maxknownstrings += 128;
+			prog->knownstrings = PRVM_Alloc(prog->maxknownstrings * sizeof(char *));
+			if (prog->numknownstrings)
+				memcpy(prog->knownstrings, oldstrings, prog->numknownstrings * sizeof(char *));
+		}
+		prog->numknownstrings++;
+	}
+	prog->knownstrings[i] = s;
+	return -1 - i;
+}
+
+char *PRVM_AllocString(int bufferlength)
+{
+	int i;
+	if (!bufferlength)
+		return 0;
+	for (i = 0;i < prog->numknownstrings;i++)
+		if (!prog->knownstrings[i])
+			break;
+	if (i >= prog->numknownstrings)
+	{
+		if (i >= prog->maxknownstrings)
+		{
+			const char **oldstrings = prog->knownstrings;
+			prog->maxknownstrings += 128;
+			prog->knownstrings = PRVM_Alloc(prog->maxknownstrings * sizeof(char *));
+			if (prog->numknownstrings)
+				memcpy(prog->knownstrings, oldstrings, prog->numknownstrings * sizeof(char *));
+		}
+		prog->numknownstrings++;
+	}
+	return (char *)(prog->knownstrings[i] = PRVM_Alloc(bufferlength));
+}
+
+void PRVM_FreeString(char *s)
+{
+	int i;
+	if (!s)
+		Host_Error("PRVM_FreeString: attempt to free a NULL string\n");
+	if (s >= prog->strings && s <= prog->strings + prog->stringssize)
+		Host_Error("PRVM_FreeString: attempt to free a constant string\n");
+	for (i = 0;i < prog->numknownstrings;i++)
+		if (prog->knownstrings[i] == s)
+			break;
+	if (i == prog->numknownstrings)
+		Host_Error("PRVM_FreeString: attempt to free a non-existent or already freed string\n");
+	PRVM_Free((char *)prog->knownstrings[i]);
+	prog->knownstrings[i] = NULL;
+}
 

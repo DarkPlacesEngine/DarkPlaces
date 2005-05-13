@@ -519,7 +519,7 @@ void Host_Savegame_f (void)
 	// write the light styles
 	for (i=0 ; i<MAX_LIGHTSTYLES ; i++)
 	{
-		if (sv.lightstyles[i])
+		if (sv.lightstyles[i][0])
 			FS_Printf(f, "%s\n", sv.lightstyles[i]);
 		else
 			FS_Print(f,"m\n");
@@ -627,8 +627,7 @@ void Host_Loadgame_f (void)
 	{
 		// light style
 		COM_ParseToken(&t, false);
-		sv.lightstyles[i] = PR_Alloc(strlen(com_token)+1);
-		strcpy(sv.lightstyles[i], com_token);
+		strlcpy(sv.lightstyles[i], com_token, sizeof(sv.lightstyles[i]));
 	}
 
 // load the edicts out of the savegame file
@@ -737,7 +736,7 @@ void Host_Name_f (void)
 
 	// point the string back at updateclient->name to keep it safe
 	strlcpy (host_client->name, newName, sizeof (host_client->name));
-	host_client->edict->v->netname = PR_SetString(host_client->name);
+	host_client->edict->v->netname = PR_SetEngineString(host_client->name);
 	if (strcmp(host_client->old_name, host_client->name))
 	{
 		if (host_client->spawned)
@@ -799,7 +798,7 @@ void Host_Playermodel_f (void)
 	// point the string back at updateclient->name to keep it safe
 	strlcpy (host_client->playermodel, newPath, sizeof (host_client->playermodel));
 	if( eval_playermodel )
-		GETEDICTFIELDVALUE(host_client->edict, eval_playermodel)->string = PR_SetString(host_client->playermodel);
+		GETEDICTFIELDVALUE(host_client->edict, eval_playermodel)->string = PR_SetEngineString(host_client->playermodel);
 	if (strcmp(host_client->old_model, host_client->playermodel))
 	{
 		if (host_client->spawned)
@@ -860,7 +859,7 @@ void Host_Playerskin_f (void)
 	// point the string back at updateclient->name to keep it safe
 	strlcpy (host_client->playerskin, newPath, sizeof (host_client->playerskin));
 	if( eval_playerskin )
-		GETEDICTFIELDVALUE(host_client->edict, eval_playerskin)->string = PR_SetString(host_client->playerskin);
+		GETEDICTFIELDVALUE(host_client->edict, eval_playerskin)->string = PR_SetEngineString(host_client->playerskin);
 	if (strcmp(host_client->old_skin, host_client->playerskin))
 	{
 		if (host_client->spawned)

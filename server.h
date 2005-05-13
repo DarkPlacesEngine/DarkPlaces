@@ -77,7 +77,7 @@ typedef struct
 	// LordHavoc: precaches are now MAX_QPATH rather than a pointer
 	// updated by SV_SoundIndex
 	char sound_precache[MAX_SOUNDS][MAX_QPATH];
-	char *lightstyles[MAX_LIGHTSTYLES];
+	char lightstyles[MAX_LIGHTSTYLES][64];
 	int num_edicts;
 	int max_edicts;
 	// small edict_t structures which just contain pointers
@@ -297,7 +297,7 @@ void SV_Init (void);
 
 void SV_StartParticle (vec3_t org, vec3_t dir, int color, int count);
 void SV_StartEffect (vec3_t org, int modelindex, int startframe, int framecount, int framerate);
-void SV_StartSound (edict_t *entity, int channel, char *sample, int volume, float attenuation);
+void SV_StartSound (edict_t *entity, int channel, const char *sample, int volume, float attenuation);
 
 void SV_ConnectClient (int clientnum, netconn_t *netconnection);
 void SV_DropClient (qboolean crash);
@@ -311,8 +311,8 @@ void SV_ReadClientMessage(void);
 // 0 = fail if not precached,
 // 1 = warn if not found and precache if possible
 // 2 = precache
-int SV_ModelIndex(char *s, int precachemode);
-int SV_SoundIndex(char *s, int precachemode);
+int SV_ModelIndex(const char *s, int precachemode);
+int SV_SoundIndex(const char *s, int precachemode);
 
 void SV_SetIdealPitch (void);
 

@@ -201,7 +201,7 @@ Larger attenuations will drop off.  (max 4 attenuation)
 
 ==================
 */
-void SV_StartSound (edict_t *entity, int channel, char *sample, int volume, float attenuation)
+void SV_StartSound (edict_t *entity, int channel, const char *sample, int volume, float attenuation)
 {
 	int sound_num, field_mask, i, ent;
 
@@ -1136,9 +1136,9 @@ void SV_UpdateToReliableMessages (void)
 	int i, j;
 	client_t *client;
 	eval_t *val;
-	char *name;
-	char *model;
-	char *skin;
+	const char *name;
+	const char *model;
+	const char *skin;
 
 // check for changes to be sent over the reliable streams
 	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
@@ -1152,7 +1152,7 @@ void SV_UpdateToReliableMessages (void)
 			name = "";
 		// always point the string back at host_client->name to keep it safe
 		strlcpy (host_client->name, name, sizeof (host_client->name));
-		host_client->edict->v->netname = PR_SetString(host_client->name);
+		host_client->edict->v->netname = PR_SetEngineString(host_client->name);
 		if (strcmp(host_client->old_name, host_client->name))
 		{
 			if (host_client->spawned)
@@ -1184,7 +1184,7 @@ void SV_UpdateToReliableMessages (void)
 				model = "";
 			// always point the string back at host_client->name to keep it safe
 			strlcpy (host_client->playermodel, model, sizeof (host_client->playermodel));
-			GETEDICTFIELDVALUE(host_client->edict, eval_playermodel)->string = PR_SetString(host_client->playermodel);
+			GETEDICTFIELDVALUE(host_client->edict, eval_playermodel)->string = PR_SetEngineString(host_client->playermodel);
 		}
 
 		// NEXUIZ_PLAYERSKIN
@@ -1194,7 +1194,7 @@ void SV_UpdateToReliableMessages (void)
 				skin = "";
 			// always point the string back at host_client->name to keep it safe
 			strlcpy (host_client->playerskin, skin, sizeof (host_client->playerskin));
-			GETEDICTFIELDVALUE(host_client->edict, eval_playerskin)->string = PR_SetString(host_client->playerskin);
+			GETEDICTFIELDVALUE(host_client->edict, eval_playerskin)->string = PR_SetEngineString(host_client->playerskin);
 		}
 
 		// frags
@@ -1333,7 +1333,7 @@ SV_ModelIndex
 
 ================
 */
-int SV_ModelIndex(char *s, int precachemode)
+int SV_ModelIndex(const char *s, int precachemode)
 {
 	int i, limit = (sv.protocol == PROTOCOL_QUAKE ? 256 : MAX_MODELS);
 	char filename[MAX_QPATH];
@@ -1382,7 +1382,7 @@ SV_SoundIndex
 
 ================
 */
-int SV_SoundIndex(char *s, int precachemode)
+int SV_SoundIndex(const char *s, int precachemode)
 {
 	int i, limit = (sv.protocol == PROTOCOL_QUAKE ? 256 : MAX_SOUNDS);
 	char filename[MAX_QPATH];
@@ -1762,7 +1762,7 @@ void SV_SpawnServer (const char *server)
 	ent = EDICT_NUM(0);
 	memset (ent->v, 0, progs->entityfields * 4);
 	ent->e->free = false;
-	ent->v->model = PR_SetString(sv.modelname);
+	ent->v->model = PR_SetEngineString(sv.modelname);
 	ent->v->modelindex = 1;		// world model
 	ent->v->solid = SOLID_BSP;
 	ent->v->movetype = MOVETYPE_PUSH;
@@ -1772,7 +1772,7 @@ void SV_SpawnServer (const char *server)
 	else
 		pr_global_struct->deathmatch = deathmatch.integer;
 
-	pr_global_struct->mapname = PR_SetString(sv.name);
+	pr_global_struct->mapname = PR_SetEngineString(sv.name);
 
 // serverflags are for cross level information (sigils)
 	pr_global_struct->serverflags = svs.serverflags;

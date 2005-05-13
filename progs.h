@@ -147,6 +147,7 @@ extern mfunction_t *SV_ParseClientCommandQC;
 extern	dprograms_t		*progs;
 extern	mfunction_t		*pr_functions;
 extern	char			*pr_strings;
+extern	int				pr_stringssize;
 extern	ddef_t			*pr_globaldefs;
 extern	ddef_t			*pr_fielddefs;
 extern	dstatement_t	*pr_statements;
@@ -155,6 +156,10 @@ extern	float			*pr_globals;			// same as pr_global_struct
 
 extern	int				pr_edict_size;	// in bytes
 extern	int				pr_edictareasize; // LordHavoc: for bounds checking
+
+extern	int				pr_maxknownstrings;
+extern	int				pr_numknownstrings;
+extern	const char		**pr_knownstrings;
 
 //============================================================================
 
@@ -181,9 +186,6 @@ void SV_IncreaseEdicts(void);
 edict_t *ED_Alloc (void);
 void ED_Free (edict_t *ed);
 void ED_ClearEdict (edict_t *e);
-
-char	*ED_NewString (const char *string);
-// returns a copy of the string allocated from the server's string heap
 
 void ED_Print(edict_t *ed);
 void ED_Write (qfile_t *f, edict_t *ed);
@@ -244,8 +246,11 @@ void PR_Execute_ProgsLoaded(void);
 void ED_PrintEdicts (void);
 void ED_PrintNum (int ent);
 
-#define PR_GetString(num) (pr_strings + num)
-#define PR_SetString(s)   ((s) != NULL ? (int) (s - pr_strings) : 0)
+const char *PR_GetString(int num);
+int PR_SetQCString(const char *s);
+int PR_SetEngineString(const char *s);
+char *PR_AllocString(int bufferlength);
+void PR_FreeString(char *s);
 
 #endif
 

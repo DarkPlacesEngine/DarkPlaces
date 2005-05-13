@@ -424,7 +424,7 @@ void SV_DropClient(qboolean crash)
 	}
 
 	// remove leaving player from scoreboard
-	//host_client->edict->v->netname = PR_SetString(host_client->name);
+	//host_client->edict->v->netname = PR_SetEngineString(host_client->name);
 	//if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_clientcolors)))
 	//	val->_float = 0;
 	//host_client->edict->v->frags = 0;
