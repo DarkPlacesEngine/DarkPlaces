@@ -319,6 +319,8 @@ void CL_AdjustAngles (void)
 	cl.viewangles[ROLL] = bound(-50, cl.viewangles[ROLL], 50);
 }
 
+qboolean cl_ignoremousemove = false;
+
 /*
 ================
 CL_Move
@@ -372,6 +374,14 @@ void CL_Move (void)
 
 	// allow mice or other external controllers to add to the move
 	IN_Move ();
+
+	// ignore a mouse move if mouse was activated/deactivated this frame
+	if (cl_ignoremousemove)
+	{
+		cl_ignoremousemove = false;
+		in_mouse_x = 0;
+		in_mouse_y = 0;
+	}
 
 	// apply m_filter if it is on
 	mx = in_mouse_x;

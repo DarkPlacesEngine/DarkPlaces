@@ -147,7 +147,7 @@ static qboolean	restore_spi;
 static int		originalmouseparms[3], newmouseparms[3] = {0, 0, 1};
 
 static unsigned int uiWheelMessage;
-static qboolean	mouseparmsvalid, mouseactivatetoggle;
+static qboolean	mouseparmsvalid;
 static qboolean	dinput_acquired;
 
 static unsigned int		mstate_di;
@@ -311,22 +311,7 @@ void VID_Finish (void)
 		vid_usemouse = true;
 	if (!vid_activewindow)
 		vid_usemouse = false;
-	if (vid_usemouse)
-	{
-		if (!vid_usingmouse)
-		{
-			vid_usingmouse = true;
-			IN_Activate (true);
-		}
-	}
-	else
-	{
-		if (vid_usingmouse)
-		{
-			vid_usingmouse = false;
-			IN_Activate (false);
-		}
-	}
+	IN_Activate(vid_usemouse);
 
 	if (r_render.integer && !vid_hidden)
 	{
@@ -489,7 +474,6 @@ void AppActivate(BOOL fActive, BOOL minimize)
 
 	if (!fActive)
 	{
-		vid_usingmouse = false;
 		IN_Activate (false);
 		if (vid_isfullscreen)
 		{
@@ -1044,45 +1028,51 @@ static void IN_Activate (qboolean grab)
 
 	if (grab)
 	{
-		mouseactivatetoggle = true;
-		if (dinput && g_pMouse)
+		if (!vid_usingmouse)
 		{
-			IDirectInputDevice_Acquire(g_pMouse);
-			dinput_acquired = true;
+			vid_usingmouse = true;
+			cl_ignoremousemove = true;
+			if (dinput && g_pMouse)
+			{
+				IDirectInputDevice_Acquire(g_pMouse);
+				dinput_acquired = true;
+			}
+			else
+			{
+				RECT window_rect;
+				window_rect.left = window_x;
+				window_rect.top = window_y;
+				window_rect.right = window_x + window_width;
+				window_rect.bottom = window_y + window_height;
+				if (mouseparmsvalid)
+					restore_spi = SystemParametersInfo (SPI_SETMOUSE, 0, newmouseparms, 0);
+				SetCursorPos (window_center_x, window_center_y);
+				SetCapture (mainwindow);
+				ClipCursor (&window_rect);
+			}
+			ShowCursor (false);
 		}
-		else
-		{
-			RECT window_rect;
-			window_rect.left = window_x;
-			window_rect.top = window_y;
-			window_rect.right = window_x + window_width;
-			window_rect.bottom = window_y + window_height;
-			if (mouseparmsvalid)
-				restore_spi = SystemParametersInfo (SPI_SETMOUSE, 0, newmouseparms, 0);
-			SetCursorPos (window_center_x, window_center_y);
-			SetCapture (mainwindow);
-			ClipCursor (&window_rect);
-		}
-		vid_usingmouse = true;
-		ShowCursor (false);
 	}
 	else
 	{
-		mouseactivatetoggle = false;
-		if (dinput_acquired)
+		if (vid_usingmouse)
 		{
-			IDirectInputDevice_Unacquire(g_pMouse);
-			dinput_acquired = false;
+			vid_usingmouse = false;
+			cl_ignoremousemove = true;
+			if (dinput_acquired)
+			{
+				IDirectInputDevice_Unacquire(g_pMouse);
+				dinput_acquired = false;
+			}
+			else
+			{
+				if (restore_spi)
+					SystemParametersInfo (SPI_SETMOUSE, 0, originalmouseparms, 0);
+				ClipCursor (NULL);
+				ReleaseCapture ();
+			}
+			ShowCursor (true);
 		}
-		else
-		{
-			if (restore_spi)
-				SystemParametersInfo (SPI_SETMOUSE, 0, originalmouseparms, 0);
-			ClipCursor (NULL);
-			ReleaseCapture ();
-		}
-		vid_usingmouse = false;
-		ShowCursor (true);
 	}
 }
 
@@ -1224,11 +1214,6 @@ static void IN_StartupMouse (void)
 	}
 
 	mouse_buttons = 10;
-
-// if a fullscreen video mode was set before the mouse was initialized,
-// set the mouse state appropriately
-	if (mouseactivatetoggle)
-		IN_Activate (true);
 }
 
 

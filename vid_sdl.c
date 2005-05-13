@@ -28,9 +28,6 @@ static qboolean vid_isfullscreen;
 
 static SDL_Surface *screen;
 
-static void IN_Init( void );
-static void IN_Shutdown( void );
-
 /////////////////////////
 // Input handling
 ////
@@ -209,6 +206,7 @@ static void IN_Activate( qboolean grab )
 		if (!vid_usingmouse)
 		{
 			vid_usingmouse = true;
+			cl_ignoremousemove = true;
 			SDL_WM_GrabInput( SDL_GRAB_ON );
 			SDL_ShowCursor( SDL_DISABLE );
 		}
@@ -218,6 +216,7 @@ static void IN_Activate( qboolean grab )
 		if (vid_usingmouse)
 		{
 			vid_usingmouse = false;
+			cl_ignoremousemove = true;
 			SDL_WM_GrabInput( SDL_GRAB_OFF );
 			SDL_ShowCursor( SDL_ENABLE );
 		}
@@ -233,21 +232,6 @@ void IN_Move( void )
 		in_mouse_x = x;
 		in_mouse_y = y;
 	}
-}
-
-static void IN_Init( void )
-{
-	// init keyboard
-	SDL_EnableUNICODE( SDL_ENABLE );
-	// enable key repeat since everyone expects it
-	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
-
-	// init mouse
-	vid_usingmouse = false;
-}
-
-static void IN_Shutdown( void )
-{
 }
 
 /////////////////////
@@ -325,7 +309,10 @@ void VID_Init (void)
 	vid_isfullscreen = false;
 
 	SDL_SetEventFilter( (SDL_EventFilter) Sys_EventFilter );
-	IN_Init();
+	// init keyboard
+	SDL_EnableUNICODE( SDL_ENABLE );
+	// enable key repeat since everyone expects it
+	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 }
 
 // set the icon (we dont use SDL here since it would be too much a PITA)
@@ -454,13 +441,12 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 	vid_hidden = false;
 	vid_activewindow = false;
 	vid_usingmouse = false;
-	IN_Init();
 	return true;
 }
 
 void VID_Shutdown (void)
 {
-	IN_Shutdown();
+	IN_Activate(false);
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
 }
 
