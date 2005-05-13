@@ -375,7 +375,8 @@ static void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfi
 	skinframe_t tempskinframe;
 	if (skinfile)
 	{
-		for (i = 0;skinfile;skinfile = skinfile->next, i++, skin++)
+		// the skin += loadmodel->num_surfaces part of this is because data_textures on alias models is arranged as [numskins][numsurfaces]
+		for (i = 0;skinfile;skinfile = skinfile->next, i++, skin += loadmodel->num_surfaces)
 		{
 			memset(skin, 0, sizeof(*skin));
 			for (skinfileitem = skinfile->items;skinfileitem;skinfileitem = skinfileitem->next)
