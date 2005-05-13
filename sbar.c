@@ -135,22 +135,13 @@ void sbar_start(void)
 
 	numsbarpics = 0;
 
-	sb_disc = Sbar_NewPic("gfx/disc");
-
-	for (i = 0;i < 10;i++)
-	{
-		sb_nums[0][i] = Sbar_NewPic (va("gfx/num_%i",i));
-		sb_nums[1][i] = Sbar_NewPic (va("gfx/anum_%i",i));
-	}
-
-	sb_nums[0][10] = Sbar_NewPic ("gfx/num_minus");
-	sb_nums[1][10] = Sbar_NewPic ("gfx/anum_minus");
-
-	sb_colon = Sbar_NewPic ("gfx/num_colon");
-	sb_slash = Sbar_NewPic ("gfx/num_slash");
-
 	if (gamemode == GAME_SOM)
 	{
+		sb_disc = Sbar_NewPic("gfx/disc");
+
+		for (i = 0;i < 10;i++)
+			sb_nums[0][i] = Sbar_NewPic (va("gfx/num_%i",i));
+
 		somsb_health = Sbar_NewPic("gfx/hud_health");
 		somsb_ammo[0] = Sbar_NewPic("gfx/sb_shells");
 		somsb_ammo[1] = Sbar_NewPic("gfx/sb_nails");
@@ -162,6 +153,10 @@ void sbar_start(void)
 	}
 	else if (gamemode == GAME_NEXUIZ)
 	{
+		for (i = 0;i < 10;i++)
+			sb_nums[0][i] = Sbar_NewPic (va("gfx/num_%i",i));
+		sb_nums[0][10] = Sbar_NewPic ("gfx/num_minus");
+
 		sb_ammo[0] = Sbar_NewPic ("gfx/sb_shells");
 		sb_ammo[1] = Sbar_NewPic ("gfx/sb_bullets");
 		sb_ammo[2] = Sbar_NewPic ("gfx/sb_rocket");
@@ -181,6 +176,20 @@ void sbar_start(void)
 	}
 	else
 	{
+		sb_disc = Sbar_NewPic("gfx/disc");
+
+		for (i = 0;i < 10;i++)
+		{
+			sb_nums[0][i] = Sbar_NewPic (va("gfx/num_%i",i));
+			sb_nums[1][i] = Sbar_NewPic (va("gfx/anum_%i",i));
+		}
+
+		sb_nums[0][10] = Sbar_NewPic ("gfx/num_minus");
+		sb_nums[1][10] = Sbar_NewPic ("gfx/anum_minus");
+
+		sb_colon = Sbar_NewPic ("gfx/num_colon");
+		sb_slash = Sbar_NewPic ("gfx/num_slash");
+
 		sb_weapons[0][0] = Sbar_NewPic ("gfx/inv_shotgun");
 		sb_weapons[0][1] = Sbar_NewPic ("gfx/inv_sshotgun");
 		sb_weapons[0][2] = Sbar_NewPic ("gfx/inv_nailgun");
@@ -983,8 +992,10 @@ void Sbar_Draw (void)
 			// special items
 			if (cl.stats[STAT_ITEMS] & IT_INVULNERABILITY)
 			{
-				Sbar_DrawNum (36, 0, 666, 3, 1);
-				Sbar_DrawPic (0, 0, sb_disc);
+				// Nexuiz has no anum pics
+				//Sbar_DrawNum (36, 0, 666, 3, 1);
+				// Nexuiz has no disc pic
+				//Sbar_DrawPic (0, 0, sb_disc);
 			}
 
 			// armor
@@ -1259,16 +1270,19 @@ void Sbar_IntermissionOverlay (void)
 	dig = cl.completed_time/60;
 	Sbar_DrawNum (160, 64, dig, 3, 0);
 	num = cl.completed_time - dig*60;
-	Sbar_DrawPic (234,64,sb_colon);
+	if (gamemode != GAME_NEXUIZ)
+		Sbar_DrawPic (234,64,sb_colon);
 	Sbar_DrawPic (246,64,sb_nums[0][num/10]);
 	Sbar_DrawPic (266,64,sb_nums[0][num%10]);
 
 	Sbar_DrawNum (160, 104, cl.stats[STAT_SECRETS], 3, 0);
-	Sbar_DrawPic (232, 104, sb_slash);
+	if (gamemode != GAME_NEXUIZ)
+		Sbar_DrawPic (232, 104, sb_slash);
 	Sbar_DrawNum (240, 104, cl.stats[STAT_TOTALSECRETS], 3, 0);
 
 	Sbar_DrawNum (160, 144, cl.stats[STAT_MONSTERS], 3, 0);
-	Sbar_DrawPic (232, 144, sb_slash);
+	if (gamemode != GAME_NEXUIZ)
+		Sbar_DrawPic (232, 144, sb_slash);
 	Sbar_DrawNum (240, 144, cl.stats[STAT_TOTALMONSTERS], 3, 0);
 
 }
