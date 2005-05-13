@@ -696,7 +696,7 @@ void SCR_ScreenShot_f (void)
 	buffer2 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3);
 	buffer3 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3 + 18);
 
-	if (SCR_ScreenShot (filename, buffer1, buffer2, buffer3, vid.realx, vid.realy, vid.realwidth, vid.realheight, false, false, false, jpeg))
+	if (SCR_ScreenShot (filename, buffer1, buffer2, buffer3, vid.realx, vid.realy, vid.realwidth, vid.realheight, false, false, false, jpeg, true))
 		Con_Printf("Wrote %s\n", filename);
 	else
 		Con_Printf("unable to write %s\n", filename);
@@ -885,7 +885,7 @@ qboolean SCR_CaptureVideo_VideoFrame(int newframenum)
 	unsigned char *b, *out;
 	char filename[32];
 	int outoffset = (width/2)*(height/2);
-	//return SCR_ScreenShot(filename, cl_capturevideo_buffer, cl_capturevideo_buffer + vid.realwidth * vid.realheight * 3, cl_capturevideo_buffer + vid.realwidth * vid.realheight * 6, vid.realx, vid.realy, vid.realwidth, vid.realheight, false, false, false, jpeg);
+	//return SCR_ScreenShot(filename, cl_capturevideo_buffer, cl_capturevideo_buffer + vid.realwidth * vid.realheight * 3, cl_capturevideo_buffer + vid.realwidth * vid.realheight * 6, vid.realx, vid.realy, vid.realwidth, vid.realheight, false, false, false, jpeg, true);
 	// speed is critical here, so do saving as directly as possible
 	switch (cl_capturevideo_format)
 	{
@@ -1039,12 +1039,12 @@ struct
 }
 envmapinfo[12] =
 {
-	{{  0,   0, 0}, "rt",  true, false, false},
-	{{  0,  90, 0}, "ft",  true, false, false},
-	{{  0, 180, 0}, "lf",  true, false, false},
-	{{  0, 270, 0}, "bk",  true, false, false},
-	{{-90, 180, 0}, "up", false,  true, false},
-	{{ 90, 180, 0}, "dn", false,  true, false},
+	{{  0,   0, 0}, "rt", false, false, false},
+	{{  0, 270, 0}, "ft", false, false, false},
+	{{  0, 180, 0}, "lf", false, false, false},
+	{{  0,  90, 0}, "bk", false, false, false},
+	{{-90, 180, 0}, "up",  true,  true, false},
+	{{ 90, 180, 0}, "dn",  true,  true, false},
 
 	{{  0,   0, 0}, "px",  true,  true,  true},
 	{{  0,  90, 0}, "py", false,  true, false},
@@ -1103,7 +1103,7 @@ static void R_Envmap_f (void)
 		R_Mesh_Start();
 		R_RenderView();
 		R_Mesh_Finish();
-		SCR_ScreenShot(filename, buffer1, buffer2, buffer3, vid.realx, vid.realy + vid.realheight - (r_refdef.y + r_refdef.height), size, size, envmapinfo[j].flipx, envmapinfo[j].flipy, envmapinfo[j].flipdiagonaly, false);
+		SCR_ScreenShot(filename, buffer1, buffer2, buffer3, vid.realx, vid.realy + vid.realheight - (r_refdef.y + r_refdef.height), size, size, envmapinfo[j].flipx, envmapinfo[j].flipy, envmapinfo[j].flipdiagonaly, false, false);
 	}
 
 	Mem_Free (buffer1);
