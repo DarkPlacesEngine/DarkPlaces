@@ -91,7 +91,6 @@ static qboolean vid_usingmouse = false;
 static qboolean vid_usemouse = false;
 static qboolean vid_usingvsync = false;
 static qboolean vid_usevsync = false;
-static qboolean ignoremousemove = false;
 static float	mouse_x, mouse_y;
 static int p_mouse_x, p_mouse_y;
 
@@ -292,7 +291,7 @@ static void IN_Activate (qboolean grab)
 			XGrabKeyboard(vidx11_display, win, False, GrabModeAsync, GrabModeAsync, CurrentTime);
 
 			mouse_x = mouse_y = 0;
-			ignoremousemove = true;
+			cl_ignoremousemove = true;
 			vid_usingmouse = true;
 		}
 	}
@@ -312,7 +311,7 @@ static void IN_Activate (qboolean grab)
 			if (win)
 				XUndefineCursor(vidx11_display, win);
 
-			ignoremousemove = true;
+			cl_ignoremousemove = true;
 			vid_usingmouse = false;
 		}
 	}
@@ -523,14 +522,6 @@ static void HandleEvents(void)
 		p_mouse_x = scr_width / 2;
 		p_mouse_y = scr_height / 2;
 		XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, p_mouse_x, p_mouse_y);
-	}
-
-	// if told to ignore one mouse move, do so
-	if (ignoremousemove)
-	{
-		ignoremousemove = false;
-		mouse_x = 0;
-		mouse_y = 0;
 	}
 }
 
@@ -885,7 +876,6 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 
 	vid_usingmouse = false;
 	vid_usingvsync = false;
-	ignoremousemove = true;
 	vid_hidden = false;
 	vid_activewindow = true;
 	GL_Init();
