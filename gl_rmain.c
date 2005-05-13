@@ -1880,8 +1880,8 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			basetexture = texture->skin.merged ? texture->skin.merged : texture->skin.base;
 			dopants = false;
 			doshirt = false;
-			//dofullbrightshirt = false;
-			//dofullbrightpants = false;
+			dofullbrightshirt = false;
+			dofullbrightpants = false;
 		}
 		if (dolightmap && gl_combine.integer)
 		{
