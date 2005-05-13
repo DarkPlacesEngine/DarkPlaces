@@ -38,7 +38,7 @@ Space padding is so names can be printed nicely in tables.
 Can safely be performed in place.
 ==================
 */
-static void W_CleanupName (char *in, char *out)
+static void W_CleanupName (const char *in, char *out)
 {
 	int		i;
 	int		c;
@@ -58,7 +58,7 @@ static void W_CleanupName (char *in, char *out)
 		out[i] = 0;
 }
 
-void *W_GetLumpName(char *name)
+void *W_GetLumpName(const char *name)
 {
 	int i;
 	lumpinfo_t *lump;

@@ -69,7 +69,7 @@ static qboolean WakeVideo( clvideo_t * video )
 	return true;
 }
 
-static clvideo_t* OpenVideo( clvideo_t *video, char *filename, char *name, int owner )
+static clvideo_t* OpenVideo( clvideo_t *video, const char *filename, const char *name, int owner )
 {
 	strncpy( video->filename, filename, MAX_QPATH );
 	video->ownertag = owner;
@@ -95,7 +95,7 @@ static clvideo_t* OpenVideo( clvideo_t *video, char *filename, char *name, int o
 	return video;
 }
 
-clvideo_t* CL_OpenVideo( char *filename, char *name, int owner )
+clvideo_t* CL_OpenVideo( const char *filename, const char *name, int owner )
 {
 	clvideo_t *video;
 
@@ -107,7 +107,7 @@ clvideo_t* CL_OpenVideo( char *filename, char *name, int owner )
 	return OpenVideo( video, filename, name, owner );
 }
 
-clvideo_t* CL_GetVideo( char *name )
+clvideo_t* CL_GetVideo( const char *name )
 {
 	int i;
 	clvideo_t *video;

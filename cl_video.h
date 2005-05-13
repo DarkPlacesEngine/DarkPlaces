@@ -36,17 +36,17 @@ typedef struct clvideo_s
 	cachepic_t cpif;
 
 	// if a video is suspended, it is automatically paused (else we'd still have to process the frames)
-	
+
 	// used to determine whether the video's resources should be freed or not
-    double  lasttime; 
+    double  lasttime;
 	// when lasttime - realtime > THRESHOLD, all but the stream is freed
-	qboolean suspended; 
+	qboolean suspended;
 
 	char	filename[MAX_QPATH];
 } clvideo_t;
 
-clvideo_t*	CL_OpenVideo( char *filename, char *name, int owner );
-clvideo_t*	CL_GetVideo( char *name );
+clvideo_t*	CL_OpenVideo( const char *filename, const char *name, int owner );
+clvideo_t*	CL_GetVideo( const char *name );
 void		CL_SetVideoState( clvideo_t *video, clvideostate_t state );
 void		CL_RestartVideo( clvideo_t *video );
 

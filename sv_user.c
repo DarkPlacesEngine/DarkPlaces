@@ -776,7 +776,7 @@ void SV_ReadClientMessage(void)
 				Cmd_ExecuteString (s, src_client);
 			else if (SV_ParseClientCommandQC)
 			{
-				G_INT(OFS_PARM0) = PR_SetString(s);
+				G_INT(OFS_PARM0) = PR_SetEngineString(s);
 				pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
 				PR_ExecuteProgram ((func_t)(SV_ParseClientCommandQC - pr_functions), "QC function SV_ParseClientCommand is missing");
 			}

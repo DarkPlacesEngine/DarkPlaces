@@ -2506,7 +2506,7 @@ void M_Menu_Keys_f (void)
 
 #define NUMKEYS 5
 
-void M_FindKeysForCommand (char *command, int *keys)
+void M_FindKeysForCommand (const char *command, int *keys)
 {
 	int		count;
 	int		j;

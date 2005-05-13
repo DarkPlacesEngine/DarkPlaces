@@ -262,7 +262,7 @@ Draw_CachePic
 ================
 */
 // FIXME: move this to client somehow
-cachepic_t	*Draw_CachePic (char *path, qboolean persistent)
+cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 {
 	int i, crc, hashkey;
 	cachepic_t *pic;
@@ -350,7 +350,7 @@ cachepic_t	*Draw_CachePic (char *path, qboolean persistent)
 	return pic;
 }
 
-cachepic_t *Draw_NewPic(char *picname, int width, int height, int alpha, qbyte *pixels)
+cachepic_t *Draw_NewPic(const char *picname, int width, int height, int alpha, qbyte *pixels)
 {
 	int crc, hashkey;
 	cachepic_t *pic;
@@ -391,7 +391,7 @@ cachepic_t *Draw_NewPic(char *picname, int width, int height, int alpha, qbyte *
 	return pic;
 }
 
-void Draw_FreePic(char *picname)
+void Draw_FreePic(const char *picname)
 {
 	int crc;
 	int hashkey;

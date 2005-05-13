@@ -242,6 +242,7 @@ typedef struct vm_prog_s
 	dprograms_t			*progs;
 	mfunction_t			*functions;
 	char				*strings;
+	int					stringssize;
 	ddef_t				*fielddefs;
 	ddef_t				*globaldefs;
 	dstatement_t		*statements;
@@ -249,6 +250,10 @@ typedef struct vm_prog_s
 	float				*globals;			// same as pr_global_struct
 	int					edict_size;			// in bytes
 	int					edictareasize;		// LordHavoc: in bytes (for bound checking)
+
+	int					maxknownstrings;
+	int					numknownstrings;
+	const char			**knownstrings;
 
 	// all memory allocations related to this vm_prog (code, edicts, strings)
 	mempool_t			*progs_mempool;
@@ -379,6 +384,13 @@ void PRVM_Init (void);
 void PRVM_ExecuteProgram (func_t fnum, const char *errormessage);
 void PRVM_LoadProgs (const char *filename, int numrequiredfunc, char **required_func);
 
+#define PRVM_Alloc(buffersize) _PRVM_Alloc(buffersize, __FILE__, __LINE__)
+#define PRVM_Free(buffer) _PRVM_Free(buffer, __FILE__, __LINE__)
+#define PRVM_FreeAll() _PRVM_FreeAll(__FILE__, __LINE__)
+void *_PRVM_Alloc (size_t buffersize, const char *filename, int fileline);
+void _PRVM_Free (void *buffer, const char *filename, int fileline);
+void _PRVM_FreeAll (const char *filename, int fileline);
+
 void PRVM_Profile_f (void);
 
 void PRVM_PrintState(void);
@@ -388,9 +400,6 @@ void PRVM_Crash (void);
 prvm_edict_t *PRVM_ED_Alloc (void);
 void PRVM_ED_Free (prvm_edict_t *ed);
 void PRVM_ED_ClearEdict (prvm_edict_t *e);
-
-char *PRVM_ED_NewString (const char *string);
-// returns a copy of the string allocated from the server's string heap
 
 void PRVM_ED_Print(prvm_edict_t *ed);
 void PRVM_ED_Write (qfile_t *f, prvm_edict_t *ed);
@@ -439,8 +448,11 @@ void PRVM_Init_Exec(void);
 void PRVM_ED_PrintEdicts_f (void);
 void PRVM_ED_PrintNum (int ent);
 
-#define PRVM_GetString(num) (prog->strings + num)
-#define PRVM_SetString(s)   ((s) != NULL ? (int) (s - prog->strings) : 0)
+const char *PRVM_GetString(int num);
+int PRVM_SetQCString(const char *s);
+int PRVM_SetEngineString(const char *s);
+char *PRVM_AllocString(int bufferlength);
+void PRVM_FreeString(char *s);
 
 //============================================================================
 
