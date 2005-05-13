@@ -1609,7 +1609,7 @@ void R_Mesh_Draw_ShowTris(int firstvertex, int numvertices, int numtriangles, co
 ==============================================================================
 */
 
-qboolean SCR_ScreenShot(char *filename, qbyte *buffer1, qbyte *buffer2, qbyte *buffer3, int x, int y, int width, int height, qboolean flipx, qboolean flipy, qboolean flipdiagonal, qboolean jpeg)
+qboolean SCR_ScreenShot(char *filename, qbyte *buffer1, qbyte *buffer2, qbyte *buffer3, int x, int y, int width, int height, qboolean flipx, qboolean flipy, qboolean flipdiagonal, qboolean jpeg, qboolean gammacorrect)
 {
 	int	indices[3] = {0,1,2};
 	qboolean ret;
@@ -1620,7 +1620,7 @@ qboolean SCR_ScreenShot(char *filename, qbyte *buffer1, qbyte *buffer2, qbyte *b
 	qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer1);
 	CHECKGLERROR
 
-	if (scr_screenshot_gamma.value != 1)
+	if (scr_screenshot_gamma.value != 1 && gammacorrect)
 	{
 		int i;
 		double igamma = 1.0 / scr_screenshot_gamma.value;

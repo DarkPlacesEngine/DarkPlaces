@@ -98,7 +98,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *
 void R_Mesh_Draw_ShowTris(int firstvertex, int numvertices, int numtriangles, const int *elements);
 
 // saves a section of the rendered frame to a .tga or .jpg file
-qboolean SCR_ScreenShot(char *filename, qbyte *buffer1, qbyte *buffer2, qbyte *buffer3, int x, int y, int width, int height, qboolean flipx, qboolean flipy, qboolean flipdiagonal, qboolean jpeg);
+qboolean SCR_ScreenShot(char *filename, qbyte *buffer1, qbyte *buffer2, qbyte *buffer3, int x, int y, int width, int height, qboolean flipx, qboolean flipy, qboolean flipdiagonal, qboolean jpeg, qboolean gammacorrect);
 // used by R_Envmap_f and internally in backend, clears the frame
 void R_ClearScreen(void);
 // invoke refresh of frame
