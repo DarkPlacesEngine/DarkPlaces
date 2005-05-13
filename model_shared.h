@@ -99,9 +99,6 @@ typedef struct surfmesh_s
 	float *data_texcoorddetail2f; // float[verts*2] texcoords for detail texture
 	float *data_lightmapcolor4f;
 	int *data_lightmapoffsets; // index into surface's lightmap samples for vertex lighting
-	// if a model these will be a skin list to choose from
-	int num_skins;
-	struct texture_s *data_skins;
 	// morph blending, these are zero if model is skeletal or static
 	int num_morphframes;
 	float *data_morphvertex3f;

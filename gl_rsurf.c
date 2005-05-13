@@ -656,26 +656,75 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 	*outnumsurfacespointer = info.outnumsurfaces;
 }
 
+extern float *rsurface_vertex3f;
+extern float *rsurface_svector3f;
+extern float *rsurface_tvector3f;
+extern float *rsurface_normal3f;
+extern void RSurf_SetVertexPointer(const entity_render_t *ent, const texture_t *texture, const msurface_t *surface, const vec3_t modelorg);
+
 void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs)
 {
 	model_t *model = ent->model;
 	msurface_t *surface;
 	int surfacelistindex;
-	if (r_drawcollisionbrushes.integer < 2)
+	float projectdistance = lightradius + model->radius + r_shadow_projectdistance.value;
+	vec3_t modelorg;
+	texture_t *texture;
+	// check the box in modelspace, it was already checked in worldspace
+	if (!BoxesOverlap(ent->model->normalmins, ent->model->normalmaxs, lightmins, lightmaxs))
+		return;
+	if (r_drawcollisionbrushes.integer >= 2)
+		return;
+	if (!r_shadow_compilingrtlight)
+		R_UpdateAllTextureInfo(ent);
+	if (model->brush.shadowmesh)
 	{
 		R_Shadow_PrepareShadowMark(model->brush.shadowmesh->numtriangles);
-		if (!r_shadow_compilingrtlight)
-			R_UpdateAllTextureInfo(ent);
+		if (r_shadow_compilingrtlight)
+		{
+			for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
+			{
+				surface = model->data_surfaces + surfacelist[surfacelistindex];
+				texture = surface->texture;
+				if ((texture->basematerialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_WALL)) != MATERIALFLAG_WALL)
+					continue;
+				if (texture->textureflags & (Q3TEXTUREFLAG_TWOSIDED | Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
+					continue;
+				R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, lightmins, lightmaxs, surface->mins, surface->maxs);
+			}
+		}
+		else
+		{
+			for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
+			{
+				surface = model->data_surfaces + surfacelist[surfacelistindex];
+				texture = surface->texture->currentframe;
+				if ((texture->currentmaterialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_WALL)) != MATERIALFLAG_WALL)
+					continue;
+				if (texture->textureflags & (Q3TEXTUREFLAG_TWOSIDED | Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
+					continue;
+				R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, lightmins, lightmaxs, surface->mins, surface->maxs);
+			}
+		}
+		R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, lightradius + model->radius + projectdistance, numshadowmark, shadowmarklist);
+	}
+	else
+	{
+		projectdistance = lightradius + ent->model->radius;
+		Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 		{
 			surface = model->data_surfaces + surfacelist[surfacelistindex];
-			if ((surface->texture->currentmaterialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_WALL)) != MATERIALFLAG_WALL)
+			// FIXME: get current skin
+			texture = surface->texture;//R_FetchAliasSkin(ent, surface->groupmesh);
+			if (texture->currentmaterialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT) || !surface->num_triangles)
 				continue;
-			if (surface->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
-				continue;
-			R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, lightmins, lightmaxs, surface->mins, surface->maxs);
+			RSurf_SetVertexPointer(ent, texture, surface, modelorg);
+			// identify lit faces within the bounding box
+			R_Shadow_PrepareShadowMark(surface->groupmesh->num_triangles);
+			R_Shadow_MarkVolumeFromBox(surface->num_firsttriangle, surface->num_triangles, rsurface_vertex3f, surface->groupmesh->data_element3i, relativelightorigin, lightmins, lightmaxs, surface->mins, surface->maxs);
+			R_Shadow_VolumeFromList(surface->groupmesh->num_vertices, surface->groupmesh->num_triangles, rsurface_vertex3f, surface->groupmesh->data_element3i, surface->groupmesh->data_neighbor3i, relativelightorigin, projectdistance, numshadowmark, shadowmarklist);
 		}
-		R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, lightradius + model->radius + r_shadow_projectdistance.value, numshadowmark, shadowmarklist);
 	}
 }
 
@@ -683,58 +732,64 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolor, int numsurfaces,
 {
 	model_t *model = ent->model;
 	msurface_t *surface;
-	texture_t *t;
+	texture_t *texture;
 	int surfacelistindex;
-	if (r_drawcollisionbrushes.integer < 2)
+	vec3_t modelorg;
+	if (r_drawcollisionbrushes.integer >= 2)
+		return;
+	if (r_shadow_compilingrtlight)
 	{
-		R_Mesh_Matrix(&ent->matrix);
-		if (!r_shadow_compilingrtlight)
-			R_UpdateAllTextureInfo(ent);
+		// if compiling an rtlight, capture the meshes
+		int tri;
+		int *e;
+		float *lightmins, *lightmaxs, *v[3], *vertex3f;
 		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 		{
 			surface = model->data_surfaces + surfacelist[surfacelistindex];
-			if (surface->texture->basematerialflags & MATERIALFLAG_NODRAW || !surface->num_triangles)
+			texture = surface->texture;
+			if ((texture->basematerialflags & (MATERIALFLAG_WALL | MATERIALFLAG_TRANSPARENT)) != MATERIALFLAG_WALL || !surface->num_triangles)
 				continue;
-			if (r_shadow_compilingrtlight)
+			e = surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle;
+			vertex3f = surface->groupmesh->data_vertex3f;
+			lightmins = r_shadow_compilingrtlight->cullmins;
+			lightmaxs = r_shadow_compilingrtlight->cullmaxs;
+			for (tri = 0;tri < surface->num_triangles;tri++, e += 3)
 			{
-				// if compiling an rtlight, capture the mesh
-				t = surface->texture;
-				if ((t->basematerialflags & (MATERIALFLAG_WALL | MATERIALFLAG_TRANSPARENT)) == MATERIALFLAG_WALL)
-				{
-#if 1
-					int tri;
-					int *e;
-					float *lightmins, *lightmaxs, *v[3], *vertex3f;
-					e = surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle;
-					vertex3f = surface->groupmesh->data_vertex3f;
-					lightmins = r_shadow_compilingrtlight->cullmins;
-					lightmaxs = r_shadow_compilingrtlight->cullmaxs;
-					for (tri = 0;tri < surface->num_triangles;tri++, e += 3)
-					{
-						v[0] = vertex3f + e[0] * 3;
-						v[1] = vertex3f + e[1] * 3;
-						v[2] = vertex3f + e[2] * 3;
-						if (PointInfrontOfTriangle(r_shadow_compilingrtlight->shadoworigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
-							Mod_ShadowMesh_AddMesh(r_shadow_mempool, r_shadow_compilingrtlight->static_meshchain_light, surface->texture->skin.base, surface->texture->skin.gloss, surface->texture->skin.nmap, surface->groupmesh->data_vertex3f, surface->groupmesh->data_svector3f, surface->groupmesh->data_tvector3f, surface->groupmesh->data_normal3f, surface->groupmesh->data_texcoordtexture2f, 1, e);
-					}
-#else
-					Mod_ShadowMesh_AddMesh(r_shadow_mempool, r_shadow_compilingrtlight->static_meshchain_light, surface->texture->skin.base, surface->texture->skin.gloss, surface->texture->skin.nmap, surface->groupmesh->data_vertex3f, surface->groupmesh->data_svector3f, surface->groupmesh->data_tvector3f, surface->groupmesh->data_normal3f, surface->groupmesh->data_texcoordtexture2f, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
-#endif
-				}
+				v[0] = vertex3f + e[0] * 3;
+				v[1] = vertex3f + e[1] * 3;
+				v[2] = vertex3f + e[2] * 3;
+				if (PointInfrontOfTriangle(r_shadow_compilingrtlight->shadoworigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+					Mod_ShadowMesh_AddMesh(r_shadow_mempool, r_shadow_compilingrtlight->static_meshchain_light, surface->texture->skin.base, surface->texture->skin.gloss, surface->texture->skin.nmap, surface->groupmesh->data_vertex3f, surface->groupmesh->data_svector3f, surface->groupmesh->data_tvector3f, surface->groupmesh->data_normal3f, surface->groupmesh->data_texcoordtexture2f, 1, e);
 			}
-			else if (ent != r_refdef.worldentity || r_worldsurfacevisible[surfacelist[surfacelistindex]])
+		}
+	}
+	else
+	{
+		R_UpdateAllTextureInfo(ent);
+		Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
+		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
+		{
+			if (ent == r_refdef.worldentity && !r_worldsurfacevisible[surfacelist[surfacelistindex]])
+				continue;
+			surface = model->data_surfaces + surfacelist[surfacelistindex];
+			texture = surface->texture->currentframe;
+			// FIXME: transparent surfaces need to be lit later
+			if ((texture->currentmaterialflags & (MATERIALFLAG_WALL | MATERIALFLAG_TRANSPARENT)) != MATERIALFLAG_WALL || !surface->num_triangles)
+				continue;
+			if (texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+				qglDisable(GL_CULL_FACE);
+			RSurf_SetVertexPointer(ent, texture, surface, modelorg);
+			if (!rsurface_svector3f)
 			{
-				t = surface->texture->currentframe;
-				// FIXME: transparent surfaces need to be lit later
-				if ((t->currentmaterialflags & (MATERIALFLAG_WALL | MATERIALFLAG_TRANSPARENT)) == MATERIALFLAG_WALL)
-				{
-					if (surface->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
-						qglDisable(GL_CULL_FACE);
-					R_Shadow_RenderLighting(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle), surface->groupmesh->data_vertex3f, surface->groupmesh->data_svector3f, surface->groupmesh->data_tvector3f, surface->groupmesh->data_normal3f, surface->groupmesh->data_texcoordtexture2f, lightcolor, vec3_origin, vec3_origin, t->skin.base, NULL, NULL, t->skin.nmap, t->skin.gloss);
-					if (surface->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
-						qglEnable(GL_CULL_FACE);
-				}
+				rsurface_svector3f = varray_svector3f;
+				rsurface_tvector3f = varray_tvector3f;
+				rsurface_normal3f = varray_normal3f;
+				Mod_BuildTextureVectorsAndNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_vertex3f, surface->groupmesh->data_texcoordtexture2f, surface->groupmesh->data_element3i + surface->num_firsttriangle * 3, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f);
 			}
+			// FIXME: add colormapping
+			R_Shadow_RenderLighting(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle), rsurface_vertex3f, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f, surface->groupmesh->data_texcoordtexture2f, lightcolor, vec3_origin, vec3_origin, texture->skin.base, NULL, NULL, texture->skin.nmap, texture->skin.gloss);
+			if (texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+				qglEnable(GL_CULL_FACE);
 		}
 	}
 }
