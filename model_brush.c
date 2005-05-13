@@ -1337,7 +1337,7 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 		data = (qbyte*) FS_LoadFile(litfilename, tempmempool, false);
 		if (data)
 		{
-			if (fs_filesize > 8 && data[0] == 'Q' && data[1] == 'L' && data[2] == 'I' && data[3] == 'T')
+			if (fs_filesize == 8 + l->filelen * 3 && data[0] == 'Q' && data[1] == 'L' && data[2] == 'I' && data[3] == 'T')
 			{
 				i = LittleLong(((int *)data)[1]);
 				if (i == 1)
@@ -1359,7 +1359,7 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 				if (fs_filesize == 8)
 					Con_Print("Empty .lit file, ignoring\n");
 				else
-					Con_Print("Corrupt .lit file (old version?), ignoring\n");
+					Con_Printf("Corrupt .lit file (file size %i bytes, should be %i bytes), ignoring\n", fs_filesize, 8 + l->filelen * 3);
 				Mem_Free(data);
 			}
 		}
