@@ -887,19 +887,15 @@ void VID_Shared_Init(void)
 		Cvar_Set("gl_combine", "0");
 }
 
-int current_vid_fullscreen;
-int current_vid_width;
-int current_vid_height;
-int current_vid_bitsperpixel;
 int VID_Mode(int fullscreen, int width, int height, int bpp)
 {
 	Con_Printf("Video: %s %dx%dx%d\n", fullscreen ? "fullscreen" : "window", width, height, bpp);
 	if (VID_InitMode(fullscreen, width, height, bpp))
 	{
-		current_vid_fullscreen = fullscreen;
-		current_vid_width = width;
-		current_vid_height = height;
-		current_vid_bitsperpixel = bpp;
+		vid.fullscreen = fullscreen;
+		vid.width = width;
+		vid.height = height;
+		vid.bitsperpixel = bpp;
 		Cvar_SetValueQuick(&vid_fullscreen, fullscreen);
 		Cvar_SetValueQuick(&vid_width, width);
 		Cvar_SetValueQuick(&vid_height, height);
@@ -931,14 +927,14 @@ void VID_Restart_f(void)
 		return;
 
 	Con_Printf("VID_Restart: changing from %s %dx%dx%dbpp, to %s %dx%dx%dbpp.\n",
-		current_vid_fullscreen ? "fullscreen" : "window", current_vid_width, current_vid_height, current_vid_bitsperpixel,
+		vid.fullscreen ? "fullscreen" : "window", vid.width, vid.height, vid.bitsperpixel,
 		vid_fullscreen.integer ? "fullscreen" : "window", vid_width.integer, vid_height.integer, vid_bitsperpixel.integer);
 	VID_CloseSystems();
 	VID_Shutdown();
 	if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer))
 	{
 		Con_Print("Video mode change failed\n");
-		if (!VID_Mode(current_vid_fullscreen, current_vid_width, current_vid_height, current_vid_bitsperpixel))
+		if (!VID_Mode(vid.fullscreen, vid.width, vid.height, vid.bitsperpixel))
 			Sys_Error("Unable to restore to last working video mode\n");
 	}
 	VID_OpenSystems();

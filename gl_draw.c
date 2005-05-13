@@ -478,19 +478,19 @@ void R_DrawQueue(void)
 		}
 	}
 
-	r_view_width = bound(0, r_refdef.width, vid.realwidth);
-	r_view_height = bound(0, r_refdef.height, vid.realheight);
+	r_view_width = bound(0, r_refdef.width, vid.width);
+	r_view_height = bound(0, r_refdef.height, vid.height);
 	r_view_depth = 1;
-	r_view_x = bound(0, r_refdef.x, vid.realwidth - r_refdef.width);
-	r_view_y = bound(0, r_refdef.y, vid.realheight - r_refdef.height);
+	r_view_x = bound(0, r_refdef.x, vid.width - r_refdef.width);
+	r_view_y = bound(0, r_refdef.y, vid.height - r_refdef.height);
 	r_view_z = 0;
 	r_view_fov_x = bound(0.1, r_refdef.fov_x, 170);
 	r_view_fov_y = bound(0.1, r_refdef.fov_y, 170);
 	r_view_matrix = r_refdef.viewentitymatrix;
 	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
 
-	qglViewport(r_view_x, vid.realheight - (r_view_y + r_view_height), r_view_width, r_view_height);
-	GL_SetupView_Mode_Ortho(0, 0, vid.conwidth, vid.conheight, -10, 100);
+	qglViewport(r_view_x, vid.height - (r_view_y + r_view_height), r_view_width, r_view_height);
+	GL_SetupView_Mode_Ortho(0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100);
 	qglDepthFunc(GL_LEQUAL);
 	R_Mesh_Matrix(&r_identitymatrix);
 
@@ -544,7 +544,7 @@ void R_DrawQueue(void)
 			R_Mesh_State(&m);
 			at = varray_texcoord2f[0];
 			av = varray_vertex3f;
-			while ((num = *str++) && x < vid.conwidth)
+			while ((num = *str++) && x < vid_conwidth.integer)
 			{
 				if (num != ' ')
 				{
@@ -599,11 +599,11 @@ void R_DrawQueue(void)
 			{
 				// We have to convert the con coords into real coords
 				int x , y, width, height;
-				x = dq->x * ((float)vid.realwidth / vid.conwidth);
+				x = dq->x * ((float)vid.width / vid_conwidth.integer);
 				// OGL uses top to bottom
-				y = dq->y * ((float) vid.realheight / vid.conheight);
-				width = dq->scalex * ((float)vid.realwidth / vid.conwidth);
-				height = dq->scaley * ((float)vid.realheight / vid.conheight);
+				y = dq->y * ((float) vid.height / vid_conheight.integer);
+				width = dq->scalex * ((float)vid.width / vid_conwidth.integer);
+				height = dq->scaley * ((float)vid.height / vid_conheight.integer);
 
 				GL_Scissor(x, y, width, height);
 

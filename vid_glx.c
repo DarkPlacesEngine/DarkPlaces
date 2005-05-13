@@ -103,8 +103,6 @@ qboolean vidmode_ext = false;
 
 static int win_x, win_y;
 
-static int scr_width, scr_height;
-
 static XF86VidModeModeInfo **vidmodes;
 static int num_vidmodes;
 static qboolean vid_isfullscreen = false;
@@ -276,7 +274,7 @@ static void IN_Activate (qboolean grab)
 					// unable to query, probably not supported
 					Con_Print( "Failed to detect XF86DGA Mouse\n" );
 					Cvar_SetValueQuick(&vid_dga, 0);
-					XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, scr_width / 2, scr_height / 2);
+					XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, vid.width / 2, vid.height / 2);
 				}
 				else
 				{
@@ -286,7 +284,7 @@ static void IN_Activate (qboolean grab)
 			}
 			else
 #endif
-				XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, scr_width / 2, scr_height / 2);
+				XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, vid.width / 2, vid.height / 2);
 
 			XGrabKeyboard(vidx11_display, win, False, GrabModeAsync, GrabModeAsync, CurrentTime);
 
@@ -363,7 +361,7 @@ static void HandleEvents(void)
 					{
 						mouse_x += event.xmotion.x - p_mouse_x;
 						mouse_y += event.xmotion.y - p_mouse_y;
-						if (abs(scr_width/2 - event.xmotion.x) > scr_width / 4 || abs(scr_height/2 - event.xmotion.y) > scr_height / 4)
+						if (abs(vid.width/2 - event.xmotion.x) > vid.width / 4 || abs(vid.height/2 - event.xmotion.y) > vid.height / 4)
 							dowarp = true;
 					}
 					p_mouse_x = event.xmotion.x;
@@ -519,8 +517,8 @@ static void HandleEvents(void)
 	if (dowarp)
 	{
 		/* move the mouse to the window center again */
-		p_mouse_x = scr_width / 2;
-		p_mouse_y = scr_height / 2;
+		p_mouse_x = vid.width / 2;
+		p_mouse_y = vid.height / 2;
 		XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, p_mouse_x, p_mouse_y);
 	}
 }
@@ -609,18 +607,6 @@ void InitSig(void)
 	signal(SIGFPE, signal_handler);
 	signal(SIGSEGV, signal_handler);
 	signal(SIGTERM, signal_handler);
-}
-
-/*
-=================
-VID_GetWindowSize
-=================
-*/
-void VID_GetWindowSize (int *x, int *y, int *width, int *height)
-{
-	*x = *y = 0;
-	*width = scr_width;
-	*height = scr_height;
 }
 
 void VID_Finish (void)
@@ -849,9 +835,6 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 		Sys_Error ("glXMakeCurrent failed\n");
 
 	XSync(vidx11_display, False);
-
-	scr_width = width;
-	scr_height = height;
 
 	if ((qglGetString = GL_GetProcAddress("glGetString")) == NULL)
 		Sys_Error("glGetString not found in %s", gl_driver);

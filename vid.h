@@ -26,14 +26,11 @@ extern int cl_available;
 
 typedef struct
 {
-	// these are set with VID_GetWindowSize and can change from frame to frame
-	int realx;
-	int realy;
-	int realwidth;
-	int realheight;
-
-	int conwidth;
-	int conheight;
+	// these are set by VID_Mode
+	int width;
+	int height;
+	int bitsperpixel;
+	int fullscreen;
 } viddef_t;
 
 // global video state
@@ -133,8 +130,6 @@ int VID_GetGamma (unsigned short *ramps);
 
 void VID_UpdateGamma(qboolean force);
 void VID_RestoreSystemGamma(void);
-
-void VID_GetWindowSize (int *x, int *y, int *width, int *height);
 
 void VID_Finish (void);
 

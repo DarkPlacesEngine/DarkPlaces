@@ -102,8 +102,7 @@ static qboolean vid_isfullscreen;
 
 //====================================
 
-static int window_x, window_y, window_width, window_height;
-static int window_center_x, window_center_y;
+static int window_x, window_y;
 
 static void IN_Activate (qboolean grab);
 
@@ -256,43 +255,8 @@ static void Joy_AdvancedUpdate_f (void);
 static void IN_JoyMove (void);
 static void IN_StartupMouse (void);
 
-/*
-================
-VID_UpdateWindowStatus
-================
-*/
-static void VID_UpdateWindowStatus (void)
-{
-	window_center_x = window_x + window_width / 2;
-	window_center_y = window_y + window_height / 2;
-
-	if (mouseinitialized && vid_usingmouse && !dinput_acquired)
-	{
-		RECT window_rect;
-		window_rect.left = window_x;
-		window_rect.top = window_y;
-		window_rect.right = window_x + window_width;
-		window_rect.bottom = window_y + window_height;
-		ClipCursor (&window_rect);
-	}
-}
-
 
 //====================================
-
-/*
-=================
-VID_GetWindowSize
-=================
-*/
-void VID_GetWindowSize (int *x, int *y, int *width, int *height)
-{
-	*x = 0;
-	*y = 0;
-	*width = window_width;
-	*height = window_height;
-}
-
 
 void VID_Finish (void)
 {
@@ -527,7 +491,7 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 		case WM_MOVE:
 			window_x = (int) LOWORD(lParam);
 			window_y = (int) HIWORD(lParam);
-			VID_UpdateWindowStatus ();
+			IN_Activate(false);
 			break;
 
 		case WM_KEYDOWN:
@@ -855,8 +819,6 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 	// x and y may be changed by WM_MOVE messages
 	window_x = CenterX;
 	window_y = CenterY;
-	window_width = width;
-	window_height = height;
 	rect.left += CenterX;
 	rect.right += CenterX;
 	rect.top += CenterY;
@@ -877,8 +839,6 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 
 	ShowWindow (mainwindow, SW_SHOWDEFAULT);
 	UpdateWindow (mainwindow);
-
- 	VID_UpdateWindowStatus ();
 
 	// now we try to make sure we get the focus on the mode switch, because
 	// sometimes in some systems we don't.  We grab the foreground, then
@@ -1015,12 +975,6 @@ void VID_Shutdown (void)
 	vid_isfullscreen = false;
 }
 
-
-/*
-===========
-IN_Activate
-===========
-*/
 static void IN_Activate (qboolean grab)
 {
 	if (!mouseinitialized)
@@ -1042,11 +996,11 @@ static void IN_Activate (qboolean grab)
 				RECT window_rect;
 				window_rect.left = window_x;
 				window_rect.top = window_y;
-				window_rect.right = window_x + window_width;
-				window_rect.bottom = window_y + window_height;
+				window_rect.right = window_x + vid.width;
+				window_rect.bottom = window_y + vid.height;
 				if (mouseparmsvalid)
 					restore_spi = SystemParametersInfo (SPI_SETMOUSE, 0, newmouseparms, 0);
-				SetCursorPos (window_center_x, window_center_y);
+				SetCursorPos ((window_x + vid.width / 2), (window_y + vid.height / 2));
 				SetCapture (mainwindow);
 				ClipCursor (&window_rect);
 			}
@@ -1306,15 +1260,15 @@ static void IN_MouseMove (void)
 	else
 	{
 		GetCursorPos (&current_pos);
-		mx = current_pos.x - window_center_x;
-		my = current_pos.y - window_center_y;
+		mx = current_pos.x - (window_x + vid.width / 2);
+		my = current_pos.y - (window_y + vid.height / 2);
 
 		in_mouse_x = mx;
 		in_mouse_y = my;
 
 		// if the mouse has moved, force it to the center, so there's room to move
 		if (mx || my)
-			SetCursorPos (window_center_x, window_center_y);
+			SetCursorPos ((window_x + vid.width / 2), (window_y + vid.height / 2));
 	}
 }
 

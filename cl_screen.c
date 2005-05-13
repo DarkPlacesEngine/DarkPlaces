@@ -102,17 +102,17 @@ void SCR_DrawCenterString (void)
 	start = scr_centerstring;
 
 	if (scr_center_lines <= 4)
-		y = vid.conheight*0.35;
+		y = vid_conheight.integer*0.35;
 	else
 		y = 48;
 
 	do
 	{
 	// scan the width of the line
-		for (l=0 ; l<vid.conwidth/8 ; l++)
+		for (l=0 ; l<vid_conwidth.integer/8 ; l++)
 			if (start[l] == '\n' || !start[l])
 				break;
-		x = (vid.conwidth - l*8)/2;
+		x = (vid_conwidth.integer - l*8)/2;
 		if (l > 0)
 		{
 			if (remaining < l)
@@ -217,7 +217,7 @@ void SCR_DrawPause (void)
 		return;
 
 	pic = Draw_CachePic ("gfx/pause", true);
-	DrawQ_Pic ((vid.conwidth - pic->width)/2, (vid.conheight - pic->height)/2, "gfx/pause", 0, 0, 1, 1, 1, 1, 0);
+	DrawQ_Pic ((vid_conwidth.integer - pic->width)/2, (vid_conheight.integer - pic->height)/2, "gfx/pause", 0, 0, 1, 1, 1, 1, 0);
 }
 
 
@@ -246,7 +246,7 @@ void SCR_SetUpToDrawConsole (void)
 
 // decide on the height of the console
 	if (key_consoleactive & KEY_CONSOLEACTIVE_USER)
-		conlines = vid.conheight/2;	// half screen
+		conlines = vid_conheight.integer/2;	// half screen
 	else
 		conlines = 0;				// none visible
 
@@ -280,7 +280,7 @@ void SCR_DrawConsole (void)
 	if (key_consoleactive & KEY_CONSOLEACTIVE_FORCED)
 	{
 		// full screen
-		Con_DrawConsole (vid.conheight);
+		Con_DrawConsole (vid_conheight.integer);
 	}
 	else if (scr_con_current)
 		Con_DrawConsole (scr_con_current);
@@ -329,7 +329,7 @@ void R_TimeReport(char *desc)
 	while (length < 20)
 		tempbuf[length++] = ' ';
 	tempbuf[length] = 0;
-	if (speedstringcount + length > (vid.conwidth / 8))
+	if (speedstringcount + length > (vid_conwidth.integer / 8))
 	{
 		strcat(r_speeds_string, "\n");
 		speedstringcount = 0;
@@ -406,9 +406,9 @@ void R_TimeReport_End(void)
 		for (i = 0;r_speeds_string[i];i++)
 			if (r_speeds_string[i] == '\n')
 				lines++;
-		y = vid.conheight - sb_lines - lines * 8;
+		y = vid_conheight.integer - sb_lines - lines * 8;
 		i = j = 0;
-		DrawQ_Fill(0, y, vid.conwidth, lines * 8, 0, 0, 0, 0.5, 0);
+		DrawQ_Fill(0, y, vid_conwidth.integer, lines * 8, 0, 0, 0, 0.5, 0);
 		while (r_speeds_string[i])
 		{
 			j = i;
@@ -509,7 +509,7 @@ void DrawQ_String_Real(float x, float y, const char *string, int maxlen, float s
 	for (;len > 0 && string[len - 1] == ' ';len--);
 	if (len < 1)
 		return;
-	if (x >= vid.conwidth || y >= vid.conheight || x < (-scalex * len) || y < (-scaley))
+	if (x >= vid_conwidth.integer || y >= vid_conheight.integer || x < (-scalex * len) || y < (-scaley))
 		return;
 	size = sizeof(*dq) + ((len + 1 + 3) & ~3);
 	if (r_refdef.drawqueuesize + size > r_refdef.maxdrawqueuesize)
@@ -692,11 +692,11 @@ void SCR_ScreenShot_f (void)
 
 	sprintf(filename, "%s%06d.%s", base, shotnumber, jpeg ? "jpg" : "tga");
 
-	buffer1 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3);
-	buffer2 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3);
-	buffer3 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3 + 18);
+	buffer1 = Mem_Alloc(tempmempool, vid.width * vid.height * 3);
+	buffer2 = Mem_Alloc(tempmempool, vid.width * vid.height * 3);
+	buffer3 = Mem_Alloc(tempmempool, vid.width * vid.height * 3 + 18);
 
-	if (SCR_ScreenShot (filename, buffer1, buffer2, buffer3, vid.realx, vid.realy, vid.realwidth, vid.realheight, false, false, false, jpeg, true))
+	if (SCR_ScreenShot (filename, buffer1, buffer2, buffer3, 0, 0, vid.width, vid.height, false, false, false, jpeg, true))
 		Con_Printf("Wrote %s\n", filename);
 	else
 		Con_Printf("unable to write %s\n", filename);
@@ -743,7 +743,7 @@ void SCR_CaptureVideo_BeginVideo(void)
 	cl_capturevideo_framerate = bound(1, cl_capturevideo_fps.value, 1000);
 	cl_capturevideo_soundrate = 0;
 	cl_capturevideo_frame = 0;
-	cl_capturevideo_buffer = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * (3+3+3) + 18);
+	cl_capturevideo_buffer = Mem_Alloc(tempmempool, vid.width * vid.height * (3+3+3) + 18);
 	gamma = 1.0/scr_screenshot_gamma.value;
 
 	/*
@@ -881,11 +881,11 @@ void SCR_CaptureVideo_EndVideo(void)
 
 qboolean SCR_CaptureVideo_VideoFrame(int newframenum)
 {
-	int x = vid.realx, y = vid.realy, width = vid.realwidth, height = vid.realheight;
+	int x = 0, y = 0, width = vid.width, height = vid.height;
 	unsigned char *b, *out;
 	char filename[32];
 	int outoffset = (width/2)*(height/2);
-	//return SCR_ScreenShot(filename, cl_capturevideo_buffer, cl_capturevideo_buffer + vid.realwidth * vid.realheight * 3, cl_capturevideo_buffer + vid.realwidth * vid.realheight * 6, vid.realx, vid.realy, vid.realwidth, vid.realheight, false, false, false, jpeg, true);
+	//return SCR_ScreenShot(filename, cl_capturevideo_buffer, cl_capturevideo_buffer + vid.width * vid.height * 3, cl_capturevideo_buffer + vid.width * vid.height * 6, 0, 0, vid.width, vid.height, false, false, false, jpeg, true);
 	// speed is critical here, so do saving as directly as possible
 	switch (cl_capturevideo_format)
 	{
@@ -950,7 +950,7 @@ qboolean SCR_CaptureVideo_VideoFrame(int newframenum)
 		}
 		return true;
 	case CAPTUREVIDEOFORMAT_TARGA:
-		//return Image_WriteTGARGB_preflipped (filename, width, height, cl_capturevideo_buffer, cl_capturevideo_buffer + vid.realwidth * vid.realheight * 3, );
+		//return Image_WriteTGARGB_preflipped (filename, width, height, cl_capturevideo_buffer, cl_capturevideo_buffer + vid.width * vid.height * 3, );
 		memset (cl_capturevideo_buffer, 0, 18);
 		cl_capturevideo_buffer[2] = 2;		// uncompressed type
 		cl_capturevideo_buffer[12] = (width >> 0) & 0xFF;
@@ -1075,7 +1075,7 @@ static void R_Envmap_f (void)
 		Con_Print("envmap: size must be one of 128, 256, 512, or 1024\n");
 		return;
 	}
-	if (size > vid.realwidth || size > vid.realheight)
+	if (size > vid.width || size > vid.height)
 	{
 		Con_Print("envmap: your resolution is not big enough to render that size\n");
 		return;
@@ -1103,7 +1103,7 @@ static void R_Envmap_f (void)
 		R_Mesh_Start();
 		R_RenderView();
 		R_Mesh_Finish();
-		SCR_ScreenShot(filename, buffer1, buffer2, buffer3, vid.realx, vid.realy + vid.realheight - (r_refdef.y + r_refdef.height), size, size, envmapinfo[j].flipx, envmapinfo[j].flipy, envmapinfo[j].flipdiagonaly, false, false);
+		SCR_ScreenShot(filename, buffer1, buffer2, buffer3, 0, vid.height - (r_refdef.y + r_refdef.height), size, size, envmapinfo[j].flipx, envmapinfo[j].flipy, envmapinfo[j].flipdiagonaly, false, false);
 	}
 
 	Mem_Free (buffer1);
@@ -1200,8 +1200,6 @@ void CL_SetupScreenSize(void)
 {
 	float conwidth, conheight;
 
-	VID_GetWindowSize (&vid.realx, &vid.realy, &vid.realwidth, &vid.realheight);
-
 	VID_UpdateGamma(false);
 
 	conwidth = bound(320, vid_conwidth.value, 2048);
@@ -1211,16 +1209,8 @@ void CL_SetupScreenSize(void)
 	if (vid_conheight.value != conheight)
 		Cvar_SetValue("vid_conheight", conheight);
 
-	vid.conwidth = vid_conwidth.integer;
-	vid.conheight = vid_conheight.integer;
-
-/*	if (vid.realheight > 240)
-	{
-		vid.conheight = (vid.realheight - 240) * scr_2dresolution.value + 240;
-		vid.conheight = bound(240, vid.conheight, vid.realheight);
-	}
-	else
-		vid.conheight = 240;*/
+	vid_conwidth.integer = vid_conwidth.integer;
+	vid_conheight.integer = vid_conheight.integer;
 
 	SCR_SetUpToDrawConsole();
 }

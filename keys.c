@@ -414,15 +414,15 @@ Key_Console (int key, char ascii)
 
 	if (key == K_PGUP || key == K_KP_PGUP || key == K_MWHEELUP)
 	{
-		con_backscroll += ((int) vid.conheight >> 5);
-		if (con_backscroll > con_totallines - (vid.conheight>>3) - 1)
-			con_backscroll = con_totallines - (vid.conheight>>3) - 1;
+		con_backscroll += ((int) vid_conheight.integer >> 5);
+		if (con_backscroll > con_totallines - (vid_conheight.integer>>3) - 1)
+			con_backscroll = con_totallines - (vid_conheight.integer>>3) - 1;
 		return;
 	}
 
 	if (key == K_PGDN || key == K_KP_PGDN || key == K_MWHEELDOWN)
 	{
-		con_backscroll -= ((int) vid.conheight >> 5);
+		con_backscroll -= ((int) vid_conheight.integer >> 5);
 		if (con_backscroll < 0)
 			con_backscroll = 0;
 		return;
@@ -430,7 +430,7 @@ Key_Console (int key, char ascii)
 
 	if (key == K_HOME || key == K_KP_HOME)
 	{
-		con_backscroll = con_totallines - (vid.conheight>>3) - 1;
+		con_backscroll = con_totallines - (vid_conheight.integer>>3) - 1;
 		return;
 	}
 

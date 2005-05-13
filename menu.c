@@ -163,12 +163,12 @@ float menu_x, menu_y, menu_width, menu_height;
 
 void M_Background(int width, int height)
 {
-	menu_width = bound(1, width, vid.conwidth);
-	menu_height = bound(1, height, vid.conheight);
-	menu_x = (vid.conwidth - menu_width) * 0.5;
-	menu_y = (vid.conheight - menu_height) * 0.5;
+	menu_width = bound(1, width, vid_conwidth.integer);
+	menu_height = bound(1, height, vid_conheight.integer);
+	menu_x = (vid_conwidth.integer - menu_width) * 0.5;
+	menu_y = (vid_conheight.integer - menu_height) * 0.5;
 	//DrawQ_Fill(menu_x, menu_y, menu_width, menu_height, 0, 0, 0, 0.5, 0);
-	DrawQ_Fill(0, 0, vid.conwidth, vid.conheight, 0, 0, 0, 0.5, 0);
+	DrawQ_Fill(0, 0, vid_conwidth.integer, vid_conheight.integer, 0, 0, 0, 0.5, 0);
 }
 
 /*
@@ -1645,7 +1645,7 @@ void M_Options_Draw (void)
 	int visible;
 	cachepic_t	*p;
 
-	M_Background(320, bound(200, 32 + OPTIONS_ITEMS * 8, vid.conheight));
+	M_Background(320, bound(200, 32 + OPTIONS_ITEMS * 8, vid_conheight.integer));
 
 	M_DrawPic(16, 4, "gfx/qplaque.lmp");
 	p = Draw_CachePic("gfx/p_option.lmp", false);
@@ -1844,7 +1844,7 @@ void M_Options_Effects_Draw (void)
 	int visible;
 	cachepic_t	*p;
 
-	M_Background(320, bound(200, 32 + OPTIONS_EFFECTS_ITEMS * 8, vid.conheight));
+	M_Background(320, bound(200, 32 + OPTIONS_EFFECTS_ITEMS * 8, vid_conheight.integer));
 
 	M_DrawPic(16, 4, "gfx/qplaque.lmp");
 	p = Draw_CachePic("gfx/p_option.lmp", false);
@@ -1983,7 +1983,7 @@ void M_Options_Graphics_Draw (void)
 	int visible;
 	cachepic_t	*p;
 
-	M_Background(320, bound(200, 32 + OPTIONS_GRAPHICS_ITEMS * 8, vid.conheight));
+	M_Background(320, bound(200, 32 + OPTIONS_GRAPHICS_ITEMS * 8, vid_conheight.integer));
 
 	M_DrawPic(16, 4, "gfx/qplaque.lmp");
 	p = Draw_CachePic("gfx/p_option.lmp", false);
@@ -2198,8 +2198,8 @@ void M_Options_ColorControl_Draw (void)
 
 	opty += 4;
 	DrawQ_Fill(menu_x, menu_y + opty, 320, 4 + 64 + 8 + 64 + 4, 0, 0, 0, 1, 0);opty += 4;
-	s = (float) 312 / 2 * vid.realwidth / vid.conwidth;
-	t = (float) 4 / 2 * vid.realheight / vid.conheight;
+	s = (float) 312 / 2 * vid.width / vid_conwidth.integer;
+	t = (float) 4 / 2 * vid.height / vid_conheight.integer;
 	DrawQ_SuperPic(menu_x + 4, menu_y + opty, "gfx/colorcontrol/ditherpattern.tga", 312, 4, 0,0, 1,0,0,1, s,0, 1,0,0,1, 0,t, 1,0,0,1, s,t, 1,0,0,1, 0);opty += 4;
 	DrawQ_SuperPic(menu_x + 4, menu_y + opty, NULL                                , 312, 4, 0,0, 0,0,0,1, 1,0, 1,0,0,1, 0,1, 0,0,0,1, 1,1, 1,0,0,1, 0);opty += 4;
 	DrawQ_SuperPic(menu_x + 4, menu_y + opty, "gfx/colorcontrol/ditherpattern.tga", 312, 4, 0,0, 0,1,0,1, s,0, 0,1,0,1, 0,t, 0,1,0,1, s,t, 0,1,0,1, 0);opty += 4;
@@ -2210,8 +2210,8 @@ void M_Options_ColorControl_Draw (void)
 	DrawQ_SuperPic(menu_x + 4, menu_y + opty, NULL                                , 312, 4, 0,0, 0,0,0,1, 1,0, 1,1,1,1, 0,1, 0,0,0,1, 1,1, 1,1,1,1, 0);opty += 4;
 
 	c = menu_options_colorcontrol_correctionvalue.value; // intensity value that should be matched up to a 50% dither to 'correct' quake
-	s = (float) 48 / 2 * vid.realwidth / vid.conwidth;
-	t = (float) 48 / 2 * vid.realheight / vid.conheight;
+	s = (float) 48 / 2 * vid.width / vid_conwidth.integer;
+	t = (float) 48 / 2 * vid.height / vid_conheight.integer;
 	u = s * 0.5;
 	v = t * 0.5;
 	opty += 8;
@@ -2729,11 +2729,6 @@ unsigned short video_resolutions[][2] = {{320,240}, {400,300}, {512,384}, {640,4
 #define VID_RES_COUNT ((int)(sizeof(video_resolutions) / sizeof(video_resolutions[0])) - 1)
 int video_resolution;
 
-extern int current_vid_fullscreen;
-extern int current_vid_width;
-extern int current_vid_height;
-extern int current_vid_bitsperpixel;
-
 
 void M_Menu_Video_f (void)
 {
@@ -2744,8 +2739,8 @@ void M_Menu_Video_f (void)
 	// Look for the current resolution
 	for (video_resolution = 0; video_resolution < VID_RES_COUNT; video_resolution++)
 	{
-		if (video_resolutions[video_resolution][0] == current_vid_width &&
-			video_resolutions[video_resolution][1] == current_vid_height)
+		if (video_resolutions[video_resolution][0] == vid.width &&
+			video_resolutions[video_resolution][1] == vid.height)
 			break;
 	}
 
@@ -2839,10 +2834,10 @@ void M_Video_Key (int key, char ascii)
 	{
 		case K_ESCAPE:
 			// vid_shared.c has a copy of the current video config. We restore it
-			Cvar_SetValueQuick(&vid_fullscreen, current_vid_fullscreen);
-			Cvar_SetValueQuick(&vid_width, current_vid_width);
-			Cvar_SetValueQuick(&vid_height, current_vid_height);
-			Cvar_SetValueQuick(&vid_bitsperpixel, current_vid_bitsperpixel);
+			Cvar_SetValueQuick(&vid_fullscreen, vid.fullscreen);
+			Cvar_SetValueQuick(&vid_width, vid.width);
+			Cvar_SetValueQuick(&vid_height, vid.height);
+			Cvar_SetValueQuick(&vid_bitsperpixel, vid.bitsperpixel);
 
 			S_LocalSound ("sound/misc/menu1.wav");
 			M_Menu_Options_f ();
@@ -4167,9 +4162,9 @@ void M_ServerList_Draw (void)
 
 	// use as much vertical space as available
 	if (gamemode == GAME_TRANSFUSION)
-		M_Background(640, vid.conheight - 80);
+		M_Background(640, vid_conheight.integer - 80);
 	else
-		M_Background(640, vid.conheight);
+		M_Background(640, vid_conheight.integer);
 	// scroll the list as the cursor moves
 	s = va("%i/%i masters %i/%i servers", masterreplycount, masterquerycount, serverreplycount, serverquerycount);
 	M_PrintRed((640 - strlen(s) * 8) / 2, 32, s);
@@ -4439,13 +4434,13 @@ void M_Draw (void)
 			cachepic_t	*p;
 			int g, scale_x, scale_y, scale_y_repeat, top_offset;
 			float scale_y_rate;
-			scale_y_repeat = vid.conheight * 2;
+			scale_y_repeat = vid_conheight.integer * 2;
 			g = (int)(realtime * 64)%96;
 			scale_y_rate = (float)(g+1) / 96;
 			top_offset = (g+12)/12;
 			p = Draw_CachePic (va("gfx/blooddrip%i", top_offset), false);
-			for (scale_x = 0; scale_x <= vid.conwidth; scale_x += p->width) {
-				for (scale_y = -scale_y_repeat; scale_y <= vid.conheight; scale_y += scale_y_repeat) {
+			for (scale_x = 0; scale_x <= vid_conwidth.integer; scale_x += p->width) {
+				for (scale_y = -scale_y_repeat; scale_y <= vid_conheight.integer; scale_y += scale_y_repeat) {
 					DrawQ_Pic (scale_x + 21, scale_y_repeat * .5 + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop3", 0, 0, 1, 1, 1, 1, 0);
 					DrawQ_Pic (scale_x +  116, scale_y_repeat + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop1", 0, 0, 1, 1, 1, 1, 0);
 					DrawQ_Pic (scale_x + 180, scale_y_repeat * .275 + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop3", 0, 0, 1, 1, 1, 1, 0);

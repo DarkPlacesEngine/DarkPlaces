@@ -709,7 +709,7 @@ void GL_LockArrays(int first, int count)
 void GL_Scissor (int x, int y, int width, int height)
 {
 	CHECKGLERROR
-	qglScissor(x, vid.realheight - (y + height),width,height);
+	qglScissor(x, vid.height - (y + height),width,height);
 	CHECKGLERROR
 }
 
@@ -1719,19 +1719,19 @@ void SCR_DrawScreen (void)
 
 			if (r_stereo_sidebyside.integer)
 			{
-				r_refdef.width = vid.realwidth * size / 2.5;
-				r_refdef.height = vid.realheight * size / 2.5 * (1 - bound(0, r_letterbox.value, 100) / 100);
-				r_refdef.x = (vid.realwidth - r_refdef.width * 2.5) * 0.5;
-				r_refdef.y = (vid.realheight - r_refdef.height)/2;
+				r_refdef.width = vid.width * size / 2.5;
+				r_refdef.height = vid.height * size / 2.5 * (1 - bound(0, r_letterbox.value, 100) / 100);
+				r_refdef.x = (vid.width - r_refdef.width * 2.5) * 0.5;
+				r_refdef.y = (vid.height - r_refdef.height)/2;
 				if (r_stereo_side)
 					r_refdef.x += r_refdef.width * 1.5;
 			}
 			else
 			{
-				r_refdef.width = vid.realwidth * size;
-				r_refdef.height = vid.realheight * size * (1 - bound(0, r_letterbox.value, 100) / 100);
-				r_refdef.x = (vid.realwidth - r_refdef.width)/2;
-				r_refdef.y = (vid.realheight - r_refdef.height)/2;
+				r_refdef.width = vid.width * size;
+				r_refdef.height = vid.height * size * (1 - bound(0, r_letterbox.value, 100) / 100);
+				r_refdef.x = (vid.width - r_refdef.width)/2;
+				r_refdef.y = (vid.height - r_refdef.height)/2;
 			}
 
 			// LordHavoc: viewzoom (zoom in for sniper rifles, etc)
@@ -1744,9 +1744,9 @@ void SCR_DrawScreen (void)
 			{
 				float sizex = bound(10, scr_zoomwindow_viewsizex.value, 100) / 100.0;
 				float sizey = bound(10, scr_zoomwindow_viewsizey.value, 100) / 100.0;
-				r_refdef.width = vid.realwidth * sizex;
-				r_refdef.height = vid.realheight * sizey;
-				r_refdef.x = (vid.realwidth - r_refdef.width)/2;
+				r_refdef.width = vid.width * sizex;
+				r_refdef.height = vid.height * sizey;
+				r_refdef.x = (vid.width - r_refdef.width)/2;
 				r_refdef.y = 0;
 				r_refdef.fov_x = scr_zoomwindow_fov.value * r_refdef.fovscale_x;
 				r_refdef.fov_y = CalcFov(scr_zoomwindow_fov.value, r_refdef.width, r_refdef.height) * r_refdef.fovscale_y;
@@ -1757,8 +1757,8 @@ void SCR_DrawScreen (void)
 
 		if (!r_stereo_sidebyside.integer)
 		{
-			r_refdef.width = vid.realwidth;
-			r_refdef.height = vid.realheight;
+			r_refdef.width = vid.width;
+			r_refdef.height = vid.height;
 			r_refdef.x = 0;
 			r_refdef.y = 0;
 		}
@@ -1783,9 +1783,8 @@ void SCR_UpdateLoadingScreen (void)
 	if (vid_hidden)
 		return;
 	r_showtrispass = 0;
-	VID_GetWindowSize(&vid.realx, &vid.realy, &vid.realwidth, &vid.realheight);
 	VID_UpdateGamma(false);
-	qglViewport(0, 0, vid.realwidth, vid.realheight);
+	qglViewport(0, 0, vid.width, vid.height);
 	//qglDisable(GL_SCISSOR_TEST);
 	//qglDepthMask(1);
 	qglColorMask(1,1,1,1);
@@ -1848,7 +1847,7 @@ void SCR_UpdateScreen (void)
 		Cvar_SetValueQuick(&gl_combine, 0);
 
 	CHECKGLERROR
-	qglViewport(0, 0, vid.realwidth, vid.realheight);
+	qglViewport(0, 0, vid.width, vid.height);
 	qglDisable(GL_SCISSOR_TEST);
 	qglDepthMask(1);
 	qglColorMask(1,1,1,1);

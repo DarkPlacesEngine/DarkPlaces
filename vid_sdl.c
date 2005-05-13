@@ -460,13 +460,6 @@ int VID_GetGamma (unsigned short *ramps)
 	return !SDL_GetGammaRamp( ramps, ramps + 256, ramps + 512);
 }
 
-void VID_GetWindowSize (int *x, int *y, int *width, int *height)
-{
-	*x = *y = 0;
-	*width = screen->w;
-	*height = screen->h;
-}
-
 void VID_Finish (void)
 {
 	Uint8 appstate;

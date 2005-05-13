@@ -401,8 +401,8 @@ void CL_Move (void)
 		{
 			// mouse interacting with the scene, mostly stationary view
 			V_StopPitchDrift();
-			cl.cmd.cursor_screen[0] += in_mouse_x * sensitivity.value / vid.realwidth;
-			cl.cmd.cursor_screen[1] += in_mouse_y * sensitivity.value / vid.realheight;
+			cl.cmd.cursor_screen[0] += in_mouse_x * sensitivity.value / vid.width;
+			cl.cmd.cursor_screen[1] += in_mouse_y * sensitivity.value / vid.height;
 		}
 		else if (in_strafe.state & 1)
 		{
@@ -448,22 +448,22 @@ void CL_UpdatePrydonCursor(void)
 	/*
 	if (cl.cmd.cursor_screen[0] < -1)
 	{
-		cl.viewangles[YAW] -= m_yaw.value * (cl.cmd.cursor_screen[0] - -1) * vid.realwidth * sensitivity.value * cl.viewzoom;
+		cl.viewangles[YAW] -= m_yaw.value * (cl.cmd.cursor_screen[0] - -1) * vid.width * sensitivity.value * cl.viewzoom;
 		cl.cmd.cursor_screen[0] = -1;
 	}
 	if (cl.cmd.cursor_screen[0] > 1)
 	{
-		cl.viewangles[YAW] -= m_yaw.value * (cl.cmd.cursor_screen[0] - 1) * vid.realwidth * sensitivity.value * cl.viewzoom;
+		cl.viewangles[YAW] -= m_yaw.value * (cl.cmd.cursor_screen[0] - 1) * vid.width * sensitivity.value * cl.viewzoom;
 		cl.cmd.cursor_screen[0] = 1;
 	}
 	if (cl.cmd.cursor_screen[1] < -1)
 	{
-		cl.viewangles[PITCH] += m_pitch.value * (cl.cmd.cursor_screen[1] - -1) * vid.realheight * sensitivity.value * cl.viewzoom;
+		cl.viewangles[PITCH] += m_pitch.value * (cl.cmd.cursor_screen[1] - -1) * vid.height * sensitivity.value * cl.viewzoom;
 		cl.cmd.cursor_screen[1] = -1;
 	}
 	if (cl.cmd.cursor_screen[1] > 1)
 	{
-		cl.viewangles[PITCH] += m_pitch.value * (cl.cmd.cursor_screen[1] - 1) * vid.realheight * sensitivity.value * cl.viewzoom;
+		cl.viewangles[PITCH] += m_pitch.value * (cl.cmd.cursor_screen[1] - 1) * vid.height * sensitivity.value * cl.viewzoom;
 		cl.cmd.cursor_screen[1] = 1;
 	}
 	*/
