@@ -185,7 +185,7 @@ static void Mod_MDLMD2MD3_TraceBox(model_t *model, int frame, trace_t *trace, co
 	float segmentmins[3], segmentmaxs[3];
 	msurface_t *surface;
 	surfmesh_t *mesh;
-	colbrushf_t *thisbrush_start, *thisbrush_end;
+	colbrushf_t *thisbrush_start = NULL, *thisbrush_end = NULL;
 	matrix4x4_t startmatrix, endmatrix;
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
@@ -361,6 +361,11 @@ static void Mod_BuildAliasSkinFromSkinFrame(texture_t *skin, skinframe_t *skinfr
 	}
 
 	skin->skin = *skinframe;
+	skin->currentframe = skin;
+	skin->basematerialflags = MATERIALFLAG_WALL;
+	if (skin->skin.fog)
+		skin->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_TRANSPARENT;
+	skin->currentmaterialflags = skin->basematerialflags;
 }
 
 static void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfile, char *meshname, char *shadername)
@@ -414,9 +419,9 @@ static void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfi
 
 #define BOUNDI(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%d exceeds %d - %d)\n", loadmodel->name, VALUE, MIN, MAX);
 #define BOUNDF(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%f exceeds %f - %f)\n", loadmodel->name, VALUE, MIN, MAX);
-extern void R_Model_Alias_Draw(entity_render_t *ent);
-extern void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs);
-extern void R_Model_Alias_DrawLight(entity_render_t *ent, float *lightcolor, int numsurfaces, const int *surfacelist);
+extern void R_Q1BSP_Draw(entity_render_t *ent);
+extern void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs);
+extern void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolor, int numsurfaces, const int *surfacelist);
 void Mod_IDP0_Load(model_t *mod, void *buffer)
 {
 	int i, j, version, totalskins, skinwidth, skinheight, groupframes, groupskins, numverts;
@@ -451,18 +456,23 @@ void Mod_IDP0_Load(model_t *mod, void *buffer)
 
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
-	loadmodel->Draw = R_Model_Alias_Draw;
-	loadmodel->DrawShadowVolume = R_Model_Alias_DrawShadowVolume;
-	loadmodel->DrawLight = R_Model_Alias_DrawLight;
+	loadmodel->Draw = R_Q1BSP_Draw;
+	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
+	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 
 	loadmodel->num_surfaces = 1;
+	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
 	loadmodel->nummeshes = loadmodel->num_surfaces;
-	data = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->nummeshes * sizeof(surfmesh_t *) + loadmodel->nummeshes * sizeof(surfmesh_t));
+	data = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->nummeshes * sizeof(surfmesh_t *) + loadmodel->nummeshes * sizeof(surfmesh_t));
 	loadmodel->data_surfaces = (void *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
+	loadmodel->surfacelist = (void *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->meshlist = (void *)data;data += loadmodel->num_surfaces * sizeof(surfmesh_t *);
 	for (i = 0;i < loadmodel->num_surfaces;i++)
+	{
+		loadmodel->surfacelist[i] = i;
 		loadmodel->meshlist[i] = (void *)data;data += sizeof(surfmesh_t);
+	}
 
 	loadmodel->numskins = LittleLong(pinmodel->numskins);
 	BOUNDI(loadmodel->numskins,0,65536);
@@ -616,13 +626,15 @@ void Mod_IDP0_Load(model_t *mod, void *buffer)
 	Mem_Free(vertremap);
 
 	// load the skins
-	if ((skinfiles = Mod_LoadSkinFiles()))
+	skinfiles = Mod_LoadSkinFiles();
+	totalskins = loadmodel->numskins;
+	loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, loadmodel->numskins * sizeof(animscene_t));
+	loadmodel->num_textures = loadmodel->num_surfaces;
+	loadmodel->data_textures = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
+	if (skinfiles)
 	{
-		loadmodel->meshlist[0]->num_skins = totalskins = loadmodel->numskins;
-		loadmodel->meshlist[0]->data_skins = Mem_Alloc(loadmodel->mempool, loadmodel->meshlist[0]->num_skins * sizeof(texture_t));
-		Mod_BuildAliasSkinsFromSkinFiles(loadmodel->meshlist[0]->data_skins, skinfiles, "default", "");
+		Mod_BuildAliasSkinsFromSkinFiles(loadmodel->data_textures, skinfiles, "default", "");
 		Mod_FreeSkinFiles(skinfiles);
-		loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numskins);
 		for (i = 0;i < loadmodel->numskins;i++)
 		{
 			loadmodel->skinscenes[i].firstframe = i;
@@ -633,9 +645,6 @@ void Mod_IDP0_Load(model_t *mod, void *buffer)
 	}
 	else
 	{
-		loadmodel->meshlist[0]->num_skins = totalskins;
-		loadmodel->meshlist[0]->data_skins = Mem_Alloc(loadmodel->mempool, loadmodel->meshlist[0]->num_skins * sizeof(texture_t));
-		loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, loadmodel->numskins * sizeof(animscene_t));
 		totalskins = 0;
 		datapointer = startskins;
 		for (i = 0;i < loadmodel->numskins;i++)
@@ -680,7 +689,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer)
 					sprintf (name, "%s_%i", loadmodel->name, i);
 				if (!Mod_LoadSkinFrame(&tempskinframe, name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_ALPHA | TEXF_PICMIP, true, false, true))
 					Mod_LoadSkinFrame_Internal(&tempskinframe, name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_ALPHA | TEXF_PICMIP, true, false, r_fullbrights.integer, (qbyte *)datapointer, skinwidth, skinheight);
-				Mod_BuildAliasSkinFromSkinFrame(loadmodel->meshlist[0]->data_skins + totalskins, &tempskinframe);
+				Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + totalskins * loadmodel->num_surfaces, &tempskinframe);
 				datapointer += skinwidth * skinheight;
 				totalskins++;
 			}
@@ -695,13 +704,13 @@ void Mod_IDP0_Load(model_t *mod, void *buffer)
 			memcpy(loadmodel->skinscenes, tempskinscenes, loadmodel->numskins * sizeof(animscene_t));
 			Mem_Free(tempskinscenes);
 
-			tempaliasskins = loadmodel->meshlist[0]->data_skins;
-			loadmodel->meshlist[0]->data_skins = Mem_Alloc(loadmodel->mempool, (totalskins + 1) * sizeof(texture_t));
-			memcpy(loadmodel->meshlist[0]->data_skins, tempaliasskins, totalskins * sizeof(texture_t));
+			tempaliasskins = loadmodel->data_textures;
+			loadmodel->data_textures = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * (totalskins + 1) * sizeof(texture_t));
+			memcpy(loadmodel->data_textures, tempaliasskins, loadmodel->num_surfaces * totalskins * sizeof(texture_t));
 			Mem_Free(tempaliasskins);
 
 			// store the info about the new skin
-			Mod_BuildAliasSkinFromSkinFrame(loadmodel->meshlist[0]->data_skins + totalskins, &tempskinframe);
+			Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + totalskins * loadmodel->num_surfaces, &tempskinframe);
 			strcpy(loadmodel->skinscenes[loadmodel->numskins].name, name);
 			loadmodel->skinscenes[loadmodel->numskins].firstframe = totalskins;
 			loadmodel->skinscenes[loadmodel->numskins].framecount = 1;
@@ -709,16 +718,14 @@ void Mod_IDP0_Load(model_t *mod, void *buffer)
 			loadmodel->skinscenes[loadmodel->numskins].loop = true;
 
 			//increase skin counts
-			loadmodel->meshlist[0]->num_skins++;
 			loadmodel->numskins++;
 			totalskins++;
 		}
 	}
 
 	surface = loadmodel->data_surfaces;
+	surface->texture = loadmodel->data_textures;
 	surface->groupmesh = loadmodel->meshlist[0];
-	// FIXME: need to store data_skins in msurface_t, not surfmesh_t
-	surface->texture = surface->groupmesh->data_skins;
 	surface->num_firsttriangle = 0;
 	surface->num_triangles = surface->groupmesh->num_triangles;
 	surface->num_firstvertex = 0;
@@ -770,9 +777,9 @@ void Mod_IDP2_Load(model_t *mod, void *buffer)
 
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
-	loadmodel->Draw = R_Model_Alias_Draw;
-	loadmodel->DrawShadowVolume = R_Model_Alias_DrawShadowVolume;
-	loadmodel->DrawLight = R_Model_Alias_DrawLight;
+	loadmodel->Draw = R_Q1BSP_Draw;
+	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
+	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 
 	if (LittleLong(pinmodel->num_tris) < 1 || LittleLong(pinmodel->num_tris) > 65536)
@@ -797,12 +804,17 @@ void Mod_IDP2_Load(model_t *mod, void *buffer)
 		Host_Error ("%s is not a valid model", loadmodel->name);
 
 	loadmodel->num_surfaces = 1;
+	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
 	loadmodel->nummeshes = loadmodel->num_surfaces;
-	data = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->nummeshes * sizeof(surfmesh_t *) + loadmodel->nummeshes * sizeof(surfmesh_t));
+	data = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->nummeshes * sizeof(surfmesh_t *) + loadmodel->nummeshes * sizeof(surfmesh_t));
 	loadmodel->data_surfaces = (void *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
+	loadmodel->surfacelist = (void *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->meshlist = (void *)data;data += loadmodel->num_surfaces * sizeof(surfmesh_t *);
 	for (i = 0;i < loadmodel->num_surfaces;i++)
+	{
+		loadmodel->surfacelist[i] = i;
 		loadmodel->meshlist[i] = (void *)data;data += sizeof(surfmesh_t);
+	}
 
 	loadmodel->numskins = LittleLong(pinmodel->num_skins);
 	numxyz = LittleLong(pinmodel->num_xyz);
@@ -817,26 +829,27 @@ void Mod_IDP2_Load(model_t *mod, void *buffer)
 
 	// load the skins
 	inskin = (void*)(base + LittleLong(pinmodel->ofs_skins));
-	if ((skinfiles = Mod_LoadSkinFiles()))
+	skinfiles = Mod_LoadSkinFiles();
+	if (skinfiles)
 	{
-		loadmodel->meshlist[0]->num_skins = loadmodel->numskins;
-		loadmodel->meshlist[0]->data_skins = Mem_Alloc(loadmodel->mempool, loadmodel->meshlist[0]->num_skins * sizeof(texture_t));
-		Mod_BuildAliasSkinsFromSkinFiles(loadmodel->meshlist[0]->data_skins, skinfiles, "default", "");
+		loadmodel->num_textures = loadmodel->num_surfaces;
+		loadmodel->data_textures = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
+		Mod_BuildAliasSkinsFromSkinFiles(loadmodel->data_textures, skinfiles, "default", "");
 		Mod_FreeSkinFiles(skinfiles);
 	}
 	else if (loadmodel->numskins)
 	{
 		// skins found (most likely not a player model)
-		loadmodel->meshlist[0]->num_skins = loadmodel->numskins;
-		loadmodel->meshlist[0]->data_skins = Mem_Alloc(loadmodel->mempool, loadmodel->meshlist[0]->num_skins * sizeof(texture_t));
+		loadmodel->num_textures = loadmodel->num_surfaces;
+		loadmodel->data_textures = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
 		for (i = 0;i < loadmodel->numskins;i++, inskin += MD2_SKINNAME)
 		{
 			if (Mod_LoadSkinFrame(&tempskinframe, inskin, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, true, false, true))
-				Mod_BuildAliasSkinFromSkinFrame(loadmodel->meshlist[0]->data_skins + i, &tempskinframe);
+				Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + i * loadmodel->num_surfaces, &tempskinframe);
 			else
 			{
 				Con_Printf("%s is missing skin \"%s\"\n", loadmodel->name, inskin);
-				Mod_BuildAliasSkinFromSkinFrame(loadmodel->meshlist[0]->data_skins + i, NULL);
+				Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + i * loadmodel->num_surfaces, NULL);
 			}
 		}
 	}
@@ -844,9 +857,9 @@ void Mod_IDP2_Load(model_t *mod, void *buffer)
 	{
 		// no skins (most likely a player model)
 		loadmodel->numskins = 1;
-		loadmodel->meshlist[0]->num_skins = loadmodel->numskins;
-		loadmodel->meshlist[0]->data_skins = Mem_Alloc(loadmodel->mempool, loadmodel->meshlist[0]->num_skins * sizeof(texture_t));
-		Mod_BuildAliasSkinFromSkinFrame(loadmodel->meshlist[0]->data_skins, NULL);
+		loadmodel->num_textures = loadmodel->num_surfaces;
+		loadmodel->data_textures = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
+		Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures, NULL);
 	}
 
 	loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numskins);
@@ -969,8 +982,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer)
 
 	surface = loadmodel->data_surfaces;
 	surface->groupmesh = loadmodel->meshlist[0];
-	// FIXME: need to store data_skins in msurface_t, not surfmesh_t
-	surface->texture = surface->groupmesh->data_skins;
+	surface->texture = loadmodel->data_textures;
 	surface->num_firsttriangle = 0;
 	surface->num_triangles = surface->groupmesh->num_triangles;
 	surface->num_firstvertex = 0;
@@ -1004,9 +1016,9 @@ void Mod_IDP3_Load(model_t *mod, void *buffer)
 
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
-	loadmodel->Draw = R_Model_Alias_Draw;
-	loadmodel->DrawShadowVolume = R_Model_Alias_DrawShadowVolume;
-	loadmodel->DrawLight = R_Model_Alias_DrawLight;
+	loadmodel->Draw = R_Q1BSP_Draw;
+	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
+	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 	loadmodel->flags = LittleLong(pinmodel->flags);
 	loadmodel->synctype = ST_RAND;
@@ -1054,22 +1066,27 @@ void Mod_IDP3_Load(model_t *mod, void *buffer)
 	}
 
 	// load meshes
+	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
 	loadmodel->nummeshes = loadmodel->num_surfaces;
-	data = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->nummeshes * sizeof(surfmesh_t *) + loadmodel->nummeshes * sizeof(surfmesh_t));
+	loadmodel->num_textures = loadmodel->num_surfaces;
+	data = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->nummeshes * sizeof(surfmesh_t *) + loadmodel->nummeshes * sizeof(surfmesh_t) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
 	loadmodel->data_surfaces = (void *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
+	loadmodel->surfacelist = (void *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->meshlist = (void *)data;data += loadmodel->num_surfaces * sizeof(surfmesh_t *);
+	loadmodel->data_textures = (void *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
 	for (i = 0;i < loadmodel->num_surfaces;i++)
-		mesh = loadmodel->meshlist[i] = (void *)data;data += sizeof(surfmesh_t);
+	{
+		loadmodel->surfacelist[i] = i;
+		loadmodel->meshlist[i] = (void *)data;data += sizeof(surfmesh_t);
+	}
 	for (i = 0, pinmesh = (md3mesh_t *)((qbyte *)pinmodel + LittleLong(pinmodel->lump_meshes));i < loadmodel->num_surfaces;i++, pinmesh = (md3mesh_t *)((qbyte *)pinmesh + LittleLong(pinmesh->lump_end)))
 	{
 		if (memcmp(pinmesh->identifier, "IDP3", 4))
 			Host_Error("Mod_IDP3_Load: invalid mesh identifier (not IDP3)\n");
 		mesh = loadmodel->meshlist[i];
-		mesh->num_skins = loadmodel->numskins;
 		mesh->num_morphframes = LittleLong(pinmesh->num_frames);
 		mesh->num_vertices = LittleLong(pinmesh->num_vertices);
 		mesh->num_triangles = LittleLong(pinmesh->num_triangles);
-		mesh->data_skins = Mem_Alloc(loadmodel->mempool, mesh->num_skins * sizeof(texture_t));
 		mesh->data_element3i = Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
 		mesh->data_neighbor3i = Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
 		mesh->data_texcoordtexture2f = Mem_Alloc(loadmodel->mempool, mesh->num_vertices * sizeof(float[2]));
@@ -1093,15 +1110,14 @@ void Mod_IDP3_Load(model_t *mod, void *buffer)
 		Mod_Alias_Mesh_CompileFrameZero(mesh);
 
 		if (LittleLong(pinmesh->num_shaders) >= 1)
-			Mod_BuildAliasSkinsFromSkinFiles(mesh->data_skins, skinfiles, pinmesh->name, ((md3shader_t *)((qbyte *) pinmesh + LittleLong(pinmesh->lump_shaders)))->name);
+			Mod_BuildAliasSkinsFromSkinFiles(loadmodel->data_textures + i, skinfiles, pinmesh->name, ((md3shader_t *)((qbyte *) pinmesh + LittleLong(pinmesh->lump_shaders)))->name);
 		else
-			for (j = 0;j < mesh->num_skins;j++)
-				Mod_BuildAliasSkinFromSkinFrame(mesh->data_skins + j, NULL);
+			for (j = 0;j < loadmodel->numskins;j++)
+				Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + i + j * loadmodel->num_surfaces, NULL);
 
 		surface = loadmodel->data_surfaces + i;
 		surface->groupmesh = mesh;
-		// FIXME: need to store data_skins in msurface_t, not surfmesh_t
-		surface->texture = mesh->data_skins;
+		surface->texture = loadmodel->data_textures + i;
 		surface->num_firsttriangle = 0;
 		surface->num_triangles = mesh->num_triangles;
 		surface->num_firstvertex = 0;
@@ -1135,9 +1151,9 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
 
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
-	loadmodel->Draw = R_Model_Alias_Draw;
-	loadmodel->DrawShadowVolume = R_Model_Alias_DrawShadowVolume;
-	loadmodel->DrawLight = R_Model_Alias_DrawLight;
+	loadmodel->Draw = R_Q1BSP_Draw;
+	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
+	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	//loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox; // FIXME: implement collisions
 	loadmodel->flags = 0; // there are no flags on zym models
 	loadmodel->synctype = ST_RAND;
@@ -1291,12 +1307,19 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
 	//loadmodel->alias.zymdata_trizone = Mem_Alloc(loadmodel->mempool, pheader->numtris);
 	//memcpy(loadmodel->alias.zymdata_trizone, (void *) (pheader->lump_trizone.start + pbase), pheader->numtris);
 
+	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
 	loadmodel->nummeshes = loadmodel->num_surfaces;
-	data = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->nummeshes * sizeof(surfmesh_t *) + loadmodel->nummeshes * sizeof(surfmesh_t));
+	loadmodel->num_textures = loadmodel->num_surfaces;
+	data = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->nummeshes * sizeof(surfmesh_t *) + loadmodel->nummeshes * sizeof(surfmesh_t) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
 	loadmodel->data_surfaces = (void *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
+	loadmodel->surfacelist = (void *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->meshlist = (void *)data;data += loadmodel->num_surfaces * sizeof(surfmesh_t *);
+	loadmodel->data_textures = (void *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
 	for (i = 0;i < loadmodel->num_surfaces;i++)
-		mesh = loadmodel->meshlist[i] = (void *)data;data += sizeof(surfmesh_t);
+	{
+		loadmodel->surfacelist[i] = i;
+		loadmodel->meshlist[i] = (void *)data;data += sizeof(surfmesh_t);
+	}
 
 	//zymlump_t lump_shaders; // char shadername[numshaders][32]; // shaders used on this model
 	//zymlump_t lump_render; // int renderlist[rendersize]; // sorted by shader with run lengths (int count), shaders are sequentially used, each run can be used with glDrawElements (each triangle is 3 int indices)
@@ -1314,9 +1337,7 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
 		if (renderlist + count * 3 > renderlistend || (i == pheader->numshaders - 1 && renderlist + count * 3 != renderlistend))
 			Host_Error("%s corrupt renderlist (wrong size)\n", loadmodel->name);
 		mesh = loadmodel->meshlist[i];
-		mesh->num_skins = loadmodel->numskins;
 		mesh->num_triangles = count;
-		mesh->data_skins = Mem_Alloc(loadmodel->mempool, mesh->num_skins * sizeof(texture_t));
 		mesh->data_element3i = Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
 		mesh->data_neighbor3i = Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
 		outelements = mesh->data_element3i;
@@ -1383,15 +1404,14 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
 		// name as the section name
 		shadername = (char *) (pheader->lump_shaders.start + pbase) + i * 32;
 		if (shadername[0])
-			Mod_BuildAliasSkinsFromSkinFiles(mesh->data_skins, skinfiles, shadername, shadername);
+			Mod_BuildAliasSkinsFromSkinFiles(loadmodel->data_textures + i, skinfiles, shadername, shadername);
 		else
-			for (j = 0;j < mesh->num_skins;j++)
-				Mod_BuildAliasSkinFromSkinFrame(mesh->data_skins + j, NULL);
+			for (j = 0;j < loadmodel->numskins;j++)
+				Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + i + j * loadmodel->num_surfaces, NULL);
 
 		surface = loadmodel->data_surfaces + i;
 		surface->groupmesh = mesh;
-		// FIXME: need to store data_skins in msurface_t, not surfmesh_t
-		surface->texture = mesh->data_skins;
+		surface->texture = loadmodel->data_textures + i;
 		surface->num_firsttriangle = 0;
 		surface->num_triangles = mesh->num_triangles;
 		surface->num_firstvertex = 0;
