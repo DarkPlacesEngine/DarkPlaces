@@ -1368,7 +1368,7 @@ qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 		return true;
 
 	// the light area is visible, set up the scissor rectangle
-	GL_Scissor(ix1, vid.realheight - iy2, ix2 - ix1, iy2 - iy1);
+	GL_Scissor(ix1, vid.height - iy2, ix2 - ix1, iy2 - iy1);
 	//qglScissor(ix1, iy1, ix2 - ix1, iy2 - iy1);
 	//qglEnable(GL_SCISSOR_TEST);
 	c_rt_scissored++;

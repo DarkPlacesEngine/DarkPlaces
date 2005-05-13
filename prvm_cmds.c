@@ -2241,8 +2241,8 @@ void VM_getmousepos(void)
 
 	VM_SAFEPARMCOUNT(0,VM_getmousepos);
 
-	PRVM_G_VECTOR(OFS_RETURN)[0] = in_mouse_x * vid.conwidth / vid.realwidth;
-	PRVM_G_VECTOR(OFS_RETURN)[1] = in_mouse_y * vid.conheight / vid.realheight;
+	PRVM_G_VECTOR(OFS_RETURN)[0] = in_mouse_x * vid_conwidth.integer / vid.width;
+	PRVM_G_VECTOR(OFS_RETURN)[1] = in_mouse_y * vid_conheight.integer / vid.height;
 	PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
 }
 
@@ -2789,10 +2789,10 @@ void VM_drawsetcliparea(void)
 	float x,y,w,h;
 	VM_SAFEPARMCOUNT(4,VM_drawsetcliparea);
 
-	x = bound(0, PRVM_G_FLOAT(OFS_PARM0), vid.conwidth);
-	y = bound(0, PRVM_G_FLOAT(OFS_PARM1), vid.conheight);
-	w = bound(0, PRVM_G_FLOAT(OFS_PARM2) + PRVM_G_FLOAT(OFS_PARM0) - x, (vid.conwidth  - x));
-	h = bound(0, PRVM_G_FLOAT(OFS_PARM3) + PRVM_G_FLOAT(OFS_PARM1) - y, (vid.conheight - y));
+	x = bound(0, PRVM_G_FLOAT(OFS_PARM0), vid_conwidth.integer);
+	y = bound(0, PRVM_G_FLOAT(OFS_PARM1), vid_conheight.integer);
+	w = bound(0, PRVM_G_FLOAT(OFS_PARM2) + PRVM_G_FLOAT(OFS_PARM0) - x, (vid_conwidth.integer  - x));
+	h = bound(0, PRVM_G_FLOAT(OFS_PARM3) + PRVM_G_FLOAT(OFS_PARM1) - y, (vid_conheight.integer - y));
 
 	DrawQ_SetClipArea(x, y, w, h);
 }

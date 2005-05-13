@@ -239,7 +239,7 @@ int cl_videoplaying = false; // old, but still supported
 void CL_DrawVideo(void)
 {
 	if (cl_videoplaying)
-		DrawQ_Pic(0, 0, videoarray->cpif.name, vid.conwidth, vid.conheight, 1, 1, 1, 1, 0);
+		DrawQ_Pic(0, 0, videoarray->cpif.name, vid_conwidth.integer, vid_conheight.integer, 1, 1, 1, 1, 0);
 }
 
 void CL_VideoStart(char *filename)

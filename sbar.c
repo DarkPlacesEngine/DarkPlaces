@@ -533,11 +533,11 @@ static void Sbar_DrawWeapon(int nr, float fade, int active)
 	const int w_width = 300, w_height = 100, w_space = 10;
 	const float w_scale = 0.4;
 
-	DrawQ_Pic(vid.conwidth - (w_width + w_space) * w_scale, (w_height + w_space) * w_scale * nr + w_space, sb_weapons[0][nr]->name, w_width * w_scale, w_height * w_scale, (active) ? 1 : 0.6, active ? 1 : 0.6, active ? 1 : 1, fade * sbar_alpha_fg.value, DRAWFLAG_ADDITIVE);
-	//DrawQ_String(vid.conwidth - (w_space + font_size ), (w_height + w_space) * w_scale * nr + w_space, va("%i",nr+1), 0, font_size, font_size, 1, 0, 0, fade, 0);
+	DrawQ_Pic(vid_conwidth.integer - (w_width + w_space) * w_scale, (w_height + w_space) * w_scale * nr + w_space, sb_weapons[0][nr]->name, w_width * w_scale, w_height * w_scale, (active) ? 1 : 0.6, active ? 1 : 0.6, active ? 1 : 1, fade * sbar_alpha_fg.value, DRAWFLAG_ADDITIVE);
+	//DrawQ_String(vid_conwidth.integer - (w_space + font_size ), (w_height + w_space) * w_scale * nr + w_space, va("%i",nr+1), 0, font_size, font_size, 1, 0, 0, fade, 0);
 
 	if (active)
-		DrawQ_Fill(vid.conwidth - (w_width + w_space) * w_scale, (w_height + w_space) * w_scale * nr + w_space, w_width * w_scale, w_height * w_scale, 0.3, 0.3, 0.3, fade * sbar_alpha_fg.value, DRAWFLAG_ADDITIVE);
+		DrawQ_Fill(vid_conwidth.integer - (w_width + w_space) * w_scale, (w_height + w_space) * w_scale * nr + w_space, w_width * w_scale, w_height * w_scale, 0.3, 0.3, 0.3, fade * sbar_alpha_fg.value, DRAWFLAG_ADDITIVE);
 }
 
 /*
@@ -760,9 +760,9 @@ void Sbar_DrawFace (void)
 		// draw background
 		Sbar_DrawPic (112, 0, rsb_teambord);
 		c = (qbyte *)&palette_complete[(s->colors & 0xf0) + 8];
-		DrawQ_Fill (sbar_x + 113, vid.conheight-SBAR_HEIGHT+3, 22, 9, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+		DrawQ_Fill (sbar_x + 113, vid_conheight.integer-SBAR_HEIGHT+3, 22, 9, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
 		c = (qbyte *)&palette_complete[((s->colors & 15)<<4) + 8];
-		DrawQ_Fill (sbar_x + 113, vid.conheight-SBAR_HEIGHT+12, 22, 9, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+		DrawQ_Fill (sbar_x + 113, vid_conheight.integer-SBAR_HEIGHT+12, 22, 9, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
 
 		// draw number
 		f = s->frags;
@@ -867,26 +867,26 @@ void Sbar_ShowFPS(void)
 		fps_scalex = 12;
 		fps_scaley = 12;
 		fps_height = fps_scaley * ((fpsstring[0] != 0) + (timestring[0] != 0) + (datestring[0] != 0));
-		//fps_y = vid.conheight - sb_lines; // yes this may draw over the sbar
-		//fps_y = bound(0, fps_y, vid.conheight - fps_height);
-		fps_y = vid.conheight - fps_height;
+		//fps_y = vid_conheight.integer - sb_lines; // yes this may draw over the sbar
+		//fps_y = bound(0, fps_y, vid_conheight.integer - fps_height);
+		fps_y = vid_conheight.integer - fps_height;
 		if (fpsstring[0])
 		{
-			fps_x = vid.conwidth - fps_scalex * strlen(fpsstring);
+			fps_x = vid_conwidth.integer - fps_scalex * strlen(fpsstring);
 			DrawQ_Fill(fps_x, fps_y, fps_scalex * strlen(fpsstring), fps_scaley, 0, 0, 0, 0.5, 0);
 			DrawQ_String(fps_x, fps_y, fpsstring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0);
 			fps_y += fps_scaley;
 		}
 		if (timestring[0])
 		{
-			fps_x = vid.conwidth - fps_scalex * strlen(timestring);
+			fps_x = vid_conwidth.integer - fps_scalex * strlen(timestring);
 			DrawQ_Fill(fps_x, fps_y, fps_scalex * strlen(timestring), fps_scaley, 0, 0, 0, 0.5, 0);
 			DrawQ_String(fps_x, fps_y, timestring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0);
 			fps_y += fps_scaley;
 		}
 		if (datestring[0])
 		{
-			fps_x = vid.conwidth - fps_scalex * strlen(datestring);
+			fps_x = vid_conwidth.integer - fps_scalex * strlen(datestring);
 			DrawQ_Fill(fps_x, fps_y, fps_scalex * strlen(datestring), fps_scaley, 0, 0, 0, 0.5, 0);
 			DrawQ_String(fps_x, fps_y, datestring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0);
 			fps_y += fps_scaley;
@@ -920,7 +920,7 @@ void Sbar_Draw (void)
 		{
 			// this is the top left of the sbar area
 			sbar_x = 0;
-			sbar_y = vid.conheight - 24*3;
+			sbar_y = vid_conheight.integer - 24*3;
 
 			// armor
 			if (cl.stats[STAT_ARMOR])
@@ -954,8 +954,8 @@ void Sbar_Draw (void)
 	}
 	else if (gamemode == GAME_NEXUIZ)
 	{
-		sbar_y = vid.conheight - 47;
-		sbar_x = (vid.conwidth - 640)/2;
+		sbar_y = vid_conheight.integer - 47;
+		sbar_x = (vid_conwidth.integer - 640)/2;
 
 		if (sb_showscores || cl.stats[STAT_HEALTH] <= 0)
 		{
@@ -1032,16 +1032,16 @@ void Sbar_Draw (void)
 				DrawQ_Pic(sbar_x,sbar_y,sb_sbar_overlay->name,0,0,1,1,1,1,DRAWFLAG_MODULATE);
 		}
 
-		//if (vid.conwidth > 320 && cl.gametype == GAME_DEATHMATCH)
+		//if (vid_conwidth.integer > 320 && cl.gametype == GAME_DEATHMATCH)
 		//	Sbar_MiniDeathmatchOverlay (0, 17);
 	}
 	else // Quake and others
 	{
-		sbar_y = vid.conheight - SBAR_HEIGHT;
+		sbar_y = vid_conheight.integer - SBAR_HEIGHT;
 		if (cl.gametype == GAME_DEATHMATCH && gamemode != GAME_TRANSFUSION)
 			sbar_x = 0;
 		else
-			sbar_x = (vid.conwidth - 320)/2;
+			sbar_x = (vid_conwidth.integer - 320)/2;
 
 		if (sb_lines > 24)
 		{
@@ -1143,12 +1143,12 @@ void Sbar_Draw (void)
 
 		}
 
-		if (vid.conwidth > 320 && cl.gametype == GAME_DEATHMATCH)
+		if (vid_conwidth.integer > 320 && cl.gametype == GAME_DEATHMATCH)
 		{
 			if (gamemode == GAME_TRANSFUSION)
 				Sbar_MiniDeathmatchOverlay (0, 0);
 			else
-				Sbar_MiniDeathmatchOverlay (324, vid.conheight - sb_lines);
+				Sbar_MiniDeathmatchOverlay (324, vid_conheight.integer - sb_lines);
 		}
 	}
 
@@ -1157,7 +1157,7 @@ void Sbar_Draw (void)
 	R_Draw2DCrosshair();
 
 	if (cl_prydoncursor.integer)
-		DrawQ_Pic((cl.cmd.cursor_screen[0] + 1) * 0.5 * vid.conwidth, (cl.cmd.cursor_screen[1] + 1) * 0.5 * vid.conheight, va("gfx/prydoncursor%03i", cl_prydoncursor.integer), 0, 0, 1, 1, 1, 1, 0);
+		DrawQ_Pic((cl.cmd.cursor_screen[0] + 1) * 0.5 * vid_conwidth.integer, (cl.cmd.cursor_screen[1] + 1) * 0.5 * vid_conheight.integer, va("gfx/prydoncursor%03i", cl_prydoncursor.integer), 0, 0, 1, 1, 1, 1, 0);
 }
 
 //=============================================================================
@@ -1187,14 +1187,14 @@ void Sbar_DeathmatchOverlay (void)
 	cachepic_t *pic;
 
 	pic = Draw_CachePic ("gfx/ranking", true);
-	DrawQ_Pic ((vid.conwidth - pic->width)/2, 8, "gfx/ranking", 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
+	DrawQ_Pic ((vid_conwidth.integer - pic->width)/2, 8, "gfx/ranking", 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
 
 	// scores
 	Sbar_SortFrags ();
 	// draw the text
-	x = (vid.conwidth - (6 + 15) * 8) / 2;
+	x = (vid_conwidth.integer - (6 + 15) * 8) / 2;
 	y = 40;
-	for (i = 0;i < scoreboardlines && y < vid.conheight;i++)
+	for (i = 0;i < scoreboardlines && y < vid_conheight.integer;i++)
 		y += Sbar_PrintScoreboardItem(cl.scores + fragsort[i], x, y);
 }
 
@@ -1210,12 +1210,12 @@ void Sbar_MiniDeathmatchOverlay (int x, int y)
 
 	// decide where to print
 	if (gamemode == GAME_TRANSFUSION)
-		numlines = (vid.conwidth - x + 127) / 128;
+		numlines = (vid_conwidth.integer - x + 127) / 128;
 	else
-		numlines = (vid.conheight - y + 7) / 8;
+		numlines = (vid_conheight.integer - y + 7) / 8;
 
 	// give up if there isn't room
-	if (x >= vid.conwidth || y >= vid.conheight || numlines < 1)
+	if (x >= vid_conwidth.integer || y >= vid_conheight.integer || numlines < 1)
 		return;
 
 	// scores
@@ -1233,12 +1233,12 @@ void Sbar_MiniDeathmatchOverlay (int x, int y)
 
 	if (gamemode == GAME_TRANSFUSION)
 	{
-		for (;i < scoreboardlines && x < vid.conwidth;i++)
+		for (;i < scoreboardlines && x < vid_conwidth.integer;i++)
 			x += 128 + Sbar_PrintScoreboardItem(cl.scores + fragsort[i], x, y);
 	}
 	else
 	{
-		for (;i < scoreboardlines && y < vid.conheight;i++)
+		for (;i < scoreboardlines && y < vid_conheight.integer;i++)
 			y += Sbar_PrintScoreboardItem(cl.scores + fragsort[i], x, y);
 	}
 }
@@ -1260,8 +1260,8 @@ void Sbar_IntermissionOverlay (void)
 		return;
 	}
 
-	sbar_x = (vid.conwidth - 320) >> 1;
-	sbar_y = (vid.conheight - 200) >> 1;
+	sbar_x = (vid_conwidth.integer - 320) >> 1;
+	sbar_y = (vid_conheight.integer - 200) >> 1;
 
 	DrawQ_Pic (sbar_x + 64, sbar_y + 24, "gfx/complete", 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
 	DrawQ_Pic (sbar_x + 0, sbar_y + 56, "gfx/inter", 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
@@ -1299,6 +1299,6 @@ void Sbar_FinaleOverlay (void)
 	cachepic_t	*pic;
 
 	pic = Draw_CachePic ("gfx/finale", true);
-	DrawQ_Pic((vid.conwidth - pic->width)/2, 16, "gfx/finale", 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
+	DrawQ_Pic((vid_conwidth.integer - pic->width)/2, 16, "gfx/finale", 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
 }
 

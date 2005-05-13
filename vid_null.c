@@ -49,13 +49,6 @@ void InitSig(void)
 #endif
 }
 
-void VID_GetWindowSize (int *x, int *y, int *width, int *height)
-{
-	*x = *y = 0;
-	*width = 1;
-	*height = 1;
-}
-
 void VID_Finish (void)
 {
 }

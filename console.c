@@ -325,7 +325,7 @@ void Con_CheckResize (void)
 	int i, j, width, oldwidth, oldtotallines, numlines, numchars;
 	char tbuf[CON_TEXTSIZE];
 
-	width = (vid.conwidth >> 3);
+	width = (vid_conwidth.integer >> 3);
 
 	if (width == con_linewidth)
 		return;
@@ -839,7 +839,7 @@ void Con_DrawNotify (void)
 			int linewidth;
 
 			for (linewidth = con_linewidth; linewidth && text[linewidth-1] == ' '; linewidth--);
-			x = (vid.conwidth - linewidth * 8) / 2;
+			x = (vid_conwidth.integer - linewidth * 8) / 2;
 		} else
 			x = 0;
 
@@ -891,10 +891,10 @@ void Con_DrawConsole (int lines)
 
 // draw the background
 	if (scr_conbrightness.value >= 0.01f)
-		DrawQ_Pic(0, lines - vid.conheight, "gfx/conback", vid.conwidth, vid.conheight, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, scr_conalpha.value, 0);
+		DrawQ_Pic(0, lines - vid_conheight.integer, "gfx/conback", vid_conwidth.integer, vid_conheight.integer, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, scr_conalpha.value, 0);
 	else
-		DrawQ_Fill(0, lines - vid.conheight, vid.conwidth, vid.conheight, 0, 0, 0, scr_conalpha.value, 0);
-	DrawQ_String(vid.conwidth - strlen(engineversion) * 8 - 8, lines - 8, engineversion, 0, 8, 8, 1, 0, 0, 1, 0);
+		DrawQ_Fill(0, lines - vid_conheight.integer, vid_conwidth.integer, vid_conheight.integer, 0, 0, 0, scr_conalpha.value, 0);
+	DrawQ_String(vid_conwidth.integer - strlen(engineversion) * 8 - 8, lines - 8, engineversion, 0, 8, 8, 1, 0, 0, 1, 0);
 
 // draw the text
 	con_vislines = lines;

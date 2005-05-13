@@ -814,8 +814,8 @@ static void R_BlendView(void)
 		// set the (poorly named) screenwidth and screenheight variables to
 		// a power of 2 at least as large as the screen, these will define the
 		// size of the texture to allocate
-		for (screenwidth = 1;screenwidth < vid.realwidth;screenwidth *= 2);
-		for (screenheight = 1;screenheight < vid.realheight;screenheight *= 2);
+		for (screenwidth = 1;screenwidth < vid.width;screenwidth *= 2);
+		for (screenheight = 1;screenheight < vid.height;screenheight *= 2);
 		// allocate textures as needed
 		if (!r_bloom_texture_screen)
 			r_bloom_texture_screen = R_LoadTexture2D(r_main_texturepool, "screen", screenwidth, screenheight, NULL, TEXTYPE_RGBA, TEXF_FORCENEAREST | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
@@ -852,14 +852,14 @@ static void R_BlendView(void)
 		R_Mesh_State(&m);
 		// copy view into the full resolution screen image texture
 		GL_ActiveTexture(0);
-		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.realheight - (r_view_y + r_view_height), r_view_width, r_view_height);
+		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.height - (r_view_y + r_view_height), r_view_width, r_view_height);
 		c_bloomcopies++;
 		c_bloomcopypixels += r_view_width * r_view_height;
 		// now scale it down to the bloom size and raise to a power of itself
 		// to darken it (this leaves the really bright stuff bright, and
 		// everything else becomes very dark)
 		// TODO: optimize with multitexture or GLSL
-		qglViewport(r_view_x, vid.realheight - (r_view_y + bloomheight), bloomwidth, bloomheight);
+		qglViewport(r_view_x, vid.height - (r_view_y + bloomheight), bloomwidth, bloomheight);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		GL_Color(1, 1, 1, 1);
 		R_Mesh_Draw(0, 4, 2, polygonelements);
@@ -881,7 +881,7 @@ static void R_BlendView(void)
 		m.pointer_texcoord[0] = varray_texcoord2f[2];
 		R_Mesh_State(&m);
 		GL_ActiveTexture(0);
-		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.realheight - (r_view_y + bloomheight), bloomwidth, bloomheight);
+		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.height - (r_view_y + bloomheight), bloomwidth, bloomheight);
 		c_bloomcopies++;
 		c_bloomcopypixels += bloomwidth * bloomheight;
 		// blend on at multiple vertical offsets to achieve a vertical blur
@@ -915,7 +915,7 @@ static void R_BlendView(void)
 		}
 		// copy the vertically blurred bloom view to a texture
 		GL_ActiveTexture(0);
-		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.realheight - (r_view_y + bloomheight), bloomwidth, bloomheight);
+		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.height - (r_view_y + bloomheight), bloomwidth, bloomheight);
 		c_bloomcopies++;
 		c_bloomcopypixels += bloomwidth * bloomheight;
 		// blend the vertically blurred image at multiple offsets horizontally
@@ -950,11 +950,11 @@ static void R_BlendView(void)
 		}
 		// copy the blurred bloom view to a texture
 		GL_ActiveTexture(0);
-		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.realheight - (r_view_y + bloomheight), bloomwidth, bloomheight);
+		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.height - (r_view_y + bloomheight), bloomwidth, bloomheight);
 		c_bloomcopies++;
 		c_bloomcopypixels += bloomwidth * bloomheight;
 		// go back to full view area
-		qglViewport(r_view_x, vid.realheight - (r_view_y + r_view_height), r_view_width, r_view_height);
+		qglViewport(r_view_x, vid.height - (r_view_y + r_view_height), r_view_width, r_view_height);
 		// put the original screen image back in place and blend the bloom
 		// texture on it
 		memset(&m, 0, sizeof(m));
@@ -1022,11 +1022,11 @@ void R_RenderView(void)
 	if (!r_refdef.entities/* || !r_refdef.worldmodel*/)
 		return; //Host_Error ("R_RenderView: NULL worldmodel");
 
-	r_view_width = bound(0, r_refdef.width, vid.realwidth);
-	r_view_height = bound(0, r_refdef.height, vid.realheight);
+	r_view_width = bound(0, r_refdef.width, vid.width);
+	r_view_height = bound(0, r_refdef.height, vid.height);
 	r_view_depth = 1;
-	r_view_x = bound(0, r_refdef.x, vid.realwidth - r_refdef.width);
-	r_view_y = bound(0, r_refdef.y, vid.realheight - r_refdef.height);
+	r_view_x = bound(0, r_refdef.x, vid.width - r_refdef.width);
+	r_view_y = bound(0, r_refdef.y, vid.height - r_refdef.height);
 	r_view_z = 0;
 	r_view_fov_x = bound(1, r_refdef.fov_x, 170);
 	r_view_fov_y = bound(1, r_refdef.fov_y, 170);
@@ -1039,7 +1039,7 @@ void R_RenderView(void)
 	r_lightmapintensity = r_rtworld ? r_shadow_realtime_world_lightmaps.value : 1;
 
 	// GL is weird because it's bottom to top, r_view_y is top to bottom
-	qglViewport(r_view_x, vid.realheight - (r_view_y + r_view_height), r_view_width, r_view_height);
+	qglViewport(r_view_x, vid.height - (r_view_y + r_view_height), r_view_width, r_view_height);
 	GL_Scissor(r_view_x, r_view_y, r_view_width, r_view_height);
 	GL_ScissorTest(true);
 	GL_DepthMask(true);
@@ -1061,7 +1061,7 @@ void R_RenderView(void)
 	R_BlendView();
 	R_TimeReport("blendview");
 
-	GL_Scissor(0, 0, vid.realwidth, vid.realheight);
+	GL_Scissor(0, 0, vid.width, vid.height);
 	GL_ScissorTest(false);
 }
 
