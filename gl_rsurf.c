@@ -786,8 +786,35 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolor, int numsurfaces,
 				rsurface_normal3f = varray_normal3f;
 				Mod_BuildTextureVectorsAndNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_vertex3f, surface->groupmesh->data_texcoordtexture2f, surface->groupmesh->data_element3i + surface->num_firsttriangle * 3, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f);
 			}
-			// FIXME: add colormapping
-			R_Shadow_RenderLighting(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle), rsurface_vertex3f, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f, surface->groupmesh->data_texcoordtexture2f, lightcolor, vec3_origin, vec3_origin, texture->skin.base, NULL, NULL, texture->skin.nmap, texture->skin.gloss);
+			if (ent->colormap >= 0)
+			{
+				vec3_t lightcolorpants, lightcolorshirt;
+				// 128-224 are backwards ranges
+				int b = (ent->colormap & 0xF) << 4;b += (b >= 128 && b < 224) ? 4 : 12;
+				if (texture->skin.pants && b >= 224)
+				{
+					qbyte *bcolor = (qbyte *) (&palette_complete[b]);
+					lightcolorpants[0] = lightcolor[0] * bcolor[0] * (1.0f / 255.0f);
+					lightcolorpants[1] = lightcolor[1] * bcolor[1] * (1.0f / 255.0f);
+					lightcolorpants[2] = lightcolor[2] * bcolor[2] * (1.0f / 255.0f);
+				}
+				else
+					VectorClear(lightcolorpants);
+				// 128-224 are backwards ranges
+				b = (ent->colormap & 0xF0);b += (b >= 128 && b < 224) ? 4 : 12;
+				if (texture->skin.shirt && b >= 224)
+				{
+					qbyte *bcolor = (qbyte *) (&palette_complete[b]);
+					lightcolorshirt[0] = lightcolor[0] * bcolor[0] * (1.0f / 255.0f);
+					lightcolorshirt[1] = lightcolor[1] * bcolor[1] * (1.0f / 255.0f);
+					lightcolorshirt[2] = lightcolor[2] * bcolor[2] * (1.0f / 255.0f);
+				}
+				else
+					VectorClear(lightcolorshirt);
+				R_Shadow_RenderLighting(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle), rsurface_vertex3f, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f, surface->groupmesh->data_texcoordtexture2f, lightcolor, lightcolorpants, lightcolorshirt, texture->skin.base, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, texture->skin.gloss);
+			}
+			else
+				R_Shadow_RenderLighting(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle), rsurface_vertex3f, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f, surface->groupmesh->data_texcoordtexture2f, lightcolor, vec3_origin, vec3_origin, texture->skin.merged ? texture->skin.merged : texture->skin.base, NULL, NULL, texture->skin.nmap, texture->skin.gloss);
 			if (texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
 				qglEnable(GL_CULL_FACE);
 		}
