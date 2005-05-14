@@ -1858,7 +1858,7 @@ int PRVM_SetEngineString(const char *s)
 			prog->maxknownstrings += 128;
 			prog->knownstrings = PRVM_Alloc(prog->maxknownstrings * sizeof(char *));
 			if (prog->numknownstrings)
-				memcpy(prog->knownstrings, oldstrings, prog->numknownstrings * sizeof(char *));
+				memcpy((char **)prog->knownstrings, oldstrings, prog->numknownstrings * sizeof(char *));
 		}
 		prog->numknownstrings++;
 	}
@@ -1882,7 +1882,7 @@ char *PRVM_AllocString(int bufferlength)
 			prog->maxknownstrings += 128;
 			prog->knownstrings = PRVM_Alloc(prog->maxknownstrings * sizeof(char *));
 			if (prog->numknownstrings)
-				memcpy(prog->knownstrings, oldstrings, prog->numknownstrings * sizeof(char *));
+				memcpy((char **)prog->knownstrings, oldstrings, prog->numknownstrings * sizeof(char *));
 		}
 		prog->numknownstrings++;
 	}
