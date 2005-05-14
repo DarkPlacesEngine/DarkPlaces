@@ -239,12 +239,10 @@ typedef struct particle_s
 	float		gravity; // how much gravity affects this particle (1.0 = normal gravity, 0.0 = none)
 	float		friction; // how much air friction affects this object (objects with a low mass/size ratio tend to get more air friction)
 	qbyte		color[4];
-#ifndef WORKINGLQUAKE
 	unsigned short owner; // decal stuck to this entity
 	model_t		*ownermodel; // model the decal is stuck to (used to make sure the entity is still alive)
 	vec3_t		relativeorigin; // decal at this location in entity's coordinate space
 	vec3_t		relativedirection; // decal oriented this way relative to entity's coordinate space
-#endif
 }
 particle_t;
 
@@ -908,6 +906,7 @@ void CL_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int color
 {
 	int k;
 	float t, z, minz, maxz;
+	particle_t *p;
 	if (!cl_particles.integer) return;
 	if (maxs[0] <= mins[0]) {t = mins[0];mins[0] = maxs[0];maxs[0] = t;}
 	if (maxs[1] <= mins[1]) {t = mins[1];mins[1] = maxs[1];maxs[1] = t;}
@@ -943,9 +942,11 @@ void CL_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int color
 		{
 			k = particlepalette[colorbase + (rand()&3)];
 			if (gamemode == GAME_GOODVSBAD2)
-				particle(particletype + pt_snow, k, k, tex_particle, 20, lhrandom(64, 128) / cl_particles_quality.value, 0, 0, -1, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], 0);
+				p = particle(particletype + pt_snow, k, k, tex_particle, 20, lhrandom(64, 128) / cl_particles_quality.value, 0, 0, -1, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], 0);
 			else
-				particle(particletype + pt_snow, k, k, tex_particle, 1, lhrandom(64, 128) / cl_particles_quality.value, 0, 0, -1, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], 0);
+				p = particle(particletype + pt_snow, k, k, tex_particle, 1, lhrandom(64, 128) / cl_particles_quality.value, 0, 0, -1, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], 0);
+			if (p)
+				VectorCopy(p->vel, p->relativedirection);
 		}
 		break;
 	default:
@@ -1466,9 +1467,9 @@ void CL_MoveParticles (void)
 				{
 					// snow flutter
 					p->time2 = cl.time + (rand() & 3) * 0.1;
-					p->vel[0] += lhrandom(-32, 32);
-					p->vel[1] += lhrandom(-32, 32);
-					p->vel[2] += lhrandom(-32, 32);
+					p->vel[0] = p->relativedirection[0] + lhrandom(-32, 32);
+					p->vel[1] = p->relativedirection[1] + lhrandom(-32, 32);
+					//p->vel[2] = p->relativedirection[2] + lhrandom(-32, 32);
 				}
 #ifdef WORKINGLQUAKE
 				a = CL_PointQ1Contents(p->org);
