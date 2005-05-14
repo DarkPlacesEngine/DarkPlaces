@@ -336,6 +336,9 @@ void CL_ParseServerInfo (void)
 
 	Con_DPrint("Serverinfo packet received.\n");
 
+	// check memory integrity
+	Mem_CheckSentinelsGlobal();
+
 //
 // wipe the client_state_t struct
 //
