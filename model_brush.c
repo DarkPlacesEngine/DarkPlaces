@@ -773,7 +773,7 @@ void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cm
 #endif
 }
 
-static int Mod_Q1BSP_LightPoint_RecursiveBSPNode(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const mnode_t *node, float x, float y, float startz, float endz)
+static int Mod_Q1BSP_LightPoint_RecursiveBSPNode(model_t *model, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const mnode_t *node, float x, float y, float startz, float endz)
 {
 	int side, distz = endz - startz;
 	float front, back;
@@ -817,7 +817,7 @@ loc0:
 	}
 
 	// go down front side
-	if (node->children[side]->plane && Mod_Q1BSP_LightPoint_RecursiveBSPNode(ambientcolor, diffusecolor, diffusenormal, node->children[side], x, y, startz, mid))
+	if (node->children[side]->plane && Mod_Q1BSP_LightPoint_RecursiveBSPNode(model, ambientcolor, diffusecolor, diffusenormal, node->children[side], x, y, startz, mid))
 		return true;	// hit something
 	else
 	{
@@ -827,7 +827,7 @@ loc0:
 			int i, ds, dt;
 			msurface_t *surface;
 
-			surface = r_refdef.worldmodel->data_surfaces + node->firstsurface;
+			surface = model->data_surfaces + node->firstsurface;
 			for (i = 0;i < node->numsurfaces;i++, surface++)
 			{
 				if (!(surface->texture->basematerialflags & MATERIALFLAG_WALL) || !surface->lightmapinfo->samples)
@@ -908,7 +908,7 @@ middle sample (the one which was requested)
 
 void Mod_Q1BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal)
 {
-	Mod_Q1BSP_LightPoint_RecursiveBSPNode(ambientcolor, diffusecolor, diffusenormal, model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode, p[0], p[1], p[2], p[2] - 65536);
+	Mod_Q1BSP_LightPoint_RecursiveBSPNode(model, ambientcolor, diffusecolor, diffusenormal, model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode, p[0], p[1], p[2], p[2] - 65536);
 }
 
 static void Mod_Q1BSP_DecompressVis(const qbyte *in, const qbyte *inend, qbyte *out, qbyte *outend)
