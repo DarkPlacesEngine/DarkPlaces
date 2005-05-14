@@ -70,7 +70,7 @@ cvar_t vid_bitsperpixel = {CVAR_SAVE, "vid_bitsperpixel", "32"};
 
 cvar_t vid_vsync = {CVAR_SAVE, "vid_vsync", "0"};
 cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1"};
-cvar_t gl_combine = {CVAR_SAVE, "gl_combine", "1"};
+cvar_t gl_combine = {0, "gl_combine", "1"};
 cvar_t gl_finish = {0, "gl_finish", "0"};
 
 cvar_t v_gamma = {CVAR_SAVE, "v_gamma", "1"};

@@ -1221,7 +1221,7 @@ void R_Shadow_Stage_Lighting(int stenciltest)
 			qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "OffsetMapping_Bias"), r_shadow_glsl_offsetmapping_bias.value);CHECKGLERROR
 		}
 	}
-	else if (gl_dot3arb && gl_texturecubemap && gl_combine.integer && gl_stencil)
+	else if (gl_dot3arb && gl_texturecubemap && r_textureunits.integer >= 2 && gl_combine.integer && gl_stencil)
 		r_shadowstage = R_SHADOWSTAGE_LIGHT_DOT3;
 	else
 		r_shadowstage = R_SHADOWSTAGE_LIGHT_VERTEX;
@@ -1600,7 +1600,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 		int passes = 0;
 		if (r_shadow_glsl.integer && r_shadow_program_light[0])
 			passes++; // GLSL shader path (GFFX5200, Radeon 9500)
-		else if (gl_dot3arb && gl_texturecubemap && gl_combine.integer && gl_stencil)
+		else if (gl_dot3arb && gl_texturecubemap && r_textureunits.integer >= 2 && gl_combine.integer && gl_stencil)
 		{
 			// TODO: add direct pants/shirt rendering
 			if (pantstexture && (r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorpants) > 0.001)
