@@ -628,10 +628,9 @@ void Mod_IDP0_Load(model_t *mod, void *buffer)
 
 	// load the skins
 	skinfiles = Mod_LoadSkinFiles();
-	totalskins = loadmodel->numskins;
 	loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, loadmodel->numskins * sizeof(animscene_t));
 	loadmodel->num_textures = loadmodel->num_surfaces;
-	loadmodel->data_textures = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
+	loadmodel->data_textures = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * totalskins * sizeof(texture_t));
 	if (skinfiles)
 	{
 		Mod_BuildAliasSkinsFromSkinFiles(loadmodel->data_textures, skinfiles, "default", "");
