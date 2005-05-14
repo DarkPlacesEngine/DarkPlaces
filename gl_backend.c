@@ -1843,7 +1843,7 @@ void SCR_UpdateScreen (void)
 	if (r_textureunits.integer < 1)
 		Cvar_SetValueQuick(&r_textureunits, 1);
 
-	if (gl_combine.integer && (!gl_combine_extension || r_textureunits.integer < 2))
+	if (gl_combine.integer && !gl_combine_extension)
 		Cvar_SetValueQuick(&gl_combine, 0);
 
 	CHECKGLERROR

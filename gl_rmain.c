@@ -1884,7 +1884,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			dofullbrightshirt = false;
 			dofullbrightpants = false;
 		}
-		if (dolightmap && gl_combine.integer)
+		if (dolightmap && r_textureunits.integer >= 2 && gl_combine.integer)
 		{
 			memset(&m, 0, sizeof(m));
 			m.tex[1] = R_GetTexture(basetexture);
