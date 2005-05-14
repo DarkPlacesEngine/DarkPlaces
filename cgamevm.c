@@ -253,7 +253,7 @@ int CGVM_Model(const char *name)
 	}
 	if (i >= MAX_CGVM_MODELS)
 		return 0;
-	model = Mod_ForName((char *)name, false, false, false);
+	model = Mod_ForName(name, false, false, false);
 	if (!model)
 		return 0;
 	strcpy(cgvm_modelname[i], name);
