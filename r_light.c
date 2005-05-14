@@ -199,7 +199,8 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 				if (f > 0 && CL_TraceBox(p, vec3_origin, vec3_origin, sl->origin, false, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
 				{
 					f *= d_lightstylevalue[sl->style] * (1.0f / 65536.0f);
-					VectorMA(ambientcolor, f, sl->light, ambientcolor);
+					if (f > 0)
+						VectorMA(ambientcolor, f, sl->light, ambientcolor);
 				}
 			}
 		}
@@ -219,7 +220,8 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 			if (f < light->rtlight.lightmap_cullradius2 && CL_TraceBox(p, vec3_origin, vec3_origin, light->origin, false, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
 			{
 				f = (1.0f / (f + LIGHTOFFSET)) - light->rtlight.lightmap_subtract;
-				VectorMA(ambientcolor, f, light->rtlight.lightmap_light, ambientcolor);
+				if (f > 0)
+					VectorMA(ambientcolor, f, light->rtlight.lightmap_light, ambientcolor);
 			}
 		}
 	}
