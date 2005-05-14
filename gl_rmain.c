@@ -1453,6 +1453,7 @@ void R_Mesh_AddBrushMeshFromPlanes(rmesh_t *mesh, int numplanes, mplane_t *plane
 
 void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 {
+	texture_t *texture = t;
 	model_t *model = ent->model;
 	int s = ent->skinnum;
 	if ((unsigned int)s >= (unsigned int)model->numskins)
@@ -1467,9 +1468,10 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 			s = model->skinscenes[s].firstframe;
 	}
 	if (s > 0)
-		t = t->currentframe = t + s * model->num_surfaces;
+		t = t + s * model->num_surfaces;
 	if (t->animated)
-		t = t->currentframe = t->anim_frames[ent->frame != 0][(t->anim_total[ent->frame != 0] >= 2) ? ((int)(r_refdef.time * 5.0f) % t->anim_total[ent->frame != 0]) : 0];
+		t = t->anim_frames[ent->frame != 0][(t->anim_total[ent->frame != 0] >= 2) ? ((int)(r_refdef.time * 5.0f) % t->anim_total[ent->frame != 0]) : 0];
+	texture->currentframe = t;
 	t->currentmaterialflags = t->basematerialflags;
 	t->currentalpha = ent->alpha;
 	if (t->basematerialflags & MATERIALFLAG_WATERALPHA)
@@ -1727,7 +1729,6 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 	qboolean lightmodel = false;
 	rtexture_t *basetexture;
 	rmeshstate_t m;
-	texture = texture->currentframe;
 	if (texture->currentmaterialflags & MATERIALFLAG_NODRAW)
 		return;
 	c_faces += texturenumsurfaces;
@@ -1892,7 +1893,11 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			m.texrgbscale[1] = 2;
 			m.pointer_color = varray_color4f;
 			R_Mesh_State(&m);
-			colorscale = 1;
+			// transparent is not affected by r_lightmapintensity
+			if (!(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+				colorscale = r_lightmapintensity;
+			else
+				colorscale = 1;
 			r = ent->colormod[0] * colorscale;
 			g = ent->colormod[1] * colorscale;
 			b = ent->colormod[2] * colorscale;
@@ -1925,7 +1930,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				GL_LockArrays(0, 0);
 			}
 		}
-		else if (dolightmap && !(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+		else if (dolightmap && !(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT) && !lightmodel)
 		{
 			// single texture
 			GL_BlendFunc(GL_ONE, GL_ZERO);
@@ -1943,7 +1948,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 					R_Mesh_TexBind(0, R_GetTexture(surface->lightmaptexture));
 					R_Mesh_ColorPointer(NULL);
 				}
-				else //if (r == 1 && g == 1 && b == 1)
+				else
 				{
 					R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
 					R_Mesh_ColorPointer(surface->groupmesh->data_lightmapcolor4f);
@@ -1977,12 +1982,15 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			if (waterscrolling)
 				m.texmatrix[0] = r_waterscrollmatrix;
 			m.pointer_color = varray_color4f;
-			colorscale = 1;
+			colorscale = 2;
 			if (gl_combine.integer)
 			{
-				m.texrgbscale[0] = 4;
-				colorscale *= 0.25f;
+				m.texrgbscale[0] = 2;
+				colorscale = 1;
 			}
+			// transparent is not affected by r_lightmapintensity
+			if (!(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+				colorscale *= r_lightmapintensity;
 			R_Mesh_State(&m);
 			r = ent->colormod[0] * colorscale;
 			g = ent->colormod[1] * colorscale;
@@ -2038,9 +2046,12 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			colorscale = 1;
 			if (gl_combine.integer)
 			{
-				m.texrgbscale[0] = 4;
-				colorscale *= 0.25f;
+				m.texrgbscale[0] = 2;
+				colorscale *= 0.5f;
 			}
+			// transparent is not affected by r_lightmapintensity
+			if (!(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+				colorscale *= r_lightmapintensity;
 			R_Mesh_State(&m);
 			r = ent->colormod[0] * colorpants[0] * colorscale;
 			g = ent->colormod[1] * colorpants[1] * colorscale;
@@ -2096,9 +2107,12 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			colorscale = 1;
 			if (gl_combine.integer)
 			{
-				m.texrgbscale[0] = 4;
-				colorscale *= 0.25f;
+				m.texrgbscale[0] = 2;
+				colorscale *= 0.5f;
 			}
+			// transparent is not affected by r_lightmapintensity
+			if (!(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+				colorscale *= r_lightmapintensity;
 			R_Mesh_State(&m);
 			r = ent->colormod[0] * colorshirt[0] * colorscale;
 			g = ent->colormod[1] * colorshirt[1] * colorscale;
@@ -2156,8 +2170,8 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			colorscale = 1;
 			if (gl_combine.integer)
 			{
-				m.texrgbscale[0] = 4;
-				colorscale *= 0.25f;
+				m.texrgbscale[0] = 2;
+				colorscale *= 0.5f;
 			}
 			R_Mesh_State(&m);
 			base = r_ambient.value * (1.0f / 64.0f);
@@ -2385,8 +2399,8 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 					numsurfacelist = 0;
 				}
 				t = surface->texture;
-				f = t->currentmaterialflags & flagsmask;
 				texture = t->currentframe;
+				f = texture->currentmaterialflags & flagsmask;
 			}
 			if (f && surface->num_triangles)
 			{
@@ -2415,8 +2429,8 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 					numsurfacelist = 0;
 				}
 				t = surface->texture;
-				f = t->currentmaterialflags & flagsmask;
 				texture = t->currentframe;
+				f = texture->currentmaterialflags & flagsmask;
 			}
 			if (f && surface->num_triangles)
 			{
