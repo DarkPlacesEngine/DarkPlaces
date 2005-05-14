@@ -1814,7 +1814,7 @@ int PR_SetEngineString(const char *s)
 			pr_maxknownstrings += 128;
 			pr_knownstrings = PR_Alloc(pr_maxknownstrings * sizeof(char *));
 			if (pr_numknownstrings)
-				memcpy(pr_knownstrings, oldstrings, pr_numknownstrings * sizeof(char *));
+				memcpy((char **)pr_knownstrings, oldstrings, pr_numknownstrings * sizeof(char *));
 		}
 		pr_numknownstrings++;
 	}
@@ -1838,7 +1838,7 @@ char *PR_AllocString(int bufferlength)
 			pr_maxknownstrings += 128;
 			pr_knownstrings = PR_Alloc(pr_maxknownstrings * sizeof(char *));
 			if (pr_numknownstrings)
-				memcpy(pr_knownstrings, oldstrings, pr_numknownstrings * sizeof(char *));
+				memcpy((char **)pr_knownstrings, oldstrings, pr_numknownstrings * sizeof(char *));
 		}
 		pr_numknownstrings++;
 	}
