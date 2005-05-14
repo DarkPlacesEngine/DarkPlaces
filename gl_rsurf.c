@@ -489,6 +489,7 @@ void R_Q1BSP_Draw(entity_render_t *ent)
 		model_t *model = ent->model;
 		msurface_t *surface;
 		q3mbrush_t *brush;
+		R_Mesh_Matrix(&ent->matrix);
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 		GL_DepthMask(false);
 		GL_DepthTest(true);
