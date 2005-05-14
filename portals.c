@@ -419,7 +419,7 @@ void Portal_RecursiveFindLeafForFlow(portalrecursioninfo_t *info, mnode_t *node)
 	else
 	{
 		mleaf_t *leaf = (mleaf_t *)node;
-		if (leaf->portals)
+		if (leaf->clusterindex >= 0)
 			Portal_RecursiveFlow(info, leaf, 0, info->numfrustumplanes);
 	}
 }
@@ -438,7 +438,7 @@ void Portal_Visibility(model_t *model, const vec3_t eye, int *leaflist, qbyte *l
 
 	Mod_CheckLoaded(model);
 
-	if (!model->brush.num_portals)
+	if (!model->brush.data_nodes)
 	{
 		Con_Print("Portal_Visibility: not a brush model\n");
 		return;
