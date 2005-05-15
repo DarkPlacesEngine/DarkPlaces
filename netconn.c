@@ -1228,6 +1228,7 @@ static void NetConn_BuildChallengeString(char *buffer, int bufferlength)
 	buffer[i] = 0;
 }
 
+extern void SV_SendServerinfo (client_t *client);
 int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, lhnetaddress_t *peeraddress)
 {
 	int i, n, ret, clientnum, responselength, best;
@@ -1303,24 +1304,28 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 							for (clientnum = 0, client = svs.clients;clientnum < svs.maxclients;clientnum++, client++)
 								if (client->netconnection && LHNETADDRESS_Compare(peeraddress, &client->netconnection->peeraddress) == 0)
 									break;
-							if (clientnum < svs.maxclients)
+							if (clientnum < svs.maxclients && realtime - client->connecttime < net_messagerejointimeout.value)
 							{
-								// duplicate connection request
-								if (realtime - client->connecttime < 2.0)
-								{
-									// client is still trying to connect,
-									// so we send a duplicate reply
-									if (developer.integer)
-										Con_Printf("Datagram_ParseConnectionless: sending duplicate accept to %s.\n", addressstring2);
-									NetConn_WriteString(mysocket, "\377\377\377\377accept", peeraddress);
-								}
-								// only kick if old connection seems dead
+								// client is still trying to connect,
+								// so we send a duplicate reply
+								if (developer.integer)
+									Con_Printf("Datagram_ParseConnectionless: sending duplicate accept to %s.\n", addressstring2);
+								NetConn_WriteString(mysocket, "\377\377\377\377accept", peeraddress);
+							}
+#if 0
+							else if (clientnum < svs.maxclients)
+							{
 								if (realtime - client->netconnection->lastMessageTime >= net_messagerejointimeout.value)
 								{
-									// kick off connection and await retry
-									client->deadsocket = true;
+									// client crashed and is coming back, keep their stuff intact
+									SV_SendServerinfo(client);
+									//host_client = client;
+									//SV_DropClient (true);
+									//client->deadsocket = true;
 								}
+								// else ignore them
 							}
+#endif
 							else
 							{
 								// this is a new client, find a slot
