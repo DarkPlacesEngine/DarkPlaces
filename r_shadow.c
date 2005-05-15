@@ -451,8 +451,8 @@ void r_shadow_start(void)
 		int fragstrings_count;
 		const char *vertstrings_list[SHADERPERMUTATION_COUNT];
 		const char *fragstrings_list[SHADERPERMUTATION_COUNT];
-		vertstring = FS_LoadFile("glsl/light.vert", tempmempool, false);
-		fragstring = FS_LoadFile("glsl/light.frag", tempmempool, false);
+		vertstring = (char *)FS_LoadFile("glsl/light.vert", tempmempool, false);
+		fragstring = (char *)FS_LoadFile("glsl/light.frag", tempmempool, false);
 		for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
 		{
 			vertstrings_count = 0;
@@ -673,7 +673,7 @@ void R_Shadow_Init(void)
 	R_RegisterModule("R_Shadow", r_shadow_start, r_shadow_shutdown, r_shadow_newmap);
 }
 
-static matrix4x4_t matrix_attenuationxyz =
+matrix4x4_t matrix_attenuationxyz =
 {
 	{
 		{0.5, 0.0, 0.0, 0.5},
@@ -683,7 +683,7 @@ static matrix4x4_t matrix_attenuationxyz =
 	}
 };
 
-static matrix4x4_t matrix_attenuationz =
+matrix4x4_t matrix_attenuationz =
 {
 	{
 		{0.0, 0.0, 0.5, 0.5},
@@ -3252,7 +3252,7 @@ void R_Shadow_LoadWorldLights(void)
 	}
 	FS_StripExtension (r_refdef.worldmodel->name, name, sizeof (name));
 	strlcat (name, ".rtlights", sizeof (name));
-	lightsstring = FS_LoadFile(name, tempmempool, false);
+	lightsstring = (char *)FS_LoadFile(name, tempmempool, false);
 	if (lightsstring)
 	{
 		s = lightsstring;
@@ -3395,7 +3395,7 @@ void R_Shadow_LoadLightsFile(void)
 	}
 	FS_StripExtension (r_refdef.worldmodel->name, name, sizeof (name));
 	strlcat (name, ".lights", sizeof (name));
-	lightsstring = FS_LoadFile(name, tempmempool, false);
+	lightsstring = (char *)FS_LoadFile(name, tempmempool, false);
 	if (lightsstring)
 	{
 		s = lightsstring;
@@ -3451,7 +3451,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 	// try to load a .ent file first
 	FS_StripExtension (r_refdef.worldmodel->name, key, sizeof (key));
 	strlcat (key, ".ent", sizeof (key));
-	data = entfiledata = FS_LoadFile(key, tempmempool, true);
+	data = entfiledata = (char *)FS_LoadFile(key, tempmempool, true);
 	// and if that is not found, fall back to the bsp file entity string
 	if (!data)
 		data = r_refdef.worldmodel->brush.entities;
