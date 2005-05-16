@@ -1321,7 +1321,6 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 									SV_SendServerinfo(client);
 									//host_client = client;
 									//SV_DropClient (true);
-									//client->deadsocket = true;
 								}
 								// else ignore them
 							}
@@ -1453,13 +1452,17 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 									NetConn_Write(mysocket, net_message.data, net_message.cursize, peeraddress);
 									SZ_Clear(&net_message);
 								}
+#if 0
 								else if (realtime - client->netconnection->lastMessageTime >= net_messagerejointimeout.value)
 								{
+									SV_SendServerinfo(client);
 									// the old client hasn't sent us anything
 									// in quite a while, so kick off and let
 									// the retry take care of it...
-									client->deadsocket = true;
+									//host_client = client;
+									//SV_DropClient (true);
 								}
+#endif
 							}
 							else
 							{

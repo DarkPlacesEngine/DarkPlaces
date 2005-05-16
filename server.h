@@ -121,8 +121,6 @@ typedef struct client_s
 	qboolean dropasap;
 	// only valid before spawned
 	qboolean sendsignon;
-	// remove this client immediately
-	qboolean deadsocket;
 
 	// requested rate in bytes per second
 	int rate;
