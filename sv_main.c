@@ -317,6 +317,7 @@ void SV_SendServerinfo (client_t *client)
 	if (sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6)
 		client->entitydatabase5 = EntityFrame5_AllocDatabase(sv_mempool);
 
+	SZ_Clear (&client->message);
 	MSG_WriteByte (&client->message, svc_print);
 	dpsnprintf (message, sizeof (message), "\002\nServer: %s build %s (progs %i crc)", gamename, buildstring, pr_crc);
 	MSG_WriteString (&client->message,message);
@@ -1264,7 +1265,7 @@ void SV_SendClientMessages (void)
 			continue;
 		}
 
-		if (host_client->deadsocket || host_client->message.overflowed)
+		if (host_client->message.overflowed)
 		{
 			SV_DropClient (true);	// if the message couldn't send, kick off
 			continue;
