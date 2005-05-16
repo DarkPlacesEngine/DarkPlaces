@@ -1197,7 +1197,6 @@ void SV_Physics_Toss (edict_t *ent)
 {
 	trace_t trace;
 	vec3_t move;
-	edict_t *groundentity;
 
 	// don't stick to ground if onground and moving upward
 	if (ent->v->velocity[2] >= (1.0 / 32.0) && ((int)ent->v->flags & FL_ONGROUND))
@@ -1206,23 +1205,14 @@ void SV_Physics_Toss (edict_t *ent)
 // if onground, return without moving
 	if ((int)ent->v->flags & FL_ONGROUND)
 	{
-		if (!sv_gameplayfix_noairborncorpse.integer)
-			return;
-		if (ent->v->groundentity == 0)
+		if (ent->v->groundentity == 0 || sv_gameplayfix_noairborncorpse.integer)
 			return;
 		// if ent was supported by a brush model on previous frame,
 		// and groundentity is now freed, set groundentity to 0 (floating)
-		groundentity = PROG_TO_EDICT(ent->v->groundentity);
-		if (groundentity->v->solid == SOLID_BSP)
-		{
-			ent->e->suspendedinairflag = true;
-			return;
-		}
-		else if (ent->e->suspendedinairflag && groundentity->e->free)
+		if (ent->e->suspendedinairflag && PROG_TO_EDICT(ent->v->groundentity)->e->free)
 		{
 			// leave it suspended in the air
 			ent->v->groundentity = 0;
-			ent->e->suspendedinairflag = false;
 			return;
 		}
 	}
@@ -1288,6 +1278,8 @@ void SV_Physics_Toss (edict_t *ent)
 			{
 				ent->v->flags = (int)ent->v->flags | FL_ONGROUND;
 				ent->v->groundentity = EDICT_TO_PROG(trace.ent);
+				if (((edict_t *)trace.ent)->v->solid == SOLID_BSP)
+					ent->e->suspendedinairflag = true;
 				VectorClear (ent->v->velocity);
 				VectorClear (ent->v->avelocity);
 			}
