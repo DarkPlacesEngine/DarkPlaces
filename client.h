@@ -346,6 +346,12 @@ typedef struct
 	vec3_t	cursor_normal;
 	vec_t	cursor_fraction;
 	int		cursor_entitynumber;
+
+	double time;
+	double receivetime;
+	double applytime;
+	int buttons;
+	int impulse;
 } usercmd_t;
 
 typedef struct

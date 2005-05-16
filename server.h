@@ -333,7 +333,7 @@ void SV_WriteClientdataToMessage (client_t *client, edict_t *ent, sizebuf_t *msg
 
 void SV_MoveToGoal (void);
 
-void SV_RunClients (void);
+void SV_ApplyClientMove (void);
 void SV_SaveSpawnparms (void);
 void SV_SpawnServer (const char *server);
 

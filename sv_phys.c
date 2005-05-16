@@ -1378,12 +1378,36 @@ void SV_Physics (void)
 
 		if (i >= 1 && i <= svs.maxclients)
 		{
+			host_client = svs.clients + i - 1;
 			// don't do physics on disconnected clients, FrikBot relies on this
-			if (!svs.clients[i-1].spawned)
+			if (!host_client->spawned)
+			{
+				memset(&host_client->cmd, 0, sizeof(host_client->cmd));
 				continue;
+			}
 			// connected slot
+			// apply the latest accepted move to the entity fields
+			SV_ApplyClientMove();
+			// make sure the velocity is sane (not a NaN)
+			SV_CheckVelocity(ent);
+			// LordHavoc: QuakeC replacement for SV_ClientThink (player movement)
+			if (SV_PlayerPhysicsQC)
+			{
+				pr_global_struct->time = sv.time;
+				pr_global_struct->self = EDICT_TO_PROG(ent);
+				PR_ExecuteProgram ((func_t)(SV_PlayerPhysicsQC - pr_functions), "QC function SV_PlayerPhysics is missing");
+			}
+			else
+				SV_ClientThink ();
+			// make sure the velocity is sane (not a NaN)
+			SV_CheckVelocity(ent);
+			// LordHavoc: a hack to ensure that the (rather silly) id1 quakec
+			// player_run/player_stand1 does not horribly malfunction if the
+			// velocity becomes a number that is both == 0 and != 0
+			// (sounds to me like NaN but to be absolutely safe...)
+			if (DotProduct(ent->v->velocity, ent->v->velocity) < 0.0001)
+				VectorClear(ent->v->velocity);
 			// call standard client pre-think
-			SV_CheckVelocity (ent);
 			pr_global_struct->time = sv.time;
 			pr_global_struct->self = EDICT_TO_PROG(ent);
 			PR_ExecuteProgram (pr_global_struct->PlayerPreThink, "QC function PlayerPreThink is missing");

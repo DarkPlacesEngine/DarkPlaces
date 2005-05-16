@@ -696,9 +696,6 @@ void Host_ServerFrame (void)
 		// come in midframe (particularly if host is running really slow)
 		NetConn_ServerFrame();
 
-		// read client messages
-		SV_RunClients();
-
 		// move things around and think unless paused
 		if (sv.frametime)
 			SV_Physics();
