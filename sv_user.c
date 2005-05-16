@@ -602,79 +602,55 @@ void SV_ClientThink(void)
 SV_ReadClientMove
 ===================
 */
-void SV_ReadClientMove (usercmd_t *move)
+extern cvar_t cl_movement_latency;
+void SV_ReadClientMove (void)
 {
 	int i;
-	vec3_t angle;
-	int bits;
-	eval_t *val;
-	float total;
+	usercmd_t *move = &host_client->cmd;
+
+	memset(move, 0, sizeof(usercmd_t));
+
+	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 
 	// read ping time
+	move->time = MSG_ReadFloat ();
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
-	host_client->ping_times[host_client->num_pings % NUM_PING_TIMES] = sv.time - MSG_ReadFloat ();
-	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
-	host_client->num_pings++;
-	for (i=0, total = 0;i < NUM_PING_TIMES;i++)
-		total += host_client->ping_times[i];
-	// can be used for prediction
-	host_client->ping = total / NUM_PING_TIMES;
-	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_ping)))
-		val->_float = host_client->ping * 1000.0;
+	move->receivetime = sv.time;
+	move->applytime = move->time;
+
+	// FIXME: this is only for testing!
+	move->applytime += cl_movement_latency.value;
 
 	// read current angles
 	for (i = 0;i < 3;i++)
 	{
-		if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 		if (sv.protocol == PROTOCOL_QUAKE)
-			angle[i] = MSG_ReadAngle8i();
+			move->viewangles[i] = MSG_ReadAngle8i();
 		else if (sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3)
-			angle[i] = MSG_ReadAngle32f();
+			move->viewangles[i] = MSG_ReadAngle32f();
 		else if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6)
-			angle[i] = MSG_ReadAngle16i();
-		if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
+			move->viewangles[i] = MSG_ReadAngle16i();
 	}
-
-	VectorCopy (angle, host_client->edict->v->v_angle);
+	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 
 	// read movement
-	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	move->forwardmove = MSG_ReadCoord16i ();
-	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	move->sidemove = MSG_ReadCoord16i ();
-	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	move->upmove = MSG_ReadCoord16i ();
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
-	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_movement)))
-	{
-		val->vector[0] = move->forwardmove;
-		val->vector[1] = move->sidemove;
-		val->vector[2] = move->upmove;
-	}
 
 	// read buttons
 	if (sv.protocol == PROTOCOL_DARKPLACES6)
-		bits = MSG_ReadLong ();
+		move->buttons = MSG_ReadLong ();
 	else
-		bits = MSG_ReadByte ();
+		move->buttons = MSG_ReadByte ();
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
-	host_client->edict->v->button0 = bits & 1;
-	host_client->edict->v->button2 = (bits & 2)>>1;
-	// LordHavoc: added 6 new buttons
-	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button3))) val->_float = ((bits >> 2) & 1);
-	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button4))) val->_float = ((bits >> 3) & 1);
-	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button5))) val->_float = ((bits >> 4) & 1);
-	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button6))) val->_float = ((bits >> 5) & 1);
-	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button7))) val->_float = ((bits >> 6) & 1);
-	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button8))) val->_float = ((bits >> 7) & 1);
-	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_buttonuse))) val->_float = ((bits >> 8) & 1);
-	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_buttonchat))) val->_float = ((bits >> 9) & 1);
-	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_cursor_active))) val->_float = ((bits >> 10) & 1);
 
+	// read impulse
 	i = MSG_ReadByte ();
-	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	if (i)
-		host_client->edict->v->impulse = i;
+		move->impulse = i;
+	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 
 	// PRYDON_CLIENTCURSOR
 	if (sv.protocol == PROTOCOL_DARKPLACES6)
@@ -700,10 +676,42 @@ void SV_ReadClientMove (usercmd_t *move)
 			move->cursor_entitynumber = 0;
 		if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	}
+}
+
+void SV_ApplyClientMove (void)
+{
+	int i;
+	eval_t *val;
+	float total;
+	usercmd_t *move = &host_client->cmd;
+
+	// calculate average ping time
+	host_client->ping_times[host_client->num_pings % NUM_PING_TIMES] = move->receivetime - move->time;
+	host_client->num_pings++;
+	for (i=0, total = 0;i < NUM_PING_TIMES;i++)
+		total += host_client->ping_times[i];
+	host_client->ping = total / NUM_PING_TIMES;
+
+	// set the edict fields
+	host_client->edict->v->button0 = move->buttons & 1;
+	host_client->edict->v->button2 = (move->buttons & 2)>>1;
+	host_client->edict->v->impulse = move->impulse;
+	VectorCopy(move->viewangles, host_client->edict->v->v_angle);
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button3))) val->_float = ((move->buttons >> 2) & 1);
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button4))) val->_float = ((move->buttons >> 3) & 1);
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button5))) val->_float = ((move->buttons >> 4) & 1);
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button6))) val->_float = ((move->buttons >> 5) & 1);
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button7))) val->_float = ((move->buttons >> 6) & 1);
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button8))) val->_float = ((move->buttons >> 7) & 1);
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_buttonuse))) val->_float = ((move->buttons >> 8) & 1);
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_buttonchat))) val->_float = ((move->buttons >> 9) & 1);
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_cursor_active))) val->_float = ((move->buttons >> 10) & 1);
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_movement))) VectorSet(val->vector, move->forwardmove, move->sidemove, move->upmove);
 	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_cursor_screen))) VectorCopy(move->cursor_screen, val->vector);
 	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_cursor_trace_start))) VectorCopy(move->cursor_start, val->vector);
 	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_cursor_trace_endpos))) VectorCopy(move->cursor_impact, val->vector);
 	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_cursor_trace_ent))) val->edict = EDICT_TO_PROG(EDICT_NUM(move->cursor_entitynumber));
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_ping))) val->_float = host_client->ping * 1000.0;
 }
 
 void SV_FrameLost(int framenum)
@@ -807,7 +815,7 @@ void SV_ReadClientMessage(void)
 			return;
 
 		case clc_move:
-			SV_ReadClientMove (&host_client->cmd);
+			SV_ReadClientMove ();
 			break;
 
 		case clc_ackframe:
@@ -825,51 +833,6 @@ void SV_ReadClientMessage(void)
 				host_client->latestframenum = num;
 			}
 			break;
-		}
-	}
-}
-
-/*
-==================
-SV_RunClients
-==================
-*/
-void SV_RunClients (void)
-{
-	int i;
-
-	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
-	{
-		if (!host_client->active)
-			continue;
-
-		if (!host_client->spawned)
-		{
-			// clear client movement until a new packet is received
-			memset (&host_client->cmd, 0, sizeof(host_client->cmd));
-			continue;
-		}
-
-		if (sv.frametime)
-		{
-			// LordHavoc: QuakeC replacement for SV_ClientThink (player movement)
-			if (SV_PlayerPhysicsQC)
-			{
-				pr_global_struct->time = sv.time;
-				pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
-				PR_ExecuteProgram ((func_t)(SV_PlayerPhysicsQC - pr_functions), "QC function SV_PlayerPhysics is missing");
-			}
-			else
-				SV_ClientThink ();
-
-			SV_CheckVelocity(host_client->edict);
-
-			// LordHavoc: a hack to ensure that the (rather silly) id1 quakec
-			// player_run/player_stand1 does not horribly malfunction if the
-			// velocity becomes a number that is both == 0 and != 0
-			// (sounds to me like NaN but to be absolutely safe...)
-			if (DotProduct(host_client->edict->v->velocity, host_client->edict->v->velocity) < 0.0001)
-				VectorClear(host_client->edict->v->velocity);
 		}
 	}
 }
