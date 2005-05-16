@@ -515,6 +515,7 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 		// calculate the volumes
 		ch->leftvol = (int) (scale + pan);
 		ch->rightvol = (int) (scale - pan);
+		//Con_Printf("%f %f %f:%f %f %f:%f %f:%d %d\n", ch->origin[0], ch->origin[1], ch->origin[2], source_vec[0], source_vec[1], source_vec[2], scale, pan, ch->leftvol, ch->rightvol);
 	}
 
 	// Adjust volume of static sounds
