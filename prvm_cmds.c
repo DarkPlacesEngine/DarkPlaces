@@ -2977,11 +2977,15 @@ void VM_altstr_count( void )
 	altstr = PRVM_G_STRING( OFS_PARM0 );
 	//VM_CheckEmptyString( altstr );
 
-	for( count = 0, pos = altstr ; *pos ; pos++ )
-		if( *pos == '\\' && !*++pos )
-				break;
-		else if( *pos == '\'' )
+	for( count = 0, pos = altstr ; *pos ; pos++ ) {
+		if( *pos == '\\' ) {
+			if( !*++pos ) {
+				break; 
+			}
+		} else if( *pos == '\'' ) {
 			count++;
+		}
+	}
 
 	PRVM_G_FLOAT( OFS_RETURN ) = (float) (count / 2);
 }
@@ -3039,9 +3043,10 @@ void VM_altstr_get( void )
 	count = count * 2 + 1;
 
 	for( pos = altstr ; *pos && count ; pos++ )
-		if( *pos == '\\' && !*++pos )
-			break;
-		else if( *pos == '\'' )
+		if( *pos == '\\' ) {
+			if( !*++pos )
+				break;
+		} else if( *pos == '\'' )
 			count--;
 
 	if( !*pos ) {
@@ -3091,18 +3096,21 @@ void VM_altstr_set( void )
 
 	outstr = out = VM_GetTempString();
 	for( num = num * 2 + 1, in = altstr; *in && num; *out++ = *in++ )
-		if( *in == '\\' && !*++in )
-			break;
-		else if( *in == '\'' )
+		if( *in == '\\' ) {
+			if( !*++in ) {
+				break;
+			}
+		} else if( *in == '\'' ) {
 			num--;
+		}
 
 	if( !in ) {
-		PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( NULL );
+		PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( altstr );
 		return;
 	}
 	// copy set in
 	for( ; *str; *out++ = *str++ );
-	// now jump over the old contents
+	// now jump over the old content
 	for( ; *in ; in++ )
 		if( *in == '\'' || (*in == '\\' && !*++in) )
 			break;
@@ -3139,12 +3147,17 @@ void VM_altstr_ins(void)
 
 	out = outstr = VM_GetTempString();
 	for( num = num * 2 + 2 ; *in && num > 0 ; *out++ = *in++ )
-		if( *in == '\\' && !*++in )
-			break;
-		else if( *in == '\'' )
+		if( *in == '\\' ) {
+			if( !*++in ) {
+				break;
+			}
+		} else if( *in == '\'' ) {
 			num--;
+		}
 
+	*out++ = '\'';
 	for( ; *set ; *out++ = *set++ );
+	*out++ = '\'';
 
 	strcpy( out, in );
 	PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( outstr );
