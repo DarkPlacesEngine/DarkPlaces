@@ -401,8 +401,10 @@ void SV_DropClient(qboolean crash)
 		// free the client (the body stays around)
 		if (!crash)
 		{
-			// LordHavoc: no opportunity for resending, so use unreliable
+			// LordHavoc: no opportunity for resending, so use unreliable 3 times
 			MSG_WriteByte(&host_client->message, svc_disconnect);
+			NetConn_SendUnreliableMessage(host_client->netconnection, &host_client->message);
+			NetConn_SendUnreliableMessage(host_client->netconnection, &host_client->message);
 			NetConn_SendUnreliableMessage(host_client->netconnection, &host_client->message);
 		}
 		// break the net connection
@@ -798,13 +800,7 @@ void _Host_Frame (float time)
 		time2 = Sys_DoubleTime();
 
 	// update audio
-	if (cls.signon == SIGNONS && cl_entities[cl.viewentity].state_current.active)
-	{
-		// LordHavoc: this used to use renderer variables (eww)
-		S_Update(&cl_entities[cl.viewentity].render.matrix);
-	}
-	else
-		S_Update(&identitymatrix);
+	S_Update(&r_refdef.viewentitymatrix);
 
 	CDAudio_Update();
 

@@ -1244,6 +1244,7 @@ int CL_ReadFromServer(void)
 	r_refdef.time = cl.time;
 	r_refdef.extraupdate = !r_speeds.integer;
 	r_refdef.numentities = 0;
+	Matrix4x4_CreateIdentity(&r_refdef.viewentitymatrix);
 	cl_num_brushmodel_entities = 0;
 
 	if (cls.state == ca_connected && cls.signon == SIGNONS)
