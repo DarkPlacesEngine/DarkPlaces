@@ -258,6 +258,7 @@ cvar_t cl_movement_friction = {0, "cl_movement_friction", "4"};
 cvar_t cl_movement_edgefriction = {0, "cl_movement_edgefriction", "2"};
 cvar_t cl_movement_stepheight = {0, "cl_movement_stepheight", "18"};
 cvar_t cl_movement_accelerate = {0, "cl_movement_accelerate", "10"};
+cvar_t cl_movement_jumpvelocity = {0, "cl_movement_jumpvelocity", "270"};
 cvar_t cl_gravity = {0, "cl_gravity", "800"};
 cvar_t cl_slowmo = {0, "cl_slowmo", "1"};
 
@@ -495,6 +496,7 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 	int bump;
 	int contents;
 	int crouch;
+	int onground;
 	double edgefriction;
 	double simulatedtime;
 	double currenttime;
@@ -546,6 +548,11 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 	// fetch current starting values
 	VectorCopy(cl_entities[cl.playerentity].state_current.origin, currentorigin);
 	VectorCopy(cl.mvelocity[0], currentvelocity);
+	// check if onground
+	VectorSet(currentorigin2, currentorigin[0], currentorigin[1], currentorigin[2] + 1);
+	VectorSet(neworigin2, currentorigin[0], currentorigin[1], currentorigin[2] - 1);
+	trace = CL_TraceBox(currentorigin2, cl_playercrouchmins, cl_playercrouchmaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
+	onground = trace.fraction < 1 && trace.plane.normal[2] > 0.7;
 	// FIXME: try minor nudges in various directions if startsolid to find a
 	// safe place to start the walk (due to network compression in some
 	// protocols this starts in solid)
@@ -638,6 +645,11 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 			else
 			{
 				// walk
+				if (onground && q->jump)
+				{
+					currentvelocity[2] += cl_movement_jumpvelocity.value;
+					onground = false;
+				}
 				VectorSet(yawangles, 0, q->viewangles[1], 0);
 				AngleVectors(yawangles, forward, right, up);
 				VectorMAM(q->move[0], forward, q->move[1], right, wishvel);
@@ -648,10 +660,7 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 				if (crouch)
 					wishspeed *= 0.5;
 				// check if onground
-				VectorSet(currentorigin2, currentorigin[0], currentorigin[1], currentorigin[2] + 1);
-				VectorSet(neworigin2, currentorigin[0], currentorigin[1], currentorigin[2] - 1);
-				trace = CL_TraceBox(currentorigin2, playermins, playermaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
-				if (trace.fraction < 1 && trace.plane.normal[2] > 0.7)
+				if (onground)
 				{
 					// apply ground friction
 					f = sqrt(currentvelocity[0] * currentvelocity[0] + currentvelocity[1] * currentvelocity[1]);
@@ -727,6 +736,8 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 					VectorCopy(trace.endpos, currentorigin);
 					break;
 				}
+				if (trace.plane.normal[2] > 0.7)
+					onground = true;
 				t *= 1 - trace.fraction;
 				if (trace.fraction >= 0.001)
 					VectorCopy(trace.endpos, currentorigin);
@@ -987,6 +998,7 @@ void CL_InitInput (void)
 	Cvar_RegisterVariable(&cl_movement_edgefriction);
 	Cvar_RegisterVariable(&cl_movement_stepheight);
 	Cvar_RegisterVariable(&cl_movement_accelerate);
+	Cvar_RegisterVariable(&cl_movement_jumpvelocity);
 	Cvar_RegisterVariable(&cl_gravity);
 	Cvar_RegisterVariable(&cl_slowmo);
 
