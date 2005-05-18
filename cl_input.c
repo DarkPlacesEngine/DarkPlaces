@@ -638,7 +638,7 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 			else
 			{
 				// walk
-				VectorSet(yawangles, 0, cl.viewangles[1], 0);
+				VectorSet(yawangles, 0, q->viewangles[1], 0);
 				AngleVectors(yawangles, forward, right, up);
 				VectorMAM(q->move[0], forward, q->move[1], right, wishvel);
 				wishspeed = VectorLength(wishvel);
