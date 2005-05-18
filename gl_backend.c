@@ -1102,6 +1102,8 @@ void R_Mesh_VertexPointer(const float *vertex3f)
 
 void R_Mesh_ColorPointer(const float *color4f)
 {
+	if (r_showtrispass)
+		return;
 	if (gl_state.pointer_color != color4f)
 	{
 		CHECKGLERROR
@@ -1127,6 +1129,8 @@ void R_Mesh_ColorPointer(const float *color4f)
 void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, const float *texcoord)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
+	if (r_showtrispass)
+		return;
 	// update array settings
 	if (texcoord)
 	{
@@ -1163,6 +1167,8 @@ void R_Mesh_TexBindAll(unsigned int unitnum, int tex1d, int tex2d, int tex3d, in
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	if (unitnum >= backendunits)
+		return;
+	if (r_showtrispass)
 		return;
 	// update 1d texture binding
 	if (unit->t1d != tex1d)
@@ -1255,6 +1261,8 @@ void R_Mesh_TexBind1D(unsigned int unitnum, int texnum)
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	if (unitnum >= backendunits)
 		return;
+	if (r_showtrispass)
+		return;
 	// update 1d texture binding
 	if (unit->t1d != texnum)
 	{
@@ -1309,6 +1317,8 @@ void R_Mesh_TexBind(unsigned int unitnum, int texnum)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	if (unitnum >= backendunits)
+		return;
+	if (r_showtrispass)
 		return;
 	// update 1d texture binding
 	if (unit->t1d)
@@ -1365,6 +1375,8 @@ void R_Mesh_TexBind3D(unsigned int unitnum, int texnum)
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	if (unitnum >= backendunits)
 		return;
+	if (r_showtrispass)
+		return;
 	// update 1d texture binding
 	if (unit->t1d)
 	{
@@ -1420,6 +1432,8 @@ void R_Mesh_TexBindCubeMap(unsigned int unitnum, int texnum)
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	if (unitnum >= backendunits)
 		return;
+	if (r_showtrispass)
+		return;
 	// update 1d texture binding
 	if (unit->t1d)
 	{
@@ -1473,6 +1487,8 @@ void R_Mesh_TexBindCubeMap(unsigned int unitnum, int texnum)
 void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
+	if (r_showtrispass)
+		return;
 	if (matrix->m[3][3])
 	{
 		// texmatrix specified, check if it is different
@@ -1505,6 +1521,8 @@ void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix)
 void R_Mesh_TexCombine(unsigned int unitnum, int combinergb, int combinealpha, int rgbscale, int alphascale)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
+	if (r_showtrispass)
+		return;
 	if (gl_combine.integer)
 	{
 		// GL_ARB_texture_env_combine
@@ -1560,10 +1578,6 @@ void R_Mesh_State(const rmeshstate_t *m)
 	BACKENDACTIVECHECK
 
 	R_Mesh_VertexPointer(m->pointer_vertex);
-
-	if (r_showtrispass)
-		return;
-
 	R_Mesh_ColorPointer(m->pointer_color);
 
 	if (gl_backend_rebindtextures)
