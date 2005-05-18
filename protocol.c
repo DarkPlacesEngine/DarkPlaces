@@ -2006,7 +2006,8 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 		num++;
 	}
 	// all remaining entities are dead
-	for (;num < sv.num_edicts;num++)
+	// note: this must use sv.max_edicts, not sv.num_edicts, because sv.num_edicts can both increase and decrease, where as sv.max_edicts only increases (if sv.num_edicts is used, sometimes some entities are missed when the sv.num_edicts count goes back down after firing some shots)
+	for (;num < sv.max_edicts;num++)
 	{
 		if (CHECKPVSBIT(d->visiblebits, num))
 		{
