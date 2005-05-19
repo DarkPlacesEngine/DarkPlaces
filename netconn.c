@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MASTER_PORT 27950
 
 cvar_t sv_public = {0, "sv_public", "1"};
-static cvar_t sv_heartbeatperiod = {CVAR_SAVE, "sv_heartbeatperiod", "180"};
+static cvar_t sv_heartbeatperiod = {CVAR_SAVE, "sv_heartbeatperiod", "120"};
 
 // FIXME: resolve DNS on masters whenever their value changes and cache it (to avoid major delays in active servers when they heartbeat)
 static cvar_t sv_masters [] =
