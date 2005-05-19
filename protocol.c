@@ -1941,8 +1941,8 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 	qbyte data[128];
 	entityframe5_packetlog_t *packetlog;
 
-	if (sv.num_edicts > d->maxedicts)
-		EntityFrame5_ExpandEdicts(d, (sv.num_edicts + 255) & ~255);
+	if (sv.max_edicts > d->maxedicts)
+		EntityFrame5_ExpandEdicts(d, (sv.max_edicts + 255) & ~255);
 
 	framenum = d->latestframenum + 1;
 	d->viewentnum = viewentnum;
