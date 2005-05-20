@@ -199,10 +199,12 @@ void PRVM_Profile_f (void)
 		Con_Print("prvm_profile <program name>\n");
 		return;
 	}
-
+	
 	PRVM_Begin;
 	if(!PRVM_SetProgFromString(Cmd_Argv(1)))
 		return;
+
+	Con_Printf( "%s Profile:\n[Profile] [BuiltinProfile] [CallCount]\n", PRVM_NAME );
 
 	num = 0;
 	do
@@ -221,7 +223,7 @@ void PRVM_Profile_f (void)
 		if (best)
 		{
 			//if (num < howmany)
-				Con_Printf("%s: %7i %7i %s\n", PRVM_NAME, best->profile, best->builtinsprofile, PRVM_GetString(best->s_name));
+				Con_Printf("%7i %7i %7i %s\n", best->profile, best->builtinsprofile, best->callcount, PRVM_GetString(best->s_name));
 			num++;
 			best->profile = 0;
 			best->builtinsprofile = 0;

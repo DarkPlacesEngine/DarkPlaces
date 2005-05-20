@@ -221,6 +221,8 @@ void PR_Profile_f (void)
 		return;
 	}
 
+	Con_Print( "Server Profile:\n[Profile] [BuiltinProfile] [CallCount]\n" );
+
 	//howmany = 10;
 	//if (Cmd_Argc() == 2)
 	//	howmany = atoi(Cmd_Argv(1));
@@ -241,7 +243,7 @@ void PR_Profile_f (void)
 		if (best)
 		{
 			//if (num < howmany)
-				Con_Printf("%7i %7i %s\n", best->profile, best->builtinsprofile, PR_GetString(best->s_name));
+				Con_Printf("%7i %7i %7i %s\n", best->profile, best->builtinsprofile, best->callcount, PR_GetString(best->s_name));
 			num++;
 			best->profile = 0;
 			best->builtinsprofile = 0;
