@@ -161,6 +161,7 @@ typedef struct
 
 	int		profile;		// runtime
 	int		builtinsprofile; // cost of builtin functions called by this function
+	int		callcount; // times the functions has been called since the last profile call
 
 	int		s_name;
 	int		s_file;			// source file defined in

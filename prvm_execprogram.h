@@ -270,6 +270,7 @@
 					PRVM_ERROR("NULL function in %s", PRVM_NAME);
 
 				newf = &prog->functions[OPA->function];
+				newf->callcount++;
 
 				if (newf->first_statement < 0)
 				{

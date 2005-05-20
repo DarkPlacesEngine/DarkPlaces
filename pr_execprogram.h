@@ -272,6 +272,7 @@
 					Host_Error("Bad function number");
 
 				newf = &pr_functions[OPA->function];
+				newf->callcount++;
 
 				if (newf->first_statement < 0)
 				{
