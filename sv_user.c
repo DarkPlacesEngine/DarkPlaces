@@ -616,10 +616,6 @@ void SV_ReadClientMove (void)
 	move->time = MSG_ReadFloat ();
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	move->receivetime = sv.time;
-	move->applytime = move->time;
-
-	// FIXME: this is only for testing!
-	move->applytime += cl_movement_latency.value;
 
 	// read current angles
 	for (i = 0;i < 3;i++)
