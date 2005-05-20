@@ -1712,7 +1712,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 	float *c;
 	float diff[3];
 	float colorpants[3], colorshirt[3];
-	float f, r, g, b, a, base, colorscale;
+	float f, r, g, b, a, colorscale;
 	const msurface_t *surface;
 	qboolean dolightmap;
 	qboolean doambient;
@@ -1902,7 +1902,6 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			g = ent->colormod[1] * colorscale;
 			b = ent->colormod[2] * colorscale;
 			a = texture->currentalpha;
-			base = r_ambient.value * (1.0f / 64.0f);
 			// q3bsp has no lightmap updates, so the lightstylevalue that
 			// would normally be baked into the lightmaptexture must be
 			// applied to the color
@@ -2174,10 +2173,10 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				colorscale *= 0.5f;
 			}
 			R_Mesh_State(&m);
-			base = r_ambient.value * (1.0f / 64.0f);
-			r = ent->colormod[0] * colorscale * base;
-			g = ent->colormod[1] * colorscale * base;
-			b = ent->colormod[2] * colorscale * base;
+			colorscale *= r_ambient.value * (1.0f / 64.0f);
+			r = ent->colormod[0] * colorscale;
+			g = ent->colormod[1] * colorscale;
+			b = ent->colormod[2] * colorscale;
 			a = texture->currentalpha;
 			applycolor = r != 1 || g != 1 || b != 1 || a != 1;
 			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
