@@ -349,7 +349,6 @@ typedef struct
 
 	double time;
 	double receivetime;
-	double applytime;
 	int buttons;
 	int impulse;
 } usercmd_t;
