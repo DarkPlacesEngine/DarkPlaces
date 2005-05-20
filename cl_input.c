@@ -499,8 +499,6 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 	int onground;
 	double edgefriction;
 	double simulatedtime;
-	double currenttime;
-	double newtime;
 	double frametime;
 	double t;
 	vec_t wishspeed;
@@ -527,16 +525,16 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 	n = cl.movement_numqueue;
 	cl.movement_numqueue = 0;
 	// calculate time to execute for
-	currenttime = cl.mtime[0];
-	simulatedtime = currenttime + cl_movement_latency.value / 1000.0;
+	simulatedtime = cl.mtime[0] + cl_movement_latency.value / 1000.0;
 	for (i = 0;i < n;i++)
 		if (cl.movement_queue[i].time >= cl.mtime[0] && cl.movement_queue[i].time <= simulatedtime)
 			cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
 	// add to input queue if there is room
-	if (cl.movement_numqueue < sizeof(cl.movement_queue)/sizeof(cl.movement_queue[0]))
+	if (cl.movement_numqueue < sizeof(cl.movement_queue)/sizeof(cl.movement_queue[0]) && cl.mtime[0] > cl.mtime[1])
 	{
 		// add to input queue
 		cl.movement_queue[cl.movement_numqueue].time = simulatedtime;
+		cl.movement_queue[cl.movement_numqueue].frametime = cl.mtime[0] - cl.mtime[1];
 		VectorCopy(cl.viewangles, cl.movement_queue[cl.movement_numqueue].viewangles);
 		cl.movement_queue[cl.movement_numqueue].move[0] = cl.cmd.forwardmove;
 		cl.movement_queue[cl.movement_numqueue].move[1] = cl.cmd.sidemove;
@@ -558,26 +556,20 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 	// protocols this starts in solid)
 	//currentorigin[2] += (1.0 / 32.0); // slight nudge to get out of the floor
 	crouch = false; // this will be updated on first move
-	//Con_Printf("%f: ", currenttime);
+	//Con_Printf("%f: ", cl.mtime[0]);
 	// replay input queue, and remove any stale queue items
 	// note: this relies on the fact there's always one queue item at the end
 	// abort if client movement is disabled
 	cl.movement = cl_movement.integer && cl.stats[STAT_HEALTH] > 0 && !cls.demoplayback;
 	if (!cl.movement)
 		cl.movement_numqueue = 0;
-	for (i = 0;i <= cl.movement_numqueue;i++)
+	for (i = 0;i < cl.movement_numqueue;i++)
 	{
-		newtime = (i >= cl.movement_numqueue) ? simulatedtime : cl.movement_queue[i].time;
-		frametime = newtime - currenttime;
-		if (frametime <= 0)
-			continue;
+		client_movementqueue_t *q = cl.movement_queue + bound(0, i, cl.movement_numqueue - 1);
+		frametime = q->frametime;
 		//Con_Printf(" %f", frametime);
-		currenttime = newtime;
-		if (i >= 1 && i <= cl.movement_numqueue)
-		if (i > 0 || (cl_movement.integer & 8))
-		if (i < cl.movement_numqueue - 1 || (cl_movement.integer & 16))
+		//if (frametime > 0)
 		{
-			client_movementqueue_t *q = cl.movement_queue + i - 1;
 			if (q->crouch)
 			{
 				// wants to crouch, this always works...
@@ -695,8 +687,7 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 				currentvelocity[2] -= cl_gravity.value * frametime;
 			}
 		}
-		if (i > 0 || (cl_movement.integer & 2))
-		if (i < cl.movement_numqueue - 1 || (cl_movement.integer & 4))
+		//if (i < cl.movement_numqueue - 1 || (cl_movement.integer & 4))
 		{
 			if (crouch)
 			{
@@ -746,7 +737,6 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 			}
 		}
 	}
-	//Con_Printf(" :%f\n", currenttime);
 	// store replay location
 	VectorCopy(cl.movement_origin, cl.movement_oldorigin);
 	VectorCopy(currentorigin, cl.movement_origin);
