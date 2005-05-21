@@ -236,6 +236,7 @@ typedef struct prvm_builtin_mem_s
 
 typedef void (*prvm_builtin_t) (void);
 
+// [INIT] variables flagged with this token can be initialized by 'you'
 // NOTE: external code has to create and free the mempools but everything else is done by prvm !
 typedef struct vm_prog_s
 {
@@ -256,10 +257,10 @@ typedef struct vm_prog_s
 	const char			**knownstrings;
 
 	// all memory allocations related to this vm_prog (code, edicts, strings)
-	mempool_t			*progs_mempool;
+	mempool_t			*progs_mempool; // [INIT]
 
-	prvm_builtin_t		*builtins;
-	int					numbuiltins;
+	prvm_builtin_t		*builtins; // [INIT]
+	int					numbuiltins; // [INIT]
 
 	int					argc;
 
@@ -275,7 +276,7 @@ typedef struct vm_prog_s
 	int					localstack[PRVM_LOCALSTACK_SIZE];
 	int					localstack_used;
 
-	unsigned short		crc;
+	unsigned short		crc; // [INIT]
 
 	//============================================================================
 	// until this point everything also exists (with the pr_ prefix) in the old vm
@@ -289,7 +290,7 @@ typedef struct vm_prog_s
 	void				*edictprivate;
 
 	// size of the engine private struct
-	int					edictprivate_size;
+	int					edictprivate_size; // [INIT]
 
 	// has to be updated every frame - so the vm time is up-to-date
 	// AK changed so time will point to the time field (if there is one) else it points to _time
@@ -297,19 +298,19 @@ typedef struct vm_prog_s
 	float				*time;
 	float				_time;
 
-	// name of the prog, e.g. "Server", "Client" or "Menu" (used in for text output)
-	char				*name;
+	// name of the prog, e.g. "Server", "Client" or "Menu" (used for text output)
+	char				*name; // [INIT]
 
 	// flag - used to store general flags like PRVM_GE_SELF, etc.
 	int					flag;
 
-	char				*extensionstring;
+	char				*extensionstring; // [INIT]
 
 	// used to indicate whether a prog is loaded
 	qboolean			loaded;
 
 	// used instead of the constant MAX_EDICTS
-	int					limit_edicts;
+	int					limit_edicts; // [INIT]
 
 //	prvm_builtin_mem_t  *mem_list;
 
@@ -324,20 +325,20 @@ typedef struct vm_prog_s
 	//============================================================================
 	// function pointers
 
-	void				(*begin_increase_edicts)(void);  // used by PRVM_MEM_Increase_Edicts
-	void				(*end_increase_edicts)(void);
+	void				(*begin_increase_edicts)(void); // [INIT] used by PRVM_MEM_Increase_Edicts
+	void				(*end_increase_edicts)(void); // [INIT]
 
-	void				(*init_edict)(int num);		// used by PRVM_ED_ClearEdict
-	void				(*free_edict)(prvm_edict_t *ed); // used by PRVM_ED_Free
+	void				(*init_edict)(int num); // [INIT] used by PRVM_ED_ClearEdict
+	void				(*free_edict)(prvm_edict_t *ed); // [INIT] used by PRVM_ED_Free
 
-	void				(*count_edicts)(void);	// used by PRVM_ED_Count_f
+	void				(*count_edicts)(void); // [INIT] used by PRVM_ED_Count_f
 
-	qboolean			(*load_edict)(prvm_edict_t *ent); // used by PRVM_ED_LoadFromFile
+	qboolean			(*load_edict)(prvm_edict_t *ent); // [INIT] used by PRVM_ED_LoadFromFile
 
-	void				(*init_cmd)(void);	// used by PRVM_InitProg
-	void				(*reset_cmd)(void); // used by PRVM_ResetProg
+	void				(*init_cmd)(void); // [INIT] used by PRVM_InitProg
+	void				(*reset_cmd)(void); // [INIT] used by PRVM_ResetProg
 
-	void				(*error_cmd)(void);
+	void				(*error_cmd)(void); // [INIT]
 
 } prvm_prog_t;
 
