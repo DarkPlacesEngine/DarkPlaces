@@ -88,7 +88,6 @@ Atom wm_delete_window_atom;
 
 static qboolean mouse_avail = true;
 static qboolean vid_usingmouse = false;
-static qboolean vid_usemouse = false;
 static qboolean vid_usingvsync = false;
 static qboolean vid_usevsync = false;
 static float	mouse_x, mouse_y;
@@ -611,6 +610,8 @@ void InitSig(void)
 
 void VID_Finish (void)
 {
+	qboolean vid_usemouse;
+
 	vid_usevsync = vid_vsync.integer && !cls.timedemo && gl_videosyncavailable;
 	if (vid_usingvsync != vid_usevsync && gl_videosyncavailable)
 	{

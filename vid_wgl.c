@@ -78,7 +78,6 @@ static qboolean vid_initialized = false;
 static qboolean vid_wassuspended = false;
 static qboolean vid_usingmouse = false;
 static qboolean vid_usingvsync = false;
-static qboolean vid_usemouse = false;
 static qboolean vid_usevsync = false;
 static HICON hIcon;
 
@@ -260,6 +259,8 @@ static void IN_StartupMouse (void);
 
 void VID_Finish (void)
 {
+	qboolean vid_usemouse;
+
 	vid_usevsync = vid_vsync.integer && !cls.timedemo && gl_videosyncavailable;
 	if (vid_usingvsync != vid_usevsync && gl_videosyncavailable)
 	{
