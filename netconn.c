@@ -844,8 +844,15 @@ int NetConn_ReceivedMessage(netconn_t *conn, qbyte *data, int length)
 					conn->lastMessageTime = realtime;
 					conn->timeout = realtime + net_messagetimeout.value;
 					conn->receiveSequence++;
-					memcpy(conn->receiveMessage + conn->receiveMessageLength, data, length);
-					conn->receiveMessageLength += length;
+					if( conn->receiveMessageLength + length <= sizeof( conn->receiveMessage ) ) {
+						memcpy(conn->receiveMessage + conn->receiveMessageLength, data, length);
+						conn->receiveMessageLength += length;
+					} else {
+						Con_Printf( "Reliable message (seq: %i) too big for message buffer!\n"
+									"Dropping the message!\n", sequence );
+						conn->receiveMessageLength = 0;
+						return 1;
+					} 
 					if (flags & NETFLAG_EOM)
 					{
 						reliableMessagesReceived++;
