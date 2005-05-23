@@ -764,11 +764,11 @@ int NetConn_ReceivedMessage(netconn_t *conn, qbyte *data, int length)
 	unsigned int flags;
 	unsigned int sequence;
 
-	if (length >= 8)
+	length = BigLong(((int *)data)[0]);
+	flags = length & ~NETFLAG_LENGTH_MASK;
+	length &= NETFLAG_LENGTH_MASK;
+    if (length >= 8)
 	{
-		length = BigLong(((int *)data)[0]);
-		flags = length & ~NETFLAG_LENGTH_MASK;
-		length &= NETFLAG_LENGTH_MASK;
 		// control packets were already handled
 		if (!(flags & NETFLAG_CTL))
 		{
