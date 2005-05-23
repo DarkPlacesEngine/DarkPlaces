@@ -763,14 +763,15 @@ int NetConn_ReceivedMessage(netconn_t *conn, qbyte *data, int length)
 	unsigned int count;
 	unsigned int flags;
 	unsigned int sequence;
+	int qlength;
 
-	length = BigLong(((int *)data)[0]);
-	flags = length & ~NETFLAG_LENGTH_MASK;
-	length &= NETFLAG_LENGTH_MASK;
-    if (length >= 8)
+	if (length >= 8)
 	{
+		qlength = (unsigned int)BigLong(((int *)data)[0]);
+		flags = qlength & ~NETFLAG_LENGTH_MASK;
+		qlength &= NETFLAG_LENGTH_MASK;
 		// control packets were already handled
-		if (!(flags & NETFLAG_CTL))
+		if (!(flags & NETFLAG_CTL) && qlength == length)
 		{
 			sequence = BigLong(((int *)data)[1]);
 			packetsReceived++;
@@ -852,7 +853,7 @@ int NetConn_ReceivedMessage(netconn_t *conn, qbyte *data, int length)
 									"Dropping the message!\n", sequence );
 						conn->receiveMessageLength = 0;
 						return 1;
-					} 
+					}
 					if (flags & NETFLAG_EOM)
 					{
 						reliableMessagesReceived++;
