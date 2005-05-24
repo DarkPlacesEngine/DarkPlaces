@@ -707,6 +707,7 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 				playermins = cl_playerstandmins;
 				playermaxs = cl_playerstandmaxs;
 			}
+			onground = false;
 			for (bump = 0, t = frametime;bump < 8 && VectorLength2(currentvelocity) > 0;bump++)
 			{
 				VectorMA(currentorigin, t, currentvelocity, neworigin);
