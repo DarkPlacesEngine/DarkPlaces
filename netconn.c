@@ -963,9 +963,28 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 			for( n = 0; n < serverlist_cachecount; n++ )
 				if( !strcmp( cname, serverlist_cache[n].info.cname ) )
 					break;
-			if( n == serverlist_cachecount )
-				return true;
+			if( n == serverlist_cachecount ) {
+				// LAN search doesnt require an answer from the master server so we wont 
+				// know the ping nor will it be initialized already...
 
+				// find a slot
+				if( serverlist_cachecount == SERVERLIST_TOTALSIZE )
+					return true;				
+				serverquerycount++;
+
+				memset(&serverlist_cache[serverlist_cachecount], 0, sizeof(serverlist_cache[serverlist_cachecount]));
+				// store the data the engine cares about (address and ping)
+				strlcpy (serverlist_cache[serverlist_cachecount].info.cname, cname, sizeof (serverlist_cache[serverlist_cachecount].info.cname));
+				serverlist_cache[serverlist_cachecount].info.ping = 100000;
+				serverlist_cache[serverlist_cachecount].querytime = realtime;
+				// if not in the slist menu we should print the server to console
+				if (serverlist_consoleoutput) {
+					Con_Printf("querying %s\n", ipstring);
+				}
+
+				++serverlist_cachecount;
+			
+			}
 			info = &serverlist_cache[n].info;
 			if ((s = SearchInfostring(string, "gamename"     )) != NULL) strlcpy(info->game, s, sizeof (info->game));else info->game[0] = 0;
 			if ((s = SearchInfostring(string, "modname"      )) != NULL) strlcpy(info->mod , s, sizeof (info->mod ));else info->mod[0]  = 0;
