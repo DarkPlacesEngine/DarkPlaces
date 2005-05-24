@@ -4,195 +4,7 @@
 // cause large (I think they will) parts are from pr_cmds the same copyright like in pr_cmds
 // also applies here
 
-
-/*
-============================================================================
-common cmd list:
-=================
-
-		checkextension(string)
-		error(...[string])
-		objerror(...[string)
-		print(...[strings])
-		bprint(...[string])
-		sprint(float clientnum,...[string])
-		centerprint(...[string])
-vector	normalize(vector)
-float	vlen(vector)
-float	vectoyaw(vector)
-vector	vectoangles(vector)
-float	random()
-		cmd(string)
-		float cvar (string)
-		cvar_set (string,string)
-		dprint(...[string])
-string	ftos(float)
-float	fabs(float)
-string	vtos(vector)
-string	etos(entity)
-float	stof(...[string])
-entity	spawn()
-		remove(entity e)
-entity	find(entity start, .string field, string match)
-
-entity	findfloat(entity start, .float field, float match)
-entity	findentity(entity start, .entity field, entity match)
-
-entity	findchain(.string field, string match)
-
-entity	findchainfloat(.string field, float match)
-entity	findchainentity(.string field, entity match)
-
-string	precache_file(string)
-string	precache_sound (string sample)
-		coredump()
-		traceon()
-		traceoff()
-		eprint(entity e)
-float	rint(float)
-float	floor(float)
-float	ceil(float)
-entity	nextent(entity)
-float	sin(float)
-float	cos(float)
-float	sqrt(float)
-vector	randomvec()
-float	registercvar (string name, string value, float flags)
-float	min(float a, float b, ...[float])
-float	max(float a, float b, ...[float])
-float	bound(float min, float value, float max)
-float	pow(float a, float b)
-		copyentity(entity src, entity dst)
-float	fopen(string filename, float mode)
-		fclose(float fhandle)
-string	fgets(float fhandle)
-		fputs(float fhandle, string s)
-float	strlen(string s)
-string	strcat(string,string,...[string])
-string	substring(string s, float start, float length)
-vector	stov(string s)
-string	strzone(string s)
-		strunzone(string s)
-float	tokenize(string s)
-string	argv(float n)
-float	isserver()
-float	clientcount()
-float	clientstate()
-		clientcommand(float client, string s) (for client and menu)
-		changelevel(string map)
-		localsound(string sample)
-vector	getmousepos()
-float	gettime()
-		loadfromdata(string data)
-		loadfromfile(string file)
-float	mod(float val, float m)
-const string	str_cvar (string)
-		crash()
-		stackdump()
-
-float	search_begin(string pattern, float caseinsensitive, float quiet)
-void	search_end(float handle)
-float	search_getsize(float handle)
-string	search_getfilename(float handle, float num)
-
-string	chr(float ascii)
-
-float	itof(intt ent)
-intt	ftoi(float num)
-
-float	altstr_count(string)
-string	altstr_prepare(string)
-string	altstr_get(string,float)
-string	altstr_set(string altstr, float num, string set)
-string	altstr_ins(string altstr, float num, string set)
-
-perhaps only : Menu : WriteMsg
-===============================
-
-		WriteByte(float data, float dest, float desto)
-		WriteChar(float data, float dest, float desto)
-		WriteShort(float data, float dest, float desto)
-		WriteLong(float data, float dest, float desto)
-		WriteAngle(float data, float dest, float desto)
-		WriteCoord(float data, float dest, float desto)
-		WriteString(string data, float dest, float desto)
-		WriteEntity(entity data, float dest, float desto)
-
-Client & Menu : draw functions & video functions
-===================================================
-
-float	iscachedpic(string pic)
-string	precache_pic(string pic)
-		freepic(string s)
-float	drawcharacter(vector position, float character, vector scale, vector rgb, float alpha, float flag)
-float	drawstring(vector position, string text, vector scale, vector rgb, float alpha, float flag)
-float	drawpic(vector position, string pic, vector size, vector rgb, float alpha, float flag)
-float	drawfill(vector position, vector size, vector rgb, float alpha, float flag)
-		drawsetcliparea(float x, float y, float width, float height)
-		drawresetcliparea()
-vector	getimagesize(string pic)
-
-float	cin_open(string file, string name)
-void	cin_close(string name)
-void	cin_setstate(string name, float type)
-float	cin_getstate(string name)
-void	cin_restart(string name)
-
-==============================================================================
-menu cmd list:
-===============
-
-		setkeydest(float dest)
-float	getkeydest()
-		setmousetarget(float target)
-float	getmousetarget()
-
-		callfunction(...,string function_name)
-		writetofile(float fhandle, entity ent)
-float	isfunction(string function_name)
-vector	getresolution(float number)
-string	keynumtostring(float keynum)
-string	findkeysforcommand(string command)
-float	getserverliststat(float type)
-string	getserverliststring(float fld, float hostnr)
-
-		parseentitydata(entity ent, string data)
-
-float	stringtokeynum(string key)
-
-		resetserverlistmasks()
-		setserverlistmaskstring(float mask, float fld, string str)
-		setserverlistmasknumber(float mask, float fld, float num, float op)
-		resortserverlist()
-		setserverlistsort(float field, float descending)
-		refreshserverlist()
-float	getserverlistnumber(float fld, float hostnr)
-float	getserverlistindexforkey(string key)
-		addwantedserverlistkey(string key)
-*/
-
-#include "quakedef.h"
-#include "progdefs.h"
-#include "progsvm.h"
-#include "clprogdefs.h"
-#include "mprogdefs.h"
-
-#include "cl_video.h"
-
-//============================================================================
-// nice helper macros
-
-#ifndef VM_NOPARMCHECK
-#define VM_SAFEPARMCOUNT(p,f)	if(prog->argc != p) PRVM_ERROR(#f " wrong parameter count (" #p " expected ) !\n")
-#else
-#define VM_SAFEPARMCOUNT(p,f)
-#endif
-
-#define	VM_RETURN_EDICT(e)		(((int *)prog->globals)[OFS_RETURN] = PRVM_EDICT_TO_PROG(e))
-
-#define e10 0,0,0,0,0,0,0,0,0,0
-#define e100 e10,e10,e10,e10,e10,e10,e10,e10,e10,e10
-#define e1000 e100,e100,e100,e100,e100,e100,e100,e100,e100,e100
+#include "prvm_cmds.h"
 
 //============================================================================
 // Common
@@ -218,7 +30,7 @@ qfile_t *vm_files[MAX_PRVMFILES];
 
 fssearch_t *vm_fssearchlist[TOTAL_VMSEARCHES];
 
-static char *VM_GetTempString(void)
+char *VM_GetTempString(void)
 {
 	char *s;
 	s = vm_string_temp[vm_string_tempindex];
@@ -699,17 +511,17 @@ void VM_cvar (void)
 
 /*
 =================
-VM_str_cvar
+VM_cvar_string
 
-const string	str_cvar (string)
+const string	VM_cvar_string (string)
 =================
 */
-void VM_str_cvar(void)
+void VM_cvar_string(void)
 {
 	char *out;
 	const char *name;
 	const char *cvar_string;
-	VM_SAFEPARMCOUNT(1,VM_str_cvar);
+	VM_SAFEPARMCOUNT(1,VM_cvar_string);
 
 	name = PRVM_G_STRING(OFS_PARM0);
 
@@ -879,7 +691,7 @@ void VM_ftoi(void)
 	VM_SAFEPARMCOUNT(1, VM_ftoi);
 
 	ent = PRVM_G_FLOAT(OFS_PARM0);
-	if(PRVM_PROG_TO_EDICT(ent)->p.e->free)
+	if(PRVM_PROG_TO_EDICT(ent)->priv.required->free)
 		PRVM_ERROR ("VM_ftoe: %s tried to access a freed entity (entity %i)!\n", PRVM_NAME, ent);
 
 	PRVM_G_INT(OFS_RETURN) = ent;
@@ -956,7 +768,7 @@ void VM_find (void)
 	{
 		prog->xfunction->builtinsprofile++;
 		ed = PRVM_EDICT_NUM(e);
-		if (ed->p.e->free)
+		if (ed->priv.required->free)
 			continue;
 		t = PRVM_E_STRING(ed,f);
 		if (!t)
@@ -997,7 +809,7 @@ void VM_findfloat (void)
 	{
 		prog->xfunction->builtinsprofile++;
 		ed = PRVM_EDICT_NUM(e);
-		if (ed->p.e->free)
+		if (ed->priv.required->free)
 			continue;
 		if (PRVM_E_FLOAT(ed,f) == s)
 		{
@@ -1049,7 +861,7 @@ void VM_findchain (void)
 	for (i = 1;i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
 	{
 		prog->xfunction->builtinsprofile++;
-		if (ent->p.e->free)
+		if (ent->priv.required->free)
 			continue;
 		t = PRVM_E_STRING(ent,f);
 		if (!t)
@@ -1098,7 +910,7 @@ void VM_findchainfloat (void)
 	for (i = 1;i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
 	{
 		prog->xfunction->builtinsprofile++;
-		if (ent->p.e->free)
+		if (ent->priv.required->free)
 			continue;
 		if (PRVM_E_FLOAT(ent,f) != s)
 			continue;
@@ -1318,7 +1130,7 @@ void VM_nextent (void)
 			return;
 		}
 		ent = PRVM_EDICT_NUM(i);
-		if (!ent->p.e->free)
+		if (!ent->priv.required->free)
 		{
 			VM_RETURN_EDICT(ent);
 			return;
@@ -1662,7 +1474,7 @@ void VM_copyentity (void)
 	VM_SAFEPARMCOUNT(2,VM_copyentity);
 	in = PRVM_G_EDICT(OFS_PARM0);
 	out = PRVM_G_EDICT(OFS_PARM1);
-	memcpy(out->v, in->v, prog->progs->entityfields * 4);
+	memcpy(out->fields.vp, in->fields.vp, prog->progs->entityfields * 4);
 }
 
 /*
@@ -1716,6 +1528,21 @@ void VM_Files_CloseAll(void)
 		//VM_FILES[i] = NULL;
 	}
 	memset(VM_FILES,0,sizeof(qfile_t*[MAX_VMFILES])); // this should be faster (is it ?)
+}
+
+qfile_t *VM_GetFileHandle( int index )
+{
+	if (index < 0 || index >= MAX_VMFILES)
+	{
+		Con_Printf("VM_GetFileHandle: invalid file handle %i used in %s\n", index, PRVM_NAME);
+		return NULL;
+	}
+	if (VM_FILES[index] == NULL)
+	{
+		Con_Printf("VM_GetFileHandle: no such file handle %i (or file has been closed) in %s\n", index, PRVM_NAME);
+		return NULL;
+	}
+	return VM_FILES[index];
 }
 
 /*
@@ -2276,12 +2103,12 @@ void VM_loadfromdata(void)
 
 /*
 ========================
-VM_M_parseentitydata
+VM_parseentitydata
 
 parseentitydata(entity ent, string data)
 ========================
 */
-void VM_M_parseentitydata(void)
+void VM_parseentitydata(void)
 {
 	prvm_edict_t *ent;
 	const char *data;
@@ -2290,7 +2117,7 @@ void VM_M_parseentitydata(void)
 
     // get edict and test it
 	ent = PRVM_G_EDICT(OFS_PARM0);
-	if (ent->p.e->free)
+	if (ent->priv.required->free)
 		PRVM_ERROR ("VM_parseentitydata: %s: Can only set already spawned entities (entity %i is free)!\n", PRVM_NAME, PRVM_NUM_FOR_EDICT(ent));
 
 	data = PRVM_G_STRING(OFS_PARM1);
@@ -3177,890 +3004,4 @@ void VM_Cmd_Reset(void)
 	VM_Files_CloseAll();
 }
 
-//============================================================================
-// Server
 
-char *vm_sv_extensions =
-"";
-
-prvm_builtin_t vm_sv_builtins[] = {
-0  // to be consistent with the old vm
-};
-
-const int vm_sv_numbuiltins = sizeof(vm_sv_builtins) / sizeof(prvm_builtin_t);
-
-void VM_SV_Cmd_Init(void)
-{
-}
-
-void VM_SV_Cmd_Reset(void)
-{
-}
-
-//============================================================================
-// Client
-
-char *vm_cl_extensions =
-"";
-
-prvm_builtin_t vm_cl_builtins[] = {
-0  // to be consistent with the old vm
-};
-
-const int vm_cl_numbuiltins = sizeof(vm_cl_builtins) / sizeof(prvm_builtin_t);
-
-void VM_CL_Cmd_Init(void)
-{
-}
-
-void VM_CL_Cmd_Reset(void)
-{
-}
-
-//============================================================================
-// Menu
-
-char *vm_m_extensions =
-"DP_CINEMATIC_DPV";
-
-/*
-=========
-VM_M_setmousetarget
-
-setmousetarget(float target)
-=========
-*/
-void VM_M_setmousetarget(void)
-{
-	VM_SAFEPARMCOUNT(1, VM_M_setmousetarget);
-
-	switch((int)PRVM_G_FLOAT(OFS_PARM0))
-	{
-	case 1:
-		in_client_mouse = false;
-		break;
-	case 2:
-		in_client_mouse = true;
-		break;
-	default:
-		PRVM_ERROR("VM_M_setmousetarget: wrong destination %i !\n",PRVM_G_FLOAT(OFS_PARM0));
-	}
-}
-
-/*
-=========
-VM_M_getmousetarget
-
-float	getmousetarget
-=========
-*/
-void VM_M_getmousetarget(void)
-{
-	VM_SAFEPARMCOUNT(0,VM_M_getmousetarget);
-
-	if(in_client_mouse)
-		PRVM_G_FLOAT(OFS_RETURN) = 2;
-	else
-		PRVM_G_FLOAT(OFS_RETURN) = 1;
-}
-
-
-
-/*
-=========
-VM_M_setkeydest
-
-setkeydest(float dest)
-=========
-*/
-void VM_M_setkeydest(void)
-{
-	VM_SAFEPARMCOUNT(1,VM_M_setkeydest);
-
-	switch((int)PRVM_G_FLOAT(OFS_PARM0))
-	{
-	case 0:
-		// key_game
-		key_dest = key_game;
-		break;
-	case 2:
-		// key_menu
-		key_dest = key_menu;
-		break;
-	case 1:
-		// key_message
-		// key_dest = key_message
-		// break;
-	default:
-		PRVM_ERROR("VM_M_setkeydest: wrong destination %i !\n",prog->globals[OFS_PARM0]);
-	}
-}
-
-/*
-=========
-VM_M_getkeydest
-
-float	getkeydest
-=========
-*/
-void VM_M_getkeydest(void)
-{
-	VM_SAFEPARMCOUNT(0,VM_M_getkeydest);
-
-	// key_game = 0, key_message = 1, key_menu = 2, unknown = 3
-	switch(key_dest)
-	{
-	case key_game:
-		PRVM_G_FLOAT(OFS_RETURN) = 0;
-		break;
-	case key_menu:
-		PRVM_G_FLOAT(OFS_RETURN) = 2;
-		break;
-	case key_message:
-		// not supported
-		// PRVM_G_FLOAT(OFS_RETURN) = 1;
-		// break;
-	default:
-		PRVM_G_FLOAT(OFS_RETURN) = 3;
-	}
-}
-
-/*
-=========
-VM_M_callfunction
-
-	callfunction(...,string function_name)
-Extension: pass
-=========
-*/
-mfunction_t *PRVM_ED_FindFunction (const char *name);
-void VM_M_callfunction(void)
-{
-	mfunction_t *func;
-	const char *s;
-
-	if(prog->argc == 0)
-		PRVM_ERROR("VM_M_callfunction: 1 parameter is required !\n");
-
-	s = PRVM_G_STRING(OFS_PARM0 + (prog->argc - 1));
-
-	if(!s)
-		PRVM_ERROR("VM_M_callfunction: null string !\n");
-
-	VM_CheckEmptyString(s);
-
-	func = PRVM_ED_FindFunction(s);
-
-	if(!func)
-		PRVM_ERROR("VM_M_callfunciton: function %s not found !\n", s);
-	else if (func->first_statement < 0)
-	{
-		// negative statements are built in functions
-		int builtinnumber = -func->first_statement;
-		prog->xfunction->builtinsprofile++;
-		if (builtinnumber < prog->numbuiltins && prog->builtins[builtinnumber])
-			prog->builtins[builtinnumber]();
-		else
-			PRVM_ERROR("No such builtin #%i in %s", builtinnumber, PRVM_NAME);
-	}
-	else if(func > 0)
-	{
-		prog->argc--;
-		PRVM_ExecuteProgram(func - prog->functions,"");
-		prog->argc++;
-	}
-}
-
-/*
-=========
-VM_M_isfunction
-
-float	isfunction(string function_name)
-=========
-*/
-mfunction_t *PRVM_ED_FindFunction (const char *name);
-void VM_M_isfunction(void)
-{
-	mfunction_t *func;
-	const char *s;
-
-	VM_SAFEPARMCOUNT(1, VM_M_isfunction);
-
-	s = PRVM_G_STRING(OFS_PARM0);
-
-	if(!s)
-		PRVM_ERROR("VM_M_isfunction: null string !\n");
-
-	VM_CheckEmptyString(s);
-
-	func = PRVM_ED_FindFunction(s);
-
-	if(!func)
-		PRVM_G_FLOAT(OFS_RETURN) = false;
-	else
-		PRVM_G_FLOAT(OFS_RETURN) = true;
-}
-
-/*
-=========
-VM_M_writetofile
-
-	writetofile(float fhandle, entity ent)
-=========
-*/
-void VM_M_writetofile(void)
-{
-	prvm_edict_t * ent;
-	int filenum;
-
-	VM_SAFEPARMCOUNT(2, VM_M_writetofile);
-
-	filenum = PRVM_G_FLOAT(OFS_PARM0);
-	if (filenum < 0 || filenum >= MAX_VMFILES)
-	{
-		Con_Printf("VM_fputs: invalid file handle %i used in %s\n", filenum, PRVM_NAME);
-		return;
-	}
-	if (VM_FILES[filenum] == NULL)
-	{
-		Con_Printf("VM_fputs: no such file handle %i (or file has been closed) in %s\n", filenum, PRVM_NAME);
-		return;
-	}
-
-	ent = PRVM_G_EDICT(OFS_PARM1);
-	if(ent->p.e->free)
-	{
-		Con_Printf("VM_M_writetofile: %s: entity %i is free !\n", PRVM_NAME, PRVM_EDICT_NUM(OFS_PARM1));
-		return;
-	}
-
-	PRVM_ED_Write (VM_FILES[filenum], ent);
-}
-
-/*
-=========
-VM_M_getresolution
-
-vector	getresolution(float number)
-=========
-*/
-extern unsigned short video_resolutions[][2];
-void VM_M_getresolution(void)
-{
-	int nr;
-	VM_SAFEPARMCOUNT(1, VM_getresolution);
-
-	nr = PRVM_G_FLOAT(OFS_PARM0);
-
-
-	PRVM_G_VECTOR(OFS_RETURN)[0] = video_resolutions[nr][0];
-	PRVM_G_VECTOR(OFS_RETURN)[1] = video_resolutions[nr][1];
-	PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
-}
-
-/*
-=========
-VM_M_keynumtostring
-
-string keynumtostring(float keynum)
-=========
-*/
-void VM_M_keynumtostring(void)
-{
-	int keynum;
-	char *tmp;
-	VM_SAFEPARMCOUNT(1, VM_M_keynumtostring);
-
-	keynum = PRVM_G_FLOAT(OFS_PARM0);
-
-	tmp = VM_GetTempString();
-
-	strcpy(tmp, Key_KeynumToString(keynum));
-
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(tmp);
-}
-
-/*
-=========
-VM_M_stringtokeynum
-
-float stringtokeynum(string key)
-=========
-*/
-void VM_M_stringtokeynum( void )
-{
-	const char *str;
-	VM_SAFEPARMCOUNT( 1, VM_M_keynumtostring );
-
-	str = PRVM_G_STRING( OFS_PARM0 );
-
-	PRVM_G_INT(OFS_RETURN) = Key_StringToKeynum( str );
-}
-
-/*
-=========
-VM_M_findkeysforcommand
-
-string	findkeysforcommand(string command)
-
-the returned string is an altstring
-=========
-*/
-#define NUMKEYS 5 // TODO: merge the constant in keys.c with this one somewhen
-
-void M_FindKeysForCommand(const char *command, int *keys);
-void VM_M_findkeysforcommand(void)
-{
-	const char *cmd;
-	char *ret;
-	int keys[NUMKEYS];
-	int i;
-
-	VM_SAFEPARMCOUNT(1, VM_M_findkeysforcommand);
-
-	cmd = PRVM_G_STRING(OFS_PARM0);
-
-	VM_CheckEmptyString(cmd);
-
-	(ret = VM_GetTempString())[0] = 0;
-
-	M_FindKeysForCommand(cmd, keys);
-
-	for(i = 0; i < NUMKEYS; i++)
-		ret = strcat(ret, va(" \'%i\'", keys[i]));
-
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(ret);
-}
-
-/*
-=========
-VM_M_getserverliststat
-
-float	getserverliststat(float type)
-=========
-*/
-/*
-	type:
-0	serverlist_viewcount
-1   serverlist_totalcount
-2	masterquerycount
-3	masterreplycount
-4	serverquerycount
-5	serverreplycount
-6	sortfield
-7	sortdescending
-*/
-void VM_M_getserverliststat( void )
-{
-	int type;
-	VM_SAFEPARMCOUNT ( 1, VM_M_getserverliststat );
-
-	PRVM_G_FLOAT( OFS_RETURN ) = 0;
-
-	type = PRVM_G_FLOAT( OFS_PARM0 );
-	switch(type)
-	{
-	case 0:
-		PRVM_G_FLOAT ( OFS_RETURN ) = serverlist_viewcount;
-		return;
-	case 1:
-		PRVM_G_FLOAT ( OFS_RETURN ) = serverlist_cachecount;
-	case 2:
-		PRVM_G_FLOAT ( OFS_RETURN ) = masterquerycount;
-		return;
-	case 3:
-		PRVM_G_FLOAT ( OFS_RETURN ) = masterreplycount;
-		return;
-	case 4:
-		PRVM_G_FLOAT ( OFS_RETURN ) = serverquerycount;
-		return;
-	case 5:
-		PRVM_G_FLOAT ( OFS_RETURN ) = serverreplycount;
-		return;
-	case 6:
-		PRVM_G_FLOAT ( OFS_RETURN ) = serverlist_sortbyfield;
-		return;
-	case 7:
-		PRVM_G_FLOAT ( OFS_RETURN ) = serverlist_sortdescending;
-		return;
-	default:
-		Con_Printf( "VM_M_getserverliststat: bad type %i!\n", type );
-	}
-}
-
-/*
-========================
-VM_M_resetserverlistmasks
-
-resetserverlistmasks()
-========================
-*/
-void VM_M_resetserverlistmasks( void )
-{
-	ServerList_ResetMasks();
-}
-
-
-/*
-========================
-VM_M_setserverlistmaskstring
-
-setserverlistmaskstring(float mask, float fld, string str, float op)
-0-511		and
-512 - 1024	or
-========================
-*/
-void VM_M_setserverlistmaskstring( void )
-{
-	const char *str;
-	int masknr;
-	serverlist_mask_t *mask;
-	int field;
-
-	VM_SAFEPARMCOUNT( 4, VM_M_setserverlistmaskstring );
-	str = PRVM_G_STRING( OFS_PARM1 );
-	if( !str )
-		PRVM_ERROR( "VM_M_setserverlistmaskstring: null string passed!" );
-
-	masknr = PRVM_G_FLOAT( OFS_PARM0 );
-	if( masknr >= 0 && masknr <= SERVERLIST_ANDMASKCOUNT )
-		mask = &serverlist_andmasks[masknr];
-	else if( masknr >= 512 && masknr - 512 <= SERVERLIST_ORMASKCOUNT )
-		mask = &serverlist_ormasks[masknr - 512 ];
-	else {
-		Con_Printf( "VM_M_setserverlistmaskstring: invalid mask number %i\n", masknr );
-		return;
-	}
-
-	field = (int) PRVM_G_FLOAT( OFS_PARM1 );
-
-	switch( field ) {
-		case SLIF_CNAME:
-			strncpy( mask->info.cname, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.cname) );
-			break;
-		case SLIF_NAME:
-			strncpy( mask->info.name, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.name)  );
-			break;
-		case SLIF_MAP:
-			strncpy( mask->info.map, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.map)  );
-			break;
-		case SLIF_MOD:
-			strncpy( mask->info.mod, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.mod)  );
-			break;
-		case SLIF_GAME:
-			strncpy( mask->info.game, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.game)  );
-			break;
-		default:
-			Con_Printf( "VM_M_setserverlistmaskstring: Bad field number %i passed!\n", field );
-			return;
-	}
-
-	mask->active = true;
-	mask->tests[field] = (int) PRVM_G_FLOAT( OFS_PARM3 );
-}
-
-/*
-========================
-VM_M_setserverlistmasknumber
-
-setserverlistmasknumber(float mask, float fld, float num, float op)
-
-0-511		and
-512 - 1024	or
-========================
-*/
-void VM_M_setserverlistmasknumber( void )
-{
-	int number;
-	serverlist_mask_t *mask;
-	int	masknr;
-	int field;
-	VM_SAFEPARMCOUNT( 4, VM_M_setserverlistmasknumber );
-
-	masknr = PRVM_G_FLOAT( OFS_PARM0 );
-	if( masknr >= 0 && masknr <= SERVERLIST_ANDMASKCOUNT )
-		mask = &serverlist_andmasks[masknr];
-	else if( masknr >= 512 && masknr - 512 <= SERVERLIST_ORMASKCOUNT )
-		mask = &serverlist_ormasks[masknr - 512 ];
-	else {
-		Con_Printf( "VM_M_setserverlistmasknumber: invalid mask number %i\n", masknr );
-		return;
-	}
-
-	number = PRVM_G_FLOAT( OFS_PARM2 );
-	field = (int) PRVM_G_FLOAT( OFS_PARM1 );
-
-	switch( field ) {
-		case SLIF_MAXPLAYERS:
-			mask->info.maxplayers = number;
-			break;
-		case SLIF_NUMPLAYERS:
-			mask->info.numplayers = number;
-			break;
-		case SLIF_PING:
-			mask->info.ping = number;
-			break;
-		case SLIF_PROTOCOL:
-			mask->info.protocol = number;
-			break;
-		default:
-			Con_Printf( "VM_M_setserverlistmasknumber: Bad field number %i passed!\n", field );
-			return;
-	}
-
-	mask->active = true;
-	mask->tests[field] = (int) PRVM_G_FLOAT( OFS_PARM3 );
-}
-
-
-/*
-========================
-VM_M_resortserverlist
-
-resortserverlist
-========================
-*/
-void VM_M_resortserverlist( void )
-{
-	ServerList_RebuildViewList();
-}
-
-/*
-=========
-VM_M_getserverliststring
-
-string	getserverliststring(float field, float hostnr)
-=========
-*/
-void VM_M_getserverliststring(void)
-{
-	serverlist_entry_t *cache;
-	int hostnr;
-
-	VM_SAFEPARMCOUNT(2, VM_M_getserverliststring);
-
-	PRVM_G_INT(OFS_RETURN) = 0;
-
-	hostnr = PRVM_G_FLOAT(OFS_PARM1);
-
-	if(hostnr < 0 || hostnr >= serverlist_viewcount)
-	{
-		Con_Print("VM_M_getserverliststring: bad hostnr passed!\n");
-		return;
-	}
-	cache = serverlist_viewlist[hostnr];
-	switch( (int) PRVM_G_FLOAT(OFS_PARM0) ) {
-		case SLIF_CNAME:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( cache->info.cname );
-			break;
-		case SLIF_NAME:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( cache->info.name );
-			break;
-		case SLIF_GAME:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( cache->info.game );
-			break;
-		case SLIF_MOD:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( cache->info.mod );
-			break;
-		case SLIF_MAP:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( cache->info.map );
-			break;
-		// TODO remove this again
-		case 1024:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( cache->line1 );
-			break;
-		case 1025:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( cache->line2 );
-			break;
-		default:
-			Con_Print("VM_M_getserverliststring: bad field number passed!\n");
-	}
-}
-
-/*
-=========
-VM_M_getserverlistnumber
-
-float	getserverlistnumber(float field, float hostnr)
-=========
-*/
-void VM_M_getserverlistnumber(void)
-{
-	serverlist_entry_t *cache;
-	int hostnr;
-
-	VM_SAFEPARMCOUNT(2, VM_M_getserverliststring);
-
-	PRVM_G_INT(OFS_RETURN) = 0;
-
-	hostnr = PRVM_G_FLOAT(OFS_PARM1);
-
-	if(hostnr < 0 || hostnr >= serverlist_viewcount)
-	{
-		Con_Print("VM_M_getserverliststring: bad hostnr passed!\n");
-		return;
-	}
-	cache = serverlist_viewlist[hostnr];
-	switch( (int) PRVM_G_FLOAT(OFS_PARM0) ) {
-		case SLIF_MAXPLAYERS:
-			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.maxplayers;
-			break;
-		case SLIF_NUMPLAYERS:
-			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.numplayers;
-			break;
-		case SLIF_PING:
-			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.ping;
-			break;
-		case SLIF_PROTOCOL:
-			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.protocol;
-			break;
-		default:
-			Con_Print("VM_M_getserverlistnumber: bad field number passed!\n");
-	}
-}
-
-/*
-========================
-VM_M_setserverlistsort
-
-setserverlistsort(float field, float descending)
-========================
-*/
-void VM_M_setserverlistsort( void )
-{
-	VM_SAFEPARMCOUNT( 2, VM_M_setserverlistsort );
-
-	serverlist_sortbyfield = (int) PRVM_G_FLOAT( OFS_PARM0 );
-	serverlist_sortdescending = (qboolean) PRVM_G_FLOAT( OFS_PARM1 );
-}
-
-/*
-========================
-VM_M_refreshserverlist
-
-refreshserverlist()
-========================
-*/
-void VM_M_refreshserverlist( void )
-{
-	VM_SAFEPARMCOUNT( 0, VM_M_refreshserverlist );
-	ServerList_QueryList();
-}
-
-/*
-========================
-VM_M_getserverlistindexforkey
-
-float getserverlistindexforkey(string key)
-========================
-*/
-void VM_M_getserverlistindexforkey( void )
-{
-	const char *key;
-	VM_SAFEPARMCOUNT( 1, VM_M_getserverlistindexforkey );
-
-	key = PRVM_G_STRING( OFS_PARM0 );
-	VM_CheckEmptyString( key );
-
-	if( !strcmp( key, "cname" ) )
-		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_CNAME;
-	else if( !strcmp( key, "ping" ) )
-		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_PING;
-	else if( !strcmp( key, "game" ) )
-		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_GAME;
-	else if( !strcmp( key, "mod" ) )
-		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_MOD;
-	else if( !strcmp( key, "map" ) )
-		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_MAP;
-	else if( !strcmp( key, "name" ) )
-		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_NAME;
-	else if( !strcmp( key, "maxplayers" ) )
-		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_MAXPLAYERS;
-	else if( !strcmp( key, "numplayers" ) )
-		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_NUMPLAYERS;
-	else if( !strcmp( key, "protocol" ) )
-		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_PROTOCOL;
-	else
-		PRVM_G_FLOAT( OFS_RETURN ) = -1;
-}
-
-/*
-========================
-VM_M_addwantedserverlistkey
-
-addwantedserverlistkey(string key)
-========================
-*/
-void VM_M_addwantedserverlistkey( void )
-{
-	VM_SAFEPARMCOUNT( 1, VM_M_addwantedserverlistkey );
-}
-
-prvm_builtin_t vm_m_builtins[] = {
-	0, // to be consistent with the old vm
-	// common builtings (mostly)
-	VM_checkextension,
-	VM_error,
-	VM_objerror,
-	VM_print,
-	VM_bprint,
-	VM_sprint,
-	VM_centerprint,
-	VM_normalize,
-	VM_vlen,
-	VM_vectoyaw,	// #10
-	VM_vectoangles,
-	VM_random,
-	VM_localcmd,
-	VM_cvar,
-	VM_cvar_set,
-	VM_dprint,
-	VM_ftos,
-	VM_fabs,
-	VM_vtos,
-	VM_etos,		// 20
-	VM_stof,
-	VM_spawn,
-	VM_remove,
-	VM_find,
-	VM_findfloat,
-	VM_findchain,
-	VM_findchainfloat,
-	VM_precache_file,
-	VM_precache_sound,
-	VM_coredump,	// 30
-	VM_traceon,
-	VM_traceoff,
-	VM_eprint,
-	VM_rint,
-	VM_floor,
-	VM_ceil,
-	VM_nextent,
-	VM_sin,
-	VM_cos,
-	VM_sqrt,		// 40
-	VM_randomvec,
-	VM_registercvar,
-	VM_min,
-	VM_max,
-	VM_bound,
-	VM_pow,
-	VM_copyentity,
-	VM_fopen,
-	VM_fclose,
-	VM_fgets,		// 50
-	VM_fputs,
-	VM_strlen,
-	VM_strcat,
-	VM_substring,
-	VM_stov,
-	VM_strzone,
-	VM_strunzone,
-	VM_tokenize,
-	VM_argv,
-	VM_isserver,	// 60
-	VM_clientcount,
-	VM_clientstate,
-	VM_clcommand,
-	VM_changelevel,
-	VM_localsound,
-	VM_getmousepos,
-	VM_gettime,
-	VM_loadfromdata,
-	VM_loadfromfile,
-	VM_modulo,		// 70
-	VM_str_cvar,
-	VM_crash,
-	VM_stackdump,	// 73
-	VM_search_begin,
-	VM_search_end,
-	VM_search_getsize,
-	VM_search_getfilename, // 77
-	VM_chr,
-	VM_itof,
-	VM_ftoi,		// 80
-	VM_itof,		// isString
-	VM_altstr_count,
-	VM_altstr_prepare,
-	VM_altstr_get,
-	VM_altstr_set,
-	VM_altstr_ins,	// 86
-	0,0,0,0,	// 90
-	e10,			// 100
-	e100,			// 200
-	e100,			// 300
-	e100,			// 400
-	// msg functions
-	VM_WriteByte,
-	VM_WriteChar,
-	VM_WriteShort,
-	VM_WriteLong,
-	VM_WriteAngle,
-	VM_WriteCoord,
-	VM_WriteString,
-	VM_WriteEntity,	// 408
-	0,
-	0,				// 410
-	e10,			// 420
-	e10,			// 430
-	e10,			// 440
-	e10,			// 450
-	// draw functions
-	VM_iscachedpic,
-	VM_precache_pic,
-	VM_freepic,
-	VM_drawcharacter,
-	VM_drawstring,
-	VM_drawpic,
-	VM_drawfill,
-	VM_drawsetcliparea,
-	VM_drawresetcliparea,
-	VM_getimagesize,// 460
-	VM_cin_open,
-	VM_cin_close,
-	VM_cin_setstate,
-	VM_cin_getstate,
-	VM_cin_restart, // 465
-	0,0,0,0,0,	// 470
-	e10,			// 480
-	e10,			// 490
-	e10,			// 500
-	e100,			// 600
-	// menu functions
-	VM_M_setkeydest,
-	VM_M_getkeydest,
-	VM_M_setmousetarget,
-	VM_M_getmousetarget,
-	VM_M_callfunction,
-	VM_M_writetofile,
-	VM_M_isfunction,
-	VM_M_getresolution,
-	VM_M_keynumtostring,
-	VM_M_findkeysforcommand,// 610
-	VM_M_getserverliststat,
-	VM_M_getserverliststring,
-	VM_M_parseentitydata,
-	VM_M_stringtokeynum,
-	VM_M_resetserverlistmasks,
-	VM_M_setserverlistmaskstring,
-	VM_M_setserverlistmasknumber,
-	VM_M_resortserverlist,
-	VM_M_setserverlistsort,
-	VM_M_refreshserverlist,
-	VM_M_getserverlistnumber,
-	VM_M_getserverlistindexforkey,
-	VM_M_addwantedserverlistkey // 623
-};
-
-const int vm_m_numbuiltins = sizeof(vm_m_builtins) / sizeof(prvm_builtin_t);
-
-void VM_M_Cmd_Init(void)
-{
-	VM_Cmd_Init();
-}
-
-void VM_M_Cmd_Reset(void)
-{
-	//VM_Cmd_Init();
-	VM_Cmd_Reset();
-}
