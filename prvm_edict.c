@@ -71,8 +71,8 @@ void PRVM_MEM_Alloc()
 	// set edict pointers
 	for(i = 0; i < prog->max_edicts; i++)
 	{
-		prog->edicts[i].p.e = (prvm_edict_private_t *)((qbyte  *)prog->edictprivate + i * prog->edictprivate_size);
-		prog->edicts[i].v = (void*)((qbyte *)prog->edictsfields + i * prog->edict_size);
+		prog->edicts[i].priv.required = (prvm_edict_private_t *)((qbyte  *)prog->edictprivate + i * prog->edictprivate_size);
+		prog->edicts[i].fields.vp = (void*)((qbyte *)prog->edictsfields + i * prog->edict_size);
 	}
 }
 
@@ -105,8 +105,8 @@ void PRVM_MEM_IncreaseEdicts()
 	//set e and v pointers
 	for(i = 0; i < prog->max_edicts; i++)
 	{
-		prog->edicts[i].p.e = (prvm_edict_private_t *)((qbyte  *)prog->edictprivate + i * prog->edictprivate_size);
-		prog->edicts[i].v = (void*)((qbyte *)prog->edictsfields + i * prog->edict_size);
+		prog->edicts[i].priv.required  = (prvm_edict_private_t *)((qbyte  *)prog->edictprivate + i * prog->edictprivate_size);
+		prog->edicts[i].fields.vp = (void*)((qbyte *)prog->edictsfields + i * prog->edict_size);
 	}
 
 	PRVM_GCALL(end_increase_edicts)();
@@ -191,8 +191,8 @@ Sets everything to NULL
 void PRVM_ED_ClearEdict (prvm_edict_t *e)
 {
 	int num;
-	memset (e->v, 0, prog->progs->entityfields * 4);
-	e->p.e->free = false;
+	memset (e->fields.vp, 0, prog->progs->entityfields * 4);
+	e->priv.required->free = false;
 	// LordHavoc: for consistency set these here
 	num = PRVM_NUM_FOR_EDICT(e) - 1;
 
@@ -226,7 +226,7 @@ prvm_edict_t *PRVM_ED_Alloc (void)
 		e = PRVM_EDICT_NUM(i);
 		// the first couple seconds of server time can involve a lot of
 		// freeing and allocating, so relax the replacement policy
-		if (e->p.e->free && ( e->p.e->freetime < 2 || (*prog->time - e->p.e->freetime) > 0.5 ) )
+		if (e->priv.required->free && ( e->priv.required->freetime < 2 || (*prog->time - e->priv.required->freetime) > 0.5 ) )
 		{
 			PRVM_ED_ClearEdict (e);
 			return e;
@@ -262,8 +262,8 @@ void PRVM_ED_Free (prvm_edict_t *ed)
 
 	PRVM_GCALL(free_edict)(ed);
 
-	ed->p.e->free = true;
-	ed->p.e->freetime = *prog->time;
+	ed->priv.required->free = true;
+	ed->priv.required->freetime = *prog->time;
 }
 
 //===========================================================================
@@ -568,7 +568,7 @@ void PRVM_ED_Print(prvm_edict_t *ed)
 	int		type;
 	char	tempstring[8192], tempstring2[260]; // temporary string buffers
 
-	if (ed->p.e->free)
+	if (ed->priv.required->free)
 	{
 		Con_Printf("%s: FREE\n",PRVM_NAME);
 		return;
@@ -583,7 +583,7 @@ void PRVM_ED_Print(prvm_edict_t *ed)
 		if (name[strlen(name)-2] == '_')
 			continue;	// skip _x, _y, _z vars
 
-		v = (int *)((char *)ed->v + d->ofs*4);
+		v = (int *)((char *)ed->fields.vp + d->ofs*4);
 
 	// if the value is still all 0, skip the field
 		type = d->type & ~DEF_SAVEGLOBAL;
@@ -643,7 +643,7 @@ void PRVM_ED_Write (qfile_t *f, prvm_edict_t *ed)
 
 	FS_Print(f, "{\n");
 
-	if (ed->p.e->free)
+	if (ed->priv.required->free)
 	{
 		FS_Print(f, "}\n");
 		return;
@@ -656,7 +656,7 @@ void PRVM_ED_Write (qfile_t *f, prvm_edict_t *ed)
 		if (name[strlen(name)-2] == '_')
 			continue;	// skip _x, _y, _z vars
 
-		v = (int *)((char *)ed->v + d->ofs*4);
+		v = (int *)((char *)ed->fields.vp + d->ofs*4);
 
 	// if the value is still all 0, skip the field
 		type = d->type & ~DEF_SAVEGLOBAL;
@@ -772,7 +772,7 @@ void PRVM_ED_Count_f (void)
 		for (i=0 ; i<prog->num_edicts ; i++)
 		{
 			ent = PRVM_EDICT_NUM(i);
-			if (ent->p.e->free)
+			if (ent->priv.required->free)
 				continue;
 			active++;
 		}
@@ -883,7 +883,7 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s)
 	mfunction_t *func;
 
 	if (ent)
-		val = (prvm_eval_t *)((int *)ent->v + key->ofs);
+		val = (prvm_eval_t *)((int *)ent->fields.vp + key->ofs);
 	else
 		val = (prvm_eval_t *)((int *)prog->globals + key->ofs);
 	switch (key->type & ~DEF_SAVEGLOBAL)
@@ -941,7 +941,7 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s)
 			//SV_IncreaseEdicts();
 		// if SV_IncreaseEdicts was called the base pointer needs to be updated
 		if (ent)
-			val = (prvm_eval_t *)((int *)ent->v + key->ofs);
+			val = (prvm_eval_t *)((int *)ent->fields.vp + key->ofs);
 		val->edict = PRVM_EDICT_TO_PROG(EDICT_NUM(i));
 		break;
 
@@ -1092,7 +1092,7 @@ const char *PRVM_ED_ParseEdict (const char *data, prvm_edict_t *ent)
 	}
 
 	if (!init)
-		ent->p.e->free = true;
+		ent->priv.required->free = true;
 
 	return data;
 }
@@ -1142,7 +1142,7 @@ void PRVM_ED_LoadFromFile (const char *data)
 
 		// clear it
 		if (ent != prog->edicts)	// hack
-			memset (ent->v, 0, prog->progs->entityfields * 4);
+			memset (ent->fields.vp, 0, prog->progs->entityfields * 4);
 
 		data = PRVM_ED_ParseEdict (data, ent);
 		parsed++;
@@ -1160,7 +1160,7 @@ void PRVM_ED_LoadFromFile (const char *data)
 //
 		if(prog->self && prog->flag & PRVM_FE_CLASSNAME)
 		{
-			string_t handle =  *(string_t*)&((float*)ent->v)[PRVM_ED_FindFieldOffset("classname")];
+			string_t handle =  *(string_t*)&((float*)ent->fields.vp)[PRVM_ED_FindFieldOffset("classname")];
 			if (!handle)
 			{
 				Con_Print("No classname for:\n");
@@ -1189,7 +1189,7 @@ void PRVM_ED_LoadFromFile (const char *data)
 		}
 
 		spawned++;
-		if (ent->p.e->free)
+		if (ent->priv.required->free)
 			died++;
 	}
 
@@ -1472,7 +1472,10 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 		&& prog->flag && prog->self)
 		prog->flag |= PRVM_OP_STATE;
 
-	PRVM_GCALL(reset_cmd)();
+	if( prog->loaded ) {
+		PRVM_GCALL(reset_cmd)();
+	}
+	prog->loaded = TRUE;
 	PRVM_GCALL(init_cmd)();
 
 	// init mempools
@@ -1513,7 +1516,7 @@ void PRVM_Fields_f (void)
 	for (ednum = 0;ednum < prog->max_edicts;ednum++)
 	{
 		ed = PRVM_EDICT_NUM(ednum);
-		if (ed->p.e->free)
+		if (ed->priv.required->free)
 			continue;
 		for (i = 1;i < prog->progs->numfielddefs;i++)
 		{
@@ -1521,7 +1524,7 @@ void PRVM_Fields_f (void)
 			name = PRVM_GetString(d->s_name);
 			if (name[strlen(name)-2] == '_')
 				continue;	// skip _x, _y, _z vars
-			v = (int *)((char *)ed->v + d->ofs*4);
+			v = (int *)((char *)ed->fields.vp + d->ofs*4);
 			// if the value is still all 0, skip the field
 			for (j = 0;j < prvm_type_size[d->type & ~DEF_SAVEGLOBAL];j++)
 			{

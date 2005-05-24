@@ -198,7 +198,7 @@
 					return;
 				}*/
 				ed = PRVM_PROG_TO_EDICT(OPA->edict);
-				OPC->_int = (qbyte *)((int *)ed->v + OPB->_int) - (qbyte *)prog->edictsfields;
+				OPC->_int = (qbyte *)((int *)ed->fields.vp + OPB->_int) - (qbyte *)prog->edictsfields;
 				break;
 
 			case OP_LOAD_F:
@@ -217,7 +217,7 @@
 				}
 #endif
 				ed = PRVM_PROG_TO_EDICT(OPA->edict);
-				OPC->_int = ((prvm_eval_t *)((int *)ed->v + OPB->_int))->_int;
+				OPC->_int = ((prvm_eval_t *)((int *)ed->fields.vp + OPB->_int))->_int;
 				break;
 
 			case OP_LOAD_V:
@@ -232,9 +232,9 @@
 				}
 #endif
 				ed = PRVM_PROG_TO_EDICT(OPA->edict);
-				OPC->vector[0] = ((prvm_eval_t *)((int *)ed->v + OPB->_int))->vector[0];
-				OPC->vector[1] = ((prvm_eval_t *)((int *)ed->v + OPB->_int))->vector[1];
-				OPC->vector[2] = ((prvm_eval_t *)((int *)ed->v + OPB->_int))->vector[2];
+				OPC->vector[0] = ((prvm_eval_t *)((int *)ed->fields.vp + OPB->_int))->vector[0];
+				OPC->vector[1] = ((prvm_eval_t *)((int *)ed->fields.vp + OPB->_int))->vector[1];
+				OPC->vector[2] = ((prvm_eval_t *)((int *)ed->fields.vp + OPB->_int))->vector[2];
 				break;
 
 		//==================
@@ -312,7 +312,7 @@
 					ed = PRVM_PROG_TO_EDICT(PRVM_G_INT(prog->self->ofs));
 					PRVM_E_FLOAT(ed,PRVM_ED_FindFieldOffset ("nextthink")) = *prog->time + 0.1;
 					PRVM_E_FLOAT(ed,PRVM_ED_FindFieldOffset ("frame")) = OPA->_float;
-					*(func_t *)((qbyte*)ed->v + PRVM_ED_FindFieldOffset ("think")) = OPB->function;
+					*(func_t *)((qbyte*)ed->fields.vp + PRVM_ED_FindFieldOffset ("think")) = OPB->function;
 				}
 				else
 					PRVM_ERROR("OP_STATE not supported by %s\n", PRVM_NAME);

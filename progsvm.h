@@ -172,7 +172,7 @@ typedef struct prvm_edict_s
 	//edict_engineprivate_t *e;
 	union
 	{
-		prvm_edict_private_t *e;
+		prvm_edict_private_t *required;
 		void				 *vp;
 		// add other private structs as you desire
 		// new structs have to start with the elements of prvm_edit_private_t
@@ -190,10 +190,13 @@ typedef struct prvm_edict_s
 		//      vec3_t moved_fromangles;
 		//		... } server_edict_private_t;
 		// However, the first one should be preferred.
-	} p;
+	} priv;
 	// QuakeC fields (stored in dynamically resized array)
 	//entvars_t *v;
-	void *v;
+	union 
+	{
+		void *vp;
+	} fields;
 } prvm_edict_t;
 
 #define PRVM_GETEDICTFIELDVALUE(ed, fieldoffset) (fieldoffset ? (prvm_eval_t *)((qbyte *)ed->v + fieldoffset) : NULL)
@@ -436,10 +439,10 @@ prvm_edict_t *PRVM_EDICT_NUM_ERROR(int n, char *filename, int fileline);
 //#define	PRVM_G_FUNCTION(o) (*(func_t *)&prog->globals[o])
 
 // FIXME: make these go away?
-#define	PRVM_E_FLOAT(e,o) (((float*)e->v)[o])
-#define	PRVM_E_INT(e,o) (((int*)e->v)[o])
-//#define	PRVM_E_VECTOR(e,o) (&((float*)e->v)[o])
-#define	PRVM_E_STRING(e,o) (PRVM_GetString(*(string_t *)&((float*)e->v)[o]))
+#define	PRVM_E_FLOAT(e,o) (((float*)e->fields.vp)[o])
+#define	PRVM_E_INT(e,o) (((int*)e->fields.vp)[o])
+//#define	PRVM_E_VECTOR(e,o) (&((float*)e->fields.vp)[o])
+#define	PRVM_E_STRING(e,o) (PRVM_GetString(*(string_t *)&((float*)e->fields.vp)[o]))
 
 extern	int		prvm_type_size[8]; // for consistency : I think a goal of this sub-project is to
 // make the new vm mostly independent from the old one, thus if it's necessary, I copy everything
