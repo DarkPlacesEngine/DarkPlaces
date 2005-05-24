@@ -57,7 +57,7 @@ typedef struct edict_engineprivate_s
 	// we should avoid extensive checking on entities already encountered
 	int areagridmarknumber;
 
-	// PROTOCOL_QUAKE
+	// PROTOCOL_QUAKE, PROTOCOL_QUAKEDP, PROTOCOL_NEHAHRAMOVIE
 	// baseline values
 	entity_state_t baseline;
 

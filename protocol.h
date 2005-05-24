@@ -22,27 +22,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
-// LordHavoc: I own protocol ranges 96, 97, 3500-3599
+// protocolversion_t is defined in common.h
 
-// quake or darkplaces extended quake entity protocol
-// (still used by TomazQuake and others)
-#define	PROTOCOL_QUAKE 15
-
-// neh_gl entity protocol
-// (failed QSG protocol, used only by nehahra movie)
-#define	PROTOCOL_NEHAHRAMOVIE 250
-
-// entityframe protocol
-#define	PROTOCOL_DARKPLACES1 96
-#define	PROTOCOL_DARKPLACES2 97
-
-// entityframe4 protocol
-#define	PROTOCOL_DARKPLACES3 3500
-#define PROTOCOL_DARKPLACES4 3501
-
-// entityframe5 protocol
-#define PROTOCOL_DARKPLACES5 3502
-#define PROTOCOL_DARKPLACES6 3503
+protocolversion_t Protocol_EnumForName(const char *s);
+const char *Protocol_NameForEnum(protocolversion_t p);
+protocolversion_t Protocol_EnumForNumber(int n);
+int Protocol_NumberForEnum(protocolversion_t p);
+void Protocol_Names(char *buffer, size_t buffersize);
 
 // model effects
 #define	EF_ROCKET	1			// leave a trail
@@ -767,7 +753,7 @@ int EntityState5_DeltaBitsForState(entity_state_t *o, entity_state_t *n);
 void EntityFrame5_CL_ReadFrame(void);
 void EntityFrame5_LostFrame(entityframe5_database_t *d, int framenum);
 void EntityFrame5_AckFrame(entityframe5_database_t *d, int framenum);
-void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum, int *stats);
+void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum, int *stats, int movesequence);
 
 extern cvar_t developer_networkentities;
 

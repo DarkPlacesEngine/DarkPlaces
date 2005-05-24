@@ -498,7 +498,6 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 	int crouch;
 	int onground;
 	double edgefriction;
-	double simulatedtime;
 	double frametime;
 	double t;
 	vec_t wishspeed;
@@ -524,16 +523,25 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 	// remove stale queue items
 	n = cl.movement_numqueue;
 	cl.movement_numqueue = 0;
-	// calculate time to execute for
-	simulatedtime = cl.mtime[0] + cl_movement_latency.value / 1000.0;
-	for (i = 0;i < n;i++)
-		if (cl.movement_queue[i].time >= cl.mtime[0] && cl.movement_queue[i].time <= simulatedtime)
-			cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
+	if (cl.servermovesequence)
+	{
+		for (i = 0;i < n;i++)
+			if (cl.movement_queue[i].sequence > cl.servermovesequence)
+				cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
+	}
+	else
+	{
+		double simulatedtime = cl.mtime[0] + cl_movement_latency.value / 1000.0;
+		for (i = 0;i < n;i++)
+			if (cl.movement_queue[i].time >= cl.mtime[0] && cl.movement_queue[i].time <= simulatedtime)
+				cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
+	}
 	// add to input queue if there is room
-	if (cl.movement_numqueue < sizeof(cl.movement_queue)/sizeof(cl.movement_queue[0]) && cl.mtime[0] > cl.mtime[1])
+	if (cl_movement.integer && cl.movement_numqueue < sizeof(cl.movement_queue)/sizeof(cl.movement_queue[0]) && cl.mtime[0] > cl.mtime[1])
 	{
 		// add to input queue
-		cl.movement_queue[cl.movement_numqueue].time = simulatedtime;
+		cl.movement_queue[cl.movement_numqueue].sequence = cl.movesequence;
+		cl.movement_queue[cl.movement_numqueue].time = cl.mtime[0] + cl_movement_latency.value / 1000.0;
 		cl.movement_queue[cl.movement_numqueue].frametime = cl.mtime[0] - cl.mtime[1];
 		VectorCopy(cl.viewangles, cl.movement_queue[cl.movement_numqueue].viewangles);
 		cl.movement_queue[cl.movement_numqueue].move[0] = cl.cmd.forwardmove;
@@ -560,7 +568,7 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 	// replay input queue, and remove any stale queue items
 	// note: this relies on the fact there's always one queue item at the end
 	// abort if client movement is disabled
-	cl.movement = cl_movement.integer && cl.stats[STAT_HEALTH] > 0 && !cls.demoplayback;
+	cl.movement = /*cl_movement.integer && */cl.stats[STAT_HEALTH] > 0 && !cls.demoplayback;
 	if (!cl.movement)
 		cl.movement_numqueue = 0;
 	for (i = 0;i < cl.movement_numqueue;i++)
@@ -815,18 +823,79 @@ void CL_SendMove(void)
 	if (++cl.movemessages >= 2)
 	{
 		// send the movement message
-		// PROTOCOL_QUAKE       clc_move = 16 bytes total
-		// PROTOCOL_DARKPLACES1 clc_move = 19 bytes total
-		// PROTOCOL_DARKPLACES2 clc_move = 25 bytes total
-		// PROTOCOL_DARKPLACES3 clc_move = 25 bytes total
-		// PROTOCOL_DARKPLACES4 clc_move = 19 bytes total
-		// PROTOCOL_DARKPLACES5 clc_move = 19 bytes total
-		// PROTOCOL_DARKPLACES6 clc_move = 52 bytes total
-		// 5 bytes
-		MSG_WriteByte (&buf, clc_move);
-		MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
-		if (cl.protocol == PROTOCOL_DARKPLACES6)
+		// PROTOCOL_QUAKE        clc_move = 16 bytes total
+		// PROTOCOL_QUAKEDP      clc_move = 16 bytes total
+		// PROTOCOL_NEHAHRAMOVIE clc_move = 16 bytes total
+		// PROTOCOL_DARKPLACES1  clc_move = 19 bytes total
+		// PROTOCOL_DARKPLACES2  clc_move = 25 bytes total
+		// PROTOCOL_DARKPLACES3  clc_move = 25 bytes total
+		// PROTOCOL_DARKPLACES4  clc_move = 19 bytes total
+		// PROTOCOL_DARKPLACES5  clc_move = 19 bytes total
+		// PROTOCOL_DARKPLACES6  clc_move = 52 bytes total
+		// PROTOCOL_DARKPLACES7  clc_move = 56 bytes total
+		if (cl.protocol == PROTOCOL_QUAKE || cl.protocol == PROTOCOL_QUAKEDP || cl.protocol == PROTOCOL_NEHAHRAMOVIE)
 		{
+			// 5 bytes
+			MSG_WriteByte (&buf, clc_move);
+			MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
+			// 3 bytes
+			for (i = 0;i < 3;i++)
+				MSG_WriteAngle8i (&buf, cl.viewangles[i]);
+			// 6 bytes
+			MSG_WriteCoord16i (&buf, forwardmove);
+			MSG_WriteCoord16i (&buf, sidemove);
+			MSG_WriteCoord16i (&buf, upmove);
+			// 2 bytes
+			MSG_WriteByte (&buf, bits);
+			MSG_WriteByte (&buf, in_impulse);
+		}
+		else if (cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3)
+		{
+			// 5 bytes
+			MSG_WriteByte (&buf, clc_move);
+			MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
+			// 12 bytes
+			for (i = 0;i < 3;i++)
+				MSG_WriteAngle32f (&buf, cl.viewangles[i]);
+			// 6 bytes
+			MSG_WriteCoord16i (&buf, forwardmove);
+			MSG_WriteCoord16i (&buf, sidemove);
+			MSG_WriteCoord16i (&buf, upmove);
+			// 2 bytes
+			MSG_WriteByte (&buf, bits);
+			MSG_WriteByte (&buf, in_impulse);
+		}
+		else if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5)
+		{
+			// 5 bytes
+			MSG_WriteByte (&buf, clc_move);
+			MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
+			// 6 bytes
+			for (i = 0;i < 3;i++)
+				MSG_WriteAngle16i (&buf, cl.viewangles[i]);
+			// 6 bytes
+			MSG_WriteCoord16i (&buf, forwardmove);
+			MSG_WriteCoord16i (&buf, sidemove);
+			MSG_WriteCoord16i (&buf, upmove);
+			// 2 bytes
+			MSG_WriteByte (&buf, bits);
+			MSG_WriteByte (&buf, in_impulse);
+		}
+		else
+		{
+			// 5 bytes
+			MSG_WriteByte (&buf, clc_move);
+			if (cl.protocol != PROTOCOL_DARKPLACES6)
+			{
+				if (cl_movement.integer)
+				{
+					cl.movesequence++;
+					MSG_WriteLong (&buf, cl.movesequence);
+				}
+				else
+					MSG_WriteLong (&buf, 0);
+			}
+			MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
 			// 6 bytes
 			for (i = 0;i < 3;i++)
 				MSG_WriteAngle16i (&buf, cl.viewangles[i]);
@@ -848,36 +917,6 @@ void CL_SendMove(void)
 			MSG_WriteFloat (&buf, cl.cmd.cursor_impact[1]);
 			MSG_WriteFloat (&buf, cl.cmd.cursor_impact[2]);
 			MSG_WriteShort (&buf, cl.cmd.cursor_entitynumber);
-		}
-		else
-		{
-			if (cl.protocol == PROTOCOL_QUAKE || cl.protocol == PROTOCOL_NEHAHRAMOVIE)
-			{
-				// 3 bytes
-				for (i = 0;i < 3;i++)
-					MSG_WriteAngle8i (&buf, cl.viewangles[i]);
-			}
-			else if (cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3)
-			{
-				// 12 bytes
-				for (i = 0;i < 3;i++)
-					MSG_WriteAngle32f (&buf, cl.viewangles[i]);
-			}
-			else if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5)
-			{
-				// 6 bytes
-				for (i = 0;i < 3;i++)
-					MSG_WriteAngle16i (&buf, cl.viewangles[i]);
-			}
-			else
-				Host_Error("CL_SendMove: unknown cl.protocol %i\n", cl.protocol);
-			// 6 bytes
-			MSG_WriteCoord16i (&buf, forwardmove);
-			MSG_WriteCoord16i (&buf, sidemove);
-			MSG_WriteCoord16i (&buf, upmove);
-			// 2 bytes
-			MSG_WriteByte (&buf, bits);
-			MSG_WriteByte (&buf, in_impulse);
 		}
 	}
 
@@ -901,6 +940,7 @@ void CL_SendMove(void)
 	}
 
 	// PROTOCOL_DARKPLACES6 = 67 bytes per packet
+	// PROTOCOL_DARKPLACES7 = 71 bytes per packet
 
 	// deliver the message
 	if (cls.demoplayback)

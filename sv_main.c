@@ -21,9 +21,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-// select which protocol to host, by name
-// this is named the same as PROTOCOL_DARKPLACES6 for example, minus the PROTOCOL_ prefix
-cvar_t sv_protocolname = {0, "sv_protocolname", "DARKPLACES6"};
+// select which protocol to host, this is fed to Protocol_EnumForName
+cvar_t sv_protocolname = {0, "sv_protocolname", "DARKPLACES7"};
 cvar_t sv_ratelimitlocalplayer = {0, "sv_ratelimitlocalplayer", "0"};
 cvar_t sv_maxrate = {CVAR_SAVE | CVAR_NOTIFY, "sv_maxrate", "10000"};
 
@@ -310,12 +309,15 @@ void SV_SendServerinfo (client_t *client)
 	if (client->entitydatabase5)
 		EntityFrame5_FreeDatabase(client->entitydatabase5);
 
-	if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3)
-		client->entitydatabase = EntityFrame_AllocDatabase(sv_mempool);
-	if (sv.protocol == PROTOCOL_DARKPLACES4)
-		client->entitydatabase4 = EntityFrame4_AllocDatabase(sv_mempool);
-	if (sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6)
-		client->entitydatabase5 = EntityFrame5_AllocDatabase(sv_mempool);
+	if (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE)
+	{
+		if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3)
+			client->entitydatabase = EntityFrame_AllocDatabase(sv_mempool);
+		else if (sv.protocol == PROTOCOL_DARKPLACES4)
+			client->entitydatabase4 = EntityFrame4_AllocDatabase(sv_mempool);
+		else
+			client->entitydatabase5 = EntityFrame5_AllocDatabase(sv_mempool);
+	}
 
 	SZ_Clear (&client->message);
 	MSG_WriteByte (&client->message, svc_print);
@@ -323,7 +325,7 @@ void SV_SendServerinfo (client_t *client)
 	MSG_WriteString (&client->message,message);
 
 	MSG_WriteByte (&client->message, svc_serverinfo);
-	MSG_WriteLong (&client->message, sv.protocol);
+	MSG_WriteLong (&client->message, Protocol_NumberForEnum(sv.protocol));
 	MSG_WriteByte (&client->message, svs.maxclients);
 
 	if (!coop.integer && deathmatch.integer)
@@ -668,7 +670,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 			return;
 		// always send world submodels, they don't generate much traffic
 		// except in PROTOCOL_QUAKE where they hog bandwidth like crazy
-		else if (!(s->effects & EF_NODEPTHTEST) && (!(isbmodel = (model = sv.models[s->modelindex]) != NULL && model->name[0] == '*') || sv.protocol == PROTOCOL_QUAKE))
+		else if (!(s->effects & EF_NODEPTHTEST) && (!(isbmodel = (model = sv.models[s->modelindex]) != NULL && model->name[0] == '*') || (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE)))
 		{
 			Mod_CheckLoaded(model);
 			// entity has survived every check so far, check if visible
@@ -811,7 +813,7 @@ void SV_WriteEntitiesToClient(client_t *client, edict_t *clent, sizebuf_t *msg, 
 		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d trace\n", client->name, sv_writeentitiestoclient_totalentities, sv_writeentitiestoclient_visibleentities, sv_writeentitiestoclient_culled_pvs + sv_writeentitiestoclient_culled_trace, sv_writeentitiestoclient_culled_pvs, sv_writeentitiestoclient_culled_trace);
 
 	if (client->entitydatabase5)
-		EntityFrame5_WriteFrame(msg, client->entitydatabase5, numsendstates, sendstates, client - svs.clients + 1, stats);
+		EntityFrame5_WriteFrame(msg, client->entitydatabase5, numsendstates, sendstates, client - svs.clients + 1, stats, client->movesequence);
 	else if (client->entitydatabase4)
 		EntityFrame4_WriteFrame(msg, client->entitydatabase4, numsendstates, sendstates);
 	else if (client->entitydatabase)
@@ -916,7 +918,7 @@ void SV_WriteClientdataToMessage (client_t *client, edict_t *ent, sizebuf_t *msg
 	{
 		if (ent->v->punchangle[i])
 			bits |= (SU_PUNCH1<<i);
-		if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6)
+		if (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE)
 			if (punchvector[i])
 				bits |= (SU_PUNCHVEC1<<i);
 		if (ent->v->velocity[i])
@@ -944,7 +946,7 @@ void SV_WriteClientdataToMessage (client_t *client, edict_t *ent, sizebuf_t *msg
 	//stats[STAT_SECRETS] = pr_global_struct->found_secrets;
 	//stats[STAT_MONSTERS] = pr_global_struct->killed_monsters;
 
-	if (sv.protocol != PROTOCOL_DARKPLACES6)
+	if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
 	{
 		if (stats[STAT_VIEWHEIGHT] != DEFAULT_VIEWHEIGHT) bits |= SU_VIEWHEIGHT;
 		bits |= SU_ITEMS;
@@ -952,7 +954,7 @@ void SV_WriteClientdataToMessage (client_t *client, edict_t *ent, sizebuf_t *msg
 		if (stats[STAT_ARMOR]) bits |= SU_ARMOR;
 		bits |= SU_WEAPON;
 		// FIXME: which protocols support this?  does PROTOCOL_DARKPLACES3 support viewzoom?
-		if (sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
+		if (sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
 			if (viewzoom != 255)
 				bits |= SU_VIEWZOOM;
 	}
@@ -980,26 +982,23 @@ void SV_WriteClientdataToMessage (client_t *client, edict_t *ent, sizebuf_t *msg
 	{
 		if (bits & (SU_PUNCH1<<i))
 		{
-			if (sv.protocol == PROTOCOL_QUAKE)
+			if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE)
 				MSG_WriteChar(msg, ent->v->punchangle[i]);
-			else if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6)
+			else
 				MSG_WriteAngle16i(msg, ent->v->punchangle[i]);
 		}
-		if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6)
+		if (bits & (SU_PUNCHVEC1<<i))
 		{
-			if (bits & (SU_PUNCHVEC1<<i))
-			{
-				if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4)
-					MSG_WriteCoord16i(msg, punchvector[i]);
-				else if (sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6)
-					MSG_WriteCoord32f(msg, punchvector[i]);
-			}
+			if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4)
+				MSG_WriteCoord16i(msg, punchvector[i]);
+			else
+				MSG_WriteCoord32f(msg, punchvector[i]);
 		}
 		if (bits & (SU_VELOCITY1<<i))
 		{
 			if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4)
 				MSG_WriteChar(msg, ent->v->velocity[i] * (1.0f / 16.0f));
-			else if (sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6)
+			else
 				MSG_WriteCoord32f(msg, ent->v->velocity[i]);
 		}
 	}
@@ -1025,7 +1024,7 @@ void SV_WriteClientdataToMessage (client_t *client, edict_t *ent, sizebuf_t *msg
 		if (bits & SU_VIEWZOOM)
 			MSG_WriteShort (msg, min(stats[STAT_VIEWZOOM], 65535));
 	}
-	else if (sv.protocol != PROTOCOL_DARKPLACES6)
+	else if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4)
 	{
 		if (bits & SU_WEAPONFRAME)
 			MSG_WriteByte (msg, stats[STAT_WEAPONFRAME]);
@@ -1050,9 +1049,9 @@ void SV_WriteClientdataToMessage (client_t *client, edict_t *ent, sizebuf_t *msg
 			MSG_WriteByte (msg, stats[STAT_WEAPON]);
 		if (bits & SU_VIEWZOOM)
 		{
-			if (sv.protocol == PROTOCOL_DARKPLACES4)
+			if (sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4)
 				MSG_WriteByte (msg, min(stats[STAT_VIEWZOOM], 255));
-			else if (sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6)
+			else
 				MSG_WriteShort (msg, min(stats[STAT_VIEWZOOM], 65535));
 		}
 	}
@@ -1076,9 +1075,17 @@ qboolean SV_SendClientDatagram (client_t *client)
 		maxsize = sizeof(sv_sendclientdatagram_buf);
 		maxsize2 = sizeof(sv_sendclientdatagram_buf);
 	}
-	else if (sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6)
+	else if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4)
 	{
-		// PROTOCOL_DARKPLACES5 supports packet size limiting of updates
+		// no rate limiting support on older protocols because dp protocols
+		// 1-4 kick the client off if they overflow, and quake protocol shows
+		// less than the full entity set if rate limited
+		maxsize = 1400;
+		maxsize2 = 1400;
+	}
+	else
+	{
+		// PROTOCOL_DARKPLACES5 and later support packet size limiting of updates
 		maxrate = bound(NET_MINRATE, sv_maxrate.integer, NET_MAXRATE);
 		if (sv_maxrate.integer != maxrate)
 			Cvar_SetValueQuick(&sv_maxrate, maxrate);
@@ -1086,14 +1093,6 @@ qboolean SV_SendClientDatagram (client_t *client)
 		rate = bound(NET_MINRATE, client->rate, maxrate);
 		rate = (int)(client->rate * sys_ticrate.value);
 		maxsize = bound(100, rate, 1400);
-		maxsize2 = 1400;
-	}
-	else
-	{
-		// no rate limiting support on older protocols because dp protocols
-		// 1-4 kick the client off if they overflow, and quake protocol shows
-		// less than the full entity set if rate limited
-		maxsize = 1400;
 		maxsize2 = 1400;
 	}
 
@@ -1336,7 +1335,7 @@ SV_ModelIndex
 */
 int SV_ModelIndex(const char *s, int precachemode)
 {
-	int i, limit = (sv.protocol == PROTOCOL_QUAKE ? 256 : MAX_MODELS);
+	int i, limit = ((sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE) ? 256 : MAX_MODELS);
 	char filename[MAX_QPATH];
 	if (!s || !*s)
 		return 0;
@@ -1350,7 +1349,7 @@ int SV_ModelIndex(const char *s, int precachemode)
 		{
 			if (precachemode)
 			{
-				if (sv.state != ss_loading && (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5))
+				if (sv.state != ss_loading && (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5))
 				{
 					Con_Printf("SV_ModelIndex(\"%s\"): precache_model can only be done in spawn functions\n", filename);
 					return 0;
@@ -1359,7 +1358,7 @@ int SV_ModelIndex(const char *s, int precachemode)
 					Con_Printf("SV_ModelIndex(\"%s\"): not precached (fix your code), precaching anyway\n", filename);
 				strlcpy(sv.model_precache[i], filename, sizeof(sv.model_precache[i]));
 				sv.models[i] = Mod_ForName (sv.model_precache[i], true, false, false);
-				if (sv.protocol == PROTOCOL_DARKPLACES6 && sv.state != ss_loading)
+				if (sv.state != ss_loading)
 				{
 					MSG_WriteByte(&sv.reliable_datagram, svc_precache);
 					MSG_WriteShort(&sv.reliable_datagram, i);
@@ -1385,7 +1384,7 @@ SV_SoundIndex
 */
 int SV_SoundIndex(const char *s, int precachemode)
 {
-	int i, limit = (sv.protocol == PROTOCOL_QUAKE ? 256 : MAX_SOUNDS);
+	int i, limit = ((sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE) ? 256 : MAX_SOUNDS);
 	char filename[MAX_QPATH];
 	if (!s || !*s)
 		return 0;
@@ -1399,7 +1398,7 @@ int SV_SoundIndex(const char *s, int precachemode)
 		{
 			if (precachemode)
 			{
-				if (sv.state != ss_loading && (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5))
+				if (sv.state != ss_loading && (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5))
 				{
 					Con_Printf("SV_SoundIndex(\"%s\"): precache_sound can only be done in spawn functions\n", filename);
 					return 0;
@@ -1407,7 +1406,7 @@ int SV_SoundIndex(const char *s, int precachemode)
 				if (precachemode == 1)
 					Con_Printf("SV_SoundIndex(\"%s\"): not precached (fix your code), precaching anyway\n", filename);
 				strlcpy(sv.sound_precache[i], filename, sizeof(sv.sound_precache[i]));
-				if (sv.protocol == PROTOCOL_DARKPLACES6 && sv.state != ss_loading)
+				if (sv.state != ss_loading)
 				{
 					MSG_WriteByte(&sv.reliable_datagram, svc_precache);
 					MSG_WriteShort(&sv.reliable_datagram, i + 32768);
@@ -1661,30 +1660,13 @@ void SV_SpawnServer (const char *server)
 
 	strlcpy (sv.name, server, sizeof (sv.name));
 
-	sv.netquakecompatible = false;
-	if (!strcasecmp(sv_protocolname.string, "QUAKE"))
+	sv.protocol = Protocol_EnumForName(sv_protocolname.string);
+	if (sv.protocol == PROTOCOL_UNKNOWN)
 	{
+		char buffer[1024];
+		Protocol_Names(buffer, sizeof(buffer));
+		Con_Printf("Unknown sv_protocolname \"%s\", valid values are:\n%s\n", sv_protocolname.string, buffer);
 		sv.protocol = PROTOCOL_QUAKE;
-		sv.netquakecompatible = true;
-	}
-	else if (!strcasecmp(sv_protocolname.string, "QUAKEDP"))
-		sv.protocol = PROTOCOL_QUAKE;
-	else if (!strcasecmp(sv_protocolname.string, "DARKPLACES1"))
-		sv.protocol = PROTOCOL_DARKPLACES1;
-	else if (!strcasecmp(sv_protocolname.string, "DARKPLACES2"))
-		sv.protocol = PROTOCOL_DARKPLACES2;
-	else if (!strcasecmp(sv_protocolname.string, "DARKPLACES3"))
-		sv.protocol = PROTOCOL_DARKPLACES3;
-	else if (!strcasecmp(sv_protocolname.string, "DARKPLACES4"))
-		sv.protocol = PROTOCOL_DARKPLACES4;
-	else if (!strcasecmp(sv_protocolname.string, "DARKPLACES5"))
-		sv.protocol = PROTOCOL_DARKPLACES5;
-	else if (!strcasecmp(sv_protocolname.string, "DARKPLACES6"))
-		sv.protocol = PROTOCOL_DARKPLACES6;
-	else
-	{
-		sv.protocol = PROTOCOL_DARKPLACES6;
-		Con_Printf("Unknown sv_protocolname \"%s\", valid values are QUAKE, QUAKEDP, DARKPLACES1, DARKPLACES2, DARKPLACES3, DARKPLACES4, DARKPLACES5, DARKPLACES6, falling back to DARKPLACES6 protocol\n", sv_protocolname.string);
 	}
 
 // load progs to get entity field count
@@ -1803,14 +1785,14 @@ void SV_SpawnServer (const char *server)
 // run two frames to allow everything to settle
 	for (i = 0;i < 2;i++)
 	{
-		sv.frametime = pr_global_struct->frametime = host_frametime = 0.1;
+		sv.frametime = host_frametime = 0.1;
 		SV_Physics ();
 	}
 
 	Mod_PurgeUnused();
 
 // create a baseline for more efficient communications
-	if (sv.protocol == PROTOCOL_QUAKE)
+	if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE)
 		SV_CreateBaseline ();
 
 // send serverinfo to all connected clients

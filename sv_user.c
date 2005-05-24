@@ -602,17 +602,21 @@ void SV_ClientThink(void)
 SV_ReadClientMove
 ===================
 */
-extern cvar_t cl_movement_latency;
+extern void SV_Physics_Entity (edict_t *ent, qboolean runmove);
 void SV_ReadClientMove (void)
 {
 	int i;
+	double oldmovetime;
 	usercmd_t *move = &host_client->cmd;
 
+	oldmovetime = move->time;
 	memset(move, 0, sizeof(usercmd_t));
 
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 
 	// read ping time
+	if (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE && sv.protocol != PROTOCOL_DARKPLACES1 && sv.protocol != PROTOCOL_DARKPLACES2 && sv.protocol != PROTOCOL_DARKPLACES3 && sv.protocol != PROTOCOL_DARKPLACES4 && sv.protocol != PROTOCOL_DARKPLACES5 && sv.protocol != PROTOCOL_DARKPLACES6)
+		move->sequence = MSG_ReadLong ();
 	move->time = MSG_ReadFloat ();
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	move->receivetime = sv.time;
@@ -620,11 +624,13 @@ void SV_ReadClientMove (void)
 	// read current angles
 	for (i = 0;i < 3;i++)
 	{
-		if (sv.protocol == PROTOCOL_QUAKE)
+		if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE)
 			move->viewangles[i] = MSG_ReadAngle8i();
+		else if (sv.protocol == PROTOCOL_DARKPLACES1)
+			move->viewangles[i] = MSG_ReadAngle16i();
 		else if (sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3)
 			move->viewangles[i] = MSG_ReadAngle32f();
-		else if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6)
+		else
 			move->viewangles[i] = MSG_ReadAngle16i();
 	}
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
@@ -636,10 +642,10 @@ void SV_ReadClientMove (void)
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 
 	// read buttons
-	if (sv.protocol == PROTOCOL_DARKPLACES6)
-		move->buttons = MSG_ReadLong ();
-	else
+	if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
 		move->buttons = MSG_ReadByte ();
+	else
+		move->buttons = MSG_ReadLong ();
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 
 	// read impulse
@@ -649,7 +655,7 @@ void SV_ReadClientMove (void)
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 
 	// PRYDON_CLIENTCURSOR
-	if (sv.protocol == PROTOCOL_DARKPLACES6)
+	if (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE && sv.protocol != PROTOCOL_DARKPLACES1 && sv.protocol != PROTOCOL_DARKPLACES2 && sv.protocol != PROTOCOL_DARKPLACES3 && sv.protocol != PROTOCOL_DARKPLACES4 && sv.protocol != PROTOCOL_DARKPLACES5)
 	{
 		// 30 bytes
 		move->cursor_screen[0] = MSG_ReadShort() * (1.0f / 32767.0f);
@@ -671,6 +677,23 @@ void SV_ReadClientMove (void)
 		if (EDICT_NUM(move->cursor_entitynumber)->e->free)
 			move->cursor_entitynumber = 0;
 		if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
+	}
+
+	if (!host_client->spawned)
+		memset(move, 0, sizeof(*move));
+	else
+	{
+		host_client->movesequence = move->sequence;
+		if (host_client->movesequence)
+		{
+			double frametime = move->time - oldmovetime;
+			double oldframetime = pr_global_struct->frametime;
+			if (frametime > 0.1)
+				frametime = 0.1;
+			pr_global_struct->frametime = frametime;
+			SV_Physics_Entity(host_client->edict, true);
+			pr_global_struct->frametime = oldframetime;
+		}
 	}
 }
 

@@ -35,6 +35,71 @@ entity_state_t defaultstate =
 	{0,0}//unsigned char unused[2]; // !
 };
 
+// LordHavoc: I own protocol ranges 96, 97, 3500-3599
+
+struct
+{
+	int number;
+	const char *name;
+}
+protocolversioninfo[] =
+{
+	{0, "UNKNOWN"},
+	{15, "QUAKE"},
+	{15, "QUAKEDP"},
+	{250, "NEHAHRAMOVIE"},
+	{96, "DARKPLACES1"},
+	{97, "DARKPLACES2"},
+	{3500, "DARKPLACES3"},
+	{3501, "DARKPLACES4"},
+	{3502, "DARKPLACES5"},
+	{3503, "DARKPLACES6"},
+	{3504, "DARKPLACES7"},
+	{0, NULL}
+};
+
+protocolversion_t Protocol_EnumForName(const char *s)
+{
+	int i;
+	for (i = 1;protocolversioninfo[i].name;i++)
+		if (!strcasecmp(s, protocolversioninfo[i].name))
+			return i;
+	return PROTOCOL_UNKNOWN;
+}
+
+const char *Protocol_NameForEnum(protocolversion_t p)
+{
+	return protocolversioninfo[p].name;
+}
+
+protocolversion_t Protocol_EnumForNumber(int n)
+{
+	int i;
+	for (i = 1;protocolversioninfo[i].name;i++)
+		if (protocolversioninfo[i].number == n)
+			return i;
+	return PROTOCOL_UNKNOWN;
+}
+
+int Protocol_NumberForEnum(protocolversion_t p)
+{
+	return protocolversioninfo[p].number;
+}
+
+void Protocol_Names(char *buffer, size_t buffersize)
+{
+	int i;
+	if (buffersize < 1)
+		return;
+	buffer[0] = 0;
+	for (i = 1;protocolversioninfo[i].name;i++)
+	{
+		if (i > 1)
+			strlcat(buffer, " ", sizeof(buffer));
+		strlcat(buffer, protocolversioninfo[i].name, sizeof(buffer));
+	}
+}
+
 // keep track of quake entities because they need to be killed if they get stale
 int cl_lastquakeentity = 0;
 qbyte cl_isquakeentity[MAX_EDICTS];
@@ -250,8 +315,11 @@ void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int numstates, const entity_sta
 			bits |= U_GLOWCOLOR;
 
 		// if extensions are disabled, clear the relevant update flags
-		if (sv.netquakecompatible)
+		if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_NEHAHRAMOVIE)
 			bits &= 0x7FFF;
+		if (sv.protocol == PROTOCOL_NEHAHRAMOVIE)
+			if (s->alpha != 255 || s->effects & EF_FULLBRIGHT)
+				bits |= U_EXTEND1;
 
 		// write the message
 		if (bits >= 16777216)
@@ -288,6 +356,22 @@ void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int numstates, const entity_sta
 		if (bits & U_COLORMOD)		{int c = ((int)bound(0, s->colormod[0] * (7.0f / 32.0f), 7) << 5) | ((int)bound(0, s->colormod[0] * (7.0f / 32.0f), 7) << 2) | ((int)bound(0, s->colormod[0] * (3.0f / 32.0f), 3) << 0);MSG_WriteByte(&buf, c);}
 		if (bits & U_FRAME2)		MSG_WriteByte(&buf, s->frame >> 8);
 		if (bits & U_MODEL2)		MSG_WriteByte(&buf, s->modelindex >> 8);
+
+		// the nasty protocol
+		if ((bits & U_EXTEND1) && sv.protocol == PROTOCOL_NEHAHRAMOVIE)
+		{
+			if (s->effects & EF_FULLBRIGHT)
+			{
+				MSG_WriteFloat(&buf, 2); // QSG protocol version
+				MSG_WriteFloat(&buf, s->alpha <= 0 ? 0 : (s->alpha >= 255 ? 1 : s->alpha * (1.0f / 255.0f))); // alpha
+				MSG_WriteFloat(&buf, 1); // fullbright
+			}
+			else
+			{
+				MSG_WriteFloat(&buf, 1); // QSG protocol version
+				MSG_WriteFloat(&buf, s->alpha <= 0 ? 0 : (s->alpha >= 255 ? 1 : s->alpha * (1.0f / 255.0f))); // alpha
+			}
+		}
 
 		// if the commit is full, we're done this frame
 		if (msg->cursize + buf.cursize > msg->maxsize)
@@ -392,7 +476,7 @@ void EntityState_WriteFields(const entity_state_t *ent, sizebuf_t *msg, unsigned
 		if (bits & E_ORIGIN3)
 			MSG_WriteCoord16i(msg, ent->origin[2]);
 	}
-	else if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6)
+	else
 	{
 		// LordHavoc: have to write flags first, as they can modify protocol
 		if (bits & E_FLAGS)
@@ -416,16 +500,7 @@ void EntityState_WriteFields(const entity_state_t *ent, sizebuf_t *msg, unsigned
 				MSG_WriteCoord32f(msg, ent->origin[2]);
 		}
 	}
-	if ((sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6) && !(ent->flags & RENDER_LOWPRECISION))
-	{
-		if (bits & E_ANGLE1)
-			MSG_WriteAngle16i(msg, ent->angles[0]);
-		if (bits & E_ANGLE2)
-			MSG_WriteAngle16i(msg, ent->angles[1]);
-		if (bits & E_ANGLE3)
-			MSG_WriteAngle16i(msg, ent->angles[2]);
-	}
-	else
+	if ((sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4) && (ent->flags & RENDER_LOWPRECISION))
 	{
 		if (bits & E_ANGLE1)
 			MSG_WriteAngle8i(msg, ent->angles[0]);
@@ -433,6 +508,15 @@ void EntityState_WriteFields(const entity_state_t *ent, sizebuf_t *msg, unsigned
 			MSG_WriteAngle8i(msg, ent->angles[1]);
 		if (bits & E_ANGLE3)
 			MSG_WriteAngle8i(msg, ent->angles[2]);
+	}
+	else
+	{
+		if (bits & E_ANGLE1)
+			MSG_WriteAngle16i(msg, ent->angles[0]);
+		if (bits & E_ANGLE2)
+			MSG_WriteAngle16i(msg, ent->angles[1]);
+		if (bits & E_ANGLE3)
+			MSG_WriteAngle16i(msg, ent->angles[2]);
 	}
 	if (bits & E_MODEL1)
 		MSG_WriteByte(msg, ent->modelindex & 0xFF);
@@ -532,7 +616,7 @@ void EntityState_ReadFields(entity_state_t *e, unsigned int bits)
 		if (bits & E_ORIGIN3)
 			e->origin[2] = MSG_ReadCoord16i();
 	}
-	else if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5 || cl.protocol == PROTOCOL_DARKPLACES6)
+	else
 	{
 		if (bits & E_FLAGS)
 			e->flags = MSG_ReadByte();
@@ -555,18 +639,7 @@ void EntityState_ReadFields(entity_state_t *e, unsigned int bits)
 				e->origin[2] = MSG_ReadCoord32f();
 		}
 	}
-	else
-		Host_Error("EntityState_ReadFields: unknown cl.protocol %i\n", cl.protocol);
-	if ((cl.protocol == PROTOCOL_DARKPLACES5 || cl.protocol == PROTOCOL_DARKPLACES6) && !(e->flags & RENDER_LOWPRECISION))
-	{
-		if (bits & E_ANGLE1)
-			e->angles[0] = MSG_ReadAngle16i();
-		if (bits & E_ANGLE2)
-			e->angles[1] = MSG_ReadAngle16i();
-		if (bits & E_ANGLE3)
-			e->angles[2] = MSG_ReadAngle16i();
-	}
-	else
+	if ((cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4) && (e->flags & RENDER_LOWPRECISION))
 	{
 		if (bits & E_ANGLE1)
 			e->angles[0] = MSG_ReadAngle8i();
@@ -574,6 +647,15 @@ void EntityState_ReadFields(entity_state_t *e, unsigned int bits)
 			e->angles[1] = MSG_ReadAngle8i();
 		if (bits & E_ANGLE3)
 			e->angles[2] = MSG_ReadAngle8i();
+	}
+	else
+	{
+		if (bits & E_ANGLE1)
+			e->angles[0] = MSG_ReadAngle16i();
+		if (bits & E_ANGLE2)
+			e->angles[1] = MSG_ReadAngle16i();
+		if (bits & E_ANGLE3)
+			e->angles[2] = MSG_ReadAngle16i();
 	}
 	if (bits & E_MODEL1)
 		e->modelindex = (e->modelindex & 0xFF00) | (unsigned int) MSG_ReadByte();
@@ -1815,6 +1897,8 @@ void EntityFrame5_CL_ReadFrame(void)
 	for (i = 0;i < LATESTFRAMENUMS-1;i++)
 		cl.latestframenums[i] = cl.latestframenums[i+1];
 	cl.latestframenums[LATESTFRAMENUMS-1] = MSG_ReadLong();
+	if (cl.protocol != PROTOCOL_QUAKE && cl.protocol != PROTOCOL_QUAKEDP && cl.protocol != PROTOCOL_NEHAHRAMOVIE && cl.protocol != PROTOCOL_DARKPLACES1 && cl.protocol != PROTOCOL_DARKPLACES2 && cl.protocol != PROTOCOL_DARKPLACES3 && cl.protocol != PROTOCOL_DARKPLACES4 && cl.protocol != PROTOCOL_DARKPLACES5 && cl.protocol != PROTOCOL_DARKPLACES6)
+		cl.servermovesequence = MSG_ReadLong();
 	// read entity numbers until we find a 0x8000
 	// (which would be remove world entity, but is actually a terminator)
 	while ((n = (unsigned short)MSG_ReadShort()) != 0x8000 && !msg_badread)
@@ -1933,7 +2017,7 @@ void EntityFrame5_AckFrame(entityframe5_database_t *d, int framenum)
 int entityframe5_prioritychaincounts[E5_PROTOCOL_PRIORITYLEVELS];
 unsigned short entityframe5_prioritychains[E5_PROTOCOL_PRIORITYLEVELS][ENTITYFRAME5_MAXSTATES];
 
-void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum, int *stats)
+void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum, int *stats, int movesequence)
 {
 	const entity_state_t *n;
 	int i, num, l, framenum, packetlognumber, priority;
@@ -2038,7 +2122,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 	packetlog->packetnumber = framenum;
 	packetlog->numstates = 0;
 	// write stat updates
-	if (sv.protocol == PROTOCOL_DARKPLACES6)
+	if (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE && sv.protocol != PROTOCOL_DARKPLACES1 && sv.protocol != PROTOCOL_DARKPLACES2 && sv.protocol != PROTOCOL_DARKPLACES3 && sv.protocol != PROTOCOL_DARKPLACES4 && sv.protocol != PROTOCOL_DARKPLACES5)
 	{
 		for (i = 0;i < MAX_CL_STATS;i++)
 		{
@@ -2065,6 +2149,8 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 	d->latestframenum = framenum;
 	MSG_WriteByte(msg, svc_entities);
 	MSG_WriteLong(msg, framenum);
+	if (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE && sv.protocol != PROTOCOL_DARKPLACES1 && sv.protocol != PROTOCOL_DARKPLACES2 && sv.protocol != PROTOCOL_DARKPLACES3 && sv.protocol != PROTOCOL_DARKPLACES4 && sv.protocol != PROTOCOL_DARKPLACES5 && sv.protocol != PROTOCOL_DARKPLACES6)
+		MSG_WriteLong(msg, movesequence);
 	for (priority = E5_PROTOCOL_PRIORITYLEVELS - 1;priority >= 0 && packetlog->numstates < ENTITYFRAME5_MAXSTATES;priority--)
 	{
 		for (i = 0;i < entityframe5_prioritychaincounts[priority] && packetlog->numstates < ENTITYFRAME5_MAXSTATES;i++)
