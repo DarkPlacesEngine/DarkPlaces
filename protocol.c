@@ -45,16 +45,16 @@ struct
 protocolversioninfo[] =
 {
 	{0, "UNKNOWN"},
-	{15, "QUAKE"},
+	{3504, "DP7"},
+	{3503, "DP6"},
+	{3502, "DP5"},
+	{3501, "DP4"},
+	{3500, "DP3"},
+	{97, "DP2"},
+	{96, "DP1"},
 	{15, "QUAKEDP"},
 	{250, "NEHAHRAMOVIE"},
-	{96, "DARKPLACES1"},
-	{97, "DARKPLACES2"},
-	{3500, "DARKPLACES3"},
-	{3501, "DARKPLACES4"},
-	{3502, "DARKPLACES5"},
-	{3503, "DARKPLACES6"},
-	{3504, "DARKPLACES7"},
+	{15, "QUAKE"},
 	{0, NULL}
 };
 

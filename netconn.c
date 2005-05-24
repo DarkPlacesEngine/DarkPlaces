@@ -927,10 +927,12 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 
 		if (length > 10 && !memcmp(string, "challenge ", 10) && cls.connect_trying)
 		{
+			char protocolnames[1400];
+			Protocol_Names(protocolnames, sizeof(protocolnames));
 			LHNETADDRESS_ToString(peeraddress, addressstring2, sizeof(addressstring2), true);
 			Con_Printf("\"%s\" received, sending connect request back to %s\n", string, addressstring2);
 			M_Update_Return_Reason("Got challenge response");
-			NetConn_WriteString(mysocket, va("\377\377\377\377connect\\protocol\\darkplaces 3\\challenge\\%s", string + 10), peeraddress);
+			NetConn_WriteString(mysocket, va("\377\377\377\377connect\\protocol\\darkplaces 3\\protocols\\%s\\challenge\\%s", protocolnames, string + 10), peeraddress);
 			return true;
 		}
 		if (length == 6 && !memcmp(string, "accept", 6) && cls.connect_trying)
@@ -964,12 +966,12 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 				if( !strcmp( cname, serverlist_cache[n].info.cname ) )
 					break;
 			if( n == serverlist_cachecount ) {
-				// LAN search doesnt require an answer from the master server so we wont 
+				// LAN search doesnt require an answer from the master server so we wont
 				// know the ping nor will it be initialized already...
 
 				// find a slot
 				if( serverlist_cachecount == SERVERLIST_TOTALSIZE )
-					return true;				
+					return true;
 				serverquerycount++;
 
 				memset(&serverlist_cache[serverlist_cachecount], 0, sizeof(serverlist_cache[serverlist_cachecount]));
@@ -983,7 +985,7 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 				}
 
 				++serverlist_cachecount;
-			
+
 			}
 			info = &serverlist_cache[n].info;
 			if ((s = SearchInfostring(string, "gamename"     )) != NULL) strlcpy(info->game, s, sizeof (info->game));else info->game[0] = 0;
