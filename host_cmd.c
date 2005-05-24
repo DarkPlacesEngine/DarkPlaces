@@ -45,7 +45,6 @@ Host_Status_f
 */
 void Host_Status_f (void)
 {
-	const char *protocolname;
 	client_t *client;
 	int seconds, minutes, hours = 0, j, players;
 	void (*print) (const char *fmt, ...);
@@ -67,18 +66,7 @@ void Host_Status_f (void)
 			players++;
 	print ("host:     %s\n", Cvar_VariableString ("hostname"));
 	print ("version:  %s build %s\n", gamename, buildstring);
-	switch(sv.protocol)
-	{
-		case PROTOCOL_QUAKE: protocolname = sv.netquakecompatible ? "QUAKE" : "QUAKEDP";break;
-		case PROTOCOL_DARKPLACES1: protocolname = "PROTOCOL_DARKPLACES1";break;
-		case PROTOCOL_DARKPLACES2: protocolname = "PROTOCOL_DARKPLACES2";break;
-		case PROTOCOL_DARKPLACES3: protocolname = "PROTOCOL_DARKPLACES3";break;
-		case PROTOCOL_DARKPLACES4: protocolname = "PROTOCOL_DARKPLACES4";break;
-		case PROTOCOL_DARKPLACES5: protocolname = "PROTOCOL_DARKPLACES5";break;
-		case PROTOCOL_DARKPLACES6: protocolname = "PROTOCOL_DARKPLACES6";break;
-		default: protocolname = "PROTOCOL_UNKNOWN";break;
-	}
-	print ("protocol: %i (%s)\n", sv.protocol, protocolname);
+	print ("protocol: %i (%s)\n", Protocol_NumberForEnum(sv.protocol), Protocol_NameForEnum(sv.protocol));
 	print ("map:      %s\n", sv.name);
 	print ("players:  %i active (%i max)\n\n", players, svs.maxclients);
 	for (j = 0, client = svs.clients;j < svs.maxclients;j++, client++)

@@ -116,7 +116,7 @@ typedef struct netconn_s
 
 	lhnetsocket_t *mysocket;
 	lhnetaddress_t peeraddress;
-	
+
 	// this is mostly identical to qsocket_t from quake
 
 	// if this time is reached, kick off peer
@@ -155,7 +155,7 @@ extern int playercolor;
 #define SERVERLIST_ANDMASKCOUNT		5
 #define SERVERLIST_ORMASKCOUNT		5
 
-typedef enum 
+typedef enum
 {
 	// SLMO_CONTAINS is the default for strings
 	// SLMO_GREATEREQUAL is the default for numbers (also used when OP == CONTAINS or NOTCONTAINS
@@ -193,7 +193,7 @@ typedef struct
 	int protocol;
 } serverlist_info_t;
 
-typedef enum 
+typedef enum
 {
 	SLIF_CNAME,
 	SLIF_PING,
@@ -210,12 +210,12 @@ typedef enum
 typedef struct
 {
 	// used to determine whether this entry should be included into the final view
-	qboolean finished; 
+	qboolean finished;
 	// used to calculate ping when update comes in
 	double querytime;
 
 	serverlist_info_t info;
-	
+
 	// legacy stuff
 	char line1[128];
 	char line2[128];
@@ -237,7 +237,7 @@ extern qboolean serverlist_sortdescending;
 extern int serverlist_viewcount;
 extern serverlist_entry_t *serverlist_viewlist[SERVERLIST_VIEWLISTSIZE];
 
-extern int serverlist_cachecount; 
+extern int serverlist_cachecount;
 
 extern qboolean serverlist_consoleoutput;
 

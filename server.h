@@ -48,9 +48,7 @@ typedef struct
 	qboolean loadgame;
 
 	// one of the PROTOCOL_ values
-	int protocol;
-	// this disables extensions when using PROTOCOL_QUAKE
-	qboolean netquakecompatible;
+	protocolversion_t protocol;
 
 	// used for running multiple steps in one frame, etc
 	double timer;
@@ -134,6 +132,7 @@ typedef struct client_s
 	// communications handle
 	netconn_t *netconnection;
 
+	int movesequence;
 	// movement
 	usercmd_t cmd;
 	// intended motion calced from cmd

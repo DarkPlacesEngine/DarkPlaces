@@ -273,19 +273,21 @@ void MSG_WriteCoord32f (sizebuf_t *sb, float f)
 	MSG_WriteFloat (sb, f);
 }
 
-void MSG_WriteCoord (sizebuf_t *sb, float f, int protocol)
+void MSG_WriteCoord (sizebuf_t *sb, float f, protocolversion_t protocol)
 {
-	if (protocol == PROTOCOL_QUAKE || protocol == PROTOCOL_NEHAHRAMOVIE)
+	if (protocol == PROTOCOL_QUAKE || protocol == PROTOCOL_QUAKEDP || protocol == PROTOCOL_NEHAHRAMOVIE)
 		MSG_WriteCoord13i (sb, f);
-	else if (protocol == PROTOCOL_DARKPLACES1 || protocol == PROTOCOL_DARKPLACES5 || protocol == PROTOCOL_DARKPLACES6)
+	else if (protocol == PROTOCOL_DARKPLACES1)
 		MSG_WriteCoord32f (sb, f);
 	else if (protocol == PROTOCOL_DARKPLACES2 || protocol == PROTOCOL_DARKPLACES3 || protocol == PROTOCOL_DARKPLACES4)
 		MSG_WriteCoord16i (sb, f);
 	else
-		Host_Error("MSG_WriteCoord: unknown protocol\n");
+		MSG_WriteCoord32f (sb, f);
+	//else
+	//	Host_Error("MSG_WriteCoord: unknown protocol\n");
 }
 
-void MSG_WriteVector (sizebuf_t *sb, float *v, int protocol)
+void MSG_WriteVector (sizebuf_t *sb, float *v, protocolversion_t protocol)
 {
 	MSG_WriteCoord (sb, v[0], protocol);
 	MSG_WriteCoord (sb, v[1], protocol);
@@ -314,12 +316,12 @@ void MSG_WriteAngle32f (sizebuf_t *sb, float f)
 	MSG_WriteFloat (sb, f);
 }
 
-void MSG_WriteAngle (sizebuf_t *sb, float f, int protocol)
+void MSG_WriteAngle (sizebuf_t *sb, float f, protocolversion_t protocol)
 {
-	if (protocol == PROTOCOL_DARKPLACES5 || protocol == PROTOCOL_DARKPLACES6)
-		MSG_WriteAngle16i (sb, f);
-	else
+	if (protocol == PROTOCOL_QUAKE || protocol == PROTOCOL_QUAKEDP || protocol == PROTOCOL_NEHAHRAMOVIE || protocol == PROTOCOL_DARKPLACES1 || protocol == PROTOCOL_DARKPLACES2 || protocol == PROTOCOL_DARKPLACES3 || protocol == PROTOCOL_DARKPLACES4)
 		MSG_WriteAngle8i (sb, f);
+	else
+		MSG_WriteAngle16i (sb, f);
 }
 
 //
@@ -445,19 +447,19 @@ float MSG_ReadCoord32f (void)
 	return MSG_ReadLittleFloat();
 }
 
-float MSG_ReadCoord (int protocol)
+float MSG_ReadCoord (protocolversion_t protocol)
 {
-	if (protocol == PROTOCOL_QUAKE || protocol == PROTOCOL_NEHAHRAMOVIE)
+	if (protocol == PROTOCOL_QUAKE || protocol == PROTOCOL_QUAKEDP || protocol == PROTOCOL_NEHAHRAMOVIE)
 		return MSG_ReadCoord13i();
-	else if (protocol == PROTOCOL_DARKPLACES1 || protocol == PROTOCOL_DARKPLACES5 || protocol == PROTOCOL_DARKPLACES6)
+	else if (protocol == PROTOCOL_DARKPLACES1)
 		return MSG_ReadCoord32f();
 	else if (protocol == PROTOCOL_DARKPLACES2 || protocol == PROTOCOL_DARKPLACES3 || protocol == PROTOCOL_DARKPLACES4)
 		return MSG_ReadCoord16i();
-	Host_Error("MSG_ReadCoord: unknown protocol\n");
-	return 0;
+	else
+		return MSG_ReadCoord32f();
 }
 
-void MSG_ReadVector (float *v, int protocol)
+void MSG_ReadVector (float *v, protocolversion_t protocol)
 {
 	v[0] = MSG_ReadCoord(protocol);
 	v[1] = MSG_ReadCoord(protocol);
@@ -480,12 +482,12 @@ float MSG_ReadAngle32f (void)
 	return MSG_ReadFloat ();
 }
 
-float MSG_ReadAngle (int protocol)
+float MSG_ReadAngle (protocolversion_t protocol)
 {
-	if (protocol == PROTOCOL_DARKPLACES5 || protocol == PROTOCOL_DARKPLACES6)
-		return MSG_ReadAngle16i ();
-	else
+	if (protocol == PROTOCOL_QUAKE || protocol == PROTOCOL_QUAKEDP || protocol == PROTOCOL_NEHAHRAMOVIE || protocol == PROTOCOL_DARKPLACES1 || protocol == PROTOCOL_DARKPLACES2 || protocol == PROTOCOL_DARKPLACES3 || protocol == PROTOCOL_DARKPLACES4)
 		return MSG_ReadAngle8i ();
+	else
+		return MSG_ReadAngle16i ();
 }
 
 

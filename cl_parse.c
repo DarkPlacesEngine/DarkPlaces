@@ -331,6 +331,7 @@ void CL_ParseServerInfo (void)
 {
 	char *str;
 	int i;
+	protocolversion_t protocol;
 	int nummodels, numsounds;
 	entity_t *ent;
 
@@ -346,16 +347,17 @@ void CL_ParseServerInfo (void)
 
 // parse protocol version number
 	i = MSG_ReadLong ();
-	// hack for unmarked Nehahra movie demos which had a custom protocol
-	if (i == PROTOCOL_QUAKE && cls.demoplayback && demo_nehahra.integer)
-		i = PROTOCOL_NEHAHRAMOVIE;
-	if (i != PROTOCOL_QUAKE && i != PROTOCOL_DARKPLACES1 && i != PROTOCOL_DARKPLACES2 && i != PROTOCOL_DARKPLACES3 && i != PROTOCOL_DARKPLACES4 && i != PROTOCOL_DARKPLACES5 && i != PROTOCOL_DARKPLACES6 && i != PROTOCOL_NEHAHRAMOVIE)
+	protocol = Protocol_EnumForNumber(i);
+	if (protocol == PROTOCOL_UNKNOWN)
 	{
-		Host_Error("CL_ParseServerInfo: Server is protocol %i, not %i (Quake), %i (DP1), %i (DP2), %i (DP3), %i (DP4), %i (DP5), %i (DP6), or %i (Nehahra movie)", i, PROTOCOL_QUAKE, PROTOCOL_DARKPLACES1, PROTOCOL_DARKPLACES2, PROTOCOL_DARKPLACES3, PROTOCOL_DARKPLACES4, PROTOCOL_DARKPLACES5, PROTOCOL_DARKPLACES6, PROTOCOL_NEHAHRAMOVIE);
+		Host_Error("CL_ParseServerInfo: Server is unrecognized protocol number (%i)\n", i);
 		return;
 	}
-	cl.protocol = i;
-	Con_DPrintf("Server protocol is %i\n", cl.protocol);
+	// hack for unmarked Nehahra movie demos which had a custom protocol
+	if (protocol == PROTOCOL_QUAKEDP && cls.demoplayback && demo_nehahra.integer)
+		protocol = PROTOCOL_NEHAHRAMOVIE;
+	cl.protocol = protocol;
+	Con_DPrintf("Server protocol is %s\n", Protocol_NameForEnum(cl.protocol));
 
 // parse maxclients
 	cl.maxclients = MSG_ReadByte ();
@@ -618,7 +620,7 @@ void CL_ParseClientdata (void)
 	VectorCopy (cl.mvelocity[0], cl.mvelocity[1]);
 	cl.mviewzoom[1] = cl.mviewzoom[0];
 
-	if (cl.protocol != PROTOCOL_DARKPLACES6)
+	if (cl.protocol == PROTOCOL_QUAKE || cl.protocol == PROTOCOL_QUAKEDP || cl.protocol == PROTOCOL_NEHAHRAMOVIE || cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5)
 	{
 		cl.stats[STAT_VIEWHEIGHT] = DEFAULT_VIEWHEIGHT;
 		cl.stats[STAT_ITEMS] = 0;
@@ -652,44 +654,35 @@ void CL_ParseClientdata (void)
 	{
 		if (bits & (SU_PUNCH1<<i) )
 		{
-			if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5 || cl.protocol == PROTOCOL_DARKPLACES6)
-				cl.mpunchangle[0][i] = MSG_ReadAngle16i();
-			else if (cl.protocol == PROTOCOL_QUAKE || cl.protocol == PROTOCOL_NEHAHRAMOVIE)
+			if (cl.protocol == PROTOCOL_QUAKE || cl.protocol == PROTOCOL_QUAKEDP || cl.protocol == PROTOCOL_NEHAHRAMOVIE)
 				cl.mpunchangle[0][i] = MSG_ReadChar();
 			else
-				Host_Error("CL_ParseClientData: unknown cl.protocol %i\n", cl.protocol);
+				cl.mpunchangle[0][i] = MSG_ReadAngle16i();
 		}
 		if (bits & (SU_PUNCHVEC1<<i))
 		{
 			if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4)
 				cl.mpunchvector[0][i] = MSG_ReadCoord16i();
-			else if (cl.protocol == PROTOCOL_DARKPLACES5 || cl.protocol == PROTOCOL_DARKPLACES6)
-				cl.mpunchvector[0][i] = MSG_ReadCoord32f();
 			else
-				Host_Error("CL_ParseClientData: unknown cl.protocol %i\n", cl.protocol);
+				cl.mpunchvector[0][i] = MSG_ReadCoord32f();
 		}
 		if (bits & (SU_VELOCITY1<<i) )
 		{
-			if (cl.protocol == PROTOCOL_QUAKE || cl.protocol == PROTOCOL_NEHAHRAMOVIE || cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4)
+			if (cl.protocol == PROTOCOL_QUAKE || cl.protocol == PROTOCOL_QUAKEDP || cl.protocol == PROTOCOL_NEHAHRAMOVIE || cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4)
 				cl.mvelocity[0][i] = MSG_ReadChar()*16;
-			else if (cl.protocol == PROTOCOL_DARKPLACES5 || cl.protocol == PROTOCOL_DARKPLACES6)
-				cl.mvelocity[0][i] = MSG_ReadCoord32f();
 			else
-				Host_Error("CL_ParseClientData: unknown cl.protocol %i\n", cl.protocol);
+				cl.mvelocity[0][i] = MSG_ReadCoord32f();
 		}
 	}
 
 	// LordHavoc: hipnotic demos don't have this bit set but should
-	if (bits & SU_ITEMS || cl.protocol != PROTOCOL_DARKPLACES6)
+	if (bits & SU_ITEMS || cl.protocol == PROTOCOL_QUAKE || cl.protocol == PROTOCOL_QUAKEDP || cl.protocol == PROTOCOL_NEHAHRAMOVIE || cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5)
 		cl.stats[STAT_ITEMS] = MSG_ReadLong ();
 
 	cl.onground = (bits & SU_ONGROUND) != 0;
 	cl.inwater = (bits & SU_INWATER) != 0;
 
-	if (cl.protocol == PROTOCOL_DARKPLACES6)
-	{
-	}
-	else if (cl.protocol == PROTOCOL_DARKPLACES5)
+	if (cl.protocol == PROTOCOL_DARKPLACES5)
 	{
 		cl.stats[STAT_WEAPONFRAME] = (bits & SU_WEAPONFRAME) ? MSG_ReadShort() : 0;
 		cl.stats[STAT_ARMOR] = (bits & SU_ARMOR) ? MSG_ReadShort() : 0;
@@ -702,7 +695,7 @@ void CL_ParseClientdata (void)
 		cl.stats[STAT_CELLS] = MSG_ReadShort();
 		cl.stats[STAT_ACTIVEWEAPON] = (unsigned short) MSG_ReadShort ();
 	}
-	else
+	else if (cl.protocol == PROTOCOL_QUAKE || cl.protocol == PROTOCOL_QUAKEDP || cl.protocol == PROTOCOL_NEHAHRAMOVIE || cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4)
 	{
 		cl.stats[STAT_WEAPONFRAME] = (bits & SU_WEAPONFRAME) ? MSG_ReadByte() : 0;
 		cl.stats[STAT_ARMOR] = (bits & SU_ARMOR) ? MSG_ReadByte() : 0;
@@ -721,10 +714,10 @@ void CL_ParseClientdata (void)
 
 	if (bits & SU_VIEWZOOM)
 	{
-		if (cl.protocol == PROTOCOL_DARKPLACES5 || cl.protocol == PROTOCOL_DARKPLACES6)
-			cl.stats[STAT_VIEWZOOM] = (unsigned short) MSG_ReadShort();
-		else
+		if (cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4)
 			cl.stats[STAT_VIEWZOOM] = MSG_ReadByte();
+		else
+			cl.stats[STAT_VIEWZOOM] = (unsigned short) MSG_ReadShort();
 	}
 
 	// check for important changes
@@ -1340,6 +1333,7 @@ void CL_ParseServerMessage(void)
 {
 	int			cmd;
 	int			i;
+	protocolversion_t protocol;
 	qbyte		cmdlog[32];
 	char		*cmdlogname[32], *temp;
 	int			cmdindex, cmdcount = 0;
@@ -1453,12 +1447,13 @@ void CL_ParseServerMessage(void)
 
 		case svc_version:
 			i = MSG_ReadLong ();
+			protocol = Protocol_EnumForNumber(i);
+			if (protocol == PROTOCOL_UNKNOWN)
+				Host_Error("CL_ParseServerMessage: Server is unrecognized protocol number (%i)\n", i);
 			// hack for unmarked Nehahra movie demos which had a custom protocol
-			if (i == PROTOCOL_QUAKE && cls.demoplayback && demo_nehahra.integer)
-				i = PROTOCOL_NEHAHRAMOVIE;
-			if (i != PROTOCOL_QUAKE && i != PROTOCOL_DARKPLACES1 && i != PROTOCOL_DARKPLACES2 && i != PROTOCOL_DARKPLACES3 && i != PROTOCOL_DARKPLACES4 && i != PROTOCOL_DARKPLACES5 && i != PROTOCOL_DARKPLACES6 && i != PROTOCOL_NEHAHRAMOVIE)
-				Host_Error("CL_ParseServerMessage: Server is protocol %i, not %i (Quake), %i (DP1), %i (DP2), %i (DP3), %i (DP4), %i (DP5), %i (DP6), or %i (Nehahra movie)", i, PROTOCOL_QUAKE, PROTOCOL_DARKPLACES1, PROTOCOL_DARKPLACES2, PROTOCOL_DARKPLACES3, PROTOCOL_DARKPLACES4, PROTOCOL_DARKPLACES5, PROTOCOL_DARKPLACES6, PROTOCOL_NEHAHRAMOVIE);
-			cl.protocol = i;
+			if (protocol == PROTOCOL_QUAKEDP && cls.demoplayback && demo_nehahra.integer)
+				protocol = PROTOCOL_NEHAHRAMOVIE;
+			cl.protocol = protocol;
 			break;
 
 		case svc_disconnect:
@@ -1753,10 +1748,8 @@ void CL_ParseServerMessage(void)
 				EntityFrame_CL_ReadFrame();
 			else if (cl.protocol == PROTOCOL_DARKPLACES4)
 				EntityFrame4_CL_ReadFrame();
-			else if (cl.protocol == PROTOCOL_DARKPLACES5 || cl.protocol == PROTOCOL_DARKPLACES6)
-				EntityFrame5_CL_ReadFrame();
 			else
-				Host_Error("CL_ParseServerMessage: svc_entities: unknown cl.protocol %i\n", cl.protocol);
+				EntityFrame5_CL_ReadFrame();
 			break;
 		}
 	}

@@ -351,6 +351,7 @@ typedef struct
 	double receivetime;
 	int buttons;
 	int impulse;
+	int sequence;
 } usercmd_t;
 
 typedef struct
@@ -459,6 +460,7 @@ typedef struct client_movementqueue_s
 {
 	double time;
 	float frametime;
+	int sequence;
 	float viewangles[3];
 	float move[3];
 	qboolean jump;
@@ -531,6 +533,8 @@ typedef struct
 	// queue of proposed moves
 	int movement_numqueue;
 	client_movementqueue_t movement_queue[256];
+	int movesequence;
+	int servermovesequence;
 
 // pitch drifting vars
 	float idealpitch;
@@ -596,7 +600,7 @@ typedef struct
 	scoreboard_t *scores;
 
 	// protocol version of the server we're connected to
-	int protocol;
+	protocolversion_t protocol;
 
 	// entity database stuff
 	// latest received entity frame numbers

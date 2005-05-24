@@ -687,8 +687,6 @@ void Host_ServerFrame (void)
 		if (sv.paused || (cl.islocalgame && (key_dest != key_game || key_consoleactive)))
 			sv.frametime = 0;
 
-		pr_global_struct->frametime = sv.frametime;
-
 		// set the time and clear the general datagram
 		SV_ClearDatagram();
 
