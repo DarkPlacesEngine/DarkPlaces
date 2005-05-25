@@ -2129,7 +2129,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 	// write stat updates
 	if (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE && sv.protocol != PROTOCOL_DARKPLACES1 && sv.protocol != PROTOCOL_DARKPLACES2 && sv.protocol != PROTOCOL_DARKPLACES3 && sv.protocol != PROTOCOL_DARKPLACES4 && sv.protocol != PROTOCOL_DARKPLACES5)
 	{
-		for (i = 0;i < MAX_CL_STATS && buf.cursize + 6 + 11 <= buf.maxsize;i++)
+		for (i = 0;i < MAX_CL_STATS && msg->cursize + 6 + 11 <= msg->maxsize;i++)
 		{
 			if (d->statsdeltabits[i>>3] & (1<<(i&7)))
 			{
