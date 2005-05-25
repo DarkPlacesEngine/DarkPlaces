@@ -274,6 +274,10 @@ SOURCE=.\model_sprite.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\mvm_cmds.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\netconn.c
 # End Source File
 # Begin Source File
