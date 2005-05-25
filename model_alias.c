@@ -180,9 +180,9 @@ static void Mod_Alias_Mesh_CompileFrameZero(surfmesh_t *mesh)
 
 static void Mod_MDLMD2MD3_TraceBox(model_t *model, int frame, trace_t *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs, int hitsupercontentsmask)
 {
-	int i, framenum, linetrace;
-	float *vertex3f;
+	int i, linetrace;
 	float segmentmins[3], segmentmaxs[3];
+	frameblend_t frameblend[4];
 	msurface_t *surface;
 	surfmesh_t *mesh;
 	colbrushf_t *thisbrush_start = NULL, *thisbrush_end = NULL;
@@ -206,23 +206,17 @@ static void Mod_MDLMD2MD3_TraceBox(model_t *model, int frame, trace_t *trace, co
 		thisbrush_start = Collision_BrushForBox(&startmatrix, boxstartmins, boxstartmaxs);
 		thisbrush_end = Collision_BrushForBox(&endmatrix, boxendmins, boxendmaxs);
 	}
+	memset(frameblend, 0, sizeof(frameblend));
+	frameblend[0].frame = frame;
+	frameblend[0].lerp = 1;
 	for (i = 0, surface = model->data_surfaces;i < model->num_surfaces;i++, surface++)
 	{
 		mesh = surface->groupmesh;
-		framenum = frame;
-		if (framenum < 0 || framenum > mesh->num_morphframes)
-			framenum = 0;
-		if (mesh->data_morphvertex3f)
-			vertex3f = mesh->data_morphvertex3f + framenum * mesh->num_vertices * 3;
-		else
-		{
-			vertex3f = varray_vertex3f;
-			continue; // FIXME!!!  this needs to handle skeletal!
-		}
+		Mod_Alias_GetMesh_Vertex3f(model, frameblend, mesh, varray_vertex3f);
 		if (linetrace)
-			Collision_TraceLineTriangleMeshFloat(trace, boxstartmins, boxendmins, mesh->num_triangles, mesh->data_element3i, vertex3f, SUPERCONTENTS_SOLID, segmentmins, segmentmaxs);
+			Collision_TraceLineTriangleMeshFloat(trace, boxstartmins, boxendmins, mesh->num_triangles, mesh->data_element3i, varray_vertex3f, SUPERCONTENTS_SOLID, segmentmins, segmentmaxs);
 		else
-			Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, mesh->num_triangles, mesh->data_element3i, vertex3f, SUPERCONTENTS_SOLID, segmentmins, segmentmaxs);
+			Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, mesh->num_triangles, mesh->data_element3i, varray_vertex3f, SUPERCONTENTS_SOLID, segmentmins, segmentmaxs);
 	}
 }
 
@@ -1154,7 +1148,7 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
 	loadmodel->Draw = R_Q1BSP_Draw;
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
-	//loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox; // FIXME: implement collisions
+	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 	loadmodel->flags = 0; // there are no flags on zym models
 	loadmodel->synctype = ST_RAND;
 
