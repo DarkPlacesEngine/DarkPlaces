@@ -270,6 +270,10 @@ SOURCE=.\model_sprite.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\mvm_cmds.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\netconn.c
 # End Source File
 # Begin Source File
@@ -627,6 +631,10 @@ SOURCE=.\progsvm.h
 # Begin Source File
 
 SOURCE=.\protocol.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\prvm_cmds.h
 # End Source File
 # Begin Source File
 
