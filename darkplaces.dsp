@@ -482,6 +482,10 @@ SOURCE=.\client.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\clprogdefs.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\cmd.h
 # End Source File
 # Begin Source File
@@ -546,6 +550,10 @@ SOURCE=.\keys.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\lhfont.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\lhnet.h
 # End Source File
 # Begin Source File
@@ -590,6 +598,10 @@ SOURCE=.\modelgen.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\mprogdefs.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\netconn.h
 # End Source File
 # Begin Source File
@@ -622,7 +634,15 @@ SOURCE=.\progs.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\progsvm.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\protocol.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\prvm_cmds.h
 # End Source File
 # Begin Source File
 
@@ -711,10 +731,6 @@ SOURCE=.\wad.h
 # Begin Source File
 
 SOURCE=.\winding.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\winquake.h
 # End Source File
 # Begin Source File
 
