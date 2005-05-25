@@ -1220,9 +1220,9 @@ PRVM_ResetProg
 
 void PRVM_ResetProg()
 {
+	PRVM_GCALL(reset_cmd)();
 	Mem_FreePool(&prog->progs_mempool);
 	memset(prog,0,sizeof(prvm_prog_t));
-	PRVM_GCALL(reset_cmd)();
 }
 
 /*
@@ -1236,8 +1236,6 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	dstatement_t *st;
 	ddef_t *infielddefs;
 	dfunction_t *dfunctions;
-
-	Mem_EmptyPool(prog->progs_mempool);
 
 	prog->progs = (dprograms_t *)FS_LoadFile (filename, prog->progs_mempool, false);
 	if (prog->progs == NULL)
@@ -1472,10 +1470,6 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 		&& prog->flag && prog->self)
 		prog->flag |= PRVM_OP_STATE;
 
-	if( prog->loaded ) {
-		PRVM_GCALL(reset_cmd)();
-	}
-	prog->loaded = TRUE;
 	PRVM_GCALL(init_cmd)();
 
 	// init mempools

@@ -241,7 +241,7 @@ typedef void (*prvm_builtin_t) (void);
 
 // [INIT] variables flagged with this token can be initialized by 'you'
 // NOTE: external code has to create and free the mempools but everything else is done by prvm !
-typedef struct vm_prog_s
+typedef struct prvm_prog_s
 {
 	dprograms_t			*progs;
 	mfunction_t			*functions;
@@ -386,7 +386,6 @@ void VM_Cmd_Reset(void);
 void PRVM_Init (void);
 
 void PRVM_ExecuteProgram (func_t fnum, const char *errormessage);
-void PRVM_LoadProgs (const char *filename, int numrequiredfunc, char **required_func);
 
 #define PRVM_Alloc(buffersize) _PRVM_Alloc(buffersize, __FILE__, __LINE__)
 #define PRVM_Free(buffer) _PRVM_Free(buffer, __FILE__, __LINE__)
@@ -486,14 +485,22 @@ void PRVM_FreeString(char *s);
 
 // other prog handling functions
 qboolean PRVM_SetProgFromString(const char *str);
-void	 PRVM_SetProg(int prognr);
+void PRVM_SetProg(int prognr);
 
-void	 PRVM_InitProg(int prognr);
-void	 PRVM_ResetProg(void);
+/*
+Initializing a vm:
+Call InitProg with the num
+Set up the fields marked with [INIT] in the prog struct
+Load a program with LoadProgs
+*/
+void PRVM_InitProg(int prognr);
+// LoadProgs expects to be called right after InitProg
+void PRVM_LoadProgs (const char *filename, int numrequiredfunc, char **required_func);
+void PRVM_ResetProg(void);
 
 qboolean PRVM_ProgLoaded(int prognr);
 
-int		 PRVM_GetProgNr(void);
+int	PRVM_GetProgNr(void);
 
 
 // TODO: fill in the params
