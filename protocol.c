@@ -2103,6 +2103,11 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 		}
 	}
 
+	// if there isn't at least enough room for an empty svc_entities,
+	// don't bother trying...
+	if (buf.cursize + 11 > buf.maxsize)
+		return;
+
 	// build lists of entities by priority level
 	memset(entityframe5_prioritychaincounts, 0, sizeof(entityframe5_prioritychaincounts));
 	l = 0;
@@ -2124,7 +2129,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 	// write stat updates
 	if (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE && sv.protocol != PROTOCOL_DARKPLACES1 && sv.protocol != PROTOCOL_DARKPLACES2 && sv.protocol != PROTOCOL_DARKPLACES3 && sv.protocol != PROTOCOL_DARKPLACES4 && sv.protocol != PROTOCOL_DARKPLACES5)
 	{
-		for (i = 0;i < MAX_CL_STATS;i++)
+		for (i = 0;i < MAX_CL_STATS && buf.cursize + 6 + 11 <= buf.maxsize;i++)
 		{
 			if (d->statsdeltabits[i>>3] & (1<<(i&7)))
 			{
