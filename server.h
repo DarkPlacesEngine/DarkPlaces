@@ -113,6 +113,8 @@ typedef struct client_s
 {
 	// false = empty client slot
 	qboolean active;
+	// false = don't do ClientDisconnect on drop
+	qboolean clientconnectcalled;
 	// false = don't send datagrams
 	qboolean spawned;
 	// has been told to go to another level

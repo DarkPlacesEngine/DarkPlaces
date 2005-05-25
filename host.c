@@ -415,11 +415,12 @@ void SV_DropClient(qboolean crash)
 	// call qc ClientDisconnect function
 	// LordHavoc: don't call QC if server is dead (avoids recursive
 	// Host_Error in some mods when they run out of edicts)
-	if (host_client->active && sv.active && host_client->edict && host_client->spawned)
+	if (host_client->clientconnectcalled && sv.active && host_client->edict)
 	{
 		// call the prog function for removing a client
 		// this will set the body to a dead frame, among other things
 		int saveSelf = pr_global_struct->self;
+		host_client->clientconnectcalled = false;
 		pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
 		PR_ExecuteProgram(pr_global_struct->ClientDisconnect, "QC function ClientDisconnect is missing");
 		pr_global_struct->self = saveSelf;
