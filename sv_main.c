@@ -291,6 +291,7 @@ void SV_SendServerinfo (client_t *client)
 			(&pr_global_struct->parm1)[i] = host_client->spawn_parms[i];
 
 		// call the spawn function
+		host_client->clientconnectcalled = true;
 		pr_global_struct->time = sv.time;
 		pr_global_struct->self = EDICT_TO_PROG(client->edict);
 		PR_ExecuteProgram (pr_global_struct->ClientConnect, "QC function ClientConnect is missing");
