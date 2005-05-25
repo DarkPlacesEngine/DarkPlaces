@@ -22,7 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 
 // select which protocol to host, this is fed to Protocol_EnumForName
-cvar_t sv_protocolname = {0, "sv_protocolname", "DARKPLACES6"};
+cvar_t sv_protocolname = {0, "sv_protocolname", "DP6"};
 cvar_t sv_ratelimitlocalplayer = {0, "sv_ratelimitlocalplayer", "0"};
 cvar_t sv_maxrate = {CVAR_SAVE | CVAR_NOTIFY, "sv_maxrate", "10000"};
 
