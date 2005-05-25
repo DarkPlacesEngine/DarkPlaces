@@ -79,6 +79,7 @@ OBJ_COMMON= \
 	pr_edict.o \
 	pr_exec.o \
 	protocol.o \
+	mvm_cmds.o \
 	prvm_cmds.o \
 	prvm_edict.o \
 	prvm_exec.o \
