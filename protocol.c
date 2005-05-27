@@ -270,7 +270,7 @@ void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int numstates, const entity_sta
 			bits |= U_EXTERIORMODEL;
 
 		// LordHavoc: old stuff, but rewritten to have more exact tolerances
-		baseline = sv.edicts[s->number].e->baseline;
+		baseline = prog->edicts[s->number].priv.server->baseline;
 		if (baseline.origin[0] != s->origin[0])
 			bits |= U_ORIGIN1;
 		if (baseline.origin[1] != s->origin[1])
@@ -1381,15 +1381,15 @@ void EntityFrame4_WriteFrame(sizebuf_t *msg, entityframe4_database_t *d, int num
 				Con_Printf(" %i", d->commit[i].framenum);
 		Con_Print(")\n");
 	}
-	if (d->currententitynumber >= sv.max_edicts)
+	if (d->currententitynumber >= prog->max_edicts)
 		startnumber = 1;
 	else
-		startnumber = bound(1, d->currententitynumber, sv.max_edicts - 1);
+		startnumber = bound(1, d->currententitynumber, prog->max_edicts - 1);
 	MSG_WriteShort(msg, startnumber);
 	// reset currententitynumber so if the loop does not break it we will
 	// start at beginning next frame (if it does break, it will set it)
 	d->currententitynumber = 1;
-	for (i = 0, n = startnumber;n < sv.max_edicts;n++)
+	for (i = 0, n = startnumber;n < prog->max_edicts;n++)
 	{
 		// find the old state to delta from
 		e = EntityFrame4_GetReferenceEntity(d, n);
@@ -2025,8 +2025,8 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 	qbyte data[128];
 	entityframe5_packetlog_t *packetlog;
 
-	if (sv.max_edicts > d->maxedicts)
-		EntityFrame5_ExpandEdicts(d, (sv.max_edicts + 255) & ~255);
+	if (prog->max_edicts > d->maxedicts)
+		EntityFrame5_ExpandEdicts(d, (prog->max_edicts + 255) & ~255);
 
 	framenum = d->latestframenum + 1;
 	d->viewentnum = viewentnum;
@@ -2090,8 +2090,8 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 		num++;
 	}
 	// all remaining entities are dead
-	// note: this must use sv.max_edicts, not sv.num_edicts, because sv.num_edicts can both increase and decrease, where as sv.max_edicts only increases (if sv.num_edicts is used, sometimes some entities are missed when the sv.num_edicts count goes back down after firing some shots)
-	for (;num < sv.max_edicts;num++)
+	// note: this must use prog->max_edicts, not prog->num_edicts, because prog->num_edicts can both increase and decrease, where as prog->max_edicts only increases (if prog->num_edicts is used, sometimes some entities are missed when the prog->num_edicts count goes back down after firing some shots)
+	for (;num < prog->max_edicts;num++)
 	{
 		if (CHECKPVSBIT(d->visiblebits, num))
 		{
@@ -2111,7 +2111,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 	// build lists of entities by priority level
 	memset(entityframe5_prioritychaincounts, 0, sizeof(entityframe5_prioritychaincounts));
 	l = 0;
-	for (num = 0;num < sv.num_edicts;num++)
+	for (num = 0;num < prog->num_edicts;num++)
 	{
 		if (d->priorities[num])
 		{

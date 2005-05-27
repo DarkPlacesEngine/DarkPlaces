@@ -8,6 +8,54 @@ char *vm_m_extensions =
 
 /*
 =========
+VM_M_precache_file
+
+string	precache_file(string)
+=========
+*/
+void VM_M_precache_file (void)
+{	// precache_file is only used to copy files with qcc, it does nothing
+	VM_SAFEPARMCOUNT(1,VM_precache_file);
+
+	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
+}
+
+/*
+=========
+VM_M_preache_error
+
+used instead of the other VM_precache_* functions in the builtin list
+=========
+*/
+
+void VM_M_precache_error (void)
+{
+	PRVM_ERROR ("PF_Precache_*: Precache can only be done in spawn functions");
+}
+
+/*
+=========
+VM_M_precache_sound
+
+string	precache_sound (string sample)
+=========
+*/
+void VM_M_precache_sound (void)
+{
+	const char	*s;
+
+	VM_SAFEPARMCOUNT(1, VM_precache_sound);
+
+	s = PRVM_G_STRING(OFS_PARM0);
+	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
+	VM_CheckEmptyString (s);
+
+	if(snd_initialized.integer && !S_PrecacheSound (s,true, true))
+		Con_Printf("VM_precache_sound: Failed to load %s for %s\n", s, PRVM_NAME);
+}
+
+/*
+=========
 VM_M_setmousetarget
 
 setmousetarget(float target)
@@ -75,7 +123,7 @@ void VM_M_setkeydest(void)
 		// key_dest = key_message
 		// break;
 	default:
-		PRVM_ERROR("VM_M_setkeydest: wrong destination %i !\n",prog->globals[OFS_PARM0]);
+		PRVM_ERROR("VM_M_setkeydest: wrong destination %i !\n",prog->globals.generic[OFS_PARM0]);
 	}
 }
 
@@ -672,6 +720,98 @@ void VM_M_addwantedserverlistkey( void )
 	VM_SAFEPARMCOUNT( 1, VM_M_addwantedserverlistkey );
 }
 
+/*
+===============================================================================
+MESSAGE WRITING
+
+used only for client and menu
+severs uses VM_SV_...
+
+Write*(* data, float type, float to)
+
+===============================================================================
+*/
+
+#define	MSG_BROADCAST	0		// unreliable to all
+#define	MSG_ONE			1		// reliable to one (msg_entity)
+#define	MSG_ALL			2		// reliable to all
+#define	MSG_INIT		3		// write to the init string
+
+sizebuf_t *VM_WriteDest (void)
+{
+	int		dest;
+	int		destclient;
+
+	if(!sv.active)
+		PRVM_ERROR("VM_WriteDest: game is not server (%s)\n", PRVM_NAME);
+
+	dest = PRVM_G_FLOAT(OFS_PARM1);
+	switch (dest)
+	{
+	case MSG_BROADCAST:
+		return &sv.datagram;
+
+	case MSG_ONE:
+		destclient = (int) PRVM_G_FLOAT(OFS_PARM2);
+		if (destclient < 0 || destclient >= svs.maxclients || !svs.clients[destclient].active)
+			PRVM_ERROR("VM_clientcommand: %s: invalid client !\n", PRVM_NAME);
+
+		return &svs.clients[destclient].message;
+
+	case MSG_ALL:
+		return &sv.reliable_datagram;
+
+	case MSG_INIT:
+		return &sv.signon;
+
+	default:
+		PRVM_ERROR ("WriteDest: bad destination");
+		break;
+	}
+
+	return NULL;
+}
+
+void VM_M_WriteByte (void)
+{
+	MSG_WriteByte (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0));
+}
+
+void VM_M_WriteChar (void)
+{
+	MSG_WriteChar (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0));
+}
+
+void VM_M_WriteShort (void)
+{
+	MSG_WriteShort (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0));
+}
+
+void VM_M_WriteLong (void)
+{
+	MSG_WriteLong (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0));
+}
+
+void VM_M_WriteAngle (void)
+{
+	MSG_WriteAngle (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0), sv.protocol);
+}
+
+void VM_M_WriteCoord (void)
+{
+	MSG_WriteCoord (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0), sv.protocol);
+}
+
+void VM_M_WriteString (void)
+{
+	MSG_WriteString (VM_WriteDest(), PRVM_G_STRING(OFS_PARM0));
+}
+
+void VM_M_WriteEntity (void)
+{
+	MSG_WriteShort (VM_WriteDest(), PRVM_G_EDICTNUM(OFS_PARM0));
+}
+
 prvm_builtin_t vm_m_builtins[] = {
 	0, // to be consistent with the old vm
 	// common builtings (mostly)
@@ -702,8 +842,8 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_findfloat,
 	VM_findchain,
 	VM_findchainfloat,
-	VM_precache_file,
-	VM_precache_sound,
+	VM_M_precache_file,
+	VM_M_precache_sound,
 	VM_coredump,	// 30
 	VM_traceon,
 	VM_traceoff,
@@ -767,14 +907,14 @@ prvm_builtin_t vm_m_builtins[] = {
 	e100,			// 300
 	e100,			// 400
 	// msg functions
-	VM_WriteByte,
-	VM_WriteChar,
-	VM_WriteShort,
-	VM_WriteLong,
-	VM_WriteAngle,
-	VM_WriteCoord,
-	VM_WriteString,
-	VM_WriteEntity,	// 408
+	VM_M_WriteByte,
+	VM_M_WriteChar,
+	VM_M_WriteShort,
+	VM_M_WriteLong,
+	VM_M_WriteAngle,
+	VM_M_WriteCoord,
+	VM_M_WriteString,
+	VM_M_WriteEntity,	// 408
 	0,
 	0,				// 410
 	e10,			// 420

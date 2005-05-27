@@ -24,8 +24,6 @@ int current_skill;
 cvar_t sv_cheats = {0, "sv_cheats", "0"};
 qboolean allowcheats = false;
 
-mfunction_t *ED_FindFunction (char *name);
-
 /*
 ==================
 Host_Quit_f
@@ -84,7 +82,7 @@ void Host_Status_f (void)
 		}
 		else
 			hours = 0;
-		print ("#%-2u %-16.16s  %3i  %2i:%02i:%02i\n", j+1, client->name, (int)client->edict->v->frags, hours, minutes, seconds);
+		print ("#%-2u %-16.16s  %3i  %2i:%02i:%02i\n", j+1, client->name, (int)client->edict->fields.server->frags, hours, minutes, seconds);
 		print ("   %s\n", client->netconnection ? client->netconnection->address : "botclient");
 	}
 }
@@ -111,8 +109,8 @@ void Host_God_f (void)
 		return;
 	}
 
-	host_client->edict->v->flags = (int)host_client->edict->v->flags ^ FL_GODMODE;
-	if (!((int)host_client->edict->v->flags & FL_GODMODE) )
+	host_client->edict->fields.server->flags = (int)host_client->edict->fields.server->flags ^ FL_GODMODE;
+	if (!((int)host_client->edict->fields.server->flags & FL_GODMODE) )
 		SV_ClientPrint("godmode OFF\n");
 	else
 		SV_ClientPrint("godmode ON\n");
@@ -132,8 +130,8 @@ void Host_Notarget_f (void)
 		return;
 	}
 
-	host_client->edict->v->flags = (int)host_client->edict->v->flags ^ FL_NOTARGET;
-	if (!((int)host_client->edict->v->flags & FL_NOTARGET) )
+	host_client->edict->fields.server->flags = (int)host_client->edict->fields.server->flags ^ FL_NOTARGET;
+	if (!((int)host_client->edict->fields.server->flags & FL_NOTARGET) )
 		SV_ClientPrint("notarget OFF\n");
 	else
 		SV_ClientPrint("notarget ON\n");
@@ -155,16 +153,16 @@ void Host_Noclip_f (void)
 		return;
 	}
 
-	if (host_client->edict->v->movetype != MOVETYPE_NOCLIP)
+	if (host_client->edict->fields.server->movetype != MOVETYPE_NOCLIP)
 	{
 		noclip_anglehack = true;
-		host_client->edict->v->movetype = MOVETYPE_NOCLIP;
+		host_client->edict->fields.server->movetype = MOVETYPE_NOCLIP;
 		SV_ClientPrint("noclip ON\n");
 	}
 	else
 	{
 		noclip_anglehack = false;
-		host_client->edict->v->movetype = MOVETYPE_WALK;
+		host_client->edict->fields.server->movetype = MOVETYPE_WALK;
 		SV_ClientPrint("noclip OFF\n");
 	}
 }
@@ -190,14 +188,14 @@ void Host_Fly_f (void)
 		return;
 	}
 
-	if (host_client->edict->v->movetype != MOVETYPE_FLY)
+	if (host_client->edict->fields.server->movetype != MOVETYPE_FLY)
 	{
-		host_client->edict->v->movetype = MOVETYPE_FLY;
+		host_client->edict->fields.server->movetype = MOVETYPE_FLY;
 		SV_ClientPrint("flymode ON\n");
 	}
 	else
 	{
-		host_client->edict->v->movetype = MOVETYPE_WALK;
+		host_client->edict->fields.server->movetype = MOVETYPE_WALK;
 		SV_ClientPrint("flymode OFF\n");
 	}
 }
@@ -278,7 +276,11 @@ void Host_Map_f (void)
 	strcpy(level, Cmd_Argv(1));
 	SV_SpawnServer(level);
 	if (sv.active && cls.state == ca_disconnected)
+	{
+		SV_VM_Begin();
 		CL_EstablishConnection("local:1");
+		SV_VM_End();
+	}
 }
 
 /*
@@ -309,12 +311,18 @@ void Host_Changelevel_f (void)
 	key_dest = key_game;
 	key_consoleactive = 0;
 
+	SV_VM_Begin();
 	SV_SaveSpawnparms ();
+	SV_VM_End();
 	allowcheats = sv_cheats.integer != 0;
 	strcpy(level, Cmd_Argv(1));
 	SV_SpawnServer(level);
 	if (sv.active && cls.state == ca_disconnected)
+	{
+		SV_VM_Begin();
 		CL_EstablishConnection("local:1");
+		SV_VM_End();
+	}
 }
 
 /*
@@ -348,8 +356,12 @@ void Host_Restart_f (void)
 	allowcheats = sv_cheats.integer != 0;
 	strcpy(mapname, sv.name);
 	SV_SpawnServer(mapname);
-	if (sv.active && cls.state == ca_disconnected)
+	if (sv.active && cls.state == ca_disconnected) 
+	{
+		SV_VM_Begin();
 		CL_EstablishConnection("local:1");
+		SV_VM_End();
+	}
 }
 
 /*
@@ -389,7 +401,9 @@ void Host_Connect_f (void)
 		Con_Print("connect <serveraddress> : connect to a multiplayer game\n");
 		return;
 	}
-	CL_EstablishConnection(Cmd_Argv(1));
+	SV_VM_Begin();
+	CL_EstablishConnection("local:1");
+	SV_VM_End();
 }
 
 
@@ -464,7 +478,7 @@ void Host_Savegame_f (void)
 				Con_Print("Can't save multiplayer games.\n");
 				return;
 			}
-			if (svs.clients[i].edict->v->deadflag)
+			if (svs.clients[i].edict->fields.server->deadflag)
 			{
 				Con_Print("Can't savegame with a dead player\n");
 				return;
@@ -513,9 +527,14 @@ void Host_Savegame_f (void)
 			FS_Print(f,"m\n");
 	}
 
-	ED_WriteGlobals (f);
-	for (i=0 ; i<sv.num_edicts ; i++)
-		ED_Write (f, EDICT_NUM(i));
+	SV_VM_Begin();
+
+	PRVM_ED_WriteGlobals (f);
+	for (i=0 ; i<prog->num_edicts ; i++)
+		PRVM_ED_Write (f, PRVM_EDICT_NUM(i));
+
+	SV_VM_End();
+
 	FS_Close (f);
 	Con_Print("done.\n");
 }
@@ -534,7 +553,7 @@ void Host_Loadgame_f (void)
 	const char *start;
 	const char *t;
 	char *text;
-	edict_t *ent;
+	prvm_edict_t *ent;
 	int i;
 	int entnum;
 	int version;
@@ -619,6 +638,7 @@ void Host_Loadgame_f (void)
 	}
 
 // load the edicts out of the savegame file
+	SV_VM_Begin();
 	// -1 is the globals
 	entnum = -1;
 	for (;;)
@@ -641,7 +661,7 @@ void Host_Loadgame_f (void)
 		if (entnum == -1)
 		{
 			// parse the global vars
-			ED_ParseGlobals (start);
+			PRVM_ED_ParseGlobals (start);
 		}
 		else
 		{
@@ -651,22 +671,23 @@ void Host_Loadgame_f (void)
 				Mem_Free(text);
 				Host_Error("Host_PerformLoadGame: too many edicts in save file (reached MAX_EDICTS %i)\n", MAX_EDICTS);
 			}
-			while (entnum >= sv.max_edicts)
-				SV_IncreaseEdicts();
-			ent = EDICT_NUM(entnum);
-			memset (ent->v, 0, progs->entityfields * 4);
-			ent->e->free = false;
-			ED_ParseEdict (start, ent);
+			while (entnum >= prog->max_edicts)
+				//SV_IncreaseEdicts();
+				PRVM_MEM_IncreaseEdicts();
+			ent = PRVM_EDICT_NUM(entnum);
+			memset (ent->fields.server, 0, prog->progs->entityfields * 4);
+			ent->priv.server->free = false;
+			PRVM_ED_ParseEdict (start, ent);
 
 			// link it into the bsp tree
-			if (!ent->e->free)
+			if (!ent->priv.server->free)
 				SV_LinkEdict (ent, false);
 		}
 
 		entnum++;
 	}
 
-	sv.num_edicts = entnum;
+	prog->num_edicts = entnum;
 	sv.time = time;
 
 	for (i = 0;i < NUM_SPAWN_PARMS;i++)
@@ -675,6 +696,8 @@ void Host_Loadgame_f (void)
 	// make sure we're connected to loopback
 	if (cls.state == ca_disconnected || !(cls.state == ca_connected && cls.netcon != NULL && LHNETADDRESS_GetAddressType(&cls.netcon->peeraddress) == LHNETADDRESSTYPE_LOOP))
 		CL_EstablishConnection("local:1");
+
+	SV_VM_End();
 }
 
 //============================================================================
@@ -724,7 +747,7 @@ void Host_Name_f (void)
 
 	// point the string back at updateclient->name to keep it safe
 	strlcpy (host_client->name, newName, sizeof (host_client->name));
-	host_client->edict->v->netname = PR_SetEngineString(host_client->name);
+	host_client->edict->fields.server->netname = PRVM_SetEngineString(host_client->name);
 	if (strcmp(host_client->old_name, host_client->name))
 	{
 		if (host_client->spawned)
@@ -786,11 +809,11 @@ void Host_Playermodel_f (void)
 	// point the string back at updateclient->name to keep it safe
 	strlcpy (host_client->playermodel, newPath, sizeof (host_client->playermodel));
 	if( eval_playermodel )
-		GETEDICTFIELDVALUE(host_client->edict, eval_playermodel)->string = PR_SetEngineString(host_client->playermodel);
+		PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_playermodel)->string = PRVM_SetEngineString(host_client->playermodel);
 	if (strcmp(host_client->old_model, host_client->playermodel))
 	{
 		if (host_client->spawned)
-			SV_BroadcastPrintf("%s changed model to %s\n", host_client->old_model, host_client->playermodel);
+			SV_BroadcastPrintf("%s changed model to %s\n", host_client->name, host_client->playermodel);
 		strcpy(host_client->old_model, host_client->playermodel);
 		/*// send notification to all clients
 		MSG_WriteByte (&sv.reliable_datagram, svc_updatepmodel);
@@ -847,11 +870,11 @@ void Host_Playerskin_f (void)
 	// point the string back at updateclient->name to keep it safe
 	strlcpy (host_client->playerskin, newPath, sizeof (host_client->playerskin));
 	if( eval_playerskin )
-		GETEDICTFIELDVALUE(host_client->edict, eval_playerskin)->string = PR_SetEngineString(host_client->playerskin);
+		PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_playerskin)->string = PRVM_SetEngineString(host_client->playerskin);
 	if (strcmp(host_client->old_skin, host_client->playerskin))
 	{
 		if (host_client->spawned)
-			SV_BroadcastPrintf("%s changed skin to %s\n", host_client->old_skin, host_client->playerskin);
+			SV_BroadcastPrintf("%s changed skin to %s\n", host_client->name, host_client->playerskin);
 		strcpy(host_client->old_skin, host_client->playerskin);
 		/*// send notification to all clients
 		MSG_WriteByte (&sv.reliable_datagram, svc_updatepskin);
@@ -920,7 +943,7 @@ void Host_Say(qboolean teamonly)
 	// note: save is not a valid edict if fromServer is true
 	save = host_client;
 	for (j = 0, host_client = svs.clients;j < svs.maxclients;j++, host_client++)
-		if (host_client->spawned && (!teamonly || host_client->edict->v->team == save->edict->v->team))
+		if (host_client->spawned && (!teamonly || host_client->edict->fields.server->team == save->edict->fields.server->team))
 			SV_ClientPrint(text);
 	host_client = save;
 
@@ -1050,22 +1073,22 @@ void Host_Color_f(void)
 		return;
 	}
 
-	if (host_client->edict && (f = ED_FindFunction ("SV_ChangeTeam")) && (SV_ChangeTeam = (func_t)(f - pr_functions)))
+	if (host_client->edict && (f = PRVM_ED_FindFunction ("SV_ChangeTeam")) && (SV_ChangeTeam = (func_t)(f - prog->functions)))
 	{
 		Con_DPrint("Calling SV_ChangeTeam\n");
-		pr_global_struct->time = sv.time;
-		pr_globals[OFS_PARM0] = playercolor;
-		pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
-		PR_ExecuteProgram (SV_ChangeTeam, "QC function SV_ChangeTeam is missing");
+		prog->globals.server->time = sv.time;
+		prog->globals.generic[OFS_PARM0] = playercolor;
+		prog->globals.server->self = PRVM_EDICT_TO_PROG(host_client->edict);
+		PRVM_ExecuteProgram (SV_ChangeTeam, "QC function SV_ChangeTeam is missing");
 	}
 	else
 	{
-		eval_t *val;
+		prvm_eval_t *val;
 		if (host_client->edict)
 		{
-			if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_clientcolors)))
+			if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_clientcolors)))
 				val->_float = playercolor;
-			host_client->edict->v->team = bottom + 1;
+			host_client->edict->fields.server->team = bottom + 1;
 		}
 		host_client->colors = playercolor;
 		if (host_client->old_colors != host_client->colors)
@@ -1117,15 +1140,15 @@ void Host_Kill_f (void)
 		return;
 	}
 
-	if (host_client->edict->v->health <= 0)
+	if (host_client->edict->fields.server->health <= 0)
 	{
 		SV_ClientPrint("Can't suicide -- already dead!\n");
 		return;
 	}
 
-	pr_global_struct->time = sv.time;
-	pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
-	PR_ExecuteProgram (pr_global_struct->ClientKill, "QC function ClientKill is missing");
+	prog->globals.server->time = sv.time;
+	prog->globals.server->self = PRVM_EDICT_TO_PROG(host_client->edict);
+	PRVM_ExecuteProgram (prog->globals.server->ClientKill, "QC function ClientKill is missing");
 }
 
 
@@ -1164,7 +1187,7 @@ cvar_t cl_pmodel = {CVAR_SAVE, "_cl_pmodel", "0"};
 static void Host_PModel_f (void)
 {
 	int i;
-	eval_t *val;
+	prvm_eval_t *val;
 
 	if (Cmd_Argc () == 1)
 	{
@@ -1183,7 +1206,7 @@ static void Host_PModel_f (void)
 		return;
 	}
 
-	if (host_client->edict && (val = GETEDICTFIELDVALUE(host_client->edict, eval_pmodel)))
+	if (host_client->edict && (val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_pmodel)))
 		val->_float = i;
 }
 
@@ -1258,36 +1281,36 @@ void Host_Spawn_f (void)
 		// if this is the last client to be connected, unpause
 		sv.paused = false;
 
-		if ((f = ED_FindFunction ("RestoreGame")))
-		if ((RestoreGame = (func_t)(f - pr_functions)))
+		if ((f = PRVM_ED_FindFunction ("RestoreGame")))
+		if ((RestoreGame = (func_t)(f - prog->functions)))
 		{
 			Con_DPrint("Calling RestoreGame\n");
-			pr_global_struct->time = sv.time;
-			pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
-			PR_ExecuteProgram (RestoreGame, "QC function RestoreGame is missing");
+			prog->globals.server->time = sv.time;
+			prog->globals.server->self = PRVM_EDICT_TO_PROG(host_client->edict);
+			PRVM_ExecuteProgram (RestoreGame, "QC function RestoreGame is missing");
 		}
 	}
 	else
 	{
 		// set up the edict
-		ED_ClearEdict(host_client->edict);
+		PRVM_ED_ClearEdict(host_client->edict);
 
-		//Con_Printf("Host_Spawn_f: host_client->edict->netname = %s, host_client->edict->netname = %s, host_client->name = %s\n", PR_GetString(host_client->edict->v->netname), PR_GetString(host_client->edict->v->netname), host_client->name);
+		//Con_Printf("Host_Spawn_f: host_client->edict->netname = %s, host_client->edict->netname = %s, host_client->name = %s\n", PRVM_GetString(host_client->edict->fields.server->netname), PRVM_GetString(host_client->edict->fields.server->netname), host_client->name);
 
 		// copy spawn parms out of the client_t
 		for (i=0 ; i< NUM_SPAWN_PARMS ; i++)
-			(&pr_global_struct->parm1)[i] = host_client->spawn_parms[i];
+			(&prog->globals.server->parm1)[i] = host_client->spawn_parms[i];
 
 		// call the spawn function
 		host_client->clientconnectcalled = true;
-		pr_global_struct->time = sv.time;
-		pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
-		PR_ExecuteProgram (pr_global_struct->ClientConnect, "QC function ClientConnect is missing");
+		prog->globals.server->time = sv.time;
+		prog->globals.server->self = PRVM_EDICT_TO_PROG(host_client->edict);
+		PRVM_ExecuteProgram (prog->globals.server->ClientConnect, "QC function ClientConnect is missing");
 
 		if ((Sys_DoubleTime() - host_client->connecttime) <= sv.time)
 			Con_Printf("%s entered the game\n", host_client->name);
 
-		PR_ExecuteProgram (pr_global_struct->PutClientInServer, "QC function PutClientInServer is missing");
+		PRVM_ExecuteProgram (prog->globals.server->PutClientInServer, "QC function PutClientInServer is missing");
 	}
 
 
@@ -1321,19 +1344,19 @@ void Host_Spawn_f (void)
 	// send some stats
 	MSG_WriteByte (&host_client->message, svc_updatestat);
 	MSG_WriteByte (&host_client->message, STAT_TOTALSECRETS);
-	MSG_WriteLong (&host_client->message, pr_global_struct->total_secrets);
+	MSG_WriteLong (&host_client->message, prog->globals.server->total_secrets);
 
 	MSG_WriteByte (&host_client->message, svc_updatestat);
 	MSG_WriteByte (&host_client->message, STAT_TOTALMONSTERS);
-	MSG_WriteLong (&host_client->message, pr_global_struct->total_monsters);
+	MSG_WriteLong (&host_client->message, prog->globals.server->total_monsters);
 
 	MSG_WriteByte (&host_client->message, svc_updatestat);
 	MSG_WriteByte (&host_client->message, STAT_SECRETS);
-	MSG_WriteLong (&host_client->message, pr_global_struct->found_secrets);
+	MSG_WriteLong (&host_client->message, prog->globals.server->found_secrets);
 
 	MSG_WriteByte (&host_client->message, svc_updatestat);
 	MSG_WriteByte (&host_client->message, STAT_MONSTERS);
-	MSG_WriteLong (&host_client->message, pr_global_struct->killed_monsters);
+	MSG_WriteLong (&host_client->message, prog->globals.server->killed_monsters);
 
 	// send a fixangle
 	// Never send a roll angle, because savegames can catch the server
@@ -1341,8 +1364,8 @@ void Host_Spawn_f (void)
 	// and it won't happen if the game was just loaded, so you wind up
 	// with a permanent head tilt
 	MSG_WriteByte (&host_client->message, svc_setangle);
-	MSG_WriteAngle (&host_client->message, host_client->edict->v->angles[0], sv.protocol);
-	MSG_WriteAngle (&host_client->message, host_client->edict->v->angles[1], sv.protocol);
+	MSG_WriteAngle (&host_client->message, host_client->edict->fields.server->angles[0], sv.protocol);
+	MSG_WriteAngle (&host_client->message, host_client->edict->fields.server->angles[1], sv.protocol);
 	MSG_WriteAngle (&host_client->message, 0, sv.protocol);
 
 	SV_WriteClientdataToMessage (host_client, host_client->edict, &host_client->message, stats);
@@ -1466,7 +1489,7 @@ void Host_Give_f (void)
 {
 	const char *t;
 	int v;
-	eval_t *val;
+	prvm_eval_t *val;
 
 	if (cmd_source == src_command)
 	{
@@ -1501,128 +1524,128 @@ void Host_Give_f (void)
 			if (t[0] == '6')
 			{
 				if (t[1] == 'a')
-					host_client->edict->v->items = (int)host_client->edict->v->items | HIT_PROXIMITY_GUN;
+					host_client->edict->fields.server->items = (int)host_client->edict->fields.server->items | HIT_PROXIMITY_GUN;
 				else
-					host_client->edict->v->items = (int)host_client->edict->v->items | IT_GRENADE_LAUNCHER;
+					host_client->edict->fields.server->items = (int)host_client->edict->fields.server->items | IT_GRENADE_LAUNCHER;
 			}
 			else if (t[0] == '9')
-				host_client->edict->v->items = (int)host_client->edict->v->items | HIT_LASER_CANNON;
+				host_client->edict->fields.server->items = (int)host_client->edict->fields.server->items | HIT_LASER_CANNON;
 			else if (t[0] == '0')
-				host_client->edict->v->items = (int)host_client->edict->v->items | HIT_MJOLNIR;
+				host_client->edict->fields.server->items = (int)host_client->edict->fields.server->items | HIT_MJOLNIR;
 			else if (t[0] >= '2')
-				host_client->edict->v->items = (int)host_client->edict->v->items | (IT_SHOTGUN << (t[0] - '2'));
+				host_client->edict->fields.server->items = (int)host_client->edict->fields.server->items | (IT_SHOTGUN << (t[0] - '2'));
 		}
 		else
 		{
 			if (t[0] >= '2')
-				host_client->edict->v->items = (int)host_client->edict->v->items | (IT_SHOTGUN << (t[0] - '2'));
+				host_client->edict->fields.server->items = (int)host_client->edict->fields.server->items | (IT_SHOTGUN << (t[0] - '2'));
 		}
 		break;
 
 	case 's':
-		if (gamemode == GAME_ROGUE && (val = GETEDICTFIELDVALUE(host_client->edict, eval_ammo_shells1)))
+		if (gamemode == GAME_ROGUE && (val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_ammo_shells1)))
 			val->_float = v;
 
-		host_client->edict->v->ammo_shells = v;
+		host_client->edict->fields.server->ammo_shells = v;
 		break;
 	case 'n':
 		if (gamemode == GAME_ROGUE)
 		{
-			if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_ammo_nails1)))
+			if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_ammo_nails1)))
 			{
 				val->_float = v;
-				if (host_client->edict->v->weapon <= IT_LIGHTNING)
-					host_client->edict->v->ammo_nails = v;
+				if (host_client->edict->fields.server->weapon <= IT_LIGHTNING)
+					host_client->edict->fields.server->ammo_nails = v;
 			}
 		}
 		else
 		{
-			host_client->edict->v->ammo_nails = v;
+			host_client->edict->fields.server->ammo_nails = v;
 		}
 		break;
 	case 'l':
 		if (gamemode == GAME_ROGUE)
 		{
-			val = GETEDICTFIELDVALUE(host_client->edict, eval_ammo_lava_nails);
+			val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_ammo_lava_nails);
 			if (val)
 			{
 				val->_float = v;
-				if (host_client->edict->v->weapon > IT_LIGHTNING)
-					host_client->edict->v->ammo_nails = v;
+				if (host_client->edict->fields.server->weapon > IT_LIGHTNING)
+					host_client->edict->fields.server->ammo_nails = v;
 			}
 		}
 		break;
 	case 'r':
 		if (gamemode == GAME_ROGUE)
 		{
-			val = GETEDICTFIELDVALUE(host_client->edict, eval_ammo_rockets1);
+			val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_ammo_rockets1);
 			if (val)
 			{
 				val->_float = v;
-				if (host_client->edict->v->weapon <= IT_LIGHTNING)
-					host_client->edict->v->ammo_rockets = v;
+				if (host_client->edict->fields.server->weapon <= IT_LIGHTNING)
+					host_client->edict->fields.server->ammo_rockets = v;
 			}
 		}
 		else
 		{
-			host_client->edict->v->ammo_rockets = v;
+			host_client->edict->fields.server->ammo_rockets = v;
 		}
 		break;
 	case 'm':
 		if (gamemode == GAME_ROGUE)
 		{
-			val = GETEDICTFIELDVALUE(host_client->edict, eval_ammo_multi_rockets);
+			val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_ammo_multi_rockets);
 			if (val)
 			{
 				val->_float = v;
-				if (host_client->edict->v->weapon > IT_LIGHTNING)
-					host_client->edict->v->ammo_rockets = v;
+				if (host_client->edict->fields.server->weapon > IT_LIGHTNING)
+					host_client->edict->fields.server->ammo_rockets = v;
 			}
 		}
 		break;
 	case 'h':
-		host_client->edict->v->health = v;
+		host_client->edict->fields.server->health = v;
 		break;
 	case 'c':
 		if (gamemode == GAME_ROGUE)
 		{
-			val = GETEDICTFIELDVALUE(host_client->edict, eval_ammo_cells1);
+			val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_ammo_cells1);
 			if (val)
 			{
 				val->_float = v;
-				if (host_client->edict->v->weapon <= IT_LIGHTNING)
-					host_client->edict->v->ammo_cells = v;
+				if (host_client->edict->fields.server->weapon <= IT_LIGHTNING)
+					host_client->edict->fields.server->ammo_cells = v;
 			}
 		}
 		else
 		{
-			host_client->edict->v->ammo_cells = v;
+			host_client->edict->fields.server->ammo_cells = v;
 		}
 		break;
 	case 'p':
 		if (gamemode == GAME_ROGUE)
 		{
-			val = GETEDICTFIELDVALUE(host_client->edict, eval_ammo_plasma);
+			val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_ammo_plasma);
 			if (val)
 			{
 				val->_float = v;
-				if (host_client->edict->v->weapon > IT_LIGHTNING)
-					host_client->edict->v->ammo_cells = v;
+				if (host_client->edict->fields.server->weapon > IT_LIGHTNING)
+					host_client->edict->fields.server->ammo_cells = v;
 			}
 		}
 		break;
 	}
 }
 
-edict_t	*FindViewthing (void)
+prvm_edict_t	*FindViewthing (void)
 {
 	int		i;
-	edict_t	*e;
+	prvm_edict_t	*e;
 
-	for (i=0 ; i<sv.num_edicts ; i++)
+	for (i=0 ; i<prog->num_edicts ; i++)
 	{
-		e = EDICT_NUM(i);
-		if (!strcmp (PR_GetString(e->v->classname), "viewthing"))
+		e = PRVM_EDICT_NUM(i);
+		if (!strcmp (PRVM_GetString(e->fields.server->classname), "viewthing"))
 			return e;
 	}
 	Con_Print("No viewthing on map\n");
@@ -1636,7 +1659,7 @@ Host_Viewmodel_f
 */
 void Host_Viewmodel_f (void)
 {
-	edict_t	*e;
+	prvm_edict_t	*e;
 	model_t	*m;
 
 	e = FindViewthing ();
@@ -1650,8 +1673,8 @@ void Host_Viewmodel_f (void)
 		return;
 	}
 
-	e->v->frame = 0;
-	cl.model_precache[(int)e->v->modelindex] = m;
+	e->fields.server->frame = 0;
+	cl.model_precache[(int)e->fields.server->modelindex] = m;
 }
 
 /*
@@ -1661,20 +1684,20 @@ Host_Viewframe_f
 */
 void Host_Viewframe_f (void)
 {
-	edict_t	*e;
+	prvm_edict_t	*e;
 	int		f;
 	model_t	*m;
 
 	e = FindViewthing ();
 	if (!e)
 		return;
-	m = cl.model_precache[(int)e->v->modelindex];
+	m = cl.model_precache[(int)e->fields.server->modelindex];
 
 	f = atoi(Cmd_Argv(1));
 	if (f >= m->numframes)
 		f = m->numframes-1;
 
-	e->v->frame = f;
+	e->fields.server->frame = f;
 }
 
 
@@ -1693,19 +1716,19 @@ Host_Viewnext_f
 */
 void Host_Viewnext_f (void)
 {
-	edict_t	*e;
+	prvm_edict_t	*e;
 	model_t	*m;
 
 	e = FindViewthing ();
 	if (!e)
 		return;
-	m = cl.model_precache[(int)e->v->modelindex];
+	m = cl.model_precache[(int)e->fields.server->modelindex];
 
-	e->v->frame = e->v->frame + 1;
-	if (e->v->frame >= m->numframes)
-		e->v->frame = m->numframes - 1;
+	e->fields.server->frame = e->fields.server->frame + 1;
+	if (e->fields.server->frame >= m->numframes)
+		e->fields.server->frame = m->numframes - 1;
 
-	PrintFrameName (m, e->v->frame);
+	PrintFrameName (m, e->fields.server->frame);
 }
 
 /*
@@ -1715,20 +1738,20 @@ Host_Viewprev_f
 */
 void Host_Viewprev_f (void)
 {
-	edict_t	*e;
+	prvm_edict_t	*e;
 	model_t	*m;
 
 	e = FindViewthing ();
 	if (!e)
 		return;
 
-	m = cl.model_precache[(int)e->v->modelindex];
+	m = cl.model_precache[(int)e->fields.server->modelindex];
 
-	e->v->frame = e->v->frame - 1;
-	if (e->v->frame < 0)
-		e->v->frame = 0;
+	e->fields.server->frame = e->fields.server->frame - 1;
+	if (e->fields.server->frame < 0)
+		e->fields.server->frame = 0;
 
-	PrintFrameName (m, e->v->frame);
+	PrintFrameName (m, e->fields.server->frame);
 }
 
 /*

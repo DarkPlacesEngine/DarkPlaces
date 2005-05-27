@@ -36,18 +36,18 @@ void SV_ClearWorld (void);
 
 // call before removing an entity, and before trying to move one,
 // so it doesn't clip against itself
-void SV_UnlinkEdict (edict_t *ent);
+void SV_UnlinkEdict (prvm_edict_t *ent);
 
 // Needs to be called any time an entity changes origin, mins, maxs, or solid
 // sets ent->v.absmin and ent->v.absmax
 // if touchtriggers, calls prog functions for the intersected triggers
-void SV_LinkEdict (edict_t *ent, qboolean touch_triggers);
+void SV_LinkEdict (prvm_edict_t *ent, qboolean touch_triggers);
 
 // returns true if the entity is in solid currently
-int SV_TestEntityPosition (edict_t *ent);
+int SV_TestEntityPosition (prvm_edict_t *ent);
 
 // returns list of entities touching a box
-int SV_EntitiesInBox(vec3_t mins, vec3_t maxs, int maxlist, edict_t **list);
+int SV_EntitiesInBox(vec3_t mins, vec3_t maxs, int maxlist, prvm_edict_t **list);
 
 // mins and maxs are relative
 // if the entire move stays in a solid volume, trace.allsolid will be set
@@ -59,7 +59,7 @@ int SV_EntitiesInBox(vec3_t mins, vec3_t maxs, int maxlist, edict_t **list);
 // shouldn't be considered solid objects
 
 // passedict is explicitly excluded from clipping checks (normally NULL)
-trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, edict_t *passedict);
+trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict);
 
 int SV_PointQ1Contents(const vec3_t point);
 int SV_PointSuperContents(const vec3_t point);

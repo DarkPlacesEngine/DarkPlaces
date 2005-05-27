@@ -205,6 +205,7 @@ extern char *buildstring;
 #include "client.h"
 #include "render.h"
 #include "progs.h"
+#include "progsvm.h"
 #include "server.h"
 
 #include "input.h"

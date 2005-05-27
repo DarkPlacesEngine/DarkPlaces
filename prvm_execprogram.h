@@ -292,9 +292,9 @@
 				startprofile = profile;
 				prog->xstatement = st - prog->statements;
 
-				prog->globals[OFS_RETURN] = prog->globals[(unsigned short) st->a];
-				prog->globals[OFS_RETURN+1] = prog->globals[(unsigned short) st->a+1];
-				prog->globals[OFS_RETURN+2] = prog->globals[(unsigned short) st->a+2];
+				prog->globals.generic[OFS_RETURN] = prog->globals.generic[(unsigned short) st->a];
+				prog->globals.generic[OFS_RETURN+1] = prog->globals.generic[(unsigned short) st->a+1];
+				prog->globals.generic[OFS_RETURN+2] = prog->globals.generic[(unsigned short) st->a+2];
 
 				st = prog->statements + PRVM_LeaveFunction();
 				if (prog->depth <= exitdepth)
@@ -310,9 +310,9 @@
 					startprofile = profile;
 					prog->xstatement = st - prog->statements;
 					ed = PRVM_PROG_TO_EDICT(PRVM_G_INT(prog->self->ofs));
-					PRVM_E_FLOAT(ed,PRVM_ED_FindFieldOffset ("nextthink")) = *prog->time + 0.1;
-					PRVM_E_FLOAT(ed,PRVM_ED_FindFieldOffset ("frame")) = OPA->_float;
-					*(func_t *)((qbyte*)ed->fields.vp + PRVM_ED_FindFieldOffset ("think")) = OPB->function;
+					PRVM_E_FLOAT(ed,PRVM_ED_FindField ("nextthink")->ofs) = *prog->time + 0.1;
+					PRVM_E_FLOAT(ed,PRVM_ED_FindField ("frame")->ofs) = OPA->_float;
+					*(func_t *)((float*)ed->fields.vp + PRVM_ED_FindField ("think")->ofs) = OPB->function;
 				}
 				else
 					PRVM_ERROR("OP_STATE not supported by %s\n", PRVM_NAME);
@@ -482,7 +482,7 @@
 					return;
 				}
 #endif
-				ptr = (eval_t *)((qbyte *)sv.edictsfields + OPB->_int);
+				ptr = (prvm_eval_t *)((qbyte *)prog->edictsfields + OPB->_int);
 				ptr->_int = OPA->_int;
 				break;
 			case OP_LOAD_I:
@@ -504,8 +504,8 @@
 					return;
 				}
 #endif
-				ed = PROG_TO_EDICT(OPA->edict);
-				OPC->_int = ((eval_t *)((int *)ed->v + OPB->_int))->_int;
+				ed = PRVM_PROG_TO_EDICT(OPA->edict);
+				OPC->_int = ((prvm_eval_t *)((int *)ed->v + OPB->_int))->_int;
 				break;
 
 			case OP_GSTOREP_I:

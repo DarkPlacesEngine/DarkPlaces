@@ -1,73 +1,13 @@
-/*
-Copyright (C) 1996-1997 Id Software, Inc.
+#include "prvm_cmds.h"
 
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
+//============================================================================
+// Server
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-
-*/
-
-#include "quakedef.h"
-
+#define PF_WARNING(s) do{Con_Printf(s);PRVM_PrintState();return;}while(0)
 cvar_t sv_aim = {CVAR_SAVE, "sv_aim", "2"}; //"0.93"}; // LordHavoc: disabled autoaim by default
-cvar_t pr_zone_min_strings = {0, "pr_zone_min_strings", "64"};
-
-// LordHavoc: added this to semi-fix the problem of using many ftos calls in a print
-#define STRINGTEMP_BUFFERS 16
-#define STRINGTEMP_LENGTH 4096
-static char pr_string_temp[STRINGTEMP_BUFFERS][STRINGTEMP_LENGTH];
-static int pr_string_tempindex = 0;
-
-static char *PR_GetTempString(void)
-{
-	char *s;
-	s = pr_string_temp[pr_string_tempindex];
-	pr_string_tempindex = (pr_string_tempindex + 1) % STRINGTEMP_BUFFERS;
-	return s;
-}
-
-#define	RETURN_EDICT(e) (PRVM_G_INT(OFS_RETURN) = PRVM_EDICT_TO_PROG(e))
-#define PF_WARNING(s) do{Con_Printf(s);PR_PrintState();return;}while(0)
-#define PF_ERROR(s) do{Host_Error(s);return;}while(0)
 
 
-/*
-===============================================================================
-
-						BUILT-IN FUNCTIONS
-
-===============================================================================
-*/
-
-
-void PF_VarString(int first, char *out, int outlength)
-{
-	int i;
-	const char *s;
-	char *outend;
-
-	outend = out + outlength - 1;
-	for (i = first;i < pr_argc && out < outend;i++)
-	{
-		s = PRVM_G_STRING((OFS_PARM0+i*3));
-		while (out < outend && *s)
-			*out++ = *s++;
-	}
-	*out++ = 0;
-}
-
-char *ENGINE_EXTENSIONS =
+char *vm_sv_extensions =
 "DP_BUTTONCHAT "
 "DP_BUTTONUSE "
 "DP_CL_LOADSKY "
@@ -175,87 +115,6 @@ char *ENGINE_EXTENSIONS =
 "NEXUIZ_PLAYERSKIN "
 ;
 
-qboolean checkextension(const char *name)
-{
-	int len;
-	char *e, *start;
-	len = strlen(name);
-	for (e = ENGINE_EXTENSIONS;*e;e++)
-	{
-		while (*e == ' ')
-			e++;
-		if (!*e)
-			break;
-		start = e;
-		while (*e && *e != ' ')
-			e++;
-		if (e - start == len)
-			if (!strncasecmp(start, name, len))
-				return true;
-	}
-	return false;
-}
-
-/*
-=================
-PF_checkextension
-
-returns true if the extension is supported by the server
-
-checkextension(extensionname)
-=================
-*/
-void PF_checkextension (void)
-{
-	PRVM_G_FLOAT(OFS_RETURN) = checkextension(PRVM_G_STRING(OFS_PARM0));
-}
-
-/*
-=================
-PF_error
-
-This is a TERMINAL error, which will kill off the entire server.
-Dumps self.
-
-error(value)
-=================
-*/
-void PF_error (void)
-{
-	prvm_edict_t	*ed;
-	char string[STRINGTEMP_LENGTH];
-
-	PF_VarString(0, string, sizeof(string));
-	Con_Printf("======SERVER ERROR in %s:\n%s\n", PRVM_GetString(pr_xfunction->s_name), string);
-	ed = PRVM_PROG_TO_EDICT(prog->globals.server->self);
-	ED_Print(ed);
-
-	PF_ERROR("Program error");
-}
-
-/*
-=================
-PF_objerror
-
-Dumps out self, then an error message.  The program is aborted and self is
-removed, but the level can continue.
-
-objerror(value)
-=================
-*/
-void PF_objerror (void)
-{
-	prvm_edict_t	*ed;
-	char string[STRINGTEMP_LENGTH];
-
-	PF_VarString(0, string, sizeof(string));
-	Con_Printf("======OBJECT ERROR in %s:\n%s\n", PRVM_GetString(pr_xfunction->s_name), string);
-	ed = PRVM_PROG_TO_EDICT(prog->globals.server->self);
-	ED_Print(ed);
-	ED_Free (ed);
-}
-
-
 /*
 ==============
 PF_makevectors
@@ -314,7 +173,7 @@ void SetMinMaxSize (prvm_edict_t *e, float *min, float *max, qboolean rotate)
 
 	for (i=0 ; i<3 ; i++)
 		if (min[i] > max[i])
-			PF_ERROR("SetMinMaxSize: backwards mins/maxs\n");
+			PRVM_ERROR("SetMinMaxSize: backwards mins/maxs\n");
 
 // set derived values
 	VectorCopy (min, e->fields.server->mins);
@@ -388,22 +247,6 @@ void PF_setmodel (void)
 
 /*
 =================
-PF_bprint
-
-broadcast print to everyone on server
-
-bprint(value)
-=================
-*/
-void PF_bprint (void)
-{
-	char string[STRINGTEMP_LENGTH];
-	PF_VarString(0, string, sizeof(string));
-	SV_BroadcastPrint(string);
-}
-
-/*
-=================
 PF_sprint
 
 single print to a specific client
@@ -415,7 +258,7 @@ void PF_sprint (void)
 {
 	client_t	*client;
 	int			entnum;
-	char string[STRINGTEMP_LENGTH];
+	char string[VM_STRINGTEMP_LENGTH];
 
 	entnum = PRVM_G_EDICTNUM(OFS_PARM0);
 
@@ -426,7 +269,7 @@ void PF_sprint (void)
 	}
 
 	client = svs.clients + entnum-1;
-	PF_VarString(1, string, sizeof(string));
+	VM_VarString(1, string, sizeof(string));
 	MSG_WriteChar(&client->message,svc_print);
 	MSG_WriteString(&client->message, string);
 }
@@ -445,7 +288,7 @@ void PF_centerprint (void)
 {
 	client_t	*client;
 	int			entnum;
-	char string[STRINGTEMP_LENGTH];
+	char string[VM_STRINGTEMP_LENGTH];
 
 	entnum = PRVM_G_EDICTNUM(OFS_PARM0);
 
@@ -456,146 +299,9 @@ void PF_centerprint (void)
 	}
 
 	client = svs.clients + entnum-1;
-	PF_VarString(1, string, sizeof(string));
+	VM_VarString(1, string, sizeof(string));
 	MSG_WriteChar(&client->message,svc_centerprint);
 	MSG_WriteString(&client->message, string);
-}
-
-
-/*
-=================
-PF_normalize
-
-vector normalize(vector)
-=================
-*/
-void PF_normalize (void)
-{
-	float	*value1;
-	vec3_t	newvalue;
-	float	new;
-
-	value1 = PRVM_G_VECTOR(OFS_PARM0);
-
-	new = value1[0] * value1[0] + value1[1] * value1[1] + value1[2]*value1[2];
-	new = sqrt(new);
-
-	if (new == 0)
-		newvalue[0] = newvalue[1] = newvalue[2] = 0;
-	else
-	{
-		new = 1/new;
-		newvalue[0] = value1[0] * new;
-		newvalue[1] = value1[1] * new;
-		newvalue[2] = value1[2] * new;
-	}
-
-	VectorCopy (newvalue, PRVM_G_VECTOR(OFS_RETURN));
-}
-
-/*
-=================
-PF_vlen
-
-scalar vlen(vector)
-=================
-*/
-void PF_vlen (void)
-{
-	float	*value1;
-	float	new;
-
-	value1 = PRVM_G_VECTOR(OFS_PARM0);
-
-	new = value1[0] * value1[0] + value1[1] * value1[1] + value1[2]*value1[2];
-	new = sqrt(new);
-
-	PRVM_G_FLOAT(OFS_RETURN) = new;
-}
-
-/*
-=================
-PF_vectoyaw
-
-float vectoyaw(vector)
-=================
-*/
-void PF_vectoyaw (void)
-{
-	float	*value1;
-	float	yaw;
-
-	value1 = PRVM_G_VECTOR(OFS_PARM0);
-
-	if (value1[1] == 0 && value1[0] == 0)
-		yaw = 0;
-	else
-	{
-		yaw = (atan2(value1[1], value1[0]) * 180 / M_PI);
-		if (yaw < 0)
-			yaw += 360;
-	}
-
-	PRVM_G_FLOAT(OFS_RETURN) = yaw;
-}
-
-
-/*
-=================
-PF_vectoangles
-
-vector vectoangles(vector)
-=================
-*/
-void PF_vectoangles (void)
-{
-	double value1[3], forward, yaw, pitch;
-
-	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), value1);
-
-	if (value1[1] == 0 && value1[0] == 0)
-	{
-		yaw = 0;
-		if (value1[2] > 0)
-			pitch = 90;
-		else
-			pitch = 270;
-	}
-	else
-	{
-		// LordHavoc: optimized a bit
-		if (value1[0])
-		{
-			yaw = (atan2(value1[1], value1[0]) * 180 / M_PI);
-			if (yaw < 0)
-				yaw += 360;
-		}
-		else if (value1[1] > 0)
-			yaw = 90;
-		else
-			yaw = 270;
-
-		forward = sqrt(value1[0]*value1[0] + value1[1]*value1[1]);
-		pitch = (atan2(value1[2], forward) * 180 / M_PI);
-		if (pitch < 0)
-			pitch += 360;
-	}
-
-	VectorSet(PRVM_G_VECTOR(OFS_RETURN), pitch, yaw, 0);
-}
-
-/*
-=================
-PF_Random
-
-Returns a number from 0<= num < 1
-
-random()
-=================
-*/
-void PF_random (void)
-{
-	PRVM_G_FLOAT(OFS_RETURN) = lhrandom(0, 1);
 }
 
 /*
@@ -708,18 +414,6 @@ void PF_sound (void)
 
 /*
 =================
-PF_break
-
-break()
-=================
-*/
-void PF_break (void)
-{
-	PF_ERROR("break: break statement\n");
-}
-
-/*
-=================
 PF_traceline
 
 Used for use tracing and shot targeting
@@ -736,7 +430,7 @@ void PF_traceline (void)
 	int		move;
 	prvm_edict_t	*ent;
 
-	pr_xfunction->builtinsprofile += 30;
+	prog->xfunction->builtinsprofile += 30;
 
 	v1 = PRVM_G_VECTOR(OFS_PARM0);
 	v2 = PRVM_G_VECTOR(OFS_PARM1);
@@ -780,7 +474,7 @@ void PF_tracebox (void)
 	int		move;
 	prvm_edict_t	*ent;
 
-	pr_xfunction->builtinsprofile += 30;
+	prog->xfunction->builtinsprofile += 30;
 
 	v1 = PRVM_G_VECTOR(OFS_PARM0);
 	m1 = PRVM_G_VECTOR(OFS_PARM1);
@@ -812,7 +506,7 @@ void PF_tracetoss (void)
 	prvm_edict_t	*ent;
 	prvm_edict_t	*ignore;
 
-	pr_xfunction->builtinsprofile += 600;
+	prog->xfunction->builtinsprofile += 600;
 
 	ent = PRVM_G_EDICT(OFS_PARM0);
 	if (ent == prog->edicts)
@@ -872,7 +566,7 @@ int PF_newcheckclient (int check)
 	for ( ;  ; i++)
 	{
 		// count the cost
-		pr_xfunction->builtinsprofile++;
+		prog->xfunction->builtinsprofile++;
 		// wrap around
 		if (i == svs.maxclients+1)
 			i = 1;
@@ -926,7 +620,7 @@ void PF_checkclient (void)
 	ent = PRVM_EDICT_NUM(sv.lastcheck);
 	if (ent->priv.server->free || ent->fields.server->health <= 0)
 	{
-		RETURN_EDICT(prog->edicts);
+		VM_RETURN_EDICT(prog->edicts);
 		return;
 	}
 
@@ -936,13 +630,13 @@ void PF_checkclient (void)
 	if (sv.worldmodel && checkpvsbytes && !sv.worldmodel->brush.BoxTouchingPVS(sv.worldmodel, checkpvs, view, view))
 	{
 		c_notvis++;
-		RETURN_EDICT(prog->edicts);
+		VM_RETURN_EDICT(prog->edicts);
 		return;
 	}
 
 	// might be able to see it
 	c_invis++;
-	RETURN_EDICT(ent);
+	VM_RETURN_EDICT(ent);
 }
 
 //============================================================================
@@ -975,44 +669,6 @@ void PF_stuffcmd (void)
 	host_client = svs.clients + entnum-1;
 	Host_ClientCommands ("%s", str);
 	host_client = old;
-}
-
-/*
-=================
-PF_localcmd
-
-Sends text to server console
-
-localcmd (string)
-=================
-*/
-void PF_localcmd (void)
-{
-	Cbuf_AddText(PRVM_G_STRING(OFS_PARM0));
-}
-
-/*
-=================
-PF_cvar
-
-float cvar (string)
-=================
-*/
-void PF_cvar (void)
-{
-	PRVM_G_FLOAT(OFS_RETURN) = Cvar_VariableValue(PRVM_G_STRING(OFS_PARM0));
-}
-
-/*
-=================
-PF_cvar_set
-
-float cvar (string)
-=================
-*/
-void PF_cvar_set (void)
-{
-	Cvar_Set(PRVM_G_STRING(OFS_PARM0), PRVM_G_STRING(OFS_PARM1));
 }
 
 /*
@@ -1055,7 +711,7 @@ void PF_findradius (void)
 	for (i = 0;i < numtouchedicts;i++)
 	{
 		ent = touchedicts[i];
-		pr_xfunction->builtinsprofile++;
+		prog->xfunction->builtinsprofile++;
 		// Quake did not return non-solid entities but darkplaces does
 		// (note: this is the reason you can't blow up fallen zombies)
 		if (ent->fields.server->solid == SOLID_NOT && !sv_gameplayfix_blowupfallenzombies.integer)
@@ -1079,217 +735,7 @@ void PF_findradius (void)
 		}
 	}
 
-	RETURN_EDICT(chain);
-}
-
-
-/*
-=========
-PF_dprint
-=========
-*/
-void PF_dprint (void)
-{
-	char string[STRINGTEMP_LENGTH];
-	if (developer.integer)
-	{
-		PF_VarString(0, string, sizeof(string));
-		Con_Print(string);
-	}
-}
-
-void PF_ftos (void)
-{
-	float v;
-	char *s;
-	v = PRVM_G_FLOAT(OFS_PARM0);
-
-	s = PR_GetTempString();
-	if ((float)((int)v) == v)
-		sprintf(s, "%i", (int)v);
-	else
-		sprintf(s, "%f", v);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(s);
-}
-
-void PF_fabs (void)
-{
-	float	v;
-	v = PRVM_G_FLOAT(OFS_PARM0);
-	PRVM_G_FLOAT(OFS_RETURN) = fabs(v);
-}
-
-void PF_vtos (void)
-{
-	char *s;
-	s = PR_GetTempString();
-	sprintf (s, "'%5.1f %5.1f %5.1f'", PRVM_G_VECTOR(OFS_PARM0)[0], PRVM_G_VECTOR(OFS_PARM0)[1], PRVM_G_VECTOR(OFS_PARM0)[2]);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(s);
-}
-
-void PF_etos (void)
-{
-	char *s;
-	s = PR_GetTempString();
-	sprintf (s, "entity %i", PRVM_G_EDICTNUM(OFS_PARM0));
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(s);
-}
-
-void PF_Spawn (void)
-{
-	prvm_edict_t	*ed;
-	pr_xfunction->builtinsprofile += 20;
-	ed = ED_Alloc();
-	RETURN_EDICT(ed);
-}
-
-void PF_Remove (void)
-{
-	prvm_edict_t	*ed;
-	pr_xfunction->builtinsprofile += 20;
-
-	ed = PRVM_G_EDICT(OFS_PARM0);
-	if (ed == prog->edicts)
-		PF_WARNING("remove: tried to remove world\n");
-	if (PRVM_NUM_FOR_EDICT(ed) <= svs.maxclients)
-		PF_WARNING("remove: tried to remove a client\n");
-	// LordHavoc: not an error because id1 progs did this in some cases (killtarget removes entities, even if they are already removed in some cases...)
-	if (ed->priv.server->free && developer.integer)
-		PF_WARNING("remove: tried to remove an entity that was already removed\n");
-	ED_Free (ed);
-}
-
-
-// entity (entity start, .string field, string match) find = #5;
-void PF_Find (void)
-{
-	int		e;
-	int		f;
-	const char	*s, *t;
-	prvm_edict_t	*ed;
-
-	e = PRVM_G_EDICTNUM(OFS_PARM0);
-	f = PRVM_G_INT(OFS_PARM1);
-	s = PRVM_G_STRING(OFS_PARM2);
-	if (!s || !s[0])
-	{
-		RETURN_EDICT(prog->edicts);
-		return;
-	}
-
-	for (e++ ; e < prog->num_edicts ; e++)
-	{
-		pr_xfunction->builtinsprofile++;
-		ed = PRVM_EDICT_NUM(e);
-		if (ed->priv.server->free)
-			continue;
-		t = E_STRING(ed,f);
-		if (!t)
-			continue;
-		if (!strcmp(t,s))
-		{
-			RETURN_EDICT(ed);
-			return;
-		}
-	}
-
-	RETURN_EDICT(prog->edicts);
-}
-
-// LordHavoc: added this for searching float, int, and entity reference fields
-void PF_FindFloat (void)
-{
-	int		e;
-	int		f;
-	float	s;
-	prvm_edict_t	*ed;
-
-	e = PRVM_G_EDICTNUM(OFS_PARM0);
-	f = PRVM_G_INT(OFS_PARM1);
-	s = PRVM_G_FLOAT(OFS_PARM2);
-
-	for (e++ ; e < prog->num_edicts ; e++)
-	{
-		pr_xfunction->builtinsprofile++;
-		ed = PRVM_EDICT_NUM(e);
-		if (ed->priv.server->free)
-			continue;
-		if (E_FLOAT(ed,f) == s)
-		{
-			RETURN_EDICT(ed);
-			return;
-		}
-	}
-
-	RETURN_EDICT(prog->edicts);
-}
-
-// chained search for strings in entity fields
-// entity(.string field, string match) findchain = #402;
-void PF_findchain (void)
-{
-	int		i;
-	int		f;
-	const char	*s, *t;
-	prvm_edict_t	*ent, *chain;
-
-	chain = (prvm_edict_t *)prog->edicts;
-
-	f = PRVM_G_INT(OFS_PARM0);
-	s = PRVM_G_STRING(OFS_PARM1);
-	if (!s || !s[0])
-	{
-		RETURN_EDICT(prog->edicts);
-		return;
-	}
-
-	ent = PRVM_NEXT_EDICT(prog->edicts);
-	for (i = 1;i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
-	{
-		pr_xfunction->builtinsprofile++;
-		if (ent->priv.server->free)
-			continue;
-		t = E_STRING(ent,f);
-		if (!t)
-			continue;
-		if (strcmp(t,s))
-			continue;
-
-		ent->fields.server->chain = PRVM_EDICT_TO_PROG(chain);
-		chain = ent;
-	}
-
-	RETURN_EDICT(chain);
-}
-
-// LordHavoc: chained search for float, int, and entity reference fields
-// entity(.string field, float match) findchainfloat = #403;
-void PF_findchainfloat (void)
-{
-	int		i;
-	int		f;
-	float	s;
-	prvm_edict_t	*ent, *chain;
-
-	chain = (prvm_edict_t *)prog->edicts;
-
-	f = PRVM_G_INT(OFS_PARM0);
-	s = PRVM_G_FLOAT(OFS_PARM1);
-
-	ent = PRVM_NEXT_EDICT(prog->edicts);
-	for (i = 1;i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
-	{
-		pr_xfunction->builtinsprofile++;
-		if (ent->priv.server->free)
-			continue;
-		if (E_FLOAT(ent,f) != s)
-			continue;
-
-		ent->fields.server->chain = PRVM_EDICT_TO_PROG(chain);
-		chain = ent;
-	}
-
-	RETURN_EDICT(chain);
+	VM_RETURN_EDICT(chain);
 }
 
 // LordHavoc: search for flags in float fields
@@ -1306,18 +752,18 @@ void PF_findflags (void)
 
 	for (e++ ; e < prog->num_edicts ; e++)
 	{
-		pr_xfunction->builtinsprofile++;
+		prog->xfunction->builtinsprofile++;
 		ed = PRVM_EDICT_NUM(e);
 		if (ed->priv.server->free)
 			continue;
-		if ((int)E_FLOAT(ed,f) & s)
+		if ((int)PRVM_E_FLOAT(ed,f) & s)
 		{
-			RETURN_EDICT(ed);
+			VM_RETURN_EDICT(ed);
 			return;
 		}
 	}
 
-	RETURN_EDICT(prog->edicts);
+	VM_RETURN_EDICT(prog->edicts);
 }
 
 // LordHavoc: chained search for flags in float fields
@@ -1336,17 +782,17 @@ void PF_findchainflags (void)
 	ent = PRVM_NEXT_EDICT(prog->edicts);
 	for (i = 1;i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
 	{
-		pr_xfunction->builtinsprofile++;
+		prog->xfunction->builtinsprofile++;
 		if (ent->priv.server->free)
 			continue;
-		if (!((int)E_FLOAT(ent,f) & s))
+		if (!((int)PRVM_E_FLOAT(ent,f) & s))
 			continue;
 
 		ent->fields.server->chain = PRVM_EDICT_TO_PROG(chain);
 		chain = ent;
 	}
 
-	RETURN_EDICT(chain);
+	VM_RETURN_EDICT(chain);
 }
 
 void PF_precache_file (void)
@@ -1365,27 +811,6 @@ void PF_precache_model (void)
 {
 	SV_ModelIndex(PRVM_G_STRING(OFS_PARM0), 2);
 	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
-}
-
-
-void PF_coredump (void)
-{
-	ED_PrintEdicts ();
-}
-
-void PF_traceon (void)
-{
-	pr_trace = true;
-}
-
-void PF_traceoff (void)
-{
-	pr_trace = false;
-}
-
-void PF_eprint (void)
-{
-	ED_PrintNum (PRVM_G_EDICTNUM(OFS_PARM0));
 }
 
 /*
@@ -1424,14 +849,14 @@ void PF_walkmove (void)
 	move[2] = 0;
 
 // save program state, because SV_movestep may call other progs
-	oldf = pr_xfunction;
+	oldf = prog->xfunction;
 	oldself = prog->globals.server->self;
 
 	PRVM_G_FLOAT(OFS_RETURN) = SV_movestep(ent, move, true);
 
 
 // restore program state
-	pr_xfunction = oldf;
+	prog->xfunction = oldf;
 	prog->globals.server->self = oldself;
 }
 
@@ -1509,25 +934,6 @@ void PF_lightstyle (void)
 	}
 }
 
-void PF_rint (void)
-{
-	float	f;
-	f = PRVM_G_FLOAT(OFS_PARM0);
-	if (f > 0)
-		PRVM_G_FLOAT(OFS_RETURN) = (int)(f + 0.5);
-	else
-		PRVM_G_FLOAT(OFS_RETURN) = (int)(f - 0.5);
-}
-void PF_floor (void)
-{
-	PRVM_G_FLOAT(OFS_RETURN) = floor(PRVM_G_FLOAT(OFS_PARM0));
-}
-void PF_ceil (void)
-{
-	PRVM_G_FLOAT(OFS_RETURN) = ceil(PRVM_G_FLOAT(OFS_PARM0));
-}
-
-
 /*
 =============
 PF_checkbottom
@@ -1546,37 +952,6 @@ PF_pointcontents
 void PF_pointcontents (void)
 {
 	PRVM_G_FLOAT(OFS_RETURN) = SV_PointQ1Contents(PRVM_G_VECTOR(OFS_PARM0));
-}
-
-/*
-=============
-PF_nextent
-
-entity nextent(entity)
-=============
-*/
-void PF_nextent (void)
-{
-	int		i;
-	prvm_edict_t	*ent;
-
-	i = PRVM_G_EDICTNUM(OFS_PARM0);
-	while (1)
-	{
-		pr_xfunction->builtinsprofile++;
-		i++;
-		if (i == prog->num_edicts)
-		{
-			RETURN_EDICT(prog->edicts);
-			return;
-		}
-		ent = PRVM_EDICT_NUM(i);
-		if (!ent->priv.server->free)
-		{
-			RETURN_EDICT(ent);
-			return;
-		}
-	}
 }
 
 /*
@@ -1632,7 +1007,7 @@ void PF_aim (void)
 	check = PRVM_NEXT_EDICT(prog->edicts);
 	for (i=1 ; i<prog->num_edicts ; i++, check = PRVM_NEXT_EDICT(check) )
 	{
-		pr_xfunction->builtinsprofile++;
+		prog->xfunction->builtinsprofile++;
 		if (check->fields.server->takedamage != DAMAGE_AIM)
 			continue;
 		if (check == ent)
@@ -1864,7 +1239,7 @@ void PF_WriteEntity (void)
 	MSG_WriteShort (WriteDest(), PRVM_G_EDICTNUM(OFS_PARM1));
 }
 
-//=============================================================================
+//////////////////////////////////////////////////////////
 
 void PF_makestatic (void)
 {
@@ -1903,7 +1278,7 @@ void PF_makestatic (void)
 	}
 
 // throw the entity away now
-	ED_Free (ent);
+	PRVM_ED_Free (ent);
 }
 
 //=============================================================================
@@ -1934,63 +1309,8 @@ void PF_setspawnparms (void)
 }
 
 /*
-==============
-PF_changelevel
-==============
-*/
-void PF_changelevel (void)
-{
-	const char	*s;
-
-// make sure we don't issue two changelevels
-	if (svs.changelevel_issued)
-		return;
-	svs.changelevel_issued = true;
-
-	s = PRVM_G_STRING(OFS_PARM0);
-	Cbuf_AddText (va("changelevel %s\n",s));
-}
-
-void PF_sin (void)
-{
-	PRVM_G_FLOAT(OFS_RETURN) = sin(PRVM_G_FLOAT(OFS_PARM0));
-}
-
-void PF_cos (void)
-{
-	PRVM_G_FLOAT(OFS_RETURN) = cos(PRVM_G_FLOAT(OFS_PARM0));
-}
-
-void PF_sqrt (void)
-{
-	PRVM_G_FLOAT(OFS_RETURN) = sqrt(PRVM_G_FLOAT(OFS_PARM0));
-}
-
-/*
 =================
-PF_RandomVec
-
-Returns a vector of length < 1
-
-randomvec()
-=================
-*/
-void PF_randomvec (void)
-{
-	vec3_t		temp;
-	do
-	{
-		temp[0] = (rand()&32767) * (2.0 / 32767.0) - 1.0;
-		temp[1] = (rand()&32767) * (2.0 / 32767.0) - 1.0;
-		temp[2] = (rand()&32767) * (2.0 / 32767.0) - 1.0;
-	}
-	while (DotProduct(temp, temp) >= 1);
-	VectorCopy (temp, PRVM_G_VECTOR(OFS_RETURN));
-}
-
-/*
-=================
-PF_GetLight
+PF_getlight
 
 Returns a color vector indicating the lighting at the requested point.
 
@@ -2000,7 +1320,7 @@ Returns a color vector indicating the lighting at the requested point.
 getlight(vector)
 =================
 */
-void PF_GetLight (void)
+void PF_getlight (void)
 {
 	vec3_t ambientcolor, diffusecolor, diffusenormal;
 	vec_t *p;
@@ -2038,94 +1358,6 @@ void PF_registercvar (void)
 
 /*
 =================
-PF_min
-
-returns the minimum of two supplied floats
-
-min(a, b)
-=================
-*/
-void PF_min (void)
-{
-	// LordHavoc: 3+ argument enhancement suggested by FrikaC
-	if (pr_argc == 2)
-		PRVM_G_FLOAT(OFS_RETURN) = min(PRVM_G_FLOAT(OFS_PARM0), PRVM_G_FLOAT(OFS_PARM1));
-	else if (pr_argc >= 3)
-	{
-		int i;
-		float f = PRVM_G_FLOAT(OFS_PARM0);
-		for (i = 1;i < pr_argc;i++)
-			if (PRVM_G_FLOAT((OFS_PARM0+i*3)) < f)
-				f = PRVM_G_FLOAT((OFS_PARM0+i*3));
-		PRVM_G_FLOAT(OFS_RETURN) = f;
-	}
-	else
-	{
-		PRVM_G_FLOAT(OFS_RETURN) = 0;
-		PF_WARNING("min: must supply at least 2 floats\n");
-	}
-}
-
-/*
-=================
-PF_max
-
-returns the maximum of two supplied floats
-
-max(a, b)
-=================
-*/
-void PF_max (void)
-{
-	// LordHavoc: 3+ argument enhancement suggested by FrikaC
-	if (pr_argc == 2)
-		PRVM_G_FLOAT(OFS_RETURN) = max(PRVM_G_FLOAT(OFS_PARM0), PRVM_G_FLOAT(OFS_PARM1));
-	else if (pr_argc >= 3)
-	{
-		int i;
-		float f = PRVM_G_FLOAT(OFS_PARM0);
-		for (i = 1;i < pr_argc;i++)
-			if (PRVM_G_FLOAT((OFS_PARM0+i*3)) > f)
-				f = PRVM_G_FLOAT((OFS_PARM0+i*3));
-		PRVM_G_FLOAT(OFS_RETURN) = f;
-	}
-	else
-	{
-		PRVM_G_FLOAT(OFS_RETURN) = 0;
-		PF_WARNING("max: must supply at least 2 floats\n");
-	}
-}
-
-/*
-=================
-PF_bound
-
-returns number bounded by supplied range
-
-min(min, value, max)
-=================
-*/
-void PF_bound (void)
-{
-	PRVM_G_FLOAT(OFS_RETURN) = bound(PRVM_G_FLOAT(OFS_PARM0), PRVM_G_FLOAT(OFS_PARM1), PRVM_G_FLOAT(OFS_PARM2));
-}
-
-/*
-=================
-PF_pow
-
-returns a raised to power b
-
-pow(a, b)
-=================
-*/
-void PF_pow (void)
-{
-	PRVM_G_FLOAT(OFS_RETURN) = pow(PRVM_G_FLOAT(OFS_PARM0), PRVM_G_FLOAT(OFS_PARM1));
-}
-
-/*
-=================
 PF_copyentity
 
 copies data from one entity to another
@@ -2146,8 +1378,9 @@ void PF_copyentity (void)
 		PF_WARNING("copyentity: can not modify world entity\n");
 	if (out->priv.server->free)
 		PF_WARNING("copyentity: can not modify free entity\n");
-	memcpy(out->v, in->v, progs->entityfields * 4);
+	memcpy(out->fields.server, in->fields.server, prog->progs->entityfields * 4);
 }
+
 
 /*
 =================
@@ -2784,222 +2017,6 @@ void PF_getsurfaceclippedpoint(void)
 	VectorAdd(out, ed->fields.server->origin, PRVM_G_VECTOR(OFS_RETURN));
 }
 
-#define MAX_PRFILES 256
-
-qfile_t *pr_files[MAX_PRFILES];
-
-void PR_Files_Init(void)
-{
-	memset(pr_files, 0, sizeof(pr_files));
-}
-
-void PR_Files_CloseAll(void)
-{
-	int i;
-	for (i = 0;i < MAX_PRFILES;i++)
-	{
-		if (pr_files[i])
-			FS_Close(pr_files[i]);
-		pr_files[i] = NULL;
-	}
-}
-
-//float(string s) stof = #81; // get numerical value from a string
-void PF_stof(void)
-{
-	char string[STRINGTEMP_LENGTH];
-	PF_VarString(0, string, sizeof(string));
-	PRVM_G_FLOAT(OFS_RETURN) = atof(string);
-}
-
-//float(string filename, float mode) fopen = #110; // opens a file inside quake/gamedir/data/ (mode is FILE_READ, FILE_APPEND, or FILE_WRITE), returns fhandle >= 0 if successful, or fhandle < 0 if unable to open file for any reason
-void PF_fopen(void)
-{
-	int filenum, mode;
-	const char *modestring, *filename;
-	for (filenum = 0;filenum < MAX_PRFILES;filenum++)
-		if (pr_files[filenum] == NULL)
-			break;
-	if (filenum >= MAX_PRFILES)
-	{
-		Con_Printf("PF_fopen: ran out of file handles (%i)\n", MAX_PRFILES);
-		PRVM_G_FLOAT(OFS_RETURN) = -2;
-		return;
-	}
-	mode = PRVM_G_FLOAT(OFS_PARM1);
-	switch(mode)
-	{
-	case 0: // FILE_READ
-		modestring = "rb";
-		break;
-	case 1: // FILE_APPEND
-		modestring = "ab";
-		break;
-	case 2: // FILE_WRITE
-		modestring = "wb";
-		break;
-	default:
-		Con_Printf("PF_fopen: no such mode %i (valid: 0 = read, 1 = append, 2 = write)\n", mode);
-		PRVM_G_FLOAT(OFS_RETURN) = -3;
-		return;
-	}
-	filename = PRVM_G_STRING(OFS_PARM0);
-	// -4 failure (dangerous/non-portable filename) removed, FS_Open checks
-	pr_files[filenum] = FS_Open(va("data/%s", filename), modestring, false, false);
-
-	if (pr_files[filenum] == NULL && modestring == "rb")
-		pr_files[filenum] = FS_Open(filename, modestring, false, false);
-
-	if (pr_files[filenum] == NULL)
-		PRVM_G_FLOAT(OFS_RETURN) = -1;
-	else
-		PRVM_G_FLOAT(OFS_RETURN) = filenum;
-}
-
-//void(float fhandle) fclose = #111; // closes a file
-void PF_fclose(void)
-{
-	int filenum = PRVM_G_FLOAT(OFS_PARM0);
-	if (filenum < 0 || filenum >= MAX_PRFILES)
-	{
-		Con_Printf("PF_fclose: invalid file handle %i\n", filenum);
-		return;
-	}
-	if (pr_files[filenum] == NULL)
-	{
-		Con_Printf("PF_fclose: no such file handle %i (or file has been closed)\n", filenum);
-		return;
-	}
-	FS_Close(pr_files[filenum]);
-	pr_files[filenum] = NULL;
-}
-
-//string(float fhandle) fgets = #112; // reads a line of text from the file and returns as a tempstring
-void PF_fgets(void)
-{
-	int c, end;
-	static char string[STRINGTEMP_LENGTH];
-	int filenum = PRVM_G_FLOAT(OFS_PARM0);
-	if (filenum < 0 || filenum >= MAX_PRFILES)
-	{
-		Con_Printf("PF_fgets: invalid file handle %i\n", filenum);
-		return;
-	}
-	if (pr_files[filenum] == NULL)
-	{
-		Con_Printf("PF_fgets: no such file handle %i (or file has been closed)\n", filenum);
-		return;
-	}
-	end = 0;
-	for (;;)
-	{
-		c = FS_Getc(pr_files[filenum]);
-		if (c == '\r' || c == '\n' || c < 0)
-			break;
-		if (end < STRINGTEMP_LENGTH - 1)
-			string[end++] = c;
-	}
-	string[end] = 0;
-	// remove \n following \r
-	if (c == '\r')
-	{
-		c = FS_Getc(pr_files[filenum]);
-		if (c != '\n')
-			FS_UnGetc(pr_files[filenum], (unsigned char)c);
-	}
-	if (developer.integer)
-		Con_Printf("fgets: %s\n", string);
-	if (c >= 0 || end)
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(string);
-	else
-		PRVM_G_INT(OFS_RETURN) = 0;
-}
-
-//void(float fhandle, string s) fputs = #113; // writes a line of text to the end of the file
-void PF_fputs(void)
-{
-	int stringlength;
-	char string[STRINGTEMP_LENGTH];
-	int filenum = PRVM_G_FLOAT(OFS_PARM0);
-	if (filenum < 0 || filenum >= MAX_PRFILES)
-	{
-		Con_Printf("PF_fputs: invalid file handle %i\n", filenum);
-		return;
-	}
-	if (pr_files[filenum] == NULL)
-	{
-		Con_Printf("PF_fputs: no such file handle %i (or file has been closed)\n", filenum);
-		return;
-	}
-	PF_VarString(1, string, sizeof(string));
-	if ((stringlength = strlen(string)))
-		FS_Write(pr_files[filenum], string, stringlength);
-	if (developer.integer)
-		Con_Printf("fputs: %s\n", string);
-}
-
-//float(string s) strlen = #114; // returns how many characters are in a string
-void PF_strlen(void)
-{
-	const char *s;
-	s = PRVM_G_STRING(OFS_PARM0);
-	if (s)
-		PRVM_G_FLOAT(OFS_RETURN) = strlen(s);
-	else
-		PRVM_G_FLOAT(OFS_RETURN) = 0;
-}
-
-//string(string s1, string s2) strcat = #115; // concatenates two strings (for example "abc", "def" would return "abcdef") and returns as a tempstring
-void PF_strcat(void)
-{
-	char *s = PR_GetTempString();
-	PF_VarString(0, s, STRINGTEMP_LENGTH);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(s);
-}
-
-//string(string s, float start, float length) substring = #116; // returns a section of a string as a tempstring
-void PF_substring(void)
-{
-	int i, start, length;
-	const char *s;
-	char *string = PR_GetTempString();
-	s = PRVM_G_STRING(OFS_PARM0);
-	start = PRVM_G_FLOAT(OFS_PARM1);
-	length = PRVM_G_FLOAT(OFS_PARM2);
-	if (!s)
-		s = "";
-	for (i = 0;i < start && *s;i++, s++);
-	for (i = 0;i < STRINGTEMP_LENGTH - 1 && *s && i < length;i++, s++)
-		string[i] = *s;
-	string[i] = 0;
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(string);
-}
-
-//vector(string s) stov = #117; // returns vector value from a string
-void PF_stov(void)
-{
-	char string[STRINGTEMP_LENGTH];
-	PF_VarString(0, string, sizeof(string));
-	Math_atov(string, PRVM_G_VECTOR(OFS_RETURN));
-}
-
-//string(string s) strzone = #118; // makes a copy of a string into the string zone and returns it, this is often used to keep around a tempstring for longer periods of time (tempstrings are replaced often)
-void PF_strzone(void)
-{
-	const char *in;
-	char *out;
-	in = PRVM_G_STRING(OFS_PARM0);
-	out = PR_AllocString(strlen(in) + 1);
-	strcpy(out, in);
-	PRVM_G_INT(OFS_RETURN) = PR_SetQCString(out);
-}
-
-//void(string s) strunzone = #119; // removes a copy of a string from the string zone (you can not use that string again or it may crash!!!)
-void PF_strunzone(void)
-{
-	PR_FreeString((char *)PRVM_G_STRING(OFS_PARM0));
-}
-
 //void(entity e, string s) clientcommand = #440; // executes a command string as if it came from the specified client
 //this function originally written by KrimZon, made shorter by LordHavoc
 void PF_clientcommand (void)
@@ -3019,44 +2036,6 @@ void PF_clientcommand (void)
 	host_client = svs.clients + i;
 	Cmd_ExecuteString (PRVM_G_STRING(OFS_PARM1), src_client);
 	host_client = temp_client;
-}
-
-//float(string s) tokenize = #441; // takes apart a string into individal words (access them with argv), returns how many
-//this function originally written by KrimZon, made shorter by LordHavoc
-//20040203: rewritten by LordHavoc (no longer uses allocations)
-int num_tokens = 0;
-char *tokens[256], tokenbuf[4096];
-void PF_tokenize (void)
-{
-	int pos;
-	const char *p;
-	p = PRVM_G_STRING(OFS_PARM0);
-
-	num_tokens = 0;
-	pos = 0;
-	while(COM_ParseToken(&p, false))
-	{
-		if (num_tokens >= (int)(sizeof(tokens)/sizeof(tokens[0])))
-			break;
-		if (pos + strlen(com_token) + 1 > sizeof(tokenbuf))
-			break;
-		tokens[num_tokens++] = tokenbuf + pos;
-		strcpy(tokenbuf + pos, com_token);
-		pos += strlen(com_token) + 1;
-	}
-
-	PRVM_G_FLOAT(OFS_RETURN) = num_tokens;
-}
-
-//string(float n) argv = #442; // returns a word from the tokenized string (returns nothing for an invalid index)
-//this function originally written by KrimZon, made shorter by LordHavoc
-void PF_argv (void)
-{
-	int token_num = PRVM_G_FLOAT(OFS_PARM0);
-	if (token_num >= 0 && token_num < num_tokens)
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(tokens[token_num]);
-	else
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(NULL);
 }
 
 //void(entity e, entity tagentity, string tagname) setattachment = #443; // attachs e to a tag on tagentity (note: use "" to attach to entity origin/angles instead of a tag)
@@ -3079,18 +2058,18 @@ void PF_setattachment (void)
 
 	v = PRVM_GETEDICTFIELDVALUE(e, eval_tag_entity);
 	if (v)
-		fields.server->edict = PRVM_EDICT_TO_PROG(tagentity);
+		v->edict = PRVM_EDICT_TO_PROG(tagentity);
 
 	v = PRVM_GETEDICTFIELDVALUE(e, eval_tag_index);
 	if (v)
-		fields.server->_float = 0;
+		v->_float = 0;
 	if (tagentity != NULL && tagentity != prog->edicts && tagname && tagname[0])
 	{
 		modelindex = (int)tagentity->fields.server->modelindex;
 		if (modelindex >= 0 && modelindex < MAX_MODELS && (model = sv.models[modelindex]))
 		{
-			fields.server->_float = Mod_Alias_GetTagIndexForName(model, tagentity->fields.server->skin, tagname);
-			if (fields.server->_float == 0)
+			v->_float = Mod_Alias_GetTagIndexForName(model, tagentity->fields.server->skin, tagname);
+			if (v->_float == 0)
 				Con_DPrintf("setattachment(edict %i, edict %i, string \"%s\"): tried to find tag named \"%s\" on entity %i (model \"%s\") but could not find it\n", PRVM_NUM_FOR_EDICT(e), PRVM_NUM_FOR_EDICT(tagentity), tagname, tagname, PRVM_NUM_FOR_EDICT(tagentity), model->name);
 		}
 		else
@@ -3307,177 +2286,6 @@ void PF_gettaginfo (void)
 	}
 }
 
-
-/////////////////////////////////////////
-// DP_QC_FS_SEARCH extension
-
-// qc fs search handling
-#define MAX_SEARCHES 128
-
-fssearch_t *pr_fssearchlist[MAX_SEARCHES];
-
-void PR_Search_Init(void)
-{
-	memset(pr_fssearchlist,0,sizeof(pr_fssearchlist));
-}
-
-void PR_Search_Reset(void)
-{
-	int i;
-	// reset the fssearch list
-	for(i = 0; i < MAX_SEARCHES; i++)
-		if(pr_fssearchlist[i])
-			FS_FreeSearch(pr_fssearchlist[i]);
-	memset(pr_fssearchlist,0,sizeof(pr_fssearchlist));
-}
-
-/*
-=========
-PF_search_begin
-
-float search_begin(string pattern, float caseinsensitive, float quiet)
-=========
-*/
-void PF_search_begin(void)
-{
-	int handle;
-	const char *pattern;
-	int caseinsens, quiet;
-
-	pattern = PRVM_G_STRING(OFS_PARM0);
-	if (!pattern || pattern[0] <= ' ')
-		PF_ERROR("PF_search_begin: Bad string");
-
-	caseinsens = PRVM_G_FLOAT(OFS_PARM1);
-	quiet = PRVM_G_FLOAT(OFS_PARM2);
-
-	for(handle = 0; handle < MAX_SEARCHES; handle++)
-		if(!pr_fssearchlist[handle])
-			break;
-
-	if(handle >= MAX_SEARCHES)
-	{
-		Con_Printf("PR_search_begin: ran out of search handles (%i)\n", MAX_SEARCHES);
-		PRVM_G_FLOAT(OFS_RETURN) = -2;
-		return;
-	}
-
-	if(!(pr_fssearchlist[handle] = FS_Search(pattern,caseinsens, quiet)))
-		PRVM_G_FLOAT(OFS_RETURN) = -1;
-	else
-		PRVM_G_FLOAT(OFS_RETURN) = handle;
-}
-
-/*
-=========
-VM_search_end
-
-void	search_end(float handle)
-=========
-*/
-void PF_search_end(void)
-{
-	int handle;
-
-	handle = PRVM_G_FLOAT(OFS_PARM0);
-
-	if(handle < 0 || handle >= MAX_SEARCHES)
-	{
-		Con_Printf("PF_search_end: invalid handle %i\n", handle);
-		return;
-	}
-	if(pr_fssearchlist[handle] == NULL)
-	{
-		Con_Printf("PF_search_end: no such handle %i\n", handle);
-		return;
-	}
-
-	FS_FreeSearch(pr_fssearchlist[handle]);
-	pr_fssearchlist[handle] = NULL;
-}
-
-/*
-=========
-VM_search_getsize
-
-float	search_getsize(float handle)
-=========
-*/
-void PF_search_getsize(void)
-{
-	int handle;
-
-	handle = PRVM_G_FLOAT(OFS_PARM0);
-
-	if(handle < 0 || handle >= MAX_SEARCHES)
-	{
-		Con_Printf("PF_search_getsize: invalid handle %i\n", handle);
-		return;
-	}
-	if(pr_fssearchlist[handle] == NULL)
-	{
-		Con_Printf("PF_search_getsize: no such handle %i\n", handle);
-		return;
-	}
-
-	PRVM_G_FLOAT(OFS_RETURN) = pr_fssearchlist[handle]->numfilenames;
-}
-
-/*
-=========
-VM_search_getfilename
-
-string	search_getfilename(float handle, float num)
-=========
-*/
-void PF_search_getfilename(void)
-{
-	int handle, filenum;
-	char *tmp;
-
-	handle = PRVM_G_FLOAT(OFS_PARM0);
-	filenum = PRVM_G_FLOAT(OFS_PARM1);
-
-	if(handle < 0 || handle >= MAX_SEARCHES)
-	{
-		Con_Printf("PF_search_getfilename: invalid handle %i\n", handle);
-		return;
-	}
-	if(pr_fssearchlist[handle] == NULL)
-	{
-		Con_Printf("PF_search_getfilename: no such handle %i\n", handle);
-		return;
-	}
-	if(filenum < 0 || filenum >= pr_fssearchlist[handle]->numfilenames)
-	{
-		Con_Printf("PF_search_getfilename: invalid filenum %i\n", filenum);
-		return;
-	}
-
-	tmp = PR_GetTempString();
-	strcpy(tmp, pr_fssearchlist[handle]->filenames[filenum]);
-
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(tmp);
-}
-
-void PF_cvar_string (void)
-{
-	const char *str;
-	cvar_t *var;
-	char *tmp;
-
-	str = PRVM_G_STRING(OFS_PARM0);
-	var = Cvar_FindVar (str);
-	if (var)
-	{
-		tmp = PR_GetTempString();
-		strcpy(tmp, var->string);
-	}
-	else
-		tmp = NULL;
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(tmp);
-}
-
 //void(entity clent) dropclient (DP_SV_DROPCLIENT)
 void PF_dropclient (void)
 {
@@ -3499,19 +2307,19 @@ void PF_spawnclient (void)
 {
 	int i;
 	prvm_edict_t	*ed;
-	pr_xfunction->builtinsprofile += 2;
+	prog->xfunction->builtinsprofile += 2;
 	ed = prog->edicts;
 	for (i = 0;i < svs.maxclients;i++)
 	{
 		if (!svs.clients[i].active)
 		{
-			pr_xfunction->builtinsprofile += 100;
+			prog->xfunction->builtinsprofile += 100;
 			SV_ConnectClient (i, NULL);
 			ed = PRVM_EDICT_NUM(i + 1);
 			break;
 		}
 	}
-	RETURN_EDICT(ed);
+	VM_RETURN_EDICT(ed);
 }
 
 //float(entity clent) clienttype (DP_SV_BOTCLIENT)
@@ -3529,60 +2337,59 @@ void PF_clienttype (void)
 		PRVM_G_FLOAT(OFS_RETURN) = 2;
 }
 
-builtin_t pr_builtin[] =
-{
+prvm_builtin_t vm_sv_builtins[] = {
 NULL,						// #0
 PF_makevectors,				// #1 void(entity e) makevectors
 PF_setorigin,				// #2 void(entity e, vector o) setorigin
 PF_setmodel,				// #3 void(entity e, string m) setmodel
 PF_setsize,					// #4 void(entity e, vector min, vector max) setsize
 NULL,						// #5 void(entity e, vector min, vector max) setabssize
-PF_break,					// #6 void() break
-PF_random,					// #7 float() random
+VM_break,					// #6 void() break
+VM_random,					// #7 float() random
 PF_sound,					// #8 void(entity e, float chan, string samp) sound
-PF_normalize,				// #9 vector(vector v) normalize
-PF_error,					// #10 void(string e) error
-PF_objerror,				// #11 void(string e) objerror
-PF_vlen,					// #12 float(vector v) vlen
-PF_vectoyaw,				// #13 float(vector v) vectoyaw
-PF_Spawn,					// #14 entity() spawn
-PF_Remove,					// #15 void(entity e) remove
+VM_normalize,				// #9 vector(vector v) normalize
+VM_error,					// #10 void(string e) error
+VM_objerror,				// #11 void(string e) objerror
+VM_vlen,					// #12 float(vector v) vlen
+VM_vectoyaw,				// #13 float(vector v) vectoyaw
+VM_spawn,					// #14 entity() spawn
+VM_remove,					// #15 void(entity e) remove
 PF_traceline,				// #16 float(vector v1, vector v2, float tryents) traceline
 PF_checkclient,				// #17 entity() clientlist
-PF_Find,					// #18 entity(entity start, .string fld, string match) find
+VM_find,					// #18 entity(entity start, .string fld, string match) find
 PF_precache_sound,			// #19 void(string s) precache_sound
 PF_precache_model,			// #20 void(string s) precache_model
 PF_stuffcmd,				// #21 void(entity client, string s)stuffcmd
 PF_findradius,				// #22 entity(vector org, float rad) findradius
-PF_bprint,					// #23 void(string s) bprint
+VM_bprint,					// #23 void(string s) bprint
 PF_sprint,					// #24 void(entity client, string s) sprint
-PF_dprint,					// #25 void(string s) dprint
-PF_ftos,					// #26 void(string s) ftos
-PF_vtos,					// #27 void(string s) vtos
-PF_coredump,				// #28 void() coredump
-PF_traceon,					// #29 void() traceon
-PF_traceoff,				// #30 void() traceoff
-PF_eprint,					// #31 void(entity e) eprint
+VM_dprint,					// #25 void(string s) dprint
+VM_ftos,					// #26 void(string s) ftos
+VM_vtos,					// #27 void(string s) vtos
+VM_coredump,				// #28 void() coredump
+VM_traceon,					// #29 void() traceon
+VM_traceoff,				// #30 void() traceoff
+VM_eprint,					// #31 void(entity e) eprint
 PF_walkmove,				// #32 float(float yaw, float dist) walkmove
 NULL,						// #33
 PF_droptofloor,				// #34 float() droptofloor
 PF_lightstyle,				// #35 void(float style, string value) lightstyle
-PF_rint,					// #36 float(float v) rint
-PF_floor,					// #37 float(float v) floor
-PF_ceil,					// #38 float(float v) ceil
+VM_rint,					// #36 float(float v) rint
+VM_floor,					// #37 float(float v) floor
+VM_ceil,					// #38 float(float v) ceil
 NULL,						// #39
 PF_checkbottom,				// #40 float(entity e) checkbottom
 PF_pointcontents,			// #41 float(vector v) pointcontents
 NULL,						// #42
-PF_fabs,					// #43 float(float f) fabs
+VM_fabs,					// #43 float(float f) fabs
 PF_aim,						// #44 vector(entity e, float speed) aim
-PF_cvar,					// #45 float(string s) cvar
-PF_localcmd,				// #46 void(string s) localcmd
-PF_nextent,					// #47 entity(entity e) nextent
+VM_cvar,					// #45 float(string s) cvar
+VM_localcmd,				// #46 void(string s) localcmd
+VM_nextent,					// #47 entity(entity e) nextent
 PF_particle,				// #48 void(vector o, vector d, float color, float count) particle
 PF_changeyaw,				// #49 void() ChangeYaw
 NULL,						// #50
-PF_vectoangles,				// #51 vector(vector v) vectoangles
+VM_vectoangles,				// #51 vector(vector v) vectoangles
 PF_WriteByte,				// #52 void(float to, float f) WriteByte
 PF_WriteChar,				// #53 void(float to, float f) WriteChar
 PF_WriteShort,				// #54 void(float to, float f) WriteShort
@@ -3591,19 +2398,19 @@ PF_WriteCoord,				// #56 void(float to, float f) WriteCoord
 PF_WriteAngle,				// #57 void(float to, float f) WriteAngle
 PF_WriteString,				// #58 void(float to, string s) WriteString
 PF_WriteEntity,				// #59 void(float to, entity e) WriteEntity
-PF_sin,						// #60 float(float f) sin (DP_QC_SINCOSSQRTPOW)
-PF_cos,						// #61 float(float f) cos (DP_QC_SINCOSSQRTPOW)
-PF_sqrt,					// #62 float(float f) sqrt (DP_QC_SINCOSSQRTPOW)
+VM_sin,						// #60 float(float f) sin (DP_QC_SINCOSSQRTPOW)
+VM_cos,						// #61 float(float f) cos (DP_QC_SINCOSSQRTPOW)
+VM_sqrt,					// #62 float(float f) sqrt (DP_QC_SINCOSSQRTPOW)
 PF_changepitch,				// #63 void(entity ent) changepitch (DP_QC_CHANGEPITCH)
-PF_TraceToss,				// #64 void(entity e, entity ignore) tracetoss (DP_QC_TRACETOSS)
-PF_etos,					// #65 string(entity ent) etos (DP_QC_ETOS)
+PF_tracetoss,				// #64 void(entity e, entity ignore) tracetoss (DP_QC_TRACETOSS)
+VM_etos,					// #65 string(entity ent) etos (DP_QC_ETOS)
 NULL,						// #66
 SV_MoveToGoal,				// #67 void(float step) movetogoal
 PF_precache_file,			// #68 string(string s) precache_file
 PF_makestatic,				// #69 void(entity e) makestatic
-PF_changelevel,				// #70 void(string s) changelevel
+VM_changelevel,				// #70 void(string s) changelevel
 NULL,						// #71
-PF_cvar_set,				// #72 void(string var, string val) cvar_set
+VM_cvar_set,				// #72 void(string var, string val) cvar_set
 PF_centerprint,				// #73 void(entity client, strings) centerprint
 PF_ambientsound,			// #74 void(vector pos, string samp, float vol, float atten) ambientsound
 PF_precache_model,			// #75 string(string s) precache_model2
@@ -3612,7 +2419,7 @@ PF_precache_file,			// #77 string(string s) precache_file2
 PF_setspawnparms,			// #78 void(entity e) setspawnparms
 NULL,						// #79
 NULL,						// #80
-PF_stof,					// #81 float(string s) stof (FRIK_FILE)
+VM_stof,					// #81 float(string s) stof (FRIK_FILE)
 NULL,						// #82
 NULL,						// #83
 NULL,						// #84
@@ -3622,15 +2429,15 @@ NULL,						// #87
 NULL,						// #88
 NULL,						// #89
 PF_tracebox,				// #90 void(vector v1, vector min, vector max, vector v2, float nomonsters, entity forent) tracebox (DP_QC_TRACEBOX)
-PF_randomvec,				// #91 vector() randomvec (DP_QC_RANDOMVEC)
-PF_GetLight,				// #92 vector(vector org) getlight (DP_QC_GETLIGHT)
+VM_randomvec,				// #91 vector() randomvec (DP_QC_RANDOMVEC)
+PF_getlight,				// #92 vector(vector org) getlight (DP_QC_GETLIGHT)
 PF_registercvar,			// #93 float(string name, string value) registercvar (DP_REGISTERCVAR)
-PF_min,						// #94 float(float a, floats) min (DP_QC_MINMAXBOUND)
-PF_max,						// #95 float(float a, floats) max (DP_QC_MINMAXBOUND)
-PF_bound,					// #96 float(float minimum, float val, float maximum) bound (DP_QC_MINMAXBOUND)
-PF_pow,						// #97 float(float f, float f) pow (DP_QC_SINCOSSQRTPOW)
-PF_FindFloat,				// #98 entity(entity start, .float fld, float match) findfloat (DP_QC_FINDFLOAT)
-PF_checkextension,			// #99 float(string s) checkextension (the basis of the extension system)
+VM_min,						// #94 float(float a, floats) min (DP_QC_MINMAXBOUND)
+VM_max,						// #95 float(float a, floats) max (DP_QC_MINMAXBOUND)
+VM_bound,					// #96 float(float minimum, float val, float maximum) bound (DP_QC_MINMAXBOUND)
+VM_pow,						// #97 float(float f, float f) pow (DP_QC_SINCOSSQRTPOW)
+VM_findfloat,				// #98 entity(entity start, .float fld, float match) findfloat (DP_QC_FINDFLOAT)
+VM_checkextension,			// #99 float(string s) checkextension (the basis of the extension system)
 NULL,						// #100
 NULL,						// #101
 NULL,						// #102
@@ -3641,24 +2448,23 @@ NULL,						// #106
 NULL,						// #107
 NULL,						// #108
 NULL,						// #109
-PF_fopen,					// #110 float(string filename, float mode) fopen (FRIK_FILE)
-PF_fclose,					// #111 void(float fhandle) fclose (FRIK_FILE)
-PF_fgets,					// #112 string(float fhandle) fgets (FRIK_FILE)
-PF_fputs,					// #113 void(float fhandle, string s) fputs (FRIK_FILE)
-PF_strlen,					// #114 float(string s) strlen (FRIK_FILE)
-PF_strcat,					// #115 string(string s1, string s2) strcat (FRIK_FILE)
-PF_substring,				// #116 string(string s, float start, float length) substring (FRIK_FILE)
-PF_stov,					// #117 vector(string) stov (FRIK_FILE)
-PF_strzone,					// #118 string(string s) strzone (FRIK_FILE)
-PF_strunzone,				// #119 void(string s) strunzone (FRIK_FILE)
-#define a NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-a a a a a a a a				// #120-199
-a a a a a a a a a a			// #200-299
-a a a a a a a a a a			// #300-399
-PF_copyentity,				// #400 void(entity from, entity to) copyentity (DP_QC_COPYENTITY)
+VM_fopen,					// #110 float(string filename, float mode) fopen (FRIK_FILE)
+VM_fclose,					// #111 void(float fhandle) fclose (FRIK_FILE)
+VM_fgets,					// #112 string(float fhandle) fgets (FRIK_FILE)
+VM_fputs,					// #113 void(float fhandle, string s) fputs (FRIK_FILE)
+VM_strlen,					// #114 float(string s) strlen (FRIK_FILE)
+VM_strcat,					// #115 string(string s1, string s2) strcat (FRIK_FILE)
+VM_substring,				// #116 string(string s, float start, float length) substring (FRIK_FILE)
+VM_stov,					// #117 vector(string) stov (FRIK_FILE)
+VM_strzone,					// #118 string(string s) strzone (FRIK_FILE)
+VM_strunzone,				// #119 void(string s) strunzone (FRIK_FILE)
+e10, e10, e10, e10, e10, e10, e10, e10,		// #120-199
+e10, e10, e10, e10, e10, e10, e10, e10, e10, e10,	// #200-299
+e10, e10, e10, e10, e10, e10, e10, e10, e10, e10,	// #300-399
+VM_copyentity,				// #400 void(entity from, entity to) copyentity (DP_QC_COPYENTITY)
 PF_setcolor,				// #401 void(entity ent, float colors) setcolor (DP_QC_SETCOLOR)
-PF_findchain,				// #402 entity(.string fld, string match) findchain (DP_QC_FINDCHAIN)
-PF_findchainfloat,			// #403 entity(.float fld, float match) findchainfloat (DP_QC_FINDCHAINFLOAT)
+VM_findchain,				// #402 entity(.string fld, string match) findchain (DP_QC_FINDCHAIN)
+VM_findchainfloat,			// #403 entity(.float fld, float match) findchainfloat (DP_QC_FINDCHAINFLOAT)
 PF_effect,					// #404 void(vector org, string modelname, float startframe, float endframe, float framerate) effect (DP_SV_EFFECT)
 PF_te_blood,				// #405 void(vector org, vector velocity, float howmany) te_blood (DP_TE_BLOOD)
 PF_te_bloodshower,			// #406 void(vector mincorner, vector maxcorner, float explosionspeed, float howmany) te_bloodshower (DP_TE_BLOODSHOWER)
@@ -3696,14 +2502,14 @@ PF_getsurfacetexture,		// #437 string(entity e, float s) getsurfacetexture (DP_Q
 PF_getsurfacenearpoint,		// #438 float(entity e, vector p) getsurfacenearpoint (DP_QC_GETSURFACE)
 PF_getsurfaceclippedpoint,	// #439 vector(entity e, float s, vector p) getsurfaceclippedpoint (DP_QC_GETSURFACE)
 PF_clientcommand,			// #440 void(entity e, string s) clientcommand (KRIMZON_SV_PARSECLIENTCOMMAND)
-PF_tokenize,				// #441 float(string s) tokenize (KRIMZON_SV_PARSECLIENTCOMMAND)
-PF_argv,					// #442 string(float n) argv (KRIMZON_SV_PARSECLIENTCOMMAND)
+VM_tokenize,				// #441 float(string s) tokenize (KRIMZON_SV_PARSECLIENTCOMMAND)
+VM_argv,					// #442 string(float n) argv (KRIMZON_SV_PARSECLIENTCOMMAND)
 PF_setattachment,			// #443 void(entity e, entity tagentity, string tagname) setattachment (DP_GFX_QUAKE3MODELTAGS)
-PF_search_begin,			// #444 float(string pattern, float caseinsensitive, float quiet) search_begin (DP_FS_SEARCH)
-PF_search_end,				// #445 void(float handle) search_end (DP_FS_SEARCH)
-PF_search_getsize,			// #446 float(float handle) search_getsize (DP_FS_SEARCH)
-PF_search_getfilename,		// #447 string(float handle, float num) search_getfilename (DP_FS_SEARCH)
-PF_cvar_string,				// #448 string(string s) cvar_string (DP_QC_CVAR_STRING)
+VM_search_begin,			// #444 float(string pattern, float caseinsensitive, float quiet) search_begin (DP_FS_SEARCH)
+VM_search_end,				// #445 void(float handle) search_end (DP_FS_SEARCH)
+VM_search_getsize,			// #446 float(float handle) search_getsize (DP_FS_SEARCH)
+VM_search_getfilename,		// #447 string(float handle, float num) search_getfilename (DP_FS_SEARCH)
+VM_cvar_string,				// #448 string(string s) cvar_string (DP_QC_CVAR_STRING)
 PF_findflags,				// #449 entity(entity start, .float fld, float match) findflags (DP_QC_FINDFLAGS)
 PF_findchainflags,			// #450 entity(.float fld, float match) findchainflags (DP_QC_FINDCHAINFLAGS)
 PF_gettagindex,				// #451 float(entity ent, string tagname) gettagindex (DP_QC_GETTAGINFO)
@@ -3715,25 +2521,18 @@ NULL,						// #456
 NULL,						// #457
 NULL,						// #458
 NULL,						// #459
-a a a a						// #460-499 (LordHavoc)
+e10, e10, e10, e10			// #460-499 (LordHavoc)
 };
 
-builtin_t *pr_builtins = pr_builtin;
-int pr_numbuiltins = sizeof(pr_builtin)/sizeof(pr_builtin[0]);
+const int vm_sv_numbuiltins = sizeof(vm_sv_builtins) / sizeof(prvm_builtin_t);
 
-void PR_Cmd_Init(void)
+void VM_SV_Cmd_Init(void)
 {
-	PR_Files_Init();
-	PR_Search_Init();
+	VM_Cmd_Init();
 }
 
-void PR_Cmd_Shutdown(void)
+void VM_SV_Cmd_Reset(void)
 {
-}
-
-void PR_Cmd_Reset(void)
-{
-	PR_Search_Reset();
-	PR_Files_CloseAll();
+	VM_Cmd_Reset();
 }
 

@@ -90,7 +90,7 @@
 				OPC->_float = !OPA->vector[0] && !OPA->vector[1] && !OPA->vector[2];
 				break;
 			case OP_NOT_S:
-				OPC->_float = !OPA->string || !*PR_GetString(OPA->string);
+				OPC->_float = !OPA->string || !*PRVM_GetString(OPA->string);
 				break;
 			case OP_NOT_FNC:
 				OPC->_float = !OPA->function;
@@ -105,7 +105,7 @@
 				OPC->_float = (OPA->vector[0] == OPB->vector[0]) && (OPA->vector[1] == OPB->vector[1]) && (OPA->vector[2] == OPB->vector[2]);
 				break;
 			case OP_EQ_S:
-				OPC->_float = !strcmp(PR_GetString(OPA->string),PR_GetString(OPB->string));
+				OPC->_float = !strcmp(PRVM_GetString(OPA->string),PRVM_GetString(OPB->string));
 				break;
 			case OP_EQ_E:
 				OPC->_float = OPA->_int == OPB->_int;
@@ -120,7 +120,7 @@
 				OPC->_float = (OPA->vector[0] != OPB->vector[0]) || (OPA->vector[1] != OPB->vector[1]) || (OPA->vector[2] != OPB->vector[2]);
 				break;
 			case OP_NE_S:
-				OPC->_float = strcmp(PR_GetString(OPA->string),PR_GetString(OPB->string));
+				OPC->_float = strcmp(PRVM_GetString(OPA->string),PRVM_GetString(OPB->string));
 				break;
 			case OP_NE_E:
 				OPC->_float = OPA->_int != OPB->_int;
@@ -158,7 +158,7 @@
 					return;
 				}
 #endif
-				ptr = (eval_t *)((qbyte *)sv.edictsfields + OPB->_int);
+				ptr = (prvm_eval_t *)((qbyte *)prog->edictsfields + OPB->_int);
 				ptr->_int = OPA->_int;
 				break;
 			case OP_STOREP_V:
@@ -172,7 +172,7 @@
 					return;
 				}
 #endif
-				ptr = (eval_t *)((qbyte *)sv.edictsfields + OPB->_int);
+				ptr = (prvm_eval_t *)((qbyte *)prog->edictsfields + OPB->_int);
 				ptr->vector[0] = OPA->vector[0];
 				ptr->vector[1] = OPA->vector[1];
 				ptr->vector[2] = OPA->vector[2];
@@ -197,8 +197,8 @@
 					Host_Error("assignment to world entity");
 					return;
 				}
-				ed = PROG_TO_EDICT(OPA->edict);
-				OPC->_int = (qbyte *)((int *)ed->v + OPB->_int) - (qbyte *)sv.edictsfields;
+				ed = PRVM_PROG_TO_EDICT(OPA->edict);
+				OPC->_int = (qbyte *)((int *)ed->v + OPB->_int) - (qbyte *)prog->edictsfields;
 				break;
 
 			case OP_LOAD_F:
@@ -216,8 +216,8 @@
 					return;
 				}
 #endif
-				ed = PROG_TO_EDICT(OPA->edict);
-				OPC->_int = ((eval_t *)((int *)ed->v + OPB->_int))->_int;
+				ed = PRVM_PROG_TO_EDICT(OPA->edict);
+				OPC->_int = ((prvm_eval_t *)((int *)ed->v + OPB->_int))->_int;
 				break;
 
 			case OP_LOAD_V:
@@ -231,10 +231,10 @@
 					return;
 				}
 #endif
-				ed = PROG_TO_EDICT(OPA->edict);
-				OPC->vector[0] = ((eval_t *)((int *)ed->v + OPB->_int))->vector[0];
-				OPC->vector[1] = ((eval_t *)((int *)ed->v + OPB->_int))->vector[1];
-				OPC->vector[2] = ((eval_t *)((int *)ed->v + OPB->_int))->vector[2];
+				ed = PRVM_PROG_TO_EDICT(OPA->edict);
+				OPC->vector[0] = ((prvm_eval_t *)((int *)ed->v + OPB->_int))->vector[0];
+				OPC->vector[1] = ((prvm_eval_t *)((int *)ed->v + OPB->_int))->vector[1];
+				OPC->vector[2] = ((prvm_eval_t *)((int *)ed->v + OPB->_int))->vector[2];
 				break;
 
 		//==================
@@ -271,7 +271,7 @@
 				else if (OPA->function > (unsigned) progs->numfunctions)
 					Host_Error("Bad function number");
 
-				newf = &pr_functions[OPA->function];
+				newf = &prog->functions[OPA->function];
 				newf->callcount++;
 
 				if (newf->first_statement < 0)
@@ -311,10 +311,10 @@
 				pr_xfunction->profile += profile - startprofile;
 				startprofile = profile;
 				pr_xstatement = st - pr_statements;
-				ed = PROG_TO_EDICT(pr_global_struct->self);
-				ed->v->nextthink = pr_global_struct->time + 0.1;
-				ed->v->frame = OPA->_float;
-				ed->v->think = OPB->function;
+				ed = PRVM_PROG_TO_EDICT(prog->globals.server->self);
+				ed->fields.server->nextthink = prog->globals.server->time + 0.1;
+				ed->fields.server->frame = OPA->_float;
+				ed->fields.server->think = OPB->function;
 				break;
 
 // LordHavoc: to be enabled when Progs version 7 (or whatever it will be numbered) is finalized
@@ -481,7 +481,7 @@
 					return;
 				}
 #endif
-				ptr = (eval_t *)((qbyte *)sv.edictsfields + OPB->_int);
+				ptr = (prvm_eval_t *)((qbyte *)prog->edictsfields + OPB->_int);
 				ptr->_int = OPA->_int;
 				break;
 			case OP_LOAD_I:
@@ -503,8 +503,8 @@
 					return;
 				}
 #endif
-				ed = PROG_TO_EDICT(OPA->edict);
-				OPC->_int = ((eval_t *)((int *)ed->v + OPB->_int))->_int;
+				ed = PRVM_PROG_TO_EDICT(OPA->edict);
+				OPC->_int = ((prvm_eval_t *)((int *)ed->v + OPB->_int))->_int;
 				break;
 
 			case OP_GSTOREP_I:

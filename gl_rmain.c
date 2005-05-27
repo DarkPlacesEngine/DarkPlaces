@@ -606,7 +606,7 @@ void GL_Init (void)
 	VID_CheckExtensions();
 
 	// LordHavoc: report supported extensions
-	Con_DPrintf("\nengine extensions: %s\n", ENGINE_EXTENSIONS);
+	Con_DPrintf("\nengine extensions: %s\n", vm_sv_extensions );
 
 	// clear to black (loading plaque will be seen over this)
 	qglClearColor(0,0,0,1);

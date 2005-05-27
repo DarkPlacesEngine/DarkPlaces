@@ -4629,8 +4629,8 @@ void MP_Keydown (int key, char ascii)
 	*prog->time = realtime;
 
 	// pass key
-	prog->globals[OFS_PARM0] = (float) key;
-	prog->globals[OFS_PARM1] = (float) ascii;
+	prog->globals.generic[OFS_PARM0] = (float) key;
+	prog->globals.generic[OFS_PARM1] = (float) ascii;
 	PRVM_ExecuteProgram(m_keydown, M_F_KEYDOWN"(float key, float ascii) required\n");
 
 	PRVM_End;
@@ -4694,9 +4694,10 @@ void MP_Init (void)
 	PRVM_Begin;
 	PRVM_InitProg(PRVM_MENUPROG);
 
-	prog->crc = M_PROGHEADER_CRC;
+	prog->headercrc = M_PROGHEADER_CRC;
 	prog->edictprivate_size = 0; // no private struct used
 	prog->name = M_NAME;
+	prog->num_edicts = 1;
 	prog->limit_edicts = M_MAX_EDICTS;
 	prog->extensionstring = vm_m_extensions;
 	prog->builtins = vm_m_builtins;
@@ -4708,7 +4709,7 @@ void MP_Init (void)
 	// allocate the mempools
 	prog->progs_mempool = Mem_AllocPool(M_PROG_FILENAME, 0, NULL);
 
-	PRVM_LoadProgs(M_PROG_FILENAME, m_numrequiredfunc, m_required_func);
+	PRVM_LoadProgs(M_PROG_FILENAME, m_numrequiredfunc, m_required_func, 0, NULL);
 
 	// set m_draw and m_keydown
 	m_draw = (func_t) (PRVM_ED_FindFunction(M_F_DRAW) - prog->functions);
