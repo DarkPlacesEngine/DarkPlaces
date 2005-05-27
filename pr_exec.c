@@ -199,7 +199,7 @@ void PR_StackTrace (void)
 		if (!f)
 			Con_Print("<NULL FUNCTION>\n");
 		else
-			Con_Printf("%12s : %s : statement %i\n", PR_GetString(f->s_file), PR_GetString(f->s_name), pr_stack[i].s - f->first_statement);
+			Con_Printf("%12s : %s : statement %i\n", PRVM_GetString(f->s_file), PRVM_GetString(f->s_name), pr_stack[i].s - f->first_statement);
 	}
 }
 
@@ -233,7 +233,7 @@ void PR_Profile_f (void)
 		best = NULL;
 		for (i=0 ; i<progs->numfunctions ; i++)
 		{
-			f = &pr_functions[i];
+			f = &prog->functions[i];
 			if (f->profile > max)
 			{
 				max = f->profile;
@@ -243,7 +243,7 @@ void PR_Profile_f (void)
 		if (best)
 		{
 			//if (num < howmany)
-				Con_Printf("%7i %7i %7i %s\n", best->profile, best->builtinsprofile, best->callcount, PR_GetString(best->s_name));
+				Con_Printf("%7i %7i %7i %s\n", best->profile, best->builtinsprofile, best->callcount, PRVM_GetString(best->s_name));
 			num++;
 			best->profile = 0;
 			best->builtinsprofile = 0;
@@ -280,7 +280,7 @@ void PR_Crash(void)
 
 /*
 ============================================================================
-PR_ExecuteProgram
+PRVM_ExecuteProgram
 
 The interpretation main loop
 ============================================================================
@@ -309,7 +309,7 @@ int PR_EnterFunction (mfunction_t *f)
 // save off any locals that the new function steps on
 	c = f->locals;
 	if (localstack_used + c > LOCALSTACK_SIZE)
-		Host_Error ("PR_ExecuteProgram: locals stack overflow\n");
+		Host_Error ("PRVM_ExecuteProgram: locals stack overflow\n");
 
 	for (i=0 ; i < c ; i++)
 		localstack[localstack_used+i] = ((int *)pr_globals)[f->parm_start + i];
@@ -348,7 +348,7 @@ int PR_LeaveFunction (void)
 	c = pr_xfunction->locals;
 	localstack_used -= c;
 	if (localstack_used < 0)
-		Host_Error ("PR_ExecuteProgram: locals stack underflow\n");
+		Host_Error ("PRVM_ExecuteProgram: locals stack underflow\n");
 
 	for (i=0 ; i < c ; i++)
 		((int *)pr_globals)[pr_xfunction->parm_start + i] = localstack[localstack_used+i];
@@ -371,31 +371,31 @@ void PR_Execute_ProgsLoaded(void)
 
 /*
 ====================
-PR_ExecuteProgram
+PRVM_ExecuteProgram
 ====================
 */
 // LordHavoc: optimized
-#define OPA ((eval_t *)&pr_globals[(unsigned short) st->a])
-#define OPB ((eval_t *)&pr_globals[(unsigned short) st->b])
-#define OPC ((eval_t *)&pr_globals[(unsigned short) st->c])
+#define OPA ((prvm_eval_t *)&pr_globals[(unsigned short) st->a])
+#define OPB ((prvm_eval_t *)&pr_globals[(unsigned short) st->b])
+#define OPC ((prvm_eval_t *)&pr_globals[(unsigned short) st->c])
 extern cvar_t pr_boundscheck;
 extern cvar_t pr_traceqc;
-void PR_ExecuteProgram (func_t fnum, const char *errormessage)
+void PRVM_ExecuteProgram (func_t fnum, const char *errormessage)
 {
 	dstatement_t	*st;
 	mfunction_t	*f, *newf;
-	edict_t	*ed;
-	eval_t	*ptr;
+	prvm_edict_t	*ed;
+	prvm_eval_t	*ptr;
 	int		profile, startprofile, cachedpr_trace, exitdepth;
 
 	if (!fnum || fnum >= (unsigned) progs->numfunctions)
 	{
-		if (pr_global_struct->self)
-			ED_Print(PROG_TO_EDICT(pr_global_struct->self));
-		Host_Error ("PR_ExecuteProgram: %s", errormessage);
+		if (prog->globals.server->self)
+			ED_Print(PRVM_PROG_TO_EDICT(prog->globals.server->self));
+		Host_Error ("PRVM_ExecuteProgram: %s", errormessage);
 	}
 
-	f = &pr_functions[fnum];
+	f = &prog->functions[fnum];
 
 	pr_trace = pr_traceqc.integer;
 

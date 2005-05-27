@@ -6,7 +6,7 @@
 // not yet used
 typedef struct physentity_s
 {
-	// this may be a entity_t, or a edict_t, or whatever
+	// this may be a entity_t, or a prvm_edict_t, or whatever
 	void *realentity;
 
 	// can be NULL if it is a bbox object

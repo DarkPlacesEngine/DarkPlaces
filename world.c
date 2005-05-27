@@ -146,25 +146,25 @@ SV_UnlinkEdict
 
 ===============
 */
-void SV_UnlinkEdict (edict_t *ent)
+void SV_UnlinkEdict (prvm_edict_t *ent)
 {
 	int i;
 	for (i = 0;i < ENTITYGRIDAREAS;i++)
 	{
-		if (ent->e->areagrid[i].prev)
+		if (ent->priv.server->areagrid[i].prev)
 		{
-			RemoveLink (&ent->e->areagrid[i]);
-			ent->e->areagrid[i].prev = ent->e->areagrid[i].next = NULL;
+			RemoveLink (&ent->priv.server->areagrid[i]);
+			ent->priv.server->areagrid[i].prev = ent->priv.server->areagrid[i].next = NULL;
 		}
 	}
 }
 
-int SV_EntitiesInBox(vec3_t mins, vec3_t maxs, int maxlist, edict_t **list)
+int SV_EntitiesInBox(vec3_t mins, vec3_t maxs, int maxlist, prvm_edict_t **list)
 {
 	int numlist;
 	areagrid_t *grid;
 	link_t *l;
-	edict_t *ent;
+	prvm_edict_t *ent;
 	int igrid[3], igridmins[3], igridmaxs[3];
 
 	sv_areagrid_stats_calls++;
@@ -189,11 +189,11 @@ int SV_EntitiesInBox(vec3_t mins, vec3_t maxs, int maxlist, edict_t **list)
 	{
 		for (l = sv_areagrid_outside.edicts.next;l != &sv_areagrid_outside.edicts;l = l->next)
 		{
-			ent = EDICT_NUM_UNSIGNED(l->entitynumber);
-			if (ent->e->areagridmarknumber != sv_areagrid_marknumber)
+			ent = PRVM_EDICT_NUM_UNSIGNED(l->entitynumber);
+			if (ent->priv.server->areagridmarknumber != sv_areagrid_marknumber)
 			{
-				ent->e->areagridmarknumber = sv_areagrid_marknumber;
-				if (!ent->e->free && BoxesOverlap(mins, maxs, ent->v->absmin, ent->v->absmax))
+				ent->priv.server->areagridmarknumber = sv_areagrid_marknumber;
+				if (!ent->priv.server->free && BoxesOverlap(mins, maxs, ent->fields.server->absmin, ent->fields.server->absmax))
 				{
 					if (numlist < maxlist)
 						list[numlist] = ent;
@@ -213,11 +213,11 @@ int SV_EntitiesInBox(vec3_t mins, vec3_t maxs, int maxlist, edict_t **list)
 			{
 				for (l = grid->edicts.next;l != &grid->edicts;l = l->next)
 				{
-					ent = EDICT_NUM_UNSIGNED(l->entitynumber);
-					if (ent->e->areagridmarknumber != sv_areagrid_marknumber)
+					ent = PRVM_EDICT_NUM_UNSIGNED(l->entitynumber);
+					if (ent->priv.server->areagridmarknumber != sv_areagrid_marknumber)
 					{
-						ent->e->areagridmarknumber = sv_areagrid_marknumber;
-						if (!ent->e->free && BoxesOverlap(mins, maxs, ent->v->absmin, ent->v->absmax))
+						ent->priv.server->areagridmarknumber = sv_areagrid_marknumber;
+						if (!ent->priv.server->free && BoxesOverlap(mins, maxs, ent->fields.server->absmin, ent->fields.server->absmax))
 						{
 							if (numlist < maxlist)
 								list[numlist] = ent;
@@ -232,14 +232,14 @@ int SV_EntitiesInBox(vec3_t mins, vec3_t maxs, int maxlist, edict_t **list)
 	return numlist;
 }
 
-void SV_TouchAreaGrid(edict_t *ent)
+void SV_TouchAreaGrid(prvm_edict_t *ent)
 {
 	int i, numtouchedicts, old_self, old_other;
-	edict_t *touch, *touchedicts[MAX_EDICTS];
+	prvm_edict_t *touch, *touchedicts[MAX_EDICTS];
 
 	// build a list of edicts to touch, because the link loop can be corrupted
 	// by SV_IncreaseEdicts called during touch functions
-	numtouchedicts = SV_EntitiesInBox(ent->v->absmin, ent->v->absmax, MAX_EDICTS, touchedicts);
+	numtouchedicts = SV_EntitiesInBox(ent->fields.server->absmin, ent->fields.server->absmax, MAX_EDICTS, touchedicts);
 	if (numtouchedicts > MAX_EDICTS)
 	{
 		// this never happens
@@ -247,41 +247,41 @@ void SV_TouchAreaGrid(edict_t *ent)
 		numtouchedicts = MAX_EDICTS;
 	}
 
-	old_self = pr_global_struct->self;
-	old_other = pr_global_struct->other;
+	old_self = prog->globals.server->self;
+	old_other = prog->globals.server->other;
 	for (i = 0;i < numtouchedicts;i++)
 	{
 		touch = touchedicts[i];
-		if (touch != ent && (int)touch->v->solid == SOLID_TRIGGER && touch->v->touch)
+		if (touch != ent && (int)touch->fields.server->solid == SOLID_TRIGGER && touch->fields.server->touch)
 		{
-			pr_global_struct->self = EDICT_TO_PROG(touch);
-			pr_global_struct->other = EDICT_TO_PROG(ent);
-			pr_global_struct->time = sv.time;
-			PR_ExecuteProgram (touch->v->touch, "QC function self.touch is missing");
+			prog->globals.server->self = PRVM_EDICT_TO_PROG(touch);
+			prog->globals.server->other = PRVM_EDICT_TO_PROG(ent);
+			prog->globals.server->time = sv.time;
+			PRVM_ExecuteProgram (touch->fields.server->touch, "QC function self.touch is missing");
 		}
 	}
-	pr_global_struct->self = old_self;
-	pr_global_struct->other = old_other;
+	prog->globals.server->self = old_self;
+	prog->globals.server->other = old_other;
 }
 
-void SV_LinkEdict_AreaGrid(edict_t *ent)
+void SV_LinkEdict_AreaGrid(prvm_edict_t *ent)
 {
 	areagrid_t *grid;
-	int igrid[3], igridmins[3], igridmaxs[3], gridnum, entitynumber = NUM_FOR_EDICT(ent);
+	int igrid[3], igridmins[3], igridmaxs[3], gridnum, entitynumber = PRVM_NUM_FOR_EDICT(ent);
 
-	if (entitynumber <= 0 || entitynumber >= sv.max_edicts || EDICT_NUM(entitynumber) != ent)
-		Host_Error("SV_LinkEdict_AreaGrid: invalid edict %p (sv.edicts is %p, edict compared to sv.edicts is %i)\n", ent, sv.edicts, entitynumber);
+	if (entitynumber <= 0 || entitynumber >= prog->max_edicts || PRVM_EDICT_NUM(entitynumber) != ent)
+		Host_Error("SV_LinkEdict_AreaGrid: invalid edict %p (edicts is %p, edict compared to prog->edicts is %i)\n", ent, prog->edicts, entitynumber);
 
-	igridmins[0] = (int) ((ent->v->absmin[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]);
-	igridmins[1] = (int) ((ent->v->absmin[1] + sv_areagrid_bias[1]) * sv_areagrid_scale[1]);
-	//igridmins[2] = (int) ((ent->v->absmin[2] + sv_areagrid_bias[2]) * sv_areagrid_scale[2]);
-	igridmaxs[0] = (int) ((ent->v->absmax[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]) + 1;
-	igridmaxs[1] = (int) ((ent->v->absmax[1] + sv_areagrid_bias[1]) * sv_areagrid_scale[1]) + 1;
-	//igridmaxs[2] = (int) ((ent->v->absmax[2] + sv_areagrid_bias[2]) * sv_areagrid_scale[2]) + 1;
+	igridmins[0] = (int) ((ent->fields.server->absmin[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]);
+	igridmins[1] = (int) ((ent->fields.server->absmin[1] + sv_areagrid_bias[1]) * sv_areagrid_scale[1]);
+	//igridmins[2] = (int) ((ent->fields.server->absmin[2] + sv_areagrid_bias[2]) * sv_areagrid_scale[2]);
+	igridmaxs[0] = (int) ((ent->fields.server->absmax[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]) + 1;
+	igridmaxs[1] = (int) ((ent->fields.server->absmax[1] + sv_areagrid_bias[1]) * sv_areagrid_scale[1]) + 1;
+	//igridmaxs[2] = (int) ((ent->fields.server->absmax[2] + sv_areagrid_bias[2]) * sv_areagrid_scale[2]) + 1;
 	if (igridmins[0] < 0 || igridmaxs[0] > AREA_GRID || igridmins[1] < 0 || igridmaxs[1] > AREA_GRID || ((igridmaxs[0] - igridmins[0]) * (igridmaxs[1] - igridmins[1])) > ENTITYGRIDAREAS)
 	{
 		// wow, something outside the grid, store it as such
-		InsertLinkBefore (&ent->e->areagrid[0], &sv_areagrid_outside.edicts, entitynumber);
+		InsertLinkBefore (&ent->priv.server->areagrid[0], &sv_areagrid_outside.edicts, entitynumber);
 		return;
 	}
 
@@ -290,7 +290,7 @@ void SV_LinkEdict_AreaGrid(edict_t *ent)
 	{
 		grid = sv_areagrid + igrid[1] * AREA_GRID + igridmins[0];
 		for (igrid[0] = igridmins[0];igrid[0] < igridmaxs[0];igrid[0]++, grid++, gridnum++)
-			InsertLinkBefore (&ent->e->areagrid[gridnum], &grid->edicts, entitynumber);
+			InsertLinkBefore (&ent->priv.server->areagrid[gridnum], &grid->edicts, entitynumber);
 	}
 }
 
@@ -300,27 +300,27 @@ SV_LinkEdict
 
 ===============
 */
-void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
+void SV_LinkEdict (prvm_edict_t *ent, qboolean touch_triggers)
 {
 	model_t *model;
 
-	if (ent->e->areagrid[0].prev)
+	if (ent->priv.server->areagrid[0].prev)
 		SV_UnlinkEdict (ent);	// unlink from old position
 
-	if (ent == sv.edicts)
+	if (ent == prog->edicts)
 		return;		// don't add the world
 
-	if (ent->e->free)
+	if (ent->priv.server->free)
 		return;
 
 // set the abs box
 
-	if (ent->v->solid == SOLID_BSP)
+	if (ent->fields.server->solid == SOLID_BSP)
 	{
-		int modelindex = ent->v->modelindex;
+		int modelindex = ent->fields.server->modelindex;
 		if (modelindex < 0 || modelindex > MAX_MODELS)
 		{
-			Con_Printf("edict %i: SOLID_BSP with invalid modelindex!\n", NUM_FOR_EDICT(ent));
+			Con_Printf("edict %i: SOLID_BSP with invalid modelindex!\n", PRVM_NUM_FOR_EDICT(ent));
 			modelindex = 0;
 		}
 		model = sv.models[modelindex];
@@ -328,63 +328,63 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 		{
 			Mod_CheckLoaded(model);
 			if (!model->TraceBox)
-				Con_Printf("edict %i: SOLID_BSP with non-collidable model\n", NUM_FOR_EDICT(ent));
+				Con_Printf("edict %i: SOLID_BSP with non-collidable model\n", PRVM_NUM_FOR_EDICT(ent));
 
-			if (ent->v->angles[0] || ent->v->angles[2] || ent->v->avelocity[0] || ent->v->avelocity[2])
+			if (ent->fields.server->angles[0] || ent->fields.server->angles[2] || ent->fields.server->avelocity[0] || ent->fields.server->avelocity[2])
 			{
-				VectorAdd(ent->v->origin, model->rotatedmins, ent->v->absmin);
-				VectorAdd(ent->v->origin, model->rotatedmaxs, ent->v->absmax);
+				VectorAdd(ent->fields.server->origin, model->rotatedmins, ent->fields.server->absmin);
+				VectorAdd(ent->fields.server->origin, model->rotatedmaxs, ent->fields.server->absmax);
 			}
-			else if (ent->v->angles[1] || ent->v->avelocity[1])
+			else if (ent->fields.server->angles[1] || ent->fields.server->avelocity[1])
 			{
-				VectorAdd(ent->v->origin, model->yawmins, ent->v->absmin);
-				VectorAdd(ent->v->origin, model->yawmaxs, ent->v->absmax);
+				VectorAdd(ent->fields.server->origin, model->yawmins, ent->fields.server->absmin);
+				VectorAdd(ent->fields.server->origin, model->yawmaxs, ent->fields.server->absmax);
 			}
 			else
 			{
-				VectorAdd(ent->v->origin, model->normalmins, ent->v->absmin);
-				VectorAdd(ent->v->origin, model->normalmaxs, ent->v->absmax);
+				VectorAdd(ent->fields.server->origin, model->normalmins, ent->fields.server->absmin);
+				VectorAdd(ent->fields.server->origin, model->normalmaxs, ent->fields.server->absmax);
 			}
 		}
 		else
 		{
 			// SOLID_BSP with no model is valid, mainly because some QC setup code does so temporarily
-			VectorAdd(ent->v->origin, ent->v->mins, ent->v->absmin);
-			VectorAdd(ent->v->origin, ent->v->maxs, ent->v->absmax);
+			VectorAdd(ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->absmin);
+			VectorAdd(ent->fields.server->origin, ent->fields.server->maxs, ent->fields.server->absmax);
 		}
 	}
 	else
 	{
-		VectorAdd(ent->v->origin, ent->v->mins, ent->v->absmin);
-		VectorAdd(ent->v->origin, ent->v->maxs, ent->v->absmax);
+		VectorAdd(ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->absmin);
+		VectorAdd(ent->fields.server->origin, ent->fields.server->maxs, ent->fields.server->absmax);
 	}
 
 //
 // to make items easier to pick up and allow them to be grabbed off
 // of shelves, the abs sizes are expanded
 //
-	if ((int)ent->v->flags & FL_ITEM)
+	if ((int)ent->fields.server->flags & FL_ITEM)
 	{
-		ent->v->absmin[0] -= 15;
-		ent->v->absmin[1] -= 15;
-		ent->v->absmin[2] -= 1;
-		ent->v->absmax[0] += 15;
-		ent->v->absmax[1] += 15;
-		ent->v->absmax[2] += 1;
+		ent->fields.server->absmin[0] -= 15;
+		ent->fields.server->absmin[1] -= 15;
+		ent->fields.server->absmin[2] -= 1;
+		ent->fields.server->absmax[0] += 15;
+		ent->fields.server->absmax[1] += 15;
+		ent->fields.server->absmax[2] += 1;
 	}
 	else
 	{
 		// because movement is clipped an epsilon away from an actual edge,
 		// we must fully check even when bounding boxes don't quite touch
-		ent->v->absmin[0] -= 1;
-		ent->v->absmin[1] -= 1;
-		ent->v->absmin[2] -= 1;
-		ent->v->absmax[0] += 1;
-		ent->v->absmax[1] += 1;
-		ent->v->absmax[2] += 1;
+		ent->fields.server->absmin[0] -= 1;
+		ent->fields.server->absmin[1] -= 1;
+		ent->fields.server->absmin[2] -= 1;
+		ent->fields.server->absmax[0] += 1;
+		ent->fields.server->absmax[1] += 1;
+		ent->fields.server->absmax[2] += 1;
 	}
 
-	if (ent->v->solid == SOLID_NOT)
+	if (ent->fields.server->solid == SOLID_NOT)
 		return;
 
 	SV_LinkEdict_AreaGrid(ent);
@@ -411,9 +411,9 @@ SV_TestEntityPosition
 This could be a lot more efficient...
 ============
 */
-int SV_TestEntityPosition (edict_t *ent)
+int SV_TestEntityPosition (prvm_edict_t *ent)
 {
-	return SV_Move (ent->v->origin, ent->v->mins, ent->v->maxs, ent->v->origin, MOVE_NORMAL, ent).startsolid;
+	return SV_Move (ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, ent->fields.server->origin, MOVE_NORMAL, ent).startsolid;
 }
 
 
@@ -433,7 +433,7 @@ Handles selection or creation of a clipping hull, and offseting (and
 eventually rotation) of the end points
 ==================
 */
-trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int movetype, int hitsupercontents)
+trace_t SV_ClipMoveToEntity(prvm_edict_t *ent, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int movetype, int hitsupercontents)
 {
 	trace_t trace;
 	model_t *model = NULL;
@@ -445,45 +445,45 @@ trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins,
 	trace.fraction = trace.realfraction = 1;
 	VectorCopy(end, trace.endpos);
 
-	if ((int) ent->v->solid == SOLID_BSP || movetype == MOVE_HITMODEL)
+	if ((int) ent->fields.server->solid == SOLID_BSP || movetype == MOVE_HITMODEL)
 	{
-		unsigned int modelindex = ent->v->modelindex;
+		unsigned int modelindex = ent->fields.server->modelindex;
 		// if the modelindex is 0, it shouldn't be SOLID_BSP!
 		if (modelindex == 0)
 		{
-			Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with no model\n", NUM_FOR_EDICT(ent));
+			Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with no model\n", PRVM_NUM_FOR_EDICT(ent));
 			return trace;
 		}
 		if (modelindex >= MAX_MODELS)
 		{
-			Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with invalid modelindex\n", NUM_FOR_EDICT(ent));
+			Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with invalid modelindex\n", PRVM_NUM_FOR_EDICT(ent));
 			return trace;
 		}
 		model = sv.models[modelindex];
 		if (modelindex != 0 && model == NULL)
 		{
-			Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with invalid modelindex\n", NUM_FOR_EDICT(ent));
+			Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with invalid modelindex\n", PRVM_NUM_FOR_EDICT(ent));
 			return trace;
 		}
 
 		Mod_CheckLoaded(model);
-		if ((int) ent->v->solid == SOLID_BSP)
+		if ((int) ent->fields.server->solid == SOLID_BSP)
 		{
 			if (!model->TraceBox)
 			{
-				Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with a non-collidable model\n", NUM_FOR_EDICT(ent));
+				Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with a non-collidable model\n", PRVM_NUM_FOR_EDICT(ent));
 				return trace;
 			}
-			//if (ent->v->movetype != MOVETYPE_PUSH)
+			//if (ent->fields.server->movetype != MOVETYPE_PUSH)
 			//{
-			//	Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP without MOVETYPE_PUSH\n", NUM_FOR_EDICT(ent));
+			//	Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP without MOVETYPE_PUSH\n", PRVM_NUM_FOR_EDICT(ent));
 			//	return trace;
 			//}
 		}
-		Matrix4x4_CreateFromQuakeEntity(&matrix, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2], ent->v->angles[0], ent->v->angles[1], ent->v->angles[2], 1);
+		Matrix4x4_CreateFromQuakeEntity(&matrix, ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2], ent->fields.server->angles[0], ent->fields.server->angles[1], ent->fields.server->angles[2], 1);
 	}
 	else
-		Matrix4x4_CreateTranslate(&matrix, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2]);
+		Matrix4x4_CreateTranslate(&matrix, ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2]);
 
 	Matrix4x4_Invert_Simple(&imatrix, &matrix);
 	Matrix4x4_Transform(&imatrix, start, starttransformed);
@@ -495,7 +495,7 @@ trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins,
 	if (model && model->TraceBox)
 	{
 		int frame;
-		frame = (int)ent->v->frame;
+		frame = (int)ent->fields.server->frame;
 		frame = bound(0, frame, (model->numframes - 1));
 		VectorAdd(starttransformed, maxs, starttransformedmaxs);
 		VectorAdd(endtransformed, maxs, endtransformedmaxs);
@@ -504,7 +504,7 @@ trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins,
 		model->TraceBox(model, frame, &trace, starttransformedmins, starttransformedmaxs, endtransformedmins, endtransformedmaxs, hitsupercontents);
 	}
 	else
-		Collision_ClipTrace_Box(&trace, ent->v->mins, ent->v->maxs, starttransformed, mins, maxs, endtransformed, hitsupercontents, SUPERCONTENTS_SOLID);
+		Collision_ClipTrace_Box(&trace, ent->fields.server->mins, ent->fields.server->maxs, starttransformed, mins, maxs, endtransformed, hitsupercontents, SUPERCONTENTS_SOLID);
 	trace.fraction = bound(0, trace.fraction, 1);
 	trace.realfraction = bound(0, trace.realfraction, 1);
 
@@ -529,9 +529,9 @@ SV_Move
 ==================
 */
 #if COLLISIONPARANOID >= 1
-trace_t SV_Move_(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, edict_t *passedict)
+trace_t SV_Move_(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict)
 #else
-trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, edict_t *passedict)
+trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict)
 #endif
 {
 	vec3_t hullmins, hullmaxs;
@@ -539,7 +539,7 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	int hitsupercontentsmask;
 	int passedictprog;
 	qboolean pointtrace;
-	edict_t *traceowner, *touch;
+	prvm_edict_t *traceowner, *touch;
 	trace_t trace;
 	// bounding box of entire move area
 	vec3_t clipboxmins, clipboxmaxs;
@@ -552,7 +552,7 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	// trace results
 	trace_t cliptrace;
 	int numtouchedicts;
-	edict_t *touchedicts[MAX_EDICTS];
+	prvm_edict_t *touchedicts[MAX_EDICTS];
 
 	VectorCopy(start, clipstart);
 	VectorCopy(end, clipend);
@@ -567,16 +567,16 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	hitsupercontentsmask = SUPERCONTENTS_SOLID;
 	if (passedict)
 	{
-		if (passedict->v->solid == SOLID_SLIDEBOX)
+		if (passedict->fields.server->solid == SOLID_SLIDEBOX)
 			hitsupercontentsmask |= SUPERCONTENTS_PLAYERCLIP;
-		if ((int)passedict->v->flags & FL_MONSTER)
+		if ((int)passedict->fields.server->flags & FL_MONSTER)
 			hitsupercontentsmask |= SUPERCONTENTS_MONSTERCLIP;
 	}
 
 	// clip to world
-	cliptrace = SV_ClipMoveToEntity(sv.edicts, clipstart, clipmins, clipmaxs, clipend, type, hitsupercontentsmask);
+	cliptrace = SV_ClipMoveToEntity(prog->edicts, clipstart, clipmins, clipmaxs, clipend, type, hitsupercontentsmask);
 	if (cliptrace.startsolid || cliptrace.fraction < 1)
-		cliptrace.ent = sv.edicts;
+		cliptrace.ent = prog->edicts;
 	if (type == MOVE_WORLDONLY)
 		return cliptrace;
 
@@ -614,14 +614,14 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	}
 
 	// if the passedict is world, make it NULL (to avoid two checks each time)
-	if (passedict == sv.edicts)
+	if (passedict == prog->edicts)
 		passedict = NULL;
 	// precalculate prog value for passedict for comparisons
-	passedictprog = EDICT_TO_PROG(passedict);
+	passedictprog = PRVM_EDICT_TO_PROG(passedict);
 	// figure out whether this is a point trace for comparisons
 	pointtrace = VectorCompare(clipmins, clipmaxs);
 	// precalculate passedict's owner edict pointer for comparisons
-	traceowner = passedict ? PROG_TO_EDICT(passedict->v->owner) : 0;
+	traceowner = passedict ? PRVM_PROG_TO_EDICT(passedict->fields.server->owner) : 0;
 
 	// clip to enttiies
 	numtouchedicts = SV_EntitiesInBox(clipboxmins, clipboxmaxs, MAX_EDICTS, touchedicts);
@@ -635,9 +635,9 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	{
 		touch = touchedicts[i];
 
-		if (touch->v->solid < SOLID_BBOX)
+		if (touch->fields.server->solid < SOLID_BBOX)
 			continue;
-		if (type == MOVE_NOMONSTERS && touch->v->solid != SOLID_BSP)
+		if (type == MOVE_NOMONSTERS && touch->fields.server->solid != SOLID_BSP)
 			continue;
 
 		if (passedict)
@@ -649,21 +649,21 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 			if (traceowner == touch)
 				continue;
 			// don't clip owner against owned entities
-			if (passedictprog == touch->v->owner)
+			if (passedictprog == touch->fields.server->owner)
 				continue;
 			// don't clip points against points (they can't collide)
-			if (pointtrace && VectorCompare(touch->v->mins, touch->v->maxs) && (type != MOVE_MISSILE || !((int)touch->v->flags & FL_MONSTER)))
+			if (pointtrace && VectorCompare(touch->fields.server->mins, touch->fields.server->maxs) && (type != MOVE_MISSILE || !((int)touch->fields.server->flags & FL_MONSTER)))
 				continue;
 			// don't clip corpse against character
-			if (passedict->v->solid == SOLID_CORPSE && (touch->v->solid == SOLID_SLIDEBOX || touch->v->solid == SOLID_CORPSE))
+			if (passedict->fields.server->solid == SOLID_CORPSE && (touch->fields.server->solid == SOLID_SLIDEBOX || touch->fields.server->solid == SOLID_CORPSE))
 				continue;
 			// don't clip character against corpse
-			if (passedict->v->solid == SOLID_SLIDEBOX && touch->v->solid == SOLID_CORPSE)
+			if (passedict->fields.server->solid == SOLID_SLIDEBOX && touch->fields.server->solid == SOLID_CORPSE)
 				continue;
 		}
 
 		// might interact, so do an exact clip
-		if ((int)touch->v->flags & FL_MONSTER)
+		if ((int)touch->fields.server->flags & FL_MONSTER)
 			trace = SV_ClipMoveToEntity(touch, clipstart, clipmins2, clipmaxs2, clipend, type, hitsupercontentsmask);
 		else
 			trace = SV_ClipMoveToEntity(touch, clipstart, clipmins, clipmaxs, clipend, type, hitsupercontentsmask);
@@ -698,7 +698,7 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 }
 
 #if COLLISIONPARANOID >= 1
-trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, edict_t *passedict)
+trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict)
 {
 	int endstuck;
 	trace_t trace;
@@ -711,7 +711,7 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 #if COLLISIONPARANOID < 3
 		if (trace.startsolid || endstuck)
 #endif
-			Con_Printf("%s{e%i:%f %f %f:%f %f %f:%f:%f %f %f%s%s}\n", (trace.startsolid || endstuck) ? "\002" : "", passedict ? passedict - sv.edicts : -1, passedict->v->origin[0], passedict->v->origin[1], passedict->v->origin[2], end[0] - passedict->v->origin[0], end[1] - passedict->v->origin[1], end[2] - passedict->v->origin[2], trace.fraction, trace.endpos[0] - passedict->v->origin[0], trace.endpos[1] - passedict->v->origin[1], trace.endpos[2] - passedict->v->origin[2], trace.startsolid ? " startstuck" : "", endstuck ? " endstuck" : "");
+			Con_Printf("%s{e%i:%f %f %f:%f %f %f:%f:%f %f %f%s%s}\n", (trace.startsolid || endstuck) ? "\002" : "", passedict ? passedict - prog->edicts : -1, passedict->fields.server->origin[0], passedict->fields.server->origin[1], passedict->fields.server->origin[2], end[0] - passedict->fields.server->origin[0], end[1] - passedict->fields.server->origin[1], end[2] - passedict->fields.server->origin[2], trace.fraction, trace.endpos[0] - passedict->fields.server->origin[0], trace.endpos[1] - passedict->fields.server->origin[1], trace.endpos[2] - passedict->fields.server->origin[2], trace.startsolid ? " startstuck" : "", endstuck ? " endstuck" : "");
 	}
 	return trace;
 }

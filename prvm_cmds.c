@@ -11,8 +11,6 @@
 
 // temp string handling
 // LordHavoc: added this to semi-fix the problem of using many ftos calls in a print
-#define VM_STRINGTEMP_BUFFERS 16
-#define VM_STRINGTEMP_LENGTH 4096
 static char vm_string_temp[VM_STRINGTEMP_BUFFERS][VM_STRINGTEMP_LENGTH];
 static int vm_string_tempindex = 0;
 
@@ -370,7 +368,7 @@ void VM_vectoangles (void)
 			yaw = 270;
 
 		forward = sqrt(value1[0]*value1[0] + value1[1]*value1[1]);
-		pitch = (int) (atan2(value1[2], forward) * 180 / M_PI);
+		pitch = (atan2(value1[2], forward) * 180 / M_PI);
 		if (pitch < 0)
 			pitch += 360;
 	}
@@ -416,15 +414,15 @@ void PF_sound (void)
 {
 	char		*sample;
 	int			channel;
-	edict_t		*entity;
+	prvm_edict_t		*entity;
 	int 		volume;
 	float attenuation;
 
-	entity = G_EDICT(OFS_PARM0);
-	channel = G_FLOAT(OFS_PARM1);
-	sample = G_STRING(OFS_PARM2);
-	volume = G_FLOAT(OFS_PARM3) * 255;
-	attenuation = G_FLOAT(OFS_PARM4);
+	entity = PRVM_G_EDICT(OFS_PARM0);
+	channel = PRVM_G_FLOAT(OFS_PARM1);
+	sample = PRVM_G_STRING(OFS_PARM2);
+	volume = PRVM_G_FLOAT(OFS_PARM3) * 255;
+	attenuation = PRVM_G_FLOAT(OFS_PARM4);
 
 	if (volume < 0 || volume > 255)
 		Host_Error ("SV_StartSound: volume = %i", volume);
@@ -729,11 +727,17 @@ void VM_remove (void)
 	VM_SAFEPARMCOUNT(1, VM_remove);
 
 	ed = PRVM_G_EDICT(OFS_PARM0);
+	if( PRVM_NUM_FOR_EDICT(ed) <= prog->reserved_edicts ) {
+		Con_DPrint( "VM_remove: tried to remove the null entity or a reserved entity!\n" );
+	} else if( ed->priv.required->free ) {
+		Con_DPrint( "VM_remove: tried to remove an already freed entity!\n" );
+	} else {
+		PRVM_ED_Free (ed);
+	}
 //	if (ed == prog->edicts)
 //		PRVM_ERROR ("remove: tried to remove world\n");
 //	if (PRVM_NUM_FOR_EDICT(ed) <= sv.maxclients)
 //		Host_Error("remove: tried to remove a client\n");
-	PRVM_ED_Free (ed);
 }
 
 /*
@@ -924,54 +928,6 @@ void VM_findchainfloat (void)
 
 /*
 =========
-VM_precache_file
-
-string	precache_file(string)
-=========
-*/
-void VM_precache_file (void)
-{	// precache_file is only used to copy files with qcc, it does nothing
-	VM_SAFEPARMCOUNT(1,VM_precache_file);
-
-	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
-}
-
-/*
-=========
-VM_preache_error
-
-used instead of the other VM_precache_* functions in the builtin list
-=========
-*/
-
-void VM_precache_error (void)
-{
-	PRVM_ERROR ("PF_Precache_*: Precache can only be done in spawn functions");
-}
-
-/*
-=========
-VM_precache_sound
-
-string	precache_sound (string sample)
-=========
-*/
-void VM_precache_sound (void)
-{
-	const char	*s;
-
-	VM_SAFEPARMCOUNT(1, VM_precache_sound);
-
-	s = PRVM_G_STRING(OFS_PARM0);
-	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
-	VM_CheckEmptyString (s);
-
-	if(snd_initialized.integer && !S_PrecacheSound (s,true, true))
-		Con_Printf("VM_precache_sound: Failed to load %s for %s\n", s, PRVM_NAME);
-}
-
-/*
-=========
 VM_coredump
 
 coredump()
@@ -1136,98 +1092,6 @@ void VM_nextent (void)
 			return;
 		}
 	}
-}
-
-/*
-===============================================================================
-MESSAGE WRITING
-
-used only for client and menu
-severs uses VM_SV_...
-
-Write*(* data, float type, float to)
-
-===============================================================================
-*/
-
-#define	MSG_BROADCAST	0		// unreliable to all
-#define	MSG_ONE			1		// reliable to one (msg_entity)
-#define	MSG_ALL			2		// reliable to all
-#define	MSG_INIT		3		// write to the init string
-
-sizebuf_t *VM_WriteDest (void)
-{
-	int		dest;
-	int		destclient;
-
-	if(!sv.active)
-		PRVM_ERROR("VM_WriteDest: game is not server (%s)\n", PRVM_NAME);
-
-	dest = G_FLOAT(OFS_PARM1);
-	switch (dest)
-	{
-	case MSG_BROADCAST:
-		return &sv.datagram;
-
-	case MSG_ONE:
-		destclient = (int) PRVM_G_FLOAT(OFS_PARM2);
-		if (destclient < 0 || destclient >= svs.maxclients || !svs.clients[destclient].active)
-			PRVM_ERROR("VM_clientcommand: %s: invalid client !\n", PRVM_NAME);
-
-		return &svs.clients[destclient].message;
-
-	case MSG_ALL:
-		return &sv.reliable_datagram;
-
-	case MSG_INIT:
-		return &sv.signon;
-
-	default:
-		PRVM_ERROR ("WriteDest: bad destination");
-		break;
-	}
-
-	return NULL;
-}
-
-void VM_WriteByte (void)
-{
-	MSG_WriteByte (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0));
-}
-
-void VM_WriteChar (void)
-{
-	MSG_WriteChar (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0));
-}
-
-void VM_WriteShort (void)
-{
-	MSG_WriteShort (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0));
-}
-
-void VM_WriteLong (void)
-{
-	MSG_WriteLong (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0));
-}
-
-void VM_WriteAngle (void)
-{
-	MSG_WriteAngle (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0), sv.protocol);
-}
-
-void VM_WriteCoord (void)
-{
-	MSG_WriteCoord (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0), sv.protocol);
-}
-
-void VM_WriteString (void)
-{
-	MSG_WriteString (VM_WriteDest(), PRVM_G_STRING(OFS_PARM0));
-}
-
-void VM_WriteEntity (void)
-{
-	MSG_WriteShort (VM_WriteDest(), PRVM_G_EDICTNUM(OFS_PARM0));
 }
 
 //=============================================================================
@@ -1490,10 +1354,10 @@ setcolor(clientent, value)
 {
 	client_t *client;
 	int entnum, i;
-	eval_t *val;
+	prvm_eval_t *val;
 
-	entnum = G_EDICTNUM(OFS_PARM0);
-	i = G_FLOAT(OFS_PARM1);
+	entnum = PRVM_G_EDICTNUM(OFS_PARM0);
+	i = PRVM_G_FLOAT(OFS_PARM1);
 
 	if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
 	{
@@ -1502,11 +1366,11 @@ setcolor(clientent, value)
 	}
 
 	client = svs.clients + entnum-1;
-	if ((val = GETEDICTFIELDVALUE(client->edict, eval_clientcolors)))
+	if ((val = PRVM_GETEDICTFIELDVALUE(client->edict, eval_clientcolors)))
 		val->_float = i;
 	client->colors = i;
 	client->old_colors = i;
-	client->edict->v->team = (i & 15) + 1;
+	client->edict->fields.server->team = (i & 15) + 1;
 
 	MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
 	MSG_WriteByte (&sv.reliable_datagram, entnum - 1);
@@ -1589,16 +1453,7 @@ void VM_fopen(void)
 		return;
 	}
 	filename = PRVM_G_STRING(OFS_PARM0);
-	// .. is parent directory on many platforms
-	// / is parent directory on Amiga
-	// : is root of drive on Amiga (also used as a directory separator on Mac, but / works there too, so that's a bad idea)
-	// \ is a windows-ism (so it's naughty to use it, / works on all platforms)
-	if ((filename[0] == '.' && filename[1] == '.') || filename[0] == '/' || strrchr(filename, ':') || strrchr(filename, '\\'))
-	{
-		Con_Printf("VM_fopen: %s dangerous or non-portable filename \"%s\" not allowed. (contains : or \\ or begins with .. or /)\n", PRVM_NAME, filename);
-		PRVM_G_FLOAT(OFS_RETURN) = -4;
-		return;
-	}
+
 	VM_FILES[filenum] = FS_Open(va("data/%s", filename), modestring, false, false);
 	if (VM_FILES[filenum] == NULL && mode == 0)
 		VM_FILES[filenum] = FS_Open(va("%s", filename), modestring, false, false);
@@ -1887,50 +1742,38 @@ VM_tokenize
 float tokenize(string s)
 =========
 */
-//float(string s) tokenize = #441;
-// takes apart a string into individal words (access them with argv), returns how many
-// this function originally written by KrimZon, made shorter by LordHavoc
-static char **tokens = NULL;
-static int    max_tokens, num_tokens = 0;
+//float(string s) tokenize = #441; // takes apart a string into individal words (access them with argv), returns how many
+//this function originally written by KrimZon, made shorter by LordHavoc
+//20040203: rewritten by LordHavoc (no longer uses allocations)
+int num_tokens = 0;
+char *tokens[256], tokenbuf[4096];
 void VM_tokenize (void)
 {
-	const char *p, *str;
+	int pos;
+	const char *p;
 
 	VM_SAFEPARMCOUNT(1,VM_tokenize);
 
-	str = PRVM_G_STRING(OFS_PARM0);
+	p = PRVM_G_STRING(OFS_PARM0);
 
-	if (tokens != NULL)
+	num_tokens = 0;
+	pos = 0;
+	while(COM_ParseToken(&p, false))
 	{
-		int i;
-		for (i=0;i<num_tokens;i++)
-			Z_Free(tokens[i]);
-		Z_Free(tokens);
-		num_tokens = 0;
-	}
-
-	tokens = Z_Malloc(strlen(str) * sizeof(char *));
-	max_tokens = strlen(str);
-
-	for (p = str;COM_ParseToken(&p, false) && num_tokens < max_tokens;num_tokens++)
-	{
-		tokens[num_tokens] = Z_Malloc(strlen(com_token) + 1);
-		strcpy(tokens[num_tokens], com_token);
+		if (num_tokens >= (int)(sizeof(tokens)/sizeof(tokens[0])))
+			break;
+		if (pos + strlen(com_token) + 1 > sizeof(tokenbuf))
+			break;
+		tokens[num_tokens++] = tokenbuf + pos;
+		strcpy(tokenbuf + pos, com_token);
+		pos += strlen(com_token) + 1;
 	}
 
 	PRVM_G_FLOAT(OFS_RETURN) = num_tokens;
 }
 
-/*
-=========
-VM_argv
-
-string argv(float n)
-=========
-*/
-//string(float n) argv = #442;
-// returns a word from the tokenized string (returns nothing for an invalid index)
-// this function originally written by KrimZon, made shorter by LordHavoc
+//string(float n) argv = #442; // returns a word from the tokenized string (returns nothing for an invalid index)
+//this function originally written by KrimZon, made shorter by LordHavoc
 void VM_argv (void)
 {
 	int token_num;
@@ -1938,6 +1781,7 @@ void VM_argv (void)
 	VM_SAFEPARMCOUNT(1,VM_argv);
 
 	token_num = PRVM_G_FLOAT(OFS_PARM0);
+
 	if (token_num >= 0 && token_num < num_tokens)
 		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(tokens[token_num]);
 	else
@@ -1948,43 +1792,43 @@ void VM_argv (void)
 //void(entity e, entity tagentity, string tagname) setattachment = #443; // attachs e to a tag on tagentity (note: use "" to attach to entity origin/angles instead of a tag)
 void PF_setattachment (void)
 {
-	edict_t *e = G_EDICT(OFS_PARM0);
-	edict_t *tagentity = G_EDICT(OFS_PARM1);
-	char *tagname = G_STRING(OFS_PARM2);
-	eval_t *v;
+	prvm_edict_t *e = PRVM_G_EDICT(OFS_PARM0);
+	prvm_edict_t *tagentity = PRVM_G_EDICT(OFS_PARM1);
+	char *tagname = PRVM_G_STRING(OFS_PARM2);
+	prvm_eval_t *v;
 	int i, modelindex;
 	model_t *model;
 
 	if (tagentity == NULL)
-		tagentity = sv.edicts;
+		tagentity = prog->edicts;
 
-	v = GETEDICTFIELDVALUE(e, eval_tag_entity);
+	v = PRVM_GETEDICTFIELDVALUE(e, eval_tag_entity);
 	if (v)
-		v->edict = EDICT_TO_PROG(tagentity);
+		fields.server->edict = PRVM_EDICT_TO_PROG(tagentity);
 
-	v = GETEDICTFIELDVALUE(e, eval_tag_index);
+	v = PRVM_GETEDICTFIELDVALUE(e, eval_tag_index);
 	if (v)
-		v->_float = 0;
-	if (tagentity != NULL && tagentity != sv.edicts && tagname && tagname[0])
+		fields.server->_float = 0;
+	if (tagentity != NULL && tagentity != prog->edicts && tagname && tagname[0])
 	{
-		modelindex = (int)tagentity->v->modelindex;
+		modelindex = (int)tagentity->fields.server->modelindex;
 		if (modelindex >= 0 && modelindex < MAX_MODELS)
 		{
 			model = sv.models[modelindex];
-			if (model->data_overridetagnamesforskin && (unsigned int)tagentity->v->skin < (unsigned int)model->numskins && model->data_overridetagnamesforskin[(unsigned int)tagentity->v->skin].num_overridetagnames)
-				for (i = 0;i < model->data_overridetagnamesforskin[(unsigned int)tagentity->v->skin].num_overridetagnames;i++)
-					if (!strcmp(tagname, model->data_overridetagnamesforskin[(unsigned int)tagentity->v->skin].data_overridetagnames[i].name))
-						v->_float = i + 1;
+			if (model->data_overridetagnamesforskin && (unsigned int)tagentity->fields.server->skin < (unsigned int)model->numskins && model->data_overridetagnamesforskin[(unsigned int)tagentity->fields.server->skin].num_overridetagnames)
+				for (i = 0;i < model->data_overridetagnamesforskin[(unsigned int)tagentity->fields.server->skin].num_overridetagnames;i++)
+					if (!strcmp(tagname, model->data_overridetagnamesforskin[(unsigned int)tagentity->fields.server->skin].data_overridetagnames[i].name))
+						fields.server->_float = i + 1;
 			// FIXME: use a model function to get tag info (need to handle skeletal)
-			if (v->_float == 0 && model->num_tags)
+			if (fields.server->_float == 0 && model->num_tags)
 				for (i = 0;i < model->num_tags;i++)
 					if (!strcmp(tagname, model->data_tags[i].name))
-						v->_float = i + 1;
-			if (v->_float == 0)
-				Con_DPrintf("setattachment(edict %i, edict %i, string \"%s\"): tried to find tag named \"%s\" on entity %i (model \"%s\") but could not find it\n", NUM_FOR_EDICT(e), NUM_FOR_EDICT(tagentity), tagname, tagname, NUM_FOR_EDICT(tagentity), model->name);
+						fields.server->_float = i + 1;
+			if (fields.server->_float == 0)
+				Con_DPrintf("setattachment(edict %i, edict %i, string \"%s\"): tried to find tag named \"%s\" on entity %i (model \"%s\") but could not find it\n", PRVM_NUM_FOR_EDICT(e), PRVM_NUM_FOR_EDICT(tagentity), tagname, tagname, PRVM_NUM_FOR_EDICT(tagentity), model->name);
 		}
 		else
-			Con_DPrintf("setattachment(edict %i, edict %i, string \"%s\"): tried to find tag named \"%s\" on entity %i but it has no model\n", NUM_FOR_EDICT(e), NUM_FOR_EDICT(tagentity), tagname, tagname, NUM_FOR_EDICT(tagentity));
+			Con_DPrintf("setattachment(edict %i, edict %i, string \"%s\"): tried to find tag named \"%s\" on entity %i but it has no model\n", PRVM_NUM_FOR_EDICT(e), PRVM_NUM_FOR_EDICT(tagentity), tagname, tagname, PRVM_NUM_FOR_EDICT(tagentity));
 	}
 }*/
 

@@ -76,20 +76,9 @@ typedef struct
 	// updated by SV_SoundIndex
 	char sound_precache[MAX_SOUNDS][MAX_QPATH];
 	char lightstyles[MAX_LIGHTSTYLES][64];
-	int num_edicts;
-	int max_edicts;
-	// small edict_t structures which just contain pointers
-	// (allocated at server startup only)
-	edict_t *edicts;
-	// engine private edict information
-	// (dynamically resized - always access through edict_t!)
-	edict_engineprivate_t *edictsengineprivate;
-	// QuakeC fields array
-	// (dynamically resized - always access through edict_t!)
-	void *edictsfields;
 	// PushMove sometimes has to move entities back from a failed move
 	// (dynamically resized)
-	edict_t **moved_edicts;
+	prvm_edict_t **moved_edicts;
 	// some actions are only valid during load
 	server_state_t state;
 
@@ -143,8 +132,8 @@ typedef struct client_s
 	// can be added to at any time, copied and clear once per frame
 	sizebuf_t message;
 	qbyte msgbuf[NET_MAXMESSAGE];
-	// EDICT_NUM(clientnum+1)
-	edict_t *edict;
+	// PRVM_EDICT_NUM(clientnum+1)
+	prvm_edict_t *edict;
 
 	float ping_times[NUM_PING_TIMES];
 	// ping_times[num_pings%NUM_PING_TIMES]
@@ -296,7 +285,7 @@ void SV_Init (void);
 
 void SV_StartParticle (vec3_t org, vec3_t dir, int color, int count);
 void SV_StartEffect (vec3_t org, int modelindex, int startframe, int framecount, int framerate);
-void SV_StartSound (edict_t *entity, int channel, const char *sample, int volume, float attenuation);
+void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int volume, float attenuation);
 
 void SV_ConnectClient (int clientnum, netconn_t *netconnection);
 void SV_DropClient (qboolean crash);
@@ -326,11 +315,11 @@ void SV_BroadcastPrintf(const char *fmt, ...);
 
 void SV_Physics (void);
 
-qboolean SV_PlayerCheckGround (edict_t *ent);
-qboolean SV_CheckBottom (edict_t *ent);
-qboolean SV_movestep (edict_t *ent, vec3_t move, qboolean relink);
+qboolean SV_PlayerCheckGround (prvm_edict_t *ent);
+qboolean SV_CheckBottom (prvm_edict_t *ent);
+qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink);
 
-void SV_WriteClientdataToMessage (client_t *client, edict_t *ent, sizebuf_t *msg, int *stats);
+void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats);
 
 void SV_MoveToGoal (void);
 
@@ -338,7 +327,12 @@ void SV_ApplyClientMove (void);
 void SV_SaveSpawnparms (void);
 void SV_SpawnServer (const char *server);
 
-void SV_CheckVelocity (edict_t *ent);
+void SV_CheckVelocity (prvm_edict_t *ent);
+
+void SV_SetupVM(void);
+
+void SV_VM_Begin(void);
+void SV_VM_End(void);
 
 #endif
 

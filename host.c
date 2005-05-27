@@ -127,7 +127,7 @@ void Host_Error (const char *error, ...)
 
 	CL_Parse_DumpPacket();
 
-	PR_Crash();
+	//PR_Crash();
 
 	//PRVM_Crash(); // crash current prog
 
@@ -394,7 +394,7 @@ void SV_DropClient(qboolean crash)
 	Con_Printf("Client \"%s\" dropped\n", host_client->name);
 
 	// make sure edict is not corrupt (from a level change for example)
-	host_client->edict = EDICT_NUM(host_client - svs.clients + 1);
+	host_client->edict = PRVM_EDICT_NUM(host_client - svs.clients + 1);
 
 	if (host_client->netconnection)
 	{
@@ -419,18 +419,18 @@ void SV_DropClient(qboolean crash)
 	{
 		// call the prog function for removing a client
 		// this will set the body to a dead frame, among other things
-		int saveSelf = pr_global_struct->self;
+		int saveSelf = prog->globals.server->self;
 		host_client->clientconnectcalled = false;
-		pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
-		PR_ExecuteProgram(pr_global_struct->ClientDisconnect, "QC function ClientDisconnect is missing");
-		pr_global_struct->self = saveSelf;
+		prog->globals.server->self = PRVM_EDICT_TO_PROG(host_client->edict);
+		PRVM_ExecuteProgram(prog->globals.server->ClientDisconnect, "QC function ClientDisconnect is missing");
+		prog->globals.server->self = saveSelf;
 	}
 
 	// remove leaving player from scoreboard
-	//host_client->edict->v->netname = PR_SetEngineString(host_client->name);
-	//if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_clientcolors)))
+	//host_client->edict->fields.server->netname = PRVM_SetEngineString(host_client->name);
+	//if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_clientcolors)))
 	//	val->_float = 0;
-	//host_client->edict->v->frags = 0;
+	//host_client->edict->fields.server->frags = 0;
 	host_client->name[0] = 0;
 	host_client->colors = 0;
 	host_client->frags = 0;
@@ -458,7 +458,7 @@ void SV_DropClient(qboolean crash)
 	if (sv.active)
 	{
 		// clear a fields that matter to DP_SV_CLIENTNAME and DP_SV_CLIENTCOLORS, and also frags
-		ED_ClearEdict(host_client->edict);
+		PRVM_ED_ClearEdict(host_client->edict);
 	}
 
 	// clear the client struct (this sets active to false)
@@ -487,8 +487,9 @@ void Host_ShutdownServer(qboolean crash)
 	if (!sv.active)
 		return;
 
+	SV_VM_Begin();
 	// print out where the crash happened, if it was caused by QC
-	PR_Crash();
+	//PRVM_Crash();
 
 	NetConn_Heartbeat(2);
 	NetConn_Heartbeat(2);
@@ -503,18 +504,20 @@ void Host_ShutdownServer(qboolean crash)
 		Con_Printf("Host_ShutdownServer: NetConn_SendToAll failed for %u clients\n", count);
 
 	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
-		if (host_client->active)
+		if (host_client->active) {
 			SV_DropClient(crash); // server shutdown
+		}
 
 	NetConn_CloseServerPorts();
 
 	sv.active = false;
-
 //
 // clear structures
 //
 	memset(&sv, 0, sizeof(sv));
 	memset(svs.clients, 0, svs.maxclients*sizeof(client_t));
+
+	SV_VM_End();
 }
 
 
@@ -670,10 +673,15 @@ void Host_ServerFrame (void)
 		return;
 	}
 	sv.timer += host_realframetime;
+
+    
 	// run the world state
 	// don't allow simulation to run too fast or too slow or logic glitches can occur
 	for (framecount = 0;framecount < framelimit && sv.timer > 0;framecount++)
 	{
+		// setup the VM frame
+		SV_VM_Begin();
+
 		if (cl.islocalgame)
 			advancetime = min(sv.timer, sys_ticrate.value);
 		else
@@ -704,7 +712,12 @@ void Host_ServerFrame (void)
 
 		// send an heartbeat if enough time has passed since the last one
 		NetConn_Heartbeat(0);
+
+		// end the server VM frame
+		SV_VM_End();
 	}
+
+
 	// if we fell behind too many frames just don't worry about it
 	if (sv.timer > 0)
 		sv.timer = 0;
@@ -958,8 +971,8 @@ void Host_Init (void)
 	Mathlib_Init();
 
 	NetConn_Init();
-	PR_Init();
-	PR_Cmd_Init();
+	//PR_Init();
+	//PR_Cmd_Init();
 	PRVM_Init();
 	Mod_Init();
 	SV_Init();
@@ -1082,7 +1095,7 @@ void Host_Shutdown(void)
 	CDAudio_Shutdown ();
 	S_Terminate ();
 	NetConn_Shutdown ();
-	PR_Shutdown ();
+	//PR_Shutdown ();
 
 	if (cls.state != ca_dedicated)
 	{

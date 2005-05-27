@@ -265,6 +265,8 @@ void PRVM_PrintState(void)
 
 void PRVM_Crash()
 {
+
+	//TODO: make this more compilant with PR_Crash
 	if (prog->depth < 1)
 	{
 		// kill the stack just to be sure
@@ -316,7 +318,7 @@ int PRVM_EnterFunction (mfunction_t *f)
 		PRVM_ERROR ("PRVM_ExecuteProgram: locals stack overflow in %s\n", PRVM_NAME);
 
 	for (i=0 ; i < c ; i++)
-		prog->localstack[prog->localstack_used+i] = ((int *)prog->globals)[f->parm_start + i];
+		prog->localstack[prog->localstack_used+i] = ((int *)prog->globals.generic)[f->parm_start + i];
 	prog->localstack_used += c;
 
 // copy parameters
@@ -325,7 +327,7 @@ int PRVM_EnterFunction (mfunction_t *f)
 	{
 		for (j=0 ; j<f->parm_size[i] ; j++)
 		{
-			((int *)prog->globals)[o] = ((int *)prog->globals)[OFS_PARM0+i*3+j];
+			((int *)prog->globals.generic)[o] = ((int *)prog->globals.generic)[OFS_PARM0+i*3+j];
 			o++;
 		}
 	}
@@ -355,7 +357,7 @@ int PRVM_LeaveFunction (void)
 		PRVM_ERROR ("PRVM_ExecuteProgram: locals stack underflow in %s\n", PRVM_NAME);
 
 	for (i=0 ; i < c ; i++)
-		((int *)prog->globals)[prog->xfunction->parm_start + i] = prog->localstack[prog->localstack_used+i];
+		((int *)prog->globals.generic)[prog->xfunction->parm_start + i] = prog->localstack[prog->localstack_used+i];
 
 // up stack
 	prog->depth--;
@@ -378,9 +380,9 @@ PRVM_ExecuteProgram
 ====================
 */
 // LordHavoc: optimized
-#define OPA ((prvm_eval_t *)&prog->globals[(unsigned short) st->a])
-#define OPB ((prvm_eval_t *)&prog->globals[(unsigned short) st->b])
-#define OPC ((prvm_eval_t *)&prog->globals[(unsigned short) st->c])
+#define OPA ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->a])
+#define OPB ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->b])
+#define OPC ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->c])
 extern cvar_t prvm_boundscheck;
 extern cvar_t prvm_traceqc;
 extern int		PRVM_ED_FindFieldOffset (const char *field);
@@ -397,7 +399,7 @@ void PRVM_ExecuteProgram (func_t fnum, const char *errormessage)
 	{
 		if (prog->self && PRVM_G_INT(prog->self->ofs))
 			PRVM_ED_Print(PRVM_PROG_TO_EDICT(PRVM_G_INT(prog->self->ofs)));
-		PRVM_ERROR ("PR_ExecuteProgram: %s", errormessage);
+		PRVM_ERROR ("PRVM_ExecuteProgram: %s", errormessage);
 	}
 
 	f = &prog->functions[fnum];
