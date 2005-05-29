@@ -1572,7 +1572,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 	int renders;
 	float color[3], color2[3], colorscale, specularscale;
 	rmeshstate_t m;
-	// FIXME: support EF_NODEPTHTEST
+	// FIXME: support MATERIALFLAG_NODEPTHTEST
 	if (!basetexture)
 		basetexture = r_texture_white;
 	if (!bumptexture)
