@@ -1946,6 +1946,7 @@ qboolean SV_VM_CB_LoadEdict(prvm_edict_t *ent)
 	return true;
 }
 
+cvar_t	pr_checkextension = {CVAR_READONLY, "pr_checkextension", "1"};
 cvar_t	nomonsters = {0, "nomonsters", "0"};
 cvar_t	gamecfg = {0, "gamecfg", "0"};
 cvar_t	scratch1 = {0, "scratch1", "0"};
@@ -1972,6 +1973,7 @@ cvar_t	cutscene = {0, "cutscene", "1"};
 
 void SV_VM_Init(void)
 {
+	Cvar_RegisterVariable (&pr_checkextension);
 	Cvar_RegisterVariable (&nomonsters);
 	Cvar_RegisterVariable (&gamecfg);
 	Cvar_RegisterVariable (&scratch1);
