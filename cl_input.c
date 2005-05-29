@@ -568,7 +568,7 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 	// replay input queue, and remove any stale queue items
 	// note: this relies on the fact there's always one queue item at the end
 	// abort if client movement is disabled
-	cl.movement = cl_movement.integer && cl.stats[STAT_HEALTH] > 0 && !cls.demoplayback;
+	cl.movement = cl_movement.integer && cl.stats[STAT_HEALTH] > 0 && !cls.demoplayback && !cl.intermission;
 	if (!cl.movement)
 		cl.movement_numqueue = 0;
 	for (i = 0;i < cl.movement_numqueue;i++)
