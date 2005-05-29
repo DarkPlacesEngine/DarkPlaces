@@ -401,9 +401,13 @@ void Host_Connect_f (void)
 		Con_Print("connect <serveraddress> : connect to a multiplayer game\n");
 		return;
 	}
-	SV_VM_Begin();
-	CL_EstablishConnection("local:1");
-	SV_VM_End();
+	if( sv.active ) {
+		SV_VM_Begin();
+		CL_EstablishConnection(Cmd_Argv(1));
+		SV_VM_End();
+	} else {
+		CL_EstablishConnection(Cmd_Argv(1));
+	}
 }
 
 

@@ -517,6 +517,8 @@ void Host_ShutdownServer(qboolean crash)
 	memset(&sv, 0, sizeof(sv));
 	memset(svs.clients, 0, svs.maxclients*sizeof(client_t));
 
+	PRVM_ResetProg();
+
 	SV_VM_End();
 }
 
