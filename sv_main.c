@@ -25,7 +25,7 @@ void SV_VM_Init();
 void SV_VM_Setup();
 
 // select which protocol to host, this is fed to Protocol_EnumForName
-cvar_t sv_protocolname = {0, "sv_protocolname", "DP6"};
+cvar_t sv_protocolname = {0, "sv_protocolname", "DP7"};
 cvar_t sv_ratelimitlocalplayer = {0, "sv_ratelimitlocalplayer", "0"};
 cvar_t sv_maxrate = {CVAR_SAVE | CVAR_NOTIFY, "sv_maxrate", "10000"};
 
