@@ -75,9 +75,6 @@ OBJ_COMMON= \
 	palette.o \
 	polygon.o \
 	portals.o \
-#	pr_cmds.o \
-#	pr_edict.o \
-#	pr_exec.o \
 	protocol.o \
 	mvm_cmds.o \
 	svvm_cmds.o \

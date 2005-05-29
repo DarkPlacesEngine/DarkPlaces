@@ -1637,7 +1637,7 @@ void SV_SpawnServer (const char *server)
 //
 // tell all connected clients that we are going to a new level
 //
-	if (sv.active) 
+	if (sv.active)
 	{
 		SV_VM_Begin();
 		SV_SendReconnect();
@@ -1755,7 +1755,7 @@ void SV_SpawnServer (const char *server)
 //
 // load the rest of the entities
 //
-	// AK possible hack since num_edicts is still 0 
+	// AK possible hack since num_edicts is still 0
 	ent = PRVM_EDICT_NUM(0);
 	memset (ent->fields.server, 0, prog->progs->entityfields * 4);
 	ent->priv.server->free = false;
@@ -1924,7 +1924,7 @@ void SV_VM_CB_CountEdicts(void)
 	Con_Printf("step      :%3i\n", step);
 }
 
-qboolean SV_VM_CB_LoadEdict(prvm_edict_t *ent) 
+qboolean SV_VM_CB_LoadEdict(prvm_edict_t *ent)
 {
 	// remove things from different skill levels or deathmatch
 	if (gamemode != GAME_TRANSFUSION) //Transfusion does this in QC
@@ -2205,7 +2205,7 @@ void SV_VM_Setup(void)
 	prog->load_edict = SV_VM_CB_LoadEdict;
 	prog->init_cmd = VM_SV_Cmd_Init;
 	prog->reset_cmd = VM_SV_Cmd_Reset;
-	prog->error_cmd = NULL; // change this 
+	prog->error_cmd = NULL; // change this
 
 	// TODO: add a requiredfuncs list (ask LH if this is necessary at all)
 	PRVM_LoadProgs( sv_progs.string, 0, NULL, REQFIELDS, reqfields );

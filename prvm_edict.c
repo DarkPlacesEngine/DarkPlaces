@@ -187,7 +187,6 @@ Sets everything to NULL
 */
 void PRVM_ED_ClearEdict (prvm_edict_t *e)
 {
-	int num;
 	memset (e->fields.vp, 0, prog->progs->entityfields * 4);
 	e->priv.required->free = false;
 
