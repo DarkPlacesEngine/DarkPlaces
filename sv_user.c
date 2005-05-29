@@ -649,9 +649,7 @@ void SV_ReadClientMove (void)
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 
 	// read impulse
-	i = MSG_ReadByte ();
-	if (i)
-		move->impulse = i;
+	move->impulse = MSG_ReadByte ();
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 
 	// PRYDON_CLIENTCURSOR
@@ -714,7 +712,8 @@ void SV_ApplyClientMove (void)
 	// set the edict fields
 	host_client->edict->fields.server->button0 = move->buttons & 1;
 	host_client->edict->fields.server->button2 = (move->buttons & 2)>>1;
-	host_client->edict->fields.server->impulse = move->impulse;
+	if (move->impulse)
+		host_client->edict->fields.server->impulse = move->impulse;
 	VectorCopy(move->viewangles, host_client->edict->fields.server->v_angle);
 	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button3))) val->_float = ((move->buttons >> 2) & 1);
 	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button4))) val->_float = ((move->buttons >> 3) & 1);
