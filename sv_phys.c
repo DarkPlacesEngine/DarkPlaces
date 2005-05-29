@@ -1171,7 +1171,7 @@ void SV_CheckWaterTransition (prvm_edict_t *ent)
 	}
 
 	// check if the entity crossed into or out of water
-	if ((ent->fields.server->watertype == CONTENTS_WATER || ent->fields.server->watertype == CONTENTS_SLIME) != (cont == CONTENTS_WATER || cont == CONTENTS_SLIME))
+	if (gamemode != GAME_NEXUIZ && ((ent->fields.server->watertype == CONTENTS_WATER || ent->fields.server->watertype == CONTENTS_SLIME) != (cont == CONTENTS_WATER || cont == CONTENTS_SLIME)))
 		SV_StartSound (ent, 0, "misc/h2ohit1.wav", 255, 1);
 
 	if (cont <= CONTENTS_WATER)
