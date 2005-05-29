@@ -1482,6 +1482,8 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 		t->currentmaterialflags |= MATERIALFLAG_ADD | MATERIALFLAG_TRANSPARENT;
 	else if (t->currentalpha < 1)
 		t->currentmaterialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_TRANSPARENT;
+	if (ent->effects & EF_NODEPTHTEST)
+		t->currentmaterialflags |= MATERIALFLAG_NODEPTHTEST;
 }
 
 void R_UpdateAllTextureInfo(entity_render_t *ent)
@@ -2339,7 +2341,7 @@ void R_QueueTextureSurfaceList(entity_render_t *ent, texture_t *texture, int tex
 				tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
 				tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
 				Matrix4x4_Transform(&ent->matrix, tempcenter, center);
-				R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_vieworigin : center, RSurfShader_Transparent_Callback, ent, surface - ent->model->data_surfaces);
+				R_MeshQueue_AddTransparent(texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_vieworigin : center, RSurfShader_Transparent_Callback, ent, surface - ent->model->data_surfaces);
 			}
 		}
 	}
