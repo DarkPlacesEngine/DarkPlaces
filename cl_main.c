@@ -333,7 +333,7 @@ static void CL_PrintEntities_f(void)
 			strcpy(name, "--no model--");
 		for (j = strlen(name);j < 25;j++)
 			name[j] = ' ';
-		Con_Printf("%3i: %s:%04i (%5i %5i %5i) [%3i %3i %3i] %4.2f %5.3f\n", i, name, ent->render.frame, (int) ent->render.origin[0], (int) ent->render.origin[1], (int) ent->render.origin[2], (int) ent->render.angles[0] % 360, (int) ent->render.angles[1] % 360, (int) ent->render.angles[2] % 360, ent->render.scale, ent->render.alpha);
+		Con_Printf("%3i: %s:%4i (%5i %5i %5i) [%3i %3i %3i] %4.2f %5.3f\n", i, name, ent->render.frame, (int) ent->render.origin[0], (int) ent->render.origin[1], (int) ent->render.origin[2], (int) ent->render.angles[0] % 360, (int) ent->render.angles[1] % 360, (int) ent->render.angles[2] % 360, ent->render.scale, ent->render.alpha);
 	}
 }
 
@@ -718,9 +718,19 @@ void CL_LinkNetworkEntity(entity_t *e)
 		CL_BoundingBoxForEntity(&e->render);
 
 		// handle effects now that we know where this entity is in the world...
-		origin[0] = e->render.matrix.m[0][3];
-		origin[1] = e->render.matrix.m[1][3];
-		origin[2] = e->render.matrix.m[2][3];
+		if (e->render.model && e->render.model->soundfromcenter)
+		{
+			// bmodels are treated specially since their origin is usually '0 0 0'
+			vec3_t o;
+			VectorMAM(0.5f, e->render.model->normalmins, 0.5f, e->render.model->normalmaxs, o);
+			Matrix4x4_Transform(&e->render.matrix, o, origin);
+		}
+		else
+		{
+			origin[0] = e->render.matrix.m[0][3];
+			origin[1] = e->render.matrix.m[1][3];
+			origin[2] = e->render.matrix.m[2][3];
+		}
 		trailtype = -1;
 		dlightradius = 0;
 		dlightcolor[0] = 0;

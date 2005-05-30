@@ -497,12 +497,10 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 	else
 	{
 		// update sound origin if we know about the entity
-		if (ch->entnum > 0 && cls.state == ca_connected && cl_entities[ch->entnum].state_current.active)
+		if (ch->entnum > 0 && cls.state == ca_connected && cl_entities[ch->entnum].render.model)
 		{
-			//Con_Printf("-- entnum %i origin %f %f %f neworigin %f %f %f\n", ch->entnum, ch->origin[0], ch->origin[1], ch->origin[2], cl_entities[ch->entnum].state_current.origin[0], cl_entities[ch->entnum].state_current.origin[1], cl_entities[ch->entnum].state_current.origin[2]);
-			VectorCopy(cl_entities[ch->entnum].state_current.origin, ch->origin);
-			if (cl_entities[ch->entnum].state_current.modelindex && cl.model_precache[cl_entities[ch->entnum].state_current.modelindex] && cl.model_precache[cl_entities[ch->entnum].state_current.modelindex]->soundfromcenter)
-				VectorMAMAM(1.0f, ch->origin, 0.5f, cl.model_precache[cl_entities[ch->entnum].state_current.modelindex]->normalmins, 0.5f, cl.model_precache[cl_entities[ch->entnum].state_current.modelindex]->normalmaxs, ch->origin);
+			//Con_Printf("-- entnum %i origin %f %f %f neworigin %f %f %f\n", ch->entnum, ch->origin[0], ch->origin[1], ch->origin[2], cl_entities[ch->entnum].persistent.trail_origin[0], cl_entities[ch->entnum].persistent.trail_origin[1], cl_entities[ch->entnum].persistent.trail_origin[2]);
+			VectorCopy(cl_entities[ch->entnum].persistent.trail_origin, ch->origin);
 		}
 
 		// calculate stereo seperation and distance attenuation
