@@ -294,18 +294,6 @@ SOURCE=.\portals.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\pr_cmds.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\pr_edict.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\pr_exec.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\protocol.c
 # End Source File
 # Begin Source File
@@ -399,6 +387,10 @@ SOURCE=.\sv_phys.c
 # Begin Source File
 
 SOURCE=.\sv_user.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\svvm_cmds.c
 # End Source File
 # Begin Source File
 
