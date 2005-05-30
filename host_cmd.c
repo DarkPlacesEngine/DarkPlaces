@@ -951,7 +951,8 @@ void Host_Say(qboolean teamonly)
 			SV_ClientPrint(text);
 	host_client = save;
 
-	Con_Print(&text[1]);
+	if (cls.state == ca_dedicated)
+		Con_Print(&text[1]);
 }
 
 
