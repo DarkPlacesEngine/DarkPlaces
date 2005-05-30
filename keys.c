@@ -446,27 +446,17 @@ Key_Console (int key, char ascii)
 
 	if (key_linepos < MAX_INPUTLINE-1)
 	{
-		int i;
-
-		if (key_insert)	// check insert mode
+		int len;
+		len = strlen(&key_lines[edit_line][key_linepos]);
+		// check insert mode, or always insert if at end of line
+		if (key_insert || len == 0)
 		{
-			// can't do strcpy to move string to right
-			i = strlen(key_lines[edit_line]) - 1;
-
-			if (i == 254)
-				i--;
-
-			for (; i >= key_linepos; i--)
-				key_lines[edit_line][i + 1] = key_lines[edit_line][i];
+			// can't use strcpy to move string to right
+			len++;
+			memmove(&key_lines[edit_line][key_linepos + 1], &key_lines[edit_line][key_linepos], len);
 		}
-
-		// only null terminate if at the end
-		i = key_lines[edit_line][key_linepos];
 		key_lines[edit_line][key_linepos] = ascii;
 		key_linepos++;
-
-		if (!i)
-			key_lines[edit_line][key_linepos] = 0;
 	}
 }
 
