@@ -903,7 +903,13 @@ void FS_Init (void)
 	fs_mempool = Mem_AllocPool("file management", 0, NULL);
 
 	strcpy(fs_basedir, ".");
-	strcpy(fs_gamedir, ".");
+	strcpy(fs_gamedir, "");
+
+#ifdef MACOSX
+	// FIXME: is there a better way to find the directory outside the .app?
+	if (strstr(com_argv[0], ".app/"))
+		strcpy(fs_basedir, "../../..");
+#endif
 
 	PK3_OpenLibrary ();
 
