@@ -908,7 +908,15 @@ void FS_Init (void)
 #ifdef MACOSX
 	// FIXME: is there a better way to find the directory outside the .app?
 	if (strstr(com_argv[0], ".app/"))
-		strcpy(fs_basedir, "../../..");
+	{
+		char *split;
+		char temp[4096];
+		split = strstr(com_argv[0], ".app/");
+		while (split > com_argv[0] && *split != '/')
+			split--;
+		strlcpy(fs_basedir, com_argv[0], sizeof(fs_basedir));
+		fs_basedir[split - com_argv[0]] = 0;
+	}
 #endif
 
 	PK3_OpenLibrary ();
