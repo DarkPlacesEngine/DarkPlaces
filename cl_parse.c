@@ -851,7 +851,8 @@ void CL_InitTEnts (void)
 	cl_sfx_ric1 = S_PrecacheSound ("sound/weapons/ric1.wav", false, true);
 	cl_sfx_ric2 = S_PrecacheSound ("sound/weapons/ric2.wav", false, true);
 	cl_sfx_ric3 = S_PrecacheSound ("sound/weapons/ric3.wav", false, true);
-	cl_sfx_r_exp3 = S_PrecacheSound ("sound/weapons/r_exp3.wav", false, true);
+	if (gamemode != GAME_NEXUIZ)
+		cl_sfx_r_exp3 = S_PrecacheSound ("sound/weapons/r_exp3.wav", false, true);
 }
 
 void CL_ParseBeam (model_t *m, int lightning)
@@ -979,7 +980,6 @@ void CL_ParseTempEntity(void)
 		}
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		if (rand() % 5)
 			S_StartSound(-1, 0, cl_sfx_tink1, pos, 1, 1);
 		else
@@ -1140,7 +1140,8 @@ void CL_ParseTempEntity(void)
 		// LordHavoc: boosted color from 1.0, 0.8, 0.4 to 1.25, 1.0, 0.5
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 350, 4.0f, 2.0f, 0.50f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
+		if (gamemode != GAME_NEXUIZ)
+			S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
 	case TE_EXPLOSIONQUAD:
@@ -1150,7 +1151,8 @@ void CL_ParseTempEntity(void)
 		CL_ParticleExplosion(pos);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 350, 2.5f, 2.0f, 4.0f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
+		if (gamemode != GAME_NEXUIZ)
+			S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
 	case TE_EXPLOSION3:
@@ -1163,7 +1165,8 @@ void CL_ParseTempEntity(void)
 		color[1] = MSG_ReadCoord(cl.protocol) * (2.0f / 1.0f);
 		color[2] = MSG_ReadCoord(cl.protocol) * (2.0f / 1.0f);
 		CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
+		if (gamemode != GAME_NEXUIZ)
+			S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
 	case TE_EXPLOSIONRGB:
@@ -1176,7 +1179,8 @@ void CL_ParseTempEntity(void)
 		color[2] = MSG_ReadByte() * (2.0f / 255.0f);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
+		if (gamemode != GAME_NEXUIZ)
+			S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
 	case TE_TAREXPLOSION:
@@ -1185,8 +1189,8 @@ void CL_ParseTempEntity(void)
 		CL_FindNonSolidLocation(pos, pos, 10);
 		CL_BlobExplosion(pos);
 
-		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
-		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
+		if (gamemode != GAME_NEXUIZ)
+			S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 600, 1.6f, 0.8f, 2.0f, 1200, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		break;
@@ -1277,7 +1281,8 @@ void CL_ParseTempEntity(void)
 		color[2] = tempcolor[2] * (2.0f / 255.0f);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
+		if (gamemode != GAME_NEXUIZ)
+			S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
 	case TE_TEI_G3:
@@ -1301,7 +1306,8 @@ void CL_ParseTempEntity(void)
 		CL_ParticleExplosion(pos);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 500, 2.5f, 2.0f, 1.0f, 500, 9999, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
+		if (gamemode != GAME_NEXUIZ)
+			S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
 	case TE_TEI_PLASMAHIT:
