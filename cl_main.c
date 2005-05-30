@@ -587,7 +587,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			e->render.colormap = -1; // no special coloring
 		e->render.skinnum = e->state_current.skin;
 		VectorScale(e->state_current.colormod, (1.0f / 32.0f), e->render.colormod);
-		if (e->render.flags & RENDER_VIEWMODEL)
+		if (e->render.flags & RENDER_VIEWMODEL && !e->state_current.tagentity)
 		{
 			if (!r_drawviewmodel.integer || chase_active.integer || envmap)
 				return;
