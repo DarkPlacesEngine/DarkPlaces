@@ -356,7 +356,7 @@ void Host_Restart_f (void)
 	allowcheats = sv_cheats.integer != 0;
 	strcpy(mapname, sv.name);
 	SV_SpawnServer(mapname);
-	if (sv.active && cls.state == ca_disconnected) 
+	if (sv.active && cls.state == ca_disconnected)
 	{
 		SV_VM_Begin();
 		CL_EstablishConnection("local:1");
@@ -951,7 +951,7 @@ void Host_Say(qboolean teamonly)
 			SV_ClientPrint(text);
 	host_client = save;
 
-	//Con_Print(&text[1]);
+	Con_Print(&text[1]);
 }
 
 
