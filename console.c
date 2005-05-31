@@ -585,6 +585,9 @@ void Con_Print(const char *msg)
 			line[index] = 0;
 			// send to log file
 			Log_ConPrint(line);
+			// send to scrollable buffer
+			if (con_initialized && cls.state != ca_dedicated)
+				Con_PrintToHistory(line, mask);
 			// send to terminal or dedicated server window
 			if (!sys_nostdout)
 			{
@@ -593,9 +596,6 @@ void Con_Print(const char *msg)
 					*p = qfont_table[*p];
 				Sys_PrintToTerminal(line);
 			}
-			// send to scrollable buffer
-			if (con_initialized && cls.state != ca_dedicated)
-				Con_PrintToHistory(line, mask);
 			// empty the line buffer
 			index = 0;
 		}
