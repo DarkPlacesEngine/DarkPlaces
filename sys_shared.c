@@ -68,7 +68,7 @@ qboolean Sys_LoadLibrary (const char** dllnames, dllhandle_t* handle, const dllf
 		{
 			char path[MAX_OSPATH];
 			strlcpy(path, com_argv[0], sizeof(path));
-			*(strrchr(com_argv[0], '/')) = 0;
+			strrchr(com_argv[0], '/')[1] = 0;
 			for (i = 0; dllnames[i] != NULL; i++)
 			{
 				char temp[MAX_OSPATH];
