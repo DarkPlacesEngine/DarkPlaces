@@ -3940,10 +3940,10 @@ static void Mod_Q3BSP_LoadPlanes(lump_t *l)
 
 	for (i = 0;i < count;i++, in++, out++)
 	{
-		out->normal[0] = LittleLong(in->normal[0]);
-		out->normal[1] = LittleLong(in->normal[1]);
-		out->normal[2] = LittleLong(in->normal[2]);
-		out->dist = LittleLong(in->dist);
+		out->normal[0] = LittleFloat(in->normal[0]);
+		out->normal[1] = LittleFloat(in->normal[1]);
+		out->normal[2] = LittleFloat(in->normal[2]);
+		out->dist = LittleFloat(in->dist);
 		PlaneClassify(out);
 	}
 }
