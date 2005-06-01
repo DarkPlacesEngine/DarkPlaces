@@ -307,12 +307,6 @@ void VID_Init (void)
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		Sys_Error ("Failed to init video: %s\n", SDL_GetError());
 	vid_isfullscreen = false;
-
-	SDL_SetEventFilter( (SDL_EventFilter) Sys_EventFilter );
-	// init keyboard
-	SDL_EnableUNICODE( SDL_ENABLE );
-	// enable key repeat since everyone expects it
-	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 }
 
 // set the icon (we dont use SDL here since it would be too much a PITA)
@@ -424,7 +418,15 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 		VID_Shutdown();
 		return false;
 	}
+
+	// set window title
 	VID_SetCaption();
+	// set up an event filter to ask confirmation on close button in WIN32
+	SDL_SetEventFilter( (SDL_EventFilter) Sys_EventFilter );
+	// init keyboard
+	SDL_EnableUNICODE( SDL_ENABLE );
+	// enable key repeat since everyone expects it
+	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 
 	gl_renderer = qglGetString(GL_RENDERER);
 	gl_vendor = qglGetString(GL_VENDOR);
