@@ -532,7 +532,7 @@ typedef struct
 	vec3_t movement_velocity;
 	// queue of proposed moves
 	int movement_numqueue;
-	client_movementqueue_t movement_queue[256];
+	client_movementqueue_t movement_queue[64];
 	int movesequence;
 	int servermovesequence;
 
