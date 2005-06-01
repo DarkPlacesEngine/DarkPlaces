@@ -95,17 +95,28 @@ cvar_t timeformat = {CVAR_SAVE, "timeformat", "[%b %e %X] "};
 
 /*
 ================
+Host_AbortCurrentFrame
+
+aborts the current host frame and goes on with the next one
+================
+*/
+void Host_AbortCurrentFrame(void)
+{
+	longjmp (host_abortserver, 1);
+}
+
+/*
+================
 Host_Error
 
 This shuts down both the client and server
 ================
 */
-void PRVM_ProcessError(void);
-static char hosterrorstring1[4096];
-static char hosterrorstring2[4096];
-static qboolean hosterror = false;
 void Host_Error (const char *error, ...)
 {
+	static char hosterrorstring1[4096];
+	static char hosterrorstring2[4096];
+	static qboolean hosterror = false;
 	va_list argptr;
 
 	va_start (argptr,error);
@@ -129,12 +140,9 @@ void Host_Error (const char *error, ...)
 
 	//PR_Crash();
 
-	//PRVM_Crash(); // crash current prog
+	// print out where the crash happened, if it was caused by QC (and do a cleanup)
+	PRVM_Crash();
 
-	// crash all prvm progs
-	PRVM_CrashAll();
-
-	PRVM_ProcessError();
 
 	Host_ShutdownServer (false);
 
@@ -146,7 +154,7 @@ void Host_Error (const char *error, ...)
 
 	hosterror = false;
 
-	longjmp (host_abortserver, 1);
+	Host_AbortCurrentFrame();
 }
 
 void Host_ServerOptions (void)
@@ -488,8 +496,6 @@ void Host_ShutdownServer(qboolean crash)
 		return;
 
 	SV_VM_Begin();
-	// print out where the crash happened, if it was caused by QC
-	//PRVM_Crash();
 
 	NetConn_Heartbeat(2);
 	NetConn_Heartbeat(2);
@@ -656,7 +662,6 @@ void Host_GetConsoleCommands (void)
 		Cbuf_AddText (cmd);
 	}
 }
-
 
 /*
 ==================

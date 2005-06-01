@@ -4605,8 +4605,18 @@ static func_t m_draw, m_keydown;
 
 void MR_SetRouting (qboolean forceold);
 
-void MP_Error(void)
+void MP_Error(const char *format, ...)
 {
+	char errorstring[4096];
+	va_list argptr;
+
+	va_start (argptr, format);
+	dpvsnprintf (errorstring, sizeof(errorstring), format, argptr);
+	va_end (argptr);
+	Con_Printf( "Menu_Error: %s\n", errorstring );
+
+	PRVM_Crash();
+
 	// fall back to the normal menu
 
 	// say it
@@ -4614,10 +4624,10 @@ void MP_Error(void)
 
 	key_dest = key_game;
 
-	//PRVM_ResetProg();
-
 	// init the normal menu now -> this will also correct the menu router pointers
 	MR_SetRouting (TRUE);
+
+	Host_AbortCurrentFrame();
 }
 
 void MP_Keydown (int key, char ascii)
@@ -4687,6 +4697,16 @@ void MP_Shutdown (void)
 	PRVM_ResetProg();
 
 	PRVM_End;
+}
+
+void MP_Fallback (void)
+{
+	MP_Shutdown();
+
+	key_dest = key_game;
+
+	// init the normal menu now -> this will also correct the menu router pointers
+	MR_SetRouting (TRUE);
 }
 
 void MP_Init (void)
@@ -4797,7 +4817,7 @@ void MR_Init_Commands(void)
 	Cvar_RegisterVariable (&forceqmenu);
 	Cvar_RegisterVariable (&menu_options_colorcontrol_correctionvalue);
 	if (gamemode == GAME_NETHERWORLD)
-		Cmd_AddCommand ("menu_fallback", MP_Error); //Force to old-style menu
+		Cmd_AddCommand ("menu_fallback", MP_Fallback); //Force to old-style menu
 	Cmd_AddCommand ("menu_restart",MR_Restart);
 	Cmd_AddCommand ("togglemenu", Call_MR_ToggleMenu_f);
 }

@@ -360,7 +360,7 @@ typedef struct prvm_prog_s
 	void				(*init_cmd)(void); // [INIT] used by PRVM_InitProg
 	void				(*reset_cmd)(void); // [INIT] used by PRVM_ResetProg
 
-	void				(*error_cmd)(void); // [INIT]
+	void				(*error_cmd)(const char *format, ...); // [INIT]
 
 } prvm_prog_t;
 
@@ -485,10 +485,10 @@ void PRVM_FreeString(char *s);
 //============================================================================
 
 // used as replacement for a prog stack
-#define PRVM_DEBUGPRSTACK
+//#define PRVM_DEBUGPRSTACK
 
 #ifdef PRVM_DEBUGPRSTACK
-#define PRVM_Begin  if(prog != 0) Host_Error("prog not 0(prog = %i) in file: %s line: %i!\n", PRVM_GetProgNr(), __FILE__, __LINE__)
+#define PRVM_Begin  if(prog != 0) Con_Printf("prog not 0(prog = %i) in file: %s line: %i!\n", PRVM_GetProgNr(), __FILE__, __LINE__)
 #define PRVM_End	prog = 0
 #else
 #define PRVM_Begin
@@ -506,7 +506,7 @@ void PRVM_FreeString(char *s);
 // helper macro to make function pointer calls easier
 #define PRVM_GCALL(func)	if(prog->func) prog->func
 
-#define PRVM_ERROR		Host_Error
+#define PRVM_ERROR		prog->error_cmd
 
 // other prog handling functions
 qboolean PRVM_SetProgFromString(const char *str);

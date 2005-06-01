@@ -277,8 +277,6 @@ extern server_t sv;
 
 extern client_t *host_client;
 
-extern jmp_buf host_abortserver;
-
 //===========================================================
 
 void SV_Init (void);

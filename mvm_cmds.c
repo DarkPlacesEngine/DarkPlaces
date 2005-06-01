@@ -442,7 +442,7 @@ void VM_M_setserverlistmaskstring( void )
 	int field;
 
 	VM_SAFEPARMCOUNT( 4, VM_M_setserverlistmaskstring );
-	str = PRVM_G_STRING( OFS_PARM1 );
+	str = PRVM_G_STRING( OFS_PARM2 );
 	if( !str )
 		PRVM_ERROR( "VM_M_setserverlistmaskstring: null string passed!" );
 
