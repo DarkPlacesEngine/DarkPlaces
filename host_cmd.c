@@ -1417,6 +1417,7 @@ void Host_Kick_f (void)
 	if (cmd_source != src_command || !sv.active)
 		return;
 
+	SV_VM_Begin();
 	save = host_client;
 
 	if (Cmd_Argc() > 2 && strcmp(Cmd_Argv(1), "#") == 0)
@@ -1475,6 +1476,7 @@ void Host_Kick_f (void)
 	}
 
 	host_client = save;
+	SV_VM_End();
 }
 
 /*
@@ -1667,7 +1669,12 @@ void Host_Viewmodel_f (void)
 	prvm_edict_t	*e;
 	model_t	*m;
 
+	if (!sv.active)
+		return;
+
+	SV_VM_Begin();
 	e = FindViewthing ();
+	SV_VM_End();
 	if (!e)
 		return;
 
@@ -1693,7 +1700,12 @@ void Host_Viewframe_f (void)
 	int		f;
 	model_t	*m;
 
+	if (!sv.active)
+		return;
+
+	SV_VM_Begin();
 	e = FindViewthing ();
+	SV_VM_End();
 	if (!e)
 		return;
 	m = cl.model_precache[(int)e->fields.server->modelindex];
@@ -1724,7 +1736,12 @@ void Host_Viewnext_f (void)
 	prvm_edict_t	*e;
 	model_t	*m;
 
+	if (!sv.active)
+		return;
+
+	SV_VM_Begin();
 	e = FindViewthing ();
+	SV_VM_End();
 	if (!e)
 		return;
 	m = cl.model_precache[(int)e->fields.server->modelindex];
@@ -1746,7 +1763,12 @@ void Host_Viewprev_f (void)
 	prvm_edict_t	*e;
 	model_t	*m;
 
+	if (!sv.active)
+		return;
+
+	SV_VM_Begin();
 	e = FindViewthing ();
+	SV_VM_End();
 	if (!e)
 		return;
 
