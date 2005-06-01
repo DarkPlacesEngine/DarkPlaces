@@ -265,23 +265,18 @@ void PRVM_PrintState(void)
 
 void PRVM_Crash()
 {
-
-	//TODO: make this more compilant with PR_Crash
-	if (prog->depth < 1)
+	if( prog->depth > 0 )
 	{
-		// kill the stack just to be sure
-		prog->depth = 0;
-		prog->localstack_used = 0;
-		return;
+		Con_Printf("QuakeC crash report for %s:\n", PRVM_NAME);
+		PRVM_PrintState();
 	}
-
-	Con_Printf("QuakeC crash report for %s:\n", PRVM_NAME);
-	PRVM_PrintState();
 
 	// dump the stack so host_error can shutdown functions
 	prog->depth = 0;
 	prog->localstack_used = 0;
 
+	// reset the prog pointer
+	prog = NULL;
 }
 
 /*

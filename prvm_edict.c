@@ -1234,6 +1234,10 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	ddef_t *infielddefs;
 	dfunction_t *dfunctions;
 
+	if( prog->loaded ) {
+		PRVM_ERROR ("PRVM_LoadProgs: there is already a %s program loaded!\n", PRVM_NAME );
+	}
+
 	prog->progs = (dprograms_t *)FS_LoadFile (filename, prog->progs_mempool, false);
 	if (prog->progs == NULL)
 		PRVM_ERROR ("PRVM_LoadProgs: couldn't load %s for %s", filename, PRVM_NAME);
@@ -1716,6 +1720,7 @@ void PRVM_InitProg(int prognr)
 	memset(prog, 0, sizeof(prvm_prog_t));
 
 	prog->time = &prog->_time;
+	prog->error_cmd = Host_Error;
 }
 
 int PRVM_GetProgNr()
@@ -1746,12 +1751,6 @@ prvm_edict_t *PRVM_EDICT_NUM_ERROR(int n, char *filename, int fileline)
 {
 	PRVM_ERROR ("PRVM_EDICT_NUM: %s: bad number %i (called at %s:%i)", PRVM_NAME, n, filename, fileline);
 	return NULL;
-}
-
-void PRVM_ProcessError(void)
-{
-	if(prog)
-		PRVM_GCALL(error_cmd)();
 }
 
 /*

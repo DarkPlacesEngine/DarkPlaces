@@ -243,6 +243,8 @@ void Host_ClientCommands(const char *fmt, ...);
 void Host_ShutdownServer(qboolean crash);
 void Host_Reconnect_f(void);
 
+void Host_AbortCurrentFrame(void);
+
 // skill level for currently loaded level (in case the user changes the cvar while the level is running, this reflects the level actually in use)
 extern int current_skill;
 
