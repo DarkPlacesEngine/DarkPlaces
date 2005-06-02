@@ -49,6 +49,7 @@ static rtexture_t *draw_generateconchars(void)
 {
 	int i;
 	qbyte buffer[65536][4], *data = NULL;
+	double random;
 
 	fs_filesize = 13396;
 	data = LoadTGA (concharimage, 256, 256);
@@ -56,33 +57,37 @@ static rtexture_t *draw_generateconchars(void)
 // Gold numbers
 	for (i = 0;i < 8192;i++)
 	{
-		buffer[i][0] = 115;
-		buffer[i][1] = 87;
-		buffer[i][2] = 31;
+		random = lhrandom (0.0,1.0);
+		buffer[i][0] = 83 + (qbyte)(random * 64);
+		buffer[i][1] = 71 + (qbyte)(random * 32);
+		buffer[i][2] = 23 + (qbyte)(random * 16);
 		buffer[i][3] = data[i*4+0];
 	}
 // White chars
 	for (i = 8192;i < 32768;i++)
 	{
-		buffer[i][0] = 123;
-		buffer[i][1] = 123;
-		buffer[i][2] = 123;
+		random = lhrandom (0.0,1.0);
+		buffer[i][0] = 95 + (qbyte)(random * 64);
+		buffer[i][1] = 95 + (qbyte)(random * 64);
+		buffer[i][2] = 95 + (qbyte)(random * 64);
 		buffer[i][3] = data[i*4+0];
 	}
 // Gold numbers
 	for (i = 32768;i < 40960;i++)
 	{
-		buffer[i][0] = 115;
-		buffer[i][1] = 87;
-		buffer[i][2] = 31;
+		random = lhrandom (0.0,1.0);
+		buffer[i][0] = 83 + (qbyte)(random * 64);
+		buffer[i][1] = 71 + (qbyte)(random * 32);
+		buffer[i][2] = 23 + (qbyte)(random * 16);
 		buffer[i][3] = data[i*4+0];
 	}
 // Red chars
 	for (i = 40960;i < 65536;i++)
 	{
-		buffer[i][0] = 143;
-		buffer[i][1] = 67;
-		buffer[i][2] = 51;
+		random = lhrandom (0.0,1.0);
+		buffer[i][0] = 96 + (qbyte)(random * 64);
+		buffer[i][1] = 43 + (qbyte)(random * 32);
+		buffer[i][2] = 27 + (qbyte)(random * 32);
 		buffer[i][3] = data[i*4+0];
 	}
 
