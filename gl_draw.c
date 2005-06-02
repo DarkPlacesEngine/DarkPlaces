@@ -38,7 +38,7 @@ static int numcachepics;
 
 static rtexturepool_t *drawtexturepool;
 
-static qbyte concharimage[11356] =
+static qbyte concharimage[13396] =
 {
 #include "lhfont.h"
 };
@@ -50,25 +50,42 @@ static rtexture_t *draw_generateconchars(void)
 	int i;
 	qbyte buffer[65536][4], *data = NULL;
 
-	fs_filesize = 11356;
+	fs_filesize = 13396;
 	data = LoadTGA (concharimage, 256, 256);
 	fs_filesize = -1;
-
-	for (i = 0;i < 32768;i++)
+// Gold numbers
+	for (i = 0;i < 8192;i++)
 	{
-		buffer[i][0] = 255;
-		buffer[i][1] = 255;
-		buffer[i][2] = 255;
+		buffer[i][0] = 115;
+		buffer[i][1] = 87;
+		buffer[i][2] = 31;
+		buffer[i][3] = data[i*4+0];
+	}
+// White chars
+	for (i = 8192;i < 32768;i++)
+	{
+		buffer[i][0] = 123;
+		buffer[i][1] = 123;
+		buffer[i][2] = 123;
+		buffer[i][3] = data[i*4+0];
+	}
+// Gold numbers
+	for (i = 32768;i < 40960;i++)
+	{
+		buffer[i][0] = 115;
+		buffer[i][1] = 87;
+		buffer[i][2] = 31;
+		buffer[i][3] = data[i*4+0];
+	}
+// Red chars
+	for (i = 40960;i < 65536;i++)
+	{
+		buffer[i][0] = 143;
+		buffer[i][1] = 67;
+		buffer[i][2] = 51;
 		buffer[i][3] = data[i*4+0];
 	}
 
-	for (i = 32768;i < 65536;i++)
-	{
-		buffer[i][0] = 255;
-		buffer[i][1] = 0;
-		buffer[i][2] = 0;
-		buffer[i][3] = data[i*4+0];
-	}
 	Mem_Free(data);
 	return R_LoadTexture2D(drawtexturepool, "conchars", 256, 256, &buffer[0][0], TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
 }
