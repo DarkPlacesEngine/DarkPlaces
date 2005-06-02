@@ -70,6 +70,8 @@ void Mod_Alias_GetMesh_Vertex3f(const model_t *model, const frameblend_t *frameb
 		float lerp1, lerp2, lerp3, lerp4;
 		const float *vertsbase, *verts1, *verts2, *verts3, *verts4;
 		// vertex morph
+		if (!mesh->data_morphvertex3f)
+			Host_Error("model %s has no skeletal or vertex morph animation data\n", model->name);
 		vertsbase = mesh->data_morphvertex3f;
 		vertcount = mesh->num_vertices;
 		verts1 = vertsbase + frameblend[0].frame * vertcount * 3;
@@ -1344,6 +1346,8 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
 			 || (unsigned int)outelements[1] >= (unsigned int)pheader->numverts
 			 || (unsigned int)outelements[2] >= (unsigned int)pheader->numverts)
 				Host_Error("%s corrupt renderlist (out of bounds index)\n", loadmodel->name);
+			if (vertbonecounts[outelements[0]] == 0 || vertbonecounts[outelements[1]] == 0 || vertbonecounts[outelements[2]] == 0)
+				Host_Error("%s corrupt renderlist (references vertex with no bone weights\n", loadmodel->name);
 			renderlist += 3;
 			outelements += 3;
 		}
@@ -1362,14 +1366,14 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
 			}
 		}
 		mesh->num_vertexboneweights = 0;
-		for (j = 0;j < mesh->num_vertices;j++)
+		for (j = 0;j < pheader->numverts;j++)
 			if (remapvertices[j] >= 0)
 				mesh->num_vertexboneweights += vertbonecounts[remapvertices[j]];
 		mesh->data_vertexboneweights = Mem_Alloc(loadmodel->mempool, mesh->num_vertexboneweights * sizeof(surfmeshvertexboneweight_t));
 		mesh->num_vertexboneweights = 0;
 		// note this vertexboneweight ordering requires that the remapvertices array is sequential numbers (separated by -1 values for omitted vertices)
 		l = 0;
-		for (j = 0;j < mesh->num_vertices;j++)
+		for (j = 0;j < pheader->numverts;j++)
 		{
 			if (remapvertices[j] < 0)
 			{
@@ -1389,19 +1393,18 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
 				l++;
 			}
 		}
-
-		Mod_ValidateElements(mesh->data_element3i, mesh->num_triangles, mesh->num_vertices, __FILE__, __LINE__);
-		Mod_BuildTriangleNeighbors(mesh->data_neighbor3i, mesh->data_element3i, mesh->num_triangles);
-		Mod_Alias_Mesh_CompileFrameZero(mesh);
-
+		shadername = (char *) (pheader->lump_shaders.start + pbase) + i * 32;
 		// since zym models do not have named sections, reuse their shader
 		// name as the section name
-		shadername = (char *) (pheader->lump_shaders.start + pbase) + i * 32;
 		if (shadername[0])
 			Mod_BuildAliasSkinsFromSkinFiles(loadmodel->data_textures + i, skinfiles, shadername, shadername);
 		else
 			for (j = 0;j < loadmodel->numskins;j++)
 				Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + i + j * loadmodel->num_surfaces, NULL);
+
+		Mod_ValidateElements(mesh->data_element3i, mesh->num_triangles, mesh->num_vertices, __FILE__, __LINE__);
+		Mod_BuildTriangleNeighbors(mesh->data_neighbor3i, mesh->data_element3i, mesh->num_triangles);
+		Mod_Alias_Mesh_CompileFrameZero(mesh);
 
 		surface = loadmodel->data_surfaces + i;
 		surface->groupmesh = mesh;
