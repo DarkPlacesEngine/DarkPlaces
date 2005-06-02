@@ -692,7 +692,8 @@ qbyte *loadimagepixels (const char *filename, qboolean complain, int matchwidth,
 		Mem_CheckSentinelsGlobal();
 	if (developer_texturelogging.integer)
 		Log_Printf("textures.log", "%s\n", filename);
-	Image_StripImageExtension(filename, basename); // strip filename extensions to allow replacement by other types
+	strlcpy(basename, filename, sizeof(basename));
+	Image_StripImageExtension(basename, basename); // strip filename extensions to allow replacement by other types
 	// replace *'s with #, so commandline utils don't get confused when dealing with the external files
 	for (c = basename;*c;c++)
 		if (*c == '*')
@@ -1521,7 +1522,8 @@ int image_loadskin(imageskin_t *s, char *shadername)
 	qbyte *bumppixels;
 	int bumppixels_width, bumppixels_height;
 	char name[MAX_QPATH];
-	Image_StripImageExtension(shadername, name);
+	strlcpy(name, shadername, sizeof(name));
+	Image_StripImageExtension(name, name);
 	memset(s, 0, sizeof(*s));
 	s->basepixels = loadimagepixels(name, false, 0, 0);
 	if (s->basepixels == NULL)
