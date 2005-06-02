@@ -292,7 +292,7 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 	if (numcachepics == MAX_CACHED_PICS)
 		Sys_Error ("numcachepics == MAX_CACHED_PICS");
 	pic = cachepics + (numcachepics++);
-	strcpy (pic->name, path);
+	strlcpy (pic->name, path, sizeof(pic->name));
 	// link into list
 	pic->chain = cachepichash[hashkey];
 	cachepichash[hashkey] = pic;

@@ -324,25 +324,25 @@ void R_TimeReport(char *desc)
 	r_timereport_current = Sys_DoubleTime();
 	t = (int) ((r_timereport_current - r_timereport_temp) * 1000000.0);
 
-	sprintf(tempbuf, "%8i %s", t, desc);
+	dpsnprintf(tempbuf, sizeof(tempbuf), "%8i %s", t, desc);
 	length = strlen(tempbuf);
 	while (length < 20)
 		tempbuf[length++] = ' ';
 	tempbuf[length] = 0;
 	if (speedstringcount + length > (vid_conwidth.integer / 8))
 	{
-		strcat(r_speeds_string, "\n");
+		strlcat(r_speeds_string, "\n", sizeof(r_speeds_string));
 		speedstringcount = 0;
 	}
 	// skip the space at the beginning if it's the first on the line
 	if (speedstringcount == 0)
 	{
-		strcat(r_speeds_string, tempbuf + 1);
+		strlcat(r_speeds_string, tempbuf + 1, sizeof(r_speeds_string));
 		speedstringcount = length - 1;
 	}
 	else
 	{
-		strcat(r_speeds_string, tempbuf);
+		strlcat(r_speeds_string, tempbuf, sizeof(r_speeds_string));
 		speedstringcount += length;
 	}
 }
