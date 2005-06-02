@@ -1027,6 +1027,20 @@ void Host_Init (void)
 	// save console log up to this point to log_file if it was set by configs
 	Log_Start();
 
+	// FIXME: put this into some neat design, but the menu should be allowed to crash
+	// without crashing the whole game, so this should just be a short-time solution
+	Host_StartVideo();
+
+	// here comes the not so critical stuff
+	if (setjmp(host_abortframe)) {
+		return;
+	}
+
+	if (cls.state != ca_dedicated)
+	{
+		MR_Init();
+	}
+
 	// check for special benchmark mode
 // COMMANDLINEOPTION: Client: -benchmark <demoname> runs a timedemo and quits, results of any timedemo can be found in gamedir/benchmark.log (for example id1/benchmark.log)
 	i = COM_CheckParm("-benchmark");
@@ -1056,19 +1070,6 @@ void Host_Init (void)
 	Con_DPrint("========Initialized=========\n");
 
 	Host_StartVideo();
-
-	// FIXME: put this into some neat design, but the menu should be allowed to crash
-	// without crashing the whole game, so this should just be a short-time solution
-
-	// here comes the not so critical stuff
-	if (setjmp(host_abortframe)) {
-		return;
-	}
-
-	if (vid_opened && cls.state != ca_dedicated)
-	{
-		MR_Init();
-	}
 }
 
 
