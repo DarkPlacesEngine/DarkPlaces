@@ -319,7 +319,7 @@ void ServerList_RebuildViewList(void)
 
 	serverlist_viewcount = 0;
 	for( i = 0 ; i < serverlist_cachecount ; i++ )
-		if( serverlist_cache[i].finished )
+		if( serverlist_cache[i].query == SQS_QUERIED )
 			ServerList_ViewList_Insert( &serverlist_cache[i] );
 }
 
@@ -903,7 +903,6 @@ int NetConn_IsLocalGame(void)
 int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, lhnetaddress_t *peeraddress)
 {
 	int ret, c, control;
-	lhnetaddress_t svaddress;
 	const char *s;
 	char *string, addressstring2[128], cname[128], ipstring[32];
 	char stringbuf[16384];
@@ -973,7 +972,6 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 				// find a slot
 				if( serverlist_cachecount == SERVERLIST_TOTALSIZE )
 					return true;
-				serverquerycount++;
 
 				memset(&serverlist_cache[serverlist_cachecount], 0, sizeof(serverlist_cache[serverlist_cachecount]));
 				// store the data the engine cares about (address and ping)
@@ -986,8 +984,8 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 				}
 
 				++serverlist_cachecount;
-
 			}
+
 			info = &serverlist_cache[n].info;
 			if ((s = SearchInfostring(string, "gamename"     )) != NULL) strlcpy(info->game, s, sizeof (info->game));else info->game[0] = 0;
 			if ((s = SearchInfostring(string, "modname"      )) != NULL) strlcpy(info->mod , s, sizeof (info->mod ));else info->mod[0]  = 0;
@@ -1025,14 +1023,15 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 					if (serverlist_cache[n].line1[i] != ' ')
 						serverlist_cache[n].line1[i] -= 30;
 			}
-			// and finally, update the view set
-			if( serverlist_cache[n].finished )
-                ServerList_ViewList_Remove( &serverlist_cache[n] );
-			// else if not in the slist menu we should print the server to console (if wanted)
+			if( serverlist_cache[n].query == SQS_QUERIED ) {
+				ServerList_ViewList_Remove( &serverlist_cache[n] );
+			}
+			// if not in the slist menu we should print the server to console (if wanted)
 			else if( serverlist_consoleoutput )
 				Con_Printf("%s\n%s\n", serverlist_cache[n].line1, serverlist_cache[n].line2);
+			// and finally, update the view set
 			ServerList_ViewList_Insert( &serverlist_cache[n] );
-			serverlist_cache[n].finished = true;
+			serverlist_cache[n].query = SQS_QUERIED;
 
 			return true;
 		}
@@ -1062,17 +1061,11 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 				{
 					serverquerycount++;
 
-					LHNETADDRESS_FromString(&svaddress, ipstring, 0);
-					NetConn_WriteString(mysocket, "\377\377\377\377getinfo", &svaddress);
-
 					memset(&serverlist_cache[serverlist_cachecount], 0, sizeof(serverlist_cache[serverlist_cachecount]));
 					// store the data the engine cares about (address and ping)
 					strlcpy (serverlist_cache[serverlist_cachecount].info.cname, ipstring, sizeof (serverlist_cache[serverlist_cachecount].info.cname));
 					serverlist_cache[serverlist_cachecount].info.ping = 100000;
-					serverlist_cache[serverlist_cachecount].querytime = realtime;
-					// if not in the slist menu we should print the server to console
-					if (serverlist_consoleoutput)
-						Con_Printf("querying %s\n", ipstring);
+					serverlist_cache[serverlist_cachecount].query = SQS_PENDING;
 
 					++serverlist_cachecount;
 				}
@@ -1190,6 +1183,51 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 	return ret;
 }
 
+#define QUERIES_PER_FRAME 4
+void NetConn_QueryQueueFrame(void)
+{
+	int index = 0;
+	int queries = 0;
+	static float time = -1;
+	int maxqueries = 0;
+
+	if( time == -1 ) {
+		time = realtime;
+	}
+
+	maxqueries = QUERIES_PER_FRAME * (realtime - time );
+
+	if( maxqueries == 0 ) {
+		return;
+	}
+
+	for( ; index < serverlist_cachecount && queries < QUERIES_PER_FRAME ; index++ ) 
+	{
+		if( serverlist_cache[ index ].query == SQS_PENDING ) 
+		{
+			lhnetaddress_t address;
+			int socket;
+
+			LHNETADDRESS_FromString(&address, serverlist_cache[ index ].info.cname, 0);
+			for (socket = 0; socket < cl_numsockets ; socket++) {
+				NetConn_WriteString(cl_sockets[socket], "\377\377\377\377getinfo", &address);
+			}
+			
+			serverlist_cache[ index ].querytime = realtime;
+			serverlist_cache[ index ].query = SQS_QUERYING;
+
+			// if not in the slist menu we should print the server to console
+			if (serverlist_consoleoutput)
+				Con_Printf("querying %s\n", serverlist_cache[ index ].info.cname);
+
+
+			queries++;
+		}
+	}
+
+	time = realtime;
+}
+
 void NetConn_ClientFrame(void)
 {
 	int i, length;
@@ -1221,9 +1259,12 @@ void NetConn_ClientFrame(void)
 		NetConn_Write(cls.connect_mysocket, net_message.data, net_message.cursize, &cls.connect_address);
 		SZ_Clear(&net_message);
 	}
-	for (i = 0;i < cl_numsockets;i++)
-		while (cl_sockets[i] && (length = NetConn_Read(cl_sockets[i], readbuffer, sizeof(readbuffer), &peeraddress)) > 0)
+	for (i = 0;i < cl_numsockets;i++) {
+		while (cl_sockets[i] && (length = NetConn_Read(cl_sockets[i], readbuffer, sizeof(readbuffer), &peeraddress)) > 0) {
 			NetConn_ClientParsePacket(cl_sockets[i], readbuffer, length, &peeraddress);
+		}
+	}
+	NetConn_QueryQueueFrame();
 	if (cls.netcon && realtime > cls.netcon->timeout)
 	{
 		Con_Print("Connection timed out\n");

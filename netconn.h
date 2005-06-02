@@ -207,10 +207,18 @@ typedef enum
 	SLIF_COUNT
 } serverlist_infofield_t;
 
+typedef enum
+{
+	SQS_NONE = 0,
+	SQS_PENDING,
+	SQS_QUERYING,
+	SQS_QUERIED
+} serverlist_query_state;
+
 typedef struct
 {
 	// used to determine whether this entry should be included into the final view
-	qboolean finished;
+	serverlist_query_state query;
 	// used to calculate ping when update comes in
 	double querytime;
 
@@ -296,6 +304,7 @@ void NetConn_ClientFrame(void);
 void NetConn_ServerFrame(void);
 void NetConn_QueryMasters(void);
 void NetConn_Heartbeat(int priority);
+void NetConn_QueryQueueFrame(void);
 int NetConn_SendToAll(sizebuf_t *data, double blocktime);
 void Net_Stats_f(void);
 void Net_Slist_f(void);
