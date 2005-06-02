@@ -56,7 +56,7 @@ int forcedeveloper;
 // current client
 client_t *host_client;
 
-jmp_buf host_abortserver;
+jmp_buf host_abortframe;
 
 // pretend frames take this amount of time (in seconds), 0 = realtime
 cvar_t host_framerate = {0, "host_framerate","0"};
@@ -102,7 +102,7 @@ aborts the current host frame and goes on with the next one
 */
 void Host_AbortCurrentFrame(void)
 {
-	longjmp (host_abortserver, 1);
+	longjmp (host_abortframe, 1);
 }
 
 /*
@@ -745,7 +745,7 @@ void _Host_Frame (float time)
 	static double time3 = 0;
 	int pass1, pass2, pass3;
 
-	if (setjmp(host_abortserver))
+	if (setjmp(host_abortframe))
 		return;			// something bad happened, or the server disconnected
 
 	// decide the simulation time
@@ -880,7 +880,6 @@ void Host_StartVideo(void)
 		VID_Start();
 		CDAudio_Startup();
 		CL_InitTEnts();  // We must wait after sound startup to load tent sounds
-		MR_Init();
 	}
 }
 
@@ -1057,6 +1056,19 @@ void Host_Init (void)
 	Con_DPrint("========Initialized=========\n");
 
 	Host_StartVideo();
+
+	// FIXME: put this into some neat design, but the menu should be allowed to crash
+	// without crashing the whole game, so this should just be a short-time solution
+
+	// here comes the not so critical stuff
+	if (setjmp(host_abortframe)) {
+		return;
+	}
+
+	if (vid_opened && cls.state != ca_dedicated)
+	{
+		MR_Init();
+	}
 }
 
 
