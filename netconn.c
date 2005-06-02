@@ -110,14 +110,16 @@ qboolean serverlist_consoleoutput;
 static void _ServerList_ViewList_Helper_InsertBefore( int index, serverlist_entry_t *entry )
 {
     int i;
-	if( serverlist_viewcount == SERVERLIST_VIEWLISTSIZE )
-		return;
+	if( serverlist_viewcount < SERVERLIST_VIEWLISTSIZE ) {
+		i = serverlist_viewcount++;
+	} else {
+		i = SERVERLIST_VIEWLISTSIZE - 1;
+	}
 
-	for( i = serverlist_viewcount ; i > index ; i-- )
+	for( ; i > index ; i-- )
 		serverlist_viewlist[ i ] = serverlist_viewlist[ i - 1 ];
 
 	serverlist_viewlist[index] = entry;
-	serverlist_viewcount++;
 }
 
 // we suppose serverlist_viewcount to be valid, ie > 0
@@ -254,9 +256,7 @@ static void ServerList_ViewList_Insert( serverlist_entry_t *entry )
 {
 	int start, end, mid;
 
-	if( serverlist_viewcount == SERVERLIST_VIEWLISTSIZE )
-		return;
-
+	// FIXME: change this to be more readable (...)
 	// now check whether it passes through the masks
 	for( start = 0 ; serverlist_andmasks[start].active && start < SERVERLIST_ANDMASKCOUNT ; start++ )
 		if( !_ServerList_Entry_Mask( &serverlist_andmasks[start], &entry->info ) )
@@ -271,7 +271,7 @@ static void ServerList_ViewList_Insert( serverlist_entry_t *entry )
 	if( !serverlist_viewcount ) {
 		_ServerList_ViewList_Helper_InsertBefore( 0, entry );
 		return;
-	}
+	} 
 	// ok, insert it, we just need to find out where exactly:
 
 	// two special cases
@@ -335,7 +335,7 @@ static void _ServerList_Test(void)
 	int i;
 	for( i = 0 ; i < 1024 ; i++ ) {
 		memset( &serverlist_cache[serverlist_cachecount], 0, sizeof( serverlist_entry_t ) );
-		serverlist_cache[serverlist_cachecount].info.ping = rand() % 450 + 250;
+		serverlist_cache[serverlist_cachecount].info.ping = 1000 + 1024 - i;
 		dpsnprintf( serverlist_cache[serverlist_cachecount].info.name, 128, "Black's ServerList Test %i", i );
 		serverlist_cache[serverlist_cachecount].finished = true;
 		sprintf( serverlist_cache[serverlist_cachecount].line1, "%i %s", serverlist_cache[serverlist_cachecount].info.ping, serverlist_cache[serverlist_cachecount].info.name );
@@ -355,9 +355,10 @@ void ServerList_QueryList(void)
 	serverlist_cachecount = 0;
 	serverlist_viewcount = 0;
 	serverlist_consoleoutput = false;
-	NetConn_QueryMasters();
-
+	
 	//_ServerList_Test();
+	
+	NetConn_QueryMasters();
 }
 
 // rest
