@@ -1864,7 +1864,7 @@ int PRVM_AllocString(int bufferlength, char **pointer)
 		}
 		prog->numknownstrings++;
 	}
-	(char *)(prog->knownstrings[i]) = PRVM_Alloc(bufferlength);
+	prog->knownstrings[i] = PRVM_Alloc(bufferlength);
 	if (pointer)
 		*pointer = (char *)(prog->knownstrings[i]);
 	return -1 - i;
