@@ -1825,7 +1825,7 @@ int PRVM_SetEngineString(const char *s)
 	// new unknown engine string
 	if (developer.integer >= 3)
 		Con_Printf("new engine string %p\n", s);
-	for (i = 0;i < prog->numknownstrings;i++)
+	for (i = prog->firstfreeknownstring;i < prog->numknownstrings;i++)
 		if (!prog->knownstrings[i])
 			break;
 	if (i >= prog->numknownstrings)
@@ -1840,6 +1840,7 @@ int PRVM_SetEngineString(const char *s)
 		}
 		prog->numknownstrings++;
 	}
+	prog->firstfreeknownstring = i + 1;
 	prog->knownstrings[i] = s;
 	return -1 - i;
 }
@@ -1849,7 +1850,7 @@ int PRVM_AllocString(int bufferlength, char **pointer)
 	int i;
 	if (!bufferlength)
 		return 0;
-	for (i = 0;i < prog->numknownstrings;i++)
+	for (i = prog->firstfreeknownstring;i < prog->numknownstrings;i++)
 		if (!prog->knownstrings[i])
 			break;
 	if (i >= prog->numknownstrings)
@@ -1864,6 +1865,7 @@ int PRVM_AllocString(int bufferlength, char **pointer)
 		}
 		prog->numknownstrings++;
 	}
+	prog->firstfreeknownstring = i + 1;
 	prog->knownstrings[i] = PRVM_Alloc(bufferlength);
 	if (pointer)
 		*pointer = (char *)(prog->knownstrings[i]);
@@ -1883,6 +1885,7 @@ void PRVM_FreeString(int num)
 			Host_Error("PRVM_FreeString: attempt to free a non-existent or already freed string\n");
 		PRVM_Free((char *)prog->knownstrings[num]);
 		prog->knownstrings[num] = NULL;
+		prog->firstfreeknownstring = min(prog->firstfreeknownstring, num);
 	}
 	else
 		Host_Error("PRVM_FreeString: invalid string offset %i\n", num);
