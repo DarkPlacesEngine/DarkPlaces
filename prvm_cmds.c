@@ -1686,9 +1686,8 @@ void VM_strzone(void)
 	VM_SAFEPARMCOUNT(1,VM_strzone);
 
 	in = PRVM_G_STRING(OFS_PARM0);
-	out = PRVM_AllocString(strlen(in) + 1);
+	PRVM_G_INT(OFS_RETURN) = PRVM_AllocString(strlen(in) + 1, &out);
 	strcpy(out, in);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetQCString(out);
 }
 
 /*
@@ -1702,7 +1701,7 @@ strunzone(string s)
 void VM_strunzone(void)
 {
 	VM_SAFEPARMCOUNT(1,VM_strunzone);
-	PRVM_FreeString((char *)PRVM_G_STRING(OFS_PARM0));
+	PRVM_FreeString(PRVM_G_INT(OFS_PARM0));
 }
 
 /*
@@ -2651,7 +2650,7 @@ void VM_altstr_count( void )
 	for( count = 0, pos = altstr ; *pos ; pos++ ) {
 		if( *pos == '\\' ) {
 			if( !*++pos ) {
-				break; 
+				break;
 			}
 		} else if( *pos == '\'' ) {
 			count++;
