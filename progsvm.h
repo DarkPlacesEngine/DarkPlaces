@@ -152,7 +152,7 @@ typedef union prvm_eval_s
 	int				edict;
 } prvm_eval_t;
 
-typedef struct prvm_required_field_s 
+typedef struct prvm_required_field_s
 {
 	int type;
 	const char *name;
@@ -200,7 +200,7 @@ typedef struct prvm_edict_s
 		// However, the first one should be preferred.
 	} priv;
 	// QuakeC fields (stored in dynamically resized array)
-	union 
+	union
 	{
 		void *vp;
 		entvars_t *server;
@@ -479,8 +479,8 @@ void PRVM_ED_PrintNum (int ent);
 const char *PRVM_GetString(int num);
 int PRVM_SetQCString(const char *s);
 int PRVM_SetEngineString(const char *s);
-char *PRVM_AllocString(int bufferlength);
-void PRVM_FreeString(char *s);
+int PRVM_AllocString(int bufferlength, char **pointer);
+void PRVM_FreeString(int num);
 
 //============================================================================
 

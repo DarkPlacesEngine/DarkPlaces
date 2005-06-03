@@ -884,8 +884,7 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s)
 	{
 	case ev_string:
 		l = strlen(s) + 1;
-		new_p = PRVM_AllocString(l);
-		val->string = PRVM_SetQCString(new_p);
+		val->string = PRVM_AllocString(l, &new_p);
 		for (i = 0;i < l;i++)
 		{
 			if (s[i] == '\\' && i < l-1)
@@ -1859,7 +1858,7 @@ int PRVM_SetEngineString(const char *s)
 	return -1 - i;
 }
 
-char *PRVM_AllocString(int bufferlength)
+int PRVM_AllocString(int bufferlength, char **pointer)
 {
 	int i;
 	if (!bufferlength)
@@ -1879,22 +1878,27 @@ char *PRVM_AllocString(int bufferlength)
 		}
 		prog->numknownstrings++;
 	}
-	return (char *)(prog->knownstrings[i] = PRVM_Alloc(bufferlength));
+	(char *)(prog->knownstrings[i]) = PRVM_Alloc(bufferlength);
+	if (pointer)
+		*pointer = (char *)(prog->knownstrings[i]);
+	return -1 - i;
 }
 
-void PRVM_FreeString(char *s)
+void PRVM_FreeString(int num)
 {
-	int i;
-	if (!s)
+	if (num == 0)
 		Host_Error("PRVM_FreeString: attempt to free a NULL string\n");
-	if (s >= prog->strings && s <= prog->strings + prog->stringssize)
+	else if (num >= 0 && num < prog->stringssize)
 		Host_Error("PRVM_FreeString: attempt to free a constant string\n");
-	for (i = 0;i < prog->numknownstrings;i++)
-		if (prog->knownstrings[i] == s)
-			break;
-	if (i == prog->numknownstrings)
-		Host_Error("PRVM_FreeString: attempt to free a non-existent or already freed string\n");
-	PRVM_Free((char *)prog->knownstrings[i]);
-	prog->knownstrings[i] = NULL;
+	else if (num < 0 && num >= -prog->numknownstrings)
+	{
+		num = -1 - num;
+		if (!prog->knownstrings[num])
+			Host_Error("PRVM_FreeString: attempt to free a non-existent or already freed string\n");
+		PRVM_Free((char *)prog->knownstrings[num]);
+		prog->knownstrings[num] = NULL;
+	}
+	else
+		Host_Error("PRVM_FreeString: invalid string offset %i\n", num);
 }
 
