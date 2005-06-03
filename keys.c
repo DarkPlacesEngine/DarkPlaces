@@ -867,6 +867,12 @@ Key_Event (int key, char ascii, qboolean down)
 	if (key == K_ESCAPE) {
 		if (!down)
 			return;
+		// ctrl-escape is a safety measure
+		if (ctrl_down)
+		{
+			Con_ToggleConsole_f ();
+			return;
+		}
 		switch (key_dest) {
 			case key_message:
 				Key_Message (key, ascii);
