@@ -15,8 +15,12 @@ else
 ifeq ($(DP_ARCH), Darwin)
 	DP_MAKE_TARGET=macosx
 else
+ifeq ($(DP_ARCH), SunOS)
+	DP_MAKE_TARGET=sunos
+else
 	DP_MAKE_TARGET=linux
 
+endif  # ifeq ($(DP_ARCH), SunOS)
 endif  # ifeq ($(DP_ARCH), Darwin)
 endif  # ifneq ($(filter %BSD,$(DP_ARCH)),)
 endif  # ifdef windir
@@ -72,6 +76,25 @@ ifeq ($(DP_MAKE_TARGET), macosx)
 	LDFLAGS_CL=$(LDFLAGS_MACOSXCL)
 	LDFLAGS_SV=$(LDFLAGS_MACOSXSV)
 	LDFLAGS_SDL=$(LDFLAGS_MACOSXSDL)
+
+	EXE_CL=$(EXE_UNIXCL)
+	EXE_SV=$(EXE_UNIXSV)
+	EXE_SDL=$(EXE_UNIXSDL)
+endif
+
+# SunOS configuration (Solaris)
+ifeq ($(DP_MAKE_TARGET), sunos)
+	OBJ_SOUND=$(OBJ_SUNOSSOUND)
+	LIB_SOUND=$(LIB_SUNOSSOUND)
+	OBJ_CD=$(OBJ_SUNOSCD)
+
+	OBJ_CL=$(OBJ_GLX)
+
+	CFLAGS_EXTRA=$(CFLAGS_SUNOS)
+
+	LDFLAGS_CL=$(LDFLAGS_SUNOSCL)
+	LDFLAGS_SV=$(LDFLAGS_SUNOSSV)
+	LDFLAGS_SDL=$(LDFLAGS_SUNOSSDL)
 
 	EXE_CL=$(EXE_UNIXCL)
 	EXE_SV=$(EXE_UNIXSV)

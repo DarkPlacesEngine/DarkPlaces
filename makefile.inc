@@ -186,6 +186,21 @@ LDFLAGS_MACOSXSDL=$(LDFLAGS_UNIXCOMMON) -ldl $(LDFLAGS_UNIXSDL)
 
 OBJ_AGL= builddate.c sys_linux.o vid_agl.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
 
+##### SunOS specific variables #####
+
+OBJ_SUNOSSOUND=$(OBJ_OSSSOUND)
+LIB_SUNOSSOUND=$(LIB_OSSSOUND)
+
+# No CD support available
+OBJ_SUNOSCD=$(OBJ_NOCD)
+
+CFLAGS_SUNOS=-I/usr/lib/oss/include -DBSD_COMP
+
+# Link
+LDFLAGS_SUNOSCL=$(LDFLAGS_UNIXCOMMON) -ldl -lsocket -lnsl $(LDFLAGS_UNIXCL)
+LDFLAGS_SUNOSSV=$(LDFLAGS_UNIXCOMMON) -ldl -lsocket -lnsl
+LDFLAGS_SUNOSSDL=$(LDFLAGS_UNIXCOMMON) -ldl -lsocket -lnsl $(LDFLAGS_UNIXSDL)
+
 
 ##### BSD specific variables #####
 
@@ -303,21 +318,21 @@ bin-debug :
 	@echo
 	@echo "========== $(EXE) (debug) =========="
 	$(MAKE) $(EXE) DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
-		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_DEBUG) $(OPTIM_DEBUG)"\
+		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_EXTRA) $(CFLAGS_DEBUG) $(OPTIM_DEBUG)"\
 		LDFLAGS="$(LDFLAGS_DEBUG) $(LDFLAGS_COMMON)"
 
 bin-profile :
 	@echo
 	@echo "========== $(EXE) (profile) =========="
 	$(MAKE) $(EXE) DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
-		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_PROFILE) $(OPTIM_RELEASE)"\
+		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_EXTRA) $(CFLAGS_PROFILE) $(OPTIM_RELEASE)"\
 		LDFLAGS="$(LDFLAGS_PROFILE) $(LDFLAGS_COMMON)"
 
 bin-release :
 	@echo
 	@echo "========== $(EXE) (release) =========="
 	$(MAKE) $(EXE) DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
-		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_RELEASE) $(OPTIM_RELEASE)"\
+		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_EXTRA) $(CFLAGS_RELEASE) $(OPTIM_RELEASE)"\
 		LDFLAGS="$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)"
 	strip $(EXE)
 
