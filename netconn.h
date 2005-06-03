@@ -210,15 +210,17 @@ typedef enum
 typedef enum
 {
 	SQS_NONE = 0,
-	SQS_PENDING,
 	SQS_QUERYING,
-	SQS_QUERIED
+	SQS_QUERIED,
+	SQS_TIMEDOUT
 } serverlist_query_state;
 
 typedef struct
 {
 	// used to determine whether this entry should be included into the final view
 	serverlist_query_state query;
+	// used to count the number of times the host has tried to query this server already
+	unsigned querycounter;
 	// used to calculate ping when update comes in
 	double querytime;
 
