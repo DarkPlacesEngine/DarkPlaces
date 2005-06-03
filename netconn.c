@@ -56,7 +56,8 @@ cvar_t cl_netlocalping = {0, "cl_netlocalping","0"};
 static cvar_t cl_netpacketloss = {0, "cl_netpacketloss","0"};
 static cvar_t net_slist_queriespersecond = {0, "net_slist_queriespersecond", "20"};
 static cvar_t net_slist_queriesperframe = {0, "net_slist_queriesperframe", "4"};
-
+static cvar_t net_slist_timeout = {0, "net_slist_timeout", "4"};
+static cvar_t net_slist_maxtries = {0, "net_slist_maxtries", "3"};
 
 /* statistic counters */
 static int packetsSent = 0;
@@ -1074,7 +1075,7 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 					// store the data the engine cares about (address and ping)
 					strlcpy (serverlist_cache[serverlist_cachecount].info.cname, ipstring, sizeof (serverlist_cache[serverlist_cachecount].info.cname));
 					serverlist_cache[serverlist_cachecount].info.ping = 100000;
-					serverlist_cache[serverlist_cachecount].query = SQS_PENDING;
+					serverlist_cache[serverlist_cachecount].query = SQS_QUERYING;
 
 					++serverlist_cachecount;
 				}
@@ -1199,6 +1200,7 @@ void NetConn_QueryQueueFrame(void)
 	int index;
 	int queries;
 	int maxqueries;
+	double timeouttime;
 	static double querycounter = 0;
 
 	if (serverlist_querysleep)
@@ -1210,35 +1212,52 @@ void NetConn_QueryQueueFrame(void)
 	maxqueries = bound(0, maxqueries, net_slist_queriesperframe.integer);
 	querycounter -= maxqueries;
 
+	if( maxqueries == 0 ) {
+		return;
+	}
+
 	// scan serverlist and issue queries as needed
-	// (note: this aborts immediately if maxqueries is 0)
+    serverlist_querysleep = true;
+
+	timeouttime = realtime - net_slist_timeout.value;
 	for( index = 0, queries = 0 ; index < serverlist_cachecount && queries < maxqueries ; index++ )
 	{
-		if( serverlist_cache[ index ].query == SQS_PENDING )
+		serverlist_entry_t *entry = &serverlist_cache[ index ];
+		if( entry->query != SQS_QUERYING ) 
+		{
+			continue;
+		}
+
+        serverlist_querysleep = false;
+		if( entry->querycounter != 0 && entry->querytime > timeouttime )
+		{
+			continue;
+		}
+
+		if( entry->querycounter != net_slist_maxtries.integer ) 
 		{
 			lhnetaddress_t address;
 			int socket;
 
-			LHNETADDRESS_FromString(&address, serverlist_cache[ index ].info.cname, 0);
+			LHNETADDRESS_FromString(&address, entry->info.cname, 0);
 			for (socket = 0; socket < cl_numsockets ; socket++) {
 				NetConn_WriteString(cl_sockets[socket], "\377\377\377\377getinfo", &address);
 			}
 
-			serverlist_cache[ index ].querytime = realtime;
-			serverlist_cache[ index ].query = SQS_QUERYING;
+			entry->querytime = realtime;
+			entry->querycounter++;
 
 			// if not in the slist menu we should print the server to console
 			if (serverlist_consoleoutput)
-				Con_Printf("querying %s\n", serverlist_cache[ index ].info.cname);
-
+				Con_Printf("querying %25s (%i. try)\n", entry->info.cname, entry->querycounter);
 
 			queries++;
+		} 
+		else 
+		{
+			entry->query = SQS_TIMEDOUT;
 		}
 	}
-
-	// if we didn't find any to query, go back to sleep
-	if (index == serverlist_cachecount)
-		serverlist_querysleep = true;
 }
 
 void NetConn_ClientFrame(void)
@@ -1896,6 +1915,8 @@ void NetConn_Init(void)
 	Cmd_AddCommand("heartbeat", Net_Heartbeat_f);
 	Cvar_RegisterVariable(&net_slist_queriespersecond);
 	Cvar_RegisterVariable(&net_slist_queriesperframe);
+	Cvar_RegisterVariable(&net_slist_timeout);
+	Cvar_RegisterVariable(&net_slist_maxtries);
 	Cvar_RegisterVariable(&net_messagetimeout);
 	Cvar_RegisterVariable(&net_messagerejointimeout);
 	Cvar_RegisterVariable(&net_connecttimeout);
