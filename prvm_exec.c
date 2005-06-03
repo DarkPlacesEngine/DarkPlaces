@@ -199,7 +199,7 @@ void PRVM_Profile_f (void)
 		Con_Print("prvm_profile <program name>\n");
 		return;
 	}
-	
+
 	PRVM_Begin;
 	if(!PRVM_SetProgFromString(Cmd_Argv(1)))
 		return;
@@ -227,6 +227,7 @@ void PRVM_Profile_f (void)
 			num++;
 			best->profile = 0;
 			best->builtinsprofile = 0;
+			best->callcount = 0;
 		}
 	} while (best);
 
@@ -245,7 +246,7 @@ void PRVM_CrashAll()
 		PRVM_SetProg(i);
 		PRVM_Crash();
 	}
-	
+
 	prog = oldprog;
 }
 
@@ -381,7 +382,7 @@ PRVM_ExecuteProgram
 extern cvar_t prvm_boundscheck;
 extern cvar_t prvm_traceqc;
 extern int		PRVM_ED_FindFieldOffset (const char *field);
-extern ddef_t*	PRVM_ED_FindGlobal(const char *name); 
+extern ddef_t*	PRVM_ED_FindGlobal(const char *name);
 void PRVM_ExecuteProgram (func_t fnum, const char *errormessage)
 {
 	dstatement_t	*st;
