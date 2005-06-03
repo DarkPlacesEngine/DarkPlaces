@@ -268,6 +268,9 @@ typedef struct prvm_prog_s
 
 	int					maxknownstrings;
 	int					numknownstrings;
+	// this is updated whenever a string is removed or added
+	// (simple optimization of the free string search)
+	int					firstfreeknownstring;
 	const char			**knownstrings;
 
 	// all memory allocations related to this vm_prog (code, edicts, strings)
