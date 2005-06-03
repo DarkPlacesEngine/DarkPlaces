@@ -1234,7 +1234,7 @@ void NetConn_QueryQueueFrame(void)
 			continue;
 		}
 
-		if( entry->querycounter != net_slist_maxtries.integer ) 
+		if( entry->querycounter != (unsigned) net_slist_maxtries.integer ) 
 		{
 			lhnetaddress_t address;
 			int socket;
