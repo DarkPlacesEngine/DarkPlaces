@@ -54,6 +54,8 @@ cvar_t developer_networking = {0, "developer_networking", "0"};
 
 cvar_t cl_netlocalping = {0, "cl_netlocalping","0"};
 static cvar_t cl_netpacketloss = {0, "cl_netpacketloss","0"};
+static cvar_t net_slist_queriespersecond = {0, "net_slist_queriespersecond", "20"};
+static cvar_t net_slist_queriesperframe = {0, "net_slist_queriesperframe", "4"};
 
 
 /* statistic counters */
@@ -73,6 +75,9 @@ int masterquerycount = 0;
 int masterreplycount = 0;
 int serverquerycount = 0;
 int serverreplycount = 0;
+
+// this is only false if there are still servers left to query
+int serverlist_querysleep = true;
 
 static qbyte sendbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
 static qbyte readbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
@@ -271,7 +276,7 @@ static void ServerList_ViewList_Insert( serverlist_entry_t *entry )
 	if( !serverlist_viewcount ) {
 		_ServerList_ViewList_Helper_InsertBefore( 0, entry );
 		return;
-	} 
+	}
 	// ok, insert it, we just need to find out where exactly:
 
 	// two special cases
@@ -355,9 +360,9 @@ void ServerList_QueryList(void)
 	serverlist_cachecount = 0;
 	serverlist_viewcount = 0;
 	serverlist_consoleoutput = false;
-	
+
 	//_ServerList_Test();
-	
+
 	NetConn_QueryMasters();
 }
 
@@ -884,6 +889,10 @@ void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_t *peer
 	M_Update_Return_Reason("");
 	// the connection request succeeded, stop current connection and set up a new connection
 	CL_Disconnect();
+	// if we're connecting to a remote server, shut down any local server
+	if (LHNETADDRESS_GetAddressType(peeraddress) != LHNETADDRESSTYPE_LOOP && sv.active)
+		Host_ShutdownServer (false);
+	// allocate a net connection to keep track of things
 	cls.netcon = NetConn_Open(mysocket, peeraddress);
 	Con_Printf("Connection accepted to %s\n", cls.netcon->address);
 	key_dest = key_game;
@@ -1074,6 +1083,8 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 				data += 7;
 				length -= 7;
 			}
+			// begin or resume serverlist queries
+			serverlist_querysleep = false;
 			return true;
 		}
 		/*
@@ -1183,27 +1194,27 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 	return ret;
 }
 
-#define QUERIES_PER_FRAME 4
 void NetConn_QueryQueueFrame(void)
 {
-	int index = 0;
-	int queries = 0;
-	static float time = -1;
-	int maxqueries = 0;
+	int index;
+	int queries;
+	int maxqueries;
+	static double querycounter = 0;
 
-	if( time == -1 ) {
-		time = realtime;
-	}
-
-	maxqueries = QUERIES_PER_FRAME * (realtime - time );
-
-	if( maxqueries == 0 ) {
+	if (serverlist_querysleep)
 		return;
-	}
 
-	for( ; index < serverlist_cachecount && queries < QUERIES_PER_FRAME ; index++ ) 
+	// each time querycounter reaches 1.0 issue a query
+	querycounter += host_realframetime * net_slist_queriespersecond.value;
+	maxqueries = (int)querycounter;
+	maxqueries = bound(0, maxqueries, net_slist_queriesperframe.integer);
+	querycounter -= maxqueries;
+
+	// scan serverlist and issue queries as needed
+	// (note: this aborts immediately if maxqueries is 0)
+	for( index = 0, queries = 0 ; index < serverlist_cachecount && queries < maxqueries ; index++ )
 	{
-		if( serverlist_cache[ index ].query == SQS_PENDING ) 
+		if( serverlist_cache[ index ].query == SQS_PENDING )
 		{
 			lhnetaddress_t address;
 			int socket;
@@ -1212,7 +1223,7 @@ void NetConn_QueryQueueFrame(void)
 			for (socket = 0; socket < cl_numsockets ; socket++) {
 				NetConn_WriteString(cl_sockets[socket], "\377\377\377\377getinfo", &address);
 			}
-			
+
 			serverlist_cache[ index ].querytime = realtime;
 			serverlist_cache[ index ].query = SQS_QUERYING;
 
@@ -1225,7 +1236,9 @@ void NetConn_QueryQueueFrame(void)
 		}
 	}
 
-	time = realtime;
+	// if we didn't find any to query, go back to sleep
+	if (index == serverlist_cachecount)
+		serverlist_querysleep = true;
 }
 
 void NetConn_ClientFrame(void)
@@ -1881,6 +1894,8 @@ void NetConn_Init(void)
 	Cmd_AddCommand("net_stats", Net_Stats_f);
 	Cmd_AddCommand("net_slist", Net_Slist_f);
 	Cmd_AddCommand("heartbeat", Net_Heartbeat_f);
+	Cvar_RegisterVariable(&net_slist_queriespersecond);
+	Cvar_RegisterVariable(&net_slist_queriesperframe);
 	Cvar_RegisterVariable(&net_messagetimeout);
 	Cvar_RegisterVariable(&net_messagerejointimeout);
 	Cvar_RegisterVariable(&net_connecttimeout);
