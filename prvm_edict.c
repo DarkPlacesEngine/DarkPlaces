@@ -1812,20 +1812,6 @@ const char *PRVM_GetString(int num)
 	}
 }
 
-int PRVM_SetQCString(const char *s)
-{
-	int i;
-	if (!s)
-		return 0;
-	if (s >= prog->strings && s <= prog->strings + prog->stringssize)
-		return s - prog->strings;
-	for (i = 0;i < prog->numknownstrings;i++)
-		if (prog->knownstrings[i] == s)
-			return -1 - i;
-	Host_Error("PRVM_SetQCString: unknown string\n");
-	return -1 - i;
-}
-
 int PRVM_SetEngineString(const char *s)
 {
 	int i;
