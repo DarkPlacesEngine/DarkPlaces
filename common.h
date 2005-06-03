@@ -33,6 +33,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # define MACOSX
 #endif
 
+// Create our own define for Solaris
+#if defined(__sun__) && defined(__svr4__)
+# define SUNOS
+#endif
+
+#ifdef SUNOS
+# define FNDELAY O_NDELAY	// FNDELAY's equivalent on SunOS is O_NDELAY
+# define model_t dp_model_t // Workaround conflict with /usr/include/sys/model.h
+#endif
 
 //============================================================================
 
@@ -76,8 +85,16 @@ unsigned short CRC_Block(const qbyte *data, int size);
 # if defined(WIN32)
 #  define BYTE_ORDER LITTLE_ENDIAN
 # else
-#  warning "Unable to determine the CPU endianess. Defaulting to little endian"
-#  define BYTE_ORDER LITTLE_ENDIAN
+#  if defined(SUNOS)
+#   if defined(__i386) || defined(__amd64)
+#    define BYTE_ORDER LITTLE_ENDIAN
+#   else
+#    define BYTE_ORDER BIG_ENDIAN
+#   endif
+#  else
+#   warning "Unable to determine the CPU endianess. Defaulting to little endian"
+#   define BYTE_ORDER LITTLE_ENDIAN
+#  endif
 # endif
 #endif
 
