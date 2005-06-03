@@ -39,7 +39,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 
 #ifdef SUNOS
-# define FNDELAY O_NDELAY	// FNDELAY's equivalent on SunOS is O_NDELAY
+#include <sys/file.h>		// Needed for FNDELAY
 # define model_t dp_model_t // Workaround conflict with /usr/include/sys/model.h
 #endif
 
