@@ -2026,7 +2026,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 	entityframe5_packetlog_t *packetlog;
 
 	if (prog->max_edicts > d->maxedicts)
-		EntityFrame5_ExpandEdicts(d, (prog->max_edicts + 255) & ~255);
+		EntityFrame5_ExpandEdicts(d, prog->max_edicts);
 
 	framenum = d->latestframenum + 1;
 	d->viewentnum = viewentnum;
@@ -2038,6 +2038,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 			break;
 	if (packetlognumber == ENTITYFRAME5_MAXPACKETLOGS)
 	{
+		Con_DPrintf("EntityFrame5_WriteFrame: packetlog overflow for a client, resetting\n");
 		EntityFrame5_LostFrame(d, framenum);
 		packetlognumber = 0;
 	}
@@ -2090,8 +2091,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 		num++;
 	}
 	// all remaining entities are dead
-	// note: this must use prog->max_edicts, not prog->num_edicts, because prog->num_edicts can both increase and decrease, where as prog->max_edicts only increases (if prog->num_edicts is used, sometimes some entities are missed when the prog->num_edicts count goes back down after firing some shots)
-	for (;num < prog->max_edicts;num++)
+	for (;num < d->maxedicts;num++)
 	{
 		if (CHECKPVSBIT(d->visiblebits, num))
 		{
@@ -2111,7 +2111,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 	// build lists of entities by priority level
 	memset(entityframe5_prioritychaincounts, 0, sizeof(entityframe5_prioritychaincounts));
 	l = 0;
-	for (num = 0;num < prog->num_edicts;num++)
+	for (num = 0;num < d->maxedicts;num++)
 	{
 		if (d->priorities[num])
 		{
