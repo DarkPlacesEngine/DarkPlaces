@@ -844,7 +844,7 @@ void COM_CheckRegistered (void)
 {
 	Cvar_Set ("cmdline", com_cmdline);
 
-	if (!FS_FileExists("gfx/pop.lmp"))
+	if (gamemode == GAME_NORMAL && !FS_FileExists("gfx/pop.lmp"))
 	{
 		if (fs_modified)
 			Con_Print("Playing shareware version, with modification.\nwarning: most mods require full quake data.\n");
