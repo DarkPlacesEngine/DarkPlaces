@@ -223,6 +223,8 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 			continue;
 		if (!ent->model || !ent->model->TraceBox)
 			continue;
+		if ((ent->flags & RENDER_EXTERIORMODEL) && !chase_active.integer)
+			continue;
 		// if transparent and not selectable, skip entity
 		if (!(cl_entities[n].state_current.effects & EF_SELECTABLE) && (ent->alpha < 1 || (ent->effects & (EF_ADDITIVE | EF_NODEPTHTEST))))
 			continue;
