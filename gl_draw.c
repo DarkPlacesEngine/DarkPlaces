@@ -289,20 +289,14 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 	int i, crc, hashkey;
 	cachepic_t *pic;
 	qpic_t *p;
-	int persistentflag;
+	int flags;
 
-    if (!strncmp(CLVIDEOPREFIX, path, sizeof(CLVIDEOPREFIX) - 1)) {
+	if (!strncmp(CLVIDEOPREFIX, path, sizeof(CLVIDEOPREFIX) - 1)) {
 		clvideo_t *video;
 
 		video = CL_GetVideo(path);
 		if( video )
 			return &video->cpif;
-	}
-
-	if (persistent) {
-		persistentflag = TEXF_PRECACHE;
-	} else {
-		persistentflag = 0;
 	}
 
 	crc = CRC_Block(path, strlen(path));
@@ -319,12 +313,18 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 	pic->chain = cachepichash[hashkey];
 	cachepichash[hashkey] = pic;
 
+	flags = TEXF_ALPHA;
+	if (persistent)
+		flags |= TEXF_PRECACHE;
+	if (!strcmp(path, "gfx/colorcontrol/ditherpattern.tga"))
+		flags |= TEXF_CLAMP;
+
 	// load the pic from disk
-	pic->tex = loadtextureimage(drawtexturepool, path, 0, 0, false, TEXF_ALPHA | persistentflag);
+	pic->tex = loadtextureimage(drawtexturepool, path, 0, 0, false, flags);
 	if (pic->tex == NULL && !strncmp(path, "gfx/", 4))
 	{
 		// compatibility with older versions
-		pic->tex = loadtextureimage(drawtexturepool, path + 4, 0, 0, false, TEXF_ALPHA | persistentflag);
+		pic->tex = loadtextureimage(drawtexturepool, path + 4, 0, 0, false, flags);
 		// failed to find gfx/whatever.tga or similar, try the wad
 		if (pic->tex == NULL && (p = W_GetLumpName (path + 4)))
 		{
@@ -336,10 +336,10 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 				for (i = 0;i < 128 * 128;i++)
 					if (pix[i] == 0)
 						pix[i] = 255;
-				pic->tex = R_LoadTexture2D(drawtexturepool, path, 128, 128, pix, TEXTYPE_PALETTE, TEXF_ALPHA | persistentflag, palette_complete);
+				pic->tex = R_LoadTexture2D(drawtexturepool, path, 128, 128, pix, TEXTYPE_PALETTE, flags, palette_complete);
 			}
 			else
-				pic->tex = R_LoadTexture2D(drawtexturepool, path, p->width, p->height, p->data, TEXTYPE_PALETTE, TEXF_ALPHA | persistentflag, palette_complete);
+				pic->tex = R_LoadTexture2D(drawtexturepool, path, p->width, p->height, p->data, TEXTYPE_PALETTE, flags, palette_complete);
 		}
 	}
 
