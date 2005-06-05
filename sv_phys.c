@@ -1345,8 +1345,6 @@ void SV_Physics_Entity (prvm_edict_t *ent, qboolean runmove)
 	int i = ent - prog->edicts;
 	if (i >= 1 && i <= svs.maxclients)
 	{
-		// apply the latest accepted move to the entity fields
-		SV_ApplyClientMove();
 		// make sure the velocity is sane (not a NaN)
 		SV_CheckVelocity(ent);
 		// LordHavoc: QuakeC replacement for SV_ClientThink (player movement)

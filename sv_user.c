@@ -603,6 +603,7 @@ SV_ReadClientMove
 ===================
 */
 extern void SV_Physics_Entity (prvm_edict_t *ent, qboolean runmove);
+void SV_ApplyClientMove (void);
 void SV_ReadClientMove (void)
 {
 	int i;
@@ -681,6 +682,8 @@ void SV_ReadClientMove (void)
 		memset(move, 0, sizeof(*move));
 	else
 	{
+		// apply the latest accepted move to the entity fields
+		SV_ApplyClientMove();
 		host_client->movesequence = move->sequence;
 		if (host_client->movesequence)
 		{
