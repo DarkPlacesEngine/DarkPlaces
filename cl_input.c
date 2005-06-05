@@ -439,6 +439,7 @@ void CL_Move (void)
 
 #include "cl_collision.h"
 
+extern void V_CalcRefdef(void);
 void CL_UpdatePrydonCursor(void)
 {
 	vec3_t temp, scale;
@@ -479,11 +480,13 @@ void CL_UpdatePrydonCursor(void)
 	// trace distance
 	VectorScale(scale, 1000000, scale);
 
-	// FIXME: use something other than renderer variables here
-	// (but they need to match)
-	VectorCopy(r_vieworigin, cl.cmd.cursor_start);
+	// calculate current view matrix
+	V_CalcRefdef();
+	VectorClear(temp);
+	Matrix4x4_Transform(&r_refdef.viewentitymatrix, temp, cl.cmd.cursor_start);
 	VectorSet(temp, cl.cmd.cursor_screen[2] * scale[2], cl.cmd.cursor_screen[0] * scale[0], cl.cmd.cursor_screen[1] * scale[1]);
-	Matrix4x4_Transform(&r_view_matrix, temp, cl.cmd.cursor_end);
+	Matrix4x4_Transform(&r_refdef.viewentitymatrix, temp, cl.cmd.cursor_end);
+	// trace from view origin to the cursor
 	cl.cmd.cursor_fraction = CL_SelectTraceLine(cl.cmd.cursor_start, cl.cmd.cursor_end, cl.cmd.cursor_impact, cl.cmd.cursor_normal, &cl.cmd.cursor_entitynumber, (chase_active.integer || cl.intermission) ? &cl_entities[cl.playerentity].render : NULL);
 	// makes sparks where cursor is
 	//CL_SparkShower(cl.cmd.cursor_impact, cl.cmd.cursor_normal, 5, 0);
@@ -794,6 +797,8 @@ void CL_SendMove(void)
 	sidemove = cl.cmd.sidemove;
 	upmove = cl.cmd.upmove;
 #endif
+
+	CL_UpdatePrydonCursor();
 
 	buf.maxsize = 128;
 	buf.cursize = 0;

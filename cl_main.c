@@ -1297,9 +1297,6 @@ CL_SendCmd
 void CL_UpdatePrydonCursor(void);
 void CL_SendCmd(void)
 {
-	if (cls.signon == SIGNONS)
-		CL_UpdatePrydonCursor();
-
 	if (cls.demoplayback)
 	{
 		SZ_Clear(&cls.message);
