@@ -550,6 +550,10 @@ void Con_Print(const char *msg)
 		{
 			// if this is the beginning of a new line, print timestamp
 			char *timestamp = timestamps.integer ? Sys_TimeString(timeformat.string) : "";
+			// reset the color 
+			// FIXME: 1. perhaps we should use a terminal system 2. use a constant instead of 7!
+			line[index++] = '^';
+			line[index++] = '7';
 			// special color codes for chat messages must always come first
 			// for Con_PrintToHistory to work properly
 			if (*msg <= 2)
@@ -670,86 +674,6 @@ DRAWING
 ==============================================================================
 */
 
-static vec4_t _con_colors[] =
-{
-	// Quake3 colors
-	// LordHavoc: why on earth is cyan before magenta in Quake3?
-	// LordHavoc: note: Doom3 uses white for [0] and [7]
-	{0.0, 0.0, 0.0, 1.0}, // black
-	{1.0, 0.0, 0.0, 1.0}, // red
-	{0.0, 1.0, 0.0, 1.0}, // green
-	{1.0, 1.0, 0.0, 1.0}, // yellow
-	{0.0, 0.0, 1.0, 1.0}, // blue
-	{0.0, 1.0, 1.0, 1.0}, // cyan
-	{1.0, 0.0, 1.0, 1.0}, // magenta
-	{1.0, 1.0, 1.0, 1.0}  // white
-	// Black's color table
-	//{1.0, 1.0, 1.0, 1.0},
-	//{1.0, 0.0, 0.0, 1.0},
-	//{0.0, 1.0, 0.0, 1.0},
-	//{0.0, 0.0, 1.0, 1.0},
-	//{1.0, 1.0, 0.0, 1.0},
-	//{0.0, 1.0, 1.0, 1.0},
-	//{1.0, 0.0, 1.0, 1.0},
-	//{0.1, 0.1, 0.1, 1.0}
-};
-
-#define _con_colors_count	(sizeof(_con_colors) / sizeof(vec3_t))
-#define _con_color_tag		'^'
-
-// color is read and changed in the end
-static void _Con_DrawString( float x, float y, const char *text, int maxlen, float scalex, float scaley, int flags )
-{
-	vec_t *color;
-	const char *first, *last;
-	int len;
-
-	color = _con_colors[7];
-	if( maxlen < 1)
-		len = strlen( text );
-	else
-		len = min( maxlen, (signed) strlen( text ));
-
-    first = last = text;
-	while( 1 ) {
-		// iterate until we get the next color tag or reach the end of the text part to draw
-		for( ; len && *last != _con_color_tag ; len--, last++ )
-			;
-		// only draw the partial string if we have read anything
-		if( last != first ) {
-			// draw the string
-			DrawQ_String( x, y, first, last - first, scalex, scaley, color[0], color[1], color[2], color[3], flags );
-			// update x to be at the new start position
-			x += (last - first) * scalex;
-			// if we have reached the end, we have finished
-			if( !len )
-				break;
-		}
-		first = last;
-		// jump over the tag
-		last++;
-		len--;
-		if( len && '0' <= *last && *last <= '9' ) {
-			int index = 0;
-
-			while( '0' <= *last && *last <= '9' && len ) {
-				index = index * 10 + *last - '0';
-				if( index < _con_colors_count ) {
-					last++;
-					len--;
-				} else {
-					index /= 10;
-					break;
-				}
-			}
-
-			color = _con_colors[index];
-			// we dont want to display the color tag and the color index
-			first = last;
-		}
-	}
-}
-
 /*
 ================
 Con_DrawInput
@@ -792,7 +716,7 @@ void Con_DrawInput (void)
 		text += 1 + key_linepos - con_linewidth;
 
 	// draw it
-	_Con_DrawString(0, con_vislines - 16, text, con_linewidth, 8, 8, 0);
+	DrawQ_ColoredString(0, con_vislines - 16, text, con_linewidth, 8, 8, 1.0, 1.0, 1.0, 1.0, 0, NULL );
 
 	// remove cursor
 //	key_lines[edit_line][key_linepos] = 0;
@@ -814,6 +738,7 @@ void Con_DrawNotify (void)
 	float	time;
 	extern char chat_buffer[];
 	char	temptext[256];
+	int colorindex = -1; //-1 for default
 
 	if (con_notify.integer < 0)
 		Cvar_SetValueQuick(&con_notify, 0);
@@ -825,6 +750,7 @@ void Con_DrawNotify (void)
 		v = 0;
 	for (i= con_current-con_notify.integer+1 ; i<=con_current ; i++)
 	{
+
 		if (i < 0)
 			continue;
 		time = con_times[i % con_notify.integer];
@@ -843,14 +769,16 @@ void Con_DrawNotify (void)
 		} else
 			x = 0;
 
-		_Con_DrawString(x, v, text, con_linewidth, 8, 8, 0);
-
+		DrawQ_ColoredString( x, v, text, con_linewidth, 8, 8, 1.0, 1.0, 1.0, 1.0, 0, &colorindex ); 
+			
 		v += 8;
 	}
 
 
 	if (key_dest == key_message)
 	{
+		int colorindex = -1;
+
 		x = 0;
 
 		// LordHavoc: speedup, and other improvements
@@ -860,13 +788,13 @@ void Con_DrawNotify (void)
 			sprintf(temptext, "say:%s%c", chat_buffer, (int) 10+((int)(realtime*con_cursorspeed)&1));
 		while (strlen(temptext) >= (size_t) con_linewidth)
 		{
-			_Con_DrawString (0, v, temptext, con_linewidth, 8, 8, 0);
+			DrawQ_ColoredString( 0, v, temptext, con_linewidth, 8, 8, 1.0, 1.0, 1.0, 1.0, 0, &colorindex );
 			strcpy(temptext, &temptext[con_linewidth]);
 			v += 8;
 		}
 		if (strlen(temptext) > 0)
 		{
-			_Con_DrawString (0, v, temptext, 0, 8, 8, 0);
+			DrawQ_ColoredString( 0, v, temptext, 0, 8, 8, 1.0, 1.0, 1.0, 1.0, 0, &colorindex );
 			v += 8;
 		}
 	}
@@ -885,6 +813,7 @@ void Con_DrawConsole (int lines)
 {
 	int i, y, rows, j;
 	char *text;
+	int colorindex = -1;
 
 	if (lines <= 0)
 		return;
@@ -907,7 +836,7 @@ void Con_DrawConsole (int lines)
 		j = max(i - con_backscroll, 0);
 		text = con_text + (j % con_totallines)*con_linewidth;
 
-		_Con_DrawString(0, y, text, con_linewidth, 8, 8, 0);
+		DrawQ_ColoredString( 0, y, text, con_linewidth, 8, 8, 1.0, 1.0, 1.0, 1.0, 0, &colorindex );
 	}
 
 // draw the input prompt, user text, and cursor if desired
