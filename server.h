@@ -94,8 +94,9 @@ typedef struct
 	qbyte signon_buf[NET_MAXMESSAGE];
 } server_t;
 
+// if defined this does ping smoothing, otherwise it does not
+//#define NUM_PING_TIMES 16
 
-#define NUM_PING_TIMES 16
 #define NUM_SPAWN_PARMS 16
 
 typedef struct client_s
@@ -135,9 +136,11 @@ typedef struct client_s
 	// PRVM_EDICT_NUM(clientnum+1)
 	prvm_edict_t *edict;
 
+#ifdef NUM_PING_TIMES
 	float ping_times[NUM_PING_TIMES];
 	// ping_times[num_pings%NUM_PING_TIMES]
 	int num_pings;
+#endif
 	// LordHavoc: can be used for prediction or whatever...
 	float ping;
 
