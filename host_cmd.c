@@ -209,8 +209,6 @@ Host_Ping_f
 */
 void Host_Ping_f (void)
 {
-	int		i, j;
-	float	total;
 	client_t	*client;
 
 	if (cmd_source == src_command)
