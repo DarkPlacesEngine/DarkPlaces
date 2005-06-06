@@ -47,6 +47,8 @@ void DrawQ_Clear(void);
 void DrawQ_Pic(float x, float y, const char *picname, float width, float height, float red, float green, float blue, float alpha, int flags);
 // draw a text string
 void DrawQ_String(float x, float y, const char *string, int maxlen, float scalex, float scaley, float red, float green, float blue, float alpha, int flags);
+// draw a text string that supports color tags (colorindex can either be NULL, -1 to make it choose the default color or valid index to start with)
+void DrawQ_ColoredString( float x, float y, const char *text, int maxlen, float scalex, float scaley, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor );
 // draw a filled rectangle
 void DrawQ_Fill(float x, float y, float w, float h, float red, float green, float blue, float alpha, int flags);
 // draw a very fancy pic (per corner texcoord/color control), the order is tl, tr, bl, br

@@ -45,6 +45,99 @@ static void R_Envmap_f (void);
 // backend
 void R_ClearScreen(void);
 
+// color tag printing
+static vec4_t _draw_colors[] =
+{
+	// Quake3 colors
+	// LordHavoc: why on earth is cyan before magenta in Quake3?
+	// LordHavoc: note: Doom3 uses white for [0] and [7]
+	{0.0, 0.0, 0.0, 1.0}, // black
+	{1.0, 0.0, 0.0, 1.0}, // red
+	{0.0, 1.0, 0.0, 1.0}, // green
+	{1.0, 1.0, 0.0, 1.0}, // yellow
+	{0.0, 0.0, 1.0, 1.0}, // blue
+	{0.0, 1.0, 1.0, 1.0}, // cyan
+	{1.0, 0.0, 1.0, 1.0}, // magenta
+	{1.0, 1.0, 1.0, 1.0}  // white
+	// Black's color table
+	//{1.0, 1.0, 1.0, 1.0},
+	//{1.0, 0.0, 0.0, 1.0},
+	//{0.0, 1.0, 0.0, 1.0},
+	//{0.0, 0.0, 1.0, 1.0},
+	//{1.0, 1.0, 0.0, 1.0},
+	//{0.0, 1.0, 1.0, 1.0},
+	//{1.0, 0.0, 1.0, 1.0},
+	//{0.1, 0.1, 0.1, 1.0}
+};
+
+#define _draw_colors_count	(sizeof(_draw_colors) / sizeof(vec4_t))
+#define _draw_color_tag		'^'
+#define _draw_color_default 7
+
+// color is read and changed in the end
+void DrawQ_ColoredString( float x, float y, const char *text, int maxlen, float scalex, float scaley, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor )
+{
+	vec_t *color;
+	const char *first, *last;
+	int len;
+	int colorindex;
+	
+    if( !outcolor || *outcolor == -1 ) {
+		colorindex = _draw_color_default;
+	} else {
+		colorindex = *outcolor;
+	}
+
+	color = _draw_colors[colorindex];
+
+	if( maxlen < 1)
+		len = strlen( text );
+	else
+		len = min( maxlen, (signed) strlen( text ) );
+
+    first = last = text;
+	while( len ) {
+		// iterate until we get the next color tag or reach the end of the text part to draw
+		for( ; len && *last != _draw_color_tag ; len--, last++ )
+			;
+		// only draw the partial string if we have read anything
+		if( last != first ) {
+			// draw the string
+			DrawQ_String( x, y, first, last - first, scalex, scaley, basered * color[0], basegreen * color[1], baseblue * color[2], basealpha * color[3], flags );
+			// update x to be at the new start position
+			x += (last - first) * scalex;
+			// if we have reached the end, we have finished
+			if( !len )
+				break;
+		}
+		first = last;
+		// jump over the tag
+		last++;
+		len--;
+		if( len && '0' <= *last && *last <= '9' ) {
+			colorindex = 0;
+			while( '0' <= *last && *last <= '9' && len ) {
+				colorindex = colorindex * 10 + *last - '0';
+				if( colorindex < _draw_colors_count ) {
+					last++;
+					len--;
+				} else {
+					colorindex /= 10;
+					break;
+				}
+			}
+
+			color = _draw_colors[colorindex];
+			// we dont want to display the color tag and the color index
+			first = last;
+		}
+	}
+
+	if( outcolor ) {
+		*outcolor = colorindex;
+	}
+}
+
 /*
 ===============================================================================
 
@@ -540,6 +633,8 @@ void DrawQ_String(float x, float y, const char *string, int maxlen, float scalex
 
 	DrawQ_String_Real(x,y,string,maxlen,scalex,scaley,red,green,blue,alpha,flags);
 }
+
+
 
 void DrawQ_Fill (float x, float y, float w, float h, float red, float green, float blue, float alpha, int flags)
 {

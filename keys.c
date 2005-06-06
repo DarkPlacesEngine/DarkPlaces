@@ -804,8 +804,8 @@ Key_Init (void)
 	consolekeys[K_KP_MINUS] = true;
 	consolekeys[K_KP_DIVIDE] = true;
 	consolekeys[K_KP_MULTIPLY] = true;
-	consolekeys['`'] = false;
-	consolekeys['~'] = false;
+	consolekeys['`'] = true;
+	consolekeys['~'] = true;
 
 	menubound[K_ESCAPE] = true;
 	for (i = 0; i < 12; i++)
@@ -833,6 +833,109 @@ Should NOT be called during an interrupt!
 void
 Key_Event (int key, char ascii, qboolean down)
 {
+#if 1
+#define USERPLAYING()	( !key_consoleactive && key_dest == key_game && (cls.state == ca_connected && cls.signon == SIGNONS) )
+//#define CONSOLEKEY()	(key_consoleactive && !consolekeys[key])
+#define CONSOLEKEY()	( key_dest == key_console)
+	const char *bind;
+
+	// get key binding
+	bind = keybindings[ key_bmap ][ key ];
+	if( !bind ) {
+		bind = keybindings[ key_bmap2 ][ key ];
+	}
+
+	// set key state
+	keydown[ key ] = down;
+
+	// update key repeats
+	if( down ) {
+		key_repeats[ key ]++;
+		if( key_repeats[ key ] > 1 ) {
+			if( (key_consoleactive && !consolekeys[key]) || USERPLAYING() )
+				return;						// ignore most autorepeats
+		}
+	} else {
+		key_repeats[ key ] = 0;
+	}
+
+	if( key == K_CTRL ) {
+		ctrl_down = down;
+	}
+
+	if( !down ) {
+		if( bind && bind[ 0 ] == '+') {
+			Cbuf_AddText( va( "-%s %i\n", bind + 1, key) ); 
+		}
+	} else {
+		// handle ESCAPE specially, so unbinding wont help
+		if( key == K_ESCAPE ) {
+			// ctrl-escape is a safety measure for users who cant toggle the console otherwise
+			if( ctrl_down ) {
+				Con_ToggleConsole_f();
+				return;
+			}
+			switch( key_dest ) {
+				case key_message:
+					Key_Message( key, ascii );
+					break;
+				case key_menu:
+					MR_Keydown( key, ascii );
+					break;
+				case key_game:
+					MR_ToggleMenu_f();
+					break;
+				default:
+					Sys_Error( "Bad key_dest" );
+			}
+			return;
+		}
+
+		if (bind && !strncmp( bind, "toggleconsole", strlen( "toggleconsole" ) ) )
+		{
+			Cbuf_AddText( bind );
+			Cbuf_AddText( "\n" );
+		} else {
+			// during demo playback, all keys ingame bring up the main menu
+			if( cls.demoplayback && !key_consoleactive && key_dest == key_game ) {
+				MR_ToggleMenu_f ();
+				return;
+			}
+
+			// menu bind/function keys or normal binds
+			if( (key_dest == key_menu && menubound[key]) || USERPLAYING() ) {
+				if( bind ) {
+					if( bind[0] == '+' ) {			// button commands add keynum as a parm
+						Cbuf_AddText( va( "%s %i\n", bind, key ) );
+					} else {
+						Cbuf_AddText( bind );
+						Cbuf_AddText( "\n" );
+					}
+				}
+				return;
+			}
+		}
+
+		// either console or game state key functions
+		if( key_consoleactive ) {
+				Key_Console( key, ascii );
+		} else {
+			switch (key_dest) {
+				case key_message:
+					Key_Message( key, ascii );
+					break;
+				case key_menu:
+					MR_Keydown( key, ascii );
+					break;
+				case key_game:
+					// unbound key
+					break;
+				default:
+					Sys_Error( "Bad key_dest" );
+			}
+		}
+	}
+#else
 	const char	*kb;
 	char		cmd[1024];
 
@@ -976,6 +1079,7 @@ Key_Event (int key, char ascii, qboolean down)
 					Sys_Error ("Bad key_dest");
 		}
 	}
+#endif
 }
 
 /*
