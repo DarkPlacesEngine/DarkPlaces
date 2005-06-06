@@ -955,8 +955,8 @@ void CL_SendMove(void)
 	if (!buf.cursize)
 		return;
 
-	// FIXME: bits & 64 is +button5, Nexuiz specific
-	CL_ClientMovement((bits & 2) != 0, (bits & 64) != 0);
+	// FIXME: bits & 16 is +button5, Nexuiz specific
+	CL_ClientMovement((bits & 2) != 0, (bits & 16) != 0);
 
 	if (NetConn_SendUnreliableMessage(cls.netcon, &buf) == -1)
 	{
