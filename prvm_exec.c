@@ -266,6 +266,9 @@ void PRVM_PrintState(void)
 
 void PRVM_Crash()
 {
+	if (prog == NULL)
+		return;
+
 	if( prog->depth > 0 )
 	{
 		Con_Printf("QuakeC crash report for %s:\n", PRVM_NAME);
