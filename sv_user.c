@@ -700,17 +700,22 @@ void SV_ReadClientMove (void)
 
 void SV_ApplyClientMove (void)
 {
+#ifdef NUM_PING_TIMES
 	int i;
-	prvm_eval_t *val;
 	float total;
+#endif
+	prvm_eval_t *val;
 	usercmd_t *move = &host_client->cmd;
 
 	// calculate average ping time
+	host_client->ping = move->receivetime - move->time;
+#ifdef NUM_PING_TIMES
 	host_client->ping_times[host_client->num_pings % NUM_PING_TIMES] = move->receivetime - move->time;
 	host_client->num_pings++;
 	for (i=0, total = 0;i < NUM_PING_TIMES;i++)
 		total += host_client->ping_times[i];
 	host_client->ping = total / NUM_PING_TIMES;
+#endif
 
 	// set the edict fields
 	host_client->edict->fields.server->button0 = move->buttons & 1;
