@@ -835,9 +835,8 @@ Key_Event (int key, char ascii, qboolean down)
 {
 #if 0
 #define USERPLAYING()	( !key_consoleactive && key_dest == key_game && (cls.state == ca_connected && cls.signon == SIGNONS) )
-//#define CONSOLEKEY()	(key_consoleactive && !consolekeys[key])
-#define CONSOLEKEY()	( key_dest == key_console)
 	const char *bind;
+	static qboolean shift_down = false;
 
 	// get key binding
 	bind = keybindings[ key_bmap ][ key ];
@@ -859,8 +858,8 @@ Key_Event (int key, char ascii, qboolean down)
 		key_repeats[ key ] = 0;
 	}
 
-	if( key == K_CTRL ) {
-		ctrl_down = down;
+	if( key == K_SHIFT ) {
+		shift_down = down;
 	}
 
 	if( !down ) {
@@ -871,7 +870,7 @@ Key_Event (int key, char ascii, qboolean down)
 		// handle ESCAPE specially, so unbinding wont help
 		if( key == K_ESCAPE ) {
 			// ctrl-escape is a safety measure for users who cant toggle the console otherwise
-			if( ctrl_down ) {
+			if( shift_down || key_consoleactive ) {
 				Con_ToggleConsole_f();
 				return;
 			}
@@ -889,6 +888,11 @@ Key_Event (int key, char ascii, qboolean down)
 					Sys_Error( "Bad key_dest" );
 			}
 			return;
+		}
+
+		if( key_consoleactive ) {
+				Key_Console( key, ascii );
+				return;
 		}
 
 		if (bind && !strncmp( bind, "toggleconsole", strlen( "toggleconsole" ) ) )
@@ -917,22 +921,18 @@ Key_Event (int key, char ascii, qboolean down)
 		}
 
 		// either console or game state key functions
-		if( key_consoleactive ) {
-				Key_Console( key, ascii );
-		} else {
-			switch (key_dest) {
-				case key_message:
-					Key_Message( key, ascii );
-					break;
-				case key_menu:
-					MR_Keydown( key, ascii );
-					break;
-				case key_game:
-					// unbound key
-					break;
-				default:
-					Sys_Error( "Bad key_dest" );
-			}
+		switch (key_dest) {
+			case key_message:
+				Key_Message( key, ascii );
+				break;
+			case key_menu:
+				MR_Keydown( key, ascii );
+				break;
+			case key_game:
+				// unbound key
+				break;
+			default:
+				Sys_Error( "Bad key_dest" );
 		}
 	}
 #else
