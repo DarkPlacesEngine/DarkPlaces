@@ -833,7 +833,7 @@ Should NOT be called during an interrupt!
 void
 Key_Event (int key, char ascii, qboolean down)
 {
-#if 1
+#if 0
 #define USERPLAYING()	( !key_consoleactive && key_dest == key_game && (cls.state == ca_connected && cls.signon == SIGNONS) )
 //#define CONSOLEKEY()	(key_consoleactive && !consolekeys[key])
 #define CONSOLEKEY()	( key_dest == key_console)
