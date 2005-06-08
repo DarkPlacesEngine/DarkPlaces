@@ -1,5 +1,3 @@
-##### Variables that you may want to modify #####
-
 # Choose the compiler you want to use
 CC=gcc
 
@@ -17,16 +15,40 @@ CC=gcc
 CPUOPTIMIZATIONS=
 
 
-##### Variables that you shouldn't care about #####
+###### Sound and audio CD #####
 
-# Sound objects
-OBJ_COMMONSOUND=snd_main.o snd_mem.o snd_mix.o snd_ogg.o snd_wav.o
-OBJ_NOSOUND=snd_null.o
-OBJ_OSSSOUND=$(OBJ_COMMONSOUND) snd_oss.o
-LIB_OSSSOUND=
+OBJ_SND_COMMON=snd_main.o snd_mem.o snd_mix.o snd_ogg.o snd_wav.o
+
+# No sound
+OBJ_SND_NULL=snd_null.o
+LIB_SND_NULL=
+
+# Open Sound System (Linux, FreeBSD and Solaris)
+OBJ_SND_OSS=$(OBJ_SND_COMMON) snd_oss.o
+LIB_SND_OSS=
+
+# Advanced Linux Sound Architecture (Linux)
+OBJ_SND_ALSA=$(OBJ_SND_COMMON) snd_alsa.o
+LIB_SND_ALSA=-lasound
+
+# Core Audio (Mac OS X)
+OBJ_SND_COREAUDIO=$(OBJ_SND_COMMON) snd_coreaudio.c
+LIB_SND_COREAUDIO=
+
+# BSD / Sun audio API (NetBSD and OpenBSD)
+OBJ_SND_BSD=$(OBJ_SND_COMMON) snd_bsd.o
+LIB_SND_BSD=
+
+# DirectX and Win32 WAVE output (Win32)
+OBJ_SND_WIN=$(OBJ_SND_COMMON) snd_win.o
+LIB_SND_WIN=
+
 
 # CD objects
 OBJ_NOCD=cd_null.o
+
+
+###### Common objects and flags #####
 
 # Common objects
 OBJ_COMMON= \
@@ -71,13 +93,12 @@ OBJ_COMMON= \
 	model_brush.o \
 	model_shared.o \
 	model_sprite.o \
+	mvm_cmds.o \
 	netconn.o \
 	palette.o \
 	polygon.o \
 	portals.o \
 	protocol.o \
-	mvm_cmds.o \
-	svvm_cmds.o \
 	prvm_cmds.o \
 	prvm_edict.o \
 	prvm_exec.o \
@@ -95,6 +116,7 @@ OBJ_COMMON= \
 	sv_move.o \
 	sv_phys.o \
 	sv_user.o \
+	svvm_cmds.o \
 	sys_shared.o \
 	ui.o \
 	vid_shared.o \
@@ -107,8 +129,8 @@ OBJ_COMMON= \
 # note that builddate.c is very intentionally not compiled to a .o before
 # being linked, because it should be recompiled every time an executable is
 # built to give the executable a proper date string
-OBJ_SV= builddate.c sys_linux.o vid_null.o $(OBJ_NOSOUND) $(OBJ_NOCD) $(OBJ_COMMON)
-OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o $(OBJ_COMMONSOUND) snd_sdl.o cd_sdl.o $(OBJ_COMMON)
+OBJ_SV= builddate.c sys_linux.o vid_null.o $(OBJ_SND_NULL) $(OBJ_NOCD) $(OBJ_COMMON)
+OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o $(OBJ_SND_COMMON) snd_sdl.o cd_sdl.o $(OBJ_COMMON)
 
 
 # Compilation
@@ -147,15 +169,7 @@ CMD_UNIXRM=rm -rf
 
 ##### Linux specific variables #####
 
-# Recommended for: anyone not using ALSA
-OBJ_LINUXSOUND=$(OBJ_OSSSOUND)
-LIB_LINUXSOUND=$(LIB_OSSSOUND)
-# Recommended for: anyone using ALSA
-#OBJ_LINUXSOUND=$(OBJ_COMMONSOUND) snd_alsa.o
-#LIB_LINUXSOUND=-lasound
-# Recommended for: anyone who can't use the above drivers
-#OBJ_LINUXSOUND=$(OBJ_NOSOUND)
-#LIB_LINUXSOUND=
+DEFAULT_SNDAPI_LINUX=ALSA
 
 # If you want CD sound in Linux
 OBJ_LINUXCD=cd_linux.o
@@ -170,9 +184,7 @@ LDFLAGS_LINUXSDL=$(LDFLAGS_UNIXCOMMON) -ldl $(LDFLAGS_UNIXSDL)
 
 ##### Mac OS X specific variables #####
 
-#OBJ_MACOSXSOUND=$(OBJ_COMMONSOUND) snd_coreaudio.c
-OBJ_MACOSXSOUND=$(OBJ_NOSOUND)
-LIB_MACOSXSOUND=
+DEFAULT_SNDAPI_MACOSX=COREAUDIO
 
 # If you want CD sound in Mac OS X
 #OBJ_MACOSXCD=cd_macosx.o
@@ -188,8 +200,7 @@ OBJ_AGL= builddate.c sys_linux.o vid_agl.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
 
 ##### SunOS specific variables #####
 
-OBJ_SUNOSSOUND=$(OBJ_OSSSOUND)
-LIB_SUNOSSOUND=$(LIB_OSSSOUND)
+DEFAULT_SNDAPI_SUNOS=OSS
 
 # No CD support available
 OBJ_SUNOSCD=$(OBJ_NOCD)
@@ -204,9 +215,7 @@ LDFLAGS_SUNOSSDL=$(LDFLAGS_UNIXCOMMON) -ldl -lsocket -lnsl $(LDFLAGS_UNIXSDL)
 
 ##### BSD specific variables #####
 
-OBJ_BSDSOUND=$(OBJ_COMMONSOUND) snd_bsd.o
-#OBJ_BSDSOUND=$(OBJ_NOSOUND)
-LIB_BSDSOUND=
+DEFAULT_SNDAPI_BSD=BSD
 
 #if you want CD sound in BSD
 OBJ_BSDCD=cd_bsd.o
@@ -221,16 +230,14 @@ LDFLAGS_BSDSDL=$(LDFLAGS_UNIXCOMMON) $(LDFLAGS_UNIXSDL)
 
 ##### Win32 specific variables #####
 
-OBJ_WINSOUND=$(OBJ_COMMONSOUND) snd_win.o
-#OBJ_WINSOUND=$(OBJ_NOSOUND)
-LIB_WINSOUND=
+DEFAULT_SNDAPI_WIN32=WIN
 
 #if you want CD sound in Win32
 OBJ_WINCD=cd_win.o
 #if you want no CD audio
 #OBJ_WINCD=$(OBJ_NOCD)
 
-OBJ_WGL= builddate.c darkplaces.o sys_win.o vid_wgl.o conproc.o $(OBJ_WINSOUND) $(OBJ_WINCD) $(OBJ_COMMON)
+OBJ_WGL= builddate.c darkplaces.o sys_win.o vid_wgl.o conproc.o $(OBJ_SND_WIN) $(OBJ_WINCD) $(OBJ_COMMON)
 
 # Link
 LDFLAGS_WINCOMMON=-lwinmm -lwsock32
@@ -270,68 +277,83 @@ help:
 	@echo
 
 debug :
-	$(MAKE) sdl-debug cl-debug sv-debug DP_MAKE_TARGET=$(DP_MAKE_TARGET)
+	$(MAKE) sdl-debug cl-debug sv-debug \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API)
 
 profile :
-	$(MAKE) sdl-profile cl-profile sv-profile DP_MAKE_TARGET=$(DP_MAKE_TARGET)
+	$(MAKE) sdl-profile cl-profile sv-profile \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API)
 
 release :
-	$(MAKE) sdl-release cl-release sv-release DP_MAKE_TARGET=$(DP_MAKE_TARGET)
+	$(MAKE) sdl-release cl-release sv-release \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API)
 
 cl-debug :
-	$(MAKE) bin-debug DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
+	$(MAKE) bin-debug \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		EXE="$(EXE_CL)" LDFLAGS_COMMON="$(LDFLAGS_CL)"
 
 cl-profile :
-	$(MAKE) bin-profile DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
+	$(MAKE) bin-profile \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		EXE="$(EXE_CL)" LDFLAGS_COMMON="$(LDFLAGS_CL)"
 
 cl-release :
-	$(MAKE) bin-release DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
+	$(MAKE) bin-release \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		EXE="$(EXE_CL)" LDFLAGS_COMMON="$(LDFLAGS_CL)"
 
 sv-debug :
-	$(MAKE) bin-debug DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
+	$(MAKE) bin-debug \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		EXE="$(EXE_SV)" LDFLAGS_COMMON="$(LDFLAGS_SV)"
 
 sv-profile :
-	$(MAKE) bin-profile DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
+	$(MAKE) bin-profile \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		EXE="$(EXE_SV)" LDFLAGS_COMMON="$(LDFLAGS_SV)"
 
 sv-release :
-	$(MAKE) bin-release DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
+	$(MAKE) bin-release \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		EXE="$(EXE_SV)" LDFLAGS_COMMON="$(LDFLAGS_SV)"
 
 sdl-debug :
-	$(MAKE) bin-debug DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
+	$(MAKE) bin-debug \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		EXE="$(EXE_SDL)" LDFLAGS_COMMON="$(LDFLAGS_SDL)"
 
 sdl-profile :
-	$(MAKE) bin-profile DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
+	$(MAKE) bin-profile \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		EXE="$(EXE_SDL)" LDFLAGS_COMMON="$(LDFLAGS_SDL)"
 
 sdl-release :
-	$(MAKE) bin-release DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
+	$(MAKE) bin-release \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		EXE="$(EXE_SDL)" LDFLAGS_COMMON="$(LDFLAGS_SDL)"
 
 bin-debug :
 	@echo
 	@echo "========== $(EXE) (debug) =========="
-	$(MAKE) $(EXE) DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
+	$(MAKE) $(EXE) \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_EXTRA) $(CFLAGS_DEBUG) $(OPTIM_DEBUG)"\
 		LDFLAGS="$(LDFLAGS_DEBUG) $(LDFLAGS_COMMON)"
 
 bin-profile :
 	@echo
 	@echo "========== $(EXE) (profile) =========="
-	$(MAKE) $(EXE) DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
+	$(MAKE) $(EXE) \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_EXTRA) $(CFLAGS_PROFILE) $(OPTIM_RELEASE)"\
 		LDFLAGS="$(LDFLAGS_PROFILE) $(LDFLAGS_COMMON)"
 
 bin-release :
 	@echo
 	@echo "========== $(EXE) (release) =========="
-	$(MAKE) $(EXE) DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
+	$(MAKE) $(EXE) \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_EXTRA) $(CFLAGS_RELEASE) $(OPTIM_RELEASE)"\
 		LDFLAGS="$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)"
 	strip $(EXE)

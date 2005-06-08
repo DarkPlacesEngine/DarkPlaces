@@ -50,8 +50,7 @@ endif
 
 # Linux configuration
 ifeq ($(DP_MAKE_TARGET), linux)
-	OBJ_SOUND=$(OBJ_LINUXSOUND)
-	LIB_SOUND=$(LIB_LINUXSOUND)
+	DEFAULT_SNDAPI=$(DEFAULT_SNDAPI_LINUX)
 	OBJ_CD=$(OBJ_LINUXCD)
 
 	OBJ_CL=$(OBJ_GLX)
@@ -67,8 +66,7 @@ endif
 
 # Mac OS X configuration
 ifeq ($(DP_MAKE_TARGET), macosx)
-	OBJ_SOUND=$(OBJ_MACOSXSOUND)
-	LIB_SOUND=$(LIB_MACOSXSOUND)
+	DEFAULT_SNDAPI=$(DEFAULT_SNDAPI_MACOSX)
 	OBJ_CD=$(OBJ_MACOSXCD)
 
 	OBJ_CL=$(OBJ_AGL)
@@ -84,8 +82,7 @@ endif
 
 # SunOS configuration (Solaris)
 ifeq ($(DP_MAKE_TARGET), sunos)
-	OBJ_SOUND=$(OBJ_SUNOSSOUND)
-	LIB_SOUND=$(LIB_SUNOSSOUND)
+	DEFAULT_SNDAPI=$(DEFAULT_SNDAPI_SUNOS)
 	OBJ_CD=$(OBJ_SUNOSCD)
 
 	OBJ_CL=$(OBJ_GLX)
@@ -104,11 +101,9 @@ endif
 # BSD configuration
 ifeq ($(DP_MAKE_TARGET), bsd)
 ifeq ($(DP_ARCH),FreeBSD)
-	OBJ_SOUND=$(OBJ_OSSSOUND)
-	LIB_SOUND=$(LIB_OSSSOUND)
+	DEFAULT_SNDAPI=$(DEFAULT_SNDAPI_OSS)
 else
-	OBJ_SOUND=$(OBJ_BSDSOUND)
-	LIB_SOUND=$(LIB_BSDSOUND)
+	DEFAULT_SNDAPI=$(DEFAULT_SNDAPI_BSD)
 endif
 	OBJ_CD=$(OBJ_BSDCD)
 
@@ -125,8 +120,7 @@ endif
 
 # Win32 configuration
 ifeq ($(DP_MAKE_TARGET), mingw)
-	OBJ_SOUND=$(OBJ_WINSOUND)
-	LIB_SOUND=$(LIB_WINSOUND)
+	DEFAULT_SNDAPI=$(DEFAULT_SNDAPI_WIN32)
 	OBJ_CD=$(OBJ_WINCD)
 
 	OBJ_CL=$(OBJ_WGL)
@@ -138,6 +132,49 @@ ifeq ($(DP_MAKE_TARGET), mingw)
 	EXE_CL=$(EXE_WINCL)
 	EXE_SV=$(EXE_WINSV)
 	EXE_SDL=$(EXE_WINSDL)
+endif
+
+
+##### Sound configuration #####
+
+ifndef DP_SOUND_API
+	DP_SOUND_API=$(DEFAULT_SNDAPI)
+endif
+
+# NULL: no sound
+ifeq ($(DP_SOUND_API), NULL)
+	OBJ_SOUND=$(OBJ_SND_NULL)
+	LIB_SOUND=$(LIB_SND_NULL)
+endif
+
+# OSS: Open Sound System
+ifeq ($(DP_SOUND_API), OSS)
+	OBJ_SOUND=$(OBJ_SND_OSS)
+	LIB_SOUND=$(LIB_SND_OSS)
+endif
+
+# ALSA: Advanced Linux Sound Architecture
+ifeq ($(DP_SOUND_API), ALSA)
+	OBJ_SOUND=$(OBJ_SND_ALSA)
+	LIB_SOUND=$(LIB_SND_ALSA)
+endif
+
+# COREAUDIO: Core Audio
+ifeq ($(DP_SOUND_API), COREAUDIO)
+	OBJ_SOUND=$(OBJ_SND_COREAUDIO)
+	LIB_SOUND=$(LIB_SND_COREAUDIO)
+endif
+
+# BSD: BSD / Sun audio API
+ifeq ($(DP_SOUND_API), BSD)
+	OBJ_SOUND=$(OBJ_SND_BSD)
+	LIB_SOUND=$(LIB_SND_BSD)
+endif
+
+# WIN: DirectX and Win32 WAVE output
+ifeq ($(DP_SOUND_API), WIN)
+	OBJ_SOUND=$(OBJ_SND_WIN)
+	LIB_SOUND=$(LIB_SND_WIN)
 endif
 
 
