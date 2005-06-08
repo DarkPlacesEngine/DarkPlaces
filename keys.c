@@ -804,8 +804,8 @@ Key_Init (void)
 	consolekeys[K_KP_MINUS] = true;
 	consolekeys[K_KP_DIVIDE] = true;
 	consolekeys[K_KP_MULTIPLY] = true;
-	consolekeys['`'] = true;
-	consolekeys['~'] = true;
+	consolekeys['`'] = false;
+	consolekeys['~'] = false;
 
 	menubound[K_ESCAPE] = true;
 	for (i = 0; i < 12; i++)
@@ -869,8 +869,8 @@ Key_Event (int key, char ascii, qboolean down)
 	} else {
 		// handle ESCAPE specially, so unbinding wont help
 		if( key == K_ESCAPE ) {
-			// ctrl-escape is a safety measure for users who cant toggle the console otherwise
-			if( shift_down || key_consoleactive ) {
+			// shift-escape is a safety measure for users who cant toggle the console otherwise
+			if( shift_down ) {
 				Con_ToggleConsole_f();
 				return;
 			}
@@ -890,13 +890,7 @@ Key_Event (int key, char ascii, qboolean down)
 			return;
 		}
 
-		if( key_consoleactive ) {
-				Key_Console( key, ascii );
-				return;
-		}
-
-		if (bind && !strncmp( bind, "toggleconsole", strlen( "toggleconsole" ) ) )
-		{
+		if( !(key_consoleactive && consolekeys[ key ]) && bind && !strncmp( bind, "toggleconsole", strlen( "toggleconsole" ) ) ) {
 			Cbuf_AddText( bind );
 			Cbuf_AddText( "\n" );
 		} else {
@@ -909,7 +903,7 @@ Key_Event (int key, char ascii, qboolean down)
 			// menu bind/function keys or normal binds
 			if( (key_dest == key_menu && menubound[key]) || USERPLAYING() ) {
 				if( bind ) {
-					if( bind[0] == '+' ) {			// button commands add keynum as a parm
+					if( bind[0] == '+' ) { // button commands add keynum as a parm
 						Cbuf_AddText( va( "%s %i\n", bind, key ) );
 					} else {
 						Cbuf_AddText( bind );
@@ -921,18 +915,22 @@ Key_Event (int key, char ascii, qboolean down)
 		}
 
 		// either console or game state key functions
-		switch (key_dest) {
-			case key_message:
-				Key_Message( key, ascii );
-				break;
-			case key_menu:
-				MR_Keydown( key, ascii );
-				break;
-			case key_game:
-				// unbound key
-				break;
-			default:
-				Sys_Error( "Bad key_dest" );
+		if( key_consoleactive ) {
+				Key_Console( key, ascii );
+		} else {
+			switch (key_dest) {
+				case key_message:
+					Key_Message( key, ascii );
+					break;
+				case key_menu:
+					MR_Keydown( key, ascii );
+					break;
+				case key_game:				
+					// unbound key
+					break;
+				default:
+					Sys_Error( "Bad key_dest" );
+			}
 		}
 	}
 #else
