@@ -1755,7 +1755,7 @@ prvm_edict_t *PRVM_EDICT_NUM_ERROR(int n, char *filename, int fileline)
 /*
 int NUM_FOR_EDICT_ERROR(prvm_edict_t *e)
 {
-	Host_Error ("PRVM_NUM_FOR_EDICT: bad pointer %p (world is %p, entity number would be %i)", e, prog->edicts, e - prog->edicts);
+	PRVM_ERROR ("PRVM_NUM_FOR_EDICT: bad pointer %p (world is %p, entity number would be %i)", e, prog->edicts, e - prog->edicts);
 	return 0;
 }
 
@@ -1802,12 +1802,12 @@ const char *PRVM_GetString(int num)
 	{
 		num = -1 - num;
 		if (!prog->knownstrings[num])
-			Host_Error("PRVM_GetString: attempt to get string that is already freed\n");
+			PRVM_ERROR("PRVM_GetString: attempt to get string that is already freed\n");
 		return prog->knownstrings[num];
 	}
 	else
 	{
-		Host_Error("PRVM_GetString: invalid string offset %i\n", num);
+		PRVM_ERROR("PRVM_GetString: invalid string offset %i\n", num);
 		return "";
 	}
 }
@@ -1818,7 +1818,7 @@ int PRVM_SetEngineString(const char *s)
 	if (!s)
 		return 0;
 	if (s >= prog->strings && s <= prog->strings + prog->stringssize)
-		Host_Error("PRVM_SetEngineString: s in prog->strings area\n");
+		PRVM_ERROR("PRVM_SetEngineString: s in prog->strings area\n");
 	for (i = 0;i < prog->numknownstrings;i++)
 		if (prog->knownstrings[i] == s)
 			return -1 - i;
@@ -1875,19 +1875,19 @@ int PRVM_AllocString(int bufferlength, char **pointer)
 void PRVM_FreeString(int num)
 {
 	if (num == 0)
-		Host_Error("PRVM_FreeString: attempt to free a NULL string\n");
+		PRVM_ERROR("PRVM_FreeString: attempt to free a NULL string\n");
 	else if (num >= 0 && num < prog->stringssize)
-		Host_Error("PRVM_FreeString: attempt to free a constant string\n");
+		PRVM_ERROR("PRVM_FreeString: attempt to free a constant string\n");
 	else if (num < 0 && num >= -prog->numknownstrings)
 	{
 		num = -1 - num;
 		if (!prog->knownstrings[num])
-			Host_Error("PRVM_FreeString: attempt to free a non-existent or already freed string\n");
+			PRVM_ERROR("PRVM_FreeString: attempt to free a non-existent or already freed string\n");
 		PRVM_Free((char *)prog->knownstrings[num]);
 		prog->knownstrings[num] = NULL;
 		prog->firstfreeknownstring = min(prog->firstfreeknownstring, num);
 	}
 	else
-		Host_Error("PRVM_FreeString: invalid string offset %i\n", num);
+		PRVM_ERROR("PRVM_FreeString: invalid string offset %i\n", num);
 }
 
