@@ -223,6 +223,8 @@ cvar_t r_shadow_glsl = {0, "r_shadow_glsl", "1"};
 cvar_t r_shadow_glsl_offsetmapping = {0, "r_shadow_glsl_offsetmapping", "1"};
 cvar_t r_shadow_glsl_offsetmapping_scale = {0, "r_shadow_glsl_offsetmapping_scale", "-0.04"};
 cvar_t r_shadow_glsl_offsetmapping_bias = {0, "r_shadow_glsl_offsetmapping_bias", "0.04"};
+cvar_t r_shadow_glsl_geforcefxlowquality = {0, "r_shadow_glsl_geforcefxlowquality", "1"};
+cvar_t r_shadow_glsl_surfacenormalize = {0, "r_shadow_glsl_surfacenormalize", "1"};
 cvar_t gl_ext_stenciltwoside = {0, "gl_ext_stenciltwoside", "1"};
 cvar_t r_editlights = {0, "r_editlights", "0"};
 cvar_t r_editlights_cursordistance = {0, "r_editlights_cursordistance", "1024"};
@@ -260,7 +262,9 @@ static cubemapinfo_t cubemaps[MAX_CUBEMAPS];
 #define SHADERPERMUTATION_FOG (1<<1)
 #define SHADERPERMUTATION_CUBEFILTER (1<<2)
 #define SHADERPERMUTATION_OFFSETMAPPING (1<<3)
-#define SHADERPERMUTATION_COUNT (1<<4)
+#define SHADERPERMUTATION_SURFACENORMALIZE (1<<4)
+#define SHADERPERMUTATION_GEFORCEFX (1<<5)
+#define SHADERPERMUTATION_COUNT (1<<6)
 
 GLhandleARB r_shadow_program_light[SHADERPERMUTATION_COUNT];
 
@@ -327,22 +331,29 @@ const char *builtinshader_light_frag =
 "// ambient+diffuse+specular+normalmap+attenuation+cubemap+fog shader\n"
 "// written by Forest 'LordHavoc' Hale\n"
 "\n"
-"uniform vec3 LightColor;\n"
+"// use half floats on GEFORCEFX for math performance, otherwise don't\n"
+"#ifndef GEFORCEFX\n"
+"#define half float\n"
+"#define hvec2 vec2\n"
+"#define hvec3 vec3\n"
+"#define hvec4 vec4\n"
+"#endif\n"
 "\n"
+"uniform hvec3 LightColor;\n"
 "#ifdef USEOFFSETMAPPING\n"
-"uniform float OffsetMapping_Scale;\n"
-"uniform float OffsetMapping_Bias;\n"
+"uniform half OffsetMapping_Scale;\n"
+"uniform half OffsetMapping_Bias;\n"
 "#endif\n"
 "#ifdef USESPECULAR\n"
-"uniform float SpecularPower;\n"
+"uniform half SpecularPower;\n"
 "#endif\n"
 "#ifdef USEFOG\n"
-"uniform float FogRangeRecip;\n"
+"uniform half FogRangeRecip;\n"
 "#endif\n"
-"uniform float AmbientScale;\n"
-"uniform float DiffuseScale;\n"
+"uniform half AmbientScale;\n"
+"uniform half DiffuseScale;\n"
 "#ifdef USESPECULAR\n"
-"uniform float SpecularScale;\n"
+"uniform half SpecularScale;\n"
 "#endif\n"
 "\n"
 "uniform sampler2D Texture_Normal;\n"
@@ -374,49 +385,53 @@ const char *builtinshader_light_frag =
 "	//\n"
 "	// pow(1-(x*x+y*y+z*z), 4) is far more realistic but needs large lights to\n"
 "	// provide significant illumination, large = slow = pain.\n"
-"	float colorscale = max(1.0 - dot(CubeVector, CubeVector), 0.0);\n"
+"	half colorscale = max(1.0 - dot(CubeVector, CubeVector), 0.0);\n"
 "\n"
 "#ifdef USEFOG\n"
 "	// apply fog\n"
-"	colorscale *= texture2D(Texture_FogMask, vec2(length(EyeVector)*FogRangeRecip, 0)).x;\n"
+"	colorscale *= texture2D(Texture_FogMask, hvec2(length(EyeVector)*FogRangeRecip, 0)).x;\n"
 "#endif\n"
 "\n"
 "#ifdef USEOFFSETMAPPING\n"
 "	// this is 3 sample because of ATI Radeon 9500-9800/X300 limits\n"
-"	vec2 OffsetVector = normalize(EyeVector).xy * vec2(-0.333, 0.333);\n"
-"	vec2 TexCoordOffset = TexCoord + OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoord).w);\n"
+"	hvec2 OffsetVector = normalize(EyeVector).xy * vec2(-0.333, 0.333);\n"
+"	hvec2 TexCoordOffset = TexCoord + OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoord).w);\n"
 "	TexCoordOffset += OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoordOffset).w);\n"
 "	TexCoordOffset += OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoordOffset).w);\n"
 "#define TexCoord TexCoordOffset\n"
 "#endif\n"
 "\n"
-"	// get the texels - with a blendmap we'd need to blend multiple here\n"
-"	vec3 surfacenormal = -1.0 + 2.0 * vec3(texture2D(Texture_Normal, TexCoord));\n"
-"	vec3 colortexel = vec3(texture2D(Texture_Color, TexCoord));\n"
-"#ifdef USESPECULAR\n"
-"	vec3 glosstexel = vec3(texture2D(Texture_Gloss, TexCoord));\n"
+"	// get the surface normal\n"
+"#ifdef SURFACENORMALIZE\n"
+"	hvec3 surfacenormal = normalize(hvec3(texture2D(Texture_Normal, TexCoord)) - 0.5);\n"
+"#else\n"
+"	hvec3 surfacenormal = -1.0 + 2.0 * hvec3(texture2D(Texture_Normal, TexCoord));\n"
 "#endif\n"
 "\n"
 "	// calculate shading\n"
-"	vec3 diffusenormal = normalize(LightVector);\n"
-"	vec3 color = colortexel * (AmbientScale + DiffuseScale * max(dot(surfacenormal, diffusenormal), 0.0));\n"
+"	hvec3 diffusenormal = hvec3(normalize(LightVector));\n"
+"	hvec3 color = hvec3(texture2D(Texture_Color, TexCoord)) * (AmbientScale + DiffuseScale * max(dot(surfacenormal, diffusenormal), 0.0));\n"
 "#ifdef USESPECULAR\n"
-"	color += glosstexel * (SpecularScale * pow(max(dot(surfacenormal, normalize(diffusenormal + normalize(EyeVector))), 0.0), SpecularPower));\n"
+"	hvec3 specularnormal = hvec3(normalize(diffusenormal + hvec3(normalize(EyeVector))));\n"
+"	color += hvec3(texture2D(Texture_Gloss, TexCoord)) * (SpecularScale * pow(max(dot(surfacenormal, specularnormal), 0.0), SpecularPower));\n"
 "#endif\n"
 "\n"
 "#ifdef USECUBEFILTER\n"
 "	// apply light cubemap filter\n"
-"	color *= vec3(textureCube(Texture_Cube, CubeVector));\n"
+"	color *= hvec3(textureCube(Texture_Cube, CubeVector));\n"
 "#endif\n"
 "\n"
-"	// calculate fragment color\n"
-"	gl_FragColor = vec4(LightColor * color * colorscale, 1);\n"
+"	// calculate fragment color (apply light color and attenuation/fog scaling)\n"
+"	gl_FragColor = hvec4(color * LightColor * colorscale, 1);\n"
 "}\n"
 ;
 
 void r_shadow_start(void)
 {
 	int i;
+	// if not a GeForce FX, turn off the lowquality cvar
+	if (strncmp(gl_renderer, "GeForce FX ", strlen("GeForce FX ")))
+		Cvar_SetValue("r_shadow_glsl_geforcefxlowquality", 0);
 	// allocate vertex processing arrays
 	numcubemaps = 0;
 	r_shadow_attenuation2dtexture = NULL;
@@ -449,8 +464,8 @@ void r_shadow_start(void)
 		char *vertstring, *fragstring;
 		int vertstrings_count;
 		int fragstrings_count;
-		const char *vertstrings_list[SHADERPERMUTATION_COUNT];
-		const char *fragstrings_list[SHADERPERMUTATION_COUNT];
+		const char *vertstrings_list[SHADERPERMUTATION_COUNT+1];
+		const char *fragstrings_list[SHADERPERMUTATION_COUNT+1];
 		vertstring = (char *)FS_LoadFile("glsl/light.vert", tempmempool, false);
 		fragstring = (char *)FS_LoadFile("glsl/light.frag", tempmempool, false);
 		for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
@@ -476,6 +491,16 @@ void r_shadow_start(void)
 			{
 				vertstrings_list[vertstrings_count++] = "#define USEOFFSETMAPPING\n";
 				fragstrings_list[fragstrings_count++] = "#define USEOFFSETMAPPING\n";
+			}
+			if (i & SHADERPERMUTATION_SURFACENORMALIZE)
+			{
+				vertstrings_list[vertstrings_count++] = "#define SURFACENORMALIZE\n";
+				fragstrings_list[fragstrings_count++] = "#define SURFACENORMALIZE\n";
+			}
+			if (i & SHADERPERMUTATION_GEFORCEFX)
+			{
+				vertstrings_list[vertstrings_count++] = "#define GEFORCEFX\n";
+				fragstrings_list[fragstrings_count++] = "#define GEFORCEFX\n";
 			}
 			vertstrings_list[vertstrings_count++] = vertstring ? vertstring : builtinshader_light_vert;
 			fragstrings_list[fragstrings_count++] = fragstring ? fragstring : builtinshader_light_frag;
@@ -597,6 +622,8 @@ void R_Shadow_Help_f(void)
 "r_shadow_glsl_offsetmapping : enables Offset Mapping bumpmap enhancement\n"
 "r_shadow_glsl_offsetmapping_scale : controls depth of Offset Mapping\n"
 "r_shadow_glsl_offsetmapping_bias : should be negative half of scale\n"
+"r_shadow_glsl_geforcefxlowquality : use lower quality lighting\n"
+"r_shadow_glsl_surfacenormalize : makes bumpmapping slightly higher quality\n"
 "r_shadow_scissor : use scissor optimization\n"
 "r_shadow_shadow_polygonfactor : nudge shadow volumes closer/further\n"
 "r_shadow_shadow_polygonoffset : nudge shadow volumes closer/further\n"
@@ -643,6 +670,8 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_glsl_offsetmapping);
 	Cvar_RegisterVariable(&r_shadow_glsl_offsetmapping_scale);
 	Cvar_RegisterVariable(&r_shadow_glsl_offsetmapping_bias);
+	Cvar_RegisterVariable(&r_shadow_glsl_geforcefxlowquality);
+	Cvar_RegisterVariable(&r_shadow_glsl_surfacenormalize);
 	Cvar_RegisterVariable(&gl_ext_stenciltwoside);
 	if (gamemode == GAME_TENEBRAE)
 	{
@@ -1187,7 +1216,7 @@ void R_Shadow_Stage_Lighting(int stenciltest)
 		// only add a feature to the permutation if that permutation exists
 		// (otherwise it might end up not using a shader at all, which looks
 		// worse than using less features)
-		if (r_shadow_rtlight->specularscale && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_SPECULAR])
+		if (r_shadow_rtlight->specularscale && r_shadow_gloss.integer >= 1 && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_SPECULAR])
 			r_shadow_lightpermutation |= SHADERPERMUTATION_SPECULAR;
 		//if (fog && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_FOG])
 		//	r_shadow_lightpermutation |= SHADERPERMUTATION_FOG;
@@ -1195,6 +1224,10 @@ void R_Shadow_Stage_Lighting(int stenciltest)
 			r_shadow_lightpermutation |= SHADERPERMUTATION_CUBEFILTER;
 		if (r_shadow_glsl_offsetmapping.integer && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_OFFSETMAPPING])
 			r_shadow_lightpermutation |= SHADERPERMUTATION_OFFSETMAPPING;
+		if (r_shadow_glsl_surfacenormalize.integer && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_SURFACENORMALIZE])
+			r_shadow_lightpermutation |= SHADERPERMUTATION_SURFACENORMALIZE;
+		if (r_shadow_glsl_geforcefxlowquality.integer && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_GEFORCEFX])
+			r_shadow_lightpermutation |= SHADERPERMUTATION_GEFORCEFX;
 		r_shadow_lightprog = r_shadow_program_light[r_shadow_lightpermutation];
 		qglUseProgramObjectARB(r_shadow_lightprog);CHECKGLERROR
 		// TODO: support fog (after renderer is converted to texture fog)
