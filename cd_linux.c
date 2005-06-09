@@ -20,6 +20,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // Quake is a trademark of Id Software, Inc., (c) 1996 Id Software, Inc. All
 // rights reserved.
 
+// suggested by Zero_Dogg to fix a compile problem on Mandriva Linux
+#define __KERNEL_STRICT_NAMES
+
 #include <linux/cdrom.h>
 #include <sys/ioctl.h>
 
