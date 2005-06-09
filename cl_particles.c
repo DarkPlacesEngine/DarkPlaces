@@ -25,7 +25,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define NUMVERTEXNORMALS	162
 siextern float r_avertexnormals[NUMVERTEXNORMALS][3];
 #define m_bytenormals r_avertexnormals
-#define VectorNormalizeFast VectorNormalize
 #define CL_PointQ1Contents(v) (Mod_PointInLeaf(v,cl.worldmodel)->contents)
 typedef unsigned char qbyte;
 #define cl_stainmaps.integer 0
@@ -46,16 +45,16 @@ void R_CalcBeam_Vertex3f (float *vert, vec3_t org1, vec3_t org2, float width)
 	vec3_t right1, right2, diff, normal;
 
 	VectorSubtract (org2, org1, normal);
-	VectorNormalizeFast (normal);
+	VectorNormalize (normal);
 
 	// calculate 'right' vector for start
 	VectorSubtract (r_vieworigin, org1, diff);
-	VectorNormalizeFast (diff);
+	VectorNormalize (diff);
 	CrossProduct (normal, diff, right1);
 
 	// calculate 'right' vector for end
 	VectorSubtract (r_vieworigin, org2, diff);
-	VectorNormalizeFast (diff);
+	VectorNormalize (diff);
 	CrossProduct (normal, diff, right2);
 
 	vert[ 0] = org1[0] + width * right1[0];
@@ -145,7 +144,7 @@ void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up)
 	right[0] -= d * forward[0];
 	right[1] -= d * forward[1];
 	right[2] -= d * forward[2];
-	VectorNormalizeFast(right);
+	VectorNormalize(right);
 	CrossProduct(right, forward, up);
 }
 #if QW
@@ -977,7 +976,7 @@ void CL_Stardust (vec3_t mins, vec3_t maxs, int count)
 		o[1] = lhrandom(mins[1], maxs[1]);
 		o[2] = lhrandom(mins[2], maxs[2]);
 		VectorSubtract(o, center, v);
-		VectorNormalizeFast(v);
+		VectorNormalize(v);
 		VectorScale(v, 100, v);
 		v[2] += sv_gravity.value * 0.15f;
 		particle(particletype + pt_static, 0x903010, 0xFFD030, tex_particle, 1.5, lhrandom(64, 128) / cl_particles_quality.value, 128 / cl_particles_quality.value, 1, 0, o[0], o[1], o[2], v[0], v[1], v[2], 0.2);
@@ -2011,7 +2010,7 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	{
 		R_CalcBeam_Vertex3f(particle_vertex3f, p->org, p->vel, size);
 		VectorSubtract(p->vel, p->org, up);
-		VectorNormalizeFast(up);
+		VectorNormalize(up);
 		v[0] = DotProduct(p->org, up) * (1.0f / 64.0f);
 		v[1] = DotProduct(p->vel, up) * (1.0f / 64.0f);
 		particle_texcoord2f[0] = 1;particle_texcoord2f[1] = v[0];

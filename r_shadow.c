@@ -1556,9 +1556,9 @@ static void R_Shadow_GenTexCoords_Specular_NormalCubeMap(float *out3f, int numve
 	for (i = 0;i < numverts;i++, vertex3f += 3, svector3f += 3, tvector3f += 3, normal3f += 3, out3f += 3)
 	{
 		VectorSubtract(vertex3f, relativelightorigin, lightdir);
-		VectorNormalizeFast(lightdir);
+		VectorNormalize(lightdir);
 		VectorSubtract(vertex3f, relativeeyeorigin, eyedir);
-		VectorNormalizeFast(eyedir);
+		VectorNormalize(eyedir);
 		VectorAdd(lightdir, eyedir, halfdir);
 		// the cubemap normalizes this for us
 		out3f[0] = DotProduct(svector3f, halfdir);

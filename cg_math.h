@@ -80,17 +80,6 @@ extern vec3_t vec3_origin;
 #define VectorScale(in, scale, out) ((out)[0] = (in)[0] * (scale),(out)[1] = (in)[1] * (scale),(out)[2] = (in)[2] * (scale))
 #define VectorCompare(a,b) (((a)[0]==(b)[0])&&((a)[1]==(b)[1])&&((a)[2]==(b)[2]))
 #define VectorMA(a, scale, b, c) ((c)[0] = (a)[0] + (scale) * (b)[0],(c)[1] = (a)[1] + (scale) * (b)[1],(c)[2] = (a)[2] + (scale) * (b)[2])
-#define VectorNormalizeFast(_v)\
-{\
-	float _y, _number;\
-	_number = DotProduct(_v, _v);\
-	if (_number != 0.0)\
-	{\
-		*((long *)&_y) = 0x5f3759df - ((* (long *) &_number) >> 1);\
-		_y = _y * (1.5f - (_number * 0.5f * _y * _y));\
-		VectorScale(_v, _y, _v);\
-	}\
-}
 #define VectorRandom(v) {do{(v)[0] = CGVM_RandomRange(-1, 1);(v)[1] = CGVM_RandomRange(-1, 1);(v)[2] = CGVM_RandomRange(-1, 1);}while(DotProduct(v, v) > 1);}
 
 void AngleVectors (vec3_t angles, vec3_t forward, vec3_t right, vec3_t up);

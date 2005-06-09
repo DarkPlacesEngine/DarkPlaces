@@ -141,17 +141,6 @@ void ByteToNormal(qbyte num, vec3_t n)
 		VectorClear(n); // FIXME: complain?
 }
 
-float Q_RSqrt(float number)
-{
-	float y;
-
-	if (number == 0.0f)
-		return 0.0f;
-
-	*((int *)&y) = 0x5f3759df - ((* (int *) &number) >> 1);
-	return y * (1.5f - (number * 0.5f * y * y));
-}
-
 // assumes "src" is normalized
 void PerpendicularVector( vec3_t dst, const vec3_t src )
 {
@@ -216,7 +205,7 @@ void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up)
 
 	d = DotProduct(forward, right);
 	VectorMA(right, -d, forward, right);
-	VectorNormalizeFast(right);
+	VectorNormalize(right);
 	CrossProduct(right, forward, up);
 }
 

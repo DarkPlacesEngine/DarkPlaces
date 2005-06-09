@@ -13,7 +13,7 @@ static float portaltemppoints2[256][3];
 static int portal_markid = 0;
 static float boxpoints[4*3];
 
-int Portal_PortalThroughPortalPlanes(tinyplane_t *clipplanes, int clipnumplanes, float *targpoints, int targnumpoints, float *out, int maxpoints)
+static int Portal_PortalThroughPortalPlanes(tinyplane_t *clipplanes, int clipnumplanes, float *targpoints, int targnumpoints, float *out, int maxpoints)
 {
 	int numpoints, i;
 	if (targnumpoints < 3)
@@ -35,7 +35,7 @@ int Portal_PortalThroughPortalPlanes(tinyplane_t *clipplanes, int clipnumplanes,
 	return numpoints;
 }
 
-int Portal_RecursiveFlowSearch (mleaf_t *leaf, vec3_t eye, int firstclipplane, int numclipplanes)
+static int Portal_RecursiveFlowSearch (mleaf_t *leaf, vec3_t eye, int firstclipplane, int numclipplanes)
 {
 	mportal_t *p;
 	int newpoints, i, prev;
@@ -71,7 +71,7 @@ int Portal_RecursiveFlowSearch (mleaf_t *leaf, vec3_t eye, int firstclipplane, i
 					VectorSubtract(eye, portaltemppoints2[i], v1);
 					VectorSubtract(portaltemppoints2[prev], portaltemppoints2[i], v2);
 					CrossProduct(v1, v2, newplanes[i].normal);
-					VectorNormalizeFast(newplanes[i].normal);
+					VectorNormalize(newplanes[i].normal);
 					newplanes[i].dist = DotProduct(eye, newplanes[i].normal);
 					if (DotProduct(newplanes[i].normal, center) <= newplanes[i].dist)
 					{
@@ -96,7 +96,7 @@ int Portal_RecursiveFlowSearch (mleaf_t *leaf, vec3_t eye, int firstclipplane, i
 	return false;
 }
 
-void Portal_PolygonRecursiveMarkLeafs(mnode_t *node, float *polypoints, int numpoints)
+static void Portal_PolygonRecursiveMarkLeafs(mnode_t *node, float *polypoints, int numpoints)
 {
 	int i, front;
 	float *p;
@@ -158,7 +158,7 @@ int Portal_CheckPolygon(model_t *model, vec3_t eye, float *polypoints, int numpo
 		VectorSubtract(eye, (&polypoints[i * 3]), v1);
 		VectorSubtract((&polypoints[prev * 3]), (&polypoints[i * 3]), v2);
 		CrossProduct(v1, v2, portalplanes[i].normal);
-		VectorNormalizeFast(portalplanes[i].normal);
+		VectorNormalize(portalplanes[i].normal);
 		portalplanes[i].dist = DotProduct(eye, portalplanes[i].normal);
 		if (DotProduct(portalplanes[i].normal, center) <= portalplanes[i].dist)
 		{
@@ -265,8 +265,6 @@ int Portal_CheckBox(model_t *model, vec3_t eye, vec3_t a, vec3_t b)
 	return false;
 }
 
-vec3_t trianglepoints[3];
-
 typedef struct portalrecursioninfo_s
 {
 	int exact;
@@ -286,7 +284,7 @@ typedef struct portalrecursioninfo_s
 }
 portalrecursioninfo_t;
 
-void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, int firstclipplane, int numclipplanes)
+static void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, int firstclipplane, int numclipplanes)
 {
 	mportal_t *p;
 	int newpoints, i, prev;
@@ -382,18 +380,16 @@ void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, int first
 					VectorAdd(center, portaltemppoints2[i], center);
 				// ixtable is a 1.0f / N table
 				VectorScale(center, ixtable[newpoints], center);
-				// calculate the planes, and make sure the polygon can see it's own center
+				// calculate the planes, and make sure the polygon can see its own center
 				newplanes = &portalplanes[firstclipplane + numclipplanes];
 				for (prev = newpoints - 1, i = 0;i < newpoints;prev = i, i++)
 				{
-					VectorSubtract(portaltemppoints2[prev], portaltemppoints2[i], v1);
-					VectorSubtract(info->eye, portaltemppoints2[i], v2);
-					CrossProduct(v1, v2, newplanes[i].normal);
-					VectorNormalizeFast(newplanes[i].normal);
+					TriangleNormal(portaltemppoints2[prev], portaltemppoints2[i], info->eye, newplanes[i].normal);
+					VectorNormalize(newplanes[i].normal);
 					newplanes[i].dist = DotProduct(info->eye, newplanes[i].normal);
 					if (DotProduct(newplanes[i].normal, center) <= newplanes[i].dist)
 					{
-						// polygon can't see it's own center, discard and use parent portal
+						// polygon can't see its own center, discard and use parent portal
 						break;
 					}
 				}
@@ -406,7 +402,7 @@ void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, int first
 	}
 }
 
-void Portal_RecursiveFindLeafForFlow(portalrecursioninfo_t *info, mnode_t *node)
+static void Portal_RecursiveFindLeafForFlow(portalrecursioninfo_t *info, mnode_t *node)
 {
 	if (node->plane)
 	{
