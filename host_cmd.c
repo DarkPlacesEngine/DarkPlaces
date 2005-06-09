@@ -223,7 +223,7 @@ void Host_Ping_f (void)
 	{
 		if (!client->active)
 			continue;
-		SV_ClientPrintf("%4i %s\n", (int)(client->ping*1000), client->name);
+		SV_ClientPrintf("%4i %s\n", (int)floor(client->ping*1000+0.5), client->name);
 	}
 }
 
