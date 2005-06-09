@@ -39,7 +39,7 @@ EXE_SDL=$(EXE_UNIXSDL)
 ##### Sound configuration #####
 
 .ifndef DP_SOUND_API
-	DP_SOUND_API=$(DEFAULT_SNDAPI)
+DP_SOUND_API=$(DEFAULT_SNDAPI)
 .endif
 
 # NULL: no sound
