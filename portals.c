@@ -289,7 +289,7 @@ static void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, in
 	mportal_t *p;
 	int newpoints, i, prev;
 	float dist;
-	vec3_t center, v1, v2;
+	vec3_t center;
 	tinyplane_t *newplanes;
 
 	for (i = 0;i < 3;i++)
