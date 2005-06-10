@@ -50,7 +50,7 @@ endif
 
 # Linux configuration
 ifeq ($(DP_MAKE_TARGET), linux)
-	DEFAULT_SNDAPI=$(DEFAULT_SNDAPI_LINUX)
+	DEFAULT_SNDAPI=ALSA
 	OBJ_CD=$(OBJ_LINUXCD)
 
 	OBJ_CL=$(OBJ_GLX)
@@ -66,7 +66,7 @@ endif
 
 # Mac OS X configuration
 ifeq ($(DP_MAKE_TARGET), macosx)
-	DEFAULT_SNDAPI=$(DEFAULT_SNDAPI_MACOSX)
+	DEFAULT_SNDAPI=COREAUDIO
 	OBJ_CD=$(OBJ_MACOSXCD)
 
 	OBJ_CL=$(OBJ_AGL)
@@ -82,7 +82,7 @@ endif
 
 # SunOS configuration (Solaris)
 ifeq ($(DP_MAKE_TARGET), sunos)
-	DEFAULT_SNDAPI=$(DEFAULT_SNDAPI_SUNOS)
+	DEFAULT_SNDAPI=OSS
 	OBJ_CD=$(OBJ_SUNOSCD)
 
 	OBJ_CL=$(OBJ_GLX)
@@ -101,9 +101,9 @@ endif
 # BSD configuration
 ifeq ($(DP_MAKE_TARGET), bsd)
 ifeq ($(DP_ARCH),FreeBSD)
-	DEFAULT_SNDAPI=$(DEFAULT_SNDAPI_OSS)
+	DEFAULT_SNDAPI=OSS
 else
-	DEFAULT_SNDAPI=$(DEFAULT_SNDAPI_BSD)
+	DEFAULT_SNDAPI=BSD
 endif
 	OBJ_CD=$(OBJ_BSDCD)
 
@@ -120,7 +120,7 @@ endif
 
 # Win32 configuration
 ifeq ($(DP_MAKE_TARGET), mingw)
-	DEFAULT_SNDAPI=$(DEFAULT_SNDAPI_WIN32)
+	DEFAULT_SNDAPI=WIN
 	OBJ_CD=$(OBJ_WINCD)
 
 	OBJ_CL=$(OBJ_WGL)
