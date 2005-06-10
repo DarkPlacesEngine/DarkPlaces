@@ -169,8 +169,6 @@ CMD_UNIXRM=rm -rf
 
 ##### Linux specific variables #####
 
-DEFAULT_SNDAPI_LINUX=ALSA
-
 # If you want CD sound in Linux
 OBJ_LINUXCD=cd_linux.o
 # If you want no CD audio
@@ -183,8 +181,6 @@ LDFLAGS_LINUXSDL=$(LDFLAGS_UNIXCOMMON) -ldl $(LDFLAGS_UNIXSDL)
 
 
 ##### Mac OS X specific variables #####
-
-DEFAULT_SNDAPI_MACOSX=COREAUDIO
 
 # If you want CD sound in Mac OS X
 #OBJ_MACOSXCD=cd_macosx.o
@@ -200,8 +196,6 @@ OBJ_AGL= builddate.c sys_linux.o vid_agl.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
 
 ##### SunOS specific variables #####
 
-DEFAULT_SNDAPI_SUNOS=OSS
-
 # No CD support available
 OBJ_SUNOSCD=$(OBJ_NOCD)
 
@@ -215,8 +209,6 @@ LDFLAGS_SUNOSSDL=$(LDFLAGS_UNIXCOMMON) -ldl -lsocket -lnsl $(LDFLAGS_UNIXSDL)
 
 ##### BSD specific variables #####
 
-DEFAULT_SNDAPI_BSD=BSD
-
 #if you want CD sound in BSD
 OBJ_BSDCD=cd_bsd.o
 #if you want no CD audio
@@ -229,8 +221,6 @@ LDFLAGS_BSDSDL=$(LDFLAGS_UNIXCOMMON) $(LDFLAGS_UNIXSDL)
 
 
 ##### Win32 specific variables #####
-
-DEFAULT_SNDAPI_WIN32=WIN
 
 #if you want CD sound in Win32
 OBJ_WINCD=cd_win.o
@@ -277,16 +267,13 @@ help:
 	@echo
 
 debug :
-	$(MAKE) sdl-debug cl-debug sv-debug \
-		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API)
+	$(MAKE) sv-debug cl-debug sdl-debug
 
 profile :
-	$(MAKE) sdl-profile cl-profile sv-profile \
-		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API)
+	$(MAKE) sv-profile cl-profile sdl-profile
 
 release :
-	$(MAKE) sdl-release cl-release sv-release \
-		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API)
+	$(MAKE) sv-release cl-release sdl-release
 
 cl-debug :
 	$(MAKE) bin-debug \
