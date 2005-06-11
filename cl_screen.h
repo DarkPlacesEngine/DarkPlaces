@@ -41,6 +41,11 @@ DRAWFLAG_2XMODULATE,
 DRAWFLAG_NUMFLAGS
 };
 
+// shared color tag printing constants
+#define STRING_COLOR_TAG			'^'
+#define STRING_COLOR_DEFAULT		7
+#define STRING_COLOR_DEFAULT_STR	"7"
+
 // clear the draw queue
 void DrawQ_Clear(void);
 // draw an image
