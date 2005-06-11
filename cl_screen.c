@@ -123,7 +123,7 @@ void DrawQ_ColoredString( float x, float y, const char *text, int maxlen, float 
 					}
 					current++;
 					len--;
-				} while( len > 0 && '0' <= *current && *current <= '9' )
+				} while( len > 0 && '0' <= *current && *current <= '9' );
 				// set the color
 				color = _draw_colors[colorindex];
 				// we jump over the color tag 
