@@ -893,6 +893,9 @@ Key_Event (int key, char ascii, qboolean down)
 		if( !(key_consoleactive && consolekeys[ key ]) && bind && !strncmp( bind, "toggleconsole", strlen( "toggleconsole" ) ) ) {
 			Cbuf_AddText( bind );
 			Cbuf_AddText( "\n" );
+			if( ascii != STRING_COLOR_TAG ) {
+				return;
+			}
 		} else {
 			// during demo playback, all keys ingame bring up the main menu
 			if( cls.demoplayback && !key_consoleactive && key_dest == key_game ) {

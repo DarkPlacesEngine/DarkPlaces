@@ -46,7 +46,7 @@ static void R_Envmap_f (void);
 void R_ClearScreen(void);
 
 // color tag printing
-static vec4_t _draw_colors[] =
+static vec4_t string_colors[] =
 {
 	// Quake3 colors
 	// LordHavoc: why on earth is cyan before magenta in Quake3?
@@ -70,9 +70,7 @@ static vec4_t _draw_colors[] =
 	//{0.1, 0.1, 0.1, 1.0}
 };
 
-#define _draw_colors_count	(sizeof(_draw_colors) / sizeof(vec4_t))
-#define _draw_color_tag		'^'
-#define _draw_color_default 7
+#define STRING_COLORS_COUNT	(sizeof(string_colors) / sizeof(vec4_t))
 
 // color is read and changed in the end
 void DrawQ_ColoredString( float x, float y, const char *text, int maxlen, float scalex, float scaley, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor )
@@ -83,11 +81,11 @@ void DrawQ_ColoredString( float x, float y, const char *text, int maxlen, float 
 	const char *start, *current;
 
 	if( !outcolor || *outcolor == -1 ) {
-		colorindex = _draw_color_default;
+		colorindex = STRING_COLOR_DEFAULT;
 	} else {
 		colorindex = *outcolor;
 	}
-	color = _draw_colors[colorindex];
+	color = string_colors[colorindex];
 
 	if( maxlen < 1)
 		len = strlen( text );
@@ -97,7 +95,7 @@ void DrawQ_ColoredString( float x, float y, const char *text, int maxlen, float 
 	start = current = text;
 	while( len > 0 ) {
 		// check for color control char
-		if( *current == _draw_color_tag ) {
+		if( *current == STRING_COLOR_TAG ) {
 			// get next char
 			current++;
 			len--;
@@ -105,7 +103,7 @@ void DrawQ_ColoredString( float x, float y, const char *text, int maxlen, float 
 				break;
 			}
 			// display the tag char?
-			if( *current == _draw_color_tag ) {
+			if( *current == STRING_COLOR_TAG ) {
 				// only display one of the two
 				start = current;
 				// get the next char
@@ -116,7 +114,7 @@ void DrawQ_ColoredString( float x, float y, const char *text, int maxlen, float 
 				do {
 					colorindex = colorindex * 10 + (*current - '0');
 					// only read as long as it makes a valid index
-					if( colorindex >= _draw_colors_count ) {
+					if( colorindex >= STRING_COLORS_COUNT ) {
 						// undo the last operation
 						colorindex /= 10;
 						break;
@@ -125,13 +123,13 @@ void DrawQ_ColoredString( float x, float y, const char *text, int maxlen, float 
 					len--;
 				} while( len > 0 && '0' <= *current && *current <= '9' );
 				// set the color
-				color = _draw_colors[colorindex];
+				color = string_colors[colorindex];
 				// we jump over the color tag 
 				start = current;
 			}
 		}
 		// go on and read normal text in until the next control char
-		while( len > 0 && *current != _draw_color_tag ) {
+		while( len > 0 && *current != STRING_COLOR_TAG ) {
 			current++;
 			len--;
 		}
