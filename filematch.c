@@ -85,6 +85,9 @@ stringlist_t *stringlistsort(stringlist_t *start)
 {
 	int notdone;
 	stringlist_t *current, *previous, *temp2, *temp3, *temp4;
+	// exit early if there's nothing to sort
+	if (start == NULL || start->next == NULL)
+		return start;
 	notdone = 1;
 	while (notdone)
 	{
@@ -122,33 +125,29 @@ stringlist_t *listdirectory(const char *path)
 {
 	char pattern[4096], *c;
 	struct _finddata_t n_file;
-    long hFile;
+	long hFile;
 	stringlist_t *start, *current;
 	strlcpy (pattern, path, sizeof (pattern));
-	strlcat (pattern, "\\*", sizeof (pattern));
+	strlcat (pattern, "*", sizeof (pattern));
 	// ask for the directory listing handle
 	hFile = _findfirst(pattern, &n_file);
-	if(hFile != -1)
-	{
-		// start a new chain with the the first name
-		start = current = stringlistappend(NULL, n_file.name);
-		// iterate through the directory
-		while (_findnext(hFile, &n_file) == 0)
-			current = stringlistappend(current, n_file.name);
-		_findclose(hFile);
-
-		// convert names to lowercase because windows does not care, but pattern matching code often does
-		for (current = start;current;current = current->next)
-			for (c = current->text;*c;c++)
-				if (*c >= 'A' && *c <= 'Z')
-					*c += 'a' - 'A';
-
-		// sort the list alphanumerically
-		start = stringlistsort(start);
-		return start;
-	}
-	else
+	if(hFile == -1)
 		return NULL;
+	// start a new chain with the the first name
+	start = current = stringlistappend(NULL, n_file.name);
+	// iterate through the directory
+	while (_findnext(hFile, &n_file) == 0)
+		current = stringlistappend(current, n_file.name);
+	_findclose(hFile);
+
+	// convert names to lowercase because windows does not care, but pattern matching code often does
+	for (current = start;current;current = current->next)
+		for (c = current->text;*c;c++)
+			if (*c >= 'A' && *c <= 'Z')
+				*c += 'a' - 'A';
+
+	// sort the list alphanumerically
+	return stringlistsort(start);
 }
 #else
 #include <dirent.h>
@@ -160,15 +159,16 @@ stringlist_t *listdirectory(const char *path)
 	dir = opendir(path);
 	if (!dir)
 		return NULL;
-	ent = readdir(dir);
-	if (!ent)
+	start = current = NULL;
+	while ((ent = readdir(dir)))
 	{
-		closedir(dir);
-		return NULL;
+		if (strcmp(ent->d_name, ".") && strcmp(ent->d_name, ".."))
+		{
+			current = stringlistappend(current, ent->d_name);
+			if (!start)
+				start = current;
+		}
 	}
-	start = current = stringlistappend(NULL, ent->d_name);
-	while((ent = readdir(dir)))
-		current = stringlistappend(current, ent->d_name);
 	closedir(dir);
 	// sort the list alphanumerically
 	return stringlistsort(start);

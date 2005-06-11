@@ -702,9 +702,7 @@ void FS_Path_f (void)
 	for (s=fs_searchpaths ; s ; s=s->next)
 	{
 		if (s->pack)
-		{
 			Con_Printf("%s (%i files)\n", s->pack->filename, s->pack->numfiles);
-		}
 		else
 			Con_Printf("%s\n", s->filename);
 	}
@@ -799,7 +797,7 @@ void FS_AddGameDirectory (const char *dir)
 	{
 		if (matchpattern(current->text, "*.pak", true))
 		{
-			dpsnprintf (pakfile, sizeof (pakfile), "%s/%s", dir, current->text);
+			dpsnprintf (pakfile, sizeof (pakfile), "%s%s", dir, current->text);
 			pak = FS_LoadPackPAK (pakfile);
 			if (pak)
 			{
@@ -818,7 +816,7 @@ void FS_AddGameDirectory (const char *dir)
 	{
 		if (matchpattern(current->text, "*.pk3", true))
 		{
-			dpsnprintf (pakfile, sizeof (pakfile), "%s/%s", dir, current->text);
+			dpsnprintf (pakfile, sizeof (pakfile), "%s%s", dir, current->text);
 			pak = FS_LoadPackPK3 (pakfile);
 			if (pak)
 			{
@@ -854,13 +852,13 @@ void FS_AddGameHierarchy (const char *dir)
 #endif
 
 	// Add the common game directory
-	FS_AddGameDirectory (va("%s/%s", fs_basedir, dir));
+	FS_AddGameDirectory (va("%s/%s/", fs_basedir, dir));
 
 #ifndef WIN32
 	// Add the personal game directory
 	homedir = getenv ("HOME");
 	if (homedir != NULL && homedir[0] != '\0')
-		FS_AddGameDirectory (va("%s/.%s/%s", homedir, gameuserdirname, dir));
+		FS_AddGameDirectory (va("%s/.%s/%s/", homedir, gameuserdirname, dir));
 #endif
 }
 
@@ -1289,7 +1287,7 @@ static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet)
 		else
 		{
 			char netpath[MAX_OSPATH];
-			dpsnprintf(netpath, sizeof(netpath), "%s/%s", search->filename, name);
+			dpsnprintf(netpath, sizeof(netpath), "%s%s", search->filename, name);
 			if (FS_SysFileExists (netpath))
 			{
 				if (!quiet)
@@ -1338,7 +1336,7 @@ qfile_t *FS_OpenReadFile (const char *filename, qboolean quiet, qboolean nonbloc
 	if (pack_ind < 0)
 	{
 		char path [MAX_OSPATH];
-		dpsnprintf (path, sizeof (path), "%s/%s", search->filename, filename);
+		dpsnprintf (path, sizeof (path), "%s%s", search->filename, filename);
 		return FS_SysOpen (path, "rb", nonblocking);
 	}
 
@@ -1378,7 +1376,7 @@ qfile_t* FS_Open (const char* filepath, const char* mode, qboolean quiet, qboole
 		char real_path [MAX_OSPATH];
 
 		// Open the file on disk directly
-		dpsnprintf (real_path, sizeof (real_path), "%s/%s", fs_gamedir, filepath);
+		dpsnprintf (real_path, sizeof (real_path), "%s%s", fs_gamedir, filepath);
 
 		// Create directories up to the file
 		FS_CreatePath (real_path);
@@ -2020,10 +2018,14 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 	char netpath[MAX_OSPATH];
 	char temp[MAX_OSPATH];
 
-	while(!strncmp(pattern, "./", 2))
-		pattern += 2;
-	while(!strncmp(pattern, ".\\", 2))
-		pattern += 2;
+	for (i = 0;pattern[i] == '.' || pattern[i] == ':' || pattern[i] == '/' || pattern[i] == '\\';i++)
+		;
+
+	if (i > 0)
+	{
+		Con_Printf("Don't use punctuation at the beginning of a search pattern!\n");
+		return NULL;
+	}
 
 	search = NULL;
 	liststart = NULL;
@@ -2032,14 +2034,9 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 	slash = strrchr(pattern, '/');
 	backslash = strrchr(pattern, '\\');
 	colon = strrchr(pattern, ':');
-	separator = pattern;
-	if (separator < slash)
-		separator = slash;
-	if (separator < backslash)
-		separator = backslash;
-	if (separator < colon)
-		separator = colon;
-	basepathlength = separator - pattern;
+	separator = max(slash, backslash);
+	separator = max(separator, colon);
+	basepathlength = separator ? (separator + 1 - pattern) : 0;
 	basepath = Mem_Alloc (tempmempool, basepathlength + 1);
 	if (basepathlength)
 		memcpy(basepath, pattern, basepathlength);
@@ -2091,12 +2088,12 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 		else
 		{
 			// get a directory listing and look at each name
-			dpsnprintf(netpath, sizeof (netpath), "%s/%s", searchpath->filename, basepath);
+			dpsnprintf(netpath, sizeof (netpath), "%s%s", searchpath->filename, basepath);
 			if ((dir = listdirectory(netpath)))
 			{
 				for (dirfile = dir;dirfile;dirfile = dirfile->next)
 				{
-					dpsnprintf(temp, sizeof(temp), "%s/%s", basepath, dirfile->text);
+					dpsnprintf(temp, sizeof(temp), "%s%s", basepath, dirfile->text);
 					if (matchpattern(temp, (char *)pattern, true))
 					{
 						for (listtemp = liststart;listtemp;listtemp = listtemp->next)
