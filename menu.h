@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define M_PROG_FILENAME "menu.dat"
 #define M_NAME	"menu"
-#define M_MAX_EDICTS	(1 << 11) // should be enough for a menu
+#define M_MAX_EDICTS	(1 << 12) // should be enough for a menu
 
 enum m_state_e {
 	m_none,
