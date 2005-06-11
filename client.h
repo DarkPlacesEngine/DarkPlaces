@@ -526,6 +526,8 @@ typedef struct
 	// client movement simulation
 	// these fields are only updated by CL_ClientMovement (called by CL_SendMove after parsing each network packet)
 	qboolean movement;
+	// indicates the queue has been updated and should be replayed
+	qboolean movement_replay;
 	// simulated data (this is valid even if cl.movement is false)
 	vec3_t movement_origin;
 	vec3_t movement_oldorigin;

@@ -1247,6 +1247,7 @@ CL_ReadFromServer
 Read all incoming data from the server
 ===============
 */
+extern void CL_ClientMovement_Replay();
 int CL_ReadFromServer(void)
 {
 	CL_ReadDemoMessage();
@@ -1267,6 +1268,7 @@ int CL_ReadFromServer(void)
 		V_FadeViewFlashs();
 
 		// relink network entities (note: this sets up the view!)
+		CL_ClientMovement_Replay();
 		CL_RelinkNetworkEntities();
 
 		// move particles
