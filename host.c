@@ -166,48 +166,37 @@ void Host_ServerOptions (void)
 
 // COMMANDLINEOPTION: Server: -dedicated [playerlimit] starts a dedicated server (with a command console), default playerlimit is 8
 // COMMANDLINEOPTION: Server: -listen [playerlimit] starts a multiplayer server with graphical client, like singleplayer but other players can connect, default playerlimit is 8
-	if (cl_available)
+	// if no client is in the executable or -dedicated is specified on
+	// commandline, start a dedicated server
+	i = COM_CheckParm ("-dedicated");
+	if (i || !cl_available)
 	{
-		// client exists, check what mode the user wants
-		i = COM_CheckParm ("-dedicated");
+		cls.state = ca_dedicated;
+		// check for -dedicated specifying how many players
+		if (i && i + 1 < com_argc && atoi (com_argv[i+1]) >= 1)
+			svs.maxclients = atoi (com_argv[i+1]);
+		if (COM_CheckParm ("-listen"))
+			Sys_Error ("Only one of -dedicated or -listen can be specified");
+		// default sv_public on for dedicated servers (often hosted by serious administrators), off for listen servers (often hosted by clueless users)
+		Cvar_SetValue("sv_public", 1);
+	}
+	else if (cl_available)
+	{
+		// client exists and not dedicated, check if -listen is specified
+		cls.state = ca_disconnected;
+		i = COM_CheckParm ("-listen");
 		if (i)
 		{
-			cls.state = ca_dedicated;
 			// default players unless specified
 			if (i + 1 < com_argc && atoi (com_argv[i+1]) >= 1)
 				svs.maxclients = atoi (com_argv[i+1]);
-			if (COM_CheckParm ("-listen"))
-				Sys_Error ("Only one of -dedicated or -listen can be specified");
 		}
 		else
 		{
-			cls.state = ca_disconnected;
-			i = COM_CheckParm ("-listen");
-			if (i)
-			{
-				// default players unless specified
-				if (i + 1 < com_argc && atoi (com_argv[i+1]) >= 1)
-					svs.maxclients = atoi (com_argv[i+1]);
-			}
-			else
-			{
-				// default players in some games, singleplayer in most
-				if (gamemode != GAME_GOODVSBAD2 && gamemode != GAME_NEXUIZ && gamemode != GAME_BATTLEMECH)
-					svs.maxclients = 1;
-			}
+			// default players in some games, singleplayer in most
+			if (gamemode != GAME_GOODVSBAD2 && gamemode != GAME_NEXUIZ && gamemode != GAME_BATTLEMECH)
+				svs.maxclients = 1;
 		}
-	}
-	else
-	{
-		// no client in the executable, always start dedicated server
-		if (COM_CheckParm ("-listen"))
-			Sys_Error ("-listen not available in a dedicated server executable");
-		cls.state = ca_dedicated;
-		// check for -dedicated specifying how many players
-		i = COM_CheckParm ("-dedicated");
-		// default players unless specified
-		if (i && i + 1 < com_argc && atoi (com_argv[i+1]) >= 1)
-			svs.maxclients = atoi (com_argv[i+1]);
 	}
 
 	svs.maxclients = bound(1, svs.maxclients, MAX_SCOREBOARD);
@@ -681,7 +670,7 @@ void Host_ServerFrame (void)
 	}
 	sv.timer += host_realframetime;
 
-    
+
 	// run the world state
 	// don't allow simulation to run too fast or too slow or logic glitches can occur
 	for (framecount = 0;framecount < framelimit && sv.timer > 0;framecount++)
