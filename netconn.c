@@ -1332,10 +1332,83 @@ static void NetConn_BuildChallengeString(char *buffer, int bufferlength)
 	buffer[i] = 0;
 }
 
+static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg, size_t out_size, qboolean fullstatus)
+{
+	unsigned int nb_clients = 0, i;
+	int length;
+
+	// How many clients are there?
+	for (i = 0;i < svs.maxclients;i++)
+		if (svs.clients[i].active)
+			nb_clients++;
+
+	// TODO: we should add more information for the full status string
+	length = dpsnprintf(out_msg, out_size,
+						"\377\377\377\377%s\x0A"
+						"\\gamename\\%s\\modname\\%s\\sv_maxclients\\%d"
+						"\\clients\\%d\\mapname\\%s\\hostname\\%s""\\protocol\\%d"
+						"%s%s"
+						"%s",
+						fullstatus ? "statusResponse" : "infoResponse",
+						gamename, com_modname, svs.maxclients,
+						nb_clients, sv.name, hostname.string, NET_PROTOCOL_VERSION,
+						challenge ? "\\challenge\\" : "", challenge ? challenge : "",
+						fullstatus ? "\n" : "");
+
+	// Make sure it fits in the buffer
+	if (length < 0)
+		return false;
+
+	if (fullstatus)
+	{
+		char *ptr;
+		int left;
+
+		ptr = out_msg + length;
+		left = out_size - length;
+
+		for (i = 0;i < svs.maxclients;i++)
+		{
+			client_t *cl = &svs.clients[i];
+			if (cl->active)
+			{
+				int nameind, cleanind;
+				char curchar;
+				char cleanname [sizeof(cl->name)];
+
+				// Remove all characters '"' and '\' in the player name
+				nameind = 0;
+				cleanind = 0;
+				do
+				{
+					curchar = cl->name[nameind++];
+					if (curchar != '"' && curchar != '\\')
+					{
+						cleanname[cleanind++] = curchar;
+						if (cleanind == sizeof(cleanname) - 1)
+							break;
+					}
+				} while (curchar != '\0');
+
+				length = dpsnprintf(ptr, left, "%d %d \"%s\"\n",
+									cl->frags,
+									(int)(cl->ping * 1000.0f),
+									cleanname);
+				if(length < 0)
+					return false;
+				left -= length;
+				ptr += length;
+			}
+		}
+	}
+
+	return true;
+}
+
 extern void SV_SendServerinfo (client_t *client);
 int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, lhnetaddress_t *peeraddress)
 {
-	int i, n, ret, clientnum, responselength, best;
+	int i, ret, clientnum, best;
 	double besttime;
 	client_t *client;
 	netconn_t *conn;
@@ -1466,22 +1539,31 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 			if (length >= 7 && !memcmp(string, "getinfo", 7))
 			{
 				const char *challenge = NULL;
+
 				// If there was a challenge in the getinfo message
 				if (length > 8 && string[7] == ' ')
 					challenge = string + 8;
-				for (i = 0, n = 0;i < svs.maxclients;i++)
-					if (svs.clients[i].active)
-						n++;
-				responselength = dpsnprintf(response, sizeof(response), "\377\377\377\377infoResponse\x0A"
-							"\\gamename\\%s\\modname\\%s\\sv_maxclients\\%d"
-							"\\clients\\%d\\mapname\\%s\\hostname\\%s\\protocol\\%d%s%s",
-							gamename, com_modname, svs.maxclients, n,
-							sv.name, hostname.string, NET_PROTOCOL_VERSION, challenge ? "\\challenge\\" : "", challenge ? challenge : "");
-				// does it fit in the buffer?
-				if (responselength >= 0)
+
+				if (NetConn_BuildStatusResponse(challenge, response, sizeof(response), false))
 				{
 					if (developer.integer)
 						Con_Printf("Sending reply to master %s - %s\n", addressstring2, response);
+					NetConn_WriteString(mysocket, response, peeraddress);
+				}
+				return true;
+			}
+			if (length >= 9 && !memcmp(string, "getstatus", 9))
+			{
+				const char *challenge = NULL;
+
+				// If there was a challenge in the getinfo message
+				if (length > 10 && string[9] == ' ')
+					challenge = string + 10;
+
+				if (NetConn_BuildStatusResponse(challenge, response, sizeof(response), true))
+				{
+					if (developer.integer)
+						Con_Printf("Sending reply to client %s - %s\n", addressstring2, response);
 					NetConn_WriteString(mysocket, response, peeraddress);
 				}
 				return true;
