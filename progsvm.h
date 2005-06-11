@@ -272,6 +272,7 @@ typedef struct prvm_prog_s
 	// (simple optimization of the free string search)
 	int					firstfreeknownstring;
 	const char			**knownstrings;
+	const char			***stringshash;
 
 	// all memory allocations related to this vm_prog (code, edicts, strings)
 	mempool_t			*progs_mempool; // [INIT]
