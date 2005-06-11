@@ -492,37 +492,10 @@ void CL_UpdatePrydonCursor(void)
 	//CL_SparkShower(cl.cmd.cursor_impact, cl.cmd.cursor_normal, 5, 0);
 }
 
-void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
+void CL_ClientMovement_Input(qboolean buttonjump, qboolean buttoncrouch)
 {
 	int i;
 	int n;
-	int bump;
-	int contents;
-	int crouch;
-	int onground;
-	double edgefriction;
-	double frametime;
-	double t;
-	vec_t wishspeed;
-	vec_t addspeed;
-	vec_t accelspeed;
-	vec_t f;
-	vec_t *playermins;
-	vec_t *playermaxs;
-	vec3_t currentorigin;
-	vec3_t currentvelocity;
-	vec3_t forward;
-	vec3_t right;
-	vec3_t up;
-	vec3_t wishvel;
-	vec3_t wishdir;
-	vec3_t neworigin;
-	vec3_t currentorigin2;
-	vec3_t neworigin2;
-	vec3_t yawangles;
-	trace_t trace;
-	trace_t trace2;
-	trace_t trace3;
 	// remove stale queue items
 	n = cl.movement_numqueue;
 	cl.movement_numqueue = 0;
@@ -554,26 +527,66 @@ void CL_ClientMovement(qboolean buttonjump, qboolean buttoncrouch)
 		cl.movement_queue[cl.movement_numqueue].crouch = buttoncrouch;
 		cl.movement_numqueue++;
 	}
+	cl.movement = cl_movement.integer && cl.stats[STAT_HEALTH] > 0 && !cls.demoplayback && !cl.intermission;
+	// clear queue if client movement is disabled
+	if (!cl.movement)
+		cl.movement_numqueue = 0;
+	cl.movement_replay = true;
+}
+
+void CL_ClientMovement_Replay(void)
+{
+	int i;
+	int bump;
+	int contents;
+	int crouch;
+	int onground;
+	double edgefriction;
+	double frametime;
+	double t;
+	vec_t wishspeed;
+	vec_t addspeed;
+	vec_t accelspeed;
+	vec_t f;
+	vec_t *playermins;
+	vec_t *playermaxs;
+	vec3_t currentorigin;
+	vec3_t currentvelocity;
+	vec3_t forward;
+	vec3_t right;
+	vec3_t up;
+	vec3_t wishvel;
+	vec3_t wishdir;
+	vec3_t neworigin;
+	vec3_t currentorigin2;
+	vec3_t neworigin2;
+	vec3_t yawangles;
+	trace_t trace;
+	trace_t trace2;
+	trace_t trace3;
+	if (!cl.movement_replay)
+		return;
+	cl.movement_replay = false;
+
 	// fetch current starting values
 	VectorCopy(cl_entities[cl.playerentity].state_current.origin, currentorigin);
 	VectorCopy(cl.mvelocity[0], currentvelocity);
-	// check if onground
-	VectorSet(currentorigin2, currentorigin[0], currentorigin[1], currentorigin[2] + 1);
-	VectorSet(neworigin2, currentorigin[0], currentorigin[1], currentorigin[2] - 1);
-	trace = CL_TraceBox(currentorigin2, cl_playercrouchmins, cl_playercrouchmaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
-	onground = trace.fraction < 1 && trace.plane.normal[2] > 0.7;
 	// FIXME: try minor nudges in various directions if startsolid to find a
 	// safe place to start the walk (due to network compression in some
 	// protocols this starts in solid)
 	//currentorigin[2] += (1.0 / 32.0); // slight nudge to get out of the floor
 	crouch = false; // this will be updated on first move
+
+	// check if onground
+	VectorSet(currentorigin2, currentorigin[0], currentorigin[1], currentorigin[2] + 1);
+	VectorSet(neworigin2, currentorigin[0], currentorigin[1], currentorigin[2] - 1);
+	trace = CL_TraceBox(currentorigin2, cl_playercrouchmins, cl_playercrouchmaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
+	onground = trace.fraction < 1 && trace.plane.normal[2] > 0.7;
 	//Con_Printf("%f: ", cl.mtime[0]);
-	// replay input queue, and remove any stale queue items
+
+	// replay the input queue to predict current location
 	// note: this relies on the fact there's always one queue item at the end
-	// abort if client movement is disabled
-	cl.movement = cl_movement.integer && cl.stats[STAT_HEALTH] > 0 && !cls.demoplayback && !cl.intermission;
-	if (!cl.movement)
-		cl.movement_numqueue = 0;
+
 	for (i = 0;i < cl.movement_numqueue;i++)
 	{
 		client_movementqueue_t *q = cl.movement_queue + bound(0, i, cl.movement_numqueue - 1);
@@ -956,7 +969,7 @@ void CL_SendMove(void)
 		return;
 
 	// FIXME: bits & 16 is +button5, Nexuiz specific
-	CL_ClientMovement((bits & 2) != 0, (bits & 16) != 0);
+	CL_ClientMovement_Input((bits & 2) != 0, (bits & 16) != 0);
 
 	if (NetConn_SendUnreliableMessage(cls.netcon, &buf) == -1)
 	{
