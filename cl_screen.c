@@ -78,16 +78,15 @@ static vec4_t _draw_colors[] =
 void DrawQ_ColoredString( float x, float y, const char *text, int maxlen, float scalex, float scaley, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor )
 {
 	vec_t *color;
-	const char *first, *last;
 	int len;
 	int colorindex;
-	
-    if( !outcolor || *outcolor == -1 ) {
+	const char *start, *current;
+
+	if( !outcolor || *outcolor == -1 ) {
 		colorindex = _draw_color_default;
 	} else {
 		colorindex = *outcolor;
 	}
-
 	color = _draw_colors[colorindex];
 
 	if( maxlen < 1)
@@ -95,44 +94,59 @@ void DrawQ_ColoredString( float x, float y, const char *text, int maxlen, float 
 	else
 		len = min( maxlen, (signed) strlen( text ) );
 
-    first = last = text;
-	while( len ) {
-		// iterate until we get the next color tag or reach the end of the text part to draw
-		for( ; len && *last != _draw_color_tag ; len--, last++ )
-			;
-		// only draw the partial string if we have read anything
-		if( last != first ) {
-			// draw the string
-			DrawQ_String( x, y, first, last - first, scalex, scaley, basered * color[0], basegreen * color[1], baseblue * color[2], basealpha * color[3], flags );
-			// update x to be at the new start position
-			x += (last - first) * scalex;
-			// if we have reached the end, we have finished
-			if( !len )
+	start = current = text;
+	while( len > 0 ) {
+		// check for color control char
+		if( *current == _draw_color_tag ) {
+			// get next char
+			current++;
+			len--;
+			if( len == 0 ) {
 				break;
-		}
-		first = last;
-		// jump over the tag
-		last++;
-		len--;
-		if( len && '0' <= *last && *last <= '9' ) {
-			colorindex = 0;
-			while( '0' <= *last && *last <= '9' && len ) {
-				colorindex = colorindex * 10 + *last - '0';
-				if( colorindex < _draw_colors_count ) {
-					last++;
-					len--;
-				} else {
-					colorindex /= 10;
-					break;
-				}
 			}
-
-			color = _draw_colors[colorindex];
-			// we dont want to display the color tag and the color index
-			first = last;
+			// display the tag char?
+			if( *current == _draw_color_tag ) {
+				// only display one of the two
+				start = current;
+				// get the next char
+				current++;
+				len--;
+			} else if( '0' <= *current && *current <= '9' ) {
+				colorindex = 0;
+				do {
+					colorindex = colorindex * 10 + (*current - '0');
+					// only read as long as it makes a valid index
+					if( colorindex >= _draw_colors_count ) {
+						// undo the last operation
+						colorindex /= 10;
+						break;
+					}
+					current++;
+					len--;
+				} while( len > 0 && '0' <= *current && *current <= '9' )
+				// set the color
+				color = _draw_colors[colorindex];
+				// we jump over the color tag 
+				start = current;
+			}
+		}
+		// go on and read normal text in until the next control char
+		while( len > 0 && *current != _draw_color_tag ) {
+			current++;
+			len--;
+		}
+		// display the text
+		if( start != current ) {
+			// draw the string
+			DrawQ_String( x, y, start, current - start, scalex, scaley, basered * color[0], basegreen * color[1], baseblue * color[2], basealpha * color[3], flags );
+			// update x to be at the new start position
+			x += (current - start) * scalex;
+			// set start accordingly
+			start = current;
 		}
 	}
 
+	// return the last colorindex
 	if( outcolor ) {
 		*outcolor = colorindex;
 	}
