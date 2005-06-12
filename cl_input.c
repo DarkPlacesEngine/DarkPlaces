@@ -632,6 +632,8 @@ void CL_ClientMovement_Replay(void)
 				wishspeed = VectorLength(wishvel);
 				if (wishspeed)
 					VectorScale(wishvel, 1 / wishspeed, wishdir);
+				else
+					VectorSet( wishdir, 0.0, 0.0, 0.0 );
 				wishspeed = min(wishspeed, cl_movement_maxspeed.value);
 				if (crouch)
 					wishspeed *= 0.5;
@@ -672,6 +674,8 @@ void CL_ClientMovement_Replay(void)
 				wishspeed = VectorLength(wishvel);
 				if (wishspeed)
 					VectorScale(wishvel, 1 / wishspeed, wishdir);
+				else
+					VectorSet( wishdir, 0.0, 0.0, 0.0 );
 				wishspeed = min(wishspeed, cl_movement_maxspeed.value);
 				if (crouch)
 					wishspeed *= 0.5;
