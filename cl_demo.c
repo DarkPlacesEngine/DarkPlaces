@@ -86,6 +86,10 @@ void CL_StopPlayback (void)
 
 	if (cls.timedemo)
 		CL_FinishTimeDemo ();
+
+	if (COM_CheckParm("-demo") || COM_CheckParm("-demolooponly"))
+		Host_Quit_f();
+
 }
 
 /*

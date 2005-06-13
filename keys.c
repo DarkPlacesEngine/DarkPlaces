@@ -882,6 +882,11 @@ Key_Event (int key, char ascii, qboolean down)
 					MR_Keydown( key, ascii );
 					break;
 				case key_game:
+					if (COM_CheckParm ("-demolooponly"))
+					{
+						CL_Disconnect ();
+						return;
+					}
 					MR_ToggleMenu_f();
 					break;
 				default:
@@ -899,7 +904,8 @@ Key_Event (int key, char ascii, qboolean down)
 		} else {
 			// during demo playback, all keys ingame bring up the main menu
 			if( cls.demoplayback && !key_consoleactive && key_dest == key_game ) {
-				MR_ToggleMenu_f ();
+				if (!COM_CheckParm ("-demolooponly"))
+					MR_ToggleMenu_f ();
 				return;
 			}
 

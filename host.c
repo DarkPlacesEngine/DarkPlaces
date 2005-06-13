@@ -1040,6 +1040,26 @@ void Host_Init (void)
 		Cbuf_Execute();
 	}
 
+	// check for special demo mode
+// COMMANDLINEOPTION: Client: -demo <demoname> runs a playdemo and quits
+	i = COM_CheckParm("-demo");
+	if (i && i + 1 < com_argc)
+	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
+	{
+		Cbuf_AddText(va("playdemo %s\n", com_argv[i + 1]));
+		Cbuf_Execute();
+	}
+
+	// check for special demolooponly mode
+// COMMANDLINEOPTION: Client: -demolooponly <demoname> runs a playdemo and quits
+	i = COM_CheckParm("-demolooponly");
+	if (i && i + 1 < com_argc)
+	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
+	{
+		Cbuf_AddText(va("playdemo %s\n", com_argv[i + 1]));
+		Cbuf_Execute();
+	}
+
 	if (cls.state == ca_dedicated || COM_CheckParm("-listen"))
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
