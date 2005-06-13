@@ -1932,7 +1932,7 @@ void M_Options_Effects_Key (int k, char ascii)
 }
 
 
-#define	OPTIONS_GRAPHICS_ITEMS	12
+#define	OPTIONS_GRAPHICS_ITEMS	14
 
 int options_graphics_cursor;
 
@@ -1955,6 +1955,7 @@ extern cvar_t r_bloom_intensity;
 extern cvar_t r_bloom_power;
 extern cvar_t r_bloom_blur;
 extern cvar_t r_bloom_resolution;
+extern cvar_t gl_picmip;
 
 void M_Menu_Options_Graphics_AdjustSliders (int dir)
 {
@@ -1975,6 +1976,8 @@ void M_Menu_Options_Graphics_AdjustSliders (int dir)
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_bloom_power,                           bound(1, r_bloom_power.value + dir * 1, 16));
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_bloom_blur,                            bound(1, r_bloom_blur.value + dir * 1, 16));
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_bloom_resolution,                      bound(64, r_bloom_resolution.value + dir * 64, 2048));
+	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&gl_picmip,                               bound(0, gl_picmip.value - dir, 3));
+	else if (options_graphics_cursor == optnum++) Cbuf_AddText ("r_restart\n");
 }
 
 
@@ -2006,6 +2009,8 @@ void M_Options_Graphics_Draw (void)
 	M_Options_PrintSlider(  "            Bloom Power", true, r_bloom_power.value, 1, 16);
 	M_Options_PrintSlider(  "             Bloom Blur", true, r_bloom_blur.value, 1, 16);
 	M_Options_PrintSlider(  "       Bloom Resolution", true, r_bloom_resolution.value, 64, 2048);
+	M_Options_PrintSlider(  "        Texture Quality", true, gl_picmip.value, 3, 0);
+	M_Options_PrintCommand( "       Restart Renderer", true);
 }
 
 
