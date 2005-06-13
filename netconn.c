@@ -1224,7 +1224,7 @@ void NetConn_QueryQueueFrame(void)
 	for( index = 0, queries = 0 ; index < serverlist_cachecount && queries < maxqueries ; index++ )
 	{
 		serverlist_entry_t *entry = &serverlist_cache[ index ];
-		if( entry->query != SQS_QUERYING ) 
+		if( entry->query != SQS_QUERYING )
 		{
 			continue;
 		}
@@ -1235,7 +1235,7 @@ void NetConn_QueryQueueFrame(void)
 			continue;
 		}
 
-		if( entry->querycounter != (unsigned) net_slist_maxtries.integer ) 
+		if( entry->querycounter != (unsigned) net_slist_maxtries.integer )
 		{
 			lhnetaddress_t address;
 			int socket;
@@ -1253,8 +1253,8 @@ void NetConn_QueryQueueFrame(void)
 				Con_Printf("querying %25s (%i. try)\n", entry->info.cname, entry->querycounter);
 
 			queries++;
-		} 
-		else 
+		}
+		else
 		{
 			entry->query = SQS_TIMEDOUT;
 		}
@@ -1338,7 +1338,7 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 	int length;
 
 	// How many clients are there?
-	for (i = 0;i < svs.maxclients;i++)
+	for (i = 0;i < (unsigned int)svs.maxclients;i++)
 		if (svs.clients[i].active)
 			nb_clients++;
 
@@ -1367,7 +1367,7 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 		ptr = out_msg + length;
 		left = out_size - length;
 
-		for (i = 0;i < svs.maxclients;i++)
+		for (i = 0;i < (unsigned int)svs.maxclients;i++)
 		{
 			client_t *cl = &svs.clients[i];
 			if (cl->active)
