@@ -206,17 +206,19 @@ static qboolean _ServerList_CompareInt( int A, serverlist_maskop_t op, int B )
 
 static qboolean _ServerList_CompareStr( const char *A, serverlist_maskop_t op, const char *B )
 {
+	int i;
 	char bufferA[ 256 ], bufferB[ 256 ]; // should be more than enough
-	strcpy( bufferA, A );
-	strlwr( bufferA );
-
-	strcpy( bufferB, B );
-	strlwr( bufferB );
+	for (i = 0;i < sizeof(bufferA)-1 && A[i];i++)
+		bufferA[i] = (A[i] >= 'A' && A[i] <= 'Z') ? (A[i] + 'a' - 'A') : A[i];
+	bufferA[i] = 0;
+	for (i = 0;i < sizeof(bufferB)-1 && B[i];i++)
+		bufferB[i] = (B[i] >= 'A' && B[i] <= 'Z') ? (B[i] + 'a' - 'A') : B[i];
+	bufferB[i] = 0;
 
 	// Same here, also using an intermediate & final return would be more appropriate
 	// A info B mask
 	switch( op ) {
-		case SLMO_CONTAINS: 		
+		case SLMO_CONTAINS:
 			return *bufferB && !!strstr( bufferA, bufferB ); // we want a real bool
 		case SLMO_NOTCONTAIN:
 			return !*bufferB || !strstr( bufferA, bufferB );
