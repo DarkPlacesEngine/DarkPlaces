@@ -369,6 +369,11 @@ This is sent just before a server changes levels
 */
 void Host_Reconnect_f (void)
 {
+	if (cmd_source == src_command)
+	{
+		Con_Print("reconnect is not valid from the console\n");
+		return;
+	}
 	if (Cmd_Argc() != 1)
 	{
 		Con_Print("reconnect : wait for signon messages again\n");
