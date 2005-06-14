@@ -206,25 +206,32 @@ static qboolean _ServerList_CompareInt( int A, serverlist_maskop_t op, int B )
 
 static qboolean _ServerList_CompareStr( const char *A, serverlist_maskop_t op, const char *B )
 {
+	char bufferA[ 256 ], bufferB[ 256 ]; // should be more than enough
+	strcpy( bufferA, A );
+	strlwr( bufferA );
+
+	strcpy( bufferB, B );
+	strlwr( bufferB );
+
 	// Same here, also using an intermediate & final return would be more appropriate
 	// A info B mask
 	switch( op ) {
-		case SLMO_CONTAINS:
-			return *B && !!strstr( A, B ); // we want a real bool
+		case SLMO_CONTAINS: 		
+			return *bufferB && !!strstr( bufferA, bufferB ); // we want a real bool
 		case SLMO_NOTCONTAIN:
-			return !*B || !strstr( A, B );
+			return !*bufferB || !strstr( bufferA, bufferB );
 		case SLMO_LESS:
-			return strcmp( A, B ) < 0;
+			return strcmp( bufferA, bufferB ) < 0;
 		case SLMO_LESSEQUAL:
-			return strcmp( A, B ) <= 0;
+			return strcmp( bufferA, bufferB ) <= 0;
 		case SLMO_EQUAL:
-			return strcmp( A, B ) == 0;
+			return strcmp( bufferA, bufferB ) == 0;
 		case SLMO_GREATER:
-			return strcmp( A, B ) > 0;
+			return strcmp( bufferA, bufferB ) > 0;
 		case SLMO_NOTEQUAL:
-			return strcmp( A, B ) != 0;
+			return strcmp( bufferA, bufferB ) != 0;
 		case SLMO_GREATEREQUAL:
-			return strcmp( A, B ) >= 0;
+			return strcmp( bufferA, bufferB ) >= 0;
 		default:
 			Con_DPrint( "_ServerList_CompareStr: Bad op!\n" );
 			return false;
