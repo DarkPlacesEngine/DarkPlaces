@@ -140,16 +140,16 @@ CFLAGS_DEBUG=-ggdb
 CFLAGS_PROFILE=-g -pg -ggdb
 CFLAGS_RELEASE=
 
-OPTIM_DEBUG=
+OPTIM_DEBUG=$(CPUOPTIMIZATIONS)
 OPTIM_RELEASE=-O2 -fno-strict-aliasing -ffast-math -funroll-loops $(CPUOPTIMIZATIONS)
 
 DO_CC=$(CC) $(CFLAGS) -c $< -o $@
 
 
 # Link
-LDFLAGS_DEBUG=-g -ggdb
-LDFLAGS_PROFILE=-g -pg
-LDFLAGS_RELEASE=
+LDFLAGS_DEBUG=-g -ggdb $(OPTIM_DEBUG)
+LDFLAGS_PROFILE=-g -pg $(OPTIM_RELEASE)
+LDFLAGS_RELEASE=$(OPTIM_RELEASE)
 
 
 ##### UNIX specific variables #####
