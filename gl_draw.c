@@ -38,7 +38,7 @@ static int numcachepics;
 
 static rtexturepool_t *drawtexturepool;
 
-static qbyte concharimage[13396] =
+static qbyte concharimage[13468] =
 {
 #include "lhfont.h"
 };
