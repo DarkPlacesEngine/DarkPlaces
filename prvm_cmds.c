@@ -1457,6 +1457,8 @@ void VM_fopen(void)
 	VM_FILES[filenum] = FS_Open(va("data/%s", filename), modestring, false, false);
 	if (VM_FILES[filenum] == NULL && mode == 0)
 		VM_FILES[filenum] = FS_Open(va("%s", filename), modestring, false, false);
+	if (developer.integer)
+		Con_Printf("fopen: %s mode %s opened as #%i\n", filename, modestring, filenum);
 
 	if (VM_FILES[filenum] == NULL)
 		PRVM_G_FLOAT(OFS_RETURN) = -1;
@@ -1489,6 +1491,8 @@ void VM_fclose(void)
 		Con_Printf("VM_fclose: no such file handle %i (or file has been closed) in %s\n", filenum, PRVM_NAME);
 		return;
 	}
+	if (developer.integer)
+		Con_Printf("fclose #%i\n", filenum);
 	FS_Close(VM_FILES[filenum]);
 	VM_FILES[filenum] = NULL;
 }
