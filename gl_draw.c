@@ -91,6 +91,10 @@ static rtexture_t *draw_generateconchars(void)
 		buffer[i][3] = data[i*4+0];
 	}
 
+#if 0
+	Image_WriteTGARGBA ("gfx/generated_conchars.tga", 256, 256, &buffer[0][0]);
+#endif
+
 	Mem_Free(data);
 	return R_LoadTexture2D(drawtexturepool, "conchars", 256, 256, &buffer[0][0], TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
 }
