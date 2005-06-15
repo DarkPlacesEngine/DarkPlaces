@@ -1457,13 +1457,19 @@ void VM_fopen(void)
 	VM_FILES[filenum] = FS_Open(va("data/%s", filename), modestring, false, false);
 	if (VM_FILES[filenum] == NULL && mode == 0)
 		VM_FILES[filenum] = FS_Open(va("%s", filename), modestring, false, false);
-	if (developer.integer)
-		Con_Printf("fopen: %s mode %s opened as #%i\n", filename, modestring, filenum);
 
 	if (VM_FILES[filenum] == NULL)
+	{
+		if (developer.integer)
+			Con_Printf("fopen: %s mode %s failed\n", filename, modestring);
 		PRVM_G_FLOAT(OFS_RETURN) = -1;
+	}
 	else
+	{
+		if (developer.integer)
+			Con_Printf("fopen: %s mode %s opened as #%i\n", filename, modestring, filenum);
 		PRVM_G_FLOAT(OFS_RETURN) = filenum;
+	}
 }
 
 /*
