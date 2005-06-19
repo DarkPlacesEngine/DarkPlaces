@@ -44,8 +44,7 @@ static qboolean		consolekeys[1024];	// if true, can't be rebound while in
 										// console
 static qboolean		menubound[1024];		// if true, can't be rebound while in
 										// menu
-static unsigned int	key_repeats[1024];	// if > 1, it is autorepeating
-static qboolean		keydown[1024];
+static unsigned int	keydown[1024];	// if > 1, it is autorepeating
 
 typedef struct {
 	const char	*name;
@@ -834,9 +833,6 @@ Key_Event (int key, char ascii, qboolean down)
 #define USERPLAYING()	( !key_consoleactive && key_dest == key_game && (cls.state == ca_connected && cls.signon == SIGNONS) )
 	const char *bind;
 
-	// set key state
-	keydown[ key ] = down;
-
 	// get key binding
 	bind = keybindings[ key_bmap ][ key ];
 	if( !bind ) {
@@ -845,13 +841,13 @@ Key_Event (int key, char ascii, qboolean down)
 
 	// update key repeats
 	if( down ) {
-		key_repeats[ key ]++;
-		if( key_repeats[ key ] > 1 ) {
+		keydown[ key ]++;
+		if( keydown[ key ] > 1 ) {
 			if( (key_consoleactive && !consolekeys[key]) || USERPLAYING() )
 				return;						// ignore most autorepeats
 		}
 	} else {
-		key_repeats[ key ] = 0;
+		keydown[ key ] = 0;
 	}
 
 	if( !down ) {
@@ -938,9 +934,6 @@ Key_Event (int key, char ascii, qboolean down)
 #define USERPLAYING()	( !key_consoleactive && key_dest == key_game && (cls.state == ca_connected && cls.signon == SIGNONS) )
 	const char *bind;
 
-	// set key state
-	keydown[key] = down;
-
 	// get key binding
 	bind = keybindings[key_bmap][key];
 	if (!bind)
@@ -949,7 +942,7 @@ Key_Event (int key, char ascii, qboolean down)
 	if (!down)
 	{
 		// clear repeat count now that the key is released
-		key_repeats[key] = 0;
+		keydown[key] = 0;
 		// key up events only generate commands if the game key binding is a button
 		// command (leading + sign).  These will occur even in console mode, to
 		// keep the character from continuing an action started before a console
@@ -964,7 +957,7 @@ Key_Event (int key, char ascii, qboolean down)
 
 	// increment key repeat count each time a down is received so that things
 	// which want to ignore key repeat can ignore it
-	key_repeats[key]++;
+	keydown[key]++;
 
 	// key_consoleactive is a flag not a key_dest because the console is a
 	// high priority overlay ontop of the normal screen (designed as a safety
@@ -980,10 +973,10 @@ Key_Event (int key, char ascii, qboolean down)
 	if (key == K_ESCAPE)
 	{
 		// ignore key repeats on escape
-		if (key_repeats[key] > 1)
+		if (keydown[key] > 1)
 			return;
 		// escape does these things:
-		// key_consolactive - close console
+		// key_consoleactive - close console
 		// key_message - abort messagemode
 		// key_menu - go to parent menu (or key_game)
 		// key_game - open menu
@@ -1017,7 +1010,7 @@ Key_Event (int key, char ascii, qboolean down)
 	if (key >= K_F1 && key <= K_F12)
 	{
 		// ignore key repeats on F1-F12 binds
-		if (key_repeats[key] > 1)
+		if (keydown[key] > 1)
 			return;
 		if (bind)
 		{
@@ -1057,7 +1050,7 @@ Key_Event (int key, char ascii, qboolean down)
 			break;
 		case key_game:
 			// ignore key repeats on binds
-			if (bind && key_repeats[key] == 1)
+			if (bind && keydown[key] == 1)
 			{
 				// button commands add keynum as a parm
 				if (bind[0] == '+')
@@ -1079,10 +1072,8 @@ Key_Event (int key, char ascii, qboolean down)
 	const char	*kb;
 	char		cmd[1024];
 
-	keydown[key] = down;
-
 	if (!down)
-		key_repeats[key] = 0;
+		keydown[key] = 0;
 
 	key_lastpress = key;
 	key_count++;
@@ -1092,8 +1083,8 @@ Key_Event (int key, char ascii, qboolean down)
 
 	// update auto-repeat status
 	if (down) {
-		key_repeats[key]++;
-		if (key_repeats[key] > 1) {
+		keydown[key]++;
+		if (keydown[key] > 1) {
 			if ((key_consoleactive && !consolekeys[key]) ||
 					(!key_consoleactive && key_dest == key_game &&
 					 (cls.state == ca_connected && cls.signon == SIGNONS)))
@@ -1230,11 +1221,5 @@ Key_ClearStates
 void
 Key_ClearStates (void)
 {
-	int i;
-
-	for (i = 0; i < (int)(sizeof(keydown)/sizeof(keydown[0])); i++)
-	{
-		keydown[i] = false;
-		key_repeats[i] = 0;
-	}
+	memset(keydown, 0, sizeof(keydown));
 }
