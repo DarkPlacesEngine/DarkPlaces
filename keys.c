@@ -27,24 +27,17 @@
 key up events are sent even if in console mode
 */
 
-#define MAX_INPUTLINE 256
-int			edit_line = 31;
-int			history_line = 31;
-char		key_lines[32][MAX_INPUTLINE];
+int			edit_line = MAX_INPUTLINES-1;
+int			history_line = MAX_INPUTLINES-1;
+char		key_lines[MAX_INPUTLINES][MAX_INPUTLINE];
 int			key_linepos;
-int			key_insert = true;	// insert key toggle (for editing)
-
+qboolean	key_insert = true;	// insert key toggle (for editing)
 keydest_t	key_dest;
 int			key_consoleactive;
+char		*keybindings[MAX_BINDMAPS][MAX_KEYS];
 
 static int	key_bmap, key_bmap2;
-
-char				*keybindings[8][1024];
-static qboolean		consolekeys[1024];	// if true, can't be rebound while in
-										// console
-static qboolean		menubound[1024];		// if true, can't be rebound while in
-										// menu
-static qbyte keydown[1024];	// 0 = up, 1 = down, 2 = repeating
+static qbyte keydown[MAX_KEYS];	// 0 = up, 1 = down, 2 = repeating
 
 typedef struct {
 	const char	*name;
@@ -212,7 +205,7 @@ static const keyname_t   keynames[] = {
 void
 Key_ClearEditLine (int edit_line)
 {
-	memset (key_lines[edit_line], '\0', MAX_INPUTLINE);
+	memset (key_lines[edit_line], '\0', sizeof(key_lines[edit_line]));
 	key_lines[edit_line][0] = ']';
 	key_linepos = 1;
 }
@@ -776,38 +769,6 @@ Key_Init (void)
 	key_linepos = 1;
 
 //
-// init ascii characters in console mode
-//
-	for (i = 32; i < 128; i++)
-		consolekeys[i] = true;
-	consolekeys[K_ENTER] = true; consolekeys[K_KP_ENTER] = true;
-	consolekeys[K_TAB] = true;
-	consolekeys[K_LEFTARROW] = true; consolekeys[K_KP_LEFTARROW] = true;
-	consolekeys[K_RIGHTARROW] = true; consolekeys[K_KP_RIGHTARROW] = true;
-	consolekeys[K_UPARROW] = true; consolekeys[K_KP_UPARROW] = true;
-	consolekeys[K_DOWNARROW] = true; consolekeys[K_KP_DOWNARROW] = true;
-	consolekeys[K_BACKSPACE] = true;
-	consolekeys[K_DEL] = true; consolekeys[K_KP_DEL] = true;
-	consolekeys[K_INS] = true; consolekeys[K_KP_INS] = true;
-	consolekeys[K_HOME] = true; consolekeys[K_KP_HOME] = true;
-	consolekeys[K_END] = true; consolekeys[K_KP_END] = true;
-	consolekeys[K_PGUP] = true; consolekeys[K_KP_PGUP] = true;
-	consolekeys[K_PGDN] = true; consolekeys[K_KP_PGDN] = true;
-	consolekeys[K_SHIFT] = true;
-	consolekeys[K_MWHEELUP] = true;
-	consolekeys[K_MWHEELDOWN] = true;
-	consolekeys[K_KP_PLUS] = true;
-	consolekeys[K_KP_MINUS] = true;
-	consolekeys[K_KP_DIVIDE] = true;
-	consolekeys[K_KP_MULTIPLY] = true;
-	consolekeys['`'] = false;
-	consolekeys['~'] = false;
-
-	menubound[K_ESCAPE] = true;
-	for (i = 0; i < 12; i++)
-		menubound[K_F1 + i] = true;
-
-//
 // register our functions
 //
 	Cmd_AddCommand ("in_bind", Key_In_Bind_f);
@@ -829,109 +790,6 @@ Should NOT be called during an interrupt!
 void
 Key_Event (int key, char ascii, qboolean down)
 {
-#if 0
-#define USERPLAYING()	( !key_consoleactive && key_dest == key_game && (cls.state == ca_connected && cls.signon == SIGNONS) )
-	const char *bind;
-
-	// get key binding
-	bind = keybindings[ key_bmap ][ key ];
-	if( !bind ) {
-		bind = keybindings[ key_bmap2 ][ key ];
-	}
-
-	// update key repeats
-	if( down ) {
-		keydown[ key ] = min(keydown[ key ] + 1, 2);
-		if( keydown[ key ] > 1 ) {
-			if( (key_consoleactive && !consolekeys[key]) || USERPLAYING() )
-				return;						// ignore most autorepeats
-		}
-	} else {
-		keydown[ key ] = 0;
-	}
-
-	if( !down ) {
-		if( bind && bind[ 0 ] == '+') {
-			Cbuf_AddText( va( "-%s %i\n", bind + 1, key) );
-		}
-	} else {
-		// handle ESCAPE specially, so unbinding wont help
-		if( key == K_ESCAPE ) {
-			// shift-escape is a safety measure for users who cant toggle the console otherwise
-			if( keydown[K_SHIFT] ) {
-				Con_ToggleConsole_f();
-				return;
-			}
-			switch( key_dest ) {
-				case key_message:
-					Key_Message( key, ascii );
-					break;
-				case key_menu:
-					MR_Keydown( key, ascii );
-					break;
-				case key_game:
-					if (COM_CheckParm ("-demolooponly"))
-					{
-						CL_Disconnect ();
-						return;
-					}
-					MR_ToggleMenu_f();
-					break;
-				default:
-					Sys_Error( "Bad key_dest" );
-			}
-			return;
-		}
-
-		if( !(key_consoleactive && consolekeys[ key ]) && bind && !strncmp( bind, "toggleconsole", strlen( "toggleconsole" ) ) ) {
-			Cbuf_AddText( bind );
-			Cbuf_AddText( "\n" );
-			if( ascii != STRING_COLOR_TAG ) {
-				return;
-			}
-		} else {
-			// during demo playback, all keys ingame bring up the main menu
-			if( cls.demoplayback && !key_consoleactive && key_dest == key_game ) {
-				if (!COM_CheckParm ("-demolooponly"))
-					MR_ToggleMenu_f ();
-				return;
-			}
-
-			// menu bind/function keys or normal binds
-			if( (key_dest == key_menu && menubound[key]) || USERPLAYING() ) {
-				if( bind ) {
-					if( bind[0] == '+' ) { // button commands add keynum as a parm
-						Cbuf_AddText( va( "%s %i\n", bind, key ) );
-					} else {
-						Cbuf_AddText( bind );
-						Cbuf_AddText( "\n" );
-					}
-				}
-				return;
-			}
-		}
-
-		// either console or game state key functions
-		if( key_consoleactive ) {
-				Key_Console( key, ascii );
-		} else {
-			switch (key_dest) {
-				case key_message:
-					Key_Message( key, ascii );
-					break;
-				case key_menu:
-					MR_Keydown( key, ascii );
-					break;
-				case key_game:
-					// unbound key
-					break;
-				default:
-					Sys_Error( "Bad key_dest" );
-			}
-		}
-	}
-#elif 1
-#define USERPLAYING()	( !key_consoleactive && key_dest == key_game && (cls.state == ca_connected && cls.signon == SIGNONS) )
 	const char *bind;
 
 	// get key binding
@@ -1068,149 +926,6 @@ Key_Event (int key, char ascii, qboolean down)
 			else
 				Sys_Error ("Bad key_dest");
 	}
-#else
-	const char	*kb;
-	char		cmd[1024];
-
-	if (!down)
-		keydown[key] = 0;
-
-	key_lastpress = key;
-	key_count++;
-	if (key_count <= 0) {
-		return;							// just catching keys for Con_NotifyBox
-	}
-
-	// update auto-repeat status
-	if (down) {
-		keydown[key] = min(keydown[key] + 1, 2);
-		if (keydown[key] > 1) {
-			if ((key_consoleactive && !consolekeys[key]) ||
-					(!key_consoleactive && key_dest == key_game &&
-					 (cls.state == ca_connected && cls.signon == SIGNONS)))
-				return;						// ignore most autorepeats
-		}
-	}
-
-	if (key == K_CTRL)
-		ctrl_down = down;
-
-	//
-	// handle escape specially, so the user can never unbind it
-	//
-	if (key == K_ESCAPE) {
-		if (!down)
-			return;
-		// ctrl-escape is a safety measure
-		if (ctrl_down)
-		{
-			Con_ToggleConsole_f ();
-			return;
-		}
-		switch (key_dest) {
-			case key_message:
-				Key_Message (key, ascii);
-				break;
-			case key_menu:
-				MR_Keydown (key, ascii);
-				break;
-			case key_game:
-				MR_ToggleMenu_f ();
-				break;
-			default:
-				if(UI_Callback_IsSlotUsed(key_dest - 3))
-					UI_Callback_KeyDown (key, ascii);
-				else
-					Sys_Error ("Bad key_dest");
-		}
-		return;
-	}
-
-	if (down)
-	{
-		if (!(kb = keybindings[key_bmap][key]))
-			kb = keybindings[key_bmap2][key];
-		if (kb && !strncmp(kb, "toggleconsole", strlen("toggleconsole")))
-		{
-			Cbuf_AddText (kb);
-			Cbuf_AddText ("\n");
-			return;
-		}
-	}
-
-	if (key_consoleactive && consolekeys[key] && down)
-		Key_Console (key, ascii);
-	else
-	{
-		//
-		// key up events only generate commands if the game key binding is a button
-		// command (leading + sign).  These will occur even in console mode, to
-		// keep the character from continuing an action started before a console
-		// switch.  Button commands include the kenum as a parameter, so multiple
-		// downs can be matched with ups
-		//
-		if (!down) {
-			if (!(kb = keybindings[key_bmap][key]))
-				kb = keybindings[key_bmap2][key];
-
-			if (kb && kb[0] == '+') {
-				dpsnprintf (cmd, sizeof(cmd), "-%s %i\n", kb + 1, key);
-				Cbuf_AddText (cmd);
-			}
-			return;
-		}
-
-		//
-		// during demo playback, most keys bring up the main menu
-		//
-		if (cls.demoplayback && down && consolekeys[key] && key_dest == key_game) {
-			MR_ToggleMenu_f ();
-			return;
-		}
-
-		//
-		// if not a consolekey, send to the interpreter no matter what mode is
-		//
-		if ((key_dest == key_menu && menubound[key])
-				|| (key_consoleactive && !consolekeys[key])
-				|| (key_dest == key_game &&
-					((cls.state == ca_connected) || !consolekeys[key]))) {
-			if (!(kb = keybindings[key_bmap][key]))
-				kb = keybindings[key_bmap2][key];
-			if (kb) {
-				if (kb[0] == '+') {			// button commands add keynum as a parm
-					dpsnprintf (cmd, sizeof(cmd), "%s %i\n", kb, key);
-					Cbuf_AddText (cmd);
-				} else {
-					Cbuf_AddText (kb);
-					Cbuf_AddText ("\n");
-				}
-			}
-			return;
-		}
-
-		if (!down)
-			return;							// other systems only care about key
-		// down events
-
-		switch (key_dest) {
-			case key_message:
-				Key_Message (key, ascii);
-				break;
-			case key_menu:
-				MR_Keydown (key, ascii);
-				break;
-			case key_game:
-				Key_Console (key, ascii);
-				break;
-			default:
-				if(UI_Callback_IsSlotUsed(key_dest - 3))
-					UI_Callback_KeyDown (key, ascii);
-				else
-					Sys_Error ("Bad key_dest");
-		}
-	}
-#endif
 }
 
 /*

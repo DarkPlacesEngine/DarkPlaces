@@ -51,13 +51,6 @@ float con_times[MAX_NOTIFYLINES];
 
 int con_vislines;
 
-#define MAXCMDLINE	256
-extern char key_lines[32][MAXCMDLINE];
-extern int edit_line;
-extern int key_linepos;
-extern int key_insert;
-
-
 qboolean con_initialized;
 
 
@@ -550,7 +543,7 @@ void Con_Print(const char *msg)
 		{
 			// if this is the beginning of a new line, print timestamp
 			char *timestamp = timestamps.integer ? Sys_TimeString(timeformat.string) : "";
-			// reset the color 
+			// reset the color
 			// FIXME: 1. perhaps we should use a terminal system 2. use a constant instead of 7!
 			line[index++] = STRING_COLOR_TAG;
 			// assert( STRING_COLOR_DEFAULT < 10 )
@@ -770,8 +763,8 @@ void Con_DrawNotify (void)
 		} else
 			x = 0;
 
-		DrawQ_ColoredString( x, v, text, con_linewidth, 8, 8, 1.0, 1.0, 1.0, 1.0, 0, &colorindex ); 
-			
+		DrawQ_ColoredString( x, v, text, con_linewidth, 8, 8, 1.0, 1.0, 1.0, 1.0, 0, &colorindex );
+
 		v += 8;
 	}
 
