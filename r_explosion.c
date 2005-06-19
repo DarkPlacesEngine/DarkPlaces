@@ -245,10 +245,6 @@ void R_MoveExplosion(explosion_t *e)
 void R_MoveExplosions(void)
 {
 	int i;
-	float frametime;
-
-	frametime = cl.time - cl.oldtime;
-
 	for (i = 0;i < MAX_EXPLOSIONS;i++)
 		if (cl.time < explosion[i].endtime)
 			R_MoveExplosion(&explosion[i]);
