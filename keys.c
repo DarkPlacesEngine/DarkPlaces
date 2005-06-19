@@ -833,16 +833,15 @@ Key_Event (int key, char ascii, qboolean down)
 #if 1
 #define USERPLAYING()	( !key_consoleactive && key_dest == key_game && (cls.state == ca_connected && cls.signon == SIGNONS) )
 	const char *bind;
-	static qboolean shift_down = false;
+
+	// set key state
+	keydown[ key ] = down;
 
 	// get key binding
 	bind = keybindings[ key_bmap ][ key ];
 	if( !bind ) {
 		bind = keybindings[ key_bmap2 ][ key ];
 	}
-
-	// set key state
-	keydown[ key ] = down;
 
 	// update key repeats
 	if( down ) {
@@ -855,10 +854,6 @@ Key_Event (int key, char ascii, qboolean down)
 		key_repeats[ key ] = 0;
 	}
 
-	if( key == K_SHIFT ) {
-		shift_down = down;
-	}
-
 	if( !down ) {
 		if( bind && bind[ 0 ] == '+') {
 			Cbuf_AddText( va( "-%s %i\n", bind + 1, key) );
@@ -867,7 +862,7 @@ Key_Event (int key, char ascii, qboolean down)
 		// handle ESCAPE specially, so unbinding wont help
 		if( key == K_ESCAPE ) {
 			// shift-escape is a safety measure for users who cant toggle the console otherwise
-			if( shift_down ) {
+			if( keydown[K_SHIFT] ) {
 				Con_ToggleConsole_f();
 				return;
 			}
