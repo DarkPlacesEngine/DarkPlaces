@@ -32,14 +32,11 @@ int			edit_line = 31;
 int			history_line = 31;
 char		key_lines[32][MAX_INPUTLINE];
 int			key_linepos;
-static int	ctrl_down = false;
-static int	key_lastpress;
 int			key_insert = true;	// insert key toggle (for editing)
 
 keydest_t	key_dest;
 int			key_consoleactive;
 
-static int	key_count;					// incremented every key event
 static int	key_bmap, key_bmap2;
 
 char				*keybindings[8][1024];
@@ -864,7 +861,7 @@ Key_Event (int key, char ascii, qboolean down)
 
 	if( !down ) {
 		if( bind && bind[ 0 ] == '+') {
-			Cbuf_AddText( va( "-%s %i\n", bind + 1, key) ); 
+			Cbuf_AddText( va( "-%s %i\n", bind + 1, key) );
 		}
 	} else {
 		// handle ESCAPE specially, so unbinding wont help
@@ -934,7 +931,7 @@ Key_Event (int key, char ascii, qboolean down)
 				case key_menu:
 					MR_Keydown( key, ascii );
 					break;
-				case key_game:				
+				case key_game:
 					// unbound key
 					break;
 				default:
