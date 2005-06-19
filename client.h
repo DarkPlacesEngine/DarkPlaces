@@ -585,6 +585,19 @@ typedef struct
 	// type of game (deathmatch, coop, singleplayer)
 	int gametype;
 
+	// models and sounds used by engine code (particularly cl_parse.c)
+	model_t *model_bolt;
+	model_t *model_bolt2;
+	model_t *model_bolt3;
+	model_t *model_beam;
+	sfx_t *sfx_wizhit;
+	sfx_t *sfx_knighthit;
+	sfx_t *sfx_tink1;
+	sfx_t *sfx_ric1;
+	sfx_t *sfx_ric2;
+	sfx_t *sfx_ric3;
+	sfx_t *sfx_r_exp3;
+
 // refresh related state
 
 	// cl_entitites[0].model
@@ -786,12 +799,6 @@ void V_Init (void);
 float V_CalcRoll (vec3_t angles, vec3_t velocity);
 void V_UpdateBlends (void);
 void V_ParseDamage (void);
-
-
-//
-// cl_tent
-//
-void CL_InitTEnts (void);
 
 //
 // cl_part

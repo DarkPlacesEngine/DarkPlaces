@@ -423,10 +423,25 @@ void CL_ParseServerInfo (void)
 	Mod_ClearUsed();
 	for (i = 1;i < nummodels;i++)
 		Mod_FindName(parse_model_precache[i]);
+	// precache any models used by the client (this also marks them used)
+	cl.model_bolt = Mod_ForName("progs/bolt.mdl", false, false, false);
+	cl.model_bolt2 = Mod_ForName("progs/bolt2.mdl", false, false, false);
+	cl.model_bolt3 = Mod_ForName("progs/bolt3.mdl", true, false, false);
+	cl.model_beam = Mod_ForName("progs/beam.mdl", true, false, false);
 	Mod_PurgeUnused();
 
 	// do the same for sounds
+	// FIXME: S_ServerSounds does not know about cl.sfx_ sounds
 	S_ServerSounds (parse_sound_precache, numsounds);
+
+	// precache any sounds used by the client
+	cl.sfx_wizhit = S_PrecacheSound("sound/wizard/hit.wav", false, true);
+	cl.sfx_knighthit = S_PrecacheSound("sound/hknight/hit.wav", false, true);
+	cl.sfx_tink1 = S_PrecacheSound("sound/weapons/tink1.wav", false, true);
+	cl.sfx_ric1 = S_PrecacheSound("sound/weapons/ric1.wav", false, true);
+	cl.sfx_ric2 = S_PrecacheSound("sound/weapons/ric2.wav", false, true);
+	cl.sfx_ric3 = S_PrecacheSound("sound/weapons/ric3.wav", false, true);
+	cl.sfx_r_exp3 = S_PrecacheSound("sound/weapons/r_exp3.wav", false, true);
 
 	// now we try to load everything that is new
 
@@ -825,36 +840,6 @@ void CL_ParseEffect2 (void)
 	CL_Effect(org, modelindex, startframe, framecount, framerate);
 }
 
-model_t *cl_model_bolt = NULL;
-model_t *cl_model_bolt2 = NULL;
-model_t *cl_model_bolt3 = NULL;
-model_t *cl_model_beam = NULL;
-
-sfx_t *cl_sfx_wizhit;
-sfx_t *cl_sfx_knighthit;
-sfx_t *cl_sfx_tink1;
-sfx_t *cl_sfx_ric1;
-sfx_t *cl_sfx_ric2;
-sfx_t *cl_sfx_ric3;
-sfx_t *cl_sfx_r_exp3;
-
-/*
-=================
-CL_ParseTEnt
-=================
-*/
-void CL_InitTEnts (void)
-{
-	cl_sfx_wizhit = S_PrecacheSound ("sound/wizard/hit.wav", false, true);
-	cl_sfx_knighthit = S_PrecacheSound ("sound/hknight/hit.wav", false, true);
-	cl_sfx_tink1 = S_PrecacheSound ("sound/weapons/tink1.wav", false, true);
-	cl_sfx_ric1 = S_PrecacheSound ("sound/weapons/ric1.wav", false, true);
-	cl_sfx_ric2 = S_PrecacheSound ("sound/weapons/ric2.wav", false, true);
-	cl_sfx_ric3 = S_PrecacheSound ("sound/weapons/ric3.wav", false, true);
-	if (gamemode != GAME_NEXUIZ)
-		cl_sfx_r_exp3 = S_PrecacheSound ("sound/weapons/r_exp3.wav", false, true);
-}
-
 void CL_ParseBeam (model_t *m, int lightning)
 {
 	int i, ent;
@@ -931,7 +916,7 @@ void CL_ParseTempEntity(void)
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 100, 0.12f, 0.50f, 0.12f, 500, 0.2, 0, -1, false, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		CL_RunParticleEffect(pos, vec3_origin, 20, 30);
-		S_StartSound(-1, 0, cl_sfx_wizhit, pos, 1, 1);
+		S_StartSound(-1, 0, cl.sfx_wizhit, pos, 1, 1);
 		break;
 
 	case TE_KNIGHTSPIKE:
@@ -941,7 +926,7 @@ void CL_ParseTempEntity(void)
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 100, 0.50f, 0.30f, 0.10f, 500, 0.2, 0, -1, false, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		CL_RunParticleEffect(pos, vec3_origin, 226, 20);
-		S_StartSound(-1, 0, cl_sfx_knighthit, pos, 1, 1);
+		S_StartSound(-1, 0, cl.sfx_knighthit, pos, 1, 1);
 		break;
 
 	case TE_SPIKE:
@@ -955,16 +940,16 @@ void CL_ParseTempEntity(void)
 			CL_BulletMark(pos);
 		}
 		if (rand() % 5)
-			S_StartSound(-1, 0, cl_sfx_tink1, pos, 1, 1);
+			S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
 		else
 		{
 			rnd = rand() & 3;
 			if (rnd == 1)
-				S_StartSound(-1, 0, cl_sfx_ric1, pos, 1, 1);
+				S_StartSound(-1, 0, cl.sfx_ric1, pos, 1, 1);
 			else if (rnd == 2)
-				S_StartSound(-1, 0, cl_sfx_ric2, pos, 1, 1);
+				S_StartSound(-1, 0, cl.sfx_ric2, pos, 1, 1);
 			else
-				S_StartSound(-1, 0, cl_sfx_ric3, pos, 1, 1);
+				S_StartSound(-1, 0, cl.sfx_ric3, pos, 1, 1);
 		}
 		break;
 	case TE_SPIKEQUAD:
@@ -981,16 +966,16 @@ void CL_ParseTempEntity(void)
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		if (rand() % 5)
-			S_StartSound(-1, 0, cl_sfx_tink1, pos, 1, 1);
+			S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
 		else
 		{
 			rnd = rand() & 3;
 			if (rnd == 1)
-				S_StartSound(-1, 0, cl_sfx_ric1, pos, 1, 1);
+				S_StartSound(-1, 0, cl.sfx_ric1, pos, 1, 1);
 			else if (rnd == 2)
-				S_StartSound(-1, 0, cl_sfx_ric2, pos, 1, 1);
+				S_StartSound(-1, 0, cl.sfx_ric2, pos, 1, 1);
 			else
-				S_StartSound(-1, 0, cl_sfx_ric3, pos, 1, 1);
+				S_StartSound(-1, 0, cl.sfx_ric3, pos, 1, 1);
 		}
 		break;
 	case TE_SUPERSPIKE:
@@ -1005,16 +990,16 @@ void CL_ParseTempEntity(void)
 			CL_BulletMark(pos);
 		}
 		if (rand() % 5)
-			S_StartSound(-1, 0, cl_sfx_tink1, pos, 1, 1);
+			S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
 		else
 		{
 			rnd = rand() & 3;
 			if (rnd == 1)
-				S_StartSound(-1, 0, cl_sfx_ric1, pos, 1, 1);
+				S_StartSound(-1, 0, cl.sfx_ric1, pos, 1, 1);
 			else if (rnd == 2)
-				S_StartSound(-1, 0, cl_sfx_ric2, pos, 1, 1);
+				S_StartSound(-1, 0, cl.sfx_ric2, pos, 1, 1);
 			else
-				S_StartSound(-1, 0, cl_sfx_ric3, pos, 1, 1);
+				S_StartSound(-1, 0, cl.sfx_ric3, pos, 1, 1);
 		}
 		break;
 	case TE_SUPERSPIKEQUAD:
@@ -1031,16 +1016,16 @@ void CL_ParseTempEntity(void)
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		if (rand() % 5)
-			S_StartSound(-1, 0, cl_sfx_tink1, pos, 1, 1);
+			S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
 		else
 		{
 			rnd = rand() & 3;
 			if (rnd == 1)
-				S_StartSound(-1, 0, cl_sfx_ric1, pos, 1, 1);
+				S_StartSound(-1, 0, cl.sfx_ric1, pos, 1, 1);
 			else if (rnd == 2)
-				S_StartSound(-1, 0, cl_sfx_ric2, pos, 1, 1);
+				S_StartSound(-1, 0, cl.sfx_ric2, pos, 1, 1);
 			else
-				S_StartSound(-1, 0, cl_sfx_ric3, pos, 1, 1);
+				S_StartSound(-1, 0, cl.sfx_ric3, pos, 1, 1);
 		}
 		break;
 		// LordHavoc: added for improved blood splatters
@@ -1141,7 +1126,7 @@ void CL_ParseTempEntity(void)
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 350, 4.0f, 2.0f, 0.50f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		if (gamemode != GAME_NEXUIZ)
-			S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
+			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
 		break;
 
 	case TE_EXPLOSIONQUAD:
@@ -1152,7 +1137,7 @@ void CL_ParseTempEntity(void)
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 350, 2.5f, 2.0f, 4.0f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		if (gamemode != GAME_NEXUIZ)
-			S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
+			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
 		break;
 
 	case TE_EXPLOSION3:
@@ -1166,7 +1151,7 @@ void CL_ParseTempEntity(void)
 		color[2] = MSG_ReadCoord(cl.protocol) * (2.0f / 1.0f);
 		CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		if (gamemode != GAME_NEXUIZ)
-			S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
+			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
 		break;
 
 	case TE_EXPLOSIONRGB:
@@ -1180,7 +1165,7 @@ void CL_ParseTempEntity(void)
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		if (gamemode != GAME_NEXUIZ)
-			S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
+			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
 		break;
 
 	case TE_TAREXPLOSION:
@@ -1190,7 +1175,7 @@ void CL_ParseTempEntity(void)
 		CL_BlobExplosion(pos);
 
 		if (gamemode != GAME_NEXUIZ)
-			S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
+			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 600, 1.6f, 0.8f, 2.0f, 1200, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		break;
@@ -1223,31 +1208,23 @@ void CL_ParseTempEntity(void)
 
 	case TE_LIGHTNING1:
 		// lightning bolts
-		if (!cl_model_bolt)
-			cl_model_bolt = Mod_ForName("progs/bolt.mdl", false, false, false);
-		CL_ParseBeam(cl_model_bolt, true);
+		CL_ParseBeam(cl.model_bolt, true);
 		break;
 
 	case TE_LIGHTNING2:
 		// lightning bolts
-		if (!cl_model_bolt2)
-			cl_model_bolt2 = Mod_ForName("progs/bolt2.mdl", false, false, false);
-		CL_ParseBeam(cl_model_bolt2, true);
+		CL_ParseBeam(cl.model_bolt2, true);
 		break;
 
 	case TE_LIGHTNING3:
 		// lightning bolts
-		if (!cl_model_bolt3)
-			cl_model_bolt3 = Mod_ForName("progs/bolt3.mdl", true, false, false);
-		CL_ParseBeam(cl_model_bolt3, false);
+		CL_ParseBeam(cl.model_bolt3, false);
 		break;
 
 // PGM 01/21/97
 	case TE_BEAM:
 		// grappling hook beam
-		if (!cl_model_beam)
-			cl_model_beam = Mod_ForName("progs/beam.mdl", true, false, false);
-		CL_ParseBeam(cl_model_beam, false);
+		CL_ParseBeam(cl.model_beam, false);
 		break;
 // PGM 01/21/97
 
@@ -1282,7 +1259,7 @@ void CL_ParseTempEntity(void)
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		if (gamemode != GAME_NEXUIZ)
-			S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
+			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
 		break;
 
 	case TE_TEI_G3:
@@ -1307,7 +1284,7 @@ void CL_ParseTempEntity(void)
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 500, 2.5f, 2.0f, 1.0f, 500, 9999, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		if (gamemode != GAME_NEXUIZ)
-			S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
+			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
 		break;
 
 	case TE_TEI_PLASMAHIT:
