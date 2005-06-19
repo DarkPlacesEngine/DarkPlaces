@@ -16,7 +16,7 @@
 
 	You should have received a copy of the GNU General Public License
 	along with this program; if not, write to:
-	
+
 		Free Software Foundation, Inc.
 		59 Temple Place - Suite 330
 		Boston, MA  02111-1307, USA
@@ -185,23 +185,28 @@ extern enum {
 
 typedef enum { key_game, key_message, key_menu } keydest_t;
 
-extern char *keybindings[8][1024];
-extern char key_lines[32][256];
-extern int key_linepos;
-extern int edit_line;
-extern int history_line;
-extern void Key_ClearEditLine(int edit_line);
-extern qboolean chat_team;
-extern char chat_buffer[256];
-extern unsigned int chat_bufferlen;
-
+#define MAX_INPUTLINES 32
+#define MAX_INPUTLINE 256
+#define MAX_BINDMAPS 8
+#define MAX_KEYS 1024
+extern	int			edit_line;
+extern	int			history_line;
+extern	char		key_lines[MAX_INPUTLINES][MAX_INPUTLINE];
+extern	int			key_linepos;
+extern	qboolean	key_insert;	// insert key toggle (for editing)
+extern	keydest_t	key_dest;
 // key_consoleactive bits
 // user wants console (halfscreen)
 #define KEY_CONSOLEACTIVE_USER 1
 // console forced because there's nothing else active (fullscreen)
 #define KEY_CONSOLEACTIVE_FORCED 4
-extern int key_consoleactive;
-extern keydest_t key_dest;
+extern	int			key_consoleactive;
+extern	char		*keybindings[MAX_BINDMAPS][MAX_KEYS];
+
+extern void Key_ClearEditLine(int edit_line);
+extern qboolean chat_team;
+extern char chat_buffer[256];
+extern unsigned int chat_bufferlen;
 
 void Key_WriteBindings(qfile_t *f);
 void Key_Init(void);
