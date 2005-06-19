@@ -1681,9 +1681,9 @@ void Host_Viewmodel_f (void)
 		return;
 
 	m = Mod_ForName (Cmd_Argv(1), false, true, false);
-	if (!m)
+	if (!m || !m->loaded || !m->Draw)
 	{
-		Con_Printf("Can't load %s\n", Cmd_Argv(1));
+		Con_Printf("viewmodel: can't load %s\n", Cmd_Argv(1));
 		return;
 	}
 
