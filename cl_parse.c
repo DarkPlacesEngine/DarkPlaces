@@ -426,8 +426,8 @@ void CL_ParseServerInfo (void)
 	// precache any models used by the client (this also marks them used)
 	cl.model_bolt = Mod_ForName("progs/bolt.mdl", false, false, false);
 	cl.model_bolt2 = Mod_ForName("progs/bolt2.mdl", false, false, false);
-	cl.model_bolt3 = Mod_ForName("progs/bolt3.mdl", true, false, false);
-	cl.model_beam = Mod_ForName("progs/beam.mdl", true, false, false);
+	cl.model_bolt3 = Mod_ForName("progs/bolt3.mdl", false, false, false);
+	cl.model_beam = Mod_ForName("progs/beam.mdl", false, false, false);
 	Mod_PurgeUnused();
 
 	// do the same for sounds
