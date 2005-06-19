@@ -408,6 +408,8 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 	else
 	{
 		// call the progs to get default spawn parms for the new client
+		// set self to world to intentionally cause errors with broken SetNewParms code in some mods
+		prog->globals.server->self = 0;
 		PRVM_ExecuteProgram (prog->globals.server->SetNewParms, "QC function SetNewParms is missing");
 		for (i=0 ; i<NUM_SPAWN_PARMS ; i++)
 			client->spawn_parms[i] = (&prog->globals.server->parm1)[i];
