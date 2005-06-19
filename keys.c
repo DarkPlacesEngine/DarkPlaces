@@ -830,7 +830,7 @@ Should NOT be called during an interrupt!
 void
 Key_Event (int key, char ascii, qboolean down)
 {
-#if 1
+#if 0
 #define USERPLAYING()	( !key_consoleactive && key_dest == key_game && (cls.state == ca_connected && cls.signon == SIGNONS) )
 	const char *bind;
 
@@ -933,6 +933,147 @@ Key_Event (int key, char ascii, qboolean down)
 					Sys_Error( "Bad key_dest" );
 			}
 		}
+	}
+#elif 1
+#define USERPLAYING()	( !key_consoleactive && key_dest == key_game && (cls.state == ca_connected && cls.signon == SIGNONS) )
+	const char *bind;
+
+	// set key state
+	keydown[key] = down;
+
+	// get key binding
+	bind = keybindings[key_bmap][key];
+	if (!bind)
+		bind = keybindings[key_bmap2][key];
+
+	if (!down)
+	{
+		// clear repeat count now that the key is released
+		key_repeats[key] = 0;
+		// key up events only generate commands if the game key binding is a button
+		// command (leading + sign).  These will occur even in console mode, to
+		// keep the character from continuing an action started before a console
+		// switch.  Button commands include the kenum as a parameter, so multiple
+		// downs can be matched with ups
+		if (bind && bind[0] == '+')
+			Cbuf_AddText(va("-%s %i\n", bind + 1, key));
+		return;
+	}
+
+	// from here on we know this is a down event
+
+	// increment key repeat count each time a down is received so that things
+	// which want to ignore key repeat can ignore it
+	key_repeats[key]++;
+
+	// key_consoleactive is a flag not a key_dest because the console is a
+	// high priority overlay ontop of the normal screen (designed as a safety
+	// feature so that developers and users can rescue themselves from a bad
+	// situation).
+	//
+	// this also means that toggling the console on/off does not lose the old
+	// key_dest state
+
+	// specially handle escape (togglemenu) and shift-escape (toggleconsole)
+	// engine bindings, these are not handled as normal binds so that the user
+	// can recover from a completely empty bindmap
+	if (key == K_ESCAPE)
+	{
+		// ignore key repeats on escape
+		if (key_repeats[key] > 1)
+			return;
+		// escape does these things:
+		// key_consolactive - close console
+		// key_message - abort messagemode
+		// key_menu - go to parent menu (or key_game)
+		// key_game - open menu
+		// in all modes shift-escape toggles console
+		if (key_consoleactive || keydown[K_SHIFT])
+		{
+			Con_ToggleConsole_f ();
+			return;
+		}
+		switch (key_dest)
+		{
+			case key_message:
+				Key_Message (key, ascii);
+				break;
+			case key_menu:
+				MR_Keydown (key, ascii);
+				break;
+			case key_game:
+				MR_ToggleMenu_f ();
+				break;
+			default:
+				if(UI_Callback_IsSlotUsed(key_dest - 3))
+					UI_Callback_KeyDown (key, ascii);
+				else
+					Sys_Error ("Bad key_dest");
+		}
+		return;
+	}
+
+	// send function keydowns to interpreter no matter what mode is
+	if (key >= K_F1 && key <= K_F12)
+	{
+		// ignore key repeats on F1-F12 binds
+		if (key_repeats[key] > 1)
+			return;
+		if (bind)
+		{
+			// button commands add keynum as a parm
+			if (bind[0] == '+')
+				Cbuf_AddText (va("%s %i\n", bind, key));
+			else
+			{
+				Cbuf_AddText (bind);
+				Cbuf_AddText ("\n");
+			}
+		}
+		return;
+	}
+
+#if 1
+	// ignore binds (other than the above escape/F1-F12 keys) while in console
+	if (key_consoleactive)
+#else
+	// respond to toggleconsole binds while in console unless the pressed key
+	// happens to be the color prefix character (such as on German keyboards)
+	if (key_consoleactive && (strncmp(bind, "toggleconsole", strlen("toggleconsole")) || ascii == STRING_COLOR_TAG))
+#endif
+	{
+		Key_Console (key, ascii);
+		return;
+	}
+
+	// anything else is a key press into the game, chat line, or menu
+	switch (key_dest)
+	{
+		case key_message:
+			Key_Message (key, ascii);
+			break;
+		case key_menu:
+			MR_Keydown (key, ascii);
+			break;
+		case key_game:
+			// ignore key repeats on binds
+			if (bind && key_repeats[key] == 1)
+			{
+				// button commands add keynum as a parm
+				if (bind[0] == '+')
+					Cbuf_AddText (va("%s %i\n", bind, key));
+				else
+				{
+					Cbuf_AddText (bind);
+					Cbuf_AddText ("\n");
+				}
+			}
+			break;
+		default:
+			if(UI_Callback_IsSlotUsed(key_dest - 3))
+				UI_Callback_KeyDown (key, ascii);
+			else
+				Sys_Error ("Bad key_dest");
 	}
 #else
 	const char	*kb;
