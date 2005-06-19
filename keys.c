@@ -44,7 +44,7 @@ static qboolean		consolekeys[1024];	// if true, can't be rebound while in
 										// console
 static qboolean		menubound[1024];		// if true, can't be rebound while in
 										// menu
-static unsigned int	keydown[1024];	// if > 1, it is autorepeating
+static qbyte keydown[1024];	// 0 = up, 1 = down, 2 = repeating
 
 typedef struct {
 	const char	*name;
@@ -841,7 +841,7 @@ Key_Event (int key, char ascii, qboolean down)
 
 	// update key repeats
 	if( down ) {
-		keydown[ key ]++;
+		keydown[ key ] = min(keydown[ key ] + 1, 2);
 		if( keydown[ key ] > 1 ) {
 			if( (key_consoleactive && !consolekeys[key]) || USERPLAYING() )
 				return;						// ignore most autorepeats
@@ -957,7 +957,7 @@ Key_Event (int key, char ascii, qboolean down)
 
 	// increment key repeat count each time a down is received so that things
 	// which want to ignore key repeat can ignore it
-	keydown[key]++;
+	keydown[key] = min(keydown[key] + 1, 2);
 
 	// key_consoleactive is a flag not a key_dest because the console is a
 	// high priority overlay ontop of the normal screen (designed as a safety
@@ -1083,7 +1083,7 @@ Key_Event (int key, char ascii, qboolean down)
 
 	// update auto-repeat status
 	if (down) {
-		keydown[key]++;
+		keydown[key] = min(keydown[key] + 1, 2);
 		if (keydown[key] > 1) {
 			if ((key_consoleactive && !consolekeys[key]) ||
 					(!key_consoleactive && key_dest == key_game &&
