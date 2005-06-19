@@ -2209,7 +2209,7 @@ void SV_VM_Setup(void)
 	prog->load_edict = SV_VM_CB_LoadEdict;
 	prog->init_cmd = VM_SV_Cmd_Init;
 	prog->reset_cmd = VM_SV_Cmd_Reset;
-	prog->error_cmd = NULL; // change this
+	prog->error_cmd = Host_Error;
 
 	// TODO: add a requiredfuncs list (ask LH if this is necessary at all)
 	PRVM_LoadProgs( sv_progs.string, 0, NULL, REQFIELDS, reqfields );
