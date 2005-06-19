@@ -58,7 +58,10 @@ static vec4_t string_colors[] =
 	{0.0, 0.0, 1.0, 1.0}, // blue
 	{0.0, 1.0, 1.0, 1.0}, // cyan
 	{1.0, 0.0, 1.0, 1.0}, // magenta
-	{1.0, 1.0, 1.0, 1.0}  // white
+	{1.0, 1.0, 1.0, 1.0}, // white
+	// [515]'s BX_COLOREDTEXT extension
+	{1.0, 1.0, 1.0, 0.5}, // half transparent
+	{0.5, 0.5, 0.5, 1.0}  // half brightness	
 	// Black's color table
 	//{1.0, 1.0, 1.0, 1.0},
 	//{1.0, 0.0, 0.0, 1.0},
