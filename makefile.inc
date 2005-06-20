@@ -122,7 +122,6 @@ OBJ_COMMON= \
 	vid_shared.o \
 	view.o \
 	wad.o \
-	winding.o \
 	world.o \
 	zone.o
 
