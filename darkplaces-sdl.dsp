@@ -7,19 +7,19 @@
 CFG=sdl - Win32 Debug
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
-!MESSAGE 
+!MESSAGE
 !MESSAGE NMAKE /f "darkplaces-sdl.mak".
-!MESSAGE 
+!MESSAGE
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
-!MESSAGE 
+!MESSAGE
 !MESSAGE NMAKE /f "darkplaces-sdl.mak" CFG="sdl - Win32 Debug"
-!MESSAGE 
+!MESSAGE
 !MESSAGE Possible choices for configuration are:
-!MESSAGE 
+!MESSAGE
 !MESSAGE "sdl - Win32 Release" (based on "Win32 (x86) Application")
 !MESSAGE "sdl - Win32 Debug" (based on "Win32 (x86) Application")
-!MESSAGE 
+!MESSAGE
 
 # Begin Project
 # PROP AllowPerConfigDependencies 0
@@ -83,7 +83,7 @@ LINK32=link.exe
 # ADD LINK32 user32.lib gdi32.lib opengl32.lib wsock32.lib winmm.lib comctl32.lib dxguid.lib sdl.lib sdlmain.lib /nologo /subsystem:console /debug /machine:I386 /out:"Debug-SDL/darkplaces-sdl-debug.exe" /pdbtype:sept
 # SUBTRACT LINK32 /pdb:none
 
-!ENDIF 
+!ENDIF
 
 # Begin Target
 
@@ -418,10 +418,6 @@ SOURCE=.\wad.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\winding.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\world.c
 # End Source File
 # Begin Source File
@@ -711,10 +707,6 @@ SOURCE=.\vid.h
 # Begin Source File
 
 SOURCE=.\wad.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\winding.h
 # End Source File
 # Begin Source File
 
