@@ -859,7 +859,7 @@ Key_Event (int key, char ascii, qboolean down)
 				if(UI_Callback_IsSlotUsed(key_dest - 3))
 					UI_Callback_KeyDown (key, ascii);
 				else
-					Sys_Error ("Bad key_dest");
+					Con_Printf ("Key_Event: Bad key_dest");
 		}
 		return;
 	}
@@ -924,7 +924,7 @@ Key_Event (int key, char ascii, qboolean down)
 			if(UI_Callback_IsSlotUsed(key_dest - 3))
 				UI_Callback_KeyDown (key, ascii);
 			else
-				Sys_Error ("Bad key_dest");
+				Con_Printf ("Key_Event: Bad key_dest");
 	}
 }
 

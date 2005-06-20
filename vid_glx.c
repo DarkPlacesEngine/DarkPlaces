@@ -830,15 +830,24 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 
 	ctx = qglXCreateContext(vidx11_display, visinfo, NULL, True);
 	if (!ctx)
-		Sys_Error ("glXCreateContext failed\n");
+	{
+		Con_Printf ("glXCreateContext failed\n");
+		return false;
+	}
 
 	if (!qglXMakeCurrent(vidx11_display, win, ctx))
-		Sys_Error ("glXMakeCurrent failed\n");
+	{
+		Con_Printf ("glXMakeCurrent failed\n");
+		return false;
+	}
 
 	XSync(vidx11_display, False);
 
 	if ((qglGetString = GL_GetProcAddress("glGetString")) == NULL)
-		Sys_Error("glGetString not found in %s", gl_driver);
+	{
+		Con_Printf ("glGetString not found in %s", gl_driver);
+		return false;
+	}
 
 	gl_renderer = qglGetString(GL_RENDERER);
 	gl_vendor = qglGetString(GL_VENDOR);

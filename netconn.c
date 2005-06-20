@@ -440,13 +440,22 @@ int NetConn_SendReliableMessage(netconn_t *conn, sizebuf_t *data)
 
 //#ifdef DEBUG
 	if (data->cursize == 0)
-		Sys_Error("Datagram_SendMessage: zero length message\n");
+	{
+		Con_Printf ("Datagram_SendMessage: zero length message\n");
+		return -1;
+	}
 
 	if (data->cursize > (int)sizeof(conn->sendMessage))
-		Sys_Error("Datagram_SendMessage: message too big (%u > %u)\n", data->cursize, sizeof(conn->sendMessage));
+	{
+		Con_Printf ("Datagram_SendMessage: message too big (%u > %u)\n", data->cursize, sizeof(conn->sendMessage));
+		return -1;
+	}
 
 	if (conn->canSend == false)
-		Sys_Error("SendMessage: called with canSend == false\n");
+	{
+		Con_Printf ("SendMessage: called with canSend == false\n");
+		return -1;
+	}
 //#endif
 
 	memcpy(conn->sendMessage, data->data, data->cursize);
@@ -571,10 +580,16 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data)
 
 //#ifdef DEBUG
 	if (data->cursize == 0)
-		Sys_Error("Datagram_SendUnreliableMessage: zero length message\n");
+	{
+		Con_Printf ("Datagram_SendUnreliableMessage: zero length message\n");
+		return -1;
+	}
 
 	if (packetLen > (int)sizeof(sendbuffer))
-		Sys_Error("Datagram_SendUnreliableMessage: message too big %u\n", data->cursize);
+	{
+		Con_Printf ("Datagram_SendUnreliableMessage: message too big %u\n", data->cursize);
+		return -1;
+	}
 //#endif
 
 	header = (void *)sendbuffer;

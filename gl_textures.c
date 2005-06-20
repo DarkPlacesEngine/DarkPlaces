@@ -283,7 +283,7 @@ void R_FreeTexturePool(rtexturepool_t **rtexturepool)
 	while (pool->gltchain)
 		R_FreeTexture((rtexture_t *)pool->gltchain);
 	if (pool->imagechain)
-		Sys_Error("R_FreeTexturePool: not all images freed\n");
+		Con_Printf("R_FreeTexturePool: not all images freed\n");
 	Mem_Free(pool);
 }
 
@@ -928,7 +928,10 @@ static void R_FindImageForTexture(gltexture_t *glt)
 
 		image = Mem_Alloc(texturemempool, sizeof(gltextureimage_t));
 		if (image == NULL)
-			Sys_Error("R_FindImageForTexture: ran out of memory\n");
+		{
+			Con_Printf ("R_FindImageForTexture: ran out of memory\n");
+			return;
+		}
 		image->type = GLIMAGETYPE_FRAGMENTS;
 		// make sure the created image is big enough for the fragment
 		for (image->width = block_size;image->width < glt->width;image->width <<= 1);
@@ -953,7 +956,10 @@ static void R_FindImageForTexture(gltexture_t *glt)
 
 		image = Mem_Alloc(texturemempool, sizeof(gltextureimage_t));
 		if (image == NULL)
-			Sys_Error("R_FindImageForTexture: ran out of memory\n");
+		{
+			Con_Printf ("R_FindImageForTexture: ran out of memory\n");
+			return;
+		}
 		image->type = GLIMAGETYPE_TILE;
 		image->blockallocation = NULL;
 
@@ -1018,16 +1024,28 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 		return NULL;
 
 	if (flags & TEXF_FRAGMENT && texturetype != GLTEXTURETYPE_2D)
-		Sys_Error("R_LoadTexture: only 2D fragment textures implemented\n");
+	{
+		Con_Printf ("R_LoadTexture: only 2D fragment textures implemented\n");
+		return NULL;
+	}
 	if (texturetype == GLTEXTURETYPE_CUBEMAP && !gl_texturecubemap)
-		Sys_Error("R_LoadTexture: cubemap texture not supported by driver\n");
+	{
+		Con_Printf ("R_LoadTexture: cubemap texture not supported by driver\n");
+		return NULL;
+	}
 	if (texturetype == GLTEXTURETYPE_3D && !gl_texture3d)
-		Sys_Error("R_LoadTexture: 3d texture not supported by driver\n");
+	{
+		Con_Printf ("R_LoadTexture: 3d texture not supported by driver\n");
+		return NULL;
+	}
 
 	texinfo = R_GetTexTypeInfo(textype, flags);
 	size = width * height * depth * sides * texinfo->inputbytesperpixel;
 	if (size < 1)
-		Sys_Error("R_LoadTexture: bogus texture size (%dx%dx%dx%dbppx%dsides = %d bytes)\n", width, height, depth, texinfo->inputbytesperpixel * 8, sides);
+	{
+		Con_Printf ("R_LoadTexture: bogus texture size (%dx%dx%dx%dbppx%dsides = %d bytes)\n", width, height, depth, texinfo->inputbytesperpixel * 8, sides);
+		return NULL;
+	}
 
 	// clear the alpha flag if the texture has no transparent pixels
 	switch(textype)
@@ -1095,8 +1113,9 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	{
 		glt->inputtexels = Mem_Alloc(texturemempool, size);
 		if (glt->inputtexels == NULL)
-			Sys_Error("R_LoadTexture: out of memory\n");
-		memcpy(glt->inputtexels, data, size);
+			Con_Printf ("R_LoadTexture: out of memory\n");
+		else
+			memcpy(glt->inputtexels, data, size);
 	}
 	else
 		glt->inputtexels = NULL;

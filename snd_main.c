@@ -303,7 +303,10 @@ void S_FreeSfx (sfx_t *sfx, qboolean force)
 				break;
 			}
 		if (prev_sfx == NULL)
-			Sys_Error ("S_FreeSfx: Can't find SFX %s in the list!\n", sfx->name);
+		{
+			Con_Printf ("S_FreeSfx: Can't find SFX %s in the list!\n", sfx->name);
+			return;
+		}
 	}
 
 	// Free it

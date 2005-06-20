@@ -9,11 +9,17 @@ void fractalnoise(qbyte *noise, int size, int startgrid)
 
 	for (sizepower = 0;(1 << sizepower) < size;sizepower++);
 	if (size != (1 << sizepower))
-		Sys_Error("fractalnoise: size must be power of 2\n");
+	{
+		Con_Printf("fractalnoise: size must be power of 2\n");
+		return;
+	}
 
 	for (gridpower = 0;(1 << gridpower) < startgrid;gridpower++);
 	if (startgrid != (1 << gridpower))
-		Sys_Error("fractalnoise: grid must be power of 2\n");
+	{
+		Con_Printf("fractalnoise: grid must be power of 2\n");
+		return;
+	}
 
 	startgrid = bound(0, startgrid, size);
 
@@ -72,11 +78,17 @@ void fractalnoisequick(qbyte *noise, int size, int startgrid)
 
 	for (sizepower = 0;(1 << sizepower) < size;sizepower++);
 	if (size != (1 << sizepower))
-		Sys_Error("fractalnoise: size must be power of 2\n");
+	{
+		Con_Printf("fractalnoise: size must be power of 2\n");
+		return;
+	}
 
 	for (gridpower = 0;(1 << gridpower) < startgrid;gridpower++);
 	if (startgrid != (1 << gridpower))
-		Sys_Error("fractalnoise: grid must be power of 2\n");
+	{
+		Con_Printf("fractalnoise: grid must be power of 2\n");
+		return;
+	}
 
 	startgrid = bound(0, startgrid, size);
 

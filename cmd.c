@@ -557,14 +557,16 @@ static void Cmd_TokenizeString (const char *text)
 		{
 			l = strlen(com_token) + 1;
 			if (cmd_tokenizebufferpos + l > CMD_TOKENIZELENGTH)
-				Sys_Error("Cmd_TokenizeString: ran out of %i character buffer space for command arguements\n", CMD_TOKENIZELENGTH);
+			{
+				Con_Printf("Cmd_TokenizeString: ran out of %i character buffer space for command arguements\n", CMD_TOKENIZELENGTH);
+				break;
+			}
 			strcpy (cmd_tokenizebuffer + cmd_tokenizebufferpos, com_token);
 			cmd_argv[cmd_argc] = cmd_tokenizebuffer + cmd_tokenizebufferpos;
 			cmd_tokenizebufferpos += l;
 			cmd_argc++;
 		}
 	}
-
 }
 
 
@@ -904,7 +906,10 @@ int Cmd_CheckParm (const char *parm)
 	int i;
 
 	if (!parm)
-		Sys_Error ("Cmd_CheckParm: NULL");
+	{
+		Con_Printf ("Cmd_CheckParm: NULL");
+		return 0;
+	}
 
 	for (i = 1; i < Cmd_Argc (); i++)
 		if (!strcasecmp (parm, Cmd_Argv (i)))

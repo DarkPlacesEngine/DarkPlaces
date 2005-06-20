@@ -28,7 +28,10 @@ void R_RegisterModule(char *name, void(*start)(void), void(*shutdown)(void), voi
 		if (rendermodule[i].name == NULL)
 			break;
 		if (!strcmp(name, rendermodule[i].name))
-			Sys_Error("R_RegisterModule: module \"%s\" registered twice\n", name);
+		{
+			Con_Printf("R_RegisterModule: module \"%s\" registered twice\n", name);
+			return;
+		}
 	}
 	if (i >= MAXRENDERMODULES)
 		Sys_Error("R_RegisterModule: ran out of renderer module slots (%i)\n", MAXRENDERMODULES);
@@ -47,7 +50,10 @@ void R_Modules_Start(void)
 		if (rendermodule[i].name == NULL)
 			continue;
 		if (rendermodule[i].active)
-			Sys_Error("R_StartModules: module \"%s\" already active\n", rendermodule[i].name);
+		{
+			Con_Printf ("R_StartModules: module \"%s\" already active\n", rendermodule[i].name);
+			continue;
+		}
 		rendermodule[i].active = 1;
 		rendermodule[i].start();
 	}

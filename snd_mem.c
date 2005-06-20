@@ -69,8 +69,11 @@ size_t ResampleSfx (const qbyte *in_data, size_t in_length, const snd_format_t* 
 
 		// Check that we can handle one second of that sound
 		if (in_format->speed * in_format->channels > (1 << INTEGER_BITS))
-			Sys_Error ("ResampleSfx: sound quality too high for resampling (%uHz, %u channel(s))",
+		{
+			Con_Printf ("ResampleSfx: sound quality too high for resampling (%uHz, %u channel(s))",
 					   in_format->speed, in_format->channels);
+			return 0;
+		}
 
 		// We work 1 sec at a time to make sure we don't accumulate any
 		// significant error when adding "fracstep" over several seconds, and
@@ -167,7 +170,7 @@ qboolean S_LoadSound (sfx_t *s, qboolean complain)
 	if (s->fetcher != NULL)
 	{
 		if (s->format.speed != shm->format.speed)
-			Sys_Error ("S_LoadSound: sound %s hasn't been resampled (%uHz instead of %uHz)", s->name);
+			Con_Printf ("S_LoadSound: sound %s hasn't been resampled (%uHz instead of %uHz)", s->name);
 		return true;
 	}
 
