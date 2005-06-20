@@ -96,7 +96,12 @@ double Sys_DoubleTime (void)
 		LARGE_INTEGER PerformanceCount;
 
 		if (!QueryPerformanceFrequency (&PerformanceFreq))
-			Sys_Error ("No hardware timer available");
+		{
+			Con_Printf ("No hardware timer available");
+			// fall back to timeGetTime
+			Cvar_SetValueQuick(&sys_usetimegettime, true);
+			return Sys_DoubleTime();
+		}
 		QueryPerformanceCounter (&PerformanceCount);
 
 		#ifdef __BORLANDC__

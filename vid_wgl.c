@@ -695,7 +695,7 @@ void VID_Init(void)
 	wc.lpszClassName = "DarkPlacesWindowClass";
 
 	if (!RegisterClass (&wc))
-		Sys_Error("Couldn't register window class\n");
+		Con_Printf ("Couldn't register window class\n");
 
 	IN_Init();
 }

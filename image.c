@@ -1303,7 +1303,10 @@ Image_Resample
 void Image_Resample (const void *indata, int inwidth, int inheight, int indepth, void *outdata, int outwidth, int outheight, int outdepth, int bytesperpixel, int quality)
 {
 	if (indepth != 1 || outdepth != 1)
-		Sys_Error("Image_Resample: 3D resampling not supported\n");
+	{
+		Con_Printf ("Image_Resample: 3D resampling not supported\n");
+		return;
+	}
 	if (bytesperpixel == 4)
 	{
 		if (quality)
@@ -1319,7 +1322,7 @@ void Image_Resample (const void *indata, int inwidth, int inheight, int indepth,
 			Image_Resample24Nolerp(indata, inwidth, inheight, outdata, outwidth, outheight);
 	}
 	else
-		Sys_Error("Image_Resample: unsupported bytesperpixel %i\n", bytesperpixel);
+		Con_Printf ("Image_Resample: unsupported bytesperpixel %i\n", bytesperpixel);
 }
 
 // in can be the same as out
@@ -1327,7 +1330,10 @@ void Image_MipReduce(const qbyte *in, qbyte *out, int *width, int *height, int *
 {
 	int x, y, nextrow;
 	if (*depth != 1 || destdepth != 1)
-		Sys_Error("Image_Resample: 3D resampling not supported\n");
+	{
+		Con_Printf ("Image_Resample: 3D resampling not supported\n");
+		return;
+	}
 	nextrow = *width * bytesperpixel;
 	if (*width > destwidth)
 	{
@@ -1368,7 +1374,7 @@ void Image_MipReduce(const qbyte *in, qbyte *out, int *width, int *height, int *
 				}
 			}
 			else
-				Sys_Error("Image_MipReduce: unsupported bytesperpixel %i\n", bytesperpixel);
+				Con_Printf ("Image_MipReduce: unsupported bytesperpixel %i\n", bytesperpixel);
 		}
 		else
 		{
@@ -1403,7 +1409,7 @@ void Image_MipReduce(const qbyte *in, qbyte *out, int *width, int *height, int *
 				}
 			}
 			else
-				Sys_Error("Image_MipReduce: unsupported bytesperpixel %i\n", bytesperpixel);
+				Con_Printf ("Image_MipReduce: unsupported bytesperpixel %i\n", bytesperpixel);
 		}
 	}
 	else
@@ -1444,10 +1450,10 @@ void Image_MipReduce(const qbyte *in, qbyte *out, int *width, int *height, int *
 				}
 			}
 			else
-				Sys_Error("Image_MipReduce: unsupported bytesperpixel %i\n", bytesperpixel);
+				Con_Printf ("Image_MipReduce: unsupported bytesperpixel %i\n", bytesperpixel);
 		}
 		else
-			Sys_Error("Image_MipReduce: desired size already achieved\n");
+			Con_Printf ("Image_MipReduce: desired size already achieved\n");
 	}
 }
 

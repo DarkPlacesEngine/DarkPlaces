@@ -310,7 +310,11 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 			return pic;
 
 	if (numcachepics == MAX_CACHED_PICS)
-		Sys_Error ("numcachepics == MAX_CACHED_PICS");
+	{
+		Con_Printf ("Draw_CachePic: numcachepics == MAX_CACHED_PICS");
+		// FIXME: support NULL in callers?
+		return cachepics; // return the first one
+	}
 	pic = cachepics + (numcachepics++);
 	strlcpy (pic->name, path, sizeof(pic->name));
 	// link into list
@@ -400,7 +404,11 @@ cachepic_t *Draw_NewPic(const char *picname, int width, int height, int alpha, q
 		if (pic == NULL)
 		{
 			if (numcachepics == MAX_CACHED_PICS)
-				Sys_Error ("numcachepics == MAX_CACHED_PICS");
+			{
+				Con_Printf ("Draw_NewPic: numcachepics == MAX_CACHED_PICS");
+				// FIXME: support NULL in callers?
+				return cachepics; // return the first one
+			}
 			pic = cachepics + (numcachepics++);
 			strcpy (pic->name, picname);
 			// link into list
