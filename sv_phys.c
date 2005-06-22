@@ -453,23 +453,6 @@ int SV_FlyMove (prvm_edict_t *ent, float time, float *stepnormal)
 	return blocked;
 }
 
-int SV_SetOnGround (prvm_edict_t *ent)
-{
-	vec3_t end;
-	trace_t trace;
-	if ((int)ent->fields.server->flags & FL_ONGROUND)
-		return 1;
-	VectorSet(end, ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2] - 1);
-	trace = SV_Move(ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, end, MOVE_NORMAL, ent);
-	if (trace.fraction < 1 && trace.plane.normal[2] >= 0.7)
-	{
-		ent->fields.server->flags = (int)ent->fields.server->flags | FL_ONGROUND;
-		ent->fields.server->groundentity = PRVM_EDICT_TO_PROG(trace.ent);
-		return 1;
-	}
-	return 0;
-}
-
 /*
 ============
 SV_AddGravity
@@ -988,7 +971,6 @@ void SV_WalkMove (prvm_edict_t *ent)
 
 	clip = SV_FlyMove (ent, sv.frametime, NULL);
 
-	SV_SetOnGround (ent);
 	SV_CheckVelocity(ent);
 
 	VectorCopy(ent->fields.server->origin, originalmove_origin);
@@ -1097,7 +1079,6 @@ void SV_WalkMove (prvm_edict_t *ent)
 		ent->fields.server->groundentity = originalmove_groundentity;
 	}
 
-	SV_SetOnGround (ent);
 	SV_CheckVelocity(ent);
 }
 
