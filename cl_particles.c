@@ -955,7 +955,7 @@ void CL_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int color
 		}
 		break;
 	default:
-		Host_Error("CL_ParticleRain: unknown type %i (0 = rain, 1 = snow)\n", type);
+		Con_Printf ("CL_ParticleRain: unknown type %i (0 = rain, 1 = snow)\n", type);
 	}
 }
 
@@ -2025,7 +2025,10 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 		particle_texcoord2f[6] = 1;particle_texcoord2f[7] = v[1];
 	}
 	else
-		Host_Error("R_DrawParticles: unknown particle orientation %i\n", p->type->orientation);
+	{
+		Con_Printf("R_DrawParticles: unknown particle orientation %i\n", p->type->orientation);
+		return;
+	}
 
 #if WORKINGLQUAKE
 	if (blendmode == PBLEND_ALPHA)

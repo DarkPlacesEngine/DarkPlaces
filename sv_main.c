@@ -209,13 +209,22 @@ void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int v
 	int sound_num, field_mask, i, ent;
 
 	if (volume < 0 || volume > 255)
-		Host_Error ("SV_StartSound: volume = %i", volume);
+	{
+		Con_Printf ("SV_StartSound: volume = %i", volume);
+		return;
+	}
 
 	if (attenuation < 0 || attenuation > 4)
-		Host_Error ("SV_StartSound: attenuation = %f", attenuation);
+	{
+		Con_Printf ("SV_StartSound: attenuation = %f", attenuation);
+		return;
+	}
 
 	if (channel < 0 || channel > 7)
-		Host_Error ("SV_StartSound: channel = %i", channel);
+	{
+		Con_Printf ("SV_StartSound: channel = %i", channel);
+		return;
+	}
 
 	if (sv.datagram.cursize > MAX_PACKETFRAGMENT-21)
 		return;

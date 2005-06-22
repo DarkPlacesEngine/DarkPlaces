@@ -313,7 +313,10 @@ int SV_FlyMove (prvm_edict_t *ent, float time, float *stepnormal)
 		}
 
 		if (!trace.ent)
-			Host_Error("SV_FlyMove: !trace.ent");
+		{
+			Con_Printf ("SV_FlyMove: !trace.ent");
+			trace.ent = prog->edicts;
+		}
 
 		if (((int) ent->fields.server->flags & FL_ONGROUND) && ent->fields.server->groundentity == PRVM_EDICT_TO_PROG(trace.ent))
 			impact = false;
@@ -1433,7 +1436,7 @@ void SV_Physics_Entity (prvm_edict_t *ent, qboolean runmove)
 		}
 		break;
 	default:
-		Host_Error ("SV_Physics: bad movetype %i", (int)ent->fields.server->movetype);
+		Con_Printf ("SV_Physics: bad movetype %i", (int)ent->fields.server->movetype);
 		break;
 	}
 

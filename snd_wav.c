@@ -204,7 +204,10 @@ static wavinfo_t GetWavinfo (char *name, qbyte *wav, int wavlength)
 	if (info.samples)
 	{
 		if (samples < info.samples)
-			Host_Error ("Sound %s has a bad loop length", name);
+		{
+			Con_Printf ("Sound %s has a bad loop length", name);
+			info.samples = samples;
+		}
 	}
 	else
 		info.samples = samples;

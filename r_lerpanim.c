@@ -32,7 +32,10 @@ void R_LerpAnimation(entity_render_t *r)
 
 	// note: this could be removed, if the rendering code allows an empty blend array
 	if (r->frame1 < 0)
-		Host_Error ("CL_LerpAnimation: frame1 is NULL\n");
+	{
+		Con_Printf ("CL_LerpAnimation: frame1 is NULL\n");
+		r->frame1 = 0;
+	}
 
 	// check r_lerpmodels and round off very close blend percentages
 	if (!r_lerpmodels.integer)
