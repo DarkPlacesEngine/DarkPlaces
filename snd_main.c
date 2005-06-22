@@ -257,7 +257,10 @@ sfx_t *S_FindName (const char *name)
 		return NULL;
 
 	if (strlen (name) >= sizeof (sfx->name))
-		Host_Error ("S_FindName: sound name too long (%s)", name);
+	{
+		Con_Printf ("S_FindName: sound name too long (%s)", name);
+		return NULL;
+	}
 
 	// Look for this sound in the list of known sfx
 	for (sfx = known_sfx; sfx != NULL; sfx = sfx->next)

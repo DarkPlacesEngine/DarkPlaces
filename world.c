@@ -270,7 +270,10 @@ void SV_LinkEdict_AreaGrid(prvm_edict_t *ent)
 	int igrid[3], igridmins[3], igridmaxs[3], gridnum, entitynumber = PRVM_NUM_FOR_EDICT(ent);
 
 	if (entitynumber <= 0 || entitynumber >= prog->max_edicts || PRVM_EDICT_NUM(entitynumber) != ent)
-		Host_Error("SV_LinkEdict_AreaGrid: invalid edict %p (edicts is %p, edict compared to prog->edicts is %i)\n", ent, prog->edicts, entitynumber);
+	{
+		Con_Printf ("SV_LinkEdict_AreaGrid: invalid edict %p (edicts is %p, edict compared to prog->edicts is %i)\n", ent, prog->edicts, entitynumber);
+		return;
+	}
 
 	igridmins[0] = (int) ((ent->fields.server->absmin[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]);
 	igridmins[1] = (int) ((ent->fields.server->absmin[1] + sv_areagrid_bias[1]) * sv_areagrid_scale[1]);

@@ -1182,18 +1182,20 @@ sizebuf_t *WriteDest (void)
 		ent = PRVM_PROG_TO_EDICT(prog->globals.server->msg_entity);
 		entnum = PRVM_NUM_FOR_EDICT(ent);
 		if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
-			Host_Error("WriteDest: tried to write to non-client\n");
-		return &svs.clients[entnum-1].message;
+		{
+			Con_Printf ("WriteDest: tried to write to non-client\n");
+			return &sv.reliable_datagram;
+		}
+		else
+			return &svs.clients[entnum-1].message;
 
+	default:
+		Con_Printf ("WriteDest: bad destination");
 	case MSG_ALL:
 		return &sv.reliable_datagram;
 
 	case MSG_INIT:
 		return &sv.signon;
-
-	default:
-		Host_Error("WriteDest: bad destination");
-		break;
 	}
 
 	return NULL;

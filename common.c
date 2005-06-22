@@ -283,8 +283,6 @@ void MSG_WriteCoord (sizebuf_t *sb, float f, protocolversion_t protocol)
 		MSG_WriteCoord16i (sb, f);
 	else
 		MSG_WriteCoord32f (sb, f);
-	//else
-	//	Host_Error("MSG_WriteCoord: unknown protocol\n");
 }
 
 void MSG_WriteVector (sizebuf_t *sb, float *v, protocolversion_t protocol)
