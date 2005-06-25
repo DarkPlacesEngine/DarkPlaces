@@ -3861,7 +3861,12 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 									out->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_WATERALPHA;
 								else
 									out->basematerialflags |= MATERIALFLAG_WALL;
-								if (out->surfaceparms & Q3SURFACEPARM_TRANS)
+								if (out->textureflags & Q3TEXTUREFLAG_ALPHATEST)
+								{
+									// FIXME: support alpha test?
+									out->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_TRANSPARENT;
+								}
+								else if (out->surfaceparms & Q3SURFACEPARM_TRANS)
 								{
 									if (out->textureflags & Q3TEXTUREFLAG_ADDITIVE)
 										out->basematerialflags |= MATERIALFLAG_ADD | MATERIALFLAG_TRANSPARENT;
