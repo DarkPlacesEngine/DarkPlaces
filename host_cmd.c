@@ -818,8 +818,6 @@ void Host_Playermodel_f (void)
 		PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_playermodel)->string = PRVM_SetEngineString(host_client->playermodel);
 	if (strcmp(host_client->old_model, host_client->playermodel))
 	{
-		if (host_client->spawned)
-			SV_BroadcastPrintf("%s changed model to %s\n", host_client->name, host_client->playermodel);
 		strcpy(host_client->old_model, host_client->playermodel);
 		/*// send notification to all clients
 		MSG_WriteByte (&sv.reliable_datagram, svc_updatepmodel);
