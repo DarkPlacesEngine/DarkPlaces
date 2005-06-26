@@ -1179,7 +1179,7 @@ float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
 	// print the text
 	//DrawQ_String(x, y, va("%c%4i %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
 	// FIXME: use a constant for this color tag instead
-	DrawQ_ColoredString(x, y, va("%c%4i %s^" STRING_COLOR_DEFAULT_STR, (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL ); 
+	DrawQ_ColoredString(x, y, va("%c%4i %s" STRING_COLOR_DEFAULT_STR, (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL ); 
 	return 8;
 }
 
