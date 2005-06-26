@@ -931,9 +931,9 @@ void Host_Say(qboolean teamonly)
 		p1++;
 	}
 	if (!fromServer)
-		dpsnprintf (text, sizeof(text), "%c%s: %s", 1, host_client->name, p1);
+		dpsnprintf (text, sizeof(text), "%c%s" STRING_COLOR_DEFAULT_STR ": %s", 1, host_client->name, p1);
 	else
-		dpsnprintf (text, sizeof(text), "%c<%s> %s", 1, hostname.string, p1);
+		dpsnprintf (text, sizeof(text), "%c<%s" STRING_COLOR_DEFAULT_STR "> %s", 1, hostname.string, p1);
 	p2 = text + strlen(text);
 	while ((const char *)p2 > (const char *)text && (p2[-1] == '\r' || p2[-1] == '\n' || (p2[-1] == '\"' && quoted)))
 	{

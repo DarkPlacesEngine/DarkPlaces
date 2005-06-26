@@ -12,12 +12,15 @@
 -d (flum) bug darkplaces client: corona on your own muzzleflash is annoying when looking down because it can be seen, disable corona on all muzzleflashes (flum)
 -d (mashakos) bug darkplaces input: fix the mouse move when console is raised in glx, probably by ignoring the first move after console raise (mashakos)
 -d (romi) feature darkplaces editlights: add coronasize setting to rtlights (romi)
+-d bug darkplaces client: do replay cl_movement queue each time a move is added, as this is called from the server packet parser, which can overwhelm the client with several packets in one frame, leading to a complete lockup until the level changes (Black)
+-d bug darkplaces menuvm: menu input focus is lost if a map command occurs while in menu, even if it fails the menu still lost focus and is unusable until closed and reopened with escape key (Black, Vermeulen)
+-d bug darkplaces renderer: text coloring is only affecting the first line of messagemode text (LordHavoc)
+-d bug darkplaces server: add color code to start of chat message to prevent nick colors from messing up the text color
 0 bug darkplaces WGL client: figure out why GDI input has stuttering problems with gl_finish 0 mode (Kinn, Urre, romi, Spike, Black)
 0 bug darkplaces WGL client: fix GDI input init/shutdown, it is using weird mouse acceleration and not restoring it on exit (innovati)
 0 bug darkplaces WGL/GLX/SDL client bug: if sound is unavailable (causing a freeze waiting for it to become available), the config is reset (SavageX)
 0 bug darkplaces bsd filesystem: read() is failing (not returning the requested amount) on freebsd when reading files, whether actual files or in a pk3 - somehow it is still able to read the pk3 zip directory though (suminigashi, Elric)
 0 bug darkplaces capturevideo: cl_capturevideo 1 with sound off is not locking the framerate of a server (Vermeulen)
-0 bug darkplaces client: do replay cl_movement queue each time a move is added, as this is called from the server packet parser, which can overwhelm the client with several packets in one frame, leading to a complete lockup until the level changes (Black)
 0 bug darkplaces client: lightning beam following owner is not working well with cl_movement mode
 0 bug darkplaces client: pain flash seems to be framerate dependent?  (Urre)
 0 bug darkplaces collisions: curve collisions sometimes catch on the lip of the edge, pushing into the curved back wall around certain jumppads in Nexuiz for example consistently gets stuck just below the ledge (HReaper)
@@ -31,7 +34,6 @@
 0 bug darkplaces loader: nexuiz loading a level often loops part of the map's music during loading, this is probably an extra Host_Frame being executed during loading, where it shouldn't be (Vermeulen)
 0 bug darkplaces loader: occasional crash due to memory corruption when doing "deathmatch 1;map start" during demo loop (Willis)
 0 bug darkplaces makefile: add icon to windows sdl builds (RenegadeC)
-0 bug darkplaces menuvm: menu input focus is lost if a map command occurs while in menu, even if it fails the menu still lost focus and is unusable until closed and reopened with escape key (Black, Vermeulen)
 0 bug darkplaces particles: cl_particles_quality is affecting lifetime of decals, it should not
 0 bug darkplaces physics: corpses/gibs are not riding down e1m1 lift (scar3crow)
 0 bug darkplaces physics: figure out why monsters keep making fall pain sound after they've landed in dpmod (Cruaich)
@@ -52,11 +54,9 @@
 0 bug darkplaces renderer: make sure that unlit maps show up fullbright (Wazat)
 0 bug darkplaces renderer: opaque water (r_wateralpha 1) is not being lit by rtlights (LordHavoc)
 0 bug darkplaces renderer: reverse corona traceline direction so that a player in solid can see coronas (Urre)
-0 bug darkplaces renderer: text coloring is only affecting the first line of messagemode text (LordHavoc)
 0 bug darkplaces renderer: vertex normals seem to be generated backwards (LordHavoc)
 0 bug darkplaces server: PF_vectorvectors is broken, given a v_forward from makevectors (not using roll) it does not give the same v_right and v_up vectors (VorteX)
 0 bug darkplaces server: add TE_FLAMEJET builtin and add extension (Supajoe)
-0 bug darkplaces server: add color code to start of chat message to prevent nick colors from messing up the text color
 0 bug darkplaces server: apparently MOVETYPE_WALK on non-players is frequently resetting origin to oldorigin, why does it think it's in solid? (Wazat)
 0 bug darkplaces server: figure out what's breaking RenegadeC's TAOV monster jump code (RenegadeC)
 0 bug darkplaces server: losing player colors on join (LordHavoc)
