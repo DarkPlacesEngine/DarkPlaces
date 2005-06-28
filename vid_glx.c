@@ -207,6 +207,8 @@ static int XLateKey(XKeyEvent *ev, char *ascii)
 		case XK_KP_Subtract: key = K_KP_MINUS; break;
 		case XK_KP_Divide: key = K_KP_SLASH; break;
 
+		case XK_section:	key = '~'; break;
+
 		default:
 			if (keysym < 32 && keysym > 126)
 				break;
