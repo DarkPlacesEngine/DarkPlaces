@@ -220,7 +220,7 @@ cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1"};
 cvar_t r_shadow_visiblelighting = {0, "r_shadow_visiblelighting", "0"};
 cvar_t r_shadow_visiblevolumes = {0, "r_shadow_visiblevolumes", "0"};
 cvar_t r_shadow_glsl = {0, "r_shadow_glsl", "1"};
-cvar_t r_shadow_glsl_offsetmapping = {0, "r_shadow_glsl_offsetmapping", "1"};
+cvar_t r_shadow_glsl_offsetmapping = {0, "r_shadow_glsl_offsetmapping", "0"};
 cvar_t r_shadow_glsl_offsetmapping_scale = {0, "r_shadow_glsl_offsetmapping_scale", "-0.04"};
 cvar_t r_shadow_glsl_offsetmapping_bias = {0, "r_shadow_glsl_offsetmapping_bias", "0.04"};
 cvar_t r_shadow_glsl_geforcefxlowquality = {0, "r_shadow_glsl_geforcefxlowquality", "1"};
@@ -505,7 +505,7 @@ void r_shadow_start(void)
 			r_shadow_program_light[i] = GL_Backend_CompileProgram(vertstrings_count, vertstrings_list, fragstrings_count, fragstrings_list);
 			if (!r_shadow_program_light[i])
 			{
-				Con_Printf("permutation %s %s %s %s failed for shader %s, some features may not work properly!\n", i & 1 ? "specular" : "", i & 2 ? "fog" : "", i & 4 ? "cubefilter" : "", i & 8 ? "offsetmapping" : "", "glsl/light");
+				Con_Printf("permutation %s %s %s %s %s %s failed for shader %s, some features may not work properly!\n", i & 1 ? "specular" : "", i & 2 ? "fog" : "", i & 4 ? "cubefilter" : "", i & 8 ? "offsetmapping" : "", i & 16 ? "surfacenormalize" : "", i & 32 ? "geforcefx" : "", "glsl/light");
 				continue;
 			}
 			qglUseProgramObjectARB(r_shadow_program_light[i]);
