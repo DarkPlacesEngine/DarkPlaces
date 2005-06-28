@@ -49,6 +49,7 @@ cvar_t sv_jumpstep = {CVAR_NOTIFY, "sv_jumpstep", "1"};
 cvar_t sv_wallfriction = {CVAR_NOTIFY, "sv_wallfriction", "1"};
 cvar_t sv_newflymove = {CVAR_NOTIFY, "sv_newflymove", "0"};
 cvar_t sv_freezenonclients = {CVAR_NOTIFY, "sv_freezenonclients", "0"};
+cvar_t sv_playerphysicsqc = {CVAR_NOTIFY, "sv_playerphysicsqc", "1"};
 
 #define	MOVE_EPSILON	0.01
 
@@ -61,6 +62,8 @@ void SV_Phys_Init (void)
 	Cvar_RegisterVariable(&sv_wallfriction);
 	Cvar_RegisterVariable(&sv_newflymove);
 	Cvar_RegisterVariable(&sv_freezenonclients);
+
+	Cvar_RegisterVariable(&sv_playerphysicsqc);
 }
 
 /*
@@ -1332,7 +1335,7 @@ void SV_Physics_Entity (prvm_edict_t *ent, qboolean runmove)
 		// make sure the velocity is sane (not a NaN)
 		SV_CheckVelocity(ent);
 		// LordHavoc: QuakeC replacement for SV_ClientThink (player movement)
-		if (SV_PlayerPhysicsQC)
+		if (SV_PlayerPhysicsQC && sv_playerphysicsqc.integer)
 		{
 			prog->globals.server->time = sv.time;
 			prog->globals.server->self = PRVM_EDICT_TO_PROG(ent);

@@ -261,6 +261,8 @@ typedef struct prvm_prog_s
 	int					edict_size;			// in bytes
 	int					edictareasize;		// LordHavoc: in bytes (for bound checking)
 
+	int					*statement_linenums; // NULL if not available
+
 	union {
 		float *generic;
 		globalvars_t *server;

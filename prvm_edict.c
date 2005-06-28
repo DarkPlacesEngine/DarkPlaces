@@ -1223,6 +1223,51 @@ void PRVM_ResetProg()
 
 /*
 ===============
+PRVM_LoadLNO
+===============
+*/
+void PRVM_LoadLNO( const char *progname ) {
+	qbyte *lno;
+	unsigned long *header;
+	char filename[512];
+
+	FS_StripExtension( progname, filename, sizeof( filename ) );
+	strlcat( filename, ".lno", sizeof( filename ) );
+
+	lno = FS_LoadFile( filename, tempmempool, false );
+	if( !lno ) {
+		return;
+	}
+
+/*
+<Spike>    SafeWrite (h, &lnotype, sizeof(int));
+<Spike>    SafeWrite (h, &version, sizeof(int));
+<Spike>    SafeWrite (h, &numglobaldefs, sizeof(int));
+<Spike>    SafeWrite (h, &numpr_globals, sizeof(int));
+<Spike>    SafeWrite (h, &numfielddefs, sizeof(int));
+<Spike>    SafeWrite (h, &numstatements, sizeof(int));
+<Spike>    SafeWrite (h, statement_linenums, numstatements*sizeof(int));
+*/
+	if( (unsigned) fs_filesize < (6 + prog->progs->numstatements) * sizeof( long ) ) {
+        return;
+	}
+
+	header = (unsigned long *) lno;
+	if( header[ 0 ] == *(unsigned long *) "LNOF" &&
+		LittleLong( header[ 1 ] ) == 1 &&
+		LittleLong( header[ 2 ] ) == prog->progs->numglobaldefs && 
+		LittleLong( header[ 3 ] ) == prog->progs->numglobals &&
+		LittleLong( header[ 4 ] ) == prog->progs->numfielddefs &&
+		LittleLong( header[ 5 ] ) == prog->progs->numstatements ) 
+	{
+		prog->statement_linenums = Mem_Alloc(prog->progs_mempool, prog->progs->numstatements * sizeof( long ) );
+		memcpy( prog->statement_linenums, (long *) lno + 6, prog->progs->numstatements * sizeof( long ) ); 
+	}
+	Mem_Free( lno );
+}
+
+/*
+===============
 PRVM_LoadProgs
 ===============
 */
@@ -1446,6 +1491,8 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 			break;
 		}
 	}
+
+	PRVM_LoadLNO( filename );
 
 	PRVM_Init_Exec();
 
