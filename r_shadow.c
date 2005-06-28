@@ -232,8 +232,6 @@ cvar_t r_editlights_cursorpushback = {0, "r_editlights_cursorpushback", "0"};
 cvar_t r_editlights_cursorpushoff = {0, "r_editlights_cursorpushoff", "4"};
 cvar_t r_editlights_cursorgrid = {0, "r_editlights_cursorgrid", "4"};
 cvar_t r_editlights_quakelightsizescale = {CVAR_SAVE, "r_editlights_quakelightsizescale", "0.8"};
-cvar_t r_editlights_rtlightssizescale = {CVAR_SAVE, "r_editlights_rtlightssizescale", "0.7"};
-cvar_t r_editlights_rtlightscolorscale = {CVAR_SAVE, "r_editlights_rtlightscolorscale", "2"};
 
 float r_shadow_attenpower, r_shadow_attenscale;
 
@@ -3351,8 +3349,6 @@ void R_Shadow_LoadWorldLights(void)
 				Con_Printf("found %d parameters on line %i, should be 8 or more parameters (origin[0] origin[1] origin[2] radius color[0] color[1] color[2] style \"cubemapname\" corona angles[0] angles[1] angles[2] coronasizescale ambientscale diffusescale specularscale flags)\n", a, n + 1);
 				break;
 			}
-			VectorScale(color, r_editlights_rtlightscolorscale.value, color);
-			radius *= r_editlights_rtlightssizescale.value;
 			R_Shadow_UpdateWorldLight(R_Shadow_NewWorldLight(), origin, angles, color, radius, corona, style, shadow, cubemapname, coronasizescale, ambientscale, diffusescale, specularscale, flags);
 			if (*s == '\r')
 				s++;
@@ -3387,11 +3383,11 @@ void R_Shadow_SaveWorldLights(void)
 	for (light = r_shadow_worldlightchain;light;light = light->next)
 	{
 		if (light->coronasizescale != 0.25f || light->ambientscale != 0 || light->diffusescale != 1 || light->specularscale != 1 || light->flags != LIGHTFLAG_REALTIMEMODE)
-			sprintf(line, "%s%f %f %f %f %f %f %f %d \"%s\" %f %f %f %f %f %f %f %f %i\n", light->shadow ? "" : "!", light->origin[0], light->origin[1], light->origin[2], light->radius / r_editlights_rtlightssizescale.value, light->color[0] / r_editlights_rtlightscolorscale.value, light->color[1] / r_editlights_rtlightscolorscale.value, light->color[2] / r_editlights_rtlightscolorscale.value, light->style, light->cubemapname, light->corona, light->angles[0], light->angles[1], light->angles[2], light->coronasizescale, light->ambientscale, light->diffusescale, light->specularscale, light->flags);
+			sprintf(line, "%s%f %f %f %f %f %f %f %d \"%s\" %f %f %f %f %f %f %f %f %i\n", light->shadow ? "" : "!", light->origin[0], light->origin[1], light->origin[2], light->radius, light->color[0], light->color[1], light->color[2], light->style, light->cubemapname, light->corona, light->angles[0], light->angles[1], light->angles[2], light->coronasizescale, light->ambientscale, light->diffusescale, light->specularscale, light->flags);
 		else if (light->cubemapname[0] || light->corona || light->angles[0] || light->angles[1] || light->angles[2])
-			sprintf(line, "%s%f %f %f %f %f %f %f %d \"%s\" %f %f %f %f\n", light->shadow ? "" : "!", light->origin[0], light->origin[1], light->origin[2], light->radius / r_editlights_rtlightssizescale.value, light->color[0] / r_editlights_rtlightscolorscale.value, light->color[1] / r_editlights_rtlightscolorscale.value, light->color[2] / r_editlights_rtlightscolorscale.value, light->style, light->cubemapname, light->corona, light->angles[0], light->angles[1], light->angles[2]);
+			sprintf(line, "%s%f %f %f %f %f %f %f %d \"%s\" %f %f %f %f\n", light->shadow ? "" : "!", light->origin[0], light->origin[1], light->origin[2], light->radius, light->color[0], light->color[1], light->color[2], light->style, light->cubemapname, light->corona, light->angles[0], light->angles[1], light->angles[2]);
 		else
-			sprintf(line, "%s%f %f %f %f %f %f %f %d\n", light->shadow ? "" : "!", light->origin[0], light->origin[1], light->origin[2], light->radius / r_editlights_rtlightssizescale.value, light->color[0] / r_editlights_rtlightscolorscale.value, light->color[1] / r_editlights_rtlightscolorscale.value, light->color[2] / r_editlights_rtlightscolorscale.value, light->style);
+			sprintf(line, "%s%f %f %f %f %f %f %f %d\n", light->shadow ? "" : "!", light->origin[0], light->origin[1], light->origin[2], light->radius, light->color[0], light->color[1], light->color[2], light->style);
 		if (bufchars + (int) strlen(line) > bufmaxchars)
 		{
 			bufmaxchars = bufchars + strlen(line) + 2048;
@@ -3944,6 +3940,36 @@ void R_Shadow_EditLights_Edit_f(void)
 		}
 		radius = atof(Cmd_Argv(2));
 	}
+	else if (!strcmp(Cmd_Argv(1), "colorscale"))
+	{
+		if (Cmd_Argc() == 3)
+		{
+			double scale = atof(Cmd_Argv(2));
+			color[0] *= scale;
+			color[1] *= scale;
+			color[2] *= scale;
+		}
+		else
+		{
+			if (Cmd_Argc() != 5)
+			{
+				Con_Printf("usage: r_editlights_edit %s red green blue  (OR grey instead of red green blue)\n", Cmd_Argv(1));
+				return;
+			}
+			color[0] *= atof(Cmd_Argv(2));
+			color[1] *= atof(Cmd_Argv(3));
+			color[2] *= atof(Cmd_Argv(4));
+		}
+	}
+	else if (!strcmp(Cmd_Argv(1), "radiusscale") || !strcmp(Cmd_Argv(1), "sizescale"))
+	{
+		if (Cmd_Argc() != 3)
+		{
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			return;
+		}
+		radius *= atof(Cmd_Argv(2));
+	}
 	else if (!strcmp(Cmd_Argv(1), "style"))
 	{
 		if (Cmd_Argc() != 3)
@@ -4170,8 +4196,6 @@ void R_Shadow_EditLights_Help_f(void)
 "r_editlights_cursorpushoff : push cursor off surface this far\n"
 "r_editlights_cursorgrid : snap cursor to grid of this size\n"
 "r_editlights_quakelightsizescale : imported quake light entity size scaling\n"
-"r_editlights_rtlightssizescale : imported rtlight size scaling\n"
-"r_editlights_rtlightscolorscale : imported rtlight color scaling\n"
 "Commands:\n"
 "r_editlights_help : this help\n"
 "r_editlights_clear : remove all lights\n"
@@ -4198,6 +4222,10 @@ void R_Shadow_EditLights_Help_f(void)
 "anglesz z: set z component of light angles\n"
 "color r g b : set color of light (can be brighter than 1 1 1)\n"
 "radius radius : set radius (size) of light\n"
+"colorscale grey : multiply color of light (1 does nothing)\n"
+"colorscale r g b : multiply color of light (1 1 1 does nothing)\n"
+"radiusscale scale : multiply radius (size) of light (1 does nothing)\n"
+"sizescale scale : multiply radius (size) of light (1 does nothing)\n"
 "style style : set lightstyle of light (flickering patterns, switches, etc)\n"
 "cubemap basename : set filter cubemap of light (not yet supported)\n"
 "shadows 1/0 : turn on/off shadows\n"
@@ -4264,8 +4292,6 @@ void R_Shadow_EditLights_Init(void)
 	Cvar_RegisterVariable(&r_editlights_cursorpushoff);
 	Cvar_RegisterVariable(&r_editlights_cursorgrid);
 	Cvar_RegisterVariable(&r_editlights_quakelightsizescale);
-	Cvar_RegisterVariable(&r_editlights_rtlightssizescale);
-	Cvar_RegisterVariable(&r_editlights_rtlightscolorscale);
 	Cmd_AddCommand("r_editlights_help", R_Shadow_EditLights_Help_f);
 	Cmd_AddCommand("r_editlights_clear", R_Shadow_EditLights_Clear_f);
 	Cmd_AddCommand("r_editlights_reload", R_Shadow_EditLights_Reload_f);
