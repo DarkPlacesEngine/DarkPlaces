@@ -661,23 +661,32 @@ void NetConn_OpenServerPort(const char *addressstring, int defaultport)
 {
 	lhnetaddress_t address;
 	lhnetsocket_t *s;
+	int port;
 	char addressstring2[1024];
-	if (LHNETADDRESS_FromString(&address, addressstring, defaultport))
+
+	for (port = defaultport; port <= defaultport + 100; port++)
 	{
-		if ((s = LHNET_OpenSocket_Connectionless(&address)))
+		if (LHNETADDRESS_FromString(&address, addressstring, port))
 		{
-			sv_sockets[sv_numsockets++] = s;
-			LHNETADDRESS_ToString(LHNET_AddressFromSocket(s), addressstring2, sizeof(addressstring2), true);
-			Con_Printf("Server listening on address %s\n", addressstring2);
+			if ((s = LHNET_OpenSocket_Connectionless(&address)))
+			{
+				sv_sockets[sv_numsockets++] = s;
+				LHNETADDRESS_ToString(LHNET_AddressFromSocket(s), addressstring2, sizeof(addressstring2), true);
+				Con_Printf("Server listening on address %s\n", addressstring2);
+			}
+			else
+			{
+				LHNETADDRESS_ToString(&address, addressstring2, sizeof(addressstring2), true);
+				Con_Printf("Server failed to open socket on address %s\n", addressstring2);
+			}
 		}
-		else
+		else 
 		{
-			LHNETADDRESS_ToString(&address, addressstring2, sizeof(addressstring2), true);
-			Con_Printf("Server failed to open socket on address %s\n", addressstring2);
+			Con_Printf("Server unable to parse address %s\n", addressstring);
+			// if it cant parse one address, it wont be able to parse another for sure
+			break;
 		}
 	}
-	else
-		Con_Printf("Server unable to parse address %s\n", addressstring);
 }
 
 void NetConn_OpenServerPorts(int opennetports)

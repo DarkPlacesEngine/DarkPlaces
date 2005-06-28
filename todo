@@ -1,4 +1,5 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
+-d feature darkplaces server: add sv_playerphysicsqc cvar to allow engine to ignore SV_PlayerPhysics function, this would also have to change the reported extensions (Gleeb)
 -d (Baalz) bug darkplaces input: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
 -d (Gilgamesh) feature darkplaces protocol: add back colormod extension (FrikaC, Uffe, Gilgamesh, Wazat)
 -d (Kinn, romi) bug darkplaces WGL client: default WGL input back to GDI, the DirectInput driver is malfunctioning, losing key release messages, stuttering mouse input, and lacks mouse wheel support (Wazat, Kinn)
@@ -142,8 +143,6 @@
 0 feature darkplaces server: add cl_prydoncursor_centeredcursor cvar and PRYDON_CLIENTCURSOR_CENTEREDCURSOR extension (Wazat)
 0 feature darkplaces server: add filename/line number reporting to progs stack and opcode printouts (Spike)
 0 feature darkplaces server: add sv_antilag cvar which would upgrade the aim() builtin to aim at the creature the player's prydon cursor trace was hitting (Spike)
-0 feature darkplaces server: add sv_playerphysicsqc cvar to allow engine to ignore SV_PlayerPhysics function, this would also have to change the reported extensions (Gleeb)
-0 feature darkplaces server: automatically choose a server port if the bind fails, just keep incrementing the port until it finds an available port (tell Spike)
 0 feature darkplaces server: make fopen builtin have the ability to disable fopen builtin access to read /, read data/, write data/, or disable fopen builtin entirely
 0 feature darkplaces server: make noclip/fly cheats use MOVETYPE_CHEATNOCLIP/MOVETYPE_CHEATFLY which would have the nicer movement interface (Spikester)
 0 feature darkplaces sound: Lordhavoc needs to talk to fuh about snd_macos.c (fuh)
@@ -373,6 +372,7 @@
 7 feature darkplaces renderer: mirrors (Sajt)
 7 feature darkplaces renderer: shadow volume clipping (romi)
 d bug darkplaces Mac filesystem: on Mac dlopen is not finding dylib files alongside the executable, do a more thorough search (Zenex)
+d feature darkplaces server: automatically choose a server port if the bind fails, just keep incrementing the port until it finds an available port (tell Spike)
 d bug darkplaces Mac filesystem: on Mac init the basedir to argv[0] truncated to not include the *.app/ part of the path onward (Zenex)
 d bug darkplaces SDL input: changing video mode causes it to ignore all character events from then on
 d bug darkplaces X11 keyboard: make sure that the XLookupString code is not little endian specific (Elric, jitspoe)
