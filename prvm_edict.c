@@ -1313,6 +1313,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	prog->numknownstrings = 0;
 	prog->maxknownstrings = 0;
 	prog->knownstrings = NULL;
+	prog->knownstrings_freeable = NULL;
 
 	prog->globaldefs = (ddef_t *)((qbyte *)prog->progs + prog->progs->ofs_globaldefs);
 
@@ -1880,10 +1881,15 @@ int PRVM_SetEngineString(const char *s)
 		if (i >= prog->maxknownstrings)
 		{
 			const char **oldstrings = prog->knownstrings;
+			const qbyte *oldstrings_freeable = prog->knownstrings_freeable;
 			prog->maxknownstrings += 128;
 			prog->knownstrings = PRVM_Alloc(prog->maxknownstrings * sizeof(char *));
+			prog->knownstrings_freeable = PRVM_Alloc(prog->maxknownstrings * sizeof(qbyte));
 			if (prog->numknownstrings)
+			{
 				memcpy((char **)prog->knownstrings, oldstrings, prog->numknownstrings * sizeof(char *));
+				memcpy((char **)prog->knownstrings_freeable, oldstrings_freeable, prog->numknownstrings * sizeof(qbyte));
+			}
 		}
 		prog->numknownstrings++;
 	}
@@ -1905,15 +1911,21 @@ int PRVM_AllocString(int bufferlength, char **pointer)
 		if (i >= prog->maxknownstrings)
 		{
 			const char **oldstrings = prog->knownstrings;
+			const qbyte *oldstrings_freeable = prog->knownstrings_freeable;
 			prog->maxknownstrings += 128;
 			prog->knownstrings = PRVM_Alloc(prog->maxknownstrings * sizeof(char *));
+			prog->knownstrings_freeable = PRVM_Alloc(prog->maxknownstrings * sizeof(qbyte));
 			if (prog->numknownstrings)
+			{
 				memcpy((char **)prog->knownstrings, oldstrings, prog->numknownstrings * sizeof(char *));
+				memcpy((char **)prog->knownstrings_freeable, oldstrings_freeable, prog->numknownstrings * sizeof(qbyte));
+			}
 		}
 		prog->numknownstrings++;
 	}
 	prog->firstfreeknownstring = i + 1;
 	prog->knownstrings[i] = PRVM_Alloc(bufferlength);
+	prog->knownstrings_freeable[i] = true;
 	if (pointer)
 		*pointer = (char *)(prog->knownstrings[i]);
 	return -1 - i;
@@ -1930,8 +1942,11 @@ void PRVM_FreeString(int num)
 		num = -1 - num;
 		if (!prog->knownstrings[num])
 			PRVM_ERROR("PRVM_FreeString: attempt to free a non-existent or already freed string\n");
+		if (!prog->knownstrings[num])
+			PRVM_ERROR("PRVM_FreeString: attempt to free a string owned by the engine\n");
 		PRVM_Free((char *)prog->knownstrings[num]);
 		prog->knownstrings[num] = NULL;
+		prog->knownstrings_freeable[num] = false;
 		prog->firstfreeknownstring = min(prog->firstfreeknownstring, num);
 	}
 	else
