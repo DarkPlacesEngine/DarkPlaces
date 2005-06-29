@@ -673,6 +673,7 @@ void NetConn_OpenServerPort(const char *addressstring, int defaultport)
 				sv_sockets[sv_numsockets++] = s;
 				LHNETADDRESS_ToString(LHNET_AddressFromSocket(s), addressstring2, sizeof(addressstring2), true);
 				Con_Printf("Server listening on address %s\n", addressstring2);
+				break;
 			}
 			else
 			{
