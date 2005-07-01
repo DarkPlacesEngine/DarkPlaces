@@ -862,7 +862,7 @@ void CL_ParseBeam (model_t *m, int lightning)
 	// override any beam with the same entity
 	for (i = 0, b = cl_beams;i < cl_max_beams;i++, b++)
 	{
-		if (b->entity == ent)
+		if (b->entity == ent && ent)
 		{
 			//b->entity = ent;
 			b->lightning = lightning;
