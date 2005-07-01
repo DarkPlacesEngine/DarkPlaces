@@ -1736,6 +1736,7 @@ void SV_SpawnServer (const char *server)
 	//prog->num_edicts = svs.maxclients+1;
 
 	sv.state = ss_loading;
+	prog->allowworldwrites = true;
 	sv.paused = false;
 
 	*prog->time = sv.time = 1.0;
@@ -1806,6 +1807,7 @@ void SV_SpawnServer (const char *server)
 
 // all setup is completed, any further precache statements are errors
 	sv.state = ss_active;
+	prog->allowworldwrites = false;
 
 // run two frames to allow everything to settle
 	for (i = 0;i < 2;i++)
