@@ -189,14 +189,14 @@
 					return;
 				}
 #endif
-				/*if (OPA->edict == 0 && sv.state == ss_active)
+				if (OPA->edict == 0 && !prog->allowworldwrites)
 				{
 					prog->xfunction->profile += profile - startprofile;
 					startprofile = profile;
 					prog->xstatement = st - prog->statements;
 					Host_Error("assignment to world entity in %s", PRVM_NAME);
 					return;
-				}*/
+				}
 				ed = PRVM_PROG_TO_EDICT(OPA->edict);
 				OPC->_int = (qbyte *)((int *)ed->fields.vp + OPB->_int) - (qbyte *)prog->edictsfields;
 				break;
@@ -304,7 +304,7 @@
 				break;
 
 			case OP_STATE:
-				if(prog->flag & PRVM_OP_STATE) 
+				if(prog->flag & PRVM_OP_STATE)
 				{
 					prog->xfunction->profile += profile - startprofile;
 					startprofile = profile;
@@ -317,7 +317,7 @@
 				else
 					PRVM_ERROR("OP_STATE not supported by %s\n", PRVM_NAME);
 				break;
-				
+
 // LordHavoc: to be enabled when Progs version 7 (or whatever it will be numbered) is finalized
 /*
 			case OP_ADD_I:

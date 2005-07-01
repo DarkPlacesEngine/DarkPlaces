@@ -328,6 +328,10 @@ typedef struct prvm_prog_s
 	float				*time;
 	float				_time;
 
+	// allow writing to world entity fields, this is set by server init and
+	// cleared before first server frame
+	qboolean			allowworldwrites;
+
 	// name of the prog, e.g. "Server", "Client" or "Menu" (used for text output)
 	char				*name; // [INIT]
 
