@@ -668,7 +668,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 	model_t *model = ent->model;
 	msurface_t *surface;
 	int surfacelistindex;
-	float projectdistance = lightradius + model->radius + r_shadow_projectdistance.value;
+	float projectdistance = lightradius + model->radius*2 + r_shadow_projectdistance.value;
 	vec3_t modelorg;
 	texture_t *texture;
 	// check the box in modelspace, it was already checked in worldspace
