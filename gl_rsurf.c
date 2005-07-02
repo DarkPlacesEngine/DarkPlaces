@@ -711,7 +711,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 	}
 	else
 	{
-		projectdistance = lightradius + ent->model->radius;
+		projectdistance = lightradius + ent->model->radius*2;
 		Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 		{
