@@ -29,7 +29,7 @@ char *svc_strings[128] =
 	"svc_nop",
 	"svc_disconnect",
 	"svc_updatestat",
-	"svc_version",		// [long] server version
+	"svc_version",		// [int] server version
 	"svc_setview",		// [short] entity number
 	"svc_sound",			// <see code>
 	"svc_time",			// [float] server time
@@ -38,7 +38,7 @@ char *svc_strings[128] =
 						// the string should be \n terminated
 	"svc_setangle",		// [vec3] set the view angle to this absolute value
 
-	"svc_serverinfo",		// [long] version
+	"svc_serverinfo",		// [int] version
 						// [string] signon string
 						// [string]..[0]model cache [string]...[0]sounds cache
 						// [string]..[0]item cache
