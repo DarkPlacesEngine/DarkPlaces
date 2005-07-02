@@ -639,16 +639,7 @@ void EntityState_ReadFields(entity_state_t *e, unsigned int bits)
 				e->origin[2] = MSG_ReadCoord32f();
 		}
 	}
-	if ((cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4) && (e->flags & RENDER_LOWPRECISION))
-	{
-		if (bits & E_ANGLE1)
-			e->angles[0] = MSG_ReadAngle8i();
-		if (bits & E_ANGLE2)
-			e->angles[1] = MSG_ReadAngle8i();
-		if (bits & E_ANGLE3)
-			e->angles[2] = MSG_ReadAngle8i();
-	}
-	else
+	if ((cl.protocol == PROTOCOL_DARKPLACES5 || cl.protocol == PROTOCOL_DARKPLACES6) && !(e->flags & RENDER_LOWPRECISION))
 	{
 		if (bits & E_ANGLE1)
 			e->angles[0] = MSG_ReadAngle16i();
@@ -656,6 +647,15 @@ void EntityState_ReadFields(entity_state_t *e, unsigned int bits)
 			e->angles[1] = MSG_ReadAngle16i();
 		if (bits & E_ANGLE3)
 			e->angles[2] = MSG_ReadAngle16i();
+	}
+	else
+	{
+		if (bits & E_ANGLE1)
+			e->angles[0] = MSG_ReadAngle8i();
+		if (bits & E_ANGLE2)
+			e->angles[1] = MSG_ReadAngle8i();
+		if (bits & E_ANGLE3)
+			e->angles[2] = MSG_ReadAngle8i();
 	}
 	if (bits & E_MODEL1)
 		e->modelindex = (e->modelindex & 0xFF00) | (unsigned int) MSG_ReadByte();
