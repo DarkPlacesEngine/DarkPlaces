@@ -1228,7 +1228,7 @@ PRVM_LoadLNO
 */
 void PRVM_LoadLNO( const char *progname ) {
 	qbyte *lno;
-	unsigned long *header;
+	unsigned int *header;
 	char filename[512];
 
 	FS_StripExtension( progname, filename, sizeof( filename ) );
@@ -1248,20 +1248,20 @@ void PRVM_LoadLNO( const char *progname ) {
 <Spike>    SafeWrite (h, &numstatements, sizeof(int));
 <Spike>    SafeWrite (h, statement_linenums, numstatements*sizeof(int));
 */
-	if( (unsigned) fs_filesize < (6 + prog->progs->numstatements) * sizeof( long ) ) {
+	if( (unsigned) fs_filesize < (6 + prog->progs->numstatements) * sizeof( int ) ) {
         return;
 	}
 
-	header = (unsigned long *) lno;
-	if( header[ 0 ] == *(unsigned long *) "LNOF" &&
+	header = (unsigned int *) lno;
+	if( header[ 0 ] == *(unsigned int *) "LNOF" &&
 		LittleLong( header[ 1 ] ) == 1 &&
-		LittleLong( header[ 2 ] ) == prog->progs->numglobaldefs && 
-		LittleLong( header[ 3 ] ) == prog->progs->numglobals &&
-		LittleLong( header[ 4 ] ) == prog->progs->numfielddefs &&
-		LittleLong( header[ 5 ] ) == prog->progs->numstatements ) 
+		(unsigned int)LittleLong( header[ 2 ] ) == (unsigned int)prog->progs->numglobaldefs &&
+		(unsigned int)LittleLong( header[ 3 ] ) == (unsigned int)prog->progs->numglobals &&
+		(unsigned int)LittleLong( header[ 4 ] ) == (unsigned int)prog->progs->numfielddefs &&
+		(unsigned int)LittleLong( header[ 5 ] ) == (unsigned int)prog->progs->numstatements )
 	{
-		prog->statement_linenums = Mem_Alloc(prog->progs_mempool, prog->progs->numstatements * sizeof( long ) );
-		memcpy( prog->statement_linenums, (long *) lno + 6, prog->progs->numstatements * sizeof( long ) ); 
+		prog->statement_linenums = Mem_Alloc(prog->progs_mempool, prog->progs->numstatements * sizeof( int ) );
+		memcpy( prog->statement_linenums, (int *) lno + 6, prog->progs->numstatements * sizeof( int ) );
 	}
 	Mem_Free( lno );
 }
