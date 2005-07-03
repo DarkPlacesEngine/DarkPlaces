@@ -95,6 +95,21 @@ const char *Cvar_VariableString (const char *var_name)
 	return var->string;
 }
 
+/*
+============
+Cvar_VariableDefString
+============
+*/
+const char *Cvar_VariableDefString (const char *var_name)
+{
+	cvar_t *var;
+
+	var = Cvar_FindVar (var_name);
+	if (!var)
+		return cvar_null_string;
+	return var->defstring;
+}
+
 
 /*
 ============
@@ -213,7 +228,7 @@ void Cvar_SetQuick (cvar_t *var, const char *value)
 	}
 
 	if (developer.integer)
-		Con_Printf("Cvar_SetQuick({\"%s\", \"%s\", %i}, \"%s\");\n", var->name, var->string, var->flags, value);
+		Con_Printf("Cvar_SetQuick({\"%s\", \"%s\", %i, \"%s\"}, \"%s\");\n", var->name, var->string, var->flags, var->defstring, value);
 
 	Cvar_SetQuick_Internal(var, value);
 }
@@ -266,7 +281,7 @@ Adds a freestanding variable to the variable list.
 */
 void Cvar_RegisterVariable (cvar_t *variable)
 {
-	cvar_t *cvar, *cvar2;
+	cvar_t *current, *next, *cvar;
 	char *oldstr;
 
 	if (developer.integer)
@@ -287,6 +302,7 @@ void Cvar_RegisterVariable (cvar_t *variable)
 			variable->flags |= (cvar->flags & ~CVAR_ALLOCATED);
 			// cvar->string is now owned by variable instead
 			variable->string = cvar->string;
+			variable->defstring = cvar->defstring;
 			variable->value = atof (variable->string);
 			variable->integer = (int) variable->value;
 			// replace cvar with this one...
@@ -299,13 +315,13 @@ void Cvar_RegisterVariable (cvar_t *variable)
 			else
 			{
 				// otherwise find it somewhere in the list
-				for (cvar2 = cvar_vars;cvar2->next != cvar;cvar2 = cvar2->next);
-				if (cvar2->next == cvar)
-					cvar2->next = variable;
+				for (current = cvar_vars;current->next != cvar;current = current->next)
+					;
+				current->next = variable;
 			}
 
 			// get rid of old allocated cvar
-			// (but not the cvar->string, because we kept that)
+			// (but not cvar->string and cvar->defstring, because we kept those)
 			Z_Free(cvar->name);
 			Z_Free(cvar);
 		}
@@ -325,19 +341,21 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	oldstr = variable->string;
 	variable->string = Z_Malloc (strlen(variable->string)+1);
 	strcpy (variable->string, oldstr);
+	variable->defstring = Z_Malloc (strlen(variable->string)+1);
+	strcpy (variable->defstring, oldstr);
 	variable->value = atof (variable->string);
 	variable->integer = (int) variable->value;
 
 // link the variable in
 // alphanumerical order
-	for( cvar = NULL, cvar2 = cvar_vars ; cvar2 && strcmp( cvar2->name, variable->name ) < 0 ; cvar = cvar2, cvar2 = cvar->next )
+	for( current = NULL, next = cvar_vars ; next && strcmp( next->name, variable->name ) < 0 ; current = next, next = next->next )
 		;
-	if( cvar ) {
-		cvar->next = variable;
+	if( current ) {
+		current->next = variable;
 	} else {
 		cvar_vars = variable;
 	}
-	variable->next = cvar2;
+	variable->next = next;
 }
 
 /*
@@ -360,6 +378,15 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags)
 	{
 		cvar->flags |= flags;
 		Cvar_SetQuick_Internal (cvar, value);
+		// also set the default value (but only once)
+		if (~cvar->flags & CVAR_DEFAULTSET) 
+		{
+			cvar->flags |= CVAR_DEFAULTSET;
+
+			Z_Free(cvar->defstring);
+			cvar->defstring = Z_Malloc(strlen(value) + 1);
+			strcpy(cvar->defstring, value);
+		}
 		return cvar;
 	}
 
@@ -373,11 +400,13 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags)
 // allocate a new cvar, cvar name, and cvar string
 // FIXME: these never get Z_Free'd
 	cvar = Z_Malloc(sizeof(cvar_t));
-	cvar->flags = flags | CVAR_ALLOCATED;
+	cvar->flags = flags | CVAR_ALLOCATED | CVAR_DEFAULTSET;
 	cvar->name = Z_Malloc(strlen(name)+1);
 	strcpy(cvar->name, name);
 	cvar->string = Z_Malloc(strlen(value)+1);
 	strcpy(cvar->string, value);
+	cvar->defstring = Z_Malloc(strlen(value)+1);
+	strcpy(cvar->defstring, value);
 	cvar->value = atof (cvar->string);
 	cvar->integer = (int) cvar->value;
 
@@ -407,7 +436,7 @@ qboolean	Cvar_Command (void)
 // perform a variable print or set
 	if (Cmd_Argc() == 1)
 	{
-		Con_Printf("\"%s\" is \"%s\"\n", v->name, v->string);
+		Con_Printf("\"%s\" is \"%s\" [\"%s\"]\n", v->name, v->string, v->defstring);
 		return true;
 	}
 
@@ -471,7 +500,7 @@ void Cvar_List_f (void)
 		if (partial && strncasecmp (partial,cvar->name,len))
 			continue;
 
-		Con_Printf("%s is \"%s\"\n", cvar->name, cvar->string);
+		Con_Printf("%s is \"%s\" [\"%s\"]\n", cvar->name, cvar->string, cvar->defstring);
 		count++;
 	}
 

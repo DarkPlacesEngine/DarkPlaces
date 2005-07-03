@@ -124,6 +124,13 @@ PRVM_PrintStatement
 void PRVM_PrintStatement (dstatement_t *s)
 {
 	int		i;
+	
+	if( prog->statement_linenums ) {
+		int opnum;
+
+		opnum = s - prog->statements;
+		Con_Printf( "%s:%i: ", PRVM_GetString( prog->xfunction->s_file ), prog->statement_linenums[ opnum ] );
+	}
 
 	if ( (unsigned)s->op < sizeof(prvm_opnames)/sizeof(prvm_opnames[0]))
 	{

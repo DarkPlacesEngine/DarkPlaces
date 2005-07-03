@@ -524,7 +524,7 @@ void VM_cvar_string(void)
 	name = PRVM_G_STRING(OFS_PARM0);
 
 	if(!name)
-		PRVM_ERROR("VM_str_cvar: %s: null string\n", PRVM_NAME);
+		PRVM_ERROR("VM_cvar_string: %s: null string\n", PRVM_NAME);
 
 	VM_CheckEmptyString(name);
 
@@ -537,6 +537,36 @@ void VM_cvar_string(void)
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(out);
 }
 
+
+/*
+========================
+VM_cvar_defstring
+
+const string	VM_cvar_defstring (string)
+========================
+*/
+void VM_cvar_defstring (void) 
+{
+	char *out;
+	const char *name;
+	const char *cvar_string;
+	VM_SAFEPARMCOUNT(1,VM_cvar_string);
+
+	name = PRVM_G_STRING(OFS_PARM0);
+
+	if(!name)
+		PRVM_ERROR("VM_cvar_defstring: %s: null string\n", PRVM_NAME);
+
+	VM_CheckEmptyString(name);
+
+	out = VM_GetTempString();
+
+	cvar_string = Cvar_VariableDefString(name);
+
+	strcpy(out, cvar_string);
+
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(out);
+}
 /*
 =================
 VM_cvar_set
@@ -836,7 +866,6 @@ VM_findchain
 entity	findchain(.string field, string match)
 =========
 */
-int PRVM_ED_FindFieldOffset(const char *field);
 // chained search for strings in entity fields
 // entity(.string field, string match) findchain = #402;
 void VM_findchain (void)
@@ -921,6 +950,88 @@ void VM_findchainfloat (void)
 		if (ent->priv.required->free)
 			continue;
 		if (PRVM_E_FLOAT(ent,f) != s)
+			continue;
+
+		PRVM_E_INT(ent,chain_of) = PRVM_EDICT_TO_PROG(chain);
+		chain = ent;
+	}
+
+	VM_RETURN_EDICT(chain);
+}
+
+/*
+========================
+VM_findflags
+
+entity	findflags(entity start, .float field, float match)
+========================
+*/
+// LordHavoc: search for flags in float fields
+void VM_findflags (void)
+{
+	int		e;
+	int		f;
+	int		s;
+	prvm_edict_t	*ed;
+
+	VM_SAFEPARMCOUNT(3, VM_findflags);
+
+
+	e = PRVM_G_EDICTNUM(OFS_PARM0);
+	f = PRVM_G_INT(OFS_PARM1);
+	s = (int)PRVM_G_FLOAT(OFS_PARM2);
+
+	for (e++ ; e < prog->num_edicts ; e++)
+	{
+		prog->xfunction->builtinsprofile++;
+		ed = PRVM_EDICT_NUM(e);
+		if (ed->priv.required->free)
+			continue;
+		if ((int)PRVM_E_FLOAT(ed,f) & s)
+		{
+			VM_RETURN_EDICT(ed);
+			return;
+		}
+	}
+
+	VM_RETURN_EDICT(prog->edicts);
+}
+
+/*
+========================
+VM_findchainflags
+
+entity	findchainflags(.float field, float match)
+========================
+*/
+// LordHavoc: chained search for flags in float fields
+void VM_findchainflags (void)
+{
+	int		i;
+	int		f;
+	int		s;
+	int		chain_of;
+	prvm_edict_t	*ent, *chain;
+
+	VM_SAFEPARMCOUNT(2, VM_findchainflags);
+
+	if(!prog->flag & PRVM_FE_CHAIN)
+		PRVM_ERROR("VM_findchainflags: %s doesnt have a chain field !\n", PRVM_NAME);
+
+	chain_of = PRVM_ED_FindField("chain")->ofs;
+
+	chain = (prvm_edict_t *)prog->edicts;
+
+	f = PRVM_G_INT(OFS_PARM0);
+	s = (int)PRVM_G_FLOAT(OFS_PARM1);
+
+	ent = PRVM_NEXT_EDICT(prog->edicts);
+	for (i = 1;i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
+	{
+		prog->xfunction->builtinsprofile++;
+		if (ent->priv.required->free)
+			continue;
+		if (!((int)PRVM_E_FLOAT(ent,f) & s))
 			continue;
 
 		PRVM_E_INT(ent,chain_of) = PRVM_EDICT_TO_PROG(chain);

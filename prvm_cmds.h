@@ -101,11 +101,18 @@ string	chr(float ascii)
 float	itof(intt ent)
 intt	ftoi(float num)
 
+-------will be removed soon----------
 float	altstr_count(string)
 string	altstr_prepare(string)
 string	altstr_get(string,float)
 string	altstr_set(string altstr, float num, string set)
 string	altstr_ins(string altstr, float num, string set)
+--------------------------------------
+
+entity	findflags(entity start, .float field, float match)
+entity	findchainflags(.float field, float match)
+
+const string	VM_cvar_defstring (string)
 
 perhaps only : Menu : WriteMsg
 ===============================
@@ -219,6 +226,7 @@ void VM_break (void);
 void VM_localcmd (void);
 void VM_cvar (void);
 void VM_cvar_string(void);
+void VM_cvar_defstring (void);
 void VM_cvar_set (void);
 void VM_dprint (void);
 void VM_ftos (void);
@@ -234,6 +242,8 @@ void VM_find (void);
 void VM_findfloat (void);
 void VM_findchain (void);
 void VM_findchainfloat (void);
+void VM_findflags (void);
+void VM_findchainflags (void);
 void VM_precache_file (void);
 void VM_precache_error (void);
 void VM_precache_sound (void);
@@ -248,17 +258,6 @@ void VM_rint (void);
 void VM_floor (void);
 void VM_ceil (void);
 void VM_nextent (void);
-
-// REMOVE THESE
-sizebuf_t *VM_WriteDest (void);
-void VM_WriteByte (void);
-void VM_WriteChar (void);
-void VM_WriteShort (void);
-void VM_WriteLong (void);
-void VM_WriteAngle (void);
-void VM_WriteCoord (void);
-void VM_WriteString (void);
-void VM_WriteEntity (void);
 
 void VM_changelevel (void);
 void VM_sin (void);

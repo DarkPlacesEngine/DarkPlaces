@@ -194,7 +194,7 @@
 					prog->xfunction->profile += profile - startprofile;
 					startprofile = profile;
 					prog->xstatement = st - prog->statements;
-					Host_Error("assignment to world entity in %s", PRVM_NAME);
+					PRVM_ERROR("forbidden assignment to null/world entity in %s", PRVM_NAME);
 					return;
 				}
 				ed = PRVM_PROG_TO_EDICT(OPA->edict);

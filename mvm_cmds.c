@@ -900,8 +900,11 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_altstr_prepare,
 	VM_altstr_get,
 	VM_altstr_set,
-	VM_altstr_ins,	// 86
-	0,0,0,0,	// 90
+	VM_altstr_ins,
+	VM_findflags,
+	VM_findchainflags,
+	VM_cvar_defstring, // 89
+	0, // 90
 	e10,			// 100
 	e100,			// 200
 	e100,			// 300

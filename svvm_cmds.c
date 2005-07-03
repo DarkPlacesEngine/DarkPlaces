@@ -739,63 +739,6 @@ void PF_findradius (void)
 	VM_RETURN_EDICT(chain);
 }
 
-// LordHavoc: search for flags in float fields
-void PF_findflags (void)
-{
-	int		e;
-	int		f;
-	int		s;
-	prvm_edict_t	*ed;
-
-	e = PRVM_G_EDICTNUM(OFS_PARM0);
-	f = PRVM_G_INT(OFS_PARM1);
-	s = (int)PRVM_G_FLOAT(OFS_PARM2);
-
-	for (e++ ; e < prog->num_edicts ; e++)
-	{
-		prog->xfunction->builtinsprofile++;
-		ed = PRVM_EDICT_NUM(e);
-		if (ed->priv.server->free)
-			continue;
-		if ((int)PRVM_E_FLOAT(ed,f) & s)
-		{
-			VM_RETURN_EDICT(ed);
-			return;
-		}
-	}
-
-	VM_RETURN_EDICT(prog->edicts);
-}
-
-// LordHavoc: chained search for flags in float fields
-void PF_findchainflags (void)
-{
-	int		i;
-	int		f;
-	int		s;
-	prvm_edict_t	*ent, *chain;
-
-	chain = (prvm_edict_t *)prog->edicts;
-
-	f = PRVM_G_INT(OFS_PARM0);
-	s = (int)PRVM_G_FLOAT(OFS_PARM1);
-
-	ent = PRVM_NEXT_EDICT(prog->edicts);
-	for (i = 1;i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
-	{
-		prog->xfunction->builtinsprofile++;
-		if (ent->priv.server->free)
-			continue;
-		if (!((int)PRVM_E_FLOAT(ent,f) & s))
-			continue;
-
-		ent->fields.server->chain = PRVM_EDICT_TO_PROG(chain);
-		chain = ent;
-	}
-
-	VM_RETURN_EDICT(chain);
-}
-
 void PF_precache_file (void)
 {	// precache_file is only used to copy files with qcc, it does nothing
 	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
@@ -2513,8 +2456,8 @@ VM_search_end,				// #445 void(float handle) search_end (DP_FS_SEARCH)
 VM_search_getsize,			// #446 float(float handle) search_getsize (DP_FS_SEARCH)
 VM_search_getfilename,		// #447 string(float handle, float num) search_getfilename (DP_FS_SEARCH)
 VM_cvar_string,				// #448 string(string s) cvar_string (DP_QC_CVAR_STRING)
-PF_findflags,				// #449 entity(entity start, .float fld, float match) findflags (DP_QC_FINDFLAGS)
-PF_findchainflags,			// #450 entity(.float fld, float match) findchainflags (DP_QC_FINDCHAINFLAGS)
+VM_findflags,				// #449 entity(entity start, .float fld, float match) findflags (DP_QC_FINDFLAGS)
+VM_findchainflags,			// #450 entity(.float fld, float match) findchainflags (DP_QC_FINDCHAINFLAGS)
 PF_gettagindex,				// #451 float(entity ent, string tagname) gettagindex (DP_QC_GETTAGINFO)
 PF_gettaginfo,				// #452 vector(entity ent, float tagindex) gettaginfo (DP_QC_GETTAGINFO)
 PF_dropclient,				// #453 void(entity clent) dropclient (DP_SV_DROPCLIENT)
