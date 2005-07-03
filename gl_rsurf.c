@@ -792,7 +792,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolor, int numsurfaces,
 				vec3_t lightcolorpants, lightcolorshirt;
 				// 128-224 are backwards ranges
 				int b = (ent->colormap & 0xF) << 4;b += (b >= 128 && b < 224) ? 4 : 12;
-				if (texture->skin.pants && b >= 224)
+				if (texture->skin.pants && b < 224)
 				{
 					qbyte *bcolor = (qbyte *) (&palette_complete[b]);
 					lightcolorpants[0] = lightcolor[0] * bcolor[0] * (1.0f / 255.0f);
@@ -803,7 +803,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolor, int numsurfaces,
 					VectorClear(lightcolorpants);
 				// 128-224 are backwards ranges
 				b = (ent->colormap & 0xF0);b += (b >= 128 && b < 224) ? 4 : 12;
-				if (texture->skin.shirt && b >= 224)
+				if (texture->skin.shirt && b < 224)
 				{
 					qbyte *bcolor = (qbyte *) (&palette_complete[b]);
 					lightcolorshirt[0] = lightcolor[0] * bcolor[0] * (1.0f / 255.0f);
