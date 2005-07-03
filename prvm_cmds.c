@@ -564,7 +564,11 @@ void VM_dprint (void)
 	if (developer.integer)
 	{
 		VM_VarString(0, string, sizeof(string));
+#if 1
+		Con_Printf("%s", string);
+#else
 		Con_Printf("%s: %s", PRVM_NAME, string);
+#endif
 	}
 }
 
@@ -849,7 +853,7 @@ void VM_findchain (void)
 	if(!prog->flag & PRVM_FE_CHAIN)
 		PRVM_ERROR("VM_findchain: %s doesnt have a chain field !\n", PRVM_NAME);
 
-	chain_of = PRVM_ED_FindFieldOffset ("chain");
+	chain_of = PRVM_ED_FindField("chain")->ofs;
 
 	chain = prog->edicts;
 
@@ -903,7 +907,7 @@ void VM_findchainfloat (void)
 	if(!prog->flag & PRVM_FE_CHAIN)
 		PRVM_ERROR("VM_findchainfloat: %s doesnt have a chain field !\n", PRVM_NAME);
 
-	chain_of = PRVM_ED_FindFieldOffset ("chain");
+	chain_of = PRVM_ED_FindField("chain")->ofs;
 
 	chain = (prvm_edict_t *)prog->edicts;
 
