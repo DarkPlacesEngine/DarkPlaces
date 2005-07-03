@@ -64,6 +64,7 @@ interface from being ambiguous.
 // used to determine if flags is valid
 #define CVAR_MAXFLAGSVAL 7
 // for internal use only!
+#define CVAR_DEFAULTSET (1<<30)
 #define CVAR_ALLOCATED (1<<31)
 
 /*
@@ -104,11 +105,16 @@ menucvar_t;
 typedef struct cvar_s
 {
 	int flags;
+
 	char *name;
+
 	char *string;
 	int integer;
 	float value;
 	float vector[3];
+
+	char *defstring;
+
 	//menucvar_t menuinfo;
 	struct cvar_s *next;
 } cvar_t;
@@ -139,6 +145,9 @@ float Cvar_VariableValue (const char *var_name);
 // returns 0 if not defined or non numeric
 
 const char *Cvar_VariableString (const char *var_name);
+// returns an empty string if not defined
+
+const char *Cvar_VariableDefString (const char *var_name);
 // returns an empty string if not defined
 
 const char *Cvar_CompleteVariable (const char *partial);

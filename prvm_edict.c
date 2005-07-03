@@ -1283,7 +1283,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	}
 
 	prog->progs = (dprograms_t *)FS_LoadFile (filename, prog->progs_mempool, false);
-	if (prog->progs == NULL)
+	if (prog->progs == NULL || fs_filesize < sizeof(dprograms_t))
 		PRVM_ERROR ("PRVM_LoadProgs: couldn't load %s for %s", filename, PRVM_NAME);
 
 	Con_DPrintf("%s programs occupy %iK.\n", PRVM_NAME, fs_filesize/1024);
@@ -1493,7 +1493,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 		}
 	}
 
-	PRVM_LoadLNO( filename );
+	PRVM_LoadLNO(filename);
 
 	PRVM_Init_Exec();
 
