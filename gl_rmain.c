@@ -105,7 +105,7 @@ cvar_t r_bloom_blur = {CVAR_SAVE, "r_bloom_blur", "8"};
 cvar_t r_bloom_resolution = {CVAR_SAVE, "r_bloom_resolution", "320"};
 cvar_t r_bloom_power = {CVAR_SAVE, "r_bloom_power", "4"};
 
-cvar_t developer_texturelogging = {0, "developer_texturelogging", "1"};
+cvar_t developer_texturelogging = {0, "developer_texturelogging", "0"};
 
 cvar_t gl_lightmaps = {0, "gl_lightmaps", "0"};
 
