@@ -951,6 +951,13 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 	IN_StartupMouse ();
 	IN_StartupJoystick ();
 
+	if (gl_videosyncavailable)
+	{
+		vid_usevsync = vid_vsync.integer;
+		vid_usingvsync = vid_vsync.integer;
+		qwglSwapIntervalEXT (vid_usevsync);
+	}
+
 	return true;
 }
 
