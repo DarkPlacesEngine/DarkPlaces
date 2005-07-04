@@ -3130,6 +3130,8 @@ rtexture_t *R_Shadow_Cubemap(const char *basename)
 	numcubemaps++;
 	strcpy(cubemaps[i].basename, basename);
 	cubemaps[i].texture = R_Shadow_LoadCubemap(cubemaps[i].basename);
+	if (!cubemaps[i].texture)
+		cubemaps[i].texture = r_texture_whitecube;
 	return cubemaps[i].texture;
 }
 
