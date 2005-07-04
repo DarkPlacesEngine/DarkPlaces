@@ -839,7 +839,7 @@ Key_Event (int key, char ascii, qboolean down)
 		// key_menu - go to parent menu (or key_game)
 		// key_game - open menu
 		// in all modes shift-escape toggles console
-		if (key_consoleactive || keydown[K_SHIFT])
+		if ((key_consoleactive & KEY_CONSOLEACTIVE_USER) || keydown[K_SHIFT])
 		{
 			Con_ToggleConsole_f ();
 			return;
