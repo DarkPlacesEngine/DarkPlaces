@@ -1880,7 +1880,7 @@ void SV_VM_CB_InitEdict(prvm_edict_t *e)
 		e->fields.server->colormap = num + 1;
 		e->fields.server->team = (svs.clients[num].colors & 15) + 1;
 		// set netname/clientcolors back to client values so that
-		// DP_SV_CLIENTNAME and DPV_SV_CLIENTCOLORS will not immediately
+		// DP_SV_CLIENTNAME and DP_SV_CLIENTCOLORS will not immediately
 		// reset them
 		e->fields.server->netname = PRVM_SetEngineString(svs.clients[num].name);
 		if ((val = PRVM_GETEDICTFIELDVALUE(e, eval_clientcolors)))
