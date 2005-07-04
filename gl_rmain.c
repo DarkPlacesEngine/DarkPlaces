@@ -579,7 +579,6 @@ void Render_Init(void)
 {
 	gl_backend_init();
 	R_Textures_Init();
-	Mod_RenderInit();
 	R_MeshQueue_Init();
 	GL_Main_Init();
 	GL_Draw_Init();
@@ -593,6 +592,7 @@ void Render_Init(void)
 	UI_Init();
 	Sbar_Init();
 	R_LightningBeams_Init();
+	Mod_RenderInit();
 }
 
 /*
