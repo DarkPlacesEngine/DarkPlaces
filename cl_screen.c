@@ -1087,7 +1087,7 @@ void SCR_CaptureVideo_SoundFrame(qbyte *bufstereo16le, size_t length, int rate)
 	if (!cl_capturevideo_soundfile)
 		return;
 	cl_capturevideo_soundrate = rate;
-	if (FS_Write (cl_capturevideo_soundfile, bufstereo16le, 4 * length) < 4 * length)
+	if (FS_Write (cl_capturevideo_soundfile, bufstereo16le, 4 * length) < (fs_offset_t)(4 * length))
 	{
 		Cvar_SetValueQuick(&cl_capturevideo, 0);
 		Con_Printf("video sound saving failed on frame %i, out of disk space? stopping video capture.\n", cl_capturevideo_frame);
