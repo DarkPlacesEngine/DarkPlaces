@@ -98,11 +98,11 @@ typedef struct mempool_s
 	// POOLFLAG_*
 	int flags;
 	// total memory allocated in this pool (inside memheaders)
-	int totalsize;
+	size_t totalsize;
 	// total memory allocated in this pool (actual malloc total)
-	int realsize;
+	size_t realsize;
 	// updated each time the pool is displayed by memlist, shows change from previous time (unless pool was freed)
-	int lastchecksize;
+	size_t lastchecksize;
 	// name of the pool
 	char name[POOLNAMESIZE];
 	// linked into global mempool list
