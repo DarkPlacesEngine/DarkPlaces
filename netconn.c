@@ -208,10 +208,10 @@ static qboolean _ServerList_CompareStr( const char *A, serverlist_maskop_t op, c
 {
 	int i;
 	char bufferA[ 256 ], bufferB[ 256 ]; // should be more than enough
-	for (i = 0;i < sizeof(bufferA)-1 && A[i];i++)
+	for (i = 0;i < (int)sizeof(bufferA)-1 && A[i];i++)
 		bufferA[i] = (A[i] >= 'A' && A[i] <= 'Z') ? (A[i] + 'a' - 'A') : A[i];
 	bufferA[i] = 0;
-	for (i = 0;i < sizeof(bufferB)-1 && B[i];i++)
+	for (i = 0;i < (int)sizeof(bufferB)-1 && B[i];i++)
 		bufferB[i] = (B[i] >= 'A' && B[i] <= 'Z') ? (B[i] + 'a' - 'A') : B[i];
 	bufferB[i] = 0;
 
@@ -887,7 +887,7 @@ int NetConn_ReceivedMessage(netconn_t *conn, qbyte *data, int length)
 					conn->lastMessageTime = realtime;
 					conn->timeout = realtime + net_messagetimeout.value;
 					conn->receiveSequence++;
-					if( conn->receiveMessageLength + length <= sizeof( conn->receiveMessage ) ) {
+					if( conn->receiveMessageLength + length <= (int)sizeof( conn->receiveMessage ) ) {
 						memcpy(conn->receiveMessage + conn->receiveMessageLength, data, length);
 						conn->receiveMessageLength += length;
 					} else {

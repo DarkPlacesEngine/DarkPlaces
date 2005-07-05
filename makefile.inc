@@ -134,7 +134,7 @@ OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o $(OBJ_SND_COMMON) snd_sdl.o cd_sdl.o $(
 
 # Compilation
 # CFLAGS_COMMON=-MD -Wall -Werror
-CFLAGS_COMMON=-MD -Wall
+CFLAGS_COMMON=-MD -Wall -Wsign-compare
 CFLAGS_DEBUG=-ggdb
 CFLAGS_PROFILE=-g -pg -ggdb
 CFLAGS_RELEASE=

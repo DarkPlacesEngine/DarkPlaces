@@ -870,7 +870,7 @@ returns false if error
 */
 qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s)
 {
-	size_t i, l;
+	int i, l;
 	char *new_p;
 	ddef_t *def;
 	prvm_eval_t *val;
@@ -883,7 +883,7 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s)
 	switch (key->type & ~DEF_SAVEGLOBAL)
 	{
 	case ev_string:
-		l = strlen(s) + 1;
+		l = (int)strlen(s) + 1;
 		val->string = PRVM_AllocString(l, &new_p);
 		for (i = 0;i < l;i++)
 		{
@@ -926,7 +926,7 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s)
 	case ev_entity:
 		while (*s && *s <= ' ')
 			s++;
-		i = (unsigned int)atoi(s);
+		i = atoi(s);
 		if (i >= prog->limit_edicts)
 			Con_Printf("PRVM_ED_ParseEpair: ev_entity reference too large (edict %u >= MAX_EDICTS %u) on %s\n", (unsigned int)i, (unsigned int)MAX_EDICTS, PRVM_NAME);
 		while (i >= prog->max_edicts)
@@ -935,7 +935,7 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s)
 		// if SV_IncreaseEdicts was called the base pointer needs to be updated
 		if (ent)
 			val = (prvm_eval_t *)((int *)ent->fields.vp + key->ofs);
-		val->edict = PRVM_EDICT_TO_PROG(PRVM_EDICT_NUM(i));
+		val->edict = PRVM_EDICT_TO_PROG(PRVM_EDICT_NUM((int)i));
 		break;
 
 	case ev_field:
@@ -1306,7 +1306,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	prog->stringssize = 0;
 	for (i = 0;i < prog->progs->numstrings;i++)
 	{
-		if (prog->progs->ofs_strings + prog->stringssize >= fs_filesize)
+		if (prog->progs->ofs_strings + prog->stringssize >= (int)fs_filesize)
 			PRVM_ERROR ("%s: %s strings go past end of file\n", PRVM_NAME, filename);
 		prog->stringssize += (int)strlen (prog->strings + prog->stringssize) + 1;
 	}

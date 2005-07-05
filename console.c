@@ -571,7 +571,7 @@ void Con_Print(const char *msg)
 			}
 			// store timestamp
 			for (;*timestamp;index++, timestamp++)
-				if (index < sizeof(line) - 2)
+				if (index < (int)sizeof(line) - 2)
 					line[index] = *timestamp;
 		}
 		// append the character

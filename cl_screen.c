@@ -117,7 +117,7 @@ void DrawQ_ColoredString( float x, float y, const char *text, int maxlen, float 
 				do {
 					colorindex = colorindex * 10 + (*current - '0');
 					// only read as long as it makes a valid index
-					if( colorindex >= STRING_COLORS_COUNT ) {
+					if( colorindex >= (int)STRING_COLORS_COUNT ) {
 						// undo the last operation
 						colorindex /= 10;
 						break;
@@ -943,7 +943,7 @@ void SCR_CaptureVideo_EndVideo(void)
 	// finish the wave file
 	if (cl_capturevideo_soundfile)
 	{
-		i = FS_Tell (cl_capturevideo_soundfile);
+		i = (int)FS_Tell (cl_capturevideo_soundfile);
 		//"RIFF", (int) unknown (chunk size), "WAVE",
 		//"fmt ", (int) 16 (chunk size), (short) format 1 (uncompressed PCM), (short) 2 channels, (int) unknown rate, (int) unknown bytes per second, (short) 4 bytes per sample (channels * bytes per channel), (short) 16 bits per channel
 		//"data", (int) unknown (chunk size)

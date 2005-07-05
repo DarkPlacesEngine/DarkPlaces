@@ -1024,7 +1024,7 @@ void Host_Tell_f(void)
 	text[j++] = 0;
 
 	save = host_client;
-	for (j = 0, host_client = svs.clients;j < svs.maxclients;j++, host_client++)
+	for (j = 0, host_client = svs.clients;j < (size_t)svs.maxclients;j++, host_client++)
 		if (host_client->spawned && !strcasecmp(host_client->name, Cmd_Argv(1)))
 			SV_ClientPrint(text);
 	host_client = save;
