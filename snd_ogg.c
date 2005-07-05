@@ -492,7 +492,7 @@ static const sfxbuffer_t* OGG_FetchSound (channel_t* ch, unsigned int start, uns
 		done += ret;
 
 	// Resample in the sfxbuffer
-	newlength = ResampleSfx (resampling_buffer, (size_t)done / (size_t)factor, &per_sfx->format, sb->data + sb->length * factor, sfx->name);
+	newlength = ResampleSfx (resampling_buffer, (size_t)done / (size_t)factor, &per_sfx->format, sb->data + sb->length * (size_t)factor, sfx->name);
 	sb->length += newlength;
 
 	return sb;
