@@ -113,7 +113,7 @@ int hz_bitstream_read_blocks_read(hz_bitstream_readblocks_t *blocks, hz_bitstrea
 		else
 			b->size = s;
 		s -= b->size;
-		if (FS_Read(stream->file, b->data, b->size) != b->size)
+		if (FS_Read(stream->file, b->data, b->size) != (fs_offset_t)b->size)
 		{
 			stream->endoffile = 1;
 			break;
