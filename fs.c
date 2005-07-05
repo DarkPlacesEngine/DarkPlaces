@@ -1483,13 +1483,13 @@ fs_offset_t FS_Write (qfile_t* file, const void* data, size_t datasize)
 
 	// If necessary, seek to the exact file position we're supposed to be
 	if (file->buff_ind != file->buff_len)
-		lseek (file->handle, file->buff_ind - file->buff_len, SEEK_CUR);
+		lseek (file->handle, (fs_offset_t)(file->buff_ind - file->buff_len), SEEK_CUR);
 
 	// Purge cached data
 	FS_Purge (file);
 
 	// Write the buffer and update the position
-	result = write (file->handle, data, datasize);
+	result = write (file->handle, data, (fs_offset_t)datasize);
 	file->position = lseek (file->handle, 0, SEEK_CUR);
 	if (file->real_length < file->position)
 		file->real_length = file->position;
@@ -1529,7 +1529,7 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 	// First, we copy as many bytes as we can from "buff"
 	if (file->buff_ind < file->buff_len)
 	{
-		count = file->buff_len - file->buff_ind;
+		count = (fs_offset_t)(file->buff_len - file->buff_ind);
 
 		done += ((fs_offset_t)buffersize > count) ? count : (fs_offset_t)buffersize;
 		memcpy (buffer, &file->buff[file->buff_ind], done);
@@ -1578,7 +1578,7 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 				file->position += nb;
 
 				// Copy the requested data in "buffer" (as much as we can)
-				count = (buffersize > file->buff_len) ? file->buff_len : buffersize;
+				count = (fs_offset_t)((buffersize > file->buff_len) ? file->buff_len : buffersize);
 				memcpy (&((qbyte*)buffer)[done], file->buff, count);
 				file->buff_ind = count;
 				done += count;
@@ -1604,11 +1604,11 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 			if (file->position == file->real_length)
 				return done;
 
-			count = ztk->comp_length - ztk->in_position;
+			count = (fs_offset_t)(ztk->comp_length - ztk->in_position);
 			if (count > (fs_offset_t)sizeof (ztk->input))
 				count = (fs_offset_t)sizeof (ztk->input);
-			lseek (file->handle, file->offset + ztk->in_position, SEEK_SET);
-			if (read (file->handle, ztk->input, count) != (fs_offset_t)count)
+			lseek (file->handle, file->offset + (fs_offset_t)ztk->in_position, SEEK_SET);
+			if (read (file->handle, ztk->input, count) != count)
 			{
 				Con_Printf ("FS_Read: unexpected end of file");
 				break;
@@ -1639,10 +1639,10 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 			ztk->in_ind = ztk->in_len - ztk->zstream.avail_in;
 
 			file->buff_len = sizeof (file->buff) - ztk->zstream.avail_out;
-			file->position += file->buff_len;
+			file->position += (fs_offset_t)file->buff_len;
 
 			// Copy the requested data in "buffer" (as much as we can)
-			count = (buffersize > file->buff_len) ? file->buff_len : buffersize;
+			count = (fs_offset_t)((buffersize > file->buff_len) ? file->buff_len : buffersize);
 			memcpy (&((qbyte*)buffer)[done], file->buff, count);
 			file->buff_ind = count;
 		}
@@ -1661,7 +1661,7 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 			ztk->in_ind = ztk->in_len - ztk->zstream.avail_in;
 
 			// How much data did it inflate?
-			count = buffersize - ztk->zstream.avail_out;
+			count = (fs_offset_t)(buffersize - ztk->zstream.avail_out);
 			file->position += count;
 
 			// Purge cached data
@@ -1880,7 +1880,7 @@ Give the current position in a file
 */
 fs_offset_t FS_Tell (qfile_t* file)
 {
-	return file->position - file->buff_len + file->buff_ind;
+	return file->position - (fs_offset_t)(file->buff_len + file->buff_ind);
 }
 
 

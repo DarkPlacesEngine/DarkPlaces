@@ -110,7 +110,7 @@ static void SV_SaveEntFile_f(void)
 		return;
 	}
 	FS_StripExtension(sv.worldmodel->name, basename, sizeof(basename));
-	FS_WriteFile(va("%s.ent", basename), sv.worldmodel->brush.entities, strlen(sv.worldmodel->brush.entities));
+	FS_WriteFile(va("%s.ent", basename), sv.worldmodel->brush.entities, (fs_offset_t)strlen(sv.worldmodel->brush.entities));
 }
 
 
