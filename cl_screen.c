@@ -61,7 +61,7 @@ static vec4_t string_colors[] =
 	{1.0, 1.0, 1.0, 1.0}, // white
 	// [515]'s BX_COLOREDTEXT extension
 	{1.0, 1.0, 1.0, 0.5}, // half transparent
-	{0.5, 0.5, 0.5, 1.0}  // half brightness	
+	{0.5, 0.5, 0.5, 1.0}  // half brightness
 	// Black's color table
 	//{1.0, 1.0, 1.0, 1.0},
 	//{1.0, 0.0, 0.0, 1.0},
@@ -91,9 +91,9 @@ void DrawQ_ColoredString( float x, float y, const char *text, int maxlen, float 
 	color = string_colors[colorindex];
 
 	if( maxlen < 1)
-		len = strlen( text );
+		len = (int)strlen( text );
 	else
-		len = min( maxlen, (signed) strlen( text ) );
+		len = min( maxlen, (int) strlen( text ) );
 
 	start = current = text;
 	while( len > 0 ) {
@@ -127,7 +127,7 @@ void DrawQ_ColoredString( float x, float y, const char *text, int maxlen, float 
 				} while( len > 0 && '0' <= *current && *current <= '9' );
 				// set the color
 				color = string_colors[colorindex];
-				// we jump over the color tag 
+				// we jump over the color tag
 				start = current;
 			}
 		}
@@ -433,7 +433,7 @@ void R_TimeReport(char *desc)
 	t = (int) ((r_timereport_current - r_timereport_temp) * 1000000.0);
 
 	dpsnprintf(tempbuf, sizeof(tempbuf), "%8i %s", t, desc);
-	length = strlen(tempbuf);
+	length = (int)strlen(tempbuf);
 	while (length < 20)
 		tempbuf[length++] = ' ';
 	tempbuf[length] = 0;
@@ -610,7 +610,7 @@ void DrawQ_String_Real(float x, float y, const char *string, int maxlen, float s
 	if (alpha < (1.0f / 255.0f))
 		return;
 	if (maxlen < 1)
-		len = strlen(string);
+		len = (int)strlen(string);
 	else
 		for (len = 0;len < maxlen && string[len];len++);
 	for (;len > 0 && string[0] == ' ';string++, x += scalex, len--);

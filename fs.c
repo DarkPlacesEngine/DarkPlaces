@@ -258,7 +258,7 @@ VARIABLES
 
 mempool_t *fs_mempool;
 
-int fs_filesize;
+size_t fs_filesize;
 
 pack_t *packlist = NULL;
 
@@ -433,7 +433,7 @@ int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 {
 	qbyte *central_dir, *ptr;
 	unsigned int ind;
-	int remaining;
+	size_t remaining;
 
 	// Load the central directory in memory
 	central_dir = Mem_Alloc (tempmempool, eocd->cdir_size);
@@ -475,7 +475,7 @@ int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 		if ((ptr[8] & 0x29) == 0 && (ptr[38] & 0x18) == 0)
 		{
 			// Still enough bytes for the name?
-			if ((size_t) remaining < namesize || namesize >= sizeof (*pack->files))
+			if (remaining < namesize || namesize >= sizeof (*pack->files))
 			{
 				Mem_Free (central_dir);
 				return -1;
@@ -958,7 +958,7 @@ void FS_Init (void)
 	if (i && i < com_argc-1)
 	{
 		strlcpy (fs_basedir, com_argv[i+1], sizeof (fs_basedir));
-		i = strlen (fs_basedir);
+		i = (int)strlen (fs_basedir);
 		if (i > 0 && (fs_basedir[i-1] == '\\' || fs_basedir[i-1] == '/'))
 			fs_basedir[i-1] = 0;
 	}
@@ -1157,7 +1157,7 @@ qfile_t *FS_OpenPackedFile (pack_t* pack, int pack_ind)
 
 	pfile = &pack->files[pack_ind];
 
-	fs_filesize = -1;
+	fs_filesize = 0;
 
 	// If we don't have the true offset, get it now
 	if (! (pfile->flags & PACKFILE_FLAG_TRUEOFFS))
@@ -1383,7 +1383,7 @@ qfile_t *FS_OpenReadFile (const char *filename, qboolean quiet, qboolean nonbloc
 	// Not found?
 	if (search == NULL)
 	{
-		fs_filesize = -1;
+		fs_filesize = 0;
 		return NULL;
 	}
 
@@ -1621,7 +1621,7 @@ size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 		}
 
 		ztk->zstream.next_in = &ztk->input[ztk->in_ind];
-		ztk->zstream.avail_in = ztk->in_len - ztk->in_ind;
+		ztk->zstream.avail_in = (unsigned int)(ztk->in_len - ztk->in_ind);
 
 		// Now that we are sure we have compressed data available, we need to determine
 		// if it's better to inflate it in "file->buff" or directly in "buffer"
@@ -1652,7 +1652,7 @@ size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 		else
 		{
 			ztk->zstream.next_out = &((qbyte*)buffer)[done];
-			ztk->zstream.avail_out = buffersize;
+			ztk->zstream.avail_out = (unsigned int)buffersize;
 			error = qz_inflate (&ztk->zstream, Z_SYNC_FLUSH);
 			if (error != Z_OK && error != Z_STREAM_END)
 			{
@@ -1793,14 +1793,14 @@ int FS_Seek (qfile_t* file, long offset, int whence)
 	switch (whence)
 	{
 		case SEEK_CUR:
-			offset += file->position - file->buff_len + file->buff_ind;
+			offset += (long)(file->position - file->buff_len + file->buff_ind);
 			break;
 
 		case SEEK_SET:
 			break;
 
 		case SEEK_END:
-			offset += file->real_length;
+			offset += (long)file->real_length;
 			break;
 
 		default:
@@ -1879,7 +1879,7 @@ FS_Tell
 Give the current position in a file
 ====================
 */
-long FS_Tell (qfile_t* file)
+size_t FS_Tell (qfile_t* file)
 {
 	return file->position - file->buff_len + file->buff_ind;
 }
@@ -2075,7 +2075,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 	fssearch_t *search;
 	searchpath_t *searchpath;
 	pack_t *pak;
-	int i, basepathlength, numfiles, numchars;
+	size_t i, basepathlength, numfiles, numchars;
 	stringlist_t *dir, *dirfile, *liststart, *listcurrent, *listtemp;
 	const char *slash, *backslash, *colon, *separator;
 	char *basepath;
@@ -2217,12 +2217,12 @@ void FS_FreeSearch(fssearch_t *search)
 extern int con_linewidth;
 int FS_ListDirectory(const char *pattern, int oneperline)
 {
-	int numfiles;
-	int numcolumns;
-	int numlines;
-	int columnwidth;
-	int linebufpos;
-	int i, j, k, l;
+	size_t numfiles;
+	size_t numcolumns;
+	size_t numlines;
+	size_t columnwidth;
+	size_t linebufpos;
+	size_t i, j, k, l;
 	const char *name;
 	char linebuf[4096];
 	fssearch_t *search;
@@ -2261,11 +2261,11 @@ int FS_ListDirectory(const char *pattern, int oneperline)
 					if (l < numfiles)
 					{
 						name = search->filenames[l];
-						for (j = 0;name[j] && j < (int)sizeof(linebuf) - 1;j++)
+						for (j = 0;name[j] && linebufpos + 1 < sizeof(linebuf);j++)
 							linebuf[linebufpos++] = name[j];
 						// space out name unless it's the last on the line
-						if (k < (numcolumns - 1) && l < (numfiles - 1))
-							for (;j < columnwidth && j < (int)sizeof(linebuf) - 1;j++)
+						if (k + 1 < numcolumns && l + 1 < numfiles)
+							for (;j < columnwidth && linebufpos + 1 < sizeof(linebuf);j++)
 								linebuf[linebufpos++] = ' ';
 					}
 				}

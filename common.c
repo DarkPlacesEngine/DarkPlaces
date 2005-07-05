@@ -171,7 +171,7 @@ static unsigned short crctable[256] =
 	0x6e17,	0x7e36,	0x4e55,	0x5e74,	0x2e93,	0x3eb2,	0x0ed1,	0x1ef0
 };
 
-unsigned short CRC_Block(const qbyte *data, int size)
+unsigned short CRC_Block(const qbyte *data, size_t size)
 {
 	unsigned short crc = CRC_INIT_VALUE;
 	while (size--)
@@ -249,7 +249,7 @@ void MSG_WriteString (sizebuf_t *sb, const char *s)
 	if (!s)
 		SZ_Write (sb, "", 1);
 	else
-		SZ_Write (sb, s, strlen(s)+1);
+		SZ_Write (sb, s, (int)strlen(s)+1);
 }
 
 void MSG_WriteCoord13i (sizebuf_t *sb, float f)
@@ -1131,7 +1131,7 @@ int COM_ReadAndTokenizeLine(const char **text, char **argv, int maxargc, char *t
 	l = *text;
 	commentprefixlength = 0;
 	if (commentprefix)
-		commentprefixlength = strlen(commentprefix);
+		commentprefixlength = (int)strlen(commentprefix);
 	while (*l && *l != '\n' && *l != '\r')
 	{
 		if (*l > ' ')

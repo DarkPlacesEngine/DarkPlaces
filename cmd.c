@@ -79,7 +79,7 @@ void Cbuf_AddText (const char *text)
 {
 	int		l;
 
-	l = strlen (text);
+	l = (int)strlen (text);
 
 	if (cmd_text.cursize + l >= cmd_text.maxsize)
 	{
@@ -87,7 +87,7 @@ void Cbuf_AddText (const char *text)
 		return;
 	}
 
-	SZ_Write (&cmd_text, text, strlen (text));
+	SZ_Write (&cmd_text, text, (int)strlen (text));
 }
 
 
@@ -412,7 +412,7 @@ static void Cmd_List_f (void)
 	if (Cmd_Argc() > 1)
 	{
 		partial = Cmd_Argv (1);
-		len = strlen(partial);
+		len = (int)strlen(partial);
 	}
 	else
 	{
@@ -555,7 +555,7 @@ static void Cmd_TokenizeString (const char *text)
 
 		if (cmd_argc < MAX_ARGS)
 		{
-			l = strlen(com_token) + 1;
+			l = (int)strlen(com_token) + 1;
 			if (cmd_tokenizebufferpos + l > CMD_TOKENIZELENGTH)
 			{
 				Con_Printf("Cmd_TokenizeString: ran out of %i character buffer space for command arguements\n", CMD_TOKENIZELENGTH);
@@ -638,7 +638,7 @@ Cmd_CompleteCommand
 const char *Cmd_CompleteCommand (const char *partial)
 {
 	cmd_function_t *cmd;
-	int len;
+	size_t len;
 
 	len = strlen(partial);
 
@@ -665,7 +665,8 @@ const char *Cmd_CompleteCommand (const char *partial)
 int Cmd_CompleteCountPossible (const char *partial)
 {
 	cmd_function_t *cmd;
-	int len, h;
+	size_t len;
+	int h;
 
 	h = 0;
 	len = strlen(partial);
@@ -693,9 +694,9 @@ int Cmd_CompleteCountPossible (const char *partial)
 const char **Cmd_CompleteBuildList (const char *partial)
 {
 	cmd_function_t *cmd;
-	int len = 0;
-	int bpos = 0;
-	int sizeofbuf = (Cmd_CompleteCountPossible (partial) + 1) * sizeof (const char *);
+	size_t len = 0;
+	size_t bpos = 0;
+	size_t sizeofbuf = (Cmd_CompleteCountPossible (partial) + 1) * sizeof (const char *);
 	const char **buf;
 
 	len = strlen(partial);
@@ -721,7 +722,7 @@ const char **Cmd_CompleteBuildList (const char *partial)
 const char *Cmd_CompleteAlias (const char *partial)
 {
 	cmdalias_t *alias;
-	int len;
+	size_t len;
 
 	len = strlen(partial);
 
@@ -748,7 +749,7 @@ const char *Cmd_CompleteAlias (const char *partial)
 int Cmd_CompleteAliasCountPossible (const char *partial)
 {
 	cmdalias_t	*alias;
-	int			len;
+	size_t		len;
 	int			h;
 
 	h = 0;
@@ -778,9 +779,9 @@ int Cmd_CompleteAliasCountPossible (const char *partial)
 const char **Cmd_CompleteAliasBuildList (const char *partial)
 {
 	cmdalias_t *alias;
-	int len = 0;
-	int bpos = 0;
-	int sizeofbuf = (Cmd_CompleteAliasCountPossible (partial) + 1) * sizeof (const char *);
+	size_t len = 0;
+	size_t bpos = 0;
+	size_t sizeofbuf = (Cmd_CompleteAliasCountPossible (partial) + 1) * sizeof (const char *);
 	const char **buf;
 
 	len = strlen(partial);
@@ -871,7 +872,7 @@ void Cmd_ForwardStringToServer (const char *s)
 	// attention, it has been eradicated from here, its only (former) use in
 	// all of darkplaces.
 	MSG_WriteByte(&cls.message, clc_stringcmd);
-	SZ_Write(&cls.message, s, strlen(s) + 1);
+	SZ_Write(&cls.message, s, (int)strlen(s) + 1);
 }
 
 /*

@@ -499,7 +499,7 @@ padded to 20 field width
 char *PRVM_GlobalString (int ofs)
 {
 	char	*s;
-	int		i;
+	size_t	i;
 	ddef_t	*def;
 	void	*val;
 	static char	line[128];
@@ -524,7 +524,7 @@ char *PRVM_GlobalString (int ofs)
 
 char *PRVM_GlobalStringNoContents (int ofs)
 {
-	int		i;
+	size_t	i;
 	ddef_t	*def;
 	static char	line[128];
 
@@ -554,7 +554,7 @@ For debugging
 // LordHavoc: changed to print out every 4096 characters (incase there are a lot of fields to print)
 void PRVM_ED_Print(prvm_edict_t *ed)
 {
-	int		l;
+	size_t	l;
 	ddef_t	*d;
 	int		*v;
 	int		i, j;
@@ -870,7 +870,7 @@ returns false if error
 */
 qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s)
 {
-	int i, l;
+	size_t i, l;
 	char *new_p;
 	ddef_t *def;
 	prvm_eval_t *val;
@@ -926,9 +926,9 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s)
 	case ev_entity:
 		while (*s && *s <= ' ')
 			s++;
-		i = atoi(s);
-		if (i < 0 || i >= prog->limit_edicts)
-			Con_Printf("PRVM_ED_ParseEpair: ev_entity reference too large (edict %i >= MAX_EDICTS %i) on %s\n", i, MAX_EDICTS, PRVM_NAME);
+		i = (unsigned int)atoi(s);
+		if (i >= prog->limit_edicts)
+			Con_Printf("PRVM_ED_ParseEpair: ev_entity reference too large (edict %u >= MAX_EDICTS %u) on %s\n", (unsigned int)i, (unsigned int)MAX_EDICTS, PRVM_NAME);
 		while (i >= prog->max_edicts)
 			PRVM_MEM_IncreaseEdicts();
 			//SV_IncreaseEdicts();
@@ -1015,7 +1015,7 @@ const char *PRVM_ED_ParseEdict (const char *data, prvm_edict_t *ent)
 	qboolean anglehack;
 	qboolean init;
 	char keyname[256];
-	int n;
+	size_t n;
 
 	init = false;
 
@@ -1308,7 +1308,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	{
 		if (prog->progs->ofs_strings + prog->stringssize >= fs_filesize)
 			PRVM_ERROR ("%s: %s strings go past end of file\n", PRVM_NAME, filename);
-		prog->stringssize += strlen (prog->strings + prog->stringssize) + 1;
+		prog->stringssize += (int)strlen (prog->strings + prog->stringssize) + 1;
 	}
 	prog->numknownstrings = 0;
 	prog->maxknownstrings = 0;
@@ -1626,7 +1626,7 @@ void PRVM_Fields_f (void)
 			name = tempstring2;
 		}
 		strcat(tempstring, name);
-		for (j = strlen(name);j < 25;j++)
+		for (j = (int)strlen(name);j < 25;j++)
 			strcat(tempstring, " ");
 		sprintf(tempstring2, "%5d", counts[i]);
 		strcat(tempstring, tempstring2);
@@ -1898,7 +1898,7 @@ int PRVM_SetEngineString(const char *s)
 	return -1 - i;
 }
 
-int PRVM_AllocString(int bufferlength, char **pointer)
+int PRVM_AllocString(size_t bufferlength, char **pointer)
 {
 	int i;
 	if (!bufferlength)

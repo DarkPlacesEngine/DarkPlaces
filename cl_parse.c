@@ -1489,7 +1489,7 @@ void CL_ParseServerMessage(void)
 				Host_Error ("svc_lightstyle >= MAX_LIGHTSTYLES");
 			strlcpy (cl_lightstyle[i].map,  MSG_ReadString(), sizeof (cl_lightstyle[i].map));
 			cl_lightstyle[i].map[MAX_STYLESTRING - 1] = 0;
-			cl_lightstyle[i].length = strlen(cl_lightstyle[i].map);
+			cl_lightstyle[i].length = (int)strlen(cl_lightstyle[i].map);
 			break;
 
 		case svc_sound:

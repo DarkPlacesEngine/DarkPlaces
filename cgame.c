@@ -72,7 +72,7 @@ static localentity_t *entspawn(void)
 static void entremove(localentity_t *e)
 {
 	int i;
-	i = (e - localentity) / sizeof(localentity_t);
+	i = (int)((e - localentity) / sizeof(localentity_t));
 	if (i < 0 || i >= MAX_LOCALENTITIES)
 		return; // this should be an error
 	//memset(e, 0, sizeof(*e));

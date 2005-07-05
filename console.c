@@ -182,7 +182,7 @@ void Log_ConPrint (const char *msg)
 		// If we need to enlarge the log queue
 		if (len > remain)
 		{
-			unsigned int factor = ((logq_ind + len) / logq_size) + 1;
+			size_t factor = ((logq_ind + len) / logq_size) + 1;
 			qbyte* newqueue;
 
 			logq_size *= factor;
@@ -693,7 +693,7 @@ void Con_DrawInput (void)
 	// use strlen of edit_line instead of key_linepos to allow editing
 	// of early characters w/o erasing
 
-	y = strlen(text);
+	y = (int)strlen(text);
 
 // fill out remainder with spaces
 	for (i = y; i < 256; i++)
@@ -851,7 +851,7 @@ void Con_DisplayList(const char **list)
 	const char **walk = list;
 
 	while (*walk) {
-		len = strlen(*walk);
+		len = (int)strlen(*walk);
 		if (len > maxlen)
 			maxlen = len;
 		walk++;
@@ -859,7 +859,7 @@ void Con_DisplayList(const char **list)
 	maxlen += 1;
 
 	while (*list) {
-		len = strlen(*list);
+		len = (int)strlen(*list);
 		if (pos + maxlen >= width) {
 			Con_Print("\n");
 			pos = 0;
@@ -909,7 +909,7 @@ void Con_CompleteCommandLine (void)
 		else
 			list[0] = Cmd_CompleteAliasBuildList(s);
 		cmd = *list[0];
-		cmd_len = strlen (cmd);
+		cmd_len = (int)strlen (cmd);
 	} else {
 		if (c)
 			cmd = *(list[0] = Cmd_CompleteBuildList(s));
@@ -918,7 +918,7 @@ void Con_CompleteCommandLine (void)
 		if (a)
 			cmd = *(list[2] = Cmd_CompleteAliasBuildList(s));
 
-		cmd_len = strlen (s);
+		cmd_len = (int)strlen (s);
 		do {
 			for (i = 0; i < 3; i++) {
 				char ch = cmd[cmd_len];

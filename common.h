@@ -62,7 +62,7 @@ void SZ_HexDumpToConsole(const sizebuf_t *buf);
 
 void Com_HexDumpToConsole(const qbyte *data, int size);
 
-unsigned short CRC_Block(const qbyte *data, int size);
+unsigned short CRC_Block(const qbyte *data, size_t size);
 
 
 //============================================================================

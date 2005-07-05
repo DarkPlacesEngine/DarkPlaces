@@ -277,7 +277,7 @@ void S_PaintChannels(int endtime)
 
 				// paint up to end
 				if (ch->end < end)
-					count = ch->end - ltime;
+					count = (int)ch->end - ltime;
 				else
 					count = end - ltime;
 

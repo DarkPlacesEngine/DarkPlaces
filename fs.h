@@ -36,7 +36,7 @@ typedef struct qfile_s qfile_t;
 extern char fs_gamedir [MAX_OSPATH];
 extern char fs_basedir [MAX_OSPATH];
 
-extern int fs_filesize;  // set by FS_Open (in "read" mode) and FS_LoadFile
+extern size_t fs_filesize;  // set by FS_Open (in "read" mode) and FS_LoadFile
 
 
 // ------ Main functions ------ //
@@ -54,7 +54,7 @@ int FS_VPrintf(qfile_t* file, const char* format, va_list ap);
 int FS_Getc (qfile_t* file);
 int FS_UnGetc (qfile_t* file, unsigned char c);
 int FS_Seek (qfile_t* file, long offset, int whence);
-long FS_Tell (qfile_t* file);
+size_t FS_Tell (qfile_t* file);
 void FS_Purge (qfile_t* file);
 
 typedef struct fssearch_s

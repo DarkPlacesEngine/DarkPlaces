@@ -3363,7 +3363,7 @@ void R_Shadow_LoadWorldLights(void)
 void R_Shadow_SaveWorldLights(void)
 {
 	dlight_t *light;
-	int bufchars, bufmaxchars;
+	size_t bufchars, bufmaxchars;
 	char *buf, *oldbuf;
 	char name[MAX_QPATH];
 	char line[1024];

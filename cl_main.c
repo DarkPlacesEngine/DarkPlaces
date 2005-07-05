@@ -331,7 +331,7 @@ static void CL_PrintEntities_f(void)
 			strlcpy (name, ent->render.model->name, 25);
 		else
 			strcpy(name, "--no model--");
-		for (j = strlen(name);j < 25;j++)
+		for (j = (int)strlen(name);j < 25;j++)
 			name[j] = ' ';
 		Con_Printf("%3i: %s:%4i (%5i %5i %5i) [%3i %3i %3i] %4.2f %5.3f\n", i, name, ent->render.frame, (int) ent->render.origin[0], (int) ent->render.origin[1], (int) ent->render.origin[2], (int) ent->render.angles[0] % 360, (int) ent->render.angles[1] % 360, (int) ent->render.angles[2] % 360, ent->render.scale, ent->render.alpha);
 	}
