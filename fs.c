@@ -154,7 +154,7 @@ struct qfile_s
 	int				ungetc;					// single stored character from ungetc, cleared to EOF when read
 
 	// Contents buffer
-	size_t			buff_ind, buff_len;		// buffer current index and length
+	fs_offset_t		buff_ind, buff_len;		// buffer current index and length
 	qbyte			buff [FILE_BUFF_SIZE];
 
 	// For zipped files
@@ -1483,7 +1483,7 @@ fs_offset_t FS_Write (qfile_t* file, const void* data, size_t datasize)
 
 	// If necessary, seek to the exact file position we're supposed to be
 	if (file->buff_ind != file->buff_len)
-		lseek (file->handle, (fs_offset_t)(file->buff_ind - file->buff_len), SEEK_CUR);
+		lseek (file->handle, file->buff_ind - file->buff_len, SEEK_CUR);
 
 	// Purge cached data
 	FS_Purge (file);
@@ -1529,7 +1529,7 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 	// First, we copy as many bytes as we can from "buff"
 	if (file->buff_ind < file->buff_len)
 	{
-		count = (fs_offset_t)(file->buff_len - file->buff_ind);
+		count = file->buff_len - file->buff_ind;
 
 		done += ((fs_offset_t)buffersize > count) ? count : (fs_offset_t)buffersize;
 		memcpy (buffer, &file->buff[file->buff_ind], done);
@@ -1545,7 +1545,7 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 	// If the file isn't compressed
 	if (! (file->flags & QFILE_FLAG_DEFLATED))
 	{
-		int nb;
+		fs_offset_t nb;
 
 		// We must take care to not read after the end of the file
 		count = file->real_length - file->position;
@@ -1578,7 +1578,7 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 				file->position += nb;
 
 				// Copy the requested data in "buffer" (as much as we can)
-				count = (fs_offset_t)((buffersize > file->buff_len) ? file->buff_len : buffersize);
+				count = (fs_offset_t)buffersize > file->buff_len ? file->buff_len : (fs_offset_t)buffersize;
 				memcpy (&((qbyte*)buffer)[done], file->buff, count);
 				file->buff_ind = count;
 				done += count;
@@ -1638,11 +1638,11 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 			}
 			ztk->in_ind = ztk->in_len - ztk->zstream.avail_in;
 
-			file->buff_len = sizeof (file->buff) - ztk->zstream.avail_out;
-			file->position += (fs_offset_t)file->buff_len;
+			file->buff_len = (fs_offset_t)sizeof (file->buff) - ztk->zstream.avail_out;
+			file->position += file->buff_len;
 
 			// Copy the requested data in "buffer" (as much as we can)
-			count = (fs_offset_t)((buffersize > file->buff_len) ? file->buff_len : buffersize);
+			count = (fs_offset_t)buffersize > file->buff_len ? file->buff_len : (fs_offset_t)buffersize;
 			memcpy (&((qbyte*)buffer)[done], file->buff, count);
 			file->buff_ind = count;
 		}
@@ -1792,14 +1792,14 @@ int FS_Seek (qfile_t* file, fs_offset_t offset, int whence)
 	switch (whence)
 	{
 		case SEEK_CUR:
-			offset += (long)(file->position - file->buff_len + file->buff_ind);
+			offset += file->position - file->buff_len + file->buff_ind;
 			break;
 
 		case SEEK_SET:
 			break;
 
 		case SEEK_END:
-			offset += (long)file->real_length;
+			offset += file->real_length;
 			break;
 
 		default:
@@ -1809,8 +1809,7 @@ int FS_Seek (qfile_t* file, fs_offset_t offset, int whence)
 		return -1;
 
 	// If we have the data in our read buffer, we don't need to actually seek
-	if (file->position - (fs_offset_t)file->buff_len <= offset
-		&& offset <= file->position)
+	if (file->position - file->buff_len <= offset && offset <= file->position)
 	{
 		file->buff_ind = offset + file->buff_len - file->position;
 		return 0;
@@ -1880,7 +1879,7 @@ Give the current position in a file
 */
 fs_offset_t FS_Tell (qfile_t* file)
 {
-	return file->position - (fs_offset_t)(file->buff_len + file->buff_ind);
+	return file->position - file->buff_len + file->buff_ind;
 }
 
 
