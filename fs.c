@@ -2185,7 +2185,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 		for (listtemp = liststart;listtemp;listtemp = listtemp->next)
 		{
 			numfiles++;
-			numchars += strlen(listtemp->text) + 1;
+			numchars += (int)strlen(listtemp->text) + 1;
 		}
 		search = Z_Malloc(sizeof(fssearch_t) + numchars + numfiles * sizeof(char *));
 		search->filenames = (char **)((char *)search + sizeof(fssearch_t));
@@ -2198,7 +2198,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 			search->filenames[numfiles] = search->filenamesbuffer + numchars;
 			strcpy(search->filenames[numfiles], listtemp->text);
 			numfiles++;
-			numchars += strlen(listtemp->text) + 1;
+			numchars += (int)strlen(listtemp->text) + 1;
 		}
 		if (liststart)
 			stringlistfree(liststart);
@@ -2239,7 +2239,7 @@ int FS_ListDirectory(const char *pattern, int oneperline)
 		columnwidth = 0;
 		for (i = 0;i < numfiles;i++)
 		{
-			l = strlen(search->filenames[i]);
+			l = (int)strlen(search->filenames[i]);
 			if (columnwidth < l)
 				columnwidth = l;
 		}
