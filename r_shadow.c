@@ -3386,7 +3386,7 @@ void R_Shadow_SaveWorldLights(void)
 			sprintf(line, "%s%f %f %f %f %f %f %f %d \"%s\" %f %f %f %f\n", light->shadow ? "" : "!", light->origin[0], light->origin[1], light->origin[2], light->radius, light->color[0], light->color[1], light->color[2], light->style, light->cubemapname, light->corona, light->angles[0], light->angles[1], light->angles[2]);
 		else
 			sprintf(line, "%s%f %f %f %f %f %f %f %d\n", light->shadow ? "" : "!", light->origin[0], light->origin[1], light->origin[2], light->radius, light->color[0], light->color[1], light->color[2], light->style);
-		if (bufchars + (int) strlen(line) > bufmaxchars)
+		if (bufchars + strlen(line) > bufmaxchars)
 		{
 			bufmaxchars = bufchars + strlen(line) + 2048;
 			oldbuf = buf;
@@ -3405,7 +3405,7 @@ void R_Shadow_SaveWorldLights(void)
 		}
 	}
 	if (bufchars)
-		FS_WriteFile(name, buf, bufchars);
+		FS_WriteFile(name, buf, (fs_offset_t)bufchars);
 	if (buf)
 		Mem_Free(buf);
 }
