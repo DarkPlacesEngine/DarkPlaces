@@ -178,7 +178,7 @@ void W_LoadTextureWadFile (char *filename, int complain)
 	if (!(lumps = Mem_Alloc(tempmempool, sizeof(lumpinfo_t)*numlumps)))
 	{Con_Print("W_LoadTextureWadFile: unable to allocate temporary memory for lump table\n");return;}
 
-	if (FS_Read(file, lumps, sizeof(lumpinfo_t) * numlumps) != sizeof(lumpinfo_t) * (size_t)numlumps)
+	if (FS_Read(file, lumps, sizeof(lumpinfo_t) * numlumps) != (fs_offset_t)sizeof(lumpinfo_t) * numlumps)
 	{Con_Print("W_LoadTextureWadFile: unable to read lump table\n");return;}
 
 	for (i=0, lump_p = lumps ; i<numlumps ; i++,lump_p++)
@@ -260,7 +260,7 @@ qbyte *W_GetTexture(char *name)
 				tex = Mem_Alloc(tempmempool, texwadlump[i].size);
 				if (!tex)
 					return NULL;
-				if (FS_Read(file, tex, texwadlump[i].size) < (size_t)texwadlump[i].size)
+				if (FS_Read(file, tex, texwadlump[i].size) < texwadlump[i].size)
 				{Con_Print("W_GetTexture: corrupt WAD3 file\n");return NULL;}
 
 				tex->width = LittleLong(tex->width);
