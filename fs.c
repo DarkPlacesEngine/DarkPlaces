@@ -148,9 +148,9 @@ struct qfile_s
 {
 	qfile_flags_t	flags;
 	int				handle;					// file descriptor
-	size_t			real_length;			// uncompressed file size (for files opened in "read" mode)
-	size_t			position;				// current position in the file
-	size_t			offset;					// offset into the package (0 if external file)
+	fs_offset_t		real_length;			// uncompressed file size (for files opened in "read" mode)
+	fs_offset_t		position;				// current position in the file
+	fs_offset_t		offset;					// offset into the package (0 if external file)
 	int				ungetc;					// single stored character from ungetc, cleared to EOF when read
 
 	// Contents buffer
@@ -244,8 +244,8 @@ void FS_Dir_f(void);
 void FS_Ls_f(void);
 
 static packfile_t* FS_AddFileToPack (const char* name, pack_t* pack,
-									 size_t offset, size_t packsize,
-									 size_t realsize, packfile_flags_t flags);
+									fs_offset_t offset, fs_offset_t packsize,
+									fs_offset_t realsize, packfile_flags_t flags);
 
 
 /*
@@ -258,7 +258,7 @@ VARIABLES
 
 mempool_t *fs_mempool;
 
-size_t fs_filesize;
+fs_offset_t fs_filesize;
 
 pack_t *packlist = NULL;
 
@@ -384,7 +384,7 @@ qboolean PK3_GetEndOfCentralDir (const char *packfile, int packhandle, pk3_endOf
 		maxsize = ZIP_MAX_COMMENTS_SIZE + ZIP_END_CDIR_SIZE;
 	buffer = Mem_Alloc (tempmempool, maxsize);
 	lseek (packhandle, filesize - maxsize, SEEK_SET);
-	if (read (packhandle, buffer, maxsize) != (ssize_t) maxsize)
+	if (read (packhandle, buffer, maxsize) != (fs_offset_t) maxsize)
 	{
 		Mem_Free (buffer);
 		return false;
@@ -433,7 +433,7 @@ int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 {
 	qbyte *central_dir, *ptr;
 	unsigned int ind;
-	size_t remaining;
+	fs_offset_t remaining;
 
 	// Load the central directory in memory
 	central_dir = Mem_Alloc (tempmempool, eocd->cdir_size);
@@ -448,7 +448,7 @@ int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 	ptr = central_dir;
 	for (ind = 0; ind < eocd->nbentries; ind++)
 	{
-		size_t namesize, count;
+		fs_offset_t namesize, count;
 
 		// Checking the remaining size
 		if (remaining < ZIP_CDIR_CHUNK_BASE_SIZE)
@@ -475,7 +475,7 @@ int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 		if ((ptr[8] & 0x29) == 0 && (ptr[38] & 0x18) == 0)
 		{
 			// Still enough bytes for the name?
-			if (remaining < namesize || namesize >= sizeof (*pack->files))
+			if (remaining < namesize || namesize >= (int)sizeof (*pack->files))
 			{
 				Mem_Free (central_dir);
 				return -1;
@@ -485,12 +485,11 @@ int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 			if (ptr[ZIP_CDIR_CHUNK_BASE_SIZE + namesize - 1] != '/')
 			{
 				char filename [sizeof (pack->files[0].name)];
-				size_t offset, packsize, realsize;
+				fs_offset_t offset, packsize, realsize;
 				packfile_flags_t flags;
 
 				// Extract the name (strip it if necessary)
-				if (namesize >= sizeof (filename))
-					namesize = sizeof (filename) - 1;
+				namesize = min(namesize, (int)sizeof (filename) - 1);
 				memcpy (filename, &ptr[ZIP_CDIR_CHUNK_BASE_SIZE], namesize);
 				filename[namesize] = '\0';
 
@@ -598,7 +597,7 @@ Find where the true file data offset is
 qboolean PK3_GetTrueFileOffset (packfile_t *pfile, pack_t *pack)
 {
 	qbyte buffer [ZIP_LOCAL_CHUNK_BASE_SIZE];
-	size_t count;
+	fs_offset_t count;
 
 	// Already found?
 	if (pfile->flags & PACKFILE_FLAG_TRUEOFFS)
@@ -638,8 +637,8 @@ Add a file to the list of files contained into a package
 ====================
 */
 static packfile_t* FS_AddFileToPack (const char* name, pack_t* pack,
-									 size_t offset, size_t packsize,
-									 size_t realsize, packfile_flags_t flags)
+									 fs_offset_t offset, fs_offset_t packsize,
+									 fs_offset_t realsize, packfile_flags_t flags)
 {
 	int (*strcmp_funct) (const char* str1, const char* str2);
 	int left, right, middle;
@@ -792,8 +791,8 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 	// parse the directory
 	for (i = 0;i < numpackfiles;i++)
 	{
-		size_t offset = LittleLong (info[i].filepos);
-		size_t size = LittleLong (info[i].filelen);
+		fs_offset_t offset = LittleLong (info[i].filepos);
+		fs_offset_t size = LittleLong (info[i].filelen);
 
 		FS_AddFileToPack (info[i].name, pack, offset, size, size, PACKFILE_FLAG_TRUEOFFS);
 	}
@@ -1478,9 +1477,9 @@ FS_Write
 Write "datasize" bytes into a file
 ====================
 */
-size_t FS_Write (qfile_t* file, const void* data, size_t datasize)
+fs_offset_t FS_Write (qfile_t* file, const void* data, size_t datasize)
 {
-	ssize_t result;
+	fs_offset_t result;
 
 	// If necessary, seek to the exact file position we're supposed to be
 	if (file->buff_ind != file->buff_len)
@@ -1509,9 +1508,9 @@ FS_Read
 Read up to "buffersize" bytes from a file
 ====================
 */
-size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
+fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 {
-	size_t count, done;
+	fs_offset_t count, done;
 
 	if (buffersize == 0)
 		return 0;
@@ -1532,7 +1531,7 @@ size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 	{
 		count = file->buff_len - file->buff_ind;
 
-		done += (buffersize > count) ? count : buffersize;
+		done += ((fs_offset_t)buffersize > count) ? count : (fs_offset_t)buffersize;
 		memcpy (buffer, &file->buff[file->buff_ind], done);
 		file->buff_ind += done;
 
@@ -1554,8 +1553,8 @@ size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 		// If we have a lot of data to get, put them directly into "buffer"
 		if (buffersize > sizeof (file->buff) / 2)
 		{
-			if (count > buffersize)
-				count = buffersize;
+			if (count > (fs_offset_t)buffersize)
+				count = (fs_offset_t)buffersize;
 			lseek (file->handle, file->offset + file->position, SEEK_SET);
 			nb = read (file->handle, &((qbyte*)buffer)[done], count);
 			if (nb > 0)
@@ -1569,8 +1568,8 @@ size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 		}
 		else
 		{
-			if (count > sizeof (file->buff))
-				count = sizeof (file->buff);
+			if (count > (fs_offset_t)sizeof (file->buff))
+				count = (fs_offset_t)sizeof (file->buff);
 			lseek (file->handle, file->offset + file->position, SEEK_SET);
 			nb = read (file->handle, file->buff, count);
 			if (nb > 0)
@@ -1606,10 +1605,10 @@ size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 				return done;
 
 			count = ztk->comp_length - ztk->in_position;
-			if (count > sizeof (ztk->input))
-				count = sizeof (ztk->input);
+			if (count > (fs_offset_t)sizeof (ztk->input))
+				count = (fs_offset_t)sizeof (ztk->input);
 			lseek (file->handle, file->offset + ztk->in_position, SEEK_SET);
-			if (read (file->handle, ztk->input, count) != (ssize_t)count)
+			if (read (file->handle, ztk->input, count) != (fs_offset_t)count)
 			{
 				Con_Printf ("FS_Read: unexpected end of file");
 				break;
@@ -1719,7 +1718,7 @@ Print a string into a file
 int FS_VPrintf (qfile_t* file, const char* format, va_list ap)
 {
 	int len;
-	size_t buff_size;
+	fs_offset_t buff_size;
 	char *tempbuff = NULL;
 
 	buff_size = 1024;
@@ -1783,11 +1782,11 @@ FS_Seek
 Move the position index in a file
 ====================
 */
-int FS_Seek (qfile_t* file, long offset, int whence)
+int FS_Seek (qfile_t* file, fs_offset_t offset, int whence)
 {
 	ztoolkit_t *ztk;
 	qbyte* buffer;
-	size_t buffersize;
+	fs_offset_t buffersize;
 
 	// Compute the file offset
 	switch (whence)
@@ -1810,8 +1809,8 @@ int FS_Seek (qfile_t* file, long offset, int whence)
 		return -1;
 
 	// If we have the data in our read buffer, we don't need to actually seek
-	if (file->position - file->buff_len <= (size_t)offset &&
-		(size_t)offset <= file->position)
+	if (file->position - (fs_offset_t)file->buff_len <= offset
+		&& offset <= file->position)
 	{
 		file->buff_ind = offset + file->buff_len - file->position;
 		return 0;
@@ -1834,7 +1833,7 @@ int FS_Seek (qfile_t* file, long offset, int whence)
 	ztk = file->ztk;
 
 	// If we have to go back in the file, we need to restart from the beginning
-	if ((size_t)offset <= file->position)
+	if (offset <= file->position)
 	{
 		ztk->in_ind = 0;
 		ztk->in_len = 0;
@@ -1853,10 +1852,10 @@ int FS_Seek (qfile_t* file, long offset, int whence)
 	buffer = Mem_Alloc (tempmempool, buffersize);
 
 	// Skip all data until we reach the requested offset
-	while ((size_t)offset > file->position)
+	while (offset > file->position)
 	{
-		size_t diff = offset - file->position;
-		size_t count, len;
+		fs_offset_t diff = offset - file->position;
+		fs_offset_t count, len;
 
 		count = (diff > buffersize) ? buffersize : diff;
 		len = FS_Read (file, buffer, count);
@@ -1879,7 +1878,7 @@ FS_Tell
 Give the current position in a file
 ====================
 */
-size_t FS_Tell (qfile_t* file)
+fs_offset_t FS_Tell (qfile_t* file)
 {
 	return file->position - file->buff_len + file->buff_ind;
 }
@@ -1934,7 +1933,7 @@ FS_WriteFile
 The filename will be prefixed by the current game directory
 ============
 */
-qboolean FS_WriteFile (const char *filename, void *data, size_t len)
+qboolean FS_WriteFile (const char *filename, void *data, fs_offset_t len)
 {
 	qfile_t *file;
 
@@ -2075,7 +2074,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 	fssearch_t *search;
 	searchpath_t *searchpath;
 	pack_t *pak;
-	size_t i, basepathlength, numfiles, numchars;
+	int i, basepathlength, numfiles, numchars;
 	stringlist_t *dir, *dirfile, *liststart, *listcurrent, *listtemp;
 	const char *slash, *backslash, *colon, *separator;
 	char *basepath;
@@ -2114,7 +2113,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 		{
 			// look through all the pak file elements
 			pak = searchpath->pack;
-			for (i = 0;i < (size_t)pak->numfiles;i++)
+			for (i = 0;i < pak->numfiles;i++)
 			{
 				strcpy(temp, pak->files[i].name);
 				while (temp[0])
@@ -2217,12 +2216,12 @@ void FS_FreeSearch(fssearch_t *search)
 extern int con_linewidth;
 int FS_ListDirectory(const char *pattern, int oneperline)
 {
-	size_t numfiles;
-	size_t numcolumns;
-	size_t numlines;
-	size_t columnwidth;
-	size_t linebufpos;
-	size_t i, j, k, l;
+	int numfiles;
+	int numcolumns;
+	int numlines;
+	int columnwidth;
+	int linebufpos;
+	int i, j, k, l;
 	const char *name;
 	char linebuf[4096];
 	fssearch_t *search;
@@ -2261,11 +2260,11 @@ int FS_ListDirectory(const char *pattern, int oneperline)
 					if (l < numfiles)
 					{
 						name = search->filenames[l];
-						for (j = 0;name[j] && linebufpos + 1 < sizeof(linebuf);j++)
+						for (j = 0;name[j] && linebufpos + 1 < (int)sizeof(linebuf);j++)
 							linebuf[linebufpos++] = name[j];
 						// space out name unless it's the last on the line
 						if (k + 1 < numcolumns && l + 1 < numfiles)
-							for (;j < columnwidth && linebufpos + 1 < sizeof(linebuf);j++)
+							for (;j < columnwidth && linebufpos + 1 < (int)sizeof(linebuf);j++)
 								linebuf[linebufpos++] = ' ';
 					}
 				}

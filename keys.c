@@ -348,7 +348,7 @@ Key_Console (int key, char ascii)
 	// delete char on cursor
 	if (key == K_DEL || key == K_KP_DEL)
 	{
-		if ((size_t)key_linepos < strlen(key_lines[edit_line]))
+		if (key_linepos < (int)strlen(key_lines[edit_line]))
 			strcpy(key_lines[edit_line] + key_linepos, key_lines[edit_line] + key_linepos + 1);
 		return;
 	}
@@ -358,7 +358,7 @@ Key_Console (int key, char ascii)
 	// otherwise just go right one
 	if (key == K_RIGHTARROW || key == K_KP_RIGHTARROW)
 	{
-		if ((size_t)key_linepos < strlen(key_lines[edit_line]))
+		if (key_linepos < (int)strlen(key_lines[edit_line]))
 			key_linepos++;
 
 		return;

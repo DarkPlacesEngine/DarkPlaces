@@ -628,7 +628,7 @@ static void JPEG_TermDestination (j_compress_ptr cinfo)
 
 	// Write any data remaining in the buffer
 	if (datacount > 0)
-		if (FS_Write (dest->outfile, dest->buffer, datacount) != datacount)
+		if (FS_Write (dest->outfile, dest->buffer, datacount) != (fs_offset_t)datacount)
 			error_in_jpeg = true;
 }
 

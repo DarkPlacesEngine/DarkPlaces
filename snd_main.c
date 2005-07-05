@@ -569,7 +569,7 @@ int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 {
 	channel_t *target_chan, *check;
 	int		ch_idx;
-	size_t	skip;
+	int		skip;
 
 	if (!sound_started || !sfx || nosound.integer)
 		return -1;
@@ -603,8 +603,8 @@ int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 		if (check->sfx == sfx && !check->pos)
 		{
 			skip = 0.1 * sfx->format.speed;
-			if (skip > sfx->total_length)
-				skip = sfx->total_length;
+			if (skip > (int)sfx->total_length)
+				skip = (int)sfx->total_length;
 			if (skip > 0)
 				skip = rand() % skip;
 			target_chan->pos += skip;

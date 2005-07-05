@@ -819,7 +819,7 @@ int		loadable[MAX_SAVEGAMES];
 
 void M_ScanSaves (void)
 {
-	size_t	i, j, len;
+	int		i, j, len;
 	char	name[MAX_OSPATH];
 	char	buf[SAVEGAME_COMMENT_LENGTH + 256];
 	const char *t;

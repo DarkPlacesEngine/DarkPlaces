@@ -74,9 +74,9 @@ checkextension(extensionname)
 // kind of helper function
 static qboolean checkextension(const char *name)
 {
-	size_t len;
+	int len;
 	char *e, *start;
-	len = strlen(name);
+	len = (int)strlen(name);
 
 	for (e = prog->extensionstring;*e;e++)
 	{
@@ -87,7 +87,7 @@ static qboolean checkextension(const char *name)
 		start = e;
 		while (*e && *e != ' ')
 			e++;
-		if ((size_t)(e - start) == len && !strncasecmp(start, name, len))
+		if ((e - start) == len && !strncasecmp(start, name, len))
 			return true;
 	}
 	return false;
@@ -1677,7 +1677,7 @@ fputs(float fhandle, string s)
 //void(float fhandle, string s) fputs = #113; // writes a line of text to the end of the file
 void VM_fputs(void)
 {
-	size_t stringlength;
+	int stringlength;
 	char string[VM_STRINGTEMP_LENGTH];
 	int filenum;
 
@@ -1695,7 +1695,7 @@ void VM_fputs(void)
 		return;
 	}
 	VM_VarString(1, string, sizeof(string));
-	if ((stringlength = strlen(string)))
+	if ((stringlength = (int)strlen(string)))
 		FS_Write(VM_FILES[filenum], string, stringlength);
 	if (developer.integer)
 		Con_Printf("fputs: %s: %s\n", PRVM_NAME, string);

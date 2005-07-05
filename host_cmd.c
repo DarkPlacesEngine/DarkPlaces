@@ -971,7 +971,7 @@ void Host_Say_Team_f(void)
 void Host_Tell_f(void)
 {
 	client_t *save;
-	size_t j;
+	int j;
 	const char *p1, *p2;
 	char text[1024]; // LordHavoc: FIXME: temporary buffer overflow fix (was 64)
 	qboolean fromServer = false;
@@ -1018,13 +1018,13 @@ void Host_Tell_f(void)
 	}
 	while (p2 > p1 && (p2[-1] == '\n' || p2[-1] == '\r'))
 		p2--;
-	for (j = strlen(text);j < (sizeof(text) - 2) && p1 < p2;)
+	for (j = (int)strlen(text);j < (int)(sizeof(text) - 2) && p1 < p2;)
 		text[j++] = *p1++;
 	text[j++] = '\n';
 	text[j++] = 0;
 
 	save = host_client;
-	for (j = 0, host_client = svs.clients;j < (size_t)svs.maxclients;j++, host_client++)
+	for (j = 0, host_client = svs.clients;j < svs.maxclients;j++, host_client++)
 		if (host_client->spawned && !strcasecmp(host_client->name, Cmd_Argv(1)))
 			SV_ClientPrint(text);
 	host_client = save;

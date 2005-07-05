@@ -189,7 +189,7 @@ void CL_ReadDemoMessage(void)
 			cl.mviewangles[0][i] = LittleFloat(f);
 		}
 
-		if (FS_Read(cls.demofile, net_message.data, net_message.cursize) == (size_t)net_message.cursize)
+		if (FS_Read(cls.demofile, net_message.data, net_message.cursize) == net_message.cursize)
 		{
 			MSG_BeginReading();
 			CL_ParseServerMessage();

@@ -9,7 +9,9 @@ typedef unsigned char qbyte;
 
 typedef enum {false, true} qboolean;
 
-#ifdef WIN32
+#ifdef WIN64
+# define ssize_t long long
+#elifdef WIN32
 # define ssize_t long
 #endif
 
