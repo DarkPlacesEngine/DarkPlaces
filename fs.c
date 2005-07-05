@@ -206,9 +206,9 @@ typedef struct
 {
 	char name [MAX_QPATH];
 	packfile_flags_t flags;
-	size_t offset;
-	size_t packsize;	// size in the package
-	size_t realsize;	// real file size (uncompressed)
+	fs_offset_t offset;
+	fs_offset_t packsize;	// size in the package
+	fs_offset_t realsize;	// real file size (uncompressed)
 } packfile_t;
 
 typedef struct pack_s
