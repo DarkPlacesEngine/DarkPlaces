@@ -31,7 +31,8 @@
 typedef struct qfile_s qfile_t;
 
 #ifdef WIN32
-typedef _int64 fs_offset_t;
+typedef long fs_offset_t; // 32bit
+//typedef _int64 fs_offset_t; // 64bit (lots of warnings, and lseek/read/write still don't take 64bit on win64)
 #else
 typedef long long fs_offset_t;
 #endif
