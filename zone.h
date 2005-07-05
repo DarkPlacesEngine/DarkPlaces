@@ -52,7 +52,7 @@ typedef struct memheader_s
 	struct memclump_s *clump;
 #endif
 	// size of the memory after the header (excluding header and sentinel2)
-	int size;
+	size_t size;
 	// file name and line where Mem_Alloc was called
 	const char *filename;
 	int fileline;
@@ -75,10 +75,10 @@ typedef struct memclump_s
 	// should always be MEMCLUMP_SENTINEL
 	unsigned int sentinel2;
 	// if this drops to 0, the clump is freed
-	int blocksinuse;
+	size_t blocksinuse;
 	// largest block of memory available (this is reset to an optimistic
 	// number when anything is freed, and updated when alloc fails the clump)
-	int largestavailable;
+	size_t largestavailable;
 	// next clump in the chain
 	struct memclump_s *chain;
 }
