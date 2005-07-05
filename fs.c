@@ -1934,7 +1934,7 @@ FS_WriteFile
 The filename will be prefixed by the current game directory
 ============
 */
-qboolean FS_WriteFile (const char *filename, void *data, int len)
+qboolean FS_WriteFile (const char *filename, void *data, size_t len)
 {
 	qfile_t *file;
 
