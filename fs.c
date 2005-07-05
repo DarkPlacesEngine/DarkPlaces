@@ -1686,7 +1686,7 @@ Print a string into a file
 */
 int FS_Print (qfile_t* file, const char *msg)
 {
-	return FS_Write (file, msg, strlen (msg));
+	return (int)FS_Write (file, msg, strlen (msg));
 }
 
 /*
@@ -2114,7 +2114,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 		{
 			// look through all the pak file elements
 			pak = searchpath->pack;
-			for (i = 0;i < pak->numfiles;i++)
+			for (i = 0;i < (size_t)pak->numfiles;i++)
 			{
 				strcpy(temp, pak->files[i].name);
 				while (temp[0])
@@ -2191,7 +2191,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 		search = Z_Malloc(sizeof(fssearch_t) + numchars + numfiles * sizeof(char *));
 		search->filenames = (char **)((char *)search + sizeof(fssearch_t));
 		search->filenamesbuffer = (char *)((char *)search + sizeof(fssearch_t) + numfiles * sizeof(char *));
-		search->numfilenames = numfiles;
+		search->numfilenames = (int)numfiles;
 		numfiles = 0;
 		numchars = 0;
 		for (listtemp = liststart;listtemp;listtemp = listtemp->next)
@@ -2280,7 +2280,7 @@ int FS_ListDirectory(const char *pattern, int oneperline)
 		for (i = 0;i < numfiles;i++)
 			Con_Printf("%s\n", search->filenames[i]);
 	FS_FreeSearch(search);
-	return numfiles;
+	return (int)numfiles;
 }
 
 static void FS_ListDirectoryCmd (const char* cmdname, int oneperline)

@@ -264,7 +264,7 @@ qboolean S_LoadWavFile (const char *filename, sfx_t *s)
 
 	Con_DPrintf ("Loading WAV file \"%s\"\n", filename);
 
-	info = GetWavinfo (s->name, data, fs_filesize);
+	info = GetWavinfo (s->name, data, (int)fs_filesize);
 	// Stereo sounds are allowed (intended for music)
 	if (info.channels < 1 || info.channels > 2)
 	{
@@ -313,7 +313,7 @@ qboolean S_LoadWavFile (const char *filename, sfx_t *s)
 	}
 #endif
 
-	sb->length = ResampleSfx (data + info.dataofs, info.samples, &s->format, sb->data, s->name);
+	sb->length = (int)ResampleSfx (data + info.dataofs, info.samples, &s->format, sb->data, s->name);
 	s->format.speed = shm->format.speed;
 	s->total_length = sb->length;
 	sb->offset = 0;

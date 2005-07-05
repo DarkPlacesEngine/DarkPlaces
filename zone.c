@@ -352,7 +352,7 @@ mempool_t *zonemempool;
 
 void Mem_PrintStats(void)
 {
-	int count = 0, size = 0;
+	size_t count = 0, size = 0;
 	mempool_t *pool;
 	memheader_t *mem;
 	Mem_CheckSentinelsGlobal();
@@ -361,14 +361,14 @@ void Mem_PrintStats(void)
 		count++;
 		size += pool->totalsize;
 	}
-	Con_Printf("%i memory pools, totalling %i bytes (%.3fMB)\n", count, size, size / 1048576.0);
+	Con_Printf("%lu memory pools, totalling %lu bytes (%.3fMB)\n", (unsigned long)count, (unsigned long)size, size / 1048576.0);
 	for (pool = poolchain;pool;pool = pool->next)
 	{
 		if ((pool->flags & POOLFLAG_TEMP) && pool->chain)
 		{
-			Con_Printf("Memory pool %p has sprung a leak totalling %i bytes (%.3fMB)!  Listing contents...\n", pool, pool->totalsize, pool->totalsize / 1048576.0);
+			Con_Printf("Memory pool %p has sprung a leak totalling %lu bytes (%.3fMB)!  Listing contents...\n", pool, (unsigned long)pool->totalsize, pool->totalsize / 1048576.0);
 			for (mem = pool->chain;mem;mem = mem->next)
-				Con_Printf("%10i bytes allocated at %s:%i\n", mem->size, mem->filename, mem->fileline);
+				Con_Printf("%10lu bytes allocated at %s:%i\n", (unsigned long)mem->size, mem->filename, mem->fileline);
 		}
 	}
 }
@@ -382,11 +382,11 @@ void Mem_PrintList(int listallocations)
 	           "size    name\n");
 	for (pool = poolchain;pool;pool = pool->next)
 	{
-		Con_Printf("%10ik (%10ik actual) %s (%+i byte change) %s\n", (pool->totalsize + 1023) / 1024, (pool->realsize + 1023) / 1024, pool->name, pool->totalsize - pool->lastchecksize, (pool->flags & POOLFLAG_TEMP) ? "TEMP" : "");
+		Con_Printf("%10luk (%10luk actual) %s (%+li byte change) %s\n", (unsigned long) ((pool->totalsize + 1023) / 1024), (unsigned long)((pool->realsize + 1023) / 1024), pool->name, (long)pool->totalsize - pool->lastchecksize, (pool->flags & POOLFLAG_TEMP) ? "TEMP" : "");
 		pool->lastchecksize = pool->totalsize;
 		if (listallocations)
 			for (mem = pool->chain;mem;mem = mem->next)
-				Con_Printf("%10i bytes allocated at %s:%i\n", mem->size, mem->filename, mem->fileline);
+				Con_Printf("%10lu bytes allocated at %s:%i\n", (unsigned long)mem->size, mem->filename, mem->fileline);
 	}
 }
 

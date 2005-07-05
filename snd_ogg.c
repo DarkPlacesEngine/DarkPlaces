@@ -452,7 +452,7 @@ static const sfxbuffer_t* OGG_FetchSound (channel_t* ch, unsigned int start, uns
 	if (sb->offset <= start && sb->offset + sb->length >= start + nbsamples)
 		return sb;
 
-	newlength = (int)(sb->offset + sb->length) - start;
+	newlength = sb->offset + sb->length - start;
 
 	// If we need to skip some data before decompressing the rest, or if the stream has looped
 	if (newlength < 0 || sb->offset > start)
@@ -492,7 +492,7 @@ static const sfxbuffer_t* OGG_FetchSound (channel_t* ch, unsigned int start, uns
 		done += ret;
 
 	// Resample in the sfxbuffer
-	newlength = ResampleSfx (resampling_buffer, (size_t)done / (size_t)factor, &per_sfx->format, sb->data + sb->length * (size_t)factor, sfx->name);
+	newlength = (int)ResampleSfx (resampling_buffer, (size_t)done / (size_t)factor, &per_sfx->format, sb->data + sb->length * (size_t)factor, sfx->name);
 	sb->length += newlength;
 
 	return sb;
@@ -579,7 +579,7 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 
 	// Decide if we go for a stream or a simple PCM cache
 	buff_len = ceil (STREAM_BUFFER_DURATION * (shm->format.speed * 2 * vi->channels));
-	if (snd_streaming.integer && len > fs_filesize + 3 * buff_len)
+	if (snd_streaming.integer && len > (ogg_int64_t)fs_filesize + 3 * buff_len)
 	{
 		ogg_stream_persfx_t* per_sfx;
 
@@ -636,7 +636,7 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 		s->loopstart = -1;
 		s->flags &= ~SFXFLAG_STREAMED;
 
-		sb->length = ResampleSfx (buff, (size_t)done / (vi->channels * 2), &s->format, sb->data, s->name);
+		sb->length = (unsigned int)ResampleSfx (buff, (size_t)done / (vi->channels * 2), &s->format, sb->data, s->name);
 		s->format.speed = shm->format.speed;
 		s->total_length = sb->length;
 		sb->offset = 0;

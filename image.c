@@ -568,7 +568,7 @@ qbyte *LoadLMP (const qbyte *f, int matchwidth, int matchheight, qboolean loadAs
 	if ((matchwidth && image_width != matchwidth) || (matchheight && image_height != matchheight))
 		return NULL;
 
-	if (fs_filesize < 8 + image_width * image_height)
+	if (fs_filesize < (size_t)(8 + image_width * image_height))
 	{
 		Con_Print("LoadLMP: invalid LMP file\n");
 		return NULL;

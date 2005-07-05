@@ -152,7 +152,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 			address->addressdata.inet6.family = hostentry->h_addrtype;
 			address->addressdata.inet6.port = htons((unsigned short)port);
 			memcpy(address->addressdata.inet6.address, hostentry->h_addr_list[0], sizeof(address->addressdata.inet6.address));
-			for (i = 0;i < sizeof(namecache[namecacheposition].name)-1 && name[i];i++)
+			for (i = 0;i < (int)sizeof(namecache[namecacheposition].name)-1 && name[i];i++)
 				namecache[namecacheposition].name[i] = name[i];
 			namecache[namecacheposition].name[i] = 0;
 			namecache[namecacheposition].address = *address;
@@ -169,7 +169,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 			address->addressdata.inet4.family = hostentry->h_addrtype;
 			address->addressdata.inet4.port = htons((unsigned short)port);
 			memcpy(address->addressdata.inet4.address, hostentry->h_addr_list[0], sizeof(address->addressdata.inet4.address));
-			for (i = 0;i < sizeof(namecache[namecacheposition].name)-1 && name[i];i++)
+			for (i = 0;i < (int)sizeof(namecache[namecacheposition].name)-1 && name[i];i++)
 				namecache[namecacheposition].name[i] = name[i];
 			namecache[namecacheposition].name[i] = 0;
 			namecache[namecacheposition].address = *address;
@@ -183,7 +183,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 #ifdef STANDALONETEST
 	printf("gethostbyname failed on address \"%s\"\n", name);
 #endif
-	for (i = 0;i < sizeof(namecache[namecacheposition].name)-1 && name[i];i++)
+	for (i = 0;i < (int)sizeof(namecache[namecacheposition].name)-1 && name[i];i++)
 		namecache[namecacheposition].name[i] = name[i];
 	namecache[namecacheposition].name[i] = 0;
 	namecache[namecacheposition].address.addresstype = LHNETADDRESSTYPE_NONE;

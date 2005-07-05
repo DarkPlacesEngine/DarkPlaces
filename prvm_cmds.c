@@ -87,11 +87,8 @@ static qboolean checkextension(const char *name)
 		start = e;
 		while (*e && *e != ' ')
 			e++;
-		if (e - start == len)
-			if (!strncasecmp(start, name, len))
-			{
-				return true;
-			}
+		if ((size_t)(e - start) == len && !strncasecmp(start, name, len))
+			return true;
 	}
 	return false;
 }

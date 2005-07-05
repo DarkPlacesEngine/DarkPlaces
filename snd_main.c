@@ -1023,7 +1023,7 @@ void S_SoundList(void)
 	{
 		if (sfx->fetcher != NULL)
 		{
-			size = sfx->mempool->totalsize;
+			size = (int)sfx->mempool->totalsize;
 			total += size;
 			Con_Printf ("%c%c%c%c(%2db, %6s) %8i : %s\n",
 						(sfx->loopstart >= 0) ? 'L' : ' ',

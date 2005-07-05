@@ -3676,7 +3676,7 @@ gamelevels_t openquartzgame = {"OpenQuartz", openquartzlevels, openquartzepisode
 
 typedef struct
 {
-	int gameid;
+	gamemode_t gameid;
 	gamelevels_t *notregistered;
 	gamelevels_t *registered;
 }

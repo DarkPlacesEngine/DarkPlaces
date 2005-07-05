@@ -1337,7 +1337,7 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 		data = (qbyte*) FS_LoadFile(litfilename, tempmempool, false);
 		if (data)
 		{
-			if (fs_filesize == 8 + l->filelen * 3 && data[0] == 'Q' && data[1] == 'L' && data[2] == 'I' && data[3] == 'T')
+			if (fs_filesize == (size_t)(8 + l->filelen * 3) && data[0] == 'Q' && data[1] == 'L' && data[2] == 'I' && data[3] == 'T')
 			{
 				i = LittleLong(((int *)data)[1]);
 				if (i == 1)

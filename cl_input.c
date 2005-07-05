@@ -513,7 +513,7 @@ void CL_ClientMovement_Input(qboolean buttonjump, qboolean buttoncrouch)
 				cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
 	}
 	// add to input queue if there is room
-	if (cl_movement.integer && cl.movement_numqueue < sizeof(cl.movement_queue)/sizeof(cl.movement_queue[0]) && cl.mtime[0] > cl.mtime[1])
+	if (cl_movement.integer && cl.movement_numqueue < (int)(sizeof(cl.movement_queue)/sizeof(cl.movement_queue[0])) && cl.mtime[0] > cl.mtime[1])
 	{
 		// add to input queue
 		cl.movement_queue[cl.movement_numqueue].sequence = cl.movesequence;
