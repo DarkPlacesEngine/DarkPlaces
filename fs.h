@@ -70,7 +70,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet);
 void FS_FreeSearch(fssearch_t *search);
 
 qbyte *FS_LoadFile (const char *path, mempool_t *pool, qboolean quiet);
-qboolean FS_WriteFile (const char *filename, void *data, int len);
+qboolean FS_WriteFile (const char *filename, void *data, size_t len);
 
 
 // ------ Other functions ------ //
