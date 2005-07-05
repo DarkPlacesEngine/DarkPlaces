@@ -108,7 +108,7 @@ void Sys_PrintToTerminal(const char *text)
 	DWORD dummy;
 	extern HANDLE houtput;
 	if (cls.state == ca_dedicated)
-		WriteFile(houtput, text, strlen (text), &dummy, NULL);
+		WriteFile(houtput, text, (DWORD) strlen(text), &dummy, NULL);
 }
 
 /*
@@ -316,6 +316,9 @@ void Sys_InitConsole (void)
 		hinput = GetStdHandle (STD_INPUT_HANDLE);
 		houtput = GetStdHandle (STD_OUTPUT_HANDLE);
 
+#ifdef WIN64
+#define atoi _atoi64
+#endif
 	// give QHOST a chance to hook into the console
 		if ((t = COM_CheckParm ("-HFILE")) > 0)
 		{

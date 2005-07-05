@@ -26,7 +26,7 @@ cvar_t developer_memorydebug = {0, "developer_memorydebug", "0"};
 
 mempool_t *poolchain = NULL;
 
-void *_Mem_Alloc(mempool_t *pool, int size, const char *filename, int fileline)
+void *_Mem_Alloc(mempool_t *pool, size_t size, const char *filename, int fileline)
 {
 #if MEMCLUMPING
 	int i, j, k, needed, endbit, largest;
