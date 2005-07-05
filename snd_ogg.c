@@ -452,7 +452,7 @@ static const sfxbuffer_t* OGG_FetchSound (channel_t* ch, unsigned int start, uns
 	if (sb->offset <= start && sb->offset + sb->length >= start + nbsamples)
 		return sb;
 
-	newlength = sb->offset + sb->length - start;
+	newlength = (int)(sb->offset + sb->length) - start;
 
 	// If we need to skip some data before decompressing the rest, or if the stream has looped
 	if (newlength < 0 || sb->offset > start)

@@ -26,8 +26,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 typedef struct
 {
-	size_t	length;
-	size_t	offset;
+	unsigned int	length;
+	unsigned int	offset;
 	qbyte	data[4];	// variable sized
 } sfxbuffer_t;
 
@@ -59,7 +59,7 @@ struct sfx_s
 	unsigned int		flags;			// cf SFXFLAG_* defines
 	snd_format_t		format;
 	int					loopstart;
-	size_t				total_length;
+	unsigned int		total_length;
 	const snd_fetcher_t	*fetcher;
 	void				*fetcher_data;	// Per-sfx data for the sound fetching functions
 };
