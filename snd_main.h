@@ -80,9 +80,9 @@ typedef struct
 	int				master_vol;		// 0-255 master volume
 	int				leftvol;		// 0-255 volume
 	int				rightvol;		// 0-255 volume
-	int				end;			// end time in global paintsamples
-	int				lastptime;		// last time this channel was painted
-	int				pos;			// sample position in sfx
+	size_t			end;			// end time in global paintsamples
+	size_t			lastptime;		// last time this channel was painted
+	size_t			pos;			// sample position in sfx
 	int				entnum;			// to allow overriding a specific sound
 	int				entchannel;
 	vec3_t			origin;			// origin of sound effect

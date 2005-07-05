@@ -238,9 +238,7 @@ void S_PaintChannels(int endtime)
 			// if the channel is paused
 			if (ch->flags & CHANNELFLAG_PAUSED)
 			{
-				size_t pausedtime;
-
-				pausedtime = end - paintedtime;
+				int pausedtime = end - paintedtime;
 				ch->lastptime += pausedtime;
 				ch->end += pausedtime;
 				continue;

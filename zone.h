@@ -125,7 +125,7 @@ mempool_t;
 #define Mem_FreePool(pool) _Mem_FreePool(pool, __FILE__, __LINE__)
 #define Mem_EmptyPool(pool) _Mem_EmptyPool(pool, __FILE__, __LINE__)
 
-void *_Mem_Alloc(mempool_t *pool, int size, const char *filename, int fileline);
+void *_Mem_Alloc(mempool_t *pool, size_t size, const char *filename, int fileline);
 void _Mem_Free(void *data, const char *filename, int fileline);
 mempool_t *_Mem_AllocPool(const char *name, int flags, mempool_t *parent, const char *filename, int fileline);
 void _Mem_FreePool(mempool_t **pool, const char *filename, int fileline);
