@@ -119,7 +119,7 @@ Cvar_CompleteVariable
 const char *Cvar_CompleteVariable (const char *partial)
 {
 	cvar_t		*cvar;
-	int			len;
+	size_t		len;
 
 	len = strlen(partial);
 
@@ -146,7 +146,7 @@ const char *Cvar_CompleteVariable (const char *partial)
 int Cvar_CompleteCountPossible (const char *partial)
 {
 	cvar_t	*cvar;
-	int		len;
+	size_t	len;
 	int		h;
 
 	h = 0;
@@ -175,9 +175,9 @@ int Cvar_CompleteCountPossible (const char *partial)
 const char **Cvar_CompleteBuildList (const char *partial)
 {
 	const cvar_t *cvar;
-	int len = 0;
-	int bpos = 0;
-	int sizeofbuf = (Cvar_CompleteCountPossible (partial) + 1) * sizeof (const char *);
+	size_t len = 0;
+	size_t bpos = 0;
+	size_t sizeofbuf = (Cvar_CompleteCountPossible (partial) + 1) * sizeof (const char *);
 	const char **buf;
 
 	len = strlen(partial);
@@ -379,7 +379,7 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags)
 		cvar->flags |= flags;
 		Cvar_SetQuick_Internal (cvar, value);
 		// also set the default value (but only once)
-		if (~cvar->flags & CVAR_DEFAULTSET) 
+		if (~cvar->flags & CVAR_DEFAULTSET)
 		{
 			cvar->flags |= CVAR_DEFAULTSET;
 
@@ -481,7 +481,8 @@ void Cvar_List_f (void)
 {
 	cvar_t *cvar;
 	const char *partial;
-	int len, count;
+	size_t len;
+	int count;
 
 	if (Cmd_Argc() > 1)
 	{

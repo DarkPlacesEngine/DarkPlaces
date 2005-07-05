@@ -473,7 +473,7 @@ void gl_main_newmap(void)
 	if (cl.worldmodel)
 	{
 		strlcpy(entname, cl.worldmodel->name, sizeof(entname));
-		l = strlen(entname) - 4;
+		l = (int)strlen(entname) - 4;
 		if (l >= 0 && !strcmp(entname + l, ".bsp"))
 		{
 			strcpy(entname + l, ".ent");

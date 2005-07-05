@@ -123,8 +123,8 @@ PRVM_PrintStatement
 */
 void PRVM_PrintStatement (dstatement_t *s)
 {
-	int		i;
-	
+	size_t i;
+
 	if( prog->statement_linenums ) {
 		int opnum;
 

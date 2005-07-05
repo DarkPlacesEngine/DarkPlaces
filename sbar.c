@@ -504,10 +504,10 @@ void Sbar_SoloScoreboard (void)
 
 // draw level name
 	if (gamemode == GAME_NEXUIZ) {
-		l = strlen (cl.worldmodel->name);
+		l = (int) strlen (cl.worldmodel->name);
 		Sbar_DrawString (232 - l*4, 12, cl.worldmodel->name);
 	} else {
-		l = strlen (cl.levelname);
+		l = (int) strlen (cl.levelname);
 		Sbar_DrawString (232 - l*4, 12, cl.levelname);
 	}
 }
@@ -1179,7 +1179,7 @@ float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
 	// print the text
 	//DrawQ_String(x, y, va("%c%4i %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
 	// FIXME: use a constant for this color tag instead
-	DrawQ_ColoredString(x, y, va("%c%4i %s" STRING_COLOR_DEFAULT_STR, (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL ); 
+	DrawQ_ColoredString(x, y, va("%c%4i %s" STRING_COLOR_DEFAULT_STR, (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL );
 	return 8;
 }
 

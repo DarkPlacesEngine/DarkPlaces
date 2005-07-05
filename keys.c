@@ -272,7 +272,7 @@ Key_Console (int key, char ascii)
 		{
 			int i;
 			strtok(cbd, "\n\r\b");
-			i = strlen(cbd);
+			i = (int)strlen(cbd);
 			if (i + key_linepos >= MAX_INPUTLINE)
 				i= MAX_INPUTLINE - key_linepos;
 			if (i > 0)
@@ -378,7 +378,7 @@ Key_Console (int key, char ascii)
 		{
 			history_line--;
 			strcpy(key_lines[edit_line], key_lines[history_line]);
-			key_linepos = strlen(key_lines[edit_line]);
+			key_linepos = (int)strlen(key_lines[edit_line]);
 		}
 		return;
 	}
@@ -396,7 +396,7 @@ Key_Console (int key, char ascii)
 		else
 		{
 			strcpy(key_lines[edit_line], key_lines[history_line]);
-			key_linepos = strlen(key_lines[edit_line]);
+			key_linepos = (int)strlen(key_lines[edit_line]);
 		}
 		return;
 	}
@@ -436,7 +436,7 @@ Key_Console (int key, char ascii)
 	if (key_linepos < MAX_INPUTLINE-1)
 	{
 		int len;
-		len = strlen(&key_lines[edit_line][key_linepos]);
+		len = (int)strlen(&key_lines[edit_line][key_linepos]);
 		// check insert mode, or always insert if at end of line
 		if (key_insert || len == 0)
 		{
@@ -553,8 +553,8 @@ Key_KeynumToString (int keynum)
 void
 Key_SetBinding (int keynum, int bindmap, const char *binding)
 {
-	char       *new;
-	int         l;
+	char *new;
+	size_t l;
 
 	if (keynum == -1)
 		return;

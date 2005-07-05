@@ -185,7 +185,7 @@ void CL_ReadDemoMessage(void)
 		VectorCopy(cl.mviewangles[0], cl.mviewangles[1]);
 		for (i = 0;i < 3;i++)
 		{
-			r = FS_Read(cls.demofile, &f, 4);
+			r = (int)FS_Read(cls.demofile, &f, 4);
 			cl.mviewangles[0][i] = LittleFloat(f);
 		}
 

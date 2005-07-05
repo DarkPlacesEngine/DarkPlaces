@@ -428,7 +428,7 @@ int NetConn_Write(lhnetsocket_t *mysocket, const void *data, int length, const l
 int NetConn_WriteString(lhnetsocket_t *mysocket, const char *string, const lhnetaddress_t *peeraddress)
 {
 	// note this does not include the trailing NULL because we add that in the parser
-	return NetConn_Write(mysocket, string, strlen(string), peeraddress);
+	return NetConn_Write(mysocket, string, (int)strlen(string), peeraddress);
 }
 
 int NetConn_SendReliableMessage(netconn_t *conn, sizebuf_t *data)
@@ -681,7 +681,7 @@ void NetConn_OpenServerPort(const char *addressstring, int defaultport)
 				Con_Printf("Server failed to open socket on address %s\n", addressstring2);
 			}
 		}
-		else 
+		else
 		{
 			Con_Printf("Server unable to parse address %s\n", addressstring);
 			// if it cant parse one address, it wont be able to parse another for sure
@@ -1399,7 +1399,7 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 		int left;
 
 		ptr = out_msg + length;
-		left = out_size - length;
+		left = (int)out_size - length;
 
 		for (i = 0;i < (unsigned int)svs.maxclients;i++)
 		{

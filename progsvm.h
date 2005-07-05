@@ -489,7 +489,7 @@ void PRVM_ED_PrintNum (int ent);
 
 const char *PRVM_GetString(int num);
 int PRVM_SetEngineString(const char *s);
-int PRVM_AllocString(int bufferlength, char **pointer);
+int PRVM_AllocString(size_t bufferlength, char **pointer);
 void PRVM_FreeString(int num);
 
 //============================================================================

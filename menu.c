@@ -819,7 +819,7 @@ int		loadable[MAX_SAVEGAMES];
 
 void M_ScanSaves (void)
 {
-	int		i, j, len;
+	size_t	i, j, len;
 	char	name[MAX_OSPATH];
 	char	buf[SAVEGAME_COMMENT_LENGTH + 256];
 	const char *t;
@@ -830,7 +830,7 @@ void M_ScanSaves (void)
 	{
 		strcpy (m_filenames[i], "--- UNUSED SLOT ---");
 		loadable[i] = false;
-		sprintf (name, "s%i.sav", i);
+		sprintf (name, "s%i.sav", (int)i);
 		f = FS_Open (name, "rb", false, false);
 		if (!f)
 			continue;
@@ -1449,7 +1449,7 @@ forward:
 			break;
 		if (setup_cursor == 0)
 		{
-			l = strlen(setup_myname);
+			l = (int)strlen(setup_myname);
 			if (l < 15)
 			{
 				setup_myname[l+1] = 0;
@@ -1622,7 +1622,7 @@ void M_Options_PrintCheckbox(char *s, int enabled, int yes)
 	{
 		DrawQ_Fill(menu_x, menu_y + opty, 320, 8, optnum == optcursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
 		M_ItemPrint(0, opty, s, enabled);
-		M_DrawCheckbox(0 + strlen(s) * 8 + 8, opty, yes);
+		M_DrawCheckbox(0 + (int)strlen(s) * 8 + 8, opty, yes);
 	}
 	opty += 8;
 	optnum++;
@@ -1634,7 +1634,7 @@ void M_Options_PrintSlider(char *s, int enabled, float value, float minvalue, fl
 	{
 		DrawQ_Fill(menu_x, menu_y + opty, 320, 8, optnum == optcursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
 		M_ItemPrint(0, opty, s, enabled);
-		M_DrawSlider(0 + strlen(s) * 8 + 8, opty, value, minvalue, maxvalue);
+		M_DrawSlider(0 + (int)strlen(s) * 8 + 8, opty, value, minvalue, maxvalue);
 	}
 	opty += 8;
 	optnum++;
@@ -3090,7 +3090,7 @@ void M_Quit_Draw (void)
 	int i, l, linelength, firstline, lastline, lines;
 	for (i = 0, linelength = 0, firstline = 9999, lastline = -1;m_quit_message[i];i++)
 	{
-		if ((l = strlen(m_quit_message[i])))
+		if ((l = (int)strlen(m_quit_message[i])))
 		{
 			if (firstline > i)
 				firstline = i;
@@ -3258,7 +3258,7 @@ void M_LanConfig_Key (int key, char ascii)
 
 		if (lanConfig_cursor == 2)
 		{
-			l = strlen(lanConfig_joinname);
+			l = (int)strlen(lanConfig_joinname);
 			if (l < 21)
 			{
 				lanConfig_joinname[l+1] = 0;
@@ -3270,7 +3270,7 @@ void M_LanConfig_Key (int key, char ascii)
 			break;
 		if (lanConfig_cursor == 0)
 		{
-			l = strlen(lanConfig_portname);
+			l = (int)strlen(lanConfig_portname);
 			if (l < 5)
 			{
 				lanConfig_portname[l+1] = 0;
@@ -4115,7 +4115,7 @@ void M_GameOptions_Key (int key, char ascii)
 	case K_BACKSPACE:
 		if (gameoptions_cursor == 9)
 		{
-			l = strlen(hostname.string);
+			l = (int)strlen(hostname.string);
 			if (l)
 			{
 				l = min(l - 1, 37);
@@ -4131,7 +4131,7 @@ void M_GameOptions_Key (int key, char ascii)
 			break;
 		if (gameoptions_cursor == 9)
 		{
-			l = strlen(hostname.string);
+			l = (int)strlen(hostname.string);
 			if (l < 37)
 			{
 				memcpy(hostnamebuf, hostname.string, l);

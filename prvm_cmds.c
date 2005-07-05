@@ -74,7 +74,7 @@ checkextension(extensionname)
 // kind of helper function
 static qboolean checkextension(const char *name)
 {
-	int len;
+	size_t len;
 	char *e, *start;
 	len = strlen(name);
 
@@ -545,7 +545,7 @@ VM_cvar_defstring
 const string	VM_cvar_defstring (string)
 ========================
 */
-void VM_cvar_defstring (void) 
+void VM_cvar_defstring (void)
 {
 	char *out;
 	const char *name;
@@ -1680,7 +1680,7 @@ fputs(float fhandle, string s)
 //void(float fhandle, string s) fputs = #113; // writes a line of text to the end of the file
 void VM_fputs(void)
 {
-	int stringlength;
+	size_t stringlength;
 	char string[VM_STRINGTEMP_LENGTH];
 	int filenum;
 
@@ -1873,7 +1873,7 @@ int num_tokens = 0;
 char *tokens[256], tokenbuf[4096];
 void VM_tokenize (void)
 {
-	int pos;
+	size_t pos;
 	const char *p;
 
 	VM_SAFEPARMCOUNT(1,VM_tokenize);
