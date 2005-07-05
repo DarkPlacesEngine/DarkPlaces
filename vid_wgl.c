@@ -19,6 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // gl_vidnt.c -- NT GL vid component
 
+// we don't need a very new dinput
+#define DIRECTINPUT_VERSION 0x0300
+
 #include "quakedef.h"
 #include <windows.h>
 #include <dsound.h>
