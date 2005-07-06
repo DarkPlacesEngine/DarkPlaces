@@ -1678,6 +1678,8 @@ void SV_SpawnServer (const char *server)
 
 	memset (&sv, 0, sizeof(sv));
 
+	sv.active = true;
+
 	strlcpy (sv.name, server, sizeof (sv.name));
 
 	sv.protocol = Protocol_EnumForName(sv_protocolname.string);
@@ -1802,8 +1804,6 @@ void SV_SpawnServer (const char *server)
 
 	// LordHavoc: clear world angles (to fix e3m3.bsp)
 	VectorClear(prog->edicts->fields.server->angles);
-
-	sv.active = true;
 
 // all setup is completed, any further precache statements are errors
 	sv.state = ss_active;
