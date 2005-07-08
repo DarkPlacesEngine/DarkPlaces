@@ -386,7 +386,7 @@ int Mod_BuildVertexRemapTableFromElements(int numelements, const int *elements, 
 
 #if 1
 // fast way, using an edge hash
-#define TRIANGLEEDGEHASH 16384
+#define TRIANGLEEDGEHASH 8192
 void Mod_BuildTriangleNeighbors(int *neighbors, const int *elements, int numtriangles)
 {
 	int i, j, p, e1, e2, *n, hashindex, count, match;
