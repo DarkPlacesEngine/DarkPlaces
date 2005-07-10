@@ -131,7 +131,7 @@ Mod_LoadModel
 Loads a model
 ==================
 */
-static model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolean isworldmodel)
+model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolean isworldmodel)
 {
 	int num;
 	unsigned int crc;
@@ -213,22 +213,6 @@ static model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, 
 	// no errors occurred
 	mod->loaded = true;
 	return mod;
-}
-
-void Mod_CheckLoaded(model_t *mod)
-{
-	if (mod)
-	{
-		if (!mod->loaded)
-			Mod_LoadModel(mod, true, true, mod->isworldmodel);
-		else
-		{
-			//if (mod->type == mod_invalid)
-			//	Host_Error("Mod_CheckLoaded: invalid model\n");
-			mod->used = true;
-			return;
-		}
-	}
 }
 
 /*

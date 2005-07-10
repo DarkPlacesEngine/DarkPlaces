@@ -542,7 +542,8 @@ extern qbyte *mod_base;
 extern cvar_t r_fullbrights;
 
 void Mod_Init (void);
-void Mod_CheckLoaded (model_t *mod);
+#define Mod_CheckLoaded(mod) (mod ? (mod->loaded ? (mod->used = true) : (Mod_LoadModel(mod, true, true, mod->isworldmodel), true)) : false)
+model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolean isworldmodel);
 void Mod_ClearAll (void);
 model_t *Mod_FindName (const char *name);
 model_t *Mod_ForName (const char *name, qboolean crash, qboolean checkdisk, qboolean isworldmodel);
