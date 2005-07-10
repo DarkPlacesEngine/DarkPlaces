@@ -332,7 +332,9 @@ qboolean PK3_OpenLibrary (void)
 {
 	const char* dllnames [] =
 	{
-#ifdef WIN32
+#if defined(WIN64)
+		"zlib64.dll",
+#elif defined(WIN32)
 		"zlib.dll",
 #elif defined(MACOSX)
 		"libz.dylib",
