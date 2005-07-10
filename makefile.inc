@@ -75,7 +75,6 @@ OBJ_COMMON= \
 	fs.o \
 	gl_backend.o \
 	gl_draw.o \
-	gl_models.o \
 	gl_rmain.o \
 	gl_rsurf.o \
 	gl_textures.o \
