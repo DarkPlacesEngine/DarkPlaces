@@ -397,7 +397,9 @@ qboolean JPEG_OpenLibrary (void)
 {
 	const char* dllnames [] =
 	{
-#ifdef WIN32
+#if defined(WIN64)
+		"libjpeg64.dll",
+#elif defined(WIN32)
 		"libjpeg.dll",
 #elif defined(MACOSX)
 		"libjpeg.62.dylib",
