@@ -723,15 +723,14 @@ void Sbar_DrawFrags (void)
 		f = s->frags;
 		sprintf (num, "%3i",f);
 
-		Sbar_DrawCharacter (x +  8, -24, num[0]);
-		Sbar_DrawCharacter (x + 16, -24, num[1]);
-		Sbar_DrawCharacter (x + 24, -24, num[2]);
-
 		if (k == cl.viewentity - 1)
 		{
 			Sbar_DrawCharacter ( x      + 2, -24, 16);
 			Sbar_DrawCharacter ( x + 32 - 4, -24, 17);
 		}
+		Sbar_DrawCharacter (x +  8, -24, num[0]);
+		Sbar_DrawCharacter (x + 16, -24, num[1]);
+		Sbar_DrawCharacter (x + 24, -24, num[2]);
 		x += 32;
 	}
 }
