@@ -30,6 +30,7 @@ static rtexture_t *char_texture;
 //=============================================================================
 /* Support Routines */
 
+#define FONT_FILESIZE 13468
 #define MAX_CACHED_PICS 256
 #define CACHEPICHASHSIZE 256
 static cachepic_t *cachepichash[CACHEPICHASHSIZE];
@@ -38,7 +39,7 @@ static int numcachepics;
 
 static rtexturepool_t *drawtexturepool;
 
-static qbyte concharimage[13468] =
+static qbyte concharimage[FONT_FILESIZE] =
 {
 #include "lhfont.h"
 };
@@ -51,7 +52,7 @@ static rtexture_t *draw_generateconchars(void)
 	qbyte buffer[65536][4], *data = NULL;
 	double random;
 
-	fs_filesize = 13396;
+	fs_filesize = FONT_FILESIZE;
 	data = LoadTGA (concharimage, 256, 256);
 	fs_filesize = -1;
 // Gold numbers
