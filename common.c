@@ -801,27 +801,6 @@ skipwhite:
 		*datapointer = data;
 	}
 
-	// check for $cvar
-	if (com_token[0] == '$' && com_token[1]) 
-	{
-		cvar_t *cvar;
-
-		cvar = Cvar_FindVar(&com_token[1]);
-		if (cvar)
-		{
-			strcpy(com_token, cvar->string);
-		}
-		else if( com_token[1] == '$' )
-		{
-			// remove the first $
-			char *pos;
-		
-			for( pos = com_token ; *pos ; pos++ )
-			{
-				*pos = *(pos + 1);
-			}
-		}
-	}
 	return true;
 }
 
