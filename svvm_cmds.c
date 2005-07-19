@@ -8,6 +8,8 @@ cvar_t sv_aim = {CVAR_SAVE, "sv_aim", "2"}; //"0.93"}; // LordHavoc: disabled au
 
 
 char *vm_sv_extensions =
+"DP_CON_EXPANDCVAR "
+"DP_CON_ALIASPARAMETERS "
 "DP_BUTTONCHAT "
 "DP_BUTTONUSE "
 "DP_CL_LOADSKY "
