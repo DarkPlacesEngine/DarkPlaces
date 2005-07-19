@@ -395,6 +395,51 @@ cmd_source_t cmd_source;
 static cmd_function_t *cmd_functions;		// possible commands to execute
 
 /*
+============
+Cmd_ExecuteAlias
+
+Called for aliases and fills in the alias into the cbuffer
+============
+*/
+static void Cmd_ExecuteAlias (cmdalias_t *alias)
+{
+	const char *text = alias->value;
+	
+	while( COM_ParseTokenConsole( &text ) ) 
+	{
+		Cbuf_AddText( "\"" );
+
+		if( com_token[0] == '$' )
+		{
+			int argNum;
+			argNum = atoi( &com_token[1] );
+
+			// no number at all?
+			if( argNum == 0 )
+			{
+				Cbuf_AddText( com_token );
+			}
+			else if( argNum >= Cmd_Argc() )
+			{
+				Con_Printf( "Warning: Not enough parameters passed to alias '%s', at least %i expected:\n    %s\n", alias->name, argNum, alias->value );
+				Cbuf_AddText( com_token );
+			}
+			else
+			{
+				Cbuf_AddText( Cmd_Argv( argNum ) );
+			}
+		}
+		else 
+		{
+			Cbuf_AddText( com_token );
+		}
+
+		Cbuf_AddText( "\"" );
+	}
+	Cbuf_AddText( "\n" );
+}
+
+/*
 ========
 Cmd_List
 
@@ -836,7 +881,7 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 	{
 		if (!strcasecmp (cmd_argv[0], a->name))
 		{
-			Cbuf_InsertText (a->value);
+			Cmd_ExecuteAlias(a);
 			cmd_tokenizebufferpos = oldpos;
 			return;
 		}

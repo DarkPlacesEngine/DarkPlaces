@@ -12,7 +12,12 @@
 -d (flum) bug darkplaces client: corona on your own muzzleflash is annoying when looking down because it can be seen, disable corona on all muzzleflashes (flum)
 -d (mashakos) bug darkplaces input: fix the mouse move when console is raised in glx, probably by ignoring the first move after console raise (mashakos)
 -d (romi) feature darkplaces editlights: add coronasize setting to rtlights (romi)
--d feature darkplaces server: add sv_playerphysicsqc cvar to allow engine to ignore SV_PlayerPhysics function, this would also have to change the reported extensions (Gleeb)
+-d feature darkplaces server: add sv_playerphysicsqc cvar to allow engine to ignore 
+SV_PlayerPhysics function, this would also have to change the reported extensions (Gleeb)
+-d bug darkplaces prvm: assignment to world is not producing an error after world spawn stage (Spike)
+-d feature darkplaces server: add filename/line number reporting to progs stack and opcode printouts (Spike)
+-d feature darkplaces console: expand parameters such as $cvar to use the value of the cvar, DP_CON_EXPANDCVAR (up2nogood)
+-d feature darkplaces console: make aliases given parameters insert the parameters in place of $1, $2, $* macros in the alias string, add this as DP_CON_ALIASPARAMETERS (up2nogood)
 0 bug darkplaces WGL client: figure out why GDI input has stuttering problems with gl_finish 0 mode (Kinn, Urre, romi, Spike, Black)
 0 bug darkplaces WGL client: fix GDI input init/shutdown, it is using weird mouse acceleration and not restoring it on exit (innovati)
 0 bug darkplaces WGL/GLX/SDL client bug: if sound is unavailable (causing a freeze waiting for it to become available), the config is reset (SavageX)
@@ -44,7 +49,6 @@
 0 bug darkplaces protocol: models sometimes staying in nexuiz after a big battle, entities that don't exist on the server anymore (Spike)
 0 bug darkplaces protocol: sometimes players are invisible in nexuiz, showing only their gun model, this may be related to svc_precache messages not being sent during signon (Vermeulen)
 0 bug darkplaces prvm: add back the leak checking http://cvs.icculus.org/cvs/twilight/darkplaces/prvm_cmds.c?r1=1.67&r2=1.68 (Black)
-0 bug darkplaces prvm: assignment to world is not producing an error after world spawn stage (Spike)
 0 bug darkplaces renderer: animated textures are not being lit by static rtlights (LordHavoc)
 0 bug darkplaces renderer: do bloom effect before world crosshair and coronas and things (KrimZon)
 0 bug darkplaces renderer: lit sprites (which use R_CompleteLightPoint) are being lit blue by glow_color 108 dlights (Cheapy)
@@ -141,7 +145,6 @@
 0 feature darkplaces server: add a DP_QC_WARNING extension which has a "warning" builtin that does a PF_WARNING just to print the requested message, opcode dump, and stack trace (FrikaC)
 0 feature darkplaces server: add a clipmask thingy to allow QC to mask off collisions as it wishes (Uffe)
 0 feature darkplaces server: add cl_prydoncursor_centeredcursor cvar and PRYDON_CLIENTCURSOR_CENTEREDCURSOR extension (Wazat)
-0 feature darkplaces server: add filename/line number reporting to progs stack and opcode printouts (Spike)
 0 feature darkplaces server: add sv_antilag cvar which would upgrade the aim() builtin to aim at the creature the player's prydon cursor trace was hitting (Spike)
 0 feature darkplaces server: make fopen builtin have the ability to disable fopen builtin access to read /, read data/, write data/, or disable fopen builtin entirely
 0 feature darkplaces server: make noclip/fly cheats use MOVETYPE_CHEATNOCLIP/MOVETYPE_CHEATFLY which would have the nicer movement interface (Spikester)
@@ -251,8 +254,6 @@
 2 feature darkplaces client: make CL_Video use TEXF_FRAGMENT again by adding general, transparent support for it in all drawqueue functions (so you dont need to call FragmentLocation) (Black)
 2 feature darkplaces client: make tab completion able to complete map names when using a map or changelevel command (Zenex)
 2 feature darkplaces console: add a "maps" command which takes the list from "dir maps/*.bsp" and prints the actual names of all the levels according to their worldspawn.message keys (RPG, Zenex)
-2 feature darkplaces console: expand parameters such as $cvar to use the value of the cvar, DP_CON_EXPANDCVAR (up2nogood)
-2 feature darkplaces console: make aliases given parameters insert the parameters in place of $1, $2, $* macros in the alias string, add this as DP_CON_ALIASPARAMETERS (up2nogood)
 2 feature darkplaces image: add scaling capabilities to Image_CopyMux
 2 feature darkplaces loader: add support for fuhquake naming of map textures (textures/start/quake.tga style)
 2 feature darkplaces menu: implement menu_clearkeyconfig and menu_keyconfig and the corresponding menu (diGGer)
