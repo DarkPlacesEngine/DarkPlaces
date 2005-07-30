@@ -649,7 +649,7 @@ void Cmd_AddCommand (const char *cmd_name, xcommand_t function)
 	cmd_function_t *prev, *current;
 
 // fail if the command is a variable name
-	if (Cvar_VariableString(cmd_name)[0])
+	if (Cvar_FindVar( cmd_name ))
 	{
 		Con_Printf("Cmd_AddCommand: %s already defined as a var\n", cmd_name);
 		return;
