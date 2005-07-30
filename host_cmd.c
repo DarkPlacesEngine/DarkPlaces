@@ -294,7 +294,12 @@ void Host_Changelevel_f (void)
 		Con_Print("changelevel <levelname> : continue game on a new level\n");
 		return;
 	}
-	if (!sv.active || cls.demoplayback)
+	// HACKHACKHACK
+	if (!sv.active) {
+		Host_Map_f();
+		return;
+	}
+	if (cls.demoplayback)
 	{
 		Con_Print("Only the server may changelevel\n");
 		return;
