@@ -142,7 +142,7 @@ char *Sys_ConsoleInput(void)
 	if (cls.state == ca_dedicated)
 	{
 		static char text[256];
-		static int len = 0;
+		static unsigned int len = 0;
 #ifdef WIN32
 		int c;
 
