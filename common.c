@@ -961,8 +961,8 @@ static const gamemode_info_t gamemode_info [] =
 // COMMANDLINEOPTION: Game: -prydon runs the topdown point and click action-RPG Prydon Gate
 { "prydon",			"-prydon",		"PrydonGate",			"id1",		"prydon",		"prydon",		"darkplaces"},
 // GAME_NETHERWORLD
-// COMMANDLINEOPTION: Game: -netherworld runs the game Netherworld: Dark Masters
-{ "netherworld",	"-netherworld",	"Dark Masters",			"id1",		"netherworld", 	"nw",			"darkplaces"},
+// COMMANDLINEOPTION: Game: -netherworld runs the game Netherworld: Dark Master
+{ "netherworld",	"-netherworld",	"Netherworld: Dark Master",	"id1",		"netherworld", 	"nw",			"darkplaces"},
 // GAME_THEHUNTED
 // COMMANDLINEOPTION: Game: -netherworld runs the game The Hunted
 { "thehunted",		"-thehunted",	"The Hunted",			"thdata",	NULL, 			"th",			"thehunted"},
