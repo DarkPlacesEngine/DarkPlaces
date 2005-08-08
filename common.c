@@ -964,7 +964,7 @@ static const gamemode_info_t gamemode_info [] =
 // COMMANDLINEOPTION: Game: -netherworld runs the game Netherworld: Dark Master
 { "netherworld",	"-netherworld",	"Netherworld: Dark Master",	"id1",		"netherworld", 	"nw",			"darkplaces"},
 // GAME_THEHUNTED
-// COMMANDLINEOPTION: Game: -netherworld runs the game The Hunted
+// COMMANDLINEOPTION: Game: -thehunted runs the game The Hunted
 { "thehunted",		"-thehunted",	"The Hunted",			"thdata",	NULL, 			"th",			"thehunted"},
 };
 
