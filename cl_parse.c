@@ -280,29 +280,29 @@ Con_DPrintf("CL_SignonReply: %i\n", cls.signon);
 
 	case 2:
 		MSG_WriteByte (&cls.message, clc_stringcmd);
-		MSG_WriteString (&cls.message, va("name \"%s\"\n", cl_name.string));
+		MSG_WriteString (&cls.message, va("name \"%s\"", cl_name.string));
 
 		MSG_WriteByte (&cls.message, clc_stringcmd);
-		MSG_WriteString (&cls.message, va("color %i %i\n", cl_color.integer >> 4, cl_color.integer & 15));
+		MSG_WriteString (&cls.message, va("color %i %i", cl_color.integer >> 4, cl_color.integer & 15));
 
 		if (cl_pmodel.integer)
 		{
 			MSG_WriteByte (&cls.message, clc_stringcmd);
-			MSG_WriteString (&cls.message, va("pmodel %i\n", cl_pmodel.integer));
+			MSG_WriteString (&cls.message, va("pmodel %i", cl_pmodel.integer));
 		}
 		if (*cl_playermodel.string)
 		{
 			MSG_WriteByte (&cls.message, clc_stringcmd);
-			MSG_WriteString (&cls.message, va("playermodel %s\n", cl_playermodel.string));
+			MSG_WriteString (&cls.message, va("playermodel %s", cl_playermodel.string));
 		}
 		if (*cl_playerskin.string)
 		{
 			MSG_WriteByte (&cls.message, clc_stringcmd);
-			MSG_WriteString (&cls.message, va("playerskin %s\n", cl_playerskin.string));
+			MSG_WriteString (&cls.message, va("playerskin %s", cl_playerskin.string));
 		}
 
 		MSG_WriteByte (&cls.message, clc_stringcmd);
-		MSG_WriteString (&cls.message, va("rate %i\n", cl_rate.integer));
+		MSG_WriteString (&cls.message, va("rate %i", cl_rate.integer));
 
 		MSG_WriteByte (&cls.message, clc_stringcmd);
 		MSG_WriteString (&cls.message, "spawn");
