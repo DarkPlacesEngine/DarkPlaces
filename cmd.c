@@ -151,8 +151,8 @@ void Cbuf_Execute (void)
 		for (i=0 ; i< cmd_text.cursize ; i++)
 		{
 			if (text[i] == '"')
-				quotes++;
-			if ( !(quotes&1) &&  text[i] == ';')
+				quotes ^= 1;
+			if ( !quotes &&  text[i] == ';')
 				break;	// don't break if inside a quoted string
 			if (text[i] == '\r' || text[i] == '\n')
 				break;
@@ -403,40 +403,75 @@ Called for aliases and fills in the alias into the cbuffer
 */
 static void Cmd_ExecuteAlias (cmdalias_t *alias)
 {
-	const char *text = alias->value;
-	
-	while( COM_ParseTokenConsole( &text ) ) 
+#define ALIAS_BUFFER 1024
+	static char buffer[ ALIAS_BUFFER + 2 ];
+	const char *in;
+	char *out;
+	unsigned outlen;
+	int inquote;
+
+	in = alias->value;
+	out = buffer;
+	outlen = 0;
+	inquote = 0;
+
+	while( *in && outlen < ALIAS_BUFFER ) 
 	{
-		Cbuf_AddText( "\"" );
-
-		if( com_token[0] == '$' )
+		if( *in == '"' ) 
 		{
-			int argNum;
-			argNum = atoi( &com_token[1] );
-
-			// no number at all?
-			if( argNum == 0 )
-			{
-				Cbuf_AddText( com_token );
-			}
-			else if( argNum >= Cmd_Argc() )
-			{
-				Con_Printf( "Warning: Not enough parameters passed to alias '%s', at least %i expected:\n    %s\n", alias->name, argNum, alias->value );
-				Cbuf_AddText( com_token );
-			}
-			else
-			{
-				Cbuf_AddText( Cmd_Argv( argNum ) );
-			}
-		}
-		else 
+			inquote ^= 1;
+		} 
+		else if( *in == '$' && !inquote ) 
 		{
-			Cbuf_AddText( com_token );
-		}
+			// $* is replaced with all formal parameters, $num is parsed as an argument (or as $num if there arent enough parameters), $bla becomes $bla and $$bla becomes $$bla
+			// read over the $
+			in++;
+			if( *in == '*' ) 
+			{
+				const char *linein = Cmd_Args();
+				// include all params
+				while( *linein && outlen < ALIAS_BUFFER ) {
+					*out++ = *linein++;
+					outlen++;
+				}
 
-		Cbuf_AddText( "\"" );
+				in++;
+			} else {
+				char *nexttoken;
+				int argnum;
+
+				argnum = strtol( in, &nexttoken, 10 );
+
+				if( 0 < argnum && argnum < Cmd_Argc() )
+				{
+					const char *param = Cmd_Argv( argnum );
+					while( *param && outlen < ALIAS_BUFFER ) {
+						*out++ = *param++;
+						outlen++;
+					}
+					in = nexttoken;
+				}
+				else if( argnum >= Cmd_Argc() )
+				{
+					Con_Printf( "Warning: Not enough parameters passed to alias '%s', at least %i expected:\n    %s\n", alias->name, argnum, alias->value );
+					*out++ = '$';
+					outlen++;
+				}
+				// not a number
+				else if( argnum == 0 )
+				{
+					*out++ = '$';
+					outlen++;
+				}
+			}
+		} else {
+			*out++ = *in++;
+			outlen++;
+		}
 	}
-	Cbuf_AddText( "\n" );
+	*out++ = '\n';
+	*out++ = 0;
+	Cbuf_AddText( buffer );
 }
 
 /*
