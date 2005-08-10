@@ -48,6 +48,8 @@ int gl_support_shading_language_100 = false;
 int gl_support_vertex_shader = false;
 // GL_ARB_fragment_shader
 int gl_support_fragment_shader = false;
+// GL_NV_half_float
+int gl_support_half_float = false;
 
 // LordHavoc: if window is hidden, don't update screen
 qboolean vid_hidden = true;
@@ -673,12 +675,15 @@ void VID_CheckExtensions(void)
 
 // COMMANDLINEOPTION: GL: -noshaderobjects disables GL_ARB_shader_objects (required for vertex shader and fragment shader)
 // COMMANDLINEOPTION: GL: -noshadinglanguage100 disables GL_ARB_shading_language_100 (required for vertex shader and fragment shader)
-// COMMANDLINEOPTION: GL: -novertexshader disables GL_ARB_vertex_shader (currently unused, allows vertex shader effects)
-// COMMANDLINEOPTION: GL: -nofragmentshader disables GL_ARB_fragment_shader (currently unused, allows pixel shader effects)
+// COMMANDLINEOPTION: GL: -novertexshader disables GL_ARB_vertex_shader (allows vertex shader effects)
+// COMMANDLINEOPTION: GL: -nofragmentshader disables GL_ARB_fragment_shader (allows pixel shader effects, can improve per pixel lighting performance and capabilities)
 	if ((gl_support_shader_objects = GL_CheckExtension("GL_ARB_shader_objects", shaderobjectsfuncs, "-noshaderobjects", false)))
 		if ((gl_support_shading_language_100 = GL_CheckExtension("GL_ARB_shading_language_100", NULL, "-noshadinglanguage100", false)))
 			if ((gl_support_vertex_shader = GL_CheckExtension("GL_ARB_vertex_shader", vertexshaderfuncs, "-novertexshader", false)))
 				gl_support_fragment_shader = GL_CheckExtension("GL_ARB_fragment_shader", NULL, "-nofragmentshader", false);
+
+// COMMANDLINEOPTION: GL: -nohalffloat disables GL_NV_half_float extension
+	gl_support_half_float = GL_CheckExtension("GL_NV_half_float", NULL, "-nohalffloat", false);
 }
 
 qboolean vid_vertexarrays_are_var = false;

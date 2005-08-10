@@ -223,7 +223,7 @@ cvar_t r_shadow_glsl = {0, "r_shadow_glsl", "1"};
 cvar_t r_shadow_glsl_offsetmapping = {0, "r_shadow_glsl_offsetmapping", "0"};
 cvar_t r_shadow_glsl_offsetmapping_scale = {0, "r_shadow_glsl_offsetmapping_scale", "-0.04"};
 cvar_t r_shadow_glsl_offsetmapping_bias = {0, "r_shadow_glsl_offsetmapping_bias", "0.04"};
-cvar_t r_shadow_glsl_geforcefxlowquality = {0, "r_shadow_glsl_geforcefxlowquality", "1"};
+cvar_t r_shadow_glsl_usehalffloat = {0, "r_shadow_glsl_usehalffloat", "0"};
 cvar_t r_shadow_glsl_surfacenormalize = {0, "r_shadow_glsl_surfacenormalize", "1"};
 cvar_t gl_ext_stenciltwoside = {0, "gl_ext_stenciltwoside", "1"};
 cvar_t r_editlights = {0, "r_editlights", "0"};
@@ -427,9 +427,9 @@ const char *builtinshader_light_frag =
 void r_shadow_start(void)
 {
 	int i;
-	// if not a GeForce FX, turn off the lowquality cvar
-	if (strncmp(gl_renderer, "GeForce FX ", strlen("GeForce FX ")))
-		Cvar_SetValue("r_shadow_glsl_geforcefxlowquality", 0);
+	// use half float math where available (speed gain on NVIDIA GFFX and GF6)
+	if (gl_support_half_float)
+		Cvar_SetValue("r_shadow_glsl_usehalffloat", 1);
 	// allocate vertex processing arrays
 	numcubemaps = 0;
 	r_shadow_attenuation2dtexture = NULL;
@@ -620,7 +620,7 @@ void R_Shadow_Help_f(void)
 "r_shadow_glsl_offsetmapping : enables Offset Mapping bumpmap enhancement\n"
 "r_shadow_glsl_offsetmapping_scale : controls depth of Offset Mapping\n"
 "r_shadow_glsl_offsetmapping_bias : should be negative half of scale\n"
-"r_shadow_glsl_geforcefxlowquality : use lower quality lighting\n"
+"r_shadow_glsl_usehalffloat : use lower quality lighting\n"
 "r_shadow_glsl_surfacenormalize : makes bumpmapping slightly higher quality\n"
 "r_shadow_scissor : use scissor optimization\n"
 "r_shadow_shadow_polygonfactor : nudge shadow volumes closer/further\n"
@@ -668,7 +668,7 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_glsl_offsetmapping);
 	Cvar_RegisterVariable(&r_shadow_glsl_offsetmapping_scale);
 	Cvar_RegisterVariable(&r_shadow_glsl_offsetmapping_bias);
-	Cvar_RegisterVariable(&r_shadow_glsl_geforcefxlowquality);
+	Cvar_RegisterVariable(&r_shadow_glsl_usehalffloat);
 	Cvar_RegisterVariable(&r_shadow_glsl_surfacenormalize);
 	Cvar_RegisterVariable(&gl_ext_stenciltwoside);
 	if (gamemode == GAME_TENEBRAE)
@@ -1224,7 +1224,7 @@ void R_Shadow_Stage_Lighting(int stenciltest)
 			r_shadow_lightpermutation |= SHADERPERMUTATION_OFFSETMAPPING;
 		if (r_shadow_glsl_surfacenormalize.integer && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_SURFACENORMALIZE])
 			r_shadow_lightpermutation |= SHADERPERMUTATION_SURFACENORMALIZE;
-		if (r_shadow_glsl_geforcefxlowquality.integer && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_GEFORCEFX])
+		if (r_shadow_glsl_usehalffloat.integer && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_GEFORCEFX])
 			r_shadow_lightpermutation |= SHADERPERMUTATION_GEFORCEFX;
 		r_shadow_lightprog = r_shadow_program_light[r_shadow_lightpermutation];
 		qglUseProgramObjectARB(r_shadow_lightprog);CHECKGLERROR

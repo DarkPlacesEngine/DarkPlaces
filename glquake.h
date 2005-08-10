@@ -676,6 +676,10 @@ extern int gl_support_shading_language_100;
 // GL_EXT_bgra
 #define GL_BGRA					0x80E1
 
+// GL_NV_half_float
+extern int gl_support_half_float;
+// note: this extension has GL_HALF stuff for feeding half floats but I don't use that
+
 #define DEBUGGL
 
 #ifdef DEBUGGL
