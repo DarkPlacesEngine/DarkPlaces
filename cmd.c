@@ -415,18 +415,18 @@ static void Cmd_ExecuteAlias (cmdalias_t *alias)
 	outlen = 0;
 	inquote = 0;
 
-	while( *in && outlen < ALIAS_BUFFER ) 
+	while( *in && outlen < ALIAS_BUFFER )
 	{
-		if( *in == '"' ) 
+		if( *in == '"' )
 		{
 			inquote ^= 1;
-		} 
-		else if( *in == '$' && !inquote ) 
+		}
+		else if( *in == '$' && !inquote )
 		{
 			// $* is replaced with all formal parameters, $num is parsed as an argument (or as $num if there arent enough parameters), $bla becomes $bla and $$bla becomes $$bla
 			// read over the $
 			in++;
-			if( *in == '*' ) 
+			if( *in == '*' )
 			{
 				const char *linein = Cmd_Args();
 				// include all params
@@ -633,9 +633,9 @@ static void Cmd_TokenizeString (const char *text)
 		if (!COM_ParseTokenConsole(&text))
 			return;
 
-		// check for $cvar 
+		// check for $cvar
 		// (perhaps use another target buffer?)
-		if (com_token[0] == '$' && com_token[1]) 
+		if (com_token[0] == '$' && com_token[1])
 		{
 			cvar_t *cvar;
 
@@ -648,7 +648,7 @@ static void Cmd_TokenizeString (const char *text)
 			{
 				// remove the first $
 				char *pos;
-			
+
 				for( pos = com_token ; *pos ; pos++ )
 				{
 					*pos = *(pos + 1);
@@ -988,10 +988,19 @@ Sends the entire command line over to the server
 void Cmd_ForwardToServer (void)
 {
 	const char *s;
-	if (strcasecmp(Cmd_Argv(0), "cmd"))
-		s = va("%s %s", Cmd_Argv(0), Cmd_Argc() > 1 ? Cmd_Args() : "");
-	else
+	if (!strcasecmp(Cmd_Argv(0), "cmd"))
+	{
+		// we want to strip off "cmd", so just send the args
 		s = Cmd_Argc() > 1 ? Cmd_Args() : "";
+	}
+	else
+	{
+		// we need to keep the command name, so send Cmd_Argv(0), a space and then Cmd_Args()
+		s = va("%s %s", Cmd_Argv(0), Cmd_Argc() > 1 ? Cmd_Args() : "");
+	}
+	// don't send an empty forward message if the user tries "cmd" by itself
+	if (!s || !*s)
+		return;
 	Cmd_ForwardStringToServer(s);
 }
 
