@@ -199,6 +199,7 @@ void SCR_DrawCenterString (void)
 	int		l;
 	int		x, y;
 	int		remaining;
+	int		color;
 
 // the finale prints the characters one at a time
 	if (cl.intermission)
@@ -214,6 +215,7 @@ void SCR_DrawCenterString (void)
 	else
 		y = 48;
 
+	color = -1;
 	do
 	{
 	// scan the width of the line
@@ -225,7 +227,7 @@ void SCR_DrawCenterString (void)
 		{
 			if (remaining < l)
 				l = remaining;
-			DrawQ_String(x, y, start, l, 8, 8, 1, 1, 1, 1, 0);
+			DrawQ_ColoredString(x, y, start, l, 8, 8, 1, 1, 1, 1, 0, &color);
 			remaining -= l;
 			if (remaining <= 0)
 				return;
