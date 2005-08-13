@@ -4612,6 +4612,7 @@ void MR_SetRouting (qboolean forceold);
 
 void MP_Error(const char *format, ...)
 {
+	static qboolean processingError = false;
 	char errorstring[4096];
 	va_list argptr;
 
@@ -4620,7 +4621,13 @@ void MP_Error(const char *format, ...)
 	va_end (argptr);
 	Con_Printf( "Menu_Error: %s\n", errorstring );
 
-	PRVM_Crash();
+	if( !processingError ) {
+		processingError = true;
+		PRVM_Crash();
+		processingError = false;
+	} else {
+		Con_Printf( "Menu_Error: Recursive call to MP_Error (from PRVM_Crash)!\n" );
+	}
 
 	// fall back to the normal menu
 
