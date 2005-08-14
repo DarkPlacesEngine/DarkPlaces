@@ -63,6 +63,8 @@ cvar_t cl_noplayershadow = {CVAR_SAVE, "cl_noplayershadow", "0"};
 
 cvar_t cl_prydoncursor = {0, "cl_prydoncursor", "0"};
 
+cvar_t cl_deathnoviewmodel = {0, "cl_deathnoviewmodel", "1"};
+
 vec3_t cl_playerstandmins;
 vec3_t cl_playerstandmaxs;
 vec3_t cl_playercrouchmins;
@@ -1010,7 +1012,7 @@ static void CL_RelinkNetworkEntities(void)
 	ent->state_current.modelindex = cl.stats[STAT_WEAPON];
 	ent->state_current.frame = cl.stats[STAT_WEAPONFRAME];
 	ent->state_current.flags = RENDER_VIEWMODEL;
-	if (cl.stats[STAT_HEALTH] <= 0 || cl.intermission)
+	if ((cl.stats[STAT_HEALTH] <= 0 && cl_deathnoviewmodel.integer) || cl.intermission)
 		ent->state_current.modelindex = 0;
 	else if (cl.stats[STAT_ITEMS] & IT_INVISIBILITY)
 	{
@@ -1464,6 +1466,8 @@ void CL_Init (void)
 	Cvar_RegisterVariable(&cl_noplayershadow);
 
 	Cvar_RegisterVariable(&cl_prydoncursor);
+
+	Cvar_RegisterVariable(&cl_deathnoviewmodel);
 
 	Cmd_AddCommand("timerefresh", CL_TimeRefresh_f);
 

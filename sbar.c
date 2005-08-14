@@ -97,6 +97,8 @@ cvar_t	showdate_format = {CVAR_SAVE, "showdate_format", "%Y-%m-%d"};
 cvar_t	sbar_alpha_bg = {CVAR_SAVE, "sbar_alpha_bg", "0.4"};
 cvar_t	sbar_alpha_fg = {CVAR_SAVE, "sbar_alpha_fg", "1"};
 
+cvar_t	cl_deathscoreboard = {0, "cl_deathscoreboard", "1"};
+
 void Sbar_MiniDeathmatchOverlay (int x, int y);
 void Sbar_DeathmatchOverlay (void);
 void Sbar_IntermissionOverlay (void);
@@ -329,6 +331,7 @@ void Sbar_Init (void)
 	Cvar_RegisterVariable (&showdate_format);
 	Cvar_RegisterVariable (&sbar_alpha_bg);
 	Cvar_RegisterVariable (&sbar_alpha_fg);
+	Cvar_RegisterVariable (&cl_deathscoreboard);
 
 	R_RegisterModule("sbar", sbar_start, sbar_shutdown, sbar_newmap);
 }
@@ -913,7 +916,7 @@ void Sbar_Draw (void)
 
 	if (gamemode == GAME_SOM)
 	{
-		if (sb_showscores || cl.stats[STAT_HEALTH] <= 0)
+		if (sb_showscores || (cl.stats[STAT_HEALTH] <= 0 && cl_deathscoreboard.integer))
 			Sbar_DrawScoreboard ();
 		else if (sb_lines)
 		{
@@ -956,7 +959,7 @@ void Sbar_Draw (void)
 		sbar_y = vid_conheight.integer - 47;
 		sbar_x = (vid_conwidth.integer - 640)/2;
 
-		if (sb_showscores || cl.stats[STAT_HEALTH] <= 0)
+		if (sb_showscores || (cl.stats[STAT_HEALTH] <= 0 && cl_deathscoreboard.integer))
 		{
 			Sbar_DrawAlphaPic (0, 0, sb_scorebar, sbar_alpha_bg.value);
 			Sbar_DrawScoreboard ();
@@ -1050,7 +1053,7 @@ void Sbar_Draw (void)
 				Sbar_DrawFrags ();
 		}
 
-		if (sb_showscores || cl.stats[STAT_HEALTH] <= 0)
+		if (sb_showscores || (cl.stats[STAT_HEALTH] <= 0 && cl_deathscoreboard.integer))
 		{
 			if (gamemode != GAME_GOODVSBAD2)
 				Sbar_DrawAlphaPic (0, 0, sb_scorebar, sbar_alpha_bg.value);
