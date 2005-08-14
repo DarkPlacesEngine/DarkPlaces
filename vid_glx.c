@@ -35,7 +35,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <X11/cursorfont.h>
 
 #include <X11/extensions/XShm.h>
-#if !defined(__APPLE__) && !defined(__MACH__)
+#if !defined(__APPLE__) && !defined(__MACH__) && !defined(SUNOS)
 #include <X11/extensions/xf86dga.h>
 #endif
 #include <X11/extensions/xf86vmode.h>
@@ -93,7 +93,7 @@ static qboolean vid_usevsync = false;
 static float	mouse_x, mouse_y;
 static int p_mouse_x, p_mouse_y;
 
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(SUNOS)
 cvar_t vid_dga = {CVAR_SAVE, "vid_dga", "1"};
 cvar_t vid_dga_mouseaccel = {0, "vid_dga_mouseaccel", "1"};
 #endif
@@ -265,7 +265,7 @@ static void IN_Activate (qboolean grab)
 
 			XGrabPointer(vidx11_display, win,  True, 0, GrabModeAsync, GrabModeAsync, win, None, CurrentTime);
 
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(SUNOS)
 			if (vid_dga.integer)
 			{
 				int MajorVersion, MinorVersion;
@@ -298,7 +298,7 @@ static void IN_Activate (qboolean grab)
 	{
 		if (vid_usingmouse)
 		{
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(SUNOS)
 			if (vid_dga.integer)
 				XF86DGADirectVideo(vidx11_display, DefaultScreen(vidx11_display), 0);
 #endif
@@ -348,7 +348,7 @@ static void HandleEvents(void)
 			// mouse moved
 			if (vid_usingmouse)
 			{
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(SUNOS)
 				if (vid_dga.integer == 1)
 				{
 					mouse_x += event.xmotion.x_root * vid_dga_mouseaccel.value;
@@ -652,7 +652,7 @@ int VID_GetGamma(unsigned short *ramps)
 
 void VID_Init(void)
 {
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(SUNOS)
 	Cvar_RegisterVariable (&vid_dga);
 	Cvar_RegisterVariable (&vid_dga_mouseaccel);
 #endif

@@ -251,7 +251,7 @@ extern int serverlist_cachecount;
 
 extern qboolean serverlist_consoleoutput;
 
-#if !defined(_WIN32 ) && !defined (__linux__) && !defined (__sun__)
+#if !defined(_WIN32) && !defined(__linux__) && !defined(SUNOS)
 #ifndef htonl
 extern unsigned long htonl (unsigned long hostlong);
 #endif

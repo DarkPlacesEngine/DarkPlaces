@@ -33,11 +33,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # define MACOSX
 #endif
 
-// Create our own define for Solaris
-#if defined(__sun__) && defined(__svr4__)
-# define SUNOS
-#endif
-
 #ifdef SUNOS
 #include <sys/file.h>		// Needed for FNDELAY
 # define model_t dp_model_t // Workaround conflict with /usr/include/sys/model.h

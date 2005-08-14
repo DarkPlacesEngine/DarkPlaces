@@ -42,9 +42,9 @@ endif
 
 # 64bits AMD CPUs use another lib directory
 ifeq ($(DP_MACHINE),x86_64)
-	UNIX_X11LIBPATH:=-L/usr/X11R6/lib64
+	UNIX_X11LIBPATH:=/usr/X11R6/lib64
 else
-	UNIX_X11LIBPATH:=-L/usr/X11R6/lib
+	UNIX_X11LIBPATH:=/usr/X11R6/lib
 endif
 
 
@@ -82,7 +82,7 @@ endif
 
 # SunOS configuration (Solaris)
 ifeq ($(DP_MAKE_TARGET), sunos)
-	DEFAULT_SNDAPI=OSS
+	DEFAULT_SNDAPI=BSD
 	OBJ_CD=$(OBJ_SUNOSCD)
 
 	OBJ_CL=$(OBJ_GLX)
