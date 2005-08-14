@@ -599,6 +599,6 @@ void V_Init (void)
 	if (gamemode == GAME_GOODVSBAD2)
 		Cvar_RegisterVariable (&chase_stevie);
 
-	Cvar_RegisterVariable (&v_deathtilt.integer);
+	Cvar_RegisterVariable (&v_deathtilt);
 }
 
