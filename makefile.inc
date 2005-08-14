@@ -5,6 +5,8 @@ CC=gcc
 #CPUOPTIMIZATIONS=-march=athlon
 # athlon xp optimizations
 #CPUOPTIMIZATIONS=-march=athlon-xp
+# athlon 64 optimizations
+#CPUOPTIMIZATIONS=-march=athlon64 -m32
 # Pentium 3 optimizations
 #CPUOPTIMIZATIONS=-march=pentium3
 # Pentium 4 optimizations
@@ -156,7 +158,12 @@ OBJ_GLX= builddate.c sys_linux.o vid_glx.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
 
 LDFLAGS_UNIXCOMMON=-lm
 #LDFLAGS_UNIXCL=-L/usr/X11R6/lib -lX11 -lXext -lXxf86dga -lXxf86vm $(LIB_SOUND)
-LDFLAGS_UNIXCL=$(UNIX_X11LIBPATH) -lX11 -lXext -lXxf86dga -lXxf86vm $(LIB_SOUND)
+ifeq ($(DP_MAKE_TARGET), sunos)
+	LDFLAGS_UNIXCL=-R$(UNIX_X11LIBPATH) -L$(UNIX_X11LIBPATH) -lX11 -lXext -lXxf86vm $(LIB_SOUND)
+else
+	LDFLAGS_UNIXCL=-L$(UNIX_X11LIBPATH) -lX11 -lXext -lXxf86dga -lXxf86vm $(LIB_SOUND)
+endif
+
 LDFLAGS_UNIXSDL=`sdl-config --libs`
 EXE_UNIXCL=darkplaces-glx
 EXE_UNIXSV=darkplaces-dedicated
@@ -197,7 +204,7 @@ OBJ_AGL= builddate.c sys_linux.o vid_agl.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
 # No CD support available
 OBJ_SUNOSCD=$(OBJ_NOCD)
 
-CFLAGS_SUNOS=-I/usr/lib/oss/include -DBSD_COMP
+CFLAGS_SUNOS=-I/usr/lib/oss/include -DBSD_COMP -DSUNOS
 
 # Link
 LDFLAGS_SUNOSCL=$(LDFLAGS_UNIXCOMMON) -ldl -lsocket -lnsl $(LDFLAGS_UNIXCL)

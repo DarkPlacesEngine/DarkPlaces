@@ -20,11 +20,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <sys/param.h>
 #include <sys/audioio.h>
+#ifndef SUNOS
 #include <sys/endian.h>
+#endif
 #include <sys/ioctl.h>
 
 #include <fcntl.h>
+#ifndef SUNOS
 #include <paths.h>
+#endif
 #include <unistd.h>
 
 #include "quakedef.h"
@@ -55,7 +59,11 @@ qboolean SNDDMA_Init (void)
 #ifdef _PATH_SOUND
 	snddev = _PATH_SOUND;
 #else
+#ifndef SUNOS
 	snddev = "/dev/sound";
+#else
+	snddev = "/dev/audio";
+#endif
 #endif
 	audio_fd = open (snddev, O_WRONLY | O_NDELAY | O_NONBLOCK);
 	if (audio_fd < 0)
@@ -81,7 +89,11 @@ qboolean SNDDMA_Init (void)
 #if BYTE_ORDER == BIG_ENDIAN
 		info.play.encoding = AUDIO_ENCODING_SLINEAR_BE;
 #else
+#ifndef SUNOS
 		info.play.encoding = AUDIO_ENCODING_SLINEAR_LE;
+#else
+		info.play.encoding = AUDIO_ENCODING_LINEAR;
+#endif
 #endif
 		if (ioctl (audio_fd, AUDIO_SETINFO, &info) == 0)
 			break;
