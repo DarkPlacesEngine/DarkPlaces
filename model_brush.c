@@ -3158,7 +3158,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	//Mod_Q1BSP_ProcessLightList();
 
 	if (developer.integer)
-		Con_Printf("Some stats for q1bsp model \"%s\": %i faces, %i nodes, %i leafs, %i visleafs, %i visleafportals\n", loadmodel->name, loadmodel->num_surfaces, loadmodel->brush.num_nodes, loadmodel->brush.num_leafs, mod->brushq1.submodels[i].visleafs, loadmodel->brush.num_portals);
+		Con_Printf("Some stats for q1bsp model \"%s\": %i faces, %i nodes, %i leafs, %i visleafs, %i visleafportals\n", loadmodel->name, loadmodel->num_surfaces, loadmodel->brush.num_nodes, loadmodel->brush.num_leafs, mod->brush.num_pvsclusters, loadmodel->brush.num_portals);
 }
 
 static void Mod_Q2BSP_LoadEntities(lump_t *l)
