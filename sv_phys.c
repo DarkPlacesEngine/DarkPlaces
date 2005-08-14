@@ -657,8 +657,11 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 
 		// if the entity is standing on the pusher, it will definitely be moved
 		if (!(((int)check->fields.server->flags & FL_ONGROUND) && PRVM_PROG_TO_EDICT(check->fields.server->groundentity) == pusher))
+		{
+			// if the entity is not inside the pusher's final position, leave it alone
 			if (!SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin).startsolid)
 				continue;
+		}
 
 		if (forward[0] != 1 || left[1] != 1) // quick way to check if any rotation is used
 		{
