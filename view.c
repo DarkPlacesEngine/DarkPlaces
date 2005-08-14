@@ -64,6 +64,8 @@ cvar_t chase_active = {CVAR_SAVE, "chase_active", "0"};
 // GAME_GOODVSBAD2
 cvar_t chase_stevie = {0, "chase_stevie", "0"};
 
+cvar_t cl_deathtilt = {0, "cl_deathtilt", "1"};
+
 float	v_dmg_time, v_dmg_roll, v_dmg_pitch;
 
 
@@ -385,7 +387,7 @@ void V_CalcRefdef (void)
 			{
 				// first person view from entity
 				// angles
-				if (cl.stats[STAT_HEALTH] <= 0 && gamemode != GAME_FNIGGIUM)
+				if (cl.stats[STAT_HEALTH] <= 0 && cl_deathtilt.integer)
 					viewangles[ROLL] = 80;	// dead view angle
 				VectorAdd(viewangles, cl.punchangle, viewangles);
 				viewangles[ROLL] += V_CalcRoll(cl.viewangles, cl.movement_velocity);
@@ -596,5 +598,7 @@ void V_Init (void)
 	Cvar_RegisterVariable (&chase_active);
 	if (gamemode == GAME_GOODVSBAD2)
 		Cvar_RegisterVariable (&chase_stevie);
+
+	Cvar_RegisterVariable (&cl_deathtilt.integer);
 }
 
