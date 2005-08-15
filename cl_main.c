@@ -99,6 +99,10 @@ int cl_num_static_entities;
 int cl_num_temp_entities;
 int cl_num_brushmodel_entities;
 
+// keep track of quake entities because they need to be killed if they get stale
+extern int cl_lastquakeentity;
+extern qbyte cl_isquakeentity[MAX_EDICTS];
+
 /*
 =====================
 CL_ClearState
@@ -156,6 +160,9 @@ void CL_ClearState(void)
 	cl_dlights = Mem_Alloc(cl_mempool, cl_max_dlights * sizeof(dlight_t));
 	cl_lightstyle = Mem_Alloc(cl_mempool, cl_max_lightstyle * sizeof(lightstyle_t));
 	cl_brushmodel_entities = Mem_Alloc(cl_mempool, cl_max_brushmodel_entities * sizeof(int));
+
+	cl_lastquakeentity = 0;
+	memset(cl_isquakeentity, 0, sizeof(cl_isquakeentity));
 
 	// LordHavoc: have to set up the baseline info for alpha and other stuff
 	for (i = 0;i < cl_max_entities;i++)
