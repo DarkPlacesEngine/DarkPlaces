@@ -135,6 +135,12 @@ void _Mem_Free(void *data, const char *filename, int fileline)
 	mempool_t *pool;
 	if (data == NULL)
 		Sys_Error("Mem_Free: data == NULL (called at %s:%i)", filename, fileline);
+	if (developer.integer && developer_memorydebug.integer)
+	{
+		_Mem_CheckSentinelsGlobal(filename, fileline);
+		if (!Mem_IsAllocated(NULL, data))
+			Sys_Error("Mem_Free: data is not allocated (called at %s:%i)", filename, fileline);
+	}
 
 	mem = (memheader_t *)((qbyte *) data - sizeof(memheader_t));
 	if (mem->sentinel1 != MEMHEADER_SENTINEL1)
@@ -208,6 +214,8 @@ void _Mem_Free(void *data, const char *filename, int fileline)
 mempool_t *_Mem_AllocPool(const char *name, int flags, mempool_t *parent, const char *filename, int fileline)
 {
 	mempool_t *pool;
+	if (developer.integer && developer_memorydebug.integer)
+		_Mem_CheckSentinelsGlobal(filename, fileline);
 	pool = malloc(sizeof(mempool_t));
 	if (pool == NULL)
 		Sys_Error("Mem_AllocPool: out of memory (allocpool at %s:%i)", filename, fileline);
@@ -231,16 +239,18 @@ void _Mem_FreePool(mempool_t **pool, const char *filename, int fileline)
 {
 	mempool_t **chainaddress, *iter, *temp;
 
+	if (developer.integer && developer_memorydebug.integer)
+		_Mem_CheckSentinelsGlobal(filename, fileline);
 	if (*pool)
 	{
-		if ((*pool)->sentinel1 != MEMHEADER_SENTINEL1)
-			Sys_Error("Mem_FreePool: trashed pool sentinel 1 (allocpool at %s:%i, freepool at %s:%i)", (*pool)->filename, (*pool)->fileline, filename, fileline);
-		if ((*pool)->sentinel2 != MEMHEADER_SENTINEL1)
-			Sys_Error("Mem_FreePool: trashed pool sentinel 2 (allocpool at %s:%i, freepool at %s:%i)", (*pool)->filename, (*pool)->fileline, filename, fileline);
 		// unlink pool from chain
 		for (chainaddress = &poolchain;*chainaddress && *chainaddress != *pool;chainaddress = &((*chainaddress)->next));
 		if (*chainaddress != *pool)
 			Sys_Error("Mem_FreePool: pool already free (freepool at %s:%i)", filename, fileline);
+		if ((*pool)->sentinel1 != MEMHEADER_SENTINEL1)
+			Sys_Error("Mem_FreePool: trashed pool sentinel 1 (allocpool at %s:%i, freepool at %s:%i)", (*pool)->filename, (*pool)->fileline, filename, fileline);
+		if ((*pool)->sentinel2 != MEMHEADER_SENTINEL1)
+			Sys_Error("Mem_FreePool: trashed pool sentinel 2 (allocpool at %s:%i, freepool at %s:%i)", (*pool)->filename, (*pool)->fileline, filename, fileline);
 		*chainaddress = (*pool)->next;
 
 		// free memory owned by the pool
@@ -263,6 +273,16 @@ void _Mem_EmptyPool(mempool_t *pool, const char *filename, int fileline)
 {
 	mempool_t *chainaddress;
 
+	if (developer.integer && developer_memorydebug.integer)
+	{
+		_Mem_CheckSentinelsGlobal(filename, fileline);
+		// check if this pool is in the poolchain
+		for (chainaddress = poolchain;chainaddress;chainaddress = chainaddress->next)
+			if (chainaddress == pool)
+				break;
+		if (!chainaddress)
+			Sys_Error("Mem_EmptyPool: pool is already free (emptypool at %s:%i)", filename, fileline);
+	}
 	if (pool == NULL)
 		Sys_Error("Mem_EmptyPool: pool == NULL (emptypool at %s:%i)", filename, fileline);
 	if (pool->sentinel1 != MEMHEADER_SENTINEL1)
@@ -335,10 +355,21 @@ qboolean Mem_IsAllocated(mempool_t *pool, void *data)
 	memheader_t *header;
 	memheader_t *target;
 
-    target = (memheader_t *)((qbyte *) data - sizeof(memheader_t));
-	for( header = pool->chain ; header ; header = header->next )
-		if( header == target )
-			return true;
+	if (pool)
+	{
+		// search only one pool
+		target = (memheader_t *)((qbyte *) data - sizeof(memheader_t));
+		for( header = pool->chain ; header ; header = header->next )
+			if( header == target )
+				return true;
+	}
+	else
+	{
+		// search all pools
+		for (pool = poolchain;pool;pool = pool->next)
+			if (Mem_IsAllocated(pool, data))
+				return true;
+	}
 	return false;
 }
 
