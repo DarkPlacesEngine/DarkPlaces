@@ -1214,6 +1214,8 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, int color, entity_t *en
 					particle(particletype + pt_alphastatic, color, color, tex_particle, 5, qd*128, qd*320, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0);
 				break;
 #endif
+			default:
+				Sys_Error("CL_RocketTrail: unknown trail type %i\n", type);
 		}
 
 		// advance to next time and position
