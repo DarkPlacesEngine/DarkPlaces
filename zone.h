@@ -132,6 +132,7 @@ void _Mem_FreePool(mempool_t **pool, const char *filename, int fileline);
 void _Mem_EmptyPool(mempool_t *pool, const char *filename, int fileline);
 void _Mem_CheckSentinels(void *data, const char *filename, int fileline);
 void _Mem_CheckSentinelsGlobal(const char *filename, int fileline);
+// if pool is NULL this searches ALL pools for the allocation
 qboolean Mem_IsAllocated(mempool_t *pool, void *data);
 
 // used for temporary allocations
