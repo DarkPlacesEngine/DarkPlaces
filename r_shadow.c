@@ -3621,6 +3621,12 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 			}
 			else if (!strcmp("style", key))
 				style = atoi(value);
+			else if (!strcmp("skin", key))
+				skin = (int)atof(value);
+			else if (!strcmp("pflags", key))
+				pflags = (int)atof(value);
+			else if (!strcmp("effects", key))
+				effects = (int)atof(value);
 			else if (r_refdef.worldmodel->type == mod_brushq3)
 			{
 				if (!strcmp("scale", key))
@@ -3628,12 +3634,6 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 				if (!strcmp("fade", key))
 					fadescale = atof(value);
 			}
-			else if (!strcmp("skin", key))
-				skin = (int)atof(value);
-			else if (!strcmp("pflags", key))
-				pflags = (int)atof(value);
-			else if (!strcmp("effects", key))
-				effects = (int)atof(value);
 		}
 		if (!islight)
 			continue;
@@ -3696,6 +3696,10 @@ void R_Shadow_SetCursorLocationForView(void)
 		push = -push;
 		VectorMA(trace.endpos, push, r_viewforward, endpos);
 		VectorMA(endpos, r_editlights_cursorpushoff.value, trace.plane.normal, endpos);
+	} 
+	else 
+	{
+		VectorClear( endpos );
 	}
 	r_editlights_cursorlocation[0] = floor(endpos[0] / r_editlights_cursorgrid.value + 0.5f) * r_editlights_cursorgrid.value;
 	r_editlights_cursorlocation[1] = floor(endpos[1] / r_editlights_cursorgrid.value + 0.5f) * r_editlights_cursorgrid.value;
