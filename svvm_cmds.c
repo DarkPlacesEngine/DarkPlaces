@@ -862,6 +862,10 @@ void PF_lightstyle (void)
 	style = PRVM_G_FLOAT(OFS_PARM0);
 	val = PRVM_G_STRING(OFS_PARM1);
 
+	if( (unsigned) style >= 64 ) {
+		PRVM_ERROR( "PF_lightstyle: style: %i >= 64", style );
+	}
+
 // change the string in sv
 	strlcpy(sv.lightstyles[style], val, sizeof(sv.lightstyles[style]));
 
