@@ -1895,7 +1895,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		}
 
 		// compile additional data about the surface geometry
-		Mod_BuildTextureVectorsAndNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, surface->groupmesh->data_vertex3f, surface->groupmesh->data_texcoordtexture2f, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle), surface->groupmesh->data_svector3f, surface->groupmesh->data_tvector3f, surface->groupmesh->data_normal3f);
+		Mod_BuildTextureVectorsAndNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, surface->groupmesh->data_vertex3f, surface->groupmesh->data_texcoordtexture2f, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle), surface->groupmesh->data_svector3f, surface->groupmesh->data_tvector3f, surface->groupmesh->data_normal3f, true);
 		BoxFromPoints(surface->mins, surface->maxs, surface->num_vertices, (surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex));
 
 		// generate surface extents information
@@ -4427,7 +4427,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				Con_Print("\n");
 			}
 			// for per pixel lighting
-			Mod_BuildTextureVectorsAndNormals(out->num_firstvertex, out->num_vertices, out->num_triangles, out->groupmesh->data_vertex3f, out->groupmesh->data_texcoordtexture2f, (out->groupmesh->data_element3i + 3 * out->num_firsttriangle), out->groupmesh->data_svector3f, out->groupmesh->data_tvector3f, out->groupmesh->data_normal3f);
+			Mod_BuildTextureVectorsAndNormals(out->num_firstvertex, out->num_vertices, out->num_triangles, out->groupmesh->data_vertex3f, out->groupmesh->data_texcoordtexture2f, (out->groupmesh->data_element3i + 3 * out->num_firsttriangle), out->groupmesh->data_svector3f, out->groupmesh->data_tvector3f, out->groupmesh->data_normal3f, true);
 			// calculate a bounding box
 			VectorClear(out->mins);
 			VectorClear(out->maxs);

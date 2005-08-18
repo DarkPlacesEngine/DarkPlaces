@@ -177,7 +177,7 @@ static void Mod_Alias_Mesh_CompileFrameZero(surfmesh_t *mesh)
 	mesh->data_tvector3f = mesh->data_vertex3f + mesh->num_vertices * 6;
 	mesh->data_normal3f = mesh->data_vertex3f + mesh->num_vertices * 9;
 	Mod_Alias_GetMesh_Vertex3f(loadmodel, frameblend, mesh, mesh->data_vertex3f);
-	Mod_BuildTextureVectorsAndNormals(0, mesh->num_vertices, mesh->num_triangles, mesh->data_vertex3f, mesh->data_texcoordtexture2f, mesh->data_element3i, mesh->data_svector3f, mesh->data_tvector3f, mesh->data_normal3f);
+	Mod_BuildTextureVectorsAndNormals(0, mesh->num_vertices, mesh->num_triangles, mesh->data_vertex3f, mesh->data_texcoordtexture2f, mesh->data_element3i, mesh->data_svector3f, mesh->data_tvector3f, mesh->data_normal3f, true);
 }
 
 static void Mod_MDLMD2MD3_TraceBox(model_t *model, int frame, trace_t *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs, int hitsupercontentsmask)

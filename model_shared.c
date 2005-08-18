@@ -486,60 +486,51 @@ void Mod_ValidateElements(const int *elements, int numtriangles, int numverts, c
 }
 
 // warning: this is an expensive function!
-void Mod_BuildNormals(int firstvertex, int numvertices, int numtriangles, const float *vertex3f, const int *elements, float *normal3f)
+void Mod_BuildNormals(int firstvertex, int numvertices, int numtriangles, const float *vertex3f, const int *elements, float *normal3f, qboolean areaweighting)
 {
-	int i;
+	int i, j;
 	const int *element;
 	float *vectorNormal;
+	float areaNormal[3];
 	// clear the vectors
 	memset(normal3f + 3 * firstvertex, 0, numvertices * sizeof(float[3]));
 	// process each vertex of each triangle and accumulate the results
 	// use area-averaging, to make triangles with a big area have a bigger
 	// weighting on the vertex normal than triangles with a small area
 	// to do so, just add the 'normals' together (the bigger the area
-	// the greater the length of the normal is 
+	// the greater the length of the normal is
 	element = elements;
-	for (i = 0; i < numtriangles; i++)
+	for (i = 0; i < numtriangles; i++, element += 3)
 	{
-		float areaNormal[3];
-
 		TriangleNormal(
-			vertex3f + element[0] * 3, 
-			vertex3f + element[1] * 3, 
-			vertex3f + element[2] * 3, 
+			vertex3f + element[0] * 3,
+			vertex3f + element[1] * 3,
+			vertex3f + element[2] * 3,
 			areaNormal
 			);
-	
-		vectorNormal = normal3f + element[0] * 3;
-		vectorNormal[0] += areaNormal[0];
-		vectorNormal[1] += areaNormal[1];
-		vectorNormal[2] += areaNormal[2];
 
-		vectorNormal = normal3f + element[1] * 3;
-		vectorNormal[0] += areaNormal[0];
-		vectorNormal[1] += areaNormal[1];
-		vectorNormal[2] += areaNormal[2];
+		if (!areaweighting)
+			VectorNormalize(areaNormal);
 
-		vectorNormal = normal3f + element[2] * 3;
-		vectorNormal[0] += areaNormal[0];
-		vectorNormal[1] += areaNormal[1];
-		vectorNormal[2] += areaNormal[2];
-
-		element += 3;
+		for (j = 0;j < 3;j++)
+		{
+			vectorNormal = normal3f + element[j] * 3;
+			vectorNormal[0] += areaNormal[0];
+			vectorNormal[1] += areaNormal[1];
+			vectorNormal[2] += areaNormal[2];
+		}
 	}
 	// and just normalize the accumulated vertex normal in the end
 	vectorNormal = normal3f + 3 * firstvertex;
-	for (i = 0; i < numvertices; i++) {
+	for (i = 0; i < numvertices; i++, vectorNormal += 3)
 		VectorNormalize(vectorNormal);
-		vectorNormal += 3;
-	}
 }
 
 void Mod_BuildBumpVectors(const float *v0, const float *v1, const float *v2, const float *tc0, const float *tc1, const float *tc2, float *svector3f, float *tvector3f, float *normal3f)
 {
 	float f, tangentcross[3], v10[3], v20[3], tc10[2], tc20[2];
-	// 103 add/sub/negate/multiply (1 cycle), 3 divide (20 cycle), 3 sqrt (22 cycle), 4 compare (3 cycle?), total cycles not counting load/store/exchange roughly 241 cycles
-	// 12 add, 28 subtract, 57 multiply, 3 divide, 3 sqrt, 4 compare, 50% chance of 6 negates
+	// 79 add/sub/negate/multiply (1 cycle), 1 compare (3 cycle?), total cycles not counting load/store/exchange roughly 82 cycles
+	// 6 add, 28 subtract, 39 multiply, 1 compare, 50% chance of 6 negates
 
 	// 6 multiply, 9 subtract
 	VectorSubtract(v1, v0, v10);
@@ -547,8 +538,6 @@ void Mod_BuildBumpVectors(const float *v0, const float *v1, const float *v2, con
 	normal3f[0] = v10[1] * v20[2] - v10[2] * v20[1];
 	normal3f[1] = v10[2] * v20[0] - v10[0] * v20[2];
 	normal3f[2] = v10[0] * v20[1] - v10[1] * v20[0];
-	// 1 sqrt, 1 divide, 6 multiply, 2 add, 1 compare
-	VectorNormalize(normal3f);
 	// 12 multiply, 10 subtract
 	tc10[1] = tc1[1] - tc0[1];
 	tc20[1] = tc2[1] - tc0[1];
@@ -569,9 +558,6 @@ void Mod_BuildBumpVectors(const float *v0, const float *v1, const float *v2, con
 	tvector3f[0] -= f * normal3f[0];
 	tvector3f[1] -= f * normal3f[1];
 	tvector3f[2] -= f * normal3f[2];
-	// 2 sqrt, 2 divide, 12 multiply, 4 add, 2 compare
-	VectorNormalize(svector3f);
-	VectorNormalize(tvector3f);
 	// if texture is mapped the wrong way (counterclockwise), the tangents
 	// have to be flipped, this is detected by calculating a normal from the
 	// two tangents, and seeing if it is opposite the surface normal
@@ -585,7 +571,7 @@ void Mod_BuildBumpVectors(const float *v0, const float *v1, const float *v2, con
 }
 
 // warning: this is a very expensive function!
-void Mod_BuildTextureVectorsAndNormals(int firstvertex, int numvertices, int numtriangles, const float *vertex3f, const float *texcoord2f, const int *elements, float *svector3f, float *tvector3f, float *normal3f)
+void Mod_BuildTextureVectorsAndNormals(int firstvertex, int numvertices, int numtriangles, const float *vertex3f, const float *texcoord2f, const int *elements, float *svector3f, float *tvector3f, float *normal3f, qboolean areaweighting)
 {
 	int i, tnum;
 	float sdir[3], tdir[3], normal[3], *v;
@@ -601,33 +587,21 @@ void Mod_BuildTextureVectorsAndNormals(int firstvertex, int numvertices, int num
 	for (tnum = 0, e = elements;tnum < numtriangles;tnum++, e += 3)
 	{
 		Mod_BuildBumpVectors(vertex3f + e[0] * 3, vertex3f + e[1] * 3, vertex3f + e[2] * 3, texcoord2f + e[0] * 2, texcoord2f + e[1] * 2, texcoord2f + e[2] * 2, sdir, tdir, normal);
+		if (!areaweighting)
+		{
+			VectorNormalize(sdir);
+			VectorNormalize(tdir);
+			VectorNormalize(normal);
+		}
 		if (svector3f)
-		{
 			for (i = 0;i < 3;i++)
-			{
-				svector3f[e[i]*3  ] += sdir[0];
-				svector3f[e[i]*3+1] += sdir[1];
-				svector3f[e[i]*3+2] += sdir[2];
-			}
-		}
+				VectorAdd(svector3f + e[i]*3, sdir, svector3f + e[i]*3);
 		if (tvector3f)
-		{
 			for (i = 0;i < 3;i++)
-			{
-				tvector3f[e[i]*3  ] += tdir[0];
-				tvector3f[e[i]*3+1] += tdir[1];
-				tvector3f[e[i]*3+2] += tdir[2];
-			}
-		}
+				VectorAdd(tvector3f + e[i]*3, tdir, tvector3f + e[i]*3);
 		if (normal3f)
-		{
 			for (i = 0;i < 3;i++)
-			{
-				normal3f[e[i]*3  ] += normal[0];
-				normal3f[e[i]*3+1] += normal[1];
-				normal3f[e[i]*3+2] += normal[2];
-			}
-		}
+				VectorAdd(normal3f + e[i]*3, normal, normal3f + e[i]*3);
 	}
 	// now we could divide the vectors by the number of averaged values on
 	// each vertex...  but instead normalize them
