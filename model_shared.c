@@ -488,33 +488,51 @@ void Mod_ValidateElements(const int *elements, int numtriangles, int numverts, c
 // warning: this is an expensive function!
 void Mod_BuildNormals(int firstvertex, int numvertices, int numtriangles, const float *vertex3f, const int *elements, float *normal3f)
 {
-	int i, tnum;
-	float normal[3], *v;
-	const int *e;
+	int i;
+	const int *element;
+	float *vectorNormal;
 	// clear the vectors
 	memset(normal3f + 3 * firstvertex, 0, numvertices * sizeof(float[3]));
 	// process each vertex of each triangle and accumulate the results
-	for (tnum = 0, e = elements;tnum < numtriangles;tnum++, e += 3)
+	// use area-averaging, to make triangles with a big area have a bigger
+	// weighting on the vertex normal than triangles with a small area
+	// to do so, just add the 'normals' together (the bigger the area
+	// the greater the length of the normal is 
+	element = elements;
+	for (i = 0; i < numtriangles; i++)
 	{
-		TriangleNormal(vertex3f + e[0] * 3, vertex3f + e[1] * 3, vertex3f + e[2] * 3, normal);
-		VectorNormalize(normal);
-		v = normal3f + e[0] * 3;
-		v[0] += normal[0];
-		v[1] += normal[1];
-		v[2] += normal[2];
-		v = normal3f + e[1] * 3;
-		v[0] += normal[0];
-		v[1] += normal[1];
-		v[2] += normal[2];
-		v = normal3f + e[2] * 3;
-		v[0] += normal[0];
-		v[1] += normal[1];
-		v[2] += normal[2];
+		float areaNormal[3];
+
+		TriangleNormal(
+			vertex3f + element[0] * 3, 
+			vertex3f + element[1] * 3, 
+			vertex3f + element[2] * 3, 
+			areaNormal
+			);
+	
+		vectorNormal = normal3f + element[0] * 3;
+		vectorNormal[0] += areaNormal[0];
+		vectorNormal[1] += areaNormal[1];
+		vectorNormal[2] += areaNormal[2];
+
+		vectorNormal = normal3f + element[1] * 3;
+		vectorNormal[0] += areaNormal[0];
+		vectorNormal[1] += areaNormal[1];
+		vectorNormal[2] += areaNormal[2];
+
+		vectorNormal = normal3f + element[2] * 3;
+		vectorNormal[0] += areaNormal[0];
+		vectorNormal[1] += areaNormal[1];
+		vectorNormal[2] += areaNormal[2];
+
+		element += 3;
 	}
-	// now we could divide the vectors by the number of averaged values on
-	// each vertex...  but instead normalize them
-	for (i = 0, v = normal3f + 3 * firstvertex;i < numvertices;i++, v += 3)
-		VectorNormalize(v);
+	// and just normalize the accumulated vertex normal in the end
+	vectorNormal = normal3f + 3 * firstvertex;
+	for (i = 0; i < numvertices; i++) {
+		VectorNormalize(vectorNormal);
+		vectorNormal += 3;
+	}
 }
 
 void Mod_BuildBumpVectors(const float *v0, const float *v1, const float *v2, const float *tc0, const float *tc1, const float *tc2, float *svector3f, float *tvector3f, float *normal3f)
