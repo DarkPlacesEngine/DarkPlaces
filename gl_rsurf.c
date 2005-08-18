@@ -785,7 +785,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolor, int numsurfaces,
 				rsurface_svector3f = varray_svector3f;
 				rsurface_tvector3f = varray_tvector3f;
 				rsurface_normal3f = varray_normal3f;
-				Mod_BuildTextureVectorsAndNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_vertex3f, surface->groupmesh->data_texcoordtexture2f, surface->groupmesh->data_element3i + surface->num_firsttriangle * 3, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f);
+				Mod_BuildTextureVectorsAndNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_vertex3f, surface->groupmesh->data_texcoordtexture2f, surface->groupmesh->data_element3i + surface->num_firsttriangle * 3, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f, r_smoothnormals_areaweighting.integer);
 			}
 			if (ent->colormap >= 0)
 			{

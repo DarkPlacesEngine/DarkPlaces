@@ -105,6 +105,8 @@ cvar_t r_bloom_blur = {CVAR_SAVE, "r_bloom_blur", "8"};
 cvar_t r_bloom_resolution = {CVAR_SAVE, "r_bloom_resolution", "320"};
 cvar_t r_bloom_power = {CVAR_SAVE, "r_bloom_power", "4"};
 
+cvar_t r_smoothnormals_areaweighting = {0, "r_smoothnormals_areaweighting", "1"};
+
 cvar_t developer_texturelogging = {0, "developer_texturelogging", "0"};
 
 cvar_t gl_lightmaps = {0, "gl_lightmaps", "0"};
@@ -513,6 +515,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_bloom_blur);
 	Cvar_RegisterVariable(&r_bloom_resolution);
 	Cvar_RegisterVariable(&r_bloom_power);
+	Cvar_RegisterVariable(&r_smoothnormals_areaweighting);
 	Cvar_RegisterVariable(&developer_texturelogging);
 	Cvar_RegisterVariable(&gl_lightmaps);
 	if (gamemode == GAME_NEHAHRA || gamemode == GAME_NEXUIZ || gamemode == GAME_TENEBRAE)
@@ -1527,7 +1530,7 @@ void RSurf_SetVertexPointer(const entity_render_t *ent, const texture_t *texture
 			rsurface_svector3f = varray_svector3f;
 			rsurface_tvector3f = varray_tvector3f;
 			rsurface_normal3f = varray_normal3f;
-			Mod_BuildTextureVectorsAndNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_vertex3f, surface->groupmesh->data_texcoordtexture2f, surface->groupmesh->data_element3i + surface->num_firsttriangle * 3, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f);
+			Mod_BuildTextureVectorsAndNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_vertex3f, surface->groupmesh->data_texcoordtexture2f, surface->groupmesh->data_element3i + surface->num_firsttriangle * 3, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f, r_smoothnormals_areaweighting.integer);
 		}
 		// a single autosprite surface can contain multiple sprites...
 		VectorClear(forward);
@@ -1564,7 +1567,7 @@ void RSurf_SetVertexPointer(const entity_render_t *ent, const texture_t *texture
 			rsurface_svector3f = varray_svector3f;
 			rsurface_tvector3f = varray_tvector3f;
 			rsurface_normal3f = varray_normal3f;
-			Mod_BuildTextureVectorsAndNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_vertex3f, surface->groupmesh->data_texcoordtexture2f, surface->groupmesh->data_element3i + surface->num_firsttriangle * 3, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f);
+			Mod_BuildTextureVectorsAndNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_vertex3f, surface->groupmesh->data_texcoordtexture2f, surface->groupmesh->data_element3i + surface->num_firsttriangle * 3, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f, r_smoothnormals_areaweighting.integer);
 		}
 		Matrix4x4_Transform(&ent->inversematrix, r_viewforward, forward);
 		Matrix4x4_Transform(&ent->inversematrix, r_viewright, right);
@@ -1609,7 +1612,7 @@ void RSurf_SetColorPointer(const entity_render_t *ent, const msurface_t *surface
 			if (rsurface_normal3f == NULL)
 			{
 				rsurface_normal3f = varray_normal3f;
-				Mod_BuildNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_vertex3f, surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle, rsurface_normal3f);
+				Mod_BuildNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_vertex3f, surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle, rsurface_normal3f, r_smoothnormals_areaweighting.integer);
 			}
 			R_LightModel_CalcVertexColors(ambientcolor4f, diffusecolor, diffusenormal, surface->groupmesh->num_vertices, rsurface_vertex3f + 3 * surface->num_firstvertex, rsurface_normal3f + 3 * surface->num_firstvertex, rsurface_lightmapcolor4f + 4 * surface->num_firstvertex);
 			r = 1;

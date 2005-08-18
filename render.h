@@ -196,6 +196,8 @@ extern cvar_t r_textureunits;
 extern cvar_t gl_polyblend;
 extern cvar_t gl_dither;
 
+extern cvar_t r_smoothnormals_areaweighting;
+
 #include "gl_backend.h"
 
 #include "r_light.h"
