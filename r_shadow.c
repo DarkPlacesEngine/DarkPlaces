@@ -1624,7 +1624,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 		glosstexture = r_texture_black;
 		specularscale = 0;
 	}
-	if ((r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * (VectorLength2(lightcolorbase) + VectorLength2(lightcolorpants) + VectorLength2(lightcolorshirt)) + specularscale * VectorLength2(lightcolorbase) <= 0.001)
+	if ((r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * (VectorLength2(lightcolorbase) + VectorLength2(lightcolorpants) + VectorLength2(lightcolorshirt)) + specularscale * VectorLength2(lightcolorbase) < (1.0f / 1048576.0f))
 		return;
 	if (r_shadowstage == R_SHADOWSTAGE_VISIBLELIGHTING)
 	{
@@ -2857,12 +2857,12 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	entity_render_t *shadowentities[MAX_EDICTS];
 
 	// skip lights that don't light (corona only lights)
-	if (rtlight->ambientscale + rtlight->diffusescale + rtlight->specularscale < 0.01)
+	if (rtlight->ambientscale + rtlight->diffusescale + rtlight->specularscale < (1.0f / 32768.0f))
 		return;
 
 	f = (rtlight->style >= 0 ? d_lightstylevalue[rtlight->style] : 128) * (1.0f / 256.0f) * r_shadow_lightintensityscale.value;
 	VectorScale(rtlight->color, f, lightcolor);
-	if (VectorLength2(lightcolor) < 0.01)
+	if (VectorLength2(lightcolor) < (1.0f / 32768.0f))
 		return;
 	/*
 	if (rtlight->selected)
@@ -3585,7 +3585,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 					{
 						originhack[0] = 0;
 						originhack[1] = 0;
-						originhack[2] = 48;
+						originhack[2] = 0;
 						overridecolor[0] = 1;
 						overridecolor[1] = 0.5;
 						overridecolor[2] = 0.1;
@@ -3594,7 +3594,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 					{
 						originhack[0] = 0;
 						originhack[1] = 0;
-						originhack[2] = 40;
+						originhack[2] = 0;
 						overridecolor[0] = 1;
 						overridecolor[1] = 0.5;
 						overridecolor[2] = 0.1;
@@ -3603,7 +3603,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 					{
 						originhack[0] = 0;
 						originhack[1] = 0;
-						originhack[2] = 40;
+						originhack[2] = 0;
 						overridecolor[0] = 1;
 						overridecolor[1] = 0.5;
 						overridecolor[2] = 0.1;
@@ -3612,7 +3612,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 					{
 						originhack[0] = 0;
 						originhack[1] = 0;
-						originhack[2] = 40;
+						originhack[2] = 0;
 						overridecolor[0] = 1;
 						overridecolor[1] = 0.5;
 						overridecolor[2] = 0.1;
@@ -3696,8 +3696,8 @@ void R_Shadow_SetCursorLocationForView(void)
 		push = -push;
 		VectorMA(trace.endpos, push, r_viewforward, endpos);
 		VectorMA(endpos, r_editlights_cursorpushoff.value, trace.plane.normal, endpos);
-	} 
-	else 
+	}
+	else
 	{
 		VectorClear( endpos );
 	}
