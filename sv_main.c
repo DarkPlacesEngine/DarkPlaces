@@ -483,7 +483,8 @@ void SV_PrepareEntitiesForSending(void)
 	for (e = 1, ent = PRVM_NEXT_EDICT(prog->edicts);e < prog->num_edicts;e++, ent = PRVM_NEXT_EDICT(ent))
 	{
 		sendentitiesindex[e] = NULL;
-		if (ent->priv.server->free)
+		// the 2 billion unit check is actually to detect NAN origins (we really don't want to send those)
+		if (ent->priv.server->free || VectorLength2(ent->fields.server->origin) > 2000000000.0*2000000000.0)
 			continue;
 
 		cs = defaultstate;
