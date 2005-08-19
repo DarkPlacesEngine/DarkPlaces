@@ -1606,7 +1606,7 @@ void RSurf_SetColorPointer(const entity_render_t *ent, const msurface_t *surface
 		vec4_t ambientcolor4f;
 		vec3_t diffusecolor;
 		vec3_t diffusenormal;
-		if (R_LightModel(ambientcolor4f, diffusecolor, diffusenormal, ent, r, g, b, a, false))
+		if (R_LightModel(ambientcolor4f, diffusecolor, diffusenormal, ent, r*0.5f, g*0.5f, b*0.5f, a, false))
 		{
 			rsurface_lightmapcolor4f = varray_color4f;
 			if (rsurface_normal3f == NULL)
@@ -2047,11 +2047,11 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			if (waterscrolling)
 				m.texmatrix[0] = r_waterscrollmatrix;
 			m.pointer_color = varray_color4f;
-			colorscale = 1;
+			colorscale = 2;
 			if (gl_combine.integer)
 			{
 				m.texrgbscale[0] = 2;
-				colorscale *= 0.5f;
+				colorscale = 1;
 			}
 			// transparent is not affected by r_lightmapintensity
 			if (!(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
@@ -2108,11 +2108,11 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			if (waterscrolling)
 				m.texmatrix[0] = r_waterscrollmatrix;
 			m.pointer_color = varray_color4f;
-			colorscale = 1;
+			colorscale = 2;
 			if (gl_combine.integer)
 			{
 				m.texrgbscale[0] = 2;
-				colorscale *= 0.5f;
+				colorscale *= 1;
 			}
 			// transparent is not affected by r_lightmapintensity
 			if (!(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
@@ -2172,10 +2172,10 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				m.texmatrix[0] = r_waterscrollmatrix;
 			m.pointer_color = varray_color4f;
 			colorscale = 1;
-			if (gl_combine.integer)
+			if (gl_combine.integer && (ent->colormod[0] > 1 || ent->colormod[1] > 1 || ent->colormod[2] > 1))
 			{
-				m.texrgbscale[0] = 2;
-				colorscale *= 0.5f;
+				m.texrgbscale[0] = 4;
+				colorscale = 0.25f;
 			}
 			R_Mesh_State(&m);
 			colorscale *= r_ambient.value * (1.0f / 64.0f);
@@ -2224,10 +2224,9 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				m.texmatrix[0] = r_waterscrollmatrix;
 			m.pointer_color = varray_color4f;
 			R_Mesh_State(&m);
-			colorscale = 1;
-			r = ent->colormod[0] * colorscale;
-			g = ent->colormod[1] * colorscale;
-			b = ent->colormod[2] * colorscale;
+			r = 1;
+			g = 1;
+			b = 1;
 			a = texture->currentalpha;
 			applycolor = r != 1 || g != 1 || b != 1 || a != 1;
 			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
