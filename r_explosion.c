@@ -26,10 +26,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define EXPLOSIONVERTS ((EXPLOSIONGRID+1)*(EXPLOSIONGRID+1))
 #define EXPLOSIONTRIS (EXPLOSIONGRID*EXPLOSIONGRID*2)
 
-float explosiontexcoord2f[EXPLOSIONVERTS][2];
-int explosiontris[EXPLOSIONTRIS][3];
-int explosionnoiseindex[EXPLOSIONVERTS];
-vec3_t explosionpoint[EXPLOSIONVERTS];
+static float explosiontexcoord2f[EXPLOSIONVERTS][2];
+static int explosiontris[EXPLOSIONTRIS][3];
+static int explosionnoiseindex[EXPLOSIONVERTS];
+static vec3_t explosionpoint[EXPLOSIONVERTS];
 
 typedef struct explosion_s
 {
@@ -45,17 +45,17 @@ typedef struct explosion_s
 }
 explosion_t;
 
-explosion_t explosion[MAX_EXPLOSIONS];
+static explosion_t explosion[MAX_EXPLOSIONS];
 
-rtexture_t	*explosiontexture;
-rtexture_t	*explosiontexturefog;
+static rtexture_t	*explosiontexture;
+static rtexture_t	*explosiontexturefog;
 
-rtexturepool_t	*explosiontexturepool;
+static rtexturepool_t	*explosiontexturepool;
 
 cvar_t r_explosionclip = {CVAR_SAVE, "r_explosionclip", "1"};
-cvar_t r_drawexplosions = {0, "r_drawexplosions", "1"};
+static cvar_t r_drawexplosions = {0, "r_drawexplosions", "1"};
 
-void r_explosion_start(void)
+static void r_explosion_start(void)
 {
 	int x, y;
 	qbyte noise1[128][128], noise2[128][128], noise3[128][128], data[128][128][4];
@@ -87,17 +87,17 @@ void r_explosion_start(void)
 	// note that explosions survive the restart
 }
 
-void r_explosion_shutdown(void)
+static void r_explosion_shutdown(void)
 {
 	R_FreeTexturePool(&explosiontexturepool);
 }
 
-void r_explosion_newmap(void)
+static void r_explosion_newmap(void)
 {
 	memset(explosion, 0, sizeof(explosion));
 }
 
-int R_ExplosionVert(int column, int row)
+static int R_ExplosionVert(int column, int row)
 {
 	int i;
 	float yaw, pitch;
@@ -180,7 +180,7 @@ void R_NewExplosion(vec3_t org)
 	}
 }
 
-void R_DrawExplosionCallback(const void *calldata1, int calldata2)
+static void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 {
 	int numtriangles, numverts;
 	float alpha;
@@ -210,7 +210,7 @@ void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 	GL_LockArrays(0, 0);
 }
 
-void R_MoveExplosion(explosion_t *e)
+static void R_MoveExplosion(explosion_t *e)
 {
 	int i;
 	float dot, end[3], frametime;
