@@ -941,7 +941,7 @@ void FS_Init (void)
 	if (strstr(com_argv[0], ".app/"))
 	{
 		char *split;
-		char temp[4096];
+
 		split = strstr(com_argv[0], ".app/");
 		while (split > com_argv[0] && *split != '/')
 			split--;
