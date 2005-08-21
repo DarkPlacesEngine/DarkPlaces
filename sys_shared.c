@@ -53,7 +53,7 @@ qboolean Sys_LoadLibrary (const char** dllnames, dllhandle_t* handle, const dllf
 #ifdef WIN32
 		dllhandle = LoadLibrary (dllnames[i]);
 #else
-		dllhandle = dlopen (dllnames[i], RTLD_LAZY);
+		dllhandle = dlopen (dllnames[i], RTLD_LAZY | RTLD_GLOBAL);
 #endif
 		if (dllhandle)
 			break;
@@ -75,7 +75,7 @@ qboolean Sys_LoadLibrary (const char** dllnames, dllhandle_t* handle, const dllf
 #ifdef WIN32
 			dllhandle = LoadLibrary (temp);
 #else
-			dllhandle = dlopen (temp, RTLD_LAZY);
+			dllhandle = dlopen (temp, RTLD_LAZY | RTLD_GLOBAL);
 #endif
 			if (dllhandle)
 				break;
