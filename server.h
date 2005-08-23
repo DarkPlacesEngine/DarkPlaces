@@ -254,6 +254,7 @@ extern cvar_t sv_friction;
 extern cvar_t sv_edgefriction;
 extern cvar_t sv_stopspeed;
 extern cvar_t sv_maxspeed;
+extern cvar_t sv_maxairspeed;
 extern cvar_t sv_accelerate;
 extern cvar_t sv_idealpitchscale;
 extern cvar_t sv_aim;
