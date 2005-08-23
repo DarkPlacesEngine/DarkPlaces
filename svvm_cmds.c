@@ -94,6 +94,7 @@ char *vm_sv_extensions =
 "DP_SV_ROTATINGBMODEL "
 "DP_SV_SETCOLOR "
 "DP_SV_SLOWMO "
+"DP_SV_WRITEUNTERMINATEDSTRING "
 "DP_TE_BLOOD "
 "DP_TE_BLOODSHOWER "
 "DP_TE_CUSTOMFLASH "
@@ -1184,6 +1185,11 @@ void PF_WriteCoord (void)
 void PF_WriteString (void)
 {
 	MSG_WriteString (WriteDest(), PRVM_G_STRING(OFS_PARM1));
+}
+
+void PF_WriteUnterminatedString (void)
+{
+	MSG_WriteUnterminatedString (WriteDest(), PRVM_G_STRING(OFS_PARM1));
 }
 
 
@@ -2470,7 +2476,7 @@ PF_gettaginfo,				// #452 vector(entity ent, float tagindex) gettaginfo (DP_QC_G
 PF_dropclient,				// #453 void(entity clent) dropclient (DP_SV_DROPCLIENT)
 PF_spawnclient,				// #454 entity() spawnclient (DP_SV_BOTCLIENT)
 PF_clienttype,				// #455 float(entity clent) clienttype (DP_SV_BOTCLIENT)
-NULL,						// #456
+PF_WriteUnterminatedString,	// #456
 NULL,						// #457
 NULL,						// #458
 NULL,						// #459

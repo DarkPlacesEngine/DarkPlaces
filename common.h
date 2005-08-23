@@ -148,6 +148,7 @@ void MSG_WriteShort (sizebuf_t *sb, int c);
 void MSG_WriteLong (sizebuf_t *sb, int c);
 void MSG_WriteFloat (sizebuf_t *sb, float f);
 void MSG_WriteString (sizebuf_t *sb, const char *s);
+void MSG_WriteUnterminatedString (sizebuf_t *sb, const char *s);
 void MSG_WriteAngle8i (sizebuf_t *sb, float f);
 void MSG_WriteAngle16i (sizebuf_t *sb, float f);
 void MSG_WriteAngle32f (sizebuf_t *sb, float f);
