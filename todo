@@ -172,7 +172,7 @@ d feature darkplaces client: v_deathtilt cvar (Sajt, MauveBib)
 0 feature darkplaces: .vis files - like .lit but replacement vis data, note this also requires .leaf files (knghtbrd)
 0 feature darkplaces: showfps should show spf when below 1fps (Sajt)
 0 feature dpmod: add knight/hell knight swords as player weapons (TimeServ)
-0 feature dpmod: add skill 4 (respawning nightmare monsters)
+0 feature dpmod: add mode with respawning monsters
 0 feature dpmod: change kill awards to use DP_SV_CLIENTFLASHPIC (Tomaz)
 0 feature dpmod: find a way to make deathmatch 7 get more difficult as kills increase?  (Zombie13)
 0 feature dpmod: make a editlights.cfg containing a lot of light editing binds as bindmap 5, also aliases to turn on/off that bindmap, so users can bind one key to the switch command to switch to a light editing mode and back again any time they want (HReaper)
@@ -247,7 +247,6 @@ d feature darkplaces client: v_deathtilt cvar (Sajt, MauveBib)
 1 feature dpmod: dm 7 monster spawns should occasionally fail in a shower of gibs (Rick)
 1 feature dpmod: dm 7 super monsters should glow and have a name which shows up when in crosshairs (Rick)
 1 feature dpmod: dm 7 super scrag should fire spiral acid (Rick)
-1 feature dpmod: make a skill 4 mode where monsters are nearly invisible (alpha 0.2?) except when attacking or in pain
 1 feature dpmod: make ogres start up their chainsaw when first seeing an enemy (scar3crow)
 1 feature hmap2: add .mip loading support
 1 feature lhfire: add percentage and estimated time reporting to console output (daniel_hansson@telia.com)
@@ -954,6 +953,7 @@ d dpmod: change weapons 8-10 to lightning, plasma, plasma wave (joe hill)
 d dpmod: fix backpacks (giving no ammo)
 d dpmod: fix the plasma wave doing excessive damage at low framerates
 d dpmod: impulse 154 should cycle to deathmatch 7 (Rick)
+d dpmod: make a skill 4 mode where monsters are nearly invisible (alpha 0.2?) except when attacking or in pain
 d dpmod: make enforcers drop more cells for plasma gun (Sajt)
 d dpmod: make grapple off-hand (joe hill)
 d dpmod: make grunts reload less often, like every 10 shotgun shells (scar3crow)
