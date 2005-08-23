@@ -10,7 +10,7 @@ cvar_t crosshair_size = {CVAR_SAVE, "crosshair_size", "1"};
 cvar_t crosshair_static = {CVAR_SAVE, "crosshair_static", "1"};
 
 // must match NUMCROSSHAIRS in gl_draw.c
-#define NUMCROSSHAIRS 5
+#define NUMCROSSHAIRS 6
 
 void R_Crosshairs_Init(void)
 {

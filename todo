@@ -2,6 +2,7 @@
 -d (Baalz) bug darkplaces input: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
 -d (Gilgamesh) feature darkplaces protocol: add back colormod extension (FrikaC, Uffe, Gilgamesh, Wazat)
 -d (Gleeb) feature darkplaces server: add sv_playerphysicsqc cvar to allow engine to ignore SV_PlayerPhysics function, this would also have to change the reported extensions (Gleeb)
+-d (HellToupee) feature darkplaces client: add a dot crosshair texture (HellToupee)
 -d (Kinn, romi) bug darkplaces WGL client: default WGL input back to GDI, the DirectInput driver is malfunctioning, losing key release messages, stuttering mouse input, and lacks mouse wheel support (Wazat, Kinn)
 -d (Mabus) bug darkplaces loading: test zlib support with entirely pk3'd id1 data (should crash because of zlib not being setup early enough - fix this) (Mabus)
 d bug darkplaces renderer: fix q3bsp fogging (Sajt)
@@ -120,7 +121,6 @@ d feature darkplaces client: v_deathtilt cvar (Sajt, MauveBib)
 0 change darkplaces renderer: write rendering functions that take msurface_t * lists and migrate most of renderer to them (LordHavoc)
 0 change darkplaces server: make dedicated server not load images (maybe all fail?)
 0 cleanup darkplaces memory: add Mem_AllocNoClear function, and use it where possible, if developer is on it should clear with random garbage
-0 feature darkplaces client: add a dot crosshair texture (HellToupee)
 0 feature darkplaces client: add cvars to control lighting quality to allow performance tradeoffs; r_shadow_ options for use of dot3 shading, etc
 0 feature darkplaces client: add scr_showbrand cvar which would show gfx/brand.tga in the left/right top/bottom corner (depending on value of scr_showbrand) all the time, this would be useful for screenshots (Spirit_of_85)
 0 feature darkplaces client: cvar for console text size (Vermeulen)
