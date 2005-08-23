@@ -1796,6 +1796,22 @@ void PF_te_plasmaburn (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
 }
 
+void PF_te_flamejet (void)
+{
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_FLAMEJET);
+	// org
+	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
+	// vel
+	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM1)[0], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM1)[1], sv.protocol);
+	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM1)[2], sv.protocol);
+	// count
+	MSG_WriteByte(&sv.datagram, PRVM_G_FLOAT(OFS_PARM2));
+}
+
 static void clippointtosurface(msurface_t *surface, vec3_t p, vec3_t out)
 {
 	int i, j, k;
@@ -2477,7 +2493,7 @@ PF_dropclient,				// #453 void(entity clent) dropclient (DP_SV_DROPCLIENT)
 PF_spawnclient,				// #454 entity() spawnclient (DP_SV_BOTCLIENT)
 PF_clienttype,				// #455 float(entity clent) clienttype (DP_SV_BOTCLIENT)
 PF_WriteUnterminatedString,	// #456 void(float to, string s) WriteUnterminatedString (DP_SV_WRITEUNTERMINATEDSTRING)
-NULL,						// #457
+PF_te_flamejet,				// #457 void(vector org, vector vel, float howmany) te_flamejet = #457 (DP_TE_FLAMEJET)
 NULL,						// #458
 NULL,						// #459
 e10, e10, e10, e10			// #460-499 (LordHavoc)
