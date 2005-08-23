@@ -313,7 +313,8 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 	qpic_t *p;
 	int flags;
 
-	if (!strncmp(CLVIDEOPREFIX, path, sizeof(CLVIDEOPREFIX) - 1)) {
+	if (!strncmp(CLVIDEOPREFIX, path, sizeof(CLVIDEOPREFIX) - 1))
+	{
 		clvideo_t *video;
 
 		video = CL_GetVideo(path);
