@@ -145,7 +145,7 @@ static rtexture_t *draw_generatemousepointer(void)
 }
 
 // must match NUMCROSSHAIRS in r_crosshairs.c
-#define NUMCROSSHAIRS 5
+#define NUMCROSSHAIRS 6
 
 static qbyte *crosshairtexdata[NUMCROSSHAIRS] =
 {
@@ -195,9 +195,9 @@ static qbyte *crosshairtexdata[NUMCROSSHAIRS] =
 	".......44......."
 	".......44......."
 	"................"
-	".......77......."
-	".......77......."
 	"................"
+	".......77......."
+	".......77......."
 	"................"
 	,
 	"................"
@@ -214,7 +214,7 @@ static qbyte *crosshairtexdata[NUMCROSSHAIRS] =
 	"........7......."
 	"........7......."
 	"........7......."
-	"................"
+	"........7......."
 	"................"
 	,
 	"................"
@@ -229,6 +229,23 @@ static qbyte *crosshairtexdata[NUMCROSSHAIRS] =
 	"........4......."
 	"................"
 	"........7......."
+	"................"
+	"................"
+	"................"
+	"................"
+	,
+	"................"
+	"................"
+	"................"
+	"................"
+	"................"
+	"................"
+	"................"
+	"................"
+	"........7......."
+	"................"
+	"................"
+	"................"
 	"................"
 	"................"
 	"................"
@@ -368,6 +385,8 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 		pic->tex = draw_generatecrosshair(3);
 	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair5.tga"))
 		pic->tex = draw_generatecrosshair(4);
+	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair6.tga"))
+		pic->tex = draw_generatecrosshair(5);
 	if (pic->tex == NULL && !strcmp(path, "gfx/colorcontrol/ditherpattern.tga"))
 		pic->tex = draw_generateditherpattern();
 	if (pic->tex == NULL)
