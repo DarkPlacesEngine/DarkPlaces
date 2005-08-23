@@ -252,6 +252,12 @@ void MSG_WriteString (sizebuf_t *sb, const char *s)
 		SZ_Write (sb, s, (int)strlen(s)+1);
 }
 
+void MSG_WriteUnterminatedString (sizebuf_t *sb, const char *s)
+{
+	if (s)
+		SZ_Write (sb, s, (int)strlen(s));
+}
+
 void MSG_WriteCoord13i (sizebuf_t *sb, float f)
 {
 	if (f >= 0)
