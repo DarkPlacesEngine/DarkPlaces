@@ -25,6 +25,7 @@ cvar_t sv_edgefriction = {0, "edgefriction", "2"};
 cvar_t sv_deltacompress = {0, "sv_deltacompress", "1"};
 cvar_t sv_idealpitchscale = {0, "sv_idealpitchscale","0.8"};
 cvar_t sv_maxspeed = {CVAR_NOTIFY, "sv_maxspeed", "320"};
+cvar_t sv_maxairspeed = {0, "sv_maxairspeed", "30"};
 cvar_t sv_accelerate = {0, "sv_accelerate", "10"};
 
 static usercmd_t cmd;
@@ -176,8 +177,8 @@ void SV_AirAccelerate (vec3_t wishveloc)
 	float addspeed, wishspd, accelspeed, currentspeed;
 
 	wishspd = VectorNormalizeLength (wishveloc);
-	if (wishspd > 30)
-		wishspd = 30;
+	if (wishspd > sv_maxairspeed.value)
+		wishspd = sv_maxairspeed.value;
 	currentspeed = DotProduct (host_client->edict->fields.server->velocity, wishveloc);
 	addspeed = wishspd - currentspeed;
 	if (addspeed <= 0)
