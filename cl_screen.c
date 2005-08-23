@@ -14,6 +14,7 @@ cvar_t scr_centertime = {0, "scr_centertime","2"};
 cvar_t scr_showram = {CVAR_SAVE, "showram","1"};
 cvar_t scr_showturtle = {CVAR_SAVE, "showturtle","0"};
 cvar_t scr_showpause = {CVAR_SAVE, "showpause","1"};
+cvar_t scr_showbrand = {0, "showbrand","0"};
 cvar_t scr_printspeed = {0, "scr_printspeed","8"};
 cvar_t vid_conwidth = {CVAR_SAVE, "vid_conwidth", "640"};
 cvar_t vid_conheight = {CVAR_SAVE, "vid_conheight", "480"};
@@ -330,9 +331,61 @@ void SCR_DrawPause (void)
 	DrawQ_Pic ((vid_conwidth.integer - pic->width)/2, (vid_conheight.integer - pic->height)/2, "gfx/pause", 0, 0, 1, 1, 1, 1, 0);
 }
 
+/*
+==============
+SCR_DrawBrand
+==============
+*/
+void SCR_DrawBrand (void)
+{
+	cachepic_t	*pic;
+	float		x, y;
 
+	if (!scr_showbrand.value)
+		return;
 
+	pic = Draw_CachePic ("gfx/brand", true);
 
+	switch ((int)scr_showbrand.value)
+	{
+	case 1:	// bottom left
+		x = 0;
+		y = vid_conheight.integer - pic->height;
+		break;
+	case 2:	// bottom centre
+		x = (vid_conwidth.integer - pic->width) / 2;
+		y = vid_conheight.integer - pic->height;
+		break;
+	case 3:	// bottom right
+		x = vid_conwidth.integer - pic->width;
+		y = vid_conheight.integer - pic->height;
+		break;
+	case 4:	// centre right
+		x = vid_conwidth.integer - pic->width;
+		y = (vid_conheight.integer - pic->height) / 2;
+		break;
+	case 5:	// top right
+		x = vid_conwidth.integer - pic->width;
+		y = 0;
+		break;
+	case 6:	// top centre
+		x = (vid_conwidth.integer - pic->width) / 2;
+		y = 0;
+		break;
+	case 7:	// top left
+		x = 0;
+		y = 0;
+		break;
+	case 8:	// centre left
+		x = 0;
+		y = (vid_conheight.integer - pic->height) / 2;
+		break;
+	default:
+		return;
+	}
+
+	DrawQ_Pic (x, y, "gfx/brand", 0, 0, 1, 1, 1, 1, 0);
+}
 
 //=============================================================================
 
@@ -569,6 +622,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_showram);
 	Cvar_RegisterVariable (&scr_showturtle);
 	Cvar_RegisterVariable (&scr_showpause);
+	Cvar_RegisterVariable (&scr_showbrand);
 	Cvar_RegisterVariable (&scr_centertime);
 	Cvar_RegisterVariable (&scr_printspeed);
 	Cvar_RegisterVariable (&vid_conwidth);
@@ -1409,6 +1463,8 @@ void CL_UpdateScreen(void)
 	R_Shadow_EditLights_DrawSelectedLightProperties();
 
 	SCR_DrawConsole();
+
+	SCR_DrawBrand();
 
 	SCR_UpdateScreen();
 }
