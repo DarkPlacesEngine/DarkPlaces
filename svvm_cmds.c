@@ -2476,7 +2476,7 @@ PF_gettaginfo,				// #452 vector(entity ent, float tagindex) gettaginfo (DP_QC_G
 PF_dropclient,				// #453 void(entity clent) dropclient (DP_SV_DROPCLIENT)
 PF_spawnclient,				// #454 entity() spawnclient (DP_SV_BOTCLIENT)
 PF_clienttype,				// #455 float(entity clent) clienttype (DP_SV_BOTCLIENT)
-PF_WriteUnterminatedString,	// #456
+PF_WriteUnterminatedString,	// #456 void(float to, string s) WriteUnterminatedString (DP_SV_WRITEUNTERMINATEDSTRING)
 NULL,						// #457
 NULL,						// #458
 NULL,						// #459
