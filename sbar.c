@@ -812,12 +812,13 @@ void Sbar_ShowFPS(void)
 	char fpsstring[32];
 	char timestring[32];
 	char datestring[32];
+	qboolean red;
 	fpsstring[0] = 0;
 	timestring[0] = 0;
 	datestring[0] = 0;
 	if (showfps.integer)
 	{
-		int calc;
+		float calc;
 		if (showfps.integer > 1)
 		{
 			static double currtime, frametimes[32];
@@ -837,20 +838,21 @@ void Sbar_ShowFPS(void)
 			framecycle++;
 			framecycle &= 31;
 			if (showfps.integer == 2)
-				calc = (int) (((double) count / total) + 0.5);
+				calc = (((double)count / total) + 0.5);
 			else // showfps 3, rapid update
-				calc = (int) ((1.0 / (newtime - currtime)) + 0.5);
+				calc = ((1.0 / (newtime - currtime)) + 0.5);
 			currtime = newtime;
 		}
 		else
 		{
 			static double nexttime = 0, lasttime = 0;
-			static int framerate = 0, framecount = 0;
+			static float framerate = 0;
+			static int framecount = 0;
 			double newtime;
 			newtime = Sys_DoubleTime();
 			if (newtime >= nexttime)
 			{
-				framerate = (int) (framecount / (newtime - lasttime) + 0.5);
+				framerate = ((float)framecount / (newtime - lasttime) + 0.5);
 				lasttime = newtime;
 				nexttime = max(nexttime + 1, lasttime - 1);
 				framecount = 0;
@@ -858,7 +860,11 @@ void Sbar_ShowFPS(void)
 			framecount++;
 			calc = framerate;
 		}
-		dpsnprintf(fpsstring, sizeof(fpsstring), "%4i fps", calc);
+
+		if (red = (calc < 1.0f))
+			dpsnprintf(fpsstring, sizeof(fpsstring), "%4i spf", (int)(1.0f / calc + 0.5));
+		else
+			dpsnprintf(fpsstring, sizeof(fpsstring), "%4i fps", (int)(calc + 0.5));
 	}
 	if (showtime.integer)
 		strlcpy(timestring, Sys_TimeString(showtime_format.string), sizeof(timestring));
@@ -876,7 +882,10 @@ void Sbar_ShowFPS(void)
 		{
 			fps_x = vid_conwidth.integer - fps_scalex * strlen(fpsstring);
 			DrawQ_Fill(fps_x, fps_y, fps_scalex * strlen(fpsstring), fps_scaley, 0, 0, 0, 0.5, 0);
-			DrawQ_String(fps_x, fps_y, fpsstring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0);
+			if (red)
+				DrawQ_String(fps_x, fps_y, fpsstring, 0, fps_scalex, fps_scaley, 1, 0, 0, 1, 0);
+			else
+				DrawQ_String(fps_x, fps_y, fpsstring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0);
 			fps_y += fps_scaley;
 		}
 		if (timestring[0])
