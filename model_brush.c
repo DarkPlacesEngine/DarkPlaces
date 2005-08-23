@@ -4680,40 +4680,22 @@ static void Mod_Q3BSP_LoadLightGrid(lump_t *l)
 	loadmodel->brushq3.num_lightgrid_isize[1] = loadmodel->brushq3.num_lightgrid_imaxs[1] - loadmodel->brushq3.num_lightgrid_imins[1] + 1;
 	loadmodel->brushq3.num_lightgrid_isize[2] = loadmodel->brushq3.num_lightgrid_imaxs[2] - loadmodel->brushq3.num_lightgrid_imins[2] + 1;
 	count = loadmodel->brushq3.num_lightgrid_isize[0] * loadmodel->brushq3.num_lightgrid_isize[1] * loadmodel->brushq3.num_lightgrid_isize[2];
+	Matrix4x4_CreateScale3(&loadmodel->brushq3.num_lightgrid_indexfromworld, loadmodel->brushq3.num_lightgrid_scale[0], loadmodel->brushq3.num_lightgrid_scale[1], loadmodel->brushq3.num_lightgrid_scale[2]);
+	Matrix4x4_ConcatTranslate(&loadmodel->brushq3.num_lightgrid_indexfromworld, -loadmodel->brushq3.num_lightgrid_imins[0] * loadmodel->brushq3.num_lightgrid_cellsize[0], -loadmodel->brushq3.num_lightgrid_imins[1] * loadmodel->brushq3.num_lightgrid_cellsize[1], -loadmodel->brushq3.num_lightgrid_imins[2] * loadmodel->brushq3.num_lightgrid_cellsize[2]);
+
+	// if lump is empty there is nothing to load, we can deal with that in the LightPoint code
 	if (l->filelen)
 	{
 		if (l->filelen < count * (int)sizeof(*in))
 			Host_Error("Mod_Q3BSP_LoadLightGrid: invalid lightgrid lump size %i bytes, should be %i bytes (%ix%ix%i)\n", l->filelen, count * sizeof(*in), loadmodel->brushq3.num_lightgrid_dimensions[0], loadmodel->brushq3.num_lightgrid_dimensions[1], loadmodel->brushq3.num_lightgrid_dimensions[2]);
 		if (l->filelen != count * (int)sizeof(*in))
 			Con_Printf("Mod_Q3BSP_LoadLightGrid: Warning: calculated lightgrid size %i bytes does not match lump size %i\n", count * sizeof(*in), l->filelen);
-	}
-
-	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
-	loadmodel->brushq3.data_lightgrid = out;
-	loadmodel->brushq3.num_lightgrid = count;
-
-	// no swapping or validation necessary
-	if (l->filelen)
+		out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+		loadmodel->brushq3.data_lightgrid = out;
+		loadmodel->brushq3.num_lightgrid = count;
+		// no swapping or validation necessary
 		memcpy(out, in, count * (int)sizeof(*out));
-	else
-	{
-		// no data, fill with white
-		int i;
-		for (i = 0;i < count;i++)
-		{
-			out[i].ambientrgb[0] = 128;
-			out[i].ambientrgb[1] = 128;
-			out[i].ambientrgb[2] = 128;
-			out[i].diffusergb[0] = 0;
-			out[i].diffusergb[1] = 0;
-			out[i].diffusergb[2] = 0;
-			out[i].diffusepitch = 0;
-			out[i].diffuseyaw = 0;
-		}
 	}
-
-	Matrix4x4_CreateScale3(&loadmodel->brushq3.num_lightgrid_indexfromworld, loadmodel->brushq3.num_lightgrid_scale[0], loadmodel->brushq3.num_lightgrid_scale[1], loadmodel->brushq3.num_lightgrid_scale[2]);
-	Matrix4x4_ConcatTranslate(&loadmodel->brushq3.num_lightgrid_indexfromworld, -loadmodel->brushq3.num_lightgrid_imins[0] * loadmodel->brushq3.num_lightgrid_cellsize[0], -loadmodel->brushq3.num_lightgrid_imins[1] * loadmodel->brushq3.num_lightgrid_cellsize[1], -loadmodel->brushq3.num_lightgrid_imins[2] * loadmodel->brushq3.num_lightgrid_cellsize[2]);
 }
 
 static void Mod_Q3BSP_LoadPVS(lump_t *l)
@@ -4759,7 +4741,6 @@ static void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientc
 	int i, j, k, index[3];
 	float transformed[3], blend1, blend2, blend, yaw, pitch, sinpitch;
 	q3dlightgrid_t *a, *s;
-	// FIXME: write this
 	if (!model->brushq3.num_lightgrid)
 	{
 		ambientcolor[0] = 1;
