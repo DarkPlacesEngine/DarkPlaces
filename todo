@@ -5,8 +5,7 @@
 -d (HellToupee) feature darkplaces client: add a dot crosshair texture (HellToupee)
 -d (Kinn, romi) bug darkplaces WGL client: default WGL input back to GDI, the DirectInput driver is malfunctioning, losing key release messages, stuttering mouse input, and lacks mouse wheel support (Wazat, Kinn)
 -d (Mabus) bug darkplaces loading: test zlib support with entirely pk3'd id1 data (should crash because of zlib not being setup early enough - fix this) (Mabus)
-d bug darkplaces renderer: fix q3bsp fogging (Sajt)
-d feature darkplaces client: v_deathtilt cvar (Sajt, MauveBib)
+-d (QuakeMatt) change darkplaces menu: remove gl_combine from menu as it's not saved to config and really shouldn't be changed except when debugging drivers (QuakeMatt)
 -d (shadowalker) feature darkplaces server: add DP_QC_WRITEUNTERMINATEDSTRING extension (shadowalker)
 -d (Speedy) feature darkplaces init: add -demolooponly option which makes escape key quit, and disables all other keys (Speedy)
 -d (Spike) bug darkplaces console: inserting characters in the commandline is not adding a nul terminator to the commandline, resulting in lots of trash from older commandlines suddenly showing up (Spike)
@@ -108,7 +107,6 @@ d feature darkplaces client: v_deathtilt cvar (Sajt, MauveBib)
 0 change darkplaces extensions: edit FRIK_FILE documentation to mention that fgets uses its own separate buffer, so only one fgets can be done at a time without uzing strzone, but that darkplaces uses standard tempstrings for fgets (it doesn't - change it!) and mention DP_QC_MULTIPLETEMPSTRINGS (FrikaC)
 0 change darkplaces extensions: edit FRIK_FILE documentation to mention that strcat uses its own separate buffer, and that a = strcat(a, b);a = strcat(a, c); works correctly despite this, also mention that in DP strcat uses standard tempstrings, and mention DP_QC_MULTIPLETEMPSTRINGS (FrikaC)
 0 change darkplaces menu: move all options into a submenu so that people won't keep ignoring the other submenus
-0 change darkplaces menu: remove gl_combine from menu as it's not saved to config and really shouldn't be changed except when debugging drivers (QuakeMatt)
 0 change darkplaces networking: make darkplaces detect its *public* client port from master server and send that in nq connect messages (wallace)
 0 change darkplaces protocol: PRYDON_CLIENTCURSOR should use a stat and .prydoncursor field instead of the cl_prydoncursor cvar, because stuffcmd is a bit icky (FrikaC)
 0 change darkplaces protocol: document the TEI stuff used in Nexuiz?  check telejano site first (Sajt)
@@ -445,6 +443,7 @@ d bug darkplaces renderer: colormod is not affecting bmodels (Urre)
 d bug darkplaces renderer: compiled rtlights aren't working in modeltest.bsp which is a one cluster map (LordHavoc)
 d bug darkplaces renderer: don't shut off gl_combine when r_textureunits goes below 2, and don't save gl_combine either
 d bug darkplaces renderer: envmap command includes the hud in the screenshots, bad!
+d bug darkplaces renderer: fix q3bsp fogging (Sajt)
 d bug darkplaces renderer: fix rtlighting of viewmodel, it should not be performing lighting on a model outside the light radius (LordHavoc)
 d bug darkplaces renderer: fix the delayed lightmap updates on bmodels, they're lagging behind one frame, very noticable on flickering light
 d bug darkplaces renderer: fix vis problems when outside the level in q1bsp
@@ -972,6 +971,7 @@ d dpzoo.map: rain
 d dpzoo.map: skybox
 d dpzoo.map: snow
 d dpzoo.map: transparent glass bmodels (DP_ENT_ALPHA)
+d feature darkplaces client: v_deathtilt cvar (Sajt, MauveBib)
 d feature darkplaces console: change commandline history to clear the commandline when cursoring below the most recent history, and not allow cursoring back more than the oldest history (up2nogood)
 d feature darkplaces cvars: sort cvars and commands by name so that when saved to config they are sorted (might also be able to remove sorting from cvar/command listing)
 d feature darkplaces init: add -demo option like -benchmark except playdemo instead of timedemo

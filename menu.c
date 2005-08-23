@@ -1500,7 +1500,7 @@ void M_DrawCheckbox (int x, int y, int on)
 }
 
 
-#define OPTIONS_ITEMS 40
+#define OPTIONS_ITEMS 39
 
 int options_cursor;
 
@@ -1547,8 +1547,6 @@ void M_Menu_Options_AdjustSliders (int dir)
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&r_sky, !r_sky.integer);
 	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&gl_combine, !gl_combine.integer);
-	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&gl_dither, !gl_dither.integer);
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&gl_texture_anisotropy, bound(1, gl_texture_anisotropy.integer + dir, gl_max_anisotropy));
@@ -1563,7 +1561,7 @@ void M_Menu_Options_AdjustSliders (int dir)
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&r_textshadow, !r_textshadow.integer);
 	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&crosshair, bound(0, crosshair.integer + dir, 5));
+		Cvar_SetValueQuick (&crosshair, bound(0, crosshair.integer + dir, 6));
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&crosshair_size, bound(1, crosshair_size.value + dir, 5));
 	else if (options_cursor == optnum++)
@@ -1675,7 +1673,6 @@ void M_Options_Draw (void)
 	M_Options_PrintCheckbox("  JPEG screenshots", jpeg_dll != NULL, scr_screenshot_jpeg.integer);
 	M_Options_PrintSlider(  "      JPEG quality", jpeg_dll != NULL, scr_screenshot_jpeg_quality.value, 0, 1);
 	M_Options_PrintCheckbox("               Sky", true, r_sky.integer);
-	M_Options_PrintCheckbox("   Texture Combine", true, gl_combine.integer);
 	M_Options_PrintCheckbox("         Dithering", true, gl_dither.integer);
 	M_Options_PrintSlider(  "Anisotropic Filter", gl_support_anisotropy, gl_texture_anisotropy.integer, 1, gl_max_anisotropy);
 	M_Options_PrintSlider(  "        Game Speed", sv.active, slowmo.value, 0, 5);
