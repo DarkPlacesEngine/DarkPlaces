@@ -29,7 +29,6 @@
 0 bug darkplaces client: GAME_NEHAHRA: make sure cutscenes and movies work, got a report of seeing a black screen (NightFright)
 0 bug darkplaces client: cl_beams_relative is sometimes drawing beams from '0 0 0' (VorteX)
 0 bug darkplaces client: lightning beam following owner is not working well with cl_movement mode
-0 bug darkplaces client: pain flash seems to be framerate dependent?  (Urre)
 0 bug darkplaces collisions: curve collisions sometimes catch on the lip of the edge, pushing into the curved back wall around certain jumppads in Nexuiz for example consistently gets stuck just below the ledge (HReaper)
 0 bug darkplaces command: "rate", "playermodel", "playerskin", "pmodel" commands can spam server console with usage statements (Spike)
 0 bug darkplaces console: chat messages are showing up in brown quake characters and having ^7 and such printed literally
@@ -1011,6 +1010,7 @@ d zmodel: fix scale and origin commands (Vermeulen)
 f LordHavoc: examine .mb (Maya Binary) file from Electro and learn its format (Electro)
 f bug darkplaces client: occasionally when level changes on remote server, Host_Error occurs (LordHavoc)
 f bug darkplaces client: occasionally when level changes on remote server, connection stops and console scrolls wildly without user intervention, and it does not print any kind of error to the terminal, vid_restart in this state causes a crash (LordHavoc)
+f bug darkplaces client: pain flash seems to be framerate dependent?  (Urre)
 f bug darkplaces renderer: alias layers should have a shadow volume pass so that nodraw textures don't cast a shadow
 f bug darkplaces renderer: fix disappearing viewmodel (and other models) when in an unvised q3bsp, or partially inside a wall in q3bsp
 f darkplaces client: add chase_pitch cvar to control pitch angle of chase camera, and chase_angle cvar to control yaw angle of chase camera, and add back chase_right cvar (Electro)
