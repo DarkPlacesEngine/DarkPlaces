@@ -553,6 +553,11 @@ typedef struct
 	qboolean onground;
 	qboolean inwater;
 
+	// used by bob
+	qboolean oldonground;
+	double lastongroundtime;
+	double hitgroundtime;
+
 	// don't change view angle, full screen, etc
 	int intermission;
 	// latched at intermission start
