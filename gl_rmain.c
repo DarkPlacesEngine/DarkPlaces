@@ -1595,13 +1595,13 @@ void RSurf_SetVertexPointer(const entity_render_t *ent, const texture_t *texture
 	R_Mesh_VertexPointer(rsurface_vertex3f);
 }
 
-void RSurf_SetColorPointer(const entity_render_t *ent, const msurface_t *surface, const vec3_t modelorg, float r, float g, float b, float a, qboolean lightmodel, qboolean vertexlight, qboolean applycolor, qboolean applyfog)
+void RSurf_SetColorPointer(const entity_render_t *ent, const msurface_t *surface, const vec3_t modelorg, float r, float g, float b, float a, int lightmode, qboolean applycolor, qboolean applyfog)
 {
 	int i;
 	float f;
 	float *v, *c, *c2;
 	vec3_t diff;
-	if (lightmodel)
+	if (lightmode >= 2)
 	{
 		vec4_t ambientcolor4f;
 		vec3_t diffusecolor;
@@ -1630,7 +1630,7 @@ void RSurf_SetColorPointer(const entity_render_t *ent, const msurface_t *surface
 			rsurface_lightmapcolor4f = NULL;
 		}
 	}
-	else if (vertexlight)
+	else if (lightmode >= 1)
 	{
 		if (surface->lightmapinfo)
 		{
@@ -1731,7 +1731,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 	qboolean dofullbrightpants;
 	qboolean dofullbrightshirt;
 	qboolean applycolor;
-	qboolean lightmodel = false;
+	qboolean lightmode = 0;
 	rtexture_t *basetexture;
 	rmeshstate_t m;
 	if (texture->currentmaterialflags & MATERIALFLAG_NODRAW)
@@ -1739,7 +1739,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 	c_faces += texturenumsurfaces;
 	// FIXME: identify models using a better check than ent->model->shadowmesh
 	if (!(ent->effects & EF_FULLBRIGHT) && !ent->model->brush.shadowmesh)
-		lightmodel = true;
+		lightmode = 2;
 	// gl_lightmaps debugging mode skips normal texturing
 	if (gl_lightmaps.integer)
 	{
@@ -1756,7 +1756,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			R_Mesh_TexBind(0, R_GetTexture(surface->lightmaptexture));
 			R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordlightmap2f);
 			RSurf_SetVertexPointer(ent, texture, surface, modelorg);
-			RSurf_SetColorPointer(ent, surface, modelorg, 1, 1, 1, 1, lightmodel, !surface->lightmaptexture, false, false);
+			RSurf_SetColorPointer(ent, surface, modelorg, 1, 1, 1, 1, lightmode ? lightmode : !surface->lightmaptexture, false, false);
 			GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 			R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 			GL_LockArrays(0, 0);
@@ -1903,20 +1903,15 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				colorscale = r_lightmapintensity;
 			else
 				colorscale = 1;
+			// q3bsp has no lightmap updates, so the lightstylevalue that
+			// would normally be baked into the lightmaptexture must be
+			// applied to the color
+			if (ent->model->type == mod_brushq3)
+				colorscale *= d_lightstylevalue[0] * (1.0f / 128.0f);
 			r = ent->colormod[0] * colorscale;
 			g = ent->colormod[1] * colorscale;
 			b = ent->colormod[2] * colorscale;
 			a = texture->currentalpha;
-			// q3bsp has no lightmap updates, so the lightstylevalue that
-			// would normally be baked into the lightmaptexture must be
-			// applied to the color
-			if (ent->model->brushq3.data_lightmaps)
-			{
-				float scale = d_lightstylevalue[0] * (1.0f / 128.0f);
-				r *= scale;
-				g *= scale;
-				b *= scale;
-			}
 			applycolor = r != 1 || g != 1 || b != 1 || a != 1;
 			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
@@ -1928,13 +1923,13 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 					R_Mesh_TexBind(0, R_GetTexture(surface->lightmaptexture));
 				else
 					R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
-				RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, lightmodel, !surface->lightmaptexture, applycolor, fogallpasses);
+				RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, lightmode ? lightmode : !surface->lightmaptexture, applycolor, fogallpasses);
 				GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 				GL_LockArrays(0, 0);
 			}
 		}
-		else if (dolightmap && !(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT) && !lightmodel)
+		else if (dolightmap && !(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT) && !lightmode)
 		{
 			// single texture
 			GL_BlendFunc(GL_ONE, GL_ZERO);
@@ -1995,30 +1990,25 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			// transparent is not affected by r_lightmapintensity
 			if (!(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
 				colorscale *= r_lightmapintensity;
+			// q3bsp has no lightmap updates, so the lightstylevalue that
+			// would normally be baked into the lightmaptexture must be
+			// applied to the color
+			if (dolightmap && ent->model->type == mod_brushq3)
+				colorscale *= d_lightstylevalue[0] * (1.0f / 128.0f);
 			R_Mesh_State(&m);
 			r = ent->colormod[0] * colorscale;
 			g = ent->colormod[1] * colorscale;
 			b = ent->colormod[2] * colorscale;
 			a = texture->currentalpha;
+			applycolor = r != 1 || g != 1 || b != 1 || a != 1;
 			if (dolightmap)
 			{
-				// q3bsp has no lightmap updates, so the lightstylevalue that
-				// would normally be baked into the lightmaptexture must be
-				// applied to the color
-				if (ent->model->brushq3.data_lightmaps)
-				{
-					float scale = d_lightstylevalue[0] * (1.0f / 128.0f);
-					r *= scale;
-					g *= scale;
-					b *= scale;
-				}
-				applycolor = r != 1 || g != 1 || b != 1 || a != 1;
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
 					surface = texturesurfacelist[texturesurfaceindex];
 					RSurf_SetVertexPointer(ent, texture, surface, modelorg);
 					R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
-					RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, lightmodel, true, applycolor, fogallpasses);
+					RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, lightmode, applycolor, fogallpasses);
 					GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 					GL_LockArrays(0, 0);
@@ -2026,13 +2016,12 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			}
 			else
 			{
-				applycolor = r != 1 || g != 1 || b != 1 || a != 1;
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
 					surface = texturesurfacelist[texturesurfaceindex];
 					RSurf_SetVertexPointer(ent, texture, surface, modelorg);
 					R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
-					RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, false, false, applycolor, fogallpasses);
+					RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, 0, applycolor, fogallpasses);
 					GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 					GL_LockArrays(0, 0);
@@ -2056,30 +2045,25 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			// transparent is not affected by r_lightmapintensity
 			if (!(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
 				colorscale *= r_lightmapintensity;
+			// q3bsp has no lightmap updates, so the lightstylevalue that
+			// would normally be baked into the lightmaptexture must be
+			// applied to the color
+			if (dolightmap && !dofullbrightpants && ent->model->type == mod_brushq3)
+				colorscale *= d_lightstylevalue[0] * (1.0f / 128.0f);
 			R_Mesh_State(&m);
 			r = ent->colormod[0] * colorpants[0] * colorscale;
 			g = ent->colormod[1] * colorpants[1] * colorscale;
 			b = ent->colormod[2] * colorpants[2] * colorscale;
 			a = texture->currentalpha;
+			applycolor = r != 1 || g != 1 || b != 1 || a != 1;
 			if (dolightmap && !dofullbrightpants)
 			{
-				// q3bsp has no lightmap updates, so the lightstylevalue that
-				// would normally be baked into the lightmaptexture must be
-				// applied to the color
-				if (ent->model->brushq3.data_lightmaps)
-				{
-					float scale = d_lightstylevalue[0] * (1.0f / 128.0f);
-					r *= scale;
-					g *= scale;
-					b *= scale;
-				}
-				applycolor = r != 1 || g != 1 || b != 1 || a != 1;
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
 					surface = texturesurfacelist[texturesurfaceindex];
 					RSurf_SetVertexPointer(ent, texture, surface, modelorg);
 					R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
-					RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, lightmodel, true, applycolor, fogallpasses);
+					RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, lightmode, applycolor, fogallpasses);
 					GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 					GL_LockArrays(0, 0);
@@ -2087,13 +2071,12 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			}
 			else
 			{
-				applycolor = r != 1 || g != 1 || b != 1 || a != 1;
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
 					surface = texturesurfacelist[texturesurfaceindex];
 					RSurf_SetVertexPointer(ent, texture, surface, modelorg);
 					R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
-					RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, false, false, applycolor, fogallpasses);
+					RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, 0, applycolor, fogallpasses);
 					GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 					GL_LockArrays(0, 0);
@@ -2117,30 +2100,25 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			// transparent is not affected by r_lightmapintensity
 			if (!(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
 				colorscale *= r_lightmapintensity;
+			// q3bsp has no lightmap updates, so the lightstylevalue that
+			// would normally be baked into the lightmaptexture must be
+			// applied to the color
+			if (dolightmap && !dofullbrightshirt && ent->model->type == mod_brushq3)
+				colorscale *= d_lightstylevalue[0] * (1.0f / 128.0f);
 			R_Mesh_State(&m);
 			r = ent->colormod[0] * colorshirt[0] * colorscale;
 			g = ent->colormod[1] * colorshirt[1] * colorscale;
 			b = ent->colormod[2] * colorshirt[2] * colorscale;
 			a = texture->currentalpha;
+			applycolor = r != 1 || g != 1 || b != 1 || a != 1;
 			if (dolightmap && !dofullbrightshirt)
 			{
-				// q3bsp has no lightmap updates, so the lightstylevalue that
-				// would normally be baked into the lightmaptexture must be
-				// applied to the color
-				if (ent->model->brushq3.data_lightmaps)
-				{
-					float scale = d_lightstylevalue[0] * (1.0f / 128.0f);
-					r *= scale;
-					g *= scale;
-					b *= scale;
-				}
-				applycolor = r != 1 || g != 1 || b != 1 || a != 1;
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
 					surface = texturesurfacelist[texturesurfaceindex];
 					RSurf_SetVertexPointer(ent, texture, surface, modelorg);
 					R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
-					RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, lightmodel, true, applycolor, fogallpasses);
+					RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, lightmode, applycolor, fogallpasses);
 					GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 					GL_LockArrays(0, 0);
@@ -2148,13 +2126,12 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			}
 			else
 			{
-				applycolor = r != 1 || g != 1 || b != 1 || a != 1;
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
 					surface = texturesurfacelist[texturesurfaceindex];
 					RSurf_SetVertexPointer(ent, texture, surface, modelorg);
 					R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
-					RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, false, false, applycolor, fogallpasses);
+					RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, 0, applycolor, fogallpasses);
 					GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 					GL_LockArrays(0, 0);
@@ -2189,7 +2166,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				surface = texturesurfacelist[texturesurfaceindex];
 				RSurf_SetVertexPointer(ent, texture, surface, modelorg);
 				R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
-				RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, false, false, applycolor, fogallpasses);
+				RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, 0, applycolor, fogallpasses);
 				GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 				GL_LockArrays(0, 0);
@@ -2234,7 +2211,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				surface = texturesurfacelist[texturesurfaceindex];
 				RSurf_SetVertexPointer(ent, texture, surface, modelorg);
 				R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
-				RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, false, false, applycolor, fogallpasses);
+				RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, 0, applycolor, fogallpasses);
 				GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 				GL_LockArrays(0, 0);
