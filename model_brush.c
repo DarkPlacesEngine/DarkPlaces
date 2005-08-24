@@ -3710,9 +3710,9 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 											Con_Printf(" %s", parameter[j]);
 										Con_Print("\n");
 									}
-									if (passnumber == 0 && numparameters >= 1 && (flags & Q3SURFACEPARM_TRANS))
+									if (passnumber == 0 && numparameters >= 1)
 									{
-										if (!strcasecmp(parameter[0], "blendfunc"))
+										if (!strcasecmp(parameter[0], "blendfunc") && (flags & Q3SURFACEPARM_TRANS))
 										{
 											if (numparameters == 2 && !strcasecmp(parameter[1], "add"))
 												flags2 |= Q3TEXTUREFLAG_ADDITIVE;
