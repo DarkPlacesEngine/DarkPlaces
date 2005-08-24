@@ -992,7 +992,7 @@ static void R_FindImageForTexture(gltexture_t *glt)
 
 	glt->x = x;
 	glt->y = y;
-	glt->y = z;
+	glt->z = z;
 	glt->image = image;
 }
 
