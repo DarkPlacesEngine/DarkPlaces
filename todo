@@ -3,6 +3,7 @@
 -d (Gilgamesh) feature darkplaces protocol: add back colormod extension (FrikaC, Uffe, Gilgamesh, Wazat)
 -d (Gleeb) feature darkplaces server: add sv_playerphysicsqc cvar to allow engine to ignore SV_PlayerPhysics function, this would also have to change the reported extensions (Gleeb)
 -d (HellToupee) feature darkplaces client: add a dot crosshair texture (HellToupee)
+-d (Joel Murdoch) change darkplaces client: add a swinging weapon motion to replace the removed forward/back movement of the weapon, should be controllable with cl_bob_* cvars (Joel Murdoch)
 -d (Kinn, romi) bug darkplaces WGL client: default WGL input back to GDI, the DirectInput driver is malfunctioning, losing key release messages, stuttering mouse input, and lacks mouse wheel support (Wazat, Kinn)
 -d (Mabus) bug darkplaces loading: test zlib support with entirely pk3'd id1 data (should crash because of zlib not being setup early enough - fix this) (Mabus)
 -d (QuakeMatt) change darkplaces menu: remove gl_combine from menu as it's not saved to config and really shouldn't be changed except when debugging drivers (QuakeMatt)
@@ -25,6 +26,7 @@
 0 bug darkplaces capturevideo: cl_capturevideo 1 with sound off is not locking the framerate of a server (Vermeulen)
 0 bug darkplaces client: GAME_NEHAHRA: make sure cutscenes and movies work, got a report of seeing a black screen (NightFright)
 0 bug darkplaces client: cl_beams_relative is sometimes drawing beams from '0 0 0' (VorteX)
+0 bug darkplaces client: fix cl_bobmodel bug which momentarily jolts the gun when you pass through a trigger, pick up an item, etc (Sajt)
 0 bug darkplaces client: lightning beam following owner is not working well with cl_movement mode
 0 bug darkplaces collisions: curve collisions sometimes catch on the lip of the edge, pushing into the curved back wall around certain jumppads in Nexuiz for example consistently gets stuck just below the ledge (HReaper)
 0 bug darkplaces command: "rate", "playermodel", "playerskin", "pmodel" commands can spam server console with usage statements (Spike)
@@ -98,7 +100,6 @@
 0 bug hmap: strip .map extension from filename if present
 0 change darkplaces client: GAME_NEXUIZ: implement new hud and scoreboard based on http://www.quirkybastards.net/qmods/scoreboard.jpg except with deaths instead of lives, and map name instead of "be the last one alive" and remove the time string and map string at the bottom, instead showing the hud (Vermeulen)
 0 change darkplaces client: PRYDON_CLIENTCURSOR should be able to click on sprites, make sure it uses a minimal bounding box for viewmodelforclient sprites to avoid 'slop' area around a sprite (FrikaC)
-0 change darkplaces client: add a swinging weapon motion to replace the removed forward/back movement of the weapon, should be controllable with cl_bob_* cvars (Joel Murdoch)
 0 change darkplaces client: reduce number of particles used, and particle limit, to save some memory (LordHavoc)
 0 change darkplaces extensions: edit FRIK_FILE documentation to mention that fgets uses its own separate buffer, so only one fgets can be done at a time without uzing strzone, but that darkplaces uses standard tempstrings for fgets (it doesn't - change it!) and mention DP_QC_MULTIPLETEMPSTRINGS (FrikaC)
 0 change darkplaces extensions: edit FRIK_FILE documentation to mention that strcat uses its own separate buffer, and that a = strcat(a, b);a = strcat(a, c); works correctly despite this, also mention that in DP strcat uses standard tempstrings, and mention DP_QC_MULTIPLETEMPSTRINGS (FrikaC)
