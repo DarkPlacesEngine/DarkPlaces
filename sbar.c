@@ -861,7 +861,7 @@ void Sbar_ShowFPS(void)
 			calc = framerate;
 		}
 
-		if (red = (calc < 1.0f))
+		if ((red = (calc < 1.0f)))
 			dpsnprintf(fpsstring, sizeof(fpsstring), "%4i spf", (int)(1.0f / calc + 0.5));
 		else
 			dpsnprintf(fpsstring, sizeof(fpsstring), "%4i fps", (int)(calc + 0.5));
