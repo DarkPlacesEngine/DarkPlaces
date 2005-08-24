@@ -38,6 +38,11 @@ cvar_t	cl_bob = {0, "cl_bob","0.02"};
 cvar_t	cl_bobcycle = {0, "cl_bobcycle","0.6"};
 cvar_t	cl_bobup = {0, "cl_bobup","0.5"};
 
+cvar_t	cl_bobmodel = {0, "cl_bobmodel", "1"};
+cvar_t	cl_bobmodel_side = {0, "cl_bobmodel_side", "0.05"};
+cvar_t	cl_bobmodel_up = {0, "cl_bobmodel_up", "0.02"};
+cvar_t	cl_bobmodel_speed = {0, "cl_bobmodel_speed", "7"};
+
 cvar_t	v_kicktime = {0, "v_kicktime", "0.5"};
 cvar_t	v_kickroll = {0, "v_kickroll", "0.6"};
 cvar_t	v_kickpitch = {0, "v_kickpitch", "0.6"};
@@ -314,7 +319,7 @@ void V_CalcRefdef (void)
 {
 	static float oldz;
 	entity_t *ent;
-	float vieworg[3], viewangles[3];
+	float vieworg[3], gunorg[3], viewangles[3];
 	trace_t trace;
 	Matrix4x4_CreateIdentity(&viewmodelmatrix);
 	Matrix4x4_CreateIdentity(&r_refdef.viewentitymatrix);
@@ -336,6 +341,14 @@ void V_CalcRefdef (void)
 			// and the angles from the input system
 			Matrix4x4_OriginFromMatrix(&ent->render.matrix, vieworg);
 			VectorCopy(cl.viewangles, viewangles);
+
+			if (cl.onground)
+			{
+				if (!cl.oldonground)
+					cl.hitgroundtime = cl.time;
+				cl.lastongroundtime = cl.time;
+			}
+			cl.oldonground = cl.onground;
 
 			// stair smoothing
 			//Con_Printf("cl.onground %i oldz %f newz %f\n", cl.onground, oldz, vieworg[2]);
@@ -400,24 +413,73 @@ void V_CalcRefdef (void)
 				// origin
 				VectorAdd(vieworg, cl.punchvector, vieworg);
 				vieworg[2] += cl.stats[STAT_VIEWHEIGHT];
-				if (cl.stats[STAT_HEALTH] > 0 && cl_bob.value && cl_bobcycle.value)
+				if (cl.stats[STAT_HEALTH] > 0)
 				{
-					double bob, cycle;
-					// LordHavoc: this code is *weird*, but not replacable (I think it
-					// should be done in QC on the server, but oh well, quake is quake)
-					// LordHavoc: figured out bobup: the time at which the sin is at 180
-					// degrees (which allows lengthening or squishing the peak or valley)
-					cycle = cl.time / cl_bobcycle.value;
-					cycle -= (int) cycle;
-					if (cycle < cl_bobup.value)
-						cycle = sin(M_PI * cycle / cl_bobup.value);
-					else
-						cycle = sin(M_PI + M_PI * (cycle-cl_bobup.value)/(1.0 - cl_bobup.value));
-					// bob is proportional to velocity in the xy plane
-					// (don't count Z, or jumping messes it up)
-					bob = sqrt(cl.movement_velocity[0]*cl.movement_velocity[0] + cl.movement_velocity[1]*cl.movement_velocity[1]) * cl_bob.value;
-					bob = bob*0.3 + bob*0.7*cycle;
-					vieworg[2] += bound(-7, bob, 4);
+					double xyspeed, bob;
+
+					xyspeed = sqrt(cl.movement_velocity[0]*cl.movement_velocity[0] + cl.movement_velocity[1]*cl.movement_velocity[1]);
+					if (cl_bob.value && cl_bobcycle.value)
+					{
+						float cycle;
+						// LordHavoc: this code is *weird*, but not replacable (I think it
+						// should be done in QC on the server, but oh well, quake is quake)
+						// LordHavoc: figured out bobup: the time at which the sin is at 180
+						// degrees (which allows lengthening or squishing the peak or valley)
+						cycle = cl.time / cl_bobcycle.value;
+						cycle -= (int) cycle;
+						if (cycle < cl_bobup.value)
+							cycle = sin(M_PI * cycle / cl_bobup.value);
+						else
+							cycle = sin(M_PI + M_PI * (cycle-cl_bobup.value)/(1.0 - cl_bobup.value));
+						// bob is proportional to velocity in the xy plane
+						// (don't count Z, or jumping messes it up)
+						bob = xyspeed * cl_bob.value;
+						bob = bob*0.3 + bob*0.7*cycle;
+						vieworg[2] += bound(-7, bob, 4);
+					}
+
+					VectorCopy(vieworg, gunorg);
+
+					if (cl_bobmodel.value)
+					{
+						// calculate for swinging gun model
+						// the gun bobs when running on the ground, but doesn't bob when you're in the air.
+						// Sajt: I tried to smooth out the transitions between bob and no bob, which works
+						// for the most part, but for some reason when you go through a message trigger or
+						// pick up an item or anything like that it will momentarily jolt the gun.
+						vec3_t forward, right, up;
+						float bspeed;
+						float s;
+						float t;
+
+						s = cl.time * cl_bobmodel_speed.value;
+						if (cl.onground)
+						{
+							if (cl.time - cl.hitgroundtime < 0.2)
+							{
+								// just hit the ground, speed the bob back up over the next 0.2 seconds
+								t = cl.time - cl.hitgroundtime;
+								t = bound(0, t, 0.2);
+								t *= 5;
+							}
+							else
+								t = 1;
+						}
+						else
+						{
+							// recently left the ground, slow the bob down over the next 0.2 seconds
+							t = cl.time - cl.lastongroundtime;
+							t = 0.2 - bound(0, t, 0.2);
+							t *= 5;
+						}
+
+						bspeed = bound (0, xyspeed, 400) * 0.01f;
+						AngleVectors (viewangles, forward, right, up);
+						bob = bspeed * cl_bobmodel_side.value * sin (s) * t;
+						VectorMA (gunorg, bob, right, gunorg);
+						bob = bspeed * cl_bobmodel_up.value * cos (s * 2) * t;
+						VectorMA (gunorg, bob, up, gunorg);
+					}
 				}
 			}
 			// calculate a view matrix for rendering the scene
@@ -426,7 +488,7 @@ void V_CalcRefdef (void)
 			else
 				Matrix4x4_CreateFromQuakeEntity(&r_refdef.viewentitymatrix, vieworg[0], vieworg[1], vieworg[2], viewangles[0], viewangles[1], viewangles[2] + v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value, 1);
 			// calculate a viewmodel matrix for use in view-attached entities
-			Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, vieworg[0], vieworg[1], vieworg[2], viewangles[0], viewangles[1], viewangles[2], 0.3);
+			Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, gunorg[0], gunorg[1], gunorg[2], viewangles[0], viewangles[1], viewangles[2], 0.3);
 		}
 	}
 }
@@ -586,6 +648,10 @@ void V_Init (void)
 	Cvar_RegisterVariable (&cl_bob);
 	Cvar_RegisterVariable (&cl_bobcycle);
 	Cvar_RegisterVariable (&cl_bobup);
+	Cvar_RegisterVariable (&cl_bobmodel);
+	Cvar_RegisterVariable (&cl_bobmodel_side);
+	Cvar_RegisterVariable (&cl_bobmodel_up);
+	Cvar_RegisterVariable (&cl_bobmodel_speed);
 
 	Cvar_RegisterVariable (&v_kicktime);
 	Cvar_RegisterVariable (&v_kickroll);
