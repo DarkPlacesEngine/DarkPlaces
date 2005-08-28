@@ -1355,7 +1355,6 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
 		mesh->num_vertices = Mod_BuildVertexRemapTableFromElements(mesh->num_triangles * 3, mesh->data_element3i, pheader->numverts, remapvertices);
 		for (j = 0;j < mesh->num_triangles * 3;j++)
 			mesh->data_element3i[j] = remapvertices[mesh->data_element3i[j]];
-		Mod_BuildTriangleNeighbors(mesh->data_neighbor3i, mesh->data_element3i, mesh->num_triangles);
 		mesh->data_texcoordtexture2f = Mem_Alloc(loadmodel->mempool, mesh->num_vertices * sizeof(float[2]));
 		for (j = 0;j < pheader->numverts;j++)
 		{
@@ -1418,5 +1417,217 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
 	Mem_Free(vertbonecounts);
 	Mem_Free(verts);
 	Mem_Free(outtexcoord2f);
+}
+
+void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer)
+{
+	dpmheader_t *pheader;
+	dpmframe_t *frame;
+	dpmbone_t *bone;
+	dpmmesh_t *dpmmesh;
+	qbyte *pbase;
+	int i, j, k;
+	skinfile_t *skinfiles;
+	qbyte *data;
+
+	pheader = (void *)buffer;
+	pbase = buffer;
+	if (memcmp(pheader->id, "DARKPLACESMODEL\0", 16))
+		Host_Error ("Mod_DARKPLACESMODEL_Load: %s is not a zymotic model\n");
+	if (BigLong(pheader->type) != 2)
+		Host_Error ("Mod_DARKPLACESMODEL_Load: only type 2 (hierarchical skeletal pose) models are currently supported (name = %s)\n", loadmodel->name);
+
+	loadmodel->type = mod_alias;
+	loadmodel->DrawSky = NULL;
+	loadmodel->Draw = R_Q1BSP_Draw;
+	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
+	loadmodel->DrawLight = R_Q1BSP_DrawLight;
+	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
+	loadmodel->flags = 0; // there are no flags on zym models
+	loadmodel->synctype = ST_RAND;
+
+	// byteswap header
+	pheader->type = BigLong(pheader->type);
+	pheader->filesize = BigLong(pheader->filesize);
+	pheader->mins[0] = BigFloat(pheader->mins[0]);
+	pheader->mins[1] = BigFloat(pheader->mins[1]);
+	pheader->mins[2] = BigFloat(pheader->mins[2]);
+	pheader->maxs[0] = BigFloat(pheader->maxs[0]);
+	pheader->maxs[1] = BigFloat(pheader->maxs[1]);
+	pheader->maxs[2] = BigFloat(pheader->maxs[2]);
+	pheader->yawradius = BigFloat(pheader->yawradius);
+	pheader->allradius = BigFloat(pheader->allradius);
+	pheader->num_bones = BigLong(pheader->num_bones);
+	pheader->num_meshs = BigLong(pheader->num_meshs);
+	pheader->num_frames = BigLong(pheader->num_frames);
+	pheader->ofs_bones = BigLong(pheader->ofs_bones);
+	pheader->ofs_meshs = BigLong(pheader->ofs_meshs);
+	pheader->ofs_frames = BigLong(pheader->ofs_frames);
+
+	// model bbox
+	for (i = 0;i < 3;i++)
+	{
+		loadmodel->normalmins[i] = pheader->mins[i];
+		loadmodel->normalmaxs[i] = pheader->maxs[i];
+		loadmodel->yawmins[i] = i != 2 ? -pheader->yawradius : pheader->mins[i];
+		loadmodel->yawmaxs[i] = i != 2 ? pheader->yawradius : pheader->maxs[i];
+		loadmodel->rotatedmins[i] = -pheader->allradius;
+		loadmodel->rotatedmaxs[i] = pheader->allradius;
+	}
+	loadmodel->radius = pheader->allradius;
+	loadmodel->radius2 = pheader->allradius * pheader->allradius;
+
+	// load external .skin files if present
+	skinfiles = Mod_LoadSkinFiles();
+	if (loadmodel->numskins < 1)
+		loadmodel->numskins = 1;
+
+	loadmodel->numframes = pheader->num_frames;
+	loadmodel->num_bones = pheader->num_bones;
+	loadmodel->num_poses = loadmodel->num_bones * loadmodel->numframes;
+	loadmodel->num_textures = loadmodel->nummeshes = loadmodel->nummodelsurfaces = loadmodel->num_surfaces = pheader->num_meshs;
+
+	// do most allocations as one merged chunk
+	data = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->nummeshes * sizeof(surfmesh_t *) + loadmodel->nummeshes * sizeof(surfmesh_t) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->num_poses * sizeof(float[12]) + loadmodel->numframes * sizeof(animscene_t));
+	loadmodel->data_surfaces = (void *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
+	loadmodel->surfacelist = (void *)data;data += loadmodel->num_surfaces * sizeof(int);
+	loadmodel->meshlist = (void *)data;data += loadmodel->num_surfaces * sizeof(surfmesh_t *);
+	loadmodel->data_textures = (void *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
+	loadmodel->skinscenes = (void *)data;data += loadmodel->numskins * sizeof(animscene_t);
+	loadmodel->data_bones = (void *)data;data += loadmodel->num_bones * sizeof(aliasbone_t);
+	loadmodel->data_poses = (void *)data;data += loadmodel->num_poses * sizeof(float[12]);
+	loadmodel->animscenes = (void *)data;data += loadmodel->numframes * sizeof(animscene_t);
+	for (i = 0;i < loadmodel->numskins;i++)
+	{
+		loadmodel->skinscenes[i].firstframe = i;
+		loadmodel->skinscenes[i].framecount = 1;
+		loadmodel->skinscenes[i].loop = true;
+		loadmodel->skinscenes[i].framerate = 10;
+	}
+	for (i = 0;i < loadmodel->num_surfaces;i++)
+	{
+		loadmodel->surfacelist[i] = i;
+		loadmodel->meshlist[i] = (void *)data;data += sizeof(surfmesh_t);
+	}
+
+	// load the bone info
+	bone = (void *) (pbase + pheader->ofs_bones);
+	for (i = 0;i < loadmodel->num_bones;i++)
+	{
+		memcpy(loadmodel->data_bones[i].name, bone[i].name, sizeof(bone[i].name));
+		loadmodel->data_bones[i].flags = BigLong(bone[i].flags);
+		loadmodel->data_bones[i].parent = BigLong(bone[i].parent);
+		if (loadmodel->data_bones[i].parent >= i)
+			Host_Error("%s bone[%i].parent >= %i\n", loadmodel->name, i, i);
+	}
+
+	// load the frames
+	frame = (void *) (pbase + pheader->ofs_frames);
+	for (i = 0;i < loadmodel->numframes;i++)
+	{
+		const float *poses;
+		memcpy(loadmodel->animscenes[i].name, frame->name, sizeof(frame->name));
+		loadmodel->animscenes[i].firstframe = i;
+		loadmodel->animscenes[i].framecount = 1;
+		loadmodel->animscenes[i].loop = true;
+		loadmodel->animscenes[i].framerate = 10;
+		// load the bone poses for this frame
+		poses = (void *) (pbase + BigLong(frame->ofs_bonepositions));
+		for (j = 0;j < loadmodel->num_bones*12;j++)
+			loadmodel->data_poses[i * loadmodel->num_bones*12 + j] = BigFloat(poses[j]);
+		// stuff not processed here: mins, maxs, yawradius, allradius
+		frame++;
+	}
+
+	// load the meshes now
+	dpmmesh = (void *) (pbase + pheader->ofs_meshs);
+	for (i = 0;i < loadmodel->num_surfaces;i++)
+	{
+		const int *inelements;
+		int *outelements;
+		const float *intexcoord;
+		surfmesh_t *mesh;
+		msurface_t *surface;
+
+		mesh = loadmodel->meshlist[i];
+		mesh->num_triangles = BigLong(dpmmesh->num_tris);
+		mesh->num_vertices = BigLong(dpmmesh->num_verts);
+
+		// to find out how many weights exist we two a two-stage load...
+		mesh->num_vertexboneweights = 0;
+		data = (void *) (pbase + BigLong(dpmmesh->ofs_verts));
+		for (j = 0;j < mesh->num_vertices;j++)
+		{
+			int numweights = BigLong(((dpmvertex_t *)data)->numbones);
+			mesh->num_vertexboneweights += numweights;
+			data += sizeof(dpmvertex_t);
+			data += numweights * sizeof(dpmbonevert_t);
+		}
+
+		// allocate things now that we know how many
+		mesh->data_vertexboneweights = Mem_Alloc(loadmodel->mempool, mesh->num_vertexboneweights * sizeof(surfmeshvertexboneweight_t));
+		mesh->data_element3i = Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
+		mesh->data_neighbor3i = Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
+		mesh->data_texcoordtexture2f = Mem_Alloc(loadmodel->mempool, mesh->num_vertices * sizeof(float[2]));
+
+		inelements = (void *) (pbase + BigLong(dpmmesh->ofs_indices));
+		outelements = mesh->data_element3i;
+		for (j = 0;j < mesh->num_triangles;j++)
+		{
+			// swap element order to flip triangles, because Quake uses clockwise (rare) and dpm uses counterclockwise (standard)
+			outelements[0] = BigLong(inelements[2]);
+			outelements[1] = BigLong(inelements[1]);
+			outelements[2] = BigLong(inelements[0]);
+			inelements += 3;
+			outelements += 3;
+		}
+
+		intexcoord = (void *) (pbase + BigLong(dpmmesh->ofs_texcoords));
+		for (j = 0;j < mesh->num_vertices*2;j++)
+			mesh->data_texcoordtexture2f[j] = BigFloat(intexcoord[j]);
+
+		// now load them for real
+		mesh->num_vertexboneweights = 0;
+		data = (void *) (pbase + BigLong(dpmmesh->ofs_verts));
+		for (j = 0;j < mesh->num_vertices;j++)
+		{
+			int numweights = BigLong(((dpmvertex_t *)data)->numbones);
+			data += sizeof(dpmvertex_t);
+			for (k = 0;k < numweights;k++)
+			{
+				const dpmbonevert_t *vert = (void *) data;
+				// stuff not processed here: normal
+				mesh->data_vertexboneweights[mesh->num_vertexboneweights].vertexindex = j;
+				mesh->data_vertexboneweights[mesh->num_vertexboneweights].boneindex = BigLong(vert->bonenum);
+				mesh->data_vertexboneweights[mesh->num_vertexboneweights].origin[0] = BigFloat(vert->origin[0]);
+				mesh->data_vertexboneweights[mesh->num_vertexboneweights].origin[1] = BigFloat(vert->origin[1]);
+				mesh->data_vertexboneweights[mesh->num_vertexboneweights].origin[2] = BigFloat(vert->origin[2]);
+				mesh->data_vertexboneweights[mesh->num_vertexboneweights].origin[3] = BigFloat(vert->influence);
+				mesh->num_vertexboneweights++;
+				data += sizeof(dpmbonevert_t);
+			}
+		}
+
+		// since dpm models do not have named sections, reuse their shader name as the section name
+		if (dpmmesh->shadername[0])
+			Mod_BuildAliasSkinsFromSkinFiles(loadmodel->data_textures + i, skinfiles, dpmmesh->shadername, dpmmesh->shadername);
+		else
+			for (j = 0;j < loadmodel->numskins;j++)
+				Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + i + j * loadmodel->num_surfaces, NULL);
+
+		Mod_ValidateElements(mesh->data_element3i, mesh->num_triangles, mesh->num_vertices, __FILE__, __LINE__);
+		Mod_BuildTriangleNeighbors(mesh->data_neighbor3i, mesh->data_element3i, mesh->num_triangles);
+		Mod_Alias_Mesh_CompileFrameZero(mesh);
+
+		surface = loadmodel->data_surfaces + i;
+		surface->groupmesh = mesh;
+		surface->texture = loadmodel->data_textures + i;
+		surface->num_firsttriangle = 0;
+		surface->num_triangles = mesh->num_triangles;
+		surface->num_firstvertex = 0;
+		surface->num_vertices = mesh->num_vertices;
+
+		dpmmesh++;
+	}
 }
 

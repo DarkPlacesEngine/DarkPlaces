@@ -119,10 +119,14 @@ typedef struct
 extern void Mod_IDP0_Load(struct model_s *mod, void *buffer);
 extern void Mod_IDP2_Load(struct model_s *mod, void *buffer);
 extern void Mod_IDP3_Load(struct model_s *mod, void *buffer);
+extern void Mod_ZYMOTICMODEL_Load(struct model_s *mod, void *buffer);
+extern void Mod_DARKPLACESMODEL_Load(struct model_s *mod, void *buffer);
 
 extern void Mod_AliasInit(void);
 
 #include "model_zymotic.h"
+
+#include "model_dpmodel.h"
 
 // all md3 ints, floats, and shorts, are little endian, and thus need to be
 // passed through LittleLong/LittleFloat/LittleShort to avoid breaking on

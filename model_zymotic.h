@@ -64,7 +64,5 @@ typedef struct zymvertex_s
 }
 zymvertex_t;
 
-extern void Mod_ZYMOTICMODEL_Load(struct model_s *mod, void *buffer);
-
 #endif
 
