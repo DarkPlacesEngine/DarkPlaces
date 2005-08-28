@@ -246,6 +246,7 @@ typedef enum gamemode_e
 	GAME_PRYDON,
 	GAME_NETHERWORLD,
 	GAME_THEHUNTED,
+	GAME_DEFEATINDETAIL2,
 }
 gamemode_t;
 

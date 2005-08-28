@@ -962,16 +962,19 @@ static const gamemode_info_t gamemode_info [] =
 { "neoteric",		"-neoteric",	"Neoteric",				"id1",		"neobase",		"neo",			"darkplaces" },
 // GAME_OPENQUARTZ
 // COMMANDLINEOPTION: Game: -openquartz runs the game OpenQuartz, a standalone GPL replacement of the quake content
-{ "openquartz",		"-openquartz",	"OpenQuartz",			"id1",		NULL,			"openquartz",	"darkplaces"},
+{ "openquartz",		"-openquartz",	"OpenQuartz",			"id1",		NULL,			"openquartz",	"darkplaces" },
 // GAME_PRYDON
 // COMMANDLINEOPTION: Game: -prydon runs the topdown point and click action-RPG Prydon Gate
-{ "prydon",			"-prydon",		"PrydonGate",			"id1",		"prydon",		"prydon",		"darkplaces"},
+{ "prydon",			"-prydon",		"PrydonGate",			"id1",		"prydon",		"prydon",		"darkplaces" },
 // GAME_NETHERWORLD
 // COMMANDLINEOPTION: Game: -netherworld runs the game Netherworld: Dark Master
-{ "netherworld",	"-netherworld",	"Netherworld: Dark Master",	"id1",		"netherworld", 	"nw",			"darkplaces"},
+{ "netherworld",	"-netherworld",	"Netherworld: Dark Master",	"id1",		"netherworld", 	"nw",			"darkplaces" },
 // GAME_THEHUNTED
 // COMMANDLINEOPTION: Game: -thehunted runs the game The Hunted
-{ "thehunted",		"-thehunted",	"The Hunted",			"thdata",	NULL, 			"th",			"thehunted"},
+{ "thehunted",		"-thehunted",	"The Hunted",			"thdata",	NULL, 			"th",			"thehunted" },
+// GAME_DEFEATINDETAIL2
+// COMMANDLINEOPTION: Game: -did2 runs the game Defeat In Detail 2
+{ "did2",			"-did2",		"Defeat In Detail 2",	"data",		NULL, 			"did2_",		"did2" },
 };
 
 void COM_InitGameType (void)
