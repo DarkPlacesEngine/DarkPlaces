@@ -419,7 +419,7 @@ static void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfi
 extern void R_Q1BSP_Draw(entity_render_t *ent);
 extern void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs);
 extern void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolor, int numsurfaces, const int *surfacelist);
-void Mod_IDP0_Load(model_t *mod, void *buffer)
+void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int i, j, version, totalskins, skinwidth, skinheight, groupframes, groupskins, numverts;
 	float scales, scalet, scale[3], translate[3], interval;
@@ -741,7 +741,7 @@ static void Mod_MD2_ConvertVerts (vec3_t scale, vec3_t translate, trivertx_t *v,
 	}
 }
 
-void Mod_IDP2_Load(model_t *mod, void *buffer)
+void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int i, j, k, hashindex, num, numxyz, numst, xyz, st, skinwidth, skinheight, *vertremap, version, end, numverts;
 	float *stverts, s, t, scale[3], translate[3];
@@ -985,7 +985,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer)
 	surface->num_vertices = surface->groupmesh->num_vertices;
 }
 
-void Mod_IDP3_Load(model_t *mod, void *buffer)
+void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int i, j, k, version;
 	qbyte *data;
@@ -1123,7 +1123,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer)
 	Mod_FreeSkinFiles(skinfiles);
 }
 
-void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
+void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	zymtype1header_t *pinmodel, *pheader;
 	qbyte *pbase;
@@ -1419,7 +1419,7 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
 	Mem_Free(outtexcoord2f);
 }
 
-void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer)
+void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	dpmheader_t *pheader;
 	dpmframe_t *frame;

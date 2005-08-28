@@ -578,10 +578,6 @@ void Mod_ShadowMesh_Free(shadowmesh_t *mesh);
 int Mod_LoadSkinFrame(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int usedetailtexture, int loadglowtexture);
 int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int usedetailtexture, int loadglowtexture, qbyte *skindata, int width, int height);
 
-// used for talking to the QuakeC mainly
-int Mod_Q1BSP_NativeContentsFromSuperContents(struct model_s *model, int supercontents);
-int Mod_Q1BSP_SuperContentsFromNativeContents(struct model_s *model, int nativecontents);
-
 extern cvar_t r_mipskins;
 
 typedef struct skinfileitem_s
@@ -605,6 +601,34 @@ int Mod_CountSkinFiles(skinfile_t *skinfile);
 
 void Mod_SnapVertices(int numcomponents, int numvertices, float *vertices, float snap);
 int Mod_RemoveDegenerateTriangles(int numtriangles, const int *inelement3i, int *outelement3i, const float *vertex3f);
+
+// bsp models
+void Mod_BrushInit(void);
+// used for talking to the QuakeC mainly
+int Mod_Q1BSP_NativeContentsFromSuperContents(struct model_s *model, int supercontents);
+int Mod_Q1BSP_SuperContentsFromNativeContents(struct model_s *model, int nativecontents);
+
+// alias models
+struct frameblend_s;
+void Mod_AliasInit(void);
+void Mod_Alias_GetMesh_Vertex3f(const model_t *model, const struct frameblend_s *frameblend, const struct surfmesh_s *mesh, float *out3f);
+int Mod_Alias_GetTagMatrix(const model_t *model, int poseframe, int tagindex, matrix4x4_t *outmatrix);
+int Mod_Alias_GetTagIndexForName(const model_t *model, unsigned int skin, const char *tagname);
+
+// sprite models
+void Mod_SpriteInit(void);
+
+// loaders
+void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_IBSP_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_MAP_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend);
 
 #endif	// MODEL_SHARED_H
 

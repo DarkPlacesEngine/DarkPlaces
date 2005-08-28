@@ -2917,7 +2917,7 @@ extern void R_Q1BSP_Draw(entity_render_t *ent);
 extern void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, qbyte *outleafpvs, int *outnumleafspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer);
 extern void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs);
 extern void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolor, int numsurfaces, const int *surfacelist);
-void Mod_Q1BSP_Load(model_t *mod, void *buffer)
+void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int i, j, k;
 	dheader_t *header;
@@ -3539,7 +3539,7 @@ static void Mod_Q2BSP_LoadModels(lump_t *l)
 */
 }
 
-void static Mod_Q2BSP_Load(model_t *mod, void *buffer)
+void static Mod_Q2BSP_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int i;
 	q2dheader_t *header;
@@ -5412,7 +5412,7 @@ void Mod_Q3BSP_RecursiveFindNumLeafs(mnode_t *node)
 		loadmodel->brush.num_leafs = numleafs;
 }
 
-void Mod_Q3BSP_Load(model_t *mod, void *buffer)
+void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int i, j, numshadowmeshtriangles;
 	q3dheader_t *header;
@@ -5568,18 +5568,18 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 	}
 }
 
-void Mod_IBSP_Load(model_t *mod, void *buffer)
+void Mod_IBSP_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int i = LittleLong(((int *)buffer)[1]);
 	if (i == Q3BSPVERSION)
-		Mod_Q3BSP_Load(mod,buffer);
+		Mod_Q3BSP_Load(mod,buffer, bufferend);
 	else if (i == Q2BSPVERSION)
-		Mod_Q2BSP_Load(mod,buffer);
+		Mod_Q2BSP_Load(mod,buffer, bufferend);
 	else
 		Host_Error("Mod_IBSP_Load: unknown/unsupported version %i\n", i);
 }
 
-void Mod_MAP_Load(model_t *mod, void *buffer)
+void Mod_MAP_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	Host_Error("Mod_MAP_Load: not yet implemented\n");
 }

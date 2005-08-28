@@ -38,9 +38,5 @@ typedef struct mspriteframe_s
 	rtexture_t *texture, *fogtexture;
 } mspriteframe_t;
 
-extern void Mod_IDSP_Load(struct model_s *mod, const void *buffer);
-extern void Mod_IDS2_Load(struct model_s *mod, const void *buffer);
-extern void Mod_SpriteInit(void);
-
 #endif
 

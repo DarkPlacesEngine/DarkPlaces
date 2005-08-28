@@ -189,19 +189,20 @@ model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolea
 
 	if (buf)
 	{
+		char *bufend = buf + fs_filesize;
 		num = LittleLong(*((int *)buf));
 		// call the apropriate loader
 		loadmodel = mod;
-		     if (!memcmp(buf, "IDPO", 4)) Mod_IDP0_Load(mod, buf);
-		else if (!memcmp(buf, "IDP2", 4)) Mod_IDP2_Load(mod, buf);
-		else if (!memcmp(buf, "IDP3", 4)) Mod_IDP3_Load(mod, buf);
-		else if (!memcmp(buf, "IDSP", 4)) Mod_IDSP_Load(mod, buf);
-		else if (!memcmp(buf, "IDS2", 4)) Mod_IDS2_Load(mod, buf);
-		else if (!memcmp(buf, "IBSP", 4)) Mod_IBSP_Load(mod, buf);
-		else if (!memcmp(buf, "ZYMOTICMODEL", 12)) Mod_ZYMOTICMODEL_Load(mod, buf);
-		else if (!memcmp(buf, "DARKPLACESMODEL", 16)) Mod_DARKPLACESMODEL_Load(mod, buf);
-		else if (strlen(mod->name) >= 4 && !strcmp(mod->name - 4, ".map")) Mod_MAP_Load(mod, buf);
-		else if (num == BSPVERSION || num == 30) Mod_Q1BSP_Load(mod, buf);
+		     if (!memcmp(buf, "IDPO", 4)) Mod_IDP0_Load(mod, buf, bufend);
+		else if (!memcmp(buf, "IDP2", 4)) Mod_IDP2_Load(mod, buf, bufend);
+		else if (!memcmp(buf, "IDP3", 4)) Mod_IDP3_Load(mod, buf, bufend);
+		else if (!memcmp(buf, "IDSP", 4)) Mod_IDSP_Load(mod, buf, bufend);
+		else if (!memcmp(buf, "IDS2", 4)) Mod_IDS2_Load(mod, buf, bufend);
+		else if (!memcmp(buf, "IBSP", 4)) Mod_IBSP_Load(mod, buf, bufend);
+		else if (!memcmp(buf, "ZYMOTICMODEL", 12)) Mod_ZYMOTICMODEL_Load(mod, buf, bufend);
+		else if (!memcmp(buf, "DARKPLACESMODEL", 16)) Mod_DARKPLACESMODEL_Load(mod, buf, bufend);
+		else if (strlen(mod->name) >= 4 && !strcmp(mod->name - 4, ".map")) Mod_MAP_Load(mod, buf, bufend);
+		else if (num == BSPVERSION || num == 30) Mod_Q1BSP_Load(mod, buf, bufend);
 		else Con_Printf("Mod_LoadModel: model \"%s\" is of unknown/unsupported type\n", mod->name);
 		Mem_Free(buf);
 	}

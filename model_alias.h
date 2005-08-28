@@ -116,14 +116,6 @@ typedef struct
 	int			ofs_end;		// end of file
 } md2_t;
 
-extern void Mod_IDP0_Load(struct model_s *mod, void *buffer);
-extern void Mod_IDP2_Load(struct model_s *mod, void *buffer);
-extern void Mod_IDP3_Load(struct model_s *mod, void *buffer);
-extern void Mod_ZYMOTICMODEL_Load(struct model_s *mod, void *buffer);
-extern void Mod_DARKPLACESMODEL_Load(struct model_s *mod, void *buffer);
-
-extern void Mod_AliasInit(void);
-
 #include "model_zymotic.h"
 
 #include "model_dpmodel.h"
@@ -231,11 +223,6 @@ typedef struct aliasbone_s
 	int parent; // -1 for no parent
 }
 aliasbone_t;
-
-struct frameblend_s;
-void Mod_Alias_GetMesh_Vertex3f(const struct model_s *model, const struct frameblend_s *frameblend, const struct surfmesh_s *mesh, float *out3f);
-int Mod_Alias_GetTagMatrix(const struct model_s *model, int poseframe, int tagindex, matrix4x4_t *outmatrix);
-int Mod_Alias_GetTagIndexForName(const struct model_s *model, unsigned int skin, const char *tagname);
 
 #endif
 
