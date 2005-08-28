@@ -2988,6 +2988,7 @@ int M_ChooseQuitMessage(int request)
 	case GAME_HIPNOTIC:
 	case GAME_ROGUE:
 	case GAME_NEHAHRA:
+	case GAME_DEFEATINDETAIL2:
 		if (request-- == 0) return M_QuitMessage("Are you gonna quit","this game just like","everything else?",NULL,NULL,NULL,NULL,NULL);
 		if (request-- == 0) return M_QuitMessage("Milord, methinks that","thou art a lowly","quitter. Is this true?",NULL,NULL,NULL,NULL,NULL);
 		if (request-- == 0) return M_QuitMessage("Do I need to bust your","face open for trying","to quit?",NULL,NULL,NULL,NULL,NULL);
@@ -3661,6 +3662,18 @@ episode_t openquartzepisodes[] =
 	{"Contrib", 7, 6},
 };
 
+level_t defeatindetail2levels[] =
+{
+	{"atac3",	"River Crossing"},
+	{"atac4",	"Canyon Chaos"},
+	{"atac7",	"Desert Stormer"},
+};
+
+episode_t defeatindetail2episodes[] =
+{
+	{"ATAC Campaign", 0, 3},
+};
+
 gamelevels_t sharewarequakegame = {"Shareware Quake", quakelevels, quakeepisodes, 2};
 gamelevels_t registeredquakegame = {"Quake", quakelevels, quakeepisodes, 7};
 gamelevels_t hipnoticgame = {"Scourge of Armagon", hipnoticlevels, hipnoticepisodes, 6};
@@ -3670,6 +3683,7 @@ gamelevels_t transfusiongame = {"Transfusion", transfusionlevels, transfusionepi
 gamelevels_t goodvsbad2game = {"Good Vs. Bad 2", goodvsbad2levels, goodvsbad2episodes, 1};
 gamelevels_t battlemechgame = {"Battlemech", battlemechlevels, battlemechepisodes, 1};
 gamelevels_t openquartzgame = {"OpenQuartz", openquartzlevels, openquartzepisodes, 3};
+gamelevels_t defeatindetail2game = {"Defeat In Detail 2", defeatindetail2levels, defeatindetail2episodes, 1};
 
 typedef struct
 {
@@ -3689,6 +3703,7 @@ gameinfo_t gamelist[] =
 	{GAME_GOODVSBAD2, &goodvsbad2game, &goodvsbad2game},
 	{GAME_BATTLEMECH, &battlemechgame, &battlemechgame},
 	{GAME_OPENQUARTZ, &openquartzgame, &openquartzgame},
+	{GAME_DEFEATINDETAIL2, &defeatindetail2game, &defeatindetail2game},
 	{-1, &sharewarequakegame, &registeredquakegame} // final fallback
 };
 
