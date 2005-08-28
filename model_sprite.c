@@ -204,7 +204,7 @@ static void Mod_Sprite_SharedSetup(const qbyte *datapointer, int version, const 
 }
 
 extern void R_Model_Sprite_Draw(entity_render_t *ent);
-void Mod_IDSP_Load(model_t *mod, const void *buffer)
+void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int version;
 	const qbyte *datapointer;
@@ -317,12 +317,12 @@ void Mod_IDSP_Load(model_t *mod, const void *buffer)
 }
 
 
-void Mod_IDS2_Load(model_t *mod, const void *buffer)
+void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int i, version;
 	const dsprite2_t *pinqsprite;
 	float modelradius;
-	
+
 	loadmodel->type = mod_sprite;
 	loadmodel->flags2 = EF_FULLBRIGHT;
 

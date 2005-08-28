@@ -211,12 +211,6 @@ typedef struct mlight_s
 }
 mlight_t;
 
-struct model_s;
-void Mod_Q1BSP_Load(struct model_s *mod, void *buffer);
-void Mod_IBSP_Load(struct model_s *mod, void *buffer);
-void Mod_MAP_Load(struct model_s *mod, void *buffer);
-void Mod_BrushInit(void);
-
 // Q2 bsp stuff
 
 #define Q2BSPVERSION	38
