@@ -3008,16 +3008,12 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	numshadowmeshtriangles = 0;
 	for (j = 0, surface = loadmodel->data_surfaces;j < loadmodel->num_surfaces;j++, surface++)
 	{
-		if (surface->texture->basematerialflags & MATERIALFLAG_SOLID)
-		{
-			surface->num_firstshadowmeshtriangle = numshadowmeshtriangles;
-			numshadowmeshtriangles += surface->num_triangles;
-		}
+		surface->num_firstshadowmeshtriangle = numshadowmeshtriangles;
+		numshadowmeshtriangles += surface->num_triangles;
 	}
 	loadmodel->brush.shadowmesh = Mod_ShadowMesh_Begin(loadmodel->mempool, numshadowmeshtriangles * 3, numshadowmeshtriangles, NULL, NULL, NULL, false, false, true);
 	for (j = 0, surface = loadmodel->data_surfaces;j < loadmodel->num_surfaces;j++, surface++)
-		if (surface->texture->basematerialflags & MATERIALFLAG_SOLID)
-			Mod_ShadowMesh_AddMesh(loadmodel->mempool, loadmodel->brush.shadowmesh, NULL, NULL, NULL, surface->groupmesh->data_vertex3f, NULL, NULL, NULL, NULL, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
+		Mod_ShadowMesh_AddMesh(loadmodel->mempool, loadmodel->brush.shadowmesh, NULL, NULL, NULL, surface->groupmesh->data_vertex3f, NULL, NULL, NULL, NULL, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 	loadmodel->brush.shadowmesh = Mod_ShadowMesh_Finish(loadmodel->mempool, loadmodel->brush.shadowmesh, false, true);
 	Mod_BuildTriangleNeighbors(loadmodel->brush.shadowmesh->neighbor3i, loadmodel->brush.shadowmesh->element3i, loadmodel->brush.shadowmesh->numtriangles);
 
