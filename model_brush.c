@@ -3008,8 +3008,11 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	numshadowmeshtriangles = 0;
 	for (j = 0, surface = loadmodel->data_surfaces;j < loadmodel->num_surfaces;j++, surface++)
 	{
-		surface->num_firstshadowmeshtriangle = numshadowmeshtriangles;
-		numshadowmeshtriangles += surface->num_triangles;
+		if (surface->texture->basematerialflags & MATERIALFLAG_SOLID)
+		{
+			surface->num_firstshadowmeshtriangle = numshadowmeshtriangles;
+			numshadowmeshtriangles += surface->num_triangles;
+		}
 	}
 	loadmodel->brush.shadowmesh = Mod_ShadowMesh_Begin(loadmodel->mempool, numshadowmeshtriangles * 3, numshadowmeshtriangles, NULL, NULL, NULL, false, false, true);
 	for (j = 0, surface = loadmodel->data_surfaces;j < loadmodel->num_surfaces;j++, surface++)
