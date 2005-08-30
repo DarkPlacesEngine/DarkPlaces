@@ -116,10 +116,6 @@ typedef struct
 	int			ofs_end;		// end of file
 } md2_t;
 
-#include "model_zymotic.h"
-
-#include "model_dpmodel.h"
-
 // all md3 ints, floats, and shorts, are little endian, and thus need to be
 // passed through LittleLong/LittleFloat/LittleShort to avoid breaking on
 // bigendian machines (Macs for example)
@@ -223,6 +219,12 @@ typedef struct aliasbone_s
 	int parent; // -1 for no parent
 }
 aliasbone_t;
+
+#include "model_zymotic.h"
+
+#include "model_dpmodel.h"
+
+#include "model_psk.h"
 
 #endif
 
