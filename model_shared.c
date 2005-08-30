@@ -480,12 +480,21 @@ void Mod_BuildTriangleNeighbors(int *neighbors, const int *elements, int numtria
 }
 #endif
 
-void Mod_ValidateElements(const int *elements, int numtriangles, int numverts, const char *filename, int fileline)
+void Mod_ValidateElements(int *elements, int numtriangles, int numverts, const char *filename, int fileline)
 {
-	int i;
+	int i, warned = false;
 	for (i = 0;i < numtriangles * 3;i++)
+	{
 		if ((unsigned int)elements[i] >= (unsigned int)numverts)
-			Con_Printf("Mod_ValidateElements: out of bounds element detected at %s:%d\n", filename, fileline);
+		{
+			if (!warned)
+			{
+				warned = true;
+				Con_Printf("Mod_ValidateElements: out of bounds elements detected at %s:%d\n", filename, fileline);
+			}
+			elements[i] = 0;
+		}
+	}
 }
 
 // warning: this is an expensive function!
