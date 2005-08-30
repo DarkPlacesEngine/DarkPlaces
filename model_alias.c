@@ -1708,7 +1708,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	FS_StripExtension(loadmodel->name, animname, sizeof(animname));
 	strlcat(animname, ".psa", sizeof(animname));
 	animbuffer = animfilebuffer = FS_LoadFile(animname, loadmodel->mempool, false);
-	animbufferend = animbuffer + fs_filesize;
+	animbufferend = (void *)((unsigned char*)animbuffer + fs_filesize);
 	if (animbuffer == NULL)
 		Host_Error("%s: can't find .psa file (%s)\n", loadmodel->name, animname);
 
