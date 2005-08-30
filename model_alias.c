@@ -22,8 +22,21 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "image.h"
 #include "r_shadow.h"
 
+cvar_t r_skeletal_debugbone = {0, "r_skeletal_debugbone", "-1"};
+cvar_t r_skeletal_debugbonecomponent = {0, "r_skeletal_debugbonecomponent", "3"};
+cvar_t r_skeletal_debugbonevalue = {0, "r_skeletal_debugbonevalue", "100"};
+cvar_t r_skeletal_debugtranslatex = {0, "r_skeletal_debugtranslatex", "1"};
+cvar_t r_skeletal_debugtranslatey = {0, "r_skeletal_debugtranslatey", "1"};
+cvar_t r_skeletal_debugtranslatez = {0, "r_skeletal_debugtranslatez", "1"};
+
 void Mod_AliasInit (void)
 {
+	Cvar_RegisterVariable(&r_skeletal_debugbone);
+	Cvar_RegisterVariable(&r_skeletal_debugbonecomponent);
+	Cvar_RegisterVariable(&r_skeletal_debugbonevalue);
+	Cvar_RegisterVariable(&r_skeletal_debugtranslatex);
+	Cvar_RegisterVariable(&r_skeletal_debugtranslatey);
+	Cvar_RegisterVariable(&r_skeletal_debugtranslatez);
 }
 
 void Mod_Alias_GetMesh_Vertex3f(const model_t *model, const frameblend_t *frameblend, const surfmesh_t *mesh, float *out3f)
@@ -45,6 +58,11 @@ void Mod_Alias_GetMesh_Vertex3f(const model_t *model, const frameblend_t *frameb
 				for (k = 0;k < 12;k++)
 					m[k] += matrix[k] * frameblend[blends].lerp;
 			}
+			if (i == r_skeletal_debugbone.integer)
+				m[r_skeletal_debugbonecomponent.integer % 12] += r_skeletal_debugbonevalue.value;
+			m[3] *= r_skeletal_debugtranslatex.value;
+			m[7] *= r_skeletal_debugtranslatey.value;
+			m[11] *= r_skeletal_debugtranslatez.value;
 			if (model->data_bones[i].parent >= 0)
 				R_ConcatTransforms(bonepose[model->data_bones[i].parent], m, bonepose[i]);
 			else
@@ -408,7 +426,7 @@ static void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfi
 		else
 		{
 			if (cls.state != ca_dedicated)
-				Con_Printf("failed to load mesh \"%s\" shader \"%s\"\n", meshname, shadername);
+				Con_Printf("Can't find texture \"%s\" for mesh \"%s\", using grey checkerboard\n", shadername, meshname);
 			Mod_BuildAliasSkinFromSkinFrame(skin, NULL);
 		}
 	}
@@ -1433,7 +1451,7 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	pheader = (void *)buffer;
 	pbase = buffer;
 	if (memcmp(pheader->id, "DARKPLACESMODEL\0", 16))
-		Host_Error ("Mod_DARKPLACESMODEL_Load: %s is not a zymotic model\n");
+		Host_Error ("Mod_DARKPLACESMODEL_Load: %s is not a darkplaces model\n");
 	if (BigLong(pheader->type) != 2)
 		Host_Error ("Mod_DARKPLACESMODEL_Load: only type 2 (hierarchical skeletal pose) models are currently supported (name = %s)\n", loadmodel->name);
 
@@ -1629,5 +1647,551 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 
 		dpmmesh++;
 	}
+}
+
+static void Mod_PSKMODEL_AnimKeyToMatrix(float *origin, float *quat, matrix4x4_t *m)
+{
+	float x = quat[0], y = quat[1], z = quat[2], w = quat[3];
+	m->m[0][0]=1-2*(y*y+z*z);m->m[0][1]=  2*(x*y-z*w);m->m[0][2]=  2*(x*z+y*w);m->m[0][3]=origin[0];
+	m->m[1][0]=  2*(x*y+z*w);m->m[1][1]=1-2*(x*x+z*z);m->m[1][2]=  2*(y*z-x*w);m->m[1][3]=origin[1];
+	m->m[2][0]=  2*(x*z-y*w);m->m[2][1]=  2*(y*z+x*w);m->m[2][2]=1-2*(x*x+y*y);m->m[2][3]=origin[2];
+	m->m[3][0]=  0          ;m->m[3][1]=  0          ;m->m[3][2]=  0          ;m->m[3][3]=1;
+}
+
+// no idea why PSK/PSA files contain weird quaternions but they do...
+#define PSKQUATNEGATIONS
+void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
+{
+	int i, j, index, version, recordsize, numrecords;
+	int numpnts, numvtxw, numfaces, nummatts, numbones, numrawweights, numanimbones, numanims, numanimkeys;
+	pskpnts_t *pnts;
+	pskvtxw_t *vtxw;
+	pskface_t *faces;
+	pskmatt_t *matts;
+	pskboneinfo_t *bones;
+	pskrawweights_t *rawweights;
+	pskboneinfo_t *animbones;
+	pskaniminfo_t *anims;
+	pskanimkeys_t *animkeys;
+	void *animfilebuffer, *animbuffer, *animbufferend;
+	pskchunk_t *pchunk;
+	surfmesh_t *mesh;
+	skinfile_t *skinfiles;
+	char animname[MAX_QPATH];
+
+	pchunk = (void *)buffer;
+	if (strcmp(pchunk->id, "ACTRHEAD"))
+		Host_Error ("Mod_PSKMODEL_Load: %s is not a ActorX model\n");
+
+	loadmodel->type = mod_alias;
+	loadmodel->DrawSky = NULL;
+	loadmodel->Draw = R_Q1BSP_Draw;
+	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
+	loadmodel->DrawLight = R_Q1BSP_DrawLight;
+	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
+	loadmodel->flags = 0; // there are no flags on zym models
+	loadmodel->synctype = ST_RAND;
+
+	// load external .skin files if present
+	skinfiles = Mod_LoadSkinFiles();
+	if (loadmodel->numskins < 1)
+		loadmodel->numskins = 1;
+	loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, loadmodel->numskins * sizeof(animscene_t));
+	for (i = 0;i < loadmodel->numskins;i++)
+	{
+		loadmodel->skinscenes[i].firstframe = i;
+		loadmodel->skinscenes[i].framecount = 1;
+		loadmodel->skinscenes[i].loop = true;
+		loadmodel->skinscenes[i].framerate = 10;
+	}
+
+	FS_StripExtension(loadmodel->name, animname, sizeof(animname));
+	strlcat(animname, ".psa", sizeof(animname));
+	animbuffer = animfilebuffer = FS_LoadFile(animname, loadmodel->mempool, false);
+	animbufferend = animbuffer + fs_filesize;
+	if (animbuffer == NULL)
+		Host_Error("%s: can't find .psa file (%s)\n", loadmodel->name, animname);
+
+	numpnts = 0;
+	pnts = NULL;
+	numvtxw = 0;
+	vtxw = NULL;
+	numfaces = 0;
+	faces = NULL;
+	nummatts = 0;
+	matts = NULL;
+	numbones = 0;
+	bones = NULL;
+	numrawweights = 0;
+	rawweights = NULL;
+	numanims = 0;
+	anims = NULL;
+	numanimkeys = 0;
+	animkeys = NULL;
+
+	while (buffer < bufferend)
+	{
+		pchunk = buffer;
+		buffer = (void *)((unsigned char *)buffer + sizeof(pskchunk_t));
+		version = LittleLong(pchunk->version);
+		recordsize = LittleLong(pchunk->recordsize);
+		numrecords = LittleLong(pchunk->numrecords);
+		if (developer.integer)
+			Con_Printf("%s: %s %x: %i * %i = %i\n", loadmodel->name, pchunk->id, version, recordsize, numrecords, recordsize * numrecords);
+		if (version != 0x1e83b9 && version != 0x1e9179 && version != 0x2e)
+			Con_Printf ("%s: chunk %s has unknown version %x (0x1e83b9, 0x1e9179 and 0x2e are currently supported), trying to load anyway!\n", loadmodel->name, pchunk->id, version);
+		if (!strcmp(pchunk->id, "ACTRHEAD"))
+		{
+			// nothing to do
+		}
+		else if (!strcmp(pchunk->id, "PNTS0000"))
+		{
+			pskpnts_t *p;
+			if (recordsize != sizeof(*p))
+				Host_Error("%s: %s has unsupported recordsize\n", loadmodel->name, pchunk->id);
+			// byteswap in place and keep the pointer
+			numpnts = numrecords;
+			pnts = buffer;
+			for (index = 0, p = buffer;index < numrecords;index++, p++)
+			{
+				p->origin[0] = LittleFloat(p->origin[0]);
+				p->origin[1] = LittleFloat(p->origin[1]);
+				p->origin[2] = LittleFloat(p->origin[2]);
+			}
+			buffer = p;
+		}
+		else if (!strcmp(pchunk->id, "VTXW0000"))
+		{
+			pskvtxw_t *p;
+			if (recordsize != sizeof(*p))
+				Host_Error("%s: %s has unsupported recordsize\n", loadmodel->name, pchunk->id);
+			// byteswap in place and keep the pointer
+			numvtxw = numrecords;
+			vtxw = buffer;
+			for (index = 0, p = buffer;index < numrecords;index++, p++)
+			{
+				p->pntsindex = LittleShort(p->pntsindex);
+				p->texcoord[0] = LittleFloat(p->texcoord[0]);
+				p->texcoord[1] = LittleFloat(p->texcoord[1]);
+				if (p->pntsindex >= numpnts)
+				{
+					Con_Printf("%s: vtxw->pntsindex %i >= numpnts %i\n", loadmodel->name, p->pntsindex, numpnts);
+					p->pntsindex = 0;
+				}
+			}
+			buffer = p;
+		}
+		else if (!strcmp(pchunk->id, "FACE0000"))
+		{
+			pskface_t *p;
+			if (recordsize != sizeof(*p))
+				Host_Error("%s: %s has unsupported recordsize\n", loadmodel->name, pchunk->id);
+			// byteswap in place and keep the pointer
+			numfaces = numrecords;
+			faces = buffer;
+			for (index = 0, p = buffer;index < numrecords;index++, p++)
+			{
+				p->vtxwindex[0] = LittleShort(p->vtxwindex[0]);
+				p->vtxwindex[1] = LittleShort(p->vtxwindex[1]);
+				p->vtxwindex[2] = LittleShort(p->vtxwindex[2]);
+				p->group = LittleLong(p->group);
+				if (p->vtxwindex[0] >= numvtxw)
+				{
+					Con_Printf("%s: face->vtxwindex[0] %i >= numvtxw %i\n", loadmodel->name, p->vtxwindex[0], numvtxw);
+					p->vtxwindex[0] = 0;
+				}
+				if (p->vtxwindex[1] >= numvtxw)
+				{
+					Con_Printf("%s: face->vtxwindex[1] %i >= numvtxw %i\n", loadmodel->name, p->vtxwindex[1], numvtxw);
+					p->vtxwindex[1] = 0;
+				}
+				if (p->vtxwindex[2] >= numvtxw)
+				{
+					Con_Printf("%s: face->vtxwindex[2] %i >= numvtxw %i\n", loadmodel->name, p->vtxwindex[2], numvtxw);
+					p->vtxwindex[2] = 0;
+				}
+			}
+			buffer = p;
+		}
+		else if (!strcmp(pchunk->id, "MATT0000"))
+		{
+			pskmatt_t *p;
+			if (recordsize != sizeof(*p))
+				Host_Error("%s: %s has unsupported recordsize\n", loadmodel->name, pchunk->id);
+			// byteswap in place and keep the pointer
+			nummatts = numrecords;
+			matts = buffer;
+			for (index = 0, p = buffer;index < numrecords;index++, p++)
+			{
+			}
+			buffer = p;
+		}
+		else if (!strcmp(pchunk->id, "REFSKELT"))
+		{
+			pskboneinfo_t *p;
+			if (recordsize != sizeof(*p))
+				Host_Error("%s: %s has unsupported recordsize\n", loadmodel->name, pchunk->id);
+			// byteswap in place and keep the pointer
+			numbones = numrecords;
+			bones = buffer;
+			for (index = 0, p = buffer;index < numrecords;index++, p++)
+			{
+				p->numchildren = LittleLong(p->numchildren);
+				p->parent = LittleLong(p->parent);
+				p->basepose.quat[0] = LittleFloat(p->basepose.quat[0]);
+				p->basepose.quat[1] = LittleFloat(p->basepose.quat[1]);
+				p->basepose.quat[2] = LittleFloat(p->basepose.quat[2]);
+				p->basepose.quat[3] = LittleFloat(p->basepose.quat[3]);
+				p->basepose.origin[0] = LittleFloat(p->basepose.origin[0]);
+				p->basepose.origin[1] = LittleFloat(p->basepose.origin[1]);
+				p->basepose.origin[2] = LittleFloat(p->basepose.origin[2]);
+				p->basepose.unknown = LittleFloat(p->basepose.unknown);
+				p->basepose.size[0] = LittleFloat(p->basepose.size[0]);
+				p->basepose.size[1] = LittleFloat(p->basepose.size[1]);
+				p->basepose.size[2] = LittleFloat(p->basepose.size[2]);
+#ifdef PSKQUATNEGATIONS
+				if (index)
+				{
+					p->basepose.quat[0] *= -1;
+					p->basepose.quat[1] *= -1;
+					p->basepose.quat[2] *= -1;
+				}
+				else
+				{
+					p->basepose.quat[0] *=  1;
+					p->basepose.quat[1] *= -1;
+					p->basepose.quat[2] *=  1;
+				}
+#endif
+				if (p->parent < 0 || p->parent >= numbones)
+				{
+					Con_Printf("%s: bone->parent %i >= numbones %i\n", loadmodel->name, p->parent, numbones);
+					p->parent = 0;
+				}
+			}
+			buffer = p;
+		}
+		else if (!strcmp(pchunk->id, "RAWWEIGHTS"))
+		{
+			pskrawweights_t *p;
+			if (recordsize != sizeof(*p))
+				Host_Error("%s: %s has unsupported recordsize\n", loadmodel->name, pchunk->id);
+			// byteswap in place and keep the pointer
+			numrawweights = numrecords;
+			rawweights = buffer;
+			for (index = 0, p = buffer;index < numrecords;index++, p++)
+			{
+				p->weight = LittleFloat(p->weight);
+				p->pntsindex = LittleLong(p->pntsindex);
+				p->boneindex = LittleLong(p->boneindex);
+				if (p->pntsindex < 0 || p->pntsindex >= numpnts)
+				{
+					Con_Printf("%s: weight->pntsindex %i >= numpnts %i\n", loadmodel->name, p->pntsindex, numpnts);
+					p->pntsindex = 0;
+				}
+				if (p->boneindex < 0 || p->boneindex >= numbones)
+				{
+					Con_Printf("%s: weight->boneindex %i >= numbones %i\n", loadmodel->name, p->boneindex, numbones);
+					p->boneindex = 0;
+				}
+			}
+			buffer = p;
+		}
+	}
+
+	while (animbuffer < animbufferend)
+	{
+		pchunk = animbuffer;
+		animbuffer = (void *)((unsigned char *)animbuffer + sizeof(pskchunk_t));
+		version = LittleLong(pchunk->version);
+		recordsize = LittleLong(pchunk->recordsize);
+		numrecords = LittleLong(pchunk->numrecords);
+		if (developer.integer)
+			Con_Printf("%s: %s %x: %i * %i = %i\n", animname, pchunk->id, version, recordsize, numrecords, recordsize * numrecords);
+		if (version != 0x1e83b9 && version != 0x1e9179 && version != 0x2e)
+			Con_Printf ("%s: chunk %s has unknown version %x (0x1e83b9, 0x1e9179 and 0x2e are currently supported), trying to load anyway!\n", animname, pchunk->id, version);
+		if (!strcmp(pchunk->id, "ANIMHEAD"))
+		{
+			// nothing to do
+		}
+		else if (!strcmp(pchunk->id, "BONENAMES"))
+		{
+			pskboneinfo_t *p;
+			if (recordsize != sizeof(*p))
+				Host_Error("%s: %s has unsupported recordsize\n", animname, pchunk->id);
+			// byteswap in place and keep the pointer
+			numanimbones = numrecords;
+			animbones = animbuffer;
+			// NOTE: supposedly psa does not need to match the psk model, the
+			// bones missing from the psa would simply use their base
+			// positions from the psk, but this is hard for me to implement
+			// and people can easily make animations that match.
+			if (numanimbones != numbones)
+				Host_Error("%s: this loader only supports animations with the same bones as the mesh\n");
+			for (index = 0, p = animbuffer;index < numrecords;index++, p++)
+			{
+				p->numchildren = LittleLong(p->numchildren);
+				p->parent = LittleLong(p->parent);
+				p->basepose.quat[0] = LittleFloat(p->basepose.quat[0]);
+				p->basepose.quat[1] = LittleFloat(p->basepose.quat[1]);
+				p->basepose.quat[2] = LittleFloat(p->basepose.quat[2]);
+				p->basepose.quat[3] = LittleFloat(p->basepose.quat[3]);
+				p->basepose.origin[0] = LittleFloat(p->basepose.origin[0]);
+				p->basepose.origin[1] = LittleFloat(p->basepose.origin[1]);
+				p->basepose.origin[2] = LittleFloat(p->basepose.origin[2]);
+				p->basepose.unknown = LittleFloat(p->basepose.unknown);
+				p->basepose.size[0] = LittleFloat(p->basepose.size[0]);
+				p->basepose.size[1] = LittleFloat(p->basepose.size[1]);
+				p->basepose.size[2] = LittleFloat(p->basepose.size[2]);
+#ifdef PSKQUATNEGATIONS
+				if (index)
+				{
+					p->basepose.quat[0] *= -1;
+					p->basepose.quat[1] *= -1;
+					p->basepose.quat[2] *= -1;
+				}
+				else
+				{
+					p->basepose.quat[0] *=  1;
+					p->basepose.quat[1] *= -1;
+					p->basepose.quat[2] *=  1;
+				}
+#endif
+				if (p->parent < 0 || p->parent >= numanimbones)
+				{
+					Con_Printf("%s: bone->parent %i >= numanimbones %i\n", animname, p->parent, numanimbones);
+					p->parent = 0;
+				}
+				// check that bones are the same as in the base
+				if (strcmp(p->name, bones[index].name) || p->parent != bones[index].parent)
+					Host_Error("%s: this loader only supports animations with the same bones as the mesh\n", animname);
+			}
+			animbuffer = p;
+		}
+		else if (!strcmp(pchunk->id, "ANIMINFO"))
+		{
+			pskaniminfo_t *p;
+			if (recordsize != sizeof(*p))
+				Host_Error("%s: %s has unsupported recordsize\n", animname, pchunk->id);
+			// byteswap in place and keep the pointer
+			numanims = numrecords;
+			anims = animbuffer;
+			for (index = 0, p = animbuffer;index < numrecords;index++, p++)
+			{
+				p->numbones = LittleLong(p->numbones);
+				p->playtime = LittleFloat(p->playtime);
+				p->fps = LittleFloat(p->fps);
+				p->firstframe = LittleLong(p->firstframe);
+				p->numframes = LittleLong(p->numframes);
+				if (p->numbones != numbones)
+				{
+					Con_Printf("%s: animinfo->numbones != numbones, trying to load anyway!\n", animname);
+				}
+			}
+			animbuffer = p;
+		}
+		else if (!strcmp(pchunk->id, "ANIMKEYS"))
+		{
+			pskanimkeys_t *p;
+			if (recordsize != sizeof(*p))
+				Host_Error("%s: %s has unsupported recordsize\n", animname, pchunk->id);
+			numanimkeys = numrecords;
+			animkeys = animbuffer;
+			for (index = 0, p = animbuffer;index < numrecords;index++, p++)
+			{
+				p->origin[0] = LittleFloat(p->origin[0]);
+				p->origin[1] = LittleFloat(p->origin[1]);
+				p->origin[2] = LittleFloat(p->origin[2]);
+				p->quat[0] = LittleFloat(p->quat[0]);
+				p->quat[1] = LittleFloat(p->quat[1]);
+				p->quat[2] = LittleFloat(p->quat[2]);
+				p->quat[3] = LittleFloat(p->quat[3]);
+				p->frametime = LittleFloat(p->frametime);
+#ifdef PSKQUATNEGATIONS
+				if (index % numbones)
+				{
+					p->quat[0] *= -1;
+					p->quat[1] *= -1;
+					p->quat[2] *= -1;
+				}
+				else
+				{
+					p->quat[0] *=  1;
+					p->quat[1] *= -1;
+					p->quat[2] *=  1;
+				}
+#endif
+			}
+			animbuffer = p;
+			// TODO: allocate bonepose stuff
+		}
+		else
+			Con_Printf("%s: unknown chunk ID \"%s\"\n", animname, pchunk->id);
+	}
+
+	if (!numpnts || !pnts || !numvtxw || !vtxw || !numfaces || !faces || !nummatts || !matts || !numbones || !bones || !numrawweights || !rawweights || !numanims || !anims || !numanimkeys || !animkeys)
+		Host_Error("%s: missing required chunks\n", loadmodel->name);
+
+	// FIXME: model bbox
+	// model bbox
+	for (i = 0;i < 3;i++)
+	{
+		loadmodel->normalmins[i] = -128;
+		loadmodel->normalmaxs[i] = 128;
+		loadmodel->yawmins[i] = -128;
+		loadmodel->yawmaxs[i] = 128;
+		loadmodel->rotatedmins[i] = -128;
+		loadmodel->rotatedmaxs[i] = 128;
+	}
+	loadmodel->radius = 128;
+	loadmodel->radius2 = loadmodel->radius * loadmodel->radius;
+
+	loadmodel->numframes = 0;
+	for (index = 0;index < numanims;index++)
+		loadmodel->numframes += anims[index].numframes;
+
+	loadmodel->num_bones = numbones;
+	loadmodel->num_poses = loadmodel->num_bones * loadmodel->numframes;
+	loadmodel->num_textures = loadmodel->nummeshes = loadmodel->nummodelsurfaces = loadmodel->num_surfaces = nummatts;
+
+	if (numanimkeys != loadmodel->num_bones * loadmodel->numframes)
+		Host_Error("%s: %s has incorrect number of animation keys\n", animname, pchunk->id);
+
+	loadmodel->data_poses = Mem_Alloc(loadmodel->mempool, loadmodel->num_poses * sizeof(float[12]));
+	loadmodel->animscenes = Mem_Alloc(loadmodel->mempool, loadmodel->numframes * sizeof(animscene_t));
+	loadmodel->data_textures = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
+	loadmodel->data_surfaces = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t));
+	loadmodel->surfacelist = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(int));
+	loadmodel->data_bones = Mem_Alloc(loadmodel->mempool, loadmodel->num_bones * sizeof(aliasbone_t));
+
+	loadmodel->meshlist = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t *));
+	mesh = loadmodel->meshlist[0] = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t));
+	mesh->num_vertices = numvtxw;
+	mesh->num_triangles = numfaces;
+	mesh->data_element3i = Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
+	mesh->data_neighbor3i = Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
+	mesh->data_texcoordtexture2f = Mem_Alloc(loadmodel->mempool, mesh->num_vertices * sizeof(float[2]));
+
+	// create surfaces
+	for (index = 0, i = 0;index < nummatts;index++)
+	{
+		// since psk models do not have named sections, reuse their shader name as the section name
+		if (matts[index].name[0])
+			Mod_BuildAliasSkinsFromSkinFiles(loadmodel->data_textures + index, skinfiles, matts[index].name, matts[index].name);
+		else
+			for (j = 0;j < loadmodel->numskins;j++)
+				Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures + index + j * loadmodel->num_surfaces, NULL);
+		loadmodel->surfacelist[index] = index;
+		loadmodel->data_surfaces[index].groupmesh = loadmodel->meshlist[0];
+		loadmodel->data_surfaces[index].texture = loadmodel->data_textures + index;
+		loadmodel->data_surfaces[index].num_firstvertex = 0;
+		loadmodel->data_surfaces[index].num_vertices = loadmodel->meshlist[0]->num_vertices;
+	}
+
+	// copy over the texcoords
+	for (index = 0;index < numvtxw;index++)
+	{
+		mesh->data_texcoordtexture2f[index*2+0] = vtxw[index].texcoord[0];
+		mesh->data_texcoordtexture2f[index*2+1] = vtxw[index].texcoord[1];
+	}
+
+	// loading the faces is complicated because we need to sort them into surfaces by mattindex
+	for (index = 0;index < numfaces;index++)
+		loadmodel->data_surfaces[faces[index].mattindex].num_triangles++;
+	for (index = 0, i = 0;index < nummatts;index++)
+	{
+		loadmodel->data_surfaces[index].num_firsttriangle = i;
+		i += loadmodel->data_surfaces[index].num_triangles;
+		loadmodel->data_surfaces[index].num_triangles = 0;
+	}
+	for (index = 0;index < numfaces;index++)
+	{
+		i = (loadmodel->data_surfaces[faces[index].mattindex].num_firsttriangle + loadmodel->data_surfaces[faces[index].mattindex].num_triangles++)*3;
+		mesh->data_element3i[i+0] = faces[index].vtxwindex[0];
+		mesh->data_element3i[i+1] = faces[index].vtxwindex[1];
+		mesh->data_element3i[i+2] = faces[index].vtxwindex[2];
+	}
+
+	// copy over the bones
+	for (index = 0;index < numbones;index++)
+	{
+		strlcpy(loadmodel->data_bones[index].name, bones[index].name, sizeof(loadmodel->data_bones[index].name));
+		loadmodel->data_bones[index].parent = (index || bones[index].parent > 0) ? bones[index].parent : -1;
+		if (loadmodel->data_bones[index].parent >= index)
+			Host_Error("%s bone[%i].parent >= %i\n", loadmodel->name, index, index);
+	}
+
+	// build bone-relative vertex weights from the psk point weights
+	mesh->num_vertexboneweights = 0;
+	for (index = 0;index < numvtxw;index++)
+		for (j = 0;j < numrawweights;j++)
+			if (rawweights[j].pntsindex == vtxw[index].pntsindex)
+				mesh->num_vertexboneweights++;
+	mesh->data_vertexboneweights = Mem_Alloc(loadmodel->mempool, mesh->num_vertexboneweights * sizeof(surfmeshvertexboneweight_t));
+	mesh->num_vertexboneweights = 0;
+	for (index = 0;index < numvtxw;index++)
+	{
+		for (j = 0;j < numrawweights;j++)
+		{
+			if (rawweights[j].pntsindex == vtxw[index].pntsindex)
+			{
+				matrix4x4_t matrix, inversematrix;
+				mesh->data_vertexboneweights[mesh->num_vertexboneweights].vertexindex = index;
+				mesh->data_vertexboneweights[mesh->num_vertexboneweights].boneindex = rawweights[j].boneindex;
+				mesh->data_vertexboneweights[mesh->num_vertexboneweights].weight = rawweights[j].weight;
+				Matrix4x4_CreateIdentity(&matrix);
+				for (i = rawweights[j].boneindex;i >= 0;i = loadmodel->data_bones[i].parent)
+				{
+					matrix4x4_t childmatrix, tempmatrix;
+					Mod_PSKMODEL_AnimKeyToMatrix(bones[i].basepose.origin, bones[i].basepose.quat, &tempmatrix);
+					childmatrix = matrix;
+					Matrix4x4_Concat(&matrix, &tempmatrix, &childmatrix);
+				}
+				Matrix4x4_Invert_Simple(&inversematrix, &matrix);
+				Matrix4x4_Transform(&inversematrix, pnts[rawweights[j].pntsindex].origin, mesh->data_vertexboneweights[mesh->num_vertexboneweights].origin);
+				VectorScale(mesh->data_vertexboneweights[mesh->num_vertexboneweights].origin, mesh->data_vertexboneweights[mesh->num_vertexboneweights].weight, mesh->data_vertexboneweights[mesh->num_vertexboneweights].origin);
+				mesh->num_vertexboneweights++;
+			}
+		}
+	}
+
+	// set up the animscenes based on the anims
+	for (index = 0, i = 0;index < numanims;index++)
+	{
+		for (j = 0;j < anims[index].numframes;j++, i++)
+		{
+			dpsnprintf(loadmodel->animscenes[i].name, sizeof(loadmodel->animscenes[i].name), "%s_%d", anims[index].name, j);
+			loadmodel->animscenes[i].firstframe = i;
+			loadmodel->animscenes[i].framecount = 1;
+			loadmodel->animscenes[i].loop = true;
+			loadmodel->animscenes[i].framerate = 10;
+		}
+	}
+
+	// load the poses from the animkeys
+	for (index = 0;index < numanimkeys;index++)
+	{
+		matrix4x4_t matrix;
+		Mod_PSKMODEL_AnimKeyToMatrix(animkeys[index].origin, animkeys[index].quat, &matrix);
+		loadmodel->data_poses[index*12+0] = matrix.m[0][0];
+		loadmodel->data_poses[index*12+1] = matrix.m[0][1];
+		loadmodel->data_poses[index*12+2] = matrix.m[0][2];
+		loadmodel->data_poses[index*12+3] = matrix.m[0][3];
+		loadmodel->data_poses[index*12+4] = matrix.m[1][0];
+		loadmodel->data_poses[index*12+5] = matrix.m[1][1];
+		loadmodel->data_poses[index*12+6] = matrix.m[1][2];
+		loadmodel->data_poses[index*12+7] = matrix.m[1][3];
+		loadmodel->data_poses[index*12+8] = matrix.m[2][0];
+		loadmodel->data_poses[index*12+9] = matrix.m[2][1];
+		loadmodel->data_poses[index*12+10] = matrix.m[2][2];
+		loadmodel->data_poses[index*12+11] = matrix.m[2][3];
+	}
+
+	// compile extra data we want
+	Mod_ValidateElements(mesh->data_element3i, mesh->num_triangles, mesh->num_vertices, __FILE__, __LINE__);
+	Mod_BuildTriangleNeighbors(mesh->data_neighbor3i, mesh->data_element3i, mesh->num_triangles);
+	Mod_Alias_Mesh_CompileFrameZero(mesh);
+
+	Mem_Free(animfilebuffer);
 }
 

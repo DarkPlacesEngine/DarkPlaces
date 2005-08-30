@@ -627,6 +627,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend);
 
