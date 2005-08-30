@@ -189,7 +189,7 @@ model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolea
 
 	if (buf)
 	{
-		char *bufend = buf + fs_filesize;
+		char *bufend = (char *)buf + fs_filesize;
 		num = LittleLong(*((int *)buf));
 		// call the apropriate loader
 		loadmodel = mod;
