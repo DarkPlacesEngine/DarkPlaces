@@ -812,7 +812,7 @@ void Sbar_ShowFPS(void)
 	char fpsstring[32];
 	char timestring[32];
 	char datestring[32];
-	qboolean red;
+	qboolean red = false;
 	fpsstring[0] = 0;
 	timestring[0] = 0;
 	datestring[0] = 0;
