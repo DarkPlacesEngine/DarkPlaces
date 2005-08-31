@@ -944,7 +944,7 @@ static const gamemode_info_t gamemode_info [] =
 { "battlemech",		"-battlemech",	"Battlemech",			"base",		NULL,			"battlemech",	"battlemech" },
 // GAME_ZYMOTIC
 // COMMANDLINEOPTION: Game: -zymotic runs the singleplayer game Zymotic
-{ "zymotic",		"-zymotic",		"Zymotic",				"data",		NULL,			"zymotic",		"zymotic" },
+{ "zymotic",		"-zymotic",		"Zymotic",				"basezym",		NULL,			"zymotic",		"zymotic" },
 // GAME_FNIGGIUM
 // COMMANDLINEOPTION: Game: -fniggium runs the post apocalyptic melee RPG Fniggium
 { "fniggium",		"-fniggium",	"Fniggium",				"data",		NULL,			"fniggium",		"fniggium" },
