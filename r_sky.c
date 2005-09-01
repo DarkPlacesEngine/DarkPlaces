@@ -84,7 +84,7 @@ void R_UnloadSkyBox(void)
 	}
 }
 
-void R_LoadSkyBox(void)
+int R_LoadSkyBox(void)
 {
 	int i, j, success;
 	int indices[4] = {0,1,2,3};
@@ -95,7 +95,7 @@ void R_LoadSkyBox(void)
 	R_UnloadSkyBox();
 
 	if (!skyname[0])
-		return;
+		return true;
 
 	for (j=0; j<3; j++)
 	{
@@ -126,7 +126,9 @@ void R_LoadSkyBox(void)
 	}
 
 	if (j == 3)
-		Con_Printf ("Failed to load %s as skybox\n", skyname);
+		return false;
+
+	return true;
 }
 
 int R_SetSkyBox(const char *sky)
@@ -142,11 +144,7 @@ int R_SetSkyBox(const char *sky)
 
 	strcpy(skyname, sky);
 
-	R_LoadSkyBox();
-
-	if (!skyname[0])
-		return true;
-	return false;
+	return R_LoadSkyBox();
 }
 
 // LordHavoc: added LoadSky console command
