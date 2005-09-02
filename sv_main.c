@@ -1811,6 +1811,11 @@ void SV_SpawnServer (const char *server)
 	sv.state = ss_active;
 	prog->allowworldwrites = false;
 
+	// we need to reset the spawned flag on all connected clients here so that
+	// their thinks don't run during startup (before PutClientInServer)
+	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
+		host_client->spawned = false;
+
 // run two frames to allow everything to settle
 	for (i = 0;i < 2;i++)
 	{
