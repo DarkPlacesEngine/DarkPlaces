@@ -289,19 +289,7 @@ TargaHeader;
 
 void PrintTargaHeader(TargaHeader *t)
 {
-	Con_Print("TargaHeader:\n");
-	Con_Printf("uint8 id_length = %i;\n", t->id_length);
-	Con_Printf("uint8 colormap_type = %i;\n", t->colormap_type);
-	Con_Printf("uint8 image_type = %i;\n", t->image_type);
-	Con_Printf("uint16 colormap_index = %i;\n", t->colormap_index);
-	Con_Printf("uint16 colormap_length = %i;\n", t->colormap_length);
-	Con_Printf("uint8 colormap_size = %i;\n", t->colormap_size);
-	Con_Printf("uint16 x_origin = %i;\n", t->x_origin);
-	Con_Printf("uint16 y_origin = %i;\n", t->y_origin);
-	Con_Printf("uint16 width = %i;\n", t->width);
-	Con_Printf("uint16 height = %i;\n", t->height);
-	Con_Printf("uint8 pixel_size = %i;\n", t->pixel_size);
-	Con_Printf("uint8 attributes = %i;\n", t->attributes);
+	Con_Printf("TargaHeader:\nuint8 id_length = %i;\nuint8 colormap_type = %i;\nuint8 image_type = %i;\nuint16 colormap_index = %i;\nuint16 colormap_length = %i;\nuint8 colormap_size = %i;\nuint16 x_origin = %i;\nuint16 y_origin = %i;\nuint16 width = %i;\nuint16 height = %i;\nuint8 pixel_size = %i;\nuint8 attributes = %i;\n", t->id_length, t->colormap_type, t->image_type, t->colormap_index, t->colormap_length, t->colormap_size, t->x_origin, t->y_origin, t->width, t->height, t->pixel_size, t->attributes);
 }
 
 /*
@@ -314,8 +302,9 @@ qbyte *LoadTGA (const qbyte *f, int matchwidth, int matchheight)
 	int x, y, row_inc, compressed, readpixelcount, red, green, blue, alpha, runlen, pindex, alphabits;
 	qbyte *pixbuf, *image_rgba;
 	const qbyte *fin, *enddata;
+	unsigned char *p;
 	TargaHeader targa_header;
-	unsigned char palette[256*4], *p;
+	unsigned char palette[256*4];
 
 	if (fs_filesize < 19)
 		return NULL;
@@ -436,6 +425,14 @@ qbyte *LoadTGA (const qbyte *f, int matchwidth, int matchheight)
 		return NULL;
 	}
 
+	// number of attribute bits per pixel, we only support 0 or 8
+	alphabits = targa_header.attributes & 0x0F;
+	if (alphabits != 8 && alphabits != 0)
+	{
+		Con_Print("LoadTGA: only 0 or 8 attribute (alpha) bits supported\n");
+		return NULL;
+	}
+
 	image_rgba = Mem_Alloc(tempmempool, image_width * image_height * 4);
 	if (!image_rgba)
 	{
@@ -453,14 +450,6 @@ qbyte *LoadTGA (const qbyte *f, int matchwidth, int matchheight)
 	{
 		pixbuf = image_rgba;
 		row_inc = 0;
-	}
-
-	// number of attribute bits per pixel, we only support 0 or 8
-	alphabits = targa_header.attributes & 0x0F;
-	if (alphabits != 8 && alphabits != 0)
-	{
-		Con_Print("LoadTGA: only 0 or 8 attribute (alpha) bits supported\n");
-		return NULL;
 	}
 
 	compressed = targa_header.image_type == 9 || targa_header.image_type == 10 || targa_header.image_type == 11;
