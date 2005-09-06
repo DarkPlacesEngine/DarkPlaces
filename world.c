@@ -477,7 +477,7 @@ trace_t SV_ClipMoveToEntity(prvm_edict_t *ent, const vec3_t start, const vec3_t 
 				Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with a non-collidable model\n", PRVM_NUM_FOR_EDICT(ent));
 				return trace;
 			}
-			//if (ent->fields.server->movetype != MOVETYPE_PUSH)
+			//if ((int) ent->fields.server->movetype != MOVETYPE_PUSH)
 			//{
 			//	Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP without MOVETYPE_PUSH\n", PRVM_NUM_FOR_EDICT(ent));
 			//	return trace;
