@@ -266,6 +266,8 @@ typedef struct model_brush_s
 {
 	// true if this model is a HalfLife .bsp file
 	qboolean ishlbsp;
+	// true if this model is a Martial Concert .bsp file
+	qboolean ismcbsp;
 	// string of entity definitions (.map format)
 	char *entities;
 
