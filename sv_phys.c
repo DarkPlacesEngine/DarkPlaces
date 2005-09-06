@@ -527,9 +527,8 @@ trace_t SV_ClipMoveToEntity (prvm_edict_t *ent, vec3_t start, vec3_t mins, vec3_
 void SV_PushMove (prvm_edict_t *pusher, float movetime)
 {
 	int i, e, index;
-	prvm_edict_t *check, *ed;
 	float savesolid, movetime2, pushltime;
-	vec3_t mins, maxs, move, move1, moveangle, pushorig, pushang, a, forward, left, up, org, org2;
+	vec3_t mins, maxs, move, move1, moveangle, pushorig, pushang, a, forward, left, up, org;
 	int num_moved;
 	int numcheckentities;
 	static prvm_edict_t *checkentities[MAX_EDICTS];
@@ -647,7 +646,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 	numcheckentities = SV_EntitiesInBox(mins, maxs, MAX_EDICTS, checkentities);
 	for (e = 0;e < numcheckentities;e++)
 	{
-		check = checkentities[e];
+		prvm_edict_t *check = checkentities[e];
 		if (check->fields.server->movetype == MOVETYPE_NONE
 		 || check->fields.server->movetype == MOVETYPE_PUSH
 		 || check->fields.server->movetype == MOVETYPE_FOLLOW
@@ -669,6 +668,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 
 		if (forward[0] != 1 || left[1] != 1) // quick way to check if any rotation is used
 		{
+			vec3_t org2;
 			VectorSubtract (check->fields.server->origin, pusher->fields.server->origin, org);
 			org2[0] = DotProduct (org, forward);
 			org2[1] = DotProduct (org, left);
@@ -694,47 +694,60 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		if (SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID).startsolid)
 		{
 			// try moving the contacted entity a tiny bit further to account for precision errors
+			vec3_t move2;
 			pusher->fields.server->solid = SOLID_NOT;
-			VectorScale(move, 0.1, move);
-			SV_PushEntity (check, move);
+			VectorScale(move, 1.1, move2);
+			VectorCopy (check->priv.server->moved_from, check->fields.server->origin);
+			VectorCopy (check->priv.server->moved_fromangles, check->fields.server->angles);
+			SV_PushEntity (check, move2);
 			pusher->fields.server->solid = savesolid;
 			if (SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID).startsolid)
 			{
-				// still inside pusher, so it's really blocked
-
-				// fail the move
-				if (check->fields.server->mins[0] == check->fields.server->maxs[0])
-					continue;
-				if (check->fields.server->solid == SOLID_NOT || check->fields.server->solid == SOLID_TRIGGER)
+				// try moving the contacted entity a tiny bit less to account for precision errors
+				pusher->fields.server->solid = SOLID_NOT;
+				VectorScale(move, 0.9, move2);
+				VectorCopy (check->priv.server->moved_from, check->fields.server->origin);
+				VectorCopy (check->priv.server->moved_fromangles, check->fields.server->angles);
+				SV_PushEntity (check, move2);
+				pusher->fields.server->solid = savesolid;
+				if (SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID).startsolid)
 				{
-					// corpse
-					check->fields.server->mins[0] = check->fields.server->mins[1] = 0;
-					VectorCopy (check->fields.server->mins, check->fields.server->maxs);
-					continue;
-				}
+					// still inside pusher, so it's really blocked
 
-				VectorCopy (pushorig, pusher->fields.server->origin);
-				VectorCopy (pushang, pusher->fields.server->angles);
-				pusher->fields.server->ltime = pushltime;
-				SV_LinkEdict (pusher, false);
+					// fail the move
+					if (check->fields.server->mins[0] == check->fields.server->maxs[0])
+						continue;
+					if (check->fields.server->solid == SOLID_NOT || check->fields.server->solid == SOLID_TRIGGER)
+					{
+						// corpse
+						check->fields.server->mins[0] = check->fields.server->mins[1] = 0;
+						VectorCopy (check->fields.server->mins, check->fields.server->maxs);
+						continue;
+					}
 
-				// move back any entities we already moved
-				for (i = 0;i < num_moved;i++)
-				{
-					ed = sv.moved_edicts[i];
-					VectorCopy (ed->priv.server->moved_from, ed->fields.server->origin);
-					VectorCopy (ed->priv.server->moved_fromangles, ed->fields.server->angles);
-					SV_LinkEdict (ed, false);
-				}
+					VectorCopy (pushorig, pusher->fields.server->origin);
+					VectorCopy (pushang, pusher->fields.server->angles);
+					pusher->fields.server->ltime = pushltime;
+					SV_LinkEdict (pusher, false);
 
-				// if the pusher has a "blocked" function, call it, otherwise just stay in place until the obstacle is gone
-				if (pusher->fields.server->blocked)
-				{
-					prog->globals.server->self = PRVM_EDICT_TO_PROG(pusher);
-					prog->globals.server->other = PRVM_EDICT_TO_PROG(check);
-					PRVM_ExecuteProgram (pusher->fields.server->blocked, "QC function self.blocked is missing");
+					// move back any entities we already moved
+					for (i = 0;i < num_moved;i++)
+					{
+						prvm_edict_t *ed = sv.moved_edicts[i];
+						VectorCopy (ed->priv.server->moved_from, ed->fields.server->origin);
+						VectorCopy (ed->priv.server->moved_fromangles, ed->fields.server->angles);
+						SV_LinkEdict (ed, false);
+					}
+
+					// if the pusher has a "blocked" function, call it, otherwise just stay in place until the obstacle is gone
+					if (pusher->fields.server->blocked)
+					{
+						prog->globals.server->self = PRVM_EDICT_TO_PROG(pusher);
+						prog->globals.server->other = PRVM_EDICT_TO_PROG(check);
+						PRVM_ExecuteProgram (pusher->fields.server->blocked, "QC function self.blocked is missing");
+					}
+					break;
 				}
-				break;
 			}
 		}
 	}
