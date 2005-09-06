@@ -28,6 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 //cvar_t r_subdivide_size = {CVAR_SAVE, "r_subdivide_size", "128"};
 cvar_t halflifebsp = {0, "halflifebsp", "0"};
+cvar_t mcbsp = {0, "mcbsp", "0"};
 cvar_t r_novis = {0, "r_novis", "0"};
 cvar_t r_miplightmaps = {CVAR_SAVE, "r_miplightmaps", "0"};
 cvar_t r_lightmaprgba = {0, "r_lightmaprgba", "1"};
@@ -48,6 +49,7 @@ void Mod_BrushInit(void)
 {
 //	Cvar_RegisterVariable(&r_subdivide_size);
 	Cvar_RegisterVariable(&halflifebsp);
+	Cvar_RegisterVariable(&mcbsp);
 	Cvar_RegisterVariable(&r_novis);
 	Cvar_RegisterVariable(&r_miplightmaps);
 	Cvar_RegisterVariable(&r_lightmaprgba);
@@ -637,6 +639,13 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace,
 	VectorSubtract(boxstartmaxs, boxstartmins, boxsize);
 	if (boxsize[0] < 3)
 		rhc.hull = &model->brushq1.hulls[0]; // 0x0x0
+	else if (model->brush.ismcbsp)
+	{
+		if (boxsize[2] < 48) // pick the nearest of 40 or 56
+			rhc.hull = &model->brushq1.hulls[2]; // 16x16x40
+		else
+			rhc.hull = &model->brushq1.hulls[1]; // 16x16x56
+	}
 	else if (model->brush.ishlbsp)
 	{
 		// LordHavoc: this has to have a minor tolerance (the .1) because of
@@ -1327,6 +1336,11 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 		loadmodel->brushq1.lightdata = Mem_Alloc(loadmodel->mempool, l->filelen);
 		for (i=0; i<l->filelen; i++)
 			loadmodel->brushq1.lightdata[i] = mod_base[l->fileofs+i] >>= 1;
+	}
+	else if (loadmodel->brush.ismcbsp)
+	{
+		loadmodel->brushq1.lightdata = Mem_Alloc(loadmodel->mempool, l->filelen);
+		memcpy(loadmodel->brushq1.lightdata, mod_base + l->fileofs, l->filelen);
 	}
 	else // LordHavoc: bsp version 29 (normal white lighting)
 	{
@@ -2117,7 +2131,35 @@ static void Mod_Q1BSP_LoadClipnodes(lump_t *l)
 	loadmodel->brushq1.clipnodes = out;
 	loadmodel->brushq1.numclipnodes = count;
 
-	if (loadmodel->brush.ishlbsp)
+	if (loadmodel->brush.ismcbsp)
+	{
+		hull = &loadmodel->brushq1.hulls[1];
+		hull->clipnodes = out;
+		hull->firstclipnode = 0;
+		hull->lastclipnode = count-1;
+		hull->planes = loadmodel->brush.data_planes;
+		hull->clip_mins[0] = -12;
+		hull->clip_mins[1] = -12;
+		hull->clip_mins[2] = -24;
+		hull->clip_maxs[0] = 12;
+		hull->clip_maxs[1] = 12;
+		hull->clip_maxs[2] = 32;
+		VectorSubtract(hull->clip_maxs, hull->clip_mins, hull->clip_size);
+
+		hull = &loadmodel->brushq1.hulls[2];
+		hull->clipnodes = out;
+		hull->firstclipnode = 0;
+		hull->lastclipnode = count-1;
+		hull->planes = loadmodel->brush.data_planes;
+		hull->clip_mins[0] = -12;
+		hull->clip_mins[1] = -12;
+		hull->clip_mins[2] = -24;
+		hull->clip_maxs[0] = 12;
+		hull->clip_maxs[1] = 12;
+		hull->clip_maxs[2] = 16;
+		VectorSubtract(hull->clip_maxs, hull->clip_mins, hull->clip_size);
+	}
+	else if (loadmodel->brush.ishlbsp)
 	{
 		hull = &loadmodel->brushq1.hulls[1];
 		hull->clipnodes = out;
@@ -2885,7 +2927,16 @@ static void Mod_Q1BSP_RoundUpToHullSize(model_t *cmodel, const vec3_t inmins, co
 	const hull_t *hull;
 
 	VectorSubtract(inmaxs, inmins, size);
-	if (cmodel->brush.ishlbsp)
+	if (cmodel->brush.ismcbsp)
+	{
+		if (size[0] < 3)
+			hull = &cmodel->brushq1.hulls[0]; // 0x0x0
+		else if (size[2] < 48) // pick the nearest of 40 or 56
+			hull = &cmodel->brushq1.hulls[2]; // 16x16x40
+		else
+			hull = &cmodel->brushq1.hulls[1]; // 16x16x56
+	}
+	else if (cmodel->brush.ishlbsp)
 	{
 		if (size[0] < 3)
 			hull = &cmodel->brushq1.hulls[0]; // 0x0x0
@@ -2929,12 +2980,25 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 
 	mod->type = mod_brushq1;
 
-	header = (dheader_t *)buffer;
+	if (!memcmp(buffer, "MCBSP", 5))
+	{
+		header = (dheader_t *)((unsigned char*)buffer + 5);
 
-	i = LittleLong(header->version);
-	if (i != BSPVERSION && i != 30)
-		Host_Error("Mod_Q1BSP_Load: %s has wrong version number(%i should be %i(Quake) or 30(HalfLife))", mod->name, i, BSPVERSION);
-	mod->brush.ishlbsp = i == 30;
+		i = LittleLong(header->version);
+		if (i != MCBSPVERSION)
+			Host_Error("Mod_Q1BSP_Load: %s has wrong version number(MCBSP %i should be %i", mod->name, i, MCBSPVERSION);
+		mod->brush.ismcbsp = true;
+		mod->brush.ishlbsp = false;
+	}
+	else
+	{
+		header = (dheader_t *)buffer;
+
+		i = LittleLong(header->version);
+		if (i != BSPVERSION && i != 30)
+			Host_Error("Mod_Q1BSP_Load: %s has wrong version number(%i should be %i(Quake) or 30(HalfLife)", mod->name, i, BSPVERSION);
+		mod->brush.ishlbsp = i == 30;
+	}
 
 	mod->soundfromcenter = true;
 	mod->TraceBox = Mod_Q1BSP_TraceBox;
@@ -2952,7 +3016,10 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	mod->brush.PointInLeaf = Mod_Q1BSP_PointInLeaf;
 
 	if (loadmodel->isworldmodel)
+	{
 		Cvar_SetValue("halflifebsp", mod->brush.ishlbsp);
+		Cvar_SetValue("mcbsp", mod->brush.ismcbsp);
+	}
 
 // swap all the lumps
 	mod_base = (qbyte *)header;
@@ -3554,8 +3621,12 @@ void static Mod_Q2BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	if (i != Q2BSPVERSION)
 		Host_Error("Mod_Q2BSP_Load: %s has wrong version number (%i, should be %i)", mod->name, i, Q2BSPVERSION);
 	mod->brush.ishlbsp = false;
+	mod->brush.ismcbsp = false;
 	if (loadmodel->isworldmodel)
+	{
 		Cvar_SetValue("halflifebsp", mod->brush.ishlbsp);
+		Cvar_SetValue("mcbsp", mod->brush.ismcbsp);
+	}
 
 	mod_base = (qbyte *)header;
 
@@ -5428,8 +5499,13 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	i = LittleLong(header->version);
 	if (i != Q3BSPVERSION)
 		Host_Error("Mod_Q3BSP_Load: %s has wrong version number (%i, should be %i)", mod->name, i, Q3BSPVERSION);
-	if (mod->isworldmodel)
-		Cvar_SetValue("halflifebsp", false);
+	mod->brush.ishlbsp = false;
+	mod->brush.ismcbsp = false;
+	if (loadmodel->isworldmodel)
+	{
+		Cvar_SetValue("halflifebsp", mod->brush.ishlbsp);
+		Cvar_SetValue("mcbsp", mod->brush.ismcbsp);
+	}
 
 	mod->soundfromcenter = true;
 	mod->TraceBox = Mod_Q3BSP_TraceBox;
