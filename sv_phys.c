@@ -523,7 +523,7 @@ SV_PushMove
 
 ============
 */
-trace_t SV_ClipMoveToEntity (prvm_edict_t *ent, vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end);
+trace_t SV_ClipMoveToEntity (prvm_edict_t *ent, vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, int movetype, int hitsupercontents);
 void SV_PushMove (prvm_edict_t *pusher, float movetime)
 {
 	int i, e, index;
@@ -632,7 +632,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 	VectorCopy (pusher->fields.server->angles, pushang);
 	pushltime = pusher->fields.server->ltime;
 
-// move the pusher to it's final position
+// move the pusher to its final position
 
 	VectorMA (pusher->fields.server->origin, movetime, pusher->fields.server->velocity, pusher->fields.server->origin);
 	VectorMA (pusher->fields.server->angles, movetime, pusher->fields.server->avelocity, pusher->fields.server->angles);
@@ -648,18 +648,18 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 	for (e = 0;e < numcheckentities;e++)
 	{
 		check = checkentities[e];
-		if (check->fields.server->movetype == MOVETYPE_PUSH
-		 || check->fields.server->movetype == MOVETYPE_NONE
-		 || check->fields.server->movetype == MOVETYPE_FOLLOW
-		 || check->fields.server->movetype == MOVETYPE_NOCLIP
-		 || check->fields.server->movetype == MOVETYPE_FAKEPUSH)
+		if ((int)check->fields.server->movetype == MOVETYPE_PUSH
+		 || (int)check->fields.server->movetype == MOVETYPE_NONE
+		 || (int)check->fields.server->movetype == MOVETYPE_FOLLOW
+		 || (int)check->fields.server->movetype == MOVETYPE_NOCLIP
+		 || (int)check->fields.server->movetype == MOVETYPE_FAKEPUSH)
 			continue;
 
 		// if the entity is standing on the pusher, it will definitely be moved
 		if (!(((int)check->fields.server->flags & FL_ONGROUND) && PRVM_PROG_TO_EDICT(check->fields.server->groundentity) == pusher))
 		{
 			// if the entity is not inside the pusher's final position, leave it alone
-			if (!SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin).startsolid)
+			if (!SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID).startsolid)
 				continue;
 		}
 
@@ -676,7 +676,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 			VectorCopy (move1, move);
 
 		// remove the onground flag for non-players
-		if (check->fields.server->movetype != MOVETYPE_WALK)
+		if ((int)check->fields.server->movetype != MOVETYPE_WALK)
 			check->fields.server->flags = (int)check->fields.server->flags & ~FL_ONGROUND;
 
 		VectorCopy (check->fields.server->origin, check->priv.server->moved_from);
@@ -691,21 +691,21 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		pusher->fields.server->solid = savesolid; // was SOLID_BSP
 
 		// if it is still inside the pusher, block
-		if (SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin).startsolid)
+		if (SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID).startsolid)
 		{
 			// try moving the contacted entity a tiny bit further to account for precision errors
 			pusher->fields.server->solid = SOLID_NOT;
 			VectorScale(move, 0.1, move);
 			SV_PushEntity (check, move);
 			pusher->fields.server->solid = savesolid;
-			if (SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin).startsolid)
+			if (SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID).startsolid)
 			{
 				// still inside pusher, so it's really blocked
 
 				// fail the move
 				if (check->fields.server->mins[0] == check->fields.server->maxs[0])
 					continue;
-				if (check->fields.server->solid == SOLID_NOT || check->fields.server->solid == SOLID_TRIGGER)
+				if ((int)check->fields.server->solid == SOLID_NOT || (int)check->fields.server->solid == SOLID_TRIGGER)
 				{
 					// corpse
 					check->fields.server->mins[0] = check->fields.server->mins[1] = 0;
