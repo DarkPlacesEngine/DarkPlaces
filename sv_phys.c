@@ -661,7 +661,11 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 			// if the entity is not inside the pusher's final position, leave it alone
 			if (!SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID).startsolid)
 				continue;
+			// remove the onground flag for non-players
+			if (check->fields.server->movetype != MOVETYPE_WALK)
+				check->fields.server->flags = (int)check->fields.server->flags & ~FL_ONGROUND;
 		}
+
 
 		if (forward[0] != 1 || left[1] != 1) // quick way to check if any rotation is used
 		{
@@ -674,10 +678,6 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		}
 		else
 			VectorCopy (move1, move);
-
-		// remove the onground flag for non-players
-		if (check->fields.server->movetype != MOVETYPE_WALK)
-			check->fields.server->flags = (int)check->fields.server->flags & ~FL_ONGROUND;
 
 		VectorCopy (check->fields.server->origin, check->priv.server->moved_from);
 		VectorCopy (check->fields.server->angles, check->priv.server->moved_fromangles);
