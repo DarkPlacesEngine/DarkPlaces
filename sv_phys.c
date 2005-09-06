@@ -648,11 +648,11 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 	for (e = 0;e < numcheckentities;e++)
 	{
 		check = checkentities[e];
-		if ((int)check->fields.server->movetype == MOVETYPE_PUSH
-		 || (int)check->fields.server->movetype == MOVETYPE_NONE
-		 || (int)check->fields.server->movetype == MOVETYPE_FOLLOW
-		 || (int)check->fields.server->movetype == MOVETYPE_NOCLIP
-		 || (int)check->fields.server->movetype == MOVETYPE_FAKEPUSH)
+		if (check->fields.server->movetype == MOVETYPE_NONE
+		 || check->fields.server->movetype == MOVETYPE_PUSH
+		 || check->fields.server->movetype == MOVETYPE_FOLLOW
+		 || check->fields.server->movetype == MOVETYPE_NOCLIP
+		 || check->fields.server->movetype == MOVETYPE_FAKEPUSH)
 			continue;
 
 		// if the entity is standing on the pusher, it will definitely be moved
@@ -676,7 +676,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 			VectorCopy (move1, move);
 
 		// remove the onground flag for non-players
-		if ((int)check->fields.server->movetype != MOVETYPE_WALK)
+		if (check->fields.server->movetype != MOVETYPE_WALK)
 			check->fields.server->flags = (int)check->fields.server->flags & ~FL_ONGROUND;
 
 		VectorCopy (check->fields.server->origin, check->priv.server->moved_from);
@@ -705,7 +705,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 				// fail the move
 				if (check->fields.server->mins[0] == check->fields.server->maxs[0])
 					continue;
-				if ((int)check->fields.server->solid == SOLID_NOT || (int)check->fields.server->solid == SOLID_TRIGGER)
+				if (check->fields.server->solid == SOLID_NOT || check->fields.server->solid == SOLID_TRIGGER)
 				{
 					// corpse
 					check->fields.server->mins[0] = check->fields.server->mins[1] = 0;
