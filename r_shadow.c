@@ -210,7 +210,6 @@ cvar_t r_shadow_realtime_world_dlightshadows = {CVAR_SAVE, "r_shadow_realtime_wo
 cvar_t r_shadow_realtime_world_lightmaps = {CVAR_SAVE, "r_shadow_realtime_world_lightmaps", "0"};
 cvar_t r_shadow_realtime_world_shadows = {CVAR_SAVE, "r_shadow_realtime_world_shadows", "1"};
 cvar_t r_shadow_realtime_world_compile = {0, "r_shadow_realtime_world_compile", "1"};
-cvar_t r_shadow_realtime_world_compilelight = {0, "r_shadow_realtime_world_compilelight", "1"};
 cvar_t r_shadow_realtime_world_compileshadow = {0, "r_shadow_realtime_world_compileshadow", "1"};
 cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1"};
 cvar_t r_shadow_shadow_polygonfactor = {0, "r_shadow_shadow_polygonfactor", "0"};
@@ -614,7 +613,6 @@ void R_Shadow_Help_f(void)
 "r_shadow_realtime_world_lightmaps : use lightmaps in addition to lights\n"
 "r_shadow_realtime_world_shadows : cast shadows from world lights\n"
 "r_shadow_realtime_world_compile : compile surface/visibility information\n"
-"r_shadow_realtime_world_compilelight : compile lighting geometry\n"
 "r_shadow_realtime_world_compileshadow : compile shadow geometry\n"
 "r_shadow_glsl : use OpenGL Shading Language for lighting\n"
 "r_shadow_glsl_offsetmapping : enables Offset Mapping bumpmap enhancement\n"
@@ -655,7 +653,6 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_realtime_world_lightmaps);
 	Cvar_RegisterVariable(&r_shadow_realtime_world_shadows);
 	Cvar_RegisterVariable(&r_shadow_realtime_world_compile);
-	Cvar_RegisterVariable(&r_shadow_realtime_world_compilelight);
 	Cvar_RegisterVariable(&r_shadow_realtime_world_compileshadow);
 	Cvar_RegisterVariable(&r_shadow_scissor);
 	Cvar_RegisterVariable(&r_shadow_shadow_polygonfactor);
@@ -2613,7 +2610,7 @@ void R_RTLight_UpdateFromDLight(rtlight_t *rtlight, const dlight_t *light, int i
 // (undone by R_FreeCompiledRTLight, which R_UpdateLight calls)
 void R_RTLight_Compile(rtlight_t *rtlight)
 {
-	int shadowmeshes, shadowtris, lightmeshes, lighttris, numleafs, numleafpvsbytes, numsurfaces;
+	int shadowmeshes, shadowtris, numleafs, numleafpvsbytes, numsurfaces;
 	entity_render_t *ent = r_refdef.worldentity;
 	model_t *model = r_refdef.worldmodel;
 	qbyte *data;
@@ -2659,12 +2656,6 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 			model->DrawShadowVolume(ent, rtlight->shadoworigin, rtlight->radius, numsurfaces, r_shadow_buffer_surfacelist, rtlight->cullmins, rtlight->cullmaxs);
 			rtlight->static_meshchain_shadow = Mod_ShadowMesh_Finish(r_shadow_mempool, rtlight->static_meshchain_shadow, false, false);
 		}
-		if (model->DrawLight)
-		{
-			rtlight->static_meshchain_light = Mod_ShadowMesh_Begin(r_shadow_mempool, 32768, 32768, NULL, NULL, NULL, true, false, true);
-			model->DrawLight(ent, vec3_origin, numsurfaces, r_shadow_buffer_surfacelist);
-			rtlight->static_meshchain_light = Mod_ShadowMesh_Finish(r_shadow_mempool, rtlight->static_meshchain_light, true, false);
-		}
 		// switch back to rendering when DrawShadowVolume or DrawLight is called
 		r_shadow_compilingrtlight = NULL;
 	}
@@ -2686,19 +2677,7 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 		}
 	}
 
-	lightmeshes = 0;
-	lighttris = 0;
-	if (rtlight->static_meshchain_light)
-	{
-		shadowmesh_t *mesh;
-		for (mesh = rtlight->static_meshchain_light;mesh;mesh = mesh->next)
-		{
-			lightmeshes++;
-			lighttris += mesh->numtriangles;
-		}
-	}
-
-	Con_DPrintf("static light built: %f %f %f : %f %f %f box, %i shadow volume triangles (in %i meshes), %i light triangles (in %i meshes)\n", rtlight->cullmins[0], rtlight->cullmins[1], rtlight->cullmins[2], rtlight->cullmaxs[0], rtlight->cullmaxs[1], rtlight->cullmaxs[2], shadowtris, shadowmeshes, lighttris, lightmeshes);
+	Con_DPrintf("static light built: %f %f %f : %f %f %f box, %i shadow volume triangles (in %i meshes)\n", rtlight->cullmins[0], rtlight->cullmins[1], rtlight->cullmins[2], rtlight->cullmaxs[0], rtlight->cullmaxs[1], rtlight->cullmaxs[2], shadowtris, shadowmeshes);
 }
 
 void R_RTLight_Uncompile(rtlight_t *rtlight)
@@ -2708,9 +2687,6 @@ void R_RTLight_Uncompile(rtlight_t *rtlight)
 		if (rtlight->static_meshchain_shadow)
 			Mod_ShadowMesh_Free(rtlight->static_meshchain_shadow);
 		rtlight->static_meshchain_shadow = NULL;
-		if (rtlight->static_meshchain_light)
-			Mod_ShadowMesh_Free(rtlight->static_meshchain_light);
-		rtlight->static_meshchain_light = NULL;
 		// these allocations are grouped
 		if (rtlight->static_leaflist)
 			Mem_Free(rtlight->static_leaflist);
@@ -2786,7 +2762,6 @@ void R_Shadow_DrawEntityShadow(entity_render_t *ent, rtlight_t *rtlight, int num
 
 void R_Shadow_DrawEntityLight(entity_render_t *ent, rtlight_t *rtlight, vec3_t lightcolorbase, int numsurfaces, int *surfacelist)
 {
-	shadowmesh_t *mesh;
 	// set up properties for rendering light onto this entity
 	r_shadow_entitylightcolor[0] = lightcolorbase[0] * ent->colormod[0] * ent->alpha;
 	r_shadow_entitylightcolor[1] = lightcolorbase[1] * ent->colormod[1] * ent->alpha;
@@ -2808,37 +2783,7 @@ void R_Shadow_DrawEntityLight(entity_render_t *ent, rtlight_t *rtlight, vec3_t l
 		}
 	}
 	if (ent == r_refdef.worldentity)
-	{
-		if (rtlight->compiled && r_shadow_realtime_world_compile.integer && r_shadow_realtime_world_compilelight.integer)
-		{
-			for (mesh = rtlight->static_meshchain_light;mesh;mesh = mesh->next)
-			{
-				rtexture_t *glosstexture = r_texture_black;
-				float specularscale = 0;
-				if (mesh->map_specular)
-				{
-					if (r_shadow_gloss.integer >= 1 && r_shadow_glossintensity.value > 0 && r_shadow_rtlight->specularscale > 0)
-					{
-						glosstexture = mesh->map_specular;
-						specularscale = r_shadow_rtlight->specularscale * r_shadow_glossintensity.value;
-					}
-				}
-				else
-				{
-					if (r_shadow_gloss.integer >= 2 && r_shadow_gloss2intensity.value > 0 && r_shadow_glossintensity.value > 0 && r_shadow_rtlight->specularscale > 0)
-					{
-						glosstexture = r_texture_white;
-						specularscale = r_shadow_rtlight->specularscale * r_shadow_gloss2intensity.value;
-					}
-				}
-				if ((r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorbase) + specularscale * VectorLength2(lightcolorbase) < (1.0f / 1048576.0f))
-					continue;
-				R_Shadow_RenderLighting(0, mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->vertex3f, mesh->svector3f, mesh->tvector3f, mesh->normal3f, mesh->texcoord2f, r_shadow_entitylightcolor, vec3_origin, vec3_origin, mesh->map_diffuse, r_texture_black, r_texture_black, mesh->map_normal, glosstexture);
-			}
-		}
-		else
-			ent->model->DrawLight(ent, r_shadow_entitylightcolor, numsurfaces, surfacelist);
-	}
+		ent->model->DrawLight(ent, r_shadow_entitylightcolor, numsurfaces, surfacelist);
 	else
 		ent->model->DrawLight(ent, r_shadow_entitylightcolor, ent->model->nummodelsurfaces, ent->model->surfacelist);
 }
