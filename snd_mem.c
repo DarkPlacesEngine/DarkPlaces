@@ -56,9 +56,9 @@ size_t ResampleSfx (const qbyte *in_data, size_t in_length, const snd_format_t* 
 	// General case (linear interpolation with a fixed-point fractional
 	// step, 18-bit integer part and 14-bit fractional part)
 	// Can handle up to 2^18 (262144) samples per second (> 96KHz stereo)
-	#define FRACTIONAL_BITS 14
-	#define FRACTIONAL_MASK ((1 << FRACTIONAL_BITS) - 1)
-	#define INTEGER_BITS (sizeof(samplefrac)*8 - FRACTIONAL_BITS)
+#	define FRACTIONAL_BITS 14
+#	define FRACTIONAL_MASK ((1 << FRACTIONAL_BITS) - 1)
+#	define INTEGER_BITS (sizeof(samplefrac)*8 - FRACTIONAL_BITS)
 	else
 	{
 		const unsigned int fracstep = (double)in_format->speed / shm->format.speed * (1 << FRACTIONAL_BITS);

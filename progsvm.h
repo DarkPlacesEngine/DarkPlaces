@@ -508,9 +508,9 @@ void PRVM_FreeString(int num);
 
 //#define PRVM_SAFENAME
 #ifndef PRVM_SAFENAME
-	#define PRVM_NAME	(prog->name)
+#	define PRVM_NAME	(prog->name)
 #else
-	#define PRVM_NAME	(prog->name ? prog->name : "Unknown prog name")
+#	define PRVM_NAME	(prog->name ? prog->name : "Unknown prog name")
 #endif
 
 // helper macro to make function pointer calls easier
