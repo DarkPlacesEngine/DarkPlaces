@@ -736,123 +736,94 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolorbase, int numsurfa
 	texture_t *texture;
 	int surfacelistindex;
 	vec3_t modelorg;
+	texture_t *tex;
+	vec3_t lightcolorpants, lightcolorshirt;
+	rtexture_t *basetexture = NULL;
+	rtexture_t *glosstexture = NULL;
+	float specularscale = 0;
+	qboolean skip;
 	if (r_drawcollisionbrushes.integer >= 2)
 		return;
-	if (r_shadow_compilingrtlight)
+	R_UpdateAllTextureInfo(ent);
+	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
+	tex = NULL;
+	texture = NULL;
+	skip = false;
+	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
-		// if compiling an rtlight, capture the meshes
-		int tri;
-		int *e;
-		float *lightmins, *lightmaxs, *v[3], *vertex3f;
-		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
+		if ((ent == r_refdef.worldentity && !r_worldsurfacevisible[surfacelist[surfacelistindex]]))
+			continue;
+		surface = model->data_surfaces + surfacelist[surfacelistindex];
+		if (tex != surface->texture)
 		{
-			surface = model->data_surfaces + surfacelist[surfacelistindex];
-			texture = surface->texture;
-			if ((texture->basematerialflags & (MATERIALFLAG_WALL | MATERIALFLAG_TRANSPARENT)) != MATERIALFLAG_WALL || !surface->num_triangles)
+			tex = surface->texture;
+			texture = surface->texture->currentframe;
+			// FIXME: transparent surfaces need to be lit later
+			skip = (texture->currentmaterialflags & (MATERIALFLAG_WALL | MATERIALFLAG_TRANSPARENT)) != MATERIALFLAG_WALL;
+			if (skip)
 				continue;
-			e = surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle;
-			vertex3f = surface->groupmesh->data_vertex3f;
-			lightmins = r_shadow_compilingrtlight->cullmins;
-			lightmaxs = r_shadow_compilingrtlight->cullmaxs;
-			for (tri = 0;tri < surface->num_triangles;tri++, e += 3)
+			if (texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+				qglDisable(GL_CULL_FACE);
+			else
+				qglEnable(GL_CULL_FACE);
+			glosstexture = r_texture_black;
+			specularscale = 0;
+			if (texture->skin.gloss)
 			{
-				v[0] = vertex3f + e[0] * 3;
-				v[1] = vertex3f + e[1] * 3;
-				v[2] = vertex3f + e[2] * 3;
-				if (PointInfrontOfTriangle(r_shadow_compilingrtlight->shadoworigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
-					Mod_ShadowMesh_AddMesh(r_shadow_mempool, r_shadow_compilingrtlight->static_meshchain_light, surface->texture->skin.base, surface->texture->skin.gloss, surface->texture->skin.nmap, surface->groupmesh->data_vertex3f, surface->groupmesh->data_svector3f, surface->groupmesh->data_tvector3f, surface->groupmesh->data_normal3f, surface->groupmesh->data_texcoordtexture2f, 1, e);
+				if (r_shadow_gloss.integer >= 1 && r_shadow_glossintensity.value > 0 && r_shadow_rtlight->specularscale > 0)
+				{
+					glosstexture = texture->skin.gloss;
+					specularscale = r_shadow_rtlight->specularscale * r_shadow_glossintensity.value;
+				}
 			}
+			else
+			{
+				if (r_shadow_gloss.integer >= 2 && r_shadow_gloss2intensity.value > 0 && r_shadow_glossintensity.value > 0 && r_shadow_rtlight->specularscale > 0)
+				{
+					glosstexture = r_texture_white;
+					specularscale = r_shadow_rtlight->specularscale * r_shadow_gloss2intensity.value;
+				}
+			}
+			VectorClear(lightcolorpants);
+			VectorClear(lightcolorshirt);
+			if (ent->colormap >= 0)
+			{
+				// 128-224 are backwards ranges
+				int b = (ent->colormap & 0xF) << 4;b += (b >= 128 && b < 224) ? 4 : 12;
+				if (texture->skin.pants && b < 224)
+				{
+					qbyte *bcolor = (qbyte *) (&palette_complete[b]);
+					lightcolorpants[0] = lightcolorbase[0] * bcolor[0] * (1.0f / 255.0f);
+					lightcolorpants[1] = lightcolorbase[1] * bcolor[1] * (1.0f / 255.0f);
+					lightcolorpants[2] = lightcolorbase[2] * bcolor[2] * (1.0f / 255.0f);
+				}
+				// 128-224 are backwards ranges
+				b = (ent->colormap & 0xF0);b += (b >= 128 && b < 224) ? 4 : 12;
+				if (texture->skin.shirt && b < 224)
+				{
+					qbyte *bcolor = (qbyte *) (&palette_complete[b]);
+					lightcolorshirt[0] = lightcolorbase[0] * bcolor[0] * (1.0f / 255.0f);
+					lightcolorshirt[1] = lightcolorbase[1] * bcolor[1] * (1.0f / 255.0f);
+					lightcolorshirt[2] = lightcolorbase[2] * bcolor[2] * (1.0f / 255.0f);
+				}
+				basetexture = texture->skin.base;
+			}
+			else
+				basetexture = texture->skin.merged ? texture->skin.merged : texture->skin.base;
+			if ((r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * (VectorLength2(lightcolorbase) + VectorLength2(lightcolorpants) + VectorLength2(lightcolorshirt)) + specularscale * VectorLength2(lightcolorbase) < (1.0f / 1048576.0f))
+				skip = true;
 		}
-	}
-	else
-	{
-		texture_t *tex;
-		vec3_t lightcolorpants, lightcolorshirt;
-		rtexture_t *basetexture = NULL;
-		rtexture_t *glosstexture = NULL;
-		float specularscale = 0;
-		qboolean skip;
-		R_UpdateAllTextureInfo(ent);
-		Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
-		tex = NULL;
-		texture = NULL;
-		skip = false;
-		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
+		if (skip || !surface->num_triangles)
+			continue;
+		RSurf_SetVertexPointer(ent, texture, surface, modelorg);
+		if (!rsurface_svector3f)
 		{
-			if ((ent == r_refdef.worldentity && !r_worldsurfacevisible[surfacelist[surfacelistindex]]))
-				continue;
-			surface = model->data_surfaces + surfacelist[surfacelistindex];
-			if (tex != surface->texture)
-			{
-				tex = surface->texture;
-				texture = surface->texture->currentframe;
-				// FIXME: transparent surfaces need to be lit later
-				skip = (texture->currentmaterialflags & (MATERIALFLAG_WALL | MATERIALFLAG_TRANSPARENT)) != MATERIALFLAG_WALL;
-				if (skip)
-					continue;
-				if (texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
-					qglDisable(GL_CULL_FACE);
-				else
-					qglEnable(GL_CULL_FACE);
-				glosstexture = r_texture_black;
-				specularscale = 0;
-				if (texture->skin.gloss)
-				{
-					if (r_shadow_gloss.integer >= 1 && r_shadow_glossintensity.value > 0 && r_shadow_rtlight->specularscale > 0)
-					{
-						glosstexture = texture->skin.gloss;
-						specularscale = r_shadow_rtlight->specularscale * r_shadow_glossintensity.value;
-					}
-				}
-				else
-				{
-					if (r_shadow_gloss.integer >= 2 && r_shadow_gloss2intensity.value > 0 && r_shadow_glossintensity.value > 0 && r_shadow_rtlight->specularscale > 0)
-					{
-						glosstexture = r_texture_white;
-						specularscale = r_shadow_rtlight->specularscale * r_shadow_gloss2intensity.value;
-					}
-				}
-				VectorClear(lightcolorpants);
-				VectorClear(lightcolorshirt);
-				if (ent->colormap >= 0)
-				{
-					// 128-224 are backwards ranges
-					int b = (ent->colormap & 0xF) << 4;b += (b >= 128 && b < 224) ? 4 : 12;
-					if (texture->skin.pants && b < 224)
-					{
-						qbyte *bcolor = (qbyte *) (&palette_complete[b]);
-						lightcolorpants[0] = lightcolorbase[0] * bcolor[0] * (1.0f / 255.0f);
-						lightcolorpants[1] = lightcolorbase[1] * bcolor[1] * (1.0f / 255.0f);
-						lightcolorpants[2] = lightcolorbase[2] * bcolor[2] * (1.0f / 255.0f);
-					}
-					// 128-224 are backwards ranges
-					b = (ent->colormap & 0xF0);b += (b >= 128 && b < 224) ? 4 : 12;
-					if (texture->skin.shirt && b < 224)
-					{
-						qbyte *bcolor = (qbyte *) (&palette_complete[b]);
-						lightcolorshirt[0] = lightcolorbase[0] * bcolor[0] * (1.0f / 255.0f);
-						lightcolorshirt[1] = lightcolorbase[1] * bcolor[1] * (1.0f / 255.0f);
-						lightcolorshirt[2] = lightcolorbase[2] * bcolor[2] * (1.0f / 255.0f);
-					}
-					basetexture = texture->skin.base;
-				}
-				else
-					basetexture = texture->skin.merged ? texture->skin.merged : texture->skin.base;
-				if ((r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * (VectorLength2(lightcolorbase) + VectorLength2(lightcolorpants) + VectorLength2(lightcolorshirt)) + specularscale * VectorLength2(lightcolorbase) < (1.0f / 1048576.0f))
-					skip = true;
-			}
-			if (skip || !surface->num_triangles)
-				continue;
-			RSurf_SetVertexPointer(ent, texture, surface, modelorg);
-			if (!rsurface_svector3f)
-			{
-				rsurface_svector3f = varray_svector3f;
-				rsurface_tvector3f = varray_tvector3f;
-				rsurface_normal3f = varray_normal3f;
-				Mod_BuildTextureVectorsAndNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_vertex3f, surface->groupmesh->data_texcoordtexture2f, surface->groupmesh->data_element3i + surface->num_firsttriangle * 3, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f, r_smoothnormals_areaweighting.integer);
-			}
-			R_Shadow_RenderLighting(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle), rsurface_vertex3f, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f, surface->groupmesh->data_texcoordtexture2f, lightcolorbase, lightcolorpants, lightcolorshirt, basetexture, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, texture->skin.gloss);
+			rsurface_svector3f = varray_svector3f;
+			rsurface_tvector3f = varray_tvector3f;
+			rsurface_normal3f = varray_normal3f;
+			Mod_BuildTextureVectorsAndNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_vertex3f, surface->groupmesh->data_texcoordtexture2f, surface->groupmesh->data_element3i + surface->num_firsttriangle * 3, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f, r_smoothnormals_areaweighting.integer);
 		}
+		R_Shadow_RenderLighting(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle), rsurface_vertex3f, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f, surface->groupmesh->data_texcoordtexture2f, lightcolorbase, lightcolorpants, lightcolorshirt, basetexture, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, texture->skin.gloss);
 	}
 	qglEnable(GL_CULL_FACE);
 }
