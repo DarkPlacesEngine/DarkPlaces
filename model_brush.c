@@ -4119,8 +4119,11 @@ static void Mod_Q3BSP_LoadEffects(lump_t *l)
 	{
 		strlcpy (out->shadername, in->shadername, sizeof (out->shadername));
 		n = LittleLong(in->brushindex);
-		if (n < 0 || n >= loadmodel->brush.num_brushes)
-			Host_Error("Mod_Q3BSP_LoadEffects: invalid brushindex %i (%i brushes)\n", n, loadmodel->brush.num_brushes);
+		if (n >= loadmodel->brush.num_brushes)
+		{
+			Con_Printf("Mod_Q3BSP_LoadEffects: invalid brushindex %i (%i brushes), setting to -1\n", n, loadmodel->brush.num_brushes);
+			n = -1;
+		}
 		out->brushindex = n;
 		out->unknown = LittleLong(in->unknown);
 	}
