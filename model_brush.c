@@ -2963,11 +2963,6 @@ static void Mod_Q1BSP_RoundUpToHullSize(model_t *cmodel, const vec3_t inmins, co
 	VectorAdd(inmins, hull->clip_size, outmaxs);
 }
 
-extern void R_Q1BSP_DrawSky(entity_render_t *ent);
-extern void R_Q1BSP_Draw(entity_render_t *ent);
-extern void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, qbyte *outleafpvs, int *outnumleafspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer);
-extern void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs);
-extern void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolor, int numsurfaces, const int *surfacelist);
 void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int i, j, k;
@@ -3160,6 +3155,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 		mod->DrawSky = NULL;
 		mod->Draw = R_Q1BSP_Draw;
 		mod->GetLightInfo = R_Q1BSP_GetLightInfo;
+		mod->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
 		mod->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 		mod->DrawLight = R_Q1BSP_DrawLight;
 		if (i != 0)
@@ -5521,6 +5517,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	mod->brush.PointInLeaf = Mod_Q1BSP_PointInLeaf;
 	mod->Draw = R_Q1BSP_Draw;
 	mod->GetLightInfo = R_Q1BSP_GetLightInfo;
+	mod->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
 	mod->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	mod->DrawLight = R_Q1BSP_DrawLight;
 
