@@ -657,12 +657,6 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 	*outnumsurfacespointer = info.outnumsurfaces;
 }
 
-extern float *rsurface_vertex3f;
-extern float *rsurface_svector3f;
-extern float *rsurface_tvector3f;
-extern float *rsurface_normal3f;
-extern void RSurf_SetVertexPointer(const entity_render_t *ent, const texture_t *texture, const msurface_t *surface, const vec3_t modelorg);
-
 void R_Q1BSP_CompileShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist)
 {
 	model_t *model = ent->model;
@@ -685,6 +679,12 @@ void R_Q1BSP_CompileShadowVolume(entity_render_t *ent, vec3_t relativelightorigi
 	R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, lightradius + model->radius + projectdistance, numshadowmark, shadowmarklist);
 	r_shadow_compilingrtlight->static_meshchain_shadow = Mod_ShadowMesh_Finish(r_shadow_mempool, r_shadow_compilingrtlight->static_meshchain_shadow, false, false);
 }
+
+extern float *rsurface_vertex3f;
+extern float *rsurface_svector3f;
+extern float *rsurface_tvector3f;
+extern float *rsurface_normal3f;
+extern void RSurf_SetVertexPointer(const entity_render_t *ent, const texture_t *texture, const msurface_t *surface, const vec3_t modelorg);
 
 void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs)
 {
@@ -735,12 +735,15 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 	}
 }
 
+#define RSURF_MAX_BATCHSURFACES 1024
+
 void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolorbase, int numsurfaces, const int *surfacelist)
 {
 	model_t *model = ent->model;
 	msurface_t *surface;
 	texture_t *texture;
-	int surfacelistindex;
+	int surfacelistindex, batchnumsurfaces;
+	msurface_t *batchsurfacelist[RSURF_MAX_BATCHSURFACES];
 	vec3_t modelorg;
 	texture_t *tex;
 	vec3_t lightcolorpants, lightcolorshirt;
@@ -755,6 +758,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolorbase, int numsurfa
 	tex = NULL;
 	texture = NULL;
 	skip = false;
+	batchnumsurfaces = 0;
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
 		if ((ent == r_refdef.worldentity && !r_worldsurfacevisible[surfacelist[surfacelistindex]]))
@@ -762,6 +766,11 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolorbase, int numsurfa
 		surface = model->data_surfaces + surfacelist[surfacelistindex];
 		if (tex != surface->texture)
 		{
+			if (batchnumsurfaces > 0)
+			{
+				R_Shadow_RenderSurfacesLighting(ent, texture, batchnumsurfaces, batchsurfacelist, lightcolorbase, lightcolorpants, lightcolorshirt, basetexture, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, glosstexture, specularscale, modelorg);
+				batchnumsurfaces = 0;
+			}
 			tex = surface->texture;
 			texture = surface->texture->currentframe;
 			// FIXME: transparent surfaces need to be lit later
@@ -819,17 +828,20 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolorbase, int numsurfa
 			if ((r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * (VectorLength2(lightcolorbase) + VectorLength2(lightcolorpants) + VectorLength2(lightcolorshirt)) + specularscale * VectorLength2(lightcolorbase) < (1.0f / 1048576.0f))
 				skip = true;
 		}
-		if (skip || !surface->num_triangles)
-			continue;
-		RSurf_SetVertexPointer(ent, texture, surface, modelorg);
-		if (!rsurface_svector3f)
+		if (!skip && surface->num_triangles)
 		{
-			rsurface_svector3f = varray_svector3f;
-			rsurface_tvector3f = varray_tvector3f;
-			rsurface_normal3f = varray_normal3f;
-			Mod_BuildTextureVectorsAndNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_vertex3f, surface->groupmesh->data_texcoordtexture2f, surface->groupmesh->data_element3i + surface->num_firsttriangle * 3, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f, r_smoothnormals_areaweighting.integer);
+			if (batchnumsurfaces == RSURF_MAX_BATCHSURFACES)
+			{
+				R_Shadow_RenderSurfacesLighting(ent, texture, batchnumsurfaces, batchsurfacelist, lightcolorbase, lightcolorpants, lightcolorshirt, basetexture, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, glosstexture, specularscale, modelorg);
+				batchnumsurfaces = 0;
+			}
+			batchsurfacelist[batchnumsurfaces++] = surface;
 		}
-		R_Shadow_RenderLighting(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle), rsurface_vertex3f, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f, surface->groupmesh->data_texcoordtexture2f, lightcolorbase, lightcolorpants, lightcolorshirt, basetexture, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, texture->skin.gloss, specularscale);
+	}
+	if (batchnumsurfaces > 0)
+	{
+		R_Shadow_RenderSurfacesLighting(ent, texture, batchnumsurfaces, batchsurfacelist, lightcolorbase, lightcolorpants, lightcolorshirt, basetexture, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, glosstexture, specularscale, modelorg);
+		batchnumsurfaces = 0;
 	}
 	qglEnable(GL_CULL_FACE);
 }
