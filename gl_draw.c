@@ -241,8 +241,8 @@ static qbyte *crosshairtexdata[NUMCROSSHAIRS] =
 	"................"
 	"................"
 	"................"
-	"................"
-	"........7......."
+	".......55......."
+	".......55......."
 	"................"
 	"................"
 	"................"
@@ -314,6 +314,7 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 	int flags;
 
 	if (!strncmp(CLVIDEOPREFIX, path, sizeof(CLVIDEOPREFIX) - 1))
+
 	{
 		clvideo_t *video;
 
