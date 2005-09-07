@@ -35,7 +35,7 @@ LIB_SND_ALSA=-lasound
 
 # Core Audio (Mac OS X)
 OBJ_SND_COREAUDIO=$(OBJ_SND_COMMON) snd_coreaudio.c
-LIB_SND_COREAUDIO=
+LIB_SND_COREAUDIO=-framework CoreAudio
 
 # BSD / Sun audio API (NetBSD and OpenBSD)
 OBJ_SND_BSD=$(OBJ_SND_COMMON) snd_bsd.o
@@ -187,17 +187,18 @@ LDFLAGS_LINUXSDL=$(LDFLAGS_UNIXCOMMON) -ldl $(LDFLAGS_UNIXSDL)
 
 ##### Mac OS X specific variables #####
 
-# If you want CD sound in Mac OS X
-#OBJ_MACOSXCD=cd_macosx.o
-# If you want no CD audio
+# No CD support available
 OBJ_MACOSXCD=$(OBJ_NOCD)
 
 # Link
-LDFLAGS_MACOSXCL=$(LDFLAGS_UNIXCOMMON) -ldl $(LDFLAGS_UNIXCL)
+LDFLAGS_MACOSXCL=$(LDFLAGS_UNIXCOMMON) -ldl -framework Carbon $(LIB_SOUND)
 LDFLAGS_MACOSXSV=$(LDFLAGS_UNIXCOMMON) -ldl
 LDFLAGS_MACOSXSDL=$(LDFLAGS_UNIXCOMMON) -ldl `sdl-config --static-libs`
 
 OBJ_AGL= builddate.c sys_linux.o vid_agl.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
+
+EXE_MACOSXCL=darkplaces-agl
+
 
 ##### SunOS specific variables #####
 

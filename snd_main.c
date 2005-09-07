@@ -140,7 +140,8 @@ void S_Startup(void)
 
 	sound_started = true;
 
-	Con_DPrintf("Sound sampling rate: %i\n", shm->format.speed);
+	Con_Printf("Sound format: %dHz, %d bit, %d channels\n", shm->format.speed,
+			   shm->format.width * 8, shm->format.channels);
 }
 
 void S_Shutdown(void)
