@@ -430,9 +430,11 @@ static void Cmd_ExecuteAlias (cmdalias_t *alias)
 			{
 				const char *linein = Cmd_Args();
 				// include all params
-				while( *linein && outlen < ALIAS_BUFFER ) {
-					*out++ = *linein++;
-					outlen++;
+				if (linein) {
+					while( *linein && outlen < ALIAS_BUFFER ) {
+						*out++ = *linein++;
+						outlen++;
+					}
 				}
 
 				in++;
