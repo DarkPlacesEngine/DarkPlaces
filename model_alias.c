@@ -434,9 +434,6 @@ static void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfi
 
 #define BOUNDI(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%d exceeds %d - %d)\n", loadmodel->name, VALUE, MIN, MAX);
 #define BOUNDF(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%f exceeds %f - %f)\n", loadmodel->name, VALUE, MIN, MAX);
-extern void R_Q1BSP_Draw(entity_render_t *ent);
-extern void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs);
-extern void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolor, int numsurfaces, const int *surfacelist);
 void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int i, j, version, totalskins, skinwidth, skinheight, groupframes, groupskins, numverts;
@@ -472,6 +469,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Q1BSP_Draw;
+	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
@@ -792,6 +790,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Q1BSP_Draw;
+	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
@@ -1031,6 +1030,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Q1BSP_Draw;
+	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
@@ -1166,6 +1166,7 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Q1BSP_Draw;
+	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
@@ -1458,6 +1459,7 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Q1BSP_Draw;
+	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
@@ -1686,6 +1688,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Q1BSP_Draw;
+	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;

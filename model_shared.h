@@ -512,6 +512,8 @@ typedef struct model_s
 	void(*Draw)(struct entity_render_s *ent);
 	// gathers info on which clusters and surfaces are lit by light, as well as calculating a bounding box
 	void(*GetLightInfo)(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, qbyte *outleafpvs, int *outnumleafspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer);
+	// compile a shadow volume for the model based on light source
+	void(*CompileShadowVolume)(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist);
 	// draw a shadow volume for the model based on light source
 	void(*DrawShadowVolume)(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs);
 	// draw the lighting on a model (through stencil)
@@ -609,6 +611,15 @@ void Mod_BrushInit(void);
 // used for talking to the QuakeC mainly
 int Mod_Q1BSP_NativeContentsFromSuperContents(struct model_s *model, int supercontents);
 int Mod_Q1BSP_SuperContentsFromNativeContents(struct model_s *model, int nativecontents);
+
+// a lot of model formats use the Q1BSP code, so here are the prototypes...
+struct entity_render_s;
+void R_Q1BSP_DrawSky(struct entity_render_s *ent);
+void R_Q1BSP_Draw(struct entity_render_s *ent);
+void R_Q1BSP_GetLightInfo(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, qbyte *outleafpvs, int *outnumleafspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer);
+void R_Q1BSP_CompileShadowVolume(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist);
+void R_Q1BSP_DrawShadowVolume(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs);
+void R_Q1BSP_DrawLight(struct entity_render_s *ent, float *lightcolor, int numsurfaces, const int *surfacelist);
 
 // alias models
 struct frameblend_s;

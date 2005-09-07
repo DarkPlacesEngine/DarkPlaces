@@ -663,6 +663,29 @@ extern float *rsurface_tvector3f;
 extern float *rsurface_normal3f;
 extern void RSurf_SetVertexPointer(const entity_render_t *ent, const texture_t *texture, const msurface_t *surface, const vec3_t modelorg);
 
+void R_Q1BSP_CompileShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist)
+{
+	model_t *model = ent->model;
+	msurface_t *surface;
+	int surfacelistindex;
+	float projectdistance = lightradius + model->radius*2 + r_shadow_projectdistance.value;
+	texture_t *texture;
+	r_shadow_compilingrtlight->static_meshchain_shadow = Mod_ShadowMesh_Begin(r_shadow_mempool, 32768, 32768, NULL, NULL, NULL, false, false, true);
+	R_Shadow_PrepareShadowMark(model->brush.shadowmesh->numtriangles);
+	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
+	{
+		surface = model->data_surfaces + surfacelist[surfacelistindex];
+		texture = surface->texture;
+		if ((texture->basematerialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_WALL)) != MATERIALFLAG_WALL)
+			continue;
+		if (texture->textureflags & (Q3TEXTUREFLAG_TWOSIDED | Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
+			continue;
+		R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, r_shadow_compilingrtlight->cullmins, r_shadow_compilingrtlight->cullmaxs, surface->mins, surface->maxs);
+	}
+	R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, lightradius + model->radius + projectdistance, numshadowmark, shadowmarklist);
+	r_shadow_compilingrtlight->static_meshchain_shadow = Mod_ShadowMesh_Finish(r_shadow_mempool, r_shadow_compilingrtlight->static_meshchain_shadow, false, false);
+}
+
 void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs)
 {
 	model_t *model = ent->model;
@@ -676,36 +699,19 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 		return;
 	if (r_drawcollisionbrushes.integer >= 2)
 		return;
-	if (!r_shadow_compilingrtlight)
-		R_UpdateAllTextureInfo(ent);
+	R_UpdateAllTextureInfo(ent);
 	if (model->brush.shadowmesh)
 	{
 		R_Shadow_PrepareShadowMark(model->brush.shadowmesh->numtriangles);
-		if (r_shadow_compilingrtlight)
+		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 		{
-			for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
-			{
-				surface = model->data_surfaces + surfacelist[surfacelistindex];
-				texture = surface->texture;
-				if ((texture->basematerialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_WALL)) != MATERIALFLAG_WALL)
-					continue;
-				if (texture->textureflags & (Q3TEXTUREFLAG_TWOSIDED | Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
-					continue;
-				R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, lightmins, lightmaxs, surface->mins, surface->maxs);
-			}
-		}
-		else
-		{
-			for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
-			{
-				surface = model->data_surfaces + surfacelist[surfacelistindex];
-				texture = surface->texture->currentframe;
-				if ((texture->currentmaterialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_WALL)) != MATERIALFLAG_WALL)
-					continue;
-				if (texture->textureflags & (Q3TEXTUREFLAG_TWOSIDED | Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
-					continue;
-				R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, lightmins, lightmaxs, surface->mins, surface->maxs);
-			}
+			surface = model->data_surfaces + surfacelist[surfacelistindex];
+			texture = surface->texture->currentframe;
+			if ((texture->currentmaterialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_WALL)) != MATERIALFLAG_WALL)
+				continue;
+			if (texture->textureflags & (Q3TEXTUREFLAG_TWOSIDED | Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
+				continue;
+			R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, lightmins, lightmaxs, surface->mins, surface->maxs);
 		}
 		R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, lightradius + model->radius + projectdistance, numshadowmark, shadowmarklist);
 	}
@@ -823,7 +829,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolorbase, int numsurfa
 			rsurface_normal3f = varray_normal3f;
 			Mod_BuildTextureVectorsAndNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_vertex3f, surface->groupmesh->data_texcoordtexture2f, surface->groupmesh->data_element3i + surface->num_firsttriangle * 3, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f, r_smoothnormals_areaweighting.integer);
 		}
-		R_Shadow_RenderLighting(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle), rsurface_vertex3f, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f, surface->groupmesh->data_texcoordtexture2f, lightcolorbase, lightcolorpants, lightcolorshirt, basetexture, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, texture->skin.gloss);
+		R_Shadow_RenderLighting(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle), rsurface_vertex3f, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f, surface->groupmesh->data_texcoordtexture2f, lightcolorbase, lightcolorpants, lightcolorshirt, basetexture, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, texture->skin.gloss, specularscale);
 	}
 	qglEnable(GL_CULL_FACE);
 }
