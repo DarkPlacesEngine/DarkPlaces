@@ -939,6 +939,10 @@ int Mod_LoadSkinFrame(skinframe_t *skinframe, char *basename, int textureflags, 
 		if (s.shirtpixels != NULL)
 			skinframe->shirt = R_LoadTexture2D (loadmodel->texturepool, va("%s_shirt", basename), s.shirtpixels_width, s.shirtpixels_height, s.shirtpixels, TEXTYPE_RGBA, textureflags, NULL);
 	}
+	if (!skinframe->base)
+		skinframe->base = r_texture_notexture;
+	if (!skinframe->nmap)
+		skinframe->nmap = r_texture_blanknormalmap;
 	image_freeskin(&s);
 	return true;
 }
@@ -983,6 +987,8 @@ int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, char *basename, int textu
 				skinframe->base = GL_TextureForSkinLayer(skindata, width, height, va("%s_nospecial", basename), palette_nocolormap, textureflags); // no pants or shirt
 		}
 	}
+	if (!skinframe->nmap)
+		skinframe->nmap = r_texture_blanknormalmap;
 	return true;
 }
 
