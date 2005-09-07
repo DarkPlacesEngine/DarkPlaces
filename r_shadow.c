@@ -1055,7 +1055,7 @@ void R_Shadow_ValidateCvars(void)
 }
 
 // light currently being rendered
-static rtlight_t *r_shadow_rtlight;
+rtlight_t *r_shadow_rtlight;
 // light filter cubemap being used by the light
 static rtexture_t *r_shadow_lightcubemap;
 
@@ -1604,28 +1604,6 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 	float color[3], color2[3], colorscale, specularscale;
 	rmeshstate_t m;
 	// FIXME: support MATERIALFLAG_NODEPTHTEST
-	if (!basetexture)
-		basetexture = r_texture_white;
-	if (!bumptexture)
-		bumptexture = r_texture_blanknormalmap;
-	if (!pantstexture)
-		lightcolorpants = vec3_origin;
-	if (!shirttexture)
-		lightcolorshirt = vec3_origin;
-	if (glosstexture && r_shadow_gloss.integer >= 1 && r_shadow_glossintensity.value > 0 && r_shadow_rtlight->specularscale > 0)
-		specularscale = r_shadow_rtlight->specularscale * r_shadow_glossintensity.value;
-	else if (!glosstexture && r_shadow_gloss.integer >= 2 && r_shadow_gloss2intensity.value > 0 && r_shadow_glossintensity.value > 0 && r_shadow_rtlight->specularscale > 0)
-	{
-		glosstexture = r_texture_white;
-		specularscale = r_shadow_rtlight->specularscale * r_shadow_gloss2intensity.value;
-	}
-	else
-	{
-		glosstexture = r_texture_black;
-		specularscale = 0;
-	}
-	if ((r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * (VectorLength2(lightcolorbase) + VectorLength2(lightcolorpants) + VectorLength2(lightcolorshirt)) + specularscale * VectorLength2(lightcolorbase) < (1.0f / 1048576.0f))
-		return;
 	if (r_shadowstage == R_SHADOWSTAGE_VISIBLELIGHTING)
 	{
 		int passes = 0;
@@ -1634,18 +1612,18 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 			// GLSL shader path (GFFX5200, Radeon 9500)
 			// TODO: add direct pants/shirt rendering
 			if (pantstexture && (r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorpants) > 0.001)
-				R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, lightcolorpants, vec3_origin, vec3_origin, pantstexture, NULL, NULL, bumptexture, NULL);
+				R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, lightcolorpants, vec3_origin, vec3_origin, pantstexture, r_texture_black, r_texture_black, bumptexture, NULL);
 			if (shirttexture && (r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorshirt) > 0.001)
-				R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, lightcolorshirt, vec3_origin, vec3_origin, shirttexture, NULL, NULL, bumptexture, NULL);
+				R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, lightcolorshirt, vec3_origin, vec3_origin, shirttexture, r_texture_black, r_texture_black, bumptexture, NULL);
 			passes++;
 		}
 		else if (gl_dot3arb && gl_texturecubemap && r_textureunits.integer >= 2 && gl_combine.integer && gl_stencil)
 		{
 			// TODO: add direct pants/shirt rendering
 			if (pantstexture && (r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorpants) > 0.001)
-				R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, lightcolorpants, vec3_origin, vec3_origin, pantstexture, NULL, NULL, bumptexture, NULL);
+				R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, lightcolorpants, vec3_origin, vec3_origin, pantstexture, r_texture_black, r_texture_black, bumptexture, NULL);
 			if (shirttexture && (r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorshirt) > 0.001)
-				R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, lightcolorshirt, vec3_origin, vec3_origin, shirttexture, NULL, NULL, bumptexture, NULL);
+				R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, lightcolorshirt, vec3_origin, vec3_origin, shirttexture, r_texture_black, r_texture_black, bumptexture, NULL);
 			if (r_shadow_rtlight->ambientscale)
 			{
 				colorscale = r_shadow_rtlight->ambientscale;
@@ -1720,9 +1698,9 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 		{
 			// TODO: add direct pants/shirt rendering
 			if (pantstexture && (r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorpants) > 0.001)
-				R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, lightcolorpants, vec3_origin, vec3_origin, pantstexture, NULL, NULL, bumptexture, NULL);
+				R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, lightcolorpants, vec3_origin, vec3_origin, pantstexture, r_texture_black, r_texture_black, bumptexture, NULL);
 			if (shirttexture && (r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorshirt) > 0.001)
-				R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, lightcolorshirt, vec3_origin, vec3_origin, shirttexture, NULL, NULL, bumptexture, NULL);
+				R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, lightcolorshirt, vec3_origin, vec3_origin, shirttexture, r_texture_black, r_texture_black, bumptexture, NULL);
 			if (r_shadow_rtlight->ambientscale)
 			{
 				VectorScale(lightcolorbase, r_shadow_rtlight->ambientscale, color2);
@@ -1753,9 +1731,9 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 		// GLSL shader path (GFFX5200, Radeon 9500)
 		// TODO: add direct pants/shirt rendering
 		if (pantstexture && (r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorpants) > 0.001)
-			R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, lightcolorpants, vec3_origin, vec3_origin, pantstexture, NULL, NULL, bumptexture, NULL);
+			R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, lightcolorpants, vec3_origin, vec3_origin, pantstexture, r_texture_black, r_texture_black, bumptexture, NULL);
 		if (shirttexture && (r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorshirt) > 0.001)
-			R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, lightcolorshirt, vec3_origin, vec3_origin, shirttexture, NULL, NULL, bumptexture, NULL);
+			R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, lightcolorshirt, vec3_origin, vec3_origin, shirttexture, r_texture_black, r_texture_black, bumptexture, NULL);
 		R_Mesh_VertexPointer(vertex3f);
 		R_Mesh_TexCoordPointer(0, 2, texcoord2f);
 		R_Mesh_TexCoordPointer(1, 3, svector3f);
@@ -1779,9 +1757,9 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 	{
 		// TODO: add direct pants/shirt rendering
 		if (pantstexture && (r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorpants) > 0.001)
-			R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, lightcolorpants, vec3_origin, vec3_origin, pantstexture, NULL, NULL, bumptexture, NULL);
+			R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, lightcolorpants, vec3_origin, vec3_origin, pantstexture, r_texture_black, r_texture_black, bumptexture, NULL);
 		if (shirttexture && (r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorshirt) > 0.001)
-			R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, lightcolorshirt, vec3_origin, vec3_origin, shirttexture, NULL, NULL, bumptexture, NULL);
+			R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, lightcolorshirt, vec3_origin, vec3_origin, shirttexture, r_texture_black, r_texture_black, bumptexture, NULL);
 		if (r_shadow_rtlight->ambientscale)
 		{
 			GL_Color(1,1,1,1);
@@ -2472,9 +2450,9 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 	{
 		// TODO: add direct pants/shirt rendering
 		if (pantstexture && (r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorpants) > 0.001)
-			R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, lightcolorpants, vec3_origin, vec3_origin, pantstexture, NULL, NULL, bumptexture, NULL);
+			R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, lightcolorpants, vec3_origin, vec3_origin, pantstexture, r_texture_black, r_texture_black, bumptexture, NULL);
 		if (shirttexture && (r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorshirt) > 0.001)
-			R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, lightcolorshirt, vec3_origin, vec3_origin, shirttexture, NULL, NULL, bumptexture, NULL);
+			R_Shadow_RenderLighting(firstvertex, numvertices, numtriangles, elements, vertex3f, svector3f, tvector3f, normal3f, texcoord2f, lightcolorshirt, vec3_origin, vec3_origin, shirttexture, r_texture_black, r_texture_black, bumptexture, NULL);
 		if (r_shadow_rtlight->ambientscale)
 		{
 			GL_BlendFunc(GL_ONE, GL_ONE);
@@ -2806,13 +2784,13 @@ void R_Shadow_DrawEntityShadow(entity_render_t *ent, rtlight_t *rtlight, int num
 	}
 }
 
-void R_Shadow_DrawEntityLight(entity_render_t *ent, rtlight_t *rtlight, vec3_t lightcolor, int numsurfaces, int *surfacelist)
+void R_Shadow_DrawEntityLight(entity_render_t *ent, rtlight_t *rtlight, vec3_t lightcolorbase, int numsurfaces, int *surfacelist)
 {
 	shadowmesh_t *mesh;
 	// set up properties for rendering light onto this entity
-	r_shadow_entitylightcolor[0] = lightcolor[0] * ent->colormod[0] * ent->alpha;
-	r_shadow_entitylightcolor[1] = lightcolor[1] * ent->colormod[1] * ent->alpha;
-	r_shadow_entitylightcolor[2] = lightcolor[2] * ent->colormod[2] * ent->alpha;
+	r_shadow_entitylightcolor[0] = lightcolorbase[0] * ent->colormod[0] * ent->alpha;
+	r_shadow_entitylightcolor[1] = lightcolorbase[1] * ent->colormod[1] * ent->alpha;
+	r_shadow_entitylightcolor[2] = lightcolorbase[2] * ent->colormod[2] * ent->alpha;
 	Matrix4x4_Concat(&r_shadow_entitytolight, &rtlight->matrix_worldtolight, &ent->matrix);
 	Matrix4x4_Concat(&r_shadow_entitytoattenuationxyz, &matrix_attenuationxyz, &r_shadow_entitytolight);
 	Matrix4x4_Concat(&r_shadow_entitytoattenuationz, &matrix_attenuationz, &r_shadow_entitytolight);
@@ -2834,7 +2812,29 @@ void R_Shadow_DrawEntityLight(entity_render_t *ent, rtlight_t *rtlight, vec3_t l
 		if (rtlight->compiled && r_shadow_realtime_world_compile.integer && r_shadow_realtime_world_compilelight.integer)
 		{
 			for (mesh = rtlight->static_meshchain_light;mesh;mesh = mesh->next)
-				R_Shadow_RenderLighting(0, mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->vertex3f, mesh->svector3f, mesh->tvector3f, mesh->normal3f, mesh->texcoord2f, r_shadow_entitylightcolor, vec3_origin, vec3_origin, mesh->map_diffuse, NULL, NULL, mesh->map_normal, mesh->map_specular);
+			{
+				rtexture_t *glosstexture = r_texture_black;
+				float specularscale = 0;
+				if (mesh->map_specular)
+				{
+					if (r_shadow_gloss.integer >= 1 && r_shadow_glossintensity.value > 0 && r_shadow_rtlight->specularscale > 0)
+					{
+						glosstexture = mesh->map_specular;
+						specularscale = r_shadow_rtlight->specularscale * r_shadow_glossintensity.value;
+					}
+				}
+				else
+				{
+					if (r_shadow_gloss.integer >= 2 && r_shadow_gloss2intensity.value > 0 && r_shadow_glossintensity.value > 0 && r_shadow_rtlight->specularscale > 0)
+					{
+						glosstexture = r_texture_white;
+						specularscale = r_shadow_rtlight->specularscale * r_shadow_gloss2intensity.value;
+					}
+				}
+				if ((r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorbase) + specularscale * VectorLength2(lightcolorbase) < (1.0f / 1048576.0f))
+					continue;
+				R_Shadow_RenderLighting(0, mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->vertex3f, mesh->svector3f, mesh->tvector3f, mesh->normal3f, mesh->texcoord2f, r_shadow_entitylightcolor, vec3_origin, vec3_origin, mesh->map_diffuse, r_texture_black, r_texture_black, mesh->map_normal, glosstexture);
+			}
 		}
 		else
 			ent->model->DrawLight(ent, r_shadow_entitylightcolor, numsurfaces, surfacelist);
