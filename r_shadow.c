@@ -328,7 +328,7 @@ const char *builtinshader_light_frag =
 "// ambient+diffuse+specular+normalmap+attenuation+cubemap+fog shader\n"
 "// written by Forest 'LordHavoc' Hale\n"
 "\n"
-"// use half floats on GEFORCEFX for math performance, otherwise don't\n"
+"// use half floats if available for math performance\n"
 "#ifndef GEFORCEFX\n"
 "#define half float\n"
 "#define hvec2 vec2\n"
@@ -1613,7 +1613,6 @@ static void R_Shadow_RenderSurfacesLighting_Light_GLSL(const entity_render_t *en
 	qboolean doambientshirt = r_shadow_rtlight->ambientscale * VectorLength2(lightcolorshirt) > 0.00001 && shirttexture != r_texture_black;
 	qboolean dodiffuseshirt = r_shadow_rtlight->diffusescale * VectorLength2(lightcolorshirt) > 0.00001 && shirttexture != r_texture_black;
 	qboolean dospecular = specularscale * VectorLength2(lightcolorbase) > 0.00001 && glosstexture != r_texture_black;
-	//qboolean dowatershader = (texture->currentmaterialflags & MATERIALFLAG_WATER) && r_watershader.value;
 	// TODO: add direct pants/shirt rendering
 	if (doambientpants || dodiffusepants)
 		R_Shadow_RenderSurfacesLighting_Light_GLSL(ent, texture, numsurfaces, surfacelist, lightcolorpants, vec3_origin, vec3_origin, pantstexture, r_texture_black, r_texture_black, normalmaptexture, r_texture_black, 0, modelorg);
