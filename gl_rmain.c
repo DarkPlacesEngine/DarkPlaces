@@ -119,7 +119,6 @@ rtexture_t *r_texture_black;
 rtexture_t *r_texture_notexture;
 rtexture_t *r_texture_whitecube;
 rtexture_t *r_texture_normalizationcube;
-rtexture_t *r_texture_detailtextures[NUM_DETAILTEXTURES];
 
 void R_ModulateColors(float *in, float *out, int verts, float r, float g, float b)
 {
@@ -217,55 +216,6 @@ void FOG_registercvars(void)
 		Cvar_RegisterVariable (&gl_fogstart);
 		Cvar_RegisterVariable (&gl_fogend);
 	}
-}
-
-static void R_BuildDetailTextures (void)
-{
-	int i, x, y, light;
-	float vc[3], vx[3], vy[3], vn[3], lightdir[3];
-#define DETAILRESOLUTION 256
-	qbyte (*data)[DETAILRESOLUTION][4];
-	qbyte (*noise)[DETAILRESOLUTION];
-
-	// Allocate the buffers dynamically to avoid having such big guys on the stack
-	data = Mem_Alloc(tempmempool, DETAILRESOLUTION * sizeof(*data));
-	noise = Mem_Alloc(tempmempool, DETAILRESOLUTION * sizeof(*noise));
-
-	lightdir[0] = 0.5;
-	lightdir[1] = 1;
-	lightdir[2] = -0.25;
-	VectorNormalize(lightdir);
-	for (i = 0;i < NUM_DETAILTEXTURES;i++)
-	{
-		fractalnoise(&noise[0][0], DETAILRESOLUTION, DETAILRESOLUTION >> 4);
-		for (y = 0;y < DETAILRESOLUTION;y++)
-		{
-			for (x = 0;x < DETAILRESOLUTION;x++)
-			{
-				vc[0] = x;
-				vc[1] = y;
-				vc[2] = noise[y][x] * (1.0f / 32.0f);
-				vx[0] = x + 1;
-				vx[1] = y;
-				vx[2] = noise[y][(x + 1) % DETAILRESOLUTION] * (1.0f / 32.0f);
-				vy[0] = x;
-				vy[1] = y + 1;
-				vy[2] = noise[(y + 1) % DETAILRESOLUTION][x] * (1.0f / 32.0f);
-				VectorSubtract(vx, vc, vx);
-				VectorSubtract(vy, vc, vy);
-				CrossProduct(vx, vy, vn);
-				VectorNormalize(vn);
-				light = 128 - DotProduct(vn, lightdir) * 128;
-				light = bound(0, light, 255);
-				data[y][x][0] = data[y][x][1] = data[y][x][2] = light;
-				data[y][x][3] = 255;
-			}
-		}
-		r_texture_detailtextures[i] = R_LoadTexture2D(r_main_texturepool, va("detailtexture%i", i), DETAILRESOLUTION, DETAILRESOLUTION, &data[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_PRECACHE, NULL);
-	}
-
-	Mem_Free(noise);
-	Mem_Free(data);
 }
 
 static void R_BuildBlankTextures(void)
@@ -394,7 +344,6 @@ void gl_main_start(void)
 	r_bloom_texture_bloom = NULL;
 	R_BuildBlankTextures();
 	R_BuildNoTexture();
-	R_BuildDetailTextures();
 	if (gl_texturecubemap)
 	{
 		R_BuildWhiteCube();
@@ -1673,7 +1622,6 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 	const msurface_t *surface;
 	qboolean dolightmap;
 	qboolean doambient;
-	qboolean dodetail;
 	qboolean doglow;
 	qboolean dofogpass;
 	qboolean fogallpasses;
@@ -1771,7 +1719,6 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 		// normal surface (wall or water)
 		dolightmap = !(texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT);
 		doambient = r_ambient.value >= (1/64.0f);
-		dodetail = r_detailtextures.integer && texture->skin.detail != NULL && !(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT);
 		doglow = texture->skin.glow != NULL;
 		dofogpass = fogenabled && !(texture->currentmaterialflags & MATERIALFLAG_ADD);
 		fogallpasses = fogenabled && !(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT);
@@ -2073,24 +2020,6 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				RSurf_SetVertexPointer(ent, texture, surface, modelorg);
 				R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
 				RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, 0, applycolor, fogallpasses);
-				GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
-				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
-				GL_LockArrays(0, 0);
-			}
-		}
-		if (dodetail)
-		{
-			GL_BlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
-			GL_DepthMask(false);
-			GL_Color(1, 1, 1, 1);
-			memset(&m, 0, sizeof(m));
-			m.tex[0] = R_GetTexture(texture->skin.detail);
-			R_Mesh_State(&m);
-			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-			{
-				surface = texturesurfacelist[texturesurfaceindex];
-				RSurf_SetVertexPointer(ent, texture, surface, modelorg);
-				R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoorddetail2f);
 				GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 				GL_LockArrays(0, 0);

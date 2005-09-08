@@ -1761,7 +1761,7 @@ void M_Options_Key (int k, char ascii)
 	}
 }
 
-#define	OPTIONS_EFFECTS_ITEMS	36
+#define	OPTIONS_EFFECTS_ITEMS	35
 
 int options_effects_cursor;
 
@@ -1773,7 +1773,6 @@ void M_Menu_Options_Effects_f (void)
 }
 
 
-extern cvar_t r_detailtextures;
 extern cvar_t cl_stainmaps;
 extern cvar_t cl_stainmaps_clearonload;
 extern cvar_t r_explosionclip;
@@ -1807,7 +1806,6 @@ void M_Menu_Options_Effects_AdjustSliders (int dir)
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_stainmaps, !cl_stainmaps.integer);
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_stainmaps_clearonload, !cl_stainmaps_clearonload.integer);
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_decals, !cl_decals.integer);
-	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&r_detailtextures, !r_detailtextures.integer);
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles_bulletimpacts, !cl_particles_bulletimpacts.integer);
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles_smoke, !cl_particles_smoke.integer);
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles_sparks, !cl_particles_sparks.integer);
@@ -1861,7 +1859,6 @@ void M_Options_Effects_Draw (void)
 	M_Options_PrintCheckbox("             Stainmaps", true, cl_stainmaps.integer);
 	M_Options_PrintCheckbox("Onload Clear Stainmaps", true, cl_stainmaps_clearonload.integer);
 	M_Options_PrintCheckbox("                Decals", true, cl_decals.integer);
-	M_Options_PrintCheckbox("      Detail Texturing", true, r_detailtextures.integer);
 	M_Options_PrintCheckbox("        Bullet Impacts", true, cl_particles_bulletimpacts.integer);
 	M_Options_PrintCheckbox("                 Smoke", true, cl_particles_smoke.integer);
 	M_Options_PrintCheckbox("                Sparks", true, cl_particles_sparks.integer);

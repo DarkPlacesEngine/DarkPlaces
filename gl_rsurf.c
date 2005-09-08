@@ -28,7 +28,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 cvar_t r_ambient = {0, "r_ambient", "0"};
 cvar_t r_drawportals = {0, "r_drawportals", "0"};
 cvar_t r_testvis = {0, "r_testvis", "0"};
-cvar_t r_detailtextures = {CVAR_SAVE, "r_detailtextures", "1"};
 cvar_t r_surfaceworldnode = {0, "r_surfaceworldnode", "0"};
 cvar_t r_drawcollisionbrushes_polygonfactor = {0, "r_drawcollisionbrushes_polygonfactor", "-1"};
 cvar_t r_drawcollisionbrushes_polygonoffset = {0, "r_drawcollisionbrushes_polygonoffset", "0"};
@@ -866,7 +865,6 @@ void GL_Surf_Init(void)
 	Cvar_RegisterVariable(&r_ambient);
 	Cvar_RegisterVariable(&r_drawportals);
 	Cvar_RegisterVariable(&r_testvis);
-	Cvar_RegisterVariable(&r_detailtextures);
 	Cvar_RegisterVariable(&r_surfaceworldnode);
 	Cvar_RegisterVariable(&r_drawcollisionbrushes_polygonfactor);
 	Cvar_RegisterVariable(&r_drawcollisionbrushes_polygonoffset);

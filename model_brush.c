@@ -1141,7 +1141,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		}
 		else
 		{
-			if (!Mod_LoadSkinFrame(&tx->skin, tx->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, tx->name[0] != '*', true))
+			if (!Mod_LoadSkinFrame(&tx->skin, tx->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, true))
 			{
 				// did not find external texture, load it from the bsp or wad3
 				if (loadmodel->brush.ishlbsp)
@@ -1176,7 +1176,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 						Mem_Free(freepixels);
 				}
 				else if (mtdata) // texture included
-					Mod_LoadSkinFrame_Internal(&tx->skin, tx->name, TEXF_MIPMAP | TEXF_PRECACHE | TEXF_PICMIP, false, tx->name[0] != '*', tx->name[0] != '*' && r_fullbrights.integer, mtdata, tx->width, tx->height);
+					Mod_LoadSkinFrame_Internal(&tx->skin, tx->name, TEXF_MIPMAP | TEXF_PRECACHE | TEXF_PICMIP, false, tx->name[0] != '*' && r_fullbrights.integer, mtdata, tx->width, tx->height);
 			}
 		}
 		if (tx->skin.base == NULL)
@@ -1845,7 +1845,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 	// vertex limit
 	loadmodel->nummeshes = 1;
 	loadmodel->meshlist = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t *));
-	loadmodel->meshlist[0] = Mod_AllocSurfMesh(loadmodel->mempool, totalverts, totaltris, true, true, false, false);
+	loadmodel->meshlist[0] = Mod_AllocSurfMesh(loadmodel->mempool, totalverts, totaltris, true, false, false);
 
 	totalverts = 0;
 	totaltris = 0;
@@ -1894,8 +1894,6 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 			t = DotProduct(((surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex) + i * 3), surface->lightmapinfo->texinfo->vecs[1]) + surface->lightmapinfo->texinfo->vecs[1][3];
 			(surface->groupmesh->data_texcoordtexture2f + 2 * surface->num_firstvertex)[i * 2 + 0] = s / surface->texture->width;
 			(surface->groupmesh->data_texcoordtexture2f + 2 * surface->num_firstvertex)[i * 2 + 1] = t / surface->texture->height;
-			(surface->groupmesh->data_texcoorddetail2f + 2 * surface->num_firstvertex)[i * 2 + 0] = s * (1.0f / 16.0f);
-			(surface->groupmesh->data_texcoorddetail2f + 2 * surface->num_firstvertex)[i * 2 + 1] = t * (1.0f / 16.0f);
 			(surface->groupmesh->data_texcoordlightmap2f + 2 * surface->num_firstvertex)[i * 2 + 0] = 0;
 			(surface->groupmesh->data_texcoordlightmap2f + 2 * surface->num_firstvertex)[i * 2 + 1] = 0;
 			(surface->groupmesh->data_lightmapoffsets + surface->num_firstvertex)[i] = 0;
@@ -3984,8 +3982,8 @@ parseerror:
 			//if (R_TextureHasAlpha(out->skin.base))
 			//	out->surfaceparms |= Q3SURFACEPARM_TRANS;
 		}
-		if (!Mod_LoadSkinFrame(&out->skin, out->name, (((out->textureflags & Q3TEXTUREFLAG_NOMIPMAPS) || (out->surfaceparms & Q3SURFACEPARM_NOMIPMAPS)) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (out->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP), false, false, true))
-			if (!Mod_LoadSkinFrame(&out->skin, out->firstpasstexturename, (((out->textureflags & Q3TEXTUREFLAG_NOMIPMAPS) || (out->surfaceparms & Q3SURFACEPARM_NOMIPMAPS)) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (out->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP), false, false, true))
+		if (!Mod_LoadSkinFrame(&out->skin, out->name, (((out->textureflags & Q3TEXTUREFLAG_NOMIPMAPS) || (out->surfaceparms & Q3SURFACEPARM_NOMIPMAPS)) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (out->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP), false, true))
+			if (!Mod_LoadSkinFrame(&out->skin, out->firstpasstexturename, (((out->textureflags & Q3TEXTUREFLAG_NOMIPMAPS) || (out->surfaceparms & Q3SURFACEPARM_NOMIPMAPS)) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (out->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP), false, true))
 				if (cls.state != ca_dedicated)
 					Con_Printf("%s: texture loading for shader \"%s\" failed (first layer \"%s\" not found either)\n", loadmodel->name, out->name, out->firstpasstexturename);
 		// no animation
@@ -4358,7 +4356,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		i = oldi;
 		in = oldin;
 		out = oldout;
-		mesh = tempmeshlist[meshnum] = Mod_AllocSurfMesh(loadmodel->mempool, meshvertices, meshtriangles, false, false, true, false);
+		mesh = tempmeshlist[meshnum] = Mod_AllocSurfMesh(loadmodel->mempool, meshvertices, meshtriangles, false, true, false);
 		meshvertices = 0;
 		meshtriangles = 0;
 		for (;i < count && meshvertices + out->num_vertices <= mesh->num_vertices;i++, in++, out++)

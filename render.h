@@ -68,9 +68,6 @@ extern cvar_t gl_flashblend;
 // vis stuff
 extern cvar_t r_novis;
 
-// detail texture stuff
-extern cvar_t r_detailtextures;
-
 extern cvar_t r_lerpsprites;
 extern cvar_t r_lerpmodels;
 extern cvar_t r_waterscroll;
@@ -207,8 +204,6 @@ extern rtexture_t *r_texture_black;
 extern rtexture_t *r_texture_notexture;
 extern rtexture_t *r_texture_whitecube;
 extern rtexture_t *r_texture_normalizationcube;
-#define NUM_DETAILTEXTURES 1
-extern rtexture_t *r_texture_detailtextures[NUM_DETAILTEXTURES];
 
 void R_TimeReport(char *name);
 void R_TimeReport_Start(void);
