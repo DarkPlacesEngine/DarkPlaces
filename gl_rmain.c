@@ -120,7 +120,6 @@ rtexture_t *r_texture_notexture;
 rtexture_t *r_texture_whitecube;
 rtexture_t *r_texture_normalizationcube;
 rtexture_t *r_texture_detailtextures[NUM_DETAILTEXTURES];
-rtexture_t *r_texture_distorttexture[64];
 
 void R_ModulateColors(float *in, float *out, int verts, float r, float g, float b)
 {
@@ -269,54 +268,6 @@ static void R_BuildDetailTextures (void)
 	Mem_Free(data);
 }
 
-static qbyte R_MorphDistortTexture (double y0, double y1, double y2, double y3, double morph)
-{
-	int m =	(int)(((y1 + y3 - (y0 + y2)) * morph * morph * morph) +
-			((2 * (y0 - y1) + y2 - y3) * morph * morph) +
-			((y2 - y0) * morph) +
-			(y1));
-	return (qbyte)bound(0, m, 255);
-}
-
-static void R_BuildDistortTexture (void)
-{
-	int x, y, i, j;
-#define DISTORTRESOLUTION 32
-	qbyte data[5][DISTORTRESOLUTION][DISTORTRESOLUTION][2];
-
-	for (i=0; i<4; i++)
-	{
-		for (y=0; y<DISTORTRESOLUTION; y++)
-		{
-			for (x=0; x<DISTORTRESOLUTION; x++)
-			{
-				data[i][y][x][0] = rand () & 255;
-				data[i][y][x][1] = rand () & 255;
-			}
-		}
-	}
-
-	for (i=0; i<4; i++)
-	{
-		for (j=0; j<16; j++)
-		{
-			r_texture_distorttexture[i*16+j] = NULL;
-			if (gl_textureshader)
-			{
-				for (y=0; y<DISTORTRESOLUTION; y++)
-				{
-					for (x=0; x<DISTORTRESOLUTION; x++)
-					{
-						data[4][y][x][0] = R_MorphDistortTexture (data[(i-1)&3][y][x][0], data[i][y][x][0], data[(i+1)&3][y][x][0], data[(i+2)&3][y][x][0], 0.0625*j);
-						data[4][y][x][1] = R_MorphDistortTexture (data[(i-1)&3][y][x][1], data[i][y][x][1], data[(i+1)&3][y][x][1], data[(i+2)&3][y][x][1], 0.0625*j);
-					}
-				}
-				r_texture_distorttexture[i*16+j] = R_LoadTexture2D(r_main_texturepool, va("distorttexture%i", i*16+j), DISTORTRESOLUTION, DISTORTRESOLUTION, &data[4][0][0][0], TEXTYPE_DSDT, TEXF_PRECACHE, NULL);
-			}
-		}
-	}
-}
-
 static void R_BuildBlankTextures(void)
 {
 	qbyte data[4];
@@ -444,7 +395,6 @@ void gl_main_start(void)
 	R_BuildBlankTextures();
 	R_BuildNoTexture();
 	R_BuildDetailTextures();
-	R_BuildDistortTexture();
 	if (gl_texturecubemap)
 	{
 		R_BuildWhiteCube();
