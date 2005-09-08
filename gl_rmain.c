@@ -1487,6 +1487,10 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 		t->currentmaterialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_TRANSPARENT;
 	if (ent->effects & EF_NODEPTHTEST)
 		t->currentmaterialflags |= MATERIALFLAG_NODEPTHTEST;
+	if (t->currentmaterialflags & MATERIALFLAG_WATER && r_waterscroll.value != 0)
+		t->currenttexmatrix = r_waterscrollmatrix;
+	else
+		t->currenttexmatrix = r_identitymatrix;
 }
 
 void R_UpdateAllTextureInfo(entity_render_t *ent)
@@ -1725,7 +1729,6 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 	qboolean doglow;
 	qboolean dofogpass;
 	qboolean fogallpasses;
-	qboolean waterscrolling;
 	qboolean dopants;
 	qboolean doshirt;
 	qboolean dofullbrightpants;
@@ -1772,8 +1775,6 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	else
 		GL_BlendFunc(GL_ONE, GL_ZERO);
-	// water waterscrolling in texture matrix
-	waterscrolling = (texture->currentmaterialflags & MATERIALFLAG_WATER) && r_waterscroll.value != 0;
 	if (texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
 		qglDisable(GL_CULL_FACE);
 	if (texture->currentmaterialflags & MATERIALFLAG_SKY)
@@ -1827,7 +1828,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 		m.texcombinergb[0] = GL_REPLACE;
 		m.texcombinergb[1] = GL_REPLACE;
 		Matrix4x4_CreateFromQuakeEntity(&m.texmatrix[0], 0, 0, 0, 0, 0, 0, r_watershader.value);
-		m.texmatrix[1] = r_waterscrollmatrix;
+		m.texmatrix[1] = texture->currenttexmatrix;
 		R_Mesh_State(&m);
 
 		GL_Color(1, 1, 1, texture->currentalpha);
@@ -1893,8 +1894,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 		{
 			memset(&m, 0, sizeof(m));
 			m.tex[1] = R_GetTexture(basetexture);
-			if (waterscrolling)
-				m.texmatrix[1] = r_waterscrollmatrix;
+			m.texmatrix[1] = texture->currenttexmatrix;
 			m.texrgbscale[1] = 2;
 			m.pointer_color = varray_color4f;
 			R_Mesh_State(&m);
@@ -1961,8 +1961,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			GL_Color(r_lightmapintensity * ent->colormod[0], r_lightmapintensity * ent->colormod[1], r_lightmapintensity * ent->colormod[2], 1);
 			memset(&m, 0, sizeof(m));
 			m.tex[0] = R_GetTexture(basetexture);
-			if (waterscrolling)
-				m.texmatrix[0] = r_waterscrollmatrix;
+			m.texmatrix[0] = texture->currenttexmatrix;
 			R_Mesh_State(&m);
 			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
@@ -1978,8 +1977,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 		{
 			memset(&m, 0, sizeof(m));
 			m.tex[0] = R_GetTexture(basetexture);
-			if (waterscrolling)
-				m.texmatrix[0] = r_waterscrollmatrix;
+			m.texmatrix[0] = texture->currenttexmatrix;
 			m.pointer_color = varray_color4f;
 			colorscale = 2;
 			if (gl_combine.integer)
@@ -2033,8 +2031,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 			memset(&m, 0, sizeof(m));
 			m.tex[0] = R_GetTexture(texture->skin.pants);
-			if (waterscrolling)
-				m.texmatrix[0] = r_waterscrollmatrix;
+			m.texmatrix[0] = texture->currenttexmatrix;
 			m.pointer_color = varray_color4f;
 			colorscale = 2;
 			if (gl_combine.integer)
@@ -2088,8 +2085,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 			memset(&m, 0, sizeof(m));
 			m.tex[0] = R_GetTexture(texture->skin.shirt);
-			if (waterscrolling)
-				m.texmatrix[0] = r_waterscrollmatrix;
+			m.texmatrix[0] = texture->currenttexmatrix;
 			m.pointer_color = varray_color4f;
 			colorscale = 2;
 			if (gl_combine.integer)
@@ -2145,8 +2141,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			GL_DepthMask(false);
 			memset(&m, 0, sizeof(m));
 			m.tex[0] = R_GetTexture(texture->skin.base);
-			if (waterscrolling)
-				m.texmatrix[0] = r_waterscrollmatrix;
+			m.texmatrix[0] = texture->currenttexmatrix;
 			m.pointer_color = varray_color4f;
 			colorscale = 1;
 			if (gl_combine.integer && (ent->colormod[0] > 1 || ent->colormod[1] > 1 || ent->colormod[2] > 1))
@@ -2197,8 +2192,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			GL_DepthMask(false);
 			memset(&m, 0, sizeof(m));
 			m.tex[0] = R_GetTexture(texture->skin.glow);
-			if (waterscrolling)
-				m.texmatrix[0] = r_waterscrollmatrix;
+			m.texmatrix[0] = texture->currenttexmatrix;
 			m.pointer_color = varray_color4f;
 			R_Mesh_State(&m);
 			r = 1;
@@ -2237,8 +2231,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			GL_DepthMask(false);
 			memset(&m, 0, sizeof(m));
 			m.tex[0] = R_GetTexture(texture->skin.fog);
-			if (waterscrolling)
-				m.texmatrix[0] = r_waterscrollmatrix;
+			m.texmatrix[0] = texture->currenttexmatrix;
 			R_Mesh_State(&m);
 			r = fogcolor[0];
 			g = fogcolor[1];

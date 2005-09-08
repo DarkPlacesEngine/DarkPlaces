@@ -169,10 +169,13 @@ typedef struct texture_s
 	// set if animated or there is an alternate frame set
 	// (this is an optimization in the renderer)
 	int animated;
+
 	// the current texture frame in animation
 	struct texture_s *currentframe;
 	// current alpha of the texture
 	float currentalpha;
+	// current texture transform matrix (used for water scrolling)
+	matrix4x4_t currenttexmatrix;
 
 	// q3bsp
 	char name[64];
