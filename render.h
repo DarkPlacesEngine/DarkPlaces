@@ -209,7 +209,6 @@ extern rtexture_t *r_texture_whitecube;
 extern rtexture_t *r_texture_normalizationcube;
 #define NUM_DETAILTEXTURES 1
 extern rtexture_t *r_texture_detailtextures[NUM_DETAILTEXTURES];
-extern rtexture_t *r_texture_distorttexture[64];
 
 void R_TimeReport(char *name);
 void R_TimeReport_Start(void);
