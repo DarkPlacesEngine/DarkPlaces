@@ -97,7 +97,6 @@ cvar_t r_textureunits = {0, "r_textureunits", "32"};
 cvar_t r_lerpsprites = {CVAR_SAVE, "r_lerpsprites", "1"};
 cvar_t r_lerpmodels = {CVAR_SAVE, "r_lerpmodels", "1"};
 cvar_t r_waterscroll = {CVAR_SAVE, "r_waterscroll", "1"};
-cvar_t r_watershader = {CVAR_SAVE, "r_watershader", "1"};
 
 cvar_t r_bloom = {CVAR_SAVE, "r_bloom", "0"};
 cvar_t r_bloom_intensity = {CVAR_SAVE, "r_bloom_intensity", "2"};
@@ -508,7 +507,6 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_lerpsprites);
 	Cvar_RegisterVariable(&r_lerpmodels);
 	Cvar_RegisterVariable(&r_waterscroll);
-	Cvar_RegisterVariable(&r_watershader);
 	Cvar_RegisterVariable(&r_drawcollisionbrushes);
 	Cvar_RegisterVariable(&r_bloom);
 	Cvar_RegisterVariable(&r_bloom_intensity);
@@ -1817,43 +1815,6 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			}
 			GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
 		}
-	}
-	else if ((texture->currentmaterialflags & MATERIALFLAG_WATER) && r_watershader.value && gl_textureshader && !texture->skin.glow && !fogenabled && ent->colormod[0] == 1 && ent->colormod[1] == 1 && ent->colormod[2] == 1)
-	{
-		// NVIDIA Geforce3 distortion texture shader on water
-		float args[4] = {0.05f,0,0,0.04f};
-		memset(&m, 0, sizeof(m));
-		m.tex[0] = R_GetTexture(r_texture_distorttexture[(int)(r_refdef.time * 16)&63]);
-		m.tex[1] = R_GetTexture(texture->skin.base);
-		m.texcombinergb[0] = GL_REPLACE;
-		m.texcombinergb[1] = GL_REPLACE;
-		Matrix4x4_CreateFromQuakeEntity(&m.texmatrix[0], 0, 0, 0, 0, 0, 0, r_watershader.value);
-		m.texmatrix[1] = texture->currenttexmatrix;
-		R_Mesh_State(&m);
-
-		GL_Color(1, 1, 1, texture->currentalpha);
-		GL_ActiveTexture(0);
-		qglTexEnvi(GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_TEXTURE_2D);
-		GL_ActiveTexture(1);
-		qglTexEnvi(GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_OFFSET_TEXTURE_2D_NV);
-		qglTexEnvi(GL_TEXTURE_SHADER_NV, GL_PREVIOUS_TEXTURE_INPUT_NV, GL_TEXTURE0_ARB);
-		qglTexEnvfv(GL_TEXTURE_SHADER_NV, GL_OFFSET_TEXTURE_MATRIX_NV, &args[0]);
-		qglEnable(GL_TEXTURE_SHADER_NV);
-
-		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-		{
-			surface = texturesurfacelist[texturesurfaceindex];
-			RSurf_SetVertexPointer(ent, texture, surface, modelorg);
-			R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
-			R_Mesh_TexCoordPointer(1, 2, surface->groupmesh->data_texcoordtexture2f);
-			GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
-			R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
-			GL_LockArrays(0, 0);
-		}
-
-		qglDisable(GL_TEXTURE_SHADER_NV);
-		qglTexEnvi(GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_TEXTURE_2D);
-		GL_ActiveTexture(0);
 	}
 	else if (texture->currentmaterialflags & (MATERIALFLAG_WATER | MATERIALFLAG_WALL))
 	{
