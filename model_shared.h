@@ -51,7 +51,6 @@ typedef struct skinframe_s
 	rtexture_t *shirt; // shirt only (in greyscale)
 	rtexture_t *nmap; // normalmap (bumpmap for dot3)
 	rtexture_t *gloss; // glossmap (for dot3)
-	rtexture_t *detail; // detail texture (silly bumps for non-dot3)
 	rtexture_t *glow; // glow only (fullbrights)
 	rtexture_t *fog; // alpha of the base texture (if not opaque)
 }
@@ -96,7 +95,6 @@ typedef struct surfmesh_s
 	float *data_normal3f; // float[verts*3] direction of 'R' (out) texture axis for each vertex
 	float *data_texcoordtexture2f; // float[verts*2] texcoords for surface texture
 	float *data_texcoordlightmap2f; // float[verts*2] texcoords for lightmap texture
-	float *data_texcoorddetail2f; // float[verts*2] texcoords for detail texture
 	float *data_lightmapcolor4f;
 	int *data_lightmapoffsets; // index into surface's lightmap samples for vertex lighting
 	// morph blending, these are zero if model is skeletal or static
@@ -570,7 +568,7 @@ void Mod_ValidateElements(int *elements, int numtriangles, int numverts, const c
 void Mod_BuildNormals(int firstvertex, int numvertices, int numtriangles, const float *vertex3f, const int *elements, float *normal3f, qboolean areaweighting);
 void Mod_BuildTextureVectorsAndNormals(int firstvertex, int numvertices, int numtriangles, const float *vertex, const float *texcoord, const int *elements, float *svectors, float *tvectors, float *normals, qboolean areaweighting);
 
-surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qboolean detailtexcoords, qboolean lightmapoffsets, qboolean vertexcolors, qboolean neighbors);
+surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qboolean lightmapoffsets, qboolean vertexcolors, qboolean neighbors);
 
 shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtriangles, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, int light, int neighbors, int expandable);
 shadowmesh_t *Mod_ShadowMesh_ReAlloc(mempool_t *mempool, shadowmesh_t *oldmesh, int light, int neighbors);
@@ -582,8 +580,8 @@ shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh,
 void Mod_ShadowMesh_CalcBBox(shadowmesh_t *firstmesh, vec3_t mins, vec3_t maxs, vec3_t center, float *radius);
 void Mod_ShadowMesh_Free(shadowmesh_t *mesh);
 
-int Mod_LoadSkinFrame(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int usedetailtexture, int loadglowtexture);
-int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int usedetailtexture, int loadglowtexture, qbyte *skindata, int width, int height);
+int Mod_LoadSkinFrame(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int loadglowtexture);
+int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int loadglowtexture, qbyte *skindata, int width, int height);
 
 extern cvar_t r_mipskins;
 

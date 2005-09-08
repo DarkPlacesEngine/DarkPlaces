@@ -632,11 +632,11 @@ void Mod_BuildTextureVectorsAndNormals(int firstvertex, int numvertices, int num
 			VectorNormalize(v);
 }
 
-surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qboolean detailtexcoords, qboolean lightmapoffsets, qboolean vertexcolors, qboolean neighbors)
+surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qboolean lightmapoffsets, qboolean vertexcolors, qboolean neighbors)
 {
 	surfmesh_t *mesh;
 	qbyte *data;
-	mesh = Mem_Alloc(mempool, sizeof(surfmesh_t) + numvertices * (3 + 3 + 3 + 3 + 2 + 2 + (detailtexcoords ? 2 : 0) + (vertexcolors ? 4 : 0)) * sizeof(float) + numvertices * (lightmapoffsets ? 1 : 0) * sizeof(int) + numtriangles * (3 + 3 + (neighbors ? 3 : 0)) * sizeof(int));
+	mesh = Mem_Alloc(mempool, sizeof(surfmesh_t) + numvertices * (3 + 3 + 3 + 3 + 2 + 2 + (vertexcolors ? 4 : 0)) * sizeof(float) + numvertices * (lightmapoffsets ? 1 : 0) * sizeof(int) + numtriangles * (3 + 3 + (neighbors ? 3 : 0)) * sizeof(int));
 	mesh->num_vertices = numvertices;
 	mesh->num_triangles = numtriangles;
 	data = (qbyte *)(mesh + 1);
@@ -648,8 +648,6 @@ surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriang
 		mesh->data_normal3f = (float *)data, data += sizeof(float[3]) * mesh->num_vertices;
 		mesh->data_texcoordtexture2f = (float *)data, data += sizeof(float[2]) * mesh->num_vertices;
 		mesh->data_texcoordlightmap2f = (float *)data, data += sizeof(float[2]) * mesh->num_vertices;
-		if (detailtexcoords)
-			mesh->data_texcoorddetail2f = (float *)data, data += sizeof(float[2]) * mesh->num_vertices;
 		if (vertexcolors)
 			mesh->data_lightmapcolor4f = (float *)data, data += sizeof(float[4]) * mesh->num_vertices;
 		if (lightmapoffsets)
@@ -914,15 +912,12 @@ static rtexture_t *GL_TextureForSkinLayer(const qbyte *in, int width, int height
 	return NULL;
 }
 
-static int detailtexturecycle = 0;
-int Mod_LoadSkinFrame(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int usedetailtexture, int loadglowtexture)
+int Mod_LoadSkinFrame(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int loadglowtexture)
 {
 	imageskin_t s;
 	memset(skinframe, 0, sizeof(*skinframe));
 	if (!image_loadskin(&s, basename))
 		return false;
-	if (usedetailtexture)
-		skinframe->detail = r_texture_detailtextures[(detailtexturecycle++) % NUM_DETAILTEXTURES];
 	skinframe->base = R_LoadTexture2D (loadmodel->texturepool, basename, s.basepixels_width, s.basepixels_height, s.basepixels, TEXTYPE_RGBA, textureflags, NULL);
 	if (s.nmappixels != NULL)
 		skinframe->nmap = R_LoadTexture2D (loadmodel->texturepool, va("%s_nmap", basename), s.nmappixels_width, s.nmappixels_height, s.nmappixels, TEXTYPE_RGBA, textureflags, NULL);
@@ -947,14 +942,12 @@ int Mod_LoadSkinFrame(skinframe_t *skinframe, char *basename, int textureflags, 
 	return true;
 }
 
-int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int usedetailtexture, int loadglowtexture, qbyte *skindata, int width, int height)
+int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int loadglowtexture, qbyte *skindata, int width, int height)
 {
 	qbyte *temp1, *temp2;
 	memset(skinframe, 0, sizeof(*skinframe));
 	if (!skindata)
 		return false;
-	if (usedetailtexture)
-		skinframe->detail = r_texture_detailtextures[(detailtexturecycle++) % NUM_DETAILTEXTURES];
 	if (r_shadow_bumpscale_basetexture.value > 0)
 	{
 		temp1 = Mem_Alloc(loadmodel->mempool, width * height * 8);
