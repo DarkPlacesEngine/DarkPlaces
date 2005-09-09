@@ -475,6 +475,7 @@ void CL_ParseServerInfo (void)
 	ent->render.model = cl.worldmodel = cl.model_precache[1];
 	ent->render.scale = 1; // some of the renderer still relies on scale
 	ent->render.alpha = 1;
+	ent->render.colormap = -1; // no special coloring
 	ent->render.flags = RENDER_SHADOW | RENDER_LIGHT;
 	Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, 0, 0, 0, 0, 0, 0, 1);
 	Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
