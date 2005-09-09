@@ -110,6 +110,8 @@ cvar_t developer_texturelogging = {0, "developer_texturelogging", "0"};
 
 cvar_t gl_lightmaps = {0, "gl_lightmaps", "0"};
 
+cvar_t r_test = {0, "r_test", "0"}; // used for testing renderer code changes, otherwise does nothing
+
 rtexturepool_t *r_main_texturepool;
 rtexture_t *r_bloom_texture_screen;
 rtexture_t *r_bloom_texture_bloom;
@@ -415,6 +417,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_smoothnormals_areaweighting);
 	Cvar_RegisterVariable(&developer_texturelogging);
 	Cvar_RegisterVariable(&gl_lightmaps);
+	Cvar_RegisterVariable(&r_test);
 	if (gamemode == GAME_NEHAHRA || gamemode == GAME_NEXUIZ || gamemode == GAME_TENEBRAE)
 		Cvar_SetValue("r_fullbrights", 0);
 	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap);
@@ -1351,36 +1354,62 @@ void R_Mesh_AddBrushMeshFromPlanes(rmesh_t *mesh, int numplanes, mplane_t *plane
 	}
 }
 
+void R_Texture_AddLayer(texture_t *t, qboolean depthmask, int blendfunc1, int blendfunc2, texturelayertype_t type, rtexture_t *texture, matrix4x4_t *matrix, float r, float g, float b, float a, int texrgbscale)
+{
+	texturelayer_t *layer;
+	layer = t->currentlayers + t->currentnumlayers++;
+	layer->type = type;
+	layer->depthmask = depthmask;
+	layer->blendfunc1 = blendfunc1;
+	layer->blendfunc2 = blendfunc2;
+	layer->texture = texture;
+	layer->texmatrix = *matrix;
+	layer->color[0] = r;
+	layer->color[1] = g;
+	layer->color[2] = b;
+	layer->color[3] = a;
+	layer->texrgbscale = texrgbscale;
+}
+
 void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 {
-	texture_t *texture = t;
-	model_t *model = ent->model;
-	int s = ent->skinnum;
-	if ((unsigned int)s >= (unsigned int)model->numskins)
-		s = 0;
-	if (s >= 1)
-		c_models++;
-	if (model->skinscenes)
+	// FIXME: identify models using a better check than ent->model->brush.shadowmesh
+	//int lightmode = ((ent->effects & EF_FULLBRIGHT) || ent->model->brush.shadowmesh) ? 0 : 2;
+
 	{
-		if (model->skinscenes[s].framecount > 1)
-			s = model->skinscenes[s].firstframe + (unsigned int) (r_refdef.time * model->skinscenes[s].framerate) % model->skinscenes[s].framecount;
-		else
-			s = model->skinscenes[s].firstframe;
+		texture_t *texture = t;
+		model_t *model = ent->model;
+		int s = ent->skinnum;
+		if ((unsigned int)s >= (unsigned int)model->numskins)
+			s = 0;
+		if (s >= 1)
+			c_models++;
+		if (model->skinscenes)
+		{
+			if (model->skinscenes[s].framecount > 1)
+				s = model->skinscenes[s].firstframe + (unsigned int) (r_refdef.time * model->skinscenes[s].framerate) % model->skinscenes[s].framecount;
+			else
+				s = model->skinscenes[s].firstframe;
+		}
+		if (s > 0)
+			t = t + s * model->num_surfaces;
+		if (t->animated)
+			t = t->anim_frames[ent->frame != 0][(t->anim_total[ent->frame != 0] >= 2) ? ((int)(r_refdef.time * 5.0f) % t->anim_total[ent->frame != 0]) : 0];
+		texture->currentframe = t;
 	}
-	if (s > 0)
-		t = t + s * model->num_surfaces;
-	if (t->animated)
-		t = t->anim_frames[ent->frame != 0][(t->anim_total[ent->frame != 0] >= 2) ? ((int)(r_refdef.time * 5.0f) % t->anim_total[ent->frame != 0]) : 0];
-	texture->currentframe = t;
+
 	t->currentmaterialflags = t->basematerialflags;
-	t->currentalpha = ent->alpha;
+	t->currentcolorbase[0] = ent->colormod[0];
+	t->currentcolorbase[1] = ent->colormod[1];
+	t->currentcolorbase[2] = ent->colormod[2];
+	t->currentcolorbase[3] = ent->alpha;
 	if (t->basematerialflags & MATERIALFLAG_WATERALPHA)
-		t->currentalpha *= r_wateralpha.value;
+		t->currentcolorbase[3] *= r_wateralpha.value;
 	if (!(ent->flags & RENDER_LIGHT))
 		t->currentmaterialflags |= MATERIALFLAG_FULLBRIGHT;
 	if (ent->effects & EF_ADDITIVE)
 		t->currentmaterialflags |= MATERIALFLAG_ADD | MATERIALFLAG_TRANSPARENT;
-	else if (t->currentalpha < 1)
+	else if (t->currentcolorbase[3] < 1)
 		t->currentmaterialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_TRANSPARENT;
 	if (ent->effects & EF_NODEPTHTEST)
 		t->currentmaterialflags |= MATERIALFLAG_NODEPTHTEST;
@@ -1388,6 +1417,227 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 		t->currenttexmatrix = r_waterscrollmatrix;
 	else
 		t->currenttexmatrix = r_identitymatrix;
+	if (ent->colormap >= 0)
+	{
+		int b;
+		qbyte *bcolor;
+		t->currentbasetexture = t->skin.base;
+		t->currentdopants = t->skin.pants != NULL;
+		t->currentdoshirt = t->skin.shirt != NULL;
+		// 128-224 are backwards ranges
+		b = (ent->colormap & 0xF) << 4;b += (b >= 128 && b < 224) ? 4 : 12;
+		t->currentdofullbrightpants = (b >= 224) || (t->currentmaterialflags & MATERIALFLAG_FULLBRIGHT);
+		bcolor = (qbyte *) (&palette_complete[b]);
+		t->currentcolorpants[0] = bcolor[0] * (1.0f / 255.0f) * t->currentcolorbase[0];
+		t->currentcolorpants[1] = bcolor[1] * (1.0f / 255.0f) * t->currentcolorbase[1];
+		t->currentcolorpants[2] = bcolor[2] * (1.0f / 255.0f) * t->currentcolorbase[2];
+		t->currentcolorpants[3] = t->currentcolorbase[3];
+		// 128-224 are backwards ranges
+		b = (ent->colormap & 0xF0);b += (b >= 128 && b < 224) ? 4 : 12;
+		t->currentdofullbrightshirt = (b >= 224) || (t->currentmaterialflags & MATERIALFLAG_FULLBRIGHT);
+		bcolor = (qbyte *) (&palette_complete[b]);
+		t->currentcolorshirt[0] = bcolor[0] * (1.0f / 255.0f) * t->currentcolorbase[0];
+		t->currentcolorshirt[1] = bcolor[1] * (1.0f / 255.0f) * t->currentcolorbase[1];
+		t->currentcolorshirt[2] = bcolor[2] * (1.0f / 255.0f) * t->currentcolorbase[2];
+		t->currentcolorshirt[3] = t->currentcolorbase[3];
+	}
+	else
+	{
+		t->currentbasetexture = t->skin.merged ? t->skin.merged : t->skin.base;
+		t->currentdopants = false;
+		t->currentdoshirt = false;
+		t->currentdofullbrightpants = false;
+		t->currentdofullbrightshirt = false;
+	}
+	t->currentfogallpasses = fogenabled && (t->currentmaterialflags & MATERIALFLAG_TRANSPARENT);
+	t->currentnumlayers = 0;
+	if (!(t->currentmaterialflags & MATERIALFLAG_NODRAW))
+	{
+		int blendfunc1, blendfunc2, depthmask;
+		if (t->currentmaterialflags & MATERIALFLAG_ADD)
+		{
+			blendfunc1 = GL_SRC_ALPHA;
+			blendfunc2 = GL_ONE;
+			depthmask = false;
+		}
+		else if (t->currentmaterialflags & MATERIALFLAG_ALPHA)
+		{
+			blendfunc1 = GL_SRC_ALPHA;
+			blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+			depthmask = false;
+		}
+		else
+		{
+			blendfunc1 = GL_ONE;
+			blendfunc2 = GL_ZERO;
+			depthmask = true;
+		}
+		if (gl_lightmaps.integer)
+			R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_LIGHTMAP, r_texture_white, &r_identitymatrix, 1, 1, 1, 1, 1);
+		else if (t->currentmaterialflags & MATERIALFLAG_SKY)
+		{
+			// transparent sky would be ridiculous
+			if (!(t->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+				R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_SKY, r_texture_white, &r_identitymatrix, fogcolor[0], fogcolor[1], fogcolor[2], 1, 1);
+		}
+		else if (t->currentmaterialflags & (MATERIALFLAG_WATER | MATERIALFLAG_WALL))
+		{
+			int type;
+			float colorscale, r, g, b;
+			rtexture_t *currentbasetexture;
+			colorscale = 2;
+			// q3bsp has no lightmap updates, so the lightstylevalue that
+			// would normally be baked into the lightmaptexture must be
+			// applied to the color
+			if (!(t->currentmaterialflags & MATERIALFLAG_FULLBRIGHT) && ent->model->type == mod_brushq3)
+				colorscale *= d_lightstylevalue[0] * (1.0f / 128.0f);
+			r = t->currentcolorbase[0] * colorscale;
+			g = t->currentcolorbase[1] * colorscale;
+			b = t->currentcolorbase[2] * colorscale;
+			// transparent and fullbright are not affected by r_lightmapintensity
+			if (!(t->currentmaterialflags & (MATERIALFLAG_TRANSPARENT | MATERIALFLAG_FULLBRIGHT)))
+			{
+				r *= r_lightmapintensity;
+				g *= r_lightmapintensity;
+				b *= r_lightmapintensity;
+			}
+			currentbasetexture = (ent->colormap >= 0 && t->skin.merged) ? t->skin.merged : t->skin.base;
+			if (!(t->currentmaterialflags & MATERIALFLAG_FULLBRIGHT) && r_textureunits.integer >= 2 && gl_combine.integer)
+			{
+				if ((r > 2 || g > 2 || b > 2) && gl_combine.integer)
+					R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_LIGHTMAP_DOUBLEMODULATE_TEXTURE, currentbasetexture, &t->currenttexmatrix, r * 0.25f, g * 0.25f, b * 0.25f, t->currentcolorbase[3], 4);
+				else if ((r > 1 || g > 1 || b > 1) && gl_combine.integer)
+					R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_LIGHTMAP_DOUBLEMODULATE_TEXTURE, currentbasetexture, &t->currenttexmatrix, r * 0.5f, g * 0.5f, b * 0.5f, t->currentcolorbase[3], 2);
+				else
+					R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_LIGHTMAP_DOUBLEMODULATE_TEXTURE, currentbasetexture, &t->currenttexmatrix, r, g, b, t->currentcolorbase[3], 1);
+			}
+			else if ((t->currentmaterialflags & (MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_TRANSPARENT)) == 0)
+			{
+				R_Texture_AddLayer(t, true, GL_ONE, GL_ZERO, TEXTURELAYERTYPE_LIGHTMAP, r_texture_white, &r_identitymatrix, 1, 1, 1, 1, 1);
+				if (r > 1 || g > 1 || b > 1)
+					R_Texture_AddLayer(t, false, GL_DST_COLOR, GL_SRC_COLOR, TEXTURELAYERTYPE_TEXTURE, currentbasetexture, &t->currenttexmatrix, r * 0.5f, g * 0.5f, b * 0.5f, t->currentcolorbase[3], 1);
+				else
+					R_Texture_AddLayer(t, false, GL_ZERO, GL_SRC_COLOR, TEXTURELAYERTYPE_TEXTURE, currentbasetexture, &t->currenttexmatrix, r, g, b, t->currentcolorbase[3], 1);
+			}
+			else
+			{
+				if (t->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
+				{
+					type = TEXTURELAYERTYPE_TEXTURE;
+					r *= 0.5f;
+					g *= 0.5f;
+					b *= 0.5f;
+				}
+				else
+					type = TEXTURELAYERTYPE_VERTEXTEXTURE;
+				if ((r > 2 || g > 2 || b > 2) && gl_combine.integer)
+					R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, type, currentbasetexture, &t->currenttexmatrix, r * 0.25f, g * 0.25f, b * 0.25f, t->currentcolorbase[3], 4);
+				else if ((r > 1 || g > 1 || b > 1) && gl_combine.integer)
+					R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, type, currentbasetexture, &t->currenttexmatrix, r * 0.5f, g * 0.5f, b * 0.5f, t->currentcolorbase[3], 2);
+				else
+					R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, type, currentbasetexture, &t->currenttexmatrix, r, g, b, t->currentcolorbase[3], 1);
+			}
+			if (ent->colormap >= 0 && t->skin.pants)
+			{
+				int cb;
+				qbyte *cbcolor;
+				// 128-224 are backwards ranges
+				cb = (ent->colormap & 0xF) << 4;cb += (cb >= 128 && cb < 224) ? 4 : 12;
+				cbcolor = (qbyte *) (&palette_complete[cb]);
+				r = cbcolor[0] * (1.0f / 255.0f) * t->currentcolorbase[0] * colorscale;
+				g = cbcolor[1] * (1.0f / 255.0f) * t->currentcolorbase[1] * colorscale;
+				b = cbcolor[2] * (1.0f / 255.0f) * t->currentcolorbase[2] * colorscale;
+				// transparent and fullbright are not affected by r_lightmapintensity
+				if ((cb >= 224) || (t->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
+				{
+					type = TEXTURELAYERTYPE_TEXTURE;
+					r *= 0.5f;
+					g *= 0.5f;
+					b *= 0.5f;
+				}
+				else
+				{
+					type = TEXTURELAYERTYPE_VERTEXTEXTURE;
+					if (!(t->currentmaterialflags & (MATERIALFLAG_TRANSPARENT | MATERIALFLAG_FULLBRIGHT)))
+					{
+						r *= r_lightmapintensity;
+						g *= r_lightmapintensity;
+						b *= r_lightmapintensity;
+					}
+				}
+				if ((r > 2 || g > 2 || b > 2) && gl_combine.integer)
+					R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, type, t->skin.pants, &t->currenttexmatrix, r * 0.25f, g * 0.25f, b * 0.25f, t->currentcolorbase[3], 4);
+				else if ((r > 1 || g > 1 || b > 1) && gl_combine.integer)
+					R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, type, t->skin.pants, &t->currenttexmatrix, r * 0.5f, g * 0.5f, b * 0.5f, t->currentcolorbase[3], 2);
+				else
+					R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, type, t->skin.pants, &t->currenttexmatrix, r, g, b, t->currentcolorbase[3], 1);
+			}
+			if (ent->colormap >= 0 && t->skin.shirt)
+			{
+				int cb;
+				qbyte *cbcolor;
+				// 128-224 are backwards ranges
+				cb = (ent->colormap & 0xF0);cb += (cb >= 128 && cb < 224) ? 4 : 12;
+				cbcolor = (qbyte *) (&palette_complete[cb]);
+				r = cbcolor[0] * (1.0f / 255.0f) * t->currentcolorbase[0] * colorscale;
+				g = cbcolor[1] * (1.0f / 255.0f) * t->currentcolorbase[1] * colorscale;
+				b = cbcolor[2] * (1.0f / 255.0f) * t->currentcolorbase[2] * colorscale;
+				// transparent and fullbright are not affected by r_lightmapintensity
+				if ((cb >= 224) || (t->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
+				{
+					type = TEXTURELAYERTYPE_TEXTURE;
+					r *= 0.5f;
+					g *= 0.5f;
+					b *= 0.5f;
+				}
+				else
+				{
+					type = TEXTURELAYERTYPE_VERTEXTEXTURE;
+					if (!(t->currentmaterialflags & (MATERIALFLAG_TRANSPARENT | MATERIALFLAG_FULLBRIGHT)))
+					{
+						r *= r_lightmapintensity;
+						g *= r_lightmapintensity;
+						b *= r_lightmapintensity;
+					}
+				}
+				if ((r > 2 || g > 2 || b > 2) && gl_combine.integer)
+					R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, type, t->skin.shirt, &t->currenttexmatrix, r * 0.25f, g * 0.25f, b * 0.25f, t->currentcolorbase[3], 4);
+				else if ((r > 1 || g > 1 || b > 1) && gl_combine.integer)
+					R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, type, t->skin.shirt, &t->currenttexmatrix, r * 0.5f, g * 0.5f, b * 0.5f, t->currentcolorbase[3], 2);
+				else
+					R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, type, t->skin.shirt, &t->currenttexmatrix, r, g, b, t->currentcolorbase[3], 1);
+			}
+			if (r_ambient.value >= (1.0f/64.0f))
+			{
+				r = t->currentcolorbase[0] * colorscale * r_ambient.value * (1.0f / 64.0f);
+				g = t->currentcolorbase[1] * colorscale * r_ambient.value * (1.0f / 64.0f);
+				b = t->currentcolorbase[2] * colorscale * r_ambient.value * (1.0f / 64.0f);
+				if ((r > 2 || g > 2 || b > 2) && gl_combine.integer)
+					R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, currentbasetexture, &t->currenttexmatrix, r * 0.25f, g * 0.25f, b * 0.25f, t->currentcolorbase[3], 4);
+				else if ((r > 1 || g > 1 || b > 1) && gl_combine.integer)
+					R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, currentbasetexture, &t->currenttexmatrix, r * 0.5f, g * 0.5f, b * 0.5f, t->currentcolorbase[3], 2);
+				else
+					R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, currentbasetexture, &t->currenttexmatrix, r, g, b, t->currentcolorbase[3], 1);
+			}
+			if (t->skin.glow != NULL)
+				R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->skin.glow, &t->currenttexmatrix, 1, 1, 1, t->currentcolorbase[3], 1);
+			if (fogenabled && !(t->currentmaterialflags & MATERIALFLAG_ADD))
+			{
+				// if this is opaque use alpha blend which will darken the earlier
+				// passes cheaply.
+				//
+				// if this is an alpha blended material, all the earlier passes
+				// were darkened by fog already, so we only need to add the fog
+				// color ontop through the fog mask texture
+				//
+				// if this is an additive blended material, all the earlier passes
+				// were darkened by fog already, and we should not add fog color
+				// (because the background was not darkened, there is no fog color
+				// that was lost behind it).
+				R_Texture_AddLayer(t, false, GL_SRC_ALPHA, t->currentfogallpasses ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA, TEXTURELAYERTYPE_FOG, t->skin.fog, &r_identitymatrix, fogcolor[0], fogcolor[1], fogcolor[2], t->currentcolorbase[3], 1);
+			}
+		}
+	}
 }
 
 void R_UpdateAllTextureInfo(entity_render_t *ent)
@@ -1504,6 +1754,7 @@ void RSurf_SetColorPointer(const entity_render_t *ent, const msurface_t *surface
 	vec3_t diff;
 	if (lightmode >= 2)
 	{
+		// model lighting
 		vec4_t ambientcolor4f;
 		vec3_t diffusecolor;
 		vec3_t diffusenormal;
@@ -1535,8 +1786,7 @@ void RSurf_SetColorPointer(const entity_render_t *ent, const msurface_t *surface
 	{
 		if (surface->lightmapinfo)
 		{
-			rsurface_lightmapcolor4f = varray_color4f;
-			for (i = 0, c = rsurface_lightmapcolor4f + 4 * surface->num_firstvertex;i < surface->num_vertices;i++, c += 4)
+			for (i = 0, c = varray_color4f + 4 * surface->num_firstvertex;i < surface->num_vertices;i++, c += 4)
 			{
 				const qbyte *lm = surface->lightmapinfo->samples + (surface->groupmesh->data_lightmapoffsets + surface->num_firstvertex)[i];
 				float scale = d_lightstylevalue[surface->lightmapinfo->styles[0]] * (1.0f / 32768.0f);
@@ -1561,6 +1811,7 @@ void RSurf_SetColorPointer(const entity_render_t *ent, const msurface_t *surface
 					}
 				}
 			}
+			rsurface_lightmapcolor4f = varray_color4f;
 		}
 		else
 			rsurface_lightmapcolor4f = surface->groupmesh->data_lightmapcolor4f;
@@ -1604,6 +1855,7 @@ void RSurf_SetColorPointer(const entity_render_t *ent, const msurface_t *surface
 			c2[2] = c[2] * b;
 			c2[3] = c[3] * a;
 		}
+		rsurface_lightmapcolor4f = varray_color4f;
 	}
 	R_Mesh_ColorPointer(rsurface_lightmapcolor4f);
 	GL_Color(r, g, b, a);
@@ -1614,31 +1866,19 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 {
 	int i;
 	int texturesurfaceindex;
+	int lightmode;
 	const float *v;
 	float *c;
 	float diff[3];
-	float colorpants[3], colorshirt[3];
 	float f, r, g, b, a, colorscale;
 	const msurface_t *surface;
-	qboolean dolightmap;
-	qboolean doambient;
-	qboolean doglow;
-	qboolean dofogpass;
-	qboolean fogallpasses;
-	qboolean dopants;
-	qboolean doshirt;
-	qboolean dofullbrightpants;
-	qboolean dofullbrightshirt;
 	qboolean applycolor;
-	qboolean lightmode = 0;
-	rtexture_t *basetexture;
 	rmeshstate_t m;
 	if (texture->currentmaterialflags & MATERIALFLAG_NODRAW)
 		return;
 	c_faces += texturenumsurfaces;
-	// FIXME: identify models using a better check than ent->model->shadowmesh
-	if (!(ent->effects & EF_FULLBRIGHT) && !ent->model->brush.shadowmesh)
-		lightmode = 2;
+	// FIXME: identify models using a better check than ent->model->brush.shadowmesh
+	lightmode = ((ent->effects & EF_FULLBRIGHT) || ent->model->brush.shadowmesh) ? 0 : 2;
 	// gl_lightmaps debugging mode skips normal texturing
 	if (gl_lightmaps.integer)
 	{
@@ -1664,6 +1904,201 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 		return;
 	}
 	GL_DepthTest(!(texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
+	if (texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+		qglDisable(GL_CULL_FACE);
+if (r_test.integer)
+{
+	if (texture->currentnumlayers)
+	{
+		int layerindex;
+		texturelayer_t *layer;
+		for (layerindex = 0, layer = texture->currentlayers;layerindex < texture->currentnumlayers;layerindex++, layer++)
+		{
+			GL_DepthMask(layer->depthmask);
+			GL_BlendFunc(layer->blendfunc1, layer->blendfunc2);
+			GL_Color(layer->color[0], layer->color[1], layer->color[2], layer->color[3]);
+			applycolor = layer->color[0] != 1 || layer->color[1] != 1 || layer->color[2] != 1 || layer->color[3] != 1;
+			switch (layer->type)
+			{
+			case TEXTURELAYERTYPE_SKY:
+				if (skyrendernow)
+				{
+					skyrendernow = false;
+					if (skyrendermasked)
+					{
+						R_Sky();
+						// restore entity matrix and GL_Color
+						R_Mesh_Matrix(&ent->matrix);
+						GL_Color(layer->color[0], layer->color[1], layer->color[2], layer->color[3]);
+					}
+				}
+				// LordHavoc: HalfLife maps have freaky skypolys...
+				//if (!ent->model->brush.ishlbsp)
+				{
+					if (skyrendermasked)
+					{
+						// depth-only (masking)
+						GL_ColorMask(0,0,0,0);
+						// just to make sure that braindead drivers don't draw anything
+						// despite that colormask...
+						GL_BlendFunc(GL_ZERO, GL_ONE);
+					}
+					else
+					{
+						// fog sky
+						GL_BlendFunc(GL_ONE, GL_ZERO);
+					}
+					memset(&m, 0, sizeof(m));
+					R_Mesh_State(&m);
+					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+					{
+						surface = texturesurfacelist[texturesurfaceindex];
+						RSurf_SetVertexPointer(ent, texture, surface, modelorg);
+						GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
+						R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
+						GL_LockArrays(0, 0);
+					}
+					if (skyrendermasked)
+						GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
+				}
+				break;
+			case TEXTURELAYERTYPE_LIGHTMAP_DOUBLEMODULATE_TEXTURE:
+				memset(&m, 0, sizeof(m));
+				m.tex[1] = R_GetTexture(layer->texture);
+				m.texmatrix[1] = layer->texmatrix;
+				m.texrgbscale[1] = layer->texrgbscale;
+				m.pointer_color = varray_color4f;
+				R_Mesh_State(&m);
+				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+				{
+					surface = texturesurfacelist[texturesurfaceindex];
+					RSurf_SetVertexPointer(ent, texture, surface, modelorg);
+					R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordlightmap2f);
+					R_Mesh_TexCoordPointer(1, 2, surface->groupmesh->data_texcoordtexture2f);
+					if (lightmode == 2)
+					{
+						R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
+						RSurf_SetColorPointer(ent, surface, modelorg, layer->color[0], layer->color[1], layer->color[2], layer->color[3], 2, applycolor, texture->currentfogallpasses);
+					}
+					else if (surface->lightmaptexture)
+					{
+						R_Mesh_TexBind(0, R_GetTexture(surface->lightmaptexture));
+						RSurf_SetColorPointer(ent, surface, modelorg, layer->color[0], layer->color[1], layer->color[2], layer->color[3], 0, applycolor, texture->currentfogallpasses);
+					}
+					else
+					{
+						R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
+						RSurf_SetColorPointer(ent, surface, modelorg, layer->color[0], layer->color[1], layer->color[2], layer->color[3], 1, applycolor, texture->currentfogallpasses);
+					}
+					GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
+					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
+					GL_LockArrays(0, 0);
+				}
+				break;
+			case TEXTURELAYERTYPE_LIGHTMAP:
+				memset(&m, 0, sizeof(m));
+				R_Mesh_State(&m);
+				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+				{
+					surface = texturesurfacelist[texturesurfaceindex];
+					RSurf_SetVertexPointer(ent, texture, surface, modelorg);
+					R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordlightmap2f);
+					if (lightmode == 2)
+					{
+						R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
+						RSurf_SetColorPointer(ent, surface, modelorg, layer->color[0], layer->color[1], layer->color[2], layer->color[3], 2, applycolor, false);
+					}
+					else if (surface->lightmaptexture)
+					{
+						R_Mesh_TexBind(0, R_GetTexture(surface->lightmaptexture));
+						R_Mesh_ColorPointer(NULL);
+					}
+					else
+					{
+						R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
+						// TODO: use a specialized RSurf_SetColorPointer
+						RSurf_SetColorPointer(ent, surface, modelorg, layer->color[0], layer->color[1], layer->color[2], layer->color[3], 1, applycolor, false);
+					}
+					GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
+					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
+					GL_LockArrays(0, 0);
+				}
+				break;
+			case TEXTURELAYERTYPE_VERTEXTEXTURE:
+				memset(&m, 0, sizeof(m));
+				m.tex[0] = R_GetTexture(layer->texture);
+				m.texmatrix[0] = layer->texmatrix;
+				m.pointer_color = varray_color4f;
+				m.texrgbscale[0] = layer->texrgbscale;
+				R_Mesh_State(&m);
+				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+				{
+					surface = texturesurfacelist[texturesurfaceindex];
+					RSurf_SetVertexPointer(ent, texture, surface, modelorg);
+					R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
+					RSurf_SetColorPointer(ent, surface, modelorg, layer->color[0], layer->color[1], layer->color[2], layer->color[3], lightmode ? lightmode : 1, applycolor, texture->currentfogallpasses);
+					GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
+					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
+					GL_LockArrays(0, 0);
+				}
+				break;
+			case TEXTURELAYERTYPE_TEXTURE:
+				memset(&m, 0, sizeof(m));
+				m.tex[0] = R_GetTexture(layer->texture);
+				m.texmatrix[0] = layer->texmatrix;
+				m.pointer_color = varray_color4f;
+				m.texrgbscale[0] = layer->texrgbscale;
+				R_Mesh_State(&m);
+				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+				{
+					surface = texturesurfacelist[texturesurfaceindex];
+					RSurf_SetVertexPointer(ent, texture, surface, modelorg);
+					R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
+					RSurf_SetColorPointer(ent, surface, modelorg, layer->color[0], layer->color[1], layer->color[2], layer->color[3], 0, applycolor, texture->currentfogallpasses);
+					GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
+					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
+					GL_LockArrays(0, 0);
+				}
+				break;
+			case TEXTURELAYERTYPE_FOG:
+				memset(&m, 0, sizeof(m));
+				if (layer->texture)
+				{
+					m.tex[0] = R_GetTexture(layer->texture);
+					m.texmatrix[0] = layer->texmatrix;
+				}
+				R_Mesh_State(&m);
+				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+				{
+					int i;
+					float f, *v, *c;
+					surface = texturesurfacelist[texturesurfaceindex];
+					RSurf_SetVertexPointer(ent, texture, surface, modelorg);
+					if (layer->texture)
+						R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
+					R_Mesh_ColorPointer(varray_color4f);
+					for (i = 0, v = (rsurface_vertex3f + 3 * surface->num_firstvertex), c = (varray_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c += 4)
+					{
+						VectorSubtract(v, modelorg, diff);
+						f = exp(fogdensity/DotProduct(diff, diff));
+						c[0] = layer->color[0];
+						c[1] = layer->color[1];
+						c[2] = layer->color[2];
+						c[3] = f * layer->color[3];
+					}
+					GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
+					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
+					GL_LockArrays(0, 0);
+				}
+				break;
+			default:
+				Con_Printf("R_DrawTextureSurfaceList: unknown layer type %i\n", layer->type);
+			}
+		}
+	}
+}
+else
+{
 	GL_DepthMask(!(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT));
 	if (texture->currentmaterialflags & MATERIALFLAG_ADD)
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
@@ -1671,8 +2106,6 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	else
 		GL_BlendFunc(GL_ONE, GL_ZERO);
-	if (texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
-		qglDisable(GL_CULL_FACE);
 	if (texture->currentmaterialflags & MATERIALFLAG_SKY)
 	{
 		if (skyrendernow)
@@ -1717,41 +2150,11 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 	else if (texture->currentmaterialflags & (MATERIALFLAG_WATER | MATERIALFLAG_WALL))
 	{
 		// normal surface (wall or water)
-		dolightmap = !(texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT);
-		doambient = r_ambient.value >= (1/64.0f);
-		doglow = texture->skin.glow != NULL;
-		dofogpass = fogenabled && !(texture->currentmaterialflags & MATERIALFLAG_ADD);
-		fogallpasses = fogenabled && !(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT);
-		if (ent->colormap >= 0)
+		if (!(texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT) && r_textureunits.integer >= 2 && gl_combine.integer)
 		{
-			int b;
-			qbyte *bcolor;
-			basetexture = texture->skin.base;
-			dopants = texture->skin.pants != NULL;
-			doshirt = texture->skin.shirt != NULL;
-			// 128-224 are backwards ranges
-			b = (ent->colormap & 0xF) << 4;b += (b >= 128 && b < 224) ? 4 : 12;
-			dofullbrightpants = b >= 224;
-			bcolor = (qbyte *) (&palette_complete[b]);
-			VectorScale(bcolor, (1.0f / 255.0f), colorpants);
-			// 128-224 are backwards ranges
-			b = (ent->colormap & 0xF0);b += (b >= 128 && b < 224) ? 4 : 12;
-			dofullbrightshirt = b >= 224;
-			bcolor = (qbyte *) (&palette_complete[b]);
-			VectorScale(bcolor, (1.0f / 255.0f), colorshirt);
-		}
-		else
-		{
-			basetexture = texture->skin.merged ? texture->skin.merged : texture->skin.base;
-			dopants = false;
-			doshirt = false;
-			dofullbrightshirt = false;
-			dofullbrightpants = false;
-		}
-		if (dolightmap && r_textureunits.integer >= 2 && gl_combine.integer)
-		{
+			// multitexture single pass
 			memset(&m, 0, sizeof(m));
-			m.tex[1] = R_GetTexture(basetexture);
+			m.tex[1] = R_GetTexture(texture->currentbasetexture);
 			m.texmatrix[1] = texture->currenttexmatrix;
 			m.texrgbscale[1] = 2;
 			m.pointer_color = varray_color4f;
@@ -1766,10 +2169,10 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			// applied to the color
 			if (ent->model->type == mod_brushq3)
 				colorscale *= d_lightstylevalue[0] * (1.0f / 128.0f);
-			r = ent->colormod[0] * colorscale;
-			g = ent->colormod[1] * colorscale;
-			b = ent->colormod[2] * colorscale;
-			a = texture->currentalpha;
+			r = texture->currentcolorbase[0] * colorscale;
+			g = texture->currentcolorbase[1] * colorscale;
+			b = texture->currentcolorbase[2] * colorscale;
+			a = texture->currentcolorbase[3];
 			applycolor = r != 1 || g != 1 || b != 1 || a != 1;
 			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
@@ -1781,15 +2184,16 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 					R_Mesh_TexBind(0, R_GetTexture(surface->lightmaptexture));
 				else
 					R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
-				RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, lightmode ? lightmode : !surface->lightmaptexture, applycolor, fogallpasses);
+				RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, lightmode ? lightmode : !surface->lightmaptexture, applycolor, texture->currentfogallpasses);
 				GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 				GL_LockArrays(0, 0);
 			}
 		}
-		else if (dolightmap && !(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT) && !lightmode)
+		// FIXME: identify models using a better check than ent->model->brush.shadowmesh
+		else if (!(texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT) && !(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT) && ((ent->effects & EF_FULLBRIGHT) || ent->model->brush.shadowmesh))
 		{
-			// single texture
+			// single texture two pass
 			GL_BlendFunc(GL_ONE, GL_ZERO);
 			GL_DepthMask(true);
 			GL_Color(1, 1, 1, 1);
@@ -1816,9 +2220,9 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			}
 			GL_BlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
 			GL_DepthMask(false);
-			GL_Color(r_lightmapintensity * ent->colormod[0], r_lightmapintensity * ent->colormod[1], r_lightmapintensity * ent->colormod[2], 1);
+			GL_Color(r_lightmapintensity * texture->currentcolorbase[0], r_lightmapintensity * texture->currentcolorbase[1], r_lightmapintensity * texture->currentcolorbase[2], texture->currentcolorbase[3]);
 			memset(&m, 0, sizeof(m));
-			m.tex[0] = R_GetTexture(basetexture);
+			m.tex[0] = R_GetTexture(texture->currentbasetexture);
 			m.texmatrix[0] = texture->currenttexmatrix;
 			R_Mesh_State(&m);
 			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
@@ -1833,8 +2237,9 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 		}
 		else
 		{
+			// single texture single pass (vertex lit only)
 			memset(&m, 0, sizeof(m));
-			m.tex[0] = R_GetTexture(basetexture);
+			m.tex[0] = R_GetTexture(texture->currentbasetexture);
 			m.texmatrix[0] = texture->currenttexmatrix;
 			m.pointer_color = varray_color4f;
 			colorscale = 2;
@@ -1849,22 +2254,22 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			// q3bsp has no lightmap updates, so the lightstylevalue that
 			// would normally be baked into the lightmaptexture must be
 			// applied to the color
-			if (dolightmap && ent->model->type == mod_brushq3)
+			if (!(texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT) && ent->model->type == mod_brushq3)
 				colorscale *= d_lightstylevalue[0] * (1.0f / 128.0f);
 			R_Mesh_State(&m);
-			r = ent->colormod[0] * colorscale;
-			g = ent->colormod[1] * colorscale;
-			b = ent->colormod[2] * colorscale;
-			a = texture->currentalpha;
+			r = texture->currentcolorbase[0] * colorscale;
+			g = texture->currentcolorbase[1] * colorscale;
+			b = texture->currentcolorbase[2] * colorscale;
+			a = texture->currentcolorbase[3];
 			applycolor = r != 1 || g != 1 || b != 1 || a != 1;
-			if (dolightmap)
+			if (!(texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
 			{
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
 					surface = texturesurfacelist[texturesurfaceindex];
 					RSurf_SetVertexPointer(ent, texture, surface, modelorg);
 					R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
-					RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, lightmode, applycolor, fogallpasses);
+					RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, lightmode ? lightmode : 1, applycolor, texture->currentfogallpasses);
 					GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 					GL_LockArrays(0, 0);
@@ -1877,14 +2282,14 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 					surface = texturesurfacelist[texturesurfaceindex];
 					RSurf_SetVertexPointer(ent, texture, surface, modelorg);
 					R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
-					RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, 0, applycolor, fogallpasses);
+					RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, 0, applycolor, texture->currentfogallpasses);
 					GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 					GL_LockArrays(0, 0);
 				}
 			}
 		}
-		if (dopants)
+		if (texture->currentdopants)
 		{
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 			memset(&m, 0, sizeof(m));
@@ -1903,22 +2308,22 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			// q3bsp has no lightmap updates, so the lightstylevalue that
 			// would normally be baked into the lightmaptexture must be
 			// applied to the color
-			if (dolightmap && !dofullbrightpants && ent->model->type == mod_brushq3)
+			if (!(texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT) && !texture->currentdofullbrightpants && ent->model->type == mod_brushq3)
 				colorscale *= d_lightstylevalue[0] * (1.0f / 128.0f);
 			R_Mesh_State(&m);
-			r = ent->colormod[0] * colorpants[0] * colorscale;
-			g = ent->colormod[1] * colorpants[1] * colorscale;
-			b = ent->colormod[2] * colorpants[2] * colorscale;
-			a = texture->currentalpha;
+			r = texture->currentcolorpants[0] * colorscale;
+			g = texture->currentcolorpants[1] * colorscale;
+			b = texture->currentcolorpants[2] * colorscale;
+			a = texture->currentcolorpants[3];
 			applycolor = r != 1 || g != 1 || b != 1 || a != 1;
-			if (dolightmap && !dofullbrightpants)
+			if (!(texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT) && !texture->currentdofullbrightpants)
 			{
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
 					surface = texturesurfacelist[texturesurfaceindex];
 					RSurf_SetVertexPointer(ent, texture, surface, modelorg);
 					R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
-					RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, lightmode, applycolor, fogallpasses);
+					RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, lightmode, applycolor, texture->currentfogallpasses);
 					GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 					GL_LockArrays(0, 0);
@@ -1931,14 +2336,14 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 					surface = texturesurfacelist[texturesurfaceindex];
 					RSurf_SetVertexPointer(ent, texture, surface, modelorg);
 					R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
-					RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, 0, applycolor, fogallpasses);
+					RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, 0, applycolor, texture->currentfogallpasses);
 					GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 					GL_LockArrays(0, 0);
 				}
 			}
 		}
-		if (doshirt)
+		if (texture->currentdoshirt)
 		{
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 			memset(&m, 0, sizeof(m));
@@ -1949,7 +2354,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			if (gl_combine.integer)
 			{
 				m.texrgbscale[0] = 2;
-				colorscale *= 1;
+				colorscale = 1;
 			}
 			// transparent is not affected by r_lightmapintensity
 			if (!(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
@@ -1957,22 +2362,22 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			// q3bsp has no lightmap updates, so the lightstylevalue that
 			// would normally be baked into the lightmaptexture must be
 			// applied to the color
-			if (dolightmap && !dofullbrightshirt && ent->model->type == mod_brushq3)
+			if (!(texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT) && !texture->currentdofullbrightshirt && ent->model->type == mod_brushq3)
 				colorscale *= d_lightstylevalue[0] * (1.0f / 128.0f);
 			R_Mesh_State(&m);
-			r = ent->colormod[0] * colorshirt[0] * colorscale;
-			g = ent->colormod[1] * colorshirt[1] * colorscale;
-			b = ent->colormod[2] * colorshirt[2] * colorscale;
-			a = texture->currentalpha;
+			r = texture->currentcolorshirt[0] * colorscale;
+			g = texture->currentcolorshirt[1] * colorscale;
+			b = texture->currentcolorshirt[2] * colorscale;
+			a = texture->currentcolorshirt[3];
 			applycolor = r != 1 || g != 1 || b != 1 || a != 1;
-			if (dolightmap && !dofullbrightshirt)
+			if (!(texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT) && !texture->currentdofullbrightshirt)
 			{
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
 					surface = texturesurfacelist[texturesurfaceindex];
 					RSurf_SetVertexPointer(ent, texture, surface, modelorg);
 					R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
-					RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, lightmode, applycolor, fogallpasses);
+					RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, lightmode, applycolor, texture->currentfogallpasses);
 					GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 					GL_LockArrays(0, 0);
@@ -1985,16 +2390,15 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 					surface = texturesurfacelist[texturesurfaceindex];
 					RSurf_SetVertexPointer(ent, texture, surface, modelorg);
 					R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
-					RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, 0, applycolor, fogallpasses);
+					RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, 0, applycolor, texture->currentfogallpasses);
 					GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 					GL_LockArrays(0, 0);
 				}
 			}
 		}
-		if (doambient)
+		if (r_ambient.value >= (1/64.0f))
 		{
-			doambient = false;
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 			GL_DepthMask(false);
 			memset(&m, 0, sizeof(m));
@@ -2009,23 +2413,23 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			}
 			R_Mesh_State(&m);
 			colorscale *= r_ambient.value * (1.0f / 64.0f);
-			r = ent->colormod[0] * colorscale;
-			g = ent->colormod[1] * colorscale;
-			b = ent->colormod[2] * colorscale;
-			a = texture->currentalpha;
+			r = texture->currentcolorbase[0] * colorscale;
+			g = texture->currentcolorbase[1] * colorscale;
+			b = texture->currentcolorbase[2] * colorscale;
+			a = texture->currentcolorbase[3];
 			applycolor = r != 1 || g != 1 || b != 1 || a != 1;
 			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
 				surface = texturesurfacelist[texturesurfaceindex];
 				RSurf_SetVertexPointer(ent, texture, surface, modelorg);
 				R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
-				RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, 0, applycolor, fogallpasses);
+				RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, 0, applycolor, texture->currentfogallpasses);
 				GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 				GL_LockArrays(0, 0);
 			}
 		}
-		if (doglow)
+		if (texture->skin.glow != NULL)
 		{
 			// if glow was not already done using multitexture, do it now.
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
@@ -2038,20 +2442,20 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			r = 1;
 			g = 1;
 			b = 1;
-			a = texture->currentalpha;
+			a = texture->currentcolorbase[3];
 			applycolor = r != 1 || g != 1 || b != 1 || a != 1;
 			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
 				surface = texturesurfacelist[texturesurfaceindex];
 				RSurf_SetVertexPointer(ent, texture, surface, modelorg);
 				R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
-				RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, 0, applycolor, fogallpasses);
+				RSurf_SetColorPointer(ent, surface, modelorg, r, g, b, a, 0, applycolor, texture->currentfogallpasses);
 				GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 				GL_LockArrays(0, 0);
 			}
 		}
-		if (dofogpass)
+		if (fogenabled && !(texture->currentmaterialflags & MATERIALFLAG_ADD))
 		{
 			// if this is opaque use alpha blend which will darken the earlier
 			// passes cheaply.
@@ -2064,7 +2468,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			// were darkened by fog already, and we should not add fog color
 			// (because the background was not darkened, there is no fog color
 			// that was lost behind it).
-			if (fogallpasses)
+			if (texture->currentfogallpasses)
 				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 			else
 				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -2076,7 +2480,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			r = fogcolor[0];
 			g = fogcolor[1];
 			b = fogcolor[2];
-			a = texture->currentalpha;
+			a = texture->currentcolorbase[3];
 			applycolor = r != 1 || g != 1 || b != 1 || a != 1;
 			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
@@ -2084,7 +2488,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				RSurf_SetVertexPointer(ent, texture, surface, modelorg);
 				R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
 				R_Mesh_ColorPointer(varray_color4f);
-				//RSurf_FogPassColors_Vertex3f_Color4f((surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex), varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], texture->currentalpha, 1, surface->num_vertices, modelorg);
+				//RSurf_FogPassColors_Vertex3f_Color4f((surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex), varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], texture->currentcolorbase[3], 1, surface->num_vertices, modelorg);
 				if (!surface->lightmaptexture && surface->groupmesh->data_lightmapcolor4f && (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
 				{
 					for (i = 0, v = (rsurface_vertex3f + 3 * surface->num_firstvertex), c = (varray_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c += 4)
@@ -2115,6 +2519,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			}
 		}
 	}
+}
 	if (texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
 		qglEnable(GL_CULL_FACE);
 }

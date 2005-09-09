@@ -141,6 +141,31 @@ typedef struct shadowmesh_s
 }
 shadowmesh_t;
 
+typedef enum texturelayertype_e
+{
+	TEXTURELAYERTYPE_INVALID,
+	TEXTURELAYERTYPE_SKY,
+	TEXTURELAYERTYPE_LIGHTMAP_DOUBLEMODULATE_TEXTURE,
+	TEXTURELAYERTYPE_LIGHTMAP,
+	TEXTURELAYERTYPE_TEXTURE,
+	TEXTURELAYERTYPE_VERTEXTEXTURE,
+	TEXTURELAYERTYPE_FOG,
+}
+texturelayertype_t;
+
+typedef struct texturelayer_s
+{
+	texturelayertype_t type;
+	qboolean depthmask;
+	int blendfunc1;
+	int blendfunc2;
+	rtexture_t *texture;
+	matrix4x4_t texmatrix;
+	vec4_t color;
+	int texrgbscale;
+}
+texturelayer_t;
+
 typedef struct texture_s
 {
 	// q1bsp
@@ -170,10 +195,32 @@ typedef struct texture_s
 
 	// the current texture frame in animation
 	struct texture_s *currentframe;
-	// current alpha of the texture
-	float currentalpha;
 	// current texture transform matrix (used for water scrolling)
 	matrix4x4_t currenttexmatrix;
+
+	// this is either texture->skin.merged or texture->skin.base depending on colormapping
+	rtexture_t *currentbasetexture;
+	// color to use on the base layer (use instead of ent->colormod and ent->alpha)
+	vec4_t currentcolorbase;
+	// color to use on the pants layer
+	vec4_t currentcolorpants;
+	// color to use on the shirt layer
+	vec4_t currentcolorshirt;
+	// render pants layer
+	qboolean currentdopants;
+	// render shirt layer
+	qboolean currentdoshirt;
+	// render pants as fullbright
+	qboolean currentdofullbrightpants;
+	// render shirt as fullbright
+	qboolean currentdofullbrightshirt;
+	// indicates that all passes should apply fog darkening; used on
+	// transparent surfaces where simply blending an alpha fog as a final
+	// pass would not behave properly
+	qboolean currentfogallpasses;
+
+	int currentnumlayers;
+	texturelayer_t currentlayers[16];
 
 	// q3bsp
 	char name[64];
