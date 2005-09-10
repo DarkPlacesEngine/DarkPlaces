@@ -2900,7 +2900,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 
 	mod->type = mod_brushq1;
 
-	if (!memcmp (buffer, "MCBSP", 5))
+	if (!memcmp (buffer, "MCBSPpad", 8))
 	{
 		qbyte	*index;
 
@@ -2910,7 +2910,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 		mod_base = (qbyte*)buffer;
 
 		index = mod_base;
-		index += 5;
+		index += 8;
 		i = LittleLong(*(int*)index); index += 4;
 		if (i != MCBSPVERSION)
 			Host_Error("Mod_Q1BSP_Load: %s has wrong version number(%i should be %i)", mod->name, i, MCBSPVERSION);
