@@ -60,7 +60,7 @@ typedef struct
 	int			numhulls;
 	int			filehulls;
 	float		hullsizes[MAX_MAP_HULLS][2][3];
-} dhullinfo_t;
+} hullinfo_t;
 
 typedef struct
 {

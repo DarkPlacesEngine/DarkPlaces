@@ -1562,13 +1562,13 @@ static void Mod_Q1BSP_LoadVertexes(lump_t *l)
 	}
 }
 
-static void Mod_Q1BSP_LoadSubmodels(lump_t *l, dhullinfo_t *hullinfo)
+static void Mod_Q1BSP_LoadSubmodels(lump_t *l, hullinfo_t *hullinfo)
 {
-	byte		*index;
+	qbyte		*index;
 	dmodel_t	*out;
 	int			i, j, count;
 
-	index = (byte *)(mod_base + l->fileofs);
+	index = (qbyte *)(mod_base + l->fileofs);
 	if (l->filelen % (48+4*hullinfo->filehulls))
 		Host_Error ("Mod_Q1BSP_LoadSubmodels: funny lump size in %s", loadmodel->name);
 
@@ -2121,7 +2121,7 @@ static void Mod_Q1BSP_LoadLeafs(lump_t *l)
 	}
 }
 
-static void Mod_Q1BSP_LoadClipnodes(lump_t *l, dhullinfo_t *hullinfo)
+static void Mod_Q1BSP_LoadClipnodes(lump_t *l, hullinfo_t *hullinfo)
 {
 	dclipnode_t *in, *out;
 	int			i, count;
@@ -2896,7 +2896,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	msurface_t *surface;
 	int numshadowmeshtriangles;
 	dheader_t _header;
-	dhullinfo_t hullinfo;
+	hullinfo_t hullinfo;
 
 	mod->type = mod_brushq1;
 
