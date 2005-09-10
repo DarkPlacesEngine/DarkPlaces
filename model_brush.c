@@ -1562,35 +1562,42 @@ static void Mod_Q1BSP_LoadVertexes(lump_t *l)
 	}
 }
 
-static void Mod_Q1BSP_LoadSubmodels(lump_t *l)
+static void Mod_Q1BSP_LoadSubmodels(lump_t *l, dhullinfo_t *hullinfo)
 {
-	dmodel_t	*in;
+	byte		*index;
 	dmodel_t	*out;
 	int			i, j, count;
 
-	in = (void *)(mod_base + l->fileofs);
-	if (l->filelen % sizeof(*in))
-		Host_Error("Mod_Q1BSP_LoadSubmodels: funny lump size in %s",loadmodel->name);
-	count = l->filelen / sizeof(*in);
-	out = Mem_Alloc(loadmodel->mempool, count*sizeof(*out));
+	index = (byte *)(mod_base + l->fileofs);
+	if (l->filelen % (48+4*hullinfo->filehulls))
+		Host_Error ("Mod_Q1BSP_LoadSubmodels: funny lump size in %s", loadmodel->name);
+
+	count = l->filelen / (48+4*hullinfo->filehulls);
+	out = Mem_Alloc (loadmodel->mempool, count*sizeof(*out));
 
 	loadmodel->brushq1.submodels = out;
 	loadmodel->brush.numsubmodels = count;
 
-	for ( i=0 ; i<count ; i++, in++, out++)
+	for (i = 0; i < count; i++, out++)
 	{
-		for (j=0 ; j<3 ; j++)
+	// spread out the mins / maxs by a pixel
+		out->mins[0] = LittleFloat(*(float*)index) - 1; index += 4;
+		out->mins[1] = LittleFloat(*(float*)index) - 1; index += 4;
+		out->mins[2] = LittleFloat(*(float*)index) - 1; index += 4;
+		out->maxs[0] = LittleFloat(*(float*)index) + 1; index += 4;
+		out->maxs[1] = LittleFloat(*(float*)index) + 1; index += 4;
+		out->maxs[2] = LittleFloat(*(float*)index) + 1; index += 4;
+		out->origin[0] = LittleFloat (*(float*)index); index += 4;
+		out->origin[1] = LittleFloat (*(float*)index); index += 4;
+		out->origin[2] = LittleFloat (*(float*)index); index += 4;
+		for (j = 0; j < hullinfo->filehulls; j++)
 		{
-			// spread the mins / maxs by a pixel
-			out->mins[j] = LittleFloat(in->mins[j]) - 1;
-			out->maxs[j] = LittleFloat(in->maxs[j]) + 1;
-			out->origin[j] = LittleFloat(in->origin[j]);
+			out->headnode[j] = LittleLong (*(int*)index);
+			index += 4;
 		}
-		for (j=0 ; j<MAX_MAP_HULLS ; j++)
-			out->headnode[j] = LittleLong(in->headnode[j]);
-		out->visleafs = LittleLong(in->visleafs);
-		out->firstface = LittleLong(in->firstface);
-		out->numfaces = LittleLong(in->numfaces);
+		out->visleafs = LittleLong (*(int*)index); index += 4;
+		out->firstface = LittleLong (*(int*)index); index += 4;
+		out->numfaces = LittleLong (*(int*)index); index += 4;
 	}
 }
 
@@ -2114,7 +2121,7 @@ static void Mod_Q1BSP_LoadLeafs(lump_t *l)
 	}
 }
 
-static void Mod_Q1BSP_LoadClipnodes(lump_t *l)
+static void Mod_Q1BSP_LoadClipnodes(lump_t *l, dhullinfo_t *hullinfo)
 {
 	dclipnode_t *in, *out;
 	int			i, count;
@@ -2129,101 +2136,19 @@ static void Mod_Q1BSP_LoadClipnodes(lump_t *l)
 	loadmodel->brushq1.clipnodes = out;
 	loadmodel->brushq1.numclipnodes = count;
 
-	if (loadmodel->brush.ismcbsp)
+	for (i = 1; i < hullinfo->numhulls; i++)
 	{
-		hull = &loadmodel->brushq1.hulls[1];
+		hull = &loadmodel->brushq1.hulls[i];
 		hull->clipnodes = out;
 		hull->firstclipnode = 0;
 		hull->lastclipnode = count-1;
 		hull->planes = loadmodel->brush.data_planes;
-		hull->clip_mins[0] = -12;
-		hull->clip_mins[1] = -12;
-		hull->clip_mins[2] = -24;
-		hull->clip_maxs[0] = 12;
-		hull->clip_maxs[1] = 12;
-		hull->clip_maxs[2] = 32;
-		VectorSubtract(hull->clip_maxs, hull->clip_mins, hull->clip_size);
-
-		hull = &loadmodel->brushq1.hulls[2];
-		hull->clipnodes = out;
-		hull->firstclipnode = 0;
-		hull->lastclipnode = count-1;
-		hull->planes = loadmodel->brush.data_planes;
-		hull->clip_mins[0] = -12;
-		hull->clip_mins[1] = -12;
-		hull->clip_mins[2] = -24;
-		hull->clip_maxs[0] = 12;
-		hull->clip_maxs[1] = 12;
-		hull->clip_maxs[2] = 16;
-		VectorSubtract(hull->clip_maxs, hull->clip_mins, hull->clip_size);
-	}
-	else if (loadmodel->brush.ishlbsp)
-	{
-		hull = &loadmodel->brushq1.hulls[1];
-		hull->clipnodes = out;
-		hull->firstclipnode = 0;
-		hull->lastclipnode = count-1;
-		hull->planes = loadmodel->brush.data_planes;
-		hull->clip_mins[0] = -16;
-		hull->clip_mins[1] = -16;
-		hull->clip_mins[2] = -36;
-		hull->clip_maxs[0] = 16;
-		hull->clip_maxs[1] = 16;
-		hull->clip_maxs[2] = 36;
-		VectorSubtract(hull->clip_maxs, hull->clip_mins, hull->clip_size);
-
-		hull = &loadmodel->brushq1.hulls[2];
-		hull->clipnodes = out;
-		hull->firstclipnode = 0;
-		hull->lastclipnode = count-1;
-		hull->planes = loadmodel->brush.data_planes;
-		hull->clip_mins[0] = -32;
-		hull->clip_mins[1] = -32;
-		hull->clip_mins[2] = -32;
-		hull->clip_maxs[0] = 32;
-		hull->clip_maxs[1] = 32;
-		hull->clip_maxs[2] = 32;
-		VectorSubtract(hull->clip_maxs, hull->clip_mins, hull->clip_size);
-
-		hull = &loadmodel->brushq1.hulls[3];
-		hull->clipnodes = out;
-		hull->firstclipnode = 0;
-		hull->lastclipnode = count-1;
-		hull->planes = loadmodel->brush.data_planes;
-		hull->clip_mins[0] = -16;
-		hull->clip_mins[1] = -16;
-		hull->clip_mins[2] = -18;
-		hull->clip_maxs[0] = 16;
-		hull->clip_maxs[1] = 16;
-		hull->clip_maxs[2] = 18;
-		VectorSubtract(hull->clip_maxs, hull->clip_mins, hull->clip_size);
-	}
-	else
-	{
-		hull = &loadmodel->brushq1.hulls[1];
-		hull->clipnodes = out;
-		hull->firstclipnode = 0;
-		hull->lastclipnode = count-1;
-		hull->planes = loadmodel->brush.data_planes;
-		hull->clip_mins[0] = -16;
-		hull->clip_mins[1] = -16;
-		hull->clip_mins[2] = -24;
-		hull->clip_maxs[0] = 16;
-		hull->clip_maxs[1] = 16;
-		hull->clip_maxs[2] = 32;
-		VectorSubtract(hull->clip_maxs, hull->clip_mins, hull->clip_size);
-
-		hull = &loadmodel->brushq1.hulls[2];
-		hull->clipnodes = out;
-		hull->firstclipnode = 0;
-		hull->lastclipnode = count-1;
-		hull->planes = loadmodel->brush.data_planes;
-		hull->clip_mins[0] = -32;
-		hull->clip_mins[1] = -32;
-		hull->clip_mins[2] = -24;
-		hull->clip_maxs[0] = 32;
-		hull->clip_maxs[1] = 32;
-		hull->clip_maxs[2] = 64;
+		hull->clip_mins[0] = hullinfo->hullsizes[i][0][0];
+		hull->clip_mins[1] = hullinfo->hullsizes[i][0][1];
+		hull->clip_mins[2] = hullinfo->hullsizes[i][0][2];
+		hull->clip_maxs[0] = hullinfo->hullsizes[i][1][0];
+		hull->clip_maxs[1] = hullinfo->hullsizes[i][1][1];
+		hull->clip_maxs[2] = hullinfo->hullsizes[i][1][2];
 		VectorSubtract(hull->clip_maxs, hull->clip_mins, hull->clip_size);
 	}
 
@@ -2970,18 +2895,50 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	float dist, modelyawradius, modelradius, *vec;
 	msurface_t *surface;
 	int numshadowmeshtriangles;
+	dheader_t _header;
+	dhullinfo_t hullinfo;
 
 	mod->type = mod_brushq1;
 
-	if (!memcmp(buffer, "MCBSP", 5))
+	if (!memcmp (buffer, "MCBSP", 5))
 	{
-		header = (dheader_t *)((unsigned char*)buffer + 5);
+		qbyte	*index;
 
-		i = LittleLong(header->version);
-		if (i != MCBSPVERSION)
-			Host_Error("Mod_Q1BSP_Load: %s has wrong version number(MCBSP %i should be %i", mod->name, i, MCBSPVERSION);
 		mod->brush.ismcbsp = true;
 		mod->brush.ishlbsp = false;
+
+		mod_base = (qbyte*)buffer;
+
+		index = mod_base;
+		index += 5;
+		i = LittleLong(*(int*)index); index += 4;
+		if (i != MCBSPVERSION)
+			Host_Error("Mod_Q1BSP_Load: %s has wrong version number(%i should be %i)", mod->name, i, MCBSPVERSION);
+
+	// read hull info
+		hullinfo.numhulls = LittleLong(*(int*)index); index += 4;
+		hullinfo.filehulls = hullinfo.numhulls;
+		VectorClear (hullinfo.hullsizes[0][0]);
+		VectorClear (hullinfo.hullsizes[0][1]);
+		for (i = 1; i < hullinfo.numhulls; i++)
+		{
+			hullinfo.hullsizes[i][0][0] = LittleFloat(*(float*)index); index += 4;
+			hullinfo.hullsizes[i][0][1] = LittleFloat(*(float*)index); index += 4;
+			hullinfo.hullsizes[i][0][2] = LittleFloat(*(float*)index); index += 4;
+			hullinfo.hullsizes[i][1][0] = LittleFloat(*(float*)index); index += 4;
+			hullinfo.hullsizes[i][1][1] = LittleFloat(*(float*)index); index += 4;
+			hullinfo.hullsizes[i][1][2] = LittleFloat(*(float*)index); index += 4;
+		}
+
+	// read lumps
+		_header.version = 0;
+		for (i = 0; i < HEADER_LUMPS; i++)
+		{
+			_header.lumps[i].fileofs = LittleLong(*(int*)index); index += 4;
+			_header.lumps[i].filelen = LittleLong(*(int*)index); index += 4;
+		}
+
+		header = &_header;
 	}
 	else
 	{
@@ -2991,6 +2948,39 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 		if (i != BSPVERSION && i != 30)
 			Host_Error("Mod_Q1BSP_Load: %s has wrong version number(%i should be %i(Quake) or 30(HalfLife)", mod->name, i, BSPVERSION);
 		mod->brush.ishlbsp = i == 30;
+		mod->brush.ismcbsp = false;
+
+	// fill in hull info
+		VectorClear (hullinfo.hullsizes[0][0]);
+		VectorClear (hullinfo.hullsizes[0][1]);
+		if (mod->brush.ishlbsp)
+		{
+			hullinfo.numhulls = 4;
+			hullinfo.filehulls = 4;
+			VectorSet (hullinfo.hullsizes[0][0], -16, -16, -36);
+			VectorSet (hullinfo.hullsizes[0][1], 16, 16, 36);
+			VectorSet (hullinfo.hullsizes[1][0], -32, -32, -32);
+			VectorSet (hullinfo.hullsizes[1][1], 32, 32, 32);
+			VectorSet (hullinfo.hullsizes[2][0], -16, -16, -18);
+			VectorSet (hullinfo.hullsizes[2][1], 16, 16, 18);
+		}
+		else
+		{
+			hullinfo.numhulls = 3;
+			hullinfo.filehulls = 4;
+			VectorSet (hullinfo.hullsizes[0][0], -16, -16, -24);
+			VectorSet (hullinfo.hullsizes[0][1], 16, 16, 32);
+			VectorSet (hullinfo.hullsizes[1][0], -32, -32, -24);
+			VectorSet (hullinfo.hullsizes[1][1], 32, 32, 64);
+		}
+
+	// read lumps
+		mod_base = (qbyte*)buffer;
+		for (i = 0; i < HEADER_LUMPS; i++)
+		{
+			header->lumps[i].fileofs = LittleLong(header->lumps[i].fileofs);
+			header->lumps[i].filelen = LittleLong(header->lumps[i].filelen);
+		}
 	}
 
 	mod->soundfromcenter = true;
@@ -3014,16 +3004,6 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 		Cvar_SetValue("mcbsp", mod->brush.ismcbsp);
 	}
 
-// swap all the lumps
-	mod_base = (qbyte *)header;
-
-	header->version = LittleLong(header->version);
-	for (i = 0;i < HEADER_LUMPS;i++)
-	{
-		header->lumps[i].fileofs = LittleLong(header->lumps[i].fileofs);
-		header->lumps[i].filelen = LittleLong(header->lumps[i].filelen);
-	}
-
 // load into heap
 
 	// store which lightmap format to use
@@ -3041,10 +3021,10 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	Mod_Q1BSP_LoadLeaffaces(&header->lumps[LUMP_MARKSURFACES]);
 	Mod_Q1BSP_LoadVisibility(&header->lumps[LUMP_VISIBILITY]);
 	// load submodels before leafs because they contain the number of vis leafs
-	Mod_Q1BSP_LoadSubmodels(&header->lumps[LUMP_MODELS]);
+	Mod_Q1BSP_LoadSubmodels(&header->lumps[LUMP_MODELS], &hullinfo);
 	Mod_Q1BSP_LoadLeafs(&header->lumps[LUMP_LEAFS]);
 	Mod_Q1BSP_LoadNodes(&header->lumps[LUMP_NODES]);
-	Mod_Q1BSP_LoadClipnodes(&header->lumps[LUMP_CLIPNODES]);
+	Mod_Q1BSP_LoadClipnodes(&header->lumps[LUMP_CLIPNODES], &hullinfo);
 
 	if (!mod->brushq1.lightdata)
 		mod->brush.LightPoint = NULL;
