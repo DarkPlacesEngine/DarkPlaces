@@ -19,7 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 
-#define	MAX_MAP_HULLS		4
+#define	MAX_MAP_HULLS		16		// was 4
 #define	MAX_MAP_LEAFS		65536	// was 8192
 
 // key / value pair sizes
@@ -31,8 +31,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 
 #define BSPVERSION	29
-#define MCBSPVERSION 1
-#define	TOOLVERSION	2
+#define MCBSPVERSION 2
 
 typedef struct
 {
@@ -55,6 +54,13 @@ typedef struct
 #define	LUMP_SURFEDGES	13
 #define	LUMP_MODELS		14
 #define	HEADER_LUMPS	15
+
+typedef struct
+{
+	int			numhulls;
+	int			filehulls;
+	float		hullsizes[MAX_MAP_HULLS][2][3];
+} dhullinfo_t;
 
 typedef struct
 {
