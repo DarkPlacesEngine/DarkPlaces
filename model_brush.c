@@ -1562,6 +1562,30 @@ static void Mod_Q1BSP_LoadVertexes(lump_t *l)
 	}
 }
 
+// The following two functions should be removed and MSG_* or SZ_* function sets adjusted so they
+// can be used for this
+// REMOVEME
+int SB_ReadInt (qbyte **buffer)
+{
+	int	i;
+	i = ((*buffer)[0]) + 256*((*buffer)[1]) + 65536*((*buffer)[2]) + 16777216*((*buffer)[3]);
+	(*buffer) += 4;
+	return i;
+}
+
+// REMOVEME
+float SB_ReadFloat (qbyte **buffer)
+{
+	union
+	{
+		int		i;
+		float	f;
+	} u;
+
+	u.i = SB_ReadInt (buffer);
+	return u.f;
+}
+
 static void Mod_Q1BSP_LoadSubmodels(lump_t *l, hullinfo_t *hullinfo)
 {
 	qbyte		*index;
@@ -1581,23 +1605,20 @@ static void Mod_Q1BSP_LoadSubmodels(lump_t *l, hullinfo_t *hullinfo)
 	for (i = 0; i < count; i++, out++)
 	{
 	// spread out the mins / maxs by a pixel
-		out->mins[0] = LittleFloat(*(float*)index) - 1; index += 4;
-		out->mins[1] = LittleFloat(*(float*)index) - 1; index += 4;
-		out->mins[2] = LittleFloat(*(float*)index) - 1; index += 4;
-		out->maxs[0] = LittleFloat(*(float*)index) + 1; index += 4;
-		out->maxs[1] = LittleFloat(*(float*)index) + 1; index += 4;
-		out->maxs[2] = LittleFloat(*(float*)index) + 1; index += 4;
-		out->origin[0] = LittleFloat (*(float*)index); index += 4;
-		out->origin[1] = LittleFloat (*(float*)index); index += 4;
-		out->origin[2] = LittleFloat (*(float*)index); index += 4;
+		out->mins[0] = SB_ReadFloat (&index) - 1;
+		out->mins[1] = SB_ReadFloat (&index) - 1;
+		out->mins[2] = SB_ReadFloat (&index) - 1;
+		out->maxs[0] = SB_ReadFloat (&index) + 1;
+		out->maxs[1] = SB_ReadFloat (&index) + 1;
+		out->maxs[2] = SB_ReadFloat (&index) + 1;
+		out->origin[0] = SB_ReadFloat (&index);
+		out->origin[1] = SB_ReadFloat (&index);
+		out->origin[2] = SB_ReadFloat (&index);
 		for (j = 0; j < hullinfo->filehulls; j++)
-		{
-			out->headnode[j] = LittleLong (*(int*)index);
-			index += 4;
-		}
-		out->visleafs = LittleLong (*(int*)index); index += 4;
-		out->firstface = LittleLong (*(int*)index); index += 4;
-		out->numfaces = LittleLong (*(int*)index); index += 4;
+			out->headnode[j] = SB_ReadInt (&index);
+		out->visleafs = SB_ReadInt (&index);
+		out->firstface = SB_ReadInt (&index);
+		out->numfaces = SB_ReadInt (&index);
 	}
 }
 
@@ -2911,7 +2932,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 
 		index = mod_base;
 		index += 8;
-		i = LittleLong(*(int*)index); index += 4;
+		i = SB_ReadInt (&index);
 		if (i != MCBSPVERSION)
 			Host_Error("Mod_Q1BSP_Load: %s has wrong version number(%i should be %i)", mod->name, i, MCBSPVERSION);
 
@@ -2922,20 +2943,20 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 		VectorClear (hullinfo.hullsizes[0][1]);
 		for (i = 1; i < hullinfo.numhulls; i++)
 		{
-			hullinfo.hullsizes[i][0][0] = LittleFloat(*(float*)index); index += 4;
-			hullinfo.hullsizes[i][0][1] = LittleFloat(*(float*)index); index += 4;
-			hullinfo.hullsizes[i][0][2] = LittleFloat(*(float*)index); index += 4;
-			hullinfo.hullsizes[i][1][0] = LittleFloat(*(float*)index); index += 4;
-			hullinfo.hullsizes[i][1][1] = LittleFloat(*(float*)index); index += 4;
-			hullinfo.hullsizes[i][1][2] = LittleFloat(*(float*)index); index += 4;
+			hullinfo.hullsizes[i][0][0] = SB_ReadFloat (&index);
+			hullinfo.hullsizes[i][0][1] = SB_ReadFloat (&index);
+			hullinfo.hullsizes[i][0][2] = SB_ReadFloat (&index);
+			hullinfo.hullsizes[i][1][0] = SB_ReadFloat (&index);
+			hullinfo.hullsizes[i][1][1] = SB_ReadFloat (&index);
+			hullinfo.hullsizes[i][1][2] = SB_ReadFloat (&index);
 		}
 
 	// read lumps
 		_header.version = 0;
 		for (i = 0; i < HEADER_LUMPS; i++)
 		{
-			_header.lumps[i].fileofs = LittleLong(*(int*)index); index += 4;
-			_header.lumps[i].filelen = LittleLong(*(int*)index); index += 4;
+			_header.lumps[i].fileofs = SB_ReadInt (&index);
+			_header.lumps[i].filelen = SB_ReadInt (&index);
 		}
 
 		header = &_header;
