@@ -203,7 +203,7 @@ model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolea
 		else if (!memcmp(buf, "DARKPLACESMODEL", 16)) Mod_DARKPLACESMODEL_Load(mod, buf, bufend);
 		else if (!strcmp(buf, "ACTRHEAD")) Mod_PSKMODEL_Load(mod, buf, bufend);
 		else if (strlen(mod->name) >= 4 && !strcmp(mod->name - 4, ".map")) Mod_MAP_Load(mod, buf, bufend);
-		else if (!memcmp(buf, "MCBSP", 5)) Mod_Q1BSP_Load(mod, buf, bufend);
+		else if (!memcmp(buf, "MCBSPpad", 8)) Mod_Q1BSP_Load(mod, buf, bufend);
 		else if (num == BSPVERSION || num == 30) Mod_Q1BSP_Load(mod, buf, bufend);
 		else Con_Printf("Mod_LoadModel: model \"%s\" is of unknown/unsupported type\n", mod->name);
 		Mem_Free(buf);
