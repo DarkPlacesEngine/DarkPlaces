@@ -2978,21 +2978,21 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 		{
 			hullinfo.numhulls = 4;
 			hullinfo.filehulls = 4;
-			VectorSet (hullinfo.hullsizes[0][0], -16, -16, -36);
-			VectorSet (hullinfo.hullsizes[0][1], 16, 16, 36);
-			VectorSet (hullinfo.hullsizes[1][0], -32, -32, -32);
-			VectorSet (hullinfo.hullsizes[1][1], 32, 32, 32);
-			VectorSet (hullinfo.hullsizes[2][0], -16, -16, -18);
-			VectorSet (hullinfo.hullsizes[2][1], 16, 16, 18);
+			VectorSet (hullinfo.hullsizes[1][0], -16, -16, -36);
+			VectorSet (hullinfo.hullsizes[1][1], 16, 16, 36);
+			VectorSet (hullinfo.hullsizes[2][0], -32, -32, -32);
+			VectorSet (hullinfo.hullsizes[2][1], 32, 32, 32);
+			VectorSet (hullinfo.hullsizes[3][0], -16, -16, -18);
+			VectorSet (hullinfo.hullsizes[3][1], 16, 16, 18);
 		}
 		else
 		{
 			hullinfo.numhulls = 3;
 			hullinfo.filehulls = 4;
-			VectorSet (hullinfo.hullsizes[0][0], -16, -16, -24);
-			VectorSet (hullinfo.hullsizes[0][1], 16, 16, 32);
-			VectorSet (hullinfo.hullsizes[1][0], -32, -32, -24);
-			VectorSet (hullinfo.hullsizes[1][1], 32, 32, 64);
+			VectorSet (hullinfo.hullsizes[1][0], -16, -16, -24);
+			VectorSet (hullinfo.hullsizes[1][1], 16, 16, 32);
+			VectorSet (hullinfo.hullsizes[2][0], -32, -32, -24);
+			VectorSet (hullinfo.hullsizes[2][1], 32, 32, 64);
 		}
 
 	// read lumps
