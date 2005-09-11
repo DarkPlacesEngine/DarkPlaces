@@ -296,7 +296,7 @@ const char *builtinshader_light_vert =
 "void main(void)\n"
 "{\n"
 "	// copy the surface texcoord\n"
-"	TexCoord = vec2(gl_TextureMatrix[0] * glMultiTexCoord0);\n"
+"	TexCoord = vec2(gl_TextureMatrix[0] * gl_MultiTexCoord0);\n"
 "\n"
 "	// transform vertex position into light attenuation/cubemap space\n"
 "	// (-1 to +1 across the light box)\n"
