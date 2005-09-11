@@ -243,8 +243,11 @@ typedef struct entity_render_s
 	model_t *model;
 	// current uninterpolated animation frame (for things which do not use interpolation)
 	int frame;
-	// entity shirt and pants colors
+	// entity shirt and pants colors (-1 if not colormapped)
 	int colormap;
+	// literal colors for renderer
+	vec3_t colormap_pantscolor;
+	vec3_t colormap_shirtcolor;
 	// light, particles, etc
 	int effects;
 	// for Alias models

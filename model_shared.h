@@ -145,10 +145,10 @@ typedef enum texturelayertype_e
 {
 	TEXTURELAYERTYPE_INVALID,
 	TEXTURELAYERTYPE_SKY,
-	TEXTURELAYERTYPE_LIGHTMAP_DOUBLEMODULATE_TEXTURE,
-	TEXTURELAYERTYPE_LIGHTMAP,
+	TEXTURELAYERTYPE_LITTEXTURE_COMBINE,
+	TEXTURELAYERTYPE_LITTEXTURE_MULTIPASS,
+	TEXTURELAYERTYPE_LITTEXTURE_VERTEX,
 	TEXTURELAYERTYPE_TEXTURE,
-	TEXTURELAYERTYPE_VERTEXTEXTURE,
 	TEXTURELAYERTYPE_FOG,
 }
 texturelayertype_t;
@@ -172,7 +172,6 @@ typedef struct texturelayer_s
 	rtexture_t *texture;
 	matrix4x4_t texmatrix;
 	vec4_t color;
-	int texrgbscale;
 	int flags;
 }
 texturelayer_t;
@@ -555,7 +554,7 @@ typedef struct model_s
 	// draw a shadow volume for the model based on light source
 	void(*DrawShadowVolume)(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs);
 	// draw the lighting on a model (through stencil)
-	void(*DrawLight)(struct entity_render_s *ent, float *lightcolor, int numsurfaces, const int *surfacelist);
+	void(*DrawLight)(struct entity_render_s *ent, vec3_t lightcolorbase, vec3_t lightcolorpants, vec3_t lightcolorshirt, int numsurfaces, const int *surfacelist);
 	// trace a box against this model
 	void (*TraceBox)(struct model_s *model, int frame, struct trace_s *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs, int hitsupercontentsmask);
 	// fields belonging to some types of model
@@ -657,7 +656,7 @@ void R_Q1BSP_Draw(struct entity_render_s *ent);
 void R_Q1BSP_GetLightInfo(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, qbyte *outleafpvs, int *outnumleafspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer);
 void R_Q1BSP_CompileShadowVolume(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist);
 void R_Q1BSP_DrawShadowVolume(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs);
-void R_Q1BSP_DrawLight(struct entity_render_s *ent, float *lightcolor, int numsurfaces, const int *surfacelist);
+void R_Q1BSP_DrawLight(struct entity_render_s *ent, vec3_t lightcolorbase, vec3_t lightcolorpants, vec3_t lightcolorshirt, int numsurfaces, const int *surfacelist);
 
 // alias models
 struct frameblend_s;

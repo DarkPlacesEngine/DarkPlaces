@@ -736,7 +736,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 
 #define RSURF_MAX_BATCHSURFACES 1024
 
-void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolorbase, int numsurfaces, const int *surfacelist)
+void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolorbase, float *lightcolorpants, float *lightcolorshirt, int numsurfaces, const int *surfacelist)
 {
 	model_t *model = ent->model;
 	msurface_t *surface;
@@ -745,12 +745,13 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolorbase, int numsurfa
 	msurface_t *batchsurfacelist[RSURF_MAX_BATCHSURFACES];
 	vec3_t modelorg;
 	texture_t *tex;
-	vec3_t lightcolorpants, lightcolorshirt;
 	rtexture_t *basetexture = NULL;
 	rtexture_t *glosstexture = NULL;
 	float specularscale = 0;
 	qboolean skip;
 	if (r_drawcollisionbrushes.integer >= 2)
+		return;
+	if (VectorLength2(lightcolorbase) + VectorLength2(lightcolorpants) + VectorLength2(lightcolorshirt) < 0.0001)
 		return;
 	R_UpdateAllTextureInfo(ent);
 	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
@@ -798,32 +799,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolorbase, int numsurfa
 					specularscale = r_shadow_rtlight->specularscale * r_shadow_gloss2intensity.value;
 				}
 			}
-			VectorClear(lightcolorpants);
-			VectorClear(lightcolorshirt);
-			if (ent->colormap >= 0)
-			{
-				// 128-224 are backwards ranges
-				int b = (ent->colormap & 0xF) << 4;b += (b >= 128 && b < 224) ? 4 : 12;
-				if (texture->skin.pants && b < 224)
-				{
-					qbyte *bcolor = (qbyte *) (&palette_complete[b]);
-					lightcolorpants[0] = lightcolorbase[0] * bcolor[0] * (1.0f / 255.0f);
-					lightcolorpants[1] = lightcolorbase[1] * bcolor[1] * (1.0f / 255.0f);
-					lightcolorpants[2] = lightcolorbase[2] * bcolor[2] * (1.0f / 255.0f);
-				}
-				// 128-224 are backwards ranges
-				b = (ent->colormap & 0xF0);b += (b >= 128 && b < 224) ? 4 : 12;
-				if (texture->skin.shirt && b < 224)
-				{
-					qbyte *bcolor = (qbyte *) (&palette_complete[b]);
-					lightcolorshirt[0] = lightcolorbase[0] * bcolor[0] * (1.0f / 255.0f);
-					lightcolorshirt[1] = lightcolorbase[1] * bcolor[1] * (1.0f / 255.0f);
-					lightcolorshirt[2] = lightcolorbase[2] * bcolor[2] * (1.0f / 255.0f);
-				}
-				basetexture = texture->skin.base;
-			}
-			else
-				basetexture = texture->skin.merged ? texture->skin.merged : texture->skin.base;
+			basetexture = (ent->colormap < 0 && texture->skin.merged) ? texture->skin.merged : texture->skin.base;
 			if ((r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * (VectorLength2(lightcolorbase) + VectorLength2(lightcolorpants) + VectorLength2(lightcolorshirt)) + specularscale * VectorLength2(lightcolorbase) < (1.0f / 1048576.0f))
 				skip = true;
 		}
