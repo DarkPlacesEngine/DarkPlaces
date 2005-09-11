@@ -1665,27 +1665,32 @@ void RSurf_SetColorPointer(const entity_render_t *ent, const msurface_t *surface
 			for (i = 0, c = varray_color4f + 4 * surface->num_firstvertex;i < surface->num_vertices;i++, c += 4)
 			{
 				const qbyte *lm = surface->lightmapinfo->samples + (surface->groupmesh->data_lightmapoffsets + surface->num_firstvertex)[i];
-				float scale = d_lightstylevalue[surface->lightmapinfo->styles[0]] * (1.0f / 32768.0f);
-				VectorScale(lm, scale, c);
-				if (surface->lightmapinfo->styles[1] != 255)
+				if (lm)
 				{
-					int size3 = ((surface->lightmapinfo->extents[0]>>4)+1)*((surface->lightmapinfo->extents[1]>>4)+1)*3;
-					lm += size3;
-					scale = d_lightstylevalue[surface->lightmapinfo->styles[1]] * (1.0f / 32768.0f);
-					VectorMA(c, scale, lm, c);
-					if (surface->lightmapinfo->styles[2] != 255)
+					float scale = d_lightstylevalue[surface->lightmapinfo->styles[0]] * (1.0f / 32768.0f);
+					VectorScale(lm, scale, c);
+					if (surface->lightmapinfo->styles[1] != 255)
 					{
+						int size3 = ((surface->lightmapinfo->extents[0]>>4)+1)*((surface->lightmapinfo->extents[1]>>4)+1)*3;
 						lm += size3;
-						scale = d_lightstylevalue[surface->lightmapinfo->styles[2]] * (1.0f / 32768.0f);
+						scale = d_lightstylevalue[surface->lightmapinfo->styles[1]] * (1.0f / 32768.0f);
 						VectorMA(c, scale, lm, c);
-						if (surface->lightmapinfo->styles[3] != 255)
+						if (surface->lightmapinfo->styles[2] != 255)
 						{
 							lm += size3;
-							scale = d_lightstylevalue[surface->lightmapinfo->styles[3]] * (1.0f / 32768.0f);
+							scale = d_lightstylevalue[surface->lightmapinfo->styles[2]] * (1.0f / 32768.0f);
 							VectorMA(c, scale, lm, c);
+							if (surface->lightmapinfo->styles[3] != 255)
+							{
+								lm += size3;
+								scale = d_lightstylevalue[surface->lightmapinfo->styles[3]] * (1.0f / 32768.0f);
+								VectorMA(c, scale, lm, c);
+							}
 						}
 					}
 				}
+				else
+					VectorClear(c);
 			}
 			rsurface_lightmapcolor4f = varray_color4f;
 		}
