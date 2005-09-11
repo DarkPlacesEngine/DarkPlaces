@@ -1069,7 +1069,11 @@ static matrix4x4_t r_shadow_entitytoattenuationxyz;
 // this transforms only the Z to S, and T is always 0.5
 static matrix4x4_t r_shadow_entitytoattenuationz;
 // rtlight->color * r_dlightstylevalue[rtlight->style] / 256 * r_shadow_lightintensityscale.value * ent->colormod * ent->alpha
-static vec3_t r_shadow_entitylightcolor;
+static vec3_t r_shadow_entitylightcolorbase;
+// rtlight->color * r_dlightstylevalue[rtlight->style] / 256 * r_shadow_lightintensityscale.value * ent->colormap_pantscolor * ent->alpha
+static vec3_t r_shadow_entitylightcolorpants;
+// rtlight->color * r_dlightstylevalue[rtlight->style] / 256 * r_shadow_lightintensityscale.value * ent->colormap_shirtcolor * ent->alpha
+static vec3_t r_shadow_entitylightcolorshirt;
 
 static int r_shadow_lightpermutation;
 static int r_shadow_lightprog;
@@ -2713,12 +2717,18 @@ void R_Shadow_DrawEntityShadow(entity_render_t *ent, rtlight_t *rtlight, int num
 	}
 }
 
-void R_Shadow_DrawEntityLight(entity_render_t *ent, rtlight_t *rtlight, vec3_t lightcolorbase, int numsurfaces, int *surfacelist)
+void R_Shadow_DrawEntityLight(entity_render_t *ent, rtlight_t *rtlight, vec3_t lightcolor, int numsurfaces, int *surfacelist)
 {
 	// set up properties for rendering light onto this entity
-	r_shadow_entitylightcolor[0] = lightcolorbase[0] * ent->colormod[0] * ent->alpha;
-	r_shadow_entitylightcolor[1] = lightcolorbase[1] * ent->colormod[1] * ent->alpha;
-	r_shadow_entitylightcolor[2] = lightcolorbase[2] * ent->colormod[2] * ent->alpha;
+	r_shadow_entitylightcolorbase[0] = lightcolor[0] * ent->colormod[0] * ent->alpha;
+	r_shadow_entitylightcolorbase[1] = lightcolor[1] * ent->colormod[1] * ent->alpha;
+	r_shadow_entitylightcolorbase[2] = lightcolor[2] * ent->colormod[2] * ent->alpha;
+	r_shadow_entitylightcolorpants[0] = lightcolor[0] * ent->colormap_pantscolor[0] * ent->alpha;
+	r_shadow_entitylightcolorpants[1] = lightcolor[1] * ent->colormap_pantscolor[1] * ent->alpha;
+	r_shadow_entitylightcolorpants[2] = lightcolor[2] * ent->colormap_pantscolor[2] * ent->alpha;
+	r_shadow_entitylightcolorshirt[0] = lightcolor[0] * ent->colormap_shirtcolor[0] * ent->alpha;
+	r_shadow_entitylightcolorshirt[1] = lightcolor[1] * ent->colormap_shirtcolor[1] * ent->alpha;
+	r_shadow_entitylightcolorshirt[2] = lightcolor[2] * ent->colormap_shirtcolor[2] * ent->alpha;
 	Matrix4x4_Concat(&r_shadow_entitytolight, &rtlight->matrix_worldtolight, &ent->matrix);
 	Matrix4x4_Concat(&r_shadow_entitytoattenuationxyz, &matrix_attenuationxyz, &r_shadow_entitytolight);
 	Matrix4x4_Concat(&r_shadow_entitytoattenuationz, &matrix_attenuationz, &r_shadow_entitytolight);
@@ -2736,9 +2746,9 @@ void R_Shadow_DrawEntityLight(entity_render_t *ent, rtlight_t *rtlight, vec3_t l
 		}
 	}
 	if (ent == r_refdef.worldentity)
-		ent->model->DrawLight(ent, r_shadow_entitylightcolor, numsurfaces, surfacelist);
+		ent->model->DrawLight(ent, r_shadow_entitylightcolorbase, r_shadow_entitylightcolorpants, r_shadow_entitylightcolorshirt, numsurfaces, surfacelist);
 	else
-		ent->model->DrawLight(ent, r_shadow_entitylightcolor, ent->model->nummodelsurfaces, ent->model->surfacelist);
+		ent->model->DrawLight(ent, r_shadow_entitylightcolorbase, r_shadow_entitylightcolorpants, r_shadow_entitylightcolorshirt, ent->model->nummodelsurfaces, ent->model->surfacelist);
 }
 
 void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
