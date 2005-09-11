@@ -2,7 +2,6 @@
 	DarkPlaces file system
 
 	Copyright (C) 2003-2005 Mathieu Olivier
-	Copyright (C) 1999,2000  contributors of the QuakeForge project
 
 	This program is free software; you can redistribute it and/or
 	modify it under the terms of the GNU General Public License
@@ -42,6 +41,11 @@
 // Win32 requires us to add O_BINARY, but the other OSes don't have it
 #ifndef O_BINARY
 # define O_BINARY 0
+#endif
+
+// In case the system doesn't support the O_NONBLOCK flag
+#ifndef O_NONBLOCK
+# define O_NONBLOCK 0
 #endif
 
 
@@ -90,7 +94,11 @@ CONSTANTS
 #define MAX_WBITS		15
 #define Z_OK			0
 #define Z_STREAM_END	1
-#define ZLIB_VERSION	"1.1.4"
+#define ZLIB_VERSION	"1.2.3"
+
+// Uncomment the following line if the zlib DLL you have still uses
+// the 1.1.x series calling convention on Win32 (WINAPI)
+//#define ZLIB_USES_WINAPI
 
 
 /*
@@ -281,7 +289,7 @@ PRIVATE FUNCTIONS - PK3 HANDLING
 */
 
 // Functions exported from zlib
-#ifdef WIN32
+#if defined(WIN32) && defined(ZLIB_USES_WINAPI)
 # define ZEXPORT WINAPI
 #else
 # define ZEXPORT
@@ -335,7 +343,12 @@ qboolean PK3_OpenLibrary (void)
 #if defined(WIN64)
 		"zlib64.dll",
 #elif defined(WIN32)
+# ifdef ZLIB_USES_WINAPI
+		"zlibwapi.dll",
 		"zlib.dll",
+# else
+		"zlib1.dll",
+# endif
 #elif defined(MACOSX)
 		"libz.dylib",
 #else
@@ -1115,10 +1128,8 @@ static qfile_t* FS_SysOpen (const char* filepath, const char* mode, qboolean non
 		}
 	}
 
-#ifndef WIN32
 	if (nonblocking)
 		opt |= O_NONBLOCK;
-#endif
 
 	file = Mem_Alloc (fs_mempool, sizeof (*file));
 	memset (file, 0, sizeof (*file));
