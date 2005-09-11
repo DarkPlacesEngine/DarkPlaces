@@ -483,6 +483,7 @@ void R_TimeReport(char *desc)
 	if (!r_timereport_active || r_showtrispass)
 		return;
 
+	qglFinish();
 	r_timereport_temp = r_timereport_current;
 	r_timereport_current = Sys_DoubleTime();
 	t = (int) ((r_timereport_current - r_timereport_temp) * 1000000.0);
