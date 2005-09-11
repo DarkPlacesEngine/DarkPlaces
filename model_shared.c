@@ -61,7 +61,7 @@ static void mod_newmap(void)
 
 	for (i = 0;i < MAX_MOD_KNOWN;i++)
 	{
-		if (mod_known[i].name[0])
+		if (mod_known[i].mempool && mod_known[i].data_surfaces)
 		{
 			for (surfacenum = 0, surface = mod_known[i].data_surfaces;surfacenum < mod_known[i].num_surfaces;surfacenum++, surface++)
 			{
