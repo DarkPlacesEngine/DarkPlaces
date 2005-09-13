@@ -279,6 +279,8 @@ char fs_basedir[MAX_OSPATH];
 
 qboolean fs_modified;   // set true if using non-id files
 
+cvar_t scr_screenshot_name = {0, "scr_screenshot_name","dp"};
+
 
 /*
 =============================================================================

@@ -22,7 +22,7 @@ cvar_t vid_pixelaspect = {CVAR_SAVE, "vid_pixelaspect", "1"};
 cvar_t scr_screenshot_jpeg = {CVAR_SAVE, "scr_screenshot_jpeg","1"};
 cvar_t scr_screenshot_jpeg_quality = {CVAR_SAVE, "scr_screenshot_jpeg_quality","0.9"};
 cvar_t scr_screenshot_gamma = {CVAR_SAVE, "scr_screenshot_gamma","2.2"};
-cvar_t scr_screenshot_name = {0, "scr_screenshot_name","dp"};
+// scr_screenshot_name is defined in fs.c
 cvar_t cl_capturevideo = {0, "cl_capturevideo", "0"};
 cvar_t cl_capturevideo_sound = {0, "cl_capturevideo_sound", "0"};
 cvar_t cl_capturevideo_fps = {0, "cl_capturevideo_fps", "30"};
