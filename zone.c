@@ -383,7 +383,7 @@ mempool_t *zonemempool;
 
 void Mem_PrintStats(void)
 {
-	size_t count = 0, size = 0;
+	size_t count = 0, size = 0, realsize = 0;
 	mempool_t *pool;
 	memheader_t *mem;
 	Mem_CheckSentinelsGlobal();
@@ -391,8 +391,10 @@ void Mem_PrintStats(void)
 	{
 		count++;
 		size += pool->totalsize;
+		realsize += pool->realsize;
 	}
 	Con_Printf("%lu memory pools, totalling %lu bytes (%.3fMB)\n", (unsigned long)count, (unsigned long)size, size / 1048576.0);
+	Con_Printf("total allocated size: %lu bytes (%.3fMB)\n", (unsigned long)realsize, realsize / 1048576.0);
 	for (pool = poolchain;pool;pool = pool->next)
 	{
 		if ((pool->flags & POOLFLAG_TEMP) && pool->chain)
