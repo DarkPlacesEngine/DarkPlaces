@@ -39,7 +39,6 @@ typedef struct AudioState_s
 } AudioState;
 
 
-extern mempool_t *snd_mempool;
 static AudioState	 as;
 
 static void Buffer_Callback(void *userdata, Uint8 *stream, int len);

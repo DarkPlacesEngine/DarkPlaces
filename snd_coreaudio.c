@@ -43,8 +43,6 @@ static qboolean s_isRunning;
 static AudioDeviceID outputDeviceID;
 static AudioStreamBasicDescription outputStreamBasicDescription;
 
-extern mempool_t *snd_mempool;
-
 
 /*
 ===============

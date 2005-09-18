@@ -228,8 +228,24 @@ static const sfxbuffer_t* WAV_FetchSound (channel_t* ch, unsigned int start, uns
 	return ch->sfx->fetcher_data;
 }
 
+/*
+====================
+WAV_FreeSfx
+====================
+*/
+static void WAV_FreeSfx (sfx_t* sfx)
+{
+	sfxbuffer_t* sb = sfx->fetcher_data;
 
-snd_fetcher_t wav_fetcher = { WAV_FetchSound, NULL };
+	// Free the sound buffer
+	sfx->memsize -= (sb->length * sfx->format.channels * sfx->format.width) + sizeof (*sb) - sizeof (sb->data);
+	Mem_Free(sb);
+
+	sfx->fetcher_data = NULL;
+	sfx->fetcher = NULL;
+}
+
+const snd_fetcher_t wav_fetcher = { WAV_FetchSound, NULL, WAV_FreeSfx };
 
 
 /*
@@ -242,23 +258,22 @@ qboolean S_LoadWavFile (const char *filename, sfx_t *s)
 	qbyte *data;
 	wavinfo_t info;
 	int len;
+	size_t memsize;
 	sfxbuffer_t* sb;
 
-	Mem_FreePool (&s->mempool);
-	s->mempool = Mem_AllocPool(s->name, 0, NULL);
+	// Already loaded?
+	if (s->fetcher != NULL)
+		return true;
 
 	// Load the file
-	data = FS_LoadFile(filename, s->mempool, false);
+	data = FS_LoadFile(filename, snd_mempool, false);
 	if (!data)
-	{
-		Mem_FreePool (&s->mempool);
 		return false;
-	}
 
 	// Don't try to load it if it's not a WAV file
 	if (memcmp (data, "RIFF", 4) || memcmp (data + 8, "WAVE", 4))
 	{
-		Mem_FreePool (&s->mempool);
+		Mem_Free(data);
 		return false;
 	}
 
@@ -269,7 +284,7 @@ qboolean S_LoadWavFile (const char *filename, sfx_t *s)
 	if (info.channels < 1 || info.channels > 2)
 	{
 		Con_Printf("%s has an unsupported number of channels (%i)\n",s->name, info.channels);
-		Mem_FreePool (&s->mempool);
+		Mem_Free(data);
 		return false;
 	}
 	//if (info.channels == 2)
@@ -279,13 +294,15 @@ qboolean S_LoadWavFile (const char *filename, sfx_t *s)
 	len = (int) ((double) info.samples * (double) shm->format.speed / (double) info.rate);
 	len = len * info.width * info.channels;
 
-	sb = Mem_Alloc (s->mempool, len + sizeof (*sb) - sizeof (sb->data));
+	memsize = len + sizeof (*sb) - sizeof (sb->data);
+	sb = Mem_Alloc (snd_mempool, memsize);
 	if (sb == NULL)
 	{
 		Con_Printf("failed to allocate memory for sound \"%s\"\n", s->name);
-		Mem_FreePool(&s->mempool);
+		Mem_Free(data);
 		return false;
 	}
+	s->memsize += memsize;
 
 	s->fetcher = &wav_fetcher;
 	s->fetcher_data = sb;

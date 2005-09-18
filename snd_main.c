@@ -272,6 +272,7 @@ sfx_t *S_FindName (const char *name)
 	sfx = Mem_Alloc (snd_mempool, sizeof (*sfx));
 	memset (sfx, 0, sizeof(*sfx));
 	strlcpy (sfx->name, name, sizeof (sfx->name));
+	sfx->memsize = sizeof(*sfx);
 	sfx->next = known_sfx;
 	known_sfx = sfx;
 
@@ -287,6 +288,8 @@ S_FreeSfx
 */
 void S_FreeSfx (sfx_t *sfx, qboolean force)
 {
+	unsigned int i;
+
 	// Never free a locked sfx unless forced
 	if (!force && (sfx->locks > 0 || (sfx->flags & SFXFLAG_PERMANENTLOCK)))
 		return;
@@ -313,8 +316,14 @@ void S_FreeSfx (sfx_t *sfx, qboolean force)
 		}
 	}
 
+	// Stop all channels using this sfx
+	for (i = 0; i < total_channels; i++)
+		if (channels[i].sfx == sfx)
+			S_StopChannel (i);
+
 	// Free it
-	Mem_FreePool (&sfx->mempool);
+	if (sfx->fetcher != NULL && sfx->fetcher->free != NULL)
+		sfx->fetcher->free (sfx);
 	Mem_Free (sfx);
 }
 
@@ -631,9 +640,9 @@ void S_StopChannel (unsigned int channel_ind)
 
 		if (sfx->fetcher != NULL)
 		{
-			snd_fetcher_end_t fetcher_end = sfx->fetcher->end;
-			if (fetcher_end != NULL)
-				fetcher_end (ch);
+			snd_fetcher_endsb_t fetcher_endsb = sfx->fetcher->endsb;
+			if (fetcher_endsb != NULL)
+				fetcher_endsb (ch);
 		}
 
 		// Remove the lock it holds
@@ -1024,7 +1033,7 @@ void S_SoundList(void)
 	{
 		if (sfx->fetcher != NULL)
 		{
-			size = (int)sfx->mempool->totalsize;
+			size = (int)sfx->memsize;
 			total += size;
 			Con_Printf ("%c%c%c%c(%2db, %6s) %8i : %s\n",
 						(sfx->loopstart >= 0) ? 'L' : ' ',
