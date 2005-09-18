@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2003-2004  Mathieu Olivier
+	Copyright (C) 2003-2005  Mathieu Olivier
 
 	This program is free software; you can redistribute it and/or
 	modify it under the terms of the GNU General Public License
@@ -370,6 +370,7 @@ void OGG_CloseLibrary (void)
 */
 
 #define STREAM_BUFFER_DURATION 1.5f	// 1.5 sec
+#define STREAM_BUFFER_SIZE(format_ptr) (ceil (STREAM_BUFFER_DURATION * ((format_ptr)->speed * (format_ptr)->width * (format_ptr)->channels)))
 
 // We work with 1 sec sequences, so this buffer must be able to contain
 // 1 sec of sound of the highest quality (48 KHz, 16 bit samples, stereo)
@@ -406,6 +407,7 @@ static const sfxbuffer_t* OGG_FetchSound (channel_t* ch, unsigned int start, uns
 	ogg_stream_perchannel_t* per_ch;
 	sfxbuffer_t* sb;
 	sfx_t* sfx;
+	snd_format_t* format;
 	ogg_stream_persfx_t* per_sfx;
 	int newlength, done, ret, bigendian;
 	unsigned int factor;
@@ -414,14 +416,18 @@ static const sfxbuffer_t* OGG_FetchSound (channel_t* ch, unsigned int start, uns
 	per_ch = ch->fetcher_data;
 	sfx = ch->sfx;
 	per_sfx = sfx->fetcher_data;
-	buff_len = ceil (STREAM_BUFFER_DURATION * (sfx->format.speed * sfx->format.width * sfx->format.channels));
+	format = &sfx->format;
+	buff_len = STREAM_BUFFER_SIZE(format);
 
 	// If there's no fetcher structure attached to the channel yet
 	if (per_ch == NULL)
 	{
+		size_t memsize;
 		ogg_stream_persfx_t* per_sfx;
 
-		per_ch = Mem_Alloc (sfx->mempool, sizeof (*per_ch) - sizeof (per_ch->sb.data) + buff_len);
+		memsize = sizeof (*per_ch) - sizeof (per_ch->sb.data) + buff_len;
+		per_ch = Mem_Alloc (snd_mempool, memsize);
+		sfx->memsize += memsize;
 		per_sfx = sfx->fetcher_data;
 
 		// Open it with the VorbisFile API
@@ -486,10 +492,10 @@ static const sfxbuffer_t* OGG_FetchSound (channel_t* ch, unsigned int start, uns
 	newlength = per_sfx->format.speed * factor;  // -> 1 sec of sound before resampling
 
 	// Decompress in the resampling_buffer
-#if BYTE_ORDER == LITTLE_ENDIAN
-	bigendian = 0;
-#else
+#if BYTE_ORDER == BIG_ENDIAN
 	bigendian = 1;
+#else
+	bigendian = 0;
 #endif
 	done = 0;
 	while ((ret = qov_read (&per_ch->vf, &resampling_buffer[done], (int)(newlength - done), bigendian, 2, 1, &per_ch->bs)) > 0)
@@ -515,15 +521,44 @@ static void OGG_FetchEnd (channel_t* ch)
 	per_ch = ch->fetcher_data;
 	if (per_ch != NULL)
 	{
+		size_t buff_len;
+		snd_format_t* format;
+
 		// Free the ogg vorbis decoder
 		qov_clear (&per_ch->vf);
 
 		Mem_Free (per_ch);
 		ch->fetcher_data = NULL;
+		
+		format = &ch->sfx->format;
+		buff_len = STREAM_BUFFER_SIZE(format);
+		ch->sfx->memsize -= sizeof (*per_ch) - sizeof (per_ch->sb.data) + buff_len;
 	}
 }
 
-static const snd_fetcher_t ogg_fetcher = { OGG_FetchSound, OGG_FetchEnd };
+
+/*
+====================
+OGG_FreeSfx
+====================
+*/
+static void OGG_FreeSfx (sfx_t* sfx)
+{
+	ogg_stream_persfx_t* per_sfx = sfx->fetcher_data;
+
+	// Free the Ogg Vorbis file
+	Mem_Free(per_sfx->file);
+	sfx->memsize -= per_sfx->filesize;
+
+	// Free the stream structure
+	Mem_Free(per_sfx);
+	sfx->memsize -= sizeof (*per_sfx);
+
+	sfx->fetcher_data = NULL;
+	sfx->fetcher = NULL;
+}
+
+static const snd_fetcher_t ogg_fetcher = { OGG_FetchSound, OGG_FetchEnd, OGG_FreeSfx };
 
 
 /*
@@ -544,16 +579,14 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 	if (!vf_dll)
 		return false;
 
-	Mem_FreePool (&s->mempool);
-	s->mempool = Mem_AllocPool (s->name, 0, NULL);
+	// Already loaded?
+	if (s->fetcher != NULL)
+		return true;
 
 	// Load the file
-	data = FS_LoadFile (filename, s->mempool, false);
+	data = FS_LoadFile (filename, snd_mempool, false);
 	if (data == NULL)
-	{
-		Mem_FreePool (&s->mempool);
 		return false;
-	}
 
 	Con_DPrintf ("Loading Ogg Vorbis file \"%s\"\n", filename);
 
@@ -564,7 +597,7 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 	if (qov_open_callbacks (&ov_decode, &vf, NULL, 0, callbacks) < 0)
 	{
 		Con_Printf ("error while opening Ogg Vorbis file \"%s\"\n", filename);
-		Mem_FreePool (&s->mempool);
+		Mem_Free(data);
 		return false;
 	}
 
@@ -575,7 +608,7 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 		Con_Printf("%s has an unsupported number of channels (%i)\n",
 					s->name, vi->channels);
 		qov_clear (&vf);
-		Mem_FreePool (&s->mempool);
+		Mem_Free(data);
 		return false;
 	}
 
@@ -588,9 +621,11 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 		ogg_stream_persfx_t* per_sfx;
 
 		Con_DPrintf ("\"%s\" will be streamed\n", filename);
-		per_sfx = Mem_Alloc (s->mempool, sizeof (*per_sfx));
+		per_sfx = Mem_Alloc (snd_mempool, sizeof (*per_sfx));
+		s->memsize += sizeof (*per_sfx);
 		per_sfx->file = data;
 		per_sfx->filesize = fs_filesize;
+		s->memsize += fs_filesize;
 
 		per_sfx->format.speed = vi->rate;
 		per_sfx->format.width = 2;  // We always work with 16 bits samples
@@ -612,11 +647,12 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 		int bs, bigendian;
 		long ret;
 		sfxbuffer_t *sb;
+		size_t memsize;
 
 		Con_DPrintf ("\"%s\" will be cached\n", filename);
 
 		// Decode it
-		buff = Mem_Alloc (s->mempool, (int)len);
+		buff = Mem_Alloc (snd_mempool, (int)len);
 		done = 0;
 		bs = 0;
 #if BYTE_ORDER == LITTLE_ENDIAN
@@ -631,7 +667,9 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 		len = (double)done * (double)shm->format.speed / (double)vi->rate;
 
 		// Resample it
-		sb = Mem_Alloc (s->mempool, (size_t)len + sizeof (*sb) - sizeof (sb->data));
+		memsize = (size_t)len + sizeof (*sb) - sizeof (sb->data);
+		sb = Mem_Alloc (snd_mempool, memsize);
+		s->memsize += memsize;
 		s->fetcher_data = sb;
 		s->fetcher = &wav_fetcher;
 		s->format.speed = vi->rate;

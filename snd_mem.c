@@ -213,20 +213,3 @@ qboolean S_LoadSound (sfx_t *s, qboolean complain)
 		Con_Printf("S_LoadSound: Couldn't load \"%s\"\n", s->name);
 	return false;
 }
-
-void S_UnloadSound (sfx_t *s)
-{
-	if (s->fetcher != NULL)
-	{
-		unsigned int i;
-
-		// Stop all channels that use this sound
-		for (i = 0; i < total_channels ; i++)
-			if (channels[i].sfx == s)
-				S_StopChannel (i);
-
-		s->fetcher = NULL;
-		s->fetcher_data = NULL;
-		Mem_FreePool(&s->mempool);
-	}
-}

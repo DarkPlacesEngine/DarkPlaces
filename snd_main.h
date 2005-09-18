@@ -50,7 +50,7 @@ struct sfx_s
 {
 	char				name[MAX_QPATH];
 	sfx_t				*next;
-	mempool_t			*mempool;
+	size_t				memsize;		// total memory used (including sfx_t and fetcher data)
 	int					locks;			// One lock is automatically granted while the sfx is
 										// playing (and removed when stopped). Locks can also be
 										// added by S_PrecacheSound and S_ServerSounds.
@@ -91,11 +91,13 @@ typedef struct
 } channel_t;
 
 typedef const sfxbuffer_t* (*snd_fetcher_getsb_t) (channel_t* ch, unsigned int start, unsigned int nbsamples);
-typedef void (*snd_fetcher_end_t) (channel_t* ch);
+typedef void (*snd_fetcher_endsb_t) (channel_t* ch);
+typedef void (*snd_fetcher_free_t) (sfx_t* sfx);
 struct snd_fetcher_s
 {
 	snd_fetcher_getsb_t		getsb;
-	snd_fetcher_end_t		end;
+	snd_fetcher_endsb_t		endsb;
+	snd_fetcher_free_t		free;
 };
 
 void S_PaintChannels(int endtime);
@@ -112,7 +114,6 @@ void SNDDMA_Submit(void);
 void SNDDMA_Shutdown(void);
 
 qboolean S_LoadSound (sfx_t *s, qboolean complain);
-void S_UnloadSound(sfx_t *s);
 
 void S_LockSfx (sfx_t *sfx);
 void S_UnlockSfx (sfx_t *sfx);
@@ -122,8 +123,6 @@ void S_UnlockBuffer(void);
 
 extern size_t ResampleSfx (const qbyte *in_data, size_t in_length, const snd_format_t* in_format, qbyte *out_data, const char* sfxname);
 
-// ====================================================================
-// User-setable variables
 // ====================================================================
 
 // 0 to NUM_AMBIENTS - 1 = water, etc
@@ -144,6 +143,8 @@ extern cvar_t snd_swapstereo;
 extern cvar_t snd_streaming;
 
 extern int snd_blocked;
+
+extern mempool_t *snd_mempool;
 
 
 #endif
