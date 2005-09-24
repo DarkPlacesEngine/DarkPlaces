@@ -1680,6 +1680,8 @@ void SV_SpawnServer (const char *server)
 
 	memset (&sv, 0, sizeof(sv));
 
+	SV_VM_Setup();
+
 	sv.active = true;
 
 	strlcpy (sv.name, server, sizeof (sv.name));
@@ -1692,8 +1694,6 @@ void SV_SpawnServer (const char *server)
 		Con_Printf("Unknown sv_protocolname \"%s\", valid values are:\n%s\n", sv_protocolname.string, buffer);
 		sv.protocol = PROTOCOL_QUAKE;
 	}
-
-	SV_VM_Setup();
 
 	SV_VM_Begin();
 
