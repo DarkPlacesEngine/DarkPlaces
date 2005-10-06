@@ -656,7 +656,6 @@ surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriang
 	if (mesh->num_triangles)
 	{
 		mesh->data_element3i = (int *)data, data += sizeof(int[3]) * mesh->num_triangles;
-		mesh->data_element3i = (int *)data, data += sizeof(int[3]) * mesh->num_triangles;
 		if (neighbors)
 			mesh->data_neighbor3i = (int *)data, data += sizeof(int[3]) * mesh->num_triangles;
 	}
