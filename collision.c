@@ -1097,7 +1097,7 @@ float Collision_ClipTrace_Line_Sphere(double *linestart, double *lineend, double
 	if (deviationdist > sphereradius*sphereradius)
 		return 1; // miss (off to the side)
 	// nudge back to find the correct impact distance
-	impactdist += (sqrt(deviationdist) - sphereradius);
+	impactdist += deviationdist - sphereradius;
 	if (impactdist >= linelength)
 		return 1; // miss (not close enough)
 	if (impactdist < 0)
