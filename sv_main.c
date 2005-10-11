@@ -906,7 +906,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	// stuff the sigil bits into the high bits of items for sbar, or else
 	// mix in items2
 	val = PRVM_GETEDICTFIELDVALUE(ent, eval_items2);
-	if (val)
+	if (gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE)
 		items = (int)ent->fields.server->items | ((int)val->_float << 23);
 	else
 		items = (int)ent->fields.server->items | ((int)prog->globals.server->serverflags << 28);
