@@ -1191,6 +1191,7 @@ void Host_Pause_f (void)
 ======================
 Host_PModel_f
 LordHavoc: only supported for Nehahra, I personally think this is dumb, but Mindcrime won't listen.
+LordHavoc: correction, Mindcrime will be removing pmodel in the future, but it's still stuck here for compatibility.
 ======================
 */
 cvar_t cl_pmodel = {CVAR_SAVE, "_cl_pmodel", "0"};
