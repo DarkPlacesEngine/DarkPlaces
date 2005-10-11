@@ -1054,7 +1054,10 @@ void Collision_ClipTrace_BrushBox(trace_t *trace, const vec3_t cmins, const vec3
 	Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, boxbrush, boxbrush);
 }
 
-// LordHavoc: currently unused and not yet tested
+//pseudocode for detecting line/sphere overlap without calculating an impact point
+//linesphereorigin = sphereorigin - linestart;linediff = lineend - linestart;linespherefrac = DotProduct(linesphereorigin, linediff) / DotProduct(linediff, linediff);return VectorLength2(linesphereorigin - bound(0, linespherefrac, 1) * linediff) >= sphereradius*sphereradius;
+
+// LordHavoc: currently unused, but tested
 // note: this can be used for tracing a moving sphere vs a stationary sphere,
 // by simply adding the moving sphere's radius to the sphereradius parameter,
 // all the results are correct (impactpoint, impactnormal, and fraction)
@@ -1063,35 +1066,26 @@ float Collision_ClipTrace_Line_Sphere(double *linestart, double *lineend, double
 	double dir[3], scale, v[3], deviationdist, impactdist, linelength;
 	// make sure the impactpoint and impactnormal are valid even if there is
 	// no collision
-	impactpoint[0] = lineend[0];
-	impactpoint[1] = lineend[1];
-	impactpoint[2] = lineend[2];
-	impactnormal[0] = 0;
-	impactnormal[1] = 0;
-	impactnormal[2] = 0;
+	VectorCopy(lineend, impactpoint);
+	VectorClear(impactnormal);
 	// calculate line direction
-	dir[0] = lineend[0] - linestart[0];
-	dir[1] = lineend[1] - linestart[1];
-	dir[2] = lineend[2] - linestart[2];
+	VectorSubtract(lineend, linestart, dir);
 	// normalize direction
-	linelength = sqrt(dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]);
+	linelength = VectorLength(dir);
 	if (linelength)
 	{
 		scale = 1.0 / linelength;
-		dir[0] *= scale;
-		dir[1] *= scale;
-		dir[2] *= scale;
+		VectorScale(dir, scale, dir);
 	}
 	// this dotproduct calculates the distance along the line at which the
 	// sphere origin is (nearest point to the sphere origin on the line)
-	impactdist = dir[0] * (sphereorigin[0] - linestart[0]) + dir[1] * (sphereorigin[1] - linestart[1]) + dir[2] * (sphereorigin[2] - linestart[2]);
+	impactdist = DotProduct(sphereorigin, dir) - DotProduct(linestart, dir);
 	// calculate point on line at that distance, and subtract the
 	// sphereorigin from it, so we have a vector to measure for the distance
 	// of the line from the sphereorigin (deviation, how off-center it is)
-	v[0] = linestart[0] + impactdist * dir[0] - sphereorigin[0];
-	v[1] = linestart[1] + impactdist * dir[1] - sphereorigin[1];
-	v[2] = linestart[2] + impactdist * dir[2] - sphereorigin[2];
-	deviationdist = v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
+	VectorMA(linestart, impactdist, dir, v);
+	VectorSubtract(v, sphereorigin, v);
+	deviationdist = VectorLength2(v);
 	// if outside the radius, it's a miss for sure
 	// (we do this comparison using squared radius to avoid a sqrt)
 	if (deviationdist > sphereradius*sphereradius)
@@ -1103,22 +1097,11 @@ float Collision_ClipTrace_Line_Sphere(double *linestart, double *lineend, double
 	if (impactdist < 0)
 		return 1; // miss (linestart is past or inside sphere)
 	// calculate new impactpoint
-	impactpoint[0] = linestart[0] + impactdist * dir[0];
-	impactpoint[1] = linestart[1] + impactdist * dir[1];
-	impactpoint[2] = linestart[2] + impactdist * dir[2];
+	VectorMA(linestart, impactdist, dir, impactpoint);
 	// calculate impactnormal (surface normal at point of impact)
-	impactnormal[0] = impactpoint[0] - sphereorigin[0];
-	impactnormal[1] = impactpoint[1] - sphereorigin[1];
-	impactnormal[2] = impactpoint[2] - sphereorigin[2];
+	VectorSubtract(impactpoint, sphereorigin, impactnormal);
 	// normalize impactnormal
-	scale = impactnormal[0] * impactnormal[0] + impactnormal[1] * impactnormal[1] + impactnormal[2] * impactnormal[2];
-	if (scale)
-	{
-		scale = 1.0 / sqrt(scale);
-		impactnormal[0] *= scale;
-		impactnormal[1] *= scale;
-		impactnormal[2] *= scale;
-	}
+	VectorNormalize(impactnormal);
 	// return fraction of movement distance
 	return impactdist / linelength;
 }
