@@ -1061,6 +1061,10 @@ const char *PRVM_ED_ParseEdict (const char *data, prvm_edict_t *ent)
 
 		init = true;
 
+		// ignore attempts to set key "" (this problem occurs in nehahra neh1m8.bsp)
+		if (!keyname[0])
+			continue;
+
 // keynames with a leading underscore are used for utility comments,
 // and are immediately discarded by quake
 		if (keyname[0] == '_')
