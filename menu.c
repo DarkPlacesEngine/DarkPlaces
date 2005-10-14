@@ -1761,7 +1761,7 @@ void M_Options_Key (int k, char ascii)
 	}
 }
 
-#define	OPTIONS_EFFECTS_ITEMS	35
+#define	OPTIONS_EFFECTS_ITEMS	34
 
 int options_effects_cursor;
 
@@ -1776,7 +1776,6 @@ void M_Menu_Options_Effects_f (void)
 extern cvar_t cl_stainmaps;
 extern cvar_t cl_stainmaps_clearonload;
 extern cvar_t r_explosionclip;
-extern cvar_t r_modellights;
 extern cvar_t r_coronas;
 extern cvar_t gl_flashblend;
 extern cvar_t cl_beams_polygon;
@@ -1796,8 +1795,7 @@ void M_Menu_Options_Effects_AdjustSliders (int dir)
 	S_LocalSound ("sound/misc/menu3.wav");
 
 	optnum = 0;
-	     if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&r_modellights, bound(0, r_modellights.value + dir, 8));
-	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&r_coronas, bound(0, r_coronas.value + dir * 0.125, 4));
+	     if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&r_coronas, bound(0, r_coronas.value + dir * 0.125, 4));
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&gl_flashblend, !gl_flashblend.integer);
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles, !cl_particles.integer);
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles_quality, bound(1, cl_particles_quality.value + dir * 0.5, 4));
@@ -1849,7 +1847,6 @@ void M_Options_Effects_Draw (void)
 	visible = (menu_height - 32) / 8;
 	opty = 32 - bound(0, optcursor - (visible >> 1), max(0, OPTIONS_EFFECTS_ITEMS - visible)) * 8;
 
-	M_Options_PrintSlider(  "      Lights Per Model", true, r_modellights.value, 0, 8);
 	M_Options_PrintSlider(  "      Corona Intensity", true, r_coronas.value, 0, 4);
 	M_Options_PrintCheckbox("      Use Only Coronas", true, gl_flashblend.integer);
 	M_Options_PrintCheckbox("             Particles", true, cl_particles.integer);
