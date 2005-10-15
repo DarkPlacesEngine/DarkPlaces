@@ -501,6 +501,9 @@ void r_shadow_start(void)
 			}
 			if (i & SHADERPERMUTATION_GEFORCEFX)
 			{
+				// if the extension does not exist, don't try to compile it
+				if (!gl_support_halffloat)
+					continue;
 				vertstrings_list[vertstrings_count++] = "#define GEFORCEFX\n";
 				fragstrings_list[fragstrings_count++] = "#define GEFORCEFX\n";
 			}
