@@ -262,7 +262,7 @@ static qbyte crosshairtexdata[NUMCROSSHAIRS][16*16] =
 static rtexture_t *draw_generatecrosshair(int num)
 {
 	int i;
-	char *in;
+	qbyte *in;
 	qbyte data[16*16][4];
 	in = crosshairtexdata[num];
 	for (i = 0;i < 16*16;i++)
