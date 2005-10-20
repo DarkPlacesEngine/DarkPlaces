@@ -321,6 +321,7 @@ void V_CalcRefdef (void)
 	entity_t *ent;
 	float vieworg[3], gunorg[3], viewangles[3];
 	trace_t trace;
+	VectorClear(gunorg);
 	Matrix4x4_CreateIdentity(&viewmodelmatrix);
 	Matrix4x4_CreateIdentity(&r_refdef.viewentitymatrix);
 	if (cls.state == ca_connected && cls.signon == SIGNONS)

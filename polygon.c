@@ -96,9 +96,9 @@ void PolygonD_QuadForPlane(double *outpoints, double planenormalx, double planen
 	outpoints[11] = planedist * planenormalz - quadsize * quadright[2] - quadsize * quadup[2];
 }
 
-void PolygonF_Divide(unsigned int innumpoints, const float *inpoints, float planenormalx, float planenormaly, float planenormalz, float planedist, float epsilon, unsigned int outfrontmaxpoints, float *outfrontpoints, unsigned int *neededfrontpoints, unsigned int outbackmaxpoints, float *outbackpoints, unsigned int *neededbackpoints)
+void PolygonF_Divide(int innumpoints, const float *inpoints, float planenormalx, float planenormaly, float planenormalz, float planedist, float epsilon, int outfrontmaxpoints, float *outfrontpoints, int *neededfrontpoints, int outbackmaxpoints, float *outbackpoints, int *neededbackpoints)
 {
-	unsigned int i, frontcount, backcount;
+	int i, frontcount, backcount;
 	const float *n, *p;
 	float frac, pdist, ndist;
 	frontcount = 0;
@@ -154,9 +154,9 @@ void PolygonF_Divide(unsigned int innumpoints, const float *inpoints, float plan
 		*neededbackpoints = backcount;
 }
 
-void PolygonD_Divide(unsigned int innumpoints, const double *inpoints, double planenormalx, double planenormaly, double planenormalz, double planedist, double epsilon, unsigned int outfrontmaxpoints, double *outfrontpoints, unsigned int *neededfrontpoints, unsigned int outbackmaxpoints, double *outbackpoints, unsigned int *neededbackpoints)
+void PolygonD_Divide(int innumpoints, const double *inpoints, double planenormalx, double planenormaly, double planenormalz, double planedist, double epsilon, int outfrontmaxpoints, double *outfrontpoints, int *neededfrontpoints, int outbackmaxpoints, double *outbackpoints, int *neededbackpoints)
 {
-	unsigned int i, frontcount, backcount;
+	int i, frontcount, backcount;
 	const double *n, *p;
 	double frac, pdist, ndist;
 	frontcount = 0;

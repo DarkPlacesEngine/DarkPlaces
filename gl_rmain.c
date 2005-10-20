@@ -297,6 +297,7 @@ static void R_BuildNormalizationCube(void)
 				t = (y + 0.5f) * (2.0f / NORMSIZE) - 1.0f;
 				switch(side)
 				{
+				default:
 				case 0:
 					v[0] = 1;
 					v[1] = -t;
@@ -379,7 +380,7 @@ void gl_main_newmap(void)
 		if (l >= 0 && !strcmp(entname + l, ".bsp"))
 		{
 			strcpy(entname + l, ".ent");
-			if ((entities = FS_LoadFile(entname, tempmempool, true)))
+			if ((entities = (char *)FS_LoadFile(entname, tempmempool, true)))
 			{
 				CL_ParseEntityLump(entities);
 				Mem_Free(entities);

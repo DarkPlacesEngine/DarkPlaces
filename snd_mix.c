@@ -355,7 +355,7 @@ qboolean SND_PaintChannelFrom8 (channel_t *ch, int count)
 	// Stereo sound support
 	if (ch->sfx->format.channels == 2)
 	{
-		sfx = sb->data + (ch->pos - sb->offset) * 2;
+		sfx = (signed char *)sb->data + (ch->pos - sb->offset) * 2;
 		for (i = 0;i < count;i++)
 		{
 			paintbuffer[i].left += (*sfx++ * leftvol) >> 8;
@@ -364,13 +364,12 @@ qboolean SND_PaintChannelFrom8 (channel_t *ch, int count)
 	}
 	else
 	{
-		sfx = sb->data + ch->pos - sb->offset;
+		sfx = (signed char *)sb->data + ch->pos - sb->offset;
 		for (i = 0;i < count;i++)
 		{
 			paintbuffer[i].left += (*sfx * leftvol) >> 8;
 			paintbuffer[i].right += (*sfx++ * rightvol) >> 8;
 		}
-
 	}
 	ch->pos += count;
 	return true;

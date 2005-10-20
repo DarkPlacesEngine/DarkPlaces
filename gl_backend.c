@@ -174,9 +174,9 @@ static void gl_backend_start(void)
 	if (gl_support_fragment_shader)
 	{
 		CHECKGLERROR
-		qglGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS_ARB, &backendimageunits);
+		qglGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS_ARB, (int *)&backendimageunits);
 		CHECKGLERROR
-		qglGetIntegerv(GL_MAX_TEXTURE_COORDS_ARB, &backendarrayunits);
+		qglGetIntegerv(GL_MAX_TEXTURE_COORDS_ARB, (int *)&backendarrayunits);
 		CHECKGLERROR
 		Con_Printf("GLSL shader support detected: texture units = %i texenv, %i image, %i array\n", backendunits, backendimageunits, backendarrayunits);
 	}

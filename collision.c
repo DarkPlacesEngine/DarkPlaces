@@ -522,6 +522,7 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 	float enterfrac, leavefrac, d1, d2, f, imove, newimpactnormal[3], enterfrac2;
 	const colplanef_t *startplane, *endplane;
 
+	VectorClear(newimpactnormal);
 	enterfrac = -1;
 	enterfrac2 = -1;
 	leavefrac = 1;
@@ -662,6 +663,7 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 	float enterfrac, leavefrac, d1, d2, f, imove, newimpactnormal[3], enterfrac2;
 	const colplanef_t *startplane, *endplane;
 
+	VectorClear(newimpactnormal);
 	enterfrac = -1;
 	enterfrac2 = -1;
 	leavefrac = 1;
