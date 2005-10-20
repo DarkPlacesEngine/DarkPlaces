@@ -238,7 +238,7 @@ void R_FreeTexture(rtexture_t *rt)
 			else
 				Host_Error("R_FreeTexture: image not linked in pool\n");
 			if (image->texnum)
-				qglDeleteTextures(1, &image->texnum);
+				qglDeleteTextures(1, (GLuint *)&image->texnum);
 			if (image->blockallocation)
 				Mem_Free(image->blockallocation);
 			Mem_Free(image);
@@ -986,7 +986,7 @@ static void R_FindImageForTexture(gltexture_t *glt)
 	image->bytesperpixel = texinfo->internalbytesperpixel;
 	image->sides = image->texturetype == GLTEXTURETYPE_CUBEMAP ? 6 : 1;
 	// get a texture number to use
-	qglGenTextures(1, &image->texnum);
+	qglGenTextures(1, (GLuint *)&image->texnum);
 	*imagechainpointer = image;
 	image->texturecount++;
 

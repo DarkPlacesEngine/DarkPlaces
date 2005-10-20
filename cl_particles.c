@@ -558,7 +558,7 @@ void CL_ReadPointFile_f (void)
 #if WORKINGLQUAKE
 	pointfile = COM_LoadTempFile (name);
 #else
-	pointfile = FS_LoadFile(name, tempmempool, true);
+	pointfile = (char *)FS_LoadFile(name, tempmempool, true);
 #endif
 	if (!pointfile)
 	{
@@ -567,6 +567,7 @@ void CL_ReadPointFile_f (void)
 	}
 
 	Con_Printf("Reading %s...\n", name);
+	VectorClear(leakorg);
 	c = 0;
 	s = 0;
 	pointfilepos = pointfile;

@@ -634,7 +634,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 	}
 	else if (lhnetsocket->address.addresstype == LHNETADDRESSTYPE_INET4)
 	{
-		int inetaddresslength;
+		unsigned int inetaddresslength;
 		address->addresstype = LHNETADDRESSTYPE_NONE;
 		inetaddresslength = sizeof(address->addressdata.inet4);
 		value = recvfrom(lhnetsocket->inetsocket, content, maxcontentlength, 0, (struct sockaddr *)&address->addressdata.inet4, &inetaddresslength);
@@ -669,7 +669,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 	}
 	else if (lhnetsocket->address.addresstype == LHNETADDRESSTYPE_INET6)
 	{
-		int inetaddresslength;
+		unsigned int inetaddresslength;
 		address->addresstype = LHNETADDRESSTYPE_NONE;
 		inetaddresslength = sizeof(address->addressdata.inet6);
 		value = recvfrom(lhnetsocket->inetsocket, content, maxcontentlength, 0, (struct sockaddr *)&address->addressdata.inet6, &inetaddresslength);

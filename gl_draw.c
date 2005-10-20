@@ -147,8 +147,9 @@ static rtexture_t *draw_generatemousepointer(void)
 // must match NUMCROSSHAIRS in r_crosshairs.c
 #define NUMCROSSHAIRS 6
 
-static qbyte *crosshairtexdata[NUMCROSSHAIRS] =
+static qbyte crosshairtexdata[NUMCROSSHAIRS][16*16] =
 {
+	{
 	"................"
 	"................"
 	"................"
@@ -165,7 +166,8 @@ static qbyte *crosshairtexdata[NUMCROSSHAIRS] =
 	"................"
 	"................"
 	"................"
-	,
+	},
+	{
 	"................"
 	"................"
 	"................"
@@ -182,7 +184,8 @@ static qbyte *crosshairtexdata[NUMCROSSHAIRS] =
 	"................"
 	"................"
 	"................"
-	,
+	},
+	{
 	"................"
 	".......77......."
 	".......77......."
@@ -199,7 +202,8 @@ static qbyte *crosshairtexdata[NUMCROSSHAIRS] =
 	".......77......."
 	".......77......."
 	"................"
-	,
+	},
+	{
 	"................"
 	"................"
 	"................"
@@ -216,7 +220,8 @@ static qbyte *crosshairtexdata[NUMCROSSHAIRS] =
 	"........7......."
 	"........7......."
 	"................"
-	,
+	},
+	{
 	"................"
 	"................"
 	"................"
@@ -233,7 +238,8 @@ static qbyte *crosshairtexdata[NUMCROSSHAIRS] =
 	"................"
 	"................"
 	"................"
-	,
+	},
+	{
 	"................"
 	"................"
 	"................"
@@ -250,6 +256,7 @@ static qbyte *crosshairtexdata[NUMCROSSHAIRS] =
 	"................"
 	"................"
 	"................"
+	}
 };
 
 static rtexture_t *draw_generatecrosshair(int num)
@@ -323,7 +330,7 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 			return &video->cpif;
 	}
 
-	crc = CRC_Block(path, strlen(path));
+	crc = CRC_Block((qbyte *)path, strlen(path));
 	hashkey = ((crc >> 8) ^ crc) % CACHEPICHASHSIZE;
 	for (pic = cachepichash[hashkey];pic;pic = pic->chain)
 		if (!strcmp (path, pic->name))
@@ -407,7 +414,7 @@ cachepic_t *Draw_NewPic(const char *picname, int width, int height, int alpha, q
 	int crc, hashkey;
 	cachepic_t *pic;
 
-	crc = CRC_Block(picname, strlen(picname));
+	crc = CRC_Block((qbyte *)picname, strlen(picname));
 	hashkey = ((crc >> 8) ^ crc) % CACHEPICHASHSIZE;
 	for (pic = cachepichash[hashkey];pic;pic = pic->chain)
 		if (!strcmp (picname, pic->name))
@@ -453,7 +460,7 @@ void Draw_FreePic(const char *picname)
 	int hashkey;
 	cachepic_t *pic;
 	// this doesn't really free the pic, but does free it's texture
-	crc = CRC_Block(picname, strlen(picname));
+	crc = CRC_Block((qbyte *)picname, strlen(picname));
 	hashkey = ((crc >> 8) ^ crc) % CACHEPICHASHSIZE;
 	for (pic = cachepichash[hashkey];pic;pic = pic->chain)
 	{

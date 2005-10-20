@@ -1299,7 +1299,7 @@ showlmp_t showlmp[SHOWLMP_MAXLABELS];
 void SHOWLMP_decodehide(void)
 {
 	int i;
-	qbyte *lmplabel;
+	char *lmplabel;
 	lmplabel = MSG_ReadString();
 	for (i = 0;i < SHOWLMP_MAXLABELS;i++)
 		if (showlmp[i].isactive && strcmp(showlmp[i].label, lmplabel) == 0)
@@ -1312,7 +1312,7 @@ void SHOWLMP_decodehide(void)
 void SHOWLMP_decodeshow(void)
 {
 	int i, k;
-	qbyte lmplabel[256], picname[256];
+	char lmplabel[256], picname[256];
 	float x, y;
 	strlcpy (lmplabel,MSG_ReadString(), sizeof (lmplabel));
 	strlcpy (picname, MSG_ReadString(), sizeof (picname));

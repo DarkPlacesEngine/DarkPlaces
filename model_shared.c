@@ -851,6 +851,8 @@ void Mod_ShadowMesh_CalcBBox(shadowmesh_t *firstmesh, vec3_t mins, vec3_t maxs, 
 	shadowmesh_t *mesh;
 	vec3_t nmins, nmaxs, ncenter, temp;
 	float nradius2, dist2, *v;
+	VectorClear(nmins);
+	VectorClear(nmaxs);
 	// calculate bbox
 	for (mesh = firstmesh;mesh;mesh = mesh->next)
 	{
@@ -1075,7 +1077,7 @@ tag_torso,
 */
 	memset(tagsets, 0, sizeof(tagsets));
 	memset(word, 0, sizeof(word));
-	for (i = 0;i < MAX_SKINS && (data = text = FS_LoadFile(va("%s_%i.skin", loadmodel->name, i), tempmempool, true));i++)
+	for (i = 0;i < MAX_SKINS && (data = text = (char *)FS_LoadFile(va("%s_%i.skin", loadmodel->name, i), tempmempool, true));i++)
 	{
 		numtags = 0;
 

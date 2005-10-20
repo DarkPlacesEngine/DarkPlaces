@@ -3733,7 +3733,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 	{
 		for (i = 0;i < search->numfilenames;i++)
 		{
-			if ((f = FS_LoadFile(search->filenames[i], tempmempool, false)))
+			if ((f = (char *)FS_LoadFile(search->filenames[i], tempmempool, false)))
 			{
 				text = f;
 				while (COM_ParseToken(&text, false))

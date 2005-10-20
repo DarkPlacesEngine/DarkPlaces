@@ -1524,8 +1524,8 @@ Tell all the clients that the server is changing levels
 */
 void SV_SendReconnect (void)
 {
-	char	data[128];
-	sizebuf_t	msg;
+	qbyte data[128];
+	sizebuf_t msg;
 
 	msg.data = data;
 	msg.cursize = 0;
@@ -1623,7 +1623,7 @@ void SV_SpawnServer (const char *server)
 {
 	prvm_edict_t *ent;
 	int i;
-	qbyte *entities;
+	char *entities;
 	model_t *worldmodel;
 	char modelname[sizeof(sv.modelname)];
 
@@ -1793,7 +1793,7 @@ void SV_SpawnServer (const char *server)
 	// load replacement entity file if found
 	entities = NULL;
 	if (sv_entpatch.integer)
-		entities = FS_LoadFile(va("maps/%s.ent", sv.name), tempmempool, true);
+		entities = (char *)FS_LoadFile(va("maps/%s.ent", sv.name), tempmempool, true);
 	if (entities)
 	{
 		Con_Printf("Loaded maps/%s.ent\n", sv.name);

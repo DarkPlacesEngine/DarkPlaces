@@ -426,10 +426,10 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 	// enable key repeat since everyone expects it
 	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 
-	gl_renderer = qglGetString(GL_RENDERER);
-	gl_vendor = qglGetString(GL_VENDOR);
-	gl_version = qglGetString(GL_VERSION);
-	gl_extensions = qglGetString(GL_EXTENSIONS);
+	gl_renderer = (const char *)qglGetString(GL_RENDERER);
+	gl_vendor = (const char *)qglGetString(GL_VENDOR);
+	gl_version = (const char *)qglGetString(GL_VERSION);
+	gl_extensions = (const char *)qglGetString(GL_EXTENSIONS);
 	gl_platform = "SDL";
 	// Knghtbrd: should assign platform-specific extensions here
 	//TODO: maybe ;)

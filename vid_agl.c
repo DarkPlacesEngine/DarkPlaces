@@ -198,16 +198,16 @@ void VID_Shutdown(void)
 {
 	if (context == NULL || window == NULL)
 		return;
-	
+
 	IN_Activate(false);
 	VID_RestoreSystemGamma();
-	
+
 	if (context != NULL)
 	{
 		qaglDestroyContext(context);
 		context = NULL;
 	}
-	
+
 	if (window != NULL)
 	{
 		DisposeWindow(window);
@@ -227,7 +227,7 @@ static qboolean AsyncEvent_Collapsed = false;
 static OSStatus MainWindowEventHandler (EventHandlerCallRef nextHandler, EventRef event, void *userData)
 {
 	OSStatus err = noErr;
-	
+
 	switch (GetEventKind (event))
 	{
 		case kEventWindowClosed:
@@ -271,7 +271,7 @@ static void VID_ProcessPendingAsyncEvents (void)
 		vid_activewindow = false;
 		VID_RestoreSystemGamma();
 	}
-	
+
 	// Closed
 	if (AsyncEvent_Quitting)
 	{
@@ -347,7 +347,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 		Con_Printf("Unable to create window (error %d)\n", carbonError);
 		return false;
 	}
-	
+
 	// Set the window title
 	CFStringRef windowTitle = CFSTR("DarkPlaces AGL");
 	SetWindowTitleWithCFString(window, windowTitle);
@@ -356,7 +356,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 	// Install the callback function for the window events we can't get
 	// through ReceiveNextEvent (i.e. close, collapse, and expand)
 	InstallWindowEventHandler (window, NewEventHandlerUPP (MainWindowEventHandler),
-							   GetEventTypeCount(winEvents), winEvents, window, NULL); 
+							   GetEventTypeCount(winEvents), winEvents, window, NULL);
 
 	screen = GetGWorldDevice(GetWindowPort(window));
 	if (screen == NULL)
@@ -385,7 +385,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 		Sys_Error ("aglSetDrawable failed\n");
 	if (!qaglSetCurrentContext(context))
 		Sys_Error ("aglSetCurrentContext failed\n");
-	
+
 	scr_width = width;
 	scr_height = height;
 
@@ -399,10 +399,10 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 		vid_isfullscreen = true;
 	}
 
-	gl_renderer = qglGetString(GL_RENDERER);
-	gl_vendor = qglGetString(GL_VENDOR);
-	gl_version = qglGetString(GL_VERSION);
-	gl_extensions = qglGetString(GL_EXTENSIONS);
+	gl_renderer = (const char *)qglGetString(GL_RENDERER);
+	gl_vendor = (const char *)qglGetString(GL_VENDOR);
+	gl_version = (const char *)qglGetString(GL_VERSION);
+	gl_extensions = (const char *)qglGetString(GL_EXTENSIONS);
 	gl_platform = "AGL";
 	gl_videosyncavailable = false;
 
@@ -529,8 +529,8 @@ void Sys_SendKeyEvents(void)
 {
 	EventRef theEvent;
 	EventTargetRef theTarget;
-	
-	// Start by processing the asynchronous events we received since the previous frame 
+
+	// Start by processing the asynchronous events we received since the previous frame
 	VID_ProcessPendingAsyncEvents();
 
 	theTarget = GetEventDispatcherTarget();
@@ -573,7 +573,7 @@ void Sys_SendKeyEvents(void)
 					case kEventMouseMoved:
 					{
 						HIPoint deltaPos;
-						
+
 						GetEventParameter(theEvent, kEventParamMouseDelta, typeHIPoint, NULL, sizeof(deltaPos), NULL, &deltaPos);
 						//Con_Printf(">> kEventMouseMoved (%f, %f) <<\n", deltaPos.x, deltaPos.y);
 
@@ -627,7 +627,7 @@ void Sys_SendKeyEvents(void)
 						Handle_Key(keycode, false);
 						//Con_Printf(">> kEventRawKeyUp (%d) <<\n", keycode);
 						break;
-					
+
 					case kEventRawKeyModifiersChanged:
 					{
 						UInt32 keymod = 0;

@@ -63,12 +63,12 @@ OSStatus audioDeviceIOProc(AudioDeviceID inDevice,
 	unsigned int sampleIndex;
 	float *outBuffer;
 	float scale;
-	
+
 	offset = (s_chunkCount * submissionChunk) % maxMixedSamples;
 	samples = s_mixedSamples + offset;
-	
+
 	outBuffer = (float *)outOutputData->mBuffers[0].mData;
-	
+
 	// If we have run out of samples, return silence
 	if (s_chunkCount * submissionChunk > shm->format.channels * paintedtime)
 	{
@@ -83,7 +83,7 @@ OSStatus audioDeviceIOProc(AudioDeviceID inDevice,
 
 		s_chunkCount++; // this is the next buffer we will submit
 	}
-	
+
 	return 0;
 }
 
@@ -110,14 +110,14 @@ qboolean SNDDMA_Init(void)
 		Con_Printf("AudioHardwareGetProperty returned %d\n", status);
 		return false;
 	}
-	
+
 	if (outputDeviceID == kAudioDeviceUnknown)
 	{
 		Con_Printf("AudioHardwareGetProperty: outputDeviceID is kAudioDeviceUnknown\n");
 		return false;
 	}
 
-	// Configure the output device	
+	// Configure the output device
 	// TODO: support "-sndspeed", "-sndmono" and "-sndstereo"
 	propertySize = sizeof(bufferByteCount);
 	bufferByteCount = CHUNK_SIZE * sizeof(float);
@@ -127,7 +127,7 @@ qboolean SNDDMA_Init(void)
 		Con_Printf("AudioDeviceSetProperty: returned %d when setting kAudioDevicePropertyBufferSize to %d\n", status, CHUNK_SIZE);
 		return false;
 	}
-	
+
 	propertySize = sizeof(bufferByteCount);
 	status = AudioDeviceGetProperty(outputDeviceID, 0, false, kAudioDevicePropertyBufferSize, &propertySize, &bufferByteCount);
 	if (status)
@@ -164,7 +164,7 @@ qboolean SNDDMA_Init(void)
 		Con_Printf("Default Audio Device doesn't support Linear PCM!\n");
 		return false;
 	}
-	
+
 	// Start sound running
 	status = AudioDeviceAddIOProc(outputDeviceID, audioDeviceIOProc, NULL);
 	if (status)
@@ -200,7 +200,7 @@ qboolean SNDDMA_Init(void)
 	s_isRunning = true;
 
 	Con_Printf("   Initialization successful\n");
-	
+
 	return true;
 }
 
@@ -228,29 +228,29 @@ Reset the sound device for exiting
 void SNDDMA_Shutdown(void)
 {
 	OSStatus status;
-	
+
 	if (!s_isRunning)
 		return;
-		
+
 	status = AudioDeviceStop(outputDeviceID, audioDeviceIOProc);
 	if (status)
 	{
 		Con_Printf("AudioDeviceStop: returned %d\n", status);
 		return;
 	}
-	
+
 	s_isRunning = false;
-	
+
 	status = AudioDeviceRemoveIOProc(outputDeviceID, audioDeviceIOProc);
 	if (status)
 	{
 		Con_Printf("AudioDeviceRemoveIOProc: returned %d\n", status);
 		return;
 	}
-	
+
 	Mem_Free(s_mixedSamples);
 	s_mixedSamples = NULL;
-	shm->samples = NULL;
+	shm->buffer = NULL;
 }
 
 /*

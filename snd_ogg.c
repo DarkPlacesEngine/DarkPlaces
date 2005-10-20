@@ -498,7 +498,7 @@ static const sfxbuffer_t* OGG_FetchSound (channel_t* ch, unsigned int start, uns
 	bigendian = 0;
 #endif
 	done = 0;
-	while ((ret = qov_read (&per_ch->vf, &resampling_buffer[done], (int)(newlength - done), bigendian, 2, 1, &per_ch->bs)) > 0)
+	while ((ret = qov_read (&per_ch->vf, (char *)&resampling_buffer[done], (int)(newlength - done), bigendian, 2, 1, &per_ch->bs)) > 0)
 		done += ret;
 
 	// Resample in the sfxbuffer
@@ -529,7 +529,7 @@ static void OGG_FetchEnd (channel_t* ch)
 
 		Mem_Free (per_ch);
 		ch->fetcher_data = NULL;
-		
+
 		format = &ch->sfx->format;
 		buff_len = STREAM_BUFFER_SIZE(format);
 		ch->sfx->memsize -= sizeof (*per_ch) - sizeof (per_ch->sb.data) + buff_len;
@@ -678,7 +678,7 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 		s->loopstart = -1;
 		s->flags &= ~SFXFLAG_STREAMED;
 
-		sb->length = (unsigned int)ResampleSfx (buff, (size_t)done / (vi->channels * 2), &s->format, sb->data, s->name);
+		sb->length = (unsigned int)ResampleSfx ((qbyte *)buff, (size_t)done / (vi->channels * 2), &s->format, sb->data, s->name);
 		s->format.speed = shm->format.speed;
 		s->total_length = sb->length;
 		sb->offset = 0;

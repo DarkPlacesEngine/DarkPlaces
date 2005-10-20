@@ -586,7 +586,7 @@ void Host_Loadgame_f (void)
 
 	cls.demonum = -1;		// stop demo loop in case this fails
 
-	t = text = FS_LoadFile (filename, tempmempool, false);
+	t = text = (char *)FS_LoadFile (filename, tempmempool, false);
 	if (!text)
 	{
 		Con_Print("ERROR: couldn't open.\n");
@@ -904,7 +904,7 @@ void Host_Say(qboolean teamonly)
 	const char *p1;
 	char *p2;
 	// LordHavoc: 256 char say messages
-	unsigned char text[256];
+	char text[256];
 	qboolean fromServer = false;
 
 	if (cmd_source == src_command)

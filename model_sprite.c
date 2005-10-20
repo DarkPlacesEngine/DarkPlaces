@@ -38,7 +38,7 @@ void Mod_SpriteInit (void)
 }
 
 static int alphaonlytable[4] = {255 | 0x80000000, 255 | 0x80000000, 255 | 0x80000000, 3};
-static void Mod_Sprite_SharedSetup(const qbyte *datapointer, int version, const int *palette, const int *alphapalette)
+static void Mod_Sprite_SharedSetup(const qbyte *datapointer, int version, const unsigned int *palette, const unsigned int *alphapalette)
 {
 	int					i, j, groupframes, realframes, x, y, origin[2], width, height;
 	dspriteframetype_t	*pinframetype;
@@ -310,7 +310,7 @@ void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 			alphapalette[i][3] = palette[i][3];
 		}
 
-		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinhlsprite->version), (int *)(&palette[0][0]), (int *)(&alphapalette[0][0]));
+		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinhlsprite->version), (unsigned int *)(&palette[0][0]), (unsigned int *)(&alphapalette[0][0]));
 	}
 	else
 		Host_Error("Mod_IDSP_Load: %s has wrong version number (%i). Only %i (quake), %i (HalfLife), and %i (sprite32) supported",

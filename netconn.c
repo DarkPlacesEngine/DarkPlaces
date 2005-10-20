@@ -1169,7 +1169,7 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 			if (developer.integer)
 				Con_Printf("Datagram_ParseConnectionless: received CCREP_REJECT from %s.\n", addressstring2);
 			cls.connect_trying = false;
-			M_Update_Return_Reason(data);
+			M_Update_Return_Reason((char *)data);
 			break;
 #if 0
 		case CCREP_SERVER_INFO:
