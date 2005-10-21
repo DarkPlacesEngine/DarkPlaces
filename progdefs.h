@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef PROGDEFS_H
 #define PROGDEFS_H
 
-typedef struct
+typedef struct globalvars_s
 {
 	int	pad[28];
 	int	self;
@@ -82,7 +82,7 @@ typedef struct
 	func_t	SetChangeParms;
 } globalvars_t;
 
-typedef struct
+typedef struct entvars_s
 {
 	float	modelindex;
 	vec3_t	absmin;

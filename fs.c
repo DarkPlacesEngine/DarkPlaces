@@ -172,7 +172,7 @@ struct qfile_s
 
 // You can get the complete ZIP format description from PKWARE website
 
-typedef struct
+typedef struct pk3_endOfCentralDir_s
 {
 	unsigned int signature;
 	unsigned short disknum;
@@ -186,13 +186,13 @@ typedef struct
 
 
 // ------ PAK files on disk ------ //
-typedef struct
+typedef struct dpackfile_s
 {
 	char name[56];
 	int filepos, filelen;
 } dpackfile_t;
 
-typedef struct
+typedef struct dpackheader_s
 {
 	char id[4];
 	int dirofs;
@@ -206,7 +206,7 @@ typedef struct
 // file compressed using the deflate algorithm
 #define PACKFILE_FLAG_DEFLATED (1 << 1)
 
-typedef struct
+typedef struct packfile_s
 {
 	char name [MAX_QPATH];
 	int flags;

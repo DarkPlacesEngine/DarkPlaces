@@ -407,7 +407,7 @@ typedef struct gltextureunit_s
 }
 gltextureunit_t;
 
-static struct
+static struct gl_state_s
 {
 	int blendfunc1;
 	int blendfunc2;

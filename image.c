@@ -159,7 +159,7 @@ void Image_Copy8bitRGBA(const qbyte *in, qbyte *out, int pixels, const unsigned 
 =================================================================
 */
 
-typedef struct
+typedef struct pcx_s
 {
     char	manufacturer;
     char	version;
@@ -582,7 +582,7 @@ static qbyte *LoadLMPRGBA (const qbyte *f, int matchwidth, int matchheight)
 }
 
 
-typedef struct
+typedef struct q2wal_s
 {
 	char		name[32];
 	unsigned	width, height;

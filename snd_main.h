@@ -24,14 +24,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "sound.h"
 
 
-typedef struct
+typedef struct sfxbuffer_s
 {
 	unsigned int	length;
 	unsigned int	offset;
 	qbyte	data[4];	// variable sized
 } sfxbuffer_t;
 
-typedef struct
+typedef struct snd_format_s
 {
 	unsigned int	speed;
 	unsigned int	width;
@@ -64,7 +64,7 @@ struct sfx_s
 	void				*fetcher_data;	// Per-sfx data for the sound fetching functions
 };
 
-typedef struct
+typedef struct dma_s
 {
 	snd_format_t	format;
 	int				samples;		// mono samples in buffer
@@ -73,7 +73,7 @@ typedef struct
 	int				bufferlength;	// used only by certain drivers
 } dma_t;
 
-typedef struct
+typedef struct channel_s
 {
 	sfx_t			*sfx;			// sfx number
 	unsigned int	flags;			// cf CHANNELFLAG_* defines

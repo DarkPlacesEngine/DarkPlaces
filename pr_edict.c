@@ -75,16 +75,6 @@ cvar_t	pr_boundscheck = {0, "pr_boundscheck", "1"};
 // LordHavoc: prints every opcode as it executes - warning: this is significant spew
 cvar_t	pr_traceqc = {0, "pr_traceqc", "0"};
 
-#define	MAX_FIELD_LEN	64
-#define GEFV_CACHESIZE	2
-
-typedef struct {
-	ddef_t	*pcache;
-	char	field[MAX_FIELD_LEN];
-} gefv_cache;
-
-static gefv_cache	gefvCache[GEFV_CACHESIZE] = {{NULL, ""}, {NULL, ""}};
-
 ddef_t *ED_FindField (const char *name);
 mfunction_t *PRVM_ED_FindFunction (const char *name);
 
@@ -1290,10 +1280,6 @@ void PR_LoadProgs (const char *progsname)
 
 	if (!progsname || !*progsname)
 		Host_Error("PR_LoadProgs: passed empty progsname");
-
-// flush the non-C variable lookup cache
-	for (i=0 ; i<GEFV_CACHESIZE ; i++)
-		gefvCache[i].field[0] = 0;
 
 	PR_FreeAll();
 

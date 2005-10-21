@@ -9,7 +9,7 @@
 //#define HZREADBLOCKSIZE 16000
 #define HZREADBLOCKSIZE 1048576
 
-typedef struct
+typedef struct hz_bitstream_read_s
 {
 	qfile_t *file;
 	int endoffile;
@@ -24,7 +24,7 @@ typedef struct hz_bitstream_readblock_s
 }
 hz_bitstream_readblock_t;
 
-typedef struct
+typedef struct hz_bitstream_readblocks_s
 {
 	hz_bitstream_readblock_t *blocks;
 	hz_bitstream_readblock_t *current;

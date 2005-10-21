@@ -33,7 +33,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define BSPVERSION	29
 #define MCBSPVERSION 2
 
-typedef struct
+typedef struct lump_s
 {
 	int		fileofs, filelen;
 } lump_t;
@@ -55,14 +55,14 @@ typedef struct
 #define	LUMP_MODELS		14
 #define	HEADER_LUMPS	15
 
-typedef struct
+typedef struct hullinfo_s
 {
 	int			numhulls;
 	int			filehulls;
 	float		hullsizes[MAX_MAP_HULLS][2][3];
 } hullinfo_t;
 
-typedef struct
+typedef struct dmodel_s
 {
 	float		mins[3], maxs[3];
 	float		origin[3];
@@ -71,13 +71,13 @@ typedef struct
 	int			firstface, numfaces;
 } dmodel_t;
 
-typedef struct
+typedef struct dheader_s
 {
 	int			version;
 	lump_t		lumps[HEADER_LUMPS];
 } dheader_t;
 
-typedef struct
+typedef struct dmiptexlump_s
 {
 	int			nummiptex;
 	int			dataofs[4];		// [nummiptex]
@@ -92,7 +92,7 @@ typedef struct miptex_s
 } miptex_t;
 
 
-typedef struct
+typedef struct dvertex_s
 {
 	float	point[3];
 } dvertex_t;
@@ -108,7 +108,7 @@ typedef struct
 #define	PLANE_ANYY		4
 #define	PLANE_ANYZ		5
 
-typedef struct
+typedef struct dplane_s
 {
 	float	normal[3];
 	float	dist;
@@ -218,7 +218,7 @@ typedef struct
 */
 
 
-typedef struct
+typedef struct dnode_s
 {
 	int			planenum;
 	short		children[2];	// negative numbers are -(leafs+1), not nodes
@@ -228,14 +228,14 @@ typedef struct
 	unsigned short	numfaces;	// counting both sides
 } dnode_t;
 
-typedef struct
+typedef struct dclipnode_s
 {
 	int			planenum;
 	short		children[2];	// negative numbers are contents
 } dclipnode_t;
 
 
-typedef struct
+typedef struct texinfo_s
 {
 	float		vecs[2][4];		// [s/t][xyz offset]
 	int			miptex;
@@ -245,13 +245,13 @@ typedef struct
 
 // note that edge 0 is never used, because negative edge nums are used for
 // counterclockwise use of the edge in a face
-typedef struct
+typedef struct dedge_s
 {
 	unsigned short	v[2];		// vertex numbers
 } dedge_t;
 
 #define	MAXLIGHTMAPS	4
-typedef struct
+typedef struct dface_s
 {
 	// LordHavoc: changed from short to unsigned short for q2 support
 	unsigned short	planenum;
@@ -277,7 +277,7 @@ typedef struct
 
 // leaf 0 is the generic CONTENTS_SOLID leaf, used for all solid areas
 // all other leafs need visibility info
-typedef struct
+typedef struct dleaf_s
 {
 	int			contents;
 	int			visofs;				// -1 = no visibility info

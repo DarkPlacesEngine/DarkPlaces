@@ -131,7 +131,7 @@ void SwapPic (qpic_t *pic)
 
 // LordHavoc: added alternate WAD2/WAD3 system for HalfLife texture wads
 #define TEXWAD_MAXIMAGES 16384
-typedef struct
+typedef struct texwadlump_s
 {
 	char name[16];
 	qfile_t *file;

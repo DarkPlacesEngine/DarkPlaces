@@ -901,7 +901,7 @@ void COM_InitArgv (void)
 
 // Game mods
 
-typedef struct
+typedef struct gamemode_info_s
 {
 	const char* prog_name;
 	const char* cmdline;

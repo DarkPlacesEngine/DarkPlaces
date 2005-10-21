@@ -35,7 +35,7 @@ extern cvar_t gl_paranoid;
 extern cvar_t gl_printcheckerror;
 
 //input to R_Mesh_State
-typedef struct
+typedef struct rmeshstate_s
 {
 	// textures
 	int tex1d[MAX_TEXTUREUNITS];

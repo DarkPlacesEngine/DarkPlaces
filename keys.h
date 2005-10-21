@@ -32,7 +32,8 @@
 //
 // these are the key numbers that should be passed to Key_Event
 //
-extern enum {
+extern enum keynum_e
+{
 	K_TAB			= 9,
 	K_ENTER			= 13,
 	K_ESCAPE		= 27,
@@ -181,9 +182,10 @@ extern enum {
 	K_AUX31,
 	K_AUX32,
 
-} keynum_t;
+}
+keynum_t;
 
-typedef enum { key_game, key_message, key_menu } keydest_t;
+typedef enum keydest_e { key_game, key_message, key_menu } keydest_t;
 
 #define MAX_INPUTLINES 32
 #define MAX_INPUTLINE 256

@@ -34,7 +34,7 @@
 #define TEXTYPE_DSDT 4
 
 // contents of this structure are mostly private to gl_textures.c
-typedef struct
+typedef struct rtexture_s
 {
 	// this is exposed (rather than private) for speed reasons only
 	int texnum;
@@ -42,7 +42,7 @@ typedef struct
 rtexture_t;
 
 // contents of this structure are private to gl_textures.c
-typedef struct
+typedef struct rtexturepool_s
 {
 	int useless;
 }

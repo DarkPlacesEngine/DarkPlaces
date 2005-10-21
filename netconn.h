@@ -155,7 +155,7 @@ extern int playercolor;
 #define SERVERLIST_ANDMASKCOUNT		5
 #define SERVERLIST_ORMASKCOUNT		5
 
-typedef enum
+typedef enum serverlist_maskop_e
 {
 	// SLMO_CONTAINS is the default for strings
 	// SLMO_GREATEREQUAL is the default for numbers (also used when OP == CONTAINS or NOTCONTAINS
@@ -171,7 +171,7 @@ typedef enum
 } serverlist_maskop_t;
 
 // struct with all fields that you can search for or sort by
-typedef struct
+typedef struct serverlist_info_s
 {
 	// address for connecting
 	char cname[128];
@@ -215,7 +215,7 @@ typedef enum
 	SQS_TIMEDOUT
 } serverlist_query_state;
 
-typedef struct
+typedef struct serverlist_entry_s
 {
 	// used to determine whether this entry should be included into the final view
 	serverlist_query_state query;
@@ -231,7 +231,7 @@ typedef struct
 	char line2[128];
 } serverlist_entry_t;
 
-typedef struct
+typedef struct serverlist_mask_s
 {
 	qboolean			active;
 	serverlist_maskop_t  tests[SLIF_COUNT];

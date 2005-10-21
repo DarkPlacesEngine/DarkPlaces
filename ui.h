@@ -10,7 +10,7 @@
 
 #define UI_EVENT_QUEUE_SIZE 32
 
-typedef enum { UI_BUTTON, UI_LABEL } ui_control_type;
+typedef enum ui_control_type_e { UI_BUTTON, UI_LABEL } ui_control_type;
 
 typedef struct ui_message_s			ui_message_t;
 typedef struct ui_item_s			*ui_item_t;

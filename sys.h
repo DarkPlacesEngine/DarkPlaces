@@ -37,7 +37,7 @@ typedef HMODULE dllhandle_t;
   typedef void* dllhandle_t;
 #endif
 
-typedef struct
+typedef struct dllfunction_s
 {
 	const char *name;
 	void **funcvariable;

@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef MODEL_SHARED_H
 #define MODEL_SHARED_H
 
-typedef enum {ST_SYNC=0, ST_RAND } synctype_t;
+typedef enum synctype_e {ST_SYNC=0, ST_RAND } synctype_t;
 
 /*
 
@@ -30,7 +30,7 @@ m*_t structures are in-memory
 
 */
 
-typedef enum {mod_invalid, mod_brushq1, mod_sprite, mod_alias, mod_brushq2, mod_brushq3} modtype_t;
+typedef enum modtype_e {mod_invalid, mod_brushq1, mod_sprite, mod_alias, mod_brushq2, mod_brushq3} modtype_t;
 
 typedef struct animscene_s
 {
@@ -223,7 +223,7 @@ typedef struct texture_s
 }
 texture_t;
 
-typedef struct
+typedef struct mtexinfo_s
 {
 	float vecs[2][4];
 	texture_t *texture;

@@ -57,7 +57,7 @@ typedef struct effect_s
 }
 cl_effect_t;
 
-typedef struct
+typedef struct beam_s
 {
 	int		entity;
 	// draw this as lightning polygons, or a model?
@@ -332,7 +332,7 @@ typedef struct entity_s
 }
 entity_t;
 
-typedef struct
+typedef struct usercmd_s
 {
 	vec3_t	viewangles;
 
@@ -356,20 +356,20 @@ typedef struct
 	int sequence;
 } usercmd_t;
 
-typedef struct
+typedef struct lightstyle_s
 {
 	int		length;
 	char	map[MAX_STYLESTRING];
 } lightstyle_t;
 
-typedef struct
+typedef struct scoreboard_s
 {
 	char	name[MAX_SCOREBOARDNAME];
 	int		frags;
 	int		colors; // two 4 bit fields
 } scoreboard_t;
 
-typedef struct
+typedef struct cshift_s
 {
 	int		destcolor[3];
 	int		percent;		// 0-256
@@ -406,7 +406,7 @@ cactive_t;
 // the client_static_t structure is persistent through an arbitrary number
 // of server connections
 //
-typedef struct
+typedef struct client_static_s
 {
 	cactive_t state;
 
@@ -474,7 +474,7 @@ client_movementqueue_t;
 // the client_state_t structure is wiped completely at every
 // server signon
 //
-typedef struct
+typedef struct client_state_s
 {
 	// true if playing in a local game and no one else is connected
 	int islocalgame;
@@ -735,7 +735,7 @@ extern cvar_t cl_beams_lightatend;
 //
 // cl_input
 //
-typedef struct
+typedef struct kbutton_s
 {
 	int		down[2];		// key nums holding it down
 	int		state;			// low bit is down state
@@ -865,7 +865,7 @@ void R_NewExplosion(vec3_t org);
 
 #include "cl_screen.h"
 
-typedef struct
+typedef struct refdef_s
 {
 	// area to render in
 	int x, y, width, height;

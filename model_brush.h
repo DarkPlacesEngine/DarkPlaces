@@ -35,7 +35,7 @@ BRUSH MODELS
 //
 // in memory representation
 //
-typedef struct
+typedef struct mvertex_s
 {
 	vec3_t position;
 }
@@ -87,7 +87,7 @@ mplane_t;
 // probably used only on q1bsp water
 #define MATERIALFLAG_LIGHTBOTHSIDES 1024
 
-typedef struct
+typedef struct medge_s
 {
 	unsigned short v[2];
 }
@@ -140,7 +140,7 @@ typedef struct mleaf_s
 }
 mleaf_t;
 
-typedef struct
+typedef struct hull_s
 {
 	dclipnode_t *clipnodes;
 	mplane_t *planes;
@@ -241,14 +241,14 @@ mlight_t;
 #define	Q2LUMP_AREAPORTALS	18
 #define	Q2HEADER_LUMPS		19
 
-typedef struct
+typedef struct q2dheader_s
 {
 	int			ident;
 	int			version;
 	lump_t		lumps[HEADER_LUMPS];
 } q2dheader_t;
 
-typedef struct
+typedef struct q2dmodel_s
 {
 	float		mins[3], maxs[3];
 	float		origin[3];		// for sounds or lights
@@ -314,7 +314,7 @@ typedef struct
 
 
 
-typedef struct
+typedef struct q2dnode_s
 {
 	int			planenum;
 	int			children[2];	// negative numbers are -(leafs+1), not nodes
@@ -325,7 +325,7 @@ typedef struct
 } q2dnode_t;
 
 
-typedef struct
+typedef struct q2texinfo_s
 {
 	float		vecs[2][4];		// [s/t][xyz offset]
 	int			flags;			// miptex flags + overrides
@@ -334,7 +334,7 @@ typedef struct
 	int			nexttexinfo;	// for animations, -1 = end of chain
 } q2texinfo_t;
 
-typedef struct
+typedef struct q2dleaf_s
 {
 	int				contents;			// OR of all brushes (not needed?)
 
@@ -351,13 +351,13 @@ typedef struct
 	unsigned short	numleafbrushes;
 } q2dleaf_t;
 
-typedef struct
+typedef struct q2dbrushside_s
 {
 	unsigned short	planenum;		// facing out of the leaf
 	short	texinfo;
 } q2dbrushside_t;
 
-typedef struct
+typedef struct q2dbrush_s
 {
 	int			firstside;
 	int			numsides;
@@ -370,7 +370,7 @@ typedef struct
 // compressed bit vectors
 #define	Q2DVIS_PVS	0
 #define	Q2DVIS_PHS	1
-typedef struct
+typedef struct q2dvis_s
 {
 	int			numclusters;
 	int			bitofs[8][2];	// bitofs[numclusters][2]
@@ -379,13 +379,13 @@ typedef struct
 // each area has a list of portals that lead into other areas
 // when portals are closed, other areas may not be visible or
 // hearable even if the vis info says that it should be
-typedef struct
+typedef struct q2dareaportal_s
 {
 	int		portalnum;
 	int		otherarea;
 } q2dareaportal_t;
 
-typedef struct
+typedef struct q2darea_s
 {
 	int		numareaportals;
 	int		firstareaportal;
@@ -415,14 +415,14 @@ typedef struct
 #define	Q3LUMP_PVS			16 // potentially visible set; bit[clusters][clusters] (used by rendering)
 #define	Q3HEADER_LUMPS		17
 
-typedef struct
+typedef struct q3dheader_s
 {
 	int			ident;
 	int			version;
 	lump_t		lumps[HEADER_LUMPS];
 } q3dheader_t;
 
-typedef struct
+typedef struct q3dtexture_s
 {
 	char name[Q3PATHLENGTH];
 	int surfaceflags;
@@ -431,14 +431,14 @@ typedef struct
 q3dtexture_t;
 
 // note: planes are paired, the pair of planes with i and i ^ 1 are opposites.
-typedef struct
+typedef struct q3dplane_s
 {
 	float normal[3];
 	float dist;
 }
 q3dplane_t;
 
-typedef struct
+typedef struct q3dnode_s
 {
 	int planeindex;
 	int childrenindex[2];
@@ -447,7 +447,7 @@ typedef struct
 }
 q3dnode_t;
 
-typedef struct
+typedef struct q3dleaf_s
 {
 	int clusterindex; // pvs index
 	int areaindex; // area index
@@ -460,7 +460,7 @@ typedef struct
 }
 q3dleaf_t;
 
-typedef struct
+typedef struct q3dmodel_s
 {
 	float mins[3];
 	float maxs[3];
@@ -471,7 +471,7 @@ typedef struct
 }
 q3dmodel_t;
 
-typedef struct
+typedef struct q3dbrush_s
 {
 	int firstbrushside;
 	int numbrushsides;
@@ -479,14 +479,14 @@ typedef struct
 }
 q3dbrush_t;
 
-typedef struct
+typedef struct q3dbrushside_s
 {
 	int planeindex;
 	int textureindex;
 }
 q3dbrushside_t;
 
-typedef struct
+typedef struct q3dvertex_s
 {
 	float origin3f[3];
 	float texcoord2f[2];
@@ -496,7 +496,7 @@ typedef struct
 }
 q3dvertex_t;
 
-typedef struct
+typedef struct q3dmeshvertex_s
 {
 	int offset; // first vertex index of mesh
 }
@@ -515,7 +515,7 @@ q3deffect_t;
 #define Q3FACETYPE_MESH 3 // common
 #define Q3FACETYPE_FLARE 4 // rare (is this ever used?)
 
-typedef struct
+typedef struct q3dface_s
 {
 	int textureindex;
 	int effectindex; // -1 if none
@@ -586,13 +586,13 @@ typedef struct
 }
 q3dface_t;
 
-typedef struct
+typedef struct q3dlightmap_s
 {
 	unsigned char rgb[128*128*3];
 }
 q3dlightmap_t;
 
-typedef struct
+typedef struct q3dlightgrid_s
 {
 	unsigned char ambientrgb[3];
 	unsigned char diffusergb[3];
@@ -601,7 +601,7 @@ typedef struct
 }
 q3dlightgrid_t;
 
-typedef struct
+typedef struct q3dpvs_s
 {
 	int numclusters;
 	int chainlength;

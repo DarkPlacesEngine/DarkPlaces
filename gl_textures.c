@@ -27,7 +27,7 @@ static mempool_t *texturemempool;
 // size of images which hold fragment textures, ignores picmip and max_size
 static int block_size;
 
-typedef struct
+typedef struct textypeinfo_s
 {
 	int textype;
 	int inputbytesperpixel;
@@ -288,7 +288,7 @@ void R_FreeTexturePool(rtexturepool_t **rtexturepool)
 }
 
 
-typedef struct
+typedef struct glmode_s
 {
 	char *name;
 	int minification, magnification;

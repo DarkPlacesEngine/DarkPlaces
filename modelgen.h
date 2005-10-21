@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -34,11 +34,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define ALIAS_ONSEAM				0x0020
 
-typedef enum { ALIAS_SINGLE=0, ALIAS_GROUP } aliasframetype_t;
+typedef enum aliasframetype_e { ALIAS_SINGLE=0, ALIAS_GROUP } aliasframetype_t;
 
-typedef enum { ALIAS_SKIN_SINGLE=0, ALIAS_SKIN_GROUP } aliasskintype_t;
+typedef enum aliasskintype_e { ALIAS_SKIN_SINGLE=0, ALIAS_SKIN_GROUP } aliasskintype_t;
 
-typedef struct {
+typedef struct mdl_s
+{
 	int			ident;
 	int			version;
 	vec3_t		scale;
@@ -54,62 +55,83 @@ typedef struct {
 	synctype_t	synctype;
 	int			flags;
 	float		size;
-} mdl_t;
+}
+mdl_t;
 
 // TODO: could be shorts
 
-typedef struct {
+typedef struct stvert_s
+{
 	int		onseam;
 	int		s;
 	int		t;
-} stvert_t;
+}
+stvert_t;
 
-typedef struct dtriangle_s {
+typedef struct dtriangle_s
+{
 	int					facesfront;
 	int					vertindex[3];
-} dtriangle_t;
+}
+dtriangle_t;
 
 #define DT_FACES_FRONT				0x0010
 
 // This mirrors trivert_t in trilib.h, is present so Quake knows how to
 // load this data
 
-typedef struct {
+typedef struct trivertx_s
+{
 	qbyte	v[3];
 	qbyte	lightnormalindex;
-} trivertx_t;
+}
+trivertx_t;
 
-typedef struct {
+typedef struct daliasframe_s
+{
 	trivertx_t	bboxmin;	// lightnormal isn't used
 	trivertx_t	bboxmax;	// lightnormal isn't used
 	char		name[16];	// frame name from grabbing
-} daliasframe_t;
+}
+daliasframe_t;
 
-typedef struct {
+typedef struct daliasgroup_s
+{
 	int			numframes;
 	trivertx_t	bboxmin;	// lightnormal isn't used
 	trivertx_t	bboxmax;	// lightnormal isn't used
-} daliasgroup_t;
+}
+daliasgroup_t;
 
-typedef struct {
+typedef struct daliasskingroup_s
+{
 	int			numskins;
-} daliasskingroup_t;
+}
+daliasskingroup_t;
 
-typedef struct {
+typedef struct daliasinterval_s
+{
 	float	interval;
-} daliasinterval_t;
+}
+daliasinterval_t;
 
-typedef struct {
+typedef struct daliasskininterval_s
+{
 	float	interval;
-} daliasskininterval_t;
+}
+daliasskininterval_t;
 
-typedef struct {
+typedef struct daliasframetype_s
+{
 	aliasframetype_t	type;
-} daliasframetype_t;
+}
+daliasframetype_t;
 
-typedef struct {
+typedef struct daliasskintype_s
+{
 	aliasskintype_t	type;
-} daliasskintype_t;
+}
+daliasskintype_t;
 
 #endif
 
