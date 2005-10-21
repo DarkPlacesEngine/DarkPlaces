@@ -652,7 +652,7 @@ void Image_StripImageExtension (const char *in, char *out)
 		strcpy(out, in);
 }
 
-struct
+struct imageformat_s
 {
 	const char *formatstring;
 	qbyte *(*loadfunc)(const qbyte *f, int matchwidth, int matchheight);
