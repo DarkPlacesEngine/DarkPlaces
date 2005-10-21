@@ -241,21 +241,21 @@ void MSG_WriteFloat (sizebuf_t *sb, float f)
 	dat.f = f;
 	dat.l = LittleLong (dat.l);
 
-	SZ_Write (sb, &dat.l, 4);
+	SZ_Write (sb, (qbyte *)&dat.l, 4);
 }
 
 void MSG_WriteString (sizebuf_t *sb, const char *s)
 {
 	if (!s)
-		SZ_Write (sb, "", 1);
+		SZ_Write (sb, (qbyte *)"", 1);
 	else
-		SZ_Write (sb, s, (int)strlen(s)+1);
+		SZ_Write (sb, (qbyte *)s, (int)strlen(s)+1);
 }
 
 void MSG_WriteUnterminatedString (sizebuf_t *sb, const char *s)
 {
 	if (s)
-		SZ_Write (sb, s, (int)strlen(s));
+		SZ_Write (sb, (qbyte *)s, (int)strlen(s));
 }
 
 void MSG_WriteCoord13i (sizebuf_t *sb, float f)
@@ -502,9 +502,9 @@ void SZ_Clear (sizebuf_t *buf)
 	buf->cursize = 0;
 }
 
-void *SZ_GetSpace (sizebuf_t *buf, int length)
+qbyte *SZ_GetSpace (sizebuf_t *buf, int length)
 {
-	void *data;
+	qbyte *data;
 
 	if (buf->cursize + length > buf->maxsize)
 	{
@@ -525,7 +525,7 @@ void *SZ_GetSpace (sizebuf_t *buf, int length)
 	return data;
 }
 
-void SZ_Write (sizebuf_t *buf, const void *data, int length)
+void SZ_Write (sizebuf_t *buf, const qbyte *data, int length)
 {
 	memcpy (SZ_GetSpace(buf,length),data,length);
 }
@@ -990,7 +990,7 @@ void COM_InitGameType (void)
 	for (i = 1; i < sizeof (gamemode_info) / sizeof (gamemode_info[0]); i++)
 		if (strstr (name, gamemode_info[i].prog_name))
 		{
-			gamemode = i;
+			gamemode = (gamemode_t)i;
 			break;
 		}
 
@@ -998,7 +998,7 @@ void COM_InitGameType (void)
 	for (i = 0; i < sizeof (gamemode_info) / sizeof (gamemode_info[0]); i++)
 		if (COM_CheckParm (gamemode_info[i].cmdline))
 		{
-			gamemode = i;
+			gamemode = (gamemode_t)i;
 			break;
 		}
 

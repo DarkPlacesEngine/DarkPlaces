@@ -250,7 +250,7 @@ void VM_M_writetofile(void)
 	if( !file ) {
 		return;
 	}
-	
+
 	ent = PRVM_G_EDICT(OFS_PARM1);
 	if(ent->priv.required->free)
 	{
@@ -480,7 +480,7 @@ void VM_M_setserverlistmaskstring( void )
 	}
 
 	mask->active = true;
-	mask->tests[field] = (int) PRVM_G_FLOAT( OFS_PARM3 );
+	mask->tests[field] = (serverlist_maskop_t) PRVM_G_FLOAT( OFS_PARM3 );
 }
 
 /*
@@ -533,7 +533,7 @@ void VM_M_setserverlistmasknumber( void )
 	}
 
 	mask->active = true;
-	mask->tests[field] = (int) PRVM_G_FLOAT( OFS_PARM3 );
+	mask->tests[field] = (serverlist_maskop_t) PRVM_G_FLOAT( OFS_PARM3 );
 }
 
 
@@ -654,7 +654,7 @@ void VM_M_setserverlistsort( void )
 {
 	VM_SAFEPARMCOUNT( 2, VM_M_setserverlistsort );
 
-	serverlist_sortbyfield = (int) PRVM_G_FLOAT( OFS_PARM0 );
+	serverlist_sortbyfield = (serverlist_infofield_t) PRVM_G_FLOAT( OFS_PARM0 );
 	serverlist_sortdescending = (qboolean) PRVM_G_FLOAT( OFS_PARM1 );
 }
 

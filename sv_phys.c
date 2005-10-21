@@ -359,7 +359,7 @@ int SV_FlyMove (prvm_edict_t *ent, float time, float *stepnormal)
 		// run the impact function
 		if (impact)
 		{
-			SV_Impact(ent, trace.ent);
+			SV_Impact(ent, (prvm_edict_t *)trace.ent);
 
 			// break if removed by the impact function
 			if (ent->priv.server->free)
@@ -512,7 +512,7 @@ trace_t SV_PushEntity (prvm_edict_t *ent, vec3_t push)
 	SV_LinkEdict (ent, true);
 
 	if (trace.ent && (!((int)ent->fields.server->flags & FL_ONGROUND) || ent->fields.server->groundentity != PRVM_EDICT_TO_PROG(trace.ent)))
-		SV_Impact (ent, trace.ent);
+		SV_Impact (ent, (prvm_edict_t *)trace.ent);
 	return trace;
 }
 
@@ -523,7 +523,6 @@ SV_PushMove
 
 ============
 */
-trace_t SV_ClipMoveToEntity (prvm_edict_t *ent, vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, int movetype, int hitsupercontents);
 void SV_PushMove (prvm_edict_t *pusher, float movetime)
 {
 	int i, e, index;

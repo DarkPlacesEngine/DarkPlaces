@@ -1888,7 +1888,7 @@ static void MaxPlayers_f(void)
 	if (svs.clients)
 		Mem_Free(svs.clients);
 	svs.maxclients = n;
-	svs.clients = Mem_Alloc(sv_mempool, sizeof(client_t) * svs.maxclients);
+	svs.clients = (client_t *)Mem_Alloc(sv_mempool, sizeof(client_t) * svs.maxclients);
 	if (n == 1)
 		Cvar_Set ("deathmatch", "0");
 	else

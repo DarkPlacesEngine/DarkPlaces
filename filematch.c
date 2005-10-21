@@ -61,7 +61,7 @@ int matchpattern(char *in, char *pattern, int caseinsensitive)
 stringlist_t *stringlistappend(stringlist_t *current, char *text)
 {
 	stringlist_t *newitem;
-	newitem = Z_Malloc(strlen(text) + 1 + sizeof(stringlist_t));
+	newitem = (stringlist_t *)Z_Malloc(strlen(text) + 1 + sizeof(stringlist_t));
 	newitem->next = NULL;
 	newitem->text = (char *)(newitem + 1);
 	strcpy(newitem->text, text);

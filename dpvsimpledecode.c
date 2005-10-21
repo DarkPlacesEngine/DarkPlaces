@@ -40,7 +40,7 @@ hz_bitstream_read_t *hz_bitstream_read_open(char *filename)
 	hz_bitstream_read_t *stream;
 	if ((file = FS_Open (filename, "rb", false, false)))
 	{
-		stream = malloc(sizeof(hz_bitstream_read_t));
+		stream = (hz_bitstream_read_t *)malloc(sizeof(hz_bitstream_read_t));
 		memset(stream, 0, sizeof(*stream));
 		stream->file = file;
 		return stream;
@@ -61,7 +61,7 @@ void hz_bitstream_read_close(hz_bitstream_read_t *stream)
 hz_bitstream_readblocks_t *hz_bitstream_read_blocks_new(void)
 {
 	hz_bitstream_readblocks_t *blocks;
-	blocks = malloc(sizeof(hz_bitstream_readblocks_t));
+	blocks = (hz_bitstream_readblocks_t *)malloc(sizeof(hz_bitstream_readblocks_t));
 	if (blocks == NULL)
 		return NULL;
 	memset(blocks, 0, sizeof(hz_bitstream_readblocks_t));
@@ -98,7 +98,7 @@ int hz_bitstream_read_blocks_read(hz_bitstream_readblocks_t *blocks, hz_bitstrea
 	{
 		if (b == NULL)
 		{
-			b = malloc(sizeof(hz_bitstream_readblock_t));
+			b = (hz_bitstream_readblock_t *)malloc(sizeof(hz_bitstream_readblock_t));
 			if (b == NULL)
 				return HZREADERROR_MALLOCFAILED;
 			b->next = NULL;
@@ -201,7 +201,7 @@ unsigned int hz_bitstream_read_int(hz_bitstream_readblocks_t *blocks)
 void hz_bitstream_read_bytes(hz_bitstream_readblocks_t *blocks, void *outdata, unsigned int size)
 {
 	unsigned char *out;
-	out = outdata;
+	out = (unsigned char *)outdata;
 	while (size--)
 		*out++ = hz_bitstream_read_byte(blocks);
 }
@@ -364,7 +364,7 @@ void *dpvsimpledecode_open(char *filename, char **errorstring)
 	char t[8], *wavename;
 	if (errorstring != NULL)
 		*errorstring = NULL;
-	s = malloc(sizeof(dpvsimpledecodestream_t));
+	s = (dpvsimpledecodestream_t *)Z_Malloc(sizeof(dpvsimpledecodestream_t));
 	if (s != NULL)
 	{
 		s->bitstream = hz_bitstream_read_open(filename);
@@ -389,10 +389,10 @@ void *dpvsimpledecode_open(char *filename, char **errorstring)
 
 						if (s->info_framerate > 0.0)
 						{
-							s->videopixels = malloc(s->info_imagewidth * s->info_imageheight * sizeof(*s->videopixels));
+							s->videopixels = (unsigned int *)Z_Malloc(s->info_imagewidth * s->info_imageheight * sizeof(*s->videopixels));
 							if (s->videopixels != NULL)
 							{
-								wavename = malloc(strlen(filename) + 10);
+								wavename = (char *)Z_Malloc(strlen(filename) + 10);
 								if (wavename)
 								{
 									sfx_t* sfx;
@@ -439,7 +439,7 @@ void *dpvsimpledecode_open(char *filename, char **errorstring)
 // closes a stream
 void dpvsimpledecode_close(void *stream)
 {
-	dpvsimpledecodestream_t *s = stream;
+	dpvsimpledecodestream_t *s = (dpvsimpledecodestream_t *)stream;
 	if (s == NULL)
 		return;
 	if (s->videopixels)
@@ -461,7 +461,7 @@ void dpvsimpledecode_close(void *stream)
 // error message
 int dpvsimpledecode_error(void *stream, char **errorstring)
 {
-	dpvsimpledecodestream_t *s = stream;
+	dpvsimpledecodestream_t *s = (dpvsimpledecodestream_t *)stream;
 	int e;
 	e = s->error;
 	s->error = 0;
@@ -510,21 +510,21 @@ int dpvsimpledecode_error(void *stream, char **errorstring)
 // returns the width of the image data
 unsigned int dpvsimpledecode_getwidth(void *stream)
 {
-	dpvsimpledecodestream_t *s = stream;
+	dpvsimpledecodestream_t *s = (dpvsimpledecodestream_t *)stream;
 	return s->info_imagewidth;
 }
 
 // returns the height of the image data
 unsigned int dpvsimpledecode_getheight(void *stream)
 {
-	dpvsimpledecodestream_t *s = stream;
+	dpvsimpledecodestream_t *s = (dpvsimpledecodestream_t *)stream;
 	return s->info_imageheight;
 }
 
 // returns the framerate of the stream
 double dpvsimpledecode_getframerate(void *stream)
 {
-	dpvsimpledecodestream_t *s = stream;
+	dpvsimpledecodestream_t *s = (dpvsimpledecodestream_t *)stream;
 	return s->info_framerate;
 }
 
@@ -557,7 +557,7 @@ static int dpvsimpledecode_convertpixels(dpvsimpledecodestream_t *s, void *image
 		unsigned int *outrow;
 		for (y = 0;y < height;y++)
 		{
-			outrow = (void *)((unsigned char *)imagedata + y * imagebytesperrow);
+			outrow = (unsigned int *)((unsigned char *)imagedata + y * imagebytesperrow);
 			for (x = 0;x < width;x++)
 			{
 				a = *in++;
@@ -570,7 +570,7 @@ static int dpvsimpledecode_convertpixels(dpvsimpledecodestream_t *s, void *image
 		unsigned short *outrow;
 		for (y = 0;y < height;y++)
 		{
-			outrow = (void *)((unsigned char *)imagedata + y * imagebytesperrow);
+			outrow = (unsigned short *)((unsigned char *)imagedata + y * imagebytesperrow);
 			if (Rloss == 19 && Gloss == 10 && Bloss == 3 && Rshift == 11 && Gshift == 5 && Bshift == 0)
 			{
 				// optimized
@@ -640,7 +640,7 @@ static int dpvsimpledecode_decompressimage(dpvsimpledecodestream_t *s)
 // decodes a video frame to the supplied output pixels
 int dpvsimpledecode_video(void *stream, void *imagedata, unsigned int Rmask, unsigned int Gmask, unsigned int Bmask, unsigned int bytesperpixel, int imagebytesperrow)
 {
-	dpvsimpledecodestream_t *s = stream;
+	dpvsimpledecodestream_t *s = (dpvsimpledecodestream_t *)stream;
 	unsigned int framedatasize;
 	char t[4];
 	s->error = DPVSIMPLEDECODEERROR_NONE;

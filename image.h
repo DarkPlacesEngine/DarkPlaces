@@ -21,6 +21,8 @@ void Image_Copy8bitRGBA(const qbyte *in, qbyte *out, int pixels, const unsigned 
 // makes a RGBA mask from RGBA input, in can be the same as out
 int image_makemask (const qbyte *in, qbyte *out, int size);
 
+qbyte *LoadTGA (const qbyte *f, int matchwidth, int matchheight);
+
 // loads a texture, as pixel data
 qbyte *loadimagepixels (const char *filename, qboolean complain, int matchwidth, int matchheight);
 
@@ -34,8 +36,8 @@ qbyte *loadimagepixelsmask (const char *filename, qboolean complain, int matchwi
 rtexture_t *loadtextureimagemask (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags);
 
 // loads a texture and it's alpha mask at once (NULL if it has no translucent pixels)
-rtexture_t *image_masktex;
-rtexture_t *image_nmaptex;
+extern rtexture_t *image_masktex;
+extern rtexture_t *image_nmaptex;
 rtexture_t *loadtextureimagewithmask (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags);
 rtexture_t *loadtextureimagewithmaskandnmap (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags, float bumpscale);
 rtexture_t *loadtextureimagebumpasnmap (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags, float bumpscale);

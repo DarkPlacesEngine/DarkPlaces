@@ -683,7 +683,7 @@ void DrawQ_String_Real(float x, float y, const char *string, int maxlen, float s
 	green = bound(0, green, 1);
 	blue = bound(0, blue, 1);
 	alpha = bound(0, alpha, 1);
-	dq = (void *)(r_refdef.drawqueue + r_refdef.drawqueuesize);
+	dq = (drawqueue_t *)(r_refdef.drawqueue + r_refdef.drawqueuesize);
 	dq->size = size;
 	dq->command = DRAWQUEUE_STRING;
 	dq->flags = flags;
@@ -760,7 +760,7 @@ void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 	size += sizeof(float[4]) * mesh->num_vertices;
 	if (r_refdef.drawqueuesize + size > r_refdef.maxdrawqueuesize)
 		return;
-	dq = (void *)(r_refdef.drawqueue + r_refdef.drawqueuesize);
+	dq = (drawqueue_t *)(r_refdef.drawqueue + r_refdef.drawqueuesize);
 	dq->size = size;
 	dq->command = DRAWQUEUE_MESH;
 	dq->flags = flags;
@@ -770,14 +770,14 @@ void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 	dq->scalex = 0;
 	dq->scaley = 0;
 	p = (void *)(dq + 1);
-	m = p;p = (qbyte*)p + sizeof(drawqueuemesh_t);
+	m = (drawqueuemesh_t *)p;p = (qbyte*)p + sizeof(drawqueuemesh_t);
 	m->num_triangles = mesh->num_triangles;
 	m->num_vertices = mesh->num_vertices;
 	m->texture = mesh->texture;
-	m->data_element3i  = p;memcpy(m->data_element3i , mesh->data_element3i , m->num_triangles * sizeof(int[3]));p = (qbyte*)p + m->num_triangles * sizeof(int[3]);
-	m->data_vertex3f   = p;memcpy(m->data_vertex3f  , mesh->data_vertex3f  , m->num_vertices * sizeof(float[3]));p = (qbyte*)p + m->num_vertices * sizeof(float[3]);
-	m->data_texcoord2f = p;memcpy(m->data_texcoord2f, mesh->data_texcoord2f, m->num_vertices * sizeof(float[2]));p = (qbyte*)p + m->num_vertices * sizeof(float[2]);
-	m->data_color4f    = p;memcpy(m->data_color4f   , mesh->data_color4f   , m->num_vertices * sizeof(float[4]));p = (qbyte*)p + m->num_vertices * sizeof(float[4]);
+	m->data_element3i  = (int *)p;memcpy(m->data_element3i , mesh->data_element3i , m->num_triangles * sizeof(int[3]));p = (qbyte*)p + m->num_triangles * sizeof(int[3]);
+	m->data_vertex3f   = (float *)p;memcpy(m->data_vertex3f  , mesh->data_vertex3f  , m->num_vertices * sizeof(float[3]));p = (qbyte*)p + m->num_vertices * sizeof(float[3]);
+	m->data_texcoord2f = (float *)p;memcpy(m->data_texcoord2f, mesh->data_texcoord2f, m->num_vertices * sizeof(float[2]));p = (qbyte*)p + m->num_vertices * sizeof(float[2]);
+	m->data_color4f    = (float *)p;memcpy(m->data_color4f   , mesh->data_color4f   , m->num_vertices * sizeof(float[4]));p = (qbyte*)p + m->num_vertices * sizeof(float[4]);
 	r_refdef.drawqueuesize += dq->size;
 }
 
@@ -789,7 +789,7 @@ void DrawQ_SetClipArea(float x, float y, float width, float height)
 		Con_DPrint("DrawQueue full !\n");
 		return;
 	}
-	dq = (void*) (r_refdef.drawqueue + r_refdef.drawqueuesize);
+	dq = (drawqueue_t *) (r_refdef.drawqueue + r_refdef.drawqueuesize);
 	dq->size = sizeof(*dq);
 	dq->command = DRAWQUEUE_SETCLIP;
 	dq->x = x;
@@ -810,7 +810,7 @@ void DrawQ_ResetClipArea(void)
 		Con_DPrint("DrawQueue full !\n");
 		return;
 	}
-	dq = (void*) (r_refdef.drawqueue + r_refdef.drawqueuesize);
+	dq = (drawqueue_t *) (r_refdef.drawqueue + r_refdef.drawqueuesize);
 	dq->size = sizeof(*dq);
 	dq->command = DRAWQUEUE_RESETCLIP;
 	dq->x = 0;
@@ -859,9 +859,9 @@ void SCR_ScreenShot_f (void)
 
 	sprintf(filename, "%s%06d.%s", base, shotnumber, jpeg ? "jpg" : "tga");
 
-	buffer1 = Mem_Alloc(tempmempool, vid.width * vid.height * 3);
-	buffer2 = Mem_Alloc(tempmempool, vid.width * vid.height * 3);
-	buffer3 = Mem_Alloc(tempmempool, vid.width * vid.height * 3 + 18);
+	buffer1 = (qbyte *)Mem_Alloc(tempmempool, vid.width * vid.height * 3);
+	buffer2 = (qbyte *)Mem_Alloc(tempmempool, vid.width * vid.height * 3);
+	buffer3 = (qbyte *)Mem_Alloc(tempmempool, vid.width * vid.height * 3 + 18);
 
 	if (SCR_ScreenShot (filename, buffer1, buffer2, buffer3, 0, 0, vid.width, vid.height, false, false, false, jpeg, true))
 		Con_Printf("Wrote %s\n", filename);
@@ -910,7 +910,7 @@ void SCR_CaptureVideo_BeginVideo(void)
 	cl_capturevideo_framerate = bound(1, cl_capturevideo_fps.value, 1000);
 	cl_capturevideo_soundrate = 0;
 	cl_capturevideo_frame = 0;
-	cl_capturevideo_buffer = Mem_Alloc(tempmempool, vid.width * vid.height * (3+3+3) + 18);
+	cl_capturevideo_buffer = (qbyte *)Mem_Alloc(tempmempool, vid.width * vid.height * (3+3+3) + 18);
 	gamma = 1.0/scr_screenshot_gamma.value;
 
 	/*
@@ -1258,9 +1258,9 @@ static void R_Envmap_f (void)
 	r_refdef.fov_x = 90;
 	r_refdef.fov_y = 90;
 
-	buffer1 = Mem_Alloc(tempmempool, size * size * 3);
-	buffer2 = Mem_Alloc(tempmempool, size * size * 3);
-	buffer3 = Mem_Alloc(tempmempool, size * size * 3 + 18);
+	buffer1 = (qbyte *)Mem_Alloc(tempmempool, size * size * 3);
+	buffer2 = (qbyte *)Mem_Alloc(tempmempool, size * size * 3);
+	buffer3 = (qbyte *)Mem_Alloc(tempmempool, size * size * 3 + 18);
 
 	for (j = 0;j < 12;j++)
 	{

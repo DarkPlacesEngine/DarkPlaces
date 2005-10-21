@@ -322,14 +322,14 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 colbrushf_t *Collision_AllocBrushFloat(mempool_t *mempool, int numpoints, int numplanes, int numtriangles, int supercontents)
 {
 	colbrushf_t *brush;
-	brush = Mem_Alloc(mempool, sizeof(colbrushf_t) + sizeof(colpointf_t) * numpoints + sizeof(colplanef_t) * numplanes + sizeof(int[3]) * numtriangles);
+	brush = (colbrushf_t *)Mem_Alloc(mempool, sizeof(colbrushf_t) + sizeof(colpointf_t) * numpoints + sizeof(colplanef_t) * numplanes + sizeof(int[3]) * numtriangles);
 	brush->supercontents = supercontents;
 	brush->numplanes = numplanes;
 	brush->numpoints = numpoints;
 	brush->numtriangles = numtriangles;
-	brush->planes = (void *)(brush + 1);
-	brush->points = (void *)(brush->planes + brush->numplanes);
-	brush->elements = (void *)(brush->points + brush->numpoints);
+	brush->planes = (colplanef_t *)(brush + 1);
+	brush->points = (colpointf_t *)(brush->planes + brush->numplanes);
+	brush->elements = (int *)(brush->points + brush->numpoints);
 	return brush;
 }
 
@@ -505,11 +505,11 @@ void Collision_CalcPlanesForPolygonBrushFloat(colbrushf_t *brush)
 colbrushf_t *Collision_AllocBrushFromPermanentPolygonFloat(mempool_t *mempool, int numpoints, float *points, int supercontents)
 {
 	colbrushf_t *brush;
-	brush = Mem_Alloc(mempool, sizeof(colbrushf_t) + sizeof(colplanef_t) * (numpoints + 2));
+	brush = (colbrushf_t *)Mem_Alloc(mempool, sizeof(colbrushf_t) + sizeof(colplanef_t) * (numpoints + 2));
 	brush->supercontents = supercontents;
 	brush->numpoints = numpoints;
 	brush->numplanes = numpoints + 2;
-	brush->planes = (void *)(brush + 1);
+	brush->planes = (colplanef_t *)(brush + 1);
 	brush->points = (colpointf_t *)points;
 	Sys_Error("Collision_AllocBrushFromPermanentPolygonFloat: FIXME: this code needs to be updated to generate a mesh...\n");
 	return brush;
@@ -1339,9 +1339,9 @@ colbsp_t;
 colbsp_t *Collision_CreateCollisionBSP(mempool_t *mempool)
 {
 	colbsp_t *bsp;
-	bsp = Mem_Alloc(mempool, sizeof(colbsp_t));
+	bsp = (colbsp_t *)Mem_Alloc(mempool, sizeof(colbsp_t));
 	bsp->mempool = mempool;
-	bsp->nodes = Mem_Alloc(bsp->mempool, sizeof(colbspnode_t));
+	bsp->nodes = (colbspnode_t *)Mem_Alloc(bsp->mempool, sizeof(colbspnode_t));
 	return bsp;
 }
 

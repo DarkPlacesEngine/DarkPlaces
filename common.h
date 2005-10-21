@@ -50,8 +50,8 @@ typedef struct sizebuf_s
 } sizebuf_t;
 
 void SZ_Clear (sizebuf_t *buf);
-void *SZ_GetSpace (sizebuf_t *buf, int length);
-void SZ_Write (sizebuf_t *buf, const void *data, int length);
+qbyte *SZ_GetSpace (sizebuf_t *buf, int length);
+void SZ_Write (sizebuf_t *buf, const qbyte *data, int length);
 void SZ_HexDumpToConsole(const sizebuf_t *buf);
 
 void Com_HexDumpToConsole(const qbyte *data, int size);

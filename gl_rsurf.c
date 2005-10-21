@@ -299,7 +299,7 @@ static void R_DrawPortal_Callback(const void *calldata1, int calldata2)
 	int i;
 	float *v;
 	rmeshstate_t m;
-	const mportal_t *portal = calldata1;
+	const mportal_t *portal = (mportal_t *)calldata1;
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthMask(false);
 	GL_DepthTest(true);

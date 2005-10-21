@@ -186,7 +186,7 @@ static void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 	float alpha;
 	rmeshstate_t m;
 	const explosion_t *e;
-	e = calldata1;
+	e = (explosion_t *)calldata1;
 
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	GL_DepthMask(false);

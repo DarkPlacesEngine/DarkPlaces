@@ -1686,7 +1686,7 @@ static void R_InitParticleTexture (void)
 	// and white on black background) so we can alpha fade it to black, then
 	// we invert it again during the blendfunc to make it work...
 
-	particletexturedata = Mem_Alloc(tempmempool, PARTICLEFONTSIZE*PARTICLEFONTSIZE*4);
+	particletexturedata = (qbyte *)Mem_Alloc(tempmempool, PARTICLEFONTSIZE*PARTICLEFONTSIZE*4);
 	memset(particletexturedata, 255, PARTICLEFONTSIZE*PARTICLEFONTSIZE*4);
 
 	// smoke
@@ -1898,7 +1898,7 @@ void R_DrawParticle(particle_t *p)
 #else
 void R_DrawParticleCallback(const void *calldata1, int calldata2)
 {
-	const particle_t *p = calldata1;
+	const particle_t *p = (particle_t *)calldata1;
 	rmeshstate_t m;
 #endif
 	pblend_t blendmode;

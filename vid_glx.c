@@ -555,7 +555,7 @@ void *GL_GetProcAddress(const char *name)
 {
 	void *p = NULL;
 	if (qglXGetProcAddressARB != NULL)
-		p = (void *) qglXGetProcAddressARB(name);
+		p = (void *) qglXGetProcAddressARB((GLubyte *)name);
 	if (p == NULL)
 		p = (void *) dlsym(prjobj, name);
 	return p;
@@ -726,11 +726,12 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 		vidmode_ext = true;
 	}
 
-	if ((qglXChooseVisual = GL_GetProcAddress("glXChooseVisual")) == NULL
-	 || (qglXCreateContext = GL_GetProcAddress("glXCreateContext")) == NULL
-	 || (qglXMakeCurrent = GL_GetProcAddress("glXMakeCurrent")) == NULL
-	 || (qglXSwapBuffers = GL_GetProcAddress("glXSwapBuffers")) == NULL
-	 || (qglXQueryExtensionsString = GL_GetProcAddress("glXQueryExtensionsString")) == NULL)
+	if ((qglXChooseVisual = (XVisualInfo *(GLAPIENTRY *)(Display *dpy, int screen, int *attribList))GL_GetProcAddress("glXChooseVisual")) == NULL
+	 || (qglXCreateContext = (GLXContext (GLAPIENTRY *)(Display *dpy, XVisualInfo *vis, GLXContext shareList, Bool direct))GL_GetProcAddress("glXCreateContext")) == NULL
+	 || (qglXDestroyContext = (void (GLAPIENTRY *)(Display *dpy, GLXContext ctx))GL_GetProcAddress("glXDestroyContext")) == NULL
+	 || (qglXMakeCurrent = (Bool (GLAPIENTRY *)(Display *dpy, GLXDrawable drawable, GLXContext ctx))GL_GetProcAddress("glXMakeCurrent")) == NULL
+	 || (qglXSwapBuffers = (void (GLAPIENTRY *)(Display *dpy, GLXDrawable drawable))GL_GetProcAddress("glXSwapBuffers")) == NULL
+	 || (qglXQueryExtensionsString = (const char *(GLAPIENTRY *)(Display *dpy, int screen))GL_GetProcAddress("glXQueryExtensionsString")) == NULL)
 	{
 		Con_Printf("glX functions not found in %s\n", gl_driver);
 		return false;
@@ -845,16 +846,16 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 
 	XSync(vidx11_display, False);
 
-	if ((qglGetString = GL_GetProcAddress("glGetString")) == NULL)
+	if ((qglGetString = (const GLubyte* (GLAPIENTRY *)(GLenum name))GL_GetProcAddress("glGetString")) == NULL)
 	{
 		Con_Printf ("glGetString not found in %s", gl_driver);
 		return false;
 	}
 
-	gl_renderer = qglGetString(GL_RENDERER);
-	gl_vendor = qglGetString(GL_VENDOR);
-	gl_version = qglGetString(GL_VERSION);
-	gl_extensions = qglGetString(GL_EXTENSIONS);
+	gl_renderer = (const char *)qglGetString(GL_RENDERER);
+	gl_vendor = (const char *)qglGetString(GL_VENDOR);
+	gl_version = (const char *)qglGetString(GL_VERSION);
+	gl_extensions = (const char *)qglGetString(GL_EXTENSIONS);
 	gl_platform = "GLX";
 	gl_platformextensions = qglXQueryExtensionsString(vidx11_display, vidx11_screen);
 

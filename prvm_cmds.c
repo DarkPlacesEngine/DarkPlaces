@@ -252,24 +252,20 @@ void VM_normalize (void)
 {
 	float	*value1;
 	vec3_t	newvalue;
-	float	new;
+	double	f;
 
 	VM_SAFEPARMCOUNT(1,VM_normalize);
 
 	value1 = PRVM_G_VECTOR(OFS_PARM0);
 
-	new = value1[0] * value1[0] + value1[1] * value1[1] + value1[2]*value1[2];
-	new = sqrt(new);
-
-	if (new == 0)
-		newvalue[0] = newvalue[1] = newvalue[2] = 0;
-	else
+	f = VectorLength2(value1);
+	if (f)
 	{
-		new = 1/new;
-		newvalue[0] = value1[0] * new;
-		newvalue[1] = value1[1] * new;
-		newvalue[2] = value1[2] * new;
+		f = 1.0 / sqrt(f);
+		VectorScale(value1, f, newvalue);
 	}
+	else
+		VectorClear(newvalue);
 
 	VectorCopy (newvalue, PRVM_G_VECTOR(OFS_RETURN));
 }
@@ -283,17 +279,8 @@ scalar vlen(vector)
 */
 void VM_vlen (void)
 {
-	float	*value1;
-	float	new;
-
 	VM_SAFEPARMCOUNT(1,VM_vlen);
-
-	value1 = PRVM_G_VECTOR(OFS_PARM0);
-
-	new = value1[0] * value1[0] + value1[1] * value1[1] + value1[2]*value1[2];
-	new = sqrt(new);
-
-	PRVM_G_FLOAT(OFS_RETURN) = new;
+	PRVM_G_FLOAT(OFS_RETURN) = VectorLength(PRVM_G_VECTOR(OFS_PARM0));
 }
 
 /*
@@ -2695,7 +2682,7 @@ void VM_cin_setstate( void )
 	name = PRVM_G_STRING( OFS_PARM0 );
 	VM_CheckEmptyString( name );
 
-	state = PRVM_G_FLOAT( OFS_PARM1 );
+	state = (clvideostate_t)PRVM_G_FLOAT( OFS_PARM1 );
 
 	video = CL_GetVideo( name );
 	if( video && state > CLVIDEO_UNUSED && state < CLVIDEO_STATECOUNT )

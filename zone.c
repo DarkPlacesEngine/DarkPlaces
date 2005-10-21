@@ -101,7 +101,7 @@ choseclump:
 		// big allocations are not clumped
 #endif
 		pool->realsize += sizeof(memheader_t) + size + sizeof(int);
-		mem = malloc(sizeof(memheader_t) + size + sizeof(int));
+		mem = (memheader_t *)malloc(sizeof(memheader_t) + size + sizeof(int));
 		if (mem == NULL)
 			Sys_Error("Mem_Alloc: out of memory (alloc at %s:%i)", filename, fileline);
 #if MEMCLUMPING
@@ -216,7 +216,7 @@ mempool_t *_Mem_AllocPool(const char *name, int flags, mempool_t *parent, const 
 	mempool_t *pool;
 	if (developer.integer && developer_memorydebug.integer)
 		_Mem_CheckSentinelsGlobal(filename, fileline);
-	pool = malloc(sizeof(mempool_t));
+	pool = (mempool_t *)malloc(sizeof(mempool_t));
 	if (pool == NULL)
 		Sys_Error("Mem_AllocPool: out of memory (allocpool at %s:%i)", filename, fileline);
 	memset(pool, 0, sizeof(mempool_t));

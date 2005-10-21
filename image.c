@@ -116,7 +116,7 @@ void Image_GammaRemapRGB(const qbyte *in, qbyte *out, int pixels, const qbyte *g
 // note: pal must be 32bit color
 void Image_Copy8bitRGBA(const qbyte *in, qbyte *out, int pixels, const unsigned int *pal)
 {
-	int *iout = (void *)out;
+	int *iout = (int *)out;
 	while (pixels >= 8)
 	{
 		iout[0] = pal[in[0]];
@@ -220,7 +220,7 @@ qbyte* LoadPCX (const qbyte *f, int matchwidth, int matchheight)
 
 	palette = f + fs_filesize - 768;
 
-	image_rgba = Mem_Alloc(tempmempool, image_width*image_height*4);
+	image_rgba = (qbyte *)Mem_Alloc(tempmempool, image_width*image_height*4);
 	if (!image_rgba)
 	{
 		Con_Printf("LoadPCX: not enough memory for %i by %i image\n", image_width, image_height);
@@ -433,7 +433,7 @@ qbyte *LoadTGA (const qbyte *f, int matchwidth, int matchheight)
 		return NULL;
 	}
 
-	image_rgba = Mem_Alloc(tempmempool, image_width * image_height * 4);
+	image_rgba = (qbyte *)Mem_Alloc(tempmempool, image_width * image_height * 4);
 	if (!image_rgba)
 	{
 		Con_Printf("LoadTGA: not enough memory for %i by %i image\n", image_width, image_height);
@@ -565,12 +565,12 @@ qbyte *LoadLMP (const qbyte *f, int matchwidth, int matchheight, qboolean loadAs
 
 	if (loadAs8Bit)
 	{
-		image_buffer = Mem_Alloc(tempmempool, image_width * image_height);
+		image_buffer = (qbyte *)Mem_Alloc(tempmempool, image_width * image_height);
 		memcpy(image_buffer, f + 8, image_width * image_height);
 	}
 	else
 	{
-		image_buffer = Mem_Alloc(tempmempool, image_width * image_height * 4);
+		image_buffer = (qbyte *)Mem_Alloc(tempmempool, image_width * image_height * 4);
 		Image_Copy8bitRGBA(f + 8, image_buffer, image_width * image_height, palette_complete);
 	}
 	return image_buffer;
@@ -596,7 +596,7 @@ typedef struct
 qbyte *LoadWAL (const qbyte *f, int matchwidth, int matchheight)
 {
 	qbyte *image_rgba;
-	const q2wal_t *inwal = (const void *)f;
+	const q2wal_t *inwal = (const q2wal_t *)f;
 
 	if (fs_filesize < (int) sizeof(q2wal_t))
 	{
@@ -620,7 +620,7 @@ qbyte *LoadWAL (const qbyte *f, int matchwidth, int matchheight)
 		return NULL;
 	}
 
-	image_rgba = Mem_Alloc(tempmempool, image_width * image_height * 4);
+	image_rgba = (qbyte *)Mem_Alloc(tempmempool, image_width * image_height * 4);
 	if (!image_rgba)
 	{
 		Con_Printf("LoadLMP: not enough memory for %i by %i image\n", image_width, image_height);
@@ -800,7 +800,7 @@ rtexture_t *loadtextureimagewithmaskandnmap (rtexturepool_t *pool, const char *f
 	if (!(data = loadimagepixels (filename, complain, matchwidth, matchheight)))
 		return 0;
 
-	data2 = Mem_Alloc(tempmempool, image_width * image_height * 4);
+	data2 = (qbyte *)Mem_Alloc(tempmempool, image_width * image_height * 4);
 
 	rt = R_LoadTexture2D(pool, filename, image_width, image_height, data, TEXTYPE_RGBA, flags, NULL);
 
@@ -822,7 +822,7 @@ rtexture_t *loadtextureimagebumpasnmap (rtexturepool_t *pool, const char *filena
 	rtexture_t *rt;
 	if (!(data = loadimagepixels (filename, complain, matchwidth, matchheight)))
 		return 0;
-	data2 = Mem_Alloc(tempmempool, image_width * image_height * 4);
+	data2 = (qbyte *)Mem_Alloc(tempmempool, image_width * image_height * 4);
 
 	Image_HeightmapToNormalmap(data, data2, image_width, image_height, (flags & TEXF_CLAMP) != 0, bumpscale);
 	rt = R_LoadTexture2D(pool, filename, image_width, image_height, data2, TEXTYPE_RGBA, flags, NULL);
@@ -867,7 +867,7 @@ void Image_WriteTGARGB (const char *filename, int width, int height, const qbyte
 	qbyte *buffer, *out;
 	const qbyte *in, *end;
 
-	buffer = Mem_Alloc(tempmempool, width*height*3 + 18);
+	buffer = (qbyte *)Mem_Alloc(tempmempool, width*height*3 + 18);
 
 	memset (buffer, 0, 18);
 	buffer[2] = 2;		// uncompressed type
@@ -901,7 +901,7 @@ void Image_WriteTGARGBA (const char *filename, int width, int height, const qbyt
 	qbyte *buffer, *out;
 	const qbyte *in, *end;
 
-	buffer = Mem_Alloc(tempmempool, width*height*4 + 18);
+	buffer = (qbyte *)Mem_Alloc(tempmempool, width*height*4 + 18);
 
 	memset (buffer, 0, 18);
 	buffer[2] = 2;		// uncompressed type
@@ -1019,13 +1019,13 @@ void Image_Resample32Lerp(const void *indata, int inwidth, int inheight, void *o
 	const qbyte *inrow;
 	qbyte *resamplerow1;
 	qbyte *resamplerow2;
-	out = outdata;
+	out = (qbyte *)outdata;
 	fstep = (int) (inheight*65536.0f/outheight);
 
-	resamplerow1 = Mem_Alloc(tempmempool, outwidth*4*2);
+	resamplerow1 = (qbyte *)Mem_Alloc(tempmempool, outwidth*4*2);
 	resamplerow2 = resamplerow1 + outwidth*4;
 
-	inrow = indata;
+	inrow = (const qbyte *)indata;
 	oldy = 0;
 	Image_Resample32LerpLine (inrow, resamplerow1, inwidth, outwidth);
 	Image_Resample32LerpLine (inrow + inwidth4, resamplerow2, inwidth, outwidth);
@@ -1122,7 +1122,7 @@ void Image_Resample32Nolerp(const void *indata, int inwidth, int inheight, void 
 	unsigned frac, fracstep;
 	// relies on int being 4 bytes
 	int *inrow, *out;
-	out = outdata;
+	out = (int *)outdata;
 
 	fracstep = inwidth*0x10000/outwidth;
 	for (i = 0;i < outheight;i++)
@@ -1160,13 +1160,13 @@ void Image_Resample24Lerp(const void *indata, int inwidth, int inheight, void *o
 	const qbyte *inrow;
 	qbyte *resamplerow1;
 	qbyte *resamplerow2;
-	out = outdata;
+	out = (qbyte *)outdata;
 	fstep = (int) (inheight*65536.0f/outheight);
 
-	resamplerow1 = Mem_Alloc(tempmempool, outwidth*3*2);
+	resamplerow1 = (qbyte *)Mem_Alloc(tempmempool, outwidth*3*2);
 	resamplerow2 = resamplerow1 + outwidth*3;
 
-	inrow = indata;
+	inrow = (const qbyte *)indata;
 	oldy = 0;
 	Image_Resample24LerpLine (inrow, resamplerow1, inwidth, outwidth);
 	Image_Resample24LerpLine (inrow + inwidth3, resamplerow2, inwidth, outwidth);
@@ -1254,7 +1254,7 @@ void Image_Resample24Nolerp(const void *indata, int inwidth, int inheight, void 
 	int i, j, f, inwidth3 = inwidth * 3;
 	unsigned frac, fracstep;
 	qbyte *inrow, *out;
-	out = outdata;
+	out = (qbyte *)outdata;
 
 	fracstep = inwidth*0x10000/outwidth;
 	for (i = 0;i < outheight;i++)
@@ -1529,7 +1529,7 @@ int image_loadskin(imageskin_t *s, char *shadername)
 	bumppixels = NULL;bumppixels_width = 0;bumppixels_height = 0;
 	if (Image_CheckAlpha(s->basepixels, s->basepixels_width * s->basepixels_height, true))
 	{
-		s->maskpixels = Mem_Alloc(loadmodel->mempool, s->basepixels_width * s->basepixels_height * 4);
+		s->maskpixels = (qbyte *)Mem_Alloc(loadmodel->mempool, s->basepixels_width * s->basepixels_height * 4);
 		s->maskpixels_width = s->basepixels_width;
 		s->maskpixels_height = s->basepixels_height;
 		memcpy(s->maskpixels, s->basepixels, s->maskpixels_width * s->maskpixels_height * 4);
@@ -1583,7 +1583,7 @@ int image_loadskin(imageskin_t *s, char *shadername)
 		{
 			if (r_shadow_bumpscale_bumpmap.value > 0)
 			{
-				s->nmappixels = Mem_Alloc(loadmodel->mempool, bumppixels_width * bumppixels_height * 4);
+				s->nmappixels = (qbyte *)Mem_Alloc(loadmodel->mempool, bumppixels_width * bumppixels_height * 4);
 				s->nmappixels_width = bumppixels_width;
 				s->nmappixels_height = bumppixels_height;
 				Image_HeightmapToNormalmap(bumppixels, s->nmappixels, s->nmappixels_width, s->nmappixels_height, false, r_shadow_bumpscale_bumpmap.value);
@@ -1593,7 +1593,7 @@ int image_loadskin(imageskin_t *s, char *shadername)
 		{
 			if (r_shadow_bumpscale_basetexture.value > 0)
 			{
-				s->nmappixels = Mem_Alloc(loadmodel->mempool, s->basepixels_width * s->basepixels_height * 4);
+				s->nmappixels = (qbyte *)Mem_Alloc(loadmodel->mempool, s->basepixels_width * s->basepixels_height * 4);
 				s->nmappixels_width = s->basepixels_width;
 				s->nmappixels_height = s->basepixels_height;
 				Image_HeightmapToNormalmap(s->basepixels, s->nmappixels, s->nmappixels_width, s->nmappixels_height, false, r_shadow_bumpscale_basetexture.value);

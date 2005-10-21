@@ -97,10 +97,10 @@ static void Mod_Sprite_SharedSetup(const qbyte *datapointer, int version, const 
 		realframes += groupframes;
 	}
 
-	loadmodel->animscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numframes);
-	loadmodel->sprite.sprdata_frames = Mem_Alloc(loadmodel->mempool, sizeof(mspriteframe_t) * realframes);
+	loadmodel->animscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numframes);
+	loadmodel->sprite.sprdata_frames = (mspriteframe_t *)Mem_Alloc(loadmodel->mempool, sizeof(mspriteframe_t) * realframes);
 
-	datapointer = startframes;
+	datapointer = (qbyte *)startframes;
 	realframes = 0;
 	for (i = 0;i < loadmodel->numframes;i++)
 	{
@@ -172,7 +172,7 @@ static void Mod_Sprite_SharedSetup(const qbyte *datapointer, int version, const 
 					{
 						loadmodel->sprite.sprdata_frames[realframes].texture = R_LoadTexture2D(loadmodel->texturepool, name, width, height, datapointer, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, NULL);
 						// make fog version (just alpha)
-						pixbuf = Mem_Alloc(tempmempool, width*height*4);
+						pixbuf = (qbyte *)Mem_Alloc(tempmempool, width*height*4);
 						Image_CopyMux(pixbuf, datapointer, width, height, false, false, false, 4, 4, alphaonlytable);
 						loadmodel->sprite.sprdata_frames[realframes].fogtexture = R_LoadTexture2D(loadmodel->texturepool, fogname, width, height, pixbuf, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, NULL);
 						Mem_Free(pixbuf);
@@ -209,7 +209,7 @@ void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 	int version;
 	const qbyte *datapointer;
 
-	datapointer = buffer;
+	datapointer = (qbyte *)buffer;
 
 	loadmodel->type = mod_sprite;
 	loadmodel->flags2 = EF_FULLBRIGHT;
@@ -355,8 +355,8 @@ void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 		}
 	}
 
-	loadmodel->animscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numframes);
-	loadmodel->sprite.sprdata_frames = Mem_Alloc(loadmodel->mempool, sizeof(mspriteframe_t) * loadmodel->numframes);
+	loadmodel->animscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numframes);
+	loadmodel->sprite.sprdata_frames = (mspriteframe_t *)Mem_Alloc(loadmodel->mempool, sizeof(mspriteframe_t) * loadmodel->numframes);
 
 	modelradius = 0;
 	for (i = 0;i < loadmodel->numframes;i++)

@@ -389,7 +389,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 	scr_width = width;
 	scr_height = height;
 
-	if ((qglGetString = GL_GetProcAddress("glGetString")) == NULL)
+	if ((qglGetString = (const GLubyte* (GLAPIENTRY *)(GLenum name))GL_GetProcAddress("glGetString")) == NULL)
 		Sys_Error("glGetString not found in %s", gl_driver);
 
 	if (fullscreen)

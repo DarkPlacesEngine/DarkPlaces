@@ -196,7 +196,7 @@ void M_PrintRed (float cx, float cy, const char *str)
 	DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 0, 0, 1, 0);
 }
 
-void M_ItemPrint(float cx, float cy, char *str, int unghosted)
+void M_ItemPrint(float cx, float cy, const char *str, int unghosted)
 {
 	if (unghosted)
 		DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 1, 1, 1, 0);
@@ -204,7 +204,7 @@ void M_ItemPrint(float cx, float cy, char *str, int unghosted)
 		DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 0.4, 0.4, 0.4, 1, 0);
 }
 
-void M_DrawPic (float cx, float cy, char *picname)
+void M_DrawPic (float cx, float cy, const char *picname)
 {
 	DrawQ_Pic (menu_x + cx, menu_y + cy, picname, 0, 0, 1, 1, 1, 1, 0);
 }
@@ -1330,8 +1330,8 @@ void M_Setup_Draw (void)
 			menuplyr_width = image_width;
 			menuplyr_height = image_height;
 			Mem_Free(f);
-			menuplyr_pixels = Mem_Alloc(cl_mempool, menuplyr_width * menuplyr_height);
-			menuplyr_translated = Mem_Alloc(cl_mempool, menuplyr_width * menuplyr_height * 4);
+			menuplyr_pixels = (qbyte *)Mem_Alloc(cl_mempool, menuplyr_width * menuplyr_height);
+			menuplyr_translated = (unsigned int *)Mem_Alloc(cl_mempool, menuplyr_width * menuplyr_height * 4);
 			memcpy(menuplyr_pixels, data, menuplyr_width * menuplyr_height);
 			Mem_Free(data);
 		}
@@ -1603,7 +1603,7 @@ int optnum;
 int opty;
 int optcursor;
 
-void M_Options_PrintCommand(char *s, int enabled)
+void M_Options_PrintCommand(const char *s, int enabled)
 {
 	if (opty >= 32)
 	{
@@ -1614,7 +1614,7 @@ void M_Options_PrintCommand(char *s, int enabled)
 	optnum++;
 }
 
-void M_Options_PrintCheckbox(char *s, int enabled, int yes)
+void M_Options_PrintCheckbox(const char *s, int enabled, int yes)
 {
 	if (opty >= 32)
 	{
@@ -1626,7 +1626,7 @@ void M_Options_PrintCheckbox(char *s, int enabled, int yes)
 	optnum++;
 }
 
-void M_Options_PrintSlider(char *s, int enabled, float value, float minvalue, float maxvalue)
+void M_Options_PrintSlider(const char *s, int enabled, float value, float minvalue, float maxvalue)
 {
 	if (opty >= 32)
 	{
@@ -3055,7 +3055,7 @@ void M_Quit_Key (int key, char ascii)
 	case 'N':
 		if (wasInMenus)
 		{
-			m_state = m_quit_prevstate;
+			m_state = (enum m_state_e)m_quit_prevstate;
 			m_entersound = true;
 		}
 		else
@@ -3696,7 +3696,7 @@ gameinfo_t gamelist[] =
 	{GAME_BATTLEMECH, &battlemechgame, &battlemechgame},
 	{GAME_OPENQUARTZ, &openquartzgame, &openquartzgame},
 	{GAME_DEFEATINDETAIL2, &defeatindetail2game, &defeatindetail2game},
-	{-1, &sharewarequakegame, &registeredquakegame} // final fallback
+	{(gamemode_t)-1, &sharewarequakegame, &registeredquakegame} // final fallback
 };
 
 gamelevels_t *lookupgameinfo(void)
@@ -4773,6 +4773,11 @@ void MP_Restart(void)
 // Menu router
 
 static cvar_t forceqmenu = { 0, "forceqmenu", "0" };
+
+void (*MR_Keydown) (int key, char ascii);
+void (*MR_Draw) (void);
+void (*MR_ToggleMenu_f) (void);
+void (*MR_Shutdown) (void);
 
 void MR_SetRouting(qboolean forceold)
 {

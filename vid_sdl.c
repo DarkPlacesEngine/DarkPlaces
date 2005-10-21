@@ -374,16 +374,14 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 		return false;
 	}
 
-	qglGetString = GL_GetProcAddress("glGetString");
-
-	// Knghtbrd: should do platform-specific extension string function here
-
-	if (qglGetString == NULL)
+	if ((qglGetString = (const GLubyte* (GLAPIENTRY *)(GLenum name))GL_GetProcAddress("glGetString")) == NULL)
 	{
 		VID_Shutdown();
 		Con_Print("Required OpenGL function glGetString not found\n");
 		return false;
 	}
+
+	// Knghtbrd: should do platform-specific extension string function here
 
 	vid_isfullscreen = false;
 	if (fullscreen) {

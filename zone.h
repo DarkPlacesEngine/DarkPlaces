@@ -136,7 +136,7 @@ void _Mem_CheckSentinelsGlobal(const char *filename, int fileline);
 qboolean Mem_IsAllocated(mempool_t *pool, void *data);
 
 // used for temporary allocations
-mempool_t *tempmempool;
+extern mempool_t *tempmempool;
 
 void Memory_Init (void);
 void Memory_Shutdown (void);

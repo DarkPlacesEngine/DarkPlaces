@@ -255,7 +255,7 @@ rtexturepool_t *R_AllocTexturePool(void)
 	gltexturepool_t *pool;
 	if (texturemempool == NULL)
 		return NULL;
-	pool = Mem_Alloc(texturemempool, sizeof(gltexturepool_t));
+	pool = (gltexturepool_t *)Mem_Alloc(texturemempool, sizeof(gltexturepool_t));
 	if (pool == NULL)
 		return NULL;
 	pool->next = gltexturepoolchain;
@@ -458,8 +458,6 @@ static void R_TextureStats_f(void)
 	R_TextureStats_Print(true, true, true);
 }
 
-char engineversion[40];
-
 static void r_textures_start(void)
 {
 	// deal with size limits of various drivers (3dfx in particular)
@@ -575,8 +573,8 @@ void R_MakeResizeBufferBigger(int size)
 			Mem_Free(resizebuffer);
 		if (colorconvertbuffer)
 			Mem_Free(colorconvertbuffer);
-		resizebuffer = Mem_Alloc(texturemempool, resizebuffersize);
-		colorconvertbuffer = Mem_Alloc(texturemempool, resizebuffersize);
+		resizebuffer = (qbyte *)Mem_Alloc(texturemempool, resizebuffersize);
+		colorconvertbuffer = (qbyte *)Mem_Alloc(texturemempool, resizebuffersize);
 		if (!resizebuffer || !colorconvertbuffer)
 			Host_Error("R_Upload: out of memory\n");
 	}
@@ -926,7 +924,7 @@ static void R_FindImageForTexture(gltexture_t *glt)
 			return;
 		}
 
-		image = Mem_Alloc(texturemempool, sizeof(gltextureimage_t));
+		image = (gltextureimage_t *)Mem_Alloc(texturemempool, sizeof(gltextureimage_t));
 		if (image == NULL)
 		{
 			Con_Printf ("R_FindImageForTexture: ran out of memory\n");
@@ -941,7 +939,7 @@ static void R_FindImageForTexture(gltexture_t *glt)
 		image->depth = 1;
 		if (gltexturetypedimensions[glt->texturetype] >= 3)
 			for (image->depth = block_size;image->depth < glt->depth;image->depth <<= 1);
-		image->blockallocation = Mem_Alloc(texturemempool, image->width * sizeof(short));
+		image->blockallocation = (short int *)Mem_Alloc(texturemempool, image->width * sizeof(short));
 		memset(image->blockallocation, 0, image->width * sizeof(short));
 
 		x = 0;
@@ -954,7 +952,7 @@ static void R_FindImageForTexture(gltexture_t *glt)
 	{
 		for (imagechainpointer = &pool->imagechain;*imagechainpointer;imagechainpointer = &(*imagechainpointer)->imagechain);
 
-		image = Mem_Alloc(texturemempool, sizeof(gltextureimage_t));
+		image = (gltextureimage_t *)Mem_Alloc(texturemempool, sizeof(gltextureimage_t));
 		if (image == NULL)
 		{
 			Con_Printf ("R_FindImageForTexture: ran out of memory\n");
@@ -1094,7 +1092,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 		Host_Error("R_LoadTexture: unknown texture type\n");
 	}
 
-	glt = Mem_Alloc(texturemempool, sizeof(gltexture_t));
+	glt = (gltexture_t *)Mem_Alloc(texturemempool, sizeof(gltexture_t));
 	if (identifier)
 		strlcpy (glt->identifier, identifier, sizeof(glt->identifier));
 	glt->pool = pool;
@@ -1111,7 +1109,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 
 	if (data)
 	{
-		glt->inputtexels = Mem_Alloc(texturemempool, size);
+		glt->inputtexels = (qbyte *)Mem_Alloc(texturemempool, size);
 		if (glt->inputtexels == NULL)
 			Con_Printf ("R_LoadTexture: out of memory\n");
 		else

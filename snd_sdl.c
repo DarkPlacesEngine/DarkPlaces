@@ -92,7 +92,7 @@ qboolean SNDDMA_Init(void)
 
 	// Init the shm structure
 	memset( (void*) shm, 0, sizeof(*shm) );
-	
+
 	shm->format.channels = 2; //stereo
 	shm->format.width = 2;
 
@@ -106,7 +106,7 @@ qboolean SNDDMA_Init(void)
 	shm->samplepos = 0;
 	shm->samples = AUDIO_SDL_SAMPLES * AUDIO_LOCALFACTOR;
 	shm->bufferlength = shm->samples * shm->format.width;
-	shm->buffer = Mem_Alloc( snd_mempool, shm->bufferlength );
+	shm->buffer = (qbyte *)Mem_Alloc( snd_mempool, shm->bufferlength );
 
 	// Init the as structure
 	as.buffer = shm->buffer;
@@ -120,18 +120,18 @@ qboolean SNDDMA_Init(void)
 	spec.format = AUDIO_S16SYS;
 	spec.freq = shm->format.speed;
 	spec.userdata = NULL;
-	spec.samples = AUDIO_SDL_SAMPLES; 
-	
+	spec.samples = AUDIO_SDL_SAMPLES;
+
 	if( SDL_OpenAudio( &spec, NULL ) ) {
 		Con_Print( "Failed to open the audio device!\n" );
-		Con_DPrintf( 
+		Con_DPrintf(
 			"Audio Specification:\n"
 			"\tChannels  : %i\n"
 			"\tFormat    : %x\n"
 			"\tFrequency : %i\n"
-			"\tBuffersize: %i Bytes(%i Samples)\n", 
+			"\tBuffersize: %i Bytes(%i Samples)\n",
 			spec.channels, spec.format, spec.freq, shm->bufferlength , spec.samples );
-		Mem_Free( shm->buffer ); 
+		Mem_Free( shm->buffer );
 		return false;
 	}
 

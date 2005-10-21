@@ -432,8 +432,8 @@ void GL_SetupTextureState(void)
 	unsigned int i;
 	gltextureunit_t *unit;
 	CHECKGLERROR
-	gl_state.unit = -1;
-	gl_state.clientunit = -1;
+	gl_state.unit = MAX_TEXTUREUNITS;
+	gl_state.clientunit = MAX_TEXTUREUNITS;
 	for (i = 0;i < MAX_TEXTUREUNITS;i++)
 	{
 		unit = gl_state.units + i;
@@ -2052,7 +2052,7 @@ int R_Mesh_CacheArray(rcachearrayrequest_t *r)
 	//R_Mesh_CacheArray_ValidateState(3);
 	// calculate a hashindex to choose a cache chain
 	r->data = NULL;
-	hashindex = CRC_Block((void *)r, sizeof(*r)) % RCACHEARRAY_HASHSIZE;
+	hashindex = CRC_Block((qbyte *)r, sizeof(*r)) % RCACHEARRAY_HASHSIZE;
 
 	// is it already cached?
 	for (lhead = &r_mesh_rcachechain[hashindex], l = lhead->next;l != lhead;l = l->next)

@@ -63,7 +63,7 @@ protocolversion_t Protocol_EnumForName(const char *s)
 	int i;
 	for (i = 1;protocolversioninfo[i].name;i++)
 		if (!strcasecmp(s, protocolversioninfo[i].name))
-			return i;
+			return (protocolversion_t)i;
 	return PROTOCOL_UNKNOWN;
 }
 
@@ -77,7 +77,7 @@ protocolversion_t Protocol_EnumForNumber(int n)
 	int i;
 	for (i = 1;protocolversioninfo[i].name;i++)
 		if (protocolversioninfo[i].number == n)
-			return i;
+			return (protocolversion_t)i;
 	return PROTOCOL_UNKNOWN;
 }
 
@@ -754,7 +754,7 @@ void EntityState_ReadFields(entity_state_t *e, unsigned int bits)
 // (client and server) allocates a new empty database
 entityframe_database_t *EntityFrame_AllocDatabase(mempool_t *mempool)
 {
-	return Mem_Alloc(mempool, sizeof(entityframe_database_t));
+	return (entityframe_database_t *)Mem_Alloc(mempool, sizeof(entityframe_database_t));
 }
 
 // (client and server) frees the database
@@ -1081,7 +1081,7 @@ entity_state_t *EntityFrame4_GetReferenceEntity(entityframe4_database_t *d, int 
 		int oldmax = d->maxreferenceentities;
 		entity_state_t *oldentity = d->referenceentity;
 		d->maxreferenceentities = (number + 15) & ~7;
-		d->referenceentity = Mem_Alloc(d->mempool, d->maxreferenceentities * sizeof(*d->referenceentity));
+		d->referenceentity = (entity_state_t *)Mem_Alloc(d->mempool, d->maxreferenceentities * sizeof(*d->referenceentity));
 		if (oldentity)
 		{
 			memcpy(d->referenceentity, oldentity, oldmax * sizeof(*d->referenceentity));
@@ -1104,7 +1104,7 @@ void EntityFrame4_AddCommitEntity(entityframe4_database_t *d, const entity_state
 	{
 		entity_state_t *oldentity = d->currentcommit->entity;
 		d->currentcommit->maxentities += 8;
-		d->currentcommit->entity = Mem_Alloc(d->mempool, d->currentcommit->maxentities * sizeof(*d->currentcommit->entity));
+		d->currentcommit->entity = (entity_state_t *)Mem_Alloc(d->mempool, d->currentcommit->maxentities * sizeof(*d->currentcommit->entity));
 		if (oldentity)
 		{
 			memcpy(d->currentcommit->entity, oldentity, d->currentcommit->numentities * sizeof(*d->currentcommit->entity));
@@ -1117,7 +1117,7 @@ void EntityFrame4_AddCommitEntity(entityframe4_database_t *d, const entity_state
 entityframe4_database_t *EntityFrame4_AllocDatabase(mempool_t *pool)
 {
 	entityframe4_database_t *d;
-	d = Mem_Alloc(pool, sizeof(*d));
+	d = (entityframe4_database_t *)Mem_Alloc(pool, sizeof(*d));
 	d->mempool = pool;
 	EntityFrame4_ResetDatabase(d);
 	return d;
@@ -1448,7 +1448,7 @@ void EntityFrame4_WriteFrame(sizebuf_t *msg, entityframe4_database_t *d, int num
 entityframe5_database_t *EntityFrame5_AllocDatabase(mempool_t *pool)
 {
 	entityframe5_database_t *d;
-	d = Mem_Alloc(pool, sizeof(*d));
+	d = (entityframe5_database_t *)Mem_Alloc(pool, sizeof(*d));
 	EntityFrame5_ResetDatabase(d);
 	return d;
 }
@@ -1483,12 +1483,12 @@ void EntityFrame5_ExpandEdicts(entityframe5_database_t *d, int newmax)
 		entity_state_t *oldstates = d->states;
 		qbyte *oldvisiblebits = d->visiblebits;
 		d->maxedicts = newmax;
-		data = Mem_Alloc(sv_mempool, d->maxedicts * sizeof(int) + d->maxedicts * sizeof(qbyte) + d->maxedicts * sizeof(int) + d->maxedicts * sizeof(entity_state_t) + (d->maxedicts+7)/8 * sizeof(qbyte));
-		d->deltabits = (void *)data;data += d->maxedicts * sizeof(int);
-		d->priorities = (void *)data;data += d->maxedicts * sizeof(qbyte);
-		d->updateframenum = (void *)data;data += d->maxedicts * sizeof(int);
-		d->states = (void *)data;data += d->maxedicts * sizeof(entity_state_t);
-		d->visiblebits = (void *)data;data += (d->maxedicts+7)/8 * sizeof(qbyte);
+		data = (qbyte *)Mem_Alloc(sv_mempool, d->maxedicts * sizeof(int) + d->maxedicts * sizeof(qbyte) + d->maxedicts * sizeof(int) + d->maxedicts * sizeof(entity_state_t) + (d->maxedicts+7)/8 * sizeof(qbyte));
+		d->deltabits = (int *)data;data += d->maxedicts * sizeof(int);
+		d->priorities = (qbyte *)data;data += d->maxedicts * sizeof(qbyte);
+		d->updateframenum = (int *)data;data += d->maxedicts * sizeof(int);
+		d->states = (entity_state_t *)data;data += d->maxedicts * sizeof(entity_state_t);
+		d->visiblebits = (qbyte *)data;data += (d->maxedicts+7)/8 * sizeof(qbyte);
 		if (oldmaxedicts)
 		{
 			memcpy(d->deltabits, olddeltabits, oldmaxedicts * sizeof(int));

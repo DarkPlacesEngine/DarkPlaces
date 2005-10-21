@@ -186,7 +186,7 @@ void Log_ConPrint (const char *msg)
 			qbyte* newqueue;
 
 			logq_size *= factor;
-			newqueue = Mem_Alloc (tempmempool, logq_size);
+			newqueue = (qbyte *)Mem_Alloc (tempmempool, logq_size);
 			memcpy (newqueue, logqueue, logq_ind);
 			Mem_Free (logqueue);
 			logqueue = newqueue;
@@ -369,7 +369,7 @@ void Con_Init (void)
 
 	// Allocate a log queue
 	logq_size = 512;
-	logqueue = Mem_Alloc (tempmempool, logq_size);
+	logqueue = (qbyte *)Mem_Alloc (tempmempool, logq_size);
 	logq_ind = 0;
 
 	Cvar_RegisterVariable (&log_file);
@@ -542,7 +542,7 @@ void Con_Print(const char *msg)
 		if (index == 0)
 		{
 			// if this is the beginning of a new line, print timestamp
-			char *timestamp = timestamps.integer ? Sys_TimeString(timeformat.string) : "";
+			const char *timestamp = timestamps.integer ? Sys_TimeString(timeformat.string) : "";
 			// reset the color
 			// FIXME: 1. perhaps we should use a terminal system 2. use a constant instead of 7!
 			line[index++] = STRING_COLOR_TAG;
@@ -730,7 +730,7 @@ void Con_DrawNotify (void)
 	char	*text;
 	int		i;
 	float	time;
-	extern char chat_buffer[];
+	extern char chat_buffer[256];
 	char	temptext[256];
 	int colorindex = -1; //-1 for default
 
@@ -802,7 +802,6 @@ Draws the console with the solid background
 The typing input line at the bottom should only be drawn if typing is allowed
 ================
 */
-extern char engineversion[40];
 void Con_DrawConsole (int lines)
 {
 	int i, y, rows, j;
