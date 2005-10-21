@@ -135,12 +135,10 @@ typedef struct
 } z_stream;
 
 
-typedef enum
-{
-	QFILE_FLAG_NONE		= 0,
-	QFILE_FLAG_PACKED	= (1 << 0),	// inside a package (PAK or PK3)
-	QFILE_FLAG_DEFLATED	= (1 << 1)	// file is compressed using the deflate algorithm (PK3 only)
-} qfile_flags_t;
+// inside a package (PAK or PK3)
+#define QFILE_FLAG_PACKED (1 << 0)
+// file is compressed using the deflate algorithm (PK3 only)
+#define QFILE_FLAG_DEFLATED (1 << 1)
 
 #define FILE_BUFF_SIZE 2048
 typedef struct
@@ -154,7 +152,7 @@ typedef struct
 
 struct qfile_s
 {
-	qfile_flags_t	flags;
+	int				flags;
 	int				handle;					// file descriptor
 	fs_offset_t		real_length;			// uncompressed file size (for files opened in "read" mode)
 	fs_offset_t		position;				// current position in the file
@@ -203,17 +201,15 @@ typedef struct
 
 
 // Packages in memory
-typedef enum
-{
-	PACKFILE_FLAG_NONE		= 0,
-	PACKFILE_FLAG_TRUEOFFS	= (1 << 0),	// the offset in packfile_t is the true contents offset
-	PACKFILE_FLAG_DEFLATED	= (1 << 1)	// file compressed using the deflate algorithm
-} packfile_flags_t;
+// the offset in packfile_t is the true contents offset
+#define PACKFILE_FLAG_TRUEOFFS (1 << 0)
+// file compressed using the deflate algorithm
+#define PACKFILE_FLAG_DEFLATED (1 << 1)
 
 typedef struct
 {
 	char name [MAX_QPATH];
-	packfile_flags_t flags;
+	int flags;
 	fs_offset_t offset;
 	fs_offset_t packsize;	// size in the package
 	fs_offset_t realsize;	// real file size (uncompressed)
@@ -253,7 +249,7 @@ void FS_Ls_f(void);
 
 static packfile_t* FS_AddFileToPack (const char* name, pack_t* pack,
 									fs_offset_t offset, fs_offset_t packsize,
-									fs_offset_t realsize, packfile_flags_t flags);
+									fs_offset_t realsize, int flags);
 
 
 /*
@@ -399,7 +395,7 @@ qboolean PK3_GetEndOfCentralDir (const char *packfile, int packhandle, pk3_endOf
 		maxsize = filesize;
 	else
 		maxsize = ZIP_MAX_COMMENTS_SIZE + ZIP_END_CDIR_SIZE;
-	buffer = Mem_Alloc (tempmempool, maxsize);
+	buffer = (qbyte *)Mem_Alloc (tempmempool, maxsize);
 	lseek (packhandle, filesize - maxsize, SEEK_SET);
 	if (read (packhandle, buffer, maxsize) != (fs_offset_t) maxsize)
 	{
@@ -453,7 +449,7 @@ int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 	fs_offset_t remaining;
 
 	// Load the central directory in memory
-	central_dir = Mem_Alloc (tempmempool, eocd->cdir_size);
+	central_dir = (qbyte *)Mem_Alloc (tempmempool, eocd->cdir_size);
 	lseek (pack->handle, eocd->cdir_offset, SEEK_SET);
 	read (pack->handle, central_dir, eocd->cdir_size);
 
@@ -503,7 +499,7 @@ int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 			{
 				char filename [sizeof (pack->files[0].name)];
 				fs_offset_t offset, packsize, realsize;
-				packfile_flags_t flags;
+				int flags;
 
 				// Extract the name (strip it if necessary)
 				namesize = min(namesize, (int)sizeof (filename) - 1);
@@ -581,12 +577,12 @@ pack_t *FS_LoadPackPK3 (const char *packfile)
 #endif
 
 	// Create a package structure in memory
-	pack = Mem_Alloc(fs_mempool, sizeof (pack_t));
+	pack = (pack_t *)Mem_Alloc(fs_mempool, sizeof (pack_t));
 	pack->ignorecase = true; // PK3 ignores case
 	strlcpy (pack->filename, packfile, sizeof (pack->filename));
 	pack->handle = packhandle;
 	pack->numfiles = eocd.nbentries;
-	pack->files = Mem_Alloc(fs_mempool, eocd.nbentries * sizeof(packfile_t));
+	pack->files = (packfile_t *)Mem_Alloc(fs_mempool, eocd.nbentries * sizeof(packfile_t));
 	pack->next = packlist;
 	packlist = pack;
 
@@ -655,7 +651,7 @@ Add a file to the list of files contained into a package
 */
 static packfile_t* FS_AddFileToPack (const char* name, pack_t* pack,
 									 fs_offset_t offset, fs_offset_t packsize,
-									 fs_offset_t realsize, packfile_flags_t flags)
+									 fs_offset_t realsize, int flags)
 {
 	int (*strcmp_funct) (const char* str1, const char* str2);
 	int left, right, middle;
@@ -792,16 +788,16 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 		return NULL;
 	}
 
-	pack = Mem_Alloc(fs_mempool, sizeof (pack_t));
+	pack = (pack_t *)Mem_Alloc(fs_mempool, sizeof (pack_t));
 	pack->ignorecase = false; // PAK is case sensitive
 	strlcpy (pack->filename, packfile, sizeof (pack->filename));
 	pack->handle = packhandle;
 	pack->numfiles = 0;
-	pack->files = Mem_Alloc(fs_mempool, numpackfiles * sizeof(packfile_t));
+	pack->files = (packfile_t *)Mem_Alloc(fs_mempool, numpackfiles * sizeof(packfile_t));
 	pack->next = packlist;
 	packlist = pack;
 
-	info = Mem_Alloc(tempmempool, sizeof(*info) * numpackfiles);
+	info = (dpackfile_t *)Mem_Alloc(tempmempool, sizeof(*info) * numpackfiles);
 	lseek (packhandle, header.dirofs, SEEK_SET);
 	read (packhandle, (void *)info, header.dirlen);
 
@@ -849,7 +845,7 @@ void FS_AddGameDirectory (const char *dir)
 			pak = FS_LoadPackPAK (pakfile);
 			if (pak)
 			{
-				search = Mem_Alloc(fs_mempool, sizeof(searchpath_t));
+				search = (searchpath_t *)Mem_Alloc(fs_mempool, sizeof(searchpath_t));
 				search->pack = pak;
 				search->next = fs_searchpaths;
 				fs_searchpaths = search;
@@ -868,7 +864,7 @@ void FS_AddGameDirectory (const char *dir)
 			pak = FS_LoadPackPK3 (pakfile);
 			if (pak)
 			{
-				search = Mem_Alloc(fs_mempool, sizeof(searchpath_t));
+				search = (searchpath_t *)Mem_Alloc(fs_mempool, sizeof(searchpath_t));
 				search->pack = pak;
 				search->next = fs_searchpaths;
 				fs_searchpaths = search;
@@ -881,7 +877,7 @@ void FS_AddGameDirectory (const char *dir)
 
 	// Add the directory to the search path
 	// (unpacked files have the priority over packed files)
-	search = Mem_Alloc(fs_mempool, sizeof(searchpath_t));
+	search = (searchpath_t *)Mem_Alloc(fs_mempool, sizeof(searchpath_t));
 	strlcpy (search->filename, dir, sizeof (search->filename));
 	search->next = fs_searchpaths;
 	fs_searchpaths = search;
@@ -991,7 +987,7 @@ void FS_Init (void)
 			if (!com_argv[i] || com_argv[i][0] == '+' || com_argv[i][0] == '-')
 				break;
 
-			search = Mem_Alloc(fs_mempool, sizeof(searchpath_t));
+			search = (searchpath_t *)Mem_Alloc(fs_mempool, sizeof(searchpath_t));
 			if (!strcasecmp (FS_FileExtension(com_argv[i]), "pak"))
 			{
 				search->pack = FS_LoadPackPAK (com_argv[i]);
@@ -1133,7 +1129,7 @@ static qfile_t* FS_SysOpen (const char* filepath, const char* mode, qboolean non
 	if (nonblocking)
 		opt |= O_NONBLOCK;
 
-	file = Mem_Alloc (fs_mempool, sizeof (*file));
+	file = (qfile_t *)Mem_Alloc (fs_mempool, sizeof (*file));
 	memset (file, 0, sizeof (*file));
 	file->ungetc = EOF;
 
@@ -1203,7 +1199,7 @@ qfile_t *FS_OpenPackedFile (pack_t* pack, int pack_ind)
 		return NULL;
 	}
 
-	file = Mem_Alloc (fs_mempool, sizeof (*file));
+	file = (qfile_t *)Mem_Alloc (fs_mempool, sizeof (*file));
 	memset (file, 0, sizeof (*file));
 	file->handle = dup_handle;
 	file->flags = QFILE_FLAG_PACKED;
@@ -1219,7 +1215,7 @@ qfile_t *FS_OpenPackedFile (pack_t* pack, int pack_ind)
 		file->flags |= QFILE_FLAG_DEFLATED;
 
 		// We need some more variables
-		ztk = Mem_Alloc (fs_mempool, sizeof (*ztk));
+		ztk = (ztoolkit_t *)Mem_Alloc (fs_mempool, sizeof (*ztk));
 
 		ztk->comp_length = pfile->packsize;
 
@@ -1737,13 +1733,13 @@ int FS_VPrintf (qfile_t* file, const char* format, va_list ap)
 	char *tempbuff = NULL;
 
 	buff_size = 1024;
-	tempbuff = Mem_Alloc (tempmempool, buff_size);
+	tempbuff = (char *)Mem_Alloc (tempmempool, buff_size);
 	len = dpvsnprintf (tempbuff, buff_size, format, ap);
 	while (len < 0)
 	{
 		Mem_Free (tempbuff);
 		buff_size *= 2;
-		tempbuff = Mem_Alloc (tempmempool, buff_size);
+		tempbuff = (char *)Mem_Alloc (tempmempool, buff_size);
 		len = dpvsnprintf (tempbuff, buff_size, format, ap);
 	}
 
@@ -1863,7 +1859,7 @@ int FS_Seek (qfile_t* file, fs_offset_t offset, int whence)
 
 	// We need a big buffer to force inflating into it directly
 	buffersize = 2 * sizeof (file->buff);
-	buffer = Mem_Alloc (tempmempool, buffersize);
+	buffer = (qbyte *)Mem_Alloc (tempmempool, buffersize);
 
 	// Skip all data until we reach the requested offset
 	while (offset > file->position)
@@ -1930,7 +1926,7 @@ qbyte *FS_LoadFile (const char *path, mempool_t *pool, qboolean quiet)
 	if (!file)
 		return NULL;
 
-	buf = Mem_Alloc (pool, fs_filesize + 1);
+	buf = (qbyte *)Mem_Alloc (pool, fs_filesize + 1);
 	buf[fs_filesize] = '\0';
 
 	FS_Read (file, buf, fs_filesize);
@@ -2114,7 +2110,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 	separator = max(slash, backslash);
 	separator = max(separator, colon);
 	basepathlength = separator ? (separator + 1 - pattern) : 0;
-	basepath = Mem_Alloc (tempmempool, basepathlength + 1);
+	basepath = (char *)Mem_Alloc (tempmempool, basepathlength + 1);
 	if (basepathlength)
 		memcpy(basepath, pattern, basepathlength);
 	basepath[basepathlength] = 0;
@@ -2201,7 +2197,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 			numfiles++;
 			numchars += (int)strlen(listtemp->text) + 1;
 		}
-		search = Z_Malloc(sizeof(fssearch_t) + numchars + numfiles * sizeof(char *));
+		search = (fssearch_t *)Z_Malloc(sizeof(fssearch_t) + numchars + numfiles * sizeof(char *));
 		search->filenames = (char **)((char *)search + sizeof(fssearch_t));
 		search->filenamesbuffer = (char *)((char *)search + sizeof(fssearch_t) + numfiles * sizeof(char *));
 		search->numfilenames = (int)numfiles;

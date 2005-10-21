@@ -909,7 +909,7 @@ typedef struct
 }
 refdef_t;
 
-refdef_t r_refdef;
+extern refdef_t r_refdef;
 
 #include "cgamevm.h"
 

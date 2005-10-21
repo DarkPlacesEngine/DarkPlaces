@@ -78,9 +78,9 @@ void MP_Shutdown (void);*/
 void MR_Init_Commands (void);
 void MR_Init (void);
 void MR_Restart (void);
-void (*MR_Keydown) (int key, char ascii);
-void (*MR_Draw) (void);
-void (*MR_ToggleMenu_f) (void);
-void (*MR_Shutdown) (void);
+extern void (*MR_Keydown) (int key, char ascii);
+extern void (*MR_Draw) (void);
+extern void (*MR_ToggleMenu_f) (void);
+extern void (*MR_Shutdown) (void);
 #endif
 

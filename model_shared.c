@@ -153,7 +153,7 @@ model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolea
 		buf = FS_LoadFile (mod->name, tempmempool, false);
 		if (buf)
 		{
-			crc = CRC_Block(buf, fs_filesize);
+			crc = CRC_Block((qbyte *)buf, fs_filesize);
 			if (mod->crc != crc)
 				mod->loaded = false;
 		}
@@ -201,7 +201,7 @@ model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolea
 		else if (!memcmp(buf, "IBSP", 4)) Mod_IBSP_Load(mod, buf, bufend);
 		else if (!memcmp(buf, "ZYMOTICMODEL", 12)) Mod_ZYMOTICMODEL_Load(mod, buf, bufend);
 		else if (!memcmp(buf, "DARKPLACESMODEL", 16)) Mod_DARKPLACESMODEL_Load(mod, buf, bufend);
-		else if (!strcmp(buf, "ACTRHEAD")) Mod_PSKMODEL_Load(mod, buf, bufend);
+		else if (!memcmp(buf, "ACTRHEAD", 8)) Mod_PSKMODEL_Load(mod, buf, bufend);
 		else if (strlen(mod->name) >= 4 && !strcmp(mod->name - 4, ".map")) Mod_MAP_Load(mod, buf, bufend);
 		else if (!memcmp(buf, "MCBSPpad", 8)) Mod_Q1BSP_Load(mod, buf, bufend);
 		else if (num == BSPVERSION || num == 30) Mod_Q1BSP_Load(mod, buf, bufend);
@@ -362,7 +362,7 @@ int Mod_BuildVertexRemapTableFromElements(int numelements, const int *elements, 
 {
 	int i, count;
 	qbyte *used;
-	used = Mem_Alloc(tempmempool, numvertices);
+	used = (qbyte *)Mem_Alloc(tempmempool, numvertices);
 	memset(used, 0, numvertices);
 	for (i = 0;i < numelements;i++)
 		used[elements[i]] = 1;
@@ -391,7 +391,7 @@ void Mod_BuildTriangleNeighbors(int *neighbors, const int *elements, int numtria
 	edgehashentries = edgehashentriesbuffer;
 	// if there are too many triangles for the stack array, allocate larger buffer
 	if (numtriangles > TRIANGLEEDGEHASH)
-		edgehashentries = Mem_Alloc(tempmempool, numtriangles * 3 * sizeof(edgehashentry_t));
+		edgehashentries = (edgehashentry_t *)Mem_Alloc(tempmempool, numtriangles * 3 * sizeof(edgehashentry_t));
 	// find neighboring triangles
 	for (i = 0, e = elements, n = neighbors;i < numtriangles;i++, e += 3, n += 3)
 	{
@@ -636,7 +636,7 @@ surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriang
 {
 	surfmesh_t *mesh;
 	qbyte *data;
-	mesh = Mem_Alloc(mempool, sizeof(surfmesh_t) + numvertices * (3 + 3 + 3 + 3 + 2 + 2 + (vertexcolors ? 4 : 0)) * sizeof(float) + numvertices * (lightmapoffsets ? 1 : 0) * sizeof(int) + numtriangles * (3 + (neighbors ? 3 : 0)) * sizeof(int));
+	mesh = (surfmesh_t *)Mem_Alloc(mempool, sizeof(surfmesh_t) + numvertices * (3 + 3 + 3 + 3 + 2 + 2 + (vertexcolors ? 4 : 0)) * sizeof(float) + numvertices * (lightmapoffsets ? 1 : 0) * sizeof(int) + numtriangles * (3 + (neighbors ? 3 : 0)) * sizeof(int));
 	mesh->num_vertices = numvertices;
 	mesh->num_triangles = numtriangles;
 	data = (qbyte *)(mesh + 1);
@@ -676,8 +676,8 @@ shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtria
 		size += maxtriangles * sizeof(int[3]);
 	if (expandable)
 		size += SHADOWMESHVERTEXHASH * sizeof(shadowmeshvertexhash_t *) + maxverts * sizeof(shadowmeshvertexhash_t);
-	data = Mem_Alloc(mempool, size);
-	newmesh = (void *)data;data += sizeof(*newmesh);
+	data = (qbyte *)Mem_Alloc(mempool, size);
+	newmesh = (shadowmesh_t *)data;data += sizeof(*newmesh);
 	newmesh->map_diffuse = map_diffuse;
 	newmesh->map_specular = map_specular;
 	newmesh->map_normal = map_normal;
@@ -686,23 +686,23 @@ shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtria
 	newmesh->numverts = 0;
 	newmesh->numtriangles = 0;
 
-	newmesh->vertex3f = (void *)data;data += maxverts * sizeof(float[3]);
+	newmesh->vertex3f = (float *)data;data += maxverts * sizeof(float[3]);
 	if (light)
 	{
-		newmesh->svector3f = (void *)data;data += maxverts * sizeof(float[3]);
-		newmesh->tvector3f = (void *)data;data += maxverts * sizeof(float[3]);
-		newmesh->normal3f = (void *)data;data += maxverts * sizeof(float[3]);
-		newmesh->texcoord2f = (void *)data;data += maxverts * sizeof(float[2]);
+		newmesh->svector3f = (float *)data;data += maxverts * sizeof(float[3]);
+		newmesh->tvector3f = (float *)data;data += maxverts * sizeof(float[3]);
+		newmesh->normal3f = (float *)data;data += maxverts * sizeof(float[3]);
+		newmesh->texcoord2f = (float *)data;data += maxverts * sizeof(float[2]);
 	}
-	newmesh->element3i = (void *)data;data += maxtriangles * sizeof(int[3]);
+	newmesh->element3i = (int *)data;data += maxtriangles * sizeof(int[3]);
 	if (neighbors)
 	{
-		newmesh->neighbor3i = (void *)data;data += maxtriangles * sizeof(int[3]);
+		newmesh->neighbor3i = (int *)data;data += maxtriangles * sizeof(int[3]);
 	}
 	if (expandable)
 	{
-		newmesh->vertexhashtable = (void *)data;data += SHADOWMESHVERTEXHASH * sizeof(shadowmeshvertexhash_t *);
-		newmesh->vertexhashentries = (void *)data;data += maxverts * sizeof(shadowmeshvertexhash_t);
+		newmesh->vertexhashtable = (shadowmeshvertexhash_t **)data;data += SHADOWMESHVERTEXHASH * sizeof(shadowmeshvertexhash_t *);
+		newmesh->vertexhashentries = (shadowmeshvertexhash_t *)data;data += maxverts * sizeof(shadowmeshvertexhash_t);
 	}
 	return newmesh;
 }
@@ -951,7 +951,7 @@ int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, char *basename, int textu
 		return false;
 	if (r_shadow_bumpscale_basetexture.value > 0)
 	{
-		temp1 = Mem_Alloc(loadmodel->mempool, width * height * 8);
+		temp1 = (qbyte *)Mem_Alloc(loadmodel->mempool, width * height * 8);
 		temp2 = temp1 + width * height * 4;
 		Image_Copy8bitRGBA(skindata, temp1, width * height, palette_nofullbrights);
 		Image_HeightmapToNormalmap(temp1, temp2, width, height, false, r_shadow_bumpscale_basetexture.value);
@@ -1084,12 +1084,12 @@ tag_torso,
 		// If it's the first file we parse
 		if (skinfile == NULL)
 		{
-			skinfile = Mem_Alloc(tempmempool, sizeof(skinfile_t));
+			skinfile = (skinfile_t *)Mem_Alloc(tempmempool, sizeof(skinfile_t));
 			first = skinfile;
 		}
 		else
 		{
-			skinfile->next = Mem_Alloc(tempmempool, sizeof(skinfile_t));
+			skinfile->next = (skinfile_t *)Mem_Alloc(tempmempool, sizeof(skinfile_t));
 			skinfile = skinfile->next;
 		}
 		skinfile->next = NULL;
@@ -1122,7 +1122,7 @@ tag_torso,
 				if (words == 3)
 				{
 					Con_DPrintf("Mod_LoadSkinFiles: parsed mesh \"%s\" shader replacement \"%s\"\n", word[1], word[2]);
-					skinfileitem = Mem_Alloc(tempmempool, sizeof(skinfileitem_t));
+					skinfileitem = (skinfileitem_t *)Mem_Alloc(tempmempool, sizeof(skinfileitem_t));
 					skinfileitem->next = skinfile->items;
 					skinfile->items = skinfileitem;
 					strlcpy (skinfileitem->name, word[1], sizeof (skinfileitem->name));
@@ -1143,7 +1143,7 @@ tag_torso,
 			{
 				// mesh shader name, like "U_RArm,models/players/Legoman/BikerA1.tga"
 				Con_DPrintf("Mod_LoadSkinFiles: parsed mesh \"%s\" shader replacement \"%s\"\n", word[0], word[2]);
-				skinfileitem = Mem_Alloc(tempmempool, sizeof(skinfileitem_t));
+				skinfileitem = (skinfileitem_t *)Mem_Alloc(tempmempool, sizeof(skinfileitem_t));
 				skinfileitem->next = skinfile->items;
 				skinfile->items = skinfileitem;
 				strlcpy (skinfileitem->name, word[0], sizeof (skinfileitem->name));
@@ -1159,14 +1159,14 @@ tag_torso,
 			overridetagnameset_t *t;
 			t = tagsets + i;
 			t->num_overridetagnames = numtags;
-			t->data_overridetagnames = Mem_Alloc(loadmodel->mempool, t->num_overridetagnames * sizeof(overridetagname_t));
+			t->data_overridetagnames = (overridetagname_t *)Mem_Alloc(loadmodel->mempool, t->num_overridetagnames * sizeof(overridetagname_t));
 			memcpy(t->data_overridetagnames, tags, t->num_overridetagnames * sizeof(overridetagname_t));
 			tagsetsused = true;
 		}
 	}
 	if (tagsetsused)
 	{
-		loadmodel->data_overridetagnamesforskin = Mem_Alloc(loadmodel->mempool, i * sizeof(overridetagnameset_t));
+		loadmodel->data_overridetagnamesforskin = (overridetagnameset_t *)Mem_Alloc(loadmodel->mempool, i * sizeof(overridetagnameset_t));
 		memcpy(loadmodel->data_overridetagnamesforskin, tagsets, i * sizeof(overridetagnameset_t));
 	}
 	if (i)

@@ -114,9 +114,9 @@ void r_lightningbeams_setuptexture(void)
 	int x, y;
 	qbyte *data, *noise1, *noise2;
 
-	data = Mem_Alloc(tempmempool, BEAMWIDTH * BEAMHEIGHT * 4);
-	noise1 = Mem_Alloc(tempmempool, BEAMHEIGHT * BEAMHEIGHT);
-	noise2 = Mem_Alloc(tempmempool, BEAMHEIGHT * BEAMHEIGHT);
+	data = (qbyte *)Mem_Alloc(tempmempool, BEAMWIDTH * BEAMHEIGHT * 4);
+	noise1 = (qbyte *)Mem_Alloc(tempmempool, BEAMHEIGHT * BEAMHEIGHT);
+	noise2 = (qbyte *)Mem_Alloc(tempmempool, BEAMHEIGHT * BEAMHEIGHT);
 	fractalnoise(noise1, BEAMHEIGHT, BEAMHEIGHT / 8);
 	fractalnoise(noise2, BEAMHEIGHT, BEAMHEIGHT / 16);
 
@@ -229,7 +229,7 @@ float beamrepeatscale;
 
 void R_DrawLightningBeamCallback(const void *calldata1, int calldata2)
 {
-	const beam_t *b = calldata1;
+	const beam_t *b = (beam_t *)calldata1;
 	rmeshstate_t m;
 	vec3_t beamdir, right, up, offset;
 	float length, t1, t2;

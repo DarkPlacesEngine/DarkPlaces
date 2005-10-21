@@ -87,7 +87,7 @@ void Cbuf_AddText (const char *text)
 		return;
 	}
 
-	SZ_Write (&cmd_text, text, (int)strlen (text));
+	SZ_Write (&cmd_text, (const qbyte *)text, (int)strlen (text));
 }
 
 
@@ -109,7 +109,7 @@ void Cbuf_InsertText (const char *text)
 	templen = cmd_text.cursize;
 	if (templen)
 	{
-		temp = Mem_Alloc (tempmempool, templen);
+		temp = (char *)Mem_Alloc (tempmempool, templen);
 		memcpy (temp, cmd_text.data, templen);
 		SZ_Clear (&cmd_text);
 	}
@@ -122,7 +122,7 @@ void Cbuf_InsertText (const char *text)
 	// add the copied off data
 	if (temp != NULL)
 	{
-		SZ_Write (&cmd_text, temp, templen);
+		SZ_Write (&cmd_text, (const qbyte *)temp, templen);
 		Mem_Free (temp);
 	}
 }
@@ -337,7 +337,7 @@ static void Cmd_Alias_f (void)
 	{
 		cmdalias_t *prev, *current;
 
-		a = Z_Malloc (sizeof(cmdalias_t));
+		a = (cmdalias_t *)Z_Malloc (sizeof(cmdalias_t));
 		strlcpy (a->name, s, sizeof (a->name));
 		// insert it at the right alphanumeric position
 		for( prev = NULL, current = cmd_alias ; current && strcmp( current->name, a->name ) < 0 ; prev = current, current = current->next )
@@ -362,7 +362,7 @@ static void Cmd_Alias_f (void)
 	}
 	strlcat (cmd, "\n", sizeof (cmd));
 
-	a->value = Z_Malloc (strlen (cmd) + 1);
+	a->value = (char *)Z_Malloc (strlen (cmd) + 1);
 	strcpy (a->value, cmd);
 }
 
@@ -702,7 +702,7 @@ void Cmd_AddCommand (const char *cmd_name, xcommand_t function)
 		}
 	}
 
-	cmd = Mem_Alloc(cmd_mempool, sizeof(cmd_function_t));
+	cmd = (cmd_function_t *)Mem_Alloc(cmd_mempool, sizeof(cmd_function_t));
 	cmd->name = cmd_name;
 	cmd->function = function;
 	cmd->next = cmd_functions;
@@ -805,7 +805,7 @@ const char **Cmd_CompleteBuildList (const char *partial)
 	const char **buf;
 
 	len = strlen(partial);
-	buf = Mem_Alloc(tempmempool, sizeofbuf + sizeof (const char *));
+	buf = (const char **)Mem_Alloc(tempmempool, sizeofbuf + sizeof (const char *));
 	// Loop through the alias list and print all matches
 	for (cmd = cmd_functions; cmd; cmd = cmd->next)
 		if (!strncasecmp(partial, cmd->name, len))
@@ -890,7 +890,7 @@ const char **Cmd_CompleteAliasBuildList (const char *partial)
 	const char **buf;
 
 	len = strlen(partial);
-	buf = Mem_Alloc(tempmempool, sizeofbuf + sizeof (const char *));
+	buf = (const char **)Mem_Alloc(tempmempool, sizeofbuf + sizeof (const char *));
 	// Loop through the alias list and print all matches
 	for (alias = cmd_alias; alias; alias = alias->next)
 		if (!strncasecmp(partial, alias->name, len))
@@ -977,7 +977,7 @@ void Cmd_ForwardStringToServer (const char *s)
 	// attention, it has been eradicated from here, its only (former) use in
 	// all of darkplaces.
 	MSG_WriteByte(&cls.message, clc_stringcmd);
-	SZ_Write(&cls.message, s, (int)strlen(s) + 1);
+	SZ_Write(&cls.message, (const qbyte *)s, (int)strlen(s) + 1);
 }
 
 /*

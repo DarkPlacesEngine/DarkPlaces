@@ -57,7 +57,7 @@ void PRVM_MEM_Alloc(void)
 	prog->edictprivate_size = max(prog->edictprivate_size,(int)sizeof(prvm_edict_private_t));
 
 	// alloc edicts
-	prog->edicts = Mem_Alloc(prog->progs_mempool,prog->limit_edicts * sizeof(prvm_edict_t));
+	prog->edicts = (prvm_edict_t *)Mem_Alloc(prog->progs_mempool,prog->limit_edicts * sizeof(prvm_edict_t));
 
 	// alloc edict private space
 	prog->edictprivate = Mem_Alloc(prog->progs_mempool, prog->max_edicts * prog->edictprivate_size);
@@ -373,7 +373,7 @@ char *PRVM_ValueString (etype_t type, prvm_eval_t *val)
 	mfunction_t *f;
 	int n;
 
-	type &= ~DEF_SAVEGLOBAL;
+	type = (etype_t)((int) type & ~DEF_SAVEGLOBAL);
 
 	switch (type)
 	{
@@ -433,7 +433,7 @@ char *PRVM_UglyValueString (etype_t type, prvm_eval_t *val)
 	ddef_t *def;
 	mfunction_t *f;
 
-	type &= ~DEF_SAVEGLOBAL;
+	type = (etype_t)((int)type & ~DEF_SAVEGLOBAL);
 
 	switch (type)
 	{
@@ -510,7 +510,7 @@ char *PRVM_GlobalString (int ofs)
 		sprintf (line,"%i(?)", ofs);
 	else
 	{
-		s = PRVM_ValueString (def->type, val);
+		s = PRVM_ValueString ((etype_t)def->type, (prvm_eval_t *)val);
 		sprintf (line,"%i(%s)%s", ofs, PRVM_GetString(def->s_name), s);
 	}
 
@@ -600,7 +600,7 @@ void PRVM_ED_Print(prvm_edict_t *ed)
 			strcat(tempstring, " ");
 		strcat(tempstring, " ");
 
-		name = PRVM_ValueString(d->type, (prvm_eval_t *)v);
+		name = PRVM_ValueString((etype_t)d->type, (prvm_eval_t *)v);
 		if (strlen(name) > 256)
 		{
 			memcpy (tempstring2, name, 256);
@@ -661,7 +661,7 @@ void PRVM_ED_Write (qfile_t *f, prvm_edict_t *ed)
 			continue;
 
 		FS_Printf(f,"\"%s\" ",name);
-		FS_Printf(f,"\"%s\"\n", PRVM_UglyValueString(d->type, (prvm_eval_t *)v));
+		FS_Printf(f,"\"%s\"\n", PRVM_UglyValueString((etype_t)d->type, (prvm_eval_t *)v));
 	}
 
 	FS_Print(f, "}\n");
@@ -813,7 +813,7 @@ void PRVM_ED_WriteGlobals (qfile_t *f)
 
 		name = PRVM_GetString(def->s_name);
 		FS_Printf(f,"\"%s\" ", name);
-		FS_Printf(f,"\"%s\"\n", PRVM_UglyValueString(type, (prvm_eval_t *)&prog->globals.generic[def->ofs]));
+		FS_Printf(f,"\"%s\"\n", PRVM_UglyValueString((etype_t)type, (prvm_eval_t *)&prog->globals.generic[def->ofs]));
 	}
 	FS_Print(f,"}\n");
 }
@@ -1264,7 +1264,7 @@ void PRVM_LoadLNO( const char *progname ) {
 		(unsigned int)LittleLong( header[ 4 ] ) == (unsigned int)prog->progs->numfielddefs &&
 		(unsigned int)LittleLong( header[ 5 ] ) == (unsigned int)prog->progs->numstatements )
 	{
-		prog->statement_linenums = Mem_Alloc(prog->progs_mempool, prog->progs->numstatements * sizeof( int ) );
+		prog->statement_linenums = (int *)Mem_Alloc(prog->progs_mempool, prog->progs->numstatements * sizeof( int ) );
 		memcpy( prog->statement_linenums, (int *) lno + 6, prog->progs->numstatements * sizeof( int ) );
 	}
 	Mem_Free( lno );
@@ -1325,7 +1325,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	// so allocate a new place for it
 	infielddefs = (ddef_t *)((qbyte *)prog->progs + prog->progs->ofs_fielddefs);
 	//												( + DPFIELDS			   )
-	prog->fielddefs = Mem_Alloc(prog->progs_mempool, (prog->progs->numfielddefs + numrequiredfields) * sizeof(ddef_t));
+	prog->fielddefs = (ddef_t *)Mem_Alloc(prog->progs_mempool, (prog->progs->numfielddefs + numrequiredfields) * sizeof(ddef_t));
 
 	prog->statements = (dstatement_t *)((qbyte *)prog->progs + prog->progs->ofs_statements);
 
@@ -1343,7 +1343,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 		prog->statements[i].c = LittleShort(prog->statements[i].c);
 	}
 
-	prog->functions = Mem_Alloc(prog->progs_mempool, sizeof(mfunction_t) * prog->progs->numfunctions);
+	prog->functions = (mfunction_t *)Mem_Alloc(prog->progs_mempool, sizeof(mfunction_t) * prog->progs->numfunctions);
 	for (i = 0;i < prog->progs->numfunctions;i++)
 	{
 		prog->functions[i].first_statement = LittleLong (dfunctions[i].first_statement);
@@ -1558,7 +1558,7 @@ void PRVM_Fields_f (void)
 	if(!PRVM_SetProgFromString(Cmd_Argv(1)))
 		return;
 
-	counts = Mem_Alloc(tempmempool, prog->progs->numfielddefs * sizeof(int));
+	counts = (int *)Mem_Alloc(tempmempool, prog->progs->numfielddefs * sizeof(int));
 	for (ednum = 0;ednum < prog->max_edicts;ednum++)
 	{
 		ed = PRVM_EDICT_NUM(ednum);
@@ -1701,7 +1701,7 @@ void PRVM_Global_f(void)
 	if( !global )
 		Con_Printf( "No global '%s' in %s!\n", Cmd_Argv(2), Cmd_Argv(1) );
 	else
-		Con_Printf( "%s: %s\n", Cmd_Argv(2), PRVM_ValueString( global->type, (prvm_eval_t *) &prog->globals.generic[ global->ofs ] ) );
+		Con_Printf( "%s: %s\n", Cmd_Argv(2), PRVM_ValueString( (etype_t)global->type, (prvm_eval_t *) &prog->globals.generic[ global->ofs ] ) );
 	PRVM_End;
 }
 
@@ -1887,8 +1887,8 @@ int PRVM_SetEngineString(const char *s)
 			const char **oldstrings = prog->knownstrings;
 			const qbyte *oldstrings_freeable = prog->knownstrings_freeable;
 			prog->maxknownstrings += 128;
-			prog->knownstrings = PRVM_Alloc(prog->maxknownstrings * sizeof(char *));
-			prog->knownstrings_freeable = PRVM_Alloc(prog->maxknownstrings * sizeof(qbyte));
+			prog->knownstrings = (const char **)PRVM_Alloc(prog->maxknownstrings * sizeof(char *));
+			prog->knownstrings_freeable = (qbyte *)PRVM_Alloc(prog->maxknownstrings * sizeof(qbyte));
 			if (prog->numknownstrings)
 			{
 				memcpy((char **)prog->knownstrings, oldstrings, prog->numknownstrings * sizeof(char *));
@@ -1917,8 +1917,8 @@ int PRVM_AllocString(size_t bufferlength, char **pointer)
 			const char **oldstrings = prog->knownstrings;
 			const qbyte *oldstrings_freeable = prog->knownstrings_freeable;
 			prog->maxknownstrings += 128;
-			prog->knownstrings = PRVM_Alloc(prog->maxknownstrings * sizeof(char *));
-			prog->knownstrings_freeable = PRVM_Alloc(prog->maxknownstrings * sizeof(qbyte));
+			prog->knownstrings = (const char **)PRVM_Alloc(prog->maxknownstrings * sizeof(char *));
+			prog->knownstrings_freeable = (qbyte *)PRVM_Alloc(prog->maxknownstrings * sizeof(qbyte));
 			if (prog->numknownstrings)
 			{
 				memcpy((char **)prog->knownstrings, oldstrings, prog->numknownstrings * sizeof(char *));
@@ -1928,7 +1928,7 @@ int PRVM_AllocString(size_t bufferlength, char **pointer)
 		prog->numknownstrings++;
 	}
 	prog->firstfreeknownstring = i + 1;
-	prog->knownstrings[i] = PRVM_Alloc(bufferlength);
+	prog->knownstrings[i] = (char *)PRVM_Alloc(bufferlength);
 	prog->knownstrings_freeable[i] = true;
 	if (pointer)
 		*pointer = (char *)(prog->knownstrings[i]);

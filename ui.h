@@ -29,7 +29,7 @@ struct ui_item_s
 	// used to build the item list
 	struct ui_item_s *prev, *next; // items are allowed to be freed everywhere
 
-	// called for system events (true means message processed) 
+	// called for system events (true means message processed)
 	int	(*eventhandler)(ui_itemlist_t list, ui_item_t self, ui_message_t *in, ui_message_queue_t *out);
 
 	// z-order (the higher, the later it is drawn)
@@ -126,7 +126,7 @@ typedef struct ui_button_s	*ui_button_t;
 typedef struct ui_label_s	*ui_label_t;
 typedef struct ui_text_s	*ui_text_t;
 
-struct ui_label_t
+struct ui_label_s
 {
 	struct ui_item_s item;
 
@@ -142,7 +142,7 @@ struct ui_button
 	const char *caption;
 };
 
-ui_item_t UI_CreateButton(void); 
+ui_item_t UI_CreateButton(void);
 ui_item_t UI_CreateLabel(void);
 ui_item_t UI_CreateText(void);
 

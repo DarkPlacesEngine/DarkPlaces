@@ -190,7 +190,7 @@ int Mod_Alias_GetTagIndexForName(const model_t *model, unsigned int skin, const 
 static void Mod_Alias_Mesh_CompileFrameZero(surfmesh_t *mesh)
 {
 	frameblend_t frameblend[4] = {{0, 1}, {0, 0}, {0, 0}, {0, 0}};
-	mesh->data_vertex3f = Mem_Alloc(loadmodel->mempool, mesh->num_vertices * sizeof(float[3][4]));
+	mesh->data_vertex3f = (float *)Mem_Alloc(loadmodel->mempool, mesh->num_vertices * sizeof(float[3][4]));
 	mesh->data_svector3f = mesh->data_vertex3f + mesh->num_vertices * 3;
 	mesh->data_tvector3f = mesh->data_vertex3f + mesh->num_vertices * 6;
 	mesh->data_normal3f = mesh->data_vertex3f + mesh->num_vertices * 9;
@@ -457,7 +457,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 	int *vertonseam, *vertremap;
 	skinfile_t *skinfiles;
 
-	datapointer = buffer;
+	datapointer = (qbyte *)buffer;
 	pinmodel = (mdl_t *)datapointer;
 	datapointer += sizeof(mdl_t);
 
@@ -477,14 +477,14 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->num_surfaces = 1;
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
 	loadmodel->nummeshes = loadmodel->num_surfaces;
-	data = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->nummeshes * sizeof(surfmesh_t *) + loadmodel->nummeshes * sizeof(surfmesh_t));
-	loadmodel->data_surfaces = (void *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
-	loadmodel->surfacelist = (void *)data;data += loadmodel->num_surfaces * sizeof(int);
-	loadmodel->meshlist = (void *)data;data += loadmodel->num_surfaces * sizeof(surfmesh_t *);
+	data = (qbyte *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->nummeshes * sizeof(surfmesh_t *) + loadmodel->nummeshes * sizeof(surfmesh_t));
+	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
+	loadmodel->surfacelist = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
+	loadmodel->meshlist = (surfmesh_t **)data;data += loadmodel->num_surfaces * sizeof(surfmesh_t *);
 	for (i = 0;i < loadmodel->num_surfaces;i++)
 	{
 		loadmodel->surfacelist[i] = i;
-		loadmodel->meshlist[i] = (void *)data;data += sizeof(surfmesh_t);
+		loadmodel->meshlist[i] = (surfmesh_t *)data;data += sizeof(surfmesh_t);
 	}
 
 	loadmodel->numskins = LittleLong(pinmodel->numskins);
@@ -564,8 +564,8 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 
 	// store texture coordinates into temporary array, they will be stored
 	// after usage is determined (triangle data)
-	vertst = Mem_Alloc(tempmempool, numverts * 2 * sizeof(float[2]));
-	vertremap = Mem_Alloc(tempmempool, numverts * 3 * sizeof(int));
+	vertst = (float *)Mem_Alloc(tempmempool, numverts * 2 * sizeof(float[2]));
+	vertremap = (int *)Mem_Alloc(tempmempool, numverts * 3 * sizeof(int));
 	vertonseam = vertremap + numverts * 2;
 
 	scales = 1.0 / skinwidth;
@@ -580,7 +580,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 	}
 
 // load triangle data
-	loadmodel->meshlist[0]->data_element3i = Mem_Alloc(loadmodel->mempool, sizeof(int[3]) * loadmodel->meshlist[0]->num_triangles);
+	loadmodel->meshlist[0]->data_element3i = (int *)Mem_Alloc(loadmodel->mempool, sizeof(int[3]) * loadmodel->meshlist[0]->num_triangles);
 
 	// read the triangle elements
 	for (i = 0;i < loadmodel->meshlist[0]->num_triangles;i++)
@@ -619,7 +619,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 	for (i = 0;i < loadmodel->meshlist[0]->num_triangles * 3;i++)
 		loadmodel->meshlist[0]->data_element3i[i] = vertremap[loadmodel->meshlist[0]->data_element3i[i]];
 	// store the texture coordinates
-	loadmodel->meshlist[0]->data_texcoordtexture2f = Mem_Alloc(loadmodel->mempool, sizeof(float[2]) * loadmodel->meshlist[0]->num_vertices);
+	loadmodel->meshlist[0]->data_texcoordtexture2f = (float *)Mem_Alloc(loadmodel->mempool, sizeof(float[2]) * loadmodel->meshlist[0]->num_vertices);
 	for (i = 0;i < loadmodel->meshlist[0]->num_vertices;i++)
 	{
 		loadmodel->meshlist[0]->data_texcoordtexture2f[i*2+0] = vertst[i*2+0];
@@ -627,9 +627,9 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 	}
 
 // load the frames
-	loadmodel->animscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numframes);
-	loadmodel->meshlist[0]->data_morphvertex3f = Mem_Alloc(loadmodel->mempool, sizeof(float[3]) * loadmodel->meshlist[0]->num_morphframes * loadmodel->meshlist[0]->num_vertices);
-	loadmodel->meshlist[0]->data_neighbor3i = Mem_Alloc(loadmodel->mempool, loadmodel->meshlist[0]->num_triangles * sizeof(int[3]));
+	loadmodel->animscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numframes);
+	loadmodel->meshlist[0]->data_morphvertex3f = (float *)Mem_Alloc(loadmodel->mempool, sizeof(float[3]) * loadmodel->meshlist[0]->num_morphframes * loadmodel->meshlist[0]->num_vertices);
+	loadmodel->meshlist[0]->data_neighbor3i = (int *)Mem_Alloc(loadmodel->mempool, loadmodel->meshlist[0]->num_triangles * sizeof(int[3]));
 	Mod_MDL_LoadFrames (startframes, numverts, scale, translate, vertremap);
 	Mod_BuildTriangleNeighbors(loadmodel->meshlist[0]->data_neighbor3i, loadmodel->meshlist[0]->data_element3i, loadmodel->meshlist[0]->num_triangles);
 	Mod_CalcAliasModelBBoxes();
@@ -640,9 +640,9 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 
 	// load the skins
 	skinfiles = Mod_LoadSkinFiles();
-	loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, loadmodel->numskins * sizeof(animscene_t));
+	loadmodel->skinscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, loadmodel->numskins * sizeof(animscene_t));
 	loadmodel->num_textures = loadmodel->num_surfaces;
-	loadmodel->data_textures = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * totalskins * sizeof(texture_t));
+	loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * totalskins * sizeof(texture_t));
 	if (skinfiles)
 	{
 		Mod_BuildAliasSkinsFromSkinFiles(loadmodel->data_textures, skinfiles, "default", "");
@@ -712,12 +712,12 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 		{
 			// expand the arrays to make room
 			tempskinscenes = loadmodel->skinscenes;
-			loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, (loadmodel->numskins + 1) * sizeof(animscene_t));
+			loadmodel->skinscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, (loadmodel->numskins + 1) * sizeof(animscene_t));
 			memcpy(loadmodel->skinscenes, tempskinscenes, loadmodel->numskins * sizeof(animscene_t));
 			Mem_Free(tempskinscenes);
 
 			tempaliasskins = loadmodel->data_textures;
-			loadmodel->data_textures = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * (totalskins + 1) * sizeof(texture_t));
+			loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * (totalskins + 1) * sizeof(texture_t));
 			memcpy(loadmodel->data_textures, tempaliasskins, loadmodel->num_surfaces * totalskins * sizeof(texture_t));
 			Mem_Free(tempaliasskins);
 
@@ -779,8 +779,8 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 	skinframe_t tempskinframe;
 	skinfile_t *skinfiles;
 
-	pinmodel = buffer;
-	base = buffer;
+	pinmodel = (md2_t *)buffer;
+	base = (qbyte *)buffer;
 
 	version = LittleLong (pinmodel->version);
 	if (version != MD2ALIAS_VERSION)
@@ -819,14 +819,14 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->num_surfaces = 1;
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
 	loadmodel->nummeshes = loadmodel->num_surfaces;
-	data = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->nummeshes * sizeof(surfmesh_t *) + loadmodel->nummeshes * sizeof(surfmesh_t));
-	loadmodel->data_surfaces = (void *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
-	loadmodel->surfacelist = (void *)data;data += loadmodel->num_surfaces * sizeof(int);
-	loadmodel->meshlist = (void *)data;data += loadmodel->num_surfaces * sizeof(surfmesh_t *);
+	data = (qbyte *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->nummeshes * sizeof(surfmesh_t *) + loadmodel->nummeshes * sizeof(surfmesh_t));
+	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
+	loadmodel->surfacelist = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
+	loadmodel->meshlist = (surfmesh_t **)data;data += loadmodel->num_surfaces * sizeof(surfmesh_t *);
 	for (i = 0;i < loadmodel->num_surfaces;i++)
 	{
 		loadmodel->surfacelist[i] = i;
-		loadmodel->meshlist[i] = (void *)data;data += sizeof(surfmesh_t);
+		loadmodel->meshlist[i] = (surfmesh_t *)data;data += sizeof(surfmesh_t);
 	}
 
 	loadmodel->numskins = LittleLong(pinmodel->num_skins);
@@ -835,18 +835,18 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->meshlist[0]->num_triangles = LittleLong(pinmodel->num_tris);
 	loadmodel->numframes = LittleLong(pinmodel->num_frames);
 	loadmodel->meshlist[0]->num_morphframes = loadmodel->numframes;
-	loadmodel->animscenes = Mem_Alloc(loadmodel->mempool, loadmodel->numframes * sizeof(animscene_t));
+	loadmodel->animscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, loadmodel->numframes * sizeof(animscene_t));
 
 	loadmodel->flags = 0; // there are no MD2 flags
 	loadmodel->synctype = ST_RAND;
 
 	// load the skins
-	inskin = (void*)(base + LittleLong(pinmodel->ofs_skins));
+	inskin = (char *)(base + LittleLong(pinmodel->ofs_skins));
 	skinfiles = Mod_LoadSkinFiles();
 	if (skinfiles)
 	{
 		loadmodel->num_textures = loadmodel->num_surfaces;
-		loadmodel->data_textures = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
+		loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
 		Mod_BuildAliasSkinsFromSkinFiles(loadmodel->data_textures, skinfiles, "default", "");
 		Mod_FreeSkinFiles(skinfiles);
 	}
@@ -854,7 +854,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 	{
 		// skins found (most likely not a player model)
 		loadmodel->num_textures = loadmodel->num_surfaces;
-		loadmodel->data_textures = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
+		loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
 		for (i = 0;i < loadmodel->numskins;i++, inskin += MD2_SKINNAME)
 		{
 			if (Mod_LoadSkinFrame(&tempskinframe, inskin, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, true, true))
@@ -871,11 +871,11 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 		// no skins (most likely a player model)
 		loadmodel->numskins = 1;
 		loadmodel->num_textures = loadmodel->num_surfaces;
-		loadmodel->data_textures = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
+		loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
 		Mod_BuildAliasSkinFromSkinFrame(loadmodel->data_textures, NULL);
 	}
 
-	loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numskins);
+	loadmodel->skinscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numskins);
 	for (i = 0;i < loadmodel->numskins;i++)
 	{
 		loadmodel->skinscenes[i].firstframe = i;
@@ -885,12 +885,12 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 	}
 
 	// load the triangles and stvert data
-	inst = (void*)(base + LittleLong(pinmodel->ofs_st));
-	intri = (void*)(base + LittleLong(pinmodel->ofs_tris));
+	inst = (unsigned short *)(base + LittleLong(pinmodel->ofs_st));
+	intri = (md2triangle_t *)(base + LittleLong(pinmodel->ofs_tris));
 	skinwidth = LittleLong(pinmodel->skinwidth);
 	skinheight = LittleLong(pinmodel->skinheight);
 
-	stverts = Mem_Alloc(tempmempool, numst * sizeof(float[2]));
+	stverts = (float *)Mem_Alloc(tempmempool, numst * sizeof(float[2]));
 	s = 1.0f / skinwidth;
 	t = 1.0f / skinheight;
 	for (i = 0;i < numst;i++)
@@ -907,11 +907,11 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 		stverts[i*2+1] = k * t;
 	}
 
-	md2verthash = Mem_Alloc(tempmempool, 256 * sizeof(hash));
-	md2verthashdata = Mem_Alloc(tempmempool, loadmodel->meshlist[0]->num_triangles * 3 * sizeof(*hash));
+	md2verthash = (struct md2verthash_s **)Mem_Alloc(tempmempool, 256 * sizeof(hash));
+	md2verthashdata = (struct md2verthash_s *)Mem_Alloc(tempmempool, loadmodel->meshlist[0]->num_triangles * 3 * sizeof(*hash));
 	// swap the triangle list
 	num = 0;
-	loadmodel->meshlist[0]->data_element3i = Mem_Alloc(loadmodel->mempool, loadmodel->meshlist[0]->num_triangles * sizeof(int[3]));
+	loadmodel->meshlist[0]->data_element3i = (int *)Mem_Alloc(loadmodel->mempool, loadmodel->meshlist[0]->num_triangles * sizeof(int[3]));
 	for (i = 0;i < loadmodel->meshlist[0]->num_triangles;i++)
 	{
 		for (j = 0;j < 3;j++)
@@ -951,8 +951,8 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 
 	numverts = num;
 	loadmodel->meshlist[0]->num_vertices = numverts;
-	vertremap = Mem_Alloc(loadmodel->mempool, num * sizeof(int));
-	loadmodel->meshlist[0]->data_texcoordtexture2f = Mem_Alloc(loadmodel->mempool, num * sizeof(float[2]));
+	vertremap = (int *)Mem_Alloc(loadmodel->mempool, num * sizeof(int));
+	loadmodel->meshlist[0]->data_texcoordtexture2f = (float *)Mem_Alloc(loadmodel->mempool, num * sizeof(float[2]));
 	for (i = 0;i < num;i++)
 	{
 		hash = md2verthashdata + i;
@@ -966,7 +966,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 
 	// load the frames
 	datapointer = (base + LittleLong(pinmodel->ofs_frames));
-	loadmodel->meshlist[0]->data_morphvertex3f = Mem_Alloc(loadmodel->mempool, numverts * loadmodel->meshlist[0]->num_morphframes * sizeof(float[3]));
+	loadmodel->meshlist[0]->data_morphvertex3f = (float *)Mem_Alloc(loadmodel->mempool, numverts * loadmodel->meshlist[0]->num_morphframes * sizeof(float[3]));
 	for (i = 0;i < loadmodel->meshlist[0]->num_morphframes;i++)
 	{
 		pinframe = (md2frame_t *)datapointer;
@@ -976,7 +976,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 			scale[j] = LittleFloat(pinframe->scale[j]);
 			translate[j] = LittleFloat(pinframe->translate[j]);
 		}
-		Mod_MD2_ConvertVerts(scale, translate, (void *)datapointer, loadmodel->meshlist[0]->data_morphvertex3f + i * numverts * 3, numverts, vertremap);
+		Mod_MD2_ConvertVerts(scale, translate, (trivertx_t *)datapointer, loadmodel->meshlist[0]->data_morphvertex3f + i * numverts * 3, numverts, vertremap);
 		datapointer += numxyz * sizeof(trivertx_t);
 
 		strcpy(loadmodel->animscenes[i].name, pinframe->name);
@@ -988,7 +988,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 
 	Mem_Free(vertremap);
 
-	loadmodel->meshlist[0]->data_neighbor3i = Mem_Alloc(loadmodel->mempool, loadmodel->meshlist[0]->num_triangles * sizeof(int[3]));
+	loadmodel->meshlist[0]->data_neighbor3i = (int *)Mem_Alloc(loadmodel->mempool, loadmodel->meshlist[0]->num_triangles * sizeof(int[3]));
 	Mod_BuildTriangleNeighbors(loadmodel->meshlist[0]->data_neighbor3i, loadmodel->meshlist[0]->data_element3i, loadmodel->meshlist[0]->num_triangles);
 	Mod_CalcAliasModelBBoxes();
 	Mod_Alias_Mesh_CompileFrameZero(loadmodel->meshlist[0]);
@@ -1014,7 +1014,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	md3tag_t *pintag;
 	skinfile_t *skinfiles;
 
-	pinmodel = buffer;
+	pinmodel = (md3modelheader_t *)buffer;
 
 	if (memcmp(pinmodel->identifier, "IDP3", 4))
 		Host_Error ("%s is not a MD3 (IDP3) file\n", loadmodel->name);
@@ -1042,7 +1042,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->num_surfaces = LittleLong(pinmodel->num_meshes);
 
 	// make skinscenes for the skins (no groups)
-	loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numskins);
+	loadmodel->skinscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numskins);
 	for (i = 0;i < loadmodel->numskins;i++)
 	{
 		loadmodel->skinscenes[i].firstframe = i;
@@ -1052,7 +1052,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	}
 
 	// load frameinfo
-	loadmodel->animscenes = Mem_Alloc(loadmodel->mempool, loadmodel->numframes * sizeof(animscene_t));
+	loadmodel->animscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, loadmodel->numframes * sizeof(animscene_t));
 	for (i = 0, pinframe = (md3frameinfo_t *)((qbyte *)pinmodel + LittleLong(pinmodel->lump_frameinfo));i < loadmodel->numframes;i++, pinframe++)
 	{
 		strcpy(loadmodel->animscenes[i].name, pinframe->name);
@@ -1065,7 +1065,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	// load tags
 	loadmodel->num_tagframes = loadmodel->numframes;
 	loadmodel->num_tags = LittleLong(pinmodel->num_tags);
-	loadmodel->data_tags = Mem_Alloc(loadmodel->mempool, loadmodel->num_tagframes * loadmodel->num_tags * sizeof(aliastag_t));
+	loadmodel->data_tags = (aliastag_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_tagframes * loadmodel->num_tags * sizeof(aliastag_t));
 	for (i = 0, pintag = (md3tag_t *)((qbyte *)pinmodel + LittleLong(pinmodel->lump_tags));i < loadmodel->num_tagframes * loadmodel->num_tags;i++, pintag++)
 	{
 		strcpy(loadmodel->data_tags[i].name, pintag->name);
@@ -1083,15 +1083,15 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
 	loadmodel->nummeshes = loadmodel->num_surfaces;
 	loadmodel->num_textures = loadmodel->num_surfaces;
-	data = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->nummeshes * sizeof(surfmesh_t *) + loadmodel->nummeshes * sizeof(surfmesh_t) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
-	loadmodel->data_surfaces = (void *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
-	loadmodel->surfacelist = (void *)data;data += loadmodel->num_surfaces * sizeof(int);
-	loadmodel->meshlist = (void *)data;data += loadmodel->num_surfaces * sizeof(surfmesh_t *);
-	loadmodel->data_textures = (void *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
+	data = (qbyte *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->nummeshes * sizeof(surfmesh_t *) + loadmodel->nummeshes * sizeof(surfmesh_t) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
+	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
+	loadmodel->surfacelist = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
+	loadmodel->meshlist = (surfmesh_t **)data;data += loadmodel->num_surfaces * sizeof(surfmesh_t *);
+	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
 	for (i = 0;i < loadmodel->num_surfaces;i++)
 	{
 		loadmodel->surfacelist[i] = i;
-		loadmodel->meshlist[i] = (void *)data;data += sizeof(surfmesh_t);
+		loadmodel->meshlist[i] = (surfmesh_t *)data;data += sizeof(surfmesh_t);
 	}
 	for (i = 0, pinmesh = (md3mesh_t *)((qbyte *)pinmodel + LittleLong(pinmodel->lump_meshes));i < loadmodel->num_surfaces;i++, pinmesh = (md3mesh_t *)((qbyte *)pinmesh + LittleLong(pinmesh->lump_end)))
 	{
@@ -1101,10 +1101,10 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 		mesh->num_morphframes = LittleLong(pinmesh->num_frames);
 		mesh->num_vertices = LittleLong(pinmesh->num_vertices);
 		mesh->num_triangles = LittleLong(pinmesh->num_triangles);
-		mesh->data_element3i = Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
-		mesh->data_neighbor3i = Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
-		mesh->data_texcoordtexture2f = Mem_Alloc(loadmodel->mempool, mesh->num_vertices * sizeof(float[2]));
-		mesh->data_morphvertex3f = Mem_Alloc(loadmodel->mempool, mesh->num_vertices * mesh->num_morphframes * sizeof(float[3]));
+		mesh->data_element3i = (int *)Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
+		mesh->data_neighbor3i = (int *)Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
+		mesh->data_texcoordtexture2f = (float *)Mem_Alloc(loadmodel->mempool, mesh->num_vertices * sizeof(float[2]));
+		mesh->data_morphvertex3f = (float *)Mem_Alloc(loadmodel->mempool, mesh->num_vertices * mesh->num_morphframes * sizeof(float[3]));
 		for (j = 0;j < mesh->num_triangles * 3;j++)
 			mesh->data_element3i[j] = LittleLong(((int *)((qbyte *)pinmesh + LittleLong(pinmesh->lump_elements)))[j]);
 		for (j = 0;j < mesh->num_vertices;j++)
@@ -1156,8 +1156,8 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	msurface_t *surface;
 	surfmesh_t *mesh;
 
-	pinmodel = (void *)buffer;
-	pbase = buffer;
+	pinmodel = (zymtype1header_t *)buffer;
+	pbase = (qbyte *)buffer;
 	if (memcmp(pinmodel->id, "ZYMOTICMODEL", 12))
 		Host_Error ("Mod_ZYMOTICMODEL_Load: %s is not a zymotic model\n");
 	if (BigLong(pinmodel->type) != 1)
@@ -1216,7 +1216,7 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		loadmodel->numskins = 1;
 
 	// make skinscenes for the skins (no groups)
-	loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numskins);
+	loadmodel->skinscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numskins);
 	for (i = 0;i < loadmodel->numskins;i++)
 	{
 		loadmodel->skinscenes[i].firstframe = i;
@@ -1248,8 +1248,8 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	// go through the lumps, swapping things
 
 	//zymlump_t lump_scenes; // zymscene_t scene[numscenes]; // name and other information for each scene (see zymscene struct)
-	loadmodel->animscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numframes);
-	scene = (void *) (pheader->lump_scenes.start + pbase);
+	loadmodel->animscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numframes);
+	scene = (zymscene_t *) (pheader->lump_scenes.start + pbase);
 	numposes = pheader->lump_poses.length / pheader->numbones / sizeof(float[3][4]);
 	for (i = 0;i < pheader->numscenes;i++)
 	{
@@ -1269,15 +1269,15 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 
 	//zymlump_t lump_poses; // float pose[numposes][numbones][3][4]; // animation data
 	loadmodel->num_poses = pheader->lump_poses.length / sizeof(float[3][4]);
-	loadmodel->data_poses = Mem_Alloc(loadmodel->mempool, pheader->lump_poses.length);
-	poses = (void *) (pheader->lump_poses.start + pbase);
+	loadmodel->data_poses = (float *)Mem_Alloc(loadmodel->mempool, pheader->lump_poses.length);
+	poses = (float *) (pheader->lump_poses.start + pbase);
 	for (i = 0;i < pheader->lump_poses.length / 4;i++)
 		loadmodel->data_poses[i] = BigFloat(poses[i]);
 
 	//zymlump_t lump_bones; // zymbone_t bone[numbones];
 	loadmodel->num_bones = pheader->numbones;
-	loadmodel->data_bones = Mem_Alloc(loadmodel->mempool, pheader->numbones * sizeof(aliasbone_t));
-	bone = (void *) (pheader->lump_bones.start + pbase);
+	loadmodel->data_bones = (aliasbone_t *)Mem_Alloc(loadmodel->mempool, pheader->numbones * sizeof(aliasbone_t));
+	bone = (zymbone_t *) (pheader->lump_bones.start + pbase);
 	for (i = 0;i < pheader->numbones;i++)
 	{
 		memcpy(loadmodel->data_bones[i].name, bone[i].name, sizeof(bone[i].name));
@@ -1288,8 +1288,8 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	}
 
 	//zymlump_t lump_vertbonecounts; // int vertbonecounts[numvertices]; // how many bones influence each vertex (separate mainly to make this compress better)
-	vertbonecounts = Mem_Alloc(loadmodel->mempool, pheader->numverts * sizeof(int));
-	bonecount = (void *) (pheader->lump_vertbonecounts.start + pbase);
+	vertbonecounts = (int *)Mem_Alloc(loadmodel->mempool, pheader->numverts * sizeof(int));
+	bonecount = (int *) (pheader->lump_vertbonecounts.start + pbase);
 	for (i = 0;i < pheader->numverts;i++)
 	{
 		vertbonecounts[i] = BigLong(bonecount[i]);
@@ -1298,8 +1298,8 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	}
 
 	//zymlump_t lump_verts; // zymvertex_t vert[numvertices]; // see vertex struct
-	verts = Mem_Alloc(loadmodel->mempool, pheader->lump_verts.length);
-	vertdata = (void *) (pheader->lump_verts.start + pbase);
+	verts = (zymvertex_t *)Mem_Alloc(loadmodel->mempool, pheader->lump_verts.length);
+	vertdata = (zymvertex_t *) (pheader->lump_verts.start + pbase);
 	for (i = 0;i < pheader->lump_verts.length / (int) sizeof(zymvertex_t);i++)
 	{
 		verts[i].bonenum = BigLong(vertdata[i].bonenum);
@@ -1309,8 +1309,8 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	}
 
 	//zymlump_t lump_texcoords; // float texcoords[numvertices][2];
-	outtexcoord2f = Mem_Alloc(loadmodel->mempool, pheader->numverts * sizeof(float[2]));
-	intexcoord2f = (void *) (pheader->lump_texcoords.start + pbase);
+	outtexcoord2f = (float *)Mem_Alloc(loadmodel->mempool, pheader->numverts * sizeof(float[2]));
+	intexcoord2f = (float *) (pheader->lump_texcoords.start + pbase);
 	for (i = 0;i < pheader->numverts;i++)
 	{
 		outtexcoord2f[i*2+0] = BigFloat(intexcoord2f[i*2+0]);
@@ -1325,15 +1325,15 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
 	loadmodel->nummeshes = loadmodel->num_surfaces;
 	loadmodel->num_textures = loadmodel->num_surfaces;
-	data = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->nummeshes * sizeof(surfmesh_t *) + loadmodel->nummeshes * sizeof(surfmesh_t) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
-	loadmodel->data_surfaces = (void *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
-	loadmodel->surfacelist = (void *)data;data += loadmodel->num_surfaces * sizeof(int);
-	loadmodel->meshlist = (void *)data;data += loadmodel->num_surfaces * sizeof(surfmesh_t *);
-	loadmodel->data_textures = (void *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
+	data = (qbyte *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->nummeshes * sizeof(surfmesh_t *) + loadmodel->nummeshes * sizeof(surfmesh_t) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
+	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
+	loadmodel->surfacelist = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
+	loadmodel->meshlist = (surfmesh_t **)data;data += loadmodel->num_surfaces * sizeof(surfmesh_t *);
+	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
 	for (i = 0;i < loadmodel->num_surfaces;i++)
 	{
 		loadmodel->surfacelist[i] = i;
-		loadmodel->meshlist[i] = (void *)data;data += sizeof(surfmesh_t);
+		loadmodel->meshlist[i] = (surfmesh_t *)data;data += sizeof(surfmesh_t);
 	}
 
 	//zymlump_t lump_shaders; // char shadername[numshaders][32]; // shaders used on this model
@@ -1342,8 +1342,8 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	count = pheader->numshaders * sizeof(int) + pheader->numtris * sizeof(int[3]);
 	if (pheader->lump_render.length != count)
 		Host_Error("%s renderlist is wrong size (%i bytes, should be %i bytes)\n", loadmodel->name, pheader->lump_render.length, count);
-	renderlist = (void *) (pheader->lump_render.start + pbase);
-	renderlistend = (void *) ((qbyte *) renderlist + pheader->lump_render.length);
+	renderlist = (int *) (pheader->lump_render.start + pbase);
+	renderlistend = (int *) ((qbyte *) renderlist + pheader->lump_render.length);
 	for (i = 0;i < loadmodel->num_surfaces;i++)
 	{
 		if (renderlist >= renderlistend)
@@ -1353,8 +1353,8 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 			Host_Error("%s corrupt renderlist (wrong size)\n", loadmodel->name);
 		mesh = loadmodel->meshlist[i];
 		mesh->num_triangles = count;
-		mesh->data_element3i = Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
-		mesh->data_neighbor3i = Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
+		mesh->data_element3i = (int *)Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
+		mesh->data_neighbor3i = (int *)Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
 		outelements = mesh->data_element3i;
 		for (j = 0;j < mesh->num_triangles;j++)
 		{
@@ -1370,11 +1370,11 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 			renderlist += 3;
 			outelements += 3;
 		}
-		remapvertices = Mem_Alloc(loadmodel->mempool, pheader->numverts * sizeof(int));
+		remapvertices = (int *)Mem_Alloc(loadmodel->mempool, pheader->numverts * sizeof(int));
 		mesh->num_vertices = Mod_BuildVertexRemapTableFromElements(mesh->num_triangles * 3, mesh->data_element3i, pheader->numverts, remapvertices);
 		for (j = 0;j < mesh->num_triangles * 3;j++)
 			mesh->data_element3i[j] = remapvertices[mesh->data_element3i[j]];
-		mesh->data_texcoordtexture2f = Mem_Alloc(loadmodel->mempool, mesh->num_vertices * sizeof(float[2]));
+		mesh->data_texcoordtexture2f = (float *)Mem_Alloc(loadmodel->mempool, mesh->num_vertices * sizeof(float[2]));
 		for (j = 0;j < pheader->numverts;j++)
 		{
 			if (remapvertices[j] >= 0)
@@ -1387,7 +1387,7 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		for (j = 0;j < pheader->numverts;j++)
 			if (remapvertices[j] >= 0)
 				mesh->num_vertexboneweights += vertbonecounts[remapvertices[j]];
-		mesh->data_vertexboneweights = Mem_Alloc(loadmodel->mempool, mesh->num_vertexboneweights * sizeof(surfmeshvertexboneweight_t));
+		mesh->data_vertexboneweights = (surfmeshvertexboneweight_t *)Mem_Alloc(loadmodel->mempool, mesh->num_vertexboneweights * sizeof(surfmeshvertexboneweight_t));
 		mesh->num_vertexboneweights = 0;
 		// note this vertexboneweight ordering requires that the remapvertices array is sequential numbers (separated by -1 values for omitted vertices)
 		l = 0;
@@ -1449,8 +1449,8 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	skinfile_t *skinfiles;
 	qbyte *data;
 
-	pheader = (void *)buffer;
-	pbase = buffer;
+	pheader = (dpmheader_t *)buffer;
+	pbase = (qbyte *)buffer;
 	if (memcmp(pheader->id, "DARKPLACESMODEL\0", 16))
 		Host_Error ("Mod_DARKPLACESMODEL_Load: %s is not a darkplaces model\n");
 	if (BigLong(pheader->type) != 2)
@@ -1508,15 +1508,15 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->num_textures = loadmodel->nummeshes = loadmodel->nummodelsurfaces = loadmodel->num_surfaces = pheader->num_meshs;
 
 	// do most allocations as one merged chunk
-	data = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->nummeshes * sizeof(surfmesh_t *) + loadmodel->nummeshes * sizeof(surfmesh_t) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->num_poses * sizeof(float[12]) + loadmodel->numframes * sizeof(animscene_t));
-	loadmodel->data_surfaces = (void *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
-	loadmodel->surfacelist = (void *)data;data += loadmodel->num_surfaces * sizeof(int);
-	loadmodel->meshlist = (void *)data;data += loadmodel->num_surfaces * sizeof(surfmesh_t *);
-	loadmodel->data_textures = (void *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
-	loadmodel->skinscenes = (void *)data;data += loadmodel->numskins * sizeof(animscene_t);
-	loadmodel->data_bones = (void *)data;data += loadmodel->num_bones * sizeof(aliasbone_t);
-	loadmodel->data_poses = (void *)data;data += loadmodel->num_poses * sizeof(float[12]);
-	loadmodel->animscenes = (void *)data;data += loadmodel->numframes * sizeof(animscene_t);
+	data = (qbyte *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->nummeshes * sizeof(surfmesh_t *) + loadmodel->nummeshes * sizeof(surfmesh_t) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->num_poses * sizeof(float[12]) + loadmodel->numframes * sizeof(animscene_t));
+	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
+	loadmodel->surfacelist = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
+	loadmodel->meshlist = (surfmesh_t **)data;data += loadmodel->num_surfaces * sizeof(surfmesh_t *);
+	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
+	loadmodel->skinscenes = (animscene_t *)data;data += loadmodel->numskins * sizeof(animscene_t);
+	loadmodel->data_bones = (aliasbone_t *)data;data += loadmodel->num_bones * sizeof(aliasbone_t);
+	loadmodel->data_poses = (float *)data;data += loadmodel->num_poses * sizeof(float[12]);
+	loadmodel->animscenes = (animscene_t *)data;data += loadmodel->numframes * sizeof(animscene_t);
 	for (i = 0;i < loadmodel->numskins;i++)
 	{
 		loadmodel->skinscenes[i].firstframe = i;
@@ -1527,11 +1527,11 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	for (i = 0;i < loadmodel->num_surfaces;i++)
 	{
 		loadmodel->surfacelist[i] = i;
-		loadmodel->meshlist[i] = (void *)data;data += sizeof(surfmesh_t);
+		loadmodel->meshlist[i] = (surfmesh_t *)data;data += sizeof(surfmesh_t);
 	}
 
 	// load the bone info
-	bone = (void *) (pbase + pheader->ofs_bones);
+	bone = (dpmbone_t *) (pbase + pheader->ofs_bones);
 	for (i = 0;i < loadmodel->num_bones;i++)
 	{
 		memcpy(loadmodel->data_bones[i].name, bone[i].name, sizeof(bone[i].name));
@@ -1542,7 +1542,7 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	}
 
 	// load the frames
-	frame = (void *) (pbase + pheader->ofs_frames);
+	frame = (dpmframe_t *) (pbase + pheader->ofs_frames);
 	for (i = 0;i < loadmodel->numframes;i++)
 	{
 		const float *poses;
@@ -1552,7 +1552,7 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		loadmodel->animscenes[i].loop = true;
 		loadmodel->animscenes[i].framerate = 10;
 		// load the bone poses for this frame
-		poses = (void *) (pbase + BigLong(frame->ofs_bonepositions));
+		poses = (float *) (pbase + BigLong(frame->ofs_bonepositions));
 		for (j = 0;j < loadmodel->num_bones*12;j++)
 			loadmodel->data_poses[i * loadmodel->num_bones*12 + j] = BigFloat(poses[j]);
 		// stuff not processed here: mins, maxs, yawradius, allradius
@@ -1560,7 +1560,7 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	}
 
 	// load the meshes now
-	dpmmesh = (void *) (pbase + pheader->ofs_meshs);
+	dpmmesh = (dpmmesh_t *) (pbase + pheader->ofs_meshs);
 	for (i = 0;i < loadmodel->num_surfaces;i++)
 	{
 		const int *inelements;
@@ -1575,7 +1575,7 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 
 		// to find out how many weights exist we two a two-stage load...
 		mesh->num_vertexboneweights = 0;
-		data = (void *) (pbase + BigLong(dpmmesh->ofs_verts));
+		data = (qbyte *) (pbase + BigLong(dpmmesh->ofs_verts));
 		for (j = 0;j < mesh->num_vertices;j++)
 		{
 			int numweights = BigLong(((dpmvertex_t *)data)->numbones);
@@ -1585,12 +1585,12 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		}
 
 		// allocate things now that we know how many
-		mesh->data_vertexboneweights = Mem_Alloc(loadmodel->mempool, mesh->num_vertexboneweights * sizeof(surfmeshvertexboneweight_t));
-		mesh->data_element3i = Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
-		mesh->data_neighbor3i = Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
-		mesh->data_texcoordtexture2f = Mem_Alloc(loadmodel->mempool, mesh->num_vertices * sizeof(float[2]));
+		mesh->data_vertexboneweights = (surfmeshvertexboneweight_t *)Mem_Alloc(loadmodel->mempool, mesh->num_vertexboneweights * sizeof(surfmeshvertexboneweight_t));
+		mesh->data_element3i = (int *)Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
+		mesh->data_neighbor3i = (int *)Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
+		mesh->data_texcoordtexture2f = (float *)Mem_Alloc(loadmodel->mempool, mesh->num_vertices * sizeof(float[2]));
 
-		inelements = (void *) (pbase + BigLong(dpmmesh->ofs_indices));
+		inelements = (int *) (pbase + BigLong(dpmmesh->ofs_indices));
 		outelements = mesh->data_element3i;
 		for (j = 0;j < mesh->num_triangles;j++)
 		{
@@ -1602,20 +1602,20 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 			outelements += 3;
 		}
 
-		intexcoord = (void *) (pbase + BigLong(dpmmesh->ofs_texcoords));
+		intexcoord = (float *) (pbase + BigLong(dpmmesh->ofs_texcoords));
 		for (j = 0;j < mesh->num_vertices*2;j++)
 			mesh->data_texcoordtexture2f[j] = BigFloat(intexcoord[j]);
 
 		// now load them for real
 		mesh->num_vertexboneweights = 0;
-		data = (void *) (pbase + BigLong(dpmmesh->ofs_verts));
+		data = (qbyte *) (pbase + BigLong(dpmmesh->ofs_verts));
 		for (j = 0;j < mesh->num_vertices;j++)
 		{
 			int numweights = BigLong(((dpmvertex_t *)data)->numbones);
 			data += sizeof(dpmvertex_t);
 			for (k = 0;k < numweights;k++)
 			{
-				const dpmbonevert_t *vert = (void *) data;
+				const dpmbonevert_t *vert = (dpmbonevert_t *) data;
 				// stuff not processed here: normal
 				mesh->data_vertexboneweights[mesh->num_vertexboneweights].vertexindex = j;
 				mesh->data_vertexboneweights[mesh->num_vertexboneweights].boneindex = BigLong(vert->bonenum);
@@ -1681,7 +1681,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	skinfile_t *skinfiles;
 	char animname[MAX_QPATH];
 
-	pchunk = (void *)buffer;
+	pchunk = (pskchunk_t *)buffer;
 	if (strcmp(pchunk->id, "ACTRHEAD"))
 		Host_Error ("Mod_PSKMODEL_Load: %s is not a ActorX model\n");
 
@@ -1699,7 +1699,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	skinfiles = Mod_LoadSkinFiles();
 	if (loadmodel->numskins < 1)
 		loadmodel->numskins = 1;
-	loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, loadmodel->numskins * sizeof(animscene_t));
+	loadmodel->skinscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, loadmodel->numskins * sizeof(animscene_t));
 	for (i = 0;i < loadmodel->numskins;i++)
 	{
 		loadmodel->skinscenes[i].firstframe = i;
@@ -1734,7 +1734,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 
 	while (buffer < bufferend)
 	{
-		pchunk = buffer;
+		pchunk = (pskchunk_t *)buffer;
 		buffer = (void *)((unsigned char *)buffer + sizeof(pskchunk_t));
 		version = LittleLong(pchunk->version);
 		recordsize = LittleLong(pchunk->recordsize);
@@ -1754,8 +1754,8 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 				Host_Error("%s: %s has unsupported recordsize\n", loadmodel->name, pchunk->id);
 			// byteswap in place and keep the pointer
 			numpnts = numrecords;
-			pnts = buffer;
-			for (index = 0, p = buffer;index < numrecords;index++, p++)
+			pnts = (pskpnts_t *)buffer;
+			for (index = 0, p = (pskpnts_t *)buffer;index < numrecords;index++, p++)
 			{
 				p->origin[0] = LittleFloat(p->origin[0]);
 				p->origin[1] = LittleFloat(p->origin[1]);
@@ -1770,8 +1770,8 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 				Host_Error("%s: %s has unsupported recordsize\n", loadmodel->name, pchunk->id);
 			// byteswap in place and keep the pointer
 			numvtxw = numrecords;
-			vtxw = buffer;
-			for (index = 0, p = buffer;index < numrecords;index++, p++)
+			vtxw = (pskvtxw_t *)buffer;
+			for (index = 0, p = (pskvtxw_t *)buffer;index < numrecords;index++, p++)
 			{
 				p->pntsindex = LittleShort(p->pntsindex);
 				p->texcoord[0] = LittleFloat(p->texcoord[0]);
@@ -1791,8 +1791,8 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 				Host_Error("%s: %s has unsupported recordsize\n", loadmodel->name, pchunk->id);
 			// byteswap in place and keep the pointer
 			numfaces = numrecords;
-			faces = buffer;
-			for (index = 0, p = buffer;index < numrecords;index++, p++)
+			faces = (pskface_t *)buffer;
+			for (index = 0, p = (pskface_t *)buffer;index < numrecords;index++, p++)
 			{
 				p->vtxwindex[0] = LittleShort(p->vtxwindex[0]);
 				p->vtxwindex[1] = LittleShort(p->vtxwindex[1]);
@@ -1823,8 +1823,8 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 				Host_Error("%s: %s has unsupported recordsize\n", loadmodel->name, pchunk->id);
 			// byteswap in place and keep the pointer
 			nummatts = numrecords;
-			matts = buffer;
-			for (index = 0, p = buffer;index < numrecords;index++, p++)
+			matts = (pskmatt_t *)buffer;
+			for (index = 0, p = (pskmatt_t *)buffer;index < numrecords;index++, p++)
 			{
 			}
 			buffer = p;
@@ -1836,8 +1836,8 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 				Host_Error("%s: %s has unsupported recordsize\n", loadmodel->name, pchunk->id);
 			// byteswap in place and keep the pointer
 			numbones = numrecords;
-			bones = buffer;
-			for (index = 0, p = buffer;index < numrecords;index++, p++)
+			bones = (pskboneinfo_t *)buffer;
+			for (index = 0, p = (pskboneinfo_t *)buffer;index < numrecords;index++, p++)
 			{
 				p->numchildren = LittleLong(p->numchildren);
 				p->parent = LittleLong(p->parent);
@@ -1881,8 +1881,8 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 				Host_Error("%s: %s has unsupported recordsize\n", loadmodel->name, pchunk->id);
 			// byteswap in place and keep the pointer
 			numrawweights = numrecords;
-			rawweights = buffer;
-			for (index = 0, p = buffer;index < numrecords;index++, p++)
+			rawweights = (pskrawweights_t *)buffer;
+			for (index = 0, p = (pskrawweights_t *)buffer;index < numrecords;index++, p++)
 			{
 				p->weight = LittleFloat(p->weight);
 				p->pntsindex = LittleLong(p->pntsindex);
@@ -1904,7 +1904,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 
 	while (animbuffer < animbufferend)
 	{
-		pchunk = animbuffer;
+		pchunk = (pskchunk_t *)animbuffer;
 		animbuffer = (void *)((unsigned char *)animbuffer + sizeof(pskchunk_t));
 		version = LittleLong(pchunk->version);
 		recordsize = LittleLong(pchunk->recordsize);
@@ -1924,14 +1924,14 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 				Host_Error("%s: %s has unsupported recordsize\n", animname, pchunk->id);
 			// byteswap in place and keep the pointer
 			numanimbones = numrecords;
-			animbones = animbuffer;
+			animbones = (pskboneinfo_t *)animbuffer;
 			// NOTE: supposedly psa does not need to match the psk model, the
 			// bones missing from the psa would simply use their base
 			// positions from the psk, but this is hard for me to implement
 			// and people can easily make animations that match.
 			if (numanimbones != numbones)
 				Host_Error("%s: this loader only supports animations with the same bones as the mesh\n");
-			for (index = 0, p = animbuffer;index < numrecords;index++, p++)
+			for (index = 0, p = (pskboneinfo_t *)animbuffer;index < numrecords;index++, p++)
 			{
 				p->numchildren = LittleLong(p->numchildren);
 				p->parent = LittleLong(p->parent);
@@ -1978,8 +1978,8 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 				Host_Error("%s: %s has unsupported recordsize\n", animname, pchunk->id);
 			// byteswap in place and keep the pointer
 			numanims = numrecords;
-			anims = animbuffer;
-			for (index = 0, p = animbuffer;index < numrecords;index++, p++)
+			anims = (pskaniminfo_t *)animbuffer;
+			for (index = 0, p = (pskaniminfo_t *)animbuffer;index < numrecords;index++, p++)
 			{
 				p->numbones = LittleLong(p->numbones);
 				p->playtime = LittleFloat(p->playtime);
@@ -1999,8 +1999,8 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 			if (recordsize != sizeof(*p))
 				Host_Error("%s: %s has unsupported recordsize\n", animname, pchunk->id);
 			numanimkeys = numrecords;
-			animkeys = animbuffer;
-			for (index = 0, p = animbuffer;index < numrecords;index++, p++)
+			animkeys = (pskanimkeys_t *)animbuffer;
+			for (index = 0, p = (pskanimkeys_t *)animbuffer;index < numrecords;index++, p++)
 			{
 				p->origin[0] = LittleFloat(p->origin[0]);
 				p->origin[1] = LittleFloat(p->origin[1]);
@@ -2060,20 +2060,20 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	if (numanimkeys != loadmodel->num_bones * loadmodel->numframes)
 		Host_Error("%s: %s has incorrect number of animation keys\n", animname, pchunk->id);
 
-	loadmodel->data_poses = Mem_Alloc(loadmodel->mempool, loadmodel->num_poses * sizeof(float[12]));
-	loadmodel->animscenes = Mem_Alloc(loadmodel->mempool, loadmodel->numframes * sizeof(animscene_t));
-	loadmodel->data_textures = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
-	loadmodel->data_surfaces = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t));
-	loadmodel->surfacelist = Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(int));
-	loadmodel->data_bones = Mem_Alloc(loadmodel->mempool, loadmodel->num_bones * sizeof(aliasbone_t));
+	loadmodel->data_poses = (float *)Mem_Alloc(loadmodel->mempool, loadmodel->num_poses * sizeof(float[12]));
+	loadmodel->animscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, loadmodel->numframes * sizeof(animscene_t));
+	loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
+	loadmodel->data_surfaces = (msurface_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t));
+	loadmodel->surfacelist = (int *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(int));
+	loadmodel->data_bones = (aliasbone_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_bones * sizeof(aliasbone_t));
 
-	loadmodel->meshlist = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t *));
-	mesh = loadmodel->meshlist[0] = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t));
+	loadmodel->meshlist = (surfmesh_t **)Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t *));
+	mesh = loadmodel->meshlist[0] = (surfmesh_t *)Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t));
 	mesh->num_vertices = numvtxw;
 	mesh->num_triangles = numfaces;
-	mesh->data_element3i = Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
-	mesh->data_neighbor3i = Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
-	mesh->data_texcoordtexture2f = Mem_Alloc(loadmodel->mempool, mesh->num_vertices * sizeof(float[2]));
+	mesh->data_element3i = (int *)Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
+	mesh->data_neighbor3i = (int *)Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
+	mesh->data_texcoordtexture2f = (float *)Mem_Alloc(loadmodel->mempool, mesh->num_vertices * sizeof(float[2]));
 
 	// create surfaces
 	for (index = 0, i = 0;index < nummatts;index++)
@@ -2130,7 +2130,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		for (j = 0;j < numrawweights;j++)
 			if (rawweights[j].pntsindex == vtxw[index].pntsindex)
 				mesh->num_vertexboneweights++;
-	mesh->data_vertexboneweights = Mem_Alloc(loadmodel->mempool, mesh->num_vertexboneweights * sizeof(surfmeshvertexboneweight_t));
+	mesh->data_vertexboneweights = (surfmeshvertexboneweight_t *)Mem_Alloc(loadmodel->mempool, mesh->num_vertexboneweights * sizeof(surfmeshvertexboneweight_t));
 	mesh->num_vertexboneweights = 0;
 	for (index = 0;index < numvtxw;index++)
 	{

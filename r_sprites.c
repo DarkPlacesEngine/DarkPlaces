@@ -79,7 +79,7 @@ static void R_DrawSpriteImage (int additive, int depthdisable, mspriteframe_t *f
 
 void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 {
-	const entity_render_t *ent = calldata1;
+	const entity_render_t *ent = (entity_render_t *)calldata1;
 	int i;
 	vec3_t left, up, org, color, diffusecolor, diffusenormal;
 	mspriteframe_t *frame;

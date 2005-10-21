@@ -321,6 +321,8 @@ qboolean SV_PlayerCheckGround (prvm_edict_t *ent);
 qboolean SV_CheckBottom (prvm_edict_t *ent);
 qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink);
 
+struct trace_s SV_ClipMoveToEntity(prvm_edict_t *ent, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int movetype, int hitsupercontents);
+
 void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats);
 
 void SV_MoveToGoal (void);

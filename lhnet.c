@@ -447,7 +447,7 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 	lhnetsocket_t *lhnetsocket, *s;
 	if (!address)
 		return NULL;
-	lhnetsocket = Z_Malloc(sizeof(*lhnetsocket));
+	lhnetsocket = (lhnetsocket_t *)Z_Malloc(sizeof(*lhnetsocket));
 	if (lhnetsocket)
 	{
 		memset(lhnetsocket, 0, sizeof(*lhnetsocket));
@@ -508,10 +508,10 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 						socklen_t namelen;
 #endif
 						namelen = address->addresstype == LHNETADDRESSTYPE_INET6 ? sizeof(lhnetsocket->address.addressdata.inet6) : sizeof(lhnetsocket->address.addressdata.inet4);
-						if (bind(lhnetsocket->inetsocket, (void *)&lhnetsocket->address.addressdata, namelen) != -1)
+						if (bind(lhnetsocket->inetsocket, (struct sockaddr *)&lhnetsocket->address.addressdata, namelen) != -1)
 						{
 							int i = 1;
-							getsockname(lhnetsocket->inetsocket, (void *)&lhnetsocket->address.addressdata, &namelen);
+							getsockname(lhnetsocket->inetsocket, (struct sockaddr *)&lhnetsocket->address.addressdata, &namelen);
 							// enable broadcast on this socket
 							setsockopt(lhnetsocket->inetsocket, SOL_SOCKET, SO_BROADCAST, (char *)&i, sizeof(i));
 							lhnetsocket->next = &lhnet_socketlist;
@@ -715,7 +715,7 @@ int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentleng
 	if (lhnetsocket->address.addresstype == LHNETADDRESSTYPE_LOOP)
 	{
 		lhnetpacket_t *p;
-		p = Z_Malloc(sizeof(*p) + contentlength);
+		p = (lhnetpacket_t *)Z_Malloc(sizeof(*p) + contentlength);
 		p->data = (void *)(p + 1);
 		memcpy(p->data, content, contentlength);
 		p->length = contentlength;

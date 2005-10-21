@@ -733,7 +733,7 @@ int *R_Shadow_ResizeShadowElements(int numtris)
 		maxshadowelements = numtris * 24;
 		if (shadowelements)
 			Mem_Free(shadowelements);
-		shadowelements = Mem_Alloc(r_shadow_mempool, maxshadowelements * sizeof(int));
+		shadowelements = (int *)Mem_Alloc(r_shadow_mempool, maxshadowelements * sizeof(int));
 	}
 	return shadowelements;
 }
@@ -749,8 +749,8 @@ static void R_Shadow_EnlargeLeafSurfaceBuffer(int numleafs, int numsurfaces)
 		if (r_shadow_buffer_leaflist)
 			Mem_Free(r_shadow_buffer_leaflist);
 		r_shadow_buffer_numleafpvsbytes = numleafpvsbytes;
-		r_shadow_buffer_leafpvs = Mem_Alloc(r_shadow_mempool, r_shadow_buffer_numleafpvsbytes);
-		r_shadow_buffer_leaflist = Mem_Alloc(r_shadow_mempool, r_shadow_buffer_numleafpvsbytes * 8 * sizeof(*r_shadow_buffer_leaflist));
+		r_shadow_buffer_leafpvs = (qbyte *)Mem_Alloc(r_shadow_mempool, r_shadow_buffer_numleafpvsbytes);
+		r_shadow_buffer_leaflist = (int *)Mem_Alloc(r_shadow_mempool, r_shadow_buffer_numleafpvsbytes * 8 * sizeof(*r_shadow_buffer_leaflist));
 	}
 	if (r_shadow_buffer_numsurfacepvsbytes < numsurfacepvsbytes)
 	{
@@ -759,8 +759,8 @@ static void R_Shadow_EnlargeLeafSurfaceBuffer(int numleafs, int numsurfaces)
 		if (r_shadow_buffer_surfacelist)
 			Mem_Free(r_shadow_buffer_surfacelist);
 		r_shadow_buffer_numsurfacepvsbytes = numsurfacepvsbytes;
-		r_shadow_buffer_surfacepvs = Mem_Alloc(r_shadow_mempool, r_shadow_buffer_numsurfacepvsbytes);
-		r_shadow_buffer_surfacelist = Mem_Alloc(r_shadow_mempool, r_shadow_buffer_numsurfacepvsbytes * 8 * sizeof(*r_shadow_buffer_surfacelist));
+		r_shadow_buffer_surfacepvs = (qbyte *)Mem_Alloc(r_shadow_mempool, r_shadow_buffer_numsurfacepvsbytes);
+		r_shadow_buffer_surfacelist = (int *)Mem_Alloc(r_shadow_mempool, r_shadow_buffer_numsurfacepvsbytes * 8 * sizeof(*r_shadow_buffer_surfacelist));
 	}
 }
 
@@ -774,8 +774,8 @@ void R_Shadow_PrepareShadowMark(int numtris)
 			Mem_Free(shadowmark);
 		if (shadowmarklist)
 			Mem_Free(shadowmarklist);
-		shadowmark = Mem_Alloc(r_shadow_mempool, maxshadowmark * sizeof(*shadowmark));
-		shadowmarklist = Mem_Alloc(r_shadow_mempool, maxshadowmark * sizeof(*shadowmarklist));
+		shadowmark = (int *)Mem_Alloc(r_shadow_mempool, maxshadowmark * sizeof(*shadowmark));
+		shadowmarklist = (int *)Mem_Alloc(r_shadow_mempool, maxshadowmark * sizeof(*shadowmarklist));
 		shadowmarkcount = 0;
 	}
 	shadowmarkcount++;
@@ -802,8 +802,8 @@ int R_Shadow_ConstructShadowVolume(int innumvertices, int innumtris, const int *
 			Mem_Free(vertexupdate);
 		if (vertexremap)
 			Mem_Free(vertexremap);
-		vertexupdate = Mem_Alloc(r_shadow_mempool, maxvertexupdate * sizeof(int));
-		vertexremap = Mem_Alloc(r_shadow_mempool, maxvertexupdate * sizeof(int));
+		vertexupdate = (int *)Mem_Alloc(r_shadow_mempool, maxvertexupdate * sizeof(int));
+		vertexremap = (int *)Mem_Alloc(r_shadow_mempool, maxvertexupdate * sizeof(int));
 		vertexupdatenum = 0;
 	}
 	vertexupdatenum++;
@@ -1005,7 +1005,7 @@ static void R_Shadow_MakeTextures(void)
 	r_shadow_attenscale = r_shadow_lightattenuationscale.value;
 #define ATTEN2DSIZE 64
 #define ATTEN3DSIZE 32
-	data = Mem_Alloc(tempmempool, max(ATTEN3DSIZE*ATTEN3DSIZE*ATTEN3DSIZE*4, ATTEN2DSIZE*ATTEN2DSIZE*4));
+	data = (qbyte *)Mem_Alloc(tempmempool, max(ATTEN3DSIZE*ATTEN3DSIZE*ATTEN3DSIZE*4, ATTEN2DSIZE*ATTEN2DSIZE*4));
 	for (y = 0;y < ATTEN2DSIZE;y++)
 	{
 		for (x = 0;x < ATTEN2DSIZE;x++)
@@ -2606,13 +2606,13 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 		R_Shadow_EnlargeLeafSurfaceBuffer(model->brush.num_leafs, model->num_surfaces);
 		model->GetLightInfo(ent, rtlight->shadoworigin, rtlight->radius, rtlight->cullmins, rtlight->cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces);
 		numleafpvsbytes = (model->brush.num_leafs + 7) >> 3;
-		data = Mem_Alloc(r_shadow_mempool, sizeof(int) * numleafs + numleafpvsbytes + sizeof(int) * numsurfaces);
+		data = (qbyte *)Mem_Alloc(r_shadow_mempool, sizeof(int) * numleafs + numleafpvsbytes + sizeof(int) * numsurfaces);
 		rtlight->static_numleafs = numleafs;
 		rtlight->static_numleafpvsbytes = numleafpvsbytes;
-		rtlight->static_leaflist = (void *)data;data += sizeof(int) * numleafs;
-		rtlight->static_leafpvs = (void *)data;data += numleafpvsbytes;
+		rtlight->static_leaflist = (int *)data;data += sizeof(int) * numleafs;
+		rtlight->static_leafpvs = (qbyte *)data;data += numleafpvsbytes;
 		rtlight->static_numsurfaces = numsurfaces;
-		rtlight->static_surfacelist = (void *)data;data += sizeof(int) * numsurfaces;
+		rtlight->static_surfacelist = (int *)data;data += sizeof(int) * numsurfaces;
 		if (numleafs)
 			memcpy(rtlight->static_leaflist, r_shadow_buffer_leaflist, rtlight->static_numleafs * sizeof(*rtlight->static_leaflist));
 		if (numleafpvsbytes)
@@ -3003,7 +3003,7 @@ rtexture_t *R_Shadow_LoadCubemap(const char *basename)
 					{
 						cubemapsize = image_width;
 						// note this clears to black, so unavailable sides are black
-						cubemappixels = Mem_Alloc(tempmempool, 6*cubemapsize*cubemapsize*4);
+						cubemappixels = (qbyte *)Mem_Alloc(tempmempool, 6*cubemapsize*cubemapsize*4);
 					}
 					// copy the image with any flipping needed by the suffix (px and posx types don't need flipping)
 					if (cubemappixels)
@@ -3060,7 +3060,7 @@ void R_Shadow_FreeCubemaps(void)
 dlight_t *R_Shadow_NewWorldLight(void)
 {
 	dlight_t *light;
-	light = Mem_Alloc(r_shadow_mempool, sizeof(dlight_t));
+	light = (dlight_t *)Mem_Alloc(r_shadow_mempool, sizeof(dlight_t));
 	light->next = r_shadow_worldlightchain;
 	r_shadow_worldlightchain = light;
 	return light;
@@ -3135,7 +3135,7 @@ void R_Shadow_DrawLightSpriteCallback(const void *calldata1, int calldata2)
 {
 	float intensity;
 	const dlight_t *light;
-	light = calldata1;
+	light = (dlight_t *)calldata1;
 	intensity = 0.5;
 	if (light->selected)
 		intensity = 0.75 + 0.25 * sin(realtime * M_PI * 4.0);
@@ -3306,7 +3306,7 @@ void R_Shadow_SaveWorldLights(void)
 		{
 			bufmaxchars = bufchars + strlen(line) + 2048;
 			oldbuf = buf;
-			buf = Mem_Alloc(tempmempool, bufmaxchars);
+			buf = (char *)Mem_Alloc(tempmempool, bufmaxchars);
 			if (oldbuf)
 			{
 				if (bufchars)

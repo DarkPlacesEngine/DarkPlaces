@@ -44,8 +44,6 @@ static qbyte concharimage[FONT_FILESIZE] =
 #include "lhfont.h"
 };
 
-extern qbyte *LoadTGA (qbyte *f, int matchwidth, int matchheight);
-
 static rtexture_t *draw_generateconchars(void)
 {
 	int i;
@@ -100,8 +98,7 @@ static rtexture_t *draw_generateconchars(void)
 	return R_LoadTexture2D(drawtexturepool, "conchars", 256, 256, &buffer[0][0], TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
 }
 
-static qbyte pointerimage[256] =
-{
+static char *pointerimage =
 	"333333332......."
 	"26777761........"
 	"2655541........."
@@ -118,7 +115,7 @@ static qbyte pointerimage[256] =
 	"................"
 	"................"
 	"................"
-};
+;
 
 static rtexture_t *draw_generatemousepointer(void)
 {
@@ -147,9 +144,8 @@ static rtexture_t *draw_generatemousepointer(void)
 // must match NUMCROSSHAIRS in r_crosshairs.c
 #define NUMCROSSHAIRS 6
 
-static qbyte crosshairtexdata[NUMCROSSHAIRS][16*16] =
+static char *crosshairtexdata[NUMCROSSHAIRS] =
 {
-	{
 	"................"
 	"................"
 	"................"
@@ -166,8 +162,7 @@ static qbyte crosshairtexdata[NUMCROSSHAIRS][16*16] =
 	"................"
 	"................"
 	"................"
-	},
-	{
+	,
 	"................"
 	"................"
 	"................"
@@ -184,8 +179,7 @@ static qbyte crosshairtexdata[NUMCROSSHAIRS][16*16] =
 	"................"
 	"................"
 	"................"
-	},
-	{
+	,
 	"................"
 	".......77......."
 	".......77......."
@@ -202,8 +196,7 @@ static qbyte crosshairtexdata[NUMCROSSHAIRS][16*16] =
 	".......77......."
 	".......77......."
 	"................"
-	},
-	{
+	,
 	"................"
 	"................"
 	"................"
@@ -220,8 +213,7 @@ static qbyte crosshairtexdata[NUMCROSSHAIRS][16*16] =
 	"........7......."
 	"........7......."
 	"................"
-	},
-	{
+	,
 	"................"
 	"................"
 	"................"
@@ -238,8 +230,7 @@ static qbyte crosshairtexdata[NUMCROSSHAIRS][16*16] =
 	"................"
 	"................"
 	"................"
-	},
-	{
+	,
 	"................"
 	"................"
 	"................"
@@ -256,13 +247,12 @@ static qbyte crosshairtexdata[NUMCROSSHAIRS][16*16] =
 	"................"
 	"................"
 	"................"
-	}
 };
 
 static rtexture_t *draw_generatecrosshair(int num)
 {
 	int i;
-	qbyte *in;
+	char *in;
 	qbyte data[16*16][4];
 	in = crosshairtexdata[num];
 	for (i = 0;i < 16*16;i++)
@@ -361,7 +351,7 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 		// compatibility with older versions
 		pic->tex = loadtextureimage(drawtexturepool, path + 4, 0, 0, false, flags);
 		// failed to find gfx/whatever.tga or similar, try the wad
-		if (pic->tex == NULL && (p = W_GetLumpName (path + 4)))
+		if (pic->tex == NULL && (p = (qpic_t *)W_GetLumpName (path + 4)))
 		{
 			if (!strcmp(path, "gfx/conchars"))
 			{
@@ -646,7 +636,7 @@ void R_DrawQueue(void)
 			}
 			break;
 		case DRAWQUEUE_MESH:
-			mesh = (void *)(dq + 1);
+			mesh = (drawqueuemesh_t *)(dq + 1);
 			m.pointer_vertex = mesh->data_vertex3f;
 			m.pointer_color = mesh->data_color4f;
 			m.pointer_texcoord[0] = mesh->data_texcoord2f;

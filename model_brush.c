@@ -1049,7 +1049,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		loadmodel->num_textures = 2;
 	}
 
-	loadmodel->data_textures = Mem_Alloc(loadmodel->mempool, loadmodel->num_textures * sizeof(texture_t));
+	loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_textures * sizeof(texture_t));
 
 	// fill out all slots with notexture
 	for (i = 0, tx = loadmodel->data_textures;i < loadmodel->num_textures;i++, tx++)
@@ -1160,7 +1160,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 						tx->skin.base = tx->skin.merged = R_LoadTexture2D(loadmodel->texturepool, tx->name, image_width, image_height, pixels, TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, NULL);
 						if (Image_CheckAlpha(pixels, image_width * image_height, true))
 						{
-							fogpixels = Mem_Alloc(tempmempool, image_width * image_height * 4);
+							fogpixels = (qbyte *)Mem_Alloc(tempmempool, image_width * image_height * 4);
 							for (j = 0;j < image_width * image_height * 4;j += 4)
 							{
 								fogpixels[j + 0] = 255;
@@ -1333,13 +1333,13 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 	loadmodel->brushq1.lightdata = NULL;
 	if (loadmodel->brush.ishlbsp) // LordHavoc: load the colored lighting data straight
 	{
-		loadmodel->brushq1.lightdata = Mem_Alloc(loadmodel->mempool, l->filelen);
+		loadmodel->brushq1.lightdata = (qbyte *)Mem_Alloc(loadmodel->mempool, l->filelen);
 		for (i=0; i<l->filelen; i++)
 			loadmodel->brushq1.lightdata[i] = mod_base[l->fileofs+i] >>= 1;
 	}
 	else if (loadmodel->brush.ismcbsp)
 	{
-		loadmodel->brushq1.lightdata = Mem_Alloc(loadmodel->mempool, l->filelen);
+		loadmodel->brushq1.lightdata = (qbyte *)Mem_Alloc(loadmodel->mempool, l->filelen);
 		memcpy(loadmodel->brushq1.lightdata, mod_base + l->fileofs, l->filelen);
 	}
 	else // LordHavoc: bsp version 29 (normal white lighting)
@@ -1357,7 +1357,7 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 				if (i == 1)
 				{
 					Con_DPrintf("loaded %s\n", litfilename);
-					loadmodel->brushq1.lightdata = Mem_Alloc(loadmodel->mempool, fs_filesize - 8);
+					loadmodel->brushq1.lightdata = (qbyte *)Mem_Alloc(loadmodel->mempool, fs_filesize - 8);
 					memcpy(loadmodel->brushq1.lightdata, data + 8, fs_filesize - 8);
 					Mem_Free(data);
 					return;
@@ -1380,7 +1380,7 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 		// LordHavoc: oh well, expand the white lighting data
 		if (!l->filelen)
 			return;
-		loadmodel->brushq1.lightdata = Mem_Alloc(loadmodel->mempool, l->filelen*3);
+		loadmodel->brushq1.lightdata = (qbyte *)Mem_Alloc(loadmodel->mempool, l->filelen*3);
 		in = loadmodel->brushq1.lightdata + l->filelen*2; // place the file at the end, so it will not be overwritten until the very last write
 		out = loadmodel->brushq1.lightdata;
 		memcpy(in, mod_base + l->fileofs, l->filelen);
@@ -1420,7 +1420,7 @@ static void Mod_Q1BSP_LoadLightList(void)
 			s++;
 			numlights++;
 		}
-		loadmodel->brushq1.lights = Mem_Alloc(loadmodel->mempool, numlights * sizeof(mlight_t));
+		loadmodel->brushq1.lights = (mlight_t *)Mem_Alloc(loadmodel->mempool, numlights * sizeof(mlight_t));
 		s = lightsstring;
 		n = 0;
 		while (*s && n < numlights)
@@ -1463,7 +1463,7 @@ static void Mod_Q1BSP_LoadVisibility(lump_t *l)
 	if (!l->filelen)
 		return;
 	loadmodel->brushq1.num_compressedpvs = l->filelen;
-	loadmodel->brushq1.data_compressedpvs = Mem_Alloc(loadmodel->mempool, l->filelen);
+	loadmodel->brushq1.data_compressedpvs = (qbyte *)Mem_Alloc(loadmodel->mempool, l->filelen);
 	memcpy(loadmodel->brushq1.data_compressedpvs, mod_base + l->fileofs, l->filelen);
 }
 
@@ -1532,7 +1532,7 @@ static void Mod_Q1BSP_LoadEntities(lump_t *l)
 	loadmodel->brush.entities = NULL;
 	if (!l->filelen)
 		return;
-	loadmodel->brush.entities = Mem_Alloc(loadmodel->mempool, l->filelen);
+	loadmodel->brush.entities = (char *)Mem_Alloc(loadmodel->mempool, l->filelen);
 	memcpy(loadmodel->brush.entities, mod_base + l->fileofs, l->filelen);
 	if (loadmodel->brush.ishlbsp)
 		Mod_Q1BSP_ParseWadsFromEntityLump(loadmodel->brush.entities);
@@ -1545,11 +1545,11 @@ static void Mod_Q1BSP_LoadVertexes(lump_t *l)
 	mvertex_t	*out;
 	int			i, count;
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (dvertex_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q1BSP_LoadVertexes: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Mem_Alloc(loadmodel->mempool, count*sizeof(*out));
+	out = (mvertex_t *)Mem_Alloc(loadmodel->mempool, count*sizeof(*out));
 
 	loadmodel->brushq1.vertexes = out;
 	loadmodel->brushq1.numvertexes = count;
@@ -1597,7 +1597,7 @@ static void Mod_Q1BSP_LoadSubmodels(lump_t *l, hullinfo_t *hullinfo)
 		Host_Error ("Mod_Q1BSP_LoadSubmodels: funny lump size in %s", loadmodel->name);
 
 	count = l->filelen / (48+4*hullinfo->filehulls);
-	out = Mem_Alloc (loadmodel->mempool, count*sizeof(*out));
+	out = (dmodel_t *)Mem_Alloc (loadmodel->mempool, count*sizeof(*out));
 
 	loadmodel->brushq1.submodels = out;
 	loadmodel->brush.numsubmodels = count;
@@ -1628,11 +1628,11 @@ static void Mod_Q1BSP_LoadEdges(lump_t *l)
 	medge_t *out;
 	int 	i, count;
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (dedge_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q1BSP_LoadEdges: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+	out = (medge_t *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
 	loadmodel->brushq1.edges = out;
 	loadmodel->brushq1.numedges = count;
@@ -1650,11 +1650,11 @@ static void Mod_Q1BSP_LoadTexinfo(lump_t *l)
 	mtexinfo_t *out;
 	int i, j, k, count, miptex;
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (texinfo_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q1BSP_LoadTexinfo: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+	out = (mtexinfo_t *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
 	loadmodel->brushq1.texinfo = out;
 	loadmodel->brushq1.numtexinfo = count;
@@ -1851,18 +1851,18 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 	int i, j, count, surfacenum, planenum, smax, tmax, ssize, tsize, firstedge, numedges, totalverts, totaltris;
 	float texmins[2], texmaxs[2], val;
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (dface_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q1BSP_LoadFaces: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	loadmodel->data_surfaces = Mem_Alloc(loadmodel->mempool, count*sizeof(msurface_t));
-	loadmodel->data_surfaces_lightmapinfo = Mem_Alloc(loadmodel->mempool, count*sizeof(msurface_lightmapinfo_t));
+	loadmodel->data_surfaces = (msurface_t *)Mem_Alloc(loadmodel->mempool, count*sizeof(msurface_t));
+	loadmodel->data_surfaces_lightmapinfo = (msurface_lightmapinfo_t *)Mem_Alloc(loadmodel->mempool, count*sizeof(msurface_lightmapinfo_t));
 
 	loadmodel->num_surfaces = count;
 
 	totalverts = 0;
 	totaltris = 0;
-	for (surfacenum = 0, in = (void *)(mod_base + l->fileofs);surfacenum < count;surfacenum++, in++)
+	for (surfacenum = 0, in = (dface_t *)(mod_base + l->fileofs);surfacenum < count;surfacenum++, in++)
 	{
 		numedges = LittleShort(in->numedges);
 		totalverts += numedges;
@@ -1872,12 +1872,12 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 	// TODO: split up into multiple meshes as needed to avoid exceeding 65536
 	// vertex limit
 	loadmodel->nummeshes = 1;
-	loadmodel->meshlist = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t *));
+	loadmodel->meshlist = (surfmesh_t **)Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t *));
 	loadmodel->meshlist[0] = Mod_AllocSurfMesh(loadmodel->mempool, totalverts, totaltris, true, false, false);
 
 	totalverts = 0;
 	totaltris = 0;
-	for (surfacenum = 0, in = (void *)(mod_base + l->fileofs), surface = loadmodel->data_surfaces;surfacenum < count;surfacenum++, in++, surface++)
+	for (surfacenum = 0, in = (dface_t *)(mod_base + l->fileofs), surface = loadmodel->data_surfaces;surfacenum < count;surfacenum++, in++, surface++)
 	{
 		surface->lightmapinfo = loadmodel->data_surfaces_lightmapinfo + surfacenum;
 
@@ -1975,7 +1975,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 			// give non-lightmapped water a 1x white lightmap
 			if ((surface->texture->basematerialflags & MATERIALFLAG_WATER) && (surface->lightmapinfo->texinfo->flags & TEX_SPECIAL) && ssize <= 256 && tsize <= 256)
 			{
-				surface->lightmapinfo->samples = Mem_Alloc(loadmodel->mempool, ssize * tsize * 3);
+				surface->lightmapinfo->samples = (qbyte *)Mem_Alloc(loadmodel->mempool, ssize * tsize * 3);
 				surface->lightmapinfo->styles[0] = 0;
 				memset(surface->lightmapinfo->samples, 128, ssize * tsize * 3);
 			}
@@ -1993,7 +1993,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 			if (ssize > 256 || tsize > 256)
 				Host_Error("Bad surface extents");
 			// stainmap for permanent marks on walls
-			surface->lightmapinfo->stainsamples = Mem_Alloc(loadmodel->mempool, ssize * tsize * 3);
+			surface->lightmapinfo->stainsamples = (qbyte *)Mem_Alloc(loadmodel->mempool, ssize * tsize * 3);
 			// clear to white
 			memset(surface->lightmapinfo->stainsamples, 255, ssize * tsize * 3);
 
@@ -2044,11 +2044,11 @@ static void Mod_Q1BSP_LoadNodes(lump_t *l)
 	dnode_t		*in;
 	mnode_t 	*out;
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (dnode_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q1BSP_LoadNodes: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Mem_Alloc(loadmodel->mempool, count*sizeof(*out));
+	out = (mnode_t *)Mem_Alloc(loadmodel->mempool, count*sizeof(*out));
 
 	loadmodel->brush.data_nodes = out;
 	loadmodel->brush.num_nodes = count;
@@ -2086,18 +2086,18 @@ static void Mod_Q1BSP_LoadLeafs(lump_t *l)
 	mleaf_t *out;
 	int i, j, count, p;
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (dleaf_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q1BSP_LoadLeafs: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Mem_Alloc(loadmodel->mempool, count*sizeof(*out));
+	out = (mleaf_t *)Mem_Alloc(loadmodel->mempool, count*sizeof(*out));
 
 	loadmodel->brush.data_leafs = out;
 	loadmodel->brush.num_leafs = count;
 	// get visleafs from the submodel data
 	loadmodel->brush.num_pvsclusters = loadmodel->brushq1.submodels[0].visleafs;
 	loadmodel->brush.num_pvsclusterbytes = (loadmodel->brush.num_pvsclusters+7)>>3;
-	loadmodel->brush.data_pvsclusters = Mem_Alloc(loadmodel->mempool, loadmodel->brush.num_pvsclusters * loadmodel->brush.num_pvsclusterbytes);
+	loadmodel->brush.data_pvsclusters = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->brush.num_pvsclusters * loadmodel->brush.num_pvsclusterbytes);
 	memset(loadmodel->brush.data_pvsclusters, 0xFF, loadmodel->brush.num_pvsclusters * loadmodel->brush.num_pvsclusterbytes);
 
 	for ( i=0 ; i<count ; i++, in++, out++)
@@ -2148,11 +2148,11 @@ static void Mod_Q1BSP_LoadClipnodes(lump_t *l, hullinfo_t *hullinfo)
 	int			i, count;
 	hull_t		*hull;
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (dclipnode_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q1BSP_LoadClipnodes: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Mem_Alloc(loadmodel->mempool, count*sizeof(*out));
+	out = (dclipnode_t *)Mem_Alloc(loadmodel->mempool, count*sizeof(*out));
 
 	loadmodel->brushq1.clipnodes = out;
 	loadmodel->brushq1.numclipnodes = count;
@@ -2194,7 +2194,7 @@ static void Mod_Q1BSP_MakeHull0(void)
 	hull = &loadmodel->brushq1.hulls[0];
 
 	in = loadmodel->brush.data_nodes;
-	out = Mem_Alloc(loadmodel->mempool, loadmodel->brush.num_nodes * sizeof(dclipnode_t));
+	out = (dclipnode_t *)Mem_Alloc(loadmodel->mempool, loadmodel->brush.num_nodes * sizeof(dclipnode_t));
 
 	hull->clipnodes = out;
 	hull->firstclipnode = 0;
@@ -2214,11 +2214,11 @@ static void Mod_Q1BSP_LoadLeaffaces(lump_t *l)
 	int i, j;
 	short *in;
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (short *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q1BSP_LoadLeaffaces: funny lump size in %s",loadmodel->name);
 	loadmodel->brush.num_leafsurfaces = l->filelen / sizeof(*in);
-	loadmodel->brush.data_leafsurfaces = Mem_Alloc(loadmodel->mempool, loadmodel->brush.num_leafsurfaces * sizeof(int));
+	loadmodel->brush.data_leafsurfaces = (int *)Mem_Alloc(loadmodel->mempool, loadmodel->brush.num_leafsurfaces * sizeof(int));
 
 	for (i = 0;i < loadmodel->brush.num_leafsurfaces;i++)
 	{
@@ -2234,11 +2234,11 @@ static void Mod_Q1BSP_LoadSurfedges(lump_t *l)
 	int		i;
 	int		*in;
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (int *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q1BSP_LoadSurfedges: funny lump size in %s",loadmodel->name);
 	loadmodel->brushq1.numsurfedges = l->filelen / sizeof(*in);
-	loadmodel->brushq1.surfedges = Mem_Alloc(loadmodel->mempool, loadmodel->brushq1.numsurfedges * sizeof(int));
+	loadmodel->brushq1.surfedges = (int *)Mem_Alloc(loadmodel->mempool, loadmodel->brushq1.numsurfedges * sizeof(int));
 
 	for (i = 0;i < loadmodel->brushq1.numsurfedges;i++)
 		loadmodel->brushq1.surfedges[i] = LittleLong(in[i]);
@@ -2251,12 +2251,12 @@ static void Mod_Q1BSP_LoadPlanes(lump_t *l)
 	mplane_t	*out;
 	dplane_t 	*in;
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (dplane_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q1BSP_LoadPlanes: funny lump size in %s", loadmodel->name);
 
 	loadmodel->brush.num_planes = l->filelen / sizeof(*in);
-	loadmodel->brush.data_planes = out = Mem_Alloc(loadmodel->mempool, loadmodel->brush.num_planes * sizeof(*out));
+	loadmodel->brush.data_planes = out = (mplane_t *)Mem_Alloc(loadmodel->mempool, loadmodel->brush.num_planes * sizeof(*out));
 
 	for (i = 0;i < loadmodel->brush.num_planes;i++, in++, out++)
 	{
@@ -2388,7 +2388,7 @@ AllocPortal
 static portal_t *AllocPortal(void)
 {
 	portal_t *p;
-	p = Mem_Alloc(loadmodel->mempool, sizeof(portal_t));
+	p = (portal_t *)Mem_Alloc(loadmodel->mempool, sizeof(portal_t));
 	p->chain = portalchain;
 	portalchain = p;
 	return p;
@@ -2473,9 +2473,9 @@ static void Mod_Q1BSP_FinalizePortals(void)
 		}
 		p = p->chain;
 	}
-	loadmodel->brush.data_portals = Mem_Alloc(loadmodel->mempool, numportals * sizeof(mportal_t) + numpoints * sizeof(mvertex_t));
+	loadmodel->brush.data_portals = (mportal_t *)Mem_Alloc(loadmodel->mempool, numportals * sizeof(mportal_t) + numpoints * sizeof(mvertex_t));
 	loadmodel->brush.num_portals = numportals;
-	loadmodel->brush.data_portalpoints = (void *)((qbyte *) loadmodel->brush.data_portals + numportals * sizeof(mportal_t));
+	loadmodel->brush.data_portalpoints = (mvertex_t *)((qbyte *) loadmodel->brush.data_portals + numportals * sizeof(mportal_t));
 	loadmodel->brush.num_portalpoints = numpoints;
 	// clear all leaf portal chains
 	for (i = 0;i < loadmodel->brush.num_leafs;i++)
@@ -2586,7 +2586,7 @@ static void RemovePortalFromNodes(portal_t *portal)
 		portalpointer = (void **) &node->portals;
 		while (1)
 		{
-			t = *portalpointer;
+			t = (portal_t *)*portalpointer;
 			if (!t)
 				Host_Error("RemovePortalFromNodes: portal not in leaf");
 
@@ -2778,10 +2778,10 @@ static void Mod_Q1BSP_BuildLightmapUpdateChains(mempool_t *mempool, model_t *mod
 	}
 	if (!totalcount)
 		return;
-	model->brushq1.light_style = Mem_Alloc(mempool, model->brushq1.light_styles * sizeof(qbyte));
-	model->brushq1.light_stylevalue = Mem_Alloc(mempool, model->brushq1.light_styles * sizeof(int));
-	model->brushq1.light_styleupdatechains = Mem_Alloc(mempool, model->brushq1.light_styles * sizeof(msurface_t **));
-	model->brushq1.light_styleupdatechainsbuffer = Mem_Alloc(mempool, totalcount * sizeof(msurface_t *));
+	model->brushq1.light_style = (qbyte *)Mem_Alloc(mempool, model->brushq1.light_styles * sizeof(qbyte));
+	model->brushq1.light_stylevalue = (int *)Mem_Alloc(mempool, model->brushq1.light_styles * sizeof(int));
+	model->brushq1.light_styleupdatechains = (msurface_t ***)Mem_Alloc(mempool, model->brushq1.light_styles * sizeof(msurface_t **));
+	model->brushq1.light_styleupdatechainsbuffer = (msurface_t **)Mem_Alloc(mempool, totalcount * sizeof(msurface_t *));
 	model->brushq1.light_styles = 0;
 	for (i = 0;i < 255;i++)
 		if (stylecounts[i])
@@ -3079,7 +3079,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	Mod_BuildTriangleNeighbors(loadmodel->brush.shadowmesh->neighbor3i, loadmodel->brush.shadowmesh->element3i, loadmodel->brush.shadowmesh->numtriangles);
 
 	if (loadmodel->brush.numsubmodels)
-		loadmodel->brush.submodels = Mem_Alloc(loadmodel->mempool, loadmodel->brush.numsubmodels * sizeof(model_t *));
+		loadmodel->brush.submodels = (model_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brush.numsubmodels * sizeof(model_t *));
 
 	if (loadmodel->isworldmodel)
 	{
@@ -3146,7 +3146,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 		mod->nummodelsurfaces = bm->numfaces;
 
 		// make the model surface list (used by shadowing/lighting)
-		mod->surfacelist = Mem_Alloc(loadmodel->mempool, mod->nummodelsurfaces * sizeof(*mod->surfacelist));
+		mod->surfacelist = (int *)Mem_Alloc(loadmodel->mempool, mod->nummodelsurfaces * sizeof(*mod->surfacelist));
 		for (j = 0;j < mod->nummodelsurfaces;j++)
 			mod->surfacelist[j] = mod->firstmodelsurface + j;
 
@@ -3666,7 +3666,7 @@ static void Mod_Q3BSP_LoadEntities(lump_t *l)
 	loadmodel->brushq3.num_lightgrid_cellsize[2] = 128;
 	if (!l->filelen)
 		return;
-	loadmodel->brush.entities = Mem_Alloc(loadmodel->mempool, l->filelen);
+	loadmodel->brush.entities = (char *)Mem_Alloc(loadmodel->mempool, l->filelen);
 	memcpy(loadmodel->brush.entities, mod_base + l->fileofs, l->filelen);
 	data = loadmodel->brush.entities;
 	// some Q3 maps override the lightgrid_cellsize with a worldspawn key
@@ -3711,11 +3711,11 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 	char firstpasstexturename[Q3PATHLENGTH];
 	char parameter[4][Q3PATHLENGTH];
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (q3dtexture_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q3BSP_LoadTextures: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+	out = (texture_t *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
 	loadmodel->data_textures = out;
 	loadmodel->num_textures = count;
@@ -4000,11 +4000,11 @@ static void Mod_Q3BSP_LoadPlanes(lump_t *l)
 	mplane_t *out;
 	int i, count;
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (q3dplane_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q3BSP_LoadPlanes: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+	out = (mplane_t *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
 	loadmodel->brush.data_planes = out;
 	loadmodel->brush.num_planes = count;
@@ -4025,11 +4025,11 @@ static void Mod_Q3BSP_LoadBrushSides(lump_t *l)
 	q3mbrushside_t *out;
 	int i, n, count;
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (q3dbrushside_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q3BSP_LoadBrushSides: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+	out = (q3mbrushside_t *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
 	loadmodel->brush.data_brushsides = out;
 	loadmodel->brush.num_brushsides = count;
@@ -4054,11 +4054,11 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 	int i, j, n, c, count, maxplanes;
 	mplane_t *planes;
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (q3dbrush_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q3BSP_LoadBrushes: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+	out = (q3mbrush_t *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
 	loadmodel->brush.data_brushes = out;
 	loadmodel->brush.num_brushes = count;
@@ -4085,7 +4085,7 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 			maxplanes = out->numbrushsides;
 			if (planes)
 				Mem_Free(planes);
-			planes = Mem_Alloc(tempmempool, sizeof(mplane_t) * maxplanes);
+			planes = (mplane_t *)Mem_Alloc(tempmempool, sizeof(mplane_t) * maxplanes);
 		}
 		for (j = 0;j < out->numbrushsides;j++)
 		{
@@ -4105,11 +4105,11 @@ static void Mod_Q3BSP_LoadEffects(lump_t *l)
 	q3deffect_t *out;
 	int i, n, count;
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (q3deffect_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q3BSP_LoadEffects: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+	out = (q3deffect_t *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
 	loadmodel->brushq3.data_effects = out;
 	loadmodel->brushq3.num_effects = count;
@@ -4133,11 +4133,11 @@ static void Mod_Q3BSP_LoadVertices(lump_t *l)
 	q3dvertex_t *in;
 	int i, count;
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (q3dvertex_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q3BSP_LoadVertices: funny lump size in %s",loadmodel->name);
 	loadmodel->brushq3.num_vertices = count = l->filelen / sizeof(*in);
-	loadmodel->brushq3.data_vertex3f = Mem_Alloc(loadmodel->mempool, count * (sizeof(float) * (3 + 2 + 2 + 4)));
+	loadmodel->brushq3.data_vertex3f = (float *)Mem_Alloc(loadmodel->mempool, count * (sizeof(float) * (3 + 2 + 2 + 4)));
 	loadmodel->brushq3.data_texcoordtexture2f = loadmodel->brushq3.data_vertex3f + count * 3;
 	loadmodel->brushq3.data_texcoordlightmap2f = loadmodel->brushq3.data_texcoordtexture2f + count * 2;
 	loadmodel->brushq3.data_color4f = loadmodel->brushq3.data_texcoordlightmap2f + count * 2;
@@ -4165,11 +4165,11 @@ static void Mod_Q3BSP_LoadTriangles(lump_t *l)
 	int *out;
 	int i, count;
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (int *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(int[3]))
 		Host_Error("Mod_Q3BSP_LoadTriangles: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+	out = (int *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
 	loadmodel->brushq3.num_triangles = count / 3;
 	loadmodel->brushq3.data_element3i = out;
@@ -4193,11 +4193,11 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l)
 
 	if (!l->filelen)
 		return;
-	in = (void *)(mod_base + l->fileofs);
+	in = (q3dlightmap_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q3BSP_LoadLightmaps: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+	out = (rtexture_t **)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
 	loadmodel->brushq3.data_lightmaps = out;
 	loadmodel->brushq3.num_lightmaps = count;
@@ -4223,11 +4223,11 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 	float *v;
 	surfmesh_t *mesh, *tempmeshlist[1024];
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (q3dface_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q3BSP_LoadFaces: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+	out = (msurface_t *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
 	loadmodel->data_surfaces = out;
 	loadmodel->num_surfaces = count;
@@ -4460,8 +4460,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				finalvertices = finalwidth * finalheight;
 				finaltriangles = (finalwidth - 1) * (finalheight - 1) * 2;
 
-				out->data_collisionvertex3f = Mem_Alloc(loadmodel->mempool, sizeof(float[3]) * finalvertices);
-				out->data_collisionelement3i = Mem_Alloc(loadmodel->mempool, sizeof(int[3]) * finaltriangles);
+				out->data_collisionvertex3f = (float *)Mem_Alloc(loadmodel->mempool, sizeof(float[3]) * finalvertices);
+				out->data_collisionelement3i = (int *)Mem_Alloc(loadmodel->mempool, sizeof(int[3]) * finaltriangles);
 				out->num_collisionvertices = finalvertices;
 				out->num_collisiontriangles = finaltriangles;
 				Q3PatchTesselateFloat(3, sizeof(float[3]), out->data_collisionvertex3f, patchsize[0], patchsize[1], sizeof(float[3]), originalvertex3f, xtess, ytess);
@@ -4532,7 +4532,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 	loadmodel->nummeshes = meshnum;
 	if (loadmodel->nummeshes)
 	{
-		loadmodel->meshlist = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t *) * loadmodel->nummeshes);
+		loadmodel->meshlist = (surfmesh_t **)Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t *) * loadmodel->nummeshes);
 		memcpy(loadmodel->meshlist, tempmeshlist, sizeof(surfmesh_t *) * loadmodel->nummeshes);
 	}
 
@@ -4555,11 +4555,11 @@ static void Mod_Q3BSP_LoadModels(lump_t *l)
 	q3dmodel_t *out;
 	int i, j, n, c, count;
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (q3dmodel_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q3BSP_LoadModels: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+	out = (q3dmodel_t *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
 	loadmodel->brushq3.data_models = out;
 	loadmodel->brushq3.num_models = count;
@@ -4592,11 +4592,11 @@ static void Mod_Q3BSP_LoadLeafBrushes(lump_t *l)
 	int *out;
 	int i, n, count;
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (int *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q3BSP_LoadLeafBrushes: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+	out = (int *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
 	loadmodel->brush.data_leafbrushes = out;
 	loadmodel->brush.num_leafbrushes = count;
@@ -4616,11 +4616,11 @@ static void Mod_Q3BSP_LoadLeafFaces(lump_t *l)
 	int *out;
 	int i, n, count;
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (int *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q3BSP_LoadLeafFaces: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+	out = (int *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
 	loadmodel->brush.data_leafsurfaces = out;
 	loadmodel->brush.num_leafsurfaces = count;
@@ -4640,11 +4640,11 @@ static void Mod_Q3BSP_LoadLeafs(lump_t *l)
 	mleaf_t *out;
 	int i, j, n, c, count;
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (q3dleaf_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q3BSP_LoadLeafs: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+	out = (mleaf_t *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
 	loadmodel->brush.data_leafs = out;
 	loadmodel->brush.num_leafs = count;
@@ -4682,11 +4682,11 @@ static void Mod_Q3BSP_LoadNodes(lump_t *l)
 	mnode_t *out;
 	int i, j, n, count;
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (q3dnode_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q3BSP_LoadNodes: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+	out = (mnode_t *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
 	loadmodel->brush.data_nodes = out;
 	loadmodel->brush.num_nodes = count;
@@ -4733,7 +4733,7 @@ static void Mod_Q3BSP_LoadLightGrid(lump_t *l)
 	q3dlightgrid_t *out;
 	int count;
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (q3dlightgrid_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q3BSP_LoadLightGrid: funny lump size in %s",loadmodel->name);
 	loadmodel->brushq3.num_lightgrid_scale[0] = 1.0f / loadmodel->brushq3.num_lightgrid_cellsize[0];
@@ -4759,7 +4759,7 @@ static void Mod_Q3BSP_LoadLightGrid(lump_t *l)
 			Host_Error("Mod_Q3BSP_LoadLightGrid: invalid lightgrid lump size %i bytes, should be %i bytes (%ix%ix%i)\n", l->filelen, count * sizeof(*in), loadmodel->brushq3.num_lightgrid_dimensions[0], loadmodel->brushq3.num_lightgrid_dimensions[1], loadmodel->brushq3.num_lightgrid_dimensions[2]);
 		if (l->filelen != count * (int)sizeof(*in))
 			Con_Printf("Mod_Q3BSP_LoadLightGrid: Warning: calculated lightgrid size %i bytes does not match lump size %i\n", count * sizeof(*in), l->filelen);
-		out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+		out = (q3dlightgrid_t *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 		loadmodel->brushq3.data_lightgrid = out;
 		loadmodel->brushq3.num_lightgrid = count;
 		// no swapping or validation necessary
@@ -4784,12 +4784,12 @@ static void Mod_Q3BSP_LoadPVS(lump_t *l)
 		// create clusters
 		loadmodel->brush.num_pvsclusterbytes = (loadmodel->brush.num_pvsclusters + 7) / 8;
 		totalchains = loadmodel->brush.num_pvsclusterbytes * loadmodel->brush.num_pvsclusters;
-		loadmodel->brush.data_pvsclusters = Mem_Alloc(loadmodel->mempool, totalchains);
+		loadmodel->brush.data_pvsclusters = (unsigned char *)Mem_Alloc(loadmodel->mempool, totalchains);
 		memset(loadmodel->brush.data_pvsclusters, 0xFF, totalchains);
 		return;
 	}
 
-	in = (void *)(mod_base + l->fileofs);
+	in = (q3dpvs_t *)(mod_base + l->fileofs);
 	if (l->filelen < 9)
 		Host_Error("Mod_Q3BSP_LoadPVS: funny lump size in %s",loadmodel->name);
 
@@ -4801,7 +4801,7 @@ static void Mod_Q3BSP_LoadPVS(lump_t *l)
 	if (l->filelen < totalchains + (int)sizeof(*in))
 		Host_Error("Mod_Q3BSP_LoadPVS: lump too small ((numclusters = %i) * (chainlength = %i) + sizeof(q3dpvs_t) == %i bytes, lump is %i bytes)\n", loadmodel->brush.num_pvsclusters, loadmodel->brush.num_pvsclusterbytes, totalchains + sizeof(*in), l->filelen);
 
-	loadmodel->brush.data_pvsclusters = Mem_Alloc(loadmodel->mempool, totalchains);
+	loadmodel->brush.data_pvsclusters = (unsigned char *)Mem_Alloc(loadmodel->mempool, totalchains);
 	memcpy(loadmodel->brush.data_pvsclusters, (qbyte *)(in + 1), totalchains);
 }
 
@@ -5615,7 +5615,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 		mod->nummodelsurfaces = mod->brushq3.data_models[i].numfaces;
 		mod->firstmodelbrush = mod->brushq3.data_models[i].firstbrush;
 		mod->nummodelbrushes = mod->brushq3.data_models[i].numbrushes;
-		mod->surfacelist = Mem_Alloc(loadmodel->mempool, mod->nummodelsurfaces * sizeof(*mod->surfacelist));
+		mod->surfacelist = (int *)Mem_Alloc(loadmodel->mempool, mod->nummodelsurfaces * sizeof(*mod->surfacelist));
 		for (j = 0;j < mod->nummodelsurfaces;j++)
 			mod->surfacelist[j] = mod->firstmodelsurface + j;
 

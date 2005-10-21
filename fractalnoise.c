@@ -24,7 +24,7 @@ void fractalnoise(qbyte *noise, int size, int startgrid)
 	startgrid = bound(0, startgrid, size);
 
 	amplitude = 0xFFFF; // this gets halved before use
-	noisebuf = Mem_Alloc(tempmempool, size*size*sizeof(int));
+	noisebuf = (int *)Mem_Alloc(tempmempool, size*size*sizeof(int));
 	memset(noisebuf, 0, size*size*sizeof(int));
 
 	for (g2 = startgrid;g2;g2 >>= 1)

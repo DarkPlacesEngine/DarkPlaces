@@ -201,7 +201,7 @@ void Host_ServerOptions (void)
 
 	svs.maxclients = bound(1, svs.maxclients, MAX_SCOREBOARD);
 
-	svs.clients = Mem_Alloc(sv_mempool, sizeof(client_t) * svs.maxclients);
+	svs.clients = (client_t *)Mem_Alloc(sv_mempool, sizeof(client_t) * svs.maxclients);
 
 	if (svs.maxclients > 1 && !deathmatch.integer)
 		Cvar_SetValueQuick(&deathmatch, 1);

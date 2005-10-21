@@ -397,7 +397,7 @@ int NetConn_Read(lhnetsocket_t *mysocket, void *data, int maxlength, lhnetaddres
 		{
 			LHNETADDRESS_ToString(peeraddress, addressstring2, sizeof(addressstring2), true);
 			Con_Printf("LHNET_Read(%p (%s), %p, %i, %p) = %i from %s:\n", mysocket, addressstring, data, maxlength, peeraddress, length, addressstring2);
-			Com_HexDumpToConsole(data, length);
+			Com_HexDumpToConsole((qbyte *)data, length);
 		}
 		else
 			Con_Printf("LHNET_Read(%p (%s), %p, %i, %p) = %i\n", mysocket, addressstring, data, maxlength, peeraddress, length);
@@ -420,7 +420,7 @@ int NetConn_Write(lhnetsocket_t *mysocket, const void *data, int length, const l
 		LHNETADDRESS_ToString(LHNET_AddressFromSocket(mysocket), addressstring, sizeof(addressstring), true);
 		LHNETADDRESS_ToString(peeraddress, addressstring2, sizeof(addressstring2), true);
 		Con_Printf("LHNET_Write(%p (%s), %p, %i, %p (%s)) = %i%s\n", mysocket, addressstring, data, length, peeraddress, addressstring2, length, ret == length ? "" : " (ERROR)");
-		Com_HexDumpToConsole(data, length);
+		Com_HexDumpToConsole((qbyte *)data, length);
 	}
 	return ret;
 }
@@ -474,7 +474,7 @@ int NetConn_SendReliableMessage(netconn_t *conn, sizebuf_t *data)
 
 	packetLen = NET_HEADERSIZE + dataLen;
 
-	header = (void *)sendbuffer;
+	header = (unsigned int *)sendbuffer;
 	header[0] = BigLong(packetLen | (NETFLAG_DATA | eom));
 	header[1] = BigLong(conn->sendSequence);
 	memcpy(sendbuffer + NET_HEADERSIZE, conn->sendMessage, dataLen);
@@ -513,7 +513,7 @@ static void NetConn_SendMessageNext(netconn_t *conn)
 
 		packetLen = NET_HEADERSIZE + dataLen;
 
-		header = (void *)sendbuffer;
+		header = (unsigned int *)sendbuffer;
 		header[0] = BigLong(packetLen | (NETFLAG_DATA | eom));
 		header[1] = BigLong(conn->sendSequence);
 		memcpy(sendbuffer + NET_HEADERSIZE, conn->sendMessage, dataLen);
@@ -551,7 +551,7 @@ static void NetConn_ReSendMessage(netconn_t *conn)
 
 		packetLen = NET_HEADERSIZE + dataLen;
 
-		header = (void *)sendbuffer;
+		header = (unsigned int *)sendbuffer;
 		header[0] = BigLong(packetLen | (NETFLAG_DATA | eom));
 		header[1] = BigLong(conn->sendSequence - 1);
 		memcpy(sendbuffer + NET_HEADERSIZE, conn->sendMessage, dataLen);
@@ -574,7 +574,7 @@ qboolean NetConn_CanSendMessage(netconn_t *conn)
 int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data)
 {
 	int packetLen;
-	int *header;
+	unsigned int *header;
 
 	packetLen = NET_HEADERSIZE + data->cursize;
 
@@ -592,7 +592,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data)
 	}
 //#endif
 
-	header = (void *)sendbuffer;
+	header = (unsigned int *)sendbuffer;
 	header[0] = BigLong(packetLen | NETFLAG_UNRELIABLE);
 	header[1] = BigLong(conn->unreliableSendSequence);
 	memcpy(sendbuffer + NET_HEADERSIZE, data->data, data->cursize);
@@ -732,7 +732,7 @@ lhnetsocket_t *NetConn_ChooseServerSocketForAddress(lhnetaddress_t *address)
 netconn_t *NetConn_Open(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress)
 {
 	netconn_t *conn;
-	conn = Mem_Alloc(netconn_mempool, sizeof(*conn));
+	conn = (netconn_t *)Mem_Alloc(netconn_mempool, sizeof(*conn));
 	conn->mysocket = mysocket;
 	conn->peeraddress = *peeraddress;
 	conn->canSend = true;

@@ -1712,7 +1712,7 @@ void SV_SpawnServer (const char *server)
 	// progs fields, often accessed by server
 	prog->edictsfields = PR_Alloc(prog->max_edicts * prog->edict_size);*/
 	// used by PushMove to move back pushed entities
-	sv.moved_edicts = PRVM_Alloc(prog->max_edicts * sizeof(prvm_edict_t *));
+	sv.moved_edicts = (prvm_edict_t **)PRVM_Alloc(prog->max_edicts * sizeof(prvm_edict_t *));
 	/*for (i = 0;i < prog->max_edicts;i++)
 	{
 		ent = prog->edicts + i;
@@ -1850,7 +1850,7 @@ void SV_VM_CB_BeginIncreaseEdicts(void)
 	prvm_edict_t *ent;
 
 	PRVM_Free( sv.moved_edicts );
-	sv.moved_edicts = PRVM_Alloc(prog->max_edicts * sizeof(prvm_edict_t *));
+	sv.moved_edicts = (prvm_edict_t **)PRVM_Alloc(prog->max_edicts * sizeof(prvm_edict_t *));
 
 	// links don't survive the transition, so unlink everything
 	for (i = 0, ent = prog->edicts;i < prog->max_edicts;i++, ent++)

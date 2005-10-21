@@ -352,7 +352,7 @@ typedef struct
 entity_state_t;
 
 // baseline state values
-entity_state_t defaultstate;
+extern entity_state_t defaultstate;
 // reads a quake entity from the network stream
 void EntityFrameQuake_ReadEntity(int bits);
 // writes a list of quake entities to the network stream

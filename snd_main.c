@@ -124,7 +124,7 @@ void S_Startup(void)
 		shm->format.channels = 2;
 		shm->samples = 32768;
 		shm->samplepos = 0;
-		shm->buffer = Mem_Alloc(snd_mempool, shm->format.channels * shm->samples * shm->format.width);
+		shm->buffer = (qbyte *)Mem_Alloc(snd_mempool, shm->format.channels * shm->samples * shm->format.width);
 	}
 	else
 	{
@@ -269,7 +269,7 @@ sfx_t *S_FindName (const char *name)
 			return sfx;
 
 	// Add a sfx_t struct for this sound
-	sfx = Mem_Alloc (snd_mempool, sizeof (*sfx));
+	sfx = (sfx_t *)Mem_Alloc (snd_mempool, sizeof (*sfx));
 	memset (sfx, 0, sizeof(*sfx));
 	strlcpy (sfx->name, name, sizeof (sfx->name));
 	sfx->memsize = sizeof(*sfx);
@@ -699,7 +699,7 @@ void S_StopAllSounds (void)
 	memset(channels, 0, MAX_CHANNELS * sizeof(channel_t));
 
 	// Clear sound buffer
-	pbuf = S_LockBuffer();
+	pbuf = (unsigned char *)S_LockBuffer();
 	if (pbuf != NULL)
 	{
 		int setsize = shm->samples * shm->format.width;

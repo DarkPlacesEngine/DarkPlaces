@@ -336,10 +336,10 @@ static void net_gibshower(unsigned char num)
 // called by engine
 void CG_Init(void)
 {
-	localentity = CGVM_Malloc(sizeof(*localentity) * MAX_LOCALENTITIES);
-	localentityactive = CGVM_Malloc(sizeof(*localentityactive) * MAX_LOCALENTITIES);
-	localentityfreetime = CGVM_Malloc(sizeof(*localentityfreetime) * MAX_LOCALENTITIES);
-	phys_entity = CGVM_Malloc(sizeof(*phys_entity) * MAX_LOCALENTITIES);
+	localentity = (localentity_t *)CGVM_Malloc(sizeof(*localentity) * MAX_LOCALENTITIES);
+	localentityactive = (unsigned char *)CGVM_Malloc(sizeof(*localentityactive) * MAX_LOCALENTITIES);
+	localentityfreetime = (float *)CGVM_Malloc(sizeof(*localentityfreetime) * MAX_LOCALENTITIES);
+	phys_entity = (cgphysentity_t *)CGVM_Malloc(sizeof(*phys_entity) * MAX_LOCALENTITIES);
 	CGVM_RegisterNetworkCode(1, net_explosion);
 	CGVM_RegisterNetworkCode(2, net_gibshower);
 	gametime = 0;

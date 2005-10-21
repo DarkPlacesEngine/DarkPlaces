@@ -181,7 +181,7 @@ const char **Cvar_CompleteBuildList (const char *partial)
 	const char **buf;
 
 	len = strlen(partial);
-	buf = Mem_Alloc(tempmempool, sizeofbuf + sizeof (const char *));
+	buf = (const char **)Mem_Alloc(tempmempool, sizeofbuf + sizeof (const char *));
 	// Loop through the alias list and print all matches
 	for (cvar = cvar_vars; cvar; cvar = cvar->next)
 		if (!strncasecmp(partial, cvar->name, len))
@@ -210,7 +210,7 @@ void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 	{
 		Z_Free (var->string);	// free the old value string
 
-		var->string = Z_Malloc (strlen(value)+1);
+		var->string = (char *)Z_Malloc (strlen(value)+1);
 	}
 	strcpy (var->string, value);
 	var->value = atof (var->string);
@@ -339,9 +339,9 @@ void Cvar_RegisterVariable (cvar_t *variable)
 
 // copy the value off, because future sets will Z_Free it
 	oldstr = variable->string;
-	variable->string = Z_Malloc (strlen(variable->string)+1);
+	variable->string = (char *)Z_Malloc (strlen(variable->string)+1);
 	strcpy (variable->string, oldstr);
-	variable->defstring = Z_Malloc (strlen(variable->string)+1);
+	variable->defstring = (char *)Z_Malloc (strlen(variable->string)+1);
 	strcpy (variable->defstring, oldstr);
 	variable->value = atof (variable->string);
 	variable->integer = (int) variable->value;
@@ -384,7 +384,7 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags)
 			cvar->flags |= CVAR_DEFAULTSET;
 
 			Z_Free(cvar->defstring);
-			cvar->defstring = Z_Malloc(strlen(value) + 1);
+			cvar->defstring = (char *)Z_Malloc(strlen(value) + 1);
 			strcpy(cvar->defstring, value);
 		}
 		return cvar;
@@ -399,13 +399,13 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags)
 
 // allocate a new cvar, cvar name, and cvar string
 // FIXME: these never get Z_Free'd
-	cvar = Z_Malloc(sizeof(cvar_t));
+	cvar = (cvar_t *)Z_Malloc(sizeof(cvar_t));
 	cvar->flags = flags | CVAR_ALLOCATED | CVAR_DEFAULTSET;
-	cvar->name = Z_Malloc(strlen(name)+1);
+	cvar->name = (char *)Z_Malloc(strlen(name)+1);
 	strcpy(cvar->name, name);
-	cvar->string = Z_Malloc(strlen(value)+1);
+	cvar->string = (char *)Z_Malloc(strlen(value)+1);
 	strcpy(cvar->string, value);
-	cvar->defstring = Z_Malloc(strlen(value)+1);
+	cvar->defstring = (char *)Z_Malloc(strlen(value)+1);
 	strcpy(cvar->defstring, value);
 	cvar->value = atof (cvar->string);
 	cvar->integer = (int) cvar->value;

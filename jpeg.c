@@ -472,7 +472,7 @@ static void JPEG_SkipInputData (j_decompress_ptr cinfo, long num_bytes)
 
 static void JPEG_MemSrc (j_decompress_ptr cinfo, const qbyte *buffer)
 {
-	cinfo->src = cinfo->mem->alloc_small ((j_common_ptr) cinfo, JPOOL_PERMANENT, sizeof (struct jpeg_source_mgr));
+	cinfo->src = (struct jpeg_source_mgr *)cinfo->mem->alloc_small ((j_common_ptr) cinfo, JPOOL_PERMANENT, sizeof (struct jpeg_source_mgr));
 
 	cinfo->src->next_input_byte = buffer;
 	cinfo->src->bytes_in_buffer = fs_filesize;
@@ -530,8 +530,8 @@ qbyte* JPEG_LoadImage (const qbyte *f, int matchwidth, int matchheight)
 		return NULL;
 	}
 
-	image_rgba = Mem_Alloc(tempmempool, image_width * image_height * 4);
-	scanline = Mem_Alloc(tempmempool, image_width * cinfo.output_components);
+	image_rgba = (qbyte *)Mem_Alloc(tempmempool, image_width * image_height * 4);
+	scanline = (qbyte *)Mem_Alloc(tempmempool, image_width * cinfo.output_components);
 	if (!image_rgba || !scanline)
 	{
 		if (!image_rgba)

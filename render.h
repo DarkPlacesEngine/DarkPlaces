@@ -24,11 +24,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // flag arrays used for visibility checking on world model
 // (all other entities have no per-surface/per-leaf visibility checks)
 // TODO: dynamic resize according to r_refdef.worldmodel->brush.num_clusters
-qbyte r_pvsbits[(32768+7)>>3];
+extern qbyte r_pvsbits[(32768+7)>>3];
 // TODO: dynamic resize according to r_refdef.worldmodel->brush.num_leafs
-qbyte r_worldleafvisible[32768];
+extern qbyte r_worldleafvisible[32768];
 // TODO: dynamic resize according to r_refdef.worldmodel->num_surfaces
-qbyte r_worldsurfacevisible[262144];
+extern qbyte r_worldsurfacevisible[262144];
 
 extern matrix4x4_t r_identitymatrix;
 

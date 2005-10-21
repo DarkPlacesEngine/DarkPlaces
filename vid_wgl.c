@@ -909,14 +909,14 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 		return false;
 	}
 
-	qglGetString = GL_GetProcAddress("glGetString");
-	qwglGetExtensionsStringARB = GL_GetProcAddress("wglGetExtensionsStringARB");
-	if (qglGetString == NULL)
+	if ((qglGetString = (const GLubyte* (GLAPIENTRY *)(GLenum name))GL_GetProcAddress("glGetString")) == NULL)
 	{
 		VID_Shutdown();
 		Con_Print("glGetString not found\n");
 		return false;
 	}
+	if ((qwglGetExtensionsStringARB = (const char *(WINAPI *)(HDC hdc))GL_GetProcAddress("wglGetExtensionsStringARB")) == NULL)
+		Con_Print("wglGetExtensionsStringARB not found\n");
 	gl_renderer = qglGetString(GL_RENDERER);
 	gl_vendor = qglGetString(GL_VENDOR);
 	gl_version = qglGetString(GL_VERSION);

@@ -366,7 +366,7 @@ void CL_ParseServerInfo (void)
 		Host_Error("Bad maxclients (%u) from server\n", cl.maxclients);
 		return;
 	}
-	cl.scores = Mem_Alloc(cl_mempool, cl.maxclients*sizeof(*cl.scores));
+	cl.scores = (scoreboard_t *)Mem_Alloc(cl_mempool, cl.maxclients*sizeof(*cl.scores));
 
 // parse gametype
 	cl.gametype = MSG_ReadByte ();

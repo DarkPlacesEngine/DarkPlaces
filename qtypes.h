@@ -7,7 +7,11 @@ typedef unsigned char qbyte;
 #undef true
 #undef false
 
+#ifndef __cplusplus
 typedef enum {false, true} qboolean;
+#else
+typedef bool qboolean;
+#endif
 
 #if defined(WIN32) && !defined(WIN64)
 # define ssize_t long
@@ -18,8 +22,8 @@ typedef enum {false, true} qboolean;
 #endif
 
 #ifndef FALSE
-#define FALSE 0
-#define TRUE 1
+#define FALSE false
+#define TRUE true
 #endif
 
 // up / down

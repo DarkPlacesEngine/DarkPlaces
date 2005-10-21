@@ -225,7 +225,7 @@ WAV_FetchSound
 */
 static const sfxbuffer_t* WAV_FetchSound (channel_t* ch, unsigned int start, unsigned int nbsamples)
 {
-	return ch->sfx->fetcher_data;
+	return (sfxbuffer_t *)ch->sfx->fetcher_data;
 }
 
 /*
@@ -235,7 +235,7 @@ WAV_FreeSfx
 */
 static void WAV_FreeSfx (sfx_t* sfx)
 {
-	sfxbuffer_t* sb = sfx->fetcher_data;
+	sfxbuffer_t* sb = (sfxbuffer_t *)sfx->fetcher_data;
 
 	// Free the sound buffer
 	sfx->memsize -= (sb->length * sfx->format.channels * sfx->format.width) + sizeof (*sb) - sizeof (sb->data);
@@ -295,7 +295,7 @@ qboolean S_LoadWavFile (const char *filename, sfx_t *s)
 	len = len * info.width * info.channels;
 
 	memsize = len + sizeof (*sb) - sizeof (sb->data);
-	sb = Mem_Alloc (snd_mempool, memsize);
+	sb = (sfxbuffer_t *)Mem_Alloc (snd_mempool, memsize);
 	if (sb == NULL)
 	{
 		Con_Printf("failed to allocate memory for sound \"%s\"\n", s->name);

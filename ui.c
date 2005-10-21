@@ -136,8 +136,8 @@ void UI_Key(ui_itemlist_t list, int key, int ascii)
 ui_item_t UI_CloneItem(ui_item_t item)
 {
 	ui_item_t clone;
-	clone = UI_Alloc(item->size);
-	clone = memcpy(clone, item, item->size);
+	clone = (ui_item_t)UI_Alloc(item->size);
+	memcpy(clone, item, item->size);
 
 	return clone;
 }
@@ -184,7 +184,7 @@ void UI_FreeItemByName(ui_itemlist_t list, const char *name)
 // itemlist stuff
 ui_itemlist_t UI_CreateItemList(void)
 {
-	return UI_Alloc(sizeof(ui_itemlist_t));
+	return (ui_itemlist_t)UI_Alloc(sizeof(ui_itemlist_t));
 }
 
 ui_itemlist_t UI_CloneItemList(ui_itemlist_t list)

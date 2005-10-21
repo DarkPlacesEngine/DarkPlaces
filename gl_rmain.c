@@ -1156,7 +1156,7 @@ float nomodelcolor4f[6*4] =
 
 void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 {
-	const entity_render_t *ent = calldata1;
+	const entity_render_t *ent = (entity_render_t *)calldata1;
 	int i;
 	float f1, f2, *c, diff[3];
 	float color4f[6*4];
@@ -2011,7 +2011,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 
 static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata2)
 {
-	const entity_render_t *ent = calldata1;
+	const entity_render_t *ent = (entity_render_t *)calldata1;
 	const msurface_t *surface = ent->model->data_surfaces + calldata2;
 	vec3_t modelorg;
 	texture_t *texture;
