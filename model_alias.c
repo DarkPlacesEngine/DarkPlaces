@@ -499,7 +499,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 	BOUNDI(loadmodel->meshlist[0]->num_triangles,0,65536);
 	loadmodel->numframes = LittleLong(pinmodel->numframes);
 	BOUNDI(loadmodel->numframes,0,65536);
-	loadmodel->synctype = LittleLong (pinmodel->synctype);
+	loadmodel->synctype = (synctype_t)LittleLong (pinmodel->synctype);
 	BOUNDI(loadmodel->synctype,0,2);
 	loadmodel->flags = LittleLong (pinmodel->flags);
 

@@ -230,7 +230,7 @@ void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 
 		loadmodel->numframes = LittleLong (pinqsprite->numframes);
 		loadmodel->sprite.sprnum_type = LittleLong (pinqsprite->type);
-		loadmodel->synctype = LittleLong (pinqsprite->synctype);
+		loadmodel->synctype = (synctype_t)LittleLong (pinqsprite->synctype);
 
 		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinqsprite->version), palette_complete, palette_alpha);
 	}
@@ -246,7 +246,7 @@ void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 
 		loadmodel->numframes = LittleLong (pinhlsprite->numframes);
 		loadmodel->sprite.sprnum_type = LittleLong (pinhlsprite->type);
-		loadmodel->synctype = LittleLong (pinhlsprite->synctype);
+		loadmodel->synctype = (synctype_t)LittleLong (pinhlsprite->synctype);
 		rendermode = pinhlsprite->rendermode;
 
 		in = datapointer;
