@@ -319,14 +319,14 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 		return false;
 	}
 
-	if ((qaglChoosePixelFormat = GL_GetProcAddress("aglChoosePixelFormat")) == NULL
-	 || (qaglCreateContext = GL_GetProcAddress("aglCreateContext")) == NULL
-	 || (qaglDestroyContext = GL_GetProcAddress("aglDestroyContext")) == NULL
-	 || (qaglDestroyPixelFormat = GL_GetProcAddress("aglDestroyPixelFormat")) == NULL
-	 || (qaglSetCurrentContext = GL_GetProcAddress("aglSetCurrentContext")) == NULL
-	 || (qaglSetDrawable = GL_GetProcAddress("aglSetDrawable")) == NULL
-	 || (qaglSetFullScreen = GL_GetProcAddress("aglSetFullScreen")) == NULL
-	 || (qaglSwapBuffers = GL_GetProcAddress("aglSwapBuffers")) == NULL
+	if ((qaglChoosePixelFormat = (AGLPixelFormat (*) (const AGLDevice *gdevs, GLint ndev, const GLint *attribList))GL_GetProcAddress("aglChoosePixelFormat")) == NULL
+	 || (qaglCreateContext = (AGLContext (*) (AGLPixelFormat pix, AGLContext share))GL_GetProcAddress("aglCreateContext")) == NULL
+	 || (qaglDestroyContext = (GLboolean (*) (AGLContext ctx))GL_GetProcAddress("aglDestroyContext")) == NULL
+	 || (qaglDestroyPixelFormat = (void (*) (AGLPixelFormat pix))GL_GetProcAddress("aglDestroyPixelFormat")) == NULL
+	 || (qaglSetCurrentContext = (GLboolean (*) (AGLContext ctx))GL_GetProcAddress("aglSetCurrentContext")) == NULL
+	 || (qaglSetDrawable = (GLboolean (*) (AGLContext ctx, AGLDrawable draw))GL_GetProcAddress("aglSetDrawable")) == NULL
+	 || (qaglSetFullScreen = (GLboolean (*) (AGLContext ctx, GLsizei width, GLsizei height, GLsizei freq, GLint device))GL_GetProcAddress("aglSetFullScreen")) == NULL
+	 || (qaglSwapBuffers = (void (*) (AGLContext ctx))GL_GetProcAddress("aglSwapBuffers")) == NULL
 	)
 	{
 		Con_Printf("AGL functions not found\n");
