@@ -1343,7 +1343,7 @@ void NetConn_ClientFrame(void)
 }
 
 #define MAX_CHALLENGES 128
-struct
+struct challenge_s
 {
 	lhnetaddress_t address;
 	double time;
