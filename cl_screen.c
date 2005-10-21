@@ -1198,7 +1198,7 @@ R_Envmap_f
 Grab six views for environment mapping tests
 ===============
 */
-struct
+struct envmapinfo_s
 {
 	float angles[3];
 	char *name;
