@@ -74,7 +74,7 @@ void VM_M_setmousetarget(void)
 		in_client_mouse = true;
 		break;
 	default:
-		PRVM_ERROR("VM_M_setmousetarget: wrong destination %i !\n",PRVM_G_FLOAT(OFS_PARM0));
+		PRVM_ERROR("VM_M_setmousetarget: wrong destination %f !\n",PRVM_G_FLOAT(OFS_PARM0));
 	}
 }
 
@@ -123,7 +123,7 @@ void VM_M_setkeydest(void)
 		// key_dest = key_message
 		// break;
 	default:
-		PRVM_ERROR("VM_M_setkeydest: wrong destination %i !\n",prog->globals.generic[OFS_PARM0]);
+		PRVM_ERROR("VM_M_setkeydest: wrong destination %f !\n", PRVM_G_FLOAT(OFS_PARM0));
 	}
 }
 
