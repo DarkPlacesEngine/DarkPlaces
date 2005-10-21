@@ -174,7 +174,7 @@ qboolean SNDDMA_Init(void)
 	}
 
 	maxMixedSamples = BUFFER_SIZE;
-	s_mixedSamples = Mem_Alloc (snd_mempool, sizeof(*s_mixedSamples) * maxMixedSamples);
+	s_mixedSamples = (short *)Mem_Alloc (snd_mempool, sizeof(*s_mixedSamples) * maxMixedSamples);
 	Con_DPrintf("   Buffer size = %d samples (%d chunks)\n",
 				maxMixedSamples, (maxMixedSamples / submissionChunk));
 
