@@ -2682,7 +2682,7 @@ void VM_cin_setstate( void )
 	name = PRVM_G_STRING( OFS_PARM0 );
 	VM_CheckEmptyString( name );
 
-	state = (clvideostate_t)PRVM_G_FLOAT( OFS_PARM1 );
+	state = (clvideostate_t)((int)PRVM_G_FLOAT( OFS_PARM1 ));
 
 	video = CL_GetVideo( name );
 	if( video && state > CLVIDEO_UNUSED && state < CLVIDEO_STATECOUNT )
