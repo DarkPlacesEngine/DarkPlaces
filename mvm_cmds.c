@@ -480,7 +480,7 @@ void VM_M_setserverlistmaskstring( void )
 	}
 
 	mask->active = true;
-	mask->tests[field] = (serverlist_maskop_t) PRVM_G_FLOAT( OFS_PARM3 );
+	mask->tests[field] = (serverlist_maskop_t)((int)PRVM_G_FLOAT( OFS_PARM3 ));
 }
 
 /*
@@ -533,7 +533,7 @@ void VM_M_setserverlistmasknumber( void )
 	}
 
 	mask->active = true;
-	mask->tests[field] = (serverlist_maskop_t) PRVM_G_FLOAT( OFS_PARM3 );
+	mask->tests[field] = (serverlist_maskop_t)((int)PRVM_G_FLOAT( OFS_PARM3 ));
 }
 
 
