@@ -317,7 +317,7 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define RENDER_TRANSPARENT 262144 // can't light during opaque stage
 
 // this is 80 bytes
-typedef struct
+typedef struct entity_state_s
 {
 	// ! means this is not sent to client
 	double time; // ! time this state was built (used on client for interpolation)
@@ -418,7 +418,7 @@ the Write function performs these steps:
 server updates entities in looping ranges, a frame consists of a range of visible entities (not always all visible entities),
 */
 
-typedef struct
+typedef struct entity_frameinfo_s
 {
 	double time;
 	int framenum;
@@ -430,7 +430,7 @@ entity_frameinfo_t;
 #define MAX_ENTITY_HISTORY 64
 #define MAX_ENTITY_DATABASE (MAX_EDICTS * 2)
 
-typedef struct
+typedef struct entityframe_database_s
 {
 	// note: these can be far out of range, modulo with MAX_ENTITY_DATABASE to get a valid range (which may wrap)
 	// start and end of used area, when adding a new update to database, store at endpos, and increment endpos
@@ -455,7 +455,7 @@ typedef struct
 entityframe_database_t;
 
 // build entity data in this, to pass to entity read/write functions
-typedef struct
+typedef struct entity_frame_s
 {
 	double time;
 	int framenum;

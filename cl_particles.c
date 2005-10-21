@@ -1522,7 +1522,7 @@ void CL_MoveParticles (void)
 
 #define MAX_PARTICLETEXTURES 64
 // particletexture_t is a rectangle in the particlefonttexture
-typedef struct
+typedef struct particletexture_s
 {
 	rtexture_t *texture;
 	float s1, t1, s2, t2;

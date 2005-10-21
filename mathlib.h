@@ -208,13 +208,13 @@ void BoxPlaneCornerDistances_Separate(const vec3_t emins, const vec3_t emaxs, co
 #define PlaneDiff(point,plane) (((plane)->type < 3 ? (point)[(plane)->type] : DotProduct((point), (plane)->normal)) - (plane)->dist)
 
 // LordHavoc: minimal plane structure
-typedef struct
+typedef struct tinyplane_s
 {
 	float normal[3], dist;
 }
 tinyplane_t;
 
-typedef struct
+typedef struct tinydoubleplane_s
 {
 	double normal[3], dist;
 }

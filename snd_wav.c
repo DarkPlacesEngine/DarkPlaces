@@ -27,7 +27,7 @@
 #include "snd_wav.h"
 
 
-typedef struct
+typedef struct wavinfo_s
 {
 	int		rate;
 	int		width;

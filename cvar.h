@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -85,14 +85,14 @@ interface from being ambiguous.
 
 #define MAX_CVAROPTIONS 16
 
-typedef struct
+typedef struct cvaroption_s
 {
 	int value;
 	const char *name;
 }
 cvaroption_t;
 
-typedef struct
+typedef struct menucvar_s
 {
 	int type;
 	float valuemin, valuemax, valuestep;

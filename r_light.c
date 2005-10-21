@@ -227,7 +227,7 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 	}
 }
 
-typedef struct
+typedef struct nearlight_s
 {
 	vec3_t origin;
 	//vec_t cullradius2;

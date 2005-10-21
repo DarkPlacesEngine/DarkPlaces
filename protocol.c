@@ -37,7 +37,7 @@ entity_state_t defaultstate =
 
 // LordHavoc: I own protocol ranges 96, 97, 3500-3599
 
-struct
+struct protocolversioninfo_s
 {
 	int number;
 	const char *name;

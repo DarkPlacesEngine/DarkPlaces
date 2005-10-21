@@ -115,7 +115,7 @@ void M_Update_Return_Reason(char *s)
 
 // Nehahra
 #define NumberOfNehahraDemos 34
-typedef struct
+typedef struct nehahrademonames_s
 {
 	char *name;
 	char *desc;
@@ -3286,20 +3286,20 @@ void M_LanConfig_Key (int key, char ascii)
 //=============================================================================
 /* GAME OPTIONS MENU */
 
-typedef struct
+typedef struct level_s
 {
 	char	*name;
 	char	*description;
 } level_t;
 
-typedef struct
+typedef struct episode_s
 {
 	char	*description;
 	int		firstLevel;
 	int		levels;
 } episode_t;
 
-typedef struct
+typedef struct gamelevels_s
 {
 	char *gamename;
 	level_t *levels;
@@ -3677,7 +3677,7 @@ gamelevels_t battlemechgame = {"Battlemech", battlemechlevels, battlemechepisode
 gamelevels_t openquartzgame = {"OpenQuartz", openquartzlevels, openquartzepisodes, 3};
 gamelevels_t defeatindetail2game = {"Defeat In Detail 2", defeatindetail2levels, defeatindetail2episodes, 1};
 
-typedef struct
+typedef struct gameinfo_s
 {
 	gamemode_t gameid;
 	gamelevels_t *notregistered;

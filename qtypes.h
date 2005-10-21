@@ -8,7 +8,7 @@ typedef unsigned char qbyte;
 #undef false
 
 #ifndef __cplusplus
-typedef enum {false, true} qboolean;
+typedef enum qboolean_e {false, true} qboolean;
 #else
 typedef bool qboolean;
 #endif

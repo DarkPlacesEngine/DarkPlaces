@@ -39,10 +39,12 @@ char		*keybindings[MAX_BINDMAPS][MAX_KEYS];
 static int	key_bmap, key_bmap2;
 static qbyte keydown[MAX_KEYS];	// 0 = up, 1 = down, 2 = repeating
 
-typedef struct {
+typedef struct keyname_s
+{
 	const char	*name;
 	int			keynum;
-} keyname_t;
+}
+keyname_t;
 
 static const keyname_t   keynames[] = {
 	{"TAB", K_TAB},

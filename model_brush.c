@@ -429,7 +429,7 @@ int Mod_Q1BSP_NativeContentsFromSuperContents(model_t *model, int supercontents)
 	return CONTENTS_EMPTY;
 }
 
-typedef struct
+typedef struct RecursiveHullCheckTraceInfo_s
 {
 	// the hull we're tracing through
 	const hull_t *hull;

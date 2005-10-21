@@ -24,7 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 extern int cl_available;
 
-typedef struct
+typedef struct viddef_s
 {
 	// these are set by VID_Mode
 	int width;

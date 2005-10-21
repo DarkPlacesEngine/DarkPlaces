@@ -51,7 +51,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define SPRITE2_VERSION		2
 
-typedef struct
+typedef struct dsprite_s
 {
 	int			ident;
 	int			version;
@@ -64,7 +64,7 @@ typedef struct
 	synctype_t	synctype;
 } dsprite_t;
 
-typedef struct
+typedef struct dspritehl_s
 {
 	int			ident;
 	int			version;
@@ -78,14 +78,14 @@ typedef struct
 	synctype_t	synctype;
 } dspritehl_t;
 
-typedef struct
+typedef struct dsprite2frame_s
 {
 	int		width, height;
 	int		origin_x, origin_y;		// raster coordinates inside pic
 	char	name[64];				// name of pcx file
 } dsprite2frame_t;
 
-typedef struct
+typedef struct dsprite2_s
 {
 	int				ident;
 	int				version;
@@ -104,23 +104,23 @@ typedef struct
 #define SPRHL_INDEXALPHA	2
 #define SPRHL_ALPHATEST	3
 
-typedef struct {
+typedef struct dspriteframe_s {
 	int			origin[2];
 	int			width;
 	int			height;
 } dspriteframe_t;
 
-typedef struct {
+typedef struct dspritegroup_s {
 	int			numframes;
 } dspritegroup_t;
 
-typedef struct {
+typedef struct dspriteinterval_s {
 	float	interval;
 } dspriteinterval_t;
 
-typedef enum { SPR_SINGLE=0, SPR_GROUP } spriteframetype_t;
+typedef enum spriteframetype_e { SPR_SINGLE=0, SPR_GROUP } spriteframetype_t;
 
-typedef struct {
+typedef struct dspriteframetype_s {
 	spriteframetype_t	type;
 } dspriteframetype_t;
 

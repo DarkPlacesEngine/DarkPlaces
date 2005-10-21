@@ -37,7 +37,7 @@ HRESULT (WINAPI *pDirectSoundCreate)(GUID FAR *lpGUID, LPDIRECTSOUND FAR *lplpDS
 // DirectSound output: 64KB in 1 buffer
 #define SECONDARY_BUFFER_SIZE	(64 * 1024)
 
-typedef enum {SIS_SUCCESS, SIS_FAILURE, SIS_NOTAVAIL} sndinitstat;
+typedef enum sndinitstat_e {SIS_SUCCESS, SIS_FAILURE, SIS_NOTAVAIL} sndinitstat;
 
 static qboolean	wavonly;
 static qboolean	dsound_init;

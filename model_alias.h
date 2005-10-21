@@ -32,7 +32,8 @@ Alias models are position independent, so the cache manager can move them.
 
 #include "modelgen.h"
 
-typedef struct {
+typedef struct daliashdr_s
+{
 	int			ident;
 	int			version;
 	vec3_t		scale;
@@ -48,7 +49,8 @@ typedef struct {
 	synctype_t	synctype;
 	int			flags;
 	float		size;
-} daliashdr_t;
+}
+daliashdr_t;
 
 /*
 ========================================================================
@@ -64,19 +66,19 @@ typedef struct {
 #define MD2ALIAS_VERSION	8
 #define	MD2_SKINNAME	64
 
-typedef struct
+typedef struct md2stvert_s
 {
 	short	s;
 	short	t;
 } md2stvert_t;
 
-typedef struct
+typedef struct md2triangle_s
 {
 	short	index_xyz[3];
 	short	index_st[3];
 } md2triangle_t;
 
-typedef struct
+typedef struct md2frame_s
 {
 	float		scale[3];	// multiply byte verts by this
 	float		translate[3];	// then add this
@@ -92,7 +94,7 @@ typedef struct
 // and an integer vertex index.
 
 
-typedef struct
+typedef struct md2_s
 {
 	int			ident;
 	int			version;

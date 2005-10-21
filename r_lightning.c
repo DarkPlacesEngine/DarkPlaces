@@ -40,7 +40,11 @@ void r_lightningbeams_setuptexture(void)
 	float particlex, particley, particlexv, particleyv, dx, dy, s, maxpathstrength;
 	qbyte *pixels;
 	int *image;
-	struct {float x, y, strength;} path[PATHPOINTS], temppath;
+	struct lightningpathnode_s
+	{
+		float x, y, strength;
+	}
+	path[PATHPOINTS], temppath;
 
 	image = Mem_Alloc(tempmempool, BEAMWIDTH * BEAMHEIGHT * sizeof(int));
 	pixels = Mem_Alloc(tempmempool, BEAMWIDTH * BEAMHEIGHT * sizeof(qbyte[4]));
