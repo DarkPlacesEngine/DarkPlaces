@@ -421,7 +421,7 @@ void R_WorldVisibility(void)
 			// if leaf is in current pvs and on the screen, mark its surfaces
 			if (CHECKPVSBIT(r_pvsbits, leaf->clusterindex) && !R_CullBox(leaf->mins, leaf->maxs))
 			{
-				c_leafs++;
+				renderstats.world_leafs++;
 				r_worldleafvisible[j] = true;
 				if (leaf->numleafsurfaces)
 					for (i = 0, mark = leaf->firstleafsurface;i < leaf->numleafsurfaces;i++, mark++)
@@ -443,7 +443,7 @@ void R_WorldVisibility(void)
 		leafstackpos = 1;
 		while (leafstackpos)
 		{
-			c_leafs++;
+			renderstats.world_leafs++;
 			leaf = leafstack[--leafstackpos];
 			r_worldleafvisible[leaf - model->brush.data_leafs] = true;
 			// mark any surfaces bounding this leaf
@@ -458,8 +458,11 @@ void R_WorldVisibility(void)
 			// and the leaf is visible in the pvs
 			// (the first two checks won't cause as many cache misses as the leaf checks)
 			for (p = leaf->portals;p;p = p->next)
+			{
+				renderstats.world_portals++;
 				if (DotProduct(r_vieworigin, p->plane.normal) < (p->plane.dist + 1) && !R_CullBox(p->mins, p->maxs) && !r_worldleafvisible[p->past - model->brush.data_leafs] && CHECKPVSBIT(r_pvsbits, p->past->clusterindex))
 					leafstack[leafstackpos++] = p->past;
+			}
 		}
 	}
 
@@ -477,15 +480,14 @@ void R_Q1BSP_DrawSky(entity_render_t *ent)
 
 void R_Q1BSP_Draw(entity_render_t *ent)
 {
-	if (ent->model == NULL)
+	model_t *model = ent->model;
+	if (model == NULL)
 		return;
-	c_bmodels++;
 	if (r_drawcollisionbrushes.integer < 2)
 		R_DrawSurfaces(ent, false);
-	if (r_drawcollisionbrushes.integer >= 1 && ent->model->brush.num_brushes)
+	if (r_drawcollisionbrushes.integer >= 1 && model->brush.num_brushes)
 	{
 		int i;
-		model_t *model = ent->model;
 		msurface_t *surface;
 		q3mbrush_t *brush;
 		R_Mesh_Matrix(&ent->matrix);
@@ -764,6 +766,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolorbase, float *light
 		if ((ent == r_refdef.worldentity && !r_worldsurfacevisible[surfacelist[surfacelistindex]]))
 			continue;
 		surface = model->data_surfaces + surfacelist[surfacelistindex];
+		renderstats.lights_lighttriangles += surface->num_triangles;
 		if (tex != surface->texture)
 		{
 			if (batchnumsurfaces > 0)

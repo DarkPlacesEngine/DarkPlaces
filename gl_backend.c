@@ -886,8 +886,8 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *
 		R_Mesh_Draw_ShowTris(firstvertex, numvertices, numtriangles, elements);
 		return;
 	}
-	c_meshs++;
-	c_meshelements += numelements;
+	renderstats.meshes++;
+	renderstats.meshes_elements += numelements;
 	if (gl_paranoid.integer)
 	{
 		unsigned int i, j, size;

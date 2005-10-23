@@ -108,7 +108,6 @@ void R_UpdateLights(void)
 	}
 
 	r_numdlights = 0;
-	c_dlights = 0;
 
 	if (!r_dynamic.integer || !cl_dlights)
 		return;
@@ -121,7 +120,6 @@ void R_UpdateLights(void)
 			R_RTLight_UpdateFromDLight(&cl_dlights[i].rtlight, &cl_dlights[i], false);
 			// FIXME: use pointer instead of copy
 			r_dlight[r_numdlights++] = cl_dlights[i];
-			c_dlights++; // count every dlight in use
 		}
 	}
 }
