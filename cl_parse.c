@@ -448,14 +448,14 @@ void CL_ParseServerInfo (void)
 	// world model
 	CL_KeepaliveMessage ();
 	cl.model_precache[1] = Mod_ForName(parse_model_precache[1], false, false, true);
-	if (cl.model_precache[1] == NULL)
+	if (cl.model_precache[1]->Draw == NULL)
 		Con_Printf("Map %s not found\n", parse_model_precache[1]);
 
 	// normal models
 	for (i=2 ; i<nummodels ; i++)
 	{
 		CL_KeepaliveMessage();
-		if ((cl.model_precache[i] = Mod_ForName(parse_model_precache[i], false, false, false)) == NULL)
+		if ((cl.model_precache[i] = Mod_ForName(parse_model_precache[i], false, false, false))->Draw == NULL)
 			Con_Printf("Model %s not found\n", parse_model_precache[i]);
 	}
 
