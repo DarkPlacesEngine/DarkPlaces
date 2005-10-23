@@ -18,7 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#ifndef PROGS_H 
+#ifndef PROGS_H
 #define PROGS_H
 #include "pr_comp.h"			// defs shared with qcc
 
@@ -29,6 +29,7 @@ typedef struct link_s
 } link_t;
 
 #define ENTITYGRIDAREAS 16
+#define MAX_ENTITYCLUSTERS 16
 
 typedef struct edict_engineprivate_s
 {
@@ -37,6 +38,11 @@ typedef struct edict_engineprivate_s
 	// sv.time when the object was freed (to prevent early reuse which could
 	// mess up client interpolation or obscure severe QuakeC bugs)
 	float freetime;
+
+	// cached cluster links for quick stationary object visibility checking
+	vec3_t cullmins, cullmaxs;
+	int pvs_numclusters;
+	int pvs_clusterlist[MAX_ENTITYCLUSTERS];
 
 	// physics grid areas this edict is linked into
 	link_t areagrid[ENTITYGRIDAREAS];
@@ -154,6 +160,11 @@ typedef struct edict_engineprivate_s
 	// sv.time when the object was freed (to prevent early reuse which could
 	// mess up client interpolation or obscure severe QuakeC bugs)
 	float freetime;
+
+	// cached cluster links for quick stationary object visibility checking
+	vec3_t cullmins, cullmaxs;
+	int pvs_numclusters;
+	int pvs_clusterlist[MAX_ENTITYCLUSTERS];
 
 	// physics grid areas this edict is linked into
 	link_t areagrid[ENTITYGRIDAREAS];
