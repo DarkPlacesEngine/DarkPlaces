@@ -104,6 +104,48 @@ static void Mod_Q1BSP_AmbientSoundLevelsForPoint(model_t *model, const vec3_t p,
 		memset(out, 0, outsize);
 }
 
+static int Mod_Q1BSP_FindBoxClusters(model_t *model, const vec3_t mins, const vec3_t maxs, int maxclusters, int *clusterlist)
+{
+	int numclusters = 0, side, nodestackindex = 0;
+	mnode_t *node, *nodestack[1024];
+	if (!model->brush.num_pvsclusters)
+		return -1;
+	node = model->brush.data_nodes;
+	for (;;)
+	{
+		if (node->plane)
+		{
+			// node - recurse down the BSP tree
+			side = BoxOnPlaneSide(mins, maxs, node->plane) - 1;
+			if (side < 2)
+			{
+				// box is on one side of plane, take that path
+				node = node->children[side];
+			}
+			else
+			{
+				// box crosses plane, take one path and remember the other
+				if (nodestackindex < 1024)
+					nodestack[nodestackindex++] = node->children[0];
+				node = node->children[1];
+			}
+		}
+		else
+		{
+			// leaf - check cluster bit
+			if (numclusters < maxclusters)
+				clusterlist[numclusters] = ((mleaf_t *)node)->clusterindex;
+			numclusters++;
+			// try another path we didn't take earlier
+			if (nodestackindex == 0)
+				break;
+			node = nodestack[--nodestackindex];
+		}
+	}
+	// return number of clusters found (even if more than the maxclusters)
+	return numclusters;
+}
+
 static int Mod_Q1BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3_t mins, const vec3_t maxs)
 {
 	int clusterindex, side, nodestackindex = 0;
@@ -3013,6 +3055,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	mod->brush.BoxTouchingPVS = Mod_Q1BSP_BoxTouchingPVS;
 	mod->brush.BoxTouchingLeafPVS = Mod_Q1BSP_BoxTouchingLeafPVS;
 	mod->brush.BoxTouchingVisibleLeafs = Mod_Q1BSP_BoxTouchingVisibleLeafs;
+	mod->brush.FindBoxClusters = Mod_Q1BSP_FindBoxClusters;
 	mod->brush.LightPoint = Mod_Q1BSP_LightPoint;
 	mod->brush.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
 	mod->brush.AmbientSoundLevelsForPoint = Mod_Q1BSP_AmbientSoundLevelsForPoint;
@@ -3164,6 +3207,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 			mod->brush.BoxTouchingPVS = NULL;
 			mod->brush.BoxTouchingLeafPVS = NULL;
 			mod->brush.BoxTouchingVisibleLeafs = NULL;
+			mod->brush.FindBoxClusters = NULL;
 			mod->brush.LightPoint = NULL;
 			mod->brush.AmbientSoundLevelsForPoint = NULL;
 		}
@@ -5514,6 +5558,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	mod->brush.BoxTouchingPVS = Mod_Q1BSP_BoxTouchingPVS;
 	mod->brush.BoxTouchingLeafPVS = Mod_Q1BSP_BoxTouchingLeafPVS;
 	mod->brush.BoxTouchingVisibleLeafs = Mod_Q1BSP_BoxTouchingVisibleLeafs;
+	mod->brush.FindBoxClusters = Mod_Q1BSP_FindBoxClusters;
 	mod->brush.LightPoint = Mod_Q3BSP_LightPoint;
 	mod->brush.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
 	mod->brush.PointInLeaf = Mod_Q1BSP_PointInLeaf;
@@ -5605,6 +5650,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 			mod->brush.BoxTouchingPVS = NULL;
 			mod->brush.BoxTouchingLeafPVS = NULL;
 			mod->brush.BoxTouchingVisibleLeafs = NULL;
+			mod->brush.FindBoxClusters = NULL;
 			mod->brush.LightPoint = NULL;
 			mod->brush.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
 		}
