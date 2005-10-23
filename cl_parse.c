@@ -511,7 +511,6 @@ void CL_ValidateState(entity_state_t *s)
 	}
 
 	model = cl.model_precache[s->modelindex];
-	Mod_CheckLoaded(model);
 	if (model && model->type && s->frame >= model->numframes)
 	{
 		Con_DPrintf("CL_ValidateState: no such frame %i in \"%s\" (which has %i frames)\n", s->frame, model->name, model->numframes);

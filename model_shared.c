@@ -37,18 +37,22 @@ static model_t mod_known[MAX_MOD_KNOWN];
 static void mod_start(void)
 {
 	int i;
-	for (i = 0;i < MAX_MOD_KNOWN;i++)
-		if (mod_known[i].name[0])
-			Mod_UnloadModel(&mod_known[i]);
-	Mod_LoadModels();
+	model_t *mod;
+
+	for (i = 0, mod = mod_known;i < MAX_MOD_KNOWN;i++, mod++)
+		if (mod->name[0])
+			if (mod->used)
+				Mod_LoadModel(mod, true, false, mod->isworldmodel);
 }
 
 static void mod_shutdown(void)
 {
 	int i;
-	for (i = 0;i < MAX_MOD_KNOWN;i++)
-		if (mod_known[i].name[0])
-			Mod_UnloadModel(&mod_known[i]);
+	model_t *mod;
+
+	for (i = 0, mod = mod_known;i < MAX_MOD_KNOWN;i++, mod++)
+		if (mod->loaded)
+			Mod_UnloadModel(mod);
 }
 
 static void mod_newmap(void)
@@ -100,15 +104,6 @@ void Mod_RenderInit(void)
 	R_RegisterModule("Models", mod_start, mod_shutdown, mod_newmap);
 }
 
-void Mod_FreeModel (model_t *mod)
-{
-	R_FreeTexturePool(&mod->texturepool);
-	Mem_FreePool(&mod->mempool);
-
-	// clear the struct to make it available
-	memset(mod, 0, sizeof(model_t));
-}
-
 void Mod_UnloadModel (model_t *mod)
 {
 	char name[MAX_QPATH];
@@ -117,7 +112,12 @@ void Mod_UnloadModel (model_t *mod)
 	strcpy(name, mod->name);
 	isworldmodel = mod->isworldmodel;
 	used = mod->used;
-	Mod_FreeModel(mod);
+	// free textures/memory attached to the model
+	R_FreeTexturePool(&mod->texturepool);
+	Mem_FreePool(&mod->mempool);
+	// clear the struct to make it available
+	memset(mod, 0, sizeof(model_t));
+	// restore the fields we want to preserve
 	strcpy(mod->name, name);
 	mod->isworldmodel = isworldmodel;
 	mod->used = used;
@@ -230,12 +230,14 @@ void Mod_ClearAll(void)
 
 void Mod_ClearUsed(void)
 {
+#if 0
 	int i;
 	model_t *mod;
 
 	for (i = 0, mod = mod_known;i < MAX_MOD_KNOWN;i++, mod++)
 		if (mod->name[0])
 			mod->used = false;
+#endif
 }
 
 void Mod_PurgeUnused(void)
@@ -246,27 +248,24 @@ void Mod_PurgeUnused(void)
 	for (i = 0, mod = mod_known;i < MAX_MOD_KNOWN;i++, mod++)
 		if (mod->name[0])
 			if (!mod->used)
-				Mod_FreeModel(mod);
+				Mod_UnloadModel(mod);
 }
 
 // only used during loading!
 void Mod_RemoveStaleWorldModels(model_t *skip)
 {
 	int i;
-	for (i = 0;i < MAX_MOD_KNOWN;i++)
-		if (mod_known[i].isworldmodel && skip != &mod_known[i])
-			Mod_UnloadModel(mod_known + i);
-}
-
-void Mod_LoadModels(void)
-{
-	int i;
 	model_t *mod;
 
 	for (i = 0, mod = mod_known;i < MAX_MOD_KNOWN;i++, mod++)
-		if (mod->name[0])
-			if (mod->used)
-				Mod_CheckLoaded(mod);
+	{
+		if (mod->isworldmodel && mod->loaded && skip != mod)
+		{
+			Mod_UnloadModel(mod);
+			mod->isworldmodel = false;
+			mod->used = false;
+		}
+	}
 }
 
 /*
@@ -321,7 +320,11 @@ Loads in a model for the given name
 */
 model_t *Mod_ForName(const char *name, qboolean crash, qboolean checkdisk, qboolean isworldmodel)
 {
-	return Mod_LoadModel(Mod_FindName(name), crash, checkdisk, isworldmodel);
+	model_t *model;
+	model = Mod_FindName(name);
+	if (!model->loaded || checkdisk)
+		Mod_LoadModel(model, crash, checkdisk, isworldmodel);
+	return model;
 }
 
 qbyte *mod_base;

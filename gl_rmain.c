@@ -582,7 +582,6 @@ static void R_MarkEntities (void)
 		for (i = 0;i < r_refdef.numentities;i++)
 		{
 			ent = r_refdef.entities[i];
-			Mod_CheckLoaded(ent->model);
 			// some of the renderer still relies on origin...
 			Matrix4x4_OriginFromMatrix(&ent->matrix, ent->origin);
 			// some of the renderer still relies on scale...
@@ -600,7 +599,6 @@ static void R_MarkEntities (void)
 		for (i = 0;i < r_refdef.numentities;i++)
 		{
 			ent = r_refdef.entities[i];
-			Mod_CheckLoaded(ent->model);
 			// some of the renderer still relies on origin...
 			Matrix4x4_OriginFromMatrix(&ent->matrix, ent->origin);
 			// some of the renderer still relies on scale...

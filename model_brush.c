@@ -74,8 +74,6 @@ static mleaf_t *Mod_Q1BSP_PointInLeaf(model_t *model, const vec3_t p)
 	if (model == NULL)
 		return NULL;
 
-	Mod_CheckLoaded(model);
-
 	// LordHavoc: modified to start at first clip node,
 	// in other words: first node of the (sub)model
 	node = model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode;
@@ -2855,7 +2853,6 @@ static void Mod_Q1BSP_BuildLightmapUpdateChains(mempool_t *mempool, model_t *mod
 static qbyte *Mod_Q1BSP_GetPVS(model_t *model, const vec3_t p)
 {
 	mnode_t *node;
-	Mod_CheckLoaded(model);
 	node = model->brush.data_nodes;
 	while (node->plane)
 		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct(p,node->plane->normal)) < node->plane->dist];

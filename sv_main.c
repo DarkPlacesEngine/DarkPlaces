@@ -763,7 +763,6 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 		// generate much traffic (in old protocols they hog bandwidth)
 		else if (!(s->effects & EF_NODEPTHTEST) && !((isbmodel = (model = sv.models[s->modelindex]) != NULL && model->name[0] == '*') && (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE)))
 		{
-			Mod_CheckLoaded(model);
 			// entity has survived every check so far, check if visible
 			ed = PRVM_EDICT_NUM(s->number);
 
@@ -860,8 +859,6 @@ void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *
 	sv_writeentitiestoclient_culled_trace = 0;
 	sv_writeentitiestoclient_visibleentities = 0;
 	sv_writeentitiestoclient_totalentities = 0;
-
-	Mod_CheckLoaded(sv.worldmodel);
 
 // find the client's PVS
 	// the real place being tested from

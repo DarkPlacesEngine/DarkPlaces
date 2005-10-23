@@ -275,7 +275,6 @@ void R_Stain (const vec3_t origin, float radius, int cr1, int cg1, int cb1, int 
 		model = ent->model;
 		if (model && model->name[0] == '*')
 		{
-			Mod_CheckLoaded(model);
 			if (model->brush.data_nodes)
 			{
 				Matrix4x4_Transform(&ent->inversematrix, origin, org);

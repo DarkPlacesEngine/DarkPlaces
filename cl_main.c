@@ -708,7 +708,6 @@ void CL_LinkNetworkEntity(entity_t *e)
 		e->render.model = cl.model_precache[e->state_current.modelindex];
 		if (e->render.model)
 		{
-			Mod_CheckLoaded(e->render.model);
 			// if model is alias or this is a tenebrae-like dlight, reverse pitch direction
 			if (e->render.model->type == mod_alias || (e->state_current.lightpflags & PFLAGS_FULLDYNAMIC))
 				angles[0] = -angles[0];
@@ -1015,7 +1014,6 @@ static void CL_RelinkStaticEntities(void)
 	entity_t *e;
 	for (i = 0, e = cl_static_entities;i < cl_num_static_entities && r_refdef.numentities < r_refdef.maxentities;i++, e++)
 	{
-		Mod_CheckLoaded(e->render.model);
 		e->render.flags = 0;
 		// transparent stuff can't be lit during the opaque stage
 		if (e->render.effects & (EF_ADDITIVE | EF_NODEPTHTEST) || e->render.alpha < 1)
