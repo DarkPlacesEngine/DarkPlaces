@@ -1347,9 +1347,12 @@ void Host_Spawn_f (void)
 	// send all current light styles
 	for (i=0 ; i<MAX_LIGHTSTYLES ; i++)
 	{
-		MSG_WriteByte (&host_client->message, svc_lightstyle);
-		MSG_WriteByte (&host_client->message, (char)i);
-		MSG_WriteString (&host_client->message, sv.lightstyles[i]);
+		if (sv.lightstyles[i][0])
+		{
+			MSG_WriteByte (&host_client->message, svc_lightstyle);
+			MSG_WriteByte (&host_client->message, (char)i);
+			MSG_WriteString (&host_client->message, sv.lightstyles[i]);
+		}
 	}
 
 	// send some stats
