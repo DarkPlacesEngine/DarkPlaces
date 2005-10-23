@@ -48,7 +48,6 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	cliptrace.fraction = 1;
 	cliptrace.realfraction = 1;
 
-	Mod_CheckLoaded(cl.worldmodel);
 	if (cl.worldmodel && cl.worldmodel->TraceBox)
 		cl.worldmodel->TraceBox(cl.worldmodel, 0, &cliptrace, startmins, startmaxs, endmins, endmaxs, hitsupercontentsmask);
 
@@ -196,7 +195,6 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 
 	if (hitent)
 		*hitent = 0;
-	Mod_CheckLoaded(cl.worldmodel);
 	if (cl.worldmodel && cl.worldmodel->TraceBox)
 		cl.worldmodel->TraceBox(cl.worldmodel, 0, &trace, start, start, end, end, SUPERCONTENTS_SOLID);
 

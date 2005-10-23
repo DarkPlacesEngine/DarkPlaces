@@ -140,7 +140,6 @@ int Portal_CheckPolygon(model_t *model, vec3_t eye, float *polypoints, int numpo
 
 	portal_markid++;
 
-	Mod_CheckLoaded(model);
 	Portal_PolygonRecursiveMarkLeafs(model->brush.data_nodes, polypoints, numpoints);
 
 	eyeleaf = model->brush.PointInLeaf(model, eye);
@@ -431,8 +430,6 @@ void Portal_Visibility(model_t *model, const vec3_t eye, int *leaflist, qbyte *l
 		Con_Print("Portal_Visibility: NULL model\n");
 		return;
 	}
-
-	Mod_CheckLoaded(model);
 
 	if (!model->brush.data_nodes)
 	{

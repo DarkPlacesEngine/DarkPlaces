@@ -135,7 +135,6 @@ SV_ClearWorld
 */
 void SV_ClearWorld (void)
 {
-	Mod_CheckLoaded(sv.worldmodel);
 	SV_CreateAreaGrid(sv.worldmodel->normalmins, sv.worldmodel->normalmaxs);
 }
 
@@ -329,7 +328,6 @@ void SV_LinkEdict (prvm_edict_t *ent, qboolean touch_triggers)
 		model = sv.models[modelindex];
 		if (model != NULL)
 		{
-			Mod_CheckLoaded(model);
 			if (!model->TraceBox)
 				Con_Printf("edict %i: SOLID_BSP with non-collidable model\n", PRVM_NUM_FOR_EDICT(ent));
 
@@ -469,7 +467,6 @@ trace_t SV_ClipMoveToEntity(prvm_edict_t *ent, const vec3_t start, const vec3_t 
 			return trace;
 		}
 
-		Mod_CheckLoaded(model);
 		if ((int) ent->fields.server->solid == SOLID_BSP)
 		{
 			if (!model->TraceBox)
