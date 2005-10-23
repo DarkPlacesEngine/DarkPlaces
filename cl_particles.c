@@ -2086,7 +2086,7 @@ void R_DrawParticles (void)
 	{
 		if (p->type)
 		{
-			c_particles++;
+			renderstats.particles++;
 			if (DotProduct(p->org, r_viewforward) >= minparticledist || p->type->orientation == PARTICLE_BEAM)
 			{
 				if (p->type == particletype + pt_decal)

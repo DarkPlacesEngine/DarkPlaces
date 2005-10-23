@@ -148,8 +148,6 @@ void R_Model_Sprite_Draw(entity_render_t *ent)
 	if (ent->frameblend[0].frame < 0)
 		return;
 
-	c_sprites++;
-
 	R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_vieworigin : ent->origin, R_DrawSpriteModelCallback, ent, 0);
 }
 

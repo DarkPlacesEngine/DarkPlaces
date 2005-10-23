@@ -30,7 +30,7 @@ mplane_t frustum[5];
 
 matrix4x4_t r_identitymatrix;
 
-int c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c_bmodels, c_sprites, c_particles, c_dlights, c_meshs, c_meshelements, c_rt_lights, c_rt_clears, c_rt_scissored, c_rt_shadowmeshes, c_rt_shadowtris, c_rt_lightmeshes, c_rt_lighttris, c_rtcached_shadowmeshes, c_rtcached_shadowtris, c_bloom, c_bloomcopies, c_bloomcopypixels, c_bloomdraws, c_bloomdrawpixels;
+renderstats_t renderstats;
 
 // true during envmap command capture
 qboolean envmap;
@@ -650,6 +650,7 @@ void R_DrawModels(void)
 		ent = r_refdef.entities[i];
 		if (ent->visframe == r_framecount)
 		{
+			renderstats.entities++;
 			if (ent->model && ent->model->Draw != NULL)
 				ent->model->Draw(ent);
 			else
@@ -714,7 +715,7 @@ static void R_BlendView(void)
 	{
 		int screenwidth, screenheight, bloomwidth, bloomheight, x, dobloomblend, range;
 		float xoffset, yoffset, r;
-		c_bloom++;
+		renderstats.bloom++;
 		// set the (poorly named) screenwidth and screenheight variables to
 		// a power of 2 at least as large as the screen, these will define the
 		// size of the texture to allocate
@@ -757,8 +758,7 @@ static void R_BlendView(void)
 		// copy view into the full resolution screen image texture
 		GL_ActiveTexture(0);
 		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.height - (r_view_y + r_view_height), r_view_width, r_view_height);
-		c_bloomcopies++;
-		c_bloomcopypixels += r_view_width * r_view_height;
+		renderstats.bloom_copypixels += r_view_width * r_view_height;
 		// now scale it down to the bloom size and raise to a power of itself
 		// to darken it (this leaves the really bright stuff bright, and
 		// everything else becomes very dark)
@@ -767,15 +767,13 @@ static void R_BlendView(void)
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		GL_Color(1, 1, 1, 1);
 		R_Mesh_Draw(0, 4, 2, polygonelements);
-		c_bloomdraws++;
-		c_bloomdrawpixels += bloomwidth * bloomheight;
+		renderstats.bloom_drawpixels += bloomwidth * bloomheight;
 		// render multiple times with a multiply blendfunc to raise to a power
 		GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
 		for (x = 1;x < r_bloom_power.integer;x++)
 		{
 			R_Mesh_Draw(0, 4, 2, polygonelements);
-			c_bloomdraws++;
-			c_bloomdrawpixels += bloomwidth * bloomheight;
+			renderstats.bloom_drawpixels += bloomwidth * bloomheight;
 		}
 		// we now have a darkened bloom image in the framebuffer, copy it into
 		// the bloom image texture for more processing
@@ -786,8 +784,7 @@ static void R_BlendView(void)
 		R_Mesh_State(&m);
 		GL_ActiveTexture(0);
 		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.height - (r_view_y + bloomheight), bloomwidth, bloomheight);
-		c_bloomcopies++;
-		c_bloomcopypixels += bloomwidth * bloomheight;
+		renderstats.bloom_copypixels += bloomwidth * bloomheight;
 		// blend on at multiple vertical offsets to achieve a vertical blur
 		// TODO: do offset blends using GLSL
 		range = r_bloom_blur.integer * bloomwidth / 320;
@@ -813,15 +810,13 @@ static void R_BlendView(void)
 				continue;
 			GL_Color(r, r, r, 1);
 			R_Mesh_Draw(0, 4, 2, polygonelements);
-			c_bloomdraws++;
-			c_bloomdrawpixels += bloomwidth * bloomheight;
+			renderstats.bloom_drawpixels += bloomwidth * bloomheight;
 			GL_BlendFunc(GL_ONE, GL_ONE);
 		}
 		// copy the vertically blurred bloom view to a texture
 		GL_ActiveTexture(0);
 		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.height - (r_view_y + bloomheight), bloomwidth, bloomheight);
-		c_bloomcopies++;
-		c_bloomcopypixels += bloomwidth * bloomheight;
+		renderstats.bloom_copypixels += bloomwidth * bloomheight;
 		// blend the vertically blurred image at multiple offsets horizontally
 		// to finish the blur effect
 		// TODO: do offset blends using GLSL
@@ -848,15 +843,13 @@ static void R_BlendView(void)
 				continue;
 			GL_Color(r, r, r, 1);
 			R_Mesh_Draw(0, 4, 2, polygonelements);
-			c_bloomdraws++;
-			c_bloomdrawpixels += bloomwidth * bloomheight;
+			renderstats.bloom_drawpixels += bloomwidth * bloomheight;
 			GL_BlendFunc(GL_ONE, GL_ONE);
 		}
 		// copy the blurred bloom view to a texture
 		GL_ActiveTexture(0);
 		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.height - (r_view_y + bloomheight), bloomwidth, bloomheight);
-		c_bloomcopies++;
-		c_bloomcopypixels += bloomwidth * bloomheight;
+		renderstats.bloom_copypixels += bloomwidth * bloomheight;
 		// go back to full view area
 		qglViewport(r_view_x, vid.height - (r_view_y + r_view_height), r_view_width, r_view_height);
 		// put the original screen image back in place and blend the bloom
@@ -883,8 +876,7 @@ static void R_BlendView(void)
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		GL_Color(1,1,1,1);
 		R_Mesh_Draw(0, 4, 2, polygonelements);
-		c_bloomdraws++;
-		c_bloomdrawpixels += r_view_width * r_view_height;
+		renderstats.bloom_drawpixels += r_view_width * r_view_height;
 		// now blend on the bloom texture if multipass
 		if (dobloomblend)
 		{
@@ -896,8 +888,7 @@ static void R_BlendView(void)
 			GL_BlendFunc(GL_ONE, GL_ONE);
 			GL_Color(1,1,1,1);
 			R_Mesh_Draw(0, 4, 2, polygonelements);
-			c_bloomdraws++;
-			c_bloomdrawpixels += r_view_width * r_view_height;
+			renderstats.bloom_drawpixels += r_view_width * r_view_height;
 		}
 	}
 	if (r_refdef.viewblend[3] >= 0.01f)
@@ -1383,8 +1374,6 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 		int s = ent->skinnum;
 		if ((unsigned int)s >= (unsigned int)model->numskins)
 			s = 0;
-		if (s >= 1)
-			c_models++;
 		if (model->skinscenes)
 		{
 			if (model->skinscenes[s].framecount > 1)
@@ -1753,7 +1742,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 	rmeshstate_t m;
 	if (texture->currentmaterialflags & MATERIALFLAG_NODRAW)
 		return;
-	c_faces += texturenumsurfaces;
+	renderstats.entities_surfaces += texturenumsurfaces;
 	// FIXME: identify models using a better check than ent->model->brush.shadowmesh
 	lightmode = ((ent->effects & EF_FULLBRIGHT) || ent->model->brush.shadowmesh) ? 0 : 2;
 	GL_DepthTest(!(texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
@@ -2055,6 +2044,7 @@ extern void R_BuildLightMap(const entity_render_t *ent, msurface_t *surface);
 void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 {
 	int i, j, f, flagsmask;
+	int counttriangles = 0;
 	msurface_t *surface, **surfacechain;
 	texture_t *t, *texture;
 	model_t *model = ent->model;
@@ -2112,6 +2102,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 					R_BuildLightMap(ent, surface);
 				// add face to draw list
 				surfacelist[numsurfacelist++] = surface;
+				counttriangles += surface->num_triangles;
 				if (numsurfacelist >= maxsurfacelist)
 				{
 					R_QueueTextureSurfaceList(ent, texture, numsurfacelist, surfacelist, modelorg);
@@ -2142,6 +2133,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 					R_BuildLightMap(ent, surface);
 				// add face to draw list
 				surfacelist[numsurfacelist++] = surface;
+				counttriangles += surface->num_triangles;
 				if (numsurfacelist >= maxsurfacelist)
 				{
 					R_QueueTextureSurfaceList(ent, texture, numsurfacelist, surfacelist, modelorg);
@@ -2152,5 +2144,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	}
 	if (numsurfacelist)
 		R_QueueTextureSurfaceList(ent, texture, numsurfacelist, surfacelist, modelorg);
+	if (!r_showtrispass)
+		renderstats.entities_triangles += counttriangles;
 }
 

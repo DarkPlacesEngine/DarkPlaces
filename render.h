@@ -111,7 +111,29 @@ void R_Mesh_AddBrushMeshFromPlanes(rmesh_t *mesh, int numplanes, mplane_t *plane
 extern int r_framecount;
 extern mplane_t frustum[5];
 
-extern int c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c_bmodels, c_sprites, c_particles, c_dlights, c_meshs, c_meshelements, c_rt_lights, c_rt_clears, c_rt_scissored, c_rt_shadowmeshes, c_rt_shadowtris, c_rt_lightmeshes, c_rt_lighttris, c_rtcached_shadowmeshes, c_rtcached_shadowtris, c_bloom, c_bloomcopies, c_bloomcopypixels, c_bloomdraws, c_bloomdrawpixels;
+typedef struct renderstats_s
+{
+	int entities;
+	int entities_surfaces;
+	int entities_triangles;
+	int world_leafs;
+	int world_portals;
+	int particles;
+	int meshes;
+	int meshes_elements;
+	int lights;
+	int lights_clears;
+	int lights_scissored;
+	int lights_lighttriangles;
+	int lights_shadowtriangles;
+	int lights_dynamicshadowtriangles;
+	int bloom;
+	int bloom_copypixels;
+	int bloom_drawpixels;
+}
+renderstats_t;
+
+extern renderstats_t renderstats;
 
 // brightness of world lightmaps and related lighting
 // (often reduced when world rtlights are enabled)

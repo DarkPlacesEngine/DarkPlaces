@@ -923,6 +923,7 @@ void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f,
 	if (maxshadowelements < nummarktris * 24)
 		R_Shadow_ResizeShadowElements((nummarktris + 256) * 24);
 	tris = R_Shadow_ConstructShadowVolume(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, varray_vertex3f2, projectorigin, projectdistance, nummarktris, marktris);
+	renderstats.lights_dynamicshadowtriangles += tris;
 	R_Shadow_RenderVolume(outverts, tris, varray_vertex3f2, shadowelements);
 }
 
@@ -972,6 +973,7 @@ void R_Shadow_RenderVolume(int numvertices, int numtriangles, const float *verte
 		Mod_ShadowMesh_AddMesh(r_shadow_mempool, r_shadow_compilingrtlight->static_meshchain_shadow, NULL, NULL, NULL, vertex3f, NULL, NULL, NULL, NULL, numtriangles, element3i);
 		return;
 	}
+	renderstats.lights_shadowtriangles += numtriangles;
 	memset(&m, 0, sizeof(m));
 	m.pointer_vertex = vertex3f;
 	R_Mesh_State(&m);
@@ -982,15 +984,11 @@ void R_Shadow_RenderVolume(int numvertices, int numtriangles, const float *verte
 		qglCullFace(GL_BACK); // quake is backwards, this culls front faces
 		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
 		R_Mesh_Draw(0, numvertices, numtriangles, element3i);
-		c_rt_shadowmeshes++;
-		c_rt_shadowtris += numtriangles;
 		// increment stencil if frontface is behind depthbuffer
 		qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 		qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
 	}
 	R_Mesh_Draw(0, numvertices, numtriangles, element3i);
-	c_rt_shadowmeshes++;
-	c_rt_shadowtris += numtriangles;
 	GL_LockArrays(0, 0);
 }
 
@@ -1173,7 +1171,7 @@ void R_Shadow_Stage_StencilShadowVolumes(void)
 		qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 	}
 	GL_Clear(GL_STENCIL_BUFFER_BIT);
-	c_rt_clears++;
+	renderstats.lights_clears++;
 }
 
 void R_Shadow_Stage_Lighting(int stenciltest)
@@ -1411,7 +1409,7 @@ qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	GL_Scissor(ix1, vid.height - iy2, ix2 - ix1, iy2 - iy1);
 	//qglScissor(ix1, iy1, ix2 - ix1, iy2 - iy1);
 	//qglEnable(GL_SCISSOR_TEST);
-	c_rt_scissored++;
+	renderstats.lights_scissored++;
 	return false;
 }
 
@@ -1659,8 +1657,6 @@ static void R_Shadow_RenderSurfacesLighting_Light_GLSL(const entity_render_t *en
 		R_Mesh_TexCoordPointer(3, 3, rsurface_normal3f);
 		GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 		R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
-		c_rt_lightmeshes++;
-		c_rt_lighttris += surface->num_triangles;
 		GL_LockArrays(0, 0);
 	}
 }
@@ -1843,8 +1839,6 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3(const entity_render_t *en
 				GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
 				GL_LockArrays(0, 0);
-				c_rt_lightmeshes++;
-				c_rt_lighttris += surface->num_triangles;
 
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = rsurface_vertex3f;
@@ -1873,8 +1867,6 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3(const entity_render_t *en
 			{
 				GL_Color(bound(0, color2[0], 1), bound(0, color2[1], 1), bound(0, color2[2], 1), 1);
 				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
-				c_rt_lightmeshes++;
-				c_rt_lighttris += surface->num_triangles;
 			}
 			GL_LockArrays(0, 0);
 		}
@@ -1916,8 +1908,6 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3(const entity_render_t *en
 				GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
 				GL_LockArrays(0, 0);
-				c_rt_lightmeshes++;
-				c_rt_lighttris += surface->num_triangles;
 
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = rsurface_vertex3f;
@@ -1956,8 +1946,6 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3(const entity_render_t *en
 				GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
 				GL_LockArrays(0, 0);
-				c_rt_lightmeshes++;
-				c_rt_lighttris += surface->num_triangles;
 
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = rsurface_vertex3f;
@@ -1974,8 +1962,6 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3(const entity_render_t *en
 				GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
 				GL_LockArrays(0, 0);
-				c_rt_lightmeshes++;
-				c_rt_lighttris += surface->num_triangles;
 
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = rsurface_vertex3f;
@@ -2014,8 +2000,6 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3(const entity_render_t *en
 				GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
 				GL_LockArrays(0, 0);
-				c_rt_lightmeshes++;
-				c_rt_lighttris += surface->num_triangles;
 
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = rsurface_vertex3f;
@@ -2067,8 +2051,6 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3(const entity_render_t *en
 				GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
 				GL_LockArrays(0, 0);
-				c_rt_lightmeshes++;
-				c_rt_lighttris += surface->num_triangles;
 
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = rsurface_vertex3f;
@@ -2115,8 +2097,6 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3(const entity_render_t *en
 				GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
 				GL_LockArrays(0, 0);
-				c_rt_lightmeshes++;
-				c_rt_lighttris += surface->num_triangles;
 
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = rsurface_vertex3f;
@@ -2133,8 +2113,6 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3(const entity_render_t *en
 				GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
 				GL_LockArrays(0, 0);
-				c_rt_lightmeshes++;
-				c_rt_lighttris += surface->num_triangles;
 
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = rsurface_vertex3f;
@@ -2163,8 +2141,6 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3(const entity_render_t *en
 			{
 				GL_Color(bound(0, color2[0], 1), bound(0, color2[1], 1), bound(0, color2[2], 1), 1);
 				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
-				c_rt_lightmeshes++;
-				c_rt_lighttris += surface->num_triangles;
 			}
 			GL_LockArrays(0, 0);
 		}
@@ -2194,8 +2170,6 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3(const entity_render_t *en
 					GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
 					GL_LockArrays(0, 0);
-					c_rt_lightmeshes++;
-					c_rt_lighttris += surface->num_triangles;
 
 					memset(&m, 0, sizeof(m));
 					m.pointer_vertex = rsurface_vertex3f;
@@ -2208,11 +2182,7 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3(const entity_render_t *en
 					// 0.25 * 0.25 = 0.0625 (this is another pass)
 					// 0.0625 * 0.0625 = 0.00390625 (this is another pass)
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
-					c_rt_lightmeshes++;
-					c_rt_lighttris += surface->num_triangles;
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
-					c_rt_lightmeshes++;
-					c_rt_lighttris += surface->num_triangles;
 					GL_LockArrays(0, 0);
 
 					memset(&m, 0, sizeof(m));
@@ -2230,8 +2200,6 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3(const entity_render_t *en
 					GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
 					GL_LockArrays(0, 0);
-					c_rt_lightmeshes++;
-					c_rt_lighttris += surface->num_triangles;
 
 					memset(&m, 0, sizeof(m));
 					m.pointer_vertex = rsurface_vertex3f;
@@ -2270,8 +2238,6 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3(const entity_render_t *en
 					GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
 					GL_LockArrays(0, 0);
-					c_rt_lightmeshes++;
-					c_rt_lighttris += surface->num_triangles;
 
 					memset(&m, 0, sizeof(m));
 					m.pointer_vertex = rsurface_vertex3f;
@@ -2284,11 +2250,7 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3(const entity_render_t *en
 					// 0.25 * 0.25 = 0.0625 (this is another pass)
 					// 0.0625 * 0.0625 = 0.00390625 (this is another pass)
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
-					c_rt_lightmeshes++;
-					c_rt_lighttris += surface->num_triangles;
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
-					c_rt_lightmeshes++;
-					c_rt_lighttris += surface->num_triangles;
 					GL_LockArrays(0, 0);
 
 					memset(&m, 0, sizeof(m));
@@ -2325,8 +2287,6 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3(const entity_render_t *en
 					GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
 					GL_LockArrays(0, 0);
-					c_rt_lightmeshes++;
-					c_rt_lighttris += surface->num_triangles;
 
 					memset(&m, 0, sizeof(m));
 					m.pointer_vertex = rsurface_vertex3f;
@@ -2339,11 +2299,7 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3(const entity_render_t *en
 					// 0.25 * 0.25 = 0.0625 (this is another pass)
 					// 0.0625 * 0.0625 = 0.00390625 (this is another pass)
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
-					c_rt_lightmeshes++;
-					c_rt_lighttris += surface->num_triangles;
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
-					c_rt_lightmeshes++;
-					c_rt_lighttris += surface->num_triangles;
 					GL_LockArrays(0, 0);
 
 					memset(&m, 0, sizeof(m));
@@ -2369,8 +2325,6 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3(const entity_render_t *en
 					GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
 					GL_LockArrays(0, 0);
-					c_rt_lightmeshes++;
-					c_rt_lighttris += surface->num_triangles;
 
 					memset(&m, 0, sizeof(m));
 					m.pointer_vertex = rsurface_vertex3f;
@@ -2398,8 +2352,6 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3(const entity_render_t *en
 				{
 					GL_Color(bound(0, color2[0], 1), bound(0, color2[1], 1), bound(0, color2[2], 1), 1);
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
-					c_rt_lightmeshes++;
-					c_rt_lighttris += surface->num_triangles;
 				}
 				GL_LockArrays(0, 0);
 			}
@@ -2500,8 +2452,6 @@ static void R_Shadow_RenderSurfacesLighting_Light_Vertex(const entity_render_t *
 			GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 			R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
 			GL_LockArrays(0, 0);
-			c_rt_lightmeshes++;
-			c_rt_lighttris += surface->num_triangles;
 		}
 	}
 }
@@ -2684,6 +2634,7 @@ void R_Shadow_DrawEntityShadow(entity_render_t *ent, rtlight_t *rtlight, int num
 			R_Mesh_Matrix(&ent->matrix);
 			for (mesh = rtlight->static_meshchain_shadow;mesh;mesh = mesh->next)
 			{
+				renderstats.lights_shadowtriangles += mesh->numtriangles;
 				R_Mesh_VertexPointer(mesh->vertex3f);
 				GL_LockArrays(0, mesh->numverts);
 				if (r_shadowstage == R_SHADOWSTAGE_STENCIL)
@@ -2692,15 +2643,11 @@ void R_Shadow_DrawEntityShadow(entity_render_t *ent, rtlight_t *rtlight, int num
 					qglCullFace(GL_BACK); // quake is backwards, this culls front faces
 					qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
 					R_Mesh_Draw(0, mesh->numverts, mesh->numtriangles, mesh->element3i);
-					c_rtcached_shadowmeshes++;
-					c_rtcached_shadowtris += mesh->numtriangles;
 					// increment stencil if frontface is behind depthbuffer
 					qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 					qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
 				}
 				R_Mesh_Draw(0, mesh->numverts, mesh->numtriangles, mesh->element3i);
-				c_rtcached_shadowmeshes++;
-				c_rtcached_shadowtris += mesh->numtriangles;
 				GL_LockArrays(0, 0);
 			}
 		}
@@ -2876,7 +2823,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 		return;
 
 	R_Shadow_Stage_ActiveLight(rtlight);
-	c_rt_lights++;
+	renderstats.lights++;
 
 	usestencil = false;
 	if (numshadowentities && (!visible || r_shadow_visiblelighting.integer == 1) && gl_stencil && rtlight->shadow && (rtlight->isstatic ? r_rtworldshadows : r_rtdlightshadows))

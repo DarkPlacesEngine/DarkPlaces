@@ -519,43 +519,17 @@ void R_TimeReport_Start(void)
 	{
 		speedstringcount = 0;
 		sprintf(r_speeds_string + strlen(r_speeds_string), "org:'%+8.2f %+8.2f %+8.2f' dir:'%+2.3f %+2.3f %+2.3f'\n", r_vieworigin[0], r_vieworigin[1], r_vieworigin[2], r_viewforward[0], r_viewforward[1], r_viewforward[2]);
-		sprintf(r_speeds_string + strlen(r_speeds_string), "world:%6i faces%6i nodes%6i leafs%6i dlitwalls\n", c_faces, c_nodes, c_leafs, c_light_polys);
-		sprintf(r_speeds_string + strlen(r_speeds_string), "%5i models%5i bmodels%5i sprites%6i particles%4i dlights\n", c_models, c_bmodels, c_sprites, c_particles, c_dlights);
-		sprintf(r_speeds_string + strlen(r_speeds_string), "%6i modeltris%6i meshs%6i meshtris\n", c_alias_polys, c_meshs, c_meshelements / 3);
-		sprintf(r_speeds_string + strlen(r_speeds_string), "bloom %s: %i copies (%i pixels) %i draws (%i pixels)\n", c_bloom ? "active" : "inactive", c_bloomcopies, c_bloomcopypixels, c_bloomdraws, c_bloomdrawpixels);
-		sprintf(r_speeds_string + strlen(r_speeds_string), "realtime lighting:%4i lights%4i clears%4i scissored\n", c_rt_lights, c_rt_clears, c_rt_scissored);
-		sprintf(r_speeds_string + strlen(r_speeds_string), "dynamic: %6i shadowmeshes%6i shadowtris%6i lightmeshes%6i lighttris\n", c_rt_shadowmeshes, c_rt_shadowtris, c_rt_lightmeshes, c_rt_lighttris);
-		sprintf(r_speeds_string + strlen(r_speeds_string), "precomputed: %6i shadowmeshes%6i shadowtris\n", c_rtcached_shadowmeshes, c_rtcached_shadowtris);
-
-		c_alias_polys = 0;
-		c_light_polys = 0;
-		c_faces = 0;
-		c_nodes = 0;
-		c_leafs = 0;
-		c_models = 0;
-		c_bmodels = 0;
-		c_sprites = 0;
-		c_particles = 0;
-		c_dlights = 0;
-		c_meshs = 0;
-		c_meshelements = 0;
-		c_rt_lights = 0;
-		c_rt_clears = 0;
-		c_rt_scissored = 0;
-		c_rt_shadowmeshes = 0;
-		c_rt_shadowtris = 0;
-		c_rt_lightmeshes = 0;
-		c_rt_lighttris = 0;
-		c_rtcached_shadowmeshes = 0;
-		c_rtcached_shadowtris = 0;
-		c_bloom = 0;
-		c_bloomcopies = 0;
-		c_bloomcopypixels = 0;
-		c_bloomdraws = 0;
-		c_bloomdrawpixels = 0;
+		sprintf(r_speeds_string + strlen(r_speeds_string), "%5i entities%6i surfaces%6i triangles%5i leafs%5i portals%6i particles\n", renderstats.entities, renderstats.entities_surfaces, renderstats.entities_triangles, renderstats.world_leafs, renderstats.world_portals, renderstats.particles);
+		sprintf(r_speeds_string + strlen(r_speeds_string), "%4i lights%4i clears%4i scissored%7i light%7i shadow%i7 dynamic\n", renderstats.lights, renderstats.lights_clears, renderstats.lights_scissored, renderstats.lights_lighttriangles, renderstats.lights_shadowtriangles, renderstats.lights_dynamicshadowtriangles);
+		if (renderstats.bloom)
+			sprintf(r_speeds_string + strlen(r_speeds_string), "rendered%6i meshes%8i triangles bloompixels%8i copied%8i drawn\n", renderstats.meshes, renderstats.meshes_elements / 3, renderstats.bloom_copypixels, renderstats.bloom_drawpixels);
+		else
+			sprintf(r_speeds_string + strlen(r_speeds_string), "rendered%6i meshes%8i triangles\n", renderstats.meshes, renderstats.meshes_elements / 3);
 
 		r_timereport_start = Sys_DoubleTime();
 	}
+
+	memset(&renderstats, 0, sizeof(renderstats));
 }
 
 void R_TimeReport_End(void)
