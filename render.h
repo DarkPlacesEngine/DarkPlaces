@@ -167,7 +167,6 @@ extern float r_view_fov_y;
 extern matrix4x4_t r_view_matrix;
 
 extern	mleaf_t		*r_viewleaf, *r_oldviewleaf;
-extern	unsigned short	d_lightstylevalue[256];	// 8.8 fraction of base light value
 
 extern	qboolean	envmap;
 

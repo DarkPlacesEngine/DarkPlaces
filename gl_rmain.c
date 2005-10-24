@@ -71,9 +71,6 @@ matrix4x4_t r_view_matrix;
 //
 refdef_t r_refdef;
 
-// 8.8 fraction of base light value
-unsigned short d_lightstylevalue[256];
-
 cvar_t r_showtris = {0, "r_showtris", "0"};
 cvar_t r_drawentities = {0, "r_drawentities","1"};
 cvar_t r_drawviewmodel = {0, "r_drawviewmodel","1"};
@@ -939,7 +936,6 @@ void R_RenderView(void)
 	R_ClearScreen();
 	R_Textures_Frame();
 	R_UpdateFog();
-	R_UpdateLights();
 	R_TimeReport("setup");
 
 	qglDepthFunc(GL_LEQUAL);
@@ -1457,7 +1453,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 					// would normally be baked into the lightmaptexture must be
 					// applied to the color
 					if (ent->model->type == mod_brushq3)
-						colorscale *= d_lightstylevalue[0] * (1.0f / 256.0f);
+						colorscale *= r_refdef.lightstylevalue[0] * (1.0f / 256.0f);
 					// transparent and fullbright are not affected by r_lightmapintensity
 					if (!(t->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
 						colorscale *= r_lightmapintensity;
@@ -1655,23 +1651,23 @@ void RSurf_SetColorPointer(const entity_render_t *ent, const msurface_t *surface
 				const qbyte *lm = surface->lightmapinfo->samples + (surface->groupmesh->data_lightmapoffsets + surface->num_firstvertex)[i];
 				if (lm)
 				{
-					float scale = d_lightstylevalue[surface->lightmapinfo->styles[0]] * (1.0f / 32768.0f);
+					float scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[0]] * (1.0f / 32768.0f);
 					VectorScale(lm, scale, c);
 					if (surface->lightmapinfo->styles[1] != 255)
 					{
 						int size3 = ((surface->lightmapinfo->extents[0]>>4)+1)*((surface->lightmapinfo->extents[1]>>4)+1)*3;
 						lm += size3;
-						scale = d_lightstylevalue[surface->lightmapinfo->styles[1]] * (1.0f / 32768.0f);
+						scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[1]] * (1.0f / 32768.0f);
 						VectorMA(c, scale, lm, c);
 						if (surface->lightmapinfo->styles[2] != 255)
 						{
 							lm += size3;
-							scale = d_lightstylevalue[surface->lightmapinfo->styles[2]] * (1.0f / 32768.0f);
+							scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[2]] * (1.0f / 32768.0f);
 							VectorMA(c, scale, lm, c);
 							if (surface->lightmapinfo->styles[3] != 255)
 							{
 								lm += size3;
-								scale = d_lightstylevalue[surface->lightmapinfo->styles[3]] * (1.0f / 32768.0f);
+								scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[3]] * (1.0f / 32768.0f);
 								VectorMA(c, scale, lm, c);
 							}
 						}
@@ -2060,9 +2056,9 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	{
 		for (i = 0;i < model->brushq1.light_styles;i++)
 		{
-			if (model->brushq1.light_stylevalue[i] != d_lightstylevalue[model->brushq1.light_style[i]])
+			if (model->brushq1.light_stylevalue[i] != r_refdef.lightstylevalue[model->brushq1.light_style[i]])
 			{
-				model->brushq1.light_stylevalue[i] = d_lightstylevalue[model->brushq1.light_style[i]];
+				model->brushq1.light_stylevalue[i] = r_refdef.lightstylevalue[model->brushq1.light_style[i]];
 				if ((surfacechain = model->brushq1.light_styleupdatechains[i]))
 					for (;(surface = *surfacechain);surfacechain++)
 						surface->cached_dlight = true;

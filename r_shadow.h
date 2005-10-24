@@ -55,7 +55,7 @@ void R_Shadow_UpdateWorldLightSelection(void);
 
 extern rtlight_t *r_shadow_compilingrtlight;
 
-void R_RTLight_UpdateFromDLight(rtlight_t *rtlight, const dlight_t *light, int isstatic);
+void R_RTLight_Update(dlight_t *light, int isstatic);
 void R_RTLight_Compile(rtlight_t *rtlight);
 void R_RTLight_Uncompile(rtlight_t *rtlight);
 

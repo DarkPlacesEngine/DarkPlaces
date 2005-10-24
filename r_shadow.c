@@ -1074,11 +1074,11 @@ static matrix4x4_t r_shadow_entitytolight;
 static matrix4x4_t r_shadow_entitytoattenuationxyz;
 // this transforms only the Z to S, and T is always 0.5
 static matrix4x4_t r_shadow_entitytoattenuationz;
-// rtlight->color * r_dlightstylevalue[rtlight->style] / 256 * r_shadow_lightintensityscale.value * ent->colormod * ent->alpha
+// rtlight->color * r_refdef.lightstylevalue[rtlight->style] / 256 * r_shadow_lightintensityscale.value * ent->colormod * ent->alpha
 static vec3_t r_shadow_entitylightcolorbase;
-// rtlight->color * r_dlightstylevalue[rtlight->style] / 256 * r_shadow_lightintensityscale.value * ent->colormap_pantscolor * ent->alpha
+// rtlight->color * r_refdef.lightstylevalue[rtlight->style] / 256 * r_shadow_lightintensityscale.value * ent->colormap_pantscolor * ent->alpha
 static vec3_t r_shadow_entitylightcolorpants;
-// rtlight->color * r_dlightstylevalue[rtlight->style] / 256 * r_shadow_lightintensityscale.value * ent->colormap_shirtcolor * ent->alpha
+// rtlight->color * r_refdef.lightstylevalue[rtlight->style] / 256 * r_shadow_lightintensityscale.value * ent->colormap_shirtcolor * ent->alpha
 static vec3_t r_shadow_entitylightcolorshirt;
 
 static int r_shadow_lightpermutation;
@@ -2479,10 +2479,11 @@ void R_Shadow_RenderSurfacesLighting(const entity_render_t *ent, const texture_t
 	}
 }
 
-void R_RTLight_UpdateFromDLight(rtlight_t *rtlight, const dlight_t *light, int isstatic)
+void R_RTLight_Update(dlight_t *light, int isstatic)
 {
 	int j, k;
 	float scale;
+	rtlight_t *rtlight = &light->rtlight;
 	R_RTLight_Uncompile(rtlight);
 	memset(rtlight, 0, sizeof(*rtlight));
 
@@ -2521,7 +2522,7 @@ void R_RTLight_UpdateFromDLight(rtlight_t *rtlight, const dlight_t *light, int i
 
 	rtlight->lightmap_cullradius = bound(0, rtlight->radius, 2048.0f);
 	rtlight->lightmap_cullradius2 = rtlight->lightmap_cullradius * rtlight->lightmap_cullradius;
-	VectorScale(rtlight->color, rtlight->radius * (rtlight->style >= 0 ? d_lightstylevalue[rtlight->style] : 128) * 0.125f, rtlight->lightmap_light);
+	VectorScale(rtlight->color, rtlight->radius * (rtlight->style >= 0 ? r_refdef.lightstylevalue[rtlight->style] : 128) * 0.125f, rtlight->lightmap_light);
 	rtlight->lightmap_subtract = 1.0f / rtlight->lightmap_cullradius2;
 }
 
@@ -2723,7 +2724,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	if (rtlight->ambientscale + rtlight->diffusescale + rtlight->specularscale < (1.0f / 32768.0f))
 		return;
 
-	f = (rtlight->style >= 0 ? d_lightstylevalue[rtlight->style] : 128) * (1.0f / 256.0f) * r_shadow_lightintensityscale.value;
+	f = (rtlight->style >= 0 ? r_refdef.lightstylevalue[rtlight->style] : 128) * (1.0f / 256.0f) * r_shadow_lightintensityscale.value;
 	VectorScale(rtlight->color, f, lightcolor);
 	if (VectorLength2(lightcolor) < (1.0f / 32768.0f))
 		return;
@@ -2878,8 +2879,8 @@ void R_ShadowVolumeLighting(qboolean visible)
 			if (light->flags & flag)
 				R_DrawRTLight(&light->rtlight, visible);
 	if (r_rtdlight)
-		for (lnum = 0, light = r_dlight;lnum < r_numdlights;lnum++, light++)
-			R_DrawRTLight(&light->rtlight, visible);
+		for (lnum = 0;lnum < r_refdef.numlights;lnum++)
+			R_DrawRTLight(&r_refdef.lights[lnum]->rtlight, visible);
 
 	R_Shadow_Stage_End();
 }
@@ -3041,7 +3042,7 @@ void R_Shadow_UpdateWorldLight(dlight_t *light, vec3_t origin, vec3_t angles, ve
 	light->flags = flags;
 	Matrix4x4_CreateFromQuakeEntity(&light->matrix, light->origin[0], light->origin[1], light->origin[2], light->angles[0], light->angles[1], light->angles[2], 1);
 
-	R_RTLight_UpdateFromDLight(&light->rtlight, light, true);
+	R_RTLight_Update(light, true);
 }
 
 void R_Shadow_FreeWorldLight(dlight_t *light)

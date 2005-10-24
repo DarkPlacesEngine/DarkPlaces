@@ -83,7 +83,7 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 		{
 			bl = intblocklights;
 			for (maps = 0;maps < MAXLIGHTMAPS && surface->lightmapinfo->styles[maps] != 255;maps++, lightmap += size3)
-				for (scale = d_lightstylevalue[surface->lightmapinfo->styles[maps]], i = 0;i < size3;i++)
+				for (scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[maps]], i = 0;i < size3;i++)
 					bl[i] += lightmap[i] * scale;
 		}
 	}
