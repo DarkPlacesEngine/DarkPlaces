@@ -296,6 +296,7 @@ int BoxOnPlaneSide(const vec3_t emins, const vec3_t emaxs, const mplane_t *p)
 	}
 }
 
+#if 0
 int BoxOnPlaneSide_Separate(const vec3_t emins, const vec3_t emaxs, const vec3_t normal, const vec_t dist)
 {
 	switch((normal[0] < 0) | ((normal[1] < 0) << 1) | ((normal[2] < 0) << 2))
@@ -311,6 +312,7 @@ int BoxOnPlaneSide_Separate(const vec3_t emins, const vec3_t emaxs, const vec3_t
 	case 7: return (((normal[0] * emins[0] + normal[1] * emins[1] + normal[2] * emins[2]) >= dist) | (((normal[0] * emaxs[0] + normal[1] * emaxs[1] + normal[2] * emaxs[2]) < dist) << 1));
 	}
 }
+#endif
 
 void BoxPlaneCorners(const vec3_t emins, const vec3_t emaxs, const mplane_t *p, vec3_t outnear, vec3_t outfar)
 {
