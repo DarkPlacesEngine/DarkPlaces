@@ -104,17 +104,19 @@ static void Mod_Q1BSP_AmbientSoundLevelsForPoint(model_t *model, const vec3_t p,
 
 static int Mod_Q1BSP_FindBoxClusters(model_t *model, const vec3_t mins, const vec3_t maxs, int maxclusters, int *clusterlist)
 {
-	int numclusters = 0, side, nodestackindex = 0;
+	int numclusters = 0;
+	int nodestackindex = 0;
 	mnode_t *node, *nodestack[1024];
 	if (!model->brush.num_pvsclusters)
 		return -1;
 	node = model->brush.data_nodes;
 	for (;;)
 	{
+#if 0
 		if (node->plane)
 		{
 			// node - recurse down the BSP tree
-			side = BoxOnPlaneSide(mins, maxs, node->plane) - 1;
+			int side = BoxOnPlaneSide(mins, maxs, node->plane) - 1;
 			if (side < 2)
 			{
 				// box is on one side of plane, take that path
@@ -127,18 +129,38 @@ static int Mod_Q1BSP_FindBoxClusters(model_t *model, const vec3_t mins, const ve
 					nodestack[nodestackindex++] = node->children[0];
 				node = node->children[1];
 			}
+			continue;
 		}
 		else
 		{
-			// leaf - check cluster bit
+			// leaf - add clusterindex to list
 			if (numclusters < maxclusters)
 				clusterlist[numclusters] = ((mleaf_t *)node)->clusterindex;
 			numclusters++;
-			// try another path we didn't take earlier
-			if (nodestackindex == 0)
-				break;
-			node = nodestack[--nodestackindex];
 		}
+#else
+		if (BoxesOverlap(mins, maxs, node->mins, node->maxs))
+		{
+			if (node->plane)
+			{
+				if (nodestackindex < 1024)
+					nodestack[nodestackindex++] = node->children[0];
+				node = node->children[1];
+				continue;
+			}
+			else
+			{
+				// leaf - add clusterindex to list
+				if (numclusters < maxclusters)
+					clusterlist[numclusters] = ((mleaf_t *)node)->clusterindex;
+				numclusters++;
+			}
+		}
+#endif
+		// try another path we didn't take earlier
+		if (nodestackindex == 0)
+			break;
+		node = nodestack[--nodestackindex];
 	}
 	// return number of clusters found (even if more than the maxclusters)
 	return numclusters;
@@ -146,17 +168,18 @@ static int Mod_Q1BSP_FindBoxClusters(model_t *model, const vec3_t mins, const ve
 
 static int Mod_Q1BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3_t mins, const vec3_t maxs)
 {
-	int clusterindex, side, nodestackindex = 0;
+	int nodestackindex = 0;
 	mnode_t *node, *nodestack[1024];
 	if (!model->brush.num_pvsclusters)
 		return true;
 	node = model->brush.data_nodes;
 	for (;;)
 	{
+#if 0
 		if (node->plane)
 		{
 			// node - recurse down the BSP tree
-			side = BoxOnPlaneSide(mins, maxs, node->plane) - 1;
+			int side = BoxOnPlaneSide(mins, maxs, node->plane) - 1;
 			if (side < 2)
 			{
 				// box is on one side of plane, take that path
@@ -169,24 +192,44 @@ static int Mod_Q1BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3
 					nodestack[nodestackindex++] = node->children[0];
 				node = node->children[1];
 			}
+			continue;
 		}
 		else
 		{
 			// leaf - check cluster bit
-			clusterindex = ((mleaf_t *)node)->clusterindex;
+			int clusterindex = ((mleaf_t *)node)->clusterindex;
 			if (CHECKPVSBIT(pvs, clusterindex))
 			{
 				// it is visible, return immediately with the news
 				return true;
 			}
+		}
+#else
+		if (BoxesOverlap(mins, maxs, node->mins, node->maxs))
+		{
+			if (node->plane)
+			{
+				if (nodestackindex < 1024)
+					nodestack[nodestackindex++] = node->children[0];
+				node = node->children[1];
+				continue;
+			}
 			else
 			{
-				// nothing to see here, try another path we didn't take earlier
-				if (nodestackindex == 0)
-					break;
-				node = nodestack[--nodestackindex];
+				// leaf - check cluster bit
+				int clusterindex = ((mleaf_t *)node)->clusterindex;
+				if (CHECKPVSBIT(pvs, clusterindex))
+				{
+					// it is visible, return immediately with the news
+					return true;
+				}
 			}
 		}
+#endif
+		// nothing to see here, try another path we didn't take earlier
+		if (nodestackindex == 0)
+			break;
+		node = nodestack[--nodestackindex];
 	}
 	// it is not visible
 	return false;
@@ -194,17 +237,18 @@ static int Mod_Q1BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3
 
 static int Mod_Q1BSP_BoxTouchingLeafPVS(model_t *model, const qbyte *pvs, const vec3_t mins, const vec3_t maxs)
 {
-	int clusterindex, side, nodestackindex = 0;
+	int nodestackindex = 0;
 	mnode_t *node, *nodestack[1024];
 	if (!model->brush.num_leafs)
 		return true;
 	node = model->brush.data_nodes;
 	for (;;)
 	{
+#if 0
 		if (node->plane)
 		{
 			// node - recurse down the BSP tree
-			side = BoxOnPlaneSide(mins, maxs, node->plane) - 1;
+			int side = BoxOnPlaneSide(mins, maxs, node->plane) - 1;
 			if (side < 2)
 			{
 				// box is on one side of plane, take that path
@@ -217,24 +261,44 @@ static int Mod_Q1BSP_BoxTouchingLeafPVS(model_t *model, const qbyte *pvs, const 
 					nodestack[nodestackindex++] = node->children[0];
 				node = node->children[1];
 			}
+			continue;
 		}
 		else
 		{
 			// leaf - check cluster bit
-			clusterindex = ((mleaf_t *)node) - model->brush.data_leafs;
+			int clusterindex = ((mleaf_t *)node) - model->brush.data_leafs;
 			if (CHECKPVSBIT(pvs, clusterindex))
 			{
 				// it is visible, return immediately with the news
 				return true;
 			}
+		}
+#else
+		if (BoxesOverlap(mins, maxs, node->mins, node->maxs))
+		{
+			if (node->plane)
+			{
+				if (nodestackindex < 1024)
+					nodestack[nodestackindex++] = node->children[0];
+				node = node->children[1];
+				continue;
+			}
 			else
 			{
-				// nothing to see here, try another path we didn't take earlier
-				if (nodestackindex == 0)
-					break;
-				node = nodestack[--nodestackindex];
+				// leaf - check cluster bit
+				int clusterindex = ((mleaf_t *)node) - model->brush.data_leafs;
+				if (CHECKPVSBIT(pvs, clusterindex))
+				{
+					// it is visible, return immediately with the news
+					return true;
+				}
 			}
 		}
+#endif
+		// nothing to see here, try another path we didn't take earlier
+		if (nodestackindex == 0)
+			break;
+		node = nodestack[--nodestackindex];
 	}
 	// it is not visible
 	return false;
@@ -242,15 +306,18 @@ static int Mod_Q1BSP_BoxTouchingLeafPVS(model_t *model, const qbyte *pvs, const 
 
 static int Mod_Q1BSP_BoxTouchingVisibleLeafs(model_t *model, const qbyte *visibleleafs, const vec3_t mins, const vec3_t maxs)
 {
-	int side, nodestackindex = 0;
+	int nodestackindex = 0;
 	mnode_t *node, *nodestack[1024];
+	if (!model->brush.num_leafs)
+		return true;
 	node = model->brush.data_nodes;
 	for (;;)
 	{
+#if 0
 		if (node->plane)
 		{
 			// node - recurse down the BSP tree
-			side = BoxOnPlaneSide(mins, maxs, node->plane) - 1;
+			int side = BoxOnPlaneSide(mins, maxs, node->plane) - 1;
 			if (side < 2)
 			{
 				// box is on one side of plane, take that path
@@ -263,6 +330,7 @@ static int Mod_Q1BSP_BoxTouchingVisibleLeafs(model_t *model, const qbyte *visibl
 					nodestack[nodestackindex++] = node->children[0];
 				node = node->children[1];
 			}
+			continue;
 		}
 		else
 		{
@@ -272,14 +340,32 @@ static int Mod_Q1BSP_BoxTouchingVisibleLeafs(model_t *model, const qbyte *visibl
 				// it is visible, return immediately with the news
 				return true;
 			}
+		}
+#else
+		if (BoxesOverlap(mins, maxs, node->mins, node->maxs))
+		{
+			if (node->plane)
+			{
+				if (nodestackindex < 1024)
+					nodestack[nodestackindex++] = node->children[0];
+				node = node->children[1];
+				continue;
+			}
 			else
 			{
-				// nothing to see here, try another path we didn't take earlier
-				if (nodestackindex == 0)
-					break;
-				node = nodestack[--nodestackindex];
+				// leaf - check if it is visible
+				if (visibleleafs[(mleaf_t *)node - model->brush.data_leafs])
+				{
+					// it is visible, return immediately with the news
+					return true;
+				}
 			}
 		}
+#endif
+		// nothing to see here, try another path we didn't take earlier
+		if (nodestackindex == 0)
+			break;
+		node = nodestack[--nodestackindex];
 	}
 	// it is not visible
 	return false;
@@ -898,7 +984,7 @@ loc0:
 
 					for (maps = 0;maps < MAXLIGHTMAPS && surface->lightmapinfo->styles[maps] != 255;maps++)
 					{
-						scale = d_lightstylevalue[surface->lightmapinfo->styles[maps]];
+						scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[maps]];
 						r00 += lightmap[      0] * scale;g00 += lightmap[      1] * scale;b00 += lightmap[      2] * scale;
 						r01 += lightmap[      3] * scale;g01 += lightmap[      4] * scale;b01 += lightmap[      5] * scale;
 						r10 += lightmap[line3+0] * scale;g10 += lightmap[line3+1] * scale;b10 += lightmap[line3+2] * scale;
@@ -2450,12 +2536,57 @@ static void Mod_Q1BSP_RecursiveRecalcNodeBBox(mnode_t *node)
 	Mod_Q1BSP_RecursiveRecalcNodeBBox(node->children[1]);
 
 	// make combined bounding box from children
-	node->mins[0] = min(node->children[0]->mins[0], node->children[1]->mins[0]);
-	node->mins[1] = min(node->children[0]->mins[1], node->children[1]->mins[1]);
-	node->mins[2] = min(node->children[0]->mins[2], node->children[1]->mins[2]);
-	node->maxs[0] = max(node->children[0]->maxs[0], node->children[1]->maxs[0]);
-	node->maxs[1] = max(node->children[0]->maxs[1], node->children[1]->maxs[1]);
-	node->maxs[2] = max(node->children[0]->maxs[2], node->children[1]->maxs[2]);
+	if (node->plane)
+	{
+		node->mins[0] = min(node->children[0]->mins[0], node->children[1]->mins[0]);
+		node->mins[1] = min(node->children[0]->mins[1], node->children[1]->mins[1]);
+		node->mins[2] = min(node->children[0]->mins[2], node->children[1]->mins[2]);
+		node->maxs[0] = max(node->children[0]->maxs[0], node->children[1]->maxs[0]);
+		node->maxs[1] = max(node->children[0]->maxs[1], node->children[1]->maxs[1]);
+		node->maxs[2] = max(node->children[0]->maxs[2], node->children[1]->maxs[2]);
+	}
+	else if (((mleaf_t *)node->children[0])->clusterindex >= 0)
+	{
+		if (((mleaf_t *)node->children[1])->clusterindex >= 0)
+		{
+			node->mins[0] = min(node->children[0]->mins[0], node->children[1]->mins[0]);
+			node->mins[1] = min(node->children[0]->mins[1], node->children[1]->mins[1]);
+			node->mins[2] = min(node->children[0]->mins[2], node->children[1]->mins[2]);
+			node->maxs[0] = max(node->children[0]->maxs[0], node->children[1]->maxs[0]);
+			node->maxs[1] = max(node->children[0]->maxs[1], node->children[1]->maxs[1]);
+			node->maxs[2] = max(node->children[0]->maxs[2], node->children[1]->maxs[2]);
+		}
+		else
+		{
+			node->mins[0] = node->children[0]->mins[0];
+			node->mins[1] = node->children[0]->mins[1];
+			node->mins[2] = node->children[0]->mins[2];
+			node->maxs[0] = node->children[0]->maxs[0];
+			node->maxs[1] = node->children[0]->maxs[1];
+			node->maxs[2] = node->children[0]->maxs[2];
+		}
+	}
+	else
+	{
+		if (((mleaf_t *)node->children[1])->clusterindex >= 0)
+		{
+			node->mins[0] = node->children[1]->mins[0];
+			node->mins[1] = node->children[1]->mins[1];
+			node->mins[2] = node->children[1]->mins[2];
+			node->maxs[0] = node->children[1]->maxs[0];
+			node->maxs[1] = node->children[1]->maxs[1];
+			node->maxs[2] = node->children[1]->maxs[2];
+		}
+		else
+		{
+			node->mins[0] = 2000000000;
+			node->mins[1] = 2000000000;
+			node->mins[2] = 2000000000;
+			node->maxs[0] = -2000000000;
+			node->maxs[1] = -2000000000;
+			node->maxs[2] = -2000000000;
+		}
+	}
 }
 
 static void Mod_Q1BSP_FinalizePortals(void)
@@ -2466,7 +2597,8 @@ static void Mod_Q1BSP_FinalizePortals(void)
 	mvertex_t *point;
 	mleaf_t *leaf, *endleaf;
 
-	// recalculate bounding boxes for all leafs(because qbsp is very sloppy)
+	// tally up portal and point counts and recalculate bounding boxes for all
+	// leafs (because qbsp is very sloppy)
 	leaf = loadmodel->brush.data_leafs;
 	endleaf = leaf + loadmodel->brush.num_leafs;
 	for (;leaf < endleaf;leaf++)
@@ -2474,31 +2606,6 @@ static void Mod_Q1BSP_FinalizePortals(void)
 		VectorSet(leaf->mins,  2000000000,  2000000000,  2000000000);
 		VectorSet(leaf->maxs, -2000000000, -2000000000, -2000000000);
 	}
-	p = portalchain;
-	while (p)
-	{
-		if (p->numpoints >= 3)
-		{
-			for (i = 0;i < 2;i++)
-			{
-				leaf = (mleaf_t *)p->nodes[i];
-				for (j = 0;j < p->numpoints;j++)
-				{
-					if (leaf->mins[0] > p->points[j*3+0]) leaf->mins[0] = p->points[j*3+0];
-					if (leaf->mins[1] > p->points[j*3+1]) leaf->mins[1] = p->points[j*3+1];
-					if (leaf->mins[2] > p->points[j*3+2]) leaf->mins[2] = p->points[j*3+2];
-					if (leaf->maxs[0] < p->points[j*3+0]) leaf->maxs[0] = p->points[j*3+0];
-					if (leaf->maxs[1] < p->points[j*3+1]) leaf->maxs[1] = p->points[j*3+1];
-					if (leaf->maxs[2] < p->points[j*3+2]) leaf->maxs[2] = p->points[j*3+2];
-				}
-			}
-		}
-		p = p->chain;
-	}
-
-	Mod_Q1BSP_RecursiveRecalcNodeBBox(loadmodel->brush.data_nodes);
-
-	// tally up portal and point counts
 	p = portalchain;
 	numportals = 0;
 	numpoints = 0;
@@ -2529,59 +2636,81 @@ static void Mod_Q1BSP_FinalizePortals(void)
 	{
 		pnext = p->chain;
 
-		// note: this check must match the one above or it will usually corrupt memory
-		// the nodes[0] != nodes[1] check is because leaf 0 is the shared solid leaf, it can have many portals inside with leaf 0 on both sides
-		if (p->numpoints >= 3 && p->nodes[0] != p->nodes[1] && ((mleaf_t *)p->nodes[0])->clusterindex >= 0 && ((mleaf_t *)p->nodes[1])->clusterindex >= 0)
+		if (p->numpoints >= 3 && p->nodes[0] != p->nodes[1])
 		{
-			// first make the back to front portal(forward portal)
-			portal->points = point;
-			portal->numpoints = p->numpoints;
-			portal->plane.dist = p->plane.dist;
-			VectorCopy(p->plane.normal, portal->plane.normal);
-			portal->here = (mleaf_t *)p->nodes[1];
-			portal->past = (mleaf_t *)p->nodes[0];
-			// copy points
-			for (j = 0;j < portal->numpoints;j++)
+			// note: this check must match the one above or it will usually corrupt memory
+			// the nodes[0] != nodes[1] check is because leaf 0 is the shared solid leaf, it can have many portals inside with leaf 0 on both sides
+			if (((mleaf_t *)p->nodes[0])->clusterindex >= 0 && ((mleaf_t *)p->nodes[1])->clusterindex >= 0)
 			{
-				VectorCopy(p->points + j*3, point->position);
-				point++;
+				// first make the back to front portal(forward portal)
+				portal->points = point;
+				portal->numpoints = p->numpoints;
+				portal->plane.dist = p->plane.dist;
+				VectorCopy(p->plane.normal, portal->plane.normal);
+				portal->here = (mleaf_t *)p->nodes[1];
+				portal->past = (mleaf_t *)p->nodes[0];
+				// copy points
+				for (j = 0;j < portal->numpoints;j++)
+				{
+					VectorCopy(p->points + j*3, point->position);
+					point++;
+				}
+				BoxFromPoints(portal->mins, portal->maxs, portal->numpoints, portal->points->position);
+				PlaneClassify(&portal->plane);
+
+				// link into leaf's portal chain
+				portal->next = portal->here->portals;
+				portal->here->portals = portal;
+
+				// advance to next portal
+				portal++;
+
+				// then make the front to back portal(backward portal)
+				portal->points = point;
+				portal->numpoints = p->numpoints;
+				portal->plane.dist = -p->plane.dist;
+				VectorNegate(p->plane.normal, portal->plane.normal);
+				portal->here = (mleaf_t *)p->nodes[0];
+				portal->past = (mleaf_t *)p->nodes[1];
+				// copy points
+				for (j = portal->numpoints - 1;j >= 0;j--)
+				{
+					VectorCopy(p->points + j*3, point->position);
+					point++;
+				}
+				BoxFromPoints(portal->mins, portal->maxs, portal->numpoints, portal->points->position);
+				PlaneClassify(&portal->plane);
+
+				// link into leaf's portal chain
+				portal->next = portal->here->portals;
+				portal->here->portals = portal;
+
+				// advance to next portal
+				portal++;
 			}
-			BoxFromPoints(portal->mins, portal->maxs, portal->numpoints, portal->points->position);
-			PlaneClassify(&portal->plane);
-
-			// link into leaf's portal chain
-			portal->next = portal->here->portals;
-			portal->here->portals = portal;
-
-			// advance to next portal
-			portal++;
-
-			// then make the front to back portal(backward portal)
-			portal->points = point;
-			portal->numpoints = p->numpoints;
-			portal->plane.dist = -p->plane.dist;
-			VectorNegate(p->plane.normal, portal->plane.normal);
-			portal->here = (mleaf_t *)p->nodes[0];
-			portal->past = (mleaf_t *)p->nodes[1];
-			// copy points
-			for (j = portal->numpoints - 1;j >= 0;j--)
+			// add the portal's polygon points to the leaf bounding boxes
+			for (i = 0;i < 2;i++)
 			{
-				VectorCopy(p->points + j*3, point->position);
-				point++;
+				leaf = (mleaf_t *)p->nodes[i];
+				if (leaf->clusterindex >= 0)
+				{
+					for (j = 0;j < p->numpoints;j++)
+					{
+						if (leaf->mins[0] > p->points[j*3+0]) leaf->mins[0] = p->points[j*3+0];
+						if (leaf->mins[1] > p->points[j*3+1]) leaf->mins[1] = p->points[j*3+1];
+						if (leaf->mins[2] > p->points[j*3+2]) leaf->mins[2] = p->points[j*3+2];
+						if (leaf->maxs[0] < p->points[j*3+0]) leaf->maxs[0] = p->points[j*3+0];
+						if (leaf->maxs[1] < p->points[j*3+1]) leaf->maxs[1] = p->points[j*3+1];
+						if (leaf->maxs[2] < p->points[j*3+2]) leaf->maxs[2] = p->points[j*3+2];
+					}
+				}
 			}
-			BoxFromPoints(portal->mins, portal->maxs, portal->numpoints, portal->points->position);
-			PlaneClassify(&portal->plane);
-
-			// link into leaf's portal chain
-			portal->next = portal->here->portals;
-			portal->here->portals = portal;
-
-			// advance to next portal
-			portal++;
 		}
 		FreePortal(p);
 		p = pnext;
 	}
+	// now recalculate the node bounding boxes from the leafs
+	Mod_Q1BSP_RecursiveRecalcNodeBBox(loadmodel->brush.data_nodes);
 }
 
 /*
