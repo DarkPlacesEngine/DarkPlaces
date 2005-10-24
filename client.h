@@ -710,7 +710,6 @@ extern lightstyle_t *cl_lightstyle;
 extern client_state_t cl;
 
 extern void CL_AllocDlight (entity_render_t *ent, matrix4x4_t *matrix, float radius, float red, float green, float blue, float decay, float lifetime, int cubemapnum, int style, int shadowenable, vec_t corona, vec_t coronasizescale, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int flags);
-extern void CL_DecayLights (void);
 
 //=============================================================================
 
@@ -900,6 +899,14 @@ typedef struct refdef_s
 	entity_render_t **entities;
 	int numentities;
 	int maxentities;
+
+	// renderable dynamic lights
+	dlight_t *lights[MAX_DLIGHTS];
+	int numlights;
+
+	// 8.8bit fixed point intensities for light styles
+	// controls intensity of dynamic lights and lightmap layers
+	unsigned short	lightstylevalue[256];	// 8.8 fraction of base light value
 
 	// 2D art drawing queue
 	// TODO: get rid of this

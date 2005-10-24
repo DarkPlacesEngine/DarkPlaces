@@ -235,7 +235,7 @@ typedef struct msurface_lightmapinfo_s
 {
 	// texture mapping properties used by this surface
 	mtexinfo_t *texinfo; // q1bsp
-	// index into d_lightstylevalue array, 255 means not used (black)
+	// index into r_refdef.lightstylevalue array, 255 means not used (black)
 	qbyte styles[MAXLIGHTMAPS]; // q1bsp
 	// RGB lighting data [numstyles][height][width][3]
 	qbyte *samples; // q1bsp

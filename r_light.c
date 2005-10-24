@@ -23,9 +23,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cl_collision.h"
 #include "r_shadow.h"
 
-dlight_t r_dlight[MAX_DLIGHTS];
-int r_numdlights = 0;
-
 cvar_t r_modellights = {CVAR_SAVE, "r_modellights", "4"};
 cvar_t r_vismarklights = {0, "r_vismarklights", "1"};
 cvar_t r_coronas = {CVAR_SAVE, "r_coronas", "1"};
@@ -67,7 +64,7 @@ void r_light_newmap(void)
 {
 	int i;
 	for (i = 0;i < 256;i++)
-		d_lightstylevalue[i] = 264;		// normal light value
+		r_refdef.lightstylevalue[i] = 264;		// normal light value
 }
 
 void R_Light_Init(void)
@@ -77,51 +74,6 @@ void R_Light_Init(void)
 	Cvar_RegisterVariable(&r_coronas);
 	Cvar_RegisterVariable(&gl_flashblend);
 	R_RegisterModule("R_Light", r_light_start, r_light_shutdown, r_light_newmap);
-}
-
-/*
-==================
-R_UpdateLights
-==================
-*/
-void R_UpdateLights(void)
-{
-	float frac;
-	int i, j, k, l;
-
-// light animations
-// 'm' is normal light, 'a' is no light, 'z' is double bright
-	i = (int)(cl.time * 10);
-	frac = (cl.time * 10) - i;
-	for (j = 0;j < MAX_LIGHTSTYLES;j++)
-	{
-		if (!cl_lightstyle || !cl_lightstyle[j].length)
-		{
-			d_lightstylevalue[j] = 256;
-			continue;
-		}
-		k = i % cl_lightstyle[j].length;
-		l = (i-1) % cl_lightstyle[j].length;
-		k = cl_lightstyle[j].map[k] - 'a';
-		l = cl_lightstyle[j].map[l] - 'a';
-		d_lightstylevalue[j] = ((k*frac)+(l*(1-frac)))*22;
-	}
-
-	r_numdlights = 0;
-
-	if (!r_dynamic.integer || !cl_dlights)
-		return;
-
-	// TODO: optimize to not scan whole cl_dlights array if possible
-	for (i = 0;i < MAX_DLIGHTS;i++)
-	{
-		if (cl_dlights[i].radius > 0)
-		{
-			R_RTLight_UpdateFromDLight(&cl_dlights[i].rtlight, &cl_dlights[i], false);
-			// FIXME: use pointer instead of copy
-			r_dlight[r_numdlights++] = cl_dlights[i];
-		}
-	}
 }
 
 void R_DrawCoronas(void)
@@ -143,8 +95,9 @@ void R_DrawCoronas(void)
 			R_DrawSprite(GL_ONE, GL_ONE, lightcorona, true, light->rtlight.shadoworigin, r_viewright, r_viewup, scale, -scale, -scale, scale, light->rtlight.color[0] * cscale, light->rtlight.color[1] * cscale, light->rtlight.color[2] * cscale, 1);
 		}
 	}
-	for (i = 0, light = r_dlight;i < r_numdlights;i++, light++)
+	for (i = 0;i < r_refdef.numlights;i++)
 	{
+		light = r_refdef.lights[i];
 		if ((light->flags & flag) && light->corona * r_coronas.value > 0 && (dist = (DotProduct(light->origin, r_viewforward) - viewdist)) >= 24.0f && CL_TraceBox(light->origin, vec3_origin, vec3_origin, r_vieworigin, true, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
 		{
 			cscale = light->corona * r_coronas.value * 0.25f;
@@ -190,13 +143,13 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 		for (i = 0;i < r_refdef.worldmodel->brushq1.numlights;i++)
 		{
 			sl = r_refdef.worldmodel->brushq1.lights + i;
-			if (d_lightstylevalue[sl->style] > 0)
+			if (r_refdef.lightstylevalue[sl->style] > 0)
 			{
 				VectorSubtract (p, sl->origin, v);
 				f = ((1.0f / (DotProduct(v, v) * sl->falloff + sl->distbias)) - sl->subtract);
 				if (f > 0 && CL_TraceBox(p, vec3_origin, vec3_origin, sl->origin, false, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
 				{
-					f *= d_lightstylevalue[sl->style] * (1.0f / 65536.0f);
+					f *= r_refdef.lightstylevalue[sl->style] * (1.0f / 65536.0f);
 					if (f > 0)
 						VectorMA(ambientcolor, f, sl->light, ambientcolor);
 				}
@@ -210,9 +163,10 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 		float f, v[3];
 		dlight_t *light;
 		// FIXME: this really should handle dlights as diffusecolor/diffusenormal somehow
-		for (i = 0;i < r_numdlights;i++)
+		// FIXME: this should be updated to match rtlight falloff!
+		for (i = 0;i < r_refdef.numlights;i++)
 		{
-			light = r_dlight + i;
+			light = r_refdef.lights[i];
 			VectorSubtract(p, light->origin, v);
 			f = DotProduct(v, v);
 			if (f < light->rtlight.lightmap_cullradius2 && CL_TraceBox(p, vec3_origin, vec3_origin, light->origin, false, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
@@ -284,7 +238,7 @@ int R_LightModel(float *ambient4f, float *diffusecolor, float *diffusenormal, co
 	for (i = 0;i < ent->numentlights;i++)
 	{
 		sl = r_refdef.worldmodel->brushq1.lights + ent->entlights[i];
-		stylescale = d_lightstylevalue[sl->style] * (1.0f / 65536.0f);
+		stylescale = r_refdef.lightstylevalue[sl->style] * (1.0f / 65536.0f);
 		VectorSubtract (ent->origin, sl->origin, v);
 		f = ((1.0f / (DotProduct(v, v) * sl->falloff + sl->distbias)) - sl->subtract) * stylescale;
 		VectorScale(sl->light, f, ambientcolor);
@@ -334,9 +288,9 @@ int R_LightModel(float *ambient4f, float *diffusecolor, float *diffusenormal, co
 	if (ent->flags & RENDER_TRANSPARENT)
 	{
 		// FIXME: this dlighting doesn't look like rtlights
-		for (i = 0;i < r_numdlights;i++)
+		for (i = 0;i < r_refdef.numlights;i++)
 		{
-			light = r_dlight + i;
+			light = r_refdef.lights[i];
 			VectorCopy(light->origin, v);
 			if (v[0] < ent->mins[0]) v[0] = ent->mins[0];if (v[0] > ent->maxs[0]) v[0] = ent->maxs[0];
 			if (v[1] < ent->mins[1]) v[1] = ent->mins[1];if (v[1] > ent->maxs[1]) v[1] = ent->maxs[1];
@@ -385,7 +339,7 @@ int R_LightModel(float *ambient4f, float *diffusecolor, float *diffusenormal, co
 						Matrix4x4_Transform(&ent->inversematrix, light->origin, nl->origin);
 						/*
 						Con_Printf("%i %s : %f %f %f : %f %f %f\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n"
-						, rd - r_dlight, ent->model->name
+						, rd - cl_dlights, ent->model->name
 						, light->origin[0], light->origin[1], light->origin[2]
 						, nl->origin[0], nl->origin[1], nl->origin[2]
 						, ent->inversematrix.m[0][0], ent->inversematrix.m[0][1], ent->inversematrix.m[0][2], ent->inversematrix.m[0][3]

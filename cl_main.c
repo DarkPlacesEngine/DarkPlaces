@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cl_collision.h"
 #include "cl_video.h"
 #include "image.h"
+#include "r_shadow.h"
 
 // we need to declare some mouse variables here, because the menu system
 // references them even when on a unix system.
@@ -83,6 +84,7 @@ int cl_max_beams;
 int cl_max_dlights;
 int cl_max_lightstyle;
 int cl_max_brushmodel_entities;
+int cl_activedlights;
 
 entity_t *cl_entities;
 qbyte *cl_entities_active;
@@ -150,6 +152,7 @@ void CL_ClearState(void)
 	cl_max_dlights = MAX_DLIGHTS;
 	cl_max_lightstyle = MAX_LIGHTSTYLES;
 	cl_max_brushmodel_entities = MAX_EDICTS;
+	cl_activedlights = 0;
 
 	cl_entities = (entity_t *)Mem_Alloc(cl_mempool, cl_max_entities * sizeof(entity_t));
 	cl_entities_active = (qbyte *)Mem_Alloc(cl_mempool, cl_max_brushmodel_entities * sizeof(qbyte));
@@ -492,7 +495,7 @@ void CL_AllocDlight(entity_render_t *ent, matrix4x4_t *matrix, float radius, flo
 	if (ent)
 	{
 		dl = cl_dlights;
-		for (i = 0;i < MAX_DLIGHTS;i++, dl++)
+		for (i = 0;i < cl_activedlights;i++, dl++)
 			if (dl->ent == ent)
 				goto dlightsetup;
 	}
@@ -500,9 +503,15 @@ void CL_AllocDlight(entity_render_t *ent, matrix4x4_t *matrix, float radius, flo
 
 // then look for anything else
 	dl = cl_dlights;
-	for (i = 0;i < MAX_DLIGHTS;i++, dl++)
+	for (i = 0;i < cl_activedlights;i++, dl++)
 		if (!dl->radius)
 			goto dlightsetup;
+	// if we hit the end of the active dlights and found no gaps, add a new one
+	if (i < MAX_DLIGHTS)
+	{
+		cl_activedlights = i + 1;
+		goto dlightsetup;
+	}
 
 	// unable to find one
 	return;
@@ -539,16 +548,55 @@ dlightsetup:
 	dl->specularscale = specularscale;
 }
 
-void CL_DecayLights(void)
+void CL_UpdateLights(void)
 {
-	int i;
+	int i, j, k, l, oldmax;
 	dlight_t *dl;
-	float time;
+	float time, frac, f;
+
+	r_refdef.numlights = 0;
 
 	time = cl.time - cl.oldtime;
-	for (i = 0, dl = cl_dlights;i < MAX_DLIGHTS;i++, dl++)
+	oldmax = cl_activedlights;
+	cl_activedlights = 0;
+	for (i = 0, dl = cl_dlights;i < oldmax;i++, dl++)
+	{
 		if (dl->radius)
-			dl->radius = (cl.time < dl->die) ? max(0, dl->radius - time * dl->decay) : 0;
+		{
+			f = dl->radius - time * dl->decay;
+			if (cl.time < dl->die && f > 0)
+			{
+				dl->radius = dl->radius - time * dl->decay;
+				cl_activedlights = i + 1;
+				if (r_dynamic.integer)
+				{
+					R_RTLight_Update(dl, false);
+					r_refdef.lights[r_refdef.numlights++] = dl;
+				}
+			}
+			else
+				dl->radius = 0;
+		}
+	}
+
+// light animations
+// 'm' is normal light, 'a' is no light, 'z' is double bright
+	f = cl.time * 10;
+	i = (int)floor(f);
+	frac = f - i;
+	for (j = 0;j < MAX_LIGHTSTYLES;j++)
+	{
+		if (!cl_lightstyle || !cl_lightstyle[j].length)
+		{
+			r_refdef.lightstylevalue[j] = 256;
+			continue;
+		}
+		k = i % cl_lightstyle[j].length;
+		l = (i-1) % cl_lightstyle[j].length;
+		k = cl_lightstyle[j].map[k] - 'a';
+		l = cl_lightstyle[j].map[l] - 'a';
+		r_refdef.lightstylevalue[j] = ((k*frac)+(l*(1-frac)))*22;
+	}
 }
 
 #define MAXVIEWMODELS 32
@@ -1301,7 +1349,7 @@ int CL_ReadFromServer(void)
 	{
 		// prepare for a new frame
 		CL_LerpPlayer(CL_LerpPoint());
-		CL_DecayLights();
+		CL_UpdateLights();
 		CL_ClearTempEntities();
 		V_DriftPitch();
 		V_FadeViewFlashs();
