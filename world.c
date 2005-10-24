@@ -521,6 +521,28 @@ trace_t SV_ClipMoveToEntity(prvm_edict_t *ent, const vec3_t start, const vec3_t 
 	return trace;
 }
 
+/*
+==================
+SV_ClipMoveToWorld
+==================
+*/
+trace_t SV_ClipMoveToWorld(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int movetype, int hitsupercontents)
+{
+	trace_t trace;
+	float starttransformedmins[3], starttransformedmaxs[3], endtransformedmins[3], endtransformedmaxs[3];
+	memset(&trace, 0, sizeof(trace));
+	trace.fraction = trace.realfraction = 1;
+	VectorAdd(start, maxs, starttransformedmaxs);
+	VectorAdd(end, maxs, endtransformedmaxs);
+	VectorAdd(start, mins, starttransformedmins);
+	VectorAdd(end, mins, endtransformedmins);
+	sv.worldmodel->TraceBox(sv.worldmodel, 0, &trace, starttransformedmins, starttransformedmaxs, endtransformedmins, endtransformedmaxs, hitsupercontents);
+	trace.fraction = bound(0, trace.fraction, 1);
+	trace.realfraction = bound(0, trace.realfraction, 1);
+	VectorLerp(start, trace.fraction, end, trace.endpos);
+	return trace;
+}
+
 //===========================================================================
 
 /*
@@ -574,7 +596,7 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	}
 
 	// clip to world
-	cliptrace = SV_ClipMoveToEntity(prog->edicts, clipstart, clipmins, clipmaxs, clipend, type, hitsupercontentsmask);
+	cliptrace = SV_ClipMoveToWorld(clipstart, clipmins, clipmaxs, clipend, type, hitsupercontentsmask);
 	if (cliptrace.startsolid || cliptrace.fraction < 1)
 		cliptrace.ent = prog->edicts;
 	if (type == MOVE_WORLDONLY)
