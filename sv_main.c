@@ -570,7 +570,7 @@ void SV_PrepareEntitiesForSending(void)
 			if (effects & EF_STARDUST)
 				specialvisibilityradius = max(specialvisibilityradius, 100);
 		}
-		if (e > svs.maxclients && (!modelindex && !cs.specialvisibilityradius))
+		if (e > svs.maxclients && (!modelindex && !specialvisibilityradius))
 			continue;
 
 		cs = defaultstate;
@@ -681,12 +681,12 @@ void SV_PrepareEntitiesForSending(void)
 		}
 		if (specialvisibilityradius)
 		{
-			cullmins[0] = min(cullmins[0], cs.origin[0] - cs.specialvisibilityradius);
-			cullmins[1] = min(cullmins[1], cs.origin[1] - cs.specialvisibilityradius);
-			cullmins[2] = min(cullmins[2], cs.origin[2] - cs.specialvisibilityradius);
-			cullmaxs[0] = max(cullmaxs[0], cs.origin[0] + cs.specialvisibilityradius);
-			cullmaxs[1] = max(cullmaxs[1], cs.origin[1] + cs.specialvisibilityradius);
-			cullmaxs[2] = max(cullmaxs[2], cs.origin[2] + cs.specialvisibilityradius);
+			cullmins[0] = min(cullmins[0], cs.origin[0] - specialvisibilityradius);
+			cullmins[1] = min(cullmins[1], cs.origin[1] - specialvisibilityradius);
+			cullmins[2] = min(cullmins[2], cs.origin[2] - specialvisibilityradius);
+			cullmaxs[0] = max(cullmaxs[0], cs.origin[0] + specialvisibilityradius);
+			cullmaxs[1] = max(cullmaxs[1], cs.origin[1] + specialvisibilityradius);
+			cullmaxs[2] = max(cullmaxs[2], cs.origin[2] + specialvisibilityradius);
 		}
 		if (!VectorCompare(cullmins, ent->priv.server->cullmins) || !VectorCompare(cullmaxs, ent->priv.server->cullmaxs))
 		{
