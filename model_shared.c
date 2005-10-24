@@ -163,7 +163,8 @@ model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolea
 
 	Con_DPrintf("loading model %s\n", mod->name);
 	// LordHavoc: unload the existing model in this slot (if there is one)
-	Mod_UnloadModel(mod);
+	if (mod->loaded)
+		Mod_UnloadModel(mod);
 
 	// load the model
 	mod->isworldmodel = isworldmodel;
@@ -322,7 +323,7 @@ model_t *Mod_ForName(const char *name, qboolean crash, qboolean checkdisk, qbool
 {
 	model_t *model;
 	model = Mod_FindName(name);
-	if (!model->loaded || checkdisk)
+	if (model->name[0] != '*' && (!model->loaded || checkdisk))
 		Mod_LoadModel(model, crash, checkdisk, isworldmodel);
 	return model;
 }
