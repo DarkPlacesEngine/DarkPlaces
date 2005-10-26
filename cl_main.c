@@ -548,13 +548,12 @@ dlightsetup:
 	dl->specularscale = specularscale;
 }
 
-void CL_UpdateLights(void)
+// called before entity relinking
+void CL_DecayLights(void)
 {
-	int i, j, k, l, oldmax;
+	int i, oldmax;
 	dlight_t *dl;
-	float time, frac, f;
-
-	r_refdef.numlights = 0;
+	float time, f;
 
 	time = cl.time - cl.oldtime;
 	oldmax = cl_activedlights;
@@ -568,14 +567,30 @@ void CL_UpdateLights(void)
 			{
 				dl->radius = dl->radius - time * dl->decay;
 				cl_activedlights = i + 1;
-				if (r_dynamic.integer)
-				{
-					R_RTLight_Update(dl, false);
-					r_refdef.lights[r_refdef.numlights++] = dl;
-				}
 			}
 			else
 				dl->radius = 0;
+		}
+	}
+}
+
+// called after entity relinking
+void CL_UpdateLights(void)
+{
+	int i, j, k, l;
+	dlight_t *dl;
+	float frac, f;
+
+	r_refdef.numlights = 0;
+	if (r_dynamic.integer)
+	{
+		for (i = 0, dl = cl_dlights;i < cl_activedlights;i++, dl++)
+		{
+			if (dl->radius)
+			{
+				R_RTLight_Update(dl, false);
+				r_refdef.lights[r_refdef.numlights++] = dl;
+			}
 		}
 	}
 
@@ -1349,7 +1364,7 @@ int CL_ReadFromServer(void)
 	{
 		// prepare for a new frame
 		CL_LerpPlayer(CL_LerpPoint());
-		CL_UpdateLights();
+		CL_DecayLights();
 		CL_ClearTempEntities();
 		V_DriftPitch();
 		V_FadeViewFlashs();
@@ -1370,6 +1385,8 @@ int CL_ReadFromServer(void)
 
 		// run cgame code (which can add more entities)
 		CL_CGVM_Frame();
+
+		CL_UpdateLights();
 
 		// update view blend
 		V_CalcViewBlend();
