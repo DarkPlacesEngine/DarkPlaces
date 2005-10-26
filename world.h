@@ -61,8 +61,7 @@ int SV_EntitiesInBox(vec3_t mins, vec3_t maxs, int maxlist, prvm_edict_t **list)
 // passedict is explicitly excluded from clipping checks (normally NULL)
 trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict);
 
-int SV_PointQ1Contents(const vec3_t point);
-int SV_PointSuperContents(const vec3_t point);
+#define SV_PointSuperContents(point) (SV_Move((point), vec3_origin, vec3_origin, (point), sv_gameplayfix_swiminbmodels.integer ? MOVE_NOMONSTERS : MOVE_WORLDONLY, NULL).startsupercontents)
 
 #endif
 
