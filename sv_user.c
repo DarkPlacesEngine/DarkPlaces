@@ -603,7 +603,6 @@ void SV_ClientThink(void)
 SV_ReadClientMove
 ===================
 */
-extern void SV_Physics_Entity (prvm_edict_t *ent, qboolean runmove);
 void SV_ApplyClientMove (void);
 void SV_ReadClientMove (void)
 {
@@ -693,7 +692,7 @@ void SV_ReadClientMove (void)
 			if (frametime > 0.1)
 				frametime = 0.1;
 			prog->globals.server->frametime = frametime;
-			SV_Physics_Entity(host_client->edict, true);
+			SV_Physics_ClientEntity(host_client->edict);
 			prog->globals.server->frametime = oldframetime;
 		}
 	}
