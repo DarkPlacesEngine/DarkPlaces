@@ -112,7 +112,7 @@ static int Mod_Q1BSP_FindBoxClusters(model_t *model, const vec3_t mins, const ve
 	node = model->brush.data_nodes;
 	for (;;)
 	{
-#if 0
+#if 1
 		if (node->plane)
 		{
 			// node - recurse down the BSP tree
@@ -175,7 +175,7 @@ static int Mod_Q1BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3
 	node = model->brush.data_nodes;
 	for (;;)
 	{
-#if 0
+#if 1
 		if (node->plane)
 		{
 			// node - recurse down the BSP tree
@@ -244,7 +244,7 @@ static int Mod_Q1BSP_BoxTouchingLeafPVS(model_t *model, const qbyte *pvs, const 
 	node = model->brush.data_nodes;
 	for (;;)
 	{
-#if 0
+#if 1
 		if (node->plane)
 		{
 			// node - recurse down the BSP tree
@@ -313,7 +313,7 @@ static int Mod_Q1BSP_BoxTouchingVisibleLeafs(model_t *model, const qbyte *visibl
 	node = model->brush.data_nodes;
 	for (;;)
 	{
-#if 0
+#if 1
 		if (node->plane)
 		{
 			// node - recurse down the BSP tree
@@ -2536,57 +2536,12 @@ static void Mod_Q1BSP_RecursiveRecalcNodeBBox(mnode_t *node)
 	Mod_Q1BSP_RecursiveRecalcNodeBBox(node->children[1]);
 
 	// make combined bounding box from children
-	if (node->plane)
-	{
-		node->mins[0] = min(node->children[0]->mins[0], node->children[1]->mins[0]);
-		node->mins[1] = min(node->children[0]->mins[1], node->children[1]->mins[1]);
-		node->mins[2] = min(node->children[0]->mins[2], node->children[1]->mins[2]);
-		node->maxs[0] = max(node->children[0]->maxs[0], node->children[1]->maxs[0]);
-		node->maxs[1] = max(node->children[0]->maxs[1], node->children[1]->maxs[1]);
-		node->maxs[2] = max(node->children[0]->maxs[2], node->children[1]->maxs[2]);
-	}
-	else if (((mleaf_t *)node->children[0])->clusterindex >= 0)
-	{
-		if (((mleaf_t *)node->children[1])->clusterindex >= 0)
-		{
-			node->mins[0] = min(node->children[0]->mins[0], node->children[1]->mins[0]);
-			node->mins[1] = min(node->children[0]->mins[1], node->children[1]->mins[1]);
-			node->mins[2] = min(node->children[0]->mins[2], node->children[1]->mins[2]);
-			node->maxs[0] = max(node->children[0]->maxs[0], node->children[1]->maxs[0]);
-			node->maxs[1] = max(node->children[0]->maxs[1], node->children[1]->maxs[1]);
-			node->maxs[2] = max(node->children[0]->maxs[2], node->children[1]->maxs[2]);
-		}
-		else
-		{
-			node->mins[0] = node->children[0]->mins[0];
-			node->mins[1] = node->children[0]->mins[1];
-			node->mins[2] = node->children[0]->mins[2];
-			node->maxs[0] = node->children[0]->maxs[0];
-			node->maxs[1] = node->children[0]->maxs[1];
-			node->maxs[2] = node->children[0]->maxs[2];
-		}
-	}
-	else
-	{
-		if (((mleaf_t *)node->children[1])->clusterindex >= 0)
-		{
-			node->mins[0] = node->children[1]->mins[0];
-			node->mins[1] = node->children[1]->mins[1];
-			node->mins[2] = node->children[1]->mins[2];
-			node->maxs[0] = node->children[1]->maxs[0];
-			node->maxs[1] = node->children[1]->maxs[1];
-			node->maxs[2] = node->children[1]->maxs[2];
-		}
-		else
-		{
-			node->mins[0] = 2000000000;
-			node->mins[1] = 2000000000;
-			node->mins[2] = 2000000000;
-			node->maxs[0] = -2000000000;
-			node->maxs[1] = -2000000000;
-			node->maxs[2] = -2000000000;
-		}
-	}
+	node->mins[0] = min(node->children[0]->mins[0], node->children[1]->mins[0]);
+	node->mins[1] = min(node->children[0]->mins[1], node->children[1]->mins[1]);
+	node->mins[2] = min(node->children[0]->mins[2], node->children[1]->mins[2]);
+	node->maxs[0] = max(node->children[0]->maxs[0], node->children[1]->maxs[0]);
+	node->maxs[1] = max(node->children[0]->maxs[1], node->children[1]->maxs[1]);
+	node->maxs[2] = max(node->children[0]->maxs[2], node->children[1]->maxs[2]);
 }
 
 static void Mod_Q1BSP_FinalizePortals(void)
@@ -2692,17 +2647,14 @@ static void Mod_Q1BSP_FinalizePortals(void)
 			for (i = 0;i < 2;i++)
 			{
 				leaf = (mleaf_t *)p->nodes[i];
-				if (leaf->clusterindex >= 0)
+				for (j = 0;j < p->numpoints;j++)
 				{
-					for (j = 0;j < p->numpoints;j++)
-					{
-						if (leaf->mins[0] > p->points[j*3+0]) leaf->mins[0] = p->points[j*3+0];
-						if (leaf->mins[1] > p->points[j*3+1]) leaf->mins[1] = p->points[j*3+1];
-						if (leaf->mins[2] > p->points[j*3+2]) leaf->mins[2] = p->points[j*3+2];
-						if (leaf->maxs[0] < p->points[j*3+0]) leaf->maxs[0] = p->points[j*3+0];
-						if (leaf->maxs[1] < p->points[j*3+1]) leaf->maxs[1] = p->points[j*3+1];
-						if (leaf->maxs[2] < p->points[j*3+2]) leaf->maxs[2] = p->points[j*3+2];
-					}
+					if (leaf->mins[0] > p->points[j*3+0]) leaf->mins[0] = p->points[j*3+0];
+					if (leaf->mins[1] > p->points[j*3+1]) leaf->mins[1] = p->points[j*3+1];
+					if (leaf->mins[2] > p->points[j*3+2]) leaf->mins[2] = p->points[j*3+2];
+					if (leaf->maxs[0] < p->points[j*3+0]) leaf->maxs[0] = p->points[j*3+0];
+					if (leaf->maxs[1] < p->points[j*3+1]) leaf->maxs[1] = p->points[j*3+1];
+					if (leaf->maxs[2] < p->points[j*3+2]) leaf->maxs[2] = p->points[j*3+2];
 				}
 			}
 		}
