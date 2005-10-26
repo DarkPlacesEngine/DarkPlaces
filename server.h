@@ -163,6 +163,10 @@ typedef struct client_s
 	// latest received clc_ackframe (used to detect packet loss)
 	int latestframenum;
 
+	// cache weaponmodel name lookups
+	char weaponmodel[MAX_QPATH];
+	int weaponmodelindex;
+
 	entityframe_database_t *entitydatabase;
 	entityframe4_database_t *entitydatabase4;
 	entityframe5_database_t *entitydatabase5;
@@ -316,6 +320,7 @@ void SV_BroadcastPrint(const char *msg);
 void SV_BroadcastPrintf(const char *fmt, ...);
 
 void SV_Physics (void);
+void SV_Physics_ClientEntity (prvm_edict_t *ent);
 
 qboolean SV_PlayerCheckGround (prvm_edict_t *ent);
 qboolean SV_CheckBottom (prvm_edict_t *ent);

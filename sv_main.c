@@ -930,7 +930,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	prvm_eval_t	*val;
 	vec3_t	punchvector;
 	qbyte	viewzoom;
-	int		weaponmodelindex;
+	const char *s;
 
 //
 // send a damage message
@@ -974,7 +974,14 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	if ((val = PRVM_GETEDICTFIELDVALUE(ent, eval_punchvector)))
 		VectorCopy(val->vector, punchvector);
 
-	weaponmodelindex = SV_ModelIndex(PRVM_GetString(ent->fields.server->weaponmodel), 1);
+	// FIXME: cache weapon model name and index in client struct to save time
+	// (this search can be almost 1% of cpu time!)
+	s = PRVM_GetString(ent->fields.server->weaponmodel);
+	if (strcmp(s, client->weaponmodel))
+	{
+		strlcpy(client->weaponmodel, s, sizeof(client->weaponmodel));
+		client->weaponmodelindex = SV_ModelIndex(s, 1);
+	}
 
 	viewzoom = 255;
 	if ((val = PRVM_GETEDICTFIELDVALUE(ent, eval_viewzoom)))
@@ -1007,7 +1014,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	stats[STAT_ITEMS] = items;
 	stats[STAT_WEAPONFRAME] = ent->fields.server->weaponframe;
 	stats[STAT_ARMOR] = ent->fields.server->armorvalue;
-	stats[STAT_WEAPON] = weaponmodelindex;
+	stats[STAT_WEAPON] = client->weaponmodelindex;
 	stats[STAT_HEALTH] = ent->fields.server->health;
 	stats[STAT_AMMO] = ent->fields.server->currentammo;
 	stats[STAT_SHELLS] = ent->fields.server->ammo_shells;
