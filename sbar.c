@@ -89,12 +89,15 @@ sbarpic_t *somsb_health;
 sbarpic_t *somsb_ammo[4];
 sbarpic_t *somsb_armor[3];
 
-sbarpic_t *zymsb_crosshair_dot;
+sbarpic_t *zymsb_crosshair_center;
 sbarpic_t *zymsb_crosshair_line;
 sbarpic_t *zymsb_crosshair_health;
 sbarpic_t *zymsb_crosshair_ammo;
 sbarpic_t *zymsb_crosshair_clip;
 sbarpic_t *zymsb_crosshair_background;
+sbarpic_t *zymsb_crosshair_left1;
+sbarpic_t *zymsb_crosshair_left2;
+sbarpic_t *zymsb_crosshair_right;
 
 cvar_t	showfps = {CVAR_SAVE, "showfps", "0"};
 cvar_t	showtime = {CVAR_SAVE, "showtime", "0"};
@@ -185,12 +188,15 @@ void sbar_start(void)
 	}
 	else if (gamemode == GAME_ZYMOTIC)
 	{
-		zymsb_crosshair_dot = Sbar_NewPic ("gfx/hud/crosshair_dot");
+		zymsb_crosshair_center = Sbar_NewPic ("gfx/hud/crosshair_center");
 		zymsb_crosshair_line = Sbar_NewPic ("gfx/hud/crosshair_line");
 		zymsb_crosshair_health = Sbar_NewPic ("gfx/hud/crosshair_health");
 		zymsb_crosshair_clip = Sbar_NewPic ("gfx/hud/crosshair_clip");
 		zymsb_crosshair_ammo = Sbar_NewPic ("gfx/hud/crosshair_ammo");
 		zymsb_crosshair_background = Sbar_NewPic ("gfx/hud/crosshair_background");
+		zymsb_crosshair_left1 = Sbar_NewPic ("gfx/hud/crosshair_left1");
+		zymsb_crosshair_left2 = Sbar_NewPic ("gfx/hud/crosshair_left2");
+		zymsb_crosshair_right = Sbar_NewPic ("gfx/hud/crosshair_right");
 	}
 	else
 	{
@@ -921,6 +927,26 @@ void Sbar_ShowFPS(void)
 	}
 }
 
+void Sbar_DrawGauge(float x, float y, const char *picname, float width, float height, float rangey, float rangeheight, float c1, float c2, float c1r, float c1g, float c1b, float c1a, float c2r, float c2g, float c2b, float c2a, float c3r, float c3g, float c3b, float c3a, int drawflags)
+{
+	float r[5];
+	c2 = bound(0, c2, 1);
+	c1 = bound(0, c1, 1 - c2);
+	r[0] = 0;
+	r[1] = rangey + rangeheight * (c2 + c1);
+	r[2] = rangey + rangeheight * (c2);
+	r[3] = rangey;
+	r[4] = height;
+	if (r[1] > r[0])
+		DrawQ_SuperPic(x, y + r[0], picname, width, (r[1] - r[0]), 0,(r[0] / height), c3r,c3g,c3b,c3a, 1,(r[0] / height), c3r,c3g,c3b,c3a, 0,(r[1] / height), c3r,c3g,c3b,c3a, 1,(r[1] / height), c3r,c3g,c3b,c3a, drawflags);
+	if (r[2] > r[1])
+		DrawQ_SuperPic(x, y + r[1], picname, width, (r[2] - r[1]), 0,(r[1] / height), c1r,c1g,c1b,c1a, 1,(r[1] / height), c1r,c1g,c1b,c1a, 0,(r[2] / height), c1r,c1g,c1b,c1a, 1,(r[2] / height), c1r,c1g,c1b,c1a, drawflags);
+	if (r[3] > r[2])
+		DrawQ_SuperPic(x, y + r[2], picname, width, (r[3] - r[2]), 0,(r[2] / height), c2r,c2g,c2b,c2a, 1,(r[2] / height), c2r,c2g,c2b,c2a, 0,(r[3] / height), c2r,c2g,c2b,c2a, 1,(r[3] / height), c2r,c2g,c2b,c2a, drawflags);
+	if (r[4] > r[3])
+		DrawQ_SuperPic(x, y + r[3], picname, width, (r[4] - r[3]), 0,(r[3] / height), c3r,c3g,c3b,c3a, 1,(r[3] / height), c3r,c3g,c3b,c3a, 0,(r[4] / height), c3r,c3g,c3b,c3a, 1,(r[4] / height), c3r,c3g,c3b,c3a, drawflags);
+}
+
 /*
 ===============
 Sbar_Draw
@@ -1066,6 +1092,27 @@ void Sbar_Draw (void)
 	}
 	else if (gamemode == GAME_ZYMOTIC)
 	{
+#if 1
+		float scale = 64.0f / 256.0f;
+		float kickoffset[3];
+		VectorClear(kickoffset);
+		if (v_dmg_time > 0)
+		{
+			kickoffset[0] = (v_dmg_time/v_kicktime.value*v_dmg_roll) * 10 * scale;
+			kickoffset[1] = (v_dmg_time/v_kicktime.value*v_dmg_pitch) * 10 * scale;
+		}
+		sbar_x = (vid_conwidth.integer - 256 * scale)/2 + kickoffset[0];
+		sbar_y = (vid_conheight.integer - 256 * scale)/2 + kickoffset[1];
+		// left1 16, 48 : 126 -66
+		// left2 16, 128 : 196 -66
+		// right 176, 48 : 196 -136
+		if (cl.stats[STAT_AMMO] > 200)
+			Con_Printf("cl.stats[STAT_AMMO] == %i\n", cl.stats[STAT_AMMO]);
+		Sbar_DrawGauge(sbar_x +  16 * scale, sbar_y +  48 * scale, zymsb_crosshair_left1->name, 64*scale,  80*scale, 78*scale,  -66*scale, cl.stats[STAT_AMMO]  * (1.0 / 200.0), cl.stats[STAT_SHELLS]  * (1.0 / 200.0), 0.8f,0.8f,0.0f,1.0f, 0.8f,0.5f,0.0f,1.0f, 0.3f,0.3f,0.3f,1.0f, DRAWFLAG_NORMAL);
+		Sbar_DrawGauge(sbar_x +  16 * scale, sbar_y + 128 * scale, zymsb_crosshair_left2->name, 64*scale,  80*scale, 68*scale,  -66*scale, cl.stats[STAT_NAILS] * (1.0 / 200.0), cl.stats[STAT_ROCKETS] * (1.0 / 200.0), 0.8f,0.8f,0.0f,1.0f, 0.8f,0.5f,0.0f,1.0f, 0.3f,0.3f,0.3f,1.0f, DRAWFLAG_NORMAL);
+		Sbar_DrawGauge(sbar_x + 176 * scale, sbar_y +  48 * scale, zymsb_crosshair_right->name, 64*scale, 160*scale, 148*scale, -136*scale, cl.stats[STAT_ARMOR]  * (1.0 / 300.0), cl.stats[STAT_HEALTH]  * (1.0 / 300.0), 0.0f,0.5f,1.0f,1.0f, 1.0f,0.0f,0.0f,1.0f, 0.3f,0.3f,0.3f,1.0f, DRAWFLAG_NORMAL);
+		DrawQ_Pic(sbar_x + 120 * scale, sbar_y + 120 * scale, zymsb_crosshair_center->name, 16 * scale, 16 * scale, 1, 1, 1, 1, DRAWFLAG_NORMAL);
+#else
 		float scale = 128.0f / 256.0f;
 		float healthstart, healthheight, healthstarttc, healthendtc;
 		float shieldstart, shieldheight, shieldstarttc, shieldendtc;
@@ -1106,6 +1153,8 @@ void Sbar_Draw (void)
 		if (ammoheight > 0)   DrawQ_SuperPic(sbar_x + 0 * scale, sbar_y + ammostart   * scale, zymsb_crosshair_ammo->name,   256 * scale, ammoheight   * scale, 0,ammostarttc,   0.8f,0.8f,0.0f,1.0f, 1,ammostarttc,   0.8f,0.8f,0.0f,1.0f, 0,ammoendtc,   0.8f,0.8f,0.0f,1.0f, 1,ammoendtc,   0.8f,0.8f,0.0f,1.0f, DRAWFLAG_NORMAL);
 		if (clipheight > 0)   DrawQ_SuperPic(sbar_x + 0 * scale, sbar_y + clipstart   * scale, zymsb_crosshair_clip->name,   256 * scale, clipheight   * scale, 0,clipstarttc,   1.0f,1.0f,0.0f,1.0f, 1,clipstarttc,   1.0f,1.0f,0.0f,1.0f, 0,clipendtc,   1.0f,1.0f,0.0f,1.0f, 1,clipendtc,   1.0f,1.0f,0.0f,1.0f, DRAWFLAG_NORMAL);
 		DrawQ_Pic(sbar_x + 0 * scale, sbar_y + 0 * scale, zymsb_crosshair_background->name, 256 * scale, 256 * scale, 1, 1, 1, 1, DRAWFLAG_NORMAL);
+		DrawQ_Pic(sbar_x + 120 * scale, sbar_y + 120 * scale, zymsb_crosshair_center->name, 16 * scale, 16 * scale, 1, 1, 1, 1, DRAWFLAG_NORMAL);
+#endif
 	}
 	else // Quake and others
 	{
