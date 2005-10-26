@@ -1547,7 +1547,7 @@ PF_pointcontents
 */
 void PF_pointcontents (void)
 {
-	PRVM_G_FLOAT(OFS_RETURN) = SV_PointQ1Contents(PRVM_G_VECTOR(OFS_PARM0));
+	PRVM_G_FLOAT(OFS_RETURN) = Mod_Q1BSP_NativeContentsFromSuperContents(NULL, SV_PointSuperContents(PRVM_G_VECTOR(OFS_PARM0)));
 }
 
 /*

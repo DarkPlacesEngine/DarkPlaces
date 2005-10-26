@@ -739,14 +739,4 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 }
 #endif
 
-int SV_PointSuperContents(const vec3_t point)
-{
-	return SV_Move(point, vec3_origin, vec3_origin, point, sv_gameplayfix_swiminbmodels.integer ? MOVE_NOMONSTERS : MOVE_WORLDONLY, NULL).startsupercontents;
-}
-
-int SV_PointQ1Contents(const vec3_t point)
-{
-	return Mod_Q1BSP_NativeContentsFromSuperContents(NULL, SV_PointSuperContents(point));
-}
-
 
