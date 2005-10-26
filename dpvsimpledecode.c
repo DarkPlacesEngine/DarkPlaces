@@ -40,7 +40,7 @@ hz_bitstream_read_t *hz_bitstream_read_open(char *filename)
 	hz_bitstream_read_t *stream;
 	if ((file = FS_Open (filename, "rb", false, false)))
 	{
-		stream = (hz_bitstream_read_t *)malloc(sizeof(hz_bitstream_read_t));
+		stream = (hz_bitstream_read_t *)Z_Malloc(sizeof(hz_bitstream_read_t));
 		memset(stream, 0, sizeof(*stream));
 		stream->file = file;
 		return stream;
@@ -54,14 +54,14 @@ void hz_bitstream_read_close(hz_bitstream_read_t *stream)
 	if (stream)
 	{
 		FS_Close(stream->file);
-		free(stream);
+		Z_Free(stream);
 	}
 }
 
 hz_bitstream_readblocks_t *hz_bitstream_read_blocks_new(void)
 {
 	hz_bitstream_readblocks_t *blocks;
-	blocks = (hz_bitstream_readblocks_t *)malloc(sizeof(hz_bitstream_readblocks_t));
+	blocks = (hz_bitstream_readblocks_t *)Z_Malloc(sizeof(hz_bitstream_readblocks_t));
 	if (blocks == NULL)
 		return NULL;
 	memset(blocks, 0, sizeof(hz_bitstream_readblocks_t));
@@ -76,9 +76,9 @@ void hz_bitstream_read_blocks_free(hz_bitstream_readblocks_t *blocks)
 	for (b = blocks->blocks;b;b = n)
 	{
 		n = b->next;
-		free(b);
+		Z_Free(b);
 	}
-	free(blocks);
+	Z_Free(blocks);
 }
 
 void hz_bitstream_read_flushbits(hz_bitstream_readblocks_t *blocks)
@@ -98,7 +98,7 @@ int hz_bitstream_read_blocks_read(hz_bitstream_readblocks_t *blocks, hz_bitstrea
 	{
 		if (b == NULL)
 		{
-			b = (hz_bitstream_readblock_t *)malloc(sizeof(hz_bitstream_readblock_t));
+			b = (hz_bitstream_readblock_t *)Z_Malloc(sizeof(hz_bitstream_readblock_t));
 			if (b == NULL)
 				return HZREADERROR_MALLOCFAILED;
 			b->next = NULL;
@@ -404,7 +404,7 @@ void *dpvsimpledecode_open(char *filename, char **errorstring)
 										s->sndchan = S_StartSound (-1, 0, sfx, vec3_origin, 1.0f, 0);
 									else
 										s->sndchan = -1;
-									free(wavename);
+									Z_Free(wavename);
 								}
 								// all is well...
 								s->videoframenum = -10000;
@@ -429,7 +429,7 @@ void *dpvsimpledecode_open(char *filename, char **errorstring)
 		}
 		else if (errorstring != NULL)
 			*errorstring = "unable to open file";
-		free(s);
+		Z_Free(s);
 	}
 	else if (errorstring != NULL)
 		*errorstring = "unable to allocate memory for stream info structure";
@@ -443,14 +443,14 @@ void dpvsimpledecode_close(void *stream)
 	if (s == NULL)
 		return;
 	if (s->videopixels)
-		free(s->videopixels);
+		Z_Free(s->videopixels);
 	if (s->sndchan != -1)
 		S_StopChannel (s->sndchan);
 	if (s->framedatablocks)
 		hz_bitstream_read_blocks_free(s->framedatablocks);
 	if (s->bitstream)
 		hz_bitstream_read_close(s->bitstream);
-	free(s);
+	Z_Free(s);
 }
 
 // utilitarian functions
