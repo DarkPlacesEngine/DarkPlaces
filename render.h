@@ -197,6 +197,8 @@ int R_CullBox(const vec3_t mins, const vec3_t maxs);
 extern qboolean fogenabled;
 extern vec3_t fogcolor;
 extern vec_t fogdensity;
+extern vec_t fogrange;
+extern vec_t fograngerecip;
 #define calcfog(v) (exp(-(fogdensity*fogdensity*(((v)[0] - r_vieworigin[0])*((v)[0] - r_vieworigin[0])+((v)[1] - r_vieworigin[1])*((v)[1] - r_vieworigin[1])+((v)[2] - r_vieworigin[2])*((v)[2] - r_vieworigin[2])))))
 #define calcfogbyte(v) ((qbyte) (bound(0, ((int) ((float) (calcfog((v)) * 255.0f))), 255)))
 
@@ -225,6 +227,8 @@ extern rtexture_t *r_texture_black;
 extern rtexture_t *r_texture_notexture;
 extern rtexture_t *r_texture_whitecube;
 extern rtexture_t *r_texture_normalizationcube;
+extern rtexture_t *r_texture_fogattenuation;
+extern rtexture_t *r_texture_fogintensity;
 
 void R_TimeReport(char *name);
 void R_TimeReport_Start(void);
