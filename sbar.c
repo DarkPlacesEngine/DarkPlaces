@@ -1106,8 +1106,6 @@ void Sbar_Draw (void)
 		// left1 16, 48 : 126 -66
 		// left2 16, 128 : 196 -66
 		// right 176, 48 : 196 -136
-		if (cl.stats[STAT_AMMO] > 200)
-			Con_Printf("cl.stats[STAT_AMMO] == %i\n", cl.stats[STAT_AMMO]);
 		Sbar_DrawGauge(sbar_x +  16 * scale, sbar_y +  48 * scale, zymsb_crosshair_left1->name, 64*scale,  80*scale, 78*scale,  -66*scale, cl.stats[STAT_AMMO]  * (1.0 / 200.0), cl.stats[STAT_SHELLS]  * (1.0 / 200.0), 0.8f,0.8f,0.0f,1.0f, 0.8f,0.5f,0.0f,1.0f, 0.3f,0.3f,0.3f,1.0f, DRAWFLAG_NORMAL);
 		Sbar_DrawGauge(sbar_x +  16 * scale, sbar_y + 128 * scale, zymsb_crosshair_left2->name, 64*scale,  80*scale, 68*scale,  -66*scale, cl.stats[STAT_NAILS] * (1.0 / 200.0), cl.stats[STAT_ROCKETS] * (1.0 / 200.0), 0.8f,0.8f,0.0f,1.0f, 0.8f,0.5f,0.0f,1.0f, 0.3f,0.3f,0.3f,1.0f, DRAWFLAG_NORMAL);
 		Sbar_DrawGauge(sbar_x + 176 * scale, sbar_y +  48 * scale, zymsb_crosshair_right->name, 64*scale, 160*scale, 148*scale, -136*scale, cl.stats[STAT_ARMOR]  * (1.0 / 300.0), cl.stats[STAT_HEALTH]  * (1.0 / 300.0), 0.0f,0.5f,1.0f,1.0f, 1.0f,0.0f,0.0f,1.0f, 0.3f,0.3f,0.3f,1.0f, DRAWFLAG_NORMAL);
