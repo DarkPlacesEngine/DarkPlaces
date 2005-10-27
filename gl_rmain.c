@@ -118,6 +118,8 @@ rtexture_t *r_texture_black;
 rtexture_t *r_texture_notexture;
 rtexture_t *r_texture_whitecube;
 rtexture_t *r_texture_normalizationcube;
+rtexture_t *r_texture_fogattenuation;
+rtexture_t *r_texture_fogintensity;
 
 void R_ModulateColors(float *in, float *out, int verts, float r, float g, float b)
 {
@@ -148,6 +150,8 @@ void R_FillColors(float *out, int verts, float r, float g, float b, float a)
 
 vec3_t fogcolor;
 vec_t fogdensity;
+vec_t fogrange;
+vec_t fograngerecip;
 float fog_density, fog_red, fog_green, fog_blue;
 qboolean fogenabled;
 qboolean oldgl_fogenable;
@@ -182,6 +186,10 @@ void R_UpdateFog(void)
 	{
 		fogenabled = true;
 		fogdensity = -4000.0f / (fog_density * fog_density);
+		// this is the point where the fog reaches 0.991373 alpha, which we
+		// consider a good enough cutoff point for the texture
+		fogrange = 400 / fog_density;
+		fograngerecip = 1.0f / fogrange;
 		// fog color was already set
 	}
 	else
@@ -337,6 +345,31 @@ static void R_BuildNormalizationCube(void)
 	r_texture_normalizationcube = R_LoadTextureCubeMap(r_main_texturepool, "normalcube", NORMSIZE, &data[0][0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP, NULL);
 }
 
+static void R_BuildFogTexture(void)
+{
+#define FOGWIDTH 64
+	int x, b;
+	double r;
+	qbyte data1[FOGWIDTH][4];
+	qbyte data2[FOGWIDTH][4];
+	r = (-65536.0 / (FOGWIDTH*FOGWIDTH));
+	for (x = 0;x < FOGWIDTH;x++)
+	{
+		b = (int)(256.0 * exp(r / ((double)x*(double)x)));
+		b = bound(0, b, 255);
+		data1[x][0] = 255 - b;
+		data1[x][1] = 255 - b;
+		data1[x][2] = 255 - b;
+		data1[x][3] = 255;
+		data2[x][0] = b;
+		data2[x][1] = b;
+		data2[x][2] = b;
+		data2[x][3] = 255;
+	}
+	r_texture_fogattenuation = R_LoadTexture2D(r_main_texturepool, "fogattenuation", FOGWIDTH, 1, &data1[0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP, NULL);
+	r_texture_fogintensity = R_LoadTexture2D(r_main_texturepool, "fogintensity", FOGWIDTH, 1, &data2[0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP, NULL);
+}
+
 void gl_main_start(void)
 {
 	r_main_texturepool = R_AllocTexturePool();
@@ -349,6 +382,7 @@ void gl_main_start(void)
 		R_BuildWhiteCube();
 		R_BuildNormalizationCube();
 	}
+	R_BuildFogTexture();
 }
 
 void gl_main_shutdown(void)
