@@ -90,7 +90,7 @@ void R_DrawWorldCrosshair(void)
 	VectorCopy(trace.endpos, spriteorigin);
 
 	// draw the sprite
-	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, pic->tex, true, spriteorigin, r_viewright, r_viewup, spritescale, -spritescale, -spritescale, spritescale, color[0], color[1], color[2], color[3]);
+	R_DrawSprite(GL_ONE, GL_ONE, pic->tex, NULL, true, spriteorigin, r_viewright, r_viewup, spritescale, -spritescale, -spritescale, spritescale, color[0], color[1], color[2], color[3]);
 }
 
 void R_Draw2DCrosshair(void)

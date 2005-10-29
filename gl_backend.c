@@ -1166,7 +1166,7 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, co
 void R_Mesh_TexBindAll(unsigned int unitnum, int tex1d, int tex2d, int tex3d, int texcubemap)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
-	if (unitnum >= backendunits)
+	if (unitnum >= backendimageunits)
 		return;
 	if (r_showtrispass)
 		return;
@@ -1259,7 +1259,7 @@ void R_Mesh_TexBindAll(unsigned int unitnum, int tex1d, int tex2d, int tex3d, in
 void R_Mesh_TexBind1D(unsigned int unitnum, int texnum)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
-	if (unitnum >= backendunits)
+	if (unitnum >= backendimageunits)
 		return;
 	if (r_showtrispass)
 		return;
@@ -1267,15 +1267,18 @@ void R_Mesh_TexBind1D(unsigned int unitnum, int texnum)
 	if (unit->t1d != texnum)
 	{
 		GL_ActiveTexture(unitnum);
-		if (texnum)
+		if (unitnum < backendunits)
 		{
-			if (unit->t1d == 0)
-				qglEnable(GL_TEXTURE_1D);
-		}
-		else
-		{
-			if (unit->t1d)
-				qglDisable(GL_TEXTURE_1D);
+			if (texnum)
+			{
+				if (unit->t1d == 0)
+					qglEnable(GL_TEXTURE_1D);
+			}
+			else
+			{
+				if (unit->t1d)
+					qglDisable(GL_TEXTURE_1D);
+			}
 		}
 		unit->t1d = texnum;
 		qglBindTexture(GL_TEXTURE_1D, unit->t1d);
@@ -1285,8 +1288,11 @@ void R_Mesh_TexBind1D(unsigned int unitnum, int texnum)
 	if (unit->t2d)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unit->t2d)
-			qglDisable(GL_TEXTURE_2D);
+		if (unitnum < backendunits)
+		{
+			if (unit->t2d)
+				qglDisable(GL_TEXTURE_2D);
+		}
 		unit->t2d = 0;
 		qglBindTexture(GL_TEXTURE_2D, unit->t2d);
 		CHECKGLERROR
@@ -1295,8 +1301,11 @@ void R_Mesh_TexBind1D(unsigned int unitnum, int texnum)
 	if (unit->t3d)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unit->t3d)
-			qglDisable(GL_TEXTURE_3D);
+		if (unitnum < backendunits)
+		{
+			if (unit->t3d)
+				qglDisable(GL_TEXTURE_3D);
+		}
 		unit->t3d = 0;
 		qglBindTexture(GL_TEXTURE_3D, unit->t3d);
 		CHECKGLERROR
@@ -1305,8 +1314,11 @@ void R_Mesh_TexBind1D(unsigned int unitnum, int texnum)
 	if (unit->tcubemap)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unit->tcubemap)
-			qglDisable(GL_TEXTURE_CUBE_MAP_ARB);
+		if (unitnum < backendunits)
+		{
+			if (unit->tcubemap)
+				qglDisable(GL_TEXTURE_CUBE_MAP_ARB);
+		}
 		unit->tcubemap = 0;
 		qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);
 		CHECKGLERROR
@@ -1316,7 +1328,7 @@ void R_Mesh_TexBind1D(unsigned int unitnum, int texnum)
 void R_Mesh_TexBind(unsigned int unitnum, int texnum)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
-	if (unitnum >= backendunits)
+	if (unitnum >= backendimageunits)
 		return;
 	if (r_showtrispass)
 		return;
@@ -1324,8 +1336,11 @@ void R_Mesh_TexBind(unsigned int unitnum, int texnum)
 	if (unit->t1d)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unit->t1d)
-			qglDisable(GL_TEXTURE_1D);
+		if (unitnum < backendunits)
+		{
+			if (unit->t1d)
+				qglDisable(GL_TEXTURE_1D);
+		}
 		unit->t1d = 0;
 		qglBindTexture(GL_TEXTURE_1D, unit->t1d);
 		CHECKGLERROR
@@ -1334,15 +1349,18 @@ void R_Mesh_TexBind(unsigned int unitnum, int texnum)
 	if (unit->t2d != texnum)
 	{
 		GL_ActiveTexture(unitnum);
-		if (texnum)
+		if (unitnum < backendunits)
 		{
-			if (unit->t2d == 0)
-				qglEnable(GL_TEXTURE_2D);
-		}
-		else
-		{
-			if (unit->t2d)
-				qglDisable(GL_TEXTURE_2D);
+			if (texnum)
+			{
+				if (unit->t2d == 0)
+					qglEnable(GL_TEXTURE_2D);
+			}
+			else
+			{
+				if (unit->t2d)
+					qglDisable(GL_TEXTURE_2D);
+			}
 		}
 		unit->t2d = texnum;
 		qglBindTexture(GL_TEXTURE_2D, unit->t2d);
@@ -1352,8 +1370,11 @@ void R_Mesh_TexBind(unsigned int unitnum, int texnum)
 	if (unit->t3d)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unit->t3d)
-			qglDisable(GL_TEXTURE_3D);
+		if (unitnum < backendunits)
+		{
+			if (unit->t3d)
+				qglDisable(GL_TEXTURE_3D);
+		}
 		unit->t3d = 0;
 		qglBindTexture(GL_TEXTURE_3D, unit->t3d);
 		CHECKGLERROR
@@ -1362,8 +1383,11 @@ void R_Mesh_TexBind(unsigned int unitnum, int texnum)
 	if (unit->tcubemap != 0)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unit->tcubemap)
-			qglDisable(GL_TEXTURE_CUBE_MAP_ARB);
+		if (unitnum < backendunits)
+		{
+			if (unit->tcubemap)
+				qglDisable(GL_TEXTURE_CUBE_MAP_ARB);
+		}
 		unit->tcubemap = 0;
 		qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);
 		CHECKGLERROR
@@ -1373,7 +1397,7 @@ void R_Mesh_TexBind(unsigned int unitnum, int texnum)
 void R_Mesh_TexBind3D(unsigned int unitnum, int texnum)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
-	if (unitnum >= backendunits)
+	if (unitnum >= backendimageunits)
 		return;
 	if (r_showtrispass)
 		return;
@@ -1381,8 +1405,11 @@ void R_Mesh_TexBind3D(unsigned int unitnum, int texnum)
 	if (unit->t1d)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unit->t1d)
-			qglDisable(GL_TEXTURE_1D);
+		if (unitnum < backendunits)
+		{
+			if (unit->t1d)
+				qglDisable(GL_TEXTURE_1D);
+		}
 		unit->t1d = 0;
 		qglBindTexture(GL_TEXTURE_1D, unit->t1d);
 		CHECKGLERROR
@@ -1391,8 +1418,11 @@ void R_Mesh_TexBind3D(unsigned int unitnum, int texnum)
 	if (unit->t2d)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unit->t2d)
-			qglDisable(GL_TEXTURE_2D);
+		if (unitnum < backendunits)
+		{
+			if (unit->t2d)
+				qglDisable(GL_TEXTURE_2D);
+		}
 		unit->t2d = 0;
 		qglBindTexture(GL_TEXTURE_2D, unit->t2d);
 		CHECKGLERROR
@@ -1401,15 +1431,18 @@ void R_Mesh_TexBind3D(unsigned int unitnum, int texnum)
 	if (unit->t3d != texnum)
 	{
 		GL_ActiveTexture(unitnum);
-		if (texnum)
+		if (unitnum < backendunits)
 		{
-			if (unit->t3d == 0)
-				qglEnable(GL_TEXTURE_3D);
-		}
-		else
-		{
-			if (unit->t3d)
-				qglDisable(GL_TEXTURE_3D);
+			if (texnum)
+			{
+				if (unit->t3d == 0)
+					qglEnable(GL_TEXTURE_3D);
+			}
+			else
+			{
+				if (unit->t3d)
+					qglDisable(GL_TEXTURE_3D);
+			}
 		}
 		unit->t3d = texnum;
 		qglBindTexture(GL_TEXTURE_3D, unit->t3d);
@@ -1419,8 +1452,11 @@ void R_Mesh_TexBind3D(unsigned int unitnum, int texnum)
 	if (unit->tcubemap != 0)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unit->tcubemap)
-			qglDisable(GL_TEXTURE_CUBE_MAP_ARB);
+		if (unitnum < backendunits)
+		{
+			if (unit->tcubemap)
+				qglDisable(GL_TEXTURE_CUBE_MAP_ARB);
+		}
 		unit->tcubemap = 0;
 		qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);
 		CHECKGLERROR
@@ -1430,7 +1466,7 @@ void R_Mesh_TexBind3D(unsigned int unitnum, int texnum)
 void R_Mesh_TexBindCubeMap(unsigned int unitnum, int texnum)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
-	if (unitnum >= backendunits)
+	if (unitnum >= backendimageunits)
 		return;
 	if (r_showtrispass)
 		return;
@@ -1438,8 +1474,11 @@ void R_Mesh_TexBindCubeMap(unsigned int unitnum, int texnum)
 	if (unit->t1d)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unit->t1d)
-			qglDisable(GL_TEXTURE_1D);
+		if (unitnum < backendunits)
+		{
+			if (unit->t1d)
+				qglDisable(GL_TEXTURE_1D);
+		}
 		unit->t1d = 0;
 		qglBindTexture(GL_TEXTURE_1D, unit->t1d);
 		CHECKGLERROR
@@ -1448,8 +1487,11 @@ void R_Mesh_TexBindCubeMap(unsigned int unitnum, int texnum)
 	if (unit->t2d)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unit->t2d)
-			qglDisable(GL_TEXTURE_2D);
+		if (unitnum < backendunits)
+		{
+			if (unit->t2d)
+				qglDisable(GL_TEXTURE_2D);
+		}
 		unit->t2d = 0;
 		qglBindTexture(GL_TEXTURE_2D, unit->t2d);
 		CHECKGLERROR
@@ -1458,8 +1500,11 @@ void R_Mesh_TexBindCubeMap(unsigned int unitnum, int texnum)
 	if (unit->t3d)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unit->t3d)
-			qglDisable(GL_TEXTURE_3D);
+		if (unitnum < backendunits)
+		{
+			if (unit->t3d)
+				qglDisable(GL_TEXTURE_3D);
+		}
 		unit->t3d = 0;
 		qglBindTexture(GL_TEXTURE_3D, unit->t3d);
 		CHECKGLERROR
@@ -1468,15 +1513,18 @@ void R_Mesh_TexBindCubeMap(unsigned int unitnum, int texnum)
 	if (unit->tcubemap != texnum)
 	{
 		GL_ActiveTexture(unitnum);
-		if (texnum)
+		if (unitnum < backendunits)
 		{
-			if (unit->tcubemap == 0)
-				qglEnable(GL_TEXTURE_CUBE_MAP_ARB);
-		}
-		else
-		{
-			if (unit->tcubemap)
-				qglDisable(GL_TEXTURE_CUBE_MAP_ARB);
+			if (texnum)
+			{
+				if (unit->tcubemap == 0)
+					qglEnable(GL_TEXTURE_CUBE_MAP_ARB);
+			}
+			else
+			{
+				if (unit->tcubemap)
+					qglDisable(GL_TEXTURE_CUBE_MAP_ARB);
+			}
 		}
 		unit->tcubemap = texnum;
 		qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);
