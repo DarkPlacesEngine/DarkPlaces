@@ -690,10 +690,12 @@ void NetConn_OpenServerPort(const char *addressstring, int defaultport)
 	}
 }
 
+static void NetConn_UpdateServerStuff(void);
 void NetConn_OpenServerPorts(int opennetports)
 {
 	int port;
 	NetConn_CloseServerPorts();
+	NetConn_UpdateServerStuff();
 	port = bound(0, sv_netport.integer, 65535);
 	if (port == 0)
 		port = 26000;
