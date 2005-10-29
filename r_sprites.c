@@ -113,32 +113,15 @@ void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 		fog = 0;
 	ifog = 1 - fog;
 
-	if (r_lerpsprites.integer)
+	// LordHavoc: interpolated sprite rendering
+	for (i = 0;i < 4;i++)
 	{
-		// LordHavoc: interpolated sprite rendering
-		for (i = 0;i < 4;i++)
+		if (ent->frameblend[i].lerp >= 0.01f)
 		{
-			if (ent->frameblend[i].lerp >= 0.01f)
-			{
-				frame = ent->model->sprite.sprdata_frames + ent->frameblend[i].frame;
-				R_DrawSpriteImage((ent->effects & EF_ADDITIVE), (ent->effects & EF_NODEPTHTEST), frame, frame->texture, org, up, left, color[0] * ifog, color[1] * ifog, color[2] * ifog, ent->alpha * ent->frameblend[i].lerp);
-				if (fog * ent->frameblend[i].lerp >= 0.01f)
-					R_DrawSpriteImage(true, (ent->effects & EF_NODEPTHTEST), frame, frame->fogtexture, org, up, left, fogcolor[0],fogcolor[1],fogcolor[2], fog * ent->alpha * ent->frameblend[i].lerp);
-			}
-		}
-	}
-	else
-	{
-		// LordHavoc: no interpolation
-		frame = NULL;
-		for (i = 0;i < 4 && ent->frameblend[i].lerp;i++)
 			frame = ent->model->sprite.sprdata_frames + ent->frameblend[i].frame;
-
-		if (frame)
-		{
-			R_DrawSpriteImage((ent->effects & EF_ADDITIVE), (ent->effects & EF_NODEPTHTEST), frame, frame->texture, org, up, left, color[0] * ifog, color[1] * ifog, color[2] * ifog, ent->alpha);
+			R_DrawSpriteImage((ent->effects & EF_ADDITIVE), (ent->effects & EF_NODEPTHTEST), frame, frame->texture, org, up, left, color[0] * ifog, color[1] * ifog, color[2] * ifog, ent->alpha * ent->frameblend[i].lerp);
 			if (fog * ent->frameblend[i].lerp >= 0.01f)
-				R_DrawSpriteImage(true, (ent->effects & EF_NODEPTHTEST), frame, frame->fogtexture, org, up, left, fogcolor[0],fogcolor[1],fogcolor[2], fog * ent->alpha);
+				R_DrawSpriteImage(true, (ent->effects & EF_NODEPTHTEST), frame, frame->fogtexture, org, up, left, fogcolor[0],fogcolor[1],fogcolor[2], fog * ent->alpha * ent->frameblend[i].lerp);
 		}
 	}
 }

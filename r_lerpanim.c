@@ -6,17 +6,20 @@
 // LordHavoc: later note: made FRAMEBLENDINSERT macro
 void R_LerpAnimation(entity_render_t *r)
 {
-	int sub1, sub2, numframes, f, i;
+	int sub1, sub2, numframes, f, i, dolerp;
 	double sublerp, lerp, d;
 	animscene_t *scene;
 	frameblend_t *blend;
-
-	if (!r->model || !r->model->type)
-		return;
+	model_t *model = r->model;
 
 	blend = r->frameblend;
+	blend[0].frame = blend[1].frame = blend[2].frame = blend[3].frame = 0;
+	blend[0].lerp = blend[1].lerp = blend[2].lerp = blend[3].lerp = 0;
 
-	numframes = r->model->numframes;
+	if (!model || !model->type)
+		return;
+
+	numframes = model->numframes;
 
 	if (r->frame1 >= numframes)
 	{
@@ -38,20 +41,18 @@ void R_LerpAnimation(entity_render_t *r)
 	}
 
 	// check r_lerpmodels and round off very close blend percentages
-	if (!r_lerpmodels.integer)
-		r->framelerp = 1;
-	else if (r->framelerp >= (65535.0f / 65536.0f))
+	dolerp = (model->type == mod_sprite) ? r_lerpsprites.integer : r_lerpmodels.integer;
+
+	if (!dolerp || r->framelerp >= (65535.0f / 65536.0f))
 		r->framelerp = 1;
 	else if (r->framelerp < (1.0f / 65536.0f))
 		r->framelerp = 0;
 
-	blend[0].frame = blend[1].frame = blend[2].frame = blend[3].frame = 0;
-	blend[0].lerp = blend[1].lerp = blend[2].lerp = blend[3].lerp = 0;
-	if (r->model->animscenes)
+	if (model->animscenes)
 	{
 		if (r->framelerp < 1 && r->frame1 >= 0)
 		{
-			scene = r->model->animscenes + r->frame1;
+			scene = model->animscenes + r->frame1;
 			lerp = 1 - r->framelerp;
 
 			if (scene->framecount > 1)
@@ -60,8 +61,8 @@ void R_LerpAnimation(entity_render_t *r)
 				sub1 = (int) (sublerp);
 				sub2 = sub1 + 1;
 				sublerp -= sub1;
-				if (!r_lerpmodels.integer)
-					sublerp = 1;
+				if (!dolerp)
+					sublerp = 0;
 				else if (sublerp >= (65535.0f / 65536.0f))
 					sublerp = 1;
 				else if (sublerp < (1.0f / 65536.0f))
@@ -106,7 +107,7 @@ void R_LerpAnimation(entity_render_t *r)
 		}
 		if (r->framelerp > 0 && r->frame2 >= 0)
 		{
-			scene = r->model->animscenes + r->frame2;
+			scene = model->animscenes + r->frame2;
 			lerp = r->framelerp;
 
 			if (scene->framecount > 1)
@@ -115,8 +116,8 @@ void R_LerpAnimation(entity_render_t *r)
 				sub1 = (int) (sublerp);
 				sub2 = sub1 + 1;
 				sublerp -= sub1;
-				if (!r_lerpmodels.integer)
-					sublerp = 1;
+				if (!dolerp)
+					sublerp = 0;
 				else if (sublerp >= (65535.0f / 65536.0f))
 					sublerp = 1;
 				else if (sublerp < (1.0f / 65536.0f))
