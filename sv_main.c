@@ -1724,8 +1724,7 @@ void SV_SpawnServer (const char *server)
 	}
 	else
 	{
-		// make sure cvars have been checked before opening the ports
-		NetConn_ServerFrame();
+		// open server port
 		NetConn_OpenServerPorts(true);
 	}
 
