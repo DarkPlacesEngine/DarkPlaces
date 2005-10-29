@@ -1,15 +1,21 @@
 
 #include "quakedef.h"
 
-static int R_SpriteSetup (const entity_render_t *ent, int type, float org[3], float left[3], float up[3])
+void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 {
+	const entity_render_t *ent = (entity_render_t *)calldata1;
+	int i;
+	vec3_t left, up, org, color, diffusecolor, diffusenormal;
+	mspriteframe_t *frame;
+	vec3_t diff;
+	float fog, ifog;
 	float scale;
 
 	// nudge it toward the view to make sure it isn't in a wall
 	org[0] = ent->matrix.m[0][3] - r_viewforward[0];
 	org[1] = ent->matrix.m[1][3] - r_viewforward[1];
 	org[2] = ent->matrix.m[2][3] - r_viewforward[2];
-	switch(type)
+	switch(ent->model->sprite.sprnum_type)
 	{
 	case SPR_VP_PARALLEL_UPRIGHT:
 		// flames and such
@@ -34,7 +40,7 @@ static int R_SpriteSetup (const entity_render_t *ent, int type, float org[3], fl
 		up[2] = ent->scale;
 		break;
 	default:
-		Con_Printf("R_SpriteSetup: unknown sprite type %i\n", type);
+		Con_Printf("R_SpriteSetup: unknown sprite type %i\n", ent->model->sprite.sprnum_type);
 		// fall through to normal sprite
 	case SPR_VP_PARALLEL:
 		// normal sprite
@@ -68,26 +74,6 @@ static int R_SpriteSetup (const entity_render_t *ent, int type, float org[3], fl
 		up[2] = ent->matrix.m[0][2] * r_viewforward[2] + ent->matrix.m[1][2] * r_viewleft[2] + ent->matrix.m[2][2] * r_viewup[2];
 		break;
 	}
-	return false;
-}
-
-static void R_DrawSpriteImage (int additive, int depthdisable, mspriteframe_t *frame, rtexture_t *texture, vec3_t origin, vec3_t up, vec3_t left, float red, float green, float blue, float alpha)
-{
-	// FIXME: negate left and right in loader
-	R_DrawSprite(GL_SRC_ALPHA, additive ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA, texture, depthdisable, origin, left, up, frame->left, frame->right, frame->down, frame->up, red, green, blue, alpha);
-}
-
-void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
-{
-	const entity_render_t *ent = (entity_render_t *)calldata1;
-	int i;
-	vec3_t left, up, org, color, diffusecolor, diffusenormal;
-	mspriteframe_t *frame;
-	vec3_t diff;
-	float fog, ifog;
-
-	if (R_SpriteSetup(ent, ent->model->sprite.sprnum_type, org, left, up))
-		return;
 
 	R_Mesh_Matrix(&r_identitymatrix);
 
@@ -119,9 +105,10 @@ void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 		if (ent->frameblend[i].lerp >= 0.01f)
 		{
 			frame = ent->model->sprite.sprdata_frames + ent->frameblend[i].frame;
-			R_DrawSpriteImage((ent->effects & EF_ADDITIVE), (ent->effects & EF_NODEPTHTEST), frame, frame->texture, org, up, left, color[0] * ifog, color[1] * ifog, color[2] * ifog, ent->alpha * ent->frameblend[i].lerp);
+			// FIXME: negate left and right in loader
+			R_DrawSprite(GL_SRC_ALPHA, (ent->effects & EF_ADDITIVE) ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA, frame->texture, (ent->effects & EF_NODEPTHTEST), org, left, up, frame->left, frame->right, frame->down, frame->up, color[0] * ifog, color[1] * ifog, color[2] * ifog, ent->alpha * ent->frameblend[i].lerp);
 			if (fog * ent->frameblend[i].lerp >= 0.01f)
-				R_DrawSpriteImage(true, (ent->effects & EF_NODEPTHTEST), frame, frame->fogtexture, org, up, left, fogcolor[0],fogcolor[1],fogcolor[2], fog * ent->alpha * ent->frameblend[i].lerp);
+				R_DrawSprite(GL_SRC_ALPHA, GL_ONE, frame->fogtexture, (ent->effects & EF_NODEPTHTEST), org, left, up, frame->left, frame->right, frame->down, frame->up, fogcolor[0],fogcolor[1],fogcolor[2], fog * ent->alpha * ent->frameblend[i].lerp);
 		}
 	}
 }
