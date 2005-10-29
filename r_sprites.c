@@ -7,8 +7,6 @@ void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 	int i;
 	vec3_t left, up, org, color, diffusecolor, diffusenormal;
 	mspriteframe_t *frame;
-	vec3_t diff;
-	float fog, ifog;
 	float scale;
 
 	// nudge it toward the view to make sure it isn't in a wall
@@ -88,17 +86,6 @@ void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 	color[1] *= ent->colormod[1];
 	color[2] *= ent->colormod[2];
 
-	if (fogenabled)
-	{
-		VectorSubtract(ent->origin, r_vieworigin, diff);
-		fog = exp(fogdensity/DotProduct(diff,diff));
-		if (fog > 1)
-			fog = 1;
-	}
-	else
-		fog = 0;
-	ifog = 1 - fog;
-
 	// LordHavoc: interpolated sprite rendering
 	for (i = 0;i < 4;i++)
 	{
@@ -106,9 +93,7 @@ void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 		{
 			frame = ent->model->sprite.sprdata_frames + ent->frameblend[i].frame;
 			// FIXME: negate left and right in loader
-			R_DrawSprite(GL_SRC_ALPHA, (ent->effects & EF_ADDITIVE) ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA, frame->texture, (ent->effects & EF_NODEPTHTEST), org, left, up, frame->left, frame->right, frame->down, frame->up, color[0] * ifog, color[1] * ifog, color[2] * ifog, ent->alpha * ent->frameblend[i].lerp);
-			if (fog * ent->frameblend[i].lerp >= 0.01f)
-				R_DrawSprite(GL_SRC_ALPHA, GL_ONE, frame->fogtexture, (ent->effects & EF_NODEPTHTEST), org, left, up, frame->left, frame->right, frame->down, frame->up, fogcolor[0],fogcolor[1],fogcolor[2], fog * ent->alpha * ent->frameblend[i].lerp);
+			R_DrawSprite(GL_SRC_ALPHA, (ent->effects & EF_ADDITIVE) ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA, frame->texture, frame->fogtexture, (ent->effects & EF_NODEPTHTEST), org, left, up, frame->left, frame->right, frame->down, frame->up, color[0], color[1], color[2], ent->alpha * ent->frameblend[i].lerp);
 		}
 	}
 }

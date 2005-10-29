@@ -194,13 +194,16 @@ void R_DrawExplosions(void);
 
 int R_CullBox(const vec3_t mins, const vec3_t maxs);
 
-extern qboolean fogenabled;
+#define FOGTABLEWIDTH 1024
 extern vec3_t fogcolor;
 extern vec_t fogdensity;
 extern vec_t fogrange;
 extern vec_t fograngerecip;
-#define calcfog(v) (exp(-(fogdensity*fogdensity*(((v)[0] - r_vieworigin[0])*((v)[0] - r_vieworigin[0])+((v)[1] - r_vieworigin[1])*((v)[1] - r_vieworigin[1])+((v)[2] - r_vieworigin[2])*((v)[2] - r_vieworigin[2])))))
-#define calcfogbyte(v) ((qbyte) (bound(0, ((int) ((float) (calcfog((v)) * 255.0f))), 255)))
+extern int fogtableindex;
+extern vec_t fogtabledistmultiplier;
+extern float fogtable[FOGTABLEWIDTH];
+extern qboolean fogenabled;
+#define VERTEXFOGTABLE(dist) (fogtableindex = (int)((dist) * fogtabledistmultiplier), fogtable[bound(0, fogtableindex, FOGTABLEWIDTH - 1)])
 
 #include "r_modules.h"
 
@@ -241,7 +244,7 @@ void R_DrawWorldCrosshair(void);
 void R_Draw2DCrosshair(void);
 
 void R_CalcBeam_Vertex3f(float *vert, const vec3_t org1, const vec3_t org2, float width);
-void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, int depthdisable, const vec3_t origin, const vec3_t left, const vec3_t up, float scalex1, float scalex2, float scaley1, float scaley2, float cr, float cg, float cb, float ca);
+void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_t *fogtexture, int depthdisable, const vec3_t origin, const vec3_t left, const vec3_t up, float scalex1, float scalex2, float scaley1, float scaley2, float cr, float cg, float cb, float ca);
 
 struct entity_render_s;
 struct texture_s;

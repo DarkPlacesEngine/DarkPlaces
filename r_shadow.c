@@ -297,11 +297,11 @@ const char *builtinshader_light_vert =
 "\n"
 "varying vec2 TexCoord;\n"
 "varying myhvec3 CubeVector;\n"
-"varying myhvec3 LightVector;\n"
+"varying vec3 LightVector;\n"
 "\n"
 "#if defined(USESPECULAR) || defined(USEFOG) || defined(USEOFFSETMAPPING)\n"
 "uniform vec3 EyePosition;\n"
-"varying myhvec3 EyeVector;\n"
+"varying vec3 EyeVector;\n"
 "#endif\n"
 "\n"
 "// TODO: get rid of tangentt (texcoord2) and use a crossproduct to regenerate it from tangents (texcoord1) and normal (texcoord3)\n"
@@ -385,9 +385,9 @@ const char *builtinshader_light_frag =
 "\n"
 "varying vec2 TexCoord;\n"
 "varying myhvec3 CubeVector;\n"
-"varying myhvec3 LightVector;\n"
+"varying vec3 LightVector;\n"
 "#if defined(USESPECULAR) || defined(USEFOG) || defined(USEOFFSETMAPPING)\n"
-"varying myhvec3 EyeVector;\n"
+"varying vec3 EyeVector;\n"
 "#endif\n"
 "\n"
 "void main(void)\n"
@@ -1223,8 +1223,7 @@ void R_Shadow_Stage_Lighting(int stenciltest)
 		m.tex[1] = R_GetTexture(r_texture_white); // diffuse
 		m.tex[2] = R_GetTexture(r_texture_white); // gloss
 		m.texcubemap[3] = R_GetTexture(r_shadow_lightcubemap); // light filter
-		// TODO: support fog (after renderer is converted to texture fog)
-		m.tex[4] = R_GetTexture(r_texture_white); // fog
+		m.tex[4] = R_GetTexture(r_texture_fogattenuation); // fog
 		//m.texmatrix[3] = r_shadow_entitytolight; // light filter matrix
 		R_Mesh_State(&m);
 		GL_BlendFunc(GL_ONE, GL_ONE);
@@ -1234,10 +1233,10 @@ void R_Shadow_Stage_Lighting(int stenciltest)
 		// only add a feature to the permutation if that permutation exists
 		// (otherwise it might end up not using a shader at all, which looks
 		// worse than using less features)
+		if (fogenabled && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_FOG])
+			r_shadow_lightpermutation |= SHADERPERMUTATION_FOG;
 		if (r_shadow_rtlight->specularscale && r_shadow_gloss.integer >= 1 && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_SPECULAR])
 			r_shadow_lightpermutation |= SHADERPERMUTATION_SPECULAR;
-		//if (fog && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_FOG])
-		//	r_shadow_lightpermutation |= SHADERPERMUTATION_FOG;
 		if (r_shadow_lightcubemap != r_texture_whitecube && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_CUBEFILTER])
 			r_shadow_lightpermutation |= SHADERPERMUTATION_CUBEFILTER;
 		if (r_shadow_glsl_offsetmapping.integer && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_OFFSETMAPPING])
@@ -1251,7 +1250,7 @@ void R_Shadow_Stage_Lighting(int stenciltest)
 		// TODO: support fog (after renderer is converted to texture fog)
 		if (r_shadow_lightpermutation & SHADERPERMUTATION_FOG)
 		{
-			qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "FogRangeRecip"), 0);CHECKGLERROR
+			qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "FogRangeRecip"), fograngerecip);CHECKGLERROR
 		}
 		qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "AmbientScale"), r_shadow_rtlight->ambientscale);CHECKGLERROR
 		qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "DiffuseScale"), r_shadow_rtlight->diffusescale);CHECKGLERROR
@@ -3089,7 +3088,7 @@ void R_Shadow_SelectLight(dlight_t *light)
 void R_Shadow_DrawCursorCallback(const void *calldata1, int calldata2)
 {
 	float scale = r_editlights_cursorgrid.value * 0.5f;
-	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, lighttextures[0], false, r_editlights_cursorlocation, r_viewright, r_viewup, scale, -scale, -scale, scale, 1, 1, 1, 0.5f);
+	R_DrawSprite(GL_ONE, GL_ONE, lighttextures[0], NULL, false, r_editlights_cursorlocation, r_viewright, r_viewup, scale, -scale, -scale, scale, 1, 1, 1, 0.5f);
 }
 
 void R_Shadow_DrawLightSpriteCallback(const void *calldata1, int calldata2)
@@ -3102,7 +3101,7 @@ void R_Shadow_DrawLightSpriteCallback(const void *calldata1, int calldata2)
 		intensity = 0.75 + 0.25 * sin(realtime * M_PI * 4.0);
 	if (!light->shadow)
 		intensity *= 0.5f;
-	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, lighttextures[calldata2], false, light->origin, r_viewright, r_viewup, 8, -8, -8, 8, intensity, intensity, intensity, 0.5);
+	R_DrawSprite(GL_ONE, GL_ONE, lighttextures[calldata2], NULL, false, light->origin, r_viewright, r_viewup, 8, -8, -8, 8, intensity, intensity, intensity, 0.5);
 }
 
 void R_Shadow_DrawLightSprites(void)

@@ -92,7 +92,7 @@ void R_DrawCoronas(void)
 		{
 			cscale = light->rtlight.corona * r_coronas.value * 0.25f;
 			scale = light->rtlight.radius * light->rtlight.coronasizescale;
-			R_DrawSprite(GL_ONE, GL_ONE, lightcorona, true, light->rtlight.shadoworigin, r_viewright, r_viewup, scale, -scale, -scale, scale, light->rtlight.color[0] * cscale, light->rtlight.color[1] * cscale, light->rtlight.color[2] * cscale, 1);
+			R_DrawSprite(GL_ONE, GL_ONE, lightcorona, NULL, true, light->rtlight.shadoworigin, r_viewright, r_viewup, scale, -scale, -scale, scale, light->rtlight.color[0] * cscale, light->rtlight.color[1] * cscale, light->rtlight.color[2] * cscale, 1);
 		}
 	}
 	for (i = 0;i < r_refdef.numlights;i++)
@@ -107,7 +107,7 @@ void R_DrawCoronas(void)
 				cscale *= 4.0f;
 				scale *= 2.0f;
 			}
-			R_DrawSprite(GL_ONE, GL_ONE, lightcorona, true, light->origin, r_viewright, r_viewup, scale, -scale, -scale, scale, light->color[0] * cscale, light->color[1] * cscale, light->color[2] * cscale, 1);
+			R_DrawSprite(GL_ONE, GL_ONE, lightcorona, NULL, true, light->origin, r_viewright, r_viewup, scale, -scale, -scale, scale, light->color[0] * cscale, light->color[1] * cscale, light->color[2] * cscale, 1);
 		}
 	}
 }

@@ -1902,7 +1902,7 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	rmeshstate_t m;
 #endif
 	pblend_t blendmode;
-	float org[3], up2[3], v[3], right[3], up[3], fog, ifog, fogvec[3], cr, cg, cb, ca, size;
+	float org[3], up2[3], v[3], right[3], up[3], fog, ifog, cr, cg, cb, ca, size;
 	particletexture_t *tex;
 
 	VectorCopy(p->org, org);
@@ -1934,8 +1934,7 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	}
 	if (fogenabled)
 	{
-		VectorSubtract(org, r_vieworigin, fogvec);
-		fog = exp(fogdensity/DotProduct(fogvec,fogvec));
+		fog = VERTEXFOGTABLE(VectorDistance(org, r_vieworigin));
 		ifog = 1 - fog;
 		cr = cr * ifog;
 		cg = cg * ifog;
