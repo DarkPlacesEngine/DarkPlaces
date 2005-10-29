@@ -1431,105 +1431,102 @@ extern float *rsurface_tvector3f;
 extern float *rsurface_normal3f;
 extern void RSurf_SetVertexPointer(const entity_render_t *ent, const texture_t *texture, const msurface_t *surface, const vec3_t modelorg);
 
-static void R_Shadow_VertexShadingWithXYZAttenuation(const msurface_t *surface, const float *diffusecolor, const float *ambientcolor, float reduce)
+static void R_Shadow_RenderSurfacesLighting_Light_Vertex_Shading(const msurface_t *surface, const float *diffusecolor, const float *ambientcolor, float reduce, const vec3_t modelorg)
 {
 	int numverts = surface->num_vertices;
 	float *vertex3f = rsurface_vertex3f + 3 * surface->num_firstvertex;
 	float *normal3f = rsurface_normal3f + 3 * surface->num_firstvertex;
 	float *color4f = varray_color4f + 4 * surface->num_firstvertex;
 	float dist, dot, distintensity, shadeintensity, v[3], n[3];
-	for (;numverts > 0;numverts--, vertex3f += 3, normal3f += 3, color4f += 4)
+	if (r_textureunits.integer >= 3)
 	{
-		Matrix4x4_Transform(&r_shadow_entitytolight, vertex3f, v);
-		if ((dist = DotProduct(v, v)) < 1)
+		for (;numverts > 0;numverts--, vertex3f += 3, normal3f += 3, color4f += 4)
 		{
-			dist = sqrt(dist);
-			distintensity = pow(1 - dist, r_shadow_attenpower) * r_shadow_attenscale;
+			Matrix4x4_Transform(&r_shadow_entitytolight, vertex3f, v);
 			Matrix4x4_Transform3x3(&r_shadow_entitytolight, normal3f, n);
 			if ((dot = DotProduct(n, v)) > 0)
 			{
 				shadeintensity = dot / sqrt(VectorLength2(v) * VectorLength2(n));
-				color4f[0] = (ambientcolor[0] + shadeintensity * diffusecolor[0]) * distintensity - reduce;
-				color4f[1] = (ambientcolor[1] + shadeintensity * diffusecolor[1]) * distintensity - reduce;
-				color4f[2] = (ambientcolor[2] + shadeintensity * diffusecolor[2]) * distintensity - reduce;
+				color4f[0] = (ambientcolor[0] + shadeintensity * diffusecolor[0]) - reduce;
+				color4f[1] = (ambientcolor[1] + shadeintensity * diffusecolor[1]) - reduce;
+				color4f[2] = (ambientcolor[2] + shadeintensity * diffusecolor[2]) - reduce;
+				if (fogenabled)
+				{
+					float f = VERTEXFOGTABLE(VectorDistance(v, modelorg));
+					VectorScale(color4f, f, color4f);
+				}
 			}
 			else
-			{
-				color4f[0] = ambientcolor[0] * distintensity - reduce;
-				color4f[1] = ambientcolor[1] * distintensity - reduce;
-				color4f[2] = ambientcolor[2] * distintensity - reduce;
-			}
-			color4f[0] = bound(0, color4f[0], 1);
-			color4f[1] = bound(0, color4f[1], 1);
-			color4f[2] = bound(0, color4f[2], 1);
+				VectorClear(color4f);
+			color4f[3] = 1;
 		}
-		else
-			VectorClear(color4f);
-		color4f[3] = 1;
 	}
-}
-
-static void R_Shadow_VertexShadingWithZAttenuation(const msurface_t *surface, const float *diffusecolor, const float *ambientcolor, float reduce)
-{
-	int numverts = surface->num_vertices;
-	float *vertex3f = rsurface_vertex3f + 3 * surface->num_firstvertex;
-	float *normal3f = rsurface_normal3f + 3 * surface->num_firstvertex;
-	float *color4f = varray_color4f + 4 * surface->num_firstvertex;
-	float dist, dot, distintensity, shadeintensity, v[3], n[3];
-	for (;numverts > 0;numverts--, vertex3f += 3, normal3f += 3, color4f += 4)
+	else if (r_textureunits.integer >= 2)
 	{
-		Matrix4x4_Transform(&r_shadow_entitytolight, vertex3f, v);
-		if ((dist = fabs(v[2])) < 1)
+		for (;numverts > 0;numverts--, vertex3f += 3, normal3f += 3, color4f += 4)
 		{
-			distintensity = pow(1 - dist, r_shadow_attenpower) * r_shadow_attenscale;
-			Matrix4x4_Transform3x3(&r_shadow_entitytolight, normal3f, n);
-			if ((dot = DotProduct(n, v)) > 0)
+			Matrix4x4_Transform(&r_shadow_entitytolight, vertex3f, v);
+			if ((dist = fabs(v[2])) < 1)
 			{
-				shadeintensity = dot / sqrt(VectorLength2(v) * VectorLength2(n));
-				color4f[0] = (ambientcolor[0] + shadeintensity * diffusecolor[0]) * distintensity - reduce;
-				color4f[1] = (ambientcolor[1] + shadeintensity * diffusecolor[1]) * distintensity - reduce;
-				color4f[2] = (ambientcolor[2] + shadeintensity * diffusecolor[2]) * distintensity - reduce;
+				distintensity = pow(1 - dist, r_shadow_attenpower) * r_shadow_attenscale;
+				Matrix4x4_Transform3x3(&r_shadow_entitytolight, normal3f, n);
+				if ((dot = DotProduct(n, v)) > 0)
+				{
+					shadeintensity = dot / sqrt(VectorLength2(v) * VectorLength2(n));
+					color4f[0] = (ambientcolor[0] + shadeintensity * diffusecolor[0]) * distintensity - reduce;
+					color4f[1] = (ambientcolor[1] + shadeintensity * diffusecolor[1]) * distintensity - reduce;
+					color4f[2] = (ambientcolor[2] + shadeintensity * diffusecolor[2]) * distintensity - reduce;
+				}
+				else
+				{
+					color4f[0] = ambientcolor[0] * distintensity - reduce;
+					color4f[1] = ambientcolor[1] * distintensity - reduce;
+					color4f[2] = ambientcolor[2] * distintensity - reduce;
+				}
+				if (fogenabled)
+				{
+					float f = VERTEXFOGTABLE(VectorDistance(v, modelorg));
+					VectorScale(color4f, f, color4f);
+				}
 			}
 			else
-			{
-				color4f[0] = ambientcolor[0] * distintensity - reduce;
-				color4f[1] = ambientcolor[1] * distintensity - reduce;
-				color4f[2] = ambientcolor[2] * distintensity - reduce;
-			}
-			color4f[0] = bound(0, color4f[0], 1);
-			color4f[1] = bound(0, color4f[1], 1);
-			color4f[2] = bound(0, color4f[2], 1);
+				VectorClear(color4f);
+			color4f[3] = 1;
 		}
-		else
-			VectorClear(color4f);
-		color4f[3] = 1;
 	}
-}
-
-static void R_Shadow_VertexShading(const msurface_t *surface, const float *diffusecolor, const float *ambientcolor, float reduce)
-{
-	int numverts = surface->num_vertices;
-	float *vertex3f = rsurface_vertex3f + 3 * surface->num_firstvertex;
-	float *normal3f = rsurface_normal3f + 3 * surface->num_firstvertex;
-	float *color4f = varray_color4f + 4 * surface->num_firstvertex;
-	float dot, shadeintensity, v[3], n[3];
-	for (;numverts > 0;numverts--, vertex3f += 3, normal3f += 3, color4f += 4)
+	else
 	{
-		Matrix4x4_Transform(&r_shadow_entitytolight, vertex3f, v);
-		Matrix4x4_Transform3x3(&r_shadow_entitytolight, normal3f, n);
-		if ((dot = DotProduct(n, v)) > 0)
+		for (;numverts > 0;numverts--, vertex3f += 3, normal3f += 3, color4f += 4)
 		{
-			shadeintensity = dot / sqrt(VectorLength2(v) * VectorLength2(n));
-			color4f[0] = (ambientcolor[0] + shadeintensity * diffusecolor[0]) - reduce;
-			color4f[1] = (ambientcolor[1] + shadeintensity * diffusecolor[1]) - reduce;
-			color4f[2] = (ambientcolor[2] + shadeintensity * diffusecolor[2]) - reduce;
-			color4f[0] = bound(0, color4f[0], 1);
-			color4f[1] = bound(0, color4f[1], 1);
-			color4f[2] = bound(0, color4f[2], 1);
+			Matrix4x4_Transform(&r_shadow_entitytolight, vertex3f, v);
+			if ((dist = DotProduct(v, v)) < 1)
+			{
+				dist = sqrt(dist);
+				distintensity = pow(1 - dist, r_shadow_attenpower) * r_shadow_attenscale;
+				Matrix4x4_Transform3x3(&r_shadow_entitytolight, normal3f, n);
+				if ((dot = DotProduct(n, v)) > 0)
+				{
+					shadeintensity = dot / sqrt(VectorLength2(v) * VectorLength2(n));
+					color4f[0] = (ambientcolor[0] + shadeintensity * diffusecolor[0]) * distintensity - reduce;
+					color4f[1] = (ambientcolor[1] + shadeintensity * diffusecolor[1]) * distintensity - reduce;
+					color4f[2] = (ambientcolor[2] + shadeintensity * diffusecolor[2]) * distintensity - reduce;
+				}
+				else
+				{
+					color4f[0] = ambientcolor[0] * distintensity - reduce;
+					color4f[1] = ambientcolor[1] * distintensity - reduce;
+					color4f[2] = ambientcolor[2] * distintensity - reduce;
+				}
+				if (fogenabled)
+				{
+					float f = VERTEXFOGTABLE(VectorDistance(v, modelorg));
+					VectorScale(color4f, f, color4f);
+				}
+			}
+			else
+				VectorClear(color4f);
+			color4f[3] = 1;
 		}
-		else
-			VectorClear(color4f);
-		color4f[3] = 1;
 	}
 }
 
@@ -2453,17 +2450,69 @@ static void R_Shadow_RenderSurfacesLighting_Light_Vertex(const entity_render_t *
 #endif
 			}
 		}
+		R_Shadow_RenderSurfacesLighting_Light_Vertex_Shading(surface, diffusecolor2, ambientcolor2, 0, modelorg);
 		for (renders = 0;renders < 64 && (ambientcolor2[0] > renders || ambientcolor2[1] > renders || ambientcolor2[2] > renders || diffusecolor2[0] > renders || diffusecolor2[1] > renders || diffusecolor2[2] > renders);renders++)
 		{
-			if (r_textureunits.integer >= 3)
-				R_Shadow_VertexShading(surface, diffusecolor2, ambientcolor2, renders);
-			else if (r_textureunits.integer >= 2)
-				R_Shadow_VertexShadingWithZAttenuation(surface, diffusecolor2, ambientcolor2, renders);
-			else
-				R_Shadow_VertexShadingWithXYZAttenuation(surface, diffusecolor2, ambientcolor2, renders);
+			int i;
+			float *c;
+#if 1
+			// due to low fillrate on the cards this vertex lighting path is
+			// designed for, we manually cull all triangles that do not
+			// contain a lit vertex
+			int draw;
+			const int *e;
+			int newnumtriangles;
+			int *newe;
+			int newelements[3072];
+			draw = false;
+			newnumtriangles = 0;
+			newe = newelements;
+			for (i = 0, e = elements;i < surface->num_triangles;i++, e += 3)
+			{
+				if (newnumtriangles >= 1024)
+				{
+					GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
+					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, newnumtriangles, newelements);
+					GL_LockArrays(0, 0);
+					newnumtriangles = 0;
+					newe = newelements;
+				}
+				if (VectorLength2(varray_color4f + e[0] * 4) + VectorLength2(varray_color4f + e[1] * 4) + VectorLength2(varray_color4f + e[2] * 4) >= 0.01)
+				{
+					newe[0] = e[0];
+					newe[1] = e[1];
+					newe[2] = e[2];
+					newnumtriangles++;
+					newe += 3;
+					draw = true;
+				}
+			}
+			if (newnumtriangles >= 1)
+			{
+				GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
+				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, newnumtriangles, newelements);
+				GL_LockArrays(0, 0);
+				draw = true;
+			}
+			if (!draw)
+				break;
+#else
+			for (i = 0, c = varray_color4f + 4 * surface->num_firstvertex;i < surface->num_vertices;i++, c += 4)
+				if (VectorLength2(c))
+					goto goodpass;
+			break;
+goodpass:
 			GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 			R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
 			GL_LockArrays(0, 0);
+#endif
+			// now reduce the intensity for the next overbright pass
+			for (i = 0, c = varray_color4f + 4 * surface->num_firstvertex;i < surface->num_vertices;i++, c += 4)
+			{
+				c[0] = max(0, c[0] - 1);
+				c[1] = max(0, c[1] - 1);
+				c[2] = max(0, c[2] - 1);
+			}
 		}
 	}
 }
