@@ -1590,6 +1590,10 @@ Tell all the clients that the server is changing levels
 */
 void SV_SendReconnect (void)
 {
+#if 1
+	MSG_WriteByte(&sv.reliable_datagram, svc_stufftext);
+	MSG_WriteString(&sv.reliable_datagram, "reconnect\n");
+#else
 	qbyte data[128];
 	sizebuf_t msg;
 
@@ -1603,6 +1607,7 @@ void SV_SendReconnect (void)
 
 	if (cls.state != ca_dedicated)
 		Cmd_ExecuteString ("reconnect\n", src_command);
+#endif
 }
 
 
