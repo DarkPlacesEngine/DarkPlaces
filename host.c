@@ -588,20 +588,9 @@ qboolean Host_FilterTime (double time)
 	{
 		int msleft;
 		// don't totally hog the CPU
-		if (cls.state == ca_dedicated)
-		{
-			// if dedicated, try to use as little cpu as possible by waiting
-			// just a little longer than necessary
-			// (yes this means it doesn't quite keep up with the framerate)
-			msleft = (int)ceil(timeleft * 1000);
-		}
-		else
-		{
-			// if not dedicated, try to hit exactly a steady framerate by not
-			// sleeping the full amount
-			msleft = (int)floor(timeleft * 1000);
-		}
-		if (msleft > 0)
+		// try to hit exactly a steady framerate by not sleeping the full amount
+		msleft = (int)floor(timeleft * 1000);
+		if (msleft >= 10)
 			Sys_Sleep(msleft);
 		return false;
 	}
