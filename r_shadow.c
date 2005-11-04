@@ -1625,19 +1625,16 @@ static void R_Shadow_RenderSurfacesLighting_Light_GLSL(const entity_render_t *en
 {
 	// ARB2 GLSL shader path (GFFX5200, Radeon 9500)
 	int surfacelistindex;
-	qboolean doambientbase = r_shadow_rtlight->ambientscale * VectorLength2(lightcolorbase) > 0.00001 && basetexture != r_texture_black;
-	qboolean dodiffusebase = r_shadow_rtlight->diffusescale * VectorLength2(lightcolorbase) > 0.00001 && basetexture != r_texture_black;
-	qboolean doambientpants = r_shadow_rtlight->ambientscale * VectorLength2(lightcolorpants) > 0.00001 && pantstexture != r_texture_black;
-	qboolean dodiffusepants = r_shadow_rtlight->diffusescale * VectorLength2(lightcolorpants) > 0.00001 && pantstexture != r_texture_black;
-	qboolean doambientshirt = r_shadow_rtlight->ambientscale * VectorLength2(lightcolorshirt) > 0.00001 && shirttexture != r_texture_black;
-	qboolean dodiffuseshirt = r_shadow_rtlight->diffusescale * VectorLength2(lightcolorshirt) > 0.00001 && shirttexture != r_texture_black;
+	qboolean dobase = (r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorbase) > 0.00001 && basetexture != r_texture_black;
+	qboolean dopants = (r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorpants) > 0.00001 && pantstexture != r_texture_black;
+	qboolean doshirt = (r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorshirt) > 0.00001 && shirttexture != r_texture_black;
 	qboolean dospecular = specularscale * VectorLength2(lightcolorbase) > 0.00001 && glosstexture != r_texture_black;
 	// TODO: add direct pants/shirt rendering
-	if (doambientpants || dodiffusepants)
+	if (dopants)
 		R_Shadow_RenderSurfacesLighting_Light_GLSL(ent, texture, numsurfaces, surfacelist, lightcolorpants, vec3_origin, vec3_origin, pantstexture, r_texture_black, r_texture_black, normalmaptexture, r_texture_black, 0, modelorg);
-	if (doambientshirt || dodiffuseshirt)
+	if (doshirt)
 		R_Shadow_RenderSurfacesLighting_Light_GLSL(ent, texture, numsurfaces, surfacelist, lightcolorshirt, vec3_origin, vec3_origin, shirttexture, r_texture_black, r_texture_black, normalmaptexture, r_texture_black, 0, modelorg);
-	if (!doambientbase && !dodiffusebase && !dospecular)
+	if (!dobase && !dospecular)
 		return;
 	R_Mesh_TexMatrix(0, &texture->currenttexmatrix);
 	R_Mesh_TexBind(0, R_GetTexture(normalmaptexture));
