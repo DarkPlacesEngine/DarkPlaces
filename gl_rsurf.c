@@ -529,18 +529,22 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 	mleaf_t *leaf;
 	for (;;)
 	{
-		if (!BoxesOverlap(info->lightmins, info->lightmaxs, node->mins, node->maxs))
-			return;
-		if (!node->plane)
+		mplane_t *plane = node->plane;
+		//if (!BoxesOverlap(info->lightmins, info->lightmaxs, node->mins, node->maxs))
+		//	return;
+		if (!plane)
 			break;
-		sides = BoxOnPlaneSide(info->lightmins, info->lightmaxs, node->plane) - 1;
-		if (sides == 2)
+		if (plane->type < 3)
+			sides = ((info->lightmaxs[plane->type] >= plane->dist) | ((info->lightmins[plane->type] < plane->dist) << 1));
+		else
+			sides = BoxOnPlaneSide(info->lightmins, info->lightmaxs, plane);
+		if (sides == 3)
 		{
 			R_Q1BSP_RecursiveGetLightInfo(info, node->children[0]);
 			node = node->children[1];
 		}
 		else
-			node = node->children[sides];
+			node = node->children[sides - 1];
 	}
 	leaf = (mleaf_t *)node;
 	if (info->pvs == NULL || CHECKPVSBIT(info->pvs, leaf->clusterindex))

@@ -5091,7 +5091,7 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, model_t *model,
 static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, model_t *model, mnode_t *node, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int markframe, const vec3_t segmentmins, const vec3_t segmentmaxs)
 {
 	int i;
-	//int sides;
+	int sides;
 	float nodesegmentmins[3], nodesegmentmaxs[3];
 	mleaf_t *leaf;
 	colbrushf_t *brush;
@@ -5312,6 +5312,57 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, model_t *model
 		}
 	*/
 #if 1
+	for (;;)
+	{
+		mplane_t *plane = node->plane;
+		if (!plane)
+			break;
+		// axial planes are much more common than non-axial, so an optimized
+		// axial case pays off here
+		if (plane->type < 3)
+		{
+			// this is an axial plane, compare bounding box directly to it and
+			// recurse sides accordingly
+			// recurse down node sides
+			// use an inlined axial BoxOnPlaneSide to slightly reduce overhead
+			//sides = BoxOnPlaneSide(nodesegmentmins, nodesegmentmaxs, plane);
+			sides = ((segmentmaxs[plane->type] >= plane->dist) | ((segmentmins[plane->type] < plane->dist) << 1));
+			if (sides == 3)
+			{
+				// segment box crosses plane
+				Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
+				sides = 2;
+			}
+		}
+		else
+		{
+			// this is a non-axial plane, entire trace bounding box
+			// comparisons against it are likely to be very sloppy, so in if
+			// the whole box is split by the plane we then test the start/end
+			// boxes against it to be sure
+			sides = BoxOnPlaneSide(segmentmins, segmentmaxs, plane);
+			if (sides == 3)
+			{
+				// segment box crosses plane
+				// now check start and end brush boxes to handle a lot of 'diagonal' cases more efficiently...
+				sides = BoxOnPlaneSide(thisbrush_start->mins, thisbrush_start->maxs, plane) | BoxOnPlaneSide(thisbrush_end->mins, thisbrush_end->maxs, plane);
+				if (sides == 3)
+				{
+					Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
+					sides = 2;
+				}
+			}
+		}
+		// take whichever side the segment box is on
+		node = node->children[sides - 1];
+	}
+	nodesegmentmins[0] = max(segmentmins[0], node->mins[0]);
+	nodesegmentmins[1] = max(segmentmins[1], node->mins[1]);
+	nodesegmentmins[2] = max(segmentmins[2], node->mins[2]);
+	nodesegmentmaxs[0] = min(segmentmaxs[0], node->maxs[0]);
+	nodesegmentmaxs[1] = min(segmentmaxs[1], node->maxs[1]);
+	nodesegmentmaxs[2] = min(segmentmaxs[2], node->maxs[2]);
+#elif 1
 	for (;;)
 	{
 		nodesegmentmins[0] = max(segmentmins[0], node->mins[0]);
