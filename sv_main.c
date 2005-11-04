@@ -34,8 +34,6 @@ static cvar_t sv_cullentities_trace = {0, "sv_cullentities_trace", "0"}; // tend
 static cvar_t sv_cullentities_stats = {0, "sv_cullentities_stats", "0"};
 static cvar_t sv_entpatch = {0, "sv_entpatch", "1"};
 
-extern cvar_t sys_ticrate;
-
 cvar_t sv_gameplayfix_grenadebouncedownslopes = {0, "sv_gameplayfix_grenadebouncedownslopes", "1"};
 cvar_t sv_gameplayfix_noairborncorpse = {0, "sv_gameplayfix_noairborncorpse", "1"};
 cvar_t sv_gameplayfix_stepdown = {0, "sv_gameplayfix_stepdown", "1"};

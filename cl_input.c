@@ -56,8 +56,6 @@ kbutton_t	in_button3, in_button4, in_button5, in_button6, in_button7, in_button8
 
 int			in_impulse;
 
-extern cvar_t sys_ticrate;
-
 
 void KeyDown (kbutton_t *b)
 {

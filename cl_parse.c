@@ -574,7 +574,7 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 		// not a monster
 		ent->persistent.lerpstarttime = ent->state_previous.time;
 		// no lerp if it's singleplayer
-		if (cl.islocalgame)
+		if (cl.islocalgame && !sv_fixedframeratesingleplayer.integer)
 			ent->persistent.lerpdeltatime = 0;
 		else
 			ent->persistent.lerpdeltatime = bound(0, ent->state_current.time - ent->state_previous.time, 0.1);
