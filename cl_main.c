@@ -426,7 +426,7 @@ static float CL_LerpPoint(void)
 
 	// LordHavoc: lerp in listen games as the server is being capped below the client (usually)
 	f = cl.mtime[0] - cl.mtime[1];
-	if (!f || cl_nolerp.integer || cls.timedemo || cl.islocalgame)
+	if (!f || cl_nolerp.integer || cls.timedemo || (cl.islocalgame && !sv_fixedframeratesingleplayer.integer))
 	{
 		cl.time = cl.mtime[0];
 		return 1;

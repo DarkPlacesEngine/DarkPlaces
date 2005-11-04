@@ -71,6 +71,7 @@ cvar_t cl_maxfps = {CVAR_SAVE, "cl_maxfps", "1000"};
 cvar_t sv_echobprint = {CVAR_SAVE, "sv_echobprint", "1"};
 
 cvar_t sys_ticrate = {CVAR_SAVE, "sys_ticrate","0.05"};
+cvar_t sv_fixedframeratesingleplayer = {0, "sv_fixedframeratesingleplayer", "0"};
 cvar_t serverprofile = {0, "serverprofile","0"};
 
 cvar_t fraglimit = {CVAR_NOTIFY, "fraglimit","0"};
@@ -225,6 +226,7 @@ void Host_InitLocal (void)
 	Cvar_RegisterVariable (&sv_echobprint);
 
 	Cvar_RegisterVariable (&sys_ticrate);
+	Cvar_RegisterVariable (&sv_fixedframeratesingleplayer);
 	Cvar_RegisterVariable (&serverprofile);
 
 	Cvar_RegisterVariable (&fraglimit);
@@ -670,7 +672,7 @@ void Host_ServerFrame (void)
 		// setup the VM frame
 		SV_VM_Begin();
 
-		if (cl.islocalgame)
+		if (cl.islocalgame && !sv_fixedframeratesingleplayer.integer)
 			advancetime = min(sv.timer, sys_ticrate.value);
 		else
 			advancetime = sys_ticrate.value;
