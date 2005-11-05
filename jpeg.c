@@ -470,12 +470,12 @@ static void JPEG_SkipInputData (j_decompress_ptr cinfo, long num_bytes)
     cinfo->src->bytes_in_buffer -= num_bytes;
 }
 
-static void JPEG_MemSrc (j_decompress_ptr cinfo, const unsigned char *buffer)
+static void JPEG_MemSrc (j_decompress_ptr cinfo, const unsigned char *buffer, size_t filesize)
 {
 	cinfo->src = (struct jpeg_source_mgr *)cinfo->mem->alloc_small ((j_common_ptr) cinfo, JPOOL_PERMANENT, sizeof (struct jpeg_source_mgr));
 
 	cinfo->src->next_input_byte = buffer;
-	cinfo->src->bytes_in_buffer = fs_filesize;
+	cinfo->src->bytes_in_buffer = filesize;
 
 	cinfo->src->init_source = JPEG_Noop;
 	cinfo->src->fill_input_buffer = JPEG_FillInputBuffer;
@@ -498,7 +498,7 @@ JPEG_LoadImage
 Load a JPEG image into a RGBA buffer
 ====================
 */
-unsigned char* JPEG_LoadImage (const unsigned char *f, int matchwidth, int matchheight)
+unsigned char* JPEG_LoadImage (const unsigned char *f, int filesize, int matchwidth, int matchheight)
 {
 	struct jpeg_decompress_struct cinfo;
 	struct jpeg_error_mgr jerr;
@@ -511,7 +511,7 @@ unsigned char* JPEG_LoadImage (const unsigned char *f, int matchwidth, int match
 
 	cinfo.err = qjpeg_std_error (&jerr);
 	qjpeg_create_decompress (&cinfo);
-	JPEG_MemSrc (&cinfo, f);
+	JPEG_MemSrc (&cinfo, f, filesize);
 	qjpeg_read_header (&cinfo, TRUE);
 	qjpeg_start_decompress (&cinfo);
 

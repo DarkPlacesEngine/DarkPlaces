@@ -1231,6 +1231,7 @@ PRVM_LoadLNO
 ===============
 */
 void PRVM_LoadLNO( const char *progname ) {
+	fs_offset_t filesize;
 	unsigned char *lno;
 	unsigned int *header;
 	char filename[512];
@@ -1238,7 +1239,7 @@ void PRVM_LoadLNO( const char *progname ) {
 	FS_StripExtension( progname, filename, sizeof( filename ) );
 	strlcat( filename, ".lno", sizeof( filename ) );
 
-	lno = FS_LoadFile( filename, tempmempool, false );
+	lno = FS_LoadFile( filename, tempmempool, false, &filesize );
 	if( !lno ) {
 		return;
 	}
@@ -1252,7 +1253,7 @@ void PRVM_LoadLNO( const char *progname ) {
 <Spike>    SafeWrite (h, &numstatements, sizeof(int));
 <Spike>    SafeWrite (h, statement_linenums, numstatements*sizeof(int));
 */
-	if( (unsigned) fs_filesize < (6 + prog->progs->numstatements) * sizeof( int ) ) {
+	if( (unsigned) filesize < (6 + prog->progs->numstatements) * sizeof( int ) ) {
         return;
 	}
 
@@ -1281,18 +1282,19 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	dstatement_t *st;
 	ddef_t *infielddefs;
 	dfunction_t *dfunctions;
+	fs_offset_t filesize;
 
 	if( prog->loaded ) {
 		PRVM_ERROR ("PRVM_LoadProgs: there is already a %s program loaded!\n", PRVM_NAME );
 	}
 
-	prog->progs = (dprograms_t *)FS_LoadFile (filename, prog->progs_mempool, false);
-	if (prog->progs == NULL || fs_filesize < (fs_offset_t)sizeof(dprograms_t))
+	prog->progs = (dprograms_t *)FS_LoadFile (filename, prog->progs_mempool, false, &filesize);
+	if (prog->progs == NULL || filesize < (fs_offset_t)sizeof(dprograms_t))
 		PRVM_ERROR ("PRVM_LoadProgs: couldn't load %s for %s", filename, PRVM_NAME);
 
-	Con_DPrintf("%s programs occupy %iK.\n", PRVM_NAME, fs_filesize/1024);
+	Con_DPrintf("%s programs occupy %iK.\n", PRVM_NAME, filesize/1024);
 
-	prog->filecrc = CRC_Block((unsigned char *)prog->progs, fs_filesize);
+	prog->filecrc = CRC_Block((unsigned char *)prog->progs, filesize);
 
 // byte swap the header
 	for (i = 0;i < (int) sizeof(*prog->progs) / 4;i++)
@@ -1310,7 +1312,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	prog->stringssize = 0;
 	for (i = 0;i < prog->progs->numstrings;i++)
 	{
-		if (prog->progs->ofs_strings + prog->stringssize >= (int)fs_filesize)
+		if (prog->progs->ofs_strings + prog->stringssize >= (int)filesize)
 			PRVM_ERROR ("%s: %s strings go past end of file\n", PRVM_NAME, filename);
 		prog->stringssize += (int)strlen (prog->strings + prog->stringssize) + 1;
 	}

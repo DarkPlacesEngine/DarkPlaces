@@ -30,9 +30,10 @@ void Palette_SetupSpecialPalettes(void)
 	int shirt_start, shirt_end;
 	int reversed_start, reversed_end;
 	unsigned char *colormap;
+	fs_offset_t filesize;
 
-	colormap = FS_LoadFile("gfx/colormap.lmp", tempmempool, true);
-	if (colormap && fs_filesize >= 16385)
+	colormap = FS_LoadFile("gfx/colormap.lmp", tempmempool, true, NULL);
+	if (colormap && filesize >= 16385)
 		fullbright_start = 256 - colormap[16384];
 	else
 		fullbright_start = 256;
@@ -164,6 +165,7 @@ void Palette_Init(void)
 {
 	int i;
 	float gamma, scale, base;
+	fs_offset_t filesize;
 	unsigned char *in, *out, *palfile;
 	unsigned char texturegammaramp[256];
 
@@ -188,8 +190,8 @@ void Palette_Init(void)
 
 	BuildGammaTable8(1.0f, gamma, scale, base, texturegammaramp);
 
-	palfile = (unsigned char *)FS_LoadFile ("gfx/palette.lmp", tempmempool, false);
-	if (palfile && fs_filesize >= 768)
+	palfile = (unsigned char *)FS_LoadFile ("gfx/palette.lmp", tempmempool, false, &filesize);
+	if (palfile && filesize >= 768)
 		in = palfile;
 	else
 	{

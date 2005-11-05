@@ -50,9 +50,7 @@ static rtexture_t *draw_generateconchars(void)
 	unsigned char buffer[65536][4], *data = NULL;
 	double random;
 
-	fs_filesize = FONT_FILESIZE;
-	data = LoadTGA (concharimage, 256, 256);
-	fs_filesize = -1;
+	data = LoadTGA (concharimage, FONT_FILESIZE, 256, 256);
 // Gold numbers
 	for (i = 0;i < 8192;i++)
 	{

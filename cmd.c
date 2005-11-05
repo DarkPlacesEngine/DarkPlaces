@@ -265,7 +265,7 @@ static void Cmd_Exec_f (void)
 		return;
 	}
 
-	f = (char *)FS_LoadFile (Cmd_Argv(1), tempmempool, false);
+	f = (char *)FS_LoadFile (Cmd_Argv(1), tempmempool, false, NULL);
 	if (!f)
 	{
 		Con_Printf("couldn't exec %s\n",Cmd_Argv(1));

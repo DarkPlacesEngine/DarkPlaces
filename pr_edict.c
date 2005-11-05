@@ -1274,6 +1274,7 @@ extern void PR_Cmd_Reset (void);
 void PR_LoadProgs (const char *progsname)
 {
 	int i;
+	fs_offset_t filesize;
 	dstatement_t *st;
 	ddef_t *infielddefs;
 	dfunction_t *dfunctions;
@@ -1283,13 +1284,13 @@ void PR_LoadProgs (const char *progsname)
 
 	PR_FreeAll();
 
-	progs = (dprograms_t *)FS_LoadFile (progsname, serverprogs_mempool, false);
+	progs = (dprograms_t *)FS_LoadFile (progsname, serverprogs_mempool, false, &filesize);
 	if (!progs)
 		Host_Error ("PR_LoadProgs: couldn't load %s", progsname);
 
-	Con_DPrintf("Programs occupy %iK.\n", fs_filesize/1024);
+	Con_DPrintf("Programs occupy %iK.\n", filesize/1024);
 
-	pr_crc = CRC_Block((unsigned char *)progs, fs_filesize);
+	pr_crc = CRC_Block((unsigned char *)progs, filesize);
 
 // byte swap the header
 	for (i = 0;i < (int) sizeof(*progs) / 4;i++)
@@ -1307,7 +1308,7 @@ void PR_LoadProgs (const char *progsname)
 	pr_stringssize = 0;
 	for (i = 0;i < progs->numstrings;i++)
 	{
-		if (progs->ofs_strings + pr_stringssize >= fs_filesize)
+		if (progs->ofs_strings + pr_stringssize >= filesize)
 			Host_Error ("progs.dat strings go past end of file\n");
 		pr_stringssize += strlen (pr_strings + pr_stringssize) + 1;
 	}

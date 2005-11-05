@@ -136,6 +136,7 @@ model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolea
 	int num;
 	unsigned int crc;
 	void *buf;
+	fs_offset_t filesize;
 
 	mod->used = true;
 
@@ -150,10 +151,10 @@ model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolea
 	{
 		if (checkdisk && mod->loaded)
 			Con_DPrintf("checking model %s\n", mod->name);
-		buf = FS_LoadFile (mod->name, tempmempool, false);
+		buf = FS_LoadFile (mod->name, tempmempool, false, &filesize);
 		if (buf)
 		{
-			crc = CRC_Block((unsigned char *)buf, fs_filesize);
+			crc = CRC_Block((unsigned char *)buf, filesize);
 			if (mod->crc != crc)
 				mod->loaded = false;
 		}
@@ -190,7 +191,7 @@ model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolea
 
 	if (buf)
 	{
-		char *bufend = (char *)buf + fs_filesize;
+		char *bufend = (char *)buf + filesize;
 		num = LittleLong(*((int *)buf));
 		// call the apropriate loader
 		loadmodel = mod;
@@ -1081,7 +1082,7 @@ tag_torso,
 */
 	memset(tagsets, 0, sizeof(tagsets));
 	memset(word, 0, sizeof(word));
-	for (i = 0;i < MAX_SKINS && (data = text = (char *)FS_LoadFile(va("%s_%i.skin", loadmodel->name, i), tempmempool, true));i++)
+	for (i = 0;i < MAX_SKINS && (data = text = (char *)FS_LoadFile(va("%s_%i.skin", loadmodel->name, i), tempmempool, true, NULL));i++)
 	{
 		numtags = 0;
 

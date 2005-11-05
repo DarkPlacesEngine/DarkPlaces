@@ -586,7 +586,7 @@ void Host_Loadgame_f (void)
 
 	cls.demonum = -1;		// stop demo loop in case this fails
 
-	t = text = (char *)FS_LoadFile (filename, tempmempool, false);
+	t = text = (char *)FS_LoadFile (filename, tempmempool, false, NULL);
 	if (!text)
 	{
 		Con_Print("ERROR: couldn't open.\n");

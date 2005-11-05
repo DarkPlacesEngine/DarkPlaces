@@ -262,8 +262,6 @@ VARIABLES
 
 mempool_t *fs_mempool;
 
-fs_offset_t fs_filesize;
-
 pack_t *packlist = NULL;
 
 searchpath_t *fs_searchpaths = NULL;
@@ -381,7 +379,7 @@ Extract the end of the central directory from a PK3 package
 */
 qboolean PK3_GetEndOfCentralDir (const char *packfile, int packhandle, pk3_endOfCentralDir_t *eocd)
 {
-	long filesize, maxsize;
+	fs_offset_t filesize, maxsize;
 	unsigned char *buffer, *ptr;
 	int ind;
 
@@ -1167,8 +1165,6 @@ qfile_t *FS_OpenPackedFile (pack_t* pack, int pack_ind)
 
 	pfile = &pack->files[pack_ind];
 
-	fs_filesize = 0;
-
 	// If we don't have the true offset, get it now
 	if (! (pfile->flags & PACKFILE_FLAG_TRUEOFFS))
 		if (!PK3_GetTrueFileOffset (pfile, pack))
@@ -1245,8 +1241,6 @@ qfile_t *FS_OpenPackedFile (pack_t* pack, int pack_ind)
 
 		file->ztk = ztk;
 	}
-
-	fs_filesize = pfile->realsize;
 
 	return file;
 }
@@ -1379,8 +1373,6 @@ static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet)
 FS_OpenReadFile
 
 Look for a file in the search paths and open it in read-only mode
-
-Sets fs_filesize
 ===========
 */
 qfile_t *FS_OpenReadFile (const char *filename, qboolean quiet, qboolean nonblocking)
@@ -1392,10 +1384,7 @@ qfile_t *FS_OpenReadFile (const char *filename, qboolean quiet, qboolean nonbloc
 
 	// Not found?
 	if (search == NULL)
-	{
-		fs_filesize = 0;
 		return NULL;
-	}
 
 	// Found in the filesystem?
 	if (pack_ind < 0)
@@ -1427,8 +1416,6 @@ Open a file. The syntax is the same as fopen
 */
 qfile_t* FS_Open (const char* filepath, const char* mode, qboolean quiet, qboolean nonblocking)
 {
-	qfile_t* file;
-
 	if (FS_CheckNastyPath(filepath))
 	{
 		Con_Printf("FS_Open(\"%s\", \"%s\", %s): nasty filename rejected\n", filepath, mode, quiet ? "true" : "false");
@@ -1448,13 +1435,9 @@ qfile_t* FS_Open (const char* filepath, const char* mode, qboolean quiet, qboole
 
 		return FS_SysOpen (real_path, mode, nonblocking);
 	}
-
 	// Else, we look at the various search paths and open the file in read-only mode
-	file = FS_OpenReadFile (filepath, quiet, nonblocking);
-	if (file != NULL)
-		fs_filesize = file->real_length;
-
-	return file;
+	else
+		return FS_OpenReadFile (filepath, quiet, nonblocking);
 }
 
 
@@ -1917,21 +1900,24 @@ Filename are relative to the quake directory.
 Always appends a 0 byte.
 ============
 */
-unsigned char *FS_LoadFile (const char *path, mempool_t *pool, qboolean quiet)
+unsigned char *FS_LoadFile (const char *path, mempool_t *pool, qboolean quiet, fs_offset_t *filesizepointer)
 {
 	qfile_t *file;
-	unsigned char *buf;
+	unsigned char *buf = NULL;
+	fs_offset_t filesize = 0;
 
 	file = FS_Open (path, "rb", quiet, false);
-	if (!file)
-		return NULL;
+	if (file)
+	{
+		filesize = file->real_length;
+		buf = (unsigned char *)Mem_Alloc (pool, filesize + 1);
+		buf[filesize] = '\0';
+		FS_Read (file, buf, filesize);
+		FS_Close (file);
+	}
 
-	buf = (unsigned char *)Mem_Alloc (pool, fs_filesize + 1);
-	buf[fs_filesize] = '\0';
-
-	FS_Read (file, buf, fs_filesize);
-	FS_Close (file);
-
+	if (filesizepointer)
+		*filesizepointer = filesize;
 	return buf;
 }
 
