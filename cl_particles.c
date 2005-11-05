@@ -558,7 +558,7 @@ void CL_ReadPointFile_f (void)
 #if WORKINGLQUAKE
 	pointfile = COM_LoadTempFile (name);
 #else
-	pointfile = (char *)FS_LoadFile(name, tempmempool, true);
+	pointfile = (char *)FS_LoadFile(name, tempmempool, true, NULL);
 #endif
 	if (!pointfile)
 	{

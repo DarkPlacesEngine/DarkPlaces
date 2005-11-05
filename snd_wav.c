@@ -255,6 +255,7 @@ S_LoadWavFile
 */
 qboolean S_LoadWavFile (const char *filename, sfx_t *s)
 {
+	fs_offset_t filesize;
 	unsigned char *data;
 	wavinfo_t info;
 	int len;
@@ -266,7 +267,7 @@ qboolean S_LoadWavFile (const char *filename, sfx_t *s)
 		return true;
 
 	// Load the file
-	data = FS_LoadFile(filename, snd_mempool, false);
+	data = FS_LoadFile(filename, snd_mempool, false, &filesize);
 	if (!data)
 		return false;
 
@@ -279,7 +280,7 @@ qboolean S_LoadWavFile (const char *filename, sfx_t *s)
 
 	Con_DPrintf ("Loading WAV file \"%s\"\n", filename);
 
-	info = GetWavinfo (s->name, data, (int)fs_filesize);
+	info = GetWavinfo (s->name, data, (int)filesize);
 	// Stereo sounds are allowed (intended for music)
 	if (info.channels < 1 || info.channels > 2)
 	{

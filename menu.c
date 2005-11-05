@@ -1321,12 +1321,13 @@ void M_Setup_Draw (void)
 	if (menuplyr_load)
 	{
 		unsigned char *data, *f;
+		fs_offset_t filesize;
 		menuplyr_load = false;
 		menuplyr_top = -1;
 		menuplyr_bottom = -1;
-		if ((f = FS_LoadFile("gfx/menuplyr.lmp", tempmempool, true)))
+		if ((f = FS_LoadFile("gfx/menuplyr.lmp", tempmempool, true, &filesize)))
 		{
-			data = LoadLMP (f, 0, 0, true);
+			data = LoadLMP (f, filesize, 0, 0, true);
 			menuplyr_width = image_width;
 			menuplyr_height = image_height;
 			Mem_Free(f);

@@ -571,6 +571,7 @@ Load an Ogg Vorbis file into memory
 qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 {
 	unsigned char *data;
+	fs_offset_t filesize;
 	ov_decode_t ov_decode;
 	OggVorbis_File vf;
 	vorbis_info *vi;
@@ -584,7 +585,7 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 		return true;
 
 	// Load the file
-	data = FS_LoadFile (filename, snd_mempool, false);
+	data = FS_LoadFile (filename, snd_mempool, false, &filesize);
 	if (data == NULL)
 		return false;
 
@@ -593,7 +594,7 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 	// Open it with the VorbisFile API
 	ov_decode.buffer = data;
 	ov_decode.ind = 0;
-	ov_decode.buffsize = fs_filesize;
+	ov_decode.buffsize = filesize;
 	if (qov_open_callbacks (&ov_decode, &vf, NULL, 0, callbacks) < 0)
 	{
 		Con_Printf ("error while opening Ogg Vorbis file \"%s\"\n", filename);
@@ -616,7 +617,7 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 
 	// Decide if we go for a stream or a simple PCM cache
 	buff_len = ceil (STREAM_BUFFER_DURATION * (shm->format.speed * 2 * vi->channels));
-	if (snd_streaming.integer && len > (ogg_int64_t)fs_filesize + 3 * buff_len)
+	if (snd_streaming.integer && len > (ogg_int64_t)filesize + 3 * buff_len)
 	{
 		ogg_stream_persfx_t* per_sfx;
 
@@ -624,8 +625,8 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 		per_sfx = (ogg_stream_persfx_t *)Mem_Alloc (snd_mempool, sizeof (*per_sfx));
 		s->memsize += sizeof (*per_sfx);
 		per_sfx->file = data;
-		per_sfx->filesize = fs_filesize;
-		s->memsize += fs_filesize;
+		per_sfx->filesize = filesize;
+		s->memsize += filesize;
 
 		per_sfx->format.speed = vi->rate;
 		per_sfx->format.width = 2;  // We always work with 16 bits samples

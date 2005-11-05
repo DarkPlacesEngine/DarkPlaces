@@ -61,6 +61,7 @@ static void W_CleanupName (const char *in, char *out)
 void *W_GetLumpName(const char *name)
 {
 	int i;
+	fs_offset_t filesize;
 	lumpinfo_t *lump;
 	char clean[16];
 	wadinfo_t *header;
@@ -76,17 +77,16 @@ void *W_GetLumpName(const char *name)
 	if (!wad_loaded)
 	{
 		wad_loaded = true;
-		if ((temp = FS_LoadFile ("gfx.wad", tempmempool, false)))
+		if ((wad_base = FS_LoadFile ("gfx.wad", cl_mempool, false, &filesize)))
 		{
 			if (memcmp(temp, "WAD2", 4))
+			{
 				Con_Print("gfx.wad doesn't have WAD2 id\n");
+				Mem_Free(wad_base);
+				wad_base = NULL;
+			}
 			else
 			{
-				wad_base = (unsigned char *)Mem_Alloc(cl_mempool, fs_filesize);
-
-				memcpy(wad_base, temp, fs_filesize);
-				Mem_Free(temp);
-
 				header = (wadinfo_t *)wad_base;
 				wad_numlumps = LittleLong(header->numlumps);
 				infotableofs = LittleLong(header->infotableofs);

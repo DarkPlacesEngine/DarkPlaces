@@ -481,8 +481,8 @@ void r_shadow_start(void)
 		int fragstrings_count;
 		const char *vertstrings_list[SHADERPERMUTATION_COUNT+1];
 		const char *fragstrings_list[SHADERPERMUTATION_COUNT+1];
-		vertstring = (char *)FS_LoadFile("glsl/light.vert", tempmempool, false);
-		fragstring = (char *)FS_LoadFile("glsl/light.frag", tempmempool, false);
+		vertstring = (char *)FS_LoadFile("glsl/light.vert", tempmempool, false, NULL);
+		fragstring = (char *)FS_LoadFile("glsl/light.frag", tempmempool, false, NULL);
 		for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
 		{
 			vertstrings_count = 0;
@@ -3203,7 +3203,7 @@ void R_Shadow_LoadWorldLights(void)
 	}
 	FS_StripExtension (r_refdef.worldmodel->name, name, sizeof (name));
 	strlcat (name, ".rtlights", sizeof (name));
-	lightsstring = (char *)FS_LoadFile(name, tempmempool, false);
+	lightsstring = (char *)FS_LoadFile(name, tempmempool, false, NULL);
 	if (lightsstring)
 	{
 		s = lightsstring;
@@ -3344,7 +3344,7 @@ void R_Shadow_LoadLightsFile(void)
 	}
 	FS_StripExtension (r_refdef.worldmodel->name, name, sizeof (name));
 	strlcat (name, ".lights", sizeof (name));
-	lightsstring = (char *)FS_LoadFile(name, tempmempool, false);
+	lightsstring = (char *)FS_LoadFile(name, tempmempool, false, NULL);
 	if (lightsstring)
 	{
 		s = lightsstring;
@@ -3400,7 +3400,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 	// try to load a .ent file first
 	FS_StripExtension (r_refdef.worldmodel->name, key, sizeof (key));
 	strlcat (key, ".ent", sizeof (key));
-	data = entfiledata = (char *)FS_LoadFile(key, tempmempool, true);
+	data = entfiledata = (char *)FS_LoadFile(key, tempmempool, true, NULL);
 	// and if that is not found, fall back to the bsp file entity string
 	if (!data)
 		data = r_refdef.worldmodel->brush.entities;

@@ -1861,7 +1861,7 @@ void SV_SpawnServer (const char *server)
 	// load replacement entity file if found
 	entities = NULL;
 	if (sv_entpatch.integer)
-		entities = (char *)FS_LoadFile(va("maps/%s.ent", sv.name), tempmempool, true);
+		entities = (char *)FS_LoadFile(va("maps/%s.ent", sv.name), tempmempool, true, NULL);
 	if (entities)
 	{
 		Con_Printf("Loaded maps/%s.ent\n", sv.name);

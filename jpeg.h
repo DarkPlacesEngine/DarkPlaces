@@ -27,7 +27,7 @@
 
 qboolean JPEG_OpenLibrary (void);
 void JPEG_CloseLibrary (void);
-unsigned char* JPEG_LoadImage (const unsigned char *f, int matchwidth, int matchheight);
+unsigned char* JPEG_LoadImage (const unsigned char *f, int filesize, int matchwidth, int matchheight);
 qboolean JPEG_SaveImage_preflipped (const char *filename, int width, int height, unsigned char *data);
 
 

@@ -44,7 +44,6 @@ typedef long long fs_offset_t;
 extern char fs_gamedir [MAX_OSPATH];
 extern char fs_basedir [MAX_OSPATH];
 
-extern fs_offset_t fs_filesize;  // set by FS_Open (in "read" mode) and FS_LoadFile
 
 
 // ------ Main functions ------ //
@@ -77,7 +76,7 @@ fssearch_t;
 fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet);
 void FS_FreeSearch(fssearch_t *search);
 
-unsigned char *FS_LoadFile (const char *path, mempool_t *pool, qboolean quiet);
+unsigned char *FS_LoadFile (const char *path, mempool_t *pool, qboolean quiet, fs_offset_t *filesizepointer);
 qboolean FS_WriteFile (const char *filename, void *data, fs_offset_t len);
 
 

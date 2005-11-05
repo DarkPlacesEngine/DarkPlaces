@@ -1456,6 +1456,7 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 	int i;
 	unsigned char *in, *out, *data, d;
 	char litfilename[1024];
+	fs_offset_t filesize;
 	loadmodel->brushq1.lightdata = NULL;
 	if (loadmodel->brush.ishlbsp) // LordHavoc: load the colored lighting data straight
 	{
@@ -1474,17 +1475,17 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 		strlcpy (litfilename, loadmodel->name, sizeof (litfilename));
 		FS_StripExtension (litfilename, litfilename, sizeof (litfilename));
 		strlcat (litfilename, ".lit", sizeof (litfilename));
-		data = (unsigned char*) FS_LoadFile(litfilename, tempmempool, false);
+		data = (unsigned char*) FS_LoadFile(litfilename, tempmempool, false, &filesize);
 		if (data)
 		{
-			if (fs_filesize == (fs_offset_t)(8 + l->filelen * 3) && data[0] == 'Q' && data[1] == 'L' && data[2] == 'I' && data[3] == 'T')
+			if (filesize == (fs_offset_t)(8 + l->filelen * 3) && data[0] == 'Q' && data[1] == 'L' && data[2] == 'I' && data[3] == 'T')
 			{
 				i = LittleLong(((int *)data)[1]);
 				if (i == 1)
 				{
 					Con_DPrintf("loaded %s\n", litfilename);
-					loadmodel->brushq1.lightdata = (unsigned char *)Mem_Alloc(loadmodel->mempool, fs_filesize - 8);
-					memcpy(loadmodel->brushq1.lightdata, data + 8, fs_filesize - 8);
+					loadmodel->brushq1.lightdata = (unsigned char *)Mem_Alloc(loadmodel->mempool, filesize - 8);
+					memcpy(loadmodel->brushq1.lightdata, data + 8, filesize - 8);
 					Mem_Free(data);
 					return;
 				}
@@ -1496,10 +1497,10 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 			}
 			else
 			{
-				if (fs_filesize == 8)
+				if (filesize == 8)
 					Con_Print("Empty .lit file, ignoring\n");
 				else
-					Con_Printf("Corrupt .lit file (file size %i bytes, should be %i bytes), ignoring\n", fs_filesize, 8 + l->filelen * 3);
+					Con_Printf("Corrupt .lit file (file size %i bytes, should be %i bytes), ignoring\n", filesize, 8 + l->filelen * 3);
 				Mem_Free(data);
 			}
 		}
@@ -1529,7 +1530,7 @@ static void Mod_Q1BSP_LoadLightList(void)
 	strlcpy (lightsfilename, loadmodel->name, sizeof (lightsfilename));
 	FS_StripExtension (lightsfilename, lightsfilename, sizeof(lightsfilename));
 	strlcat (lightsfilename, ".lights", sizeof (lightsfilename));
-	s = lightsstring = (char *) FS_LoadFile(lightsfilename, tempmempool, false);
+	s = lightsstring = (char *) FS_LoadFile(lightsfilename, tempmempool, false, NULL);
 	if (s)
 	{
 		numlights = 0;
@@ -2405,7 +2406,7 @@ static void Mod_Q1BSP_LoadMapBrushes(void)
 	char mapfilename[MAX_QPATH];
 	FS_StripExtension (loadmodel->name, mapfilename, sizeof (mapfilename));
 	strlcat (mapfilename, ".map", sizeof (mapfilename));
-	maptext = (unsigned char*) FS_LoadFile(mapfilename, tempmempool, false);
+	maptext = (unsigned char*) FS_LoadFile(mapfilename, tempmempool, false, NULL);
 	if (!maptext)
 		return;
 	text = maptext;
@@ -3855,7 +3856,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 	{
 		for (i = 0;i < search->numfilenames;i++)
 		{
-			if ((f = (char *)FS_LoadFile(search->filenames[i], tempmempool, false)))
+			if ((f = (char *)FS_LoadFile(search->filenames[i], tempmempool, false, NULL)))
 			{
 				text = f;
 				while (COM_ParseToken(&text, false))

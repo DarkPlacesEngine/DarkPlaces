@@ -431,7 +431,7 @@ void gl_main_newmap(void)
 		if (l >= 0 && !strcmp(entname + l, ".bsp"))
 		{
 			strcpy(entname + l, ".ent");
-			if ((entities = (char *)FS_LoadFile(entname, tempmempool, true)))
+			if ((entities = (char *)FS_LoadFile(entname, tempmempool, true, NULL)))
 			{
 				CL_ParseEntityLump(entities);
 				Mem_Free(entities);

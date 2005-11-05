@@ -180,14 +180,14 @@ typedef struct pcx_s
 LoadPCX
 ============
 */
-unsigned char* LoadPCX (const unsigned char *f, int matchwidth, int matchheight)
+unsigned char* LoadPCX (const unsigned char *f, int filesize, int matchwidth, int matchheight)
 {
 	pcx_t pcx;
 	unsigned char *a, *b, *image_rgba, *pbuf;
 	const unsigned char *palette, *fin, *enddata;
 	int x, y, x2, dataByte;
 
-	if (fs_filesize < (int)sizeof(pcx) + 768)
+	if (filesize < (int)sizeof(pcx) + 768)
 	{
 		Con_Print("Bad pcx file\n");
 		return NULL;
@@ -218,7 +218,7 @@ unsigned char* LoadPCX (const unsigned char *f, int matchwidth, int matchheight)
 	if ((matchwidth && image_width != matchwidth) || (matchheight && image_height != matchheight))
 		return NULL;
 
-	palette = f + fs_filesize - 768;
+	palette = f + filesize - 768;
 
 	image_rgba = (unsigned char *)Mem_Alloc(tempmempool, image_width*image_height*4);
 	if (!image_rgba)
@@ -297,7 +297,7 @@ void PrintTargaHeader(TargaHeader *t)
 LoadTGA
 =============
 */
-unsigned char *LoadTGA (const unsigned char *f, int matchwidth, int matchheight)
+unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, int matchheight)
 {
 	int x, y, row_inc, compressed, readpixelcount, red, green, blue, alpha, runlen, pindex, alphabits;
 	unsigned char *pixbuf, *image_rgba;
@@ -306,10 +306,10 @@ unsigned char *LoadTGA (const unsigned char *f, int matchwidth, int matchheight)
 	TargaHeader targa_header;
 	unsigned char palette[256*4];
 
-	if (fs_filesize < 19)
+	if (filesize < 19)
 		return NULL;
 
-	enddata = f + fs_filesize;
+	enddata = f + filesize;
 
 	targa_header.id_length = f[0];
 	targa_header.colormap_type = f[1];
@@ -536,11 +536,11 @@ unsigned char *LoadTGA (const unsigned char *f, int matchwidth, int matchheight)
 LoadLMP
 ============
 */
-unsigned char *LoadLMP (const unsigned char *f, int matchwidth, int matchheight, qboolean loadAs8Bit)
+unsigned char *LoadLMP (const unsigned char *f, int filesize, int matchwidth, int matchheight, qboolean loadAs8Bit)
 {
 	unsigned char *image_buffer;
 
-	if (fs_filesize < 9)
+	if (filesize < 9)
 	{
 		Con_Print("LoadLMP: invalid LMP file\n");
 		return NULL;
@@ -557,7 +557,7 @@ unsigned char *LoadLMP (const unsigned char *f, int matchwidth, int matchheight,
 	if ((matchwidth && image_width != matchwidth) || (matchheight && image_height != matchheight))
 		return NULL;
 
-	if (fs_filesize < (fs_offset_t)(8 + image_width * image_height))
+	if (filesize < (8 + image_width * image_height))
 	{
 		Con_Print("LoadLMP: invalid LMP file\n");
 		return NULL;
@@ -576,9 +576,9 @@ unsigned char *LoadLMP (const unsigned char *f, int matchwidth, int matchheight,
 	return image_buffer;
 }
 
-static unsigned char *LoadLMPRGBA (const unsigned char *f, int matchwidth, int matchheight)
+static unsigned char *LoadLMPRGBA (const unsigned char *f, int filesize, int matchwidth, int matchheight)
 {
-	return LoadLMP(f, matchwidth, matchheight, false);
+	return LoadLMP(f, filesize, matchwidth, matchheight, false);
 }
 
 
@@ -593,12 +593,12 @@ typedef struct q2wal_s
 	int			value;
 } q2wal_t;
 
-unsigned char *LoadWAL (const unsigned char *f, int matchwidth, int matchheight)
+unsigned char *LoadWAL (const unsigned char *f, int filesize, int matchwidth, int matchheight)
 {
 	unsigned char *image_rgba;
 	const q2wal_t *inwal = (const q2wal_t *)f;
 
-	if (fs_filesize < (int) sizeof(q2wal_t))
+	if (filesize < (int) sizeof(q2wal_t))
 	{
 		Con_Print("LoadWAL: invalid WAL file\n");
 		return NULL;
@@ -614,7 +614,7 @@ unsigned char *LoadWAL (const unsigned char *f, int matchwidth, int matchheight)
 	if ((matchwidth && image_width != matchwidth) || (matchheight && image_height != matchheight))
 		return NULL;
 
-	if ((int) fs_filesize < (int) sizeof(q2wal_t) + (int) LittleLong(inwal->offsets[0]) + image_width * image_height)
+	if (filesize < (int) sizeof(q2wal_t) + (int) LittleLong(inwal->offsets[0]) + image_width * image_height)
 	{
 		Con_Print("LoadWAL: invalid WAL file\n");
 		return NULL;
@@ -655,7 +655,7 @@ void Image_StripImageExtension (const char *in, char *out)
 struct imageformat_s
 {
 	const char *formatstring;
-	unsigned char *(*loadfunc)(const unsigned char *f, int matchwidth, int matchheight);
+	unsigned char *(*loadfunc)(const unsigned char *f, int filesize, int matchwidth, int matchheight);
 }
 imageformats[] =
 {
@@ -675,6 +675,7 @@ imageformats[] =
 unsigned char *loadimagepixels (const char *filename, qboolean complain, int matchwidth, int matchheight)
 {
 	int i;
+	fs_offset_t filesize;
 	unsigned char *f, *data = NULL;
 	char basename[MAX_QPATH], name[MAX_QPATH], *c;
 	if (developer_memorydebug.integer)
@@ -690,10 +691,10 @@ unsigned char *loadimagepixels (const char *filename, qboolean complain, int mat
 	for (i = 0;imageformats[i].formatstring;i++)
 	{
 		sprintf (name, imageformats[i].formatstring, basename);
-		f = FS_LoadFile(name, tempmempool, true);
+		f = FS_LoadFile(name, tempmempool, true, &filesize);
 		if (f)
 		{
-			data = imageformats[i].loadfunc(f, matchwidth, matchheight);
+			data = imageformats[i].loadfunc(f, filesize, matchwidth, matchheight);
 			Mem_Free(f);
 			if (data)
 			{

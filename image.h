@@ -21,7 +21,7 @@ void Image_Copy8bitRGBA(const unsigned char *in, unsigned char *out, int pixels,
 // makes a RGBA mask from RGBA input, in can be the same as out
 int image_makemask (const unsigned char *in, unsigned char *out, int size);
 
-unsigned char *LoadTGA (const unsigned char *f, int matchwidth, int matchheight);
+unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, int matchheight);
 
 // loads a texture, as pixel data
 unsigned char *loadimagepixels (const char *filename, qboolean complain, int matchwidth, int matchheight);
@@ -61,7 +61,7 @@ void Image_Resample (const void *indata, int inwidth, int inheight, int indepth,
 void Image_MipReduce(const unsigned char *in, unsigned char *out, int *width, int *height, int *depth, int destwidth, int destheight, int destdepth, int bytesperpixel);
 
 // only used by menuplyr coloring
-unsigned char *LoadLMP (const unsigned char *f, int matchwidth, int matchheight, qboolean loadAs8Bit);
+unsigned char *LoadLMP (const unsigned char *f, int filesize, int matchwidth, int matchheight, qboolean loadAs8Bit);
 
 void Image_HeightmapToNormalmap(const unsigned char *inpixels, unsigned char *outpixels, int width, int height, int clamp, float bumpscale);
 
