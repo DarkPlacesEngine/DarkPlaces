@@ -42,7 +42,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 typedef struct qpic_s
 {
 	int			width, height;
-	qbyte		data[4];			// variably sized
+	unsigned char		data[4];			// variably sized
 } qpic_t;
 
 
@@ -67,15 +67,15 @@ typedef struct lumpinfo_s
 
 extern	int			wad_numlumps;
 extern	lumpinfo_t	*wad_lumps;
-extern	qbyte		*wad_base;
+extern	unsigned char		*wad_base;
 
 void	*W_GetLumpName (const char *name);
 
 
 // LordHavoc: added alternate texture WAD2/WAD3 system for easier loading of HalfLife texture wads
 void	W_LoadTextureWadFile (char *filename, int complain);
-qbyte	*W_GetTexture (char *name); // returns tempmempool allocated image data, width and height are in image_width and image_height
-qbyte	*W_ConvertWAD3Texture(miptex_t *tex); // returns tempmempool allocated image data, width and height are in image_width and image_height
+unsigned char	*W_GetTexture (char *name); // returns tempmempool allocated image data, width and height are in image_width and image_height
+unsigned char	*W_ConvertWAD3Texture(miptex_t *tex); // returns tempmempool allocated image data, width and height are in image_width and image_height
 
 #endif
 

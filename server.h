@@ -83,15 +83,15 @@ typedef struct server_s
 	server_state_t state;
 
 	sizebuf_t datagram;
-	qbyte datagram_buf[NET_MAXMESSAGE];
+	unsigned char datagram_buf[NET_MAXMESSAGE];
 
 	// copied to all clients at end of frame
 	sizebuf_t reliable_datagram;
-	qbyte reliable_datagram_buf[NET_MAXMESSAGE];
+	unsigned char reliable_datagram_buf[NET_MAXMESSAGE];
 
 	sizebuf_t signon;
 	// LordHavoc: increased signon message buffer from 8192
-	qbyte signon_buf[NET_MAXMESSAGE];
+	unsigned char signon_buf[NET_MAXMESSAGE];
 } server_t;
 
 // if defined this does ping smoothing, otherwise it does not
@@ -132,7 +132,7 @@ typedef struct client_s
 
 	// can be added to at any time, copied and clear once per frame
 	sizebuf_t message;
-	qbyte msgbuf[NET_MAXMESSAGE];
+	unsigned char msgbuf[NET_MAXMESSAGE];
 	// PRVM_EDICT_NUM(clientnum+1)
 	prvm_edict_t *edict;
 

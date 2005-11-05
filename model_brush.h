@@ -134,7 +134,7 @@ typedef struct mleaf_s
 	int *firstleafsurface;
 	int numleafbrushes; // q3bsp
 	int *firstleafbrush; // q3bsp
-	qbyte ambient_sound_level[NUM_AMBIENTS]; // q1bsp
+	unsigned char ambient_sound_level[NUM_AMBIENTS]; // q1bsp
 	int contents; // q1bsp: // TODO: remove (only used temporarily during loading when making collision hull 0)
 	int portalmarkid; // q1bsp // used by see-polygon-through-portals visibility checker
 }

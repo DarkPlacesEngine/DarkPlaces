@@ -36,11 +36,11 @@ cvar_t r_q3bsp_renderskydepth = {0, "r_q3bsp_renderskydepth", "0"};
 // flag arrays used for visibility checking on world model
 // (all other entities have no per-surface/per-leaf visibility checks)
 // TODO: dynamic resize according to r_refdef.worldmodel->brush.num_clusters
-qbyte r_pvsbits[(32768+7)>>3];
+unsigned char r_pvsbits[(32768+7)>>3];
 // TODO: dynamic resize according to r_refdef.worldmodel->brush.num_leafs
-qbyte r_worldleafvisible[32768];
+unsigned char r_worldleafvisible[32768];
 // TODO: dynamic resize according to r_refdef.worldmodel->num_surfaces
-qbyte r_worldsurfacevisible[262144];
+unsigned char r_worldsurfacevisible[262144];
 
 /*
 ===============
@@ -53,9 +53,9 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 {
 	int smax, tmax, i, j, size, size3, maps, stride, l;
 	unsigned int *bl, scale;
-	qbyte *lightmap, *out, *stain;
+	unsigned char *lightmap, *out, *stain;
 	static unsigned int intblocklights[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*3]; // LordHavoc: *3 for colored lighting
-	static qbyte templight[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*4];
+	static unsigned char templight[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*4];
 
 	// update cached lighting info
 	surface->cached_dlight = 0;
@@ -131,7 +131,7 @@ void R_StainNode (mnode_t *node, model_t *model, const vec3_t origin, float radi
 	float ndist, a, ratio, maxdist, maxdist2, maxdist3, invradius, sdtable[256], td, dist2;
 	msurface_t *surface, *endsurface;
 	int i, s, t, smax, tmax, smax3, impacts, impactt, stained;
-	qbyte *bl;
+	unsigned char *bl;
 	vec3_t impact;
 
 	maxdist = radius * radius;
@@ -209,9 +209,9 @@ loc0:
 							{
 								if (a > 1)
 									a = 1;
-								bl[0] = (qbyte) ((float) bl[0] + a * ((fcolor[0] + ratio * fcolor[4]) - (float) bl[0]));
-								bl[1] = (qbyte) ((float) bl[1] + a * ((fcolor[1] + ratio * fcolor[5]) - (float) bl[1]));
-								bl[2] = (qbyte) ((float) bl[2] + a * ((fcolor[2] + ratio * fcolor[6]) - (float) bl[2]));
+								bl[0] = (unsigned char) ((float) bl[0] + a * ((fcolor[0] + ratio * fcolor[4]) - (float) bl[0]));
+								bl[1] = (unsigned char) ((float) bl[1] + a * ((fcolor[1] + ratio * fcolor[5]) - (float) bl[1]));
+								bl[2] = (unsigned char) ((float) bl[2] + a * ((fcolor[2] + ratio * fcolor[6]) - (float) bl[2]));
 								stained = true;
 							}
 						}
@@ -510,16 +510,16 @@ typedef struct r_q1bsp_getlightinfo_s
 	vec3_t relativelightorigin;
 	float lightradius;
 	int *outleaflist;
-	qbyte *outleafpvs;
+	unsigned char *outleafpvs;
 	int outnumleafs;
 	int *outsurfacelist;
-	qbyte *outsurfacepvs;
+	unsigned char *outsurfacepvs;
 	int outnumsurfaces;
 	vec3_t outmins;
 	vec3_t outmaxs;
 	vec3_t lightmins;
 	vec3_t lightmaxs;
-	const qbyte *pvs;
+	const unsigned char *pvs;
 }
 r_q1bsp_getlightinfo_t;
 
@@ -598,7 +598,7 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 	}
 }
 
-void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, qbyte *outleafpvs, int *outnumleafspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer)
+void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, unsigned char *outleafpvs, int *outnumleafspointer, int *outsurfacelist, unsigned char *outsurfacepvs, int *outnumsurfacespointer)
 {
 	r_q1bsp_getlightinfo_t info;
 	VectorCopy(relativelightorigin, info.relativelightorigin);

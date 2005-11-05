@@ -66,7 +66,7 @@ memheader_t;
 typedef struct memclump_s
 {
 	// contents of the clump
-	qbyte block[MEMCLUMPSIZE];
+	unsigned char block[MEMCLUMPSIZE];
 	// should always be MEMCLUMP_SENTINEL
 	unsigned int sentinel1;
 	// if a bit is on, it means that the MEMUNIT bytes it represents are

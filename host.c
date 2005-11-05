@@ -479,7 +479,7 @@ void Host_ShutdownServer(qboolean crash)
 {
 	int i, count;
 	sizebuf_t buf;
-	qbyte message[4];
+	unsigned char message[4];
 
 	Con_DPrintf("Host_ShutdownServer\n");
 

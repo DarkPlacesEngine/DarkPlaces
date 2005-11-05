@@ -66,7 +66,7 @@ static void Cmd_Wait_f (void)
 
 	// LordHavoc: inreased this from 8192 to 32768
 static sizebuf_t	cmd_text;
-static qbyte		cmd_text_buf[32768];
+static unsigned char		cmd_text_buf[32768];
 
 /*
 ============
@@ -87,7 +87,7 @@ void Cbuf_AddText (const char *text)
 		return;
 	}
 
-	SZ_Write (&cmd_text, (const qbyte *)text, (int)strlen (text));
+	SZ_Write (&cmd_text, (const unsigned char *)text, (int)strlen (text));
 }
 
 
@@ -122,7 +122,7 @@ void Cbuf_InsertText (const char *text)
 	// add the copied off data
 	if (temp != NULL)
 	{
-		SZ_Write (&cmd_text, (const qbyte *)temp, templen);
+		SZ_Write (&cmd_text, (const unsigned char *)temp, templen);
 		Mem_Free (temp);
 	}
 }
@@ -977,7 +977,7 @@ void Cmd_ForwardStringToServer (const char *s)
 	// attention, it has been eradicated from here, its only (former) use in
 	// all of darkplaces.
 	MSG_WriteByte(&cls.message, clc_stringcmd);
-	SZ_Write(&cls.message, (const qbyte *)s, (int)strlen(s) + 1);
+	SZ_Write(&cls.message, (const unsigned char *)s, (int)strlen(s) + 1);
 }
 
 /*

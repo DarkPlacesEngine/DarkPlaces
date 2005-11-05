@@ -102,7 +102,7 @@ void Protocol_Names(char *buffer, size_t buffersize)
 
 // keep track of quake entities because they need to be killed if they get stale
 int cl_lastquakeentity = 0;
-qbyte cl_isquakeentity[MAX_EDICTS];
+unsigned char cl_isquakeentity[MAX_EDICTS];
 
 void EntityFrameQuake_ReadEntity(int bits)
 {
@@ -172,7 +172,7 @@ void EntityFrameQuake_ReadEntity(int bits)
 	if (bits & U_EFFECTS2)	s.effects = (s.effects & 0x00FF) | (MSG_ReadByte() << 8);
 	if (bits & U_GLOWSIZE)	s.glowsize = MSG_ReadByte();
 	if (bits & U_GLOWCOLOR)	s.glowcolor = MSG_ReadByte();
-	if (bits & U_COLORMOD)	{int c = MSG_ReadByte();s.colormod[0] = (qbyte)(((c >> 5) & 7) * (32.0f / 7.0f));s.colormod[1] = (qbyte)(((c >> 2) & 7) * (32.0f / 7.0f));s.colormod[2] = (qbyte)((c & 3) * (32.0f / 3.0f));}
+	if (bits & U_COLORMOD)	{int c = MSG_ReadByte();s.colormod[0] = (unsigned char)(((c >> 5) & 7) * (32.0f / 7.0f));s.colormod[1] = (unsigned char)(((c >> 2) & 7) * (32.0f / 7.0f));s.colormod[2] = (unsigned char)((c & 3) * (32.0f / 3.0f));}
 	if (bits & U_GLOWTRAIL) s.flags |= RENDER_GLOWTRAIL;
 	if (bits & U_FRAME2)	s.frame = (s.frame & 0x00FF) | (MSG_ReadByte() << 8);
 	if (bits & U_MODEL2)	s.modelindex = (s.modelindex & 0x00FF) | (MSG_ReadByte() << 8);
@@ -244,7 +244,7 @@ void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int numstates, const entity_sta
 	entity_state_t baseline;
 	int i, bits;
 	sizebuf_t buf;
-	qbyte data[128];
+	unsigned char data[128];
 
 	// prepare the buffer
 	memset(&buf, 0, sizeof(buf));
@@ -397,11 +397,11 @@ int EntityState_DeltaBits(const entity_state_t *o, const entity_state_t *n)
 		bits |= E_ORIGIN2;
 	if (fabs(n->origin[2] - o->origin[2]) > (1.0f / 256.0f))
 		bits |= E_ORIGIN3;
-	if ((qbyte) (n->angles[0] * (256.0f / 360.0f)) != (qbyte) (o->angles[0] * (256.0f / 360.0f)))
+	if ((unsigned char) (n->angles[0] * (256.0f / 360.0f)) != (unsigned char) (o->angles[0] * (256.0f / 360.0f)))
 		bits |= E_ANGLE1;
-	if ((qbyte) (n->angles[1] * (256.0f / 360.0f)) != (qbyte) (o->angles[1] * (256.0f / 360.0f)))
+	if ((unsigned char) (n->angles[1] * (256.0f / 360.0f)) != (unsigned char) (o->angles[1] * (256.0f / 360.0f)))
 		bits |= E_ANGLE2;
-	if ((qbyte) (n->angles[2] * (256.0f / 360.0f)) != (qbyte) (o->angles[2] * (256.0f / 360.0f)))
+	if ((unsigned char) (n->angles[2] * (256.0f / 360.0f)) != (unsigned char) (o->angles[2] * (256.0f / 360.0f)))
 		bits |= E_ANGLE3;
 	if ((n->modelindex ^ o->modelindex) & 0x00FF)
 		bits |= E_MODEL1;
@@ -1026,7 +1026,7 @@ void EntityFrame_CL_ReadFrame(void)
 	}
 	EntityFrame_AddFrame(d, f->eye, f->framenum, f->numentities, f->entitydata);
 
-	memset(cl_entities_active, 0, cl_num_entities * sizeof(qbyte));
+	memset(cl_entities_active, 0, cl_num_entities * sizeof(unsigned char));
 	number = 1;
 	for (i = 0;i < f->numentities;i++)
 	{
@@ -1346,7 +1346,7 @@ void EntityFrame4_WriteFrame(sizebuf_t *msg, entityframe4_database_t *d, int num
 	entity_state_t inactiveentitystate;
 	int i, n, startnumber;
 	sizebuf_t buf;
-	qbyte data[128];
+	unsigned char data[128];
 
 	// if there isn't enough space to accomplish anything, skip it
 	if (msg->cursize + 24 > msg->maxsize)
@@ -1475,27 +1475,27 @@ void EntityFrame5_ExpandEdicts(entityframe5_database_t *d, int newmax)
 {
 	if (d->maxedicts < newmax)
 	{
-		qbyte *data;
+		unsigned char *data;
 		int oldmaxedicts = d->maxedicts;
 		int *olddeltabits = d->deltabits;
-		qbyte *oldpriorities = d->priorities;
+		unsigned char *oldpriorities = d->priorities;
 		int *oldupdateframenum = d->updateframenum;
 		entity_state_t *oldstates = d->states;
-		qbyte *oldvisiblebits = d->visiblebits;
+		unsigned char *oldvisiblebits = d->visiblebits;
 		d->maxedicts = newmax;
-		data = (qbyte *)Mem_Alloc(sv_mempool, d->maxedicts * sizeof(int) + d->maxedicts * sizeof(qbyte) + d->maxedicts * sizeof(int) + d->maxedicts * sizeof(entity_state_t) + (d->maxedicts+7)/8 * sizeof(qbyte));
+		data = (unsigned char *)Mem_Alloc(sv_mempool, d->maxedicts * sizeof(int) + d->maxedicts * sizeof(unsigned char) + d->maxedicts * sizeof(int) + d->maxedicts * sizeof(entity_state_t) + (d->maxedicts+7)/8 * sizeof(unsigned char));
 		d->deltabits = (int *)data;data += d->maxedicts * sizeof(int);
-		d->priorities = (qbyte *)data;data += d->maxedicts * sizeof(qbyte);
+		d->priorities = (unsigned char *)data;data += d->maxedicts * sizeof(unsigned char);
 		d->updateframenum = (int *)data;data += d->maxedicts * sizeof(int);
 		d->states = (entity_state_t *)data;data += d->maxedicts * sizeof(entity_state_t);
-		d->visiblebits = (qbyte *)data;data += (d->maxedicts+7)/8 * sizeof(qbyte);
+		d->visiblebits = (unsigned char *)data;data += (d->maxedicts+7)/8 * sizeof(unsigned char);
 		if (oldmaxedicts)
 		{
 			memcpy(d->deltabits, olddeltabits, oldmaxedicts * sizeof(int));
-			memcpy(d->priorities, oldpriorities, oldmaxedicts * sizeof(qbyte));
+			memcpy(d->priorities, oldpriorities, oldmaxedicts * sizeof(unsigned char));
 			memcpy(d->updateframenum, oldupdateframenum, oldmaxedicts * sizeof(int));
 			memcpy(d->states, oldstates, oldmaxedicts * sizeof(entity_state_t));
-			memcpy(d->visiblebits, oldvisiblebits, (oldmaxedicts+7)/8 * sizeof(qbyte));
+			memcpy(d->visiblebits, oldvisiblebits, (oldmaxedicts+7)/8 * sizeof(unsigned char));
 			// the previous buffers were a single allocation, so just one free
 			Mem_Free(olddeltabits);
 		}
@@ -1953,7 +1953,7 @@ void EntityFrame5_LostFrame(entityframe5_database_t *d, int framenum)
 	int i, j, k, l, bits;
 	entityframe5_changestate_t *s, *s2;
 	entityframe5_packetlog_t *p, *p2;
-	qbyte statsdeltabits[(MAX_CL_STATS+7)/8];
+	unsigned char statsdeltabits[(MAX_CL_STATS+7)/8];
 	// scan for packets that were lost
 	for (i = 0, p = d->packetlog;i < ENTITYFRAME5_MAXPACKETLOGS;i++, p++)
 	{
@@ -2022,7 +2022,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 	const entity_state_t *n;
 	int i, num, l, framenum, packetlognumber, priority;
 	sizebuf_t buf;
-	qbyte data[128];
+	unsigned char data[128];
 	entityframe5_packetlog_t *packetlog;
 
 	if (prog->max_edicts > d->maxedicts)

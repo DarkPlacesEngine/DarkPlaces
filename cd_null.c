@@ -48,7 +48,7 @@ void CDAudio_SysSetVolume (float volume)
 }
 
 
-int CDAudio_SysPlay (qbyte track)
+int CDAudio_SysPlay (unsigned char track)
 {
 	return -1;
 }

@@ -114,11 +114,11 @@ TYPES
 // been cast to "void*" for a matter of simplicity
 typedef struct
 {
-	qbyte			*next_in;	// next input byte
+	unsigned char			*next_in;	// next input byte
 	unsigned int	avail_in;	// number of bytes available at next_in
 	unsigned long	total_in;	// total nb of input bytes read so far
 
-	qbyte			*next_out;	// next output byte should be put there
+	unsigned char			*next_out;	// next output byte should be put there
 	unsigned int	avail_out;	// remaining free space at next_out
 	unsigned long	total_out;	// total nb of bytes output so far
 
@@ -147,7 +147,7 @@ typedef struct
 	size_t		comp_length;			// length of the compressed file
 	size_t		in_ind, in_len;			// input buffer current index and length
 	size_t		in_position;			// position in the compressed file
-	qbyte		input [FILE_BUFF_SIZE];
+	unsigned char		input [FILE_BUFF_SIZE];
 } ztoolkit_t;
 
 struct qfile_s
@@ -161,7 +161,7 @@ struct qfile_s
 
 	// Contents buffer
 	fs_offset_t		buff_ind, buff_len;		// buffer current index and length
-	qbyte			buff [FILE_BUFF_SIZE];
+	unsigned char			buff [FILE_BUFF_SIZE];
 
 	// For zipped files
 	ztoolkit_t*		ztk;
@@ -382,7 +382,7 @@ Extract the end of the central directory from a PK3 package
 qboolean PK3_GetEndOfCentralDir (const char *packfile, int packhandle, pk3_endOfCentralDir_t *eocd)
 {
 	long filesize, maxsize;
-	qbyte *buffer, *ptr;
+	unsigned char *buffer, *ptr;
 	int ind;
 
 	// Get the package size
@@ -395,7 +395,7 @@ qboolean PK3_GetEndOfCentralDir (const char *packfile, int packhandle, pk3_endOf
 		maxsize = filesize;
 	else
 		maxsize = ZIP_MAX_COMMENTS_SIZE + ZIP_END_CDIR_SIZE;
-	buffer = (qbyte *)Mem_Alloc (tempmempool, maxsize);
+	buffer = (unsigned char *)Mem_Alloc (tempmempool, maxsize);
 	lseek (packhandle, filesize - maxsize, SEEK_SET);
 	if (read (packhandle, buffer, maxsize) != (fs_offset_t) maxsize)
 	{
@@ -444,12 +444,12 @@ Extract the file list from a PK3 file
 */
 int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 {
-	qbyte *central_dir, *ptr;
+	unsigned char *central_dir, *ptr;
 	unsigned int ind;
 	fs_offset_t remaining;
 
 	// Load the central directory in memory
-	central_dir = (qbyte *)Mem_Alloc (tempmempool, eocd->cdir_size);
+	central_dir = (unsigned char *)Mem_Alloc (tempmempool, eocd->cdir_size);
 	lseek (pack->handle, eocd->cdir_offset, SEEK_SET);
 	read (pack->handle, central_dir, eocd->cdir_size);
 
@@ -609,7 +609,7 @@ Find where the true file data offset is
 */
 qboolean PK3_GetTrueFileOffset (packfile_t *pfile, pack_t *pack)
 {
-	qbyte buffer [ZIP_LOCAL_CHUNK_BASE_SIZE];
+	unsigned char buffer [ZIP_LOCAL_CHUNK_BASE_SIZE];
 	fs_offset_t count;
 
 	// Already found?
@@ -1567,7 +1567,7 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 			if (count > (fs_offset_t)buffersize)
 				count = (fs_offset_t)buffersize;
 			lseek (file->handle, file->offset + file->position, SEEK_SET);
-			nb = read (file->handle, &((qbyte*)buffer)[done], count);
+			nb = read (file->handle, &((unsigned char*)buffer)[done], count);
 			if (nb > 0)
 			{
 				done += nb;
@@ -1590,7 +1590,7 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 
 				// Copy the requested data in "buffer" (as much as we can)
 				count = (fs_offset_t)buffersize > file->buff_len ? file->buff_len : (fs_offset_t)buffersize;
-				memcpy (&((qbyte*)buffer)[done], file->buff, count);
+				memcpy (&((unsigned char*)buffer)[done], file->buff, count);
 				file->buff_ind = count;
 				done += count;
 			}
@@ -1654,14 +1654,14 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 
 			// Copy the requested data in "buffer" (as much as we can)
 			count = (fs_offset_t)buffersize > file->buff_len ? file->buff_len : (fs_offset_t)buffersize;
-			memcpy (&((qbyte*)buffer)[done], file->buff, count);
+			memcpy (&((unsigned char*)buffer)[done], file->buff, count);
 			file->buff_ind = count;
 		}
 
 		// Else, we inflate directly in "buffer"
 		else
 		{
-			ztk->zstream.next_out = &((qbyte*)buffer)[done];
+			ztk->zstream.next_out = &((unsigned char*)buffer)[done];
 			ztk->zstream.avail_out = (unsigned int)buffersize;
 			error = qz_inflate (&ztk->zstream, Z_SYNC_FLUSH);
 			if (error != Z_OK && error != Z_STREAM_END)
@@ -1796,7 +1796,7 @@ Move the position index in a file
 int FS_Seek (qfile_t* file, fs_offset_t offset, int whence)
 {
 	ztoolkit_t *ztk;
-	qbyte* buffer;
+	unsigned char* buffer;
 	fs_offset_t buffersize;
 
 	// Compute the file offset
@@ -1859,7 +1859,7 @@ int FS_Seek (qfile_t* file, fs_offset_t offset, int whence)
 
 	// We need a big buffer to force inflating into it directly
 	buffersize = 2 * sizeof (file->buff);
-	buffer = (qbyte *)Mem_Alloc (tempmempool, buffersize);
+	buffer = (unsigned char *)Mem_Alloc (tempmempool, buffersize);
 
 	// Skip all data until we reach the requested offset
 	while (offset > file->position)
@@ -1917,16 +1917,16 @@ Filename are relative to the quake directory.
 Always appends a 0 byte.
 ============
 */
-qbyte *FS_LoadFile (const char *path, mempool_t *pool, qboolean quiet)
+unsigned char *FS_LoadFile (const char *path, mempool_t *pool, qboolean quiet)
 {
 	qfile_t *file;
-	qbyte *buf;
+	unsigned char *buf;
 
 	file = FS_Open (path, "rb", quiet, false);
 	if (!file)
 		return NULL;
 
-	buf = (qbyte *)Mem_Alloc (pool, fs_filesize + 1);
+	buf = (unsigned char *)Mem_Alloc (pool, fs_filesize + 1);
 	buf[fs_filesize] = '\0';
 
 	FS_Read (file, buf, fs_filesize);

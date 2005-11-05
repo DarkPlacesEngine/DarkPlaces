@@ -209,13 +209,13 @@ void M_DrawPic (float cx, float cy, const char *picname)
 	DrawQ_Pic (menu_x + cx, menu_y + cy, picname, 0, 0, 1, 1, 1, 1, 0);
 }
 
-qbyte identityTable[256];
-qbyte translationTable[256];
+unsigned char identityTable[256];
+unsigned char translationTable[256];
 
 void M_BuildTranslationTable(int top, int bottom)
 {
 	int j;
-	qbyte *dest, *source;
+	unsigned char *dest, *source;
 
 	for (j = 0; j < 256; j++)
 		identityTable[j] = j;
@@ -1254,7 +1254,7 @@ void M_Menu_Setup_f (void)
 }
 
 static int menuplyr_width, menuplyr_height, menuplyr_top, menuplyr_bottom, menuplyr_load;
-static qbyte *menuplyr_pixels;
+static unsigned char *menuplyr_pixels;
 static unsigned int *menuplyr_translated;
 
 typedef struct ratetable_s
@@ -1320,7 +1320,7 @@ void M_Setup_Draw (void)
 	// LordHavoc: rewrote this code greatly
 	if (menuplyr_load)
 	{
-		qbyte *data, *f;
+		unsigned char *data, *f;
 		menuplyr_load = false;
 		menuplyr_top = -1;
 		menuplyr_bottom = -1;
@@ -1330,7 +1330,7 @@ void M_Setup_Draw (void)
 			menuplyr_width = image_width;
 			menuplyr_height = image_height;
 			Mem_Free(f);
-			menuplyr_pixels = (qbyte *)Mem_Alloc(cl_mempool, menuplyr_width * menuplyr_height);
+			menuplyr_pixels = (unsigned char *)Mem_Alloc(cl_mempool, menuplyr_width * menuplyr_height);
 			menuplyr_translated = (unsigned int *)Mem_Alloc(cl_mempool, menuplyr_width * menuplyr_height * 4);
 			memcpy(menuplyr_pixels, data, menuplyr_width * menuplyr_height);
 			Mem_Free(data);
@@ -1346,7 +1346,7 @@ void M_Setup_Draw (void)
 			M_BuildTranslationTable(menuplyr_top*16, menuplyr_bottom*16);
 			for (i = 0;i < menuplyr_width * menuplyr_height;i++)
 				menuplyr_translated[i] = palette_complete[translationTable[menuplyr_pixels[i]]];
-			Draw_NewPic("gfx/menuplyr.lmp", menuplyr_width, menuplyr_height, true, (qbyte *)menuplyr_translated);
+			Draw_NewPic("gfx/menuplyr.lmp", menuplyr_width, menuplyr_height, true, (unsigned char *)menuplyr_translated);
 		}
 		M_DrawPic(160, 48, "gfx/bigbox.lmp");
 		M_DrawPic(172, 56, "gfx/menuplyr.lmp");

@@ -153,7 +153,7 @@ model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolea
 		buf = FS_LoadFile (mod->name, tempmempool, false);
 		if (buf)
 		{
-			crc = CRC_Block((qbyte *)buf, fs_filesize);
+			crc = CRC_Block((unsigned char *)buf, fs_filesize);
 			if (mod->crc != crc)
 				mod->loaded = false;
 		}
@@ -328,7 +328,7 @@ model_t *Mod_ForName(const char *name, qboolean crash, qboolean checkdisk, qbool
 	return model;
 }
 
-qbyte *mod_base;
+unsigned char *mod_base;
 
 
 //=============================================================================
@@ -365,8 +365,8 @@ static void Mod_Precache(void)
 int Mod_BuildVertexRemapTableFromElements(int numelements, const int *elements, int numvertices, int *remapvertices)
 {
 	int i, count;
-	qbyte *used;
-	used = (qbyte *)Mem_Alloc(tempmempool, numvertices);
+	unsigned char *used;
+	used = (unsigned char *)Mem_Alloc(tempmempool, numvertices);
 	memset(used, 0, numvertices);
 	for (i = 0;i < numelements;i++)
 		used[elements[i]] = 1;
@@ -639,11 +639,11 @@ void Mod_BuildTextureVectorsAndNormals(int firstvertex, int numvertices, int num
 surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qboolean lightmapoffsets, qboolean vertexcolors, qboolean neighbors)
 {
 	surfmesh_t *mesh;
-	qbyte *data;
+	unsigned char *data;
 	mesh = (surfmesh_t *)Mem_Alloc(mempool, sizeof(surfmesh_t) + numvertices * (3 + 3 + 3 + 3 + 2 + 2 + (vertexcolors ? 4 : 0)) * sizeof(float) + numvertices * (lightmapoffsets ? 1 : 0) * sizeof(int) + numtriangles * (3 + (neighbors ? 3 : 0)) * sizeof(int));
 	mesh->num_vertices = numvertices;
 	mesh->num_triangles = numtriangles;
-	data = (qbyte *)(mesh + 1);
+	data = (unsigned char *)(mesh + 1);
 	if (mesh->num_vertices)
 	{
 		mesh->data_vertex3f = (float *)data, data += sizeof(float[3]) * mesh->num_vertices;
@@ -669,7 +669,7 @@ surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriang
 shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtriangles, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, int light, int neighbors, int expandable)
 {
 	shadowmesh_t *newmesh;
-	qbyte *data;
+	unsigned char *data;
 	int size;
 	size = sizeof(shadowmesh_t);
 	size += maxverts * sizeof(float[3]);
@@ -680,7 +680,7 @@ shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtria
 		size += maxtriangles * sizeof(int[3]);
 	if (expandable)
 		size += SHADOWMESHVERTEXHASH * sizeof(shadowmeshvertexhash_t *) + maxverts * sizeof(shadowmeshvertexhash_t);
-	data = (qbyte *)Mem_Alloc(mempool, size);
+	data = (unsigned char *)Mem_Alloc(mempool, size);
 	newmesh = (shadowmesh_t *)data;data += sizeof(*newmesh);
 	newmesh->map_diffuse = map_diffuse;
 	newmesh->map_specular = map_specular;
@@ -908,11 +908,11 @@ void Mod_ShadowMesh_Free(shadowmesh_t *mesh)
 	}
 }
 
-static rtexture_t *GL_TextureForSkinLayer(const qbyte *in, int width, int height, const char *name, const unsigned int *palette, int textureflags)
+static rtexture_t *GL_TextureForSkinLayer(const unsigned char *in, int width, int height, const char *name, const unsigned int *palette, int textureflags)
 {
 	int i;
 	for (i = 0;i < width*height;i++)
-		if (((qbyte *)&palette[in[i]])[3] > 0)
+		if (((unsigned char *)&palette[in[i]])[3] > 0)
 			return R_LoadTexture2D (loadmodel->texturepool, name, width, height, in, TEXTYPE_PALETTE, textureflags, palette);
 	return NULL;
 }
@@ -947,15 +947,15 @@ int Mod_LoadSkinFrame(skinframe_t *skinframe, char *basename, int textureflags, 
 	return true;
 }
 
-int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int loadglowtexture, qbyte *skindata, int width, int height)
+int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int loadglowtexture, unsigned char *skindata, int width, int height)
 {
-	qbyte *temp1, *temp2;
+	unsigned char *temp1, *temp2;
 	memset(skinframe, 0, sizeof(*skinframe));
 	if (!skindata)
 		return false;
 	if (r_shadow_bumpscale_basetexture.value > 0)
 	{
-		temp1 = (qbyte *)Mem_Alloc(loadmodel->mempool, width * height * 8);
+		temp1 = (unsigned char *)Mem_Alloc(loadmodel->mempool, width * height * 8);
 		temp2 = temp1 + width * height * 4;
 		Image_Copy8bitRGBA(skindata, temp1, width * height, palette_nofullbrights);
 		Image_HeightmapToNormalmap(temp1, temp2, width, height, false, r_shadow_bumpscale_basetexture.value);
@@ -990,7 +990,7 @@ int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, char *basename, int textu
 	return true;
 }
 
-void Mod_GetTerrainVertex3fTexCoord2fFromRGBA(const qbyte *imagepixels, int imagewidth, int imageheight, int ix, int iy, float *vertex3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
+void Mod_GetTerrainVertex3fTexCoord2fFromRGBA(const unsigned char *imagepixels, int imagewidth, int imageheight, int ix, int iy, float *vertex3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
 {
 	float v[3], tc[3];
 	v[0] = ix;
@@ -1005,7 +1005,7 @@ void Mod_GetTerrainVertex3fTexCoord2fFromRGBA(const qbyte *imagepixels, int imag
 	texcoord2f[1] = tc[1];
 }
 
-void Mod_GetTerrainVertexFromRGBA(const qbyte *imagepixels, int imagewidth, int imageheight, int ix, int iy, float *vertex3f, float *svector3f, float *tvector3f, float *normal3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
+void Mod_GetTerrainVertexFromRGBA(const unsigned char *imagepixels, int imagewidth, int imageheight, int ix, int iy, float *vertex3f, float *svector3f, float *tvector3f, float *normal3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
 {
 	float vup[3], vdown[3], vleft[3], vright[3];
 	float tcup[3], tcdown[3], tcleft[3], tcright[3];
@@ -1030,7 +1030,7 @@ void Mod_GetTerrainVertexFromRGBA(const qbyte *imagepixels, int imagewidth, int 
 	VectorAdd(normal3f, nl, normal3f);
 }
 
-void Mod_ConstructTerrainPatchFromRGBA(const qbyte *imagepixels, int imagewidth, int imageheight, int x1, int y1, int width, int height, int *element3i, int *neighbor3i, float *vertex3f, float *svector3f, float *tvector3f, float *normal3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
+void Mod_ConstructTerrainPatchFromRGBA(const unsigned char *imagepixels, int imagewidth, int imageheight, int x1, int y1, int width, int height, int *element3i, int *neighbor3i, float *vertex3f, float *svector3f, float *tvector3f, float *normal3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
 {
 	int x, y, ix, iy, *e;
 	e = element3i;

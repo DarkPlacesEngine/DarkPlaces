@@ -174,11 +174,11 @@ int *vertexremap;
 int vertexupdatenum;
 
 int r_shadow_buffer_numleafpvsbytes;
-qbyte *r_shadow_buffer_leafpvs;
+unsigned char *r_shadow_buffer_leafpvs;
 int *r_shadow_buffer_leaflist;
 
 int r_shadow_buffer_numsurfacepvsbytes;
-qbyte *r_shadow_buffer_surfacepvs;
+unsigned char *r_shadow_buffer_surfacepvs;
 int *r_shadow_buffer_surfacelist;
 
 rtexturepool_t *r_shadow_texturepool;
@@ -762,7 +762,7 @@ static void R_Shadow_EnlargeLeafSurfaceBuffer(int numleafs, int numsurfaces)
 		if (r_shadow_buffer_leaflist)
 			Mem_Free(r_shadow_buffer_leaflist);
 		r_shadow_buffer_numleafpvsbytes = numleafpvsbytes;
-		r_shadow_buffer_leafpvs = (qbyte *)Mem_Alloc(r_shadow_mempool, r_shadow_buffer_numleafpvsbytes);
+		r_shadow_buffer_leafpvs = (unsigned char *)Mem_Alloc(r_shadow_mempool, r_shadow_buffer_numleafpvsbytes);
 		r_shadow_buffer_leaflist = (int *)Mem_Alloc(r_shadow_mempool, r_shadow_buffer_numleafpvsbytes * 8 * sizeof(*r_shadow_buffer_leaflist));
 	}
 	if (r_shadow_buffer_numsurfacepvsbytes < numsurfacepvsbytes)
@@ -772,7 +772,7 @@ static void R_Shadow_EnlargeLeafSurfaceBuffer(int numleafs, int numsurfaces)
 		if (r_shadow_buffer_surfacelist)
 			Mem_Free(r_shadow_buffer_surfacelist);
 		r_shadow_buffer_numsurfacepvsbytes = numsurfacepvsbytes;
-		r_shadow_buffer_surfacepvs = (qbyte *)Mem_Alloc(r_shadow_mempool, r_shadow_buffer_numsurfacepvsbytes);
+		r_shadow_buffer_surfacepvs = (unsigned char *)Mem_Alloc(r_shadow_mempool, r_shadow_buffer_numsurfacepvsbytes);
 		r_shadow_buffer_surfacelist = (int *)Mem_Alloc(r_shadow_mempool, r_shadow_buffer_numsurfacepvsbytes * 8 * sizeof(*r_shadow_buffer_surfacelist));
 	}
 }
@@ -1009,14 +1009,14 @@ static void R_Shadow_MakeTextures(void)
 {
 	int x, y, z, d;
 	float v[3], intensity;
-	qbyte *data;
+	unsigned char *data;
 	R_FreeTexturePool(&r_shadow_texturepool);
 	r_shadow_texturepool = R_AllocTexturePool();
 	r_shadow_attenpower = r_shadow_lightattenuationpower.value;
 	r_shadow_attenscale = r_shadow_lightattenuationscale.value;
 #define ATTEN2DSIZE 64
 #define ATTEN3DSIZE 32
-	data = (qbyte *)Mem_Alloc(tempmempool, max(ATTEN3DSIZE*ATTEN3DSIZE*ATTEN3DSIZE*4, ATTEN2DSIZE*ATTEN2DSIZE*4));
+	data = (unsigned char *)Mem_Alloc(tempmempool, max(ATTEN3DSIZE*ATTEN3DSIZE*ATTEN3DSIZE*4, ATTEN2DSIZE*ATTEN2DSIZE*4));
 	for (y = 0;y < ATTEN2DSIZE;y++)
 	{
 		for (x = 0;x < ATTEN2DSIZE;x++)
@@ -2591,7 +2591,7 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 	int shadowmeshes, shadowtris, numleafs, numleafpvsbytes, numsurfaces;
 	entity_render_t *ent = r_refdef.worldentity;
 	model_t *model = r_refdef.worldmodel;
-	qbyte *data;
+	unsigned char *data;
 
 	// compile the light
 	rtlight->compiled = true;
@@ -2615,11 +2615,11 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 		R_Shadow_EnlargeLeafSurfaceBuffer(model->brush.num_leafs, model->num_surfaces);
 		model->GetLightInfo(ent, rtlight->shadoworigin, rtlight->radius, rtlight->cullmins, rtlight->cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces);
 		numleafpvsbytes = (model->brush.num_leafs + 7) >> 3;
-		data = (qbyte *)Mem_Alloc(r_shadow_mempool, sizeof(int) * numleafs + numleafpvsbytes + sizeof(int) * numsurfaces);
+		data = (unsigned char *)Mem_Alloc(r_shadow_mempool, sizeof(int) * numleafs + numleafpvsbytes + sizeof(int) * numsurfaces);
 		rtlight->static_numleafs = numleafs;
 		rtlight->static_numleafpvsbytes = numleafpvsbytes;
 		rtlight->static_leaflist = (int *)data;data += sizeof(int) * numleafs;
-		rtlight->static_leafpvs = (qbyte *)data;data += numleafpvsbytes;
+		rtlight->static_leafpvs = (unsigned char *)data;data += numleafpvsbytes;
 		rtlight->static_numsurfaces = numsurfaces;
 		rtlight->static_surfacelist = (int *)data;data += sizeof(int) * numsurfaces;
 		if (numleafs)
@@ -2772,7 +2772,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	vec3_t lightcolor;
 	int numleafs, numsurfaces;
 	int *leaflist, *surfacelist;
-	qbyte *leafpvs;
+	unsigned char *leafpvs;
 	int numlightentities;
 	int numshadowentities;
 	entity_render_t *lightentities[MAX_EDICTS];
@@ -2983,7 +2983,7 @@ static int componentorder[4] = {0, 1, 2, 3};
 rtexture_t *R_Shadow_LoadCubemap(const char *basename)
 {
 	int i, j, cubemapsize;
-	qbyte *cubemappixels, *image_rgba;
+	unsigned char *cubemappixels, *image_rgba;
 	rtexture_t *cubemaptexture;
 	char name[256];
 	// must start 0 so the first loadimagepixels has no requested width/height
@@ -3009,7 +3009,7 @@ rtexture_t *R_Shadow_LoadCubemap(const char *basename)
 					{
 						cubemapsize = image_width;
 						// note this clears to black, so unavailable sides are black
-						cubemappixels = (qbyte *)Mem_Alloc(tempmempool, 6*cubemapsize*cubemapsize*4);
+						cubemappixels = (unsigned char *)Mem_Alloc(tempmempool, 6*cubemapsize*cubemapsize*4);
 					}
 					// copy the image with any flipping needed by the suffix (px and posx types don't need flipping)
 					if (cubemappixels)

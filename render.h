@@ -24,11 +24,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // flag arrays used for visibility checking on world model
 // (all other entities have no per-surface/per-leaf visibility checks)
 // TODO: dynamic resize according to r_refdef.worldmodel->brush.num_clusters
-extern qbyte r_pvsbits[(32768+7)>>3];
+extern unsigned char r_pvsbits[(32768+7)>>3];
 // TODO: dynamic resize according to r_refdef.worldmodel->brush.num_leafs
-extern qbyte r_worldleafvisible[32768];
+extern unsigned char r_worldleafvisible[32768];
 // TODO: dynamic resize according to r_refdef.worldmodel->num_surfaces
-extern qbyte r_worldsurfacevisible[262144];
+extern unsigned char r_worldsurfacevisible[262144];
 
 extern matrix4x4_t r_identitymatrix;
 
@@ -183,7 +183,7 @@ void R_UpdateWorld(void); // needs no r_refdef
 void R_RenderView(void); // must call R_UpdateWorld and set r_refdef first
 
 
-void R_InitSky (qbyte *src, int bytesperpixel); // called at level load
+void R_InitSky (unsigned char *src, int bytesperpixel); // called at level load
 
 void R_WorldVisibility();
 void R_DrawParticles(void);

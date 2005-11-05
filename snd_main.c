@@ -124,7 +124,7 @@ void S_Startup(void)
 		shm->format.channels = 2;
 		shm->samples = 32768;
 		shm->samplepos = 0;
-		shm->buffer = (qbyte *)Mem_Alloc(snd_mempool, shm->format.channels * shm->samples * shm->format.width);
+		shm->buffer = (unsigned char *)Mem_Alloc(snd_mempool, shm->format.channels * shm->samples * shm->format.width);
 	}
 	else
 	{
@@ -780,7 +780,7 @@ void S_UpdateAmbientSounds (void)
 	float		vol;
 	int			ambient_channel;
 	channel_t	*chan;
-	qbyte		ambientlevels[NUM_AMBIENTS];
+	unsigned char		ambientlevels[NUM_AMBIENTS];
 
 	if (ambient_level.value <= 0 || !cl.worldmodel || !cl.worldmodel->brush.AmbientSoundLevelsForPoint)
 		return;

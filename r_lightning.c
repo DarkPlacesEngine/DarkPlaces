@@ -38,7 +38,7 @@ void r_lightningbeams_setuptexture(void)
 #define PATHPOINTS 8
 	int i, j, px, py, nearestpathindex, imagenumber;
 	float particlex, particley, particlexv, particleyv, dx, dy, s, maxpathstrength;
-	qbyte *pixels;
+	unsigned char *pixels;
 	int *image;
 	struct lightningpathnode_s
 	{
@@ -47,7 +47,7 @@ void r_lightningbeams_setuptexture(void)
 	path[PATHPOINTS], temppath;
 
 	image = Mem_Alloc(tempmempool, BEAMWIDTH * BEAMHEIGHT * sizeof(int));
-	pixels = Mem_Alloc(tempmempool, BEAMWIDTH * BEAMHEIGHT * sizeof(qbyte[4]));
+	pixels = Mem_Alloc(tempmempool, BEAMWIDTH * BEAMHEIGHT * sizeof(unsigned char[4]));
 
 	for (imagenumber = 0, maxpathstrength = 0.0339476;maxpathstrength < 0.5;imagenumber++, maxpathstrength += 0.01)
 	{
@@ -116,11 +116,11 @@ void r_lightningbeams_setuptexture(void)
 #define BEAMHEIGHT 128
 	float r, g, b, intensity, fx, width, center;
 	int x, y;
-	qbyte *data, *noise1, *noise2;
+	unsigned char *data, *noise1, *noise2;
 
-	data = (qbyte *)Mem_Alloc(tempmempool, BEAMWIDTH * BEAMHEIGHT * 4);
-	noise1 = (qbyte *)Mem_Alloc(tempmempool, BEAMHEIGHT * BEAMHEIGHT);
-	noise2 = (qbyte *)Mem_Alloc(tempmempool, BEAMHEIGHT * BEAMHEIGHT);
+	data = (unsigned char *)Mem_Alloc(tempmempool, BEAMWIDTH * BEAMHEIGHT * 4);
+	noise1 = (unsigned char *)Mem_Alloc(tempmempool, BEAMHEIGHT * BEAMHEIGHT);
+	noise2 = (unsigned char *)Mem_Alloc(tempmempool, BEAMHEIGHT * BEAMHEIGHT);
 	fractalnoise(noise1, BEAMHEIGHT, BEAMHEIGHT / 8);
 	fractalnoise(noise2, BEAMHEIGHT, BEAMHEIGHT / 16);
 
@@ -138,10 +138,10 @@ void r_lightningbeams_setuptexture(void)
 			r = intensity * 1.0f;
 			g = intensity * 1.0f;
 			b = intensity * 1.0f;
-			data[(y * BEAMWIDTH + x) * 4 + 0] = (qbyte)(bound(0, r, 1) * 255.0f);
-			data[(y * BEAMWIDTH + x) * 4 + 1] = (qbyte)(bound(0, g, 1) * 255.0f);
-			data[(y * BEAMWIDTH + x) * 4 + 2] = (qbyte)(bound(0, b, 1) * 255.0f);
-			data[(y * BEAMWIDTH + x) * 4 + 3] = (qbyte)255;
+			data[(y * BEAMWIDTH + x) * 4 + 0] = (unsigned char)(bound(0, r, 1) * 255.0f);
+			data[(y * BEAMWIDTH + x) * 4 + 1] = (unsigned char)(bound(0, g, 1) * 255.0f);
+			data[(y * BEAMWIDTH + x) * 4 + 2] = (unsigned char)(bound(0, b, 1) * 255.0f);
+			data[(y * BEAMWIDTH + x) * 4 + 3] = (unsigned char)255;
 		}
 	}
 

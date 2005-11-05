@@ -1289,7 +1289,7 @@ void PR_LoadProgs (const char *progsname)
 
 	Con_DPrintf("Programs occupy %iK.\n", fs_filesize/1024);
 
-	pr_crc = CRC_Block((qbyte *)progs, fs_filesize);
+	pr_crc = CRC_Block((unsigned char *)progs, fs_filesize);
 
 // byte swap the header
 	for (i = 0;i < (int) sizeof(*progs) / 4;i++)
@@ -1300,8 +1300,8 @@ void PR_LoadProgs (const char *progsname)
 	if (progs->crc != PROGHEADER_CRC && progs->crc != 32401) // tenebrae crc also allowed
 		Host_Error ("progs.dat system vars have been modified, progdefs.h is out of date");
 
-	//prog->functions = (dfunction_t *)((qbyte *)progs + progs->ofs_functions);
-	dfunctions = (dfunction_t *)((qbyte *)progs + progs->ofs_functions);
+	//prog->functions = (dfunction_t *)((unsigned char *)progs + progs->ofs_functions);
+	dfunctions = (dfunction_t *)((unsigned char *)progs + progs->ofs_functions);
 
 	pr_strings = (char *)progs + progs->ofs_strings;
 	pr_stringssize = 0;
@@ -1315,19 +1315,19 @@ void PR_LoadProgs (const char *progsname)
 	pr_maxknownstrings = 0;
 	pr_knownstrings = NULL;
 
-	pr_globaldefs = (ddef_t *)((qbyte *)progs + progs->ofs_globaldefs);
+	pr_globaldefs = (ddef_t *)((unsigned char *)progs + progs->ofs_globaldefs);
 
 	// we need to expand the fielddefs list to include all the engine fields,
 	// so allocate a new place for it
-	infielddefs = (ddef_t *)((qbyte *)progs + progs->ofs_fielddefs);
+	infielddefs = (ddef_t *)((unsigned char *)progs + progs->ofs_fielddefs);
 	pr_fielddefs = PR_Alloc((progs->numfielddefs + DPFIELDS) * sizeof(ddef_t));
 	prog->functions = PR_Alloc(sizeof(mfunction_t) * progs->numfunctions);
 
-	pr_statements = (dstatement_t *)((qbyte *)progs + progs->ofs_statements);
+	pr_statements = (dstatement_t *)((unsigned char *)progs + progs->ofs_statements);
 
 	// moved edict_size calculation down below field adding code
 
-	pr_global_struct = (globalvars_t *)((qbyte *)progs + progs->ofs_globals);
+	pr_global_struct = (globalvars_t *)((unsigned char *)progs + progs->ofs_globals);
 	pr_globals = (float *)pr_global_struct;
 
 // byte swap the lumps
@@ -1724,7 +1724,7 @@ int PRVM_NUM_FOR_EDICT(prvm_edict_t *e)
 //	return e - prog->edicts;
 //}
 
-//#define	PRVM_EDICT_TO_PROG(e) ((qbyte *)(((prvm_edict_t *)e)->v) - (qbyte *)(prog->edictsfields))
+//#define	PRVM_EDICT_TO_PROG(e) ((unsigned char *)(((prvm_edict_t *)e)->v) - (unsigned char *)(prog->edictsfields))
 //#define PRVM_PROG_TO_EDICT(e) (prog->edicts + ((e) / (progs->entityfields * 4)))
 int PRVM_EDICT_TO_PROG(prvm_edict_t *e)
 {
@@ -1733,7 +1733,7 @@ int PRVM_EDICT_TO_PROG(prvm_edict_t *e)
 	if ((unsigned int)n >= (unsigned int)prog->max_edicts)
 		Host_Error("PRVM_EDICT_TO_PROG: invalid edict %8p (number %i compared to world at %8p)\n", e, n, prog->edicts);
 	return n;// EXPERIMENTAL
-	//return (qbyte *)e->v - (qbyte *)prog->edictsfields;
+	//return (unsigned char *)e->v - (unsigned char *)prog->edictsfields;
 }
 prvm_edict_t *PRVM_PROG_TO_EDICT(int n)
 {

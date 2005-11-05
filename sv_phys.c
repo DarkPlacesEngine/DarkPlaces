@@ -1498,7 +1498,7 @@ void SV_Physics (void)
 {
 	int i, newnum_edicts;
 	prvm_edict_t *ent;
-	qbyte runmove[MAX_EDICTS];
+	unsigned char runmove[MAX_EDICTS];
 
 // let the progs know that a new frame has started
 	prog->globals.server->self = PRVM_EDICT_TO_PROG(prog->edicts);

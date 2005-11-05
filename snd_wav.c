@@ -38,10 +38,10 @@ typedef struct wavinfo_s
 } wavinfo_t;
 
 
-static qbyte *data_p;
-static qbyte *iff_end;
-static qbyte *last_chunk;
-static qbyte *iff_data;
+static unsigned char *data_p;
+static unsigned char *iff_end;
+static unsigned char *last_chunk;
+static unsigned char *iff_data;
 static int iff_chunk_len;
 
 
@@ -122,7 +122,7 @@ static void DumpChunks(void)
 GetWavinfo
 ============
 */
-static wavinfo_t GetWavinfo (char *name, qbyte *wav, int wavlength)
+static wavinfo_t GetWavinfo (char *name, unsigned char *wav, int wavlength)
 {
 	wavinfo_t info;
 	int i;
@@ -255,7 +255,7 @@ S_LoadWavFile
 */
 qboolean S_LoadWavFile (const char *filename, sfx_t *s)
 {
-	qbyte *data;
+	unsigned char *data;
 	wavinfo_t info;
 	int len;
 	size_t memsize;

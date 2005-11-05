@@ -463,7 +463,7 @@ crosses a waterline.
 */
 
 int sv_writeentitiestoclient_pvsbytes;
-qbyte sv_writeentitiestoclient_pvs[MAX_MAP_LEAFS/8];
+unsigned char sv_writeentitiestoclient_pvs[MAX_MAP_LEAFS/8];
 
 static int numsendentities;
 static entity_state_t sendentities[MAX_EDICTS];
@@ -507,7 +507,7 @@ void SV_PrepareEntitiesForSending(void)
 
 		flags = 0;
 		i = (int)(PRVM_GETEDICTFIELDVALUE(ent, eval_glow_size)->_float * 0.25f);
-		glowsize = (qbyte)bound(0, i, 255);
+		glowsize = (unsigned char)bound(0, i, 255);
 		if (PRVM_GETEDICTFIELDVALUE(ent, eval_glow_trail)->_float)
 			flags |= RENDER_GLOWTRAIL;
 
@@ -519,8 +519,8 @@ void SV_PrepareEntitiesForSending(void)
 		light[2] = (unsigned short)bound(0, f, 65535);
 		f = PRVM_GETEDICTFIELDVALUE(ent, eval_light_lev)->_float;
 		light[3] = (unsigned short)bound(0, f, 65535);
-		lightstyle = (qbyte)PRVM_GETEDICTFIELDVALUE(ent, eval_style)->_float;
-		lightpflags = (qbyte)PRVM_GETEDICTFIELDVALUE(ent, eval_pflags)->_float;
+		lightstyle = (unsigned char)PRVM_GETEDICTFIELDVALUE(ent, eval_style)->_float;
+		lightpflags = (unsigned char)PRVM_GETEDICTFIELDVALUE(ent, eval_pflags)->_float;
 
 		if (gamemode == GAME_TENEBRAE)
 		{
@@ -587,7 +587,7 @@ void SV_PrepareEntitiesForSending(void)
 		cs.nodrawtoclient = PRVM_GETEDICTFIELDVALUE(ent, eval_nodrawtoclient)->edict;
 		cs.drawonlytoclient = PRVM_GETEDICTFIELDVALUE(ent, eval_drawonlytoclient)->edict;
 		cs.tagentity = PRVM_GETEDICTFIELDVALUE(ent, eval_tag_entity)->edict;
-		cs.tagindex = (qbyte)PRVM_GETEDICTFIELDVALUE(ent, eval_tag_index)->_float;
+		cs.tagindex = (unsigned char)PRVM_GETEDICTFIELDVALUE(ent, eval_tag_index)->_float;
 		cs.glowsize = glowsize;
 
 		// don't need to init cs.colormod because the defaultstate did that for us
@@ -607,14 +607,14 @@ void SV_PrepareEntitiesForSending(void)
 		if (f)
 		{
 			i = (int)f;
-			cs.alpha = (qbyte)bound(0, i, 255);
+			cs.alpha = (unsigned char)bound(0, i, 255);
 		}
 		// halflife
 		f = (PRVM_GETEDICTFIELDVALUE(ent, eval_renderamt)->_float);
 		if (f)
 		{
 			i = (int)f;
-			cs.alpha = (qbyte)bound(0, i, 255);
+			cs.alpha = (unsigned char)bound(0, i, 255);
 		}
 
 		cs.scale = 16;
@@ -622,7 +622,7 @@ void SV_PrepareEntitiesForSending(void)
 		if (f)
 		{
 			i = (int)f;
-			cs.scale = (qbyte)bound(0, i, 255);
+			cs.scale = (unsigned char)bound(0, i, 255);
 		}
 
 		cs.glowcolor = 254;
@@ -927,7 +927,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	int		items;
 	prvm_eval_t	*val;
 	vec3_t	punchvector;
-	qbyte	viewzoom;
+	unsigned char	viewzoom;
 	const char *s;
 
 //
@@ -1144,7 +1144,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 SV_SendClientDatagram
 =======================
 */
-static qbyte sv_sendclientdatagram_buf[NET_MAXMESSAGE]; // FIXME?
+static unsigned char sv_sendclientdatagram_buf[NET_MAXMESSAGE]; // FIXME?
 qboolean SV_SendClientDatagram (client_t *client)
 {
 	int rate, maxrate, maxsize, maxsize2;
@@ -1310,7 +1310,7 @@ message buffer
 void SV_SendNop (client_t *client)
 {
 	sizebuf_t	msg;
-	qbyte		buf[4];
+	unsigned char		buf[4];
 
 	msg.data = buf;
 	msg.maxsize = sizeof(buf);
@@ -1592,7 +1592,7 @@ void SV_SendReconnect (void)
 	MSG_WriteByte(&sv.reliable_datagram, svc_stufftext);
 	MSG_WriteString(&sv.reliable_datagram, "reconnect\n");
 #else
-	qbyte data[128];
+	unsigned char data[128];
 	sizebuf_t msg;
 
 	msg.data = data;
@@ -1667,8 +1667,8 @@ void SV_IncreaseEdicts(void)
 
 	for (i = 0, ent = prog->edicts;i < prog->max_edicts;i++, ent++)
 	{
-		ent->priv.vp = (qbyte*) prog->edictprivate + i * prog->edictprivate_size;
-		ent->fields.server = (void *)((qbyte *)prog->edictsfields + i * prog->edict_size);
+		ent->priv.vp = (unsigned char*) prog->edictprivate + i * prog->edictprivate_size;
+		ent->fields.server = (void *)((unsigned char *)prog->edictsfields + i * prog->edict_size);
 		// link every entity except world
 		if (!ent->priv.server->free)
 			SV_LinkEdict(ent, false);
@@ -1784,8 +1784,8 @@ void SV_SpawnServer (const char *server)
 	/*for (i = 0;i < prog->max_edicts;i++)
 	{
 		ent = prog->edicts + i;
-		ent->priv.vp = (qbyte*) prog->edictprivate + i * prog->edictprivate_size;
-		ent->fields.server = (void *)((qbyte *)prog->edictsfields + i * prog->edict_size);
+		ent->priv.vp = (unsigned char*) prog->edictprivate + i * prog->edictprivate_size;
+		ent->fields.server = (void *)((unsigned char *)prog->edictsfields + i * prog->edict_size);
 	}*/
 
 	// fix up client->edict pointers for returning clients right away...

@@ -158,7 +158,7 @@
 					return;
 				}
 #endif
-				ptr = (prvm_eval_t *)((qbyte *)prog->edictsfields + OPB->_int);
+				ptr = (prvm_eval_t *)((unsigned char *)prog->edictsfields + OPB->_int);
 				ptr->_int = OPA->_int;
 				break;
 			case OP_STOREP_V:
@@ -172,7 +172,7 @@
 					return;
 				}
 #endif
-				ptr = (prvm_eval_t *)((qbyte *)prog->edictsfields + OPB->_int);
+				ptr = (prvm_eval_t *)((unsigned char *)prog->edictsfields + OPB->_int);
 				ptr->vector[0] = OPA->vector[0];
 				ptr->vector[1] = OPA->vector[1];
 				ptr->vector[2] = OPA->vector[2];
@@ -198,7 +198,7 @@
 					return;
 				}
 				ed = PRVM_PROG_TO_EDICT(OPA->edict);
-				OPC->_int = (qbyte *)((int *)ed->fields.vp + OPB->_int) - (qbyte *)prog->edictsfields;
+				OPC->_int = (unsigned char *)((int *)ed->fields.vp + OPB->_int) - (unsigned char *)prog->edictsfields;
 				break;
 
 			case OP_LOAD_F:
@@ -482,7 +482,7 @@
 					return;
 				}
 #endif
-				ptr = (prvm_eval_t *)((qbyte *)prog->edictsfields + OPB->_int);
+				ptr = (prvm_eval_t *)((unsigned char *)prog->edictsfields + OPB->_int);
 				ptr->_int = OPA->_int;
 				break;
 			case OP_LOAD_I:

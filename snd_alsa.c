@@ -282,7 +282,7 @@ int SNDDMA_GetDMAPos (void)
 	offset *= shm->format.channels;
 	nframes *= shm->format.channels;
 	shm->samplepos = offset;
-	shm->buffer = (qbyte *)areas->addr;
+	shm->buffer = (unsigned char *)areas->addr;
 	return shm->samplepos;
 }
 

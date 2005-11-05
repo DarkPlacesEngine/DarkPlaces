@@ -87,7 +87,7 @@ int cl_max_brushmodel_entities;
 int cl_activedlights;
 
 entity_t *cl_entities;
-qbyte *cl_entities_active;
+unsigned char *cl_entities_active;
 entity_t *cl_static_entities;
 entity_t *cl_temp_entities;
 cl_effect_t *cl_effects;
@@ -103,7 +103,7 @@ int cl_num_brushmodel_entities;
 
 // keep track of quake entities because they need to be killed if they get stale
 extern int cl_lastquakeentity;
-extern qbyte cl_isquakeentity[MAX_EDICTS];
+extern unsigned char cl_isquakeentity[MAX_EDICTS];
 
 /*
 =====================
@@ -155,7 +155,7 @@ void CL_ClearState(void)
 	cl_activedlights = 0;
 
 	cl_entities = (entity_t *)Mem_Alloc(cl_mempool, cl_max_entities * sizeof(entity_t));
-	cl_entities_active = (qbyte *)Mem_Alloc(cl_mempool, cl_max_brushmodel_entities * sizeof(qbyte));
+	cl_entities_active = (unsigned char *)Mem_Alloc(cl_mempool, cl_max_brushmodel_entities * sizeof(unsigned char));
 	cl_static_entities = (entity_t *)Mem_Alloc(cl_mempool, cl_max_static_entities * sizeof(entity_t));
 	cl_temp_entities = (entity_t *)Mem_Alloc(cl_mempool, cl_max_temp_entities * sizeof(entity_t));
 	cl_effects = (cl_effect_t *)Mem_Alloc(cl_mempool, cl_max_effects * sizeof(cl_effect_t));
@@ -655,15 +655,15 @@ void CL_LinkNetworkEntity(entity_t *e)
 		if (e->state_current.flags & RENDER_COLORMAPPED)
 		{
 			int cb;
-			qbyte *cbcolor;
+			unsigned char *cbcolor;
 			e->render.colormap = e->state_current.colormap;
 			cb = (e->render.colormap & 0xF) << 4;cb += (cb >= 128 && cb < 224) ? 4 : 12;
-			cbcolor = (qbyte *) (&palette_complete[cb]);
+			cbcolor = (unsigned char *) (&palette_complete[cb]);
 			e->render.colormap_pantscolor[0] = cbcolor[0] * (1.0f / 255.0f) * e->render.colormod[0];
 			e->render.colormap_pantscolor[1] = cbcolor[1] * (1.0f / 255.0f) * e->render.colormod[1];
 			e->render.colormap_pantscolor[2] = cbcolor[2] * (1.0f / 255.0f) * e->render.colormod[2];
 			cb = (e->render.colormap & 0xF0);cb += (cb >= 128 && cb < 224) ? 4 : 12;
-			cbcolor = (qbyte *) (&palette_complete[cb]);
+			cbcolor = (unsigned char *) (&palette_complete[cb]);
 			e->render.colormap_shirtcolor[0] = cbcolor[0] * (1.0f / 255.0f) * e->render.colormod[0];
 			e->render.colormap_shirtcolor[1] = cbcolor[1] * (1.0f / 255.0f) * e->render.colormod[1];
 			e->render.colormap_shirtcolor[2] = cbcolor[2] * (1.0f / 255.0f) * e->render.colormod[2];
@@ -671,15 +671,15 @@ void CL_LinkNetworkEntity(entity_t *e)
 		else if (e->state_current.colormap && cl.scores != NULL)
 		{
 			int cb;
-			qbyte *cbcolor;
+			unsigned char *cbcolor;
 			e->render.colormap = cl.scores[e->state_current.colormap - 1].colors; // color it
 			cb = (e->render.colormap & 0xF) << 4;cb += (cb >= 128 && cb < 224) ? 4 : 12;
-			cbcolor = (qbyte *) (&palette_complete[cb]);
+			cbcolor = (unsigned char *) (&palette_complete[cb]);
 			e->render.colormap_pantscolor[0] = cbcolor[0] * (1.0f / 255.0f) * e->render.colormod[0];
 			e->render.colormap_pantscolor[1] = cbcolor[1] * (1.0f / 255.0f) * e->render.colormod[1];
 			e->render.colormap_pantscolor[2] = cbcolor[2] * (1.0f / 255.0f) * e->render.colormod[2];
 			cb = (e->render.colormap & 0xF0);cb += (cb >= 128 && cb < 224) ? 4 : 12;
-			cbcolor = (qbyte *) (&palette_complete[cb]);
+			cbcolor = (unsigned char *) (&palette_complete[cb]);
 			e->render.colormap_shirtcolor[0] = cbcolor[0] * (1.0f / 255.0f) * e->render.colormod[0];
 			e->render.colormap_shirtcolor[1] = cbcolor[1] * (1.0f / 255.0f) * e->render.colormod[1];
 			e->render.colormap_shirtcolor[2] = cbcolor[2] * (1.0f / 255.0f) * e->render.colormod[2];
@@ -993,7 +993,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			// * 4 for the expansion from 0-255 to 0-1023 range,
 			// / 255 to scale down byte colors
 			dlightradius = max(dlightradius, e->state_current.glowsize * 4);
-			VectorMA(dlightcolor, (1.0f / 255.0f), (qbyte *)&palette_complete[e->state_current.glowcolor], dlightcolor);
+			VectorMA(dlightcolor, (1.0f / 255.0f), (unsigned char *)&palette_complete[e->state_current.glowcolor], dlightcolor);
 		}
 		// make the glow dlight
 		if (dlightradius > 0 && (dlightcolor[0] || dlightcolor[1] || dlightcolor[2]) && !(e->render.flags & RENDER_VIEWMODEL))
@@ -1508,7 +1508,7 @@ void CL_Init (void)
 	r_refdef.entities = (entity_render_t **)Mem_Alloc(cl_mempool, sizeof(entity_render_t *) * r_refdef.maxentities);
 	// 256k drawqueue buffer
 	r_refdef.maxdrawqueuesize = 256 * 1024;
-	r_refdef.drawqueue = (qbyte *)Mem_Alloc(cl_mempool, r_refdef.maxdrawqueuesize);
+	r_refdef.drawqueue = (unsigned char *)Mem_Alloc(cl_mempool, r_refdef.maxdrawqueuesize);
 
 	cls.message.data = cls.message_buf;
 	cls.message.maxsize = sizeof(cls.message_buf);

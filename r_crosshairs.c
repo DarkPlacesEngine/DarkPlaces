@@ -25,7 +25,7 @@ void R_Crosshairs_Init(void)
 void R_GetCrosshairColor(float *out)
 {
 	int i;
-	qbyte *color;
+	unsigned char *color;
 	float scale, base;
 	if (cl.viewentity >= 1 && cl.viewentity <= cl.maxclients)
 	{
@@ -37,7 +37,7 @@ void R_GetCrosshairColor(float *out)
 	}
 	else
 		i = 15;
-	color = (qbyte *) &palette_complete[i];
+	color = (unsigned char *) &palette_complete[i];
 	if (crosshair_flashspeed.value >= 0.01f)
 		base = (sin(realtime * crosshair_flashspeed.value * (M_PI*2.0f)) * crosshair_flashrange.value);
 	else

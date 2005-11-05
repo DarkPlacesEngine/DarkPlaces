@@ -782,7 +782,7 @@ void CL_SendMove(void)
 	int i;
 	int bits;
 	sizebuf_t buf;
-	qbyte data[128];
+	unsigned char data[128];
 #define MOVEAVERAGING 0
 #if MOVEAVERAGING
 	static float forwardmove, sidemove, upmove, total; // accumulation

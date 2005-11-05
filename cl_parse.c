@@ -168,7 +168,7 @@ so the server doesn't disconnect.
 ==================
 */
 
-static qbyte olddata[NET_MAXMESSAGE];
+static unsigned char olddata[NET_MAXMESSAGE];
 void CL_KeepaliveMessage (void)
 {
 	float time;
@@ -197,7 +197,7 @@ void CL_KeepaliveMessage (void)
 	if (cls.netcon && NetConn_CanSendMessage(cls.netcon) && (time = Sys_DoubleTime()) - lastmsg >= 5)
 	{
 		sizebuf_t	msg;
-		qbyte		buf[4];
+		unsigned char		buf[4];
 		lastmsg = time;
 		// write out a nop
 		// LordHavoc: must use unreliable because reliable could kill the sigon message!
@@ -903,7 +903,7 @@ void CL_ParseTempEntity(void)
 	int rnd;
 	int colorStart, colorLength, count;
 	float velspeed, radius;
-	qbyte *tempcolor;
+	unsigned char *tempcolor;
 	matrix4x4_t tempmatrix;
 
 	type = MSG_ReadByte();
@@ -1252,7 +1252,7 @@ void CL_ParseTempEntity(void)
 		colorStart = MSG_ReadByte();
 		colorLength = MSG_ReadByte();
 		CL_ParticleExplosion2(pos, colorStart, colorLength);
-		tempcolor = (qbyte *)&palette_complete[(rand()%colorLength) + colorStart];
+		tempcolor = (unsigned char *)&palette_complete[(rand()%colorLength) + colorStart];
 		color[0] = tempcolor[0] * (2.0f / 255.0f);
 		color[1] = tempcolor[1] * (2.0f / 255.0f);
 		color[2] = tempcolor[2] * (2.0f / 255.0f);
@@ -1304,7 +1304,7 @@ void CL_ParseTempEntity(void)
 
 #define SHOWNET(x) if(cl_shownet.integer==2)Con_Printf("%3i:%s\n", msg_readcount-1, x);
 
-static qbyte cgamenetbuffer[65536];
+static unsigned char cgamenetbuffer[65536];
 
 /*
 =====================
@@ -1317,7 +1317,7 @@ void CL_ParseServerMessage(void)
 	int			cmd;
 	int			i;
 	protocolversion_t protocol;
-	qbyte		cmdlog[32];
+	unsigned char		cmdlog[32];
 	char		*cmdlogname[32], *temp;
 	int			cmdindex, cmdcount = 0;
 	qboolean	sendmove = false;
@@ -1651,9 +1651,9 @@ void CL_ParseServerMessage(void)
 			cl.cdtrack = MSG_ReadByte ();
 			cl.looptrack = MSG_ReadByte ();
 			if ( (cls.demoplayback || cls.demorecording) && (cls.forcetrack != -1) )
-				CDAudio_Play ((qbyte)cls.forcetrack, true);
+				CDAudio_Play ((unsigned char)cls.forcetrack, true);
 			else
-				CDAudio_Play ((qbyte)cl.cdtrack, true);
+				CDAudio_Play ((unsigned char)cl.cdtrack, true);
 			break;
 
 		case svc_intermission:

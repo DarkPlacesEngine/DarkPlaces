@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cdaudio.h"
 #include <SDL.h>
 
-/*IMPORTANT: 
+/*IMPORTANT:
 SDL 1.2.7 and older seems to have a strange bug regarding CDPause and CDResume under WIN32.
 If CDResume is called, it plays to end of the CD regardless what values for lasttrack and lastframe
 were passed to CDPlayTracks.
@@ -80,7 +80,7 @@ void CDAudio_SysSetVolume (float volume)
 }
 
 
-int CDAudio_SysPlay (qbyte track)
+int CDAudio_SysPlay (unsigned char track)
 {
 	SDL_CDStop( cd );
 	endtime = realtime + (float) cd->track[ track - 1 ].length / CD_FPS;
@@ -129,7 +129,7 @@ int CDAudio_SysUpdate (void)
 
 void CDAudio_SysInit (void)
 {
-	if( SDL_InitSubSystem( SDL_INIT_CDROM ) == -1 ) 
+	if( SDL_InitSubSystem( SDL_INIT_CDROM ) == -1 )
 		Con_Print( "Failed to init the CDROM SDL subsystem!\n" );
 
 	Cmd_AddCommand( "cddrive", CDAudio_SDL_CDDrive_f );
@@ -148,7 +148,7 @@ int CDAudio_SysStartup (void)
 {
 	int i;
 	int numdrives;
-    
+
 	numdrives = SDL_CDNumDrives();
 	if( numdrives == -1 ) // was the CDROM system initialized correctly?
 		return -1;
@@ -210,8 +210,8 @@ void CDAudio_SDL_CDDrive_f( void )
 	if( !cd ) {
 		Con_Printf( "Couldn't open drive %i.\n", i );
 		return;
-	} 
-	
+	}
+
 	if( !CD_INDRIVE( SDL_CDStatus( cd ) ) )
 		Con_Printf( "No cd in drive %i.\n", i );
 	else if( !IsAudioCD() )
@@ -224,4 +224,4 @@ void CDAudio_SDL_CDDrive_f( void )
 
 
 
-		
+

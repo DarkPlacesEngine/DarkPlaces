@@ -68,8 +68,8 @@ void PRVM_MEM_Alloc(void)
 	// set edict pointers
 	for(i = 0; i < prog->max_edicts; i++)
 	{
-		prog->edicts[i].priv.required = (prvm_edict_private_t *)((qbyte  *)prog->edictprivate + i * prog->edictprivate_size);
-		prog->edicts[i].fields.vp = (void*)((qbyte *)prog->edictsfields + i * prog->edict_size);
+		prog->edicts[i].priv.required = (prvm_edict_private_t *)((unsigned char  *)prog->edictprivate + i * prog->edictprivate_size);
+		prog->edicts[i].fields.vp = (void*)((unsigned char *)prog->edictsfields + i * prog->edict_size);
 	}
 }
 
@@ -102,8 +102,8 @@ void PRVM_MEM_IncreaseEdicts(void)
 	//set e and v pointers
 	for(i = 0; i < prog->max_edicts; i++)
 	{
-		prog->edicts[i].priv.required  = (prvm_edict_private_t *)((qbyte  *)prog->edictprivate + i * prog->edictprivate_size);
-		prog->edicts[i].fields.vp = (void*)((qbyte *)prog->edictsfields + i * prog->edict_size);
+		prog->edicts[i].priv.required  = (prvm_edict_private_t *)((unsigned char  *)prog->edictprivate + i * prog->edictprivate_size);
+		prog->edicts[i].fields.vp = (void*)((unsigned char *)prog->edictsfields + i * prog->edict_size);
 	}
 
 	PRVM_GCALL(end_increase_edicts)();
@@ -1160,7 +1160,7 @@ void PRVM_ED_LoadFromFile (const char *data)
 //
 		if(prog->self && prog->flag & PRVM_FE_CLASSNAME)
 		{
-			string_t handle =  *(string_t*)&((qbyte*)ent->fields.vp)[PRVM_ED_FindFieldOffset("classname")];
+			string_t handle =  *(string_t*)&((unsigned char*)ent->fields.vp)[PRVM_ED_FindFieldOffset("classname")];
 			if (!handle)
 			{
 				Con_Print("No classname for:\n");
@@ -1231,7 +1231,7 @@ PRVM_LoadLNO
 ===============
 */
 void PRVM_LoadLNO( const char *progname ) {
-	qbyte *lno;
+	unsigned char *lno;
 	unsigned int *header;
 	char filename[512];
 
@@ -1292,7 +1292,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 
 	Con_DPrintf("%s programs occupy %iK.\n", PRVM_NAME, fs_filesize/1024);
 
-	prog->filecrc = CRC_Block((qbyte *)prog->progs, fs_filesize);
+	prog->filecrc = CRC_Block((unsigned char *)prog->progs, fs_filesize);
 
 // byte swap the header
 	for (i = 0;i < (int) sizeof(*prog->progs) / 4;i++)
@@ -1303,8 +1303,8 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	if (prog->progs->crc != prog->headercrc)
 		PRVM_ERROR ("%s: %s system vars have been modified, progdefs.h is out of date", PRVM_NAME, filename);
 
-	//prog->functions = (dfunction_t *)((qbyte *)progs + progs->ofs_functions);
-	dfunctions = (dfunction_t *)((qbyte *)prog->progs + prog->progs->ofs_functions);
+	//prog->functions = (dfunction_t *)((unsigned char *)progs + progs->ofs_functions);
+	dfunctions = (dfunction_t *)((unsigned char *)prog->progs + prog->progs->ofs_functions);
 
 	prog->strings = (char *)prog->progs + prog->progs->ofs_strings;
 	prog->stringssize = 0;
@@ -1319,20 +1319,20 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	prog->knownstrings = NULL;
 	prog->knownstrings_freeable = NULL;
 
-	prog->globaldefs = (ddef_t *)((qbyte *)prog->progs + prog->progs->ofs_globaldefs);
+	prog->globaldefs = (ddef_t *)((unsigned char *)prog->progs + prog->progs->ofs_globaldefs);
 
 	// we need to expand the fielddefs list to include all the engine fields,
 	// so allocate a new place for it
-	infielddefs = (ddef_t *)((qbyte *)prog->progs + prog->progs->ofs_fielddefs);
+	infielddefs = (ddef_t *)((unsigned char *)prog->progs + prog->progs->ofs_fielddefs);
 	//												( + DPFIELDS			   )
 	prog->fielddefs = (ddef_t *)Mem_Alloc(prog->progs_mempool, (prog->progs->numfielddefs + numrequiredfields) * sizeof(ddef_t));
 
-	prog->statements = (dstatement_t *)((qbyte *)prog->progs + prog->progs->ofs_statements);
+	prog->statements = (dstatement_t *)((unsigned char *)prog->progs + prog->progs->ofs_statements);
 
 	// moved edict_size calculation down below field adding code
 
-	//pr_global_struct = (globalvars_t *)((qbyte *)progs + progs->ofs_globals);
-	prog->globals.generic = (float *)((qbyte *)prog->progs + prog->progs->ofs_globals);
+	//pr_global_struct = (globalvars_t *)((unsigned char *)progs + progs->ofs_globals);
+	prog->globals.generic = (float *)((unsigned char *)prog->progs + prog->progs->ofs_globals);
 
 // byte swap the lumps
 	for (i=0 ; i<prog->progs->numstatements ; i++)
@@ -1825,7 +1825,7 @@ int PRVM_NUM_FOR_EDICT(prvm_edict_t *e)
 //	return e - prog->edicts;
 //}
 
-//#define	PRVM_EDICT_TO_PROG(e) ((qbyte *)(((prvm_edict_t *)e)->v) - (qbyte *)(prog->edictsfields))
+//#define	PRVM_EDICT_TO_PROG(e) ((unsigned char *)(((prvm_edict_t *)e)->v) - (unsigned char *)(prog->edictsfields))
 //#define PRVM_PROG_TO_EDICT(e) (prog->edicts + ((e) / (progs->entityfields * 4)))
 int PRVM_EDICT_TO_PROG(prvm_edict_t *e)
 {
@@ -1834,7 +1834,7 @@ int PRVM_EDICT_TO_PROG(prvm_edict_t *e)
 	if ((unsigned int)n >= (unsigned int)prog->max_edicts)
 		Host_Error("PRVM_EDICT_TO_PROG: invalid edict %8p (number %i compared to world at %8p)\n", e, n, prog->edicts);
 	return n;// EXPERIMENTAL
-	//return (qbyte *)e->v - (qbyte *)prog->edictsfields;
+	//return (unsigned char *)e->v - (unsigned char *)prog->edictsfields;
 }
 prvm_edict_t *PRVM_PROG_TO_EDICT(int n)
 {
@@ -1885,14 +1885,14 @@ int PRVM_SetEngineString(const char *s)
 		if (i >= prog->maxknownstrings)
 		{
 			const char **oldstrings = prog->knownstrings;
-			const qbyte *oldstrings_freeable = prog->knownstrings_freeable;
+			const unsigned char *oldstrings_freeable = prog->knownstrings_freeable;
 			prog->maxknownstrings += 128;
 			prog->knownstrings = (const char **)PRVM_Alloc(prog->maxknownstrings * sizeof(char *));
-			prog->knownstrings_freeable = (qbyte *)PRVM_Alloc(prog->maxknownstrings * sizeof(qbyte));
+			prog->knownstrings_freeable = (unsigned char *)PRVM_Alloc(prog->maxknownstrings * sizeof(unsigned char));
 			if (prog->numknownstrings)
 			{
 				memcpy((char **)prog->knownstrings, oldstrings, prog->numknownstrings * sizeof(char *));
-				memcpy((char **)prog->knownstrings_freeable, oldstrings_freeable, prog->numknownstrings * sizeof(qbyte));
+				memcpy((char **)prog->knownstrings_freeable, oldstrings_freeable, prog->numknownstrings * sizeof(unsigned char));
 			}
 		}
 		prog->numknownstrings++;
@@ -1915,14 +1915,14 @@ int PRVM_AllocString(size_t bufferlength, char **pointer)
 		if (i >= prog->maxknownstrings)
 		{
 			const char **oldstrings = prog->knownstrings;
-			const qbyte *oldstrings_freeable = prog->knownstrings_freeable;
+			const unsigned char *oldstrings_freeable = prog->knownstrings_freeable;
 			prog->maxknownstrings += 128;
 			prog->knownstrings = (const char **)PRVM_Alloc(prog->maxknownstrings * sizeof(char *));
-			prog->knownstrings_freeable = (qbyte *)PRVM_Alloc(prog->maxknownstrings * sizeof(qbyte));
+			prog->knownstrings_freeable = (unsigned char *)PRVM_Alloc(prog->maxknownstrings * sizeof(unsigned char));
 			if (prog->numknownstrings)
 			{
 				memcpy((char **)prog->knownstrings, oldstrings, prog->numknownstrings * sizeof(char *));
-				memcpy((char **)prog->knownstrings_freeable, oldstrings_freeable, prog->numknownstrings * sizeof(qbyte));
+				memcpy((char **)prog->knownstrings_freeable, oldstrings_freeable, prog->numknownstrings * sizeof(unsigned char));
 			}
 		}
 		prog->numknownstrings++;

@@ -454,7 +454,7 @@ static void Handle_KeyMod(UInt32 keymod)
 	prev_keymod = keymod;
 }
 
-static void Handle_Key(qbyte charcode, qboolean keypressed)
+static void Handle_Key(unsigned char charcode, qboolean keypressed)
 {
 	unsigned int keycode = 0;
 	char ascii = '\0';

@@ -7,7 +7,7 @@ void CL_CGVM_Shutdown(void);
 void CL_CGVM_Clear(void);
 void CL_CGVM_Frame(void);
 void CL_CGVM_Start(void);
-void CL_CGVM_ParseNetwork(qbyte *netbuffer, int length);
+void CL_CGVM_ParseNetwork(unsigned char *netbuffer, int length);
 
 #endif
 

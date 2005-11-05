@@ -35,7 +35,7 @@ void r_light_start(void)
 {
 	float dx, dy;
 	int x, y, a;
-	qbyte pixels[32][32][4];
+	unsigned char pixels[32][32][4];
 	lighttexturepool = R_AllocTexturePool();
 	for (y = 0;y < 32;y++)
 	{

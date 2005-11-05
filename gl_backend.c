@@ -1671,7 +1671,7 @@ void R_Mesh_Draw_ShowTris(int firstvertex, int numvertices, int numtriangles, co
 ==============================================================================
 */
 
-qboolean SCR_ScreenShot(char *filename, qbyte *buffer1, qbyte *buffer2, qbyte *buffer3, int x, int y, int width, int height, qboolean flipx, qboolean flipy, qboolean flipdiagonal, qboolean jpeg, qboolean gammacorrect)
+qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *buffer2, unsigned char *buffer3, int x, int y, int width, int height, qboolean flipx, qboolean flipy, qboolean flipdiagonal, qboolean jpeg, qboolean gammacorrect)
 {
 	int	indices[3] = {0,1,2};
 	qboolean ret;
@@ -2039,7 +2039,7 @@ static rcachearrayitem_t r_mesh_rcacheitems[RCACHEARRAY_ITEMS];
 // size of data buffer
 static int r_mesh_rcachedata_size = RCACHEARRAY_DEFAULTSIZE;
 // data buffer
-static qbyte r_mesh_rcachedata[RCACHEARRAY_DEFAULTSIZE];
+static unsigned char r_mesh_rcachedata[RCACHEARRAY_DEFAULTSIZE];
 
 // current state
 static int r_mesh_rcachedata_offset;
@@ -2100,7 +2100,7 @@ int R_Mesh_CacheArray(rcachearrayrequest_t *r)
 	//R_Mesh_CacheArray_ValidateState(3);
 	// calculate a hashindex to choose a cache chain
 	r->data = NULL;
-	hashindex = CRC_Block((qbyte *)r, sizeof(*r)) % RCACHEARRAY_HASHSIZE;
+	hashindex = CRC_Block((unsigned char *)r, sizeof(*r)) % RCACHEARRAY_HASHSIZE;
 
 	// is it already cached?
 	for (lhead = &r_mesh_rcachechain[hashindex], l = lhead->next;l != lhead;l = l->next)

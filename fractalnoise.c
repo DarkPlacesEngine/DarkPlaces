@@ -1,7 +1,7 @@
 
 #include "quakedef.h"
 
-void fractalnoise(qbyte *noise, int size, int startgrid)
+void fractalnoise(unsigned char *noise, int size, int startgrid)
 {
 	int x, y, g, g2, amplitude, min, max, size1 = size - 1, sizepower, gridpower;
 	int *noisebuf;
@@ -65,13 +65,13 @@ void fractalnoise(qbyte *noise, int size, int startgrid)
 	// normalize noise and copy to output
 	for (y = 0;y < size;y++)
 		for (x = 0;x < size;x++)
-			*noise++ = (qbyte) (((n(x,y) - min) * 256) / max);
+			*noise++ = (unsigned char) (((n(x,y) - min) * 256) / max);
 	Mem_Free(noisebuf);
 #undef n
 }
 
 // unnormalized, used for explosions mainly, does not allocate/free memory (hence the name quick)
-void fractalnoisequick(qbyte *noise, int size, int startgrid)
+void fractalnoisequick(unsigned char *noise, int size, int startgrid)
 {
 	int x, y, g, g2, amplitude, size1 = size - 1, sizepower, gridpower;
 #define n(x,y) noise[((y)&size1)*size+((x)&size1)]
@@ -110,13 +110,13 @@ void fractalnoisequick(qbyte *noise, int size, int startgrid)
 			// diamond
 			for (y = 0;y < size;y += g2)
 				for (x = 0;x < size;x += g2)
-					n(x+g,y+g) = (qbyte) (((int) n(x,y) + (int) n(x+g2,y) + (int) n(x,y+g2) + (int) n(x+g2,y+g2)) >> 2);
+					n(x+g,y+g) = (unsigned char) (((int) n(x,y) + (int) n(x+g2,y) + (int) n(x,y+g2) + (int) n(x+g2,y+g2)) >> 2);
 			// square
 			for (y = 0;y < size;y += g2)
 				for (x = 0;x < size;x += g2)
 				{
-					n(x+g,y) = (qbyte) (((int) n(x,y) + (int) n(x+g2,y) + (int) n(x+g,y-g) + (int) n(x+g,y+g)) >> 2);
-					n(x,y+g) = (qbyte) (((int) n(x,y) + (int) n(x,y+g2) + (int) n(x-g,y+g) + (int) n(x+g,y+g)) >> 2);
+					n(x+g,y) = (unsigned char) (((int) n(x,y) + (int) n(x+g2,y) + (int) n(x+g,y-g) + (int) n(x+g,y+g)) >> 2);
+					n(x,y+g) = (unsigned char) (((int) n(x,y) + (int) n(x,y+g2) + (int) n(x-g,y+g) + (int) n(x+g,y+g)) >> 2);
 				}
 		}
 	}

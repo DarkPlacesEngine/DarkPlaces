@@ -262,7 +262,7 @@ typedef struct dface_s
 	short		texinfo;
 
 // lighting info
-	qbyte		styles[MAXLIGHTMAPS];
+	unsigned char		styles[MAXLIGHTMAPS];
 	int			lightofs;		// start of [numstyles*surfsize] samples
 } dface_t;
 
@@ -288,6 +288,6 @@ typedef struct dleaf_s
 	unsigned short		firstmarksurface;
 	unsigned short		nummarksurfaces;
 
-	qbyte		ambient_level[NUM_AMBIENTS];
+	unsigned char		ambient_level[NUM_AMBIENTS];
 } dleaf_t;
 

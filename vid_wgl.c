@@ -294,7 +294,7 @@ void VID_Finish (void)
 
 
 
-static qbyte scantokey[128] =
+static unsigned char scantokey[128] =
 {
 //  0           1       2    3     4     5       6       7      8         9      A          B           C       D           E           F
 	0          ,27    ,'1'  ,'2'  ,'3'  ,'4'    ,'5'    ,'6'   ,'7'      ,'8'   ,'9'       ,'0'        ,'-'   ,'='         ,K_BACKSPACE,9    ,//0
