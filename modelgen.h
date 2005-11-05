@@ -82,8 +82,8 @@ dtriangle_t;
 
 typedef struct trivertx_s
 {
-	qbyte	v[3];
-	qbyte	lightnormalindex;
+	unsigned char	v[3];
+	unsigned char	lightnormalindex;
 }
 trivertx_t;
 

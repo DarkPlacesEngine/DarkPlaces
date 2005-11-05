@@ -32,7 +32,7 @@ extern void CDAudio_SysCloseDoor (void);
 extern int CDAudio_SysGetAudioDiskInfo (void);
 extern float CDAudio_SysGetVolume (void);
 extern void CDAudio_SysSetVolume (float volume);
-extern int CDAudio_SysPlay (qbyte track);
+extern int CDAudio_SysPlay (unsigned char track);
 extern int CDAudio_SysStop (void);
 extern int CDAudio_SysPause (void);
 extern int CDAudio_SysResume (void);
@@ -48,8 +48,8 @@ static qboolean wasPlaying = false;
 static qboolean initialized = false;
 static qboolean enabled = false;
 static float cdvolume;
-static qbyte remap[MAXTRACKS];
-static qbyte maxTrack;
+static unsigned char remap[MAXTRACKS];
+static unsigned char maxTrack;
 static int faketrack = -1;
 
 static float saved_vol = 1.0f;
@@ -58,7 +58,7 @@ static float saved_vol = 1.0f;
 qboolean cdValid = false;
 qboolean cdPlaying = false;
 qboolean cdPlayLooping = false;
-qbyte cdPlayTrack;
+unsigned char cdPlayTrack;
 
 
 static void CDAudio_Eject (void)
@@ -95,7 +95,7 @@ static int CDAudio_GetAudioDiskInfo (void)
 }
 
 
-void CDAudio_Play (qbyte track, qboolean looping)
+void CDAudio_Play (unsigned char track, qboolean looping)
 {
 	sfx_t* sfx;
 
@@ -268,13 +268,13 @@ static void CD_f (void)
 
 	if (strcasecmp(command, "play") == 0)
 	{
-		CDAudio_Play((qbyte)atoi(Cmd_Argv (2)), false);
+		CDAudio_Play((unsigned char)atoi(Cmd_Argv (2)), false);
 		return;
 	}
 
 	if (strcasecmp(command, "loop") == 0)
 	{
-		CDAudio_Play((qbyte)atoi(Cmd_Argv (2)), true);
+		CDAudio_Play((unsigned char)atoi(Cmd_Argv (2)), true);
 		return;
 	}
 

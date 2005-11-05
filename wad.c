@@ -69,7 +69,7 @@ void *W_GetLumpName(const char *name)
 	static int wad_loaded = false;
 	static int wad_numlumps = 0;
 	static lumpinfo_t *wad_lumps = NULL;
-	static qbyte *wad_base = NULL;
+	static unsigned char *wad_base = NULL;
 
 	W_CleanupName (name, clean);
 
@@ -82,7 +82,7 @@ void *W_GetLumpName(const char *name)
 				Con_Print("gfx.wad doesn't have WAD2 id\n");
 			else
 			{
-				wad_base = (qbyte *)Mem_Alloc(cl_mempool, fs_filesize);
+				wad_base = (unsigned char *)Mem_Alloc(cl_mempool, fs_filesize);
 
 				memcpy(wad_base, temp, fs_filesize);
 				Mem_Free(temp);
@@ -206,13 +206,13 @@ void W_LoadTextureWadFile (char *filename, int complain)
 }
 
 
-qbyte *W_ConvertWAD3Texture(miptex_t *tex)
+unsigned char *W_ConvertWAD3Texture(miptex_t *tex)
 {
-	qbyte *in, *data, *out, *pal;
+	unsigned char *in, *data, *out, *pal;
 	int d, p;
 
-	in = (qbyte *)tex + tex->offsets[0];
-	data = out = (qbyte *)Mem_Alloc(tempmempool, tex->width * tex->height * 4);
+	in = (unsigned char *)tex + tex->offsets[0];
+	data = out = (unsigned char *)Mem_Alloc(tempmempool, tex->width * tex->height * 4);
 	if (!data)
 		return NULL;
 	image_width = tex->width;
@@ -237,13 +237,13 @@ qbyte *W_ConvertWAD3Texture(miptex_t *tex)
 	return data;
 }
 
-qbyte *W_GetTexture(char *name)
+unsigned char *W_GetTexture(char *name)
 {
 	char texname[17];
 	int i, j;
 	qfile_t *file;
 	miptex_t *tex;
-	qbyte *data;
+	unsigned char *data;
 
 	texname[16] = 0;
 	W_CleanupName (name, texname);

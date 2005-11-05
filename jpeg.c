@@ -38,9 +38,9 @@
 =================================================================
 */
 
-// jboolean is qbyte instead of int on Win32
+// jboolean is unsigned char instead of int on Win32
 #ifdef WIN32
-typedef qbyte jboolean;
+typedef unsigned char jboolean;
 #else
 typedef int jboolean;
 #endif
@@ -119,7 +119,7 @@ struct jpeg_error_mgr
 
 struct jpeg_source_mgr
 {
-	const qbyte *next_input_byte;
+	const unsigned char *next_input_byte;
 	size_t bytes_in_buffer;
 
 	void (*init_source) (j_decompress_ptr cinfo);
@@ -186,18 +186,18 @@ struct jpeg_decompress_struct
 	void *comp_info;
 	jboolean progressive_mode;
 	jboolean arith_code;
-	qbyte arith_dc_L[NUM_ARITH_TBLS];
-	qbyte arith_dc_U[NUM_ARITH_TBLS];
-	qbyte arith_ac_K[NUM_ARITH_TBLS];
+	unsigned char arith_dc_L[NUM_ARITH_TBLS];
+	unsigned char arith_dc_U[NUM_ARITH_TBLS];
+	unsigned char arith_ac_K[NUM_ARITH_TBLS];
 	unsigned int restart_interval;
 	jboolean saw_JFIF_marker;
-	qbyte JFIF_major_version;
-	qbyte JFIF_minor_version;
-	qbyte density_unit;
+	unsigned char JFIF_major_version;
+	unsigned char JFIF_minor_version;
+	unsigned char density_unit;
 	unsigned short X_density;
 	unsigned short Y_density;
 	jboolean saw_Adobe_marker;
-	qbyte Adobe_transform;
+	unsigned char Adobe_transform;
 	jboolean CCIR601_sampling;
 	void *marker_list;
 	int max_h_samp_factor;
@@ -250,9 +250,9 @@ struct jpeg_compress_struct
 	void *quant_tbl_ptrs[NUM_QUANT_TBLS];
 	void *dc_huff_tbl_ptrs[NUM_HUFF_TBLS];
 	void *ac_huff_tbl_ptrs[NUM_HUFF_TBLS];
-	qbyte arith_dc_L[NUM_ARITH_TBLS];
-	qbyte arith_dc_U[NUM_ARITH_TBLS];
-	qbyte arith_ac_K[NUM_ARITH_TBLS];
+	unsigned char arith_dc_L[NUM_ARITH_TBLS];
+	unsigned char arith_dc_U[NUM_ARITH_TBLS];
+	unsigned char arith_ac_K[NUM_ARITH_TBLS];
 
 	int num_scans;
 	const void *scan_info;
@@ -267,9 +267,9 @@ struct jpeg_compress_struct
 	int restart_in_rows;
 
 	jboolean write_JFIF_header;
-	qbyte JFIF_major_version;
-	qbyte JFIF_minor_version;
-	qbyte density_unit;
+	unsigned char JFIF_major_version;
+	unsigned char JFIF_minor_version;
+	unsigned char density_unit;
 	unsigned short X_density;
 	unsigned short Y_density;
 	jboolean write_Adobe_marker;
@@ -302,7 +302,7 @@ struct jpeg_compress_struct
 
 struct jpeg_destination_mgr
 {
-	qbyte* next_output_byte;
+	unsigned char* next_output_byte;
 	size_t free_in_buffer;
 
 	void (*init_destination) (j_compress_ptr cinfo);
@@ -333,13 +333,13 @@ static void (*qjpeg_finish_compress) (j_compress_ptr cinfo);
 static jboolean (*qjpeg_finish_decompress) (j_decompress_ptr cinfo);
 static jboolean (*qjpeg_resync_to_restart) (j_decompress_ptr cinfo, int desired);
 static int (*qjpeg_read_header) (j_decompress_ptr cinfo, jboolean require_image);
-static JDIMENSION (*qjpeg_read_scanlines) (j_decompress_ptr cinfo, qbyte** scanlines, JDIMENSION max_lines);
+static JDIMENSION (*qjpeg_read_scanlines) (j_decompress_ptr cinfo, unsigned char** scanlines, JDIMENSION max_lines);
 static void (*qjpeg_set_defaults) (j_compress_ptr cinfo);
 static void (*qjpeg_set_quality) (j_compress_ptr cinfo, int quality, jboolean force_baseline);
 static jboolean (*qjpeg_start_compress) (j_compress_ptr cinfo, jboolean write_all_tables);
 static jboolean (*qjpeg_start_decompress) (j_decompress_ptr cinfo);
 static struct jpeg_error_mgr* (*qjpeg_std_error) (struct jpeg_error_mgr *err);
-static JDIMENSION (*qjpeg_write_scanlines) (j_compress_ptr cinfo, qbyte** scanlines, JDIMENSION num_lines);
+static JDIMENSION (*qjpeg_write_scanlines) (j_compress_ptr cinfo, unsigned char** scanlines, JDIMENSION num_lines);
 
 static dllfunction_t jpegfuncs[] =
 {
@@ -364,7 +364,7 @@ static dllfunction_t jpegfuncs[] =
 // Handle for JPEG DLL
 dllhandle_t jpeg_dll = NULL;
 
-static qbyte jpeg_eoi_marker [2] = {0xFF, JPEG_EOI};
+static unsigned char jpeg_eoi_marker [2] = {0xFF, JPEG_EOI};
 static qboolean error_in_jpeg;
 
 // Our own output manager for JPEG compression
@@ -373,7 +373,7 @@ typedef struct
 	struct jpeg_destination_mgr pub;
 
 	qfile_t* outfile;
-	qbyte* buffer;
+	unsigned char* buffer;
 } my_destination_mgr;
 typedef my_destination_mgr* my_dest_ptr;
 
@@ -470,7 +470,7 @@ static void JPEG_SkipInputData (j_decompress_ptr cinfo, long num_bytes)
     cinfo->src->bytes_in_buffer -= num_bytes;
 }
 
-static void JPEG_MemSrc (j_decompress_ptr cinfo, const qbyte *buffer)
+static void JPEG_MemSrc (j_decompress_ptr cinfo, const unsigned char *buffer)
 {
 	cinfo->src = (struct jpeg_source_mgr *)cinfo->mem->alloc_small ((j_common_ptr) cinfo, JPOOL_PERMANENT, sizeof (struct jpeg_source_mgr));
 
@@ -498,11 +498,11 @@ JPEG_LoadImage
 Load a JPEG image into a RGBA buffer
 ====================
 */
-qbyte* JPEG_LoadImage (const qbyte *f, int matchwidth, int matchheight)
+unsigned char* JPEG_LoadImage (const unsigned char *f, int matchwidth, int matchheight)
 {
 	struct jpeg_decompress_struct cinfo;
 	struct jpeg_error_mgr jerr;
-	qbyte *image_rgba, *scanline;
+	unsigned char *image_rgba, *scanline;
 	unsigned int line;
 
 	// No DLL = no JPEGs
@@ -530,8 +530,8 @@ qbyte* JPEG_LoadImage (const qbyte *f, int matchwidth, int matchheight)
 		return NULL;
 	}
 
-	image_rgba = (qbyte *)Mem_Alloc(tempmempool, image_width * image_height * 4);
-	scanline = (qbyte *)Mem_Alloc(tempmempool, image_width * cinfo.output_components);
+	image_rgba = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
+	scanline = (unsigned char *)Mem_Alloc(tempmempool, image_width * cinfo.output_components);
 	if (!image_rgba || !scanline)
 	{
 		if (!image_rgba)
@@ -547,7 +547,7 @@ qbyte* JPEG_LoadImage (const qbyte *f, int matchwidth, int matchheight)
 	line = 0;
 	while (cinfo.output_scanline < cinfo.output_height)
 	{
-		qbyte *buffer_ptr;
+		unsigned char *buffer_ptr;
 		int ind;
 
 		qjpeg_read_scanlines (&cinfo, &scanline, 1);
@@ -603,7 +603,7 @@ qbyte* JPEG_LoadImage (const qbyte *f, int matchwidth, int matchheight)
 static void JPEG_InitDestination (j_compress_ptr cinfo)
 {
 	my_dest_ptr dest = (my_dest_ptr)cinfo->dest;
-	dest->buffer = (qbyte*)cinfo->mem->alloc_small ((j_common_ptr) cinfo, JPOOL_IMAGE, JPEG_OUTPUT_BUF_SIZE * sizeof(qbyte));
+	dest->buffer = (unsigned char*)cinfo->mem->alloc_small ((j_common_ptr) cinfo, JPOOL_IMAGE, JPEG_OUTPUT_BUF_SIZE * sizeof(unsigned char));
 	dest->pub.next_output_byte = dest->buffer;
 	dest->pub.free_in_buffer = JPEG_OUTPUT_BUF_SIZE;
 }
@@ -657,11 +657,11 @@ JPEG_SaveImage_preflipped
 Save a preflipped JPEG image to a file
 ====================
 */
-qboolean JPEG_SaveImage_preflipped (const char *filename, int width, int height, qbyte *data)
+qboolean JPEG_SaveImage_preflipped (const char *filename, int width, int height, unsigned char *data)
 {
 	struct jpeg_compress_struct cinfo;
 	struct jpeg_error_mgr jerr;
-	qbyte *scanline;
+	unsigned char *scanline;
 	unsigned int offset, linesize;
 	qfile_t* file;
 

@@ -106,7 +106,7 @@ qboolean SNDDMA_Init(void)
 	shm->samplepos = 0;
 	shm->samples = AUDIO_SDL_SAMPLES * AUDIO_LOCALFACTOR;
 	shm->bufferlength = shm->samples * shm->format.width;
-	shm->buffer = (qbyte *)Mem_Alloc( snd_mempool, shm->bufferlength );
+	shm->buffer = (unsigned char *)Mem_Alloc( snd_mempool, shm->bufferlength );
 
 	// Init the as structure
 	as.buffer = shm->buffer;

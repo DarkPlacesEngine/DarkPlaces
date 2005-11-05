@@ -272,10 +272,10 @@ typedef struct portalrecursioninfo_s
 	vec3_t boxmaxs;
 	int numsurfaces;
 	int *surfacelist;
-	qbyte *surfacepvs;
+	unsigned char *surfacepvs;
 	int numleafs;
 	int *leaflist;
-	qbyte *leafpvs;
+	unsigned char *leafpvs;
 	model_t *model;
 	vec3_t eye;
 	float *updateleafsmins;
@@ -419,7 +419,7 @@ static void Portal_RecursiveFindLeafForFlow(portalrecursioninfo_t *info, mnode_t
 	}
 }
 
-void Portal_Visibility(model_t *model, const vec3_t eye, int *leaflist, qbyte *leafpvs, int *numleafspointer, int *surfacelist, qbyte *surfacepvs, int *numsurfacespointer, const mplane_t *frustumplanes, int numfrustumplanes, int exact, const float *boxmins, const float *boxmaxs, float *updateleafsmins, float *updateleafsmaxs)
+void Portal_Visibility(model_t *model, const vec3_t eye, int *leaflist, unsigned char *leafpvs, int *numleafspointer, int *surfacelist, unsigned char *surfacepvs, int *numsurfacespointer, const mplane_t *frustumplanes, int numfrustumplanes, int exact, const float *boxmins, const float *boxmaxs, float *updateleafsmins, float *updateleafsmaxs)
 {
 	int i;
 	portalrecursioninfo_t info;

@@ -45,7 +45,7 @@ static cvar_t sv_masters [] =
 static double nextheartbeattime = 0;
 
 sizebuf_t net_message;
-static qbyte net_message_buf[NET_MAXMESSAGE];
+static unsigned char net_message_buf[NET_MAXMESSAGE];
 
 cvar_t net_messagetimeout = {0, "net_messagetimeout","300"};
 cvar_t net_messagerejointimeout = {0, "net_messagerejointimeout","10"};
@@ -81,8 +81,8 @@ int serverreplycount = 0;
 // this is only false if there are still servers left to query
 int serverlist_querysleep = true;
 
-static qbyte sendbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
-static qbyte readbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
+static unsigned char sendbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
+static unsigned char readbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
 
 int cl_numsockets;
 lhnetsocket_t *cl_sockets[16];
@@ -397,7 +397,7 @@ int NetConn_Read(lhnetsocket_t *mysocket, void *data, int maxlength, lhnetaddres
 		{
 			LHNETADDRESS_ToString(peeraddress, addressstring2, sizeof(addressstring2), true);
 			Con_Printf("LHNET_Read(%p (%s), %p, %i, %p) = %i from %s:\n", mysocket, addressstring, data, maxlength, peeraddress, length, addressstring2);
-			Com_HexDumpToConsole((qbyte *)data, length);
+			Com_HexDumpToConsole((unsigned char *)data, length);
 		}
 		else
 			Con_Printf("LHNET_Read(%p (%s), %p, %i, %p) = %i\n", mysocket, addressstring, data, maxlength, peeraddress, length);
@@ -420,7 +420,7 @@ int NetConn_Write(lhnetsocket_t *mysocket, const void *data, int length, const l
 		LHNETADDRESS_ToString(LHNET_AddressFromSocket(mysocket), addressstring, sizeof(addressstring), true);
 		LHNETADDRESS_ToString(peeraddress, addressstring2, sizeof(addressstring2), true);
 		Con_Printf("LHNET_Write(%p (%s), %p, %i, %p (%s)) = %i%s\n", mysocket, addressstring, data, length, peeraddress, addressstring2, length, ret == length ? "" : " (ERROR)");
-		Com_HexDumpToConsole((qbyte *)data, length);
+		Com_HexDumpToConsole((unsigned char *)data, length);
 	}
 	return ret;
 }
@@ -802,7 +802,7 @@ static void NetConn_UpdateServerStuff(void)
 	}
 }
 
-int NetConn_ReceivedMessage(netconn_t *conn, qbyte *data, int length)
+int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int length)
 {
 	unsigned int count;
 	unsigned int flags;
@@ -883,7 +883,7 @@ int NetConn_ReceivedMessage(netconn_t *conn, qbyte *data, int length)
 				unsigned int temppacket[2];
 				temppacket[0] = BigLong(8 | NETFLAG_ACK);
 				temppacket[1] = BigLong(sequence);
-				NetConn_Write(conn->mysocket, (qbyte *)temppacket, 8, &conn->peeraddress);
+				NetConn_Write(conn->mysocket, (unsigned char *)temppacket, 8, &conn->peeraddress);
 				if (sequence == conn->receiveSequence)
 				{
 					conn->lastMessageTime = realtime;
@@ -947,7 +947,7 @@ int NetConn_IsLocalGame(void)
 	return false;
 }
 
-int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, lhnetaddress_t *peeraddress)
+int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *data, int length, lhnetaddress_t *peeraddress)
 {
 	int ret, c, control;
 	const char *s;
@@ -1442,7 +1442,7 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 }
 
 extern void SV_SendServerinfo (client_t *client);
-int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, lhnetaddress_t *peeraddress)
+int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *data, int length, lhnetaddress_t *peeraddress)
 {
 	int i, ret, clientnum, best;
 	double besttime;
@@ -1946,7 +1946,7 @@ void NetConn_Heartbeat(int priority)
 int NetConn_SendToAll(sizebuf_t *data, double blocktime)
 {
 	int i, count = 0;
-	qbyte sent[MAX_SCOREBOARD];
+	unsigned char sent[MAX_SCOREBOARD];
 
 	memset(sent, 0, sizeof(sent));
 

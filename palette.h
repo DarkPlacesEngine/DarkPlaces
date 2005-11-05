@@ -13,7 +13,7 @@ extern unsigned int palette_alpha[256];
 extern unsigned int palette_font[256];
 
 // used by hardware gamma functions in vid_* files
-void BuildGammaTable8(float prescale, float gamma, float scale, float base, qbyte *out);
+void BuildGammaTable8(float prescale, float gamma, float scale, float base, unsigned char *out);
 void BuildGammaTable16(float prescale, float gamma, float scale, float base, unsigned short *out);
 
 void Palette_Init(void);

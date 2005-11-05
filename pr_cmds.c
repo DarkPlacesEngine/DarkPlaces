@@ -855,7 +855,7 @@ void PF_checkpos (void)
 //============================================================================
 
 int checkpvsbytes;
-qbyte checkpvs[MAX_MAP_LEAFS/8];
+unsigned char checkpvs[MAX_MAP_LEAFS/8];
 
 int PF_newcheckclient (int check)
 {

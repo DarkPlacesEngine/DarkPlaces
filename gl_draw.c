@@ -39,7 +39,7 @@ static int numcachepics;
 
 static rtexturepool_t *drawtexturepool;
 
-static qbyte concharimage[FONT_FILESIZE] =
+static unsigned char concharimage[FONT_FILESIZE] =
 {
 #include "lhfont.h"
 };
@@ -47,7 +47,7 @@ static qbyte concharimage[FONT_FILESIZE] =
 static rtexture_t *draw_generateconchars(void)
 {
 	int i;
-	qbyte buffer[65536][4], *data = NULL;
+	unsigned char buffer[65536][4], *data = NULL;
 	double random;
 
 	fs_filesize = FONT_FILESIZE;
@@ -57,36 +57,36 @@ static rtexture_t *draw_generateconchars(void)
 	for (i = 0;i < 8192;i++)
 	{
 		random = lhrandom (0.0,1.0);
-		buffer[i][0] = 83 + (qbyte)(random * 64);
-		buffer[i][1] = 71 + (qbyte)(random * 32);
-		buffer[i][2] = 23 + (qbyte)(random * 16);
+		buffer[i][0] = 83 + (unsigned char)(random * 64);
+		buffer[i][1] = 71 + (unsigned char)(random * 32);
+		buffer[i][2] = 23 + (unsigned char)(random * 16);
 		buffer[i][3] = data[i*4+0];
 	}
 // White chars
 	for (i = 8192;i < 32768;i++)
 	{
 		random = lhrandom (0.0,1.0);
-		buffer[i][0] = 95 + (qbyte)(random * 64);
-		buffer[i][1] = 95 + (qbyte)(random * 64);
-		buffer[i][2] = 95 + (qbyte)(random * 64);
+		buffer[i][0] = 95 + (unsigned char)(random * 64);
+		buffer[i][1] = 95 + (unsigned char)(random * 64);
+		buffer[i][2] = 95 + (unsigned char)(random * 64);
 		buffer[i][3] = data[i*4+0];
 	}
 // Gold numbers
 	for (i = 32768;i < 40960;i++)
 	{
 		random = lhrandom (0.0,1.0);
-		buffer[i][0] = 83 + (qbyte)(random * 64);
-		buffer[i][1] = 71 + (qbyte)(random * 32);
-		buffer[i][2] = 23 + (qbyte)(random * 16);
+		buffer[i][0] = 83 + (unsigned char)(random * 64);
+		buffer[i][1] = 71 + (unsigned char)(random * 32);
+		buffer[i][2] = 23 + (unsigned char)(random * 16);
 		buffer[i][3] = data[i*4+0];
 	}
 // Red chars
 	for (i = 40960;i < 65536;i++)
 	{
 		random = lhrandom (0.0,1.0);
-		buffer[i][0] = 96 + (qbyte)(random * 64);
-		buffer[i][1] = 43 + (qbyte)(random * 32);
-		buffer[i][2] = 27 + (qbyte)(random * 32);
+		buffer[i][0] = 96 + (unsigned char)(random * 64);
+		buffer[i][1] = 43 + (unsigned char)(random * 32);
+		buffer[i][2] = 27 + (unsigned char)(random * 32);
 		buffer[i][3] = data[i*4+0];
 	}
 
@@ -120,7 +120,7 @@ static char *pointerimage =
 static rtexture_t *draw_generatemousepointer(void)
 {
 	int i;
-	qbyte buffer[256][4];
+	unsigned char buffer[256][4];
 	for (i = 0;i < 256;i++)
 	{
 		if (pointerimage[i] == '.')
@@ -253,7 +253,7 @@ static rtexture_t *draw_generatecrosshair(int num)
 {
 	int i;
 	char *in;
-	qbyte data[16*16][4];
+	unsigned char data[16*16][4];
 	in = crosshairtexdata[num];
 	for (i = 0;i < 16*16;i++)
 	{
@@ -269,7 +269,7 @@ static rtexture_t *draw_generatecrosshair(int num)
 			data[i][0] = 255;
 			data[i][1] = 255;
 			data[i][2] = 255;
-			data[i][3] = (qbyte) ((int) (in[i] - '0') * 255 / 7);
+			data[i][3] = (unsigned char) ((int) (in[i] - '0') * 255 / 7);
 		}
 	}
 	return R_LoadTexture2D(drawtexturepool, va("crosshair%i", num), 16, 16, &data[0][0], TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
@@ -279,7 +279,7 @@ static rtexture_t *draw_generateditherpattern(void)
 {
 #if 1
 	int x, y;
-	qbyte data[8*8*4];
+	unsigned char data[8*8*4];
 	for (y = 0;y < 8;y++)
 	{
 		for (x = 0;x < 8;x++)
@@ -290,7 +290,7 @@ static rtexture_t *draw_generateditherpattern(void)
 	}
 	return R_LoadTexture2D(drawtexturepool, "ditherpattern", 8, 8, data, TEXTYPE_RGBA, TEXF_FORCENEAREST | TEXF_PRECACHE, NULL);
 #else
-	qbyte data[16];
+	unsigned char data[16];
 	memset(data, 255, sizeof(data));
 	data[0] = data[1] = data[2] = data[12] = data[13] = data[14] = 0;
 	return R_LoadTexture2D(drawtexturepool, "ditherpattern", 2, 2, data, TEXTYPE_RGBA, TEXF_FORCENEAREST | TEXF_PRECACHE, NULL);
@@ -320,7 +320,7 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 			return &video->cpif;
 	}
 
-	crc = CRC_Block((qbyte *)path, strlen(path));
+	crc = CRC_Block((unsigned char *)path, strlen(path));
 	hashkey = ((crc >> 8) ^ crc) % CACHEPICHASHSIZE;
 	for (pic = cachepichash[hashkey];pic;pic = pic->chain)
 		if (!strcmp (path, pic->name))
@@ -355,9 +355,9 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 		{
 			if (!strcmp(path, "gfx/conchars"))
 			{
-				qbyte *pix;
+				unsigned char *pix;
 				// conchars is a raw image and with the wrong transparent color
-				pix = (qbyte *)p;
+				pix = (unsigned char *)p;
 				for (i = 0;i < 128 * 128;i++)
 					if (pix[i] == 0)
 						pix[i] = 255;
@@ -399,12 +399,12 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 	return pic;
 }
 
-cachepic_t *Draw_NewPic(const char *picname, int width, int height, int alpha, qbyte *pixels)
+cachepic_t *Draw_NewPic(const char *picname, int width, int height, int alpha, unsigned char *pixels)
 {
 	int crc, hashkey;
 	cachepic_t *pic;
 
-	crc = CRC_Block((qbyte *)picname, strlen(picname));
+	crc = CRC_Block((unsigned char *)picname, strlen(picname));
 	hashkey = ((crc >> 8) ^ crc) % CACHEPICHASHSIZE;
 	for (pic = cachepichash[hashkey];pic;pic = pic->chain)
 		if (!strcmp (picname, pic->name))
@@ -450,7 +450,7 @@ void Draw_FreePic(const char *picname)
 	int hashkey;
 	cachepic_t *pic;
 	// this doesn't really free the pic, but does free it's texture
-	crc = CRC_Block((qbyte *)picname, strlen(picname));
+	crc = CRC_Block((unsigned char *)picname, strlen(picname));
 	hashkey = ((crc >> 8) ^ crc) % CACHEPICHASHSIZE;
 	for (pic = cachepichash[hashkey];pic;pic = pic->chain)
 	{

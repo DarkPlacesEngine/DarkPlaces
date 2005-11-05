@@ -103,7 +103,7 @@ typedef struct gltexture_s
 	int x, y, z, width, height, depth;
 	// copy of the original texture(s) supplied to the upload function, for
 	// delayed uploads (non-precached)
-	qbyte *inputtexels;
+	unsigned char *inputtexels;
 	// original data size in *inputtexels
 	int inputdatasize;
 	// flags supplied to the LoadTexture function
@@ -131,9 +131,9 @@ gltexturepool_t;
 
 static gltexturepool_t *gltexturepoolchain = NULL;
 
-static qbyte *resizebuffer = NULL, *colorconvertbuffer;
+static unsigned char *resizebuffer = NULL, *colorconvertbuffer;
 static int resizebuffersize = 0;
-static qbyte *texturebuffer;
+static unsigned char *texturebuffer;
 static int texturebuffersize = 0;
 
 static int realmaxsize = 0;
@@ -573,8 +573,8 @@ void R_MakeResizeBufferBigger(int size)
 			Mem_Free(resizebuffer);
 		if (colorconvertbuffer)
 			Mem_Free(colorconvertbuffer);
-		resizebuffer = (qbyte *)Mem_Alloc(texturemempool, resizebuffersize);
-		colorconvertbuffer = (qbyte *)Mem_Alloc(texturemempool, resizebuffersize);
+		resizebuffer = (unsigned char *)Mem_Alloc(texturemempool, resizebuffersize);
+		colorconvertbuffer = (unsigned char *)Mem_Alloc(texturemempool, resizebuffersize);
 		if (!resizebuffer || !colorconvertbuffer)
 			Host_Error("R_Upload: out of memory\n");
 	}
@@ -649,11 +649,11 @@ static void GL_SetupTextureParameters(int flags, int texturetype)
 	CHECKGLERROR
 }
 
-static void R_Upload(gltexture_t *glt, qbyte *data)
+static void R_Upload(gltexture_t *glt, unsigned char *data)
 {
 	int i, mip, width, height, depth;
 	GLint oldbindtexnum;
-	qbyte *prevbuffer;
+	unsigned char *prevbuffer;
 	prevbuffer = data;
 
 	CHECKGLERROR
@@ -1011,7 +1011,7 @@ static void R_UploadTexture (gltexture_t *glt)
 		Con_Printf("R_UploadTexture: Texture %s already uploaded and destroyed.  Can not upload original image again.  Uploaded blank texture.\n", glt->identifier);
 }
 
-static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, int sides, int flags, int textype, int texturetype, const qbyte *data, const unsigned int *palette)
+static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, int sides, int flags, int textype, int texturetype, const unsigned char *data, const unsigned int *palette)
 {
 	int i, size;
 	gltexture_t *glt;
@@ -1056,7 +1056,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 			{
 				for (i = 0;i < size;i++)
 				{
-					if (((qbyte *)&palette[data[i]])[3] < 255)
+					if (((unsigned char *)&palette[data[i]])[3] < 255)
 					{
 						flags |= TEXF_ALPHA;
 						break;
@@ -1109,7 +1109,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 
 	if (data)
 	{
-		glt->inputtexels = (qbyte *)Mem_Alloc(texturemempool, size);
+		glt->inputtexels = (unsigned char *)Mem_Alloc(texturemempool, size);
 		if (glt->inputtexels == NULL)
 			Con_Printf ("R_LoadTexture: out of memory\n");
 		else
@@ -1124,22 +1124,22 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	return (rtexture_t *)glt;
 }
 
-rtexture_t *R_LoadTexture1D(rtexturepool_t *rtexturepool, const char *identifier, int width, const qbyte *data, int textype, int flags, const unsigned int *palette)
+rtexture_t *R_LoadTexture1D(rtexturepool_t *rtexturepool, const char *identifier, int width, const unsigned char *data, int textype, int flags, const unsigned int *palette)
 {
 	return R_SetupTexture(rtexturepool, identifier, width, 1, 1, 1, flags, textype, GLTEXTURETYPE_1D, data, palette);
 }
 
-rtexture_t *R_LoadTexture2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, const qbyte *data, int textype, int flags, const unsigned int *palette)
+rtexture_t *R_LoadTexture2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, const unsigned char *data, int textype, int flags, const unsigned int *palette)
 {
 	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, flags, textype, GLTEXTURETYPE_2D, data, palette);
 }
 
-rtexture_t *R_LoadTexture3D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, const qbyte *data, int textype, int flags, const unsigned int *palette)
+rtexture_t *R_LoadTexture3D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, const unsigned char *data, int textype, int flags, const unsigned int *palette)
 {
 	return R_SetupTexture(rtexturepool, identifier, width, height, depth, 1, flags, textype, GLTEXTURETYPE_3D, data, palette);
 }
 
-rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *identifier, int width, const qbyte *data, int textype, int flags, const unsigned int *palette)
+rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *identifier, int width, const unsigned char *data, int textype, int flags, const unsigned int *palette)
 {
 	return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, flags, textype, GLTEXTURETYPE_CUBEMAP, data, palette);
 }
@@ -1252,7 +1252,7 @@ int R_CompatibleFragmentWidth(int width, int textype, int flags)
 	return width;
 }
 
-void R_UpdateTexture(rtexture_t *rt, qbyte *data)
+void R_UpdateTexture(rtexture_t *rt, unsigned char *data)
 {
 	gltexture_t *glt;
 	if (rt == NULL)

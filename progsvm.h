@@ -207,7 +207,7 @@ typedef struct prvm_edict_s
 	} fields;
 } prvm_edict_t;
 
-#define PRVM_GETEDICTFIELDVALUE(ed, fieldoffset) (fieldoffset ? (prvm_eval_t *)((qbyte *)ed->fields.vp + fieldoffset) : NULL)
+#define PRVM_GETEDICTFIELDVALUE(ed, fieldoffset) (fieldoffset ? (prvm_eval_t *)((unsigned char *)ed->fields.vp + fieldoffset) : NULL)
 
 /*// this struct is the basic requirement for a qc prog
 typedef struct prvm_pr_globalvars_s
@@ -274,7 +274,7 @@ typedef struct prvm_prog_s
 	// (simple optimization of the free string search)
 	int					firstfreeknownstring;
 	const char			**knownstrings;
-	qbyte				*knownstrings_freeable;
+	unsigned char				*knownstrings_freeable;
 	const char			***stringshash;
 
 	// all memory allocations related to this vm_prog (code, edicts, strings)

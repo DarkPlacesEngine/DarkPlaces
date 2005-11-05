@@ -184,7 +184,7 @@ qboolean SNDDMA_Init(void)
 	shm->format.channels = outputStreamBasicDescription.mChannelsPerFrame;
 	shm->format.width = 2;
 	shm->samples = maxMixedSamples;
-	shm->buffer = (qbyte *)s_mixedSamples;
+	shm->buffer = (unsigned char *)s_mixedSamples;
 	shm->samplepos = 0;
 
 	// We haven't enqueued anything yet

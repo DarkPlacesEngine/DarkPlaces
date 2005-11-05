@@ -236,11 +236,11 @@ typedef struct msurface_lightmapinfo_s
 	// texture mapping properties used by this surface
 	mtexinfo_t *texinfo; // q1bsp
 	// index into r_refdef.lightstylevalue array, 255 means not used (black)
-	qbyte styles[MAXLIGHTMAPS]; // q1bsp
+	unsigned char styles[MAXLIGHTMAPS]; // q1bsp
 	// RGB lighting data [numstyles][height][width][3]
-	qbyte *samples; // q1bsp
+	unsigned char *samples; // q1bsp
 	// stain to apply on lightmap (soot/dirt/blood/whatever)
-	qbyte *stainsamples; // q1bsp
+	unsigned char *stainsamples; // q1bsp
 	// the stride when building lightmaps to comply with fragment update
 	int lightmaptexturestride; // q1bsp
 	int texturemins[2]; // q1bsp
@@ -362,17 +362,17 @@ typedef struct model_brush_s
 	// common functions
 	int (*SuperContentsFromNativeContents)(struct model_s *model, int nativecontents);
 	int (*NativeContentsFromSuperContents)(struct model_s *model, int supercontents);
-	qbyte *(*GetPVS)(struct model_s *model, const vec3_t p);
-	int (*FatPVS)(struct model_s *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbufferlength);
-	int (*BoxTouchingPVS)(struct model_s *model, const qbyte *pvs, const vec3_t mins, const vec3_t maxs);
-	int (*BoxTouchingLeafPVS)(struct model_s *model, const qbyte *pvs, const vec3_t mins, const vec3_t maxs);
-	int (*BoxTouchingVisibleLeafs)(struct model_s *model, const qbyte *visibleleafs, const vec3_t mins, const vec3_t maxs);
+	unsigned char *(*GetPVS)(struct model_s *model, const vec3_t p);
+	int (*FatPVS)(struct model_s *model, const vec3_t org, vec_t radius, unsigned char *pvsbuffer, int pvsbufferlength);
+	int (*BoxTouchingPVS)(struct model_s *model, const unsigned char *pvs, const vec3_t mins, const vec3_t maxs);
+	int (*BoxTouchingLeafPVS)(struct model_s *model, const unsigned char *pvs, const vec3_t mins, const vec3_t maxs);
+	int (*BoxTouchingVisibleLeafs)(struct model_s *model, const unsigned char *visibleleafs, const vec3_t mins, const vec3_t maxs);
 	int (*FindBoxClusters)(struct model_s *model, const vec3_t mins, const vec3_t maxs, int maxclusters, int *clusterlist);
 	void (*LightPoint)(struct model_s *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal);
 	void (*FindNonSolidLocation)(struct model_s *model, const vec3_t in, vec3_t out, vec_t radius);
 	mleaf_t *(*PointInLeaf)(struct model_s *model, const float *p);
 	// these are actually only found on brushq1, but NULL is handled gracefully
-	void (*AmbientSoundLevelsForPoint)(struct model_s *model, const vec3_t p, qbyte *out, int outsize);
+	void (*AmbientSoundLevelsForPoint)(struct model_s *model, const vec3_t p, unsigned char *out, int outsize);
 	void (*RoundUpToHullSize)(struct model_s *cmodel, const vec3_t inmins, const vec3_t inmaxs, vec3_t outmins, vec3_t outmaxs);
 
 	char skybox[64];
@@ -407,17 +407,17 @@ typedef struct model_brushq1_s
 	hull_t			hulls[MAX_MAP_HULLS];
 
 	int				num_compressedpvs;
-	qbyte			*data_compressedpvs;
+	unsigned char			*data_compressedpvs;
 
 	int				num_lightdata;
-	qbyte			*lightdata;
+	unsigned char			*lightdata;
 
 	int				numlights;
 	mlight_t		*lights;
 
 	// lightmap update chains for light styles
 	int				light_styles;
-	qbyte			*light_style;
+	unsigned char			*light_style;
 	int				*light_stylevalue;
 	msurface_t		***light_styleupdatechains;
 	msurface_t		**light_styleupdatechainsbuffer;
@@ -549,7 +549,7 @@ typedef struct model_s
 	// draw the model using lightmap/dlight shading
 	void(*Draw)(struct entity_render_s *ent);
 	// gathers info on which clusters and surfaces are lit by light, as well as calculating a bounding box
-	void(*GetLightInfo)(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, qbyte *outleafpvs, int *outnumleafspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer);
+	void(*GetLightInfo)(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, unsigned char *outleafpvs, int *outnumleafspointer, int *outsurfacelist, unsigned char *outsurfacepvs, int *outnumsurfacespointer);
 	// compile a shadow volume for the model based on light source
 	void(*CompileShadowVolume)(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist);
 	// draw a shadow volume for the model based on light source
@@ -577,7 +577,7 @@ model_t;
 
 // model loading
 extern model_t *loadmodel;
-extern qbyte *mod_base;
+extern unsigned char *mod_base;
 // sky/water subdivision
 //extern cvar_t gl_subdivide_size;
 // texture fullbrights
@@ -616,7 +616,7 @@ void Mod_ShadowMesh_CalcBBox(shadowmesh_t *firstmesh, vec3_t mins, vec3_t maxs, 
 void Mod_ShadowMesh_Free(shadowmesh_t *mesh);
 
 int Mod_LoadSkinFrame(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int loadglowtexture);
-int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int loadglowtexture, qbyte *skindata, int width, int height);
+int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int loadglowtexture, unsigned char *skindata, int width, int height);
 
 extern cvar_t r_mipskins;
 
@@ -652,7 +652,7 @@ int Mod_Q1BSP_SuperContentsFromNativeContents(struct model_s *model, int nativec
 struct entity_render_s;
 void R_Q1BSP_DrawSky(struct entity_render_s *ent);
 void R_Q1BSP_Draw(struct entity_render_s *ent);
-void R_Q1BSP_GetLightInfo(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, qbyte *outleafpvs, int *outnumleafspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer);
+void R_Q1BSP_GetLightInfo(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, unsigned char *outleafpvs, int *outnumleafspointer, int *outsurfacelist, unsigned char *outsurfacepvs, int *outnumsurfacespointer);
 void R_Q1BSP_CompileShadowVolume(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist);
 void R_Q1BSP_DrawShadowVolume(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs);
 void R_Q1BSP_DrawLight(struct entity_render_s *ent, vec3_t lightcolorbase, vec3_t lightcolorpants, vec3_t lightcolorshirt, int numsurfaces, const int *surfacelist);

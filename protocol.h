@@ -694,7 +694,7 @@ typedef struct entityframe5_packetlog_s
 	int packetnumber;
 	int numstates;
 	entityframe5_changestate_t states[ENTITYFRAME5_MAXSTATES];
-	qbyte statsdeltabits[(MAX_CL_STATS+7)/8];
+	unsigned char statsdeltabits[(MAX_CL_STATS+7)/8];
 }
 entityframe5_packetlog_t;
 
@@ -715,7 +715,7 @@ typedef struct entityframe5_database_s
 	int *deltabits; // [maxedicts]
 	// priorities of entities (updated whenever deltabits change)
 	// (derived from deltabits)
-	qbyte *priorities; // [maxedicts]
+	unsigned char *priorities; // [maxedicts]
 	// last frame this entity was sent on, for prioritzation
 	int *updateframenum; // [maxedicts]
 
@@ -724,10 +724,10 @@ typedef struct entityframe5_database_s
 	// which entities are currently active
 	// (duplicate of the active bit of every state in states[])
 	// (derived from states)
-	qbyte *visiblebits; // [(maxedicts+7)/8]
+	unsigned char *visiblebits; // [(maxedicts+7)/8]
 
 	// delta compression of stats
-	qbyte statsdeltabits[(MAX_CL_STATS+7)/8];
+	unsigned char statsdeltabits[(MAX_CL_STATS+7)/8];
 	int stats[MAX_CL_STATS];
 
 	// old notes

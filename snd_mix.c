@@ -34,12 +34,12 @@ portable_samplepair_t paintbuffer[PAINTBUFFER_SIZE];
 
 // FIXME: this desyncs with the video too easily
 extern qboolean cl_capturevideo_active;
-extern void SCR_CaptureVideo_SoundFrame(qbyte *bufstereo16le, size_t length, int rate);
+extern void SCR_CaptureVideo_SoundFrame(unsigned char *bufstereo16le, size_t length, int rate);
 void S_CaptureAVISound(portable_samplepair_t *buf, size_t length)
 {
 	int n;
 	size_t i;
-	qbyte out[PAINTBUFFER_SIZE * 4];
+	unsigned char out[PAINTBUFFER_SIZE * 4];
 	if (!cl_capturevideo_active)
 		return;
 	// write the sound buffer as little endian 16bit interleaved stereo

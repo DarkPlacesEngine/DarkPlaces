@@ -59,7 +59,7 @@ char com_modname[MAX_OSPATH] = "";
 
 short   ShortSwap (short l)
 {
-	qbyte    b1,b2;
+	unsigned char    b1,b2;
 
 	b1 = l&255;
 	b2 = (l>>8)&255;
@@ -69,7 +69,7 @@ short   ShortSwap (short l)
 
 int    LongSwap (int l)
 {
-	qbyte    b1,b2,b3,b4;
+	unsigned char    b1,b2,b3,b4;
 
 	b1 = l&255;
 	b2 = (l>>8)&255;
@@ -84,7 +84,7 @@ float FloatSwap (float f)
 	union
 	{
 		float   f;
-		qbyte    b[4];
+		unsigned char    b[4];
 	} dat1, dat2;
 
 
@@ -99,22 +99,22 @@ float FloatSwap (float f)
 
 // Extract integers from buffers
 
-unsigned int BuffBigLong (const qbyte *buffer)
+unsigned int BuffBigLong (const unsigned char *buffer)
 {
 	return (buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
 }
 
-unsigned short BuffBigShort (const qbyte *buffer)
+unsigned short BuffBigShort (const unsigned char *buffer)
 {
 	return (buffer[0] << 8) | buffer[1];
 }
 
-unsigned int BuffLittleLong (const qbyte *buffer)
+unsigned int BuffLittleLong (const unsigned char *buffer)
 {
 	return (buffer[3] << 24) | (buffer[2] << 16) | (buffer[1] << 8) | buffer[0];
 }
 
-unsigned short BuffLittleShort (const qbyte *buffer)
+unsigned short BuffLittleShort (const unsigned char *buffer)
 {
 	return (buffer[1] << 8) | buffer[0];
 }
@@ -171,7 +171,7 @@ static unsigned short crctable[256] =
 	0x6e17,	0x7e36,	0x4e55,	0x5e74,	0x2e93,	0x3eb2,	0x0ed1,	0x1ef0
 };
 
-unsigned short CRC_Block(const qbyte *data, size_t size)
+unsigned short CRC_Block(const unsigned char *data, size_t size)
 {
 	unsigned short crc = CRC_INIT_VALUE;
 	while (size--)
@@ -195,7 +195,7 @@ Handles byte ordering and avoids alignment errors
 
 void MSG_WriteChar (sizebuf_t *sb, int c)
 {
-	qbyte    *buf;
+	unsigned char    *buf;
 
 	buf = SZ_GetSpace (sb, 1);
 	buf[0] = c;
@@ -203,7 +203,7 @@ void MSG_WriteChar (sizebuf_t *sb, int c)
 
 void MSG_WriteByte (sizebuf_t *sb, int c)
 {
-	qbyte    *buf;
+	unsigned char    *buf;
 
 	buf = SZ_GetSpace (sb, 1);
 	buf[0] = c;
@@ -211,7 +211,7 @@ void MSG_WriteByte (sizebuf_t *sb, int c)
 
 void MSG_WriteShort (sizebuf_t *sb, int c)
 {
-	qbyte    *buf;
+	unsigned char    *buf;
 
 	buf = SZ_GetSpace (sb, 2);
 	buf[0] = c&0xff;
@@ -220,7 +220,7 @@ void MSG_WriteShort (sizebuf_t *sb, int c)
 
 void MSG_WriteLong (sizebuf_t *sb, int c)
 {
-	qbyte    *buf;
+	unsigned char    *buf;
 
 	buf = SZ_GetSpace (sb, 4);
 	buf[0] = c&0xff;
@@ -241,21 +241,21 @@ void MSG_WriteFloat (sizebuf_t *sb, float f)
 	dat.f = f;
 	dat.l = LittleLong (dat.l);
 
-	SZ_Write (sb, (qbyte *)&dat.l, 4);
+	SZ_Write (sb, (unsigned char *)&dat.l, 4);
 }
 
 void MSG_WriteString (sizebuf_t *sb, const char *s)
 {
 	if (!s)
-		SZ_Write (sb, (qbyte *)"", 1);
+		SZ_Write (sb, (unsigned char *)"", 1);
 	else
-		SZ_Write (sb, (qbyte *)s, (int)strlen(s)+1);
+		SZ_Write (sb, (unsigned char *)s, (int)strlen(s)+1);
 }
 
 void MSG_WriteUnterminatedString (sizebuf_t *sb, const char *s)
 {
 	if (s)
-		SZ_Write (sb, (qbyte *)s, (int)strlen(s));
+		SZ_Write (sb, (unsigned char *)s, (int)strlen(s));
 }
 
 void MSG_WriteCoord13i (sizebuf_t *sb, float f)
@@ -502,9 +502,9 @@ void SZ_Clear (sizebuf_t *buf)
 	buf->cursize = 0;
 }
 
-qbyte *SZ_GetSpace (sizebuf_t *buf, int length)
+unsigned char *SZ_GetSpace (sizebuf_t *buf, int length)
 {
-	qbyte *data;
+	unsigned char *data;
 
 	if (buf->cursize + length > buf->maxsize)
 	{
@@ -525,7 +525,7 @@ qbyte *SZ_GetSpace (sizebuf_t *buf, int length)
 	return data;
 }
 
-void SZ_Write (sizebuf_t *buf, const qbyte *data, int length)
+void SZ_Write (sizebuf_t *buf, const unsigned char *data, int length)
 {
 	memcpy (SZ_GetSpace(buf,length),data,length);
 }
@@ -535,12 +535,12 @@ void SZ_Write (sizebuf_t *buf, const qbyte *data, int length)
 // all of darkplaces.
 
 static char *hexchar = "0123456789ABCDEF";
-void Com_HexDumpToConsole(const qbyte *data, int size)
+void Com_HexDumpToConsole(const unsigned char *data, int size)
 {
 	int i, j, n;
 	char text[1024];
 	char *cur, *flushpointer;
-	const qbyte *d;
+	const unsigned char *d;
 	cur = text;
 	flushpointer = text + 512;
 	for (i = 0;i < size;)

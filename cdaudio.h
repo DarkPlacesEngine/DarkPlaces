@@ -21,14 +21,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 extern qboolean cdValid;
 extern qboolean cdPlaying;
 extern qboolean cdPlayLooping;
-extern qbyte cdPlayTrack;
+extern unsigned char cdPlayTrack;
 
 extern cvar_t cdaudioinitialized;
 
 int CDAudio_Init(void);
 void CDAudio_Open(void);
 void CDAudio_Close(void);
-void CDAudio_Play(qbyte track, qboolean looping);
+void CDAudio_Play(unsigned char track, qboolean looping);
 void CDAudio_Stop(void);
 void CDAudio_Pause(void);
 void CDAudio_Resume(void);

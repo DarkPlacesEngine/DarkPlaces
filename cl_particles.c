@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 siextern float r_avertexnormals[NUMVERTEXNORMALS][3];
 #define m_bytenormals r_avertexnormals
 #define CL_PointQ1Contents(v) (Mod_PointInLeaf(v,cl.worldmodel)->contents)
-typedef unsigned char qbyte;
+typedef unsigned char unsigned char;
 #define cl_stainmaps.integer 0
 void R_Stain (vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, int cr2, int cg2, int cb2, int ca2)
 {
@@ -70,7 +70,7 @@ void R_CalcBeam_Vertex3f (float *vert, vec3_t org1, vec3_t org2, float width)
 	vert[10] = org2[1] + width * right2[1];
 	vert[11] = org2[2] + width * right2[2];
 }
-void fractalnoise(qbyte *noise, int size, int startgrid)
+void fractalnoise(unsigned char *noise, int size, int startgrid)
 {
 	int x, y, g, g2, amplitude, min, max, size1 = size - 1, sizepower, gridpower;
 	int *noisebuf;
@@ -134,7 +134,7 @@ void fractalnoise(qbyte *noise, int size, int startgrid)
 	// normalize noise and copy to output
 	for (y = 0;y < size;y++)
 		for (x = 0;x < size;x++)
-			*noise++ = (qbyte) (((n(x,y) - min) * 256) / max);
+			*noise++ = (unsigned char) (((n(x,y) - min) * 256) / max);
 	free(noisebuf);
 #undef n
 }
@@ -243,7 +243,7 @@ typedef struct particle_s
 	float		bounce; // how much bounce-back from a surface the particle hits (0 = no physics, 1 = stop and slide, 2 = keep bouncing forever, 1.5 is typical)
 	float		gravity; // how much gravity affects this particle (1.0 = normal gravity, 0.0 = none)
 	float		friction; // how much air friction affects this object (objects with a low mass/size ratio tend to get more air friction)
-	qbyte		color[4];
+	unsigned char		color[4];
 	unsigned short owner; // decal stuck to this entity
 	model_t		*ownermodel; // model the decal is stuck to (used to make sure the entity is still alive)
 	vec3_t		relativeorigin; // decal at this location in entity's coordinate space
@@ -1542,7 +1542,7 @@ static cvar_t r_drawparticles = {0, "r_drawparticles", "1"};
 #define PARTICLETEXTURESIZE 64
 #define PARTICLEFONTSIZE (PARTICLETEXTURESIZE*8)
 
-static qbyte shadebubble(float dx, float dy, vec3_t light)
+static unsigned char shadebubble(float dx, float dy, vec3_t light)
 {
 	float dz, f, dot;
 	vec3_t normal;
@@ -1569,13 +1569,13 @@ static qbyte shadebubble(float dx, float dy, vec3_t light)
 		f *= 128;
 		f += 16; // just to give it a haze so you can see the outline
 		f = bound(0, f, 255);
-		return (qbyte) f;
+		return (unsigned char) f;
 	}
 	else
 		return 0;
 }
 
-static void setuptex(int texnum, qbyte *data, qbyte *particletexturedata)
+static void setuptex(int texnum, unsigned char *data, unsigned char *particletexturedata)
 {
 	int basex, basey, y;
 	basex = ((texnum >> 0) & 7) * PARTICLETEXTURESIZE;
@@ -1588,11 +1588,11 @@ static void setuptex(int texnum, qbyte *data, qbyte *particletexturedata)
 		memcpy(particletexturedata + ((basey + y) * PARTICLEFONTSIZE + basex) * 4, data + y * PARTICLETEXTURESIZE * 4, PARTICLETEXTURESIZE * 4);
 }
 
-void particletextureblotch(qbyte *data, float radius, float red, float green, float blue, float alpha)
+void particletextureblotch(unsigned char *data, float radius, float red, float green, float blue, float alpha)
 {
 	int x, y;
 	float cx, cy, dx, dy, f, iradius;
-	qbyte *d;
+	unsigned char *d;
 	cx = (lhrandom(radius + 1, PARTICLETEXTURESIZE - 2 - radius) + lhrandom(radius + 1, PARTICLETEXTURESIZE - 2 - radius)) * 0.5f;
 	cy = (lhrandom(radius + 1, PARTICLETEXTURESIZE - 2 - radius) + lhrandom(radius + 1, PARTICLETEXTURESIZE - 2 - radius)) * 0.5f;
 	iradius = 1.0f / radius;
@@ -1615,7 +1615,7 @@ void particletextureblotch(qbyte *data, float radius, float red, float green, fl
 	}
 }
 
-void particletextureclamp(qbyte *data, int minr, int ming, int minb, int maxr, int maxg, int maxb)
+void particletextureclamp(unsigned char *data, int minr, int ming, int minb, int maxr, int maxg, int maxb)
 {
 	int i;
 	for (i = 0;i < PARTICLETEXTURESIZE*PARTICLETEXTURESIZE;i++, data += 4)
@@ -1626,7 +1626,7 @@ void particletextureclamp(qbyte *data, int minr, int ming, int minb, int maxr, i
 	}
 }
 
-void particletextureinvert(qbyte *data)
+void particletextureinvert(unsigned char *data)
 {
 	int i;
 	for (i = 0;i < PARTICLETEXTURESIZE*PARTICLETEXTURESIZE;i++, data += 4)
@@ -1638,10 +1638,10 @@ void particletextureinvert(qbyte *data)
 }
 
 // Those loops are in a separate function to work around an optimization bug in Mac OS X's GCC
-static void R_InitBloodTextures (qbyte *particletexturedata)
+static void R_InitBloodTextures (unsigned char *particletexturedata)
 {
 	int i, j, k, m;
-	qbyte data[PARTICLETEXTURESIZE][PARTICLETEXTURESIZE][4];
+	unsigned char data[PARTICLETEXTURESIZE][PARTICLETEXTURESIZE][4];
 
 	// blood particles
 	for (i = 0;i < 8;i++)
@@ -1673,9 +1673,9 @@ static void R_InitParticleTexture (void)
 {
 	int x, y, d, i, k, m;
 	float dx, dy, radius, f, f2;
-	qbyte data[PARTICLETEXTURESIZE][PARTICLETEXTURESIZE][4], noise3[64][64], data2[64][16][4];
+	unsigned char data[PARTICLETEXTURESIZE][PARTICLETEXTURESIZE][4], noise3[64][64], data2[64][16][4];
 	vec3_t light;
-	qbyte *particletexturedata;
+	unsigned char *particletexturedata;
 
 	// a note: decals need to modulate (multiply) the background color to
 	// properly darken it (stain), and they need to be able to alpha fade,
@@ -1686,7 +1686,7 @@ static void R_InitParticleTexture (void)
 	// and white on black background) so we can alpha fade it to black, then
 	// we invert it again during the blendfunc to make it work...
 
-	particletexturedata = (qbyte *)Mem_Alloc(tempmempool, PARTICLEFONTSIZE*PARTICLEFONTSIZE*4);
+	particletexturedata = (unsigned char *)Mem_Alloc(tempmempool, PARTICLEFONTSIZE*PARTICLEFONTSIZE*4);
 	memset(particletexturedata, 255, PARTICLEFONTSIZE*PARTICLEFONTSIZE*4);
 
 	// smoke
@@ -1695,7 +1695,7 @@ static void R_InitParticleTexture (void)
 		memset(&data[0][0][0], 255, sizeof(data));
 		do
 		{
-			qbyte noise1[PARTICLETEXTURESIZE*2][PARTICLETEXTURESIZE*2], noise2[PARTICLETEXTURESIZE*2][PARTICLETEXTURESIZE*2];
+			unsigned char noise1[PARTICLETEXTURESIZE*2][PARTICLETEXTURESIZE*2], noise2[PARTICLETEXTURESIZE*2][PARTICLETEXTURESIZE*2];
 
 			fractalnoise(&noise1[0][0], PARTICLETEXTURESIZE*2, PARTICLETEXTURESIZE/8);
 			fractalnoise(&noise2[0][0], PARTICLETEXTURESIZE*2, PARTICLETEXTURESIZE/4);
@@ -1711,7 +1711,7 @@ static void R_InitParticleTexture (void)
 						d = d * (1-(dx*dx+dy*dy));
 					d = (d * noise1[y][x]) >> 7;
 					d = bound(0, d, 255);
-					data[y][x][3] = (qbyte) d;
+					data[y][x][3] = (unsigned char) d;
 					if (m < d)
 						m = d;
 				}
@@ -1750,7 +1750,7 @@ static void R_InitParticleTexture (void)
 			dx = (x - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
 			d = 256 * (1 - (dx*dx+dy*dy));
 			d = bound(0, d, 255);
-			data[y][x][3] = (qbyte) d;
+			data[y][x][3] = (unsigned char) d;
 		}
 	}
 	setuptex(tex_particle, &data[0][0][0], particletexturedata);
@@ -1835,7 +1835,7 @@ static void R_InitParticleTexture (void)
 		{
 			dx = (x - 0.5f*16) / (16*0.5f-2);
 			d = (1 - sqrt(fabs(dx))) * noise3[y][x];
-			data2[y][x][0] = data2[y][x][1] = data2[y][x][2] = (qbyte) bound(0, d, 255);
+			data2[y][x][0] = data2[y][x][1] = data2[y][x][2] = (unsigned char) bound(0, d, 255);
 			data2[y][x][3] = 255;
 		}
 	}

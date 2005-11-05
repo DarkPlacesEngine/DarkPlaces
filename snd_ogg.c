@@ -221,7 +221,7 @@ static dllhandle_t vf_dll = NULL;
 
 typedef struct
 {
-	qbyte *buffer;
+	unsigned char *buffer;
 	ogg_int64_t ind, buffsize;
 } ov_decode_t;
 
@@ -374,13 +374,13 @@ void OGG_CloseLibrary (void)
 
 // We work with 1 sec sequences, so this buffer must be able to contain
 // 1 sec of sound of the highest quality (48 KHz, 16 bit samples, stereo)
-static qbyte resampling_buffer [48000 * 2 * 2];
+static unsigned char resampling_buffer [48000 * 2 * 2];
 
 
 // Per-sfx data structure
 typedef struct
 {
-	qbyte			*file;
+	unsigned char			*file;
 	size_t			filesize;
 	snd_format_t	format;
 } ogg_stream_persfx_t;
@@ -570,7 +570,7 @@ Load an Ogg Vorbis file into memory
 */
 qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 {
-	qbyte *data;
+	unsigned char *data;
 	ov_decode_t ov_decode;
 	OggVorbis_File vf;
 	vorbis_info *vi;
@@ -678,7 +678,7 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 		s->loopstart = -1;
 		s->flags &= ~SFXFLAG_STREAMED;
 
-		sb->length = (unsigned int)ResampleSfx ((qbyte *)buff, (size_t)done / (vi->channels * 2), &s->format, sb->data, s->name);
+		sb->length = (unsigned int)ResampleSfx ((unsigned char *)buff, (size_t)done / (vi->channels * 2), &s->format, sb->data, s->name);
 		s->format.speed = shm->format.speed;
 		s->total_length = sb->length;
 		sb->offset = 0;

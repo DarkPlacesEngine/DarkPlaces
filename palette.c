@@ -12,7 +12,7 @@ unsigned int palette_alpha[256];
 unsigned int palette_font[256];
 
 // John Carmack said the quake palette.lmp can be considered public domain because it is not an important asset to id, so I include it here as a fallback if no external palette file is found.
-qbyte host_quakepal[768] =
+unsigned char host_quakepal[768] =
 {
 0,0,0,15,15,15,31,31,31,47,47,47,63,63,63,75,75,75,91,91,91,107,107,107,123,123,123,139,139,139,155,155,155,171,171,171,187,187,187,203,203,203,219,219,219,235,235,235,15,11,7,23,15,11,31,23,11,39,27,15,47,35,19,55,43,23,63,47,23,75,55,27,83,59,27,91,67,31,99,75,31,107,83,31,115,87,31,123,95,35,131,103,35,143,111,35,11,11,15,19,19,27,27,27,39,39,39,51,47,47,63,55,55,75,63,63,87,71,71,103,79,79,115,91,91,127,99,99,
 139,107,107,151,115,115,163,123,123,175,131,131,187,139,139,203,0,0,0,7,7,0,11,11,0,19,19,0,27,27,0,35,35,0,43,43,7,47,47,7,55,55,7,63,63,7,71,71,7,75,75,11,83,83,11,91,91,11,99,99,11,107,107,15,7,0,0,15,0,0,23,0,0,31,0,0,39,0,0,47,0,0,55,0,0,63,0,0,71,0,0,79,0,0,87,0,0,95,0,0,103,0,0,111,0,0,119,0,0,127,0,0,19,19,0,27,27,0,35,35,0,47,43,0,55,47,0,67,
@@ -29,7 +29,7 @@ void Palette_SetupSpecialPalettes(void)
 	int pants_start, pants_end;
 	int shirt_start, shirt_end;
 	int reversed_start, reversed_end;
-	qbyte *colormap;
+	unsigned char *colormap;
 
 	colormap = FS_LoadFile("gfx/colormap.lmp", tempmempool, true);
 	if (colormap && fs_filesize >= 16385)
@@ -106,7 +106,7 @@ void Palette_SetupSpecialPalettes(void)
 	palette_font[255] = 0;
 }
 
-void BuildGammaTable8(float prescale, float gamma, float scale, float base, qbyte *out)
+void BuildGammaTable8(float prescale, float gamma, float scale, float base, unsigned char *out)
 {
 	int i, adjusted;
 	double invgamma, d;
@@ -164,8 +164,8 @@ void Palette_Init(void)
 {
 	int i;
 	float gamma, scale, base;
-	qbyte *in, *out, *palfile;
-	qbyte texturegammaramp[256];
+	unsigned char *in, *out, *palfile;
+	unsigned char texturegammaramp[256];
 
 	gamma = 1;
 	scale = 1;
@@ -188,7 +188,7 @@ void Palette_Init(void)
 
 	BuildGammaTable8(1.0f, gamma, scale, base, texturegammaramp);
 
-	palfile = (qbyte *)FS_LoadFile ("gfx/palette.lmp", tempmempool, false);
+	palfile = (unsigned char *)FS_LoadFile ("gfx/palette.lmp", tempmempool, false);
 	if (palfile && fs_filesize >= 768)
 		in = palfile;
 	else
@@ -196,7 +196,7 @@ void Palette_Init(void)
 		Con_DPrint("Couldn't load gfx/palette.lmp, falling back on internal palette\n");
 		in = host_quakepal;
 	}
-	out = (qbyte *) palette_complete; // palette is accessed as 32bit for speed reasons, but is created as 8bit bytes
+	out = (unsigned char *) palette_complete; // palette is accessed as 32bit for speed reasons, but is created as 8bit bytes
 	for (i = 0;i < 255;i++)
 	{
 		*out++ = texturegammaramp[*in++];

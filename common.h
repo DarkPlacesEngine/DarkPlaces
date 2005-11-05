@@ -44,19 +44,19 @@ typedef struct sizebuf_s
 {
 	qboolean	allowoverflow;	// if false, do a Sys_Error
 	qboolean	overflowed;		// set to true if the buffer size failed
-	qbyte		*data;
+	unsigned char		*data;
 	int			maxsize;
 	int			cursize;
 } sizebuf_t;
 
 void SZ_Clear (sizebuf_t *buf);
-qbyte *SZ_GetSpace (sizebuf_t *buf, int length);
-void SZ_Write (sizebuf_t *buf, const qbyte *data, int length);
+unsigned char *SZ_GetSpace (sizebuf_t *buf, int length);
+void SZ_Write (sizebuf_t *buf, const unsigned char *data, int length);
 void SZ_HexDumpToConsole(const sizebuf_t *buf);
 
-void Com_HexDumpToConsole(const qbyte *data, int size);
+void Com_HexDumpToConsole(const unsigned char *data, int size);
 
-unsigned short CRC_Block(const qbyte *data, size_t size);
+unsigned short CRC_Block(const unsigned char *data, size_t size);
 
 
 //============================================================================
@@ -115,10 +115,10 @@ float FloatSwap (float f);
 #define LittleFloat(l) FloatSwap(l)
 #endif
 
-unsigned int BuffBigLong (const qbyte *buffer);
-unsigned short BuffBigShort (const qbyte *buffer);
-unsigned int BuffLittleLong (const qbyte *buffer);
-unsigned short BuffLittleShort (const qbyte *buffer);
+unsigned int BuffBigLong (const unsigned char *buffer);
+unsigned short BuffBigShort (const unsigned char *buffer);
+unsigned int BuffLittleLong (const unsigned char *buffer);
+unsigned short BuffLittleShort (const unsigned char *buffer);
 
 
 //============================================================================

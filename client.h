@@ -138,7 +138,7 @@ typedef struct rtlight_s
 	int static_numleafs;
 	int static_numleafpvsbytes;
 	int *static_leaflist;
-	qbyte *static_leafpvs;
+	unsigned char *static_leafpvs;
 	// surfaces seen by light
 	int static_numsurfaces;
 	int *static_surfacelist;
@@ -452,7 +452,7 @@ typedef struct client_static_s
 	netconn_t *netcon;
 	// writing buffer to send to server
 	sizebuf_t message;
-	qbyte message_buf[1024];
+	unsigned char message_buf[1024];
 }
 client_static_t;
 
@@ -697,7 +697,7 @@ extern int cl_num_brushmodel_entities;
 
 extern mempool_t *cl_mempool;
 extern entity_t *cl_entities;
-extern qbyte *cl_entities_active;
+extern unsigned char *cl_entities_active;
 extern entity_t *cl_static_entities;
 extern entity_t *cl_temp_entities;
 extern int *cl_brushmodel_entities;
@@ -910,7 +910,7 @@ typedef struct refdef_s
 
 	// 2D art drawing queue
 	// TODO: get rid of this
-	qbyte *drawqueue;
+	unsigned char *drawqueue;
 	int drawqueuesize;
 	int maxdrawqueuesize;
 }

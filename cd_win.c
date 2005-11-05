@@ -98,7 +98,7 @@ void CDAudio_SysSetVolume (float volume)
 }
 
 
-int CDAudio_SysPlay (qbyte track)
+int CDAudio_SysPlay (unsigned char track)
 {
 	DWORD				dwReturn;
 	MCI_PLAY_PARMS		mciPlayParms;
@@ -187,7 +187,7 @@ int CDAudio_SysResume (void)
 		Con_Printf("CDAudio_SysResume: MCI_PLAY failed (%i)\n", dwReturn);
 		return -1;
 	}
-	return 0;	
+	return 0;
 }
 
 LONG CDAudio_MessageHandler (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)

@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -43,8 +43,8 @@ static qboolean snd_inited = false;
 // TODO: allocate them in SNDDMA_Init, with a size depending on
 // the sound format (enough for 0.5 sec of sound for instance)
 #define SND_BUFF_SIZE 65536
-static qbyte dma_buffer [SND_BUFF_SIZE];
-static qbyte writebuf [SND_BUFF_SIZE];
+static unsigned char dma_buffer [SND_BUFF_SIZE];
+static unsigned char writebuf [SND_BUFF_SIZE];
 
 
 qboolean SNDDMA_Init (void)

@@ -89,8 +89,8 @@ int R_LoadSkyBox(void)
 	int i, j, success;
 	int indices[4] = {0,1,2,3};
 	char name[1024];
-	qbyte *image_rgba;
-	qbyte *temp;
+	unsigned char *image_rgba;
+	unsigned char *temp;
 
 	R_UnloadSkyBox();
 
@@ -113,7 +113,7 @@ int R_LoadSkyBox(void)
 					}
 				}
 			}
-			temp = (qbyte *)Mem_Alloc(tempmempool, image_width*image_height*4);
+			temp = (unsigned char *)Mem_Alloc(tempmempool, image_width*image_height*4);
 			Image_CopyMux (temp, image_rgba, image_width, image_height, suffix[j][i].flipx, suffix[j][i].flipy, suffix[j][i].flipdiagonal, 4, 4, indices);
 			skyboxside[i] = R_LoadTexture2D(skytexturepool, va("skyboxside%d", i), image_width, image_height, temp, TEXTYPE_RGBA, TEXF_CLAMP | TEXF_PRECACHE, NULL);
 			Mem_Free(image_rgba);

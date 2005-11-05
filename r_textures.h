@@ -61,17 +61,17 @@ int R_CompatibleFragmentWidth(int width, int textype, int flags);
 // add a texture to a pool and optionally precache (upload) it
 // (note: data == NULL is perfectly acceptable)
 // (note: palette must not be NULL if using TEXTYPE_PALETTE)
-rtexture_t *R_LoadTexture1D(rtexturepool_t *rtexturepool, const char *identifier, int width, const qbyte *data, int textype, int flags, const unsigned int *palette);
-rtexture_t *R_LoadTexture2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, const qbyte *data, int textype, int flags, const unsigned int *palette);
-rtexture_t *R_LoadTexture3D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, const qbyte *data, int textype, int flags, const unsigned int *palette);
-rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *identifier, int width, const qbyte *data, int textype, int flags, const unsigned int *palette);
+rtexture_t *R_LoadTexture1D(rtexturepool_t *rtexturepool, const char *identifier, int width, const unsigned char *data, int textype, int flags, const unsigned int *palette);
+rtexture_t *R_LoadTexture2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, const unsigned char *data, int textype, int flags, const unsigned int *palette);
+rtexture_t *R_LoadTexture3D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, const unsigned char *data, int textype, int flags, const unsigned int *palette);
+rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *identifier, int width, const unsigned char *data, int textype, int flags, const unsigned int *palette);
 
 // free a texture
 void R_FreeTexture(rtexture_t *rt);
 
 // update the image data of a texture, used by lightmap updates and
 // procedural textures.
-void R_UpdateTexture(rtexture_t *rt, qbyte *data);
+void R_UpdateTexture(rtexture_t *rt, unsigned char *data);
 
 // location of the fragment in the texture (note: any parameter except rt can
 // be NULL)

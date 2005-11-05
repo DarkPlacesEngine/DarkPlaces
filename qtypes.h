@@ -2,8 +2,6 @@
 #ifndef QTYPES_H
 #define QTYPES_H
 
-typedef unsigned char qbyte;
-
 #undef true
 #undef false
 

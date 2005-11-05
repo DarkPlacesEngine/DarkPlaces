@@ -77,7 +77,7 @@ fssearch_t;
 fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet);
 void FS_FreeSearch(fssearch_t *search);
 
-qbyte *FS_LoadFile (const char *path, mempool_t *pool, qboolean quiet);
+unsigned char *FS_LoadFile (const char *path, mempool_t *pool, qboolean quiet);
 qboolean FS_WriteFile (const char *filename, void *data, fs_offset_t len);
 
 

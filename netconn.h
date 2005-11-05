@@ -132,12 +132,12 @@ typedef struct netconn_s
 	unsigned int sendSequence;
 	unsigned int unreliableSendSequence;
 	int sendMessageLength;
-	qbyte sendMessage[NET_MAXMESSAGE];
+	unsigned char sendMessage[NET_MAXMESSAGE];
 
 	unsigned int receiveSequence;
 	unsigned int unreliableReceiveSequence;
 	int receiveMessageLength;
-	qbyte receiveMessage[NET_MAXMESSAGE];
+	unsigned char receiveMessage[NET_MAXMESSAGE];
 
 	char address[128];
 } netconn_t;
@@ -299,9 +299,9 @@ netconn_t *NetConn_Open(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress);
 void NetConn_Close(netconn_t *conn);
 void NetConn_Listen(qboolean state);
 int NetConn_IsLocalGame(void);
-//int NetConn_ReceivedMessage(netconn_t *conn, qbyte *data, int length);
-//int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, lhnetaddress_t *peeraddress);
-//int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, lhnetaddress_t *peeraddress);
+//int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int length);
+//int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *data, int length, lhnetaddress_t *peeraddress);
+//int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *data, int length, lhnetaddress_t *peeraddress);
 void NetConn_ClientFrame(void);
 void NetConn_ServerFrame(void);
 void NetConn_QueryMasters(void);

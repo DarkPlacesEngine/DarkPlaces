@@ -744,14 +744,14 @@ void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 	dq->scalex = 0;
 	dq->scaley = 0;
 	p = (void *)(dq + 1);
-	m = (drawqueuemesh_t *)p;p = (qbyte*)p + sizeof(drawqueuemesh_t);
+	m = (drawqueuemesh_t *)p;p = (unsigned char*)p + sizeof(drawqueuemesh_t);
 	m->num_triangles = mesh->num_triangles;
 	m->num_vertices = mesh->num_vertices;
 	m->texture = mesh->texture;
-	m->data_element3i  = (int *)p;memcpy(m->data_element3i , mesh->data_element3i , m->num_triangles * sizeof(int[3]));p = (qbyte*)p + m->num_triangles * sizeof(int[3]);
-	m->data_vertex3f   = (float *)p;memcpy(m->data_vertex3f  , mesh->data_vertex3f  , m->num_vertices * sizeof(float[3]));p = (qbyte*)p + m->num_vertices * sizeof(float[3]);
-	m->data_texcoord2f = (float *)p;memcpy(m->data_texcoord2f, mesh->data_texcoord2f, m->num_vertices * sizeof(float[2]));p = (qbyte*)p + m->num_vertices * sizeof(float[2]);
-	m->data_color4f    = (float *)p;memcpy(m->data_color4f   , mesh->data_color4f   , m->num_vertices * sizeof(float[4]));p = (qbyte*)p + m->num_vertices * sizeof(float[4]);
+	m->data_element3i  = (int *)p;memcpy(m->data_element3i , mesh->data_element3i , m->num_triangles * sizeof(int[3]));p = (unsigned char*)p + m->num_triangles * sizeof(int[3]);
+	m->data_vertex3f   = (float *)p;memcpy(m->data_vertex3f  , mesh->data_vertex3f  , m->num_vertices * sizeof(float[3]));p = (unsigned char*)p + m->num_vertices * sizeof(float[3]);
+	m->data_texcoord2f = (float *)p;memcpy(m->data_texcoord2f, mesh->data_texcoord2f, m->num_vertices * sizeof(float[2]));p = (unsigned char*)p + m->num_vertices * sizeof(float[2]);
+	m->data_color4f    = (float *)p;memcpy(m->data_color4f   , mesh->data_color4f   , m->num_vertices * sizeof(float[4]));p = (unsigned char*)p + m->num_vertices * sizeof(float[4]);
 	r_refdef.drawqueuesize += dq->size;
 }
 
@@ -808,9 +808,9 @@ void SCR_ScreenShot_f (void)
 	static char oldname[MAX_QPATH];
 	char base[MAX_QPATH];
 	char filename[MAX_QPATH];
-	qbyte *buffer1;
-	qbyte *buffer2;
-	qbyte *buffer3;
+	unsigned char *buffer1;
+	unsigned char *buffer2;
+	unsigned char *buffer3;
 	qboolean jpeg = (scr_screenshot_jpeg.integer != 0);
 
 	sprintf (base, "screenshots/%s", scr_screenshot_name.string);
@@ -833,9 +833,9 @@ void SCR_ScreenShot_f (void)
 
 	sprintf(filename, "%s%06d.%s", base, shotnumber, jpeg ? "jpg" : "tga");
 
-	buffer1 = (qbyte *)Mem_Alloc(tempmempool, vid.width * vid.height * 3);
-	buffer2 = (qbyte *)Mem_Alloc(tempmempool, vid.width * vid.height * 3);
-	buffer3 = (qbyte *)Mem_Alloc(tempmempool, vid.width * vid.height * 3 + 18);
+	buffer1 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3);
+	buffer2 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3);
+	buffer3 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3 + 18);
 
 	if (SCR_ScreenShot (filename, buffer1, buffer2, buffer3, 0, 0, vid.width, vid.height, false, false, false, jpeg, true))
 		Con_Printf("Wrote %s\n", filename);
@@ -864,7 +864,7 @@ static double cl_capturevideo_starttime = 0;
 double cl_capturevideo_framerate = 0;
 static int cl_capturevideo_soundrate = 0;
 static int cl_capturevideo_frame = 0;
-static qbyte *cl_capturevideo_buffer = NULL;
+static unsigned char *cl_capturevideo_buffer = NULL;
 static qfile_t *cl_capturevideo_videofile = NULL;
 qfile_t *cl_capturevideo_soundfile = NULL;
 static short cl_capturevideo_rgbtoyuvscaletable[3][3][256];
@@ -875,7 +875,7 @@ void SCR_CaptureVideo_BeginVideo(void)
 {
 	double gamma, g;
 	unsigned int i;
-	qbyte out[44];
+	unsigned char out[44];
 	if (cl_capturevideo_active)
 		return;
 	// soundrate is figured out on the first SoundFrame
@@ -884,7 +884,7 @@ void SCR_CaptureVideo_BeginVideo(void)
 	cl_capturevideo_framerate = bound(1, cl_capturevideo_fps.value, 1000);
 	cl_capturevideo_soundrate = 0;
 	cl_capturevideo_frame = 0;
-	cl_capturevideo_buffer = (qbyte *)Mem_Alloc(tempmempool, vid.width * vid.height * (3+3+3) + 18);
+	cl_capturevideo_buffer = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * (3+3+3) + 18);
 	gamma = 1.0/scr_screenshot_gamma.value;
 
 	/*
@@ -960,7 +960,7 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 void SCR_CaptureVideo_EndVideo(void)
 {
 	int i, n;
-	qbyte out[44];
+	unsigned char out[44];
 	if (!cl_capturevideo_active)
 		return;
 	cl_capturevideo_active = false;
@@ -1113,7 +1113,7 @@ qboolean SCR_CaptureVideo_VideoFrame(int newframenum)
 	}
 }
 
-void SCR_CaptureVideo_SoundFrame(qbyte *bufstereo16le, size_t length, int rate)
+void SCR_CaptureVideo_SoundFrame(unsigned char *bufstereo16le, size_t length, int rate)
 {
 	if (!cl_capturevideo_soundfile)
 		return;
@@ -1199,9 +1199,9 @@ static void R_Envmap_f (void)
 {
 	int j, size;
 	char filename[256], basename[256];
-	qbyte *buffer1;
-	qbyte *buffer2;
-	qbyte *buffer3;
+	unsigned char *buffer1;
+	unsigned char *buffer2;
+	unsigned char *buffer3;
 
 	if (Cmd_Argc() != 3)
 	{
@@ -1232,9 +1232,9 @@ static void R_Envmap_f (void)
 	r_refdef.fov_x = 90;
 	r_refdef.fov_y = 90;
 
-	buffer1 = (qbyte *)Mem_Alloc(tempmempool, size * size * 3);
-	buffer2 = (qbyte *)Mem_Alloc(tempmempool, size * size * 3);
-	buffer3 = (qbyte *)Mem_Alloc(tempmempool, size * size * 3 + 18);
+	buffer1 = (unsigned char *)Mem_Alloc(tempmempool, size * size * 3);
+	buffer2 = (unsigned char *)Mem_Alloc(tempmempool, size * size * 3);
+	buffer3 = (unsigned char *)Mem_Alloc(tempmempool, size * size * 3 + 18);
 
 	for (j = 0;j < 12;j++)
 	{

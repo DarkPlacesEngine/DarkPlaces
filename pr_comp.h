@@ -153,7 +153,7 @@ typedef struct dfunction_s
 	int		s_file;			// source file defined in
 
 	int		numparms;
-	qbyte	parm_size[MAX_PARMS];
+	unsigned char	parm_size[MAX_PARMS];
 }
 dfunction_t;
 
@@ -171,7 +171,7 @@ typedef struct mfunction_s
 	int		s_file;			// source file defined in
 
 	int		numparms;
-	qbyte	parm_size[MAX_PARMS];
+	unsigned char	parm_size[MAX_PARMS];
 }
 mfunction_t;
 

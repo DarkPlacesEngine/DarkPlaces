@@ -31,7 +31,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 ResampleSfx
 ================
 */
-size_t ResampleSfx (const qbyte *in_data, size_t in_length, const snd_format_t* in_format, qbyte *out_data, const char* sfxname)
+size_t ResampleSfx (const unsigned char *in_data, size_t in_length, const snd_format_t* in_format, unsigned char *out_data, const char* sfxname)
 {
 	size_t srclength, outcount, i;
 
@@ -64,8 +64,8 @@ size_t ResampleSfx (const qbyte *in_data, size_t in_length, const snd_format_t* 
 		const unsigned int fracstep = (double)in_format->speed / shm->format.speed * (1 << FRACTIONAL_BITS);
 		size_t remain_in = srclength, total_out = 0;
 		unsigned int samplefrac;
-		const qbyte *in_ptr = in_data;
-		qbyte *out_ptr = out_data;
+		const unsigned char *in_ptr = in_data;
+		unsigned char *out_ptr = out_data;
 
 		// Check that we can handle one second of that sound
 		if (in_format->speed * in_format->channels > (1 << INTEGER_BITS))
@@ -123,12 +123,12 @@ size_t ResampleSfx (const qbyte *in_data, size_t in_length, const snd_format_t* 
 						// No more value to interpolate with?
 						if (srcsample + in_format->channels < remain_in)
 						{
-							a = ((const qbyte*)in_ptr)[srcsample] - 128;
-							b = ((const qbyte*)in_ptr)[srcsample + in_format->channels] - 128;
+							a = ((const unsigned char*)in_ptr)[srcsample] - 128;
+							b = ((const unsigned char*)in_ptr)[srcsample + in_format->channels] - 128;
 							*((signed char*)out_ptr) = (((b - a) * (samplefrac & FRACTIONAL_MASK)) >> FRACTIONAL_BITS) + a;
 						}
 						else
-							*((signed char*)out_ptr) = ((const qbyte*)in_ptr)[srcsample] - 128;
+							*((signed char*)out_ptr) = ((const unsigned char*)in_ptr)[srcsample] - 128;
 
 						out_ptr += sizeof (signed char);
 					}

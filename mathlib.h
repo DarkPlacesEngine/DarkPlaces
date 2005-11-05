@@ -180,8 +180,8 @@ float VectorNormalizeLength2 (vec3_t v, vec3_t dest);		// returns vector length
 #define NUMVERTEXNORMALS	162
 extern float m_bytenormals[NUMVERTEXNORMALS][3];
 
-qbyte NormalToByte(const vec3_t n);
-void ByteToNormal(qbyte num, vec3_t n);
+unsigned char NormalToByte(const vec3_t n);
+void ByteToNormal(unsigned char num, vec3_t n);
 
 void R_ConcatRotations (const float in1[3*3], const float in2[3*3], float out[3*3]);
 void R_ConcatTransforms (const float in1[3*4], const float in2[3*4], float out[3*4]);

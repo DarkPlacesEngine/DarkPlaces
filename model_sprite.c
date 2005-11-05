@@ -38,7 +38,7 @@ void Mod_SpriteInit (void)
 }
 
 static int alphaonlytable[4] = {255 | 0x80000000, 255 | 0x80000000, 255 | 0x80000000, 3};
-static void Mod_Sprite_SharedSetup(const qbyte *datapointer, int version, const unsigned int *palette, const unsigned int *alphapalette)
+static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version, const unsigned int *palette, const unsigned int *alphapalette)
 {
 	int					i, j, groupframes, realframes, x, y, origin[2], width, height;
 	dspriteframetype_t	*pinframetype;
@@ -47,7 +47,7 @@ static void Mod_Sprite_SharedSetup(const qbyte *datapointer, int version, const 
 	dspriteinterval_t	*pinintervals;
 	float				modelradius, interval;
 	char				name[MAX_QPATH], fogname[MAX_QPATH];
-	qbyte				*pixbuf;
+	unsigned char				*pixbuf;
 	const void			*startframes;
 	modelradius = 0;
 
@@ -100,7 +100,7 @@ static void Mod_Sprite_SharedSetup(const qbyte *datapointer, int version, const 
 	loadmodel->animscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numframes);
 	loadmodel->sprite.sprdata_frames = (mspriteframe_t *)Mem_Alloc(loadmodel->mempool, sizeof(mspriteframe_t) * realframes);
 
-	datapointer = (qbyte *)startframes;
+	datapointer = (unsigned char *)startframes;
 	realframes = 0;
 	for (i = 0;i < loadmodel->numframes;i++)
 	{
@@ -172,7 +172,7 @@ static void Mod_Sprite_SharedSetup(const qbyte *datapointer, int version, const 
 					{
 						loadmodel->sprite.sprdata_frames[realframes].texture = R_LoadTexture2D(loadmodel->texturepool, name, width, height, datapointer, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, NULL);
 						// make fog version (just alpha)
-						pixbuf = (qbyte *)Mem_Alloc(tempmempool, width*height*4);
+						pixbuf = (unsigned char *)Mem_Alloc(tempmempool, width*height*4);
 						Image_CopyMux(pixbuf, datapointer, width, height, false, false, false, 4, 4, alphaonlytable);
 						loadmodel->sprite.sprdata_frames[realframes].fogtexture = R_LoadTexture2D(loadmodel->texturepool, fogname, width, height, pixbuf, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, NULL);
 						Mem_Free(pixbuf);
@@ -207,9 +207,9 @@ extern void R_Model_Sprite_Draw(entity_render_t *ent);
 void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int version;
-	const qbyte *datapointer;
+	const unsigned char *datapointer;
 
-	datapointer = (qbyte *)buffer;
+	datapointer = (unsigned char *)buffer;
 
 	loadmodel->type = mod_sprite;
 	loadmodel->flags2 = EF_FULLBRIGHT;
@@ -237,8 +237,8 @@ void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 	else if (version == SPRITEHL_VERSION)
 	{
 		int i, rendermode;
-		qbyte palette[256][4], alphapalette[256][4];
-		const qbyte *in;
+		unsigned char palette[256][4], alphapalette[256][4];
+		const unsigned char *in;
 		dspritehl_t *pinhlsprite;
 
 		pinhlsprite = (dspritehl_t *)datapointer;

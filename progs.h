@@ -249,7 +249,7 @@ extern int eval_colormod;
 extern int eval_playermodel;
 extern int eval_playerskin;
 
-#define PRVM_GETEDICTFIELDVALUE(ed, fieldoffset) (fieldoffset ? (prvm_eval_t *)((qbyte *)ed->v + fieldoffset) : NULL)
+#define PRVM_GETEDICTFIELDVALUE(ed, fieldoffset) (fieldoffset ? (prvm_eval_t *)((unsigned char *)ed->v + fieldoffset) : NULL)
 
 
 extern mfunction_t *SV_PlayerPhysicsQC;

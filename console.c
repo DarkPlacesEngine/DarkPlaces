@@ -66,7 +66,7 @@ cvar_t log_file = {0, "log_file",""};
 char crt_log_file [MAX_OSPATH] = "";
 qfile_t* logfile = NULL;
 
-qbyte* logqueue = NULL;
+unsigned char* logqueue = NULL;
 size_t logq_ind = 0;
 size_t logq_size = 0;
 
@@ -183,10 +183,10 @@ void Log_ConPrint (const char *msg)
 		if (len > remain)
 		{
 			size_t factor = ((logq_ind + len) / logq_size) + 1;
-			qbyte* newqueue;
+			unsigned char* newqueue;
 
 			logq_size *= factor;
-			newqueue = (qbyte *)Mem_Alloc (tempmempool, logq_size);
+			newqueue = (unsigned char *)Mem_Alloc (tempmempool, logq_size);
 			memcpy (newqueue, logqueue, logq_ind);
 			Mem_Free (logqueue);
 			logqueue = newqueue;
@@ -369,7 +369,7 @@ void Con_Init (void)
 
 	// Allocate a log queue
 	logq_size = 512;
-	logqueue = (qbyte *)Mem_Alloc (tempmempool, logq_size);
+	logqueue = (unsigned char *)Mem_Alloc (tempmempool, logq_size);
 	logq_ind = 0;
 
 	Cvar_RegisterVariable (&log_file);

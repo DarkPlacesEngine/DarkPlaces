@@ -11,7 +11,7 @@
 typedef struct drawqueue_s
 {
 	unsigned short size;
-	qbyte command, flags;
+	unsigned char command, flags;
 	unsigned int color;
 	float x, y, scalex, scaley;
 }

@@ -9,10 +9,10 @@ int		image_height;
 
 #if 1
 // written by LordHavoc in a readable way, optimized by Vic, further optimized by LordHavoc (the non-special index case), readable version preserved below this
-void Image_CopyMux(qbyte *outpixels, const qbyte *inpixels, int inputwidth, int inputheight, qboolean inputflipx, qboolean inputflipy, qboolean inputflipdiagonal, int numoutputcomponents, int numinputcomponents, int *outputinputcomponentindices)
+void Image_CopyMux(unsigned char *outpixels, const unsigned char *inpixels, int inputwidth, int inputheight, qboolean inputflipx, qboolean inputflipy, qboolean inputflipdiagonal, int numoutputcomponents, int numinputcomponents, int *outputinputcomponentindices)
 {
 	int index, c, x, y;
-	const qbyte *in, *line;
+	const unsigned char *in, *line;
 	int row_inc = (inputflipy ? -inputwidth : inputwidth) * numinputcomponents, col_inc = (inputflipx ? -1 : 1) * numinputcomponents;
 	int row_ofs = (inputflipy ? (inputheight - 1) * inputwidth * numinputcomponents : 0), col_ofs = (inputflipx ? (inputwidth - 1) * numinputcomponents : 0);
 
@@ -58,10 +58,10 @@ void Image_CopyMux(qbyte *outpixels, const qbyte *inpixels, int inputwidth, int 
 }
 #else
 // intentionally readable version
-void Image_CopyMux(qbyte *outpixels, const qbyte *inpixels, int inputwidth, int inputheight, qboolean inputflipx, qboolean inputflipy, qboolean inputflipdiagonal, int numoutputcomponents, int numinputcomponents, int *outputinputcomponentindices)
+void Image_CopyMux(unsigned char *outpixels, const unsigned char *inpixels, int inputwidth, int inputheight, qboolean inputflipx, qboolean inputflipy, qboolean inputflipdiagonal, int numoutputcomponents, int numinputcomponents, int *outputinputcomponentindices)
 {
 	int index, c, x, y;
-	const qbyte *in, *inrow, *incolumn;
+	const unsigned char *in, *inrow, *incolumn;
 	if (inputflipdiagonal)
 	{
 		for (x = 0;x < inputwidth;x++)
@@ -101,7 +101,7 @@ void Image_CopyMux(qbyte *outpixels, const qbyte *inpixels, int inputwidth, int 
 }
 #endif
 
-void Image_GammaRemapRGB(const qbyte *in, qbyte *out, int pixels, const qbyte *gammar, const qbyte *gammag, const qbyte *gammab)
+void Image_GammaRemapRGB(const unsigned char *in, unsigned char *out, int pixels, const unsigned char *gammar, const unsigned char *gammag, const unsigned char *gammab)
 {
 	while (pixels--)
 	{
@@ -114,7 +114,7 @@ void Image_GammaRemapRGB(const qbyte *in, qbyte *out, int pixels, const qbyte *g
 }
 
 // note: pal must be 32bit color
-void Image_Copy8bitRGBA(const qbyte *in, qbyte *out, int pixels, const unsigned int *pal)
+void Image_Copy8bitRGBA(const unsigned char *in, unsigned char *out, int pixels, const unsigned int *pal)
 {
 	int *iout = (int *)out;
 	while (pixels >= 8)
@@ -180,11 +180,11 @@ typedef struct pcx_s
 LoadPCX
 ============
 */
-qbyte* LoadPCX (const qbyte *f, int matchwidth, int matchheight)
+unsigned char* LoadPCX (const unsigned char *f, int matchwidth, int matchheight)
 {
 	pcx_t pcx;
-	qbyte *a, *b, *image_rgba, *pbuf;
-	const qbyte *palette, *fin, *enddata;
+	unsigned char *a, *b, *image_rgba, *pbuf;
+	const unsigned char *palette, *fin, *enddata;
 	int x, y, x2, dataByte;
 
 	if (fs_filesize < (int)sizeof(pcx) + 768)
@@ -220,7 +220,7 @@ qbyte* LoadPCX (const qbyte *f, int matchwidth, int matchheight)
 
 	palette = f + fs_filesize - 768;
 
-	image_rgba = (qbyte *)Mem_Alloc(tempmempool, image_width*image_height*4);
+	image_rgba = (unsigned char *)Mem_Alloc(tempmempool, image_width*image_height*4);
 	if (!image_rgba)
 	{
 		Con_Printf("LoadPCX: not enough memory for %i by %i image\n", image_width, image_height);
@@ -297,11 +297,11 @@ void PrintTargaHeader(TargaHeader *t)
 LoadTGA
 =============
 */
-qbyte *LoadTGA (const qbyte *f, int matchwidth, int matchheight)
+unsigned char *LoadTGA (const unsigned char *f, int matchwidth, int matchheight)
 {
 	int x, y, row_inc, compressed, readpixelcount, red, green, blue, alpha, runlen, pindex, alphabits;
-	qbyte *pixbuf, *image_rgba;
-	const qbyte *fin, *enddata;
+	unsigned char *pixbuf, *image_rgba;
+	const unsigned char *fin, *enddata;
 	unsigned char *p;
 	TargaHeader targa_header;
 	unsigned char palette[256*4];
@@ -433,7 +433,7 @@ qbyte *LoadTGA (const qbyte *f, int matchwidth, int matchheight)
 		return NULL;
 	}
 
-	image_rgba = (qbyte *)Mem_Alloc(tempmempool, image_width * image_height * 4);
+	image_rgba = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
 	if (!image_rgba)
 	{
 		Con_Printf("LoadTGA: not enough memory for %i by %i image\n", image_width, image_height);
@@ -536,9 +536,9 @@ qbyte *LoadTGA (const qbyte *f, int matchwidth, int matchheight)
 LoadLMP
 ============
 */
-qbyte *LoadLMP (const qbyte *f, int matchwidth, int matchheight, qboolean loadAs8Bit)
+unsigned char *LoadLMP (const unsigned char *f, int matchwidth, int matchheight, qboolean loadAs8Bit)
 {
-	qbyte *image_buffer;
+	unsigned char *image_buffer;
 
 	if (fs_filesize < 9)
 	{
@@ -565,18 +565,18 @@ qbyte *LoadLMP (const qbyte *f, int matchwidth, int matchheight, qboolean loadAs
 
 	if (loadAs8Bit)
 	{
-		image_buffer = (qbyte *)Mem_Alloc(tempmempool, image_width * image_height);
+		image_buffer = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height);
 		memcpy(image_buffer, f + 8, image_width * image_height);
 	}
 	else
 	{
-		image_buffer = (qbyte *)Mem_Alloc(tempmempool, image_width * image_height * 4);
+		image_buffer = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
 		Image_Copy8bitRGBA(f + 8, image_buffer, image_width * image_height, palette_complete);
 	}
 	return image_buffer;
 }
 
-static qbyte *LoadLMPRGBA (const qbyte *f, int matchwidth, int matchheight)
+static unsigned char *LoadLMPRGBA (const unsigned char *f, int matchwidth, int matchheight)
 {
 	return LoadLMP(f, matchwidth, matchheight, false);
 }
@@ -593,9 +593,9 @@ typedef struct q2wal_s
 	int			value;
 } q2wal_t;
 
-qbyte *LoadWAL (const qbyte *f, int matchwidth, int matchheight)
+unsigned char *LoadWAL (const unsigned char *f, int matchwidth, int matchheight)
 {
-	qbyte *image_rgba;
+	unsigned char *image_rgba;
 	const q2wal_t *inwal = (const q2wal_t *)f;
 
 	if (fs_filesize < (int) sizeof(q2wal_t))
@@ -620,7 +620,7 @@ qbyte *LoadWAL (const qbyte *f, int matchwidth, int matchheight)
 		return NULL;
 	}
 
-	image_rgba = (qbyte *)Mem_Alloc(tempmempool, image_width * image_height * 4);
+	image_rgba = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
 	if (!image_rgba)
 	{
 		Con_Printf("LoadLMP: not enough memory for %i by %i image\n", image_width, image_height);
@@ -655,7 +655,7 @@ void Image_StripImageExtension (const char *in, char *out)
 struct imageformat_s
 {
 	const char *formatstring;
-	qbyte *(*loadfunc)(const qbyte *f, int matchwidth, int matchheight);
+	unsigned char *(*loadfunc)(const unsigned char *f, int matchwidth, int matchheight);
 }
 imageformats[] =
 {
@@ -672,10 +672,10 @@ imageformats[] =
 	{NULL, NULL}
 };
 
-qbyte *loadimagepixels (const char *filename, qboolean complain, int matchwidth, int matchheight)
+unsigned char *loadimagepixels (const char *filename, qboolean complain, int matchwidth, int matchheight)
 {
 	int i;
-	qbyte *f, *data = NULL;
+	unsigned char *f, *data = NULL;
 	char basename[MAX_QPATH], name[MAX_QPATH], *c;
 	if (developer_memorydebug.integer)
 		Mem_CheckSentinelsGlobal();
@@ -718,7 +718,7 @@ qbyte *loadimagepixels (const char *filename, qboolean complain, int matchwidth,
 	return NULL;
 }
 
-int image_makemask (const qbyte *in, qbyte *out, int size)
+int image_makemask (const unsigned char *in, unsigned char *out, int size)
 {
 	int i, count;
 	count = 0;
@@ -734,9 +734,9 @@ int image_makemask (const qbyte *in, qbyte *out, int size)
 	return count;
 }
 
-qbyte* loadimagepixelsmask (const char *filename, qboolean complain, int matchwidth, int matchheight)
+unsigned char* loadimagepixelsmask (const char *filename, qboolean complain, int matchwidth, int matchheight)
 {
-	qbyte *in, *data;
+	unsigned char *in, *data;
 	in = data = loadimagepixels(filename, complain, matchwidth, matchheight);
 	if (!data)
 		return NULL;
@@ -751,7 +751,7 @@ qbyte* loadimagepixelsmask (const char *filename, qboolean complain, int matchwi
 
 rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags)
 {
-	qbyte *data;
+	unsigned char *data;
 	rtexture_t *rt;
 	if (!(data = loadimagepixels (filename, complain, matchwidth, matchheight)))
 		return 0;
@@ -762,7 +762,7 @@ rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, int ma
 
 rtexture_t *loadtextureimagemask (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags)
 {
-	qbyte *data;
+	unsigned char *data;
 	rtexture_t *rt;
 	if (!(data = loadimagepixelsmask (filename, complain, matchwidth, matchheight)))
 		return 0;
@@ -775,7 +775,7 @@ rtexture_t *image_masktex;
 rtexture_t *image_nmaptex;
 rtexture_t *loadtextureimagewithmask (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags)
 {
-	qbyte *data;
+	unsigned char *data;
 	rtexture_t *rt;
 	image_masktex = NULL;
 	image_nmaptex = NULL;
@@ -793,14 +793,14 @@ rtexture_t *loadtextureimagewithmask (rtexturepool_t *pool, const char *filename
 
 rtexture_t *loadtextureimagewithmaskandnmap (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags, float bumpscale)
 {
-	qbyte *data, *data2;
+	unsigned char *data, *data2;
 	rtexture_t *rt;
 	image_masktex = NULL;
 	image_nmaptex = NULL;
 	if (!(data = loadimagepixels (filename, complain, matchwidth, matchheight)))
 		return 0;
 
-	data2 = (qbyte *)Mem_Alloc(tempmempool, image_width * image_height * 4);
+	data2 = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
 
 	rt = R_LoadTexture2D(pool, filename, image_width, image_height, data, TEXTYPE_RGBA, flags, NULL);
 
@@ -818,11 +818,11 @@ rtexture_t *loadtextureimagewithmaskandnmap (rtexturepool_t *pool, const char *f
 
 rtexture_t *loadtextureimagebumpasnmap (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags, float bumpscale)
 {
-	qbyte *data, *data2;
+	unsigned char *data, *data2;
 	rtexture_t *rt;
 	if (!(data = loadimagepixels (filename, complain, matchwidth, matchheight)))
 		return 0;
-	data2 = (qbyte *)Mem_Alloc(tempmempool, image_width * image_height * 4);
+	data2 = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
 
 	Image_HeightmapToNormalmap(data, data2, image_width, image_height, (flags & TEXF_CLAMP) != 0, bumpscale);
 	rt = R_LoadTexture2D(pool, filename, image_width, image_height, data2, TEXTYPE_RGBA, flags, NULL);
@@ -832,11 +832,11 @@ rtexture_t *loadtextureimagebumpasnmap (rtexturepool_t *pool, const char *filena
 	return rt;
 }
 
-qboolean Image_WriteTGARGB_preflipped (const char *filename, int width, int height, const qbyte *data, qbyte *buffer)
+qboolean Image_WriteTGARGB_preflipped (const char *filename, int width, int height, const unsigned char *data, unsigned char *buffer)
 {
 	qboolean ret;
-	qbyte *out;
-	const qbyte *in, *end;
+	unsigned char *out;
+	const unsigned char *in, *end;
 
 	memset (buffer, 0, 18);
 	buffer[2] = 2;		// uncompressed type
@@ -861,13 +861,13 @@ qboolean Image_WriteTGARGB_preflipped (const char *filename, int width, int heig
 	return ret;
 }
 
-void Image_WriteTGARGB (const char *filename, int width, int height, const qbyte *data)
+void Image_WriteTGARGB (const char *filename, int width, int height, const unsigned char *data)
 {
 	int y;
-	qbyte *buffer, *out;
-	const qbyte *in, *end;
+	unsigned char *buffer, *out;
+	const unsigned char *in, *end;
 
-	buffer = (qbyte *)Mem_Alloc(tempmempool, width*height*3 + 18);
+	buffer = (unsigned char *)Mem_Alloc(tempmempool, width*height*3 + 18);
 
 	memset (buffer, 0, 18);
 	buffer[2] = 2;		// uncompressed type
@@ -895,13 +895,13 @@ void Image_WriteTGARGB (const char *filename, int width, int height, const qbyte
 	Mem_Free(buffer);
 }
 
-void Image_WriteTGARGBA (const char *filename, int width, int height, const qbyte *data)
+void Image_WriteTGARGBA (const char *filename, int width, int height, const unsigned char *data)
 {
 	int y;
-	qbyte *buffer, *out;
-	const qbyte *in, *end;
+	unsigned char *buffer, *out;
+	const unsigned char *in, *end;
 
-	buffer = (qbyte *)Mem_Alloc(tempmempool, width*height*4 + 18);
+	buffer = (unsigned char *)Mem_Alloc(tempmempool, width*height*4 + 18);
 
 	memset (buffer, 0, 18);
 	buffer[2] = 2;		// uncompressed type
@@ -931,9 +931,9 @@ void Image_WriteTGARGBA (const char *filename, int width, int height, const qbyt
 	Mem_Free(buffer);
 }
 
-qboolean Image_CheckAlpha(const qbyte *data, int size, qboolean rgba)
+qboolean Image_CheckAlpha(const unsigned char *data, int size, qboolean rgba)
 {
-	const qbyte *end;
+	const unsigned char *end;
 	if (rgba)
 	{
 		// check alpha bytes
@@ -951,7 +951,7 @@ qboolean Image_CheckAlpha(const qbyte *data, int size, qboolean rgba)
 	return 0;
 }
 
-static void Image_Resample32LerpLine (const qbyte *in, qbyte *out, int inwidth, int outwidth)
+static void Image_Resample32LerpLine (const unsigned char *in, unsigned char *out, int inwidth, int outwidth)
 {
 	int		j, xi, oldx = 0, f, fstep, endx, lerp;
 	fstep = (int) (inwidth*65536.0f/outwidth);
@@ -967,10 +967,10 @@ static void Image_Resample32LerpLine (const qbyte *in, qbyte *out, int inwidth, 
 		if (xi < endx)
 		{
 			lerp = f & 0xFFFF;
-			*out++ = (qbyte) ((((in[4] - in[0]) * lerp) >> 16) + in[0]);
-			*out++ = (qbyte) ((((in[5] - in[1]) * lerp) >> 16) + in[1]);
-			*out++ = (qbyte) ((((in[6] - in[2]) * lerp) >> 16) + in[2]);
-			*out++ = (qbyte) ((((in[7] - in[3]) * lerp) >> 16) + in[3]);
+			*out++ = (unsigned char) ((((in[4] - in[0]) * lerp) >> 16) + in[0]);
+			*out++ = (unsigned char) ((((in[5] - in[1]) * lerp) >> 16) + in[1]);
+			*out++ = (unsigned char) ((((in[6] - in[2]) * lerp) >> 16) + in[2]);
+			*out++ = (unsigned char) ((((in[7] - in[3]) * lerp) >> 16) + in[3]);
 		}
 		else // last pixel of the line has no pixel to lerp to
 		{
@@ -982,7 +982,7 @@ static void Image_Resample32LerpLine (const qbyte *in, qbyte *out, int inwidth, 
 	}
 }
 
-static void Image_Resample24LerpLine (const qbyte *in, qbyte *out, int inwidth, int outwidth)
+static void Image_Resample24LerpLine (const unsigned char *in, unsigned char *out, int inwidth, int outwidth)
 {
 	int		j, xi, oldx = 0, f, fstep, endx, lerp;
 	fstep = (int) (inwidth*65536.0f/outwidth);
@@ -998,9 +998,9 @@ static void Image_Resample24LerpLine (const qbyte *in, qbyte *out, int inwidth, 
 		if (xi < endx)
 		{
 			lerp = f & 0xFFFF;
-			*out++ = (qbyte) ((((in[3] - in[0]) * lerp) >> 16) + in[0]);
-			*out++ = (qbyte) ((((in[4] - in[1]) * lerp) >> 16) + in[1]);
-			*out++ = (qbyte) ((((in[5] - in[2]) * lerp) >> 16) + in[2]);
+			*out++ = (unsigned char) ((((in[3] - in[0]) * lerp) >> 16) + in[0]);
+			*out++ = (unsigned char) ((((in[4] - in[1]) * lerp) >> 16) + in[1]);
+			*out++ = (unsigned char) ((((in[5] - in[2]) * lerp) >> 16) + in[2]);
 		}
 		else // last pixel of the line has no pixel to lerp to
 		{
@@ -1011,21 +1011,21 @@ static void Image_Resample24LerpLine (const qbyte *in, qbyte *out, int inwidth, 
 	}
 }
 
-#define LERPBYTE(i) r = resamplerow1[i];out[i] = (qbyte) ((((resamplerow2[i] - r) * lerp) >> 16) + r)
+#define LERPBYTE(i) r = resamplerow1[i];out[i] = (unsigned char) ((((resamplerow2[i] - r) * lerp) >> 16) + r)
 void Image_Resample32Lerp(const void *indata, int inwidth, int inheight, void *outdata, int outwidth, int outheight)
 {
 	int i, j, r, yi, oldy, f, fstep, lerp, endy = (inheight-1), inwidth4 = inwidth*4, outwidth4 = outwidth*4;
-	qbyte *out;
-	const qbyte *inrow;
-	qbyte *resamplerow1;
-	qbyte *resamplerow2;
-	out = (qbyte *)outdata;
+	unsigned char *out;
+	const unsigned char *inrow;
+	unsigned char *resamplerow1;
+	unsigned char *resamplerow2;
+	out = (unsigned char *)outdata;
 	fstep = (int) (inheight*65536.0f/outheight);
 
-	resamplerow1 = (qbyte *)Mem_Alloc(tempmempool, outwidth*4*2);
+	resamplerow1 = (unsigned char *)Mem_Alloc(tempmempool, outwidth*4*2);
 	resamplerow2 = resamplerow1 + outwidth*4;
 
-	inrow = (const qbyte *)indata;
+	inrow = (const unsigned char *)indata;
 	oldy = 0;
 	Image_Resample32LerpLine (inrow, resamplerow1, inwidth, outwidth);
 	Image_Resample32LerpLine (inrow + inwidth4, resamplerow2, inwidth, outwidth);
@@ -1037,7 +1037,7 @@ void Image_Resample32Lerp(const void *indata, int inwidth, int inheight, void *o
 			lerp = f & 0xFFFF;
 			if (yi != oldy)
 			{
-				inrow = (qbyte *)indata + inwidth4*yi;
+				inrow = (unsigned char *)indata + inwidth4*yi;
 				if (yi == oldy+1)
 					memcpy(resamplerow1, resamplerow2, outwidth4);
 				else
@@ -1100,7 +1100,7 @@ void Image_Resample32Lerp(const void *indata, int inwidth, int inheight, void *o
 		{
 			if (yi != oldy)
 			{
-				inrow = (qbyte *)indata + inwidth4*yi;
+				inrow = (unsigned char *)indata + inwidth4*yi;
 				if (yi == oldy+1)
 					memcpy(resamplerow1, resamplerow2, outwidth4);
 				else
@@ -1156,17 +1156,17 @@ void Image_Resample32Nolerp(const void *indata, int inwidth, int inheight, void 
 void Image_Resample24Lerp(const void *indata, int inwidth, int inheight, void *outdata, int outwidth, int outheight)
 {
 	int i, j, r, yi, oldy, f, fstep, lerp, endy = (inheight-1), inwidth3 = inwidth * 3, outwidth3 = outwidth * 3;
-	qbyte *out;
-	const qbyte *inrow;
-	qbyte *resamplerow1;
-	qbyte *resamplerow2;
-	out = (qbyte *)outdata;
+	unsigned char *out;
+	const unsigned char *inrow;
+	unsigned char *resamplerow1;
+	unsigned char *resamplerow2;
+	out = (unsigned char *)outdata;
 	fstep = (int) (inheight*65536.0f/outheight);
 
-	resamplerow1 = (qbyte *)Mem_Alloc(tempmempool, outwidth*3*2);
+	resamplerow1 = (unsigned char *)Mem_Alloc(tempmempool, outwidth*3*2);
 	resamplerow2 = resamplerow1 + outwidth*3;
 
-	inrow = (const qbyte *)indata;
+	inrow = (const unsigned char *)indata;
 	oldy = 0;
 	Image_Resample24LerpLine (inrow, resamplerow1, inwidth, outwidth);
 	Image_Resample24LerpLine (inrow + inwidth3, resamplerow2, inwidth, outwidth);
@@ -1178,7 +1178,7 @@ void Image_Resample24Lerp(const void *indata, int inwidth, int inheight, void *o
 			lerp = f & 0xFFFF;
 			if (yi != oldy)
 			{
-				inrow = (qbyte *)indata + inwidth3*yi;
+				inrow = (unsigned char *)indata + inwidth3*yi;
 				if (yi == oldy+1)
 					memcpy(resamplerow1, resamplerow2, outwidth3);
 				else
@@ -1234,7 +1234,7 @@ void Image_Resample24Lerp(const void *indata, int inwidth, int inheight, void *o
 		{
 			if (yi != oldy)
 			{
-				inrow = (qbyte *)indata + inwidth3*yi;
+				inrow = (unsigned char *)indata + inwidth3*yi;
 				if (yi == oldy+1)
 					memcpy(resamplerow1, resamplerow2, outwidth3);
 				else
@@ -1253,13 +1253,13 @@ void Image_Resample24Nolerp(const void *indata, int inwidth, int inheight, void 
 {
 	int i, j, f, inwidth3 = inwidth * 3;
 	unsigned frac, fracstep;
-	qbyte *inrow, *out;
-	out = (qbyte *)outdata;
+	unsigned char *inrow, *out;
+	out = (unsigned char *)outdata;
 
 	fracstep = inwidth*0x10000/outwidth;
 	for (i = 0;i < outheight;i++)
 	{
-		inrow = (qbyte *)indata + inwidth3*(i*inheight/outheight);
+		inrow = (unsigned char *)indata + inwidth3*(i*inheight/outheight);
 		frac = fracstep >> 1;
 		j = outwidth - 4;
 		while (j >= 0)
@@ -1315,7 +1315,7 @@ void Image_Resample (const void *indata, int inwidth, int inheight, int indepth,
 }
 
 // in can be the same as out
-void Image_MipReduce(const qbyte *in, qbyte *out, int *width, int *height, int *depth, int destwidth, int destheight, int destdepth, int bytesperpixel)
+void Image_MipReduce(const unsigned char *in, unsigned char *out, int *width, int *height, int *depth, int destwidth, int destheight, int destdepth, int bytesperpixel)
 {
 	int x, y, nextrow;
 	if (*depth != 1 || destdepth != 1)
@@ -1337,10 +1337,10 @@ void Image_MipReduce(const qbyte *in, qbyte *out, int *width, int *height, int *
 				{
 					for (x = 0;x < *width;x++)
 					{
-						out[0] = (qbyte) ((in[0] + in[4] + in[nextrow  ] + in[nextrow+4]) >> 2);
-						out[1] = (qbyte) ((in[1] + in[5] + in[nextrow+1] + in[nextrow+5]) >> 2);
-						out[2] = (qbyte) ((in[2] + in[6] + in[nextrow+2] + in[nextrow+6]) >> 2);
-						out[3] = (qbyte) ((in[3] + in[7] + in[nextrow+3] + in[nextrow+7]) >> 2);
+						out[0] = (unsigned char) ((in[0] + in[4] + in[nextrow  ] + in[nextrow+4]) >> 2);
+						out[1] = (unsigned char) ((in[1] + in[5] + in[nextrow+1] + in[nextrow+5]) >> 2);
+						out[2] = (unsigned char) ((in[2] + in[6] + in[nextrow+2] + in[nextrow+6]) >> 2);
+						out[3] = (unsigned char) ((in[3] + in[7] + in[nextrow+3] + in[nextrow+7]) >> 2);
 						out += 4;
 						in += 8;
 					}
@@ -1353,9 +1353,9 @@ void Image_MipReduce(const qbyte *in, qbyte *out, int *width, int *height, int *
 				{
 					for (x = 0;x < *width;x++)
 					{
-						out[0] = (qbyte) ((in[0] + in[3] + in[nextrow  ] + in[nextrow+3]) >> 2);
-						out[1] = (qbyte) ((in[1] + in[4] + in[nextrow+1] + in[nextrow+4]) >> 2);
-						out[2] = (qbyte) ((in[2] + in[5] + in[nextrow+2] + in[nextrow+5]) >> 2);
+						out[0] = (unsigned char) ((in[0] + in[3] + in[nextrow  ] + in[nextrow+3]) >> 2);
+						out[1] = (unsigned char) ((in[1] + in[4] + in[nextrow+1] + in[nextrow+4]) >> 2);
+						out[2] = (unsigned char) ((in[2] + in[5] + in[nextrow+2] + in[nextrow+5]) >> 2);
 						out += 3;
 						in += 6;
 					}
@@ -1374,10 +1374,10 @@ void Image_MipReduce(const qbyte *in, qbyte *out, int *width, int *height, int *
 				{
 					for (x = 0;x < *width;x++)
 					{
-						out[0] = (qbyte) ((in[0] + in[4]) >> 1);
-						out[1] = (qbyte) ((in[1] + in[5]) >> 1);
-						out[2] = (qbyte) ((in[2] + in[6]) >> 1);
-						out[3] = (qbyte) ((in[3] + in[7]) >> 1);
+						out[0] = (unsigned char) ((in[0] + in[4]) >> 1);
+						out[1] = (unsigned char) ((in[1] + in[5]) >> 1);
+						out[2] = (unsigned char) ((in[2] + in[6]) >> 1);
+						out[3] = (unsigned char) ((in[3] + in[7]) >> 1);
 						out += 4;
 						in += 8;
 					}
@@ -1389,9 +1389,9 @@ void Image_MipReduce(const qbyte *in, qbyte *out, int *width, int *height, int *
 				{
 					for (x = 0;x < *width;x++)
 					{
-						out[0] = (qbyte) ((in[0] + in[3]) >> 1);
-						out[1] = (qbyte) ((in[1] + in[4]) >> 1);
-						out[2] = (qbyte) ((in[2] + in[5]) >> 1);
+						out[0] = (unsigned char) ((in[0] + in[3]) >> 1);
+						out[1] = (unsigned char) ((in[1] + in[4]) >> 1);
+						out[2] = (unsigned char) ((in[2] + in[5]) >> 1);
 						out += 3;
 						in += 6;
 					}
@@ -1413,10 +1413,10 @@ void Image_MipReduce(const qbyte *in, qbyte *out, int *width, int *height, int *
 				{
 					for (x = 0;x < *width;x++)
 					{
-						out[0] = (qbyte) ((in[0] + in[nextrow  ]) >> 1);
-						out[1] = (qbyte) ((in[1] + in[nextrow+1]) >> 1);
-						out[2] = (qbyte) ((in[2] + in[nextrow+2]) >> 1);
-						out[3] = (qbyte) ((in[3] + in[nextrow+3]) >> 1);
+						out[0] = (unsigned char) ((in[0] + in[nextrow  ]) >> 1);
+						out[1] = (unsigned char) ((in[1] + in[nextrow+1]) >> 1);
+						out[2] = (unsigned char) ((in[2] + in[nextrow+2]) >> 1);
+						out[3] = (unsigned char) ((in[3] + in[nextrow+3]) >> 1);
 						out += 4;
 						in += 4;
 					}
@@ -1429,9 +1429,9 @@ void Image_MipReduce(const qbyte *in, qbyte *out, int *width, int *height, int *
 				{
 					for (x = 0;x < *width;x++)
 					{
-						out[0] = (qbyte) ((in[0] + in[nextrow  ]) >> 1);
-						out[1] = (qbyte) ((in[1] + in[nextrow+1]) >> 1);
-						out[2] = (qbyte) ((in[2] + in[nextrow+2]) >> 1);
+						out[0] = (unsigned char) ((in[0] + in[nextrow  ]) >> 1);
+						out[1] = (unsigned char) ((in[1] + in[nextrow+1]) >> 1);
+						out[2] = (unsigned char) ((in[2] + in[nextrow+2]) >> 1);
 						out += 3;
 						in += 3;
 					}
@@ -1514,7 +1514,7 @@ void Image_HeightmapToNormalmap(const unsigned char *inpixels, unsigned char *ou
 int image_loadskin(imageskin_t *s, char *shadername)
 {
 	int j;
-	qbyte *bumppixels;
+	unsigned char *bumppixels;
 	int bumppixels_width, bumppixels_height;
 	char name[MAX_QPATH];
 	strlcpy(name, shadername, sizeof(name));
@@ -1529,7 +1529,7 @@ int image_loadskin(imageskin_t *s, char *shadername)
 	bumppixels = NULL;bumppixels_width = 0;bumppixels_height = 0;
 	if (Image_CheckAlpha(s->basepixels, s->basepixels_width * s->basepixels_height, true))
 	{
-		s->maskpixels = (qbyte *)Mem_Alloc(loadmodel->mempool, s->basepixels_width * s->basepixels_height * 4);
+		s->maskpixels = (unsigned char *)Mem_Alloc(loadmodel->mempool, s->basepixels_width * s->basepixels_height * 4);
 		s->maskpixels_width = s->basepixels_width;
 		s->maskpixels_height = s->basepixels_height;
 		memcpy(s->maskpixels, s->basepixels, s->maskpixels_width * s->maskpixels_height * 4);
@@ -1583,7 +1583,7 @@ int image_loadskin(imageskin_t *s, char *shadername)
 		{
 			if (r_shadow_bumpscale_bumpmap.value > 0)
 			{
-				s->nmappixels = (qbyte *)Mem_Alloc(loadmodel->mempool, bumppixels_width * bumppixels_height * 4);
+				s->nmappixels = (unsigned char *)Mem_Alloc(loadmodel->mempool, bumppixels_width * bumppixels_height * 4);
 				s->nmappixels_width = bumppixels_width;
 				s->nmappixels_height = bumppixels_height;
 				Image_HeightmapToNormalmap(bumppixels, s->nmappixels, s->nmappixels_width, s->nmappixels_height, false, r_shadow_bumpscale_bumpmap.value);
@@ -1593,7 +1593,7 @@ int image_loadskin(imageskin_t *s, char *shadername)
 		{
 			if (r_shadow_bumpscale_basetexture.value > 0)
 			{
-				s->nmappixels = (qbyte *)Mem_Alloc(loadmodel->mempool, s->basepixels_width * s->basepixels_height * 4);
+				s->nmappixels = (unsigned char *)Mem_Alloc(loadmodel->mempool, s->basepixels_width * s->basepixels_height * 4);
 				s->nmappixels_width = s->basepixels_width;
 				s->nmappixels_height = s->basepixels_height;
 				Image_HeightmapToNormalmap(s->basepixels, s->nmappixels, s->nmappixels_width, s->nmappixels_height, false, r_shadow_bumpscale_basetexture.value);

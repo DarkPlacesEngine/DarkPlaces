@@ -28,7 +28,7 @@ typedef struct sfxbuffer_s
 {
 	unsigned int	length;
 	unsigned int	offset;
-	qbyte	data[4];	// variable sized
+	unsigned char	data[4];	// variable sized
 } sfxbuffer_t;
 
 typedef struct snd_format_s
@@ -121,7 +121,7 @@ void S_UnlockSfx (sfx_t *sfx);
 void *S_LockBuffer(void);
 void S_UnlockBuffer(void);
 
-extern size_t ResampleSfx (const qbyte *in_data, size_t in_length, const snd_format_t* in_format, qbyte *out_data, const char* sfxname);
+extern size_t ResampleSfx (const unsigned char *in_data, size_t in_length, const snd_format_t* in_format, unsigned char *out_data, const char* sfxname);
 
 // ====================================================================
 

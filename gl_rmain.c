@@ -244,7 +244,7 @@ void FOG_registercvars(void)
 
 static void R_BuildBlankTextures(void)
 {
-	qbyte data[4];
+	unsigned char data[4];
 	data[0] = 128; // normal X
 	data[1] = 128; // normal Y
 	data[2] = 255; // normal Z
@@ -265,7 +265,7 @@ static void R_BuildBlankTextures(void)
 static void R_BuildNoTexture(void)
 {
 	int x, y;
-	qbyte pix[16][16][4];
+	unsigned char pix[16][16][4];
 	// this makes a light grey/dark grey checkerboard texture
 	for (y = 0;y < 16;y++)
 	{
@@ -292,7 +292,7 @@ static void R_BuildNoTexture(void)
 
 static void R_BuildWhiteCube(void)
 {
-	qbyte data[6*1*1*4];
+	unsigned char data[6*1*1*4];
 	data[ 0] = 255;data[ 1] = 255;data[ 2] = 255;data[ 3] = 255;
 	data[ 4] = 255;data[ 5] = 255;data[ 6] = 255;data[ 7] = 255;
 	data[ 8] = 255;data[ 9] = 255;data[10] = 255;data[11] = 255;
@@ -308,7 +308,7 @@ static void R_BuildNormalizationCube(void)
 	vec3_t v;
 	vec_t s, t, intensity;
 #define NORMSIZE 64
-	qbyte data[6][NORMSIZE][NORMSIZE][4];
+	unsigned char data[6][NORMSIZE][NORMSIZE][4];
 	for (side = 0;side < 6;side++)
 	{
 		for (y = 0;y < NORMSIZE;y++)
@@ -367,8 +367,8 @@ static void R_BuildFogTexture(void)
 	int x, b;
 	double r, alpha;
 #define FOGWIDTH 64
-	qbyte data1[FOGWIDTH][4];
-	qbyte data2[FOGWIDTH][4];
+	unsigned char data1[FOGWIDTH][4];
+	unsigned char data2[FOGWIDTH][4];
 	r = (-1.0/256.0) * (FOGWIDTH * FOGWIDTH);
 	for (x = 0;x < FOGWIDTH;x++)
 	{
@@ -1705,7 +1705,7 @@ void RSurf_SetColorPointer(const entity_render_t *ent, const msurface_t *surface
 		{
 			for (i = 0, c = varray_color4f + 4 * surface->num_firstvertex;i < surface->num_vertices;i++, c += 4)
 			{
-				const qbyte *lm = surface->lightmapinfo->samples + (surface->groupmesh->data_lightmapoffsets + surface->num_firstvertex)[i];
+				const unsigned char *lm = surface->lightmapinfo->samples + (surface->groupmesh->data_lightmapoffsets + surface->num_firstvertex)[i];
 				if (lm)
 				{
 					float scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[0]] * (1.0f / 32768.0f);
