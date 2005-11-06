@@ -395,6 +395,96 @@ cmd_source_t cmd_source;
 static cmd_function_t *cmd_functions;		// possible commands to execute
 
 /*
+Cmd_PreprocessString
+
+Preprocesses strings and replaces $*, $param#, $cvar accordingly
+*/
+static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned maxoutlen, cmdalias_t *alias ) {
+	const char *in;
+	char *out;
+	unsigned outlen;
+	int inquote;
+
+	// HACK?
+	if( maxoutlen == 0 ) {
+		return;
+	}
+	maxoutlen--; // because of \0
+
+	in = intext;
+	out = outtext;
+	outlen = 0;
+	inquote = 0;
+
+	while( *in && outlen < maxoutlen ) {
+		if( *in == '$' && !inquote ) {
+			// read over the $
+			in++;
+			// $* is replaced with all formal parameters, $num is parsed as an argument (or as $num if there arent enough parameters), $bla becomes $bla and $$bla becomes $$bla
+			if( *in == '*' && alias ) {
+				const char *linein = Cmd_Args();
+				// include all params
+				if (linein) {
+					while( *linein && outlen < maxoutlen ) {
+						*out++ = *linein++;
+						outlen++;
+					}
+				}
+
+				in++;
+			} else if( '0' <= *in && *in <= '9' && alias ) {
+				char *nexttoken;
+				int argnum;
+
+				argnum = strtol( in, &nexttoken, 10 );
+
+				if( 0 < argnum && argnum < Cmd_Argc() ) {
+					const char *param = Cmd_Argv( argnum );
+					while( *param && outlen < maxoutlen ) {
+						*out++ = *param++;
+						outlen++;
+					}
+					in = nexttoken;
+				} else if( argnum >= Cmd_Argc() ) {
+					Con_Printf( "Warning: Not enough parameters passed to alias '%s', at least %i expected:\n    %s\n", alias->name, argnum, alias->value );
+					*out++ = '$';
+					outlen++;
+				}
+			} else {
+				cvar_t *cvar;
+				const char *tempin = in;
+
+				COM_ParseTokenConsole( &tempin );
+				cvar = Cvar_FindVar(&com_token[0]);
+				if (cvar) {
+					const char *cvarcontent = cvar->string;
+					while( *cvarcontent && outlen < maxoutlen ) {
+						*out++ = *cvarcontent++;
+						outlen++;
+					}
+					in = tempin;
+				} else if( com_token[0] == '$' ) {
+					// remove the first $
+					char *pos = com_token;
+					while( *pos && outlen < maxoutlen ) {
+						*out++ = *pos++;
+						outlen++;
+					}
+					in = tempin;
+				}
+			}
+		} else {
+			if( *in == '"' ) {
+				inquote ^= 1;
+			} 
+			*out++ = *in++;
+			outlen++;
+		}
+	}
+	*out = 0;
+}
+
+/*
 ============
 Cmd_ExecuteAlias
 
@@ -403,6 +493,7 @@ Called for aliases and fills in the alias into the cbuffer
 */
 static void Cmd_ExecuteAlias (cmdalias_t *alias)
 {
+	/*
 #define ALIAS_BUFFER 1024
 	static char buffer[ ALIAS_BUFFER + 2 ];
 	const char *in;
@@ -472,7 +563,10 @@ static void Cmd_ExecuteAlias (cmdalias_t *alias)
 		}
 	}
 	*out++ = '\n';
-	*out++ = 0;
+	*out++ = 0;*/
+#define ALIAS_BUFFER 1024
+	static char buffer[ ALIAS_BUFFER + 2 ];
+	Cmd_PreprocessString( alias->value, buffer, ALIAS_BUFFER, alias );
 	Cbuf_AddText( buffer );
 }
 
@@ -600,6 +694,7 @@ Cmd_TokenizeString
 Parses the given string into command line tokens.
 ============
 */
+// AK: This function should only be called from ExcuteString because the current design is a bit of an hack
 static void Cmd_TokenizeString (const char *text)
 {
 	int l;
@@ -619,7 +714,7 @@ static void Cmd_TokenizeString (const char *text)
 		// Windows: \r\n
 		if (*text == '\n' || *text == '\r')
 		{
-			// a newline seperates commands in the buffer
+			// a newline separates commands in the buffer
 			if (*text == '\r' && text[1] == '\n')
 				text++;
 			text++;
@@ -630,33 +725,10 @@ static void Cmd_TokenizeString (const char *text)
 			return;
 
 		if (cmd_argc == 1)
-			 cmd_args = text;
+			cmd_args = text;
 
 		if (!COM_ParseTokenConsole(&text))
 			return;
-
-		// check for $cvar
-		// (perhaps use another target buffer?)
-		if (com_token[0] == '$' && com_token[1])
-		{
-			cvar_t *cvar;
-
-			cvar = Cvar_FindVar(&com_token[1]);
-			if (cvar)
-			{
-				strcpy(com_token, cvar->string);
-			}
-			else if( com_token[1] == '$' )
-			{
-				// remove the first $
-				char *pos;
-
-				for( pos = com_token ; *pos ; pos++ )
-				{
-					*pos = *(pos + 1);
-				}
-			}
-		}
 
 		if (cmd_argc < MAX_ARGS)
 		{
@@ -910,13 +982,17 @@ FIXME: lookupnoadd the token to speed search?
 */
 void Cmd_ExecuteString (const char *text, cmd_source_t src)
 {
+#define EXECUTESTRING_BUFFER 4096
+	static char buffer[ EXECUTESTRING_BUFFER ];
 	int oldpos;
 	cmd_function_t *cmd;
 	cmdalias_t *a;
 
 	oldpos = cmd_tokenizebufferpos;
 	cmd_source = src;
-	Cmd_TokenizeString (text);
+
+	Cmd_PreprocessString( text, buffer, EXECUTESTRING_BUFFER, NULL );
+	Cmd_TokenizeString (buffer);
 
 // execute the command line
 	if (!Cmd_Argc())
