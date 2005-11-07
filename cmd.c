@@ -530,11 +530,10 @@ static void Cmd_List_f (void)
 		count++;
 	}
 
-	Con_Printf("%i Command%s", count, (count > 1) ? "s" : "");
 	if (partial)
-		Con_Printf(" beginning with \"%s\"", partial);
-
-	Con_Print("\n\n");
+		Con_Printf("%i Command%s beginning with \"%s\"\n\n", count, (count > 1) ? "s" : "", partial);
+	else
+		Con_Printf("%i Command%s\n\n", count, (count > 1) ? "s" : "");
 }
 
 /*

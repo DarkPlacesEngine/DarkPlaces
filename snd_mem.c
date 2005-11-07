@@ -70,7 +70,7 @@ size_t ResampleSfx (const unsigned char *in_data, size_t in_length, const snd_fo
 		// Check that we can handle one second of that sound
 		if (in_format->speed * in_format->channels > (1 << INTEGER_BITS))
 		{
-			Con_Printf ("ResampleSfx: sound quality too high for resampling (%uHz, %u channel(s))",
+			Con_Printf ("ResampleSfx: sound quality too high for resampling (%uHz, %u channel(s))\n",
 					   in_format->speed, in_format->channels);
 			return 0;
 		}
@@ -170,7 +170,7 @@ qboolean S_LoadSound (sfx_t *s, qboolean complain)
 	if (s->fetcher != NULL)
 	{
 		if (s->format.speed != shm->format.speed)
-			Con_Printf ("S_LoadSound: sound %s hasn't been resampled (%uHz instead of %uHz)", s->name);
+			Con_Printf ("S_LoadSound: sound %s hasn't been resampled (%uHz instead of %uHz)\n", s->name);
 		return true;
 	}
 

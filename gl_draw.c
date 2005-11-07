@@ -326,7 +326,7 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 
 	if (numcachepics == MAX_CACHED_PICS)
 	{
-		Con_Printf ("Draw_CachePic: numcachepics == MAX_CACHED_PICS");
+		Con_Printf ("Draw_CachePic: numcachepics == MAX_CACHED_PICS\n");
 		// FIXME: support NULL in callers?
 		return cachepics; // return the first one
 	}
@@ -422,7 +422,7 @@ cachepic_t *Draw_NewPic(const char *picname, int width, int height, int alpha, u
 		{
 			if (numcachepics == MAX_CACHED_PICS)
 			{
-				Con_Printf ("Draw_NewPic: numcachepics == MAX_CACHED_PICS");
+				Con_Printf ("Draw_NewPic: numcachepics == MAX_CACHED_PICS\n");
 				// FIXME: support NULL in callers?
 				return cachepics; // return the first one
 			}

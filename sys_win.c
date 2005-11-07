@@ -158,7 +158,7 @@ double Sys_DoubleTime (void)
 
 		if (!QueryPerformanceFrequency (&PerformanceFreq))
 		{
-			Con_Printf ("No hardware timer available");
+			Con_Printf ("No hardware timer available\n");
 			// fall back to timeGetTime
 			Cvar_SetValueQuick(&sys_usetimegettime, true);
 			return Sys_DoubleTime();

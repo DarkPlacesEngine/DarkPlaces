@@ -550,7 +550,7 @@ pack_t *FS_LoadPackPK3 (const char *packfile)
 
 	if (! PK3_GetEndOfCentralDir (packfile, packhandle, &eocd))
 	{
-		Con_Printf ("%s is not a PK3 file", packfile);
+		Con_Printf ("%s is not a PK3 file\n", packfile);
 		close(packhandle);
 		return NULL;
 	}
@@ -558,7 +558,7 @@ pack_t *FS_LoadPackPK3 (const char *packfile)
 	// Multi-volume ZIP archives are NOT allowed
 	if (eocd.disknum != 0 || eocd.cdir_disknum != 0)
 	{
-		Con_Printf ("%s is a multi-volume ZIP archive", packfile);
+		Con_Printf ("%s is a multi-volume ZIP archive\n", packfile);
 		close(packhandle);
 		return NULL;
 	}
@@ -568,7 +568,7 @@ pack_t *FS_LoadPackPK3 (const char *packfile)
 #if MAX_FILES_IN_PACK < 65535
 	if (eocd.nbentries > MAX_FILES_IN_PACK)
 	{
-		Con_Printf ("%s contains too many files (%hu)", packfile, eocd.nbentries);
+		Con_Printf ("%s contains too many files (%hu)\n", packfile, eocd.nbentries);
 		close(packhandle);
 		return NULL;
 	}
@@ -587,7 +587,7 @@ pack_t *FS_LoadPackPK3 (const char *packfile)
 	real_nb_files = PK3_BuildFileList (pack, &eocd);
 	if (real_nb_files < 0)
 	{
-		Con_Printf ("%s is not a valid PK3 file", packfile);
+		Con_Printf ("%s is not a valid PK3 file\n", packfile);
 		close(pack->handle);
 		Mem_Free(pack);
 		return NULL;
@@ -619,7 +619,7 @@ qboolean PK3_GetTrueFileOffset (packfile_t *pfile, pack_t *pack)
 	count = read (pack->handle, buffer, ZIP_LOCAL_CHUNK_BASE_SIZE);
 	if (count != ZIP_LOCAL_CHUNK_BASE_SIZE || BuffBigLong (buffer) != ZIP_DATA_HEADER)
 	{
-		Con_Printf ("Can't retrieve file %s in package %s", pfile->name, pack->filename);
+		Con_Printf ("Can't retrieve file %s in package %s\n", pfile->name, pack->filename);
 		return false;
 	}
 
@@ -763,7 +763,7 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 	read (packhandle, (void *)&header, sizeof(header));
 	if (memcmp(header.id, "PACK", 4))
 	{
-		Con_Printf ("%s is not a packfile", packfile);
+		Con_Printf ("%s is not a packfile\n", packfile);
 		close(packhandle);
 		return NULL;
 	}
@@ -772,7 +772,7 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 
 	if (header.dirlen % sizeof(dpackfile_t))
 	{
-		Con_Printf ("%s has an invalid directory size", packfile);
+		Con_Printf ("%s has an invalid directory size\n", packfile);
 		close(packhandle);
 		return NULL;
 	}
@@ -781,7 +781,7 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 
 	if (numpackfiles > MAX_FILES_IN_PACK)
 	{
-		Con_Printf ("%s has %i files", packfile, numpackfiles);
+		Con_Printf ("%s has %i files\n", packfile, numpackfiles);
 		close(packhandle);
 		return NULL;
 	}
@@ -991,7 +991,7 @@ void FS_Init (void)
 				search->pack = FS_LoadPackPAK (com_argv[i]);
 				if (!search->pack)
 				{
-					Con_Printf ("Couldn't load packfile: %s", com_argv[i]);
+					Con_Printf ("Couldn't load packfile: %s\n", com_argv[i]);
 					Mem_Free(search);
 					continue;
 				}
@@ -1001,7 +1001,7 @@ void FS_Init (void)
 				search->pack = FS_LoadPackPK3 (com_argv[i]);
 				if (!search->pack)
 				{
-					Con_Printf ("Couldn't load packfile: %s", com_argv[i]);
+					Con_Printf ("Couldn't load packfile: %s\n", com_argv[i]);
 					Mem_Free(search);
 					continue;
 				}
@@ -1183,7 +1183,7 @@ qfile_t *FS_OpenPackedFile (pack_t* pack, int pack_ind)
 	// the dup() call to avoid having to close the dup_handle on error here
 	if (lseek (pack->handle, pfile->offset, SEEK_SET) == -1)
 	{
-		Con_Printf ("FS_OpenPackedFile: can't lseek to %s in %s (offset: %d)",
+		Con_Printf ("FS_OpenPackedFile: can't lseek to %s in %s (offset: %d)\n",
 					pfile->name, pack->filename, pfile->offset);
 		return NULL;
 	}
@@ -1191,7 +1191,7 @@ qfile_t *FS_OpenPackedFile (pack_t* pack, int pack_ind)
 	dup_handle = dup (pack->handle);
 	if (dup_handle < 0)
 	{
-		Con_Printf ("FS_OpenPackedFile: can't dup package's handle (pack: %s)", pack->filename);
+		Con_Printf ("FS_OpenPackedFile: can't dup package's handle (pack: %s)\n", pack->filename);
 		return NULL;
 	}
 
@@ -1230,7 +1230,7 @@ qfile_t *FS_OpenPackedFile (pack_t* pack, int pack_ind)
 		 */
 		if (qz_inflateInit2 (&ztk->zstream, -MAX_WBITS) != Z_OK)
 		{
-			Con_Printf ("FS_OpenPackedFile: inflate init error (file: %s)", pfile->name);
+			Con_Printf ("FS_OpenPackedFile: inflate init error (file: %s)\n", pfile->name);
 			close(dup_handle);
 			Mem_Free(file);
 			return NULL;
@@ -1604,7 +1604,7 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 			lseek (file->handle, file->offset + (fs_offset_t)ztk->in_position, SEEK_SET);
 			if (read (file->handle, ztk->input, count) != count)
 			{
-				Con_Printf ("FS_Read: unexpected end of file");
+				Con_Printf ("FS_Read: unexpected end of file\n");
 				break;
 			}
 
@@ -1627,7 +1627,7 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 			error = qz_inflate (&ztk->zstream, Z_SYNC_FLUSH);
 			if (error != Z_OK && error != Z_STREAM_END)
 			{
-				Con_Printf ("FS_Read: Can't inflate file");
+				Con_Printf ("FS_Read: Can't inflate file\n");
 				break;
 			}
 			ztk->in_ind = ztk->in_len - ztk->zstream.avail_in;
@@ -1649,7 +1649,7 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 			error = qz_inflate (&ztk->zstream, Z_SYNC_FLUSH);
 			if (error != Z_OK && error != Z_STREAM_END)
 			{
-				Con_Printf ("FS_Read: Can't inflate file");
+				Con_Printf ("FS_Read: Can't inflate file\n");
 				break;
 			}
 			ztk->in_ind = ztk->in_len - ztk->zstream.avail_in;
