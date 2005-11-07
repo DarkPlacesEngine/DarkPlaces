@@ -305,7 +305,7 @@ static int Sys_EventFilter( SDL_Event *event );
 void VID_Init (void)
 {
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
-		Sys_Error ("Failed to init video: %s\n", SDL_GetError());
+		Sys_Error ("Failed to init video: %s", SDL_GetError());
 	vid_isfullscreen = false;
 }
 

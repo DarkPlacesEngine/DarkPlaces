@@ -52,7 +52,7 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 	modelradius = 0;
 
 	if (loadmodel->numframes < 1)
-		Host_Error ("Mod_Sprite_SharedSetup: Invalid # of frames: %d\n", loadmodel->numframes);
+		Host_Error ("Mod_Sprite_SharedSetup: Invalid # of frames: %d", loadmodel->numframes);
 
 	// LordHavoc: hack to allow sprites to be non-fullbright
 	for (i = 0;i < MAX_QPATH && loadmodel->name[i];i++)
@@ -298,7 +298,7 @@ void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 			palette[255][0] = palette[255][1] = palette[255][2] = palette[255][3] = 0;
 			break;
 		default:
-			Host_Error("Mod_IDSP_Load: unknown texFormat (%i, should be 0, 1, 2, or 3)\n", i);
+			Host_Error("Mod_IDSP_Load: unknown texFormat (%i, should be 0, 1, 2, or 3)", i);
 			return;
 		}
 
@@ -341,7 +341,7 @@ void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 
 	loadmodel->numframes = LittleLong (pinqsprite->numframes);
 	if (loadmodel->numframes < 1)
-		Host_Error ("Mod_IDS2_Load: Invalid # of frames: %d\n", loadmodel->numframes);
+		Host_Error ("Mod_IDS2_Load: Invalid # of frames: %d", loadmodel->numframes);
 	loadmodel->sprite.sprnum_type = SPR_VP_PARALLEL;
 	loadmodel->synctype = ST_SYNC;
 

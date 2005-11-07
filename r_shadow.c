@@ -3109,7 +3109,7 @@ void R_Shadow_FreeWorldLight(dlight_t *light)
 	R_RTLight_Uncompile(&light->rtlight);
 	for (lightpointer = &r_shadow_worldlightchain;*lightpointer && *lightpointer != light;lightpointer = &(*lightpointer)->next);
 	if (*lightpointer != light)
-		Sys_Error("R_Shadow_FreeWorldLight: light not linked into chain\n");
+		Sys_Error("R_Shadow_FreeWorldLight: light not linked into chain");
 	*lightpointer = light->next;
 	Mem_Free(light);
 }

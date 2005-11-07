@@ -316,7 +316,7 @@ void SetMinMaxSize (prvm_edict_t *e, float *min, float *max, qboolean rotate)
 
 	for (i=0 ; i<3 ; i++)
 		if (min[i] > max[i])
-			PF_ERROR("SetMinMaxSize: backwards mins/maxs\n");
+			PF_ERROR("SetMinMaxSize: backwards mins/maxs");
 
 // set derived values
 	VectorCopy (min, e->fields.server->mins);
@@ -717,7 +717,7 @@ break()
 */
 void PF_break (void)
 {
-	PF_ERROR("break: break statement\n");
+	PF_ERROR("break: break statement");
 }
 
 /*
@@ -1808,7 +1808,7 @@ sizebuf_t *WriteDest (void)
 		ent = PRVM_PROG_TO_EDICT(prog->globals.server->msg_entity);
 		entnum = PRVM_NUM_FOR_EDICT(ent);
 		if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
-			Host_Error("WriteDest: tried to write to non-client\n");
+			Host_Error("WriteDest: tried to write to non-client");
 		return &svs.clients[entnum-1].message;
 
 	case MSG_ALL:

@@ -350,7 +350,7 @@ void CL_ParseServerInfo (void)
 	protocol = Protocol_EnumForNumber(i);
 	if (protocol == PROTOCOL_UNKNOWN)
 	{
-		Host_Error("CL_ParseServerInfo: Server is unrecognized protocol number (%i)\n", i);
+		Host_Error("CL_ParseServerInfo: Server is unrecognized protocol number (%i)", i);
 		return;
 	}
 	// hack for unmarked Nehahra movie demos which had a custom protocol
@@ -363,7 +363,7 @@ void CL_ParseServerInfo (void)
 	cl.maxclients = MSG_ReadByte ();
 	if (cl.maxclients < 1 || cl.maxclients > MAX_SCOREBOARD)
 	{
-		Host_Error("Bad maxclients (%u) from server\n", cl.maxclients);
+		Host_Error("Bad maxclients (%u) from server", cl.maxclients);
 		return;
 	}
 	cl.scores = (scoreboard_t *)Mem_Alloc(cl_mempool, cl.maxclients*sizeof(*cl.scores));
@@ -400,7 +400,7 @@ void CL_ParseServerInfo (void)
 		if (!str[0])
 			break;
 		if (nummodels==MAX_MODELS)
-			Host_Error ("Server sent too many model precaches\n");
+			Host_Error ("Server sent too many model precaches");
 		if (strlen(str) >= MAX_QPATH)
 			Host_Error ("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
 		strlcpy (parse_model_precache[nummodels], str, sizeof (parse_model_precache[nummodels]));
@@ -412,7 +412,7 @@ void CL_ParseServerInfo (void)
 		if (!str[0])
 			break;
 		if (numsounds==MAX_SOUNDS)
-			Host_Error("Server sent too many sound precaches\n");
+			Host_Error("Server sent too many sound precaches");
 		if (strlen(str) >= MAX_QPATH)
 			Host_Error("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
 		strlcpy (parse_sound_precache[numsounds], str, sizeof (parse_sound_precache[numsounds]));
@@ -501,7 +501,7 @@ void CL_ValidateState(entity_state_t *s)
 		return;
 
 	if (s->modelindex >= MAX_MODELS)
-		Host_Error("CL_ValidateState: modelindex (%i) >= MAX_MODELS (%i)\n", s->modelindex, MAX_MODELS);
+		Host_Error("CL_ValidateState: modelindex (%i) >= MAX_MODELS (%i)", s->modelindex, MAX_MODELS);
 
 	// colormap is client index + 1
 	if ((!s->flags & RENDER_COLORMAPPED) && s->colormap > cl.maxclients)
@@ -1409,7 +1409,7 @@ void CL_ParseServerMessage(void)
 				}
 				description[strlen(description)-1] = '\n'; // replace the last space with a newline
 				Con_Print(description);
-				Host_Error ("CL_ParseServerMessage: Illegible server message\n");
+				Host_Error ("CL_ParseServerMessage: Illegible server message");
 			}
 			break;
 
@@ -1432,7 +1432,7 @@ void CL_ParseServerMessage(void)
 			i = MSG_ReadLong ();
 			protocol = Protocol_EnumForNumber(i);
 			if (protocol == PROTOCOL_UNKNOWN)
-				Host_Error("CL_ParseServerMessage: Server is unrecognized protocol number (%i)\n", i);
+				Host_Error("CL_ParseServerMessage: Server is unrecognized protocol number (%i)", i);
 			// hack for unmarked Nehahra movie demos which had a custom protocol
 			if (protocol == PROTOCOL_QUAKEDP && cls.demoplayback && demo_nehahra.integer)
 				protocol = PROTOCOL_NEHAHRAMOVIE;
@@ -1475,7 +1475,7 @@ void CL_ParseServerMessage(void)
 		case svc_setview:
 			cl.viewentity = (unsigned short)MSG_ReadShort ();
 			if (cl.viewentity >= MAX_EDICTS)
-				Host_Error("svc_setview >= MAX_EDICTS\n");
+				Host_Error("svc_setview >= MAX_EDICTS");
 			if (cl.viewentity >= cl_max_entities)
 				CL_ExpandEntities(cl.viewentity);
 			// LordHavoc: assume first setview recieved is the real player entity

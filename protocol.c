@@ -125,9 +125,9 @@ void EntityFrameQuake_ReadEntity(int bits)
 		num = MSG_ReadByte ();
 
 	if (num >= MAX_EDICTS)
-		Host_Error("EntityFrameQuake_ReadEntity: entity number (%i) >= MAX_EDICTS (%i)\n", num, MAX_EDICTS);
+		Host_Error("EntityFrameQuake_ReadEntity: entity number (%i) >= MAX_EDICTS (%i)", num, MAX_EDICTS);
 	if (num < 1)
-		Host_Error("EntityFrameQuake_ReadEntity: invalid entity number (%i)\n", num);
+		Host_Error("EntityFrameQuake_ReadEntity: invalid entity number (%i)", num);
 
 	if (cl_num_entities <= num)
 	{
@@ -208,7 +208,7 @@ void EntityFrameQuake_ReadEntity(int bits)
 	}
 
 	if (msg_badread)
-		Host_Error("EntityFrameQuake_ReadEntity: read error\n");
+		Host_Error("EntityFrameQuake_ReadEntity: read error");
 }
 
 void EntityFrameQuake_ISeeDeadEntities(void)
@@ -964,17 +964,17 @@ void EntityFrame_CL_ReadFrame(void)
 	while ((number = (unsigned short) MSG_ReadShort()) != 0xFFFF && !msg_badread)
 	{
 		if (msg_badread)
-			Host_Error("EntityFrame_Read: read error\n");
+			Host_Error("EntityFrame_Read: read error");
 		removed = number & 0x8000;
 		number &= 0x7FFF;
 		if (number >= MAX_EDICTS)
-			Host_Error("EntityFrame_Read: number (%i) >= MAX_EDICTS (%i)\n", number, MAX_EDICTS);
+			Host_Error("EntityFrame_Read: number (%i) >= MAX_EDICTS (%i)", number, MAX_EDICTS);
 
 		// seek to entity, while copying any skipped entities (assume unchanged)
 		while (old < oldend && old->number < number)
 		{
 			if (f->numentities >= MAX_ENTITY_DATABASE)
-				Host_Error("EntityFrame_Read: entity list too big\n");
+				Host_Error("EntityFrame_Read: entity list too big");
 			f->entitydata[f->numentities] = *old++;
 			f->entitydata[f->numentities++].time = cl.mtime[0];
 		}
@@ -988,7 +988,7 @@ void EntityFrame_CL_ReadFrame(void)
 		else
 		{
 			if (f->numentities >= MAX_ENTITY_DATABASE)
-				Host_Error("EntityFrame_Read: entity list too big\n");
+				Host_Error("EntityFrame_Read: entity list too big");
 
 			// reserve this slot
 			e = f->entitydata + f->numentities++;
@@ -1020,7 +1020,7 @@ void EntityFrame_CL_ReadFrame(void)
 	while (old < oldend)
 	{
 		if (f->numentities >= MAX_ENTITY_DATABASE)
-			Host_Error("EntityFrame_Read: entity list too big\n");
+			Host_Error("EntityFrame_Read: entity list too big");
 		f->entitydata[f->numentities] = *old++;
 		f->entitydata[f->numentities++].time = cl.mtime[0];
 	}

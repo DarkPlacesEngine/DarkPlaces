@@ -148,7 +148,7 @@ void Host_Error (const char *error, ...)
 	Host_ShutdownServer (false);
 
 	if (cls.state == ca_dedicated)
-		Sys_Error ("Host_Error: %s\n",hosterrorstring2);	// dedicated servers exit
+		Sys_Error ("Host_Error: %s",hosterrorstring2);	// dedicated servers exit
 
 	CL_Disconnect ();
 	cls.demonum = -1;

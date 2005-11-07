@@ -380,11 +380,11 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 	context = qaglCreateContext(pixelFormat, NULL);
 	qaglDestroyPixelFormat(pixelFormat);
 	if (context == NULL)
-		Sys_Error ("aglCreateContext failed\n");
+		Sys_Error ("aglCreateContext failed");
 	if (!qaglSetDrawable(context, GetWindowPort(window)))
-		Sys_Error ("aglSetDrawable failed\n");
+		Sys_Error ("aglSetDrawable failed");
 	if (!qaglSetCurrentContext(context))
-		Sys_Error ("aglSetCurrentContext failed\n");
+		Sys_Error ("aglSetCurrentContext failed");
 
 	scr_width = width;
 	scr_height = height;
@@ -395,7 +395,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 	if (fullscreen)
 	{
 		if (!qaglSetFullScreen (context, width, height, 0, 0))
-			Sys_Error("aglSetFullScreen failed\n");
+			Sys_Error("aglSetFullScreen failed");
 		vid_isfullscreen = true;
 	}
 

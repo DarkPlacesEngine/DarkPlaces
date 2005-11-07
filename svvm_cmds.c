@@ -178,7 +178,7 @@ void SetMinMaxSize (prvm_edict_t *e, float *min, float *max, qboolean rotate)
 
 	for (i=0 ; i<3 ; i++)
 		if (min[i] > max[i])
-			PRVM_ERROR("SetMinMaxSize: backwards mins/maxs\n");
+			PRVM_ERROR("SetMinMaxSize: backwards mins/maxs");
 
 // set derived values
 	VectorCopy (min, e->fields.server->mins);

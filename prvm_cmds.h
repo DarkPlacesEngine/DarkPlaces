@@ -189,7 +189,7 @@ float	getserverlistindexforkey(string key)
 // nice helper macros
 
 #ifndef VM_NOPARMCHECK
-#define VM_SAFEPARMCOUNT(p,f)	if(prog->argc != p) PRVM_ERROR(#f " wrong parameter count (" #p " expected ) !\n")
+#define VM_SAFEPARMCOUNT(p,f)	if(prog->argc != p) PRVM_ERROR(#f " wrong parameter count (" #p " expected ) !")
 #else
 #define VM_SAFEPARMCOUNT(p,f)
 #endif

@@ -140,6 +140,11 @@ static int realmaxsize = 0;
 
 static textypeinfo_t *R_GetTexTypeInfo(int textype, int flags)
 {
+	if ((flags & (TEXF_PICMIP | TEXF_FRAGMENT)) == (TEXF_PICMIP | TEXF_FRAGMENT))
+	{
+		Host_Error("R_GetTexTypeInfo: TEXF_PICMIP can not be used with TEXF_FRAGMENT");
+		return NULL;
+	}
 	if (flags & TEXF_ALPHA)
 	{
 		switch(textype)
@@ -147,12 +152,12 @@ static textypeinfo_t *R_GetTexTypeInfo(int textype, int flags)
 		case TEXTYPE_PALETTE:
 			return &textype_palette_alpha;
 		case TEXTYPE_RGB:
-			Host_Error("R_GetTexTypeInfo: RGB format has no alpha, TEXF_ALPHA not allowed\n");
+			Host_Error("R_GetTexTypeInfo: RGB format has no alpha, TEXF_ALPHA not allowed");
 			return NULL;
 		case TEXTYPE_RGBA:
 			return &textype_rgba_alpha;
 		default:
-			Host_Error("R_GetTexTypeInfo: unknown texture format\n");
+			Host_Error("R_GetTexTypeInfo: unknown texture format");
 			return NULL;
 		}
 	}
@@ -169,7 +174,7 @@ static textypeinfo_t *R_GetTexTypeInfo(int textype, int flags)
 		case TEXTYPE_DSDT:
 			return &textype_dsdt;
 		default:
-			Host_Error("R_GetTexTypeInfo: unknown texture format\n");
+			Host_Error("R_GetTexTypeInfo: unknown texture format");
 			return NULL;
 		}
 	}
@@ -215,13 +220,13 @@ void R_FreeTexture(rtexture_t *rt)
 
 	glt = (gltexture_t *)rt;
 	if (glt == NULL)
-		Host_Error("R_FreeTexture: texture == NULL\n");
+		Host_Error("R_FreeTexture: texture == NULL");
 
 	for (gltpointer = &glt->pool->gltchain;*gltpointer && *gltpointer != glt;gltpointer = &(*gltpointer)->chain);
 	if (*gltpointer == glt)
 		*gltpointer = glt->chain;
 	else
-		Host_Error("R_FreeTexture: texture \"%s\" not linked in pool\n", glt->identifier);
+		Host_Error("R_FreeTexture: texture \"%s\" not linked in pool", glt->identifier);
 
 	// note: if freeing a fragment texture, this will not make the claimed
 	// space available for new textures unless all other fragments in the
@@ -236,7 +241,7 @@ void R_FreeTexture(rtexture_t *rt)
 			if (*gltimagepointer == image)
 				*gltimagepointer = image->imagechain;
 			else
-				Host_Error("R_FreeTexture: image not linked in pool\n");
+				Host_Error("R_FreeTexture: image not linked in pool");
 			if (image->texnum)
 				qglDeleteTextures(1, (GLuint *)&image->texnum);
 			if (image->blockallocation)
@@ -274,12 +279,12 @@ void R_FreeTexturePool(rtexturepool_t **rtexturepool)
 	pool = (gltexturepool_t *)(*rtexturepool);
 	*rtexturepool = NULL;
 	if (pool->sentinel != TEXTUREPOOL_SENTINEL)
-		Host_Error("R_FreeTexturePool: pool already freed\n");
+		Host_Error("R_FreeTexturePool: pool already freed");
 	for (poolpointer = &gltexturepoolchain;*poolpointer && *poolpointer != pool;poolpointer = &(*poolpointer)->next);
 	if (*poolpointer == pool)
 		*poolpointer = pool->next;
 	else
-		Host_Error("R_FreeTexturePool: pool not linked\n");
+		Host_Error("R_FreeTexturePool: pool not linked");
 	while (pool->gltchain)
 		R_FreeTexture((rtexture_t *)pool->gltchain);
 	if (pool->imagechain)
@@ -576,7 +581,7 @@ void R_MakeResizeBufferBigger(int size)
 		resizebuffer = (unsigned char *)Mem_Alloc(texturemempool, resizebuffersize);
 		colorconvertbuffer = (unsigned char *)Mem_Alloc(texturemempool, resizebuffersize);
 		if (!resizebuffer || !colorconvertbuffer)
-			Host_Error("R_Upload: out of memory\n");
+			Host_Error("R_Upload: out of memory");
 	}
 }
 
@@ -688,7 +693,7 @@ static void R_Upload(gltexture_t *glt, unsigned char *data)
 				CHECKGLERROR
 				break;
 			default:
-				Host_Error("R_Upload: fragment texture of type other than 1D, 2D, or 3D\n");
+				Host_Error("R_Upload: fragment texture of type other than 1D, 2D, or 3D");
 				break;
 			}
 			GL_SetupTextureParameters(glt->image->flags, glt->image->texturetype);
@@ -724,7 +729,7 @@ static void R_Upload(gltexture_t *glt, unsigned char *data)
 			CHECKGLERROR
 			break;
 		default:
-			Host_Error("R_Upload: fragment texture of type other than 1D, 2D, or 3D\n");
+			Host_Error("R_Upload: fragment texture of type other than 1D, 2D, or 3D");
 			break;
 		}
 	}
@@ -1067,7 +1072,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 		break;
 	case TEXTYPE_RGB:
 		if (flags & TEXF_ALPHA)
-			Host_Error("R_LoadTexture: RGB has no alpha, don't specify TEXF_ALPHA\n");
+			Host_Error("R_LoadTexture: RGB has no alpha, don't specify TEXF_ALPHA");
 		break;
 	case TEXTYPE_RGBA:
 		if (flags & TEXF_ALPHA)
@@ -1089,7 +1094,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	case TEXTYPE_DSDT:
 		break;
 	default:
-		Host_Error("R_LoadTexture: unknown texture type\n");
+		Host_Error("R_LoadTexture: unknown texture type");
 	}
 
 	glt = (gltexture_t *)Mem_Alloc(texturemempool, sizeof(gltexture_t));
@@ -1189,7 +1194,7 @@ void R_FragmentLocation3D(rtexture_t *rt, int *x, int *y, int *z, float *fx1, fl
 		return;
 	}
 	if (!rt)
-		Host_Error("R_FragmentLocation: no texture supplied\n");
+		Host_Error("R_FragmentLocation: no texture supplied");
 	glt = (gltexture_t *)rt;
 	if (glt->flags & TEXF_FRAGMENT)
 	{
@@ -1256,9 +1261,9 @@ void R_UpdateTexture(rtexture_t *rt, unsigned char *data)
 {
 	gltexture_t *glt;
 	if (rt == NULL)
-		Host_Error("R_UpdateTexture: no texture supplied\n");
+		Host_Error("R_UpdateTexture: no texture supplied");
 	if (data == NULL)
-		Host_Error("R_UpdateTexture: no data supplied\n");
+		Host_Error("R_UpdateTexture: no data supplied");
 	glt = (gltexture_t *)rt;
 
 	// if it has not been uploaded yet, update the data that will be used when it is

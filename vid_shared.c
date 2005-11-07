@@ -625,7 +625,7 @@ void VID_CheckExtensions(void)
 	gl_support_fragment_shader = false;
 
 	if (!GL_CheckExtension("OpenGL 1.1.0", opengl110funcs, NULL, false))
-		Sys_Error("OpenGL 1.1.0 functions not found\n");
+		Sys_Error("OpenGL 1.1.0 functions not found");
 
 	Con_Printf("GL_VENDOR: %s\n", gl_vendor);
 	Con_Printf("GL_RENDERER: %s\n", gl_renderer);
@@ -940,7 +940,7 @@ void VID_Restart_f(void)
 	{
 		Con_Print("Video mode change failed\n");
 		if (!VID_Mode(vid.fullscreen, vid.width, vid.height, vid.bitsperpixel))
-			Sys_Error("Unable to restore to last working video mode\n");
+			Sys_Error("Unable to restore to last working video mode");
 	}
 	VID_OpenSystems();
 }
@@ -992,7 +992,7 @@ void VID_Start(void)
 		if (!success && vid_fullscreen.integer)
 			success = VID_Mode(false, 640, 480, 16);
 		if (!success)
-			Sys_Error("Video modes failed\n");
+			Sys_Error("Video modes failed");
 	}
 	VID_OpenSystems();
 }

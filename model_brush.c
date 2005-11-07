@@ -1949,7 +1949,7 @@ static void Mod_Q1BSP_GenerateWarpMesh(msurface_t *surface)
 	subdivpolyverts = 0;
 	SubdividePolygon(surface->num_vertices, (surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex));
 	if (subdivpolytriangles < 1)
-		Host_Error("Mod_Q1BSP_GenerateWarpMesh: no triangles?\n");
+		Host_Error("Mod_Q1BSP_GenerateWarpMesh: no triangles?");
 
 	surface->mesh = mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + subdivpolytriangles * sizeof(int[3]) + subdivpolyverts * sizeof(surfvertex_t));
 	mesh->num_vertices = subdivpolyverts;
@@ -2012,16 +2012,16 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		firstedge = LittleLong(in->firstedge);
 		numedges = LittleShort(in->numedges);
 		if ((unsigned int) firstedge > (unsigned int) loadmodel->brushq1.numsurfedges || (unsigned int) numedges > (unsigned int) loadmodel->brushq1.numsurfedges || (unsigned int) firstedge + (unsigned int) numedges > (unsigned int) loadmodel->brushq1.numsurfedges)
-			Host_Error("Mod_Q1BSP_LoadFaces: invalid edge range (firstedge %i, numedges %i, model edges %i)\n", firstedge, numedges, loadmodel->brushq1.numsurfedges);
+			Host_Error("Mod_Q1BSP_LoadFaces: invalid edge range (firstedge %i, numedges %i, model edges %i)", firstedge, numedges, loadmodel->brushq1.numsurfedges);
 		i = LittleShort(in->texinfo);
 		if ((unsigned int) i >= (unsigned int) loadmodel->brushq1.numtexinfo)
-			Host_Error("Mod_Q1BSP_LoadFaces: invalid texinfo index %i(model has %i texinfos)\n", i, loadmodel->brushq1.numtexinfo);
+			Host_Error("Mod_Q1BSP_LoadFaces: invalid texinfo index %i(model has %i texinfos)", i, loadmodel->brushq1.numtexinfo);
 		surface->lightmapinfo->texinfo = loadmodel->brushq1.texinfo + i;
 		surface->texture = surface->lightmapinfo->texinfo->texture;
 
 		planenum = LittleShort(in->planenum);
 		if ((unsigned int) planenum >= (unsigned int) loadmodel->brush.num_planes)
-			Host_Error("Mod_Q1BSP_LoadFaces: invalid plane index %i (model has %i planes)\n", planenum, loadmodel->brush.num_planes);
+			Host_Error("Mod_Q1BSP_LoadFaces: invalid plane index %i (model has %i planes)", planenum, loadmodel->brush.num_planes);
 
 		//surface->flags = surface->texture->flags;
 		//if (LittleShort(in->side))
@@ -2156,7 +2156,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 static void Mod_Q1BSP_LoadNodes_RecursiveSetParent(mnode_t *node, mnode_t *parent)
 {
 	//if (node->parent)
-	//	Host_Error("Mod_Q1BSP_LoadNodes_RecursiveSetParent: runaway recursion\n");
+	//	Host_Error("Mod_Q1BSP_LoadNodes_RecursiveSetParent: runaway recursion");
 	node->parent = parent;
 	if (node->plane)
 	{
@@ -2306,7 +2306,7 @@ static void Mod_Q1BSP_LoadClipnodes(lump_t *l, hullinfo_t *hullinfo)
 		out->children[0] = LittleShort(in->children[0]);
 		out->children[1] = LittleShort(in->children[1]);
 		if (out->children[0] >= count || out->children[1] >= count)
-			Host_Error("Corrupt clipping hull(out of range child)\n");
+			Host_Error("Corrupt clipping hull(out of range child)");
 	}
 }
 
@@ -3729,7 +3729,7 @@ void static Mod_Q2BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	int i;
 	q2dheader_t *header;
 
-	Host_Error("Mod_Q2BSP_Load: not yet implemented\n");
+	Host_Error("Mod_Q2BSP_Load: not yet implemented");
 
 	mod->type = mod_brushq2;
 
@@ -4161,11 +4161,11 @@ static void Mod_Q3BSP_LoadBrushSides(lump_t *l)
 	{
 		n = LittleLong(in->planeindex);
 		if (n < 0 || n >= loadmodel->brush.num_planes)
-			Host_Error("Mod_Q3BSP_LoadBrushSides: invalid planeindex %i (%i planes)\n", n, loadmodel->brush.num_planes);
+			Host_Error("Mod_Q3BSP_LoadBrushSides: invalid planeindex %i (%i planes)", n, loadmodel->brush.num_planes);
 		out->plane = loadmodel->brush.data_planes + n;
 		n = LittleLong(in->textureindex);
 		if (n < 0 || n >= loadmodel->num_textures)
-			Host_Error("Mod_Q3BSP_LoadBrushSides: invalid textureindex %i (%i textures)\n", n, loadmodel->num_textures);
+			Host_Error("Mod_Q3BSP_LoadBrushSides: invalid textureindex %i (%i textures)", n, loadmodel->num_textures);
 		out->texture = loadmodel->data_textures + n;
 	}
 }
@@ -4194,12 +4194,12 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 		n = LittleLong(in->firstbrushside);
 		c = LittleLong(in->numbrushsides);
 		if (n < 0 || n + c > loadmodel->brush.num_brushsides)
-			Host_Error("Mod_Q3BSP_LoadBrushes: invalid brushside range %i : %i (%i brushsides)\n", n, n + c, loadmodel->brush.num_brushsides);
+			Host_Error("Mod_Q3BSP_LoadBrushes: invalid brushside range %i : %i (%i brushsides)", n, n + c, loadmodel->brush.num_brushsides);
 		out->firstbrushside = loadmodel->brush.data_brushsides + n;
 		out->numbrushsides = c;
 		n = LittleLong(in->textureindex);
 		if (n < 0 || n >= loadmodel->num_textures)
-			Host_Error("Mod_Q3BSP_LoadBrushes: invalid textureindex %i (%i textures)\n", n, loadmodel->num_textures);
+			Host_Error("Mod_Q3BSP_LoadBrushes: invalid textureindex %i (%i textures)", n, loadmodel->num_textures);
 		out->texture = loadmodel->data_textures + n;
 
 		// make a list of mplane_t structs to construct a colbrush from
@@ -4697,13 +4697,13 @@ static void Mod_Q3BSP_LoadModels(lump_t *l)
 		n = LittleLong(in->firstface);
 		c = LittleLong(in->numfaces);
 		if (n < 0 || n + c > loadmodel->num_surfaces)
-			Host_Error("Mod_Q3BSP_LoadModels: invalid face range %i : %i (%i faces)\n", n, n + c, loadmodel->num_surfaces);
+			Host_Error("Mod_Q3BSP_LoadModels: invalid face range %i : %i (%i faces)", n, n + c, loadmodel->num_surfaces);
 		out->firstface = n;
 		out->numfaces = c;
 		n = LittleLong(in->firstbrush);
 		c = LittleLong(in->numbrushes);
 		if (n < 0 || n + c > loadmodel->brush.num_brushes)
-			Host_Error("Mod_Q3BSP_LoadModels: invalid brush range %i : %i (%i brushes)\n", n, n + c, loadmodel->brush.num_brushes);
+			Host_Error("Mod_Q3BSP_LoadModels: invalid brush range %i : %i (%i brushes)", n, n + c, loadmodel->brush.num_brushes);
 		out->firstbrush = n;
 		out->numbrushes = c;
 	}
@@ -4728,7 +4728,7 @@ static void Mod_Q3BSP_LoadLeafBrushes(lump_t *l)
 	{
 		n = LittleLong(*in);
 		if (n < 0 || n >= loadmodel->brush.num_brushes)
-			Host_Error("Mod_Q3BSP_LoadLeafBrushes: invalid brush index %i (%i brushes)\n", n, loadmodel->brush.num_brushes);
+			Host_Error("Mod_Q3BSP_LoadLeafBrushes: invalid brush index %i (%i brushes)", n, loadmodel->brush.num_brushes);
 		*out = n;
 	}
 }
@@ -4752,7 +4752,7 @@ static void Mod_Q3BSP_LoadLeafFaces(lump_t *l)
 	{
 		n = LittleLong(*in);
 		if (n < 0 || n >= loadmodel->num_surfaces)
-			Host_Error("Mod_Q3BSP_LoadLeafFaces: invalid face index %i (%i faces)\n", n, loadmodel->num_surfaces);
+			Host_Error("Mod_Q3BSP_LoadLeafFaces: invalid face index %i (%i faces)", n, loadmodel->num_surfaces);
 		*out = n;
 	}
 }
@@ -4787,13 +4787,13 @@ static void Mod_Q3BSP_LoadLeafs(lump_t *l)
 		n = LittleLong(in->firstleafface);
 		c = LittleLong(in->numleaffaces);
 		if (n < 0 || n + c > loadmodel->brush.num_leafsurfaces)
-			Host_Error("Mod_Q3BSP_LoadLeafs: invalid leafsurface range %i : %i (%i leafsurfaces)\n", n, n + c, loadmodel->brush.num_leafsurfaces);
+			Host_Error("Mod_Q3BSP_LoadLeafs: invalid leafsurface range %i : %i (%i leafsurfaces)", n, n + c, loadmodel->brush.num_leafsurfaces);
 		out->firstleafsurface = loadmodel->brush.data_leafsurfaces + n;
 		out->numleafsurfaces = c;
 		n = LittleLong(in->firstleafbrush);
 		c = LittleLong(in->numleafbrushes);
 		if (n < 0 || n + c > loadmodel->brush.num_leafbrushes)
-			Host_Error("Mod_Q3BSP_LoadLeafs: invalid leafbrush range %i : %i (%i leafbrushes)\n", n, n + c, loadmodel->brush.num_leafbrushes);
+			Host_Error("Mod_Q3BSP_LoadLeafs: invalid leafbrush range %i : %i (%i leafbrushes)", n, n + c, loadmodel->brush.num_leafbrushes);
 		out->firstleafbrush = loadmodel->brush.data_leafbrushes + n;
 		out->numleafbrushes = c;
 	}
@@ -4819,7 +4819,7 @@ static void Mod_Q3BSP_LoadNodes(lump_t *l)
 		out->parent = NULL;
 		n = LittleLong(in->planeindex);
 		if (n < 0 || n >= loadmodel->brush.num_planes)
-			Host_Error("Mod_Q3BSP_LoadNodes: invalid planeindex %i (%i planes)\n", n, loadmodel->brush.num_planes);
+			Host_Error("Mod_Q3BSP_LoadNodes: invalid planeindex %i (%i planes)", n, loadmodel->brush.num_planes);
 		out->plane = loadmodel->brush.data_planes + n;
 		for (j = 0;j < 2;j++)
 		{
@@ -4827,14 +4827,14 @@ static void Mod_Q3BSP_LoadNodes(lump_t *l)
 			if (n >= 0)
 			{
 				if (n >= loadmodel->brush.num_nodes)
-					Host_Error("Mod_Q3BSP_LoadNodes: invalid child node index %i (%i nodes)\n", n, loadmodel->brush.num_nodes);
+					Host_Error("Mod_Q3BSP_LoadNodes: invalid child node index %i (%i nodes)", n, loadmodel->brush.num_nodes);
 				out->children[j] = loadmodel->brush.data_nodes + n;
 			}
 			else
 			{
 				n = -1 - n;
 				if (n >= loadmodel->brush.num_leafs)
-					Host_Error("Mod_Q3BSP_LoadNodes: invalid child leaf index %i (%i leafs)\n", n, loadmodel->brush.num_leafs);
+					Host_Error("Mod_Q3BSP_LoadNodes: invalid child leaf index %i (%i leafs)", n, loadmodel->brush.num_leafs);
 				out->children[j] = (mnode_t *)(loadmodel->brush.data_leafs + n);
 			}
 		}
@@ -4879,9 +4879,9 @@ static void Mod_Q3BSP_LoadLightGrid(lump_t *l)
 	if (l->filelen)
 	{
 		if (l->filelen < count * (int)sizeof(*in))
-			Host_Error("Mod_Q3BSP_LoadLightGrid: invalid lightgrid lump size %i bytes, should be %i bytes (%ix%ix%i)\n", l->filelen, count * sizeof(*in), loadmodel->brushq3.num_lightgrid_dimensions[0], loadmodel->brushq3.num_lightgrid_dimensions[1], loadmodel->brushq3.num_lightgrid_dimensions[2]);
+			Host_Error("Mod_Q3BSP_LoadLightGrid: invalid lightgrid lump size %i bytes, should be %i bytes (%ix%ix%i)", l->filelen, count * sizeof(*in), loadmodel->brushq3.num_lightgrid_dimensions[0], loadmodel->brushq3.num_lightgrid_dimensions[1], loadmodel->brushq3.num_lightgrid_dimensions[2]);
 		if (l->filelen != count * (int)sizeof(*in))
-			Con_Printf("Mod_Q3BSP_LoadLightGrid: Warning: calculated lightgrid size %i bytes does not match lump size %i\n", count * sizeof(*in), l->filelen);
+			Con_Printf("Mod_Q3BSP_LoadLightGrid: Warning: calculated lightgrid size %i bytes does not match lump size %i", count * sizeof(*in), l->filelen);
 		out = (q3dlightgrid_t *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 		loadmodel->brushq3.data_lightgrid = out;
 		loadmodel->brushq3.num_lightgrid = count;
@@ -4919,10 +4919,10 @@ static void Mod_Q3BSP_LoadPVS(lump_t *l)
 	loadmodel->brush.num_pvsclusters = LittleLong(in->numclusters);
 	loadmodel->brush.num_pvsclusterbytes = LittleLong(in->chainlength);
 	if (loadmodel->brush.num_pvsclusterbytes < ((loadmodel->brush.num_pvsclusters + 7) / 8))
-		Host_Error("Mod_Q3BSP_LoadPVS: (chainlength = %i) < ((numclusters = %i) + 7) / 8\n", loadmodel->brush.num_pvsclusterbytes, loadmodel->brush.num_pvsclusters);
+		Host_Error("Mod_Q3BSP_LoadPVS: (chainlength = %i) < ((numclusters = %i) + 7) / 8", loadmodel->brush.num_pvsclusterbytes, loadmodel->brush.num_pvsclusters);
 	totalchains = loadmodel->brush.num_pvsclusterbytes * loadmodel->brush.num_pvsclusters;
 	if (l->filelen < totalchains + (int)sizeof(*in))
-		Host_Error("Mod_Q3BSP_LoadPVS: lump too small ((numclusters = %i) * (chainlength = %i) + sizeof(q3dpvs_t) == %i bytes, lump is %i bytes)\n", loadmodel->brush.num_pvsclusters, loadmodel->brush.num_pvsclusterbytes, totalchains + sizeof(*in), l->filelen);
+		Host_Error("Mod_Q3BSP_LoadPVS: lump too small ((numclusters = %i) * (chainlength = %i) + sizeof(q3dpvs_t) == %i bytes, lump is %i bytes)", loadmodel->brush.num_pvsclusters, loadmodel->brush.num_pvsclusterbytes, totalchains + sizeof(*in), l->filelen);
 
 	loadmodel->brush.data_pvsclusters = (unsigned char *)Mem_Alloc(loadmodel->mempool, totalchains);
 	memcpy(loadmodel->brush.data_pvsclusters, (unsigned char *)(in + 1), totalchains);
@@ -5827,11 +5827,11 @@ void Mod_IBSP_Load(model_t *mod, void *buffer, void *bufferend)
 	else if (i == Q2BSPVERSION)
 		Mod_Q2BSP_Load(mod,buffer, bufferend);
 	else
-		Host_Error("Mod_IBSP_Load: unknown/unsupported version %i\n", i);
+		Host_Error("Mod_IBSP_Load: unknown/unsupported version %i", i);
 }
 
 void Mod_MAP_Load(model_t *mod, void *buffer, void *bufferend)
 {
-	Host_Error("Mod_MAP_Load: not yet implemented\n");
+	Host_Error("Mod_MAP_Load: not yet implemented");
 }
 

@@ -73,7 +73,7 @@ void GL_PrintError(int errornumber, char *filename, int linenumber)
 }
 #endif
 
-#define BACKENDACTIVECHECK if (!backendactive) Sys_Error("GL backend function called when backend is not active\n");
+#define BACKENDACTIVECHECK if (!backendactive) Sys_Error("GL backend function called when backend is not active");
 
 void SCR_ScreenShot_f (void);
 
