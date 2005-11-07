@@ -294,7 +294,7 @@ void Cvar_RegisterVariable (cvar_t *variable)
 		if (cvar->flags & CVAR_ALLOCATED)
 		{
 			if (developer.integer)
-				Con_Printf("...  replacing existing allocated cvar {\"%s\", \"%s\", %i}", cvar->name, cvar->string, cvar->flags);
+				Con_Printf("...  replacing existing allocated cvar {\"%s\", \"%s\", %i}\n", cvar->name, cvar->string, cvar->flags);
 			// fixed variables replace allocated ones
 			// (because the engine directly accesses fixed variables)
 			// NOTE: this isn't actually used currently
@@ -505,10 +505,10 @@ void Cvar_List_f (void)
 		count++;
 	}
 
-	Con_Printf("%i cvar(s)", count);
 	if (partial)
-		Con_Printf(" beginning with \"%s\"", partial);
-	Con_Print("\n");
+		Con_Printf("%i cvar(s) beginning with \"%s\"\n", count, partial);
+	else
+		Con_Printf("%i cvar(s)\n", count);
 }
 // 2000-01-09 CvarList command by Maddes
 

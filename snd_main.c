@@ -259,7 +259,7 @@ sfx_t *S_FindName (const char *name)
 
 	if (strlen (name) >= sizeof (sfx->name))
 	{
-		Con_Printf ("S_FindName: sound name too long (%s)", name);
+		Con_Printf ("S_FindName: sound name too long (%s)\n", name);
 		return NULL;
 	}
 

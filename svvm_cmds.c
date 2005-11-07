@@ -1141,7 +1141,7 @@ sizebuf_t *WriteDest (void)
 			return &svs.clients[entnum-1].message;
 
 	default:
-		Con_Printf ("WriteDest: bad destination");
+		Con_Printf ("WriteDest: bad destination\n");
 	case MSG_ALL:
 		return &sv.reliable_datagram;
 

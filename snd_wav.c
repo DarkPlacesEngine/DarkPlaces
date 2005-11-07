@@ -205,7 +205,7 @@ static wavinfo_t GetWavinfo (char *name, unsigned char *wav, int wavlength)
 	{
 		if (samples < info.samples)
 		{
-			Con_Printf ("Sound %s has a bad loop length", name);
+			Con_Printf ("Sound %s has a bad loop length\n", name);
 			info.samples = samples;
 		}
 	}

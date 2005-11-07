@@ -177,7 +177,7 @@ void Host_ServerOptions (void)
 		if (i && i + 1 < com_argc && atoi (com_argv[i+1]) >= 1)
 			svs.maxclients = atoi (com_argv[i+1]);
 		if (COM_CheckParm ("-listen"))
-			Con_Printf ("Only one of -dedicated or -listen can be specified");
+			Con_Printf ("Only one of -dedicated or -listen can be specified\n");
 		// default sv_public on for dedicated servers (often hosted by serious administrators), off for listen servers (often hosted by clueless users)
 		Cvar_SetValue("sv_public", 1);
 	}

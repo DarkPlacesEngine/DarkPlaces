@@ -209,19 +209,19 @@ void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int v
 
 	if (volume < 0 || volume > 255)
 	{
-		Con_Printf ("SV_StartSound: volume = %i", volume);
+		Con_Printf ("SV_StartSound: volume = %i\n", volume);
 		return;
 	}
 
 	if (attenuation < 0 || attenuation > 4)
 	{
-		Con_Printf ("SV_StartSound: attenuation = %f", attenuation);
+		Con_Printf ("SV_StartSound: attenuation = %f\n", attenuation);
 		return;
 	}
 
 	if (channel < 0 || channel > 7)
 	{
-		Con_Printf ("SV_StartSound: channel = %i", channel);
+		Con_Printf ("SV_StartSound: channel = %i\n", channel);
 		return;
 	}
 

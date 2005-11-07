@@ -1390,7 +1390,7 @@ static void SV_Physics_Entity (prvm_edict_t *ent, qboolean runmove)
 			SV_Physics_Toss (ent);
 		break;
 	default:
-		Con_Printf ("SV_Physics: bad movetype %i", (int)ent->fields.server->movetype);
+		Con_Printf ("SV_Physics: bad movetype %i\n", (int)ent->fields.server->movetype);
 		break;
 	}
 }
@@ -1472,7 +1472,7 @@ void SV_Physics_ClientEntity (prvm_edict_t *ent)
 		}
 		break;
 	default:
-		Con_Printf ("SV_Physics_ClientEntity: bad movetype %i", (int)ent->fields.server->movetype);
+		Con_Printf ("SV_Physics_ClientEntity: bad movetype %i\n", (int)ent->fields.server->movetype);
 		break;
 	}
 
