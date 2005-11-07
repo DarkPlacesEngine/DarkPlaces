@@ -152,7 +152,7 @@ void VM_objerror (void)
 	}
 	else
 		// objerror has to display the object fields -> else call
-		PRVM_ERROR ("VM_objecterror: self not defined !\n");
+		PRVM_ERROR ("VM_objecterror: self not defined !");
 }
 
 /*
@@ -508,7 +508,7 @@ void VM_cvar_string(void)
 	name = PRVM_G_STRING(OFS_PARM0);
 
 	if(!name)
-		PRVM_ERROR("VM_cvar_string: %s: null string\n", PRVM_NAME);
+		PRVM_ERROR("VM_cvar_string: %s: null string", PRVM_NAME);
 
 	VM_CheckEmptyString(name);
 
@@ -539,7 +539,7 @@ void VM_cvar_defstring (void)
 	name = PRVM_G_STRING(OFS_PARM0);
 
 	if(!name)
-		PRVM_ERROR("VM_cvar_defstring: %s: null string\n", PRVM_NAME);
+		PRVM_ERROR("VM_cvar_defstring: %s: null string", PRVM_NAME);
 
 	VM_CheckEmptyString(name);
 
@@ -708,7 +708,7 @@ void VM_ftoi(void)
 
 	ent = PRVM_G_FLOAT(OFS_PARM0);
 	if(PRVM_PROG_TO_EDICT(ent)->priv.required->free)
-		PRVM_ERROR ("VM_ftoe: %s tried to access a freed entity (entity %i)!\n", PRVM_NAME, ent);
+		PRVM_ERROR ("VM_ftoe: %s tried to access a freed entity (entity %i)!", PRVM_NAME, ent);
 
 	PRVM_G_INT(OFS_RETURN) = ent;
 }
@@ -753,9 +753,9 @@ void VM_remove (void)
 		PRVM_ED_Free (ed);
 	}
 //	if (ed == prog->edicts)
-//		PRVM_ERROR ("remove: tried to remove world\n");
+//		PRVM_ERROR ("remove: tried to remove world");
 //	if (PRVM_NUM_FOR_EDICT(ed) <= sv.maxclients)
-//		Host_Error("remove: tried to remove a client\n");
+//		Host_Error("remove: tried to remove a client");
 }
 
 /*
@@ -864,7 +864,7 @@ void VM_findchain (void)
 
 	// is the same like !(prog->flag & PRVM_FE_CHAIN) - even if the operator precedence is another
 	if(!prog->flag & PRVM_FE_CHAIN)
-		PRVM_ERROR("VM_findchain: %s doesnt have a chain field !\n", PRVM_NAME);
+		PRVM_ERROR("VM_findchain: %s doesnt have a chain field !", PRVM_NAME);
 
 	chain_of = PRVM_ED_FindField("chain")->ofs;
 
@@ -918,7 +918,7 @@ void VM_findchainfloat (void)
 	VM_SAFEPARMCOUNT(2, VM_findchainfloat);
 
 	if(!prog->flag & PRVM_FE_CHAIN)
-		PRVM_ERROR("VM_findchainfloat: %s doesnt have a chain field !\n", PRVM_NAME);
+		PRVM_ERROR("VM_findchainfloat: %s doesnt have a chain field !", PRVM_NAME);
 
 	chain_of = PRVM_ED_FindField("chain")->ofs;
 
@@ -1000,7 +1000,7 @@ void VM_findchainflags (void)
 	VM_SAFEPARMCOUNT(2, VM_findchainflags);
 
 	if(!prog->flag & PRVM_FE_CHAIN)
-		PRVM_ERROR("VM_findchainflags: %s doesnt have a chain field !\n", PRVM_NAME);
+		PRVM_ERROR("VM_findchainflags: %s doesnt have a chain field !", PRVM_NAME);
 
 	chain_of = PRVM_ED_FindField("chain")->ofs;
 
@@ -1068,7 +1068,7 @@ void VM_crash(void)
 {
 	VM_SAFEPARMCOUNT(0, VM_crash);
 
-	PRVM_ERROR("Crash called by %s\n",PRVM_NAME);
+	PRVM_ERROR("Crash called by %s",PRVM_NAME);
 }
 
 /*
@@ -1362,7 +1362,7 @@ void VM_min (void)
 		PRVM_G_FLOAT(OFS_RETURN) = f;
 	}
 	else
-		PRVM_ERROR("VM_min: %s must supply at least 2 floats\n", PRVM_NAME);
+		PRVM_ERROR("VM_min: %s must supply at least 2 floats", PRVM_NAME);
 }
 
 /*
@@ -1389,7 +1389,7 @@ void VM_max (void)
 		PRVM_G_FLOAT(OFS_RETURN) = f;
 	}
 	else
-		PRVM_ERROR("VM_max: %s must supply at least 2 floats\n", PRVM_NAME);
+		PRVM_ERROR("VM_max: %s must supply at least 2 floats", PRVM_NAME);
 }
 
 /*
@@ -1724,7 +1724,7 @@ void VM_strcat(void)
 	char *s;
 
 	if(prog->argc < 1)
-		PRVM_ERROR("VM_strcat wrong parameter count (min. 1 expected ) !\n");
+		PRVM_ERROR("VM_strcat wrong parameter count (min. 1 expected ) !");
 
 	s = VM_GetTempString();
 	VM_VarString(0, s, VM_STRINGTEMP_LENGTH);
@@ -2070,13 +2070,13 @@ void VM_parseentitydata(void)
     // get edict and test it
 	ent = PRVM_G_EDICT(OFS_PARM0);
 	if (ent->priv.required->free)
-		PRVM_ERROR ("VM_parseentitydata: %s: Can only set already spawned entities (entity %i is free)!\n", PRVM_NAME, PRVM_NUM_FOR_EDICT(ent));
+		PRVM_ERROR ("VM_parseentitydata: %s: Can only set already spawned entities (entity %i is free)!", PRVM_NAME, PRVM_NUM_FOR_EDICT(ent));
 
 	data = PRVM_G_STRING(OFS_PARM1);
 
     // parse the opening brace
 	if (!COM_ParseToken(&data, false) || com_token[0] != '{' )
-		PRVM_ERROR ("VM_parseentitydata: %s: Couldn't parse entity data:\n%s\n", PRVM_NAME, data );
+		PRVM_ERROR ("VM_parseentitydata: %s: Couldn't parse entity data:\n%s", PRVM_NAME, data );
 
 	PRVM_ED_ParseEdict (data, ent);
 }
@@ -2340,7 +2340,7 @@ void VM_precache_pic(void)
 	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
 
 	if(!s)
-		PRVM_ERROR ("VM_precache_pic: %s: NULL\n", PRVM_NAME);
+		PRVM_ERROR ("VM_precache_pic: %s: NULL", PRVM_NAME);
 
 	VM_CheckEmptyString (s);
 
@@ -2365,7 +2365,7 @@ void VM_freepic(void)
 	s = PRVM_G_STRING(OFS_PARM0);
 
 	if(!s)
-		PRVM_ERROR ("VM_freepic: %s: NULL\n");
+		PRVM_ERROR ("VM_freepic: %s: NULL");
 
 	VM_CheckEmptyString (s);
 
@@ -2607,7 +2607,7 @@ void VM_getimagesize(void)
 	p = PRVM_G_STRING(OFS_PARM0);
 
 	if(!p)
-		PRVM_ERROR("VM_getimagepos: %s passed null picture name !\n", PRVM_NAME);
+		PRVM_ERROR("VM_getimagepos: %s passed null picture name !", PRVM_NAME);
 
 	VM_CheckEmptyString (p);
 

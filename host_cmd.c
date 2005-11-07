@@ -680,7 +680,7 @@ void Host_Loadgame_f (void)
 			if (entnum >= MAX_EDICTS)
 			{
 				Mem_Free(text);
-				Host_Error("Host_PerformLoadGame: too many edicts in save file (reached MAX_EDICTS %i)\n", MAX_EDICTS);
+				Host_Error("Host_PerformLoadGame: too many edicts in save file (reached MAX_EDICTS %i)", MAX_EDICTS);
 			}
 			while (entnum >= prog->max_edicts)
 				//SV_IncreaseEdicts();

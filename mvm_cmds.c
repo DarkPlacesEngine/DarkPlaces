@@ -74,7 +74,7 @@ void VM_M_setmousetarget(void)
 		in_client_mouse = true;
 		break;
 	default:
-		PRVM_ERROR("VM_M_setmousetarget: wrong destination %f !\n",PRVM_G_FLOAT(OFS_PARM0));
+		PRVM_ERROR("VM_M_setmousetarget: wrong destination %f !",PRVM_G_FLOAT(OFS_PARM0));
 	}
 }
 
@@ -123,7 +123,7 @@ void VM_M_setkeydest(void)
 		// key_dest = key_message
 		// break;
 	default:
-		PRVM_ERROR("VM_M_setkeydest: wrong destination %f !\n", PRVM_G_FLOAT(OFS_PARM0));
+		PRVM_ERROR("VM_M_setkeydest: wrong destination %f !", PRVM_G_FLOAT(OFS_PARM0));
 	}
 }
 
@@ -171,19 +171,19 @@ void VM_M_callfunction(void)
 	const char *s;
 
 	if(prog->argc == 0)
-		PRVM_ERROR("VM_M_callfunction: 1 parameter is required !\n");
+		PRVM_ERROR("VM_M_callfunction: 1 parameter is required !");
 
 	s = PRVM_G_STRING(OFS_PARM0 + (prog->argc - 1));
 
 	if(!s)
-		PRVM_ERROR("VM_M_callfunction: null string !\n");
+		PRVM_ERROR("VM_M_callfunction: null string !");
 
 	VM_CheckEmptyString(s);
 
 	func = PRVM_ED_FindFunction(s);
 
 	if(!func)
-		PRVM_ERROR("VM_M_callfunciton: function %s not found !\n", s);
+		PRVM_ERROR("VM_M_callfunciton: function %s not found !", s);
 	else if (func->first_statement < 0)
 	{
 		// negative statements are built in functions
@@ -220,7 +220,7 @@ void VM_M_isfunction(void)
 	s = PRVM_G_STRING(OFS_PARM0);
 
 	if(!s)
-		PRVM_ERROR("VM_M_isfunction: null string !\n");
+		PRVM_ERROR("VM_M_isfunction: null string !");
 
 	VM_CheckEmptyString(s);
 
@@ -743,7 +743,7 @@ sizebuf_t *VM_WriteDest (void)
 	int		destclient;
 
 	if(!sv.active)
-		PRVM_ERROR("VM_WriteDest: game is not server (%s)\n", PRVM_NAME);
+		PRVM_ERROR("VM_WriteDest: game is not server (%s)", PRVM_NAME);
 
 	dest = PRVM_G_FLOAT(OFS_PARM1);
 	switch (dest)
@@ -754,7 +754,7 @@ sizebuf_t *VM_WriteDest (void)
 	case MSG_ONE:
 		destclient = (int) PRVM_G_FLOAT(OFS_PARM2);
 		if (destclient < 0 || destclient >= svs.maxclients || !svs.clients[destclient].active)
-			PRVM_ERROR("VM_clientcommand: %s: invalid client !\n", PRVM_NAME);
+			PRVM_ERROR("VM_clientcommand: %s: invalid client !", PRVM_NAME);
 
 		return &svs.clients[destclient].message;
 

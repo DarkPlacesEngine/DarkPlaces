@@ -298,7 +298,7 @@ int PR_EnterFunction (mfunction_t *f)
 	int		i, j, c, o;
 
 	if (!f)
-		Host_Error ("PR_EnterFunction: NULL function\n");
+		Host_Error ("PR_EnterFunction: NULL function");
 
 	pr_stack[pr_depth].s = pr_xstatement;
 	pr_stack[pr_depth].f = pr_xfunction;
@@ -309,7 +309,7 @@ int PR_EnterFunction (mfunction_t *f)
 // save off any locals that the new function steps on
 	c = f->locals;
 	if (localstack_used + c > LOCALSTACK_SIZE)
-		Host_Error ("PRVM_ExecuteProgram: locals stack overflow\n");
+		Host_Error ("PRVM_ExecuteProgram: locals stack overflow");
 
 	for (i=0 ; i < c ; i++)
 		localstack[localstack_used+i] = ((int *)pr_globals)[f->parm_start + i];
@@ -343,12 +343,12 @@ int PR_LeaveFunction (void)
 		Host_Error ("prog stack underflow");
 
 	if (!pr_xfunction)
-		Host_Error ("PR_LeaveFunction: NULL function\n");
+		Host_Error ("PR_LeaveFunction: NULL function");
 // restore locals from the stack
 	c = pr_xfunction->locals;
 	localstack_used -= c;
 	if (localstack_used < 0)
-		Host_Error ("PRVM_ExecuteProgram: locals stack underflow\n");
+		Host_Error ("PRVM_ExecuteProgram: locals stack underflow");
 
 	for (i=0 ; i < c ; i++)
 		((int *)pr_globals)[pr_xfunction->parm_start + i] = localstack[localstack_used+i];

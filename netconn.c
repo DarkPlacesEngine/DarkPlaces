@@ -710,7 +710,7 @@ void NetConn_OpenServerPorts(int opennetports)
 		//NetConn_OpenServerPort(net_address_ipv6.string, port);
 	}
 	if (sv_numsockets == 0)
-		Host_Error("NetConn_OpenServerPorts: unable to open any ports!\n");
+		Host_Error("NetConn_OpenServerPorts: unable to open any ports!");
 }
 
 lhnetsocket_t *NetConn_ChooseClientSocketForAddress(lhnetaddress_t *address)

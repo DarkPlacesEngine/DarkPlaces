@@ -737,7 +737,7 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 	int depth;
 
 	if (vid_initialized)
-		Sys_Error("VID_InitMode called when video is already initialised\n");
+		Sys_Error("VID_InitMode called when video is already initialised");
 
 	// if stencil is enabled, ask for alpha too
 	if (bpp >= 32)

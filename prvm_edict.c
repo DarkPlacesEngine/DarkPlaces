@@ -172,10 +172,10 @@ void PRVM_SetProg(int prognr)
 		if(prog_list[prognr].loaded)
 			prog = &prog_list[prognr];
 		else
-			PRVM_ERROR("%i not loaded !\n", prognr);
+			PRVM_ERROR("%i not loaded !", prognr);
 		return;
 	}
-	PRVM_ERROR("Invalid program number %i\n", prognr);
+	PRVM_ERROR("Invalid program number %i", prognr);
 }
 
 /*
@@ -1285,7 +1285,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	fs_offset_t filesize;
 
 	if( prog->loaded ) {
-		PRVM_ERROR ("PRVM_LoadProgs: there is already a %s program loaded!\n", PRVM_NAME );
+		PRVM_ERROR ("PRVM_LoadProgs: there is already a %s program loaded!", PRVM_NAME );
 	}
 
 	prog->progs = (dprograms_t *)FS_LoadFile (filename, prog->progs_mempool, false, &filesize);
@@ -1313,7 +1313,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	for (i = 0;i < prog->progs->numstrings;i++)
 	{
 		if (prog->progs->ofs_strings + prog->stringssize >= (int)filesize)
-			PRVM_ERROR ("%s: %s strings go past end of file\n", PRVM_NAME, filename);
+			PRVM_ERROR ("%s: %s strings go past end of file", PRVM_NAME, filename);
 		prog->stringssize += (int)strlen (prog->strings + prog->stringssize) + 1;
 	}
 	prog->numknownstrings = 0;
@@ -1390,7 +1390,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	// check required functions
 	for(i=0 ; i < numrequiredfunc ; i++)
 		if(PRVM_ED_FindFunction(required_func[i]) == 0)
-			PRVM_ERROR("%s: %s not found in %s\n",PRVM_NAME, required_func[i], filename);
+			PRVM_ERROR("%s: %s not found in %s",PRVM_NAME, required_func[i], filename);
 
 	for (i=0 ; i<prog->progs->numglobals ; i++)
 		((int *)prog->globals.generic)[i] = LittleLong (((int *)prog->globals.generic)[i]);
@@ -1408,11 +1408,11 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 		case OP_IF:
 		case OP_IFNOT:
 			if ((unsigned short) st->a >= prog->progs->numglobals || st->b + i < 0 || st->b + i >= prog->progs->numstatements)
-				PRVM_ERROR("PRVM_LoadProgs: out of bounds IF/IFNOT (statement %d) in %s\n", i, PRVM_NAME);
+				PRVM_ERROR("PRVM_LoadProgs: out of bounds IF/IFNOT (statement %d) in %s", i, PRVM_NAME);
 			break;
 		case OP_GOTO:
 			if (st->a + i < 0 || st->a + i >= prog->progs->numstatements)
-				PRVM_ERROR("PRVM_LoadProgs: out of bounds GOTO (statement %d) in %s\n", i, PRVM_NAME);
+				PRVM_ERROR("PRVM_LoadProgs: out of bounds GOTO (statement %d) in %s", i, PRVM_NAME);
 			break;
 		// global global global
 		case OP_ADD_F:
@@ -1450,7 +1450,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 		case OP_LOAD_FNC:
 		case OP_LOAD_V:
 			if ((unsigned short) st->a >= prog->progs->numglobals || (unsigned short) st->b >= prog->progs->numglobals || (unsigned short) st->c >= prog->progs->numglobals)
-				PRVM_ERROR("PRVM_LoadProgs: out of bounds global index (statement %d)\n", i);
+				PRVM_ERROR("PRVM_LoadProgs: out of bounds global index (statement %d)", i);
 			break;
 		// global none global
 		case OP_NOT_F:
@@ -1459,7 +1459,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 		case OP_NOT_FNC:
 		case OP_NOT_ENT:
 			if ((unsigned short) st->a >= prog->progs->numglobals || (unsigned short) st->c >= prog->progs->numglobals)
-				PRVM_ERROR("PRVM_LoadProgs: out of bounds global index (statement %d) in %s\n", i, PRVM_NAME);
+				PRVM_ERROR("PRVM_LoadProgs: out of bounds global index (statement %d) in %s", i, PRVM_NAME);
 			break;
 		// 2 globals
 		case OP_STOREP_F:
@@ -1476,7 +1476,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 		case OP_STOREP_V:
 		case OP_STORE_V:
 			if ((unsigned short) st->a >= prog->progs->numglobals || (unsigned short) st->b >= prog->progs->numglobals)
-				PRVM_ERROR("PRVM_LoadProgs: out of bounds global index (statement %d)\n in %s", i, PRVM_NAME);
+				PRVM_ERROR("PRVM_LoadProgs: out of bounds global index (statement %d) in %s", i, PRVM_NAME);
 			break;
 		// 1 global
 		case OP_CALL0:
@@ -1491,10 +1491,10 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 		case OP_DONE:
 		case OP_RETURN:
 			if ((unsigned short) st->a >= prog->progs->numglobals)
-				PRVM_ERROR("PRVM_LoadProgs: out of bounds global index (statement %d) in %s\n", i, PRVM_NAME);
+				PRVM_ERROR("PRVM_LoadProgs: out of bounds global index (statement %d) in %s", i, PRVM_NAME);
 			break;
 		default:
-			PRVM_ERROR("PRVM_LoadProgs: unknown opcode %d at statement %d in %s\n", st->op, i, PRVM_NAME);
+			PRVM_ERROR("PRVM_LoadProgs: unknown opcode %d at statement %d in %s", st->op, i, PRVM_NAME);
 			break;
 		}
 	}
@@ -1763,7 +1763,7 @@ PRVM_InitProg
 void PRVM_InitProg(int prognr)
 {
 	if(prognr < 0 || prognr >= PRVM_MAXPROGS)
-		Sys_Error("PRVM_InitProg: Invalid program number %i\n",prognr);
+		Sys_Error("PRVM_InitProg: Invalid program number %i",prognr);
 
 	prog = &prog_list[prognr];
 
@@ -1834,14 +1834,14 @@ int PRVM_EDICT_TO_PROG(prvm_edict_t *e)
 	int n;
 	n = e - prog->edicts;
 	if ((unsigned int)n >= (unsigned int)prog->max_edicts)
-		Host_Error("PRVM_EDICT_TO_PROG: invalid edict %8p (number %i compared to world at %8p)\n", e, n, prog->edicts);
+		Host_Error("PRVM_EDICT_TO_PROG: invalid edict %8p (number %i compared to world at %8p)", e, n, prog->edicts);
 	return n;// EXPERIMENTAL
 	//return (unsigned char *)e->v - (unsigned char *)prog->edictsfields;
 }
 prvm_edict_t *PRVM_PROG_TO_EDICT(int n)
 {
 	if ((unsigned int)n >= (unsigned int)prog->max_edicts)
-		Host_Error("PRVM_PROG_TO_EDICT: invalid edict number %i\n", n);
+		Host_Error("PRVM_PROG_TO_EDICT: invalid edict number %i", n);
 	return prog->edicts + n; // EXPERIMENTAL
 	//return prog->edicts + ((n) / (progs->entityfields * 4));
 }
@@ -1856,12 +1856,12 @@ const char *PRVM_GetString(int num)
 	{
 		num = -1 - num;
 		if (!prog->knownstrings[num])
-			PRVM_ERROR("PRVM_GetString: attempt to get string that is already freed\n");
+			PRVM_ERROR("PRVM_GetString: attempt to get string that is already freed");
 		return prog->knownstrings[num];
 	}
 	else
 	{
-		PRVM_ERROR("PRVM_GetString: invalid string offset %i\n", num);
+		PRVM_ERROR("PRVM_GetString: invalid string offset %i", num);
 		return "";
 	}
 }
@@ -1872,7 +1872,7 @@ int PRVM_SetEngineString(const char *s)
 	if (!s)
 		return 0;
 	if (s >= prog->strings && s <= prog->strings + prog->stringssize)
-		PRVM_ERROR("PRVM_SetEngineString: s in prog->strings area\n");
+		PRVM_ERROR("PRVM_SetEngineString: s in prog->strings area");
 	for (i = 0;i < prog->numknownstrings;i++)
 		if (prog->knownstrings[i] == s)
 			return -1 - i;
@@ -1940,22 +1940,22 @@ int PRVM_AllocString(size_t bufferlength, char **pointer)
 void PRVM_FreeString(int num)
 {
 	if (num == 0)
-		PRVM_ERROR("PRVM_FreeString: attempt to free a NULL string\n");
+		PRVM_ERROR("PRVM_FreeString: attempt to free a NULL string");
 	else if (num >= 0 && num < prog->stringssize)
-		PRVM_ERROR("PRVM_FreeString: attempt to free a constant string\n");
+		PRVM_ERROR("PRVM_FreeString: attempt to free a constant string");
 	else if (num < 0 && num >= -prog->numknownstrings)
 	{
 		num = -1 - num;
 		if (!prog->knownstrings[num])
-			PRVM_ERROR("PRVM_FreeString: attempt to free a non-existent or already freed string\n");
+			PRVM_ERROR("PRVM_FreeString: attempt to free a non-existent or already freed string");
 		if (!prog->knownstrings[num])
-			PRVM_ERROR("PRVM_FreeString: attempt to free a string owned by the engine\n");
+			PRVM_ERROR("PRVM_FreeString: attempt to free a string owned by the engine");
 		PRVM_Free((char *)prog->knownstrings[num]);
 		prog->knownstrings[num] = NULL;
 		prog->knownstrings_freeable[num] = false;
 		prog->firstfreeknownstring = min(prog->firstfreeknownstring, num);
 	}
 	else
-		PRVM_ERROR("PRVM_FreeString: invalid string offset %i\n", num);
+		PRVM_ERROR("PRVM_FreeString: invalid string offset %i", num);
 }
 

@@ -310,7 +310,7 @@ int PRVM_EnterFunction (mfunction_t *f)
 	int		i, j, c, o;
 
 	if (!f)
-		PRVM_ERROR ("PRVM_EnterFunction: NULL function in %s\n", PRVM_NAME);
+		PRVM_ERROR ("PRVM_EnterFunction: NULL function in %s", PRVM_NAME);
 
 	prog->stack[prog->depth].s = prog->xstatement;
 	prog->stack[prog->depth].f = prog->xfunction;
@@ -321,7 +321,7 @@ int PRVM_EnterFunction (mfunction_t *f)
 // save off any locals that the new function steps on
 	c = f->locals;
 	if (prog->localstack_used + c > PRVM_LOCALSTACK_SIZE)
-		PRVM_ERROR ("PRVM_ExecuteProgram: locals stack overflow in %s\n", PRVM_NAME);
+		PRVM_ERROR ("PRVM_ExecuteProgram: locals stack overflow in %s", PRVM_NAME);
 
 	for (i=0 ; i < c ; i++)
 		prog->localstack[prog->localstack_used+i] = ((int *)prog->globals.generic)[f->parm_start + i];
@@ -355,12 +355,12 @@ int PRVM_LeaveFunction (void)
 		PRVM_ERROR ("prog stack underflow in %s", PRVM_NAME);
 
 	if (!prog->xfunction)
-		PRVM_ERROR ("PR_LeaveFunction: NULL function in %s\n", PRVM_NAME);
+		PRVM_ERROR ("PR_LeaveFunction: NULL function in %s", PRVM_NAME);
 // restore locals from the stack
 	c = prog->xfunction->locals;
 	prog->localstack_used -= c;
 	if (prog->localstack_used < 0)
-		PRVM_ERROR ("PRVM_ExecuteProgram: locals stack underflow in %s\n", PRVM_NAME);
+		PRVM_ERROR ("PRVM_ExecuteProgram: locals stack underflow in %s", PRVM_NAME);
 
 	for (i=0 ; i < c ; i++)
 		((int *)prog->globals.generic)[prog->xfunction->parm_start + i] = prog->localstack[prog->localstack_used+i];

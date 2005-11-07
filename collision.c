@@ -511,7 +511,7 @@ colbrushf_t *Collision_AllocBrushFromPermanentPolygonFloat(mempool_t *mempool, i
 	brush->numplanes = numpoints + 2;
 	brush->planes = (colplanef_t *)(brush + 1);
 	brush->points = (colpointf_t *)points;
-	Sys_Error("Collision_AllocBrushFromPermanentPolygonFloat: FIXME: this code needs to be updated to generate a mesh...\n");
+	Sys_Error("Collision_AllocBrushFromPermanentPolygonFloat: FIXME: this code needs to be updated to generate a mesh...");
 	return brush;
 }
 

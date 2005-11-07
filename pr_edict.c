@@ -1309,7 +1309,7 @@ void PR_LoadProgs (const char *progsname)
 	for (i = 0;i < progs->numstrings;i++)
 	{
 		if (progs->ofs_strings + pr_stringssize >= filesize)
-			Host_Error ("progs.dat strings go past end of file\n");
+			Host_Error ("progs.dat strings go past end of file");
 		pr_stringssize += strlen (pr_strings + pr_stringssize) + 1;
 	}
 	pr_numknownstrings = 0;
@@ -1397,11 +1397,11 @@ void PR_LoadProgs (const char *progsname)
 		case OP_IF:
 		case OP_IFNOT:
 			if ((unsigned short) st->a >= progs->numglobals || st->b + i < 0 || st->b + i >= progs->numstatements)
-				Host_Error("PR_LoadProgs: out of bounds IF/IFNOT (statement %d)\n", i);
+				Host_Error("PR_LoadProgs: out of bounds IF/IFNOT (statement %d)", i);
 			break;
 		case OP_GOTO:
 			if (st->a + i < 0 || st->a + i >= progs->numstatements)
-				Host_Error("PR_LoadProgs: out of bounds GOTO (statement %d)\n", i);
+				Host_Error("PR_LoadProgs: out of bounds GOTO (statement %d)", i);
 			break;
 		// global global global
 		case OP_ADD_F:
@@ -1439,7 +1439,7 @@ void PR_LoadProgs (const char *progsname)
 		case OP_LOAD_FNC:
 		case OP_LOAD_V:
 			if ((unsigned short) st->a >= progs->numglobals || (unsigned short) st->b >= progs->numglobals || (unsigned short) st->c >= progs->numglobals)
-				Host_Error("PR_LoadProgs: out of bounds global index (statement %d)\n", i);
+				Host_Error("PR_LoadProgs: out of bounds global index (statement %d)", i);
 			break;
 		// global none global
 		case OP_NOT_F:
@@ -1448,7 +1448,7 @@ void PR_LoadProgs (const char *progsname)
 		case OP_NOT_FNC:
 		case OP_NOT_ENT:
 			if ((unsigned short) st->a >= progs->numglobals || (unsigned short) st->c >= progs->numglobals)
-				Host_Error("PR_LoadProgs: out of bounds global index (statement %d)\n", i);
+				Host_Error("PR_LoadProgs: out of bounds global index (statement %d)", i);
 			break;
 		// 2 globals
 		case OP_STOREP_F:
@@ -1465,7 +1465,7 @@ void PR_LoadProgs (const char *progsname)
 		case OP_STOREP_V:
 		case OP_STORE_V:
 			if ((unsigned short) st->a >= progs->numglobals || (unsigned short) st->b >= progs->numglobals)
-				Host_Error("PR_LoadProgs: out of bounds global index (statement %d)\n", i);
+				Host_Error("PR_LoadProgs: out of bounds global index (statement %d)", i);
 			break;
 		// 1 global
 		case OP_CALL0:
@@ -1480,10 +1480,10 @@ void PR_LoadProgs (const char *progsname)
 		case OP_DONE:
 		case OP_RETURN:
 			if ((unsigned short) st->a >= progs->numglobals)
-				Host_Error("PR_LoadProgs: out of bounds global index (statement %d)\n", i);
+				Host_Error("PR_LoadProgs: out of bounds global index (statement %d)", i);
 			break;
 		default:
-			Host_Error("PR_LoadProgs: unknown opcode %d at statement %d\n", st->op, i);
+			Host_Error("PR_LoadProgs: unknown opcode %d at statement %d", st->op, i);
 			break;
 		}
 	}
@@ -1732,14 +1732,14 @@ int PRVM_EDICT_TO_PROG(prvm_edict_t *e)
 	int n;
 	n = e - prog->edicts;
 	if ((unsigned int)n >= (unsigned int)prog->max_edicts)
-		Host_Error("PRVM_EDICT_TO_PROG: invalid edict %8p (number %i compared to world at %8p)\n", e, n, prog->edicts);
+		Host_Error("PRVM_EDICT_TO_PROG: invalid edict %8p (number %i compared to world at %8p)", e, n, prog->edicts);
 	return n;// EXPERIMENTAL
 	//return (unsigned char *)e->v - (unsigned char *)prog->edictsfields;
 }
 prvm_edict_t *PRVM_PROG_TO_EDICT(int n)
 {
 	if ((unsigned int)n >= (unsigned int)prog->max_edicts)
-		Host_Error("PRVM_PROG_TO_EDICT: invalid edict number %i\n", n);
+		Host_Error("PRVM_PROG_TO_EDICT: invalid edict number %i", n);
 	return prog->edicts + n; // EXPERIMENTAL
 	//return prog->edicts + ((n) / (progs->entityfields * 4));
 }
@@ -1753,12 +1753,12 @@ const char *PRVM_GetString(int num)
 	{
 		num = -1 - num;
 		if (!pr_knownstrings[num])
-			Host_Error("PRVM_GetString: attempt to get string that is already freed\n");
+			Host_Error("PRVM_GetString: attempt to get string that is already freed");
 		return pr_knownstrings[num];
 	}
 	else
 	{
-		Host_Error("PRVM_GetString: invalid string offset %i\n", num);
+		Host_Error("PRVM_GetString: invalid string offset %i", num);
 		return "";
 	}
 }
@@ -1773,7 +1773,7 @@ int PR_SetQCString(const char *s)
 	for (i = 0;i < pr_numknownstrings;i++)
 		if (pr_knownstrings[i] == s)
 			return -1 - i;
-	Host_Error("PR_SetQCString: unknown string\n");
+	Host_Error("PR_SetQCString: unknown string");
 	return -1 - i;
 }
 
@@ -1783,7 +1783,7 @@ int PRVM_SetEngineString(const char *s)
 	if (!s)
 		return 0;
 	if (s >= pr_strings && s <= pr_strings + pr_stringssize)
-		Host_Error("PRVM_SetEngineString: s in pr_strings area\n");
+		Host_Error("PRVM_SetEngineString: s in pr_strings area");
 	for (i = 0;i < pr_numknownstrings;i++)
 		if (pr_knownstrings[i] == s)
 			return -1 - i;
@@ -1836,14 +1836,14 @@ void PR_FreeString(char *s)
 {
 	int i;
 	if (!s)
-		Host_Error("PR_FreeString: attempt to free a NULL string\n");
+		Host_Error("PR_FreeString: attempt to free a NULL string");
 	if (s >= pr_strings && s <= pr_strings + pr_stringssize)
-		Host_Error("PR_FreeString: attempt to free a constant string\n");
+		Host_Error("PR_FreeString: attempt to free a constant string");
 	for (i = 0;i < pr_numknownstrings;i++)
 		if (pr_knownstrings[i] == s)
 			break;
 	if (i == pr_numknownstrings)
-		Host_Error("PR_FreeString: attempt to free a non-existent or already freed string\n");
+		Host_Error("PR_FreeString: attempt to free a non-existent or already freed string");
 	PR_Free((char *)pr_knownstrings[i]);
 	pr_knownstrings[i] = NULL;
 }

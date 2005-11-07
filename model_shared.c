@@ -309,7 +309,7 @@ model_t *Mod_FindName(const char *name)
 		return mod;
 	}
 
-	Host_Error ("Mod_FindName: ran out of models\n");
+	Host_Error ("Mod_FindName: ran out of models");
 	return NULL;
 }
 

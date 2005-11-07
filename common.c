@@ -509,10 +509,10 @@ unsigned char *SZ_GetSpace (sizebuf_t *buf, int length)
 	if (buf->cursize + length > buf->maxsize)
 	{
 		if (!buf->allowoverflow)
-			Host_Error ("SZ_GetSpace: overflow without allowoverflow set\n");
+			Host_Error ("SZ_GetSpace: overflow without allowoverflow set");
 
 		if (length > buf->maxsize)
-			Host_Error ("SZ_GetSpace: %i is > full buffer size\n", length);
+			Host_Error ("SZ_GetSpace: %i is > full buffer size", length);
 
 		buf->overflowed = true;
 		Con_Print("SZ_GetSpace: overflow\n");

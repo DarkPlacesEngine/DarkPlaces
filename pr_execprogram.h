@@ -154,7 +154,7 @@
 					pr_xfunction->profile += profile - startprofile;
 					startprofile = profile;
 					pr_xstatement = st - pr_statements;
-					Host_Error("Progs attempted to write to an out of bounds edict (%i)\n", OPB->_int);
+					Host_Error("Progs attempted to write to an out of bounds edict (%i)", OPB->_int);
 					return;
 				}
 #endif
@@ -168,7 +168,7 @@
 					pr_xfunction->profile += profile - startprofile;
 					startprofile = profile;
 					pr_xstatement = st - pr_statements;
-					Host_Error("Progs attempted to write to an out of bounds edict (%i)\n", OPB->_int);
+					Host_Error("Progs attempted to write to an out of bounds edict (%i)", OPB->_int);
 					return;
 				}
 #endif
@@ -185,7 +185,7 @@
 					pr_xfunction->profile += profile - startprofile;
 					startprofile = profile;
 					pr_xstatement = st - pr_statements;
-					Host_Error("Progs attempted to address an invalid field (%i) in an edict\n", OPB->_int);
+					Host_Error("Progs attempted to address an invalid field (%i) in an edict", OPB->_int);
 					return;
 				}
 #endif
@@ -212,7 +212,7 @@
 					pr_xfunction->profile += profile - startprofile;
 					startprofile = profile;
 					pr_xstatement = st - pr_statements;
-					Host_Error("Progs attempted to read an invalid field in an edict (%i)\n", OPB->_int);
+					Host_Error("Progs attempted to read an invalid field in an edict (%i)", OPB->_int);
 					return;
 				}
 #endif
@@ -227,7 +227,7 @@
 					pr_xfunction->profile += profile - startprofile;
 					startprofile = profile;
 					pr_xstatement = st - pr_statements;
-					Host_Error("Progs attempted to read an invalid field in an edict (%i)\n", OPB->_int);
+					Host_Error("Progs attempted to read an invalid field in an edict (%i)", OPB->_int);
 					return;
 				}
 #endif
@@ -477,7 +477,7 @@
 					pr_xfunction->profile += profile - startprofile;
 					startprofile = profile;
 					pr_xstatement = st - pr_statements;
-					Host_Error("Progs attempted to write to an out of bounds edict\n");
+					Host_Error("Progs attempted to write to an out of bounds edict");
 					return;
 				}
 #endif
@@ -491,7 +491,7 @@
 					pr_xfunction->profile += profile - startprofile;
 					startprofile = profile;
 					pr_xstatement = st - pr_statements;
-					Host_Error("Progs attempted to read an out of bounds edict number\n");
+					Host_Error("Progs attempted to read an out of bounds edict number");
 					return;
 				}
 				if (OPB->_int < 0 || OPB->_int >= progs->entityfields)
@@ -499,7 +499,7 @@
 					pr_xfunction->profile += profile - startprofile;
 					startprofile = profile;
 					pr_xstatement = st - pr_statements;
-					Host_Error("Progs attempted to read an invalid field in an edict\n");
+					Host_Error("Progs attempted to read an invalid field in an edict");
 					return;
 				}
 #endif
@@ -519,7 +519,7 @@
 					pr_xfunction->profile += profile - startprofile;
 					startprofile = profile;
 					pr_xstatement = st - pr_statements;
-					Host_Error("Progs attempted to write to an invalid indexed global\n");
+					Host_Error("Progs attempted to write to an invalid indexed global");
 					return;
 				}
 #endif
@@ -532,7 +532,7 @@
 					pr_xfunction->profile += profile - startprofile;
 					startprofile = profile;
 					pr_xstatement = st - pr_statements;
-					Host_Error("Progs attempted to write to an invalid indexed global\n");
+					Host_Error("Progs attempted to write to an invalid indexed global");
 					return;
 				}
 #endif
@@ -549,7 +549,7 @@
 					pr_xfunction->profile += profile - startprofile;
 					startprofile = profile;
 					pr_xstatement = st - pr_statements;
-					Host_Error("Progs attempted to address an out of bounds global\n");
+					Host_Error("Progs attempted to address an out of bounds global");
 					return;
 				}
 #endif
@@ -568,7 +568,7 @@
 					pr_xfunction->profile += profile - startprofile;
 					startprofile = profile;
 					pr_xstatement = st - pr_statements;
-					Host_Error("Progs attempted to read an invalid indexed global\n");
+					Host_Error("Progs attempted to read an invalid indexed global");
 					return;
 				}
 #endif
@@ -582,7 +582,7 @@
 					pr_xfunction->profile += profile - startprofile;
 					startprofile = profile;
 					pr_xstatement = st - pr_statements;
-					Host_Error("Progs attempted to read an invalid indexed global\n");
+					Host_Error("Progs attempted to read an invalid indexed global");
 					return;
 				}
 #endif
@@ -597,7 +597,7 @@
 					pr_xfunction->profile += profile - startprofile;
 					startprofile = profile;
 					pr_xstatement = st - pr_statements;
-					Host_Error("Progs boundcheck failed at line number %d, value is < 0 or >= %d\n", st->b, st->c);
+					Host_Error("Progs boundcheck failed at line number %d, value is < 0 or >= %d", st->b, st->c);
 					return;
 				}
 				break;

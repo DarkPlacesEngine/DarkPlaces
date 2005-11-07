@@ -89,7 +89,7 @@ void Mod_Alias_GetMesh_Vertex3f(const model_t *model, const frameblend_t *frameb
 		const float *vertsbase, *verts1, *verts2, *verts3, *verts4;
 		// vertex morph
 		if (!mesh->data_morphvertex3f)
-			Host_Error("model %s has no skeletal or vertex morph animation data\n", model->name);
+			Host_Error("model %s has no skeletal or vertex morph animation data", model->name);
 		vertsbase = mesh->data_morphvertex3f;
 		vertcount = mesh->num_vertices;
 		verts1 = vertsbase + frameblend[0].frame * vertcount * 3;
@@ -432,8 +432,8 @@ static void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfi
 	}
 }
 
-#define BOUNDI(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%d exceeds %d - %d)\n", loadmodel->name, VALUE, MIN, MAX);
-#define BOUNDF(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%f exceeds %f - %f)\n", loadmodel->name, VALUE, MIN, MAX);
+#define BOUNDI(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%d exceeds %d - %d)", loadmodel->name, VALUE, MIN, MAX);
+#define BOUNDF(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%f exceeds %f - %f)", loadmodel->name, VALUE, MIN, MAX);
 void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int i, j, version, totalskins, skinwidth, skinheight, groupframes, groupskins, numverts;
@@ -1017,7 +1017,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	pinmodel = (md3modelheader_t *)buffer;
 
 	if (memcmp(pinmodel->identifier, "IDP3", 4))
-		Host_Error ("%s is not a MD3 (IDP3) file\n", loadmodel->name);
+		Host_Error ("%s is not a MD3 (IDP3) file", loadmodel->name);
 	version = LittleLong (pinmodel->version);
 	if (version != MD3VERSION)
 		Host_Error ("%s has wrong version number (%i should be %i)",
@@ -1096,7 +1096,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	for (i = 0, pinmesh = (md3mesh_t *)((unsigned char *)pinmodel + LittleLong(pinmodel->lump_meshes));i < loadmodel->num_surfaces;i++, pinmesh = (md3mesh_t *)((unsigned char *)pinmesh + LittleLong(pinmesh->lump_end)))
 	{
 		if (memcmp(pinmesh->identifier, "IDP3", 4))
-			Host_Error("Mod_IDP3_Load: invalid mesh identifier (not IDP3)\n");
+			Host_Error("Mod_IDP3_Load: invalid mesh identifier (not IDP3)");
 		mesh = loadmodel->meshlist[i];
 		mesh->num_morphframes = LittleLong(pinmesh->num_frames);
 		mesh->num_vertices = LittleLong(pinmesh->num_vertices);
@@ -1159,9 +1159,9 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	pinmodel = (zymtype1header_t *)buffer;
 	pbase = (unsigned char *)buffer;
 	if (memcmp(pinmodel->id, "ZYMOTICMODEL", 12))
-		Host_Error ("Mod_ZYMOTICMODEL_Load: %s is not a zymotic model\n");
+		Host_Error ("Mod_ZYMOTICMODEL_Load: %s is not a zymotic model");
 	if (BigLong(pinmodel->type) != 1)
-		Host_Error ("Mod_ZYMOTICMODEL_Load: only type 1 (skeletal pose) models are currently supported (name = %s)\n", loadmodel->name);
+		Host_Error ("Mod_ZYMOTICMODEL_Load: only type 1 (skeletal pose) models are currently supported (name = %s)", loadmodel->name);
 
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
@@ -1259,11 +1259,11 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		loadmodel->animscenes[i].framerate = BigFloat(scene->framerate);
 		loadmodel->animscenes[i].loop = (BigLong(scene->flags) & ZYMSCENEFLAG_NOLOOP) == 0;
 		if ((unsigned int) loadmodel->animscenes[i].firstframe >= (unsigned int) numposes)
-			Host_Error("%s scene->firstframe (%i) >= numposes (%i)\n", loadmodel->name, loadmodel->animscenes[i].firstframe, numposes);
+			Host_Error("%s scene->firstframe (%i) >= numposes (%i)", loadmodel->name, loadmodel->animscenes[i].firstframe, numposes);
 		if ((unsigned int) loadmodel->animscenes[i].firstframe + (unsigned int) loadmodel->animscenes[i].framecount > (unsigned int) numposes)
-			Host_Error("%s scene->firstframe (%i) + framecount (%i) >= numposes (%i)\n", loadmodel->name, loadmodel->animscenes[i].firstframe, loadmodel->animscenes[i].framecount, numposes);
+			Host_Error("%s scene->firstframe (%i) + framecount (%i) >= numposes (%i)", loadmodel->name, loadmodel->animscenes[i].firstframe, loadmodel->animscenes[i].framecount, numposes);
 		if (loadmodel->animscenes[i].framerate < 0)
-			Host_Error("%s scene->framerate (%f) < 0\n", loadmodel->name, loadmodel->animscenes[i].framerate);
+			Host_Error("%s scene->framerate (%f) < 0", loadmodel->name, loadmodel->animscenes[i].framerate);
 		scene++;
 	}
 
@@ -1284,7 +1284,7 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		loadmodel->data_bones[i].flags = BigLong(bone[i].flags);
 		loadmodel->data_bones[i].parent = BigLong(bone[i].parent);
 		if (loadmodel->data_bones[i].parent >= i)
-			Host_Error("%s bone[%i].parent >= %i\n", loadmodel->name, i, i);
+			Host_Error("%s bone[%i].parent >= %i", loadmodel->name, i, i);
 	}
 
 	//zymlump_t lump_vertbonecounts; // int vertbonecounts[numvertices]; // how many bones influence each vertex (separate mainly to make this compress better)
@@ -1294,7 +1294,7 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	{
 		vertbonecounts[i] = BigLong(bonecount[i]);
 		if (vertbonecounts[i] < 1)
-			Host_Error("%s bonecount[%i] < 1\n", loadmodel->name, i);
+			Host_Error("%s bonecount[%i] < 1", loadmodel->name, i);
 	}
 
 	//zymlump_t lump_verts; // zymvertex_t vert[numvertices]; // see vertex struct
@@ -1341,16 +1341,16 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	// byteswap, validate, and swap winding order of tris
 	count = pheader->numshaders * sizeof(int) + pheader->numtris * sizeof(int[3]);
 	if (pheader->lump_render.length != count)
-		Host_Error("%s renderlist is wrong size (%i bytes, should be %i bytes)\n", loadmodel->name, pheader->lump_render.length, count);
+		Host_Error("%s renderlist is wrong size (%i bytes, should be %i bytes)", loadmodel->name, pheader->lump_render.length, count);
 	renderlist = (int *) (pheader->lump_render.start + pbase);
 	renderlistend = (int *) ((unsigned char *) renderlist + pheader->lump_render.length);
 	for (i = 0;i < loadmodel->num_surfaces;i++)
 	{
 		if (renderlist >= renderlistend)
-			Host_Error("%s corrupt renderlist (wrong size)\n", loadmodel->name);
+			Host_Error("%s corrupt renderlist (wrong size)", loadmodel->name);
 		count = BigLong(*renderlist);renderlist++;
 		if (renderlist + count * 3 > renderlistend || (i == pheader->numshaders - 1 && renderlist + count * 3 != renderlistend))
-			Host_Error("%s corrupt renderlist (wrong size)\n", loadmodel->name);
+			Host_Error("%s corrupt renderlist (wrong size)", loadmodel->name);
 		mesh = loadmodel->meshlist[i];
 		mesh->num_triangles = count;
 		mesh->data_element3i = (int *)Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
@@ -1364,9 +1364,9 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 			if ((unsigned int)outelements[0] >= (unsigned int)pheader->numverts
 			 || (unsigned int)outelements[1] >= (unsigned int)pheader->numverts
 			 || (unsigned int)outelements[2] >= (unsigned int)pheader->numverts)
-				Host_Error("%s corrupt renderlist (out of bounds index)\n", loadmodel->name);
+				Host_Error("%s corrupt renderlist (out of bounds index)", loadmodel->name);
 			if (vertbonecounts[outelements[0]] == 0 || vertbonecounts[outelements[1]] == 0 || vertbonecounts[outelements[2]] == 0)
-				Host_Error("%s corrupt renderlist (references vertex with no bone weights\n", loadmodel->name);
+				Host_Error("%s corrupt renderlist (references vertex with no bone weights", loadmodel->name);
 			renderlist += 3;
 			outelements += 3;
 		}
@@ -1452,9 +1452,9 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	pheader = (dpmheader_t *)buffer;
 	pbase = (unsigned char *)buffer;
 	if (memcmp(pheader->id, "DARKPLACESMODEL\0", 16))
-		Host_Error ("Mod_DARKPLACESMODEL_Load: %s is not a darkplaces model\n");
+		Host_Error ("Mod_DARKPLACESMODEL_Load: %s is not a darkplaces model");
 	if (BigLong(pheader->type) != 2)
-		Host_Error ("Mod_DARKPLACESMODEL_Load: only type 2 (hierarchical skeletal pose) models are currently supported (name = %s)\n", loadmodel->name);
+		Host_Error ("Mod_DARKPLACESMODEL_Load: only type 2 (hierarchical skeletal pose) models are currently supported (name = %s)", loadmodel->name);
 
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
@@ -1538,7 +1538,7 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		loadmodel->data_bones[i].flags = BigLong(bone[i].flags);
 		loadmodel->data_bones[i].parent = BigLong(bone[i].parent);
 		if (loadmodel->data_bones[i].parent >= i)
-			Host_Error("%s bone[%i].parent >= %i\n", loadmodel->name, i, i);
+			Host_Error("%s bone[%i].parent >= %i", loadmodel->name, i, i);
 	}
 
 	// load the frames
@@ -1684,7 +1684,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 
 	pchunk = (pskchunk_t *)buffer;
 	if (strcmp(pchunk->id, "ACTRHEAD"))
-		Host_Error ("Mod_PSKMODEL_Load: %s is not a ActorX model\n");
+		Host_Error ("Mod_PSKMODEL_Load: %s is not an Unreal Engine ActorX (.psk + .psa) model");
 
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
@@ -1714,7 +1714,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	animbuffer = animfilebuffer = FS_LoadFile(animname, loadmodel->mempool, false, &filesize);
 	animbufferend = (void *)((unsigned char*)animbuffer + (int)filesize);
 	if (animbuffer == NULL)
-		Host_Error("%s: can't find .psa file (%s)\n", loadmodel->name, animname);
+		Host_Error("%s: can't find .psa file (%s)", loadmodel->name, animname);
 
 	numpnts = 0;
 	pnts = NULL;
@@ -1752,7 +1752,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		{
 			pskpnts_t *p;
 			if (recordsize != sizeof(*p))
-				Host_Error("%s: %s has unsupported recordsize\n", loadmodel->name, pchunk->id);
+				Host_Error("%s: %s has unsupported recordsize", loadmodel->name, pchunk->id);
 			// byteswap in place and keep the pointer
 			numpnts = numrecords;
 			pnts = (pskpnts_t *)buffer;
@@ -1768,7 +1768,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		{
 			pskvtxw_t *p;
 			if (recordsize != sizeof(*p))
-				Host_Error("%s: %s has unsupported recordsize\n", loadmodel->name, pchunk->id);
+				Host_Error("%s: %s has unsupported recordsize", loadmodel->name, pchunk->id);
 			// byteswap in place and keep the pointer
 			numvtxw = numrecords;
 			vtxw = (pskvtxw_t *)buffer;
@@ -1789,7 +1789,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		{
 			pskface_t *p;
 			if (recordsize != sizeof(*p))
-				Host_Error("%s: %s has unsupported recordsize\n", loadmodel->name, pchunk->id);
+				Host_Error("%s: %s has unsupported recordsize", loadmodel->name, pchunk->id);
 			// byteswap in place and keep the pointer
 			numfaces = numrecords;
 			faces = (pskface_t *)buffer;
@@ -1821,7 +1821,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		{
 			pskmatt_t *p;
 			if (recordsize != sizeof(*p))
-				Host_Error("%s: %s has unsupported recordsize\n", loadmodel->name, pchunk->id);
+				Host_Error("%s: %s has unsupported recordsize", loadmodel->name, pchunk->id);
 			// byteswap in place and keep the pointer
 			nummatts = numrecords;
 			matts = (pskmatt_t *)buffer;
@@ -1834,7 +1834,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		{
 			pskboneinfo_t *p;
 			if (recordsize != sizeof(*p))
-				Host_Error("%s: %s has unsupported recordsize\n", loadmodel->name, pchunk->id);
+				Host_Error("%s: %s has unsupported recordsize", loadmodel->name, pchunk->id);
 			// byteswap in place and keep the pointer
 			numbones = numrecords;
 			bones = (pskboneinfo_t *)buffer;
@@ -1879,7 +1879,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		{
 			pskrawweights_t *p;
 			if (recordsize != sizeof(*p))
-				Host_Error("%s: %s has unsupported recordsize\n", loadmodel->name, pchunk->id);
+				Host_Error("%s: %s has unsupported recordsize", loadmodel->name, pchunk->id);
 			// byteswap in place and keep the pointer
 			numrawweights = numrecords;
 			rawweights = (pskrawweights_t *)buffer;
@@ -1922,7 +1922,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		{
 			pskboneinfo_t *p;
 			if (recordsize != sizeof(*p))
-				Host_Error("%s: %s has unsupported recordsize\n", animname, pchunk->id);
+				Host_Error("%s: %s has unsupported recordsize", animname, pchunk->id);
 			// byteswap in place and keep the pointer
 			numanimbones = numrecords;
 			animbones = (pskboneinfo_t *)animbuffer;
@@ -1931,7 +1931,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 			// positions from the psk, but this is hard for me to implement
 			// and people can easily make animations that match.
 			if (numanimbones != numbones)
-				Host_Error("%s: this loader only supports animations with the same bones as the mesh\n");
+				Host_Error("%s: this loader only supports animations with the same bones as the mesh");
 			for (index = 0, p = (pskboneinfo_t *)animbuffer;index < numrecords;index++, p++)
 			{
 				p->numchildren = LittleLong(p->numchildren);
@@ -1968,7 +1968,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 				}
 				// check that bones are the same as in the base
 				if (strcmp(p->name, bones[index].name) || p->parent != bones[index].parent)
-					Host_Error("%s: this loader only supports animations with the same bones as the mesh\n", animname);
+					Host_Error("%s: this loader only supports animations with the same bones as the mesh", animname);
 			}
 			animbuffer = p;
 		}
@@ -1976,7 +1976,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		{
 			pskaniminfo_t *p;
 			if (recordsize != sizeof(*p))
-				Host_Error("%s: %s has unsupported recordsize\n", animname, pchunk->id);
+				Host_Error("%s: %s has unsupported recordsize", animname, pchunk->id);
 			// byteswap in place and keep the pointer
 			numanims = numrecords;
 			anims = (pskaniminfo_t *)animbuffer;
@@ -1998,7 +1998,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		{
 			pskanimkeys_t *p;
 			if (recordsize != sizeof(*p))
-				Host_Error("%s: %s has unsupported recordsize\n", animname, pchunk->id);
+				Host_Error("%s: %s has unsupported recordsize", animname, pchunk->id);
 			numanimkeys = numrecords;
 			animkeys = (pskanimkeys_t *)animbuffer;
 			for (index = 0, p = (pskanimkeys_t *)animbuffer;index < numrecords;index++, p++)
@@ -2034,7 +2034,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	}
 
 	if (!numpnts || !pnts || !numvtxw || !vtxw || !numfaces || !faces || !nummatts || !matts || !numbones || !bones || !numrawweights || !rawweights || !numanims || !anims || !numanimkeys || !animkeys)
-		Host_Error("%s: missing required chunks\n", loadmodel->name);
+		Host_Error("%s: missing required chunks", loadmodel->name);
 
 	// FIXME: model bbox
 	// model bbox
@@ -2059,7 +2059,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->num_textures = loadmodel->nummeshes = loadmodel->nummodelsurfaces = loadmodel->num_surfaces = nummatts;
 
 	if (numanimkeys != loadmodel->num_bones * loadmodel->numframes)
-		Host_Error("%s: %s has incorrect number of animation keys\n", animname, pchunk->id);
+		Host_Error("%s: %s has incorrect number of animation keys", animname, pchunk->id);
 
 	loadmodel->data_poses = (float *)Mem_Alloc(loadmodel->mempool, loadmodel->num_poses * sizeof(float[12]));
 	loadmodel->animscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, loadmodel->numframes * sizeof(animscene_t));
@@ -2122,7 +2122,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		strlcpy(loadmodel->data_bones[index].name, bones[index].name, sizeof(loadmodel->data_bones[index].name));
 		loadmodel->data_bones[index].parent = (index || bones[index].parent > 0) ? bones[index].parent : -1;
 		if (loadmodel->data_bones[index].parent >= index)
-			Host_Error("%s bone[%i].parent >= %i\n", loadmodel->name, index, index);
+			Host_Error("%s bone[%i].parent >= %i", loadmodel->name, index, index);
 	}
 
 	// build bone-relative vertex weights from the psk point weights

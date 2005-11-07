@@ -1216,7 +1216,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, int color, entity_t *en
 				break;
 #endif
 			default:
-				Sys_Error("CL_RocketTrail: unknown trail type %i\n", type);
+				Sys_Error("CL_RocketTrail: unknown trail type %i", type);
 		}
 
 		// advance to next time and position
