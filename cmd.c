@@ -401,33 +401,39 @@ Preprocesses strings and replaces $*, $param#, $cvar accordingly
 */
 static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned maxoutlen, cmdalias_t *alias ) {
 	const char *in;
-	char *out;
 	unsigned outlen;
 	int inquote;
 
-	// HACK?
+	// don't crash if there's no room in the outtext buffer
 	if( maxoutlen == 0 ) {
 		return;
 	}
 	maxoutlen--; // because of \0
 
 	in = intext;
-	out = outtext;
 	outlen = 0;
 	inquote = 0;
 
 	while( *in && outlen < maxoutlen ) {
 		if( *in == '$' && !inquote ) {
-			// read over the $
+			// this is some kind of expansion, see what comes after the $
 			in++;
-			// $* is replaced with all formal parameters, $num is parsed as an argument (or as $num if there arent enough parameters), $bla becomes $bla and $$bla becomes $$bla
-			if( *in == '*' && alias ) {
+			// replacements that can always be used:
+			// $$ is replaced with $, to allow escaping $
+			// $<cvarname> is replaced with the contents of the cvar
+			//
+			// the following can be used in aliases only:
+			// $* is replaced with all formal parameters (including name of the alias - this probably is not desirable)
+			// $0 is replaced with the name of this alias
+			// $<number> is replaced with an argument to this alias (or copied as-is if no such parameter exists), can be multiple digits
+			if( *in == '$' ) {
+				outtext[outlen++] = *in++;
+			} else if( *in == '*' && alias ) {
 				const char *linein = Cmd_Args();
 				// include all params
 				if (linein) {
 					while( *linein && outlen < maxoutlen ) {
-						*out++ = *linein++;
-						outlen++;
+						outtext[outlen++] = *linein++;
 					}
 				}
 
@@ -438,50 +444,40 @@ static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned ma
 
 				argnum = strtol( in, &nexttoken, 10 );
 
-				if( 0 < argnum && argnum < Cmd_Argc() ) {
+				if( 0 <= argnum && argnum < Cmd_Argc() ) {
 					const char *param = Cmd_Argv( argnum );
 					while( *param && outlen < maxoutlen ) {
-						*out++ = *param++;
-						outlen++;
+						outtext[outlen++] = *param++;
 					}
 					in = nexttoken;
 				} else if( argnum >= Cmd_Argc() ) {
 					Con_Printf( "Warning: Not enough parameters passed to alias '%s', at least %i expected:\n    %s\n", alias->name, argnum, alias->value );
-					*out++ = '$';
-					outlen++;
+					outtext[outlen++] = '$';
 				}
 			} else {
 				cvar_t *cvar;
 				const char *tempin = in;
 
 				COM_ParseTokenConsole( &tempin );
-				cvar = Cvar_FindVar(&com_token[0]);
-				if (cvar) {
+				if ((cvar = Cvar_FindVar(&com_token[0]))) {
 					const char *cvarcontent = cvar->string;
 					while( *cvarcontent && outlen < maxoutlen ) {
-						*out++ = *cvarcontent++;
-						outlen++;
+						outtext[outlen++] = *cvarcontent++;
 					}
 					in = tempin;
-				} else if( com_token[0] == '$' ) {
-					// remove the first $
-					char *pos = com_token;
-					while( *pos && outlen < maxoutlen ) {
-						*out++ = *pos++;
-						outlen++;
-					}
-					in = tempin;
+				} else {
+					Con_Printf( "Warning: could not find cvar %s when expanding alias %s\n    %s\n", com_token, alias->name, alias->value );
+					outtext[outlen++] = '$';
 				}
 			}
 		} else {
 			if( *in == '"' ) {
 				inquote ^= 1;
-			} 
-			*out++ = *in++;
-			outlen++;
+			}
+			outtext[outlen++] = *in++;
 		}
 	}
-	*out = 0;
+	outtext[outlen] = 0;
 }
 
 /*
@@ -493,77 +489,6 @@ Called for aliases and fills in the alias into the cbuffer
 */
 static void Cmd_ExecuteAlias (cmdalias_t *alias)
 {
-	/*
-#define ALIAS_BUFFER 1024
-	static char buffer[ ALIAS_BUFFER + 2 ];
-	const char *in;
-	char *out;
-	unsigned outlen;
-	int inquote;
-
-	in = alias->value;
-	out = buffer;
-	outlen = 0;
-	inquote = 0;
-
-	while( *in && outlen < ALIAS_BUFFER )
-	{
-		if( *in == '"' )
-		{
-			inquote ^= 1;
-		}
-		else if( *in == '$' && !inquote )
-		{
-			// $* is replaced with all formal parameters, $num is parsed as an argument (or as $num if there arent enough parameters), $bla becomes $bla and $$bla becomes $$bla
-			// read over the $
-			in++;
-			if( *in == '*' )
-			{
-				const char *linein = Cmd_Args();
-				// include all params
-				if (linein) {
-					while( *linein && outlen < ALIAS_BUFFER ) {
-						*out++ = *linein++;
-						outlen++;
-					}
-				}
-
-				in++;
-			} else {
-				char *nexttoken;
-				int argnum;
-
-				argnum = strtol( in, &nexttoken, 10 );
-
-				if( 0 < argnum && argnum < Cmd_Argc() )
-				{
-					const char *param = Cmd_Argv( argnum );
-					while( *param && outlen < ALIAS_BUFFER ) {
-						*out++ = *param++;
-						outlen++;
-					}
-					in = nexttoken;
-				}
-				else if( argnum >= Cmd_Argc() )
-				{
-					Con_Printf( "Warning: Not enough parameters passed to alias '%s', at least %i expected:\n    %s\n", alias->name, argnum, alias->value );
-					*out++ = '$';
-					outlen++;
-				}
-				// not a number
-				else if( argnum == 0 )
-				{
-					*out++ = '$';
-					outlen++;
-				}
-			}
-		} else {
-			*out++ = *in++;
-			outlen++;
-		}
-	}
-	*out++ = '\n';
-	*out++ = 0;*/
 #define ALIAS_BUFFER 1024
 	static char buffer[ ALIAS_BUFFER + 2 ];
 	Cmd_PreprocessString( alias->value, buffer, ALIAS_BUFFER, alias );
