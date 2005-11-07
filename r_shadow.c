@@ -3134,7 +3134,7 @@ void R_Shadow_SelectLight(dlight_t *light)
 void R_Shadow_DrawCursorCallback(const void *calldata1, int calldata2)
 {
 	float scale = r_editlights_cursorgrid.value * 0.5f;
-	R_DrawSprite(GL_ONE, GL_ONE, lighttextures[0], NULL, false, r_editlights_cursorlocation, r_viewright, r_viewup, scale, -scale, -scale, scale, 1, 1, 1, 0.5f);
+	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, lighttextures[0], NULL, false, r_editlights_cursorlocation, r_viewright, r_viewup, scale, -scale, -scale, scale, 1, 1, 1, 0.5f);
 }
 
 void R_Shadow_DrawLightSpriteCallback(const void *calldata1, int calldata2)
@@ -3147,7 +3147,7 @@ void R_Shadow_DrawLightSpriteCallback(const void *calldata1, int calldata2)
 		intensity = 0.75 + 0.25 * sin(realtime * M_PI * 4.0);
 	if (!light->shadow)
 		intensity *= 0.5f;
-	R_DrawSprite(GL_ONE, GL_ONE, lighttextures[calldata2], NULL, false, light->origin, r_viewright, r_viewup, 8, -8, -8, 8, intensity, intensity, intensity, 0.5);
+	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, lighttextures[calldata2], NULL, false, light->origin, r_viewright, r_viewup, 8, -8, -8, 8, intensity, intensity, intensity, 0.5);
 }
 
 void R_Shadow_DrawLightSprites(void)
