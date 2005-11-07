@@ -24,7 +24,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "r_shadow.h"
 
 cvar_t r_modellights = {CVAR_SAVE, "r_modellights", "4"};
-cvar_t r_vismarklights = {0, "r_vismarklights", "1"};
 cvar_t r_coronas = {CVAR_SAVE, "r_coronas", "1"};
 cvar_t gl_flashblend = {CVAR_SAVE, "gl_flashblend", "0"};
 
@@ -70,7 +69,6 @@ void r_light_newmap(void)
 void R_Light_Init(void)
 {
 	Cvar_RegisterVariable(&r_modellights);
-	Cvar_RegisterVariable(&r_vismarklights);
 	Cvar_RegisterVariable(&r_coronas);
 	Cvar_RegisterVariable(&gl_flashblend);
 	R_RegisterModule("R_Light", r_light_start, r_light_shutdown, r_light_newmap);
