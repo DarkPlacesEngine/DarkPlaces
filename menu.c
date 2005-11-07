@@ -247,42 +247,42 @@ void M_DrawTextBox (float x, float y, float width, float height)
 	// draw left side
 	cx = x;
 	cy = y;
-	M_DrawPic (cx, cy, "gfx/box_tl.lmp");
+	M_DrawPic (cx, cy, "gfx/box_tl");
 	for (n = 0; n < height; n++)
 	{
 		cy += 8;
-		M_DrawPic (cx, cy, "gfx/box_ml.lmp");
+		M_DrawPic (cx, cy, "gfx/box_ml");
 	}
-	M_DrawPic (cx, cy+8, "gfx/box_bl.lmp");
+	M_DrawPic (cx, cy+8, "gfx/box_bl");
 
 	// draw middle
 	cx += 8;
 	while (width > 0)
 	{
 		cy = y;
-		M_DrawPic (cx, cy, "gfx/box_tm.lmp");
+		M_DrawPic (cx, cy, "gfx/box_tm");
 		for (n = 0; n < height; n++)
 		{
 			cy += 8;
 			if (n >= 1)
-				M_DrawPic (cx, cy, "gfx/box_mm2.lmp");
+				M_DrawPic (cx, cy, "gfx/box_mm2");
 			else
-				M_DrawPic (cx, cy, "gfx/box_mm.lmp");
+				M_DrawPic (cx, cy, "gfx/box_mm");
 		}
-		M_DrawPic (cx, cy+8, "gfx/box_bm.lmp");
+		M_DrawPic (cx, cy+8, "gfx/box_bm");
 		width -= 2;
 		cx += 16;
 	}
 
 	// draw right side
 	cy = y;
-	M_DrawPic (cx, cy, "gfx/box_tr.lmp");
+	M_DrawPic (cx, cy, "gfx/box_tr");
 	for (n = 0; n < height; n++)
 	{
 		cy += 8;
-		M_DrawPic (cx, cy, "gfx/box_mr.lmp");
+		M_DrawPic (cx, cy, "gfx/box_mr");
 	}
-	M_DrawPic (cx, cy+8, "gfx/box_br.lmp");
+	M_DrawPic (cx, cy+8, "gfx/box_br");
 }
 
 //=============================================================================
@@ -433,25 +433,25 @@ void M_Main_Draw (void)
 	}
 
 	M_Background(320, 200);
-	M_DrawPic (16, 4, "gfx/qplaque.lmp");
-	p = Draw_CachePic ("gfx/ttl_main.lmp", false);
-	M_DrawPic ( (320-p->width)/2, 4, "gfx/ttl_main.lmp");
+	M_DrawPic (16, 4, "gfx/qplaque");
+	p = Draw_CachePic ("gfx/ttl_main", false);
+	M_DrawPic ( (320-p->width)/2, 4, "gfx/ttl_main");
 // Nehahra
 	if (gamemode == GAME_NEHAHRA)
 	{
 		if (NehGameType == TYPE_BOTH)
-			M_DrawPic (72, 32, "gfx/mainmenu.lmp");
+			M_DrawPic (72, 32, "gfx/mainmenu");
 		else if (NehGameType == TYPE_GAME)
-			M_DrawPic (72, 32, "gfx/gamemenu.lmp");
+			M_DrawPic (72, 32, "gfx/gamemenu");
 		else
-			M_DrawPic (72, 32, "gfx/demomenu.lmp");
+			M_DrawPic (72, 32, "gfx/demomenu");
 	}
 	else
-		M_DrawPic (72, 32, "gfx/mainmenu.lmp");
+		M_DrawPic (72, 32, "gfx/mainmenu");
 
 	f = (int)(realtime * 10)%6;
 
-	M_DrawPic (54, 32 + m_main_cursor * 20, va("gfx/menudot%i.lmp", f+1));
+	M_DrawPic (54, 32 + m_main_cursor * 20, va("gfx/menudot%i", f+1));
 }
 
 
@@ -718,13 +718,13 @@ void M_SinglePlayer_Draw (void)
 
 	M_Background(320, 200);
 
-	M_DrawPic (16, 4, "gfx/qplaque.lmp");
-	p = Draw_CachePic ("gfx/ttl_sgl.lmp", false);
+	M_DrawPic (16, 4, "gfx/qplaque");
+	p = Draw_CachePic ("gfx/ttl_sgl", false);
 
 	// Some mods don't have a single player mode
 	if (gamemode == GAME_NEXUIZ || gamemode == GAME_GOODVSBAD2 || gamemode == GAME_BATTLEMECH)
 	{
-		M_DrawPic ((320 - p->width) / 2, 4, "gfx/ttl_sgl.lmp");
+		M_DrawPic ((320 - p->width) / 2, 4, "gfx/ttl_sgl");
 
 		M_DrawTextBox (60, 8 * 8, 23, 4);
 		if (gamemode == GAME_NEXUIZ)
@@ -739,12 +739,12 @@ void M_SinglePlayer_Draw (void)
 	{
 		int		f;
 
-		M_DrawPic ( (320-p->width)/2, 4, "gfx/ttl_sgl.lmp");
-		M_DrawPic (72, 32, "gfx/sp_menu.lmp");
+		M_DrawPic ( (320-p->width)/2, 4, "gfx/ttl_sgl");
+		M_DrawPic (72, 32, "gfx/sp_menu");
 
 		f = (int)(realtime * 10)%6;
 
-		M_DrawPic (54, 32 + m_singleplayer_cursor * 20, va("gfx/menudot%i.lmp", f+1));
+		M_DrawPic (54, 32 + m_singleplayer_cursor * 20, va("gfx/menudot%i", f+1));
 	}
 }
 
@@ -885,8 +885,8 @@ void M_Load_Draw (void)
 
 	M_Background(320, 200);
 
-	p = Draw_CachePic ("gfx/p_load.lmp", false);
-	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_load.lmp" );
+	p = Draw_CachePic ("gfx/p_load", false);
+	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_load" );
 
 	for (i=0 ; i< MAX_SAVEGAMES; i++)
 		M_Print(16, 32 + 8*i, m_filenames[i]);
@@ -903,8 +903,8 @@ void M_Save_Draw (void)
 
 	M_Background(320, 200);
 
-	p = Draw_CachePic ("gfx/p_save.lmp", false);
-	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_save.lmp");
+	p = Draw_CachePic ("gfx/p_save", false);
+	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_save");
 
 	for (i=0 ; i<MAX_SAVEGAMES ; i++)
 		M_Print(16, 32 + 8*i, m_filenames[i]);
@@ -1179,14 +1179,14 @@ void M_MultiPlayer_Draw (void)
 	}
 	M_Background(320, 200);
 
-	M_DrawPic (16, 4, "gfx/qplaque.lmp");
-	p = Draw_CachePic ("gfx/p_multi.lmp", false);
-	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_multi.lmp");
-	M_DrawPic (72, 32, "gfx/mp_menu.lmp");
+	M_DrawPic (16, 4, "gfx/qplaque");
+	p = Draw_CachePic ("gfx/p_multi", false);
+	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_multi");
+	M_DrawPic (72, 32, "gfx/mp_menu");
 
 	f = (int)(realtime * 10)%6;
 
-	M_DrawPic (54, 32 + m_multiplayer_cursor * 20, va("gfx/menudot%i.lmp", f+1));
+	M_DrawPic (54, 32 + m_multiplayer_cursor * 20, va("gfx/menudot%i", f+1));
 }
 
 
@@ -1297,9 +1297,9 @@ void M_Setup_Draw (void)
 
 	M_Background(320, 200);
 
-	M_DrawPic (16, 4, "gfx/qplaque.lmp");
-	p = Draw_CachePic ("gfx/p_multi.lmp", false);
-	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_multi.lmp");
+	M_DrawPic (16, 4, "gfx/qplaque");
+	p = Draw_CachePic ("gfx/p_multi", false);
+	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_multi");
 
 	M_Print(64, 40, "Your name");
 	M_DrawTextBox (160, 32, 16, 1);
@@ -1347,10 +1347,10 @@ void M_Setup_Draw (void)
 			M_BuildTranslationTable(menuplyr_top*16, menuplyr_bottom*16);
 			for (i = 0;i < menuplyr_width * menuplyr_height;i++)
 				menuplyr_translated[i] = palette_complete[translationTable[menuplyr_pixels[i]]];
-			Draw_NewPic("gfx/menuplyr.lmp", menuplyr_width, menuplyr_height, true, (unsigned char *)menuplyr_translated);
+			Draw_NewPic("gfx/menuplyr", menuplyr_width, menuplyr_height, true, (unsigned char *)menuplyr_translated);
 		}
-		M_DrawPic(160, 48, "gfx/bigbox.lmp");
-		M_DrawPic(172, 56, "gfx/menuplyr.lmp");
+		M_DrawPic(160, 48, "gfx/bigbox");
+		M_DrawPic(172, 56, "gfx/menuplyr");
 	}
 
 	if (setup_cursor == 0)
@@ -1646,9 +1646,9 @@ void M_Options_Draw (void)
 
 	M_Background(320, bound(200, 32 + OPTIONS_ITEMS * 8, vid_conheight.integer));
 
-	M_DrawPic(16, 4, "gfx/qplaque.lmp");
-	p = Draw_CachePic("gfx/p_option.lmp", false);
-	M_DrawPic((320-p->width)/2, 4, "gfx/p_option.lmp");
+	M_DrawPic(16, 4, "gfx/qplaque");
+	p = Draw_CachePic("gfx/p_option", false);
+	M_DrawPic((320-p->width)/2, 4, "gfx/p_option");
 
 	optnum = 0;
 	optcursor = options_cursor;
@@ -1839,9 +1839,9 @@ void M_Options_Effects_Draw (void)
 
 	M_Background(320, bound(200, 32 + OPTIONS_EFFECTS_ITEMS * 8, vid_conheight.integer));
 
-	M_DrawPic(16, 4, "gfx/qplaque.lmp");
-	p = Draw_CachePic("gfx/p_option.lmp", false);
-	M_DrawPic((320-p->width)/2, 4, "gfx/p_option.lmp");
+	M_DrawPic(16, 4, "gfx/qplaque");
+	p = Draw_CachePic("gfx/p_option", false);
+	M_DrawPic((320-p->width)/2, 4, "gfx/p_option");
 
 	optcursor = options_effects_cursor;
 	optnum = 0;
@@ -1978,9 +1978,9 @@ void M_Options_Graphics_Draw (void)
 
 	M_Background(320, bound(200, 32 + OPTIONS_GRAPHICS_ITEMS * 8, vid_conheight.integer));
 
-	M_DrawPic(16, 4, "gfx/qplaque.lmp");
-	p = Draw_CachePic("gfx/p_option.lmp", false);
-	M_DrawPic((320-p->width)/2, 4, "gfx/p_option.lmp");
+	M_DrawPic(16, 4, "gfx/qplaque");
+	p = Draw_CachePic("gfx/p_option", false);
+	M_DrawPic((320-p->width)/2, 4, "gfx/p_option");
 
 	optcursor = options_graphics_cursor;
 	optnum = 0;
@@ -2163,9 +2163,9 @@ void M_Options_ColorControl_Draw (void)
 
 	M_Background(320, 256);
 
-	M_DrawPic(16, 4, "gfx/qplaque.lmp");
-	p = Draw_CachePic("gfx/p_option.lmp", false);
-	M_DrawPic((320-p->width)/2, 4, "gfx/p_option.lmp");
+	M_DrawPic(16, 4, "gfx/qplaque");
+	p = Draw_CachePic("gfx/p_option", false);
+	M_DrawPic((320-p->width)/2, 4, "gfx/p_option");
 
 	optcursor = options_colorcontrol_cursor;
 	optnum = 0;
@@ -2195,13 +2195,13 @@ void M_Options_ColorControl_Draw (void)
 	DrawQ_Fill(menu_x, menu_y + opty, 320, 4 + 64 + 8 + 64 + 4, 0, 0, 0, 1, 0);opty += 4;
 	s = (float) 312 / 2 * vid.width / vid_conwidth.integer;
 	t = (float) 4 / 2 * vid.height / vid_conheight.integer;
-	DrawQ_SuperPic(menu_x + 4, menu_y + opty, "gfx/colorcontrol/ditherpattern.tga", 312, 4, 0,0, 1,0,0,1, s,0, 1,0,0,1, 0,t, 1,0,0,1, s,t, 1,0,0,1, 0);opty += 4;
+	DrawQ_SuperPic(menu_x + 4, menu_y + opty, "gfx/colorcontrol/ditherpattern", 312, 4, 0,0, 1,0,0,1, s,0, 1,0,0,1, 0,t, 1,0,0,1, s,t, 1,0,0,1, 0);opty += 4;
 	DrawQ_SuperPic(menu_x + 4, menu_y + opty, NULL                                , 312, 4, 0,0, 0,0,0,1, 1,0, 1,0,0,1, 0,1, 0,0,0,1, 1,1, 1,0,0,1, 0);opty += 4;
-	DrawQ_SuperPic(menu_x + 4, menu_y + opty, "gfx/colorcontrol/ditherpattern.tga", 312, 4, 0,0, 0,1,0,1, s,0, 0,1,0,1, 0,t, 0,1,0,1, s,t, 0,1,0,1, 0);opty += 4;
+	DrawQ_SuperPic(menu_x + 4, menu_y + opty, "gfx/colorcontrol/ditherpattern", 312, 4, 0,0, 0,1,0,1, s,0, 0,1,0,1, 0,t, 0,1,0,1, s,t, 0,1,0,1, 0);opty += 4;
 	DrawQ_SuperPic(menu_x + 4, menu_y + opty, NULL                                , 312, 4, 0,0, 0,0,0,1, 1,0, 0,1,0,1, 0,1, 0,0,0,1, 1,1, 0,1,0,1, 0);opty += 4;
-	DrawQ_SuperPic(menu_x + 4, menu_y + opty, "gfx/colorcontrol/ditherpattern.tga", 312, 4, 0,0, 0,0,1,1, s,0, 0,0,1,1, 0,t, 0,0,1,1, s,t, 0,0,1,1, 0);opty += 4;
+	DrawQ_SuperPic(menu_x + 4, menu_y + opty, "gfx/colorcontrol/ditherpattern", 312, 4, 0,0, 0,0,1,1, s,0, 0,0,1,1, 0,t, 0,0,1,1, s,t, 0,0,1,1, 0);opty += 4;
 	DrawQ_SuperPic(menu_x + 4, menu_y + opty, NULL                                , 312, 4, 0,0, 0,0,0,1, 1,0, 0,0,1,1, 0,1, 0,0,0,1, 1,1, 0,0,1,1, 0);opty += 4;
-	DrawQ_SuperPic(menu_x + 4, menu_y + opty, "gfx/colorcontrol/ditherpattern.tga", 312, 4, 0,0, 1,1,1,1, s,0, 1,1,1,1, 0,t, 1,1,1,1, s,t, 1,1,1,1, 0);opty += 4;
+	DrawQ_SuperPic(menu_x + 4, menu_y + opty, "gfx/colorcontrol/ditherpattern", 312, 4, 0,0, 1,1,1,1, s,0, 1,1,1,1, 0,t, 1,1,1,1, s,t, 1,1,1,1, 0);opty += 4;
 	DrawQ_SuperPic(menu_x + 4, menu_y + opty, NULL                                , 312, 4, 0,0, 0,0,0,1, 1,0, 1,1,1,1, 0,1, 0,0,0,1, 1,1, 1,1,1,1, 0);opty += 4;
 
 	c = menu_options_colorcontrol_correctionvalue.value; // intensity value that should be matched up to a 50% dither to 'correct' quake
@@ -2212,20 +2212,20 @@ void M_Options_ColorControl_Draw (void)
 	opty += 8;
 	x = 4;
 	DrawQ_Fill(menu_x + x, menu_y + opty, 64, 48, c, 0, 0, 1, 0);
-	DrawQ_SuperPic(menu_x + x + 16, menu_y + opty + 16, "gfx/colorcontrol/ditherpattern.tga", 16, 16, 0,0, 1,0,0,1, s,0, 1,0,0,1, 0,t, 1,0,0,1, s,t, 1,0,0,1, 0);
-	DrawQ_SuperPic(menu_x + x + 32, menu_y + opty + 16, "gfx/colorcontrol/ditherpattern.tga", 16, 16, 0,0, 1,0,0,1, u,0, 1,0,0,1, 0,v, 1,0,0,1, u,v, 1,0,0,1, 0);
+	DrawQ_SuperPic(menu_x + x + 16, menu_y + opty + 16, "gfx/colorcontrol/ditherpattern", 16, 16, 0,0, 1,0,0,1, s,0, 1,0,0,1, 0,t, 1,0,0,1, s,t, 1,0,0,1, 0);
+	DrawQ_SuperPic(menu_x + x + 32, menu_y + opty + 16, "gfx/colorcontrol/ditherpattern", 16, 16, 0,0, 1,0,0,1, u,0, 1,0,0,1, 0,v, 1,0,0,1, u,v, 1,0,0,1, 0);
 	x += 80;
 	DrawQ_Fill(menu_x + x, menu_y + opty, 64, 48, 0, c, 0, 1, 0);
-	DrawQ_SuperPic(menu_x + x + 16, menu_y + opty + 16, "gfx/colorcontrol/ditherpattern.tga", 16, 16, 0,0, 0,1,0,1, s,0, 0,1,0,1, 0,t, 0,1,0,1, s,t, 0,1,0,1, 0);
-	DrawQ_SuperPic(menu_x + x + 32, menu_y + opty + 16, "gfx/colorcontrol/ditherpattern.tga", 16, 16, 0,0, 0,1,0,1, u,0, 0,1,0,1, 0,v, 0,1,0,1, u,v, 0,1,0,1, 0);
+	DrawQ_SuperPic(menu_x + x + 16, menu_y + opty + 16, "gfx/colorcontrol/ditherpattern", 16, 16, 0,0, 0,1,0,1, s,0, 0,1,0,1, 0,t, 0,1,0,1, s,t, 0,1,0,1, 0);
+	DrawQ_SuperPic(menu_x + x + 32, menu_y + opty + 16, "gfx/colorcontrol/ditherpattern", 16, 16, 0,0, 0,1,0,1, u,0, 0,1,0,1, 0,v, 0,1,0,1, u,v, 0,1,0,1, 0);
 	x += 80;
 	DrawQ_Fill(menu_x + x, menu_y + opty, 64, 48, 0, 0, c, 1, 0);
-	DrawQ_SuperPic(menu_x + x + 16, menu_y + opty + 16, "gfx/colorcontrol/ditherpattern.tga", 16, 16, 0,0, 0,0,1,1, s,0, 0,0,1,1, 0,t, 0,0,1,1, s,t, 0,0,1,1, 0);
-	DrawQ_SuperPic(menu_x + x + 32, menu_y + opty + 16, "gfx/colorcontrol/ditherpattern.tga", 16, 16, 0,0, 0,0,1,1, u,0, 0,0,1,1, 0,v, 0,0,1,1, u,v, 0,0,1,1, 0);
+	DrawQ_SuperPic(menu_x + x + 16, menu_y + opty + 16, "gfx/colorcontrol/ditherpattern", 16, 16, 0,0, 0,0,1,1, s,0, 0,0,1,1, 0,t, 0,0,1,1, s,t, 0,0,1,1, 0);
+	DrawQ_SuperPic(menu_x + x + 32, menu_y + opty + 16, "gfx/colorcontrol/ditherpattern", 16, 16, 0,0, 0,0,1,1, u,0, 0,0,1,1, 0,v, 0,0,1,1, u,v, 0,0,1,1, 0);
 	x += 80;
 	DrawQ_Fill(menu_x + x, menu_y + opty, 64, 48, c, c, c, 1, 0);
-	DrawQ_SuperPic(menu_x + x + 16, menu_y + opty + 16, "gfx/colorcontrol/ditherpattern.tga", 16, 16, 0,0, 1,1,1,1, s,0, 1,1,1,1, 0,t, 1,1,1,1, s,t, 1,1,1,1, 0);
-	DrawQ_SuperPic(menu_x + x + 32, menu_y + opty + 16, "gfx/colorcontrol/ditherpattern.tga", 16, 16, 0,0, 1,1,1,1, u,0, 1,1,1,1, 0,v, 1,1,1,1, u,v, 1,1,1,1, 0);
+	DrawQ_SuperPic(menu_x + x + 16, menu_y + opty + 16, "gfx/colorcontrol/ditherpattern", 16, 16, 0,0, 1,1,1,1, s,0, 1,1,1,1, 0,t, 1,1,1,1, s,t, 1,1,1,1, 0);
+	DrawQ_SuperPic(menu_x + x + 32, menu_y + opty + 16, "gfx/colorcontrol/ditherpattern", 16, 16, 0,0, 1,1,1,1, u,0, 1,1,1,1, 0,v, 1,1,1,1, u,v, 1,1,1,1, 0);
 }
 
 
@@ -2552,8 +2552,8 @@ void M_Keys_Draw (void)
 
 	M_Background(320, 48 + 8 * numcommands);
 
-	p = Draw_CachePic ("gfx/ttl_cstm.lmp", false);
-	M_DrawPic ( (320-p->width)/2, 4, "gfx/ttl_cstm.lmp");
+	p = Draw_CachePic ("gfx/ttl_cstm", false);
+	M_DrawPic ( (320-p->width)/2, 4, "gfx/ttl_cstm");
 
 	if (bind_grab)
 		M_Print(12, 32, "Press a key or button for this action");
@@ -2757,9 +2757,9 @@ void M_Video_Draw (void)
 
 	M_Background(320, 200);
 
-	M_DrawPic(16, 4, "gfx/qplaque.lmp");
-	p = Draw_CachePic("gfx/vidmodes.lmp", false);
-	M_DrawPic((320-p->width)/2, 4, "gfx/vidmodes.lmp");
+	M_DrawPic(16, 4, "gfx/qplaque");
+	p = Draw_CachePic("gfx/vidmodes", false);
+	M_DrawPic((320-p->width)/2, 4, "gfx/vidmodes");
 
 	// Resolution
 	M_Print(16, video_cursor_table[0], "            Resolution");
@@ -2895,7 +2895,7 @@ void M_Menu_Help_f (void)
 void M_Help_Draw (void)
 {
 	M_Background(320, 200);
-	M_DrawPic (0, 0, va("gfx/help%i.lmp", help_page));
+	M_DrawPic (0, 0, va("gfx/help%i", help_page));
 }
 
 
@@ -3137,10 +3137,10 @@ void M_LanConfig_Draw (void)
 
 	M_Background(320, 200);
 
-	M_DrawPic (16, 4, "gfx/qplaque.lmp");
-	p = Draw_CachePic ("gfx/p_multi.lmp", false);
+	M_DrawPic (16, 4, "gfx/qplaque");
+	p = Draw_CachePic ("gfx/p_multi", false);
 	basex = (320-p->width)/2;
-	M_DrawPic (basex, 4, "gfx/p_multi.lmp");
+	M_DrawPic (basex, 4, "gfx/p_multi");
 
 	if (StartingGame)
 		startJoin = "New Game";
@@ -3740,9 +3740,9 @@ void M_GameOptions_Draw (void)
 
 	M_Background(320, 200);
 
-	M_DrawPic (16, 4, "gfx/qplaque.lmp");
-	p = Draw_CachePic ("gfx/p_multi.lmp", false);
-	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_multi.lmp");
+	M_DrawPic (16, 4, "gfx/qplaque");
+	p = Draw_CachePic ("gfx/p_multi", false);
+	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_multi");
 
 	M_DrawTextBox (152, 32, 10, 1);
 	M_Print(160, 40, "begin game");
@@ -4185,8 +4185,8 @@ void M_ServerList_Draw (void)
 	start = bound(0, slist_cursor - (visible >> 1), serverlist_viewcount - visible);
 	end = min(start + visible, serverlist_viewcount);
 
-	p = Draw_CachePic("gfx/p_multi.lmp", false);
-	M_DrawPic((640 - p->width) / 2, 4, "gfx/p_multi.lmp");
+	p = Draw_CachePic("gfx/p_multi", false);
+	M_DrawPic((640 - p->width) / 2, 4, "gfx/p_multi");
 	if (end > start)
 	{
 		for (n = start;n < end;n++)
