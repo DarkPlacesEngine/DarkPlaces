@@ -27,7 +27,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 cvar_t r_ambient = {0, "r_ambient", "0"};
 cvar_t r_drawportals = {0, "r_drawportals", "0"};
-cvar_t r_lockpvs = {0, "r_testpvs", "0"};
+cvar_t r_lockpvs = {0, "r_lockpvs", "0"};
 cvar_t r_lockvisibility = {0, "r_lockvisibility", "0"};
 cvar_t r_useportalculling = {0, "r_useportalculling", "0"};
 cvar_t r_drawcollisionbrushes_polygonfactor = {0, "r_drawcollisionbrushes_polygonfactor", "-1"};
