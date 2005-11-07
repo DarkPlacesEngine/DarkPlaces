@@ -32,7 +32,7 @@ void Palette_SetupSpecialPalettes(void)
 	unsigned char *colormap;
 	fs_offset_t filesize;
 
-	colormap = FS_LoadFile("gfx/colormap.lmp", tempmempool, true, NULL);
+	colormap = FS_LoadFile("gfx/colormap.lmp", tempmempool, true, &filesize);
 	if (colormap && filesize >= 16385)
 		fullbright_start = 256 - colormap[16384];
 	else
