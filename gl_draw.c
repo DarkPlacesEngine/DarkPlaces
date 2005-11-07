@@ -339,7 +339,7 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 	flags = TEXF_ALPHA;
 	if (persistent)
 		flags |= TEXF_PRECACHE;
-	if (!strcmp(path, "gfx/colorcontrol/ditherpattern.tga"))
+	if (!strcmp(path, "gfx/colorcontrol/ditherpattern"))
 		flags |= TEXF_CLAMP;
 
 	// load the pic from disk
@@ -368,23 +368,23 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 
 	if (pic->tex == NULL && !strcmp(path, "gfx/conchars"))
 		pic->tex = draw_generateconchars();
-	if (pic->tex == NULL && !strcmp(path, "ui/mousepointer.tga"))
+	if (pic->tex == NULL && !strcmp(path, "ui/mousepointer"))
 		pic->tex = draw_generatemousepointer();
-	if (pic->tex == NULL && !strcmp(path, "gfx/prydoncursor001.tga"))
+	if (pic->tex == NULL && !strcmp(path, "gfx/prydoncursor001"))
 		pic->tex = draw_generatemousepointer();
-	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair1.tga"))
+	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair1"))
 		pic->tex = draw_generatecrosshair(0);
-	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair2.tga"))
+	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair2"))
 		pic->tex = draw_generatecrosshair(1);
-	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair3.tga"))
+	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair3"))
 		pic->tex = draw_generatecrosshair(2);
-	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair4.tga"))
+	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair4"))
 		pic->tex = draw_generatecrosshair(3);
-	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair5.tga"))
+	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair5"))
 		pic->tex = draw_generatecrosshair(4);
-	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair6.tga"))
+	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair6"))
 		pic->tex = draw_generatecrosshair(5);
-	if (pic->tex == NULL && !strcmp(path, "gfx/colorcontrol/ditherpattern.tga"))
+	if (pic->tex == NULL && !strcmp(path, "gfx/colorcontrol/ditherpattern"))
 		pic->tex = draw_generateditherpattern();
 	if (pic->tex == NULL)
 	{

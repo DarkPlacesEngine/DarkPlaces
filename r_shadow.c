@@ -3159,7 +3159,7 @@ void R_Shadow_DrawLightSprites(void)
 	for (i = 0;i < 5;i++)
 	{
 		lighttextures[i] = NULL;
-		if ((pic = Draw_CachePic(va("gfx/crosshair%i.tga", i + 1), true)))
+		if ((pic = Draw_CachePic(va("gfx/crosshair%i", i + 1), true)))
 			lighttextures[i] = pic->tex;
 	}
 

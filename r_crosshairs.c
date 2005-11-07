@@ -72,7 +72,7 @@ void R_DrawWorldCrosshair(void)
 		return;
 	if (!cl.viewentity || !cl_entities[cl.viewentity].state_current.active)
 		return;
-	pic = Draw_CachePic(va("gfx/crosshair%i.tga", num), true);
+	pic = Draw_CachePic(va("gfx/crosshair%i", num), true);
 	if (!pic)
 		return;
 	R_GetCrosshairColor(color);
@@ -107,7 +107,7 @@ void R_Draw2DCrosshair(void)
 		return;
 	if (!cl.viewentity || !cl_entities[cl.viewentity].state_current.active)
 		return;
-	pic = Draw_CachePic(va("gfx/crosshair%i.tga", num), true);
+	pic = Draw_CachePic(va("gfx/crosshair%i", num), true);
 	if (pic)
 	{
 		R_GetCrosshairColor(color);
