@@ -132,11 +132,14 @@ void Cbuf_InsertText (const char *text)
 Cbuf_Execute
 ============
 */
+static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned maxoutlen, cmdalias_t *alias );
 void Cbuf_Execute (void)
 {
+#define EXECUTESTRING_BUFFER 2048
 	int i;
 	char *text;
 	char line[1024];
+	char preprocessed[EXECUTESTRING_BUFFER];
 	int quotes;
 
 	// LordHavoc: making sure the tokenizebuffer doesn't get filled up by repeated crashes
@@ -175,7 +178,8 @@ void Cbuf_Execute (void)
 		}
 
 // execute the command line
-		Cmd_ExecuteString (line, src_command);
+		Cmd_PreprocessString( line, preprocessed, EXECUTESTRING_BUFFER, NULL );
+		Cmd_ExecuteString (preprocessed, src_command);
 
 		if (cmd_wait)
 		{	// skip out while text still remains in buffer, leaving it
@@ -387,8 +391,7 @@ typedef struct cmd_function_s
 static int cmd_argc;
 static const char *cmd_argv[MAX_ARGS];
 static const char *cmd_null_string = "";
-static const char *cmd_args = NULL;
-
+static const char *cmd_args;
 cmd_source_t cmd_source;
 
 
@@ -906,8 +909,6 @@ FIXME: lookupnoadd the token to speed search?
 */
 void Cmd_ExecuteString (const char *text, cmd_source_t src)
 {
-#define EXECUTESTRING_BUFFER 4096
-	static char buffer[ EXECUTESTRING_BUFFER ];
 	int oldpos;
 	cmd_function_t *cmd;
 	cmdalias_t *a;
@@ -915,8 +916,7 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 	oldpos = cmd_tokenizebufferpos;
 	cmd_source = src;
 
-	Cmd_PreprocessString( text, buffer, EXECUTESTRING_BUFFER, NULL );
-	Cmd_TokenizeString (buffer);
+	Cmd_TokenizeString (text);
 
 // execute the command line
 	if (!Cmd_Argc())
