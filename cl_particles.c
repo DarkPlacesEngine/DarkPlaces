@@ -505,40 +505,29 @@ CL_EntityParticles
 */
 void CL_EntityParticles (entity_t *ent)
 {
-	int			i;
-	float		angle;
-	float		sp, sy, cp, cy;
-	vec3_t		forward;
-	float		dist;
-	float		beamlength;
+	int i;
+	float pitch, yaw, dist = 64, beamlength = 16, org[3], v[3];
 	static vec3_t avelocities[NUMVERTEXNORMALS];
 	if (!cl_particles.integer) return;
 
-	dist = 64;
-	beamlength = 16;
+#ifdef WORKINGLQUAKE
+	VectorCopy(ent->origin, org);
+#else
+	VectorCopy(ent->render.origin, org);
+#endif
 
 	if (!avelocities[0][0])
-		for (i=0 ; i<NUMVERTEXNORMALS*3 ; i++)
-			avelocities[0][i] = (rand()&255) * 0.01;
+		for (i = 0;i < NUMVERTEXNORMALS * 3;i++)
+			avelocities[0][i] = lhrandom(0, 2.55);
 
-	for (i=0 ; i<NUMVERTEXNORMALS ; i++)
+	for (i = 0;i < NUMVERTEXNORMALS;i++)
 	{
-		angle = cl.time * avelocities[i][0];
-		sy = sin(angle);
-		cy = cos(angle);
-		angle = cl.time * avelocities[i][1];
-		sp = sin(angle);
-		cp = cos(angle);
-
-		forward[0] = cp*cy;
-		forward[1] = cp*sy;
-		forward[2] = -sp;
-
-#ifdef WORKINGLQUAKE
-		particle(particletype + pt_entityparticle, particlepalette[0x6f], particlepalette[0x6f], tex_particle, 2, 255, 0, 0, 0, ent->origin[0] + m_bytenormals[i][0]*dist + forward[0]*beamlength, ent->origin[1] + m_bytenormals[i][1]*dist + forward[1]*beamlength, ent->origin[2] + m_bytenormals[i][2]*dist + forward[2]*beamlength, 0, 0, 0, 0);
-#else
-		particle(particletype + pt_entityparticle, particlepalette[0x6f], particlepalette[0x6f], tex_particle, 2, 255, 0, 0, 0, ent->render.origin[0] + m_bytenormals[i][0]*dist + forward[0]*beamlength, ent->render.origin[1] + m_bytenormals[i][1]*dist + forward[1]*beamlength, ent->render.origin[2] + m_bytenormals[i][2]*dist + forward[2]*beamlength, 0, 0, 0, 0);
-#endif
+		yaw = cl.time * avelocities[i][0];
+		pitch = cl.time * avelocities[i][1];
+		v[0] = org[0] + m_bytenormals[i][0] * dist + (cos(pitch)*cos(yaw)) * beamlength;
+		v[1] = org[1] + m_bytenormals[i][1] * dist + (cos(pitch)*sin(yaw)) * beamlength;
+		v[2] = org[2] + m_bytenormals[i][2] * dist + (-sin(pitch)) * beamlength;
+		particle(particletype + pt_entityparticle, particlepalette[0x6f], particlepalette[0x6f], tex_particle, 2, 255, 0, 0, 0, v[0], v[1], v[2], 0, 0, 0, 0);
 	}
 }
 
