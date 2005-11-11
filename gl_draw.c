@@ -31,7 +31,7 @@ static rtexture_t *char_texture;
 /* Support Routines */
 
 #define FONT_FILESIZE 13468
-#define MAX_CACHED_PICS 256
+#define MAX_CACHED_PICS 1024
 #define CACHEPICHASHSIZE 256
 static cachepic_t *cachepichash[CACHEPICHASHSIZE];
 static cachepic_t cachepics[MAX_CACHED_PICS];
