@@ -37,7 +37,7 @@ static cvar_t sv_masters [] =
 	{CVAR_SAVE, "sv_master3", ""},
 	{CVAR_SAVE, "sv_master4", ""},
 	{0, "sv_masterextra1", "ghdigital.com"}, //69.59.212.88
-	{0, "sv_masterextra2", "dpmaster.deathmask.net"}, //64.253.41.48
+	{0, "sv_masterextra2", "dpmaster.deathmask.net"}, //64.253.41.49
 	{0, "sv_masterextra3", "12.166.196.192"}, //blaze.mindphukd.org (doesn't resolve currently but works as an ip)
 	{0, NULL, NULL}
 };
