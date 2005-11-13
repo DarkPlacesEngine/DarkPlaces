@@ -519,7 +519,7 @@ void CL_AllocDlight(entity_render_t *ent, matrix4x4_t *matrix, float radius, flo
 dlightsetup:
 	//Con_Printf("dlight %i : %f %f %f : %f %f %f\n", i, org[0], org[1], org[2], red * radius, green * radius, blue * radius);
 	memset (dl, 0, sizeof(*dl));
-	dl->matrix = *matrix;
+	Matrix4x4_Normalize(&dl->matrix, matrix);
 	dl->ent = ent;
 	dl->origin[0] = dl->matrix.m[0][3];
 	dl->origin[1] = dl->matrix.m[1][3];

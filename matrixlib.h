@@ -34,6 +34,9 @@ void Matrix4x4_Transpose3x3 (matrix4x4_t *out, const matrix4x4_t *in1);
 // creates a matrix that does the opposite of the matrix provided
 // only supports translate, rotate, scale (not scale3) matrices
 void Matrix4x4_Invert_Simple (matrix4x4_t *out, const matrix4x4_t *in1);
+// creates a matrix that does the same rotation and translation as the matrix
+// provided, but no uniform scaling, does not support scale3 matrices
+void Matrix4x4_Normalize (matrix4x4_t *out, matrix4x4_t *in1);
 
 // creates an identity matrix
 // (a matrix which does nothing)
