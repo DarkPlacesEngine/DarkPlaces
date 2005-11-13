@@ -37,6 +37,7 @@
 static struct namecache_s
 {
 	lhnetaddress_t address;
+	double expirationtime;
 	char name[64];
 }
 namecache[MAX_NAMECACHE];
@@ -126,7 +127,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 	for (i = 0;i < MAX_NAMECACHE;i++)
 		if (!strcmp(namecache[i].name, name))
 			break;
-	if (i < MAX_NAMECACHE)
+	if (i < MAX_NAMECACHE && Sys_DoubleTime() < namecache[i].expirationtime)
 	{
 		*address = namecache[i].address;
 		if (address->addresstype == LHNETADDRESSTYPE_INET6)
@@ -155,6 +156,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 			for (i = 0;i < (int)sizeof(namecache[namecacheposition].name)-1 && name[i];i++)
 				namecache[namecacheposition].name[i] = name[i];
 			namecache[namecacheposition].name[i] = 0;
+			namecache[namecacheposition].expirationtime = Sys_DoubleTime() + 300;
 			namecache[namecacheposition].address = *address;
 			namecacheposition = (namecacheposition + 1) % MAX_NAMECACHE;
 #ifdef STANDALONETEST
@@ -172,6 +174,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 			for (i = 0;i < (int)sizeof(namecache[namecacheposition].name)-1 && name[i];i++)
 				namecache[namecacheposition].name[i] = name[i];
 			namecache[namecacheposition].name[i] = 0;
+			namecache[namecacheposition].expirationtime = Sys_DoubleTime() + 300;
 			namecache[namecacheposition].address = *address;
 			namecacheposition = (namecacheposition + 1) % MAX_NAMECACHE;
 #ifdef STANDALONETEST
@@ -186,6 +189,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 	for (i = 0;i < (int)sizeof(namecache[namecacheposition].name)-1 && name[i];i++)
 		namecache[namecacheposition].name[i] = name[i];
 	namecache[namecacheposition].name[i] = 0;
+	namecache[namecacheposition].expirationtime = Sys_DoubleTime() + 300;
 	namecache[namecacheposition].address.addresstype = LHNETADDRESSTYPE_NONE;
 	namecacheposition = (namecacheposition + 1) % MAX_NAMECACHE;
 	return 0;
