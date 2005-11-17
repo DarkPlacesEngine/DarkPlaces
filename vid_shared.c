@@ -15,6 +15,10 @@ qboolean in_client_mouse = true;
 // AK where should it be placed ?
 float in_mouse_x, in_mouse_y;
 
+// value of GL_MAX_TEXTURE_<various>_SIZE
+int gl_max_texture_size = 0;
+int gl_max_3d_texture_size = 0;
+int gl_max_cube_map_texture_size = 0;
 // GL_ARB_multitexture
 int gl_textureunits = 1;
 // GL_ARB_texture_env_combine or GL_EXT_texture_env_combine
@@ -608,6 +612,9 @@ void VID_CheckExtensions(void)
 
 	// reset all the gl extension variables here
 	// this should match the declarations
+	gl_max_texture_size = 0;
+	gl_max_3d_texture_size = 0;
+	gl_max_cube_map_texture_size = 0;
 	gl_textureunits = 1;
 	gl_combine_extension = false;
 	gl_supportslockarrays = false;
@@ -633,6 +640,8 @@ void VID_CheckExtensions(void)
 	Con_Printf("GL_EXTENSIONS: %s\n", gl_extensions);
 	Con_Printf("%s_EXTENSIONS: %s\n", gl_platform, gl_platformextensions);
 
+	qglGetIntegerv(GL_MAX_TEXTURE_SIZE, &gl_max_texture_size);
+
 	Con_Print("Checking OpenGL extensions...\n");
 
 // COMMANDLINEOPTION: GL: -nodrawrangeelements disables GL_EXT_draw_range_elements (renders faster)
@@ -651,9 +660,11 @@ void VID_CheckExtensions(void)
 	}
 
 // COMMANDLINEOPTION: GL: -notexture3d disables GL_EXT_texture3D (required for spherical lights, otherwise they render as a column)
-	gl_texture3d = GL_CheckExtension("GL_EXT_texture3D", texture3dextfuncs, "-notexture3d", false);
+	if ((gl_texture3d = GL_CheckExtension("GL_EXT_texture3D", texture3dextfuncs, "-notexture3d", false)))
+		qglGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &gl_max_3d_texture_size);
 // COMMANDLINEOPTION: GL: -nocubemap disables GL_ARB_texture_cube_map (required for bumpmapping)
-	gl_texturecubemap = GL_CheckExtension("GL_ARB_texture_cube_map", NULL, "-nocubemap", false);
+	if ((gl_texturecubemap = GL_CheckExtension("GL_ARB_texture_cube_map", NULL, "-nocubemap", false)))
+		qglGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB, &gl_max_cube_map_texture_size);
 // COMMANDLINEOPTION: GL: -nocva disables GL_EXT_compiled_vertex_array (renders faster)
 	gl_supportslockarrays = GL_CheckExtension("GL_EXT_compiled_vertex_array", compiledvertexarrayfuncs, "-nocva", false);
 // COMMANDLINEOPTION: GL: -noedgeclamp disables GL_EXT_texture_edge_clamp or GL_SGIS_texture_edge_clamp (recommended, some cards do not support the other texture clamp method)
