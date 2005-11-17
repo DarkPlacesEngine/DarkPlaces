@@ -746,9 +746,21 @@ static void R_SetFrustum(void)
 
 static void R_BlendView(void)
 {
+	int screenwidth, screenheight;
+	qboolean dobloom;
+	qboolean doblend;
 	rmeshstate_t m;
 
-	if (r_refdef.viewblend[3] < 0.01f && !r_bloom.integer)
+	// set the (poorly named) screenwidth and screenheight variables to
+	// a power of 2 at least as large as the screen, these will define the
+	// size of the texture to allocate
+	for (screenwidth = 1;screenwidth < vid.width;screenwidth *= 2);
+	for (screenheight = 1;screenheight < vid.height;screenheight *= 2);
+
+	doblend = r_refdef.viewblend[3] >= 0.01f;
+	dobloom = r_bloom.integer && screenwidth <= gl_max_texture_size && screenheight <= gl_max_texture_size && r_bloom_resolution.value >= 32 && r_bloom_power.integer >= 1 && r_bloom_power.integer < 100 && r_bloom_blur.value >= 0 && r_bloom_blur.value < 512;
+
+	if (!dobloom && !doblend)
 		return;
 
 	GL_SetupView_Mode_Ortho(0, 0, 1, 1, -10, 100);
@@ -760,16 +772,11 @@ static void R_BlendView(void)
 	varray_vertex3f[3] = 1;varray_vertex3f[4] = 0;varray_vertex3f[5] = 0;
 	varray_vertex3f[6] = 1;varray_vertex3f[7] = 1;varray_vertex3f[8] = 0;
 	varray_vertex3f[9] = 0;varray_vertex3f[10] = 1;varray_vertex3f[11] = 0;
-	if (r_bloom.integer && r_bloom_resolution.value >= 32 && r_bloom_power.integer >= 1 && r_bloom_power.integer < 100 && r_bloom_blur.value >= 0 && r_bloom_blur.value < 512)
+	if (dobloom)
 	{
-		int screenwidth, screenheight, bloomwidth, bloomheight, x, dobloomblend, range;
+		int bloomwidth, bloomheight, x, dobloomblend, range;
 		float xoffset, yoffset, r;
 		renderstats.bloom++;
-		// set the (poorly named) screenwidth and screenheight variables to
-		// a power of 2 at least as large as the screen, these will define the
-		// size of the texture to allocate
-		for (screenwidth = 1;screenwidth < vid.width;screenwidth *= 2);
-		for (screenheight = 1;screenheight < vid.height;screenheight *= 2);
 		// allocate textures as needed
 		if (!r_bloom_texture_screen)
 			r_bloom_texture_screen = R_LoadTexture2D(r_main_texturepool, "screen", screenwidth, screenheight, NULL, TEXTYPE_RGBA, TEXF_FORCENEAREST | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
@@ -940,7 +947,7 @@ static void R_BlendView(void)
 			renderstats.bloom_drawpixels += r_view_width * r_view_height;
 		}
 	}
-	if (r_refdef.viewblend[3] >= 0.01f)
+	if (doblend)
 	{
 		// apply a color tint to the whole view
 		memset(&m, 0, sizeof(m));

@@ -19,7 +19,7 @@
 #define TEXF_FORCENEAREST 0x00000040
 // indicates texture should be uploaded using GL_LINEAR or GL_LINEAR_MIPMAP_NEAREST or GL_LINEAR_MIPMAP_LINEAR mode
 #define TEXF_FORCELINEAR 0x00000080
-// indicates texture should be affected by gl_picmip
+// indicates texture should be affected by gl_picmip and gl_max_size cvar
 #define TEXF_PICMIP 0x00000100
 // used for checking if textures mismatch
 #define TEXF_IMPORTANTBITS (TEXF_ALPHA | TEXF_MIPMAP | TEXF_FRAGMENT | TEXF_CLAMP | TEXF_FORCENEAREST | TEXF_FORCELINEAR | TEXF_PICMIP)

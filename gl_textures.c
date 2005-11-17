@@ -136,8 +136,6 @@ static int resizebuffersize = 0;
 static unsigned char *texturebuffer;
 static int texturebuffersize = 0;
 
-static int realmaxsize = 0;
-
 static textypeinfo_t *R_GetTexTypeInfo(int textype, int flags)
 {
 	if ((flags & (TEXF_PICMIP | TEXF_FRAGMENT)) == (TEXF_PICMIP | TEXF_FRAGMENT))
@@ -365,50 +363,81 @@ static void GL_TextureMode_f (void)
 	}
 }
 
+static void GL_Texture_CalcImageSize(int texturetype, int flags, int inwidth, int inheight, int indepth, int *outwidth, int *outheight, int *outdepth)
+{
+	int picmip = 0, maxsize = 0, width2 = 1, height2 = 1, depth2 = 1;
+
+	if (gl_max_size.integer > gl_max_texture_size)
+		Cvar_SetValue("gl_max_size", gl_max_texture_size);
+
+	switch (texturetype)
+	{
+	default:
+	case GLTEXTURETYPE_1D:
+	case GLTEXTURETYPE_2D:
+		maxsize = gl_max_texture_size;
+		break;
+	case GLTEXTURETYPE_3D:
+		maxsize = gl_max_3d_texture_size;
+		break;
+	case GLTEXTURETYPE_CUBEMAP:
+		maxsize = gl_max_cube_map_texture_size;
+		break;
+	}
+
+	if (flags & TEXF_PICMIP)
+	{
+		maxsize = min(maxsize, gl_max_size.integer);
+		picmip = gl_picmip.integer;
+	}
+
+	if (outwidth)
+	{
+		for (width2 = 1;width2 < inwidth;width2 <<= 1);
+		for (width2 >>= picmip;width2 > maxsize;width2 >>= 1);
+		*outwidth = max(1, width2);
+	}
+	if (outheight)
+	{
+		for (height2 = 1;height2 < inheight;height2 <<= 1);
+		for (height2 >>= picmip;height2 > maxsize;height2 >>= 1);
+		*outheight = max(1, height2);
+	}
+	if (outdepth)
+	{
+		for (depth2 = 1;depth2 < indepth;depth2 <<= 1);
+		for (depth2 >>= picmip;depth2 > maxsize;depth2 >>= 1);
+		*outdepth = max(1, depth2);
+	}
+}
+
+
 static int R_CalcTexelDataSize (gltexture_t *glt)
 {
-	int width2, height2, depth2, size, picmip;
+	int width2, height2, depth2, size;
+
 	if (glt->flags & TEXF_FRAGMENT)
-		size = glt->width * glt->height * glt->depth;
-	else
+		return glt->width * glt->height * glt->depth * glt->textype->internalbytesperpixel * glt->image->sides;
+
+	GL_Texture_CalcImageSize(glt->texturetype, glt->flags, glt->width, glt->height, glt->depth, &width2, &height2, &depth2);
+
+	size = width2 * height2 * depth2;
+
+	if (glt->flags & TEXF_MIPMAP)
 	{
-		picmip = 0;
-		if (glt->flags & TEXF_PICMIP)
-			picmip = gl_picmip.integer;
-		if (gl_max_size.integer > realmaxsize)
-			Cvar_SetValue("gl_max_size", realmaxsize);
-		// calculate final size
-		for (width2 = 1;width2 < glt->width;width2 <<= 1);
-		for (height2 = 1;height2 < glt->height;height2 <<= 1);
-		for (depth2 = 1;depth2 < glt->depth;depth2 <<= 1);
-		for (width2 >>= picmip;width2 > gl_max_size.integer;width2 >>= 1);
-		for (height2 >>= picmip;height2 > gl_max_size.integer;height2 >>= 1);
-		for (depth2 >>= picmip;depth2 > gl_max_size.integer;depth2 >>= 1);
-		if (width2 < 1) width2 = 1;
-		if (height2 < 1) height2 = 1;
-		if (depth2 < 1) depth2 = 1;
-
-		size = 0;
-		if (glt->flags & TEXF_MIPMAP)
+		while (width2 > 1 || height2 > 1 || depth2 > 1)
 		{
-			while (width2 > 1 || height2 > 1 || depth2 > 1)
-			{
-				size += width2 * height2 * depth2;
-				if (width2 > 1)
-					width2 >>= 1;
-				if (height2 > 1)
-					height2 >>= 1;
-				if (depth2 > 1)
-					depth2 >>= 1;
-			}
-			size++; // count the last 1x1 mipmap
+			if (width2 > 1)
+				width2 >>= 1;
+			if (height2 > 1)
+				height2 >>= 1;
+			if (depth2 > 1)
+				depth2 >>= 1;
+			size += width2 * height2 * depth2;
 		}
-		else
-			size = width2 * height2 * depth2;
 	}
-	size *= glt->textype->internalbytesperpixel * glt->image->sides;
 
-	return size;
+	return size * glt->textype->internalbytesperpixel * glt->image->sides;
 }
 
 void R_TextureStats_Print(qboolean printeach, qboolean printpool, qboolean printtotal)
@@ -465,15 +494,12 @@ static void R_TextureStats_f(void)
 
 static void r_textures_start(void)
 {
-	// deal with size limits of various drivers (3dfx in particular)
-	qglGetIntegerv(GL_MAX_TEXTURE_SIZE, &realmaxsize);
-	CHECKGLERROR
 	// LordHavoc: allow any alignment
 	qglPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	CHECKGLERROR
 
 	// use the largest scrap texture size we can (not sure if this is really a good idea)
-	for (block_size = 1;block_size < realmaxsize && block_size < gl_max_scrapsize.integer;block_size <<= 1);
+	for (block_size = 1;block_size * 2 <= gl_max_texture_size && block_size * 2 <= gl_max_scrapsize.integer;block_size *= 2);
 
 	texturemempool = Mem_AllocPool("texture management", 0, NULL);
 
@@ -865,7 +891,7 @@ static void R_Upload(gltexture_t *glt, unsigned char *data)
 
 static void R_FindImageForTexture(gltexture_t *glt)
 {
-	int i, j, best, best2, x, y, z, w, h, d, picmip;
+	int i, j, best, best2, x, y, z, w, h, d;
 	textypeinfo_t *texinfo;
 	gltexturepool_t *pool;
 	gltextureimage_t *image, **imagechainpointer;
@@ -966,21 +992,7 @@ static void R_FindImageForTexture(gltexture_t *glt)
 		image->type = GLIMAGETYPE_TILE;
 		image->blockallocation = NULL;
 
-		picmip = 0;
-		if (glt->flags & TEXF_PICMIP)
-			picmip = gl_picmip.integer;
-		// calculate final size
-		if (gl_max_size.integer > realmaxsize)
-			Cvar_SetValue("gl_max_size", realmaxsize);
-		for (image->width = 1;image->width < glt->width;image->width <<= 1);
-		for (image->height = 1;image->height < glt->height;image->height <<= 1);
-		for (image->depth = 1;image->depth < glt->depth;image->depth <<= 1);
-		for (image->width >>= picmip;image->width > gl_max_size.integer;image->width >>= 1);
-		for (image->height >>= picmip;image->height > gl_max_size.integer;image->height >>= 1);
-		for (image->depth >>= picmip;image->depth > gl_max_size.integer;image->depth >>= 1);
-		if (image->width < 1) image->width = 1;
-		if (image->height < 1) image->height = 1;
-		if (image->depth < 1) image->depth = 1;
+		GL_Texture_CalcImageSize(glt->texturetype, glt->flags, glt->width, glt->height, glt->depth, &image->width, &image->height, &image->depth);
 	}
 	image->texturetype = glt->texturetype;
 	image->glinternalformat = texinfo->glinternalformat;

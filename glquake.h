@@ -224,6 +224,8 @@ extern int gl_max_anisotropy;
 #define GL_POLYGON_SMOOTH                       0x0B41
 #endif
 
+extern int gl_max_texture_size;
+
 // GL_ARB_multitexture
 extern int gl_textureunits;
 extern void (GLAPIENTRY *qglMultiTexCoord1f) (GLenum, GLfloat);
@@ -322,6 +324,7 @@ extern int gl_textureshader;
 #endif
 
 extern int gl_texture3d;
+extern int gl_max_3d_texture_size;
 #ifndef GL_TEXTURE_3D
 #define GL_PACK_SKIP_IMAGES			0x806B
 #define GL_PACK_IMAGE_HEIGHT			0x806C
@@ -339,6 +342,7 @@ extern void (GLAPIENTRY *qglCopyTexSubImage3D)(GLenum target, GLint level, GLint
 #endif
 
 extern int gl_texturecubemap;
+extern int gl_max_cube_map_texture_size;
 #ifndef GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB
 #define GL_NORMAL_MAP_ARB			    0x8511
 #define GL_REFLECTION_MAP_ARB		    0x8512
