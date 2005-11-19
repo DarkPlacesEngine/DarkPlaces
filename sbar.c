@@ -147,7 +147,10 @@ void sbar_start(void)
 
 	numsbarpics = 0;
 
-	if (gamemode == GAME_SOM)
+	if (gamemode == GAME_NETHERWORLD)
+	{
+	}
+	else if (gamemode == GAME_SOM)
 	{
 		sb_disc = Sbar_NewPic("gfx/disc");
 
@@ -967,7 +970,10 @@ void Sbar_Draw (void)
 		return;
 	}
 
-	if (gamemode == GAME_SOM)
+	if (gamemode == GAME_NETHERWORLD)
+	{
+	}
+	else if (gamemode == GAME_SOM)
 	{
 		if (sb_showscores || (cl.stats[STAT_HEALTH] <= 0 && cl_deathscoreboard.integer))
 			Sbar_DrawScoreboard ();
