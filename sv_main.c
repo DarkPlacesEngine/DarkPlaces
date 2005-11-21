@@ -291,6 +291,10 @@ void SV_SendServerinfo (client_t *client)
 	// edicts get reallocated on level changes, so we need to update it here
 	client->edict = PRVM_EDICT_NUM((client - svs.clients) + 1);
 
+	// clear cached stuff that depends on the level
+	client->weaponmodel[0] = 0;
+	client->weaponmodelindex = 0;
+
 	// if client is a botclient coming from a level change, we need to set up
 	// client info that normally requires networking
 	if (!client->netconnection)
