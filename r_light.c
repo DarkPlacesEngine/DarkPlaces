@@ -387,9 +387,11 @@ void R_LightModel_CalcVertexColors(const float *ambientcolor4f, const float *dif
 		// silly directional diffuse shading
 		if (usediffuse)
 		{
+			// we have to negate this result because it is the incoming light
+			// direction, not simply the normal to dotproduct with.
 			dot = DotProduct(normal3f, dnormal);
-			if (dot > 0)
-				VectorMA(color, dot, diffusecolor, color);
+			if (dot < 0)
+				VectorMA(color, -dot, diffusecolor, color);
 		}
 
 		// pretty good lighting

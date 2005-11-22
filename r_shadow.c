@@ -319,16 +319,16 @@ const char *builtinshader_light_vert =
 "	// (we use unnormalized to ensure that it interpolates correctly and then\n"
 "	//  normalize it per pixel)\n"
 "	vec3 lightminusvertex = LightPosition - gl_Vertex.xyz;\n"
-"	LightVector.x = -dot(lightminusvertex, gl_MultiTexCoord1.xyz);\n"
-"	LightVector.y = -dot(lightminusvertex, gl_MultiTexCoord2.xyz);\n"
-"	LightVector.z = -dot(lightminusvertex, gl_MultiTexCoord3.xyz);\n"
+"	LightVector.x = dot(lightminusvertex, gl_MultiTexCoord1.xyz);\n"
+"	LightVector.y = dot(lightminusvertex, gl_MultiTexCoord2.xyz);\n"
+"	LightVector.z = dot(lightminusvertex, gl_MultiTexCoord3.xyz);\n"
 "\n"
 "#if defined(USESPECULAR) || defined(USEFOG) || defined(USEOFFSETMAPPING)\n"
 "	// transform unnormalized eye direction into tangent space\n"
 "	vec3 eyeminusvertex = EyePosition - gl_Vertex.xyz;\n"
-"	EyeVector.x = -dot(eyeminusvertex, gl_MultiTexCoord1.xyz);\n"
-"	EyeVector.y = -dot(eyeminusvertex, gl_MultiTexCoord2.xyz);\n"
-"	EyeVector.z = -dot(eyeminusvertex, gl_MultiTexCoord3.xyz);\n"
+"	EyeVector.x = dot(eyeminusvertex, gl_MultiTexCoord1.xyz);\n"
+"	EyeVector.y = dot(eyeminusvertex, gl_MultiTexCoord2.xyz);\n"
+"	EyeVector.z = dot(eyeminusvertex, gl_MultiTexCoord3.xyz);\n"
 "#endif\n"
 "\n"
 "	// transform vertex to camera space, using ftransform to match non-VS\n"
@@ -1444,9 +1444,9 @@ static void R_Shadow_RenderSurfacesLighting_Light_Vertex_Shading(const msurface_
 		{
 			Matrix4x4_Transform(&r_shadow_entitytolight, vertex3f, v);
 			Matrix4x4_Transform3x3(&r_shadow_entitytolight, normal3f, n);
-			if ((dot = DotProduct(n, v)) > 0)
+			if ((dot = DotProduct(n, v)) < 0)
 			{
-				shadeintensity = dot / sqrt(VectorLength2(v) * VectorLength2(n));
+				shadeintensity = -dot / sqrt(VectorLength2(v) * VectorLength2(n));
 				color4f[0] = (ambientcolor[0] + shadeintensity * diffusecolor[0]) - reduce;
 				color4f[1] = (ambientcolor[1] + shadeintensity * diffusecolor[1]) - reduce;
 				color4f[2] = (ambientcolor[2] + shadeintensity * diffusecolor[2]) - reduce;
@@ -1470,9 +1470,9 @@ static void R_Shadow_RenderSurfacesLighting_Light_Vertex_Shading(const msurface_
 			{
 				distintensity = pow(1 - dist, r_shadow_attenpower) * r_shadow_attenscale;
 				Matrix4x4_Transform3x3(&r_shadow_entitytolight, normal3f, n);
-				if ((dot = DotProduct(n, v)) > 0)
+				if ((dot = DotProduct(n, v)) < 0)
 				{
-					shadeintensity = dot / sqrt(VectorLength2(v) * VectorLength2(n));
+					shadeintensity = -dot / sqrt(VectorLength2(v) * VectorLength2(n));
 					color4f[0] = (ambientcolor[0] + shadeintensity * diffusecolor[0]) * distintensity - reduce;
 					color4f[1] = (ambientcolor[1] + shadeintensity * diffusecolor[1]) * distintensity - reduce;
 					color4f[2] = (ambientcolor[2] + shadeintensity * diffusecolor[2]) * distintensity - reduce;
@@ -1504,9 +1504,9 @@ static void R_Shadow_RenderSurfacesLighting_Light_Vertex_Shading(const msurface_
 				dist = sqrt(dist);
 				distintensity = pow(1 - dist, r_shadow_attenpower) * r_shadow_attenscale;
 				Matrix4x4_Transform3x3(&r_shadow_entitytolight, normal3f, n);
-				if ((dot = DotProduct(n, v)) > 0)
+				if ((dot = DotProduct(n, v)) < 0)
 				{
-					shadeintensity = dot / sqrt(VectorLength2(v) * VectorLength2(n));
+					shadeintensity = -dot / sqrt(VectorLength2(v) * VectorLength2(n));
 					color4f[0] = (ambientcolor[0] + shadeintensity * diffusecolor[0]) * distintensity - reduce;
 					color4f[1] = (ambientcolor[1] + shadeintensity * diffusecolor[1]) * distintensity - reduce;
 					color4f[2] = (ambientcolor[2] + shadeintensity * diffusecolor[2]) * distintensity - reduce;
@@ -1568,7 +1568,7 @@ static void R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(float *out3f, int numver
 	float lightdir[3];
 	for (i = 0;i < numverts;i++, vertex3f += 3, svector3f += 3, tvector3f += 3, normal3f += 3, out3f += 3)
 	{
-		VectorSubtract(vertex3f, relativelightorigin, lightdir);
+		VectorSubtract(relativelightorigin, vertex3f, lightdir);
 		// the cubemap normalizes this for us
 		out3f[0] = DotProduct(svector3f, lightdir);
 		out3f[1] = DotProduct(tvector3f, lightdir);
@@ -1582,9 +1582,9 @@ static void R_Shadow_GenTexCoords_Specular_NormalCubeMap(float *out3f, int numve
 	float lightdir[3], eyedir[3], halfdir[3];
 	for (i = 0;i < numverts;i++, vertex3f += 3, svector3f += 3, tvector3f += 3, normal3f += 3, out3f += 3)
 	{
-		VectorSubtract(vertex3f, relativelightorigin, lightdir);
+		VectorSubtract(relativelightorigin, vertex3f, lightdir);
 		VectorNormalize(lightdir);
-		VectorSubtract(vertex3f, relativeeyeorigin, eyedir);
+		VectorSubtract(relativeeyeorigin, vertex3f, eyedir);
 		VectorNormalize(eyedir);
 		VectorAdd(lightdir, eyedir, halfdir);
 		// the cubemap normalizes this for us
