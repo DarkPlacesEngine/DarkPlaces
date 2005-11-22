@@ -72,6 +72,7 @@ matrix4x4_t r_view_matrix;
 refdef_t r_refdef;
 
 cvar_t r_showtris = {0, "r_showtris", "0"};
+cvar_t r_shownormals = {0, "r_shownormals", "0"};
 cvar_t r_drawentities = {0, "r_drawentities","1"};
 cvar_t r_drawviewmodel = {0, "r_drawviewmodel","1"};
 cvar_t r_speeds = {0, "r_speeds","0"};
@@ -449,6 +450,7 @@ void GL_Main_Init(void)
 // FIXME: move this to client?
 	FOG_registercvars();
 	Cvar_RegisterVariable(&r_showtris);
+	Cvar_RegisterVariable(&r_shownormals);
 	Cvar_RegisterVariable(&r_drawentities);
 	Cvar_RegisterVariable(&r_drawviewmodel);
 	Cvar_RegisterVariable(&r_speeds);
@@ -1788,7 +1790,6 @@ void RSurf_SetColorPointer(const entity_render_t *ent, const msurface_t *surface
 	GL_Color(r, g, b, a);
 }
 
-
 static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *texture, int texturenumsurfaces, const msurface_t **texturesurfacelist, const vec3_t modelorg)
 {
 	int texturesurfaceindex;
@@ -2045,6 +2046,54 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 						R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 					GL_LockArrays(0, 0);
 				}
+			}
+		}
+		if (r_shownormals.integer && !r_showtrispass)
+		{
+			int j, k;
+			float v[3];
+			GL_DepthTest(true);
+			GL_DepthMask(texture->currentlayers->depthmask);
+			GL_BlendFunc(texture->currentlayers->blendfunc1, texture->currentlayers->blendfunc2);
+			memset(&m, 0, sizeof(m));
+			R_Mesh_State(&m);
+			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+			{
+				surface = texturesurfacelist[texturesurfaceindex];
+				RSurf_SetVertexPointer(ent, texture, surface, modelorg);
+				if (!rsurface_svector3f)
+				{
+					rsurface_svector3f = varray_svector3f;
+					rsurface_tvector3f = varray_tvector3f;
+					rsurface_normal3f = varray_normal3f;
+					Mod_BuildTextureVectorsAndNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_vertex3f, surface->groupmesh->data_texcoordtexture2f, surface->groupmesh->data_element3i + surface->num_firsttriangle * 3, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f, r_smoothnormals_areaweighting.integer);
+				}
+				GL_Color(1, 0, 0, 1);
+				qglBegin(GL_LINES);
+				for (j = 0, k = surface->num_firstvertex;j < surface->num_vertices;j++, k++)
+				{
+					VectorCopy(rsurface_vertex3f + k * 3, v);
+					qglVertex3f(v[0], v[1], v[2]);
+					VectorMA(v, 8, rsurface_svector3f + k * 3, v);
+					qglVertex3f(v[0], v[1], v[2]);
+				}
+				GL_Color(0, 0, 1, 1);
+				for (j = 0, k = surface->num_firstvertex;j < surface->num_vertices;j++, k++)
+				{
+					VectorCopy(rsurface_vertex3f + k * 3, v);
+					qglVertex3f(v[0], v[1], v[2]);
+					VectorMA(v, 8, rsurface_tvector3f + k * 3, v);
+					qglVertex3f(v[0], v[1], v[2]);
+				}
+				GL_Color(0, 1, 0, 1);
+				for (j = 0, k = surface->num_firstvertex;j < surface->num_vertices;j++, k++)
+				{
+					VectorCopy(rsurface_vertex3f + k * 3, v);
+					qglVertex3f(v[0], v[1], v[2]);
+					VectorMA(v, 8, rsurface_normal3f + k * 3, v);
+					qglVertex3f(v[0], v[1], v[2]);
+				}
+				qglEnd();
 			}
 		}
 	}

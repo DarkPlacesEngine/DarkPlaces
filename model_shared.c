@@ -553,9 +553,9 @@ void Mod_BuildBumpVectors(const float *v0, const float *v1, const float *v2, con
 	// 6 multiply, 9 subtract
 	VectorSubtract(v1, v0, v10);
 	VectorSubtract(v2, v0, v20);
-	normal3f[0] = v10[1] * v20[2] - v10[2] * v20[1];
-	normal3f[1] = v10[2] * v20[0] - v10[0] * v20[2];
-	normal3f[2] = v10[0] * v20[1] - v10[1] * v20[0];
+	normal3f[0] = v20[1] * v10[2] - v20[2] * v10[1];
+	normal3f[1] = v20[2] * v10[0] - v20[0] * v10[2];
+	normal3f[2] = v20[0] * v10[1] - v20[1] * v10[0];
 	// 12 multiply, 10 subtract
 	tc10[1] = tc1[1] - tc0[1];
 	tc20[1] = tc2[1] - tc0[1];
