@@ -460,7 +460,7 @@ Host_Savegame_f
 */
 void Host_Savegame_f (void)
 {
-	char	name[256];
+	char	name[MAX_QPATH];
 	qfile_t	*f;
 	int		i;
 	char	comment[SAVEGAME_COMMENT_LENGTH+1];
@@ -903,8 +903,8 @@ void Host_Say(qboolean teamonly)
 	int j, quoted;
 	const char *p1;
 	char *p2;
-	// LordHavoc: 256 char say messages
-	char text[256];
+	// LordHavoc: long say messages
+	char text[1024];
 	qboolean fromServer = false;
 
 	if (cmd_source == src_command)
@@ -978,7 +978,7 @@ void Host_Tell_f(void)
 	client_t *save;
 	int j;
 	const char *p1, *p2;
-	char text[1024]; // LordHavoc: FIXME: temporary buffer overflow fix (was 64)
+	char text[MAX_INPUTLINE]; // LordHavoc: FIXME: temporary buffer overflow fix (was 64)
 	qboolean fromServer = false;
 
 	if (cmd_source == src_command)

@@ -417,7 +417,7 @@ Returns a string describing *data in a type specific manner
 //int NoCrash_NUM_FOR_EDICT(prvm_edict_t *e);
 char *PR_ValueString (etype_t type, prvm_eval_t *val)
 {
-	static char line[1024]; // LordHavoc: enlarged a bit (was 256)
+	static char line[MAX_INPUTLINE];
 	ddef_t *def;
 	mfunction_t *f;
 	int n;
@@ -477,7 +477,7 @@ Easier to parse than PR_ValueString
 */
 char *PR_UglyValueString (etype_t type, prvm_eval_t *val)
 {
-	static char line[4096];
+	static char line[MAX_INPUTLINE];
 	int i;
 	const char *s;
 	ddef_t *def;
@@ -610,7 +610,7 @@ void ED_Print(prvm_edict_t *ed)
 	int		i, j;
 	const char	*name;
 	int		type;
-	char	tempstring[8192], tempstring2[260]; // temporary string buffers
+	char	tempstring[MAX_INPUTLINE], tempstring2[260]; // temporary string buffers
 
 	if (ed->priv.server->free)
 	{
@@ -638,11 +638,11 @@ void ED_Print(prvm_edict_t *ed)
 		if (j == type_size[type])
 			continue;
 
-		if (strlen(name) > 256)
+		if (strlen(name) > sizeof(tempstring2)-4)
 		{
-			memcpy (tempstring2, name, 256);
-			tempstring2[256] = tempstring2[257] = tempstring2[258] = '.';
-			tempstring2[259] = 0;
+			memcpy (tempstring2, name, sizeof(tempstring2)-4);
+			tempstring2[sizeof(tempstring2)-4] = tempstring2[sizeof(tempstring2)-3] = tempstring2[sizeof(tempstring2)-2] = '.';
+			tempstring2[sizeof(tempstring2)-1] = 0;
 			name = tempstring2;
 		}
 		strlcat (tempstring, name, sizeof (tempstring));
@@ -651,16 +651,16 @@ void ED_Print(prvm_edict_t *ed)
 		strcat(tempstring, " ");
 
 		name = PR_ValueString(d->type, (prvm_eval_t *)v);
-		if (strlen(name) > 256)
+		if (strlen(name) > sizeof(tempstring2)-4)
 		{
-			memcpy(tempstring2, name, 256);
-			tempstring2[256] = tempstring2[257] = tempstring2[258] = '.';
-			tempstring2[259] = 0;
+			memcpy (tempstring2, name, sizeof(tempstring2)-4);
+			tempstring2[sizeof(tempstring2)-4] = tempstring2[sizeof(tempstring2)-3] = tempstring2[sizeof(tempstring2)-2] = '.';
+			tempstring2[sizeof(tempstring2)-1] = 0;
 			name = tempstring2;
 		}
 		strlcat (tempstring, name, sizeof (tempstring));
 		strlcat (tempstring, "\n", sizeof (tempstring));
-		if (strlen(tempstring) >= 4096)
+		if (strlen(tempstring) >= sizeof(tempstring)/2)
 		{
 			Con_Print(tempstring);
 			tempstring[0] = 0;
@@ -869,7 +869,7 @@ ED_ParseGlobals
 */
 void ED_ParseGlobals (const char *data)
 {
-	char keyname[1024]; // LordHavoc: good idea? bad idea?  was 64
+	char keyname[MAX_INPUTLINE];
 	ddef_t *key;
 
 	while (1)
@@ -1499,7 +1499,7 @@ void PR_Fields_f (void)
 	int i, j, ednum, used, usedamount;
 	int *counts;
 	const char *name;
-	char tempstring[5000], tempstring2[260];
+	char tempstring[MAX_INPUTLINE], tempstring2[260];
 	prvm_edict_t *ed;
 	ddef_t *d;
 	int *v;
@@ -1572,11 +1572,11 @@ void PR_Fields_f (void)
 			strlcat (tempstring, tempstring2, sizeof (tempstring));
 			break;
 		}
-		if (strlen(name) > 256)
+		if (strlen(name) > sizeof(tempstring2)-4)
 		{
-			memcpy(tempstring2, name, 256);
-			tempstring2[256] = tempstring2[257] = tempstring2[258] = '.';
-			tempstring2[259] = 0;
+			memcpy (tempstring2, name, sizeof(tempstring2)-4);
+			tempstring2[sizeof(tempstring2)-4] = tempstring2[sizeof(tempstring2)-3] = tempstring2[sizeof(tempstring2)-2] = '.';
+			tempstring2[sizeof(tempstring2)-1] = 0;
 			name = tempstring2;
 		}
 		strcat (tempstring, name);
@@ -1585,7 +1585,7 @@ void PR_Fields_f (void)
 		dpsnprintf (tempstring2, sizeof (tempstring2), "%5d", counts[i]);
 		strlcat (tempstring, tempstring2, sizeof (tempstring));
 		strlcat (tempstring, "\n", sizeof (tempstring));
-		if (strlen(tempstring) >= 4096)
+		if (strlen(tempstring) >= sizeof(tempstring)/2)
 		{
 			Con_Print(tempstring);
 			tempstring[0] = 0;

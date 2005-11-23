@@ -757,7 +757,7 @@ unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **ver
 {
 	GLint vertexshadercompiled, fragmentshadercompiled, programlinked;
 	GLuint vertexshaderobject, fragmentshaderobject, programobject = 0;
-	char compilelog[4096];
+	char compilelog[MAX_INPUTLINE];
 	CHECKGLERROR
 
 	programobject = qglCreateProgramObjectARB();

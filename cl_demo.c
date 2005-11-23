@@ -46,7 +46,7 @@ Called to play the next demo in the demo loop
 */
 void CL_NextDemo (void)
 {
-	char	str[1024];
+	char	str[MAX_INPUTLINE];
 
 	if (cls.demonum == -1)
 		return;		// don't play demos
@@ -313,7 +313,7 @@ play [demoname]
 */
 void CL_PlayDemo_f (void)
 {
-	char	name[256];
+	char	name[MAX_QPATH];
 	int c;
 	qboolean neg = false;
 

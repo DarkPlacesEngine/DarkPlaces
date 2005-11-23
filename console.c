@@ -368,7 +368,7 @@ void Con_Init (void)
 	con_totallines = CON_TEXTSIZE / con_linewidth;
 
 	// Allocate a log queue
-	logq_size = 512;
+	logq_size = MAX_INPUTLINE;
 	logqueue = (unsigned char *)Mem_Alloc (tempmempool, logq_size);
 	logq_ind = 0;
 
@@ -535,7 +535,7 @@ void Con_Print(const char *msg)
 {
 	int mask = 0;
 	static int index = 0;
-	static char line[16384];
+	static char line[MAX_INPUTLINE];
 
 	for (;*msg;msg++)
 	{
@@ -577,7 +577,7 @@ void Con_Print(const char *msg)
 		// append the character
 		line[index++] = *msg;
 		// if this is a newline character, we have a complete line to print
-		if (*msg == '\n' || index >= 16000)
+		if (*msg == '\n' || index >= (int)sizeof(line) / 2)
 		{
 			// terminate the line
 			line[index] = 0;
@@ -601,9 +601,6 @@ void Con_Print(const char *msg)
 }
 
 
-// LordHavoc: increased from 4096 to 16384
-#define	MAXPRINTMSG	16384
-
 /*
 ================
 Con_Printf
@@ -614,7 +611,7 @@ Prints to all appropriate console targets
 void Con_Printf(const char *fmt, ...)
 {
 	va_list argptr;
-	char msg[MAXPRINTMSG];
+	char msg[MAX_INPUTLINE];
 
 	va_start(argptr,fmt);
 	dpvsnprintf(msg,sizeof(msg),fmt,argptr);
@@ -647,7 +644,7 @@ A Con_Printf that only shows up if the "developer" cvar is set
 void Con_DPrintf(const char *fmt, ...)
 {
 	va_list argptr;
-	char msg[MAXPRINTMSG];
+	char msg[MAX_INPUTLINE];
 
 	if (!developer.integer)
 		return;			// don't confuse non-developers with techie stuff...
@@ -681,7 +678,7 @@ void Con_DrawInput (void)
 {
 	int		y;
 	int		i;
-	char editlinecopy[257], *text;
+	char editlinecopy[MAX_INPUTLINE+1], *text;
 
 	if (!key_consoleactive)
 		return;		// don't draw anything
@@ -696,7 +693,7 @@ void Con_DrawInput (void)
 	y = (int)strlen(text);
 
 // fill out remainder with spaces
-	for (i = y; i < 256; i++)
+	for (i = y; i < (int)sizeof(editlinecopy)-1; i++)
 		text[i] = ' ';
 
 	// add the cursor frame
@@ -730,8 +727,7 @@ void Con_DrawNotify (void)
 	char	*text;
 	int		i;
 	float	time;
-	extern char chat_buffer[256];
-	char	temptext[256];
+	char	temptext[MAX_INPUTLINE];
 	int colorindex = -1; //-1 for default
 
 	if (con_notify.integer < 0)

@@ -2548,7 +2548,7 @@ void M_Keys_Draw (void)
 	int		keys[NUMKEYS];
 	int		y;
 	cachepic_t	*p;
-	char	keystring[1024];
+	char	keystring[MAX_INPUTLINE];
 
 	M_Background(320, 48 + 8 * numcommands);
 
@@ -4618,7 +4618,7 @@ void MR_SetRouting (qboolean forceold);
 void MP_Error(const char *format, ...)
 {
 	static qboolean processingError = false;
-	char errorstring[4096];
+	char errorstring[MAX_INPUTLINE];
 	va_list argptr;
 
 	va_start (argptr, format);

@@ -115,8 +115,8 @@ This shuts down both the client and server
 */
 void Host_Error (const char *error, ...)
 {
-	static char hosterrorstring1[4096];
-	static char hosterrorstring2[4096];
+	static char hosterrorstring1[MAX_INPUTLINE];
+	static char hosterrorstring2[MAX_INPUTLINE];
 	static qboolean hosterror = false;
 	va_list argptr;
 
@@ -306,7 +306,7 @@ FIXME: make this just a stuffed echo?
 void SV_ClientPrintf(const char *fmt, ...)
 {
 	va_list argptr;
-	char msg[4096];
+	char msg[MAX_INPUTLINE];
 
 	va_start(argptr,fmt);
 	dpvsnprintf(msg,sizeof(msg),fmt,argptr);
@@ -350,7 +350,7 @@ Sends text to all active clients
 void SV_BroadcastPrintf(const char *fmt, ...)
 {
 	va_list argptr;
-	char msg[4096];
+	char msg[MAX_INPUTLINE];
 
 	va_start(argptr,fmt);
 	dpvsnprintf(msg,sizeof(msg),fmt,argptr);
@@ -369,7 +369,7 @@ Send text over to the client to be executed
 void Host_ClientCommands(const char *fmt, ...)
 {
 	va_list argptr;
-	char string[1024];
+	char string[MAX_INPUTLINE];
 
 	va_start(argptr,fmt);
 	dpvsnprintf(string, sizeof(string), fmt, argptr);

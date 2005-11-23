@@ -266,7 +266,7 @@ void CL_VideoStop(void)
 
 static void CL_PlayVideo_f(void)
 {
-	char name[1024];
+	char name[MAX_QPATH];
 
 	Host_StartVideo();
 

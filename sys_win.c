@@ -50,7 +50,7 @@ SYSTEM IO
 void Sys_Error (const char *error, ...)
 {
 	va_list		argptr;
-	char		text[1024];
+	char		text[MAX_INPUTLINE];
 	static int	in_sys_error0 = 0;
 	static int	in_sys_error1 = 0;
 	static int	in_sys_error2 = 0;
@@ -196,7 +196,7 @@ double Sys_DoubleTime (void)
 
 char *Sys_ConsoleInput (void)
 {
-	static char text[256];
+	static char text[MAX_INPUTLINE];
 	static int len;
 	INPUT_RECORD recs[1024];
 	int ch;

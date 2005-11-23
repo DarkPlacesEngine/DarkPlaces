@@ -252,7 +252,7 @@ Cvar_SetValue
 */
 void Cvar_SetValueQuick(cvar_t *var, float value)
 {
-	char val[256];
+	char val[MAX_INPUTLINE];
 
 	if ((float)((int)value) == value)
 		sprintf(val, "%i", (int)value);
@@ -263,7 +263,7 @@ void Cvar_SetValueQuick(cvar_t *var, float value)
 
 void Cvar_SetValue(const char *var_name, float value)
 {
-	char val[256];
+	char val[MAX_INPUTLINE];
 
 	if ((float)((int)value) == value)
 		sprintf(val, "%i", (int)value);

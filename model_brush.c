@@ -1158,7 +1158,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 	texture_t *tx, *tx2, *anims[10], *altanims[10];
 	dmiptexlump_t *m;
 	unsigned char *data, *mtdata;
-	char name[256];
+	char name[MAX_QPATH];
 
 	loadmodel->data_textures = NULL;
 
@@ -1620,18 +1620,18 @@ static void Mod_Q1BSP_ParseWadsFromEntityLump(const char *data)
 			key[strlen(key)-1] = 0;
 		if (!COM_ParseToken(&data, false))
 			return; // error
-		strcpy(value, com_token);
+		dpsnprintf(value, sizeof(value), "%s", com_token);
 		if (!strcmp("wad", key)) // for HalfLife maps
 		{
 			if (loadmodel->brush.ishlbsp)
 			{
 				j = 0;
-				for (i = 0;i < 4096;i++)
+				for (i = 0;i < (int)sizeof(value);i++)
 					if (value[i] != ';' && value[i] != '\\' && value[i] != '/' && value[i] != ':')
 						break;
 				if (value[i])
 				{
-					for (;i < 4096;i++)
+					for (;i < (int)sizeof(value);i++)
 					{
 						// ignore path - the \\ check is for HalfLife... stupid windoze 'programmers'...
 						if (value[i] == '\\' || value[i] == '/' || value[i] == ':')
@@ -3782,7 +3782,7 @@ static int Mod_Q3BSP_NativeContentsFromSuperContents(model_t *model, int superco
 static void Mod_Q3BSP_LoadEntities(lump_t *l)
 {
 	const char *data;
-	char key[128], value[4096];
+	char key[128], value[MAX_INPUTLINE];
 	float v[3];
 	loadmodel->brushq3.num_lightgrid_cellsize[0] = 64;
 	loadmodel->brushq3.num_lightgrid_cellsize[1] = 64;

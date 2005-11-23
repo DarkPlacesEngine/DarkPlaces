@@ -32,13 +32,11 @@ cvar_t cmdline = {0, "cmdline","0"};
 
 extern qboolean fs_modified;   // set true if using non-id files
 
-char com_token[1024];
+char com_token[MAX_INPUTLINE];
 int com_argc;
 const char **com_argv;
 
-// LordHavoc: made commandline 1024 characters instead of 256
-#define CMDLINE_LENGTH	1024
-char com_cmdline[CMDLINE_LENGTH];
+char com_cmdline[MAX_INPUTLINE];
 
 gamemode_t gamemode;
 const char *gamename;
@@ -420,7 +418,7 @@ float MSG_ReadBigFloat (void)
 
 char *MSG_ReadString (void)
 {
-	static char string[2048];
+	static char string[MAX_INPUTLINE];
 	int l,c;
 	for (l = 0;l < (int) sizeof(string) - 1 && (c = MSG_ReadChar()) != -1 && c != 0;l++)
 		string[l] = c;
@@ -879,16 +877,16 @@ void COM_InitArgv (void)
 		{
 			// arg contains whitespace, store quotes around it
 			com_cmdline[n++] = '\"';
-			while ((n < (CMDLINE_LENGTH - 1)) && com_argv[j][i])
+			while ((n < ((int)sizeof(com_cmdline) - 1)) && com_argv[j][i])
 				com_cmdline[n++] = com_argv[j][i++];
 			com_cmdline[n++] = '\"';
 		}
 		else
 		{
-			while ((n < (CMDLINE_LENGTH - 1)) && com_argv[j][i])
+			while ((n < ((int)sizeof(com_cmdline) - 1)) && com_argv[j][i])
 				com_cmdline[n++] = com_argv[j][i++];
 		}
-		if (n < (CMDLINE_LENGTH - 1))
+		if (n < ((int)sizeof(com_cmdline) - 1))
 			com_cmdline[n++] = ' ';
 		else
 			break;
@@ -1197,8 +1195,8 @@ int COM_ReadAndTokenizeLine(const char **text, char **argv, int maxargc, char *t
 // written by Elric, thanks Elric!
 char *SearchInfostring(const char *infostring, const char *key)
 {
-	static char value [256];
-	char crt_key [256];
+	static char value [MAX_INPUTLINE];
+	char crt_key [MAX_INPUTLINE];
 	size_t value_ind, key_ind;
 	char c;
 

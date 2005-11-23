@@ -1712,18 +1712,17 @@ Print a string into a file
 int FS_VPrintf (qfile_t* file, const char* format, va_list ap)
 {
 	int len;
-	fs_offset_t buff_size;
-	char *tempbuff = NULL;
+	fs_offset_t buff_size = MAX_INPUTLINE;
+	char *tempbuff;
 
-	buff_size = 1024;
-	tempbuff = (char *)Mem_Alloc (tempmempool, buff_size);
-	len = dpvsnprintf (tempbuff, buff_size, format, ap);
-	while (len < 0)
+	for (;;)
 	{
-		Mem_Free (tempbuff);
-		buff_size *= 2;
 		tempbuff = (char *)Mem_Alloc (tempmempool, buff_size);
 		len = dpvsnprintf (tempbuff, buff_size, format, ap);
+		if (len >= 0 && len < buff_size)
+			break;
+		Mem_Free (tempbuff);
+		buff_size *= 2;
 	}
 
 	len = write (file->handle, tempbuff, len);
@@ -2219,7 +2218,7 @@ int FS_ListDirectory(const char *pattern, int oneperline)
 	int linebufpos;
 	int i, j, k, l;
 	const char *name;
-	char linebuf[4096];
+	char linebuf[MAX_INPUTLINE];
 	fssearch_t *search;
 	search = FS_Search(pattern, true, true);
 	if (!search)

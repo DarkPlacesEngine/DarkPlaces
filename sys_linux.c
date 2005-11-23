@@ -32,7 +32,7 @@ void Sys_Shutdown (void)
 void Sys_Error (const char *error, ...)
 {
 	va_list argptr;
-	char string[1024];
+	char string[MAX_INPUTLINE];
 
 // change stdin to non blocking
 #ifndef WIN32
@@ -141,7 +141,7 @@ char *Sys_ConsoleInput(void)
 {
 	if (cls.state == ca_dedicated)
 	{
-		static char text[256];
+		static char text[MAX_INPUTLINE];
 		static unsigned int len = 0;
 #ifdef WIN32
 		int c;
