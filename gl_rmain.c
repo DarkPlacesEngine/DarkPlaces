@@ -97,10 +97,10 @@ cvar_t r_lerpmodels = {CVAR_SAVE, "r_lerpmodels", "1"};
 cvar_t r_waterscroll = {CVAR_SAVE, "r_waterscroll", "1"};
 
 cvar_t r_bloom = {CVAR_SAVE, "r_bloom", "0"};
-cvar_t r_bloom_intensity = {CVAR_SAVE, "r_bloom_intensity", "2"};
-cvar_t r_bloom_blur = {CVAR_SAVE, "r_bloom_blur", "8"};
+cvar_t r_bloom_intensity = {CVAR_SAVE, "r_bloom_intensity", "1.5"};
+cvar_t r_bloom_blur = {CVAR_SAVE, "r_bloom_blur", "4"};
 cvar_t r_bloom_resolution = {CVAR_SAVE, "r_bloom_resolution", "320"};
-cvar_t r_bloom_power = {CVAR_SAVE, "r_bloom_power", "4"};
+cvar_t r_bloom_power = {CVAR_SAVE, "r_bloom_power", "2"};
 
 cvar_t r_smoothnormals_areaweighting = {0, "r_smoothnormals_areaweighting", "1"};
 
