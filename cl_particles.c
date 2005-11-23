@@ -513,7 +513,7 @@ void CL_EntityParticles (entity_t *ent)
 #ifdef WORKINGLQUAKE
 	VectorCopy(ent->origin, org);
 #else
-	VectorCopy(ent->render.origin, org);
+	Matrix4x4_OriginFromMatrix(&ent->render.matrix, org);
 #endif
 
 	if (!avelocities[0][0])

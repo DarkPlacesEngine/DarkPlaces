@@ -345,7 +345,7 @@ static void CL_PrintEntities_f(void)
 			strcpy(name, "--no model--");
 		for (j = (int)strlen(name);j < 25;j++)
 			name[j] = ' ';
-		Con_Printf("%3i: %s:%4i (%5i %5i %5i) [%3i %3i %3i] %4.2f %5.3f\n", i, name, ent->render.frame, (int) ent->render.origin[0], (int) ent->render.origin[1], (int) ent->render.origin[2], (int) ent->render.angles[0] % 360, (int) ent->render.angles[1] % 360, (int) ent->render.angles[2] % 360, ent->render.scale, ent->render.alpha);
+		Con_Printf("%3i: %s:%4i (%5i %5i %5i) [%3i %3i %3i] %4.2f %5.3f\n", i, name, ent->render.frame, (int) ent->render.matrix.m[0][3], (int) ent->render.matrix.m[1][3], (int) ent->render.matrix.m[2][3], (int) ent->render.angles[0] % 360, (int) ent->render.angles[1] % 360, (int) ent->render.angles[2] % 360, ent->render.scale, ent->render.alpha);
 	}
 }
 
@@ -1219,7 +1219,7 @@ void CL_RelinkBeams(void)
 
 		// if coming from the player, update the start position
 		//if (b->entity == cl.viewentity)
-		//	VectorCopy (cl_entities[cl.viewentity].render.origin, b->start);
+		//	Matrix4x4_OriginFromMatrix(&cl_entities[cl.viewentity].render.matrix, b->start);
 		if (cl_beams_relative.integer && b->entity == cl.viewentity && b->entity && cl_entities[b->entity].state_current.active && b->relativestartvalid)
 		{
 			entity_state_t *p = &cl_entities[b->entity].state_previous;
@@ -1246,10 +1246,12 @@ void CL_RelinkBeams(void)
 			}
 			else
 			{
+				vec3_t origin;
+				Matrix4x4_OriginFromMatrix(&r->matrix, origin);
 				if (b->entity == cl.viewentity)
-					Matrix4x4_CreateFromQuakeEntity(&matrix, r->origin[0], r->origin[1], r->origin[2] + 16, cl.viewangles[0], cl.viewangles[1], cl.viewangles[2], 1);
+					Matrix4x4_CreateFromQuakeEntity(&matrix, origin[0], origin[1], origin[2] + 16, cl.viewangles[0], cl.viewangles[1], cl.viewangles[2], 1);
 				else
-					Matrix4x4_CreateFromQuakeEntity(&matrix, r->origin[0], r->origin[1], r->origin[2] + 16, r->angles[0], r->angles[1], r->angles[2], 1);
+					Matrix4x4_CreateFromQuakeEntity(&matrix, origin[0], origin[1], origin[2] + 16, r->angles[0], r->angles[1], r->angles[2], 1);
 				Matrix4x4_Transform(&matrix, b->relativestart, b->start);
 				Matrix4x4_Transform(&matrix, b->relativeend, b->end);
 			}
