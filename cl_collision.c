@@ -35,6 +35,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	entity_render_t *ent;
 	vec3_t tracemins, tracemaxs;
 	trace_t cliptrace, trace;
+	vec3_t origin;
 	vec3_t starttransformed, endtransformed, starttransformedmins, endtransformedmins, starttransformedmaxs, endtransformedmaxs;
 	vec3_t startmins, startmaxs, endmins, endmaxs, entmins, entmaxs;
 	vec_t *playermins, *playermaxs;
@@ -130,8 +131,9 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 				// FIXME: crouch
 				playermins = cl_playerstandmins;
 				playermaxs = cl_playerstandmaxs;
-				VectorAdd(ent->origin, playermins, entmins);
-				VectorAdd(ent->origin, playermaxs, entmaxs);
+				Matrix4x4_OriginFromMatrix(&ent->matrix, origin);
+				VectorAdd(origin, playermins, entmins);
+				VectorAdd(origin, playermaxs, entmaxs);
 				if (!BoxesOverlap(tracemins, tracemaxs, entmins, entmaxs))
 					continue;
 
