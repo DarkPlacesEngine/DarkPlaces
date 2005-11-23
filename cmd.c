@@ -22,6 +22,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 
 #define	MAX_ALIAS_NAME	32
+// this is the largest script file that can be executed in one step
+// LordHavoc: inreased this from 8192 to 32768
+#define CMDBUFSIZE 32768
+// maximum number of parameters to a command
+#define	MAX_ARGS 80
+// maximum tokenizable commandline length (counting NUL terminations)
+#define CMD_TOKENIZELENGTH (MAX_INPUTLINE + 80)
 
 typedef struct cmdalias_s
 {
@@ -36,7 +43,6 @@ static qboolean cmd_wait;
 
 static mempool_t *cmd_mempool;
 
-#define CMD_TOKENIZELENGTH 4096
 static char cmd_tokenizebuffer[CMD_TOKENIZELENGTH];
 static int cmd_tokenizebufferpos = 0;
 
@@ -64,9 +70,8 @@ static void Cmd_Wait_f (void)
 =============================================================================
 */
 
-	// LordHavoc: inreased this from 8192 to 32768
 static sizebuf_t	cmd_text;
-static unsigned char		cmd_text_buf[32768];
+static unsigned char		cmd_text_buf[CMDBUFSIZE];
 
 /*
 ============
@@ -135,11 +140,10 @@ Cbuf_Execute
 static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned maxoutlen, cmdalias_t *alias );
 void Cbuf_Execute (void)
 {
-#define EXECUTESTRING_BUFFER 2048
 	int i;
 	char *text;
-	char line[1024];
-	char preprocessed[EXECUTESTRING_BUFFER];
+	char line[MAX_INPUTLINE];
+	char preprocessed[MAX_INPUTLINE];
 	int quotes;
 
 	// LordHavoc: making sure the tokenizebuffer doesn't get filled up by repeated crashes
@@ -178,7 +182,7 @@ void Cbuf_Execute (void)
 		}
 
 // execute the command line
-		Cmd_PreprocessString( line, preprocessed, EXECUTESTRING_BUFFER, NULL );
+		Cmd_PreprocessString( line, preprocessed, sizeof(preprocessed), NULL );
 		Cmd_ExecuteString (preprocessed, src_command);
 
 		if (cmd_wait)
@@ -213,7 +217,7 @@ void Cmd_StuffCmds_f (void)
 {
 	int		i, j, l;
 	// this is per command, and bounds checked (no buffer overflows)
-	char	build[2048];
+	char	build[MAX_INPUTLINE];
 
 	if (Cmd_Argc () != 1)
 	{
@@ -308,7 +312,7 @@ Creates a new command that executes a command string (possibly ; seperated)
 static void Cmd_Alias_f (void)
 {
 	cmdalias_t	*a;
-	char		cmd[1024];
+	char		cmd[MAX_INPUTLINE];
 	int			i, c;
 	const char		*s;
 
@@ -384,9 +388,6 @@ typedef struct cmd_function_s
 	const char *name;
 	xcommand_t function;
 } cmd_function_t;
-
-
-#define	MAX_ARGS		80
 
 static int cmd_argc;
 static const char *cmd_argv[MAX_ARGS];
@@ -492,9 +493,8 @@ Called for aliases and fills in the alias into the cbuffer
 */
 static void Cmd_ExecuteAlias (cmdalias_t *alias)
 {
-#define ALIAS_BUFFER 1024
-	static char buffer[ ALIAS_BUFFER + 2 ];
-	Cmd_PreprocessString( alias->value, buffer, ALIAS_BUFFER, alias );
+	static char buffer[ MAX_INPUTLINE + 2 ];
+	Cmd_PreprocessString( alias->value, buffer, sizeof(buffer) - 2, alias );
 	Cbuf_AddText( buffer );
 }
 

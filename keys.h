@@ -188,7 +188,6 @@ keynum_t;
 typedef enum keydest_e { key_game, key_message, key_menu } keydest_t;
 
 #define MAX_INPUTLINES 32
-#define MAX_INPUTLINE 256
 #define MAX_BINDMAPS 8
 #define MAX_KEYS 1024
 extern	int			edit_line;
@@ -207,7 +206,7 @@ extern	char		*keybindings[MAX_BINDMAPS][MAX_KEYS];
 
 extern void Key_ClearEditLine(int edit_line);
 extern qboolean chat_team;
-extern char chat_buffer[256];
+extern char chat_buffer[MAX_INPUTLINE];
 extern unsigned int chat_bufferlen;
 
 void Key_WriteBindings(qfile_t *f);

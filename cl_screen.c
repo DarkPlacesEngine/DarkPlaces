@@ -162,7 +162,7 @@ CENTER PRINTING
 ===============================================================================
 */
 
-char		scr_centerstring[1024];
+char		scr_centerstring[MAX_INPUTLINE];
 float		scr_centertime_start;	// for slow victory printing
 float		scr_centertime_off;
 int			scr_center_lines;
@@ -1198,7 +1198,7 @@ envmapinfo[12] =
 static void R_Envmap_f (void)
 {
 	int j, size;
-	char filename[256], basename[256];
+	char filename[MAX_QPATH], basename[MAX_QPATH];
 	unsigned char *buffer1;
 	unsigned char *buffer2;
 	unsigned char *buffer3;

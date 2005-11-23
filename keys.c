@@ -603,7 +603,7 @@ static void
 Key_In_Bind_f (void)
 {
 	int         i, c, b, m;
-	char        cmd[1024];
+	char        cmd[MAX_INPUTLINE];
 
 	c = Cmd_Argc ();
 
@@ -705,7 +705,7 @@ static void
 Key_Bind_f (void)
 {
 	int         i, c, b;
-	char        cmd[1024];
+	char        cmd[MAX_INPUTLINE];
 
 	c = Cmd_Argc ();
 

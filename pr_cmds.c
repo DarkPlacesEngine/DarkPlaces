@@ -25,7 +25,7 @@ cvar_t pr_zone_min_strings = {0, "pr_zone_min_strings", "64"};
 
 // LordHavoc: added this to semi-fix the problem of using many ftos calls in a print
 #define STRINGTEMP_BUFFERS 16
-#define STRINGTEMP_LENGTH 4096
+#define STRINGTEMP_LENGTH MAX_INPUTLINE
 static char pr_string_temp[STRINGTEMP_BUFFERS][STRINGTEMP_LENGTH];
 static int pr_string_tempindex = 0;
 
@@ -3027,7 +3027,7 @@ void PF_clientcommand (void)
 //this function originally written by KrimZon, made shorter by LordHavoc
 //20040203: rewritten by LordHavoc (no longer uses allocations)
 int num_tokens = 0;
-char *tokens[256], tokenbuf[4096];
+char *tokens[256], tokenbuf[MAX_INPUTLINE];
 void PF_tokenize (void)
 {
 	int pos;

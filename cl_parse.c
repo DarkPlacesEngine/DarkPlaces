@@ -213,7 +213,7 @@ void CL_KeepaliveMessage (void)
 void CL_ParseEntityLump(char *entdata)
 {
 	const char *data;
-	char key[128], value[4096];
+	char key[128], value[MAX_INPUTLINE];
 	FOG_clear(); // LordHavoc: no fog until set
 	// LordHavoc: default to the map's sky (q3 shader parsing sets this)
 	R_SetSkyBox(cl.worldmodel->brush.skybox);

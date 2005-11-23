@@ -3288,7 +3288,7 @@ void R_Shadow_SaveWorldLights(void)
 	size_t bufchars, bufmaxchars;
 	char *buf, *oldbuf;
 	char name[MAX_QPATH];
-	char line[1024];
+	char line[MAX_INPUTLINE];
 	if (!r_shadow_worldlightchain)
 		return;
 	if (r_refdef.worldmodel == NULL)
@@ -3390,7 +3390,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 	char *entfiledata;
 	const char *data;
 	float origin[3], angles[3], radius, color[3], light[4], fadescale, lightscale, originhack[3], overridecolor[3], vec[4];
-	char key[256], value[1024];
+	char key[256], value[MAX_INPUTLINE];
 
 	if (r_refdef.worldmodel == NULL)
 	{
@@ -3701,7 +3701,7 @@ void R_Shadow_EditLights_Edit_f(void)
 	vec3_t origin, angles, color;
 	vec_t radius, corona, coronasizescale, ambientscale, diffusescale, specularscale;
 	int style, shadows, flags, normalmode, realtimemode;
-	char cubemapname[1024];
+	char cubemapname[MAX_INPUTLINE];
 	if (!r_editlights.integer)
 	{
 		Con_Print("Cannot spawn light when not in editing mode.  Set r_editlights to 1.\n");
@@ -3718,7 +3718,7 @@ void R_Shadow_EditLights_Edit_f(void)
 	radius = r_shadow_selectedlight->radius;
 	style = r_shadow_selectedlight->style;
 	if (r_shadow_selectedlight->cubemapname)
-		strcpy(cubemapname, r_shadow_selectedlight->cubemapname);
+		strlcpy(cubemapname, r_shadow_selectedlight->cubemapname, sizeof(cubemapname));
 	else
 		cubemapname[0] = 0;
 	shadows = r_shadow_selectedlight->shadow;

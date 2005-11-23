@@ -12,7 +12,7 @@ int skyrendermasked;
 static int skyrendersphere;
 static int skyrenderbox;
 static rtexturepool_t *skytexturepool;
-static char skyname[256];
+static char skyname[MAX_QPATH];
 
 typedef struct suffixinfo_s
 {
@@ -88,7 +88,7 @@ int R_LoadSkyBox(void)
 {
 	int i, j, success;
 	int indices[4] = {0,1,2,3};
-	char name[1024];
+	char name[MAX_INPUTLINE];
 	unsigned char *image_rgba;
 	unsigned char *temp;
 

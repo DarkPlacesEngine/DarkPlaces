@@ -201,7 +201,7 @@ float	getserverlistindexforkey(string key)
 #define e1000 e100,e100,e100,e100,e100,e100,e100,e100,e100,e100
 
 #define VM_STRINGTEMP_BUFFERS 16
-#define VM_STRINGTEMP_LENGTH 4096
+#define VM_STRINGTEMP_LENGTH MAX_INPUTLINE
 
 // builtins and other general functions
 

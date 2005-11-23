@@ -1854,7 +1854,7 @@ float tokenize(string s)
 //this function originally written by KrimZon, made shorter by LordHavoc
 //20040203: rewritten by LordHavoc (no longer uses allocations)
 int num_tokens = 0;
-char *tokens[256], tokenbuf[4096];
+char *tokens[256], tokenbuf[MAX_INPUTLINE];
 void VM_tokenize (void)
 {
 	size_t pos;
