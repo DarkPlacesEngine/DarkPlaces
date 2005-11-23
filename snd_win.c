@@ -397,6 +397,7 @@ sndinitstat SNDDMA_InitDirect (void)
 	pDSBuf->lpVtbl->Play(pDSBuf, 0, 0, DSBPLAY_LOOPING);
 
 	shm->samples = gSndBufSize / shm->format.width;
+	shm->sampleframes = shm->samples / shm->format.channels;
 	shm->samplepos = 0;
 	shm->buffer = (unsigned char *) lpData;
 
@@ -527,6 +528,7 @@ qboolean SNDDMA_InitWav (void)
 	}
 
 	shm->samples = gSndBufSize / shm->format.width;
+	shm->sampleframes = shm->samples / shm->format.channels;
 	shm->samplepos = 0;
 	shm->buffer = (unsigned char *) lpData;
 

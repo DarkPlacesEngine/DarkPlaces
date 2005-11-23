@@ -111,7 +111,8 @@ qboolean SNDDMA_Init (void)
 				(info.play.channels == 2) ? "stereo" : "mono",
 				info.play.sample_rate);
 
-	shm->samples = sizeof (dma_buffer) / shm->format.width;
+	shm->sampleframes = sizeof (dma_buffer) / shm->format.width / shm->format.channels;
+	shm->samples = shm->sampleframes * shm->format.channels;
 	shm->samplepos = 0;
 	shm->buffer = dma_buffer;
 

@@ -67,19 +67,24 @@ struct sfx_s
 typedef struct dma_s
 {
 	snd_format_t	format;
+	int				sampleframes;	// frames in buffer (frame = samples for all speakers)
 	int				samples;		// mono samples in buffer
 	int				samplepos;		// in mono samples
 	unsigned char	*buffer;
 	int				bufferlength;	// used only by certain drivers
 } dma_t;
 
+// maximum supported speakers constant
+#define SND_LISTENERS 8
+
 typedef struct channel_s
 {
+	int pad[8];
 	sfx_t			*sfx;			// sfx number
+	int pad2[8];
 	unsigned int	flags;			// cf CHANNELFLAG_* defines
 	int				master_vol;		// 0-255 master volume
-	int				leftvol;		// 0-255 volume
-	int				rightvol;		// 0-255 volume
+	short			listener_volume[SND_LISTENERS];		// 0-255 volume per speaker
 	int				end;			// end time in global paintsamples
 	int				lastptime;		// last time this channel was painted
 	int				pos;			// sample position in sfx

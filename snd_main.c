@@ -24,6 +24,27 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "snd_main.h"
 #include "snd_ogg.h"
 
+#if SND_LISTENERS != 8
+#error this data only supports up to 8 channel, update it!
+#endif
+typedef struct listener_s
+{
+	float yawangle;
+	float dotscale;
+	float dotbias;
+	float ambientvolume;
+}
+listener_t;
+typedef struct speakerlayout_s
+{
+	const char *name;
+	unsigned int channels;
+	qboolean headphones;
+	listener_t listeners[SND_LISTENERS];
+}
+speakerlayout_t;
+
+static speakerlayout_t snd_speakerlayout;
 
 void S_Play(void);
 void S_PlayVol(void);
@@ -42,12 +63,13 @@ unsigned int total_channels;
 int snd_blocked = 0;
 cvar_t snd_initialized = { CVAR_READONLY, "snd_initialized", "0"};
 cvar_t snd_streaming = { CVAR_SAVE, "snd_streaming", "1"};
+cvar_t snd_headphones = { CVAR_SAVE, "snd_headphones", "0"};
 
 volatile dma_t *shm = 0;
 volatile dma_t sn;
 
 vec3_t listener_origin;
-matrix4x4_t listener_matrix;
+matrix4x4_t listener_matrix[SND_LISTENERS];
 vec_t sound_nominal_clip_dist=1000.0;
 mempool_t *snd_mempool;
 
@@ -98,7 +120,8 @@ void S_SoundInfo_f(void)
 		return;
 	}
 
-	Con_Printf("%5d stereo\n", shm->format.channels - 1);
+	Con_Printf("%5d speakers\n", shm->format.channels);
+	Con_Printf("%5d frames\n", shm->sampleframes);
 	Con_Printf("%5d samples\n", shm->samples);
 	Con_Printf("%5d samplepos\n", shm->samplepos);
 	Con_Printf("%5d samplebits\n", shm->format.width * 8);
@@ -122,9 +145,10 @@ void S_Startup(void)
 		shm->format.width = 2;
 		shm->format.speed = 22050;
 		shm->format.channels = 2;
-		shm->samples = 32768;
+		shm->sampleframes = 16384;
+		shm->samples = shm->sampleframes * shm->format.channels;
 		shm->samplepos = 0;
-		shm->buffer = (unsigned char *)Mem_Alloc(snd_mempool, shm->format.channels * shm->samples * shm->format.width);
+		shm->buffer = (unsigned char *)Mem_Alloc(snd_mempool, shm->samples * shm->format.width);
 	}
 	else
 	{
@@ -177,6 +201,7 @@ void S_Init(void)
 	Cvar_RegisterVariable(&volume);
 	Cvar_RegisterVariable(&bgmvolume);
 	Cvar_RegisterVariable(&snd_staticvolume);
+	Cvar_RegisterVariable(&snd_headphones);
 
 // COMMANDLINEOPTION: Sound: -nosound disables sound (including CD audio)
 	if (COM_CheckParm("-nosound") || COM_CheckParm("-safe"))
@@ -459,22 +484,36 @@ channel_t *SND_PickChannel(int entnum, int entchannel)
 	for (ch_idx=NUM_AMBIENTS ; ch_idx < NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS ; ch_idx++)
 	{
 		ch = &channels[ch_idx];
-		if (entchannel != 0		// channel 0 never overrides
-		&& ch->entnum == entnum
-		&& (ch->entchannel == entchannel || entchannel == -1) )
-		{	// always override sound from same entity
-			first_to_die = ch_idx;
-			break;
+		if (entchannel != 0)
+		{
+			// try to override an existing channel
+			if (ch->entnum == entnum && (ch->entchannel == entchannel || entchannel == -1) )
+			{
+				// always override sound from same entity
+				first_to_die = ch_idx;
+				break;
+			}
+		}
+		else
+		{
+			if (!ch->sfx)
+			{
+				// no sound on this channel
+				first_to_die = ch_idx;
+				break;
+			}
 		}
 
-		// don't let monster sounds override player sounds
-		if (ch->entnum == cl.viewentity && entnum != cl.viewentity && ch->sfx)
-			continue;
+		if (ch->sfx)
+		{
+			// don't let monster sounds override player sounds
+			if (ch->entnum == cl.viewentity && entnum != cl.viewentity)
+				continue;
 
-		// don't override looped sounds
-		if ((ch->flags & CHANNELFLAG_FORCELOOP) != 0 ||
-			(ch->sfx != NULL && ch->sfx->loopstart >= 0))
-			continue;
+			// don't override looped sounds
+			if ((ch->flags & CHANNELFLAG_FORCELOOP) || ch->sfx->loopstart >= 0)
+				continue;
+		}
 
 		if (ch->end - paintedtime < life_left)
 		{
@@ -500,48 +539,54 @@ Spatializes a channel
 */
 void SND_Spatialize(channel_t *ch, qboolean isstatic)
 {
-	vec_t dist, scale, pan;
+	int i;
+	vec_t dist, mastervol, intensity, vol;
 	vec3_t source_vec;
+
+	// update sound origin if we know about the entity
+	if (ch->entnum > 0 && cls.state == ca_connected && cl_entities[ch->entnum].state_current.active)
+	{
+		//Con_Printf("-- entnum %i origin %f %f %f neworigin %f %f %f\n", ch->entnum, ch->origin[0], ch->origin[1], ch->origin[2], cl_entities[ch->entnum].state_current.origin[0], cl_entities[ch->entnum].state_current.origin[1], cl_entities[ch->entnum].state_current.origin[2]);
+		VectorCopy(cl_entities[ch->entnum].state_current.origin, ch->origin);
+		if (cl_entities[ch->entnum].state_current.modelindex && cl.model_precache[cl_entities[ch->entnum].state_current.modelindex] && cl.model_precache[cl_entities[ch->entnum].state_current.modelindex]->soundfromcenter)
+			VectorMAMAM(1.0f, ch->origin, 0.5f, cl.model_precache[cl_entities[ch->entnum].state_current.modelindex]->normalmins, 0.5f, cl.model_precache[cl_entities[ch->entnum].state_current.modelindex]->normalmaxs, ch->origin);
+	}
+
+	mastervol = ch->master_vol;
+	// Adjust volume of static sounds
+	if (isstatic)
+		mastervol *= snd_staticvolume.value;
 
 	// anything coming from the view entity will always be full volume
 	// LordHavoc: make sounds with ATTN_NONE have no spatialization
 	if (ch->entnum == cl.viewentity || ch->dist_mult == 0)
 	{
-		ch->leftvol = ch->master_vol;
-		ch->rightvol = ch->master_vol;
+		for (i = 0;i < SND_LISTENERS;i++)
+		{
+			vol = mastervol * snd_speakerlayout.listeners[i].ambientvolume;
+			ch->listener_volume[i] = bound(0, vol, 255);
+		}
 	}
 	else
 	{
-		// update sound origin if we know about the entity
-		if (ch->entnum > 0 && cls.state == ca_connected && cl_entities[ch->entnum].render.model)
-		{
-			//Con_Printf("-- entnum %i origin %f %f %f neworigin %f %f %f\n", ch->entnum, ch->origin[0], ch->origin[1], ch->origin[2], cl_entities[ch->entnum].persistent.trail_origin[0], cl_entities[ch->entnum].persistent.trail_origin[1], cl_entities[ch->entnum].persistent.trail_origin[2]);
-			VectorCopy(cl_entities[ch->entnum].persistent.trail_origin, ch->origin);
-		}
-
 		// calculate stereo seperation and distance attenuation
-		Matrix4x4_Transform(&listener_matrix, ch->origin, source_vec);
-		dist = VectorNormalizeLength(source_vec);
-		// distance
-		scale = ch->master_vol * (1.0 - (dist * ch->dist_mult));
-		// panning
-		pan = scale * source_vec[1];
-		// calculate the volumes
-		ch->leftvol = (int) (scale + pan);
-		ch->rightvol = (int) (scale - pan);
-		//Con_Printf("%f %f %f:%f %f %f:%f %f:%d %d\n", ch->origin[0], ch->origin[1], ch->origin[2], source_vec[0], source_vec[1], source_vec[2], scale, pan, ch->leftvol, ch->rightvol);
+		VectorSubtract(listener_origin, ch->origin, source_vec);
+		dist = VectorLength(source_vec);
+		intensity = mastervol * (1.0 - dist * ch->dist_mult);
+		if (intensity > 0)
+		{
+			for (i = 0;i < SND_LISTENERS;i++)
+			{
+				Matrix4x4_Transform(&listener_matrix[i], ch->origin, source_vec);
+				VectorNormalize(source_vec);
+				vol = intensity * max(0, source_vec[0] * snd_speakerlayout.listeners[i].dotscale + snd_speakerlayout.listeners[i].dotbias);
+				ch->listener_volume[i] = bound(0, vol, 255);
+			}
+		}
+		else
+			for (i = 0;i < SND_LISTENERS;i++)
+				ch->listener_volume[i] = 0;
 	}
-
-	// Adjust volume of static sounds
-	if (isstatic)
-	{
-		ch->leftvol *= snd_staticvolume.value;
-		ch->rightvol *= snd_staticvolume.value;
-	}
-
-	// clamp volumes
-	ch->leftvol = bound(0, ch->leftvol, 255);
-	ch->rightvol = bound(0, ch->rightvol, 255);
 }
 
 
@@ -777,15 +822,15 @@ S_UpdateAmbientSounds
 */
 void S_UpdateAmbientSounds (void)
 {
+	int			i;
 	float		vol;
 	int			ambient_channel;
 	channel_t	*chan;
 	unsigned char		ambientlevels[NUM_AMBIENTS];
 
-	if (ambient_level.value <= 0 || !cl.worldmodel || !cl.worldmodel->brush.AmbientSoundLevelsForPoint)
-		return;
-
-	cl.worldmodel->brush.AmbientSoundLevelsForPoint(cl.worldmodel, listener_origin, ambientlevels, sizeof(ambientlevels));
+	memset(ambientlevels, 0, sizeof(ambientlevels));
+	if (cl.worldmodel && cl.worldmodel->brush.AmbientSoundLevelsForPoint)
+		cl.worldmodel->brush.AmbientSoundLevelsForPoint(cl.worldmodel, listener_origin, ambientlevels, sizeof(ambientlevels));
 
 	// Calc ambient sound levels
 	for (ambient_channel = 0 ; ambient_channel< NUM_AMBIENTS ; ambient_channel++)
@@ -794,7 +839,7 @@ void S_UpdateAmbientSounds (void)
 		if (chan->sfx == NULL || chan->sfx->fetcher == NULL)
 			continue;
 
-		vol = ambient_level.value * ambientlevels[ambient_channel];
+		vol = ambientlevels[ambient_channel];
 		if (vol < 8)
 			vol = 0;
 
@@ -812,10 +857,84 @@ void S_UpdateAmbientSounds (void)
 				chan->master_vol = vol;
 		}
 
-		chan->leftvol = chan->rightvol = chan->master_vol;
+		for (i = 0;i < SND_LISTENERS;i++)
+			chan->listener_volume[i] = (int)(chan->master_vol * ambient_level.value * snd_speakerlayout.listeners[i].ambientvolume);
 	}
 }
 
+#define SND_SPEAKERLAYOUTS 5
+static speakerlayout_t snd_speakerlayouts[SND_SPEAKERLAYOUTS] =
+{
+	{
+		"surround71", 8, false,
+		{
+			{45, 0.2, 0.2, 0.5}, // front left
+			{315, 0.2, 0.2, 0.5}, // front right
+			{135, 0.2, 0.2, 0.5}, // rear left
+			{225, 0.2, 0.2, 0.5}, // rear right
+			{0, 0.2, 0.2, 0.5}, // front center
+			{0, 0, 0, 0}, // lfe (we don't have any good lfe sound sources and it would take some filtering work to generate them (and they'd probably still be wrong), so...  no lfe)
+			{90, 0.2, 0.2, 0.5}, // side left
+			{180, 0.2, 0.2, 0.5}, // side right
+		}
+	},
+	{
+		"surround51", 6, false,
+		{
+			{45, 0.2, 0.2, 0.5}, // front left
+			{315, 0.2, 0.2, 0.5}, // front right
+			{135, 0.2, 0.2, 0.5}, // rear left
+			{225, 0.2, 0.2, 0.5}, // rear right
+			{0, 0.2, 0.2, 0.5}, // front center
+			{0, 0, 0, 0}, // lfe (we don't have any good lfe sound sources and it would take some filtering work to generate them (and they'd probably still be wrong), so...  no lfe)
+			{0, 0, 0, 0},
+			{0, 0, 0, 0},
+		}
+	},
+	{
+		// these systems sometimes have a subwoofer as well, but it has no
+		// channel of its own
+		"surround40", 4, false,
+		{
+			{45, 0.3, 0.3, 0.8}, // front left
+			{315, 0.3, 0.3, 0.8}, // front right
+			{135, 0.3, 0.3, 0.8}, // rear left
+			{225, 0.3, 0.3, 0.8}, // rear right
+			{0, 0, 0, 0},
+			{0, 0, 0, 0},
+			{0, 0, 0, 0},
+			{0, 0, 0, 0},
+		}
+	},
+	{
+		"headphones", 2, true,
+		{
+			{90, 0.5, 0.5, 1}, // side left
+			{270, 0.5, 0.5, 1}, // side right
+			{0, 0, 0, 0},
+			{0, 0, 0, 0},
+			{0, 0, 0, 0},
+			{0, 0, 0, 0},
+			{0, 0, 0, 0},
+			{0, 0, 0, 0},
+		}
+	},
+	{
+		// these systems sometimes have a subwoofer as well, but it has no
+		// channel of its own
+		"stereo", 2, false,
+		{
+			{45, 0.5, 0.5, 1}, // front left
+			{315, 0.5, 0.5, 1}, // front right
+			{0, 0, 0, 0},
+			{0, 0, 0, 0},
+			{0, 0, 0, 0},
+			{0, 0, 0, 0},
+			{0, 0, 0, 0},
+			{0, 0, 0, 0},
+		}
+	}
+};
 
 /*
 ============
@@ -828,12 +947,26 @@ void S_Update(const matrix4x4_t *listenermatrix)
 {
 	unsigned int i, j, total;
 	channel_t *ch, *combine;
+	matrix4x4_t basematrix, rotatematrix;
 
 	if (!snd_initialized.integer || (snd_blocked > 0))
 		return;
 
-	Matrix4x4_Invert_Simple(&listener_matrix, listenermatrix);
+	Matrix4x4_Invert_Simple(&basematrix, listenermatrix);
 	Matrix4x4_OriginFromMatrix(listenermatrix, listener_origin);
+
+	// select speaker layout
+	for (i = 0;i < SND_SPEAKERLAYOUTS - 1;i++)
+		if (snd_speakerlayouts[i].channels == shm->format.channels && (!snd_speakerlayouts[i].headphones || snd_headphones.integer))
+			break;
+	snd_speakerlayout = snd_speakerlayouts[i];
+
+	// calculate the current matrices
+	for (j = 0;j < SND_LISTENERS;j++)
+	{
+		Matrix4x4_CreateFromQuakeEntity(&rotatematrix, 0, 0, 0, 0, snd_speakerlayout.listeners[j].yawangle, 0, 1);
+		Matrix4x4_Concat(&listener_matrix[j], &basematrix, &rotatematrix);
+	}
 
 	// update general area ambient sound sources
 	S_UpdateAmbientSounds ();
@@ -846,39 +979,41 @@ void S_Update(const matrix4x4_t *listenermatrix)
 	{
 		if (!ch->sfx)
 			continue;
-		SND_Spatialize(ch, i >= MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS);         // respatialize channel
-		if (!ch->leftvol && !ch->rightvol)
-			continue;
+
+		// respatialize channel
+		SND_Spatialize(ch, i >= MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS);
 
 		// try to combine static sounds with a previous channel of the same
 		// sound effect so we don't mix five torches every frame
 		if (i > MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS)
 		{
-			// see if it can just use the last one
-			if (combine && combine->sfx == ch->sfx)
-			{
-				combine->leftvol += ch->leftvol;
-				combine->rightvol += ch->rightvol;
-				ch->leftvol = ch->rightvol = 0;
-				continue;
-			}
-			// search for one
-			combine = channels+MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS;
-			for (j=MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS ; j<i; j++, combine++)
-				if (combine->sfx == ch->sfx)
+			// no need to merge silent channels
+			for (j = 0;j < SND_LISTENERS;j++)
+				if (ch->listener_volume[j])
 					break;
-
-			if (j == total_channels)
-				combine = NULL;
-			else
-			{
-				if (combine != ch)
-				{
-					combine->leftvol += ch->leftvol;
-					combine->rightvol += ch->rightvol;
-					ch->leftvol = ch->rightvol = 0;
-				}
+			if (j == SND_LISTENERS)
 				continue;
+			// if the last combine chosen isn't suitable, find a new one
+			if (!(combine && combine != ch && combine->sfx == ch->sfx))
+			{
+				// search for one
+				combine = NULL;
+				for (j = MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS;j < i;j++)
+				{
+					if (channels[j].sfx == ch->sfx)
+					{
+						combine = channels + j;
+						break;
+					}
+				}
+			}
+			if (combine && combine != ch && combine->sfx == ch->sfx)
+			{
+				for (j = 0;j < SND_LISTENERS;j++)
+				{
+					combine->listener_volume[j] += ch->listener_volume[j];
+					ch->listener_volume[j] = 0;
+				}
 			}
 		}
 	}
@@ -891,8 +1026,16 @@ void S_Update(const matrix4x4_t *listenermatrix)
 		total = 0;
 		ch = channels;
 		for (i=0 ; i<total_channels; i++, ch++)
-			if (ch->sfx && (ch->leftvol || ch->rightvol) )
-				total++;
+		{
+			if (ch->sfx)
+			{
+				for (j = 0;j < SND_LISTENERS;j++)
+					if (ch->listener_volume[j])
+						break;
+				if (j < SND_LISTENERS)
+					total++;
+			}
+		}
 
 		Con_Printf("----(%u)----\n", total);
 	}
@@ -907,7 +1050,7 @@ void GetSoundtime(void)
 	static	int		oldsamplepos;
 	int		fullsamples;
 
-	fullsamples = shm->samples / shm->format.channels;
+	fullsamples = shm->sampleframes;
 
 	// it is possible to miscount buffers if it has wrapped twice between
 	// calls to S_Update.  Oh well.
@@ -940,7 +1083,6 @@ void S_ExtraUpdate (void)
 void S_Update_(void)
 {
 	unsigned        endtime;
-	int				samps;
 
 	if (!sound_started || (snd_blocked > 0))
 		return;
@@ -954,9 +1096,7 @@ void S_Update_(void)
 
 	// mix ahead of current position
 	endtime = soundtime + _snd_mixahead.value * shm->format.speed;
-	samps = shm->samples >> (shm->format.channels - 1);
-	if (endtime > (unsigned int)(soundtime + samps))
-		endtime = soundtime + samps;
+	endtime = min(endtime, (unsigned int)(soundtime + shm->sampleframes));
 
 	S_PaintChannels (endtime);
 
@@ -974,7 +1114,7 @@ console functions
 static void S_Play_Common(float fvol, float attenuation)
 {
 	int 	i, ch_ind;
-	char name[256];
+	char name[MAX_QPATH];
 	sfx_t	*sfx;
 
 	i = 1;
