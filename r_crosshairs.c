@@ -78,7 +78,7 @@ void R_DrawWorldCrosshair(void)
 	R_GetCrosshairColor(color);
 
 	// trace the shot path up to a certain distance
-	VectorCopy(cl_entities[cl.viewentity].render.origin, v1);
+	Matrix4x4_OriginFromMatrix(&cl_entities[cl.viewentity].render.matrix, v1);
 	v1[2] += 16; // HACK: this depends on the QC
 
 	// get the forward vector for the gun (not the view)
