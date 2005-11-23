@@ -22,12 +22,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 /*
 Info:
-One SDL sample consists of x channel samples
-The mixer supposes that the driver has one channel entry/sample though it has x channels/sample
-like the SDL
+SDL samples are really frames (full set of samples for all speakers)
 */
 
-#define AUDIO_SDL_SAMPLES		4096
+#define AUDIO_SDL_SAMPLEFRAMES		4096
 #define AUDIO_LOCALFACTOR		4
 
 typedef struct AudioState_s
@@ -81,8 +79,9 @@ Returns false if nothing is found.
 
 qboolean SNDDMA_Init(void)
 {
-	SDL_AudioSpec spec;
+	SDL_AudioSpec wantspec;
 	int i;
+	int channels;
 
 	// Init the SDL Audio subsystem
 	if( SDL_InitSubSystem( SDL_INIT_AUDIO ) ) {
@@ -90,48 +89,55 @@ qboolean SNDDMA_Init(void)
 		return false;
 	}
 
-	// Init the shm structure
-	memset( (void*) shm, 0, sizeof(*shm) );
+	for (channels = 8;channels >= 2;channels -= 2)
+	{
+		// Init the SDL Audio subsystem
+		wantspec.callback = Buffer_Callback;
+		wantspec.userdata = NULL;
+		wantspec.freq = 44100;
+		// COMMANDLINEOPTION: SDL Sound: -sndspeed <hz> chooses sound output rate (try values such as 44100, 48000, 22050, 11025 (quake), 24000, 32000, 96000, 192000, etc)
+		i = COM_CheckParm( "-sndspeed" );
+		if( i && i != ( com_argc - 1 ) )
+			wantspec.freq = atoi( com_argv[ i+1 ] );
+		wantspec.format = AUDIO_S16SYS;
+		wantspec.channels = channels;
+		wantspec.samples = AUDIO_SDL_SAMPLEFRAMES;
 
-	shm->format.channels = 2; //stereo
-	shm->format.width = 2;
+		if( SDL_OpenAudio( &wantspec, NULL ) )
+		{
+			Con_Printf("%s\n", SDL_GetError());
+			continue;
+		}
 
-// COMMANDLINEOPTION: SDL Sound: -sndspeed <hz> chooses 44100 hz, 22100 hz, or 11025 hz sound output rate
-	i = COM_CheckParm( "-sndspeed" );
-	if( i && i != ( com_argc - 1 ) )
-		shm->format.speed = atoi( com_argv[ i+1 ] );
-	else
-		shm->format.speed = 44100;
+		// Init the shm structure
+		memset( (void*) shm, 0, sizeof(*shm) );
+		shm->format.channels = wantspec.channels;
+		shm->format.width = 2;
+		shm->format.speed = wantspec.freq;
 
-	shm->samplepos = 0;
-	shm->samples = AUDIO_SDL_SAMPLES * AUDIO_LOCALFACTOR;
-	shm->bufferlength = shm->samples * shm->format.width;
-	shm->buffer = (unsigned char *)Mem_Alloc( snd_mempool, shm->bufferlength );
+		shm->samplepos = 0;
+		shm->sampleframes = wantspec.samples * AUDIO_LOCALFACTOR;
+		shm->samples = shm->sampleframes * shm->format.channels;
+		shm->bufferlength = shm->samples * shm->format.width;
+		shm->buffer = (unsigned char *)Mem_Alloc( snd_mempool, shm->bufferlength );
 
-	// Init the as structure
-	as.buffer = shm->buffer;
-	as.width = shm->format.width;
-	as.pos = 0;
-	as.size = shm->bufferlength;
-
-	// Init the SDL Audio subsystem
-	spec.callback = Buffer_Callback;
-	spec.channels = shm->format.channels;
-	spec.format = AUDIO_S16SYS;
-	spec.freq = shm->format.speed;
-	spec.userdata = NULL;
-	spec.samples = AUDIO_SDL_SAMPLES;
-
-	if( SDL_OpenAudio( &spec, NULL ) ) {
+		// Init the as structure
+		as.buffer = shm->buffer;
+		as.width = shm->format.width;
+		as.pos = 0;
+		as.size = shm->bufferlength;
+		break;
+	}
+	if (channels < 2)
+	{
 		Con_Print( "Failed to open the audio device!\n" );
 		Con_DPrintf(
 			"Audio Specification:\n"
 			"\tChannels  : %i\n"
 			"\tFormat    : %x\n"
 			"\tFrequency : %i\n"
-			"\tBuffersize: %i Bytes(%i Samples)\n",
-			spec.channels, spec.format, spec.freq, shm->bufferlength , spec.samples );
-		Mem_Free( shm->buffer );
+			"\tSamples   : %i\n",
+			wantspec.channels, wantspec.format, wantspec.freq, wantspec.samples );
 		return false;
 	}
 

@@ -189,7 +189,8 @@ qboolean SNDDMA_Init(void)
 		return 0;
 	}
 
-	shm->samples = info.fragstotal * info.fragsize / shm->format.width;
+	shm->sampleframes = info.fragstotal * info.fragsize / shm->format.width / shm->format.channels;
+	shm->samples = shm->sampleframes * shm->format.channels;
 
 	// memory map the dma buffer
 	shm->bufferlength = info.fragstotal * info.fragsize;
