@@ -211,6 +211,9 @@ void SCR_DrawCenterString (void)
 	scr_erase_center = 0;
 	start = scr_centerstring;
 
+	if (remaining < 1)
+		return;
+
 	if (scr_center_lines <= 4)
 		y = vid_conheight.integer*0.35;
 	else
