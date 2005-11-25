@@ -168,11 +168,11 @@ int SV_EntitiesInBox(vec3_t mins, vec3_t maxs, int maxlist, prvm_edict_t **list)
 
 	sv_areagrid_stats_calls++;
 	sv_areagrid_marknumber++;
-	igridmins[0] = (int) ((mins[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]);
-	igridmins[1] = (int) ((mins[1] + sv_areagrid_bias[1]) * sv_areagrid_scale[1]);
+	igridmins[0] = (int) floor((mins[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]);
+	igridmins[1] = (int) floor((mins[1] + sv_areagrid_bias[1]) * sv_areagrid_scale[1]);
 	//igridmins[2] = (int) ((mins[2] + sv_areagrid_bias[2]) * sv_areagrid_scale[2]);
-	igridmaxs[0] = (int) ((maxs[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]) + 1;
-	igridmaxs[1] = (int) ((maxs[1] + sv_areagrid_bias[1]) * sv_areagrid_scale[1]) + 1;
+	igridmaxs[0] = (int) floor((maxs[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]) + 1;
+	igridmaxs[1] = (int) floor((maxs[1] + sv_areagrid_bias[1]) * sv_areagrid_scale[1]) + 1;
 	//igridmaxs[2] = (int) ((maxs[2] + sv_areagrid_bias[2]) * sv_areagrid_scale[2]) + 1;
 	igridmins[0] = max(0, igridmins[0]);
 	igridmins[1] = max(0, igridmins[1]);
@@ -222,6 +222,7 @@ int SV_EntitiesInBox(vec3_t mins, vec3_t maxs, int maxlist, prvm_edict_t **list)
 								list[numlist] = ent;
 							numlist++;
 						}
+						//	Con_Printf("%d %f %f %f %f %f %f : %d : %f %f %f %f %f %f\n", BoxesOverlap(mins, maxs, ent->fields.server->absmin, ent->fields.server->absmax), ent->fields.server->absmin[0], ent->fields.server->absmin[1], ent->fields.server->absmin[2], ent->fields.server->absmax[0], ent->fields.server->absmax[1], ent->fields.server->absmax[2], PRVM_NUM_FOR_EDICT(ent), mins[0], mins[1], mins[2], maxs[0], maxs[1], maxs[2]);
 					}
 					sv_areagrid_stats_entitychecks++;
 				}
@@ -274,11 +275,11 @@ void SV_LinkEdict_AreaGrid(prvm_edict_t *ent)
 		return;
 	}
 
-	igridmins[0] = (int) ((ent->fields.server->absmin[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]);
-	igridmins[1] = (int) ((ent->fields.server->absmin[1] + sv_areagrid_bias[1]) * sv_areagrid_scale[1]);
+	igridmins[0] = (int) floor((ent->fields.server->absmin[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]);
+	igridmins[1] = (int) floor((ent->fields.server->absmin[1] + sv_areagrid_bias[1]) * sv_areagrid_scale[1]);
 	//igridmins[2] = (int) ((ent->fields.server->absmin[2] + sv_areagrid_bias[2]) * sv_areagrid_scale[2]);
-	igridmaxs[0] = (int) ((ent->fields.server->absmax[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]) + 1;
-	igridmaxs[1] = (int) ((ent->fields.server->absmax[1] + sv_areagrid_bias[1]) * sv_areagrid_scale[1]) + 1;
+	igridmaxs[0] = (int) floor((ent->fields.server->absmax[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]) + 1;
+	igridmaxs[1] = (int) floor((ent->fields.server->absmax[1] + sv_areagrid_bias[1]) * sv_areagrid_scale[1]) + 1;
 	//igridmaxs[2] = (int) ((ent->fields.server->absmax[2] + sv_areagrid_bias[2]) * sv_areagrid_scale[2]) + 1;
 	if (igridmins[0] < 0 || igridmaxs[0] > AREA_GRID || igridmins[1] < 0 || igridmaxs[1] > AREA_GRID || ((igridmaxs[0] - igridmins[0]) * (igridmaxs[1] - igridmins[1])) > ENTITYGRIDAREAS)
 	{
@@ -385,8 +386,8 @@ void SV_LinkEdict (prvm_edict_t *ent, qboolean touch_triggers)
 		ent->fields.server->absmax[2] += 1;
 	}
 
-	if (ent->fields.server->solid == SOLID_NOT)
-		return;
+	//if (ent->fields.server->solid == SOLID_NOT)
+	//	return;
 
 	SV_LinkEdict_AreaGrid(ent);
 
