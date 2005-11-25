@@ -922,6 +922,8 @@ int Mod_LoadSkinFrame(skinframe_t *skinframe, char *basename, int textureflags, 
 {
 	imageskin_t s;
 	memset(skinframe, 0, sizeof(*skinframe));
+	if (cls.state == ca_dedicated)
+		return false;
 	if (!image_loadskin(&s, basename))
 		return false;
 	skinframe->base = R_LoadTexture2D (loadmodel->texturepool, basename, s.basepixels_width, s.basepixels_height, s.basepixels, TEXTYPE_RGBA, textureflags, NULL);
@@ -952,6 +954,8 @@ int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, char *basename, int textu
 {
 	unsigned char *temp1, *temp2;
 	memset(skinframe, 0, sizeof(*skinframe));
+	if (cls.state == ca_dedicated)
+		return false;
 	if (!skindata)
 		return false;
 	if (r_shadow_bumpscale_basetexture.value > 0)
