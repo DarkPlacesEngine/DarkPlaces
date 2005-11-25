@@ -303,7 +303,9 @@ void S_TransferPaintBuffer(int endtime)
 				{
 					// 1.0 mono
 					for (i = 0;i < snd_frames;i++, snd_p++)
+					{
 						val = ((snd_p->sample[0]+snd_p->sample[1]) >> 9) + 128;*snd_out++ = bound(0, val, 255);
+					}
 				}
 			}
 		}
