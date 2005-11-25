@@ -153,7 +153,7 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 			if (modelradius < x + y)
 				modelradius = x + y;
 
-			if (width > 0 && height > 0)
+			if (width > 0 && height > 0 && cls.state != ca_dedicated)
 			{
 				if (groupframes > 1)
 					sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
@@ -390,7 +390,7 @@ void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 		if (modelradius < x + y)
 			modelradius = x + y;
 
-		if (width > 0 && height > 0)
+		if (width > 0 && height > 0 && cls.state != ca_dedicated)
 		{
 			sprframe->texture = loadtextureimagewithmask(loadmodel->texturepool, pinframe->name, 0, 0, false, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP);
 			sprframe->fogtexture = image_masktex;

@@ -1250,67 +1250,70 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			Con_Printf("warning: unnamed texture in %s, renaming to %s\n", loadmodel->name, tx->name);
 		}
 
-		// LordHavoc: HL sky textures are entirely different than quake
-		if (!loadmodel->brush.ishlbsp && !strncmp(tx->name, "sky", 3) && mtwidth == 256 && mtheight == 128)
+		if (cls.state != ca_dedicated)
 		{
-			if (loadmodel->isworldmodel)
+			// LordHavoc: HL sky textures are entirely different than quake
+			if (!loadmodel->brush.ishlbsp && !strncmp(tx->name, "sky", 3) && mtwidth == 256 && mtheight == 128)
 			{
-				data = loadimagepixels(tx->name, false, 0, 0);
-				if (data)
+				if (loadmodel->isworldmodel)
 				{
-					R_Q1BSP_LoadSplitSky(data, image_width, image_height, 4);
-					Mem_Free(data);
-				}
-				else if (mtdata != NULL)
-					R_Q1BSP_LoadSplitSky(mtdata, mtwidth, mtheight, 1);
-			}
-		}
-		else
-		{
-			if (!Mod_LoadSkinFrame(&tx->skin, tx->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, true))
-			{
-				// did not find external texture, load it from the bsp or wad3
-				if (loadmodel->brush.ishlbsp)
-				{
-					// internal texture overrides wad
-					unsigned char *pixels, *freepixels, *fogpixels;
-					pixels = freepixels = NULL;
-					if (mtdata)
-						pixels = W_ConvertWAD3Texture(dmiptex);
-					if (pixels == NULL)
-						pixels = freepixels = W_GetTexture(tx->name);
-					if (pixels != NULL)
+					data = loadimagepixels(tx->name, false, 0, 0);
+					if (data)
 					{
-						tx->width = image_width;
-						tx->height = image_height;
-						tx->skin.base = tx->skin.merged = R_LoadTexture2D(loadmodel->texturepool, tx->name, image_width, image_height, pixels, TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, NULL);
-						if (Image_CheckAlpha(pixels, image_width * image_height, true))
-						{
-							fogpixels = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
-							for (j = 0;j < image_width * image_height * 4;j += 4)
-							{
-								fogpixels[j + 0] = 255;
-								fogpixels[j + 1] = 255;
-								fogpixels[j + 2] = 255;
-								fogpixels[j + 3] = pixels[j + 3];
-							}
-							tx->skin.fog = R_LoadTexture2D(loadmodel->texturepool, tx->name, image_width, image_height, pixels, TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, NULL);
-							Mem_Free(fogpixels);
-						}
+						R_Q1BSP_LoadSplitSky(data, image_width, image_height, 4);
+						Mem_Free(data);
 					}
-					if (freepixels)
-						Mem_Free(freepixels);
+					else if (mtdata != NULL)
+						R_Q1BSP_LoadSplitSky(mtdata, mtwidth, mtheight, 1);
 				}
-				else if (mtdata) // texture included
-					Mod_LoadSkinFrame_Internal(&tx->skin, tx->name, TEXF_MIPMAP | TEXF_PRECACHE | TEXF_PICMIP, false, tx->name[0] != '*' && r_fullbrights.integer, mtdata, tx->width, tx->height);
 			}
-		}
-		if (tx->skin.base == NULL)
-		{
-			// no texture found
-			tx->width = 16;
-			tx->height = 16;
-			tx->skin.base = r_texture_notexture;
+			else
+			{
+				if (!Mod_LoadSkinFrame(&tx->skin, tx->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, true))
+				{
+					// did not find external texture, load it from the bsp or wad3
+					if (loadmodel->brush.ishlbsp)
+					{
+						// internal texture overrides wad
+						unsigned char *pixels, *freepixels, *fogpixels;
+						pixels = freepixels = NULL;
+						if (mtdata)
+							pixels = W_ConvertWAD3Texture(dmiptex);
+						if (pixels == NULL)
+							pixels = freepixels = W_GetTexture(tx->name);
+						if (pixels != NULL)
+						{
+							tx->width = image_width;
+							tx->height = image_height;
+							tx->skin.base = tx->skin.merged = R_LoadTexture2D(loadmodel->texturepool, tx->name, image_width, image_height, pixels, TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, NULL);
+							if (Image_CheckAlpha(pixels, image_width * image_height, true))
+							{
+								fogpixels = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
+								for (j = 0;j < image_width * image_height * 4;j += 4)
+								{
+									fogpixels[j + 0] = 255;
+									fogpixels[j + 1] = 255;
+									fogpixels[j + 2] = 255;
+									fogpixels[j + 3] = pixels[j + 3];
+								}
+								tx->skin.fog = R_LoadTexture2D(loadmodel->texturepool, tx->name, image_width, image_height, pixels, TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, NULL);
+								Mem_Free(fogpixels);
+							}
+						}
+						if (freepixels)
+							Mem_Free(freepixels);
+					}
+					else if (mtdata) // texture included
+						Mod_LoadSkinFrame_Internal(&tx->skin, tx->name, TEXF_MIPMAP | TEXF_PRECACHE | TEXF_PICMIP, false, tx->name[0] != '*' && r_fullbrights.integer, mtdata, tx->width, tx->height);
+				}
+			}
+			if (tx->skin.base == NULL)
+			{
+				// no texture found
+				tx->width = 16;
+				tx->height = 16;
+				tx->skin.base = r_texture_notexture;
+			}
 		}
 
 		tx->basematerialflags = 0;
@@ -4106,9 +4109,9 @@ parseerror:
 			//if (R_TextureHasAlpha(out->skin.base))
 			//	out->surfaceparms |= Q3SURFACEPARM_TRANS;
 		}
-		if (!Mod_LoadSkinFrame(&out->skin, out->name, (((out->textureflags & Q3TEXTUREFLAG_NOMIPMAPS) || (out->surfaceparms & Q3SURFACEPARM_NOMIPMAPS)) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (out->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP), false, true))
-			if (!Mod_LoadSkinFrame(&out->skin, out->firstpasstexturename, (((out->textureflags & Q3TEXTUREFLAG_NOMIPMAPS) || (out->surfaceparms & Q3SURFACEPARM_NOMIPMAPS)) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (out->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP), false, true))
-				if (cls.state != ca_dedicated)
+		if (cls.state != ca_dedicated)
+			if (!Mod_LoadSkinFrame(&out->skin, out->name, (((out->textureflags & Q3TEXTUREFLAG_NOMIPMAPS) || (out->surfaceparms & Q3SURFACEPARM_NOMIPMAPS)) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (out->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP), false, true))
+				if (!Mod_LoadSkinFrame(&out->skin, out->firstpasstexturename, (((out->textureflags & Q3TEXTUREFLAG_NOMIPMAPS) || (out->surfaceparms & Q3SURFACEPARM_NOMIPMAPS)) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (out->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP), false, true))
 					Con_Printf("%s: texture loading for shader \"%s\" failed (first layer \"%s\" not found either)\n", loadmodel->name, out->name, out->firstpasstexturename);
 		// no animation
 		out->currentframe = out;
