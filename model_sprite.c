@@ -37,7 +37,6 @@ void Mod_SpriteInit (void)
 	Cvar_RegisterVariable(&r_mipsprites);
 }
 
-static int alphaonlytable[4] = {255 | 0x80000000, 255 | 0x80000000, 255 | 0x80000000, 3};
 static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version, const unsigned int *palette, const unsigned int *alphapalette)
 {
 	int					i, j, groupframes, realframes, x, y, origin[2], width, height;
@@ -47,7 +46,6 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 	dspriteinterval_t	*pinintervals;
 	float				modelradius, interval;
 	char				name[MAX_QPATH], fogname[MAX_QPATH];
-	unsigned char				*pixbuf;
 	const void			*startframes;
 	modelradius = 0;
 
@@ -159,29 +157,18 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 					sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
 				else
 					sprintf (name, "%s_%i", loadmodel->name, i);
-				loadmodel->sprite.sprdata_frames[realframes].texture = loadtextureimagewithmask(loadmodel->texturepool, name, 0, 0, false, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP);
-				loadmodel->sprite.sprdata_frames[realframes].fogtexture = image_masktex;
+				Mod_LoadSkinFrame(&loadmodel->sprite.sprdata_frames[realframes].skin, name, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, false, false);
 
-				if (!loadmodel->sprite.sprdata_frames[realframes].texture)
+				if (!loadmodel->sprite.sprdata_frames[realframes].skin.base)
 				{
 					if (groupframes > 1)
 						sprintf (fogname, "%s_%i_%ifog", loadmodel->name, i, j);
 					else
 						sprintf (fogname, "%s_%ifog", loadmodel->name, i);
 					if (version == SPRITE32_VERSION)
-					{
-						loadmodel->sprite.sprdata_frames[realframes].texture = R_LoadTexture2D(loadmodel->texturepool, name, width, height, datapointer, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, NULL);
-						// make fog version (just alpha)
-						pixbuf = (unsigned char *)Mem_Alloc(tempmempool, width*height*4);
-						Image_CopyMux(pixbuf, datapointer, width, height, false, false, false, 4, 4, alphaonlytable);
-						loadmodel->sprite.sprdata_frames[realframes].fogtexture = R_LoadTexture2D(loadmodel->texturepool, fogname, width, height, pixbuf, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, NULL);
-						Mem_Free(pixbuf);
-					}
+						Mod_LoadSkinFrame_Internal(&loadmodel->sprite.sprdata_frames[realframes].skin, name, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, false, false, datapointer, width, height, 32, NULL, NULL);
 					else //if (version == SPRITE_VERSION || version == SPRITEHL_VERSION)
-					{
-						loadmodel->sprite.sprdata_frames[realframes].texture = R_LoadTexture2D(loadmodel->texturepool, name, width, height, datapointer, TEXTYPE_PALETTE, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, palette);
-						loadmodel->sprite.sprdata_frames[realframes].fogtexture = R_LoadTexture2D(loadmodel->texturepool, fogname, width, height, datapointer, TEXTYPE_PALETTE, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, alphapalette);
-					}
+						Mod_LoadSkinFrame_Internal(&loadmodel->sprite.sprdata_frames[realframes].skin, name, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, false, false, datapointer, width, height, 8, palette, alphapalette);
 				}
 			}
 
@@ -392,11 +379,9 @@ void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 
 		if (width > 0 && height > 0 && cls.state != ca_dedicated)
 		{
-			sprframe->texture = loadtextureimagewithmask(loadmodel->texturepool, pinframe->name, 0, 0, false, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP);
-			sprframe->fogtexture = image_masktex;
-
+			Mod_LoadSkinFrame(&sprframe->skin, pinframe->name, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, false, false);
 			// TODO: use a default texture if we can't load it?
-			if (sprframe->texture == NULL)
+			if (sprframe->skin.base == NULL)
 				Host_Error("Mod_IDS2_Load: failed to load %s", pinframe->name);
 		}
 	}

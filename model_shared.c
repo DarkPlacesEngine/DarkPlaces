@@ -918,7 +918,7 @@ static rtexture_t *GL_TextureForSkinLayer(const unsigned char *in, int width, in
 	return NULL;
 }
 
-int Mod_LoadSkinFrame(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int loadglowtexture)
+int Mod_LoadSkinFrame(skinframe_t *skinframe, const char *basename, int textureflags, int loadpantsandshirt, int loadglowtexture)
 {
 	imageskin_t s;
 	memset(skinframe, 0, sizeof(*skinframe));
@@ -950,46 +950,99 @@ int Mod_LoadSkinFrame(skinframe_t *skinframe, char *basename, int textureflags, 
 	return true;
 }
 
-int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int loadglowtexture, unsigned char *skindata, int width, int height)
+int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, const char *basename, int textureflags, int loadpantsandshirt, int loadglowtexture, const unsigned char *skindata, int width, int height, int bitsperpixel, const unsigned int *palette, const unsigned int *alphapalette)
 {
+	int i;
 	unsigned char *temp1, *temp2;
 	memset(skinframe, 0, sizeof(*skinframe));
 	if (cls.state == ca_dedicated)
 		return false;
 	if (!skindata)
 		return false;
-	if (r_shadow_bumpscale_basetexture.value > 0)
+	if (bitsperpixel == 32)
 	{
-		temp1 = (unsigned char *)Mem_Alloc(loadmodel->mempool, width * height * 8);
-		temp2 = temp1 + width * height * 4;
-		Image_Copy8bitRGBA(skindata, temp1, width * height, palette_nofullbrights);
-		Image_HeightmapToNormalmap(temp1, temp2, width, height, false, r_shadow_bumpscale_basetexture.value);
-		skinframe->nmap = R_LoadTexture2D(loadmodel->texturepool, va("%s_nmap", basename), width, height, temp2, TEXTYPE_RGBA, textureflags, NULL);
-		Mem_Free(temp1);
-	}
-	if (loadglowtexture)
-	{
-		skinframe->glow = GL_TextureForSkinLayer(skindata, width, height, va("%s_glow", basename), palette_onlyfullbrights, textureflags); // glow
-		skinframe->base = skinframe->merged = GL_TextureForSkinLayer(skindata, width, height, va("%s_merged", basename), palette_nofullbrights, textureflags); // all but fullbrights
-		if (loadpantsandshirt)
+		if (r_shadow_bumpscale_basetexture.value > 0)
 		{
-			skinframe->pants = GL_TextureForSkinLayer(skindata, width, height, va("%s_pants", basename), palette_pantsaswhite, textureflags); // pants
-			skinframe->shirt = GL_TextureForSkinLayer(skindata, width, height, va("%s_shirt", basename), palette_shirtaswhite, textureflags); // shirt
-			if (skinframe->pants || skinframe->shirt)
-				skinframe->base = GL_TextureForSkinLayer(skindata, width, height, va("%s_nospecial", basename), palette_nocolormapnofullbrights, textureflags); // no special colors
+			temp1 = (unsigned char *)Mem_Alloc(loadmodel->mempool, width * height * 8);
+			temp2 = temp1 + width * height * 4;
+			Image_HeightmapToNormalmap(skindata, temp2, width, height, false, r_shadow_bumpscale_basetexture.value);
+			skinframe->nmap = R_LoadTexture2D(loadmodel->texturepool, va("%s_nmap", basename), width, height, temp2, TEXTYPE_RGBA, textureflags | TEXF_ALPHA, NULL);
+			Mem_Free(temp1);
+		}
+		skinframe->base = skinframe->merged = R_LoadTexture2D(loadmodel->texturepool, basename, width, height, skindata, TEXTYPE_RGBA, textureflags, NULL);
+		if (textureflags & TEXF_ALPHA)
+		{
+			for (i = 3;i < width * height * 4;i += 4)
+				if (skindata[i] < 255)
+					break;
+			if (i < width * height * 4)
+			{
+				unsigned char *fogpixels = Mem_Alloc(loadmodel->mempool, width * height * 4);
+				memcpy(fogpixels, skindata, width * height * 4);
+				for (i = 0;i < width * height * 4;i += 4)
+					fogpixels[i] = fogpixels[i+1] = fogpixels[i+2] = 255;
+				skinframe->fog = R_LoadTexture2D(loadmodel->texturepool, va("%s_fog", basename), width, height, fogpixels, TEXTYPE_RGBA, textureflags, NULL);
+				Mem_Free(fogpixels);
+			}
+		}
+	}
+	else if (bitsperpixel == 8)
+	{
+		if (r_shadow_bumpscale_basetexture.value > 0)
+		{
+			temp1 = (unsigned char *)Mem_Alloc(loadmodel->mempool, width * height * 8);
+			temp2 = temp1 + width * height * 4;
+			if (bitsperpixel == 32)
+				Image_HeightmapToNormalmap(skindata, temp2, width, height, false, r_shadow_bumpscale_basetexture.value);
+			else
+			{
+				// use either a custom palette or the quake palette
+				Image_Copy8bitRGBA(skindata, temp1, width * height, palette ? palette : palette_complete);
+				Image_HeightmapToNormalmap(temp1, temp2, width, height, false, r_shadow_bumpscale_basetexture.value);
+			}
+			skinframe->nmap = R_LoadTexture2D(loadmodel->texturepool, va("%s_nmap", basename), width, height, temp2, TEXTYPE_RGBA, textureflags | TEXF_ALPHA, NULL);
+			Mem_Free(temp1);
+		}
+		// use either a custom palette, or the quake palette
+		if (palette)
+			skinframe->base = skinframe->merged = GL_TextureForSkinLayer(skindata, width, height, va("%s_merged", basename), palette, textureflags); // all
+		else if (loadglowtexture)
+		{
+			skinframe->glow = GL_TextureForSkinLayer(skindata, width, height, va("%s_glow", basename), palette_onlyfullbrights, textureflags); // glow
+			skinframe->base = skinframe->merged = GL_TextureForSkinLayer(skindata, width, height, va("%s_merged", basename), palette_nofullbrights, textureflags); // all but fullbrights
+			if (loadpantsandshirt)
+			{
+				skinframe->pants = GL_TextureForSkinLayer(skindata, width, height, va("%s_pants", basename), palette_pantsaswhite, textureflags); // pants
+				skinframe->shirt = GL_TextureForSkinLayer(skindata, width, height, va("%s_shirt", basename), palette_shirtaswhite, textureflags); // shirt
+				if (skinframe->pants || skinframe->shirt)
+					skinframe->base = GL_TextureForSkinLayer(skindata, width, height, va("%s_nospecial", basename), palette_nocolormapnofullbrights, textureflags); // no special colors
+			}
+		}
+		else
+		{
+			skinframe->base = skinframe->merged = GL_TextureForSkinLayer(skindata, width, height, va("%s_merged", basename), palette_complete, textureflags); // all
+			if (loadpantsandshirt)
+			{
+				skinframe->pants = GL_TextureForSkinLayer(skindata, width, height, va("%s_pants", basename), palette_pantsaswhite, textureflags); // pants
+				skinframe->shirt = GL_TextureForSkinLayer(skindata, width, height, va("%s_shirt", basename), palette_shirtaswhite, textureflags); // shirt
+				if (skinframe->pants || skinframe->shirt)
+					skinframe->base = GL_TextureForSkinLayer(skindata, width, height, va("%s_nospecial", basename), palette_nocolormap, textureflags); // no pants or shirt
+			}
+		}
+		if (textureflags & TEXF_ALPHA)
+		{
+			// if not using a custom alphapalette, use the quake one
+			if (!alphapalette)
+				alphapalette = palette_alpha;
+			for (i = 0;i < width * height;i++)
+				if (((unsigned char *)alphapalette)[skindata[i]*4+3] < 255)
+					break;
+			if (i < width * height)
+				skinframe->fog = GL_TextureForSkinLayer(skindata, width, height, va("%s_fog", basename), alphapalette, textureflags); // fog mask
 		}
 	}
 	else
-	{
-		skinframe->base = skinframe->merged = GL_TextureForSkinLayer(skindata, width, height, va("%s_merged", basename), palette_complete, textureflags); // all
-		if (loadpantsandshirt)
-		{
-			skinframe->pants = GL_TextureForSkinLayer(skindata, width, height, va("%s_pants", basename), palette_pantsaswhite, textureflags); // pants
-			skinframe->shirt = GL_TextureForSkinLayer(skindata, width, height, va("%s_shirt", basename), palette_shirtaswhite, textureflags); // shirt
-			if (skinframe->pants || skinframe->shirt)
-				skinframe->base = GL_TextureForSkinLayer(skindata, width, height, va("%s_nospecial", basename), palette_nocolormap, textureflags); // no pants or shirt
-		}
-	}
+		return false;
 	if (!skinframe->nmap)
 		skinframe->nmap = r_texture_blanknormalmap;
 	return true;
