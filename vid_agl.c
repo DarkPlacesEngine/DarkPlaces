@@ -514,7 +514,7 @@ static void Handle_Key(unsigned char charcode, qboolean keypressed)
 				keycode = charcode + ('a' - 'A');  // lowercase it
 				ascii = charcode;
 			}
-			else if (32 <= charcode && charcode <= 126)
+			else if (32 <= charcode)
 			{
 				keycode = charcode;
 				ascii = charcode;

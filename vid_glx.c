@@ -210,7 +210,7 @@ static int XLateKey(XKeyEvent *ev, char *ascii)
 		case XK_section:	key = '~'; break;
 
 		default:
-			if (keysym < 32 && keysym > 126)
+			if (keysym < 32)
 				break;
 
 			if (keysym >= 'A' && keysym <= 'Z')
