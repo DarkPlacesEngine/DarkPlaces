@@ -466,15 +466,16 @@ VM_localcmd
 
 Sends text over to the client's execution buffer
 
-[localcmd (string) or]
-cmd (string)
+[localcmd (string, ...) or]
+cmd (string, ...)
 =================
 */
 void VM_localcmd (void)
 {
+	char string[VM_STRINGTEMP_LENGTH];
 	VM_SAFEPARMCOUNT(1,VM_localcmd);
-
-	Cbuf_AddText(PRVM_G_STRING(OFS_PARM0));
+	VM_VarString(0, string, sizeof(string));
+	Cbuf_AddText(string);
 }
 
 /*
@@ -1786,17 +1787,17 @@ VM_strzone
 string	strzone(string s)
 =========
 */
-//string(string s) strzone = #118; // makes a copy of a string into the string zone and returns it, this is often used to keep around a tempstring for longer periods of time (tempstrings are replaced often)
+//string(string s, ...) strzone = #118; // makes a copy of a string into the string zone and returns it, this is often used to keep around a tempstring for longer periods of time (tempstrings are replaced often)
 void VM_strzone(void)
 {
-	const char *in;
 	char *out;
+	char string[VM_STRINGTEMP_LENGTH];
 
 	VM_SAFEPARMCOUNT(1,VM_strzone);
 
-	in = PRVM_G_STRING(OFS_PARM0);
-	PRVM_G_INT(OFS_RETURN) = PRVM_AllocString(strlen(in) + 1, &out);
-	strcpy(out, in);
+	VM_VarString(0, string, sizeof(string));
+	PRVM_G_INT(OFS_RETURN) = PRVM_AllocString(strlen(string) + 1, &out);
+	strcpy(out, string);
 }
 
 /*
