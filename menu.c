@@ -186,6 +186,11 @@ void M_DrawCharacter (float cx, float cy, int num)
 	DrawQ_String(menu_x + cx, menu_y + cy, temp, 1, 8, 8, 1, 1, 1, 1, 0);
 }
 
+void M_PrintColored(float cx, float cy, const char *str)
+{
+	DrawQ_ColoredString(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 1, 1, 1, 0, NULL);
+}
+
 void M_Print(float cx, float cy, const char *str)
 {
 	DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 1, 1, 1, 0);
@@ -1303,7 +1308,7 @@ void M_Setup_Draw (void)
 
 	M_Print(64, 40, "Your name");
 	M_DrawTextBox (160, 32, 16, 1);
-	M_Print(168, 40, setup_myname);
+	M_PrintColored(168, 40, setup_myname);
 
 	if (gamemode != GAME_GOODVSBAD2)
 	{
@@ -1446,7 +1451,7 @@ forward:
 		break;
 
 	default:
-		if (ascii < 32 || ascii > 126)
+		if (ascii < 32)
 			break;
 		if (setup_cursor == 0)
 		{
@@ -3244,7 +3249,7 @@ void M_LanConfig_Key (int key, char ascii)
 		break;
 
 	default:
-		if (ascii < 32 || ascii > 126)
+		if (ascii < 32)
 			break;
 
 		if (lanConfig_cursor == 2)
@@ -4132,7 +4137,7 @@ void M_GameOptions_Key (int key, char ascii)
 		break;
 
 	default:
-		if (ascii < 32 || ascii > 126)
+		if (ascii < 32)
 			break;
 		if (gameoptions_cursor == 9)
 		{
@@ -4192,8 +4197,8 @@ void M_ServerList_Draw (void)
 		for (n = start;n < end;n++)
 		{
 			DrawQ_Fill(menu_x, menu_y + y, 640, 16, n == slist_cursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
-			M_Print(0, y, serverlist_viewlist[n]->line1);y += 8;
-			M_Print(0, y, serverlist_viewlist[n]->line2);y += 8;
+			M_PrintColored(0, y, serverlist_viewlist[n]->line1);y += 8;
+			M_PrintColored(0, y, serverlist_viewlist[n]->line2);y += 8;
 		}
 	}
 	else if (realtime - masterquerytime < 3)
