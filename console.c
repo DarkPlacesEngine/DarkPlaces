@@ -557,16 +557,16 @@ void Con_Print(const char *msg)
 					// play talk wav
 					S_LocalSound ("sound/misc/talk.wav");
 				}
-				if (gamemode == GAME_NEXUIZ)
-				{
-					line[index++] = '^';
+				//if (gamemode == GAME_NEXUIZ)
+				//{
+					line[index++] = STRING_COLOR_TAG;
 					line[index++] = '3';
-				}
-				else
-				{
-					// go to colored text
-					mask = 128;
-				}
+				//}
+				//else
+				//{
+				//	// go to colored text
+				//	mask = 128;
+				//}
 				msg++;
 			}
 			// store timestamp
