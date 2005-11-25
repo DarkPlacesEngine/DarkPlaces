@@ -660,20 +660,21 @@ void SV_PrepareEntitiesForSending(void)
 		// specialvisibilityradius)
 		if ((model = sv.models[modelindex]))
 		{
+			float scale = cs.scale * (1.0f / 16.0f);
 			if (cs.angles[0] || cs.angles[2]) // pitch and roll
 			{
-				VectorAdd(cs.origin, model->rotatedmins, cullmins);
-				VectorAdd(cs.origin, model->rotatedmaxs, cullmaxs);
+				VectorMA(cs.origin, scale, model->rotatedmins, cullmins);
+				VectorMA(cs.origin, scale, model->rotatedmaxs, cullmaxs);
 			}
 			else if (cs.angles[1])
 			{
-				VectorAdd(cs.origin, model->yawmins, cullmins);
-				VectorAdd(cs.origin, model->yawmaxs, cullmaxs);
+				VectorMA(cs.origin, scale, model->yawmins, cullmins);
+				VectorMA(cs.origin, scale, model->yawmaxs, cullmaxs);
 			}
 			else
 			{
-				VectorAdd(cs.origin, model->normalmins, cullmins);
-				VectorAdd(cs.origin, model->normalmaxs, cullmaxs);
+				VectorMA(cs.origin, scale, model->normalmins, cullmins);
+				VectorMA(cs.origin, scale, model->normalmaxs, cullmaxs);
 			}
 		}
 		else
