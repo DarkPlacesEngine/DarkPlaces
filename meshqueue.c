@@ -17,6 +17,7 @@ typedef struct meshqueue_s
 meshqueue_t;
 
 float mqt_viewplanedist;
+float mqt_viewmaxdist;
 meshqueue_t *mq_array, *mqt_array, *mq_listhead;
 int mq_count, mqt_count;
 int mq_total, mqt_total;
@@ -111,12 +112,14 @@ void R_MeshQueue_AddTransparent(const vec3_t center, void (*callback)(const void
 	mq->data2 = data2;
 	mq->dist = DotProduct(center, r_viewforward) - mqt_viewplanedist;
 	mq->next = NULL;
+	mqt_viewmaxdist = max(mqt_viewmaxdist, mq->dist);
 }
 
 void R_MeshQueue_RenderTransparent(void)
 {
 	int i;
 	int hashdist;
+	float distscale;
 	meshqueue_t *mqt;
 	meshqueue_t *hash[4096], **hashpointer[4096];
 	if (mq_count)
@@ -126,10 +129,11 @@ void R_MeshQueue_RenderTransparent(void)
 	memset(hash, 0, sizeof(hash));
 	for (i = 0;i < 4096;i++)
 		hashpointer[i] = &hash[i];
+	distscale = 4095.0f / max(mqt_viewmaxdist, 4095);
 	for (i = 0, mqt = mqt_array;i < mqt_count;i++, mqt++)
 	{
 		// generate index
-		hashdist = (int) (mqt->dist);
+		hashdist = (int) (mqt->dist * distscale);
 		hashdist = bound(0, hashdist, 4095);
 		// link to tail of hash chain (to preserve render order)
 		mqt->next = NULL;
@@ -165,6 +169,7 @@ void R_MeshQueue_BeginScene(void)
 	mqt_count = 0;
 	mq_listhead = NULL;
 	mqt_viewplanedist = DotProduct(r_vieworigin, r_viewforward);
+	mqt_viewmaxdist = 0;
 }
 
 void R_MeshQueue_EndScene(void)
