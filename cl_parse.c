@@ -844,7 +844,7 @@ void CL_ParseBeam (model_t *m, int lightning)
 {
 	int i, ent;
 	vec3_t start, end;
-	beam_t *b;
+	beam_t *b = NULL;
 
 	ent = (unsigned short) MSG_ReadShort ();
 	MSG_ReadVector(start, cl.protocol);
