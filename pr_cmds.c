@@ -956,14 +956,14 @@ PF_stuffcmd
 
 Sends text over to the client's execution buffer
 
-stuffcmd (clientent, value)
+stuffcmd (clientent, value, ...)
 =================
 */
 void PF_stuffcmd (void)
 {
 	int		entnum;
-	const char	*str;
 	client_t	*old;
+	char string[VM_STRINGTEMP_LENGTH];
 
 	entnum = PRVM_G_EDICTNUM(OFS_PARM0);
 	if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
@@ -971,11 +971,11 @@ void PF_stuffcmd (void)
 		Con_Print("Can't stuffcmd to a non-client\n");
 		return;
 	}
-	str = PRVM_G_STRING(OFS_PARM1);
+	VM_VarString(1, string, sizeof(string));
 
 	old = host_client;
 	host_client = svs.clients + entnum-1;
-	Host_ClientCommands ("%s", str);
+	Host_ClientCommands ("%s", string);
 	host_client = old;
 }
 
@@ -985,12 +985,14 @@ PF_localcmd
 
 Sends text to server console
 
-localcmd (string)
+localcmd (string, ...)
 =================
 */
 void PF_localcmd (void)
 {
-	Cbuf_AddText(PRVM_G_STRING(OFS_PARM0));
+	char string[VM_STRINGTEMP_LENGTH];
+	VM_VarString(0, string, sizeof(string));
+	Cbuf_AddText(string);
 }
 
 /*
