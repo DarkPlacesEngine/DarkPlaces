@@ -1200,22 +1200,25 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 	trace_t trace;
 	vec3_t move;
 
-	// don't stick to ground if onground and moving upward
-	if (ent->fields.server->velocity[2] >= (1.0 / 32.0) && ((int)ent->fields.server->flags & FL_ONGROUND))
-		ent->fields.server->flags = (int)ent->fields.server->flags & ~FL_ONGROUND;
-
 // if onground, return without moving
 	if ((int)ent->fields.server->flags & FL_ONGROUND)
 	{
-		if (ent->fields.server->groundentity == 0 || sv_gameplayfix_noairborncorpse.integer)
-			return;
-		// if ent was supported by a brush model on previous frame,
-		// and groundentity is now freed, set groundentity to 0 (floating)
-		if (ent->priv.server->suspendedinairflag && PRVM_PROG_TO_EDICT(ent->fields.server->groundentity)->priv.server->free)
+		// don't stick to ground if onground and moving upward
+		if (ent->fields.server->velocity[2] >= (1.0 / 32.0))
+			ent->fields.server->flags -= FL_ONGROUND;
+		else
 		{
-			// leave it suspended in the air
-			ent->fields.server->groundentity = 0;
-			return;
+			prvm_edict_t *ground = PRVM_PROG_TO_EDICT(ent->fields.server->groundentity);
+			if (ground->fields.server->solid == SOLID_BSP || !sv_gameplayfix_noairborncorpse.integer)
+				return;
+			// if ent was supported by a brush model on previous frame,
+			// and groundentity is now freed, set groundentity to 0 (floating)
+			if (ent->priv.server->suspendedinairflag && ground->priv.server->free)
+			{
+				// leave it suspended in the air
+				ent->fields.server->groundentity = 0;
+				return;
+			}
 		}
 	}
 	ent->priv.server->suspendedinairflag = false;
@@ -1315,23 +1318,38 @@ will fall if the floor is pulled out from under them.
 */
 void SV_Physics_Step (prvm_edict_t *ent)
 {
-	// don't stick to ground if onground and moving upward
-	if (ent->fields.server->velocity[2] >= (1.0 / 32.0) && ((int)ent->fields.server->flags & FL_ONGROUND))
-		ent->fields.server->flags = (int)ent->fields.server->flags & ~FL_ONGROUND;
-
-	// freefall if not onground/fly/swim
-	if (!((int)ent->fields.server->flags & (FL_ONGROUND | FL_FLY | FL_SWIM)))
+	int flags = (int)ent->fields.server->flags;
+	// don't fall at all if fly/swim
+	if (!(flags & (FL_FLY | FL_SWIM)))
 	{
-		int hitsound = ent->fields.server->velocity[2] < sv_gravity.value * -0.1;
+		if (flags & FL_ONGROUND)
+		{
+			// freefall if onground and moving upward
+			// freefall if not standing on a world surface (it may be a lift)
+			prvm_edict_t *ground = PRVM_PROG_TO_EDICT(ent->fields.server->groundentity);
+			if (ent->fields.server->velocity[2] >= (1.0 / 32.0) || (ground->fields.server->solid != SOLID_BSP && sv_gameplayfix_noairborncorpse.integer))
+			{
+				ent->fields.server->flags -= FL_ONGROUND;
+				SV_AddGravity(ent);
+				SV_CheckVelocity(ent);
+				SV_FlyMove(ent, sv.frametime, NULL);
+				SV_LinkEdict(ent, true);
+			}
+		}
+		else
+		{
+			// freefall if not onground
+			int hitsound = ent->fields.server->velocity[2] < sv_gravity.value * -0.1;
 
-		SV_AddGravity(ent);
-		SV_CheckVelocity(ent);
-		SV_FlyMove(ent, sv.frametime, NULL);
-		SV_LinkEdict(ent, true);
+			SV_AddGravity(ent);
+			SV_CheckVelocity(ent);
+			SV_FlyMove(ent, sv.frametime, NULL);
+			SV_LinkEdict(ent, true);
 
-		// just hit ground
-		if (hitsound && (int)ent->fields.server->flags & FL_ONGROUND && gamemode != GAME_NEXUIZ)
-			SV_StartSound(ent, 0, "demon/dland2.wav", 255, 1);
+			// just hit ground
+			if (hitsound && (int)ent->fields.server->flags & FL_ONGROUND && gamemode != GAME_NEXUIZ)
+				SV_StartSound(ent, 0, "demon/dland2.wav", 255, 1);
+		}
 	}
 
 // regular thinking
