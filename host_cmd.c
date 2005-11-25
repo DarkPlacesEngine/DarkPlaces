@@ -209,21 +209,28 @@ Host_Ping_f
 */
 void Host_Ping_f (void)
 {
-	int		i;
-	client_t	*client;
+	int i;
+	client_t *client;
+	void (*print) (const char *fmt, ...);
 
 	if (cmd_source == src_command)
 	{
-		Cmd_ForwardToServer ();
-		return;
+		if (!sv.active)
+		{
+			Cmd_ForwardToServer ();
+			return;
+		}
+		print = Con_Printf;
 	}
+	else
+		print = SV_ClientPrintf;
 
-	SV_ClientPrint("Client ping times:\n");
+	print("Client ping times:\n");
 	for (i = 0, client = svs.clients;i < svs.maxclients;i++, client++)
 	{
 		if (!client->active)
 			continue;
-		SV_ClientPrintf("%4i %s\n", (int)floor(client->ping*1000+0.5), client->name);
+		print("%4i %s\n", (int)floor(client->ping*1000+0.5), client->name);
 	}
 }
 
