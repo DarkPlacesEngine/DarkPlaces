@@ -352,7 +352,7 @@ static void _ServerList_Test(void)
 	for( i = 0 ; i < 1024 ; i++ ) {
 		memset( &serverlist_cache[serverlist_cachecount], 0, sizeof( serverlist_entry_t ) );
 		serverlist_cache[serverlist_cachecount].info.ping = 1000 + 1024 - i;
-		dpsnprintf( serverlist_cache[serverlist_cachecount].info.name, 128, "Black's ServerList Test %i", i );
+		dpsnprintf( serverlist_cache[serverlist_cachecount].info.name, sizeof(serverlist_cache[serverlist_cachecount].info.name), "Black's ServerList Test %i", i );
 		serverlist_cache[serverlist_cachecount].finished = true;
 		sprintf( serverlist_cache[serverlist_cachecount].line1, "%i %s", serverlist_cache[serverlist_cachecount].info.ping, serverlist_cache[serverlist_cachecount].info.name );
 		ServerList_ViewList_Insert( &serverlist_cache[serverlist_cachecount] );
@@ -1002,7 +1002,7 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *data, int 
 		if (length >= 13 && !memcmp(string, "infoResponse\x0A", 13))
 		{
 			serverlist_info_t *info;
-			int i, n;
+			int n;
 			double pingtime;
 
 			string += 13;
@@ -1053,23 +1053,8 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *data, int 
 			// legacy/old stuff move it to the menu ASAP
 
 			// build description strings for the things users care about
-			dpsnprintf(serverlist_cache[n].line1, sizeof(serverlist_cache[n].line1), "%5d%c%3u/%3u %-65.65s", (int)pingtime, info->protocol != NET_PROTOCOL_VERSION ? '*' : ' ', info->numplayers, info->maxplayers, info->name);
+			dpsnprintf(serverlist_cache[n].line1, sizeof(serverlist_cache[n].line1), "%c%c%5d%c%c%c%3u/%3u %-65.65s", STRING_COLOR_TAG, pingtime >= 300 ? '1' : (pingtime >= 200 ? '3' : '7'), (int)pingtime, STRING_COLOR_TAG, STRING_COLOR_DEFAULT + '0', info->protocol != NET_PROTOCOL_VERSION ? '*' : ' ', info->numplayers, info->maxplayers, info->name);
 			dpsnprintf(serverlist_cache[n].line2, sizeof(serverlist_cache[n].line2), "%-21.21s %-19.19s %-17.17s %-20.20s", info->cname, info->game, info->mod, info->map);
-			// if ping is especially high, display it as such
-			if (pingtime >= 300)
-			{
-				// orange numbers (lower block)
-				for (i = 0;i < 5;i++)
-					if (serverlist_cache[n].line1[i] != ' ')
-						serverlist_cache[n].line1[i] += 128;
-			}
-			else if (pingtime >= 200)
-			{
-				// yellow numbers (in upper block)
-				for (i = 0;i < 5;i++)
-					if (serverlist_cache[n].line1[i] != ' ')
-						serverlist_cache[n].line1[i] -= 30;
-			}
 			if( serverlist_cache[n].query == SQS_QUERIED ) {
 				ServerList_ViewList_Remove( &serverlist_cache[n] );
 			}
