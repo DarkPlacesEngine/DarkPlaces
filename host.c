@@ -486,8 +486,6 @@ void Host_ShutdownServer(qboolean crash)
 	if (!sv.active)
 		return;
 
-	SV_VM_Begin();
-
 	NetConn_Heartbeat(2);
 	NetConn_Heartbeat(2);
 
@@ -500,10 +498,11 @@ void Host_ShutdownServer(qboolean crash)
 	if (count)
 		Con_Printf("Host_ShutdownServer: NetConn_SendToAll failed for %u clients\n", count);
 
+	SV_VM_Begin();
 	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
-		if (host_client->active) {
+		if (host_client->active)
 			SV_DropClient(crash); // server shutdown
-		}
+	SV_VM_End();
 
 	NetConn_CloseServerPorts();
 
@@ -513,8 +512,6 @@ void Host_ShutdownServer(qboolean crash)
 //
 	memset(&sv, 0, sizeof(sv));
 	memset(svs.clients, 0, svs.maxclients*sizeof(client_t));
-
-	SV_VM_End();
 }
 
 

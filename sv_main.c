@@ -295,27 +295,6 @@ void SV_SendServerinfo (client_t *client)
 	client->weaponmodel[0] = 0;
 	client->weaponmodelindex = 0;
 
-	// if client is a botclient coming from a level change, we need to set up
-	// client info that normally requires networking
-	if (!client->netconnection)
-	{
-		// set up the edict
-		 PRVM_ED_ClearEdict(client->edict);
-
-		// copy spawn parms out of the client_t
-		for (i=0 ; i< NUM_SPAWN_PARMS ; i++)
-			(&prog->globals.server->parm1)[i] = host_client->spawn_parms[i];
-
-		// call the spawn function
-		host_client->clientconnectcalled = true;
-		prog->globals.server->time = sv.time;
-		prog->globals.server->self = PRVM_EDICT_TO_PROG(client->edict);
-		PRVM_ExecuteProgram (prog->globals.server->ClientConnect, "QC function ClientConnect is missing");
-		PRVM_ExecuteProgram (prog->globals.server->PutClientInServer, "QC function PutClientInServer is missing");
-		host_client->spawned = true;
-		return;
-	}
-
 	// LordHavoc: clear entityframe tracking
 	client->latestframenum = 0;
 
@@ -426,6 +405,9 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 		for (i=0 ; i<NUM_SPAWN_PARMS ; i++)
 			client->spawn_parms[i] = (&prog->globals.server->parm1)[i];
 	}
+
+	// set up the entity for this client (including .colormap, .team, etc)
+	PRVM_ED_ClearEdict(client->edict);
 
 	// don't call SendServerinfo for a fresh botclient because its fields have
 	// not been set up by the qc yet
@@ -1793,10 +1775,6 @@ void SV_SpawnServer (const char *server)
 		ent->fields.server = (void *)((unsigned char *)prog->edictsfields + i * prog->edict_size);
 	}*/
 
-	// fix up client->edict pointers for returning clients right away...
-	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
-		host_client->edict = PRVM_EDICT_NUM(i + 1);
-
 	sv.datagram.maxsize = sizeof(sv.datagram_buf);
 	sv.datagram.cursize = 0;
 	sv.datagram.data = sv.datagram_buf;
@@ -1863,6 +1841,17 @@ void SV_SpawnServer (const char *server)
 // serverflags are for cross level information (sigils)
 	prog->globals.server->serverflags = svs.serverflags;
 
+	// we need to reset the spawned flag on all connected clients here so that
+	// their thinks don't run during startup (before PutClientInServer)
+	// we also need to set up the client entities now
+	// and we need to set the ->edict pointers to point into the progs edicts
+	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
+	{
+		host_client->spawned = false;
+		host_client->edict = PRVM_EDICT_NUM(i + 1);
+		PRVM_ED_ClearEdict(host_client->edict);
+	}
+
 	// load replacement entity file if found
 	entities = NULL;
 	if (sv_entpatch.integer)
@@ -1884,11 +1873,6 @@ void SV_SpawnServer (const char *server)
 	sv.state = ss_active;
 	prog->allowworldwrites = false;
 
-	// we need to reset the spawned flag on all connected clients here so that
-	// their thinks don't run during startup (before PutClientInServer)
-	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
-		host_client->spawned = false;
-
 // run two frames to allow everything to settle
 	for (i = 0;i < 2;i++)
 	{
@@ -1902,11 +1886,32 @@ void SV_SpawnServer (const char *server)
 	if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE)
 		SV_CreateBaseline ();
 
-// send serverinfo to all connected clients
-	// (note this also handles botclients coming back from a level change)
+// send serverinfo to all connected clients, and set up botclients coming back from a level change
 	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
-		if (host_client->active)
+	{
+		if (!host_client->active)
+			continue;
+		if (host_client->netconnection)
 			SV_SendServerinfo(host_client);
+		else
+		{
+			int j;
+			// if client is a botclient coming from a level change, we need to
+			// set up client info that normally requires networking
+
+			// copy spawn parms out of the client_t
+			for (j=0 ; j< NUM_SPAWN_PARMS ; j++)
+				(&prog->globals.server->parm1)[j] = host_client->spawn_parms[j];
+
+			// call the spawn function
+			host_client->clientconnectcalled = true;
+			prog->globals.server->time = sv.time;
+			prog->globals.server->self = PRVM_EDICT_TO_PROG(host_client->edict);
+			PRVM_ExecuteProgram (prog->globals.server->ClientConnect, "QC function ClientConnect is missing");
+			PRVM_ExecuteProgram (prog->globals.server->PutClientInServer, "QC function PutClientInServer is missing");
+			host_client->spawned = true;
+		}
+	}
 
 	Con_DPrint("Server spawned.\n");
 	NetConn_Heartbeat (2);
@@ -1967,9 +1972,9 @@ void SV_VM_CB_InitEdict(prvm_edict_t *e)
 			val->_float = svs.clients[num].colors;
 		// NEXUIZ_PLAYERMODEL and NEXUIZ_PLAYERSKIN
 		if( eval_playermodel )
-			PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_playermodel)->string = PRVM_SetEngineString(svs.clients[num].playermodel);
+			PRVM_GETEDICTFIELDVALUE(e, eval_playermodel)->string = PRVM_SetEngineString(svs.clients[num].playermodel);
 		if( eval_playerskin )
-			PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_playerskin)->string = PRVM_SetEngineString(svs.clients[num].playerskin);
+			PRVM_GETEDICTFIELDVALUE(e, eval_playerskin)->string = PRVM_SetEngineString(svs.clients[num].playerskin);
 	}
 }
 
