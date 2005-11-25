@@ -1220,41 +1220,13 @@ void CL_RelinkBeams(void)
 		// if coming from the player, update the start position
 		//if (b->entity == cl.viewentity)
 		//	Matrix4x4_OriginFromMatrix(&cl_entities[cl.viewentity].render.matrix, b->start);
-		if (cl_beams_relative.integer && b->entity == cl.viewentity && b->entity && cl_entities[b->entity].state_current.active && b->relativestartvalid)
+		if (cl_beams_relative.integer && b->entity && cl_entities[b->entity].state_current.active && b->relativestartvalid)
 		{
-			entity_state_t *p = &cl_entities[b->entity].state_previous;
-			//entity_state_t *c = &cl_entities[b->entity].state_current;
 			entity_render_t *r = &cl_entities[b->entity].render;
-			matrix4x4_t matrix, imatrix;
-			if (b->relativestartvalid == 2)
-			{
-				// not really valid yet, we need to get the orientation now
-				// (ParseBeam flagged this because it is received before
-				//  entities are received, by now they have been received)
-				// note: because players create lightning in their think
-				// function (which occurs before movement), they actually
-				// have some lag in it's location, so compare to the
-				// previous player state, not the latest
-				if (b->entity == cl.viewentity)
-					Matrix4x4_CreateFromQuakeEntity(&matrix, p->origin[0], p->origin[1], p->origin[2] + 16, cl.viewangles[0], cl.viewangles[1], cl.viewangles[2], 1);
-				else
-					Matrix4x4_CreateFromQuakeEntity(&matrix, p->origin[0], p->origin[1], p->origin[2] + 16, p->angles[0], p->angles[1], p->angles[2], 1);
-				Matrix4x4_Invert_Simple(&imatrix, &matrix);
-				Matrix4x4_Transform(&imatrix, b->start, b->relativestart);
-				Matrix4x4_Transform(&imatrix, b->end, b->relativeend);
-				b->relativestartvalid = 1;
-			}
-			else
-			{
-				vec3_t origin;
-				Matrix4x4_OriginFromMatrix(&r->matrix, origin);
-				if (b->entity == cl.viewentity)
-					Matrix4x4_CreateFromQuakeEntity(&matrix, origin[0], origin[1], origin[2] + 16, cl.viewangles[0], cl.viewangles[1], cl.viewangles[2], 1);
-				else
-					Matrix4x4_CreateFromQuakeEntity(&matrix, origin[0], origin[1], origin[2] + 16, r->angles[0], r->angles[1], r->angles[2], 1);
-				Matrix4x4_Transform(&matrix, b->relativestart, b->start);
-				Matrix4x4_Transform(&matrix, b->relativeend, b->end);
-			}
+			//Matrix4x4_OriginFromMatrix(&r->matrix, origin);
+			//Matrix4x4_CreateFromQuakeEntity(&matrix, r->origin[0], r->origin[1], r->origin[2] + 16, r->angles[0], r->angles[1], r->angles[2], 1);
+			Matrix4x4_Transform(&r->matrix, b->relativestart, b->start);
+			Matrix4x4_Transform(&r->matrix, b->relativeend, b->end);
 		}
 
 		if (b->lightning)
