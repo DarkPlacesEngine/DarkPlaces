@@ -295,8 +295,9 @@ void CL_EstablishConnection(const char *host)
 
 	// stop demo loop in case this fails
 	CL_Disconnect();
-	NetConn_ClientFrame();
-	NetConn_ServerFrame();
+
+	// run a network frame
+	//NetConn_ClientFrame();SV_VM_Begin();NetConn_ServerFrame();SV_VM_End();
 
 	if (LHNETADDRESS_FromString(&cls.connect_address, host, 26000) && (cls.connect_mysocket = NetConn_ChooseClientSocketForAddress(&cls.connect_address)))
 	{
@@ -304,17 +305,14 @@ void CL_EstablishConnection(const char *host)
 		cls.connect_remainingtries = 3;
 		cls.connect_nextsendtime = 0;
 		M_Update_Return_Reason("Trying to connect...");
-		if (sv.active)
-		{
-			NetConn_ClientFrame();
-			NetConn_ServerFrame();
-			NetConn_ClientFrame();
-			NetConn_ServerFrame();
-			NetConn_ClientFrame();
-			NetConn_ServerFrame();
-			NetConn_ClientFrame();
-			NetConn_ServerFrame();
-		}
+		// run several network frames to jump into the game quickly
+		//if (sv.active)
+		//{
+		//	NetConn_ClientFrame();SV_VM_Begin();NetConn_ServerFrame();SV_VM_End();
+		//	NetConn_ClientFrame();SV_VM_Begin();NetConn_ServerFrame();SV_VM_End();
+		//	NetConn_ClientFrame();SV_VM_Begin();NetConn_ServerFrame();SV_VM_End();
+		//	NetConn_ClientFrame();SV_VM_Begin();NetConn_ServerFrame();SV_VM_End();
+		//}
 	}
 	else
 	{

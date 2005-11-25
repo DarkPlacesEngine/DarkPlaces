@@ -1944,8 +1944,8 @@ int NetConn_SendToAll(sizebuf_t *data, double blocktime)
 	do
 	{
 		count = 0;
-		NetConn_ClientFrame();
-		NetConn_ServerFrame();
+		// run a network frame to check for packets
+		NetConn_ClientFrame();SV_VM_Begin();NetConn_ServerFrame();SV_VM_End();
 		for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 		{
 			if (host_client->netconnection)

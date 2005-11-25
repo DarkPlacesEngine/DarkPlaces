@@ -1303,9 +1303,6 @@ void Host_Spawn_f (void)
 	}
 	else
 	{
-		// set up the edict
-		PRVM_ED_ClearEdict(host_client->edict);
-
 		//Con_Printf("Host_Spawn_f: host_client->edict->netname = %s, host_client->edict->netname = %s, host_client->name = %s\n", PRVM_GetString(host_client->edict->fields.server->netname), PRVM_GetString(host_client->edict->fields.server->netname), host_client->name);
 
 		// copy spawn parms out of the client_t
