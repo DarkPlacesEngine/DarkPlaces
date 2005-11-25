@@ -1512,7 +1512,7 @@ void Image_HeightmapToNormalmap(const unsigned char *inpixels, unsigned char *ou
 	}
 }
 
-int image_loadskin(imageskin_t *s, char *shadername)
+int image_loadskin(imageskin_t *s, const char *shadername)
 {
 	int j;
 	unsigned char *bumppixels;

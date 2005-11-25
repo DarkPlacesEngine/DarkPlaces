@@ -93,7 +93,7 @@ void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 		{
 			frame = ent->model->sprite.sprdata_frames + ent->frameblend[i].frame;
 			// FIXME: negate left and right in loader
-			R_DrawSprite(GL_SRC_ALPHA, (ent->effects & EF_ADDITIVE) ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA, frame->texture, frame->fogtexture, (ent->effects & EF_NODEPTHTEST), org, left, up, frame->left, frame->right, frame->down, frame->up, color[0], color[1], color[2], ent->alpha * ent->frameblend[i].lerp);
+			R_DrawSprite(GL_SRC_ALPHA, (ent->effects & EF_ADDITIVE) ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA, frame->skin.base, frame->skin.fog, (ent->effects & EF_NODEPTHTEST), org, left, up, frame->left, frame->right, frame->down, frame->up, color[0], color[1], color[2], ent->alpha * ent->frameblend[i].lerp);
 		}
 	}
 }

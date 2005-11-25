@@ -35,7 +35,7 @@ SPRITE MODELS
 typedef struct mspriteframe_s
 {
 	float	up, down, left, right;
-	rtexture_t *texture, *fogtexture;
+	skinframe_t skin;
 } mspriteframe_t;
 
 #endif

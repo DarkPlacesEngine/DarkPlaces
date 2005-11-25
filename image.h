@@ -77,7 +77,7 @@ typedef struct imageskin_s
 }
 imageskin_t;
 
-int image_loadskin(imageskin_t *s, char *name);
+int image_loadskin(imageskin_t *s, const char *name);
 void image_freeskin(imageskin_t *s);
 
 #endif

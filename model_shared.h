@@ -615,8 +615,8 @@ shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh,
 void Mod_ShadowMesh_CalcBBox(shadowmesh_t *firstmesh, vec3_t mins, vec3_t maxs, vec3_t center, float *radius);
 void Mod_ShadowMesh_Free(shadowmesh_t *mesh);
 
-int Mod_LoadSkinFrame(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int loadglowtexture);
-int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int loadglowtexture, unsigned char *skindata, int width, int height);
+int Mod_LoadSkinFrame(skinframe_t *skinframe, const char *basename, int textureflags, int loadpantsandshirt, int loadglowtexture);
+int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, const char *basename, int textureflags, int loadpantsandshirt, int loadglowtexture, const unsigned char *skindata, int width, int height, int bitsperpixel, const unsigned int *palette, const unsigned int *alphapalette);
 
 extern cvar_t r_mipskins;
 
