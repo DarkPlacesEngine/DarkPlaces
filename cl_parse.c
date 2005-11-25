@@ -860,37 +860,49 @@ void CL_ParseBeam (model_t *m, int lightning)
 		CL_ExpandEntities(ent);
 
 	// override any beam with the same entity
-	for (i = 0, b = cl_beams;i < cl_max_beams;i++, b++)
+	i = cl_max_beams;
+	if (ent)
+		for (i = 0, b = cl_beams;i < cl_max_beams;i++, b++)
+			if (b->entity == ent)
+				break;
+	// if the entity was not found then just replace an unused beam
+	if (i == cl_max_beams)
+		for (i = 0, b = cl_beams;i < cl_max_beams;i++, b++)
+			if (!b->model || b->endtime < cl.time)
+				break;
+	if (i < cl_max_beams)
 	{
-		if (b->entity == ent && ent)
+		b->entity = ent;
+		b->lightning = lightning;
+		b->model = m;
+		b->endtime = cl.time + 0.2;
+		VectorCopy (start, b->start);
+		VectorCopy (end, b->end);
+		b->relativestartvalid = 0;
+		if (ent && cl_entities[ent].state_current.active)
 		{
-			//b->entity = ent;
-			b->lightning = lightning;
-			b->relativestartvalid = (ent && cl_entities[ent].state_current.active) ? 2 : 0;
-			b->model = m;
-			b->endtime = cl.time + 0.2;
-			VectorCopy (start, b->start);
-			VectorCopy (end, b->end);
-			return;
+			entity_state_t *p;
+			matrix4x4_t matrix, imatrix;
+			if (ent == cl.viewentity && cl.movement)
+				p = &cl_entities[b->entity].state_previous;
+			else
+				p = &cl_entities[b->entity].state_current;
+			// not really valid yet, we need to get the orientation now
+			// (ParseBeam flagged this because it is received before
+			//  entities are received, by now they have been received)
+			// note: because players create lightning in their think
+			// function (which occurs before movement), they actually
+			// have some lag in it's location, so compare to the
+			// previous player state, not the latest
+			Matrix4x4_CreateFromQuakeEntity(&matrix, p->origin[0], p->origin[1], p->origin[2], -p->angles[0], p->angles[1], p->angles[2], 1);
+			Matrix4x4_Invert_Simple(&imatrix, &matrix);
+			Matrix4x4_Transform(&imatrix, b->start, b->relativestart);
+			Matrix4x4_Transform(&imatrix, b->end, b->relativeend);
+			b->relativestartvalid = 1;
 		}
 	}
-
-	// find a free beam
-	for (i = 0, b = cl_beams;i < cl_max_beams;i++, b++)
-	{
-		if (!b->model || b->endtime < cl.time)
-		{
-			b->entity = ent;
-			b->lightning = lightning;
-			b->relativestartvalid = (ent && cl_entities[ent].state_current.active) ? 2 : 0;
-			b->model = m;
-			b->endtime = cl.time + 0.2;
-			VectorCopy (start, b->start);
-			VectorCopy (end, b->end);
-			return;
-		}
-	}
-	Con_Print("beam list overflow!\n");
+	else
+		Con_Print("beam list overflow!\n");
 }
 
 void CL_ParseTempEntity(void)
