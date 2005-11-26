@@ -349,8 +349,6 @@ void S_PaintChannels(int endtime)
 			sfx = ch->sfx;
 			if (!sfx)
 				continue;
-			if (sfx->fetcher)
-				j++;
 			for (j = 0;j < SND_LISTENERS;j++)
 				if (ch->listener_volume[j])
 					break;
