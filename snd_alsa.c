@@ -31,7 +31,6 @@
 #include "quakedef.h"
 #include "snd_main.h"
 
-static int			snd_inited;
 static snd_pcm_uframes_t buffer_size;
 
 static const char  *pcmname = NULL;
@@ -207,7 +206,6 @@ qboolean SNDDMA_Init (void)
 		shm->samples = shm->sampleframes * shm->format.channels;
 		SNDDMA_GetDMAPos ();		// sets shm->buffer
 
-		snd_inited = 1;
 		return true;
 	}
 	return false;
@@ -219,7 +217,7 @@ int SNDDMA_GetDMAPos (void)
 	snd_pcm_uframes_t offset;
 	snd_pcm_uframes_t nframes = shm->sampleframes;
 
-	if (!snd_inited)
+	if (!shm)
 		return 0;
 
 	snd_pcm_avail_update (pcm);
@@ -233,10 +231,7 @@ int SNDDMA_GetDMAPos (void)
 
 void SNDDMA_Shutdown (void)
 {
-	if (snd_inited) {
-		snd_pcm_close (pcm);
-		snd_inited = 0;
-	}
+	snd_pcm_close (pcm);
 }
 
 /*

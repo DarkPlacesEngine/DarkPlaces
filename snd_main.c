@@ -79,7 +79,6 @@ int paintedtime;
 // Linked list of known sfx
 sfx_t *known_sfx = NULL;
 
-qboolean sound_started = false;
 qboolean sound_spatialized = false;
 
 // Fake dma is a synchronous faking of the DMA progress used for
@@ -114,7 +113,7 @@ void S_FreeSfx (sfx_t *sfx, qboolean force);
 
 void S_SoundInfo_f(void)
 {
-	if (!sound_started)
+	if (!shm)
 	{
 		Con_Print("sound system not started\n");
 		return;
@@ -156,13 +155,10 @@ void S_Startup(void)
 		{
 			Con_Print("S_Startup: SNDDMA_Init failed.\n");
 			shm = NULL;
-			sound_started = false;
 			sound_spatialized = false;
 			return;
 		}
 	}
-
-	sound_started = true;
 
 	Con_Printf("Sound format: %dHz, %d bit, %d channels\n", shm->format.speed,
 			   shm->format.width * 8, shm->format.channels);
@@ -170,7 +166,7 @@ void S_Startup(void)
 
 void S_Shutdown(void)
 {
-	if (!sound_started)
+	if (!shm)
 		return;
 
 	if (fakedma)
@@ -179,7 +175,6 @@ void S_Shutdown(void)
 		SNDDMA_Shutdown();
 
 	shm = NULL;
-	sound_started = false;
 	sound_spatialized = false;
 }
 
@@ -626,7 +621,7 @@ int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 	int		ch_idx;
 	int		skip;
 
-	if (!sound_started || !sfx || nosound.integer)
+	if (!shm || !sfx || nosound.integer)
 		return -1;
 	if (!sfx->fetcher)
 	{
@@ -734,7 +729,7 @@ void S_StopAllSounds (void)
 	unsigned int i;
 	unsigned char *pbuf;
 
-	if (!sound_started)
+	if (!shm)
 		return;
 
 	for (i = 0; i < total_channels; i++)
@@ -791,7 +786,7 @@ void S_StaticSound (sfx_t *sfx, vec3_t origin, float fvol, float attenuation)
 {
 	channel_t	*target_chan;
 
-	if (!sound_started || !sfx || nosound.integer)
+	if (!shm || !sfx || nosound.integer)
 		return;
 	if (!sfx->fetcher)
 	{
@@ -949,7 +944,7 @@ void S_Update(const matrix4x4_t *listenermatrix)
 	channel_t *ch, *combine;
 	matrix4x4_t basematrix, rotatematrix;
 
-	if (!snd_initialized.integer || (snd_blocked > 0))
+	if (!snd_initialized.integer || (snd_blocked > 0) || !shm)
 		return;
 
 	Matrix4x4_Invert_Simple(&basematrix, listenermatrix);
@@ -1084,7 +1079,7 @@ void S_Update_(void)
 {
 	unsigned        endtime;
 
-	if (!sound_started || (snd_blocked > 0))
+	if (!shm || (snd_blocked > 0))
 		return;
 
 	// Updates DMA time
