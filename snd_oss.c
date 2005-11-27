@@ -34,7 +34,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "snd_main.h"
 
 int audio_fd;
-int snd_inited;
 
 static int tryrates[] = {44100, 22050, 11025, 8000};
 
@@ -54,7 +53,6 @@ qboolean SNDDMA_Init(void)
 #else
 	format16bit = AFMT_S16_LE;
 #endif
-	snd_inited = 0;
 
 	// open /dev/dsp, confirm capability to mmap, and get size of dma buffer
     audio_fd = open("/dev/dsp", O_RDWR);  // we have to open it O_RDWR for mmap
@@ -225,7 +223,6 @@ qboolean SNDDMA_Init(void)
 
 	shm->samplepos = 0;
 
-	snd_inited = 1;
 	return 1;
 }
 
@@ -234,14 +231,13 @@ int SNDDMA_GetDMAPos(void)
 
 	struct count_info count;
 
-	if (!snd_inited) return 0;
+	if (!shm) return 0;
 
 	if (ioctl(audio_fd, SNDCTL_DSP_GETOPTR, &count)==-1)
 	{
 		perror("/dev/dsp");
 		Con_Print("Uh, sound dead.\n");
-		close(audio_fd);
-		snd_inited = 0;
+		S_Shutdown();
 		return 0;
 	}
 	shm->samplepos = count.ptr / shm->format.width;
@@ -252,19 +248,15 @@ int SNDDMA_GetDMAPos(void)
 void SNDDMA_Shutdown(void)
 {
 	int tmp;
-	if (snd_inited)
-	{
-		// unmap the memory
-		munmap(shm->buffer, shm->bufferlength);
-		// stop the sound
-		tmp = 0;
-		ioctl(audio_fd, SNDCTL_DSP_SETTRIGGER, &tmp);
-		ioctl(audio_fd, SNDCTL_DSP_RESET, 0);
-		// close the device
-		close(audio_fd);
-		audio_fd = -1;
-		snd_inited = 0;
-	}
+	// unmap the memory
+	munmap(shm->buffer, shm->bufferlength);
+	// stop the sound
+	tmp = 0;
+	ioctl(audio_fd, SNDCTL_DSP_SETTRIGGER, &tmp);
+	ioctl(audio_fd, SNDCTL_DSP_RESET, 0);
+	// close the device
+	close(audio_fd);
+	audio_fd = -1;
 }
 
 /*

@@ -38,7 +38,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 static const int tryrates[] = {44100, 22050, 11025, 8000};
 
 static int audio_fd = -1;
-static qboolean snd_inited = false;
 
 // TODO: allocate them in SNDDMA_Init, with a size depending on
 // the sound format (enough for 0.5 sec of sound for instance)
@@ -116,7 +115,6 @@ qboolean SNDDMA_Init (void)
 	shm->samplepos = 0;
 	shm->buffer = dma_buffer;
 
-	snd_inited = true;
 	return true;
 }
 
@@ -124,7 +122,7 @@ int SNDDMA_GetDMAPos (void)
 {
 	audio_info_t info;
 
-	if (!snd_inited)
+	if (!shm)
 		return 0;
 
 	if (ioctl (audio_fd, AUDIO_GETINFO, &info) < 0)
@@ -139,12 +137,8 @@ int SNDDMA_GetDMAPos (void)
 
 void SNDDMA_Shutdown (void)
 {
-	if (snd_inited)
-	{
-		close (audio_fd);
-		audio_fd = -1;
-		snd_inited = false;
-	}
+	close (audio_fd);
+	audio_fd = -1;
 }
 
 /*
@@ -163,7 +157,7 @@ void SNDDMA_Submit (void)
 	int idx;
 	int stop = paintedtime;
 
-	if (!snd_inited)
+	if (!shm)
 		return;
 
 	if (paintedtime < wbufp)
