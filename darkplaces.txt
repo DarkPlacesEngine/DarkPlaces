@@ -146,7 +146,9 @@ Allow skin colormaps 14 and 15 (freaky :)
 Longer chat messages.
 No more 72fps limit, host_maxfps lets you decide.
 Support for more mouse buttons (mouse1-mouse16, mwheelup/mwheeldown are aliases to mouse4 and mouse5).
-Server browser for public (sv_public 1) darkplaces servers. 
+Server browser for public (sv_public 1) darkplaces servers.
+log_file cvar to log console messages to a file.
+condump command to dump recent console history to a file.
 
 Server features: (Note server only supports darkplaces clients)
 Allows clients to connect through firewalls (automatic feature)
@@ -159,6 +161,8 @@ No crash with the buggy 'teleport train' in shub's pit.
 Allow skin colormaps 14 and 15 (freaky :)
 sys_ticrate applies to listen (client) servers as well as dedicated.
 sv_public cvar to advertise to master server.
+log_file cvar to log console messages to a file.
+condump command to dump recent console history to a file.
 
 Modding features:
 HalfLife map support (place your HalfLife wads in quake/id1/textures/ or quake/MODDIR/textures/ as the maps need them)
@@ -219,8 +223,8 @@ GL: -nostenciltwoside disables GL_EXT_stencil_two_side (accelerates shadow rende
 GL: -notexture3d disables GL_EXT_texture3D (required for spherical lights, otherwise they render as a column)
 GL: -notextureshader disables GL_NV_texture_shader (required for the Geforce3 water shader, NVIDIA only)
 GL: -novertexshader disables GL_ARB_vertex_shader (currently unused, allows vertex shader effects)
-Game: -battlemech runs the multiplayer topdown deathmatch game BattleMech 
-Game: -fniggium runs the post apocalyptic melee RPG Fniggium 
+Game: -battlemech runs the multiplayer topdown deathmatch game BattleMech
+Game: -fniggium runs the post apocalyptic melee RPG Fniggium
 Game: -goodvsbad2 runs the psychadelic RTS FPS game Good Vs Bad 2
 Game: -hipnotic runs Quake mission pack 1: The Scourge of Armagon
 Game: -nehahra runs The Seal of Nehahra movie and game
@@ -231,8 +235,8 @@ Game: -openquartz runs the game OpenQuartz, a standalone GPL replacement of the 
 Game: -prydon runs the topdown point and click action-RPG Prydon Gate
 Game: -quake runs the game Quake (default)
 Game: -rogue runs Quake mission pack 2: The Dissolution of Eternity
-Game: -setheral runs the multiplayer game Setheral 
-Game: -som runs the multiplayer game Son Of Man 
+Game: -setheral runs the multiplayer game Setheral
+Game: -som runs the multiplayer game Son Of Man
 Game: -tenebrae runs the graphics test mod known as Tenebrae (some features not implemented)
 Game: -teu runs The Evil Unleashed (this option is obsolete as they are not using darkplaces)
 Game: -transfusion runs Transfusion (the recreation of Blood in Quake)
