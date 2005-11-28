@@ -251,7 +251,7 @@ static int Sys_EventFilter( SDL_Event *event )
 #endif
 }
 
-static keynum_t buttonremap[16] =
+static int buttonremap[16] =
 {
 	K_MOUSE1,
 	K_MOUSE3,

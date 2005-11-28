@@ -469,7 +469,7 @@ void Sys_SendKeyEvents (void)
 
 LONG CDAudio_MessageHandler(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-static keynum_t buttonremap[16] =
+static int buttonremap[16] =
 {
 	K_MOUSE1,
 	K_MOUSE2,
