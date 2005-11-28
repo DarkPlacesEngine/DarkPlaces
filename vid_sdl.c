@@ -251,6 +251,26 @@ static int Sys_EventFilter( SDL_Event *event )
 #endif
 }
 
+static keynum_t buttonremap[16] =
+{
+	K_MOUSE1,
+	K_MOUSE3,
+	K_MOUSE2,
+	K_MOUSE4,
+	K_MOUSE5,
+	K_MOUSE6,
+	K_MOUSE7,
+	K_MOUSE8,
+	K_MOUSE9,
+	K_MOUSE10,
+	K_MOUSE11,
+	K_MOUSE12,
+	K_MOUSE13,
+	K_MOUSE14,
+	K_MOUSE15,
+	K_MOUSE16,
+};
+
 void Sys_SendKeyEvents( void )
 {
 	SDL_Event event;
@@ -274,18 +294,12 @@ void Sys_SendKeyEvents( void )
 				}
 				break;
 			case SDL_MOUSEBUTTONDOWN:
-				if( event.button.button == SDL_BUTTON_MIDDLE )
-					event.button.button = SDL_BUTTON_RIGHT;
-				else if( event.button.button == SDL_BUTTON_RIGHT )
-					event.button.button = SDL_BUTTON_MIDDLE;
-				Key_Event( K_MOUSE1 + event.button.button - 1, 0, true );
+				if (event.button.button <= 16)
+					Key_Event( buttonremap[event.button.button - 1], 0, true );
 				break;
 			case SDL_MOUSEBUTTONUP:
-				if( event.button.button == SDL_BUTTON_MIDDLE )
-					event.button.button = SDL_BUTTON_RIGHT;
-				else if( event.button.button == SDL_BUTTON_RIGHT )
-					event.button.button = SDL_BUTTON_MIDDLE;
-				Key_Event( K_MOUSE1 + event.button.button - 1, 0, false );
+				if (event.button.button <= 16)
+					Key_Event( buttonremap[event.button.button - 1], 0, false );
 				break;
 		}
 }
