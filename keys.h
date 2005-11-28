@@ -32,7 +32,7 @@
 //
 // these are the key numbers that should be passed to Key_Event
 //
-extern enum keynum_e
+typedef enum keynum_e
 {
 	K_TAB			= 9,
 	K_ENTER			= 13,

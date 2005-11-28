@@ -316,7 +316,7 @@ static void IN_Activate (qboolean grab)
 	}
 }
 
-static int buttonremap[18] =
+static keynum_t buttonremap[18] =
 {
 	K_MOUSE1,
 	K_MOUSE3,
