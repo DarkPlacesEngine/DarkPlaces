@@ -469,6 +469,26 @@ void Sys_SendKeyEvents (void)
 
 LONG CDAudio_MessageHandler(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
+static keynum_t buttonremap[16] =
+{
+	K_MOUSE1,
+	K_MOUSE2,
+	K_MOUSE3,
+	K_MOUSE4,
+	K_MOUSE5,
+	K_MOUSE6,
+	K_MOUSE7,
+	K_MOUSE8,
+	K_MOUSE9,
+	K_MOUSE10,
+	K_MOUSE11,
+	K_MOUSE12,
+	K_MOUSE13,
+	K_MOUSE14,
+	K_MOUSE15,
+	K_MOUSE16,
+};
+
 /* main window procedure */
 LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 {
@@ -567,9 +587,9 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 			{
 				// perform button actions
 				int i;
-				for (i=0 ; i<mouse_buttons ; i++)
+				for (i=0 ; i<mouse_buttons && i < 16 ; i++)
 					if ((temp ^ mouse_oldbuttonstate) & (1<<i))
-						Key_Event (K_MOUSE1 + i, 0, (temp & (1<<i)) != 0);
+						Key_Event (buttonremap[i], 0, (temp & (1<<i)) != 0);
 				mouse_oldbuttonstate = temp;
 			}
 
@@ -1265,9 +1285,9 @@ static void IN_MouseMove (void)
 		}
 
 		// perform button actions
-		for (i=0 ; i<mouse_buttons ; i++)
+		for (i=0 ; i<mouse_buttons && i < 16 ; i++)
 			if ((mstate_di ^ mouse_oldbuttonstate) & (1<<i))
-				Key_Event (K_MOUSE1 + i, 0, (mstate_di & (1<<i)) != 0);
+				Key_Event (buttonremap[i], 0, (mstate_di & (1<<i)) != 0);
 		mouse_oldbuttonstate = mstate_di;
 
 		in_mouse_x = mx;

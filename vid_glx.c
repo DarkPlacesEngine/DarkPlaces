@@ -316,6 +316,28 @@ static void IN_Activate (qboolean grab)
 	}
 }
 
+static keynum_t buttonremap[18] =
+{
+	K_MOUSE1,
+	K_MOUSE3,
+	K_MOUSE2,
+	K_MWHEELUP,
+	K_MWHEELDOWN,
+	K_MOUSE4,
+	K_MOUSE5,
+	K_MOUSE6,
+	K_MOUSE7,
+	K_MOUSE8,
+	K_MOUSE9,
+	K_MOUSE10,
+	K_MOUSE11,
+	K_MOUSE12,
+	K_MOUSE13,
+	K_MOUSE14,
+	K_MOUSE15,
+	K_MOUSE16,
+};
+
 static void HandleEvents(void)
 {
 	XEvent event;
@@ -375,94 +397,18 @@ static void HandleEvents(void)
 
 		case ButtonPress:
 			// mouse button pressed
-			switch(event.xbutton.button)
-			{
-			case 1:
-				Key_Event(K_MOUSE1, 0, true);
-				break;
-			case 2:
-				Key_Event(K_MOUSE3, 0, true);
-				break;
-			case 3:
-				Key_Event(K_MOUSE2, 0, true);
-				break;
-			case 4:
-				Key_Event(K_MWHEELUP, 0, true);
-				break;
-			case 5:
-				Key_Event(K_MWHEELDOWN, 0, true);
-				break;
-			case 6:
-				Key_Event(K_MOUSE4, 0, true);
-				break;
-			case 7:
-				Key_Event(K_MOUSE5, 0, true);
-				break;
-			case 8:
-				Key_Event(K_MOUSE6, 0, true);
-				break;
-			case 9:
-				Key_Event(K_MOUSE7, 0, true);
-				break;
-			case 10:
-				Key_Event(K_MOUSE8, 0, true);
-				break;
-			case 11:
-				Key_Event(K_MOUSE9, 0, true);
-				break;
-			case 12:
-				Key_Event(K_MOUSE10, 0, true);
-				break;
-			default:
-				Con_Printf("HandleEvents: ButtonPress gave value %d, 1-12 expected\n", event.xbutton.button);
-				break;
-			}
+			if (event.xbutton.button <= 18)
+				Key_Event(buttonremap[event.xbutton.button - 1], 0, true);
+			else
+				Con_Printf("HandleEvents: ButtonPress gave value %d, 1-18 expected\n", event.xbutton.button);
 			break;
 
 		case ButtonRelease:
 			// mouse button released
-			switch(event.xbutton.button)
-			{
-			case 1:
-				Key_Event(K_MOUSE1, 0, false);
-				break;
-			case 2:
-				Key_Event(K_MOUSE3, 0, false);
-				break;
-			case 3:
-				Key_Event(K_MOUSE2, 0, false);
-				break;
-			case 4:
-				Key_Event(K_MWHEELUP, 0, false);
-				break;
-			case 5:
-				Key_Event(K_MWHEELDOWN, 0, false);
-				break;
-			case 6:
-				Key_Event(K_MOUSE4, 0, false);
-				break;
-			case 7:
-				Key_Event(K_MOUSE5, 0, false);
-				break;
-			case 8:
-				Key_Event(K_MOUSE6, 0, false);
-				break;
-			case 9:
-				Key_Event(K_MOUSE7, 0, false);
-				break;
-			case 10:
-				Key_Event(K_MOUSE8, 0, false);
-				break;
-			case 11:
-				Key_Event(K_MOUSE9, 0, false);
-				break;
-			case 12:
-				Key_Event(K_MOUSE10, 0, false);
-				break;
-			default:
-				Con_Printf("HandleEvents: ButtonRelease gave value %d, 1-12 expected\n", event.xbutton.button);
-				break;
-			}
+			if (event.xbutton.button <= 18)
+				Key_Event(buttonremap[event.xbutton.button - 1], 0, false);
+			else
+				Con_Printf("HandleEvents: ButtonRelease gave value %d, 1-18 expected\n", event.xbutton.button);
 			break;
 
 		case CreateNotify:
