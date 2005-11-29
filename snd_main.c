@@ -39,7 +39,6 @@ typedef struct speakerlayout_s
 {
 	const char *name;
 	unsigned int channels;
-	qboolean headphones;
 	listener_t listeners[SND_LISTENERS];
 }
 speakerlayout_t;
@@ -63,7 +62,6 @@ unsigned int total_channels;
 int snd_blocked = 0;
 cvar_t snd_initialized = { CVAR_READONLY, "snd_initialized", "0"};
 cvar_t snd_streaming = { CVAR_SAVE, "snd_streaming", "1"};
-cvar_t snd_headphones = { CVAR_SAVE, "snd_headphones", "0"};
 
 volatile dma_t *shm = 0;
 volatile dma_t sn;
@@ -196,7 +194,6 @@ void S_Init(void)
 	Cvar_RegisterVariable(&volume);
 	Cvar_RegisterVariable(&bgmvolume);
 	Cvar_RegisterVariable(&snd_staticvolume);
-	Cvar_RegisterVariable(&snd_headphones);
 
 // COMMANDLINEOPTION: Sound: -nosound disables sound (including CD audio)
 	if (COM_CheckParm("-nosound") || COM_CheckParm("-safe"))
@@ -861,7 +858,7 @@ void S_UpdateAmbientSounds (void)
 static speakerlayout_t snd_speakerlayouts[SND_SPEAKERLAYOUTS] =
 {
 	{
-		"surround71", 8, false,
+		"surround71", 8,
 		{
 			{45, 0.2, 0.2, 0.5}, // front left
 			{315, 0.2, 0.2, 0.5}, // front right
@@ -874,7 +871,7 @@ static speakerlayout_t snd_speakerlayouts[SND_SPEAKERLAYOUTS] =
 		}
 	},
 	{
-		"surround51", 6, false,
+		"surround51", 6,
 		{
 			{45, 0.2, 0.2, 0.5}, // front left
 			{315, 0.2, 0.2, 0.5}, // front right
@@ -889,7 +886,7 @@ static speakerlayout_t snd_speakerlayouts[SND_SPEAKERLAYOUTS] =
 	{
 		// these systems sometimes have a subwoofer as well, but it has no
 		// channel of its own
-		"surround40", 4, false,
+		"surround40", 4,
 		{
 			{45, 0.3, 0.3, 0.8}, // front left
 			{315, 0.3, 0.3, 0.8}, // front right
@@ -902,7 +899,9 @@ static speakerlayout_t snd_speakerlayouts[SND_SPEAKERLAYOUTS] =
 		}
 	},
 	{
-		"headphones", 2, true,
+		// these systems sometimes have a subwoofer as well, but it has no
+		// channel of its own
+		"stereo", 2,
 		{
 			{90, 0.5, 0.5, 1}, // side left
 			{270, 0.5, 0.5, 1}, // side right
@@ -915,12 +914,10 @@ static speakerlayout_t snd_speakerlayouts[SND_SPEAKERLAYOUTS] =
 		}
 	},
 	{
-		// these systems sometimes have a subwoofer as well, but it has no
-		// channel of its own
-		"stereo", 2, false,
+		"mono", 1,
 		{
-			{45, 0.5, 0.5, 1}, // front left
-			{315, 0.5, 0.5, 1}, // front right
+			{0, 0, 1, 1}, // center
+			{0, 0, 0, 0},
 			{0, 0, 0, 0},
 			{0, 0, 0, 0},
 			{0, 0, 0, 0},
@@ -952,7 +949,7 @@ void S_Update(const matrix4x4_t *listenermatrix)
 
 	// select speaker layout
 	for (i = 0;i < SND_SPEAKERLAYOUTS - 1;i++)
-		if (snd_speakerlayouts[i].channels == shm->format.channels && (!snd_speakerlayouts[i].headphones || snd_headphones.integer))
+		if (snd_speakerlayouts[i].channels == shm->format.channels)
 			break;
 	snd_speakerlayout = snd_speakerlayouts[i];
 
