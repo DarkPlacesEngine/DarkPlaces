@@ -253,39 +253,43 @@ particle_t;
 
 static int particlepalette[256] =
 {
-	0x000000,0x0f0f0f,0x1f1f1f,0x2f2f2f,0x3f3f3f,0x4b4b4b,0x5b5b5b,0x6b6b6b,
-	0x7b7b7b,0x8b8b8b,0x9b9b9b,0xababab,0xbbbbbb,0xcbcbcb,0xdbdbdb,0xebebeb,
-	0x0f0b07,0x170f0b,0x1f170b,0x271b0f,0x2f2313,0x372b17,0x3f2f17,0x4b371b,
-	0x533b1b,0x5b431f,0x634b1f,0x6b531f,0x73571f,0x7b5f23,0x836723,0x8f6f23,
-	0x0b0b0f,0x13131b,0x1b1b27,0x272733,0x2f2f3f,0x37374b,0x3f3f57,0x474767,
-	0x4f4f73,0x5b5b7f,0x63638b,0x6b6b97,0x7373a3,0x7b7baf,0x8383bb,0x8b8bcb,
-	0x000000,0x070700,0x0b0b00,0x131300,0x1b1b00,0x232300,0x2b2b07,0x2f2f07,
-	0x373707,0x3f3f07,0x474707,0x4b4b0b,0x53530b,0x5b5b0b,0x63630b,0x6b6b0f,
-	0x070000,0x0f0000,0x170000,0x1f0000,0x270000,0x2f0000,0x370000,0x3f0000,
-	0x470000,0x4f0000,0x570000,0x5f0000,0x670000,0x6f0000,0x770000,0x7f0000,
-	0x131300,0x1b1b00,0x232300,0x2f2b00,0x372f00,0x433700,0x4b3b07,0x574307,
-	0x5f4707,0x6b4b0b,0x77530f,0x835713,0x8b5b13,0x975f1b,0xa3631f,0xaf6723,
-	0x231307,0x2f170b,0x3b1f0f,0x4b2313,0x572b17,0x632f1f,0x733723,0x7f3b2b,
-	0x8f4333,0x9f4f33,0xaf632f,0xbf772f,0xcf8f2b,0xdfab27,0xefcb1f,0xfff31b,
-	0x0b0700,0x1b1300,0x2b230f,0x372b13,0x47331b,0x533723,0x633f2b,0x6f4733,
-	0x7f533f,0x8b5f47,0x9b6b53,0xa77b5f,0xb7876b,0xc3937b,0xd3a38b,0xe3b397,
-	0xab8ba3,0x9f7f97,0x937387,0x8b677b,0x7f5b6f,0x775363,0x6b4b57,0x5f3f4b,
-	0x573743,0x4b2f37,0x43272f,0x371f23,0x2b171b,0x231313,0x170b0b,0x0f0707,
-	0xbb739f,0xaf6b8f,0xa35f83,0x975777,0x8b4f6b,0x7f4b5f,0x734353,0x6b3b4b,
-	0x5f333f,0x532b37,0x47232b,0x3b1f23,0x2f171b,0x231313,0x170b0b,0x0f0707,
-	0xdbc3bb,0xcbb3a7,0xbfa39b,0xaf978b,0xa3877b,0x977b6f,0x876f5f,0x7b6353,
-	0x6b5747,0x5f4b3b,0x533f33,0x433327,0x372b1f,0x271f17,0x1b130f,0x0f0b07,
-	0x6f837b,0x677b6f,0x5f7367,0x576b5f,0x4f6357,0x475b4f,0x3f5347,0x374b3f,
-	0x2f4337,0x2b3b2f,0x233327,0x1f2b1f,0x172317,0x0f1b13,0x0b130b,0x070b07,
-	0xfff31b,0xefdf17,0xdbcb13,0xcbb70f,0xbba70f,0xab970b,0x9b8307,0x8b7307,
-	0x7b6307,0x6b5300,0x5b4700,0x4b3700,0x3b2b00,0x2b1f00,0x1b0f00,0x0b0700,
-	0x0000ff,0x0b0bef,0x1313df,0x1b1bcf,0x2323bf,0x2b2baf,0x2f2f9f,0x2f2f8f,
-	0x2f2f7f,0x2f2f6f,0x2f2f5f,0x2b2b4f,0x23233f,0x1b1b2f,0x13131f,0x0b0b0f,
-	0x2b0000,0x3b0000,0x4b0700,0x5f0700,0x6f0f00,0x7f1707,0x931f07,0xa3270b,
-	0xb7330f,0xc34b1b,0xcf632b,0xdb7f3b,0xe3974f,0xe7ab5f,0xefbf77,0xf7d38b,
-	0xa77b3b,0xb79b37,0xc7c337,0xe7e357,0x7fbfff,0xabe7ff,0xd7ffff,0x670000,
-	0x8b0000,0xb30000,0xd70000,0xff0000,0xfff393,0xfff7c7,0xffffff,0x9f5b53
+	0x000000,0x0f0f0f,0x1f1f1f,0x2f2f2f,0x3f3f3f,0x4b4b4b,0x5b5b5b,0x6b6b6b, // 0-7
+	0x7b7b7b,0x8b8b8b,0x9b9b9b,0xababab,0xbbbbbb,0xcbcbcb,0xdbdbdb,0xebebeb, // 8-15
+	0x0f0b07,0x170f0b,0x1f170b,0x271b0f,0x2f2313,0x372b17,0x3f2f17,0x4b371b, // 16-23
+	0x533b1b,0x5b431f,0x634b1f,0x6b531f,0x73571f,0x7b5f23,0x836723,0x8f6f23, // 24-31
+	0x0b0b0f,0x13131b,0x1b1b27,0x272733,0x2f2f3f,0x37374b,0x3f3f57,0x474767, // 32-39
+	0x4f4f73,0x5b5b7f,0x63638b,0x6b6b97,0x7373a3,0x7b7baf,0x8383bb,0x8b8bcb, // 40-47
+	0x000000,0x070700,0x0b0b00,0x131300,0x1b1b00,0x232300,0x2b2b07,0x2f2f07, // 48-55
+	0x373707,0x3f3f07,0x474707,0x4b4b0b,0x53530b,0x5b5b0b,0x63630b,0x6b6b0f, // 56-63
+	0x070000,0x0f0000,0x170000,0x1f0000,0x270000,0x2f0000,0x370000,0x3f0000, // 64-71
+	0x470000,0x4f0000,0x570000,0x5f0000,0x670000,0x6f0000,0x770000,0x7f0000, // 72-79
+	0x131300,0x1b1b00,0x232300,0x2f2b00,0x372f00,0x433700,0x4b3b07,0x574307, // 80-87
+	0x5f4707,0x6b4b0b,0x77530f,0x835713,0x8b5b13,0x975f1b,0xa3631f,0xaf6723, // 88-95
+	0x231307,0x2f170b,0x3b1f0f,0x4b2313,0x572b17,0x632f1f,0x733723,0x7f3b2b, // 96-103
+	0x8f4333,0x9f4f33,0xaf632f,0xbf772f,0xcf8f2b,0xdfab27,0xefcb1f,0xfff31b, // 104-111
+	0x0b0700,0x1b1300,0x2b230f,0x372b13,0x47331b,0x533723,0x633f2b,0x6f4733, // 112-119
+	0x7f533f,0x8b5f47,0x9b6b53,0xa77b5f,0xb7876b,0xc3937b,0xd3a38b,0xe3b397, // 120-127
+	0xab8ba3,0x9f7f97,0x937387,0x8b677b,0x7f5b6f,0x775363,0x6b4b57,0x5f3f4b, // 128-135
+	0x573743,0x4b2f37,0x43272f,0x371f23,0x2b171b,0x231313,0x170b0b,0x0f0707, // 136-143
+	0xbb739f,0xaf6b8f,0xa35f83,0x975777,0x8b4f6b,0x7f4b5f,0x734353,0x6b3b4b, // 144-151
+	0x5f333f,0x532b37,0x47232b,0x3b1f23,0x2f171b,0x231313,0x170b0b,0x0f0707, // 152-159
+	0xdbc3bb,0xcbb3a7,0xbfa39b,0xaf978b,0xa3877b,0x977b6f,0x876f5f,0x7b6353, // 160-167
+	0x6b5747,0x5f4b3b,0x533f33,0x433327,0x372b1f,0x271f17,0x1b130f,0x0f0b07, // 168-175
+	0x6f837b,0x677b6f,0x5f7367,0x576b5f,0x4f6357,0x475b4f,0x3f5347,0x374b3f, // 176-183
+	0x2f4337,0x2b3b2f,0x233327,0x1f2b1f,0x172317,0x0f1b13,0x0b130b,0x070b07, // 184-191
+	0xfff31b,0xefdf17,0xdbcb13,0xcbb70f,0xbba70f,0xab970b,0x9b8307,0x8b7307, // 192-199
+	0x7b6307,0x6b5300,0x5b4700,0x4b3700,0x3b2b00,0x2b1f00,0x1b0f00,0x0b0700, // 200-207
+	0x0000ff,0x0b0bef,0x1313df,0x1b1bcf,0x2323bf,0x2b2baf,0x2f2f9f,0x2f2f8f, // 208-215
+	0x2f2f7f,0x2f2f6f,0x2f2f5f,0x2b2b4f,0x23233f,0x1b1b2f,0x13131f,0x0b0b0f, // 216-223
+	0x2b0000,0x3b0000,0x4b0700,0x5f0700,0x6f0f00,0x7f1707,0x931f07,0xa3270b, // 224-231
+	0xb7330f,0xc34b1b,0xcf632b,0xdb7f3b,0xe3974f,0xe7ab5f,0xefbf77,0xf7d38b, // 232-239
+	0xa77b3b,0xb79b37,0xc7c337,0xe7e357,0x7fbfff,0xabe7ff,0xd7ffff,0x670000, // 240-247
+	0x8b0000,0xb30000,0xd70000,0xff0000,0xfff393,0xfff7c7,0xffffff,0x9f5b53  // 248-255
 };
+
+int		ramp1[8] = {0x6f, 0x6d, 0x6b, 0x69, 0x67, 0x65, 0x63, 0x61};
+int		ramp2[8] = {0x6f, 0x6e, 0x6d, 0x6c, 0x6b, 0x6a, 0x68, 0x66};
+int		ramp3[8] = {0x6d, 0x6b, 6, 5, 4, 3};
 
 //static int explosparkramp[8] = {0x4b0700, 0x6f0f00, 0x931f07, 0xb7330f, 0xcf632b, 0xe3974f, 0xffe7b5, 0xffffff};
 
@@ -308,6 +312,7 @@ static particle_t	*particles;
 cvar_t cl_particles = {CVAR_SAVE, "cl_particles", "1"};
 cvar_t cl_particles_quality = {CVAR_SAVE, "cl_particles_quality", "1"};
 cvar_t cl_particles_size = {CVAR_SAVE, "cl_particles_size", "1"};
+cvar_t cl_particles_quake = {CVAR_SAVE, "cl_particles_quake", "0"};
 cvar_t cl_particles_bloodshowers = {CVAR_SAVE, "cl_particles_bloodshowers", "1"};
 cvar_t cl_particles_blood = {CVAR_SAVE, "cl_particles_blood", "1"};
 cvar_t cl_particles_blood_alpha = {CVAR_SAVE, "cl_particles_blood_alpha", "0.5"};
@@ -360,6 +365,7 @@ void CL_Particles_Init (void)
 	Cvar_RegisterVariable (&cl_particles);
 	Cvar_RegisterVariable (&cl_particles_quality);
 	Cvar_RegisterVariable (&cl_particles_size);
+	Cvar_RegisterVariable (&cl_particles_quake);
 	Cvar_RegisterVariable (&cl_particles_bloodshowers);
 	Cvar_RegisterVariable (&cl_particles_blood);
 	Cvar_RegisterVariable (&cl_particles_blood_alpha);
@@ -406,25 +412,11 @@ void CL_Particles_Shutdown (void)
 // px,py,pz - starting origin of particle
 // pvx,pvy,pvz - starting velocity of particle
 // pfriction - how much the particle slows down per second (0-1 typically, can slowdown faster than 1)
-particle_t *particle(particletype_t *ptype, int pcolor1, int pcolor2, int ptex, float psize, float palpha, float palphafade, float pgravity, float pbounce, float px, float py, float pz, float pvx, float pvy, float pvz, float pfriction)
+particle_t *particle(particletype_t *ptype, int pcolor1, int pcolor2, int ptex, float psize, float palpha, float palphafade, float pgravity, float pbounce, float px, float py, float pz, float pvx, float pvy, float pvz, float pfriction, float originjitter, float velocityjitter)
 {
+	int l1, l2;
 	particle_t *part;
-	int ptempcolor, ptempcolor2, pcr1, pcg1, pcb1, pcr2, pcg2, pcb2;
-	ptempcolor = (pcolor1);
-	ptempcolor2 = (pcolor2);
-	pcr2 = ((ptempcolor2) >> 16) & 0xFF;
-	pcg2 = ((ptempcolor2) >> 8) & 0xFF;
-	pcb2 = (ptempcolor2) & 0xFF;
-	if (ptempcolor != ptempcolor2)
-	{
-		pcr1 = ((ptempcolor) >> 16) & 0xFF;
-		pcg1 = ((ptempcolor) >> 8) & 0xFF;
-		pcb1 = (ptempcolor) & 0xFF;
-		ptempcolor = rand() & 0xFF;
-		pcr2 = (((pcr2 - pcr1) * ptempcolor) >> 8) + pcr1;
-		pcg2 = (((pcg2 - pcg1) * ptempcolor) >> 8) + pcg1;
-		pcb2 = (((pcb2 - pcb1) * ptempcolor) >> 8) + pcb1;
-	}
+	vec3_t v;
 	for (;cl_freeparticle < cl_maxparticles && particles[cl_freeparticle].type;cl_freeparticle++);
 	if (cl_freeparticle >= cl_maxparticles)
 		return NULL;
@@ -432,25 +424,28 @@ particle_t *particle(particletype_t *ptype, int pcolor1, int pcolor2, int ptex, 
 	if (cl_numparticles < cl_freeparticle)
 		cl_numparticles = cl_freeparticle;
 	memset(part, 0, sizeof(*part));
-	part->type = (ptype);
-	part->color[0] = pcr2;
-	part->color[1] = pcg2;
-	part->color[2] = pcb2;
+	part->type = ptype;
+	l2 = (int)lhrandom(0.5, 256.5);
+	l1 = 256 - l2;
+	part->color[0] = ((((pcolor1 >> 16) & 0xFF) * l1 + ((pcolor2 >> 16) & 0xFF) * l2) >> 8) & 0xFF;
+	part->color[1] = ((((pcolor1 >>  8) & 0xFF) * l1 + ((pcolor2 >>  8) & 0xFF) * l2) >> 8) & 0xFF;
+	part->color[2] = ((((pcolor1 >>  0) & 0xFF) * l1 + ((pcolor2 >>  0) & 0xFF) * l2) >> 8) & 0xFF;
 	part->color[3] = 0xFF;
 	part->texnum = ptex;
-	part->size = (psize);
-	part->alpha = (palpha);
-	part->alphafade = (palphafade);
-	part->gravity = (pgravity);
-	part->bounce = (pbounce);
-	part->org[0] = (px);
-	part->org[1] = (py);
-	part->org[2] = (pz);
-	part->vel[0] = (pvx);
-	part->vel[1] = (pvy);
-	part->vel[2] = (pvz);
+	part->size = psize;
+	part->alpha = palpha;
+	part->alphafade = palphafade;
+	part->gravity = pgravity;
+	part->bounce = pbounce;
+	VectorRandom(v);
+	part->org[0] = px + originjitter * v[0];
+	part->org[1] = py + originjitter * v[1];
+	part->org[2] = pz + originjitter * v[2];
+	part->vel[0] = pvx + velocityjitter * v[0];
+	part->vel[1] = pvy + velocityjitter * v[1];
+	part->vel[2] = pvz + velocityjitter * v[2];
 	part->time2 = 0;
-	part->friction = (pfriction);
+	part->friction = pfriction;
 	return part;
 }
 
@@ -459,7 +454,7 @@ void CL_SpawnDecalParticleForSurface(int hitent, const vec3_t org, const vec3_t 
 	particle_t *p;
 	if (!cl_decals.integer)
 		return;
-	p = particle(particletype + pt_decal, color1, color2, texnum, size, alpha, 0, 0, 0, org[0] + normal[0], org[1] + normal[1], org[2] + normal[2], normal[0], normal[1], normal[2], 0);
+	p = particle(particletype + pt_decal, color1, color2, texnum, size, alpha, 0, 0, 0, org[0] + normal[0], org[1] + normal[1], org[2] + normal[2], normal[0], normal[1], normal[2], 0, 0, 0);
 	if (p)
 	{
 		p->time2 = cl.time;
@@ -527,7 +522,7 @@ void CL_EntityParticles (entity_t *ent)
 		v[0] = org[0] + m_bytenormals[i][0] * dist + (cos(pitch)*cos(yaw)) * beamlength;
 		v[1] = org[1] + m_bytenormals[i][1] * dist + (cos(pitch)*sin(yaw)) * beamlength;
 		v[2] = org[2] + m_bytenormals[i][2] * dist + (-sin(pitch)) * beamlength;
-		particle(particletype + pt_entityparticle, particlepalette[0x6f], particlepalette[0x6f], tex_particle, 2, 255, 0, 0, 0, v[0], v[1], v[2], 0, 0, 0, 0);
+		particle(particletype + pt_entityparticle, particlepalette[0x6f], particlepalette[0x6f], tex_particle, 1, 255, 0, 0, 0, v[0], v[1], v[2], 0, 0, 0, 0, 0, 0);
 	}
 }
 
@@ -583,7 +578,7 @@ void CL_ReadPointFile_f (void)
 		if (cl_numparticles < cl_maxparticles - 3)
 		{
 			s++;
-			particle(particletype + pt_static, particlepalette[(-c)&15], particlepalette[(-c)&15], tex_particle, 2, 255, 0, 0, 0, org[0], org[1], org[2], 0, 0, 0, 0);
+			particle(particletype + pt_static, particlepalette[(-c)&15], particlepalette[(-c)&15], tex_particle, 2, 255, 0, 0, 0, org[0], org[1], org[2], 0, 0, 0, 0, 0, 0);
 		}
 	}
 #ifndef WORKINGLQUAKE
@@ -592,9 +587,9 @@ void CL_ReadPointFile_f (void)
 	VectorCopy(leakorg, org);
 	Con_Printf("%i points read (%i particles spawned)\nLeak at %f %f %f\n", c, s, org[0], org[1], org[2]);
 
-	particle(particletype + pt_beam, 0xFF0000, 0xFF0000, tex_beam, 64, 255, 0, 0, 0, org[0] - 4096, org[1], org[2], org[0] + 4096, org[1], org[2], 0);
-	particle(particletype + pt_beam, 0x00FF00, 0x00FF00, tex_beam, 64, 255, 0, 0, 0, org[0], org[1] - 4096, org[2], org[0], org[1] + 4096, org[2], 0);
-	particle(particletype + pt_beam, 0x0000FF, 0x0000FF, tex_beam, 64, 255, 0, 0, 0, org[0], org[1], org[2] - 4096, org[0], org[1], org[2] + 4096, 0);
+	particle(particletype + pt_beam, 0xFF0000, 0xFF0000, tex_beam, 64, 255, 0, 0, 0, org[0] - 4096, org[1], org[2], org[0] + 4096, org[1], org[2], 0, 0, 0);
+	particle(particletype + pt_beam, 0x00FF00, 0x00FF00, tex_beam, 64, 255, 0, 0, 0, org[0], org[1] - 4096, org[2], org[0], org[1] + 4096, org[2], 0, 0, 0);
+	particle(particletype + pt_beam, 0x0000FF, 0x0000FF, tex_beam, 64, 255, 0, 0, 0, org[0], org[1], org[2] - 4096, org[0], org[1], org[2] + 4096, 0, 0, 0);
 }
 
 /*
@@ -611,7 +606,7 @@ void CL_ParseParticleEffect (void)
 
 	MSG_ReadVector(org, cl.protocol);
 	for (i=0 ; i<3 ; i++)
-		dir[i] = MSG_ReadChar () * (1.0/16);
+		dir[i] = MSG_ReadChar ();
 	msgcount = MSG_ReadByte ();
 	color = MSG_ReadByte ();
 
@@ -620,7 +615,7 @@ void CL_ParseParticleEffect (void)
 	else
 		count = msgcount;
 
-	if (cl_particles_blood_bloodhack.integer)
+	if (cl_particles_blood_bloodhack.integer && !cl_particles_quake.integer)
 	{
 		if (color == 73)
 		{
@@ -654,47 +649,68 @@ void CL_ParticleExplosion (vec3_t org)
 		R_Stain(org, 96, 80, 80, 80, 64, 176, 176, 176, 64);
 	CL_SpawnDecalParticleForPoint(org, 40, 48, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
 
-	i = CL_PointSuperContents(org);
-	if (i & (SUPERCONTENTS_SLIME | SUPERCONTENTS_WATER))
+	if (cl_particles_quake.integer)
 	{
-		if (cl_particles.integer && cl_particles_bubbles.integer && cl_particles_explosions_bubbles.integer)
-			for (i = 0;i < 128 * cl_particles_quality.value;i++)
-				particle(particletype + pt_bubble, 0x404040, 0x808080, tex_bubble, 2, (1.0f / cl_particles_quality.value) * lhrandom(128, 255), (1.0f / cl_particles_quality.value) * 128, -0.125, 1.5, org[0] + lhrandom(-16, 16), org[1] + lhrandom(-16, 16), org[2] + lhrandom(-16, 16), lhrandom(-96, 96), lhrandom(-96, 96), lhrandom(-96, 96), (1.0 / 16.0));
+		for (i = 0;i < 1024;i++)
+		{
+			int r, color;
+			r = rand()&3;
+			if (i & 1)
+			{
+				color = particlepalette[ramp1[r]];
+				particle(particletype + pt_alphastatic, color, color, tex_particle, 1, (1.0f / cl_particles_quality.value) * 32 * (8 - r), (1.0f / cl_particles_quality.value) * 318, 0, 0, org[0], org[1], org[2], 0, 0, 0, -4, 16, 256);
+			}
+			else
+			{
+				color = particlepalette[ramp2[r]];
+				particle(particletype + pt_alphastatic, color, color, tex_particle, 1, (1.0f / cl_particles_quality.value) * 32 * (8 - r), (1.0f / cl_particles_quality.value) * 478, 0, 0, org[0], org[1], org[2], 0, 0, 0, 1, 16, 256);
+			}
+		}
 	}
 	else
 	{
-		// LordHavoc: smoke effect similar to UT2003, chews fillrate too badly up close
-		// smoke puff
-		if (cl_particles.integer && cl_particles_smoke.integer && cl_particles_explosions_smoke.integer)
+		i = CL_PointSuperContents(org);
+		if (i & (SUPERCONTENTS_SLIME | SUPERCONTENTS_WATER))
 		{
-			for (i = 0;i < 32;i++)
-			{
-				int k;
-				vec3_t v, v2;
-#ifdef WORKINGLQUAKE
-				v2[0] = lhrandom(-48, 48);
-				v2[1] = lhrandom(-48, 48);
-				v2[2] = lhrandom(-48, 48);
-#else
-				for (k = 0;k < 16;k++)
-				{
-					v[0] = org[0] + lhrandom(-48, 48);
-					v[1] = org[1] + lhrandom(-48, 48);
-					v[2] = org[2] + lhrandom(-48, 48);
-					trace = CL_TraceBox(org, vec3_origin, vec3_origin, v, true, NULL, SUPERCONTENTS_SOLID, false);
-					if (trace.fraction >= 0.1)
-						break;
-				}
-				VectorSubtract(trace.endpos, org, v2);
-#endif
-				VectorScale(v2, 2.0f, v2);
-				particle(particletype + pt_smoke, 0x202020, 0x404040, tex_smoke[rand()&7], 12, 32, 64, 0, 0, org[0], org[1], org[2], v2[0], v2[1], v2[2], 0);
-			}
+			if (cl_particles.integer && cl_particles_bubbles.integer && cl_particles_explosions_bubbles.integer)
+				for (i = 0;i < 128 * cl_particles_quality.value;i++)
+					particle(particletype + pt_bubble, 0x404040, 0x808080, tex_bubble, 2, (1.0f / cl_particles_quality.value) * lhrandom(128, 255), (1.0f / cl_particles_quality.value) * 128, -0.125, 1.5, org[0], org[1], org[2], 0, 0, 0, (1.0 / 16.0), 16, 96);
 		}
+		else
+		{
+			// LordHavoc: smoke effect similar to UT2003, chews fillrate too badly up close
+			// smoke puff
+			if (cl_particles.integer && cl_particles_smoke.integer && cl_particles_explosions_smoke.integer)
+			{
+				for (i = 0;i < 32;i++)
+				{
+					int k;
+					vec3_t v, v2;
+#ifdef WORKINGLQUAKE
+					v2[0] = lhrandom(-48, 48);
+					v2[1] = lhrandom(-48, 48);
+					v2[2] = lhrandom(-48, 48);
+#else
+					for (k = 0;k < 16;k++)
+					{
+						v[0] = org[0] + lhrandom(-48, 48);
+						v[1] = org[1] + lhrandom(-48, 48);
+						v[2] = org[2] + lhrandom(-48, 48);
+						trace = CL_TraceBox(org, vec3_origin, vec3_origin, v, true, NULL, SUPERCONTENTS_SOLID, false);
+						if (trace.fraction >= 0.1)
+							break;
+					}
+					VectorSubtract(trace.endpos, org, v2);
+#endif
+					VectorScale(v2, 2.0f, v2);
+					particle(particletype + pt_smoke, 0x202020, 0x404040, tex_smoke[rand()&7], 12, 32, 64, 0, 0, org[0], org[1], org[2], v2[0], v2[1], v2[2], 0, 0, 0);
+				}
+			}
 
-		if (cl_particles.integer && cl_particles_sparks.integer && cl_particles_explosions_sparks.integer)
-			for (i = 0;i < 128 * cl_particles_quality.value;i++)
-				particle(particletype + pt_spark, 0x903010, 0xFFD030, tex_particle, 1.0f, (1.0f / cl_particles_quality.value) * lhrandom(0, 255), (1.0f / cl_particles_quality.value) * 512, 1, 0, org[0], org[1], org[2], lhrandom(-256, 256), lhrandom(-256, 256), lhrandom(-256, 256) + 80, 0.2);
+			if (cl_particles.integer && cl_particles_sparks.integer && cl_particles_explosions_sparks.integer)
+				for (i = 0;i < 128 * cl_particles_quality.value;i++)
+					particle(particletype + pt_spark, 0x903010, 0xFFD030, tex_particle, 1.0f, (1.0f / cl_particles_quality.value) * lhrandom(0, 255), (1.0f / cl_particles_quality.value) * 512, 1, 0, org[0], org[1], org[2], 0, 0, 80, 0.2, 0, 256);
+		}
 	}
 
 	if (cl_particles_explosions_shell.integer)
@@ -709,20 +725,16 @@ CL_ParticleExplosion2
 */
 void CL_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength)
 {
-	vec3_t vel;
-	vec3_t offset;
 	int i, k;
-	float pscale;
 	if (!cl_particles.integer) return;
 
 	for (i = 0;i < 512 * cl_particles_quality.value;i++)
 	{
-		VectorRandom (offset);
-		VectorScale (offset, 192, vel);
-		VectorScale (offset, 8, offset);
 		k = particlepalette[colorStart + (i % colorLength)];
-		pscale = lhrandom(0.5, 1.5);
-		particle(particletype + pt_static, k, k, tex_particle, pscale, (1.0f / cl_particles_quality.value) * 255, (1.0f/cl_particles_quality.value)*512, 0, 0, org[0] + offset[0], org[1] + offset[1], org[2] + offset[2], vel[0], vel[1], vel[2], lhrandom(1.5, 3));
+		if (cl_particles_quake.integer)
+			particle(particletype + pt_static, k, k, tex_particle, 1, (1.0f / cl_particles_quality.value) * 255, (1.0f/cl_particles_quality.value)*850, 0, 0, org[0], org[1], org[2], 0, 0, 0, -4, 8, 256);
+		else
+			particle(particletype + pt_static, k, k, tex_particle, lhrandom(0.5, 1.5), (1.0f / cl_particles_quality.value) * 255, (1.0f/cl_particles_quality.value)*512, 0, 0, org[0], org[1], org[2], 0, 0, 0, lhrandom(1.5, 3), 8, 192);
 	}
 }
 
@@ -734,7 +746,28 @@ CL_BlobExplosion
 */
 void CL_BlobExplosion (vec3_t org)
 {
-	CL_ParticleExplosion(org);
+	int i, k;
+	if (!cl_particles.integer) return;
+
+	if (!cl_particles_quake.integer)
+	{
+		CL_ParticleExplosion(org);
+		return;
+	}
+
+	for (i = 0;i < 1024 * cl_particles_quality.value;i++)
+	{
+		if (i & 1)
+		{
+			k = particlepalette[66 + rand()%6];
+			particle(particletype + pt_static, k, k, tex_particle, 1, (1.0f / cl_particles_quality.value) * lhrandom(182, 255), (1.0f/cl_particles_quality.value)*182, 0, 0, org[0], org[1], org[2], 0, 0, 0, -4, 16, 256);
+		}
+		else
+		{
+			k = particlepalette[150 + rand()%6];
+			particle(particletype + pt_static, k, k, tex_particle, 1, (1.0f / cl_particles_quality.value) * lhrandom(182, 255), (1.0f/cl_particles_quality.value)*182, 0, 0, org[0], org[1], org[2], 0, 0, lhrandom(-256, 256), 0, 16, 0);
+		}
+	}
 }
 
 /*
@@ -753,14 +786,26 @@ void CL_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count)
 		return;
 	}
 	if (!cl_particles.integer) return;
-	count *= cl_particles_quality.value;
-	while (count--)
+	if (cl_particles_quake.integer)
 	{
-		k = particlepalette[color + (rand()&7)];
-		if (gamemode == GAME_GOODVSBAD2)
-			particle(particletype + pt_alphastatic, k, k, tex_particle, 5, (1.0f / cl_particles_quality.value) * 255, (1.0f / cl_particles_quality.value) * 300, 0, 0, org[0] + lhrandom(-8, 8), org[1] + lhrandom(-8, 8), org[2] + lhrandom(-8, 8), lhrandom(-10, 10), lhrandom(-10, 10), lhrandom(-10, 10), 0);
-		else
-			particle(particletype + pt_alphastatic, k, k, tex_particle, 1, (1.0f / cl_particles_quality.value) * 255, (1.0f / cl_particles_quality.value) * 512, 0, 0, org[0] + lhrandom(-8, 8), org[1] + lhrandom(-8, 8), org[2] + lhrandom(-8, 8), dir[0] + lhrandom(-15, 15), dir[1] + lhrandom(-15, 15), dir[2] + lhrandom(-15, 15), 0);
+		count *= cl_particles_quality.value;
+		while (count--)
+		{
+			k = particlepalette[color + (rand()&7)];
+			particle(particletype + pt_alphastatic, k, k, tex_particle, 1, (1.0f / cl_particles_quality.value) * lhrandom(51, 255), (1.0f / cl_particles_quality.value) * 512, 0, 0.05, org[0], org[1], org[2], dir[0], dir[1], dir[2], 0, 8, 0);
+		}
+	}
+	else
+	{
+		count *= cl_particles_quality.value;
+		while (count--)
+		{
+			k = particlepalette[color + (rand()&7)];
+			if (gamemode == GAME_GOODVSBAD2)
+				particle(particletype + pt_alphastatic, k, k, tex_particle, 5, (1.0f / cl_particles_quality.value) * 255, (1.0f / cl_particles_quality.value) * 300, 0, 0, org[0], org[1], org[2], 0, 0, 0, 0, 8, 10);
+			else
+				particle(particletype + pt_alphastatic, k, k, tex_particle, 1, (1.0f / cl_particles_quality.value) * 255, (1.0f / cl_particles_quality.value) * 512, 0, 0, org[0], org[1], org[2], dir[0], dir[1], dir[2], 0, 8, 15);
+		}
 	}
 }
 
@@ -783,7 +828,7 @@ void CL_SparkShower (vec3_t org, vec3_t dir, int count, vec_t gravityscale)
 		while(count--)
 		{
 			k = particlepalette[0x68 + (rand() & 7)];
-			particle(particletype + pt_spark, k, k, tex_particle, 0.4f, (1.0f / cl_particles_quality.value) * lhrandom(64, 255), (1.0f / cl_particles_quality.value) * 512, gravityscale, 0, org[0], org[1], org[2], lhrandom(-64, 64) + dir[0], lhrandom(-64, 64) + dir[1], lhrandom(0, 128) + dir[2], 0);
+			particle(particletype + pt_spark, k, k, tex_particle, 0.4f, (1.0f / cl_particles_quality.value) * lhrandom(64, 255), (1.0f / cl_particles_quality.value) * 512, gravityscale, 0, org[0], org[1], org[2], dir[0], dir[1], dir[2], 0, 0, 64);
 		}
 	}
 }
@@ -806,7 +851,7 @@ void CL_Smoke (vec3_t org, vec3_t dir, int count)
 			org2[1] = org[1] + 0.125f * lhrandom(-count, count);
 			org2[2] = org[2] + 0.125f * lhrandom(-count, count);
 			trace = CL_TraceBox(org, vec3_origin, vec3_origin, org2, true, NULL, SUPERCONTENTS_SOLID, false);
-			particle(particletype + pt_smoke, 0x101010, 0x202020, tex_smoke[rand()&7], 3, (1.0f / cl_particles_quality.value) * 255, (1.0f / cl_particles_quality.value) * 1024, 0, 0, trace.endpos[0], trace.endpos[1], trace.endpos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0);
+			particle(particletype + pt_smoke, 0x101010, 0x202020, tex_smoke[rand()&7], 3, (1.0f / cl_particles_quality.value) * 255, (1.0f / cl_particles_quality.value) * 1024, 0, 0, trace.endpos[0], trace.endpos[1], trace.endpos[2], 0, 0, 0, 0, 0, 8);
 		}
 	}
 }
@@ -833,6 +878,11 @@ void CL_BloodPuff (vec3_t org, vec3_t vel, int count)
 	trace_t trace;
 	// bloodcount is used to accumulate counts too small to cause a blood particle
 	if (!cl_particles.integer) return;
+	if (cl_particles_quake.integer)
+	{
+		CL_RunParticleEffect(org, vel, 73, count * 2);
+		return;
+	}
 	if (!cl_particles_blood.integer) return;
 
 	s = count + 64.0f;
@@ -846,7 +896,7 @@ void CL_BloodPuff (vec3_t org, vec3_t vel, int count)
 		org2[1] = org[1] + 0.125f * lhrandom(-bloodcount, bloodcount);
 		org2[2] = org[2] + 0.125f * lhrandom(-bloodcount, bloodcount);
 		trace = CL_TraceBox(org, vec3_origin, vec3_origin, org2, true, NULL, SUPERCONTENTS_SOLID, false);
-		particle(particletype + pt_blood, 0xFFFFFF, 0xFFFFFF, tex_bloodparticle[rand()&7], 8, cl_particles_blood_alpha.value * 768 / cl_particles_quality.value, cl_particles_blood_alpha.value * 384 / cl_particles_quality.value, 0, -1, trace.endpos[0], trace.endpos[1], trace.endpos[2], vel[0] + lhrandom(-s, s), vel[1] + lhrandom(-s, s), vel[2] + lhrandom(-s, s), 1);
+		particle(particletype + pt_blood, 0xFFFFFF, 0xFFFFFF, tex_bloodparticle[rand()&7], 8, cl_particles_blood_alpha.value * 768 / cl_particles_quality.value, cl_particles_blood_alpha.value * 384 / cl_particles_quality.value, 0, -1, trace.endpos[0], trace.endpos[1], trace.endpos[2], vel[0], vel[1], vel[2], 1, 0, s);
 		bloodcount -= 16 / cl_particles_quality.value;
 	}
 }
@@ -876,7 +926,7 @@ void CL_BloodShower (vec3_t mins, vec3_t maxs, float velspeed, int count)
 		vel[1] = (org[1] - center[1]) * velscale[1];
 		vel[2] = (org[2] - center[2]) * velscale[2];
 		bloodcount -= 16 / cl_particles_quality.value;
-		particle(particletype + pt_blood, 0xFFFFFF, 0xFFFFFF, tex_bloodparticle[rand()&7], 8, cl_particles_blood_alpha.value * 768 / cl_particles_quality.value, cl_particles_blood_alpha.value * 384 / cl_particles_quality.value, 0, -1, org[0], org[1], org[2], vel[0], vel[1], vel[2], 1);
+		particle(particletype + pt_blood, 0xFFFFFF, 0xFFFFFF, tex_bloodparticle[rand()&7], 8, cl_particles_blood_alpha.value * 768 / cl_particles_quality.value, cl_particles_blood_alpha.value * 384 / cl_particles_quality.value, 0, -1, org[0], org[1], org[2], vel[0], vel[1], vel[2], 1, 0, 0);
 	}
 }
 
@@ -893,7 +943,7 @@ void CL_ParticleCube (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int color
 	while (count--)
 	{
 		k = particlepalette[colorbase + (rand()&3)];
-		particle(particletype + pt_alphastatic, k, k, tex_particle, 2, 255 / cl_particles_quality.value, (255 / cl_particles_quality.value) / 2, gravity ? 1 : 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(mins[2], maxs[2]), dir[0] + lhrandom(-randomvel, randomvel), dir[1] + lhrandom(-randomvel, randomvel), dir[2] + lhrandom(-randomvel, randomvel), 0);
+		particle(particletype + pt_alphastatic, k, k, tex_particle, 2, 255 / cl_particles_quality.value, (255 / cl_particles_quality.value) / 2, gravity ? 1 : 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(mins[2], maxs[2]), dir[0], dir[1], dir[2], 0, 0, randomvel);
 	}
 }
 
@@ -927,9 +977,9 @@ void CL_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int color
 		{
 			k = particlepalette[colorbase + (rand()&3)];
 			if (gamemode == GAME_GOODVSBAD2)
-				particle(particletype + pt_rain, k, k, tex_particle, 20, lhrandom(8, 16) / cl_particles_quality.value, 0, 0, -1, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], 0);
+				particle(particletype + pt_rain, k, k, tex_particle, 20, lhrandom(8, 16) / cl_particles_quality.value, 0, 0, -1, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], 0, 0, 0);
 			else
-				particle(particletype + pt_rain, k, k, tex_particle, 0.5, lhrandom(8, 16) / cl_particles_quality.value, 0, 0, -1, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], 0);
+				particle(particletype + pt_rain, k, k, tex_particle, 0.5, lhrandom(8, 16) / cl_particles_quality.value, 0, 0, -1, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], 0, 0, 0);
 		}
 		break;
 	case 1:
@@ -937,9 +987,9 @@ void CL_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int color
 		{
 			k = particlepalette[colorbase + (rand()&3)];
 			if (gamemode == GAME_GOODVSBAD2)
-				p = particle(particletype + pt_snow, k, k, tex_particle, 20, lhrandom(64, 128) / cl_particles_quality.value, 0, 0, -1, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], 0);
+				p = particle(particletype + pt_snow, k, k, tex_particle, 20, lhrandom(64, 128) / cl_particles_quality.value, 0, 0, -1, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], 0, 0, 0);
 			else
-				p = particle(particletype + pt_snow, k, k, tex_particle, 1, lhrandom(64, 128) / cl_particles_quality.value, 0, 0, -1, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], 0);
+				p = particle(particletype + pt_snow, k, k, tex_particle, 1, lhrandom(64, 128) / cl_particles_quality.value, 0, 0, -1, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], 0, 0, 0);
 			if (p)
 				VectorCopy(p->vel, p->relativedirection);
 		}
@@ -975,7 +1025,7 @@ void CL_Stardust (vec3_t mins, vec3_t maxs, int count)
 		VectorNormalize(v);
 		VectorScale(v, 100, v);
 		v[2] += sv_gravity.value * 0.15f;
-		particle(particletype + pt_static, 0x903010, 0xFFD030, tex_particle, 1.5, lhrandom(64, 128) / cl_particles_quality.value, 128 / cl_particles_quality.value, 1, 0, o[0], o[1], o[2], v[0], v[1], v[2], 0.2);
+		particle(particletype + pt_static, 0x903010, 0xFFD030, tex_particle, 1.5, lhrandom(64, 128) / cl_particles_quality.value, 128 / cl_particles_quality.value, 1, 0, o[0], o[1], o[2], v[0], v[1], v[2], 0.2, 0, 0);
 	}
 }
 
@@ -992,9 +1042,9 @@ void CL_FlameCube (vec3_t mins, vec3_t maxs, int count)
 	while (count--)
 	{
 		k = particlepalette[224 + (rand()&15)];
-		particle(particletype + pt_static, k, k, tex_particle, 4, lhrandom(64, 128) / cl_particles_quality.value, 384 / cl_particles_quality.value, -1, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(mins[2], maxs[2]), lhrandom(-32, 32), lhrandom(-32, 32), lhrandom(0, 64), 1);
+		particle(particletype + pt_static, k, k, tex_particle, 4, lhrandom(64, 128) / cl_particles_quality.value, 384 / cl_particles_quality.value, -1, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(mins[2], maxs[2]), 0, 0, 32, 1, 0, 32);
 		if (count & 1)
-			particle(particletype + pt_static, 0x303030, 0x606060, tex_smoke[rand()&7], 6, lhrandom(48, 96) / cl_particles_quality.value, 64 / cl_particles_quality.value, 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(mins[2], maxs[2]), lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(0, 32), 0);
+			particle(particletype + pt_static, 0x303030, 0x606060, tex_smoke[rand()&7], 6, lhrandom(48, 96) / cl_particles_quality.value, 64 / cl_particles_quality.value, 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(mins[2], maxs[2]), 0, 0, 24, 0, 0, 8);
 	}
 }
 
@@ -1007,7 +1057,7 @@ void CL_Flames (vec3_t org, vec3_t vel, int count)
 	while (count--)
 	{
 		k = particlepalette[224 + (rand()&15)];
-		particle(particletype + pt_static, k, k, tex_particle, 4, lhrandom(64, 128) / cl_particles_quality.value, 384 / cl_particles_quality.value, -1, 1.1, org[0], org[1], org[2], vel[0] + lhrandom(-128, 128), vel[1] + lhrandom(-128, 128), vel[2] + lhrandom(-128, 128), 1);
+		particle(particletype + pt_static, k, k, tex_particle, 4, lhrandom(64, 128) / cl_particles_quality.value, 384 / cl_particles_quality.value, -1, 1.1, org[0], org[1], org[2], vel[0], vel[1], vel[2], 1, 0, 128);
 	}
 }
 
@@ -1026,28 +1076,50 @@ void CL_LavaSplash (vec3_t origin)
 	vec3_t		dir, org;
 	if (!cl_particles.integer) return;
 
-	inc = 32 / cl_particles_quality.value;
-	for (i = -128;i < 128;i += inc)
+	if (cl_particles_quake.integer)
 	{
-		for (j = -128;j < 128;j += inc)
+		inc = 8 / cl_particles_quality.value;
+		for (i = -128;i < 128;i += inc)
 		{
-			dir[0] = j + lhrandom(0, 8);
-			dir[1] = i + lhrandom(0, 8);
-			dir[2] = 256;
-			org[0] = origin[0] + dir[0];
-			org[1] = origin[1] + dir[1];
-			org[2] = origin[2] + lhrandom(0, 64);
-			vel = lhrandom(50, 120) / VectorLength(dir); // normalize and scale
-			if (gamemode == GAME_GOODVSBAD2)
+			for (j = -128;j < 128;j += inc)
 			{
-				k = particlepalette[0 + (rand()&255)];
-				l = particlepalette[0 + (rand()&255)];
-				particle(particletype + pt_static, k, l, tex_particle, 12, inc * 8, inc * 8, 0.05, 1, org[0], org[1], org[2], dir[0] * vel, dir[1] * vel, dir[2] * vel, 0);
-			}
-			else
-			{
+				dir[0] = j + lhrandom(0, inc);
+				dir[1] = i + lhrandom(0, inc);
+				dir[2] = 256;
+				org[0] = origin[0] + dir[0];
+				org[1] = origin[1] + dir[1];
+				org[2] = origin[2] + lhrandom(0, 64);
+				vel = lhrandom(50, 120) / VectorLength(dir); // normalize and scale
 				k = l = particlepalette[224 + (rand()&7)];
-				particle(particletype + pt_static, k, l, tex_particle, 12, inc * 8, inc * 8, 0.05, 0, org[0], org[1], org[2], dir[0] * vel, dir[1] * vel, dir[2] * vel, 0);
+				particle(particletype + pt_alphastatic, k, l, tex_particle, 1, inc * lhrandom(24, 32), inc * 12, 0.05, 0, org[0], org[1], org[2], dir[0] * vel, dir[1] * vel, dir[2] * vel, 0, 0, 0);
+			}
+		}
+	}
+	else
+	{
+		inc = 32 / cl_particles_quality.value;
+		for (i = -128;i < 128;i += inc)
+		{
+			for (j = -128;j < 128;j += inc)
+			{
+				dir[0] = j + lhrandom(0, inc);
+				dir[1] = i + lhrandom(0, inc);
+				dir[2] = 256;
+				org[0] = origin[0] + dir[0];
+				org[1] = origin[1] + dir[1];
+				org[2] = origin[2] + lhrandom(0, 64);
+				vel = lhrandom(50, 120) / VectorLength(dir); // normalize and scale
+				if (gamemode == GAME_GOODVSBAD2)
+				{
+					k = particlepalette[0 + (rand()&255)];
+					l = particlepalette[0 + (rand()&255)];
+					particle(particletype + pt_static, k, l, tex_particle, 12, inc * 8, inc * 8, 0.05, 1, org[0], org[1], org[2], dir[0] * vel, dir[1] * vel, dir[2] * vel, 0, 0, 0);
+				}
+				else
+				{
+					k = l = particlepalette[224 + (rand()&7)];
+					particle(particletype + pt_static, k, l, tex_particle, 12, inc * 8, inc * 8, 0.05, 0, org[0], org[1], org[2], dir[0] * vel, dir[1] * vel, dir[2] * vel, 0, 0, 0);
+				}
 			}
 		}
 	}
@@ -1064,11 +1136,33 @@ void CL_TeleportSplash (vec3_t org)
 	float i, j, k, inc;
 	if (!cl_particles.integer) return;
 
-	inc = 8 / cl_particles_quality.value;
-	for (i = -16;i < 16;i += inc)
-		for (j = -16;j < 16;j += inc)
-			for (k = -24;k < 32;k += inc)
-				particle(particletype + pt_static, 0xA0A0A0, 0xFFFFFF, tex_particle, 10, inc * lhrandom(8, 16), inc * 32, 0, 0, org[0] + i + lhrandom(0, 8), org[1] + j + lhrandom(0, 8), org[2] + k + lhrandom(0, 8), lhrandom(-64, 64), lhrandom(-64, 64), lhrandom(-256, 256), 1);
+	if (cl_particles_quake.integer)
+	{
+		inc = 4 / cl_particles_quality.value;
+		for (i = -16;i < 16;i += inc)
+		{
+			for (j = -16;j < 16;j += inc)
+			{
+				for (k = -24;k < 32;k += inc)
+				{
+					vec3_t dir;
+					float vel;
+					VectorSet(dir, i*8, j*8, k*8);
+					VectorNormalize(dir);
+					vel = lhrandom(50, 113);
+					particle(particletype + pt_alphastatic, particlepalette[7], particlepalette[14], tex_particle, 1, inc * lhrandom(37, 63), inc * 187, 0, 0, org[0] + i + lhrandom(0, inc), org[1] + j + lhrandom(0, inc), org[2] + k + lhrandom(0, inc), dir[0] * vel, dir[1] * vel, dir[2] * vel, 0, 0, 0);
+				}
+			}
+		}
+	}
+	else
+	{
+		inc = 8 / cl_particles_quality.value;
+		for (i = -16;i < 16;i += inc)
+			for (j = -16;j < 16;j += inc)
+				for (k = -24;k < 32;k += inc)
+					particle(particletype + pt_static, 0xA0A0A0, 0xFFFFFF, tex_particle, 10, inc * lhrandom(8, 16), inc * 32, 0, 0, org[0] + i + lhrandom(0, inc), org[1] + j + lhrandom(0, inc), org[2] + k + lhrandom(0, inc), 0, 0, lhrandom(-256, 256), 1, 0, 0);
+	}
 }
 
 #ifdef WORKINGLQUAKE
@@ -1079,7 +1173,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, int color, entity_t *en
 {
 	vec3_t vec, dir, vel, pos;
 	float len, dec, speed, qd;
-	int smoke, blood, bubbles;
+	int smoke, blood, bubbles, r;
 #ifdef WORKINGLQUAKE
 	int contents;
 #endif
@@ -1133,75 +1227,160 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, int color, entity_t *en
 		switch (type)
 		{
 			case 0:	// rocket trail
-				dec = qd*3;
-				if (smoke)
+				if (cl_particles_quake.integer)
 				{
-					particle(particletype + pt_smoke, 0x303030, 0x606060, tex_smoke[rand()&7], 3, qd*cl_particles_smoke_alpha.value*125, qd*cl_particles_smoke_alphafade.value*125, 0, 0, pos[0], pos[1], pos[2], lhrandom(-5, 5), lhrandom(-5, 5), lhrandom(-5, 5), 0);
-					particle(particletype + pt_static, 0x801010, 0xFFA020, tex_smoke[rand()&7], 3, qd*cl_particles_smoke_alpha.value*288, qd*cl_particles_smoke_alphafade.value*1400, 0, 0, pos[0], pos[1], pos[2], lhrandom(-20, 20), lhrandom(-20, 20), lhrandom(-20, 20), 0);
+					dec = qd*3;
+					r = rand()&3;
+					color = particlepalette[ramp3[r]];
+					particle(particletype + pt_alphastatic, color, color, tex_particle, 1, qd*42*(6-r), qd*306, 0, -0.05, pos[0], pos[1], pos[2], 0, 0, 0, 0, 3, 0);
 				}
-				if (bubbles)
-					particle(particletype + pt_bubble, 0x404040, 0x808080, tex_bubble, 2, qd*lhrandom(64, 255), qd*256, -0.25, 1.5, pos[0], pos[1], pos[2], lhrandom(-16, 16), lhrandom(-16, 16), lhrandom(-16, 16), (1.0 / 16.0));
+				else
+				{
+					dec = qd*3;
+					if (smoke)
+					{
+						particle(particletype + pt_smoke, 0x303030, 0x606060, tex_smoke[rand()&7], 3, qd*cl_particles_smoke_alpha.value*125, qd*cl_particles_smoke_alphafade.value*125, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
+						particle(particletype + pt_static, 0x801010, 0xFFA020, tex_smoke[rand()&7], 3, qd*cl_particles_smoke_alpha.value*288, qd*cl_particles_smoke_alphafade.value*1400, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 20);
+					}
+					if (bubbles)
+						particle(particletype + pt_bubble, 0x404040, 0x808080, tex_bubble, 2, qd*lhrandom(64, 255), qd*256, -0.25, 1.5, pos[0], pos[1], pos[2], 0, 0, 0, (1.0 / 16.0), 0, 16);
+				}
 				break;
 
 			case 1: // grenade trail
-				// FIXME: make it gradually stop smoking
-				dec = qd*3;
-				if (smoke)
-					particle(particletype + pt_smoke, 0x303030, 0x606060, tex_smoke[rand()&7], 3, qd*cl_particles_smoke_alpha.value*100, qd*cl_particles_smoke_alphafade.value*100, 0, 0, pos[0], pos[1], pos[2], lhrandom(-5, 5), lhrandom(-5, 5), lhrandom(-5, 5), 0);
+				if (cl_particles_quake.integer)
+				{
+					dec = qd*3;
+					r = 2 + (rand()%5);
+					color = particlepalette[ramp3[r]];
+					particle(particletype + pt_alphastatic, color, color, tex_particle, 1, qd*42*(6-r), qd*306, 0, -0.05, pos[0], pos[1], pos[2], 0, 0, 0, 0, 3, 0);
+				}
+				else
+				{
+					dec = qd*3;
+					if (smoke)
+						particle(particletype + pt_smoke, 0x303030, 0x606060, tex_smoke[rand()&7], 3, qd*cl_particles_smoke_alpha.value*100, qd*cl_particles_smoke_alphafade.value*100, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
+				}
 				break;
 
 
 			case 2:	// blood
 			case 4:	// slight blood
-				dec = qd*16;
-				if (blood)
-					particle(particletype + pt_blood, 0xFFFFFF, 0xFFFFFF, tex_bloodparticle[rand()&7], 8, qd * cl_particles_blood_alpha.value * 768.0f, qd * cl_particles_blood_alpha.value * 384.0f, 0, -1, pos[0], pos[1], pos[2], vel[0] * 0.5f + lhrandom(-64, 64), vel[1] * 0.5f + lhrandom(-64, 64), vel[2] * 0.5f + lhrandom(-64, 64), 1);
+				if (cl_particles_quake.integer)
+				{
+					if (type == 2)
+					{
+						dec = qd*3;
+						color = particlepalette[67 + (rand()&3)];
+						particle(particletype + pt_alphastatic, color, color, tex_particle, 1, qd*255, qd*128, 0, -0.05, pos[0], pos[1], pos[2], 0, 0, 0, 0, 3, 0);
+					}
+					else
+					{
+						dec = qd*6;
+						color = particlepalette[67 + (rand()&3)];
+						particle(particletype + pt_alphastatic, color, color, tex_particle, 1, qd*255, qd*128, 0, -0.05, pos[0], pos[1], pos[2], 0, 0, 0, 0, 3, 0);
+					}
+				}
+				else
+				{
+					dec = qd*16;
+					if (blood)
+						particle(particletype + pt_blood, 0xFFFFFF, 0xFFFFFF, tex_bloodparticle[rand()&7], 8, qd * cl_particles_blood_alpha.value * 768.0f, qd * cl_particles_blood_alpha.value * 384.0f, 0, -1, pos[0], pos[1], pos[2], vel[0] * 0.5f, vel[1] * 0.5f, vel[2] * 0.5f, 1, 0, 64);
+				}
 				break;
 
 			case 3:	// green tracer
-				dec = qd*6;
-				if (smoke)
+				if (cl_particles_quake.integer)
 				{
-					if (gamemode == GAME_GOODVSBAD2)
-						particle(particletype + pt_static, 0x00002E, 0x000030, tex_particle, 6, qd*128, qd*384, 0, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0);
-					else
-						particle(particletype + pt_static, 0x002000, 0x003000, tex_particle, 6, qd*128, qd*384, 0, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0);
+					dec = qd*6;
+					color = particlepalette[52 + (rand()&7)];
+					particle(particletype + pt_alphastatic, color, color, tex_particle, 1, qd*255, qd*512, 0, 0, pos[0], pos[1], pos[2], 30*vec[1], 30*-vec[0], 0, 0, 0, 0);
+					particle(particletype + pt_alphastatic, color, color, tex_particle, 1, qd*255, qd*512, 0, 0, pos[0], pos[1], pos[2], 30*-vec[1], 30*vec[0], 0, 0, 0, 0);
+				}
+				else
+				{
+					dec = qd*16;
+					if (smoke)
+					{
+						if (gamemode == GAME_GOODVSBAD2)
+						{
+							dec = qd*6;
+							particle(particletype + pt_static, 0x00002E, 0x000030, tex_particle, 6, qd*128, qd*384, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
+						}
+						else
+						{
+							dec = qd*3;
+							color = particlepalette[20 + (rand()&7)];
+							particle(particletype + pt_static, color, color, tex_particle, 2, qd*64, qd*192, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
+						}
+					}
 				}
 				break;
 
 			case 5:	// flame tracer
-				dec = qd*6;
-				if (smoke)
-					particle(particletype + pt_static, 0x301000, 0x502000, tex_particle, 6, qd*128, qd*384, 0, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0);
+				if (cl_particles_quake.integer)
+				{
+					dec = qd*6;
+					color = particlepalette[230 + (rand()&7)];
+					particle(particletype + pt_alphastatic, color, color, tex_particle, 1, qd*255, qd*512, 0, 0, pos[0], pos[1], pos[2], 30*vec[1], 30*-vec[0], 0, 0, 0, 0);
+					particle(particletype + pt_alphastatic, color, color, tex_particle, 1, qd*255, qd*512, 0, 0, pos[0], pos[1], pos[2], 30*-vec[1], 30*vec[0], 0, 0, 0, 0);
+				}
+				else
+				{
+					dec = qd*3;
+					if (smoke)
+					{
+						color = particlepalette[226 + (rand()&7)];
+						particle(particletype + pt_static, color, color, tex_particle, 2, qd*64, qd*192, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
+					}
+				}
 				break;
 
 			case 6:	// voor trail
-				dec = qd*6;
-				if (smoke)
+				if (cl_particles_quake.integer)
 				{
-					if (gamemode == GAME_GOODVSBAD2)
-						particle(particletype + pt_alphastatic, particlepalette[0 + (rand()&255)], particlepalette[0 + (rand()&255)], tex_particle, 6, qd*255, qd*384, 0, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0);
-					else if (gamemode == GAME_PRYDON)
-						particle(particletype + pt_static, 0x103040, 0x204050, tex_particle, 6, qd*128, qd*384, 0, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0);
-					else
-						particle(particletype + pt_static, 0x502030, 0x502030, tex_particle, 6, qd*128, qd*384, 0, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0);
+					dec = qd*3;
+					color = particlepalette[152 + (rand()&3)];
+					particle(particletype + pt_alphastatic, color, color, tex_particle, 1, qd*255, qd*850, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 8, 0);
+				}
+				else
+				{
+					dec = qd*16;
+					if (smoke)
+					{
+						if (gamemode == GAME_GOODVSBAD2)
+						{
+							dec = qd*6;
+							particle(particletype + pt_alphastatic, particlepalette[0 + (rand()&255)], particlepalette[0 + (rand()&255)], tex_particle, 6, qd*255, qd*384, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
+						}
+						else if (gamemode == GAME_PRYDON)
+						{
+							dec = qd*6;
+							particle(particletype + pt_static, 0x103040, 0x204050, tex_particle, 6, qd*64, qd*192, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
+						}
+						else
+						{
+							dec = qd*3;
+							particle(particletype + pt_static, 0x502030, 0x502030, tex_particle, 3, qd*64, qd*192, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
+						}
+					}
 				}
 				break;
 #ifndef WORKINGLQUAKE
 			case 7:	// Nehahra smoke tracer
 				dec = qd*7;
 				if (smoke)
-					particle(particletype + pt_alphastatic, 0x303030, 0x606060, tex_smoke[rand()&7], 7, qd*64, qd*320, 0, 0, pos[0], pos[1], pos[2], lhrandom(-4, 4), lhrandom(-4, 4), lhrandom(0, 16), 0);
+					particle(particletype + pt_alphastatic, 0x303030, 0x606060, tex_smoke[rand()&7], 7, qd*64, qd*320, 0, 0, pos[0], pos[1], pos[2], 0, 0, lhrandom(4, 12), 0, 0, 4);
 				break;
 			case 8: // Nexuiz plasma trail
 				dec = qd*4;
 				if (smoke)
-					particle(particletype + pt_static, 0x283880, 0x283880, tex_particle, 4, qd*255, qd*1024, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0);
+					particle(particletype + pt_static, 0x283880, 0x283880, tex_particle, 4, qd*255, qd*1024, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 16);
 				break;
 			case 9: // glow trail
 				dec = qd*3;
 				if (smoke)
-					particle(particletype + pt_alphastatic, color, color, tex_particle, 5, qd*128, qd*320, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0);
+					particle(particletype + pt_alphastatic, color, color, tex_particle, 5, qd*128, qd*320, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
 				break;
 #endif
 			default:
@@ -1224,7 +1403,7 @@ void CL_BeamParticle (const vec3_t start, const vec3_t end, vec_t radius, float 
 	cg = green * 255;
 	cb = blue * 255;
 	tempcolor2 = (bound(0, cr, 255) << 16) | (bound(0, cg, 255) << 8) | bound(0, cb, 255);
-	particle(particletype + pt_beam, tempcolor2, tempcolor2, tex_beam, radius, alpha * 255, alpha * 255 / lifetime, 0, 0, start[0], start[1], start[2], end[0], end[1], end[2], 0);
+	particle(particletype + pt_beam, tempcolor2, tempcolor2, tex_beam, radius, alpha * 255, alpha * 255 / lifetime, 0, 0, start[0], start[1], start[2], end[0], end[1], end[2], 0, 0, 0);
 }
 
 void CL_Tei_Smoke(const vec3_t org, const vec3_t dir, int count)
@@ -1235,7 +1414,7 @@ void CL_Tei_Smoke(const vec3_t org, const vec3_t dir, int count)
 	// smoke puff
 	if (cl_particles_smoke.integer)
 		for (f = 0;f < count;f += 4.0f / cl_particles_quality.value)
-			particle(particletype + pt_smoke, 0x202020, 0x404040, tex_smoke[rand()&7], 5, 255 / cl_particles_quality.value, 512 / cl_particles_quality.value, 0, 0, org[0] + 0.125f * lhrandom(-count, count), org[1] + 0.125f * lhrandom (-count, count), org[2] + 0.125f * lhrandom(-count, count), dir[0] + lhrandom(-count, count) * 0.5f, dir[1] + lhrandom(-count, count) * 0.5f, dir[2] + lhrandom(-count, count) * 0.5f, 0);
+			particle(particletype + pt_smoke, 0x202020, 0x404040, tex_smoke[rand()&7], 5, 255 / cl_particles_quality.value, 512 / cl_particles_quality.value, 0, 0, org[0], org[1], org[2], dir[0], dir[1], dir[2], 0, count * 0.125f, count * 0.5f);
 }
 
 void CL_Tei_PlasmaHit(const vec3_t org, const vec3_t dir, int count)
@@ -1250,12 +1429,12 @@ void CL_Tei_PlasmaHit(const vec3_t org, const vec3_t dir, int count)
 	// smoke puff
 	if (cl_particles_smoke.integer)
 		for (f = 0;f < count;f += 4.0f / cl_particles_quality.value)
-			particle(particletype + pt_smoke, 0x202020, 0x404040, tex_smoke[rand()&7], 5, 255 / cl_particles_quality.value, 512 / cl_particles_quality.value, 0, 0, org[0] + 0.125f * lhrandom(-count, count), org[1] + 0.125f * lhrandom (-count, count), org[2] + 0.125f * lhrandom(-count, count), dir[0] + lhrandom(-count, count), dir[1] + lhrandom(-count, count), dir[2] + lhrandom(-count, count), 0);
+			particle(particletype + pt_smoke, 0x202020, 0x404040, tex_smoke[rand()&7], 5, 255 / cl_particles_quality.value, 512 / cl_particles_quality.value, 0, 0, org[0], org[1], org[2], dir[0], dir[1], dir[2], 0, count * 0.125f, count);
 
 	// sparks
 	if (cl_particles_sparks.integer)
 		for (f = 0;f < count;f += 1.0f / cl_particles_quality.value)
-			particle(particletype + pt_spark, 0x2030FF, 0x80C0FF, tex_particle, 2.0f, lhrandom(64, 255) / cl_particles_quality.value, 512 / cl_particles_quality.value, 0, 0, org[0], org[1], org[2], lhrandom(-count, count) * 3.0f + dir[0], lhrandom(-count, count) * 3.0f + dir[1], lhrandom(-count, count) * 3.0f + dir[2], 0);
+			particle(particletype + pt_spark, 0x2030FF, 0x80C0FF, tex_particle, 2.0f, lhrandom(64, 255) / cl_particles_quality.value, 512 / cl_particles_quality.value, 0, 0, org[0], org[1], org[2], dir[0], dir[1], dir[2], 0, 0, count * 3.0f);
 }
 
 /*

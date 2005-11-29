@@ -813,6 +813,7 @@ void V_ParseDamage (void);
 extern cvar_t cl_particles;
 extern cvar_t cl_particles_quality;
 extern cvar_t cl_particles_size;
+extern cvar_t cl_particles_quake;
 extern cvar_t cl_particles_bloodshowers;
 extern cvar_t cl_particles_blood;
 extern cvar_t cl_particles_blood_alpha;
