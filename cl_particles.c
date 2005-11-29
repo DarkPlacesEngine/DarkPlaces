@@ -828,7 +828,7 @@ void CL_SparkShower (vec3_t org, vec3_t dir, int count, vec_t gravityscale)
 		while(count--)
 		{
 			k = particlepalette[0x68 + (rand() & 7)];
-			particle(particletype + pt_spark, k, k, tex_particle, 0.4f, (1.0f / cl_particles_quality.value) * lhrandom(64, 255), (1.0f / cl_particles_quality.value) * 512, gravityscale, 0, org[0], org[1], org[2], dir[0], dir[1], dir[2], 0, 0, 64);
+			particle(particletype + pt_spark, k, k, tex_particle, 0.4f, (1.0f / cl_particles_quality.value) * lhrandom(64, 255), (1.0f / cl_particles_quality.value) * 512, gravityscale, 0, org[0], org[1], org[2], dir[0], dir[1], dir[2] + sv_gravity.value * 0.1, 0, 0, 64);
 		}
 	}
 }
@@ -1239,7 +1239,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, int color, entity_t *en
 					dec = qd*3;
 					if (smoke)
 					{
-						particle(particletype + pt_smoke, 0x303030, 0x606060, tex_smoke[rand()&7], 3, qd*cl_particles_smoke_alpha.value*125, qd*cl_particles_smoke_alphafade.value*125, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
+						particle(particletype + pt_smoke, 0x303030, 0x606060, tex_smoke[rand()&7], 3, qd*cl_particles_smoke_alpha.value*62, qd*cl_particles_smoke_alphafade.value*62, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
 						particle(particletype + pt_static, 0x801010, 0xFFA020, tex_smoke[rand()&7], 3, qd*cl_particles_smoke_alpha.value*288, qd*cl_particles_smoke_alphafade.value*1400, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 20);
 					}
 					if (bubbles)
@@ -1259,7 +1259,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, int color, entity_t *en
 				{
 					dec = qd*3;
 					if (smoke)
-						particle(particletype + pt_smoke, 0x303030, 0x606060, tex_smoke[rand()&7], 3, qd*cl_particles_smoke_alpha.value*100, qd*cl_particles_smoke_alphafade.value*100, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
+						particle(particletype + pt_smoke, 0x303030, 0x606060, tex_smoke[rand()&7], 3, qd*cl_particles_smoke_alpha.value*50, qd*cl_particles_smoke_alphafade.value*50, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
 				}
 				break;
 
