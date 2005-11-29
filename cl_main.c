@@ -940,18 +940,18 @@ void CL_LinkNetworkEntity(entity_t *e)
 			else if (e->render.model->flags & EF_TRACER)
 			{
 				trailtype = 3;
-				dlightradius = max(dlightradius, 100);
-				dlightcolor[0] += 0.25f;
-				dlightcolor[1] += 1.00f;
-				dlightcolor[2] += 0.25f;
+				//dlightradius = max(dlightradius, 100);
+				//dlightcolor[0] += 0.25f;
+				//dlightcolor[1] += 1.00f;
+				//dlightcolor[2] += 0.25f;
 			}
 			else if (e->render.model->flags & EF_TRACER2)
 			{
 				trailtype = 5;
-				dlightradius = max(dlightradius, 100);
-				dlightcolor[0] += 1.00f;
-				dlightcolor[1] += 0.60f;
-				dlightcolor[2] += 0.20f;
+				//dlightradius = max(dlightradius, 100);
+				//dlightcolor[0] += 1.00f;
+				//dlightcolor[1] += 0.60f;
+				//dlightcolor[2] += 0.20f;
 			}
 			else if (e->render.model->flags & EF_ROCKET)
 			{
