@@ -31,6 +31,7 @@ typedef struct viddef_s
 	int height;
 	int bitsperpixel;
 	int fullscreen;
+	int refreshrate;
 } viddef_t;
 
 // global video state
@@ -42,13 +43,17 @@ extern qboolean vid_hidden;
 extern qboolean vid_activewindow;
 extern cvar_t vid_hardwaregammasupported;
 extern qboolean vid_usinghwgamma;
+extern qboolean vid_supportrefreshrate;
 
 extern cvar_t vid_fullscreen;
 extern cvar_t vid_width;
 extern cvar_t vid_height;
 extern cvar_t vid_bitsperpixel;
+extern cvar_t vid_refreshrate;
 extern cvar_t vid_vsync;
 extern cvar_t vid_mouse;
+extern cvar_t vid_minwidth;
+extern cvar_t vid_minheight;
 
 extern cvar_t gl_combine;
 extern cvar_t gl_finish;
@@ -117,7 +122,7 @@ int VID_SetMode (int modenum);
 // sets the mode; only used by the Quake engine for resetting to mode 0 (the
 // base mode) on memory allocation failures
 
-int VID_InitMode(int fullscreen, int width, int height, int bpp);
+int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate);
 // allocates and opens an appropriate OpenGL context (and its window)
 
 

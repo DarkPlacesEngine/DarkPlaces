@@ -22,6 +22,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 int cl_available = false;
 
+qboolean vid_supportrefreshrate = false;
+
 void VID_Shutdown(void)
 {
 }
@@ -68,7 +70,7 @@ void VID_Init(void)
 	InitSig(); // trap evil signals
 }
 
-int VID_InitMode(int fullscreen, int width, int height, int bpp)
+int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate)
 {
 	return false;
 }

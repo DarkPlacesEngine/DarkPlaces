@@ -73,9 +73,12 @@ cvar_t vid_fullscreen = {CVAR_SAVE, "vid_fullscreen", "1"};
 cvar_t vid_width = {CVAR_SAVE, "vid_width", "640"};
 cvar_t vid_height = {CVAR_SAVE, "vid_height", "480"};
 cvar_t vid_bitsperpixel = {CVAR_SAVE, "vid_bitsperpixel", "32"};
+cvar_t vid_refreshrate = {CVAR_SAVE, "vid_refreshrate", "60"};
 
 cvar_t vid_vsync = {CVAR_SAVE, "vid_vsync", "0"};
 cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1"};
+cvar_t vid_minwidth = {0, "vid_minwidth", "0"};
+cvar_t vid_minheight = {0, "vid_minheight", "0"};
 cvar_t gl_combine = {0, "gl_combine", "1"};
 cvar_t gl_finish = {0, "gl_finish", "0"};
 
@@ -893,8 +896,11 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&vid_width);
 	Cvar_RegisterVariable(&vid_height);
 	Cvar_RegisterVariable(&vid_bitsperpixel);
+	Cvar_RegisterVariable(&vid_refreshrate);
 	Cvar_RegisterVariable(&vid_vsync);
 	Cvar_RegisterVariable(&vid_mouse);
+	Cvar_RegisterVariable(&vid_minwidth);
+	Cvar_RegisterVariable(&vid_minheight);
 	Cvar_RegisterVariable(&gl_combine);
 	Cvar_RegisterVariable(&gl_finish);
 	Cmd_AddCommand("force_centerview", Force_CenterView_f);
@@ -903,19 +909,21 @@ void VID_Shared_Init(void)
 		Cvar_Set("gl_combine", "0");
 }
 
-int VID_Mode(int fullscreen, int width, int height, int bpp)
+int VID_Mode(int fullscreen, int width, int height, int bpp, int refreshrate)
 {
-	Con_Printf("Video: %s %dx%dx%d\n", fullscreen ? "fullscreen" : "window", width, height, bpp);
-	if (VID_InitMode(fullscreen, width, height, bpp))
+	Con_Printf("Video: %s %dx%dx%dx%dhz\n", fullscreen ? "fullscreen" : "window", width, height, bpp, refreshrate);
+	if (VID_InitMode(fullscreen, width, height, bpp, refreshrate))
 	{
 		vid.fullscreen = fullscreen;
 		vid.width = width;
 		vid.height = height;
 		vid.bitsperpixel = bpp;
+		vid.refreshrate = refreshrate;
 		Cvar_SetValueQuick(&vid_fullscreen, fullscreen);
 		Cvar_SetValueQuick(&vid_width, width);
 		Cvar_SetValueQuick(&vid_height, height);
 		Cvar_SetValueQuick(&vid_bitsperpixel, bpp);
+		Cvar_SetValueQuick(&vid_refreshrate, refreshrate);
 		return true;
 	}
 	else
@@ -947,10 +955,10 @@ void VID_Restart_f(void)
 		vid_fullscreen.integer ? "fullscreen" : "window", vid_width.integer, vid_height.integer, vid_bitsperpixel.integer);
 	VID_CloseSystems();
 	VID_Shutdown();
-	if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer))
+	if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_refreshrate.integer))
 	{
 		Con_Print("Video mode change failed\n");
-		if (!VID_Mode(vid.fullscreen, vid.width, vid.height, vid.bitsperpixel))
+		if (!VID_Mode(vid.fullscreen, vid.width, vid.height, vid.bitsperpixel, vid.refreshrate))
 			Sys_Error("Unable to restore to last working video mode");
 	}
 	VID_OpenSystems();
@@ -992,16 +1000,17 @@ void VID_Start(void)
 	}
 
 	Con_Print("Starting video system\n");
-	success = VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer);
+	success = VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_refreshrate.integer);
 	if (!success)
 	{
 		Con_Print("Desired video mode fail, trying fallbacks...\n");
+		success = VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, 60);
 		if (!success && vid_bitsperpixel.integer > 16)
-			success = VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, 16);
+			success = VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, 16, 60);
 		if (!success && (vid_width.integer > 640 || vid_height.integer > 480))
-			success = VID_Mode(vid_fullscreen.integer, 640, 480, 16);
+			success = VID_Mode(vid_fullscreen.integer, 640, 480, 16, 60);
 		if (!success && vid_fullscreen.integer)
-			success = VID_Mode(false, 640, 480, 16);
+			success = VID_Mode(false, 640, 480, 16, 60);
 		if (!success)
 			Sys_Error("Video modes failed");
 	}

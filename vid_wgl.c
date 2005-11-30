@@ -40,6 +40,8 @@ extern HINSTANCE global_hInstance;
 // Tell startup code that we have a client
 int cl_available = true;
 
+qboolean vid_supportrefreshrate = true;
+
 static int (WINAPI *qwglChoosePixelFormat)(HDC, CONST PIXELFORMATDESCRIPTOR *);
 static int (WINAPI *qwglDescribePixelFormat)(HDC, int, UINT, LPPIXELFORMATDESCRIPTOR);
 //static int (WINAPI *qwglGetPixelFormat)(HDC);
@@ -723,7 +725,7 @@ void VID_Init(void)
 	IN_Init();
 }
 
-int VID_InitMode (int fullscreen, int width, int height, int bpp)
+int VID_InitMode (int fullscreen, int width, int height, int bpp, int refreshrate)
 {
 	int i;
 	HDC hdc;
@@ -787,10 +789,11 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 	vid_isfullscreen = false;
 	if (fullscreen)
 	{
-		gdevmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
+		gdevmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFREQUENCY;
 		gdevmode.dmBitsPerPel = bpp;
 		gdevmode.dmPelsWidth = width;
 		gdevmode.dmPelsHeight = height;
+		gdevmode.dmDisplayFrequency = refreshrate;
 		gdevmode.dmSize = sizeof (gdevmode);
 		if (ChangeDisplaySettings (&gdevmode, CDS_FULLSCREEN) != DISP_CHANGE_SUCCESSFUL)
 		{
