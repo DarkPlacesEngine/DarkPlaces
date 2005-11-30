@@ -62,8 +62,6 @@ int r_view_z;
 int r_view_width;
 int r_view_height;
 int r_view_depth;
-float r_view_fov_x;
-float r_view_fov_y;
 matrix4x4_t r_view_matrix;
 
 //
@@ -716,34 +714,118 @@ static void R_SetFrustum(void)
 	Matrix4x4_ToVectors(&r_view_matrix, r_viewforward, r_viewleft, r_viewup, r_vieworigin);
 	VectorNegate(r_viewleft, r_viewright);
 
-	// LordHavoc: note to all quake engine coders, the special case for 90
-	// degrees assumed a square view (wrong), so I removed it, Quake2 has it
-	// disabled as well.
+#if 0
+	frustum[0].normal[0] = 0 - 1.0 / r_refdef.frustum_x;
+	frustum[0].normal[1] = 0 - 0;
+	frustum[0].normal[2] = -1 - 0;
+	frustum[1].normal[0] = 0 + 1.0 / r_refdef.frustum_x;
+	frustum[1].normal[1] = 0 + 0;
+	frustum[1].normal[2] = -1 + 0;
+	frustum[2].normal[0] = 0 - 0;
+	frustum[2].normal[1] = 0 - 1.0 / r_refdef.frustum_y;
+	frustum[2].normal[2] = -1 - 0;
+	frustum[3].normal[0] = 0 + 0;
+	frustum[3].normal[1] = 0 + 1.0 / r_refdef.frustum_y;
+	frustum[3].normal[2] = -1 + 0;
+#endif
+
+#if 0
+	zNear = 1.0;
+	nudge = 1.0 - 1.0 / (1<<23);
+	frustum[4].normal[0] = 0 - 0;
+	frustum[4].normal[1] = 0 - 0;
+	frustum[4].normal[2] = -1 - -nudge;
+	frustum[4].dist = 0 - -2 * zNear * nudge;
+	frustum[5].normal[0] = 0 + 0;
+	frustum[5].normal[1] = 0 + 0;
+	frustum[5].normal[2] = -1 + -nudge;
+	frustum[5].dist = 0 + -2 * zNear * nudge;
+#endif
+
+
+
+#if 0
+	frustum[0].normal[0] = m[3] - m[0];
+	frustum[0].normal[1] = m[7] - m[4];
+	frustum[0].normal[2] = m[11] - m[8];
+	frustum[0].dist = m[15] - m[12];
+
+	frustum[1].normal[0] = m[3] + m[0];
+	frustum[1].normal[1] = m[7] + m[4];
+	frustum[1].normal[2] = m[11] + m[8];
+	frustum[1].dist = m[15] + m[12];
+
+	frustum[2].normal[0] = m[3] - m[1];
+	frustum[2].normal[1] = m[7] - m[5];
+	frustum[2].normal[2] = m[11] - m[9];
+	frustum[2].dist = m[15] - m[13];
+
+	frustum[3].normal[0] = m[3] + m[1];
+	frustum[3].normal[1] = m[7] + m[5];
+	frustum[3].normal[2] = m[11] + m[9];
+	frustum[3].dist = m[15] + m[13];
+
+	frustum[4].normal[0] = m[3] - m[2];
+	frustum[4].normal[1] = m[7] - m[6];
+	frustum[4].normal[2] = m[11] - m[10];
+	frustum[4].dist = m[15] - m[14];
+
+	frustum[5].normal[0] = m[3] + m[2];
+	frustum[5].normal[1] = m[7] + m[6];
+	frustum[5].normal[2] = m[11] + m[10];
+	frustum[5].dist = m[15] + m[14];
+#endif
+
+
+
+	VectorMAM(1, r_viewforward, 1.0 / -r_refdef.frustum_x, r_viewleft, frustum[0].normal);
+	VectorMAM(1, r_viewforward, 1.0 /  r_refdef.frustum_x, r_viewleft, frustum[1].normal);
+	VectorMAM(1, r_viewforward, 1.0 / -r_refdef.frustum_y, r_viewup, frustum[2].normal);
+	VectorMAM(1, r_viewforward, 1.0 /  r_refdef.frustum_y, r_viewup, frustum[3].normal);
+	VectorCopy(r_viewforward, frustum[4].normal);
+	VectorNormalize(frustum[0].normal);
+	VectorNormalize(frustum[1].normal);
+	VectorNormalize(frustum[2].normal);
+	VectorNormalize(frustum[3].normal);
+	frustum[0].dist = DotProduct (r_vieworigin, frustum[0].normal);
+	frustum[1].dist = DotProduct (r_vieworigin, frustum[1].normal);
+	frustum[2].dist = DotProduct (r_vieworigin, frustum[2].normal);
+	frustum[3].dist = DotProduct (r_vieworigin, frustum[3].normal);
+	frustum[4].dist = DotProduct (r_vieworigin, frustum[4].normal) + 1.0f;
+	PlaneClassify(&frustum[0]);
+	PlaneClassify(&frustum[1]);
+	PlaneClassify(&frustum[2]);
+	PlaneClassify(&frustum[3]);
+	PlaneClassify(&frustum[4]);
+
+	// LordHavoc: note to all quake engine coders, Quake had a special case
+	// for 90 degrees which assumed a square view (wrong), so I removed it,
+	// Quake2 has it disabled as well.
 
 	// rotate R_VIEWFORWARD right by FOV_X/2 degrees
-	RotatePointAroundVector( frustum[0].normal, r_viewup, r_viewforward, -(90 - r_view_fov_x / 2));
-	frustum[0].dist = DotProduct (r_vieworigin, frustum[0].normal);
-	PlaneClassify(&frustum[0]);
+	//RotatePointAroundVector( frustum[0].normal, r_viewup, r_viewforward, -(90 - r_refdef.fov_x / 2));
+	//frustum[0].dist = DotProduct (r_vieworigin, frustum[0].normal);
+	//PlaneClassify(&frustum[0]);
 
 	// rotate R_VIEWFORWARD left by FOV_X/2 degrees
-	RotatePointAroundVector( frustum[1].normal, r_viewup, r_viewforward, (90 - r_view_fov_x / 2));
-	frustum[1].dist = DotProduct (r_vieworigin, frustum[1].normal);
-	PlaneClassify(&frustum[1]);
+	//RotatePointAroundVector( frustum[1].normal, r_viewup, r_viewforward, (90 - r_refdef.fov_x / 2));
+	//frustum[1].dist = DotProduct (r_vieworigin, frustum[1].normal);
+	//PlaneClassify(&frustum[1]);
 
 	// rotate R_VIEWFORWARD up by FOV_X/2 degrees
-	RotatePointAroundVector( frustum[2].normal, r_viewleft, r_viewforward, -(90 - r_view_fov_y / 2));
-	frustum[2].dist = DotProduct (r_vieworigin, frustum[2].normal);
-	PlaneClassify(&frustum[2]);
+	//RotatePointAroundVector( frustum[2].normal, r_viewleft, r_viewforward, -(90 - r_refdef.fov_y / 2));
+	//frustum[2].dist = DotProduct (r_vieworigin, frustum[2].normal);
+	//PlaneClassify(&frustum[2]);
 
 	// rotate R_VIEWFORWARD down by FOV_X/2 degrees
-	RotatePointAroundVector( frustum[3].normal, r_viewleft, r_viewforward, (90 - r_view_fov_y / 2));
-	frustum[3].dist = DotProduct (r_vieworigin, frustum[3].normal);
-	PlaneClassify(&frustum[3]);
+	//RotatePointAroundVector( frustum[3].normal, r_viewleft, r_viewforward, (90 - r_refdef.fov_y / 2));
+	//frustum[3].dist = DotProduct (r_vieworigin, frustum[3].normal);
+	//PlaneClassify(&frustum[3]);
 
 	// nearclip plane
-	VectorCopy(r_viewforward, frustum[4].normal);
-	frustum[4].dist = DotProduct (r_vieworigin, frustum[4].normal) + 1.0f;
-	PlaneClassify(&frustum[4]);
+	//VectorCopy(r_viewforward, frustum[4].normal);
+	//frustum[4].dist = DotProduct (r_vieworigin, frustum[4].normal) + 1.0f;
+	//PlaneClassify(&frustum[4]);
 }
 
 static void R_BlendView(void)
@@ -981,8 +1063,6 @@ void R_RenderView(void)
 	r_view_x = bound(0, r_refdef.x, vid.width - r_refdef.width);
 	r_view_y = bound(0, r_refdef.y, vid.height - r_refdef.height);
 	r_view_z = 0;
-	r_view_fov_x = bound(1, r_refdef.fov_x, 170);
-	r_view_fov_y = bound(1, r_refdef.fov_y, 170);
 	r_view_matrix = r_refdef.viewentitymatrix;
 	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
 	r_rtworld = r_shadow_realtime_world.integer;
@@ -1034,9 +1114,9 @@ void R_RenderScene(void)
 
 	r_farclip = R_FarClip(r_vieworigin, r_viewforward, 768.0f) + 256.0f;
 	if (r_rtworldshadows || r_rtdlightshadows)
-		GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_view_fov_x, r_view_fov_y, 1.0f);
+		GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_refdef.frustum_x, r_refdef.frustum_y, 1.0f);
 	else
-		GL_SetupView_Mode_Perspective(r_view_fov_x, r_view_fov_y, 1.0f, r_farclip);
+		GL_SetupView_Mode_Perspective(r_refdef.frustum_x, r_refdef.frustum_y, 1.0f, r_farclip);
 
 	GL_SetupView_Orientation_FromEntity(&r_view_matrix);
 

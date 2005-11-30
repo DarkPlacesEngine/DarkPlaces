@@ -407,18 +407,18 @@ void CL_Move (void)
 		{
 			// strafing mode, all looking is movement
 			V_StopPitchDrift();
-			cl.cmd.sidemove += m_side.value * in_mouse_x * sensitivity.value * cl.viewzoom;
+			cl.cmd.sidemove += m_side.value * in_mouse_x * sensitivity.value;
 			if (noclip_anglehack)
-				cl.cmd.upmove -= m_forward.value * in_mouse_y * sensitivity.value * cl.viewzoom;
+				cl.cmd.upmove -= m_forward.value * in_mouse_y * sensitivity.value;
 			else
-				cl.cmd.forwardmove -= m_forward.value * in_mouse_y * sensitivity.value * cl.viewzoom;
+				cl.cmd.forwardmove -= m_forward.value * in_mouse_y * sensitivity.value;
 		}
 		else if ((in_mlook.state & 1) || freelook.integer)
 		{
 			// mouselook, lookstrafe causes turning to become strafing
 			V_StopPitchDrift();
 			if (lookstrafe.integer)
-				cl.cmd.sidemove += m_side.value * in_mouse_x * sensitivity.value * cl.viewzoom;
+				cl.cmd.sidemove += m_side.value * in_mouse_x * sensitivity.value;
 			else
 				cl.viewangles[YAW] -= m_yaw.value * in_mouse_x * sensitivity.value * cl.viewzoom;
 			cl.viewangles[PITCH] += m_pitch.value * in_mouse_y * sensitivity.value * cl.viewzoom;
@@ -427,7 +427,7 @@ void CL_Move (void)
 		{
 			// non-mouselook, yaw turning and forward/back movement
 			cl.viewangles[YAW] -= m_yaw.value * in_mouse_x * sensitivity.value * cl.viewzoom;
-			cl.cmd.forwardmove -= m_forward.value * in_mouse_y * sensitivity.value * cl.viewzoom;
+			cl.cmd.forwardmove -= m_forward.value * in_mouse_y * sensitivity.value;
 		}
 	}
 
@@ -471,8 +471,8 @@ void CL_UpdatePrydonCursor(void)
 	cl.cmd.cursor_screen[1] = bound(-1, cl.cmd.cursor_screen[1], 1);
 	cl.cmd.cursor_screen[2] = 1;
 
-	scale[0] = -tan(r_refdef.fov_x * M_PI / 360.0);
-	scale[1] = -tan(r_refdef.fov_y * M_PI / 360.0);
+	scale[0] = -r_refdef.frustum_x;
+	scale[1] = -r_refdef.frustum_y;
 	scale[2] = 1;
 
 	// trace distance

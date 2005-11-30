@@ -162,8 +162,6 @@ extern int r_view_z;
 extern int r_view_width;
 extern int r_view_height;
 extern int r_view_depth;
-extern float r_view_fov_x;
-extern float r_view_fov_y;
 extern matrix4x4_t r_view_matrix;
 
 extern	mleaf_t		*r_viewleaf, *r_oldviewleaf;
