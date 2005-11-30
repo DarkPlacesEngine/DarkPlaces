@@ -31,6 +31,8 @@
 // Tell startup code that we have a client
 int cl_available = true;
 
+qboolean vid_supportrefreshrate = false;
+
 // AGL prototypes
 AGLPixelFormat (*qaglChoosePixelFormat) (const AGLDevice *gdevs, GLint ndev, const GLint *attribList);
 AGLContext (*qaglCreateContext) (AGLPixelFormat pix, AGLContext share);
@@ -299,7 +301,7 @@ static void VID_BuildAGLAttrib(GLint *attrib, int stencil, qboolean fullscreen)
 	*attrib++ = AGL_NONE;
 }
 
-int VID_InitMode(int fullscreen, int width, int height, int bpp)
+int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate)
 {
     const EventTypeSpec winEvents[] =
 	{

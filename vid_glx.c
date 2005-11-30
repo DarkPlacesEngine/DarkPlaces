@@ -45,6 +45,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // Tell startup code that we have a client
 int cl_available = true;
 
+// note: if we used the XRandR extension we could support refresh rates
+qboolean vid_supportrefreshrate = false;
+
 //GLX prototypes
 XVisualInfo *(GLAPIENTRY *qglXChooseVisual)(Display *dpy, int screen, int *attribList);
 GLXContext (GLAPIENTRY *qglXCreateContext)(Display *dpy, XVisualInfo *vis, GLXContext shareList, Bool direct);
@@ -625,7 +628,7 @@ void VID_BuildGLXAttrib(int *attrib, int stencil)
 	*attrib++ = None;
 }
 
-int VID_InitMode(int fullscreen, int width, int height, int bpp)
+int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate)
 {
 	int i;
 	int attrib[32];

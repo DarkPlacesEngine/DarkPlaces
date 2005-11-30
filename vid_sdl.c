@@ -23,6 +23,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // Tell startup code that we have a client
 int cl_available = true;
+
+qboolean vid_supportrefreshrate = false;
+
 static qboolean vid_usingmouse;
 static qboolean vid_isfullscreen;
 
@@ -360,7 +363,7 @@ static void VID_OutputVersion()
 					version->major, version->minor, version->patch );
 }
 
-int VID_InitMode(int fullscreen, int width, int height, int bpp)
+int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate)
 {
 	int i;
 	int flags = SDL_OPENGL;
