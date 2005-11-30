@@ -869,11 +869,11 @@ typedef struct refdef_s
 {
 	// area to render in
 	int x, y, width, height;
-	float fov_x, fov_y;
+	float frustum_x, frustum_y;
 
 	// these are set for water warping before
-	// fov_x/fov_y are calculated
-	float fovscale_x, fovscale_y;
+	// frustum_x/frustum_y are calculated
+	float frustumscale_x, frustumscale_y;
 
 	// view transform
 	matrix4x4_t viewentitymatrix;

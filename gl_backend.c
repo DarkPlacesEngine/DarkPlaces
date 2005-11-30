@@ -274,9 +274,8 @@ void GL_SetupView_Orientation_FromEntity(matrix4x4_t *matrix)
 	memset(&backend_modelmatrix, 0, sizeof(backend_modelmatrix));
 }
 
-void GL_SetupView_Mode_Perspective (double fovx, double fovy, double zNear, double zFar)
+void GL_SetupView_Mode_Perspective (double frustumx, double frustumy, double zNear, double zFar)
 {
-	double xmax, ymax;
 	double m[16];
 
 	if (!r_render.integer)
@@ -285,11 +284,8 @@ void GL_SetupView_Mode_Perspective (double fovx, double fovy, double zNear, doub
 	// set up viewpoint
 	qglMatrixMode(GL_PROJECTION);CHECKGLERROR
 	qglLoadIdentity();CHECKGLERROR
-	// pyramid slopes
-	xmax = zNear * tan(fovx * M_PI / 360.0);
-	ymax = zNear * tan(fovy * M_PI / 360.0);
 	// set view pyramid
-	qglFrustum(-xmax, xmax, -ymax, ymax, zNear, zFar);CHECKGLERROR
+	qglFrustum(-frustumx * zNear, frustumx * zNear, -frustumy * zNear, frustumy * zNear, zNear, zFar);CHECKGLERROR
 	qglGetDoublev(GL_PROJECTION_MATRIX, m);
 	backend_projectmatrix.m[0][0] = m[0];
 	backend_projectmatrix.m[1][0] = m[1];
@@ -311,7 +307,7 @@ void GL_SetupView_Mode_Perspective (double fovx, double fovy, double zNear, doub
 	GL_SetupView_Orientation_Identity();
 }
 
-void GL_SetupView_Mode_PerspectiveInfiniteFarClip (double fovx, double fovy, double zNear)
+void GL_SetupView_Mode_PerspectiveInfiniteFarClip (double frustumx, double frustumy, double zNear)
 {
 	double nudge, m[16];
 
@@ -323,12 +319,12 @@ void GL_SetupView_Mode_PerspectiveInfiniteFarClip (double fovx, double fovy, dou
 	qglLoadIdentity();CHECKGLERROR
 	// set view pyramid
 	nudge = 1.0 - 1.0 / (1<<23);
-	m[ 0] = 1.0 / tan(fovx * M_PI / 360.0);
+	m[ 0] = 1.0 / frustumx;
 	m[ 1] = 0;
 	m[ 2] = 0;
 	m[ 3] = 0;
 	m[ 4] = 0;
-	m[ 5] = 1.0 / tan(fovy * M_PI / 360.0);
+	m[ 5] = 1.0 / frustumy;
 	m[ 6] = 0;
 	m[ 7] = 0;
 	m[ 8] = 0;
@@ -1737,17 +1733,6 @@ void R_ClearScreen(void)
 	}
 }
 
-/*
-====================
-CalcFov
-====================
-*/
-float CalcFov (float fov_x, float width, float height)
-{
-	// calculate vision size and alter by aspect, then convert back to angle
-	return atan (((height/width)/vid_pixelaspect.value)*tan(fov_x/360.0*M_PI))*360.0/M_PI;
-}
-
 int r_stereo_side;
 
 void SCR_DrawScreen (void)
@@ -1797,8 +1782,16 @@ void SCR_DrawScreen (void)
 			}
 
 			// LordHavoc: viewzoom (zoom in for sniper rifles, etc)
-			r_refdef.fov_x = scr_fov.value * r_refdef.fovscale_x;
-			r_refdef.fov_y = CalcFov (scr_fov.value, r_refdef.width, r_refdef.height) * r_refdef.fovscale_y;
+			// LordHavoc: this is designed to produce widescreen fov values
+			// when the screen is wider than 4/3 width/height aspect, to do
+			// this it simply assumes the requested fov is the vertical fov
+			// for a 4x3 display, if the ratio is not 4x3 this makes the fov
+			// higher/lower according to the ratio
+			r_refdef.frustum_y = tan(scr_fov.value * cl.viewzoom * M_PI / 360.0) * (3.0/4.0);
+			r_refdef.frustum_x = r_refdef.frustum_y * (float)r_refdef.width / (float)r_refdef.height / vid_pixelheight.value;
+
+			r_refdef.frustum_x *= r_refdef.frustumscale_x;
+			r_refdef.frustum_y *= r_refdef.frustumscale_y;
 
 			R_RenderView();
 
@@ -1810,8 +1803,12 @@ void SCR_DrawScreen (void)
 				r_refdef.height = vid.height * sizey;
 				r_refdef.x = (vid.width - r_refdef.width)/2;
 				r_refdef.y = 0;
-				r_refdef.fov_x = scr_zoomwindow_fov.value * r_refdef.fovscale_x;
-				r_refdef.fov_y = CalcFov(scr_zoomwindow_fov.value, r_refdef.width, r_refdef.height) * r_refdef.fovscale_y;
+
+				r_refdef.frustum_y = tan(scr_zoomwindow_fov.value * cl.viewzoom * M_PI / 360.0) * (3.0/4.0);
+				r_refdef.frustum_x = r_refdef.frustum_y * vid_pixelheight.value * (float)r_refdef.width / (float)r_refdef.height;
+
+				r_refdef.frustum_x *= r_refdef.frustumscale_x;
+				r_refdef.frustum_y *= r_refdef.frustumscale_y;
 
 				R_RenderView();
 			}

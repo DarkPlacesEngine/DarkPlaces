@@ -535,8 +535,6 @@ void R_DrawQueue(void)
 	r_view_x = bound(0, r_refdef.x, vid.width - r_refdef.width);
 	r_view_y = bound(0, r_refdef.y, vid.height - r_refdef.height);
 	r_view_z = 0;
-	r_view_fov_x = bound(0.1, r_refdef.fov_x, 170);
-	r_view_fov_y = bound(0.1, r_refdef.fov_y, 170);
 	r_view_matrix = r_refdef.viewentitymatrix;
 	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
 

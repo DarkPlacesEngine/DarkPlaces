@@ -514,8 +514,8 @@ void V_CalcViewBlend(void)
 	r_refdef.viewblend[1] = 0;
 	r_refdef.viewblend[2] = 0;
 	r_refdef.viewblend[3] = 0;
-	r_refdef.fovscale_x = cl.viewzoom;
-	r_refdef.fovscale_y = cl.viewzoom;
+	r_refdef.frustumscale_x = 1;
+	r_refdef.frustumscale_y = 1;
 	if (cls.state == ca_connected && cls.signon == SIGNONS && gl_polyblend.value > 0)
 	{
 		// set contents color
@@ -525,8 +525,8 @@ void V_CalcViewBlend(void)
 		supercontents = CL_PointSuperContents(vieworigin);
 		if (supercontents & SUPERCONTENTS_LIQUIDSMASK)
 		{
-			r_refdef.fovscale_x *= 1 - (((sin(cl.time * 4.7) + 1) * 0.015) * r_waterwarp.value);
-			r_refdef.fovscale_y *= 1 - (((sin(cl.time * 3.0) + 1) * 0.015) * r_waterwarp.value);
+			r_refdef.frustumscale_x *= 1 - (((sin(cl.time * 4.7) + 1) * 0.015) * r_waterwarp.value);
+			r_refdef.frustumscale_y *= 1 - (((sin(cl.time * 3.0) + 1) * 0.015) * r_waterwarp.value);
 			if (supercontents & SUPERCONTENTS_LAVA)
 			{
 				cl.cshifts[CSHIFT_CONTENTS].destcolor[0] = 255;

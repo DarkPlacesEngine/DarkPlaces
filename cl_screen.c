@@ -18,7 +18,7 @@ cvar_t scr_showbrand = {0, "showbrand","0"};
 cvar_t scr_printspeed = {0, "scr_printspeed","8"};
 cvar_t vid_conwidth = {CVAR_SAVE, "vid_conwidth", "640"};
 cvar_t vid_conheight = {CVAR_SAVE, "vid_conheight", "480"};
-cvar_t vid_pixelaspect = {CVAR_SAVE, "vid_pixelaspect", "1"};
+cvar_t vid_pixelheight = {CVAR_SAVE, "vid_pixelheight", "1"};
 cvar_t scr_screenshot_jpeg = {CVAR_SAVE, "scr_screenshot_jpeg","1"};
 cvar_t scr_screenshot_jpeg_quality = {CVAR_SAVE, "scr_screenshot_jpeg_quality","0.9"};
 cvar_t scr_screenshot_gamma = {CVAR_SAVE, "scr_screenshot_gamma","2.2"};
@@ -605,7 +605,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_printspeed);
 	Cvar_RegisterVariable (&vid_conwidth);
 	Cvar_RegisterVariable (&vid_conheight);
-	Cvar_RegisterVariable (&vid_pixelaspect);
+	Cvar_RegisterVariable (&vid_pixelheight);
 	Cvar_RegisterVariable (&scr_screenshot_jpeg);
 	Cvar_RegisterVariable (&scr_screenshot_jpeg_quality);
 	Cvar_RegisterVariable (&scr_screenshot_gamma);
@@ -1232,8 +1232,8 @@ static void R_Envmap_f (void)
 	r_refdef.width = size;
 	r_refdef.height = size;
 
-	r_refdef.fov_x = 90;
-	r_refdef.fov_y = 90;
+	r_refdef.frustum_x = tan(90 * M_PI / 360.0);
+	r_refdef.frustum_y = tan(90 * M_PI / 360.0);
 
 	buffer1 = (unsigned char *)Mem_Alloc(tempmempool, size * size * 3);
 	buffer2 = (unsigned char *)Mem_Alloc(tempmempool, size * size * 3);
