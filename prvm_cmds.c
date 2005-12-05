@@ -473,7 +473,6 @@ cmd (string, ...)
 void VM_localcmd (void)
 {
 	char string[VM_STRINGTEMP_LENGTH];
-	VM_SAFEPARMCOUNT(1,VM_localcmd);
 	VM_VarString(0, string, sizeof(string));
 	Cbuf_AddText(string);
 }
