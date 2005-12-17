@@ -38,7 +38,7 @@ static cvar_t sv_masters [] =
 	{CVAR_SAVE, "sv_master4", ""},
 	{0, "sv_masterextra1", "ghdigital.com"}, // admin: LordHavoc
 	{0, "sv_masterextra2", "dpmaster.deathmask.net"}, // admin: Willis
-	{0, "sv_masterextra3", "blaze.mindphukd.org"}, // admin: Venim
+	{0, "sv_masterextra3", "12.166.196.192"}, // admin: Venim
 	{0, "sv_masterextra4", "excalibur.nvg.ntnu.no"}, // admin: tChr
 	{0, NULL, NULL}
 };
