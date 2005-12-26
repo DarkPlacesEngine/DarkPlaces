@@ -471,6 +471,13 @@ void Sbar_DrawXNum (int x, int y, int num, int digits, int lettersize, float r, 
 //=============================================================================
 
 
+int Sbar_IsTeammatch()
+{
+	// currently only nexuiz uses the team score board
+	return ((gamemode == GAME_NEXUIZ)
+		&& (teamplay.integer > 0));
+}
+
 /*
 ===============
 Sbar_SortFrags
@@ -478,11 +485,14 @@ Sbar_SortFrags
 */
 static int fragsort[MAX_SCOREBOARD];
 static int scoreboardlines;
+static scoreboard_t teams[MAX_SCOREBOARD];
+static int teamsort[MAX_SCOREBOARD];
+static int teamlines;
 void Sbar_SortFrags (void)
 {
 	int		i, j, k;
 
-// sort by frags
+	// sort by frags
 	scoreboardlines = 0;
 	for (i=0 ; i<cl.maxclients ; i++)
 	{
@@ -501,6 +511,61 @@ void Sbar_SortFrags (void)
 				fragsort[j] = fragsort[j+1];
 				fragsort[j+1] = k;
 			}
+
+	teamlines = 0;
+	if (Sbar_IsTeammatch ())
+	{
+		// now sort players by teams.
+		for (i=0 ; i<scoreboardlines ; i++)
+		{
+			for (j=0 ; j<scoreboardlines-1-i ; j++)
+			{
+				if (cl.scores[fragsort[j]].colors < cl.scores[fragsort[j+1]].colors)
+				{
+					k = fragsort[j];
+					fragsort[j] = fragsort[j+1];
+					fragsort[j+1] = k;
+				}
+			}
+		}
+
+		// calculate team scores
+		int color = -1;
+		for (i=0 ; i<scoreboardlines ; i++)
+		{
+			if (color != cl.scores[fragsort[i]].colors)
+			{
+				color = cl.scores[fragsort[i]].colors;
+				teamlines++;
+				strcpy(teams[teamlines-1].name, "Total Team Score");
+				teams[teamlines-1].frags = 0;
+				teams[teamlines-1].colors = cl.scores[fragsort[i]].colors;
+			}
+
+			if (cl.scores[fragsort[i]].frags != -666)
+			{
+				// do not add spedcators
+				// (ugly hack for nexuiz)
+				teams[teamlines-1].frags += cl.scores[fragsort[i]].frags;
+			}
+		}
+
+		// now sort teams by scores.
+		for (i=0 ; i<teamlines ; i++)
+			teamsort[i] = i;
+		for (i=0 ; i<teamlines ; i++)
+		{
+			for (j=0 ; j<teamlines-1-i ; j++)
+			{
+				if (teams[teamsort[j]].frags < teams[teamsort[j+1]].frags)
+				{
+					k = teamsort[j];
+					teamsort[j] = teamsort[j+1];
+					teamsort[j+1] = k;
+				}
+			}
+		}
+	}
 }
 
 /*
@@ -1321,6 +1386,15 @@ void Sbar_DeathmatchOverlay (void)
 	// draw the text
 	x = (vid_conwidth.integer - (6 + 15) * 8) / 2;
 	y = 40;
+
+	if (Sbar_IsTeammatch ())
+	{
+		// show team scores first
+		for (i = 0;i < teamlines && y < vid_conheight.integer;i++)
+			y += Sbar_PrintScoreboardItem((teams + teamsort[i]), x, y);
+		y += 5;
+	}
+
 	for (i = 0;i < scoreboardlines && y < vid_conheight.integer;i++)
 		y += Sbar_PrintScoreboardItem(cl.scores + fragsort[i], x, y);
 }
