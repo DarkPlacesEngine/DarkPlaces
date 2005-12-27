@@ -9,9 +9,10 @@ cvar_t r_meshqueue_sort = {0, "r_meshqueue_sort", "0"};
 typedef struct meshqueue_s
 {
 	struct meshqueue_s *next;
-	void (*callback)(const void *data1, int data2);
-	const void *data1;
-	int data2;
+	void (*callback)(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight);
+	const entity_render_t *ent;
+	int surfacenumber;
+	const rtlight_t *rtlight;
 	float dist;
 }
 meshqueue_t;
@@ -40,7 +41,7 @@ void R_MeshQueue_Render(void)
 	if (!mq_count)
 		return;
 	for (mq = mq_listhead;mq;mq = mq->next)
-		mq->callback(mq->data1, mq->data2);
+		mq->callback(mq->ent, mq->surfacenumber, mq->rtlight);
 	mq_count = 0;
 	mq_listhead = NULL;
 }
@@ -58,20 +59,21 @@ static void R_MeshQueue_EnlargeTransparentArray(int newtotal)
 	mqt_total = newtotal;
 }
 
-void R_MeshQueue_Add(void (*callback)(const void *data1, int data2), const void *data1, int data2)
+void R_MeshQueue_Add(void (*callback)(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight), const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
 {
 	meshqueue_t *mq, **mqnext;
 	if (r_meshqueue_immediaterender.integer)
 	{
-		callback(data1, data2);
+		callback(ent, surfacenumber, rtlight);
 		return;
 	}
 	if (mq_count >= mq_total)
 		R_MeshQueue_Render();
 	mq = &mq_array[mq_count++];
 	mq->callback = callback;
-	mq->data1 = data1;
-	mq->data2 = data2;
+	mq->ent = ent;
+	mq->surfacenumber = surfacenumber;
+	mq->rtlight = rtlight;
 
 	if (r_meshqueue_sort.integer)
 	{
@@ -80,12 +82,17 @@ void R_MeshQueue_Add(void (*callback)(const void *data1, int data2), const void 
 		{
 			if (mq->callback == (*mqnext)->callback)
 			{
-				if (mq->data1 == (*mqnext)->data1)
+				if (mq->ent == (*mqnext)->ent)
 				{
-					if (mq->data2 <= (*mqnext)->data2)
+					if (mq->surfacenumber == (*mqnext)->surfacenumber)
+					{
+						if (mq->rtlight <= (*mqnext)->rtlight)
+							break;
+					}
+					else if (mq->surfacenumber < (*mqnext)->surfacenumber)
 						break;
 				}
-				else if (mq->data1 < (*mqnext)->data1)
+				else if (mq->ent < (*mqnext)->ent)
 					break;
 			}
 			else if (mq->callback < (*mqnext)->callback)
@@ -101,15 +108,16 @@ void R_MeshQueue_Add(void (*callback)(const void *data1, int data2), const void 
 	*mqnext = mq;
 }
 
-void R_MeshQueue_AddTransparent(const vec3_t center, void (*callback)(const void *data1, int data2), const void *data1, int data2)
+void R_MeshQueue_AddTransparent(const vec3_t center, void (*callback)(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight), const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
 {
 	meshqueue_t *mq;
 	if (mqt_count >= mqt_total)
 		R_MeshQueue_EnlargeTransparentArray(mqt_total + 100);
 	mq = &mqt_array[mqt_count++];
 	mq->callback = callback;
-	mq->data1 = data1;
-	mq->data2 = data2;
+	mq->ent = ent;
+	mq->surfacenumber = surfacenumber;
+	mq->rtlight = rtlight;
 	mq->dist = DotProduct(center, r_viewforward) - mqt_viewplanedist;
 	mq->next = NULL;
 	mqt_viewmaxdist = max(mqt_viewmaxdist, mq->dist);
@@ -143,7 +151,7 @@ void R_MeshQueue_RenderTransparent(void)
 	for (i = 4095;i >= 0;i--)
 		if (hash[i])
 			for (mqt = hash[i];mqt;mqt = mqt->next)
-				mqt->callback(mqt->data1, mqt->data2);
+				mqt->callback(mqt->ent, mqt->surfacenumber, mqt->rtlight);
 	mqt_count = 0;
 }
 

@@ -1281,9 +1281,8 @@ float nomodelcolor4f[6*4] =
 	0.5f, 0.0f, 0.0f, 1.0f
 };
 
-void R_DrawNoModelCallback(const void *calldata1, int calldata2)
+void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
 {
-	const entity_render_t *ent = (entity_render_t *)calldata1;
 	int i;
 	float f1, f2, *c;
 	float color4f[6*4];
@@ -1339,7 +1338,7 @@ void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 void R_DrawNoModel(entity_render_t *ent)
 {
 	//if ((ent->effects & EF_ADDITIVE) || (ent->alpha < 1))
-		R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_vieworigin : ent->origin, R_DrawNoModelCallback, ent, 0);
+		R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_vieworigin : ent->origin, R_DrawNoModel_TransparentCallback, ent, 0, r_shadow_rtlight);
 	//else
 	//	R_DrawNoModelCallback(ent, 0);
 }
@@ -1507,7 +1506,6 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 {
 	// FIXME: identify models using a better check than ent->model->brush.shadowmesh
 	//int lightmode = ((ent->effects & EF_FULLBRIGHT) || ent->model->brush.shadowmesh) ? 0 : 2;
-	float currentalpha;
 
 	{
 		texture_t *texture = t;
@@ -1530,14 +1528,14 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 	}
 
 	t->currentmaterialflags = t->basematerialflags;
-	currentalpha = ent->alpha;
+	t->currentalpha = ent->alpha;
 	if (t->basematerialflags & MATERIALFLAG_WATERALPHA)
-		currentalpha *= r_wateralpha.value;
+		t->currentalpha *= r_wateralpha.value;
 	if (!(ent->flags & RENDER_LIGHT))
 		t->currentmaterialflags |= MATERIALFLAG_FULLBRIGHT;
 	if (ent->effects & EF_ADDITIVE)
 		t->currentmaterialflags |= MATERIALFLAG_ADD | MATERIALFLAG_TRANSPARENT;
-	else if (currentalpha < 1)
+	else if (t->currentalpha < 1)
 		t->currentmaterialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_TRANSPARENT;
 	if (ent->effects & EF_NODEPTHTEST)
 		t->currentmaterialflags |= MATERIALFLAG_NODEPTHTEST;
@@ -1586,11 +1584,12 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 				currentbasetexture = (ent->colormap < 0 && t->skin.merged) ? t->skin.merged : t->skin.base;
 				if (t->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
 				{
-					R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_TEXTURE, currentbasetexture, &t->currenttexmatrix, ent->colormod[0], ent->colormod[1], ent->colormod[2], currentalpha);
+					// fullbright is not affected by r_lightmapintensity
+					R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_TEXTURE, currentbasetexture, &t->currenttexmatrix, ent->colormod[0], ent->colormod[1], ent->colormod[2], t->currentalpha);
 					if (ent->colormap >= 0 && t->skin.pants)
-						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->skin.pants, &t->currenttexmatrix, ent->colormap_pantscolor[0], ent->colormap_pantscolor[1], ent->colormap_pantscolor[2], currentalpha);
+						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->skin.pants, &t->currenttexmatrix, ent->colormap_pantscolor[0], ent->colormap_pantscolor[1], ent->colormap_pantscolor[2], t->currentalpha);
 					if (ent->colormap >= 0 && t->skin.shirt)
-						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->skin.shirt, &t->currenttexmatrix, ent->colormap_shirtcolor[0], ent->colormap_shirtcolor[1], ent->colormap_shirtcolor[2], currentalpha);
+						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->skin.shirt, &t->currenttexmatrix, ent->colormap_shirtcolor[0], ent->colormap_shirtcolor[1], ent->colormap_shirtcolor[2], t->currentalpha);
 				}
 				else
 				{
@@ -1601,32 +1600,30 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 					// applied to the color
 					if (ent->model->type == mod_brushq3)
 						colorscale *= r_refdef.lightstylevalue[0] * (1.0f / 256.0f);
-					// transparent and fullbright are not affected by r_lightmapintensity
-					if (!(t->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
-						colorscale *= r_lightmapintensity;
+					colorscale *= r_lightmapintensity;
 					if (r_textureunits.integer >= 2 && gl_combine.integer)
-						R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_LITTEXTURE_COMBINE, currentbasetexture, &t->currenttexmatrix, ent->colormod[0] * colorscale, ent->colormod[1] * colorscale, ent->colormod[2] * colorscale, currentalpha);
+						R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_LITTEXTURE_COMBINE, currentbasetexture, &t->currenttexmatrix, ent->colormod[0] * colorscale, ent->colormod[1] * colorscale, ent->colormod[2] * colorscale, t->currentalpha);
 					else if ((t->currentmaterialflags & MATERIALFLAG_TRANSPARENT) == 0)
-						R_Texture_AddLayer(t, true, GL_ONE, GL_ZERO, TEXTURELAYERTYPE_LITTEXTURE_MULTIPASS, currentbasetexture, &t->currenttexmatrix, ent->colormod[0] * colorscale * 0.5f, ent->colormod[1] * colorscale * 0.5f, ent->colormod[2] * colorscale * 0.5f, currentalpha);
+						R_Texture_AddLayer(t, true, GL_ONE, GL_ZERO, TEXTURELAYERTYPE_LITTEXTURE_MULTIPASS, currentbasetexture, &t->currenttexmatrix, ent->colormod[0] * colorscale * 0.5f, ent->colormod[1] * colorscale * 0.5f, ent->colormod[2] * colorscale * 0.5f, t->currentalpha);
 					else
-						R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_LITTEXTURE_VERTEX, currentbasetexture, &t->currenttexmatrix, ent->colormod[0] * colorscale, ent->colormod[1] * colorscale, ent->colormod[2] * colorscale, currentalpha);
+						R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_LITTEXTURE_VERTEX, currentbasetexture, &t->currenttexmatrix, ent->colormod[0] * colorscale, ent->colormod[1] * colorscale, ent->colormod[2] * colorscale, t->currentalpha);
 					if (r_ambient.value >= (1.0f/64.0f))
-						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, currentbasetexture, &t->currenttexmatrix, ent->colormod[0] * r_ambient.value * (1.0f / 64.0f), ent->colormod[1] * r_ambient.value * (1.0f / 64.0f), ent->colormod[2] * r_ambient.value * (1.0f / 64.0f), currentalpha);
+						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, currentbasetexture, &t->currenttexmatrix, ent->colormod[0] * r_ambient.value * (1.0f / 64.0f), ent->colormod[1] * r_ambient.value * (1.0f / 64.0f), ent->colormod[2] * r_ambient.value * (1.0f / 64.0f), t->currentalpha);
 					if (ent->colormap >= 0 && t->skin.pants)
 					{
-						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_LITTEXTURE_VERTEX, t->skin.pants, &t->currenttexmatrix, ent->colormap_pantscolor[0] * colorscale, ent->colormap_pantscolor[1] * colorscale, ent->colormap_pantscolor[2] * colorscale, currentalpha);
+						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_LITTEXTURE_VERTEX, t->skin.pants, &t->currenttexmatrix, ent->colormap_pantscolor[0] * colorscale, ent->colormap_pantscolor[1] * colorscale, ent->colormap_pantscolor[2] * colorscale, t->currentalpha);
 						if (r_ambient.value >= (1.0f/64.0f))
-							R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->skin.pants, &t->currenttexmatrix, ent->colormap_pantscolor[0] * r_ambient.value * (1.0f / 64.0f), ent->colormap_pantscolor[1] * r_ambient.value * (1.0f / 64.0f), ent->colormap_pantscolor[2] * r_ambient.value * (1.0f / 64.0f), currentalpha);
+							R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->skin.pants, &t->currenttexmatrix, ent->colormap_pantscolor[0] * r_ambient.value * (1.0f / 64.0f), ent->colormap_pantscolor[1] * r_ambient.value * (1.0f / 64.0f), ent->colormap_pantscolor[2] * r_ambient.value * (1.0f / 64.0f), t->currentalpha);
 					}
 					if (ent->colormap >= 0 && t->skin.shirt)
 					{
-						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_LITTEXTURE_VERTEX, t->skin.shirt, &t->currenttexmatrix, ent->colormap_shirtcolor[0] * colorscale, ent->colormap_shirtcolor[1] * colorscale, ent->colormap_shirtcolor[2] * colorscale, currentalpha);
+						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_LITTEXTURE_VERTEX, t->skin.shirt, &t->currenttexmatrix, ent->colormap_shirtcolor[0] * colorscale, ent->colormap_shirtcolor[1] * colorscale, ent->colormap_shirtcolor[2] * colorscale, t->currentalpha);
 						if (r_ambient.value >= (1.0f/64.0f))
-							R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->skin.shirt, &t->currenttexmatrix, ent->colormap_shirtcolor[0] * r_ambient.value * (1.0f / 64.0f), ent->colormap_shirtcolor[1] * r_ambient.value * (1.0f / 64.0f), ent->colormap_shirtcolor[2] * r_ambient.value * (1.0f / 64.0f), currentalpha);
+							R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->skin.shirt, &t->currenttexmatrix, ent->colormap_shirtcolor[0] * r_ambient.value * (1.0f / 64.0f), ent->colormap_shirtcolor[1] * r_ambient.value * (1.0f / 64.0f), ent->colormap_shirtcolor[2] * r_ambient.value * (1.0f / 64.0f), t->currentalpha);
 					}
 				}
 				if (t->skin.glow != NULL)
-					R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->skin.glow, &t->currenttexmatrix, 1, 1, 1, currentalpha);
+					R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->skin.glow, &t->currenttexmatrix, 1, 1, 1, t->currentalpha);
 				if (fogenabled && !(t->currentmaterialflags & MATERIALFLAG_ADD))
 				{
 					// if this is opaque use alpha blend which will darken the earlier
@@ -1640,7 +1637,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 					// were darkened by fog already, and we should not add fog color
 					// (because the background was not darkened, there is no fog color
 					// that was lost behind it).
-					R_Texture_AddLayer(t, false, GL_SRC_ALPHA, (t->currentmaterialflags & MATERIALFLAG_TRANSPARENT) ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA, TEXTURELAYERTYPE_FOG, t->skin.fog, &r_identitymatrix, fogcolor[0], fogcolor[1], fogcolor[2], currentalpha);
+					R_Texture_AddLayer(t, false, GL_SRC_ALPHA, (t->currentmaterialflags & MATERIALFLAG_TRANSPARENT) ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA, TEXTURELAYERTYPE_FOG, t->skin.fog, &r_identitymatrix, fogcolor[0], fogcolor[1], fogcolor[2], t->currentalpha);
 				}
 			}
 		}
@@ -2181,10 +2178,9 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 		qglEnable(GL_CULL_FACE);
 }
 
-static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata2)
+static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
 {
-	const entity_render_t *ent = (entity_render_t *)calldata1;
-	const msurface_t *surface = ent->model->data_surfaces + calldata2;
+	const msurface_t *surface = ent->model->data_surfaces + surfacenumber;
 	vec3_t modelorg;
 	texture_t *texture;
 
@@ -2215,7 +2211,7 @@ void R_QueueTextureSurfaceList(entity_render_t *ent, texture_t *texture, int tex
 				tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
 				tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
 				Matrix4x4_Transform(&ent->matrix, tempcenter, center);
-				R_MeshQueue_AddTransparent(texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_vieworigin : center, RSurfShader_Transparent_Callback, ent, surface - ent->model->data_surfaces);
+				R_MeshQueue_AddTransparent(texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_vieworigin : center, R_DrawSurface_TransparentCallback, ent, surface - ent->model->data_surfaces, r_shadow_rtlight);
 			}
 		}
 	}

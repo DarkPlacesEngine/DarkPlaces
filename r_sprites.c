@@ -1,9 +1,9 @@
 
 #include "quakedef.h"
+#include "r_shadow.h"
 
-void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
+void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
 {
-	const entity_render_t *ent = (entity_render_t *)calldata1;
 	int i;
 	vec3_t left, up, org, color, diffusecolor, diffusenormal;
 	mspriteframe_t *frame;
@@ -103,6 +103,6 @@ void R_Model_Sprite_Draw(entity_render_t *ent)
 	if (ent->frameblend[0].frame < 0)
 		return;
 
-	R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_vieworigin : ent->origin, R_DrawSpriteModelCallback, ent, 0);
+	R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_vieworigin : ent->origin, R_Model_Sprite_Draw_TransparentCallback, ent, 0, r_shadow_rtlight);
 }
 

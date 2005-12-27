@@ -117,6 +117,12 @@ typedef struct rtlight_s
 	// squared cullradius
 	//vec_t cullradius2;
 
+	// rendering properties, updated each time a light is rendered
+	// this is rtlight->color * d_lightstylevalue
+	vec3_t currentcolor;
+	// this is R_Shadow_Cubemap(rtlight->cubemapname)
+	rtexture_t *currentcubemap;
+
 	// lightmap renderer stuff (remove someday!)
 	// the size of the light
 	vec_t lightmap_cullradius;

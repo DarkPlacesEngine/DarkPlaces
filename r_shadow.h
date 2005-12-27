@@ -36,9 +36,32 @@ extern mempool_t *r_shadow_mempool;
 void R_Shadow_Init(void);
 void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, float projectdistance, int nummarktris, const int *marktris);
 void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *invertex3f, const int *elements, const vec3_t projectorigin, const vec3_t lightmins, const vec3_t lightmaxs, const vec3_t surfacemins, const vec3_t surfacemaxs);
-void R_Shadow_RenderSurfacesLighting(const entity_render_t *ent, const texture_t *texture, int numsurfaces, msurface_t **surfacelist, const vec3_t lightcolorbase, const vec3_t lightcolorpants, const vec3_t lightcolorshirt, rtexture_t *basetexture, rtexture_t *pantstexture, rtexture_t *shirttexture, rtexture_t *normalmaptexture, rtexture_t *glosstexture, float specularscale, const vec3_t modelorg);
+void R_Shadow_RenderSurfacesLighting(const entity_render_t *ent, const texture_t *texture, int numsurfaces, msurface_t **surfacelist);
+void R_Shadow_RenderMode_Begin(void);
+void R_Shadow_RenderMode_ActiveLight(rtlight_t *rtlight);
+void R_Shadow_RenderMode_Reset(void);
+void R_Shadow_RenderMode_StencilShadowVolumes(void);
+void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent);
+void R_Shadow_RenderMode_VisibleShadowVolumes(void);
+void R_Shadow_RenderMode_VisibleLighting(qboolean stenciltest, qboolean transparent);
+void R_Shadow_RenderMode_End(void);
+void R_Shadow_SetupEntityLight(const entity_render_t *ent);
+
 // light currently being rendered
 extern rtlight_t *r_shadow_rtlight;
+
+// this is the location of the eye in entity space
+extern vec3_t r_shadow_entityeyeorigin;
+// this is the location of the light in entity space
+extern vec3_t r_shadow_entitylightorigin;
+// this transforms entity coordinates to light filter cubemap coordinates
+// (also often used for other purposes)
+extern matrix4x4_t r_shadow_entitytolight;
+// based on entitytolight this transforms -1 to +1 to 0 to 1 for purposes
+// of attenuation texturing in full 3D (Z result often ignored)
+extern matrix4x4_t r_shadow_entitytoattenuationxyz;
+// this transforms only the Z to S, and T is always 0.5
+extern matrix4x4_t r_shadow_entitytoattenuationz;
 
 void R_Shadow_RenderVolume(int numvertices, int numtriangles, const float *vertex3f, const int *element3i);
 qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs);

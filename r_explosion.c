@@ -180,13 +180,12 @@ void R_NewExplosion(vec3_t org)
 	}
 }
 
-static void R_DrawExplosionCallback(const void *calldata1, int calldata2)
+static void R_DrawExplosion_TransparentCallback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
 {
+	const explosion_t *e = explosion + surfacenumber;
 	int numtriangles, numverts;
 	float alpha;
 	rmeshstate_t m;
-	const explosion_t *e;
-	e = (explosion_t *)calldata1;
 
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	GL_DepthMask(false);
@@ -258,6 +257,6 @@ void R_DrawExplosions(void)
 		return;
 	for (i = 0;i < MAX_EXPLOSIONS;i++)
 		if (r_refdef.time < explosion[i].endtime)
-			R_MeshQueue_AddTransparent(explosion[i].origin, R_DrawExplosionCallback, &explosion[i], 0);
+			R_MeshQueue_AddTransparent(explosion[i].origin, R_DrawExplosion_TransparentCallback, NULL, i, NULL);
 }
 
