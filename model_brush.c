@@ -1096,7 +1096,7 @@ void R_Q1BSP_LoadSplitSky (unsigned char *src, int width, int height, int bytesp
 	if (width != 256 || height != 128)
 	{
 		loadmodel->brush.solidskytexture = R_LoadTexture2D(loadmodel->texturepool, "sky_solidtexture", width, height, src, bytesperpixel == 4 ? TEXTYPE_RGBA : TEXTYPE_PALETTE, TEXF_PRECACHE, bytesperpixel == 1 ? palette_complete : NULL);
-		loadmodel->brush.alphaskytexture = NULL;;
+		loadmodel->brush.alphaskytexture = NULL;
 		return;
 	}
 
