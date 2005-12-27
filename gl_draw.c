@@ -353,16 +353,11 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 		{
 			if (!strcmp(path, "gfx/conchars"))
 			{
-				unsigned char *pix;
-				// conchars is a raw image and with the wrong transparent color
-				pix = (unsigned char *)p;
-				for (i = 0;i < 128 * 128;i++)
-					if (pix[i] == 0)
-						pix[i] = 255;
-				pic->tex = R_LoadTexture2D(drawtexturepool, path, 128, 128, pix, TEXTYPE_PALETTE, flags, palette_complete);
+				// conchars is a raw image and with color 0 as transparent instead of 255
+				pic->tex = R_LoadTexture2D(drawtexturepool, path, 128, 128, (unsigned char *)p, TEXTYPE_PALETTE, flags, palette_font);
 			}
 			else
-				pic->tex = R_LoadTexture2D(drawtexturepool, path, p->width, p->height, p->data, TEXTYPE_PALETTE, flags, palette_complete);
+				pic->tex = R_LoadTexture2D(drawtexturepool, path, p->width, p->height, p->data, TEXTYPE_PALETTE, flags, palette_transparent);
 		}
 	}
 

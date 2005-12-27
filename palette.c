@@ -2,14 +2,15 @@
 #include "quakedef.h"
 
 unsigned int palette_complete[256];
+unsigned int palette_font[256];
+unsigned int palette_alpha[256];
+unsigned int palette_nocolormap[256];
+unsigned int palette_nocolormapnofullbrights[256];
 unsigned int palette_nofullbrights[256];
 unsigned int palette_onlyfullbrights[256];
-unsigned int palette_nocolormapnofullbrights[256];
-unsigned int palette_nocolormap[256];
 unsigned int palette_pantsaswhite[256];
 unsigned int palette_shirtaswhite[256];
-unsigned int palette_alpha[256];
-unsigned int palette_font[256];
+unsigned int palette_transparent[256];
 
 // John Carmack said the quake palette.lmp can be considered public domain because it is not an important asset to id, so I include it here as a fallback if no external palette file is found.
 unsigned char host_quakepal[768] =
@@ -29,6 +30,7 @@ void Palette_SetupSpecialPalettes(void)
 	int pants_start, pants_end;
 	int shirt_start, shirt_end;
 	int reversed_start, reversed_end;
+	int transparentcolor;
 	unsigned char *colormap;
 	fs_offset_t filesize;
 
@@ -46,18 +48,21 @@ void Palette_SetupSpecialPalettes(void)
 	shirt_end = 32;
 	reversed_start = 128;
 	reversed_end = 224;
+	transparentcolor = 255;
+
+	for (i = 0;i < 256;i++)
+		palette_transparent[i] = palette_complete[i];
+	palette_transparent[transparentcolor] = 0;
 
 	for (i = 0;i < fullbright_start;i++)
 		palette_nofullbrights[i] = palette_complete[i];
-	for (i = fullbright_start;i < 255;i++)
+	for (i = fullbright_start;i < fullbright_end;i++)
 		palette_nofullbrights[i] = palette_complete[0];
-	palette_nofullbrights[255] = 0;
 
 	for (i = 0;i < 256;i++)
 		palette_onlyfullbrights[i] = palette_complete[0];
 	for (i = fullbright_start;i < fullbright_end;i++)
 		palette_onlyfullbrights[i] = palette_complete[i];
-	palette_onlyfullbrights[255] = 0;
 
 	for (i = 0;i < 256;i++)
 		palette_nocolormapnofullbrights[i] = palette_complete[i];
@@ -67,7 +72,6 @@ void Palette_SetupSpecialPalettes(void)
 		palette_nocolormapnofullbrights[i] = palette_complete[0];
 	for (i = fullbright_start;i < fullbright_end;i++)
 		palette_nocolormapnofullbrights[i] = palette_complete[0];
-	palette_nocolormapnofullbrights[255] = 0;
 
 	for (i = 0;i < 256;i++)
 		palette_nocolormap[i] = palette_complete[i];
@@ -75,7 +79,6 @@ void Palette_SetupSpecialPalettes(void)
 		palette_nocolormap[i] = palette_complete[0];
 	for (i = shirt_start;i < shirt_end;i++)
 		palette_nocolormap[i] = palette_complete[0];
-	palette_nocolormap[255] = 0;
 
 	for (i = 0;i < 256;i++)
 		palette_pantsaswhite[i] = palette_complete[0];
@@ -97,14 +100,13 @@ void Palette_SetupSpecialPalettes(void)
 			palette_shirtaswhite[i] = palette_complete[i - shirt_start];
 	}
 
-	for (i = 0;i < 255;i++)
+	for (i = 0;i < 256;i++)
 		palette_alpha[i] = 0xFFFFFFFF;
-	palette_alpha[255] = 0;
+	palette_alpha[transparentcolor] = 0;
 
-	palette_font[0] = 0;
-	for (i = 1;i < 255;i++)
+	for (i = 0;i < 256;i++)
 		palette_font[i] = palette_complete[i];
-	palette_font[255] = 0;
+	palette_font[0] = 0;
 }
 
 void BuildGammaTable8(float prescale, float gamma, float scale, float base, unsigned char *out)
@@ -199,14 +201,13 @@ void Palette_Init(void)
 		in = host_quakepal;
 	}
 	out = (unsigned char *) palette_complete; // palette is accessed as 32bit for speed reasons, but is created as 8bit bytes
-	for (i = 0;i < 255;i++)
+	for (i = 0;i < 256;i++)
 	{
 		*out++ = texturegammaramp[*in++];
 		*out++ = texturegammaramp[*in++];
 		*out++ = texturegammaramp[*in++];
 		*out++ = 255;
 	}
-	palette_complete[255] = 0; // completely transparent black
 	if (palfile)
 		Mem_Free(palfile);
 

@@ -571,7 +571,7 @@ unsigned char *LoadLMP (const unsigned char *f, int filesize, int matchwidth, in
 	else
 	{
 		image_buffer = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
-		Image_Copy8bitRGBA(f + 8, image_buffer, image_width * image_height, palette_complete);
+		Image_Copy8bitRGBA(f + 8, image_buffer, image_width * image_height, palette_transparent);
 	}
 	return image_buffer;
 }
