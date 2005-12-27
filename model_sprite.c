@@ -219,7 +219,7 @@ void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 		loadmodel->sprite.sprnum_type = LittleLong (pinqsprite->type);
 		loadmodel->synctype = (synctype_t)LittleLong (pinqsprite->synctype);
 
-		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinqsprite->version), palette_complete, palette_alpha);
+		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinqsprite->version), NULL, NULL);
 	}
 	else if (version == SPRITEHL_VERSION)
 	{
