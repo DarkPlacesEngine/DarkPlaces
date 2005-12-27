@@ -1004,7 +1004,7 @@ int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, const char *basename, int
 			Mem_Free(temp1);
 		}
 		// use either a custom palette, or the quake palette
-		skinframe->base = skinframe->merged = GL_TextureForSkinLayer(skindata, width, height, va("%s_merged", basename), palette ? palette : (loadglowtexture ? palette_nofullbrights : palette_complete), textureflags); // all
+		skinframe->base = skinframe->merged = GL_TextureForSkinLayer(skindata, width, height, va("%s_merged", basename), palette ? palette : (loadglowtexture ? palette_nofullbrights : ((textureflags & TEXF_ALPHA) ? palette_transparent : palette_complete)), textureflags); // all
 		if (!palette && loadglowtexture)
 			skinframe->glow = GL_TextureForSkinLayer(skindata, width, height, va("%s_glow", basename), palette_onlyfullbrights, textureflags); // glow
 		if (!palette && loadpantsandshirt)
