@@ -147,17 +147,17 @@ qboolean SNDDMA_Init(void)
 		return false;
 	}
 	Con_DPrintf("   Hardware format:\n");
-	Con_DPrintf("	 %5d mSampleRate\n", (unsigned int)outputStreamBasicDescription.mSampleRate);
-	Con_DPrintf("	  %c%c%c%c mFormatID\n",
+	Con_DPrintf("    %5d mSampleRate\n", (unsigned int)outputStreamBasicDescription.mSampleRate);
+	Con_DPrintf("     %c%c%c%c mFormatID\n",
 				(outputStreamBasicDescription.mFormatID & 0xff000000) >> 24,
 				(outputStreamBasicDescription.mFormatID & 0x00ff0000) >> 16,
 				(outputStreamBasicDescription.mFormatID & 0x0000ff00) >>  8,
 				(outputStreamBasicDescription.mFormatID & 0x000000ff) >>  0);
-	Con_DPrintf("	 %5d mBytesPerPacket\n", outputStreamBasicDescription.mBytesPerPacket);
-	Con_DPrintf("	 %5d mFramesPerPacket\n", outputStreamBasicDescription.mFramesPerPacket);
-	Con_DPrintf("	 %5d mBytesPerFrame\n", outputStreamBasicDescription.mBytesPerFrame);
-	Con_DPrintf("	 %5d mChannelsPerFrame\n", outputStreamBasicDescription.mChannelsPerFrame);
-	Con_DPrintf("	 %5d mBitsPerChannel\n", outputStreamBasicDescription.mBitsPerChannel);
+	Con_DPrintf("    %5d mBytesPerPacket\n", outputStreamBasicDescription.mBytesPerPacket);
+	Con_DPrintf("    %5d mFramesPerPacket\n", outputStreamBasicDescription.mFramesPerPacket);
+	Con_DPrintf("    %5d mBytesPerFrame\n", outputStreamBasicDescription.mBytesPerFrame);
+	Con_DPrintf("    %5d mChannelsPerFrame\n", outputStreamBasicDescription.mChannelsPerFrame);
+	Con_DPrintf("    %5d mBitsPerChannel\n", outputStreamBasicDescription.mBitsPerChannel);
 
 	if(outputStreamBasicDescription.mFormatID != kAudioFormatLinearPCM)
 	{
@@ -183,6 +183,7 @@ qboolean SNDDMA_Init(void)
 	shm->format.speed = outputStreamBasicDescription.mSampleRate;
 	shm->format.channels = outputStreamBasicDescription.mChannelsPerFrame;
 	shm->format.width = 2;
+	shm->sampleframes = maxMixedSamples / shm->format.channels;
 	shm->samples = maxMixedSamples;
 	shm->buffer = (unsigned char *)s_mixedSamples;
 	shm->samplepos = 0;
