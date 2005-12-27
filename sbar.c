@@ -490,7 +490,7 @@ static int teamsort[MAX_SCOREBOARD];
 static int teamlines;
 void Sbar_SortFrags (void)
 {
-	int		i, j, k;
+	int i, j, k, color;
 
 	// sort by frags
 	scoreboardlines = 0;
@@ -530,7 +530,7 @@ void Sbar_SortFrags (void)
 		}
 
 		// calculate team scores
-		int color = -1;
+		color = -1;
 		for (i=0 ; i<scoreboardlines ; i++)
 		{
 			if (color != cl.scores[fragsort[i]].colors)
