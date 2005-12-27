@@ -303,7 +303,7 @@ Draw_CachePic
 // FIXME: move this to client somehow
 cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 {
-	int i, crc, hashkey;
+	int crc, hashkey;
 	cachepic_t *pic;
 	qpic_t *p;
 	int flags;
