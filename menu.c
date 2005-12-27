@@ -1351,7 +1351,7 @@ void M_Setup_Draw (void)
 			menuplyr_bottom = setup_bottom;
 			M_BuildTranslationTable(menuplyr_top*16, menuplyr_bottom*16);
 			for (i = 0;i < menuplyr_width * menuplyr_height;i++)
-				menuplyr_translated[i] = palette_complete[translationTable[menuplyr_pixels[i]]];
+				menuplyr_translated[i] = palette_transparent[translationTable[menuplyr_pixels[i]]];
 			Draw_NewPic("gfx/menuplyr", menuplyr_width, menuplyr_height, true, (unsigned char *)menuplyr_translated);
 		}
 		M_DrawPic(160, 48, "gfx/bigbox");

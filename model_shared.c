@@ -1004,31 +1004,16 @@ int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, const char *basename, int
 			Mem_Free(temp1);
 		}
 		// use either a custom palette, or the quake palette
-		if (palette)
-			skinframe->base = skinframe->merged = GL_TextureForSkinLayer(skindata, width, height, va("%s_merged", basename), palette, textureflags); // all
-		else if (loadglowtexture)
-		{
+		skinframe->base = skinframe->merged = GL_TextureForSkinLayer(skindata, width, height, va("%s_merged", basename), palette ? palette : (loadglowtexture ? palette_nofullbrights : palette_complete), textureflags); // all
+		if (!palette && loadglowtexture)
 			skinframe->glow = GL_TextureForSkinLayer(skindata, width, height, va("%s_glow", basename), palette_onlyfullbrights, textureflags); // glow
-			skinframe->base = skinframe->merged = GL_TextureForSkinLayer(skindata, width, height, va("%s_merged", basename), palette_nofullbrights, textureflags); // all but fullbrights
-			if (loadpantsandshirt)
-			{
-				skinframe->pants = GL_TextureForSkinLayer(skindata, width, height, va("%s_pants", basename), palette_pantsaswhite, textureflags); // pants
-				skinframe->shirt = GL_TextureForSkinLayer(skindata, width, height, va("%s_shirt", basename), palette_shirtaswhite, textureflags); // shirt
-				if (skinframe->pants || skinframe->shirt)
-					skinframe->base = GL_TextureForSkinLayer(skindata, width, height, va("%s_nospecial", basename), palette_nocolormapnofullbrights, textureflags); // no special colors
-			}
-		}
-		else
+		if (!palette && loadpantsandshirt)
 		{
-			skinframe->base = skinframe->merged = GL_TextureForSkinLayer(skindata, width, height, va("%s_merged", basename), palette_complete, textureflags); // all
-			if (loadpantsandshirt)
-			{
-				skinframe->pants = GL_TextureForSkinLayer(skindata, width, height, va("%s_pants", basename), palette_pantsaswhite, textureflags); // pants
-				skinframe->shirt = GL_TextureForSkinLayer(skindata, width, height, va("%s_shirt", basename), palette_shirtaswhite, textureflags); // shirt
-				if (skinframe->pants || skinframe->shirt)
-					skinframe->base = GL_TextureForSkinLayer(skindata, width, height, va("%s_nospecial", basename), palette_nocolormap, textureflags); // no pants or shirt
-			}
+			skinframe->pants = GL_TextureForSkinLayer(skindata, width, height, va("%s_pants", basename), palette_pantsaswhite, textureflags); // pants
+			skinframe->shirt = GL_TextureForSkinLayer(skindata, width, height, va("%s_shirt", basename), palette_shirtaswhite, textureflags); // shirt
 		}
+		if (skinframe->pants || skinframe->shirt)
+			skinframe->base = GL_TextureForSkinLayer(skindata, width, height, va("%s_nospecial", basename),loadglowtexture ? palette_nocolormapnofullbrights : palette_nocolormap, textureflags); // no special colors
 		if (textureflags & TEXF_ALPHA)
 		{
 			// if not using a custom alphapalette, use the quake one
