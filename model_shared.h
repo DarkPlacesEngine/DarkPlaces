@@ -203,6 +203,8 @@ typedef struct texture_s
 	// (this is an optimization in the renderer)
 	int animated;
 
+	// the current alpha of this texture (may be affected by r_wateralpha)
+	float currentalpha;
 	// the current texture frame in animation
 	struct texture_s *currentframe;
 	// current texture transform matrix (used for water scrolling)
@@ -555,7 +557,7 @@ typedef struct model_s
 	// draw a shadow volume for the model based on light source
 	void(*DrawShadowVolume)(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs);
 	// draw the lighting on a model (through stencil)
-	void(*DrawLight)(struct entity_render_s *ent, vec3_t lightcolorbase, vec3_t lightcolorpants, vec3_t lightcolorshirt, int numsurfaces, const int *surfacelist);
+	void(*DrawLight)(struct entity_render_s *ent, int numsurfaces, const int *surfacelist);
 	// trace a box against this model
 	void (*TraceBox)(struct model_s *model, int frame, struct trace_s *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs, int hitsupercontentsmask);
 	// fields belonging to some types of model
@@ -655,7 +657,7 @@ void R_Q1BSP_Draw(struct entity_render_s *ent);
 void R_Q1BSP_GetLightInfo(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, unsigned char *outleafpvs, int *outnumleafspointer, int *outsurfacelist, unsigned char *outsurfacepvs, int *outnumsurfacespointer);
 void R_Q1BSP_CompileShadowVolume(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist);
 void R_Q1BSP_DrawShadowVolume(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs);
-void R_Q1BSP_DrawLight(struct entity_render_s *ent, vec3_t lightcolorbase, vec3_t lightcolorpants, vec3_t lightcolorshirt, int numsurfaces, const int *surfacelist);
+void R_Q1BSP_DrawLight(struct entity_render_s *ent, int numsurfaces, const int *surfacelist);
 
 // alias models
 struct frameblend_s;

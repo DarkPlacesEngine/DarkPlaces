@@ -294,12 +294,12 @@ void R_Stain (const vec3_t origin, float radius, int cr1, int cg1, int cb1, int 
 =============================================================
 */
 
-static void R_DrawPortal_Callback(const void *calldata1, int calldata2)
+static void R_DrawPortal_Callback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
 {
+	const mportal_t *portal = (mportal_t *)ent;
 	int i;
 	float *v;
 	rmeshstate_t m;
-	const mportal_t *portal = (mportal_t *)calldata1;
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
@@ -309,7 +309,7 @@ static void R_DrawPortal_Callback(const void *calldata1, int calldata2)
 	m.pointer_vertex = varray_vertex3f;
 	R_Mesh_State(&m);
 
-	i = calldata2;
+	i = surfacenumber;
 	GL_Color(((i & 0x0007) >> 0) * (1.0f / 7.0f),
 			 ((i & 0x0038) >> 3) * (1.0f / 7.0f),
 			 ((i & 0x01C0) >> 6) * (1.0f / 7.0f),
@@ -330,7 +330,7 @@ static void R_DrawPortal_Callback(const void *calldata1, int calldata2)
 // LordHavoc: this is just a nice debugging tool, very slow
 static void R_DrawPortals(void)
 {
-	int i, leafnum;//, portalnum;
+	int i, leafnum;
 	mportal_t *portal;
 	float center[3], f;
 	model_t *model = r_refdef.worldmodel;
@@ -351,8 +351,7 @@ static void R_DrawPortals(void)
 						VectorAdd(center, portal->points[i].position, center);
 					f = ixtable[portal->numpoints];
 					VectorScale(center, f, center);
-					//R_MeshQueue_AddTransparent(center, R_DrawPortal_Callback, portal, portalnum);
-					R_MeshQueue_AddTransparent(center, R_DrawPortal_Callback, portal, leafnum);
+					R_MeshQueue_AddTransparent(center, R_DrawPortal_Callback, (entity_render_t *)portal, leafnum, r_shadow_rtlight);
 				}
 			}
 		}
@@ -603,7 +602,6 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 				{
 					msurface_t *surface = info->model->data_surfaces + surfaceindex;
 					if (BoxesOverlap(info->lightmins, info->lightmaxs, surface->mins, surface->maxs))
-					if ((surface->texture->currentmaterialflags & (MATERIALFLAG_WALL | MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT)) == MATERIALFLAG_WALL)
 					{
 						int triangleindex, t;
 						const int *e;
@@ -768,9 +766,23 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 	}
 }
 
+static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
+{
+	msurface_t *surface = ent->model->data_surfaces + surfacenumber;
+	texture_t *texture = surface->texture;
+	R_UpdateTextureInfo(ent, texture);
+	texture = texture->currentframe;
+	R_Shadow_RenderMode_Begin();
+	R_Shadow_RenderMode_ActiveLight((rtlight_t *)rtlight);
+	R_Shadow_RenderMode_Lighting(false, true);
+	R_Shadow_SetupEntityLight(ent);
+	R_Shadow_RenderSurfacesLighting(ent, texture, 1, &surface);
+	R_Shadow_RenderMode_End();
+}
+
 #define RSURF_MAX_BATCHSURFACES 1024
 
-void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolorbase, float *lightcolorpants, float *lightcolorshirt, int numsurfaces, const int *surfacelist)
+void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surfacelist)
 {
 	model_t *model = ent->model;
 	msurface_t *surface;
@@ -779,13 +791,8 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolorbase, float *light
 	msurface_t *batchsurfacelist[RSURF_MAX_BATCHSURFACES];
 	vec3_t modelorg;
 	texture_t *tex;
-	rtexture_t *basetexture = NULL;
-	rtexture_t *glosstexture = NULL;
-	float specularscale = 0;
 	qboolean skip;
 	if (r_drawcollisionbrushes.integer >= 2)
-		return;
-	if (VectorLength2(lightcolorbase) + VectorLength2(lightcolorpants) + VectorLength2(lightcolorshirt) < 0.0001)
 		return;
 	R_UpdateAllTextureInfo(ent);
 	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
@@ -803,46 +810,50 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolorbase, float *light
 		{
 			if (batchnumsurfaces > 0)
 			{
-				R_Shadow_RenderSurfacesLighting(ent, texture, batchnumsurfaces, batchsurfacelist, lightcolorbase, lightcolorpants, lightcolorshirt, basetexture, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, glosstexture, specularscale, modelorg);
+				if (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT)
+				{
+					int batchsurfaceindex;
+					for (batchsurfaceindex = 0;batchsurfaceindex < batchnumsurfaces;batchsurfaceindex++)
+					{
+						msurface_t *batchsurface = batchsurfacelist[batchsurfaceindex];
+						vec3_t tempcenter, center;
+						tempcenter[0] = (batchsurface->mins[0] + batchsurface->maxs[0]) * 0.5f;
+						tempcenter[1] = (batchsurface->mins[1] + batchsurface->maxs[1]) * 0.5f;
+						tempcenter[2] = (batchsurface->mins[2] + batchsurface->maxs[2]) * 0.5f;
+						Matrix4x4_Transform(&ent->matrix, tempcenter, center);
+						R_MeshQueue_AddTransparent(texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_vieworigin : center, R_Q1BSP_DrawLight_TransparentCallback, ent, batchsurface - ent->model->data_surfaces, r_shadow_rtlight);
+					}
+				}
+				else
+					R_Shadow_RenderSurfacesLighting(ent, texture, batchnumsurfaces, batchsurfacelist);
 				batchnumsurfaces = 0;
 			}
 			tex = surface->texture;
 			texture = surface->texture->currentframe;
-			// FIXME: transparent surfaces need to be lit later
-			skip = (texture->currentmaterialflags & (MATERIALFLAG_WALL | MATERIALFLAG_TRANSPARENT)) != MATERIALFLAG_WALL;
+			skip = (texture->currentmaterialflags & MATERIALFLAG_SKY) != 0;
 			if (skip)
 				continue;
-			if (texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
-				qglDisable(GL_CULL_FACE);
-			else
-				qglEnable(GL_CULL_FACE);
-			glosstexture = r_texture_black;
-			specularscale = 0;
-			if (texture->skin.gloss)
-			{
-				if (r_shadow_gloss.integer >= 1 && r_shadow_glossintensity.value > 0 && r_shadow_rtlight->specularscale > 0)
-				{
-					glosstexture = texture->skin.gloss;
-					specularscale = r_shadow_rtlight->specularscale * r_shadow_glossintensity.value;
-				}
-			}
-			else
-			{
-				if (r_shadow_gloss.integer >= 2 && r_shadow_gloss2intensity.value > 0 && r_shadow_glossintensity.value > 0 && r_shadow_rtlight->specularscale > 0)
-				{
-					glosstexture = r_texture_white;
-					specularscale = r_shadow_rtlight->specularscale * r_shadow_gloss2intensity.value;
-				}
-			}
-			basetexture = (ent->colormap < 0 && texture->skin.merged) ? texture->skin.merged : texture->skin.base;
-			if ((r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * (VectorLength2(lightcolorbase) + VectorLength2(lightcolorpants) + VectorLength2(lightcolorshirt)) + specularscale * VectorLength2(lightcolorbase) < (1.0f / 1048576.0f))
-				skip = true;
 		}
 		if (!skip && surface->num_triangles)
 		{
 			if (batchnumsurfaces == RSURF_MAX_BATCHSURFACES)
 			{
-				R_Shadow_RenderSurfacesLighting(ent, texture, batchnumsurfaces, batchsurfacelist, lightcolorbase, lightcolorpants, lightcolorshirt, basetexture, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, glosstexture, specularscale, modelorg);
+				if (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT)
+				{
+					int batchsurfaceindex;
+					for (batchsurfaceindex = 0;batchsurfaceindex < batchnumsurfaces;batchsurfaceindex++)
+					{
+						msurface_t *batchsurface = batchsurfacelist[batchsurfaceindex];
+						vec3_t tempcenter, center;
+						tempcenter[0] = (batchsurface->mins[0] + batchsurface->maxs[0]) * 0.5f;
+						tempcenter[1] = (batchsurface->mins[1] + batchsurface->maxs[1]) * 0.5f;
+						tempcenter[2] = (batchsurface->mins[2] + batchsurface->maxs[2]) * 0.5f;
+						Matrix4x4_Transform(&ent->matrix, tempcenter, center);
+						R_MeshQueue_AddTransparent(texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_vieworigin : center, R_Q1BSP_DrawLight_TransparentCallback, ent, batchsurface - ent->model->data_surfaces, r_shadow_rtlight);
+					}
+				}
+				else
+					R_Shadow_RenderSurfacesLighting(ent, texture, batchnumsurfaces, batchsurfacelist);
 				batchnumsurfaces = 0;
 			}
 			batchsurfacelist[batchnumsurfaces++] = surface;
@@ -850,7 +861,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, float *lightcolorbase, float *light
 	}
 	if (batchnumsurfaces > 0)
 	{
-		R_Shadow_RenderSurfacesLighting(ent, texture, batchnumsurfaces, batchsurfacelist, lightcolorbase, lightcolorpants, lightcolorshirt, basetexture, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, glosstexture, specularscale, modelorg);
+		R_Shadow_RenderSurfacesLighting(ent, texture, batchnumsurfaces, batchsurfacelist);
 		batchnumsurfaces = 0;
 	}
 	qglEnable(GL_CULL_FACE);

@@ -229,9 +229,9 @@ void R_FogLightningBeam_Vertex3f_Color4f(const float *v, float *c, int numverts,
 
 float beamrepeatscale;
 
-void R_DrawLightningBeamCallback(const void *calldata1, int calldata2)
+void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
 {
-	const beam_t *b = (beam_t *)calldata1;
+	const beam_t *b = cl_beams + surfacenumber;
 	rmeshstate_t m;
 	vec3_t beamdir, right, up, offset;
 	float length, t1, t2;
@@ -343,7 +343,7 @@ void R_DrawLightningBeams(void)
 		{
 			VectorAdd(b->start, b->end, org);
 			VectorScale(org, 0.5f, org);
-			R_MeshQueue_AddTransparent(org, R_DrawLightningBeamCallback, b, 0);
+			R_MeshQueue_AddTransparent(org, R_DrawLightningBeam_TransparentCallback, NULL, i, NULL);
 		}
 	}
 }

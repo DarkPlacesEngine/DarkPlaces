@@ -2064,9 +2064,9 @@ float particle_vertex3f[12], particle_texcoord2f[8];
 void R_DrawParticle(particle_t *p)
 {
 #else
-void R_DrawParticleCallback(const void *calldata1, int calldata2)
+void R_DrawParticle_TransparentCallback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
 {
-	const particle_t *p = (particle_t *)calldata1;
+	const particle_t *p = particles + surfacenumber;
 	rmeshstate_t m;
 #endif
 	pblend_t blendmode;
@@ -2257,9 +2257,9 @@ void R_DrawParticles (void)
 			if (DotProduct(p->org, r_viewforward) >= minparticledist || p->type->orientation == PARTICLE_BEAM)
 			{
 				if (p->type == particletype + pt_decal)
-					R_DrawParticleCallback(p, 0);
+					R_DrawParticle_TransparentCallback(0, i, 0);
 				else
-					R_MeshQueue_AddTransparent(p->org, R_DrawParticleCallback, p, 0);
+					R_MeshQueue_AddTransparent(p->org, R_DrawParticle_TransparentCallback, NULL, i, NULL);
 			}
 		}
 	}
