@@ -894,7 +894,7 @@ void FS_AddGameHierarchy (const char *dir)
 #endif
 
 	// Add the common game directory
-	FS_AddGameDirectory (va("%s/%s/", fs_basedir, dir));
+	FS_AddGameDirectory (va("%s%s/", fs_basedir, dir));
 
 #ifndef WIN32
 	// Add the personal game directory
@@ -942,7 +942,7 @@ void FS_Init (void)
 
 	fs_mempool = Mem_AllocPool("file management", 0, NULL);
 
-	strcpy(fs_basedir, ".");
+	strcpy(fs_basedir, "");
 	strcpy(fs_gamedir, "");
 
 #ifdef MACOSX
@@ -972,6 +972,10 @@ void FS_Init (void)
 		if (i > 0 && (fs_basedir[i-1] == '\\' || fs_basedir[i-1] == '/'))
 			fs_basedir[i-1] = 0;
 	}
+
+	// add a path separator to the end of the basedir if it lacks one
+	if (fs_basedir[0] && fs_basedir[strlen(fs_basedir) - 1] != '/' && fs_basedir[strlen(fs_basedir) - 1] != '\\')
+		strlcat(fs_basedir, "/", sizeof(fs_basedir));
 
 	// -path <dir or packfile> [<dir or packfile>] ...
 	// Fully specifies the exact search path, overriding the generated one
@@ -1428,7 +1432,7 @@ qfile_t* FS_Open (const char* filepath, const char* mode, qboolean quiet, qboole
 		char real_path [MAX_OSPATH];
 
 		// Open the file on disk directly
-		dpsnprintf (real_path, sizeof (real_path), "%s%s", fs_gamedir, filepath);
+		dpsnprintf (real_path, sizeof (real_path), "%s/%s", fs_gamedir, filepath);
 
 		// Create directories up to the file
 		FS_CreatePath (real_path);
