@@ -31,7 +31,7 @@
 // Tell startup code that we have a client
 int cl_available = true;
 
-qboolean vid_supportrefreshrate = false;
+qboolean vid_supportrefreshrate = true;
 
 // AGL prototypes
 AGLPixelFormat (*qaglChoosePixelFormat) (const AGLDevice *gdevs, GLint ndev, const GLint *attribList);
@@ -41,6 +41,7 @@ void (*qaglDestroyPixelFormat) (AGLPixelFormat pix);
 GLboolean (*qaglSetCurrentContext) (AGLContext ctx);
 GLboolean (*qaglSetDrawable) (AGLContext ctx, AGLDrawable draw);
 GLboolean (*qaglSetFullScreen) (AGLContext ctx, GLsizei width, GLsizei height, GLsizei freq, GLint device);
+GLboolean (*qaglSetInteger) (AGLContext ctx, GLenum pname, const GLint *params);
 void (*qaglSwapBuffers) (AGLContext ctx);
 
 static qboolean mouse_avail = true;
@@ -48,6 +49,7 @@ static qboolean vid_usingmouse = false;
 static float mouse_x, mouse_y;
 
 static qboolean vid_isfullscreen = false;
+static qboolean vid_usingvsync = false;
 
 static int scr_width, scr_height;
 
@@ -102,7 +104,8 @@ static void IN_Activate( qboolean grab )
 void VID_Finish (void)
 {
 	qboolean vid_usemouse;
-
+	qboolean vid_usevsync;
+	
 	// handle the mouse state when windowed if that's changed
 	vid_usemouse = false;
 	if (vid_mouse.integer && !key_consoleactive && !cls.demoplayback)
@@ -113,6 +116,21 @@ void VID_Finish (void)
 		vid_usemouse = true;
 	IN_Activate(vid_usemouse);
 
+	// handle changes of the vsync option
+	vid_usevsync = (vid_vsync.integer && !cls.timedemo);
+	if (vid_usingvsync != vid_usevsync)
+	{
+		GLint sync = (vid_usevsync ? 1 : 0);
+
+		if (qaglSetInteger(context, AGL_SWAP_INTERVAL, &sync) == GL_TRUE)
+		{
+			vid_usingvsync = vid_usevsync;
+			Con_DPrintf("Vsync %s\n", vid_usevsync ? "activated" : "deactivated");
+		}
+		else
+			Con_Printf("ERROR: can't %s vsync\n", vid_usevsync ? "activate" : "deactivate");
+	}
+
 	if (r_render.integer)
 	{
 		if (r_speeds.integer || gl_finish.integer)
@@ -121,16 +139,60 @@ void VID_Finish (void)
 	}
 }
 
+#define GAMMA_TABLE_SIZE 256
 int VID_SetGamma(unsigned short *ramps)
 {
-	// TODO
-	return false;
+	CGGammaValue table_red [GAMMA_TABLE_SIZE];
+	CGGammaValue table_green [GAMMA_TABLE_SIZE];
+	CGGammaValue table_blue [GAMMA_TABLE_SIZE];
+	unsigned int i;
+
+	// Convert the unsigned short table into 3 float tables
+	for (i = 0; i < GAMMA_TABLE_SIZE; i++)
+		table_red[i] = (float)ramps[i] / 65535.0f;
+	for (i = 0; i < GAMMA_TABLE_SIZE; i++)
+		table_green[i] = (float)ramps[i + GAMMA_TABLE_SIZE] / 65535.0f;
+	for (i = 0; i < GAMMA_TABLE_SIZE; i++)
+		table_blue[i] = (float)ramps[i + 2 * GAMMA_TABLE_SIZE] / 65535.0f;
+
+	if (CGSetDisplayTransferByTable(CGMainDisplayID(), GAMMA_TABLE_SIZE, table_red, table_green, table_blue) != CGDisplayNoErr)
+	{
+		Con_Print("VID_SetGamma: ERROR: CGSetDisplayTransferByTable failed!\n");
+		return false;
+	}
+
+	return true;
 }
 
 int VID_GetGamma(unsigned short *ramps)
 {
-	// TODO
-	return false;
+	CGGammaValue table_red [GAMMA_TABLE_SIZE];
+	CGGammaValue table_green [GAMMA_TABLE_SIZE];
+	CGGammaValue table_blue [GAMMA_TABLE_SIZE];
+	CGTableCount actualsize = 0;
+	unsigned int i;
+	
+	// Get the gamma ramps from the system
+	if (CGGetDisplayTransferByTable(CGMainDisplayID(), GAMMA_TABLE_SIZE, table_red, table_green, table_blue, &actualsize) != CGDisplayNoErr)
+	{
+		Con_Print("VID_GetGamma: ERROR: CGGetDisplayTransferByTable failed!\n");
+		return false;
+	}
+	if (actualsize != GAMMA_TABLE_SIZE)
+	{
+		Con_Printf("VID_GetGamma: ERROR: invalid gamma table size (%u != %u)\n", actualsize, GAMMA_TABLE_SIZE);
+		return false;
+	}
+
+	// Convert the 3 float tables into 1 unsigned short table
+	for (i = 0; i < GAMMA_TABLE_SIZE; i++)
+		ramps[i] = table_red[i] * 65535.0f;
+	for (i = 0; i < GAMMA_TABLE_SIZE; i++)
+		ramps[i + GAMMA_TABLE_SIZE] = table_green[i] * 65535.0f;
+	for (i = 0; i < GAMMA_TABLE_SIZE; i++)
+		ramps[i + 2 * GAMMA_TABLE_SIZE] = table_blue[i] * 65535.0f;
+
+	return true;
 }
 
 void signal_handler(int sig)
@@ -233,19 +295,16 @@ static OSStatus MainWindowEventHandler (EventHandlerCallRef nextHandler, EventRe
 	switch (GetEventKind (event))
 	{
 		case kEventWindowClosed:
-			//Con_Printf(">> kEventWindowClosed (received) <<\n");
 			AsyncEvent_Quitting = true;
 			break;
 
 		// Docked (start)
 		case kEventWindowCollapsing:
-			//Con_Printf(">> kEventWindowCollapsing (received) <<\n");
 			AsyncEvent_Collapsed = true;
 			break;
 
 		// Undocked / restored (end)
 		case kEventWindowExpanded:
-			//Con_Printf(">> kEventWindowExpanded (received) <<\n");
 			AsyncEvent_Collapsed = false;
 			break;
 
@@ -262,13 +321,6 @@ static void VID_ProcessPendingAsyncEvents (void)
 	// Collapsed / expanded
 	if (AsyncEvent_Collapsed != vid_hidden)
 	{
-		/*
-		if (vid_hidden)
-			Con_Printf(">> kEventWindowExpanded (processed) <<\n");
-		else
-			Con_Printf(">> kEventWindowCollapsing (processed) <<\n");
-		*/
-
 		vid_hidden = !vid_hidden;
 		vid_activewindow = false;
 		VID_RestoreSystemGamma();
@@ -277,7 +329,6 @@ static void VID_ProcessPendingAsyncEvents (void)
 	// Closed
 	if (AsyncEvent_Quitting)
 	{
-		//Con_Printf(">> kEventWindowClosed (processed) <<\n");
 		Sys_Quit();
 	}
 }
@@ -290,6 +341,7 @@ static void VID_BuildAGLAttrib(GLint *attrib, int stencil, qboolean fullscreen)
 	*attrib++ = AGL_BLUE_SIZE;*attrib++ = 1;
 	*attrib++ = AGL_DOUBLEBUFFER;
 	*attrib++ = AGL_DEPTH_SIZE;*attrib++ = 1;
+
 	// if stencil is enabled, ask for alpha too
 	if (stencil)
 	{
@@ -328,6 +380,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	 || (qaglSetCurrentContext = (GLboolean (*) (AGLContext ctx))GL_GetProcAddress("aglSetCurrentContext")) == NULL
 	 || (qaglSetDrawable = (GLboolean (*) (AGLContext ctx, AGLDrawable draw))GL_GetProcAddress("aglSetDrawable")) == NULL
 	 || (qaglSetFullScreen = (GLboolean (*) (AGLContext ctx, GLsizei width, GLsizei height, GLsizei freq, GLint device))GL_GetProcAddress("aglSetFullScreen")) == NULL
+	 || (qaglSetInteger = (GLboolean (*) (AGLContext ctx, GLenum pname, const GLint *params))GL_GetProcAddress("aglSetInteger")) == NULL
 	 || (qaglSwapBuffers = (void (*) (AGLContext ctx))GL_GetProcAddress("aglSwapBuffers")) == NULL
 	)
 	{
@@ -384,7 +437,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 		Sys_Error ("aglCreateContext failed");
 	if (fullscreen)
 	{
-		if (!qaglSetFullScreen (context, width, height, 0, 0))
+		if (!qaglSetFullScreen (context, width, height, refreshrate, 0))
 			Sys_Error("aglSetFullScreen failed");
 		vid_isfullscreen = true;
 	}
@@ -408,7 +461,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	gl_version = (const char *)qglGetString(GL_VERSION);
 	gl_extensions = (const char *)qglGetString(GL_EXTENSIONS);
 	gl_platform = "AGL";
-	gl_videosyncavailable = false;
+	gl_videosyncavailable = true;
 
 	vid_usingmouse = false;
 	vid_hidden = false;
@@ -507,8 +560,9 @@ static void Handle_Key(unsigned char charcode, qboolean keypressed)
 		case kDeleteCharCode:
 			keycode = K_DEL;
 			break;
+		case 0:
 		case 191:
-			// char 191 is sent by the mouse buttons (?!)
+			// characters 0 and 191 are sent by the mouse buttons (?!)
 			break;
 		default:
 			if ('A' <= charcode && charcode <= 'Z')
@@ -516,7 +570,7 @@ static void Handle_Key(unsigned char charcode, qboolean keypressed)
 				keycode = charcode + ('a' - 'A');  // lowercase it
 				ascii = charcode;
 			}
-			else if (32 <= charcode)
+			else if (charcode >= 32)
 			{
 				keycode = charcode;
 				ascii = charcode;
@@ -560,15 +614,12 @@ void Sys_SendKeyEvents(void)
 							default:
 							case kEventMouseButtonPrimary:
 								key = K_MOUSE1;
-								//Con_Printf(">> kEventMouseButtonPrimary <<\n");
 								break;
 							case kEventMouseButtonSecondary:
 								key = K_MOUSE2;
-								//Con_Printf(">> kEventMouseButtonSecondary <<\n");
 								break;
 							case kEventMouseButtonTertiary:
 								key = K_MOUSE3;
-								//Con_Printf(">> kEventMouseButtonTertiary <<\n");
 								break;
 						}
 						Key_Event(key, '\0', eventKind == kEventMouseDown);
@@ -579,7 +630,6 @@ void Sys_SendKeyEvents(void)
 						HIPoint deltaPos;
 
 						GetEventParameter(theEvent, kEventParamMouseDelta, typeHIPoint, NULL, sizeof(deltaPos), NULL, &deltaPos);
-						//Con_Printf(">> kEventMouseMoved (%f, %f) <<\n", deltaPos.x, deltaPos.y);
 
 						mouse_x += deltaPos.x;
 						mouse_y += deltaPos.y;
@@ -592,7 +642,6 @@ void Sys_SendKeyEvents(void)
 						unsigned int wheelEvent;
 
 						GetEventParameter(theEvent, kEventParamMouseWheelDelta, typeSInt32, NULL, sizeof(delta), NULL, &delta);
-						//Con_Printf(">> kEventMouseWheelMoved (delta: %d) <<\n", delta);
 
 						wheelEvent = (delta > 0) ? K_MWHEELUP : K_MWHEELDOWN;
 						Key_Event(wheelEvent, 0, true);
@@ -601,7 +650,6 @@ void Sys_SendKeyEvents(void)
 					}
 
 					case kEventMouseDragged:
-						//Con_Printf(">> kEventMouseDragged <<\n");
 						break;
 
 					default:
@@ -619,17 +667,14 @@ void Sys_SendKeyEvents(void)
 					case kEventRawKeyDown:
 						GetEventParameter(theEvent, kEventParamKeyMacCharCodes, typeChar, NULL, sizeof(keycode), NULL, &keycode);
 						Handle_Key(keycode, true);
-						//Con_Printf(">> kEventRawKeyDown (%d) <<\n", keycode);
 						break;
 
 					case kEventRawKeyRepeat:
-						//Con_Printf(">> kEventRawKeyRepeat <<\n");
 						break;
 
 					case kEventRawKeyUp:
 						GetEventParameter(theEvent, kEventParamKeyMacCharCodes, typeChar, NULL, sizeof(keycode), NULL, &keycode);
 						Handle_Key(keycode, false);
-						//Con_Printf(">> kEventRawKeyUp (%d) <<\n", keycode);
 						break;
 
 					case kEventRawKeyModifiersChanged:
@@ -637,20 +682,16 @@ void Sys_SendKeyEvents(void)
 						UInt32 keymod = 0;
 						GetEventParameter(theEvent, kEventParamKeyModifiers, typeUInt32, NULL, sizeof(keymod), NULL, &keymod);
 						Handle_KeyMod(keymod);
-						//Con_Printf(">> kEventRawKeyModifiersChanged (0x%08X) <<\n", keymod);
 						break;
 					}
 
 					case kEventHotKeyPressed:
-						//Con_Printf(">> kEventHotKeyPressed <<\n");
 						break;
 
 					case kEventHotKeyReleased:
-						//Con_Printf(">> kEventHotKeyReleased <<\n");
 						break;
 
 					case kEventMouseWheelMoved:
-						//Con_Printf(">> kEventMouseWheelMoved - via a keyboard event (!?) <<\n");
 						break;
 
 					default:
@@ -668,20 +709,16 @@ void Sys_SendKeyEvents(void)
 				switch (eventKind)
 				{
 					case kEventAppActivated :
-						//Con_Printf(">> kEventAppActivated <<\n");
 						vid_activewindow = true;
 						break;
 					case kEventAppDeactivated:
-						//Con_Printf(">> kEventAppDeactivated <<\n");
 						vid_activewindow = false;
 						VID_RestoreSystemGamma();
 						break;
 					case kEventAppQuit:
-						//Con_Printf(">> kEventAppQuit <<\n");
 						Sys_Quit();
 						break;
 					case kEventAppActiveWindowChanged:
-						//Con_Printf(">> kEventAppActiveWindowChanged <<\n");
 						break;
 					default:
 						Con_Printf(">> kEventClassApplication (UNKNOWN eventKind: %d) <<\n", eventKind);
@@ -693,7 +730,6 @@ void Sys_SendKeyEvents(void)
 				switch (eventKind)
 				{
 					case kEventAppleEvent :
-						//Con_Printf(">> kEventAppleEvent <<\n");
 						break;
 					default:
 						Con_Printf(">> kEventClassAppleEvent (UNKNOWN eventKind: %d) <<\n", eventKind);
@@ -705,7 +741,6 @@ void Sys_SendKeyEvents(void)
 				switch (eventKind)
 				{
 					case kEventWindowUpdate :
-						//Con_Printf(">> kEventWindowUpdate <<\n");
 						break;
 					default:
 						Con_Printf(">> kEventClassWindow (UNKNOWN eventKind: %d) <<\n", eventKind);
@@ -714,7 +749,6 @@ void Sys_SendKeyEvents(void)
 				break;
 
 			case kEventClassControl:
-				//Con_Printf(">> kEventClassControl (%d) <<\n", eventKind);
 				break;
 
 			default:
