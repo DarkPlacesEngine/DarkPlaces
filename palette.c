@@ -112,54 +112,28 @@ void Palette_SetupSpecialPalettes(void)
 void BuildGammaTable8(float prescale, float gamma, float scale, float base, unsigned char *out)
 {
 	int i, adjusted;
-	double invgamma, d;
+	double invgamma;
 
-	gamma = bound(0.1, gamma, 5.0);
-	if (gamma == 1) // LordHavoc: dodge the math
+	invgamma = 1.0 / gamma;
+	prescale /= 255.0f;
+	for (i = 0;i < 256;i++)
 	{
-		for (i = 0;i < 256;i++)
-		{
-			adjusted = (int) (i * prescale * scale + base * 255.0);
-			out[i] = bound(0, adjusted, 255);
-		}
-	}
-	else
-	{
-		invgamma = 1.0 / gamma;
-		prescale /= 255.0f;
-		for (i = 0;i < 256;i++)
-		{
-			d = pow((double) i * prescale, invgamma) * scale + base;
-			adjusted = (int) (255.0 * d);
-			out[i] = bound(0, adjusted, 255);
-		}
+		adjusted = (int) (255.0 * (pow((double) i * prescale, invgamma) * scale + base) + 0.5);
+		out[i] = bound(0, adjusted, 255);
 	}
 }
 
 void BuildGammaTable16(float prescale, float gamma, float scale, float base, unsigned short *out)
 {
 	int i, adjusted;
-	double invgamma, d;
+	double invgamma;
 
-	gamma = bound(0.1, gamma, 5.0);
-	if (gamma == 1) // LordHavoc: dodge the math
+	invgamma = 1.0 / gamma;
+	prescale /= 255.0f;
+	for (i = 0;i < 256;i++)
 	{
-		for (i = 0;i < 256;i++)
-		{
-			adjusted = (int) (i * 256.0 * prescale * scale + base * 65535.0);
-			out[i] = bound(0, adjusted, 65535);
-		}
-	}
-	else
-	{
-		invgamma = 1.0 / gamma;
-		prescale /= 255.0f;
-		for (i = 0;i < 256;i++)
-		{
-			d = pow((double) i * prescale, invgamma) * scale + base;
-			adjusted = (int) (65535.0 * d);
-			out[i] = bound(0, adjusted, 65535);
-		}
+		adjusted = (int) (65535.0 * (pow((double) i * prescale, invgamma) * scale + base) + 0.5);
+		out[i] = bound(0, adjusted, 65535);
 	}
 }
 
