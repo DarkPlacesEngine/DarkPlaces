@@ -2069,6 +2069,37 @@ int SV_GetTagIndex (prvm_edict_t *e, const char *tagname)
 	return Mod_Alias_GetTagIndexForName(model, e->fields.server->skin, tagname);
 };
 
+void SV_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatrix)
+{
+	float scale = PRVM_GETEDICTFIELDVALUE(ent, eval_scale)->_float;
+	if (scale == 0)
+		scale = 1;
+	if (viewmatrix)
+		Matrix4x4_CreateFromQuakeEntity(out, ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2] + ent->fields.server->view_ofs[2], ent->fields.server->v_angle[0], ent->fields.server->v_angle[1], ent->fields.server->v_angle[2], scale);
+	else
+		Matrix4x4_CreateFromQuakeEntity(out, ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2], -ent->fields.server->angles[0], ent->fields.server->angles[1], ent->fields.server->angles[2], scale * 0.333);
+}
+
+int SV_GetEntityLocalTagMatrix(prvm_edict_t *ent, int tagindex, matrix4x4_t *out)
+{
+	int modelindex;
+	int frame;
+	model_t *model;
+	if (tagindex >= 0
+	 && (modelindex = ent->fields.server->modelindex) >= 1 && modelindex < MAX_MODELS
+	 && (model = sv.models[(int)ent->fields.server->modelindex])
+	 && model->animscenes)
+	{
+		// if model has wrong frame, engine automatically switches to model first frame
+		frame = (int)ent->fields.server->frame;
+		if (frame < 0 || frame >= model->numframes)
+			frame = 0;
+		return Mod_Alias_GetTagMatrix(model, model->animscenes[frame].firstframe, tagindex, out);
+	}
+	Matrix4x4_CreateIdentity(out);
+	return 0;
+}
+
 // Warnings/errors code:
 // 0 - normal (everything all-right)
 // 1 - world entity
@@ -2081,8 +2112,9 @@ extern cvar_t cl_bobcycle;
 extern cvar_t cl_bobup;
 int SV_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 {
+	int ret;
 	prvm_eval_t *val;
-	int modelindex, reqframe, attachloop;
+	int modelindex, attachloop;
 	matrix4x4_t entitymatrix, tagmatrix, attachmatrix;
 	prvm_edict_t *attachent;
 	model_t *model;
@@ -2100,84 +2132,41 @@ int SV_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 
 	model = sv.models[modelindex];
 
-	if (ent->fields.server->frame >= 0 && ent->fields.server->frame < model->numframes && model->animscenes)
-		reqframe = model->animscenes[(int)ent->fields.server->frame].firstframe;
-	else
-		reqframe = 0; // if model has wrong frame, engine automatically switches to model first frame
-
 	// get initial tag matrix
-	if (tagindex)
+	ret = SV_GetEntityLocalTagMatrix(ent, tagindex - 1, &tagmatrix);
+	if (ret)
+		return ret;
+
+	// DP_GFX_QUAKE3MODELTAGS, scan all chain and stop on unattached entity
+	attachloop = 0;
+	while ((val = PRVM_GETEDICTFIELDVALUE(ent, eval_tag_entity)) && val->edict)
 	{
-		int ret = Mod_Alias_GetTagMatrix(model, reqframe, tagindex - 1, &tagmatrix);
-		if (ret)
-			return ret;
-	}
-	else
-		Matrix4x4_CreateIdentity(&tagmatrix);
-
-	if ((val = PRVM_GETEDICTFIELDVALUE(ent, eval_tag_entity)) && val->edict)
-	{ // DP_GFX_QUAKE3MODELTAGS, scan all chain and stop on unattached entity
-		attachloop = 0;
-		do
-		{
-			attachent = PRVM_EDICT_NUM(val->edict); // to this it entity our entity is attached
-			val = PRVM_GETEDICTFIELDVALUE(ent, eval_tag_index);
-			if (val->_float >= 1 && attachent->fields.server->modelindex >= 1 && attachent->fields.server->modelindex < MAX_MODELS && (model = sv.models[(int)attachent->fields.server->modelindex]) && model->animscenes && attachent->fields.server->frame >= 0 && attachent->fields.server->frame < model->numframes)
-				Mod_Alias_GetTagMatrix(model, model->animscenes[(int)attachent->fields.server->frame].firstframe, val->_float - 1, &attachmatrix);
-			else
-				Matrix4x4_CreateIdentity(&attachmatrix);
-
-			// apply transformation by child entity matrix
-			val = PRVM_GETEDICTFIELDVALUE(ent, eval_scale);
-			if (val->_float == 0)
-				val->_float = 1;
-			Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2], -ent->fields.server->angles[0], ent->fields.server->angles[1], ent->fields.server->angles[2], val->_float);
-			Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
-			out->m[0][3] = entitymatrix.m[0][3] + val->_float*(entitymatrix.m[0][0]*tagmatrix.m[0][3] + entitymatrix.m[0][1]*tagmatrix.m[1][3] + entitymatrix.m[0][2]*tagmatrix.m[2][3]);
-			out->m[1][3] = entitymatrix.m[1][3] + val->_float*(entitymatrix.m[1][0]*tagmatrix.m[0][3] + entitymatrix.m[1][1]*tagmatrix.m[1][3] + entitymatrix.m[1][2]*tagmatrix.m[2][3]);
-			out->m[2][3] = entitymatrix.m[2][3] + val->_float*(entitymatrix.m[2][0]*tagmatrix.m[0][3] + entitymatrix.m[2][1]*tagmatrix.m[1][3] + entitymatrix.m[2][2]*tagmatrix.m[2][3]);
-			Matrix4x4_Copy(&tagmatrix, out);
-
-			// finally transformate by matrix of tag on parent entity
-			Matrix4x4_Concat(out, &attachmatrix, &tagmatrix);
-			out->m[0][3] = attachmatrix.m[0][3] + attachmatrix.m[0][0]*tagmatrix.m[0][3] + attachmatrix.m[0][1]*tagmatrix.m[1][3] + attachmatrix.m[0][2]*tagmatrix.m[2][3];
-			out->m[1][3] = attachmatrix.m[1][3] + attachmatrix.m[1][0]*tagmatrix.m[0][3] + attachmatrix.m[1][1]*tagmatrix.m[1][3] + attachmatrix.m[1][2]*tagmatrix.m[2][3];
-			out->m[2][3] = attachmatrix.m[2][3] + attachmatrix.m[2][0]*tagmatrix.m[0][3] + attachmatrix.m[2][1]*tagmatrix.m[1][3] + attachmatrix.m[2][2]*tagmatrix.m[2][3];
-			Matrix4x4_Copy(&tagmatrix, out);
-
-			ent = attachent;
-			attachloop += 1;
-			if (attachloop > 255) // prevent runaway looping
-				return 5;
-		}
-		while ((val = PRVM_GETEDICTFIELDVALUE(ent, eval_tag_entity)) && val->edict);
+		if (attachloop >= 256) // prevent runaway looping
+			return 5;
+		attachloop++;
+		// to this entity our entity is attached
+		attachent = PRVM_EDICT_NUM(val->edict);
+		// apply transformation by child entity matrix and then by tag on parent entity
+		SV_GetEntityMatrix(attachent, &entitymatrix, false);
+		Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
+		SV_GetEntityLocalTagMatrix(ent, PRVM_GETEDICTFIELDVALUE(ent, eval_tag_index)->_float - 1, &attachmatrix);
+		Matrix4x4_Concat(&tagmatrix, &attachmatrix, out);
+		// next iteration we process the parent entity
+		ent = attachent;
 	}
 
 	// normal or RENDER_VIEWMODEL entity (or main parent entity on attach chain)
-	val = PRVM_GETEDICTFIELDVALUE(ent, eval_scale);
-	if (val->_float == 0)
-		val->_float = 1;
-	// Alias models have inverse pitch, bmodels can't have tags, so don't check for modeltype...
-	Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2], -ent->fields.server->angles[0], ent->fields.server->angles[1], ent->fields.server->angles[2], val->_float);
+	SV_GetEntityMatrix(ent, &entitymatrix, false);
 	Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
-	out->m[0][3] = entitymatrix.m[0][3] + val->_float*(entitymatrix.m[0][0]*tagmatrix.m[0][3] + entitymatrix.m[0][1]*tagmatrix.m[1][3] + entitymatrix.m[0][2]*tagmatrix.m[2][3]);
-	out->m[1][3] = entitymatrix.m[1][3] + val->_float*(entitymatrix.m[1][0]*tagmatrix.m[0][3] + entitymatrix.m[1][1]*tagmatrix.m[1][3] + entitymatrix.m[1][2]*tagmatrix.m[2][3]);
-	out->m[2][3] = entitymatrix.m[2][3] + val->_float*(entitymatrix.m[2][0]*tagmatrix.m[0][3] + entitymatrix.m[2][1]*tagmatrix.m[1][3] + entitymatrix.m[2][2]*tagmatrix.m[2][3]);
 
+	// RENDER_VIEWMODEL magic
 	if ((val = PRVM_GETEDICTFIELDVALUE(ent, eval_viewmodelforclient)) && val->edict)
-	{// RENDER_VIEWMODEL magic
+	{
 		Matrix4x4_Copy(&tagmatrix, out);
 		ent = PRVM_EDICT_NUM(val->edict);
 
-		val = PRVM_GETEDICTFIELDVALUE(ent, eval_scale);
-		if (val->_float == 0)
-			val->_float = 1;
-
-		Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2] + ent->fields.server->view_ofs[2], ent->fields.server->v_angle[0], ent->fields.server->v_angle[1], ent->fields.server->v_angle[2], val->_float);
+		SV_GetEntityMatrix(ent, &entitymatrix, true);
 		Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
-		out->m[0][3] = entitymatrix.m[0][3] + val->_float*(entitymatrix.m[0][0]*tagmatrix.m[0][3] + entitymatrix.m[0][1]*tagmatrix.m[1][3] + entitymatrix.m[0][2]*tagmatrix.m[2][3]);
-		out->m[1][3] = entitymatrix.m[1][3] + val->_float*(entitymatrix.m[1][0]*tagmatrix.m[0][3] + entitymatrix.m[1][1]*tagmatrix.m[1][3] + entitymatrix.m[1][2]*tagmatrix.m[2][3]);
-		out->m[2][3] = entitymatrix.m[2][3] + val->_float*(entitymatrix.m[2][0]*tagmatrix.m[0][3] + entitymatrix.m[2][1]*tagmatrix.m[1][3] + entitymatrix.m[2][2]*tagmatrix.m[2][3]);
 
 		/*
 		// Cl_bob, ported from rendering code
