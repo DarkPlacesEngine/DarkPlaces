@@ -651,8 +651,11 @@ Host_ServerFrame
 */
 void Host_ServerFrame (void)
 {
-	// never run more than 5 frames at a time as a sanity limit
-	int framecount, framelimit = 5;
+	// never run more than 1 frame per call because multiple frames per call it
+	// does not handle overload gracefully, slowing down is better than a
+	// sudden significant drop in framerate (or worse, freezing until the
+	// problem goes away)
+	int framecount, framelimit = 1;
 	double advancetime;
 	if (!sv.active)
 	{
