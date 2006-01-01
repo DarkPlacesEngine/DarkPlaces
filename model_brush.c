@@ -1758,11 +1758,11 @@ static void Mod_Q1BSP_LoadEdges(lump_t *l)
 	{
 		out->v[0] = (unsigned short)LittleShort(in->v[0]);
 		out->v[1] = (unsigned short)LittleShort(in->v[1]);
-		if (out->v[0] >= loadmodel->brushq1.numvertices || out->v[1] >= loadmodel->brushq1.numvertices)
+		if (out->v[0] >= loadmodel->brushq1.numvertexes || out->v[1] >= loadmodel->brushq1.numvertexes)
 		{
-			Host_Error("Mod_Q1BSP_LoadEdges: %s has invalid vertex indices in edge %i (vertices %i %i >= numvertices %i)\n", loadmodel->name, i, out->v[0], out->v[1], loadmodel->brushq1.numvertices);
-			out[0] = 0;
-			out[1] = 0;
+			Host_Error("Mod_Q1BSP_LoadEdges: %s has invalid vertex indices in edge %i (vertices %i %i >= numvertices %i)\n", loadmodel->name, i, out->v[0], out->v[1], loadmodel->brushq1.numvertexes);
+			out->v[0] = 0;
+			out->v[1] = 0;
 		}
 	}
 }
