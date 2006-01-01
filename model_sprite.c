@@ -367,8 +367,10 @@ void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 
 		sprframe = &loadmodel->sprite.sprdata_frames[i];
 
-		sprframe->left = origin[0];
-		sprframe->right = origin[0] + width;
+		// note that sp2 origin[0] is positive, where as it is negative in
+		// spr/spr32/hlspr
+		sprframe->left = -origin[0];
+		sprframe->right = -origin[0] + width;
 		sprframe->up = origin[1];
 		sprframe->down = origin[1] - height;
 
