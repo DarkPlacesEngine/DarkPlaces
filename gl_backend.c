@@ -777,7 +777,7 @@ unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **ver
 		qglGetObjectParameterivARB(vertexshaderobject, GL_OBJECT_COMPILE_STATUS_ARB, &vertexshadercompiled);
 		qglGetInfoLogARB(vertexshaderobject, sizeof(compilelog), NULL, compilelog);
 		if (compilelog[0])
-			Con_Printf("vertex shader compile log:\n%s\n", compilelog);
+			Con_DPrintf("vertex shader compile log:\n%s\n", compilelog);
 		if (!vertexshadercompiled)
 		{
 			qglDeleteObjectARB(programobject);
@@ -806,7 +806,7 @@ unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **ver
 		qglGetObjectParameterivARB(fragmentshaderobject, GL_OBJECT_COMPILE_STATUS_ARB, &fragmentshadercompiled);
 		qglGetInfoLogARB(fragmentshaderobject, sizeof(compilelog), NULL, compilelog);
 		if (compilelog[0])
-			Con_Printf("fragment shader compile log:\n%s\n", compilelog);
+			Con_DPrintf("fragment shader compile log:\n%s\n", compilelog);
 		if (!fragmentshadercompiled)
 		{
 			qglDeleteObjectARB(programobject);
@@ -825,7 +825,7 @@ unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **ver
 	qglGetInfoLogARB(programobject, sizeof(compilelog), NULL, compilelog);
 	if (compilelog[0])
 	{
-		Con_Printf("program link log:\n%s\n", compilelog);
+		Con_DPrintf("program link log:\n%s\n", compilelog);
 		// software vertex shader is ok but software fragment shader is WAY
 		// too slow, fail program if so.
 		// NOTE: this string might be ATI specific, but that's ok because the
