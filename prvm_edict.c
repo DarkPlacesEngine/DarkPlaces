@@ -832,7 +832,7 @@ void PRVM_ED_ParseGlobals (const char *data)
 	{
 		// parse key
 		if (!COM_ParseToken(&data, false))
-			PRVM_ERROR ("PRVM_ED_ParseEntity: EOF without closing brace");
+			PRVM_ERROR ("PRVM_ED_ParseGlobals: EOF without closing brace");
 		if (com_token[0] == '}')
 			break;
 
@@ -840,10 +840,10 @@ void PRVM_ED_ParseGlobals (const char *data)
 
 		// parse value
 		if (!COM_ParseToken(&data, false))
-			PRVM_ERROR ("PRVM_ED_ParseEntity: EOF without closing brace");
+			PRVM_ERROR ("PRVM_ED_ParseGlobals: EOF without closing brace");
 
 		if (com_token[0] == '}')
-			PRVM_ERROR ("PRVM_ED_ParseEntity: closing brace without data");
+			PRVM_ERROR ("PRVM_ED_ParseGlobals: closing brace without data");
 
 		key = PRVM_ED_FindGlobal (keyname);
 		if (!key)
@@ -1024,7 +1024,7 @@ const char *PRVM_ED_ParseEdict (const char *data, prvm_edict_t *ent)
 	{
 	// parse key
 		if (!COM_ParseToken(&data, false))
-			PRVM_ERROR ("PRVM_ED_ParseEntity: EOF without closing brace");
+			PRVM_ERROR ("PRVM_ED_ParseEdict: EOF without closing brace");
 		if (com_token[0] == '}')
 			break;
 
@@ -1054,10 +1054,10 @@ const char *PRVM_ED_ParseEdict (const char *data, prvm_edict_t *ent)
 
 	// parse value
 		if (!COM_ParseToken(&data, false))
-			PRVM_ERROR ("PRVM_ED_ParseEntity: EOF without closing brace");
+			PRVM_ERROR ("PRVM_ED_ParseEdict: EOF without closing brace");
 
 		if (com_token[0] == '}')
-			PRVM_ERROR ("PRVM_ED_ParseEntity: closing brace without data");
+			PRVM_ERROR ("PRVM_ED_ParseEdict: closing brace without data");
 
 		init = true;
 
