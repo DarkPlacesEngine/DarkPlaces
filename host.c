@@ -82,6 +82,7 @@ cvar_t samelevel = {0, "samelevel","0"};
 cvar_t noexit = {CVAR_NOTIFY, "noexit","0"};
 
 cvar_t developer = {0, "developer","0"};
+cvar_t developer_entityparsing = {0, "developer_entityparsing", "0"};
 
 cvar_t skill = {0, "skill","1"};
 cvar_t deathmatch = {0, "deathmatch","0"};
@@ -238,6 +239,7 @@ void Host_InitLocal (void)
 	Cvar_RegisterVariable (&developer);
 	if (forcedeveloper) // make it real now that the cvar is registered
 		Cvar_SetValue("developer", 1);
+	Cvar_RegisterVariable (&developer_entityparsing);
 	Cvar_RegisterVariable (&deathmatch);
 	Cvar_RegisterVariable (&coop);
 
