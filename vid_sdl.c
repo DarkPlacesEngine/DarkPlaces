@@ -254,11 +254,13 @@ static int Sys_EventFilter( SDL_Event *event )
 #endif
 }
 
-static keynum_t buttonremap[16] =
+static keynum_t buttonremap[18] =
 {
 	K_MOUSE1,
 	K_MOUSE3,
 	K_MOUSE2,
+	K_MWHEELUP,
+	K_MWHEELDOWN,
 	K_MOUSE4,
 	K_MOUSE5,
 	K_MOUSE6,
@@ -297,11 +299,11 @@ void Sys_SendKeyEvents( void )
 				}
 				break;
 			case SDL_MOUSEBUTTONDOWN:
-				if (event.button.button <= 16)
+				if (event.button.button <= 18)
 					Key_Event( buttonremap[event.button.button - 1], 0, true );
 				break;
 			case SDL_MOUSEBUTTONUP:
-				if (event.button.button <= 16)
+				if (event.button.button <= 18)
 					Key_Event( buttonremap[event.button.button - 1], 0, false );
 				break;
 		}
