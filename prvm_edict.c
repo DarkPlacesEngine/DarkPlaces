@@ -1009,6 +1009,7 @@ ed should be a properly initialized empty edict.
 Used for initial level load and for savegames.
 ====================
 */
+extern cvar_t developer_entityparsing;
 const char *PRVM_ED_ParseEdict (const char *data, prvm_edict_t *ent)
 {
 	ddef_t *key;
@@ -1025,6 +1026,8 @@ const char *PRVM_ED_ParseEdict (const char *data, prvm_edict_t *ent)
 	// parse key
 		if (!COM_ParseToken(&data, false))
 			PRVM_ERROR ("PRVM_ED_ParseEdict: EOF without closing brace");
+		if (developer_entityparsing.integer)
+			Con_Printf("Key: \"%s\"", com_token);
 		if (com_token[0] == '}')
 			break;
 
@@ -1055,6 +1058,8 @@ const char *PRVM_ED_ParseEdict (const char *data, prvm_edict_t *ent)
 	// parse value
 		if (!COM_ParseToken(&data, false))
 			PRVM_ERROR ("PRVM_ED_ParseEdict: EOF without closing brace");
+		if (developer_entityparsing.integer)
+			Con_Printf(" \"%s\"\n", com_token);
 
 		if (com_token[0] == '}')
 			PRVM_ERROR ("PRVM_ED_ParseEdict: closing brace without data");
