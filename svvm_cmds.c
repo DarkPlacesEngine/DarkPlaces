@@ -2116,7 +2116,6 @@ int SV_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 	prvm_eval_t *val;
 	int modelindex, attachloop;
 	matrix4x4_t entitymatrix, tagmatrix, attachmatrix;
-	prvm_edict_t *attachent;
 	model_t *model;
 
 	Matrix4x4_CreateIdentity(out); // warnings and errors return identical matrix
@@ -2132,32 +2131,31 @@ int SV_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 
 	model = sv.models[modelindex];
 
-	// get initial tag matrix
-	ret = SV_GetEntityLocalTagMatrix(ent, tagindex - 1, &tagmatrix);
-	if (ret)
-		return ret;
-
+	Matrix4x4_CreateIdentity(&tagmatrix);
 	// DP_GFX_QUAKE3MODELTAGS, scan all chain and stop on unattached entity
 	attachloop = 0;
-	while ((val = PRVM_GETEDICTFIELDVALUE(ent, eval_tag_entity)) && val->edict)
+	for (;;)
 	{
 		if (attachloop >= 256) // prevent runaway looping
 			return 5;
-		attachloop++;
-		// to this entity our entity is attached
-		attachent = PRVM_EDICT_NUM(val->edict);
-		// apply transformation by child entity matrix and then by tag on parent entity
-		SV_GetEntityMatrix(attachent, &entitymatrix, false);
-		Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
-		SV_GetEntityLocalTagMatrix(ent, PRVM_GETEDICTFIELDVALUE(ent, eval_tag_index)->_float - 1, &attachmatrix);
-		Matrix4x4_Concat(&tagmatrix, &attachmatrix, out);
+		// apply transformation by child's tagindex on parent entity and then
+		// by parent entity itself
+		ret = SV_GetEntityLocalTagMatrix(ent, tagindex - 1, &attachmatrix);
+		if (ret && attachloop == 0)
+			return ret;
+		Matrix4x4_Concat(out, &attachmatrix, &tagmatrix);
+		SV_GetEntityMatrix(ent, &entitymatrix, false);
+		Matrix4x4_Concat(&tagmatrix, &entitymatrix, out);
 		// next iteration we process the parent entity
-		ent = attachent;
+		if ((val = PRVM_GETEDICTFIELDVALUE(ent, eval_tag_entity)) && val->edict)
+		{
+			tagindex = PRVM_GETEDICTFIELDVALUE(ent, eval_tag_index)->_float;
+			ent = PRVM_EDICT_NUM(val->edict);
+		}
+		else
+			break;
+		attachloop++;
 	}
-
-	// normal or RENDER_VIEWMODEL entity (or main parent entity on attach chain)
-	SV_GetEntityMatrix(ent, &entitymatrix, false);
-	Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
 
 	// RENDER_VIEWMODEL magic
 	if ((val = PRVM_GETEDICTFIELDVALUE(ent, eval_viewmodelforclient)) && val->edict)
