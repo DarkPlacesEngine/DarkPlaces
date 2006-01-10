@@ -58,6 +58,7 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define EF_NOSHADOW				4096	// LordHavoc: does not cast a shadow
 #define EF_NODEPTHTEST			8192	// LordHavoc: shows through walls
 #define EF_SELECTABLE			16384	// LordHavoc: highlights when PRYDON_CLIENTCURSOR mouse is over it
+#define EF_DOUBLESIDED			32768	//[515]: disable cull face for this entity
 
 #define EF_STEP					0x80000000 // internal client use only - present on MOVETYPE_STEP entities, not QC accessible (too many bits)
 
@@ -315,6 +316,7 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define RENDER_SHADOW 65536 // cast shadow
 #define RENDER_LIGHT 131072 // receive light
 #define RENDER_TRANSPARENT 262144 // can't light during opaque stage
+#define RENDER_NOCULLFACE 524288 // render as double sided (disable GL_CULL_FACE)
 
 // this is 80 bytes
 typedef struct entity_state_s

@@ -1030,6 +1030,10 @@ void CL_LinkNetworkEntity(entity_t *e)
 		// transparent stuff can't be lit during the opaque stage
 		if (e->render.effects & (EF_ADDITIVE | EF_NODEPTHTEST) || e->render.alpha < 1)
 			e->render.flags |= RENDER_TRANSPARENT;
+		// double sided rendering mode causes backfaces to be visible
+		// (mostly useful on transparent stuff)
+		if (e->render.effects & EF_DOUBLESIDED)
+			e->render.flags |= RENDER_NOCULLFACE;
 		// either fullbright or lit
 		if (!(e->render.effects & EF_FULLBRIGHT) && !r_fullbright.integer)
 			e->render.flags |= RENDER_LIGHT;

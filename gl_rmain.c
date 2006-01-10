@@ -1880,7 +1880,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 	// FIXME: identify models using a better check than ent->model->brush.shadowmesh
 	lightmode = ((ent->effects & EF_FULLBRIGHT) || ent->model->brush.shadowmesh) ? 0 : 2;
 	GL_DepthTest(!(texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
-	if (texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+	if ((texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (ent->flags & RENDER_NOCULLFACE))
 		qglDisable(GL_CULL_FACE);
 	if (texture->currentnumlayers)
 	{
@@ -2174,7 +2174,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			}
 		}
 	}
-	if (texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+	if ((texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (ent->flags & RENDER_NOCULLFACE))
 		qglEnable(GL_CULL_FACE);
 }
 
