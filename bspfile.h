@@ -62,6 +62,7 @@ typedef struct hullinfo_s
 	float		hullsizes[MAX_MAP_HULLS][2][3];
 } hullinfo_t;
 
+// WARNING: this struct does NOT match q1bsp's disk format because MAX_MAP_HULLS has been changed by Sajt's MCBSP code, this struct is only being used in memory as a result
 typedef struct dmodel_s
 {
 	float		mins[3], maxs[3];
