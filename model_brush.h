@@ -245,7 +245,7 @@ typedef struct q2dheader_s
 {
 	int			ident;
 	int			version;
-	lump_t		lumps[HEADER_LUMPS];
+	lump_t		lumps[Q2HEADER_LUMPS];
 } q2dheader_t;
 
 typedef struct q2dmodel_s
@@ -419,7 +419,7 @@ typedef struct q3dheader_s
 {
 	int			ident;
 	int			version;
-	lump_t		lumps[HEADER_LUMPS];
+	lump_t		lumps[Q3HEADER_LUMPS];
 } q3dheader_t;
 
 typedef struct q3dtexture_s
