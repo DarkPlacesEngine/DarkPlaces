@@ -2528,7 +2528,7 @@ void R_Shadow_RenderSurfacesLighting(const entity_render_t *ent, const texture_t
 	rtexture_t *basetexture;
 	rtexture_t *glosstexture;
 	float specularscale;
-	if (texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+	if ((texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (ent->flags & RENDER_NOCULLFACE))
 		qglDisable(GL_CULL_FACE);
 	else
 		qglEnable(GL_CULL_FACE);
