@@ -959,7 +959,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	if ((val = PRVM_GETEDICTFIELDVALUE(ent, eval_punchvector)))
 		VectorCopy(val->vector, punchvector);
 
-	// FIXME: cache weapon model name and index in client struct to save time
+	// cache weapon model name and index in client struct to save time
 	// (this search can be almost 1% of cpu time!)
 	s = PRVM_GetString(ent->fields.server->weaponmodel);
 	if (strcmp(s, client->weaponmodel))
@@ -2110,6 +2110,14 @@ int eval_button5;
 int eval_button6;
 int eval_button7;
 int eval_button8;
+int eval_button9;
+int eval_button10;
+int eval_button11;
+int eval_button12;
+int eval_button13;
+int eval_button14;
+int eval_button15;
+int eval_button16;
 int eval_buttonuse;
 int eval_buttonchat;
 int eval_glow_size;
@@ -2169,6 +2177,14 @@ void SV_VM_FindEdictFieldOffsets(void)
 	eval_button6 = PRVM_ED_FindFieldOffset("button6");
 	eval_button7 = PRVM_ED_FindFieldOffset("button7");
 	eval_button8 = PRVM_ED_FindFieldOffset("button8");
+	eval_button9 = PRVM_ED_FindFieldOffset("button9");
+	eval_button10 = PRVM_ED_FindFieldOffset("button10");
+	eval_button11 = PRVM_ED_FindFieldOffset("button11");
+	eval_button12 = PRVM_ED_FindFieldOffset("button12");
+	eval_button13 = PRVM_ED_FindFieldOffset("button13");
+	eval_button14 = PRVM_ED_FindFieldOffset("button14");
+	eval_button15 = PRVM_ED_FindFieldOffset("button15");
+	eval_button16 = PRVM_ED_FindFieldOffset("button16");
 	eval_buttonuse = PRVM_ED_FindFieldOffset("buttonuse");
 	eval_buttonchat = PRVM_ED_FindFieldOffset("buttonchat");
 	eval_glow_size = PRVM_ED_FindFieldOffset("glow_size");
@@ -2246,6 +2262,14 @@ prvm_required_field_t reqfields[] =
 	{ev_float, "button6"},
 	{ev_float, "button7"},
 	{ev_float, "button8"},
+	{ev_float, "button9"},
+	{ev_float, "button10"},
+	{ev_float, "button11"},
+	{ev_float, "button12"},
+	{ev_float, "button13"},
+	{ev_float, "button14"},
+	{ev_float, "button15"},
+	{ev_float, "button16"},
 	{ev_float, "buttonchat"},
 	{ev_float, "buttonuse"},
 	{ev_float, "clientcolors"},

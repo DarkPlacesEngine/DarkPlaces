@@ -53,8 +53,12 @@ kbutton_t	in_strafe, in_speed, in_jump, in_attack, in_use;
 kbutton_t	in_up, in_down;
 // LordHavoc: added 6 new buttons
 kbutton_t	in_button3, in_button4, in_button5, in_button6, in_button7, in_button8;
+//even more
+kbutton_t	in_button9, in_button10, in_button11, in_button12, in_button13, in_button14, in_button15, in_button16;
 
 int			in_impulse;
+
+extern cvar_t sys_ticrate;
 
 
 void KeyDown (kbutton_t *b)
@@ -170,6 +174,23 @@ void IN_Button7Down(void) {KeyDown(&in_button7);}
 void IN_Button7Up(void) {KeyUp(&in_button7);}
 void IN_Button8Down(void) {KeyDown(&in_button8);}
 void IN_Button8Up(void) {KeyUp(&in_button8);}
+
+void IN_Button9Down(void) {KeyDown(&in_button9);}
+void IN_Button9Up(void) {KeyUp(&in_button9);}
+void IN_Button10Down(void) {KeyDown(&in_button10);}
+void IN_Button10Up(void) {KeyUp(&in_button10);}
+void IN_Button11Down(void) {KeyDown(&in_button11);}
+void IN_Button11Up(void) {KeyUp(&in_button11);}
+void IN_Button12Down(void) {KeyDown(&in_button12);}
+void IN_Button12Up(void) {KeyUp(&in_button12);}
+void IN_Button13Down(void) {KeyDown(&in_button13);}
+void IN_Button13Up(void) {KeyUp(&in_button13);}
+void IN_Button14Down(void) {KeyDown(&in_button14);}
+void IN_Button14Up(void) {KeyUp(&in_button14);}
+void IN_Button15Down(void) {KeyDown(&in_button15);}
+void IN_Button15Up(void) {KeyUp(&in_button15);}
+void IN_Button16Down(void) {KeyDown(&in_button16);}
+void IN_Button16Up(void) {KeyUp(&in_button16);}
 
 void IN_JumpDown (void) {KeyDown(&in_jump);}
 void IN_JumpUp (void) {KeyUp(&in_jump);}
@@ -833,7 +854,15 @@ void CL_SendMove(void)
 	if (in_use.state      & 3) bits |= 256;in_use.state     &= ~2;
 	if (key_dest != key_game || key_consoleactive) bits |= 512;
 	if (cl_prydoncursor.integer) bits |= 1024;
-	// button bits 11-31 unused currently
+	if (in_button9.state  & 3)  bits |=   2048;in_button9.state  &= ~2;
+	if (in_button10.state  & 3) bits |=   4096;in_button10.state &= ~2;
+	if (in_button11.state  & 3) bits |=   8192;in_button11.state &= ~2;
+	if (in_button12.state  & 3) bits |=  16384;in_button12.state &= ~2;
+	if (in_button13.state  & 3) bits |=  32768;in_button13.state &= ~2;
+	if (in_button14.state  & 3) bits |=  65536;in_button14.state &= ~2;
+	if (in_button15.state  & 3) bits |= 131072;in_button15.state &= ~2;
+	if (in_button16.state  & 3) bits |= 262144;in_button16.state &= ~2;
+	// button bits 19-31 unused currently
 	// rotate/zoom view serverside if PRYDON_CLIENTCURSOR cursor is at edge of screen
 	if (cl.cmd.cursor_screen[0] <= -1) bits |= 8;
 	if (cl.cmd.cursor_screen[0] >=  1) bits |= 16;
@@ -1039,6 +1068,22 @@ void CL_InitInput (void)
 	Cmd_AddCommand ("-button7", IN_Button7Up);
 	Cmd_AddCommand ("+button8", IN_Button8Down);
 	Cmd_AddCommand ("-button8", IN_Button8Up);
+	Cmd_AddCommand ("+button9", IN_Button9Down);
+	Cmd_AddCommand ("-button9", IN_Button9Up);
+	Cmd_AddCommand ("+button10", IN_Button10Down);
+	Cmd_AddCommand ("-button10", IN_Button10Up);
+	Cmd_AddCommand ("+button11", IN_Button11Down);
+	Cmd_AddCommand ("-button11", IN_Button11Up);
+	Cmd_AddCommand ("+button12", IN_Button12Down);
+	Cmd_AddCommand ("-button12", IN_Button12Up);
+	Cmd_AddCommand ("+button13", IN_Button13Down);
+	Cmd_AddCommand ("-button13", IN_Button13Up);
+	Cmd_AddCommand ("+button14", IN_Button14Down);
+	Cmd_AddCommand ("-button14", IN_Button14Up);
+	Cmd_AddCommand ("+button15", IN_Button15Down);
+	Cmd_AddCommand ("-button15", IN_Button15Up);
+	Cmd_AddCommand ("+button16", IN_Button16Down);
+	Cmd_AddCommand ("-button16", IN_Button16Up);
 
 	Cvar_RegisterVariable(&cl_movement);
 	Cvar_RegisterVariable(&cl_movement_latency);
