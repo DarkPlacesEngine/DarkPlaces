@@ -729,6 +729,14 @@ void SV_ApplyClientMove (void)
 	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button6))) val->_float = ((move->buttons >> 5) & 1);
 	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button7))) val->_float = ((move->buttons >> 6) & 1);
 	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button8))) val->_float = ((move->buttons >> 7) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button9))) val->_float = ((move->buttons >> 11) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button10))) val->_float = ((move->buttons >> 12) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button11))) val->_float = ((move->buttons >> 13) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button12))) val->_float = ((move->buttons >> 14) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button13))) val->_float = ((move->buttons >> 15) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button14))) val->_float = ((move->buttons >> 16) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button15))) val->_float = ((move->buttons >> 17) & 1);
+	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button16))) val->_float = ((move->buttons >> 18) & 1);
 	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_buttonuse))) val->_float = ((move->buttons >> 8) & 1);
 	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_buttonchat))) val->_float = ((move->buttons >> 9) & 1);
 	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_cursor_active))) val->_float = ((move->buttons >> 10) & 1);
