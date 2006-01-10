@@ -1496,6 +1496,7 @@ void CL_MoveParticles (void)
 					trace = CL_TraceBox(oldorg, vec3_origin, vec3_origin, p->org, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_LIQUIDSMASK, false);
 					if (trace.fraction < 1)
 					{
+						int count;
 						// convert from a raindrop particle to a rainsplash decal
 						VectorCopy(trace.endpos, p->org);
 						VectorCopy(trace.plane.normal, p->vel);
@@ -1508,6 +1509,9 @@ void CL_MoveParticles (void)
 						p->friction = 0;
 						p->gravity = 0;
 						p->size = 8.0;
+						count = rand() & 3;
+						while(count--)
+							particle(particletype + pt_spark, 0x000000, 0x707070, tex_particle, 0.25f, (1.0f / cl_particles_quality.value) * lhrandom(64, 255), (1.0f / cl_particles_quality.value) * 512, 1, 0, p->org[0], p->org[1], p->org[2], p->vel[0]*16, p->vel[1]*16, 32 + p->vel[2]*16, 0, 0, 32);
 					}
 				}
 				else if (p->type == particletype + pt_blood)
