@@ -867,6 +867,63 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 	qglEnable(GL_CULL_FACE);
 }
 
+//Made by [515]
+void R_ReplaceWorldTexture (void)
+{
+	model_t		*m;
+	texture_t	*t;
+	int			i;
+	const char	*r, *newt;
+	m = r_refdef.worldmodel;
+
+	if(Cmd_Argc() < 2)
+	{
+		Con_Print("r_replacemaptexture <texname> <newtexname> - replaces texture\n");
+		Con_Print("r_replacemaptexture <texname> - switch back to default texture\n");
+		return;
+	}
+	if(!cl.islocalgame || !cl.worldmodel)
+	{
+		Con_Print("This command works only in singleplayer\n");
+		return;
+	}
+	r = Cmd_Argv(1);
+	newt = Cmd_Argv(2);
+	if(!newt[0])
+		newt = r;
+	for(i=0,t=m->data_textures;i<m->num_textures;i++,t++)
+	{
+		if(t->width && !strcasecmp(t->name, r))
+		{
+			if(Mod_LoadSkinFrame(&t->skin, (char*)newt, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, r_fullbrights.integer))
+			{
+				Con_Printf("%s replaced with %s\n", r, newt);
+				return;
+			}
+			else
+			{
+				Con_Printf("%s was not found\n", newt);
+				Mod_LoadSkinFrame(&t->skin, (char*)r, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, r_fullbrights.integer);//back to default
+				return;
+			}
+		}
+	}
+}
+
+//Made by [515]
+void R_ListWorldTextures (void)
+{
+	model_t		*m;
+	texture_t	*t;
+	int			i;
+	m = r_refdef.worldmodel;
+
+	Con_Print("Worldmodel textures :\n");
+	for(i=0,t=m->data_textures;i<m->num_textures;i++,t++)
+		if(t->skin.base != r_texture_notexture)
+			Con_Printf("%s\n", t->name);
+}
+
 #if 0
 static void gl_surf_start(void)
 {
@@ -892,6 +949,9 @@ void GL_Surf_Init(void)
 	Cvar_RegisterVariable(&r_drawcollisionbrushes_polygonfactor);
 	Cvar_RegisterVariable(&r_drawcollisionbrushes_polygonoffset);
 	Cvar_RegisterVariable(&r_q3bsp_renderskydepth);
+
+	Cmd_AddCommand ("r_replacemaptexture", R_ReplaceWorldTexture);		// By [515]
+	Cmd_AddCommand ("r_listmaptextures", R_ListWorldTextures);			// By [515]
 
 	//R_RegisterModule("GL_Surf", gl_surf_start, gl_surf_shutdown, gl_surf_newmap);
 }
