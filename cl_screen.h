@@ -7,6 +7,8 @@
 #define DRAWQUEUE_MESH 1
 #define DRAWQUEUE_SETCLIP 2
 #define DRAWQUEUE_RESETCLIP 3
+#define DRAWQUEUE_LINEWIDTH 4
+#define DRAWQUEUE_LINES 5
 
 typedef struct drawqueue_s
 {
@@ -64,6 +66,8 @@ void DrawQ_Mesh(drawqueuemesh_t *mesh, int flags);
 void DrawQ_SetClipArea(float x, float y, float width, float height);
 // reset the clipping area
 void DrawQ_ResetClipArea(void);
+// draw a line
+void DrawQ_Line(float width, float x1, float y1, float x2, float y2, float r, float g, float b, float alpha, int flags);
 
 void SHOWLMP_decodehide(void);
 void SHOWLMP_decodeshow(void);

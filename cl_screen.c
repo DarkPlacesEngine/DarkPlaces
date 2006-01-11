@@ -758,6 +758,86 @@ void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 	r_refdef.drawqueuesize += dq->size;
 }
 
+void DrawQ_Lines (drawqueuemesh_t *mesh, int flags)
+{
+	int size;
+	void *p;
+	drawqueue_t *dq;
+	drawqueuemesh_t *m;
+	size = sizeof(*dq);
+	size += sizeof(drawqueuemesh_t);
+	size += sizeof(int[3]) * mesh->num_triangles;
+	size += sizeof(float[3]) * mesh->num_vertices;
+	size += sizeof(float[2]) * mesh->num_vertices;
+	size += sizeof(float[4]) * mesh->num_vertices;
+	if (r_refdef.drawqueuesize + size > r_refdef.maxdrawqueuesize)
+		return;
+	dq = (void *)(r_refdef.drawqueue + r_refdef.drawqueuesize);
+	dq->size = size;
+	dq->command = DRAWQUEUE_LINES;
+	dq->flags = flags;
+	dq->color = 0;
+	dq->x = 0;
+	dq->y = 0;
+	dq->scalex = 0;
+	dq->scaley = 0;
+	p = (void *)(dq + 1);
+	m = p;p = (unsigned char*)p + sizeof(drawqueuemesh_t);
+	m->num_triangles = mesh->num_triangles;
+	m->num_vertices = mesh->num_vertices;
+	m->texture = mesh->texture;
+	m->data_element3i  = p;memcpy(m->data_element3i , mesh->data_element3i , m->num_triangles * sizeof(int[3]));p = (unsigned char*)p + m->num_triangles * sizeof(int[3]);
+	m->data_vertex3f   = p;memcpy(m->data_vertex3f  , mesh->data_vertex3f  , m->num_vertices * sizeof(float[3]));p = (unsigned char*)p + m->num_vertices * sizeof(float[3]);
+	m->data_texcoord2f = p;memcpy(m->data_texcoord2f, mesh->data_texcoord2f, m->num_vertices * sizeof(float[2]));p = (unsigned char*)p + m->num_vertices * sizeof(float[2]);
+	m->data_color4f    = p;memcpy(m->data_color4f   , mesh->data_color4f   , m->num_vertices * sizeof(float[4]));p = (unsigned char*)p + m->num_vertices * sizeof(float[4]);
+	r_refdef.drawqueuesize += dq->size;
+}
+
+//LordHavoc: FIXME: this is nasty!
+void DrawQ_LineWidth (float width)
+{
+	drawqueue_t *dq;
+	static int linewidth = 1;
+	if(width == linewidth)
+		return;
+	linewidth = width;
+	if(r_refdef.drawqueuesize + (int)sizeof(*dq) > r_refdef.maxdrawqueuesize)
+	{
+		Con_DPrint("DrawQueue full !\n");
+		return;
+	}
+	dq = (void*) (r_refdef.drawqueue + r_refdef.drawqueuesize);
+	dq->size = sizeof(*dq);
+	dq->command = DRAWQUEUE_LINEWIDTH;
+	dq->x = width;
+
+	r_refdef.drawqueuesize += dq->size;
+}
+
+//[515]: this is old, delete
+void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, float g, float b, float alpha, int flags)
+{
+	drawqueue_t *dq;
+	if(width > 0)
+		DrawQ_LineWidth(width);
+	if(r_refdef.drawqueuesize + (int)sizeof(*dq) > r_refdef.maxdrawqueuesize)
+	{
+		Con_DPrint("DrawQueue full !\n");
+		return;
+	}
+	dq = (void*) (r_refdef.drawqueue + r_refdef.drawqueuesize);
+	dq->size = sizeof(*dq);
+	dq->command = DRAWQUEUE_LINES;
+	dq->x = x1;
+	dq->y = y1;
+	dq->scalex = x2;
+	dq->scaley = y2;
+	dq->flags = flags;
+	dq->color =  ((unsigned int) (r * 255.0f) << 24) | ((unsigned int) (g * 255.0f) << 16) | ((unsigned int) (b * 255.0f) << 8) | ((unsigned int) (alpha * 255.0f));
+
+	r_refdef.drawqueuesize += dq->size;
+}
+
 void DrawQ_SetClipArea(float x, float y, float width, float height)
 {
 	drawqueue_t * dq;

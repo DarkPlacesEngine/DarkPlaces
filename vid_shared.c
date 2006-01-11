@@ -248,6 +248,10 @@ void (GLAPIENTRY *qglScissor)(GLint x, GLint y, GLsizei width, GLsizei height);
 
 void (GLAPIENTRY *qglPolygonOffset)(GLfloat factor, GLfloat units);
 
+//[515]: added on 29.07.2005
+void (GLAPIENTRY *qglLineWidth)(GLfloat width);
+void (GLAPIENTRY *qglPointSize)(GLfloat size);
+
 void (GLAPIENTRY *qglActiveStencilFaceEXT)(GLenum);
 
 void (GLAPIENTRY *qglDeleteObjectARB)(GLhandleARB obj);
@@ -420,6 +424,10 @@ static dllfunction_t opengl110funcs[] =
 	{"glVertex3f", (void **) &qglVertex3f},
 	{"glBegin", (void **) &qglBegin},
 	{"glEnd", (void **) &qglEnd},
+//[515]: added on 29.07.2005
+	{"glLineWidth", (void**) &qglLineWidth},
+	{"glPointSize", (void**) &qglPointSize},
+//
 	{"glMatrixMode", (void **) &qglMatrixMode},
 	{"glOrtho", (void **) &qglOrtho},
 	{"glFrustum", (void **) &qglFrustum},

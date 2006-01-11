@@ -657,6 +657,17 @@ void R_DrawQueue(void)
 		case DRAWQUEUE_RESETCLIP:
 			GL_ScissorTest(false);
 			break;
+		case DRAWQUEUE_LINEWIDTH:
+			qglLineWidth(x);
+			break;
+		case DRAWQUEUE_LINES:
+			mesh = (drawqueuemesh_t *)(dq + 1);
+			GL_Color(c[0], c[1], c[2], c[3]);
+			qglBegin(GL_LINE_LOOP);
+			for (num = 0;num < mesh->num_vertices;num++)
+				qglVertex2f(mesh->data_vertex3f[num*3+0], mesh->data_vertex3f[num*3+1]);
+			qglEnd();
+			break;
 		}
 	}
 
