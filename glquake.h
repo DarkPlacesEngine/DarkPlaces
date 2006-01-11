@@ -495,6 +495,10 @@ extern void (GLAPIENTRY *qglCopyTexSubImage2D)(GLenum target, GLint level, GLint
 
 extern void (GLAPIENTRY *qglPolygonOffset)(GLfloat factor, GLfloat units);
 
+//[515]: added on 29.07.2005
+extern void (GLAPIENTRY *qglLineWidth)(GLfloat width);
+extern void (GLAPIENTRY *qglPointSize)(GLfloat size);
+
 // GL_ARB_shader_objects
 extern int gl_support_shader_objects;
 #ifndef GL_PROGRAM_OBJECT_ARB
