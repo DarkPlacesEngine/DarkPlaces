@@ -44,6 +44,7 @@ char con_text[CON_TEXTSIZE];
 //seconds
 cvar_t con_notifytime = {CVAR_SAVE, "con_notifytime","3"};
 cvar_t con_notify = {CVAR_SAVE, "con_notify","4"};
+cvar_t con_textsize = {CVAR_SAVE, "con_textsize","8"};	//[515]: console text size in pixels
 
 #define MAX_NOTIFYLINES 32
 // cl.time time the line was generated for transparent notify lines
@@ -316,9 +317,14 @@ If the line width has changed, reformat the buffer.
 void Con_CheckResize (void)
 {
 	int i, j, width, oldwidth, oldtotallines, numlines, numchars;
+	float f;
 	char tbuf[CON_TEXTSIZE];
 
-	width = (vid_conwidth.integer >> 3);
+	f = bound(1, con_textsize.value, 128);
+	if(f != con_textsize.value)
+		Cvar_SetValueQuick(&con_textsize, f);
+	width = (int)floor(vid_conwidth.value / con_textsize.value);
+	width = bound(1, width, CON_TEXTSIZE/4);
 
 	if (width == con_linewidth)
 		return;
@@ -400,6 +406,7 @@ void Con_Init_Commands (void)
 	// register our cvars
 	Cvar_RegisterVariable (&con_notifytime);
 	Cvar_RegisterVariable (&con_notify);
+	Cvar_RegisterVariable (&con_textsize);
 
 	// register our commands
 	Cmd_AddCommand ("toggleconsole", Con_ToggleConsole_f);
@@ -723,7 +730,7 @@ void Con_DrawInput (void)
 		text += 1 + key_linepos - con_linewidth;
 
 	// draw it
-	DrawQ_ColoredString(0, con_vislines - 16, text, con_linewidth, 8, 8, 1.0, 1.0, 1.0, 1.0, 0, NULL );
+	DrawQ_ColoredString(0, con_vislines - con_textsize.value*2, text, con_linewidth, con_textsize.value, con_textsize.value, 1.0, 1.0, 1.0, 1.0, 0, NULL );
 
 	// remove cursor
 //	key_lines[edit_line][key_linepos] = 0;
@@ -739,7 +746,7 @@ Draws the last few lines of output transparently over the game top
 */
 void Con_DrawNotify (void)
 {
-	int		x, v;
+	float	x, v;
 	char	*text;
 	int		i;
 	float	time;
@@ -771,13 +778,13 @@ void Con_DrawNotify (void)
 			int linewidth;
 
 			for (linewidth = con_linewidth; linewidth && text[linewidth-1] == ' '; linewidth--);
-			x = (vid_conwidth.integer - linewidth * 8) / 2;
+			x = (vid_conwidth.integer - linewidth * con_textsize.value) * 0.5;
 		} else
 			x = 0;
 
-		DrawQ_ColoredString( x, v, text, con_linewidth, 8, 8, 1.0, 1.0, 1.0, 1.0, 0, &colorindex );
+		DrawQ_ColoredString( x, v, text, con_linewidth, con_textsize.value, con_textsize.value, 1.0, 1.0, 1.0, 1.0, 0, &colorindex );
 
-		v += 8;
+		v += con_textsize.value;
 	}
 
 
@@ -794,14 +801,14 @@ void Con_DrawNotify (void)
 			sprintf(temptext, "say:%s%c", chat_buffer, (int) 10+((int)(realtime*con_cursorspeed)&1));
 		while ((int)strlen(temptext) >= con_linewidth)
 		{
-			DrawQ_ColoredString( 0, v, temptext, con_linewidth, 8, 8, 1.0, 1.0, 1.0, 1.0, 0, &colorindex );
+			DrawQ_ColoredString( 0, v, temptext, con_linewidth, con_textsize.value, con_textsize.value, 1.0, 1.0, 1.0, 1.0, 0, &colorindex );
 			strcpy(temptext, &temptext[con_linewidth]);
-			v += 8;
+			v += con_textsize.value;
 		}
 		if (strlen(temptext) > 0)
 		{
-			DrawQ_ColoredString( 0, v, temptext, 0, 8, 8, 1.0, 1.0, 1.0, 1.0, 0, &colorindex );
-			v += 8;
+			DrawQ_ColoredString( 0, v, temptext, 0, con_textsize.value, con_textsize.value, 1.0, 1.0, 1.0, 1.0, 0, &colorindex );
+			v += con_textsize.value;
 		}
 	}
 }
@@ -816,7 +823,8 @@ The typing input line at the bottom should only be drawn if typing is allowed
 */
 void Con_DrawConsole (int lines)
 {
-	int i, y, rows, j;
+	int i, rows, j;
+	float y;
 	char *text;
 	int colorindex = -1;
 
@@ -828,20 +836,20 @@ void Con_DrawConsole (int lines)
 		DrawQ_Pic(0, lines - vid_conheight.integer, "gfx/conback", vid_conwidth.integer, vid_conheight.integer, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, scr_conalpha.value, 0);
 	else
 		DrawQ_Fill(0, lines - vid_conheight.integer, vid_conwidth.integer, vid_conheight.integer, 0, 0, 0, scr_conalpha.value, 0);
-	DrawQ_String(vid_conwidth.integer - strlen(engineversion) * 8 - 8, lines - 8, engineversion, 0, 8, 8, 1, 0, 0, 1, 0);
+	DrawQ_String(vid_conwidth.integer - strlen(engineversion) * con_textsize.value - con_textsize.value, lines - con_textsize.value, engineversion, 0, con_textsize.value, con_textsize.value, 1, 0, 0, 1, 0);
 
 // draw the text
 	con_vislines = lines;
 
-	rows = (lines-16)>>3;		// rows of text to draw
-	y = lines - 16 - (rows<<3);	// may start slightly negative
+	rows = (int)ceil((lines/con_textsize.value)-2);		// rows of text to draw
+	y = lines - (rows+2)*con_textsize.value;	// may start slightly negative
 
-	for (i = con_current - rows + 1;i <= con_current;i++, y += 8)
+	for (i = con_current - rows + 1;i <= con_current;i++, y += con_textsize.value)
 	{
 		j = max(i - con_backscroll, 0);
 		text = con_text + (j % con_totallines)*con_linewidth;
 
-		DrawQ_ColoredString( 0, y, text, con_linewidth, 8, 8, 1.0, 1.0, 1.0, 1.0, 0, &colorindex );
+		DrawQ_ColoredString( 0, y, text, con_linewidth, con_textsize.value, con_textsize.value, 1.0, 1.0, 1.0, 1.0, 0, &colorindex );
 	}
 
 // draw the input prompt, user text, and cursor if desired
