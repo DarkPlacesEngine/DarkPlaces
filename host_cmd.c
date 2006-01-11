@@ -1872,6 +1872,35 @@ void Host_Stopdemo_f (void)
 	Host_ShutdownServer (false);
 }
 
+void Host_SendCvar_f (void)
+{
+	int		i;
+	cvar_t	*c;
+	client_t *old;
+
+	if(Cmd_Argc() != 2)
+		return;
+	if(!(c = Cvar_FindVar(Cmd_Argv(1))))
+		return;
+	if (cls.state != ca_dedicated)
+		Cmd_ForwardStringToServer(va("sentcvar %s %s\n", c->name, c->string));
+	if(!sv.active)// || !SV_ParseClientCommandQC)
+		return;
+
+	old = host_client;
+	if (cls.state != ca_dedicated)
+		i = 1;
+	else
+		i = 0;
+	for(;i<svs.maxclients;i++)
+		if(svs.clients[i].active && svs.clients[i].netconnection)
+		{
+			host_client = &svs.clients[i];
+			Host_ClientCommands(va("sendcvar %s\n", c->name));
+		}
+	host_client = old;
+}
+
 static void MaxPlayers_f(void)
 {
 	int n;
@@ -1976,6 +2005,8 @@ void Host_InitCommands (void)
 	Cmd_AddCommand ("spawn", Host_Spawn_f);
 	Cmd_AddCommand ("begin", Host_Begin_f);
 	Cmd_AddCommand ("maxplayers", MaxPlayers_f);
+
+	Cmd_AddCommand ("sendcvar", Host_SendCvar_f);					// By [515]
 
 	Cvar_RegisterVariable(&sv_cheats);
 }
