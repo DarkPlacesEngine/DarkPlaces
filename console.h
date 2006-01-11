@@ -41,6 +41,8 @@ void Con_DrawNotify (void);
 void Con_ClearNotify (void);
 void Con_ToggleConsole_f (void);
 
+qboolean GetMapList (const char *s, char *completedname, int completednamebufferlength);
+
 // wrapper function to attempt to either complete the command line
 // or to list possible matches grouped by type
 // (i.e. will display possible variables, aliases, commands
