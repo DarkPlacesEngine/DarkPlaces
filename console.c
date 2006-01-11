@@ -356,6 +356,21 @@ void Con_CheckResize (void)
 	con_current = con_totallines - 1;
 }
 
+//[515]: the simplest command ever
+//LordHavoc: not so simple after I made it print usage...
+static void Con_Maps_f (void)
+{
+	if (Cmd_Argc() > 2)
+	{
+		Con_Printf("usage: maps [mapnameprefix]\n");
+		return;
+	}
+	else if (Cmd_Argc() == 2)
+		GetMapList(Cmd_Argv(1), NULL, 0);
+	else
+		GetMapList("", NULL, 0);
+}
+
 /*
 ================
 Con_Init
@@ -391,6 +406,7 @@ void Con_Init_Commands (void)
 	Cmd_AddCommand ("messagemode", Con_MessageMode_f);
 	Cmd_AddCommand ("messagemode2", Con_MessageMode2_f);
 	Cmd_AddCommand ("clear", Con_Clear_f);
+	Cmd_AddCommand ("maps", Con_Maps_f);							// By [515]
 
 	con_initialized = true;
 	Con_Print("Console initialized.\n");
@@ -833,6 +849,170 @@ void Con_DrawConsole (int lines)
 }
 
 /*
+GetMapList
+
+Made by [515]
+Prints not only map filename, but also
+its format (q1/q2/q3/hl) and even its message
+*/
+//[515]: here is an ugly hack.. two gotos... oh my... *but it works*
+//LordHavoc: rewrote bsp type detection, added mcbsp support and rewrote message extraction to do proper worldspawn parsing
+//LordHavoc: added .ent file loading, and redesigned error handling to still try the .ent file even if the map format is not recognized, this also eliminated one goto
+//LordHavoc: FIXME: man this GetMapList is STILL ugly code even after my cleanups...
+qboolean GetMapList (const char *s, char *completedname, int completednamebufferlength)
+{
+	fssearch_t	*t;
+	char		message[64];
+	int			i, k, max, p, o, min;
+	unsigned char *len;
+	qfile_t		*f;
+	unsigned char buf[1024];
+
+	sprintf(message, "maps/%s*.bsp", s);
+	t = FS_Search(message, 1, true);
+	if(!t)
+		return false;
+	if (t->numfilenames > 1)
+		Con_Printf("^1 %i maps found :\n", t->numfilenames);
+	len = Z_Malloc(t->numfilenames);
+	min = 666;
+	for(max=i=0;i<t->numfilenames;i++)
+	{
+		k = strlen(t->filenames[i]);
+		k -= 9;
+		if(max < k)
+			max = k;
+		else
+		if(min > k)
+			min = k;
+		len[i] = k;
+	}
+	o = strlen(s);
+	for(i=0;i<t->numfilenames;i++)
+	{
+		int lumpofs = 0, lumplen = 0;
+		char *entities = NULL;
+		const char *data = NULL;
+		char keyname[64];
+		char entfilename[MAX_QPATH];
+		strcpy(message, "^1**ERROR**^7");
+		f = FS_Open(t->filenames[i], "rb", true, false);
+		if(f)
+		{
+			memset(buf, 0, 1024);
+			FS_Read(f, buf, 1024);
+			if (!memcmp(buf, "IBSP", 4))
+			{
+				p = LittleLong(((int *)buf)[1]);
+				if (p == Q3BSPVERSION)
+				{
+					q3dheader_t *header = (q3dheader_t *)buf;
+					lumpofs = LittleLong(header->lumps[Q3LUMP_ENTITIES].fileofs);
+					lumplen = LittleLong(header->lumps[Q3LUMP_ENTITIES].filelen);
+				}
+				else if (p == Q2BSPVERSION)
+				{
+					q2dheader_t *header = (q2dheader_t *)buf;
+					lumpofs = LittleLong(header->lumps[Q2LUMP_ENTITIES].fileofs);
+					lumplen = LittleLong(header->lumps[Q2LUMP_ENTITIES].filelen);
+				}
+			}
+			else if (!memcmp(buf, "MCBSPpad", 8))
+			{
+				p = LittleLong(((int *)buf)[2]);
+				if (p == MCBSPVERSION)
+				{
+					int numhulls = LittleLong(((int *)buf)[3]);
+					lumpofs = LittleLong(((int *)buf)[3 + numhulls + LUMP_ENTITIES*2+0]);
+					lumplen = LittleLong(((int *)buf)[3 + numhulls + LUMP_ENTITIES*2+1]);
+				}
+			}
+			else if((p = LittleLong(((int *)buf)[0])) == BSPVERSION || p == 30)
+			{
+				dheader_t *header = (dheader_t *)buf;
+				lumpofs = LittleLong(header->lumps[LUMP_ENTITIES].fileofs);
+				lumplen = LittleLong(header->lumps[LUMP_ENTITIES].filelen);
+			}
+			else
+				p = 0;
+			strlcpy(entfilename, t->filenames[i], sizeof(entfilename));
+			strcpy(entfilename + strlen(entfilename) - 4, ".ent");
+			entities = (char *)FS_LoadFile(entfilename, tempmempool, true, NULL);
+			if (!entities && lumplen >= 10)
+			{
+				FS_Seek(f, lumpofs, SEEK_SET);
+				entities = Z_Malloc(lumplen + 1);
+				FS_Read(f, entities, lumplen);
+			}
+			if (entities)
+			{
+				// if there are entities to parse, a missing message key just
+				// means there is no title, so clear the message string now
+				message[0] = 0;
+				data = entities;
+				for (;;)
+				{
+					int l;
+					if (!COM_ParseToken(&data, false))
+						break;
+					if (com_token[0] == '{')
+						continue;
+					if (com_token[0] == '}')
+						break;
+					// skip leading whitespace
+					for (k = 0;com_token[k] && com_token[k] <= ' ';k++);
+					for (l = 0;l < (int)sizeof(keyname) - 1 && com_token[k+l] && com_token[k+l] > ' ';l++)
+						keyname[l] = com_token[k+l];
+					keyname[l] = 0;
+					if (!COM_ParseToken(&data, false))
+						break;
+					if (developer.integer >= 2)
+						Con_Printf("key: %s %s\n", keyname, com_token);
+					if (!strcmp(keyname, "message"))
+					{
+						// get the message contents
+						strlcpy(message, com_token, sizeof(message));
+						break;
+					}
+				}
+			}
+		}
+		if (entities)
+			Z_Free(entities);
+		if(f)
+			FS_Close(f);
+		*(t->filenames[i]+len[i]+5) = 0;
+		switch(p)
+		{
+		case Q3BSPVERSION:	strcpy((char *)buf, "Q3");break;
+		case Q2BSPVERSION:	strcpy((char *)buf, "Q2");break;
+		case BSPVERSION:	strcpy((char *)buf, "Q1");break;
+		case MCBSPVERSION:	strcpy((char *)buf, "MC");break;
+		case 30:			strcpy((char *)buf, "HL");break;
+		default:			strcpy((char *)buf, "??");break;
+		}
+		Con_Printf("%16s (%s) %s\n", t->filenames[i]+5, buf, message);
+	}
+	Con_Print("\n");
+	for(p=o;p<min;p++)
+	{
+		k = *(t->filenames[0]+5+p);
+		for(i=1;i<t->numfilenames;i++)
+			if(*(t->filenames[i]+5+p) != k)
+				goto endcomplete;
+	}
+endcomplete:
+	if(p > o)
+	{
+		memset(completedname, 0, completednamebufferlength);
+		memcpy(completedname, (t->filenames[0]+5), p);
+	}
+	Z_Free(len);
+	FS_FreeSearch(t);
+	return p > o;
+}
+
+/*
 	Con_DisplayList
 
 	New function for tab-completion system
@@ -879,22 +1059,63 @@ void Con_DisplayList(const char **list)
 	Added by EvilTypeGuy
 	Thanks to Fett erich@heintz.com
 	Thanks to taniwha
+	Enhanced to tab-complete map names by [515]
 
 */
 void Con_CompleteCommandLine (void)
 {
 	const char *cmd = "", *s;
 	const char **list[3] = {0, 0, 0};
-	int c, v, a, i, cmd_len;
+	char s2[512];
+	int c, v, a, i, cmd_len, pos, k;
 
-	s = key_lines[edit_line] + 1;
+	//find what we want to complete
+	pos = key_linepos;
+	while(--pos)
+	{
+		k = key_lines[edit_line][pos];
+		if(k == '\"' || k == ';' || k == ' ' || k == '\'')
+			break;
+	}
+	pos++;
+
+	s = key_lines[edit_line] + pos;
+	strlcpy(s2, key_lines[edit_line] + key_linepos, sizeof(s2));	//save chars after cursor
+	key_lines[edit_line][key_linepos] = 0;					//hide them
+
+	//maps search
+	for(k=pos-1;k>2;k--)
+		if(key_lines[edit_line][k] != ' ')
+		{
+			if(key_lines[edit_line][k] == '\"' || key_lines[edit_line][k] == ';' || key_lines[edit_line][k] == '\'')
+				break;
+			if	((pos+k > 2 && !strncmp(key_lines[edit_line]+k-2, "map", 3))
+				|| (pos+k > 10 && !strncmp(key_lines[edit_line]+k-10, "changelevel", 11)))
+			{
+				char t[MAX_QPATH];
+				if (GetMapList(s, t, sizeof(t)))
+				{
+					i = strlen(t) - strlen(s);
+					strcpy((char*)s, t);
+					if(s2[0])	//add back chars after cursor
+						strcpy(&key_lines[edit_line][key_linepos], s2);
+					key_linepos += i;
+				}
+				return;
+			}
+		}
+
 	// Count number of possible matches
 	c = Cmd_CompleteCountPossible(s);
 	v = Cvar_CompleteCountPossible(s);
 	a = Cmd_CompleteAliasCountPossible(s);
 
 	if (!(c + v + a))	// No possible matches
+	{
+		if(s2[0])
+			strcpy(&key_lines[edit_line][key_linepos], s2);
 		return;
+	}
 
 	if (c + v + a == 1) {
 		if (c)
@@ -952,14 +1173,20 @@ void Con_CompleteCommandLine (void)
 	}
 
 	if (cmd) {
-		strncpy(key_lines[edit_line] + 1, cmd, cmd_len);
-		key_linepos = cmd_len + 1;
+		strncpy(key_lines[edit_line] + pos, cmd, cmd_len);
+		key_linepos = cmd_len + pos;
 		if (c + v + a == 1) {
 			key_lines[edit_line][key_linepos] = ' ';
 			key_linepos++;
 		}
-		key_lines[edit_line][key_linepos] = 0;
+		if(s2[0])
+			strcpy(&key_lines[edit_line][key_linepos], s2);
+		else
+			key_lines[edit_line][key_linepos] = 0;
 	}
+	else
+		if(s2[0])
+			strcpy(&key_lines[edit_line][key_linepos], s2);
 	for (i = 0; i < 3; i++)
 		if (list[i])
 			Mem_Free((void *)list[i]);
