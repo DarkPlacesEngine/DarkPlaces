@@ -326,12 +326,29 @@ Key_Console (int key, char ascii)
 
 	// Advanced Console Editing by Radix radix@planetquake.com
 	// Added/Modified by EvilTypeGuy eviltypeguy@qeradiant.com
+	// Enhanced by [515]
 
 	// left arrow will just move left one without erasing, backspace will
 	// actually erase charcter
 	if (key == K_LEFTARROW || key == K_KP_LEFTARROW)
 	{
-		if (key_linepos > 1)
+		if (key_linepos < 2)
+			return;
+		if(keydown[K_CTRL])
+		{
+			int		pos;
+			char	k;
+			pos = key_linepos-1;
+			if(pos)
+				while(--pos)
+				{
+					k = key_lines[edit_line][pos];
+					if(k == '\"' || k == ';' || k == ' ' || k == '\'')
+						break;
+				}
+			key_linepos = pos + 1;
+		}
+		else
 			key_linepos--;
 		return;
 	}
@@ -360,9 +377,24 @@ Key_Console (int key, char ascii)
 	// otherwise just go right one
 	if (key == K_RIGHTARROW || key == K_KP_RIGHTARROW)
 	{
-		if (key_linepos < (int)strlen(key_lines[edit_line]))
+		if (key_linepos >= (int)strlen(key_lines[edit_line]))
+			return;
+		if(keydown[K_CTRL])
+		{
+			int		pos, len;
+			char	k;
+			len = (int)strlen(key_lines[edit_line]);
+			pos = key_linepos;
+			while(++pos < len)
+			{
+				k = key_lines[edit_line][pos];
+				if(k == '\"' || k == ';' || k == ' ' || k == '\'')
+					break;
+			}
+			key_linepos = pos;
+		}
+		else
 			key_linepos++;
-
 		return;
 	}
 
@@ -421,13 +453,19 @@ Key_Console (int key, char ascii)
 
 	if (key == K_HOME || key == K_KP_HOME)
 	{
-		con_backscroll = con_totallines - (vid_conheight.integer>>3) - 1;
+		if (keydown[K_CTRL])
+			con_backscroll = con_totallines - (vid_conheight.integer>>3) - 1;
+		else
+			key_linepos = 1;
 		return;
 	}
 
 	if (key == K_END || key == K_KP_END)
 	{
-		con_backscroll = 0;
+		if (keydown[K_CTRL])
+			con_backscroll = 0;
+		else
+			key_linepos = strlen(key_lines[edit_line]);
 		return;
 	}
 
