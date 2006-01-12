@@ -329,7 +329,7 @@ Key_Console (int key, char ascii)
 	// Enhanced by [515]
 
 	// left arrow will just move left one without erasing, backspace will
-	// actually erase charcter
+	// actually erase character
 	if (key == K_LEFTARROW || key == K_KP_LEFTARROW)
 	{
 		if (key_linepos < 2)
