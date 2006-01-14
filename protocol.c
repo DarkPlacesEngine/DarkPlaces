@@ -1,7 +1,7 @@
 
 #include "quakedef.h"
 
-// this is 80 bytes
+// this is 88 bytes (must match entity_state_t in protocol.h)
 entity_state_t defaultstate =
 {
 	// ! means this is not sent to client
@@ -10,6 +10,7 @@ entity_state_t defaultstate =
 	{0,0,0},//float angles[3];
 	0,//int number; // entity number this state is for
 	0,//int effects;
+	0,//unsigned int customizeentityforclient; // !
 	0,//unsigned short modelindex;
 	0,//unsigned short frame;
 	0,//unsigned short tagentity;
@@ -32,7 +33,7 @@ entity_state_t defaultstate =
 	0,//unsigned char tagindex;
 	{32, 32, 32},//unsigned char colormod[3];
 	// padding to a multiple of 8 bytes (to align the double time)
-	{0,0}//unsigned char unused[2]; // !
+	{0,0,0,0,0,0}//unsigned char unused[6]; // !
 };
 
 // LordHavoc: I own protocol ranges 96, 97, 3500-3599

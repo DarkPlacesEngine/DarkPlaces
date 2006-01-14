@@ -123,6 +123,7 @@ extern int eval_cursor_trace_ent;
 extern int eval_colormod;
 extern int eval_playermodel;
 extern int eval_playerskin;
+extern int eval_customizeentityforclient;
 
 extern mfunction_t *SV_PlayerPhysicsQC;
 extern mfunction_t *EndFrameQC;
