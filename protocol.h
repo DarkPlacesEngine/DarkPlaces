@@ -318,7 +318,7 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define RENDER_TRANSPARENT 262144 // can't light during opaque stage
 #define RENDER_NOCULLFACE 524288 // render as double sided (disable GL_CULL_FACE)
 
-// this is 80 bytes
+// this is 88 bytes
 typedef struct entity_state_s
 {
 	// ! means this is not sent to client
@@ -327,6 +327,7 @@ typedef struct entity_state_s
 	float angles[3];
 	int number; // entity number this state is for
 	int effects;
+	unsigned int customizeentityforclient; // !
 	unsigned short modelindex;
 	unsigned short frame;
 	unsigned short tagentity;
@@ -349,7 +350,7 @@ typedef struct entity_state_s
 	unsigned char tagindex;
 	unsigned char colormod[3];
 	// padding to a multiple of 8 bytes (to align the double time)
-	unsigned char unused[2];
+	unsigned char unused[6];
 }
 entity_state_t;
 

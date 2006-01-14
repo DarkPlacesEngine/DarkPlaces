@@ -455,239 +455,252 @@ static int numsendentities;
 static entity_state_t sendentities[MAX_EDICTS];
 static entity_state_t *sendentitiesindex[MAX_EDICTS];
 
-void SV_PrepareEntitiesForSending(void)
+qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int e)
 {
-	int e, i;
-	float f;
+	int i;
 	unsigned int modelindex, effects, flags, glowsize, lightstyle, lightpflags, light[4], specialvisibilityradius;
+	unsigned int customizeentityforclient;
+	float f;
 	vec3_t cullmins, cullmaxs;
 	model_t *model;
-	prvm_edict_t *ent;
 	prvm_eval_t *val;
-	entity_state_t cs;
-	// send all entities that touch the pvs
-	numsendentities = 0;
-	sendentitiesindex[0] = NULL;
-	for (e = 1, ent = PRVM_NEXT_EDICT(prog->edicts);e < prog->num_edicts;e++, ent = PRVM_NEXT_EDICT(ent))
+
+	// EF_NODRAW prevents sending for any reason except for your own
+	// client, so we must keep all clients in this superset
+	effects = (unsigned)ent->fields.server->effects;
+
+	// we can omit invisible entities with no effects that are not clients
+	// LordHavoc: this could kill tags attached to an invisible entity, I
+	// just hope we never have to support that case
+	i = (int)ent->fields.server->modelindex;
+	modelindex = (i >= 1 && i < MAX_MODELS && *PRVM_GetString(ent->fields.server->model)) ? i : 0;
+
+	flags = 0;
+	i = (int)(PRVM_GETEDICTFIELDVALUE(ent, eval_glow_size)->_float * 0.25f);
+	glowsize = (unsigned char)bound(0, i, 255);
+	if (PRVM_GETEDICTFIELDVALUE(ent, eval_glow_trail)->_float)
+		flags |= RENDER_GLOWTRAIL;
+
+	f = PRVM_GETEDICTFIELDVALUE(ent, eval_color)->vector[0]*256;
+	light[0] = (unsigned short)bound(0, f, 65535);
+	f = PRVM_GETEDICTFIELDVALUE(ent, eval_color)->vector[1]*256;
+	light[1] = (unsigned short)bound(0, f, 65535);
+	f = PRVM_GETEDICTFIELDVALUE(ent, eval_color)->vector[2]*256;
+	light[2] = (unsigned short)bound(0, f, 65535);
+	f = PRVM_GETEDICTFIELDVALUE(ent, eval_light_lev)->_float;
+	light[3] = (unsigned short)bound(0, f, 65535);
+	lightstyle = (unsigned char)PRVM_GETEDICTFIELDVALUE(ent, eval_style)->_float;
+	lightpflags = (unsigned char)PRVM_GETEDICTFIELDVALUE(ent, eval_pflags)->_float;
+
+	if (gamemode == GAME_TENEBRAE)
 	{
-		sendentitiesindex[e] = NULL;
-		// the 2 billion unit check is actually to detect NAN origins (we really don't want to send those)
-		if (ent->priv.server->free || VectorLength2(ent->fields.server->origin) > 2000000000.0*2000000000.0)
-			continue;
-
-		// this check disabled because it is never true
-		//if (numsendentities >= MAX_EDICTS)
-		//	continue;
-
-		// EF_NODRAW prevents sending for any reason except for your own
-		// client, so we must keep all clients in this superset
-		effects = (unsigned)ent->fields.server->effects;
-		if (e > svs.maxclients && (effects & EF_NODRAW))
-			continue;
-
-		// we can omit invisible entities with no effects that are not clients
-		// LordHavoc: this could kill tags attached to an invisible entity, I
-		// just hope we never have to support that case
-		i = (int)ent->fields.server->modelindex;
-		modelindex = (i >= 1 && i < MAX_MODELS && *PRVM_GetString(ent->fields.server->model)) ? i : 0;
-
-		flags = 0;
-		i = (int)(PRVM_GETEDICTFIELDVALUE(ent, eval_glow_size)->_float * 0.25f);
-		glowsize = (unsigned char)bound(0, i, 255);
-		if (PRVM_GETEDICTFIELDVALUE(ent, eval_glow_trail)->_float)
-			flags |= RENDER_GLOWTRAIL;
-
-		f = PRVM_GETEDICTFIELDVALUE(ent, eval_color)->vector[0]*256;
-		light[0] = (unsigned short)bound(0, f, 65535);
-		f = PRVM_GETEDICTFIELDVALUE(ent, eval_color)->vector[1]*256;
-		light[1] = (unsigned short)bound(0, f, 65535);
-		f = PRVM_GETEDICTFIELDVALUE(ent, eval_color)->vector[2]*256;
-		light[2] = (unsigned short)bound(0, f, 65535);
-		f = PRVM_GETEDICTFIELDVALUE(ent, eval_light_lev)->_float;
-		light[3] = (unsigned short)bound(0, f, 65535);
-		lightstyle = (unsigned char)PRVM_GETEDICTFIELDVALUE(ent, eval_style)->_float;
-		lightpflags = (unsigned char)PRVM_GETEDICTFIELDVALUE(ent, eval_pflags)->_float;
-
-		if (gamemode == GAME_TENEBRAE)
+		// tenebrae's EF_FULLDYNAMIC conflicts with Q2's EF_NODRAW
+		if (effects & 16)
 		{
-			// tenebrae's EF_FULLDYNAMIC conflicts with Q2's EF_NODRAW
-			if (effects & 16)
-			{
-				effects &= ~16;
-				lightpflags |= PFLAGS_FULLDYNAMIC;
-			}
-			// tenebrae's EF_GREEN conflicts with DP's EF_ADDITIVE
-			if (effects & 32)
-			{
-				effects &= ~32;
-				light[0] = 0.2;
-				light[1] = 1;
-				light[2] = 0.2;
-				light[3] = 200;
-				lightpflags |= PFLAGS_FULLDYNAMIC;
-			}
+			effects &= ~16;
+			lightpflags |= PFLAGS_FULLDYNAMIC;
 		}
+		// tenebrae's EF_GREEN conflicts with DP's EF_ADDITIVE
+		if (effects & 32)
+		{
+			effects &= ~32;
+			light[0] = 0.2;
+			light[1] = 1;
+			light[2] = 0.2;
+			light[3] = 200;
+			lightpflags |= PFLAGS_FULLDYNAMIC;
+		}
+	}
 
-		specialvisibilityradius = 0;
-		if (lightpflags & PFLAGS_FULLDYNAMIC)
-			specialvisibilityradius = max(specialvisibilityradius, light[3]);
-		if (glowsize)
-			specialvisibilityradius = max(specialvisibilityradius, glowsize * 4);
-		if (flags & RENDER_GLOWTRAIL)
+	specialvisibilityradius = 0;
+	if (lightpflags & PFLAGS_FULLDYNAMIC)
+		specialvisibilityradius = max(specialvisibilityradius, light[3]);
+	if (glowsize)
+		specialvisibilityradius = max(specialvisibilityradius, glowsize * 4);
+	if (flags & RENDER_GLOWTRAIL)
+		specialvisibilityradius = max(specialvisibilityradius, 100);
+	if (effects & (EF_BRIGHTFIELD | EF_MUZZLEFLASH | EF_BRIGHTLIGHT | EF_DIMLIGHT | EF_RED | EF_BLUE | EF_FLAME | EF_STARDUST))
+	{
+		if (effects & EF_BRIGHTFIELD)
+			specialvisibilityradius = max(specialvisibilityradius, 80);
+		if (effects & EF_MUZZLEFLASH)
 			specialvisibilityradius = max(specialvisibilityradius, 100);
-		if (effects & (EF_BRIGHTFIELD | EF_MUZZLEFLASH | EF_BRIGHTLIGHT | EF_DIMLIGHT | EF_RED | EF_BLUE | EF_FLAME | EF_STARDUST))
-		{
-			if (effects & EF_BRIGHTFIELD)
-				specialvisibilityradius = max(specialvisibilityradius, 80);
-			if (effects & EF_MUZZLEFLASH)
-				specialvisibilityradius = max(specialvisibilityradius, 100);
-			if (effects & EF_BRIGHTLIGHT)
-				specialvisibilityradius = max(specialvisibilityradius, 400);
-			if (effects & EF_DIMLIGHT)
-				specialvisibilityradius = max(specialvisibilityradius, 200);
-			if (effects & EF_RED)
-				specialvisibilityradius = max(specialvisibilityradius, 200);
-			if (effects & EF_BLUE)
-				specialvisibilityradius = max(specialvisibilityradius, 200);
-			if (effects & EF_FLAME)
-				specialvisibilityradius = max(specialvisibilityradius, 250);
-			if (effects & EF_STARDUST)
-				specialvisibilityradius = max(specialvisibilityradius, 100);
-		}
+		if (effects & EF_BRIGHTLIGHT)
+			specialvisibilityradius = max(specialvisibilityradius, 400);
+		if (effects & EF_DIMLIGHT)
+			specialvisibilityradius = max(specialvisibilityradius, 200);
+		if (effects & EF_RED)
+			specialvisibilityradius = max(specialvisibilityradius, 200);
+		if (effects & EF_BLUE)
+			specialvisibilityradius = max(specialvisibilityradius, 200);
+		if (effects & EF_FLAME)
+			specialvisibilityradius = max(specialvisibilityradius, 250);
+		if (effects & EF_STARDUST)
+			specialvisibilityradius = max(specialvisibilityradius, 100);
+	}
+
+	// early culling checks
+	// (final culling is done by SV_MarkWriteEntityStateToClient)
+	customizeentityforclient = PRVM_GETEDICTFIELDVALUE(ent, eval_customizeentityforclient)->function;
+	if (!customizeentityforclient)
+	{
 		if (e > svs.maxclients && (!modelindex && !specialvisibilityradius))
-			continue;
+			return false;
+		// this 2 billion unit check is actually to detect NAN origins
+		// (we really don't want to send those)
+		if (VectorLength2(ent->fields.server->origin) > 2000000000.0*2000000000.0)
+			return false;
+	}
 
-		cs = defaultstate;
-		cs.active = true;
-		cs.number = e;
-		VectorCopy(ent->fields.server->origin, cs.origin);
-		VectorCopy(ent->fields.server->angles, cs.angles);
-		cs.flags = flags;
-		cs.effects = effects;
-		cs.colormap = (unsigned)ent->fields.server->colormap;
-		cs.modelindex = modelindex;
-		cs.skin = (unsigned)ent->fields.server->skin;
-		cs.frame = (unsigned)ent->fields.server->frame;
-		cs.viewmodelforclient = PRVM_GETEDICTFIELDVALUE(ent, eval_viewmodelforclient)->edict;
-		cs.exteriormodelforclient = PRVM_GETEDICTFIELDVALUE(ent, eval_exteriormodeltoclient)->edict;
-		cs.nodrawtoclient = PRVM_GETEDICTFIELDVALUE(ent, eval_nodrawtoclient)->edict;
-		cs.drawonlytoclient = PRVM_GETEDICTFIELDVALUE(ent, eval_drawonlytoclient)->edict;
-		cs.tagentity = PRVM_GETEDICTFIELDVALUE(ent, eval_tag_entity)->edict;
-		cs.tagindex = (unsigned char)PRVM_GETEDICTFIELDVALUE(ent, eval_tag_index)->_float;
-		cs.glowsize = glowsize;
 
-		// don't need to init cs.colormod because the defaultstate did that for us
-		//cs.colormod[0] = cs.colormod[1] = cs.colormod[2] = 32;
-		val = PRVM_GETEDICTFIELDVALUE(ent, eval_colormod);
-		if (val->vector[0] || val->vector[1] || val->vector[2])
+	*cs = defaultstate;
+	cs->active = true;
+	cs->number = e;
+	VectorCopy(ent->fields.server->origin, cs->origin);
+	VectorCopy(ent->fields.server->angles, cs->angles);
+	cs->flags = flags;
+	cs->effects = effects;
+	cs->colormap = (unsigned)ent->fields.server->colormap;
+	cs->modelindex = modelindex;
+	cs->skin = (unsigned)ent->fields.server->skin;
+	cs->frame = (unsigned)ent->fields.server->frame;
+	cs->viewmodelforclient = PRVM_GETEDICTFIELDVALUE(ent, eval_viewmodelforclient)->edict;
+	cs->exteriormodelforclient = PRVM_GETEDICTFIELDVALUE(ent, eval_exteriormodeltoclient)->edict;
+	cs->nodrawtoclient = PRVM_GETEDICTFIELDVALUE(ent, eval_nodrawtoclient)->edict;
+	cs->drawonlytoclient = PRVM_GETEDICTFIELDVALUE(ent, eval_drawonlytoclient)->edict;
+	cs->customizeentityforclient = customizeentityforclient;
+	cs->tagentity = PRVM_GETEDICTFIELDVALUE(ent, eval_tag_entity)->edict;
+	cs->tagindex = (unsigned char)PRVM_GETEDICTFIELDVALUE(ent, eval_tag_index)->_float;
+	cs->glowsize = glowsize;
+
+	// don't need to init cs->colormod because the defaultstate did that for us
+	//cs->colormod[0] = cs->colormod[1] = cs->colormod[2] = 32;
+	val = PRVM_GETEDICTFIELDVALUE(ent, eval_colormod);
+	if (val->vector[0] || val->vector[1] || val->vector[2])
+	{
+		i = val->vector[0] * 32.0f;cs->colormod[0] = bound(0, i, 255);
+		i = val->vector[1] * 32.0f;cs->colormod[1] = bound(0, i, 255);
+		i = val->vector[2] * 32.0f;cs->colormod[2] = bound(0, i, 255);
+	}
+
+	cs->modelindex = modelindex;
+
+	cs->alpha = 255;
+	f = (PRVM_GETEDICTFIELDVALUE(ent, eval_alpha)->_float * 255.0f);
+	if (f)
+	{
+		i = (int)f;
+		cs->alpha = (unsigned char)bound(0, i, 255);
+	}
+	// halflife
+	f = (PRVM_GETEDICTFIELDVALUE(ent, eval_renderamt)->_float);
+	if (f)
+	{
+		i = (int)f;
+		cs->alpha = (unsigned char)bound(0, i, 255);
+	}
+
+	cs->scale = 16;
+	f = (PRVM_GETEDICTFIELDVALUE(ent, eval_scale)->_float * 16.0f);
+	if (f)
+	{
+		i = (int)f;
+		cs->scale = (unsigned char)bound(0, i, 255);
+	}
+
+	cs->glowcolor = 254;
+	f = (PRVM_GETEDICTFIELDVALUE(ent, eval_glow_color)->_float);
+	if (f)
+		cs->glowcolor = (int)f;
+
+	if (PRVM_GETEDICTFIELDVALUE(ent, eval_fullbright)->_float)
+		cs->effects |= EF_FULLBRIGHT;
+
+	if (ent->fields.server->movetype == MOVETYPE_STEP)
+		cs->flags |= RENDER_STEP;
+	if ((cs->effects & EF_LOWPRECISION) && cs->origin[0] >= -32768 && cs->origin[1] >= -32768 && cs->origin[2] >= -32768 && cs->origin[0] <= 32767 && cs->origin[1] <= 32767 && cs->origin[2] <= 32767)
+		cs->flags |= RENDER_LOWPRECISION;
+	if (ent->fields.server->colormap >= 1024)
+		cs->flags |= RENDER_COLORMAPPED;
+	if (cs->viewmodelforclient)
+		cs->flags |= RENDER_VIEWMODEL; // show relative to the view
+
+	cs->light[0] = light[0];
+	cs->light[1] = light[1];
+	cs->light[2] = light[2];
+	cs->light[3] = light[3];
+	cs->lightstyle = lightstyle;
+	cs->lightpflags = lightpflags;
+
+	cs->specialvisibilityradius = specialvisibilityradius;
+
+	// calculate the visible box of this entity (don't use the physics box
+	// as that is often smaller than a model, and would not count
+	// specialvisibilityradius)
+	if ((model = sv.models[modelindex]))
+	{
+		float scale = cs->scale * (1.0f / 16.0f);
+		if (cs->angles[0] || cs->angles[2]) // pitch and roll
 		{
-			i = val->vector[0] * 32.0f;cs.colormod[0] = bound(0, i, 255);
-			i = val->vector[1] * 32.0f;cs.colormod[1] = bound(0, i, 255);
-			i = val->vector[2] * 32.0f;cs.colormod[2] = bound(0, i, 255);
+			VectorMA(cs->origin, scale, model->rotatedmins, cullmins);
+			VectorMA(cs->origin, scale, model->rotatedmaxs, cullmaxs);
 		}
-
-		cs.modelindex = modelindex;
-
-		cs.alpha = 255;
-		f = (PRVM_GETEDICTFIELDVALUE(ent, eval_alpha)->_float * 255.0f);
-		if (f)
+		else if (cs->angles[1])
 		{
-			i = (int)f;
-			cs.alpha = (unsigned char)bound(0, i, 255);
-		}
-		// halflife
-		f = (PRVM_GETEDICTFIELDVALUE(ent, eval_renderamt)->_float);
-		if (f)
-		{
-			i = (int)f;
-			cs.alpha = (unsigned char)bound(0, i, 255);
-		}
-
-		cs.scale = 16;
-		f = (PRVM_GETEDICTFIELDVALUE(ent, eval_scale)->_float * 16.0f);
-		if (f)
-		{
-			i = (int)f;
-			cs.scale = (unsigned char)bound(0, i, 255);
-		}
-
-		cs.glowcolor = 254;
-		f = (PRVM_GETEDICTFIELDVALUE(ent, eval_glow_color)->_float);
-		if (f)
-			cs.glowcolor = (int)f;
-
-		if (PRVM_GETEDICTFIELDVALUE(ent, eval_fullbright)->_float)
-			cs.effects |= EF_FULLBRIGHT;
-
-		if (ent->fields.server->movetype == MOVETYPE_STEP)
-			cs.flags |= RENDER_STEP;
-		if ((cs.effects & EF_LOWPRECISION) && cs.origin[0] >= -32768 && cs.origin[1] >= -32768 && cs.origin[2] >= -32768 && cs.origin[0] <= 32767 && cs.origin[1] <= 32767 && cs.origin[2] <= 32767)
-			cs.flags |= RENDER_LOWPRECISION;
-		if (ent->fields.server->colormap >= 1024)
-			cs.flags |= RENDER_COLORMAPPED;
-		if (cs.viewmodelforclient)
-			cs.flags |= RENDER_VIEWMODEL; // show relative to the view
-
-		cs.light[0] = light[0];
-		cs.light[1] = light[1];
-		cs.light[2] = light[2];
-		cs.light[3] = light[3];
-		cs.lightstyle = lightstyle;
-		cs.lightpflags = lightpflags;
-
-		cs.specialvisibilityradius = specialvisibilityradius;
-
-		// calculate the visible box of this entity (don't use the physics box
-		// as that is often smaller than a model, and would not count
-		// specialvisibilityradius)
-		if ((model = sv.models[modelindex]))
-		{
-			float scale = cs.scale * (1.0f / 16.0f);
-			if (cs.angles[0] || cs.angles[2]) // pitch and roll
-			{
-				VectorMA(cs.origin, scale, model->rotatedmins, cullmins);
-				VectorMA(cs.origin, scale, model->rotatedmaxs, cullmaxs);
-			}
-			else if (cs.angles[1])
-			{
-				VectorMA(cs.origin, scale, model->yawmins, cullmins);
-				VectorMA(cs.origin, scale, model->yawmaxs, cullmaxs);
-			}
-			else
-			{
-				VectorMA(cs.origin, scale, model->normalmins, cullmins);
-				VectorMA(cs.origin, scale, model->normalmaxs, cullmaxs);
-			}
+			VectorMA(cs->origin, scale, model->yawmins, cullmins);
+			VectorMA(cs->origin, scale, model->yawmaxs, cullmaxs);
 		}
 		else
 		{
-			VectorCopy(cs.origin, cullmins);
-			VectorCopy(cs.origin, cullmaxs);
+			VectorMA(cs->origin, scale, model->normalmins, cullmins);
+			VectorMA(cs->origin, scale, model->normalmaxs, cullmaxs);
 		}
-		if (specialvisibilityradius)
+	}
+	else
+	{
+		VectorCopy(cs->origin, cullmins);
+		VectorCopy(cs->origin, cullmaxs);
+	}
+	if (specialvisibilityradius)
+	{
+		cullmins[0] = min(cullmins[0], cs->origin[0] - specialvisibilityradius);
+		cullmins[1] = min(cullmins[1], cs->origin[1] - specialvisibilityradius);
+		cullmins[2] = min(cullmins[2], cs->origin[2] - specialvisibilityradius);
+		cullmaxs[0] = max(cullmaxs[0], cs->origin[0] + specialvisibilityradius);
+		cullmaxs[1] = max(cullmaxs[1], cs->origin[1] + specialvisibilityradius);
+		cullmaxs[2] = max(cullmaxs[2], cs->origin[2] + specialvisibilityradius);
+	}
+	if (!VectorCompare(cullmins, ent->priv.server->cullmins) || !VectorCompare(cullmaxs, ent->priv.server->cullmaxs))
+	{
+		VectorCopy(cullmins, ent->priv.server->cullmins);
+		VectorCopy(cullmaxs, ent->priv.server->cullmaxs);
+		ent->priv.server->pvs_numclusters = -1;
+		if (sv.worldmodel && sv.worldmodel->brush.FindBoxClusters)
 		{
-			cullmins[0] = min(cullmins[0], cs.origin[0] - specialvisibilityradius);
-			cullmins[1] = min(cullmins[1], cs.origin[1] - specialvisibilityradius);
-			cullmins[2] = min(cullmins[2], cs.origin[2] - specialvisibilityradius);
-			cullmaxs[0] = max(cullmaxs[0], cs.origin[0] + specialvisibilityradius);
-			cullmaxs[1] = max(cullmaxs[1], cs.origin[1] + specialvisibilityradius);
-			cullmaxs[2] = max(cullmaxs[2], cs.origin[2] + specialvisibilityradius);
+			i = sv.worldmodel->brush.FindBoxClusters(sv.worldmodel, cullmins, cullmaxs, MAX_ENTITYCLUSTERS, ent->priv.server->pvs_clusterlist);
+			if (i <= MAX_ENTITYCLUSTERS)
+				ent->priv.server->pvs_numclusters = i;
 		}
-		if (!VectorCompare(cullmins, ent->priv.server->cullmins) || !VectorCompare(cullmaxs, ent->priv.server->cullmaxs))
-		{
-			VectorCopy(cullmins, ent->priv.server->cullmins);
-			VectorCopy(cullmaxs, ent->priv.server->cullmaxs);
-			ent->priv.server->pvs_numclusters = -1;
-			if (sv.worldmodel && sv.worldmodel->brush.FindBoxClusters)
-			{
-				i = sv.worldmodel->brush.FindBoxClusters(sv.worldmodel, cullmins, cullmaxs, MAX_ENTITYCLUSTERS, ent->priv.server->pvs_clusterlist);
-				if (i <= MAX_ENTITYCLUSTERS)
-					ent->priv.server->pvs_numclusters = i;
-			}
-		}
+	}
 
-		sendentitiesindex[e] = sendentities + numsendentities;
-		sendentities[numsendentities++] = cs;
+	return true;
+}
+
+void SV_PrepareEntitiesForSending(void)
+{
+	int e;
+	prvm_edict_t *ent;
+	// send all entities that touch the pvs
+	numsendentities = 0;
+	sendentitiesindex[0] = NULL;
+	memset(sendentitiesindex, 0, prog->num_edicts * sizeof(entity_state_t *));
+	for (e = 1, ent = PRVM_NEXT_EDICT(prog->edicts);e < prog->num_edicts;e++, ent = PRVM_NEXT_EDICT(ent))
+	{
+		if (!ent->priv.server->free && SV_PrepareEntityForSending(ent, sendentities + numsendentities, e))
+		{
+			sendentitiesindex[e] = sendentities + numsendentities;
+			numsendentities++;
+		}
 	}
 }
 
@@ -714,6 +727,15 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 		return;
 	sententitiesconsideration[s->number] = sententitiesmark;
 	sv_writeentitiestoclient_totalentities++;
+
+	if (s->customizeentityforclient)
+	{
+		prog->globals.server->self = s->number;
+		prog->globals.server->other = sv_writeentitiestoclient_clentnum;
+		PRVM_ExecuteProgram(s->customizeentityforclient, "customizeentityforclient: NULL function");
+		if(!PRVM_G_FLOAT(OFS_RETURN) || !SV_PrepareEntityForSending(PRVM_EDICT_NUM(s->number), s, s->number))
+			return;
+	}
 
 	// never reject player
 	if (s->number != sv_writeentitiestoclient_clentnum)
@@ -2162,6 +2184,7 @@ int eval_cursor_trace_ent;
 int eval_colormod;
 int eval_playermodel;
 int eval_playerskin;
+int eval_customizeentityforclient;
 
 mfunction_t *SV_PlayerPhysicsQC;
 mfunction_t *EndFrameQC;
@@ -2229,6 +2252,7 @@ void SV_VM_FindEdictFieldOffsets(void)
 	eval_colormod = PRVM_ED_FindFieldOffset("colormod");
 	eval_playermodel = PRVM_ED_FindFieldOffset("playermodel");
 	eval_playerskin = PRVM_ED_FindFieldOffset("playerskin");
+	eval_customizeentityforclient = PRVM_ED_FindFieldOffset("customizeentityforclient");
 
 	// LordHavoc: allowing QuakeC to override the player movement code
 	SV_PlayerPhysicsQC = PRVM_ED_FindFunction ("SV_PlayerPhysics");
@@ -2300,7 +2324,8 @@ prvm_required_field_t reqfields[] =
 	{ev_vector, "movement"},
 	{ev_vector, "punchvector"},
 	{ev_string, "playermodel"},
-	{ev_string, "playerskin"}
+	{ev_string, "playerskin"},
+	{ev_function, "customizeentityforclient"},
 };
 
 void SV_VM_Setup(void)
