@@ -2,6 +2,7 @@
 #include "quakedef.h"
 #include "image.h"
 #include "jpeg.h"
+#include "image_png.h"
 
 cvar_t	gl_max_size = {CVAR_SAVE, "gl_max_size", "2048"};
 cvar_t	gl_max_scrapsize = {CVAR_SAVE, "gl_max_scrapsize", "256"};
@@ -506,6 +507,8 @@ static void r_textures_start(void)
 	// Disable JPEG screenshots if the DLL isn't loaded
 	if (! JPEG_OpenLibrary ())
 		Cvar_SetValueQuick (&scr_screenshot_jpeg, 0);
+	// TODO: support png screenshots?
+	PNG_OpenLibrary ();
 }
 
 static void r_textures_shutdown(void)

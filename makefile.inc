@@ -84,6 +84,7 @@ OBJ_COMMON= \
 	host_cmd.o \
 	image.o \
 	jpeg.o \
+	image_png.o \
 	keys.o \
 	lhnet.o \
 	mathlib.o \

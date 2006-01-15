@@ -2,6 +2,7 @@
 #include "quakedef.h"
 #include "image.h"
 #include "jpeg.h"
+#include "image_png.h"
 #include "r_shadow.h"
 
 int		image_width;
@@ -660,12 +661,15 @@ struct imageformat_s
 imageformats[] =
 {
 	{"override/%s.tga", LoadTGA},
+	{"override/%s.png", PNG_LoadImage},
 	{"override/%s.jpg", JPEG_LoadImage},
 	{"textures/%s.tga", LoadTGA},
+	{"textures/%s.png", PNG_LoadImage},
 	{"textures/%s.jpg", JPEG_LoadImage},
 	{"textures/%s.pcx", LoadPCX},
 	{"textures/%s.wal", LoadWAL},
 	{"%s.tga", LoadTGA},
+	{"%s.png", PNG_LoadImage},
 	{"%s.jpg", JPEG_LoadImage},
 	{"%s.pcx", LoadPCX},
 	{"%s.lmp", LoadLMPRGBA},
