@@ -106,7 +106,7 @@ qboolean PNG_OpenLibrary (void)
 #ifdef WIN32
 		"libpng12.dll",
 #elif defined(MACOSX)
-		"libpng12.dylib",
+		"libpng12.0.dylib",
 #else
 		"libpng12.so.0",
 #endif
