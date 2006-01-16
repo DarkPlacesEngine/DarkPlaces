@@ -87,6 +87,11 @@ sfx_t *S_PrecacheSound (const char *sample, qboolean complain, qboolean lock)
 	return NULL;
 }
 
+sfx_t *S_FindName (const char *name)
+{
+	return NULL;
+}
+
 void S_Update(const matrix4x4_t *matrix)
 {
 }
