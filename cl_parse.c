@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "cdaudio.h"
 #include "cl_collision.h"
+#include "csprogs.h"
 
 char *svc_strings[128] =
 {
@@ -90,7 +91,7 @@ char *svc_strings[128] =
 	"svc_spawnbaseline2", //	55		// short modelindex instead of byte
 	"svc_spawnstatic2", //		56		// short modelindex instead of byte
 	"svc_entities", //			57		// [int] deltaframe [int] thisframe [float vector] eye [variable length] entitydata
-	"svc_unusedlh3", //			58
+	"svc_csqcentities", //		58		// [short] entnum [variable length] entitydata ... [short] 0x0000
 	"svc_spawnstaticsound2", //	59		// [coord3] [short] samp [byte] vol [byte] aten
 };
 
@@ -390,6 +391,7 @@ void CL_ParseServerInfo (void)
 	// disable until we get textures for it
 	R_ResetSkyBox();
 
+	memset(cl.csqc_model_precache, 0, sizeof(cl.csqc_model_precache));	//[515]: csqc
 	memset(cl.model_precache, 0, sizeof(cl.model_precache));
 	memset(cl.sound_precache, 0, sizeof(cl.sound_precache));
 
@@ -500,8 +502,8 @@ void CL_ValidateState(entity_state_t *s)
 	if (!s->active)
 		return;
 
-	if (s->modelindex >= MAX_MODELS)
-		Host_Error("CL_ValidateState: modelindex (%i) >= MAX_MODELS (%i)", s->modelindex, MAX_MODELS);
+	if (s->modelindex >= MAX_MODELS && (65536-s->modelindex) >= MAX_MODELS)
+		Host_Error("CL_ValidateState: modelindex (%i) >= MAX_MODELS (%i)\n", s->modelindex, MAX_MODELS);
 
 	// colormap is client index + 1
 	if ((!s->flags & RENDER_COLORMAPPED) && s->colormap > cl.maxclients)
@@ -695,6 +697,7 @@ void CL_ParseClientdata (void)
 		cl.stats[STAT_ITEMS] = MSG_ReadLong ();
 
 	cl.onground = (bits & SU_ONGROUND) != 0;
+	csqc_onground = cl.onground;	//[515]: cause without this csqc will receive not right value on svc_print =/
 	cl.inwater = (bits & SU_INWATER) != 0;
 
 	if (cl.protocol == PROTOCOL_DARKPLACES5)
@@ -1331,6 +1334,14 @@ void CL_ParseTempEntity(void)
 
 #define SHOWNET(x) if(cl_shownet.integer==2)Con_Printf("%3i:%s\n", msg_readcount-1, x);
 
+//[515]: csqc
+void CL_VM_Init (void);
+qboolean CL_VM_Parse_TempEntity (void);
+void CL_VM_Parse_StuffCmd (const char *msg);
+void CL_VM_Parse_CenterPrint (const char *msg);
+void CSQC_AddPrintText (const char *msg);
+void CSQC_ReadEntities (void);
+//
 static unsigned char cgamenetbuffer[65536];
 
 /*
@@ -1475,15 +1486,15 @@ void CL_ParseServerMessage(void)
 			break;
 
 		case svc_print:
-			Con_Print(MSG_ReadString());
+			CSQC_AddPrintText(MSG_ReadString());	//[515]: csqc
 			break;
 
 		case svc_centerprint:
-			SCR_CenterPrint(MSG_ReadString ());
+			CL_VM_Parse_CenterPrint(MSG_ReadString ());	//[515]: csqc
 			break;
 
 		case svc_stufftext:
-			Cbuf_AddText (MSG_ReadString ());
+			CL_VM_Parse_StuffCmd(MSG_ReadString ());	//[515]: csqc
 			break;
 
 		case svc_damage:
@@ -1492,6 +1503,7 @@ void CL_ParseServerMessage(void)
 
 		case svc_serverinfo:
 			CL_ParseServerInfo ();
+			CL_VM_Init();	//[515]: init csqc
 			break;
 
 		case svc_setangle:
@@ -1622,7 +1634,8 @@ void CL_ParseServerMessage(void)
 			CL_ParseStatic (true);
 			break;
 		case svc_temp_entity:
-			CL_ParseTempEntity ();
+			if(!CL_VM_Parse_TempEntity())
+				CL_ParseTempEntity ();
 			break;
 
 		case svc_setpause:
@@ -1760,6 +1773,9 @@ void CL_ParseServerMessage(void)
 				EntityFrame4_CL_ReadFrame();
 			else
 				EntityFrame5_CL_ReadFrame();
+			break;
+		case svc_csqcentities:
+			CSQC_ReadEntities();
 			break;
 		}
 	}

@@ -181,10 +181,12 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	return cliptrace;
 }
 
-float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t normal, int *hitent, entity_render_t *ignoreent)
+float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t normal, int *hitent, entity_render_t *ignoreent, qboolean csqcents)
 {
 	float maxfrac, maxrealfrac;
-	int n;
+	int n, entsnum;
+	entity_t *entlist;
+	unsigned char *entactivelist;
 	entity_render_t *ent;
 	float tracemins[3], tracemaxs[3];
 	trace_t trace;
@@ -213,12 +215,25 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 	tracemins[2] = min(start[2], end[2]);
 	tracemaxs[2] = max(start[2], end[2]);
 
-	// look for embedded bmodels
-	for (n = 0;n < cl_num_entities;n++)
+	if(csqcents)
 	{
-		if (!cl_entities_active[n])
+		entlist = cl_csqcentities;
+		entactivelist = cl_csqcentities_active;
+		entsnum = cl_num_csqcentities;
+	}
+	else
+	{
+		entlist = cl_entities;
+		entactivelist = cl_entities_active;
+		entsnum = cl_num_entities;
+	}
+
+	// look for embedded bmodels
+	for (n = 0;n < entsnum;n++)
+	{
+		if (!entactivelist[n])
 			continue;
-		ent = &cl_entities[n].render;
+		ent = &entlist[n].render;
 		if (!BoxesOverlap(ent->mins, ent->maxs, tracemins, tracemaxs))
 			continue;
 		if (!ent->model || !ent->model->TraceBox)
@@ -226,7 +241,7 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 		if ((ent->flags & RENDER_EXTERIORMODEL) && !chase_active.integer)
 			continue;
 		// if transparent and not selectable, skip entity
-		if (!(cl_entities[n].state_current.effects & EF_SELECTABLE) && (ent->alpha < 1 || (ent->effects & (EF_ADDITIVE | EF_NODEPTHTEST))))
+		if (!(entlist[n].state_current.effects & EF_SELECTABLE) && (ent->alpha < 1 || (ent->effects & (EF_ADDITIVE | EF_NODEPTHTEST))))
 			continue;
 		if (ent == ignoreent)
 			continue;

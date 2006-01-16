@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // rights reserved.
 
 #include "quakedef.h"
+#include "csprogs.h"
 
 /*
 ===============================================================================
@@ -415,7 +416,7 @@ void CL_Move (void)
 	old_mouse_y = my;
 
 	// if not in menu, apply mouse move to viewangles/movement
-	if (in_client_mouse)
+	if (!cl.csqc_wantsmousemove && in_client_mouse)
 	{
 		if (cl_prydoncursor.integer)
 		{
@@ -506,7 +507,7 @@ void CL_UpdatePrydonCursor(void)
 	VectorSet(temp, cl.cmd.cursor_screen[2] * scale[2], cl.cmd.cursor_screen[0] * scale[0], cl.cmd.cursor_screen[1] * scale[1]);
 	Matrix4x4_Transform(&r_refdef.viewentitymatrix, temp, cl.cmd.cursor_end);
 	// trace from view origin to the cursor
-	cl.cmd.cursor_fraction = CL_SelectTraceLine(cl.cmd.cursor_start, cl.cmd.cursor_end, cl.cmd.cursor_impact, cl.cmd.cursor_normal, &cl.cmd.cursor_entitynumber, (chase_active.integer || cl.intermission) ? &cl_entities[cl.playerentity].render : NULL);
+	cl.cmd.cursor_fraction = CL_SelectTraceLine(cl.cmd.cursor_start, cl.cmd.cursor_end, cl.cmd.cursor_impact, cl.cmd.cursor_normal, &cl.cmd.cursor_entitynumber, (chase_active.integer || cl.intermission) ? &cl_entities[cl.playerentity].render : NULL, false);
 	// makes sparks where cursor is
 	//CL_SparkShower(cl.cmd.cursor_impact, cl.cmd.cursor_normal, 5, 0);
 }
@@ -868,6 +869,8 @@ void CL_SendMove(void)
 	if (cl.cmd.cursor_screen[0] >=  1) bits |= 16;
 	if (cl.cmd.cursor_screen[1] <= -1) bits |= 32;
 	if (cl.cmd.cursor_screen[1] >=  1) bits |= 64;
+
+	csqc_buttons = bits;
 
 	// always dump the first two messages, because they may contain leftover inputs from the last level
 	if (++cl.movemessages >= 2)

@@ -3,6 +3,7 @@
 #include "cl_video.h"
 #include "jpeg.h"
 #include "cl_collision.h"
+#include "csprogs.h"
 
 cvar_t scr_viewsize = {CVAR_SAVE, "viewsize","100"};
 cvar_t scr_fov = {CVAR_SAVE, "fov","90"};	// 1 - 170
@@ -758,7 +759,7 @@ void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 	r_refdef.drawqueuesize += dq->size;
 }
 
-void DrawQ_Lines (drawqueuemesh_t *mesh, int flags)
+void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
 {
 	int size;
 	void *p;
@@ -1520,7 +1521,8 @@ void CL_UpdateScreen(void)
 	}
 	R_Shadow_EditLights_DrawSelectedLightProperties();
 
-	SCR_DrawConsole();
+	if(!csqc_loaded)
+		SCR_DrawConsole();
 
 	SCR_DrawBrand();
 

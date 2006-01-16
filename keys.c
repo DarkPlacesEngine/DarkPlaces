@@ -820,6 +820,16 @@ Key_Init (void)
 	Cmd_AddCommand ("unbindall", Key_Unbindall_f);
 }
 
+const char *Key_GetBind (int key)
+{
+	const char *bind;
+	bind = keybindings[key_bmap][key];
+	if (!bind)
+		bind = keybindings[key_bmap2][key];
+	return bind;
+}
+
+qboolean CL_VM_InputEvent (qboolean pressed, int key);
 
 /*
 ===================
@@ -831,11 +841,25 @@ void
 Key_Event (int key, char ascii, qboolean down)
 {
 	const char *bind;
+	qboolean q;
 
 	// get key binding
 	bind = keybindings[key_bmap][key];
 	if (!bind)
 		bind = keybindings[key_bmap2][key];
+
+	if(key_dest == key_game)
+	{
+		q = CL_VM_InputEvent(!down, key);
+		if(q)
+		{
+			if (down)
+				keydown[key] = min(keydown[key] + 1, 2);
+			else
+				keydown[key] = 0;
+			return;
+		}
+	}
 
 	if (!down)
 	{

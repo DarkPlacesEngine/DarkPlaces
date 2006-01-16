@@ -2618,6 +2618,45 @@ void VM_getimagesize(void)
 	PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
 }
 
+/*
+=========
+VM_keynumtostring
+
+string keynumtostring(float keynum)
+=========
+*/
+void VM_keynumtostring (void)
+{
+	int keynum;
+	char *tmp;
+	VM_SAFEPARMCOUNT(1, VM_keynumtostring);
+
+	keynum = PRVM_G_FLOAT(OFS_PARM0);
+
+	tmp = VM_GetTempString();
+
+	strcpy(tmp, Key_KeynumToString(keynum));
+
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(tmp);
+}
+
+/*
+=========
+VM_stringtokeynum
+
+float stringtokeynum(string key)
+=========
+*/
+void VM_stringtokeynum (void)
+{
+	const char *str;
+	VM_SAFEPARMCOUNT( 1, VM_keynumtostring );
+
+	str = PRVM_G_STRING( OFS_PARM0 );
+
+	PRVM_G_INT(OFS_RETURN) = Key_StringToKeynum( str );
+}
+
 // CL_Video interface functions
 
 /*
@@ -2733,6 +2772,314 @@ void VM_cin_restart( void )
 	video = CL_GetVideo( name );
 	if( video )
 		CL_RestartVideo( video );
+}
+
+/*
+==============
+VM_vectorvectors
+
+Writes new values for v_forward, v_up, and v_right based on the given forward vector
+vectorvectors(vector, vector)
+==============
+*/
+void VM_vectorvectors (void)
+{
+	VectorNormalize2(PRVM_G_VECTOR(OFS_PARM0), prog->globals.server->v_forward);
+	VectorVectors(prog->globals.server->v_forward, prog->globals.server->v_right, prog->globals.server->v_up);
+}
+
+/*
+========================
+VM_drawline
+
+void drawline(float width, vector pos1, vector pos2, vector rgb, float alpha, float flags)
+========================
+*/
+void VM_drawline (void)
+{
+	float	*c1, *c2, *rgb;
+	float	alpha, width;
+	unsigned char	flags;
+
+	VM_SAFEPARMCOUNT(6, VM_drawline);
+	width	= PRVM_G_FLOAT(OFS_PARM0);
+	c1		= PRVM_G_VECTOR(OFS_PARM1);
+	c2		= PRVM_G_VECTOR(OFS_PARM2);
+	rgb		= PRVM_G_VECTOR(OFS_PARM3);
+	alpha	= PRVM_G_FLOAT(OFS_PARM4);
+	flags	= PRVM_G_FLOAT(OFS_PARM5);
+	DrawQ_Line(width, c1[0], c1[1], c2[0], c2[1], rgb[0], rgb[1], rgb[2], alpha, flags);
+}
+
+//====================
+//QC POLYGON functions
+//====================
+
+typedef struct
+{
+	rtexture_t		*tex;
+	float			data[36];	//[515]: enough for polygons
+	unsigned char			flags;	//[515]: + VM_POLYGON_2D and VM_POLYGON_FL4V flags
+}vm_polygon_t;
+
+//static float			vm_polygon_linewidth = 1;
+static mempool_t		*vm_polygons_pool = NULL;
+static unsigned char			vm_current_vertices = 0;
+static qboolean			vm_polygons_initialized = false;
+static vm_polygon_t		*vm_polygons = NULL;
+static unsigned long	vm_polygons_num = 0, vm_drawpolygons_num = 0;	//[515]: ok long on 64bit ?
+static qboolean			vm_polygonbegin = false;	//[515]: for "no-crap-on-the-screen" check
+#define VM_DEFPOLYNUM 64	//[515]: enough for default ?
+
+#define VM_POLYGON_FL3V		16	//more than 2 vertices (used only for lines)
+#define VM_POLYGON_FLLINES	32
+#define VM_POLYGON_FL2D		64
+#define VM_POLYGON_FL4V		128	//4 vertices
+
+void VM_InitPolygons (void)
+{
+	vm_polygons_pool = Mem_AllocPool("VMPOLY", 0, NULL);
+	vm_polygons = Mem_Alloc(vm_polygons_pool, VM_DEFPOLYNUM*sizeof(vm_polygon_t));
+	memset(vm_polygons, 0, VM_DEFPOLYNUM*sizeof(vm_polygon_t));
+	vm_polygons_num = VM_DEFPOLYNUM;
+	vm_polygonbegin = vm_drawpolygons_num = 0;
+	vm_polygons_initialized = true;
+}
+
+void VM_DrawPolygonCallback (const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
+{
+	const vm_polygon_t	*p = &vm_polygons[surfacenumber];
+	int					flags = p->flags & 0x0f;
+
+	if(flags == DRAWFLAG_ADDITIVE)
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+	else if(flags == DRAWFLAG_MODULATE)
+		GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
+	else if(flags == DRAWFLAG_2XMODULATE)
+		GL_BlendFunc(GL_DST_COLOR,GL_SRC_COLOR);
+	else
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	R_Mesh_TexBind(0, R_GetTexture(p->tex));
+
+	//[515]: is speed is max ?
+	if(p->flags & VM_POLYGON_FLLINES)	//[515]: lines
+	{
+		qglLineWidth(p->data[13]);
+		qglBegin(GL_LINE_LOOP);
+			qglTexCoord1f	(p->data[12]);
+			qglColor4f		(p->data[20], p->data[21], p->data[22], p->data[23]);
+			qglVertex3f		(p->data[0] , p->data[1],  p->data[2]);
+
+			qglTexCoord1f	(p->data[14]);
+			qglColor4f		(p->data[24], p->data[25], p->data[26], p->data[27]);
+			qglVertex3f		(p->data[3] , p->data[4],  p->data[5]);
+
+			if(p->flags & VM_POLYGON_FL3V)
+			{
+				qglTexCoord1f	(p->data[16]);
+				qglColor4f		(p->data[28], p->data[29], p->data[30], p->data[31]);
+				qglVertex3f		(p->data[6] , p->data[7],  p->data[8]);
+
+				if(p->flags & VM_POLYGON_FL4V)
+				{
+					qglTexCoord1f	(p->data[18]);
+					qglColor4f		(p->data[32], p->data[33], p->data[34], p->data[35]);
+					qglVertex3f		(p->data[9] , p->data[10],  p->data[11]);
+				}
+			}
+		qglEnd();
+	}
+	else
+	{
+		qglBegin(GL_POLYGON);
+			qglTexCoord2f	(p->data[12], p->data[13]);
+			qglColor4f		(p->data[20], p->data[21], p->data[22], p->data[23]);
+			qglVertex3f		(p->data[0] , p->data[1],  p->data[2]);
+
+			qglTexCoord2f	(p->data[14], p->data[15]);
+			qglColor4f		(p->data[24], p->data[25], p->data[26], p->data[27]);
+			qglVertex3f		(p->data[3] , p->data[4],  p->data[5]);
+
+			qglTexCoord2f	(p->data[16], p->data[17]);
+			qglColor4f		(p->data[28], p->data[29], p->data[30], p->data[31]);
+			qglVertex3f		(p->data[6] , p->data[7],  p->data[8]);
+
+			if(p->flags & VM_POLYGON_FL4V)
+			{
+				qglTexCoord2f	(p->data[18], p->data[19]);
+				qglColor4f		(p->data[32], p->data[33], p->data[34], p->data[35]);
+				qglVertex3f		(p->data[9] , p->data[10],  p->data[11]);
+			}
+		qglEnd();
+	}
+}
+
+void VM_AddPolygonTo2DScene (vm_polygon_t *p)
+{
+	drawqueuemesh_t	mesh;
+	static int		picelements[6] = {0, 1, 2, 0, 2, 3};
+
+	mesh.texture = p->tex;
+	mesh.data_element3i = picelements;
+	mesh.data_vertex3f = p->data;
+	mesh.data_texcoord2f = p->data + 12;
+	mesh.data_color4f = p->data + 20;
+	if(p->flags & VM_POLYGON_FL4V)
+	{
+		mesh.num_vertices = 4;
+		mesh.num_triangles = 2;
+	}
+	else
+	{
+		mesh.num_vertices = 3;
+		mesh.num_triangles = 1;
+	}
+	if(p->flags & VM_POLYGON_FLLINES)	//[515]: lines
+		DrawQ_LineLoop (&mesh, (p->flags&0x0f));
+	else
+		DrawQ_Mesh (&mesh, (p->flags&0x0f));
+}
+
+//void(string texturename, float flag, float 2d, float lines) R_BeginPolygon
+void VM_R_PolygonBegin (void)
+{
+	vm_polygon_t	*p;
+	const char		*picname;
+	if(prog->argc < 2)
+		VM_SAFEPARMCOUNT(2, VM_R_PolygonBegin);
+
+	if(!vm_polygons_initialized)
+		VM_InitPolygons();
+	if(vm_polygonbegin)
+	{
+		Con_Printf("VM_R_PolygonBegin: called twice without VM_R_PolygonEnd after first\n");
+		return;
+	}
+	if(vm_drawpolygons_num >= vm_polygons_num)
+	{
+		p = Mem_Alloc(vm_polygons_pool, 2 * vm_polygons_num * sizeof(vm_polygon_t));
+		memset(p, 0, 2 * vm_polygons_num * sizeof(vm_polygon_t));
+		memcpy(p, vm_polygons, vm_polygons_num * sizeof(vm_polygon_t));
+		Mem_Free(vm_polygons);
+		vm_polygons = p;
+		vm_polygons_num *= 2;
+	}
+	p = &vm_polygons[vm_drawpolygons_num];
+	picname = PRVM_G_STRING(OFS_PARM0);
+	if(picname[0])
+		p->tex = Draw_CachePic(picname, false)->tex;
+	else
+		p->tex = r_texture_notexture;
+	p->flags = (unsigned char)PRVM_G_FLOAT(OFS_PARM1);
+	vm_current_vertices = 0;
+	vm_polygonbegin = true;
+	if(prog->argc >= 3)
+	{
+		if(PRVM_G_FLOAT(OFS_PARM2))
+			p->flags |= VM_POLYGON_FL2D;
+		if(prog->argc >= 4 && PRVM_G_FLOAT(OFS_PARM3))
+		{
+			p->data[13] = PRVM_G_FLOAT(OFS_PARM3);	//[515]: linewidth
+			p->flags |= VM_POLYGON_FLLINES;
+		}
+	}
+}
+
+//void(vector org, vector texcoords, vector rgb, float alpha) R_PolygonVertex
+void VM_R_PolygonVertex (void)
+{
+	float			*coords, *tx, *rgb, alpha;
+	vm_polygon_t	*p;
+	VM_SAFEPARMCOUNT(4, VM_R_PolygonVertex);
+
+	if(!vm_polygonbegin)
+	{
+		Con_Printf("VM_R_PolygonVertex: VM_R_PolygonBegin wasn't called\n");
+		return;
+	}
+	coords	= PRVM_G_VECTOR(OFS_PARM0);
+	tx		= PRVM_G_VECTOR(OFS_PARM1);
+	rgb		= PRVM_G_VECTOR(OFS_PARM2);
+	alpha = PRVM_G_FLOAT(OFS_PARM3);
+
+	p = &vm_polygons[vm_drawpolygons_num];
+	if(vm_current_vertices > 4)
+	{
+		Con_Printf("VM_R_PolygonVertex: may have 4 vertices max\n");
+		return;
+	}
+
+	p->data[vm_current_vertices*3]		= coords[0];
+	p->data[1+vm_current_vertices*3]	= coords[1];
+	if(!(p->flags & VM_POLYGON_FL2D))
+		p->data[2+vm_current_vertices*3]	= coords[2];
+
+	p->data[12+vm_current_vertices*2]	= tx[0];
+	if(!(p->flags & VM_POLYGON_FLLINES))
+		p->data[13+vm_current_vertices*2]	= tx[1];
+
+	p->data[20+vm_current_vertices*4]	= rgb[0];
+	p->data[21+vm_current_vertices*4]	= rgb[1];
+	p->data[22+vm_current_vertices*4]	= rgb[2];
+	p->data[23+vm_current_vertices*4]	= alpha;
+
+	vm_current_vertices++;
+	if(vm_current_vertices == 4)
+		p->flags |= VM_POLYGON_FL4V;
+	else
+		if(vm_current_vertices == 3)
+			p->flags |= VM_POLYGON_FL3V;
+}
+
+//void() R_EndPolygon
+void VM_R_PolygonEnd (void)
+{
+	if(!vm_polygonbegin)
+	{
+		Con_Printf("VM_R_PolygonEnd: VM_R_PolygonBegin wasn't called\n");
+		return;
+	}
+	if(vm_current_vertices > 2 || (vm_current_vertices >= 2 && vm_polygons[vm_drawpolygons_num].flags & VM_POLYGON_FLLINES))
+	{
+		if(vm_polygons[vm_drawpolygons_num].flags & VM_POLYGON_FL2D)	//[515]: don't use qcpolygons memory if 2D
+			VM_AddPolygonTo2DScene(&vm_polygons[vm_drawpolygons_num]);
+		else
+			vm_drawpolygons_num++;
+	}
+	else
+		Con_Printf("VM_R_PolygonEnd: %i vertices isn't a good choice\n", vm_current_vertices);
+	vm_polygonbegin = false;
+}
+
+void VM_AddPolygonsToMeshQueue (void)
+{
+	unsigned int i;
+	if(!vm_drawpolygons_num)
+		return;
+	for(i = 0;i < vm_drawpolygons_num;i++)
+		R_MeshQueue_Add(VM_DrawPolygonCallback, NULL, i, NULL);
+	vm_drawpolygons_num = 0;
+}
+
+
+
+
+// float(float number, float quantity) bitshift (EXT_BITSHIFT)
+void VM_bitshift (void)
+{
+	int n1, n2;
+	VM_SAFEPARMCOUNT(2, VM_bitshift);
+
+	n1 = (int)fabs((int)PRVM_G_FLOAT(OFS_PARM0));
+	n2 = (int)PRVM_G_FLOAT(OFS_PARM1);
+	if(!n1)
+		PRVM_G_FLOAT(OFS_RETURN) = n1;
+	else
+	if(n2 < 0)
+		PRVM_G_FLOAT(OFS_RETURN) = (n1 >> -n2);
+	else
+		PRVM_G_FLOAT(OFS_RETURN) = (n1 << n2);
 }
 
 ////////////////////////////////////////
@@ -2942,11 +3289,494 @@ void VM_altstr_ins(void)
 	PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( outstr );
 }
 
+
+////////////////////////////////////////
+// BufString functions
+////////////////////////////////////////
+//[515]: string buffers support
+#define MAX_QCSTR_BUFFERS 128
+#define MAX_QCSTR_STRINGS 1024
+
+typedef struct
+{
+	int		num_strings;
+	char	*strings[MAX_QCSTR_STRINGS];
+}qcstrbuffer_t;
+
+static qcstrbuffer_t	*qcstringbuffers[MAX_QCSTR_BUFFERS];
+static int				num_qcstringbuffers;
+static int				buf_sortpower;
+
+#define BUFSTR_BUFFER(a) (a>=MAX_QCSTR_BUFFERS) ? NULL : (qcstringbuffers[a])
+#define BUFSTR_ISFREE(a) (a<MAX_QCSTR_BUFFERS&&qcstringbuffers[a]&&qcstringbuffers[a]->num_strings<=0) ? 1 : 0
+
+static int BufStr_FindFreeBuffer (void)
+{
+	int	i;
+	if(num_qcstringbuffers == MAX_QCSTR_BUFFERS)
+		return -1;
+	for(i=0;i<MAX_QCSTR_BUFFERS;i++)
+		if(!qcstringbuffers[i])
+		{
+			qcstringbuffers[i] = malloc(sizeof(qcstrbuffer_t));
+			memset(qcstringbuffers[i], 0, sizeof(qcstrbuffer_t));
+			return i;
+		}
+	return -1;
+}
+
+static void BufStr_ClearBuffer (int index)
+{
+	qcstrbuffer_t	*b = qcstringbuffers[index];
+	int				i;
+
+	if(b)
+	{
+		if(b->num_strings > 0)
+		{
+			for(i=0;i<b->num_strings;i++)
+				if(b->strings[i])
+					free(b->strings[i]);
+			num_qcstringbuffers--;
+		}
+		free(qcstringbuffers[index]);
+		qcstringbuffers[index] = NULL;
+	}
+}
+
+static int BufStr_FindFreeString (qcstrbuffer_t *b)
+{
+	int				i;
+	for(i=0;i<b->num_strings;i++)
+		if(!b->strings[i] || !b->strings[i][0])
+			return i;
+	if(i == MAX_QCSTR_STRINGS)	return -1;
+	else						return i;
+}
+
+static int BufStr_SortStringsUP (const void *in1, const void *in2)
+{
+	const char *a, *b;
+	a = *((const char **) in1);
+	b = *((const char **) in2);
+	if(!a[0])	return 1;
+	if(!b[0])	return -1;
+	return strncmp(a, b, buf_sortpower);
+}
+
+static int BufStr_SortStringsDOWN (const void *in1, const void *in2)
+{
+	const char *a, *b;
+	a = *((const char **) in1);
+	b = *((const char **) in2);
+	if(!a[0])	return 1;
+	if(!b[0])	return -1;
+	return strncmp(b, a, buf_sortpower);
+}
+
+#ifdef REMOVETHIS
+static void VM_BufStr_Init (void)
+{
+	memset(qcstringbuffers, 0, sizeof(qcstringbuffers));
+	num_qcstringbuffers = 0;
+}
+
+static void VM_BufStr_ShutDown (void)
+{
+	int i;
+	for(i=0;i<MAX_QCSTR_BUFFERS && num_qcstringbuffers;i++)
+		BufStr_ClearBuffer(i);
+}
+#endif
+
+/*
+========================
+VM_buf_create
+creates new buffer, and returns it's index, returns -1 if failed
+float buf_create(void) = #460;
+========================
+*/
+void VM_buf_create (void)
+{
+	int i;
+	VM_SAFEPARMCOUNT(0, VM_buf_create);
+	i = BufStr_FindFreeBuffer();
+	if(i >= 0)
+		num_qcstringbuffers++;
+	//else
+		//Con_Printf("VM_buf_create: buffers overflow in %s\n", PRVM_NAME);
+	PRVM_G_FLOAT(OFS_RETURN) = i;
+}
+
+/*
+========================
+VM_buf_del
+deletes buffer and all strings in it
+void buf_del(float bufhandle) = #461;
+========================
+*/
+void VM_buf_del (void)
+{
+	VM_SAFEPARMCOUNT(1, VM_buf_del);
+	if(BUFSTR_BUFFER((int)PRVM_G_FLOAT(OFS_PARM0)))
+		BufStr_ClearBuffer((int)PRVM_G_FLOAT(OFS_PARM0));
+	else
+	{
+		Con_Printf("VM_buf_del: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
+		return;
+	}
+}
+
+/*
+========================
+VM_buf_getsize
+how many strings are stored in buffer
+float buf_getsize(float bufhandle) = #462;
+========================
+*/
+void VM_buf_getsize (void)
+{
+	qcstrbuffer_t	*b;
+	VM_SAFEPARMCOUNT(1, VM_buf_getsize);
+
+	b = BUFSTR_BUFFER((int)PRVM_G_FLOAT(OFS_PARM0));
+	if(!b)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -1;
+		Con_Printf("VM_buf_getsize: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
+		return;
+	}
+	else
+		PRVM_G_FLOAT(OFS_RETURN) = b->num_strings;
+}
+
+/*
+========================
+VM_buf_copy
+copy all content from one buffer to another, make sure it exists
+void buf_copy(float bufhandle_from, float bufhandle_to) = #463;
+========================
+*/
+void VM_buf_copy (void)
+{
+	qcstrbuffer_t	*b1, *b2;
+	int				i;
+	VM_SAFEPARMCOUNT(2, VM_buf_copy);
+
+	b1 = BUFSTR_BUFFER((int)PRVM_G_FLOAT(OFS_PARM0));
+	if(!b1)
+	{
+		Con_Printf("VM_buf_copy: invalid source buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
+		return;
+	}
+	i = PRVM_G_FLOAT(OFS_PARM1);
+	if(i == (int)PRVM_G_FLOAT(OFS_PARM0))
+	{
+		Con_Printf("VM_buf_copy: source == destination (%i) in %s\n", i, PRVM_NAME);
+		return;
+	}
+	b2 = BUFSTR_BUFFER(i);
+	if(!b2)
+	{
+		Con_Printf("VM_buf_copy: invalid destination buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM1), PRVM_NAME);
+		return;
+	}
+
+	BufStr_ClearBuffer(i);
+	qcstringbuffers[i] = malloc(sizeof(qcstrbuffer_t));
+	memset(qcstringbuffers[i], 0, sizeof(qcstrbuffer_t));
+	b2->num_strings = b1->num_strings;
+
+	for(i=0;i<b1->num_strings;i++)
+		if(b1->strings[i] && b1->strings[i][0])
+		{
+			b2->strings[i] = malloc(strlen(b1->strings[i])+1);
+			if(!b2->strings[i])
+			{
+				Con_Printf("VM_buf_copy: not enough memory for buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM1), PRVM_NAME);
+				break;
+			}
+			strcpy(b2->strings[i], b1->strings[i]);
+		}
+}
+
+/*
+========================
+VM_buf_sort
+sort buffer by beginnings of strings (sortpower defaults it's lenght)
+"backward == TRUE" means that sorting goes upside-down
+void buf_sort(float bufhandle, float sortpower, float backward) = #464;
+========================
+*/
+void VM_buf_sort (void)
+{
+	qcstrbuffer_t	*b;
+	int				i;
+	VM_SAFEPARMCOUNT(3, VM_buf_sort);
+
+	b = BUFSTR_BUFFER((int)PRVM_G_FLOAT(OFS_PARM0));
+	if(!b)
+	{
+		Con_Printf("VM_buf_sort: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
+		return;
+	}
+	if(b->num_strings <= 0)
+	{
+		Con_Printf("VM_buf_sort: tried to sort empty buffer %i in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
+		return;
+	}
+	buf_sortpower = PRVM_G_FLOAT(OFS_PARM1);
+	if(buf_sortpower <= 0)
+		buf_sortpower = 99999999;
+
+	if(!PRVM_G_FLOAT(OFS_PARM2))
+		qsort(b->strings, b->num_strings, sizeof(char*), BufStr_SortStringsUP);
+	else
+		qsort(b->strings, b->num_strings, sizeof(char*), BufStr_SortStringsDOWN);
+
+	for(i=b->num_strings-1;i>=0;i--)	//[515]: delete empty lines
+		if(b->strings)
+		{
+			if(b->strings[i][0])
+				break;
+			else
+			{
+				free(b->strings[i]);
+				--b->num_strings;
+				b->strings[i] = NULL;
+			}
+		}
+		else
+			--b->num_strings;
+}
+
+/*
+========================
+VM_buf_implode
+concantenates all buffer string into one with "glue" separator and returns it as tempstring
+string buf_implode(float bufhandle, string glue) = #465;
+========================
+*/
+void VM_buf_implode (void)
+{
+	qcstrbuffer_t	*b;
+	char			*k;
+	const char		*sep;
+	int				i, l;
+	VM_SAFEPARMCOUNT(2, VM_buf_implode);
+
+	b = BUFSTR_BUFFER((int)PRVM_G_FLOAT(OFS_PARM0));
+	PRVM_G_INT(OFS_RETURN) = 0;
+	if(!b)
+	{
+		Con_Printf("VM_buf_implode: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
+		return;
+	}
+	if(!b->num_strings)
+		return;
+	sep = PRVM_G_STRING(OFS_PARM1);
+	k = VM_GetTempString();
+	k[0] = 0;
+	for(l=i=0;i<b->num_strings;i++)
+		if(b->strings[i])
+		{
+			l += strlen(b->strings[i]);
+			if(l>=4095)
+				break;
+			k = strcat(k, b->strings[i]);
+			if(!k)
+				break;
+			if(sep && (i != b->num_strings-1))
+			{
+				l += strlen(sep);
+				if(l>=4095)
+					break;
+				k = strcat(k, sep);
+				if(!k)
+					break;
+			}
+		}
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(k);
+}
+
+/*
+========================
+VM_bufstr_get
+get a string from buffer, returns direct pointer, dont str_unzone it!
+string bufstr_get(float bufhandle, float string_index) = #465;
+========================
+*/
+void VM_bufstr_get (void)
+{
+	qcstrbuffer_t	*b;
+	int				strindex;
+	VM_SAFEPARMCOUNT(2, VM_bufstr_get);
+
+	b = BUFSTR_BUFFER((int)PRVM_G_FLOAT(OFS_PARM0));
+	if(!b)
+	{
+		Con_Printf("VM_bufstr_get: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
+		return;
+	}
+	strindex = (int)PRVM_G_FLOAT(OFS_PARM1);
+	if(strindex < 0 || strindex > MAX_QCSTR_STRINGS)
+	{
+		Con_Printf("VM_bufstr_get: invalid string index %i used in %s\n", strindex, PRVM_NAME);
+		return;
+	}
+	PRVM_G_INT(OFS_RETURN) = 0;
+	if(b->num_strings <= strindex)
+		return;
+	if(b->strings[strindex])
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(b->strings[strindex]);
+}
+
+/*
+========================
+VM_bufstr_set
+copies a string into selected slot of buffer
+void bufstr_set(float bufhandle, float string_index, string str) = #466;
+========================
+*/
+void VM_bufstr_set (void)
+{
+	int				bufindex, strindex;
+	qcstrbuffer_t	*b;
+	const char		*news;
+
+	VM_SAFEPARMCOUNT(3, VM_bufstr_set);
+
+	bufindex = PRVM_G_FLOAT(OFS_PARM0);
+	b = BUFSTR_BUFFER(bufindex);
+	if(!b)
+	{
+		Con_Printf("VM_bufstr_set: invalid buffer %i used in %s\n", bufindex, PRVM_NAME);
+		return;
+	}
+	strindex = PRVM_G_FLOAT(OFS_PARM1);
+	if(strindex < 0 || strindex > MAX_QCSTR_STRINGS)
+	{
+		Con_Printf("VM_bufstr_set: invalid string index %i used in %s\n", strindex, PRVM_NAME);
+		return;
+	}
+	news = PRVM_G_STRING(OFS_PARM2);
+	if(!news)
+	{
+		Con_Printf("VM_bufstr_set: null string used in %s\n", PRVM_NAME);
+		return;
+	}
+	if(b->strings[strindex])
+		free(b->strings[strindex]);
+	b->strings[strindex] = malloc(strlen(news)+1);
+	strcpy(b->strings[strindex], news);
+}
+
+/*
+========================
+VM_bufstr_add
+adds string to buffer in nearest free slot and returns it
+"order == TRUE" means that string will be added after last "full" slot
+float bufstr_add(float bufhandle, string str, float order) = #467;
+========================
+*/
+void VM_bufstr_add (void)
+{
+	int				bufindex, order, strindex;
+	qcstrbuffer_t	*b;
+	const char		*string;
+
+	VM_SAFEPARMCOUNT(3, VM_bufstr_add);
+
+	bufindex = PRVM_G_FLOAT(OFS_PARM0);
+	b = BUFSTR_BUFFER(bufindex);
+	PRVM_G_FLOAT(OFS_RETURN) = -1;
+	if(!b)
+	{
+		Con_Printf("VM_bufstr_add: invalid buffer %i used in %s\n", bufindex, PRVM_NAME);
+		return;
+	}
+	string = PRVM_G_STRING(OFS_PARM1);
+	if(!string)
+	{
+		Con_Printf("VM_bufstr_add: null string used in %s\n", PRVM_NAME);
+		return;
+	}
+
+	order = PRVM_G_FLOAT(OFS_PARM2);
+	if(order)
+		strindex = b->num_strings;
+	else
+	{
+		strindex = BufStr_FindFreeString(b);
+		if(strindex < 0)
+		{
+			Con_Printf("VM_bufstr_add: buffer %i has no free string slots in %s\n", bufindex, PRVM_NAME);
+			return;
+		}
+	}
+
+	while(b->num_strings <= strindex)
+	{
+		if(b->num_strings == MAX_QCSTR_STRINGS)
+		{
+			Con_Printf("VM_bufstr_add: buffer %i has no free string slots in %s\n", bufindex, PRVM_NAME);
+			return;
+		}
+		b->strings[b->num_strings] = NULL;
+		b->num_strings++;
+	}
+	if(b->strings[strindex])
+		free(b->strings[strindex]);
+	b->strings[strindex] = malloc(strlen(string)+1);
+	strcpy(b->strings[strindex], string);
+	PRVM_G_FLOAT(OFS_RETURN) = strindex;
+}
+
+/*
+========================
+VM_bufstr_free
+delete string from buffer
+void bufstr_free(float bufhandle, float string_index) = #468;
+========================
+*/
+void VM_bufstr_free (void)
+{
+	int				i;
+	qcstrbuffer_t	*b;
+	VM_SAFEPARMCOUNT(2, VM_bufstr_free);
+
+	b = BUFSTR_BUFFER((int)PRVM_G_FLOAT(OFS_PARM0));
+	if(!b)
+	{
+		Con_Printf("VM_bufstr_free: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
+		return;
+	}
+	i = PRVM_G_FLOAT(OFS_PARM1);
+	if(i < 0 || i > MAX_QCSTR_STRINGS)
+	{
+		Con_Printf("VM_bufstr_free: invalid string index %i used in %s\n", i, PRVM_NAME);
+		return;
+	}
+	if(b->strings[i])
+		free(b->strings[i]);
+	b->strings[i] = NULL;
+	if(i+1 == b->num_strings)
+		--b->num_strings;
+}
+
+//=============
+
 void VM_Cmd_Init(void)
 {
 	// only init the stuff for the current prog
 	VM_Files_Init();
 	VM_Search_Init();
+//	VM_BufStr_Init();
+	if(vm_polygons_initialized)
+	{
+		Mem_FreePool(&vm_polygons_pool);
+		vm_polygons_initialized = false;
+	}
 }
 
 void VM_Cmd_Reset(void)
@@ -2954,6 +3784,11 @@ void VM_Cmd_Reset(void)
 	CL_PurgeOwner( MENUOWNER );
 	VM_Search_Reset();
 	VM_Files_CloseAll();
+//	VM_BufStr_ShutDown();
+	if(vm_polygons_initialized)
+	{
+		Mem_FreePool(&vm_polygons_pool);
+		vm_polygons_initialized = false;
+	}
 }
-
 

@@ -1097,7 +1097,58 @@ void R_RenderView(void)
 	GL_ScissorTest(false);
 }
 
+//[515]: csqc
+void CSQC_R_ClearScreen (void)
+{
+	if (!r_refdef.entities/* || !r_refdef.worldmodel*/)
+		return; //Host_Error ("R_RenderView: NULL worldmodel");
+
+	r_view_width = bound(0, r_refdef.width, vid.width);
+	r_view_height = bound(0, r_refdef.height, vid.height);
+	r_view_depth = 1;
+	r_view_x = bound(0, r_refdef.x, vid.width - r_refdef.width);
+	r_view_y = bound(0, r_refdef.y, vid.height - r_refdef.height);
+	r_view_z = 0;
+	r_view_matrix = r_refdef.viewentitymatrix;
+	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
+	r_rtworld = r_shadow_realtime_world.integer;
+	r_rtworldshadows = r_shadow_realtime_world_shadows.integer && gl_stencil;
+	r_rtdlight = (r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer) && !gl_flashblend.integer;
+	r_rtdlightshadows = r_rtdlight && (r_rtworld ? r_shadow_realtime_world_dlightshadows.integer : r_shadow_realtime_dlight_shadows.integer) && gl_stencil;
+	r_lightmapintensity = r_rtworld ? r_shadow_realtime_world_lightmaps.value : 1;
+
+	// GL is weird because it's bottom to top, r_view_y is top to bottom
+	qglViewport(r_view_x, vid.height - (r_view_y + r_view_height), r_view_width, r_view_height);
+	GL_Scissor(r_view_x, r_view_y, r_view_width, r_view_height);
+	GL_ScissorTest(true);
+	GL_DepthMask(true);
+	R_ClearScreen();
+	R_Textures_Frame();
+	R_UpdateFog();
+	R_TimeReport("setup");
+}
+
+//[515]: csqc
+void CSQC_R_RenderScene (void)
+{
+	qglDepthFunc(GL_LEQUAL);
+	qglPolygonOffset(0, 0);
+	qglEnable(GL_POLYGON_OFFSET_FILL);
+
+	R_RenderScene();
+
+	qglPolygonOffset(0, 0);
+	qglDisable(GL_POLYGON_OFFSET_FILL);
+
+	R_BlendView();
+	R_TimeReport("blendview");
+
+	GL_Scissor(0, 0, vid.width, vid.height);
+	GL_ScissorTest(false);
+}
+
 extern void R_DrawLightningBeams (void);
+extern void VM_AddPolygonsToMeshQueue (void);
 void R_RenderScene(void)
 {
 	// don't let sound skip if going slow
@@ -1136,21 +1187,24 @@ void R_RenderScene(void)
 	if (r_refdef.extraupdate)
 		S_ExtraUpdate ();
 
-	GL_ShowTrisColor(0.025, 0.025, 0, 1);
-	if (r_refdef.worldmodel && r_refdef.worldmodel->DrawSky)
+	if (cl.csqc_vidvars.drawworld)
 	{
-		r_refdef.worldmodel->DrawSky(r_refdef.worldentity);
-		R_TimeReport("worldsky");
-	}
+		GL_ShowTrisColor(0.025, 0.025, 0, 1);
+		if (r_refdef.worldmodel && r_refdef.worldmodel->DrawSky)
+		{
+			r_refdef.worldmodel->DrawSky(r_refdef.worldentity);
+			R_TimeReport("worldsky");
+		}
 
-	if (R_DrawBrushModelsSky())
-		R_TimeReport("bmodelsky");
+		if (R_DrawBrushModelsSky())
+			R_TimeReport("bmodelsky");
 
-	GL_ShowTrisColor(0.05, 0.05, 0.05, 1);
-	if (r_refdef.worldmodel && r_refdef.worldmodel->Draw)
-	{
-		r_refdef.worldmodel->Draw(r_refdef.worldentity);
-		R_TimeReport("world");
+		GL_ShowTrisColor(0.05, 0.05, 0.05, 1);
+		if (r_refdef.worldmodel && r_refdef.worldmodel->Draw)
+		{
+			r_refdef.worldmodel->Draw(r_refdef.worldentity);
+			R_TimeReport("world");
+		}
 	}
 
 	// don't let sound skip if going slow
@@ -1176,23 +1230,33 @@ void R_RenderScene(void)
 
 	GL_ShowTrisColor(0.1, 0, 0, 1);
 
-	R_DrawLightningBeams();
-	R_TimeReport("lightning");
+	if (cl.csqc_vidvars.drawworld)
+	{
+		R_DrawLightningBeams();
+		R_TimeReport("lightning");
 
-	R_DrawParticles();
-	R_TimeReport("particles");
+		R_DrawParticles();
+		R_TimeReport("particles");
 
-	R_DrawExplosions();
-	R_TimeReport("explosions");
+		R_DrawExplosions();
+		R_TimeReport("explosions");
+	}
 
 	R_MeshQueue_RenderTransparent();
 	R_TimeReport("drawtrans");
 
-	R_DrawCoronas();
-	R_TimeReport("coronas");
+	if (cl.csqc_vidvars.drawworld)
+	{
+		R_DrawCoronas();
+		R_TimeReport("coronas");
+	}
+	if(cl.csqc_vidvars.drawcrosshair)
+	{
+		R_DrawWorldCrosshair();
+		R_TimeReport("crosshair");
+	}
 
-	R_DrawWorldCrosshair();
-	R_TimeReport("crosshair");
+	VM_AddPolygonsToMeshQueue();
 
 	R_MeshQueue_Render();
 	R_MeshQueue_EndScene();

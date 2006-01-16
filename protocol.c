@@ -239,6 +239,137 @@ void EntityFrameQuake_ISeeDeadEntities(void)
 	}
 }
 
+static mempool_t *sv2csqc = NULL;
+int csqc_clent = 0;
+sizebuf_t *sv2csqcbuf = NULL;
+static unsigned char *sv2csqcents_version[64];
+
+void EntityFrameCSQC_ClearVersions (void)
+{
+	if(sv2csqc)
+	{
+		Mem_FreePool(&sv2csqc);
+		sv2csqc = NULL;
+	}
+	memset(sv2csqcents_version, 0, 64*sizeof(unsigned char *));
+}
+
+void EntityFrameCSQC_InitClientVersions (int client, qboolean clear)
+{
+	if(!sv2csqc)
+		sv2csqc = Mem_AllocPool("SV2CSQC", 0, NULL);
+	if(sv2csqcents_version[client])
+	{
+		Mem_Free(sv2csqcents_version[client]);
+		sv2csqcents_version[client] = NULL;
+	}
+	sv2csqcents_version[client] = Mem_Alloc(sv2csqc, MAX_EDICTS);
+	memset(sv2csqcents_version[client], 0, MAX_EDICTS);
+}
+
+//[515]: we use only one array per-client for SendEntity feature
+void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int numstates, const entity_state_t *states)
+{
+	sizebuf_t				buf;
+	unsigned char					data[2048];
+	const entity_state_t	*s;
+	unsigned short			i, t, t2, t0;
+	prvm_eval_t				*val, *val2;
+	int						csqcents = 0;
+
+	if(!eval_SendEntity || !eval_Version)
+		return;
+	--csqc_clent;
+	if(!sv2csqcents_version[csqc_clent])
+		EntityFrameCSQC_InitClientVersions(csqc_clent, false);
+
+	for (csqcents = i = 0, s = states;i < numstates;i++, s++)
+	{
+		//[515]: entities remove
+		if(i+1 >= numstates)
+			t2 = prog->num_edicts;
+		else
+			t2 = states[i+1].number;
+		if(!i)
+		{
+			t0 = 1;
+			t2 = s->number;
+		}
+		else
+			t0 = s->number+1;
+		for(t=t0; t<t2 ;t++)
+			if(sv2csqcents_version[csqc_clent][t])
+			{
+				if(!csqcents)
+				{
+					csqcents = 1;
+					memset(&buf, 0, sizeof(buf));
+					buf.data = data;
+					buf.maxsize = sizeof(data);
+					sv2csqcbuf = &buf;
+					SZ_Clear(&buf);
+					MSG_WriteByte(&buf, svc_csqcentities);
+				}
+				sv2csqcents_version[csqc_clent][t] = 0;
+				MSG_WriteShort(&buf, (unsigned short)t | 0x8000);
+				csqcents++;
+			}
+		//[515]: entities remove
+
+//		if(!s->active)
+//			continue;
+		val = PRVM_GETEDICTFIELDVALUE((&prog->edicts[s->number]), eval_SendEntity);
+		if(val->function)
+		{
+			val2 = PRVM_GETEDICTFIELDVALUE((&prog->edicts[s->number]), eval_Version);
+			if(sv2csqcents_version[csqc_clent][s->number] == (unsigned char)val2->_float)
+				continue;
+			if(!csqcents)
+			{
+				csqcents = 1;
+				memset(&buf, 0, sizeof(buf));
+				buf.data = data;
+				buf.maxsize = sizeof(data);
+				sv2csqcbuf = &buf;
+				SZ_Clear(&buf);
+				MSG_WriteByte(&buf, svc_csqcentities);
+			}
+			if((unsigned char)val2->_float == 0)
+				val2->_float = 1;
+			MSG_WriteShort(&buf, s->number);
+			((int *)prog->globals.generic)[OFS_PARM0] = csqc_clent+1;
+			prog->globals.server->self = s->number;
+			PRVM_ExecuteProgram(val->function, "Null SendEntity\n");
+			if(!prog->globals.generic[OFS_RETURN])
+			{
+				buf.cursize -= 2;
+				if(sv2csqcents_version[csqc_clent][s->number])
+				{
+					sv2csqcents_version[csqc_clent][s->number] = 0;
+					MSG_WriteShort(&buf, (unsigned short)s->number | 0x8000);
+					csqcents++;
+				}
+			}
+			else
+			{
+				sv2csqcents_version[csqc_clent][s->number] = (unsigned char)val2->_float;
+				csqcents++;
+			}
+			if (msg->cursize + buf.cursize > msg->maxsize)
+				break;
+		}
+	}
+	if(csqcents)
+	{
+		if(csqcents > 1)
+		{
+			MSG_WriteShort(&buf, 0);
+			SZ_Write(msg, buf.data, buf.cursize);
+		}
+		sv2csqcbuf = NULL;
+	}
+}
+
 void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int numstates, const entity_state_t *states)
 {
 	const entity_state_t *s;
@@ -246,6 +377,7 @@ void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int numstates, const entity_sta
 	int i, bits;
 	sizebuf_t buf;
 	unsigned char data[128];
+	prvm_eval_t *val;
 
 	// prepare the buffer
 	memset(&buf, 0, sizeof(buf));
@@ -254,6 +386,10 @@ void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int numstates, const entity_sta
 
 	for (i = 0, s = states;i < numstates;i++, s++)
 	{
+		val = PRVM_GETEDICTFIELDVALUE((&prog->edicts[s->number]), eval_SendEntity);
+		if(val && val->function)
+			continue;
+
 		// prepare the buffer
 		SZ_Clear(&buf);
 
@@ -877,6 +1013,7 @@ void EntityFrame_WriteFrame(sizebuf_t *msg, entityframe_database_t *d, int numst
 	entity_frame_t *o = &deltaframe;
 	const entity_state_t *ent, *delta;
 	vec3_t eye;
+	prvm_eval_t *val;
 
 	d->latestframenum++;
 
@@ -906,6 +1043,10 @@ void EntityFrame_WriteFrame(sizebuf_t *msg, entityframe_database_t *d, int numst
 	{
 		ent = states + i;
 		number = ent->number;
+
+		val = PRVM_GETEDICTFIELDVALUE((&prog->edicts[number]), eval_SendEntity);
+		if(val && val->function)
+				continue;
 		for (;onum < o->numentities && o->entitydata[onum].number < number;onum++)
 		{
 			// write remove message
@@ -1348,6 +1489,7 @@ void EntityFrame4_WriteFrame(sizebuf_t *msg, entityframe4_database_t *d, int num
 	int i, n, startnumber;
 	sizebuf_t buf;
 	unsigned char data[128];
+	prvm_eval_t *val;
 
 	// if there isn't enough space to accomplish anything, skip it
 	if (msg->cursize + 24 > msg->maxsize)
@@ -1392,6 +1534,9 @@ void EntityFrame4_WriteFrame(sizebuf_t *msg, entityframe4_database_t *d, int num
 	d->currententitynumber = 1;
 	for (i = 0, n = startnumber;n < prog->max_edicts;n++)
 	{
+		val = PRVM_GETEDICTFIELDVALUE((&prog->edicts[n]), eval_SendEntity);
+		if(val && val->function)
+			continue;
 		// find the old state to delta from
 		e = EntityFrame4_GetReferenceEntity(d, n);
 		// prepare the buffer
@@ -1558,6 +1703,12 @@ int EntityState5_Priority(entityframe5_database_t *d, int stateindex)
 void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbits, sizebuf_t *msg)
 {
 	unsigned int bits = 0;
+
+	prvm_eval_t *val;
+	val = PRVM_GETEDICTFIELDVALUE((&prog->edicts[s->number]), eval_SendEntity);
+	if(val && val->function)
+		return;
+
 	if (!s->active)
 		MSG_WriteShort(msg, number | 0x8000);
 	else

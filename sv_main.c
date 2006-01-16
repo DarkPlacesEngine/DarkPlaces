@@ -24,6 +24,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 void SV_VM_Init();
 void SV_VM_Setup();
 
+void VM_AutoSentStats_Clear (void);
+void EntityFrameCSQC_ClearVersions (void);
+void EntityFrameCSQC_InitClientVersions (int client, qboolean clear);
+void VM_SV_WriteAutoSentStats (client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats);
+void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int numstates, const entity_state_t *states);
+
+
 // select which protocol to host, this is fed to Protocol_EnumForName
 cvar_t sv_protocolname = {0, "sv_protocolname", "DP7"};
 cvar_t sv_ratelimitlocalplayer = {0, "sv_ratelimitlocalplayer", "0"};
@@ -275,6 +282,7 @@ CLIENT SPAWNING
 ==============================================================================
 */
 
+static const char *SV_InitCmd;	//[515]: svprogs able to send cmd to client on connect
 /*
 ================
 SV_SendServerinfo
@@ -319,6 +327,18 @@ void SV_SendServerinfo (client_t *client)
 	MSG_WriteByte (&client->message, svc_print);
 	dpsnprintf (message, sizeof (message), "\002\nServer: %s build %s (progs %i crc)", gamename, buildstring, prog->filecrc);
 	MSG_WriteString (&client->message,message);
+
+	// LordHavoc: this does not work on dedicated servers, needs fixing.
+extern qboolean csqc_loaded;
+//[515]: init csprogs according to version of svprogs, check the crc, etc.
+	if(csqc_loaded && (cls.state == ca_dedicated || PRVM_NUM_FOR_EDICT(client->edict) != 1))
+	{
+		MSG_WriteByte (&client->message, svc_stufftext);
+		if(SV_InitCmd)
+			MSG_WriteString (&client->message, va("csqc_progcrc %i;%s\n", csqc_progcrc.integer, SV_InitCmd));
+		else
+			MSG_WriteString (&client->message, va("csqc_progcrc %i\n", csqc_progcrc.integer));
+	}
 
 	MSG_WriteByte (&client->message, svc_serverinfo);
 	MSG_WriteLong (&client->message, Protocol_NumberForEnum(sv.protocol));
@@ -370,6 +390,9 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 	float			spawn_parms[NUM_SPAWN_PARMS];
 
 	client = svs.clients + clientnum;
+
+	if(netconnection)//[515]: bots don't play with csqc =)
+		EntityFrameCSQC_InitClientVersions(clientnum, false);
 
 // set up the client_t
 	if (sv.loadgame)
@@ -855,6 +878,7 @@ void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *
 {
 	int i, numsendstates;
 	entity_state_t *s;
+	extern int csqc_clent;
 
 	// if there isn't enough space to accomplish anything, skip it
 	if (msg->cursize + 25 > msg->maxsize)
@@ -874,7 +898,7 @@ void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *
 	if (sv.worldmodel && sv.worldmodel->brush.FatPVS)
 		sv_writeentitiestoclient_pvsbytes = sv.worldmodel->brush.FatPVS(sv.worldmodel, sv_writeentitiestoclient_testeye, 8, sv_writeentitiestoclient_pvs, sizeof(sv_writeentitiestoclient_pvs));
 
-	sv_writeentitiestoclient_clentnum = PRVM_EDICT_TO_PROG(clent); // LordHavoc: for comparison purposes
+	csqc_clent = sv_writeentitiestoclient_clentnum = PRVM_EDICT_TO_PROG(clent); // LordHavoc: for comparison purposes
 
 	sententitiesmark++;
 
@@ -895,6 +919,8 @@ void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *
 
 	if (sv_cullentities_stats.integer)
 		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d trace\n", client->name, sv_writeentitiestoclient_totalentities, sv_writeentitiestoclient_visibleentities, sv_writeentitiestoclient_culled_pvs + sv_writeentitiestoclient_culled_trace, sv_writeentitiestoclient_culled_pvs, sv_writeentitiestoclient_culled_trace);
+
+	EntityFrameCSQC_WriteFrame(msg, numsendstates, sendstates);
 
 	if (client->entitydatabase5)
 		EntityFrame5_WriteFrame(msg, client->entitydatabase5, numsendstates, sendstates, client - svs.clients + 1, stats, client->movesequence);
@@ -1196,6 +1222,7 @@ qboolean SV_SendClientDatagram (client_t *client)
 
 	// add the client specific data to the datagram
 	SV_WriteClientdataToMessage (client, client->edict, &msg, stats);
+	VM_SV_WriteAutoSentStats (client, client->edict, &msg, stats);
 	SV_WriteEntitiesToClient (client, client->edict, &msg, stats);
 
 	// expand packet size to allow effects to go over the rate limit
@@ -1797,6 +1824,10 @@ void SV_SpawnServer (const char *server)
 		ent->fields.server = (void *)((unsigned char *)prog->edictsfields + i * prog->edict_size);
 	}*/
 
+	// reset client csqc entity versions right away.
+	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
+		EntityFrameCSQC_InitClientVersions(i, true);
+
 	sv.datagram.maxsize = sizeof(sv.datagram_buf);
 	sv.datagram.cursize = 0;
 	sv.datagram.data = sv.datagram_buf;
@@ -2184,12 +2215,16 @@ int eval_cursor_trace_ent;
 int eval_colormod;
 int eval_playermodel;
 int eval_playerskin;
+int eval_SendEntity;
+int eval_Version;
 int eval_customizeentityforclient;
 
 mfunction_t *SV_PlayerPhysicsQC;
 mfunction_t *EndFrameQC;
 //KrimZon - SERVER COMMANDS IN QUAKEC
 mfunction_t *SV_ParseClientCommandQC;
+
+ddef_t *PRVM_ED_FindGlobal(const char *name);
 
 void SV_VM_FindEdictFieldOffsets(void)
 {
@@ -2252,6 +2287,8 @@ void SV_VM_FindEdictFieldOffsets(void)
 	eval_colormod = PRVM_ED_FindFieldOffset("colormod");
 	eval_playermodel = PRVM_ED_FindFieldOffset("playermodel");
 	eval_playerskin = PRVM_ED_FindFieldOffset("playerskin");
+	eval_SendEntity = PRVM_ED_FindFieldOffset("SendEntity");
+	eval_Version = PRVM_ED_FindFieldOffset("Version");
 	eval_customizeentityforclient = PRVM_ED_FindFieldOffset("customizeentityforclient");
 
 	// LordHavoc: allowing QuakeC to override the player movement code
@@ -2260,6 +2297,12 @@ void SV_VM_FindEdictFieldOffsets(void)
 	EndFrameQC = PRVM_ED_FindFunction ("EndFrame");
 	//KrimZon - SERVER COMMANDS IN QUAKEC
 	SV_ParseClientCommandQC = PRVM_ED_FindFunction ("SV_ParseClientCommand");
+
+	//[515]: init stufftext string (it is sent before svc_serverinfo)
+	if(PRVM_ED_FindGlobal("SV_InitCmd") && PRVM_ED_FindGlobal("SV_InitCmd")->type & ev_string)
+		SV_InitCmd = PRVM_G_STRING(PRVM_ED_FindGlobal("SV_InitCmd")->ofs);
+	else
+		SV_InitCmd = NULL;
 }
 
 #define REQFIELDS (sizeof(reqfields) / sizeof(prvm_required_field_t))
@@ -2315,6 +2358,7 @@ prvm_required_field_t reqfields[] =
 	{ev_float, "scale"},
 	{ev_float, "style"},
 	{ev_float, "tag_index"},
+	{ev_float, "Version"},
 	{ev_float, "viewzoom"},
 	{ev_vector, "color"},
 	{ev_vector, "colormod"},
@@ -2325,6 +2369,7 @@ prvm_required_field_t reqfields[] =
 	{ev_vector, "punchvector"},
 	{ev_string, "playermodel"},
 	{ev_string, "playerskin"},
+	{ev_function, "SendEntity"},
 	{ev_function, "customizeentityforclient"},
 };
 
@@ -2359,6 +2404,9 @@ void SV_VM_Setup(void)
 	// TODO: add a requiredfuncs list (ask LH if this is necessary at all)
 	PRVM_LoadProgs( sv_progs.string, 0, NULL, REQFIELDS, reqfields );
 	SV_VM_FindEdictFieldOffsets();
+
+	VM_AutoSentStats_Clear();//[515]: csqc
+	EntityFrameCSQC_ClearVersions();//[515]: csqc
 
 	PRVM_End;
 }

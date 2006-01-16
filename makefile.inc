@@ -65,10 +65,12 @@ OBJ_COMMON= \
 	cl_particles.o \
 	cl_screen.o \
 	cl_video.o \
+	clvm_cmds.o \
 	cmd.o \
 	collision.o \
 	common.o \
 	console.o \
+	csprogs.o \
 	curves.o \
 	cvar.o \
 	dpvsimpledecode.o \
@@ -83,8 +85,8 @@ OBJ_COMMON= \
 	host.o \
 	host_cmd.o \
 	image.o \
-	jpeg.o \
 	image_png.o \
+	jpeg.o \
 	keys.o \
 	lhnet.o \
 	mathlib.o \
@@ -125,6 +127,7 @@ OBJ_COMMON= \
 	view.o \
 	wad.o \
 	world.o \
+	world_cs.o \
 	zone.o
 
 # note that builddate.c is very intentionally not compiled to a .o before

@@ -904,6 +904,7 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 		char keyname[64];
 		char entfilename[MAX_QPATH];
 		strcpy(message, "^1**ERROR**^7");
+		p = 0;
 		f = FS_Open(t->filenames[i], "rb", true, false);
 		if(f)
 		{

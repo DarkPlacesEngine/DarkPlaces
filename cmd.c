@@ -387,6 +387,7 @@ typedef struct cmd_function_s
 	struct cmd_function_s *next;
 	const char *name;
 	xcommand_t function;
+	qboolean csqcfunc;
 } cmd_function_t;
 
 static int cmd_argc;
@@ -696,14 +697,24 @@ void Cmd_AddCommand (const char *cmd_name, xcommand_t function)
 	{
 		if (!strcmp (cmd_name, cmd->name))
 		{
-			Con_Printf("Cmd_AddCommand: %s already defined\n", cmd_name);
-			return;
+			if (function)
+			{
+				Con_Printf("Cmd_AddCommand: %s already defined\n", cmd_name);
+				return;
+			}
+			else	//[515]: csqc
+			{
+				cmd->csqcfunc = true;
+				return;
+			}
 		}
 	}
 
 	cmd = (cmd_function_t *)Mem_Alloc(cmd_mempool, sizeof(cmd_function_t));
 	cmd->name = cmd_name;
 	cmd->function = function;
+	if(!function)			//[515]: csqc
+		cmd->csqcfunc = true;
 	cmd->next = cmd_functions;
 
 // insert it at the right alphanumeric position
@@ -899,6 +910,14 @@ const char **Cmd_CompleteAliasBuildList (const char *partial)
 	return buf;
 }
 
+void Cmd_ClearCsqcFuncs (void)
+{
+	cmd_function_t *cmd;
+	for (cmd=cmd_functions ; cmd ; cmd=cmd->next)
+		cmd->csqcfunc = false;
+}
+
+qboolean CL_VM_ConsoleCommand (const char *cmd);
 /*
 ============
 Cmd_ExecuteString
@@ -930,7 +949,14 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 	{
 		if (!strcasecmp (cmd_argv[0],cmd->name))
 		{
-			cmd->function ();
+			if(cmd->function && !cmd->csqcfunc)
+				cmd->function ();
+			else
+				if(CL_VM_ConsoleCommand (text))	//[515]: csqc
+					return;
+				else
+					if(cmd->function)
+						cmd->function ();
 			cmd_tokenizebufferpos = oldpos;
 			return;
 		}

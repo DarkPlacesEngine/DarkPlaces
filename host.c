@@ -24,6 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cdaudio.h"
 #include "cl_video.h"
 #include "progsvm.h"
+#include "csprogs.h"
 
 /*
 
@@ -801,7 +802,13 @@ void _Host_Frame (float time)
 		time2 = Sys_DoubleTime();
 
 	// update audio
-	S_Update(&r_refdef.viewentitymatrix);
+	if(csqc_usecsqclistener)
+	{
+		S_Update(&csqc_listenermatrix);
+		csqc_usecsqclistener = false;
+	}
+	else
+		S_Update(&r_refdef.viewentitymatrix);
 
 	CDAudio_Update();
 

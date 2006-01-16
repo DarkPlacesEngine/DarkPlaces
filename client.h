@@ -323,6 +323,7 @@ entity_persistent_t;
 
 typedef struct entity_s
 {
+	qboolean csqc;
 	// baseline state (default values)
 	entity_state_t state_baseline;
 	// previous state (interpolating from this)
@@ -476,6 +477,14 @@ typedef struct client_movementqueue_s
 }
 client_movementqueue_t;
 
+//[515]: csqc
+typedef struct
+{
+	qboolean drawworld;
+	qboolean drawenginesbar;
+	qboolean drawcrosshair;
+}csqc_vidvars_t;
+
 //
 // the client_state_t structure is wiped completely at every
 // server signon
@@ -552,6 +561,12 @@ typedef struct client_state_s
 	qboolean nodrift;
 	float driftmove;
 	double laststop;
+
+//[515]: added for csqc purposes
+	float sensitivityscale;
+	csqc_vidvars_t csqc_vidvars;	//[515]: these parms must be set to true by default
+	qboolean csqc_wantsmousemove;
+	struct model_s *csqc_model_precache[MAX_MODELS];
 
 	// local amount for smoothing stepups
 	//float crouch;
@@ -663,6 +678,9 @@ extern cvar_t cl_anglespeedkey;
 
 extern cvar_t cl_autofire;
 
+extern cvar_t csqc_progname;	//[515]: csqc crc check and right csprogs name according to progs.dat
+extern cvar_t csqc_progcrc;
+
 extern cvar_t cl_shownet;
 extern cvar_t cl_nolerp;
 
@@ -697,13 +715,16 @@ extern vec3_t cl_playercrouchmaxs;
 
 // these are updated by CL_ClearState
 extern int cl_num_entities;
+extern int cl_num_csqcentities;
 extern int cl_num_static_entities;
 extern int cl_num_temp_entities;
 extern int cl_num_brushmodel_entities;
 
 extern mempool_t *cl_mempool;
 extern entity_t *cl_entities;
+extern entity_t *cl_csqcentities;
 extern unsigned char *cl_entities_active;
+extern unsigned char *cl_csqcentities_active;
 extern entity_t *cl_static_entities;
 extern entity_t *cl_temp_entities;
 extern int *cl_brushmodel_entities;
