@@ -232,7 +232,7 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define	svc_spawnbaseline2	55		// short modelindex instead of byte
 #define svc_spawnstatic2	56		// short modelindex instead of byte
 #define svc_entities		57		// [int] deltaframe [int] thisframe [float vector] eye [variable length] entitydata
-#define svc_unusedlh3			58
+#define svc_csqcentities	58		// [short] entnum [variable length] entitydata ... [short] 0x0000
 #define	svc_spawnstaticsound2	59	// [coord3] [short] samp [byte] vol [byte] aten
 
 //

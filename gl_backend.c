@@ -1733,6 +1733,9 @@ void R_ClearScreen(void)
 	}
 }
 
+qboolean CL_VM_UpdateView (void);
+void SCR_DrawConsole (void);
+
 int r_stereo_side;
 
 void SCR_DrawScreen (void)
@@ -1793,7 +1796,10 @@ void SCR_DrawScreen (void)
 			r_refdef.frustum_x *= r_refdef.frustumscale_x;
 			r_refdef.frustum_y *= r_refdef.frustumscale_y;
 
-			R_RenderView();
+			if(!CL_VM_UpdateView())
+				R_RenderView();
+			else
+				SCR_DrawConsole();
 
 			if (scr_zoomwindow.integer)
 			{
@@ -1810,7 +1816,8 @@ void SCR_DrawScreen (void)
 				r_refdef.frustum_x *= r_refdef.frustumscale_x;
 				r_refdef.frustum_y *= r_refdef.frustumscale_y;
 
-				R_RenderView();
+				if(!CL_VM_UpdateView())
+					R_RenderView();
 			}
 		}
 

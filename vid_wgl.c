@@ -1306,6 +1306,7 @@ static void IN_MouseMove (void)
 		in_mouse_y = my;
 
 		// if the mouse has moved, force it to the center, so there's room to move
+		if (!cl.csqc_wantsmousemove)
 		if (mx || my)
 			SetCursorPos ((window_x + vid.width / 2), (window_y + vid.height / 2));
 	}

@@ -65,6 +65,7 @@ char *vm_sv_extensions =
 "DP_QC_MULTIPLETEMPSTRINGS "
 "DP_QC_RANDOMVEC "
 "DP_QC_SINCOSSQRTPOW "
+"DP_QC_STRINGBUFFERS "
 "DP_QC_TRACEBOX "
 "DP_QC_TRACETOSS "
 "DP_QC_TRACE_MOVETYPE_HITMODEL "
@@ -111,6 +112,8 @@ char *vm_sv_extensions =
 "DP_TE_SPARK "
 "DP_TE_STANDARDEFFECTBUILTINS "
 "DP_VIEWZOOM "
+"EXT_BITSHIFT "
+"EXT_CSQC "
 "FRIK_FILE "
 "KRIMZON_SV_PARSECLIENTCOMMAND "
 "NEH_CMD_PLAY2 "
@@ -133,20 +136,6 @@ makevectors(vector)
 void PF_makevectors (void)
 {
 	AngleVectors (PRVM_G_VECTOR(OFS_PARM0), prog->globals.server->v_forward, prog->globals.server->v_right, prog->globals.server->v_up);
-}
-
-/*
-==============
-PF_vectorvectors
-
-Writes new values for v_forward, v_up, and v_right based on the given forward vector
-vectorvectors(vector, vector)
-==============
-*/
-void PF_vectorvectors (void)
-{
-	VectorNormalize2(PRVM_G_VECTOR(OFS_PARM0), prog->globals.server->v_forward);
-	VectorVectors(prog->globals.server->v_forward, prog->globals.server->v_right, prog->globals.server->v_up);
 }
 
 /*
@@ -1119,12 +1108,14 @@ MESSAGE WRITING
 #define	MSG_ONE			1		// reliable to one (msg_entity)
 #define	MSG_ALL			2		// reliable to all
 #define	MSG_INIT		3		// write to the init string
+#define	MSG_ENTITY		5
 
 sizebuf_t *WriteDest (void)
 {
 	int		entnum;
 	int		dest;
 	prvm_edict_t	*ent;
+	extern sizebuf_t *sv2csqcbuf;
 
 	dest = PRVM_G_FLOAT(OFS_PARM0);
 	switch (dest)
@@ -1150,6 +1141,9 @@ sizebuf_t *WriteDest (void)
 
 	case MSG_INIT:
 		return &sv.signon;
+
+	case MSG_ENTITY:
+		return sv2csqcbuf;
 	}
 
 	return NULL;
@@ -1316,6 +1310,160 @@ void PF_registercvar (void)
 	Cvar_Get(name, value, 0);
 
 	PRVM_G_FLOAT(OFS_RETURN) = 1; // success
+}
+
+typedef struct
+{
+	unsigned char	type;	// 1/2/8 or other value if isn't used
+	int		fieldoffset;
+}autosentstat_t;
+
+static autosentstat_t *vm_autosentstats = NULL;	//[515]: it starts from 0, not 32
+static int vm_autosentstats_last;
+
+void VM_AutoSentStats_Clear (void)
+{
+	if(vm_autosentstats)
+	{
+		free(vm_autosentstats);
+		vm_autosentstats = NULL;
+		vm_autosentstats_last = -1;
+	}
+}
+
+//[515]: add check if even bigger ? "try to use two stats, cause it's too big" ?
+#define VM_SENDSTAT(a,b,c)\
+{\
+/*	if((c))*/\
+	if((c)==(unsigned char)(c))\
+	{\
+		MSG_WriteByte((a), svc_updatestatubyte);\
+		MSG_WriteByte((a), (b));\
+		MSG_WriteByte((a), (c));\
+	}\
+	else\
+	{\
+		MSG_WriteByte((a), svc_updatestat);\
+		MSG_WriteByte((a), (b));\
+		MSG_WriteLong((a), (c));\
+	}\
+}\
+
+void VM_SV_WriteAutoSentStats (client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats)
+{
+	int			i, v, *si;
+	char		s[17];
+	const char	*t;
+	qboolean	send;
+	union
+	{
+		float	f;
+		int		i;
+	}k;
+
+	if(!vm_autosentstats)
+		return;
+
+	send = (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE && sv.protocol != PROTOCOL_DARKPLACES1 && sv.protocol != PROTOCOL_DARKPLACES2 && sv.protocol != PROTOCOL_DARKPLACES3 && sv.protocol != PROTOCOL_DARKPLACES4 && sv.protocol != PROTOCOL_DARKPLACES5);
+
+	for(i=0; i<vm_autosentstats_last+1 ;i++)
+	{
+		if(!vm_autosentstats[i].type)
+			continue;
+		switch(vm_autosentstats[i].type)
+		{
+		//string
+		case 1:
+			t = PRVM_E_STRING(ent, vm_autosentstats[i].fieldoffset);
+			if(t && t[0])
+			{
+				memset(s, 0, 17);
+				strlcpy(s, t, 16);
+				si = (int*)s;
+				if (!send)
+				{
+					stats[i+32] = si[0];
+					stats[i+33] = si[1];
+					stats[i+34] = si[2];
+					stats[i+35] = si[3];
+				}
+				else
+				{
+					VM_SENDSTAT(msg, i+32, si[0]);
+					VM_SENDSTAT(msg, i+33, si[1]);
+					VM_SENDSTAT(msg, i+34, si[2]);
+					VM_SENDSTAT(msg, i+35, si[3]);
+				}
+			}
+			break;
+		//float
+		case 2:
+			k.f = PRVM_E_FLOAT(ent, vm_autosentstats[i].fieldoffset);	//[515]: use PRVM_E_INT ?
+			k.i = LittleLong (k.i);
+			if (!send)
+				stats[i+32] = k.i;
+			else
+				VM_SENDSTAT(msg, i+32, k.i);
+			break;
+		//integer
+		case 8:
+			v = PRVM_E_FLOAT(ent, vm_autosentstats[i].fieldoffset);	//[515]: use PRVM_E_INT ?
+			if (!send)
+				stats[i+32] = v;
+			else
+				VM_SENDSTAT(msg, i+32, v);
+			break;
+		default:
+			break;
+		}
+	}
+}
+
+// void(float index, float type, .void field) SV_AddStat = #470;
+// Set up an auto-sent player stat.
+// Client's get thier own fields sent to them. Index may not be less than 32.
+// Type is a value equating to the ev_ values found in qcc to dictate types. Valid ones are:
+//          1: string (4 stats carrying a total of 16 charactures)
+//          2: float (one stat, float converted to an integer for transportation)
+//          8: integer (one stat, not converted to an int, so this can be used to transport floats as floats - what a unique idea!)
+void PF_SV_AddStat (void)
+{
+	int		off, i;
+	unsigned char	type;
+
+	if(!vm_autosentstats)
+	{
+		vm_autosentstats = malloc((MAX_CL_STATS-32) * sizeof(autosentstat_t));
+		if(!vm_autosentstats)
+		{
+			Con_Printf("PF_SV_AddStat: not enough memory\n");
+			return;
+		}
+	}
+	i		= PRVM_G_FLOAT(OFS_PARM0);
+	type	= PRVM_G_FLOAT(OFS_PARM1);
+	off		= PRVM_G_INT  (OFS_PARM2);
+	i -= 32;
+
+	if(i < 0)
+	{
+		Con_Printf("PF_SV_AddStat: index may not be less than 32\n");
+		return;
+	}
+	if(i >= (MAX_CL_STATS-32))
+	{
+		Con_Printf("PF_SV_AddStat: index >= MAX_CL_STATS\n");
+		return;
+	}
+	if(i > (MAX_CL_STATS-32-4) && type == 1)
+	{
+		Con_Printf("PF_SV_AddStat: index > (MAX_CL_STATS-4) with string\n");
+		return;
+	}
+	vm_autosentstats[i].type		= type;
+	vm_autosentstats[i].fieldoffset	= off;
+	if(vm_autosentstats_last < i)
+		vm_autosentstats_last = i;
 }
 
 /*
@@ -1815,7 +1963,7 @@ void PF_te_flamejet (void)
 	MSG_WriteByte(&sv.datagram, PRVM_G_FLOAT(OFS_PARM2));
 }
 
-static void clippointtosurface(msurface_t *surface, vec3_t p, vec3_t out)
+void clippointtosurface(msurface_t *surface, vec3_t p, vec3_t out)
 {
 	int i, j, k;
 	float *v[3], facenormal[3], edgenormal[3], sidenormal[3], temp[3], offsetdist, dist, bestdist;
@@ -2302,9 +2450,14 @@ void PF_clienttype (void)
 		PRVM_G_FLOAT(OFS_RETURN) = 2;
 }
 
+void PF_edict_num (void)
+{
+	VM_RETURN_EDICT(PRVM_EDICT_NUM((int)PRVM_G_FLOAT(OFS_PARM0)));
+}
+
 prvm_builtin_t vm_sv_builtins[] = {
 NULL,						// #0
-PF_makevectors,				// #1 void(entity e) makevectors
+PF_makevectors,				// #1 void(vector ang) makevectors
 PF_setorigin,				// #2 void(entity e, vector o) setorigin
 PF_setmodel,				// #3 void(entity e, string m) setmodel
 PF_setsize,					// #4 void(entity e, vector min, vector max) setsize
@@ -2424,7 +2577,35 @@ VM_stov,					// #117 vector(string) stov (FRIK_FILE)
 VM_strzone,					// #118 string(string s) strzone (FRIK_FILE)
 VM_strunzone,				// #119 void(string s) strunzone (FRIK_FILE)
 e10, e10, e10, e10, e10, e10, e10, e10,		// #120-199
-e10, e10, e10, e10, e10, e10, e10, e10, e10, e10,	// #200-299
+// FTEQW range #200-#299
+NULL,						// #200
+NULL,						// #201
+NULL,						// #202
+NULL,						// #203
+NULL,						// #204
+NULL,						// #205
+NULL,						// #206
+NULL,						// #207
+NULL,						// #208
+NULL,						// #209
+NULL,						// #210
+NULL,						// #211
+NULL,						// #212
+NULL,						// #213
+NULL,						// #214
+NULL,						// #215
+NULL,						// #216
+NULL,						// #217
+VM_bitshift,				// #218 float(float number, float quantity) bitshift (EXT_BITSHIFT)
+NULL,						// #219
+e10,						// #220-#229
+e10,						// #230-#239
+e10,						// #240-#249
+e10,						// #250-#259
+e10,						// #260-#269
+e10,						// #270-#279
+e10,						// #280-#289
+e10,						// #290-#299
 e10, e10, e10, e10, e10, e10, e10, e10, e10, e10,	// #300-399
 VM_copyentity,				// #400 void(entity from, entity to) copyentity (DP_QC_COPYENTITY)
 PF_setcolor,				// #401 void(entity ent, float colors) setcolor (DP_QC_SETCOLOR)
@@ -2458,7 +2639,7 @@ PF_te_lightning1,			// #428 void(entity own, vector start, vector end) te_lightn
 PF_te_lightning2,			// #429 void(entity own, vector start, vector end) te_lightning2 (DP_TE_STANDARDEFFECTBUILTINS)
 PF_te_lightning3,			// #430 void(entity own, vector start, vector end) te_lightning3 (DP_TE_STANDARDEFFECTBUILTINS)
 PF_te_beam,					// #431 void(entity own, vector start, vector end) te_beam (DP_TE_STANDARDEFFECTBUILTINS)
-PF_vectorvectors,			// #432 void(vector dir) vectorvectors (DP_QC_VECTORVECTORS)
+VM_vectorvectors,			// #432 void(vector dir) vectorvectors (DP_QC_VECTORVECTORS)
 PF_te_plasmaburn,			// #433 void(vector org) te_plasmaburn (DP_TE_PLASMABURN)
 PF_getsurfacenumpoints,		// #434 float(entity e, float s) getsurfacenumpoints (DP_QC_GETSURFACE)
 PF_getsurfacepoint,			// #435 vector(entity e, float s, float n) getsurfacepoint (DP_QC_GETSURFACE)
@@ -2485,8 +2666,28 @@ PF_clienttype,				// #455 float(entity clent) clienttype (DP_SV_BOTCLIENT)
 PF_WriteUnterminatedString,	// #456 void(float to, string s) WriteUnterminatedString (DP_SV_WRITEUNTERMINATEDSTRING)
 PF_te_flamejet,				// #457 void(vector org, vector vel, float howmany) te_flamejet = #457 (DP_TE_FLAMEJET)
 NULL,						// #458
-NULL,						// #459
-e10, e10, e10, e10			// #460-499 (LordHavoc)
+PF_edict_num,				// #459 entity(float num) (??)
+VM_buf_create,				// #460 float() buf_create (DP_QC_STRINGBUFFERS)
+VM_buf_del,					// #461 void(float bufhandle) buf_del (DP_QC_STRINGBUFFERS)
+VM_buf_getsize,				// #462 float(float bufhandle) buf_getsize (DP_QC_STRINGBUFFERS)
+VM_buf_copy,				// #463 void(float bufhandle_from, float bufhandle_to) buf_copy (DP_QC_STRINGBUFFERS)
+VM_buf_sort,				// #464 void(float bufhandle, float sortpower, float backward) buf_sort (DP_QC_STRINGBUFFERS)
+VM_buf_implode,				// #465 string(float bufhandle, string glue) buf_implode (DP_QC_STRINGBUFFERS)
+VM_bufstr_get,				// #466 string(float bufhandle, float string_index) bufstr_get (DP_QC_STRINGBUFFERS)
+VM_bufstr_set,				// #467 void(float bufhandle, float string_index, string str) bufstr_set (DP_QC_STRINGBUFFERS)
+VM_bufstr_add,				// #468 float(float bufhandle, string str, float order) bufstr_add (DP_QC_STRINGBUFFERS)
+VM_bufstr_free,				// #469 void(float bufhandle, float string_index) bufstr_free (DP_QC_STRINGBUFFERS)
+PF_SV_AddStat,				// #470 void(float index, float type, .void field) SV_AddStat (EXT_CSQC)
+NULL,						// #471
+NULL,						// #472
+NULL,						// #473
+NULL,						// #474
+NULL,						// #475
+NULL,						// #476
+NULL,						// #477
+NULL,						// #478
+NULL,						// #479
+e10, e10					// #471-499 (LordHavoc)
 };
 
 const int vm_sv_numbuiltins = sizeof(vm_sv_builtins) / sizeof(prvm_builtin_t);

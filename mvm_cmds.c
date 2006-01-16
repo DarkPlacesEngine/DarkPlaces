@@ -284,45 +284,6 @@ void VM_M_getresolution(void)
 
 /*
 =========
-VM_M_keynumtostring
-
-string keynumtostring(float keynum)
-=========
-*/
-void VM_M_keynumtostring(void)
-{
-	int keynum;
-	char *tmp;
-	VM_SAFEPARMCOUNT(1, VM_M_keynumtostring);
-
-	keynum = PRVM_G_FLOAT(OFS_PARM0);
-
-	tmp = VM_GetTempString();
-
-	strcpy(tmp, Key_KeynumToString(keynum));
-
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(tmp);
-}
-
-/*
-=========
-VM_M_stringtokeynum
-
-float stringtokeynum(string key)
-=========
-*/
-void VM_M_stringtokeynum( void )
-{
-	const char *str;
-	VM_SAFEPARMCOUNT( 1, VM_M_keynumtostring );
-
-	str = PRVM_G_STRING( OFS_PARM0 );
-
-	PRVM_G_INT(OFS_RETURN) = Key_StringToKeynum( str );
-}
-
-/*
-=========
 VM_M_findkeysforcommand
 
 string	findkeysforcommand(string command)
@@ -940,7 +901,8 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_cin_setstate,
 	VM_cin_getstate,
 	VM_cin_restart, // 465
-	0,0,0,0,0,	// 470
+	VM_drawline,	// 466
+	0,0,0,0,	// 470
 	e10,			// 480
 	e10,			// 490
 	e10,			// 500
@@ -954,12 +916,12 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_M_writetofile,
 	VM_M_isfunction,
 	VM_M_getresolution,
-	VM_M_keynumtostring,
+	VM_keynumtostring,
 	VM_M_findkeysforcommand,// 610
 	VM_M_getserverliststat,
 	VM_M_getserverliststring,
 	VM_parseentitydata,
-	VM_M_stringtokeynum,
+	VM_stringtokeynum,
 	VM_M_resetserverlistmasks,
 	VM_M_setserverlistmaskstring,
 	VM_M_setserverlistmasknumber,

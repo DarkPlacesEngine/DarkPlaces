@@ -308,6 +308,7 @@ static void V_BonusFlash_f (void)
 extern matrix4x4_t viewmodelmatrix;
 
 #include "cl_collision.h"
+#include "csprogs.h"
 
 /*
 ==================
@@ -321,6 +322,8 @@ void V_CalcRefdef (void)
 	entity_t *ent;
 	float vieworg[3], gunorg[3], viewangles[3];
 	trace_t trace;
+	if(csqc_loaded)
+		return;
 	VectorClear(gunorg);
 	Matrix4x4_CreateIdentity(&viewmodelmatrix);
 	Matrix4x4_CreateIdentity(&r_refdef.viewentitymatrix);
@@ -490,6 +493,8 @@ void V_CalcRefdef (void)
 				Matrix4x4_CreateFromQuakeEntity(&r_refdef.viewentitymatrix, vieworg[0], vieworg[1], vieworg[2], viewangles[0], viewangles[1], viewangles[2] + v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value, 1);
 			// calculate a viewmodel matrix for use in view-attached entities
 			Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, gunorg[0], gunorg[1], gunorg[2], viewangles[0], viewangles[1], viewangles[2], 0.3);
+			VectorCopy(vieworg, csqc_origin);
+			VectorCopy(viewangles, csqc_angles);
 		}
 	}
 }

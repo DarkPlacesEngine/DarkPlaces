@@ -322,17 +322,40 @@ void VM_drawsetcliparea(void);
 void VM_drawresetcliparea(void);
 void VM_getimagesize(void);
 
+void VM_vectorvectors (void);
+
+void VM_keynumtostring (void);
+void VM_stringtokeynum (void);
+
 void VM_cin_open( void );
 void VM_cin_close( void );
 void VM_cin_setstate( void );
 void VM_cin_getstate( void );
 void VM_cin_restart( void );
 
+void VM_drawline (void);
+void VM_R_PolygonBegin (void);
+void VM_R_PolygonVertex (void);
+void VM_R_PolygonEnd (void);
+
+void VM_bitshift (void);
+
 void VM_altstr_count( void );
 void VM_altstr_prepare( void );
 void VM_altstr_get( void );
 void VM_altstr_set( void );
 void VM_altstr_ins(void);
+
+void VM_buf_create(void);
+void VM_buf_del (void);
+void VM_buf_getsize (void);
+void VM_buf_copy (void);
+void VM_buf_sort (void);
+void VM_buf_implode (void);
+void VM_bufstr_get (void);
+void VM_bufstr_set (void);
+void VM_bufstr_add (void);
+void VM_bufstr_free (void);
 
 void VM_Cmd_Init(void);
 void VM_Cmd_Reset(void);

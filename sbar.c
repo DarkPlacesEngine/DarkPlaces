@@ -485,6 +485,22 @@ Sbar_SortFrags
 */
 static int fragsort[MAX_SCOREBOARD];
 static int scoreboardlines;
+
+//[515]: Sbar_GetPlayer for csqc "getplayerkey" func
+int Sbar_GetPlayer (int index)
+{
+	if(index < 0)
+	{
+		index = -1-index;
+		if(index >= scoreboardlines)
+			return -1;
+		index = fragsort[index];
+	}
+	if(index >= scoreboardlines)
+		return -1;
+	return index;
+}
+
 static scoreboard_t teams[MAX_SCOREBOARD];
 static int teamsort[MAX_SCOREBOARD];
 static int teamlines;
@@ -1024,327 +1040,331 @@ extern float v_dmg_time, v_dmg_roll, v_dmg_pitch;
 extern cvar_t v_kicktime;
 void Sbar_Draw (void)
 {
-	if (cl.intermission == 1)
+	if(cl.csqc_vidvars.drawenginesbar)	//[515]: csqc drawsbar
 	{
-		Sbar_IntermissionOverlay();
-		return;
-	}
-	else if (cl.intermission == 2)
-	{
-		Sbar_FinaleOverlay();
-		return;
-	}
-
-	if (gamemode == GAME_NETHERWORLD)
-	{
-	}
-	else if (gamemode == GAME_SOM)
-	{
-		if (sb_showscores || (cl.stats[STAT_HEALTH] <= 0 && cl_deathscoreboard.integer))
-			Sbar_DrawScoreboard ();
-		else if (sb_lines)
+		if (cl.intermission == 1)
 		{
-			// this is the top left of the sbar area
-			sbar_x = 0;
-			sbar_y = vid_conheight.integer - 24*3;
+			Sbar_IntermissionOverlay();
+			return;
+		}
+		else if (cl.intermission == 2)
+		{
+			Sbar_FinaleOverlay();
+			return;
+		}
 
-			// armor
-			if (cl.stats[STAT_ARMOR])
+		if (gamemode == GAME_NETHERWORLD)
+		{
+		}
+		else if (gamemode == GAME_SOM)
+		{
+			if (sb_showscores || (cl.stats[STAT_HEALTH] <= 0 && cl_deathscoreboard.integer))
+				Sbar_DrawScoreboard ();
+			else if (sb_lines)
 			{
-				if (cl.stats[STAT_ITEMS] & IT_ARMOR3)
-					Sbar_DrawPic(0, 0, somsb_armor[2]);
-				else if (cl.stats[STAT_ITEMS] & IT_ARMOR2)
-					Sbar_DrawPic(0, 0, somsb_armor[1]);
-				else if (cl.stats[STAT_ITEMS] & IT_ARMOR1)
-					Sbar_DrawPic(0, 0, somsb_armor[0]);
-				Sbar_DrawNum(24, 0, cl.stats[STAT_ARMOR], 3, cl.stats[STAT_ARMOR] <= 25);
+				// this is the top left of the sbar area
+				sbar_x = 0;
+				sbar_y = vid_conheight.integer - 24*3;
+
+				// armor
+				if (cl.stats[STAT_ARMOR])
+				{
+					if (cl.stats[STAT_ITEMS] & IT_ARMOR3)
+						Sbar_DrawPic(0, 0, somsb_armor[2]);
+					else if (cl.stats[STAT_ITEMS] & IT_ARMOR2)
+						Sbar_DrawPic(0, 0, somsb_armor[1]);
+					else if (cl.stats[STAT_ITEMS] & IT_ARMOR1)
+						Sbar_DrawPic(0, 0, somsb_armor[0]);
+					Sbar_DrawNum(24, 0, cl.stats[STAT_ARMOR], 3, cl.stats[STAT_ARMOR] <= 25);
+				}
+
+				// health
+				Sbar_DrawPic(0, 24, somsb_health);
+				Sbar_DrawNum(24, 24, cl.stats[STAT_HEALTH], 3, cl.stats[STAT_HEALTH] <= 25);
+
+				// ammo icon
+				if (cl.stats[STAT_ITEMS] & IT_SHELLS)
+					Sbar_DrawPic(0, 48, somsb_ammo[0]);
+				else if (cl.stats[STAT_ITEMS] & IT_NAILS)
+					Sbar_DrawPic(0, 48, somsb_ammo[1]);
+				else if (cl.stats[STAT_ITEMS] & IT_ROCKETS)
+					Sbar_DrawPic(0, 48, somsb_ammo[2]);
+				else if (cl.stats[STAT_ITEMS] & IT_CELLS)
+					Sbar_DrawPic(0, 48, somsb_ammo[3]);
+				Sbar_DrawNum(24, 48, cl.stats[STAT_AMMO], 3, false);
+				if (cl.stats[STAT_SHELLS])
+					Sbar_DrawNum(24 + 3*24, 48, cl.stats[STAT_SHELLS], 1, true);
 			}
-
-			// health
-			Sbar_DrawPic(0, 24, somsb_health);
-			Sbar_DrawNum(24, 24, cl.stats[STAT_HEALTH], 3, cl.stats[STAT_HEALTH] <= 25);
-
-			// ammo icon
-			if (cl.stats[STAT_ITEMS] & IT_SHELLS)
-				Sbar_DrawPic(0, 48, somsb_ammo[0]);
-			else if (cl.stats[STAT_ITEMS] & IT_NAILS)
-				Sbar_DrawPic(0, 48, somsb_ammo[1]);
-			else if (cl.stats[STAT_ITEMS] & IT_ROCKETS)
-				Sbar_DrawPic(0, 48, somsb_ammo[2]);
-			else if (cl.stats[STAT_ITEMS] & IT_CELLS)
-				Sbar_DrawPic(0, 48, somsb_ammo[3]);
-			Sbar_DrawNum(24, 48, cl.stats[STAT_AMMO], 3, false);
-			if (cl.stats[STAT_SHELLS])
-				Sbar_DrawNum(24 + 3*24, 48, cl.stats[STAT_SHELLS], 1, true);
 		}
-	}
-	else if (gamemode == GAME_NEXUIZ)
-	{
-		sbar_y = vid_conheight.integer - 47;
-		sbar_x = (vid_conwidth.integer - 640)/2;
-
-		if (sb_showscores || (cl.stats[STAT_HEALTH] <= 0 && cl_deathscoreboard.integer))
+		else if (gamemode == GAME_NEXUIZ)
 		{
-			Sbar_DrawAlphaPic (0, 0, sb_scorebar, sbar_alpha_bg.value);
-			Sbar_DrawScoreboard ();
-		}
-		else if (sb_lines)
-		{
-			int i;
-			double time;
-			float fade;
+			sbar_y = vid_conheight.integer - 47;
+			sbar_x = (vid_conwidth.integer - 640)/2;
 
-			// we have a max time 2s (min time = 0)
-			if ((time = cl.time - cl.weapontime) < 2)
+			if (sb_showscores || (cl.stats[STAT_HEALTH] <= 0 && cl_deathscoreboard.integer))
 			{
-				fade = (1.0 - 0.5 * time);
-				fade *= fade;
-				for (i = 0; i < 8;i++)
-					if (cl.stats[STAT_ITEMS] & (1 << i))
-						Sbar_DrawWeapon(i + 1, fade, (i + 2 == cl.stats[STAT_ACTIVEWEAPON]));
-
-				if((cl.stats[STAT_ITEMS] & (1<<12)))
-					Sbar_DrawWeapon(0, fade, (cl.stats[STAT_ACTIVEWEAPON] == 1));
-			}
-
-			//if (!cl.islocalgame)
-			//	Sbar_DrawFrags ();
-
-			if (sb_lines > 24)
-				Sbar_DrawAlphaPic (0, 0, sb_sbar, sbar_alpha_fg.value);
-			else
-				Sbar_DrawAlphaPic (0, 0, sb_sbar_minimal, sbar_alpha_fg.value);
-
-			// special items
-			if (cl.stats[STAT_ITEMS] & IT_INVULNERABILITY)
-			{
-				// Nexuiz has no anum pics
-				//Sbar_DrawNum (36, 0, 666, 3, 1);
-				// Nexuiz has no disc pic
-				//Sbar_DrawPic (0, 0, sb_disc);
-			}
-
-			// armor
-			Sbar_DrawXNum ((340-3*24), 12, cl.stats[STAT_ARMOR], 3, 24, 0.6,0.7,0.8,1,0);
-
-			// health
-			if(cl.stats[STAT_HEALTH] > 100)
-				Sbar_DrawXNum((154-3*24),12,cl.stats[STAT_HEALTH],3,24,1,1,1,1,0);
-			else if(cl.stats[STAT_HEALTH] <= 25 && cl.time - (int)cl.time > 0.5)
-				Sbar_DrawXNum((154-3*24),12,cl.stats[STAT_HEALTH],3,24,0.7,0,0,1,0);
-			else
-				Sbar_DrawXNum((154-3*24),12,cl.stats[STAT_HEALTH],3,24,0.6,0.7,0.8,1,0);
-
-			// AK dont draw ammo for the laser
-			if(cl.stats[STAT_ACTIVEWEAPON] != 12)
-			{
-				if (cl.stats[STAT_ITEMS] & NEX_IT_SHELLS)
-					Sbar_DrawPic (519, 0, sb_ammo[0]);
-				else if (cl.stats[STAT_ITEMS] & NEX_IT_BULLETS)
-					Sbar_DrawPic (519, 0, sb_ammo[1]);
-				else if (cl.stats[STAT_ITEMS] & NEX_IT_ROCKETS)
-					Sbar_DrawPic (519, 0, sb_ammo[2]);
-				else if (cl.stats[STAT_ITEMS] & NEX_IT_CELLS)
-					Sbar_DrawPic (519, 0, sb_ammo[3]);
-
-				if(cl.stats[STAT_AMMO] <= 10)
-					Sbar_DrawXNum ((519-3*24), 12, cl.stats[STAT_AMMO], 3, 24, 0.7, 0,0,1,0);
-				else
-					Sbar_DrawXNum ((519-3*24), 12, cl.stats[STAT_AMMO], 3, 24, 0.6, 0.7,0.8,1,0);
-
-			}
-
-			if (sb_lines > 24)
-				DrawQ_Pic(sbar_x,sbar_y,sb_sbar_overlay->name,0,0,1,1,1,1,DRAWFLAG_MODULATE);
-		}
-
-		//if (vid_conwidth.integer > 320 && cl.gametype == GAME_DEATHMATCH)
-		//	Sbar_MiniDeathmatchOverlay (0, 17);
-	}
-	else if (gamemode == GAME_ZYMOTIC)
-	{
-#if 1
-		float scale = 64.0f / 256.0f;
-		float kickoffset[3];
-		VectorClear(kickoffset);
-		if (v_dmg_time > 0)
-		{
-			kickoffset[0] = (v_dmg_time/v_kicktime.value*v_dmg_roll) * 10 * scale;
-			kickoffset[1] = (v_dmg_time/v_kicktime.value*v_dmg_pitch) * 10 * scale;
-		}
-		sbar_x = (vid_conwidth.integer - 256 * scale)/2 + kickoffset[0];
-		sbar_y = (vid_conheight.integer - 256 * scale)/2 + kickoffset[1];
-		// left1 16, 48 : 126 -66
-		// left2 16, 128 : 196 -66
-		// right 176, 48 : 196 -136
-		Sbar_DrawGauge(sbar_x +  16 * scale, sbar_y +  48 * scale, zymsb_crosshair_left1->name, 64*scale,  80*scale, 78*scale,  -66*scale, cl.stats[STAT_AMMO]  * (1.0 / 200.0), cl.stats[STAT_SHELLS]  * (1.0 / 200.0), 0.8f,0.8f,0.0f,1.0f, 0.8f,0.5f,0.0f,1.0f, 0.3f,0.3f,0.3f,1.0f, DRAWFLAG_NORMAL);
-		Sbar_DrawGauge(sbar_x +  16 * scale, sbar_y + 128 * scale, zymsb_crosshair_left2->name, 64*scale,  80*scale, 68*scale,  -66*scale, cl.stats[STAT_NAILS] * (1.0 / 200.0), cl.stats[STAT_ROCKETS] * (1.0 / 200.0), 0.8f,0.8f,0.0f,1.0f, 0.8f,0.5f,0.0f,1.0f, 0.3f,0.3f,0.3f,1.0f, DRAWFLAG_NORMAL);
-		Sbar_DrawGauge(sbar_x + 176 * scale, sbar_y +  48 * scale, zymsb_crosshair_right->name, 64*scale, 160*scale, 148*scale, -136*scale, cl.stats[STAT_ARMOR]  * (1.0 / 300.0), cl.stats[STAT_HEALTH]  * (1.0 / 300.0), 0.0f,0.5f,1.0f,1.0f, 1.0f,0.0f,0.0f,1.0f, 0.3f,0.3f,0.3f,1.0f, DRAWFLAG_NORMAL);
-		DrawQ_Pic(sbar_x + 120 * scale, sbar_y + 120 * scale, zymsb_crosshair_center->name, 16 * scale, 16 * scale, 1, 1, 1, 1, DRAWFLAG_NORMAL);
-#else
-		float scale = 128.0f / 256.0f;
-		float healthstart, healthheight, healthstarttc, healthendtc;
-		float shieldstart, shieldheight, shieldstarttc, shieldendtc;
-		float ammostart, ammoheight, ammostarttc, ammoendtc;
-		float clipstart, clipheight, clipstarttc, clipendtc;
-		float kickoffset[3], offset;
-		VectorClear(kickoffset);
-		if (v_dmg_time > 0)
-		{
-			kickoffset[0] = (v_dmg_time/v_kicktime.value*v_dmg_roll) * 10 * scale;
-			kickoffset[1] = (v_dmg_time/v_kicktime.value*v_dmg_pitch) * 10 * scale;
-		}
-		sbar_x = (vid_conwidth.integer - 256 * scale)/2 + kickoffset[0];
-		sbar_y = (vid_conheight.integer - 256 * scale)/2 + kickoffset[1];
-		offset = 0; // TODO: offset should be controlled by recoil (question: how to detect firing?)
-		DrawQ_SuperPic(sbar_x +  120           * scale, sbar_y + ( 88 - offset) * scale, zymsb_crosshair_line->name, 16 * scale, 36 * scale, 0,0, 1,1,1,1, 1,0, 1,1,1,1, 0,1, 1,1,1,1, 1,1, 1,1,1,1, 0);
-		DrawQ_SuperPic(sbar_x + (132 + offset) * scale, sbar_y + 120            * scale, zymsb_crosshair_line->name, 36 * scale, 16 * scale, 0,1, 1,1,1,1, 0,0, 1,1,1,1, 1,1, 1,1,1,1, 1,0, 1,1,1,1, 0);
-		DrawQ_SuperPic(sbar_x +  120           * scale, sbar_y + (132 + offset) * scale, zymsb_crosshair_line->name, 16 * scale, 36 * scale, 1,1, 1,1,1,1, 0,1, 1,1,1,1, 1,0, 1,1,1,1, 0,0, 1,1,1,1, 0);
-		DrawQ_SuperPic(sbar_x + ( 88 - offset) * scale, sbar_y + 120            * scale, zymsb_crosshair_line->name, 36 * scale, 16 * scale, 1,0, 1,1,1,1, 1,1, 1,1,1,1, 0,0, 1,1,1,1, 0,1, 1,1,1,1, 0);
-		healthheight = cl.stats[STAT_HEALTH] * (152.0f / 300.0f);
-		shieldheight = cl.stats[STAT_ARMOR] * (152.0f / 300.0f);
-		healthstart = 204 - healthheight;
-		shieldstart = healthstart - shieldheight;
-		healthstarttc = healthstart * (1.0f / 256.0f);
-		healthendtc = (healthstart + healthheight) * (1.0f / 256.0f);
-		shieldstarttc = shieldstart * (1.0f / 256.0f);
-		shieldendtc = (shieldstart + shieldheight) * (1.0f / 256.0f);
-		ammoheight = cl.stats[STAT_SHELLS] * (62.0f / 200.0f);
-		ammostart = 114 - ammoheight;
-		ammostarttc = ammostart * (1.0f / 256.0f);
-		ammoendtc = (ammostart + ammoheight) * (1.0f / 256.0f);
-		clipheight = cl.stats[STAT_AMMO] * (122.0f / 200.0f);
-		clipstart = 190 - clipheight;
-		clipstarttc = clipstart * (1.0f / 256.0f);
-		clipendtc = (clipstart + clipheight) * (1.0f / 256.0f);
-		if (healthheight > 0) DrawQ_SuperPic(sbar_x + 0 * scale, sbar_y + healthstart * scale, zymsb_crosshair_health->name, 256 * scale, healthheight * scale, 0,healthstarttc, 1.0f,0.0f,0.0f,1.0f, 1,healthstarttc, 1.0f,0.0f,0.0f,1.0f, 0,healthendtc, 1.0f,0.0f,0.0f,1.0f, 1,healthendtc, 1.0f,0.0f,0.0f,1.0f, DRAWFLAG_NORMAL);
-		if (shieldheight > 0) DrawQ_SuperPic(sbar_x + 0 * scale, sbar_y + shieldstart * scale, zymsb_crosshair_health->name, 256 * scale, shieldheight * scale, 0,shieldstarttc, 0.0f,0.5f,1.0f,1.0f, 1,shieldstarttc, 0.0f,0.5f,1.0f,1.0f, 0,shieldendtc, 0.0f,0.5f,1.0f,1.0f, 1,shieldendtc, 0.0f,0.5f,1.0f,1.0f, DRAWFLAG_NORMAL);
-		if (ammoheight > 0)   DrawQ_SuperPic(sbar_x + 0 * scale, sbar_y + ammostart   * scale, zymsb_crosshair_ammo->name,   256 * scale, ammoheight   * scale, 0,ammostarttc,   0.8f,0.8f,0.0f,1.0f, 1,ammostarttc,   0.8f,0.8f,0.0f,1.0f, 0,ammoendtc,   0.8f,0.8f,0.0f,1.0f, 1,ammoendtc,   0.8f,0.8f,0.0f,1.0f, DRAWFLAG_NORMAL);
-		if (clipheight > 0)   DrawQ_SuperPic(sbar_x + 0 * scale, sbar_y + clipstart   * scale, zymsb_crosshair_clip->name,   256 * scale, clipheight   * scale, 0,clipstarttc,   1.0f,1.0f,0.0f,1.0f, 1,clipstarttc,   1.0f,1.0f,0.0f,1.0f, 0,clipendtc,   1.0f,1.0f,0.0f,1.0f, 1,clipendtc,   1.0f,1.0f,0.0f,1.0f, DRAWFLAG_NORMAL);
-		DrawQ_Pic(sbar_x + 0 * scale, sbar_y + 0 * scale, zymsb_crosshair_background->name, 256 * scale, 256 * scale, 1, 1, 1, 1, DRAWFLAG_NORMAL);
-		DrawQ_Pic(sbar_x + 120 * scale, sbar_y + 120 * scale, zymsb_crosshair_center->name, 16 * scale, 16 * scale, 1, 1, 1, 1, DRAWFLAG_NORMAL);
-#endif
-	}
-	else // Quake and others
-	{
-		sbar_y = vid_conheight.integer - SBAR_HEIGHT;
-		if (cl.gametype == GAME_DEATHMATCH && gamemode != GAME_TRANSFUSION)
-			sbar_x = 0;
-		else
-			sbar_x = (vid_conwidth.integer - 320)/2;
-
-		if (sb_lines > 24)
-		{
-			if (gamemode != GAME_GOODVSBAD2)
-				Sbar_DrawInventory ();
-			if (!cl.islocalgame && gamemode != GAME_TRANSFUSION)
-				Sbar_DrawFrags ();
-		}
-
-		if (sb_showscores || (cl.stats[STAT_HEALTH] <= 0 && cl_deathscoreboard.integer))
-		{
-			if (gamemode != GAME_GOODVSBAD2)
 				Sbar_DrawAlphaPic (0, 0, sb_scorebar, sbar_alpha_bg.value);
-			Sbar_DrawScoreboard ();
-		}
-		else if (sb_lines)
-		{
-			Sbar_DrawAlphaPic (0, 0, sb_sbar, sbar_alpha_bg.value);
-
-			// keys (hipnotic only)
-			//MED 01/04/97 moved keys here so they would not be overwritten
-			if (gamemode == GAME_HIPNOTIC)
-			{
-				if (cl.stats[STAT_ITEMS] & IT_KEY1)
-					Sbar_DrawPic (209, 3, sb_items[0]);
-				if (cl.stats[STAT_ITEMS] & IT_KEY2)
-					Sbar_DrawPic (209, 12, sb_items[1]);
+				Sbar_DrawScoreboard ();
 			}
-			// armor
-			if (gamemode != GAME_GOODVSBAD2)
+			else if (sb_lines)
 			{
+				int i;
+				double time;
+				float fade;
+
+				// we have a max time 2s (min time = 0)
+				if ((time = cl.time - cl.weapontime) < 2)
+				{
+					fade = (1.0 - 0.5 * time);
+					fade *= fade;
+					for (i = 0; i < 8;i++)
+						if (cl.stats[STAT_ITEMS] & (1 << i))
+							Sbar_DrawWeapon(i + 1, fade, (i + 2 == cl.stats[STAT_ACTIVEWEAPON]));
+
+					if((cl.stats[STAT_ITEMS] & (1<<12)))
+						Sbar_DrawWeapon(0, fade, (cl.stats[STAT_ACTIVEWEAPON] == 1));
+				}
+
+				//if (!cl.islocalgame)
+				//	Sbar_DrawFrags ();
+
+				if (sb_lines > 24)
+					Sbar_DrawAlphaPic (0, 0, sb_sbar, sbar_alpha_fg.value);
+				else
+					Sbar_DrawAlphaPic (0, 0, sb_sbar_minimal, sbar_alpha_fg.value);
+
+				// special items
 				if (cl.stats[STAT_ITEMS] & IT_INVULNERABILITY)
 				{
-					Sbar_DrawNum (24, 0, 666, 3, 1);
-					Sbar_DrawPic (0, 0, sb_disc);
+					// Nexuiz has no anum pics
+					//Sbar_DrawNum (36, 0, 666, 3, 1);
+					// Nexuiz has no disc pic
+					//Sbar_DrawPic (0, 0, sb_disc);
 				}
+
+				// armor
+				Sbar_DrawXNum ((340-3*24), 12, cl.stats[STAT_ARMOR], 3, 24, 0.6,0.7,0.8,1,0);
+
+				// health
+				if(cl.stats[STAT_HEALTH] > 100)
+					Sbar_DrawXNum((154-3*24),12,cl.stats[STAT_HEALTH],3,24,1,1,1,1,0);
+				else if(cl.stats[STAT_HEALTH] <= 25 && cl.time - (int)cl.time > 0.5)
+					Sbar_DrawXNum((154-3*24),12,cl.stats[STAT_HEALTH],3,24,0.7,0,0,1,0);
 				else
+					Sbar_DrawXNum((154-3*24),12,cl.stats[STAT_HEALTH],3,24,0.6,0.7,0.8,1,0);
+
+				// AK dont draw ammo for the laser
+				if(cl.stats[STAT_ACTIVEWEAPON] != 12)
 				{
-					if (gamemode == GAME_ROGUE)
+					if (cl.stats[STAT_ITEMS] & NEX_IT_SHELLS)
+						Sbar_DrawPic (519, 0, sb_ammo[0]);
+					else if (cl.stats[STAT_ITEMS] & NEX_IT_BULLETS)
+						Sbar_DrawPic (519, 0, sb_ammo[1]);
+					else if (cl.stats[STAT_ITEMS] & NEX_IT_ROCKETS)
+						Sbar_DrawPic (519, 0, sb_ammo[2]);
+					else if (cl.stats[STAT_ITEMS] & NEX_IT_CELLS)
+						Sbar_DrawPic (519, 0, sb_ammo[3]);
+
+					if(cl.stats[STAT_AMMO] <= 10)
+						Sbar_DrawXNum ((519-3*24), 12, cl.stats[STAT_AMMO], 3, 24, 0.7, 0,0,1,0);
+					else
+						Sbar_DrawXNum ((519-3*24), 12, cl.stats[STAT_AMMO], 3, 24, 0.6, 0.7,0.8,1,0);
+
+				}
+
+				if (sb_lines > 24)
+					DrawQ_Pic(sbar_x,sbar_y,sb_sbar_overlay->name,0,0,1,1,1,1,DRAWFLAG_MODULATE);
+			}
+
+			//if (vid_conwidth.integer > 320 && cl.gametype == GAME_DEATHMATCH)
+			//	Sbar_MiniDeathmatchOverlay (0, 17);
+		}
+		else if (gamemode == GAME_ZYMOTIC)
+		{
+	#if 1
+			float scale = 64.0f / 256.0f;
+			float kickoffset[3];
+			VectorClear(kickoffset);
+			if (v_dmg_time > 0)
+			{
+				kickoffset[0] = (v_dmg_time/v_kicktime.value*v_dmg_roll) * 10 * scale;
+				kickoffset[1] = (v_dmg_time/v_kicktime.value*v_dmg_pitch) * 10 * scale;
+			}
+			sbar_x = (vid_conwidth.integer - 256 * scale)/2 + kickoffset[0];
+			sbar_y = (vid_conheight.integer - 256 * scale)/2 + kickoffset[1];
+			// left1 16, 48 : 126 -66
+			// left2 16, 128 : 196 -66
+			// right 176, 48 : 196 -136
+			Sbar_DrawGauge(sbar_x +  16 * scale, sbar_y +  48 * scale, zymsb_crosshair_left1->name, 64*scale,  80*scale, 78*scale,  -66*scale, cl.stats[STAT_AMMO]  * (1.0 / 200.0), cl.stats[STAT_SHELLS]  * (1.0 / 200.0), 0.8f,0.8f,0.0f,1.0f, 0.8f,0.5f,0.0f,1.0f, 0.3f,0.3f,0.3f,1.0f, DRAWFLAG_NORMAL);
+			Sbar_DrawGauge(sbar_x +  16 * scale, sbar_y + 128 * scale, zymsb_crosshair_left2->name, 64*scale,  80*scale, 68*scale,  -66*scale, cl.stats[STAT_NAILS] * (1.0 / 200.0), cl.stats[STAT_ROCKETS] * (1.0 / 200.0), 0.8f,0.8f,0.0f,1.0f, 0.8f,0.5f,0.0f,1.0f, 0.3f,0.3f,0.3f,1.0f, DRAWFLAG_NORMAL);
+			Sbar_DrawGauge(sbar_x + 176 * scale, sbar_y +  48 * scale, zymsb_crosshair_right->name, 64*scale, 160*scale, 148*scale, -136*scale, cl.stats[STAT_ARMOR]  * (1.0 / 300.0), cl.stats[STAT_HEALTH]  * (1.0 / 300.0), 0.0f,0.5f,1.0f,1.0f, 1.0f,0.0f,0.0f,1.0f, 0.3f,0.3f,0.3f,1.0f, DRAWFLAG_NORMAL);
+			DrawQ_Pic(sbar_x + 120 * scale, sbar_y + 120 * scale, zymsb_crosshair_center->name, 16 * scale, 16 * scale, 1, 1, 1, 1, DRAWFLAG_NORMAL);
+	#else
+			float scale = 128.0f / 256.0f;
+			float healthstart, healthheight, healthstarttc, healthendtc;
+			float shieldstart, shieldheight, shieldstarttc, shieldendtc;
+			float ammostart, ammoheight, ammostarttc, ammoendtc;
+			float clipstart, clipheight, clipstarttc, clipendtc;
+			float kickoffset[3], offset;
+			VectorClear(kickoffset);
+			if (v_dmg_time > 0)
+			{
+				kickoffset[0] = (v_dmg_time/v_kicktime.value*v_dmg_roll) * 10 * scale;
+				kickoffset[1] = (v_dmg_time/v_kicktime.value*v_dmg_pitch) * 10 * scale;
+			}
+			sbar_x = (vid_conwidth.integer - 256 * scale)/2 + kickoffset[0];
+			sbar_y = (vid_conheight.integer - 256 * scale)/2 + kickoffset[1];
+			offset = 0; // TODO: offset should be controlled by recoil (question: how to detect firing?)
+			DrawQ_SuperPic(sbar_x +  120           * scale, sbar_y + ( 88 - offset) * scale, zymsb_crosshair_line->name, 16 * scale, 36 * scale, 0,0, 1,1,1,1, 1,0, 1,1,1,1, 0,1, 1,1,1,1, 1,1, 1,1,1,1, 0);
+			DrawQ_SuperPic(sbar_x + (132 + offset) * scale, sbar_y + 120            * scale, zymsb_crosshair_line->name, 36 * scale, 16 * scale, 0,1, 1,1,1,1, 0,0, 1,1,1,1, 1,1, 1,1,1,1, 1,0, 1,1,1,1, 0);
+			DrawQ_SuperPic(sbar_x +  120           * scale, sbar_y + (132 + offset) * scale, zymsb_crosshair_line->name, 16 * scale, 36 * scale, 1,1, 1,1,1,1, 0,1, 1,1,1,1, 1,0, 1,1,1,1, 0,0, 1,1,1,1, 0);
+			DrawQ_SuperPic(sbar_x + ( 88 - offset) * scale, sbar_y + 120            * scale, zymsb_crosshair_line->name, 36 * scale, 16 * scale, 1,0, 1,1,1,1, 1,1, 1,1,1,1, 0,0, 1,1,1,1, 0,1, 1,1,1,1, 0);
+			healthheight = cl.stats[STAT_HEALTH] * (152.0f / 300.0f);
+			shieldheight = cl.stats[STAT_ARMOR] * (152.0f / 300.0f);
+			healthstart = 204 - healthheight;
+			shieldstart = healthstart - shieldheight;
+			healthstarttc = healthstart * (1.0f / 256.0f);
+			healthendtc = (healthstart + healthheight) * (1.0f / 256.0f);
+			shieldstarttc = shieldstart * (1.0f / 256.0f);
+			shieldendtc = (shieldstart + shieldheight) * (1.0f / 256.0f);
+			ammoheight = cl.stats[STAT_SHELLS] * (62.0f / 200.0f);
+			ammostart = 114 - ammoheight;
+			ammostarttc = ammostart * (1.0f / 256.0f);
+			ammoendtc = (ammostart + ammoheight) * (1.0f / 256.0f);
+			clipheight = cl.stats[STAT_AMMO] * (122.0f / 200.0f);
+			clipstart = 190 - clipheight;
+			clipstarttc = clipstart * (1.0f / 256.0f);
+			clipendtc = (clipstart + clipheight) * (1.0f / 256.0f);
+			if (healthheight > 0) DrawQ_SuperPic(sbar_x + 0 * scale, sbar_y + healthstart * scale, zymsb_crosshair_health->name, 256 * scale, healthheight * scale, 0,healthstarttc, 1.0f,0.0f,0.0f,1.0f, 1,healthstarttc, 1.0f,0.0f,0.0f,1.0f, 0,healthendtc, 1.0f,0.0f,0.0f,1.0f, 1,healthendtc, 1.0f,0.0f,0.0f,1.0f, DRAWFLAG_NORMAL);
+			if (shieldheight > 0) DrawQ_SuperPic(sbar_x + 0 * scale, sbar_y + shieldstart * scale, zymsb_crosshair_health->name, 256 * scale, shieldheight * scale, 0,shieldstarttc, 0.0f,0.5f,1.0f,1.0f, 1,shieldstarttc, 0.0f,0.5f,1.0f,1.0f, 0,shieldendtc, 0.0f,0.5f,1.0f,1.0f, 1,shieldendtc, 0.0f,0.5f,1.0f,1.0f, DRAWFLAG_NORMAL);
+			if (ammoheight > 0)   DrawQ_SuperPic(sbar_x + 0 * scale, sbar_y + ammostart   * scale, zymsb_crosshair_ammo->name,   256 * scale, ammoheight   * scale, 0,ammostarttc,   0.8f,0.8f,0.0f,1.0f, 1,ammostarttc,   0.8f,0.8f,0.0f,1.0f, 0,ammoendtc,   0.8f,0.8f,0.0f,1.0f, 1,ammoendtc,   0.8f,0.8f,0.0f,1.0f, DRAWFLAG_NORMAL);
+			if (clipheight > 0)   DrawQ_SuperPic(sbar_x + 0 * scale, sbar_y + clipstart   * scale, zymsb_crosshair_clip->name,   256 * scale, clipheight   * scale, 0,clipstarttc,   1.0f,1.0f,0.0f,1.0f, 1,clipstarttc,   1.0f,1.0f,0.0f,1.0f, 0,clipendtc,   1.0f,1.0f,0.0f,1.0f, 1,clipendtc,   1.0f,1.0f,0.0f,1.0f, DRAWFLAG_NORMAL);
+			DrawQ_Pic(sbar_x + 0 * scale, sbar_y + 0 * scale, zymsb_crosshair_background->name, 256 * scale, 256 * scale, 1, 1, 1, 1, DRAWFLAG_NORMAL);
+			DrawQ_Pic(sbar_x + 120 * scale, sbar_y + 120 * scale, zymsb_crosshair_center->name, 16 * scale, 16 * scale, 1, 1, 1, 1, DRAWFLAG_NORMAL);
+	#endif
+		}
+		else // Quake and others
+		{
+			sbar_y = vid_conheight.integer - SBAR_HEIGHT;
+			if (cl.gametype == GAME_DEATHMATCH && gamemode != GAME_TRANSFUSION)
+				sbar_x = 0;
+			else
+				sbar_x = (vid_conwidth.integer - 320)/2;
+
+			if (sb_lines > 24)
+			{
+				if (gamemode != GAME_GOODVSBAD2)
+					Sbar_DrawInventory ();
+				if (!cl.islocalgame && gamemode != GAME_TRANSFUSION)
+					Sbar_DrawFrags ();
+			}
+
+			if (sb_showscores || (cl.stats[STAT_HEALTH] <= 0 && cl_deathscoreboard.integer))
+			{
+				if (gamemode != GAME_GOODVSBAD2)
+					Sbar_DrawAlphaPic (0, 0, sb_scorebar, sbar_alpha_bg.value);
+				Sbar_DrawScoreboard ();
+			}
+			else if (sb_lines)
+			{
+				Sbar_DrawAlphaPic (0, 0, sb_sbar, sbar_alpha_bg.value);
+
+				// keys (hipnotic only)
+				//MED 01/04/97 moved keys here so they would not be overwritten
+				if (gamemode == GAME_HIPNOTIC)
+				{
+					if (cl.stats[STAT_ITEMS] & IT_KEY1)
+						Sbar_DrawPic (209, 3, sb_items[0]);
+					if (cl.stats[STAT_ITEMS] & IT_KEY2)
+						Sbar_DrawPic (209, 12, sb_items[1]);
+				}
+				// armor
+				if (gamemode != GAME_GOODVSBAD2)
+				{
+					if (cl.stats[STAT_ITEMS] & IT_INVULNERABILITY)
 					{
-						Sbar_DrawNum (24, 0, cl.stats[STAT_ARMOR], 3, cl.stats[STAT_ARMOR] <= 25);
-						if (cl.stats[STAT_ITEMS] & RIT_ARMOR3)
-							Sbar_DrawPic (0, 0, sb_armor[2]);
-						else if (cl.stats[STAT_ITEMS] & RIT_ARMOR2)
-							Sbar_DrawPic (0, 0, sb_armor[1]);
-						else if (cl.stats[STAT_ITEMS] & RIT_ARMOR1)
-							Sbar_DrawPic (0, 0, sb_armor[0]);
+						Sbar_DrawNum (24, 0, 666, 3, 1);
+						Sbar_DrawPic (0, 0, sb_disc);
 					}
 					else
 					{
-						Sbar_DrawNum (24, 0, cl.stats[STAT_ARMOR], 3, cl.stats[STAT_ARMOR] <= 25);
-						if (cl.stats[STAT_ITEMS] & IT_ARMOR3)
-							Sbar_DrawPic (0, 0, sb_armor[2]);
-						else if (cl.stats[STAT_ITEMS] & IT_ARMOR2)
-							Sbar_DrawPic (0, 0, sb_armor[1]);
-						else if (cl.stats[STAT_ITEMS] & IT_ARMOR1)
-							Sbar_DrawPic (0, 0, sb_armor[0]);
+						if (gamemode == GAME_ROGUE)
+						{
+							Sbar_DrawNum (24, 0, cl.stats[STAT_ARMOR], 3, cl.stats[STAT_ARMOR] <= 25);
+							if (cl.stats[STAT_ITEMS] & RIT_ARMOR3)
+								Sbar_DrawPic (0, 0, sb_armor[2]);
+							else if (cl.stats[STAT_ITEMS] & RIT_ARMOR2)
+								Sbar_DrawPic (0, 0, sb_armor[1]);
+							else if (cl.stats[STAT_ITEMS] & RIT_ARMOR1)
+								Sbar_DrawPic (0, 0, sb_armor[0]);
+						}
+						else
+						{
+							Sbar_DrawNum (24, 0, cl.stats[STAT_ARMOR], 3, cl.stats[STAT_ARMOR] <= 25);
+							if (cl.stats[STAT_ITEMS] & IT_ARMOR3)
+								Sbar_DrawPic (0, 0, sb_armor[2]);
+							else if (cl.stats[STAT_ITEMS] & IT_ARMOR2)
+								Sbar_DrawPic (0, 0, sb_armor[1]);
+							else if (cl.stats[STAT_ITEMS] & IT_ARMOR1)
+								Sbar_DrawPic (0, 0, sb_armor[0]);
+						}
 					}
 				}
+
+				// face
+				Sbar_DrawFace ();
+
+				// health
+				Sbar_DrawNum (154, 0, cl.stats[STAT_HEALTH], 3, cl.stats[STAT_HEALTH] <= 25);
+
+				// ammo icon
+				if (gamemode == GAME_ROGUE)
+				{
+					if (cl.stats[STAT_ITEMS] & RIT_SHELLS)
+						Sbar_DrawPic (224, 0, sb_ammo[0]);
+					else if (cl.stats[STAT_ITEMS] & RIT_NAILS)
+						Sbar_DrawPic (224, 0, sb_ammo[1]);
+					else if (cl.stats[STAT_ITEMS] & RIT_ROCKETS)
+						Sbar_DrawPic (224, 0, sb_ammo[2]);
+					else if (cl.stats[STAT_ITEMS] & RIT_CELLS)
+						Sbar_DrawPic (224, 0, sb_ammo[3]);
+					else if (cl.stats[STAT_ITEMS] & RIT_LAVA_NAILS)
+						Sbar_DrawPic (224, 0, rsb_ammo[0]);
+					else if (cl.stats[STAT_ITEMS] & RIT_PLASMA_AMMO)
+						Sbar_DrawPic (224, 0, rsb_ammo[1]);
+					else if (cl.stats[STAT_ITEMS] & RIT_MULTI_ROCKETS)
+						Sbar_DrawPic (224, 0, rsb_ammo[2]);
+				}
+				else
+				{
+					if (cl.stats[STAT_ITEMS] & IT_SHELLS)
+						Sbar_DrawPic (224, 0, sb_ammo[0]);
+					else if (cl.stats[STAT_ITEMS] & IT_NAILS)
+						Sbar_DrawPic (224, 0, sb_ammo[1]);
+					else if (cl.stats[STAT_ITEMS] & IT_ROCKETS)
+						Sbar_DrawPic (224, 0, sb_ammo[2]);
+					else if (cl.stats[STAT_ITEMS] & IT_CELLS)
+						Sbar_DrawPic (224, 0, sb_ammo[3]);
+				}
+
+				Sbar_DrawNum (248, 0, cl.stats[STAT_AMMO], 3, cl.stats[STAT_AMMO] <= 10);
+
 			}
 
-			// face
-			Sbar_DrawFace ();
-
-			// health
-			Sbar_DrawNum (154, 0, cl.stats[STAT_HEALTH], 3, cl.stats[STAT_HEALTH] <= 25);
-
-			// ammo icon
-			if (gamemode == GAME_ROGUE)
+			if (vid_conwidth.integer > 320 && cl.gametype == GAME_DEATHMATCH)
 			{
-				if (cl.stats[STAT_ITEMS] & RIT_SHELLS)
-					Sbar_DrawPic (224, 0, sb_ammo[0]);
-				else if (cl.stats[STAT_ITEMS] & RIT_NAILS)
-					Sbar_DrawPic (224, 0, sb_ammo[1]);
-				else if (cl.stats[STAT_ITEMS] & RIT_ROCKETS)
-					Sbar_DrawPic (224, 0, sb_ammo[2]);
-				else if (cl.stats[STAT_ITEMS] & RIT_CELLS)
-					Sbar_DrawPic (224, 0, sb_ammo[3]);
-				else if (cl.stats[STAT_ITEMS] & RIT_LAVA_NAILS)
-					Sbar_DrawPic (224, 0, rsb_ammo[0]);
-				else if (cl.stats[STAT_ITEMS] & RIT_PLASMA_AMMO)
-					Sbar_DrawPic (224, 0, rsb_ammo[1]);
-				else if (cl.stats[STAT_ITEMS] & RIT_MULTI_ROCKETS)
-					Sbar_DrawPic (224, 0, rsb_ammo[2]);
+				if (gamemode == GAME_TRANSFUSION)
+					Sbar_MiniDeathmatchOverlay (0, 0);
+				else
+					Sbar_MiniDeathmatchOverlay (324, vid_conheight.integer - sb_lines);
 			}
-			else
-			{
-				if (cl.stats[STAT_ITEMS] & IT_SHELLS)
-					Sbar_DrawPic (224, 0, sb_ammo[0]);
-				else if (cl.stats[STAT_ITEMS] & IT_NAILS)
-					Sbar_DrawPic (224, 0, sb_ammo[1]);
-				else if (cl.stats[STAT_ITEMS] & IT_ROCKETS)
-					Sbar_DrawPic (224, 0, sb_ammo[2]);
-				else if (cl.stats[STAT_ITEMS] & IT_CELLS)
-					Sbar_DrawPic (224, 0, sb_ammo[3]);
-			}
-
-			Sbar_DrawNum (248, 0, cl.stats[STAT_AMMO], 3, cl.stats[STAT_AMMO] <= 10);
-
-		}
-
-		if (vid_conwidth.integer > 320 && cl.gametype == GAME_DEATHMATCH)
-		{
-			if (gamemode == GAME_TRANSFUSION)
-				Sbar_MiniDeathmatchOverlay (0, 0);
-			else
-				Sbar_MiniDeathmatchOverlay (324, vid_conheight.integer - sb_lines);
 		}
 	}
 
 	Sbar_ShowFPS();
 
-	R_Draw2DCrosshair();
+	if(cl.csqc_vidvars.drawcrosshair)
+		R_Draw2DCrosshair();
 
 	if (cl_prydoncursor.integer)
 		DrawQ_Pic((cl.cmd.cursor_screen[0] + 1) * 0.5 * vid_conwidth.integer, (cl.cmd.cursor_screen[1] + 1) * 0.5 * vid_conheight.integer, va("gfx/prydoncursor%03i", cl_prydoncursor.integer), 0, 0, 1, 1, 1, 1, 0);
