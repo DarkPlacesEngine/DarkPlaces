@@ -147,7 +147,7 @@ static int			mouse_buttons;
 static int			mouse_oldbuttonstate;
 
 static qboolean	restore_spi;
-static int		originalmouseparms[3], newmouseparms[3] = {0, 0, 1};
+static int		originalmouseparms[3], newmouseparms[3] = {0, 0, 0};
 
 static unsigned int uiWheelMessage;
 static qboolean	mouseparmsvalid;
