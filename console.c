@@ -886,7 +886,7 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 	min = 666;
 	for(max=i=0;i<t->numfilenames;i++)
 	{
-		k = strlen(t->filenames[i]);
+		k = (int)strlen(t->filenames[i]);
 		k -= 9;
 		if(max < k)
 			max = k;
@@ -895,7 +895,7 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 			min = k;
 		len[i] = k;
 	}
-	o = strlen(s);
+	o = (int)strlen(s);
 	for(i=0;i<t->numfilenames;i++)
 	{
 		int lumpofs = 0, lumplen = 0;
@@ -1104,7 +1104,7 @@ void Con_CompleteCommandLine (void)
 				char t[MAX_QPATH];
 				if (GetMapList(s, t, sizeof(t)))
 				{
-					i = strlen(t) - strlen(s);
+					i = (int)(strlen(t) - strlen(s));
 					strcpy((char*)s, t);
 					if(s2[0])	//add back chars after cursor
 						strcpy(&key_lines[edit_line][key_linepos], s2);

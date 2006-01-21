@@ -465,7 +465,7 @@ Key_Console (int key, char ascii)
 		if (keydown[K_CTRL])
 			con_backscroll = 0;
 		else
-			key_linepos = strlen(key_lines[edit_line]);
+			key_linepos = (int)strlen(key_lines[edit_line]);
 		return;
 	}
 

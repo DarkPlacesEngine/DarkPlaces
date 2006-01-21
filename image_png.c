@@ -211,8 +211,8 @@ void PNG_fReadData(void *png, unsigned char *data, size_t length)
 		length = l;
 	}
 	memcpy(data, my_png.tmpBuf + my_png.tmpi, length);
-	my_png.tmpi += length;
-	Com_HexDumpToConsole(data, length);
+	my_png.tmpi += (int)length;
+	Com_HexDumpToConsole(data, (int)length);
 }
 
 void PNG_error_fn(void *png, const char *message)

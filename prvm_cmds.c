@@ -3562,7 +3562,8 @@ void VM_buf_implode (void)
 	qcstrbuffer_t	*b;
 	char			*k;
 	const char		*sep;
-	int				i, l;
+	int				i;
+	size_t			l;
 	VM_SAFEPARMCOUNT(2, VM_buf_implode);
 
 	b = BUFSTR_BUFFER((int)PRVM_G_FLOAT(OFS_PARM0));
