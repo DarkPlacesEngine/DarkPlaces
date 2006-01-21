@@ -7,19 +7,19 @@
 CFG=sdl - Win32 Debug
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
-!MESSAGE
+!MESSAGE 
 !MESSAGE NMAKE /f "darkplaces-sdl.mak".
-!MESSAGE
+!MESSAGE 
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
-!MESSAGE
+!MESSAGE 
 !MESSAGE NMAKE /f "darkplaces-sdl.mak" CFG="sdl - Win32 Debug"
-!MESSAGE
+!MESSAGE 
 !MESSAGE Possible choices for configuration are:
-!MESSAGE
+!MESSAGE 
 !MESSAGE "sdl - Win32 Release" (based on "Win32 (x86) Application")
 !MESSAGE "sdl - Win32 Debug" (based on "Win32 (x86) Application")
-!MESSAGE
+!MESSAGE 
 
 # Begin Project
 # PROP AllowPerConfigDependencies 0
@@ -83,7 +83,7 @@ LINK32=link.exe
 # ADD LINK32 user32.lib gdi32.lib opengl32.lib wsock32.lib winmm.lib comctl32.lib dxguid.lib sdl.lib sdlmain.lib /nologo /subsystem:console /debug /machine:I386 /out:"Debug-SDL/darkplaces-sdl-debug.exe" /pdbtype:sept
 # SUBTRACT LINK32 /pdb:none
 
-!ENDIF
+!ENDIF 
 
 # Begin Target
 
@@ -146,6 +146,10 @@ SOURCE=.\cl_video.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\clvm_cmds.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\cmd.c
 # End Source File
 # Begin Source File
@@ -159,6 +163,10 @@ SOURCE=.\common.c
 # Begin Source File
 
 SOURCE=.\console.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\csprogs.c
 # End Source File
 # Begin Source File
 
@@ -219,6 +227,10 @@ SOURCE=.\host_cmd.c
 # Begin Source File
 
 SOURCE=.\image.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\image_png.c
 # End Source File
 # Begin Source File
 
@@ -418,6 +430,10 @@ SOURCE=.\world.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\world_cs.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\zone.c
 # End Source File
 # End Group
@@ -475,6 +491,10 @@ SOURCE=.\collision.h
 # Begin Source File
 
 SOURCE=.\common.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\conproc.h
 # End Source File
 # Begin Source File
 
@@ -555,6 +575,14 @@ SOURCE=.\model_alias.h
 # Begin Source File
 
 SOURCE=.\model_brush.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\model_dpmodel.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\model_psk.h
 # End Source File
 # Begin Source File
 
@@ -655,6 +683,10 @@ SOURCE=.\r_textures.h
 # Begin Source File
 
 SOURCE=.\render.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\resource.h
 # End Source File
 # Begin Source File
 
