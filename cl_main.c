@@ -1492,7 +1492,7 @@ int CL_ReadFromServer(void)
 		CL_ClientMovement_Replay();
 		if(!csqc_loaded)	//[515]: csqc
 		{
-			CL_RelinkNetworkEntities(65536);
+			CL_RelinkNetworkEntities(65535);
 
 			// move particles
 			CL_MoveParticles();
