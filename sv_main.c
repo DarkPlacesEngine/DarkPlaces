@@ -283,6 +283,7 @@ CLIENT SPAWNING
 */
 
 static const char *SV_InitCmd;	//[515]: svprogs able to send cmd to client on connect
+extern qboolean csqc_loaded;
 /*
 ================
 SV_SendServerinfo
@@ -329,7 +330,6 @@ void SV_SendServerinfo (client_t *client)
 	MSG_WriteString (&client->message,message);
 
 	// LordHavoc: this does not work on dedicated servers, needs fixing.
-extern qboolean csqc_loaded;
 //[515]: init csprogs according to version of svprogs, check the crc, etc.
 	if(csqc_loaded && (cls.state == ca_dedicated || PRVM_NUM_FOR_EDICT(client->edict) != 1))
 	{
@@ -873,12 +873,12 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 }
 
 entity_state_t sendstates[MAX_EDICTS];
+extern int csqc_clent;
 
 void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *msg, int *stats)
 {
 	int i, numsendstates;
 	entity_state_t *s;
-	extern int csqc_clent;
 
 	// if there isn't enough space to accomplish anything, skip it
 	if (msg->cursize + 25 > msg->maxsize)
