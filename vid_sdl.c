@@ -346,7 +346,11 @@ static void VID_SetCaption()
 		return;
 
 	icon = LoadIcon( GetModuleHandle( NULL ), MAKEINTRESOURCE( IDI_ICON1 ) );
+#ifndef WIN64
 	SetClassLong( info.window, GCL_HICON, (LONG) icon );
+#else
+	SetClassLongPtr( info.window, GCLP_HICON, (LONG_PTR)icon );
+#endif
 }
 #else
 static void VID_SetCaption()
