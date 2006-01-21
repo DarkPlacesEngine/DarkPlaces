@@ -401,7 +401,7 @@ static void CL_VM_Parse_Print (const char *msg)
 
 void CSQC_AddPrintText (const char *msg)
 {
-	int i;
+	size_t i;
 	if(!csqc_loaded || !CSQC_Parse_Print)
 	{
 		Con_Print(msg);
