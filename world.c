@@ -386,13 +386,10 @@ void SV_LinkEdict (prvm_edict_t *ent, qboolean touch_triggers)
 		ent->fields.server->absmax[2] += 1;
 	}
 
-	//if (ent->fields.server->solid == SOLID_NOT)
-	//	return;
-
 	SV_LinkEdict_AreaGrid(ent);
 
 // if touch_triggers, touch all entities at this node and descend for more
-	if (touch_triggers)
+	if (touch_triggers && ent->fields.server.solid != SOLID_NOT)
 		SV_TouchAreaGrid(ent);
 }
 
