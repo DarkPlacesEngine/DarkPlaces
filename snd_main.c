@@ -956,8 +956,18 @@ void S_Update(const matrix4x4_t *listenermatrix)
 	// calculate the current matrices
 	for (j = 0;j < SND_LISTENERS;j++)
 	{
-		Matrix4x4_CreateFromQuakeEntity(&rotatematrix, 0, 0, 0, 0, snd_speakerlayout.listeners[j].yawangle, 0, 1);
-		Matrix4x4_Concat(&listener_matrix[j], &basematrix, &rotatematrix);
+		Matrix4x4_CreateFromQuakeEntity(&rotatematrix, 0, 0, 0, 0, -snd_speakerlayout.listeners[j].yawangle, 0, 1);
+		Matrix4x4_Concat(&listener_matrix[j], &rotatematrix, &basematrix);
+		// I think this should now do this:
+		//   1. create a rotation matrix for rotating by e.g. -90 degrees CCW
+		//      (note: the matrix will rotate the OBJECT, not the VIEWER, so its
+		//       angle has to be taken negative)
+		//   2. create a transform which first rotates and moves its argument
+		//      into the player's view coordinates (using basematrix which is
+		//      an inverted "absolute" listener matrix), then applies the
+		//      rotation matrix for the ear
+		// Isn't Matrix4x4_CreateFromQuakeEntity a bit misleading because this
+		// does not actually refer to an entity?
 	}
 
 	// update general area ambient sound sources
