@@ -89,8 +89,18 @@ qboolean SNDDMA_Init(void)
 		return false;
 	}
 
-	for (channels = 8;channels >= 2;channels -= 2)
+	for (channels = 8;channels >= 1;channels--)
 	{
+		if ((channels & 1) && channels != 1)
+			continue;
+// COMMANDLINEOPTION: SDL Sound: -sndmono sets sound output to mono
+		if ((i=COM_CheckParm("-sndmono")) != 0)
+			if (channels != 1)
+				continue;
+// COMMANDLINEOPTION: SDL Sound: -sndstereo sets sound output to stereo
+		if ((i=COM_CheckParm("-sndstereo")) != 0)
+			if (channels != 2)
+				continue;
 		// Init the SDL Audio subsystem
 		wantspec.callback = Buffer_Callback;
 		wantspec.userdata = NULL;
@@ -128,7 +138,7 @@ qboolean SNDDMA_Init(void)
 		as.size = shm->bufferlength;
 		break;
 	}
-	if (channels < 2)
+	if (channels < 1)
 	{
 		Con_Print( "Failed to open the audio device!\n" );
 		Con_DPrintf(
