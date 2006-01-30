@@ -1006,6 +1006,8 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 	for(p=o;p<min;p++)
 	{
 		k = *(t->filenames[0]+5+p);
+		if(k == 0)
+			goto endcomplete;
 		for(i=1;i<t->numfilenames;i++)
 			if(*(t->filenames[i]+5+p) != k)
 				goto endcomplete;
@@ -1014,7 +1016,7 @@ endcomplete:
 	if(p > o)
 	{
 		memset(completedname, 0, completednamebufferlength);
-		memcpy(completedname, (t->filenames[0]+5), p);
+		memcpy(completedname, (t->filenames[0]+5), min(p, completednamebufferlength - 1));
 	}
 	Z_Free(len);
 	FS_FreeSearch(t);
@@ -1073,7 +1075,8 @@ void Con_DisplayList(const char **list)
 */
 void Con_CompleteCommandLine (void)
 {
-	const char *cmd = "", *s;
+	const char *cmd = "";
+	char *s;
 	const char **list[3] = {0, 0, 0};
 	char s2[512];
 	int c, v, a, i, cmd_len, pos, k;
@@ -1104,11 +1107,17 @@ void Con_CompleteCommandLine (void)
 				char t[MAX_QPATH];
 				if (GetMapList(s, t, sizeof(t)))
 				{
-					i = (int)(strlen(t) - strlen(s));
-					strcpy((char*)s, t);
-					if(s2[0])	//add back chars after cursor
-						strcpy(&key_lines[edit_line][key_linepos], s2);
-					key_linepos += i;
+					// first move the cursor
+					key_linepos += strlen(t) - strlen(s);
+
+					// and now do the actual work
+					*s = 0;
+					strlcat(key_lines[edit_line], t, MAX_INPUTLINE);
+					strlcat(key_lines[edit_line], s2, MAX_INPUTLINE); //add back chars after cursor
+
+					// and fix the cursor
+					if(key_linepos > (int) strlen(key_lines[edit_line]))
+						key_linepos = strlen(key_lines[edit_line]);
 				}
 				return;
 			}
