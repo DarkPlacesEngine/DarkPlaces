@@ -591,11 +591,23 @@ void VID_Finish (void)
 
 int VID_SetGamma(unsigned short *ramps)
 {
+	int rampsize;
+	// FIXME: it would be good to generate ramps of the size reported by X,
+	// for instance Quadro cards seem to use 1024 color ramps not 256
+	if(!XF86VidModeGetGammaRampSize(vidx11_display, vidx11_screen, &rampsize))
+		return 0;
+	if(rampsize != 256)
+		return 0;
 	return XF86VidModeSetGammaRamp(vidx11_display, vidx11_screen, 256, ramps, ramps + 256, ramps + 512);
 }
 
 int VID_GetGamma(unsigned short *ramps)
 {
+	int rampsize;
+	if(!XF86VidModeGetGammaRampSize(vidx11_display, vidx11_screen, &rampsize))
+		return 0;
+	if(rampsize != 256)
+		return 0;
 	return XF86VidModeGetGammaRamp(vidx11_display, vidx11_screen, 256, ramps, ramps + 256, ramps + 512);
 }
 
