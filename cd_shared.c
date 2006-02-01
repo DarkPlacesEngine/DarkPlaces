@@ -42,7 +42,7 @@ extern int CDAudio_SysStartup (void);
 extern void CDAudio_SysShutdown (void);
 
 // used by menu to ghost CD audio slider
-cvar_t	cdaudioinitialized = {CVAR_READONLY,"cdaudioinitialized","0"};
+cvar_t cdaudioinitialized = {CVAR_READONLY,"cdaudioinitialized","0","indicates if CD Audio system is active"};
 
 static qboolean wasPlaying = false;
 static qboolean initialized = false;
@@ -319,6 +319,20 @@ static void CD_f (void)
 		Con_Printf("Volume is %f\n", cdvolume);
 		return;
 	}
+
+	Con_Printf("CD commands:\n");
+	Con_Printf("cd on - enables CD audio system\n");
+	Con_Printf("cd off - stops and disables CD audio system\n");
+	Con_Printf("cd reset - resets CD audio system (clears track remapping and re-reads disc information)");
+	Con_Printf("cd remap <remap1> [remap2] [remap3] [...] - chooses (possibly emulated) CD tracks to play when a map asks for a particular track, this has many uses\n");
+	Con_Printf("cd close - closes CD tray\n");
+	Con_Printf("cd eject - stops playing music and opens CD tray to allow you to change disc\n");
+	Con_Printf("cd play <tracknumber> - plays selected track in remapping table\n");
+	Con_Printf("cd loop <tracknumber> - plays and repeats selected track in remapping table\n");
+	Con_Printf("cd stop - stops playing current CD track\n");
+	Con_Printf("cd pause - pauses CD playback\n");
+	Con_Printf("cd resume - unpauses CD playback\n");
+	Con_Printf("cd info - prints basic disc information (number of tracks, currently playing track, volume level)\n");
 }
 
 void CDAudio_SetVolume (float newvol)
@@ -375,7 +389,7 @@ int CDAudio_Init (void)
 	Cvar_SetValueQuick(&cdaudioinitialized, true);
 	enabled = true;
 
-	Cmd_AddCommand("cd", CD_f);
+	Cmd_AddCommand("cd", CD_f, "execute a CD drive command (cd on/off/reset/remap/close/play/loop/stop/pause/resume/eject/info) - use cd by itself for usage");
 
 	return 0;
 }

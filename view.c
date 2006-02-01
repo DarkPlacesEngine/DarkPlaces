@@ -31,45 +31,45 @@ when crossing a water boudnary.
 
 */
 
-cvar_t	cl_rollspeed = {0, "cl_rollspeed", "200"};
-cvar_t	cl_rollangle = {0, "cl_rollangle", "2.0"};
+cvar_t cl_rollspeed = {0, "cl_rollspeed", "200", "how much strafing is necessary to tilt the view"};
+cvar_t cl_rollangle = {0, "cl_rollangle", "2.0", "how much to tilt the view when strafing"};
 
-cvar_t	cl_bob = {0, "cl_bob","0.02"};
-cvar_t	cl_bobcycle = {0, "cl_bobcycle","0.6"};
-cvar_t	cl_bobup = {0, "cl_bobup","0.5"};
+cvar_t cl_bob = {0, "cl_bob","0.02", "view bobbing amount"};
+cvar_t cl_bobcycle = {0, "cl_bobcycle","0.6", "view bobbing speed"};
+cvar_t cl_bobup = {0, "cl_bobup","0.5", "view bobbing adjustment that makes the up or down swing of the bob last longer"};
 
-cvar_t	cl_bobmodel = {0, "cl_bobmodel", "1"};
-cvar_t	cl_bobmodel_side = {0, "cl_bobmodel_side", "0.05"};
-cvar_t	cl_bobmodel_up = {0, "cl_bobmodel_up", "0.02"};
-cvar_t	cl_bobmodel_speed = {0, "cl_bobmodel_speed", "7"};
+cvar_t cl_bobmodel = {0, "cl_bobmodel", "1", "enables gun bobbing"};
+cvar_t cl_bobmodel_side = {0, "cl_bobmodel_side", "0.05", "gun bobbing sideways sway amount"};
+cvar_t cl_bobmodel_up = {0, "cl_bobmodel_up", "0.02", "gun bobbing upward movement amount"};
+cvar_t cl_bobmodel_speed = {0, "cl_bobmodel_speed", "7", "gun bobbing speed"};
 
-cvar_t	v_kicktime = {0, "v_kicktime", "0.5"};
-cvar_t	v_kickroll = {0, "v_kickroll", "0.6"};
-cvar_t	v_kickpitch = {0, "v_kickpitch", "0.6"};
+cvar_t v_kicktime = {0, "v_kicktime", "0.5", "how long a view kick from damage lasts"};
+cvar_t v_kickroll = {0, "v_kickroll", "0.6", "how much a view kick from damage rolls your view"};
+cvar_t v_kickpitch = {0, "v_kickpitch", "0.6", "how much a view kick from damage pitches your view"};
 
-cvar_t	v_iyaw_cycle = {0, "v_iyaw_cycle", "2"};
-cvar_t	v_iroll_cycle = {0, "v_iroll_cycle", "0.5"};
-cvar_t	v_ipitch_cycle = {0, "v_ipitch_cycle", "1"};
-cvar_t	v_iyaw_level = {0, "v_iyaw_level", "0.3"};
-cvar_t	v_iroll_level = {0, "v_iroll_level", "0.1"};
-cvar_t	v_ipitch_level = {0, "v_ipitch_level", "0.3"};
+cvar_t v_iyaw_cycle = {0, "v_iyaw_cycle", "2", "v_idlescale yaw speed"};
+cvar_t v_iroll_cycle = {0, "v_iroll_cycle", "0.5", "v_idlescale roll speed"};
+cvar_t v_ipitch_cycle = {0, "v_ipitch_cycle", "1", "v_idlescale pitch speed"};
+cvar_t v_iyaw_level = {0, "v_iyaw_level", "0.3", "v_idlescale yaw amount"};
+cvar_t v_iroll_level = {0, "v_iroll_level", "0.1", "v_idlescale roll amount"};
+cvar_t v_ipitch_level = {0, "v_ipitch_level", "0.3", "v_idlescale pitch amount"};
 
-cvar_t	v_idlescale = {0, "v_idlescale", "0"};
+cvar_t v_idlescale = {0, "v_idlescale", "0", "how much of the quake 'drunken view' effect to use"};
 
-cvar_t	crosshair = {CVAR_SAVE, "crosshair", "0"};
+cvar_t crosshair = {CVAR_SAVE, "crosshair", "0", "selects crosshair to use (0 is none)"};
 
-cvar_t	v_centermove = {0, "v_centermove", "0.15"};
-cvar_t	v_centerspeed = {0, "v_centerspeed","500"};
+cvar_t v_centermove = {0, "v_centermove", "0.15", "how long before the view begins to center itself (if freelook/+mlook/+jlook/+klook are off)"};
+cvar_t v_centerspeed = {0, "v_centerspeed","500", "how fast the view centers itself"};
 
-cvar_t cl_stairsmoothspeed = {CVAR_SAVE, "cl_stairsmoothspeed", "160"};
+cvar_t cl_stairsmoothspeed = {CVAR_SAVE, "cl_stairsmoothspeed", "160", "how fast your view moves upward/downward when running up/down stairs"};
 
-cvar_t chase_back = {CVAR_SAVE, "chase_back", "48"};
-cvar_t chase_up = {CVAR_SAVE, "chase_up", "24"};
-cvar_t chase_active = {CVAR_SAVE, "chase_active", "0"};
+cvar_t chase_back = {CVAR_SAVE, "chase_back", "48", "chase cam distance from the player"};
+cvar_t chase_up = {CVAR_SAVE, "chase_up", "24", "chase cam distance from the player"};
+cvar_t chase_active = {CVAR_SAVE, "chase_active", "0", "enables chase cam"};
 // GAME_GOODVSBAD2
-cvar_t chase_stevie = {0, "chase_stevie", "0"};
+cvar_t chase_stevie = {0, "chase_stevie", "0", "chase cam view from above (used only by GoodVsBad2)"};
 
-cvar_t v_deathtilt = {0, "v_deathtilt", "1"};
+cvar_t v_deathtilt = {0, "v_deathtilt", "1", "whether to use sideways view when dead"};
 
 float	v_dmg_time, v_dmg_roll, v_dmg_pitch;
 
@@ -632,9 +632,9 @@ V_Init
 */
 void V_Init (void)
 {
-	Cmd_AddCommand ("v_cshift", V_cshift_f);
-	Cmd_AddCommand ("bf", V_BonusFlash_f);
-	Cmd_AddCommand ("centerview", V_StartPitchDrift);
+	Cmd_AddCommand ("v_cshift", V_cshift_f, "sets tint color of view");
+	Cmd_AddCommand ("bf", V_BonusFlash_f, "briefly flashes a bright color tint on view (used when items are picked up)");
+	Cmd_AddCommand ("centerview", V_StartPitchDrift, "gradually recenter view (stop looking up/down)");
 
 	Cvar_RegisterVariable (&v_centermove);
 	Cvar_RegisterVariable (&v_centerspeed);

@@ -314,8 +314,8 @@ void CL_Video_Init( void )
 	cl_videogmask = BigLong(0x00FF0000);
 	cl_videobmask = BigLong(0x0000FF00);
 
-	Cmd_AddCommand( "playvideo", CL_PlayVideo_f );
-	Cmd_AddCommand( "stopvideo", CL_StopVideo_f );
+	Cmd_AddCommand( "playvideo", CL_PlayVideo_f, "play a .dpv video file" );
+	Cmd_AddCommand( "stopvideo", CL_StopVideo_f, "stop playing a .dpv video file" );
 
 	R_RegisterModule( "CL_Video", cl_video_start, cl_video_shutdown, cl_video_newmap );
 }

@@ -2,9 +2,9 @@
 #include "quakedef.h"
 #include "meshqueue.h"
 
-cvar_t r_meshqueue_entries = {CVAR_SAVE, "r_meshqueue_entries", "16"};
-cvar_t r_meshqueue_immediaterender = {0, "r_meshqueue_immediaterender", "0"};
-cvar_t r_meshqueue_sort = {0, "r_meshqueue_sort", "0"};
+cvar_t r_meshqueue_entries = {CVAR_SAVE, "r_meshqueue_entries", "16", "maximum number of meshes to batch together and sort before issuing render calls (unused)"};
+cvar_t r_meshqueue_immediaterender = {0, "r_meshqueue_immediaterender", "0", "immediately render non-transparent meshes rather than batching"};
+cvar_t r_meshqueue_sort = {0, "r_meshqueue_sort", "0", "whether to sort meshes in a batch before issuing calls"};
 
 typedef struct meshqueue_s
 {

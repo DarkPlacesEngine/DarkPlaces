@@ -811,13 +811,13 @@ Key_Init (void)
 //
 // register our functions
 //
-	Cmd_AddCommand ("in_bind", Key_In_Bind_f);
-	Cmd_AddCommand ("in_unbind", Key_In_Unbind_f);
-	Cmd_AddCommand ("in_bindmap", Key_In_Bindmap_f);
+	Cmd_AddCommand ("in_bind", Key_In_Bind_f, "binds a command to the specified key in the selected bindmap");
+	Cmd_AddCommand ("in_unbind", Key_In_Unbind_f, "removes command on the specified key in the selected bindmap");
+	Cmd_AddCommand ("in_bindmap", Key_In_Bindmap_f, "selects active foreground and background (used only if a key is not bound in the foreground) bindmaps for typing");
 
-	Cmd_AddCommand ("bind", Key_Bind_f);
-	Cmd_AddCommand ("unbind", Key_Unbind_f);
-	Cmd_AddCommand ("unbindall", Key_Unbindall_f);
+	Cmd_AddCommand ("bind", Key_Bind_f, "binds a command to the specified key in bindmap 0");
+	Cmd_AddCommand ("unbind", Key_Unbind_f, "removes a command on the specified key in bindmap 0");
+	Cmd_AddCommand ("unbindall", Key_Unbindall_f, "removes all commands from all keys in all bindmaps (leaving only shift-escape and escape)");
 }
 
 const char *Key_GetBind (int key)

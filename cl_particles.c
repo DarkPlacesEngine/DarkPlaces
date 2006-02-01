@@ -309,27 +309,27 @@ static int			cl_numparticles;
 static int			cl_freeparticle;
 static particle_t	*particles;
 
-cvar_t cl_particles = {CVAR_SAVE, "cl_particles", "1"};
-cvar_t cl_particles_quality = {CVAR_SAVE, "cl_particles_quality", "1"};
-cvar_t cl_particles_size = {CVAR_SAVE, "cl_particles_size", "1"};
-cvar_t cl_particles_quake = {CVAR_SAVE, "cl_particles_quake", "0"};
-cvar_t cl_particles_bloodshowers = {CVAR_SAVE, "cl_particles_bloodshowers", "1"};
-cvar_t cl_particles_blood = {CVAR_SAVE, "cl_particles_blood", "1"};
-cvar_t cl_particles_blood_alpha = {CVAR_SAVE, "cl_particles_blood_alpha", "0.5"};
-cvar_t cl_particles_blood_bloodhack = {CVAR_SAVE, "cl_particles_blood_bloodhack", "1"};
-cvar_t cl_particles_bulletimpacts = {CVAR_SAVE, "cl_particles_bulletimpacts", "1"};
-cvar_t cl_particles_explosions_bubbles = {CVAR_SAVE, "cl_particles_explosions_bubbles", "1"};
-cvar_t cl_particles_explosions_smoke = {CVAR_SAVE, "cl_particles_explosions_smokes", "0"};
-cvar_t cl_particles_explosions_sparks = {CVAR_SAVE, "cl_particles_explosions_sparks", "1"};
-cvar_t cl_particles_explosions_shell = {CVAR_SAVE, "cl_particles_explosions_shell", "0"};
-cvar_t cl_particles_smoke = {CVAR_SAVE, "cl_particles_smoke", "1"};
-cvar_t cl_particles_smoke_alpha = {CVAR_SAVE, "cl_particles_smoke_alpha", "0.5"};
-cvar_t cl_particles_smoke_alphafade = {CVAR_SAVE, "cl_particles_smoke_alphafade", "0.55"};
-cvar_t cl_particles_sparks = {CVAR_SAVE, "cl_particles_sparks", "1"};
-cvar_t cl_particles_bubbles = {CVAR_SAVE, "cl_particles_bubbles", "1"};
-cvar_t cl_decals = {CVAR_SAVE, "cl_decals", "0"};
-cvar_t cl_decals_time = {CVAR_SAVE, "cl_decals_time", "0"};
-cvar_t cl_decals_fadetime = {CVAR_SAVE, "cl_decals_fadetime", "20"};
+cvar_t cl_particles = {CVAR_SAVE, "cl_particles", "1", "enables particle effects"};
+cvar_t cl_particles_quality = {CVAR_SAVE, "cl_particles_quality", "1", "multiplies number of particles and reduces their alpha"};
+cvar_t cl_particles_size = {CVAR_SAVE, "cl_particles_size", "1", "multiplies particle size"};
+cvar_t cl_particles_quake = {CVAR_SAVE, "cl_particles_quake", "0", "makes particle effects look mostly like the ones in Quake"};
+cvar_t cl_particles_bloodshowers = {CVAR_SAVE, "cl_particles_bloodshowers", "1", "enables blood shower effects"};
+cvar_t cl_particles_blood = {CVAR_SAVE, "cl_particles_blood", "1", "enables blood effects"};
+cvar_t cl_particles_blood_alpha = {CVAR_SAVE, "cl_particles_blood_alpha", "0.5", "opacity of blood"};
+cvar_t cl_particles_blood_bloodhack = {CVAR_SAVE, "cl_particles_blood_bloodhack", "1", "make certain quake particle() calls create blood effects instead"};
+cvar_t cl_particles_bulletimpacts = {CVAR_SAVE, "cl_particles_bulletimpacts", "1", "enables bulletimpact effects"};
+cvar_t cl_particles_explosions_bubbles = {CVAR_SAVE, "cl_particles_explosions_bubbles", "1", "enables bubbles from underwater explosions"};
+cvar_t cl_particles_explosions_smoke = {CVAR_SAVE, "cl_particles_explosions_smokes", "0", "enables smoke from explosions"};
+cvar_t cl_particles_explosions_sparks = {CVAR_SAVE, "cl_particles_explosions_sparks", "1", "enables sparks from explosions"};
+cvar_t cl_particles_explosions_shell = {CVAR_SAVE, "cl_particles_explosions_shell", "0", "enables polygonal shell from explosions"};
+cvar_t cl_particles_smoke = {CVAR_SAVE, "cl_particles_smoke", "1", "enables smoke (used by multiple effects)"};
+cvar_t cl_particles_smoke_alpha = {CVAR_SAVE, "cl_particles_smoke_alpha", "0.5", "smoke brightness"};
+cvar_t cl_particles_smoke_alphafade = {CVAR_SAVE, "cl_particles_smoke_alphafade", "0.55", "brightness fade per second"};
+cvar_t cl_particles_sparks = {CVAR_SAVE, "cl_particles_sparks", "1", "enables sparks (used by multiple effects)"};
+cvar_t cl_particles_bubbles = {CVAR_SAVE, "cl_particles_bubbles", "1", "enables bubbles (used by multiple effects)"};
+cvar_t cl_decals = {CVAR_SAVE, "cl_decals", "0", "enables decals (bullet holes, blood, etc)"};
+cvar_t cl_decals_time = {CVAR_SAVE, "cl_decals_time", "0", "how long before decals start to fade away"};
+cvar_t cl_decals_fadetime = {CVAR_SAVE, "cl_decals_fadetime", "20", "how long decals take to fade away"};
 
 void CL_Particles_Clear(void)
 {
@@ -360,7 +360,7 @@ void CL_Particles_Init (void)
 	else
 		cl_maxparticles = MAX_PARTICLES;
 
-	Cmd_AddCommand ("pointfile", CL_ReadPointFile_f);
+	Cmd_AddCommand ("pointfile", CL_ReadPointFile_f, "display point file produced by qbsp when a leak was detected in the map (a line leading through the leak hole, to an entity inside the level)");
 
 	Cvar_RegisterVariable (&cl_particles);
 	Cvar_RegisterVariable (&cl_particles_quality);
@@ -1709,7 +1709,7 @@ static rtexture_t *particlefonttexture;
 #endif
 static particletexture_t particletexture[MAX_PARTICLETEXTURES];
 
-static cvar_t r_drawparticles = {0, "r_drawparticles", "1"};
+static cvar_t r_drawparticles = {0, "r_drawparticles", "1", "enables drawing of particles"};
 
 #define PARTICLETEXTURESIZE 64
 #define PARTICLEFONTSIZE (PARTICLETEXTURESIZE*8)

@@ -21,12 +21,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-cvar_t sv_edgefriction = {0, "edgefriction", "2"};
-cvar_t sv_deltacompress = {0, "sv_deltacompress", "1"};
-cvar_t sv_idealpitchscale = {0, "sv_idealpitchscale","0.8"};
-cvar_t sv_maxspeed = {CVAR_NOTIFY, "sv_maxspeed", "320"};
-cvar_t sv_maxairspeed = {0, "sv_maxairspeed", "30"};
-cvar_t sv_accelerate = {0, "sv_accelerate", "10"};
+cvar_t sv_edgefriction = {0, "edgefriction", "2", "how much you slow down when nearing a ledge you might fall off"};
+cvar_t sv_idealpitchscale = {0, "sv_idealpitchscale","0.8", "how much to look up/down slopes and stairs when not using freelook"};
+cvar_t sv_maxspeed = {CVAR_NOTIFY, "sv_maxspeed", "320", "maximum speed a player can accelerate to when on ground (can be exceeded by tricks)"};
+cvar_t sv_maxairspeed = {0, "sv_maxairspeed", "30", "maximum speed a player can accelerate to when airborn (note that it is possible to completely stop by moving the opposite direction)"};
+cvar_t sv_accelerate = {0, "sv_accelerate", "10", "rate at which a player accelerates to sv_maxspeed"};
 
 static usercmd_t cmd;
 

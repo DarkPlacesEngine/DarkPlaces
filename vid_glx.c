@@ -97,8 +97,9 @@ static float	mouse_x, mouse_y;
 static int p_mouse_x, p_mouse_y;
 
 #if !defined(__APPLE__) && !defined(SUNOS)
-cvar_t vid_dga = {CVAR_SAVE, "vid_dga", "1"};
-cvar_t vid_dga_mouseaccel = {0, "vid_dga_mouseaccel", "1"};
+// FIXME: vid_dga_mouseaccel is poorly named, it is actually the multiplier for mouse movement, not an acceleration (which would be a power function or something)
+cvar_t vid_dga = {CVAR_SAVE, "vid_dga", "1", "make use of DGA mouse input"};
+cvar_t vid_dga_mouseaccel = {0, "vid_dga_mouseaccel", "1", "speed of mouse when using DGA mouse input"};
 #endif
 
 qboolean vidmode_ext = false;

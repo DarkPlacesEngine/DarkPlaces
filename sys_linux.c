@@ -13,7 +13,7 @@
 
 
 #ifdef WIN32
-cvar_t sys_usetimegettime = {CVAR_SAVE, "sys_usetimegettime", "1"};
+cvar_t sys_usetimegettime = {CVAR_SAVE, "sys_usetimegettime", "1", "use windows timeGetTime function (which has issues on some motherboards) for timing rather than QueryPerformanceCounter timer (which has issues on multicore/multiprocessor machines and processors which are designed to conserve power)"};
 #endif
 
 

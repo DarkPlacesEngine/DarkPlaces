@@ -26,24 +26,24 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "wad.h"
 
 
-//cvar_t r_subdivide_size = {CVAR_SAVE, "r_subdivide_size", "128"};
-cvar_t halflifebsp = {0, "halflifebsp", "0"};
-cvar_t mcbsp = {0, "mcbsp", "0"};
-cvar_t r_novis = {0, "r_novis", "0"};
-cvar_t r_miplightmaps = {CVAR_SAVE, "r_miplightmaps", "0"};
-cvar_t r_lightmaprgba = {0, "r_lightmaprgba", "1"};
-cvar_t r_nosurftextures = {0, "r_nosurftextures", "0"};
-cvar_t r_subdivisions_tolerance = {0, "r_subdivisions_tolerance", "4"};
-cvar_t r_subdivisions_mintess = {0, "r_subdivisions_mintess", "1"};
-cvar_t r_subdivisions_maxtess = {0, "r_subdivisions_maxtess", "1024"};
-cvar_t r_subdivisions_maxvertices = {0, "r_subdivisions_maxvertices", "65536"};
-cvar_t r_subdivisions_collision_tolerance = {0, "r_subdivisions_collision_tolerance", "15"};
-cvar_t r_subdivisions_collision_mintess = {0, "r_subdivisions_collision_mintess", "1"};
-cvar_t r_subdivisions_collision_maxtess = {0, "r_subdivisions_collision_maxtess", "1024"};
-cvar_t r_subdivisions_collision_maxvertices = {0, "r_subdivisions_collision_maxvertices", "4225"};
-cvar_t mod_q3bsp_curves_collisions = {0, "mod_q3bsp_curves_collisions", "1"};
-cvar_t mod_q3bsp_optimizedtraceline = {0, "mod_q3bsp_optimizedtraceline", "1"};
-cvar_t mod_q3bsp_debugtracebrush = {0, "mod_q3bsp_debugtracebrush", "0"};
+//cvar_t r_subdivide_size = {CVAR_SAVE, "r_subdivide_size", "128", "how large water polygons should be (smaller values produce more polygons which give better warping effects)"};
+cvar_t halflifebsp = {0, "halflifebsp", "0", "indicates the current map is hlbsp format (useful to know because of different bounding box sizes)"};
+cvar_t mcbsp = {0, "mcbsp", "0", "indicates the current map is mcbsp format (useful to know because of different bounding box sizes)"};
+cvar_t r_novis = {0, "r_novis", "0", "draws whole level, see also sv_cullentities_pvs 0"};
+cvar_t r_miplightmaps = {CVAR_SAVE, "r_miplightmaps", "0", "mipmaps lightmaps on upload, also expanding them to power of 2 sizes, this runs slower"};
+cvar_t r_lightmaprgba = {0, "r_lightmaprgba", "1", "whether to use RGBA (32bit) or RGB (24bit) lightmaps"};
+cvar_t r_nosurftextures = {0, "r_nosurftextures", "0", "pretends there was no texture lump found in the q1bsp/hlbsp loading (useful for debugging this rare case)"};
+cvar_t r_subdivisions_tolerance = {0, "r_subdivisions_tolerance", "4", "maximum error tolerance on curve subdivision for rendering purposes (in other words, the curves will be given as many polygons as necessary to represent curves at this quality)"};
+cvar_t r_subdivisions_mintess = {0, "r_subdivisions_mintess", "1", "minimum number of subdivisions (values above 1 will smooth curves that don't need it)"};
+cvar_t r_subdivisions_maxtess = {0, "r_subdivisions_maxtess", "1024", "maximum number of subdivisions (prevents curves beyond a certain detail level, limits smoothing)"};
+cvar_t r_subdivisions_maxvertices = {0, "r_subdivisions_maxvertices", "65536", "maximum vertices allowed per subdivided curve"};
+cvar_t r_subdivisions_collision_tolerance = {0, "r_subdivisions_collision_tolerance", "15", "maximum error tolerance on curve subdivision for collision purposes (usually a larger error tolerance than for rendering)"};
+cvar_t r_subdivisions_collision_mintess = {0, "r_subdivisions_collision_mintess", "1", "minimum number of subdivisions (values above 1 will smooth curves that don't need it)"};
+cvar_t r_subdivisions_collision_maxtess = {0, "r_subdivisions_collision_maxtess", "1024", "maximum number of subdivisions (prevents curves beyond a certain detail level, limits smoothing)"};
+cvar_t r_subdivisions_collision_maxvertices = {0, "r_subdivisions_collision_maxvertices", "4225", "maximum vertices allowed per subdivided curve"};
+cvar_t mod_q3bsp_curves_collisions = {0, "mod_q3bsp_curves_collisions", "1", "enables collisions with curves (SLOW)"};
+cvar_t mod_q3bsp_optimizedtraceline = {0, "mod_q3bsp_optimizedtraceline", "1", "whether to use optimized traceline code for line traces (as opposed to tracebox code)"};
+cvar_t mod_q3bsp_debugtracebrush = {0, "mod_q3bsp_debugtracebrush", "0", "selects different tracebrush bsp recursion algorithms (for debugging purposes only)"};
 
 void Mod_BrushInit(void)
 {

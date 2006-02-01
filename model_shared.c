@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "image.h"
 #include "r_shadow.h"
 
-cvar_t r_mipskins = {CVAR_SAVE, "r_mipskins", "0"};
+cvar_t r_mipskins = {CVAR_SAVE, "r_mipskins", "0", "mipmaps skins (so they become blurrier in the distance), disabled by default because it tends to blur with strange border colors from the skin"};
 
 model_t *loadmodel;
 
@@ -95,8 +95,8 @@ void Mod_Init (void)
 	Mod_SpriteInit();
 
 	Cvar_RegisterVariable(&r_mipskins);
-	Cmd_AddCommand ("modellist", Mod_Print);
-	Cmd_AddCommand ("modelprecache", Mod_Precache);
+	Cmd_AddCommand ("modellist", Mod_Print, "prints a list of loaded models");
+	Cmd_AddCommand ("modelprecache", Mod_Precache, "load a model");
 }
 
 void Mod_RenderInit(void)

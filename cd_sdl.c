@@ -132,7 +132,7 @@ void CDAudio_SysInit (void)
 	if( SDL_InitSubSystem( SDL_INIT_CDROM ) == -1 )
 		Con_Print( "Failed to init the CDROM SDL subsystem!\n" );
 
-	Cmd_AddCommand( "cddrive", CDAudio_SDL_CDDrive_f );
+	Cmd_AddCommand( "cddrive", CDAudio_SDL_CDDrive_f, "select an SDL-detected CD drive by number" );
 }
 
 static int IsAudioCD( void )

@@ -2056,7 +2056,7 @@ void M_Options_Graphics_Key (int k, char ascii)
 int		options_colorcontrol_cursor;
 
 // intensity value to match up to 50% dither to 'correct' quake
-cvar_t menu_options_colorcontrol_correctionvalue = {0, "menu_options_colorcontrol_correctionvalue", "0.25"};
+cvar_t menu_options_colorcontrol_correctionvalue = {0, "menu_options_colorcontrol_correctionvalue", "0.25", "intensity value that matches up to white/black dither pattern, due to Quake's grey level being quite dark this is 0.25, other games may use other values"};
 
 void M_Menu_Options_ColorControl_f (void)
 {
@@ -4367,24 +4367,24 @@ void M_Init (void)
 	menuplyr_load = true;
 	menuplyr_pixels = NULL;
 
-	Cmd_AddCommand ("menu_main", M_Menu_Main_f);
-	Cmd_AddCommand ("menu_singleplayer", M_Menu_SinglePlayer_f);
-	Cmd_AddCommand ("menu_load", M_Menu_Load_f);
-	Cmd_AddCommand ("menu_save", M_Menu_Save_f);
-	Cmd_AddCommand ("menu_multiplayer", M_Menu_MultiPlayer_f);
-	Cmd_AddCommand ("menu_setup", M_Menu_Setup_f);
-	Cmd_AddCommand ("menu_options", M_Menu_Options_f);
-	Cmd_AddCommand ("menu_options_effects", M_Menu_Options_Effects_f);
-	Cmd_AddCommand ("menu_options_graphics", M_Menu_Options_Graphics_f);
-	Cmd_AddCommand ("menu_options_colorcontrol", M_Menu_Options_ColorControl_f);
-	Cmd_AddCommand ("menu_keys", M_Menu_Keys_f);
-	Cmd_AddCommand ("menu_video", M_Menu_Video_f);
-	Cmd_AddCommand ("menu_reset", M_Menu_Reset_f);
-	Cmd_AddCommand ("help", M_Menu_Help_f);
-	Cmd_AddCommand ("menu_quit", M_Menu_Quit_f);
-	Cmd_AddCommand ("menu_transfusion_episode", M_Menu_Transfusion_Episode_f);
-	Cmd_AddCommand ("menu_transfusion_skill", M_Menu_Transfusion_Skill_f);
-	Cmd_AddCommand ("menu_credits", M_Menu_Credits_f);
+	Cmd_AddCommand ("menu_main", M_Menu_Main_f, "open the main menu");
+	Cmd_AddCommand ("menu_singleplayer", M_Menu_SinglePlayer_f, "open the singleplayer menu");
+	Cmd_AddCommand ("menu_load", M_Menu_Load_f, "open the loadgame menu");
+	Cmd_AddCommand ("menu_save", M_Menu_Save_f, "open the savegame menu");
+	Cmd_AddCommand ("menu_multiplayer", M_Menu_MultiPlayer_f, "open the multiplayer menu");
+	Cmd_AddCommand ("menu_setup", M_Menu_Setup_f, "open the player setup menu");
+	Cmd_AddCommand ("menu_options", M_Menu_Options_f, "open the options menu");
+	Cmd_AddCommand ("menu_options_effects", M_Menu_Options_Effects_f, "open the effects options menu");
+	Cmd_AddCommand ("menu_options_graphics", M_Menu_Options_Graphics_f, "open the graphics options menu");
+	Cmd_AddCommand ("menu_options_colorcontrol", M_Menu_Options_ColorControl_f, "open the color control menu");
+	Cmd_AddCommand ("menu_keys", M_Menu_Keys_f, "open the key binding menu");
+	Cmd_AddCommand ("menu_video", M_Menu_Video_f, "open the video options menu");
+	Cmd_AddCommand ("menu_reset", M_Menu_Reset_f, "open the reset to defaults menu");
+	Cmd_AddCommand ("help", M_Menu_Help_f, "open the help menu");
+	Cmd_AddCommand ("menu_quit", M_Menu_Quit_f, "open the quit menu");
+	Cmd_AddCommand ("menu_transfusion_episode", M_Menu_Transfusion_Episode_f, "open the transfusion episode select menu");
+	Cmd_AddCommand ("menu_transfusion_skill", M_Menu_Transfusion_Skill_f, "open the transfusion skill select menu");
+	Cmd_AddCommand ("menu_credits", M_Menu_Credits_f, "open the credits menu");
 
 	if (gamemode == GAME_TRANSFUSION)
 	{
@@ -4881,7 +4881,7 @@ void MP_Restart(void)
 //============================================================================
 // Menu router
 
-static cvar_t forceqmenu = { 0, "forceqmenu", "0" };
+static cvar_t forceqmenu = { 0, "forceqmenu", "0", "enables the quake menu instead of the quakec menu.dat (if present)" };
 
 void (*MR_Keydown) (int key, char ascii);
 void (*MR_Draw) (void);
@@ -4947,9 +4947,9 @@ void MR_Init_Commands(void)
 	Cvar_RegisterVariable (&forceqmenu);
 	Cvar_RegisterVariable (&menu_options_colorcontrol_correctionvalue);
 	if (gamemode == GAME_NETHERWORLD)
-		Cmd_AddCommand ("menu_fallback", MP_Fallback); //Force to old-style menu
-	Cmd_AddCommand ("menu_restart",MR_Restart);
-	Cmd_AddCommand ("togglemenu", Call_MR_ToggleMenu_f);
+		Cmd_AddCommand ("menu_fallback", MP_Fallback, "switch to engine menu (unload menu.dat)"); //Force to old-style menu
+	Cmd_AddCommand ("menu_restart",MR_Restart, "restart menu system (reloads menu.dat");
+	Cmd_AddCommand ("togglemenu", Call_MR_ToggleMenu_f, "opens or closes menu");
 }
 
 void MR_Init(void)

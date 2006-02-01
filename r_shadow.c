@@ -193,46 +193,45 @@ char r_shadow_mapname[MAX_QPATH];
 // used only for light filters (cubemaps)
 rtexturepool_t *r_shadow_filters_texturepool;
 
-cvar_t r_shadow_bumpscale_basetexture = {0, "r_shadow_bumpscale_basetexture", "0"};
-cvar_t r_shadow_bumpscale_bumpmap = {0, "r_shadow_bumpscale_bumpmap", "4"};
-cvar_t r_shadow_debuglight = {0, "r_shadow_debuglight", "-1"};
-cvar_t r_shadow_gloss = {CVAR_SAVE, "r_shadow_gloss", "1"};
-cvar_t r_shadow_gloss2intensity = {0, "r_shadow_gloss2intensity", "0.25"};
-cvar_t r_shadow_glossintensity = {0, "r_shadow_glossintensity", "1"};
-cvar_t r_shadow_lightattenuationpower = {0, "r_shadow_lightattenuationpower", "0.5"};
-cvar_t r_shadow_lightattenuationscale = {0, "r_shadow_lightattenuationscale", "1"};
-cvar_t r_shadow_lightintensityscale = {0, "r_shadow_lightintensityscale", "1"};
-cvar_t r_shadow_portallight = {0, "r_shadow_portallight", "1"};
-cvar_t r_shadow_projectdistance = {0, "r_shadow_projectdistance", "1000000"};
-cvar_t r_shadow_realtime_dlight = {CVAR_SAVE, "r_shadow_realtime_dlight", "1"};
-cvar_t r_shadow_realtime_dlight_shadows = {CVAR_SAVE, "r_shadow_realtime_dlight_shadows", "1"};
-cvar_t r_shadow_realtime_dlight_portalculling = {0, "r_shadow_realtime_dlight_portalculling", "0"};
-cvar_t r_shadow_realtime_world = {CVAR_SAVE, "r_shadow_realtime_world", "0"};
-cvar_t r_shadow_realtime_world_dlightshadows = {CVAR_SAVE, "r_shadow_realtime_world_dlightshadows", "1"};
-cvar_t r_shadow_realtime_world_lightmaps = {CVAR_SAVE, "r_shadow_realtime_world_lightmaps", "0"};
-cvar_t r_shadow_realtime_world_shadows = {CVAR_SAVE, "r_shadow_realtime_world_shadows", "1"};
-cvar_t r_shadow_realtime_world_compile = {0, "r_shadow_realtime_world_compile", "1"};
-cvar_t r_shadow_realtime_world_compileshadow = {0, "r_shadow_realtime_world_compileshadow", "1"};
-cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1"};
-cvar_t r_shadow_shadow_polygonfactor = {0, "r_shadow_shadow_polygonfactor", "0"};
-cvar_t r_shadow_shadow_polygonoffset = {0, "r_shadow_shadow_polygonoffset", "1"};
-cvar_t r_shadow_singlepassvolumegeneration = {0, "r_shadow_singlepassvolumegeneration", "1"};
-cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1"};
-cvar_t r_shadow_visiblelighting = {0, "r_shadow_visiblelighting", "0"};
-cvar_t r_shadow_visiblevolumes = {0, "r_shadow_visiblevolumes", "0"};
-cvar_t r_shadow_glsl = {0, "r_shadow_glsl", "1"};
-cvar_t r_shadow_glsl_offsetmapping = {0, "r_shadow_glsl_offsetmapping", "0"};
-cvar_t r_shadow_glsl_offsetmapping_scale = {0, "r_shadow_glsl_offsetmapping_scale", "-0.04"};
-cvar_t r_shadow_glsl_offsetmapping_bias = {0, "r_shadow_glsl_offsetmapping_bias", "0.04"};
-cvar_t r_shadow_glsl_usehalffloat = {0, "r_shadow_glsl_usehalffloat", "0"};
-cvar_t r_shadow_glsl_surfacenormalize = {0, "r_shadow_glsl_surfacenormalize", "1"};
-cvar_t gl_ext_stenciltwoside = {0, "gl_ext_stenciltwoside", "1"};
-cvar_t r_editlights = {0, "r_editlights", "0"};
-cvar_t r_editlights_cursordistance = {0, "r_editlights_cursordistance", "1024"};
-cvar_t r_editlights_cursorpushback = {0, "r_editlights_cursorpushback", "0"};
-cvar_t r_editlights_cursorpushoff = {0, "r_editlights_cursorpushoff", "4"};
-cvar_t r_editlights_cursorgrid = {0, "r_editlights_cursorgrid", "4"};
-cvar_t r_editlights_quakelightsizescale = {CVAR_SAVE, "r_editlights_quakelightsizescale", "0.8"};
+cvar_t r_shadow_bumpscale_basetexture = {0, "r_shadow_bumpscale_basetexture", "0", "generate fake bumpmaps from diffuse textures at this bumpyness, try 4 to match tenebrae, higher values increase depth, requires r_restart to take effect"};
+cvar_t r_shadow_bumpscale_bumpmap = {0, "r_shadow_bumpscale_bumpmap", "4", "what magnitude to interpret _bump.tga textures as, higher values increase depth, requires r_restart to take effect"};
+cvar_t r_shadow_debuglight = {0, "r_shadow_debuglight", "-1", "renders only one light, for level design purposes or debugging"};
+cvar_t r_shadow_gloss = {CVAR_SAVE, "r_shadow_gloss", "1", "0 disables gloss (specularity) rendering, 1 uses gloss if textures are found, 2 forces a flat metallic specular effect on everything without textures (similar to tenebrae)"};
+cvar_t r_shadow_gloss2intensity = {0, "r_shadow_gloss2intensity", "0.25", "how bright the forced flat gloss should look if r_shadow_gloss is 2"};
+cvar_t r_shadow_glossintensity = {0, "r_shadow_glossintensity", "1", "how bright textured glossmaps should look if r_shadow_gloss is 1 or 2"};
+cvar_t r_shadow_lightattenuationpower = {0, "r_shadow_lightattenuationpower", "0.5", "changes attenuation texture generation (does not affect r_shadow_glsl lighting)"};
+cvar_t r_shadow_lightattenuationscale = {0, "r_shadow_lightattenuationscale", "1", "changes attenuation texture generation (does not affect r_shadow_glsl lighting)"};
+cvar_t r_shadow_lightintensityscale = {0, "r_shadow_lightintensityscale", "1", "renders all world lights brighter or darker"};
+cvar_t r_shadow_portallight = {0, "r_shadow_portallight", "1", "use portal culling to exactly determine lit triangles when compiling world lights"};
+cvar_t r_shadow_projectdistance = {0, "r_shadow_projectdistance", "1000000", "how far to cast shadows"};
+cvar_t r_shadow_realtime_dlight = {CVAR_SAVE, "r_shadow_realtime_dlight", "1", "enables rendering of dynamic lights such as explosions and rocket light"};
+cvar_t r_shadow_realtime_dlight_shadows = {CVAR_SAVE, "r_shadow_realtime_dlight_shadows", "1", "enables rendering of shadows from dynamic lights"};
+cvar_t r_shadow_realtime_dlight_portalculling = {0, "r_shadow_realtime_dlight_portalculling", "0", "enables portal culling optimizations on dynamic lights (slow!  you probably don't want this!)"};
+cvar_t r_shadow_realtime_world = {CVAR_SAVE, "r_shadow_realtime_world", "0", "enables rendering of full world lighting (whether loaded from the map, or a .rtlights file, or a .ent file, or a .lights file produced by hlight)"};
+cvar_t r_shadow_realtime_world_dlightshadows = {CVAR_SAVE, "r_shadow_realtime_world_dlightshadows", "1", "enables shadows from dynamic lights when using full world lighting"};
+cvar_t r_shadow_realtime_world_lightmaps = {CVAR_SAVE, "r_shadow_realtime_world_lightmaps", "0", "brightness to render lightmaps when using full world lighting, try 0.5 for a tenebrae-like appearance"};
+cvar_t r_shadow_realtime_world_shadows = {CVAR_SAVE, "r_shadow_realtime_world_shadows", "1", "enables rendering of shadows from world lights"};
+cvar_t r_shadow_realtime_world_compile = {0, "r_shadow_realtime_world_compile", "1", "enables compilation of world lights for higher performance rendering"};
+cvar_t r_shadow_realtime_world_compileshadow = {0, "r_shadow_realtime_world_compileshadow", "1", "enables compilation of shadows from world lights for higher performance rendering"};
+cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1", "use scissor optimization of light rendering (restricts rendering to the portion of the screen affected by the light)"};
+cvar_t r_shadow_shadow_polygonfactor = {0, "r_shadow_shadow_polygonfactor", "0", "how much to enlarge shadow volume polygons when rendering (should be 0!)"};
+cvar_t r_shadow_shadow_polygonoffset = {0, "r_shadow_shadow_polygonoffset", "1", "how much to push shadow volumes into the distance when rendering, to reduce chances of zfighting artifacts (should not be less than 0)"};
+cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1", "use 3D voxel textures for spherical attenuation rather than cylindrical (does not affect r_shadow_glsl lighting)"};
+cvar_t r_shadow_visiblelighting = {0, "r_shadow_visiblelighting", "0", "shows areas lit by lights, useful for finding out why some areas of a map render slowly (bright orange = lots of passes = slow), a value of 2 disables depth testing which can be interesting but not very useful"};
+cvar_t r_shadow_visiblevolumes = {0, "r_shadow_visiblevolumes", "0", "shows areas shadowed by lights, useful for finding out why some areas of a map render slowly (bright blue = lots of passes = slow), a value of 2 disables depth testing which can be interesting but not very useful"};
+cvar_t r_shadow_glsl = {0, "r_shadow_glsl", "1", "enables use of OpenGL 2.0 pixel shaders for lighting"};
+cvar_t r_shadow_glsl_offsetmapping = {0, "r_shadow_glsl_offsetmapping", "0", "enables offset mapping effect (also known as parallax mapping or sometimes as virtual displacement mapping, not as good as relief mapping or silohuette mapping but much faster), can cause strange artifacts on many textures, requires bumpmaps for depth information (normalmaps can have depth information as alpha channel, but most do not)"};
+cvar_t r_shadow_glsl_offsetmapping_scale = {0, "r_shadow_glsl_offsetmapping_scale", "-0.04", "how deep the offset mapping effect is, and whether it is inward or outward"};
+cvar_t r_shadow_glsl_offsetmapping_bias = {0, "r_shadow_glsl_offsetmapping_bias", "0.04", "pushes the effect closer/further"};
+cvar_t r_shadow_glsl_usehalffloat = {0, "r_shadow_glsl_usehalffloat", "0", "use half and hvec variables in GLSL shader for a speed gain (NVIDIA only)"};
+cvar_t r_shadow_glsl_surfacenormalize = {0, "r_shadow_glsl_surfacenormalize", "1", "normalize bumpmap texels in GLSL shader, produces a more rounded look on small bumps and dents"};
+cvar_t gl_ext_stenciltwoside = {0, "gl_ext_stenciltwoside", "1", "make use of GL_EXT_stenciltwoside extension (NVIDIA only)"};
+cvar_t r_editlights = {0, "r_editlights", "0", "enables .rtlights file editing mode"};
+cvar_t r_editlights_cursordistance = {0, "r_editlights_cursordistance", "1024", "maximum distance of cursor from eye"};
+cvar_t r_editlights_cursorpushback = {0, "r_editlights_cursorpushback", "0", "how far to pull the cursor back toward the eye"};
+cvar_t r_editlights_cursorpushoff = {0, "r_editlights_cursorpushoff", "4", "how far to push the cursor off the impacted surface"};
+cvar_t r_editlights_cursorgrid = {0, "r_editlights_cursorgrid", "4", "snaps cursor to this grid size"};
+cvar_t r_editlights_quakelightsizescale = {CVAR_SAVE, "r_editlights_quakelightsizescale", "1", "changes size of light entities loaded from a map"};
 
 float r_shadow_attenpower, r_shadow_attenscale;
 
@@ -646,7 +645,6 @@ void R_Shadow_Help_f(void)
 "r_shadow_scissor : use scissor optimization\n"
 "r_shadow_shadow_polygonfactor : nudge shadow volumes closer/further\n"
 "r_shadow_shadow_polygonoffset : nudge shadow volumes closer/further\n"
-"r_shadow_singlepassvolumegeneration : selects shadow volume algorithm\n"
 "r_shadow_texture3d : use 3d attenuation texture (if hardware supports)\n"
 "r_shadow_visiblelighting : useful for performance testing; bright = slow!\n"
 "r_shadow_visiblevolumes : useful for performance testing; bright = slow!\n"
@@ -680,7 +678,6 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_scissor);
 	Cvar_RegisterVariable(&r_shadow_shadow_polygonfactor);
 	Cvar_RegisterVariable(&r_shadow_shadow_polygonoffset);
-	Cvar_RegisterVariable(&r_shadow_singlepassvolumegeneration);
 	Cvar_RegisterVariable(&r_shadow_texture3d);
 	Cvar_RegisterVariable(&r_shadow_visiblelighting);
 	Cvar_RegisterVariable(&r_shadow_visiblevolumes);
@@ -696,7 +693,7 @@ void R_Shadow_Init(void)
 		Cvar_SetValue("r_shadow_gloss", 2);
 		Cvar_SetValue("r_shadow_bumpscale_basetexture", 4);
 	}
-	Cmd_AddCommand("r_shadow_help", R_Shadow_Help_f);
+	Cmd_AddCommand("r_shadow_help", R_Shadow_Help_f, "prints documentation on console commands and variables used by realtime lighting and shadowing system");
 	R_Shadow_EditLights_Init();
 	r_shadow_mempool = Mem_AllocPool("R_Shadow", 0, NULL);
 	r_shadow_worldlightchain = NULL;
@@ -4284,19 +4281,19 @@ void R_Shadow_EditLights_Init(void)
 	Cvar_RegisterVariable(&r_editlights_cursorpushoff);
 	Cvar_RegisterVariable(&r_editlights_cursorgrid);
 	Cvar_RegisterVariable(&r_editlights_quakelightsizescale);
-	Cmd_AddCommand("r_editlights_help", R_Shadow_EditLights_Help_f);
-	Cmd_AddCommand("r_editlights_clear", R_Shadow_EditLights_Clear_f);
-	Cmd_AddCommand("r_editlights_reload", R_Shadow_EditLights_Reload_f);
-	Cmd_AddCommand("r_editlights_save", R_Shadow_EditLights_Save_f);
-	Cmd_AddCommand("r_editlights_spawn", R_Shadow_EditLights_Spawn_f);
-	Cmd_AddCommand("r_editlights_edit", R_Shadow_EditLights_Edit_f);
-	Cmd_AddCommand("r_editlights_editall", R_Shadow_EditLights_EditAll_f);
-	Cmd_AddCommand("r_editlights_remove", R_Shadow_EditLights_Remove_f);
-	Cmd_AddCommand("r_editlights_toggleshadow", R_Shadow_EditLights_ToggleShadow_f);
-	Cmd_AddCommand("r_editlights_togglecorona", R_Shadow_EditLights_ToggleCorona_f);
-	Cmd_AddCommand("r_editlights_importlightentitiesfrommap", R_Shadow_EditLights_ImportLightEntitiesFromMap_f);
-	Cmd_AddCommand("r_editlights_importlightsfile", R_Shadow_EditLights_ImportLightsFile_f);
-	Cmd_AddCommand("r_editlights_copyinfo", R_Shadow_EditLights_CopyInfo_f);
-	Cmd_AddCommand("r_editlights_pasteinfo", R_Shadow_EditLights_PasteInfo_f);
+	Cmd_AddCommand("r_editlights_help", R_Shadow_EditLights_Help_f, "prints documentation on console commands and variables in rtlight editing system");
+	Cmd_AddCommand("r_editlights_clear", R_Shadow_EditLights_Clear_f, "removes all world lights (let there be darkness!)");
+	Cmd_AddCommand("r_editlights_reload", R_Shadow_EditLights_Reload_f, "reloads rtlights file (or imports from .lights file or .ent file or the map itself)");
+	Cmd_AddCommand("r_editlights_save", R_Shadow_EditLights_Save_f, "save .rtlights file for current level");
+	Cmd_AddCommand("r_editlights_spawn", R_Shadow_EditLights_Spawn_f, "creates a light with default properties (let there be light!)");
+	Cmd_AddCommand("r_editlights_edit", R_Shadow_EditLights_Edit_f, "changes a property on the selected light");
+	Cmd_AddCommand("r_editlights_editall", R_Shadow_EditLights_EditAll_f, "changes a property on ALL lights at once (tip: use radiusscale and colorscale to alter these properties)");
+	Cmd_AddCommand("r_editlights_remove", R_Shadow_EditLights_Remove_f, "remove selected light");
+	Cmd_AddCommand("r_editlights_toggleshadow", R_Shadow_EditLights_ToggleShadow_f, "toggle on/off the shadow option on the selected light");
+	Cmd_AddCommand("r_editlights_togglecorona", R_Shadow_EditLights_ToggleCorona_f, "toggle on/off the corona option on the selected light");
+	Cmd_AddCommand("r_editlights_importlightentitiesfrommap", R_Shadow_EditLights_ImportLightEntitiesFromMap_f, "load lights from .ent file or map entities (ignoring .rtlights or .lights file)");
+	Cmd_AddCommand("r_editlights_importlightsfile", R_Shadow_EditLights_ImportLightsFile_f, "load lights from .lights file (ignoring .rtlights or .ent files and map entities)");
+	Cmd_AddCommand("r_editlights_copyinfo", R_Shadow_EditLights_CopyInfo_f, "store a copy of all properties (except origin) of the selected light");
+	Cmd_AddCommand("r_editlights_pasteinfo", R_Shadow_EditLights_PasteInfo_f, "apply the stored properties onto the selected light (making it exactly identical except for origin)");
 }
 

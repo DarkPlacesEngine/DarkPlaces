@@ -191,6 +191,18 @@ const char **Cvar_CompleteBuildList (const char *partial)
 	return buf;
 }
 
+// written by LordHavoc
+void Cvar_CompleteCvarPrint (const char *partial)
+{
+	cvar_t *cvar;
+	size_t len = strlen(partial);
+	// Loop through the command list and print all matches
+	for (cvar = cvar_vars; cvar; cvar = cvar->next)
+		if (!strncasecmp(partial, cvar->name, len))
+			Con_Printf("%s : %s (%s) : %s\n", cvar->name, cvar->value, cvar->defstring, cvar->description);
+}
+
+
 /*
 ============
 Cvar_Set

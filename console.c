@@ -41,10 +41,9 @@ int con_current;
 int con_x;
 char con_text[CON_TEXTSIZE];
 
-//seconds
-cvar_t con_notifytime = {CVAR_SAVE, "con_notifytime","3"};
-cvar_t con_notify = {CVAR_SAVE, "con_notify","4"};
-cvar_t con_textsize = {CVAR_SAVE, "con_textsize","8"};	//[515]: console text size in pixels
+cvar_t con_notifytime = {CVAR_SAVE, "con_notifytime","3", "how long notify lines last, in seconds"};
+cvar_t con_notify = {CVAR_SAVE, "con_notify","4", "how many notify lines to show (0-32)"};
+cvar_t con_textsize = {CVAR_SAVE, "con_textsize","8", "console text size in virtual 2D pixels"};	//[515]: console text size in pixels
 
 #define MAX_NOTIFYLINES 32
 // cl.time time the line was generated for transparent notify lines
@@ -63,7 +62,7 @@ LOGGING
 ==============================================================================
 */
 
-cvar_t log_file = {0, "log_file",""};
+cvar_t log_file = {0, "log_file","", "filename to log messages to"};
 char crt_log_file [MAX_OSPATH] = "";
 qfile_t* logfile = NULL;
 
@@ -409,11 +408,11 @@ void Con_Init_Commands (void)
 	Cvar_RegisterVariable (&con_textsize);
 
 	// register our commands
-	Cmd_AddCommand ("toggleconsole", Con_ToggleConsole_f);
-	Cmd_AddCommand ("messagemode", Con_MessageMode_f);
-	Cmd_AddCommand ("messagemode2", Con_MessageMode2_f);
-	Cmd_AddCommand ("clear", Con_Clear_f);
-	Cmd_AddCommand ("maps", Con_Maps_f);							// By [515]
+	Cmd_AddCommand ("toggleconsole", Con_ToggleConsole_f, "opens or closes the console");
+	Cmd_AddCommand ("messagemode", Con_MessageMode_f, "input a chat message to say to everyone");
+	Cmd_AddCommand ("messagemode2", Con_MessageMode2_f, "input a chat message to say to only your team");
+	Cmd_AddCommand ("clear", Con_Clear_f, "clear console history");
+	Cmd_AddCommand ("maps", Con_Maps_f, "list information about available maps");	// By [515]
 
 	con_initialized = true;
 	Con_Print("Console initialized.\n");
@@ -1123,10 +1122,25 @@ void Con_CompleteCommandLine (void)
 			}
 		}
 
-	// Count number of possible matches
+	// Count number of possible matches and print them
 	c = Cmd_CompleteCountPossible(s);
+	if (c)
+	{
+		Con_Printf("\n%i possible command%s\n", c, (c > 1) ? "s: " : ":");
+		Cmd_CompleteCommandPrint(s);
+	}
 	v = Cvar_CompleteCountPossible(s);
+	if (v)
+	{
+		Con_Printf("\n%i possible variable%s\n", v, (v > 1) ? "s: " : ":");
+		Cvar_CompleteCvarPrint(s);
+	}
 	a = Cmd_CompleteAliasCountPossible(s);
+	if (a)
+	{
+		Con_Printf("\n%i possible aliases%s\n", a, (a > 1) ? "s: " : ":");
+		Cmd_CompleteAliasPrint(s);
+	}
 
 	if (!(c + v + a))	// No possible matches
 	{
@@ -1135,76 +1149,48 @@ void Con_CompleteCommandLine (void)
 		return;
 	}
 
-	if (c + v + a == 1) {
-		if (c)
-			list[0] = Cmd_CompleteBuildList(s);
-		else if (v)
-			list[0] = Cvar_CompleteBuildList(s);
-		else
-			list[0] = Cmd_CompleteAliasBuildList(s);
-		cmd = *list[0];
-		cmd_len = (int)strlen (cmd);
-	} else {
-		if (c)
-			cmd = *(list[0] = Cmd_CompleteBuildList(s));
-		if (v)
-			cmd = *(list[1] = Cvar_CompleteBuildList(s));
-		if (a)
-			cmd = *(list[2] = Cmd_CompleteAliasBuildList(s));
+	if (c)
+		cmd = *(list[0] = Cmd_CompleteBuildList(s));
+	if (v)
+		cmd = *(list[1] = Cvar_CompleteBuildList(s));
+	if (a)
+		cmd = *(list[2] = Cmd_CompleteAliasBuildList(s));
 
-		cmd_len = (int)strlen (s);
-		do {
-			for (i = 0; i < 3; i++) {
-				char ch = cmd[cmd_len];
-				const char **l = list[i];
-				if (l) {
-					while (*l && (*l)[cmd_len] == ch)
-						l++;
-					if (*l)
-						break;
-				}
-			}
-			if (i == 3)
-				cmd_len++;
-		} while (i == 3);
-		// 'quakebar'
-		Con_Print("\n\35");
-		for (i = 0; i < con_linewidth - 4; i++)
-			Con_Print("\36");
-		Con_Print("\37\n");
-
-		// Print Possible Commands
-		if (c) {
-			Con_Printf("%i possible command%s\n", c, (c > 1) ? "s: " : ":");
-			Con_DisplayList(list[0]);
-		}
-
-		if (v) {
-			Con_Printf("%i possible variable%s\n", v, (v > 1) ? "s: " : ":");
-			Con_DisplayList(list[1]);
-		}
-
-		if (a) {
-			Con_Printf("%i possible aliases%s\n", a, (a > 1) ? "s: " : ":");
-			Con_DisplayList(list[2]);
+	for (cmd_len = (int)strlen(s);;cmd_len++)
+	{
+		const char **l;
+		for (i = 0; i < 3; i++)
+			if (list[i])
+				for (l = list[i];*l;l++)
+					if ((*l)[cmd_len] != cmd[cmd_len])
+						goto done;
+		// all possible matches share this character, so we continue...
+		if (!cmd[cmd_len])
+		{
+			// if all matches ended at the same position, stop
+			// (this means there is only one match)
+			break;
 		}
 	}
+done:
 
-	if (cmd) {
-		strncpy(key_lines[edit_line] + pos, cmd, cmd_len);
-		key_linepos = cmd_len + pos;
-		if (c + v + a == 1) {
-			key_lines[edit_line][key_linepos] = ' ';
-			key_linepos++;
-		}
-		if(s2[0])
-			strcpy(&key_lines[edit_line][key_linepos], s2);
-		else
-			key_lines[edit_line][key_linepos] = 0;
+	// prevent a buffer overrun by limiting cmd_len according to remaining space
+	cmd_len = min(cmd_len, (int)sizeof(key_lines[edit_line]) - 1 - pos);
+	if (cmd)
+	{
+		key_linepos = pos;
+		memcpy(&key_lines[edit_line][key_linepos], cmd, cmd_len);
+		key_linepos += cmd_len;
+		// if there is only one match, add a space after it
+		if (c + v + a == 1 && key_linepos < (int)sizeof(key_lines[edit_line]) - 1)
+			key_lines[edit_line][key_linepos++] = ' ';
 	}
-	else
-		if(s2[0])
-			strcpy(&key_lines[edit_line][key_linepos], s2);
+
+	// use strlcat to avoid a buffer overrun
+	key_lines[edit_line][key_linepos] = 0;
+	strlcat(key_lines[edit_line], s2, sizeof(key_lines[edit_line]));
+
+	// free the command, cvar, and alias lists
 	for (i = 0; i < 3; i++)
 		if (list[i])
 			Mem_Free((void *)list[i]);

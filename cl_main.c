@@ -29,46 +29,46 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // we need to declare some mouse variables here, because the menu system
 // references them even when on a unix system.
 
-cvar_t csqc_progname = {0, "csqc_progname","csprogs.dat"};	//[515]: csqc crc check and right csprogs name according to progs.dat
-cvar_t csqc_progcrc = {CVAR_READONLY, "csqc_progcrc","0"};
+cvar_t csqc_progname = {0, "csqc_progname","csprogs.dat","name of csprogs.dat file to load"};	//[515]: csqc crc check and right csprogs name according to progs.dat
+cvar_t csqc_progcrc = {CVAR_READONLY, "csqc_progcrc","0","CRC of csprogs.dat file to load"};
 
-cvar_t cl_shownet = {0, "cl_shownet","0"};
-cvar_t cl_nolerp = {0, "cl_nolerp", "0"};
+cvar_t cl_shownet = {0, "cl_shownet","0","1 = print packet size, 2 = print packet message list"};
+cvar_t cl_nolerp = {0, "cl_nolerp", "0","network update smoothing"};
 
-cvar_t cl_itembobheight = {0, "cl_itembobheight", "0"}; // try 8
-cvar_t cl_itembobspeed = {0, "cl_itembobspeed", "0.5"};
+cvar_t cl_itembobheight = {0, "cl_itembobheight", "0","how much items bob up and down (try 8)"};
+cvar_t cl_itembobspeed = {0, "cl_itembobspeed", "0.5","how frequently items bob up and down"};
 
-cvar_t lookspring = {CVAR_SAVE, "lookspring","0"};
-cvar_t lookstrafe = {CVAR_SAVE, "lookstrafe","0"};
-cvar_t sensitivity = {CVAR_SAVE, "sensitivity","3", 1, 30};
+cvar_t lookspring = {CVAR_SAVE, "lookspring","0","returns pitch to level with the floor when no longer holding a pitch key"};
+cvar_t lookstrafe = {CVAR_SAVE, "lookstrafe","0","move instead of turning"};
+cvar_t sensitivity = {CVAR_SAVE, "sensitivity","3","mouse speed multiplier"};
 
-cvar_t m_pitch = {CVAR_SAVE, "m_pitch","0.022"};
-cvar_t m_yaw = {CVAR_SAVE, "m_yaw","0.022"};
-cvar_t m_forward = {CVAR_SAVE, "m_forward","1"};
-cvar_t m_side = {CVAR_SAVE, "m_side","0.8"};
+cvar_t m_pitch = {CVAR_SAVE, "m_pitch","0.022","mouse pitch speed multiplier"};
+cvar_t m_yaw = {CVAR_SAVE, "m_yaw","0.022","mouse yaw speed multiplier"};
+cvar_t m_forward = {CVAR_SAVE, "m_forward","1","mouse forward speed multiplier"};
+cvar_t m_side = {CVAR_SAVE, "m_side","0.8","mouse side speed multiplier"};
 
-cvar_t freelook = {CVAR_SAVE, "freelook", "1"};
+cvar_t freelook = {CVAR_SAVE, "freelook", "1","mouse controls pitch instead of forward/back"};
 
-cvar_t r_draweffects = {0, "r_draweffects", "1"};
+cvar_t r_draweffects = {0, "r_draweffects", "1","renders temporary sprite effects"};
 
-cvar_t cl_explosions_alpha_start = {CVAR_SAVE, "cl_explosions_alpha_start", "1.5"};
-cvar_t cl_explosions_alpha_end = {CVAR_SAVE, "cl_explosions_alpha_end", "0"};
-cvar_t cl_explosions_size_start = {CVAR_SAVE, "cl_explosions_size_start", "16"};
-cvar_t cl_explosions_size_end = {CVAR_SAVE, "cl_explosions_size_end", "128"};
-cvar_t cl_explosions_lifetime = {CVAR_SAVE, "cl_explosions_lifetime", "0.5"};
+cvar_t cl_explosions_alpha_start = {CVAR_SAVE, "cl_explosions_alpha_start", "1.5","starting alpha of an explosion shell"};
+cvar_t cl_explosions_alpha_end = {CVAR_SAVE, "cl_explosions_alpha_end", "0","end alpha of an explosion shell (just before it disappears)"};
+cvar_t cl_explosions_size_start = {CVAR_SAVE, "cl_explosions_size_start", "16","starting size of an explosion shell"};
+cvar_t cl_explosions_size_end = {CVAR_SAVE, "cl_explosions_size_end", "128","ending alpha of an explosion shell (just before it disappears)"};
+cvar_t cl_explosions_lifetime = {CVAR_SAVE, "cl_explosions_lifetime", "0.5","how long an explosion shell lasts"};
 
-cvar_t cl_stainmaps = {CVAR_SAVE, "cl_stainmaps", "1"};
-cvar_t cl_stainmaps_clearonload = {CVAR_SAVE, "cl_stainmaps_clearonload", "1"};
+cvar_t cl_stainmaps = {CVAR_SAVE, "cl_stainmaps", "1","stains lightmaps, much faster than decals but blurred"};
+cvar_t cl_stainmaps_clearonload = {CVAR_SAVE, "cl_stainmaps_clearonload", "1","clear stainmaps on map restart"};
 
-cvar_t cl_beams_polygons = {CVAR_SAVE, "cl_beams_polygons", "1"};
-cvar_t cl_beams_relative = {CVAR_SAVE, "cl_beams_relative", "1"};
-cvar_t cl_beams_lightatend = {CVAR_SAVE, "cl_beams_lightatend", "0"};
+cvar_t cl_beams_polygons = {CVAR_SAVE, "cl_beams_polygons", "1","use beam polygons instead of models"};
+cvar_t cl_beams_relative = {CVAR_SAVE, "cl_beams_relative", "1","beams are relative to owner (smooth sweeps)"};
+cvar_t cl_beams_lightatend = {CVAR_SAVE, "cl_beams_lightatend", "0","make a light at the end of the beam"};
 
-cvar_t cl_noplayershadow = {CVAR_SAVE, "cl_noplayershadow", "0"};
+cvar_t cl_noplayershadow = {CVAR_SAVE, "cl_noplayershadow", "0","hide player shadow"};
 
-cvar_t cl_prydoncursor = {0, "cl_prydoncursor", "0"};
+cvar_t cl_prydoncursor = {0, "cl_prydoncursor", "0", "enables a mouse pointer which is able to click on entities in the world, useful for point and click mods, see PRYDON_CLIENTCURSOR extension in dpextensions.qc"};
 
-cvar_t cl_deathnoviewmodel = {0, "cl_deathnoviewmodel", "1"};
+cvar_t cl_deathnoviewmodel = {0, "cl_deathnoviewmodel", "1", "hides gun model when dead"};
 
 vec3_t cl_playerstandmins;
 vec3_t cl_playerstandmaxs;
@@ -1671,17 +1671,17 @@ void CL_Init (void)
 	Cvar_RegisterVariable (&cl_itembobspeed);
 	Cvar_RegisterVariable (&cl_itembobheight);
 
-	Cmd_AddCommand ("entities", CL_PrintEntities_f);
-	Cmd_AddCommand ("disconnect", CL_Disconnect_f);
-	Cmd_AddCommand ("record", CL_Record_f);
-	Cmd_AddCommand ("stop", CL_Stop_f);
-	Cmd_AddCommand ("playdemo", CL_PlayDemo_f);
-	Cmd_AddCommand ("timedemo", CL_TimeDemo_f);
+	Cmd_AddCommand ("entities", CL_PrintEntities_f, "print information on network entities known to client");
+	Cmd_AddCommand ("disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
+	Cmd_AddCommand ("record", CL_Record_f, "record a demo");
+	Cmd_AddCommand ("stop", CL_Stop_f, "stop recording or playing a demo");
+	Cmd_AddCommand ("playdemo", CL_PlayDemo_f, "watch a demo file");
+	Cmd_AddCommand ("timedemo", CL_TimeDemo_f, "play back a demo as fast as possible and save statistics to benchmark.log");
 
-	Cmd_AddCommand ("fog", CL_Fog_f);
+	Cmd_AddCommand ("fog", CL_Fog_f, "set global fog parameters (density red green blue)");
 
 	// LordHavoc: added pausedemo
-	Cmd_AddCommand ("pausedemo", CL_PauseDemo_f);
+	Cmd_AddCommand ("pausedemo", CL_PauseDemo_f, "pause demo playback (can also safely pause demo recording if using QUAKE, QUAKEDP or NEHAHRAMOVIE protocol, useful for making movies)");
 
 	Cvar_RegisterVariable(&r_draweffects);
 	Cvar_RegisterVariable(&cl_explosions_alpha_start);
@@ -1700,7 +1700,7 @@ void CL_Init (void)
 
 	Cvar_RegisterVariable(&cl_deathnoviewmodel);
 
-	Cmd_AddCommand("timerefresh", CL_TimeRefresh_f);
+	Cmd_AddCommand("timerefresh", CL_TimeRefresh_f, "turn quickly and print rendering statistcs");
 
 	CL_Parse_Init();
 	CL_Particles_Init();

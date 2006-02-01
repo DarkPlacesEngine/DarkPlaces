@@ -99,15 +99,15 @@ sbarpic_t *zymsb_crosshair_left1;
 sbarpic_t *zymsb_crosshair_left2;
 sbarpic_t *zymsb_crosshair_right;
 
-cvar_t	showfps = {CVAR_SAVE, "showfps", "0"};
-cvar_t	showtime = {CVAR_SAVE, "showtime", "0"};
-cvar_t	showtime_format = {CVAR_SAVE, "showtime_format", "%H:%M:%S"};
-cvar_t	showdate = {CVAR_SAVE, "showdate", "0"};
-cvar_t	showdate_format = {CVAR_SAVE, "showdate_format", "%Y-%m-%d"};
-cvar_t	sbar_alpha_bg = {CVAR_SAVE, "sbar_alpha_bg", "0.4"};
-cvar_t	sbar_alpha_fg = {CVAR_SAVE, "sbar_alpha_fg", "1"};
+cvar_t showfps = {CVAR_SAVE, "showfps", "0", "shows your rendered fps (frames per second)"};
+cvar_t showtime = {CVAR_SAVE, "showtime", "0", "shows current time of day (useful on screenshots)"};
+cvar_t showtime_format = {CVAR_SAVE, "showtime_format", "%H:%M:%S", "format string for time of day"};
+cvar_t showdate = {CVAR_SAVE, "showdate", "0", "shows current date (useful on screenshots)"};
+cvar_t showdate_format = {CVAR_SAVE, "showdate_format", "%Y-%m-%d", "format string for date"};
+cvar_t sbar_alpha_bg = {CVAR_SAVE, "sbar_alpha_bg", "0.4", "opacity value of the statusbar background image"};
+cvar_t sbar_alpha_fg = {CVAR_SAVE, "sbar_alpha_fg", "1", "opacity value of the statusbar weapon/item icons and numbers"};
 
-cvar_t	cl_deathscoreboard = {0, "cl_deathscoreboard", "1"};
+cvar_t cl_deathscoreboard = {0, "cl_deathscoreboard", "1", "shows scoreboard (+showscores) while dead"};
 
 void Sbar_MiniDeathmatchOverlay (int x, int y);
 void Sbar_DeathmatchOverlay (void);
@@ -347,8 +347,8 @@ void sbar_newmap(void)
 
 void Sbar_Init (void)
 {
-	Cmd_AddCommand ("+showscores", Sbar_ShowScores);
-	Cmd_AddCommand ("-showscores", Sbar_DontShowScores);
+	Cmd_AddCommand ("+showscores", Sbar_ShowScores, "show scoreboard");
+	Cmd_AddCommand ("-showscores", Sbar_DontShowScores, "hide scoreboard");
 	Cvar_RegisterVariable (&showfps);
 	Cvar_RegisterVariable (&showtime);
 	Cvar_RegisterVariable (&showtime_format);

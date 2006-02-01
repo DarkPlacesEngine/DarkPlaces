@@ -22,12 +22,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "image.h"
 #include "r_shadow.h"
 
-cvar_t r_skeletal_debugbone = {0, "r_skeletal_debugbone", "-1"};
-cvar_t r_skeletal_debugbonecomponent = {0, "r_skeletal_debugbonecomponent", "3"};
-cvar_t r_skeletal_debugbonevalue = {0, "r_skeletal_debugbonevalue", "100"};
-cvar_t r_skeletal_debugtranslatex = {0, "r_skeletal_debugtranslatex", "1"};
-cvar_t r_skeletal_debugtranslatey = {0, "r_skeletal_debugtranslatey", "1"};
-cvar_t r_skeletal_debugtranslatez = {0, "r_skeletal_debugtranslatez", "1"};
+cvar_t r_skeletal_debugbone = {0, "r_skeletal_debugbone", "-1", "development cvar for testing skeletal model code"};
+cvar_t r_skeletal_debugbonecomponent = {0, "r_skeletal_debugbonecomponent", "3", "development cvar for testing skeletal model code"};
+cvar_t r_skeletal_debugbonevalue = {0, "r_skeletal_debugbonevalue", "100", "development cvar for testing skeletal model code"};
+cvar_t r_skeletal_debugtranslatex = {0, "r_skeletal_debugtranslatex", "1", "development cvar for testing skeletal model code"};
+cvar_t r_skeletal_debugtranslatey = {0, "r_skeletal_debugtranslatey", "1", "development cvar for testing skeletal model code"};
+cvar_t r_skeletal_debugtranslatez = {0, "r_skeletal_debugtranslatez", "1", "development cvar for testing skeletal model code"};
 
 void Mod_AliasInit (void)
 {

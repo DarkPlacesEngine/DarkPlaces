@@ -40,7 +40,7 @@ void CSSV_World_Init(void)
 {
 	Cvar_RegisterVariable(&sv_debugmove);
 	Cvar_RegisterVariable(&sv_areagrid_mingridsize);
-	Cmd_AddCommand("cssv_areastats", CSSV_AreaStats_f);
+	Cmd_AddCommand("cssv_areastats", CSSV_AreaStats_f, "prints information on culling grid system");
 	Collision_Init();
 }
 

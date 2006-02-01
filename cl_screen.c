@@ -5,32 +5,32 @@
 #include "cl_collision.h"
 #include "csprogs.h"
 
-cvar_t scr_viewsize = {CVAR_SAVE, "viewsize","100"};
-cvar_t scr_fov = {CVAR_SAVE, "fov","90"};	// 1 - 170
-cvar_t scr_conspeed = {CVAR_SAVE, "scr_conspeed","900"}; // LordHavoc: quake used 300
-cvar_t scr_conalpha = {CVAR_SAVE, "scr_conalpha", "1"};
-cvar_t scr_conbrightness = {CVAR_SAVE, "scr_conbrightness", "0.2"};
-cvar_t scr_conforcewhiledisconnected = {CVAR_SAVE, "scr_conforcewhiledisconnected", "1"};
-cvar_t scr_centertime = {0, "scr_centertime","2"};
-cvar_t scr_showram = {CVAR_SAVE, "showram","1"};
-cvar_t scr_showturtle = {CVAR_SAVE, "showturtle","0"};
-cvar_t scr_showpause = {CVAR_SAVE, "showpause","1"};
-cvar_t scr_showbrand = {0, "showbrand","0"};
-cvar_t scr_printspeed = {0, "scr_printspeed","8"};
-cvar_t vid_conwidth = {CVAR_SAVE, "vid_conwidth", "640"};
-cvar_t vid_conheight = {CVAR_SAVE, "vid_conheight", "480"};
-cvar_t vid_pixelheight = {CVAR_SAVE, "vid_pixelheight", "1"};
-cvar_t scr_screenshot_jpeg = {CVAR_SAVE, "scr_screenshot_jpeg","1"};
-cvar_t scr_screenshot_jpeg_quality = {CVAR_SAVE, "scr_screenshot_jpeg_quality","0.9"};
-cvar_t scr_screenshot_gamma = {CVAR_SAVE, "scr_screenshot_gamma","2.2"};
+cvar_t scr_viewsize = {CVAR_SAVE, "viewsize","100", "how large the view should be, 110 disables inventory bar, 120 disables status bar"};
+cvar_t scr_fov = {CVAR_SAVE, "fov","90", "field of vision, 1-170 degrees, default 90, some players use 110-130"};	// 1 - 170
+cvar_t scr_conspeed = {CVAR_SAVE, "scr_conspeed","900", "speed of console open/close"}; // LordHavoc: quake used 300
+cvar_t scr_conalpha = {CVAR_SAVE, "scr_conalpha", "1", "opacity of console background"};
+cvar_t scr_conbrightness = {CVAR_SAVE, "scr_conbrightness", "0.2", "brightness of console background (0 = black, 1 = image)"};
+cvar_t scr_conforcewhiledisconnected = {CVAR_SAVE, "scr_conforcewhiledisconnected", "1", "forces fullscreen console while disconnected"};
+cvar_t scr_centertime = {0, "scr_centertime","2", "how long centerprint messages show"};
+cvar_t scr_showram = {CVAR_SAVE, "showram","1", "show ram icon if low on surface cache memory (not used)"};
+cvar_t scr_showturtle = {CVAR_SAVE, "showturtle","0", "show turtle icon when framerate is too low (not used)"};
+cvar_t scr_showpause = {CVAR_SAVE, "showpause","1" "show pause icon when game is paused"};
+cvar_t scr_showbrand = {0, "showbrand","0", "shows gfx/brand.tga in a corner of the screen (different values select different positions, including centered)"};
+cvar_t scr_printspeed = {0, "scr_printspeed","8", "speed of intermission printing (episode end texts)"};
+cvar_t vid_conwidth = {CVAR_SAVE, "vid_conwidth", "640" "virtual width of 2D graphics system"};
+cvar_t vid_conheight = {CVAR_SAVE, "vid_conheight", "480", "virtual height of 2D graphics system"};
+cvar_t vid_pixelheight = {CVAR_SAVE, "vid_pixelheight", "1", "adjusts vertical field of vision to account for non-square pixels (1280x1024 on a CRT monitor for example)"};
+cvar_t scr_screenshot_jpeg = {CVAR_SAVE, "scr_screenshot_jpeg","1", "save jpeg instead of targa"};
+cvar_t scr_screenshot_jpeg_quality = {CVAR_SAVE, "scr_screenshot_jpeg_quality","0.9", "image quality of saved jpeg"};
+cvar_t scr_screenshot_gamma = {CVAR_SAVE, "scr_screenshot_gamma","2.2", "gamma correction on saved screenshots and videos, 1.0 saves unmodified images"};
 // scr_screenshot_name is defined in fs.c
-cvar_t cl_capturevideo = {0, "cl_capturevideo", "0"};
-cvar_t cl_capturevideo_sound = {0, "cl_capturevideo_sound", "0"};
-cvar_t cl_capturevideo_fps = {0, "cl_capturevideo_fps", "30"};
-cvar_t cl_capturevideo_rawrgb = {0, "cl_capturevideo_rawrgb", "0"};
-cvar_t cl_capturevideo_rawyv12 = {0, "cl_capturevideo_rawyv12", "0"};
-cvar_t r_textshadow = {0, "r_textshadow", "0"};
-cvar_t r_letterbox = {0, "r_letterbox", "0"};
+cvar_t cl_capturevideo = {0, "cl_capturevideo", "0", "enables saving of video to a file or files (default is .tga files, if scr_screenshot_jpeg is on it saves .jpg files (VERY SLOW), if any rawrgb or rawyv12 are on it saves those formats instead, note that scr_screenshot_gamma affects the brightness of the output)"};
+cvar_t cl_capturevideo_sound = {0, "cl_capturevideo_sound", "0", "enables saving of sound to a .wav file (warning: this requires exact sync, if your hard drive can't keep up it will abort, if your graphics can't keep up it will save duplicate frames to maintain sound sync)"};
+cvar_t cl_capturevideo_fps = {0, "cl_capturevideo_fps", "30", "how many frames per second to save (29.97 for NTSC, 30 for typical PC video, 15 can be useful)"};
+cvar_t cl_capturevideo_rawrgb = {0, "cl_capturevideo_rawrgb", "0", "saves a single .rgb video file containing raw RGB images (you'll need special processing tools to encode this to something more useful)"};
+cvar_t cl_capturevideo_rawyv12 = {0, "cl_capturevideo_rawyv12", "0", "saves a single .yv12 video file containing raw YV12 (luma plane, then half resolution chroma planes, first chroma blue then chroma red, this is the format used internally by many encoders, some tools can read it directly)"};
+cvar_t r_textshadow = {0, "r_textshadow", "0" "draws a shadow on all text to improve readability"};
+cvar_t r_letterbox = {0, "r_letterbox", "0", "reduces vertical height of view to simulate a letterboxed movie effect (can be used by mods for cutscenes)"};
 
 int jpeg_supported = false;
 
@@ -618,10 +618,10 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&r_textshadow);
 	Cvar_RegisterVariable (&r_letterbox);
 
-	Cmd_AddCommand ("sizeup",SCR_SizeUp_f);
-	Cmd_AddCommand ("sizedown",SCR_SizeDown_f);
-	Cmd_AddCommand ("screenshot",SCR_ScreenShot_f);
-	Cmd_AddCommand ("envmap", R_Envmap_f);
+	Cmd_AddCommand ("sizeup",SCR_SizeUp_f, "increase view size (increases viewsize cvar)");
+	Cmd_AddCommand ("sizedown",SCR_SizeDown_f, "decrease view size (decreases viewsize cvar)");
+	Cmd_AddCommand ("screenshot",SCR_ScreenShot_f, "takes a screenshot of the next rendered frame");
+	Cmd_AddCommand ("envmap", R_Envmap_f, "render a cubemap (skybox) of the current scene");
 
 	scr_initialized = true;
 }

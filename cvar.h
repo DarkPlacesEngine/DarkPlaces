@@ -109,6 +109,7 @@ typedef struct cvar_s
 	char *name;
 
 	char *string;
+	char *description;
 	int integer;
 	float value;
 	float vector[3];
@@ -153,6 +154,8 @@ const char *Cvar_VariableDefString (const char *var_name);
 const char *Cvar_CompleteVariable (const char *partial);
 // attempts to match a partial variable name for command line completion
 // returns NULL if nothing fits
+
+void Cvar_CompleteCvarPrint (const char *partial);
 
 qboolean Cvar_Command (void);
 // called by Cmd_ExecuteString when Cmd_Argv(0) doesn't match a known

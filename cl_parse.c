@@ -97,8 +97,8 @@ char *svc_strings[128] =
 
 //=============================================================================
 
-cvar_t demo_nehahra = {0, "demo_nehahra", "0"};
-cvar_t developer_networkentities = {0, "developer_networkentities", "0"};
+cvar_t demo_nehahra = {0, "demo_nehahra", "0", "reads all quake demos as nehahra movie protocol"};
+cvar_t developer_networkentities = {0, "developer_networkentities", "0", "prints received entities, value is 0-4 (higher for more info)"};
 
 /*
 ==================

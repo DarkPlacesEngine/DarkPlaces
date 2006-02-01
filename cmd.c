@@ -386,6 +386,7 @@ typedef struct cmd_function_s
 {
 	struct cmd_function_s *next;
 	const char *name;
+	const char *description;
 	xcommand_t function;
 	qboolean csqcfunc;
 } cmd_function_t;
@@ -530,7 +531,7 @@ static void Cmd_List_f (void)
 	{
 		if (partial && strncmp(partial, cmd->name, len))
 			continue;
-		Con_Printf("%s\n", cmd->name);
+		Con_Printf("%s : %s\n", cmd->name, cmd->description);
 		count++;
 	}
 
@@ -559,17 +560,19 @@ void Cmd_Init_Commands (void)
 //
 // register our commands
 //
-	Cmd_AddCommand ("stuffcmds",Cmd_StuffCmds_f);
-	Cmd_AddCommand ("exec",Cmd_Exec_f);
-	Cmd_AddCommand ("echo",Cmd_Echo_f);
-	Cmd_AddCommand ("alias",Cmd_Alias_f);
-	Cmd_AddCommand ("cmd", Cmd_ForwardToServer);
-	Cmd_AddCommand ("wait", Cmd_Wait_f);
-	Cmd_AddCommand ("cmdlist", Cmd_List_f); 	// Added/Modified by EvilTypeGuy eviltypeguy@qeradiant.com
-	Cmd_AddCommand ("cvarlist", Cvar_List_f);	// 2000-01-09 CmdList, CvarList commands
-												// By Matthias "Maddes" Buecher
-	Cmd_AddCommand ("set", Cvar_Set_f);
-	Cmd_AddCommand ("seta", Cvar_SetA_f);
+	Cmd_AddCommand ("stuffcmds",Cmd_StuffCmds_f, "execute commandline parameters (must be present in quake.rc script)");
+	Cmd_AddCommand ("exec",Cmd_Exec_f, "execute a script file");
+	Cmd_AddCommand ("echo",Cmd_Echo_f, "print a message to the console (useful in scripts)");
+	Cmd_AddCommand ("alias",Cmd_Alias_f, "create a script function (parameters are passed in as $1 through $9, and $* for all parameters)");
+	Cmd_AddCommand ("cmd", Cmd_ForwardToServer, "send a console commandline to the server (used by some mods)");
+	Cmd_AddCommand ("wait", Cmd_Wait_f, "make script execution wait for next rendered frame");
+	Cmd_AddCommand ("set", Cvar_Set_f, "create or change the value of a console variable");
+	Cmd_AddCommand ("seta", Cvar_SetA_f, "create or change the value of a console variable that will be saved to config.cfg");
+
+	// 2000-01-09 CmdList, CvarList commands By Matthias "Maddes" Buecher
+	// Added/Modified by EvilTypeGuy eviltypeguy@qeradiant.com
+	Cmd_AddCommand ("cmdlist", Cmd_List_f, "lists all console commands beginning with the specified prefix");
+	Cmd_AddCommand ("cvarlist", Cvar_List_f, "lists all console variables beginning with the specified prefix");
 }
 
 /*
@@ -680,7 +683,7 @@ static void Cmd_TokenizeString (const char *text)
 Cmd_AddCommand
 ============
 */
-void Cmd_AddCommand (const char *cmd_name, xcommand_t function)
+void Cmd_AddCommand (const char *cmd_name, xcommand_t function, const char *description)
 {
 	cmd_function_t *cmd;
 	cmd_function_t *prev, *current;
@@ -713,6 +716,7 @@ void Cmd_AddCommand (const char *cmd_name, xcommand_t function)
 	cmd = (cmd_function_t *)Mem_Alloc(cmd_mempool, sizeof(cmd_function_t));
 	cmd->name = cmd_name;
 	cmd->function = function;
+	cmd->description = description;
 	if(!function)			//[515]: csqc
 		cmd->csqcfunc = true;
 	cmd->next = cmd_functions;
@@ -762,7 +766,7 @@ const char *Cmd_CompleteCommand (const char *partial)
 
 // check functions
 	for (cmd = cmd_functions; cmd; cmd = cmd->next)
-		if (!strncmp(partial, cmd->name, len))
+		if (!strncasecmp(partial, cmd->name, len))
 			return cmd->name;
 
 	return NULL;
@@ -825,6 +829,17 @@ const char **Cmd_CompleteBuildList (const char *partial)
 	return buf;
 }
 
+// written by LordHavoc
+void Cmd_CompleteCommandPrint (const char *partial)
+{
+	cmd_function_t *cmd;
+	size_t len = strlen(partial);
+	// Loop through the command list and print all matches
+	for (cmd = cmd_functions; cmd; cmd = cmd->next)
+		if (!strncasecmp(partial, cmd->name, len))
+			Con_Printf("%s : %s\n", cmd->name, cmd->description);
+}
+
 /*
 	Cmd_CompleteAlias
 
@@ -851,6 +866,18 @@ const char *Cmd_CompleteAlias (const char *partial)
 
 	return NULL;
 }
+
+// written by LordHavoc
+void Cmd_CompleteAliasPrint (const char *partial)
+{
+	cmdalias_t *alias;
+	size_t len = strlen(partial);
+	// Loop through the alias list and print all matches
+	for (alias = cmd_alias; alias; alias = alias->next)
+		if (!strncasecmp(partial, alias->name, len))
+			Con_Printf("%s : %s\n", alias->name, alias->value);
+}
+
 
 /*
 	Cmd_CompleteAliasCountPossible

@@ -186,25 +186,25 @@ static PDWORD	pdwRawValue[JOY_MAX_AXES];
 // each time.  this avoids any problems with getting back to a default usage
 // or when changing from one controller to another.  this way at least something
 // works.
-static cvar_t	in_joystick = {CVAR_SAVE, "joystick","0"};
-static cvar_t	joy_name = {0, "joyname", "joystick"};
-static cvar_t	joy_advanced = {0, "joyadvanced", "0"};
-static cvar_t	joy_advaxisx = {0, "joyadvaxisx", "0"};
-static cvar_t	joy_advaxisy = {0, "joyadvaxisy", "0"};
-static cvar_t	joy_advaxisz = {0, "joyadvaxisz", "0"};
-static cvar_t	joy_advaxisr = {0, "joyadvaxisr", "0"};
-static cvar_t	joy_advaxisu = {0, "joyadvaxisu", "0"};
-static cvar_t	joy_advaxisv = {0, "joyadvaxisv", "0"};
-static cvar_t	joy_forwardthreshold = {0, "joyforwardthreshold", "0.15"};
-static cvar_t	joy_sidethreshold = {0, "joysidethreshold", "0.15"};
-static cvar_t	joy_pitchthreshold = {0, "joypitchthreshold", "0.15"};
-static cvar_t	joy_yawthreshold = {0, "joyyawthreshold", "0.15"};
-static cvar_t	joy_forwardsensitivity = {0, "joyforwardsensitivity", "-1.0"};
-static cvar_t	joy_sidesensitivity = {0, "joysidesensitivity", "-1.0"};
-static cvar_t	joy_pitchsensitivity = {0, "joypitchsensitivity", "1.0"};
-static cvar_t	joy_yawsensitivity = {0, "joyyawsensitivity", "-1.0"};
-static cvar_t	joy_wwhack1 = {0, "joywwhack1", "0.0"};
-static cvar_t	joy_wwhack2 = {0, "joywwhack2", "0.0"};
+static cvar_t in_joystick = {CVAR_SAVE, "joystick","0", "enables joysticks"};
+static cvar_t joy_name = {0, "joyname", "joystick", "name of joystick to use (informational only, used only by joyadvanced 1 mode)"};
+static cvar_t joy_advanced = {0, "joyadvanced", "0", "use more than 2 axis joysticks (configuring this is very technical)"};
+static cvar_t joy_advaxisx = {0, "joyadvaxisx", "0", "axis mapping for joyadvanced 1 mode"};
+static cvar_t joy_advaxisy = {0, "joyadvaxisy", "0", "axis mapping for joyadvanced 1 mode"};
+static cvar_t joy_advaxisz = {0, "joyadvaxisz", "0", "axis mapping for joyadvanced 1 mode"};
+static cvar_t joy_advaxisr = {0, "joyadvaxisr", "0", "axis mapping for joyadvanced 1 mode"};
+static cvar_t joy_advaxisu = {0, "joyadvaxisu", "0", "axis mapping for joyadvanced 1 mode"};
+static cvar_t joy_advaxisv = {0, "joyadvaxisv", "0", "axis mapping for joyadvanced 1 mode"};
+static cvar_t joy_forwardthreshold = {0, "joyforwardthreshold", "0.15", "minimum joystick movement necessary to move forward"};
+static cvar_t joy_sidethreshold = {0, "joysidethreshold", "0.15", "minimum joystick movement necessary to move sideways (strafing)"};
+static cvar_t joy_pitchthreshold = {0, "joypitchthreshold", "0.15", "minimum joystick movement necessary to look up/down"};
+static cvar_t joy_yawthreshold = {0, "joyyawthreshold", "0.15", "minimum joystick movement necessary to turn left/right"};
+static cvar_t joy_forwardsensitivity = {0, "joyforwardsensitivity", "-1.0", "how fast the joystick moves forward"};
+static cvar_t joy_sidesensitivity = {0, "joysidesensitivity", "-1.0", "how fast the joystick moves sideways (strafing)"};
+static cvar_t joy_pitchsensitivity = {0, "joypitchsensitivity", "1.0", "how fast the joystick looks up/down"};
+static cvar_t joy_yawsensitivity = {0, "joyyawsensitivity", "-1.0", "how fast the joystick turns left/right"};
+static cvar_t joy_wwhack1 = {0, "joywwhack1", "0.0", "special hack for wingman warrior"};
+static cvar_t joy_wwhack2 = {0, "joywwhack2", "0.0", "special hack for wingman warrior"};
 
 static qboolean	joy_avail, joy_advancedinit, joy_haspov;
 static DWORD		joy_oldbuttonstate, joy_oldpovstate;
@@ -1784,7 +1784,7 @@ static void IN_Init(void)
 	Cvar_RegisterVariable (&joy_yawsensitivity);
 	Cvar_RegisterVariable (&joy_wwhack1);
 	Cvar_RegisterVariable (&joy_wwhack2);
-	Cmd_AddCommand ("joyadvancedupdate", Joy_AdvancedUpdate_f);
+	Cmd_AddCommand ("joyadvancedupdate", Joy_AdvancedUpdate_f, "applies current joyadv* cvar settings to the joystick driver");
 }
 
 static void IN_Shutdown(void)
