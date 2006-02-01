@@ -17,7 +17,7 @@ rendermodule_t rendermodule[MAXRENDERMODULES];
 
 void R_Modules_Init(void)
 {
-	Cmd_AddCommand("r_restart", R_Modules_Restart);
+	Cmd_AddCommand("r_restart", R_Modules_Restart, "restarts renderer");
 }
 
 void R_RegisterModule(char *name, void(*start)(void), void(*shutdown)(void), void(*newmap)(void))

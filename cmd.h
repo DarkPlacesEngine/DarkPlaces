@@ -86,7 +86,7 @@ extern cmd_source_t cmd_source;
 void Cmd_Init (void);
 void Cmd_Shutdown (void);
 
-void Cmd_AddCommand (const char *cmd_name, xcommand_t function);
+void Cmd_AddCommand (const char *cmd_name, xcommand_t function, const char *description);
 // called by the init functions of other parts of the program to
 // register commands and functions to call for them.
 // The cmd_name is referenced later, so it should not be in temp memory
@@ -106,7 +106,11 @@ int Cmd_CompleteCountPossible (const char *partial);
 
 const char **Cmd_CompleteBuildList (const char *partial);
 
+void Cmd_CompleteCommandPrint (const char *partial);
+
 const char *Cmd_CompleteAlias (const char *partial);
+
+void Cmd_CompleteAliasPrint (const char *partial);
 
 // Enhanced console completion by Fett erich@heintz.com
 

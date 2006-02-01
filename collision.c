@@ -5,11 +5,11 @@
 #define COLLISION_SNAPSCALE (8.0f)
 #define COLLISION_SNAP (1.0f / COLLISION_SNAPSCALE)
 
-cvar_t collision_impactnudge = {0, "collision_impactnudge", "0.03125"};
-cvar_t collision_startnudge = {0, "collision_startnudge", "0"};
-cvar_t collision_endnudge = {0, "collision_endnudge", "0"};
-cvar_t collision_enternudge = {0, "collision_enternudge", "0"};
-cvar_t collision_leavenudge = {0, "collision_leavenudge", "0"};
+cvar_t collision_impactnudge = {0, "collision_impactnudge", "0.03125", "how much to back off from the impact"};
+cvar_t collision_startnudge = {0, "collision_startnudge", "0", "how much to bias collision trace start"};
+cvar_t collision_endnudge = {0, "collision_endnudge", "0", "how much to bias collision trace end"};
+cvar_t collision_enternudge = {0, "collision_enternudge", "0", "how much to bias collision entry fraction"};
+cvar_t collision_leavenudge = {0, "collision_leavenudge", "0", "how much to bias collision exit fraction"};
 
 void Collision_Init (void)
 {

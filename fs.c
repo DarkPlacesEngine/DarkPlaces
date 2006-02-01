@@ -273,7 +273,7 @@ char fs_basedir[MAX_OSPATH];
 
 qboolean fs_modified;   // set true if using non-id files
 
-cvar_t scr_screenshot_name = {0, "scr_screenshot_name","dp"};
+cvar_t scr_screenshot_name = {0, "scr_screenshot_name","dp", "prefix name for saved screenshots (changes based on -game commandline, as well as which game mode is running)"};
 
 
 /*
@@ -1058,9 +1058,9 @@ void FS_Init_Commands(void)
 {
 	Cvar_RegisterVariable (&scr_screenshot_name);
 
-	Cmd_AddCommand ("path", FS_Path_f);
-	Cmd_AddCommand ("dir", FS_Dir_f);
-	Cmd_AddCommand ("ls", FS_Ls_f);
+	Cmd_AddCommand ("path", FS_Path_f, "print searchpath (game directories and archives)");
+	Cmd_AddCommand ("dir", FS_Dir_f, "list files in searchpath matching an * filename pattern, one per line");
+	Cmd_AddCommand ("ls", FS_Ls_f, "list files in searchpath matching an * filename pattern, multiple per line");
 
 	// set the default screenshot name to either the mod name or the
 	// gamemode screenshot name

@@ -1424,10 +1424,10 @@ void VM_CL_registercmd (void)
 	{
 		t = Z_Malloc(strlen(PRVM_G_STRING(OFS_PARM0))+1);
 		strcpy(t, PRVM_G_STRING(OFS_PARM0));
-		Cmd_AddCommand(t, NULL);
+		Cmd_AddCommand(t, NULL, "console command created by QuakeC");
 	}
 	else
-		Cmd_AddCommand(PRVM_G_STRING(OFS_PARM0), NULL);
+		Cmd_AddCommand(PRVM_G_STRING(OFS_PARM0), NULL, "console command created by QuakeC");
 
 }
 

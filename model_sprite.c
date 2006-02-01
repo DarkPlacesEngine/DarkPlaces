@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "image.h"
 
-cvar_t r_mipsprites = {CVAR_SAVE, "r_mipsprites", "1"};
+cvar_t r_mipsprites = {CVAR_SAVE, "r_mipsprites", "1", "mipmaps skins (so they become blurrier in the distance), unlike skins the sprites do not have strange border colors"};
 
 /*
 ===============

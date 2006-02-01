@@ -3,9 +3,9 @@
 #include "image.h"
 
 // FIXME: fix skybox after vid_restart
-cvar_t r_sky = {CVAR_SAVE, "r_sky", "1"};
-cvar_t r_skyscroll1 = {CVAR_SAVE, "r_skyscroll1", "1"};
-cvar_t r_skyscroll2 = {CVAR_SAVE, "r_skyscroll2", "2"};
+cvar_t r_sky = {CVAR_SAVE, "r_sky", "1", "enables sky rendering (black otherwise)"};
+cvar_t r_skyscroll1 = {CVAR_SAVE, "r_skyscroll1", "1", "speed at which upper clouds layer scrolls in quake sky"};
+cvar_t r_skyscroll2 = {CVAR_SAVE, "r_skyscroll2", "2", "speed at which lower clouds layer scrolls in quake sky"};
 int skyrendernow;
 int skyrendermasked;
 
@@ -463,7 +463,7 @@ static void r_sky_newmap(void)
 
 void R_Sky_Init(void)
 {
-	Cmd_AddCommand ("loadsky", &LoadSky_f);
+	Cmd_AddCommand ("loadsky", &LoadSky_f, "load a skybox by basename (for example loadsky mtnsun_ loads mtnsun_ft.tga and so on)");
 	Cvar_RegisterVariable (&r_sky);
 	Cvar_RegisterVariable (&r_skyscroll1);
 	Cvar_RegisterVariable (&r_skyscroll2);

@@ -21,8 +21,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-cvar_t developer_memory = {0, "developer_memory", "0"};
-cvar_t developer_memorydebug = {0, "developer_memorydebug", "0"};
+cvar_t developer_memory = {0, "developer_memory", "0", "prints debugging information about memory allocations"};
+cvar_t developer_memorydebug = {0, "developer_memorydebug", "0", "enables memory corruption checks (very slow)"};
 
 mempool_t *poolchain = NULL;
 
@@ -474,8 +474,8 @@ void Memory_Shutdown (void)
 
 void Memory_Init_Commands (void)
 {
-	Cmd_AddCommand ("memstats", MemStats_f);
-	Cmd_AddCommand ("memlist", MemList_f);
+	Cmd_AddCommand ("memstats", MemStats_f, "prints memory system statistics");
+	Cmd_AddCommand ("memlist", MemList_f, "prints memory pool information (and individual allocations if used as memlist all)");
 	Cvar_RegisterVariable (&developer_memory);
 	Cvar_RegisterVariable (&developer_memorydebug);
 }

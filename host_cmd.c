@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 
 int current_skill;
-cvar_t sv_cheats = {0, "sv_cheats", "0"};
+cvar_t sv_cheats = {0, "sv_cheats", "0", "enables cheat commands in any game, and cheat impulses in dpmod"};
 qboolean allowcheats = false;
 
 /*
@@ -725,7 +725,7 @@ void Host_Loadgame_f (void)
 Host_Name_f
 ======================
 */
-cvar_t cl_name = {CVAR_SAVE, "_cl_name", "player"};
+cvar_t cl_name = {CVAR_SAVE, "_cl_name", "player", "internal storage cvar for current player name (changed by name command)"};
 void Host_Name_f (void)
 {
 	int i, j;
@@ -783,7 +783,7 @@ void Host_Name_f (void)
 Host_Playermodel_f
 ======================
 */
-cvar_t cl_playermodel = {CVAR_SAVE, "_cl_playermodel", ""};
+cvar_t cl_playermodel = {CVAR_SAVE, "_cl_playermodel", "", "internal storage cvar for current player model in Nexuiz (changed by playermodel command)"};
 // the old cl_playermodel in cl_main has been renamed to __cl_playermodel
 void Host_Playermodel_f (void)
 {
@@ -843,7 +843,7 @@ void Host_Playermodel_f (void)
 Host_Playerskin_f
 ======================
 */
-cvar_t cl_playerskin = {CVAR_SAVE, "_cl_playerskin", ""};
+cvar_t cl_playerskin = {CVAR_SAVE, "_cl_playerskin", "", "internal storage cvar for current player skin in Nexuiz (changed by playerskin command)"};
 void Host_Playerskin_f (void)
 {
 	int i, j;
@@ -1048,7 +1048,7 @@ void Host_Tell_f(void)
 Host_Color_f
 ==================
 */
-cvar_t cl_color = {CVAR_SAVE, "_cl_color", "0"};
+cvar_t cl_color = {CVAR_SAVE, "_cl_color", "0", "internal storage cvar for current player colors (changed by color command)"};
 void Host_Color_f(void)
 {
 	int		top, bottom;
@@ -1119,7 +1119,7 @@ void Host_Color_f(void)
 	}
 }
 
-cvar_t cl_rate = {CVAR_SAVE, "_cl_rate", "10000"};
+cvar_t cl_rate = {CVAR_SAVE, "_cl_rate", "10000", "internal storage cvar for current rate (changed by rate command)"};
 void Host_Rate_f(void)
 {
 	int rate;
@@ -1201,7 +1201,7 @@ LordHavoc: only supported for Nehahra, I personally think this is dumb, but Mind
 LordHavoc: correction, Mindcrime will be removing pmodel in the future, but it's still stuck here for compatibility.
 ======================
 */
-cvar_t cl_pmodel = {CVAR_SAVE, "_cl_pmodel", "0"};
+cvar_t cl_pmodel = {CVAR_SAVE, "_cl_pmodel", "0", "internal storage cvar for current player model number in nehahra (changed by pmodel command)"};
 static void Host_PModel_f (void)
 {
 	int i;
@@ -1940,73 +1940,73 @@ Host_InitCommands
 */
 void Host_InitCommands (void)
 {
-	Cmd_AddCommand ("status", Host_Status_f);
-	Cmd_AddCommand ("quit", Host_Quit_f);
+	Cmd_AddCommand ("status", Host_Status_f, "print server status information");
+	Cmd_AddCommand ("quit", Host_Quit_f, "quit the game");
 	if (gamemode == GAME_NEHAHRA)
 	{
-		Cmd_AddCommand ("max", Host_God_f);
-		Cmd_AddCommand ("monster", Host_Notarget_f);
-		Cmd_AddCommand ("scrag", Host_Fly_f);
-		Cmd_AddCommand ("wraith", Host_Noclip_f);
-		Cmd_AddCommand ("gimme", Host_Give_f);
+		Cmd_AddCommand ("max", Host_God_f, "god mode (invulnerability)");
+		Cmd_AddCommand ("monster", Host_Notarget_f, "notarget mode (monsters do not see you)");
+		Cmd_AddCommand ("scrag", Host_Fly_f, "fly mode (flight)");
+		Cmd_AddCommand ("wraith", Host_Noclip_f, "noclip mode (flight without collisions, move through walls)");
+		Cmd_AddCommand ("gimme", Host_Give_f, "alter inventory");
 	}
 	else
 	{
-		Cmd_AddCommand ("god", Host_God_f);
-		Cmd_AddCommand ("notarget", Host_Notarget_f);
-		Cmd_AddCommand ("fly", Host_Fly_f);
-		Cmd_AddCommand ("noclip", Host_Noclip_f);
-		Cmd_AddCommand ("give", Host_Give_f);
+		Cmd_AddCommand ("god", Host_God_f, "god mode (invulnerability)");
+		Cmd_AddCommand ("notarget", Host_Notarget_f, "notarget mode (monsters do not see you)");
+		Cmd_AddCommand ("fly", Host_Fly_f, "fly mode (flight)");
+		Cmd_AddCommand ("noclip", Host_Noclip_f, "noclip mode (flight without collisions, move through walls)");
+		Cmd_AddCommand ("give", Host_Give_f, "alter inventory");
 	}
-	Cmd_AddCommand ("map", Host_Map_f);
-	Cmd_AddCommand ("restart", Host_Restart_f);
-	Cmd_AddCommand ("changelevel", Host_Changelevel_f);
-	Cmd_AddCommand ("connect", Host_Connect_f);
-	Cmd_AddCommand ("reconnect", Host_Reconnect_f);
-	Cmd_AddCommand ("version", Host_Version_f);
-	Cmd_AddCommand ("say", Host_Say_f);
-	Cmd_AddCommand ("say_team", Host_Say_Team_f);
-	Cmd_AddCommand ("tell", Host_Tell_f);
-	Cmd_AddCommand ("kill", Host_Kill_f);
-	Cmd_AddCommand ("pause", Host_Pause_f);
-	Cmd_AddCommand ("kick", Host_Kick_f);
-	Cmd_AddCommand ("ping", Host_Ping_f);
-	Cmd_AddCommand ("load", Host_Loadgame_f);
-	Cmd_AddCommand ("save", Host_Savegame_f);
+	Cmd_AddCommand ("map", Host_Map_f, "kick everyone off the server and start a new level");
+	Cmd_AddCommand ("restart", Host_Restart_f, "restart current level");
+	Cmd_AddCommand ("changelevel", Host_Changelevel_f, "change to another level, bringing along all connected clients");
+	Cmd_AddCommand ("connect", Host_Connect_f, "connect to a server by IP address or hostname");
+	Cmd_AddCommand ("reconnect", Host_Reconnect_f, "reset signon level in preparation for a new level (do not use)");
+	Cmd_AddCommand ("version", Host_Version_f, "print engine version");
+	Cmd_AddCommand ("say", Host_Say_f, "send a chat message to everyone on the server");
+	Cmd_AddCommand ("say_team", Host_Say_Team_f, "send a chat message to your team on the server");
+	Cmd_AddCommand ("tell", Host_Tell_f, "send a chat message to only one person on the server");
+	Cmd_AddCommand ("kill", Host_Kill_f, "die instantly");
+	Cmd_AddCommand ("pause", Host_Pause_f, "pause the game (if the server allows pausing)");
+	Cmd_AddCommand ("kick", Host_Kick_f, "kick a player off the server by number or name");
+	Cmd_AddCommand ("ping", Host_Ping_f, "print ping times of all players on the server");
+	Cmd_AddCommand ("load", Host_Loadgame_f, "load a saved game file");
+	Cmd_AddCommand ("save", Host_Savegame_f, "save the game to a file");
 
-	Cmd_AddCommand ("startdemos", Host_Startdemos_f);
-	Cmd_AddCommand ("demos", Host_Demos_f);
-	Cmd_AddCommand ("stopdemo", Host_Stopdemo_f);
+	Cmd_AddCommand ("startdemos", Host_Startdemos_f, "start playing back the selected demos sequentially (used at end of startup script)");
+	Cmd_AddCommand ("demos", Host_Demos_f, "restart looping demos defined by the last startdemos command");
+	Cmd_AddCommand ("stopdemo", Host_Stopdemo_f, "stop playing or recording demo (like stop command) and return to looping demos");
 
-	Cmd_AddCommand ("viewmodel", Host_Viewmodel_f);
-	Cmd_AddCommand ("viewframe", Host_Viewframe_f);
-	Cmd_AddCommand ("viewnext", Host_Viewnext_f);
-	Cmd_AddCommand ("viewprev", Host_Viewprev_f);
+	Cmd_AddCommand ("viewmodel", Host_Viewmodel_f, "change model of viewthing entity in current level");
+	Cmd_AddCommand ("viewframe", Host_Viewframe_f, "change animation frame of viewthing entity in current level");
+	Cmd_AddCommand ("viewnext", Host_Viewnext_f, "change to next animation frame of viewthing entity in current level");
+	Cmd_AddCommand ("viewprev", Host_Viewprev_f, "change to previous animation frame of viewthing entity in current level");
 
 	Cvar_RegisterVariable (&cl_name);
-	Cmd_AddCommand ("name", Host_Name_f);
+	Cmd_AddCommand ("name", Host_Name_f, "change your player name");
 	Cvar_RegisterVariable (&cl_color);
-	Cmd_AddCommand ("color", Host_Color_f);
+	Cmd_AddCommand ("color", Host_Color_f, "change your player shirt and pants colors");
 	Cvar_RegisterVariable (&cl_rate);
-	Cmd_AddCommand ("rate", Host_Rate_f);
+	Cmd_AddCommand ("rate", Host_Rate_f, "change your network connection speed");
 	if (gamemode == GAME_NEHAHRA)
 	{
 		Cvar_RegisterVariable (&cl_pmodel);
-		Cmd_AddCommand ("pmodel", Host_PModel_f);
+		Cmd_AddCommand ("pmodel", Host_PModel_f, "change your player model choice (Nehahra specific)");
 	}
 
 	// BLACK: This isnt game specific anymore (it was GAME_NEXUIZ at first)
 	Cvar_RegisterVariable (&cl_playermodel);
-	Cmd_AddCommand ("playermodel", Host_Playermodel_f);
+	Cmd_AddCommand ("playermodel", Host_Playermodel_f, "change your player model");
 	Cvar_RegisterVariable (&cl_playerskin);
-	Cmd_AddCommand ("playerskin", Host_Playerskin_f);
+	Cmd_AddCommand ("playerskin", Host_Playerskin_f, "change your player skin number");
 
-	Cmd_AddCommand ("prespawn", Host_PreSpawn_f);
-	Cmd_AddCommand ("spawn", Host_Spawn_f);
-	Cmd_AddCommand ("begin", Host_Begin_f);
-	Cmd_AddCommand ("maxplayers", MaxPlayers_f);
+	Cmd_AddCommand ("prespawn", Host_PreSpawn_f, "signon 1 (client acknowledges that server information has been received)");
+	Cmd_AddCommand ("spawn", Host_Spawn_f, "signon 2 (client has sent player information, and is asking server to send scoreboard rankings)");
+	Cmd_AddCommand ("begin", Host_Begin_f, "signon 3 (client asks server to start sending entities, and will go to signon 4 (playing) when the first entity update is received)");
+	Cmd_AddCommand ("maxplayers", MaxPlayers_f, "sets limit on how many players (or bots) may be connected to the server at once");
 
-	Cmd_AddCommand ("sendcvar", Host_SendCvar_f);					// By [515]
+	Cmd_AddCommand ("sendcvar", Host_SendCvar_f, "sends the value of a cvar to the server as a sentcvar command, for use by QuakeC");	// By [515]
 
 	Cvar_RegisterVariable(&sv_cheats);
 }

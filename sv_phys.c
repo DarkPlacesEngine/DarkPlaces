@@ -39,17 +39,17 @@ solid_edge items only clip against bsp models.
 
 */
 
-cvar_t sv_friction = {CVAR_NOTIFY, "sv_friction","4"};
-cvar_t sv_stopspeed = {CVAR_NOTIFY, "sv_stopspeed","100"};
-cvar_t sv_gravity = {CVAR_NOTIFY, "sv_gravity","800"};
-cvar_t sv_maxvelocity = {CVAR_NOTIFY, "sv_maxvelocity","2000"};
-cvar_t sv_nostep = {CVAR_NOTIFY, "sv_nostep","0"};
-cvar_t sv_stepheight = {CVAR_NOTIFY, "sv_stepheight", "18"};
-cvar_t sv_jumpstep = {CVAR_NOTIFY, "sv_jumpstep", "1"};
-cvar_t sv_wallfriction = {CVAR_NOTIFY, "sv_wallfriction", "1"};
-cvar_t sv_newflymove = {CVAR_NOTIFY, "sv_newflymove", "0"};
-cvar_t sv_freezenonclients = {CVAR_NOTIFY, "sv_freezenonclients", "0"};
-cvar_t sv_playerphysicsqc = {CVAR_NOTIFY, "sv_playerphysicsqc", "1"};
+cvar_t sv_friction = {CVAR_NOTIFY, "sv_friction","4", "how fast you slow down"};
+cvar_t sv_stopspeed = {CVAR_NOTIFY, "sv_stopspeed","100", "how fast you come to a complete stop"};
+cvar_t sv_gravity = {CVAR_NOTIFY, "sv_gravity","800", "how fast you fall (512 = roughly earth gravity)"};
+cvar_t sv_maxvelocity = {CVAR_NOTIFY, "sv_maxvelocity","2000", "universal speed limit on all entities"};
+cvar_t sv_nostep = {CVAR_NOTIFY, "sv_nostep","0", "prevents MOVETYPE_STEP entities (monsters) from moving"};
+cvar_t sv_stepheight = {CVAR_NOTIFY, "sv_stepheight", "18", "how high you can step up (TW_SV_STEPCONTROL extension)"};
+cvar_t sv_jumpstep = {CVAR_NOTIFY, "sv_jumpstep", "1", "whether you can step up while jumping (sv_gameplayfix_stepwhilejumping must also be 1)"};
+cvar_t sv_wallfriction = {CVAR_NOTIFY, "sv_wallfriction", "1", "how much you slow down when sliding along a wall"};
+cvar_t sv_newflymove = {CVAR_NOTIFY, "sv_newflymove", "0", "enables simpler/buggier player physics (not recommended)"};
+cvar_t sv_freezenonclients = {CVAR_NOTIFY, "sv_freezenonclients", "0", "freezes time, except for players, allowing you to walk around and take screenshots of explosions"};
+cvar_t sv_playerphysicsqc = {CVAR_NOTIFY, "sv_playerphysicsqc", "1", "enables QuakeC function to override player physics"};
 
 #define	MOVE_EPSILON	0.01
 

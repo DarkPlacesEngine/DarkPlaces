@@ -60,41 +60,41 @@ client_t *host_client;
 jmp_buf host_abortframe;
 
 // pretend frames take this amount of time (in seconds), 0 = realtime
-cvar_t host_framerate = {0, "host_framerate","0"};
+cvar_t host_framerate = {0, "host_framerate","0", "locks frame timing to this value in seconds, 0.05 is 20fps for example, note that this can easily run too fast, use host_maxfps if you want to limit your framerate instead, or sys_ticrate to limit server speed"};
 // shows time used by certain subsystems
-cvar_t host_speeds = {0, "host_speeds","0"};
+cvar_t host_speeds = {0, "host_speeds","0", "reports how much time is used in server/graphics/sound"};
 // LordHavoc: framerate independent slowmo
-cvar_t slowmo = {0, "slowmo", "1.0"};
+cvar_t slowmo = {0, "slowmo", "1.0", "controls game speed, 0.5 is half speed, 2 is double speed"};
 // LordHavoc: framerate upper cap
-cvar_t cl_maxfps = {CVAR_SAVE, "cl_maxfps", "1000"};
+cvar_t cl_maxfps = {CVAR_SAVE, "cl_maxfps", "1000", "maximum fps cap, if game is running faster than this it will wait before running another frame (useful to make cpu time available to other programs)"};
 
 // print broadcast messages in dedicated mode
-cvar_t sv_echobprint = {CVAR_SAVE, "sv_echobprint", "1"};
+cvar_t sv_echobprint = {CVAR_SAVE, "sv_echobprint", "1", "prints gamecode bprint() calls to server console"};
 
-cvar_t sys_ticrate = {CVAR_SAVE, "sys_ticrate","0.05"};
-cvar_t sv_fixedframeratesingleplayer = {0, "sv_fixedframeratesingleplayer", "0"};
-cvar_t serverprofile = {0, "serverprofile","0"};
+cvar_t sys_ticrate = {CVAR_SAVE, "sys_ticrate","0.05", "how long a server frame is in seconds, 0.05 is 20fps server rate, 0.1 is 10fps (can not be set higher than 0.1), 0 runs as many server frames as possible (makes games against bots a little smoother, overwhelms network players)"};
+cvar_t sv_fixedframeratesingleplayer = {0, "sv_fixedframeratesingleplayer", "0", "allows you to use server-style timing system in singleplayer (don't run faster than sys_ticrate)"};
+cvar_t serverprofile = {0, "serverprofile","0", "print some timings on server code"};
 
-cvar_t fraglimit = {CVAR_NOTIFY, "fraglimit","0"};
-cvar_t timelimit = {CVAR_NOTIFY, "timelimit","0"};
-cvar_t teamplay = {CVAR_NOTIFY, "teamplay","0"};
+cvar_t fraglimit = {CVAR_NOTIFY, "fraglimit","0", "ends level if this many frags is reached by any player"};
+cvar_t timelimit = {CVAR_NOTIFY, "timelimit","0", "ends level at this time (in minutes)"};
+cvar_t teamplay = {CVAR_NOTIFY, "teamplay","0", "teamplay mode, values depend on mod but typically 0 = no teams, 1 = no team damage no self damage, 2 = team damage and self damage, some mods support 3 = no team damage but can damage self"};
 
-cvar_t samelevel = {0, "samelevel","0"};
-cvar_t noexit = {CVAR_NOTIFY, "noexit","0"};
+cvar_t samelevel = {CVAR_NOTIFY, "samelevel","0", "repeats same level if level ends (due to timelimit or someone hitting an exit)"};
+cvar_t noexit = {CVAR_NOTIFY, "noexit","0", "kills anyone attempting to use an exit"};
 
-cvar_t developer = {0, "developer","0"};
-cvar_t developer_entityparsing = {0, "developer_entityparsing", "0"};
+cvar_t developer = {0, "developer","0", "prints additional debugging messages and information (recommended for modders and level designers)"};
+cvar_t developer_entityparsing = {0, "developer_entityparsing", "0", "prints detailed network entities information each time a packet is received"};
 
-cvar_t skill = {0, "skill","1"};
-cvar_t deathmatch = {0, "deathmatch","0"};
-cvar_t coop = {0, "coop","0"};
+cvar_t skill = {0, "skill","1", "difficulty level of game, affects monster layouts in levels, 0 = easy, 1 = normal, 2 = hard, 3 = nightmare (same layout as hard but monsters fire twice)"};
+cvar_t deathmatch = {0, "deathmatch","0", "deathmatch mode, values depend on mod but typically 0 = no deathmatch, 1 = normal deathmatch with respawning weapons, 2 = weapons stay (players can only pick up new weapons)"};
+cvar_t coop = {0, "coop","0", "coop mode, 0 = no coop, 1 = coop mode, multiple players playing through the singleplayer game (coop mode also shuts off deathmatch)"};
 
-cvar_t pausable = {0, "pausable","1"};
+cvar_t pausable = {0, "pausable","1", "allow players to pause or not"};
 
-cvar_t temp1 = {0, "temp1","0"};
+cvar_t temp1 = {0, "temp1","0", "general cvar for mods to use, in stock id1 this selects which death animation to use on players (0 = random death, other values select specific death scenes)"};
 
-cvar_t timestamps = {CVAR_SAVE, "timestamps", "0"};
-cvar_t timeformat = {CVAR_SAVE, "timeformat", "[%b %e %X] "};
+cvar_t timestamps = {CVAR_SAVE, "timestamps", "0", "prints timestamps on console messages"};
+cvar_t timeformat = {CVAR_SAVE, "timeformat", "[%b %e %X] ", "time format to use on timestamped console messages"};
 
 /*
 ================
@@ -218,7 +218,7 @@ Host_InitLocal
 void Host_SaveConfig_f(void);
 void Host_InitLocal (void)
 {
-	Cmd_AddCommand("saveconfig", Host_SaveConfig_f);
+	Cmd_AddCommand("saveconfig", Host_SaveConfig_f, "save settings to config.cfg immediately (also automatic when quitting)");
 
 	Cvar_RegisterVariable (&host_framerate);
 	Cvar_RegisterVariable (&host_speeds);

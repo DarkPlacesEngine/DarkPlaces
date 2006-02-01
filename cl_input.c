@@ -257,35 +257,35 @@ float CL_KeyState (kbutton_t *key)
 
 //==========================================================================
 
-cvar_t cl_upspeed = {CVAR_SAVE, "cl_upspeed","400"};
-cvar_t cl_forwardspeed = {CVAR_SAVE, "cl_forwardspeed","400"};
-cvar_t cl_backspeed = {CVAR_SAVE, "cl_backspeed","400"};
-cvar_t cl_sidespeed = {CVAR_SAVE, "cl_sidespeed","350"};
+cvar_t cl_upspeed = {CVAR_SAVE, "cl_upspeed","400","vertical movement speed (while swimming or flying)"};
+cvar_t cl_forwardspeed = {CVAR_SAVE, "cl_forwardspeed","400","forward movement speed"};
+cvar_t cl_backspeed = {CVAR_SAVE, "cl_backspeed","400","backward movement speed"};
+cvar_t cl_sidespeed = {CVAR_SAVE, "cl_sidespeed","350","strafe movement speed"};
 
-cvar_t cl_movespeedkey = {CVAR_SAVE, "cl_movespeedkey","2.0"};
+cvar_t cl_movespeedkey = {CVAR_SAVE, "cl_movespeedkey","2.0","how much +speed multiplies keyboard movement speed"};
 
-cvar_t cl_yawspeed = {CVAR_SAVE, "cl_yawspeed","140"};
-cvar_t cl_pitchspeed = {CVAR_SAVE, "cl_pitchspeed","150"};
+cvar_t cl_yawspeed = {CVAR_SAVE, "cl_yawspeed","140","keyboard yaw turning speed"};
+cvar_t cl_pitchspeed = {CVAR_SAVE, "cl_pitchspeed","150","keyboard pitch turning speed"};
 
-cvar_t cl_anglespeedkey = {CVAR_SAVE, "cl_anglespeedkey","1.5"};
+cvar_t cl_anglespeedkey = {CVAR_SAVE, "cl_anglespeedkey","1.5","how much +speed multiplies keyboard turning speed"};
 
-cvar_t cl_movement = {CVAR_SAVE, "cl_movement", "0"};
-cvar_t cl_movement_latency = {0, "cl_movement_latency", "0"};
-cvar_t cl_movement_maxspeed = {0, "cl_movement_maxspeed", "320"};
-cvar_t cl_movement_maxairspeed = {0, "cl_movement_maxairspeed", "30"};
-cvar_t cl_movement_stopspeed = {0, "cl_movement_stopspeed", "100"};
-cvar_t cl_movement_friction = {0, "cl_movement_friction", "4"};
-cvar_t cl_movement_edgefriction = {0, "cl_movement_edgefriction", "2"};
-cvar_t cl_movement_stepheight = {0, "cl_movement_stepheight", "18"};
-cvar_t cl_movement_accelerate = {0, "cl_movement_accelerate", "10"};
-cvar_t cl_movement_jumpvelocity = {0, "cl_movement_jumpvelocity", "270"};
-cvar_t cl_gravity = {0, "cl_gravity", "800"};
-cvar_t cl_slowmo = {0, "cl_slowmo", "1"};
+cvar_t cl_movement = {CVAR_SAVE, "cl_movement", "0", "enables clientside prediction of your player movement"};
+cvar_t cl_movement_latency = {0, "cl_movement_latency", "0", "compensates for this much latency (ping time) on quake servers which do not really support prediction, no effect on darkplaces7 protocol servers"};
+cvar_t cl_movement_maxspeed = {0, "cl_movement_maxspeed", "320", "how fast you can move (should match sv_maxspeed)"};
+cvar_t cl_movement_maxairspeed = {0, "cl_movement_maxairspeed", "30", "how fast you can move while in the air (should match sv_maxairspeed)"};
+cvar_t cl_movement_stopspeed = {0, "cl_movement_stopspeed", "100", "speed below which you will be slowed rapidly to a stop rather than sliding endlessly (should match sv_stopspeed)"};
+cvar_t cl_movement_friction = {0, "cl_movement_friction", "4", "how fast you slow down (should match sv_friction)"};
+cvar_t cl_movement_edgefriction = {0, "cl_movement_edgefriction", "2", "how much to slow down when you may be about to fall off a ledge (should match edgefriction)"};
+cvar_t cl_movement_stepheight = {0, "cl_movement_stepheight", "18", "how tall a step you can step in one instant (should match sv_stepheight)"};
+cvar_t cl_movement_accelerate = {0, "cl_movement_accelerate", "10", "how fast you accelerate (should match sv_accelerate)"};
+cvar_t cl_movement_jumpvelocity = {0, "cl_movement_jumpvelocity", "270", "how fast you move upward when you begin a jump (should match the quakec code)"};
+cvar_t cl_gravity = {0, "cl_gravity", "800", "how much gravity to apply in client physics (should match sv_gravity)"};
+cvar_t cl_slowmo = {0, "cl_slowmo", "1", "speed of game time (should match slowmo)"};
 
-cvar_t in_pitch_min = {0, "in_pitch_min", "-90"}; // quake used -70
-cvar_t in_pitch_max = {0, "in_pitch_max", "90"}; // quake used 80
+cvar_t in_pitch_min = {0, "in_pitch_min", "-90", "how far downward you can aim (quake used -70"}; // quake used -70
+cvar_t in_pitch_max = {0, "in_pitch_max", "90", "how far upward you can aim (quake used 80"}; // quake used 80
 
-cvar_t m_filter = {CVAR_SAVE, "m_filter","0"};
+cvar_t m_filter = {CVAR_SAVE, "m_filter","0", "smoothes mouse movement, less responsive but smoother aiming"};
 
 
 /*
@@ -1020,73 +1020,73 @@ CL_InitInput
 */
 void CL_InitInput (void)
 {
-	Cmd_AddCommand ("+moveup",IN_UpDown);
-	Cmd_AddCommand ("-moveup",IN_UpUp);
-	Cmd_AddCommand ("+movedown",IN_DownDown);
-	Cmd_AddCommand ("-movedown",IN_DownUp);
-	Cmd_AddCommand ("+left",IN_LeftDown);
-	Cmd_AddCommand ("-left",IN_LeftUp);
-	Cmd_AddCommand ("+right",IN_RightDown);
-	Cmd_AddCommand ("-right",IN_RightUp);
-	Cmd_AddCommand ("+forward",IN_ForwardDown);
-	Cmd_AddCommand ("-forward",IN_ForwardUp);
-	Cmd_AddCommand ("+back",IN_BackDown);
-	Cmd_AddCommand ("-back",IN_BackUp);
-	Cmd_AddCommand ("+lookup", IN_LookupDown);
-	Cmd_AddCommand ("-lookup", IN_LookupUp);
-	Cmd_AddCommand ("+lookdown", IN_LookdownDown);
-	Cmd_AddCommand ("-lookdown", IN_LookdownUp);
-	Cmd_AddCommand ("+strafe", IN_StrafeDown);
-	Cmd_AddCommand ("-strafe", IN_StrafeUp);
-	Cmd_AddCommand ("+moveleft", IN_MoveleftDown);
-	Cmd_AddCommand ("-moveleft", IN_MoveleftUp);
-	Cmd_AddCommand ("+moveright", IN_MoverightDown);
-	Cmd_AddCommand ("-moveright", IN_MoverightUp);
-	Cmd_AddCommand ("+speed", IN_SpeedDown);
-	Cmd_AddCommand ("-speed", IN_SpeedUp);
-	Cmd_AddCommand ("+attack", IN_AttackDown);
-	Cmd_AddCommand ("-attack", IN_AttackUp);
-	Cmd_AddCommand ("+jump", IN_JumpDown);
-	Cmd_AddCommand ("-jump", IN_JumpUp);
-	Cmd_AddCommand ("impulse", IN_Impulse);
-	Cmd_AddCommand ("+klook", IN_KLookDown);
-	Cmd_AddCommand ("-klook", IN_KLookUp);
-	Cmd_AddCommand ("+mlook", IN_MLookDown);
-	Cmd_AddCommand ("-mlook", IN_MLookUp);
+	Cmd_AddCommand ("+moveup",IN_UpDown, "swim upward");
+	Cmd_AddCommand ("-moveup",IN_UpUp, "stop swimming upward");
+	Cmd_AddCommand ("+movedown",IN_DownDown, "swim downward");
+	Cmd_AddCommand ("-movedown",IN_DownUp, "stop swimming downward");
+	Cmd_AddCommand ("+left",IN_LeftDown, "turn left");
+	Cmd_AddCommand ("-left",IN_LeftUp, "stop turning left");
+	Cmd_AddCommand ("+right",IN_RightDown, "turn right");
+	Cmd_AddCommand ("-right",IN_RightUp, "stop turning right");
+	Cmd_AddCommand ("+forward",IN_ForwardDown, "move forward");
+	Cmd_AddCommand ("-forward",IN_ForwardUp, "stop moving forward");
+	Cmd_AddCommand ("+back",IN_BackDown, "move backward");
+	Cmd_AddCommand ("-back",IN_BackUp, "stop moving backward");
+	Cmd_AddCommand ("+lookup", IN_LookupDown, "look upward");
+	Cmd_AddCommand ("-lookup", IN_LookupUp, "stop looking upward");
+	Cmd_AddCommand ("+lookdown", IN_LookdownDown, "look downward");
+	Cmd_AddCommand ("-lookdown", IN_LookdownUp, "stop looking downward");
+	Cmd_AddCommand ("+strafe", IN_StrafeDown, "activate strafing mode (move instead of turn)\n");
+	Cmd_AddCommand ("-strafe", IN_StrafeUp, "deactivate strafing mode");
+	Cmd_AddCommand ("+moveleft", IN_MoveleftDown, "strafe left");
+	Cmd_AddCommand ("-moveleft", IN_MoveleftUp, "stop strafing left");
+	Cmd_AddCommand ("+moveright", IN_MoverightDown, "strafe right");
+	Cmd_AddCommand ("-moveright", IN_MoverightUp, "stop strafing right");
+	Cmd_AddCommand ("+speed", IN_SpeedDown, "activate run mode (faster movement and turning)");
+	Cmd_AddCommand ("-speed", IN_SpeedUp, "deactivate run mode");
+	Cmd_AddCommand ("+attack", IN_AttackDown, "begin firing");
+	Cmd_AddCommand ("-attack", IN_AttackUp, "stop firing");
+	Cmd_AddCommand ("+jump", IN_JumpDown, "jump");
+	Cmd_AddCommand ("-jump", IN_JumpUp, "end jump (so you can jump again)");
+	Cmd_AddCommand ("impulse", IN_Impulse, "send an impulse number to server (select weapon, use item, etc)");
+	Cmd_AddCommand ("+klook", IN_KLookDown, "activate keyboard looking mode, do not recenter view");
+	Cmd_AddCommand ("-klook", IN_KLookUp, "deactivate keyboard looking mode");
+	Cmd_AddCommand ("+mlook", IN_MLookDown, "activate mouse looking mode, do not recenter view");
+	Cmd_AddCommand ("-mlook", IN_MLookUp, "deactivate mouse looking mode");
 
 	// LordHavoc: added use button
-	Cmd_AddCommand ("+use", IN_UseDown);
-	Cmd_AddCommand ("-use", IN_UseUp);
+	Cmd_AddCommand ("+use", IN_UseDown, "use something (may be used by some mods)");
+	Cmd_AddCommand ("-use", IN_UseUp, "stop using something");
 
 	// LordHavoc: added 6 new buttons
-	Cmd_AddCommand ("+button3", IN_Button3Down);
-	Cmd_AddCommand ("-button3", IN_Button3Up);
-	Cmd_AddCommand ("+button4", IN_Button4Down);
-	Cmd_AddCommand ("-button4", IN_Button4Up);
-	Cmd_AddCommand ("+button5", IN_Button5Down);
-	Cmd_AddCommand ("-button5", IN_Button5Up);
-	Cmd_AddCommand ("+button6", IN_Button6Down);
-	Cmd_AddCommand ("-button6", IN_Button6Up);
-	Cmd_AddCommand ("+button7", IN_Button7Down);
-	Cmd_AddCommand ("-button7", IN_Button7Up);
-	Cmd_AddCommand ("+button8", IN_Button8Down);
-	Cmd_AddCommand ("-button8", IN_Button8Up);
-	Cmd_AddCommand ("+button9", IN_Button9Down);
-	Cmd_AddCommand ("-button9", IN_Button9Up);
-	Cmd_AddCommand ("+button10", IN_Button10Down);
-	Cmd_AddCommand ("-button10", IN_Button10Up);
-	Cmd_AddCommand ("+button11", IN_Button11Down);
-	Cmd_AddCommand ("-button11", IN_Button11Up);
-	Cmd_AddCommand ("+button12", IN_Button12Down);
-	Cmd_AddCommand ("-button12", IN_Button12Up);
-	Cmd_AddCommand ("+button13", IN_Button13Down);
-	Cmd_AddCommand ("-button13", IN_Button13Up);
-	Cmd_AddCommand ("+button14", IN_Button14Down);
-	Cmd_AddCommand ("-button14", IN_Button14Up);
-	Cmd_AddCommand ("+button15", IN_Button15Down);
-	Cmd_AddCommand ("-button15", IN_Button15Up);
-	Cmd_AddCommand ("+button16", IN_Button16Down);
-	Cmd_AddCommand ("-button16", IN_Button16Up);
+	Cmd_AddCommand ("+button3", IN_Button3Down, "activate button3 (behavior depends on mod)");
+	Cmd_AddCommand ("-button3", IN_Button3Up, "deactivate button3");
+	Cmd_AddCommand ("+button4", IN_Button4Down, "activate button4 (behavior depends on mod)");
+	Cmd_AddCommand ("-button4", IN_Button4Up, "deactivate button3");
+	Cmd_AddCommand ("+button5", IN_Button5Down, "activate button4 (behavior depends on mod)");
+	Cmd_AddCommand ("-button5", IN_Button5Up, "deactivate button3");
+	Cmd_AddCommand ("+button6", IN_Button6Down, "activate button4 (behavior depends on mod)");
+	Cmd_AddCommand ("-button6", IN_Button6Up, "deactivate button3");
+	Cmd_AddCommand ("+button7", IN_Button7Down, "activate button4 (behavior depends on mod)");
+	Cmd_AddCommand ("-button7", IN_Button7Up, "deactivate button3");
+	Cmd_AddCommand ("+button8", IN_Button8Down, "activate button4 (behavior depends on mod)");
+	Cmd_AddCommand ("-button8", IN_Button8Up, "deactivate button3");
+	Cmd_AddCommand ("+button9", IN_Button9Down, "activate button4 (behavior depends on mod)");
+	Cmd_AddCommand ("-button9", IN_Button9Up, "deactivate button3");
+	Cmd_AddCommand ("+button10", IN_Button10Down, "activate button4 (behavior depends on mod)");
+	Cmd_AddCommand ("-button10", IN_Button10Up, "deactivate button3");
+	Cmd_AddCommand ("+button11", IN_Button11Down, "activate button4 (behavior depends on mod)");
+	Cmd_AddCommand ("-button11", IN_Button11Up, "deactivate button3");
+	Cmd_AddCommand ("+button12", IN_Button12Down, "activate button4 (behavior depends on mod)");
+	Cmd_AddCommand ("-button12", IN_Button12Up, "deactivate button3");
+	Cmd_AddCommand ("+button13", IN_Button13Down, "activate button4 (behavior depends on mod)");
+	Cmd_AddCommand ("-button13", IN_Button13Up, "deactivate button3");
+	Cmd_AddCommand ("+button14", IN_Button14Down, "activate button4 (behavior depends on mod)");
+	Cmd_AddCommand ("-button14", IN_Button14Up, "deactivate button3");
+	Cmd_AddCommand ("+button15", IN_Button15Down, "activate button4 (behavior depends on mod)");
+	Cmd_AddCommand ("-button15", IN_Button15Up, "deactivate button3");
+	Cmd_AddCommand ("+button16", IN_Button16Down, "activate button4 (behavior depends on mod)");
+	Cmd_AddCommand ("-button16", IN_Button16Up, "deactivate button3");
 
 	Cvar_RegisterVariable(&cl_movement);
 	Cvar_RegisterVariable(&cl_movement_latency);

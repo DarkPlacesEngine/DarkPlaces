@@ -69,44 +69,44 @@ matrix4x4_t r_view_matrix;
 //
 refdef_t r_refdef;
 
-cvar_t r_showtris = {0, "r_showtris", "0"};
-cvar_t r_shownormals = {0, "r_shownormals", "0"};
-cvar_t r_drawentities = {0, "r_drawentities","1"};
-cvar_t r_drawviewmodel = {0, "r_drawviewmodel","1"};
-cvar_t r_speeds = {0, "r_speeds","0"};
-cvar_t r_fullbright = {0, "r_fullbright","0"};
-cvar_t r_wateralpha = {CVAR_SAVE, "r_wateralpha","1"};
-cvar_t r_dynamic = {CVAR_SAVE, "r_dynamic","1"};
-cvar_t r_fullbrights = {CVAR_SAVE, "r_fullbrights", "1"};
-cvar_t r_drawcollisionbrushes = {0, "r_drawcollisionbrushes", "0"};
+cvar_t r_showtris = {0, "r_showtris", "0", "shows triangle outlines, value controls brightness (can be above 1)"};
+cvar_t r_shownormals = {0, "r_shownormals", "0", "shows per-vertex surface normals and tangent vectors for bumpmapped lighting"};
+cvar_t r_drawentities = {0, "r_drawentities","1", "draw entities (doors, players, projectiles, etc)"};
+cvar_t r_drawviewmodel = {0, "r_drawviewmodel","1", "draw your weapon model"};
+cvar_t r_speeds = {0, "r_speeds","0", "displays rendering statistics and per-subsystem timings"};
+cvar_t r_fullbright = {0, "r_fullbright","0", "make everything bright cheat (not allowed in multiplayer)"};
+cvar_t r_wateralpha = {CVAR_SAVE, "r_wateralpha","1", "opacity of water polygons"};
+cvar_t r_dynamic = {CVAR_SAVE, "r_dynamic","1", "enables dynamic lights (rocket glow and such)"};
+cvar_t r_fullbrights = {CVAR_SAVE, "r_fullbrights", "1", "enables glowing pixels in quake textures (changes need r_restart to take effect)"};
+cvar_t r_drawcollisionbrushes = {0, "r_drawcollisionbrushes", "0", "draws collision brushes in quake3 maps (mode 1), mode 2 disables rendering of world (trippy!)"};
 
-cvar_t gl_fogenable = {0, "gl_fogenable", "0"};
-cvar_t gl_fogdensity = {0, "gl_fogdensity", "0.25"};
-cvar_t gl_fogred = {0, "gl_fogred","0.3"};
-cvar_t gl_foggreen = {0, "gl_foggreen","0.3"};
-cvar_t gl_fogblue = {0, "gl_fogblue","0.3"};
-cvar_t gl_fogstart = {0, "gl_fogstart", "0"};
-cvar_t gl_fogend = {0, "gl_fogend","0"};
+cvar_t gl_fogenable = {0, "gl_fogenable", "0", "nehahra fog enable (for Nehahra compatibility only)"};
+cvar_t gl_fogdensity = {0, "gl_fogdensity", "0.25", "nehahra fog density (recommend values below 0.1) (for Nehahra compatibility only)"};
+cvar_t gl_fogred = {0, "gl_fogred","0.3", "nehahra fog color red value (for Nehahra compatibility only)"};
+cvar_t gl_foggreen = {0, "gl_foggreen","0.3", "nehahra fog color green value (for Nehahra compatibility only)"};
+cvar_t gl_fogblue = {0, "gl_fogblue","0.3", "nehahra fog color blue value (for Nehahra compatibility only)"};
+cvar_t gl_fogstart = {0, "gl_fogstart", "0", "nehahra fog start distance (for Nehahra compatibility only)"};
+cvar_t gl_fogend = {0, "gl_fogend","0", "nehahra fog end distance (for Nehahra compatibility only)"};
 
-cvar_t r_textureunits = {0, "r_textureunits", "32"};
+cvar_t r_textureunits = {0, "r_textureunits", "32", "number of hardware texture units reported by driver (note: setting this to 1 turns off gl_combine)"};
 
-cvar_t r_lerpsprites = {CVAR_SAVE, "r_lerpsprites", "1"};
-cvar_t r_lerpmodels = {CVAR_SAVE, "r_lerpmodels", "1"};
-cvar_t r_waterscroll = {CVAR_SAVE, "r_waterscroll", "1"};
+cvar_t r_lerpsprites = {CVAR_SAVE, "r_lerpsprites", "1", "enables animation smoothing on sprites (requires r_lerpmodels 1)"};
+cvar_t r_lerpmodels = {CVAR_SAVE, "r_lerpmodels", "1", "enables animation smoothing on models"};
+cvar_t r_waterscroll = {CVAR_SAVE, "r_waterscroll", "1", "makes water scroll around, value controls how much"};
 
-cvar_t r_bloom = {CVAR_SAVE, "r_bloom", "0"};
-cvar_t r_bloom_intensity = {CVAR_SAVE, "r_bloom_intensity", "1.5"};
-cvar_t r_bloom_blur = {CVAR_SAVE, "r_bloom_blur", "4"};
-cvar_t r_bloom_resolution = {CVAR_SAVE, "r_bloom_resolution", "320"};
-cvar_t r_bloom_power = {CVAR_SAVE, "r_bloom_power", "2"};
+cvar_t r_bloom = {CVAR_SAVE, "r_bloom", "0", "enables bloom effect (makes bright pixels affect neighboring pixels)"};
+cvar_t r_bloom_intensity = {CVAR_SAVE, "r_bloom_intensity", "1.5", "how bright the glow is"};
+cvar_t r_bloom_blur = {CVAR_SAVE, "r_bloom_blur", "4", "how large the glow is"};
+cvar_t r_bloom_resolution = {CVAR_SAVE, "r_bloom_resolution", "320", "what resolution to perform the bloom effect at (independent of screen resolution)"};
+cvar_t r_bloom_power = {CVAR_SAVE, "r_bloom_power", "2", "how much to darken the image before blurring to make the bloom effect"};
 
-cvar_t r_smoothnormals_areaweighting = {0, "r_smoothnormals_areaweighting", "1"};
+cvar_t r_smoothnormals_areaweighting = {0, "r_smoothnormals_areaweighting", "1", "uses significantly faster (and supposedly higher quality) area-weighted vertex normals and tangent vectors rather than summing normalized triangle normals and tangents"};
 
-cvar_t developer_texturelogging = {0, "developer_texturelogging", "0"};
+cvar_t developer_texturelogging = {0, "developer_texturelogging", "0", "produces a textures.log file containing names of skins and map textures the engine tried to load"};
 
-cvar_t gl_lightmaps = {0, "gl_lightmaps", "0"};
+cvar_t gl_lightmaps = {0, "gl_lightmaps", "0", "draws only lightmaps, no texture (for level designers)"};
 
-cvar_t r_test = {0, "r_test", "0"}; // used for testing renderer code changes, otherwise does nothing
+cvar_t r_test = {0, "r_test", "0", "internal development use only, leave it alone (usually does nothing anyway)"}; // used for testing renderer code changes, otherwise does nothing
 
 rtexturepool_t *r_main_texturepool;
 rtexture_t *r_bloom_texture_screen;

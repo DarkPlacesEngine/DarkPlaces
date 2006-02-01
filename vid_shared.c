@@ -62,41 +62,41 @@ qboolean vid_hidden = true;
 qboolean vid_activewindow = true;
 
 // we don't know until we try it!
-cvar_t vid_hardwaregammasupported = {CVAR_READONLY,"vid_hardwaregammasupported","1"};
+cvar_t vid_hardwaregammasupported = {CVAR_READONLY,"vid_hardwaregammasupported","1", "indicates whether hardware gamma is supported (updated by attempts to set hardware gamma ramps)"};
 // whether hardware gamma ramps are currently in effect
 qboolean vid_usinghwgamma = false;
 
 unsigned short vid_gammaramps[768];
 unsigned short vid_systemgammaramps[768];
 
-cvar_t vid_fullscreen = {CVAR_SAVE, "vid_fullscreen", "1"};
-cvar_t vid_width = {CVAR_SAVE, "vid_width", "640"};
-cvar_t vid_height = {CVAR_SAVE, "vid_height", "480"};
-cvar_t vid_bitsperpixel = {CVAR_SAVE, "vid_bitsperpixel", "32"};
-cvar_t vid_refreshrate = {CVAR_SAVE, "vid_refreshrate", "60"};
+cvar_t vid_fullscreen = {CVAR_SAVE, "vid_fullscreen", "1", "use fullscreen (1) or windowed (0)"};
+cvar_t vid_width = {CVAR_SAVE, "vid_width", "640", "resolution"};
+cvar_t vid_height = {CVAR_SAVE, "vid_height", "480", "resolution"};
+cvar_t vid_bitsperpixel = {CVAR_SAVE, "vid_bitsperpixel", "32", "how many bits per pixel to render at (32 or 16, 32 is recommended)"};
+cvar_t vid_refreshrate = {CVAR_SAVE, "vid_refreshrate", "60", "refresh rate to use, in hz (higher values flicker less, if supported by your monitor)"};
 
-cvar_t vid_vsync = {CVAR_SAVE, "vid_vsync", "0"};
-cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1"};
-cvar_t vid_minwidth = {0, "vid_minwidth", "0"};
-cvar_t vid_minheight = {0, "vid_minheight", "0"};
-cvar_t gl_combine = {0, "gl_combine", "1"};
-cvar_t gl_finish = {0, "gl_finish", "0"};
+cvar_t vid_vsync = {CVAR_SAVE, "vid_vsync", "0", "sync to vertical blank, prevents 'tearing' (seeing part of one frame and part of another on the screen at the same time), automatically disabled when doing timedemo benchmarks"};
+cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1", "whether to use the mouse in windowed mode (fullscreen always does)"};
+cvar_t vid_minwidth = {0, "vid_minwidth", "0", "minimum vid_width that is acceptable (to be set in default.cfg in mods)"};
+cvar_t vid_minheight = {0, "vid_minheight", "0", "minimum vid_height that is acceptable (to be set in default.cfg in mods)"};
+cvar_t gl_combine = {0, "gl_combine", "1", "faster rendering by using GL_ARB_texture_env_combine extension (part of OpenGL 1.3 and above)"};
+cvar_t gl_finish = {0, "gl_finish", "0", "make the cpu wait for the graphics processor at the end of each frame render (can help with strange input or video lag problems on some machines)"};
 
-cvar_t v_gamma = {CVAR_SAVE, "v_gamma", "1"};
-cvar_t v_contrast = {CVAR_SAVE, "v_contrast", "1"};
-cvar_t v_brightness = {CVAR_SAVE, "v_brightness", "0"};
-cvar_t v_color_enable = {CVAR_SAVE, "v_color_enable", "0"};
-cvar_t v_color_black_r = {CVAR_SAVE, "v_color_black_r", "0"};
-cvar_t v_color_black_g = {CVAR_SAVE, "v_color_black_g", "0"};
-cvar_t v_color_black_b = {CVAR_SAVE, "v_color_black_b", "0"};
-cvar_t v_color_grey_r = {CVAR_SAVE, "v_color_grey_r", "0.5"};
-cvar_t v_color_grey_g = {CVAR_SAVE, "v_color_grey_g", "0.5"};
-cvar_t v_color_grey_b = {CVAR_SAVE, "v_color_grey_b", "0.5"};
-cvar_t v_color_white_r = {CVAR_SAVE, "v_color_white_r", "1"};
-cvar_t v_color_white_g = {CVAR_SAVE, "v_color_white_g", "1"};
-cvar_t v_color_white_b = {CVAR_SAVE, "v_color_white_b", "1"};
-cvar_t v_hwgamma = {CVAR_SAVE, "v_hwgamma", "1"};
-cvar_t v_psycho = {0, "v_psycho", "0"};
+cvar_t v_gamma = {CVAR_SAVE, "v_gamma", "1", "inverse gamma correction value, a brightness effect that does not affect white or black, and tends to make the image grey and dull"};
+cvar_t v_contrast = {CVAR_SAVE, "v_contrast", "1", "brightness of white (values above 1 give a brighter image with increased color saturation, unlike v_gamma)"};
+cvar_t v_brightness = {CVAR_SAVE, "v_brightness", "0", "brightness of black, useful for monitors that are too dark"};
+cvar_t v_color_enable = {CVAR_SAVE, "v_color_enable", "0", "enables black-grey-white color correction curve controls"};
+cvar_t v_color_black_r = {CVAR_SAVE, "v_color_black_r", "0", "desired color of black"};
+cvar_t v_color_black_g = {CVAR_SAVE, "v_color_black_g", "0", "desired color of black"};
+cvar_t v_color_black_b = {CVAR_SAVE, "v_color_black_b", "0", "desired color of black"};
+cvar_t v_color_grey_r = {CVAR_SAVE, "v_color_grey_r", "0.5", "desired color of grey"};
+cvar_t v_color_grey_g = {CVAR_SAVE, "v_color_grey_g", "0.5", "desired color of grey"};
+cvar_t v_color_grey_b = {CVAR_SAVE, "v_color_grey_b", "0.5", "desired color of grey"};
+cvar_t v_color_white_r = {CVAR_SAVE, "v_color_white_r", "1", "desired color of white"};
+cvar_t v_color_white_g = {CVAR_SAVE, "v_color_white_g", "1", "desired color of white"};
+cvar_t v_color_white_b = {CVAR_SAVE, "v_color_white_b", "1", "desired color of white"};
+cvar_t v_hwgamma = {CVAR_SAVE, "v_hwgamma", "1", "enables use of hardware gamma correction ramps if available (note: does not work very well on Windows2000 and above)"};
+cvar_t v_psycho = {0, "v_psycho", "0", "easter egg (does not work on Windows2000 or above)"};
 
 // brand of graphics chip
 const char *gl_vendor;
@@ -911,8 +911,8 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&vid_minheight);
 	Cvar_RegisterVariable(&gl_combine);
 	Cvar_RegisterVariable(&gl_finish);
-	Cmd_AddCommand("force_centerview", Force_CenterView_f);
-	Cmd_AddCommand("vid_restart", VID_Restart_f);
+	Cmd_AddCommand("force_centerview", Force_CenterView_f, "recenters view (stops looking up/down)");
+	Cmd_AddCommand("vid_restart", VID_Restart_f, "restarts video system (closes and reopens the window, restarts renderer)");
 	if (gamemode == GAME_GOODVSBAD2)
 		Cvar_Set("gl_combine", "0");
 }

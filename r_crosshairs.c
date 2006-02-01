@@ -2,12 +2,12 @@
 #include "quakedef.h"
 #include "cl_collision.h"
 
-cvar_t crosshair_brightness = {CVAR_SAVE, "crosshair_brightness", "1"};
-cvar_t crosshair_alpha = {CVAR_SAVE, "crosshair_alpha", "1"};
-cvar_t crosshair_flashspeed = {CVAR_SAVE, "crosshair_flashspeed", "2"};
-cvar_t crosshair_flashrange = {CVAR_SAVE, "crosshair_flashrange", "0.1"};
-cvar_t crosshair_size = {CVAR_SAVE, "crosshair_size", "1"};
-cvar_t crosshair_static = {CVAR_SAVE, "crosshair_static", "1"};
+cvar_t crosshair_brightness = {CVAR_SAVE, "crosshair_brightness", "1", "how bright the crosshair should be"};
+cvar_t crosshair_alpha = {CVAR_SAVE, "crosshair_alpha", "1", "how opaque the crosshair should be"};
+cvar_t crosshair_flashspeed = {CVAR_SAVE, "crosshair_flashspeed", "2", "speed at which the crosshair flashes"};
+cvar_t crosshair_flashrange = {CVAR_SAVE, "crosshair_flashrange", "0.1", "how much the crosshair flashes"};
+cvar_t crosshair_size = {CVAR_SAVE, "crosshair_size", "1", "adjusts size of the crosshair on the screen"};
+cvar_t crosshair_static = {CVAR_SAVE, "crosshair_static", "1", "if 1 the crosshair is a 2D overlay, if 0 it is a sprite in the world indicating where your weapon will hit in standard quake mods (if the mod has the weapon somewhere else this won't be accurate)"};
 
 // must match NUMCROSSHAIRS in gl_draw.c
 #define NUMCROSSHAIRS 6

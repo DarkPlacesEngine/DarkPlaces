@@ -32,25 +32,25 @@ void EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int numstates, const entity_sta
 
 
 // select which protocol to host, this is fed to Protocol_EnumForName
-cvar_t sv_protocolname = {0, "sv_protocolname", "DP7"};
-cvar_t sv_ratelimitlocalplayer = {0, "sv_ratelimitlocalplayer", "0"};
-cvar_t sv_maxrate = {CVAR_SAVE | CVAR_NOTIFY, "sv_maxrate", "10000"};
+cvar_t sv_protocolname = {0, "sv_protocolname", "DP7", "selects network protocol to host for (values include QUAKE, QUAKEDP, NEHAHRAMOVIE, DP1 and up)"};
+cvar_t sv_ratelimitlocalplayer = {0, "sv_ratelimitlocalplayer", "0", "whether to apply rate limiting to the local player in a listen server (only useful for testing)"};
+cvar_t sv_maxrate = {CVAR_SAVE | CVAR_NOTIFY, "sv_maxrate", "10000", "upper limit on client rate cvar, should reflect your network connection quality"};
 
-static cvar_t sv_cullentities_pvs = {0, "sv_cullentities_pvs", "1"}; // fast but loose
-static cvar_t sv_cullentities_trace = {0, "sv_cullentities_trace", "0"}; // tends to get false negatives, uses a timeout to keep entities visible a short time after becoming hidden
-static cvar_t sv_cullentities_stats = {0, "sv_cullentities_stats", "0"};
-static cvar_t sv_entpatch = {0, "sv_entpatch", "1"};
+static cvar_t sv_cullentities_pvs = {0, "sv_cullentities_pvs", "1", "fast but loose culling of hidden entities"}; // fast but loose
+static cvar_t sv_cullentities_trace = {0, "sv_cullentities_trace", "0", "somewhat slow but very tight culling of hidden entities, minimizes network traffic and makes wallhack cheats useless"}; // tends to get false negatives, uses a timeout to keep entities visible a short time after becoming hidden
+static cvar_t sv_cullentities_stats = {0, "sv_cullentities_stats", "0", "displays stats on network entities culled by various methods for each client"};
+static cvar_t sv_entpatch = {0, "sv_entpatch", "1", "enables loading of .ent files to override entities in the bsp (for example Threewave CTF server pack contains .ent patch files enabling play of CTF on id1 maps)"};
 
-cvar_t sv_gameplayfix_grenadebouncedownslopes = {0, "sv_gameplayfix_grenadebouncedownslopes", "1"};
-cvar_t sv_gameplayfix_noairborncorpse = {0, "sv_gameplayfix_noairborncorpse", "1"};
-cvar_t sv_gameplayfix_stepdown = {0, "sv_gameplayfix_stepdown", "1"};
-cvar_t sv_gameplayfix_stepwhilejumping = {0, "sv_gameplayfix_stepwhilejumping", "1"};
-cvar_t sv_gameplayfix_swiminbmodels = {0, "sv_gameplayfix_swiminbmodels", "1"};
-cvar_t sv_gameplayfix_setmodelrealbox = {0, "sv_gameplayfix_setmodelrealbox", "1"};
-cvar_t sv_gameplayfix_blowupfallenzombies = {0, "sv_gameplayfix_blowupfallenzombies", "1"};
-cvar_t sv_gameplayfix_findradiusdistancetobox = {0, "sv_gameplayfix_findradiusdistancetobox", "1"};
+cvar_t sv_gameplayfix_grenadebouncedownslopes = {0, "sv_gameplayfix_grenadebouncedownslopes", "1", "prevents MOVETYPE_BOUNCE (grenades) from getting stuck when fired down a downward sloping surface"};
+cvar_t sv_gameplayfix_noairborncorpse = {0, "sv_gameplayfix_noairborncorpse", "1", "causes entities (corpses) sitting ontop of moving entities (players) to fall when the moving entity (player) is no longer supporting them"};
+cvar_t sv_gameplayfix_stepdown = {0, "sv_gameplayfix_stepdown", "1", "attempts to step down stairs, not just up them (prevents the familiar thud..thud..thud.. when running down stairs and slopes)"};
+cvar_t sv_gameplayfix_stepwhilejumping = {0, "sv_gameplayfix_stepwhilejumping", "1", "applies step-up onto a ledge even while airborn, useful if you would otherwise just-miss the floor when running across small areas with gaps (for instance running across the moving platforms in dm2, or jumping to the megahealth and red armor in dm2 rather than using the bridge)"};
+cvar_t sv_gameplayfix_swiminbmodels = {0, "sv_gameplayfix_swiminbmodels", "1", "causes pointcontents (used to determine if you are in a liquid) to check bmodel entities as well as the world model, so you can swim around in (possibly moving) water bmodel entities"};
+cvar_t sv_gameplayfix_setmodelrealbox = {0, "sv_gameplayfix_setmodelrealbox", "1", "fixes a bug in Quake that made setmodel always set the entity box to ('-16 -16 -16', '16 16 16') rather than properly checking the model box, breaks some poorly coded mods"};
+cvar_t sv_gameplayfix_blowupfallenzombies = {0, "sv_gameplayfix_blowupfallenzombies", "1", "causes findradius to detect SOLID_NOT entities such as zombies and corpses on the floor, allowing splash damage to apply to them"};
+cvar_t sv_gameplayfix_findradiusdistancetobox = {0, "sv_gameplayfix_findradiusdistancetobox", "1", "causes findradius to check the distance to the corner of a box rather than the center of the box, makes findradius detect bmodels such as very large doors that would otherwise be unaffected by splash damage"};
 
-cvar_t sv_progs = {0, "sv_progs", "progs.dat" };
+cvar_t sv_progs = {0, "sv_progs", "progs.dat", "selects which quakec progs.dat file to run" };
 
 server_t sv;
 server_static_t svs;
@@ -70,7 +70,7 @@ SV_Init
 */
 void SV_Init (void)
 {
-	Cmd_AddCommand("sv_saveentfile", SV_SaveEntFile_f);
+	Cmd_AddCommand("sv_saveentfile", SV_SaveEntFile_f, "save map entities to .ent file (to allow external editing)");
 	Cvar_RegisterVariable (&sv_maxvelocity);
 	Cvar_RegisterVariable (&sv_gravity);
 	Cvar_RegisterVariable (&sv_friction);
@@ -82,7 +82,6 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_idealpitchscale);
 	Cvar_RegisterVariable (&sv_aim);
 	Cvar_RegisterVariable (&sv_nostep);
-	Cvar_RegisterVariable (&sv_deltacompress);
 	Cvar_RegisterVariable (&sv_cullentities_pvs);
 	Cvar_RegisterVariable (&sv_cullentities_trace);
 	Cvar_RegisterVariable (&sv_cullentities_stats);
@@ -2097,30 +2096,39 @@ qboolean SV_VM_CB_LoadEdict(prvm_edict_t *ent)
 	return true;
 }
 
-cvar_t	pr_checkextension = {CVAR_READONLY, "pr_checkextension", "1"};
-cvar_t	nomonsters = {0, "nomonsters", "0"};
-cvar_t	gamecfg = {0, "gamecfg", "0"};
-cvar_t	scratch1 = {0, "scratch1", "0"};
-cvar_t	scratch2 = {0,"scratch2", "0"};
-cvar_t	scratch3 = {0, "scratch3", "0"};
-cvar_t	scratch4 = {0, "scratch4", "0"};
-cvar_t	savedgamecfg = {CVAR_SAVE, "savedgamecfg", "0"};
-cvar_t	saved1 = {CVAR_SAVE, "saved1", "0"};
-cvar_t	saved2 = {CVAR_SAVE, "saved2", "0"};
-cvar_t	saved3 = {CVAR_SAVE, "saved3", "0"};
-cvar_t	saved4 = {CVAR_SAVE, "saved4", "0"};
-cvar_t	decors = {0, "decors", "0"};
-cvar_t	nehx00 = {0, "nehx00", "0"};cvar_t	nehx01 = {0, "nehx01", "0"};
-cvar_t	nehx02 = {0, "nehx02", "0"};cvar_t	nehx03 = {0, "nehx03", "0"};
-cvar_t	nehx04 = {0, "nehx04", "0"};cvar_t	nehx05 = {0, "nehx05", "0"};
-cvar_t	nehx06 = {0, "nehx06", "0"};cvar_t	nehx07 = {0, "nehx07", "0"};
-cvar_t	nehx08 = {0, "nehx08", "0"};cvar_t	nehx09 = {0, "nehx09", "0"};
-cvar_t	nehx10 = {0, "nehx10", "0"};cvar_t	nehx11 = {0, "nehx11", "0"};
-cvar_t	nehx12 = {0, "nehx12", "0"};cvar_t	nehx13 = {0, "nehx13", "0"};
-cvar_t	nehx14 = {0, "nehx14", "0"};cvar_t	nehx15 = {0, "nehx15", "0"};
-cvar_t	nehx16 = {0, "nehx16", "0"};cvar_t	nehx17 = {0, "nehx17", "0"};
-cvar_t	nehx18 = {0, "nehx18", "0"};cvar_t	nehx19 = {0, "nehx19", "0"};
-cvar_t	cutscene = {0, "cutscene", "1"};
+cvar_t pr_checkextension = {CVAR_READONLY, "pr_checkextension", "1", "indicates to QuakeC that the standard quakec extensions system is available (if 0, quakec should not attempt to use extensions)"};
+cvar_t nomonsters = {0, "nomonsters", "0", "unused cvar in quake, can be used by mods"};
+cvar_t gamecfg = {0, "gamecfg", "0", "unused cvar in quake, can be used by mods"};
+cvar_t scratch1 = {0, "scratch1", "0", "unused cvar in quake, can be used by mods"};
+cvar_t scratch2 = {0,"scratch2", "0", "unused cvar in quake, can be used by mods"};
+cvar_t scratch3 = {0, "scratch3", "0", "unused cvar in quake, can be used by mods"};
+cvar_t scratch4 = {0, "scratch4", "0", "unused cvar in quake, can be used by mods"};
+cvar_t savedgamecfg = {CVAR_SAVE, "savedgamecfg", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
+cvar_t saved1 = {CVAR_SAVE, "saved1", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
+cvar_t saved2 = {CVAR_SAVE, "saved2", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
+cvar_t saved3 = {CVAR_SAVE, "saved3", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
+cvar_t saved4 = {CVAR_SAVE, "saved4", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
+cvar_t nehx00 = {0, "nehx00", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx01 = {0, "nehx01", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx02 = {0, "nehx02", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx03 = {0, "nehx03", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx04 = {0, "nehx04", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx05 = {0, "nehx05", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx06 = {0, "nehx06", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx07 = {0, "nehx07", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx08 = {0, "nehx08", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx09 = {0, "nehx09", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx10 = {0, "nehx10", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx11 = {0, "nehx11", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx12 = {0, "nehx12", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx13 = {0, "nehx13", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx14 = {0, "nehx14", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx15 = {0, "nehx15", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx16 = {0, "nehx16", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx17 = {0, "nehx17", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx18 = {0, "nehx18", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t nehx19 = {0, "nehx19", "0", "nehahra data storage cvar (used in singleplayer)"};
+cvar_t cutscene = {0, "cutscene", "1", "enables cutscenes in nehahra, can be used by other mods"};
 
 void SV_VM_Init(void)
 {
@@ -2136,21 +2144,29 @@ void SV_VM_Init(void)
 	Cvar_RegisterVariable (&saved2);
 	Cvar_RegisterVariable (&saved3);
 	Cvar_RegisterVariable (&saved4);
-	// LordHavoc: for DarkPlaces, this overrides the number of decors (shell casings, gibs, etc)
-	Cvar_RegisterVariable (&decors);
 	// LordHavoc: Nehahra uses these to pass data around cutscene demos
 	if (gamemode == GAME_NEHAHRA)
 	{
-		Cvar_RegisterVariable (&nehx00);Cvar_RegisterVariable (&nehx01);
-		Cvar_RegisterVariable (&nehx02);Cvar_RegisterVariable (&nehx03);
-		Cvar_RegisterVariable (&nehx04);Cvar_RegisterVariable (&nehx05);
-		Cvar_RegisterVariable (&nehx06);Cvar_RegisterVariable (&nehx07);
-		Cvar_RegisterVariable (&nehx08);Cvar_RegisterVariable (&nehx09);
-		Cvar_RegisterVariable (&nehx10);Cvar_RegisterVariable (&nehx11);
-		Cvar_RegisterVariable (&nehx12);Cvar_RegisterVariable (&nehx13);
-		Cvar_RegisterVariable (&nehx14);Cvar_RegisterVariable (&nehx15);
-		Cvar_RegisterVariable (&nehx16);Cvar_RegisterVariable (&nehx17);
-		Cvar_RegisterVariable (&nehx18);Cvar_RegisterVariable (&nehx19);
+		Cvar_RegisterVariable (&nehx00);
+		Cvar_RegisterVariable (&nehx01);
+		Cvar_RegisterVariable (&nehx02);
+		Cvar_RegisterVariable (&nehx03);
+		Cvar_RegisterVariable (&nehx04);
+		Cvar_RegisterVariable (&nehx05);
+		Cvar_RegisterVariable (&nehx06);
+		Cvar_RegisterVariable (&nehx07);
+		Cvar_RegisterVariable (&nehx08);
+		Cvar_RegisterVariable (&nehx09);
+		Cvar_RegisterVariable (&nehx10);
+		Cvar_RegisterVariable (&nehx11);
+		Cvar_RegisterVariable (&nehx12);
+		Cvar_RegisterVariable (&nehx13);
+		Cvar_RegisterVariable (&nehx14);
+		Cvar_RegisterVariable (&nehx15);
+		Cvar_RegisterVariable (&nehx16);
+		Cvar_RegisterVariable (&nehx17);
+		Cvar_RegisterVariable (&nehx18);
+		Cvar_RegisterVariable (&nehx19);
 	}
 	Cvar_RegisterVariable (&cutscene); // for Nehahra but useful to other mods as well
 }

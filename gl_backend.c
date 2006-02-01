@@ -4,22 +4,22 @@
 #include "jpeg.h"
 #include "cl_collision.h"
 
-cvar_t gl_mesh_drawrangeelements = {0, "gl_mesh_drawrangeelements", "1"};
-cvar_t gl_mesh_testarrayelement = {0, "gl_mesh_testarrayelement", "0"};
-cvar_t gl_mesh_testmanualfeeding = {0, "gl_mesh_testmanualfeeding", "0"};
-cvar_t gl_paranoid = {0, "gl_paranoid", "0"};
-cvar_t gl_printcheckerror = {0, "gl_printcheckerror", "0"};
-cvar_t r_stereo_separation = {0, "r_stereo_separation", "4"};
-cvar_t r_stereo_sidebyside = {0, "r_stereo_sidebyside", "0"};
-cvar_t r_stereo_redblue = {0, "r_stereo_redblue", "0"};
-cvar_t r_stereo_redcyan = {0, "r_stereo_redcyan", "0"};
-cvar_t r_stereo_redgreen = {0, "r_stereo_redgreen", "0"};
+cvar_t gl_mesh_drawrangeelements = {0, "gl_mesh_drawrangeelements", "1", "use glDrawRangeElements function if available instead of glDrawElements (for performance comparisons or bug testing)"};
+cvar_t gl_mesh_testarrayelement = {0, "gl_mesh_testarrayelement", "0", "use glBegin(GL_TRIANGLES);glArrayElement();glEnd(); primitives instead of glDrawElements (useful to test for driver bugs with glDrawElements)"};
+cvar_t gl_mesh_testmanualfeeding = {0, "gl_mesh_testmanualfeeding", "0", "use glBegin(GL_TRIANGLES);glTexCoord2f();glVertex3f();glEnd(); primitives instead of glDrawElements (useful to test for driver bugs with glDrawElements)"};
+cvar_t gl_paranoid = {0, "gl_paranoid", "0", "enables OpenGL error checking and other tests"};
+cvar_t gl_printcheckerror = {0, "gl_printcheckerror", "0", "prints all OpenGL error checks, useful to identify location of driver crashes"};
+cvar_t r_stereo_separation = {0, "r_stereo_separation", "4", "separation of eyes in the world (try negative values too)"};
+cvar_t r_stereo_sidebyside = {0, "r_stereo_sidebyside", "0", "side by side views (for those who can't afford glasses but can afford eye strain)"};
+cvar_t r_stereo_redblue = {0, "r_stereo_redblue", "0", "red/blue anaglyph stereo glasses (note: most of these glasses are actually red/cyan, try that one too)"};
+cvar_t r_stereo_redcyan = {0, "r_stereo_redcyan", "0", "red/cyan anaglyph stereo glasses, the kind given away at drive-in movies like Creature From The Black Lagoon In 3D"};
+cvar_t r_stereo_redgreen = {0, "r_stereo_redgreen", "0", "red/green anaglyph stereo glasses (for those who don't mind yellow)"};
 
-cvar_t r_render = {0, "r_render", "1"};
-cvar_t r_waterwarp = {CVAR_SAVE, "r_waterwarp", "1"};
-cvar_t gl_polyblend = {CVAR_SAVE, "gl_polyblend", "1"};
-cvar_t gl_dither = {CVAR_SAVE, "gl_dither", "1"}; // whether or not to use dithering
-cvar_t gl_lockarrays = {0, "gl_lockarrays", "1"};
+cvar_t r_render = {0, "r_render", "1", "enables rendering calls (you want this on!)"};
+cvar_t r_waterwarp = {CVAR_SAVE, "r_waterwarp", "1", "warp view while underwater"};
+cvar_t gl_polyblend = {CVAR_SAVE, "gl_polyblend", "1", "tints view while underwater, hurt, etc"};
+cvar_t gl_dither = {CVAR_SAVE, "gl_dither", "1", "enables OpenGL dithering (16bit looks bad with this off)"};
+cvar_t gl_lockarrays = {0, "gl_lockarrays", "1", "enables use of glLockArraysEXT, may cause glitches with some broken drivers"};
 
 int gl_maxdrawrangeelementsvertices;
 int gl_maxdrawrangeelementsindices;
@@ -210,10 +210,10 @@ static void gl_backend_newmap(void)
 {
 }
 
-cvar_t scr_zoomwindow = {CVAR_SAVE, "scr_zoomwindow", "0"};
-cvar_t scr_zoomwindow_viewsizex = {CVAR_SAVE, "scr_zoomwindow_viewsizex", "20"};
-cvar_t scr_zoomwindow_viewsizey = {CVAR_SAVE, "scr_zoomwindow_viewsizey", "20"};
-cvar_t scr_zoomwindow_fov = {CVAR_SAVE, "scr_zoomwindow_fov", "20"};
+cvar_t scr_zoomwindow = {CVAR_SAVE, "scr_zoomwindow", "0", "displays a zoomed in overlay window"};
+cvar_t scr_zoomwindow_viewsizex = {CVAR_SAVE, "scr_zoomwindow_viewsizex", "20", "horizontal viewsize of zoom window"};
+cvar_t scr_zoomwindow_viewsizey = {CVAR_SAVE, "scr_zoomwindow_viewsizey", "20", "vertical viewsize of zoom window"};
+cvar_t scr_zoomwindow_fov = {CVAR_SAVE, "scr_zoomwindow_fov", "20", "fov of zoom window"};
 
 void gl_backend_init(void)
 {

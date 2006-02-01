@@ -29,8 +29,8 @@ line of sight checks trace->inopen and trace->inwater, but bullets don't
 
 */
 
-cvar_t sv_debugmove = {CVAR_NOTIFY, "sv_debugmove", "0"};
-cvar_t sv_areagrid_mingridsize = {CVAR_NOTIFY, "sv_areagrid_mingridsize", "64"};
+cvar_t sv_debugmove = {CVAR_NOTIFY, "sv_debugmove", "0", "disables collision detection optimizations for debugging purposes"};
+cvar_t sv_areagrid_mingridsize = {CVAR_NOTIFY, "sv_areagrid_mingridsize", "64", "minimum areagrid cell size, smaller values work better for lots of small objects, higher values for large objects"};
 
 void SV_AreaStats_f(void);
 
@@ -38,7 +38,7 @@ void SV_World_Init(void)
 {
 	Cvar_RegisterVariable(&sv_debugmove);
 	Cvar_RegisterVariable(&sv_areagrid_mingridsize);
-	Cmd_AddCommand("sv_areastats", SV_AreaStats_f);
+	Cmd_AddCommand("sv_areastats", SV_AreaStats_f, "prints information on culling grid system");
 	Collision_Init();
 }
 

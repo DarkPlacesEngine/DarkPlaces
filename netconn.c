@@ -26,21 +26,21 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MASTER_PORT 27950
 
 // note this defaults on for dedicated servers, off for listen servers
-cvar_t sv_public = {0, "sv_public", "0"};
-static cvar_t sv_heartbeatperiod = {CVAR_SAVE, "sv_heartbeatperiod", "120"};
+cvar_t sv_public = {0, "sv_public", "0", "advertises this server on the master server (so that players can find it in the server browser)"};
+static cvar_t sv_heartbeatperiod = {CVAR_SAVE, "sv_heartbeatperiod", "120", "how often to send heartbeat in seconds (only used if sv_public is 1)"};
 
 // FIXME: resolve DNS on masters whenever their value changes and cache it (to avoid major delays in active servers when they heartbeat)
 static cvar_t sv_masters [] =
 {
-	{CVAR_SAVE, "sv_master1", ""},
-	{CVAR_SAVE, "sv_master2", ""},
-	{CVAR_SAVE, "sv_master3", ""},
-	{CVAR_SAVE, "sv_master4", ""},
-	{0, "sv_masterextra1", "ghdigital.com"}, // admin: LordHavoc
-	{0, "sv_masterextra2", "dpmaster.deathmask.net"}, // admin: Willis
-	{0, "sv_masterextra3", "12.166.196.192"}, // admin: Venim
-	{0, "sv_masterextra4", "excalibur.nvg.ntnu.no"}, // admin: tChr
-	{0, NULL, NULL}
+	{CVAR_SAVE, "sv_master1", "", "user-chosen master server 1"},
+	{CVAR_SAVE, "sv_master2", "", "user-chosen master server 2"},
+	{CVAR_SAVE, "sv_master3", "", "user-chosen master server 3"},
+	{CVAR_SAVE, "sv_master4", "", "user-chosen master server 4"},
+	{0, "sv_masterextra1", "ghdigital.com", "default master server 1 (admin: LordHavoc)"}, // admin: LordHavoc
+	{0, "sv_masterextra2", "dpmaster.deathmask.net", "default master server 2 (admin: Willis)"}, // admin: Willis
+	{0, "sv_masterextra3", "12.166.196.192", "default master server 3 (admin: Venim)"}, // admin: Venim
+	{0, "sv_masterextra4", "excalibur.nvg.ntnu.no", "default master server 4 (admin: tChr)"}, // admin: tChr
+	{0, NULL, NULL, NULL}
 };
 
 static double nextheartbeattime = 0;
@@ -48,18 +48,18 @@ static double nextheartbeattime = 0;
 sizebuf_t net_message;
 static unsigned char net_message_buf[NET_MAXMESSAGE];
 
-cvar_t net_messagetimeout = {0, "net_messagetimeout","300"};
-cvar_t net_messagerejointimeout = {0, "net_messagerejointimeout","10"};
-cvar_t net_connecttimeout = {0, "net_connecttimeout","10"};
-cvar_t hostname = {CVAR_SAVE, "hostname", "UNNAMED"};
-cvar_t developer_networking = {0, "developer_networking", "0"};
+cvar_t net_messagetimeout = {0, "net_messagetimeout","300", "drops players who have not sent any packets for this many seconds"};
+cvar_t net_messagerejointimeout = {0, "net_messagerejointimeout","10", "give a player this much time in seconds to rejoin and continue playing (not losing frags and such)"};
+cvar_t net_connecttimeout = {0, "net_connecttimeout","10", "after requesting a connection, the client must reply within this many seconds or be dropped (cuts down on connect floods)"};
+cvar_t hostname = {CVAR_SAVE, "hostname", "UNNAMED", "server message to show in server browser"};
+cvar_t developer_networking = {0, "developer_networking", "0", "prints all received and sent packets (recommended only for debugging)"};
 
-cvar_t cl_netlocalping = {0, "cl_netlocalping","0"};
-static cvar_t cl_netpacketloss = {0, "cl_netpacketloss","0"};
-static cvar_t net_slist_queriespersecond = {0, "net_slist_queriespersecond", "20"};
-static cvar_t net_slist_queriesperframe = {0, "net_slist_queriesperframe", "4"};
-static cvar_t net_slist_timeout = {0, "net_slist_timeout", "4"};
-static cvar_t net_slist_maxtries = {0, "net_slist_maxtries", "3"};
+cvar_t cl_netlocalping = {0, "cl_netlocalping","0", "lags local loopback connection by this much ping time (useful to play more fairly on your own server with people with higher pings)"};
+static cvar_t cl_netpacketloss = {0, "cl_netpacketloss","0", "drops this percentage of packets (incoming and outgoing), useful for testing network protocol robustness (effects failing to start, sounds failing to play, etc)"};
+static cvar_t net_slist_queriespersecond = {0, "net_slist_queriespersecond", "20", "how many server information requests to send per second"};
+static cvar_t net_slist_queriesperframe = {0, "net_slist_queriesperframe", "4", "maximum number of server information requests to send each rendered frame (guards against low framerates causing problems)"};
+static cvar_t net_slist_timeout = {0, "net_slist_timeout", "4", "how long to listen for a server information response before giving up"};
+static cvar_t net_slist_maxtries = {0, "net_slist_maxtries", "3", "how many times to ask the same server for information (more times gives better ping reports but takes longer)"};
 
 /* statistic counters */
 static int packetsSent = 0;
@@ -93,10 +93,10 @@ lhnetsocket_t *sv_sockets[16];
 netconn_t *netconn_list = NULL;
 mempool_t *netconn_mempool = NULL;
 
-cvar_t cl_netport = {0, "cl_port", "0"};
-cvar_t sv_netport = {0, "port", "26000"};
-cvar_t net_address = {0, "net_address", "0.0.0.0"};
-//cvar_t net_netaddress_ipv6 = {0, "net_address_ipv6", "[0:0:0:0:0:0:0:0]"};
+cvar_t cl_netport = {0, "cl_port", "0", "forces client to use chosen port number if not 0"};
+cvar_t sv_netport = {0, "port", "26000", "server port for players to connect to"};
+cvar_t net_address = {0, "net_address", "0.0.0.0", "network address to open ports on"};
+//cvar_t net_netaddress_ipv6 = {0, "net_address_ipv6", "[0:0:0:0:0:0:0:0]", "network address to open ipv6 ports on"};
 
 // ServerList interface
 serverlist_mask_t serverlist_andmasks[SERVERLIST_ANDMASKCOUNT];
@@ -2015,9 +2015,9 @@ void NetConn_Init(void)
 	int i;
 	lhnetaddress_t tempaddress;
 	netconn_mempool = Mem_AllocPool("network connections", 0, NULL);
-	Cmd_AddCommand("net_stats", Net_Stats_f);
-	Cmd_AddCommand("net_slist", Net_Slist_f);
-	Cmd_AddCommand("heartbeat", Net_Heartbeat_f);
+	Cmd_AddCommand("net_stats", Net_Stats_f, "print network statistics");
+	Cmd_AddCommand("net_slist", Net_Slist_f, "query master series and print all server information");
+	Cmd_AddCommand("heartbeat", Net_Heartbeat_f, "send a heartbeat to the master server (updates your server information)");
 	Cvar_RegisterVariable(&net_slist_queriespersecond);
 	Cvar_RegisterVariable(&net_slist_queriesperframe);
 	Cvar_RegisterVariable(&net_slist_timeout);

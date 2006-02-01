@@ -4,12 +4,12 @@
 #include "jpeg.h"
 #include "image_png.h"
 
-cvar_t	gl_max_size = {CVAR_SAVE, "gl_max_size", "2048"};
-cvar_t	gl_max_scrapsize = {CVAR_SAVE, "gl_max_scrapsize", "256"};
-cvar_t	gl_picmip = {CVAR_SAVE, "gl_picmip", "0"};
-cvar_t	r_lerpimages = {CVAR_SAVE, "r_lerpimages", "1"};
-cvar_t	r_precachetextures = {CVAR_SAVE, "r_precachetextures", "1"};
-cvar_t  gl_texture_anisotropy = {CVAR_SAVE, "gl_texture_anisotropy", "1"};
+cvar_t gl_max_size = {CVAR_SAVE, "gl_max_size", "2048", "maximum allowed texture size, can be used to reduce video memory usage, note: this is automatically reduced to match video card capabilities (such as 256 on 3Dfx cards before Voodoo4/5)"};
+cvar_t gl_max_scrapsize = {CVAR_SAVE, "gl_max_scrapsize", "256", "size of scrap textures used to combine lightmaps"};
+cvar_t gl_picmip = {CVAR_SAVE, "gl_picmip", "0", "reduces resolution of textures by powers of 2, for example 1 will halve width/height, reducing texture memory usage by 75%"};
+cvar_t r_lerpimages = {CVAR_SAVE, "r_lerpimages", "1", "bilinear filters images when scaling them up to power of 2 size (mode 1), looks better than glquake (mode 0)"};
+cvar_t r_precachetextures = {CVAR_SAVE, "r_precachetextures", "1", "0 = never upload textures until used, 1 = upload most textures before use (exceptions: rarely used skin colormap layers), 2 = upload all textures before use (can increase texture memory usage significantly)"};
+cvar_t gl_texture_anisotropy = {CVAR_SAVE, "gl_texture_anisotropy", "1", "anisotropic filtering quality (if supported by hardware), 1 sample (no anisotropy) and 8 sample (8 tap anisotropy) are recommended values"};
 
 int		gl_filter_min = GL_LINEAR_MIPMAP_LINEAR;
 int		gl_filter_mag = GL_LINEAR;
@@ -537,8 +537,8 @@ static void r_textures_newmap(void)
 
 void R_Textures_Init (void)
 {
-	Cmd_AddCommand("gl_texturemode", &GL_TextureMode_f);
-	Cmd_AddCommand("r_texturestats", R_TextureStats_f);
+	Cmd_AddCommand("gl_texturemode", &GL_TextureMode_f, "set texture filtering mode (GL_NEAREST, GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR, etc)");
+	Cmd_AddCommand("r_texturestats", R_TextureStats_f, "print information about all loaded textures and some statistics");
 	Cvar_RegisterVariable (&gl_max_scrapsize);
 	Cvar_RegisterVariable (&gl_max_size);
 	Cvar_RegisterVariable (&gl_picmip);

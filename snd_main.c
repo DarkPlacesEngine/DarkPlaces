@@ -60,8 +60,8 @@ channel_t channels[MAX_CHANNELS];
 unsigned int total_channels;
 
 int snd_blocked = 0;
-cvar_t snd_initialized = { CVAR_READONLY, "snd_initialized", "0"};
-cvar_t snd_streaming = { CVAR_SAVE, "snd_streaming", "1"};
+cvar_t snd_initialized = { CVAR_READONLY, "snd_initialized", "0", "indicates the sound subsystem is active"};
+cvar_t snd_streaming = { CVAR_SAVE, "snd_streaming", "1", "enables keeping compressed ogg sound files compressed, decompressing them only as needed, otherwise they will be decompressed completely at load (may use a lot of memory)"};
 
 volatile dma_t *shm = 0;
 volatile dma_t sn;
@@ -83,19 +83,19 @@ qboolean sound_spatialized = false;
 // isolating performance in the renderer.
 qboolean fakedma = false;
 
-cvar_t bgmvolume = {CVAR_SAVE, "bgmvolume", "1"};
-cvar_t volume = {CVAR_SAVE, "volume", "0.7"};
-cvar_t snd_staticvolume = {CVAR_SAVE, "snd_staticvolume", "1"};
+cvar_t bgmvolume = {CVAR_SAVE, "bgmvolume", "1", "volume of background music (such as CD music or replacement files such as sound/cdtracks/track002.ogg)"};
+cvar_t volume = {CVAR_SAVE, "volume", "0.7", "volume of sound effects"};
+cvar_t snd_staticvolume = {CVAR_SAVE, "snd_staticvolume", "1", "volume of ambient sound effects (such as swampy sounds at the start of e1m2)"};
 
-cvar_t nosound = {0, "nosound", "0"};
-cvar_t snd_precache = {0, "snd_precache", "1"};
-cvar_t bgmbuffer = {0, "bgmbuffer", "4096"};
-cvar_t ambient_level = {0, "ambient_level", "0.3"};
-cvar_t ambient_fade = {0, "ambient_fade", "100"};
-cvar_t snd_noextraupdate = {0, "snd_noextraupdate", "0"};
-cvar_t snd_show = {0, "snd_show", "0"};
-cvar_t _snd_mixahead = {CVAR_SAVE, "_snd_mixahead", "0.1"};
-cvar_t snd_swapstereo = {CVAR_SAVE, "snd_swapstereo", "0"};
+cvar_t nosound = {0, "nosound", "0", "disables sound"};
+cvar_t snd_precache = {0, "snd_precache", "1", "loads sounds before they are used"};
+//cvar_t bgmbuffer = {0, "bgmbuffer", "4096", "unused quake cvar"};
+cvar_t ambient_level = {0, "ambient_level", "0.3", "volume of environment noises (water and wind)"};
+cvar_t ambient_fade = {0, "ambient_fade", "100", "rate of volume fading when moving from one environment to another"};
+cvar_t snd_noextraupdate = {0, "snd_noextraupdate", "0", "disables extra sound mixer calls that are meant to reduce the chance of sound breakup at very low framerates"};
+cvar_t snd_show = {0, "snd_show", "0", "shows some statistics about sound mixing"};
+cvar_t _snd_mixahead = {CVAR_SAVE, "_snd_mixahead", "0.1", "how much sound to mix ahead of time"};
+cvar_t snd_swapstereo = {CVAR_SAVE, "snd_swapstereo", "0", "swaps left/right speakers for old ISA soundblaster cards"};
 
 // Ambient sounds
 sfx_t* ambient_sfxs [2] = { NULL, NULL };
@@ -205,19 +205,19 @@ void S_Init(void)
 	if (COM_CheckParm("-simsound"))
 		fakedma = true;
 
-	Cmd_AddCommand("play", S_Play);
-	Cmd_AddCommand("play2", S_Play2);
-	Cmd_AddCommand("playvol", S_PlayVol);
-	Cmd_AddCommand("stopsound", S_StopAllSounds);
-	Cmd_AddCommand("soundlist", S_SoundList);
-	Cmd_AddCommand("soundinfo", S_SoundInfo_f);
-	Cmd_AddCommand("snd_restart", S_Restart_f);
+	Cmd_AddCommand("play", S_Play, "play a sound at your current location (not heard by anyone else)");
+	Cmd_AddCommand("play2", S_Play2, "play a sound globally throughout the level (not heard by anyone else)");
+	Cmd_AddCommand("playvol", S_PlayVol, "play a sound at the specified volume level at your current location (not heard by anyone else)");
+	Cmd_AddCommand("stopsound", S_StopAllSounds, "silence");
+	Cmd_AddCommand("soundlist", S_SoundList, "list loaded sounds");
+	Cmd_AddCommand("soundinfo", S_SoundInfo_f, "print sound system information (such as channels and speed)");
+	Cmd_AddCommand("snd_restart", S_Restart_f, "restart sound system");
 
 	Cvar_RegisterVariable(&nosound);
 	Cvar_RegisterVariable(&snd_precache);
 	Cvar_RegisterVariable(&snd_initialized);
 	Cvar_RegisterVariable(&snd_streaming);
-	Cvar_RegisterVariable(&bgmbuffer);
+	//Cvar_RegisterVariable(&bgmbuffer);
 	Cvar_RegisterVariable(&ambient_level);
 	Cvar_RegisterVariable(&ambient_fade);
 	Cvar_RegisterVariable(&snd_noextraupdate);

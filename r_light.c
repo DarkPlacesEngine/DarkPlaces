@@ -23,9 +23,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cl_collision.h"
 #include "r_shadow.h"
 
-cvar_t r_modellights = {CVAR_SAVE, "r_modellights", "4"};
-cvar_t r_coronas = {CVAR_SAVE, "r_coronas", "1"};
-cvar_t gl_flashblend = {CVAR_SAVE, "gl_flashblend", "0"};
+cvar_t r_modellights = {CVAR_SAVE, "r_modellights", "4", "how many lights from a .lights file (produced by hlight) are worthy of directional shading on a model (others are applied to the whole model as ambient lighting)"};
+cvar_t r_coronas = {CVAR_SAVE, "r_coronas", "1", "brightness of corona flare effects around certain lights, 0 disables corona effects"};
+cvar_t gl_flashblend = {CVAR_SAVE, "gl_flashblend", "0", "render bright coronas for dynamic lights instead of actual lighting, fast but ugly"};
 
 static rtexture_t *lightcorona;
 static rtexturepool_t *lighttexturepool;
