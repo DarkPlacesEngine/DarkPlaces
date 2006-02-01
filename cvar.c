@@ -199,7 +199,7 @@ void Cvar_CompleteCvarPrint (const char *partial)
 	// Loop through the command list and print all matches
 	for (cvar = cvar_vars; cvar; cvar = cvar->next)
 		if (!strncasecmp(partial, cvar->name, len))
-			Con_Printf("%s : %s (%s) : %s\n", cvar->name, cvar->value, cvar->defstring, cvar->description);
+			Con_Printf("%s : \"%s\" (\"%s\") : %s\n", cvar->name, cvar->string, cvar->defstring, cvar->description);
 }
 
 
@@ -421,6 +421,7 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags)
 	strcpy(cvar->defstring, value);
 	cvar->value = atof (cvar->string);
 	cvar->integer = (int) cvar->value;
+	cvar->description = "custom cvar";
 
 // link the variable in
 	cvar->next = cvar_vars;
@@ -513,7 +514,7 @@ void Cvar_List_f (void)
 		if (partial && strncasecmp (partial,cvar->name,len))
 			continue;
 
-		Con_Printf("%s is \"%s\" [\"%s\"]\n", cvar->name, cvar->string, cvar->defstring);
+		Con_Printf("%s is \"%s\" [\"%s\"] %s\n", cvar->name, cvar->string, cvar->defstring, cvar->description);
 		count++;
 	}
 
