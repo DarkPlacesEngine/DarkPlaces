@@ -1662,8 +1662,8 @@ static void R_Shadow_RenderSurfacesLighting_Light_GLSL(const entity_render_t *en
 	{
 		R_Mesh_TexBind(5, R_GetTexture(pantstexture));
 		R_Mesh_TexBind(6, R_GetTexture(shirttexture));
-		qglUniform3fARB(qglGetUniformLocationARB(r_shadow_lightprog, "Color_Pants"), lightcolorpants[0], lightcolorpants[1], lightcolorpants[2]);CHECKGLERROR
-		qglUniform3fARB(qglGetUniformLocationARB(r_shadow_lightprog, "Color_Shirt"), lightcolorshirt[0], lightcolorshirt[1], lightcolorshirt[2]);CHECKGLERROR
+		qglUniform3fARB(qglGetUniformLocationARB(r_shadow_lightprog, "Color_Pants"), ent->colormap_pantscolor[0], ent->colormap_pantscolor[1], ent->colormap_pantscolor[2]);CHECKGLERROR
+		qglUniform3fARB(qglGetUniformLocationARB(r_shadow_lightprog, "Color_Shirt"), ent->colormap_shirtcolor[0], ent->colormap_shirtcolor[1], ent->colormap_shirtcolor[2]);CHECKGLERROR
 	}
 	if (r_shadow_lightpermutation & SHADERPERMUTATION_FOG)
 	{
