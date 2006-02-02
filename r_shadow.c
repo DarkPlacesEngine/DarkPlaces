@@ -256,13 +256,14 @@ cubemapinfo_t;
 static int numcubemaps;
 static cubemapinfo_t cubemaps[MAX_CUBEMAPS];
 
-#define SHADERPERMUTATION_SPECULAR (1<<0)
-#define SHADERPERMUTATION_FOG (1<<1)
-#define SHADERPERMUTATION_CUBEFILTER (1<<2)
-#define SHADERPERMUTATION_OFFSETMAPPING (1<<3)
-#define SHADERPERMUTATION_SURFACENORMALIZE (1<<4)
-#define SHADERPERMUTATION_GEFORCEFX (1<<5)
-#define SHADERPERMUTATION_COUNT (1<<6)
+#define SHADERPERMUTATION_COLORMAPPING (1<<0)
+#define SHADERPERMUTATION_SPECULAR (1<<1)
+#define SHADERPERMUTATION_FOG (1<<2)
+#define SHADERPERMUTATION_CUBEFILTER (1<<3)
+#define SHADERPERMUTATION_OFFSETMAPPING (1<<4)
+#define SHADERPERMUTATION_SURFACENORMALIZE (1<<5)
+#define SHADERPERMUTATION_GEFORCEFX (1<<6)
+#define SHADERPERMUTATION_COUNT (1<<7)
 
 GLhandleARB r_shadow_program_light[SHADERPERMUTATION_COUNT];
 
@@ -372,8 +373,15 @@ const char *builtinshader_light_frag =
 "uniform myhalf SpecularScale;\n"
 "#endif\n"
 "\n"
+"#ifdef USECOLORMAPPING\n"
+"uniform myhvec3 Color_Pants;\n"
+"uniform myhvec3 Color_Shirt;\n"
+"#endif\n"
+"\n"
 "uniform sampler2D Texture_Normal;\n"
 "uniform sampler2D Texture_Color;\n"
+"uniform sampler2D Texture_Pants;\n"
+"uniform sampler2D Texture_Shirt;\n"
 "#ifdef USESPECULAR\n"
 "uniform sampler2D Texture_Gloss;\n"
 "#endif\n"
@@ -426,7 +434,11 @@ const char *builtinshader_light_frag =
 "\n"
 "	// calculate shading\n"
 "	myhvec3 diffusenormal = myhvec3(normalize(LightVector));\n"
-"	myhvec3 color = myhvec3(texture2D(Texture_Color, TexCoord)) * (AmbientScale + DiffuseScale * max(dot(surfacenormal, diffusenormal), 0.0));\n"
+"	myhvec3 color = myhvec3(texture2D(Texture_Color, TexCoord));\n"
+"#ifdef USECOLORMAPPING\n"
+"	color += myhvec3(texture2D(Texture_Pants, TexCoord)) * Color_Pants + myhvec3(texture2D(Texture_Shirt, TexCoord)) * Color_Shirt;\n"
+"#endif\n"
+"	color *= (AmbientScale + DiffuseScale * max(dot(surfacenormal, diffusenormal), 0.0));\n"
 "#ifdef USESPECULAR\n"
 "	myhvec3 specularnormal = myhvec3(normalize(diffusenormal + myhvec3(normalize(EyeVector))));\n"
 "	color += myhvec3(texture2D(Texture_Gloss, TexCoord)) * SpecularScale * pow(max(dot(surfacenormal, specularnormal), 0.0), SpecularPower);\n"
@@ -486,32 +498,45 @@ void r_shadow_start(void)
 		fragstring = (char *)FS_LoadFile("glsl/light.frag", tempmempool, false, NULL);
 		for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
 		{
+			char permutationname[256];
 			vertstrings_count = 0;
 			fragstrings_count = 0;
+			permutationname[0] = 0;
+			if (i & SHADERPERMUTATION_COLORMAPPING)
+			{
+				vertstrings_list[vertstrings_count++] = "#define USECOLORMAPPING\n";
+				fragstrings_list[fragstrings_count++] = "#define USECOLORMAPPING\n";
+				strlcat(permutationname, " colormapping", sizeof(permutationname));
+			}
 			if (i & SHADERPERMUTATION_SPECULAR)
 			{
 				vertstrings_list[vertstrings_count++] = "#define USESPECULAR\n";
 				fragstrings_list[fragstrings_count++] = "#define USESPECULAR\n";
+				strlcat(permutationname, " specular", sizeof(permutationname));
 			}
 			if (i & SHADERPERMUTATION_FOG)
 			{
 				vertstrings_list[vertstrings_count++] = "#define USEFOG\n";
 				fragstrings_list[fragstrings_count++] = "#define USEFOG\n";
+				strlcat(permutationname, " fog", sizeof(permutationname));
 			}
 			if (i & SHADERPERMUTATION_CUBEFILTER)
 			{
 				vertstrings_list[vertstrings_count++] = "#define USECUBEFILTER\n";
 				fragstrings_list[fragstrings_count++] = "#define USECUBEFILTER\n";
+				strlcat(permutationname, " cubefilter", sizeof(permutationname));
 			}
 			if (i & SHADERPERMUTATION_OFFSETMAPPING)
 			{
 				vertstrings_list[vertstrings_count++] = "#define USEOFFSETMAPPING\n";
 				fragstrings_list[fragstrings_count++] = "#define USEOFFSETMAPPING\n";
+				strlcat(permutationname, " offsetmapping", sizeof(permutationname));
 			}
 			if (i & SHADERPERMUTATION_SURFACENORMALIZE)
 			{
 				vertstrings_list[vertstrings_count++] = "#define SURFACENORMALIZE\n";
 				fragstrings_list[fragstrings_count++] = "#define SURFACENORMALIZE\n";
+				strlcat(permutationname, " surfacenormalize", sizeof(permutationname));
 			}
 			if (i & SHADERPERMUTATION_GEFORCEFX)
 			{
@@ -520,13 +545,14 @@ void r_shadow_start(void)
 					continue;
 				vertstrings_list[vertstrings_count++] = "#define GEFORCEFX\n";
 				fragstrings_list[fragstrings_count++] = "#define GEFORCEFX\n";
+				strlcat(permutationname, " halffloat", sizeof(permutationname));
 			}
 			vertstrings_list[vertstrings_count++] = vertstring ? vertstring : builtinshader_light_vert;
 			fragstrings_list[fragstrings_count++] = fragstring ? fragstring : builtinshader_light_frag;
 			r_shadow_program_light[i] = GL_Backend_CompileProgram(vertstrings_count, vertstrings_list, fragstrings_count, fragstrings_list);
 			if (!r_shadow_program_light[i])
 			{
-				Con_Printf("permutation %s %s %s %s %s %s failed for shader %s, some features may not work properly!\n", i & 1 ? "specular" : "", i & 2 ? "fog" : "", i & 4 ? "cubefilter" : "", i & 8 ? "offsetmapping" : "", i & 16 ? "surfacenormalize" : "", i & 32 ? "geforcefx" : "", "glsl/light");
+				Con_Printf("permutation%s failed for shader %s, some features may not work properly!\n", permutationname, "glsl/light");
 				continue;
 			}
 			qglUseProgramObjectARB(r_shadow_program_light[i]);
@@ -544,6 +570,8 @@ void r_shadow_start(void)
 			{
 				qglUniform1iARB(qglGetUniformLocationARB(r_shadow_program_light[i], "Texture_FogMask"), 4);CHECKGLERROR
 			}
+			qglUniform1iARB(qglGetUniformLocationARB(r_shadow_program_light[i], "Texture_Pants"), 5);CHECKGLERROR
+			qglUniform1iARB(qglGetUniformLocationARB(r_shadow_program_light[i], "Texture_Shirt"), 6);CHECKGLERROR
 		}
 		qglUseProgramObjectARB(0);
 		if (fragstring)
@@ -1229,51 +1257,12 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent)
 		R_Mesh_TexBind(2, R_GetTexture(r_texture_white)); // gloss
 		R_Mesh_TexBindCubeMap(3, R_GetTexture(r_shadow_rtlight->currentcubemap)); // light filter
 		R_Mesh_TexBind(4, R_GetTexture(r_texture_fogattenuation)); // fog
+		R_Mesh_TexBind(5, R_GetTexture(r_texture_white)); // pants
+		R_Mesh_TexBind(6, R_GetTexture(r_texture_white)); // shirt
 		//R_Mesh_TexMatrix(3, r_shadow_entitytolight); // light filter matrix
 		GL_BlendFunc(GL_ONE, GL_ONE);
 		GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 0);
 		CHECKGLERROR
-		r_shadow_lightpermutation = 0;
-		// only add a feature to the permutation if that permutation exists
-		// (otherwise it might end up not using a shader at all, which looks
-		// worse than using less features)
-		if (fogenabled && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_FOG])
-			r_shadow_lightpermutation |= SHADERPERMUTATION_FOG;
-		if (r_shadow_rtlight->specularscale && r_shadow_gloss.integer >= 1 && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_SPECULAR])
-			r_shadow_lightpermutation |= SHADERPERMUTATION_SPECULAR;
-		if (r_shadow_rtlight->currentcubemap != r_texture_whitecube && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_CUBEFILTER])
-			r_shadow_lightpermutation |= SHADERPERMUTATION_CUBEFILTER;
-		if (r_shadow_glsl_offsetmapping.integer && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_OFFSETMAPPING])
-			r_shadow_lightpermutation |= SHADERPERMUTATION_OFFSETMAPPING;
-		if (r_shadow_glsl_surfacenormalize.integer && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_SURFACENORMALIZE])
-			r_shadow_lightpermutation |= SHADERPERMUTATION_SURFACENORMALIZE;
-		if (r_shadow_glsl_usehalffloat.integer && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_GEFORCEFX])
-			r_shadow_lightpermutation |= SHADERPERMUTATION_GEFORCEFX;
-		r_shadow_lightprog = r_shadow_program_light[r_shadow_lightpermutation];
-		qglUseProgramObjectARB(r_shadow_lightprog);CHECKGLERROR
-		// TODO: support fog (after renderer is converted to texture fog)
-		if (r_shadow_lightpermutation & SHADERPERMUTATION_FOG)
-		{
-			qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "FogRangeRecip"), fograngerecip);CHECKGLERROR
-		}
-		qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "AmbientScale"), r_shadow_rtlight->ambientscale);CHECKGLERROR
-		qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "DiffuseScale"), r_shadow_rtlight->diffusescale);CHECKGLERROR
-		if (r_shadow_lightpermutation & SHADERPERMUTATION_SPECULAR)
-		{
-			qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "SpecularPower"), 8);CHECKGLERROR
-			qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "SpecularScale"), r_shadow_rtlight->specularscale);CHECKGLERROR
-		}
-		//qglUniform3fARB(qglGetUniformLocationARB(r_shadow_lightprog, "LightColor"), r_shadow_entitylightcolorbase[0], r_shadow_entitylightcolorbase[1], r_shadow_entitylightcolorbase[2]);CHECKGLERROR
-		//qglUniform3fARB(qglGetUniformLocationARB(r_shadow_lightprog, "LightPosition"), relativelightorigin[0], relativelightorigin[1], relativelightorigin[2]);CHECKGLERROR
-		//if (r_shadow_lightpermutation & (SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_FOG | SHADERPERMUTATION_OFFSETMAPPING))
-		//{
-		//	qglUniform3fARB(qglGetUniformLocationARB(r_shadow_lightprog, "EyePosition"), relativeeyeorigin[0], relativeeyeorigin[1], relativeeyeorigin[2]);CHECKGLERROR
-		//}
-		if (r_shadow_lightpermutation & SHADERPERMUTATION_OFFSETMAPPING)
-		{
-			qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "OffsetMapping_Scale"), r_shadow_glsl_offsetmapping_scale.value);CHECKGLERROR
-			qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "OffsetMapping_Bias"), r_shadow_glsl_offsetmapping_bias.value);CHECKGLERROR
-		}
 	}
 }
 
@@ -1633,22 +1622,66 @@ static void R_Shadow_RenderSurfacesLighting_Light_GLSL(const entity_render_t *en
 	qboolean dopants = (r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorpants) > 0.00001 && pantstexture != r_texture_black;
 	qboolean doshirt = (r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorshirt) > 0.00001 && shirttexture != r_texture_black;
 	qboolean dospecular = specularscale * VectorLength2(lightcolorbase) > 0.00001 && glosstexture != r_texture_black;
-	// TODO: add direct pants/shirt rendering
-	if (dopants)
-		R_Shadow_RenderSurfacesLighting_Light_GLSL(ent, texture, numsurfaces, surfacelist, lightcolorpants, vec3_origin, vec3_origin, pantstexture, r_texture_black, r_texture_black, normalmaptexture, r_texture_black, 0);
-	if (doshirt)
-		R_Shadow_RenderSurfacesLighting_Light_GLSL(ent, texture, numsurfaces, surfacelist, lightcolorshirt, vec3_origin, vec3_origin, shirttexture, r_texture_black, r_texture_black, normalmaptexture, r_texture_black, 0);
-	if (!dobase && !dospecular)
+	if (!dobase && !dopants && !doshirt && !dospecular)
 		return;
+	// select a permutation of the lighting shader appropriate to this
+	// combination of texture, entity, light source, and fogging, only use the
+	// minimum features necessary to avoid wasting rendering time in the
+	// fragment shader on features that are not being used
+	r_shadow_lightpermutation = 0;
+	// only add a feature to the permutation if that permutation exists
+	// (otherwise it might end up not using a shader at all, which looks
+	// worse than using less features)
+	if (fogenabled && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_FOG])
+		r_shadow_lightpermutation |= SHADERPERMUTATION_FOG;
+	if ((dopants || doshirt) && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_COLORMAPPING])
+		r_shadow_lightpermutation |= SHADERPERMUTATION_COLORMAPPING;
+	if (specularscale > 0 && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_SPECULAR])
+		r_shadow_lightpermutation |= SHADERPERMUTATION_SPECULAR;
+	if (r_shadow_rtlight->currentcubemap != r_texture_whitecube && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_CUBEFILTER])
+		r_shadow_lightpermutation |= SHADERPERMUTATION_CUBEFILTER;
+	if (r_shadow_glsl_offsetmapping.integer && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_OFFSETMAPPING])
+		r_shadow_lightpermutation |= SHADERPERMUTATION_OFFSETMAPPING;
+	if (r_shadow_glsl_surfacenormalize.integer && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_SURFACENORMALIZE])
+		r_shadow_lightpermutation |= SHADERPERMUTATION_SURFACENORMALIZE;
+	if (r_shadow_glsl_usehalffloat.integer && r_shadow_program_light[r_shadow_lightpermutation | SHADERPERMUTATION_GEFORCEFX])
+		r_shadow_lightpermutation |= SHADERPERMUTATION_GEFORCEFX;
+	r_shadow_lightprog = r_shadow_program_light[r_shadow_lightpermutation];
+	qglUseProgramObjectARB(r_shadow_lightprog);CHECKGLERROR
 	R_Mesh_TexMatrix(0, &texture->currenttexmatrix);
+	R_Mesh_TexMatrix(3, &r_shadow_entitytolight);
 	R_Mesh_TexBind(0, R_GetTexture(normalmaptexture));
 	R_Mesh_TexBind(1, R_GetTexture(basetexture));
-	R_Mesh_TexBind(2, R_GetTexture(glosstexture));
-	if (r_shadow_lightpermutation & SHADERPERMUTATION_SPECULAR)
+	qglUniform3fARB(qglGetUniformLocationARB(r_shadow_lightprog, "LightPosition"), r_shadow_entitylightorigin[0], r_shadow_entitylightorigin[1], r_shadow_entitylightorigin[2]);CHECKGLERROR
+	if (r_shadow_lightpermutation & (SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_FOG | SHADERPERMUTATION_OFFSETMAPPING))
 	{
-		qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "SpecularScale"), specularscale);CHECKGLERROR
+		qglUniform3fARB(qglGetUniformLocationARB(r_shadow_lightprog, "EyePosition"), r_shadow_entityeyeorigin[0], r_shadow_entityeyeorigin[1], r_shadow_entityeyeorigin[2]);CHECKGLERROR
 	}
 	qglUniform3fARB(qglGetUniformLocationARB(r_shadow_lightprog, "LightColor"), lightcolorbase[0], lightcolorbase[1], lightcolorbase[2]);CHECKGLERROR
+	if (r_shadow_lightpermutation & SHADERPERMUTATION_COLORMAPPING)
+	{
+		R_Mesh_TexBind(5, R_GetTexture(pantstexture));
+		R_Mesh_TexBind(6, R_GetTexture(shirttexture));
+		qglUniform3fARB(qglGetUniformLocationARB(r_shadow_lightprog, "Color_Pants"), lightcolorpants[0], lightcolorpants[1], lightcolorpants[2]);CHECKGLERROR
+		qglUniform3fARB(qglGetUniformLocationARB(r_shadow_lightprog, "Color_Shirt"), lightcolorshirt[0], lightcolorshirt[1], lightcolorshirt[2]);CHECKGLERROR
+	}
+	if (r_shadow_lightpermutation & SHADERPERMUTATION_FOG)
+	{
+		qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "FogRangeRecip"), fograngerecip);CHECKGLERROR
+	}
+	qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "AmbientScale"), r_shadow_rtlight->ambientscale);CHECKGLERROR
+	qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "DiffuseScale"), r_shadow_rtlight->diffusescale);CHECKGLERROR
+	if (r_shadow_lightpermutation & SHADERPERMUTATION_SPECULAR)
+	{
+		R_Mesh_TexBind(2, R_GetTexture(glosstexture));
+		qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "SpecularPower"), 8);CHECKGLERROR
+		qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "SpecularScale"), specularscale);CHECKGLERROR
+	}
+	if (r_shadow_lightpermutation & SHADERPERMUTATION_OFFSETMAPPING)
+	{
+		qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "OffsetMapping_Scale"), r_shadow_glsl_offsetmapping_scale.value);CHECKGLERROR
+		qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "OffsetMapping_Bias"), r_shadow_glsl_offsetmapping_bias.value);CHECKGLERROR
+	}
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
 		const msurface_t *surface = surfacelist[surfacelistindex];
@@ -2813,15 +2846,6 @@ void R_Shadow_SetupEntityLight(const entity_render_t *ent)
 	Matrix4x4_Transform(&ent->inversematrix, r_shadow_rtlight->shadoworigin, r_shadow_entitylightorigin);
 	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, r_shadow_entityeyeorigin);
 	R_Mesh_Matrix(&ent->matrix);
-	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_LIGHT_GLSL)
-	{
-		R_Mesh_TexMatrix(3, &r_shadow_entitytolight);
-		qglUniform3fARB(qglGetUniformLocationARB(r_shadow_lightprog, "LightPosition"), r_shadow_entitylightorigin[0], r_shadow_entitylightorigin[1], r_shadow_entitylightorigin[2]);CHECKGLERROR
-		if (r_shadow_lightpermutation & (SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_FOG | SHADERPERMUTATION_OFFSETMAPPING))
-		{
-			qglUniform3fARB(qglGetUniformLocationARB(r_shadow_lightprog, "EyePosition"), r_shadow_entityeyeorigin[0], r_shadow_entityeyeorigin[1], r_shadow_entityeyeorigin[2]);CHECKGLERROR
-		}
-	}
 }
 
 void R_Shadow_DrawEntityLight(entity_render_t *ent, int numsurfaces, int *surfacelist)
