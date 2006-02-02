@@ -1424,7 +1424,7 @@ extern float *rsurface_tvector3f;
 extern float *rsurface_normal3f;
 extern void RSurf_SetVertexPointer(const entity_render_t *ent, const texture_t *texture, const msurface_t *surface, const vec3_t modelorg);
 
-static void R_Shadow_RenderSurfacesLighting_Light_Vertex_Shading(const msurface_t *surface, const float *diffusecolor, const float *ambientcolor, float reduce)
+static void R_Shadow_RenderSurfacesLighting_Light_Vertex_Shading(const msurface_t *surface, const float *diffusecolor, const float *ambientcolor)
 {
 	int numverts = surface->num_vertices;
 	float *vertex3f = rsurface_vertex3f + 3 * surface->num_firstvertex;
@@ -1440,9 +1440,9 @@ static void R_Shadow_RenderSurfacesLighting_Light_Vertex_Shading(const msurface_
 			if ((dot = DotProduct(n, v)) < 0)
 			{
 				shadeintensity = -dot / sqrt(VectorLength2(v) * VectorLength2(n));
-				color4f[0] = (ambientcolor[0] + shadeintensity * diffusecolor[0]) - reduce;
-				color4f[1] = (ambientcolor[1] + shadeintensity * diffusecolor[1]) - reduce;
-				color4f[2] = (ambientcolor[2] + shadeintensity * diffusecolor[2]) - reduce;
+				color4f[0] = (ambientcolor[0] + shadeintensity * diffusecolor[0]);
+				color4f[1] = (ambientcolor[1] + shadeintensity * diffusecolor[1]);
+				color4f[2] = (ambientcolor[2] + shadeintensity * diffusecolor[2]);
 				if (fogenabled)
 				{
 					float f = VERTEXFOGTABLE(VectorDistance(v, r_shadow_entityeyeorigin));
@@ -1466,15 +1466,15 @@ static void R_Shadow_RenderSurfacesLighting_Light_Vertex_Shading(const msurface_
 				if ((dot = DotProduct(n, v)) < 0)
 				{
 					shadeintensity = -dot / sqrt(VectorLength2(v) * VectorLength2(n));
-					color4f[0] = (ambientcolor[0] + shadeintensity * diffusecolor[0]) * distintensity - reduce;
-					color4f[1] = (ambientcolor[1] + shadeintensity * diffusecolor[1]) * distintensity - reduce;
-					color4f[2] = (ambientcolor[2] + shadeintensity * diffusecolor[2]) * distintensity - reduce;
+					color4f[0] = (ambientcolor[0] + shadeintensity * diffusecolor[0]) * distintensity;
+					color4f[1] = (ambientcolor[1] + shadeintensity * diffusecolor[1]) * distintensity;
+					color4f[2] = (ambientcolor[2] + shadeintensity * diffusecolor[2]) * distintensity;
 				}
 				else
 				{
-					color4f[0] = ambientcolor[0] * distintensity - reduce;
-					color4f[1] = ambientcolor[1] * distintensity - reduce;
-					color4f[2] = ambientcolor[2] * distintensity - reduce;
+					color4f[0] = ambientcolor[0] * distintensity;
+					color4f[1] = ambientcolor[1] * distintensity;
+					color4f[2] = ambientcolor[2] * distintensity;
 				}
 				if (fogenabled)
 				{
@@ -1500,15 +1500,15 @@ static void R_Shadow_RenderSurfacesLighting_Light_Vertex_Shading(const msurface_
 				if ((dot = DotProduct(n, v)) < 0)
 				{
 					shadeintensity = -dot / sqrt(VectorLength2(v) * VectorLength2(n));
-					color4f[0] = (ambientcolor[0] + shadeintensity * diffusecolor[0]) * distintensity - reduce;
-					color4f[1] = (ambientcolor[1] + shadeintensity * diffusecolor[1]) * distintensity - reduce;
-					color4f[2] = (ambientcolor[2] + shadeintensity * diffusecolor[2]) * distintensity - reduce;
+					color4f[0] = (ambientcolor[0] + shadeintensity * diffusecolor[0]) * distintensity;
+					color4f[1] = (ambientcolor[1] + shadeintensity * diffusecolor[1]) * distintensity;
+					color4f[2] = (ambientcolor[2] + shadeintensity * diffusecolor[2]) * distintensity;
 				}
 				else
 				{
-					color4f[0] = ambientcolor[0] * distintensity - reduce;
-					color4f[1] = ambientcolor[1] * distintensity - reduce;
-					color4f[2] = ambientcolor[2] * distintensity - reduce;
+					color4f[0] = ambientcolor[0] * distintensity;
+					color4f[1] = ambientcolor[1] * distintensity;
+					color4f[2] = ambientcolor[2] * distintensity;
 				}
 				if (fogenabled)
 				{
@@ -2418,29 +2418,104 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3(const entity_render_t *en
 	}
 }
 
+void R_Shadow_RenderSurfacesLighting_Light_Vertex_Pass(const msurface_t *surface, vec3_t diffusecolor2, vec3_t ambientcolor2)
+{
+	int renders;
+	const int *elements = surface->groupmesh->data_element3i + surface->num_firsttriangle * 3;
+	R_Shadow_RenderSurfacesLighting_Light_Vertex_Shading(surface, diffusecolor2, ambientcolor2);
+	for (renders = 0;renders < 64 && (ambientcolor2[0] > renders || ambientcolor2[1] > renders || ambientcolor2[2] > renders || diffusecolor2[0] > renders || diffusecolor2[1] > renders || diffusecolor2[2] > renders);renders++)
+	{
+		int i;
+		float *c;
+#if 1
+		// due to low fillrate on the cards this vertex lighting path is
+		// designed for, we manually cull all triangles that do not
+		// contain a lit vertex
+		int draw;
+		const int *e;
+		int newnumtriangles;
+		int *newe;
+		int newelements[3072];
+		draw = false;
+		newnumtriangles = 0;
+		newe = newelements;
+		for (i = 0, e = elements;i < surface->num_triangles;i++, e += 3)
+		{
+			if (newnumtriangles >= 1024)
+			{
+				GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
+				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, newnumtriangles, newelements);
+				GL_LockArrays(0, 0);
+				newnumtriangles = 0;
+				newe = newelements;
+			}
+			if (VectorLength2(varray_color4f + e[0] * 4) + VectorLength2(varray_color4f + e[1] * 4) + VectorLength2(varray_color4f + e[2] * 4) >= 0.01)
+			{
+				newe[0] = e[0];
+				newe[1] = e[1];
+				newe[2] = e[2];
+				newnumtriangles++;
+				newe += 3;
+				draw = true;
+			}
+		}
+		if (newnumtriangles >= 1)
+		{
+			GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
+			R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, newnumtriangles, newelements);
+			GL_LockArrays(0, 0);
+			draw = true;
+		}
+		if (!draw)
+			break;
+#else
+		for (i = 0, c = varray_color4f + 4 * surface->num_firstvertex;i < surface->num_vertices;i++, c += 4)
+			if (VectorLength2(c))
+				goto goodpass;
+		break;
+goodpass:
+		GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
+		R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
+		GL_LockArrays(0, 0);
+#endif
+		// now reduce the intensity for the next overbright pass
+		for (i = 0, c = varray_color4f + 4 * surface->num_firstvertex;i < surface->num_vertices;i++, c += 4)
+		{
+			c[0] = max(0, c[0] - 1);
+			c[1] = max(0, c[1] - 1);
+			c[2] = max(0, c[2] - 1);
+		}
+	}
+}
+
 static void R_Shadow_RenderSurfacesLighting_Light_Vertex(const entity_render_t *ent, const texture_t *texture, int numsurfaces, msurface_t **surfacelist, const vec3_t lightcolorbase, const vec3_t lightcolorpants, const vec3_t lightcolorshirt, rtexture_t *basetexture, rtexture_t *pantstexture, rtexture_t *shirttexture, rtexture_t *normalmaptexture, rtexture_t *glosstexture, float specularscale)
 {
 	int surfacelistindex;
-	int renders;
-	float ambientcolor2[3], diffusecolor2[3];
+	float ambientcolorbase[3], diffusecolorbase[3];
+	float ambientcolorpants[3], diffusecolorpants[3];
+	float ambientcolorshirt[3], diffusecolorshirt[3];
 	rmeshstate_t m;
-	qboolean doambientbase = r_shadow_rtlight->ambientscale * VectorLength2(lightcolorbase) > 0.00001 && basetexture != r_texture_black;
-	qboolean dodiffusebase = r_shadow_rtlight->diffusescale * VectorLength2(lightcolorbase) > 0.00001 && basetexture != r_texture_black;
-	qboolean doambientpants = r_shadow_rtlight->ambientscale * VectorLength2(lightcolorpants) > 0.00001 && pantstexture != r_texture_black;
-	qboolean dodiffusepants = r_shadow_rtlight->diffusescale * VectorLength2(lightcolorpants) > 0.00001 && pantstexture != r_texture_black;
-	qboolean doambientshirt = r_shadow_rtlight->ambientscale * VectorLength2(lightcolorshirt) > 0.00001 && shirttexture != r_texture_black;
-	qboolean dodiffuseshirt = r_shadow_rtlight->diffusescale * VectorLength2(lightcolorshirt) > 0.00001 && shirttexture != r_texture_black;
-	//qboolean dospecular = specularscale * VectorLength2(lightcolorbase) > 0.00001 && glosstexture != r_texture_black;
-	// TODO: add direct pants/shirt rendering
-	if (doambientpants || dodiffusepants)
-		R_Shadow_RenderSurfacesLighting_Light_Vertex(ent, texture, numsurfaces, surfacelist, lightcolorpants, vec3_origin, vec3_origin, pantstexture, r_texture_black, r_texture_black, normalmaptexture, r_texture_black, 0);
-	if (doambientshirt || dodiffuseshirt)
-		R_Shadow_RenderSurfacesLighting_Light_Vertex(ent, texture, numsurfaces, surfacelist, lightcolorshirt, vec3_origin, vec3_origin, shirttexture, r_texture_black, r_texture_black, normalmaptexture, r_texture_black, 0);
-	if (!doambientbase && !dodiffusebase)
+	qboolean dobase  = basetexture != r_texture_black;
+	qboolean dopants = pantstexture != r_texture_black;
+	qboolean doshirt = shirttexture != r_texture_black;
+	if (!dobase && !dopants && !doshirt)
 		return;
-	VectorScale(lightcolorbase, r_shadow_rtlight->ambientscale, ambientcolor2);
-	VectorScale(lightcolorbase, r_shadow_rtlight->diffusescale, diffusecolor2);
-	GL_BlendFunc(GL_ONE, GL_ONE);
+	if (dobase)
+	{
+		VectorScale(lightcolorbase, r_shadow_rtlight->ambientscale * 2, ambientcolorbase);
+		VectorScale(lightcolorbase, r_shadow_rtlight->diffusescale * 2, diffusecolorbase);
+	}
+	if (dopants)
+	{
+		VectorScale(lightcolorpants, r_shadow_rtlight->ambientscale * 2, ambientcolorpants);
+		VectorScale(lightcolorpants, r_shadow_rtlight->diffusescale * 2, diffusecolorpants);
+	}
+	if (doshirt)
+	{
+		VectorScale(lightcolorshirt, r_shadow_rtlight->ambientscale * 2, ambientcolorshirt);
+		VectorScale(lightcolorshirt, r_shadow_rtlight->diffusescale * 2, diffusecolorshirt);
+	}
+	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	memset(&m, 0, sizeof(m));
 	m.tex[0] = R_GetTexture(basetexture);
 	if (r_textureunits.integer >= 2)
@@ -2470,7 +2545,6 @@ static void R_Shadow_RenderSurfacesLighting_Light_Vertex(const entity_render_t *
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
 		const msurface_t *surface = surfacelist[surfacelistindex];
-		const int *elements = surface->groupmesh->data_element3i + surface->num_firsttriangle * 3;
 		RSurf_SetVertexPointer(ent, texture, surface, r_shadow_entityeyeorigin);
 		if (!rsurface_svector3f)
 		{
@@ -2500,69 +2574,20 @@ static void R_Shadow_RenderSurfacesLighting_Light_Vertex(const entity_render_t *
 #endif
 			}
 		}
-		R_Shadow_RenderSurfacesLighting_Light_Vertex_Shading(surface, diffusecolor2, ambientcolor2, 0);
-		for (renders = 0;renders < 64 && (ambientcolor2[0] > renders || ambientcolor2[1] > renders || ambientcolor2[2] > renders || diffusecolor2[0] > renders || diffusecolor2[1] > renders || diffusecolor2[2] > renders);renders++)
+		if (dobase)
 		{
-			int i;
-			float *c;
-#if 1
-			// due to low fillrate on the cards this vertex lighting path is
-			// designed for, we manually cull all triangles that do not
-			// contain a lit vertex
-			int draw;
-			const int *e;
-			int newnumtriangles;
-			int *newe;
-			int newelements[3072];
-			draw = false;
-			newnumtriangles = 0;
-			newe = newelements;
-			for (i = 0, e = elements;i < surface->num_triangles;i++, e += 3)
-			{
-				if (newnumtriangles >= 1024)
-				{
-					GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
-					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, newnumtriangles, newelements);
-					GL_LockArrays(0, 0);
-					newnumtriangles = 0;
-					newe = newelements;
-				}
-				if (VectorLength2(varray_color4f + e[0] * 4) + VectorLength2(varray_color4f + e[1] * 4) + VectorLength2(varray_color4f + e[2] * 4) >= 0.01)
-				{
-					newe[0] = e[0];
-					newe[1] = e[1];
-					newe[2] = e[2];
-					newnumtriangles++;
-					newe += 3;
-					draw = true;
-				}
-			}
-			if (newnumtriangles >= 1)
-			{
-				GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
-				R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, newnumtriangles, newelements);
-				GL_LockArrays(0, 0);
-				draw = true;
-			}
-			if (!draw)
-				break;
-#else
-			for (i = 0, c = varray_color4f + 4 * surface->num_firstvertex;i < surface->num_vertices;i++, c += 4)
-				if (VectorLength2(c))
-					goto goodpass;
-			break;
-goodpass:
-			GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
-			R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, elements);
-			GL_LockArrays(0, 0);
-#endif
-			// now reduce the intensity for the next overbright pass
-			for (i = 0, c = varray_color4f + 4 * surface->num_firstvertex;i < surface->num_vertices;i++, c += 4)
-			{
-				c[0] = max(0, c[0] - 1);
-				c[1] = max(0, c[1] - 1);
-				c[2] = max(0, c[2] - 1);
-			}
+			R_Mesh_TexBind(0, R_GetTexture(basetexture));
+			R_Shadow_RenderSurfacesLighting_Light_Vertex_Pass(surface, diffusecolorbase, ambientcolorbase);
+		}
+		if (dopants)
+		{
+			R_Mesh_TexBind(0, R_GetTexture(pantstexture));
+			R_Shadow_RenderSurfacesLighting_Light_Vertex_Pass(surface, diffusecolorpants, ambientcolorpants);
+		}
+		if (doshirt)
+		{
+			R_Mesh_TexBind(0, R_GetTexture(shirttexture));
+			R_Shadow_RenderSurfacesLighting_Light_Vertex_Pass(surface, diffusecolorshirt, ambientcolorshirt);
 		}
 	}
 }
@@ -2574,10 +2599,6 @@ void R_Shadow_RenderSurfacesLighting(const entity_render_t *ent, const texture_t
 	rtexture_t *basetexture;
 	rtexture_t *glosstexture;
 	float specularscale;
-	if ((texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (ent->flags & RENDER_NOCULLFACE))
-		qglDisable(GL_CULL_FACE);
-	else
-		qglEnable(GL_CULL_FACE);
 	glosstexture = r_texture_black;
 	specularscale = 0;
 	if (r_shadow_gloss.integer > 0)
@@ -2603,6 +2624,12 @@ void R_Shadow_RenderSurfacesLighting(const entity_render_t *ent, const texture_t
 	lightcolorbase[0] = r_shadow_rtlight->currentcolor[0] * ent->colormod[0] * texture->currentalpha;
 	lightcolorbase[1] = r_shadow_rtlight->currentcolor[1] * ent->colormod[1] * texture->currentalpha;
 	lightcolorbase[2] = r_shadow_rtlight->currentcolor[2] * ent->colormod[2] * texture->currentalpha;
+	if ((r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorbase) + specularscale * VectorLength2(lightcolorbase) < (1.0f / 1048576.0f))
+		return;
+	if ((texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (ent->flags & RENDER_NOCULLFACE))
+		qglDisable(GL_CULL_FACE);
+	else
+		qglEnable(GL_CULL_FACE);
 	if ((VectorLength2(ent->colormap_pantscolor) + VectorLength2(ent->colormap_shirtcolor)) >= (1.0f / 1048576.0f))
 	{
 		lightcolorpants[0] = r_shadow_rtlight->currentcolor[0] * ent->colormap_pantscolor[0] * texture->currentalpha;
@@ -2611,8 +2638,6 @@ void R_Shadow_RenderSurfacesLighting(const entity_render_t *ent, const texture_t
 		lightcolorshirt[0] = r_shadow_rtlight->currentcolor[0] * ent->colormap_shirtcolor[0] * texture->currentalpha;
 		lightcolorshirt[1] = r_shadow_rtlight->currentcolor[1] * ent->colormap_shirtcolor[1] * texture->currentalpha;
 		lightcolorshirt[2] = r_shadow_rtlight->currentcolor[2] * ent->colormap_shirtcolor[2] * texture->currentalpha;
-		if ((r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * (VectorLength2(lightcolorbase) + VectorLength2(lightcolorpants) + VectorLength2(lightcolorshirt)) + specularscale * VectorLength2(lightcolorbase) < (1.0f / 1048576.0f))
-			return;
 		basetexture = texture->skin.base;
 		switch (r_shadow_rendermode)
 		{
@@ -2635,8 +2660,6 @@ void R_Shadow_RenderSurfacesLighting(const entity_render_t *ent, const texture_t
 	}
 	else
 	{
-		if ((r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorbase) + specularscale * VectorLength2(lightcolorbase) < (1.0f / 1048576.0f))
-			return;
 		basetexture = texture->skin.merged ? texture->skin.merged : texture->skin.base;
 		switch (r_shadow_rendermode)
 		{
