@@ -1107,7 +1107,7 @@ void Con_CompleteCommandLine (void)
 				if (GetMapList(s, t, sizeof(t)))
 				{
 					// first move the cursor
-					key_linepos += strlen(t) - strlen(s);
+					key_linepos += (int)strlen(t) - (int)strlen(s);
 
 					// and now do the actual work
 					*s = 0;
@@ -1116,7 +1116,7 @@ void Con_CompleteCommandLine (void)
 
 					// and fix the cursor
 					if(key_linepos > (int) strlen(key_lines[edit_line]))
-						key_linepos = strlen(key_lines[edit_line]);
+						key_linepos = (int) strlen(key_lines[edit_line]);
 				}
 				return;
 			}
