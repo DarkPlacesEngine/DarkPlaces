@@ -2764,6 +2764,7 @@ video_resolution_t video_resolutions[] =
 {"WideScreen 8x5"            ,  720, 450, 720, 450, 1     },
 {"WideScreen 8x5"            ,  840, 525, 640, 400, 1     },
 {"WideScreen 8x5"            ,  960, 600, 640, 400, 1     },
+{"WideScreen 8x5"            , 1280, 800, 640, 400, 1     },
 {"WideScreen 8x5"            , 1440, 900, 720, 450, 1     },
 {"WideScreen 8x5"            , 1680,1050, 640, 400, 1     },
 {"WideScreen 8x5"            , 1920,1200, 640, 400, 1     },
