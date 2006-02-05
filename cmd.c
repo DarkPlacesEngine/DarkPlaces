@@ -434,8 +434,12 @@ static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned ma
 			// $<number> is replaced with an argument to this alias (or copied as-is if no such parameter exists), can be multiple digits
 			if( *in == '$' ) {
 				outtext[outlen++] = *in++;
-			} else if( *in == '*' && alias ) {
+			} else if( *in == '*' ) {
 				const char *linein = Cmd_Args();
+
+				if( !alias )
+					continue;
+				
 				// include all params
 				if (linein) {
 					while( *linein && outlen < maxoutlen ) {
@@ -444,9 +448,12 @@ static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned ma
 				}
 
 				in++;
-			} else if( '0' <= *in && *in <= '9' && alias ) {
+			} else if( '0' <= *in && *in <= '9' ) {
 				char *nexttoken;
 				int argnum;
+
+				if( !alias )
+					continue;
 
 				argnum = strtol( in, &nexttoken, 10 );
 
