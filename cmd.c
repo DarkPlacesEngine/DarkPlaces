@@ -434,13 +434,10 @@ static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned ma
 			// $<number> is replaced with an argument to this alias (or copied as-is if no such parameter exists), can be multiple digits
 			if( *in == '$' ) {
 				outtext[outlen++] = *in++;
-			} else if( *in == '*' ) {
+			} else if( *in == '*' && alias ) {
 				const char *linein = Cmd_Args();
 
-				if( !alias )
-					continue;
-				
-				// include all params
+				// include all parameters
 				if (linein) {
 					while( *linein && outlen < maxoutlen ) {
 						outtext[outlen++] = *linein++;
@@ -448,12 +445,9 @@ static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned ma
 				}
 
 				in++;
-			} else if( '0' <= *in && *in <= '9' ) {
+			} else if( '0' <= *in && *in <= '9' && alias ) {
 				char *nexttoken;
 				int argnum;
-
-				if( !alias )
-					continue;
 
 				argnum = strtol( in, &nexttoken, 10 );
 
@@ -479,7 +473,11 @@ static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned ma
 					}
 					in = tempin;
 				} else {
-					Con_Printf( "Warning: could not find cvar %s when expanding alias %s\n    %s\n", com_token, alias->name, alias->value );
+					if( alias ) {
+						Con_Printf( "Warning: could not find cvar %s when expanding alias %s\n    %s\n", com_token, alias->name, alias->value );
+					} else {
+						Con_Printf( "Warning: could not find cvar %s\n", com_token );
+					}
 					outtext[outlen++] = '$';
 				}
 			}
