@@ -441,7 +441,7 @@ void VM_CL_lightstyle (void)
 
 	i = PRVM_G_FLOAT(OFS_PARM0);
 	c = PRVM_G_STRING(OFS_PARM1);
-	if (i >= MAX_LIGHTSTYLES)
+	if (i >= cl_max_lightstyle)
 		PF_WARNING("VM_CL_lightstyle >= MAX_LIGHTSTYLES\n");
 	strlcpy (cl_lightstyle[i].map,  MSG_ReadString(), sizeof (cl_lightstyle[i].map));
 	cl_lightstyle[i].map[MAX_STYLESTRING - 1] = 0;
