@@ -649,7 +649,7 @@ void CL_UpdateLights(void)
 	f = cl.time * 10;
 	i = (int)floor(f);
 	frac = f - i;
-	for (j = 0;j < MAX_LIGHTSTYLES;j++)
+	for (j = 0;j < cl_max_lightstyle;j++)
 	{
 		if (!cl_lightstyle || !cl_lightstyle[j].length)
 		{
