@@ -570,6 +570,7 @@ void Host_Loadgame_f (void)
 	float time;
 	const char *start;
 	const char *t;
+	const char *oldt;
 	char *text;
 	prvm_edict_t *ent;
 	int i;
@@ -651,8 +652,31 @@ void Host_Loadgame_f (void)
 	for (i = 0;i < MAX_LIGHTSTYLES;i++)
 	{
 		// light style
+		oldt = t;
 		COM_ParseToken(&t, false);
+		// if this is a 64 lightstyle savegame produced by Quake, stop now
+		// we have to check this because darkplaces saves 256 lightstyle savegames
+		if (com_token[0] == '{')
+		{
+			t = oldt;
+			break;
+		}
 		strlcpy(sv.lightstyles[i], com_token, sizeof(sv.lightstyles[i]));
+	}
+
+	// now skip everything before the first opening brace
+	// (this is for forward compatibility, so that older versions (at
+	// least ones with this fix) can load savegames with extra data before the
+	// first brace, as might be produced by a later engine version)
+	for(;;)
+	{
+		oldt = t;
+		COM_ParseToken(&t, false);
+		if (com_token[0] == '{')
+		{
+			t = oldt;
+			break;
+		}
 	}
 
 // load the edicts out of the savegame file
