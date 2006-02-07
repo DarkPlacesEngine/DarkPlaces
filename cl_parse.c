@@ -1524,8 +1524,11 @@ void CL_ParseServerMessage(void)
 
 		case svc_lightstyle:
 			i = MSG_ReadByte ();
-			if (i >= MAX_LIGHTSTYLES)
-				Host_Error ("svc_lightstyle >= MAX_LIGHTSTYLES");
+			if (i >= cl_max_lightstyle)
+			{
+				Con_Printf ("svc_lightstyle >= MAX_LIGHTSTYLES");
+				break;
+			}
 			strlcpy (cl_lightstyle[i].map,  MSG_ReadString(), sizeof (cl_lightstyle[i].map));
 			cl_lightstyle[i].map[MAX_STYLESTRING - 1] = 0;
 			cl_lightstyle[i].length = (int)strlen(cl_lightstyle[i].map);
