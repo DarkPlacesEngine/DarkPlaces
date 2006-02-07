@@ -35,12 +35,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define LIGHTFLAG_NORMALMODE 1
 #define LIGHTFLAG_REALTIMEMODE 2
 
-extern int cl_max_entities;
-extern int cl_max_static_entities;
-extern int cl_max_temp_entities;
-extern int cl_max_effects;
-extern int cl_max_beams;
-
 typedef struct effect_s
 {
 	int active;
@@ -713,25 +707,37 @@ extern vec3_t cl_playerstandmaxs;
 extern vec3_t cl_playercrouchmins;
 extern vec3_t cl_playercrouchmaxs;
 
-// these are updated by CL_ClearState
-extern int cl_num_entities;
-extern int cl_num_csqcentities;
-extern int cl_num_static_entities;
-extern int cl_num_temp_entities;
-extern int cl_num_brushmodel_entities;
-
 extern mempool_t *cl_mempool;
+
+extern int cl_max_entities;
+extern int cl_max_csqcentities;
+extern int cl_max_static_entities;
+extern int cl_max_temp_entities;
+extern int cl_max_effects;
+extern int cl_max_beams;
+extern int cl_max_dlights;
+extern int cl_max_lightstyle;
+extern int cl_max_brushmodel_entities;
+extern int cl_activedlights;
+
 extern entity_t *cl_entities;
-extern entity_t *cl_csqcentities;
+extern entity_t *cl_csqcentities;	//[515]: csqc
 extern unsigned char *cl_entities_active;
-extern unsigned char *cl_csqcentities_active;
+extern unsigned char *cl_csqcentities_active;	//[515]: csqc
 extern entity_t *cl_static_entities;
 extern entity_t *cl_temp_entities;
-extern int *cl_brushmodel_entities;
 extern cl_effect_t *cl_effects;
 extern beam_t *cl_beams;
 extern dlight_t *cl_dlights;
 extern lightstyle_t *cl_lightstyle;
+extern int *cl_brushmodel_entities;
+
+// these are updated by CL_ClearState
+extern int cl_num_entities;
+extern int cl_num_csqcentities;	//[515]: csqc
+extern int cl_num_static_entities;
+extern int cl_num_temp_entities;
+extern int cl_num_brushmodel_entities;
 
 
 extern client_state_t cl;
