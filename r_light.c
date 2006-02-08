@@ -201,7 +201,6 @@ int R_LightModel(float *ambient4f, float *diffusecolor, float *diffusenormal, co
 	float v[3], f, mscale, stylescale, intensity, ambientcolor[3], tempdiffusenormal[3];
 	nearlight_t *nl;
 	mlight_t *sl;
-	dlight_t *light;
 
 	nearlights = 0;
 	maxnearlights = r_modellights.integer;
@@ -214,7 +213,7 @@ int R_LightModel(float *ambient4f, float *diffusecolor, float *diffusenormal, co
 		VectorSet(ambient4f, 1, 1, 1);
 		maxnearlights = 0;
 	}
-	else if (r_lightmapintensity <= 0 && !(ent->flags & RENDER_TRANSPARENT))
+	else if (r_lightmapintensity <= 0)
 		maxnearlights = 0;
 	else
 	{
@@ -281,81 +280,6 @@ int R_LightModel(float *ambient4f, float *diffusecolor, float *diffusenormal, co
 			nl->light[2] = sl->light[2] * stylescale * colorb * 4.0f;
 			nl->subtract = sl->subtract;
 			nl->offset = sl->distbias;
-		}
-	}
-	if (ent->flags & RENDER_TRANSPARENT)
-	{
-		// FIXME: this dlighting doesn't look like rtlights
-		for (i = 0;i < r_refdef.numlights;i++)
-		{
-			light = r_refdef.lights[i];
-			VectorCopy(light->origin, v);
-			if (v[0] < ent->mins[0]) v[0] = ent->mins[0];if (v[0] > ent->maxs[0]) v[0] = ent->maxs[0];
-			if (v[1] < ent->mins[1]) v[1] = ent->mins[1];if (v[1] > ent->maxs[1]) v[1] = ent->maxs[1];
-			if (v[2] < ent->mins[2]) v[2] = ent->mins[2];if (v[2] > ent->maxs[2]) v[2] = ent->maxs[2];
-			VectorSubtract (v, light->origin, v);
-			if (DotProduct(v, v) < light->rtlight.lightmap_cullradius2)
-			{
-				if (CL_TraceBox(ent->origin, vec3_origin, vec3_origin, light->origin, false, NULL, SUPERCONTENTS_SOLID, false).fraction != 1)
-					continue;
-				VectorSubtract (ent->origin, light->origin, v);
-				f = ((1.0f / (DotProduct(v, v) + LIGHTOFFSET)) - light->rtlight.lightmap_subtract);
-				VectorScale(light->rtlight.lightmap_light, f, ambientcolor);
-				intensity = DotProduct(ambientcolor, ambientcolor);
-				if (f < 0)
-					intensity *= -1.0f;
-				if (nearlights < maxnearlights)
-					j = nearlights++;
-				else
-				{
-					for (j = 0;j < maxnearlights;j++)
-					{
-						if (nearlight[j].intensity < intensity)
-						{
-							if (nearlight[j].intensity > 0)
-								VectorAdd(ambient4f, nearlight[j].ambientlight, ambient4f);
-							break;
-						}
-					}
-				}
-				if (j >= maxnearlights)
-				{
-					// this light is less significant than all others,
-					// add it to ambient
-					if (intensity > 0)
-						VectorAdd(ambient4f, ambientcolor, ambient4f);
-				}
-				else
-				{
-					nl = nearlight + j;
-					nl->intensity = intensity;
-					// transform the light into the model's coordinate system
-					if (worldcoords)
-						VectorCopy(light->origin, nl->origin);
-					else
-					{
-						Matrix4x4_Transform(&ent->inversematrix, light->origin, nl->origin);
-						/*
-						Con_Printf("%i %s : %f %f %f : %f %f %f\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n"
-						, rd - cl_dlights, ent->model->name
-						, light->origin[0], light->origin[1], light->origin[2]
-						, nl->origin[0], nl->origin[1], nl->origin[2]
-						, ent->inversematrix.m[0][0], ent->inversematrix.m[0][1], ent->inversematrix.m[0][2], ent->inversematrix.m[0][3]
-						, ent->inversematrix.m[1][0], ent->inversematrix.m[1][1], ent->inversematrix.m[1][2], ent->inversematrix.m[1][3]
-						, ent->inversematrix.m[2][0], ent->inversematrix.m[2][1], ent->inversematrix.m[2][2], ent->inversematrix.m[2][3]
-						, ent->inversematrix.m[3][0], ent->inversematrix.m[3][1], ent->inversematrix.m[3][2], ent->inversematrix.m[3][3]);
-						*/
-					}
-					// integrate mscale into falloff, for maximum speed
-					nl->falloff = mscale;
-					VectorCopy(ambientcolor, nl->ambientlight);
-					nl->light[0] = light->rtlight.lightmap_light[0] * colorr * 4.0f;
-					nl->light[1] = light->rtlight.lightmap_light[1] * colorg * 4.0f;
-					nl->light[2] = light->rtlight.lightmap_light[2] * colorb * 4.0f;
-					nl->subtract = light->rtlight.lightmap_subtract;
-					nl->offset = LIGHTOFFSET;
-				}
-			}
 		}
 	}
 	ambient4f[0] *= colorr;
@@ -427,7 +351,7 @@ void R_UpdateEntLights(entity_render_t *ent)
 	int i;
 	const mlight_t *sl;
 	vec3_t v;
-	if (r_lightmapintensity <= 0 && !(ent->flags & RENDER_TRANSPARENT))
+	if (r_lightmapintensity <= 0)
 		return;
 	VectorSubtract(ent->origin, ent->entlightsorigin, v);
 	if (ent->entlightsframe != (r_framecount - 1) || (realtime > ent->entlightstime && DotProduct(v,v) >= 1.0f))
