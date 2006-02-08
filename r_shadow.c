@@ -3003,7 +3003,6 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			entity_render_t *ent = r_refdef.entities[i];
 			if (BoxesOverlap(ent->mins, ent->maxs, rtlight->cullmins, rtlight->cullmaxs)
 			 && ent->model
-			 && !(ent->flags & RENDER_TRANSPARENT)
 			 && (r_refdef.worldmodel == NULL || r_refdef.worldmodel->brush.BoxTouchingLeafPVS == NULL || r_refdef.worldmodel->brush.BoxTouchingLeafPVS(r_refdef.worldmodel, leafpvs, ent->mins, ent->maxs)))
 			{
 				// about the VectorDistance2 - light emitting entities should not cast their own shadow

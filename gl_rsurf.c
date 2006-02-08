@@ -780,6 +780,22 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, in
 	R_Shadow_RenderMode_End();
 }
 
+static void R_Q1BSP_DrawLight_TransparentBatch(const entity_render_t *ent, texture_t *texture, int batchnumsurfaces, msurface_t **batchsurfacelist)
+{
+	int batchsurfaceindex;
+	msurface_t *batchsurface;
+	vec3_t tempcenter, center;
+	for (batchsurfaceindex = 0;batchsurfaceindex < batchnumsurfaces;batchsurfaceindex++)
+	{
+		batchsurface = batchsurfacelist[batchsurfaceindex];
+		tempcenter[0] = (batchsurface->mins[0] + batchsurface->maxs[0]) * 0.5f;
+		tempcenter[1] = (batchsurface->mins[1] + batchsurface->maxs[1]) * 0.5f;
+		tempcenter[2] = (batchsurface->mins[2] + batchsurface->maxs[2]) * 0.5f;
+		Matrix4x4_Transform(&ent->matrix, tempcenter, center);
+		R_MeshQueue_AddTransparent(texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_vieworigin : center, R_Q1BSP_DrawLight_TransparentCallback, ent, batchsurface - ent->model->data_surfaces, r_shadow_rtlight);
+	}
+}
+
 #define RSURF_MAX_BATCHSURFACES 1024
 
 void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surfacelist)
@@ -811,19 +827,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 			if (batchnumsurfaces > 0)
 			{
 				if (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT)
-				{
-					int batchsurfaceindex;
-					for (batchsurfaceindex = 0;batchsurfaceindex < batchnumsurfaces;batchsurfaceindex++)
-					{
-						msurface_t *batchsurface = batchsurfacelist[batchsurfaceindex];
-						vec3_t tempcenter, center;
-						tempcenter[0] = (batchsurface->mins[0] + batchsurface->maxs[0]) * 0.5f;
-						tempcenter[1] = (batchsurface->mins[1] + batchsurface->maxs[1]) * 0.5f;
-						tempcenter[2] = (batchsurface->mins[2] + batchsurface->maxs[2]) * 0.5f;
-						Matrix4x4_Transform(&ent->matrix, tempcenter, center);
-						R_MeshQueue_AddTransparent(texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_vieworigin : center, R_Q1BSP_DrawLight_TransparentCallback, ent, batchsurface - ent->model->data_surfaces, r_shadow_rtlight);
-					}
-				}
+					R_Q1BSP_DrawLight_TransparentBatch(ent, texture, batchnumsurfaces, batchsurfacelist);
 				else
 					R_Shadow_RenderSurfacesLighting(ent, texture, batchnumsurfaces, batchsurfacelist);
 				batchnumsurfaces = 0;
@@ -839,19 +843,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 			if (batchnumsurfaces == RSURF_MAX_BATCHSURFACES)
 			{
 				if (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT)
-				{
-					int batchsurfaceindex;
-					for (batchsurfaceindex = 0;batchsurfaceindex < batchnumsurfaces;batchsurfaceindex++)
-					{
-						msurface_t *batchsurface = batchsurfacelist[batchsurfaceindex];
-						vec3_t tempcenter, center;
-						tempcenter[0] = (batchsurface->mins[0] + batchsurface->maxs[0]) * 0.5f;
-						tempcenter[1] = (batchsurface->mins[1] + batchsurface->maxs[1]) * 0.5f;
-						tempcenter[2] = (batchsurface->mins[2] + batchsurface->maxs[2]) * 0.5f;
-						Matrix4x4_Transform(&ent->matrix, tempcenter, center);
-						R_MeshQueue_AddTransparent(texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_vieworigin : center, R_Q1BSP_DrawLight_TransparentCallback, ent, batchsurface - ent->model->data_surfaces, r_shadow_rtlight);
-					}
-				}
+					R_Q1BSP_DrawLight_TransparentBatch(ent, texture, batchnumsurfaces, batchsurfacelist);
 				else
 					R_Shadow_RenderSurfacesLighting(ent, texture, batchnumsurfaces, batchsurfacelist);
 				batchnumsurfaces = 0;
@@ -861,7 +853,10 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 	}
 	if (batchnumsurfaces > 0)
 	{
-		R_Shadow_RenderSurfacesLighting(ent, texture, batchnumsurfaces, batchsurfacelist);
+		if (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT)
+			R_Q1BSP_DrawLight_TransparentBatch(ent, texture, batchnumsurfaces, batchsurfacelist);
+		else
+			R_Shadow_RenderSurfacesLighting(ent, texture, batchnumsurfaces, batchsurfacelist);
 		batchnumsurfaces = 0;
 	}
 	qglEnable(GL_CULL_FACE);
