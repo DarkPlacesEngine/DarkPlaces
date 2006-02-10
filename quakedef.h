@@ -57,7 +57,7 @@ extern char engineversion[128];
 //
 // LordHavoc: increased entity limit to 2048 from 600
 #define	MAX_EDICTS		32768		// FIXME: ouch! ouch! ouch!
-#define	MAX_LIGHTSTYLES	256
+#define	MAX_LIGHTSTYLES	256			// LordHavoc: increased from 64, NOTE special consideration is needed in savegames!
 // LordHavoc: increased model and sound limits from 256 and 256 to 4096 and 4096 (and added protocol extensions accordingly to break the 256 barrier)
 #define	MAX_MODELS		4096
 #define	MAX_SOUNDS		4096
