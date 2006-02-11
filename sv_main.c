@@ -296,6 +296,8 @@ void SV_SendServerinfo (client_t *client)
 	int i;
 	char message[128];
 
+	// we know that this client has a netconnection and thus is not a bot
+
 	// edicts get reallocated on level changes, so we need to update it here
 	client->edict = PRVM_EDICT_NUM((client - svs.clients) + 1);
 
@@ -323,52 +325,52 @@ void SV_SendServerinfo (client_t *client)
 			client->entitydatabase5 = EntityFrame5_AllocDatabase(sv_mempool);
 	}
 
-	SZ_Clear (&client->message);
-	MSG_WriteByte (&client->message, svc_print);
+	SZ_Clear (&client->netconnection->message);
+	MSG_WriteByte (&client->netconnection->message, svc_print);
 	dpsnprintf (message, sizeof (message), "\002\nServer: %s build %s (progs %i crc)", gamename, buildstring, prog->filecrc);
-	MSG_WriteString (&client->message,message);
+	MSG_WriteString (&client->netconnection->message,message);
 
-	// LordHavoc: this does not work on dedicated servers, needs fixing.
+	// FIXME: LordHavoc: this does not work on dedicated servers, needs fixing.
 //[515]: init csprogs according to version of svprogs, check the crc, etc.
 	if(csqc_loaded && (cls.state == ca_dedicated || PRVM_NUM_FOR_EDICT(client->edict) != 1))
 	{
-		MSG_WriteByte (&client->message, svc_stufftext);
+		MSG_WriteByte (&client->netconnection->message, svc_stufftext);
 		if(SV_InitCmd)
-			MSG_WriteString (&client->message, va("csqc_progcrc %i;%s\n", csqc_progcrc.integer, SV_InitCmd));
+			MSG_WriteString (&client->netconnection->message, va("csqc_progcrc %i;%s\n", csqc_progcrc.integer, SV_InitCmd));
 		else
-			MSG_WriteString (&client->message, va("csqc_progcrc %i\n", csqc_progcrc.integer));
+			MSG_WriteString (&client->netconnection->message, va("csqc_progcrc %i\n", csqc_progcrc.integer));
 	}
 
-	MSG_WriteByte (&client->message, svc_serverinfo);
-	MSG_WriteLong (&client->message, Protocol_NumberForEnum(sv.protocol));
-	MSG_WriteByte (&client->message, svs.maxclients);
+	MSG_WriteByte (&client->netconnection->message, svc_serverinfo);
+	MSG_WriteLong (&client->netconnection->message, Protocol_NumberForEnum(sv.protocol));
+	MSG_WriteByte (&client->netconnection->message, svs.maxclients);
 
 	if (!coop.integer && deathmatch.integer)
-		MSG_WriteByte (&client->message, GAME_DEATHMATCH);
+		MSG_WriteByte (&client->netconnection->message, GAME_DEATHMATCH);
 	else
-		MSG_WriteByte (&client->message, GAME_COOP);
+		MSG_WriteByte (&client->netconnection->message, GAME_COOP);
 
-	MSG_WriteString (&client->message,PRVM_GetString(prog->edicts->fields.server->message));
+	MSG_WriteString (&client->netconnection->message,PRVM_GetString(prog->edicts->fields.server->message));
 
 	for (i = 1;i < MAX_MODELS && sv.model_precache[i][0];i++)
-		MSG_WriteString (&client->message, sv.model_precache[i]);
-	MSG_WriteByte (&client->message, 0);
+		MSG_WriteString (&client->netconnection->message, sv.model_precache[i]);
+	MSG_WriteByte (&client->netconnection->message, 0);
 
 	for (i = 1;i < MAX_SOUNDS && sv.sound_precache[i][0];i++)
-		MSG_WriteString (&client->message, sv.sound_precache[i]);
-	MSG_WriteByte (&client->message, 0);
+		MSG_WriteString (&client->netconnection->message, sv.sound_precache[i]);
+	MSG_WriteByte (&client->netconnection->message, 0);
 
 // send music
-	MSG_WriteByte (&client->message, svc_cdtrack);
-	MSG_WriteByte (&client->message, prog->edicts->fields.server->sounds);
-	MSG_WriteByte (&client->message, prog->edicts->fields.server->sounds);
+	MSG_WriteByte (&client->netconnection->message, svc_cdtrack);
+	MSG_WriteByte (&client->netconnection->message, prog->edicts->fields.server->sounds);
+	MSG_WriteByte (&client->netconnection->message, prog->edicts->fields.server->sounds);
 
 // set view
-	MSG_WriteByte (&client->message, svc_setview);
-	MSG_WriteShort (&client->message, PRVM_NUM_FOR_EDICT(client->edict));
+	MSG_WriteByte (&client->netconnection->message, svc_setview);
+	MSG_WriteShort (&client->netconnection->message, PRVM_NUM_FOR_EDICT(client->edict));
 
-	MSG_WriteByte (&client->message, svc_signonnum);
-	MSG_WriteByte (&client->message, 1);
+	MSG_WriteByte (&client->netconnection->message, svc_signonnum);
+	MSG_WriteByte (&client->netconnection->message, 1);
 
 	client->sendsignon = true;
 	client->spawned = false;		// need prespawn, spawn, etc
@@ -406,9 +408,7 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 	strcpy(client->old_name, "unconnected");
 	client->spawned = false;
 	client->edict = PRVM_EDICT_NUM(clientnum+1);
-	client->message.data = client->msgbuf;
-	client->message.maxsize = sizeof(client->msgbuf);
-	client->message.allowoverflow = true;		// we can catch it
+	client->netconnection->message.allowoverflow = true;		// we can catch it
 	// updated by receiving "rate" command from client
 	client->rate = NET_MINRATE;
 	// no limits for local player
@@ -1328,7 +1328,7 @@ void SV_UpdateToReliableMessages (void)
 
 	for (j = 0, client = svs.clients;j < svs.maxclients;j++, client++)
 		if (client->netconnection)
-			SZ_Write (&client->message, sv.reliable_datagram.data, sv.reliable_datagram.cursize);
+			SZ_Write (&client->netconnection->message, sv.reliable_datagram.data, sv.reliable_datagram.cursize);
 
 	SZ_Clear (&sv.reliable_datagram);
 }
@@ -1376,12 +1376,9 @@ void SV_SendClientMessages (void)
 		if (!host_client->active)
 			continue;
 		if (!host_client->netconnection)
-		{
-			SZ_Clear(&host_client->message);
 			continue;
-		}
 
-		if (host_client->message.overflowed)
+		if (host_client->netconnection->message.overflowed)
 		{
 			SV_DropClient (true);	// if the message couldn't send, kick off
 			continue;
@@ -1413,21 +1410,16 @@ void SV_SendClientMessages (void)
 			}
 		}
 
-		if (host_client->message.cursize || host_client->dropasap)
+		if (host_client->netconnection->message.cursize)
 		{
 			if (!NetConn_CanSendMessage (host_client->netconnection))
 				continue;
 
-			if (host_client->dropasap)
-				SV_DropClient (false);	// went to another level
-			else
-			{
-				if (NetConn_SendReliableMessage (host_client->netconnection, &host_client->message) == -1)
-					SV_DropClient (true);	// if the message couldn't send, kick off
-				SZ_Clear (&host_client->message);
-				host_client->last_message = realtime;
-				host_client->sendsignon = false;
-			}
+			if (NetConn_SendReliableMessage (host_client->netconnection, &host_client->netconnection->message) == -1)
+				SV_DropClient (true);	// if the message couldn't send, kick off
+			SZ_Clear (&host_client->netconnection->message);
+			host_client->last_message = realtime;
+			host_client->sendsignon = false;
 		}
 	}
 

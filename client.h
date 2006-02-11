@@ -451,9 +451,6 @@ typedef struct client_static_s
 	int signon;
 	// network connection
 	netconn_t *netcon;
-	// writing buffer to send to server
-	sizebuf_t message;
-	unsigned char message_buf[1024];
 }
 client_static_t;
 

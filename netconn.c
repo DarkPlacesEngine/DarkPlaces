@@ -740,6 +740,9 @@ netconn_t *NetConn_Open(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress)
 	conn->peeraddress = *peeraddress;
 	conn->canSend = true;
 	conn->lastMessageTime = realtime;
+	conn->message.data = conn->messagedata;
+	conn->message.maxsize = sizeof(conn->messagedata);
+	conn->message.cursize = 0;
 	// LordHavoc: (inspired by ProQuake) use a short connect timeout to
 	// reduce effectiveness of connection request floods
 	conn->timeout = realtime + net_connecttimeout.value;

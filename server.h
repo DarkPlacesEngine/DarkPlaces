@@ -107,8 +107,6 @@ typedef struct client_s
 	qboolean clientconnectcalled;
 	// false = don't send datagrams
 	qboolean spawned;
-	// has been told to go to another level
-	qboolean dropasap;
 	// only valid before spawned
 	qboolean sendsignon;
 
@@ -130,9 +128,6 @@ typedef struct client_s
 	// intended motion calced from cmd
 	vec3_t wishdir;
 
-	// can be added to at any time, copied and clear once per frame
-	sizebuf_t message;
-	unsigned char msgbuf[NET_MAXMESSAGE];
 	// PRVM_EDICT_NUM(clientnum+1)
 	prvm_edict_t *edict;
 

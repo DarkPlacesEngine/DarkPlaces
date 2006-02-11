@@ -1254,6 +1254,100 @@ char *SearchInfostring(const char *infostring, const char *key)
 	}
 }
 
+void InfoString_GetValue(const char *buffer, const char *key, char *value, size_t valuelength)
+{
+	int pos, j;
+	size_t keylength;
+	if (!key)
+		key = "";
+	if (!value)
+		value = "";
+	keylength = strlen(key);
+	if (valuelength < 1 || !value)
+	{
+		Con_Printf("InfoString_GetValue: no room in value\n");
+		return;
+	}
+	value[0] = 0;
+	if (strchr(key, '\\'))
+	{
+		Con_Printf("InfoString_GetValue: key name \"%s\" contains \\ which is not possible in an infostring\n", key);
+		return;
+	}
+	if (!key[0])
+	{
+		Con_Printf("InfoString_GetValue: can not look up a key with no name\n");
+		return;
+	}
+	while (buffer[pos] == '\\')
+	{
+		if (!memcmp(buffer + pos+1, key, keylength))
+		{
+			for (pos++;buffer[pos] && buffer[pos] != '\\';pos++);
+			pos++;
+			for (j = 0;buffer[pos+j] && buffer[pos+j] != '\\' && j < (int)valuelength - 1;j++)
+				value[j] = buffer[pos+j];
+			value[j] = 0;
+			return;
+		}
+		for (pos++;buffer[pos] && buffer[pos] != '\\';pos++);
+		for (pos++;buffer[pos] && buffer[pos] != '\\';pos++);
+	}
+	// if we reach this point the key was not found
+}
+
+void InfoString_SetValue(char *buffer, size_t bufferlength, const char *key, const char *value)
+{
+	int pos, pos2;
+	size_t keylength;
+	if (!key)
+		key = "";
+	if (!value)
+		value = "";
+	keylength = strlen(key);
+	if (strchr(key, '\\') || strchr(value, '\\'))
+	{
+		Con_Printf("InfoString_SetValue: \"%s\" \"%s\" contains \\ which is not possible to store in an infostring\n", key, value);
+		return;
+	}
+	if (!key[0])
+	{
+		Con_Printf("InfoString_SetValue: can not set a key with no name\n");
+		return;
+	}
+	while (buffer[pos] == '\\')
+	{
+		if (!memcmp(buffer + pos+1, key, keylength))
+			break;
+		for (pos++;buffer[pos] && buffer[pos] != '\\';pos++);
+		for (pos++;buffer[pos] && buffer[pos] != '\\';pos++);
+	}
+	// if we found the key, find the end of it because we will be replacing it
+	pos2 = pos;
+	if (buffer[pos] == '\\')
+	{
+		for (pos2++;buffer[pos2] && buffer[pos2] != '\\';pos++);
+		for (pos2++;buffer[pos2] && buffer[pos2] != '\\';pos++);
+	}
+	if (bufferlength <= 1 + strlen(key) + 1 + strlen(value) + strlen(buffer + pos2))
+	{
+		Con_Printf("InfoString_SetValue: no room for \"%s\" \"%s\" in infostring\n", key, value);
+		return;
+	}
+	if (value && value[0])
+	{
+		// set the key/value and append the remaining text
+		char tempbuffer[4096];
+		strlcpy(tempbuffer, buffer + pos2, sizeof(tempbuffer));
+		sprintf(buffer + pos, "\\%s\\%s%s", key, value, tempbuffer);
+	}
+	else
+	{
+		// just remove the key from the text
+		strcpy(buffer + pos, buffer + pos2);
+	}
+}
+
 
 //========================================================
 // strlcat and strlcpy, from OpenBSD

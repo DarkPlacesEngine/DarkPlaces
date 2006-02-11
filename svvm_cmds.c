@@ -265,9 +265,12 @@ void PF_sprint (void)
 	}
 
 	client = svs.clients + entnum-1;
+	if (!client->netconnection)
+		return;
+
 	VM_VarString(1, string, sizeof(string));
-	MSG_WriteChar(&client->message,svc_print);
-	MSG_WriteString(&client->message, string);
+	MSG_WriteChar(&client->netconnection->message,svc_print);
+	MSG_WriteString(&client->netconnection->message, string);
 }
 
 
@@ -295,9 +298,12 @@ void PF_centerprint (void)
 	}
 
 	client = svs.clients + entnum-1;
+	if (!client->netconnection)
+		return;
+
 	VM_VarString(1, string, sizeof(string));
-	MSG_WriteChar(&client->message,svc_centerprint);
-	MSG_WriteString(&client->message, string);
+	MSG_WriteChar(&client->netconnection->message,svc_centerprint);
+	MSG_WriteString(&client->netconnection->message, string);
 }
 
 /*
@@ -869,11 +875,11 @@ void PF_lightstyle (void)
 
 	for (j = 0, client = svs.clients;j < svs.maxclients;j++, client++)
 	{
-		if (client->active)
+		if (client->active && client->netconnection)
 		{
-			MSG_WriteChar (&client->message, svc_lightstyle);
-			MSG_WriteChar (&client->message,style);
-			MSG_WriteString (&client->message, val);
+			MSG_WriteChar (&client->netconnection->message, svc_lightstyle);
+			MSG_WriteChar (&client->netconnection->message,style);
+			MSG_WriteString (&client->netconnection->message, val);
 		}
 	}
 }
@@ -1126,13 +1132,13 @@ sizebuf_t *WriteDest (void)
 	case MSG_ONE:
 		ent = PRVM_PROG_TO_EDICT(prog->globals.server->msg_entity);
 		entnum = PRVM_NUM_FOR_EDICT(ent);
-		if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
+		if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active || !svs.clients[entnum-1].netconnection)
 		{
 			Con_Printf ("WriteDest: tried to write to non-client\n");
 			return &sv.reliable_datagram;
 		}
 		else
-			return &svs.clients[entnum-1].message;
+			return &svs.clients[entnum-1].netconnection->message;
 
 	default:
 		Con_Printf ("WriteDest: bad destination\n");

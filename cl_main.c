@@ -146,8 +146,6 @@ void CL_ClearState(void)
 	// reset the view zoom interpolation
 	cl.mviewzoom[0] = cl.mviewzoom[1] = 1;
 
-	SZ_Clear (&cls.message);
-
 	cl_num_entities = 0;
 	cl_num_csqcentities = 0;	//[515]: csqc
 	cl_num_static_entities = 0;
@@ -302,14 +300,21 @@ void CL_Disconnect(void)
 		CL_StopPlayback();
 	else if (cls.netcon)
 	{
+		sizebuf_t buf;
+		unsigned char bufdata[8];
 		if (cls.demorecording)
 			CL_Stop_f();
 
+		// send clc_disconnect 3 times to improve chances of server receiving
+		// it (but it still fails sometimes)
 		Con_DPrint("Sending clc_disconnect\n");
-		SZ_Clear(&cls.message);
-		MSG_WriteByte(&cls.message, clc_disconnect);
-		NetConn_SendUnreliableMessage(cls.netcon, &cls.message);
-		SZ_Clear(&cls.message);
+		memset(&buf, 0, sizeof(buf));
+		buf.data = bufdata;
+		buf.maxsize = sizeof(bufdata);
+		MSG_WriteByte(&buf, clc_disconnect);
+		NetConn_SendUnreliableMessage(cls.netcon, &buf);
+		NetConn_SendUnreliableMessage(cls.netcon, &buf);
+		NetConn_SendUnreliableMessage(cls.netcon, &buf);
 		NetConn_Close(cls.netcon);
 		cls.netcon = NULL;
 	}
@@ -1528,23 +1533,17 @@ CL_SendCmd
 void CL_UpdatePrydonCursor(void);
 void CL_SendCmd(void)
 {
-	if (cls.demoplayback)
-	{
-		SZ_Clear(&cls.message);
-		return;
-	}
-
 	// send the reliable message (forwarded commands) if there is one
-	if (cls.message.cursize && NetConn_CanSendMessage(cls.netcon))
+	if (cls.netcon && cls.netcon->message.cursize && NetConn_CanSendMessage(cls.netcon))
 	{
 		if (developer.integer)
 		{
 			Con_Print("CL_SendCmd: sending reliable message:\n");
-			SZ_HexDumpToConsole(&cls.message);
+			SZ_HexDumpToConsole(&cls.netcon->message);
 		}
-		if (NetConn_SendReliableMessage(cls.netcon, &cls.message) == -1)
+		if (NetConn_SendReliableMessage(cls.netcon, &cls.netcon->message) == -1)
 			Host_Error("CL_WriteToServer: lost server connection");
-		SZ_Clear(&cls.message);
+		SZ_Clear(&cls.netcon->message);
 	}
 }
 
@@ -1635,10 +1634,6 @@ void CL_Init (void)
 	// TODO: make dynamic
 	r_refdef.maxdrawqueuesize = 256 * 1024;
 	r_refdef.drawqueue = (unsigned char *)Mem_Alloc(cl_mempool, r_refdef.maxdrawqueuesize);
-
-	cls.message.data = cls.message_buf;
-	cls.message.maxsize = sizeof(cls.message_buf);
-	cls.message.cursize = 0;
 
 	CL_InitInput ();
 
