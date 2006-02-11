@@ -147,7 +147,7 @@ void Host_Error (const char *error, ...)
 	PRVM_Crash();
 
 
-	Host_ShutdownServer (false);
+	Host_ShutdownServer ();
 
 	if (cls.state == ca_dedicated)
 		Sys_Error ("Host_Error: %s",hosterrorstring2);	// dedicated servers exit
@@ -489,11 +489,9 @@ Host_ShutdownServer
 This only happens at the end of a game, not between levels
 ==================
 */
-void Host_ShutdownServer(qboolean crash)
+void Host_ShutdownServer(void)
 {
-	int i, count;
-	sizebuf_t buf;
-	unsigned char message[4];
+	int i;
 
 	Con_DPrintf("Host_ShutdownServer\n");
 
@@ -504,18 +502,10 @@ void Host_ShutdownServer(qboolean crash)
 	NetConn_Heartbeat(2);
 
 // make sure all the clients know we're disconnecting
-	buf.data = message;
-	buf.maxsize = 4;
-	buf.cursize = 0;
-	MSG_WriteByte(&buf, svc_disconnect);
-	count = NetConn_SendToAll(&buf, 5);
-	if (count)
-		Con_Printf("Host_ShutdownServer: NetConn_SendToAll failed for %u clients\n", count);
-
 	SV_VM_Begin();
 	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 		if (host_client->active)
-			SV_DropClient(crash); // server shutdown
+			SV_DropClient(false); // server shutdown
 	SV_VM_End();
 
 	NetConn_CloseServerPorts();
@@ -1121,7 +1111,7 @@ void Host_Shutdown(void)
 	CL_Disconnect();
 
 	// shut down local server if active
-	Host_ShutdownServer (false);
+	Host_ShutdownServer ();
 
 	// Shutdown menu
 	if(MR_Shutdown)

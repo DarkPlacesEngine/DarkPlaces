@@ -267,7 +267,7 @@ void Host_Map_f (void)
 	cls.demonum = -1;		// stop demo loop in case this fails
 
 	CL_Disconnect ();
-	Host_ShutdownServer(false);
+	Host_ShutdownServer();
 
 	// remove console or menu
 	key_dest = key_game;
@@ -1901,7 +1901,7 @@ void Host_Stopdemo_f (void)
 	if (!cls.demoplayback)
 		return;
 	CL_Disconnect ();
-	Host_ShutdownServer (false);
+	Host_ShutdownServer ();
 }
 
 void Host_SendCvar_f (void)

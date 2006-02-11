@@ -933,7 +933,7 @@ void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_t *peer
 	CL_Disconnect();
 	// if we're connecting to a remote server, shut down any local server
 	if (LHNETADDRESS_GetAddressType(peeraddress) != LHNETADDRESSTYPE_LOOP && sv.active)
-		Host_ShutdownServer (false);
+		Host_ShutdownServer ();
 	// allocate a net connection to keep track of things
 	cls.netcon = NetConn_Open(mysocket, peeraddress);
 	Con_Printf("Connection accepted to %s\n", cls.netcon->address);
@@ -1327,7 +1327,7 @@ void NetConn_ClientFrame(void)
 	{
 		Con_Print("Connection timed out\n");
 		CL_Disconnect();
-		Host_ShutdownServer (false);
+		Host_ShutdownServer ();
 	}
 	for (conn = netconn_list;conn;conn = conn->next)
 		NetConn_ReSendMessage(conn);
@@ -1930,43 +1930,6 @@ void NetConn_Heartbeat(int priority)
 			if (sv_masters[masternum].string && LHNETADDRESS_FromString(&masteraddress, sv_masters[masternum].string, MASTER_PORT) && (mysocket = NetConn_ChooseServerSocketForAddress(&masteraddress)))
 				NetConn_WriteString(mysocket, "\377\377\377\377heartbeat DarkPlaces\x0A", &masteraddress);
 	}
-}
-
-int NetConn_SendToAll(sizebuf_t *data, double blocktime)
-{
-	int i, count = 0;
-	unsigned char sent[MAX_SCOREBOARD];
-
-	memset(sent, 0, sizeof(sent));
-
-	// simultaneously wait for the first CanSendMessage and send the message,
-	// then wait for a second CanSendMessage (verifying it was received), or
-	// the client drops and is no longer counted
-	// the loop aborts when either it runs out of clients to send to, or a
-	// timeout expires
-	blocktime += Sys_DoubleTime();
-	do
-	{
-		count = 0;
-		// run a network frame to check for packets
-		NetConn_ClientFrame();SV_VM_Begin();NetConn_ServerFrame();SV_VM_End();
-		for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
-		{
-			if (host_client->netconnection)
-			{
-				if (NetConn_CanSendMessage(host_client->netconnection))
-				{
-					if (!sent[i])
-						NetConn_SendReliableMessage(host_client->netconnection, data);
-					sent[i] = true;
-				}
-				if (!NetConn_CanSendMessage(host_client->netconnection))
-					count++;
-			}
-		}
-	}
-	while (count && Sys_DoubleTime() < blocktime);
-	return count;
 }
 
 static void Net_Heartbeat_f(void)

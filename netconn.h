@@ -317,7 +317,6 @@ void NetConn_ServerFrame(void);
 void NetConn_QueryMasters(void);
 void NetConn_Heartbeat(int priority);
 void NetConn_QueryQueueFrame(void);
-int NetConn_SendToAll(sizebuf_t *data, double blocktime);
 void Net_Stats_f(void);
 void Net_Slist_f(void);
 
