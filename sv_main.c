@@ -408,7 +408,8 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 	strcpy(client->old_name, "unconnected");
 	client->spawned = false;
 	client->edict = PRVM_EDICT_NUM(clientnum+1);
-	client->netconnection->message.allowoverflow = true;		// we can catch it
+	if (client->netconnection)
+		client->netconnection->message.allowoverflow = true;		// we can catch it
 	// updated by receiving "rate" command from client
 	client->rate = NET_MINRATE;
 	// no limits for local player
