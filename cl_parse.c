@@ -268,50 +268,57 @@ An svc_signonnum has been received, perform a client side setup
 */
 static void CL_SignonReply (void)
 {
-	//char 	str[8192];
-
-Con_DPrintf("CL_SignonReply: %i\n", cls.signon);
+	Con_DPrintf("CL_SignonReply: %i\n", cls.signon);
 
 	switch (cls.signon)
 	{
 	case 1:
-		MSG_WriteByte (&cls.message, clc_stringcmd);
-		MSG_WriteString (&cls.message, "prespawn");
+		if (cls.netcon)
+		{
+			MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
+			MSG_WriteString (&cls.netcon->message, "prespawn");
+		}
 		break;
 
 	case 2:
-		MSG_WriteByte (&cls.message, clc_stringcmd);
-		MSG_WriteString (&cls.message, va("name \"%s\"", cl_name.string));
-
-		MSG_WriteByte (&cls.message, clc_stringcmd);
-		MSG_WriteString (&cls.message, va("color %i %i", cl_color.integer >> 4, cl_color.integer & 15));
-
-		if (cl_pmodel.integer)
+		if (cls.netcon)
 		{
-			MSG_WriteByte (&cls.message, clc_stringcmd);
-			MSG_WriteString (&cls.message, va("pmodel %i", cl_pmodel.integer));
-		}
-		if (*cl_playermodel.string)
-		{
-			MSG_WriteByte (&cls.message, clc_stringcmd);
-			MSG_WriteString (&cls.message, va("playermodel %s", cl_playermodel.string));
-		}
-		if (*cl_playerskin.string)
-		{
-			MSG_WriteByte (&cls.message, clc_stringcmd);
-			MSG_WriteString (&cls.message, va("playerskin %s", cl_playerskin.string));
-		}
+			MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
+			MSG_WriteString (&cls.netcon->message, va("name \"%s\"", cl_name.string));
 
-		MSG_WriteByte (&cls.message, clc_stringcmd);
-		MSG_WriteString (&cls.message, va("rate %i", cl_rate.integer));
+			MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
+			MSG_WriteString (&cls.netcon->message, va("color %i %i", cl_color.integer >> 4, cl_color.integer & 15));
 
-		MSG_WriteByte (&cls.message, clc_stringcmd);
-		MSG_WriteString (&cls.message, "spawn");
+			if (cl_pmodel.integer)
+			{
+				MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
+				MSG_WriteString (&cls.netcon->message, va("pmodel %i", cl_pmodel.integer));
+			}
+			if (*cl_playermodel.string)
+			{
+				MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
+				MSG_WriteString (&cls.netcon->message, va("playermodel %s", cl_playermodel.string));
+			}
+			if (*cl_playerskin.string)
+			{
+				MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
+				MSG_WriteString (&cls.netcon->message, va("playerskin %s", cl_playerskin.string));
+			}
+
+			MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
+			MSG_WriteString (&cls.netcon->message, va("rate %i", cl_rate.integer));
+
+			MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
+			MSG_WriteString (&cls.netcon->message, "spawn");
+		}
 		break;
 
 	case 3:
-		MSG_WriteByte (&cls.message, clc_stringcmd);
-		MSG_WriteString (&cls.message, "begin");
+		if (cls.netcon)
+		{
+			MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
+			MSG_WriteString (&cls.netcon->message, "begin");
+		}
 		break;
 
 	case 4:

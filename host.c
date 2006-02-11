@@ -294,8 +294,11 @@ FIXME: make this just a stuffed echo?
 */
 void SV_ClientPrint(const char *msg)
 {
-	MSG_WriteByte(&host_client->message, svc_print);
-	MSG_WriteString(&host_client->message, msg);
+	if (host_client->netconnection)
+	{
+		MSG_WriteByte(&host_client->netconnection->message, svc_print);
+		MSG_WriteString(&host_client->netconnection->message, msg);
+	}
 }
 
 /*
@@ -332,10 +335,10 @@ void SV_BroadcastPrint(const char *msg)
 
 	for (i = 0, client = svs.clients;i < svs.maxclients;i++, client++)
 	{
-		if (client->spawned)
+		if (client->spawned && client->netconnection)
 		{
-			MSG_WriteByte(&client->message, svc_print);
-			MSG_WriteString(&client->message, msg);
+			MSG_WriteByte(&client->netconnection->message, svc_print);
+			MSG_WriteString(&client->netconnection->message, msg);
 		}
 	}
 
@@ -374,12 +377,15 @@ void Host_ClientCommands(const char *fmt, ...)
 	va_list argptr;
 	char string[MAX_INPUTLINE];
 
+	if (!host_client->netconnection)
+		return;
+
 	va_start(argptr,fmt);
 	dpvsnprintf(string, sizeof(string), fmt, argptr);
 	va_end(argptr);
 
-	MSG_WriteByte(&host_client->message, svc_stufftext);
-	MSG_WriteString(&host_client->message, string);
+	MSG_WriteByte(&host_client->netconnection->message, svc_stufftext);
+	MSG_WriteString(&host_client->netconnection->message, string);
 }
 
 /*
@@ -404,10 +410,15 @@ void SV_DropClient(qboolean crash)
 		if (!crash)
 		{
 			// LordHavoc: no opportunity for resending, so use unreliable 3 times
-			MSG_WriteByte(&host_client->message, svc_disconnect);
-			NetConn_SendUnreliableMessage(host_client->netconnection, &host_client->message);
-			NetConn_SendUnreliableMessage(host_client->netconnection, &host_client->message);
-			NetConn_SendUnreliableMessage(host_client->netconnection, &host_client->message);
+			unsigned char bufdata[8];
+			sizebuf_t buf;
+			memset(&buf, 0, sizeof(buf));
+			buf.data = bufdata;
+			buf.maxsize = sizeof(bufdata);
+			MSG_WriteByte(&buf, svc_disconnect);
+			NetConn_SendUnreliableMessage(host_client->netconnection, &buf);
+			NetConn_SendUnreliableMessage(host_client->netconnection, &buf);
+			NetConn_SendUnreliableMessage(host_client->netconnection, &buf);
 		}
 		// break the net connection
 		NetConn_Close(host_client->netconnection);

@@ -1028,14 +1028,14 @@ void Cmd_ForwardStringToServer (const char *s)
 		return;
 	}
 
-	if (cls.demoplayback)
-		return;		// not really connected
+	if (!cls.netcon)
+		return;
 
 	// LordHavoc: thanks to Fuh for bringing the pure evil of SZ_Print to my
 	// attention, it has been eradicated from here, its only (former) use in
 	// all of darkplaces.
-	MSG_WriteByte(&cls.message, clc_stringcmd);
-	SZ_Write(&cls.message, (const unsigned char *)s, (int)strlen(s) + 1);
+	MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
+	SZ_Write(&cls.netcon->message, (const unsigned char *)s, (int)strlen(s) + 1);
 }
 
 /*

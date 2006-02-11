@@ -281,6 +281,8 @@ void freedirectory(stringlist_t *list);
 
 char *SearchInfostring(const char *infostring, const char *key);
 
+void InfoString_GetValue(const char *buffer, const char *key, char *value, size_t valuelength);
+void InfoString_SetValue(char *buffer, size_t bufferlength, const char *key, const char *value);
 
 // strlcat and strlcpy, from OpenBSD
 // Most (all?) BSDs already have them

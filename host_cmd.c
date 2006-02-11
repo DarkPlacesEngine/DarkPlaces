@@ -1274,9 +1274,12 @@ void Host_PreSpawn_f (void)
 		return;
 	}
 
-	SZ_Write (&host_client->message, sv.signon.data, sv.signon.cursize);
-	MSG_WriteByte (&host_client->message, svc_signonnum);
-	MSG_WriteByte (&host_client->message, 2);
+	if (host_client->netconnection)
+	{
+		SZ_Write (&host_client->netconnection->message, sv.signon.data, sv.signon.cursize);
+		MSG_WriteByte (&host_client->netconnection->message, svc_signonnum);
+		MSG_WriteByte (&host_client->netconnection->message, 2);
+	}
 	host_client->sendsignon = true;
 
 	// reset the name change timer because the client will send name soon
@@ -1313,8 +1316,9 @@ void Host_Spawn_f (void)
 	host_client->nametime = 0;
 
 	// LordHavoc: moved this above the QC calls at FrikaC's request
-	// send all current names, colors, and frag counts
-	SZ_Clear (&host_client->message);
+	// LordHavoc: commented this out
+	//if (host_client->netconnection)
+	//	SZ_Clear (&host_client->netconnection->message);
 
 	// run the entrance script
 	if (sv.loadgame)
@@ -1352,24 +1356,29 @@ void Host_Spawn_f (void)
 		PRVM_ExecuteProgram (prog->globals.server->PutClientInServer, "QC function PutClientInServer is missing");
 	}
 
+	host_client->sendsignon = true;
+
+	if (!host_client->netconnection)
+		return;
 
 	// send time of update
-	MSG_WriteByte (&host_client->message, svc_time);
-	MSG_WriteFloat (&host_client->message, sv.time);
+	MSG_WriteByte (&host_client->netconnection->message, svc_time);
+	MSG_WriteFloat (&host_client->netconnection->message, sv.time);
 
+	// send all current names, colors, and frag counts
 	for (i = 0, client = svs.clients;i < svs.maxclients;i++, client++)
 	{
 		if (!client->active)
 			continue;
-		MSG_WriteByte (&host_client->message, svc_updatename);
-		MSG_WriteByte (&host_client->message, i);
-		MSG_WriteString (&host_client->message, client->name);
-		MSG_WriteByte (&host_client->message, svc_updatefrags);
-		MSG_WriteByte (&host_client->message, i);
-		MSG_WriteShort (&host_client->message, client->frags);
-		MSG_WriteByte (&host_client->message, svc_updatecolors);
-		MSG_WriteByte (&host_client->message, i);
-		MSG_WriteByte (&host_client->message, client->colors);
+		MSG_WriteByte (&host_client->netconnection->message, svc_updatename);
+		MSG_WriteByte (&host_client->netconnection->message, i);
+		MSG_WriteString (&host_client->netconnection->message, client->name);
+		MSG_WriteByte (&host_client->netconnection->message, svc_updatefrags);
+		MSG_WriteByte (&host_client->netconnection->message, i);
+		MSG_WriteShort (&host_client->netconnection->message, client->frags);
+		MSG_WriteByte (&host_client->netconnection->message, svc_updatecolors);
+		MSG_WriteByte (&host_client->netconnection->message, i);
+		MSG_WriteByte (&host_client->netconnection->message, client->colors);
 	}
 
 	// send all current light styles
@@ -1377,44 +1386,43 @@ void Host_Spawn_f (void)
 	{
 		if (sv.lightstyles[i][0])
 		{
-			MSG_WriteByte (&host_client->message, svc_lightstyle);
-			MSG_WriteByte (&host_client->message, (char)i);
-			MSG_WriteString (&host_client->message, sv.lightstyles[i]);
+			MSG_WriteByte (&host_client->netconnection->message, svc_lightstyle);
+			MSG_WriteByte (&host_client->netconnection->message, (char)i);
+			MSG_WriteString (&host_client->netconnection->message, sv.lightstyles[i]);
 		}
 	}
 
 	// send some stats
-	MSG_WriteByte (&host_client->message, svc_updatestat);
-	MSG_WriteByte (&host_client->message, STAT_TOTALSECRETS);
-	MSG_WriteLong (&host_client->message, prog->globals.server->total_secrets);
+	MSG_WriteByte (&host_client->netconnection->message, svc_updatestat);
+	MSG_WriteByte (&host_client->netconnection->message, STAT_TOTALSECRETS);
+	MSG_WriteLong (&host_client->netconnection->message, prog->globals.server->total_secrets);
 
-	MSG_WriteByte (&host_client->message, svc_updatestat);
-	MSG_WriteByte (&host_client->message, STAT_TOTALMONSTERS);
-	MSG_WriteLong (&host_client->message, prog->globals.server->total_monsters);
+	MSG_WriteByte (&host_client->netconnection->message, svc_updatestat);
+	MSG_WriteByte (&host_client->netconnection->message, STAT_TOTALMONSTERS);
+	MSG_WriteLong (&host_client->netconnection->message, prog->globals.server->total_monsters);
 
-	MSG_WriteByte (&host_client->message, svc_updatestat);
-	MSG_WriteByte (&host_client->message, STAT_SECRETS);
-	MSG_WriteLong (&host_client->message, prog->globals.server->found_secrets);
+	MSG_WriteByte (&host_client->netconnection->message, svc_updatestat);
+	MSG_WriteByte (&host_client->netconnection->message, STAT_SECRETS);
+	MSG_WriteLong (&host_client->netconnection->message, prog->globals.server->found_secrets);
 
-	MSG_WriteByte (&host_client->message, svc_updatestat);
-	MSG_WriteByte (&host_client->message, STAT_MONSTERS);
-	MSG_WriteLong (&host_client->message, prog->globals.server->killed_monsters);
+	MSG_WriteByte (&host_client->netconnection->message, svc_updatestat);
+	MSG_WriteByte (&host_client->netconnection->message, STAT_MONSTERS);
+	MSG_WriteLong (&host_client->netconnection->message, prog->globals.server->killed_monsters);
 
 	// send a fixangle
 	// Never send a roll angle, because savegames can catch the server
 	// in a state where it is expecting the client to correct the angle
 	// and it won't happen if the game was just loaded, so you wind up
 	// with a permanent head tilt
-	MSG_WriteByte (&host_client->message, svc_setangle);
-	MSG_WriteAngle (&host_client->message, host_client->edict->fields.server->angles[0], sv.protocol);
-	MSG_WriteAngle (&host_client->message, host_client->edict->fields.server->angles[1], sv.protocol);
-	MSG_WriteAngle (&host_client->message, 0, sv.protocol);
+	MSG_WriteByte (&host_client->netconnection->message, svc_setangle);
+	MSG_WriteAngle (&host_client->netconnection->message, host_client->edict->fields.server->angles[0], sv.protocol);
+	MSG_WriteAngle (&host_client->netconnection->message, host_client->edict->fields.server->angles[1], sv.protocol);
+	MSG_WriteAngle (&host_client->netconnection->message, 0, sv.protocol);
 
-	SV_WriteClientdataToMessage (host_client, host_client->edict, &host_client->message, stats);
+	SV_WriteClientdataToMessage (host_client, host_client->edict, &host_client->netconnection->message, stats);
 
-	MSG_WriteByte (&host_client->message, svc_signonnum);
-	MSG_WriteByte (&host_client->message, 3);
-	host_client->sendsignon = true;
+	MSG_WriteByte (&host_client->netconnection->message, svc_signonnum);
+	MSG_WriteByte (&host_client->netconnection->message, 3);
 }
 
 /*

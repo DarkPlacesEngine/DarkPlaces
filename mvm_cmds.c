@@ -714,10 +714,10 @@ sizebuf_t *VM_WriteDest (void)
 
 	case MSG_ONE:
 		destclient = (int) PRVM_G_FLOAT(OFS_PARM2);
-		if (destclient < 0 || destclient >= svs.maxclients || !svs.clients[destclient].active)
+		if (destclient < 0 || destclient >= svs.maxclients || !svs.clients[destclient].active || !svs.clients[destclient].netconnection)
 			PRVM_ERROR("VM_clientcommand: %s: invalid client !", PRVM_NAME);
 
-		return &svs.clients[destclient].message;
+		return &svs.clients[destclient].netconnection->message;
 
 	case MSG_ALL:
 		return &sv.reliable_datagram;

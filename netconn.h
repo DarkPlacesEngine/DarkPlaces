@@ -128,12 +128,22 @@ typedef struct netconn_s
 	qboolean canSend;
 	qboolean sendNext;
 
+	// writing buffer to send to peer as the next reliable message
+	// can be added to at any time, copied into sendMessage buffer when it is
+	// possible to send a reliable message and then cleared
+	sizebuf_t message;
+	unsigned char messagedata[NET_MAXMESSAGE];
+
+	// reliable message that is currently sending
+	// (for building fragments)
 	unsigned int ackSequence;
 	unsigned int sendSequence;
 	unsigned int unreliableSendSequence;
 	int sendMessageLength;
 	unsigned char sendMessage[NET_MAXMESSAGE];
 
+	// reliable message that is currently being received
+	// (for putting together fragments)
 	unsigned int receiveSequence;
 	unsigned int unreliableReceiveSequence;
 	int receiveMessageLength;
