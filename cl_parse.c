@@ -173,7 +173,7 @@ static unsigned char olddata[NET_MAXMESSAGE];
 void CL_KeepaliveMessage (void)
 {
 	float time;
-	static float lastmsg;
+	static double nextmsg = -1;
 	int oldreadcount;
 	qboolean oldbadread;
 	sizebuf_t old;
@@ -195,17 +195,17 @@ void CL_KeepaliveMessage (void)
 	net_message = old;
 	memcpy(net_message.data, olddata, net_message.cursize);
 
-	if (cls.netcon && NetConn_CanSendMessage(cls.netcon) && (time = Sys_DoubleTime()) - lastmsg >= 5)
+	if (cls.netcon && (time = Sys_DoubleTime()) >= nextmsg)
 	{
 		sizebuf_t	msg;
 		unsigned char		buf[4];
-		lastmsg = time;
+		nextmsg = time + 5;
 		// write out a nop
 		// LordHavoc: must use unreliable because reliable could kill the sigon message!
 		Con_Print("--> client to server keepalive\n");
+		memset(&msg, 0, sizeof(msg));
 		msg.data = buf;
 		msg.maxsize = sizeof(buf);
-		msg.cursize = 0;
 		MSG_WriteChar(&msg, svc_nop);
 		NetConn_SendUnreliableMessage(cls.netcon, &msg);
 	}
