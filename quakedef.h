@@ -241,7 +241,7 @@ void Host_Error(const char *error, ...);
 void Host_Frame(float time);
 void Host_Quit_f(void);
 void Host_ClientCommands(const char *fmt, ...);
-void Host_ShutdownServer(qboolean crash);
+void Host_ShutdownServer(void);
 void Host_Reconnect_f(void);
 
 void Host_AbortCurrentFrame(void);

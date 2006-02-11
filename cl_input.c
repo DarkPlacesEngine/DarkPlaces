@@ -1009,7 +1009,7 @@ void CL_SendMove(void)
 	{
 		Con_Print("CL_SendMove: lost server connection\n");
 		CL_Disconnect();
-		Host_ShutdownServer(false);
+		Host_ShutdownServer();
 	}
 }
 

@@ -1608,36 +1608,6 @@ void SV_CreateBaseline (void)
 
 /*
 ================
-SV_SendReconnect
-
-Tell all the clients that the server is changing levels
-================
-*/
-void SV_SendReconnect (void)
-{
-#if 1
-	MSG_WriteByte(&sv.reliable_datagram, svc_stufftext);
-	MSG_WriteString(&sv.reliable_datagram, "reconnect\n");
-#else
-	unsigned char data[128];
-	sizebuf_t msg;
-
-	msg.data = data;
-	msg.cursize = 0;
-	msg.maxsize = sizeof(data);
-
-	MSG_WriteChar (&msg, svc_stufftext);
-	MSG_WriteString (&msg, "reconnect\n");
-	NetConn_SendToAll (&msg, 5);
-
-	if (cls.state != ca_dedicated)
-		Cmd_ExecuteString ("reconnect\n", src_command);
-#endif
-}
-
-
-/*
-================
 SV_SaveSpawnparms
 
 Grabs the current state of each client for saving across the
@@ -1748,8 +1718,10 @@ void SV_SpawnServer (const char *server)
 //
 	if (sv.active)
 	{
+		// Tell all the clients that the server is changing levels
 		SV_VM_Begin();
-		SV_SendReconnect();
+		MSG_WriteByte(&sv.reliable_datagram, svc_stufftext);
+		MSG_WriteString(&sv.reliable_datagram, "reconnect\n");
 		SV_VM_End();
 	}
 	else
