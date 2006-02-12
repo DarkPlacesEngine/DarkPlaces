@@ -172,6 +172,9 @@ LDFLAGS_UNIXSDL=`sdl-config --libs`
 EXE_UNIXCL=darkplaces-glx
 EXE_UNIXSV=darkplaces-dedicated
 EXE_UNIXSDL=darkplaces-sdl
+EXE_UNIXCLNEXUIZ=nexuiz-glx
+EXE_UNIXSVNEXUIZ=nexuiz-dedicated
+EXE_UNIXSDLNEXUIZ=nexuiz-sdl
 
 CMD_UNIXRM=rm -rf
 
@@ -237,7 +240,7 @@ OBJ_WINCD=cd_win.o
 #if you want no CD audio
 #OBJ_WINCD=$(OBJ_NOCD)
 
-OBJ_WGL= builddate.c darkplaces.o sys_win.o vid_wgl.o conproc.o $(OBJ_SND_WIN) $(OBJ_WINCD) $(OBJ_COMMON)
+OBJ_WGL= builddate.c sys_win.o vid_wgl.o conproc.o $(OBJ_SND_WIN) $(OBJ_WINCD) $(OBJ_COMMON)
 
 # Link
 LDFLAGS_WINCOMMON=-lwinmm -lwsock32
@@ -247,6 +250,9 @@ LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) `sdl-config --libs`
 EXE_WINCL=darkplaces.exe
 EXE_WINSV=darkplaces-dedicated.exe
 EXE_WINSDL=darkplaces-sdl.exe
+EXE_WINCLNEXUIZ=nexuiz.exe
+EXE_WINSVNEXUIZ=nexuiz-dedicated.exe
+EXE_WINSDLNEXUIZ=nexuiz-sdl.exe
 
 
 ##### Commands #####
@@ -265,15 +271,19 @@ help:
 	@echo "* $(MAKE) debug       : make client and server binaries (debug versions)"
 	@echo "* $(MAKE) profile     : make client and server binaries (profile versions)"
 	@echo "* $(MAKE) release     : make client and server binaries (release versions)"
+	@echo "* $(MAKE) nexuiz      : make client and server binaries with nexuiz icon (release versions)"
 	@echo "* $(MAKE) cl-debug    : make client (debug version)"
 	@echo "* $(MAKE) cl-profile  : make client (profile version)"
 	@echo "* $(MAKE) cl-release  : make client (release version)"
+	@echo "* $(MAKE) cl-nexuiz   : make client with nexuiz icon (release version)"
 	@echo "* $(MAKE) sv-debug    : make dedicated server (debug version)"
 	@echo "* $(MAKE) sv-profile  : make dedicated server (profile version)"
 	@echo "* $(MAKE) sv-release  : make dedicated server (release version)"
+	@echo "* $(MAKE) sv-nexuiz   : make dedicated server with nexuiz icon (release version)"
 	@echo "* $(MAKE) sdl-debug   : make SDL client (debug version)"
 	@echo "* $(MAKE) sdl-profile : make SDL client (profile version)"
 	@echo "* $(MAKE) sdl-release : make SDL client (release version)"
+	@echo "* $(MAKE) sdl-nexuiz  : make SDL client with nexuiz icon (release version)"
 	@echo
 
 debug :
@@ -284,6 +294,9 @@ profile :
 
 release :
 	$(MAKE) sv-release cl-release sdl-release
+
+nexuiz :
+	$(MAKE) sv-nexuiz cl-nexuiz sdl-nexuiz
 
 cl-debug :
 	$(MAKE) bin-debug \
@@ -300,6 +313,11 @@ cl-release :
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		EXE="$(EXE_CL)" LDFLAGS_COMMON="$(LDFLAGS_CL)"
 
+cl-nexuiz :
+	$(MAKE) bin-release \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
+		EXE="$(EXE_CLNEXUIZ)" LDFLAGS_COMMON="$(LDFLAGS_CL)"
+
 sv-debug :
 	$(MAKE) bin-debug \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
@@ -315,6 +333,11 @@ sv-release :
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		EXE="$(EXE_SV)" LDFLAGS_COMMON="$(LDFLAGS_SV)"
 
+sv-nexuiz :
+	$(MAKE) bin-release \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
+		EXE="$(EXE_SVNEXUIZ)" LDFLAGS_COMMON="$(LDFLAGS_SV)"
+
 sdl-debug :
 	$(MAKE) bin-debug \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
@@ -329,6 +352,11 @@ sdl-release :
 	$(MAKE) bin-release \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		EXE="$(EXE_SDL)" LDFLAGS_COMMON="$(LDFLAGS_SDL)"
+
+sdl-nexuiz :
+	$(MAKE) bin-release \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
+		EXE="$(EXE_SDLNEXUIZ)" LDFLAGS_COMMON="$(LDFLAGS_SDL)"
 
 bin-debug :
 	@echo
@@ -373,16 +401,28 @@ cd_sdl.o: cd_sdl.c
 darkplaces.o: %.o : %.rc
 	windres -o $@ $<
 
+nexuiz.o: %.o : %.rc
+	windres -o $@ $<
+
 .c.o:
 	$(DO_CC)
 
-$(EXE_CL): $(OBJ_CL)
+$(EXE_CL): $(OBJ_CL) $(OBJ_ICON)
 	$(DO_LD)
 
-$(EXE_SV): $(OBJ_SV)
+$(EXE_SV): $(OBJ_SV) $(OBJ_ICON)
 	$(DO_LD)
 
-$(EXE_SDL): $(OBJ_SDL)
+$(EXE_SDL): $(OBJ_SDL) $(OBJ_ICON)
+	$(DO_LD)
+
+$(EXE_CLNEXUIZ): $(OBJ_CL) $(OBJ_ICON_NEXUIZ)
+	$(DO_LD)
+
+$(EXE_SVNEXUIZ): $(OBJ_SV) $(OBJ_ICON_NEXUIZ)
+	$(DO_LD)
+
+$(EXE_SDLNEXUIZ): $(OBJ_SDL) $(OBJ_ICON_NEXUIZ)
 	$(DO_LD)
 
 clean:
