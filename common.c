@@ -1256,7 +1256,7 @@ char *SearchInfostring(const char *infostring, const char *key)
 
 void InfoString_GetValue(const char *buffer, const char *key, char *value, size_t valuelength)
 {
-	int pos, j;
+	int pos = 0, j;
 	size_t keylength;
 	if (!key)
 		key = "";
@@ -1298,7 +1298,7 @@ void InfoString_GetValue(const char *buffer, const char *key, char *value, size_
 
 void InfoString_SetValue(char *buffer, size_t bufferlength, const char *key, const char *value)
 {
-	int pos, pos2;
+	int pos = 0, pos2;
 	size_t keylength;
 	if (!key)
 		key = "";
