@@ -306,7 +306,7 @@ void SV_SendServerinfo (client_t *client)
 	client->weaponmodelindex = 0;
 
 	// LordHavoc: clear entityframe tracking
-	client->latestframenum = 0;
+	//client->latestframenum = 0;
 
 	SZ_Clear (&client->netconnection->message);
 	MSG_WriteByte (&client->netconnection->message, svc_print);
