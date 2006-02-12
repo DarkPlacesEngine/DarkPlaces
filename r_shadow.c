@@ -2575,6 +2575,7 @@ void R_Shadow_RenderSurfacesLighting(const entity_render_t *ent, const texture_t
 	float specularscale;
 	qboolean dopants, doshirt;
 	glosstexture = r_texture_black;
+	specularscale = 0;
 	if (r_shadow_gloss.integer > 0)
 	{
 		if (texture->skin.gloss)
