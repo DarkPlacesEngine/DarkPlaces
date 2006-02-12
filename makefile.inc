@@ -429,5 +429,8 @@ clean:
 	-$(CMD_RM) $(EXE_CL)
 	-$(CMD_RM) $(EXE_SV)
 	-$(CMD_RM) $(EXE_SDL)
+	-$(CMD_RM) $(EXE_CLNEXUIZ)
+	-$(CMD_RM) $(EXE_SVNEXUIZ)
+	-$(CMD_RM) $(EXE_SDLNEXUIZ)
 	-$(CMD_RM) *.o
 	-$(CMD_RM) *.d
