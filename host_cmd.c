@@ -1356,8 +1356,6 @@ void Host_Spawn_f (void)
 		PRVM_ExecuteProgram (prog->globals.server->PutClientInServer, "QC function PutClientInServer is missing");
 	}
 
-	host_client->sendsignon = true;
-
 	if (!host_client->netconnection)
 		return;
 
@@ -1423,6 +1421,8 @@ void Host_Spawn_f (void)
 
 	MSG_WriteByte (&host_client->netconnection->message, svc_signonnum);
 	MSG_WriteByte (&host_client->netconnection->message, 3);
+
+	host_client->sendsignon = true;
 }
 
 /*
