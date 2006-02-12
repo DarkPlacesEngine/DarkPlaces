@@ -549,13 +549,24 @@ void Sbar_SortFrags (void)
 		color = -1;
 		for (i=0 ; i<scoreboardlines ; i++)
 		{
-			if (color != cl.scores[fragsort[i]].colors)
+			if (color != (cl.scores[fragsort[i]].colors & 15))
 			{
-				color = cl.scores[fragsort[i]].colors;
+				color = cl.scores[fragsort[i]].colors & 15;
 				teamlines++;
-				strcpy(teams[teamlines-1].name, "Total Team Score");
+
+				if (color == 4)
+					strcpy(teams[teamlines-1].name, "^1Red Team");
+				else if (color == 13)
+					strcpy(teams[teamlines-1].name, "^4Blue Team");
+				else if (color == 9)
+					strcpy(teams[teamlines-1].name, "^6Pink Team");
+				else if (color == 12)
+					strcpy(teams[teamlines-1].name, "^3Yellow Team");
+				else
+					strcpy(teams[teamlines-1].name, "Total Team Score");
+				
 				teams[teamlines-1].frags = 0;
-				teams[teamlines-1].colors = cl.scores[fragsort[i]].colors;
+				teams[teamlines-1].colors = color + 16 * color;
 			}
 
 			if (cl.scores[fragsort[i]].frags != -666)
