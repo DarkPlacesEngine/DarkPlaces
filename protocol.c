@@ -1593,9 +1593,12 @@ void EntityFrame4_WriteFrame(sizebuf_t *msg, entityframe4_database_t *d, int num
 
 entityframe5_database_t *EntityFrame5_AllocDatabase(mempool_t *pool)
 {
+	int i;
 	entityframe5_database_t *d;
 	d = (entityframe5_database_t *)Mem_Alloc(pool, sizeof(*d));
-	EntityFrame5_ResetDatabase(d);
+	d->latestframenum = 0;
+	for (i = 0;i < d->maxedicts;i++)
+		d->states[i] = defaultstate;
 	return d;
 }
 
@@ -1606,15 +1609,6 @@ void EntityFrame5_FreeDatabase(entityframe5_database_t *d)
 	if (d->maxedicts)
 		Mem_Free(d->deltabits);
 	Mem_Free(d);
-}
-
-void EntityFrame5_ResetDatabase(entityframe5_database_t *d)
-{
-	int i;
-	memset(d, 0, sizeof(*d));
-	d->latestframenum = 0;
-	for (i = 0;i < d->maxedicts;i++)
-		d->states[i] = defaultstate;
 }
 
 void EntityFrame5_ExpandEdicts(entityframe5_database_t *d, int newmax)

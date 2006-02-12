@@ -750,7 +750,6 @@ entityframe5_database_t;
 
 entityframe5_database_t *EntityFrame5_AllocDatabase(mempool_t *pool);
 void EntityFrame5_FreeDatabase(entityframe5_database_t *d);
-void EntityFrame5_ResetDatabase(entityframe5_database_t *d);
 void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbits, sizebuf_t *msg);
 int EntityState5_DeltaBitsForState(entity_state_t *o, entity_state_t *n);
 void EntityFrame5_CL_ReadFrame(void);
