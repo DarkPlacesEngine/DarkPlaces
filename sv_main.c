@@ -308,23 +308,6 @@ void SV_SendServerinfo (client_t *client)
 	// LordHavoc: clear entityframe tracking
 	client->latestframenum = 0;
 
-	if (client->entitydatabase)
-		EntityFrame_FreeDatabase(client->entitydatabase);
-	if (client->entitydatabase4)
-		EntityFrame4_FreeDatabase(client->entitydatabase4);
-	if (client->entitydatabase5)
-		EntityFrame5_FreeDatabase(client->entitydatabase5);
-
-	if (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE)
-	{
-		if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3)
-			client->entitydatabase = EntityFrame_AllocDatabase(sv_mempool);
-		else if (sv.protocol == PROTOCOL_DARKPLACES4)
-			client->entitydatabase4 = EntityFrame4_AllocDatabase(sv_mempool);
-		else
-			client->entitydatabase5 = EntityFrame5_AllocDatabase(sv_mempool);
-	}
-
 	SZ_Clear (&client->netconnection->message);
 	MSG_WriteByte (&client->netconnection->message, svc_print);
 	dpsnprintf (message, sizeof (message), "\002\nServer: %s build %s (progs %i crc)", gamename, buildstring, prog->filecrc);
@@ -435,7 +418,19 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 	// don't call SendServerinfo for a fresh botclient because its fields have
 	// not been set up by the qc yet
 	if (client->netconnection)
+	{
 		SV_SendServerinfo (client);
+		if (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE)
+		{
+			if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3)
+				client->entitydatabase = EntityFrame_AllocDatabase(sv_mempool);
+			else if (sv.protocol == PROTOCOL_DARKPLACES4)
+				client->entitydatabase4 = EntityFrame4_AllocDatabase(sv_mempool);
+			else
+				client->entitydatabase5 = EntityFrame5_AllocDatabase(sv_mempool);
+		}
+
+	}
 	else
 		client->spawned = true;
 }
