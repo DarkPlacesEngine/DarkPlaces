@@ -691,12 +691,11 @@ void NetConn_OpenServerPort(const char *addressstring, int defaultport)
 	}
 }
 
-static void NetConn_UpdateServerStuff(void);
 void NetConn_OpenServerPorts(int opennetports)
 {
 	int port;
 	NetConn_CloseServerPorts();
-	NetConn_UpdateServerStuff();
+	NetConn_UpdateSockets();
 	port = bound(0, sv_netport.integer, 65535);
 	if (port == 0)
 		port = 26000;
@@ -779,7 +778,7 @@ void NetConn_Close(netconn_t *conn)
 static int clientport = -1;
 static int clientport2 = -1;
 static int hostport = -1;
-static void NetConn_UpdateServerStuff(void)
+void NetConn_UpdateSockets(void)
 {
 	if (cls.state != ca_dedicated)
 	{
@@ -1291,7 +1290,7 @@ void NetConn_ClientFrame(void)
 	int i, length;
 	lhnetaddress_t peeraddress;
 	netconn_t *conn;
-	NetConn_UpdateServerStuff();
+	NetConn_UpdateSockets();
 	if (cls.connect_trying && cls.connect_nextsendtime < realtime)
 	{
 		if (cls.connect_remainingtries == 0)
@@ -1829,7 +1828,7 @@ void NetConn_ServerFrame(void)
 	int i, length;
 	lhnetaddress_t peeraddress;
 	netconn_t *conn;
-	NetConn_UpdateServerStuff();
+	NetConn_UpdateSockets();
 	for (i = 0;i < sv_numsockets;i++)
 		while (sv_sockets[i] && (length = NetConn_Read(sv_sockets[i], readbuffer, sizeof(readbuffer), &peeraddress)) > 0)
 			NetConn_ServerParsePacket(sv_sockets[i], readbuffer, length, &peeraddress);

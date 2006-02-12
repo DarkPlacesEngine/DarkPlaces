@@ -353,6 +353,9 @@ void CL_EstablishConnection(const char *host)
 	// stop demo loop in case this fails
 	CL_Disconnect();
 
+	// make sure the client ports are open before attempting to connect
+	NetConn_UpdateSockets();
+
 	// run a network frame
 	//NetConn_ClientFrame();SV_VM_Begin();NetConn_ServerFrame();SV_VM_End();
 
