@@ -297,9 +297,9 @@ qboolean OGG_OpenLibrary (void)
 	const char* dllnames_vo [] =
 	{
 #if defined(WIN64)
-		"vorbis64.dll",
+		"libvorbis64.dll",
 #elif defined(WIN32)
-		"vorbis.dll",
+		"libvorbis.dll",
 #elif defined(MACOSX)
 		"libvorbis.dylib",
 #else
@@ -311,9 +311,9 @@ qboolean OGG_OpenLibrary (void)
 	const char* dllnames_vf [] =
 	{
 #if defined(WIN64)
-		"vorbisfile64.dll",
+		"libvorbisfile64.dll",
 #elif defined(WIN32)
-		"vorbisfile.dll",
+		"libvorbisfile.dll",
 #elif defined(MACOSX)
 		"libvorbisfile.dylib",
 #else
