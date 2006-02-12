@@ -1645,15 +1645,15 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 				int layerflags = 0;
 				if (fogenabled && (t->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
 					layerflags |= TEXTURELAYERFLAG_FOGDARKEN;
-				currentbasetexture = (VectorLength2(ent->colormap_pantscolor) + VectorLength2(ent->colormap_shirtcolor) < (1.0f / 1024.0f) && t->skin.merged) ? t->skin.merged : t->skin.base;
+				currentbasetexture = (VectorLength2(ent->colormap_pantscolor) + VectorLength2(ent->colormap_shirtcolor) < (1.0f / 1048576.0f) && t->skin.merged) ? t->skin.merged : t->skin.base;
 				if (t->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
 				{
 					// fullbright is not affected by r_lightmapintensity
 					R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_TEXTURE, currentbasetexture, &t->currenttexmatrix, ent->colormod[0], ent->colormod[1], ent->colormod[2], t->currentalpha);
 					if (VectorLength2(ent->colormap_pantscolor) >= (1.0f / 1048576.0f) && t->skin.pants)
-						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->skin.pants, &t->currenttexmatrix, ent->colormap_pantscolor[0], ent->colormap_pantscolor[1], ent->colormap_pantscolor[2], t->currentalpha);
+						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->skin.pants, &t->currenttexmatrix, ent->colormap_pantscolor[0] * ent->colormod[0], ent->colormap_pantscolor[1] * ent->colormod[1], ent->colormap_pantscolor[2] * ent->colormod[2], t->currentalpha);
 					if (VectorLength2(ent->colormap_shirtcolor) >= (1.0f / 1048576.0f) && t->skin.shirt)
-						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->skin.shirt, &t->currenttexmatrix, ent->colormap_shirtcolor[0], ent->colormap_shirtcolor[1], ent->colormap_shirtcolor[2], t->currentalpha);
+						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->skin.shirt, &t->currenttexmatrix, ent->colormap_shirtcolor[0] * ent->colormod[0], ent->colormap_shirtcolor[1] * ent->colormod[1], ent->colormap_shirtcolor[2] * ent->colormod[2], t->currentalpha);
 				}
 				else
 				{
@@ -1675,15 +1675,15 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, currentbasetexture, &t->currenttexmatrix, ent->colormod[0] * r_ambient.value * (1.0f / 64.0f), ent->colormod[1] * r_ambient.value * (1.0f / 64.0f), ent->colormod[2] * r_ambient.value * (1.0f / 64.0f), t->currentalpha);
 					if (VectorLength2(ent->colormap_pantscolor) >= (1.0f / 1048576.0f) && t->skin.pants)
 					{
-						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_LITTEXTURE_VERTEX, t->skin.pants, &t->currenttexmatrix, ent->colormap_pantscolor[0] * colorscale, ent->colormap_pantscolor[1] * colorscale, ent->colormap_pantscolor[2] * colorscale, t->currentalpha);
+						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_LITTEXTURE_VERTEX, t->skin.pants, &t->currenttexmatrix, ent->colormap_pantscolor[0] * ent->colormod[0] * colorscale, ent->colormap_pantscolor[1] * ent->colormod[1] * colorscale, ent->colormap_pantscolor[2]  * ent->colormod[2] * colorscale, t->currentalpha);
 						if (r_ambient.value >= (1.0f/64.0f))
-							R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->skin.pants, &t->currenttexmatrix, ent->colormap_pantscolor[0] * r_ambient.value * (1.0f / 64.0f), ent->colormap_pantscolor[1] * r_ambient.value * (1.0f / 64.0f), ent->colormap_pantscolor[2] * r_ambient.value * (1.0f / 64.0f), t->currentalpha);
+							R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->skin.pants, &t->currenttexmatrix, ent->colormap_pantscolor[0] * ent->colormod[0] * r_ambient.value * (1.0f / 64.0f), ent->colormap_pantscolor[1] * ent->colormod[1] * r_ambient.value * (1.0f / 64.0f), ent->colormap_pantscolor[2] * ent->colormod[2] * r_ambient.value * (1.0f / 64.0f), t->currentalpha);
 					}
 					if (VectorLength2(ent->colormap_shirtcolor) >= (1.0f / 1048576.0f) && t->skin.shirt)
 					{
-						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_LITTEXTURE_VERTEX, t->skin.shirt, &t->currenttexmatrix, ent->colormap_shirtcolor[0] * colorscale, ent->colormap_shirtcolor[1] * colorscale, ent->colormap_shirtcolor[2] * colorscale, t->currentalpha);
+						R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_LITTEXTURE_VERTEX, t->skin.shirt, &t->currenttexmatrix, ent->colormap_shirtcolor[0] * ent->colormod[0] * colorscale, ent->colormap_shirtcolor[1] * ent->colormod[1] * colorscale, ent->colormap_shirtcolor[2] * ent->colormod[2] * colorscale, t->currentalpha);
 						if (r_ambient.value >= (1.0f/64.0f))
-							R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->skin.shirt, &t->currenttexmatrix, ent->colormap_shirtcolor[0] * r_ambient.value * (1.0f / 64.0f), ent->colormap_shirtcolor[1] * r_ambient.value * (1.0f / 64.0f), ent->colormap_shirtcolor[2] * r_ambient.value * (1.0f / 64.0f), t->currentalpha);
+							R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->skin.shirt, &t->currenttexmatrix, ent->colormap_shirtcolor[0] * ent->colormod[0] * r_ambient.value * (1.0f / 64.0f), ent->colormap_shirtcolor[1] * ent->colormod[1] * r_ambient.value * (1.0f / 64.0f), ent->colormap_shirtcolor[2] * ent->colormod[2] * r_ambient.value * (1.0f / 64.0f), t->currentalpha);
 					}
 				}
 				if (t->skin.glow != NULL)
