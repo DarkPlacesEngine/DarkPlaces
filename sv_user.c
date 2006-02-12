@@ -857,7 +857,10 @@ void SV_ReadClientMessage(void)
 			if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 			if (developer_networkentities.integer >= 1)
 				Con_Printf("recv clc_ackframe %i\n", num);
-			if (host_client->latestframenum < num)
+			// if the client hasn't progressed through signons yet,
+			// ignore any clc_ackframes we get (they're probably from the
+			// previous level)
+			if (host_client->spawned && host_client->latestframenum < num)
 			{
 				int i;
 				for (i = host_client->latestframenum + 1;i < num;i++)
