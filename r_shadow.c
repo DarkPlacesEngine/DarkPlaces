@@ -1589,20 +1589,11 @@ static void R_Shadow_GenTexCoords_Specular_NormalCubeMap(float *out3f, int numve
 	}
 }
 
-static void R_Shadow_RenderSurfacesLighting_VisibleLighting(const entity_render_t *ent, const texture_t *texture, int numsurfaces, msurface_t **surfacelist, const vec3_t lightcolorbase, const vec3_t lightcolorpants, const vec3_t lightcolorshirt, rtexture_t *basetexture, rtexture_t *pantstexture, rtexture_t *shirttexture, rtexture_t *normalmaptexture, rtexture_t *glosstexture, float specularscale)
+static void R_Shadow_RenderSurfacesLighting_VisibleLighting(const entity_render_t *ent, const texture_t *texture, int numsurfaces, msurface_t **surfacelist, const vec3_t lightcolorbase, const vec3_t lightcolorpants, const vec3_t lightcolorshirt, rtexture_t *basetexture, rtexture_t *pantstexture, rtexture_t *shirttexture, rtexture_t *normalmaptexture, rtexture_t *glosstexture, float specularscale, qboolean dopants, qboolean doshirt)
 {
 	// used to display how many times a surface is lit for level design purposes
 	int surfacelistindex;
 	rmeshstate_t m;
-	qboolean doambientbase = r_shadow_rtlight->ambientscale * VectorLength2(lightcolorbase) > 0.00001 && basetexture != r_texture_black;
-	qboolean dodiffusebase = r_shadow_rtlight->diffusescale * VectorLength2(lightcolorbase) > 0.00001 && basetexture != r_texture_black;
-	qboolean doambientpants = r_shadow_rtlight->ambientscale * VectorLength2(lightcolorpants) > 0.00001 && pantstexture != r_texture_black;
-	qboolean dodiffusepants = r_shadow_rtlight->diffusescale * VectorLength2(lightcolorpants) > 0.00001 && pantstexture != r_texture_black;
-	qboolean doambientshirt = r_shadow_rtlight->ambientscale * VectorLength2(lightcolorshirt) > 0.00001 && shirttexture != r_texture_black;
-	qboolean dodiffuseshirt = r_shadow_rtlight->diffusescale * VectorLength2(lightcolorshirt) > 0.00001 && shirttexture != r_texture_black;
-	qboolean dospecular = specularscale * VectorLength2(lightcolorbase) > 0.00001 && glosstexture != r_texture_black;
-	if (!doambientbase && !dodiffusebase && !doambientpants && !dodiffusepants && !doambientshirt && !dodiffuseshirt && !dospecular)
-		return;
 	GL_Color(0.1, 0.025, 0, 1);
 	memset(&m, 0, sizeof(m));
 	R_Mesh_State(&m);
@@ -1616,16 +1607,10 @@ static void R_Shadow_RenderSurfacesLighting_VisibleLighting(const entity_render_
 	}
 }
 
-static void R_Shadow_RenderSurfacesLighting_Light_GLSL(const entity_render_t *ent, const texture_t *texture, int numsurfaces, msurface_t **surfacelist, const vec3_t lightcolorbase, const vec3_t lightcolorpants, const vec3_t lightcolorshirt, rtexture_t *basetexture, rtexture_t *pantstexture, rtexture_t *shirttexture, rtexture_t *normalmaptexture, rtexture_t *glosstexture, float specularscale)
+static void R_Shadow_RenderSurfacesLighting_Light_GLSL(const entity_render_t *ent, const texture_t *texture, int numsurfaces, msurface_t **surfacelist, const vec3_t lightcolorbase, const vec3_t lightcolorpants, const vec3_t lightcolorshirt, rtexture_t *basetexture, rtexture_t *pantstexture, rtexture_t *shirttexture, rtexture_t *normalmaptexture, rtexture_t *glosstexture, float specularscale, qboolean dopants, qboolean doshirt)
 {
 	// ARB2 GLSL shader path (GFFX5200, Radeon 9500)
 	int surfacelistindex;
-	qboolean dobase = (r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorbase) > 0.00001 && basetexture != r_texture_black;
-	qboolean dopants = (r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorpants) > 0.00001 && pantstexture != r_texture_black;
-	qboolean doshirt = (r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorshirt) > 0.00001 && shirttexture != r_texture_black;
-	qboolean dospecular = specularscale * VectorLength2(lightcolorbase) > 0.00001 && glosstexture != r_texture_black;
-	if (!dobase && !dopants && !doshirt && !dospecular)
-		return;
 	// select a permutation of the lighting shader appropriate to this
 	// combination of texture, entity, light source, and fogging, only use the
 	// minimum features necessary to avoid wasting rendering time in the
@@ -2379,18 +2364,14 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3_SpecularPass(const entity
 	GL_LockArrays(0, 0);
 }
 
-static void R_Shadow_RenderSurfacesLighting_Light_Dot3(const entity_render_t *ent, const texture_t *texture, int numsurfaces, msurface_t **surfacelist, const vec3_t lightcolorbase, const vec3_t lightcolorpants, const vec3_t lightcolorshirt, rtexture_t *basetexture, rtexture_t *pantstexture, rtexture_t *shirttexture, rtexture_t *normalmaptexture, rtexture_t *glosstexture, float specularscale)
+static void R_Shadow_RenderSurfacesLighting_Light_Dot3(const entity_render_t *ent, const texture_t *texture, int numsurfaces, msurface_t **surfacelist, const vec3_t lightcolorbase, const vec3_t lightcolorpants, const vec3_t lightcolorshirt, rtexture_t *basetexture, rtexture_t *pantstexture, rtexture_t *shirttexture, rtexture_t *normalmaptexture, rtexture_t *glosstexture, float specularscale, qboolean dopants, qboolean doshirt)
 {
 	// ARB path (any Geforce, any Radeon)
 	int surfacelistindex;
-	qboolean doambientbase = r_shadow_rtlight->ambientscale * VectorLength2(lightcolorbase) > 0.00001 && basetexture != r_texture_black;
-	qboolean dodiffusebase = r_shadow_rtlight->diffusescale * VectorLength2(lightcolorbase) > 0.00001 && basetexture != r_texture_black;
-	qboolean doambientpants = r_shadow_rtlight->ambientscale * VectorLength2(lightcolorpants) > 0.00001 && pantstexture != r_texture_black;
-	qboolean dodiffusepants = r_shadow_rtlight->diffusescale * VectorLength2(lightcolorpants) > 0.00001 && pantstexture != r_texture_black;
-	qboolean doambientshirt = r_shadow_rtlight->ambientscale * VectorLength2(lightcolorshirt) > 0.00001 && shirttexture != r_texture_black;
-	qboolean dodiffuseshirt = r_shadow_rtlight->diffusescale * VectorLength2(lightcolorshirt) > 0.00001 && shirttexture != r_texture_black;
-	qboolean dospecular = specularscale * VectorLength2(lightcolorbase) > 0.00001 && glosstexture != r_texture_black;
-	if (!doambientbase && !dodiffusebase && !doambientpants && !dodiffusepants && !doambientshirt && !dodiffuseshirt && !dospecular)
+	qboolean doambient = r_shadow_rtlight->ambientscale > 0;
+	qboolean dodiffuse = r_shadow_rtlight->diffusescale > 0;
+	qboolean dospecular = specularscale > 0;
+	if (!doambient && !dodiffuse && !dospecular)
 		return;
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
@@ -2403,18 +2384,24 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3(const entity_render_t *en
 			rsurface_normal3f = varray_normal3f;
 			Mod_BuildTextureVectorsAndNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_vertex3f, surface->groupmesh->data_texcoordtexture2f, surface->groupmesh->data_element3i + surface->num_firsttriangle * 3, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f, r_smoothnormals_areaweighting.integer);
 		}
-		if (doambientbase)
+		if (doambient)
 			R_Shadow_RenderSurfacesLighting_Light_Dot3_AmbientPass(ent, texture, surface, lightcolorbase, basetexture, r_shadow_rtlight->ambientscale);
-		if (doambientpants)
-			R_Shadow_RenderSurfacesLighting_Light_Dot3_AmbientPass(ent, texture, surface, lightcolorpants, pantstexture, r_shadow_rtlight->ambientscale);
-		if (doambientshirt)
-			R_Shadow_RenderSurfacesLighting_Light_Dot3_AmbientPass(ent, texture, surface, lightcolorshirt, shirttexture, r_shadow_rtlight->ambientscale);
-		if (dodiffusebase)
+		if (dodiffuse)
 			R_Shadow_RenderSurfacesLighting_Light_Dot3_DiffusePass(ent, texture, surface, lightcolorbase, basetexture, normalmaptexture, r_shadow_rtlight->diffusescale);
-		if (dodiffusepants)
-			R_Shadow_RenderSurfacesLighting_Light_Dot3_DiffusePass(ent, texture, surface, lightcolorpants, pantstexture, normalmaptexture, r_shadow_rtlight->diffusescale);
-		if (dodiffuseshirt)
-			R_Shadow_RenderSurfacesLighting_Light_Dot3_DiffusePass(ent, texture, surface, lightcolorshirt, shirttexture, normalmaptexture, r_shadow_rtlight->diffusescale);
+		if (dopants)
+		{
+			if (doambient)
+				R_Shadow_RenderSurfacesLighting_Light_Dot3_AmbientPass(ent, texture, surface, lightcolorpants, pantstexture, r_shadow_rtlight->ambientscale);
+			if (dodiffuse)
+				R_Shadow_RenderSurfacesLighting_Light_Dot3_DiffusePass(ent, texture, surface, lightcolorpants, pantstexture, normalmaptexture, r_shadow_rtlight->diffusescale);
+		}
+		if (doshirt)
+		{
+			if (doambient)
+				R_Shadow_RenderSurfacesLighting_Light_Dot3_AmbientPass(ent, texture, surface, lightcolorshirt, shirttexture, r_shadow_rtlight->ambientscale);
+			if (dodiffuse)
+				R_Shadow_RenderSurfacesLighting_Light_Dot3_DiffusePass(ent, texture, surface, lightcolorshirt, shirttexture, normalmaptexture, r_shadow_rtlight->diffusescale);
+		}
 		if (dospecular)
 			R_Shadow_RenderSurfacesLighting_Light_Dot3_SpecularPass(ent, texture, surface, lightcolorbase, glosstexture, normalmaptexture, specularscale);
 	}
@@ -2490,33 +2477,19 @@ goodpass:
 	}
 }
 
-static void R_Shadow_RenderSurfacesLighting_Light_Vertex(const entity_render_t *ent, const texture_t *texture, int numsurfaces, msurface_t **surfacelist, const vec3_t lightcolorbase, const vec3_t lightcolorpants, const vec3_t lightcolorshirt, rtexture_t *basetexture, rtexture_t *pantstexture, rtexture_t *shirttexture, rtexture_t *normalmaptexture, rtexture_t *glosstexture, float specularscale)
+static void R_Shadow_RenderSurfacesLighting_Light_Vertex(const entity_render_t *ent, const texture_t *texture, int numsurfaces, msurface_t **surfacelist, const vec3_t lightcolorbase, const vec3_t lightcolorpants, const vec3_t lightcolorshirt, rtexture_t *basetexture, rtexture_t *pantstexture, rtexture_t *shirttexture, rtexture_t *normalmaptexture, rtexture_t *glosstexture, float specularscale, qboolean dopants, qboolean doshirt)
 {
 	int surfacelistindex;
 	float ambientcolorbase[3], diffusecolorbase[3];
 	float ambientcolorpants[3], diffusecolorpants[3];
 	float ambientcolorshirt[3], diffusecolorshirt[3];
 	rmeshstate_t m;
-	qboolean dobase  = basetexture != r_texture_black;
-	qboolean dopants = pantstexture != r_texture_black;
-	qboolean doshirt = shirttexture != r_texture_black;
-	if (!dobase && !dopants && !doshirt)
-		return;
-	if (dobase)
-	{
-		VectorScale(lightcolorbase, r_shadow_rtlight->ambientscale * 2, ambientcolorbase);
-		VectorScale(lightcolorbase, r_shadow_rtlight->diffusescale * 2, diffusecolorbase);
-	}
-	if (dopants)
-	{
-		VectorScale(lightcolorpants, r_shadow_rtlight->ambientscale * 2, ambientcolorpants);
-		VectorScale(lightcolorpants, r_shadow_rtlight->diffusescale * 2, diffusecolorpants);
-	}
-	if (doshirt)
-	{
-		VectorScale(lightcolorshirt, r_shadow_rtlight->ambientscale * 2, ambientcolorshirt);
-		VectorScale(lightcolorshirt, r_shadow_rtlight->diffusescale * 2, diffusecolorshirt);
-	}
+	VectorScale(lightcolorbase, r_shadow_rtlight->ambientscale * 2, ambientcolorbase);
+	VectorScale(lightcolorbase, r_shadow_rtlight->diffusescale * 2, diffusecolorbase);
+	VectorScale(lightcolorpants, r_shadow_rtlight->ambientscale * 2, ambientcolorpants);
+	VectorScale(lightcolorpants, r_shadow_rtlight->diffusescale * 2, diffusecolorpants);
+	VectorScale(lightcolorshirt, r_shadow_rtlight->ambientscale * 2, ambientcolorshirt);
+	VectorScale(lightcolorshirt, r_shadow_rtlight->diffusescale * 2, diffusecolorshirt);
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	memset(&m, 0, sizeof(m));
 	m.tex[0] = R_GetTexture(basetexture);
@@ -2576,11 +2549,8 @@ static void R_Shadow_RenderSurfacesLighting_Light_Vertex(const entity_render_t *
 #endif
 			}
 		}
-		if (dobase)
-		{
-			R_Mesh_TexBind(0, R_GetTexture(basetexture));
-			R_Shadow_RenderSurfacesLighting_Light_Vertex_Pass(surface, diffusecolorbase, ambientcolorbase);
-		}
+		R_Mesh_TexBind(0, R_GetTexture(basetexture));
+		R_Shadow_RenderSurfacesLighting_Light_Vertex_Pass(surface, diffusecolorbase, ambientcolorbase);
 		if (dopants)
 		{
 			R_Mesh_TexBind(0, R_GetTexture(pantstexture));
@@ -2599,10 +2569,12 @@ void R_Shadow_RenderSurfacesLighting(const entity_render_t *ent, const texture_t
 	// FIXME: support MATERIALFLAG_NODEPTHTEST
 	vec3_t lightcolorbase, lightcolorpants, lightcolorshirt;
 	rtexture_t *basetexture;
+	rtexture_t *pantstexture;
+	rtexture_t *shirttexture;
 	rtexture_t *glosstexture;
 	float specularscale;
+	qboolean dopants, doshirt;
 	glosstexture = r_texture_black;
-	specularscale = 0;
 	if (r_shadow_gloss.integer > 0)
 	{
 		if (texture->skin.gloss)
@@ -2632,28 +2604,46 @@ void R_Shadow_RenderSurfacesLighting(const entity_render_t *ent, const texture_t
 		qglDisable(GL_CULL_FACE);
 	else
 		qglEnable(GL_CULL_FACE);
-	if ((VectorLength2(ent->colormap_pantscolor) + VectorLength2(ent->colormap_shirtcolor)) >= (1.0f / 1048576.0f))
+	dopants = texture->skin.pants != NULL && VectorLength2(ent->colormap_pantscolor) >= (1.0f / 1048576.0f);
+	doshirt = texture->skin.shirt != NULL && VectorLength2(ent->colormap_shirtcolor) >= (1.0f / 1048576.0f);
+	if (dopants + doshirt)
 	{
-		lightcolorpants[0] = r_shadow_rtlight->currentcolor[0] * ent->colormap_pantscolor[0] * texture->currentalpha;
-		lightcolorpants[1] = r_shadow_rtlight->currentcolor[1] * ent->colormap_pantscolor[1] * texture->currentalpha;
-		lightcolorpants[2] = r_shadow_rtlight->currentcolor[2] * ent->colormap_pantscolor[2] * texture->currentalpha;
-		lightcolorshirt[0] = r_shadow_rtlight->currentcolor[0] * ent->colormap_shirtcolor[0] * texture->currentalpha;
-		lightcolorshirt[1] = r_shadow_rtlight->currentcolor[1] * ent->colormap_shirtcolor[1] * texture->currentalpha;
-		lightcolorshirt[2] = r_shadow_rtlight->currentcolor[2] * ent->colormap_shirtcolor[2] * texture->currentalpha;
-		basetexture = texture->skin.base;
+		if (dopants)
+		{
+			lightcolorpants[0] = lightcolorbase[0] * ent->colormap_pantscolor[0];
+			lightcolorpants[1] = lightcolorbase[1] * ent->colormap_pantscolor[1];
+			lightcolorpants[2] = lightcolorbase[2] * ent->colormap_pantscolor[2];
+		}
+		else
+		{
+			pantstexture = r_texture_black;
+			VectorClear(lightcolorpants);
+		}
+		if (doshirt)
+		{
+			shirttexture = texture->skin.shirt;
+			lightcolorshirt[0] = lightcolorbase[0] * ent->colormap_shirtcolor[0];
+			lightcolorshirt[1] = lightcolorbase[1] * ent->colormap_shirtcolor[1];
+			lightcolorshirt[2] = lightcolorbase[2] * ent->colormap_shirtcolor[2];
+		}
+		else
+		{
+			shirttexture = r_texture_black;
+			VectorClear(lightcolorshirt);
+		}
 		switch (r_shadow_rendermode)
 		{
 		case R_SHADOW_RENDERMODE_VISIBLELIGHTING:
-			R_Shadow_RenderSurfacesLighting_VisibleLighting(ent, texture, numsurfaces, surfacelist, lightcolorbase, lightcolorpants, lightcolorshirt, texture->skin.base, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, glosstexture, specularscale);
+			R_Shadow_RenderSurfacesLighting_VisibleLighting(ent, texture, numsurfaces, surfacelist, lightcolorbase, lightcolorpants, lightcolorshirt, texture->skin.base, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, glosstexture, specularscale, dopants, doshirt);
 			break;
 		case R_SHADOW_RENDERMODE_LIGHT_GLSL:
-			R_Shadow_RenderSurfacesLighting_Light_GLSL(ent, texture, numsurfaces, surfacelist, lightcolorbase, lightcolorpants, lightcolorshirt, texture->skin.base, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, glosstexture, specularscale);
+			R_Shadow_RenderSurfacesLighting_Light_GLSL(ent, texture, numsurfaces, surfacelist, lightcolorbase, lightcolorpants, lightcolorshirt, texture->skin.base, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, glosstexture, specularscale, dopants, doshirt);
 			break;
 		case R_SHADOW_RENDERMODE_LIGHT_DOT3:
-			R_Shadow_RenderSurfacesLighting_Light_Dot3(ent, texture, numsurfaces, surfacelist, lightcolorbase, lightcolorpants, lightcolorshirt, texture->skin.base, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, glosstexture, specularscale);
+			R_Shadow_RenderSurfacesLighting_Light_Dot3(ent, texture, numsurfaces, surfacelist, lightcolorbase, lightcolorpants, lightcolorshirt, texture->skin.base, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, glosstexture, specularscale, dopants, doshirt);
 			break;
 		case R_SHADOW_RENDERMODE_LIGHT_VERTEX:
-			R_Shadow_RenderSurfacesLighting_Light_Vertex(ent, texture, numsurfaces, surfacelist, lightcolorbase, lightcolorpants, lightcolorshirt, texture->skin.base, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, glosstexture, specularscale);
+			R_Shadow_RenderSurfacesLighting_Light_Vertex(ent, texture, numsurfaces, surfacelist, lightcolorbase, lightcolorpants, lightcolorshirt, texture->skin.base, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, glosstexture, specularscale, dopants, doshirt);
 			break;
 		default:
 			Con_Printf("R_Shadow_RenderSurfacesLighting: unknown r_shadow_rendermode %i\n", r_shadow_rendermode);
@@ -2666,16 +2656,16 @@ void R_Shadow_RenderSurfacesLighting(const entity_render_t *ent, const texture_t
 		switch (r_shadow_rendermode)
 		{
 		case R_SHADOW_RENDERMODE_VISIBLELIGHTING:
-			R_Shadow_RenderSurfacesLighting_VisibleLighting(ent, texture, numsurfaces, surfacelist, lightcolorbase, vec3_origin, vec3_origin, basetexture, r_texture_black, r_texture_black, texture->skin.nmap, glosstexture, specularscale);
+			R_Shadow_RenderSurfacesLighting_VisibleLighting(ent, texture, numsurfaces, surfacelist, lightcolorbase, vec3_origin, vec3_origin, basetexture, r_texture_black, r_texture_black, texture->skin.nmap, glosstexture, specularscale, false, false);
 			break;
 		case R_SHADOW_RENDERMODE_LIGHT_GLSL:
-			R_Shadow_RenderSurfacesLighting_Light_GLSL(ent, texture, numsurfaces, surfacelist, lightcolorbase, vec3_origin, vec3_origin, basetexture, r_texture_black, r_texture_black, texture->skin.nmap, glosstexture, specularscale);
+			R_Shadow_RenderSurfacesLighting_Light_GLSL(ent, texture, numsurfaces, surfacelist, lightcolorbase, vec3_origin, vec3_origin, basetexture, r_texture_black, r_texture_black, texture->skin.nmap, glosstexture, specularscale, false, false);
 			break;
 		case R_SHADOW_RENDERMODE_LIGHT_DOT3:
-			R_Shadow_RenderSurfacesLighting_Light_Dot3(ent, texture, numsurfaces, surfacelist, lightcolorbase, vec3_origin, vec3_origin, basetexture, r_texture_black, r_texture_black, texture->skin.nmap, glosstexture, specularscale);
+			R_Shadow_RenderSurfacesLighting_Light_Dot3(ent, texture, numsurfaces, surfacelist, lightcolorbase, vec3_origin, vec3_origin, basetexture, r_texture_black, r_texture_black, texture->skin.nmap, glosstexture, specularscale, false, false);
 			break;
 		case R_SHADOW_RENDERMODE_LIGHT_VERTEX:
-			R_Shadow_RenderSurfacesLighting_Light_Vertex(ent, texture, numsurfaces, surfacelist, lightcolorbase, vec3_origin, vec3_origin, basetexture, r_texture_black, r_texture_black, texture->skin.nmap, glosstexture, specularscale);
+			R_Shadow_RenderSurfacesLighting_Light_Vertex(ent, texture, numsurfaces, surfacelist, lightcolorbase, vec3_origin, vec3_origin, basetexture, r_texture_black, r_texture_black, texture->skin.nmap, glosstexture, specularscale, false, false);
 			break;
 		default:
 			Con_Printf("R_Shadow_RenderSurfacesLighting: unknown r_shadow_rendermode %i\n", r_shadow_rendermode);
@@ -3005,6 +2995,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			entity_render_t *ent = r_refdef.entities[i];
 			if (BoxesOverlap(ent->mins, ent->maxs, rtlight->cullmins, rtlight->cullmaxs)
 			 && ent->model
+			 && !(ent->flags & RENDER_TRANSPARENT)
 			 && (r_refdef.worldmodel == NULL || r_refdef.worldmodel->brush.BoxTouchingLeafPVS == NULL || r_refdef.worldmodel->brush.BoxTouchingLeafPVS(r_refdef.worldmodel, leafpvs, ent->mins, ent->maxs)))
 			{
 				// about the VectorDistance2 - light emitting entities should not cast their own shadow
