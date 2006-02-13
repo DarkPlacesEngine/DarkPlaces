@@ -205,6 +205,7 @@ LDFLAGS_MACOSXSDL=$(LDFLAGS_UNIXCOMMON) -ldl `sdl-config --static-libs`
 OBJ_AGL= builddate.c sys_linux.o vid_agl.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
 
 EXE_MACOSXCL=darkplaces-agl
+EXE_MACOSXCLNEXUIZ=nexuiz-agl
 
 
 ##### SunOS specific variables #####
