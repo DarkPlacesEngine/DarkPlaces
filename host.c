@@ -655,12 +655,12 @@ Host_ServerFrame
 */
 void Host_ServerFrame (void)
 {
-	// never run more than 1 frame per call because multiple frames per call it
-	// does not handle overload gracefully, slowing down is better than a
-	// sudden significant drop in framerate (or worse, freezing until the
-	// problem goes away)
-	int framecount, framelimit = 1;
-	double advancetime;
+	// execute one or more server frames, with an upper limit on how much
+	// execution time to spend on server frames to avoid freezing the game if
+	// the server is overloaded, this execution time limit means the game will
+	// slow down if the server is taking too long.
+	int framecount, framelimit = 100;
+	double advancetime, aborttime;
 	if (!sv.active)
 	{
 		sv.timer = 0;
@@ -668,18 +668,22 @@ void Host_ServerFrame (void)
 	}
 	sv.timer += host_realframetime;
 
-
 	// run the world state
 	// don't allow simulation to run too fast or too slow or logic glitches can occur
+
+	// setup the VM frame
+	SV_VM_Begin();
+	// stop running server frames if the wall time reaches this value
+	aborttime = Sys_DoubleTime() + 0.05;
 	for (framecount = 0;framecount < framelimit && sv.timer > 0;framecount++)
 	{
-		// setup the VM frame
-		SV_VM_Begin();
-
-		if (cl.islocalgame && !sv_fixedframeratesingleplayer.integer)
+		if (sys_ticrate.value <= 0)
+			advancetime = sv.timer;
+		else if (cl.islocalgame && !sv_fixedframeratesingleplayer.integer)
 			advancetime = min(sv.timer, sys_ticrate.value);
 		else
 			advancetime = sys_ticrate.value;
+		advancetime = min(advancetime, 0.1);
 		sv.timer -= advancetime;
 
 		// only advance time if not paused
@@ -704,13 +708,16 @@ void Host_ServerFrame (void)
 		// send all messages to the clients
 		SV_SendClientMessages();
 
-		// send an heartbeat if enough time has passed since the last one
-		NetConn_Heartbeat(0);
-
-		// end the server VM frame
-		SV_VM_End();
+		// if this server frame took too long, break out of the loop
+		if (Sys_DoubleTime() >= aborttime)
+			break;
 	}
 
+	// end the server VM frame
+	SV_VM_End();
+
+	// send an heartbeat if enough time has passed since the last one
+	NetConn_Heartbeat(0);
 
 	// if we fell behind too many frames just don't worry about it
 	if (sv.timer > 0)
