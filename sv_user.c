@@ -649,7 +649,9 @@ void SV_ReadClientMove (void)
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 
 	// read impulse
-	move->impulse = MSG_ReadByte ();
+	i = MSG_ReadByte ();
+	if (i)
+		move->impulse = i;
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 
 	// PRYDON_CLIENTCURSOR
