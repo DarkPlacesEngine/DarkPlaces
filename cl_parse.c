@@ -1365,7 +1365,6 @@ void CL_ParseServerMessage(void)
 	unsigned char		cmdlog[32];
 	char		*cmdlogname[32], *temp;
 	int			cmdindex, cmdcount = 0;
-	qboolean	sendmove = false;
 
 	if (cls.demorecording)
 		CL_WriteDemoMessage ();
@@ -1466,7 +1465,6 @@ void CL_ParseServerMessage(void)
 		case svc_time:
 			cl.mtime[1] = cl.mtime[0];
 			cl.mtime[0] = MSG_ReadFloat ();
-			sendmove = true;
 			break;
 
 		case svc_clientdata:
@@ -1791,12 +1789,6 @@ void CL_ParseServerMessage(void)
 	}
 
 	EntityFrameQuake_ISeeDeadEntities();
-
-	if (sendmove)
-	{
-		// send one move per server frame
-		CL_SendMove();
-	}
 
 	parsingerror = false;
 }
