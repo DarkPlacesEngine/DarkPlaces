@@ -2043,6 +2043,8 @@ void EntityFrame5_CL_ReadFrame(void)
 	for (i = 0;i < LATESTFRAMENUMS-1;i++)
 		cl.latestframenums[i] = cl.latestframenums[i+1];
 	cl.latestframenums[LATESTFRAMENUMS-1] = MSG_ReadLong();
+	if (developer_networkentities.integer)
+		Con_Printf("recv: svc_entities %i\n", cl.latestframenums[LATESTFRAMENUMS-1]);
 	if (cl.protocol != PROTOCOL_QUAKE && cl.protocol != PROTOCOL_QUAKEDP && cl.protocol != PROTOCOL_NEHAHRAMOVIE && cl.protocol != PROTOCOL_DARKPLACES1 && cl.protocol != PROTOCOL_DARKPLACES2 && cl.protocol != PROTOCOL_DARKPLACES3 && cl.protocol != PROTOCOL_DARKPLACES4 && cl.protocol != PROTOCOL_DARKPLACES5 && cl.protocol != PROTOCOL_DARKPLACES6)
 		cl.servermovesequence = MSG_ReadLong();
 	// read entity numbers until we find a 0x8000
@@ -2131,7 +2133,10 @@ void EntityFrame5_LostFrame(entityframe5_database_t *d, int framenum)
 				// if the bits haven't all been cleared, there were some bits
 				// lost with this packet, so set them again now
 				if (bits)
+				{
 					d->deltabits[s->number] |= bits;
+					d->priorities[s->number] = EntityState5_Priority(d, s->number);
+				}
 			}
 			// mark lost stats
 			for (j = 0;j < MAX_CL_STATS;j++)
@@ -2297,6 +2302,8 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 		}
 	}
 	// write state updates
+	if (developer_networkentities.integer)
+		Con_Printf("send: svc_entities %i\n", framenum);
 	d->latestframenum = framenum;
 	MSG_WriteByte(msg, svc_entities);
 	MSG_WriteLong(msg, framenum);
