@@ -602,7 +602,6 @@ void SV_ClientThink(void)
 SV_ReadClientMove
 ===================
 */
-void SV_ApplyClientMove (void);
 void SV_ReadClientMove (void)
 {
 	int i;
@@ -610,7 +609,6 @@ void SV_ReadClientMove (void)
 	usercmd_t *move = &host_client->cmd;
 
 	oldmovetime = move->time;
-	memset(move, 0, sizeof(usercmd_t));
 
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 
@@ -642,10 +640,12 @@ void SV_ReadClientMove (void)
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 
 	// read buttons
+	// be sure to bitwise OR them into the move->buttons because we want to
+	// accumulate button presses from multiple packets per actual move
 	if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
-		move->buttons = MSG_ReadByte ();
+		move->buttons |= MSG_ReadByte ();
 	else
-		move->buttons = MSG_ReadLong ();
+		move->buttons |= MSG_ReadLong ();
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 
 	// read impulse
@@ -682,7 +682,6 @@ void SV_ReadClientMove (void)
 	else
 	{
 		// apply the latest accepted move to the entity fields
-		SV_ApplyClientMove();
 		host_client->movesequence = move->sequence;
 		if (host_client->movesequence)
 		{
@@ -705,6 +704,9 @@ void SV_ApplyClientMove (void)
 #endif
 	prvm_eval_t *val;
 	usercmd_t *move = &host_client->cmd;
+
+	if (!move->receivetime)
+		return;
 
 	// calculate average ping time
 	host_client->ping = move->receivetime - move->time;
@@ -745,6 +747,8 @@ void SV_ApplyClientMove (void)
 	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_cursor_trace_endpos))) VectorCopy(move->cursor_impact, val->vector);
 	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_cursor_trace_ent))) val->edict = PRVM_EDICT_TO_PROG(PRVM_EDICT_NUM(move->cursor_entitynumber));
 	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_ping))) val->_float = host_client->ping * 1000.0;
+
+	memset(move, 0, sizeof(*move));
 }
 
 void SV_FrameLost(int framenum)
