@@ -287,6 +287,8 @@ cvar_t in_pitch_max = {0, "in_pitch_max", "90", "how far upward you can aim (qua
 
 cvar_t m_filter = {CVAR_SAVE, "m_filter","0", "smoothes mouse movement, less responsive but smoother aiming"};
 
+cvar_t cl_netinputpacketspersecond = {CVAR_SAVE, "cl_netinputpacketspersecond","50", "how many input packets to send to server each second"};
+
 
 /*
 ================
@@ -799,12 +801,14 @@ void CL_ClientMovement_Replay(void)
 CL_SendMove
 ==============
 */
+extern cvar_t cl_netinputpacketspersecond;
 void CL_SendMove(void)
 {
 	int i;
 	int bits;
 	sizebuf_t buf;
 	unsigned char data[128];
+	static double lastsendtime = 0;
 #define MOVEAVERAGING 0
 #if MOVEAVERAGING
 	static float forwardmove, sidemove, upmove, total; // accumulation
@@ -821,6 +825,11 @@ void CL_SendMove(void)
 #endif
 	if (cls.signon != SIGNONS)
 		return;
+	if (realtime < lastsendtime + 1.0 / bound(10, cl_netinputpacketspersecond.value, 100))
+		return;
+	// don't let it fall behind if CL_SendMove hasn't been called recently
+	// (such is the case when framerate is too low for instance)
+	lastsendtime = max(lastsendtime + 1.0 / bound(10, cl_netinputpacketspersecond.value, 100), realtime);
 #if MOVEAVERAGING
 	// average the accumulated changes
 	total = 1.0f / total;
@@ -1104,5 +1113,7 @@ void CL_InitInput (void)
 	Cvar_RegisterVariable(&in_pitch_min);
 	Cvar_RegisterVariable(&in_pitch_max);
 	Cvar_RegisterVariable(&m_filter);
+
+	Cvar_RegisterVariable(&cl_netinputpacketspersecond);
 }
 

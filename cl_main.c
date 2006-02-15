@@ -1548,6 +1548,9 @@ void CL_SendCmd(void)
 			Host_Error("CL_WriteToServer: lost server connection");
 		SZ_Clear(&cls.netcon->message);
 	}
+
+	// send a move periodically
+	CL_SendMove();
 }
 
 // LordHavoc: pausedemo command
