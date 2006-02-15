@@ -1,4 +1,4 @@
-DarkPlaces engine readme : updated 20040206
+DarkPlaces engine readme : updated 20060215
 
 About the DarkPlaces glquake engine:
 DarkPlaces engine was started because I was unsatisfied with the other engines
@@ -7,6 +7,9 @@ some flashy effects), and craved modding features for my DarkPlaces mod, and
 wanted some real enhancements to the online gaming experience as well.
 
 DarkPlaces engine is the result, I hope everyone likes it.
+
+See the end of this file for information on how to install Quake from CD on
+Windows, Mac OSX, and Linux.
 
 I am not very good at writing documentation, so this readme is organized as a
 feature list, with information on each feature, I hope it is still adequate
@@ -283,3 +286,56 @@ Windows Sound: -sndspeed <hz> chooses 44100 hz, 22100 hz, or 11025 hz sound outp
 Windows Sound: -wavonly uses wave sound instead of DirectSound
 Windows WGL: -gl_driver <drivername> selects a GL driver library, default is opengl32.dll, useful only for 3dfxogl.dll or 3dfxvgl.dll, if you don't know what this is for, you don't need it
 Windows WGL: -novideosync disables WGL_EXT_swap_control
+
+How to install Quake on each operating system:
+All that DarkPlaces needs from the Quake CD is pak files (be sure not to copy
+opengl32.dll from the Quake CD, it will not work with DarkPlaces!), with this
+in mind, all you need to do is make a Quake directory, extract the darkplaces
+engine zip to that directory, then make a quake/id1 directory, and put the
+pak0.pak and pak1.pak from your Quake CD into the quake/id1 directory, then
+all should be well.
+
+How to deal with a DOS Quake CD on Windows:
+Try to use the DOS Quake installer if you can, use DOSBox if necessary to run
+the installer, then copy the pak0.pak and pak1.pak to your id1 directory in
+the darkplaces installation.  ( http://dosbox.sourceforge.net )
+
+How to deal with a DOS Quake CD on Linux:
+cat /media/cdrom/resource.001 /media/cdrom/resource.002 >quake.lha
+unlha x quake.lha
+If you can't get unlha or lha for your distribution, try using DOSBox to run
+the Quake installer.
+
+How to deal with a DOS Quake CD on Mac OSX:
+Unknown.  Linux solution may work if you can get hold of lha, otherwise use
+DOSBox to run the Quake installer.
+
+How to deal with a WinQuake CD on Windows:
+Copy the D:\Data\id1\pak0.pak and pak1.pak to your id1 directory.
+
+How to deal with a WinQuake CD on Linux:
+Copy the /media/cdrom/data/id1/pak*.pak to your id1 directory.
+
+How to deal with a WinQuake CD on Mac OSX:
+Find the data directory on the cdrom and copy the data/id1/pak*.pak files to
+your id1 directory.
+
+How to deal with a Linux Quake CD on Windows:
+Find an archiver (perhaps 7zip or winrar) that can extract files from rpm
+archives, locate the pak files and copy them to your id1 directory.
+
+How to deal with a Linux Quake CD on Linux:
+mkdir temp
+cd temp
+# in the following line replace quake.rpm with a correct rpm filename
+cat /media/cdrom/quake.rpm | rpm2cpio | cpio -i
+Now you should have a mess of subdirectories, locate the pak files and copy to
+your id1 directory.
+
+How to deal with a Linux Quake CD on Mac OSX:
+Unknown.  If you can get hold of rpm2cpio and cpio you should be able to
+follow the Linux method.
+
+For more information on Quake installation on Linux see the Linux Quake Howto http://www.tldp.org/HOWTO/Quake-HOWTO.html
+
+
