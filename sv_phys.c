@@ -1413,8 +1413,10 @@ static void SV_Physics_Entity (prvm_edict_t *ent, qboolean runmove)
 	}
 }
 
+void SV_ApplyClientMove (void);
 void SV_Physics_ClientEntity (prvm_edict_t *ent)
 {
+	SV_ApplyClientMove();
 	// make sure the velocity is sane (not a NaN)
 	SV_CheckVelocity(ent);
 	// LordHavoc: QuakeC replacement for SV_ClientThink (player movement)
