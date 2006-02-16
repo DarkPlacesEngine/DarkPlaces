@@ -1480,6 +1480,7 @@ extern void CL_ClientMovement_Replay();
 int CL_ReadFromServer(void)
 {
 	CL_ReadDemoMessage();
+	CL_SendCmd();
 
 	r_refdef.time = cl.time;
 	r_refdef.extraupdate = !r_speeds.integer;

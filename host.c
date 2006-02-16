@@ -761,8 +761,8 @@ void _Host_Frame (float time)
 	Cbuf_Execute();
 
 	// if running the server locally, make intentions now
-	if (cls.state == ca_connected && sv.active)
-		CL_SendCmd();
+	//if (cl.islocalgame)
+	//	CL_SendCmd();
 
 //-------------------
 //
@@ -789,11 +789,11 @@ void _Host_Frame (float time)
 
 	if (cls.state == ca_connected)
 	{
+		CL_ReadFromServer();
 		// if running the server remotely, send intentions now after
 		// the incoming messages have been read
-		if (!sv.active)
-			CL_SendCmd();
-		CL_ReadFromServer();
+		//if (!cl.islocalgame)
+		//	CL_SendCmd();
 	}
 
 	//ui_update();
