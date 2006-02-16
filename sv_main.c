@@ -1207,6 +1207,8 @@ qboolean SV_SendClientDatagram (client_t *client)
 		if (sv_maxrate.integer != maxrate)
 			Cvar_SetValueQuick(&sv_maxrate, maxrate);
 
+		// this rate limiting does not understand sys_ticrate 0
+		// (but no one should be running that on a server!)
 		rate = bound(NET_MINRATE, client->rate, maxrate);
 		rate = (int)(client->rate * sys_ticrate.value);
 		maxsize = bound(100, rate, 1400);
