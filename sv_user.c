@@ -602,7 +602,7 @@ void SV_ClientThink(void)
 SV_ReadClientMove
 ===================
 */
-void SV_ReadClientMove (void)
+qboolean SV_ReadClientMove (void)
 {
 	int i;
 	double oldmovetime;
@@ -681,6 +681,17 @@ void SV_ReadClientMove (void)
 
 	if (!host_client->spawned)
 		memset(move, 0, sizeof(*move));
+	else if (move->time > sv.time + 0.01) // add a little fuzz factor due to float precision issues
+	{
+		Con_DPrintf("client move->time %f > sv.time %f, kicking\n", move->time, sv.time);
+		// if the client is lying about time, we have definitively detected a
+		// speed cheat attempt of the worst sort, and we can immediately kick
+		// the offending player off.
+		// this fixes the timestamp to prevent a speed cheat from working
+		move->time = sv.time;
+		// but we kick the player for good measure
+		return true;
+	}
 	else
 	{
 		// apply the latest accepted move to the entity fields
@@ -696,10 +707,12 @@ void SV_ReadClientMove (void)
 			prog->globals.server->frametime = oldframetime;
 		}
 	}
+	return false;
 }
 
 void SV_ApplyClientMove (void)
 {
+	double movetime;
 #ifdef NUM_PING_TIMES
 	int i;
 	float total;
@@ -750,7 +763,10 @@ void SV_ApplyClientMove (void)
 	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_cursor_trace_ent))) val->edict = PRVM_EDICT_TO_PROG(PRVM_EDICT_NUM(move->cursor_entitynumber));
 	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_ping))) val->_float = host_client->ping * 1000.0;
 
+	// don't clear move->time as it is used for applying cl_movement 1 moves
+	movetime = move->time;
 	memset(move, 0, sizeof(*move));
+	move->time = movetime;
 }
 
 void SV_FrameLost(int framenum)
@@ -854,7 +870,9 @@ void SV_ReadClientMessage(void)
 			return;
 
 		case clc_move:
-			SV_ReadClientMove ();
+			// if ReadClientMove returns true, the client tried to speed cheat
+			if (SV_ReadClientMove ())
+				SV_DropClient (false);
 			break;
 
 		case clc_ackframe:
