@@ -534,7 +534,7 @@ void CL_ClientMovement_Input(qboolean buttonjump, qboolean buttoncrouch)
 				cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
 	}
 	// add to input queue if there is room
-	if (cl_movement.integer && cl.movement_numqueue < (int)(sizeof(cl.movement_queue)/sizeof(cl.movement_queue[0])) && cl.mtime[0] > cl.mtime[1])
+	if (cl.movement_numqueue < (int)(sizeof(cl.movement_queue)/sizeof(cl.movement_queue[0])) && cl.mtime[0] > cl.mtime[1])
 	{
 		// add to input queue
 		cl.movement_queue[cl.movement_numqueue].sequence = cl.movesequence;
@@ -548,10 +548,6 @@ void CL_ClientMovement_Input(qboolean buttonjump, qboolean buttoncrouch)
 		cl.movement_queue[cl.movement_numqueue].crouch = buttoncrouch;
 		cl.movement_numqueue++;
 	}
-	cl.movement = cl_movement.integer && cl.stats[STAT_HEALTH] > 0 && !cls.demoplayback && !cl.intermission;
-	// clear queue if client movement is disabled
-	if (!cl.movement)
-		cl.movement_numqueue = 0;
 	cl.movement_replay = true;
 }
 
@@ -585,6 +581,7 @@ void CL_ClientMovement_Replay(void)
 	trace_t trace;
 	trace_t trace2;
 	trace_t trace3;
+
 	if (!cl.movement_replay)
 		return;
 	cl.movement_replay = false;
@@ -608,7 +605,7 @@ void CL_ClientMovement_Replay(void)
 	// replay the input queue to predict current location
 	// note: this relies on the fact there's always one queue item at the end
 
-	for (i = 0;i < cl.movement_numqueue;i++)
+	for (i = 0;cl.movement && i < cl.movement_numqueue;i++)
 	{
 		client_movementqueue_t *q = cl.movement_queue + bound(0, i, cl.movement_numqueue - 1);
 		frametime = q->frametime;
@@ -822,13 +819,23 @@ void CL_SendMove(void)
 	upmove += cl.cmd.upmove;
 	total++;
 #endif
-	if (cls.signon != SIGNONS)
-		return;
-	if (realtime < lastsendtime + 1.0 / bound(10, cl_netinputpacketspersecond.value, 100))
-		return;
-	// don't let it fall behind if CL_SendMove hasn't been called recently
-	// (such is the case when framerate is too low for instance)
-	lastsendtime = max(lastsendtime + 1.0 / bound(10, cl_netinputpacketspersecond.value, 100), realtime);
+
+	if (cl_movement.integer)
+	{
+		if (!cl.movement_needupdate)
+			return;
+		cl.movement_needupdate = false;
+		cl.movement = cl.stats[STAT_HEALTH] > 0 && !cls.demoplayback && !cl.intermission;
+	}
+	else
+	{
+		cl.movement = false;
+		if (realtime < lastsendtime + 1.0 / bound(10, cl_netinputpacketspersecond.value, 100))
+			return;
+		// don't let it fall behind if CL_SendMove hasn't been called recently
+		// (such is the case when framerate is too low for instance)
+		lastsendtime = max(lastsendtime + 1.0 / bound(10, cl_netinputpacketspersecond.value, 100), realtime);
+	}
 #if MOVEAVERAGING
 	// average the accumulated changes
 	total = 1.0f / total;
@@ -1008,6 +1015,8 @@ void CL_SendMove(void)
 		return;
 	// nothing to send
 	if (!buf.cursize)
+		return;
+	if (cls.signon != SIGNONS)
 		return;
 
 	// FIXME: bits & 16 is +button5, Nexuiz specific
