@@ -823,7 +823,7 @@ void SV_CheckStuck (prvm_edict_t *ent)
 	VectorCopy (ent->fields.server->oldorigin, ent->fields.server->origin);
 	if (!SV_TestEntityPosition(ent))
 	{
-		Con_DPrint("Unstuck.\n");
+		Con_DPrintf("Unstuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
 		SV_LinkEdict (ent, true);
 		return;
 	}
@@ -837,14 +837,40 @@ void SV_CheckStuck (prvm_edict_t *ent)
 				ent->fields.server->origin[2] = org[2] + z;
 				if (!SV_TestEntityPosition(ent))
 				{
-					Con_DPrint("Unstuck.\n");
+					Con_DPrintf("Unstuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
 					SV_LinkEdict (ent, true);
 					return;
 				}
 			}
 
 	VectorCopy (org, ent->fields.server->origin);
-	Con_DPrint("player is stuck.\n");
+	Con_DPrintf("Stuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
+}
+
+void SV_UnstickEntity (prvm_edict_t *ent)
+{
+	int i, j, z;
+	vec3_t org;
+
+	VectorCopy (ent->fields.server->origin, org);
+
+	for (z=0 ; z< 18 ; z += 6)
+		for (i=-1 ; i <= 1 ; i++)
+			for (j=-1 ; j <= 1 ; j++)
+			{
+				ent->fields.server->origin[0] = org[0] + i;
+				ent->fields.server->origin[1] = org[1] + j;
+				ent->fields.server->origin[2] = org[2] + z;
+				if (!SV_TestEntityPosition(ent))
+				{
+					Con_DPrintf("Unstuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
+					SV_LinkEdict (ent, true);
+					return;
+				}
+			}
+
+	VectorCopy (org, ent->fields.server->origin);
+	Con_DPrintf("Stuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
 }
 
 
@@ -1237,6 +1263,14 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 	trace = SV_PushEntity (ent, move);
 	if (ent->priv.server->free)
 		return;
+	if (trace.startsolid)
+	{
+		// try to unstick the entity
+		SV_UnstickEntity(ent);
+		trace = SV_PushEntity (ent, move);
+		if (ent->priv.server->free)
+			return;
+	}
 
 	if (trace.fraction < 1)
 	{
