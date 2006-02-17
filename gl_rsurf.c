@@ -571,6 +571,8 @@ void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t *node)
 			R_Q1BSP_RecursiveGetLightInfo(info, node->children[0]);
 			node = node->children[1];
 		}
+		else if (sides == 0)
+			return; // ERROR: NAN bounding box!
 		else
 			node = node->children[sides - 1];
 	}
