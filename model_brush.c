@@ -116,11 +116,13 @@ static int Mod_Q1BSP_FindBoxClusters(model_t *model, const vec3_t mins, const ve
 		if (node->plane)
 		{
 			// node - recurse down the BSP tree
-			int side = BoxOnPlaneSide(mins, maxs, node->plane) - 1;
-			if (side < 2)
+			int sides = BoxOnPlaneSide(mins, maxs, node->plane);
+			if (sides < 3)
 			{
+				if (sides == 0)
+					return -1; // ERROR: NAN bounding box!
 				// box is on one side of plane, take that path
-				node = node->children[side];
+				node = node->children[sides-1];
 			}
 			else
 			{
@@ -179,11 +181,13 @@ static int Mod_Q1BSP_BoxTouchingPVS(model_t *model, const unsigned char *pvs, co
 		if (node->plane)
 		{
 			// node - recurse down the BSP tree
-			int side = BoxOnPlaneSide(mins, maxs, node->plane) - 1;
-			if (side < 2)
+			int sides = BoxOnPlaneSide(mins, maxs, node->plane);
+			if (sides < 3)
 			{
+				if (sides == 0)
+					return -1; // ERROR: NAN bounding box!
 				// box is on one side of plane, take that path
-				node = node->children[side];
+				node = node->children[sides-1];
 			}
 			else
 			{
@@ -248,11 +252,13 @@ static int Mod_Q1BSP_BoxTouchingLeafPVS(model_t *model, const unsigned char *pvs
 		if (node->plane)
 		{
 			// node - recurse down the BSP tree
-			int side = BoxOnPlaneSide(mins, maxs, node->plane) - 1;
-			if (side < 2)
+			int sides = BoxOnPlaneSide(mins, maxs, node->plane);
+			if (sides < 3)
 			{
+				if (sides == 0)
+					return -1; // ERROR: NAN bounding box!
 				// box is on one side of plane, take that path
-				node = node->children[side];
+				node = node->children[sides-1];
 			}
 			else
 			{
@@ -317,11 +323,13 @@ static int Mod_Q1BSP_BoxTouchingVisibleLeafs(model_t *model, const unsigned char
 		if (node->plane)
 		{
 			// node - recurse down the BSP tree
-			int side = BoxOnPlaneSide(mins, maxs, node->plane) - 1;
-			if (side < 2)
+			int sides = BoxOnPlaneSide(mins, maxs, node->plane);
+			if (sides < 3)
 			{
+				if (sides == 0)
+					return -1; // ERROR: NAN bounding box!
 				// box is on one side of plane, take that path
-				node = node->children[side];
+				node = node->children[sides-1];
 			}
 			else
 			{
@@ -5089,233 +5097,20 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, model_t *model
 {
 	int i;
 	int sides;
-	float nodesegmentmins[3], nodesegmentmaxs[3];
 	mleaf_t *leaf;
 	colbrushf_t *brush;
 	msurface_t *surface;
-	/*
-		// find which nodes the line is in and recurse for them
-		while (node->plane)
-		{
-			// recurse down node sides
-			int startside, endside;
-			float dist1near, dist1far, dist2near, dist2far;
-			BoxPlaneCornerDistances(thisbrush_start->mins, thisbrush_start->maxs, node->plane, &dist1near, &dist1far);
-			BoxPlaneCornerDistances(thisbrush_end->mins, thisbrush_end->maxs, node->plane, &dist2near, &dist2far);
-			startside = dist1near < 0;
-			startside = dist1near < 0 ? (dist1far < 0 ? 1 : 2) : (dist1far < 0 ? 2 : 0);
-			endside = dist2near < 0 ? (dist2far < 0 ? 1 : 2) : (dist2far < 0 ? 2 : 0);
-			if (startside == 2 || endside == 2)
-			{
-				// brushes cross plane
-				// do not clip anything, just take both sides
-				Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
-				node = node->children[1];
-				continue;
-			}
-			if (startside == 0)
-			{
-				if (endside == 0)
-				{
-					node = node->children[0];
-					continue;
-				}
-				else
-				{
-					//midf0 = dist1near / (dist1near - dist2near);
-					//midf1 = dist1far / (dist1far - dist2far);
-					Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
-					node = node->children[1];
-					continue;
-				}
-			}
-			else
-			{
-				if (endside == 0)
-				{
-					//midf0 = dist1near / (dist1near - dist2near);
-					//midf1 = dist1far / (dist1far - dist2far);
-					Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
-					node = node->children[1];
-					continue;
-				}
-				else
-				{
-					node = node->children[1];
-					continue;
-				}
-			}
-
-			if (dist1near <  0 && dist2near <  0 && dist1far <  0 && dist2far <  0){node = node->children[1];continue;}
-			if (dist1near <  0 && dist2near <  0 && dist1far <  0 && dist2far >= 0){Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);node = node->children[1];continue;}
-			if (dist1near <  0 && dist2near <  0 && dist1far >= 0 && dist2far <  0){Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);node = node->children[1];continue;}
-			if (dist1near <  0 && dist2near <  0 && dist1far >= 0 && dist2far >= 0){Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);node = node->children[1];continue;}
-			if (dist1near <  0 && dist2near >= 0 && dist1far <  0 && dist2far <  0){node = node->children[1];continue;}
-			if (dist1near <  0 && dist2near >= 0 && dist1far <  0 && dist2far >= 0){}
-			if (dist1near <  0 && dist2near >= 0 && dist1far >= 0 && dist2far <  0){Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);node = node->children[1];continue;}
-			if (dist1near <  0 && dist2near >= 0 && dist1far >= 0 && dist2far >= 0){Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);node = node->children[1];continue;}
-			if (dist1near >= 0 && dist2near <  0 && dist1far <  0 && dist2far <  0){node = node->children[1];continue;}
-			if (dist1near >= 0 && dist2near <  0 && dist1far <  0 && dist2far >= 0){Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);node = node->children[1];continue;}
-			if (dist1near >= 0 && dist2near <  0 && dist1far >= 0 && dist2far <  0){}
-			if (dist1near >= 0 && dist2near <  0 && dist1far >= 0 && dist2far >= 0){Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);node = node->children[1];continue;}
-			if (dist1near >= 0 && dist2near >= 0 && dist1far <  0 && dist2far <  0){Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);node = node->children[1];continue;}
-			if (dist1near >= 0 && dist2near >= 0 && dist1far <  0 && dist2far >= 0){node = node->children[0];continue;}
-			if (dist1near >= 0 && dist2near >= 0 && dist1far >= 0 && dist2far <  0){node = node->children[0];continue;}
-			if (dist1near >= 0 && dist2near >= 0 && dist1far >= 0 && dist2far >= 0){node = node->children[0];continue;}
-			{
-				if (dist2near < 0) // d1n<0 && d2n<0
-				{
-					if (dist2near < 0) // d1n<0 && d2n<0
-					{
-						if (dist2near < 0) // d1n<0 && d2n<0
-						{
-						}
-						else // d1n<0 && d2n>0
-						{
-						}
-					}
-					else // d1n<0 && d2n>0
-					{
-						if (dist2near < 0) // d1n<0 && d2n<0
-						{
-						}
-						else // d1n<0 && d2n>0
-						{
-						}
-					}
-				}
-				else // d1n<0 && d2n>0
-				{
-				}
-			}
-			else // d1n>0
-			{
-				if (dist2near < 0) // d1n>0 && d2n<0
-				{
-				}
-				else // d1n>0 && d2n>0
-				{
-				}
-			}
-			if (dist1near < 0 == dist1far < 0 == dist2near < 0 == dist2far < 0)
-			{
-				node = node->children[startside];
-				continue;
-			}
-			if (dist1near < dist2near)
-			{
-				// out
-				if (dist1near >= 0)
-				{
-					node = node->children[0];
-					continue;
-				}
-				if (dist2far < 0)
-				{
-					node = node->children[1];
-					continue;
-				}
-				// dist1near < 0 && dist2far >= 0
-			}
-			else
-			{
-				// in
-			}
-			startside = dist1near < 0 ? (dist1far < 0 ? 1 : 2) : (dist1far < 0 ? 2 : 0);
-			endside = dist2near < 0 ? (dist2far < 0 ? 1 : 2) : (dist2far < 0 ? 2 : 0);
-			if (startside == 2 || endside == 2)
-			{
-				// brushes cross plane
-				// do not clip anything, just take both sides
-				Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
-				node = node->children[1];
-			}
-			else if (startside == endside)
-				node = node->children[startside];
-			else if (startside == 0) // endside = 1 (start infront, end behind)
-			{
-			}
-			else // startside == 1 endside = 0 (start behind, end infront)
-			{
-			}
-			== endside)
-			{
-				if (startside < 2)
-					node = node->children[startside];
-				else
-				{
-					// start and end brush cross plane
-				}
-			}
-			else
-			{
-			}
-			if (dist1near < 0 && dist1far < 0 && dist2near < 0 && dist2far < 0)
-				node = node->children[1];
-			else if (dist1near < 0 && dist1far < 0 && dist2near >= 0 && dist2far >= 0)
-			else if (dist1near >= 0 && dist1far >= 0 && dist2near < 0 && dist2far < 0)
-			else if (dist1near >= 0 && dist1far >= 0 && dist2near >= 0 && dist2far >= 0)
-				node = node->children[0];
-			else
-			if (dist1near < 0 && dist1far < 0 && dist2near < 0 && dist2far < 0)
-			if (dist1near < 0 && dist1far < 0 && dist2near < 0 && dist2far < 0)
-			if (dist1near < 0 && dist1far < 0 && dist2near < 0 && dist2far < 0)
-			if (dist1near < 0 && dist1far < 0 && dist2near < 0 && dist2far < 0)
-			if (dist1near < 0 && dist1far < 0 && dist2near < 0 && dist2far < 0)
-			{
-			}
-			else if (dist1near >= 0 && dist1far >= 0)
-			{
-			}
-			else // mixed (lying on plane)
-			{
-			}
-			{
-				if (dist2near < 0 && dist2far < 0)
-				{
-				}
-				else
-					node = node->children[1];
-			}
-			if (dist1near < 0 && dist1far < 0 && dist2near < 0 && dist2far < 0)
-				node = node->children[0];
-			else if (dist1near >= 0 && dist1far >= 0 && dist2near >= 0 && dist2far >= 0)
-				node = node->children[1];
-			else
-			{
-				// both sides
-				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, node->children[startside], start, mid, startfrac, midfrac, linestart, lineend, markframe, segmentmins, segmentmaxs);
-				node = node->children[1];
-			}
-			sides = dist1near || dist1near < 0 | dist1far < 0 | dist2near < 0 | dist
-			startside = dist1 < 0;
-			endside = dist2 < 0;
-			if (startside == endside)
-			{
-				// most of the time the line fragment is on one side of the plane
-				node = node->children[startside];
-			}
-			else
-			{
-				// line crosses node plane, split the line
-				midfrac = dist1 / (dist1 - dist2);
-				VectorLerp(start, midfrac, end, mid);
-				// take the near side first
-				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, node->children[startside], start, mid, startfrac, midfrac, linestart, lineend, markframe, segmentmins, segmentmaxs);
-				if (midfrac <= trace->fraction)
-					Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, node->children[endside], mid, end, midfrac, endfrac, linestart, lineend, markframe, segmentmins, segmentmaxs);
-				return;
-			}
-		}
-	*/
+	mplane_t *plane;
+	float nodesegmentmins[3], nodesegmentmaxs[3];
 #if 1
 	for (;;)
 	{
-		mplane_t *plane = node->plane;
+		plane = node->plane;
 		if (!plane)
 			break;
 		// axial planes are much more common than non-axial, so an optimized
 		// axial case pays off here
+		// we must handle sides == 0 because of NANs (crashing is far worse than recursing the entire tree!)
 		if (plane->type < 3)
 		{
 			// this is an axial plane, compare bounding box directly to it and
@@ -5323,7 +5118,8 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, model_t *model
 			// recurse down node sides
 			// use an inlined axial BoxOnPlaneSide to slightly reduce overhead
 			//sides = BoxOnPlaneSide(nodesegmentmins, nodesegmentmaxs, plane);
-			sides = ((segmentmaxs[plane->type] >= plane->dist) | ((segmentmins[plane->type] < plane->dist) << 1));
+			//sides = ((segmentmaxs[plane->type] >= plane->dist) | ((segmentmins[plane->type] < plane->dist) << 1));
+			sides = ((segmentmaxs[plane->type] >= plane->dist) + ((segmentmins[plane->type] < plane->dist) * 2));
 			if (sides == 3)
 			{
 				// segment box crosses plane
@@ -5350,7 +5146,11 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, model_t *model
 				}
 			}
 		}
+		if (sides == 0)
+			return; // ERROR: NAN bounding box!
 		// take whichever side the segment box is on
+		//if (sides < 1 || sides > 2)
+		//	Sys_Error("Mod_Q3BSP_TraceBrush_RecursiveBSPNode: side > 2\n");
 		node = node->children[sides - 1];
 	}
 	nodesegmentmins[0] = max(segmentmins[0], node->mins[0]);
@@ -5407,6 +5207,8 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, model_t *model
 				node = node->children[1];
 				continue;
 			}
+			if (sides == 0)
+				return; // ERROR: NAN bounding box!
 			// take whichever side the segment box is on
 			node = node->children[sides - 1];
 			continue;
@@ -5427,6 +5229,8 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, model_t *model
 					continue;
 				}
 			}
+			if (sides == 0)
+				return; // ERROR: NAN bounding box!
 			// take whichever side the segment box is on
 			node = node->children[sides - 1];
 			continue;
@@ -5465,6 +5269,8 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, model_t *model
 			}
 			else
 			{
+				if (sides == 0)
+					return; // ERROR: NAN bounding box!
 				// take whichever side the segment box is on
 				node = node->children[sides - 1];
 			}
@@ -5484,6 +5290,8 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, model_t *model
 					sides = 2;
 				}
 			}
+			if (sides == 0)
+				return; // ERROR: NAN bounding box!
 			// take whichever side the segment box is on
 			node = node->children[sides - 1];
 		}
