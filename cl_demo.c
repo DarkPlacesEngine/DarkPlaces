@@ -331,7 +331,7 @@ void CL_PlayDemo_f (void)
 	Host_ShutdownServer ();
 
 	// update networking ports (this is mainly just needed at startup)
-	NetConn_ClientFrame();
+	NetConn_UpdateSockets();
 
 	// open the demo file
 	strlcpy (name, Cmd_Argv(1), sizeof (name));
