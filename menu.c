@@ -394,6 +394,9 @@ void M_Menu_Main_f (void)
 		else
 			MAIN_ITEMS = 7;
 	}
+	else if (gamemode == GAME_NEXUIZ) {
+		MAIN_ITEMS = 2;
+	}
 	else
 		MAIN_ITEMS = 5;
 
@@ -436,7 +439,18 @@ void M_Main_Draw (void)
 		M_DrawPic (0, 120 + m_main_cursor * 40, va("gfx/mainmenu%iselected", y3));
 		return;
 	}
-
+	else if (gamemode == GAME_NEXUIZ)
+	{
+		M_Background(640, 480); //fall back is always to 640x480, this makes it most readable at that.
+		M_PrintRed (40, (480/3)-16, "You have reached this menu due to missing or unlocatable content/data");
+		M_Print ((640/2)-92, (480/3), "You may consider adding");
+		M_Print ((640/2)-136, (480/3)+8, "-basedir /path/to/your/nexuiz/data");
+		M_Print ((640/2)-76, (480/3)+16, "to your launch path");
+		M_Print (640/2 - 48, 480/2, "Open Console"); //The console usually better shows errors (failures)
+		M_Print (640/2 - 48, 480/2 + 8, "Quit");
+		M_DrawCharacter(640/2 - 56, 480/2 + (8 * m_main_cursor), 12+((int)(realtime*4)&1));
+		return;
+	}
 	M_Background(320, 200);
 	M_DrawPic (16, 4, "gfx/qplaque");
 	p = Draw_CachePic ("gfx/ttl_main", false);
@@ -672,6 +686,19 @@ void M_Main_Key (int key, char ascii)
 					M_Menu_Quit_f ();
 					break;
 				}
+			}
+		}
+		else if (gamemode == GAME_NEXUIZ) {
+			switch (m_main_cursor)
+			{
+			case 0:
+				m_state = m_none;
+				key_dest = key_game;
+				Con_ToggleConsole_f ();
+				break;
+			case 1:
+				M_Menu_Quit_f ();
+				break;
 			}
 		}
 		else
@@ -3131,6 +3158,9 @@ int M_ChooseQuitMessage(int request)
 		if (request-- == 0) return M_QuitMessage("You prefer free beer over free speech?","Press Y to quit, N to stay",NULL,NULL,NULL,NULL,NULL,NULL);
 		if (request-- == 0) return M_QuitMessage("Is OpenQuartz Propaganda?","Press Y to quit, N to stay",NULL,NULL,NULL,NULL,NULL,NULL);
 		break;
+	case GAME_NEXUIZ: //frag related quit messages are pointless for a fallback menu!
+		if (request-- == 0) return M_QuitMessage("Are you sure you want to quit?","Press Y to quit, N to stay",NULL,NULL,NULL,NULL,NULL,NULL);
+		break;
 	default:
 		if (request-- == 0) return M_QuitMessage("Tired of fragging already?",NULL,NULL,NULL,NULL,NULL,NULL,NULL);
 		if (request-- == 0) return M_QuitMessage("Quit now and forfeit your bodycount?",NULL,NULL,NULL,NULL,NULL,NULL,NULL);
@@ -3204,7 +3234,8 @@ void M_Quit_Draw (void)
 	}
 	lines = (lastline - firstline) + 1;
 	M_Background(linelength * 8 + 16, lines * 8 + 16);
-	M_DrawTextBox(0, 0, linelength, lines);
+	if (gamemode != GAME_NEXUIZ) //since this is a fallback menu for Nexuiz (no graphics), it is very hard to read with the box
+		M_DrawTextBox(0, 0, linelength, lines); //this is less obtrusive than hacking up the M_DrawTextBox function for Nexuiz
 	for (i = 0, l = firstline;i < lines;i++, l++)
 		M_Print(8 + 4 * (linelength - strlen(m_quit_message[l])), 8 + 8 * i, m_quit_message[l]);
 }
