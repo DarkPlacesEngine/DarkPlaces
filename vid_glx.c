@@ -106,8 +106,7 @@ qboolean vidmode_ext = false;
 
 static int win_x, win_y;
 
-static XF86VidModeModeInfo **vidmodes;
-static int num_vidmodes;
+static XF86VidModeModeInfo init_vidmode;
 static qboolean vid_isfullscreen = false;
 
 static Visual *vidx11_visual;
@@ -523,7 +522,7 @@ void VID_Shutdown(void)
 
 		// FIXME: glXDestroyContext here?
 		if (vid_isfullscreen)
-			XF86VidModeSwitchToMode(vidx11_display, vidx11_screen, vidmodes[0]);
+			XF86VidModeSwitchToMode(vidx11_display, vidx11_screen, &init_vidmode);
 		if (win)
 			XDestroyWindow(vidx11_display, win);
 		XCloseDisplay(vidx11_display);
@@ -714,6 +713,14 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 		// Are we going fullscreen?  If so, let's change video mode
 		if (fullscreen)
 		{
+			XF86VidModeModeLine *current_vidmode;
+			XF86VidModeModeInfo **vidmodes;
+			int num_vidmodes;
+
+			// This nice hack comes from the SDL source code
+			current_vidmode = (XF86VidModeModeLine*)((char*)&init_vidmode + sizeof(init_vidmode.dotclock));
+			XF86VidModeGetModeLine(vidx11_display, vidx11_screen, (int*)&init_vidmode.dotclock, current_vidmode);
+
 			XF86VidModeGetAllModeLines(vidx11_display, vidx11_screen, &num_vidmodes, &vidmodes);
 			best_dist = 9999999;
 			best_fit = -1;
@@ -750,6 +757,8 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 			}
 			else
 				fullscreen = 0;
+
+			free(vidmodes);
 		}
 	}
 
