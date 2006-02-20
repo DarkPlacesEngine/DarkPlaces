@@ -421,22 +421,22 @@ void M_Main_Draw (void)
 	if (gamemode == GAME_TRANSFUSION) {
 		int y1, y2, y3;
 		M_Background(640, 480);
-		p = Draw_CachePic ("gfx/tb-transfusion", false);
-		M_DrawPic (640/2 - p->width/2, 40, "gfx/tb-transfusion");
+		p = Draw_CachePic ("gfx/menu/tb-transfusion", false);
+		M_DrawPic (640/2 - p->width/2, 40, "gfx/menu/tb-transfusion");
 		y2 = 120;
 		// 8 rather than MAIN_ITEMS to skip a number and not miss the last option
 		for (y1 = 1; y1 <= 8; y1++)
 		{
 			if (MAIN_ITEMS == 7 && y1 == 4)
 				y1++;
-			M_DrawPic (0, y2, va("gfx/mainmenu%i", y1));
+			M_DrawPic (0, y2, va("gfx/menu/mainmenu%i", y1));
 			y2 += 40;
 		}
 		if (MAIN_ITEMS == 7 && m_main_cursor > 2)
 			y3 = m_main_cursor + 2;
 		else
 			y3 = m_main_cursor + 1;
-		M_DrawPic (0, 120 + m_main_cursor * 40, va("gfx/mainmenu%iselected", y3));
+		M_DrawPic (0, 120 + m_main_cursor * 40, va("gfx/menu/mainmenu%iselected", y3));
 		return;
 	}
 	else if (gamemode == GAME_NEXUIZ)
@@ -1041,13 +1041,13 @@ void M_Transfusion_Episode_Draw (void)
 	cachepic_t *p;
 	M_Background(640, 480);
 
-	p = Draw_CachePic ("gfx/tb-episodes", false);
-	M_DrawPic (640/2 - p->width/2, 40, "gfx/tb-episodes");
+	p = Draw_CachePic ("gfx/menu/tb-episodes", false);
+	M_DrawPic (640/2 - p->width/2, 40, "gfx/menu/tb-episodes");
 	for (y = 0; y < EPISODE_ITEMS; y++){
-		M_DrawPic (0, 160 + y * 40, va("gfx/episode%i", y+1));
+		M_DrawPic (0, 160 + y * 40, va("gfx/menu/episode%i", y+1));
 	}
 
-	M_DrawPic (0, 120 + (m_episode_cursor + 1) * 40, va("gfx/episode%iselected", m_episode_cursor + 1));
+	M_DrawPic (0, 120 + (m_episode_cursor + 1) * 40, va("gfx/menu/episode%iselected", m_episode_cursor + 1));
 }
 
 void M_Transfusion_Episode_Key (int key, char ascii)
@@ -1098,14 +1098,14 @@ void M_Transfusion_Skill_Draw (void)
 	cachepic_t	*p;
 	M_Background(640, 480);
 
-	p = Draw_CachePic ("gfx/tb-difficulty", false);
-	M_DrawPic(640/2 - p->width/2, 40, "gfx/tb-difficulty");
+	p = Draw_CachePic ("gfx/menu/tb-difficulty", false);
+	M_DrawPic(640/2 - p->width/2, 40, "gfx/menu/tb-difficulty");
 
 	for (y = 0; y < SKILL_ITEMS; y++)
 	{
-		M_DrawPic (0, 180 + y * 40, va("gfx/difficulty%i", y+1));
+		M_DrawPic (0, 180 + y * 40, va("gfx/menu/difficulty%i", y+1));
 	}
-	M_DrawPic (0, 140 + (m_skill_cursor + 1) *40, va("gfx/difficulty%iselected", m_skill_cursor + 1));
+	M_DrawPic (0, 140 + (m_skill_cursor + 1) *40, va("gfx/menu/difficulty%iselected", m_skill_cursor + 1));
 }
 
 void M_Transfusion_Skill_Key (int key, char ascii)
@@ -1202,11 +1202,11 @@ void M_MultiPlayer_Draw (void)
 	if (gamemode == GAME_TRANSFUSION)
 	{
 		M_Background(640, 480);
-		p = Draw_CachePic ("gfx/tb-online", false);
-		M_DrawPic (640/2 - p->width/2, 140, "gfx/tb-online");
+		p = Draw_CachePic ("gfx/menu/tb-online", false);
+		M_DrawPic (640/2 - p->width/2, 140, "gfx/menu/tb-online");
 		for (f = 1; f <= MULTIPLAYER_ITEMS; f++)
-			M_DrawPic (0, 180 + f*40, va("gfx/online%i", f));
-		M_DrawPic (0, 220 + m_multiplayer_cursor * 40, va("gfx/online%iselected", m_multiplayer_cursor + 1));
+			M_DrawPic (0, 180 + f*40, va("gfx/menu/online%i", f));
+		M_DrawPic (0, 220 + m_multiplayer_cursor * 40, va("gfx/menu/online%iselected", m_multiplayer_cursor + 1));
 		return;
 	}
 	M_Background(320, 200);
@@ -4590,22 +4590,22 @@ void M_Draw (void)
 			g = (int)(realtime * 64)%96;
 			scale_y_rate = (float)(g+1) / 96;
 			top_offset = (g+12)/12;
-			p = Draw_CachePic (va("gfx/blooddrip%i", top_offset), false);
+			p = Draw_CachePic (va("gfx/menu/blooddrip%i", top_offset), false);
 			for (scale_x = 0; scale_x <= vid_conwidth.integer; scale_x += p->width) {
 				for (scale_y = -scale_y_repeat; scale_y <= vid_conheight.integer; scale_y += scale_y_repeat) {
-					DrawQ_Pic (scale_x + 21, scale_y_repeat * .5 + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop3", 0, 0, 1, 1, 1, 1, 0);
-					DrawQ_Pic (scale_x +  116, scale_y_repeat + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop1", 0, 0, 1, 1, 1, 1, 0);
-					DrawQ_Pic (scale_x + 180, scale_y_repeat * .275 + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop3", 0, 0, 1, 1, 1, 1, 0);
-					DrawQ_Pic (scale_x + 242, scale_y_repeat * .75 + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop3", 0, 0, 1, 1, 1, 1, 0);
-					DrawQ_Pic (scale_x + 304, scale_y_repeat * .25 + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop3", 0, 0, 1, 1, 1, 1, 0);
-					DrawQ_Pic (scale_x + 362, scale_y_repeat * .46125 + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop3", 0, 0, 1, 1, 1, 1, 0);
-					DrawQ_Pic (scale_x + 402, scale_y_repeat * .1725 + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop3", 0, 0, 1, 1, 1, 1, 0);
-					DrawQ_Pic (scale_x + 438, scale_y_repeat * .9 + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop1", 0, 0, 1, 1, 1, 1, 0);
-					DrawQ_Pic (scale_x + 484, scale_y_repeat * .5 + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop3", 0, 0, 1, 1, 1, 1, 0);
-					DrawQ_Pic (scale_x + 557, scale_y_repeat * .9425 + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop1", 0, 0, 1, 1, 1, 1, 0);
-					DrawQ_Pic (scale_x + 606, scale_y_repeat * .5 + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop2", 0, 0, 1, 1, 1, 1, 0);
+					DrawQ_Pic (scale_x + 21, scale_y_repeat * .5 + scale_y + scale_y_rate * scale_y_repeat, "gfx/menu/blooddrop3", 0, 0, 1, 1, 1, 1, 0);
+					DrawQ_Pic (scale_x +  116, scale_y_repeat + scale_y + scale_y_rate * scale_y_repeat, "gfx/menu/blooddrop1", 0, 0, 1, 1, 1, 1, 0);
+					DrawQ_Pic (scale_x + 180, scale_y_repeat * .275 + scale_y + scale_y_rate * scale_y_repeat, "gfx/menu/blooddrop3", 0, 0, 1, 1, 1, 1, 0);
+					DrawQ_Pic (scale_x + 242, scale_y_repeat * .75 + scale_y + scale_y_rate * scale_y_repeat, "gfx/menu/blooddrop3", 0, 0, 1, 1, 1, 1, 0);
+					DrawQ_Pic (scale_x + 304, scale_y_repeat * .25 + scale_y + scale_y_rate * scale_y_repeat, "gfx/menu/blooddrop3", 0, 0, 1, 1, 1, 1, 0);
+					DrawQ_Pic (scale_x + 362, scale_y_repeat * .46125 + scale_y + scale_y_rate * scale_y_repeat, "gfx/menu/blooddrop3", 0, 0, 1, 1, 1, 1, 0);
+					DrawQ_Pic (scale_x + 402, scale_y_repeat * .1725 + scale_y + scale_y_rate * scale_y_repeat, "gfx/menu/blooddrop3", 0, 0, 1, 1, 1, 1, 0);
+					DrawQ_Pic (scale_x + 438, scale_y_repeat * .9 + scale_y + scale_y_rate * scale_y_repeat, "gfx/menu/blooddrop1", 0, 0, 1, 1, 1, 1, 0);
+					DrawQ_Pic (scale_x + 484, scale_y_repeat * .5 + scale_y + scale_y_rate * scale_y_repeat, "gfx/menu/blooddrop3", 0, 0, 1, 1, 1, 1, 0);
+					DrawQ_Pic (scale_x + 557, scale_y_repeat * .9425 + scale_y + scale_y_rate * scale_y_repeat, "gfx/menu/blooddrop1", 0, 0, 1, 1, 1, 1, 0);
+					DrawQ_Pic (scale_x + 606, scale_y_repeat * .5 + scale_y + scale_y_rate * scale_y_repeat, "gfx/menu/blooddrop2", 0, 0, 1, 1, 1, 1, 0);
 				}
-				DrawQ_Pic (scale_x, -1, va("gfx/blooddrip%i", top_offset), 0, 0, 1, 1, 1, 1, 0);
+				DrawQ_Pic (scale_x, -1, va("gfx/menu/blooddrip%i", top_offset), 0, 0, 1, 1, 1, 1, 0);
 			}
 		}
 	}
