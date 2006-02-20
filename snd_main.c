@@ -431,6 +431,16 @@ sfx_t *S_PrecacheSound (const char *name, qboolean complain, qboolean lock)
 
 /*
 ==================
+S_IsSoundPrecached
+==================
+*/
+qboolean S_IsSoundPrecached (const sfx_t *sfx)
+{
+	return (sfx != NULL && sfx->fetcher != NULL);
+}
+
+/*
+==================
 S_LockSfx
 
 Add a lock to a SFX
