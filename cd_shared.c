@@ -22,7 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include "cdaudio.h"
-#include "snd_main.h"
+#include "sound.h"
 
 #define MAXTRACKS	256
 
@@ -117,7 +117,7 @@ void CDAudio_Play (unsigned char track, qboolean looping)
 
 	// Try playing a fake track (sound file) first
 	sfx = S_PrecacheSound (va ("cdtracks/track%02u.wav", track), false, false);
-	if (sfx == NULL || sfx->fetcher == NULL)
+	if (sfx == NULL || !S_IsSoundPrecached (sfx))
 		sfx = S_PrecacheSound (va ("cdtracks/track%03u.wav", track), false, false);
 	if (sfx != NULL)
 	{

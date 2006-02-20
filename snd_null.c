@@ -90,6 +90,11 @@ sfx_t *S_PrecacheSound (const char *sample, qboolean complain, qboolean lock)
 	return NULL;
 }
 
+qboolean S_IsSoundPrecached (const sfx_t *sfx)
+{
+	return false;
+}
+
 sfx_t *S_FindName (const char *name)
 {
 	return NULL;
