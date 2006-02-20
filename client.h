@@ -355,6 +355,7 @@ typedef struct usercmd_s
 	int buttons;
 	int impulse;
 	int sequence;
+	qboolean applied; // if false we're still accumulating a move
 } usercmd_t;
 
 typedef struct lightstyle_s

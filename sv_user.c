@@ -610,6 +610,10 @@ qboolean SV_ReadClientMove (void)
 
 	oldmovetime = move->time;
 
+	// if this move has been applied, clear it, and start accumulating new data
+	if (move->applied)
+		memset(move, 0, sizeof(*move));
+
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 
 	// read ping time
@@ -712,7 +716,6 @@ qboolean SV_ReadClientMove (void)
 
 void SV_ApplyClientMove (void)
 {
-	double movetime;
 #ifdef NUM_PING_TIMES
 	int i;
 	float total;
@@ -720,8 +723,10 @@ void SV_ApplyClientMove (void)
 	prvm_eval_t *val;
 	usercmd_t *move = &host_client->cmd;
 
-	if (!move->receivetime)
+	if (!move->receivetime || move->applied)
 		return;
+
+	move->applied = true;
 
 	// calculate average ping time
 	host_client->ping = move->receivetime - move->time;
@@ -762,11 +767,6 @@ void SV_ApplyClientMove (void)
 	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_cursor_trace_endpos))) VectorCopy(move->cursor_impact, val->vector);
 	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_cursor_trace_ent))) val->edict = PRVM_EDICT_TO_PROG(PRVM_EDICT_NUM(move->cursor_entitynumber));
 	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_ping))) val->_float = host_client->ping * 1000.0;
-
-	// don't clear move->time as it is used for applying cl_movement 1 moves
-	movetime = move->time;
-	memset(move, 0, sizeof(*move));
-	move->time = movetime;
 }
 
 void SV_FrameLost(int framenum)
