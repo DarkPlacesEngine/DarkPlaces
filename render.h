@@ -146,6 +146,14 @@ extern qboolean r_rtdlightshadows;
 
 // forces all rendering to draw triangle outlines
 extern cvar_t r_showtris;
+extern cvar_t r_showtris_polygonoffset;
+extern cvar_t r_shownormals;
+extern cvar_t r_showlighting;
+extern cvar_t r_showshadowvolumes;
+extern cvar_t r_showcollisionbrushes;
+extern cvar_t r_showcollisionbrushes_polygonfactor;
+extern cvar_t r_showcollisionbrushes_polygonoffset;
+extern cvar_t r_showdisabledepthtest;
 extern int r_showtrispass;
 
 //
@@ -174,7 +182,6 @@ extern cvar_t r_speeds;
 extern cvar_t r_fullbright;
 extern cvar_t r_wateralpha;
 extern cvar_t r_dynamic;
-extern cvar_t r_drawcollisionbrushes;
 
 void R_Init(void);
 void R_UpdateWorld(void); // needs no r_refdef

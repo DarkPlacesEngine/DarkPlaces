@@ -628,7 +628,7 @@ void GL_DepthTest(int state)
 {
 	if (gl_state.depthtest != state)
 	{
-		if (r_showtrispass)
+		if (r_showtrispass && r_showdisabledepthtest.integer)
 			return;
 		gl_state.depthtest = state;
 		if (gl_state.depthtest)
@@ -647,8 +647,6 @@ void GL_ColorMask(int r, int g, int b, int a)
 	int state = r*8 + g*4 + b*2 + a*1;
 	if (gl_state.colormask != state)
 	{
-		if (r_showtrispass)
-			return;
 		gl_state.colormask = state;
 		qglColorMask((GLboolean)r, (GLboolean)g, (GLboolean)b, (GLboolean)a);CHECKGLERROR
 	}
@@ -674,9 +672,9 @@ void GL_ShowTrisColor(float cr, float cg, float cb, float ca)
 {
 	if (!r_showtrispass)
 		return;
-	r_showtrispass = false;
+	r_showtrispass = 0;
 	GL_Color(cr * r_showtris.value, cg * r_showtris.value, cb * r_showtris.value, ca);
-	r_showtrispass = true;
+	r_showtrispass = 1;
 }
 
 
@@ -724,8 +722,10 @@ void GL_ScissorTest(int state)
 
 void GL_Clear(int mask)
 {
+	// in showtris rendering, don't clear the color buffer as that would hide
+	// the accumulated lines
 	if (r_showtrispass)
-		return;
+		mask &= ~GL_COLOR_BUFFER_BIT;
 	qglClear(mask);CHECKGLERROR
 }
 
@@ -1740,104 +1740,85 @@ int r_stereo_side;
 
 void SCR_DrawScreen (void)
 {
-	for (r_showtrispass = 0;r_showtrispass <= (r_showtris.value > 0);r_showtrispass++)
+	R_Mesh_Start();
+
+	R_TimeReport("setup");
+
+	if (cls.signon == SIGNONS)
 	{
-		R_Mesh_Start();
+		float size;
 
-		R_TimeReport("setup");
+		size = scr_viewsize.value * (1.0 / 100.0);
+		size = min(size, 1);
 
-		if (r_showtrispass)
+		if (r_stereo_sidebyside.integer)
 		{
-			rmeshstate_t m;
-			r_showtrispass = 0;
-			GL_BlendFunc(GL_ONE, GL_ONE);
-			GL_DepthTest(GL_FALSE);
-			GL_DepthMask(GL_FALSE);
-			memset(&m, 0, sizeof(m));
-			R_Mesh_State(&m);
-			//qglEnable(GL_LINE_SMOOTH);
-			GL_ShowTrisColor(0.2,0.2,0.2,1);
-			r_showtrispass = 1;
+			r_refdef.width = vid.width * size / 2.5;
+			r_refdef.height = vid.height * size / 2.5 * (1 - bound(0, r_letterbox.value, 100) / 100);
+			r_refdef.x = (vid.width - r_refdef.width * 2.5) * 0.5;
+			r_refdef.y = (vid.height - r_refdef.height)/2;
+			if (r_stereo_side)
+				r_refdef.x += r_refdef.width * 1.5;
+		}
+		else
+		{
+			r_refdef.width = vid.width * size;
+			r_refdef.height = vid.height * size * (1 - bound(0, r_letterbox.value, 100) / 100);
+			r_refdef.x = (vid.width - r_refdef.width)/2;
+			r_refdef.y = (vid.height - r_refdef.height)/2;
 		}
 
-		if (cls.signon == SIGNONS)
+		// LordHavoc: viewzoom (zoom in for sniper rifles, etc)
+		// LordHavoc: this is designed to produce widescreen fov values
+		// when the screen is wider than 4/3 width/height aspect, to do
+		// this it simply assumes the requested fov is the vertical fov
+		// for a 4x3 display, if the ratio is not 4x3 this makes the fov
+		// higher/lower according to the ratio
+		r_refdef.frustum_y = tan(scr_fov.value * cl.viewzoom * M_PI / 360.0) * (3.0/4.0);
+		r_refdef.frustum_x = r_refdef.frustum_y * (float)r_refdef.width / (float)r_refdef.height / vid_pixelheight.value;
+
+		r_refdef.frustum_x *= r_refdef.frustumscale_x;
+		r_refdef.frustum_y *= r_refdef.frustumscale_y;
+
+		if(!CL_VM_UpdateView())
+			R_RenderView();
+		else
+			SCR_DrawConsole();
+
+		if (scr_zoomwindow.integer)
 		{
-			float size;
+			float sizex = bound(10, scr_zoomwindow_viewsizex.value, 100) / 100.0;
+			float sizey = bound(10, scr_zoomwindow_viewsizey.value, 100) / 100.0;
+			r_refdef.width = vid.width * sizex;
+			r_refdef.height = vid.height * sizey;
+			r_refdef.x = (vid.width - r_refdef.width)/2;
+			r_refdef.y = 0;
 
-			size = scr_viewsize.value * (1.0 / 100.0);
-			size = min(size, 1);
-
-			if (r_stereo_sidebyside.integer)
-			{
-				r_refdef.width = vid.width * size / 2.5;
-				r_refdef.height = vid.height * size / 2.5 * (1 - bound(0, r_letterbox.value, 100) / 100);
-				r_refdef.x = (vid.width - r_refdef.width * 2.5) * 0.5;
-				r_refdef.y = (vid.height - r_refdef.height)/2;
-				if (r_stereo_side)
-					r_refdef.x += r_refdef.width * 1.5;
-			}
-			else
-			{
-				r_refdef.width = vid.width * size;
-				r_refdef.height = vid.height * size * (1 - bound(0, r_letterbox.value, 100) / 100);
-				r_refdef.x = (vid.width - r_refdef.width)/2;
-				r_refdef.y = (vid.height - r_refdef.height)/2;
-			}
-
-			// LordHavoc: viewzoom (zoom in for sniper rifles, etc)
-			// LordHavoc: this is designed to produce widescreen fov values
-			// when the screen is wider than 4/3 width/height aspect, to do
-			// this it simply assumes the requested fov is the vertical fov
-			// for a 4x3 display, if the ratio is not 4x3 this makes the fov
-			// higher/lower according to the ratio
-			r_refdef.frustum_y = tan(scr_fov.value * cl.viewzoom * M_PI / 360.0) * (3.0/4.0);
-			r_refdef.frustum_x = r_refdef.frustum_y * (float)r_refdef.width / (float)r_refdef.height / vid_pixelheight.value;
+			r_refdef.frustum_y = tan(scr_zoomwindow_fov.value * cl.viewzoom * M_PI / 360.0) * (3.0/4.0);
+			r_refdef.frustum_x = r_refdef.frustum_y * vid_pixelheight.value * (float)r_refdef.width / (float)r_refdef.height;
 
 			r_refdef.frustum_x *= r_refdef.frustumscale_x;
 			r_refdef.frustum_y *= r_refdef.frustumscale_y;
 
 			if(!CL_VM_UpdateView())
 				R_RenderView();
-			else
-				SCR_DrawConsole();
-
-			if (scr_zoomwindow.integer)
-			{
-				float sizex = bound(10, scr_zoomwindow_viewsizex.value, 100) / 100.0;
-				float sizey = bound(10, scr_zoomwindow_viewsizey.value, 100) / 100.0;
-				r_refdef.width = vid.width * sizex;
-				r_refdef.height = vid.height * sizey;
-				r_refdef.x = (vid.width - r_refdef.width)/2;
-				r_refdef.y = 0;
-
-				r_refdef.frustum_y = tan(scr_zoomwindow_fov.value * cl.viewzoom * M_PI / 360.0) * (3.0/4.0);
-				r_refdef.frustum_x = r_refdef.frustum_y * vid_pixelheight.value * (float)r_refdef.width / (float)r_refdef.height;
-
-				r_refdef.frustum_x *= r_refdef.frustumscale_x;
-				r_refdef.frustum_y *= r_refdef.frustumscale_y;
-
-				if(!CL_VM_UpdateView())
-					R_RenderView();
-			}
 		}
-
-		if (!r_stereo_sidebyside.integer)
-		{
-			r_refdef.width = vid.width;
-			r_refdef.height = vid.height;
-			r_refdef.x = 0;
-			r_refdef.y = 0;
-		}
-
-		// draw 2D stuff
-		R_DrawQueue();
-
-		R_Mesh_Finish();
-
-		R_TimeReport("meshfinish");
 	}
-	r_showtrispass = 0;
-	//qglDisable(GL_LINE_SMOOTH);
+
+	if (!r_stereo_sidebyside.integer)
+	{
+		r_refdef.width = vid.width;
+		r_refdef.height = vid.height;
+		r_refdef.x = 0;
+		r_refdef.y = 0;
+	}
+
+	// draw 2D stuff
+	R_DrawQueue();
+
+	R_Mesh_Finish();
+
+	R_TimeReport("meshfinish");
 }
 
 void SCR_UpdateLoadingScreen (void)
@@ -1912,6 +1893,8 @@ void SCR_UpdateScreen (void)
 	if (gl_combine.integer && !gl_combine_extension)
 		Cvar_SetValueQuick(&gl_combine, 0);
 
+	r_showtrispass = 0;
+
 	CHECKGLERROR
 	qglViewport(0, 0, vid.width, vid.height);
 	qglDisable(GL_SCISSOR_TEST);
@@ -1961,24 +1944,7 @@ void SCR_UpdateScreen (void)
 		r_refdef.viewentitymatrix = originalmatrix;
 	}
 	else
-	{
-		r_showtrispass = false;
 		SCR_DrawScreen();
-
-		if (r_showtris.value > 0)
-		{
-			rmeshstate_t m;
-			GL_BlendFunc(GL_ONE, GL_ONE);
-			GL_DepthTest(GL_FALSE);
-			GL_DepthMask(GL_FALSE);
-			memset(&m, 0, sizeof(m));
-			R_Mesh_State(&m);
-			r_showtrispass = true;
-			GL_ShowTrisColor(0.2,0.2,0.2,1);
-			SCR_DrawScreen();
-			r_showtrispass = false;
-		}
-	}
 
 	VID_Finish();
 	R_TimeReport("finish");

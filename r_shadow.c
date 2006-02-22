@@ -217,8 +217,6 @@ cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1", "use scissor optimization
 cvar_t r_shadow_shadow_polygonfactor = {0, "r_shadow_shadow_polygonfactor", "0", "how much to enlarge shadow volume polygons when rendering (should be 0!)"};
 cvar_t r_shadow_shadow_polygonoffset = {0, "r_shadow_shadow_polygonoffset", "1", "how much to push shadow volumes into the distance when rendering, to reduce chances of zfighting artifacts (should not be less than 0)"};
 cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1", "use 3D voxel textures for spherical attenuation rather than cylindrical (does not affect r_shadow_glsl lighting)"};
-cvar_t r_shadow_visiblelighting = {0, "r_shadow_visiblelighting", "0", "shows areas lit by lights, useful for finding out why some areas of a map render slowly (bright orange = lots of passes = slow), a value of 2 disables depth testing which can be interesting but not very useful"};
-cvar_t r_shadow_visiblevolumes = {0, "r_shadow_visiblevolumes", "0", "shows areas shadowed by lights, useful for finding out why some areas of a map render slowly (bright blue = lots of passes = slow), a value of 2 disables depth testing which can be interesting but not very useful"};
 cvar_t r_shadow_glsl = {0, "r_shadow_glsl", "1", "enables use of OpenGL 2.0 pixel shaders for lighting"};
 cvar_t r_shadow_glsl_offsetmapping = {0, "r_shadow_glsl_offsetmapping", "0", "enables offset mapping effect (also known as parallax mapping or sometimes as virtual displacement mapping, not as good as relief mapping or silohuette mapping but much faster), can cause strange artifacts on many textures, requires bumpmaps for depth information (normalmaps can have depth information as alpha channel, but most do not)"};
 cvar_t r_shadow_glsl_offsetmapping_scale = {0, "r_shadow_glsl_offsetmapping_scale", "-0.04", "how deep the offset mapping effect is, and whether it is inward or outward"};
@@ -676,8 +674,8 @@ void R_Shadow_Help_f(void)
 "r_shadow_shadow_polygonfactor : nudge shadow volumes closer/further\n"
 "r_shadow_shadow_polygonoffset : nudge shadow volumes closer/further\n"
 "r_shadow_texture3d : use 3d attenuation texture (if hardware supports)\n"
-"r_shadow_visiblelighting : useful for performance testing; bright = slow!\n"
-"r_shadow_visiblevolumes : useful for performance testing; bright = slow!\n"
+"r_showlighting : useful for performance testing; bright = slow!\n"
+"r_showshadowvolumes : useful for performance testing; bright = slow!\n"
 "Commands:\n"
 "r_shadow_help : this help\n"
 	);
@@ -709,8 +707,6 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_shadow_polygonfactor);
 	Cvar_RegisterVariable(&r_shadow_shadow_polygonoffset);
 	Cvar_RegisterVariable(&r_shadow_texture3d);
-	Cvar_RegisterVariable(&r_shadow_visiblelighting);
-	Cvar_RegisterVariable(&r_shadow_visiblevolumes);
 	Cvar_RegisterVariable(&r_shadow_glsl);
 	Cvar_RegisterVariable(&r_shadow_glsl_offsetmapping);
 	Cvar_RegisterVariable(&r_shadow_glsl_offsetmapping_scale);
@@ -1185,7 +1181,8 @@ void R_Shadow_RenderMode_StencilShadowVolumes(void)
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
-	qglPolygonOffset(r_shadow_shadow_polygonfactor.value, r_shadow_shadow_polygonoffset.value);
+	if (!r_showtrispass)
+		qglPolygonOffset(r_shadow_shadow_polygonfactor.value, r_shadow_shadow_polygonoffset.value);
 	//if (r_shadow_shadow_polygonoffset.value != 0)
 	//{
 	//	qglPolygonOffset(r_shadow_shadow_polygonfactor.value, r_shadow_shadow_polygonoffset.value);
@@ -1226,7 +1223,8 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent)
 	GL_BlendFunc(GL_ONE, GL_ONE);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
-	qglPolygonOffset(0, 0);
+	if (!r_showtrispass)
+		qglPolygonOffset(0, 0);
 	//qglDisable(GL_POLYGON_OFFSET_FILL);
 	GL_Color(1, 1, 1, 1);
 	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
@@ -1273,8 +1271,9 @@ void R_Shadow_RenderMode_VisibleShadowVolumes(void)
 	R_Shadow_RenderMode_Reset();
 	GL_BlendFunc(GL_ONE, GL_ONE);
 	GL_DepthMask(false);
-	GL_DepthTest(r_shadow_visiblevolumes.integer < 2);
-	qglPolygonOffset(0, 0);
+	GL_DepthTest(!r_showdisabledepthtest.integer);
+	if (!r_showtrispass)
+		qglPolygonOffset(0, 0);
 	GL_Color(0.0, 0.0125, 0.1, 1);
 	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
 	qglDepthFunc(GL_GEQUAL);
@@ -1289,8 +1288,9 @@ void R_Shadow_RenderMode_VisibleLighting(qboolean stenciltest, qboolean transpar
 	R_Shadow_RenderMode_Reset();
 	GL_BlendFunc(GL_ONE, GL_ONE);
 	GL_DepthMask(false);
-	GL_DepthTest(r_shadow_visiblelighting.integer < 2);
-	qglPolygonOffset(0, 0);
+	GL_DepthTest(!r_showdisabledepthtest.integer);
+	if (!r_showtrispass)
+		qglPolygonOffset(0, 0);
 	GL_Color(0.1, 0.0125, 0, 1);
 	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
 	if (transparent)
@@ -1313,7 +1313,8 @@ void R_Shadow_RenderMode_End(void)
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
 	GL_DepthTest(true);
-	qglPolygonOffset(0, 0);
+	if (!r_showtrispass)
+		qglPolygonOffset(0, 0);
 	//qglDisable(GL_POLYGON_OFFSET_FILL);
 	GL_Color(1, 1, 1, 1);
 	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
@@ -3012,46 +3013,53 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	if (!numlightentities)
 		return;
 
+	// don't let sound skip if going slow
+	if (r_refdef.extraupdate)
+		S_ExtraUpdate ();
+
 	// make this the active rtlight for rendering purposes
 	R_Shadow_RenderMode_ActiveLight(rtlight);
 	// count this light in the r_speeds
 	renderstats.lights++;
 
-	// draw stencil shadow volumes to mask off pixels that are in shadow
-	// so that they won't receive lighting
 	usestencil = false;
-	if (numshadowentities && (!visible || r_shadow_visiblelighting.integer == 1) && gl_stencil && rtlight->shadow && (rtlight->isstatic ? r_rtworldshadows : r_rtdlightshadows))
+	if (numshadowentities && rtlight->shadow && (rtlight->isstatic ? r_rtworldshadows : r_rtdlightshadows))
 	{
-		usestencil = true;
-		R_Shadow_RenderMode_StencilShadowVolumes();
-		for (i = 0;i < numshadowentities;i++)
-			R_Shadow_DrawEntityShadow(shadowentities[i], numsurfaces, surfacelist);
+		// draw stencil shadow volumes to mask off pixels that are in shadow
+		// so that they won't receive lighting
+		if (gl_stencil)
+		{
+			usestencil = true;
+			R_Shadow_RenderMode_StencilShadowVolumes();
+			for (i = 0;i < numshadowentities;i++)
+				R_Shadow_DrawEntityShadow(shadowentities[i], numsurfaces, surfacelist);
+		}
+
+		// optionally draw visible shape of the shadow volumes
+		// for performance analysis by level designers
+		if (r_showshadowvolumes.integer)
+		{
+			R_Shadow_RenderMode_VisibleShadowVolumes();
+			for (i = 0;i < numshadowentities;i++)
+				R_Shadow_DrawEntityShadow(shadowentities[i], numsurfaces, surfacelist);
+		}
 	}
 
-	// draw lighting in the unmasked areas
-	if (numlightentities && !visible)
+	if (numlightentities)
 	{
+		// draw lighting in the unmasked areas
 		R_Shadow_RenderMode_Lighting(usestencil, false);
 		for (i = 0;i < numlightentities;i++)
 			R_Shadow_DrawEntityLight(lightentities[i], numsurfaces, surfacelist);
-	}
 
-	// optionally draw visible shape of the shadow volumes
-	// for performance analysis by level designers
-	if (numshadowentities && visible && r_shadow_visiblevolumes.integer > 0 && rtlight->shadow && (rtlight->isstatic ? r_rtworldshadows : r_rtdlightshadows))
-	{
-		R_Shadow_RenderMode_VisibleShadowVolumes();
-		for (i = 0;i < numshadowentities;i++)
-			R_Shadow_DrawEntityShadow(shadowentities[i], numsurfaces, surfacelist);
-	}
-
-	// optionally draw the illuminated areas
-	// for performance analysis by level designers
-	if (numlightentities && visible && r_shadow_visiblelighting.integer > 0)
-	{
-		R_Shadow_RenderMode_VisibleLighting(usestencil, false);
-		for (i = 0;i < numlightentities;i++)
-			R_Shadow_DrawEntityLight(lightentities[i], numsurfaces, surfacelist);
+		// optionally draw the illuminated areas
+		// for performance analysis by level designers
+		if (r_showlighting.integer)
+		{
+			R_Shadow_RenderMode_VisibleLighting(usestencil && !r_showdisabledepthtest.integer, false);
+			for (i = 0;i < numlightentities;i++)
+				R_Shadow_DrawEntityLight(lightentities[i], numsurfaces, surfacelist);
+		}
 	}
 }
 

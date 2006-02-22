@@ -30,8 +30,6 @@ cvar_t r_drawportals = {0, "r_drawportals", "0", "shows portals (separating poly
 cvar_t r_lockpvs = {0, "r_lockpvs", "0", "disables pvs switching, allows you to walk around and inspect what is visible from a given location in the map (anything not visible from your current location will not be drawn)"};
 cvar_t r_lockvisibility = {0, "r_lockvisibility", "0", "disables visibility updates, allows you to walk around and inspect what is visible from a given viewpoint in the map (anything offscreen at the moment this is enabled will not be drawn)"};
 cvar_t r_useportalculling = {0, "r_useportalculling", "1", "use advanced portal culling visibility method to improve performance over just Potentially Visible Set, provides an even more significant speed improvement in unvised maps"};
-cvar_t r_drawcollisionbrushes_polygonfactor = {0, "r_drawcollisionbrushes_polygonfactor", "-1", "expands outward the brush polygons a little bit, used to make collision brushes appear infront of walls"};
-cvar_t r_drawcollisionbrushes_polygonoffset = {0, "r_drawcollisionbrushes_polygonoffset", "0", "nudges brush polygon depth in hardware depth units, used to make collision brushes appear infront of walls"};
 cvar_t r_q3bsp_renderskydepth = {0, "r_q3bsp_renderskydepth", "0", "draws sky depth masking in q3 maps (as in q1 maps), this means for example that sky polygons can hide other things"};
 
 // flag arrays used for visibility checking on world model
@@ -501,8 +499,7 @@ void R_Q1BSP_DrawSky(entity_render_t *ent)
 {
 	if (ent->model == NULL)
 		return;
-	if (r_drawcollisionbrushes.integer < 2)
-		R_DrawSurfaces(ent, true);
+	R_DrawSurfaces(ent, true);
 }
 
 void R_Q1BSP_Draw(entity_render_t *ent)
@@ -510,9 +507,8 @@ void R_Q1BSP_Draw(entity_render_t *ent)
 	model_t *model = ent->model;
 	if (model == NULL)
 		return;
-	if (r_drawcollisionbrushes.integer < 2)
-		R_DrawSurfaces(ent, false);
-	if (r_drawcollisionbrushes.integer >= 1 && model->brush.num_brushes)
+	R_DrawSurfaces(ent, false);
+	if (r_showcollisionbrushes.integer && model->brush.num_brushes && !r_showtrispass)
 	{
 		int i;
 		msurface_t *surface;
@@ -520,8 +516,8 @@ void R_Q1BSP_Draw(entity_render_t *ent)
 		R_Mesh_Matrix(&ent->matrix);
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 		GL_DepthMask(false);
-		GL_DepthTest(true);
-		qglPolygonOffset(r_drawcollisionbrushes_polygonfactor.value, r_drawcollisionbrushes_polygonoffset.value);
+		GL_DepthTest(!r_showdisabledepthtest.integer);
+		qglPolygonOffset(r_showcollisionbrushes_polygonfactor.value, r_showcollisionbrushes_polygonoffset.value);
 		for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
 			if (brush->colbrushf && brush->colbrushf->numtriangles)
 				R_DrawCollisionBrush(brush->colbrushf);
@@ -730,8 +726,6 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 	// check the box in modelspace, it was already checked in worldspace
 	if (!BoxesOverlap(ent->model->normalmins, ent->model->normalmaxs, lightmins, lightmaxs))
 		return;
-	if (r_drawcollisionbrushes.integer >= 2)
-		return;
 	R_UpdateAllTextureInfo(ent);
 	if (model->brush.shadowmesh)
 	{
@@ -810,8 +804,6 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 	vec3_t modelorg;
 	texture_t *tex;
 	qboolean skip;
-	if (r_drawcollisionbrushes.integer >= 2)
-		return;
 	R_UpdateAllTextureInfo(ent);
 	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 	tex = NULL;
@@ -943,8 +935,6 @@ void GL_Surf_Init(void)
 	Cvar_RegisterVariable(&r_lockpvs);
 	Cvar_RegisterVariable(&r_lockvisibility);
 	Cvar_RegisterVariable(&r_useportalculling);
-	Cvar_RegisterVariable(&r_drawcollisionbrushes_polygonfactor);
-	Cvar_RegisterVariable(&r_drawcollisionbrushes_polygonoffset);
 	Cvar_RegisterVariable(&r_q3bsp_renderskydepth);
 
 	Cmd_AddCommand ("r_replacemaptexture", R_ReplaceWorldTexture, "override a map texture for testing purposes");	// By [515]
