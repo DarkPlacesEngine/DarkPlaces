@@ -70,7 +70,14 @@ matrix4x4_t r_view_matrix;
 refdef_t r_refdef;
 
 cvar_t r_showtris = {0, "r_showtris", "0", "shows triangle outlines, value controls brightness (can be above 1)"};
+cvar_t r_showtris_polygonoffset = {0, "r_showtris_polygonoffset", "-10", "nudges triangle outlines in hardware depth units, used to make outlines appear infront of walls"};
 cvar_t r_shownormals = {0, "r_shownormals", "0", "shows per-vertex surface normals and tangent vectors for bumpmapped lighting"};
+cvar_t r_showlighting = {0, "r_showlighting", "0", "shows areas lit by lights, useful for finding out why some areas of a map render slowly (bright orange = lots of passes = slow), a value of 2 disables depth testing which can be interesting but not very useful"};
+cvar_t r_showshadowvolumes = {0, "r_showshadowvolumes", "0", "shows areas shadowed by lights, useful for finding out why some areas of a map render slowly (bright blue = lots of passes = slow), a value of 2 disables depth testing which can be interesting but not very useful"};
+cvar_t r_showcollisionbrushes = {0, "r_showcollisionbrushes", "0", "draws collision brushes in quake3 maps (mode 1), mode 2 disables rendering of world (trippy!)"};
+cvar_t r_showcollisionbrushes_polygonfactor = {0, "r_showcollisionbrushes_polygonfactor", "-1", "expands outward the brush polygons a little bit, used to make collision brushes appear infront of walls"};
+cvar_t r_showcollisionbrushes_polygonoffset = {0, "r_showcollisionbrushes_polygonoffset", "0", "nudges brush polygon depth in hardware depth units, used to make collision brushes appear infront of walls"};
+cvar_t r_showdisabledepthtest = {0, "r_showdisabledepthtest", "0", "disables depth testing on r_show* cvars, allowing you to see what hidden geometry the graphics card is processing\n"};
 cvar_t r_drawentities = {0, "r_drawentities","1", "draw entities (doors, players, projectiles, etc)"};
 cvar_t r_drawviewmodel = {0, "r_drawviewmodel","1", "draw your weapon model"};
 cvar_t r_speeds = {0, "r_speeds","0", "displays rendering statistics and per-subsystem timings"};
@@ -78,7 +85,6 @@ cvar_t r_fullbright = {0, "r_fullbright","0", "make everything bright cheat (not
 cvar_t r_wateralpha = {CVAR_SAVE, "r_wateralpha","1", "opacity of water polygons"};
 cvar_t r_dynamic = {CVAR_SAVE, "r_dynamic","1", "enables dynamic lights (rocket glow and such)"};
 cvar_t r_fullbrights = {CVAR_SAVE, "r_fullbrights", "1", "enables glowing pixels in quake textures (changes need r_restart to take effect)"};
-cvar_t r_drawcollisionbrushes = {0, "r_drawcollisionbrushes", "0", "draws collision brushes in quake3 maps (mode 1), mode 2 disables rendering of world (trippy!)"};
 
 cvar_t gl_fogenable = {0, "gl_fogenable", "0", "nehahra fog enable (for Nehahra compatibility only)"};
 cvar_t gl_fogdensity = {0, "gl_fogdensity", "0.25", "nehahra fog density (recommend values below 0.1) (for Nehahra compatibility only)"};
@@ -448,7 +454,14 @@ void GL_Main_Init(void)
 // FIXME: move this to client?
 	FOG_registercvars();
 	Cvar_RegisterVariable(&r_showtris);
+	Cvar_RegisterVariable(&r_showtris_polygonoffset);
 	Cvar_RegisterVariable(&r_shownormals);
+	Cvar_RegisterVariable(&r_showlighting);
+	Cvar_RegisterVariable(&r_showshadowvolumes);
+	Cvar_RegisterVariable(&r_showcollisionbrushes);
+	Cvar_RegisterVariable(&r_showcollisionbrushes_polygonfactor);
+	Cvar_RegisterVariable(&r_showcollisionbrushes_polygonoffset);
+	Cvar_RegisterVariable(&r_showdisabledepthtest);
 	Cvar_RegisterVariable(&r_drawentities);
 	Cvar_RegisterVariable(&r_drawviewmodel);
 	Cvar_RegisterVariable(&r_speeds);
@@ -460,7 +473,6 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_lerpsprites);
 	Cvar_RegisterVariable(&r_lerpmodels);
 	Cvar_RegisterVariable(&r_waterscroll);
-	Cvar_RegisterVariable(&r_drawcollisionbrushes);
 	Cvar_RegisterVariable(&r_bloom);
 	Cvar_RegisterVariable(&r_bloom_intensity);
 	Cvar_RegisterVariable(&r_bloom_blur);
@@ -1159,8 +1171,6 @@ void R_RenderScene(void)
 
 	R_MeshQueue_BeginScene();
 
-	GL_ShowTrisColor(0.05, 0.05, 0.05, 1);
-
 	R_SetFrustum();
 
 	r_farclip = R_FarClip(r_vieworigin, r_viewforward, 768.0f) + 256.0f;
@@ -1183,91 +1193,107 @@ void R_RenderScene(void)
 
 	R_Shadow_UpdateWorldLightSelection();
 
-	// don't let sound skip if going slow
-	if (r_refdef.extraupdate)
-		S_ExtraUpdate ();
-
-	if (cl.csqc_vidvars.drawworld)
+	for (r_showtrispass = 0;r_showtrispass <= (r_showtris.value > 0);r_showtrispass++)
 	{
-		GL_ShowTrisColor(0.025, 0.025, 0, 1);
-		if (r_refdef.worldmodel && r_refdef.worldmodel->DrawSky)
+		if (r_showtrispass)
 		{
-			r_refdef.worldmodel->DrawSky(r_refdef.worldentity);
-			R_TimeReport("worldsky");
+			rmeshstate_t m;
+			r_showtrispass = 0;
+			GL_BlendFunc(GL_ONE, GL_ONE);
+			GL_DepthTest(!r_showdisabledepthtest.integer);
+			GL_DepthMask(GL_FALSE);
+			memset(&m, 0, sizeof(m));
+			R_Mesh_State(&m);
+			//qglEnable(GL_LINE_SMOOTH);
+			qglEnable(GL_POLYGON_OFFSET_LINE);
+			qglPolygonOffset(0, r_showtris_polygonoffset.value);
+			r_showtrispass = 1;
 		}
 
-		if (R_DrawBrushModelsSky())
-			R_TimeReport("bmodelsky");
-
-		GL_ShowTrisColor(0.05, 0.05, 0.05, 1);
-		if (r_refdef.worldmodel && r_refdef.worldmodel->Draw)
+		if (cl.csqc_vidvars.drawworld)
 		{
-			r_refdef.worldmodel->Draw(r_refdef.worldentity);
-			R_TimeReport("world");
+			// don't let sound skip if going slow
+			if (r_refdef.extraupdate)
+				S_ExtraUpdate ();
+
+			GL_ShowTrisColor(0.025, 0.025, 0, 1);
+			if (r_refdef.worldmodel && r_refdef.worldmodel->DrawSky)
+			{
+				r_refdef.worldmodel->DrawSky(r_refdef.worldentity);
+				R_TimeReport("worldsky");
+			}
+
+			if (R_DrawBrushModelsSky())
+				R_TimeReport("bmodelsky");
+
+			GL_ShowTrisColor(0.05, 0.05, 0.05, 1);
+			if (r_refdef.worldmodel && r_refdef.worldmodel->Draw)
+			{
+				r_refdef.worldmodel->Draw(r_refdef.worldentity);
+				R_TimeReport("world");
+			}
+
+			R_DrawLightningBeams();
+			R_TimeReport("lightning");
+
+			R_DrawParticles();
+			R_TimeReport("particles");
+
+			R_DrawExplosions();
+			R_TimeReport("explosions");
+		}
+
+		// don't let sound skip if going slow
+		if (r_refdef.extraupdate)
+			S_ExtraUpdate ();
+
+		GL_ShowTrisColor(0, 0.015, 0, 1);
+
+		R_DrawModels();
+		R_TimeReport("models");
+
+		// don't let sound skip if going slow
+		if (r_refdef.extraupdate)
+			S_ExtraUpdate ();
+
+		GL_ShowTrisColor(0, 0, 0.033, 1);
+		R_ShadowVolumeLighting(false);
+		R_TimeReport("rtlights");
+
+		// don't let sound skip if going slow
+		if (r_refdef.extraupdate)
+			S_ExtraUpdate ();
+
+		GL_ShowTrisColor(0.1, 0, 0, 1);
+
+		R_MeshQueue_RenderTransparent();
+		R_TimeReport("drawtrans");
+
+		if (cl.csqc_vidvars.drawworld)
+		{
+			R_DrawCoronas();
+			R_TimeReport("coronas");
+		}
+		if(cl.csqc_vidvars.drawcrosshair)
+		{
+			R_DrawWorldCrosshair();
+			R_TimeReport("crosshair");
+		}
+
+		VM_AddPolygonsToMeshQueue();
+
+		R_MeshQueue_Render();
+
+		if (r_showtrispass)
+		{
+			//qglDisable(GL_LINE_SMOOTH);
+			qglDisable(GL_POLYGON_OFFSET_LINE);
 		}
 	}
 
-	// don't let sound skip if going slow
-	if (r_refdef.extraupdate)
-		S_ExtraUpdate ();
+	r_showtrispass = 0;
 
-	GL_ShowTrisColor(0, 0.015, 0, 1);
-
-	R_DrawModels();
-	R_TimeReport("models");
-
-	// don't let sound skip if going slow
-	if (r_refdef.extraupdate)
-		S_ExtraUpdate ();
-
-	GL_ShowTrisColor(0, 0, 0.033, 1);
-	R_ShadowVolumeLighting(false);
-	R_TimeReport("rtlights");
-
-	// don't let sound skip if going slow
-	if (r_refdef.extraupdate)
-		S_ExtraUpdate ();
-
-	GL_ShowTrisColor(0.1, 0, 0, 1);
-
-	if (cl.csqc_vidvars.drawworld)
-	{
-		R_DrawLightningBeams();
-		R_TimeReport("lightning");
-
-		R_DrawParticles();
-		R_TimeReport("particles");
-
-		R_DrawExplosions();
-		R_TimeReport("explosions");
-	}
-
-	R_MeshQueue_RenderTransparent();
-	R_TimeReport("drawtrans");
-
-	if (cl.csqc_vidvars.drawworld)
-	{
-		R_DrawCoronas();
-		R_TimeReport("coronas");
-	}
-	if(cl.csqc_vidvars.drawcrosshair)
-	{
-		R_DrawWorldCrosshair();
-		R_TimeReport("crosshair");
-	}
-
-	VM_AddPolygonsToMeshQueue();
-
-	R_MeshQueue_Render();
 	R_MeshQueue_EndScene();
-
-	if ((r_shadow_visiblelighting.integer || r_shadow_visiblevolumes.integer) && !r_showtrispass)
-	{
-		R_ShadowVolumeLighting(true);
-		R_TimeReport("visiblevolume");
-	}
-
-	GL_ShowTrisColor(0.05, 0.05, 0.05, 1);
 
 	// don't let sound skip if going slow
 	if (r_refdef.extraupdate)
@@ -2193,7 +2219,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 		{
 			int j, k;
 			float v[3];
-			GL_DepthTest(true);
+			GL_DepthTest(!r_showdisabledepthtest.integer);
 			GL_DepthMask(texture->currentlayers->depthmask);
 			GL_BlendFunc(texture->currentlayers->blendfunc1, texture->currentlayers->blendfunc2);
 			memset(&m, 0, sizeof(m));
