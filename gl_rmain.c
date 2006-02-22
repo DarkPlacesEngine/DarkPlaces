@@ -1232,15 +1232,6 @@ void R_RenderScene(void)
 				r_refdef.worldmodel->Draw(r_refdef.worldentity);
 				R_TimeReport("world");
 			}
-
-			R_DrawLightningBeams();
-			R_TimeReport("lightning");
-
-			R_DrawParticles();
-			R_TimeReport("particles");
-
-			R_DrawExplosions();
-			R_TimeReport("explosions");
 		}
 
 		// don't let sound skip if going slow
@@ -1265,6 +1256,18 @@ void R_RenderScene(void)
 			S_ExtraUpdate ();
 
 		GL_ShowTrisColor(0.1, 0, 0, 1);
+
+		if (cl.csqc_vidvars.drawworld)
+		{
+			R_DrawLightningBeams();
+			R_TimeReport("lightning");
+
+			R_DrawParticles();
+			R_TimeReport("particles");
+
+			R_DrawExplosions();
+			R_TimeReport("explosions");
+		}
 
 		R_MeshQueue_RenderTransparent();
 		R_TimeReport("drawtrans");
