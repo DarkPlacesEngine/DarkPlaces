@@ -116,14 +116,14 @@ void VM_error (void)
 	char string[VM_STRINGTEMP_LENGTH];
 
 	VM_VarString(0, string, sizeof(string));
-	Con_Printf("======%S ERROR in %s:\n%s\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
+	Con_Printf("======%s ERROR in %s:\n%s\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
 	if(prog->self)
 	{
 		ed = PRVM_G_EDICT(prog->self->ofs);
 		PRVM_ED_Print(ed);
 	}
 
-	PRVM_ERROR ("%s: Program error", PRVM_NAME);
+	PRVM_ERROR ("%s: Program error in function %s:\n%s\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
 }
 
 /*
@@ -142,7 +142,7 @@ void VM_objerror (void)
 	char string[VM_STRINGTEMP_LENGTH];
 
 	VM_VarString(0, string, sizeof(string));
-	Con_Printf("======%s OBJECT ERROR in %s:\n%s\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
+	Con_Printf("======OBJECT ERROR======\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
 	if(prog->self)
 	{
 		ed = PRVM_G_EDICT (prog->self->ofs);
@@ -153,6 +153,7 @@ void VM_objerror (void)
 	else
 		// objerror has to display the object fields -> else call
 		PRVM_ERROR ("VM_objecterror: self not defined !");
+	Con_Printf("%s OBJECT ERROR in %s:\n%s\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
 }
 
 /*
