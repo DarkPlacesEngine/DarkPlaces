@@ -502,7 +502,9 @@ static void Cmd_ExecuteAlias (cmdalias_t *alias)
 {
 	static char buffer[ MAX_INPUTLINE + 2 ];
 	Cmd_PreprocessString( alias->value, buffer, sizeof(buffer) - 2, alias );
-	Cbuf_AddText( buffer );
+	// insert at start of command buffer, so that aliases execute in order
+	// (fixes bug introduced by Black on 20050705)
+	Cbuf_InsertText( buffer );
 }
 
 /*
