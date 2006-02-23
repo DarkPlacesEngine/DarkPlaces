@@ -24,7 +24,7 @@ static int Portal_PortalThroughPortalPlanes(tinyplane_t *clipplanes, int clipnum
 	memcpy(&portaltemppoints[0][0][0], targpoints, numpoints * 3 * sizeof(float));
 	for (i = 0;i < clipnumplanes;i++)
 	{
-		PolygonF_Divide(numpoints, &portaltemppoints[0][0][0], clipplanes[i].normal[0], clipplanes[i].normal[1], clipplanes[i].normal[2], clipplanes[i].dist, 1.0f/32.0f, 256, &portaltemppoints[1][0][0], &numpoints, 0, NULL, NULL);
+		PolygonF_Divide(numpoints, &portaltemppoints[0][0][0], clipplanes[i].normal[0], clipplanes[i].normal[1], clipplanes[i].normal[2], clipplanes[i].dist, 1.0f/32.0f, 256, &portaltemppoints[1][0][0], &numpoints, 0, NULL, NULL, NULL);
 		if (numpoints < 3)
 			return numpoints;
 		memcpy(&portaltemppoints[0][0][0], &portaltemppoints[1][0][0], numpoints * 3 * sizeof(float));
