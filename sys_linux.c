@@ -51,7 +51,22 @@ void Sys_Error (const char *error, ...)
 
 void Sys_PrintToTerminal(const char *text)
 {
-	fprintf(stdout, "%s", text);
+#ifndef WIN32
+	// BUG: for some reason, NDELAY also affects stdout (1) when used on stdin (0).
+	int origflags = fcntl (1, F_GETFL, 0);
+	fcntl (1, F_SETFL, origflags & ~FNDELAY);
+#endif
+	while(*text)
+	{
+		ssize_t written = write(1, text, strlen(text));
+		if(written <= 0)
+			break; // sorry, I cannot do anything about this error - without an output
+		text += written;
+	}
+#ifndef WIN32
+	fcntl (1, F_SETFL, origflags);
+#endif
+	//fprintf(stdout, "%s", text);
 }
 
 double Sys_DoubleTime (void)
