@@ -1829,7 +1829,9 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		{
 			if ((ret = NetConn_ReceivedMessage(host_client->netconnection, data, length)) == 2)
 			{
+				SV_VM_Begin();
 				SV_ReadClientMessage();
+				SV_VM_End();
 				return ret;
 			}
 		}

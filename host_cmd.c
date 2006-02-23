@@ -280,11 +280,7 @@ void Host_Map_f (void)
 	strcpy(level, Cmd_Argv(1));
 	SV_SpawnServer(level);
 	if (sv.active && cls.state == ca_disconnected)
-	{
-		SV_VM_Begin();
 		CL_EstablishConnection("local:1");
-		SV_VM_End();
-	}
 }
 
 /*
@@ -327,11 +323,7 @@ void Host_Changelevel_f (void)
 	strcpy(level, Cmd_Argv(1));
 	SV_SpawnServer(level);
 	if (sv.active && cls.state == ca_disconnected)
-	{
-		SV_VM_Begin();
 		CL_EstablishConnection("local:1");
-		SV_VM_End();
-	}
 }
 
 /*
@@ -366,11 +358,7 @@ void Host_Restart_f (void)
 	strcpy(mapname, sv.name);
 	SV_SpawnServer(mapname);
 	if (sv.active && cls.state == ca_disconnected)
-	{
-		SV_VM_Begin();
 		CL_EstablishConnection("local:1");
-		SV_VM_End();
-	}
 }
 
 /*
@@ -415,13 +403,7 @@ void Host_Connect_f (void)
 		Con_Print("connect <serveraddress> : connect to a multiplayer game\n");
 		return;
 	}
-	if( sv.active ) {
-		SV_VM_Begin();
-		CL_EstablishConnection(Cmd_Argv(1));
-		SV_VM_End();
-	} else {
-		CL_EstablishConnection(Cmd_Argv(1));
-	}
+	CL_EstablishConnection(Cmd_Argv(1));
 }
 
 
@@ -737,11 +719,11 @@ void Host_Loadgame_f (void)
 	for (i = 0;i < NUM_SPAWN_PARMS;i++)
 		svs.clients[0].spawn_parms[i] = spawn_parms[i];
 
+	SV_VM_End();
+
 	// make sure we're connected to loopback
 	if (cls.state == ca_disconnected || !(cls.state == ca_connected && cls.netcon != NULL && LHNETADDRESS_GetAddressType(&cls.netcon->peeraddress) == LHNETADDRESSTYPE_LOOP))
 		CL_EstablishConnection("local:1");
-
-	SV_VM_End();
 }
 
 //============================================================================
@@ -790,7 +772,6 @@ void Host_Name_f (void)
 	host_client->nametime = sv.time + 5;
 
 	// point the string back at updateclient->name to keep it safe
-	SV_VM_Begin();
 	strlcpy (host_client->name, newName, sizeof (host_client->name));
 	host_client->edict->fields.server->netname = PRVM_SetEngineString(host_client->name);
 	if (strcmp(host_client->old_name, host_client->name))
@@ -803,7 +784,6 @@ void Host_Name_f (void)
 		MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
 		MSG_WriteString (&sv.reliable_datagram, host_client->name);
 	}
-	SV_VM_End();
 }
 
 /*
@@ -852,7 +832,6 @@ void Host_Playermodel_f (void)
 	host_client->nametime = sv.time + 5;
 	*/
 
-	SV_VM_Begin();
 	// point the string back at updateclient->name to keep it safe
 	strlcpy (host_client->playermodel, newPath, sizeof (host_client->playermodel));
 	if( eval_playermodel )
@@ -865,7 +844,6 @@ void Host_Playermodel_f (void)
 		MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
 		MSG_WriteString (&sv.reliable_datagram, host_client->playermodel);*/
 	}
-	SV_VM_End();
 }
 
 /*
@@ -913,7 +891,6 @@ void Host_Playerskin_f (void)
 	host_client->nametime = sv.time + 5;
 	*/
 
-	SV_VM_Begin();
 	// point the string back at updateclient->name to keep it safe
 	strlcpy (host_client->playerskin, newPath, sizeof (host_client->playerskin));
 	if( eval_playerskin )
@@ -928,7 +905,6 @@ void Host_Playerskin_f (void)
 		MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
 		MSG_WriteString (&sv.reliable_datagram, host_client->playerskin);*/
 	}
-	SV_VM_End();
 }
 
 void Host_Version_f (void)
@@ -1122,7 +1098,6 @@ void Host_Color_f(void)
 		return;
 	}
 
-	SV_VM_Begin();
 	if (host_client->edict && (f = PRVM_ED_FindFunction ("SV_ChangeTeam")) && (SV_ChangeTeam = (func_t)(f - prog->functions)))
 	{
 		Con_DPrint("Calling SV_ChangeTeam\n");
@@ -1150,7 +1125,6 @@ void Host_Color_f(void)
 			MSG_WriteByte (&sv.reliable_datagram, host_client->colors);
 		}
 	}
-	SV_VM_End();
 }
 
 cvar_t cl_rate = {CVAR_SAVE, "_cl_rate", "10000", "internal storage cvar for current rate (changed by rate command)"};
@@ -1197,11 +1171,9 @@ void Host_Kill_f (void)
 		return;
 	}
 
-	SV_VM_Begin();
 	prog->globals.server->time = sv.time;
 	prog->globals.server->self = PRVM_EDICT_TO_PROG(host_client->edict);
 	PRVM_ExecuteProgram (prog->globals.server->ClientKill, "QC function ClientKill is missing");
-	SV_VM_End();
 }
 
 
@@ -1260,10 +1232,8 @@ static void Host_PModel_f (void)
 		return;
 	}
 
-	SV_VM_Begin();
 	if (host_client->edict && (val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_pmodel)))
 		val->_float = i;
-	SV_VM_End();
 }
 
 //===========================================================================
@@ -1334,7 +1304,6 @@ void Host_Spawn_f (void)
 	//	SZ_Clear (&host_client->netconnection->message);
 
 	// run the entrance script
-	SV_VM_Begin();
 	if (sv.loadgame)
 	{
 		// loaded games are fully initialized already
@@ -1369,12 +1338,10 @@ void Host_Spawn_f (void)
 
 		PRVM_ExecuteProgram (prog->globals.server->PutClientInServer, "QC function PutClientInServer is missing");
 	}
-	SV_VM_End();
 
 	if (!host_client->netconnection)
 		return;
 
-	SV_VM_Begin();
 	// send time of update
 	MSG_WriteByte (&host_client->netconnection->message, svc_time);
 	MSG_WriteFloat (&host_client->netconnection->message, sv.time);
@@ -1437,7 +1404,6 @@ void Host_Spawn_f (void)
 
 	MSG_WriteByte (&host_client->netconnection->message, svc_signonnum);
 	MSG_WriteByte (&host_client->netconnection->message, 3);
-	SV_VM_End();
 }
 
 /*
@@ -1573,7 +1539,6 @@ void Host_Give_f (void)
 	t = Cmd_Argv(1);
 	v = atoi (Cmd_Argv(2));
 
-	SV_VM_Begin();
 	switch (t[0])
 	{
 	case '0':
@@ -1703,7 +1668,6 @@ void Host_Give_f (void)
 		}
 		break;
 	}
-	SV_VM_End();
 }
 
 prvm_edict_t	*FindViewthing (void)
