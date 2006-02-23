@@ -59,7 +59,7 @@ void Sys_PrintToTerminal(const char *text)
 #endif
 	while(*text)
 	{
-		int written = (int)write(1, text, strlen(text));
+		int written = (int)write(1, text, (int)strlen(text));
 		if(written <= 0)
 			break; // sorry, I cannot do anything about this error - without an output
 		text += written;
