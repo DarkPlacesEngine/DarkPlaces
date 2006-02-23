@@ -179,7 +179,7 @@ void CL_KeepaliveMessage (void)
 	sizebuf_t old;
 
 	// no need if server is local and definitely not if this is a demo
-	if (sv.active || cls.demoplayback)
+	if (sv.active || !cls.netcon)
 		return;
 
 // read messages from server, should just be nops

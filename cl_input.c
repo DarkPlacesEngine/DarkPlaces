@@ -802,30 +802,34 @@ void CL_SendMove(void)
 {
 	int i;
 	int bits;
+	int impulse;
 	sizebuf_t buf;
 	unsigned char data[128];
 	static double lastsendtime = 0;
 #define MOVEAVERAGING 0
 #if MOVEAVERAGING
-	static float forwardmove, sidemove, upmove, total; // accumulation
-#else
-	float forwardmove, sidemove, upmove;
+	static float accumforwardmove = 0, accumsidemove = 0, accumupmove = 0, accumtotal = 0; // accumulation
 #endif
+	float forwardmove, sidemove, upmove;
+
+	// if playing a demo, do nothing
+	if (!cls.netcon)
+		return;
 
 #if MOVEAVERAGING
 	// accumulate changes between messages
-	forwardmove += cl.cmd.forwardmove;
-	sidemove += cl.cmd.sidemove;
-	upmove += cl.cmd.upmove;
-	total++;
+	accumforwardmove += cl.cmd.forwardmove;
+	accumsidemove += cl.cmd.sidemove;
+	accumupmove += cl.cmd.upmove;
+	accumtotal++;
 #endif
 
-	if (cl_movement.integer)
+	if (cl_movement.integer && cls.signon == SIGNONS)
 	{
 		if (!cl.movement_needupdate)
 			return;
 		cl.movement_needupdate = false;
-		cl.movement = cl.stats[STAT_HEALTH] > 0 && !cls.demoplayback && !cl.intermission;
+		cl.movement = cl.stats[STAT_HEALTH] > 0 && !cl.intermission;
 	}
 	else
 	{
@@ -838,11 +842,14 @@ void CL_SendMove(void)
 	}
 #if MOVEAVERAGING
 	// average the accumulated changes
-	total = 1.0f / total;
-	forwardmove *= total;
-	sidemove *= total;
-	upmove *= total;
-	total = 0;
+	accumtotal = 1.0f / accumtotal;
+	forwardmove = accumforwardmove * accumtotal;
+	sidemove = accumsidemove * accumtotal;
+	upmove = accumupmove * accumtotal;
+	accumforwardmove = 0;
+	accumsidemove = 0;
+	accumupmove = 0;
+	accumtotal = 0;
 #else
 	// use the latest values
 	forwardmove = cl.cmd.forwardmove;
@@ -885,144 +892,139 @@ void CL_SendMove(void)
 	if (cl.cmd.cursor_screen[1] <= -1) bits |= 32;
 	if (cl.cmd.cursor_screen[1] >=  1) bits |= 64;
 
-	csqc_buttons = bits;
-
-	// always dump the first two messages, because they may contain leftover inputs from the last level
-	if (++cl.movemessages >= 2)
-	{
-		// send the movement message
-		// PROTOCOL_QUAKE        clc_move = 16 bytes total
-		// PROTOCOL_QUAKEDP      clc_move = 16 bytes total
-		// PROTOCOL_NEHAHRAMOVIE clc_move = 16 bytes total
-		// PROTOCOL_DARKPLACES1  clc_move = 19 bytes total
-		// PROTOCOL_DARKPLACES2  clc_move = 25 bytes total
-		// PROTOCOL_DARKPLACES3  clc_move = 25 bytes total
-		// PROTOCOL_DARKPLACES4  clc_move = 19 bytes total
-		// PROTOCOL_DARKPLACES5  clc_move = 19 bytes total
-		// PROTOCOL_DARKPLACES6  clc_move = 52 bytes total
-		// PROTOCOL_DARKPLACES7  clc_move = 56 bytes total
-		if (cl.protocol == PROTOCOL_QUAKE || cl.protocol == PROTOCOL_QUAKEDP || cl.protocol == PROTOCOL_NEHAHRAMOVIE)
-		{
-			// 5 bytes
-			MSG_WriteByte (&buf, clc_move);
-			MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
-			// 3 bytes
-			for (i = 0;i < 3;i++)
-				MSG_WriteAngle8i (&buf, cl.viewangles[i]);
-			// 6 bytes
-			MSG_WriteCoord16i (&buf, forwardmove);
-			MSG_WriteCoord16i (&buf, sidemove);
-			MSG_WriteCoord16i (&buf, upmove);
-			// 2 bytes
-			MSG_WriteByte (&buf, bits);
-			MSG_WriteByte (&buf, in_impulse);
-		}
-		else if (cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3)
-		{
-			// 5 bytes
-			MSG_WriteByte (&buf, clc_move);
-			MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
-			// 12 bytes
-			for (i = 0;i < 3;i++)
-				MSG_WriteAngle32f (&buf, cl.viewangles[i]);
-			// 6 bytes
-			MSG_WriteCoord16i (&buf, forwardmove);
-			MSG_WriteCoord16i (&buf, sidemove);
-			MSG_WriteCoord16i (&buf, upmove);
-			// 2 bytes
-			MSG_WriteByte (&buf, bits);
-			MSG_WriteByte (&buf, in_impulse);
-		}
-		else if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5)
-		{
-			// 5 bytes
-			MSG_WriteByte (&buf, clc_move);
-			MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
-			// 6 bytes
-			for (i = 0;i < 3;i++)
-				MSG_WriteAngle16i (&buf, cl.viewangles[i]);
-			// 6 bytes
-			MSG_WriteCoord16i (&buf, forwardmove);
-			MSG_WriteCoord16i (&buf, sidemove);
-			MSG_WriteCoord16i (&buf, upmove);
-			// 2 bytes
-			MSG_WriteByte (&buf, bits);
-			MSG_WriteByte (&buf, in_impulse);
-		}
-		else
-		{
-			// 5 bytes
-			MSG_WriteByte (&buf, clc_move);
-			if (cl.protocol != PROTOCOL_DARKPLACES6)
-			{
-				if (cl_movement.integer)
-				{
-					cl.movesequence++;
-					MSG_WriteLong (&buf, cl.movesequence);
-				}
-				else
-					MSG_WriteLong (&buf, 0);
-			}
-			MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
-			// 6 bytes
-			for (i = 0;i < 3;i++)
-				MSG_WriteAngle16i (&buf, cl.viewangles[i]);
-			// 6 bytes
-			MSG_WriteCoord16i (&buf, forwardmove);
-			MSG_WriteCoord16i (&buf, sidemove);
-			MSG_WriteCoord16i (&buf, upmove);
-			// 5 bytes
-			MSG_WriteLong (&buf, bits);
-			MSG_WriteByte (&buf, in_impulse);
-			// PRYDON_CLIENTCURSOR
-			// 30 bytes
-			MSG_WriteShort (&buf, cl.cmd.cursor_screen[0] * 32767.0f);
-			MSG_WriteShort (&buf, cl.cmd.cursor_screen[1] * 32767.0f);
-			MSG_WriteFloat (&buf, cl.cmd.cursor_start[0]);
-			MSG_WriteFloat (&buf, cl.cmd.cursor_start[1]);
-			MSG_WriteFloat (&buf, cl.cmd.cursor_start[2]);
-			MSG_WriteFloat (&buf, cl.cmd.cursor_impact[0]);
-			MSG_WriteFloat (&buf, cl.cmd.cursor_impact[1]);
-			MSG_WriteFloat (&buf, cl.cmd.cursor_impact[2]);
-			MSG_WriteShort (&buf, cl.cmd.cursor_entitynumber);
-		}
-	}
-
-#if MOVEAVERAGING
-	forwardmove = sidemove = upmove = 0;
-#endif
+	impulse = in_impulse;
 	in_impulse = 0;
 
-	// ack the last few frame numbers
-	// (redundent to improve handling of client->server packet loss)
-	// for LATESTFRAMENUMS == 3 case this is 15 bytes
-	for (i = 0;i < LATESTFRAMENUMS;i++)
+	csqc_buttons = bits;
+
+	if (cls.signon == SIGNONS)
 	{
-		if (cl.latestframenums[i] > 0)
+		// always dump the first two messages, because they may contain leftover inputs from the last level
+		if (++cl.movemessages >= 2)
 		{
-			if (developer_networkentities.integer >= 1)
-				Con_Printf("send clc_ackframe %i\n", cl.latestframenums[i]);
-			MSG_WriteByte(&buf, clc_ackframe);
-			MSG_WriteLong(&buf, cl.latestframenums[i]);
+			// send the movement message
+			// PROTOCOL_QUAKE        clc_move = 16 bytes total
+			// PROTOCOL_QUAKEDP      clc_move = 16 bytes total
+			// PROTOCOL_NEHAHRAMOVIE clc_move = 16 bytes total
+			// PROTOCOL_DARKPLACES1  clc_move = 19 bytes total
+			// PROTOCOL_DARKPLACES2  clc_move = 25 bytes total
+			// PROTOCOL_DARKPLACES3  clc_move = 25 bytes total
+			// PROTOCOL_DARKPLACES4  clc_move = 19 bytes total
+			// PROTOCOL_DARKPLACES5  clc_move = 19 bytes total
+			// PROTOCOL_DARKPLACES6  clc_move = 52 bytes total
+			// PROTOCOL_DARKPLACES7  clc_move = 56 bytes total
+			if (cl.protocol == PROTOCOL_QUAKE || cl.protocol == PROTOCOL_QUAKEDP || cl.protocol == PROTOCOL_NEHAHRAMOVIE)
+			{
+				// 5 bytes
+				MSG_WriteByte (&buf, clc_move);
+				MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
+				// 3 bytes
+				for (i = 0;i < 3;i++)
+					MSG_WriteAngle8i (&buf, cl.viewangles[i]);
+				// 6 bytes
+				MSG_WriteCoord16i (&buf, forwardmove);
+				MSG_WriteCoord16i (&buf, sidemove);
+				MSG_WriteCoord16i (&buf, upmove);
+				// 2 bytes
+				MSG_WriteByte (&buf, bits);
+				MSG_WriteByte (&buf, impulse);
+			}
+			else if (cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3)
+			{
+				// 5 bytes
+				MSG_WriteByte (&buf, clc_move);
+				MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
+				// 12 bytes
+				for (i = 0;i < 3;i++)
+					MSG_WriteAngle32f (&buf, cl.viewangles[i]);
+				// 6 bytes
+				MSG_WriteCoord16i (&buf, forwardmove);
+				MSG_WriteCoord16i (&buf, sidemove);
+				MSG_WriteCoord16i (&buf, upmove);
+				// 2 bytes
+				MSG_WriteByte (&buf, bits);
+				MSG_WriteByte (&buf, impulse);
+			}
+			else if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5)
+			{
+				// 5 bytes
+				MSG_WriteByte (&buf, clc_move);
+				MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
+				// 6 bytes
+				for (i = 0;i < 3;i++)
+					MSG_WriteAngle16i (&buf, cl.viewangles[i]);
+				// 6 bytes
+				MSG_WriteCoord16i (&buf, forwardmove);
+				MSG_WriteCoord16i (&buf, sidemove);
+				MSG_WriteCoord16i (&buf, upmove);
+				// 2 bytes
+				MSG_WriteByte (&buf, bits);
+				MSG_WriteByte (&buf, impulse);
+			}
+			else
+			{
+				// 5 bytes
+				MSG_WriteByte (&buf, clc_move);
+				if (cl.protocol != PROTOCOL_DARKPLACES6)
+				{
+					if (cl_movement.integer)
+					{
+						cl.movesequence++;
+						MSG_WriteLong (&buf, cl.movesequence);
+					}
+					else
+						MSG_WriteLong (&buf, 0);
+				}
+				MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
+				// 6 bytes
+				for (i = 0;i < 3;i++)
+					MSG_WriteAngle16i (&buf, cl.viewangles[i]);
+				// 6 bytes
+				MSG_WriteCoord16i (&buf, forwardmove);
+				MSG_WriteCoord16i (&buf, sidemove);
+				MSG_WriteCoord16i (&buf, upmove);
+				// 5 bytes
+				MSG_WriteLong (&buf, bits);
+				MSG_WriteByte (&buf, impulse);
+				// PRYDON_CLIENTCURSOR
+				// 30 bytes
+				MSG_WriteShort (&buf, cl.cmd.cursor_screen[0] * 32767.0f);
+				MSG_WriteShort (&buf, cl.cmd.cursor_screen[1] * 32767.0f);
+				MSG_WriteFloat (&buf, cl.cmd.cursor_start[0]);
+				MSG_WriteFloat (&buf, cl.cmd.cursor_start[1]);
+				MSG_WriteFloat (&buf, cl.cmd.cursor_start[2]);
+				MSG_WriteFloat (&buf, cl.cmd.cursor_impact[0]);
+				MSG_WriteFloat (&buf, cl.cmd.cursor_impact[1]);
+				MSG_WriteFloat (&buf, cl.cmd.cursor_impact[2]);
+				MSG_WriteShort (&buf, cl.cmd.cursor_entitynumber);
+			}
+
+			// FIXME: bits & 16 is +button5, Nexuiz specific
+			CL_ClientMovement_Input((bits & 2) != 0, (bits & 16) != 0);
 		}
+
+		// ack the last few frame numbers
+		// (redundent to improve handling of client->server packet loss)
+		// for LATESTFRAMENUMS == 3 case this is 15 bytes
+		for (i = 0;i < LATESTFRAMENUMS;i++)
+		{
+			if (cl.latestframenums[i] > 0)
+			{
+				if (developer_networkentities.integer >= 1)
+					Con_Printf("send clc_ackframe %i\n", cl.latestframenums[i]);
+				MSG_WriteByte(&buf, clc_ackframe);
+				MSG_WriteLong(&buf, cl.latestframenums[i]);
+			}
+		}
+
+		// PROTOCOL_DARKPLACES6 = 67 bytes per packet
+		// PROTOCOL_DARKPLACES7 = 71 bytes per packet
 	}
 
-	// PROTOCOL_DARKPLACES6 = 67 bytes per packet
-	// PROTOCOL_DARKPLACES7 = 71 bytes per packet
+	// send the reliable message (forwarded commands) if there is one
+	NetConn_SendUnreliableMessage(cls.netcon, &buf);
 
-	// deliver the message
-	if (cls.demoplayback)
-		return;
-	// nothing to send
-	if (!buf.cursize)
-		return;
-	if (cls.signon != SIGNONS)
-		return;
-
-	// FIXME: bits & 16 is +button5, Nexuiz specific
-	CL_ClientMovement_Input((bits & 2) != 0, (bits & 16) != 0);
-
-	if (NetConn_SendUnreliableMessage(cls.netcon, &buf) == -1)
+	if (cls.netcon->message.overflowed)
 	{
 		Con_Print("CL_SendMove: lost server connection\n");
 		CL_Disconnect();

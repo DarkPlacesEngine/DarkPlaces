@@ -301,14 +301,14 @@ void Host_Changelevel_f (void)
 		Con_Print("changelevel <levelname> : continue game on a new level\n");
 		return;
 	}
-	// HACKHACKHACK
-	if (!sv.active) {
-		Host_Map_f();
-		return;
-	}
 	if (cls.demoplayback)
 	{
 		Con_Print("Only the server may changelevel\n");
+		return;
+	}
+	// HACKHACKHACK
+	if (!sv.active) {
+		Host_Map_f();
 		return;
 	}
 	if (cmd_source != src_command)
@@ -348,7 +348,7 @@ void Host_Restart_f (void)
 		Con_Print("restart : restart current level\n");
 		return;
 	}
-	if (!sv.active || cls.demoplayback)
+	if (!sv.active)
 	{
 		Con_Print("Only the server may restart\n");
 		return;
@@ -1280,7 +1280,6 @@ void Host_PreSpawn_f (void)
 		MSG_WriteByte (&host_client->netconnection->message, svc_signonnum);
 		MSG_WriteByte (&host_client->netconnection->message, 2);
 	}
-	host_client->sendsignon = true;
 
 	// reset the name change timer because the client will send name soon
 	host_client->nametime = 0;
@@ -1421,8 +1420,6 @@ void Host_Spawn_f (void)
 
 	MSG_WriteByte (&host_client->netconnection->message, svc_signonnum);
 	MSG_WriteByte (&host_client->netconnection->message, 3);
-
-	host_client->sendsignon = true;
 }
 
 /*
