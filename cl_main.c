@@ -1480,7 +1480,7 @@ extern void CL_ClientMovement_Replay();
 int CL_ReadFromServer(void)
 {
 	CL_ReadDemoMessage();
-	CL_SendCmd();
+	CL_SendMove();
 
 	r_refdef.time = cl.time;
 	r_refdef.extraupdate = !r_speeds.integer;
@@ -1527,31 +1527,6 @@ int CL_ReadFromServer(void)
 	}
 
 	return 0;
-}
-
-/*
-=================
-CL_SendCmd
-=================
-*/
-void CL_UpdatePrydonCursor(void);
-void CL_SendCmd(void)
-{
-	// send the reliable message (forwarded commands) if there is one
-	if (cls.netcon && cls.netcon->message.cursize && NetConn_CanSendMessage(cls.netcon))
-	{
-		if (developer.integer)
-		{
-			Con_Print("CL_SendCmd: sending reliable message:\n");
-			SZ_HexDumpToConsole(&cls.netcon->message);
-		}
-		if (NetConn_SendReliableMessage(cls.netcon, &cls.netcon->message) == -1)
-			Host_Error("CL_WriteToServer: lost server connection");
-		SZ_Clear(&cls.netcon->message);
-	}
-
-	// send a move periodically
-	CL_SendMove();
 }
 
 // LordHavoc: pausedemo command

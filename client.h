@@ -780,7 +780,6 @@ extern 	kbutton_t 	in_strafe;
 extern 	kbutton_t 	in_speed;
 
 void CL_InitInput (void);
-void CL_SendCmd (void);
 void CL_SendMove (void);
 
 void CL_ValidateState(entity_state_t *s);

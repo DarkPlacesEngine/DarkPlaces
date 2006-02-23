@@ -107,8 +107,6 @@ typedef struct client_s
 	qboolean clientconnectcalled;
 	// false = don't send datagrams
 	qboolean spawned;
-	// only valid before spawned
-	qboolean sendsignon;
 
 	// requested rate in bytes per second
 	int rate;
@@ -116,8 +114,8 @@ typedef struct client_s
 	// realtime this client connected
 	double connecttime;
 
-	// reliable messages must be sent periodically
-	double last_message;
+	// keepalive messages must be sent periodically during signon
+	double keepalivetime;
 
 	// communications handle
 	netconn_t *netconnection;

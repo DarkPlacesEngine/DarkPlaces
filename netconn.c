@@ -432,112 +432,15 @@ int NetConn_WriteString(lhnetsocket_t *mysocket, const char *string, const lhnet
 	return NetConn_Write(mysocket, string, (int)strlen(string), peeraddress);
 }
 
-int NetConn_SendReliableMessage(netconn_t *conn, sizebuf_t *data)
+int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data)
 {
 	unsigned int packetLen;
 	unsigned int dataLen;
 	unsigned int eom;
 	unsigned int *header;
 
-//#ifdef DEBUG
-	if (data->cursize == 0)
-	{
-		Con_Printf ("Datagram_SendMessage: zero length message\n");
-		return -1;
-	}
-
-	if (data->cursize > (int)sizeof(conn->sendMessage))
-	{
-		Con_Printf ("Datagram_SendMessage: message too big (%u > %u)\n", data->cursize, sizeof(conn->sendMessage));
-		return -1;
-	}
-
-	if (conn->canSend == false)
-	{
-		Con_Printf ("SendMessage: called with canSend == false\n");
-		return -1;
-	}
-//#endif
-
-	memcpy(conn->sendMessage, data->data, data->cursize);
-	conn->sendMessageLength = data->cursize;
-
-	if (conn->sendMessageLength <= MAX_PACKETFRAGMENT)
-	{
-		dataLen = conn->sendMessageLength;
-		eom = NETFLAG_EOM;
-	}
-	else
-	{
-		dataLen = MAX_PACKETFRAGMENT;
-		eom = 0;
-	}
-
-	packetLen = NET_HEADERSIZE + dataLen;
-
-	header = (unsigned int *)sendbuffer;
-	header[0] = BigLong(packetLen | (NETFLAG_DATA | eom));
-	header[1] = BigLong(conn->sendSequence);
-	memcpy(sendbuffer + NET_HEADERSIZE, conn->sendMessage, dataLen);
-
-	conn->sendSequence++;
-	conn->canSend = false;
-
-	if (NetConn_Write(conn->mysocket, (void *)&sendbuffer, packetLen, &conn->peeraddress) != (int)packetLen)
-		return -1;
-
-	conn->lastSendTime = realtime;
-	packetsSent++;
-	reliableMessagesSent++;
-	return 1;
-}
-
-static void NetConn_SendMessageNext(netconn_t *conn)
-{
-	unsigned int packetLen;
-	unsigned int dataLen;
-	unsigned int eom;
-	unsigned int *header;
-
-	if (conn->sendMessageLength && !conn->canSend && conn->sendNext)
-	{
-		if (conn->sendMessageLength <= MAX_PACKETFRAGMENT)
-		{
-			dataLen = conn->sendMessageLength;
-			eom = NETFLAG_EOM;
-		}
-		else
-		{
-			dataLen = MAX_PACKETFRAGMENT;
-			eom = 0;
-		}
-
-		packetLen = NET_HEADERSIZE + dataLen;
-
-		header = (unsigned int *)sendbuffer;
-		header[0] = BigLong(packetLen | (NETFLAG_DATA | eom));
-		header[1] = BigLong(conn->sendSequence);
-		memcpy(sendbuffer + NET_HEADERSIZE, conn->sendMessage, dataLen);
-
-		conn->sendSequence++;
-		conn->sendNext = false;
-
-		if (NetConn_Write(conn->mysocket, (void *)&sendbuffer, packetLen, &conn->peeraddress) != (int)packetLen)
-			return;
-
-		conn->lastSendTime = realtime;
-		packetsSent++;
-	}
-}
-
-static void NetConn_ReSendMessage(netconn_t *conn)
-{
-	unsigned int packetLen;
-	unsigned int dataLen;
-	unsigned int eom;
-	unsigned int *header;
-
-	if (conn->sendMessageLength && !conn->canSend && (realtime - conn->lastSendTime) > 1.0)
+	// if a reliable message fragment has been lost, send it again
+	if (!conn->canSend && conn->sendMessageLength && (realtime - conn->lastSendTime) > 1.0)
 	{
 		if (conn->sendMessageLength <= MAX_PACKETFRAGMENT)
 		{
@@ -557,55 +460,85 @@ static void NetConn_ReSendMessage(netconn_t *conn)
 		header[1] = BigLong(conn->sendSequence - 1);
 		memcpy(sendbuffer + NET_HEADERSIZE, conn->sendMessage, dataLen);
 
-		conn->sendNext = false;
+		if (NetConn_Write(conn->mysocket, (void *)&sendbuffer, packetLen, &conn->peeraddress) == (int)packetLen)
+		{
+			conn->lastSendTime = realtime;
+			packetsReSent++;
+		}
+	}
 
-		if (NetConn_Write(conn->mysocket, (void *)&sendbuffer, packetLen, &conn->peeraddress) != (int)packetLen)
-			return;
+	// if we have a new reliable message to send, do so
+	if (conn->canSend && conn->message.cursize)
+	{
+		if (conn->message.cursize > (int)sizeof(conn->sendMessage))
+		{
+			Con_Printf("NetConn_SendUnreliableMessage: reliable message too big (%u > %u)\n", conn->message.cursize, sizeof(conn->sendMessage));
+			conn->message.overflowed = true;
+			return -1;
+		}
+
+		if (developer_networking.integer && conn == cls.netcon)
+		{
+			Con_Print("client sending reliable message to server:\n");
+			SZ_HexDumpToConsole(&conn->message);
+		}
+
+		memcpy(conn->sendMessage, conn->message.data, conn->message.cursize);
+		conn->sendMessageLength = conn->message.cursize;
+		SZ_Clear(&conn->message);
+
+		if (conn->sendMessageLength <= MAX_PACKETFRAGMENT)
+		{
+			dataLen = conn->sendMessageLength;
+			eom = NETFLAG_EOM;
+		}
+		else
+		{
+			dataLen = MAX_PACKETFRAGMENT;
+			eom = 0;
+		}
+
+		packetLen = NET_HEADERSIZE + dataLen;
+
+		header = (unsigned int *)sendbuffer;
+		header[0] = BigLong(packetLen | (NETFLAG_DATA | eom));
+		header[1] = BigLong(conn->sendSequence);
+		memcpy(sendbuffer + NET_HEADERSIZE, conn->sendMessage, dataLen);
+
+		conn->sendSequence++;
+		conn->canSend = false;
+
+		NetConn_Write(conn->mysocket, (void *)&sendbuffer, packetLen, &conn->peeraddress);
 
 		conn->lastSendTime = realtime;
-		packetsReSent++;
+		packetsSent++;
+		reliableMessagesSent++;
 	}
-}
 
-qboolean NetConn_CanSendMessage(netconn_t *conn)
-{
-	return conn->canSend;
-}
-
-int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data)
-{
-	int packetLen;
-	unsigned int *header;
-
-	packetLen = NET_HEADERSIZE + data->cursize;
-
-//#ifdef DEBUG
-	if (data->cursize == 0)
+	// if we have an unreliable message to send, do so
+	if (data->cursize)
 	{
-		Con_Printf ("Datagram_SendUnreliableMessage: zero length message\n");
-		return -1;
+		packetLen = NET_HEADERSIZE + data->cursize;
+
+		if (packetLen > (int)sizeof(sendbuffer))
+		{
+			Con_Printf("NetConn_SendUnreliableMessage: message too big %u\n", data->cursize);
+			return -1;
+		}
+
+		header = (unsigned int *)sendbuffer;
+		header[0] = BigLong(packetLen | NETFLAG_UNRELIABLE);
+		header[1] = BigLong(conn->unreliableSendSequence);
+		memcpy(sendbuffer + NET_HEADERSIZE, data->data, data->cursize);
+
+		conn->unreliableSendSequence++;
+
+		NetConn_Write(conn->mysocket, (void *)&sendbuffer, packetLen, &conn->peeraddress);
+
+		packetsSent++;
+		unreliableMessagesSent++;
 	}
-
-	if (packetLen > (int)sizeof(sendbuffer))
-	{
-		Con_Printf ("Datagram_SendUnreliableMessage: message too big %u\n", data->cursize);
-		return -1;
-	}
-//#endif
-
-	header = (unsigned int *)sendbuffer;
-	header[0] = BigLong(packetLen | NETFLAG_UNRELIABLE);
-	header[1] = BigLong(conn->unreliableSendSequence);
-	memcpy(sendbuffer + NET_HEADERSIZE, data->data, data->cursize);
-
-	conn->unreliableSendSequence++;
-
-	if (NetConn_Write(conn->mysocket, (void *)&sendbuffer, packetLen, &conn->peeraddress) != (int)packetLen)
-		return -1;
-
-	packetsSent++;
-	unreliableMessagesSent++;
-	return 1;
+	return 0;
 }
 
 void NetConn_CloseClientPorts(void)
@@ -805,7 +738,7 @@ void NetConn_UpdateSockets(void)
 	}
 }
 
-int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int length)
+static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int length)
 {
 	unsigned int count;
 	unsigned int flags;
@@ -861,12 +794,41 @@ int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int length)
 							Con_DPrint("ack sequencing error\n");
 						conn->lastMessageTime = realtime;
 						conn->timeout = realtime + net_messagetimeout.value;
-						conn->sendMessageLength -= MAX_PACKETFRAGMENT;
-						if (conn->sendMessageLength > 0)
+						if (conn->sendMessageLength > MAX_PACKETFRAGMENT)
 						{
+							unsigned int packetLen;
+							unsigned int dataLen;
+							unsigned int eom;
+							unsigned int *header;
+
+							conn->sendMessageLength -= MAX_PACKETFRAGMENT;
 							memcpy(conn->sendMessage, conn->sendMessage+MAX_PACKETFRAGMENT, conn->sendMessageLength);
-							conn->sendNext = true;
-							NetConn_SendMessageNext(conn);
+
+							if (conn->sendMessageLength <= MAX_PACKETFRAGMENT)
+							{
+								dataLen = conn->sendMessageLength;
+								eom = NETFLAG_EOM;
+							}
+							else
+							{
+								dataLen = MAX_PACKETFRAGMENT;
+								eom = 0;
+							}
+
+							packetLen = NET_HEADERSIZE + dataLen;
+
+							header = (unsigned int *)sendbuffer;
+							header[0] = BigLong(packetLen | (NETFLAG_DATA | eom));
+							header[1] = BigLong(conn->sendSequence);
+							memcpy(sendbuffer + NET_HEADERSIZE, conn->sendMessage, dataLen);
+
+							conn->sendSequence++;
+
+							if (NetConn_Write(conn->mysocket, (void *)&sendbuffer, packetLen, &conn->peeraddress) == (int)packetLen)
+							{
+								conn->lastSendTime = realtime;
+								packetsSent++;
+							}
 						}
 						else
 						{
@@ -950,7 +912,7 @@ int NetConn_IsLocalGame(void)
 	return false;
 }
 
-int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *data, int length, lhnetaddress_t *peeraddress)
+static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *data, int length, lhnetaddress_t *peeraddress)
 {
 	int ret, c, control;
 	const char *s;
@@ -1289,7 +1251,6 @@ void NetConn_ClientFrame(void)
 {
 	int i, length;
 	lhnetaddress_t peeraddress;
-	netconn_t *conn;
 	NetConn_UpdateSockets();
 	if (cls.connect_trying && cls.connect_nextsendtime < realtime)
 	{
@@ -1316,11 +1277,9 @@ void NetConn_ClientFrame(void)
 		NetConn_Write(cls.connect_mysocket, net_message.data, net_message.cursize, &cls.connect_address);
 		SZ_Clear(&net_message);
 	}
-	for (i = 0;i < cl_numsockets;i++) {
-		while (cl_sockets[i] && (length = NetConn_Read(cl_sockets[i], readbuffer, sizeof(readbuffer), &peeraddress)) > 0) {
+	for (i = 0;i < cl_numsockets;i++)
+		while (cl_sockets[i] && (length = NetConn_Read(cl_sockets[i], readbuffer, sizeof(readbuffer), &peeraddress)) > 0)
 			NetConn_ClientParsePacket(cl_sockets[i], readbuffer, length, &peeraddress);
-		}
-	}
 	NetConn_QueryQueueFrame();
 	if (cls.netcon && realtime > cls.netcon->timeout)
 	{
@@ -1328,8 +1287,6 @@ void NetConn_ClientFrame(void)
 		CL_Disconnect();
 		Host_ShutdownServer ();
 	}
-	for (conn = netconn_list;conn;conn = conn->next)
-		NetConn_ReSendMessage(conn);
 }
 
 #define MAX_CHALLENGES 128
@@ -1430,7 +1387,7 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 }
 
 extern void SV_SendServerinfo (client_t *client);
-int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *data, int length, lhnetaddress_t *peeraddress)
+static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *data, int length, lhnetaddress_t *peeraddress)
 {
 	int i, ret, clientnum, best;
 	double besttime;
@@ -1827,7 +1784,6 @@ void NetConn_ServerFrame(void)
 {
 	int i, length;
 	lhnetaddress_t peeraddress;
-	netconn_t *conn;
 	NetConn_UpdateSockets();
 	for (i = 0;i < sv_numsockets;i++)
 		while (sv_sockets[i] && (length = NetConn_Read(sv_sockets[i], readbuffer, sizeof(readbuffer), &peeraddress)) > 0)
@@ -1841,8 +1797,6 @@ void NetConn_ServerFrame(void)
 			SV_DropClient(false);
 		}
 	}
-	for (conn = netconn_list;conn;conn = conn->next)
-		NetConn_ReSendMessage(conn);
 }
 
 void NetConn_QueryMasters(void)

@@ -126,7 +126,6 @@ typedef struct netconn_s
 	double lastSendTime;
 
 	qboolean canSend;
-	qboolean sendNext;
 
 	// writing buffer to send to peer as the next reliable message
 	// can be added to at any time, copied into sendMessage buffer when it is
@@ -292,10 +291,6 @@ extern sizebuf_t net_message;
 
 extern cvar_t cl_netlocalping;
 
-int NetConn_SendReliableMessage(netconn_t *conn, sizebuf_t *data);
-//void NetConn_SendMessageNext(netconn_t *conn);
-//void NetConn_ReSendMessage(netconn_t *conn);
-qboolean NetConn_CanSendMessage(netconn_t *conn);
 int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data);
 void NetConn_CloseClientPorts(void);
 void NetConn_OpenClientPorts(void);
@@ -310,9 +305,6 @@ netconn_t *NetConn_Open(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress);
 void NetConn_Close(netconn_t *conn);
 void NetConn_Listen(qboolean state);
 int NetConn_IsLocalGame(void);
-//int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int length);
-//int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *data, int length, lhnetaddress_t *peeraddress);
-//int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *data, int length, lhnetaddress_t *peeraddress);
 void NetConn_ClientFrame(void);
 void NetConn_ServerFrame(void);
 void NetConn_QueryMasters(void);

@@ -372,7 +372,6 @@ void SV_SendServerinfo (client_t *client)
 	MSG_WriteByte (&client->netconnection->message, svc_signonnum);
 	MSG_WriteByte (&client->netconnection->message, 1);
 
-	client->sendsignon = true;
 	client->spawned = false;		// need prespawn, spawn, etc
 }
 
@@ -1180,7 +1179,7 @@ SV_SendClientDatagram
 =======================
 */
 static unsigned char sv_sendclientdatagram_buf[NET_MAXMESSAGE]; // FIXME?
-qboolean SV_SendClientDatagram (client_t *client)
+void SV_SendClientDatagram (client_t *client)
 {
 	int rate, maxrate, maxsize, maxsize2;
 	sizebuf_t msg;
@@ -1219,31 +1218,35 @@ qboolean SV_SendClientDatagram (client_t *client)
 	msg.maxsize = maxsize;
 	msg.cursize = 0;
 
-	MSG_WriteByte (&msg, svc_time);
-	MSG_WriteFloat (&msg, sv.time);
-
-	// add the client specific data to the datagram
-	SV_WriteClientdataToMessage (client, client->edict, &msg, stats);
-	VM_SV_WriteAutoSentStats (client, client->edict, &msg, stats);
-	SV_WriteEntitiesToClient (client, client->edict, &msg, stats);
-
-	// expand packet size to allow effects to go over the rate limit
-	// (dropping them is FAR too ugly)
-	msg.maxsize = maxsize2;
-
-	// copy the server datagram if there is space
-	// FIXME: put in delayed queue of effects to send
-	if (sv.datagram.cursize > 0 && msg.cursize + sv.datagram.cursize <= msg.maxsize)
-		SZ_Write (&msg, sv.datagram.data, sv.datagram.cursize);
-
-// send the datagram
-	if (NetConn_SendUnreliableMessage (client->netconnection, &msg) == -1)
+	if (host_client->spawned)
 	{
-		SV_DropClient (true);// if the message couldn't send, kick off
-		return false;
+		MSG_WriteByte (&msg, svc_time);
+		MSG_WriteFloat (&msg, sv.time);
+
+		// add the client specific data to the datagram
+		SV_WriteClientdataToMessage (client, client->edict, &msg, stats);
+		VM_SV_WriteAutoSentStats (client, client->edict, &msg, stats);
+		SV_WriteEntitiesToClient (client, client->edict, &msg, stats);
+
+		// expand packet size to allow effects to go over the rate limit
+		// (dropping them is FAR too ugly)
+		msg.maxsize = maxsize2;
+
+		// copy the server datagram if there is space
+		// FIXME: put in delayed queue of effects to send
+		if (sv.datagram.cursize > 0 && msg.cursize + sv.datagram.cursize <= msg.maxsize)
+			SZ_Write (&msg, sv.datagram.data, sv.datagram.cursize);
+	}
+	else if (realtime > client->keepalivetime)
+	{
+		// the player isn't totally in the game yet
+		// send small keepalive messages if too much time has passed
+		client->keepalivetime = realtime + 5;
+		MSG_WriteChar (&msg, svc_nop);
 	}
 
-	return true;
+// send the datagram
+	NetConn_SendUnreliableMessage (client->netconnection, &msg);
 }
 
 /*
@@ -1339,30 +1342,6 @@ void SV_UpdateToReliableMessages (void)
 
 /*
 =======================
-SV_SendNop
-
-Send a nop message without trashing or sending the accumulated client
-message buffer
-=======================
-*/
-void SV_SendNop (client_t *client)
-{
-	sizebuf_t	msg;
-	unsigned char		buf[4];
-
-	msg.data = buf;
-	msg.maxsize = sizeof(buf);
-	msg.cursize = 0;
-
-	MSG_WriteChar (&msg, svc_nop);
-
-	if (NetConn_SendUnreliableMessage (client->netconnection, &msg) == -1)
-		SV_DropClient (true);	// if the message couldn't send, kick off
-	client->last_message = realtime;
-}
-
-/*
-=======================
 SV_SendClientMessages
 =======================
 */
@@ -1387,43 +1366,13 @@ void SV_SendClientMessages (void)
 			continue;
 		}
 
-		if (host_client->spawned)
+		if (!prepared)
 		{
-			if (!prepared)
-			{
-				prepared = true;
-				// only prepare entities once per frame
-				SV_PrepareEntitiesForSending();
-			}
-			if (!SV_SendClientDatagram (host_client))
-				continue;
+			prepared = true;
+			// only prepare entities once per frame
+			SV_PrepareEntitiesForSending();
 		}
-		else
-		{
-		// the player isn't totally in the game yet
-		// send small keepalive messages if too much time has passed
-		// send a full message when the next signon stage has been requested
-		// some other message data (name changes, etc) may accumulate
-		// between signon stages
-			if (!host_client->sendsignon)
-			{
-				if (realtime - host_client->last_message > 5)
-					SV_SendNop (host_client);
-				continue;	// don't send out non-signon messages
-			}
-		}
-
-		if (host_client->netconnection->message.cursize)
-		{
-			if (!NetConn_CanSendMessage (host_client->netconnection))
-				continue;
-
-			if (NetConn_SendReliableMessage (host_client->netconnection, &host_client->netconnection->message) == -1)
-				SV_DropClient (true);	// if the message couldn't send, kick off
-			SZ_Clear (&host_client->netconnection->message);
-			host_client->last_message = realtime;
-			host_client->sendsignon = false;
-		}
+		SV_SendClientDatagram (host_client);
 	}
 
 // clear muzzle flashes
