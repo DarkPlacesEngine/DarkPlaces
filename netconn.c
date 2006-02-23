@@ -1574,7 +1574,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					if (i < (int)sizeof(password) - 1)
 						password[i++] = *s;
 				password[i] = 0;
-				if (!strcmp(rcon_password.string, password))
+				if (password[0] > ' ' && !strcmp(rcon_password.string, password))
 				{
 					// looks like a legitimate rcon command with the correct password
 					Con_Printf("server received rcon command from %s:\n%s\n", host_client ? host_client->name : addressstring2, s);
