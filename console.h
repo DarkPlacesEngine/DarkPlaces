@@ -28,6 +28,10 @@ extern int con_totallines;
 extern int con_backscroll;
 extern qboolean con_initialized;
 
+extern qboolean rcon_redirect;
+extern int rcon_redirect_bufferpos;
+extern char rcon_redirect_buffer[1400];
+
 void Con_CheckResize (void);
 void Con_Init (void);
 void Con_Init_Commands (void);

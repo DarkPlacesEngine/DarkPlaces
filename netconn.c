@@ -930,9 +930,10 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		stringbuf[length] = 0;
 		string = stringbuf;
 
+		LHNETADDRESS_ToString(peeraddress, addressstring2, sizeof(addressstring2), true);
+
 		if (developer.integer)
 		{
-			LHNETADDRESS_ToString(peeraddress, addressstring2, sizeof(addressstring2), true);
 			Con_Printf("NetConn_ClientParsePacket: %s sent us a command:\n", addressstring2);
 			Com_HexDumpToConsole(data, length);
 		}
@@ -941,7 +942,6 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		{
 			char protocolnames[1400];
 			Protocol_Names(protocolnames, sizeof(protocolnames));
-			LHNETADDRESS_ToString(peeraddress, addressstring2, sizeof(addressstring2), true);
 			Con_Printf("\"%s\" received, sending connect request back to %s\n", string, addressstring2);
 			M_Update_Return_Reason("Got challenge response");
 			NetConn_WriteString(mysocket, va("\377\377\377\377connect\\protocol\\darkplaces 3\\protocols\\%s\\challenge\\%s", protocolnames, string + 10), peeraddress);
@@ -1086,6 +1086,11 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		if (!strncmp(string, "ack", 3))
 			return true;
 		*/
+		if (string[0] == 'n')
+		{
+			// qw print command
+			Con_Printf("QW print command from server at %s:\n", addressstring2, string + 1);
+		}
 		// we may not have liked the packet, but it was a command packet, so
 		// we're done processing this packet now
 		return true;
@@ -1393,7 +1398,16 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 	double besttime;
 	client_t *client;
 	netconn_t *conn;
-	char *s, *string, response[512], addressstring2[128], stringbuf[16384];
+	char *s, *string, response[1400], addressstring2[128], stringbuf[16384];
+
+	// see if we can identify the sender as a local player
+	// (this is necessary for rcon to send a reliable reply if the client is
+	//  actually on the server, not sending remotely)
+	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
+		if (host_client->netconnection && host_client->netconnection->mysocket == mysocket && !LHNETADDRESS_Compare(&host_client->netconnection->peeraddress, peeraddress))
+			break;
+	if (i == svs.maxclients)
+		host_client = NULL;
 
 	if (sv.active)
 	{
@@ -1500,7 +1514,9 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 											Con_Printf("Datagram_ParseConnectionless: sending \"accept\" to %s.\n", conn->address);
 										NetConn_WriteString(mysocket, "\377\377\377\377accept", peeraddress);
 										// now set up the client
+										SV_VM_Begin();
 										SV_ConnectClient(clientnum, conn);
+										SV_VM_End();
 										NetConn_Heartbeat(1);
 									}
 								}
@@ -1546,6 +1562,46 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					if (developer.integer)
 						Con_Printf("Sending reply to client %s - %s\n", addressstring2, response);
 					NetConn_WriteString(mysocket, response, peeraddress);
+				}
+				return true;
+			}
+			if (length >= 5 && !memcmp(string, "rcon ", 5))
+			{
+				int i;
+				char *s = string + 5;
+				char password[64];
+				for (i = 0;*s > ' ';s++)
+					if (i < (int)sizeof(password) - 1)
+						password[i++] = *s;
+				password[i] = 0;
+				if (!strcmp(rcon_password.string, password))
+				{
+					// looks like a legitimate rcon command with the correct password
+					Con_Printf("server received rcon command from %s:\n%s\n", host_client ? host_client->name : addressstring2, s);
+					rcon_redirect = true;
+					rcon_redirect_bufferpos = 0;
+					Cmd_ExecuteString(s, src_command);
+					rcon_redirect_buffer[rcon_redirect_bufferpos] = 0;
+					rcon_redirect = false;
+					// print resulting text to client
+					// if client is playing, send a reliable reply instead of
+					// a command packet
+					if (host_client)
+					{
+						// if the netconnection is loop, then this is the
+						// local player on a listen mode server, and it would
+						// result in duplicate printing to the console
+						// (not that the local player should be using rcon
+						//  when they have the console)
+						if (host_client->netconnection && LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) != LHNETADDRESSTYPE_LOOP)
+							SV_ClientPrintf("%s", rcon_redirect_buffer);
+					}
+					else
+					{
+						// qw print command
+						dpsnprintf(response, sizeof(response), "\377\377\377\377n%s", rcon_redirect_buffer);
+						NetConn_WriteString(mysocket, response, peeraddress);
+					}
 				}
 				return true;
 			}
@@ -1654,7 +1710,9 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 									NetConn_Write(mysocket, net_message.data, net_message.cursize, peeraddress);
 									SZ_Clear(&net_message);
 									// now set up the client struct
+									SV_VM_Begin();
 									SV_ConnectClient(clientnum, conn);
+									SV_VM_End();
 									NetConn_Heartbeat(1);
 								}
 								else
@@ -1767,12 +1825,11 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			}
 		}
 #endif
-		for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
+		if (host_client)
 		{
-			if (host_client->netconnection && host_client->netconnection->mysocket == mysocket && !LHNETADDRESS_Compare(&host_client->netconnection->peeraddress, peeraddress))
+			if ((ret = NetConn_ReceivedMessage(host_client->netconnection, data, length)) == 2)
 			{
-				if ((ret = NetConn_ReceivedMessage(host_client->netconnection, data, length)) == 2)
-					SV_ReadClientMessage();
+				SV_ReadClientMessage();
 				return ret;
 			}
 		}

@@ -22,6 +22,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 int current_skill;
 cvar_t sv_cheats = {0, "sv_cheats", "0", "enables cheat commands in any game, and cheat impulses in dpmod"};
+cvar_t rcon_password = {0, "rcon_password", "", "password to authenticate rcon commands"};
+cvar_t rcon_address = {0, "rcon_address", "", "server address to send rcon commands to (when not connected to a server)"};
 qboolean allowcheats = false;
 
 /*
@@ -788,6 +790,7 @@ void Host_Name_f (void)
 	host_client->nametime = sv.time + 5;
 
 	// point the string back at updateclient->name to keep it safe
+	SV_VM_Begin();
 	strlcpy (host_client->name, newName, sizeof (host_client->name));
 	host_client->edict->fields.server->netname = PRVM_SetEngineString(host_client->name);
 	if (strcmp(host_client->old_name, host_client->name))
@@ -800,6 +803,7 @@ void Host_Name_f (void)
 		MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
 		MSG_WriteString (&sv.reliable_datagram, host_client->name);
 	}
+	SV_VM_End();
 }
 
 /*
@@ -848,6 +852,7 @@ void Host_Playermodel_f (void)
 	host_client->nametime = sv.time + 5;
 	*/
 
+	SV_VM_Begin();
 	// point the string back at updateclient->name to keep it safe
 	strlcpy (host_client->playermodel, newPath, sizeof (host_client->playermodel));
 	if( eval_playermodel )
@@ -860,6 +865,7 @@ void Host_Playermodel_f (void)
 		MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
 		MSG_WriteString (&sv.reliable_datagram, host_client->playermodel);*/
 	}
+	SV_VM_End();
 }
 
 /*
@@ -907,6 +913,7 @@ void Host_Playerskin_f (void)
 	host_client->nametime = sv.time + 5;
 	*/
 
+	SV_VM_Begin();
 	// point the string back at updateclient->name to keep it safe
 	strlcpy (host_client->playerskin, newPath, sizeof (host_client->playerskin));
 	if( eval_playerskin )
@@ -921,6 +928,7 @@ void Host_Playerskin_f (void)
 		MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
 		MSG_WriteString (&sv.reliable_datagram, host_client->playerskin);*/
 	}
+	SV_VM_End();
 }
 
 void Host_Version_f (void)
@@ -1114,6 +1122,7 @@ void Host_Color_f(void)
 		return;
 	}
 
+	SV_VM_Begin();
 	if (host_client->edict && (f = PRVM_ED_FindFunction ("SV_ChangeTeam")) && (SV_ChangeTeam = (func_t)(f - prog->functions)))
 	{
 		Con_DPrint("Calling SV_ChangeTeam\n");
@@ -1141,6 +1150,7 @@ void Host_Color_f(void)
 			MSG_WriteByte (&sv.reliable_datagram, host_client->colors);
 		}
 	}
+	SV_VM_End();
 }
 
 cvar_t cl_rate = {CVAR_SAVE, "_cl_rate", "10000", "internal storage cvar for current rate (changed by rate command)"};
@@ -1187,9 +1197,11 @@ void Host_Kill_f (void)
 		return;
 	}
 
+	SV_VM_Begin();
 	prog->globals.server->time = sv.time;
 	prog->globals.server->self = PRVM_EDICT_TO_PROG(host_client->edict);
 	PRVM_ExecuteProgram (prog->globals.server->ClientKill, "QC function ClientKill is missing");
+	SV_VM_End();
 }
 
 
@@ -1248,8 +1260,10 @@ static void Host_PModel_f (void)
 		return;
 	}
 
+	SV_VM_Begin();
 	if (host_client->edict && (val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_pmodel)))
 		val->_float = i;
+	SV_VM_End();
 }
 
 //===========================================================================
@@ -1320,6 +1334,7 @@ void Host_Spawn_f (void)
 	//	SZ_Clear (&host_client->netconnection->message);
 
 	// run the entrance script
+	SV_VM_Begin();
 	if (sv.loadgame)
 	{
 		// loaded games are fully initialized already
@@ -1354,10 +1369,12 @@ void Host_Spawn_f (void)
 
 		PRVM_ExecuteProgram (prog->globals.server->PutClientInServer, "QC function PutClientInServer is missing");
 	}
+	SV_VM_End();
 
 	if (!host_client->netconnection)
 		return;
 
+	SV_VM_Begin();
 	// send time of update
 	MSG_WriteByte (&host_client->netconnection->message, svc_time);
 	MSG_WriteFloat (&host_client->netconnection->message, sv.time);
@@ -1420,6 +1437,7 @@ void Host_Spawn_f (void)
 
 	MSG_WriteByte (&host_client->netconnection->message, svc_signonnum);
 	MSG_WriteByte (&host_client->netconnection->message, 3);
+	SV_VM_End();
 }
 
 /*
@@ -1555,6 +1573,7 @@ void Host_Give_f (void)
 	t = Cmd_Argv(1);
 	v = atoi (Cmd_Argv(2));
 
+	SV_VM_Begin();
 	switch (t[0])
 	{
 	case '0':
@@ -1684,6 +1703,7 @@ void Host_Give_f (void)
 		}
 		break;
 	}
+	SV_VM_End();
 }
 
 prvm_edict_t	*FindViewthing (void)
@@ -1962,6 +1982,116 @@ static void MaxPlayers_f(void)
 
 //=============================================================================
 
+// QuakeWorld commands
+
+char emodel_name[] =
+	{ 'e' ^ 0xff, 'm' ^ 0xff, 'o' ^ 0xff, 'd' ^ 0xff, 'e' ^ 0xff, 'l' ^ 0xff, 0 };
+char pmodel_name[] =
+	{ 'p' ^ 0xff, 'm' ^ 0xff, 'o' ^ 0xff, 'd' ^ 0xff, 'e' ^ 0xff, 'l' ^ 0xff, 0 };
+char prespawn_name[] =
+	{ 'p'^0xff, 'r'^0xff, 'e'^0xff, 's'^0xff, 'p'^0xff, 'a'^0xff, 'w'^0xff, 'n'^0xff,
+		' '^0xff, '%'^0xff, 'i'^0xff, ' '^0xff, '0'^0xff, ' '^0xff, '%'^0xff, 'i'^0xff, 0 };
+char modellist_name[] =
+	{ 'm'^0xff, 'o'^0xff, 'd'^0xff, 'e'^0xff, 'l'^0xff, 'l'^0xff, 'i'^0xff, 's'^0xff, 't'^0xff,
+		' '^0xff, '%'^0xff, 'i'^0xff, ' '^0xff, '%'^0xff, 'i'^0xff, 0 };
+char soundlist_name[] =
+	{ 's'^0xff, 'o'^0xff, 'u'^0xff, 'n'^0xff, 'd'^0xff, 'l'^0xff, 'i'^0xff, 's'^0xff, 't'^0xff,
+		' '^0xff, '%'^0xff, 'i'^0xff, ' '^0xff, '%'^0xff, 'i'^0xff, 0 };
+
+/*
+=====================
+Host_Rcon_f
+
+  Send the rest of the command line over as
+  an unconnected command.
+=====================
+*/
+void Host_Rcon_f (void) // credit: taken from QuakeWorld
+{
+	lhnetaddress_t to;
+	lhnetsocket_t *mysocket;
+
+	if (!rcon_password.string)
+	{
+		Con_Printf ("You must set rcon_password before issuing an rcon command.\n");
+		return;
+	}
+
+	if (cls.netcon)
+		to = cls.netcon->peeraddress;
+	else
+	{
+		if (!rcon_address.integer || !rcon_address.string[0])
+		{
+			Con_Printf ("You must either be connected, or set the rcon_address cvar to issue rcon commands\n");
+			return;
+		}
+		LHNETADDRESS_FromString(&to, rcon_address.string, sv_netport.integer);
+	}
+	mysocket = NetConn_ChooseClientSocketForAddress(&to);
+	if (mysocket)
+	{
+		// simply put together the rcon packet and send it
+		NetConn_WriteString(mysocket, va("\377\377\377\377rcon %s %s", rcon_password.string, Cmd_Args()), &to);
+	}
+}
+
+/*
+====================
+Host_Packet_f
+
+packet <destination> <contents>
+
+Contents allows \n escape character
+====================
+*/
+void Host_Packet_f (void) // credit: taken from QuakeWorld
+{
+	char send[2048];
+	int i, l;
+	const char *in;
+	char *out;
+	lhnetaddress_t address;
+	lhnetsocket_t *mysocket;
+
+	if (Cmd_Argc() != 3)
+	{
+		Con_Printf ("packet <destination> <contents>\n");
+		return;
+	}
+
+	if (!LHNETADDRESS_FromString (&address, Cmd_Argv(1), sv_netport.integer))
+	{
+		Con_Printf ("Bad address\n");
+		return;
+	}
+
+	in = Cmd_Argv(2);
+	out = send+4;
+	send[0] = send[1] = send[2] = send[3] = 0xff;
+
+	l = strlen (in);
+	for (i=0 ; i<l ; i++)
+	{
+		if (out >= send + sizeof(send) - 1)
+			break;
+		if (in[i] == '\\' && in[i+1] == 'n')
+		{
+			*out++ = '\n';
+			i++;
+		}
+		else
+			*out++ = in[i];
+	}
+	*out = 0;
+
+	mysocket = NetConn_ChooseClientSocketForAddress(&address);
+	if (mysocket)
+		NetConn_WriteString(mysocket, send, &address);
+}
+
+//=============================================================================
+
 /*
 ==================
 Host_InitCommands
@@ -2036,6 +2166,11 @@ void Host_InitCommands (void)
 	Cmd_AddCommand ("maxplayers", MaxPlayers_f, "sets limit on how many players (or bots) may be connected to the server at once");
 
 	Cmd_AddCommand ("sendcvar", Host_SendCvar_f, "sends the value of a cvar to the server as a sentcvar command, for use by QuakeC");	// By [515]
+
+	Cvar_RegisterVariable (&rcon_password);
+	Cvar_RegisterVariable (&rcon_address);
+	Cmd_AddCommand ("rcon", Host_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's)");
+	Cmd_AddCommand ("packet", Host_Packet_f, "send a packet to the specified address:port containing a text string");
 
 	Cvar_RegisterVariable(&sv_cheats);
 }

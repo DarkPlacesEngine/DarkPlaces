@@ -122,6 +122,9 @@ void Host_Error (const char *error, ...)
 	static qboolean hosterror = false;
 	va_list argptr;
 
+	// turn off rcon redirect if it was active when the crash occurred
+	rcon_redirect = false;
+
 	va_start (argptr,error);
 	dpvsnprintf (hosterrorstring1,sizeof(hosterrorstring1),error,argptr);
 	va_end (argptr);
@@ -697,10 +700,6 @@ void Host_ServerFrame (void)
 		// set the time and clear the general datagram
 		SV_ClearDatagram();
 
-		// check for network packets to the server each world step incase they
-		// come in midframe (particularly if host is running really slow)
-		NetConn_ServerFrame();
-
 		// move things around and think unless paused
 		if (sv.frametime)
 			SV_Physics();
@@ -769,6 +768,11 @@ void _Host_Frame (float time)
 // server operations
 //
 //-------------------
+
+	// receive server packets now, which might contain rcon commands, which
+	// may change level or other such things we don't want to have happen in
+	// the middle of Host_Frame
+	NetConn_ServerFrame();
 
 	// check for commands typed to the host
 	Host_GetConsoleCommands();
