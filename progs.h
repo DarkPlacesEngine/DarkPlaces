@@ -38,6 +38,9 @@ typedef struct edict_engineprivate_s
 	// sv.time when the object was freed (to prevent early reuse which could
 	// mess up client interpolation or obscure severe QuakeC bugs)
 	float freetime;
+	// initially false to prevent projectiles from moving on their first frame
+	// (even if they were spawned by an synchronous client think)
+	qboolean move;
 
 	// cached cluster links for quick stationary object visibility checking
 	vec3_t cullmins, cullmaxs;
