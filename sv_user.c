@@ -685,7 +685,7 @@ qboolean SV_ReadClientMove (void)
 
 	if (!host_client->spawned)
 		memset(move, 0, sizeof(*move));
-	else if (move->time > sv.time + 0.01) // add a little fuzz factor due to float precision issues
+	else if (move->time > (float)sv.time + 0.001f) // add a little fuzz factor due to float precision issues
 	{
 		Con_DPrintf("client move->time %f > sv.time %f, kicking\n", move->time, sv.time);
 		// if the client is lying about time, we have definitively detected a
@@ -702,10 +702,10 @@ qboolean SV_ReadClientMove (void)
 		host_client->movesequence = move->sequence;
 		if (host_client->movesequence)
 		{
-			double frametime = move->time - oldmovetime;
+			double frametime = bound(0, move->time - oldmovetime, 0.1);
 			double oldframetime = prog->globals.server->frametime;
-			if (frametime > 0.1)
-				frametime = 0.1;
+			//if (move->time - oldmovetime >= 0.1001)
+			//	Con_DPrintf("client move exceeds 100ms!  (time %f -> time %f)\n", oldmovetime, move->time);
 			prog->globals.server->frametime = frametime;
 			SV_Physics_ClientEntity(host_client->edict);
 			prog->globals.server->frametime = oldframetime;
