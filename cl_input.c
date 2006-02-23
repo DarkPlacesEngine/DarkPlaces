@@ -857,7 +857,8 @@ void CL_SendMove(void)
 	upmove = cl.cmd.upmove;
 #endif
 
-	CL_UpdatePrydonCursor();
+	if (cls.signon == SIGNONS)
+		CL_UpdatePrydonCursor();
 
 	buf.maxsize = 128;
 	buf.cursize = 0;

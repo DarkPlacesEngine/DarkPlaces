@@ -609,8 +609,6 @@ qboolean SV_ReadClientMove (void)
 	double oldmovetime;
 	usercmd_t *move = &host_client->cmd;
 
-	SV_VM_Begin();
-
 	oldmovetime = move->time;
 
 	// if this move has been applied, clear it, and start accumulating new data
@@ -714,7 +712,6 @@ qboolean SV_ReadClientMove (void)
 			prog->globals.server->frametime = oldframetime;
 		}
 	}
-	SV_VM_End();
 	return kickplayer;
 }
 
