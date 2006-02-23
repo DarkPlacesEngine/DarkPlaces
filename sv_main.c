@@ -1977,6 +1977,8 @@ void SV_VM_CB_InitEdict(prvm_edict_t *e)
 	// LordHavoc: for consistency set these here
 	int num = PRVM_NUM_FOR_EDICT(e) - 1;
 
+	e->priv.server->move = false; // don't move on first frame
+
 	if (num >= 0 && num < svs.maxclients)
 	{
 		prvm_eval_t *val;
