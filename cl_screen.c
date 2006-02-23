@@ -484,7 +484,7 @@ void R_TimeReport(char *desc)
 	int length;
 	int t;
 
-	if (!r_timereport_active || r_showtrispass)
+	if (r_speeds.integer < 2 || !r_timereport_active || r_showtrispass)
 		return;
 
 	qglFinish();
@@ -538,12 +538,16 @@ void R_TimeReport_Start(void)
 
 void R_TimeReport_End(void)
 {
+	int i, j, lines, y;
+
 	r_timereport_current = r_timereport_start;
 	R_TimeReport("total");
 
-	if (r_timereport_active)
+	j = (int)strlen(r_speeds_string);
+	if (r_timereport_active && j > 0)
 	{
-		int i, j, lines, y;
+		if (r_speeds_string[j-1] == '\n')
+			r_speeds_string[j-1] = 0;
 		lines = 1;
 		for (i = 0;r_speeds_string[i];i++)
 			if (r_speeds_string[i] == '\n')
