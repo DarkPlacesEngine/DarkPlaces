@@ -1394,8 +1394,12 @@ void SV_Physics_Step (prvm_edict_t *ent)
 
 //============================================================================
 
-static void SV_Physics_Entity (prvm_edict_t *ent, qboolean runmove)
+static void SV_Physics_Entity (prvm_edict_t *ent)
 {
+	// don't run a move on newly spawned projectiles as it messes up movement
+	// interpolation and rocket trails
+	qboolean runmove = ent->priv.server->move;
+	ent->priv.server->move = true;
 	switch ((int) ent->fields.server->movetype)
 	{
 	case MOVETYPE_PUSH:
@@ -1550,9 +1554,8 @@ SV_Physics
 */
 void SV_Physics (void)
 {
-	int i, newnum_edicts;
+	int i;
 	prvm_edict_t *ent;
-	unsigned char runmove[MAX_EDICTS];
 
 // let the progs know that a new frame has started
 	prog->globals.server->self = PRVM_EDICT_TO_PROG(prog->edicts);
@@ -1560,14 +1563,6 @@ void SV_Physics (void)
 	prog->globals.server->time = sv.time;
 	prog->globals.server->frametime = sv.frametime;
 	PRVM_ExecuteProgram (prog->globals.server->StartFrame, "QC function StartFrame is missing");
-
-	// don't run a move on newly spawned projectiles as it messes up movement
-	// interpolation and rocket trails
-	newnum_edicts = 0;
-	for (i = 0, ent = prog->edicts;i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
-		if ((runmove[i] = !ent->priv.server->free))
-			newnum_edicts = i + 1;
-	prog->num_edicts = max(svs.maxclients + 1, newnum_edicts);
 
 //
 // treat each object in turn
@@ -1597,7 +1592,7 @@ void SV_Physics (void)
 	if (!sv_freezenonclients.integer)
 		for (;i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
 			if (!ent->priv.server->free)
-				SV_Physics_Entity(ent, runmove[i]);
+				SV_Physics_Entity(ent);
 
 	if (prog->globals.server->force_retouch > 0)
 		prog->globals.server->force_retouch = max(0, prog->globals.server->force_retouch - 1);
@@ -1610,6 +1605,9 @@ void SV_Physics (void)
 		prog->globals.server->time = sv.time;
 		PRVM_ExecuteProgram ((func_t)(EndFrameQC - prog->functions), "QC function EndFrame is missing");
 	}
+
+	// decrement prog->num_edicts if the highest number entities died
+	for (;PRVM_EDICT_NUM(prog->num_edicts - 1)->priv.server->free;prog->num_edicts--);
 
 	if (!sv_freezenonclients.integer)
 		sv.time += sv.frametime;
