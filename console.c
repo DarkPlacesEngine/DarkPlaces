@@ -53,6 +53,11 @@ int con_vislines;
 
 qboolean con_initialized;
 
+// used for server replies to rcon command
+qboolean rcon_redirect = false;
+int rcon_redirect_bufferpos = 0;
+char rcon_redirect_buffer[1400];
+
 
 /*
 ==============================================================================
@@ -561,9 +566,13 @@ void Con_Print(const char *msg)
 
 	for (;*msg;msg++)
 	{
+		// if this print is in response to an rcon command, add the character
+		// to the rcon redirect buffer
+		if (rcon_redirect && rcon_redirect_bufferpos < (int)sizeof(rcon_redirect_buffer) - 1)
+			rcon_redirect_buffer[rcon_redirect_bufferpos++] = *msg;
+		// if this is the beginning of a new line, print timestamp
 		if (index == 0)
 		{
-			// if this is the beginning of a new line, print timestamp
 			const char *timestamp = timestamps.integer ? Sys_TimeString(timeformat.string) : "";
 			// reset the color
 			// FIXME: 1. perhaps we should use a terminal system 2. use a constant instead of 7!

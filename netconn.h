@@ -291,6 +291,11 @@ extern sizebuf_t net_message;
 
 extern cvar_t cl_netlocalping;
 
+extern cvar_t cl_netport;
+extern cvar_t sv_netport;
+extern cvar_t net_address;
+//extern cvar_t net_netaddress_ipv6;
+
 int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data);
 void NetConn_CloseClientPorts(void);
 void NetConn_OpenClientPorts(void);
@@ -304,6 +309,9 @@ void NetConn_Shutdown(void);
 netconn_t *NetConn_Open(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress);
 void NetConn_Close(netconn_t *conn);
 void NetConn_Listen(qboolean state);
+int NetConn_Read(lhnetsocket_t *mysocket, void *data, int maxlength, lhnetaddress_t *peeraddress);
+int NetConn_Write(lhnetsocket_t *mysocket, const void *data, int length, const lhnetaddress_t *peeraddress);
+int NetConn_WriteString(lhnetsocket_t *mysocket, const char *string, const lhnetaddress_t *peeraddress);
 int NetConn_IsLocalGame(void);
 void NetConn_ClientFrame(void);
 void NetConn_ServerFrame(void);

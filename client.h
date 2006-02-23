@@ -659,6 +659,9 @@ extern cvar_t cl_pmodel;
 extern cvar_t cl_playermodel;
 extern cvar_t cl_playerskin;
 
+extern cvar_t rcon_password;
+extern cvar_t rcon_address;
+
 extern cvar_t cl_upspeed;
 extern cvar_t cl_forwardspeed;
 extern cvar_t cl_backspeed;

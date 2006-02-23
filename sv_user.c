@@ -604,9 +604,12 @@ SV_ReadClientMove
 */
 qboolean SV_ReadClientMove (void)
 {
+	qboolean kickplayer = false;
 	int i;
 	double oldmovetime;
 	usercmd_t *move = &host_client->cmd;
+
+	SV_VM_Begin();
 
 	oldmovetime = move->time;
 
@@ -694,7 +697,7 @@ qboolean SV_ReadClientMove (void)
 		// this fixes the timestamp to prevent a speed cheat from working
 		move->time = sv.time;
 		// but we kick the player for good measure
-		return true;
+		kickplayer = true;
 	}
 	else
 	{
@@ -711,7 +714,8 @@ qboolean SV_ReadClientMove (void)
 			prog->globals.server->frametime = oldframetime;
 		}
 	}
-	return false;
+	SV_VM_End();
+	return kickplayer;
 }
 
 void SV_ApplyClientMove (void)
