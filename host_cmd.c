@@ -1972,13 +1972,23 @@ Host_Rcon_f
 */
 void Host_Rcon_f (void) // credit: taken from QuakeWorld
 {
+	int i;
 	lhnetaddress_t to;
 	lhnetsocket_t *mysocket;
 
-	if (!rcon_password.string)
+	if (!rcon_password.string || !rcon_password.string[0])
 	{
 		Con_Printf ("You must set rcon_password before issuing an rcon command.\n");
 		return;
+	}
+
+	for (i = 0;rcon_password.string[i];i++)
+	{
+		if (rcon_password.string[i] <= ' ')
+		{
+			Con_Printf("rcon_password is not allowed to have any whitespace.\n");
+			return;
+		}
 	}
 
 	if (cls.netcon)
