@@ -96,13 +96,11 @@ void PolygonD_QuadForPlane(double *outpoints, double planenormalx, double planen
 	outpoints[11] = planedist * planenormalz - quadsize * quadright[2] - quadsize * quadup[2];
 }
 
-void PolygonF_Divide(int innumpoints, const float *inpoints, float planenormalx, float planenormaly, float planenormalz, float planedist, float epsilon, int outfrontmaxpoints, float *outfrontpoints, int *neededfrontpoints, int outbackmaxpoints, float *outbackpoints, int *neededbackpoints)
+void PolygonF_Divide(int innumpoints, const float *inpoints, float planenormalx, float planenormaly, float planenormalz, float planedist, float epsilon, int outfrontmaxpoints, float *outfrontpoints, int *neededfrontpoints, int outbackmaxpoints, float *outbackpoints, int *neededbackpoints, int *oncountpointer)
 {
-	int i, frontcount, backcount;
+	int i, frontcount = 0, backcount = 0, oncount = 0;
 	const float *n, *p;
-	float frac, pdist, ndist;
-	frontcount = 0;
-	backcount = 0;
+	double frac, pdist, ndist;
 	for (i = 0;i < innumpoints;i++)
 	{
 		p = inpoints + i * 3;
@@ -111,6 +109,8 @@ void PolygonF_Divide(int innumpoints, const float *inpoints, float planenormalx,
 		ndist = n[0] * planenormalx + n[1] * planenormaly + n[2] * planenormalz - planedist;
 		if (pdist >= -epsilon)
 		{
+			if (pdist <= epsilon)
+				oncount++;
 			if (frontcount < outfrontmaxpoints)
 			{
 				*outfrontpoints++ = p[0];
@@ -131,6 +131,7 @@ void PolygonF_Divide(int innumpoints, const float *inpoints, float planenormalx,
 		}
 		if ((pdist > epsilon && ndist < -epsilon) || (pdist < -epsilon && ndist > epsilon))
 		{
+			oncount++;
 			frac = pdist / (pdist - ndist);
 			if (frontcount < outfrontmaxpoints)
 			{
@@ -152,15 +153,15 @@ void PolygonF_Divide(int innumpoints, const float *inpoints, float planenormalx,
 		*neededfrontpoints = frontcount;
 	if (neededbackpoints)
 		*neededbackpoints = backcount;
+	if (oncountpointer)
+		*oncountpointer = oncount;
 }
 
-void PolygonD_Divide(int innumpoints, const double *inpoints, double planenormalx, double planenormaly, double planenormalz, double planedist, double epsilon, int outfrontmaxpoints, double *outfrontpoints, int *neededfrontpoints, int outbackmaxpoints, double *outbackpoints, int *neededbackpoints)
+void PolygonD_Divide(int innumpoints, const double *inpoints, double planenormalx, double planenormaly, double planenormalz, double planedist, double epsilon, int outfrontmaxpoints, double *outfrontpoints, int *neededfrontpoints, int outbackmaxpoints, double *outbackpoints, int *neededbackpoints, int *oncountpointer)
 {
-	int i, frontcount, backcount;
+	int i, frontcount = 0, backcount = 0, oncount = 0;
 	const double *n, *p;
 	double frac, pdist, ndist;
-	frontcount = 0;
-	backcount = 0;
 	for (i = 0;i < innumpoints;i++)
 	{
 		p = inpoints + i * 3;
@@ -169,6 +170,8 @@ void PolygonD_Divide(int innumpoints, const double *inpoints, double planenormal
 		ndist = n[0] * planenormalx + n[1] * planenormaly + n[2] * planenormalz - planedist;
 		if (pdist >= -epsilon)
 		{
+			if (pdist <= epsilon)
+				oncount++;
 			if (frontcount < outfrontmaxpoints)
 			{
 				*outfrontpoints++ = p[0];
@@ -189,6 +192,7 @@ void PolygonD_Divide(int innumpoints, const double *inpoints, double planenormal
 		}
 		if ((pdist > epsilon && ndist < -epsilon) || (pdist < -epsilon && ndist > epsilon))
 		{
+			oncount++;
 			frac = pdist / (pdist - ndist);
 			if (frontcount < outfrontmaxpoints)
 			{
@@ -210,5 +214,7 @@ void PolygonD_Divide(int innumpoints, const double *inpoints, double planenormal
 		*neededfrontpoints = frontcount;
 	if (neededbackpoints)
 		*neededbackpoints = backcount;
+	if (oncountpointer)
+		*oncountpointer = oncount;
 }
 

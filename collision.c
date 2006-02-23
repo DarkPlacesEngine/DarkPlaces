@@ -183,7 +183,7 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 			{
 				// we want to keep the inside of the brush plane so we flip
 				// the cutting plane
-				PolygonD_Divide(pnumpoints, p[w], -originalplanes[k].normal[0], -originalplanes[k].normal[1], -originalplanes[k].normal[2], -originalplanes[k].dist, 1.0/32.0, pmaxpoints, p[!w], &pnumpoints, 0, NULL, NULL);
+				PolygonD_Divide(pnumpoints, p[w], -originalplanes[k].normal[0], -originalplanes[k].normal[1], -originalplanes[k].normal[2], -originalplanes[k].dist, 1.0/32.0, pmaxpoints, p[!w], &pnumpoints, 0, NULL, NULL, NULL);
 				w = !w;
 			}
 		}

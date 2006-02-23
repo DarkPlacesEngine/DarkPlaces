@@ -2789,7 +2789,7 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 
 		for (i = 0;i < nodeportal->numpoints*3;i++)
 			frontpoints[i] = nodeportal->points[i];
-		PolygonD_Divide(nodeportal->numpoints, frontpoints, clipplane.normal[0], clipplane.normal[1], clipplane.normal[2], clipplane.dist, 1.0/32.0, MAX_PORTALPOINTS, nodeportal->points, &nodeportal->numpoints, 0, NULL, NULL);
+		PolygonD_Divide(nodeportal->numpoints, frontpoints, clipplane.normal[0], clipplane.normal[1], clipplane.normal[2], clipplane.dist, 1.0/32.0, MAX_PORTALPOINTS, nodeportal->points, &nodeportal->numpoints, 0, NULL, NULL, NULL);
 		if (nodeportal->numpoints <= 0 || nodeportal->numpoints >= MAX_PORTALPOINTS)
 			break;
 	}
@@ -2827,7 +2827,7 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 		RemovePortalFromNodes(portal);
 
 		// cut the portal into two portals, one on each side of the node plane
-		PolygonD_Divide(portal->numpoints, portal->points, plane->normal[0], plane->normal[1], plane->normal[2], plane->dist, 1.0/32.0, MAX_PORTALPOINTS, frontpoints, &numfrontpoints, MAX_PORTALPOINTS, backpoints, &numbackpoints);
+		PolygonD_Divide(portal->numpoints, portal->points, plane->normal[0], plane->normal[1], plane->normal[2], plane->dist, 1.0/32.0, MAX_PORTALPOINTS, frontpoints, &numfrontpoints, MAX_PORTALPOINTS, backpoints, &numbackpoints, NULL);
 
 		if (!numfrontpoints)
 		{
