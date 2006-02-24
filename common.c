@@ -1274,6 +1274,11 @@ void InfoString_GetValue(const char *buffer, const char *key, char *value, size_
 		Con_Printf("InfoString_GetValue: key name \"%s\" contains \\ which is not possible in an infostring\n", key);
 		return;
 	}
+	if (strchr(key, '\"'))
+	{
+		Con_Printf("InfoString_SetValue: key name \"%s\" contains \" which is not allowed in an infostring\n", key);
+		return;
+	}
 	if (!key[0])
 	{
 		Con_Printf("InfoString_GetValue: can not look up a key with no name\n");
@@ -1308,6 +1313,11 @@ void InfoString_SetValue(char *buffer, size_t bufferlength, const char *key, con
 	if (strchr(key, '\\') || strchr(value, '\\'))
 	{
 		Con_Printf("InfoString_SetValue: \"%s\" \"%s\" contains \\ which is not possible to store in an infostring\n", key, value);
+		return;
+	}
+	if (strchr(key, '\"') || strchr(value, '\"'))
+	{
+		Con_Printf("InfoString_SetValue: \"%s\" \"%s\" contains \" which is not allowed in an infostring\n", key, value);
 		return;
 	}
 	if (!key[0])
@@ -1348,6 +1358,35 @@ void InfoString_SetValue(char *buffer, size_t bufferlength, const char *key, con
 	}
 }
 
+void InfoString_Print(char *buffer)
+{
+	int i;
+	char key[2048];
+	char value[2048];
+	while (*buffer)
+	{
+		if (*buffer != '\\')
+		{
+			Con_Printf("InfoString_Print: corrupt string\n");
+			return;
+		}
+		for (buffer++, i = 0;*buffer && *buffer != '\\';buffer++)
+			if (i < (int)sizeof(key)-1)
+				key[i++] = *buffer;
+		key[i] = 0;
+		if (*buffer != '\\')
+		{
+			Con_Printf("InfoString_Print: corrupt string\n");
+			return;
+		}
+		for (buffer++, i = 0;*buffer && *buffer != '\\';buffer++)
+			if (i < (int)sizeof(value)-1)
+				value[i++] = *buffer;
+		value[i] = 0;
+		// empty value is an error case
+		Con_Printf("%20s %s\n", key, value[0] ? value : "NO VALUE");
+	}
+}
 
 //========================================================
 // strlcat and strlcpy, from OpenBSD
