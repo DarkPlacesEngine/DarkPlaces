@@ -133,18 +133,57 @@ typedef struct netconn_s
 
 	// reliable message that is currently sending
 	// (for building fragments)
-	unsigned int ackSequence;
-	unsigned int sendSequence;
-	unsigned int unreliableSendSequence;
 	int sendMessageLength;
 	unsigned char sendMessage[NET_MAXMESSAGE];
 
 	// reliable message that is currently being received
 	// (for putting together fragments)
-	unsigned int receiveSequence;
-	unsigned int unreliableReceiveSequence;
 	int receiveMessageLength;
 	unsigned char receiveMessage[NET_MAXMESSAGE];
+
+	struct netconn_nq_s
+	{
+		unsigned int ackSequence;
+		unsigned int sendSequence;
+		unsigned int unreliableSendSequence;
+
+		unsigned int receiveSequence;
+		unsigned int unreliableReceiveSequence;
+	}
+	nq;
+	struct netconn_qw_s
+	{
+		// QW protocol
+		qboolean	fatal_error;
+
+		float		last_received;		// for timeouts
+
+	// the statistics are cleared at each client begin, because
+	// the server connecting process gives a bogus picture of the data
+		float		frame_latency;		// rolling average
+		float		frame_rate;
+
+		int			drop_count;			// dropped packets, cleared each level
+		int			good_count;			// cleared each level
+
+		int			qport;
+
+	// bandwidth estimator
+		double		cleartime;			// if realtime > nc->cleartime, free to go
+		double		rate;				// seconds / byte
+
+	// sequencing variables
+		int			incoming_sequence;
+		int			incoming_acknowledged;
+		int			incoming_reliable_acknowledged;	// single bit
+
+		int			incoming_reliable_sequence;		// single bit, maintained local
+
+		int			outgoing_sequence;
+		int			reliable_sequence;			// single bit
+		int			last_reliable_sequence;		// sequence number of last send
+	}
+	qw;
 
 	char address[128];
 } netconn_t;
@@ -294,7 +333,7 @@ extern cvar_t sv_netport;
 extern cvar_t net_address;
 //extern cvar_t net_netaddress_ipv6;
 
-int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data);
+int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolversion_t protocol);
 void NetConn_CloseClientPorts(void);
 void NetConn_OpenClientPorts(void);
 void NetConn_CloseServerPorts(void);

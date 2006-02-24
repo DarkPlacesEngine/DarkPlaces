@@ -32,6 +32,8 @@ typedef struct server_static_s
 	int serverflags;
 	// cleared when at SV_SpawnServer
 	qboolean changelevel_issued;
+	// server infostring
+	char serverinfo[MAX_SERVERINFO_STRING];
 } server_static_t;
 
 //=============================================================================

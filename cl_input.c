@@ -1023,7 +1023,7 @@ void CL_SendMove(void)
 	}
 
 	// send the reliable message (forwarded commands) if there is one
-	NetConn_SendUnreliableMessage(cls.netcon, &buf);
+	NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol);
 
 	if (cls.netcon->message.overflowed)
 	{

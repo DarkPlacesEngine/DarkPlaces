@@ -1246,7 +1246,7 @@ void SV_SendClientDatagram (client_t *client)
 	}
 
 // send the datagram
-	NetConn_SendUnreliableMessage (client->netconnection, &msg);
+	NetConn_SendUnreliableMessage (client->netconnection, &msg, sv.protocol);
 }
 
 /*
@@ -1348,6 +1348,9 @@ SV_SendClientMessages
 void SV_SendClientMessages (void)
 {
 	int i, prepared = false;
+
+	if (sv.protocol == PROTOCOL_QUAKEWORLD)
+		Sys_Error("SV_SendClientMessages: no quakeworld support\n");
 
 // update frags, names, etc
 	SV_UpdateToReliableMessages();

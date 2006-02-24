@@ -432,112 +432,170 @@ int NetConn_WriteString(lhnetsocket_t *mysocket, const char *string, const lhnet
 	return NetConn_Write(mysocket, string, (int)strlen(string), peeraddress);
 }
 
-int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data)
+int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolversion_t protocol)
 {
-	unsigned int packetLen;
-	unsigned int dataLen;
-	unsigned int eom;
-	unsigned int *header;
-
-	// if a reliable message fragment has been lost, send it again
-	if (conn->sendMessageLength && (realtime - conn->lastSendTime) > 1.0)
+	if (protocol == PROTOCOL_QUAKEWORLD)
 	{
-		if (conn->sendMessageLength <= MAX_PACKETFRAGMENT)
-		{
-			dataLen = conn->sendMessageLength;
-			eom = NETFLAG_EOM;
-		}
-		else
-		{
-			dataLen = MAX_PACKETFRAGMENT;
-			eom = 0;
-		}
+		int packetLen;
+		qboolean sendreliable;
 
-		packetLen = NET_HEADERSIZE + dataLen;
-
-		header = (unsigned int *)sendbuffer;
-		header[0] = BigLong(packetLen | (NETFLAG_DATA | eom));
-		header[1] = BigLong(conn->sendSequence - 1);
-		memcpy(sendbuffer + NET_HEADERSIZE, conn->sendMessage, dataLen);
-
-		if (NetConn_Write(conn->mysocket, (void *)&sendbuffer, packetLen, &conn->peeraddress) == (int)packetLen)
+		if (data->cursize == 0 && conn->message.cursize == 0)
 		{
-			conn->lastSendTime = realtime;
-			packetsReSent++;
-		}
-	}
-
-	// if we have a new reliable message to send, do so
-	if (!conn->sendMessageLength && conn->message.cursize)
-	{
-		if (conn->message.cursize > (int)sizeof(conn->sendMessage))
-		{
-			Con_Printf("NetConn_SendUnreliableMessage: reliable message too big (%u > %u)\n", conn->message.cursize, sizeof(conn->sendMessage));
-			conn->message.overflowed = true;
+			Con_Printf ("Datagram_SendUnreliableMessage: zero length message\n");
 			return -1;
 		}
 
-		if (developer_networking.integer && conn == cls.netcon)
+		sendreliable = false;
+		// if the remote side dropped the last reliable message, resend it
+		if (conn->qw.incoming_acknowledged > conn->qw.last_reliable_sequence && conn->qw.incoming_reliable_acknowledged != conn->qw.reliable_sequence)
+			sendreliable = true;
+		// if the reliable transmit buffer is empty, copy the current message out
+		if (!conn->sendMessageLength && conn->message.cursize)
 		{
-			Con_Print("client sending reliable message to server:\n");
-			SZ_HexDumpToConsole(&conn->message);
+			memcpy (conn->sendMessage, conn->message.data, conn->message.cursize);
+			conn->sendMessageLength = conn->message.cursize;
+			SZ_Clear(&conn->message); // clear the message buffer
+			conn->qw.reliable_sequence ^= 1;
+			sendreliable = true;
 		}
-
-		memcpy(conn->sendMessage, conn->message.data, conn->message.cursize);
-		conn->sendMessageLength = conn->message.cursize;
-		SZ_Clear(&conn->message);
-
-		if (conn->sendMessageLength <= MAX_PACKETFRAGMENT)
+		// outgoing unreliable packet number, and outgoing reliable packet number (0 or 1)
+		*((int *)(sendbuffer + 0)) = LittleLong(conn->qw.outgoing_sequence | (sendreliable<<31));
+		// last received unreliable packet number, and last received reliable packet number (0 or 1)
+		*((int *)(sendbuffer + 4)) = LittleLong(conn->qw.incoming_sequence | (conn->qw.incoming_reliable_sequence<<31));
+		packetLen = 8;
+		// client sends qport in every packet
+		if (conn == cls.netcon)
 		{
-			dataLen = conn->sendMessageLength;
-			eom = NETFLAG_EOM;
+			*((short *)(sendbuffer + 8)) = LittleShort(cls.qport);
+			packetLen += 2;
 		}
-		else
+		if (packetLen + (sendreliable ? conn->sendMessageLength : 0) + data->cursize > (int)sizeof(sendbuffer))
 		{
-			dataLen = MAX_PACKETFRAGMENT;
-			eom = 0;
-		}
-
-		packetLen = NET_HEADERSIZE + dataLen;
-
-		header = (unsigned int *)sendbuffer;
-		header[0] = BigLong(packetLen | (NETFLAG_DATA | eom));
-		header[1] = BigLong(conn->sendSequence);
-		memcpy(sendbuffer + NET_HEADERSIZE, conn->sendMessage, dataLen);
-
-		conn->sendSequence++;
-
-		NetConn_Write(conn->mysocket, (void *)&sendbuffer, packetLen, &conn->peeraddress);
-
-		conn->lastSendTime = realtime;
-		packetsSent++;
-		reliableMessagesSent++;
-	}
-
-	// if we have an unreliable message to send, do so
-	if (data->cursize)
-	{
-		packetLen = NET_HEADERSIZE + data->cursize;
-
-		if (packetLen > (int)sizeof(sendbuffer))
-		{
-			Con_Printf("NetConn_SendUnreliableMessage: message too big %u\n", data->cursize);
+			Con_Printf ("NetConn_SendUnreliableMessage: reliable message too big %u\n", data->cursize);
 			return -1;
 		}
-
-		header = (unsigned int *)sendbuffer;
-		header[0] = BigLong(packetLen | NETFLAG_UNRELIABLE);
-		header[1] = BigLong(conn->unreliableSendSequence);
-		memcpy(sendbuffer + NET_HEADERSIZE, data->data, data->cursize);
-
-		conn->unreliableSendSequence++;
+		if (sendreliable)
+		{
+			memcpy(sendbuffer + packetLen, conn->sendMessage, conn->sendMessageLength);
+			packetLen += conn->sendMessageLength;
+		}
+		memcpy(sendbuffer + packetLen, data->data, data->cursize);
+		packetLen += data->cursize;
+		conn->qw.outgoing_sequence++;
 
 		NetConn_Write(conn->mysocket, (void *)&sendbuffer, packetLen, &conn->peeraddress);
 
 		packetsSent++;
 		unreliableMessagesSent++;
+		return 0;
 	}
-	return 0;
+	else
+	{
+		unsigned int packetLen;
+		unsigned int dataLen;
+		unsigned int eom;
+		unsigned int *header;
+
+		// if a reliable message fragment has been lost, send it again
+		if (conn->sendMessageLength && (realtime - conn->lastSendTime) > 1.0)
+		{
+			if (conn->sendMessageLength <= MAX_PACKETFRAGMENT)
+			{
+				dataLen = conn->sendMessageLength;
+				eom = NETFLAG_EOM;
+			}
+			else
+			{
+				dataLen = MAX_PACKETFRAGMENT;
+				eom = 0;
+			}
+
+			packetLen = NET_HEADERSIZE + dataLen;
+
+			header = (unsigned int *)sendbuffer;
+			header[0] = BigLong(packetLen | (NETFLAG_DATA | eom));
+			header[1] = BigLong(conn->nq.sendSequence - 1);
+			memcpy(sendbuffer + NET_HEADERSIZE, conn->sendMessage, dataLen);
+
+			if (NetConn_Write(conn->mysocket, (void *)&sendbuffer, packetLen, &conn->peeraddress) == (int)packetLen)
+			{
+				conn->lastSendTime = realtime;
+				packetsReSent++;
+			}
+		}
+
+		// if we have a new reliable message to send, do so
+		if (!conn->sendMessageLength && conn->message.cursize)
+		{
+			if (conn->message.cursize > (int)sizeof(conn->sendMessage))
+			{
+				Con_Printf("NetConn_SendUnreliableMessage: reliable message too big (%u > %u)\n", conn->message.cursize, sizeof(conn->sendMessage));
+				conn->message.overflowed = true;
+				return -1;
+			}
+
+			if (developer_networking.integer && conn == cls.netcon)
+			{
+				Con_Print("client sending reliable message to server:\n");
+				SZ_HexDumpToConsole(&conn->message);
+			}
+
+			memcpy(conn->sendMessage, conn->message.data, conn->message.cursize);
+			conn->sendMessageLength = conn->message.cursize;
+			SZ_Clear(&conn->message);
+
+			if (conn->sendMessageLength <= MAX_PACKETFRAGMENT)
+			{
+				dataLen = conn->sendMessageLength;
+				eom = NETFLAG_EOM;
+			}
+			else
+			{
+				dataLen = MAX_PACKETFRAGMENT;
+				eom = 0;
+			}
+
+			packetLen = NET_HEADERSIZE + dataLen;
+
+			header = (unsigned int *)sendbuffer;
+			header[0] = BigLong(packetLen | (NETFLAG_DATA | eom));
+			header[1] = BigLong(conn->nq.sendSequence);
+			memcpy(sendbuffer + NET_HEADERSIZE, conn->sendMessage, dataLen);
+
+			conn->nq.sendSequence++;
+
+			NetConn_Write(conn->mysocket, (void *)&sendbuffer, packetLen, &conn->peeraddress);
+
+			conn->lastSendTime = realtime;
+			packetsSent++;
+			reliableMessagesSent++;
+		}
+
+		// if we have an unreliable message to send, do so
+		if (data->cursize)
+		{
+			packetLen = NET_HEADERSIZE + data->cursize;
+
+			if (packetLen > (int)sizeof(sendbuffer))
+			{
+				Con_Printf("NetConn_SendUnreliableMessage: message too big %u\n", data->cursize);
+				return -1;
+			}
+
+			header = (unsigned int *)sendbuffer;
+			header[0] = BigLong(packetLen | NETFLAG_UNRELIABLE);
+			header[1] = BigLong(conn->nq.unreliableSendSequence);
+			memcpy(sendbuffer + NET_HEADERSIZE, data->data, data->cursize);
+
+			conn->nq.unreliableSendSequence++;
+
+			NetConn_Write(conn->mysocket, (void *)&sendbuffer, packetLen, &conn->peeraddress);
+
+			packetsSent++;
+			unreliableMessagesSent++;
+		}
+		return 0;
+	}
 }
 
 void NetConn_CloseClientPorts(void)
@@ -736,15 +794,76 @@ void NetConn_UpdateSockets(void)
 	}
 }
 
-static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int length)
+static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int length, protocolversion_t protocol)
 {
-	unsigned int count;
-	unsigned int flags;
-	unsigned int sequence;
-	int qlength;
+	if (length < 8)
+		return 0;
 
-	if (length >= 8)
+	if (protocol == PROTOCOL_QUAKEWORLD)
 	{
+		int sequence, sequence_ack;
+		int reliable_ack, reliable_message;
+		int count;
+		int qport;
+
+		sequence = LittleLong(*((int *)(data + 0)));
+		sequence_ack = LittleLong(*((int *)(data + 4)));
+		data += 8;
+		length -= 8;
+
+		if (conn != cls.netcon)
+		{
+			// server only
+			if (length < 2)
+				return 0;
+			// TODO: use qport to identify that this client really is who they say they are?  (and elsewhere in the code to identify the connection without a port match?)
+			qport = LittleShort(*((int *)(data + 8)));
+			data += 2;
+			length -= 2;
+		}
+
+		packetsReceived++;
+		reliable_message = sequence >> 31;
+		reliable_ack = sequence_ack >> 31;
+		sequence &= ~(1<<31);
+		sequence_ack &= ~(1<<31);
+		if (sequence <= conn->qw.incoming_sequence)
+		{
+			Con_DPrint("Got a stale datagram\n");
+			return 0;
+		}
+		count = sequence - (conn->qw.incoming_sequence + 1);
+		if (count > 0)
+		{
+			droppedDatagrams += count;
+			Con_DPrintf("Dropped %u datagram(s)\n", count);
+		}
+		if (reliable_ack == conn->qw.reliable_sequence)
+		{
+			// received, now we will be able to send another reliable message
+			conn->sendMessageLength = 0;
+			reliableMessagesReceived++;
+		}
+		conn->qw.incoming_sequence = sequence;
+		conn->qw.incoming_acknowledged = sequence_ack;
+		conn->qw.incoming_reliable_acknowledged = reliable_ack;
+		if (reliable_message)
+			conn->qw.incoming_reliable_sequence ^= 1;
+		conn->lastMessageTime = realtime;
+		conn->timeout = realtime + net_messagetimeout.value;
+		unreliableMessagesReceived++;
+		SZ_Clear(&net_message);
+		SZ_Write(&net_message, data, length);
+		MSG_BeginReading();
+		return 2;
+	}
+	else
+	{
+		unsigned int count;
+		unsigned int flags;
+		unsigned int sequence;
+		int qlength;
+
 		qlength = (unsigned int)BigLong(((int *)data)[0]);
 		flags = qlength & ~NETFLAG_LENGTH_MASK;
 		qlength &= NETFLAG_LENGTH_MASK;
@@ -757,15 +876,15 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 			length -= 8;
 			if (flags & NETFLAG_UNRELIABLE)
 			{
-				if (sequence >= conn->unreliableReceiveSequence)
+				if (sequence >= conn->nq.unreliableReceiveSequence)
 				{
-					if (sequence > conn->unreliableReceiveSequence)
+					if (sequence > conn->nq.unreliableReceiveSequence)
 					{
-						count = sequence - conn->unreliableReceiveSequence;
+						count = sequence - conn->nq.unreliableReceiveSequence;
 						droppedDatagrams += count;
 						Con_DPrintf("Dropped %u datagram(s)\n", count);
 					}
-					conn->unreliableReceiveSequence = sequence + 1;
+					conn->nq.unreliableReceiveSequence = sequence + 1;
 					conn->lastMessageTime = realtime;
 					conn->timeout = realtime + net_messagetimeout.value;
 					unreliableMessagesReceived++;
@@ -783,12 +902,12 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 			}
 			else if (flags & NETFLAG_ACK)
 			{
-				if (sequence == (conn->sendSequence - 1))
+				if (sequence == (conn->nq.sendSequence - 1))
 				{
-					if (sequence == conn->ackSequence)
+					if (sequence == conn->nq.ackSequence)
 					{
-						conn->ackSequence++;
-						if (conn->ackSequence != conn->sendSequence)
+						conn->nq.ackSequence++;
+						if (conn->nq.ackSequence != conn->nq.sendSequence)
 							Con_DPrint("ack sequencing error\n");
 						conn->lastMessageTime = realtime;
 						conn->timeout = realtime + net_messagetimeout.value;
@@ -817,10 +936,10 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 
 							header = (unsigned int *)sendbuffer;
 							header[0] = BigLong(packetLen | (NETFLAG_DATA | eom));
-							header[1] = BigLong(conn->sendSequence);
+							header[1] = BigLong(conn->nq.sendSequence);
 							memcpy(sendbuffer + NET_HEADERSIZE, conn->sendMessage, dataLen);
 
-							conn->sendSequence++;
+							conn->nq.sendSequence++;
 
 							if (NetConn_Write(conn->mysocket, (void *)&sendbuffer, packetLen, &conn->peeraddress) == (int)packetLen)
 							{
@@ -844,11 +963,11 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 				temppacket[0] = BigLong(8 | NETFLAG_ACK);
 				temppacket[1] = BigLong(sequence);
 				NetConn_Write(conn->mysocket, (unsigned char *)temppacket, 8, &conn->peeraddress);
-				if (sequence == conn->receiveSequence)
+				if (sequence == conn->nq.receiveSequence)
 				{
 					conn->lastMessageTime = realtime;
 					conn->timeout = realtime + net_messagetimeout.value;
-					conn->receiveSequence++;
+					conn->nq.receiveSequence++;
 					if( conn->receiveMessageLength + length <= (int)sizeof( conn->receiveMessage ) ) {
 						memcpy(conn->receiveMessage + conn->receiveMessageLength, data, length);
 						conn->receiveMessageLength += length;
@@ -881,7 +1000,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 	return 0;
 }
 
-void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress)
+void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress, protocolversion_t initialprotocol)
 {
 	cls.connect_trying = false;
 	M_Update_Return_Reason("");
@@ -898,6 +1017,9 @@ void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_t *peer
 	cls.demonum = -1;			// not in the demo loop now
 	cls.state = ca_connected;
 	cls.signon = 0;				// need all the signon messages before playing
+	cls.protocol = initialprotocol;
+	if (cls.protocol == PROTOCOL_QUAKEWORLD)
+		Cmd_ForwardStringToServer("new");
 }
 
 int NetConn_IsLocalGame(void)
@@ -939,6 +1061,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 
 		if (length > 10 && !memcmp(string, "challenge ", 10) && cls.connect_trying)
 		{
+			// darkplaces or quake3
 			char protocolnames[1400];
 			Protocol_Names(protocolnames, sizeof(protocolnames));
 			Con_Printf("\"%s\" received, sending connect request back to %s\n", string, addressstring2);
@@ -946,10 +1069,27 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			NetConn_WriteString(mysocket, va("\377\377\377\377connect\\protocol\\darkplaces 3\\protocols\\%s\\challenge\\%s", protocolnames, string + 10), peeraddress);
 			return true;
 		}
+		if (length > 1 && string[0] == 'c' && string[1] >= '0' && string[1] <= '9')
+		{
+			// quakeworld
+			LHNETADDRESS_ToString(peeraddress, addressstring2, sizeof(addressstring2), true);
+			Con_Printf("\"%s\" received, sending QuakeWorld connect request back to %s\n", string, addressstring2);
+			M_Update_Return_Reason("Got QuakeWorld challenge response");
+			cls.qport = qport.integer;
+			NetConn_WriteString(mysocket, va("\377\377\377\377connect 28 %i %i \"%s\"\n", cls.qport, atoi(string + 1), cls.userinfo), peeraddress);
+		}
 		if (length == 6 && !memcmp(string, "accept", 6) && cls.connect_trying)
 		{
+			// darkplaces or quake3
 			M_Update_Return_Reason("Accepted");
-			NetConn_ConnectionEstablished(mysocket, peeraddress);
+			NetConn_ConnectionEstablished(mysocket, peeraddress, PROTOCOL_DARKPLACES3);
+			return true;
+		}
+		if (length > 1 && string[0] == 'j' && cls.connect_trying)
+		{
+			// quakeworld
+			M_Update_Return_Reason("QuakeWorld Accepted");
+			NetConn_ConnectionEstablished(mysocket, peeraddress, PROTOCOL_QUAKEWORLD);
 			return true;
 		}
 		if (length > 7 && !memcmp(string, "reject ", 7) && cls.connect_trying)
@@ -1085,6 +1225,31 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		if (!strncmp(string, "ack", 3))
 			return true;
 		*/
+		// QuakeWorld compatibility
+		if (length >= 1 && string[0] == 'j' && cls.connect_trying)
+		{
+			// accept message
+			M_Update_Return_Reason("Accepted");
+			NetConn_ConnectionEstablished(mysocket, peeraddress, PROTOCOL_QUAKEWORLD);
+			return true;
+		}
+		if (length > 1 && string[0] == 'c' && string[1] >= '0' && string[1] <= '9' && cls.connect_trying)
+		{
+			// challenge message
+			LHNETADDRESS_ToString(peeraddress, addressstring2, sizeof(addressstring2), true);
+			Con_Printf("challenge %s received, sending connect request back to %s\n", string + 1, addressstring2);
+			M_Update_Return_Reason("Got challenge response");
+			cls.qport = qport.integer;
+			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "*ip", addressstring2);
+			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "name", cl_name.string);
+			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "topcolor", va("%i", (cl_color.integer >> 4) & 15));
+			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "bottomcolor", va("%i", (cl_color.integer) & 15));
+			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "rate", va("%i", cl_rate.integer));
+			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "msg", "1");
+			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "*ver", engineversion);
+			NetConn_WriteString(mysocket, va("\377\377\377\377connect %i %i %i \"%s\"\n", 28, cls.qport, atoi(string + 1), cls.userinfo), peeraddress);
+			return true;
+		}
 		if (string[0] == 'n')
 		{
 			// qw print command
@@ -1093,6 +1258,13 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		// we may not have liked the packet, but it was a command packet, so
 		// we're done processing this packet now
 		return true;
+	}
+	// quakeworld ingame packet
+	if (fromserver && cls.protocol == PROTOCOL_QUAKEWORLD && length >= 8 && (ret = NetConn_ReceivedMessage(cls.netcon, data, length, cls.protocol)) == 2)
+	{
+		ret = 0;
+		CL_ParseServerMessage();
+		return ret;
 	}
 	// netquake control packets, supported for compatibility only
 	if (length >= 5 && (control = BigLong(*((int *)data))) && (control & (~NETFLAG_LENGTH_MASK)) == (int)NETFLAG_CTL && (control & NETFLAG_LENGTH_MASK) == length)
@@ -1118,7 +1290,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					LHNETADDRESS_SetPort(&clientportaddress, port);
 				}
 				M_Update_Return_Reason("Accepted");
-				NetConn_ConnectionEstablished(mysocket, &clientportaddress);
+				NetConn_ConnectionEstablished(mysocket, &clientportaddress, PROTOCOL_QUAKE);
 			}
 			break;
 		case CCREP_REJECT:
@@ -1181,7 +1353,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		return true;
 	}
 	ret = 0;
-	if (fromserver && length >= (int)NET_HEADERSIZE && (ret = NetConn_ReceivedMessage(cls.netcon, data, length)) == 2)
+	if (fromserver && length >= (int)NET_HEADERSIZE && (ret = NetConn_ReceivedMessage(cls.netcon, data, length, cls.protocol)) == 2)
 		CL_ParseServerMessage();
 	return ret;
 }
@@ -1268,7 +1440,7 @@ void NetConn_ClientFrame(void)
 			M_Update_Return_Reason("Connect: Failed");
 			return;
 		}
-		// try challenge first (newer server)
+		// try challenge first (newer DP server or QW)
 		NetConn_WriteString(cls.connect_mysocket, "\377\377\377\377getchallenge", &cls.connect_address);
 		// then try netquake as a fallback (old server, or netquake)
 		SZ_Clear(&net_message);
@@ -1826,7 +1998,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 #endif
 		if (host_client)
 		{
-			if ((ret = NetConn_ReceivedMessage(host_client->netconnection, data, length)) == 2)
+			if ((ret = NetConn_ReceivedMessage(host_client->netconnection, data, length, sv.protocol)) == 2)
 			{
 				SV_VM_Begin();
 				SV_ReadClientMessage();
@@ -1953,7 +2125,10 @@ static void Net_Heartbeat_f(void)
 
 void PrintStats(netconn_t *conn)
 {
-	Con_Printf("address=%21s canSend=%u sendSeq=%6u recvSeq=%6u\n", conn->address, !conn->sendMessageLength, conn->sendSequence, conn->receiveSequence);
+	if ((cls.state == ca_connected && cls.protocol == PROTOCOL_QUAKEWORLD) || (sv.active && sv.protocol == PROTOCOL_QUAKEWORLD))
+		Con_Printf("address=%21s canSend=%u sendSeq=%6u recvSeq=%6u\n", conn->address, !conn->sendMessageLength, conn->qw.outgoing_sequence, conn->qw.incoming_sequence);
+	else
+		Con_Printf("address=%21s canSend=%u sendSeq=%6u recvSeq=%6u\n", conn->address, !conn->sendMessageLength, conn->nq.sendSequence, conn->nq.receiveSequence);
 }
 
 void Net_Stats_f(void)

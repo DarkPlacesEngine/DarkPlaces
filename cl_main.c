@@ -66,6 +66,8 @@ cvar_t cl_beams_lightatend = {CVAR_SAVE, "cl_beams_lightatend", "0","make a ligh
 
 cvar_t cl_noplayershadow = {CVAR_SAVE, "cl_noplayershadow", "0","hide player shadow"};
 
+cvar_t qport = {0, "qport", "0", "identification key for playing on qw servers (allows you to maintain a connection to a quakeworld server even if your port changes)"};
+
 cvar_t cl_prydoncursor = {0, "cl_prydoncursor", "0", "enables a mouse pointer which is able to click on entities in the world, useful for point and click mods, see PRYDON_CLIENTCURSOR extension in dpextensions.qc"};
 
 cvar_t cl_deathnoviewmodel = {0, "cl_deathnoviewmodel", "1", "hides gun model when dead"};
@@ -312,9 +314,9 @@ void CL_Disconnect(void)
 		buf.data = bufdata;
 		buf.maxsize = sizeof(bufdata);
 		MSG_WriteByte(&buf, clc_disconnect);
-		NetConn_SendUnreliableMessage(cls.netcon, &buf);
-		NetConn_SendUnreliableMessage(cls.netcon, &buf);
-		NetConn_SendUnreliableMessage(cls.netcon, &buf);
+		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol);
+		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol);
+		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol);
 		NetConn_Close(cls.netcon);
 		cls.netcon = NULL;
 	}
@@ -1676,6 +1678,10 @@ void CL_Init (void)
 	Cvar_RegisterVariable(&cl_prydoncursor);
 
 	Cvar_RegisterVariable(&cl_deathnoviewmodel);
+
+	// for QW connections
+	Cvar_RegisterVariable(&qport);
+	Cvar_SetValueQuick(&qport, (rand() * RAND_MAX + rand()) & 0xffff);
 
 	Cmd_AddCommand("timerefresh", CL_TimeRefresh_f, "turn quickly and print rendering statistcs");
 

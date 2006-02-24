@@ -60,9 +60,11 @@ interface from being ambiguous.
 
 #define CVAR_SAVE 1
 #define CVAR_NOTIFY 2
-#define	CVAR_READONLY 4
+#define CVAR_READONLY 4
+#define CVAR_SERVERINFO 8
+#define CVAR_USERINFO 16
 // used to determine if flags is valid
-#define CVAR_MAXFLAGSVAL 7
+#define CVAR_MAXFLAGSVAL 31
 // for internal use only!
 #define CVAR_DEFAULTSET (1<<30)
 #define CVAR_ALLOCATED (1<<31)
