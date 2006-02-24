@@ -125,8 +125,6 @@ typedef struct netconn_s
 	double lastMessageTime;
 	double lastSendTime;
 
-	qboolean canSend;
-
 	// writing buffer to send to peer as the next reliable message
 	// can be added to at any time, copied into sendMessage buffer when it is
 	// possible to send a reliable message and then cleared

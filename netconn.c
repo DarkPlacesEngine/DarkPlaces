@@ -440,7 +440,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data)
 	unsigned int *header;
 
 	// if a reliable message fragment has been lost, send it again
-	if (!conn->canSend && conn->sendMessageLength && (realtime - conn->lastSendTime) > 1.0)
+	if (conn->sendMessageLength && (realtime - conn->lastSendTime) > 1.0)
 	{
 		if (conn->sendMessageLength <= MAX_PACKETFRAGMENT)
 		{
@@ -468,7 +468,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data)
 	}
 
 	// if we have a new reliable message to send, do so
-	if (conn->canSend && conn->message.cursize)
+	if (!conn->sendMessageLength && conn->message.cursize)
 	{
 		if (conn->message.cursize > (int)sizeof(conn->sendMessage))
 		{
@@ -506,7 +506,6 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data)
 		memcpy(sendbuffer + NET_HEADERSIZE, conn->sendMessage, dataLen);
 
 		conn->sendSequence++;
-		conn->canSend = false;
 
 		NetConn_Write(conn->mysocket, (void *)&sendbuffer, packetLen, &conn->peeraddress);
 
@@ -670,7 +669,6 @@ netconn_t *NetConn_Open(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress)
 	conn = (netconn_t *)Mem_Alloc(netconn_mempool, sizeof(*conn));
 	conn->mysocket = mysocket;
 	conn->peeraddress = *peeraddress;
-	conn->canSend = true;
 	conn->lastMessageTime = realtime;
 	conn->message.data = conn->messagedata;
 	conn->message.maxsize = sizeof(conn->messagedata);
@@ -831,10 +829,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 							}
 						}
 						else
-						{
 							conn->sendMessageLength = 0;
-							conn->canSend = true;
-						}
 					}
 					else
 						Con_DPrint("Duplicate ACK received\n");
@@ -914,10 +909,14 @@ int NetConn_IsLocalGame(void)
 
 static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *data, int length, lhnetaddress_t *peeraddress)
 {
+	qboolean fromserver;
 	int ret, c, control;
 	const char *s;
 	char *string, addressstring2[128], cname[128], ipstring[32];
 	char stringbuf[16384];
+
+	// quakeworld ingame packet
+	fromserver = cls.netcon && mysocket == cls.netcon->mysocket && !LHNETADDRESS_Compare(&cls.netcon->peeraddress, peeraddress);
 
 	if (length >= 5 && data[0] == 255 && data[1] == 255 && data[2] == 255 && data[3] == 255)
 	{
@@ -1182,7 +1181,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		return true;
 	}
 	ret = 0;
-	if (length >= (int)NET_HEADERSIZE && cls.netcon && mysocket == cls.netcon->mysocket && !LHNETADDRESS_Compare(&cls.netcon->peeraddress, peeraddress) && (ret = NetConn_ReceivedMessage(cls.netcon, data, length)) == 2)
+	if (fromserver && length >= (int)NET_HEADERSIZE && (ret = NetConn_ReceivedMessage(cls.netcon, data, length)) == 2)
 		CL_ParseServerMessage();
 	return ret;
 }
@@ -1954,7 +1953,7 @@ static void Net_Heartbeat_f(void)
 
 void PrintStats(netconn_t *conn)
 {
-	Con_Printf("address=%21s canSend=%u sendSeq=%6u recvSeq=%6u\n", conn->address, conn->canSend, conn->sendSequence, conn->receiveSequence);
+	Con_Printf("address=%21s canSend=%u sendSeq=%6u recvSeq=%6u\n", conn->address, !conn->sendMessageLength, conn->sendSequence, conn->receiveSequence);
 }
 
 void Net_Stats_f(void)
