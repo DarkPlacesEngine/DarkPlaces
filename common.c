@@ -1326,8 +1326,8 @@ void InfoString_SetValue(char *buffer, size_t bufferlength, const char *key, con
 	pos2 = pos;
 	if (buffer[pos] == '\\')
 	{
-		for (pos2++;buffer[pos2] && buffer[pos2] != '\\';pos++);
-		for (pos2++;buffer[pos2] && buffer[pos2] != '\\';pos++);
+		for (pos2++;buffer[pos2] && buffer[pos2] != '\\';pos2++);
+		for (pos2++;buffer[pos2] && buffer[pos2] != '\\';pos2++);
 	}
 	if (bufferlength <= 1 + strlen(key) + 1 + strlen(value) + strlen(buffer + pos2))
 	{
