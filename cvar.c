@@ -229,6 +229,25 @@ void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 	var->integer = (int) var->value;
 	if ((var->flags & CVAR_NOTIFY) && changed && sv.active)
 		SV_BroadcastPrintf("\"%s\" changed to \"%s\"\n", var->name, var->string);
+#if 0
+	// TODO: add infostring support to the server?
+	if ((var->flags & CVAR_SERVERINFO) && changed && sv.active)
+	{
+		InfoString_SetValue(svs.serverinfo, sizeof(svs.serverinfo), var->name, var->string);
+		if (sv.active)
+		{
+			MSG_WriteByte (&sv.reliable_datagram, svc_serverinfostring);
+			MSG_WriteString (&sv.reliable_datagram, var->name);
+			MSG_WriteString (&sv.reliable_datagram, var->string);
+		}
+	}
+#endif
+	if ((var->flags & CVAR_USERINFO) && changed && cls.state != ca_dedicated)
+	{
+		InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), var->name, var->string);
+		if (cls.state == ca_connected)
+			Cmd_ForwardStringToServer(va("setinfo \"%s\" \"%s\"\n", var->name, var->string));
+	}
 }
 
 void Cvar_SetQuick (cvar_t *var, const char *value)

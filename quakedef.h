@@ -183,6 +183,10 @@ extern char engineversion[128];
 #define	MAX_SCOREBOARD		64
 // LordHavoc: increased name limit from 32 to 64 characters
 #define	MAX_SCOREBOARDNAME	64
+// infostring sizes used by QuakeWorld support
+#define MAX_USERINFO_STRING 196
+#define MAX_SERVERINFO_STRING 512
+#define MAX_LOCALINFO_STRING 32768
 
 #include "zone.h"
 #include "fs.h"
@@ -222,6 +226,7 @@ extern char engineversion[128];
 
 extern qboolean noclip_anglehack;
 
+extern char engineversion[128];
 extern cvar_t developer;
 
 extern double host_frametime;

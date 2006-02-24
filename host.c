@@ -419,9 +419,9 @@ void SV_DropClient(qboolean crash)
 			buf.data = bufdata;
 			buf.maxsize = sizeof(bufdata);
 			MSG_WriteByte(&buf, svc_disconnect);
-			NetConn_SendUnreliableMessage(host_client->netconnection, &buf);
-			NetConn_SendUnreliableMessage(host_client->netconnection, &buf);
-			NetConn_SendUnreliableMessage(host_client->netconnection, &buf);
+			NetConn_SendUnreliableMessage(host_client->netconnection, &buf, sv.protocol);
+			NetConn_SendUnreliableMessage(host_client->netconnection, &buf, sv.protocol);
+			NetConn_SendUnreliableMessage(host_client->netconnection, &buf, sv.protocol);
 		}
 		// break the net connection
 		NetConn_Close(host_client->netconnection);

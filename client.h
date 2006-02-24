@@ -369,6 +369,14 @@ typedef struct scoreboard_s
 	char	name[MAX_SCOREBOARDNAME];
 	int		frags;
 	int		colors; // two 4 bit fields
+	// QW fields:
+	int		userid;
+	char	userinfo[MAX_USERINFO_STRING];
+	float	entertime;
+	int		ping;
+	int		packetloss;
+	int		spectator;
+	// TODO: QW skin support
 } scoreboard_t;
 
 typedef struct cshift_s
@@ -411,6 +419,9 @@ cactive_t;
 typedef struct client_static_s
 {
 	cactive_t state;
+
+	// value of "qport" cvar at time of connection
+	int qport;
 
 // demo loop control
 	// -1 = don't play demos
@@ -455,6 +466,13 @@ typedef struct client_static_s
 	int signon;
 	// network connection
 	netconn_t *netcon;
+
+	// quakeworld stuff below
+
+	// user infostring
+	// this normally contains the following keys in quakeworld:
+	// password spectator name team skin topcolor bottomcolor rate noaim msg *ver *ip
+	char userinfo[MAX_USERINFO_STRING];
 }
 client_static_t;
 
@@ -639,6 +657,9 @@ typedef struct client_state_s
 
 	// [cl.maxclients]
 	scoreboard_t *scores;
+
+	// local copy of the server infostring
+	char serverinfo[MAX_SERVERINFO_STRING];
 
 	// entity database stuff
 	// latest received entity frame numbers
@@ -830,6 +851,7 @@ void CL_Parse_Init(void);
 void CL_Parse_Shutdown(void);
 void CL_ParseServerMessage(void);
 void CL_Parse_DumpPacket(void);
+extern cvar_t qport;
 
 //
 // view

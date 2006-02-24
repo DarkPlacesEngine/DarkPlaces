@@ -95,6 +95,64 @@ char *svc_strings[128] =
 	"svc_spawnstaticsound2", //	59		// [coord3] [short] samp [byte] vol [byte] aten
 };
 
+char *qw_svc_strings[128] =
+{
+	"qw_svc_bad",					// 0
+	"qw_svc_nop",					// 1
+	"qw_svc_disconnect",			// 2
+	"qw_svc_updatestat",			// 3	// [byte] [byte]
+	"",								// 4
+	"qw_svc_setview",				// 5	// [short] entity number
+	"qw_svc_sound",					// 6	// <see code>
+	"",								// 7
+	"qw_svc_print",					// 8	// [byte] id [string] null terminated string
+	"qw_svc_stufftext",				// 9	// [string] stuffed into client's console buffer
+	"qw_svc_setangle",				// 10	// [angle3] set the view angle to this absolute value
+	"qw_svc_serverdata",			// 11	// [long] protocol ...
+	"qw_svc_lightstyle",			// 12	// [byte] [string]
+	"",								// 13
+	"qw_svc_updatefrags",			// 14	// [byte] [short]
+	"",								// 15
+	"qw_svc_stopsound",				// 16	// <see code>
+	"",								// 17
+	"",								// 18
+	"qw_svc_damage",				// 19
+	"qw_svc_spawnstatic",			// 20
+	"",								// 21
+	"qw_svc_spawnbaseline",			// 22
+	"qw_svc_temp_entity",			// 23	// variable
+	"qw_svc_setpause",				// 24	// [byte] on / off
+	"",								// 25
+	"qw_svc_centerprint",			// 26	// [string] to put in center of the screen
+	"qw_svc_killedmonster",			// 27
+	"qw_svc_foundsecret",			// 28
+	"qw_svc_spawnstaticsound",		// 29	// [coord3] [byte] samp [byte] vol [byte] aten
+	"qw_svc_intermission",			// 30		// [vec3_t] origin [vec3_t] angle
+	"qw_svc_finale",				// 31		// [string] text
+	"qw_svc_cdtrack",				// 32		// [byte] track
+	"qw_svc_sellscreen",			// 33
+	"qw_svc_smallkick",				// 34		// set client punchangle to 2
+	"qw_svc_bigkick",				// 35		// set client punchangle to 4
+	"qw_svc_updateping",			// 36		// [byte] [short]
+	"qw_svc_updateentertime",		// 37		// [byte] [float]
+	"qw_svc_updatestatlong",		// 38		// [byte] [long]
+	"qw_svc_muzzleflash",			// 39		// [short] entity
+	"qw_svc_updateuserinfo",		// 40		// [byte] slot [long] uid
+	"qw_svc_download",				// 41		// [short] size [size bytes]
+	"qw_svc_playerinfo",			// 42		// variable
+	"qw_svc_nails",					// 43		// [byte] num [48 bits] xyzpy 12 12 12 4 8
+	"qw_svc_chokecount",			// 44		// [byte] packets choked
+	"qw_svc_modellist",				// 45		// [strings]
+	"qw_svc_soundlist",				// 46		// [strings]
+	"qw_svc_packetentities",		// 47		// [...]
+	"qw_svc_deltapacketentities",	// 48		// [...]
+	"qw_svc_maxspeed",				// 49		// maxspeed change, for prediction
+	"qw_svc_entgravity",			// 50		// gravity change, for prediction
+	"qw_svc_setinfo",				// 51		// setinfo on a client
+	"qw_svc_serverinfo",			// 52		// serverinfo
+	"qw_svc_updatepl",				// 53		// [byte] [byte]
+};
+
 //=============================================================================
 
 cvar_t demo_nehahra = {0, "demo_nehahra", "0", "reads all quake demos as nehahra movie protocol"};
@@ -179,7 +237,7 @@ void CL_KeepaliveMessage (void)
 	sizebuf_t old;
 
 	// no need if server is local and definitely not if this is a demo
-	if (sv.active || !cls.netcon)
+	if (sv.active || !cls.netcon || cls.protocol == PROTOCOL_QUAKEWORLD)
 		return;
 
 // read messages from server, should just be nops
@@ -207,7 +265,7 @@ void CL_KeepaliveMessage (void)
 		msg.data = buf;
 		msg.maxsize = sizeof(buf);
 		MSG_WriteChar(&msg, svc_nop);
-		NetConn_SendUnreliableMessage(cls.netcon, &msg);
+		NetConn_SendUnreliableMessage(cls.netcon, &msg, cls.protocol);
 	}
 }
 

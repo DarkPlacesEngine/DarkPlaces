@@ -758,6 +758,7 @@ void Host_Name_f (void)
 	if (cmd_source == src_command)
 	{
 		Cvar_Set ("_cl_name", newName);
+		InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "name", newName);
 		if (cls.state == ca_connected)
 			Cmd_ForwardToServer ();
 		return;
@@ -817,6 +818,7 @@ void Host_Playermodel_f (void)
 	if (cmd_source == src_command)
 	{
 		Cvar_Set ("_cl_playermodel", newPath);
+		InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "playermodel", newPath);
 		if (cls.state == ca_connected)
 			Cmd_ForwardToServer ();
 		return;
@@ -876,6 +878,7 @@ void Host_Playerskin_f (void)
 	if (cmd_source == src_command)
 	{
 		Cvar_Set ("_cl_playerskin", newPath);
+		InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "playerskin", newPath);
 		if (cls.state == ca_connected)
 			Cmd_ForwardToServer ();
 		return;
@@ -1093,10 +1096,15 @@ void Host_Color_f(void)
 	if (cmd_source == src_command)
 	{
 		Cvar_SetValue ("_cl_color", playercolor);
-		if (cls.state == ca_connected)
+		InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "topcolor", va("%i", top));
+		InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "bottomcolor", va("%i", bottom));
+		if (cls.state == ca_connected && cls.protocol != PROTOCOL_QUAKEWORLD)
 			Cmd_ForwardToServer ();
 		return;
 	}
+
+	if (cls.protocol == PROTOCOL_QUAKEWORLD)
+		return;
 
 	if (host_client->edict && (f = PRVM_ED_FindFunction ("SV_ChangeTeam")) && (SV_ChangeTeam = (func_t)(f - prog->functions)))
 	{
@@ -1144,6 +1152,7 @@ void Host_Rate_f(void)
 	if (cmd_source == src_command)
 	{
 		Cvar_SetValue ("_cl_rate", bound(NET_MINRATE, rate, NET_MAXRATE));
+		InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "rate", va("%i", rate));
 		if (cls.state == ca_connected)
 			Cmd_ForwardToServer ();
 		return;
@@ -2012,6 +2021,177 @@ void Host_Rcon_f (void) // credit: taken from QuakeWorld
 
 /*
 ====================
+Host_User_f
+
+user <name or userid>
+
+Dump userdata / masterdata for a user
+====================
+*/
+void Host_User_f (void) // credit: taken from QuakeWorld
+{
+	int		uid;
+	int		i;
+
+	if (Cmd_Argc() != 2)
+	{
+		Con_Printf ("Usage: user <username / userid>\n");
+		return;
+	}
+
+	uid = atoi(Cmd_Argv(1));
+
+	for (i = 0;i < cl.maxclients;i++)
+	{
+		if (!cl.scores[i].name[0])
+			continue;
+		if (cl.scores[i].userid == uid || !strcasecmp(cl.scores[i].name, Cmd_Argv(1)))
+		{
+			InfoString_Print(cl.scores[i].userinfo);
+			return;
+		}
+	}
+	Con_Printf ("User not in server.\n");
+}
+
+/*
+====================
+Host_Users_f
+
+Dump userids for all current players
+====================
+*/
+void Host_Users_f (void) // credit: taken from QuakeWorld
+{
+	int		i;
+	int		c;
+
+	c = 0;
+	Con_Printf ("userid frags name\n");
+	Con_Printf ("------ ----- ----\n");
+	for (i = 0;i < cl.maxclients;i++)
+	{
+		if (cl.scores[i].name[0])
+		{
+			Con_Printf ("%6i %4i %s\n", cl.scores[i].userid, cl.scores[i].frags, cl.scores[i].name);
+			c++;
+		}
+	}
+
+	Con_Printf ("%i total users\n", c);
+}
+
+/*
+==================
+Host_FullServerinfo_f
+
+Sent by server when serverinfo changes
+==================
+*/
+// TODO: shouldn't this be a cvar instead?
+void Host_FullServerinfo_f (void) // credit: taken from QuakeWorld
+{
+	if (Cmd_Argc() != 2)
+	{
+		Con_Printf ("usage: fullserverinfo <complete info string>\n");
+		return;
+	}
+
+	strlcpy (cl.serverinfo, Cmd_Argv(1), sizeof(cl.serverinfo));
+}
+
+/*
+==================
+Host_FullInfo_f
+
+Allow clients to change userinfo
+==================
+Casey was here :)
+*/
+void Host_FullInfo_f (void) // credit: taken from QuakeWorld
+{
+	char key[512];
+	char value[512];
+	char *o;
+	const char *s;
+
+	if (Cmd_Argc() != 2)
+	{
+		Con_Printf ("fullinfo <complete info string>\n");
+		return;
+	}
+
+	s = Cmd_Argv(1);
+	if (*s == '\\')
+		s++;
+	while (*s)
+	{
+		o = key;
+		while (*s && *s != '\\')
+			*o++ = *s++;
+		*o = 0;
+
+		if (!*s)
+		{
+			Con_Printf ("MISSING VALUE\n");
+			return;
+		}
+
+		o = value;
+		s++;
+		while (*s && *s != '\\')
+			*o++ = *s++;
+		*o = 0;
+
+		if (*s)
+			s++;
+
+		if (!strcasecmp(key, pmodel_name) || !strcasecmp(key, emodel_name))
+			continue;
+
+		if (key[0] == '*')
+		{
+			Con_Printf("Can't set star-key \"%s\" to \"%s\"\n", key, value);
+			continue;
+		}
+
+		InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), key, value);
+	}
+}
+
+/*
+==================
+CL_SetInfo_f
+
+Allow clients to change userinfo
+==================
+*/
+void Host_SetInfo_f (void) // credit: taken from QuakeWorld
+{
+	if (Cmd_Argc() == 1)
+	{
+		InfoString_Print(cls.userinfo);
+		return;
+	}
+	if (Cmd_Argc() != 3)
+	{
+		Con_Printf ("usage: setinfo [ <key> <value> ]\n");
+		return;
+	}
+	if (!strcasecmp(Cmd_Argv(1), pmodel_name) || !strcasecmp(Cmd_Argv(1), emodel_name))
+		return;
+	if (Cmd_Argv(1)[0] == '*')
+	{
+		Con_Printf("Can't set star-key \"%s\" to \"%s\"\n", Cmd_Argv(1), Cmd_Argv(2));
+		return;
+	}
+	InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), Cmd_Argv(1), Cmd_Argv(2));
+	if (cls.state == ca_connected)
+		Cmd_ForwardToServer ();
+}
+
+/*
+====================
 Host_Packet_f
 
 packet <destination> <contents>
@@ -2073,6 +2253,8 @@ Host_InitCommands
 */
 void Host_InitCommands (void)
 {
+	strcpy(cls.userinfo, "\\name\\player\\team\\none\\topcolor\\0\\bottomcolor\\0\\rate\\10000\\msg\\1\\*ver\\dp");
+
 	Cmd_AddCommand ("status", Host_Status_f, "print server status information");
 	Cmd_AddCommand ("quit", Host_Quit_f, "quit the game");
 	if (gamemode == GAME_NEHAHRA)
@@ -2144,6 +2326,11 @@ void Host_InitCommands (void)
 	Cvar_RegisterVariable (&rcon_password);
 	Cvar_RegisterVariable (&rcon_address);
 	Cmd_AddCommand ("rcon", Host_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's)");
+	Cmd_AddCommand ("user", Host_User_f, "prints additional information about a player number or name on the scoreboard");
+	Cmd_AddCommand ("users", Host_Users_f, "prints additional information about all players on the scoreboard");
+	Cmd_AddCommand ("fullserverinfo", Host_FullServerinfo_f, "internal use only, sent by server to client to update client's local copy of serverinfo string");
+	Cmd_AddCommand ("fullinfo", Host_FullInfo_f, "allows client to modify their userinfo");
+	Cmd_AddCommand ("setinfo", Host_SetInfo_f, "modifies your userinfo");
 	Cmd_AddCommand ("packet", Host_Packet_f, "send a packet to the specified address:port containing a text string");
 
 	Cvar_RegisterVariable(&sv_cheats);

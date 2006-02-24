@@ -759,5 +759,124 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 
 extern cvar_t developer_networkentities;
 
+// QUAKEWORLD
+// server to client
+#define qw_svc_bad				0
+#define qw_svc_nop				1
+#define qw_svc_disconnect		2
+#define qw_svc_updatestat		3	// [byte] [byte]
+#define qw_svc_setview			5	// [short] entity number
+#define qw_svc_sound			6	// <see code>
+#define qw_svc_print			8	// [byte] id [string] null terminated string
+#define qw_svc_stufftext		9	// [string] stuffed into client's console buffer
+#define qw_svc_setangle			10	// [angle3] set the view angle to this absolute value
+#define qw_svc_serverdata		11	// [long] protocol ...
+#define qw_svc_lightstyle		12	// [byte] [string]
+#define qw_svc_updatefrags		14	// [byte] [short]
+#define qw_svc_stopsound		16	// <see code>
+#define qw_svc_damage			19
+#define qw_svc_spawnstatic		20
+#define qw_svc_spawnbaseline	22
+#define qw_svc_temp_entity		23	// variable
+#define qw_svc_setpause			24	// [byte] on / off
+#define qw_svc_centerprint		26	// [string] to put in center of the screen
+#define qw_svc_killedmonster	27
+#define qw_svc_foundsecret		28
+#define qw_svc_spawnstaticsound	29	// [coord3] [byte] samp [byte] vol [byte] aten
+#define qw_svc_intermission		30		// [vec3_t] origin [vec3_t] angle
+#define qw_svc_finale			31		// [string] text
+#define qw_svc_cdtrack			32		// [byte] track
+#define qw_svc_sellscreen		33
+#define qw_svc_smallkick		34		// set client punchangle to 2
+#define qw_svc_bigkick			35		// set client punchangle to 4
+#define qw_svc_updateping		36		// [byte] [short]
+#define qw_svc_updateentertime	37		// [byte] [float]
+#define qw_svc_updatestatlong	38		// [byte] [long]
+#define qw_svc_muzzleflash		39		// [short] entity
+#define qw_svc_updateuserinfo	40		// [byte] slot [long] uid
+#define qw_svc_download			41		// [short] size [size bytes]
+#define qw_svc_playerinfo		42		// variable
+#define qw_svc_nails			43		// [byte] num [48 bits] xyzpy 12 12 12 4 8
+#define qw_svc_chokecount		44		// [byte] packets choked
+#define qw_svc_modellist		45		// [strings]
+#define qw_svc_soundlist		46		// [strings]
+#define qw_svc_packetentities	47		// [...]
+#define qw_svc_deltapacketentities	48		// [...]
+#define qw_svc_maxspeed			49		// maxspeed change, for prediction
+#define qw_svc_entgravity		50		// gravity change, for prediction
+#define qw_svc_setinfo			51		// setinfo on a client
+#define qw_svc_serverinfo		52		// serverinfo
+#define qw_svc_updatepl			53		// [byte] [byte]
+// QUAKEWORLD
+// client to server
+#define qw_clc_bad			0
+#define qw_clc_nop			1
+#define qw_clc_move			3		// [[usercmd_t]
+#define qw_clc_stringcmd	4		// [string] message
+#define qw_clc_delta		5		// [byte] sequence number, requests delta compression of message
+#define qw_clc_tmove		6		// teleport request, spectator only
+#define qw_clc_upload		7		// teleport request, spectator only
+// QUAKEWORLD
+// playerinfo flags from server
+// playerinfo allways sends: playernum, flags, origin[] and framenumber
+#define	PF_MSEC			(1<<0)
+#define	PF_COMMAND		(1<<1)
+#define	PF_VELOCITY1	(1<<2)
+#define	PF_VELOCITY2	(1<<3)
+#define	PF_VELOCITY3	(1<<4)
+#define	PF_MODEL		(1<<5)
+#define	PF_SKINNUM		(1<<6)
+#define	PF_EFFECTS		(1<<7)
+#define	PF_WEAPONFRAME	(1<<8)		// only sent for view player
+#define	PF_DEAD			(1<<9)		// don't block movement any more
+#define	PF_GIB			(1<<10)		// offset the view height differently
+#define	PF_NOGRAV		(1<<11)		// don't apply gravity for prediction
+// QUAKEWORLD
+// if the high bit of the client to server byte is set, the low bits are
+// client move cmd bits
+// ms and angle2 are allways sent, the others are optional
+#define QW_CM_ANGLE1 	(1<<0)
+#define QW_CM_ANGLE3 	(1<<1)
+#define QW_CM_FORWARD	(1<<2)
+#define QW_CM_SIDE		(1<<3)
+#define QW_CM_UP		(1<<4)
+#define QW_CM_BUTTONS	(1<<5)
+#define QW_CM_IMPULSE	(1<<6)
+#define QW_CM_ANGLE2 	(1<<7)
+// QUAKEWORLD
+// the first 16 bits of a packetentities update holds 9 bits
+// of entity number and 7 bits of flags
+#define QW_U_ORIGIN1	(1<<9)
+#define QW_U_ORIGIN2	(1<<10)
+#define QW_U_ORIGIN3	(1<<11)
+#define QW_U_ANGLE2		(1<<12)
+#define QW_U_FRAME		(1<<13)
+#define QW_U_REMOVE		(1<<14)		// REMOVE this entity, don't add it
+#define QW_U_MOREBITS	(1<<15)
+// if MOREBITS is set, these additional flags are read in next
+#define QW_U_ANGLE1		(1<<0)
+#define QW_U_ANGLE3		(1<<1)
+#define QW_U_MODEL		(1<<2)
+#define QW_U_COLORMAP	(1<<3)
+#define QW_U_SKIN		(1<<4)
+#define QW_U_EFFECTS	(1<<5)
+#define QW_U_SOLID		(1<<6)		// the entity should be solid for prediction
+// QUAKEWORLD
+// temp entity events
+#define QW_TE_SPIKE				0
+#define QW_TE_SUPERSPIKE		1
+#define QW_TE_GUNSHOT			2
+#define QW_TE_EXPLOSION			3
+#define QW_TE_TAREXPLOSION		4
+#define QW_TE_LIGHTNING1		5
+#define QW_TE_LIGHTNING2		6
+#define QW_TE_WIZSPIKE			7
+#define QW_TE_KNIGHTSPIKE		8
+#define QW_TE_LIGHTNING3		9
+#define QW_TE_LAVASPLASH		10
+#define QW_TE_TELEPORT			11
+#define QW_TE_BLOOD				12
+#define QW_TE_LIGHTNINGBLOOD	13
+
 #endif
 

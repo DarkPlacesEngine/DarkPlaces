@@ -141,6 +141,7 @@ typedef enum protocolversion_e
 	PROTOCOL_QUAKEDP, // darkplaces extended quake protocol (used by TomazQuake and others), backwards compatible as long as no extended features are used
 	PROTOCOL_NEHAHRAMOVIE, // Nehahra movie protocol, a big nasty hack dating back to early days of the Quake Standards Group (but only ever used by neh_gl.exe), this is potentially backwards compatible with quake protocol as long as no extended features are used (but in actuality the neh_gl.exe which wrote this protocol ALWAYS wrote the extended information)
 	PROTOCOL_QUAKE, // quake (aka netquake/normalquake/nq) protocol
+	PROTOCOL_QUAKEWORLD, // quakeworld protocol
 }
 protocolversion_t;
 
@@ -283,6 +284,7 @@ char *SearchInfostring(const char *infostring, const char *key);
 
 void InfoString_GetValue(const char *buffer, const char *key, char *value, size_t valuelength);
 void InfoString_SetValue(char *buffer, size_t bufferlength, const char *key, const char *value);
+void InfoString_Print(char *buffer);
 
 // strlcat and strlcpy, from OpenBSD
 // Most (all?) BSDs already have them
