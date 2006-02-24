@@ -1116,7 +1116,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 		// hide player shadow during intermission or nehahra movie
 		if (!(e->render.effects & EF_NOSHADOW)
 		 && !(e->render.flags & (RENDER_VIEWMODEL | RENDER_TRANSPARENT))
-		 && (!(e->render.flags & RENDER_EXTERIORMODEL) || (!cl.intermission && cl.protocol != PROTOCOL_NEHAHRAMOVIE && !cl_noplayershadow.integer)))
+		 && (!(e->render.flags & RENDER_EXTERIORMODEL) || (!cl.intermission && cls.protocol != PROTOCOL_NEHAHRAMOVIE && !cl_noplayershadow.integer)))
 			e->render.flags |= RENDER_SHADOW;
 		// as soon as player is known we can call V_CalcRefDef
 		if (!csqc_loaded)

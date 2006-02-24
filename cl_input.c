@@ -914,7 +914,7 @@ void CL_SendMove(void)
 			// PROTOCOL_DARKPLACES5  clc_move = 19 bytes total
 			// PROTOCOL_DARKPLACES6  clc_move = 52 bytes total
 			// PROTOCOL_DARKPLACES7  clc_move = 56 bytes total
-			if (cl.protocol == PROTOCOL_QUAKE || cl.protocol == PROTOCOL_QUAKEDP || cl.protocol == PROTOCOL_NEHAHRAMOVIE)
+			if (cls.protocol == PROTOCOL_QUAKE || cls.protocol == PROTOCOL_QUAKEDP || cls.protocol == PROTOCOL_NEHAHRAMOVIE)
 			{
 				// 5 bytes
 				MSG_WriteByte (&buf, clc_move);
@@ -930,7 +930,7 @@ void CL_SendMove(void)
 				MSG_WriteByte (&buf, bits);
 				MSG_WriteByte (&buf, impulse);
 			}
-			else if (cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3)
+			else if (cls.protocol == PROTOCOL_DARKPLACES2 || cls.protocol == PROTOCOL_DARKPLACES3)
 			{
 				// 5 bytes
 				MSG_WriteByte (&buf, clc_move);
@@ -946,7 +946,7 @@ void CL_SendMove(void)
 				MSG_WriteByte (&buf, bits);
 				MSG_WriteByte (&buf, impulse);
 			}
-			else if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5)
+			else if (cls.protocol == PROTOCOL_DARKPLACES1 || cls.protocol == PROTOCOL_DARKPLACES4 || cls.protocol == PROTOCOL_DARKPLACES5)
 			{
 				// 5 bytes
 				MSG_WriteByte (&buf, clc_move);
@@ -966,7 +966,7 @@ void CL_SendMove(void)
 			{
 				// 5 bytes
 				MSG_WriteByte (&buf, clc_move);
-				if (cl.protocol != PROTOCOL_DARKPLACES6)
+				if (cls.protocol != PROTOCOL_DARKPLACES6)
 				{
 					if (cl_movement.integer)
 					{
