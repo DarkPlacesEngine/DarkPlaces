@@ -1477,13 +1477,13 @@ void VM_CL_ReadLong (void)
 //#364 float() readcoord (EXT_CSQC)
 void VM_CL_ReadCoord (void)
 {
-	PRVM_G_FLOAT(OFS_RETURN) = MSG_ReadCoord(cl.protocol);
+	PRVM_G_FLOAT(OFS_RETURN) = MSG_ReadCoord(cls.protocol);
 }
 
 //#365 float() readangle (EXT_CSQC)
 void VM_CL_ReadAngle (void)
 {
-	PRVM_G_FLOAT(OFS_RETURN) = MSG_ReadAngle(cl.protocol);
+	PRVM_G_FLOAT(OFS_RETURN) = MSG_ReadAngle(cls.protocol);
 }
 
 //#366 string() readstring (EXT_CSQC)

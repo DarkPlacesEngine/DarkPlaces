@@ -113,7 +113,7 @@ void EntityFrameQuake_ReadEntity(int bits)
 
 	if (bits & U_MOREBITS)
 		bits |= (MSG_ReadByte()<<8);
-	if ((bits & U_EXTEND1) && cl.protocol != PROTOCOL_NEHAHRAMOVIE)
+	if ((bits & U_EXTEND1) && cls.protocol != PROTOCOL_NEHAHRAMOVIE)
 	{
 		bits |= MSG_ReadByte() << 16;
 		if (bits & U_EXTEND2)
@@ -161,12 +161,12 @@ void EntityFrameQuake_ReadEntity(int bits)
 	if (bits & U_COLORMAP)	s.colormap = MSG_ReadByte();
 	if (bits & U_SKIN)		s.skin = MSG_ReadByte();
 	if (bits & U_EFFECTS)	s.effects = (s.effects & 0xFF00) | MSG_ReadByte();
-	if (bits & U_ORIGIN1)	s.origin[0] = MSG_ReadCoord(cl.protocol);
-	if (bits & U_ANGLE1)	s.angles[0] = MSG_ReadAngle(cl.protocol);
-	if (bits & U_ORIGIN2)	s.origin[1] = MSG_ReadCoord(cl.protocol);
-	if (bits & U_ANGLE2)	s.angles[1] = MSG_ReadAngle(cl.protocol);
-	if (bits & U_ORIGIN3)	s.origin[2] = MSG_ReadCoord(cl.protocol);
-	if (bits & U_ANGLE3)	s.angles[2] = MSG_ReadAngle(cl.protocol);
+	if (bits & U_ORIGIN1)	s.origin[0] = MSG_ReadCoord(cls.protocol);
+	if (bits & U_ANGLE1)	s.angles[0] = MSG_ReadAngle(cls.protocol);
+	if (bits & U_ORIGIN2)	s.origin[1] = MSG_ReadCoord(cls.protocol);
+	if (bits & U_ANGLE2)	s.angles[1] = MSG_ReadAngle(cls.protocol);
+	if (bits & U_ORIGIN3)	s.origin[2] = MSG_ReadCoord(cls.protocol);
+	if (bits & U_ANGLE3)	s.angles[2] = MSG_ReadAngle(cls.protocol);
 	if (bits & U_STEP)		s.flags |= RENDER_STEP;
 	if (bits & U_ALPHA)		s.alpha = MSG_ReadByte();
 	if (bits & U_SCALE)		s.scale = MSG_ReadByte();
@@ -181,7 +181,7 @@ void EntityFrameQuake_ReadEntity(int bits)
 	if (bits & U_EXTERIORMODEL)	s.flags |= RENDER_EXTERIORMODEL;
 
 	// LordHavoc: to allow playback of the Nehahra movie
-	if (cl.protocol == PROTOCOL_NEHAHRAMOVIE && (bits & U_EXTEND1))
+	if (cls.protocol == PROTOCOL_NEHAHRAMOVIE && (bits & U_EXTEND1))
 	{
 		// LordHavoc: evil format
 		int i = MSG_ReadFloat();
@@ -744,7 +744,7 @@ int EntityState_ReadExtendBits(void)
 
 void EntityState_ReadFields(entity_state_t *e, unsigned int bits)
 {
-	if (cl.protocol == PROTOCOL_DARKPLACES2)
+	if (cls.protocol == PROTOCOL_DARKPLACES2)
 	{
 		if (bits & E_ORIGIN1)
 			e->origin[0] = MSG_ReadCoord16i();
@@ -776,7 +776,7 @@ void EntityState_ReadFields(entity_state_t *e, unsigned int bits)
 				e->origin[2] = MSG_ReadCoord32f();
 		}
 	}
-	if ((cl.protocol == PROTOCOL_DARKPLACES5 || cl.protocol == PROTOCOL_DARKPLACES6) && !(e->flags & RENDER_LOWPRECISION))
+	if ((cls.protocol == PROTOCOL_DARKPLACES5 || cls.protocol == PROTOCOL_DARKPLACES6) && !(e->flags & RENDER_LOWPRECISION))
 	{
 		if (bits & E_ANGLE1)
 			e->angles[0] = MSG_ReadAngle16i();
@@ -818,7 +818,7 @@ void EntityState_ReadFields(entity_state_t *e, unsigned int bits)
 		e->glowsize = MSG_ReadByte();
 	if (bits & E_GLOWCOLOR)
 		e->glowcolor = MSG_ReadByte();
-	if (cl.protocol == PROTOCOL_DARKPLACES2)
+	if (cls.protocol == PROTOCOL_DARKPLACES2)
 		if (bits & E_FLAGS)
 			e->flags = MSG_ReadByte();
 	if (bits & E_TAGATTACHMENT)
@@ -2045,7 +2045,7 @@ void EntityFrame5_CL_ReadFrame(void)
 	cl.latestframenums[LATESTFRAMENUMS-1] = MSG_ReadLong();
 	if (developer_networkentities.integer)
 		Con_Printf("recv: svc_entities %i\n", cl.latestframenums[LATESTFRAMENUMS-1]);
-	if (cl.protocol != PROTOCOL_QUAKE && cl.protocol != PROTOCOL_QUAKEDP && cl.protocol != PROTOCOL_NEHAHRAMOVIE && cl.protocol != PROTOCOL_DARKPLACES1 && cl.protocol != PROTOCOL_DARKPLACES2 && cl.protocol != PROTOCOL_DARKPLACES3 && cl.protocol != PROTOCOL_DARKPLACES4 && cl.protocol != PROTOCOL_DARKPLACES5 && cl.protocol != PROTOCOL_DARKPLACES6)
+	if (cls.protocol != PROTOCOL_QUAKE && cls.protocol != PROTOCOL_QUAKEDP && cls.protocol != PROTOCOL_NEHAHRAMOVIE && cls.protocol != PROTOCOL_DARKPLACES1 && cls.protocol != PROTOCOL_DARKPLACES2 && cls.protocol != PROTOCOL_DARKPLACES3 && cls.protocol != PROTOCOL_DARKPLACES4 && cls.protocol != PROTOCOL_DARKPLACES5 && cls.protocol != PROTOCOL_DARKPLACES6)
 		cl.servermovesequence = MSG_ReadLong();
 	// read entity numbers until we find a 0x8000
 	// (which would be remove world entity, but is actually a terminator)

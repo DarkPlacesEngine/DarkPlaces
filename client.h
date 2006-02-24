@@ -446,6 +446,9 @@ typedef struct client_static_s
 	double connect_nextsendtime;
 	lhnetsocket_t *connect_mysocket;
 	lhnetaddress_t connect_address;
+	// protocol version of the server we're connected to
+	// (kept outside client_state_t because it's used between levels)
+	protocolversion_t protocol;
 
 // connection information
 	// 0 to SIGNONS
@@ -636,9 +639,6 @@ typedef struct client_state_s
 
 	// [cl.maxclients]
 	scoreboard_t *scores;
-
-	// protocol version of the server we're connected to
-	protocolversion_t protocol;
 
 	// entity database stuff
 	// latest received entity frame numbers

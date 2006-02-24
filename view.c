@@ -221,7 +221,7 @@ void V_ParseDamage (void)
 
 	armor = MSG_ReadByte ();
 	blood = MSG_ReadByte ();
-	MSG_ReadVector(from, cl.protocol);
+	MSG_ReadVector(from, cls.protocol);
 
 	count = blood*0.5 + armor*0.5;
 	if (count < 10)
