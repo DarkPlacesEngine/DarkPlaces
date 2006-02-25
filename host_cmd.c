@@ -1957,20 +1957,6 @@ static void MaxPlayers_f(void)
 
 // QuakeWorld commands
 
-char qw_emodel_name[] =
-	{ 'e' ^ 0xff, 'm' ^ 0xff, 'o' ^ 0xff, 'd' ^ 0xff, 'e' ^ 0xff, 'l' ^ 0xff, 0 };
-char qw_pmodel_name[] =
-	{ 'p' ^ 0xff, 'm' ^ 0xff, 'o' ^ 0xff, 'd' ^ 0xff, 'e' ^ 0xff, 'l' ^ 0xff, 0 };
-char qw_prespawn_name[] =
-	{ 'p'^0xff, 'r'^0xff, 'e'^0xff, 's'^0xff, 'p'^0xff, 'a'^0xff, 'w'^0xff, 'n'^0xff,
-		' '^0xff, '%'^0xff, 'i'^0xff, ' '^0xff, '0'^0xff, ' '^0xff, '%'^0xff, 'i'^0xff, 0 };
-char qw_modellist_name[] =
-	{ 'm'^0xff, 'o'^0xff, 'd'^0xff, 'e'^0xff, 'l'^0xff, 'l'^0xff, 'i'^0xff, 's'^0xff, 't'^0xff,
-		' '^0xff, '%'^0xff, 'i'^0xff, ' '^0xff, '%'^0xff, 'i'^0xff, 0 };
-char qw_soundlist_name[] =
-	{ 's'^0xff, 'o'^0xff, 'u'^0xff, 'n'^0xff, 'd'^0xff, 'l'^0xff, 'i'^0xff, 's'^0xff, 't'^0xff,
-		' '^0xff, '%'^0xff, 'i'^0xff, ' '^0xff, '%'^0xff, 'i'^0xff, 0 };
-
 /*
 =====================
 Host_Rcon_f
@@ -2146,7 +2132,7 @@ void Host_FullInfo_f (void) // credit: taken from QuakeWorld
 		if (*s)
 			s++;
 
-		if (!strcasecmp(key, qw_pmodel_name) || !strcasecmp(key, qw_emodel_name))
+		if (!strcasecmp(key, "pmodel") || !strcasecmp(key, "emodel"))
 			continue;
 
 		if (key[0] == '*')
@@ -2178,7 +2164,7 @@ void Host_SetInfo_f (void) // credit: taken from QuakeWorld
 		Con_Printf ("usage: setinfo [ <key> <value> ]\n");
 		return;
 	}
-	if (!strcasecmp(Cmd_Argv(1), qw_pmodel_name) || !strcasecmp(Cmd_Argv(1), qw_emodel_name))
+	if (!strcasecmp(Cmd_Argv(1), "pmodel") || !strcasecmp(Cmd_Argv(1), "emodel"))
 		return;
 	if (Cmd_Argv(1)[0] == '*')
 	{

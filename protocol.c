@@ -2558,7 +2558,7 @@ static void EntityStateQW_ReadEntityUpdate(entity_state_t *s, int bits)
 void EntityFrameQW_CL_ReadFrame(qboolean delta)
 {
 	qboolean invalid = false;
-	int i, number, oldsnapindex, newsnapindex, oldindex, newindex, oldnum, newnum;
+	int number, oldsnapindex, newsnapindex, oldindex, newindex, oldnum, newnum;
 	entity_t *ent;
 	entityframeqw_database_t *d = cl.entitydatabaseqw;
 	entityframeqw_snapshot_t *oldsnap, *newsnap;
@@ -2584,11 +2584,9 @@ void EntityFrameQW_CL_ReadFrame(qboolean delta)
 	}
 
 	// read the number of this frame to echo back in next input packet
-	for (i = 0;i < LATESTFRAMENUMS-1;i++)
-		cl.latestframenums[i] = cl.latestframenums[i+1];
-	cl.latestframenums[LATESTFRAMENUMS-1] = cls.netcon->qw.incoming_sequence;
+	cl.qw_validsequence = cls.netcon->qw.incoming_sequence;
 	if (invalid)
-		cl.latestframenums[LATESTFRAMENUMS-1] = 0;
+		cl.qw_validsequence = 0;
 
 	// read entity numbers until we find a 0x0000
 	// (which would be an empty update on world entity, but is actually a terminator)
@@ -2632,7 +2630,7 @@ void EntityFrameQW_CL_ReadFrame(qboolean delta)
 		{
 			if (newnum != oldnum && !delta && !invalid)
 			{
-				cl.latestframenums[LATESTFRAMENUMS-1] = 0;
+				cl.qw_validsequence = 0;
 				Con_Printf("WARNING: U_REMOVE %i on full update\n", newnum);
 			}
 		}

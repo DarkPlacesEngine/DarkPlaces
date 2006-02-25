@@ -61,6 +61,8 @@ void Com_HexDumpToConsole(const unsigned char *data, int size);
 
 unsigned short CRC_Block(const unsigned char *data, size_t size);
 
+unsigned char COM_BlockSequenceCRCByteQW(unsigned char *base, int length, int sequence);
+
 
 //============================================================================
 //							Endianess handling

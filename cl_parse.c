@@ -455,8 +455,8 @@ static void QW_CL_RequestNextDownload(void)
 		// done checking sounds and models, send a prespawn command now
 		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
 		// FIXME: calculate the checksum2 this wants
-		//MSG_WriteString(&cls.netcon->message, va(qw_prespawn_name, cl.qw_servercount, cl.worldmodel->checksum2));
-		MSG_WriteString(&cls.netcon->message, va(qw_prespawn_name, cl.qw_servercount, 0));
+		//MSG_WriteString(&cls.netcon->message, va("prespawn %i 0 %i", cl.qw_servercount, cl.worldmodel->checksum2));
+		MSG_WriteString(&cls.netcon->message, va("prespawn %i 0 %i", cl.qw_servercount, 0));
 
 		if (cls.qw_downloadmemory)
 		{
@@ -478,7 +478,7 @@ static void QW_CL_RequestNextDownload(void)
 			if (cl.sound_name[cls.qw_downloadnumber][0] == '*')
 				continue;
 			// check if we need to download the file, and return if so
-			if (!QW_CL_CheckOrDownloadFile(cl.sound_name[cls.qw_downloadnumber]))
+			if (!QW_CL_CheckOrDownloadFile(va("sound/%s", cl.sound_name[cls.qw_downloadnumber])))
 				return;
 		}
 
@@ -504,7 +504,7 @@ static void QW_CL_RequestNextDownload(void)
 
 		// done with sound downloads, next we check models
 		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
-		MSG_WriteString(&cls.netcon->message, va(qw_modellist_name, cl.qw_servercount, 0));
+		MSG_WriteString(&cls.netcon->message, va("modellist %i %i", cl.qw_servercount, 0));
 		break;
 	case dl_none:
 	default:
@@ -597,9 +597,10 @@ static void QW_CL_ParseModelList(void)
 	}
 
 	n = MSG_ReadByte();
+	if (n)
 	{
 		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
-		MSG_WriteString(&cls.netcon->message, va(qw_modellist_name, cl.qw_servercount, n));
+		MSG_WriteString(&cls.netcon->message, va("modellist %i %i", cl.qw_servercount, n));
 		return;
 	}
 
@@ -633,7 +634,7 @@ static void QW_CL_ParseSoundList(void)
 	if (n)
 	{
 		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
-		MSG_WriteString(&cls.netcon->message, va(qw_soundlist_name, cl.qw_servercount, n));
+		MSG_WriteString(&cls.netcon->message, va("soundlist %i %i", cl.qw_servercount, n));
 		return;
 	}
 
@@ -933,21 +934,14 @@ void CL_ParseServerInfo (void)
 		}
 #endif
 
-	// parse maxclients
-		cl.maxclients = MSG_ReadByte ();
-		if (cl.maxclients & 128)
-		{
-			cl.qw_spectator = true;
-			cl.maxclients &= ~128;
-		}
-		if (cl.maxclients < 1 || cl.maxclients > MAX_SCOREBOARD)
-		{
-			Host_Error("Bad maxclients (%u) from server", cl.maxclients);
-			return;
-		}
-		cl.scores = (scoreboard_t *)Mem_Alloc(cl_mempool, cl.maxclients*sizeof(*cl.scores));
-
 		cl.gametype = GAME_DEATHMATCH;
+		cl.maxclients = 32;
+
+		// parse player number
+		i = MSG_ReadByte();
+		cl.qw_spectator = (i & 128) != 0;
+		cl.playerentity = cl.viewentity = (i & 127) + 1;
+		cl.scores = (scoreboard_t *)Mem_Alloc(cl_mempool, cl.maxclients*sizeof(*cl.scores));
 
 		// get the full level name
 		str = MSG_ReadString ();
@@ -984,7 +978,7 @@ void CL_ParseServerInfo (void)
 		memset(cl.sound_precache, 0, sizeof(cl.sound_precache));
 
 		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
-		MSG_WriteString(&cls.netcon->message, va(qw_soundlist_name, cl.qw_servercount, 0));
+		MSG_WriteString(&cls.netcon->message, va("soundlist %i %i", cl.qw_servercount, 0));
 
 		cls.state = ca_connected;
 		cls.signon = 1;
@@ -2371,8 +2365,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case qw_svc_cdtrack:
-				cl.cdtrack = MSG_ReadByte ();
-				cl.looptrack = MSG_ReadByte ();
+				cl.cdtrack = cl.looptrack = MSG_ReadByte ();
 				if ( (cls.demoplayback || cls.demorecording) && (cls.forcetrack != -1) )
 					CDAudio_Play ((unsigned char)cls.forcetrack, true);
 				else
