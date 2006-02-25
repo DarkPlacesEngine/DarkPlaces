@@ -1957,17 +1957,17 @@ static void MaxPlayers_f(void)
 
 // QuakeWorld commands
 
-char emodel_name[] =
+char qw_emodel_name[] =
 	{ 'e' ^ 0xff, 'm' ^ 0xff, 'o' ^ 0xff, 'd' ^ 0xff, 'e' ^ 0xff, 'l' ^ 0xff, 0 };
-char pmodel_name[] =
+char qw_pmodel_name[] =
 	{ 'p' ^ 0xff, 'm' ^ 0xff, 'o' ^ 0xff, 'd' ^ 0xff, 'e' ^ 0xff, 'l' ^ 0xff, 0 };
-char prespawn_name[] =
+char qw_prespawn_name[] =
 	{ 'p'^0xff, 'r'^0xff, 'e'^0xff, 's'^0xff, 'p'^0xff, 'a'^0xff, 'w'^0xff, 'n'^0xff,
 		' '^0xff, '%'^0xff, 'i'^0xff, ' '^0xff, '0'^0xff, ' '^0xff, '%'^0xff, 'i'^0xff, 0 };
-char modellist_name[] =
+char qw_modellist_name[] =
 	{ 'm'^0xff, 'o'^0xff, 'd'^0xff, 'e'^0xff, 'l'^0xff, 'l'^0xff, 'i'^0xff, 's'^0xff, 't'^0xff,
 		' '^0xff, '%'^0xff, 'i'^0xff, ' '^0xff, '%'^0xff, 'i'^0xff, 0 };
-char soundlist_name[] =
+char qw_soundlist_name[] =
 	{ 's'^0xff, 'o'^0xff, 'u'^0xff, 'n'^0xff, 'd'^0xff, 'l'^0xff, 'i'^0xff, 's'^0xff, 't'^0xff,
 		' '^0xff, '%'^0xff, 'i'^0xff, ' '^0xff, '%'^0xff, 'i'^0xff, 0 };
 
@@ -2045,9 +2045,9 @@ void Host_User_f (void) // credit: taken from QuakeWorld
 	{
 		if (!cl.scores[i].name[0])
 			continue;
-		if (cl.scores[i].userid == uid || !strcasecmp(cl.scores[i].name, Cmd_Argv(1)))
+		if (cl.scores[i].qw_userid == uid || !strcasecmp(cl.scores[i].name, Cmd_Argv(1)))
 		{
-			InfoString_Print(cl.scores[i].userinfo);
+			InfoString_Print(cl.scores[i].qw_userinfo);
 			return;
 		}
 	}
@@ -2073,7 +2073,7 @@ void Host_Users_f (void) // credit: taken from QuakeWorld
 	{
 		if (cl.scores[i].name[0])
 		{
-			Con_Printf ("%6i %4i %s\n", cl.scores[i].userid, cl.scores[i].frags, cl.scores[i].name);
+			Con_Printf ("%6i %4i %s\n", cl.scores[i].qw_userid, cl.scores[i].frags, cl.scores[i].name);
 			c++;
 		}
 	}
@@ -2097,7 +2097,7 @@ void Host_FullServerinfo_f (void) // credit: taken from QuakeWorld
 		return;
 	}
 
-	strlcpy (cl.serverinfo, Cmd_Argv(1), sizeof(cl.serverinfo));
+	strlcpy (cl.qw_serverinfo, Cmd_Argv(1), sizeof(cl.qw_serverinfo));
 }
 
 /*
@@ -2146,7 +2146,7 @@ void Host_FullInfo_f (void) // credit: taken from QuakeWorld
 		if (*s)
 			s++;
 
-		if (!strcasecmp(key, pmodel_name) || !strcasecmp(key, emodel_name))
+		if (!strcasecmp(key, qw_pmodel_name) || !strcasecmp(key, qw_emodel_name))
 			continue;
 
 		if (key[0] == '*')
@@ -2178,7 +2178,7 @@ void Host_SetInfo_f (void) // credit: taken from QuakeWorld
 		Con_Printf ("usage: setinfo [ <key> <value> ]\n");
 		return;
 	}
-	if (!strcasecmp(Cmd_Argv(1), pmodel_name) || !strcasecmp(Cmd_Argv(1), emodel_name))
+	if (!strcasecmp(Cmd_Argv(1), qw_pmodel_name) || !strcasecmp(Cmd_Argv(1), qw_emodel_name))
 		return;
 	if (Cmd_Argv(1)[0] == '*')
 	{

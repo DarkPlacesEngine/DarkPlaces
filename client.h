@@ -370,13 +370,14 @@ typedef struct scoreboard_s
 	int		frags;
 	int		colors; // two 4 bit fields
 	// QW fields:
-	int		userid;
-	char	userinfo[MAX_USERINFO_STRING];
-	float	entertime;
-	int		ping;
-	int		packetloss;
-	int		spectator;
-	// TODO: QW skin support
+	int		qw_userid;
+	char	qw_userinfo[MAX_USERINFO_STRING];
+	float	qw_entertime;
+	int		qw_ping;
+	int		qw_packetloss;
+	int		qw_spectator;
+	char	qw_skin[MAX_QPATH];
+	cachepic_t *qw_skin_cachepic; // skins are loaded as cachepics
 } scoreboard_t;
 
 typedef struct cshift_s
@@ -404,13 +405,23 @@ typedef struct cshift_s
 #define	MAX_DEMOS		8
 #define	MAX_DEMONAME	16
 
-typedef enum
+typedef enum cactive_e
 {
 	ca_dedicated, 		// a dedicated server with no ability to start a client
 	ca_disconnected, 	// full screen console with no connection
 	ca_connected		// valid netcon, talking to a server
 }
 cactive_t;
+
+typedef enum qw_downloadtype_e
+{
+	dl_none,
+	dl_single,
+	dl_skin,
+	dl_model,
+	dl_sound
+}
+qw_downloadtype_t;
 
 //
 // the client_static_t structure is persistent through an arbitrary number
@@ -419,9 +430,6 @@ cactive_t;
 typedef struct client_static_s
 {
 	cactive_t state;
-
-	// value of "qport" cvar at time of connection
-	int qport;
 
 // demo loop control
 	// -1 = don't play demos
@@ -468,6 +476,23 @@ typedef struct client_static_s
 	netconn_t *netcon;
 
 	// quakeworld stuff below
+
+	// value of "qport" cvar at time of connection
+	int qw_qport;
+
+	// current file download buffer (only saved when file is completed)
+	char qw_downloadname[MAX_QPATH];
+	unsigned char *qw_downloadmemory;
+	int qw_downloadmemorycursize;
+	int qw_downloadmemorymaxsize;
+	int qw_downloadnumber;
+	int qw_downloadpercent;
+	qw_downloadtype_t qw_downloadtype;
+
+	// current file upload buffer (for uploading screenshots to server)
+	unsigned char *qw_uploaddata;
+	int qw_uploadsize;
+	int qw_uploadpos;
 
 	// user infostring
 	// this normally contains the following keys in quakeworld:
@@ -662,15 +687,49 @@ typedef struct client_state_s
 	// [cl.maxclients]
 	scoreboard_t *scores;
 
-	// local copy of the server infostring
-	char serverinfo[MAX_SERVERINFO_STRING];
-
 	// entity database stuff
 	// latest received entity frame numbers
 #define LATESTFRAMENUMS 3
 	int latestframenums[LATESTFRAMENUMS];
 	entityframe_database_t *entitydatabase;
 	entityframe4_database_t *entitydatabase4;
+	entityframeqw_database_t *entitydatabaseqw;
+
+	// quakeworld stuff
+
+	// local copy of the server infostring
+	char qw_serverinfo[MAX_SERVERINFO_STRING];
+
+	// used during connect
+	int qw_servercount;
+
+	// indicates whether the player is spectating
+	qboolean qw_spectator;
+
+	// movement parameters for client prediction
+	float qw_movevars_gravity;
+	float qw_movevars_stopspeed;
+	float qw_movevars_maxspeed; // can change during play
+	float qw_movevars_spectatormaxspeed;
+	float qw_movevars_accelerate;
+	float qw_movevars_airaccelerate;
+	float qw_movevars_wateraccelerate;
+	float qw_movevars_friction;
+	float qw_movevars_waterfriction;
+	float qw_movevars_entgravity; // can change during play
+
+	// models used by qw protocol
+	int qw_modelindex_spike;
+	int qw_modelindex_player;
+	int qw_modelindex_flag;
+	int qw_modelindex_s_explod;
+
+	vec3_t qw_intermission_origin;
+	vec3_t qw_intermission_angles;
+
+	// 255 is the most nails the QW protocol could send
+	int qw_num_nails;
+	vec_t qw_nails[255][6];
 }
 client_state_t;
 
@@ -768,6 +827,7 @@ extern int cl_num_static_entities;
 extern int cl_num_temp_entities;
 extern int cl_num_brushmodel_entities;
 
+extern char qw_emodel_name[], qw_pmodel_name[], qw_prespawn_name[], qw_modellist_name[], qw_soundlist_name[];
 
 extern client_state_t cl;
 
@@ -855,6 +915,8 @@ void CL_Parse_Init(void);
 void CL_Parse_Shutdown(void);
 void CL_ParseServerMessage(void);
 void CL_Parse_DumpPacket(void);
+void CL_Parse_ErrorCleanUp(void);
+void QW_CL_StartUpload(unsigned char *data, int size);
 extern cvar_t qport;
 
 //
@@ -901,8 +963,8 @@ void CL_Particles_Shutdown(void);
 void CL_ParseParticleEffect (void);
 void CL_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count);
 void CL_RocketTrail (vec3_t start, vec3_t end, int type, int color, entity_t *ent);
-void CL_SparkShower (vec3_t org, vec3_t dir, int count, vec_t gravityscale);
-void CL_Smoke (vec3_t org, vec3_t dir, int count);
+void CL_SparkShower (vec3_t org, vec3_t dir, int count, vec_t gravityscale, vec_t radius);
+void CL_Smoke (vec3_t org, vec3_t dir, int count, vec_t radius);
 void CL_BulletMark (vec3_t org);
 void CL_PlasmaBurn (vec3_t org);
 void CL_BloodPuff (vec3_t org, vec3_t vel, int count);

@@ -674,6 +674,61 @@ void CL_UpdateLights(void)
 	}
 }
 
+void CL_AddQWCTFFlagModel(entity_t *player, int skin)
+{
+	float f;
+	entity_t *flag;
+	matrix4x4_t flagmatrix;
+
+	// this code taken from QuakeWorld
+	f = 14;
+	if (player->render.frame2 >= 29 && player->render.frame2 <= 40)
+	{
+		if (player->render.frame2 >= 29 && player->render.frame2 <= 34)
+		{ //axpain
+			if      (player->render.frame2 == 29) f = f + 2;
+			else if (player->render.frame2 == 30) f = f + 8;
+			else if (player->render.frame2 == 31) f = f + 12;
+			else if (player->render.frame2 == 32) f = f + 11;
+			else if (player->render.frame2 == 33) f = f + 10;
+			else if (player->render.frame2 == 34) f = f + 4;
+		}
+		else if (player->render.frame2 >= 35 && player->render.frame2 <= 40)
+		{ // pain
+			if      (player->render.frame2 == 35) f = f + 2;
+			else if (player->render.frame2 == 36) f = f + 10;
+			else if (player->render.frame2 == 37) f = f + 10;
+			else if (player->render.frame2 == 38) f = f + 8;
+			else if (player->render.frame2 == 39) f = f + 4;
+			else if (player->render.frame2 == 40) f = f + 2;
+		}
+	}
+	else if (player->render.frame2 >= 103 && player->render.frame2 <= 118)
+	{
+		if      (player->render.frame2 >= 103 && player->render.frame2 <= 104) f = f + 6;  //nailattack
+		else if (player->render.frame2 >= 105 && player->render.frame2 <= 106) f = f + 6;  //light
+		else if (player->render.frame2 >= 107 && player->render.frame2 <= 112) f = f + 7;  //rocketattack
+		else if (player->render.frame2 >= 112 && player->render.frame2 <= 118) f = f + 7;  //shotattack
+	}
+	// end of code taken from QuakeWorld
+
+	flag = CL_NewTempEntity();
+	if (!flag)
+		return;
+
+	flag->render.model = cl.model_precache[cl.qw_modelindex_flag];
+	flag->render.skinnum = skin;
+	flag->render.colormap = -1; // no special coloring
+	flag->render.alpha = 1;
+	VectorSet(flag->render.colormod, 1, 1, 1);
+	// attach the flag to the player matrix
+	Matrix4x4_CreateFromQuakeEntity(&flagmatrix, -f, -22, 0, 0, 0, -45, 1);
+	Matrix4x4_Concat(&flag->render.matrix, &flagmatrix, &player->render.matrix);
+	Matrix4x4_Invert_Simple(&flag->render.inversematrix, &flag->render.matrix);
+	R_LerpAnimation(&flag->render);
+	CL_BoundingBoxForEntity(&flag->render);
+}
+
 #define MAXVIEWMODELS 32
 entity_t *viewmodels[MAXVIEWMODELS];
 int numviewmodels;
@@ -993,6 +1048,11 @@ void CL_LinkNetworkEntity(entity_t *e)
 				dlightcolor[0] += 1.0f;
 				dlightcolor[1] += 0.7f;
 				dlightcolor[2] += 0.3f;
+			}
+			if (e->render.effects & (EF_FLAG1QW | EF_FLAG2QW))
+			{
+				// these are only set on player entities
+				CL_AddQWCTFFlagModel(e, (e->render.effects & EF_FLAG2QW) != 0);
 			}
 		}
 		// muzzleflash fades over time, and is offset a bit
@@ -1421,6 +1481,34 @@ void CL_RelinkBeams(void)
 	}
 }
 
+static void CL_RelinkQWNails(void)
+{
+	int i;
+	vec_t *v;
+	entity_t *ent;
+
+	for (i = 0;i < cl.qw_num_nails;i++)
+	{
+		v = cl.qw_nails[i];
+
+		// if we're drawing effects, get a new temp entity
+		// (NewTempEntity adds it to the render entities list for us)
+		if (!(ent = CL_NewTempEntity()))
+			continue;
+
+		// normal stuff
+		ent->render.model = cl.model_precache[cl.qw_modelindex_spike];
+		ent->render.colormap = -1; // no special coloring
+		ent->render.alpha = 1;
+		VectorSet(ent->render.colormod, 1, 1, 1);
+
+		Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, v[0], v[1], v[2], v[3], v[4], v[5], 1);
+		Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
+		R_LerpAnimation(&ent->render);
+		CL_BoundingBoxForEntity(&ent->render);
+	}
+}
+
 void CL_LerpPlayer(float frac)
 {
 	int i;
@@ -1467,6 +1555,7 @@ void CSQC_RelinkAllEntities (int drawmask)
 		CL_RelinkStaticEntities();
 		CL_RelinkBeams();
 		CL_RelinkEffects();
+		CL_RelinkQWNails();
 	}
 }
 

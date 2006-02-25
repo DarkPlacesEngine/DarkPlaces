@@ -158,6 +158,13 @@ char *qw_svc_strings[128] =
 cvar_t demo_nehahra = {0, "demo_nehahra", "0", "reads all quake demos as nehahra movie protocol"};
 cvar_t developer_networkentities = {0, "developer_networkentities", "0", "prints received entities, value is 0-4 (higher for more info)"};
 
+static qboolean QW_CL_CheckOrDownloadFile(const char *filename);
+static void QW_CL_RequestNextDownload(void);
+static void QW_CL_NextUpload(void);
+void QW_CL_StartUpload(unsigned char *data, int size);
+//static qboolean QW_CL_IsUploading(void);
+static void QW_CL_StopUpload(void);
+
 /*
 ==================
 CL_ParseStartSoundPacket
@@ -172,34 +179,56 @@ void CL_ParseStartSoundPacket(int largesoundindex)
 	int 	field_mask;
 	float 	attenuation;
 
-	field_mask = MSG_ReadByte();
-
-	if (field_mask & SND_VOLUME)
-		volume = MSG_ReadByte ();
-	else
-		volume = DEFAULT_SOUND_PACKET_VOLUME;
-
-	if (field_mask & SND_ATTENUATION)
-		attenuation = MSG_ReadByte () / 64.0;
-	else
-		attenuation = DEFAULT_SOUND_PACKET_ATTENUATION;
-
-	if (field_mask & SND_LARGEENTITY)
+	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 	{
-		ent = (unsigned short) MSG_ReadShort ();
-		channel = MSG_ReadByte ();
-	}
-	else
-	{
-		channel = (unsigned short) MSG_ReadShort ();
-		ent = channel >> 3;
+		channel = MSG_ReadShort();
+
+		if (channel & (1<<15))
+			volume = MSG_ReadByte ();
+		else
+			volume = DEFAULT_SOUND_PACKET_VOLUME;
+
+		if (channel & (1<<14))
+			attenuation = MSG_ReadByte () / 64.0;
+		else
+			attenuation = DEFAULT_SOUND_PACKET_ATTENUATION;
+
+		ent = (channel>>3)&1023;
 		channel &= 7;
-	}
 
-	if (largesoundindex || field_mask & SND_LARGESOUND)
-		sound_num = (unsigned short) MSG_ReadShort ();
-	else
 		sound_num = MSG_ReadByte ();
+	}
+	else
+	{
+		field_mask = MSG_ReadByte();
+
+		if (field_mask & SND_VOLUME)
+			volume = MSG_ReadByte ();
+		else
+			volume = DEFAULT_SOUND_PACKET_VOLUME;
+
+		if (field_mask & SND_ATTENUATION)
+			attenuation = MSG_ReadByte () / 64.0;
+		else
+			attenuation = DEFAULT_SOUND_PACKET_ATTENUATION;
+
+		if (field_mask & SND_LARGEENTITY)
+		{
+			ent = (unsigned short) MSG_ReadShort ();
+			channel = MSG_ReadByte ();
+		}
+		else
+		{
+			channel = (unsigned short) MSG_ReadShort ();
+			ent = channel >> 3;
+			channel &= 7;
+		}
+
+		if (largesoundindex || field_mask & SND_LARGESOUND)
+			sound_num = (unsigned short) MSG_ReadShort ();
+		else
+			sound_num = MSG_ReadByte ();
+	}
 
 	MSG_ReadVector(pos, cls.protocol);
 
@@ -317,6 +346,466 @@ void CL_ParseEntityLump(char *entdata)
 	}
 }
 
+static qboolean QW_CL_CheckOrDownloadFile(const char *filename)
+{
+	qfile_t *file;
+
+	// see if the file already exists
+	file = FS_Open(filename, "rb", true, false);
+	if (file)
+	{
+		FS_Close(file);
+		return true;
+	}
+
+	// download messages in a demo would be bad
+	if (cls.demorecording)
+	{
+		Con_Printf("Unable to download \"%s\" when recording.\n", filename);
+		return true;
+	}
+
+	// don't try to download when playing a demo
+	if (!cls.netcon)
+		return true;
+
+	strlcpy(cls.qw_downloadname, filename, sizeof(cls.qw_downloadname));
+	Con_Printf("Downloading %s\n", filename);
+
+	if (!cls.qw_downloadmemory)
+	{
+		cls.qw_downloadmemory = NULL;
+		cls.qw_downloadmemorycursize = 0;
+		cls.qw_downloadmemorymaxsize = 1024*1024; // start out with a 1MB buffer
+	}
+
+	MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
+	MSG_WriteString(&cls.netcon->message, va("download %s", filename));
+
+	cls.qw_downloadnumber++;
+	cls.qw_downloadpercent = 0;
+
+	return false;
+}
+
+static void QW_CL_RequestNextDownload(void)
+{
+	int i;
+
+	// clear name of file that just finished
+	cls.qw_downloadname[0] = 0;
+
+	switch (cls.qw_downloadtype)
+	{
+	case dl_single:
+		break;
+	case dl_skin:
+		// TODO
+		break;
+	case dl_model:
+		if (cls.qw_downloadnumber == 0)
+		{
+			Con_Printf("Checking models...\n");
+			cls.qw_downloadnumber = 1;
+		}
+
+		cls.qw_downloadtype = dl_model;
+		for (;cls.qw_downloadnumber < MAX_MODELS && cl.model_name[cls.qw_downloadnumber][0];cls.qw_downloadnumber++)
+		{
+			// skip submodels
+			if (cl.model_name[cls.qw_downloadnumber][0] == '*')
+				continue;
+			if (!strcmp(cl.model_name[cls.qw_downloadnumber], "progs/spike.mdl"))
+				cl.qw_modelindex_spike = cls.qw_downloadnumber;
+			if (!strcmp(cl.model_name[cls.qw_downloadnumber], "progs/player.mdl"))
+				cl.qw_modelindex_player = cls.qw_downloadnumber;
+			if (!strcmp(cl.model_name[cls.qw_downloadnumber], "progs/flag.mdl"))
+				cl.qw_modelindex_flag = cls.qw_downloadnumber;
+			if (!strcmp(cl.model_name[cls.qw_downloadnumber], "progs/s_explod.spr"))
+				cl.qw_modelindex_s_explod = cls.qw_downloadnumber;
+			// check if we need to download the file, and return if so
+			if (!QW_CL_CheckOrDownloadFile(cl.model_name[cls.qw_downloadnumber]))
+				return;
+		}
+
+		// touch all of the precached models that are still loaded so we can free
+		// anything that isn't needed
+		Mod_ClearUsed();
+		for (i = 1;i < MAX_MODELS && cl.model_name[i][0];i++)
+			Mod_FindName(cl.model_name[i]);
+		// precache any models used by the client (this also marks them used)
+		cl.model_bolt = Mod_ForName("progs/bolt.mdl", false, false, false);
+		cl.model_bolt2 = Mod_ForName("progs/bolt2.mdl", false, false, false);
+		cl.model_bolt3 = Mod_ForName("progs/bolt3.mdl", false, false, false);
+		cl.model_beam = Mod_ForName("progs/beam.mdl", false, false, false);
+		Mod_PurgeUnused();
+
+		// now we try to load everything that is new
+
+		// world model
+		cl.model_precache[1] = Mod_ForName(cl.model_name[1], false, false, true);
+		if (cl.model_precache[1]->Draw == NULL)
+			Con_Printf("Map %s could not be found or downloaded\n", cl.model_name[1]);
+
+		// normal models
+		for (i = 2;i < MAX_MODELS && cl.model_name[i][0];i++)
+			if ((cl.model_precache[i] = Mod_ForName(cl.model_name[i], false, false, false))->Draw == NULL)
+				Con_Printf("Model %s could not be found or downloaded\n", cl.model_name[i]);
+
+		// done checking sounds and models, send a prespawn command now
+		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
+		// FIXME: calculate the checksum2 this wants
+		//MSG_WriteString(&cls.netcon->message, va(qw_prespawn_name, cl.qw_servercount, cl.worldmodel->checksum2));
+		MSG_WriteString(&cls.netcon->message, va(qw_prespawn_name, cl.qw_servercount, 0));
+
+		if (cls.qw_downloadmemory)
+		{
+			Mem_Free(cls.qw_downloadmemory);
+			cls.qw_downloadmemory = NULL;
+		}
+		break;
+	case dl_sound:
+		if (cls.qw_downloadnumber == 0)
+		{
+			Con_Printf("Checking sounds...\n");
+			cls.qw_downloadnumber = 1;
+		}
+
+		cls.qw_downloadtype = dl_sound;
+		for (;cl.sound_name[cls.qw_downloadnumber][0];cls.qw_downloadnumber++)
+		{
+			// skip subsounds
+			if (cl.sound_name[cls.qw_downloadnumber][0] == '*')
+				continue;
+			// check if we need to download the file, and return if so
+			if (!QW_CL_CheckOrDownloadFile(cl.sound_name[cls.qw_downloadnumber]))
+				return;
+		}
+
+		// load new sounds and unload old ones
+		// FIXME: S_ServerSounds does not know about cl.sfx_ sounds
+		S_ServerSounds(cl.sound_name, cls.qw_downloadnumber);
+
+		// precache any sounds used by the client
+		cl.sfx_wizhit = S_PrecacheSound("sound/wizard/hit.wav", false, true);
+		cl.sfx_knighthit = S_PrecacheSound("sound/hknight/hit.wav", false, true);
+		cl.sfx_tink1 = S_PrecacheSound("sound/weapons/tink1.wav", false, true);
+		cl.sfx_ric1 = S_PrecacheSound("sound/weapons/ric1.wav", false, true);
+		cl.sfx_ric2 = S_PrecacheSound("sound/weapons/ric2.wav", false, true);
+		cl.sfx_ric3 = S_PrecacheSound("sound/weapons/ric3.wav", false, true);
+		cl.sfx_r_exp3 = S_PrecacheSound("sound/weapons/r_exp3.wav", false, true);
+
+		// sounds
+		for (i = 1;i < MAX_SOUNDS && cl.sound_name[i][0];i++)
+		{
+			// Don't lock the sfx here, S_ServerSounds already did that
+			cl.sound_precache[i] = S_PrecacheSound(cl.sound_name[i], true, false);
+		}
+
+		// done with sound downloads, next we check models
+		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
+		MSG_WriteString(&cls.netcon->message, va(qw_modellist_name, cl.qw_servercount, 0));
+		break;
+	case dl_none:
+	default:
+		Con_Printf("Unknown download type.\n");
+	}
+}
+
+static void QW_CL_ParseDownload(void)
+{
+	int size = MSG_ReadShort();
+	int percent = MSG_ReadByte();
+
+	// skip the download fragment if playing a demo
+	if (!cls.netcon)
+	{
+		if (size > 0)
+			msg_readcount += size;
+		return;
+	}
+
+	if (size == -1)
+	{
+		Con_Printf("File not found.\n");
+		QW_CL_RequestNextDownload();
+		return;
+	}
+
+	if (msg_readcount + (unsigned short)size > net_message.cursize)
+		Host_Error("corrupt download message\n");
+
+	// make sure the buffer is big enough to include this new fragment
+	if (!cls.qw_downloadmemory || cls.qw_downloadmemorymaxsize < cls.qw_downloadmemorycursize + size)
+	{
+		unsigned char *old;
+		while (cls.qw_downloadmemorymaxsize < cls.qw_downloadmemorycursize + size)
+			cls.qw_downloadmemorymaxsize *= 2;
+		old = cls.qw_downloadmemory;
+		cls.qw_downloadmemory = Mem_Alloc(cl_mempool, cls.qw_downloadmemorymaxsize);
+		if (old)
+		{
+			memcpy(cls.qw_downloadmemory, old, cls.qw_downloadmemorycursize);
+			Mem_Free(old);
+		}
+	}
+
+	// read the fragment out of the packet
+	MSG_ReadBytes(size, cls.qw_downloadmemory + cls.qw_downloadmemorycursize);
+	cls.qw_downloadmemorycursize += size;
+
+	cls.qw_downloadpercent = percent;
+
+	if (percent != 100)
+	{
+		// request next fragment
+		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
+		MSG_WriteString(&cls.netcon->message, "nextdl");
+	}
+	else
+	{
+		// finished file
+		Con_Printf("Downloaded \"%s\"\n", cls.qw_downloadname);
+
+		FS_WriteFile(cls.qw_downloadname, cls.qw_downloadmemory, cls.qw_downloadmemorycursize);
+
+		cls.qw_downloadpercent = 0;
+
+		// start downloading the next file (or join the game)
+		QW_CL_RequestNextDownload();
+	}
+}
+
+static void QW_CL_ParseModelList(void)
+{
+	int n;
+	int nummodels = MSG_ReadByte();
+	char *str;
+
+	// parse model precache list
+	for (;;)
+	{
+		str = MSG_ReadString();
+		if (!str[0])
+			break;
+		nummodels++;
+		if (nummodels==MAX_MODELS)
+			Host_Error("Server sent too many model precaches");
+		if (strlen(str) >= MAX_QPATH)
+			Host_Error("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
+		strlcpy(cl.model_name[nummodels], str, sizeof (cl.model_name[nummodels]));
+	}
+
+	n = MSG_ReadByte();
+	{
+		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
+		MSG_WriteString(&cls.netcon->message, va(qw_modellist_name, cl.qw_servercount, n));
+		return;
+	}
+
+	cls.qw_downloadnumber = 0;
+	cls.qw_downloadtype = dl_model;
+	QW_CL_RequestNextDownload();
+}
+
+static void QW_CL_ParseSoundList(void)
+{
+	int n;
+	int numsounds = MSG_ReadByte();
+	char *str;
+
+	// parse sound precache list
+	for (;;)
+	{
+		str = MSG_ReadString();
+		if (!str[0])
+			break;
+		numsounds++;
+		if (numsounds==MAX_SOUNDS)
+			Host_Error("Server sent too many sound precaches");
+		if (strlen(str) >= MAX_QPATH)
+			Host_Error("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
+		strlcpy(cl.sound_name[numsounds], str, sizeof (cl.sound_name[numsounds]));
+	}
+
+	n = MSG_ReadByte();
+
+	if (n)
+	{
+		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
+		MSG_WriteString(&cls.netcon->message, va(qw_soundlist_name, cl.qw_servercount, n));
+		return;
+	}
+
+	cls.qw_downloadnumber = 0;
+	cls.qw_downloadtype = dl_sound;
+	QW_CL_RequestNextDownload();
+}
+
+void QW_CL_NextUpload(void)
+{
+	int r, percent, size;
+
+	if (!cls.qw_uploaddata)
+		return;
+
+	r = cls.qw_uploadsize - cls.qw_uploadpos;
+	if (r > 768)
+		r = 768;
+	size = min(1, cls.qw_uploadsize);
+	percent = (cls.qw_uploadpos+r)*100/size;
+
+	MSG_WriteByte(&cls.netcon->message, qw_clc_upload);
+	MSG_WriteShort(&cls.netcon->message, r);
+	MSG_WriteByte(&cls.netcon->message, percent);
+	SZ_Write(&cls.netcon->message, cls.qw_uploaddata + cls.qw_uploadpos, r);
+
+	Con_DPrintf("UPLOAD: %6d: %d written\n", cls.qw_uploadpos, r);
+
+	cls.qw_uploadpos += r;
+
+	if (cls.qw_uploadpos < cls.qw_uploadsize)
+		return;
+
+	Con_Printf("Upload completed\n");
+
+	QW_CL_StopUpload();
+}
+
+void QW_CL_StartUpload(unsigned char *data, int size)
+{
+	// do nothing in demos or if not connected
+	if (!cls.netcon)
+		return;
+
+	// abort existing upload if in progress
+	QW_CL_StopUpload();
+
+	Con_DPrintf("Starting upload of %d bytes...\n", size);
+
+	cls.qw_uploaddata = Mem_Alloc(cl_mempool, size);
+	memcpy(cls.qw_uploaddata, data, size);
+	cls.qw_uploadsize = size;
+	cls.qw_uploadpos = 0;
+
+	QW_CL_NextUpload();
+}
+
+#if 0
+qboolean QW_CL_IsUploading(void)
+{
+	return cls.qw_uploaddata != NULL;
+}
+#endif
+
+void QW_CL_StopUpload(void)
+{
+	if (cls.qw_uploaddata)
+		Mem_Free(cls.qw_uploaddata);
+	cls.qw_uploaddata = NULL;
+	cls.qw_uploadsize = 0;
+	cls.qw_uploadpos = 0;
+}
+
+static void QW_CL_ProcessUserInfo(int slot)
+{
+	int topcolor, bottomcolor;
+	char temp[2048];
+	InfoString_GetValue(cl.scores[slot].qw_userinfo, "name", cl.scores[slot].name, sizeof(cl.scores[slot].name));
+	InfoString_GetValue(cl.scores[slot].qw_userinfo, "topcolor", temp, sizeof(temp));topcolor = atoi(temp);
+	InfoString_GetValue(cl.scores[slot].qw_userinfo, "bottomcolor", temp, sizeof(temp));bottomcolor = atoi(temp);
+	cl.scores[slot].colors = topcolor * 16 + bottomcolor;
+	InfoString_GetValue(cl.scores[slot].qw_userinfo, "*spectator", temp, sizeof(temp));
+	cl.scores[slot].qw_spectator = temp[0] != 0;
+	InfoString_GetValue(cl.scores[slot].qw_userinfo, "skin", cl.scores[slot].qw_skin, sizeof(cl.scores[slot].qw_skin));
+	// LordHavoc: abusing Draw_CachePic for caching skins...
+	cl.scores[slot].qw_skin_cachepic = Draw_CachePic(cl.scores[slot].qw_skin, true);
+}
+
+static void QW_CL_UpdateUserInfo(void)
+{
+	int slot;
+	slot = MSG_ReadByte();
+	if (slot >= cl.maxclients)
+	{
+		Con_Printf("svc_updateuserinfo >= cl.maxclients\n");
+		MSG_ReadLong();
+		MSG_ReadString();
+		return;
+	}
+	cl.scores[slot].qw_userid = MSG_ReadLong();
+	strlcpy(cl.scores[slot].qw_userinfo, MSG_ReadString(), sizeof(cl.scores[slot].qw_userinfo));
+
+	QW_CL_ProcessUserInfo(slot);
+}
+
+static void QW_CL_SetInfo(void)
+{
+	int slot;
+	char key[2048];
+	char value[2048];
+	slot = MSG_ReadByte();
+	strlcpy(key, MSG_ReadString(), sizeof(key));
+	strlcpy(value, MSG_ReadString(), sizeof(value));
+	if (slot >= cl.maxclients)
+	{
+		Con_Printf("svc_setinfo >= cl.maxclients\n");
+		return;
+	}
+	InfoString_SetValue(cl.scores[slot].qw_userinfo, sizeof(cl.scores[slot].qw_userinfo), key, value);
+
+	QW_CL_ProcessUserInfo(slot);
+}
+
+static void QW_CL_ServerInfo(void)
+{
+	char key[2048];
+	char value[2048];
+	strlcpy(key, MSG_ReadString(), sizeof(key));
+	strlcpy(value, MSG_ReadString(), sizeof(value));
+	Con_DPrintf("SERVERINFO: %s=%s\n", key, value);
+	InfoString_SetValue(cl.qw_serverinfo, sizeof(cl.qw_serverinfo), key, value);
+}
+
+static void QW_CL_ParseNails(void)
+{
+	int i, j;
+	int numnails = MSG_ReadByte();
+	vec_t *v;
+	unsigned char bits[6];
+	cl.qw_num_nails = 0;
+	for (i = 0;i < numnails;i++)
+	{
+		v = cl.qw_nails[cl.qw_num_nails++];
+		for (j = 0;j < 6;j++)
+			bits[j] = MSG_ReadByte();
+		v[0] = ( ( bits[0] + ((bits[1]&15)<<8) ) <<1) - 4096;
+		v[1] = ( ( (bits[1]>>4) + (bits[2]<<4) ) <<1) - 4096;
+		v[2] = ( ( bits[3] + ((bits[4]&15)<<8) ) <<1) - 4096;
+		v[3] = 360*(bits[4]>>4)/16;
+		v[4] = 360*bits[5]/256;
+		v[5] = 0;
+	}
+}
+
+static void QW_CL_UpdateItemsAndWeapon(void)
+{
+	int j;
+	// check for important changes
+
+	// set flash times
+	if (cl.olditems != cl.stats[STAT_ITEMS])
+		for (j = 0;j < 32;j++)
+			if ((cl.stats[STAT_ITEMS] & (1<<j)) && !(cl.olditems & (1<<j)))
+				cl.item_gettime[j] = cl.time;
+	cl.olditems = cl.stats[STAT_ITEMS];
+
+	// GAME_NEXUIZ hud needs weapon change time
+	if (cl.activeweapon != cl.stats[STAT_ACTIVEWEAPON])
+		cl.weapontime = cl.time;
+	cl.activeweapon = cl.stats[STAT_ACTIVEWEAPON];
+}
+
 /*
 =====================
 CL_SignonReply
@@ -422,114 +911,195 @@ void CL_ParseServerInfo (void)
 	cls.protocol = protocol;
 	Con_DPrintf("Server protocol is %s\n", Protocol_NameForEnum(cls.protocol));
 
-// parse maxclients
-	cl.maxclients = MSG_ReadByte ();
-	if (cl.maxclients < 1 || cl.maxclients > MAX_SCOREBOARD)
+	if (protocol == PROTOCOL_QUAKEWORLD)
 	{
-		Host_Error("Bad maxclients (%u) from server", cl.maxclients);
-		return;
-	}
-	cl.scores = (scoreboard_t *)Mem_Alloc(cl_mempool, cl.maxclients*sizeof(*cl.scores));
+		cl.qw_servercount = MSG_ReadLong();
 
-// parse gametype
-	cl.gametype = MSG_ReadByte ();
+		str = MSG_ReadString();
+		Con_Printf("server gamedir is %s\n", str);
+#if 0
+		// FIXME: change gamedir if needed!
+		if (strcasecmp(gamedirfile, str))
+		{
+			Host_SaveConfig_f();
+			cflag = 1;
+		}
 
-// parse signon message
-	str = MSG_ReadString ();
-	strlcpy (cl.levelname, str, sizeof(cl.levelname));
+		Com_Gamedir(str); // change gamedir
 
-// seperate the printfs so the server message can have a color
-	if (cls.protocol != PROTOCOL_NEHAHRAMOVIE) // no messages when playing the Nehahra movie
+		if (cflag)
+		{
+			// exec the new config stuff
+		}
+#endif
+
+	// parse maxclients
+		cl.maxclients = MSG_ReadByte ();
+		if (cl.maxclients & 128)
+		{
+			cl.qw_spectator = true;
+			cl.maxclients &= ~128;
+		}
+		if (cl.maxclients < 1 || cl.maxclients > MAX_SCOREBOARD)
+		{
+			Host_Error("Bad maxclients (%u) from server", cl.maxclients);
+			return;
+		}
+		cl.scores = (scoreboard_t *)Mem_Alloc(cl_mempool, cl.maxclients*sizeof(*cl.scores));
+
+		cl.gametype = GAME_DEATHMATCH;
+
+		// get the full level name
+		str = MSG_ReadString ();
+		strlcpy (cl.levelname, str, sizeof(cl.levelname));
+
+		// get the movevars
+		cl.qw_movevars_gravity            = MSG_ReadFloat();
+		cl.qw_movevars_stopspeed          = MSG_ReadFloat();
+		cl.qw_movevars_maxspeed           = MSG_ReadFloat();
+		cl.qw_movevars_spectatormaxspeed  = MSG_ReadFloat();
+		cl.qw_movevars_accelerate         = MSG_ReadFloat();
+		cl.qw_movevars_airaccelerate      = MSG_ReadFloat();
+		cl.qw_movevars_wateraccelerate    = MSG_ReadFloat();
+		cl.qw_movevars_friction           = MSG_ReadFloat();
+		cl.qw_movevars_waterfriction      = MSG_ReadFloat();
+		cl.qw_movevars_entgravity         = MSG_ReadFloat();
+
+		// seperate the printfs so the server message can have a color
 		Con_Printf("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n\2%s\n", str);
 
-	// check memory integrity
-	Mem_CheckSentinelsGlobal();
+		// check memory integrity
+		Mem_CheckSentinelsGlobal();
 
-	S_StopAllSounds();
-	// if server is active, we already began a loading plaque
-	if (!sv.active)
-		SCR_BeginLoadingPlaque();
+		S_StopAllSounds();
+		// if server is active, we already began a loading plaque
+		if (!sv.active)
+			SCR_BeginLoadingPlaque();
 
-	// disable until we get textures for it
-	R_ResetSkyBox();
+		// disable until we get textures for it
+		R_ResetSkyBox();
 
-	memset(cl.csqc_model_precache, 0, sizeof(cl.csqc_model_precache));	//[515]: csqc
-	memset(cl.model_precache, 0, sizeof(cl.model_precache));
-	memset(cl.sound_precache, 0, sizeof(cl.sound_precache));
+		memset(cl.csqc_model_precache, 0, sizeof(cl.csqc_model_precache));	//[515]: csqc
+		memset(cl.model_precache, 0, sizeof(cl.model_precache));
+		memset(cl.sound_precache, 0, sizeof(cl.sound_precache));
 
-	// parse model precache list
-	for (nummodels=1 ; ; nummodels++)
-	{
-		str = MSG_ReadString();
-		if (!str[0])
-			break;
-		if (nummodels==MAX_MODELS)
-			Host_Error ("Server sent too many model precaches");
-		if (strlen(str) >= MAX_QPATH)
-			Host_Error ("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
-		strlcpy (cl.model_name[nummodels], str, sizeof (cl.model_name[nummodels]));
+		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
+		MSG_WriteString(&cls.netcon->message, va(qw_soundlist_name, cl.qw_servercount, 0));
+
+		cls.state = ca_connected;
+		cls.signon = 1;
 	}
-	// parse sound precache list
-	for (numsounds=1 ; ; numsounds++)
+	else
 	{
-		str = MSG_ReadString();
-		if (!str[0])
-			break;
-		if (numsounds==MAX_SOUNDS)
-			Host_Error("Server sent too many sound precaches");
-		if (strlen(str) >= MAX_QPATH)
-			Host_Error("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
-		strlcpy (cl.sound_name[numsounds], str, sizeof (cl.sound_name[numsounds]));
-	}
+	// parse maxclients
+		cl.maxclients = MSG_ReadByte ();
+		if (cl.maxclients < 1 || cl.maxclients > MAX_SCOREBOARD)
+		{
+			Host_Error("Bad maxclients (%u) from server", cl.maxclients);
+			return;
+		}
+		cl.scores = (scoreboard_t *)Mem_Alloc(cl_mempool, cl.maxclients*sizeof(*cl.scores));
 
-	// touch all of the precached models that are still loaded so we can free
-	// anything that isn't needed
-	Mod_ClearUsed();
-	for (i = 1;i < nummodels;i++)
-		Mod_FindName(cl.model_name[i]);
-	// precache any models used by the client (this also marks them used)
-	cl.model_bolt = Mod_ForName("progs/bolt.mdl", false, false, false);
-	cl.model_bolt2 = Mod_ForName("progs/bolt2.mdl", false, false, false);
-	cl.model_bolt3 = Mod_ForName("progs/bolt3.mdl", false, false, false);
-	cl.model_beam = Mod_ForName("progs/beam.mdl", false, false, false);
-	Mod_PurgeUnused();
+	// parse gametype
+		cl.gametype = MSG_ReadByte ();
 
-	// do the same for sounds
-	// FIXME: S_ServerSounds does not know about cl.sfx_ sounds
-	S_ServerSounds (cl.sound_name, numsounds);
+	// parse signon message
+		str = MSG_ReadString ();
+		strlcpy (cl.levelname, str, sizeof(cl.levelname));
 
-	// precache any sounds used by the client
-	cl.sfx_wizhit = S_PrecacheSound("sound/wizard/hit.wav", false, true);
-	cl.sfx_knighthit = S_PrecacheSound("sound/hknight/hit.wav", false, true);
-	cl.sfx_tink1 = S_PrecacheSound("sound/weapons/tink1.wav", false, true);
-	cl.sfx_ric1 = S_PrecacheSound("sound/weapons/ric1.wav", false, true);
-	cl.sfx_ric2 = S_PrecacheSound("sound/weapons/ric2.wav", false, true);
-	cl.sfx_ric3 = S_PrecacheSound("sound/weapons/ric3.wav", false, true);
-	cl.sfx_r_exp3 = S_PrecacheSound("sound/weapons/r_exp3.wav", false, true);
+	// seperate the printfs so the server message can have a color
+		if (cls.protocol != PROTOCOL_NEHAHRAMOVIE) // no messages when playing the Nehahra movie
+			Con_Printf("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n\2%s\n", str);
 
-	// now we try to load everything that is new
+		// check memory integrity
+		Mem_CheckSentinelsGlobal();
 
-	// world model
-	CL_KeepaliveMessage ();
-	cl.model_precache[1] = Mod_ForName(cl.model_name[1], false, false, true);
-	if (cl.model_precache[1]->Draw == NULL)
-		Con_Printf("Map %s not found\n", cl.model_name[1]);
+		S_StopAllSounds();
+		// if server is active, we already began a loading plaque
+		if (!sv.active)
+			SCR_BeginLoadingPlaque();
 
-	// normal models
-	for (i=2 ; i<nummodels ; i++)
-	{
-		CL_KeepaliveMessage();
-		if ((cl.model_precache[i] = Mod_ForName(cl.model_name[i], false, false, false))->Draw == NULL)
-			Con_Printf("Model %s not found\n", cl.model_name[i]);
-	}
+		// disable until we get textures for it
+		R_ResetSkyBox();
 
-	// sounds
-	for (i=1 ; i<numsounds ; i++)
-	{
-		CL_KeepaliveMessage();
+		memset(cl.csqc_model_precache, 0, sizeof(cl.csqc_model_precache));	//[515]: csqc
+		memset(cl.model_precache, 0, sizeof(cl.model_precache));
+		memset(cl.sound_precache, 0, sizeof(cl.sound_precache));
 
-		// Don't lock the sfx here, S_ServerSounds already did that
-		cl.sound_precache[i] = S_PrecacheSound (cl.sound_name[i], true, false);
+		// parse model precache list
+		for (nummodels=1 ; ; nummodels++)
+		{
+			str = MSG_ReadString();
+			if (!str[0])
+				break;
+			if (nummodels==MAX_MODELS)
+				Host_Error ("Server sent too many model precaches");
+			if (strlen(str) >= MAX_QPATH)
+				Host_Error ("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
+			strlcpy (cl.model_name[nummodels], str, sizeof (cl.model_name[nummodels]));
+		}
+		// parse sound precache list
+		for (numsounds=1 ; ; numsounds++)
+		{
+			str = MSG_ReadString();
+			if (!str[0])
+				break;
+			if (numsounds==MAX_SOUNDS)
+				Host_Error("Server sent too many sound precaches");
+			if (strlen(str) >= MAX_QPATH)
+				Host_Error("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
+			strlcpy (cl.sound_name[numsounds], str, sizeof (cl.sound_name[numsounds]));
+		}
+
+		// touch all of the precached models that are still loaded so we can free
+		// anything that isn't needed
+		Mod_ClearUsed();
+		for (i = 1;i < nummodels;i++)
+			Mod_FindName(cl.model_name[i]);
+		// precache any models used by the client (this also marks them used)
+		cl.model_bolt = Mod_ForName("progs/bolt.mdl", false, false, false);
+		cl.model_bolt2 = Mod_ForName("progs/bolt2.mdl", false, false, false);
+		cl.model_bolt3 = Mod_ForName("progs/bolt3.mdl", false, false, false);
+		cl.model_beam = Mod_ForName("progs/beam.mdl", false, false, false);
+		Mod_PurgeUnused();
+
+		// do the same for sounds
+		// FIXME: S_ServerSounds does not know about cl.sfx_ sounds
+		S_ServerSounds (cl.sound_name, numsounds);
+
+		// precache any sounds used by the client
+		cl.sfx_wizhit = S_PrecacheSound("sound/wizard/hit.wav", false, true);
+		cl.sfx_knighthit = S_PrecacheSound("sound/hknight/hit.wav", false, true);
+		cl.sfx_tink1 = S_PrecacheSound("sound/weapons/tink1.wav", false, true);
+		cl.sfx_ric1 = S_PrecacheSound("sound/weapons/ric1.wav", false, true);
+		cl.sfx_ric2 = S_PrecacheSound("sound/weapons/ric2.wav", false, true);
+		cl.sfx_ric3 = S_PrecacheSound("sound/weapons/ric3.wav", false, true);
+		cl.sfx_r_exp3 = S_PrecacheSound("sound/weapons/r_exp3.wav", false, true);
+
+		// now we try to load everything that is new
+
+		// world model
+		CL_KeepaliveMessage ();
+		cl.model_precache[1] = Mod_ForName(cl.model_name[1], false, false, true);
+		if (cl.model_precache[1]->Draw == NULL)
+			Con_Printf("Map %s not found\n", cl.model_name[1]);
+
+		// normal models
+		for (i=2 ; i<nummodels ; i++)
+		{
+			CL_KeepaliveMessage();
+			if ((cl.model_precache[i] = Mod_ForName(cl.model_name[i], false, false, false))->Draw == NULL)
+				Con_Printf("Model %s not found\n", cl.model_name[i]);
+		}
+
+		// sounds
+		for (i=1 ; i<numsounds ; i++)
+		{
+			CL_KeepaliveMessage();
+
+			// Don't lock the sfx here, S_ServerSounds already did that
+			cl.sound_precache[i] = S_PrecacheSound (cl.sound_name[i], true, false);
+		}
 	}
 
 	// local state
@@ -983,414 +1553,578 @@ void CL_ParseTempEntity(void)
 	unsigned char *tempcolor;
 	matrix4x4_t tempmatrix;
 
-	type = MSG_ReadByte();
-	switch (type)
+	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 	{
-	case TE_WIZSPIKE:
-		// spike hitting wall
-		MSG_ReadVector(pos, cls.protocol);
-		CL_FindNonSolidLocation(pos, pos, 4);
-		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		//CL_AllocDlight(NULL, &tempmatrix, 100, 0.12f, 0.50f, 0.12f, 500, 0.2, 0, -1, false, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		CL_RunParticleEffect(pos, vec3_origin, 20, 30);
-		S_StartSound(-1, 0, cl.sfx_wizhit, pos, 1, 1);
-		break;
-
-	case TE_KNIGHTSPIKE:
-		// spike hitting wall
-		MSG_ReadVector(pos, cls.protocol);
-		CL_FindNonSolidLocation(pos, pos, 4);
-		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		//CL_AllocDlight(NULL, &tempmatrix, 100, 0.50f, 0.30f, 0.10f, 500, 0.2, 0, -1, false, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		CL_RunParticleEffect(pos, vec3_origin, 226, 20);
-		S_StartSound(-1, 0, cl.sfx_knighthit, pos, 1, 1);
-		break;
-
-	case TE_SPIKE:
-		// spike hitting wall
-		MSG_ReadVector(pos, cls.protocol);
-		CL_FindNonSolidLocation(pos, pos, 4);
-		if (cl_particles_quake.integer)
-			CL_RunParticleEffect(pos, vec3_origin, 0, 10);
-		else if (cl_particles_bulletimpacts.integer)
+		type = MSG_ReadByte();
+		switch (type)
 		{
-			CL_SparkShower(pos, vec3_origin, 15, 1);
-			CL_Smoke(pos, vec3_origin, 15);
-		}
-		CL_BulletMark(pos);
-		if (rand() % 5)
-			S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
-		else
-		{
-			rnd = rand() & 3;
-			if (rnd == 1)
-				S_StartSound(-1, 0, cl.sfx_ric1, pos, 1, 1);
-			else if (rnd == 2)
-				S_StartSound(-1, 0, cl.sfx_ric2, pos, 1, 1);
+		case QW_TE_WIZSPIKE:
+			// spike hitting wall
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 4);
+			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+			//CL_AllocDlight(NULL, &tempmatrix, 100, 0.12f, 0.50f, 0.12f, 500, 0.2, 0, -1, false, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			CL_RunParticleEffect(pos, vec3_origin, 20, 30);
+			S_StartSound(-1, 0, cl.sfx_wizhit, pos, 1, 1);
+			break;
+
+		case QW_TE_KNIGHTSPIKE:
+			// spike hitting wall
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 4);
+			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+			//CL_AllocDlight(NULL, &tempmatrix, 100, 0.50f, 0.30f, 0.10f, 500, 0.2, 0, -1, false, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			CL_RunParticleEffect(pos, vec3_origin, 226, 20);
+			S_StartSound(-1, 0, cl.sfx_knighthit, pos, 1, 1);
+			break;
+
+		case QW_TE_SPIKE:
+			// spike hitting wall
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 4);
+			if (cl_particles_quake.integer)
+				CL_RunParticleEffect(pos, vec3_origin, 0, 10);
+			else if (cl_particles_bulletimpacts.integer)
+			{
+				CL_SparkShower(pos, vec3_origin, 15, 1, 0);
+				CL_Smoke(pos, vec3_origin, 15, 0);
+			}
+			CL_BulletMark(pos);
+			if (rand() % 5)
+				S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
 			else
-				S_StartSound(-1, 0, cl.sfx_ric3, pos, 1, 1);
-		}
-		break;
-	case TE_SPIKEQUAD:
-		// quad spike hitting wall
-		MSG_ReadVector(pos, cls.protocol);
-		CL_FindNonSolidLocation(pos, pos, 4);
-		if (cl_particles_quake.integer)
-			CL_RunParticleEffect(pos, vec3_origin, 0, 10);
-		else if (cl_particles_bulletimpacts.integer)
-		{
-			CL_SparkShower(pos, vec3_origin, 15, 1);
-			CL_Smoke(pos, vec3_origin, 15);
-		}
-		CL_BulletMark(pos);
-		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		if (rand() % 5)
-			S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
-		else
-		{
-			rnd = rand() & 3;
-			if (rnd == 1)
-				S_StartSound(-1, 0, cl.sfx_ric1, pos, 1, 1);
-			else if (rnd == 2)
-				S_StartSound(-1, 0, cl.sfx_ric2, pos, 1, 1);
+			{
+				rnd = rand() & 3;
+				if (rnd == 1)
+					S_StartSound(-1, 0, cl.sfx_ric1, pos, 1, 1);
+				else if (rnd == 2)
+					S_StartSound(-1, 0, cl.sfx_ric2, pos, 1, 1);
+				else
+					S_StartSound(-1, 0, cl.sfx_ric3, pos, 1, 1);
+			}
+			break;
+		case QW_TE_SUPERSPIKE:
+			// super spike hitting wall
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 4);
+			if (cl_particles_quake.integer)
+				CL_RunParticleEffect(pos, vec3_origin, 0, 20);
+			else if (cl_particles_bulletimpacts.integer)
+			{
+				CL_SparkShower(pos, vec3_origin, 30, 1, 0);
+				CL_Smoke(pos, vec3_origin, 30, 0);
+			}
+			CL_BulletMark(pos);
+			if (rand() % 5)
+				S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
 			else
-				S_StartSound(-1, 0, cl.sfx_ric3, pos, 1, 1);
-		}
-		break;
-	case TE_SUPERSPIKE:
-		// super spike hitting wall
-		MSG_ReadVector(pos, cls.protocol);
-		CL_FindNonSolidLocation(pos, pos, 4);
-		if (cl_particles_quake.integer)
-			CL_RunParticleEffect(pos, vec3_origin, 0, 20);
-		else if (cl_particles_bulletimpacts.integer)
-		{
-			CL_SparkShower(pos, vec3_origin, 30, 1);
-			CL_Smoke(pos, vec3_origin, 30);
-		}
-		CL_BulletMark(pos);
-		if (rand() % 5)
-			S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
-		else
-		{
-			rnd = rand() & 3;
-			if (rnd == 1)
-				S_StartSound(-1, 0, cl.sfx_ric1, pos, 1, 1);
-			else if (rnd == 2)
-				S_StartSound(-1, 0, cl.sfx_ric2, pos, 1, 1);
+			{
+				rnd = rand() & 3;
+				if (rnd == 1)
+					S_StartSound(-1, 0, cl.sfx_ric1, pos, 1, 1);
+				else if (rnd == 2)
+					S_StartSound(-1, 0, cl.sfx_ric2, pos, 1, 1);
+				else
+					S_StartSound(-1, 0, cl.sfx_ric3, pos, 1, 1);
+			}
+			break;
+
+		case QW_TE_EXPLOSION:
+			// rocket explosion
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 10);
+			CL_ParticleExplosion(pos);
+			// LordHavoc: boosted color from 1.0, 0.8, 0.4 to 1.25, 1.0, 0.5
+			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+			CL_AllocDlight(NULL, &tempmatrix, 350, 4.0f, 2.0f, 0.50f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			if (gamemode != GAME_NEXUIZ)
+				S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
+			CL_Effect(pos, cl.qw_modelindex_s_explod, 0, 6, 10);
+			break;
+
+		case QW_TE_TAREXPLOSION:
+			// tarbaby explosion
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 10);
+			CL_BlobExplosion(pos);
+
+			if (gamemode != GAME_NEXUIZ)
+				S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
+			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+			CL_AllocDlight(NULL, &tempmatrix, 600, 1.6f, 0.8f, 2.0f, 1200, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			break;
+
+		case QW_TE_LIGHTNING1:
+			// lightning bolts
+			CL_ParseBeam(cl.model_bolt, true);
+			break;
+
+		case QW_TE_LIGHTNING2:
+			// lightning bolts
+			CL_ParseBeam(cl.model_bolt2, true);
+			break;
+
+		case QW_TE_LIGHTNING3:
+			// lightning bolts
+			CL_ParseBeam(cl.model_bolt3, false);
+			break;
+
+		case QW_TE_LAVASPLASH:
+			MSG_ReadVector(pos, cls.protocol);
+			CL_LavaSplash(pos);
+			break;
+
+		case QW_TE_TELEPORT:
+			MSG_ReadVector(pos, cls.protocol);
+			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+			CL_AllocDlight(NULL, &tempmatrix, 200, 1.0f, 1.0f, 1.0f, 600, 99.0f, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			CL_TeleportSplash(pos);
+			break;
+
+		case QW_TE_GUNSHOT:
+			// bullet hitting wall
+			radius = MSG_ReadByte();
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 4);
+			if (cl_particles_quake.integer)
+				CL_RunParticleEffect(pos, vec3_origin, 0, 20*radius);
 			else
-				S_StartSound(-1, 0, cl.sfx_ric3, pos, 1, 1);
+			{
+				CL_SparkShower(pos, vec3_origin, 15*radius, 1, radius);
+				CL_Smoke(pos, vec3_origin, 15*radius, radius);
+			}
+			// TODO: scatter bullet marks throughout the sphere?
+			CL_BulletMark(pos);
+			break;
+
+		case QW_TE_BLOOD:
+			count = MSG_ReadByte();
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 4);
+			CL_BloodPuff(pos, vec3_origin, 20*count);
+			break;
+
+		case QW_TE_LIGHTNINGBLOOD:
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 4);
+			CL_BloodPuff(pos, vec3_origin, 50);
+			break;
+
+		default:
+			Host_Error("CL_ParseTempEntity: bad type %d (hex %02X)", type, type);
 		}
-		break;
-	case TE_SUPERSPIKEQUAD:
-		// quad super spike hitting wall
-		MSG_ReadVector(pos, cls.protocol);
-		CL_FindNonSolidLocation(pos, pos, 4);
-		if (cl_particles_quake.integer)
-			CL_RunParticleEffect(pos, vec3_origin, 0, 20);
-		else if (cl_particles_bulletimpacts.integer)
+	}
+	else
+	{
+		type = MSG_ReadByte();
+		switch (type)
 		{
-			CL_SparkShower(pos, vec3_origin, 30, 1);
-			CL_Smoke(pos, vec3_origin, 30);
-		}
-		CL_BulletMark(pos);
-		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		if (rand() % 5)
-			S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
-		else
-		{
-			rnd = rand() & 3;
-			if (rnd == 1)
-				S_StartSound(-1, 0, cl.sfx_ric1, pos, 1, 1);
-			else if (rnd == 2)
-				S_StartSound(-1, 0, cl.sfx_ric2, pos, 1, 1);
+		case TE_WIZSPIKE:
+			// spike hitting wall
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 4);
+			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+			//CL_AllocDlight(NULL, &tempmatrix, 100, 0.12f, 0.50f, 0.12f, 500, 0.2, 0, -1, false, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			CL_RunParticleEffect(pos, vec3_origin, 20, 30);
+			S_StartSound(-1, 0, cl.sfx_wizhit, pos, 1, 1);
+			break;
+
+		case TE_KNIGHTSPIKE:
+			// spike hitting wall
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 4);
+			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+			//CL_AllocDlight(NULL, &tempmatrix, 100, 0.50f, 0.30f, 0.10f, 500, 0.2, 0, -1, false, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			CL_RunParticleEffect(pos, vec3_origin, 226, 20);
+			S_StartSound(-1, 0, cl.sfx_knighthit, pos, 1, 1);
+			break;
+
+		case TE_SPIKE:
+			// spike hitting wall
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 4);
+			if (cl_particles_quake.integer)
+				CL_RunParticleEffect(pos, vec3_origin, 0, 10);
+			else if (cl_particles_bulletimpacts.integer)
+			{
+				CL_SparkShower(pos, vec3_origin, 15, 1, 0);
+				CL_Smoke(pos, vec3_origin, 15, 0);
+			}
+			CL_BulletMark(pos);
+			if (rand() % 5)
+				S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
 			else
-				S_StartSound(-1, 0, cl.sfx_ric3, pos, 1, 1);
+			{
+				rnd = rand() & 3;
+				if (rnd == 1)
+					S_StartSound(-1, 0, cl.sfx_ric1, pos, 1, 1);
+				else if (rnd == 2)
+					S_StartSound(-1, 0, cl.sfx_ric2, pos, 1, 1);
+				else
+					S_StartSound(-1, 0, cl.sfx_ric3, pos, 1, 1);
+			}
+			break;
+		case TE_SPIKEQUAD:
+			// quad spike hitting wall
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 4);
+			if (cl_particles_quake.integer)
+				CL_RunParticleEffect(pos, vec3_origin, 0, 10);
+			else if (cl_particles_bulletimpacts.integer)
+			{
+				CL_SparkShower(pos, vec3_origin, 15, 1, 0);
+				CL_Smoke(pos, vec3_origin, 15, 0);
+			}
+			CL_BulletMark(pos);
+			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+			CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			if (rand() % 5)
+				S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
+			else
+			{
+				rnd = rand() & 3;
+				if (rnd == 1)
+					S_StartSound(-1, 0, cl.sfx_ric1, pos, 1, 1);
+				else if (rnd == 2)
+					S_StartSound(-1, 0, cl.sfx_ric2, pos, 1, 1);
+				else
+					S_StartSound(-1, 0, cl.sfx_ric3, pos, 1, 1);
+			}
+			break;
+		case TE_SUPERSPIKE:
+			// super spike hitting wall
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 4);
+			if (cl_particles_quake.integer)
+				CL_RunParticleEffect(pos, vec3_origin, 0, 20);
+			else if (cl_particles_bulletimpacts.integer)
+			{
+				CL_SparkShower(pos, vec3_origin, 30, 1, 0);
+				CL_Smoke(pos, vec3_origin, 30, 0);
+			}
+			CL_BulletMark(pos);
+			if (rand() % 5)
+				S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
+			else
+			{
+				rnd = rand() & 3;
+				if (rnd == 1)
+					S_StartSound(-1, 0, cl.sfx_ric1, pos, 1, 1);
+				else if (rnd == 2)
+					S_StartSound(-1, 0, cl.sfx_ric2, pos, 1, 1);
+				else
+					S_StartSound(-1, 0, cl.sfx_ric3, pos, 1, 1);
+			}
+			break;
+		case TE_SUPERSPIKEQUAD:
+			// quad super spike hitting wall
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 4);
+			if (cl_particles_quake.integer)
+				CL_RunParticleEffect(pos, vec3_origin, 0, 20);
+			else if (cl_particles_bulletimpacts.integer)
+			{
+				CL_SparkShower(pos, vec3_origin, 30, 1, 0);
+				CL_Smoke(pos, vec3_origin, 30, 0);
+			}
+			CL_BulletMark(pos);
+			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+			CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			if (rand() % 5)
+				S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
+			else
+			{
+				rnd = rand() & 3;
+				if (rnd == 1)
+					S_StartSound(-1, 0, cl.sfx_ric1, pos, 1, 1);
+				else if (rnd == 2)
+					S_StartSound(-1, 0, cl.sfx_ric2, pos, 1, 1);
+				else
+					S_StartSound(-1, 0, cl.sfx_ric3, pos, 1, 1);
+			}
+			break;
+			// LordHavoc: added for improved blood splatters
+		case TE_BLOOD:
+			// blood puff
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 4);
+			dir[0] = MSG_ReadChar();
+			dir[1] = MSG_ReadChar();
+			dir[2] = MSG_ReadChar();
+			count = MSG_ReadByte();
+			CL_BloodPuff(pos, dir, count);
+			break;
+		case TE_SPARK:
+			// spark shower
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 4);
+			dir[0] = MSG_ReadChar();
+			dir[1] = MSG_ReadChar();
+			dir[2] = MSG_ReadChar();
+			count = MSG_ReadByte();
+			CL_SparkShower(pos, dir, count, 1, 0);
+			break;
+		case TE_PLASMABURN:
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 4);
+			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+			CL_AllocDlight(NULL, &tempmatrix, 200, 1, 1, 1, 1000, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			CL_PlasmaBurn(pos);
+			break;
+			// LordHavoc: added for improved gore
+		case TE_BLOODSHOWER:
+			// vaporized body
+			MSG_ReadVector(pos, cls.protocol); // mins
+			MSG_ReadVector(pos2, cls.protocol); // maxs
+			velspeed = MSG_ReadCoord(cls.protocol); // speed
+			count = (unsigned short) MSG_ReadShort(); // number of particles
+			CL_BloodShower(pos, pos2, velspeed, count);
+			break;
+		case TE_PARTICLECUBE:
+			// general purpose particle effect
+			MSG_ReadVector(pos, cls.protocol); // mins
+			MSG_ReadVector(pos2, cls.protocol); // maxs
+			MSG_ReadVector(dir, cls.protocol); // dir
+			count = (unsigned short) MSG_ReadShort(); // number of particles
+			colorStart = MSG_ReadByte(); // color
+			colorLength = MSG_ReadByte(); // gravity (1 or 0)
+			velspeed = MSG_ReadCoord(cls.protocol); // randomvel
+			CL_ParticleCube(pos, pos2, dir, count, colorStart, colorLength, velspeed);
+			break;
+
+		case TE_PARTICLERAIN:
+			// general purpose particle effect
+			MSG_ReadVector(pos, cls.protocol); // mins
+			MSG_ReadVector(pos2, cls.protocol); // maxs
+			MSG_ReadVector(dir, cls.protocol); // dir
+			count = (unsigned short) MSG_ReadShort(); // number of particles
+			colorStart = MSG_ReadByte(); // color
+			CL_ParticleRain(pos, pos2, dir, count, colorStart, 0);
+			break;
+
+		case TE_PARTICLESNOW:
+			// general purpose particle effect
+			MSG_ReadVector(pos, cls.protocol); // mins
+			MSG_ReadVector(pos2, cls.protocol); // maxs
+			MSG_ReadVector(dir, cls.protocol); // dir
+			count = (unsigned short) MSG_ReadShort(); // number of particles
+			colorStart = MSG_ReadByte(); // color
+			CL_ParticleRain(pos, pos2, dir, count, colorStart, 1);
+			break;
+
+		case TE_GUNSHOT:
+			// bullet hitting wall
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 4);
+			if (cl_particles_quake.integer)
+				CL_RunParticleEffect(pos, vec3_origin, 0, 20);
+			else
+			{
+				CL_SparkShower(pos, vec3_origin, 15, 1, 0);
+				CL_Smoke(pos, vec3_origin, 15, 0);
+			}
+			CL_BulletMark(pos);
+			break;
+
+		case TE_GUNSHOTQUAD:
+			// quad bullet hitting wall
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 4);
+			if (cl_particles_quake.integer)
+				CL_RunParticleEffect(pos, vec3_origin, 0, 20);
+			else
+			{
+				CL_SparkShower(pos, vec3_origin, 15, 1, 0);
+				CL_Smoke(pos, vec3_origin, 15, 0);
+			}
+			CL_BulletMark(pos);
+			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+			CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			break;
+
+		case TE_EXPLOSION:
+			// rocket explosion
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 10);
+			CL_ParticleExplosion(pos);
+			// LordHavoc: boosted color from 1.0, 0.8, 0.4 to 1.25, 1.0, 0.5
+			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+			CL_AllocDlight(NULL, &tempmatrix, 350, 4.0f, 2.0f, 0.50f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			if (gamemode != GAME_NEXUIZ)
+				S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
+			break;
+
+		case TE_EXPLOSIONQUAD:
+			// quad rocket explosion
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 10);
+			CL_ParticleExplosion(pos);
+			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+			CL_AllocDlight(NULL, &tempmatrix, 350, 2.5f, 2.0f, 4.0f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			if (gamemode != GAME_NEXUIZ)
+				S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
+			break;
+
+		case TE_EXPLOSION3:
+			// Nehahra movie colored lighting explosion
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 10);
+			CL_ParticleExplosion(pos);
+			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+			color[0] = MSG_ReadCoord(cls.protocol) * (2.0f / 1.0f);
+			color[1] = MSG_ReadCoord(cls.protocol) * (2.0f / 1.0f);
+			color[2] = MSG_ReadCoord(cls.protocol) * (2.0f / 1.0f);
+			CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			if (gamemode != GAME_NEXUIZ)
+				S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
+			break;
+
+		case TE_EXPLOSIONRGB:
+			// colored lighting explosion
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 10);
+			CL_ParticleExplosion(pos);
+			color[0] = MSG_ReadByte() * (2.0f / 255.0f);
+			color[1] = MSG_ReadByte() * (2.0f / 255.0f);
+			color[2] = MSG_ReadByte() * (2.0f / 255.0f);
+			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+			CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			if (gamemode != GAME_NEXUIZ)
+				S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
+			break;
+
+		case TE_TAREXPLOSION:
+			// tarbaby explosion
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 10);
+			CL_BlobExplosion(pos);
+
+			if (gamemode != GAME_NEXUIZ)
+				S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
+			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+			CL_AllocDlight(NULL, &tempmatrix, 600, 1.6f, 0.8f, 2.0f, 1200, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			break;
+
+		case TE_SMALLFLASH:
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 10);
+			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+			CL_AllocDlight(NULL, &tempmatrix, 200, 2, 2, 2, 1000, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			break;
+
+		case TE_CUSTOMFLASH:
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 4);
+			radius = (MSG_ReadByte() + 1) * 8;
+			velspeed = (MSG_ReadByte() + 1) * (1.0 / 256.0);
+			color[0] = MSG_ReadByte() * (2.0f / 255.0f);
+			color[1] = MSG_ReadByte() * (2.0f / 255.0f);
+			color[2] = MSG_ReadByte() * (2.0f / 255.0f);
+			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+			CL_AllocDlight(NULL, &tempmatrix, radius, color[0], color[1], color[2], radius / velspeed, velspeed, 0, -1, true, 1, 0.25, 1, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			break;
+
+		case TE_FLAMEJET:
+			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(dir, cls.protocol);
+			count = MSG_ReadByte();
+			CL_Flames(pos, dir, count);
+			break;
+
+		case TE_LIGHTNING1:
+			// lightning bolts
+			CL_ParseBeam(cl.model_bolt, true);
+			break;
+
+		case TE_LIGHTNING2:
+			// lightning bolts
+			CL_ParseBeam(cl.model_bolt2, true);
+			break;
+
+		case TE_LIGHTNING3:
+			// lightning bolts
+			CL_ParseBeam(cl.model_bolt3, false);
+			break;
+
+	// PGM 01/21/97
+		case TE_BEAM:
+			// grappling hook beam
+			CL_ParseBeam(cl.model_beam, false);
+			break;
+	// PGM 01/21/97
+
+	// LordHavoc: for compatibility with the Nehahra movie...
+		case TE_LIGHTNING4NEH:
+			CL_ParseBeam(Mod_ForName(MSG_ReadString(), true, false, false), false);
+			break;
+
+		case TE_LAVASPLASH:
+			MSG_ReadVector(pos, cls.protocol);
+			CL_LavaSplash(pos);
+			break;
+
+		case TE_TELEPORT:
+			MSG_ReadVector(pos, cls.protocol);
+			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+			CL_AllocDlight(NULL, &tempmatrix, 200, 1.0f, 1.0f, 1.0f, 600, 99.0f, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			CL_TeleportSplash(pos);
+			break;
+
+		case TE_EXPLOSION2:
+			// color mapped explosion
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 10);
+			colorStart = MSG_ReadByte();
+			colorLength = MSG_ReadByte();
+			CL_ParticleExplosion2(pos, colorStart, colorLength);
+			tempcolor = (unsigned char *)&palette_complete[(rand()%colorLength) + colorStart];
+			color[0] = tempcolor[0] * (2.0f / 255.0f);
+			color[1] = tempcolor[1] * (2.0f / 255.0f);
+			color[2] = tempcolor[2] * (2.0f / 255.0f);
+			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+			CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			if (gamemode != GAME_NEXUIZ)
+				S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
+			break;
+
+		case TE_TEI_G3:
+			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(pos2, cls.protocol);
+			MSG_ReadVector(dir, cls.protocol);
+			CL_BeamParticle(pos, pos2, 8, 1, 1, 1, 1, 1);
+			break;
+
+		case TE_TEI_SMOKE:
+			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(dir, cls.protocol);
+			count = MSG_ReadByte();
+			CL_FindNonSolidLocation(pos, pos, 4);
+			CL_Tei_Smoke(pos, dir, count);
+			break;
+
+		case TE_TEI_BIGEXPLOSION:
+			MSG_ReadVector(pos, cls.protocol);
+			CL_FindNonSolidLocation(pos, pos, 10);
+			CL_ParticleExplosion(pos);
+			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+			CL_AllocDlight(NULL, &tempmatrix, 500, 2.5f, 2.0f, 1.0f, 500, 9999, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			if (gamemode != GAME_NEXUIZ)
+				S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
+			break;
+
+		case TE_TEI_PLASMAHIT:
+			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(dir, cls.protocol);
+			count = MSG_ReadByte();
+			CL_FindNonSolidLocation(pos, pos, 5);
+			CL_Tei_PlasmaHit(pos, dir, count);
+			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+			CL_AllocDlight(NULL, &tempmatrix, 500, 0.6, 1.2, 2.0f, 2000, 9999, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			break;
+
+		default:
+			Host_Error("CL_ParseTempEntity: bad type %d (hex %02X)", type, type);
 		}
-		break;
-		// LordHavoc: added for improved blood splatters
-	case TE_BLOOD:
-		// blood puff
-		MSG_ReadVector(pos, cls.protocol);
-		CL_FindNonSolidLocation(pos, pos, 4);
-		dir[0] = MSG_ReadChar();
-		dir[1] = MSG_ReadChar();
-		dir[2] = MSG_ReadChar();
-		count = MSG_ReadByte();
-		CL_BloodPuff(pos, dir, count);
-		break;
-	case TE_SPARK:
-		// spark shower
-		MSG_ReadVector(pos, cls.protocol);
-		CL_FindNonSolidLocation(pos, pos, 4);
-		dir[0] = MSG_ReadChar();
-		dir[1] = MSG_ReadChar();
-		dir[2] = MSG_ReadChar();
-		count = MSG_ReadByte();
-		CL_SparkShower(pos, dir, count, 1);
-		break;
-	case TE_PLASMABURN:
-		MSG_ReadVector(pos, cls.protocol);
-		CL_FindNonSolidLocation(pos, pos, 4);
-		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 200, 1, 1, 1, 1000, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		CL_PlasmaBurn(pos);
-		break;
-		// LordHavoc: added for improved gore
-	case TE_BLOODSHOWER:
-		// vaporized body
-		MSG_ReadVector(pos, cls.protocol); // mins
-		MSG_ReadVector(pos2, cls.protocol); // maxs
-		velspeed = MSG_ReadCoord(cls.protocol); // speed
-		count = (unsigned short) MSG_ReadShort(); // number of particles
-		CL_BloodShower(pos, pos2, velspeed, count);
-		break;
-	case TE_PARTICLECUBE:
-		// general purpose particle effect
-		MSG_ReadVector(pos, cls.protocol); // mins
-		MSG_ReadVector(pos2, cls.protocol); // maxs
-		MSG_ReadVector(dir, cls.protocol); // dir
-		count = (unsigned short) MSG_ReadShort(); // number of particles
-		colorStart = MSG_ReadByte(); // color
-		colorLength = MSG_ReadByte(); // gravity (1 or 0)
-		velspeed = MSG_ReadCoord(cls.protocol); // randomvel
-		CL_ParticleCube(pos, pos2, dir, count, colorStart, colorLength, velspeed);
-		break;
-
-	case TE_PARTICLERAIN:
-		// general purpose particle effect
-		MSG_ReadVector(pos, cls.protocol); // mins
-		MSG_ReadVector(pos2, cls.protocol); // maxs
-		MSG_ReadVector(dir, cls.protocol); // dir
-		count = (unsigned short) MSG_ReadShort(); // number of particles
-		colorStart = MSG_ReadByte(); // color
-		CL_ParticleRain(pos, pos2, dir, count, colorStart, 0);
-		break;
-
-	case TE_PARTICLESNOW:
-		// general purpose particle effect
-		MSG_ReadVector(pos, cls.protocol); // mins
-		MSG_ReadVector(pos2, cls.protocol); // maxs
-		MSG_ReadVector(dir, cls.protocol); // dir
-		count = (unsigned short) MSG_ReadShort(); // number of particles
-		colorStart = MSG_ReadByte(); // color
-		CL_ParticleRain(pos, pos2, dir, count, colorStart, 1);
-		break;
-
-	case TE_GUNSHOT:
-		// bullet hitting wall
-		MSG_ReadVector(pos, cls.protocol);
-		CL_FindNonSolidLocation(pos, pos, 4);
-		if (cl_particles_quake.integer)
-			CL_RunParticleEffect(pos, vec3_origin, 0, 20);
-		else
-		{
-			CL_SparkShower(pos, vec3_origin, 15, 1);
-			CL_Smoke(pos, vec3_origin, 15);
-		}
-		CL_BulletMark(pos);
-		break;
-
-	case TE_GUNSHOTQUAD:
-		// quad bullet hitting wall
-		MSG_ReadVector(pos, cls.protocol);
-		CL_FindNonSolidLocation(pos, pos, 4);
-		if (cl_particles_quake.integer)
-			CL_RunParticleEffect(pos, vec3_origin, 0, 20);
-		else
-		{
-			CL_SparkShower(pos, vec3_origin, 15, 1);
-			CL_Smoke(pos, vec3_origin, 15);
-		}
-		CL_BulletMark(pos);
-		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		break;
-
-	case TE_EXPLOSION:
-		// rocket explosion
-		MSG_ReadVector(pos, cls.protocol);
-		CL_FindNonSolidLocation(pos, pos, 10);
-		CL_ParticleExplosion(pos);
-		// LordHavoc: boosted color from 1.0, 0.8, 0.4 to 1.25, 1.0, 0.5
-		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 350, 4.0f, 2.0f, 0.50f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		if (gamemode != GAME_NEXUIZ)
-			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
-		break;
-
-	case TE_EXPLOSIONQUAD:
-		// quad rocket explosion
-		MSG_ReadVector(pos, cls.protocol);
-		CL_FindNonSolidLocation(pos, pos, 10);
-		CL_ParticleExplosion(pos);
-		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 350, 2.5f, 2.0f, 4.0f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		if (gamemode != GAME_NEXUIZ)
-			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
-		break;
-
-	case TE_EXPLOSION3:
-		// Nehahra movie colored lighting explosion
-		MSG_ReadVector(pos, cls.protocol);
-		CL_FindNonSolidLocation(pos, pos, 10);
-		CL_ParticleExplosion(pos);
-		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		color[0] = MSG_ReadCoord(cls.protocol) * (2.0f / 1.0f);
-		color[1] = MSG_ReadCoord(cls.protocol) * (2.0f / 1.0f);
-		color[2] = MSG_ReadCoord(cls.protocol) * (2.0f / 1.0f);
-		CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		if (gamemode != GAME_NEXUIZ)
-			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
-		break;
-
-	case TE_EXPLOSIONRGB:
-		// colored lighting explosion
-		MSG_ReadVector(pos, cls.protocol);
-		CL_FindNonSolidLocation(pos, pos, 10);
-		CL_ParticleExplosion(pos);
-		color[0] = MSG_ReadByte() * (2.0f / 255.0f);
-		color[1] = MSG_ReadByte() * (2.0f / 255.0f);
-		color[2] = MSG_ReadByte() * (2.0f / 255.0f);
-		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		if (gamemode != GAME_NEXUIZ)
-			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
-		break;
-
-	case TE_TAREXPLOSION:
-		// tarbaby explosion
-		MSG_ReadVector(pos, cls.protocol);
-		CL_FindNonSolidLocation(pos, pos, 10);
-		CL_BlobExplosion(pos);
-
-		if (gamemode != GAME_NEXUIZ)
-			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
-		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 600, 1.6f, 0.8f, 2.0f, 1200, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		break;
-
-	case TE_SMALLFLASH:
-		MSG_ReadVector(pos, cls.protocol);
-		CL_FindNonSolidLocation(pos, pos, 10);
-		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 200, 2, 2, 2, 1000, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		break;
-
-	case TE_CUSTOMFLASH:
-		MSG_ReadVector(pos, cls.protocol);
-		CL_FindNonSolidLocation(pos, pos, 4);
-		radius = (MSG_ReadByte() + 1) * 8;
-		velspeed = (MSG_ReadByte() + 1) * (1.0 / 256.0);
-		color[0] = MSG_ReadByte() * (2.0f / 255.0f);
-		color[1] = MSG_ReadByte() * (2.0f / 255.0f);
-		color[2] = MSG_ReadByte() * (2.0f / 255.0f);
-		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, radius, color[0], color[1], color[2], radius / velspeed, velspeed, 0, -1, true, 1, 0.25, 1, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		break;
-
-	case TE_FLAMEJET:
-		MSG_ReadVector(pos, cls.protocol);
-		MSG_ReadVector(dir, cls.protocol);
-		count = MSG_ReadByte();
-		CL_Flames(pos, dir, count);
-		break;
-
-	case TE_LIGHTNING1:
-		// lightning bolts
-		CL_ParseBeam(cl.model_bolt, true);
-		break;
-
-	case TE_LIGHTNING2:
-		// lightning bolts
-		CL_ParseBeam(cl.model_bolt2, true);
-		break;
-
-	case TE_LIGHTNING3:
-		// lightning bolts
-		CL_ParseBeam(cl.model_bolt3, false);
-		break;
-
-// PGM 01/21/97
-	case TE_BEAM:
-		// grappling hook beam
-		CL_ParseBeam(cl.model_beam, false);
-		break;
-// PGM 01/21/97
-
-// LordHavoc: for compatibility with the Nehahra movie...
-	case TE_LIGHTNING4NEH:
-		CL_ParseBeam(Mod_ForName(MSG_ReadString(), true, false, false), false);
-		break;
-
-	case TE_LAVASPLASH:
-		MSG_ReadVector(pos, cls.protocol);
-		CL_LavaSplash(pos);
-		break;
-
-	case TE_TELEPORT:
-		MSG_ReadVector(pos, cls.protocol);
-		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 200, 1.0f, 1.0f, 1.0f, 600, 99.0f, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		CL_TeleportSplash(pos);
-		break;
-
-	case TE_EXPLOSION2:
-		// color mapped explosion
-		MSG_ReadVector(pos, cls.protocol);
-		CL_FindNonSolidLocation(pos, pos, 10);
-		colorStart = MSG_ReadByte();
-		colorLength = MSG_ReadByte();
-		CL_ParticleExplosion2(pos, colorStart, colorLength);
-		tempcolor = (unsigned char *)&palette_complete[(rand()%colorLength) + colorStart];
-		color[0] = tempcolor[0] * (2.0f / 255.0f);
-		color[1] = tempcolor[1] * (2.0f / 255.0f);
-		color[2] = tempcolor[2] * (2.0f / 255.0f);
-		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		if (gamemode != GAME_NEXUIZ)
-			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
-		break;
-
-	case TE_TEI_G3:
-		MSG_ReadVector(pos, cls.protocol);
-		MSG_ReadVector(pos2, cls.protocol);
-		MSG_ReadVector(dir, cls.protocol);
-		CL_BeamParticle(pos, pos2, 8, 1, 1, 1, 1, 1);
-		break;
-
-	case TE_TEI_SMOKE:
-		MSG_ReadVector(pos, cls.protocol);
-		MSG_ReadVector(dir, cls.protocol);
-		count = MSG_ReadByte();
-		CL_FindNonSolidLocation(pos, pos, 4);
-		CL_Tei_Smoke(pos, dir, count);
-		break;
-
-	case TE_TEI_BIGEXPLOSION:
-		MSG_ReadVector(pos, cls.protocol);
-		CL_FindNonSolidLocation(pos, pos, 10);
-		CL_ParticleExplosion(pos);
-		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 500, 2.5f, 2.0f, 1.0f, 500, 9999, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		if (gamemode != GAME_NEXUIZ)
-			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
-		break;
-
-	case TE_TEI_PLASMAHIT:
-		MSG_ReadVector(pos, cls.protocol);
-		MSG_ReadVector(dir, cls.protocol);
-		count = MSG_ReadByte();
-		CL_FindNonSolidLocation(pos, pos, 5);
-		CL_Tei_PlasmaHit(pos, dir, count);
-		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 500, 0.6, 1.2, 2.0f, 2000, 9999, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		break;
-
-	default:
-		Host_Error("CL_ParseTempEntity: bad type %d (hex %02X)", type, type);
 	}
 }
 
@@ -1442,405 +2176,719 @@ void CL_ParseServerMessage(void)
 
 	parsingerror = true;
 
-	while (1)
+	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 	{
-		if (msg_badread)
-			Host_Error ("CL_ParseServerMessage: Bad server message");
+		cl.mtime[1] = cl.mtime[0];
+		cl.mtime[0] = realtime; // qw has no clock
 
-		cmd = MSG_ReadByte ();
-
-		if (cmd == -1)
+		while (1)
 		{
-			SHOWNET("END OF MESSAGE");
-			break;		// end of message
-		}
+			if (msg_badread)
+				Host_Error ("CL_ParseServerMessage: Bad QW server message");
 
-		cmdindex = cmdcount & 31;
-		cmdcount++;
-		cmdlog[cmdindex] = cmd;
+			cmd = MSG_ReadByte ();
 
-		// if the high bit of the command byte is set, it is a fast update
-		if (cmd & 128)
-		{
-			// LordHavoc: fix for bizarre problem in MSVC that I do not understand (if I assign the string pointer directly it ends up storing a NULL pointer)
-			temp = "entity";
-			cmdlogname[cmdindex] = temp;
-			SHOWNET("fast update");
-			if (cls.signon == SIGNONS - 1)
+			if (cmd == -1)
 			{
-				// first update is the final signon stage
-				cls.signon = SIGNONS;
-				CL_SignonReply ();
+				SHOWNET("END OF MESSAGE");
+				break;		// end of message
 			}
-			EntityFrameQuake_ReadEntity (cmd&127);
-			continue;
-		}
 
-		SHOWNET(svc_strings[cmd]);
-		cmdlogname[cmdindex] = svc_strings[cmd];
-		if (!cmdlogname[cmdindex])
-		{
-			// LordHavoc: fix for bizarre problem in MSVC that I do not understand (if I assign the string pointer directly it ends up storing a NULL pointer)
-			temp = "<unknown>";
-			cmdlogname[cmdindex] = temp;
-		}
+			cmdindex = cmdcount & 31;
+			cmdcount++;
+			cmdlog[cmdindex] = cmd;
 
-		// other commands
-		switch (cmd)
-		{
-		default:
+			SHOWNET(qw_svc_strings[cmd]);
+			cmdlogname[cmdindex] = qw_svc_strings[cmd];
+			if (!cmdlogname[cmdindex])
 			{
-				char description[32*64], temp[64];
-				int count;
-				strcpy (description, "packet dump: ");
-				i = cmdcount - 32;
-				if (i < 0)
-					i = 0;
-				count = cmdcount - i;
-				i &= 31;
-				while(count > 0)
+				// LordHavoc: fix for bizarre problem in MSVC that I do not understand (if I assign the string pointer directly it ends up storing a NULL pointer)
+				temp = "<unknown>";
+				cmdlogname[cmdindex] = temp;
+			}
+
+			// other commands
+			switch (cmd)
+			{
+			default:
 				{
-					dpsnprintf (temp, sizeof (temp), "%3i:%s ", cmdlog[i], cmdlogname[i]);
-					strlcat (description, temp, sizeof (description));
-					count--;
-					i++;
+					char description[32*64], temp[64];
+					int count;
+					strcpy(description, "packet dump: ");
+					i = cmdcount - 32;
+					if (i < 0)
+						i = 0;
+					count = cmdcount - i;
 					i &= 31;
+					while(count > 0)
+					{
+						dpsnprintf(temp, sizeof(temp), "%3i:%s ", cmdlog[i], cmdlogname[i]);
+						strlcat(description, temp, sizeof(description));
+						count--;
+						i++;
+						i &= 31;
+					}
+					description[strlen(description)-1] = '\n'; // replace the last space with a newline
+					Con_Print(description);
+					Host_Error("CL_ParseServerMessage: Illegible server message");
 				}
-				description[strlen(description)-1] = '\n'; // replace the last space with a newline
-				Con_Print(description);
-				Host_Error ("CL_ParseServerMessage: Illegible server message");
-			}
-			break;
+				break;
 
-		case svc_nop:
-			if (cls.signon < SIGNONS)
-				Con_Print("<-- server to client keepalive\n");
-			break;
+			case qw_svc_nop:
+				//Con_Printf("qw_svc_nop\n");
+				break;
 
-		case svc_time:
-			cl.mtime[1] = cl.mtime[0];
-			cl.mtime[0] = MSG_ReadFloat ();
-			cl.movement_needupdate = true;
-			break;
+			case qw_svc_disconnect:
+				Con_Printf("Server disconnected\n");
+				if (cls.demonum != -1)
+					CL_NextDemo();
+				else
+					CL_Disconnect();
+				break;
 
-		case svc_clientdata:
-			CL_ParseClientdata();
-			break;
+			case qw_svc_print:
+				i = MSG_ReadByte();
+				if (i == 3) // chat
+					CSQC_AddPrintText(va("\1%s", MSG_ReadString()));	//[515]: csqc
+				else
+					CSQC_AddPrintText(MSG_ReadString());
+				break;
 
-		case svc_version:
-			i = MSG_ReadLong ();
-			protocol = Protocol_EnumForNumber(i);
-			if (protocol == PROTOCOL_UNKNOWN)
-				Host_Error("CL_ParseServerMessage: Server is unrecognized protocol number (%i)", i);
-			// hack for unmarked Nehahra movie demos which had a custom protocol
-			if (protocol == PROTOCOL_QUAKEDP && cls.demoplayback && demo_nehahra.integer)
-				protocol = PROTOCOL_NEHAHRAMOVIE;
-			cls.protocol = protocol;
-			break;
+			case qw_svc_centerprint:
+				CL_VM_Parse_CenterPrint(MSG_ReadString ());	//[515]: csqc
+				break;
 
-		case svc_disconnect:
-			Con_Printf ("Server disconnected\n");
-			if (cls.demonum != -1)
-				CL_NextDemo ();
-			else
-				CL_Disconnect ();
-			break;
+			case qw_svc_stufftext:
+				CL_VM_Parse_StuffCmd(MSG_ReadString ());	//[515]: csqc
+				break;
 
-		case svc_print:
-			CSQC_AddPrintText(MSG_ReadString());	//[515]: csqc
-			break;
+			case qw_svc_damage:
+				// svc_damage protocol is identical to nq
+				V_ParseDamage ();
+				break;
 
-		case svc_centerprint:
-			CL_VM_Parse_CenterPrint(MSG_ReadString ());	//[515]: csqc
-			break;
+			case qw_svc_serverdata:
+				//Cbuf_Execute(); // make sure any stuffed commands are done
+				CL_ParseServerInfo();
+				CL_VM_Init();	//[515]: init csqc
+				break;
 
-		case svc_stufftext:
-			CL_VM_Parse_StuffCmd(MSG_ReadString ());	//[515]: csqc
-			break;
+			case qw_svc_setangle:
+				for (i=0 ; i<3 ; i++)
+					cl.viewangles[i] = MSG_ReadAngle (cls.protocol);
+				break;
 
-		case svc_damage:
-			V_ParseDamage ();
-			break;
+			case qw_svc_lightstyle:
+				i = MSG_ReadByte ();
+				if (i >= cl_max_lightstyle)
+				{
+					Con_Printf ("svc_lightstyle >= MAX_LIGHTSTYLES");
+					break;
+				}
+				strlcpy (cl_lightstyle[i].map,  MSG_ReadString(), sizeof (cl_lightstyle[i].map));
+				cl_lightstyle[i].map[MAX_STYLESTRING - 1] = 0;
+				cl_lightstyle[i].length = (int)strlen(cl_lightstyle[i].map);
+				break;
 
-		case svc_serverinfo:
-			CL_ParseServerInfo ();
-			CL_VM_Init();	//[515]: init csqc
-			break;
+			case qw_svc_sound:
+				CL_ParseStartSoundPacket(false);
+				break;
 
-		case svc_setangle:
-			for (i=0 ; i<3 ; i++)
-				cl.viewangles[i] = MSG_ReadAngle (cls.protocol);
-			break;
+			case qw_svc_stopsound:
+				i = (unsigned short) MSG_ReadShort();
+				S_StopSound(i>>3, i&7);
+				break;
 
-		case svc_setview:
-			cl.viewentity = (unsigned short)MSG_ReadShort ();
-			if (cl.viewentity >= MAX_EDICTS)
-				Host_Error("svc_setview >= MAX_EDICTS");
-			if (cl.viewentity >= cl_max_entities)
-				CL_ExpandEntities(cl.viewentity);
-			// LordHavoc: assume first setview recieved is the real player entity
-			if (!cl.playerentity)
-				cl.playerentity = cl.viewentity;
-			break;
+			case qw_svc_updatefrags:
+				i = MSG_ReadByte();
+				if (i >= cl.maxclients)
+					Host_Error("CL_ParseServerMessage: svc_updatefrags >= cl.maxclients");
+				cl.scores[i].frags = (signed short) MSG_ReadShort();
+				break;
 
-		case svc_lightstyle:
-			i = MSG_ReadByte ();
-			if (i >= cl_max_lightstyle)
-			{
-				Con_Printf ("svc_lightstyle >= MAX_LIGHTSTYLES");
+			case qw_svc_updateping:
+				i = MSG_ReadByte();
+				if (i >= cl.maxclients)
+					Host_Error("CL_ParseServerMessage: svc_updateping >= cl.maxclients");
+				cl.scores[i].qw_ping = MSG_ReadShort();
+				break;
+
+			case qw_svc_updatepl:
+				i = MSG_ReadByte();
+				if (i >= cl.maxclients)
+					Host_Error("CL_ParseServerMessage: svc_updatepl >= cl.maxclients");
+				cl.scores[i].qw_packetloss = MSG_ReadByte();
+				break;
+
+			case qw_svc_updateentertime:
+				i = MSG_ReadByte();
+				if (i >= cl.maxclients)
+					Host_Error("CL_ParseServerMessage: svc_updateentertime >= cl.maxclients");
+				// seconds ago
+				cl.scores[i].qw_entertime = realtime - MSG_ReadFloat();
+				break;
+
+			case qw_svc_spawnbaseline:
+				i = (unsigned short) MSG_ReadShort();
+				if (i < 0 || i >= MAX_EDICTS)
+					Host_Error ("CL_ParseServerMessage: svc_spawnbaseline: invalid entity number %i", i);
+				if (i >= cl_max_entities)
+					CL_ExpandEntities(i);
+				CL_ParseBaseline(cl_entities + i, false);
+				break;
+			case qw_svc_spawnstatic:
+				CL_ParseStatic(false);
+				break;
+			case qw_svc_temp_entity:
+				if(!CL_VM_Parse_TempEntity())
+					CL_ParseTempEntity ();
+				break;
+
+			case qw_svc_killedmonster:
+				cl.stats[STAT_MONSTERS]++;
+				break;
+
+			case qw_svc_foundsecret:
+				cl.stats[STAT_SECRETS]++;
+				break;
+
+			case qw_svc_updatestat:
+				i = MSG_ReadByte ();
+				if (i < 0 || i >= MAX_CL_STATS)
+					Host_Error ("svc_updatestat: %i is invalid", i);
+				cl.stats[i] = MSG_ReadByte ();
+				break;
+
+			case qw_svc_updatestatlong:
+				i = MSG_ReadByte ();
+				if (i < 0 || i >= MAX_CL_STATS)
+					Host_Error ("svc_updatestatlong: %i is invalid", i);
+				cl.stats[i] = MSG_ReadLong ();
+				break;
+
+			case qw_svc_spawnstaticsound:
+				CL_ParseStaticSound (false);
+				break;
+
+			case qw_svc_cdtrack:
+				cl.cdtrack = MSG_ReadByte ();
+				cl.looptrack = MSG_ReadByte ();
+				if ( (cls.demoplayback || cls.demorecording) && (cls.forcetrack != -1) )
+					CDAudio_Play ((unsigned char)cls.forcetrack, true);
+				else
+					CDAudio_Play ((unsigned char)cl.cdtrack, true);
+				break;
+
+			case qw_svc_intermission:
+				cl.intermission = 1;
+				cl.completed_time = cl.time;
+				MSG_ReadVector(cl.qw_intermission_origin, cls.protocol);
+				for (i = 0;i < 3;i++)
+					cl.qw_intermission_angles[i] = MSG_ReadAngle(cls.protocol);
+				break;
+
+			case qw_svc_finale:
+				cl.intermission = 2;
+				cl.completed_time = cl.time;
+				SCR_CenterPrint(MSG_ReadString ());
+				break;
+
+			case qw_svc_sellscreen:
+				Cmd_ExecuteString ("help", src_command);
+				break;
+
+			case qw_svc_smallkick:
+				Con_Printf("TODO: qw_svc_smallkick\n");
+				break;
+			case qw_svc_bigkick:
+				Con_Printf("TODO: qw_svc_bigkick\n");
+				break;
+
+			case qw_svc_muzzleflash:
+				i = (unsigned short) MSG_ReadShort();
+				// NOTE: in QW this only worked on clients
+				if (i < 0 || i >= MAX_EDICTS)
+					Host_Error("CL_ParseServerMessage: svc_spawnbaseline: invalid entity number %i", i);
+				if (i >= cl_max_entities)
+					CL_ExpandEntities(i);
+				cl_entities[i].persistent.muzzleflash = 1.0f;
+				break;
+
+			case qw_svc_updateuserinfo:
+				QW_CL_UpdateUserInfo();
+				break;
+
+			case qw_svc_setinfo:
+				QW_CL_SetInfo();
+				break;
+
+			case qw_svc_serverinfo:
+				QW_CL_ServerInfo();
+				break;
+
+			case qw_svc_download:
+				QW_CL_ParseDownload();
+				break;
+
+			case qw_svc_playerinfo:
+				EntityStateQW_ReadPlayerUpdate();
+				break;
+
+			case qw_svc_nails:
+				QW_CL_ParseNails();
+				break;
+
+			case qw_svc_chokecount:
+				i = MSG_ReadByte();
+				// FIXME: apply to netgraph
+				//for (j = 0;j < i;j++)
+				//	cl.frames[(cls.netcon->qw.incoming_acknowledged-1-j)&QW_UPDATE_MASK].receivedtime = -2;
+				break;
+
+			case qw_svc_modellist:
+				QW_CL_ParseModelList();
+				break;
+
+			case qw_svc_soundlist:
+				QW_CL_ParseSoundList();
+				break;
+
+			case qw_svc_packetentities:
+				EntityFrameQW_CL_ReadFrame(false);
+				// first update is the final signon stage
+				if (cls.signon == SIGNONS - 1)
+					cls.signon = SIGNONS;
+				break;
+
+			case qw_svc_deltapacketentities:
+				EntityFrameQW_CL_ReadFrame(true);
+				// first update is the final signon stage
+				if (cls.signon == SIGNONS - 1)
+					cls.signon = SIGNONS;
+				break;
+
+			case qw_svc_maxspeed:
+				cl.qw_movevars_maxspeed = MSG_ReadFloat();
+				break;
+
+			case qw_svc_entgravity:
+				cl.qw_movevars_entgravity = MSG_ReadFloat();
+				break;
+
+			case qw_svc_setpause:
+				cl.paused = MSG_ReadByte ();
+				if (cl.paused)
+					CDAudio_Pause ();
+				else
+					CDAudio_Resume ();
+				S_PauseGameSounds (cl.paused);
 				break;
 			}
-			strlcpy (cl_lightstyle[i].map,  MSG_ReadString(), sizeof (cl_lightstyle[i].map));
-			cl_lightstyle[i].map[MAX_STYLESTRING - 1] = 0;
-			cl_lightstyle[i].length = (int)strlen(cl_lightstyle[i].map);
-			break;
+		}
+		QW_CL_UpdateItemsAndWeapon();
+	}
+	else
+	{
+		while (1)
+		{
+			if (msg_badread)
+				Host_Error ("CL_ParseServerMessage: Bad server message");
 
-		case svc_sound:
-			CL_ParseStartSoundPacket(false);
-			break;
+			cmd = MSG_ReadByte ();
 
-		case svc_precache:
-			if (cls.protocol == PROTOCOL_DARKPLACES1 || cls.protocol == PROTOCOL_DARKPLACES2 || cls.protocol == PROTOCOL_DARKPLACES3)
+			if (cmd == -1)
 			{
-				// was svc_sound2 in protocols 1, 2, 3, removed in 4, 5, changed to svc_precache in 6
-				CL_ParseStartSoundPacket(true);
+				SHOWNET("END OF MESSAGE");
+				break;		// end of message
 			}
-			else
+
+			cmdindex = cmdcount & 31;
+			cmdcount++;
+			cmdlog[cmdindex] = cmd;
+
+			// if the high bit of the command byte is set, it is a fast update
+			if (cmd & 128)
 			{
-				int i = (unsigned short)MSG_ReadShort();
-				char *s = MSG_ReadString();
-				if (i < 32768)
+				// LordHavoc: fix for bizarre problem in MSVC that I do not understand (if I assign the string pointer directly it ends up storing a NULL pointer)
+				temp = "entity";
+				cmdlogname[cmdindex] = temp;
+				SHOWNET("fast update");
+				if (cls.signon == SIGNONS - 1)
 				{
-					if (i >= 1 && i < MAX_MODELS)
+					// first update is the final signon stage
+					cls.signon = SIGNONS;
+					CL_SignonReply ();
+				}
+				EntityFrameQuake_ReadEntity (cmd&127);
+				continue;
+			}
+
+			SHOWNET(svc_strings[cmd]);
+			cmdlogname[cmdindex] = svc_strings[cmd];
+			if (!cmdlogname[cmdindex])
+			{
+				// LordHavoc: fix for bizarre problem in MSVC that I do not understand (if I assign the string pointer directly it ends up storing a NULL pointer)
+				temp = "<unknown>";
+				cmdlogname[cmdindex] = temp;
+			}
+
+			// other commands
+			switch (cmd)
+			{
+			default:
+				{
+					char description[32*64], temp[64];
+					int count;
+					strcpy (description, "packet dump: ");
+					i = cmdcount - 32;
+					if (i < 0)
+						i = 0;
+					count = cmdcount - i;
+					i &= 31;
+					while(count > 0)
 					{
-						model_t *model = Mod_ForName(s, false, false, i == 1);
-						if (!model)
-							Con_Printf("svc_precache: Mod_ForName(\"%s\") failed\n", s);
-						cl.model_precache[i] = model;
+						dpsnprintf (temp, sizeof (temp), "%3i:%s ", cmdlog[i], cmdlogname[i]);
+						strlcat (description, temp, sizeof (description));
+						count--;
+						i++;
+						i &= 31;
 					}
-					else
-						Con_Printf("svc_precache: index %i outside range %i...%i\n", i, 1, MAX_MODELS);
+					description[strlen(description)-1] = '\n'; // replace the last space with a newline
+					Con_Print(description);
+					Host_Error ("CL_ParseServerMessage: Illegible server message");
+				}
+				break;
+
+			case svc_nop:
+				if (cls.signon < SIGNONS)
+					Con_Print("<-- server to client keepalive\n");
+				break;
+
+			case svc_time:
+				cl.mtime[1] = cl.mtime[0];
+				cl.mtime[0] = MSG_ReadFloat ();
+				cl.movement_needupdate = true;
+				break;
+
+			case svc_clientdata:
+				CL_ParseClientdata();
+				break;
+
+			case svc_version:
+				i = MSG_ReadLong ();
+				protocol = Protocol_EnumForNumber(i);
+				if (protocol == PROTOCOL_UNKNOWN)
+					Host_Error("CL_ParseServerMessage: Server is unrecognized protocol number (%i)", i);
+				// hack for unmarked Nehahra movie demos which had a custom protocol
+				if (protocol == PROTOCOL_QUAKEDP && cls.demoplayback && demo_nehahra.integer)
+					protocol = PROTOCOL_NEHAHRAMOVIE;
+				cls.protocol = protocol;
+				break;
+
+			case svc_disconnect:
+				Con_Printf ("Server disconnected\n");
+				if (cls.demonum != -1)
+					CL_NextDemo ();
+				else
+					CL_Disconnect ();
+				break;
+
+			case svc_print:
+				CSQC_AddPrintText(MSG_ReadString());	//[515]: csqc
+				break;
+
+			case svc_centerprint:
+				CL_VM_Parse_CenterPrint(MSG_ReadString ());	//[515]: csqc
+				break;
+
+			case svc_stufftext:
+				CL_VM_Parse_StuffCmd(MSG_ReadString ());	//[515]: csqc
+				break;
+
+			case svc_damage:
+				V_ParseDamage ();
+				break;
+
+			case svc_serverinfo:
+				CL_ParseServerInfo ();
+				CL_VM_Init();	//[515]: init csqc
+				break;
+
+			case svc_setangle:
+				for (i=0 ; i<3 ; i++)
+					cl.viewangles[i] = MSG_ReadAngle (cls.protocol);
+				break;
+
+			case svc_setview:
+				cl.viewentity = (unsigned short)MSG_ReadShort ();
+				if (cl.viewentity >= MAX_EDICTS)
+					Host_Error("svc_setview >= MAX_EDICTS");
+				if (cl.viewentity >= cl_max_entities)
+					CL_ExpandEntities(cl.viewentity);
+				// LordHavoc: assume first setview recieved is the real player entity
+				if (!cl.playerentity)
+					cl.playerentity = cl.viewentity;
+				break;
+
+			case svc_lightstyle:
+				i = MSG_ReadByte ();
+				if (i >= cl_max_lightstyle)
+				{
+					Con_Printf ("svc_lightstyle >= MAX_LIGHTSTYLES");
+					break;
+				}
+				strlcpy (cl_lightstyle[i].map,  MSG_ReadString(), sizeof (cl_lightstyle[i].map));
+				cl_lightstyle[i].map[MAX_STYLESTRING - 1] = 0;
+				cl_lightstyle[i].length = (int)strlen(cl_lightstyle[i].map);
+				break;
+
+			case svc_sound:
+				CL_ParseStartSoundPacket(false);
+				break;
+
+			case svc_precache:
+				if (cls.protocol == PROTOCOL_DARKPLACES1 || cls.protocol == PROTOCOL_DARKPLACES2 || cls.protocol == PROTOCOL_DARKPLACES3)
+				{
+					// was svc_sound2 in protocols 1, 2, 3, removed in 4, 5, changed to svc_precache in 6
+					CL_ParseStartSoundPacket(true);
 				}
 				else
 				{
-					i -= 32768;
-					if (i >= 1 && i < MAX_SOUNDS)
+					int i = (unsigned short)MSG_ReadShort();
+					char *s = MSG_ReadString();
+					if (i < 32768)
 					{
-						sfx_t *sfx = S_PrecacheSound (s, true, false);
-						if (!sfx && snd_initialized.integer)
-							Con_Printf("svc_precache: S_PrecacheSound(\"%s\") failed\n", s);
-						cl.sound_precache[i] = sfx;
+						if (i >= 1 && i < MAX_MODELS)
+						{
+							model_t *model = Mod_ForName(s, false, false, i == 1);
+							if (!model)
+								Con_Printf("svc_precache: Mod_ForName(\"%s\") failed\n", s);
+							cl.model_precache[i] = model;
+						}
+						else
+							Con_Printf("svc_precache: index %i outside range %i...%i\n", i, 1, MAX_MODELS);
 					}
 					else
-						Con_Printf("svc_precache: index %i outside range %i...%i\n", i, 1, MAX_SOUNDS);
+					{
+						i -= 32768;
+						if (i >= 1 && i < MAX_SOUNDS)
+						{
+							sfx_t *sfx = S_PrecacheSound (s, true, false);
+							if (!sfx && snd_initialized.integer)
+								Con_Printf("svc_precache: S_PrecacheSound(\"%s\") failed\n", s);
+							cl.sound_precache[i] = sfx;
+						}
+						else
+							Con_Printf("svc_precache: index %i outside range %i...%i\n", i, 1, MAX_SOUNDS);
+					}
 				}
-			}
-			break;
+				break;
 
-		case svc_stopsound:
-			i = (unsigned short) MSG_ReadShort();
-			S_StopSound(i>>3, i&7);
-			break;
+			case svc_stopsound:
+				i = (unsigned short) MSG_ReadShort();
+				S_StopSound(i>>3, i&7);
+				break;
 
-		case svc_updatename:
-			i = MSG_ReadByte ();
-			if (i >= cl.maxclients)
-				Host_Error ("CL_ParseServerMessage: svc_updatename >= cl.maxclients");
-			strlcpy (cl.scores[i].name, MSG_ReadString (), sizeof (cl.scores[i].name));
-			break;
+			case svc_updatename:
+				i = MSG_ReadByte ();
+				if (i >= cl.maxclients)
+					Host_Error ("CL_ParseServerMessage: svc_updatename >= cl.maxclients");
+				strlcpy (cl.scores[i].name, MSG_ReadString (), sizeof (cl.scores[i].name));
+				break;
 
-		case svc_updatefrags:
-			i = MSG_ReadByte ();
-			if (i >= cl.maxclients)
-				Host_Error ("CL_ParseServerMessage: svc_updatefrags >= cl.maxclients");
-			cl.scores[i].frags = (signed short) MSG_ReadShort ();
-			break;
+			case svc_updatefrags:
+				i = MSG_ReadByte ();
+				if (i >= cl.maxclients)
+					Host_Error ("CL_ParseServerMessage: svc_updatefrags >= cl.maxclients");
+				cl.scores[i].frags = (signed short) MSG_ReadShort ();
+				break;
 
-		case svc_updatecolors:
-			i = MSG_ReadByte ();
-			if (i >= cl.maxclients)
-				Host_Error ("CL_ParseServerMessage: svc_updatecolors >= cl.maxclients");
-			cl.scores[i].colors = MSG_ReadByte ();
-			break;
+			case svc_updatecolors:
+				i = MSG_ReadByte ();
+				if (i >= cl.maxclients)
+					Host_Error ("CL_ParseServerMessage: svc_updatecolors >= cl.maxclients");
+				cl.scores[i].colors = MSG_ReadByte ();
+				break;
 
-		case svc_particle:
-			CL_ParseParticleEffect ();
-			break;
+			case svc_particle:
+				CL_ParseParticleEffect ();
+				break;
 
-		case svc_effect:
-			CL_ParseEffect ();
-			break;
+			case svc_effect:
+				CL_ParseEffect ();
+				break;
 
-		case svc_effect2:
-			CL_ParseEffect2 ();
-			break;
+			case svc_effect2:
+				CL_ParseEffect2 ();
+				break;
 
-		case svc_spawnbaseline:
-			i = (unsigned short) MSG_ReadShort ();
-			if (i < 0 || i >= MAX_EDICTS)
-				Host_Error ("CL_ParseServerMessage: svc_spawnbaseline: invalid entity number %i", i);
-			if (i >= cl_max_entities)
-				CL_ExpandEntities(i);
-			CL_ParseBaseline (cl_entities + i, false);
-			break;
-		case svc_spawnbaseline2:
-			i = (unsigned short) MSG_ReadShort ();
-			if (i < 0 || i >= MAX_EDICTS)
-				Host_Error ("CL_ParseServerMessage: svc_spawnbaseline2: invalid entity number %i", i);
-			if (i >= cl_max_entities)
-				CL_ExpandEntities(i);
-			CL_ParseBaseline (cl_entities + i, true);
-			break;
-		case svc_spawnstatic:
-			CL_ParseStatic (false);
-			break;
-		case svc_spawnstatic2:
-			CL_ParseStatic (true);
-			break;
-		case svc_temp_entity:
-			if(!CL_VM_Parse_TempEntity())
-				CL_ParseTempEntity ();
-			break;
+			case svc_spawnbaseline:
+				i = (unsigned short) MSG_ReadShort ();
+				if (i < 0 || i >= MAX_EDICTS)
+					Host_Error ("CL_ParseServerMessage: svc_spawnbaseline: invalid entity number %i", i);
+				if (i >= cl_max_entities)
+					CL_ExpandEntities(i);
+				CL_ParseBaseline (cl_entities + i, false);
+				break;
+			case svc_spawnbaseline2:
+				i = (unsigned short) MSG_ReadShort ();
+				if (i < 0 || i >= MAX_EDICTS)
+					Host_Error ("CL_ParseServerMessage: svc_spawnbaseline2: invalid entity number %i", i);
+				if (i >= cl_max_entities)
+					CL_ExpandEntities(i);
+				CL_ParseBaseline (cl_entities + i, true);
+				break;
+			case svc_spawnstatic:
+				CL_ParseStatic (false);
+				break;
+			case svc_spawnstatic2:
+				CL_ParseStatic (true);
+				break;
+			case svc_temp_entity:
+				if(!CL_VM_Parse_TempEntity())
+					CL_ParseTempEntity ();
+				break;
 
-		case svc_setpause:
-			cl.paused = MSG_ReadByte ();
-			if (cl.paused)
-				CDAudio_Pause ();
-			else
-				CDAudio_Resume ();
-			S_PauseGameSounds (cl.paused);
-			break;
+			case svc_setpause:
+				cl.paused = MSG_ReadByte ();
+				if (cl.paused)
+					CDAudio_Pause ();
+				else
+					CDAudio_Resume ();
+				S_PauseGameSounds (cl.paused);
+				break;
 
-		case svc_signonnum:
-			i = MSG_ReadByte ();
-			// LordHavoc: it's rude to kick off the client if they missed the
-			// reconnect somehow, so allow signon 1 even if at signon 1
-			if (i <= cls.signon && i != 1)
-				Host_Error ("Received signon %i when at %i", i, cls.signon);
-			cls.signon = i;
-			CL_SignonReply ();
-			break;
-
-		case svc_killedmonster:
-			cl.stats[STAT_MONSTERS]++;
-			break;
-
-		case svc_foundsecret:
-			cl.stats[STAT_SECRETS]++;
-			break;
-
-		case svc_updatestat:
-			i = MSG_ReadByte ();
-			if (i < 0 || i >= MAX_CL_STATS)
-				Host_Error ("svc_updatestat: %i is invalid", i);
-			cl.stats[i] = MSG_ReadLong ();
-			break;
-
-		case svc_updatestatubyte:
-			i = MSG_ReadByte ();
-			if (i < 0 || i >= MAX_CL_STATS)
-				Host_Error ("svc_updatestat: %i is invalid", i);
-			cl.stats[i] = MSG_ReadByte ();
-			break;
-
-		case svc_spawnstaticsound:
-			CL_ParseStaticSound (false);
-			break;
-
-		case svc_spawnstaticsound2:
-			CL_ParseStaticSound (true);
-			break;
-
-		case svc_cdtrack:
-			cl.cdtrack = MSG_ReadByte ();
-			cl.looptrack = MSG_ReadByte ();
-			if ( (cls.demoplayback || cls.demorecording) && (cls.forcetrack != -1) )
-				CDAudio_Play ((unsigned char)cls.forcetrack, true);
-			else
-				CDAudio_Play ((unsigned char)cl.cdtrack, true);
-			break;
-
-		case svc_intermission:
-			cl.intermission = 1;
-			cl.completed_time = cl.time;
-			break;
-
-		case svc_finale:
-			cl.intermission = 2;
-			cl.completed_time = cl.time;
-			SCR_CenterPrint(MSG_ReadString ());
-			break;
-
-		case svc_cutscene:
-			cl.intermission = 3;
-			cl.completed_time = cl.time;
-			SCR_CenterPrint(MSG_ReadString ());
-			break;
-
-		case svc_sellscreen:
-			Cmd_ExecuteString ("help", src_command);
-			break;
-		case svc_hidelmp:
-			if (gamemode == GAME_TENEBRAE)
-			{
-				// repeating particle effect
-				MSG_ReadCoord(cls.protocol);
-				MSG_ReadCoord(cls.protocol);
-				MSG_ReadCoord(cls.protocol);
-				MSG_ReadCoord(cls.protocol);
-				MSG_ReadCoord(cls.protocol);
-				MSG_ReadCoord(cls.protocol);
-				MSG_ReadByte();
-				MSG_ReadLong();
-				MSG_ReadLong();
-				MSG_ReadString();
-			}
-			else
-				SHOWLMP_decodehide();
-			break;
-		case svc_showlmp:
-			if (gamemode == GAME_TENEBRAE)
-			{
-				// particle effect
-				MSG_ReadCoord(cls.protocol);
-				MSG_ReadCoord(cls.protocol);
-				MSG_ReadCoord(cls.protocol);
-				MSG_ReadByte();
-				MSG_ReadString();
-			}
-			else
-				SHOWLMP_decodeshow();
-			break;
-		case svc_skybox:
-			R_SetSkyBox(MSG_ReadString());
-			break;
-		case svc_cgame:
-			{
-				int length;
-				length = (int) ((unsigned short) MSG_ReadShort());
-				for (i = 0;i < length;i++)
-					cgamenetbuffer[i] = MSG_ReadByte();
-				if (!msg_badread)
-					CL_CGVM_ParseNetwork(cgamenetbuffer, length);
-			}
-			break;
-		case svc_entities:
-			if (cls.signon == SIGNONS - 1)
-			{
-				// first update is the final signon stage
-				cls.signon = SIGNONS;
+			case svc_signonnum:
+				i = MSG_ReadByte ();
+				// LordHavoc: it's rude to kick off the client if they missed the
+				// reconnect somehow, so allow signon 1 even if at signon 1
+				if (i <= cls.signon && i != 1)
+					Host_Error ("Received signon %i when at %i", i, cls.signon);
+				cls.signon = i;
 				CL_SignonReply ();
+				break;
+
+			case svc_killedmonster:
+				cl.stats[STAT_MONSTERS]++;
+				break;
+
+			case svc_foundsecret:
+				cl.stats[STAT_SECRETS]++;
+				break;
+
+			case svc_updatestat:
+				i = MSG_ReadByte ();
+				if (i < 0 || i >= MAX_CL_STATS)
+					Host_Error ("svc_updatestat: %i is invalid", i);
+				cl.stats[i] = MSG_ReadLong ();
+				break;
+
+			case svc_updatestatubyte:
+				i = MSG_ReadByte ();
+				if (i < 0 || i >= MAX_CL_STATS)
+					Host_Error ("svc_updatestat: %i is invalid", i);
+				cl.stats[i] = MSG_ReadByte ();
+				break;
+
+			case svc_spawnstaticsound:
+				CL_ParseStaticSound (false);
+				break;
+
+			case svc_spawnstaticsound2:
+				CL_ParseStaticSound (true);
+				break;
+
+			case svc_cdtrack:
+				cl.cdtrack = MSG_ReadByte ();
+				cl.looptrack = MSG_ReadByte ();
+				if ( (cls.demoplayback || cls.demorecording) && (cls.forcetrack != -1) )
+					CDAudio_Play ((unsigned char)cls.forcetrack, true);
+				else
+					CDAudio_Play ((unsigned char)cl.cdtrack, true);
+				break;
+
+			case svc_intermission:
+				cl.intermission = 1;
+				cl.completed_time = cl.time;
+				break;
+
+			case svc_finale:
+				cl.intermission = 2;
+				cl.completed_time = cl.time;
+				SCR_CenterPrint(MSG_ReadString ());
+				break;
+
+			case svc_cutscene:
+				cl.intermission = 3;
+				cl.completed_time = cl.time;
+				SCR_CenterPrint(MSG_ReadString ());
+				break;
+
+			case svc_sellscreen:
+				Cmd_ExecuteString ("help", src_command);
+				break;
+			case svc_hidelmp:
+				if (gamemode == GAME_TENEBRAE)
+				{
+					// repeating particle effect
+					MSG_ReadCoord(cls.protocol);
+					MSG_ReadCoord(cls.protocol);
+					MSG_ReadCoord(cls.protocol);
+					MSG_ReadCoord(cls.protocol);
+					MSG_ReadCoord(cls.protocol);
+					MSG_ReadCoord(cls.protocol);
+					MSG_ReadByte();
+					MSG_ReadLong();
+					MSG_ReadLong();
+					MSG_ReadString();
+				}
+				else
+					SHOWLMP_decodehide();
+				break;
+			case svc_showlmp:
+				if (gamemode == GAME_TENEBRAE)
+				{
+					// particle effect
+					MSG_ReadCoord(cls.protocol);
+					MSG_ReadCoord(cls.protocol);
+					MSG_ReadCoord(cls.protocol);
+					MSG_ReadByte();
+					MSG_ReadString();
+				}
+				else
+					SHOWLMP_decodeshow();
+				break;
+			case svc_skybox:
+				R_SetSkyBox(MSG_ReadString());
+				break;
+			case svc_cgame:
+				{
+					int length;
+					length = (int) ((unsigned short) MSG_ReadShort());
+					for (i = 0;i < length;i++)
+						cgamenetbuffer[i] = MSG_ReadByte();
+					if (!msg_badread)
+						CL_CGVM_ParseNetwork(cgamenetbuffer, length);
+				}
+				break;
+			case svc_entities:
+				if (cls.signon == SIGNONS - 1)
+				{
+					// first update is the final signon stage
+					cls.signon = SIGNONS;
+					CL_SignonReply ();
+				}
+				if (cls.protocol == PROTOCOL_DARKPLACES1 || cls.protocol == PROTOCOL_DARKPLACES2 || cls.protocol == PROTOCOL_DARKPLACES3)
+					EntityFrame_CL_ReadFrame();
+				else if (cls.protocol == PROTOCOL_DARKPLACES4)
+					EntityFrame4_CL_ReadFrame();
+				else
+					EntityFrame5_CL_ReadFrame();
+				break;
+			case svc_csqcentities:
+				CSQC_ReadEntities();
+				break;
 			}
-			if (cls.protocol == PROTOCOL_DARKPLACES1 || cls.protocol == PROTOCOL_DARKPLACES2 || cls.protocol == PROTOCOL_DARKPLACES3)
-				EntityFrame_CL_ReadFrame();
-			else if (cls.protocol == PROTOCOL_DARKPLACES4)
-				EntityFrame4_CL_ReadFrame();
-			else
-				EntityFrame5_CL_ReadFrame();
-			break;
-		case svc_csqcentities:
-			CSQC_ReadEntities();
-			break;
 		}
 	}
 
@@ -1858,6 +2906,17 @@ void CL_Parse_DumpPacket(void)
 	parsingerror = false;
 }
 
+void CL_Parse_ErrorCleanUp(void)
+{
+	if (cls.qw_downloadmemory)
+	{
+		Mem_Free(cls.qw_downloadmemory);
+		cls.qw_downloadmemory = NULL;
+	}
+	cls.qw_downloadpercent = 0;
+	QW_CL_StopUpload();
+}
+
 void CL_Parse_Init(void)
 {
 	// LordHavoc: added demo_nehahra cvar
@@ -1865,6 +2924,9 @@ void CL_Parse_Init(void)
 	if (gamemode == GAME_NEHAHRA)
 		Cvar_SetValue("demo_nehahra", 1);
 	Cvar_RegisterVariable(&developer_networkentities);
+
+	Cmd_AddCommand("nextul", QW_CL_NextUpload, "sends next fragment of current upload buffer (screenshot for example)");
+	Cmd_AddCommand("stopul", QW_CL_StopUpload, "aborts current upload (screenshot for example)");
 }
 
 void CL_Parse_Shutdown(void)

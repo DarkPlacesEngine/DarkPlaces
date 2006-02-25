@@ -466,7 +466,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 		// client sends qport in every packet
 		if (conn == cls.netcon)
 		{
-			*((short *)(sendbuffer + 8)) = LittleShort(cls.qport);
+			*((short *)(sendbuffer + 8)) = LittleShort(cls.qw_qport);
 			packetLen += 2;
 		}
 		if (packetLen + (sendreliable ? conn->sendMessageLength : 0) + data->cursize > (int)sizeof(sendbuffer))
@@ -1075,8 +1075,8 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			LHNETADDRESS_ToString(peeraddress, addressstring2, sizeof(addressstring2), true);
 			Con_Printf("\"%s\" received, sending QuakeWorld connect request back to %s\n", string, addressstring2);
 			M_Update_Return_Reason("Got QuakeWorld challenge response");
-			cls.qport = qport.integer;
-			NetConn_WriteString(mysocket, va("\377\377\377\377connect 28 %i %i \"%s\"\n", cls.qport, atoi(string + 1), cls.userinfo), peeraddress);
+			cls.qw_qport = qport.integer;
+			NetConn_WriteString(mysocket, va("\377\377\377\377connect 28 %i %i \"%s\"\n", cls.qw_qport, atoi(string + 1), cls.userinfo), peeraddress);
 		}
 		if (length == 6 && !memcmp(string, "accept", 6) && cls.connect_trying)
 		{
@@ -1239,7 +1239,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			LHNETADDRESS_ToString(peeraddress, addressstring2, sizeof(addressstring2), true);
 			Con_Printf("challenge %s received, sending connect request back to %s\n", string + 1, addressstring2);
 			M_Update_Return_Reason("Got challenge response");
-			cls.qport = qport.integer;
+			cls.qw_qport = qport.integer;
 			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "*ip", addressstring2);
 			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "name", cl_name.string);
 			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "topcolor", va("%i", (cl_color.integer >> 4) & 15));
@@ -1247,7 +1247,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "rate", va("%i", cl_rate.integer));
 			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "msg", "1");
 			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "*ver", engineversion);
-			NetConn_WriteString(mysocket, va("\377\377\377\377connect %i %i %i \"%s\"\n", 28, cls.qport, atoi(string + 1), cls.userinfo), peeraddress);
+			NetConn_WriteString(mysocket, va("\377\377\377\377connect %i %i %i \"%s\"\n", 28, cls.qw_qport, atoi(string + 1), cls.userinfo), peeraddress);
 			return true;
 		}
 		if (string[0] == 'n')

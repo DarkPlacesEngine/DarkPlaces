@@ -815,7 +815,7 @@ void CL_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count)
 CL_SparkShower
 ===============
 */
-void CL_SparkShower (vec3_t org, vec3_t dir, int count, vec_t gravityscale)
+void CL_SparkShower (vec3_t org, vec3_t dir, int count, vec_t gravityscale, vec_t radius)
 {
 	int k;
 
@@ -828,12 +828,12 @@ void CL_SparkShower (vec3_t org, vec3_t dir, int count, vec_t gravityscale)
 		while(count--)
 		{
 			k = particlepalette[0x68 + (rand() & 7)];
-			particle(particletype + pt_spark, k, k, tex_particle, 0.4f, (1.0f / cl_particles_quality.value) * lhrandom(64, 255), (1.0f / cl_particles_quality.value) * 512, gravityscale, 0, org[0], org[1], org[2], dir[0], dir[1], dir[2] + sv_gravity.value * 0.1, 0, 0, 64);
+			particle(particletype + pt_spark, k, k, tex_particle, 0.4f, (1.0f / cl_particles_quality.value) * lhrandom(64, 255), (1.0f / cl_particles_quality.value) * 512, gravityscale, 0, org[0], org[1], org[2], dir[0], dir[1], dir[2] + sv_gravity.value * 0.1, 0, radius, 64);
 		}
 	}
 }
 
-void CL_Smoke (vec3_t org, vec3_t dir, int count)
+void CL_Smoke (vec3_t org, vec3_t dir, int count, vec_t radius)
 {
 	vec3_t org2;
 	int k;
@@ -851,7 +851,7 @@ void CL_Smoke (vec3_t org, vec3_t dir, int count)
 			org2[1] = org[1] + 0.125f * lhrandom(-count, count);
 			org2[2] = org[2] + 0.125f * lhrandom(-count, count);
 			trace = CL_TraceBox(org, vec3_origin, vec3_origin, org2, true, NULL, SUPERCONTENTS_SOLID, false);
-			particle(particletype + pt_smoke, 0x101010, 0x202020, tex_smoke[rand()&7], 3, (1.0f / cl_particles_quality.value) * 255, (1.0f / cl_particles_quality.value) * 1024, 0, 0, trace.endpos[0], trace.endpos[1], trace.endpos[2], 0, 0, 0, 0, 0, 8);
+			particle(particletype + pt_smoke, 0x101010, 0x202020, tex_smoke[rand()&7], 3, (1.0f / cl_particles_quality.value) * 255, (1.0f / cl_particles_quality.value) * 1024, 0, 0, trace.endpos[0], trace.endpos[1], trace.endpos[2], 0, 0, 0, 0, radius, 8);
 		}
 	}
 }
