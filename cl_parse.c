@@ -390,9 +390,6 @@ static void CL_SignonReply (void)
 CL_ParseServerInfo
 ==================
 */
-// FIXME: this is a lot of memory to be keeping around, this needs to be dynamically allocated and freed
-static char parse_model_precache[MAX_MODELS][MAX_QPATH];
-static char parse_sound_precache[MAX_SOUNDS][MAX_QPATH];
 void CL_ParseServerInfo (void)
 {
 	char *str;
@@ -470,7 +467,7 @@ void CL_ParseServerInfo (void)
 			Host_Error ("Server sent too many model precaches");
 		if (strlen(str) >= MAX_QPATH)
 			Host_Error ("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
-		strlcpy (parse_model_precache[nummodels], str, sizeof (parse_model_precache[nummodels]));
+		strlcpy (cl.model_name[nummodels], str, sizeof (cl.model_name[nummodels]));
 	}
 	// parse sound precache list
 	for (numsounds=1 ; ; numsounds++)
@@ -482,14 +479,14 @@ void CL_ParseServerInfo (void)
 			Host_Error("Server sent too many sound precaches");
 		if (strlen(str) >= MAX_QPATH)
 			Host_Error("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
-		strlcpy (parse_sound_precache[numsounds], str, sizeof (parse_sound_precache[numsounds]));
+		strlcpy (cl.sound_name[numsounds], str, sizeof (cl.sound_name[numsounds]));
 	}
 
 	// touch all of the precached models that are still loaded so we can free
 	// anything that isn't needed
 	Mod_ClearUsed();
 	for (i = 1;i < nummodels;i++)
-		Mod_FindName(parse_model_precache[i]);
+		Mod_FindName(cl.model_name[i]);
 	// precache any models used by the client (this also marks them used)
 	cl.model_bolt = Mod_ForName("progs/bolt.mdl", false, false, false);
 	cl.model_bolt2 = Mod_ForName("progs/bolt2.mdl", false, false, false);
@@ -499,7 +496,7 @@ void CL_ParseServerInfo (void)
 
 	// do the same for sounds
 	// FIXME: S_ServerSounds does not know about cl.sfx_ sounds
-	S_ServerSounds (parse_sound_precache, numsounds);
+	S_ServerSounds (cl.sound_name, numsounds);
 
 	// precache any sounds used by the client
 	cl.sfx_wizhit = S_PrecacheSound("sound/wizard/hit.wav", false, true);
@@ -514,16 +511,16 @@ void CL_ParseServerInfo (void)
 
 	// world model
 	CL_KeepaliveMessage ();
-	cl.model_precache[1] = Mod_ForName(parse_model_precache[1], false, false, true);
+	cl.model_precache[1] = Mod_ForName(cl.model_name[1], false, false, true);
 	if (cl.model_precache[1]->Draw == NULL)
-		Con_Printf("Map %s not found\n", parse_model_precache[1]);
+		Con_Printf("Map %s not found\n", cl.model_name[1]);
 
 	// normal models
 	for (i=2 ; i<nummodels ; i++)
 	{
 		CL_KeepaliveMessage();
-		if ((cl.model_precache[i] = Mod_ForName(parse_model_precache[i], false, false, false))->Draw == NULL)
-			Con_Printf("Model %s not found\n", parse_model_precache[i]);
+		if ((cl.model_precache[i] = Mod_ForName(cl.model_name[i], false, false, false))->Draw == NULL)
+			Con_Printf("Model %s not found\n", cl.model_name[i]);
 	}
 
 	// sounds
@@ -532,7 +529,7 @@ void CL_ParseServerInfo (void)
 		CL_KeepaliveMessage();
 
 		// Don't lock the sfx here, S_ServerSounds already did that
-		cl.sound_precache[i] = S_PrecacheSound (parse_sound_precache[i], true, false);
+		cl.sound_precache[i] = S_PrecacheSound (cl.sound_name[i], true, false);
 	}
 
 	// local state
