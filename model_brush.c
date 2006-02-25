@@ -3156,6 +3156,18 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	// store which lightmap format to use
 	mod->brushq1.lightmaprgba = r_lightmaprgba.integer;
 
+	mod->brush.qw_md4sum = 0;
+	mod->brush.qw_md4sum2 = 0;
+	for (i = 0;i < HEADER_LUMPS;i++)
+	{
+		if (i == LUMP_ENTITIES)
+			continue;
+		mod->brush.qw_md4sum ^= Com_BlockChecksum(mod_base + header->lumps[i].fileofs, header->lumps[i].filelen);
+		if (i == LUMP_VISIBILITY || i == LUMP_LEAFS || i == LUMP_NODES)
+			continue;
+		mod->brush.qw_md4sum2 ^= Com_BlockChecksum(mod_base + header->lumps[i].fileofs, header->lumps[i].filelen);
+	}
+
 	Mod_Q1BSP_LoadEntities(&header->lumps[LUMP_ENTITIES]);
 	Mod_Q1BSP_LoadVertexes(&header->lumps[LUMP_VERTEXES]);
 	Mod_Q1BSP_LoadEdges(&header->lumps[LUMP_EDGES]);
@@ -3758,6 +3770,18 @@ void static Mod_Q2BSP_Load(model_t *mod, void *buffer, void *bufferend)
 
 	// store which lightmap format to use
 	mod->brushq1.lightmaprgba = r_lightmaprgba.integer;
+
+	mod->brush.qw_md4sum = 0;
+	mod->brush.qw_md4sum2 = 0;
+	for (i = 0;i < Q2HEADER_LUMPS;i++)
+	{
+		if (i == Q2LUMP_ENTITIES)
+			continue;
+		mod->brush.qw_md4sum ^= Com_BlockChecksum(mod_base + header->lumps[i].fileofs, header->lumps[i].filelen);
+		if (i == Q2LUMP_VISIBILITY || i == Q2LUMP_LEAFS || i == Q2LUMP_NODES)
+			continue;
+		mod->brush.qw_md4sum2 ^= Com_BlockChecksum(mod_base + header->lumps[i].fileofs, header->lumps[i].filelen);
+	}
 
 	Mod_Q2BSP_LoadEntities(&header->lumps[Q2LUMP_ENTITIES]);
 	Mod_Q2BSP_LoadPlanes(&header->lumps[Q2LUMP_PLANES]);
@@ -5511,6 +5535,18 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	{
 		header->lumps[i].fileofs = LittleLong(header->lumps[i].fileofs);
 		header->lumps[i].filelen = LittleLong(header->lumps[i].filelen);
+	}
+
+	mod->brush.qw_md4sum = 0;
+	mod->brush.qw_md4sum2 = 0;
+	for (i = 0;i < Q3HEADER_LUMPS;i++)
+	{
+		if (i == Q3LUMP_ENTITIES)
+			continue;
+		mod->brush.qw_md4sum ^= Com_BlockChecksum(mod_base + header->lumps[i].fileofs, header->lumps[i].filelen);
+		if (i == Q3LUMP_PVS || i == Q3LUMP_LEAFS || i == Q3LUMP_NODES)
+			continue;
+		mod->brush.qw_md4sum2 ^= Com_BlockChecksum(mod_base + header->lumps[i].fileofs, header->lumps[i].filelen);
 	}
 
 	Mod_Q3BSP_LoadEntities(&header->lumps[Q3LUMP_ENTITIES]);

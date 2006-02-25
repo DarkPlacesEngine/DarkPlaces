@@ -91,6 +91,7 @@ OBJ_COMMON= \
 	lhnet.o \
 	mathlib.o \
 	matrixlib.o \
+	mdfour.o \
 	menu.o \
 	meshqueue.o \
 	model_alias.o \

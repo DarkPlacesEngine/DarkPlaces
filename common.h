@@ -63,6 +63,10 @@ unsigned short CRC_Block(const unsigned char *data, size_t size);
 
 unsigned char COM_BlockSequenceCRCByteQW(unsigned char *base, int length, int sequence);
 
+// these are actually md4sum (mdfour.c)
+unsigned Com_BlockChecksum (void *buffer, int length);
+void Com_BlockFullChecksum (void *buffer, int len, unsigned char *outbuf);
+
 
 //============================================================================
 //							Endianess handling
