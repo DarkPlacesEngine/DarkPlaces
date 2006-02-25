@@ -617,6 +617,10 @@ typedef struct client_state_s
 	struct model_s *model_precache[MAX_MODELS];
 	struct sfx_s *sound_precache[MAX_SOUNDS];
 
+	// FIXME: this is a lot of memory to be keeping around, this really should be dynamically allocated and freed somehow
+	char model_name[MAX_MODELS][MAX_QPATH];
+	char sound_name[MAX_SOUNDS][MAX_QPATH];
+
 	// for display on solo scoreboard
 	char levelname[40];
 	// cl_entitites[cl.viewentity] = player
