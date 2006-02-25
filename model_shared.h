@@ -381,6 +381,10 @@ typedef struct model_brush_s
 
 	rtexture_t *solidskytexture;
 	rtexture_t *alphaskytexture;
+
+	// QuakeWorld
+	int qw_md4sum;
+	int qw_md4sum2;
 }
 model_brush_t;
 

@@ -454,9 +454,7 @@ static void QW_CL_RequestNextDownload(void)
 
 		// done checking sounds and models, send a prespawn command now
 		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
-		// FIXME: calculate the checksum2 this wants
-		//MSG_WriteString(&cls.netcon->message, va("prespawn %i 0 %i", cl.qw_servercount, cl.worldmodel->checksum2));
-		MSG_WriteString(&cls.netcon->message, va("prespawn %i 0 %i", cl.qw_servercount, 0));
+		MSG_WriteString(&cls.netcon->message, va("prespawn %i 0 %i", cl.qw_servercount, cl.worldmodel ? cl.worldmodel->brush.qw_md4sum2 : 0));
 
 		if (cls.qw_downloadmemory)
 		{
