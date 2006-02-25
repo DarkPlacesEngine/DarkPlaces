@@ -491,7 +491,7 @@ void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int numstates, const entity_sta
 		if (bits & U_EFFECTS2)		MSG_WriteByte(&buf, s->effects >> 8);
 		if (bits & U_GLOWSIZE)		MSG_WriteByte(&buf, s->glowsize);
 		if (bits & U_GLOWCOLOR)		MSG_WriteByte(&buf, s->glowcolor);
-		if (bits & U_COLORMOD)		{int c = ((int)bound(0, s->colormod[0] * (7.0f / 32.0f), 7) << 5) | ((int)bound(0, s->colormod[0] * (7.0f / 32.0f), 7) << 2) | ((int)bound(0, s->colormod[0] * (3.0f / 32.0f), 3) << 0);MSG_WriteByte(&buf, c);}
+		if (bits & U_COLORMOD)		{int c = ((int)bound(0, s->colormod[0] * (7.0f / 32.0f), 7) << 5) | ((int)bound(0, s->colormod[1] * (7.0f / 32.0f), 7) << 2) | ((int)bound(0, s->colormod[2] * (3.0f / 32.0f), 3) << 0);MSG_WriteByte(&buf, c);}
 		if (bits & U_FRAME2)		MSG_WriteByte(&buf, s->frame >> 8);
 		if (bits & U_MODEL2)		MSG_WriteByte(&buf, s->modelindex >> 8);
 
