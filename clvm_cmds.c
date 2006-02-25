@@ -1222,15 +1222,15 @@ void VM_CL_pointparticles (void)
 	case TE_SPIKEQUAD:
 	case TE_GUNSHOT:
 	case TE_GUNSHOTQUAD:
-		CL_SparkShower(f, v, 15, 1);
-		CL_Smoke(f, v, 15);
+		CL_SparkShower(f, v, 15, 1, 0);
+		CL_Smoke(f, v, 15, 0);
 		if (cl_particles_bulletimpacts.integer)
 			CL_BulletMark(f);
 		break;
 	case TE_SUPERSPIKE:
 	case TE_SUPERSPIKEQUAD:
-		CL_SparkShower(f, v, 30, 1);
-		CL_Smoke(f, v, 30);
+		CL_SparkShower(f, v, 30, 1, 0);
+		CL_Smoke(f, v, 30, 0);
 		if (cl_particles_bulletimpacts.integer)
 			CL_BulletMark(f);
 		break;
@@ -1263,7 +1263,7 @@ void VM_CL_pointparticles (void)
 		CL_BloodPuff(f, v, n);
 		break;
 	case TE_SPARK:
-		CL_SparkShower(f, v, n, 1);
+		CL_SparkShower(f, v, n, 1, 0);
 		break;
 	case TE_FLAMEJET:
 		CL_Flames(f, v, n);
@@ -1589,7 +1589,7 @@ void VM_CL_te_spark (void)
 		return;
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	CL_FindNonSolidLocation(pos, pos2, 4);
-	CL_SparkShower(pos2, PRVM_G_VECTOR(OFS_PARM1), PRVM_G_FLOAT(OFS_PARM2), 1);
+	CL_SparkShower(pos2, PRVM_G_VECTOR(OFS_PARM1), PRVM_G_FLOAT(OFS_PARM2), 1, 0);
 }
 
 // #412 void(vector org) te_gunshotquad (DP_QUADEFFECTS1)
@@ -1602,8 +1602,8 @@ void VM_CL_te_gunshotquad (void)
 
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	CL_FindNonSolidLocation(pos, pos2, 4);
-	CL_SparkShower(pos2, vec3_origin, 15, 1);
-	CL_Smoke(pos2, vec3_origin, 15);
+	CL_SparkShower(pos2, vec3_origin, 15, 1, 0);
+	CL_Smoke(pos2, vec3_origin, 15, 0);
 	CL_BulletMark(pos2);
 	Matrix4x4_CreateTranslate(&tempmatrix, pos2[0], pos2[1], pos2[2]);
 	CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
@@ -1622,8 +1622,8 @@ void VM_CL_te_spikequad (void)
 	CL_FindNonSolidLocation(pos, pos2, 4);
 	if (cl_particles_bulletimpacts.integer)
 	{
-		CL_SparkShower(pos2, vec3_origin, 15, 1);
-		CL_Smoke(pos2, vec3_origin, 15);
+		CL_SparkShower(pos2, vec3_origin, 15, 1, 0);
+		CL_Smoke(pos2, vec3_origin, 15, 0);
 		CL_BulletMark(pos2);
 	}
 	Matrix4x4_CreateTranslate(&tempmatrix, pos2[0], pos2[1], pos2[2]);
@@ -1651,8 +1651,8 @@ void VM_CL_te_superspikequad (void)
 	CL_FindNonSolidLocation(pos, pos2, 4);
 	if (cl_particles_bulletimpacts.integer)
 	{
-		CL_SparkShower(pos2, vec3_origin, 30, 1);
-		CL_Smoke(pos2, vec3_origin, 30);
+		CL_SparkShower(pos2, vec3_origin, 30, 1, 0);
+		CL_Smoke(pos2, vec3_origin, 30, 0);
 		CL_BulletMark(pos2);
 	}
 	Matrix4x4_CreateTranslate(&tempmatrix, pos2[0], pos2[1], pos2[2]);
@@ -1721,8 +1721,8 @@ void VM_CL_te_gunshot (void)
 
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	CL_FindNonSolidLocation(pos, pos2, 4);
-	CL_SparkShower(pos2, vec3_origin, 15, 1);
-	CL_Smoke(pos2, vec3_origin, 15);
+	CL_SparkShower(pos2, vec3_origin, 15, 1, 0);
+	CL_Smoke(pos2, vec3_origin, 15, 0);
 	CL_BulletMark(pos2);
 }
 
@@ -1738,8 +1738,8 @@ void VM_CL_te_spike (void)
 	CL_FindNonSolidLocation(pos, pos2, 4);
 	if (cl_particles_bulletimpacts.integer)
 	{
-		CL_SparkShower(pos2, vec3_origin, 15, 1);
-		CL_Smoke(pos2, vec3_origin, 15);
+		CL_SparkShower(pos2, vec3_origin, 15, 1, 0);
+		CL_Smoke(pos2, vec3_origin, 15, 0);
 		CL_BulletMark(pos2);
 	}
 	if (rand() % 5)			S_StartSound(-1, 0, cl.sfx_tink1, pos2, 1, 1);
@@ -1764,8 +1764,8 @@ void VM_CL_te_superspike (void)
 	CL_FindNonSolidLocation(pos, pos2, 4);
 	if (cl_particles_bulletimpacts.integer)
 	{
-		CL_SparkShower(pos2, vec3_origin, 30, 1);
-		CL_Smoke(pos2, vec3_origin, 30);
+		CL_SparkShower(pos2, vec3_origin, 30, 1, 0);
+		CL_Smoke(pos2, vec3_origin, 30, 0);
 		CL_BulletMark(pos2);
 	}
 	if (rand() % 5)			S_StartSound(-1, 0, cl.sfx_tink1, pos2, 1, 1);

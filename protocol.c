@@ -2339,3 +2339,345 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 	MSG_WriteShort(msg, 0x8000);
 }
 
+
+
+void EntityStateQW_ReadPlayerUpdate(void)
+{
+	int slot = MSG_ReadByte();
+	int enumber = slot + 1;
+	int weaponframe;
+	int msec;
+	int playerflags;
+	int bits;
+	entity_state_t *s;
+	// look up the entity
+	entity_t *ent = cl_entities + enumber;
+	vec3_t viewangles;
+	vec3_t velocity;
+
+	// slide the current state into the previous
+	ent->state_previous = ent->state_current;
+
+	// read the update
+	s = &ent->state_current;
+	*s = defaultstate;
+	s->active = true;
+	playerflags = MSG_ReadShort();
+	MSG_ReadVector(s->origin, cls.protocol);
+	s->frame = MSG_ReadByte();
+	if (playerflags & QW_PF_MSEC)
+	{
+		// time difference between last update this player sent to the server,
+		// and last input we sent to the server (this packet is in response to
+		// our input, so msec is how long ago the last update of this player
+		// entity occurred, compared to our input being received)
+		msec = MSG_ReadByte();
+	}
+	else
+		msec = 0;
+	if (playerflags & QW_PF_COMMAND)
+	{
+		bits = MSG_ReadByte();
+		if (bits & QW_CM_ANGLE1)
+			viewangles[0] = MSG_ReadAngle16i();
+		if (bits & QW_CM_ANGLE2)
+			viewangles[1] = MSG_ReadAngle16i();
+		if (bits & QW_CM_ANGLE3)
+			viewangles[2] = MSG_ReadAngle16i();
+		if (bits & QW_CM_FORWARD)
+			MSG_ReadShort();
+		if (bits & QW_CM_SIDE)
+			MSG_ReadShort();
+		if (bits & QW_CM_UP)
+			MSG_ReadShort();
+		if (bits & QW_CM_BUTTONS)
+			MSG_ReadByte();
+		if (bits & QW_CM_IMPULSE)
+			MSG_ReadByte();
+	}
+	VectorClear(velocity);
+	if (playerflags & QW_PF_VELOCITY1)
+		velocity[0] = MSG_ReadShort();
+	if (playerflags & QW_PF_VELOCITY2)
+		velocity[1] = MSG_ReadShort();
+	if (playerflags & QW_PF_VELOCITY3)
+		velocity[2] = MSG_ReadShort();
+	if (playerflags & QW_PF_MODEL)
+		s->modelindex = MSG_ReadByte();
+	else
+		s->modelindex = cl.qw_modelindex_player;
+	if (playerflags & QW_PF_SKINNUM)
+		s->skin = MSG_ReadByte();
+	if (playerflags & QW_PF_EFFECTS)
+		s->effects = MSG_ReadByte();
+	if (playerflags & QW_PF_WEAPONFRAME)
+		weaponframe = MSG_ReadByte();
+
+	// calculate the entity angles from the viewangles
+	s->angles[0] = viewangles[0] * -0.0333;
+	s->angles[1] = viewangles[1];
+	s->angles[2] = 0;
+	s->angles[2] = V_CalcRoll(s->angles, velocity)*4;
+
+	// if this is an update on our player, update interpolation state
+	if (enumber == cl.playerentity)
+	{
+		VectorCopy (cl.mpunchangle[0], cl.mpunchangle[1]);
+		VectorCopy (cl.mpunchvector[0], cl.mpunchvector[1]);
+		VectorCopy (cl.mvelocity[0], cl.mvelocity[1]);
+		cl.mviewzoom[1] = cl.mviewzoom[0];
+
+		cl.idealpitch = 0;
+		cl.mpunchangle[0][0] = 0;
+		cl.mpunchangle[0][1] = 0;
+		cl.mpunchangle[0][2] = 0;
+		cl.mpunchvector[0][0] = 0;
+		cl.mpunchvector[0][1] = 0;
+		cl.mpunchvector[0][2] = 0;
+		cl.mvelocity[0][0] = 0;
+		cl.mvelocity[0][1] = 0;
+		cl.mvelocity[0][2] = 0;
+		cl.mviewzoom[0] = 1;
+
+		VectorCopy(velocity, cl.mvelocity[0]);
+		cl.stats[STAT_WEAPONFRAME] = weaponframe;
+	}
+
+	// set the cl_entities_active flag
+	cl_entities_active[enumber] = s->active;
+	// set the update time
+	s->time = cl.mtime[0] - msec * 0.001; // qw has no clock
+	// fix the number (it gets wiped occasionally by copying from defaultstate)
+	s->number = enumber;
+	// check if we need to update the lerp stuff
+	if (s->active)
+		CL_MoveLerpEntityStates(&cl_entities[enumber]);
+}
+
+static void EntityStateQW_ReadEntityUpdate(entity_state_t *s, int bits)
+{
+	int qweffects = 0;
+	s->active = true;
+	s->number = bits & 511;
+	bits &= ~511;
+	if (bits & QW_U_MOREBITS)
+		bits |= MSG_ReadByte();
+
+	// store the QW_U_SOLID bit here?
+
+	if (bits & QW_U_MODEL)
+		s->modelindex = MSG_ReadByte();
+	if (bits & QW_U_FRAME)
+		s->frame = MSG_ReadByte();
+	if (bits & QW_U_COLORMAP)
+		s->colormap = MSG_ReadByte();
+	if (bits & QW_U_SKIN)
+		s->skin = MSG_ReadByte();
+	if (bits & QW_U_EFFECTS)
+	{
+		s->effects = 0;
+		qweffects = MSG_ReadByte();
+		if (qweffects & QW_EF_BRIGHTFIELD)
+			s->effects |= EF_BRIGHTFIELD;
+		if (qweffects & QW_EF_MUZZLEFLASH)
+			s->effects |= EF_MUZZLEFLASH;
+		if (qweffects & QW_EF_FLAG1)
+		{
+			// mimic FTEQW's interpretation of EF_FLAG1 as EF_NODRAW on non-player entities
+			if (s->number > cl.maxclients)
+				s->effects |= EF_NODRAW;
+			else
+				s->effects |= EF_FLAG1QW;
+		}
+		if (qweffects & QW_EF_FLAG2)
+		{
+			// mimic FTEQW's interpretation of EF_FLAG2 as EF_ADDITIVE on non-player entities
+			if (s->number > cl.maxclients)
+				s->effects |= EF_ADDITIVE;
+			else
+				s->effects |= EF_FLAG2QW;
+		}
+		if (qweffects & QW_EF_RED)
+		{
+			if (qweffects & QW_EF_BLUE)
+				s->effects |= EF_RED | EF_BLUE;
+			else
+				s->effects |= EF_RED;
+		}
+		else if (qweffects & QW_EF_BLUE)
+			s->effects |= EF_BLUE;
+		else if (qweffects & QW_EF_BRIGHTLIGHT)
+			s->effects |= EF_BRIGHTLIGHT;
+		else if (qweffects & QW_EF_DIMLIGHT)
+			s->effects |= EF_DIMLIGHT;
+	}
+	if (bits & QW_U_ORIGIN1)
+		s->origin[0] = MSG_ReadCoord13i();
+	if (bits & QW_U_ANGLE1)
+		s->angles[0] = MSG_ReadAngle8i();
+	if (bits & QW_U_ORIGIN2)
+		s->origin[1] = MSG_ReadCoord13i();
+	if (bits & QW_U_ANGLE2)
+		s->angles[1] = MSG_ReadAngle8i();
+	if (bits & QW_U_ORIGIN3)
+		s->origin[2] = MSG_ReadCoord13i();
+	if (bits & QW_U_ANGLE3)
+		s->angles[2] = MSG_ReadAngle8i();
+
+	if (developer_networkentities.integer >= 2)
+	{
+		Con_Printf("ReadFields e%i", s->number);
+		if (bits & QW_U_MODEL)
+			Con_Printf(" U_MODEL %i", s->modelindex);
+		if (bits & QW_U_FRAME)
+			Con_Printf(" U_FRAME %i", s->frame);
+		if (bits & QW_U_COLORMAP)
+			Con_Printf(" U_COLORMAP %i", s->colormap);
+		if (bits & QW_U_SKIN)
+			Con_Printf(" U_SKIN %i", s->skin);
+		if (bits & QW_U_EFFECTS)
+			Con_Printf(" U_EFFECTS %i", qweffects);
+		if (bits & QW_U_ORIGIN1)
+			Con_Printf(" U_ORIGIN1 %i", s->origin[0]);
+		if (bits & QW_U_ANGLE1)
+			Con_Printf(" U_ANGLE1 %i", s->angles[0]);
+		if (bits & QW_U_ORIGIN2)
+			Con_Printf(" U_ORIGIN2 %i", s->origin[1]);
+		if (bits & QW_U_ANGLE2)
+			Con_Printf(" U_ANGLE2 %i", s->angles[1]);
+		if (bits & QW_U_ORIGIN3)
+			Con_Printf(" U_ORIGIN3 %i", s->origin[2]);
+		if (bits & QW_U_ANGLE3)
+			Con_Printf(" U_ANGLE3 %i", s->angles[2]);
+		if (bits & QW_U_SOLID)
+			Con_Printf(" U_SOLID");
+		Con_Print("\n");
+	}
+}
+
+void EntityFrameQW_CL_ReadFrame(qboolean delta)
+{
+	qboolean invalid = false;
+	int i, number, oldsnapindex, newsnapindex, oldindex, newindex, oldnum, newnum;
+	entity_t *ent;
+	entityframeqw_database_t *d = cl.entitydatabaseqw;
+	entityframeqw_snapshot_t *oldsnap, *newsnap;
+
+	newsnapindex = cls.netcon->qw.incoming_sequence & QW_UPDATE_MASK;
+	newsnap = d->snapshot + newsnapindex;
+	memset(newsnap, 0, sizeof(*newsnap));
+	if (delta)
+	{
+		oldsnapindex = MSG_ReadByte() & QW_UPDATE_MASK;
+		oldsnap = d->snapshot + oldsnapindex;
+		if (cls.netcon->qw.outgoing_sequence - oldsnapindex >= QW_UPDATE_BACKUP-1)
+		{
+			Con_DPrintf("delta update too old\n");
+			newsnap->invalid = invalid = true; // too old
+			delta = false;
+		}
+	}
+	else
+	{
+		oldsnapindex = -1;
+		oldsnap = NULL;
+	}
+
+	// read the number of this frame to echo back in next input packet
+	for (i = 0;i < LATESTFRAMENUMS-1;i++)
+		cl.latestframenums[i] = cl.latestframenums[i+1];
+	cl.latestframenums[LATESTFRAMENUMS-1] = cls.netcon->qw.incoming_sequence;
+	if (invalid)
+		cl.latestframenums[LATESTFRAMENUMS-1] = 0;
+
+	// read entity numbers until we find a 0x0000
+	// (which would be an empty update on world entity, but is actually a terminator)
+	newsnap->num_entities = 0;
+	oldindex = 0;
+	for (;;)
+	{
+		int word = (unsigned short)MSG_ReadShort();
+		if (msg_badread)
+			return; // just return, the main parser will print an error
+		newnum = word == 0 ? 512 : (word & 511);
+		oldnum = delta ? (oldindex >= oldsnap->num_entities ? 9999 : oldsnap->entities[oldindex].number) : 9999;
+
+		// copy unmodified oldsnap entities
+		while (newnum > oldnum) // delta only
+		{
+			if (developer_networkentities.integer >= 2)
+				Con_Printf("copy %i\n", oldnum);
+			// copy one of the old entities
+			if (newsnap->num_entities >= QW_MAX_PACKET_ENTITIES)
+				Host_Error("EntityFrameQW_CL_ReadFrame: newsnap->num_entities == MAX_PACKETENTITIES");
+			newsnap->entities[newsnap->num_entities] = oldsnap->entities[oldindex++];
+			newsnap->num_entities++;
+			oldnum = oldindex >= oldsnap->num_entities ? 9999 : oldsnap->entities[oldindex].number;
+		}
+
+		if (word == 0)
+			break;
+
+		if (developer_networkentities.integer >= 2)
+		{
+			if (word & QW_U_REMOVE)
+				Con_Printf("remove %i\n", newnum);
+			else if (newnum == oldnum)
+				Con_Printf("delta %i\n", newnum);
+			else
+				Con_Printf("baseline %i\n", newnum);
+		}
+
+		if (word & QW_U_REMOVE)
+		{
+			if (newnum != oldnum && !delta && !invalid)
+			{
+				cl.latestframenums[LATESTFRAMENUMS-1] = 0;
+				Con_Printf("WARNING: U_REMOVE %i on full update\n", newnum);
+			}
+		}
+		else
+		{
+			if (newsnap->num_entities >= QW_MAX_PACKET_ENTITIES)
+				Host_Error("EntityFrameQW_CL_ReadFrame: newsnap->num_entities == MAX_PACKETENTITIES");
+			newsnap->entities[newsnap->num_entities] = (newnum == oldnum) ? oldsnap->entities[oldindex++] : cl_entities[newnum].state_baseline;
+			EntityStateQW_ReadEntityUpdate(newsnap->entities + newsnap->num_entities, word);
+			newsnap->num_entities++;
+		}
+	}
+
+	// expand cl_num_entities to include every entity we've seen this game
+	newnum = newsnap->num_entities ? newsnap->entities[newsnap->num_entities - 1].number : 1;
+	if (cl_num_entities <= newnum)
+	{
+		cl_num_entities = newnum + 1;
+		if (cl_max_entities < newnum + 1)
+			CL_ExpandEntities(newnum);
+	}
+
+	// now update the entities from the snapshot states
+	number = 1;
+	for (newindex = 0;;newindex++)
+	{
+		newnum = newindex >= newsnap->num_entities ? cl_num_entities : newsnap->entities[newindex].number;
+		// kill any missing entities
+		for (;number < newnum;number++)
+		{
+			if (cl_entities_active[number])
+			{
+				cl_entities_active[number] = false;
+				cl_entities[number].state_current.active = false;
+			}
+		}
+		if (number >= cl_num_entities)
+			break;
+		// update the entity
+		ent = &cl_entities[number];
+		ent->state_previous = ent->state_current;
+		ent->state_current = newsnap->entities[newindex];
+		CL_MoveLerpEntityStates(ent);
+		// the entity lives again...
+		cl_entities_active[number] = true;
+		number++;
+	}
+}

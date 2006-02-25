@@ -144,6 +144,8 @@ void Host_Error (const char *error, ...)
 
 	CL_Parse_DumpPacket();
 
+	CL_Parse_ErrorCleanUp();
+
 	//PR_Crash();
 
 	// print out where the crash happened, if it was caused by QC (and do a cleanup)

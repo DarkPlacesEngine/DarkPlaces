@@ -60,6 +60,8 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define EF_SELECTABLE			16384	// LordHavoc: highlights when PRYDON_CLIENTCURSOR mouse is over it
 #define EF_DOUBLESIDED			32768	//[515]: disable cull face for this entity
 
+#define EF_FLAG1QW				16777216 // internal client use only
+#define EF_FLAG2QW				33554432 // internal client use only
 #define EF_STEP					0x80000000 // internal client use only - present on MOVETYPE_STEP entities, not QC accessible (too many bits)
 
 // flags for the pflags field of entities
@@ -818,19 +820,19 @@ extern cvar_t developer_networkentities;
 #define qw_clc_upload		7		// teleport request, spectator only
 // QUAKEWORLD
 // playerinfo flags from server
-// playerinfo allways sends: playernum, flags, origin[] and framenumber
-#define	PF_MSEC			(1<<0)
-#define	PF_COMMAND		(1<<1)
-#define	PF_VELOCITY1	(1<<2)
-#define	PF_VELOCITY2	(1<<3)
-#define	PF_VELOCITY3	(1<<4)
-#define	PF_MODEL		(1<<5)
-#define	PF_SKINNUM		(1<<6)
-#define	PF_EFFECTS		(1<<7)
-#define	PF_WEAPONFRAME	(1<<8)		// only sent for view player
-#define	PF_DEAD			(1<<9)		// don't block movement any more
-#define	PF_GIB			(1<<10)		// offset the view height differently
-#define	PF_NOGRAV		(1<<11)		// don't apply gravity for prediction
+// playerinfo always sends: playernum, flags, origin[] and framenumber
+#define	QW_PF_MSEC			(1<<0)
+#define	QW_PF_COMMAND		(1<<1)
+#define	QW_PF_VELOCITY1	(1<<2)
+#define	QW_PF_VELOCITY2	(1<<3)
+#define	QW_PF_VELOCITY3	(1<<4)
+#define	QW_PF_MODEL		(1<<5)
+#define	QW_PF_SKINNUM		(1<<6)
+#define	QW_PF_EFFECTS		(1<<7)
+#define	QW_PF_WEAPONFRAME	(1<<8)		// only sent for view player
+#define	QW_PF_DEAD			(1<<9)		// don't block movement any more
+#define	QW_PF_GIB			(1<<10)		// offset the view height differently
+#define	QW_PF_NOGRAV		(1<<11)		// don't apply gravity for prediction
 // QUAKEWORLD
 // if the high bit of the client to server byte is set, the low bits are
 // client move cmd bits
@@ -877,6 +879,60 @@ extern cvar_t developer_networkentities;
 #define QW_TE_TELEPORT			11
 #define QW_TE_BLOOD				12
 #define QW_TE_LIGHTNINGBLOOD	13
+// QUAKEWORLD
+// effect flags
+#define QW_EF_BRIGHTFIELD		1
+#define QW_EF_MUZZLEFLASH 		2
+#define QW_EF_BRIGHTLIGHT 		4
+#define QW_EF_DIMLIGHT 			8
+#define QW_EF_FLAG1	 			16
+#define QW_EF_FLAG2	 			32
+#define QW_EF_BLUE				64
+#define QW_EF_RED				128
+
+#define QW_UPDATE_BACKUP 64
+#define QW_UPDATE_MASK (QW_UPDATE_BACKUP - 1)
+#define QW_MAX_PACKET_ENTITIES 64
+
+// note: QW stats are directly compatible with NQ
+// (but FRAGS, WEAPONFRAME, and VIEWHEIGHT are unused)
+// so these defines are not actually used by darkplaces, but kept for reference
+#define QW_STAT_HEALTH			0
+//#define QW_STAT_FRAGS			1
+#define QW_STAT_WEAPON			2
+#define QW_STAT_AMMO			3
+#define QW_STAT_ARMOR			4
+//#define QW_STAT_WEAPONFRAME		5
+#define QW_STAT_SHELLS			6
+#define QW_STAT_NAILS			7
+#define QW_STAT_ROCKETS			8
+#define QW_STAT_CELLS			9
+#define QW_STAT_ACTIVEWEAPON	10
+#define QW_STAT_TOTALSECRETS	11
+#define QW_STAT_TOTALMONSTERS	12
+#define QW_STAT_SECRETS			13 // bumped on client side by svc_foundsecret
+#define QW_STAT_MONSTERS		14 // bumped by svc_killedmonster
+#define QW_STAT_ITEMS			15
+//#define QW_STAT_VIEWHEIGHT		16
+
+// build entity data in this, to pass to entity read/write functions
+typedef struct entityframeqw_snapshot_s
+{
+	double time;
+	qboolean invalid;
+	int num_entities;
+	entity_state_t entities[QW_MAX_PACKET_ENTITIES];
+}
+entityframeqw_snapshot_t;
+
+typedef struct entityframeqw_database_s
+{
+	entityframeqw_snapshot_t snapshot[QW_UPDATE_BACKUP];
+}
+entityframeqw_database_t;
+
+void EntityStateQW_ReadPlayerUpdate(void);
+void EntityFrameQW_CL_ReadFrame(qboolean delta);
 
 #endif
 
