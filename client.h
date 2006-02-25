@@ -523,6 +523,18 @@ typedef struct
 	qboolean drawcrosshair;
 }csqc_vidvars_t;
 
+typedef struct qw_usercmd_s
+{
+	vec3_t angles;
+	short forwardmove, sidemove, upmove;
+	unsigned char padding1[2];
+	unsigned char msec;
+	unsigned char buttons;
+	unsigned char impulse;
+	unsigned char padding2;
+}
+qw_usercmd_t;
+
 //
 // the client_state_t structure is wiped completely at every
 // server signon
@@ -730,6 +742,10 @@ typedef struct client_state_s
 	// 255 is the most nails the QW protocol could send
 	int qw_num_nails;
 	vec_t qw_nails[255][6];
+
+	int qw_validsequence;
+
+	qw_usercmd_t qw_moves[QW_UPDATE_BACKUP];
 }
 client_state_t;
 
@@ -826,8 +842,6 @@ extern int cl_num_csqcentities;	//[515]: csqc
 extern int cl_num_static_entities;
 extern int cl_num_temp_entities;
 extern int cl_num_brushmodel_entities;
-
-extern char qw_emodel_name[], qw_pmodel_name[], qw_prespawn_name[], qw_modellist_name[], qw_soundlist_name[];
 
 extern client_state_t cl;
 

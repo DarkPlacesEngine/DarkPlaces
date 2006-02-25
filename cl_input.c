@@ -288,6 +288,8 @@ cvar_t m_filter = {CVAR_SAVE, "m_filter","0", "smoothes mouse movement, less res
 
 cvar_t cl_netinputpacketspersecond = {CVAR_SAVE, "cl_netinputpacketspersecond","50", "how many input packets to send to server each second"};
 
+cvar_t cl_nodelta = {0, "cl_nodelta", "0", "disables delta compression of non-player entities in QW network protocol"};
+
 
 /*
 ================
@@ -511,6 +513,34 @@ void CL_UpdatePrydonCursor(void)
 	cl.cmd.cursor_fraction = CL_SelectTraceLine(cl.cmd.cursor_start, cl.cmd.cursor_end, cl.cmd.cursor_impact, cl.cmd.cursor_normal, &cl.cmd.cursor_entitynumber, (chase_active.integer || cl.intermission) ? &cl_entities[cl.playerentity].render : NULL, false);
 	// makes sparks where cursor is
 	//CL_SparkShower(cl.cmd.cursor_impact, cl.cmd.cursor_normal, 5, 0);
+}
+
+void CL_ClientMovement_InputQW(qw_usercmd_t *cmd)
+{
+	int i;
+	int n;
+	// remove stale queue items
+	n = cl.movement_numqueue;
+	cl.movement_numqueue = 0;
+	for (i = 0;i < n;i++)
+		if (cl.movement_queue[i].sequence > cls.netcon->qw.incoming_sequence)
+			cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
+	// add to input queue if there is room
+	if (cl.movement_numqueue < (int)(sizeof(cl.movement_queue)/sizeof(cl.movement_queue[0])) && cl.mtime[0] > cl.mtime[1])
+	{
+		// add to input queue
+		cl.movement_queue[cl.movement_numqueue].sequence = cls.netcon->qw.outgoing_sequence;
+		cl.movement_queue[cl.movement_numqueue].time = cl.mtime[0] + cl_movement_latency.value / 1000.0;
+		cl.movement_queue[cl.movement_numqueue].frametime = cmd->msec * 0.001;
+		VectorCopy(cmd->angles, cl.movement_queue[cl.movement_numqueue].viewangles);
+		cl.movement_queue[cl.movement_numqueue].move[0] = cmd->forwardmove;
+		cl.movement_queue[cl.movement_numqueue].move[1] = cmd->sidemove;
+		cl.movement_queue[cl.movement_numqueue].move[2] = cmd->upmove;
+		cl.movement_queue[cl.movement_numqueue].jump = (cmd->buttons & 2) != 0;
+		cl.movement_queue[cl.movement_numqueue].crouch = false;
+		cl.movement_numqueue++;
+	}
+	cl.movement_replay = true;
 }
 
 void CL_ClientMovement_Input(qboolean buttonjump, qboolean buttoncrouch)
@@ -792,6 +822,48 @@ void CL_ClientMovement_Replay(void)
 	//VectorSet(cl_entities[cl.playerentity].state_current.angles, 0, cl.viewangles[1], 0);
 }
 
+void QW_MSG_WriteDeltaUsercmd(sizebuf_t *buf, qw_usercmd_t *from, qw_usercmd_t *to)
+{
+	int bits;
+
+	bits = 0;
+	if (to->angles[0] != from->angles[0])
+		bits |= QW_CM_ANGLE1;
+	if (to->angles[1] != from->angles[1])
+		bits |= QW_CM_ANGLE2;
+	if (to->angles[2] != from->angles[2])
+		bits |= QW_CM_ANGLE3;
+	if (to->forwardmove != from->forwardmove)
+		bits |= QW_CM_FORWARD;
+	if (to->sidemove != from->sidemove)
+		bits |= QW_CM_SIDE;
+	if (to->upmove != from->upmove)
+		bits |= QW_CM_UP;
+	if (to->buttons != from->buttons)
+		bits |= QW_CM_BUTTONS;
+	if (to->impulse != from->impulse)
+		bits |= QW_CM_IMPULSE;
+
+	MSG_WriteByte(buf, bits);
+	if (bits & QW_CM_ANGLE1)
+		MSG_WriteAngle16i(buf, to->angles[0]);
+	if (bits & QW_CM_ANGLE2)
+		MSG_WriteAngle16i(buf, to->angles[1]);
+	if (bits & QW_CM_ANGLE3)
+		MSG_WriteAngle16i(buf, to->angles[2]);
+	if (bits & QW_CM_FORWARD)
+		MSG_WriteShort(buf, to->forwardmove);
+	if (bits & QW_CM_SIDE)
+		MSG_WriteShort(buf, to->sidemove);
+	if (bits & QW_CM_UP)
+		MSG_WriteShort(buf, to->upmove);
+	if (bits & QW_CM_BUTTONS)
+		MSG_WriteShort(buf, to->buttons);
+	if (bits & QW_CM_IMPULSE)
+		MSG_WriteShort(buf, to->impulse);
+	MSG_WriteByte(buf, to->msec);
+}
+
 /*
 ==============
 CL_SendMove
@@ -914,7 +986,67 @@ void CL_SendMove(void)
 			// PROTOCOL_DARKPLACES5  clc_move = 19 bytes total
 			// PROTOCOL_DARKPLACES6  clc_move = 52 bytes total
 			// PROTOCOL_DARKPLACES7  clc_move = 56 bytes total
-			if (cls.protocol == PROTOCOL_QUAKE || cls.protocol == PROTOCOL_QUAKEDP || cls.protocol == PROTOCOL_NEHAHRAMOVIE)
+			if (cls.protocol == PROTOCOL_QUAKEWORLD)
+			{
+				int checksumindex;
+				double msectime;
+				static double oldmsectime;
+				qw_usercmd_t *cmd, *oldcmd;
+				qw_usercmd_t nullcmd;
+
+				//Con_Printf("code qw_clc_move\n");
+
+				i = cls.netcon->qw.outgoing_sequence & QW_UPDATE_MASK;
+				cmd = &cl.qw_moves[i];
+				memset(&nullcmd, 0, sizeof(nullcmd));
+				memset(cmd, 0, sizeof(*cmd));
+				cmd->buttons = bits;
+				cmd->impulse = impulse;
+				cmd->forwardmove = (short)bound(-32768, forwardmove, 32767);
+				cmd->sidemove = (short)bound(-32768, sidemove, 32767);
+				cmd->upmove = (short)bound(-32768, upmove, 32767);
+				VectorCopy(cl.viewangles, cmd->angles);
+				msectime = realtime * 1000;
+				cmd->msec = (unsigned char)bound(0, msectime - oldmsectime, 255);
+				// ridiculous value rejection (matches qw)
+				if (cmd->msec > 250)
+					cmd->msec = 100;
+				oldmsectime = msectime;
+
+				CL_ClientMovement_InputQW(cmd);
+
+				MSG_WriteByte(&buf, qw_clc_move);
+				// save the position for a checksum byte
+				checksumindex = buf.cursize;
+				MSG_WriteByte(&buf, 0);
+				// packet loss percentage
+				// FIXME: netgraph stuff
+				MSG_WriteByte(&buf, 0);
+				// write most recent 3 moves
+				i = (cls.netcon->qw.outgoing_sequence-2) & QW_UPDATE_MASK;
+				cmd = &cl.qw_moves[i];
+				QW_MSG_WriteDeltaUsercmd(&buf, &nullcmd, cmd);
+				oldcmd = cmd;
+				i = (cls.netcon->qw.outgoing_sequence-1) & QW_UPDATE_MASK;
+				cmd = &cl.qw_moves[i];
+				QW_MSG_WriteDeltaUsercmd(&buf, oldcmd, cmd);
+				oldcmd = cmd;
+				i = cls.netcon->qw.outgoing_sequence & QW_UPDATE_MASK;
+				cmd = &cl.qw_moves[i];
+				QW_MSG_WriteDeltaUsercmd(&buf, oldcmd, cmd);
+				// calculate the checksum
+				buf.data[checksumindex] = COM_BlockSequenceCRCByteQW(buf.data + checksumindex + 1, buf.cursize - checksumindex - 1, cls.netcon->qw.outgoing_sequence);
+				// if delta compression history overflows, request no delta
+				if (cls.netcon->qw.outgoing_sequence - cl.qw_validsequence >= QW_UPDATE_BACKUP-1)
+					cl.qw_validsequence = 0;
+				// request delta compression if appropriate
+				if (cl.qw_validsequence && !cl_nodelta.integer && cls.state == ca_connected && !cls.demorecording)
+				{
+					MSG_WriteByte(&buf, qw_clc_delta);
+					MSG_WriteByte(&buf, cl.qw_validsequence & 255);
+				}
+			}
+			else if (cls.protocol == PROTOCOL_QUAKE || cls.protocol == PROTOCOL_QUAKEDP || cls.protocol == PROTOCOL_NEHAHRAMOVIE)
 			{
 				// 5 bytes
 				MSG_WriteByte (&buf, clc_move);
@@ -929,6 +1061,8 @@ void CL_SendMove(void)
 				// 2 bytes
 				MSG_WriteByte (&buf, bits);
 				MSG_WriteByte (&buf, impulse);
+
+				CL_ClientMovement_Input((bits & 2) != 0, false);
 			}
 			else if (cls.protocol == PROTOCOL_DARKPLACES2 || cls.protocol == PROTOCOL_DARKPLACES3)
 			{
@@ -945,6 +1079,8 @@ void CL_SendMove(void)
 				// 2 bytes
 				MSG_WriteByte (&buf, bits);
 				MSG_WriteByte (&buf, impulse);
+
+				CL_ClientMovement_Input((bits & 2) != 0, false);
 			}
 			else if (cls.protocol == PROTOCOL_DARKPLACES1 || cls.protocol == PROTOCOL_DARKPLACES4 || cls.protocol == PROTOCOL_DARKPLACES5)
 			{
@@ -961,6 +1097,8 @@ void CL_SendMove(void)
 				// 2 bytes
 				MSG_WriteByte (&buf, bits);
 				MSG_WriteByte (&buf, impulse);
+
+				CL_ClientMovement_Input((bits & 2) != 0, false);
 			}
 			else
 			{
@@ -998,23 +1136,26 @@ void CL_SendMove(void)
 				MSG_WriteFloat (&buf, cl.cmd.cursor_impact[1]);
 				MSG_WriteFloat (&buf, cl.cmd.cursor_impact[2]);
 				MSG_WriteShort (&buf, cl.cmd.cursor_entitynumber);
-			}
 
-			// FIXME: bits & 16 is +button5, Nexuiz specific
-			CL_ClientMovement_Input((bits & 2) != 0, (bits & 16) != 0);
+				// FIXME: bits & 16 is +button5, Nexuiz specific
+				CL_ClientMovement_Input((bits & 2) != 0, (bits & 16) != 0);
+			}
 		}
 
-		// ack the last few frame numbers
-		// (redundent to improve handling of client->server packet loss)
-		// for LATESTFRAMENUMS == 3 case this is 15 bytes
-		for (i = 0;i < LATESTFRAMENUMS;i++)
+		if (cls.protocol != PROTOCOL_QUAKEWORLD)
 		{
-			if (cl.latestframenums[i] > 0)
+			// ack the last few frame numbers
+			// (redundent to improve handling of client->server packet loss)
+			// for LATESTFRAMENUMS == 3 case this is 15 bytes
+			for (i = 0;i < LATESTFRAMENUMS;i++)
 			{
-				if (developer_networkentities.integer >= 1)
-					Con_Printf("send clc_ackframe %i\n", cl.latestframenums[i]);
-				MSG_WriteByte(&buf, clc_ackframe);
-				MSG_WriteLong(&buf, cl.latestframenums[i]);
+				if (cl.latestframenums[i] > 0)
+				{
+					if (developer_networkentities.integer >= 1)
+						Con_Printf("send clc_ackframe %i\n", cl.latestframenums[i]);
+					MSG_WriteByte(&buf, clc_ackframe);
+					MSG_WriteLong(&buf, cl.latestframenums[i]);
+				}
 			}
 		}
 
@@ -1126,5 +1267,7 @@ void CL_InitInput (void)
 	Cvar_RegisterVariable(&m_filter);
 
 	Cvar_RegisterVariable(&cl_netinputpacketspersecond);
+
+	Cvar_RegisterVariable(&cl_nodelta);
 }
 

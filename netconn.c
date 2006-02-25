@@ -439,11 +439,8 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 		int packetLen;
 		qboolean sendreliable;
 
-		if (data->cursize == 0 && conn->message.cursize == 0)
-		{
-			Con_Printf ("Datagram_SendUnreliableMessage: zero length message\n");
-			return -1;
-		}
+		// note that it is ok to send empty messages to the qw server,
+		// otherwise it won't respond to us at all
 
 		sendreliable = false;
 		// if the remote side dropped the last reliable message, resend it
@@ -823,8 +820,8 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 		}
 
 		packetsReceived++;
-		reliable_message = sequence >> 31;
-		reliable_ack = sequence_ack >> 31;
+		reliable_message = (sequence >> 31) & 1;
+		reliable_ack = (sequence_ack >> 31) & 1;
 		sequence &= ~(1<<31);
 		sequence_ack &= ~(1<<31);
 		if (sequence <= conn->qw.incoming_sequence)
@@ -1069,7 +1066,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			NetConn_WriteString(mysocket, va("\377\377\377\377connect\\protocol\\darkplaces 3\\protocols\\%s\\challenge\\%s", protocolnames, string + 10), peeraddress);
 			return true;
 		}
-		if (length > 1 && string[0] == 'c' && string[1] >= '0' && string[1] <= '9')
+		if (length > 1 && string[0] == 'c' && (string[1] == '-' || (string[1] >= '0' && string[1] <= '9')))
 		{
 			// quakeworld
 			LHNETADDRESS_ToString(peeraddress, addressstring2, sizeof(addressstring2), true);
