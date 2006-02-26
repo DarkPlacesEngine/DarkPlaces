@@ -391,6 +391,27 @@ void SCR_DrawBrand (void)
 	DrawQ_Pic (x, y, "gfx/brand", 0, 0, 1, 1, 1, 1, 0);
 }
 
+/*
+==============
+SCR_DrawDownload
+==============
+*/
+static void SCR_DrawDownload(void)
+{
+	int len;
+	float x, y;
+	float size = 8;
+	char temp[256];
+	if (!cls.qw_downloadname[0])
+		return;
+	dpsnprintf(temp, sizeof(temp), "Downloading %s ...  %3i%%\n", cls.qw_downloadname, cls.qw_downloadpercent);
+	len = strlen(temp);
+	x = (vid_conwidth.integer - len*size) / 2;
+	y = vid_conheight.integer - size;
+	DrawQ_Fill(0, y, vid_conwidth.integer, size, 0, 0, 0, 0.5, 0);
+	DrawQ_String(x, y, temp, len, size, size, 1, 1, 1, 1, 0);
+}
+
 //=============================================================================
 
 
@@ -1529,6 +1550,8 @@ void CL_UpdateScreen(void)
 		SCR_DrawConsole();
 
 	SCR_DrawBrand();
+
+	SCR_DrawDownload();
 
 	SCR_UpdateScreen();
 }

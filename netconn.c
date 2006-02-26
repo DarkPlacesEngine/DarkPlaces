@@ -456,34 +456,44 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 			sendreliable = true;
 		}
 		// outgoing unreliable packet number, and outgoing reliable packet number (0 or 1)
-		*((int *)(sendbuffer + 0)) = LittleLong(conn->qw.outgoing_sequence | (sendreliable<<31));
+		*((int *)(sendbuffer + 0)) = LittleLong((unsigned int)conn->qw.outgoing_sequence | ((unsigned int)sendreliable<<31));
 		// last received unreliable packet number, and last received reliable packet number (0 or 1)
-		*((int *)(sendbuffer + 4)) = LittleLong(conn->qw.incoming_sequence | (conn->qw.incoming_reliable_sequence<<31));
+		*((int *)(sendbuffer + 4)) = LittleLong((unsigned int)conn->qw.incoming_sequence | ((unsigned int)conn->qw.incoming_reliable_sequence<<31));
 		packetLen = 8;
+		conn->qw.outgoing_sequence++;
 		// client sends qport in every packet
 		if (conn == cls.netcon)
 		{
 			*((short *)(sendbuffer + 8)) = LittleShort(cls.qw_qport);
 			packetLen += 2;
 		}
-		if (packetLen + (sendreliable ? conn->sendMessageLength : 0) + data->cursize > (int)sizeof(sendbuffer))
+		if (packetLen + (sendreliable ? conn->sendMessageLength : 0) > 1400)
 		{
 			Con_Printf ("NetConn_SendUnreliableMessage: reliable message too big %u\n", data->cursize);
 			return -1;
 		}
+		// add the reliable message if there is one
 		if (sendreliable)
 		{
 			memcpy(sendbuffer + packetLen, conn->sendMessage, conn->sendMessageLength);
 			packetLen += conn->sendMessageLength;
+			conn->qw.last_reliable_sequence = conn->qw.outgoing_sequence;
 		}
-		memcpy(sendbuffer + packetLen, data->data, data->cursize);
-		packetLen += data->cursize;
-		conn->qw.outgoing_sequence++;
+		// add the unreliable message if possible
+		if (packetLen + data->cursize <= 1400)
+		{
+			memcpy(sendbuffer + packetLen, data->data, data->cursize);
+			packetLen += data->cursize;
+		}
 
 		NetConn_Write(conn->mysocket, (void *)&sendbuffer, packetLen, &conn->peeraddress);
 
 		packetsSent++;
 		unreliableMessagesSent++;
+
+		// delay later packets to obey rate limit
+		conn->qw.cleartime = max(conn->qw.cleartime, realtime) + packetLen * conn->qw.rate;
+
 		return 0;
 	}
 	else

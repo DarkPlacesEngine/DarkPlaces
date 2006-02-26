@@ -815,7 +815,7 @@ void SV_ReadClientMessage(void)
 			return;
 		}
 
-		cmd = MSG_ReadChar ();
+		cmd = MSG_ReadByte ();
 		if (cmd == -1)
 		{
 			// end of message

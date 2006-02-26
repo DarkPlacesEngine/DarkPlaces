@@ -858,9 +858,9 @@ void QW_MSG_WriteDeltaUsercmd(sizebuf_t *buf, qw_usercmd_t *from, qw_usercmd_t *
 	if (bits & QW_CM_UP)
 		MSG_WriteShort(buf, to->upmove);
 	if (bits & QW_CM_BUTTONS)
-		MSG_WriteShort(buf, to->buttons);
+		MSG_WriteByte(buf, to->buttons);
 	if (bits & QW_CM_IMPULSE)
-		MSG_WriteShort(buf, to->impulse);
+		MSG_WriteByte(buf, to->impulse);
 	MSG_WriteByte(buf, to->msec);
 }
 
@@ -986,6 +986,7 @@ void CL_SendMove(void)
 			// PROTOCOL_DARKPLACES5  clc_move = 19 bytes total
 			// PROTOCOL_DARKPLACES6  clc_move = 52 bytes total
 			// PROTOCOL_DARKPLACES7  clc_move = 56 bytes total
+			// PROTOCOL_QUAKEWORLD   clc_move = 34 bytes total (typically, but can reach 43 bytes, or even 49 bytes with roll)
 			if (cls.protocol == PROTOCOL_QUAKEWORLD)
 			{
 				int checksumindex;
@@ -1042,9 +1043,12 @@ void CL_SendMove(void)
 				// request delta compression if appropriate
 				if (cl.qw_validsequence && !cl_nodelta.integer && cls.state == ca_connected && !cls.demorecording)
 				{
+					cl.qw_deltasequence[cls.netcon->qw.outgoing_sequence & QW_UPDATE_MASK] = cl.qw_validsequence;
 					MSG_WriteByte(&buf, qw_clc_delta);
 					MSG_WriteByte(&buf, cl.qw_validsequence & 255);
 				}
+				else
+					cl.qw_deltasequence[cls.netcon->qw.outgoing_sequence & QW_UPDATE_MASK] = -1;
 			}
 			else if (cls.protocol == PROTOCOL_QUAKE || cls.protocol == PROTOCOL_QUAKEDP || cls.protocol == PROTOCOL_NEHAHRAMOVIE)
 			{
