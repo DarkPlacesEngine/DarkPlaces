@@ -950,7 +950,6 @@ void CL_ParseServerInfo (void)
 	int i;
 	protocolversion_t protocol;
 	int nummodels, numsounds;
-	entity_t *ent;
 
 	Con_DPrint("Serverinfo packet received.\n");
 
@@ -1145,8 +1144,8 @@ void CL_ParseServerInfo (void)
 		}
 
 		// we now have the worldmodel so we can set up the game world
-		ent->render.model = cl.worldmodel = cl.model_precache[1];
-		CL_BoundingBoxForEntity(&ent->render);
+		cl_entities[0].render.model = cl.worldmodel = cl.model_precache[1];
+		CL_BoundingBoxForEntity(&cl_entities[0].render);
 		R_Modules_NewMap();
 		CL_CGVM_Start();
 	}
