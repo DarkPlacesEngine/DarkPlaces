@@ -588,6 +588,20 @@ void CL_ClientMovement_Replay(void)
 	int contents;
 	int crouch;
 	int onground;
+	float movevars_gravity;
+	float movevars_stopspeed;
+	float movevars_maxspeed;
+	float movevars_spectatormaxspeed;
+	float movevars_accelerate;
+	float movevars_airaccelerate;
+	float movevars_wateraccelerate;
+	float movevars_friction;
+	float movevars_waterfriction;
+	float movevars_entgravity;
+	float movevars_jumpvelocity;
+	float movevars_edgefriction;
+	float movevars_maxairspeed;
+	float movevars_stepheight;
 	double edgefriction;
 	double frametime;
 	double t;
@@ -612,9 +626,45 @@ void CL_ClientMovement_Replay(void)
 	trace_t trace2;
 	trace_t trace3;
 
+
 	if (!cl.movement_replay)
 		return;
 	cl.movement_replay = false;
+
+	if (cls.protocol == PROTOCOL_QUAKEWORLD)
+	{
+		movevars_gravity = cl.qw_movevars_gravity;
+		movevars_stopspeed = cl.qw_movevars_stopspeed;
+		movevars_maxspeed = cl.qw_movevars_maxspeed;
+		movevars_spectatormaxspeed = cl.qw_movevars_spectatormaxspeed;
+		movevars_accelerate = cl.qw_movevars_accelerate;
+		movevars_airaccelerate = cl.qw_movevars_airaccelerate;
+		movevars_wateraccelerate = cl.qw_movevars_wateraccelerate;
+		movevars_friction = cl.qw_movevars_friction;
+		movevars_waterfriction = cl.qw_movevars_waterfriction;
+		movevars_entgravity = cl.qw_movevars_entgravity;
+		movevars_jumpvelocity = cl_movement_jumpvelocity.value;
+		movevars_edgefriction = cl_movement_edgefriction.value;
+		movevars_maxairspeed = cl_movement_maxairspeed.value;
+		movevars_stepheight = cl_movement_stepheight.value;
+	}
+	else
+	{
+		movevars_gravity = sv_gravity.value;
+		movevars_stopspeed = cl_movement_stopspeed.value;
+		movevars_maxspeed = cl_movement_maxspeed.value;
+		movevars_spectatormaxspeed = cl_movement_maxspeed.value;
+		movevars_accelerate = cl_movement_accelerate.value;
+		movevars_airaccelerate = cl_movement_accelerate.value;
+		movevars_wateraccelerate = cl_movement_accelerate.value;
+		movevars_friction = cl_movement_friction.value;
+		movevars_waterfriction = cl_movement_friction.value;
+		movevars_entgravity = 1;
+		movevars_jumpvelocity = cl_movement_jumpvelocity.value;
+		movevars_edgefriction = cl_movement_edgefriction.value;
+		movevars_maxairspeed = cl_movement_maxairspeed.value;
+		movevars_stepheight = cl_movement_stepheight.value;
+	}
 
 	// fetch current starting values
 	VectorCopy(cl_entities[cl.playerentity].state_current.origin, currentorigin);
@@ -682,15 +732,14 @@ void CL_ClientMovement_Replay(void)
 					VectorScale(wishvel, 1 / wishspeed, wishdir);
 				else
 					VectorSet( wishdir, 0.0, 0.0, 0.0 );
-				wishspeed = min(wishspeed, cl_movement_maxspeed.value);
+				wishspeed = min(wishspeed, movevars_maxspeed) * 0.6;
 				if (crouch)
 					wishspeed *= 0.5;
-				wishspeed *= 0.6;
-				VectorScale(currentvelocity, (1 - frametime * cl_movement_friction.value), currentvelocity);
+				VectorScale(currentvelocity, (1 - frametime * movevars_waterfriction), currentvelocity);
 				f = wishspeed - DotProduct(currentvelocity, wishdir);
 				if (f > 0)
 				{
-					f = min(f, cl_movement_accelerate.value * frametime * wishspeed);
+					f = min(f, movevars_wateraccelerate * frametime * wishspeed);
 					VectorMA(currentvelocity, f, wishdir, currentvelocity);
 				}
 				if (q->jump)
@@ -713,7 +762,7 @@ void CL_ClientMovement_Replay(void)
 				// walk
 				if (onground && q->jump)
 				{
-					currentvelocity[2] += cl_movement_jumpvelocity.value;
+					currentvelocity[2] += movevars_jumpvelocity;
 					onground = false;
 				}
 				VectorSet(yawangles, 0, q->viewangles[1], 0);
@@ -724,7 +773,7 @@ void CL_ClientMovement_Replay(void)
 					VectorScale(wishvel, 1 / wishspeed, wishdir);
 				else
 					VectorSet( wishdir, 0.0, 0.0, 0.0 );
-				wishspeed = min(wishspeed, cl_movement_maxspeed.value);
+				wishspeed = min(wishspeed, movevars_maxspeed);
 				if (crouch)
 					wishspeed *= 0.5;
 				// check if onground
@@ -739,17 +788,17 @@ void CL_ClientMovement_Replay(void)
 						VectorSet(neworigin2, currentorigin2[0], currentorigin2[1], currentorigin2[2] - 34);
 						trace = CL_TraceBox(currentorigin2, vec3_origin, vec3_origin, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
 						if (trace.fraction == 1)
-							edgefriction = cl_movement_edgefriction.value;
+							edgefriction = movevars_edgefriction;
 					}
 					// apply friction
-					f = 1 - frametime * edgefriction * ((f < cl_movement_stopspeed.value) ? (cl_movement_stopspeed.value / f) : 1) * cl_movement_friction.value;
+					f = 1 - frametime * edgefriction * ((f < movevars_stopspeed) ? (movevars_stopspeed / f) : 1) * movevars_friction;
 					f = max(f, 0);
 					VectorScale(currentvelocity, f, currentvelocity);
 				}
 				else
 				{
 					// apply air speed limit
-					wishspeed = min(wishspeed, cl_movement_maxairspeed.value);
+					wishspeed = min(wishspeed, movevars_maxairspeed);
 				}
 				if (gamemode == GAME_NEXUIZ)
 					addspeed = wishspeed;
@@ -757,7 +806,7 @@ void CL_ClientMovement_Replay(void)
 					addspeed = wishspeed - DotProduct(currentvelocity, wishdir);
 				if (addspeed > 0)
 				{
-					accelspeed = min(cl_movement_accelerate.value * frametime * wishspeed, addspeed);
+					accelspeed = min(movevars_accelerate * frametime * wishspeed, addspeed);
 					VectorMA(currentvelocity, accelspeed, wishdir, currentvelocity);
 				}
 				currentvelocity[2] -= cl_gravity.value * frametime;
@@ -784,8 +833,8 @@ void CL_ClientMovement_Replay(void)
 				{
 					// may be a step or wall, try stepping up
 					// first move forward at a higher level
-					VectorSet(currentorigin2, currentorigin[0], currentorigin[1], currentorigin[2] + cl_movement_stepheight.value);
-					VectorSet(neworigin2, neworigin[0], neworigin[1], currentorigin[2] + cl_movement_stepheight.value);
+					VectorSet(currentorigin2, currentorigin[0], currentorigin[1], currentorigin[2] + movevars_stepheight);
+					VectorSet(neworigin2, neworigin[0], neworigin[1], currentorigin[2] + movevars_stepheight);
 					trace2 = CL_TraceBox(currentorigin2, playermins, playermaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
 					// then move down from there
 					VectorCopy(trace2.endpos, currentorigin2);
