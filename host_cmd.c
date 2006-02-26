@@ -2240,14 +2240,33 @@ void Host_Packet_f (void) // credit: taken from QuakeWorld
 			*out++ = '\n';
 			i++;
 		}
+		else if (in[i] == '\\' && in[i+1] == '0')
+		{
+			*out++ = '\0';
+			i++;
+		}
+		else if (in[i] == '\\' && in[i+1] == 't')
+		{
+			*out++ = '\t';
+			i++;
+		}
+		else if (in[i] == '\\' && in[i+1] == 'r')
+		{
+			*out++ = '\r';
+			i++;
+		}
+		else if (in[i] == '\\' && in[i+1] == '"')
+		{
+			*out++ = '\"';
+			i++;
+		}
 		else
 			*out++ = in[i];
 	}
-	*out = 0;
 
 	mysocket = NetConn_ChooseClientSocketForAddress(&address);
 	if (mysocket)
-		NetConn_WriteString(mysocket, send, &address);
+		NetConn_Write(mysocket, send, out - send, &address);
 }
 
 //=============================================================================
