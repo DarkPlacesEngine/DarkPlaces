@@ -124,6 +124,7 @@ CL_ClearState
 void CL_ClearState(void)
 {
 	int i;
+	entity_t *ent;
 
 	if (cl_entities) Mem_Free(cl_entities);cl_entities = NULL;
 	if (cl_csqcentities) Mem_Free(cl_csqcentities);cl_csqcentities = NULL;	//[515]: csqc
@@ -138,6 +139,7 @@ void CL_ClearState(void)
 	if (cl_brushmodel_entities) Mem_Free(cl_brushmodel_entities);cl_brushmodel_entities = NULL;
 	if (cl.entitydatabase) EntityFrame_FreeDatabase(cl.entitydatabase);cl.entitydatabase = NULL;
 	if (cl.entitydatabase4) EntityFrame4_FreeDatabase(cl.entitydatabase4);cl.entitydatabase4 = NULL;
+	if (cl.entitydatabaseqw) EntityFrameQW_FreeDatabase(cl.entitydatabaseqw);cl.entitydatabaseqw = NULL;
 	if (cl.scores) Mem_Free(cl.scores);cl.scores = NULL;
 
 	if (!sv.active)
@@ -145,6 +147,9 @@ void CL_ClearState(void)
 
 // wipe the entire cl structure
 	memset (&cl, 0, sizeof(cl));
+
+	S_StopAllSounds();
+
 	// reset the view zoom interpolation
 	cl.mviewzoom[0] = cl.mviewzoom[1] = 1;
 
@@ -212,6 +217,27 @@ void CL_ClearState(void)
 		VectorSet(cl_playercrouchmins, -16, -16, -24);
 		VectorSet(cl_playercrouchmaxs, 16, 16, 24);
 	}
+
+	// disable until we get textures for it
+	R_ResetSkyBox();
+
+	ent = &cl_entities[0];
+	// entire entity array was cleared, so just fill in a few fields
+	ent->state_current.active = true;
+	ent->render.model = cl.worldmodel = NULL; // no world model yet
+	ent->render.scale = 1; // some of the renderer still relies on scale
+	ent->render.alpha = 1;
+	ent->render.colormap = -1; // no special coloring
+	ent->render.flags = RENDER_SHADOW | RENDER_LIGHT;
+	Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, 0, 0, 0, 0, 0, 0, 1);
+	Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
+	CL_BoundingBoxForEntity(&ent->render);
+
+	// noclip is turned off at start
+	noclip_anglehack = false;
+
+	// mark all frames invalid for delta
+	memset(cl.qw_deltasequence, -1, sizeof(cl.qw_deltasequence));
 
 	CL_Screen_NewMap();
 	CL_Particles_Clear();
@@ -307,13 +333,22 @@ void CL_Disconnect(void)
 		if (cls.demorecording)
 			CL_Stop_f();
 
-		// send clc_disconnect 3 times to improve chances of server receiving
-		// it (but it still fails sometimes)
-		Con_DPrint("Sending clc_disconnect\n");
+		// send disconnect message 3 times to improve chances of server
+		// receiving it (but it still fails sometimes)
 		memset(&buf, 0, sizeof(buf));
 		buf.data = bufdata;
 		buf.maxsize = sizeof(bufdata);
-		MSG_WriteByte(&buf, clc_disconnect);
+		if (cls.protocol == PROTOCOL_QUAKEWORLD)
+		{
+			Con_DPrint("Sending drop command\n");
+			MSG_WriteByte(&buf, qw_clc_stringcmd);
+			MSG_WriteString(&buf, "drop");
+		}
+		else
+		{
+			Con_DPrint("Sending clc_disconnect\n");
+			MSG_WriteByte(&buf, clc_disconnect);
+		}
 		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol);
 		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol);
 		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol);
@@ -723,7 +758,7 @@ void CL_AddQWCTFFlagModel(entity_t *player, int skin)
 	VectorSet(flag->render.colormod, 1, 1, 1);
 	// attach the flag to the player matrix
 	Matrix4x4_CreateFromQuakeEntity(&flagmatrix, -f, -22, 0, 0, 0, -45, 1);
-	Matrix4x4_Concat(&flag->render.matrix, &flagmatrix, &player->render.matrix);
+	Matrix4x4_Concat(&flag->render.matrix, &player->render.matrix, &flagmatrix);
 	Matrix4x4_Invert_Simple(&flag->render.inversematrix, &flag->render.matrix);
 	R_LerpAnimation(&flag->render);
 	CL_BoundingBoxForEntity(&flag->render);
@@ -1604,6 +1639,7 @@ int CL_ReadFromServer(void)
 			CL_RelinkStaticEntities();
 			CL_RelinkBeams();
 			CL_RelinkEffects();
+			CL_RelinkQWNails();
 		}
 		else
 			csqc_frame = true;

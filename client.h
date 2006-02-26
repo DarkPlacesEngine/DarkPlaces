@@ -376,8 +376,8 @@ typedef struct scoreboard_s
 	int		qw_ping;
 	int		qw_packetloss;
 	int		qw_spectator;
+	char	qw_team[8];
 	char	qw_skin[MAX_QPATH];
-	cachepic_t *qw_skin_cachepic; // skins are loaded as cachepics
 } scoreboard_t;
 
 typedef struct cshift_s
@@ -712,8 +712,14 @@ typedef struct client_state_s
 	// local copy of the server infostring
 	char qw_serverinfo[MAX_SERVERINFO_STRING];
 
+	// time of last qw "pings" command sent to server while showing scores
+	double last_ping_request;
+
 	// used during connect
 	int qw_servercount;
+
+	// updated from serverinfo
+	int qw_teamplay;
 
 	// indicates whether the player is spectating
 	qboolean qw_spectator;
@@ -743,9 +749,13 @@ typedef struct client_state_s
 	int qw_num_nails;
 	vec_t qw_nails[255][6];
 
+	float qw_weaponkick;
+
 	int qw_validsequence;
 
 	qw_usercmd_t qw_moves[QW_UPDATE_BACKUP];
+
+	int qw_deltasequence[QW_UPDATE_BACKUP];
 }
 client_state_t;
 

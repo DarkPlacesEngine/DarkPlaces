@@ -388,6 +388,7 @@ static qboolean QW_CL_CheckOrDownloadFile(const char *filename)
 	return false;
 }
 
+static void QW_CL_ProcessUserInfo(int slot);
 static void QW_CL_RequestNextDownload(void)
 {
 	int i;
@@ -400,7 +401,31 @@ static void QW_CL_RequestNextDownload(void)
 	case dl_single:
 		break;
 	case dl_skin:
-		// TODO
+		if (cls.qw_downloadnumber == 0)
+			Con_Printf("Checking skins...\n");
+		for (;cls.qw_downloadnumber < cl.maxclients;cls.qw_downloadnumber++)
+		{
+			if (!cl.scores[cls.qw_downloadnumber].name[0])
+				continue;
+			// check if we need to download the file, and return if so
+			if (!QW_CL_CheckOrDownloadFile(va("skins/%s.pcx", cl.scores[cls.qw_downloadnumber].qw_skin)))
+				return;
+		}
+
+		cls.qw_downloadtype = dl_none;
+
+		// load any newly downloaded skins
+		for (i = 0;i < cl.maxclients;i++)
+			QW_CL_ProcessUserInfo(i);
+
+		// if we're still in signon stages, request the next one
+		if (cls.signon != SIGNONS)
+		{
+			cls.signon = SIGNONS-1;
+			// we'll go to SIGNONS when the first entity update is received
+			MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
+			MSG_WriteString(&cls.netcon->message, va("begin %i", cl.qw_servercount));
+		}
 		break;
 	case dl_model:
 		if (cls.qw_downloadnumber == 0)
@@ -409,7 +434,6 @@ static void QW_CL_RequestNextDownload(void)
 			cls.qw_downloadnumber = 1;
 		}
 
-		cls.qw_downloadtype = dl_model;
 		for (;cls.qw_downloadnumber < MAX_MODELS && cl.model_name[cls.qw_downloadnumber][0];cls.qw_downloadnumber++)
 		{
 			// skip submodels
@@ -427,6 +451,8 @@ static void QW_CL_RequestNextDownload(void)
 			if (!QW_CL_CheckOrDownloadFile(cl.model_name[cls.qw_downloadnumber]))
 				return;
 		}
+
+		cls.qw_downloadtype = dl_none;
 
 		// touch all of the precached models that are still loaded so we can free
 		// anything that isn't needed
@@ -452,9 +478,20 @@ static void QW_CL_RequestNextDownload(void)
 			if ((cl.model_precache[i] = Mod_ForName(cl.model_name[i], false, false, false))->Draw == NULL)
 				Con_Printf("Model %s could not be found or downloaded\n", cl.model_name[i]);
 
+		// check memory integrity
+		Mem_CheckSentinelsGlobal();
+
+		// now that we have a world model, set up the world entity, renderer
+		// modules and csqc
+		cl_entities[0].render.model = cl.worldmodel = cl.model_precache[1];
+		CL_BoundingBoxForEntity(&cl_entities[0].render);
+
+		R_Modules_NewMap();
+		CL_CGVM_Start();
+
 		// done checking sounds and models, send a prespawn command now
 		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
-		MSG_WriteString(&cls.netcon->message, va("prespawn %i 0 %i", cl.qw_servercount, cl.worldmodel ? cl.worldmodel->brush.qw_md4sum2 : 0));
+		MSG_WriteString(&cls.netcon->message, va("prespawn %i 0 %i", cl.qw_servercount, cl.model_precache[1]->brush.qw_md4sum2));
 
 		if (cls.qw_downloadmemory)
 		{
@@ -469,16 +506,14 @@ static void QW_CL_RequestNextDownload(void)
 			cls.qw_downloadnumber = 1;
 		}
 
-		cls.qw_downloadtype = dl_sound;
 		for (;cl.sound_name[cls.qw_downloadnumber][0];cls.qw_downloadnumber++)
 		{
-			// skip subsounds
-			if (cl.sound_name[cls.qw_downloadnumber][0] == '*')
-				continue;
 			// check if we need to download the file, and return if so
 			if (!QW_CL_CheckOrDownloadFile(va("sound/%s", cl.sound_name[cls.qw_downloadnumber])))
 				return;
 		}
+
+		cls.qw_downloadtype = dl_none;
 
 		// load new sounds and unload old ones
 		// FIXME: S_ServerSounds does not know about cl.sfx_ sounds
@@ -500,6 +535,9 @@ static void QW_CL_RequestNextDownload(void)
 			cl.sound_precache[i] = S_PrecacheSound(cl.sound_name[i], true, false);
 		}
 
+		// check memory integrity
+		Mem_CheckSentinelsGlobal();
+
 		// done with sound downloads, next we check models
 		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
 		MSG_WriteString(&cls.netcon->message, va("modellist %i %i", cl.qw_servercount, 0));
@@ -512,8 +550,10 @@ static void QW_CL_RequestNextDownload(void)
 
 static void QW_CL_ParseDownload(void)
 {
-	int size = MSG_ReadShort();
+	int size = (signed short)MSG_ReadShort();
 	int percent = MSG_ReadByte();
+
+	//Con_Printf("download %i %i%% (%i/%i)\n", size, percent, cls.qw_downloadmemorycursize, cls.qw_downloadmemorymaxsize);
 
 	// skip the download fragment if playing a demo
 	if (!cls.netcon)
@@ -602,6 +642,7 @@ static void QW_CL_ParseModelList(void)
 		return;
 	}
 
+	cls.signon = 2;
 	cls.qw_downloadnumber = 0;
 	cls.qw_downloadtype = dl_model;
 	QW_CL_RequestNextDownload();
@@ -636,9 +677,28 @@ static void QW_CL_ParseSoundList(void)
 		return;
 	}
 
+	cls.signon = 2;
 	cls.qw_downloadnumber = 0;
 	cls.qw_downloadtype = dl_sound;
 	QW_CL_RequestNextDownload();
+}
+
+static void QW_CL_Skins_f(void)
+{
+	cls.qw_downloadnumber = 0;
+	cls.qw_downloadtype = dl_skin;
+	QW_CL_RequestNextDownload();
+}
+
+static void QW_CL_Changing_f(void)
+{
+	if (cls.qw_downloadmemory)  // don't change when downloading
+		return;
+
+	S_StopAllSounds();
+	cl.intermission = 0;
+	cls.signon = 1;	// not active anymore, but not disconnected
+	Con_Printf("\nChanging map...\n");
 }
 
 void QW_CL_NextUpload(void)
@@ -716,9 +776,11 @@ static void QW_CL_ProcessUserInfo(int slot)
 	cl.scores[slot].colors = topcolor * 16 + bottomcolor;
 	InfoString_GetValue(cl.scores[slot].qw_userinfo, "*spectator", temp, sizeof(temp));
 	cl.scores[slot].qw_spectator = temp[0] != 0;
+	InfoString_GetValue(cl.scores[slot].qw_userinfo, "team", cl.scores[slot].qw_team, sizeof(cl.scores[slot].qw_team));
 	InfoString_GetValue(cl.scores[slot].qw_userinfo, "skin", cl.scores[slot].qw_skin, sizeof(cl.scores[slot].qw_skin));
-	// LordHavoc: abusing Draw_CachePic for caching skins...
-	cl.scores[slot].qw_skin_cachepic = Draw_CachePic(cl.scores[slot].qw_skin, true);
+	if (!cl.scores[slot].qw_skin[0])
+		strlcpy(cl.scores[slot].qw_skin, "base", sizeof(cl.scores[slot].qw_skin));
+	// TODO: skin cache
 }
 
 static void QW_CL_UpdateUserInfo(void)
@@ -760,10 +822,13 @@ static void QW_CL_ServerInfo(void)
 {
 	char key[2048];
 	char value[2048];
+	char temp[32];
 	strlcpy(key, MSG_ReadString(), sizeof(key));
 	strlcpy(value, MSG_ReadString(), sizeof(value));
 	Con_DPrintf("SERVERINFO: %s=%s\n", key, value);
 	InfoString_SetValue(cl.qw_serverinfo, sizeof(cl.qw_serverinfo), key, value);
+	InfoString_GetValue(cl.qw_serverinfo, "teamplay", temp, sizeof(temp));
+	cl.qw_teamplay = atoi(temp);
 }
 
 static void QW_CL_ParseNails(void)
@@ -772,16 +837,17 @@ static void QW_CL_ParseNails(void)
 	int numnails = MSG_ReadByte();
 	vec_t *v;
 	unsigned char bits[6];
-	cl.qw_num_nails = 0;
 	for (i = 0;i < numnails;i++)
 	{
-		v = cl.qw_nails[cl.qw_num_nails++];
 		for (j = 0;j < 6;j++)
 			bits[j] = MSG_ReadByte();
+		if (cl.qw_num_nails > 255)
+			continue;
+		v = cl.qw_nails[cl.qw_num_nails++];
 		v[0] = ( ( bits[0] + ((bits[1]&15)<<8) ) <<1) - 4096;
 		v[1] = ( ( (bits[1]>>4) + (bits[2]<<4) ) <<1) - 4096;
 		v[2] = ( ( bits[3] + ((bits[4]&15)<<8) ) <<1) - 4096;
-		v[3] = 360*(bits[4]>>4)/16;
+		v[3] = -360*(bits[4]>>4)/16;
 		v[4] = 360*bits[5]/256;
 		v[5] = 0;
 	}
@@ -888,6 +954,10 @@ void CL_ParseServerInfo (void)
 
 	Con_DPrint("Serverinfo packet received.\n");
 
+	// if server is active, we already began a loading plaque
+	if (!sv.active)
+		SCR_BeginLoadingPlaque();
+
 	// check memory integrity
 	Mem_CheckSentinelsGlobal();
 
@@ -909,6 +979,8 @@ void CL_ParseServerInfo (void)
 		protocol = PROTOCOL_NEHAHRAMOVIE;
 	cls.protocol = protocol;
 	Con_DPrintf("Server protocol is %s\n", Protocol_NameForEnum(cls.protocol));
+
+	cl_num_entities = 1;
 
 	if (protocol == PROTOCOL_QUAKEWORLD)
 	{
@@ -963,23 +1035,15 @@ void CL_ParseServerInfo (void)
 		// check memory integrity
 		Mem_CheckSentinelsGlobal();
 
-		S_StopAllSounds();
-		// if server is active, we already began a loading plaque
-		if (!sv.active)
-			SCR_BeginLoadingPlaque();
-
-		// disable until we get textures for it
-		R_ResetSkyBox();
-
-		memset(cl.csqc_model_precache, 0, sizeof(cl.csqc_model_precache));	//[515]: csqc
-		memset(cl.model_precache, 0, sizeof(cl.model_precache));
-		memset(cl.sound_precache, 0, sizeof(cl.sound_precache));
-
 		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
 		MSG_WriteString(&cls.netcon->message, va("soundlist %i %i", cl.qw_servercount, 0));
 
 		cls.state = ca_connected;
 		cls.signon = 1;
+
+		// note: on QW protocol we can't set up the gameworld until after
+		// downloads finish...
+		// (we don't even know the name of the map yet)
 	}
 	else
 	{
@@ -1005,18 +1069,6 @@ void CL_ParseServerInfo (void)
 
 		// check memory integrity
 		Mem_CheckSentinelsGlobal();
-
-		S_StopAllSounds();
-		// if server is active, we already began a loading plaque
-		if (!sv.active)
-			SCR_BeginLoadingPlaque();
-
-		// disable until we get textures for it
-		R_ResetSkyBox();
-
-		memset(cl.csqc_model_precache, 0, sizeof(cl.csqc_model_precache));	//[515]: csqc
-		memset(cl.model_precache, 0, sizeof(cl.model_precache));
-		memset(cl.sound_precache, 0, sizeof(cl.sound_precache));
 
 		// parse model precache list
 		for (nummodels=1 ; ; nummodels++)
@@ -1088,32 +1140,16 @@ void CL_ParseServerInfo (void)
 		for (i=1 ; i<numsounds ; i++)
 		{
 			CL_KeepaliveMessage();
-
 			// Don't lock the sfx here, S_ServerSounds already did that
 			cl.sound_precache[i] = S_PrecacheSound (cl.sound_name[i], true, false);
 		}
+
+		// we now have the worldmodel so we can set up the game world
+		ent->render.model = cl.worldmodel = cl.model_precache[1];
+		CL_BoundingBoxForEntity(&ent->render);
+		R_Modules_NewMap();
+		CL_CGVM_Start();
 	}
-
-	// local state
-	ent = &cl_entities[0];
-	// entire entity array was cleared, so just fill in a few fields
-	ent->state_current.active = true;
-	ent->render.model = cl.worldmodel = cl.model_precache[1];
-	ent->render.scale = 1; // some of the renderer still relies on scale
-	ent->render.alpha = 1;
-	ent->render.colormap = -1; // no special coloring
-	ent->render.flags = RENDER_SHADOW | RENDER_LIGHT;
-	Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, 0, 0, 0, 0, 0, 0, 1);
-	Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
-	CL_BoundingBoxForEntity(&ent->render);
-
-	cl_num_entities = 1;
-
-	R_Modules_NewMap();
-	CL_CGVM_Start();
-
-	// noclip is turned off at start
-	noclip_anglehack = false;
 
 	// check memory integrity
 	Mem_CheckSentinelsGlobal();
@@ -2172,6 +2208,17 @@ void CL_ParseServerMessage(void)
 	{
 		cl.mtime[1] = cl.mtime[0];
 		cl.mtime[0] = realtime; // qw has no clock
+		cl.movement_needupdate = true;
+
+		// slightly kill qw player entities each frame
+		for (i = 1;i < cl.maxclients;i++)
+			cl_entities_active[i] = false;
+
+		// kill all qw nails
+		cl.qw_num_nails = 0;
+
+		// fade weapon view kick
+		cl.qw_weaponkick = min(cl.qw_weaponkick + 10 * cl.frametime, 0);
 
 		while (1)
 		{
@@ -2236,7 +2283,7 @@ void CL_ParseServerMessage(void)
 					CL_NextDemo();
 				else
 					CL_Disconnect();
-				break;
+				return;
 
 			case qw_svc_print:
 				i = MSG_ReadByte();
@@ -2389,10 +2436,10 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case qw_svc_smallkick:
-				Con_Printf("TODO: qw_svc_smallkick\n");
+				cl.qw_weaponkick = -2;
 				break;
 			case qw_svc_bigkick:
-				Con_Printf("TODO: qw_svc_bigkick\n");
+				cl.qw_weaponkick = -4;
 				break;
 
 			case qw_svc_muzzleflash:
@@ -2476,6 +2523,12 @@ void CL_ParseServerMessage(void)
 				break;
 			}
 		}
+
+		// fully kill the still slightly dead qw player entities each frame
+		for (i = 1;i < cl.maxclients;i++)
+			if (!cl_entities_active[i])
+				cl_entities[i].state_current.active = false;
+
 		QW_CL_UpdateItemsAndWeapon();
 	}
 	else
@@ -2918,6 +2971,8 @@ void CL_Parse_Init(void)
 
 	Cmd_AddCommand("nextul", QW_CL_NextUpload, "sends next fragment of current upload buffer (screenshot for example)");
 	Cmd_AddCommand("stopul", QW_CL_StopUpload, "aborts current upload (screenshot for example)");
+	Cmd_AddCommand("skins", QW_CL_Skins_f, "downloads missing qw skins from server");
+	Cmd_AddCommand("changing", QW_CL_Changing_f, "sent by qw servers to tell client to wait for level change");
 }
 
 void CL_Parse_Shutdown(void)

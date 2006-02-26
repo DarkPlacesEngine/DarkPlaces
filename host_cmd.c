@@ -371,22 +371,39 @@ This is sent just before a server changes levels
 */
 void Host_Reconnect_f (void)
 {
-	if (cmd_source == src_command)
+	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 	{
-		Con_Print("reconnect is not valid from the console\n");
-		return;
+		if (cls.qw_downloadmemory)  // don't change when downloading
+			return;
+
+		S_StopAllSounds();
+
+		if (cls.netcon)
+		{
+			if (cls.state == ca_connected && cls.signon < SIGNONS)
+			{
+				Con_Printf("reconnecting...\n");
+				MSG_WriteChar(&cls.netcon->message, qw_clc_stringcmd);
+				MSG_WriteString(&cls.netcon->message, "new");
+			}
+			else
+				Con_Printf("Please use connect instead (reconnect not implemented)\n");
+		}
 	}
-	if (Cmd_Argc() != 1)
+	else
 	{
-		Con_Print("reconnect : wait for signon messages again\n");
-		return;
+		if (Cmd_Argc() != 1)
+		{
+			Con_Print("reconnect : wait for signon messages again\n");
+			return;
+		}
+		if (!cls.signon)
+		{
+			Con_Print("reconnect: no signon, ignoring reconnect\n");
+			return;
+		}
+		cls.signon = 0;		// need new connection messages
 	}
-	if (!cls.signon)
-	{
-		//Con_Print("reconnect: no signon, ignoring reconnect\n");
-		return;
-	}
-	cls.signon = 0;		// need new connection messages
 }
 
 /*
@@ -2077,6 +2094,7 @@ Sent by server when serverinfo changes
 // TODO: shouldn't this be a cvar instead?
 void Host_FullServerinfo_f (void) // credit: taken from QuakeWorld
 {
+	char temp[512];
 	if (Cmd_Argc() != 2)
 	{
 		Con_Printf ("usage: fullserverinfo <complete info string>\n");
@@ -2084,6 +2102,8 @@ void Host_FullServerinfo_f (void) // credit: taken from QuakeWorld
 	}
 
 	strlcpy (cl.qw_serverinfo, Cmd_Argv(1), sizeof(cl.qw_serverinfo));
+	InfoString_GetValue(cl.qw_serverinfo, "teamplay", temp, sizeof(temp));
+	cl.qw_teamplay = atoi(temp);
 }
 
 /*

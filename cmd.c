@@ -1036,7 +1036,10 @@ void Cmd_ForwardStringToServer (const char *s)
 	// LordHavoc: thanks to Fuh for bringing the pure evil of SZ_Print to my
 	// attention, it has been eradicated from here, its only (former) use in
 	// all of darkplaces.
-	MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
+	if (cls.protocol == PROTOCOL_QUAKEWORLD)
+		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
+	else
+		MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
 	SZ_Write(&cls.netcon->message, (const unsigned char *)s, (int)strlen(s) + 1);
 }
 

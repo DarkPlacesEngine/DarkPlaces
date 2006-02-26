@@ -931,6 +931,8 @@ typedef struct entityframeqw_database_s
 }
 entityframeqw_database_t;
 
+entityframeqw_database_t *EntityFrameQW_AllocDatabase(mempool_t *pool);
+void EntityFrameQW_FreeDatabase(entityframeqw_database_t *d);
 void EntityStateQW_ReadPlayerUpdate(void);
 void EntityFrameQW_CL_ReadFrame(qboolean delta);
 

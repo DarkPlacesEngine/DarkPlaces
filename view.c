@@ -334,10 +334,14 @@ void V_CalcRefdef (void)
 		if (cl.intermission)
 		{
 			// entity is a fixed camera, just copy the matrix
-			Matrix4x4_Copy(&r_refdef.viewentitymatrix, &ent->render.matrix);
-			Matrix4x4_Copy(&viewmodelmatrix, &ent->render.matrix);
-			r_refdef.viewentitymatrix.m[2][3] += cl.stats[STAT_VIEWHEIGHT];
-			viewmodelmatrix.m[2][3] += cl.stats[STAT_VIEWHEIGHT];
+			if (cls.protocol == PROTOCOL_QUAKEWORLD)
+				Matrix4x4_CreateFromQuakeEntity(&r_refdef.viewentitymatrix, cl.qw_intermission_origin[0], cl.qw_intermission_origin[1], cl.qw_intermission_origin[2], cl.qw_intermission_angles[0], cl.qw_intermission_angles[1], cl.qw_intermission_angles[2], 1);
+			else
+			{
+				r_refdef.viewentitymatrix = ent->render.matrix;
+				r_refdef.viewentitymatrix.m[2][3] += cl.stats[STAT_VIEWHEIGHT];
+			}
+			viewmodelmatrix = r_refdef.viewentitymatrix;
 		}
 		else
 		{
@@ -345,6 +349,10 @@ void V_CalcRefdef (void)
 			// and the angles from the input system
 			Matrix4x4_OriginFromMatrix(&ent->render.matrix, vieworg);
 			VectorCopy(cl.viewangles, viewangles);
+
+			// apply qw weapon recoil effect (this did not work in QW)
+			// TODO: add a cvar to disable this
+			viewangles[PITCH] += cl.qw_weaponkick;
 
 			if (cl.onground)
 			{

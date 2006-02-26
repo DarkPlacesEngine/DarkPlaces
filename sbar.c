@@ -564,7 +564,7 @@ void Sbar_SortFrags (void)
 					strcpy(teams[teamlines-1].name, "^3Yellow Team");
 				else
 					strcpy(teams[teamlines-1].name, "Total Team Score");
-				
+
 				teams[teamlines-1].frags = 0;
 				teams[teamlines-1].colors = color + 16 * color;
 			}
@@ -1391,16 +1391,31 @@ Sbar_DeathmatchOverlay
 */
 float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
 {
+	int minutes;
 	unsigned char *c;
-	// draw colors behind score
-	c = (unsigned char *)&palette_complete[(s->colors & 0xf0) + 8];
-	DrawQ_Fill(x + 8, y+1, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
-	c = (unsigned char *)&palette_complete[((s->colors & 15)<<4) + 8];
-	DrawQ_Fill(x + 8, y+4, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
-	// print the text
-	//DrawQ_String(x, y, va("%c%4i %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
-	// FIXME: use a constant for this color tag instead
-	DrawQ_ColoredString(x, y, va("%c%4i %s" STRING_COLOR_DEFAULT_STR, (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL );
+	if (cls.protocol == PROTOCOL_QUAKEWORLD)
+	{
+		// draw colors behind score
+		c = (unsigned char *)&palette_complete[(s->colors & 0xf0) + 8];
+		DrawQ_Fill(x + 14*8, y+1, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+		c = (unsigned char *)&palette_complete[((s->colors & 15)<<4) + 8];
+		DrawQ_Fill(x + 14*8, y+4, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+		// print the text
+		//DrawQ_String(x, y, va("%c%4i %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
+		DrawQ_ColoredString(x, y, va("%c%4i %2i %4i %4i %-4s %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', bound(0, s->qw_ping, 9999), bound(0, s->qw_packetloss, 99), minutes,(int) s->frags, cl.qw_teamplay ? s->qw_team : "", s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL );
+	}
+	else
+	{
+		minutes = (int)((cl.intermission ? cl.completed_time - s->qw_entertime : realtime - s->qw_entertime) / 60.0);
+		// draw colors behind score
+		c = (unsigned char *)&palette_complete[(s->colors & 0xf0) + 8];
+		DrawQ_Fill(x + 1*8, y+1, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+		c = (unsigned char *)&palette_complete[((s->colors & 15)<<4) + 8];
+		DrawQ_Fill(x + 1*8, y+4, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+		// print the text
+		//DrawQ_String(x, y, va("%c%4i %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
+		DrawQ_ColoredString(x, y, va("%c%4i %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0, NULL );
+	}
 	return 8;
 }
 
@@ -1409,13 +1424,27 @@ void Sbar_DeathmatchOverlay (void)
 	int i, x, y;
 	cachepic_t *pic;
 
+	// request new ping times every two second
+	if (cl.last_ping_request < realtime - 2)
+	{
+		cl.last_ping_request = realtime;
+		if (cls.protocol == PROTOCOL_QUAKEWORLD)
+		{
+			MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
+			MSG_WriteString(&cls.netcon->message, "pings");
+		}
+	}
+
 	pic = Draw_CachePic ("gfx/ranking", true);
 	DrawQ_Pic ((vid_conwidth.integer - pic->width)/2, 8, "gfx/ranking", 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
 
 	// scores
 	Sbar_SortFrags ();
 	// draw the text
-	x = (vid_conwidth.integer - (6 + 15) * 8) / 2;
+	if (cls.protocol == PROTOCOL_QUAKEWORLD)
+		x = (vid_conwidth.integer - (6 + 17 + 15) * 8) / 2;
+	else
+		x = (vid_conwidth.integer - (6 + 15) * 8) / 2;
 	y = 40;
 
 	if (Sbar_IsTeammatch ())
