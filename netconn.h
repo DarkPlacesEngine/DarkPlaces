@@ -269,6 +269,8 @@ typedef struct serverlist_entry_s
 	unsigned querycounter;
 	// used to calculate ping when update comes in
 	double querytime;
+	// query protocol to use on this server
+	int protocol; // may be PROTOCOL_QUAKEWORLD or PROTOCOL_DARKPLACES7
 
 	serverlist_info_t info;
 

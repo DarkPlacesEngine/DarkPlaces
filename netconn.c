@@ -23,13 +23,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "lhnet.h"
 
-#define MASTER_PORT 27950
+#define QWMASTER_PORT 27000
+#define DPMASTER_PORT 27950
 
 // note this defaults on for dedicated servers, off for listen servers
 cvar_t sv_public = {0, "sv_public", "0", "advertises this server on the master server (so that players can find it in the server browser)"};
 static cvar_t sv_heartbeatperiod = {CVAR_SAVE, "sv_heartbeatperiod", "120", "how often to send heartbeat in seconds (only used if sv_public is 1)"};
 
-// FIXME: resolve DNS on masters whenever their value changes and cache it (to avoid major delays in active servers when they heartbeat)
 static cvar_t sv_masters [] =
 {
 	{CVAR_SAVE, "sv_master1", "", "user-chosen master server 1"},
@@ -40,6 +40,31 @@ static cvar_t sv_masters [] =
 	{0, "sv_masterextra2", "dpmaster.deathmask.net", "default master server 2 (admin: Willis)"}, // admin: Willis
 	{0, "sv_masterextra3", "12.166.196.192", "default master server 3 (admin: Venim)"}, // admin: Venim
 	{0, "sv_masterextra4", "excalibur.nvg.ntnu.no", "default master server 4 (admin: tChr)"}, // admin: tChr
+	{0, NULL, NULL, NULL}
+};
+
+static cvar_t sv_qwmasters [] =
+{
+	{CVAR_SAVE, "sv_qwmaster1", "", "user-chosen qwmaster server 1"},
+	{CVAR_SAVE, "sv_qwmaster2", "", "user-chosen qwmaster server 2"},
+	{CVAR_SAVE, "sv_qwmaster3", "", "user-chosen qwmaster server 3"},
+	{CVAR_SAVE, "sv_qwmaster4", "", "user-chosen qwmaster server 4"},
+	{0, "sv_qwmasterextra1", "satan.idsoftware.com", "default qwmaster server 1 (admin: idSoftware)"},
+	{0, "sv_qwmasterextra2", "192.246.40.37:27000", "id Limbo (admin: id Software)"},
+	{0, "sv_qwmasterextra3", "192.246.40.37:27002", "id CTF (admin: id Software)"},
+	{0, "sv_qwmasterextra4", "192.246.40.37:27003", "id TeamFortress (admin: id Software)"},
+	{0, "sv_qwmasterextra5", "192.246.40.37:27004", "id Miscilaneous (admin: id Software)"},
+	{0, "sv_qwmasterextra6", "192.246.40.37:27006", "id Deathmatch Only (admin: id Software)"},
+	{0, "sv_qwmasterextra7", "150.254.66.120:27000", "Poland's master server. (admin: unknown)"},
+	{0, "sv_qwmasterextra8", "62.112.145.129:27000", "Ocrana master server. (admin: unknown)"},
+	{0, "sv_qwmasterextra9", "master.edome.net", "edome master server. (admin: unknown)"},
+	{0, "sv_qwmasterextra10", "qwmaster.barrysworld.com", "barrysworld master server. (admin: unknown)"},
+	{0, "sv_qwmasterextra11", "qwmaster.ocrana.de:27000", "Ocrana2 master server. (admin: unknown)"},
+	{0, "sv_qwmasterextra12", "213.221.174.165:27000", "unknown1 master server. (admin: unknown)"},
+	{0, "sv_qwmasterextra13", "195.74.0.8", "unknown2 master server. (admin: unknown)"},
+	{0, "sv_qwmasterextra14", "192.246.40.37", "unknown3 master server. (admin: unknown)"},
+	{0, "sv_qwmasterextra15", "192.246.40.37:27006", "unknown4 master server. (admin: unknown)"},
+	{0, "sv_qwmasterextra16", "204.182.161.2", "unknown5 master server. (admin: unknown)"},
 	{0, NULL, NULL, NULL}
 };
 
@@ -1185,14 +1210,14 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			length -= 18;
 			masterreplycount++;
 			if (serverlist_consoleoutput)
-				Con_Print("received server list...\n");
+				Con_Print("received DarkPlaces server list...\n");
 			while (length >= 7 && data[0] == '\\' && (data[1] != 0xFF || data[2] != 0xFF || data[3] != 0xFF || data[4] != 0xFF) && data[5] * 256 + data[6] != 0)
 			{
 				int n;
 
-				dpsnprintf (ipstring, sizeof (ipstring), "%u.%u.%u.%u:%u", data[1], data[2], data[3], data[4], (data[5] << 8) | data[6]);
+				dpsnprintf (ipstring, sizeof (ipstring), "%u.%u.%u.%u:%u", data[1], data[2], data[3], data[4], data[5] * 256 + data[6]);
 				if (developer.integer)
-					Con_Printf("Requesting info from server %s\n", ipstring);
+					Con_Printf("Requesting info from DarkPlaces server %s\n", ipstring);
 				// ignore the rest of the message if the serverlist is full
 				if( serverlist_cachecount == SERVERLIST_TOTALSIZE )
 					break;
@@ -1205,6 +1230,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					serverquerycount++;
 
 					memset(&serverlist_cache[serverlist_cachecount], 0, sizeof(serverlist_cache[serverlist_cachecount]));
+					serverlist_cache[serverlist_cachecount].protocol = PROTOCOL_DARKPLACES7;
 					// store the data the engine cares about (address and ping)
 					strlcpy (serverlist_cache[serverlist_cachecount].info.cname, ipstring, sizeof (serverlist_cache[serverlist_cachecount].info.cname));
 					serverlist_cache[serverlist_cachecount].info.ping = 100000;
@@ -1216,6 +1242,50 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				// move on to next address in packet
 				data += 7;
 				length -= 7;
+			}
+			// begin or resume serverlist queries
+			serverlist_querysleep = false;
+			return true;
+		}
+		if (!memcmp(string, "d\n", 2) && serverlist_cachecount < SERVERLIST_TOTALSIZE)
+		{
+			// Extract the IP addresses
+			data += 2;
+			length -= 2;
+			masterreplycount++;
+			if (serverlist_consoleoutput)
+				Con_Print("received QuakeWorld server list...\n");
+			while (length >= 6 && (data[0] != 0xFF || data[1] != 0xFF || data[2] != 0xFF || data[3] != 0xFF) && data[4] * 256 + data[5] != 0)
+			{
+				int n;
+
+				dpsnprintf (ipstring, sizeof (ipstring), "%u.%u.%u.%u:%u", data[0], data[1], data[2], data[3], data[4] * 256 + data[5]);
+				if (developer.integer)
+					Con_Printf("Requesting info from QuakeWorld server %s\n", ipstring);
+				// ignore the rest of the message if the serverlist is full
+				if( serverlist_cachecount == SERVERLIST_TOTALSIZE )
+					break;
+				// also ignore it if we have already queried it (other master server response)
+				for( n = 0 ; n < serverlist_cachecount ; n++ )
+					if( !strcmp( ipstring, serverlist_cache[ n ].info.cname ) )
+						break;
+				if( n >= serverlist_cachecount )
+				{
+					serverquerycount++;
+
+					memset(&serverlist_cache[serverlist_cachecount], 0, sizeof(serverlist_cache[serverlist_cachecount]));
+					serverlist_cache[serverlist_cachecount].protocol = PROTOCOL_QUAKEWORLD;
+					// store the data the engine cares about (address and ping)
+					strlcpy (serverlist_cache[serverlist_cachecount].info.cname, ipstring, sizeof (serverlist_cache[serverlist_cachecount].info.cname));
+					serverlist_cache[serverlist_cachecount].info.ping = 100000;
+					serverlist_cache[serverlist_cachecount].query = SQS_QUERYING;
+
+					++serverlist_cachecount;
+				}
+
+				// move on to next address in packet
+				data += 6;
+				length -= 6;
 			}
 			// begin or resume serverlist queries
 			serverlist_querysleep = false;
@@ -1257,10 +1327,81 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			NetConn_WriteString(mysocket, va("\377\377\377\377connect %i %i %i \"%s\"\n", 28, cls.qw_qport, atoi(string + 1), cls.userinfo), peeraddress);
 			return true;
 		}
+		if (length > 2 && !memcmp(string, "n\\", 2))
+		{
+			serverlist_info_t *info;
+			int n;
+			double pingtime;
+
+			// qw server status
+			Con_Printf("QW server status from server at %s:\n%s\n", addressstring2, string + 1);
+
+			string += 1;
+			// serverlist only uses text addresses
+			LHNETADDRESS_ToString(peeraddress, cname, sizeof(cname), true);
+			// search the cache for this server and update it
+			for( n = 0; n < serverlist_cachecount; n++ )
+				if( !strcmp( cname, serverlist_cache[n].info.cname ) )
+					break;
+			if( n == serverlist_cachecount ) {
+				// LAN search doesnt require an answer from the master server so we wont
+				// know the ping nor will it be initialized already...
+
+				// find a slot
+				if( serverlist_cachecount == SERVERLIST_TOTALSIZE )
+					return true;
+
+				memset(&serverlist_cache[serverlist_cachecount], 0, sizeof(serverlist_cache[serverlist_cachecount]));
+				// store the data the engine cares about (address and ping)
+				strlcpy (serverlist_cache[serverlist_cachecount].info.cname, cname, sizeof (serverlist_cache[serverlist_cachecount].info.cname));
+				serverlist_cache[serverlist_cachecount].info.ping = 100000;
+				serverlist_cache[serverlist_cachecount].querytime = realtime;
+				// if not in the slist menu we should print the server to console
+				if (serverlist_consoleoutput) {
+					Con_Printf("querying %s\n", ipstring);
+				}
+
+				++serverlist_cachecount;
+			}
+
+			info = &serverlist_cache[n].info;
+			if ((s = SearchInfostring(string, "gamename"     )) != NULL) strlcpy(info->game, s, sizeof (info->game));else info->game[0] = 0;
+			if ((s = SearchInfostring(string, "modname"      )) != NULL) strlcpy(info->mod , s, sizeof (info->mod ));else info->mod[0]  = 0;
+			if ((s = SearchInfostring(string, "mapname"      )) != NULL) strlcpy(info->map , s, sizeof (info->map ));else info->map[0]  = 0;
+			if ((s = SearchInfostring(string, "hostname"     )) != NULL) strlcpy(info->name, s, sizeof (info->name));else info->name[0] = 0;
+			if ((s = SearchInfostring(string, "protocol"     )) != NULL) info->protocol = atoi(s);else info->protocol = -1;
+			if ((s = SearchInfostring(string, "clients"      )) != NULL) info->numplayers = atoi(s);else info->numplayers = 0;
+			if ((s = SearchInfostring(string, "sv_maxclients")) != NULL) info->maxplayers = atoi(s);else info->maxplayers  = 0;
+
+			if (info->ping == 100000)
+					serverreplycount++;
+
+			pingtime = (int)((realtime - serverlist_cache[n].querytime) * 1000.0);
+			pingtime = bound(0, pingtime, 9999);
+			// update the ping
+			info->ping = pingtime;
+
+			// legacy/old stuff move it to the menu ASAP
+
+			// build description strings for the things users care about
+			dpsnprintf(serverlist_cache[n].line1, sizeof(serverlist_cache[n].line1), "%c%c%5d%c%c%c%3u/%3u %-65.65s", STRING_COLOR_TAG, pingtime >= 300 ? '1' : (pingtime >= 200 ? '3' : '7'), (int)pingtime, STRING_COLOR_TAG, STRING_COLOR_DEFAULT + '0', info->protocol != NET_PROTOCOL_VERSION ? '*' : ' ', info->numplayers, info->maxplayers, info->name);
+			dpsnprintf(serverlist_cache[n].line2, sizeof(serverlist_cache[n].line2), "%-21.21s %-19.19s %-17.17s %-20.20s", info->cname, info->game, info->mod, info->map);
+			if( serverlist_cache[n].query == SQS_QUERIED ) {
+				ServerList_ViewList_Remove( &serverlist_cache[n] );
+			}
+			// if not in the slist menu we should print the server to console (if wanted)
+			else if( serverlist_consoleoutput )
+				Con_Printf("%s\n%s\n", serverlist_cache[n].line1, serverlist_cache[n].line2);
+			// and finally, update the view set
+			ServerList_ViewList_Insert( &serverlist_cache[n] );
+			serverlist_cache[n].query = SQS_QUERIED;
+
+			return true;
+		}
 		if (string[0] == 'n')
 		{
 			// qw print command
-			Con_Printf("QW print command from server at %s:\n", addressstring2, string + 1);
+			Con_Printf("QW print command from server at %s:\n%s\n", addressstring2, string + 1);
 		}
 		// we may not have liked the packet, but it was a command packet, so
 		// we're done processing this packet now
@@ -1410,8 +1551,15 @@ void NetConn_QueryQueueFrame(void)
 			int socket;
 
 			LHNETADDRESS_FromString(&address, entry->info.cname, 0);
-			for (socket = 0; socket < cl_numsockets ; socket++) {
-				NetConn_WriteString(cl_sockets[socket], "\377\377\377\377getinfo", &address);
+			if (entry->protocol == PROTOCOL_QUAKEWORLD)
+			{
+				for (socket = 0; socket < cl_numsockets ; socket++)
+					NetConn_WriteString(cl_sockets[socket], "\377\377\377\377status\n", &address);
+			}
+			else
+			{
+				for (socket = 0; socket < cl_numsockets ; socket++)
+					NetConn_WriteString(cl_sockets[socket], "\377\377\377\377getinfo", &address);
 			}
 
 			entry->querytime = realtime;
@@ -2070,16 +2218,30 @@ void NetConn_QueryMasters(void)
 			// search LAN for DarkPlaces servers
 			NetConn_WriteString(cl_sockets[i], "\377\377\377\377getinfo", &broadcastaddress);
 
-			// build the getservers message to send to the master servers
+			// build the getservers message to send to the dpmaster master servers
 			dpsnprintf(request, sizeof(request), "\377\377\377\377getservers %s %u empty full\x0A", gamename, NET_PROTOCOL_VERSION);
 
 			// search internet
 			for (masternum = 0;sv_masters[masternum].name;masternum++)
 			{
-				if (sv_masters[masternum].string && LHNETADDRESS_FromString(&masteraddress, sv_masters[masternum].string, MASTER_PORT) && LHNETADDRESS_GetAddressType(&masteraddress) == LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i])))
+				if (sv_masters[masternum].string && LHNETADDRESS_FromString(&masteraddress, sv_masters[masternum].string, DPMASTER_PORT) && LHNETADDRESS_GetAddressType(&masteraddress) == LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i])))
 				{
 					masterquerycount++;
 					NetConn_WriteString(cl_sockets[i], request, &masteraddress);
+				}
+			}
+
+			// build the getservers message to send to the qwmaster master servers
+			// note this has no -1 prefix, and the trailing nul byte is sent
+			dpsnprintf(request, sizeof(request), "c\n");
+
+			// search internet
+			for (masternum = 0;sv_qwmasters[masternum].name;masternum++)
+			{
+				if (sv_qwmasters[masternum].string && LHNETADDRESS_FromString(&masteraddress, sv_qwmasters[masternum].string, QWMASTER_PORT) && LHNETADDRESS_GetAddressType(&masteraddress) == LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i])))
+				{
+					masterquerycount++;
+					NetConn_Write(cl_sockets[i], request, 7, &masteraddress);
 				}
 			}
 		}
@@ -2117,7 +2279,7 @@ void NetConn_Heartbeat(int priority)
 	{
 		nextheartbeattime = realtime + sv_heartbeatperiod.value;
 		for (masternum = 0;sv_masters[masternum].name;masternum++)
-			if (sv_masters[masternum].string && LHNETADDRESS_FromString(&masteraddress, sv_masters[masternum].string, MASTER_PORT) && (mysocket = NetConn_ChooseServerSocketForAddress(&masteraddress)))
+			if (sv_masters[masternum].string && LHNETADDRESS_FromString(&masteraddress, sv_masters[masternum].string, DPMASTER_PORT) && (mysocket = NetConn_ChooseServerSocketForAddress(&masteraddress)))
 				NetConn_WriteString(mysocket, "\377\377\377\377heartbeat DarkPlaces\x0A", &masteraddress);
 	}
 }
