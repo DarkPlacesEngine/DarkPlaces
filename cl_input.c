@@ -896,7 +896,7 @@ void CL_SendMove(void)
 	accumtotal++;
 #endif
 
-	if (cl_movement.integer && cls.signon == SIGNONS)
+	if (cl_movement.integer && cls.signon == SIGNONS && cls.protocol != PROTOCOL_QUAKEWORLD)
 	{
 		if (!cl.movement_needupdate)
 			return;
