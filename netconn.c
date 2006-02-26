@@ -106,6 +106,10 @@ int serverreplycount = 0;
 
 // this is only false if there are still servers left to query
 int serverlist_querysleep = true;
+// this is pushed a second or two ahead of realtime whenever a master server
+// reply is received, to avoid issuing queries while master replies are still
+// flooding in (which would make a mess of the ping times)
+double serverlist_querywaittime = 0;
 
 static unsigned char sendbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
 static unsigned char readbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
@@ -389,7 +393,8 @@ static void _ServerList_Test(void)
 
 void ServerList_QueryList(void)
 {
-	masterquerytime = realtime;
+	//masterquerytime = realtime;
+	masterquerytime = Sys_DoubleTime();
 	masterquerycount = 0;
 	masterreplycount = 0;
 	serverquerycount = 0;
@@ -1085,7 +1090,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 
 		LHNETADDRESS_ToString(peeraddress, addressstring2, sizeof(addressstring2), true);
 
-		if (developer.integer)
+		if (developer_networking.integer)
 		{
 			Con_Printf("NetConn_ClientParsePacket: %s sent us a command:\n", addressstring2);
 			Com_HexDumpToConsole(data, length);
@@ -1160,7 +1165,8 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				// store the data the engine cares about (address and ping)
 				strlcpy (serverlist_cache[serverlist_cachecount].info.cname, cname, sizeof (serverlist_cache[serverlist_cachecount].info.cname));
 				serverlist_cache[serverlist_cachecount].info.ping = 100000;
-				serverlist_cache[serverlist_cachecount].querytime = realtime;
+				//serverlist_cache[serverlist_cachecount].querytime = realtime;
+				serverlist_cache[serverlist_cachecount].querytime = Sys_DoubleTime();
 				// if not in the slist menu we should print the server to console
 				if (serverlist_consoleoutput) {
 					Con_Printf("querying %s\n", ipstring);
@@ -1181,7 +1187,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			if (info->ping == 100000)
 					serverreplycount++;
 
-			pingtime = (int)((realtime - serverlist_cache[n].querytime) * 1000.0);
+			pingtime = (int)((Sys_DoubleTime() - serverlist_cache[n].querytime) * 1000.0 + 0.5);
 			pingtime = bound(0, pingtime, 9999);
 			// update the ping
 			info->ping = pingtime;
@@ -1189,8 +1195,8 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			// legacy/old stuff move it to the menu ASAP
 
 			// build description strings for the things users care about
-			dpsnprintf(serverlist_cache[n].line1, sizeof(serverlist_cache[n].line1), "%c%c%5d%c%c%c%3u/%3u %-65.65s", STRING_COLOR_TAG, pingtime >= 300 ? '1' : (pingtime >= 200 ? '3' : '7'), (int)pingtime, STRING_COLOR_TAG, STRING_COLOR_DEFAULT + '0', info->protocol != NET_PROTOCOL_VERSION ? '*' : ' ', info->numplayers, info->maxplayers, info->name);
-			dpsnprintf(serverlist_cache[n].line2, sizeof(serverlist_cache[n].line2), "%-21.21s %-19.19s %-17.17s %-20.20s", info->cname, info->game, info->mod, info->map);
+			dpsnprintf(serverlist_cache[n].line1, sizeof(serverlist_cache[n].line1), "^%c%5d^7 ^%c%3u^7/%3u %-65.65s", pingtime >= 300 ? '1' : (pingtime >= 200 ? '3' : '7'), (int)pingtime, ((info->numplayers > 0 && info->numplayers < info->maxplayers) ? (info->numplayers >= 4 ? '7' : '3') : '1'), info->numplayers, info->maxplayers, info->name);
+			dpsnprintf(serverlist_cache[n].line2, sizeof(serverlist_cache[n].line2), "^5%-21.21s %-19.19s %-17.17s %-20.20s", info->cname, info->game, info->mod, info->map);
 			if( serverlist_cache[n].query == SQS_QUERIED ) {
 				ServerList_ViewList_Remove( &serverlist_cache[n] );
 			}
@@ -1216,7 +1222,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				int n;
 
 				dpsnprintf (ipstring, sizeof (ipstring), "%u.%u.%u.%u:%u", data[1], data[2], data[3], data[4], data[5] * 256 + data[6]);
-				if (developer.integer)
+				if (serverlist_consoleoutput && developer_networking.integer)
 					Con_Printf("Requesting info from DarkPlaces server %s\n", ipstring);
 				// ignore the rest of the message if the serverlist is full
 				if( serverlist_cachecount == SERVERLIST_TOTALSIZE )
@@ -1245,6 +1251,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			}
 			// begin or resume serverlist queries
 			serverlist_querysleep = false;
+			serverlist_querywaittime = realtime + 3;
 			return true;
 		}
 		if (!memcmp(string, "d\n", 2) && serverlist_cachecount < SERVERLIST_TOTALSIZE)
@@ -1260,7 +1267,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				int n;
 
 				dpsnprintf (ipstring, sizeof (ipstring), "%u.%u.%u.%u:%u", data[0], data[1], data[2], data[3], data[4] * 256 + data[5]);
-				if (developer.integer)
+				if (serverlist_consoleoutput && developer_networking.integer)
 					Con_Printf("Requesting info from QuakeWorld server %s\n", ipstring);
 				// ignore the rest of the message if the serverlist is full
 				if( serverlist_cachecount == SERVERLIST_TOTALSIZE )
@@ -1289,6 +1296,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			}
 			// begin or resume serverlist queries
 			serverlist_querysleep = false;
+			serverlist_querywaittime = realtime + 3;
 			return true;
 		}
 		/*
@@ -1334,7 +1342,8 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			double pingtime;
 
 			// qw server status
-			Con_Printf("QW server status from server at %s:\n%s\n", addressstring2, string + 1);
+			if (serverlist_consoleoutput && developer_networking.integer >= 2)
+				Con_Printf("QW server status from server at %s:\n%s\n", addressstring2, string + 1);
 
 			string += 1;
 			// serverlist only uses text addresses
@@ -1355,7 +1364,8 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				// store the data the engine cares about (address and ping)
 				strlcpy (serverlist_cache[serverlist_cachecount].info.cname, cname, sizeof (serverlist_cache[serverlist_cachecount].info.cname));
 				serverlist_cache[serverlist_cachecount].info.ping = 100000;
-				serverlist_cache[serverlist_cachecount].querytime = realtime;
+				//serverlist_cache[serverlist_cachecount].querytime = realtime;
+				serverlist_cache[serverlist_cachecount].querytime = Sys_DoubleTime();
 				// if not in the slist menu we should print the server to console
 				if (serverlist_consoleoutput) {
 					Con_Printf("querying %s\n", ipstring);
@@ -1365,18 +1375,35 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			}
 
 			info = &serverlist_cache[n].info;
-			if ((s = SearchInfostring(string, "gamename"     )) != NULL) strlcpy(info->game, s, sizeof (info->game));else info->game[0] = 0;
-			if ((s = SearchInfostring(string, "modname"      )) != NULL) strlcpy(info->mod , s, sizeof (info->mod ));else info->mod[0]  = 0;
-			if ((s = SearchInfostring(string, "mapname"      )) != NULL) strlcpy(info->map , s, sizeof (info->map ));else info->map[0]  = 0;
+			if ((s = SearchInfostring(string, "*gamedir"     )) != NULL) strlcpy(info->mod , s, sizeof (info->mod ));else info->mod[0]  = 0;
+			if ((s = SearchInfostring(string, "map"          )) != NULL) strlcpy(info->map , s, sizeof (info->map ));else info->map[0]  = 0;
 			if ((s = SearchInfostring(string, "hostname"     )) != NULL) strlcpy(info->name, s, sizeof (info->name));else info->name[0] = 0;
-			if ((s = SearchInfostring(string, "protocol"     )) != NULL) info->protocol = atoi(s);else info->protocol = -1;
-			if ((s = SearchInfostring(string, "clients"      )) != NULL) info->numplayers = atoi(s);else info->numplayers = 0;
-			if ((s = SearchInfostring(string, "sv_maxclients")) != NULL) info->maxplayers = atoi(s);else info->maxplayers  = 0;
+			if ((s = SearchInfostring(string, "maxclients"   )) != NULL) info->maxplayers = atoi(s);else info->maxplayers  = 0;
+			strlcpy(info->game, "QuakeWorld", sizeof(info->game));;
+			info->protocol = 0;
+			info->numplayers = 0; // updated below
+
+			// count active players on server
+			// (we could gather more info, but we're just after the number)
+			s = strchr(string, '\n');
+			if (s)
+			{
+				s++;
+				while (s < string + length)
+				{
+					for (;s < string + length && *s != '\n';s++)
+						;
+					if (s >= string + length)
+						break;
+					info->numplayers++;
+					s++;
+				}
+			}
 
 			if (info->ping == 100000)
 					serverreplycount++;
 
-			pingtime = (int)((realtime - serverlist_cache[n].querytime) * 1000.0);
+			pingtime = (int)((Sys_DoubleTime() - serverlist_cache[n].querytime) * 1000.0 + 0.5);
 			pingtime = bound(0, pingtime, 9999);
 			// update the ping
 			info->ping = pingtime;
@@ -1384,8 +1411,8 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			// legacy/old stuff move it to the menu ASAP
 
 			// build description strings for the things users care about
-			dpsnprintf(serverlist_cache[n].line1, sizeof(serverlist_cache[n].line1), "%c%c%5d%c%c%c%3u/%3u %-65.65s", STRING_COLOR_TAG, pingtime >= 300 ? '1' : (pingtime >= 200 ? '3' : '7'), (int)pingtime, STRING_COLOR_TAG, STRING_COLOR_DEFAULT + '0', info->protocol != NET_PROTOCOL_VERSION ? '*' : ' ', info->numplayers, info->maxplayers, info->name);
-			dpsnprintf(serverlist_cache[n].line2, sizeof(serverlist_cache[n].line2), "%-21.21s %-19.19s %-17.17s %-20.20s", info->cname, info->game, info->mod, info->map);
+			dpsnprintf(serverlist_cache[n].line1, sizeof(serverlist_cache[n].line1), "^%c%5d^7 ^%c%3u^7/%3u %-65.65s", pingtime >= 300 ? '1' : (pingtime >= 200 ? '3' : '7'), (int)pingtime, ((info->numplayers > 0 && info->numplayers < info->maxplayers) ? (info->numplayers >= 4 ? '7' : '3') : '1'), info->numplayers, info->maxplayers, info->name);
+			dpsnprintf(serverlist_cache[n].line2, sizeof(serverlist_cache[n].line2), "^4%-21.21s %-19.19s %-17.17s %-20.20s", info->cname, info->game, info->mod, info->map);
 			if( serverlist_cache[n].query == SQS_QUERIED ) {
 				ServerList_ViewList_Remove( &serverlist_cache[n] );
 			}
@@ -1517,6 +1544,11 @@ void NetConn_QueryQueueFrame(void)
 	if (serverlist_querysleep)
 		return;
 
+	// apply a cool down time after master server replies,
+	// to avoid messing up the ping times on the servers
+	if (serverlist_querywaittime > realtime)
+		return;
+
 	// each time querycounter reaches 1.0 issue a query
 	querycounter += host_realframetime * net_slist_queriespersecond.value;
 	maxqueries = (int)querycounter;
@@ -1562,7 +1594,8 @@ void NetConn_QueryQueueFrame(void)
 					NetConn_WriteString(cl_sockets[socket], "\377\377\377\377getinfo", &address);
 			}
 
-			entry->querytime = realtime;
+			//entry->querytime = realtime;
+			entry->querytime = Sys_DoubleTime();
 			entry->querycounter++;
 
 			// if not in the slist menu we should print the server to console
