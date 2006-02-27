@@ -946,6 +946,8 @@ void Host_Init (void)
 	os = "OpenBSD";
 #elif defined(MACOSX)
 	os = "Mac OS X";
+#elif defined(__MORPHOS__)
+	os = "MorphOS";
 #else
 	os = "Unknown";
 #endif
