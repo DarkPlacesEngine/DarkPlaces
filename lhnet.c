@@ -17,6 +17,10 @@
 #include <arpa/inet.h>
 #endif
 
+#ifdef __MORPHOS__
+#include <proto/socket.h>
+#endif
+
 // for Z_Malloc/Z_Free in quake
 #ifndef STANDALONETEST
 #include "quakedef.h"
@@ -31,6 +35,27 @@
 #endif
 
 #include "lhnet.h"
+
+#if defined(WIN32)
+#define EWOULDBLOCK WSAEWOULDBLOCK
+#define ECONNREFUSED WSAECONNREFUSED
+
+#define SOCKETERRNO WSAGetLastError()
+
+#define SOCKLEN_T int
+#elif defined(__MORPHOS__)
+#define ioctlsocket IoctlSocket
+#define closesocket CloseSocket
+#define SOCKETERRNO Errno()
+
+#define SOCKLEN_T int
+#else
+#define ioctlsocket ioctl
+#define closesocket close
+#define SOCKETERRNO errno
+
+#define SOCKLEN_T socklen_t
+#endif
 
 // to make LHNETADDRESS_FromString resolve repeated hostnames faster, cache them
 #define MAX_NAMECACHE 64
@@ -500,17 +525,12 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 				{
 #ifdef WIN32
 					u_long _true = 1;
-					if (ioctlsocket(lhnetsocket->inetsocket, FIONBIO, &_true) != -1)
 #else
 					char _true = 1;
-					if (ioctl(lhnetsocket->inetsocket, FIONBIO, &_true) != -1)
 #endif
+					if (ioctlsocket(lhnetsocket->inetsocket, FIONBIO, &_true) != -1)
 					{
-#ifdef WIN32
-						int namelen;
-#else
-						socklen_t namelen;
-#endif
+						SOCKLEN_T namelen;
 						namelen = address->addresstype == LHNETADDRESSTYPE_INET6 ? sizeof(lhnetsocket->address.addressdata.inet6) : sizeof(lhnetsocket->address.addressdata.inet4);
 						if (bind(lhnetsocket->inetsocket, (struct sockaddr *)&lhnetsocket->address.addressdata, namelen) != -1)
 						{
@@ -529,11 +549,7 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 					}
 					else
 						Con_Printf("LHNET_OpenSocket_Connectionless: ioctlsocket returned error: %s\n", LHNETPRIVATE_StrError());
-#ifdef WIN32
 					closesocket(lhnetsocket->inetsocket);
-#else
-					close(lhnetsocket->inetsocket);
-#endif
 				}
 				else
 					Con_Printf("LHNET_OpenSocket_Connectionless: socket returned error: %s\n", LHNETPRIVATE_StrError());
@@ -566,11 +582,7 @@ void LHNET_CloseSocket(lhnetsocket_t *lhnetsocket)
 		// no special close code for loopback, just inet
 		if (lhnetsocket->address.addresstype == LHNETADDRESSTYPE_INET4 || lhnetsocket->address.addresstype == LHNETADDRESSTYPE_INET6)
 		{
-#ifdef WIN32
 			closesocket(lhnetsocket->inetsocket);
-#else
-			close(lhnetsocket->inetsocket);
-#endif
 		}
 #ifdef WIN32
 		if (lhnet_socketlist.next == &lhnet_socketlist && lhnet_didWSAStartup)
@@ -649,26 +661,15 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 		}
 		else if (value == -1)
 		{
-#ifdef WIN32
-			int e = WSAGetLastError();
-			if (e == WSAEWOULDBLOCK)
+			int e = SOCKETERRNO;
+			if (e == EWOULDBLOCK)
 				return 0;
 			switch (e)
-			{
-				case WSAECONNREFUSED:
-					Con_Print("Connection refused\n");
-					return 0;
-			}
-#else
-			if (errno == EWOULDBLOCK)
-				return 0;
-			switch (errno)
 			{
 				case ECONNREFUSED:
 					Con_Print("Connection refused\n");
 					return 0;
 			}
-#endif
 		}
 	}
 	else if (lhnetsocket->address.addresstype == LHNETADDRESSTYPE_INET6)
@@ -684,26 +685,15 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 		}
 		else if (value == -1)
 		{
-#ifdef WIN32
-			int e = WSAGetLastError();
-			if (e == WSAEWOULDBLOCK)
+			int e = SOCKETERRNO;
+			if (e == EWOULDBLOCK)
 				return 0;
 			switch (e)
-			{
-				case WSAECONNREFUSED:
-					Con_Print("Connection refused\n");
-					return 0;
-			}
-#else
-			if (errno == EWOULDBLOCK)
-				return 0;
-			switch (errno)
 			{
 				case ECONNREFUSED:
 					Con_Print("Connection refused\n");
 					return 0;
 			}
-#endif
 		}
 	}
 	return value;
@@ -740,14 +730,8 @@ int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentleng
 		value = sendto(lhnetsocket->inetsocket, content, contentlength, 0, (struct sockaddr *)&address->addressdata.inet4, sizeof(address->addressdata.inet4));
 		if (value == -1)
 		{
-#ifdef WIN32
-			int e = WSAGetLastError();
-			if (e == WSAEWOULDBLOCK)
+			if (SOCKETERRNO == EWOULDBLOCK)
 				return 0;
-#else
-			if (errno == EWOULDBLOCK)
-				return 0;
-#endif
 		}
 	}
 	else if (lhnetsocket->address.addresstype == LHNETADDRESSTYPE_INET6)
@@ -755,14 +739,8 @@ int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentleng
 		value = sendto(lhnetsocket->inetsocket, content, contentlength, 0, (struct sockaddr *)&address->addressdata.inet6, sizeof(address->addressdata.inet6));
 		if (value == -1)
 		{
-#ifdef WIN32
-			int e = WSAGetLastError();
-			if (e == WSAEWOULDBLOCK)
+			if (SOCKETERRNO == EWOULDBLOCK)
 				return 0;
-#else
-			if (errno == EWOULDBLOCK)
-				return 0;
-#endif
 		}
 	}
 	return value;
