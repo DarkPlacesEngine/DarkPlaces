@@ -1395,6 +1395,7 @@ float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
 	unsigned char *c;
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 	{
+		minutes = (int)((cl.intermission ? cl.completed_time - s->qw_entertime : realtime - s->qw_entertime) / 60.0);
 		// draw colors behind score
 		c = (unsigned char *)&palette_complete[(s->colors & 0xf0) + 8];
 		DrawQ_Fill(x + 14*8, y+1, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
@@ -1406,7 +1407,6 @@ float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
 	}
 	else
 	{
-		minutes = (int)((cl.intermission ? cl.completed_time - s->qw_entertime : realtime - s->qw_entertime) / 60.0);
 		// draw colors behind score
 		c = (unsigned char *)&palette_complete[(s->colors & 0xf0) + 8];
 		DrawQ_Fill(x + 1*8, y+1, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
