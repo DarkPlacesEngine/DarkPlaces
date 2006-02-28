@@ -405,7 +405,7 @@ static void SCR_DrawDownload(void)
 	if (!cls.qw_downloadname[0])
 		return;
 	dpsnprintf(temp, sizeof(temp), "Downloading %s ...  %3i%%\n", cls.qw_downloadname, cls.qw_downloadpercent);
-	len = strlen(temp);
+	len = (int)strlen(temp);
 	x = (vid_conwidth.integer - len*size) / 2;
 	y = vid_conheight.integer - size;
 	DrawQ_Fill(0, y, vid_conwidth.integer, size, 0, 0, 0, 0.5, 0);

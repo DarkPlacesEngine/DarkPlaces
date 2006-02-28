@@ -135,16 +135,16 @@ void PolygonF_Divide(int innumpoints, const float *inpoints, float planenormalx,
 			frac = pdist / (pdist - ndist);
 			if (frontcount < outfrontmaxpoints)
 			{
-				*outfrontpoints++ = p[0] + frac * (n[0] - p[0]);
-				*outfrontpoints++ = p[1] + frac * (n[1] - p[1]);
-				*outfrontpoints++ = p[2] + frac * (n[2] - p[2]);
+				*outfrontpoints++ = (float)(p[0] + frac * (n[0] - p[0]));
+				*outfrontpoints++ = (float)(p[1] + frac * (n[1] - p[1]));
+				*outfrontpoints++ = (float)(p[2] + frac * (n[2] - p[2]));
 			}
 			frontcount++;
 			if (backcount < outbackmaxpoints)
 			{
-				*outbackpoints++ = p[0] + frac * (n[0] - p[0]);
-				*outbackpoints++ = p[1] + frac * (n[1] - p[1]);
-				*outbackpoints++ = p[2] + frac * (n[2] - p[2]);
+				*outbackpoints++ = (float)(p[0] + frac * (n[0] - p[0]));
+				*outbackpoints++ = (float)(p[1] + frac * (n[1] - p[1]));
+				*outbackpoints++ = (float)(p[2] + frac * (n[2] - p[2]));
 			}
 			backcount++;
 		}
