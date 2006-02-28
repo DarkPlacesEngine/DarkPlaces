@@ -444,8 +444,8 @@ void M_Main_Draw (void)
 		M_Background(640, 480); //fall back is always to 640x480, this makes it most readable at that.
 		M_PrintRed (40, (480/3)-16, "You have reached this menu due to missing or unlocatable content/data");
 		M_Print ((640/2)-92, (480/3), "You may consider adding");
-		M_Print ((640/2)-136, (480/3)+8, "-basedir /path/to/your/nexuiz/data");
-		M_Print ((640/2)-76, (480/3)+16, "to your launch path");
+		M_Print ((640/2)-136, (480/3)+8, "-basedir /path/to/nexuiz");
+		M_Print ((640/2)-76, (480/3)+16, "to your launch commandline");
 		M_Print (640/2 - 48, 480/2, "Open Console"); //The console usually better shows errors (failures)
 		M_Print (640/2 - 48, 480/2 + 8, "Quit");
 		M_DrawCharacter(640/2 - 56, 480/2 + (8 * m_main_cursor), 12+((int)(realtime*4)&1));
@@ -754,14 +754,12 @@ void M_SinglePlayer_Draw (void)
 	p = Draw_CachePic ("gfx/ttl_sgl", false);
 
 	// Some mods don't have a single player mode
-	if (gamemode == GAME_NEXUIZ || gamemode == GAME_GOODVSBAD2 || gamemode == GAME_BATTLEMECH)
+	if (gamemode == GAME_GOODVSBAD2 || gamemode == GAME_BATTLEMECH)
 	{
 		M_DrawPic ((320 - p->width) / 2, 4, "gfx/ttl_sgl");
 
 		M_DrawTextBox (60, 8 * 8, 23, 4);
-		if (gamemode == GAME_NEXUIZ)
-			M_Print(95, 10 * 8, "Nexuiz is for");
-		else if (gamemode == GAME_GOODVSBAD2)
+		if (gamemode == GAME_GOODVSBAD2)
 			M_Print(95, 10 * 8, "Good Vs Bad 2 is for");
 		else  // if (gamemode == GAME_BATTLEMECH)
 			M_Print(95, 10 * 8, "Battlemech is for");
@@ -783,7 +781,7 @@ void M_SinglePlayer_Draw (void)
 
 void M_SinglePlayer_Key (int key, char ascii)
 {
-	if (gamemode == GAME_NEXUIZ || gamemode == GAME_GOODVSBAD2 || gamemode == GAME_BATTLEMECH)
+	if (gamemode == GAME_GOODVSBAD2 || gamemode == GAME_BATTLEMECH)
 	{
 		if (key == K_ESCAPE || key == K_ENTER)
 			m_state = m_main;
