@@ -2699,7 +2699,7 @@ NULL,						// #476
 NULL,						// #477
 NULL,						// #478
 NULL,						// #479
-e10, e10					// #471-499 (LordHavoc)
+e10, e10					// #480-499 (LordHavoc)
 };
 
 const int vm_sv_numbuiltins = sizeof(vm_sv_builtins) / sizeof(prvm_builtin_t);
