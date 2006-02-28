@@ -237,6 +237,10 @@ typedef struct serverlist_info_s
 	int numplayers;
 	// protocol version
 	int protocol;
+	// game data version
+	// (an integer that is used for filtering incompatible servers,
+	//  not filterable by QC)
+	int gameversion;
 } serverlist_info_t;
 
 typedef enum
