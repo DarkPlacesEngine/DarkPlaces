@@ -157,6 +157,13 @@ char *qw_svc_strings[128] =
 
 cvar_t demo_nehahra = {0, "demo_nehahra", "0", "reads all quake demos as nehahra movie protocol"};
 cvar_t developer_networkentities = {0, "developer_networkentities", "0", "prints received entities, value is 0-4 (higher for more info)"};
+cvar_t cl_sound_wizardhit = {0, "cl_sound_wizardhit", "wizard/hit.wav", "sound to play during TE_WIZSPIKE (empty cvar disables sound)"};
+cvar_t cl_sound_hknighthit = {0, "cl_sound_hknighthit", "hknight/hit.wav", "sound to play during TE_KNIGHTSPIKE (empty cvar disables sound)"};
+cvar_t cl_sound_tink1 = {0, "cl_sound_tink1", "1", "sound to play with 80% chance during TE_SPIKE/TE_SUPERSPIKE (empty cvar disables sound)"};
+cvar_t cl_sound_ric1 = {0, "cl_sound_ric1", "1", "sound to play with 5% chance during TE_SPIKE/TE_SUPERSPIKE (empty cvar disables sound)"};
+cvar_t cl_sound_ric2 = {0, "cl_sound_ric2", "1", "sound to play with 5% chance during TE_SPIKE/TE_SUPERSPIKE (empty cvar disables sound)"};
+cvar_t cl_sound_ric3 = {0, "cl_sound_ric3", "1", "sound to play with 10% chance during TE_SPIKE/TE_SUPERSPIKE (empty cvar disables sound)"};
+cvar_t cl_sound_r_exp3 = {0, "cl_sound_r_exp3", "1", "sound to play during TE_EXPLOSION and related effects (empty cvar disables sound)"};
 
 static qboolean QW_CL_CheckOrDownloadFile(const char *filename);
 static void QW_CL_RequestNextDownload(void);
@@ -520,13 +527,13 @@ static void QW_CL_RequestNextDownload(void)
 		S_ServerSounds(cl.sound_name, cls.qw_downloadnumber);
 
 		// precache any sounds used by the client
-		cl.sfx_wizhit = S_PrecacheSound("sound/wizard/hit.wav", false, true);
-		cl.sfx_knighthit = S_PrecacheSound("sound/hknight/hit.wav", false, true);
-		cl.sfx_tink1 = S_PrecacheSound("sound/weapons/tink1.wav", false, true);
-		cl.sfx_ric1 = S_PrecacheSound("sound/weapons/ric1.wav", false, true);
-		cl.sfx_ric2 = S_PrecacheSound("sound/weapons/ric2.wav", false, true);
-		cl.sfx_ric3 = S_PrecacheSound("sound/weapons/ric3.wav", false, true);
-		cl.sfx_r_exp3 = S_PrecacheSound("sound/weapons/r_exp3.wav", false, true);
+		cl.sfx_wizhit = S_PrecacheSound(cl_sound_wizardhit.string, false, true);
+		cl.sfx_knighthit = S_PrecacheSound(cl_sound_hknighthit.string, false, true);
+		cl.sfx_tink1 = S_PrecacheSound(cl_sound_tink1.string, false, true);
+		cl.sfx_ric1 = S_PrecacheSound(cl_sound_ric1.string, false, true);
+		cl.sfx_ric2 = S_PrecacheSound(cl_sound_ric2.string, false, true);
+		cl.sfx_ric3 = S_PrecacheSound(cl_sound_ric3.string, false, true);
+		cl.sfx_r_exp3 = S_PrecacheSound(cl_sound_r_exp3.string, false, true);
 
 		// sounds
 		for (i = 1;i < MAX_SOUNDS && cl.sound_name[i][0];i++)
@@ -853,7 +860,7 @@ static void QW_CL_ParseNails(void)
 	}
 }
 
-static void QW_CL_UpdateItemsAndWeapon(void)
+static void CL_UpdateItemsAndWeapon(void)
 {
 	int j;
 	// check for important changes
@@ -1111,13 +1118,13 @@ void CL_ParseServerInfo (void)
 		S_ServerSounds (cl.sound_name, numsounds);
 
 		// precache any sounds used by the client
-		cl.sfx_wizhit = S_PrecacheSound("sound/wizard/hit.wav", false, true);
-		cl.sfx_knighthit = S_PrecacheSound("sound/hknight/hit.wav", false, true);
-		cl.sfx_tink1 = S_PrecacheSound("sound/weapons/tink1.wav", false, true);
-		cl.sfx_ric1 = S_PrecacheSound("sound/weapons/ric1.wav", false, true);
-		cl.sfx_ric2 = S_PrecacheSound("sound/weapons/ric2.wav", false, true);
-		cl.sfx_ric3 = S_PrecacheSound("sound/weapons/ric3.wav", false, true);
-		cl.sfx_r_exp3 = S_PrecacheSound("sound/weapons/r_exp3.wav", false, true);
+		cl.sfx_wizhit = S_PrecacheSound(cl_sound_wizardhit.string, false, true);
+		cl.sfx_knighthit = S_PrecacheSound(cl_sound_hknighthit.string, false, true);
+		cl.sfx_tink1 = S_PrecacheSound(cl_sound_tink1.string, false, true);
+		cl.sfx_ric1 = S_PrecacheSound(cl_sound_ric1.string, false, true);
+		cl.sfx_ric2 = S_PrecacheSound(cl_sound_ric2.string, false, true);
+		cl.sfx_ric3 = S_PrecacheSound(cl_sound_ric3.string, false, true);
+		cl.sfx_r_exp3 = S_PrecacheSound(cl_sound_r_exp3.string, false, true);
 
 		// now we try to load everything that is new
 
@@ -1289,7 +1296,7 @@ Server information pertaining to this client only
 */
 void CL_ParseClientdata (void)
 {
-	int i, j, bits;
+	int i, bits;
 
 	VectorCopy (cl.mpunchangle[0], cl.mpunchangle[1]);
 	VectorCopy (cl.mpunchvector[0], cl.mpunchvector[1]);
@@ -1396,20 +1403,6 @@ void CL_ParseClientdata (void)
 		else
 			cl.stats[STAT_VIEWZOOM] = (unsigned short) MSG_ReadShort();
 	}
-
-	// check for important changes
-
-	// set flash times
-	if (cl.olditems != cl.stats[STAT_ITEMS])
-		for (j = 0;j < 32;j++)
-			if ((cl.stats[STAT_ITEMS] & (1<<j)) && !(cl.olditems & (1<<j)))
-				cl.item_gettime[j] = cl.time;
-	cl.olditems = cl.stats[STAT_ITEMS];
-
-	// GAME_NEXUIZ hud needs weapon change time
-	if (cl.activeweapon != cl.stats[STAT_ACTIVEWEAPON])
-		cl.weapontime = cl.time;
-	cl.activeweapon = cl.stats[STAT_ACTIVEWEAPON];
 
 	// viewzoom interpolation
 	cl.mviewzoom[0] = (float) max(cl.stats[STAT_VIEWZOOM], 2) * (1.0f / 255.0f);
@@ -1664,8 +1657,7 @@ void CL_ParseTempEntity(void)
 			// LordHavoc: boosted color from 1.0, 0.8, 0.4 to 1.25, 1.0, 0.5
 			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 			CL_AllocDlight(NULL, &tempmatrix, 350, 4.0f, 2.0f, 0.50f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-			if (gamemode != GAME_NEXUIZ)
-				S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
+			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
 			CL_Effect(pos, cl.qw_modelindex_s_explod, 0, 6, 10);
 			break;
 
@@ -1675,8 +1667,7 @@ void CL_ParseTempEntity(void)
 			CL_FindNonSolidLocation(pos, pos, 10);
 			CL_BlobExplosion(pos);
 
-			if (gamemode != GAME_NEXUIZ)
-				S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
+			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
 			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 			CL_AllocDlight(NULL, &tempmatrix, 600, 1.6f, 0.8f, 2.0f, 1200, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 			break;
@@ -1977,8 +1968,7 @@ void CL_ParseTempEntity(void)
 			// LordHavoc: boosted color from 1.0, 0.8, 0.4 to 1.25, 1.0, 0.5
 			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 			CL_AllocDlight(NULL, &tempmatrix, 350, 4.0f, 2.0f, 0.50f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-			if (gamemode != GAME_NEXUIZ)
-				S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
+			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
 			break;
 
 		case TE_EXPLOSIONQUAD:
@@ -1988,8 +1978,7 @@ void CL_ParseTempEntity(void)
 			CL_ParticleExplosion(pos);
 			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 			CL_AllocDlight(NULL, &tempmatrix, 350, 2.5f, 2.0f, 4.0f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-			if (gamemode != GAME_NEXUIZ)
-				S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
+			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
 			break;
 
 		case TE_EXPLOSION3:
@@ -2002,8 +1991,7 @@ void CL_ParseTempEntity(void)
 			color[1] = MSG_ReadCoord(cls.protocol) * (2.0f / 1.0f);
 			color[2] = MSG_ReadCoord(cls.protocol) * (2.0f / 1.0f);
 			CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-			if (gamemode != GAME_NEXUIZ)
-				S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
+			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
 			break;
 
 		case TE_EXPLOSIONRGB:
@@ -2016,8 +2004,7 @@ void CL_ParseTempEntity(void)
 			color[2] = MSG_ReadByte() * (2.0f / 255.0f);
 			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 			CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-			if (gamemode != GAME_NEXUIZ)
-				S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
+			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
 			break;
 
 		case TE_TAREXPLOSION:
@@ -2026,8 +2013,7 @@ void CL_ParseTempEntity(void)
 			CL_FindNonSolidLocation(pos, pos, 10);
 			CL_BlobExplosion(pos);
 
-			if (gamemode != GAME_NEXUIZ)
-				S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
+			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
 			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 			CL_AllocDlight(NULL, &tempmatrix, 600, 1.6f, 0.8f, 2.0f, 1200, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 			break;
@@ -2110,8 +2096,7 @@ void CL_ParseTempEntity(void)
 			color[2] = tempcolor[2] * (2.0f / 255.0f);
 			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 			CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-			if (gamemode != GAME_NEXUIZ)
-				S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
+			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
 			break;
 
 		case TE_TEI_G3:
@@ -2135,8 +2120,7 @@ void CL_ParseTempEntity(void)
 			CL_ParticleExplosion(pos);
 			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 			CL_AllocDlight(NULL, &tempmatrix, 500, 2.5f, 2.0f, 1.0f, 500, 9999, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-			if (gamemode != GAME_NEXUIZ)
-				S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
+			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
 			break;
 
 		case TE_TEI_PLASMAHIT:
@@ -2527,8 +2511,6 @@ void CL_ParseServerMessage(void)
 		for (i = 1;i < cl.maxclients;i++)
 			if (!cl_entities_active[i])
 				cl_entities[i].state_current.active = false;
-
-		QW_CL_UpdateItemsAndWeapon();
 	}
 	else
 	{
@@ -2935,6 +2917,8 @@ void CL_ParseServerMessage(void)
 		}
 	}
 
+	CL_UpdateItemsAndWeapon();
+
 	EntityFrameQuake_ISeeDeadEntities();
 
 	parsingerror = false;
@@ -2967,6 +2951,14 @@ void CL_Parse_Init(void)
 	if (gamemode == GAME_NEHAHRA)
 		Cvar_SetValue("demo_nehahra", 1);
 	Cvar_RegisterVariable(&developer_networkentities);
+
+	Cvar_RegisterVariable(&cl_sound_wizardhit);
+	Cvar_RegisterVariable(&cl_sound_hknighthit);
+	Cvar_RegisterVariable(&cl_sound_tink1);
+	Cvar_RegisterVariable(&cl_sound_ric1);
+	Cvar_RegisterVariable(&cl_sound_ric2);
+	Cvar_RegisterVariable(&cl_sound_ric3);
+	Cvar_RegisterVariable(&cl_sound_r_exp3);
 
 	Cmd_AddCommand("nextul", QW_CL_NextUpload, "sends next fragment of current upload buffer (screenshot for example)");
 	Cmd_AddCommand("stopul", QW_CL_StopUpload, "aborts current upload (screenshot for example)");

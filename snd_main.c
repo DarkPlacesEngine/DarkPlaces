@@ -416,6 +416,9 @@ sfx_t *S_PrecacheSound (const char *name, qboolean complain, qboolean lock)
 	if (!snd_initialized.integer)
 		return NULL;
 
+	if (name == NULL || name[0] == 0)
+		return NULL;
+
 	sfx = S_FindName (name);
 	if (sfx == NULL)
 		return NULL;

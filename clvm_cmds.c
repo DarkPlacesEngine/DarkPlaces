@@ -1680,8 +1680,7 @@ void VM_CL_te_explosionquad (void)
 	CL_ParticleExplosion(pos2);
 	Matrix4x4_CreateTranslate(&tempmatrix, pos2[0], pos2[1], pos2[2]);
 	CL_AllocDlight(NULL, &tempmatrix, 350, 2.5f, 2.0f, 4.0f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-	if (gamemode != GAME_NEXUIZ)
-		S_StartSound(-1, 0, cl.sfx_r_exp3, pos2, 1, 1);
+	S_StartSound(-1, 0, cl.sfx_r_exp3, pos2, 1, 1);
 }
 
 // #416 void(vector org) te_smallflash (DP_TE_SMALLFLASH)
@@ -1791,8 +1790,7 @@ void VM_CL_te_explosion (void)
 	CL_ParticleExplosion(pos2);
 	Matrix4x4_CreateTranslate(&tempmatrix, pos2[0], pos2[1], pos2[2]);
 	CL_AllocDlight(NULL, &tempmatrix, 350, 4.0f, 2.0f, 0.50f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-	if (gamemode != GAME_NEXUIZ)
-		S_StartSound(-1, 0, cl.sfx_r_exp3, pos2, 1, 1);
+	S_StartSound(-1, 0, cl.sfx_r_exp3, pos2, 1, 1);
 }
 
 // #422 void(vector org) te_tarexplosion (DP_TE_STANDARDEFFECTBUILTINS)
@@ -1808,8 +1806,7 @@ void VM_CL_te_tarexplosion (void)
 	CL_BlobExplosion(pos2);
 	Matrix4x4_CreateTranslate(&tempmatrix, pos2[0], pos2[1], pos2[2]);
 	CL_AllocDlight(NULL, &tempmatrix, 600, 1.6f, 0.8f, 2.0f, 1200, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-	if (gamemode != GAME_NEXUIZ)
-		S_StartSound(-1, 0, cl.sfx_r_exp3, pos2, 1, 1);
+	S_StartSound(-1, 0, cl.sfx_r_exp3, pos2, 1, 1);
 }
 
 // #423 void(vector org) te_wizspike (DP_TE_STANDARDEFFECTBUILTINS)
@@ -1885,8 +1882,7 @@ void VM_CL_te_explosion2 (void)
 	color[2] = tempcolor[2] * (2.0f / 255.0f);
 	Matrix4x4_CreateTranslate(&tempmatrix, pos2[0], pos2[1], pos2[2]);
 	CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-	if (gamemode != GAME_NEXUIZ)
-		S_StartSound(-1, 0, cl.sfx_r_exp3, pos2, 1, 1);
+	S_StartSound(-1, 0, cl.sfx_r_exp3, pos2, 1, 1);
 }
 
 

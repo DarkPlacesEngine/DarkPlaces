@@ -51,6 +51,9 @@ cvar_t sv_newflymove = {CVAR_NOTIFY, "sv_newflymove", "0", "enables simpler/bugg
 cvar_t sv_freezenonclients = {CVAR_NOTIFY, "sv_freezenonclients", "0", "freezes time, except for players, allowing you to walk around and take screenshots of explosions"};
 cvar_t sv_playerphysicsqc = {CVAR_NOTIFY, "sv_playerphysicsqc", "1", "enables QuakeC function to override player physics"};
 
+cvar_t sv_sound_watersplash = {0, "sv_sound_watersplash", "misc/h2ohit1.wav", "sound to play when MOVETYPE_FLY/TOSS/BOUNCE/STEP entity enters or leaves water (empty cvar disables the sound)"};
+cvar_t sv_sound_land = {0, "sv_sound_land", "demon/dland2.wav", "sound to play when MOVETYPE_STEP entity hits the ground at high speed (empty cvar disables the sound)"};
+
 #define	MOVE_EPSILON	0.01
 
 void SV_Physics_Toss (prvm_edict_t *ent);
@@ -64,6 +67,9 @@ void SV_Phys_Init (void)
 	Cvar_RegisterVariable(&sv_freezenonclients);
 
 	Cvar_RegisterVariable(&sv_playerphysicsqc);
+
+	Cvar_RegisterVariable(&sv_sound_watersplash);
+	Cvar_RegisterVariable(&sv_sound_land);
 }
 
 /*
@@ -1199,8 +1205,8 @@ void SV_CheckWaterTransition (prvm_edict_t *ent)
 	}
 
 	// check if the entity crossed into or out of water
-	if (gamemode != GAME_NEXUIZ && ((ent->fields.server->watertype == CONTENTS_WATER || ent->fields.server->watertype == CONTENTS_SLIME) != (cont == CONTENTS_WATER || cont == CONTENTS_SLIME)))
-		SV_StartSound (ent, 0, "misc/h2ohit1.wav", 255, 1);
+	if (sv_sound_watersplash.string && ((ent->fields.server->watertype == CONTENTS_WATER || ent->fields.server->watertype == CONTENTS_SLIME) != (cont == CONTENTS_WATER || cont == CONTENTS_SLIME)))
+		SV_StartSound (ent, 0, sv_sound_watersplash.string, 255, 1);
 
 	if (cont <= CONTENTS_WATER)
 	{
@@ -1381,8 +1387,8 @@ void SV_Physics_Step (prvm_edict_t *ent)
 			SV_LinkEdict(ent, true);
 
 			// just hit ground
-			if (hitsound && (int)ent->fields.server->flags & FL_ONGROUND && gamemode != GAME_NEXUIZ)
-				SV_StartSound(ent, 0, "demon/dland2.wav", 255, 1);
+			if (hitsound && (int)ent->fields.server->flags & FL_ONGROUND && sv_sound_land.string)
+				SV_StartSound(ent, 0, sv_sound_land.string, 255, 1);
 		}
 	}
 

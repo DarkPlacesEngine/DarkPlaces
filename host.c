@@ -1016,8 +1016,6 @@ void Host_Init (void)
 		Cbuf_AddText("alias startmap_sp \"map nehstart\"\nalias startmap_dm \"map nehstart\"\nexec quake.rc\n");
 	else if (gamemode == GAME_TRANSFUSION)
 		Cbuf_AddText("alias startmap_sp \"map e1m1\"\n""alias startmap_dm \"map bb1\"\nexec quake.rc\n");
-	else if (gamemode == GAME_NEXUIZ)
-		Cbuf_AddText("alias startmap_sp \"map nexdm01\"\nalias startmap_dm \"map nexdm01\"\nexec quake.rc\n");
 	else if (gamemode == GAME_TEU)
 		Cbuf_AddText("alias startmap_sp \"map start\"\nalias startmap_dm \"map start\"\nexec teu.rc\n");
 	else
