@@ -86,6 +86,8 @@ static cvar_t net_slist_queriesperframe = {0, "net_slist_queriesperframe", "4", 
 static cvar_t net_slist_timeout = {0, "net_slist_timeout", "4", "how long to listen for a server information response before giving up"};
 static cvar_t net_slist_maxtries = {0, "net_slist_maxtries", "3", "how many times to ask the same server for information (more times gives better ping reports but takes longer)"};
 
+static cvar_t gameversion = {0, "gameversion", "0", "version of game data (mod-specific), when client and server gameversion mismatch in the server browser the server is shown as incompatible"};
+
 /* statistic counters */
 static int packetsSent = 0;
 static int packetsReSent = 0;
@@ -301,6 +303,10 @@ static qboolean _ServerList_Entry_Mask( serverlist_mask_t *mask, serverlist_info
 static void ServerList_ViewList_Insert( serverlist_entry_t *entry )
 {
 	int start, end, mid;
+
+	// reject incompatible servers
+	if (entry->info.gameversion != gameversion.integer)
+		return;
 
 	// FIXME: change this to be more readable (...)
 	// now check whether it passes through the masks
@@ -1183,6 +1189,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			if ((s = SearchInfostring(string, "protocol"     )) != NULL) info->protocol = atoi(s);else info->protocol = -1;
 			if ((s = SearchInfostring(string, "clients"      )) != NULL) info->numplayers = atoi(s);else info->numplayers = 0;
 			if ((s = SearchInfostring(string, "sv_maxclients")) != NULL) info->maxplayers = atoi(s);else info->maxplayers  = 0;
+			if ((s = SearchInfostring(string, "gameversion"  )) != NULL) info->gameversion = atoi(s);else info->gameversion = 0;
 
 			if (info->ping == 100000)
 					serverreplycount++;
@@ -1196,7 +1203,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 
 			// build description strings for the things users care about
 			dpsnprintf(serverlist_cache[n].line1, sizeof(serverlist_cache[n].line1), "^%c%5d^7 ^%c%3u^7/%3u %-65.65s", pingtime >= 300 ? '1' : (pingtime >= 200 ? '3' : '7'), (int)pingtime, ((info->numplayers > 0 && info->numplayers < info->maxplayers) ? (info->numplayers >= 4 ? '7' : '3') : '1'), info->numplayers, info->maxplayers, info->name);
-			dpsnprintf(serverlist_cache[n].line2, sizeof(serverlist_cache[n].line2), "^5%-21.21s %-19.19s %-17.17s %-20.20s", info->cname, info->game, info->mod, info->map);
+			dpsnprintf(serverlist_cache[n].line2, sizeof(serverlist_cache[n].line2), "^5%-21.21s %-19.19s ^%c%-17.17s^5 %-20.20s", info->cname, info->game, (info->gameversion != gameversion.integer) ? '1' : '5', info->mod, info->map);
 			if( serverlist_cache[n].query == SQS_QUERIED ) {
 				ServerList_ViewList_Remove( &serverlist_cache[n] );
 			}
@@ -1375,13 +1382,14 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			}
 
 			info = &serverlist_cache[n].info;
+			strlcpy(info->game, "QuakeWorld", sizeof(info->game));;
 			if ((s = SearchInfostring(string, "*gamedir"     )) != NULL) strlcpy(info->mod , s, sizeof (info->mod ));else info->mod[0]  = 0;
 			if ((s = SearchInfostring(string, "map"          )) != NULL) strlcpy(info->map , s, sizeof (info->map ));else info->map[0]  = 0;
 			if ((s = SearchInfostring(string, "hostname"     )) != NULL) strlcpy(info->name, s, sizeof (info->name));else info->name[0] = 0;
-			if ((s = SearchInfostring(string, "maxclients"   )) != NULL) info->maxplayers = atoi(s);else info->maxplayers  = 0;
-			strlcpy(info->game, "QuakeWorld", sizeof(info->game));;
 			info->protocol = 0;
 			info->numplayers = 0; // updated below
+			if ((s = SearchInfostring(string, "maxclients"   )) != NULL) info->maxplayers = atoi(s);else info->maxplayers  = 0;
+			if ((s = SearchInfostring(string, "gameversion"  )) != NULL) info->gameversion = atoi(s);else info->gameversion = 0;
 
 			// count active players on server
 			// (we could gather more info, but we're just after the number)
@@ -1412,7 +1420,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 
 			// build description strings for the things users care about
 			dpsnprintf(serverlist_cache[n].line1, sizeof(serverlist_cache[n].line1), "^%c%5d^7 ^%c%3u^7/%3u %-65.65s", pingtime >= 300 ? '1' : (pingtime >= 200 ? '3' : '7'), (int)pingtime, ((info->numplayers > 0 && info->numplayers < info->maxplayers) ? (info->numplayers >= 4 ? '7' : '3') : '1'), info->numplayers, info->maxplayers, info->name);
-			dpsnprintf(serverlist_cache[n].line2, sizeof(serverlist_cache[n].line2), "^4%-21.21s %-19.19s %-17.17s %-20.20s", info->cname, info->game, info->mod, info->map);
+			dpsnprintf(serverlist_cache[n].line2, sizeof(serverlist_cache[n].line2), "^4%-21.21s %-19.19s ^%c%-17.17s^4 %-20.20s", info->cname, info->game, (info->gameversion != gameversion.integer) ? '1' : '4', info->mod, info->map);
 			if( serverlist_cache[n].query == SQS_QUERIED ) {
 				ServerList_ViewList_Remove( &serverlist_cache[n] );
 			}
@@ -1690,12 +1698,12 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 	// TODO: we should add more information for the full status string
 	length = dpsnprintf(out_msg, out_size,
 						"\377\377\377\377%s\x0A"
-						"\\gamename\\%s\\modname\\%s\\sv_maxclients\\%d"
-						"\\clients\\%d\\mapname\\%s\\hostname\\%s""\\protocol\\%d"
+						"\\gamename\\%s\\modname\\%s\\gameversion\\%d\\sv_maxclients\\%d"
+						"\\clients\\%d\\mapname\\%s\\hostname\\%s\\protocol\\%d"
 						"%s%s"
 						"%s",
 						fullstatus ? "statusResponse" : "infoResponse",
-						gamename, com_modname, svs.maxclients,
+						gamename, com_modname, gameversion.integer, svs.maxclients,
 						nb_clients, sv.name, hostname.string, NET_PROTOCOL_VERSION,
 						challenge ? "\\challenge\\" : "", challenge ? challenge : "",
 						fullstatus ? "\n" : "");
@@ -2399,6 +2407,7 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&sv_heartbeatperiod);
 	for (i = 0;sv_masters[i].name;i++)
 		Cvar_RegisterVariable(&sv_masters[i]);
+	Cvar_RegisterVariable(&gameversion);
 // COMMANDLINEOPTION: Server: -ip <ipaddress> sets the ip address of this machine for purposes of networking (default 0.0.0.0 also known as INADDR_ANY), use only if you have multiple network adapters and need to choose one specifically.
 	if ((i = COM_CheckParm("-ip")) && i + 1 < com_argc)
 	{
