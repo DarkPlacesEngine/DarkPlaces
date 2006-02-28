@@ -2264,17 +2264,25 @@ void NetConn_QueryMasters(void)
 				}
 			}
 
-			// build the getservers message to send to the qwmaster master servers
-			// note this has no -1 prefix, and the trailing nul byte is sent
-			dpsnprintf(request, sizeof(request), "c\n");
-
-			// search internet
-			for (masternum = 0;sv_qwmasters[masternum].name;masternum++)
+			// only query QuakeWorld servers when in GAME_NORMAL mode as that
+			// is all QuakeWorld is designed for, we don't want QuakeWorld
+			// servers showing up when running another game (not even the
+			// mission packs, as if a QuakeWorld server was using their data
+			// you could still play with -game hipnotic rather than -hipnotic)
+			if (gamemode == GAME_NORMAL)
 			{
-				if (sv_qwmasters[masternum].string && LHNETADDRESS_FromString(&masteraddress, sv_qwmasters[masternum].string, QWMASTER_PORT) && LHNETADDRESS_GetAddressType(&masteraddress) == LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i])))
+				// build the getservers message to send to the qwmaster master servers
+				// note this has no -1 prefix, and the trailing nul byte is sent
+				dpsnprintf(request, sizeof(request), "c\n");
+
+				// search internet
+				for (masternum = 0;sv_qwmasters[masternum].name;masternum++)
 				{
-					masterquerycount++;
-					NetConn_Write(cl_sockets[i], request, 7, &masteraddress);
+					if (sv_qwmasters[masternum].string && LHNETADDRESS_FromString(&masteraddress, sv_qwmasters[masternum].string, QWMASTER_PORT) && LHNETADDRESS_GetAddressType(&masteraddress) == LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i])))
+					{
+						masterquerycount++;
+						NetConn_Write(cl_sockets[i], request, 7, &masteraddress);
+					}
 				}
 			}
 		}
