@@ -2230,7 +2230,7 @@ void Host_Packet_f (void) // credit: taken from QuakeWorld
 	out = send+4;
 	send[0] = send[1] = send[2] = send[3] = 0xff;
 
-	l = strlen (in);
+	l = (int)strlen (in);
 	for (i=0 ; i<l ; i++)
 	{
 		if (out >= send + sizeof(send) - 1)
