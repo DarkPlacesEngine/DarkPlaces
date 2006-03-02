@@ -258,6 +258,10 @@ SOURCE=.\matrixlib.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\mdfour.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\menu.c
 # End Source File
 # Begin Source File
@@ -571,6 +575,10 @@ SOURCE=.\mathlib.h
 # Begin Source File
 
 SOURCE=.\matrixlib.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\mdfour.h
 # End Source File
 # Begin Source File
 
