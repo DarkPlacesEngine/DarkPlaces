@@ -300,6 +300,7 @@ qboolean OGG_OpenLibrary (void)
 		"libvorbis64.dll",
 #elif defined(WIN32)
 		"libvorbis.dll",
+		"vorbis.dll",
 #elif defined(MACOSX)
 		"libvorbis.dylib",
 #else
@@ -314,6 +315,7 @@ qboolean OGG_OpenLibrary (void)
 		"libvorbisfile64.dll",
 #elif defined(WIN32)
 		"libvorbisfile.dll",
+		"vorbisfile.dll",
 #elif defined(MACOSX)
 		"libvorbisfile.dylib",
 #else
