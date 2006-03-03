@@ -699,8 +699,6 @@ void Host_ServerFrame (void)
 		if (sv.paused || (cl.islocalgame && (key_dest != key_game || key_consoleactive)))
 			sv.frametime = 0;
 
-		// set the time and clear the general datagram
-		SV_ClearDatagram();
 
 		// move things around and think unless paused
 		if (sv.frametime)
@@ -708,6 +706,9 @@ void Host_ServerFrame (void)
 
 		// send all messages to the clients
 		SV_SendClientMessages();
+
+		// clear the general datagram
+		SV_ClearDatagram();
 
 		// if this server frame took too long, break out of the loop
 		if (Sys_DoubleTime() >= aborttime)
