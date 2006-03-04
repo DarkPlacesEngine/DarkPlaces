@@ -46,7 +46,7 @@ typedef struct clvideo_s
 } clvideo_t;
 
 clvideo_t*	CL_OpenVideo( const char *filename, const char *name, int owner );
-clvideo_t*	CL_GetVideo( const char *name );
+clvideo_t*	CL_GetVideoByName( const char *name );
 void		CL_SetVideoState( clvideo_t *video, clvideostate_t state );
 void		CL_RestartVideo( clvideo_t *video );
 

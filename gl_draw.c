@@ -310,7 +310,7 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 	{
 		clvideo_t *video;
 
-		video = CL_GetVideo(path);
+		video = CL_GetVideoByName(path);
 		if( video )
 			return &video->cpif;
 	}

@@ -112,18 +112,9 @@ clvideo_t* CL_OpenVideo( const char *filename, const char *name, int owner )
 	return video;
 }
 
-clvideo_t* CL_GetVideo( const char *name )
+static clvideo_t* CL_GetVideoBySlot( int slot )
 {
-	int i;
-	clvideo_t *video;
-
-	for( i = 0 ; i < cl_activevideos ; i++ )
-		if( videoarray[ i ].state != CLVIDEO_UNUSED
-			&&	!strcmp( videoarray[ i ].cpif.name , name ) )
-			break;
-	if( i == cl_activevideos )
-		return NULL;
-	video = &videoarray[ i ];
+	clvideo_t *video = &videoarray[ slot ];
 
 	if( video->suspended )
 	{
@@ -136,6 +127,20 @@ clvideo_t* CL_GetVideo( const char *name )
 	video->lasttime = realtime;
 
 	return video;
+}
+
+clvideo_t *CL_GetVideoByName( const char *name )
+{
+	int i;
+
+	for( i = 0 ; i < cl_activevideos ; i++ )
+		if( videoarray[ i ].state != CLVIDEO_UNUSED
+			&&	!strcmp( videoarray[ i ].cpif.name , name ) )
+			break;
+	if( i != cl_activevideos )
+		return CL_GetVideoBySlot( i );
+	else
+		return NULL;
 }
 
 void CL_SetVideoState( clvideo_t *video, clvideostate_t state )
@@ -251,7 +256,7 @@ int cl_videoplaying = false; // old, but still supported
 void CL_DrawVideo(void)
 {
 	if (cl_videoplaying)
-		DrawQ_Pic(0, 0, &videoarray->cpif, vid_conwidth.integer, vid_conheight.integer, 1, 1, 1, 1, 0);
+		DrawQ_Pic(0, 0, &CL_GetVideoBySlot( 0 )->cpif, vid_conwidth.integer, vid_conheight.integer, 1, 1, 1, 1, 0);
 }
 
 void CL_VideoStart(char *filename)
