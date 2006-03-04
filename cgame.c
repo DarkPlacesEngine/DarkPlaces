@@ -26,6 +26,7 @@ typedef struct localentity_s
 localentity_t;
 
 #define MAX_LOCALENTITIES 1024
+static int numlocalentities;
 static localentity_t *localentity;
 // true if the entity is alive (not freed)
 static unsigned char *localentityactive;
@@ -62,6 +63,8 @@ static localentity_t *entspawn(void)
 	}
 	if (best >= 0)
 	{
+		// update numlocalentities to include the newly allocated slot
+		numlocalentities = max(numlocalentities, best + 1);
 		memset(localentity + best, 0, sizeof(*localentity));
 		localentityactive[best] = true;
 		return localentity + best;
@@ -73,11 +76,15 @@ static void entremove(localentity_t *e)
 {
 	int i;
 	i = (int)((e - localentity) / sizeof(localentity_t));
-	if (i < 0 || i >= MAX_LOCALENTITIES)
+	if (i < 0 || i >= numlocalentities)
 		return; // this should be an error
 	//memset(e, 0, sizeof(*e));
 	localentityactive[i] = false;
 	localentityfreetime[i] = (float)gametime + 1.0f;
+	// since an entity was removed, we may be able to reduce the number of
+	// active entities
+	while (numlocalentities > 0 && !localentityactive[numlocalentities-1])
+		numlocalentities--;
 }
 
 static void phys_setupphysentities(void)
@@ -98,7 +105,7 @@ static void phys_moveentities(void)
 {
 	int i;
 	localentity_t *l;
-	for (i = 0;i < MAX_LOCALENTITIES;i++)
+	for (i = 0;i < numlocalentities;i++)
 	{
 		if (localentityactive[i])
 		{
@@ -336,6 +343,7 @@ static void net_gibshower(unsigned char num)
 // called by engine
 void CG_Init(void)
 {
+	numlocalentities = 0;
 	localentity = (localentity_t *)CGVM_Malloc(sizeof(*localentity) * MAX_LOCALENTITIES);
 	localentityactive = (unsigned char *)CGVM_Malloc(sizeof(*localentityactive) * MAX_LOCALENTITIES);
 	localentityfreetime = (float *)CGVM_Malloc(sizeof(*localentityfreetime) * MAX_LOCALENTITIES);
