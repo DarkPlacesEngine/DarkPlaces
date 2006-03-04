@@ -2119,7 +2119,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, int surfacen
 		}
 	}
 
-	R_Mesh_Matrix(&r_identitymatrix);
+	R_Mesh_Matrix(&identitymatrix);
 
 	memset(&m, 0, sizeof(m));
 	m.tex[0] = R_GetTexture(tex->texture);

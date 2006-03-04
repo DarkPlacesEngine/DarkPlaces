@@ -190,7 +190,7 @@ static void R_DrawExplosion_TransparentCallback(const entity_render_t *ent, int 
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
-	R_Mesh_Matrix(&r_identitymatrix);
+	R_Mesh_Matrix(&identitymatrix);
 
 	numtriangles = EXPLOSIONTRIS;
 	numverts = EXPLOSIONVERTS;

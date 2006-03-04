@@ -800,8 +800,8 @@ static const int particleeffects_num = sizeof(particleeffect_names)/sizeof(char*
 static void CSQC_R_RecalcView (void)
 {
 	extern matrix4x4_t viewmodelmatrix;
-	Matrix4x4_CreateIdentity(&viewmodelmatrix);
-	Matrix4x4_CreateIdentity(&r_refdef.viewentitymatrix);
+	viewmodelmatrix = identitymatrix;
+	r_refdef.viewentitymatrix = identitymatrix;
 	Matrix4x4_CreateFromQuakeEntity(&r_refdef.viewentitymatrix, csqc_origin[0], csqc_origin[1], csqc_origin[2], csqc_angles[0], csqc_angles[1], csqc_angles[2], 1);
 	Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, csqc_origin[0], csqc_origin[1], csqc_origin[2], csqc_angles[0], csqc_angles[1], csqc_angles[2], 0.3);
 }
@@ -2248,7 +2248,7 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 	prvm_edict_t *attachent;
 	model_t *model;
 
-	Matrix4x4_CreateIdentity(out); // warnings and errors return identical matrix
+	out = identitymatrix; // warnings and errors return identical matrix
 
 	if (ent == prog->edicts)
 		return 1;
@@ -2285,7 +2285,7 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 			return ret;
 	}
 	else
-		Matrix4x4_CreateIdentity(&tagmatrix);
+		tagmatrix = identitymatrix;
 
 	if ((val = PRVM_GETEDICTFIELDVALUE(ent, csqc_fieldoff_tag_entity)) && val->edict)
 	{ // DP_GFX_QUAKE3MODELTAGS, scan all chain and stop on unattached entity
@@ -2310,7 +2310,7 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 			if (model && val->_float >= 1 && model->animscenes && attachent->fields.client->frame >= 0 && attachent->fields.client->frame < model->numframes)
 				Mod_Alias_GetTagMatrix(model, model->animscenes[(int)attachent->fields.client->frame].firstframe, val->_float - 1, &attachmatrix);
 			else
-				Matrix4x4_CreateIdentity(&attachmatrix);
+				attachmatrix = identitymatrix;
 
 			// apply transformation by child entity matrix
 			val = PRVM_GETEDICTFIELDVALUE(ent, csqc_fieldoff_scale);

@@ -1240,8 +1240,8 @@ void CL_RelinkWorld(void)
 	entity_t *ent = &cl_entities[0];
 	cl_brushmodel_entities[cl_num_brushmodel_entities++] = 0;
 	// FIXME: this should be done at load
-	Matrix4x4_CreateIdentity(&ent->render.matrix);
-	Matrix4x4_CreateIdentity(&ent->render.inversematrix);
+	ent->render.matrix = identitymatrix;
+	ent->render.inversematrix = identitymatrix;
 	R_LerpAnimation(&ent->render);
 	CL_BoundingBoxForEntity(&ent->render);
 	ent->render.flags = RENDER_SHADOW;
@@ -1259,8 +1259,8 @@ void CL_RelinkCSQCWorld(void)	//[515]: csqc
 		return;
 //	cl_brushmodel_entities[cl_num_brushmodel_entities++] = 0;
 	// FIXME: this should be done at load
-	Matrix4x4_CreateIdentity(&ent->render.matrix);
-	Matrix4x4_CreateIdentity(&ent->render.inversematrix);
+	ent->render.matrix = identitymatrix;
+	ent->render.inversematrix = identitymatrix;
 	R_LerpAnimation(&ent->render);
 	CL_BoundingBoxForEntity(&ent->render);
 	ent->render.flags = RENDER_SHADOW;
@@ -1625,7 +1625,7 @@ int CL_ReadFromServer(void)
 	r_refdef.time = cl.time;
 	r_refdef.extraupdate = !r_speeds.integer;
 	r_refdef.numentities = 0;
-	Matrix4x4_CreateIdentity(&r_refdef.viewentitymatrix);
+	r_refdef.viewentitymatrix = identitymatrix;
 	cl_num_brushmodel_entities = 0;
 
 	if (cls.state == ca_connected && cls.signon == SIGNONS)

@@ -73,7 +73,7 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, int sur
 		break;
 	}
 
-	R_Mesh_Matrix(&r_identitymatrix);
+	R_Mesh_Matrix(&identitymatrix);
 
 	if (!(ent->flags & RENDER_LIGHT))
 		color[0] = color[1] = color[2] = 1;

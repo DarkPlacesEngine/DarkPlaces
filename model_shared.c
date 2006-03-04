@@ -593,6 +593,8 @@ void Mod_BuildTextureVectorsAndNormals(int firstvertex, int numvertices, int num
 {
 	int i, tnum;
 	float sdir[3], tdir[3], normal[3], *v;
+	const float *v0, *v1, *v2, *tc0, *tc1, *tc2;
+	float f, tangentcross[3], v10[3], v20[3], tc10[2], tc20[2];
 	const int *e;
 	// clear the vectors
 	if (svector3f)
@@ -604,7 +606,59 @@ void Mod_BuildTextureVectorsAndNormals(int firstvertex, int numvertices, int num
 	// process each vertex of each triangle and accumulate the results
 	for (tnum = 0, e = elements;tnum < numtriangles;tnum++, e += 3)
 	{
-		Mod_BuildBumpVectors(vertex3f + e[0] * 3, vertex3f + e[1] * 3, vertex3f + e[2] * 3, texcoord2f + e[0] * 2, texcoord2f + e[1] * 2, texcoord2f + e[2] * 2, sdir, tdir, normal);
+		v0 = vertex3f + e[0] * 3;
+		v1 = vertex3f + e[1] * 3;
+		v2 = vertex3f + e[2] * 3;
+		tc0 = texcoord2f + e[0] * 2;
+		tc1 = texcoord2f + e[1] * 2;
+		tc2 = texcoord2f + e[2] * 2;
+
+		// 79 add/sub/negate/multiply (1 cycle), 1 compare (3 cycle?), total cycles not counting load/store/exchange roughly 82 cycles
+		// 6 add, 28 subtract, 39 multiply, 1 compare, 50% chance of 6 negates
+
+		// calculate the edge directions and surface normal
+		// 6 multiply, 9 subtract
+		VectorSubtract(v1, v0, v10);
+		VectorSubtract(v2, v0, v20);
+		normal[0] = v20[1] * v10[2] - v20[2] * v10[1];
+		normal[1] = v20[2] * v10[0] - v20[0] * v10[2];
+		normal[2] = v20[0] * v10[1] - v20[1] * v10[0];
+
+		// calculate the tangents
+		// 12 multiply, 10 subtract
+		tc10[1] = tc1[1] - tc0[1];
+		tc20[1] = tc2[1] - tc0[1];
+		sdir[0] = tc10[1] * v20[0] - tc20[1] * v10[0];
+		sdir[1] = tc10[1] * v20[1] - tc20[1] * v10[1];
+		sdir[2] = tc10[1] * v20[2] - tc20[1] * v10[2];
+		tc10[0] = tc1[0] - tc0[0];
+		tc20[0] = tc2[0] - tc0[0];
+		tdir[0] = tc10[0] * v20[0] - tc20[0] * v10[0];
+		tdir[1] = tc10[0] * v20[1] - tc20[0] * v10[1];
+		tdir[2] = tc10[0] * v20[2] - tc20[0] * v10[2];
+
+		// make the tangents completely perpendicular to the surface normal
+		// 12 multiply, 4 add, 6 subtract
+		f = DotProduct(sdir, normal);
+		sdir[0] -= f * normal[0];
+		sdir[1] -= f * normal[1];
+		sdir[2] -= f * normal[2];
+		f = DotProduct(tdir, normal);
+		tdir[0] -= f * normal[0];
+		tdir[1] -= f * normal[1];
+		tdir[2] -= f * normal[2];
+
+		// if texture is mapped the wrong way (counterclockwise), the tangents
+		// have to be flipped, this is detected by calculating a normal from the
+		// two tangents, and seeing if it is opposite the surface normal
+		// 9 multiply, 2 add, 3 subtract, 1 compare, 50% chance of: 6 negates
+		CrossProduct(tdir, sdir, tangentcross);
+		if (DotProduct(tangentcross, normal) < 0)
+		{
+			VectorNegate(sdir, sdir);
+			VectorNegate(tdir, tdir);
+		}
+
 		if (!areaweighting)
 		{
 			VectorNormalize(sdir);

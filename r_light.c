@@ -81,7 +81,7 @@ void R_DrawCoronas(void)
 	dlight_t *light;
 	if (r_coronas.value < 0.01)
 		return;
-	R_Mesh_Matrix(&r_identitymatrix);
+	R_Mesh_Matrix(&identitymatrix);
 	viewdist = DotProduct(r_vieworigin, r_viewforward);
 	flag = r_rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
 	for (lnum = 0, light = r_shadow_worldlightchain;light;light = light->next, lnum++)

@@ -126,7 +126,7 @@ int Mod_Alias_GetTagMatrix(const model_t *model, int poseframe, int tagindex, ma
 {
 	const float *boneframe;
 	float tempbonematrix[12], bonematrix[12];
-	Matrix4x4_CreateIdentity(outmatrix);
+	*outmatrix = identitymatrix;
 	if (model->num_bones)
 	{
 		if (tagindex < 0 || tagindex >= model->num_bones)
@@ -221,8 +221,8 @@ static void Mod_MDLMD2MD3_TraceBox(model_t *model, int frame, trace_t *trace, co
 	if (!linetrace)
 	{
 		// box trace, performed as brush trace
-		Matrix4x4_CreateIdentity(&startmatrix);
-		Matrix4x4_CreateIdentity(&endmatrix);
+		startmatrix = identitymatrix;
+		endmatrix = identitymatrix;
 		thisbrush_start = Collision_BrushForBox(&startmatrix, boxstartmins, boxstartmaxs);
 		thisbrush_end = Collision_BrushForBox(&endmatrix, boxendmins, boxendmaxs);
 	}
@@ -1069,7 +1069,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	for (i = 0, pintag = (md3tag_t *)((unsigned char *)pinmodel + LittleLong(pinmodel->lump_tags));i < loadmodel->num_tagframes * loadmodel->num_tags;i++, pintag++)
 	{
 		strcpy(loadmodel->data_tags[i].name, pintag->name);
-		Matrix4x4_CreateIdentity(&loadmodel->data_tags[i].matrix);
+		loadmodel->data_tags[i].matrix = identitymatrix;
 		for (j = 0;j < 3;j++)
 		{
 			for (k = 0;k < 3;k++)
@@ -2143,7 +2143,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 				mesh->data_vertexboneweights[mesh->num_vertexboneweights].vertexindex = index;
 				mesh->data_vertexboneweights[mesh->num_vertexboneweights].boneindex = rawweights[j].boneindex;
 				mesh->data_vertexboneweights[mesh->num_vertexboneweights].weight = rawweights[j].weight;
-				Matrix4x4_CreateIdentity(&matrix);
+				matrix = identitymatrix;
 				for (i = rawweights[j].boneindex;i >= 0;i = loadmodel->data_bones[i].parent)
 				{
 					matrix4x4_t childmatrix, tempmatrix;

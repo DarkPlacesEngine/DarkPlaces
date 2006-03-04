@@ -28,7 +28,7 @@ int r_framecount;
 
 mplane_t frustum[5];
 
-matrix4x4_t r_identitymatrix;
+matrix4x4_t identitymatrix;
 
 renderstats_t renderstats;
 
@@ -450,7 +450,6 @@ void gl_main_newmap(void)
 
 void GL_Main_Init(void)
 {
-	Matrix4x4_CreateIdentity(&r_identitymatrix);
 // FIXME: move this to client?
 	FOG_registercvars();
 	Cvar_RegisterVariable(&r_showtris);
@@ -862,7 +861,7 @@ static void R_BlendView(void)
 	GL_SetupView_Mode_Ortho(0, 0, 1, 1, -10, 100);
 	GL_DepthMask(true);
 	GL_DepthTest(false);
-	R_Mesh_Matrix(&r_identitymatrix);
+	R_Mesh_Matrix(&identitymatrix);
 	// vertex coordinates for a quad that covers the screen exactly
 	varray_vertex3f[0] = 0;varray_vertex3f[1] = 0;varray_vertex3f[2] = 0;
 	varray_vertex3f[3] = 1;varray_vertex3f[4] = 0;varray_vertex3f[5] = 0;
@@ -1333,7 +1332,7 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
-	R_Mesh_Matrix(&r_identitymatrix);
+	R_Mesh_Matrix(&identitymatrix);
 
 	vertex3f[ 0] = mins[0];vertex3f[ 1] = mins[1];vertex3f[ 2] = mins[2];
 	vertex3f[ 3] = maxs[0];vertex3f[ 4] = mins[1];vertex3f[ 5] = mins[2];
@@ -1498,7 +1497,7 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_
 		fog = VERTEXFOGTABLE(VectorDistance(origin, r_vieworigin));
 	ifog = 1 - fog;
 
-	R_Mesh_Matrix(&r_identitymatrix);
+	R_Mesh_Matrix(&identitymatrix);
 	GL_BlendFunc(blendfunc1, blendfunc2);
 	GL_DepthMask(false);
 	GL_DepthTest(!depthdisable);
@@ -1656,17 +1655,17 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 	if (t->currentmaterialflags & MATERIALFLAG_WATER && r_waterscroll.value != 0)
 		t->currenttexmatrix = r_waterscrollmatrix;
 	else
-		t->currenttexmatrix = r_identitymatrix;
+		t->currenttexmatrix = identitymatrix;
 	t->currentnumlayers = 0;
 	if (!(t->currentmaterialflags & MATERIALFLAG_NODRAW))
 	{
 		if (gl_lightmaps.integer)
-			R_Texture_AddLayer(t, true, GL_ONE, GL_ZERO, TEXTURELAYERTYPE_LITTEXTURE_MULTIPASS, r_texture_white, &r_identitymatrix, 1, 1, 1, 1);
+			R_Texture_AddLayer(t, true, GL_ONE, GL_ZERO, TEXTURELAYERTYPE_LITTEXTURE_MULTIPASS, r_texture_white, &identitymatrix, 1, 1, 1, 1);
 		else if (t->currentmaterialflags & MATERIALFLAG_SKY)
 		{
 			// transparent sky would be ridiculous
 			if (!(t->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
-				R_Texture_AddLayer(t, true, GL_ONE, GL_ZERO, TEXTURELAYERTYPE_SKY, r_texture_white, &r_identitymatrix, fogcolor[0], fogcolor[1], fogcolor[2], 1);
+				R_Texture_AddLayer(t, true, GL_ONE, GL_ZERO, TEXTURELAYERTYPE_SKY, r_texture_white, &identitymatrix, fogcolor[0], fogcolor[1], fogcolor[2], 1);
 		}
 		else
 		{
@@ -1751,7 +1750,7 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 					// were darkened by fog already, and we should not add fog color
 					// (because the background was not darkened, there is no fog color
 					// that was lost behind it).
-					R_Texture_AddLayer(t, false, GL_SRC_ALPHA, (t->currentmaterialflags & MATERIALFLAG_TRANSPARENT) ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA, TEXTURELAYERTYPE_FOG, t->skin.fog, &r_identitymatrix, fogcolor[0], fogcolor[1], fogcolor[2], t->currentalpha);
+					R_Texture_AddLayer(t, false, GL_SRC_ALPHA, (t->currentmaterialflags & MATERIALFLAG_TRANSPARENT) ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA, TEXTURELAYERTYPE_FOG, t->skin.fog, &identitymatrix, fogcolor[0], fogcolor[1], fogcolor[2], t->currentalpha);
 				}
 			}
 		}
