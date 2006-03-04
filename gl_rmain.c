@@ -1597,7 +1597,7 @@ void R_Mesh_AddBrushMeshFromPlanes(rmesh_t *mesh, int numplanes, mplane_t *plane
 	}
 }
 
-void R_Texture_AddLayer(texture_t *t, qboolean depthmask, int blendfunc1, int blendfunc2, texturelayertype_t type, rtexture_t *texture, matrix4x4_t *matrix, float r, float g, float b, float a)
+static void R_Texture_AddLayer(texture_t *t, qboolean depthmask, int blendfunc1, int blendfunc2, texturelayertype_t type, rtexture_t *texture, const matrix4x4_t *matrix, float r, float g, float b, float a)
 {
 	texturelayer_t *layer;
 	layer = t->currentlayers + t->currentnumlayers++;
