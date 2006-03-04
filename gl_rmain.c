@@ -1898,13 +1898,13 @@ void RSurf_SetColorPointer(const entity_render_t *ent, const msurface_t *surface
 	}
 	else if (lightmode >= 1)
 	{
-		if (surface->lightmapinfo)
+		if (surface->lightmapinfo && surface->lightmapinfo->stainsamples)
 		{
 			for (i = 0, c = varray_color4f + 4 * surface->num_firstvertex;i < surface->num_vertices;i++, c += 4)
 			{
-				const unsigned char *lm = surface->lightmapinfo->samples + (surface->groupmesh->data_lightmapoffsets + surface->num_firstvertex)[i];
-				if (lm)
+				if (surface->lightmapinfo->samples)
 				{
+					const unsigned char *lm = surface->lightmapinfo->samples + (surface->groupmesh->data_lightmapoffsets + surface->num_firstvertex)[i];
 					float scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[0]] * (1.0f / 32768.0f);
 					VectorScale(lm, scale, c);
 					if (surface->lightmapinfo->styles[1] != 255)
@@ -2388,7 +2388,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 			if (f && surface->num_triangles)
 			{
 				// if lightmap parameters changed, rebuild lightmap texture
-				if (surface->cached_dlight && surface->lightmapinfo->samples)
+				if (surface->cached_dlight)
 					R_BuildLightMap(ent, surface);
 				// add face to draw list
 				surfacelist[numsurfacelist++] = surface;
@@ -2419,7 +2419,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 			if (f && surface->num_triangles)
 			{
 				// if lightmap parameters changed, rebuild lightmap texture
-				if (surface->cached_dlight && surface->lightmapinfo->samples)
+				if (surface->cached_dlight)
 					R_BuildLightMap(ent, surface);
 				// add face to draw list
 				surfacelist[numsurfacelist++] = surface;
