@@ -179,8 +179,8 @@ extern char engineversion[128];
 
 //===========================================
 
-// LordHavoc: increased player limit from 16 to 64
-#define	MAX_SCOREBOARD		64
+// LordHavoc: increased player limit from 16 to 255
+#define	MAX_SCOREBOARD		255
 // LordHavoc: increased name limit from 32 to 64 characters
 #define	MAX_SCOREBOARDNAME	64
 // infostring sizes used by QuakeWorld support
