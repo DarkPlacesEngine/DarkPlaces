@@ -4027,10 +4027,10 @@ void M_GameOptions_Draw (void)
 			x = (320-26*8)/2;
 			M_DrawTextBox (x, 138, 24, 4);
 			x += 8;
-			M_Print(x, 146, " More than 64 players?? ");
+			M_Print(x, 146, " More than 255 players??");
 			M_Print(x, 154, "  First, question your  ");
 			M_Print(x, 162, "   sanity, then email   ");
-			M_Print(x, 170, " havoc@telefragged.com  ");
+			M_Print(x, 170, " lordhavoc@ghdigital.com");
 		}
 		else
 			m_serverInfoMessage = false;
