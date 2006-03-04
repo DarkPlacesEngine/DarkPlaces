@@ -162,7 +162,10 @@ void mdfour_update(struct mdfour *md, unsigned char *in, int n)
 {
 	uint32 M[16];
 
-	if (n == 0) mdfour_tail(in, n);
+// start of edit by Forest 'LordHavoc' Hale
+// commented out to prevent crashing when length is 0
+//	if (n == 0) mdfour_tail(in, n);
+// end of edit by Forest 'LordHavoc' Hale
 
 	m = md;
 
