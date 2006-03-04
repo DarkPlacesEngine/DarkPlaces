@@ -3163,10 +3163,10 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	{
 		if (i == LUMP_ENTITIES)
 			continue;
-		mod->brush.qw_md4sum ^= Com_BlockChecksum(mod_base + header->lumps[i].fileofs, header->lumps[i].filelen);
+		mod->brush.qw_md4sum ^= LittleLong(Com_BlockChecksum(mod_base + header->lumps[i].fileofs, header->lumps[i].filelen));
 		if (i == LUMP_VISIBILITY || i == LUMP_LEAFS || i == LUMP_NODES)
 			continue;
-		mod->brush.qw_md4sum2 ^= Com_BlockChecksum(mod_base + header->lumps[i].fileofs, header->lumps[i].filelen);
+		mod->brush.qw_md4sum2 ^= LittleLong(Com_BlockChecksum(mod_base + header->lumps[i].fileofs, header->lumps[i].filelen));
 	}
 
 	Mod_Q1BSP_LoadEntities(&header->lumps[LUMP_ENTITIES]);
