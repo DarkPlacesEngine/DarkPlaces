@@ -2220,7 +2220,9 @@ void NetConn_ServerFrame(void)
 		if (host_client->netconnection && realtime > host_client->netconnection->timeout && LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) != LHNETADDRESSTYPE_LOOP)
 		{
 			Con_Printf("Client \"%s\" connection timed out\n", host_client->name);
+			SV_VM_Begin();
 			SV_DropClient(false);
+			SV_VM_End();
 		}
 	}
 }
