@@ -2482,27 +2482,27 @@ float	drawpic(vector position, string pic, vector size, vector rgb, float alpha,
 */
 void VM_drawpic(void)
 {
-	const char *pic;
+	const char *picname;
 	float *size, *pos, *rgb;
 	int flag;
 
 	VM_SAFEPARMCOUNT(6,VM_drawpic);
 
-	pic = PRVM_G_STRING(OFS_PARM1);
+	picname = PRVM_G_STRING(OFS_PARM1);
 
-	if(!pic)
+	if(!picname)
 	{
 		Con_Printf("VM_drawpic: %s passed null picture name !\n", PRVM_NAME);
 		PRVM_G_FLOAT(OFS_RETURN) = -1;
 		return;
 	}
 
-	VM_CheckEmptyString (pic);
+	VM_CheckEmptyString (picname);
 
 	// is pic cached ? no function yet for that
 	if(!1)
 	{
-		Con_Printf("VM_drawpic: %s: %s not cached !\n", PRVM_NAME, pic);
+		Con_Printf("VM_drawpic: %s: %s not cached !\n", PRVM_NAME, picname);
 		PRVM_G_FLOAT(OFS_RETURN) = -4;
 		return;
 	}
@@ -2522,7 +2522,7 @@ void VM_drawpic(void)
 	if(pos[2] || size[2])
 		Con_Printf("VM_drawstring: z value%c from %s discarded\n",(pos[2] && size[2]) ? 's' : 0,((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size")));
 
-	DrawQ_Pic(pos[0], pos[1], pic, size[0], size[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag);
+	DrawQ_Pic(pos[0], pos[1], Draw_CachePic(picname, false), size[0], size[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag);
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 
@@ -2556,7 +2556,7 @@ void VM_drawfill(void)
 	if(pos[2] || size[2])
 		Con_Printf("VM_drawstring: z value%c from %s discarded\n",(pos[2] && size[2]) ? 's' : 0,((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size")));
 
-	DrawQ_Pic(pos[0], pos[1], 0, size[0], size[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM3), flag);
+	DrawQ_Pic(pos[0], pos[1], NULL, size[0], size[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM3), flag);
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 

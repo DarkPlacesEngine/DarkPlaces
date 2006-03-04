@@ -1033,9 +1033,11 @@ void Host_Init (void)
 	// save console log up to this point to log_file if it was set by configs
 	Log_Start();
 
+	// put up the loading image so the user doesn't stare at a black screen...
+	SCR_BeginLoadingPlaque();
+
 	// FIXME: put this into some neat design, but the menu should be allowed to crash
 	// without crashing the whole game, so this should just be a short-time solution
-	Host_StartVideo();
 
 	// here comes the not so critical stuff
 	if (setjmp(host_abortframe)) {
@@ -1095,7 +1097,7 @@ void Host_Init (void)
 
 	Con_DPrint("========Initialized=========\n");
 
-	Host_StartVideo();
+	//Host_StartVideo();
 }
 
 

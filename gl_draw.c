@@ -26,6 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 
 static rtexture_t *char_texture;
+cachepic_t *r_crosshairs[NUMCROSSHAIRS];
 
 //=============================================================================
 /* Support Routines */
@@ -138,9 +139,6 @@ static rtexture_t *draw_generatemousepointer(void)
 	}
 	return R_LoadTexture2D(drawtexturepool, "mousepointer", 16, 16, &buffer[0][0], TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
 }
-
-// must match NUMCROSSHAIRS in r_crosshairs.c
-#define NUMCROSSHAIRS 6
 
 static char *crosshairtexdata[NUMCROSSHAIRS] =
 {
@@ -309,7 +307,6 @@ cachepic_t	*Draw_CachePic (const char *path, qboolean persistent)
 	int flags;
 
 	if (!strncmp(CLVIDEOPREFIX, path, sizeof(CLVIDEOPREFIX) - 1))
-
 	{
 		clvideo_t *video;
 
@@ -464,12 +461,15 @@ Draw_Init
 */
 static void gl_draw_start(void)
 {
+	int i;
 	drawtexturepool = R_AllocTexturePool();
 
 	numcachepics = 0;
 	memset(cachepichash, 0, sizeof(cachepichash));
 
 	char_texture = Draw_CachePic("gfx/conchars", true)->tex;
+	for (i = 0;i < NUMCROSSHAIRS;i++)
+		r_crosshairs[i] = Draw_CachePic(va("gfx/crosshair%i", i), false);
 }
 
 static void gl_draw_shutdown(void)

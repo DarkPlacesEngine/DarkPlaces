@@ -1015,6 +1015,9 @@ void R_NewExplosion(vec3_t org);
 
 #include "cl_screen.h"
 
+#define NUMCROSSHAIRS 6
+extern cachepic_t *r_crosshairs[NUMCROSSHAIRS];
+
 typedef struct refdef_s
 {
 	// area to render in
