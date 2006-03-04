@@ -2705,7 +2705,7 @@ void VM_cin_close( void )
 	name = PRVM_G_STRING( OFS_PARM0 );
 	VM_CheckEmptyString( name );
 
-	CL_CloseVideo( CL_GetVideo( name ) );
+	CL_CloseVideo( CL_GetVideoByName( name ) );
 }
 
 /*
@@ -2727,7 +2727,7 @@ void VM_cin_setstate( void )
 
 	state = (clvideostate_t)((int)PRVM_G_FLOAT( OFS_PARM1 ));
 
-	video = CL_GetVideo( name );
+	video = CL_GetVideoByName( name );
 	if( video && state > CLVIDEO_UNUSED && state < CLVIDEO_STATECOUNT )
 		CL_SetVideoState( video, state );
 }
@@ -2749,7 +2749,7 @@ void VM_cin_getstate( void )
 	name = PRVM_G_STRING( OFS_PARM0 );
 	VM_CheckEmptyString( name );
 
-	video = CL_GetVideo( name );
+	video = CL_GetVideoByName( name );
 	if( video )
 		PRVM_G_FLOAT( OFS_RETURN ) = (int)video->state;
 	else
@@ -2773,7 +2773,7 @@ void VM_cin_restart( void )
 	name = PRVM_G_STRING( OFS_PARM0 );
 	VM_CheckEmptyString( name );
 
-	video = CL_GetVideo( name );
+	video = CL_GetVideoByName( name );
 	if( video )
 		CL_RestartVideo( video );
 }
