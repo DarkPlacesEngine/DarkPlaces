@@ -2095,8 +2095,6 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		// lighting info
 		for (i = 0;i < MAXLIGHTMAPS;i++)
 			surface->lightmapinfo->styles[i] = in->styles[i];
-		// force lightmap upload on first time seeing the surface
-		surface->cached_dlight = true;
 		surface->lightmapinfo->lightmaptexturestride = 0;
 		surface->lightmaptexture = NULL;
 		i = LittleLong(in->lightofs);
@@ -2116,6 +2114,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		else // LordHavoc: white lighting (bsp version 29)
 			surface->lightmapinfo->samples = loadmodel->brushq1.lightdata + (i * 3);
 
+		// check if we should apply a lightmap to this
 		if (!(surface->lightmapinfo->texinfo->flags & TEX_SPECIAL) || surface->lightmapinfo->samples)
 		{
 			int i, iu, iv;
@@ -2123,6 +2122,8 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 
 			if (ssize > 256 || tsize > 256)
 				Host_Error("Bad surface extents");
+			// force lightmap upload on first time seeing the surface
+			surface->cached_dlight = true;
 			// stainmap for permanent marks on walls
 			surface->lightmapinfo->stainsamples = (unsigned char *)Mem_Alloc(loadmodel->mempool, ssize * tsize * 3);
 			// clear to white
