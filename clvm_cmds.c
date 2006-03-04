@@ -2248,7 +2248,7 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 	prvm_edict_t *attachent;
 	model_t *model;
 
-	out = identitymatrix; // warnings and errors return identical matrix
+	*out = identitymatrix; // warnings and errors return identical matrix
 
 	if (ent == prog->edicts)
 		return 1;
