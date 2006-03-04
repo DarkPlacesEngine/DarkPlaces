@@ -493,7 +493,9 @@ void VID_Finish (void)
 	//react on appstate changes
 	appstate = SDL_GetAppState();
 
-	if( !( appstate & SDL_APPMOUSEFOCUS ) || !( appstate & SDL_APPINPUTFOCUS ) )
+	vid_hidden = !(appstate & SDL_APPACTIVE);
+
+	if( vid_hidden || !( appstate & SDL_APPMOUSEFOCUS ) || !( appstate & SDL_APPINPUTFOCUS ) )
 		vid_activewindow = false;
 	else
 		vid_activewindow = true;
