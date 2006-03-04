@@ -92,6 +92,8 @@ int cl_max_dlights;
 int cl_max_lightstyle;
 int cl_max_brushmodel_entities;
 int cl_activedlights;
+int cl_activeeffects;
+int cl_activebeams;
 
 entity_t *cl_entities;
 entity_t *cl_csqcentities;	//[515]: csqc
@@ -170,6 +172,8 @@ void CL_ClearState(void)
 	cl_max_lightstyle = MAX_LIGHTSTYLES;
 	cl_max_brushmodel_entities = MAX_EDICTS;
 	cl_activedlights = 0;
+	cl_activeeffects = 0;
+	cl_activebeams = 0;
 
 	cl_entities = (entity_t *)Mem_Alloc(cl_mempool, cl_max_entities * sizeof(entity_t));
 	cl_csqcentities = (entity_t *)Mem_Alloc(cl_mempool, cl_max_csqcentities * sizeof(entity_t));	//[515]: csqc
@@ -576,6 +580,7 @@ void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float
 		e->frame = 0;
 		e->frame1time = cl.time;
 		e->frame2time = cl.time;
+		cl_activeeffects = max(cl_activeeffects, i + 1);
 		break;
 	}
 }
@@ -1378,7 +1383,7 @@ static void CL_RelinkEffects(void)
 	entity_t *ent;
 	float frame;
 
-	for (i = 0, e = cl_effects;i < cl_max_effects;i++, e++)
+	for (i = 0, e = cl_effects;i < cl_activeeffects;i++, e++)
 	{
 		if (e->active)
 		{
@@ -1387,6 +1392,8 @@ static void CL_RelinkEffects(void)
 			if (intframe < 0 || intframe >= e->endframe)
 			{
 				memset(e, 0, sizeof(*e));
+				while (cl_activeeffects > 0 && !cl_effects[cl_activeeffects - 1].active)
+					cl_activeeffects--;
 				continue;
 			}
 
@@ -1440,10 +1447,17 @@ void CL_RelinkBeams(void)
 	float forward;
 	matrix4x4_t tempmatrix;
 
-	for (i = 0, b = cl_beams;i < cl_max_beams;i++, b++)
+	while (cl_activebeams > 0 && !cl_beams[cl_activebeams - 1].model)
+		cl_activeeffects--;
+	for (i = 0, b = cl_beams;i < cl_activebeams;i++, b++)
 	{
-		if (!b->model || b->endtime < cl.time)
+		if (!b->model)
 			continue;
+		if (b->endtime < cl.time)
+		{
+			b->model = NULL;
+			continue;
+		}
 
 		// if coming from the player, update the start position
 		//if (b->entity == cl.viewentity)

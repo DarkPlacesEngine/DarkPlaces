@@ -337,7 +337,7 @@ void R_DrawLightningBeams(void)
 		return;
 
 	beamrepeatscale = 1.0f / r_lightningbeam_repeatdistance.value;
-	for (i = 0, b = cl_beams;i < cl_max_beams;i++, b++)
+	for (i = 0, b = cl_beams;i < cl_activebeams;i++, b++)
 	{
 		if (b->model && b->endtime >= r_refdef.time && b->lightning)
 		{

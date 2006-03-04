@@ -1091,7 +1091,8 @@ void R_RenderView(void)
 	R_ClearScreen();
 	R_Textures_Frame();
 	R_UpdateFog();
-	R_TimeReport("setup");
+	if (r_timereport_active)
+		R_TimeReport("setup");
 
 	qglDepthFunc(GL_LEQUAL);
 	qglPolygonOffset(0, 0);
@@ -1103,7 +1104,8 @@ void R_RenderView(void)
 	qglDisable(GL_POLYGON_OFFSET_FILL);
 
 	R_BlendView();
-	R_TimeReport("blendview");
+	if (r_timereport_active)
+		R_TimeReport("blendview");
 
 	GL_Scissor(0, 0, vid.width, vid.height);
 	GL_ScissorTest(false);
@@ -1137,7 +1139,8 @@ void CSQC_R_ClearScreen (void)
 	R_ClearScreen();
 	R_Textures_Frame();
 	R_UpdateFog();
-	R_TimeReport("setup");
+	if (r_timereport_active)
+		R_TimeReport("setup");
 }
 
 //[515]: csqc
@@ -1153,7 +1156,8 @@ void CSQC_R_RenderScene (void)
 	qglDisable(GL_POLYGON_OFFSET_FILL);
 
 	R_BlendView();
-	R_TimeReport("blendview");
+	if (r_timereport_active)
+		R_TimeReport("blendview");
 
 	GL_Scissor(0, 0, vid.width, vid.height);
 	GL_ScissorTest(false);
@@ -1186,10 +1190,12 @@ void R_RenderScene(void)
 	R_SkyStartFrame();
 
 	R_WorldVisibility();
-	R_TimeReport("worldvis");
+	if (r_timereport_active)
+		R_TimeReport("worldvis");
 
 	R_MarkEntities();
-	R_TimeReport("markentity");
+	if (r_timereport_active)
+		R_TimeReport("markentity");
 
 	R_Shadow_UpdateWorldLightSelection();
 
@@ -1216,21 +1222,25 @@ void R_RenderScene(void)
 			if (r_refdef.extraupdate)
 				S_ExtraUpdate ();
 
-			GL_ShowTrisColor(0.025, 0.025, 0, 1);
+			if (r_showtrispass)
+				GL_ShowTrisColor(0.025, 0.025, 0, 1);
 			if (r_refdef.worldmodel && r_refdef.worldmodel->DrawSky)
 			{
 				r_refdef.worldmodel->DrawSky(r_refdef.worldentity);
-				R_TimeReport("worldsky");
+				if (r_timereport_active)
+					R_TimeReport("worldsky");
 			}
 
-			if (R_DrawBrushModelsSky())
+			if (R_DrawBrushModelsSky() && r_timereport_active)
 				R_TimeReport("bmodelsky");
 
-			GL_ShowTrisColor(0.05, 0.05, 0.05, 1);
+			if (r_showtrispass)
+				GL_ShowTrisColor(0.05, 0.05, 0.05, 1);
 			if (r_refdef.worldmodel && r_refdef.worldmodel->Draw)
 			{
 				r_refdef.worldmodel->Draw(r_refdef.worldentity);
-				R_TimeReport("world");
+				if (r_timereport_active)
+					R_TimeReport("world");
 			}
 		}
 
@@ -1238,49 +1248,60 @@ void R_RenderScene(void)
 		if (r_refdef.extraupdate)
 			S_ExtraUpdate ();
 
-		GL_ShowTrisColor(0, 0.015, 0, 1);
+		if (r_showtrispass)
+			GL_ShowTrisColor(0, 0.015, 0, 1);
 
 		R_DrawModels();
-		R_TimeReport("models");
+		if (r_timereport_active)
+			R_TimeReport("models");
 
 		// don't let sound skip if going slow
 		if (r_refdef.extraupdate)
 			S_ExtraUpdate ();
 
-		GL_ShowTrisColor(0, 0, 0.033, 1);
+		if (r_showtrispass)
+			GL_ShowTrisColor(0, 0, 0.033, 1);
 		R_ShadowVolumeLighting(false);
-		R_TimeReport("rtlights");
+		if (r_timereport_active)
+			R_TimeReport("rtlights");
 
 		// don't let sound skip if going slow
 		if (r_refdef.extraupdate)
 			S_ExtraUpdate ();
 
-		GL_ShowTrisColor(0.1, 0, 0, 1);
+		if (r_showtrispass)
+			GL_ShowTrisColor(0.1, 0, 0, 1);
 
 		if (cl.csqc_vidvars.drawworld)
 		{
 			R_DrawLightningBeams();
-			R_TimeReport("lightning");
+			if (r_timereport_active)
+				R_TimeReport("lightning");
 
 			R_DrawParticles();
-			R_TimeReport("particles");
+			if (r_timereport_active)
+				R_TimeReport("particles");
 
 			R_DrawExplosions();
-			R_TimeReport("explosions");
+			if (r_timereport_active)
+				R_TimeReport("explosions");
 		}
 
 		R_MeshQueue_RenderTransparent();
-		R_TimeReport("drawtrans");
+		if (r_timereport_active)
+			R_TimeReport("drawtrans");
 
 		if (cl.csqc_vidvars.drawworld)
 		{
 			R_DrawCoronas();
-			R_TimeReport("coronas");
+			if (r_timereport_active)
+				R_TimeReport("coronas");
 		}
 		if(cl.csqc_vidvars.drawcrosshair)
 		{
 			R_DrawWorldCrosshair();
-			R_TimeReport("crosshair");
+			if (r_timereport_active)
+				R_TimeReport("crosshair");
 		}
 
 		VM_AddPolygonsToMeshQueue();

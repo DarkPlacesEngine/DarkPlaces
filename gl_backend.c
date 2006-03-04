@@ -1742,7 +1742,8 @@ void SCR_DrawScreen (void)
 {
 	R_Mesh_Start();
 
-	R_TimeReport("setup");
+	if (r_timereport_active)
+		R_TimeReport("setup");
 
 	if (cls.signon == SIGNONS)
 	{
@@ -1818,7 +1819,8 @@ void SCR_DrawScreen (void)
 
 	R_Mesh_Finish();
 
-	R_TimeReport("meshfinish");
+	if (r_timereport_active)
+		R_TimeReport("meshfinish");
 }
 
 void SCR_UpdateLoadingScreen (void)
@@ -1904,7 +1906,8 @@ void SCR_UpdateScreen (void)
 	qglClear(GL_COLOR_BUFFER_BIT);
 	CHECKGLERROR
 
-	R_TimeReport("clear");
+	if (r_timereport_active)
+		R_TimeReport("clear");
 
 	if (r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer || r_stereo_sidebyside.integer)
 	{
@@ -1947,7 +1950,8 @@ void SCR_UpdateScreen (void)
 		SCR_DrawScreen();
 
 	VID_Finish();
-	R_TimeReport("finish");
+	if (r_timereport_active)
+		R_TimeReport("finish");
 }
 
 

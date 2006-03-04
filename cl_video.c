@@ -9,17 +9,9 @@ static int  cl_videobmask;
 static int  cl_videogmask;
 static int	cl_videobytesperpixel;
 
+static int cl_activevideos;
 static clvideo_t videoarray[ MAXCLVIDEOS ];
 static rtexturepool_t *cl_videotexturepool;
-
-static clvideo_t *FindUnusedVid( void )
-{
-	int i;
-	for( i = 1 ; i < MAXCLVIDEOS ; i++ )
-		if( videoarray[ i ].state == CLVIDEO_UNUSED )
-			return &videoarray[ i ];
-	return NULL;
-}
 
 static qboolean OpenStream( clvideo_t * video )
 {
@@ -69,12 +61,34 @@ static qboolean WakeVideo( clvideo_t * video )
 	return true;
 }
 
-static clvideo_t* OpenVideo( clvideo_t *video, const char *filename, const char *name, int owner )
+clvideo_t* CL_OpenVideo( const char *filename, const char *name, int owner, qboolean cinematic )
 {
+	int i;
+	clvideo_t *video;
+
+	if (cinematic)
+	{
+		video = videoarray;
+		i = 0;
+	}
+	else
+	{
+		for (i = 1, video = videoarray; i < cl_activevideos;i++, video++)
+			if (videoarray[i].state == CLVIDEO_UNUSED)
+				break;
+		if (i == MAXCLVIDEOS)
+		{
+			Con_Printf( "unable to open video \"%s\" - video limit reached\n", filename );
+			return NULL;
+		}
+	}
+
 	strncpy( video->filename, filename, MAX_QPATH );
 	video->ownertag = owner;
+
 	if( strncmp( name, CLVIDEOPREFIX, sizeof( CLVIDEOPREFIX ) - 1 ) )
 		return NULL;
+
 	strncpy( video->cpif.name, name, MAX_QPATH );
 
 	if( !OpenStream( video ) )
@@ -87,24 +101,13 @@ static clvideo_t* OpenVideo( clvideo_t *video, const char *filename, const char 
 
 	video->cpif.width = dpvsimpledecode_getwidth( video->stream );
 	video->cpif.height = dpvsimpledecode_getheight( video->stream );
-	video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name,
-		video->cpif.width, video->cpif.height, NULL, TEXTYPE_RGBA, 0, NULL );
+	video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name, video->cpif.width, video->cpif.height, NULL, TEXTYPE_RGBA, 0, NULL );
 
-    video->imagedata = Mem_Alloc( cl_mempool, video->cpif.width * video->cpif.height * cl_videobytesperpixel );
+	video->imagedata = Mem_Alloc( cl_mempool, video->cpif.width * video->cpif.height * cl_videobytesperpixel );
 
+	// expand the active range to include the new entry
+	cl_activevideos = max(cl_activevideos, i + 1);
 	return video;
-}
-
-clvideo_t* CL_OpenVideo( const char *filename, const char *name, int owner )
-{
-	clvideo_t *video;
-
-	video = FindUnusedVid();
-	if( !video ) {
-		Con_Printf( "unable to open video \"%s\" - video limit reached\n", filename );
-		return NULL;
-	}
-	return OpenVideo( video, filename, name, owner );
 }
 
 clvideo_t* CL_GetVideo( const char *name )
@@ -112,11 +115,11 @@ clvideo_t* CL_GetVideo( const char *name )
 	int i;
 	clvideo_t *video;
 
-	for( i = 0 ; i < MAXCLVIDEOS ; i++ )
+	for( i = 0 ; i < cl_activevideos ; i++ )
 		if( videoarray[ i ].state != CLVIDEO_UNUSED
 			&&	!strcmp( videoarray[ i ].cpif.name , name ) )
 			break;
-	if( i == MAXCLVIDEOS )
+	if( i == cl_activevideos )
 		return NULL;
 	video = &videoarray[ i ];
 
@@ -204,7 +207,7 @@ void CL_VideoFrame( void ) // update all videos
 	int i;
 	clvideo_t *video;
 
-	for( video = videoarray, i = 0 ; i < MAXCLVIDEOS ; video++, i++ )
+	for( video = videoarray, i = 0 ; i < cl_activevideos ; video++, i++ )
 		if( video->state != CLVIDEO_UNUSED && !video->suspended )
 		{
 			if( realtime - video->lasttime > CLTHRESHOLD )
@@ -217,19 +220,23 @@ void CL_VideoFrame( void ) // update all videos
 
 	if( videoarray->state == CLVIDEO_FIRSTFRAME )
 		CL_VideoStop();
+
+	// reduce range to exclude unnecessary entries
+	while (cl_activevideos > 0 && videoarray[cl_activevideos-1].state == CLVIDEO_UNUSED)
+		cl_activevideos--;
 }
 
 void CL_Video_Shutdown( void )
 {
 	int i;
-	for( i = 0 ; i < MAXCLVIDEOS ; i++ )
+	for( i = 0 ; i < cl_activevideos ; i++ )
 		CL_CloseVideo( &videoarray[ i ] );
 }
 
 void CL_PurgeOwner( int owner )
 {
 	int i;
-	for( i = 0 ; i < MAXCLVIDEOS ; i++ )
+	for( i = 0 ; i < cl_activevideos ; i++ )
 		if( videoarray[ i ].ownertag == owner )
 			CL_CloseVideo( &videoarray[ i ] );
 }
@@ -248,7 +255,7 @@ void CL_VideoStart(char *filename)
 
 	if( videoarray->state != CLVIDEO_UNUSED )
 		CL_CloseVideo( videoarray );
-	if( !OpenVideo( videoarray, filename, va( CLVIDEOPREFIX "%s", filename ), 0 ) )
+	if( !CL_OpenVideo( filename, va( CLVIDEOPREFIX "%s", filename ), 0, true ) )
 		return;
 
 	cl_videoplaying = true;
@@ -292,7 +299,7 @@ static void cl_video_start( void )
 
 	cl_videotexturepool = R_AllocTexturePool();
 
-	for( video = videoarray, i = 0 ; i < MAXCLVIDEOS ; i++, video++ )
+	for( video = videoarray, i = 0 ; i < cl_activevideos ; i++, video++ )
 		if( video->state != CLVIDEO_UNUSED && !video->suspended )
 			video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name,
 				video->cpif.width, video->cpif.height, NULL, TEXTYPE_RGBA, 0, NULL );
@@ -309,6 +316,7 @@ static void cl_video_newmap( void )
 
 void CL_Video_Init( void )
 {
+	cl_activevideos = 0;
 	cl_videobytesperpixel = 4;
 	cl_videormask = BigLong(0xFF000000);
 	cl_videogmask = BigLong(0x00FF0000);
