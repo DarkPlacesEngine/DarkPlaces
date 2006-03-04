@@ -28,8 +28,6 @@ int r_framecount;
 
 mplane_t frustum[5];
 
-matrix4x4_t identitymatrix;
-
 renderstats_t renderstats;
 
 // true during envmap command capture
