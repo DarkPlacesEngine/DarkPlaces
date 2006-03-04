@@ -239,8 +239,6 @@ dlight_t *r_shadow_selectedlight;
 dlight_t r_shadow_bufferlight;
 vec3_t r_editlights_cursorlocation;
 
-rtexture_t *lighttextures[5];
-
 extern int con_vislines;
 
 typedef struct cubemapinfo_s
@@ -3308,7 +3306,7 @@ void R_Shadow_SelectLight(dlight_t *light)
 void R_Shadow_DrawCursor_TransparentCallback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
 {
 	float scale = r_editlights_cursorgrid.value * 0.5f;
-	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, lighttextures[0], NULL, false, r_editlights_cursorlocation, r_viewright, r_viewup, scale, -scale, -scale, scale, 1, 1, 1, 0.5f);
+	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_crosshairs[0]->tex, NULL, false, r_editlights_cursorlocation, r_viewright, r_viewup, scale, -scale, -scale, scale, 1, 1, 1, 0.5f);
 }
 
 void R_Shadow_DrawLightSprite_TransparentCallback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
@@ -3320,24 +3318,16 @@ void R_Shadow_DrawLightSprite_TransparentCallback(const entity_render_t *ent, in
 		intensity = 0.75 + 0.25 * sin(realtime * M_PI * 4.0);
 	if (!light->shadow)
 		intensity *= 0.5f;
-	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, lighttextures[surfacenumber], NULL, false, light->origin, r_viewright, r_viewup, 8, -8, -8, 8, intensity, intensity, intensity, 0.5);
+	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_crosshairs[surfacenumber]->tex, NULL, false, light->origin, r_viewright, r_viewup, 8, -8, -8, 8, intensity, intensity, intensity, 0.5);
 }
 
 void R_Shadow_DrawLightSprites(void)
 {
 	int i;
-	cachepic_t *pic;
 	dlight_t *light;
 
-	for (i = 0;i < 5;i++)
-	{
-		lighttextures[i] = NULL;
-		if ((pic = Draw_CachePic(va("gfx/crosshair%i", i + 1), true)))
-			lighttextures[i] = pic->tex;
-	}
-
 	for (i = 0, light = r_shadow_worldlightchain;light;i++, light = light->next)
-		R_MeshQueue_AddTransparent(light->origin, R_Shadow_DrawLightSprite_TransparentCallback, (entity_render_t *)light, i % 5, &light->rtlight);
+		R_MeshQueue_AddTransparent(light->origin, R_Shadow_DrawLightSprite_TransparentCallback, (entity_render_t *)light, i % NUMCROSSHAIRS, &light->rtlight);
 	R_MeshQueue_AddTransparent(r_editlights_cursorlocation, R_Shadow_DrawCursor_TransparentCallback, NULL, 0, NULL);
 }
 

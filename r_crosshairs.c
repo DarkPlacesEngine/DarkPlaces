@@ -9,9 +9,6 @@ cvar_t crosshair_flashrange = {CVAR_SAVE, "crosshair_flashrange", "0.1", "how mu
 cvar_t crosshair_size = {CVAR_SAVE, "crosshair_size", "1", "adjusts size of the crosshair on the screen"};
 cvar_t crosshair_static = {CVAR_SAVE, "crosshair_static", "1", "if 1 the crosshair is a 2D overlay, if 0 it is a sprite in the world indicating where your weapon will hit in standard quake mods (if the mod has the weapon somewhere else this won't be accurate)"};
 
-// must match NUMCROSSHAIRS in gl_draw.c
-#define NUMCROSSHAIRS 6
-
 void R_Crosshairs_Init(void)
 {
 	Cvar_RegisterVariable(&crosshair_brightness);
@@ -72,7 +69,7 @@ void R_DrawWorldCrosshair(void)
 		return;
 	if (!cl.viewentity || !cl_entities[cl.viewentity].state_current.active)
 		return;
-	pic = Draw_CachePic(va("gfx/crosshair%i", num), true);
+	pic = r_crosshairs[num];
 	if (!pic)
 		return;
 	R_GetCrosshairColor(color);
@@ -107,11 +104,11 @@ void R_Draw2DCrosshair(void)
 		return;
 	if (!cl.viewentity || !cl_entities[cl.viewentity].state_current.active)
 		return;
-	pic = Draw_CachePic(va("gfx/crosshair%i", num), true);
+	pic = r_crosshairs[num];
 	if (pic)
 	{
 		R_GetCrosshairColor(color);
-		DrawQ_Pic((vid_conwidth.integer - pic->width * crosshair_size.value) * 0.5f, (vid_conheight.integer - pic->height * crosshair_size.value) * 0.5f, pic->name, pic->width * crosshair_size.value, pic->height * crosshair_size.value, color[0], color[1], color[2], color[3], 0);
+		DrawQ_Pic((vid_conwidth.integer - pic->width * crosshair_size.value) * 0.5f, (vid_conheight.integer - pic->height * crosshair_size.value) * 0.5f, pic, pic->width * crosshair_size.value, pic->height * crosshair_size.value, color[0], color[1], color[2], color[3], 0);
 	}
 }
 

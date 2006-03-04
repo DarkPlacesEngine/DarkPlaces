@@ -293,7 +293,7 @@ void SCR_DrawTurtle (void)
 	if (count < 3)
 		return;
 
-	DrawQ_Pic (0, 0, "gfx/turtle", 0, 0, 1, 1, 1, 1, 0);
+	DrawQ_Pic (0, 0, Draw_CachePic("gfx/turtle", false), 0, 0, 1, 1, 1, 1, 0);
 }
 
 /*
@@ -310,7 +310,7 @@ void SCR_DrawNet (void)
 	if (cls.demoplayback)
 		return;
 
-	DrawQ_Pic (64, 0, "gfx/net", 0, 0, 1, 1, 1, 1, 0);
+	DrawQ_Pic (64, 0, Draw_CachePic("gfx/net", false), 0, 0, 1, 1, 1, 1, 0);
 }
 
 /*
@@ -332,7 +332,7 @@ void SCR_DrawPause (void)
 		return;
 
 	pic = Draw_CachePic ("gfx/pause", true);
-	DrawQ_Pic ((vid_conwidth.integer - pic->width)/2, (vid_conheight.integer - pic->height)/2, "gfx/pause", 0, 0, 1, 1, 1, 1, 0);
+	DrawQ_Pic ((vid_conwidth.integer - pic->width)/2, (vid_conheight.integer - pic->height)/2, pic, 0, 0, 1, 1, 1, 1, 0);
 }
 
 /*
@@ -388,7 +388,7 @@ void SCR_DrawBrand (void)
 		return;
 	}
 
-	DrawQ_Pic (x, y, "gfx/brand", 0, 0, 1, 1, 1, 1, 0);
+	DrawQ_Pic (x, y, pic, 0, 0, 1, 1, 1, 1, 0);
 }
 
 /*
@@ -408,7 +408,7 @@ static void SCR_DrawDownload(void)
 	len = (int)strlen(temp);
 	x = (vid_conwidth.integer - len*size) / 2;
 	y = vid_conheight.integer - size;
-	DrawQ_Fill(0, y, vid_conwidth.integer, size, 0, 0, 0, 0.5, 0);
+	DrawQ_Pic(0, y, NULL, vid_conwidth.integer, size, 0, 0, 0, 0.5, 0);
 	DrawQ_String(x, y, temp, len, size, size, 1, 1, 1, 1, 0);
 }
 
@@ -557,7 +557,7 @@ void R_TimeReport_Frame(void)
 					lines++;
 			y = vid_conheight.integer - sb_lines - lines * 8;
 			i = j = 0;
-			DrawQ_Fill(0, y, vid_conwidth.integer, lines * 8, 0, 0, 0, 0.5, 0);
+			DrawQ_Pic(0, y, NULL, vid_conwidth.integer, lines * 8, 0, 0, 0, 0.5, 0);
 			while (r_speeds_string[i])
 			{
 				j = i;
@@ -661,9 +661,9 @@ void DrawQ_Clear(void)
 }
 
 static int picelements[6] = {0, 1, 2, 0, 2, 3};
-void DrawQ_Pic(float x, float y, const char *picname, float width, float height, float red, float green, float blue, float alpha, int flags)
+void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, float red, float green, float blue, float alpha, int flags)
 {
-	DrawQ_SuperPic(x,y,picname,width,height,0,0,red,green,blue,alpha,1,0,red,green,blue,alpha,0,1,red,green,blue,alpha,1,1,red,green,blue,alpha,flags);
+	DrawQ_SuperPic(x,y,pic,width,height,0,0,red,green,blue,alpha,1,0,red,green,blue,alpha,0,1,red,green,blue,alpha,1,1,red,green,blue,alpha,flags);
 }
 
 void DrawQ_String_Real(float x, float y, const char *string, int maxlen, float scalex, float scaley, float red, float green, float blue, float alpha, int flags)
@@ -713,22 +713,13 @@ void DrawQ_String(float x, float y, const char *string, int maxlen, float scalex
 	DrawQ_String_Real(x,y,string,maxlen,scalex,scaley,red,green,blue,alpha,flags);
 }
 
-
-
-void DrawQ_Fill (float x, float y, float w, float h, float red, float green, float blue, float alpha, int flags)
-{
-	DrawQ_SuperPic(x,y,NULL,w,h,0,0,red,green,blue,alpha,1,0,red,green,blue,alpha,0,1,red,green,blue,alpha,1,1,red,green,blue,alpha,flags);
-}
-
-void DrawQ_SuperPic(float x, float y, const char *picname, float width, float height, float s1, float t1, float r1, float g1, float b1, float a1, float s2, float t2, float r2, float g2, float b2, float a2, float s3, float t3, float r3, float g3, float b3, float a3, float s4, float t4, float r4, float g4, float b4, float a4, int flags)
+void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height, float s1, float t1, float r1, float g1, float b1, float a1, float s2, float t2, float r2, float g2, float b2, float a2, float s3, float t3, float r3, float g3, float b3, float a3, float s4, float t4, float r4, float g4, float b4, float a4, int flags)
 {
 	float floats[36];
-	cachepic_t *pic;
 	drawqueuemesh_t mesh;
 	memset(&mesh, 0, sizeof(mesh));
-	if (picname && picname[0])
+	if (pic)
 	{
-		pic = Draw_CachePic(picname, false);
 		if (width == 0)
 			width = pic->width;
 		if (height == 0)
@@ -1440,7 +1431,7 @@ void SHOWLMP_drawall(void)
 	int i;
 	for (i = 0;i < SHOWLMP_MAXLABELS;i++)
 		if (showlmp[i].isactive)
-			DrawQ_Pic(showlmp[i].x, showlmp[i].y, showlmp[i].pic, 0, 0, 1, 1, 1, 1, 0);
+			DrawQ_Pic(showlmp[i].x, showlmp[i].y, Draw_CachePic(showlmp[i].pic, false), 0, 0, 1, 1, 1, 1, 0);
 }
 
 void SHOWLMP_clear(void)
