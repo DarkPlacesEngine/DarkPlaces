@@ -256,7 +256,7 @@ void gl_backend_init(void)
 
 void GL_SetupView_Orientation_Identity (void)
 {
-	Matrix4x4_CreateIdentity(&backend_viewmatrix);
+	backend_viewmatrix = identitymatrix;
 	memset(&backend_modelmatrix, 0, sizeof(backend_modelmatrix));
 }
 
@@ -445,7 +445,7 @@ void GL_SetupTextureState(void)
 		unit->combinergb = GL_MODULATE;
 		unit->combinealpha = GL_MODULATE;
 		unit->texmatrixenabled = false;
-		unit->matrix = r_identitymatrix;
+		unit->matrix = identitymatrix;
 	}
 
 	for (i = 0;i < backendimageunits;i++)
@@ -1845,7 +1845,7 @@ void SCR_UpdateLoadingScreen (void)
 	R_Textures_Frame();
 	GL_SetupView_Mode_Ortho(0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100);
 	R_Mesh_Start();
-	R_Mesh_Matrix(&r_identitymatrix);
+	R_Mesh_Matrix(&identitymatrix);
 	// draw the loading plaque
 	pic = Draw_CachePic("gfx/loading", false);
 	x = (vid_conwidth.integer - pic->width)/2;

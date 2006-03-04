@@ -30,8 +30,6 @@ extern unsigned char r_worldleafvisible[32768];
 // TODO: dynamic resize according to r_refdef.worldmodel->num_surfaces
 extern unsigned char r_worldsurfacevisible[262144];
 
-extern matrix4x4_t r_identitymatrix;
-
 // 1.0f / N table
 extern float ixtable[4096];
 

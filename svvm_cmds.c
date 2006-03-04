@@ -2258,7 +2258,7 @@ int SV_GetEntityLocalTagMatrix(prvm_edict_t *ent, int tagindex, matrix4x4_t *out
 			frame = 0;
 		return Mod_Alias_GetTagMatrix(model, model->animscenes[frame].firstframe, tagindex, out);
 	}
-	Matrix4x4_CreateIdentity(out);
+	*out = identitymatrix;
 	return 0;
 }
 
@@ -2280,7 +2280,7 @@ int SV_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 	matrix4x4_t entitymatrix, tagmatrix, attachmatrix;
 	model_t *model;
 
-	Matrix4x4_CreateIdentity(out); // warnings and errors return identical matrix
+	*out = identitymatrix; // warnings and errors return identical matrix
 
 	if (ent == prog->edicts)
 		return 1;
@@ -2293,7 +2293,7 @@ int SV_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 
 	model = sv.models[modelindex];
 
-	Matrix4x4_CreateIdentity(&tagmatrix);
+	tagmatrix = identitymatrix;
 	// DP_GFX_QUAKE3MODELTAGS, scan all chain and stop on unattached entity
 	attachloop = 0;
 	for (;;)

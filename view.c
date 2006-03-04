@@ -325,8 +325,8 @@ void V_CalcRefdef (void)
 	if(csqc_loaded)
 		return;
 	VectorClear(gunorg);
-	Matrix4x4_CreateIdentity(&viewmodelmatrix);
-	Matrix4x4_CreateIdentity(&r_refdef.viewentitymatrix);
+	viewmodelmatrix = identitymatrix;
+	r_refdef.viewentitymatrix = identitymatrix;
 	if (cls.state == ca_connected && cls.signon == SIGNONS)
 	{
 		// ent is the view entity (visible when out of body)

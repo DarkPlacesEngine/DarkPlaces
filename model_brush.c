@@ -5359,8 +5359,8 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 	trace->fraction = 1;
 	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
-	Matrix4x4_CreateIdentity(&startmatrix);
-	Matrix4x4_CreateIdentity(&endmatrix);
+	startmatrix = identitymatrix;
+	endmatrix = identitymatrix;
 	segmentmins[0] = min(boxstartmins[0], boxendmins[0]);
 	segmentmins[1] = min(boxstartmins[1], boxendmins[1]);
 	segmentmins[2] = min(boxstartmins[2], boxendmins[2]);

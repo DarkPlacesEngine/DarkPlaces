@@ -236,7 +236,7 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, int sur
 	vec3_t beamdir, right, up, offset;
 	float length, t1, t2;
 
-	R_Mesh_Matrix(&r_identitymatrix);
+	R_Mesh_Matrix(&identitymatrix);
 
 	// calculate beam direction (beamdir) vector and beam length
 	// get difference vector

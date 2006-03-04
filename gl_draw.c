@@ -536,7 +536,7 @@ void R_DrawQueue(void)
 	qglViewport(r_view_x, vid.height - (r_view_y + r_view_height), r_view_width, r_view_height);
 	GL_SetupView_Mode_Ortho(0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100);
 	qglDepthFunc(GL_LEQUAL);
-	R_Mesh_Matrix(&r_identitymatrix);
+	R_Mesh_Matrix(&identitymatrix);
 
 	chartexnum = R_GetTexture(char_texture);
 

@@ -301,7 +301,7 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, int surfacenumber,
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
-	R_Mesh_Matrix(&r_identitymatrix);
+	R_Mesh_Matrix(&identitymatrix);
 
 	memset(&m, 0, sizeof(m));
 	m.pointer_vertex = varray_vertex3f;

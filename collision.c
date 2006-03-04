@@ -1035,7 +1035,6 @@ colbrushf_t *Collision_BrushForBox(const matrix4x4_t *matrix, const vec3_t mins,
 void Collision_ClipTrace_BrushBox(trace_t *trace, const vec3_t cmins, const vec3_t cmaxs, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask)
 {
 	colbrushf_t *boxbrush, *thisbrush_start, *thisbrush_end;
-	matrix4x4_t identitymatrix;
 	vec3_t startmins, startmaxs, endmins, endmaxs;
 
 	// create brushes for the collision
@@ -1043,7 +1042,6 @@ void Collision_ClipTrace_BrushBox(trace_t *trace, const vec3_t cmins, const vec3
 	VectorAdd(start, maxs, startmaxs);
 	VectorAdd(end, mins, endmins);
 	VectorAdd(end, maxs, endmaxs);
-	Matrix4x4_CreateIdentity(&identitymatrix);
 	boxbrush = Collision_BrushForBox(&identitymatrix, cmins, cmaxs);
 	thisbrush_start = Collision_BrushForBox(&identitymatrix, startmins, startmaxs);
 	thisbrush_end = Collision_BrushForBox(&identitymatrix, endmins, endmaxs);
