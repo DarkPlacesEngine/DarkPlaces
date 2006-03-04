@@ -206,6 +206,9 @@ float CGVM_TracePhysics(const float *start, const float *end, const float *world
 char *CGVM_GetCvarString(const char *name)
 {
 	cvar_t *cvar;
+	// fast path for common cvars
+	if (!strcmp(name, "sv_gravity"))
+		return sv_gravity.string;
 	cvar = Cvar_FindVar((char *)name);
 	if (cvar)
 		return cvar->string;
@@ -216,6 +219,9 @@ char *CGVM_GetCvarString(const char *name)
 float CGVM_GetCvarFloat(const char *name)
 {
 	cvar_t *cvar;
+	// fast path for common cvars
+	if (!strcmp(name, "sv_gravity"))
+		return sv_gravity.value;
 	cvar = Cvar_FindVar((char *)name);
 	if (cvar)
 		return cvar->value;
@@ -226,6 +232,9 @@ float CGVM_GetCvarFloat(const char *name)
 int CGVM_GetCvarInt(const char *name)
 {
 	cvar_t *cvar;
+	// fast path for common cvars
+	if (!strcmp(name, "sv_gravity"))
+		return sv_gravity.integer;
 	cvar = Cvar_FindVar((char *)name);
 	if (cvar)
 		return cvar->integer;
