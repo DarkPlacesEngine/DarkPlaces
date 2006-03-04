@@ -459,15 +459,15 @@ const char *builtinshader_light_frag =
 
 int R_Shadow_CompileShaderPermutation(int permutation)
 {
-	if (r_shadow_program_compiledlight[permutation])
-		return r_shadow_program_light[permutation];
-	r_shadow_program_compiledlight[permutation] = true;
 	char *vertstring, *fragstring;
 	int vertstrings_count;
 	int fragstrings_count;
 	const char *vertstrings_list[SHADERPERMUTATION_COUNT+1];
 	const char *fragstrings_list[SHADERPERMUTATION_COUNT+1];
 	char permutationname[256];
+	if (r_shadow_program_compiledlight[permutation])
+		return r_shadow_program_light[permutation];
+	r_shadow_program_compiledlight[permutation] = true;
 	vertstring = (char *)FS_LoadFile("glsl/light.vert", tempmempool, false, NULL);
 	fragstring = (char *)FS_LoadFile("glsl/light.frag", tempmempool, false, NULL);
 	vertstrings_count = 0;
