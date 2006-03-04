@@ -60,6 +60,7 @@ extern void SHOWLMP_clear(void);
 
 // render profiling stuff
 extern char r_speeds_string[1024];
+extern int r_timereport_active;
 
 // lighting stuff
 extern cvar_t r_ambient;
@@ -239,8 +240,6 @@ extern rtexture_t *r_texture_fogattenuation;
 extern rtexture_t *r_texture_fogintensity;
 
 void R_TimeReport(char *name);
-void R_TimeReport_Start(void);
-void R_TimeReport_End(void);
 
 // r_stain
 void R_Stain(const vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, int cr2, int cg2, int cb2, int ca2);

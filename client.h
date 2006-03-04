@@ -833,6 +833,8 @@ extern int cl_max_dlights;
 extern int cl_max_lightstyle;
 extern int cl_max_brushmodel_entities;
 extern int cl_activedlights;
+extern int cl_activeeffects;
+extern int cl_activebeams;
 
 extern entity_t *cl_entities;
 extern entity_t *cl_csqcentities;	//[515]: csqc

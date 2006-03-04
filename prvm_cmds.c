@@ -2683,7 +2683,7 @@ void VM_cin_open( void )
 	VM_CheckEmptyString( file );
     VM_CheckEmptyString( name );
 
-	if( CL_OpenVideo( file, name, MENUOWNER ) )
+	if( CL_OpenVideo( file, name, MENUOWNER, false ) )
 		PRVM_G_FLOAT( OFS_RETURN ) = 1;
 	else
 		PRVM_G_FLOAT( OFS_RETURN ) = 0;

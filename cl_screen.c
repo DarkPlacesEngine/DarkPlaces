@@ -536,11 +536,44 @@ void R_TimeReport(char *desc)
 	}
 }
 
-void R_TimeReport_Start(void)
+void R_TimeReport_Frame(void)
 {
-	r_timereport_active = r_speeds.integer && cls.signon == SIGNONS && cls.state == ca_connected;
-	r_speeds_string[0] = 0;
-	if (r_timereport_active)
+	int i, j, lines, y;
+
+	if (r_speeds_string[0])
+	{
+		if (r_timereport_active)
+			R_TimeReport("total");
+
+		r_timereport_current = r_timereport_start;
+		j = (int)strlen(r_speeds_string);
+		if (r_timereport_active && j > 0)
+		{
+			if (r_speeds_string[j-1] == '\n')
+				r_speeds_string[j-1] = 0;
+			lines = 1;
+			for (i = 0;r_speeds_string[i];i++)
+				if (r_speeds_string[i] == '\n')
+					lines++;
+			y = vid_conheight.integer - sb_lines - lines * 8;
+			i = j = 0;
+			DrawQ_Fill(0, y, vid_conwidth.integer, lines * 8, 0, 0, 0, 0.5, 0);
+			while (r_speeds_string[i])
+			{
+				j = i;
+				while (r_speeds_string[i] && r_speeds_string[i] != '\n')
+					i++;
+				if (i - j > 0)
+					DrawQ_String(0, y, r_speeds_string + j, i - j, 8, 8, 1, 1, 1, 1, 0);
+				if (r_speeds_string[i] == '\n')
+					i++;
+				y += 8;
+			}
+		}
+		r_speeds_string[0] = 0;
+		r_timereport_active = false;
+	}
+	if (r_speeds.integer && cls.signon == SIGNONS && cls.state == ca_connected)
 	{
 		speedstringcount = 0;
 		sprintf(r_speeds_string + strlen(r_speeds_string), "org:'%+8.2f %+8.2f %+8.2f' dir:'%+2.3f %+2.3f %+2.3f'\n", r_vieworigin[0], r_vieworigin[1], r_vieworigin[2], r_viewforward[0], r_viewforward[1], r_viewforward[2]);
@@ -551,41 +584,12 @@ void R_TimeReport_Start(void)
 		else
 			sprintf(r_speeds_string + strlen(r_speeds_string), "rendered%6i meshes%8i triangles\n", renderstats.meshes, renderstats.meshes_elements / 3);
 
-		r_timereport_start = Sys_DoubleTime();
-	}
+		memset(&renderstats, 0, sizeof(renderstats));
 
-	memset(&renderstats, 0, sizeof(renderstats));
-}
-
-void R_TimeReport_End(void)
-{
-	int i, j, lines, y;
-
-	r_timereport_current = r_timereport_start;
-	R_TimeReport("total");
-
-	j = (int)strlen(r_speeds_string);
-	if (r_timereport_active && j > 0)
-	{
-		if (r_speeds_string[j-1] == '\n')
-			r_speeds_string[j-1] = 0;
-		lines = 1;
-		for (i = 0;r_speeds_string[i];i++)
-			if (r_speeds_string[i] == '\n')
-				lines++;
-		y = vid_conheight.integer - sb_lines - lines * 8;
-		i = j = 0;
-		DrawQ_Fill(0, y, vid_conwidth.integer, lines * 8, 0, 0, 0, 0.5, 0);
-		while (r_speeds_string[i])
+		if (r_speeds.integer >= 2)
 		{
-			j = i;
-			while (r_speeds_string[i] && r_speeds_string[i] != '\n')
-				i++;
-			if (i - j > 0)
-				DrawQ_String(0, y, r_speeds_string + j, i - j, 8, 8, 1, 1, 1, 1, 0);
-			if (r_speeds_string[i] == '\n')
-				i++;
-			y += 8;
+			r_timereport_active = true;
+			r_timereport_start = Sys_DoubleTime();
 		}
 	}
 }
@@ -1511,14 +1515,14 @@ void CL_UpdateScreen(void)
 
 	SCR_CaptureVideo();
 
-	if (cls.signon == SIGNONS)
+	if (r_timereport_active)
 		R_TimeReport("other");
 
 	CL_SetupScreenSize();
 
 	DrawQ_Clear();
 
-	if (cls.signon == SIGNONS)
+	if (r_timereport_active)
 		R_TimeReport("setup");
 
 	//FIXME: force menu if nothing else to look at?
@@ -1540,9 +1544,9 @@ void CL_UpdateScreen(void)
 	//ui_draw();
 	if (cls.signon == SIGNONS)
 	{
-		R_TimeReport("2d");
-		R_TimeReport_End();
-		R_TimeReport_Start();
+		if (r_timereport_active)
+			R_TimeReport("2d");
+		R_TimeReport_Frame();
 	}
 	R_Shadow_EditLights_DrawSelectedLightProperties();
 
