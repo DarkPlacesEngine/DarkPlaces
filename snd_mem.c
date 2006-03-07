@@ -82,8 +82,8 @@ size_t ResampleSfx (const unsigned char *in_data, size_t in_length, const snd_fo
 		// also to be able to handle very long sounds.
 		while (total_out < outcount)
 		{
-			size_t tmpcount, i, j;
-			unsigned int interpolation_limit, srcsample;
+			size_t tmpcount, interpolation_limit, i, j;
+			unsigned int srcsample;
 
 			samplefrac = 0;
 

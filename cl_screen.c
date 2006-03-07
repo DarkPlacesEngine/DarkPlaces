@@ -514,7 +514,7 @@ void R_TimeReport(char *desc)
 	t = (int) ((r_timereport_current - r_timereport_temp) * 1000000.0);
 
 	dpsnprintf(tempbuf, sizeof(tempbuf), "%8i %-11s", t, desc);
-	length = strlen(tempbuf);
+	length = (int)strlen(tempbuf);
 	if (speedstringcount + length > (vid_conwidth.integer / 8))
 	{
 		strlcat(r_speeds_string, "\n", sizeof(r_speeds_string));
