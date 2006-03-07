@@ -713,7 +713,7 @@ extern float *rsurface_vertex3f;
 extern float *rsurface_svector3f;
 extern float *rsurface_tvector3f;
 extern float *rsurface_normal3f;
-extern void RSurf_SetVertexPointer(const entity_render_t *ent, const texture_t *texture, const msurface_t *surface, const vec3_t modelorg);
+extern void RSurf_SetVertexPointer(const entity_render_t *ent, const texture_t *texture, const msurface_t *surface, const vec3_t modelorg, qboolean generatenormals, qboolean generatetangents);
 
 void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs)
 {
@@ -753,7 +753,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 			texture = surface->texture;//R_FetchAliasSkin(ent, surface->groupmesh);
 			if (texture->currentmaterialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT) || !surface->num_triangles)
 				continue;
-			RSurf_SetVertexPointer(ent, texture, surface, modelorg);
+			RSurf_SetVertexPointer(ent, texture, surface, modelorg, false, false);
 			// identify lit faces within the bounding box
 			R_Shadow_PrepareShadowMark(surface->groupmesh->num_triangles);
 			R_Shadow_MarkVolumeFromBox(surface->num_firsttriangle, surface->num_triangles, rsurface_vertex3f, surface->groupmesh->data_element3i, relativelightorigin, lightmins, lightmaxs, surface->mins, surface->maxs);
