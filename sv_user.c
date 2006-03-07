@@ -607,6 +607,9 @@ qboolean SV_ReadClientMove (void)
 	qboolean kickplayer = false;
 	int i;
 	double oldmovetime;
+#ifdef NUM_PING_TIMES
+	double total;
+#endif
 	usercmd_t *move = &host_client->cmd;
 
 	oldmovetime = move->time;
@@ -623,6 +626,16 @@ qboolean SV_ReadClientMove (void)
 	move->time = MSG_ReadFloat ();
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	move->receivetime = sv.time;
+
+	// calculate average ping time
+	host_client->ping = move->receivetime - move->time;
+#ifdef NUM_PING_TIMES
+	host_client->ping_times[host_client->num_pings % NUM_PING_TIMES] = move->receivetime - move->time;
+	host_client->num_pings++;
+	for (i=0, total = 0;i < NUM_PING_TIMES;i++)
+		total += host_client->ping_times[i];
+	host_client->ping = total / NUM_PING_TIMES;
+#endif
 
 	// read current angles
 	for (i = 0;i < 3;i++)
@@ -717,27 +730,18 @@ qboolean SV_ReadClientMove (void)
 
 void SV_ApplyClientMove (void)
 {
-#ifdef NUM_PING_TIMES
-	int i;
-	float total;
-#endif
 	prvm_eval_t *val;
 	usercmd_t *move = &host_client->cmd;
 
-	if (!move->receivetime || move->applied)
+	if (!move->receivetime)
 		return;
 
+	// note: a move can be applied multiple times if the client packets are
+	// not coming as often as the physics is executed, and the move must be
+	// applied before running qc each time because the id1 qc had a bug where
+	// it clears self.button2 in PlayerJump, causing pogostick behavior if
+	// moves are not applied every time before calling qc
 	move->applied = true;
-
-	// calculate average ping time
-	host_client->ping = move->receivetime - move->time;
-#ifdef NUM_PING_TIMES
-	host_client->ping_times[host_client->num_pings % NUM_PING_TIMES] = move->receivetime - move->time;
-	host_client->num_pings++;
-	for (i=0, total = 0;i < NUM_PING_TIMES;i++)
-		total += host_client->ping_times[i];
-	host_client->ping = total / NUM_PING_TIMES;
-#endif
 
 	// set the edict fields
 	host_client->edict->fields.server->button0 = move->buttons & 1;
