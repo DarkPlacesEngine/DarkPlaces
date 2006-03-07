@@ -33,7 +33,7 @@ ResampleSfx
 */
 size_t ResampleSfx (const unsigned char *in_data, size_t in_length, const snd_format_t* in_format, unsigned char *out_data, const char* sfxname)
 {
-	size_t srclength, outcount, i;
+	size_t srclength, outcount;
 
 	srclength = in_length * in_format->channels;
 	outcount = (double)in_length * shm->format.speed / in_format->speed;
@@ -46,6 +46,8 @@ size_t ResampleSfx (const unsigned char *in_data, size_t in_length, const snd_fo
 	{
 		if (in_format->width == 1)
 		{
+			size_t i;
+
 			for (i = 0; i < srclength; i++)
 				((signed char*)out_data)[i] = in_data[i] - 128;
 		}
@@ -80,61 +82,110 @@ size_t ResampleSfx (const unsigned char *in_data, size_t in_length, const snd_fo
 		// also to be able to handle very long sounds.
 		while (total_out < outcount)
 		{
-			size_t tmpcount;
+			size_t tmpcount, i, j;
+			unsigned int interpolation_limit, srcsample;
 
 			samplefrac = 0;
 
 			// If more than 1 sec of sound remains to be converted
 			if (outcount - total_out > shm->format.speed)
-				tmpcount = shm->format.speed;
-			else
-				tmpcount = outcount - total_out;
-
-			// Convert up to 1 sec of sound
-			for (i = 0; i < tmpcount; i++)
 			{
-				unsigned int j = 0;
-				unsigned int srcsample = (samplefrac >> FRACTIONAL_BITS) * in_format->channels;
-				int a, b;
+				tmpcount = shm->format.speed;
+				interpolation_limit = tmpcount;  // all samples can be interpolated
+			}
+			else
+			{
+				tmpcount = outcount - total_out;
+				interpolation_limit = ceil((double)(((remain_in / in_format->channels) - 1) << FRACTIONAL_BITS) / fracstep);
+				if (interpolation_limit > tmpcount)
+					interpolation_limit = tmpcount;
+			}
 
-				// 16 bit samples
-				if (in_format->width == 2)
+			// 16 bit samples
+			if (in_format->width == 2)
+			{
+				const short* in_ptr_short;
+
+				// Interpolated part
+				for (i = 0; i < interpolation_limit; i++)
 				{
-					for (j = 0; j < in_format->channels; j++, srcsample++)
-					{
-						// No value to interpolate with?
-						if (srcsample + in_format->channels < remain_in)
-						{
-							a = ((const short*)in_ptr)[srcsample];
-							b = ((const short*)in_ptr)[srcsample + in_format->channels];
-							*((short*)out_ptr) = (((b - a) * (samplefrac & FRACTIONAL_MASK)) >> FRACTIONAL_BITS) + a;
-						}
-						else
-							*((short*)out_ptr) = ((const short*)in_ptr)[srcsample];
+					srcsample = (samplefrac >> FRACTIONAL_BITS) * in_format->channels;
+					in_ptr_short = &((const short*)in_ptr)[srcsample];
 
+					for (j = 0; j < in_format->channels; j++)
+					{
+						int a, b;
+
+						a = *in_ptr_short;
+						b = *(in_ptr_short + in_format->channels);
+						*((short*)out_ptr) = (((b - a) * (samplefrac & FRACTIONAL_MASK)) >> FRACTIONAL_BITS) + a;
+
+						in_ptr_short++;
 						out_ptr += sizeof (short);
 					}
-				}
-				// 8 bit samples
-				else  // if (in_format->width == 1)
-				{
-					for (j = 0; j < in_format->channels; j++, srcsample++)
-					{
-						// No more value to interpolate with?
-						if (srcsample + in_format->channels < remain_in)
-						{
-							a = ((const unsigned char*)in_ptr)[srcsample] - 128;
-							b = ((const unsigned char*)in_ptr)[srcsample + in_format->channels] - 128;
-							*((signed char*)out_ptr) = (((b - a) * (samplefrac & FRACTIONAL_MASK)) >> FRACTIONAL_BITS) + a;
-						}
-						else
-							*((signed char*)out_ptr) = ((const unsigned char*)in_ptr)[srcsample] - 128;
 
+					samplefrac += fracstep;
+				}
+
+				// Non-interpolated part
+				for (/* nothing */; i < tmpcount; i++)
+				{
+					srcsample = (samplefrac >> FRACTIONAL_BITS) * in_format->channels;
+					in_ptr_short = &((const short*)in_ptr)[srcsample];
+
+					for (j = 0; j < in_format->channels; j++)
+					{
+						*((short*)out_ptr) = *in_ptr_short;
+
+						in_ptr_short++;
+						out_ptr += sizeof (short);
+					}
+
+					samplefrac += fracstep;
+				}
+			}
+			// 8 bit samples
+			else  // if (in_format->width == 1)
+			{
+				const unsigned char* in_ptr_byte;
+
+				// Convert up to 1 sec of sound
+				for (i = 0; i < interpolation_limit; i++)
+				{
+					srcsample = (samplefrac >> FRACTIONAL_BITS) * in_format->channels;
+					in_ptr_byte = &((const unsigned char*)in_ptr)[srcsample];
+
+					for (j = 0; j < in_format->channels; j++)
+					{
+						int a, b;
+
+						a = *in_ptr_byte - 128;
+						b = *(in_ptr_byte + in_format->channels) - 128;
+						*((signed char*)out_ptr) = (((b - a) * (samplefrac & FRACTIONAL_MASK)) >> FRACTIONAL_BITS) + a;
+
+						in_ptr_byte++;
 						out_ptr += sizeof (signed char);
 					}
+
+					samplefrac += fracstep;
 				}
 
-				samplefrac += fracstep;
+				// Non-interpolated part
+				for (/* nothing */; i < tmpcount; i++)
+				{
+					srcsample = (samplefrac >> FRACTIONAL_BITS) * in_format->channels;
+					in_ptr_byte = &((const unsigned char*)in_ptr)[srcsample];
+
+					for (j = 0; j < in_format->channels; j++)
+					{
+						*((signed char*)out_ptr) = *in_ptr_byte - 128;
+
+						in_ptr_byte++;
+						out_ptr += sizeof (signed char);
+					}
+
+					samplefrac += fracstep;
+				}
 			}
 
 			// Update the counters and the buffer position
