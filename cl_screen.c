@@ -513,11 +513,8 @@ void R_TimeReport(char *desc)
 	r_timereport_current = Sys_DoubleTime();
 	t = (int) ((r_timereport_current - r_timereport_temp) * 1000000.0);
 
-	dpsnprintf(tempbuf, sizeof(tempbuf), "%8i %s", t, desc);
-	length = (int)strlen(tempbuf);
-	while (length < 20)
-		tempbuf[length++] = ' ';
-	tempbuf[length] = 0;
+	dpsnprintf(tempbuf, sizeof(tempbuf), "%8i %-11s", t, desc);
+	length = strlen(tempbuf);
 	if (speedstringcount + length > (vid_conwidth.integer / 8))
 	{
 		strlcat(r_speeds_string, "\n", sizeof(r_speeds_string));
@@ -546,29 +543,25 @@ void R_TimeReport_Frame(void)
 			R_TimeReport("total");
 
 		r_timereport_current = r_timereport_start;
-		j = (int)strlen(r_speeds_string);
-		if (r_timereport_active && j > 0)
+		if (r_speeds_string[strlen(r_speeds_string)-1] == '\n')
+			r_speeds_string[strlen(r_speeds_string)-1] = 0;
+		lines = 1;
+		for (i = 0;r_speeds_string[i];i++)
+			if (r_speeds_string[i] == '\n')
+				lines++;
+		y = vid_conheight.integer - sb_lines - lines * 8;
+		i = j = 0;
+		DrawQ_Pic(0, y, NULL, vid_conwidth.integer, lines * 8, 0, 0, 0, 0.5, 0);
+		while (r_speeds_string[i])
 		{
-			if (r_speeds_string[j-1] == '\n')
-				r_speeds_string[j-1] = 0;
-			lines = 1;
-			for (i = 0;r_speeds_string[i];i++)
-				if (r_speeds_string[i] == '\n')
-					lines++;
-			y = vid_conheight.integer - sb_lines - lines * 8;
-			i = j = 0;
-			DrawQ_Pic(0, y, NULL, vid_conwidth.integer, lines * 8, 0, 0, 0, 0.5, 0);
-			while (r_speeds_string[i])
-			{
-				j = i;
-				while (r_speeds_string[i] && r_speeds_string[i] != '\n')
-					i++;
-				if (i - j > 0)
-					DrawQ_String(0, y, r_speeds_string + j, i - j, 8, 8, 1, 1, 1, 1, 0);
-				if (r_speeds_string[i] == '\n')
-					i++;
-				y += 8;
-			}
+			j = i;
+			while (r_speeds_string[i] && r_speeds_string[i] != '\n')
+				i++;
+			if (i - j > 0)
+				DrawQ_String(0, y, r_speeds_string + j, i - j, 8, 8, 1, 1, 1, 1, 0);
+			if (r_speeds_string[i] == '\n')
+				i++;
+			y += 8;
 		}
 		r_speeds_string[0] = 0;
 		r_timereport_active = false;
@@ -576,6 +569,8 @@ void R_TimeReport_Frame(void)
 	if (r_speeds.integer && cls.signon == SIGNONS && cls.state == ca_connected)
 	{
 		speedstringcount = 0;
+		r_speeds_string[0] = 0;
+		r_timereport_active = false;
 		sprintf(r_speeds_string + strlen(r_speeds_string), "org:'%+8.2f %+8.2f %+8.2f' dir:'%+2.3f %+2.3f %+2.3f'\n", r_vieworigin[0], r_vieworigin[1], r_vieworigin[2], r_viewforward[0], r_viewforward[1], r_viewforward[2]);
 		sprintf(r_speeds_string + strlen(r_speeds_string), "%5i entities%6i surfaces%6i triangles%5i leafs%5i portals%6i particles\n", renderstats.entities, renderstats.entities_surfaces, renderstats.entities_triangles, renderstats.world_leafs, renderstats.world_portals, renderstats.particles);
 		sprintf(r_speeds_string + strlen(r_speeds_string), "%4i lights%4i clears%4i scissored%7i light%7i shadow%7i dynamic\n", renderstats.lights, renderstats.lights_clears, renderstats.lights_scissored, renderstats.lights_lighttriangles, renderstats.lights_shadowtriangles, renderstats.lights_dynamicshadowtriangles);
