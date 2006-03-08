@@ -73,6 +73,18 @@ void SV_Phys_Init (void)
 }
 
 /*
+============
+SV_TestEntityPosition
+
+returns true if the entity is in solid currently
+============
+*/
+static int SV_TestEntityPosition (prvm_edict_t *ent, int movemode)
+{
+	return SV_Move (ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, ent->fields.server->origin, movemode, ent).startsolid;
+}
+
+/*
 ================
 SV_CheckAllEnts
 ================
@@ -94,7 +106,7 @@ void SV_CheckAllEnts (void)
 		 || check->fields.server->movetype == MOVETYPE_NOCLIP)
 			continue;
 
-		if (SV_TestEntityPosition (check))
+		if (SV_TestEntityPosition (check, MOVE_NORMAL))
 			Con_Print("entity in invalid position\n");
 	}
 }
@@ -819,7 +831,7 @@ void SV_CheckStuck (prvm_edict_t *ent)
 	int i, j, z;
 	vec3_t org;
 
-	if (!SV_TestEntityPosition(ent))
+	if (!SV_TestEntityPosition(ent, MOVE_NORMAL))
 	{
 		VectorCopy (ent->fields.server->origin, ent->fields.server->oldorigin);
 		return;
@@ -827,7 +839,7 @@ void SV_CheckStuck (prvm_edict_t *ent)
 
 	VectorCopy (ent->fields.server->origin, org);
 	VectorCopy (ent->fields.server->oldorigin, ent->fields.server->origin);
-	if (!SV_TestEntityPosition(ent))
+	if (!SV_TestEntityPosition(ent, MOVE_NORMAL))
 	{
 		Con_DPrintf("Unstuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
 		SV_LinkEdict (ent, true);
@@ -841,7 +853,7 @@ void SV_CheckStuck (prvm_edict_t *ent)
 				ent->fields.server->origin[0] = org[0] + i;
 				ent->fields.server->origin[1] = org[1] + j;
 				ent->fields.server->origin[2] = org[2] + z;
-				if (!SV_TestEntityPosition(ent))
+				if (!SV_TestEntityPosition(ent, MOVE_NORMAL))
 				{
 					Con_DPrintf("Unstuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
 					SV_LinkEdict (ent, true);
@@ -853,10 +865,14 @@ void SV_CheckStuck (prvm_edict_t *ent)
 	Con_DPrintf("Stuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
 }
 
-void SV_UnstickEntity (prvm_edict_t *ent)
+static void SV_UnstickEntity (prvm_edict_t *ent)
 {
 	int i, j, z;
 	vec3_t org;
+
+	// if not stuck in a bmodel, just return
+	if (!SV_TestEntityPosition(ent, MOVE_NOMONSTERS))
+		return;
 
 	VectorCopy (ent->fields.server->origin, org);
 
@@ -867,7 +883,7 @@ void SV_UnstickEntity (prvm_edict_t *ent)
 				ent->fields.server->origin[0] = org[0] + i;
 				ent->fields.server->origin[1] = org[1] + j;
 				ent->fields.server->origin[2] = org[2] + z;
-				if (!SV_TestEntityPosition(ent))
+				if (!SV_TestEntityPosition(ent, MOVE_NOMONSTERS))
 				{
 					Con_DPrintf("Unstuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
 					SV_LinkEdict (ent, true);

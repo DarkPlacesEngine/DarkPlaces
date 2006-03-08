@@ -398,27 +398,6 @@ void SV_LinkEdict (prvm_edict_t *ent, qboolean touch_triggers)
 /*
 ===============================================================================
 
-POINT TESTING IN HULLS
-
-===============================================================================
-*/
-
-/*
-============
-SV_TestEntityPosition
-
-This could be a lot more efficient...
-============
-*/
-int SV_TestEntityPosition (prvm_edict_t *ent)
-{
-	return SV_Move (ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, ent->fields.server->origin, MOVE_NORMAL, ent).startsolid;
-}
-
-
-/*
-===============================================================================
-
 LINE TESTING IN HULLS
 
 ===============================================================================
