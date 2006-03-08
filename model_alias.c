@@ -1164,12 +1164,6 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		Host_Error ("Mod_ZYMOTICMODEL_Load: only type 1 (skeletal pose) models are currently supported (name = %s)", loadmodel->name);
 
 	loadmodel->type = mod_alias;
-	loadmodel->DrawSky = NULL;
-	loadmodel->Draw = R_Q1BSP_Draw;
-	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
-	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
-	loadmodel->DrawLight = R_Q1BSP_DrawLight;
-	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 	loadmodel->flags = 0; // there are no flags on zym models
 	loadmodel->synctype = ST_RAND;
 
@@ -1207,6 +1201,24 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	pheader->lump_shaders.length = BigLong(pinmodel->lump_shaders.length);
 	pheader->lump_trizone.start = BigLong(pinmodel->lump_trizone.start);
 	pheader->lump_trizone.length = BigLong(pinmodel->lump_trizone.length);
+
+	if (pheader->numtris < 1 || pheader->numverts < 3 || pheader->numshaders < 1)
+	{
+		Con_Printf("%s has no geometry\n");
+		return;
+	}
+	if (pheader->numscenes < 1 || pheader->lump_poses.length < (int)sizeof(float[3][4]))
+	{
+		Con_Printf("%s has no animations\n");
+		return;
+	}
+
+	loadmodel->DrawSky = NULL;
+	loadmodel->Draw = R_Q1BSP_Draw;
+	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
+	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
+	loadmodel->DrawLight = R_Q1BSP_DrawLight;
+	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 
 	loadmodel->numframes = pheader->numscenes;
 	loadmodel->num_surfaces = pheader->numshaders;
@@ -1457,12 +1469,6 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		Host_Error ("Mod_DARKPLACESMODEL_Load: only type 2 (hierarchical skeletal pose) models are currently supported (name = %s)", loadmodel->name);
 
 	loadmodel->type = mod_alias;
-	loadmodel->DrawSky = NULL;
-	loadmodel->Draw = R_Q1BSP_Draw;
-	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
-	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
-	loadmodel->DrawLight = R_Q1BSP_DrawLight;
-	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 	loadmodel->flags = 0; // there are no flags on zym models
 	loadmodel->synctype = ST_RAND;
 
@@ -1483,6 +1489,24 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	pheader->ofs_bones = BigLong(pheader->ofs_bones);
 	pheader->ofs_meshs = BigLong(pheader->ofs_meshs);
 	pheader->ofs_frames = BigLong(pheader->ofs_frames);
+
+	if (pheader->num_bones < 1 || pheader->num_meshs < 1)
+	{
+		Con_Printf("%s has no geometry\n");
+		return;
+	}
+	if (pheader->num_frames < 1)
+	{
+		Con_Printf("%s has no frames\n");
+		return;
+	}
+
+	loadmodel->DrawSky = NULL;
+	loadmodel->Draw = R_Q1BSP_Draw;
+	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
+	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
+	loadmodel->DrawLight = R_Q1BSP_DrawLight;
+	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 
 	// model bbox
 	for (i = 0;i < 3;i++)
