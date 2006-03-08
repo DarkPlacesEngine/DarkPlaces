@@ -43,9 +43,6 @@ void SV_UnlinkEdict (prvm_edict_t *ent);
 // if touchtriggers, calls prog functions for the intersected triggers
 void SV_LinkEdict (prvm_edict_t *ent, qboolean touch_triggers);
 
-// returns true if the entity is in solid currently
-int SV_TestEntityPosition (prvm_edict_t *ent);
-
 // returns list of entities touching a box
 int SV_EntitiesInBox(vec3_t mins, vec3_t maxs, int maxlist, prvm_edict_t **list);
 
