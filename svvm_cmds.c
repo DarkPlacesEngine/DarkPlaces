@@ -2440,6 +2440,9 @@ void PF_spawnclient (void)
 		{
 			prog->xfunction->builtinsprofile += 100;
 			SV_ConnectClient (i, NULL);
+			// this has to be set or else ClientDisconnect won't be called
+			// we assume the qc will call ClientConnect...
+			svs.clients[i].clientconnectcalled = true;
 			ed = PRVM_EDICT_NUM(i + 1);
 			break;
 		}
