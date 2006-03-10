@@ -1124,6 +1124,9 @@ void SV_WalkMove (prvm_edict_t *ent)
 
 	if (downtrace.fraction < 1 && downtrace.plane.normal[2] > 0.7)
 	{
+		// this has been disabled so that you can't jump when you are stepping
+		// up while already jumping (also known as the Quake2 stair jump bug)
+#if 0
 		// LordHavoc: disabled this check so you can walk on monsters/players
 		//if (ent->fields.server->solid == SOLID_BSP)
 		{
@@ -1131,6 +1134,7 @@ void SV_WalkMove (prvm_edict_t *ent)
 			ent->fields.server->flags =	(int)ent->fields.server->flags | FL_ONGROUND;
 			ent->fields.server->groundentity = PRVM_EDICT_TO_PROG(downtrace.ent);
 		}
+#endif
 	}
 	else
 	{
