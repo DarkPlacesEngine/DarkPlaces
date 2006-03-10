@@ -757,7 +757,7 @@ static int Mod_Q1BSP_RecursiveHullCheckPoint(RecursiveHullCheckTraceInfo_t *t, i
 }
 #endif
 
-static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs, int hitsupercontentsmask)
+static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask)
 {
 	// this function currently only supports same size start and end
 	double boxsize[3];
@@ -770,7 +770,7 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace,
 	rhc.trace->fraction = 1;
 	rhc.trace->realfraction = 1;
 	rhc.trace->allsolid = true;
-	VectorSubtract(boxstartmaxs, boxstartmins, boxsize);
+	VectorSubtract(boxmaxs, boxmins, boxsize);
 	if (boxsize[0] < 3)
 		rhc.hull = &model->brushq1.hulls[0]; // 0x0x0
 	else if (model->brush.ismcbsp)
@@ -803,15 +803,15 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace,
 		else
 			rhc.hull = &model->brushq1.hulls[2]; // 64x64x88
 	}
-	VectorSubtract(boxstartmins, rhc.hull->clip_mins, rhc.start);
-	VectorSubtract(boxendmins, rhc.hull->clip_mins, rhc.end);
+	VectorMAMAM(1, start, 1, boxmins, -1, rhc.hull->clip_mins, rhc.start);
+	VectorMAMAM(1, end, 1, boxmins, -1, rhc.hull->clip_mins, rhc.end);
 	VectorSubtract(rhc.end, rhc.start, rhc.dist);
 #if COLLISIONPARANOID >= 2
 	Con_Printf("t(%f %f %f,%f %f %f,%i %f %f %f)", rhc.start[0], rhc.start[1], rhc.start[2], rhc.end[0], rhc.end[1], rhc.end[2], rhc.hull - model->brushq1.hulls, rhc.hull->clip_mins[0], rhc.hull->clip_mins[1], rhc.hull->clip_mins[2]);
 	Mod_Q1BSP_RecursiveHullCheck(&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
 	Con_Print("\n");
 #else
-	if (DotProduct(rhc.dist, rhc.dist))
+	if (VectorLength2(rhc.dist))
 		Mod_Q1BSP_RecursiveHullCheck(&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
 	else
 		Mod_Q1BSP_RecursiveHullCheckPoint(&rhc, rhc.hull->firstclipnode);
@@ -5042,53 +5042,54 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, model_t *model,
 	float dist1, dist2, midfrac, mid[3], nodesegmentmins[3], nodesegmentmaxs[3];
 	mleaf_t *leaf;
 	msurface_t *surface;
+	mplane_t *plane;
 	colbrushf_t *brush;
-	if (startfrac > trace->realfraction)
-		return;
-	// note: all line fragments past first impact fraction are ignored
-	if (VectorCompare(start, end))
+	// walk the tree until we hit a leaf, recursing for any split cases
+	while (node->plane)
 	{
-		// find which leaf the point is in
-		while (node->plane)
-			node = node->children[DotProduct(start, node->plane->normal) < node->plane->dist];
-	}
-	else
-	{
-		// find which nodes the line is in and recurse for them
-		while (node->plane)
+		plane = node->plane;
+		// axial planes are much more common than non-axial, so an optimized
+		// axial case pays off here
+		if (plane->type < 3)
 		{
-			// recurse down node sides
-			dist1 = PlaneDiff(start, node->plane);
-			dist2 = PlaneDiff(end, node->plane);
-			startside = dist1 < 0;
-			endside = dist2 < 0;
-			if (startside == endside)
-			{
-				// most of the time the line fragment is on one side of the plane
-				node = node->children[startside];
-			}
-			else
-			{
-				// line crosses node plane, split the line
-				dist1 = PlaneDiff(linestart, node->plane);
-				dist2 = PlaneDiff(lineend, node->plane);
-				midfrac = dist1 / (dist1 - dist2);
-				VectorLerp(linestart, midfrac, lineend, mid);
-				// take the near side first
-				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, node->children[startside], start, mid, startfrac, midfrac, linestart, lineend, markframe, segmentmins, segmentmaxs);
-				if (midfrac <= trace->realfraction)
-					Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, node->children[endside], mid, end, midfrac, endfrac, linestart, lineend, markframe, segmentmins, segmentmaxs);
-				return;
-			}
+			dist1 = start[plane->type] - plane->dist;
+			dist2 = end[plane->type] - plane->dist;
+		}
+		else
+		{
+			dist1 = DotProduct(start, plane->normal) - plane->dist;
+			dist2 = DotProduct(end, plane->normal) - plane->dist;
+		}
+		startside = dist1 < 0;
+		endside = dist2 < 0;
+		if (startside == endside)
+		{
+			// most of the time the line fragment is on one side of the plane
+			node = node->children[startside];
+		}
+		else
+		{
+			// line crosses node plane, split the line
+			dist1 = PlaneDiff(linestart, plane);
+			dist2 = PlaneDiff(lineend, plane);
+			midfrac = dist1 / (dist1 - dist2);
+			VectorLerp(linestart, midfrac, lineend, mid);
+			// take the near side first
+			Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, node->children[startside], start, mid, startfrac, midfrac, linestart, lineend, markframe, segmentmins, segmentmaxs);
+			// if we found an impact on the front side, don't waste time
+			// exploring the far side
+			if (midfrac <= trace->realfraction)
+				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, node->children[endside], mid, end, midfrac, endfrac, linestart, lineend, markframe, segmentmins, segmentmaxs);
+			return;
 		}
 	}
 	// hit a leaf
-	nodesegmentmins[0] = min(start[0], end[0]);
-	nodesegmentmins[1] = min(start[1], end[1]);
-	nodesegmentmins[2] = min(start[2], end[2]);
-	nodesegmentmaxs[0] = max(start[0], end[0]);
-	nodesegmentmaxs[1] = max(start[1], end[1]);
-	nodesegmentmaxs[2] = max(start[2], end[2]);
+	nodesegmentmins[0] = min(start[0], end[0]) - 1;
+	nodesegmentmins[1] = min(start[1], end[1]) - 1;
+	nodesegmentmins[2] = min(start[2], end[2]) - 1;
+	nodesegmentmaxs[0] = max(start[0], end[0]) + 1;
+	nodesegmentmaxs[1] = max(start[1], end[1]) + 1;
+	nodesegmentmaxs[2] = max(start[2], end[2]) + 1;
 	// line trace the brushes
 	leaf = (mleaf_t *)node;
 	for (i = 0;i < leaf->numleafbrushes;i++)
@@ -5098,8 +5099,6 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, model_t *model,
 		{
 			brush->markframe = markframe;
 			Collision_TraceLineBrushFloat(trace, linestart, lineend, brush, brush);
-			if (startfrac > trace->realfraction)
-				return;
 		}
 	}
 	// can't do point traces on curves (they have no thickness)
@@ -5113,8 +5112,6 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, model_t *model,
 			{
 				surface->collisionmarkframe = markframe;
 				Collision_TraceLineTriangleMeshFloat(trace, linestart, lineend, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->texture->supercontents, segmentmins, segmentmaxs);
-				if (startfrac > trace->realfraction)
-					return;
 			}
 		}
 	}
@@ -5129,15 +5126,12 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, model_t *model
 	msurface_t *surface;
 	mplane_t *plane;
 	float nodesegmentmins[3], nodesegmentmaxs[3];
-#if 1
-	for (;;)
+	// walk the tree until we hit a leaf, recursing for any split cases
+	while (node->plane)
 	{
 		plane = node->plane;
-		if (!plane)
-			break;
 		// axial planes are much more common than non-axial, so an optimized
 		// axial case pays off here
-		// we must handle sides == 0 because of NANs (crashing is far worse than recursing the entire tree!)
 		if (plane->type < 3)
 		{
 			// this is an axial plane, compare bounding box directly to it and
@@ -5147,183 +5141,32 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, model_t *model
 			//sides = BoxOnPlaneSide(nodesegmentmins, nodesegmentmaxs, plane);
 			//sides = ((segmentmaxs[plane->type] >= plane->dist) | ((segmentmins[plane->type] < plane->dist) << 1));
 			sides = ((segmentmaxs[plane->type] >= plane->dist) + ((segmentmins[plane->type] < plane->dist) * 2));
-			if (sides == 3)
-			{
-				// segment box crosses plane
-				Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
-				sides = 2;
-			}
 		}
 		else
 		{
-			// this is a non-axial plane, entire trace bounding box
-			// comparisons against it are likely to be very sloppy, so in if
-			// the whole box is split by the plane we then test the start/end
-			// boxes against it to be sure
-			sides = BoxOnPlaneSide(segmentmins, segmentmaxs, plane);
-			if (sides == 3)
-			{
-				// segment box crosses plane
-				// now check start and end brush boxes to handle a lot of 'diagonal' cases more efficiently...
-				sides = BoxOnPlaneSide(thisbrush_start->mins, thisbrush_start->maxs, plane) | BoxOnPlaneSide(thisbrush_end->mins, thisbrush_end->maxs, plane);
-				if (sides == 3)
-				{
-					Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
-					sides = 2;
-				}
-			}
+			// this is a non-axial plane, so check if the start and end boxes
+			// are both on one side of the plane to handle 'diagonal' cases
+			sides = BoxOnPlaneSide(thisbrush_start->mins, thisbrush_start->maxs, plane) | BoxOnPlaneSide(thisbrush_end->mins, thisbrush_end->maxs, plane);
 		}
+		if (sides == 3)
+		{
+			// segment crosses plane
+			Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
+			sides = 2;
+		}
+		// if sides == 0 then the trace itself is bogus (Not A Number values),
+		// in this case we simply pretend the trace hit nothing
 		if (sides == 0)
 			return; // ERROR: NAN bounding box!
 		// take whichever side the segment box is on
-		//if (sides < 1 || sides > 2)
-		//	Sys_Error("Mod_Q3BSP_TraceBrush_RecursiveBSPNode: side > 2\n");
 		node = node->children[sides - 1];
 	}
-	nodesegmentmins[0] = max(segmentmins[0], node->mins[0]);
-	nodesegmentmins[1] = max(segmentmins[1], node->mins[1]);
-	nodesegmentmins[2] = max(segmentmins[2], node->mins[2]);
-	nodesegmentmaxs[0] = min(segmentmaxs[0], node->maxs[0]);
-	nodesegmentmaxs[1] = min(segmentmaxs[1], node->maxs[1]);
-	nodesegmentmaxs[2] = min(segmentmaxs[2], node->maxs[2]);
-#elif 1
-	for (;;)
-	{
-		nodesegmentmins[0] = max(segmentmins[0], node->mins[0]);
-		nodesegmentmins[1] = max(segmentmins[1], node->mins[1]);
-		nodesegmentmins[2] = max(segmentmins[2], node->mins[2]);
-		nodesegmentmaxs[0] = min(segmentmaxs[0], node->maxs[0]);
-		nodesegmentmaxs[1] = min(segmentmaxs[1], node->maxs[1]);
-		nodesegmentmaxs[2] = min(segmentmaxs[2], node->maxs[2]);
-		if (nodesegmentmins[0] > nodesegmentmaxs[0] || nodesegmentmins[1] > nodesegmentmaxs[1] || nodesegmentmins[2] > nodesegmentmaxs[2])
-			return;
-		if (!node->plane)
-			break;
-		Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
-		node = node->children[1];
-	}
-#elif 0
-	// FIXME: could be made faster by copying TraceLine code and making it use
-	// box plane distances...  (variant on the BoxOnPlaneSide code)
-	for (;;)
-	{
-		nodesegmentmins[0] = max(segmentmins[0], node->mins[0]);
-		nodesegmentmins[1] = max(segmentmins[1], node->mins[1]);
-		nodesegmentmins[2] = max(segmentmins[2], node->mins[2]);
-		nodesegmentmaxs[0] = min(segmentmaxs[0], node->maxs[0]);
-		nodesegmentmaxs[1] = min(segmentmaxs[1], node->maxs[1]);
-		nodesegmentmaxs[2] = min(segmentmaxs[2], node->maxs[2]);
-		if (nodesegmentmins[0] > nodesegmentmaxs[0] || nodesegmentmins[1] > nodesegmentmaxs[1] || nodesegmentmins[2] > nodesegmentmaxs[2])
-			return;
-		if (!node->plane)
-			break;
-		if (mod_q3bsp_debugtracebrush.integer == 2)
-		{
-			Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
-			node = node->children[1];
-			continue;
-		}
-		else if (mod_q3bsp_debugtracebrush.integer == 1)
-		{
-			// recurse down node sides
-			sides = BoxOnPlaneSide(nodesegmentmins, nodesegmentmaxs, node->plane);
-			if (sides == 3)
-			{
-				// segment box crosses plane
-				Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
-				node = node->children[1];
-				continue;
-			}
-			if (sides == 0)
-				return; // ERROR: NAN bounding box!
-			// take whichever side the segment box is on
-			node = node->children[sides - 1];
-			continue;
-		}
-		else
-		{
-			// recurse down node sides
-			sides = BoxOnPlaneSide(nodesegmentmins, nodesegmentmaxs, node->plane);
-			if (sides == 3)
-			{
-				// segment box crosses plane
-				// now check start and end brush boxes to handle a lot of 'diagonal' cases more efficiently...
-				sides = BoxOnPlaneSide(thisbrush_start->mins, thisbrush_start->maxs, node->plane) | BoxOnPlaneSide(thisbrush_end->mins, thisbrush_end->maxs, node->plane);
-				if (sides == 3)
-				{
-					Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
-					node = node->children[1];
-					continue;
-				}
-			}
-			if (sides == 0)
-				return; // ERROR: NAN bounding box!
-			// take whichever side the segment box is on
-			node = node->children[sides - 1];
-			continue;
-		}
-		return;
-	}
-#else
-	// FIXME: could be made faster by copying TraceLine code and making it use
-	// box plane distances...  (variant on the BoxOnPlaneSide code)
-	for (;;)
-	{
-		nodesegmentmins[0] = max(segmentmins[0], node->mins[0]);
-		nodesegmentmins[1] = max(segmentmins[1], node->mins[1]);
-		nodesegmentmins[2] = max(segmentmins[2], node->mins[2]);
-		nodesegmentmaxs[0] = min(segmentmaxs[0], node->maxs[0]);
-		nodesegmentmaxs[1] = min(segmentmaxs[1], node->maxs[1]);
-		nodesegmentmaxs[2] = min(segmentmaxs[2], node->maxs[2]);
-		if (nodesegmentmins[0] > nodesegmentmaxs[0] || nodesegmentmins[1] > nodesegmentmaxs[1] || nodesegmentmins[2] > nodesegmentmaxs[2])
-			return;
-		if (!node->plane)
-			break;
-		if (mod_q3bsp_debugtracebrush.integer == 2)
-		{
-			Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
-			node = node->children[1];
-		}
-		else if (mod_q3bsp_debugtracebrush.integer == 1)
-		{
-			// recurse down node sides
-			sides = BoxOnPlaneSide(nodesegmentmins, nodesegmentmaxs, node->plane);
-			if (sides == 3)
-			{
-				// segment box crosses plane
-				Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
-				node = node->children[1];
-			}
-			else
-			{
-				if (sides == 0)
-					return; // ERROR: NAN bounding box!
-				// take whichever side the segment box is on
-				node = node->children[sides - 1];
-			}
-		}
-		else
-		{
-			// recurse down node sides
-			sides = BoxOnPlaneSide(nodesegmentmins, nodesegmentmaxs, node->plane);
-			if (sides == 3)
-			{
-				// segment box crosses plane
-				// now check start and end brush boxes to handle a lot of 'diagonal' cases more efficiently...
-				sides = BoxOnPlaneSide(thisbrush_start->mins, thisbrush_start->maxs, node->plane) | BoxOnPlaneSide(thisbrush_end->mins, thisbrush_end->maxs, node->plane);
-				if (sides == 3)
-				{
-					Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
-					sides = 2;
-				}
-			}
-			if (sides == 0)
-				return; // ERROR: NAN bounding box!
-			// take whichever side the segment box is on
-			node = node->children[sides - 1];
-		}
-	}
-#endif
+	nodesegmentmins[0] = max(segmentmins[0], node->mins[0] - 1);
+	nodesegmentmins[1] = max(segmentmins[1], node->mins[1] - 1);
+	nodesegmentmins[2] = max(segmentmins[2], node->mins[2] - 1);
+	nodesegmentmaxs[0] = min(segmentmaxs[0], node->maxs[0] + 1);
+	nodesegmentmaxs[1] = min(segmentmaxs[1], node->maxs[1] + 1);
+	nodesegmentmaxs[2] = min(segmentmaxs[2], node->maxs[2] + 1);
 	// hit a leaf
 	leaf = (mleaf_t *)node;
 	for (i = 0;i < leaf->numleafbrushes;i++)
@@ -5349,12 +5192,10 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, model_t *model
 	}
 }
 
-static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs, int hitsupercontentsmask)
+static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask)
 {
 	int i;
 	float segmentmins[3], segmentmaxs[3];
-	colbrushf_t *thisbrush_start, *thisbrush_end;
-	matrix4x4_t startmatrix, endmatrix;
 	static int markframe = 0;
 	msurface_t *surface;
 	q3mbrush_t *brush;
@@ -5362,50 +5203,60 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 	trace->fraction = 1;
 	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
-	startmatrix = identitymatrix;
-	endmatrix = identitymatrix;
-	segmentmins[0] = min(boxstartmins[0], boxendmins[0]);
-	segmentmins[1] = min(boxstartmins[1], boxendmins[1]);
-	segmentmins[2] = min(boxstartmins[2], boxendmins[2]);
-	segmentmaxs[0] = max(boxstartmaxs[0], boxendmaxs[0]);
-	segmentmaxs[1] = max(boxstartmaxs[1], boxendmaxs[1]);
-	segmentmaxs[2] = max(boxstartmaxs[2], boxendmaxs[2]);
-	if (mod_q3bsp_optimizedtraceline.integer && VectorCompare(boxstartmins, boxstartmaxs) && VectorCompare(boxendmins, boxendmaxs))
+	if (mod_q3bsp_optimizedtraceline.integer && VectorLength2(boxmins) + VectorLength2(boxmaxs) == 0)
 	{
-		if (VectorCompare(boxstartmins, boxendmins))
+		if (VectorCompare(start, end))
 		{
 			// point trace
 			if (model->brush.submodel)
 			{
 				for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
 					if (brush->colbrushf)
-						Collision_TracePointBrushFloat(trace, boxstartmins, brush->colbrushf);
+						Collision_TracePointBrushFloat(trace, start, brush->colbrushf);
 			}
 			else
-				Mod_Q3BSP_TracePoint_RecursiveBSPNode(trace, model, model->brush.data_nodes, boxstartmins, ++markframe);
+				Mod_Q3BSP_TracePoint_RecursiveBSPNode(trace, model, model->brush.data_nodes, start, ++markframe);
 		}
 		else
 		{
 			// line trace
+			segmentmins[0] = min(start[0], end[0]) - 1;
+			segmentmins[1] = min(start[1], end[1]) - 1;
+			segmentmins[2] = min(start[2], end[2]) - 1;
+			segmentmaxs[0] = max(start[0], end[0]) + 1;
+			segmentmaxs[1] = max(start[1], end[1]) + 1;
+			segmentmaxs[2] = max(start[2], end[2]) + 1;
 			if (model->brush.submodel)
 			{
 				for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
 					if (brush->colbrushf)
-						Collision_TraceLineBrushFloat(trace, boxstartmins, boxendmins, brush->colbrushf, brush->colbrushf);
+						Collision_TraceLineBrushFloat(trace, start, end, brush->colbrushf, brush->colbrushf);
 				if (mod_q3bsp_curves_collisions.integer)
 					for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
 						if (surface->num_collisiontriangles)
-							Collision_TraceLineTriangleMeshFloat(trace, boxstartmins, boxendmins, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->texture->supercontents, segmentmins, segmentmaxs);
+							Collision_TraceLineTriangleMeshFloat(trace, start, end, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->texture->supercontents, segmentmins, segmentmaxs);
 			}
 			else
-				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, model->brush.data_nodes, boxstartmins, boxendmins, 0, 1, boxstartmins, boxendmins, ++markframe, segmentmins, segmentmaxs);
+				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, model->brush.data_nodes, start, end, 0, 1, start, end, ++markframe, segmentmins, segmentmaxs);
 		}
 	}
 	else
 	{
 		// box trace, performed as brush trace
-		thisbrush_start = Collision_BrushForBox(&startmatrix, boxstartmins, boxstartmaxs);
-		thisbrush_end = Collision_BrushForBox(&endmatrix, boxendmins, boxendmaxs);
+		colbrushf_t *thisbrush_start, *thisbrush_end;
+		vec3_t boxstartmins, boxstartmaxs, boxendmins, boxendmaxs;
+		segmentmins[0] = min(start[0], end[0]) + boxmins[0] - 1;
+		segmentmins[1] = min(start[1], end[1]) + boxmins[1] - 1;
+		segmentmins[2] = min(start[2], end[2]) + boxmins[2] - 1;
+		segmentmaxs[0] = max(start[0], end[0]) + boxmaxs[0] + 1;
+		segmentmaxs[1] = max(start[1], end[1]) + boxmaxs[1] + 1;
+		segmentmaxs[2] = max(start[2], end[2]) + boxmaxs[2] + 1;
+		VectorAdd(start, boxmins, boxstartmins);
+		VectorAdd(start, boxmaxs, boxstartmaxs);
+		VectorAdd(end, boxmins, boxendmins);
+		VectorAdd(end, boxmaxs, boxendmaxs);
+		thisbrush_start = Collision_BrushForBox(&identitymatrix, boxstartmins, boxstartmaxs);
+		thisbrush_end = Collision_BrushForBox(&identitymatrix, boxendmins, boxendmaxs);
 		if (model->brush.submodel)
 		{
 			for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)

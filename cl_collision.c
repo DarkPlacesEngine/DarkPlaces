@@ -36,21 +36,16 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	vec3_t tracemins, tracemaxs;
 	trace_t cliptrace, trace;
 	vec3_t origin;
-	vec3_t starttransformed, endtransformed, starttransformedmins, endtransformedmins, starttransformedmaxs, endtransformedmaxs;
-	vec3_t startmins, startmaxs, endmins, endmaxs, entmins, entmaxs;
+	vec3_t starttransformed, endtransformed;
+	vec3_t entmins, entmaxs;
 	vec_t *playermins, *playermaxs;
-
-	VectorAdd(start, mins, startmins);
-	VectorAdd(start, maxs, startmaxs);
-	VectorAdd(end, mins, endmins);
-	VectorAdd(end, maxs, endmaxs);
 
 	memset (&cliptrace, 0 , sizeof(trace_t));
 	cliptrace.fraction = 1;
 	cliptrace.realfraction = 1;
 
 	if (cl.worldmodel && cl.worldmodel->TraceBox)
-		cl.worldmodel->TraceBox(cl.worldmodel, 0, &cliptrace, startmins, startmaxs, endmins, endmaxs, hitsupercontentsmask);
+		cl.worldmodel->TraceBox(cl.worldmodel, 0, &cliptrace, start, mins, maxs, end, hitsupercontentsmask);
 
 	if (hitent)
 		*hitent = 0;
@@ -73,17 +68,13 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 
 			Matrix4x4_Transform(&ent->inversematrix, start, starttransformed);
 			Matrix4x4_Transform(&ent->inversematrix, end, endtransformed);
-			VectorAdd(starttransformed, mins, starttransformedmins);
-			VectorAdd(starttransformed, maxs, starttransformedmaxs);
-			VectorAdd(endtransformed, mins, endtransformedmins);
-			VectorAdd(endtransformed, maxs, endtransformedmaxs);
 
 			memset (&trace, 0 , sizeof(trace_t));
 			trace.fraction = 1;
 			trace.realfraction = 1;
 
 			if (ent->model && ent->model->TraceBox)
-				ent->model->TraceBox(ent->model, 0, &trace, starttransformedmins, starttransformedmaxs, endtransformedmins, endtransformedmaxs, hitsupercontentsmask);
+				ent->model->TraceBox(ent->model, 0, &trace, start, mins, maxs, endtransformed, hitsupercontentsmask);
 
 			// LordHavoc: take the 'best' answers from the new trace and combine with existing data
 			if (trace.allsolid)

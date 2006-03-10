@@ -442,7 +442,6 @@ trace_t CSSV_ClipMoveToEntity(prvm_edict_t *ent, const vec3_t start, const vec3_
 	model_t *model = NULL;
 	matrix4x4_t matrix, imatrix;
 	float tempnormal[3], starttransformed[3], endtransformed[3];
-	float starttransformedmins[3], starttransformedmaxs[3], endtransformedmins[3], endtransformedmaxs[3];
 
 	memset(&trace, 0, sizeof(trace));
 	trace.fraction = trace.realfraction = 1;
@@ -499,11 +498,7 @@ trace_t CSSV_ClipMoveToEntity(prvm_edict_t *ent, const vec3_t start, const vec3_
 		int frame;
 		frame = (int)ent->fields.client->frame;
 		frame = bound(0, frame, (model->numframes - 1));
-		VectorAdd(starttransformed, maxs, starttransformedmaxs);
-		VectorAdd(endtransformed, maxs, endtransformedmaxs);
-		VectorAdd(starttransformed, mins, starttransformedmins);
-		VectorAdd(endtransformed, mins, endtransformedmins);
-		model->TraceBox(model, frame, &trace, starttransformedmins, starttransformedmaxs, endtransformedmins, endtransformedmaxs, hitsupercontents);
+		model->TraceBox(model, frame, &trace, starttransformed, mins, maxs, endtransformed, hitsupercontents);
 	}
 	else
 		Collision_ClipTrace_Box(&trace, ent->fields.client->mins, ent->fields.client->maxs, starttransformed, mins, maxs, endtransformed, hitsupercontents, SUPERCONTENTS_SOLID);

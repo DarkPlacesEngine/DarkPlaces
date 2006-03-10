@@ -563,7 +563,7 @@ typedef struct model_s
 	// draw the lighting on a model (through stencil)
 	void(*DrawLight)(struct entity_render_s *ent, int numsurfaces, const int *surfacelist);
 	// trace a box against this model
-	void (*TraceBox)(struct model_s *model, int frame, struct trace_s *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs, int hitsupercontentsmask);
+	void (*TraceBox)(struct model_s *model, int frame, struct trace_s *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask);
 	// fields belonging to some types of model
 	model_sprite_t	sprite;
 	model_brush_t	brush;

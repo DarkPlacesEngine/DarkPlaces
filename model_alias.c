@@ -198,45 +198,59 @@ static void Mod_Alias_Mesh_CompileFrameZero(surfmesh_t *mesh)
 	Mod_BuildTextureVectorsAndNormals(0, mesh->num_vertices, mesh->num_triangles, mesh->data_vertex3f, mesh->data_texcoordtexture2f, mesh->data_element3i, mesh->data_svector3f, mesh->data_tvector3f, mesh->data_normal3f, true);
 }
 
-static void Mod_MDLMD2MD3_TraceBox(model_t *model, int frame, trace_t *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs, int hitsupercontentsmask)
+static void Mod_MDLMD2MD3_TraceBox(model_t *model, int frame, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask)
 {
-	int i, linetrace;
+	int i;
 	float segmentmins[3], segmentmaxs[3];
 	frameblend_t frameblend[4];
 	msurface_t *surface;
 	surfmesh_t *mesh;
-	colbrushf_t *thisbrush_start = NULL, *thisbrush_end = NULL;
-	matrix4x4_t startmatrix, endmatrix;
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
 	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
-	segmentmins[0] = min(boxstartmins[0], boxendmins[0]);
-	segmentmins[1] = min(boxstartmins[1], boxendmins[1]);
-	segmentmins[2] = min(boxstartmins[2], boxendmins[2]);
-	segmentmaxs[0] = max(boxstartmaxs[0], boxendmaxs[0]);
-	segmentmaxs[1] = max(boxstartmaxs[1], boxendmaxs[1]);
-	segmentmaxs[2] = max(boxstartmaxs[2], boxendmaxs[2]);
-	linetrace = VectorCompare(boxstartmins, boxstartmaxs) && VectorCompare(boxendmins, boxendmaxs);
-	if (!linetrace)
-	{
-		// box trace, performed as brush trace
-		startmatrix = identitymatrix;
-		endmatrix = identitymatrix;
-		thisbrush_start = Collision_BrushForBox(&startmatrix, boxstartmins, boxstartmaxs);
-		thisbrush_end = Collision_BrushForBox(&endmatrix, boxendmins, boxendmaxs);
-	}
 	memset(frameblend, 0, sizeof(frameblend));
 	frameblend[0].frame = frame;
 	frameblend[0].lerp = 1;
-	for (i = 0, surface = model->data_surfaces;i < model->num_surfaces;i++, surface++)
+	if (VectorLength2(boxmins) + VectorLength2(boxmaxs) == 0)
 	{
-		mesh = surface->groupmesh;
-		Mod_Alias_GetMesh_Vertex3f(model, frameblend, mesh, varray_vertex3f);
-		if (linetrace)
-			Collision_TraceLineTriangleMeshFloat(trace, boxstartmins, boxendmins, mesh->num_triangles, mesh->data_element3i, varray_vertex3f, SUPERCONTENTS_SOLID, segmentmins, segmentmaxs);
-		else
+		// line trace
+		segmentmins[0] = min(start[0], end[0]) - 1;
+		segmentmins[1] = min(start[1], end[1]) - 1;
+		segmentmins[2] = min(start[2], end[2]) - 1;
+		segmentmaxs[0] = max(start[0], end[0]) + 1;
+		segmentmaxs[1] = max(start[1], end[1]) + 1;
+		segmentmaxs[2] = max(start[2], end[2]) + 1;
+		for (i = 0, surface = model->data_surfaces;i < model->num_surfaces;i++, surface++)
+		{
+			mesh = surface->groupmesh;
+			Mod_Alias_GetMesh_Vertex3f(model, frameblend, mesh, varray_vertex3f);
+			Collision_TraceLineTriangleMeshFloat(trace, start, end, mesh->num_triangles, mesh->data_element3i, varray_vertex3f, SUPERCONTENTS_SOLID, segmentmins, segmentmaxs);
+		}
+	}
+	else
+	{
+		// box trace, performed as brush trace
+		colbrushf_t *thisbrush_start, *thisbrush_end;
+		vec3_t boxstartmins, boxstartmaxs, boxendmins, boxendmaxs;
+		segmentmins[0] = min(start[0], end[0]) + boxmins[0] - 1;
+		segmentmins[1] = min(start[1], end[1]) + boxmins[1] - 1;
+		segmentmins[2] = min(start[2], end[2]) + boxmins[2] - 1;
+		segmentmaxs[0] = max(start[0], end[0]) + boxmaxs[0] + 1;
+		segmentmaxs[1] = max(start[1], end[1]) + boxmaxs[1] + 1;
+		segmentmaxs[2] = max(start[2], end[2]) + boxmaxs[2] + 1;
+		VectorAdd(start, boxmins, boxstartmins);
+		VectorAdd(start, boxmaxs, boxstartmaxs);
+		VectorAdd(end, boxmins, boxendmins);
+		VectorAdd(end, boxmaxs, boxendmaxs);
+		thisbrush_start = Collision_BrushForBox(&identitymatrix, boxstartmins, boxstartmaxs);
+		thisbrush_end = Collision_BrushForBox(&identitymatrix, boxendmins, boxendmaxs);
+		for (i = 0, surface = model->data_surfaces;i < model->num_surfaces;i++, surface++)
+		{
+			mesh = surface->groupmesh;
+			Mod_Alias_GetMesh_Vertex3f(model, frameblend, mesh, varray_vertex3f);
 			Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, mesh->num_triangles, mesh->data_element3i, varray_vertex3f, SUPERCONTENTS_SOLID, segmentmins, segmentmaxs);
+		}
 	}
 }
 

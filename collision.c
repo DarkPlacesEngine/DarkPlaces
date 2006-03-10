@@ -743,7 +743,7 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 	// penetrating line segment is normally zero length if this brush was
 	// generated from a polygon (infinitely thin), and could even be slightly
 	// positive or negative due to rounding errors in that case.
-	if (brushsolid && enterfrac > -1 && enterfrac < trace->realfraction && enterfrac - (1.0f / 1024.0f) <= leavefrac)
+	if (brushsolid && enterfrac > -1 && enterfrac < trace->realfraction && enterfrac <= leavefrac)
 	{
 #if 0
 		// broken
@@ -840,12 +840,12 @@ void Collision_TraceBrushTriangleMeshFloat(trace_t *trace, const colbrushf_t *th
 		VectorCopy(vertex3f + element3i[1] * 3, polyf_points[1].v);
 		VectorCopy(vertex3f + element3i[2] * 3, polyf_points[2].v);
 		Collision_SnapCopyPoints(3, polyf_points, polyf_points, COLLISION_SNAPSCALE, COLLISION_SNAP);
-		facemins[0] = min(polyf_points[0].v[0], min(polyf_points[1].v[0], polyf_points[2].v[0])) - 1;
-		facemins[1] = min(polyf_points[0].v[1], min(polyf_points[1].v[1], polyf_points[2].v[1])) - 1;
-		facemins[2] = min(polyf_points[0].v[2], min(polyf_points[1].v[2], polyf_points[2].v[2])) - 1;
-		facemaxs[0] = max(polyf_points[0].v[0], max(polyf_points[1].v[0], polyf_points[2].v[0])) + 1;
-		facemaxs[1] = max(polyf_points[0].v[1], max(polyf_points[1].v[1], polyf_points[2].v[1])) + 1;
-		facemaxs[2] = max(polyf_points[0].v[2], max(polyf_points[1].v[2], polyf_points[2].v[2])) + 1;
+		facemins[0] = min(polyf_points[0].v[0], min(polyf_points[1].v[0], polyf_points[2].v[0]));
+		facemins[1] = min(polyf_points[0].v[1], min(polyf_points[1].v[1], polyf_points[2].v[1]));
+		facemins[2] = min(polyf_points[0].v[2], min(polyf_points[1].v[2], polyf_points[2].v[2]));
+		facemaxs[0] = max(polyf_points[0].v[0], max(polyf_points[1].v[0], polyf_points[2].v[0]));
+		facemaxs[1] = max(polyf_points[0].v[1], max(polyf_points[1].v[1], polyf_points[2].v[1]));
+		facemaxs[2] = max(polyf_points[0].v[2], max(polyf_points[1].v[2], polyf_points[2].v[2]));
 		if (BoxesOverlap(segmentmins, segmentmaxs, facemins, facemaxs))
 		{
 			Collision_CalcPlanesForPolygonBrushFloat(&polyf_brush);
@@ -894,12 +894,12 @@ void Collision_TraceLineTriangleMeshFloat(trace_t *trace, const vec3_t linestart
 		VectorCopy(vertex3f + element3i[1] * 3, polyf_points[1].v);
 		VectorCopy(vertex3f + element3i[2] * 3, polyf_points[2].v);
 		Collision_SnapCopyPoints(numpoints, polyf_points, polyf_points, COLLISION_SNAPSCALE, COLLISION_SNAP);
-		facemins[0] = min(polyf_points[0].v[0], min(polyf_points[1].v[0], polyf_points[2].v[0])) - 1;
-		facemins[1] = min(polyf_points[0].v[1], min(polyf_points[1].v[1], polyf_points[2].v[1])) - 1;
-		facemins[2] = min(polyf_points[0].v[2], min(polyf_points[1].v[2], polyf_points[2].v[2])) - 1;
-		facemaxs[0] = max(polyf_points[0].v[0], max(polyf_points[1].v[0], polyf_points[2].v[0])) + 1;
-		facemaxs[1] = max(polyf_points[0].v[1], max(polyf_points[1].v[1], polyf_points[2].v[1])) + 1;
-		facemaxs[2] = max(polyf_points[0].v[2], max(polyf_points[1].v[2], polyf_points[2].v[2])) + 1;
+		facemins[0] = min(polyf_points[0].v[0], min(polyf_points[1].v[0], polyf_points[2].v[0]));
+		facemins[1] = min(polyf_points[0].v[1], min(polyf_points[1].v[1], polyf_points[2].v[1]));
+		facemins[2] = min(polyf_points[0].v[2], min(polyf_points[1].v[2], polyf_points[2].v[2]));
+		facemaxs[0] = max(polyf_points[0].v[0], max(polyf_points[1].v[0], polyf_points[2].v[0]));
+		facemaxs[1] = max(polyf_points[0].v[1], max(polyf_points[1].v[1], polyf_points[2].v[1]));
+		facemaxs[2] = max(polyf_points[0].v[2], max(polyf_points[1].v[2], polyf_points[2].v[2]));
 		if (BoxesOverlap(segmentmins, segmentmaxs, facemins, facemaxs))
 		{
 			Collision_CalcPlanesForPolygonBrushFloat(&polyf_brush);
