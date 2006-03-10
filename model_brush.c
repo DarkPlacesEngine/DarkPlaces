@@ -5070,8 +5070,10 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, model_t *model,
 			else
 			{
 				// line crosses node plane, split the line
+				dist1 = PlaneDiff(linestart, node->plane);
+				dist2 = PlaneDiff(lineend, node->plane);
 				midfrac = dist1 / (dist1 - dist2);
-				VectorLerp(start, midfrac, end, mid);
+				VectorLerp(linestart, midfrac, lineend, mid);
 				// take the near side first
 				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, node->children[startside], start, mid, startfrac, midfrac, linestart, lineend, markframe, segmentmins, segmentmaxs);
 				if (midfrac <= trace->realfraction)
