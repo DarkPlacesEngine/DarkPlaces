@@ -1527,6 +1527,7 @@ void CL_ParseBeam (model_t *m, int lightning)
 				break;
 	if (i < cl_max_beams)
 	{
+		cl_activebeams = max(cl_activebeams, i + 1);
 		b->entity = ent;
 		b->lightning = lightning;
 		b->model = m;
