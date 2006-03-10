@@ -1447,8 +1447,6 @@ void CL_RelinkBeams(void)
 	float forward;
 	matrix4x4_t tempmatrix;
 
-	while (cl_activebeams > 0 && !cl_beams[cl_activebeams - 1].model)
-		cl_activeeffects--;
 	for (i = 0, b = cl_beams;i < cl_activebeams;i++, b++)
 	{
 		if (!b->model)
@@ -1528,6 +1526,9 @@ void CL_RelinkBeams(void)
 			d -= 30;
 		}
 	}
+
+	while (cl_activebeams > 0 && !cl_beams[cl_activebeams - 1].model)
+		cl_activebeams--;
 }
 
 static void CL_RelinkQWNails(void)
