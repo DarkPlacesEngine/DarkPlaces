@@ -426,10 +426,10 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 		PRVM_ExecuteProgram (prog->globals.server->SetNewParms, "QC function SetNewParms is missing");
 		for (i=0 ; i<NUM_SPAWN_PARMS ; i++)
 			client->spawn_parms[i] = (&prog->globals.server->parm1)[i];
-	}
 
-	// set up the entity for this client (including .colormap, .team, etc)
-	PRVM_ED_ClearEdict(client->edict);
+		// set up the entity for this client (including .colormap, .team, etc)
+		PRVM_ED_ClearEdict(client->edict);
+	}
 
 	// don't call SendServerinfo for a fresh botclient because its fields have
 	// not been set up by the qc yet
