@@ -1673,9 +1673,15 @@ void SV_SpawnServer (const char *server)
 //
 	if (sv.active)
 	{
-		// Tell all the clients that the server is changing levels
-		MSG_WriteByte(&sv.reliable_datagram, svc_stufftext);
-		MSG_WriteString(&sv.reliable_datagram, "reconnect\n");
+		client_t *client;
+		for (i = 0, client = svs.clients;i < svs.maxclients;i++, client++)
+		{
+			if (client->netconnection)
+			{
+				MSG_WriteByte(&client->netconnection->message, svc_stufftext);
+				MSG_WriteString(&client->netconnection->message, "reconnect\n");
+			}
+		}
 	}
 	else
 	{
