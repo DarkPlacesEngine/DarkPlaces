@@ -136,7 +136,7 @@ int VID_GetGamma (unsigned short *ramps);
 void VID_UpdateGamma(qboolean force);
 void VID_RestoreSystemGamma(void);
 
-void VID_Finish (void);
+void VID_Finish (qboolean allowmousegrab);
 
 void VID_Restart_f(void);
 

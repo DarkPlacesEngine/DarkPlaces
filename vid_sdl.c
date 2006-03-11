@@ -483,7 +483,7 @@ int VID_GetGamma (unsigned short *ramps)
 	return !SDL_GetGammaRamp( ramps, ramps + 256, ramps + 512);
 }
 
-void VID_Finish (void)
+void VID_Finish (qboolean allowmousegrab)
 {
 	Uint8 appstate;
 	qboolean vid_usemouse;
@@ -503,7 +503,7 @@ void VID_Finish (void)
 		vid_activewindow = true;
 
 	vid_usemouse = false;
-	if( vid_mouse.integer && !key_consoleactive && !cls.demoplayback )
+	if( allowmousegrab && vid_mouse.integer && !key_consoleactive && !cls.demoplayback )
 		vid_usemouse = true;
 	if( vid_isfullscreen )
 		vid_usemouse = true;

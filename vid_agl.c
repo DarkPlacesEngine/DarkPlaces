@@ -101,14 +101,14 @@ static void IN_Activate( qboolean grab )
 	}
 }
 
-void VID_Finish (void)
+void VID_Finish (qboolean allowmousegrab)
 {
 	qboolean vid_usemouse;
 	qboolean vid_usevsync;
-	
+
 	// handle the mouse state when windowed if that's changed
 	vid_usemouse = false;
-	if (vid_mouse.integer && !key_consoleactive && !cls.demoplayback)
+	if (allowmousgrab && vid_mouse.integer && !key_consoleactive && !cls.demoplayback)
 		vid_usemouse = true;
 	if (!vid_activewindow)
 		vid_usemouse = false;
@@ -171,7 +171,7 @@ int VID_GetGamma(unsigned short *ramps)
 	CGGammaValue table_blue [GAMMA_TABLE_SIZE];
 	CGTableCount actualsize = 0;
 	unsigned int i;
-	
+
 	// Get the gamma ramps from the system
 	if (CGGetDisplayTransferByTable(CGMainDisplayID(), GAMMA_TABLE_SIZE, table_red, table_green, table_blue, &actualsize) != CGDisplayNoErr)
 	{
