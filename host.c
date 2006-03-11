@@ -911,13 +911,19 @@ void Host_Init (void)
 	// FIXME: this is evil, but possibly temporary
 // COMMANDLINEOPTION: Console: -developer enables warnings and other notices (RECOMMENDED for mod developers)
 	if (COM_CheckParm("-developer"))
-		developer.value = developer.integer = 100;developer.string = "100";
+	{
+		developer.value = developer.integer = 100;
+		developer.string = "100";
+	}
 
 	if (COM_CheckParm("-developer2"))
 	{
-		developer.value = developer.integer = 100;developer.string = "100";
-		developer_memory.value = developer_memory.integer = 100;developer.string = "100";
-		developer_memorydebug.value = developer_memorydebug.integer = 100;developer_memorydebug.string = "100";
+		developer.value = developer.integer = 100;
+		developer.string = "100";
+		developer_memory.value = developer_memory.integer = 100;
+		developer.string = "100";
+		developer_memorydebug.value = developer_memorydebug.integer = 100;
+		developer_memorydebug.string = "100";
 	}
 
 	// LordHavoc: quake never seeded the random number generator before... heh
