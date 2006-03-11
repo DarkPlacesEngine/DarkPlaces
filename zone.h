@@ -103,8 +103,6 @@ typedef struct mempool_s
 	size_t realsize;
 	// updated each time the pool is displayed by memlist, shows change from previous time (unless pool was freed)
 	size_t lastchecksize;
-	// name of the pool
-	char name[POOLNAMESIZE];
 	// linked into global mempool list
 	struct mempool_s *next;
 	// parent object (used for nested memory pools)
@@ -112,6 +110,8 @@ typedef struct mempool_s
 	// file name and line where Mem_AllocPool was called
 	const char *filename;
 	int fileline;
+	// name of the pool
+	char name[POOLNAMESIZE];
 	// should always be MEMHEADER_SENTINEL1
 	unsigned int sentinel2;
 }
