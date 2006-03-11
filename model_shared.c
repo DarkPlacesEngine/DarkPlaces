@@ -1185,12 +1185,12 @@ tag_torso,
 		// If it's the first file we parse
 		if (skinfile == NULL)
 		{
-			skinfile = (skinfile_t *)Mem_Alloc(tempmempool, sizeof(skinfile_t));
+			skinfile = (skinfile_t *)Mem_Alloc(loadmodel->mempool, sizeof(skinfile_t));
 			first = skinfile;
 		}
 		else
 		{
-			skinfile->next = (skinfile_t *)Mem_Alloc(tempmempool, sizeof(skinfile_t));
+			skinfile->next = (skinfile_t *)Mem_Alloc(loadmodel->mempool, sizeof(skinfile_t));
 			skinfile = skinfile->next;
 		}
 		skinfile->next = NULL;
@@ -1223,7 +1223,7 @@ tag_torso,
 				if (words == 3)
 				{
 					Con_DPrintf("Mod_LoadSkinFiles: parsed mesh \"%s\" shader replacement \"%s\"\n", word[1], word[2]);
-					skinfileitem = (skinfileitem_t *)Mem_Alloc(tempmempool, sizeof(skinfileitem_t));
+					skinfileitem = (skinfileitem_t *)Mem_Alloc(loadmodel->mempool, sizeof(skinfileitem_t));
 					skinfileitem->next = skinfile->items;
 					skinfile->items = skinfileitem;
 					strlcpy (skinfileitem->name, word[1], sizeof (skinfileitem->name));
@@ -1244,7 +1244,7 @@ tag_torso,
 			{
 				// mesh shader name, like "U_RArm,models/players/Legoman/BikerA1.tga"
 				Con_DPrintf("Mod_LoadSkinFiles: parsed mesh \"%s\" shader replacement \"%s\"\n", word[0], word[2]);
-				skinfileitem = (skinfileitem_t *)Mem_Alloc(tempmempool, sizeof(skinfileitem_t));
+				skinfileitem = (skinfileitem_t *)Mem_Alloc(loadmodel->mempool, sizeof(skinfileitem_t));
 				skinfileitem->next = skinfile->items;
 				skinfile->items = skinfileitem;
 				strlcpy (skinfileitem->name, word[0], sizeof (skinfileitem->name));
