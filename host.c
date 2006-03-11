@@ -51,9 +51,6 @@ double realtime;
 // realtime from previous frame
 double oldrealtime;
 
-// used for -developer commandline parameter, hacky hacky
-int forcedeveloper;
-
 // current client
 client_t *host_client;
 
@@ -243,8 +240,6 @@ void Host_InitLocal (void)
 	Cvar_RegisterVariable (&noexit);
 	Cvar_RegisterVariable (&skill);
 	Cvar_RegisterVariable (&developer);
-	if (forcedeveloper) // make it real now that the cvar is registered
-		Cvar_SetValue("developer", 100);
 	Cvar_RegisterVariable (&developer_entityparsing);
 	Cvar_RegisterVariable (&deathmatch);
 	Cvar_RegisterVariable (&coop);
@@ -916,17 +911,13 @@ void Host_Init (void)
 	// FIXME: this is evil, but possibly temporary
 // COMMANDLINEOPTION: Console: -developer enables warnings and other notices (RECOMMENDED for mod developers)
 	if (COM_CheckParm("-developer"))
-	{
-		forcedeveloper = true;
-		developer.value = developer.integer = 100;
-	}
+		developer.value = developer.integer = 100;developer.string = "100";
 
 	if (COM_CheckParm("-developer2"))
 	{
-		forcedeveloper = true;
-		developer.value = developer.integer = 100;
-		developer_memory.value = developer_memory.integer = 100;
-		developer_memorydebug.value = developer_memorydebug.integer = 100;
+		developer.value = developer.integer = 100;developer.string = "100";
+		developer_memory.value = developer_memory.integer = 100;developer.string = "100";
+		developer_memorydebug.value = developer_memorydebug.integer = 100;developer_memorydebug.string = "100";
 	}
 
 	// LordHavoc: quake never seeded the random number generator before... heh
