@@ -79,7 +79,7 @@ cvar_t teamplay = {CVAR_NOTIFY, "teamplay","0", "teamplay mode, values depend on
 cvar_t samelevel = {CVAR_NOTIFY, "samelevel","0", "repeats same level if level ends (due to timelimit or someone hitting an exit)"};
 cvar_t noexit = {CVAR_NOTIFY, "noexit","0", "kills anyone attempting to use an exit"};
 
-cvar_t developer = {0, "developer","100", "prints additional debugging messages and information (recommended for modders and level designers)"};
+cvar_t developer = {0, "developer","0", "prints additional debugging messages and information (recommended for modders and level designers)"};
 cvar_t developer_entityparsing = {0, "developer_entityparsing", "0", "prints detailed network entities information each time a packet is received"};
 
 cvar_t skill = {0, "skill","1", "difficulty level of game, affects monster layouts in levels, 0 = easy, 1 = normal, 2 = hard, 3 = nightmare (same layout as hard but monsters fire twice)"};
