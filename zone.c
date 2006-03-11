@@ -125,24 +125,14 @@ choseclump:
 	return (void *)((unsigned char *) mem + sizeof(memheader_t));
 }
 
-void _Mem_Free(void *data, const char *filename, int fileline)
+// only used by _Mem_Free and _Mem_FreePool
+static void _Mem_FreeBlock(memheader_t *mem, const char *filename, int fileline)
 {
 #if MEMCLUMPING
 	int i, firstblock, endblock;
 	memclump_t *clump, **clumpchainpointer;
 #endif
-	memheader_t *mem;
 	mempool_t *pool;
-	if (data == NULL)
-		Sys_Error("Mem_Free: data == NULL (called at %s:%i)", filename, fileline);
-	if (developer.integer && developer_memorydebug.integer)
-	{
-		_Mem_CheckSentinelsGlobal(filename, fileline);
-		if (!Mem_IsAllocated(NULL, data))
-			Sys_Error("Mem_Free: data is not allocated (called at %s:%i)", filename, fileline);
-	}
-
-	mem = (memheader_t *)((unsigned char *) data - sizeof(memheader_t));
 	if (mem->sentinel1 != MEMHEADER_SENTINEL1)
 		Sys_Error("Mem_Free: trashed header sentinel 1 (alloc at %s:%i, free at %s:%i)", mem->filename, mem->fileline, filename, fileline);
 	if (*((unsigned char *) mem + sizeof(memheader_t) + mem->size) != MEMHEADER_SENTINEL2)
@@ -211,6 +201,21 @@ void _Mem_Free(void *data, const char *filename, int fileline)
 #endif
 }
 
+void _Mem_Free(void *data, const char *filename, int fileline)
+{
+	if (data == NULL)
+		Sys_Error("Mem_Free: data == NULL (called at %s:%i)", filename, fileline);
+
+	if (developer.integer && developer_memorydebug.integer)
+	{
+		_Mem_CheckSentinelsGlobal(filename, fileline);
+		if (!Mem_IsAllocated(NULL, data))
+			Sys_Error("Mem_Free: data is not allocated (called at %s:%i)", filename, fileline);
+	}
+
+	_Mem_FreeBlock((memheader_t *)((unsigned char *) data - sizeof(memheader_t)), filename, fileline);
+}
+
 mempool_t *_Mem_AllocPool(const char *name, int flags, mempool_t *parent, const char *filename, int fileline)
 {
 	mempool_t *pool;
@@ -235,37 +240,39 @@ mempool_t *_Mem_AllocPool(const char *name, int flags, mempool_t *parent, const 
 	return pool;
 }
 
-void _Mem_FreePool(mempool_t **pool, const char *filename, int fileline)
+void _Mem_FreePool(mempool_t **poolpointer, const char *filename, int fileline)
 {
+	mempool_t *pool = *poolpointer;
 	mempool_t **chainaddress, *iter, *temp;
 
 	if (developer.integer && developer_memorydebug.integer)
 		_Mem_CheckSentinelsGlobal(filename, fileline);
-	if (*pool)
+	if (pool)
 	{
 		// unlink pool from chain
-		for (chainaddress = &poolchain;*chainaddress && *chainaddress != *pool;chainaddress = &((*chainaddress)->next));
-		if (*chainaddress != *pool)
+		for (chainaddress = &poolchain;*chainaddress && *chainaddress != pool;chainaddress = &((*chainaddress)->next));
+		if (*chainaddress != pool)
 			Sys_Error("Mem_FreePool: pool already free (freepool at %s:%i)", filename, fileline);
-		if ((*pool)->sentinel1 != MEMHEADER_SENTINEL1)
-			Sys_Error("Mem_FreePool: trashed pool sentinel 1 (allocpool at %s:%i, freepool at %s:%i)", (*pool)->filename, (*pool)->fileline, filename, fileline);
-		if ((*pool)->sentinel2 != MEMHEADER_SENTINEL1)
-			Sys_Error("Mem_FreePool: trashed pool sentinel 2 (allocpool at %s:%i, freepool at %s:%i)", (*pool)->filename, (*pool)->fileline, filename, fileline);
-		*chainaddress = (*pool)->next;
+		if (pool->sentinel1 != MEMHEADER_SENTINEL1)
+			Sys_Error("Mem_FreePool: trashed pool sentinel 1 (allocpool at %s:%i, freepool at %s:%i)", pool->filename, pool->fileline, filename, fileline);
+		if (pool->sentinel2 != MEMHEADER_SENTINEL1)
+			Sys_Error("Mem_FreePool: trashed pool sentinel 2 (allocpool at %s:%i, freepool at %s:%i)", pool->filename, pool->fileline, filename, fileline);
+		*chainaddress = pool->next;
 
 		// free memory owned by the pool
-		while ((*pool)->chain)
-			_Mem_Free((void *)((unsigned char *) (*pool)->chain + sizeof(memheader_t)), filename, fileline);
+		while (pool->chain)
+			_Mem_FreeBlock(pool->chain, filename, fileline);
 
 		// free child pools, too
 		for(iter = poolchain; iter; temp = iter = iter->next)
-			if(iter->parent == *pool)
+			if(iter->parent == pool)
 				_Mem_FreePool(&temp, filename, fileline);
 
 		// free the pool itself
-		memset(*pool, 0xBF, sizeof(mempool_t));
-		free(*pool);
-		*pool = NULL;
+		memset(pool, 0xBF, sizeof(mempool_t));
+		free(pool);
+
+		*poolpointer = NULL;
 	}
 }
 
@@ -292,7 +299,7 @@ void _Mem_EmptyPool(mempool_t *pool, const char *filename, int fileline)
 
 	// free memory owned by the pool
 	while (pool->chain)
-		_Mem_Free((void *)((unsigned char *) pool->chain + sizeof(memheader_t)), filename, fileline);
+		_Mem_FreeBlock(pool->chain, filename, fileline);
 
 	// empty child pools, too
 	for(chainaddress = poolchain; chainaddress; chainaddress = chainaddress->next)
