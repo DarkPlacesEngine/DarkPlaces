@@ -559,7 +559,7 @@ void InitSig(void)
 	signal(SIGTERM, signal_handler);
 }
 
-void VID_Finish (void)
+void VID_Finish (qboolean allowmousegrab)
 {
 	qboolean vid_usemouse;
 
@@ -573,7 +573,7 @@ void VID_Finish (void)
 
 // handle the mouse state when windowed if that's changed
 	vid_usemouse = false;
-	if (vid_mouse.integer && !key_consoleactive && !cls.demoplayback)
+	if (allowmousegrab && vid_mouse.integer && !key_consoleactive && !cls.demoplayback)
 		vid_usemouse = true;
 	if (!vid_activewindow)
 		vid_usemouse = false;

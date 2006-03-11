@@ -1871,7 +1871,7 @@ void SCR_UpdateLoadingScreen (void)
 	GL_LockArrays(0, 0);
 	R_Mesh_Finish();
 	// refresh
-	VID_Finish();
+	VID_Finish(false);
 }
 
 /*
@@ -1949,7 +1949,7 @@ void SCR_UpdateScreen (void)
 	else
 		SCR_DrawScreen();
 
-	VID_Finish();
+	VID_Finish(true);
 	if (r_timereport_active)
 		R_TimeReport("finish");
 }
