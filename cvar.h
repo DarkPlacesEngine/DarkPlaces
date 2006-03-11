@@ -120,6 +120,7 @@ typedef struct cvar_s
 
 	//menucvar_t menuinfo;
 	struct cvar_s *next;
+	struct cvar_s *nextonhashchain;
 } cvar_t;
 
 /*

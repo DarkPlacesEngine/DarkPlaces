@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 
 cvar_t *cvar_vars = NULL;
+cvar_t *cvar_hashtable[65536];
 char *cvar_null_string = "";
 
 /*
@@ -31,9 +32,12 @@ Cvar_FindVar
 */
 cvar_t *Cvar_FindVar (const char *var_name)
 {
+	int hashindex;
 	cvar_t *var;
 
-	for (var = cvar_vars;var;var = var->next)
+	// use hash lookup to minimize search time
+	hashindex = CRC_Block((const unsigned char *)var_name, strlen(var_name));
+	for (var = cvar_hashtable[hashindex];var;var = var->nextonhashchain)
 		if (!strcasecmp (var_name, var->name))
 			return var;
 
@@ -312,6 +316,7 @@ Adds a freestanding variable to the variable list.
 */
 void Cvar_RegisterVariable (cvar_t *variable)
 {
+	int hashindex;
 	cvar_t *current, *next, *cvar;
 	char *oldstr;
 
@@ -387,6 +392,11 @@ void Cvar_RegisterVariable (cvar_t *variable)
 		cvar_vars = variable;
 	}
 	variable->next = next;
+
+	// link to head of list in this hash table index
+	hashindex = CRC_Block((const unsigned char *)variable->name, strlen(variable->name));
+	variable->nextonhashchain = cvar_hashtable[hashindex];
+	cvar_hashtable[hashindex] = variable;
 }
 
 /*
@@ -398,7 +408,8 @@ Adds a newly allocated variable to the variable list or sets its value.
 */
 cvar_t *Cvar_Get (const char *name, const char *value, int flags)
 {
-	cvar_t *cvar;
+	int hashindex;
+	cvar_t *current, *next, *cvar;
 
 	if (developer.integer)
 		Con_Printf("Cvar_Get(\"%s\", \"%s\", %i);\n", name, value, flags);
@@ -443,8 +454,20 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags)
 	cvar->description = "custom cvar";
 
 // link the variable in
-	cvar->next = cvar_vars;
-	cvar_vars = cvar;
+// alphanumerical order
+	for( current = NULL, next = cvar_vars ; next && strcmp( next->name, cvar->name ) < 0 ; current = next, next = next->next )
+		;
+	if( current )
+		current->next = cvar;
+	else
+		cvar_vars = cvar;
+	cvar->next = next;
+
+	// link to head of list in this hash table index
+	hashindex = CRC_Block((const unsigned char *)cvar->name, strlen(cvar->name));
+	cvar->nextonhashchain = cvar_hashtable[hashindex];
+	cvar_hashtable[hashindex] = cvar;
+
 	return cvar;
 }
 
