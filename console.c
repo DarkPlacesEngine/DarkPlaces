@@ -153,10 +153,11 @@ void Log_Start (void)
 	// Dump the contents of the log queue into the log file and free it
 	if (logqueue != NULL)
 	{
-		if (logfile != NULL && logq_ind != 0)
-			FS_Write (logfile, logqueue, logq_ind);
-		Mem_Free (logqueue);
+		unsigned char *temp = logqueue;
 		logqueue = NULL;
+		if (logfile != NULL && logq_ind != 0)
+			FS_Write (logfile, temp, logq_ind);
+		Mem_Free (temp);
 		logq_ind = 0;
 		logq_size = 0;
 	}
@@ -392,7 +393,7 @@ void Con_Init (void)
 	con_linewidth = 80;
 	con_totallines = CON_TEXTSIZE / con_linewidth;
 
-	// Allocate a log queue
+	// Allocate a log queue, this will be freed after configs are parsed
 	logq_size = MAX_INPUTLINE;
 	logqueue = (unsigned char *)Mem_Alloc (tempmempool, logq_size);
 	logq_ind = 0;
