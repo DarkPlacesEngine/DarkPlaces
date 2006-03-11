@@ -82,7 +82,7 @@ cvar_t teamplay = {CVAR_NOTIFY, "teamplay","0", "teamplay mode, values depend on
 cvar_t samelevel = {CVAR_NOTIFY, "samelevel","0", "repeats same level if level ends (due to timelimit or someone hitting an exit)"};
 cvar_t noexit = {CVAR_NOTIFY, "noexit","0", "kills anyone attempting to use an exit"};
 
-cvar_t developer = {0, "developer","0", "prints additional debugging messages and information (recommended for modders and level designers)"};
+cvar_t developer = {0, "developer","100", "prints additional debugging messages and information (recommended for modders and level designers)"};
 cvar_t developer_entityparsing = {0, "developer_entityparsing", "0", "prints detailed network entities information each time a packet is received"};
 
 cvar_t skill = {0, "skill","1", "difficulty level of game, affects monster layouts in levels, 0 = easy, 1 = normal, 2 = hard, 3 = nightmare (same layout as hard but monsters fire twice)"};
@@ -244,7 +244,7 @@ void Host_InitLocal (void)
 	Cvar_RegisterVariable (&skill);
 	Cvar_RegisterVariable (&developer);
 	if (forcedeveloper) // make it real now that the cvar is registered
-		Cvar_SetValue("developer", 1);
+		Cvar_SetValue("developer", 100);
 	Cvar_RegisterVariable (&developer_entityparsing);
 	Cvar_RegisterVariable (&deathmatch);
 	Cvar_RegisterVariable (&coop);
@@ -913,6 +913,22 @@ void Host_Init (void)
 	int i;
 	const char* os;
 
+	// FIXME: this is evil, but possibly temporary
+// COMMANDLINEOPTION: Console: -developer enables warnings and other notices (RECOMMENDED for mod developers)
+	if (COM_CheckParm("-developer"))
+	{
+		forcedeveloper = true;
+		developer.value = developer.integer = 100;
+	}
+
+	if (COM_CheckParm("-developer2"))
+	{
+		forcedeveloper = true;
+		developer.value = developer.integer = 100;
+		developer_memory.value = developer_memory.integer = 100;
+		developer_memorydebug.value = developer_memorydebug.integer = 100;
+	}
+
 	// LordHavoc: quake never seeded the random number generator before... heh
 	srand(time(NULL));
 
@@ -959,15 +975,6 @@ void Host_Init (void)
 		sys_nostdout = 1;
 	else
 		Con_Printf("%s\n", engineversion);
-
-	// FIXME: this is evil, but possibly temporary
-// COMMANDLINEOPTION: Console: -developer enables warnings and other notices (RECOMMENDED for mod developers)
-	if (COM_CheckParm("-developer"))
-	{
-		forcedeveloper = true;
-		developer.integer = 1;
-		developer.value = 1;
-	}
 
 	// initialize filesystem (including fs_basedir, fs_gamedir, -path, -game, scr_screenshot_name)
 	FS_Init();
