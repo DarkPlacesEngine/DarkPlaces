@@ -243,7 +243,7 @@ void EntityFrameQuake_ISeeDeadEntities(void)
 static mempool_t *sv2csqc = NULL;
 int csqc_clent = 0;
 sizebuf_t *sv2csqcbuf = NULL;
-static unsigned char *sv2csqcents_version[64];
+static unsigned char *sv2csqcents_version[MAX_SCOREBOARD];
 
 void EntityFrameCSQC_ClearVersions (void)
 {
@@ -252,7 +252,7 @@ void EntityFrameCSQC_ClearVersions (void)
 		Mem_FreePool(&sv2csqc);
 		sv2csqc = NULL;
 	}
-	memset(sv2csqcents_version, 0, 64*sizeof(unsigned char *));
+	memset(sv2csqcents_version, 0, MAX_SCOREBOARD*sizeof(unsigned char *));
 }
 
 void EntityFrameCSQC_InitClientVersions (int client, qboolean clear)
