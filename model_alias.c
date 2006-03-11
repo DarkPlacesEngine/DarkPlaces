@@ -1462,6 +1462,7 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	Mem_Free(vertbonecounts);
 	Mem_Free(verts);
 	Mem_Free(outtexcoord2f);
+	Mod_FreeSkinFiles(skinfiles);
 }
 
 void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
@@ -1687,6 +1688,7 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 
 		dpmmesh++;
 	}
+	Mod_FreeSkinFiles(skinfiles);
 }
 
 static void Mod_PSKMODEL_AnimKeyToMatrix(float *origin, float *quat, matrix4x4_t *m)
@@ -2235,5 +2237,6 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	Mod_Alias_Mesh_CompileFrameZero(mesh);
 
 	Mem_Free(animfilebuffer);
+	Mod_FreeSkinFiles(skinfiles);
 }
 
