@@ -39,7 +39,7 @@ Memory is cleared / released when a server or client begins, not when they end.
 
 // how many frames have occurred
 // (checked by Host_Error and Host_SaveConfig_f)
-int host_framecount;
+int host_framecount = 0;
 // LordHavoc: set when quit is executed
 qboolean host_shuttingdown = false;
 
