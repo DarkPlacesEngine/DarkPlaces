@@ -108,7 +108,7 @@ void VID_Finish (qboolean allowmousegrab)
 
 	// handle the mouse state when windowed if that's changed
 	vid_usemouse = false;
-	if (allowmousgrab && vid_mouse.integer && !key_consoleactive && !cls.demoplayback)
+	if (allowmousegrab && vid_mouse.integer && !key_consoleactive && !cls.demoplayback)
 		vid_usemouse = true;
 	if (!vid_activewindow)
 		vid_usemouse = false;
