@@ -115,7 +115,6 @@
 0 feature darkplaces readme: add documentation about r_lockpvs, r_lockvisibility, r_useportalculling, r_drawportals, r_drawcollisionbrushes, r_showtris, r_speeds, r_shadow_visiblevolumes, and r_shadow_visiblelighting.
 0 feature darkplaces readme: add log_file and log_sync documentation (Edward Holness)
 0 feature darkplaces readme: document the ctrl-escape hotkey for toggleconsole (LordHavoc)
-0 feature darkplaces renderer: add a nearclip cvar (Tomaz)
 0 feature darkplaces renderer: add a rtlight flag to disable vis culling, for ambient area lights and such (Kaz)
 0 feature darkplaces renderer: add cubemap support to low quality rtlighting path for cards that support >= 2 TMUs and cubemap
 0 feature darkplaces renderer: add per-entity PolygonOffset to renderer, to allow zfighting bmodel/world glitches to be fixed, this has to affect all rendering involving the entity, including light/shadow (Tomaz)
@@ -1096,6 +1095,7 @@ d feature darkplaces physics: add a sv_ cvar to disable demonland.wav when monst
 d feature darkplaces playerphysics: add sv_maxairspeed cvar and use it in sv_user.c, default 30 to match quake player physics (Vermeulen)
 d feature darkplaces protocol: add PRYDON_CLIENTCURSOR extension - clientside mouse with highlighting of selected entities with the EF_SELECTABLE flag, and qc fields on the client entity on the server would indicate which entity the cursor is highlighting as well as where it is (Urre, Harb, FrikaC)
 d feature darkplaces protocol: allow sending of additional precaches during game, this needs to send a reliable message to all connected clients stating the new filename to load, and also to be sent to new connections (VorteX, Vermeulen)
+d feature darkplaces renderer: add a nearclip cvar (Tomaz)
 d feature darkplaces renderer: add q3bsp water rendering, both scrolling and watershader (Zombie)
 d feature darkplaces renderer: add r_shadow_visiblelighting cvar which draws redish orange polygons similar to visiblevolumes for measuring number of light passes per pixel (Harbish)
 d feature darkplaces server: add DP_QC_WRITEUNTERMINATEDSTRING extension (shadowalker)
