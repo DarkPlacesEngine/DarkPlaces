@@ -598,6 +598,14 @@ SOURCE=.\model_brush.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\model_dpmodel.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\model_psk.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\model_shared.h
 # End Source File
 # Begin Source File
