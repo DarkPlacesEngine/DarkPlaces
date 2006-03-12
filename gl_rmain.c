@@ -67,6 +67,7 @@ matrix4x4_t r_view_matrix;
 //
 refdef_t r_refdef;
 
+cvar_t r_nearclip = {0, "r_nearclip", "1", "distance from camera of nearclip plane" };
 cvar_t r_showtris = {0, "r_showtris", "0", "shows triangle outlines, value controls brightness (can be above 1)"};
 cvar_t r_showtris_polygonoffset = {0, "r_showtris_polygonoffset", "-10", "nudges triangle outlines in hardware depth units, used to make outlines appear infront of walls"};
 cvar_t r_shownormals = {0, "r_shownormals", "0", "shows per-vertex surface normals and tangent vectors for bumpmapped lighting"};
@@ -450,6 +451,7 @@ void GL_Main_Init(void)
 {
 // FIXME: move this to client?
 	FOG_registercvars();
+	Cvar_RegisterVariable(&r_nearclip);
 	Cvar_RegisterVariable(&r_showtris);
 	Cvar_RegisterVariable(&r_showtris_polygonoffset);
 	Cvar_RegisterVariable(&r_shownormals);
@@ -739,7 +741,7 @@ static void R_SetFrustum(void)
 #endif
 
 #if 0
-	zNear = 1.0;
+	zNear = r_nearclip.value;
 	nudge = 1.0 - 1.0 / (1<<23);
 	frustum[4].normal[0] = 0 - 0;
 	frustum[4].normal[1] = 0 - 0;
@@ -800,7 +802,7 @@ static void R_SetFrustum(void)
 	frustum[1].dist = DotProduct (r_vieworigin, frustum[1].normal);
 	frustum[2].dist = DotProduct (r_vieworigin, frustum[2].normal);
 	frustum[3].dist = DotProduct (r_vieworigin, frustum[3].normal);
-	frustum[4].dist = DotProduct (r_vieworigin, frustum[4].normal) + 1.0f;
+	frustum[4].dist = DotProduct (r_vieworigin, frustum[4].normal) + r_nearclip.value;
 	PlaneClassify(&frustum[0]);
 	PlaneClassify(&frustum[1]);
 	PlaneClassify(&frustum[2]);
@@ -833,7 +835,7 @@ static void R_SetFrustum(void)
 
 	// nearclip plane
 	//VectorCopy(r_viewforward, frustum[4].normal);
-	//frustum[4].dist = DotProduct (r_vieworigin, frustum[4].normal) + 1.0f;
+	//frustum[4].dist = DotProduct (r_vieworigin, frustum[4].normal) + r_nearclip.value;
 	//PlaneClassify(&frustum[4]);
 }
 
@@ -1164,6 +1166,8 @@ extern void R_DrawLightningBeams (void);
 extern void VM_AddPolygonsToMeshQueue (void);
 void R_RenderScene(void)
 {
+	float nearclip;
+
 	// don't let sound skip if going slow
 	if (r_refdef.extraupdate)
 		S_ExtraUpdate ();
@@ -1175,10 +1179,12 @@ void R_RenderScene(void)
 	R_SetFrustum();
 
 	r_farclip = R_FarClip(r_vieworigin, r_viewforward, 768.0f) + 256.0f;
+	nearclip = bound (0.001f, r_nearclip.value, r_farclip - 1.0f);
+
 	if (r_rtworldshadows || r_rtdlightshadows)
-		GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_refdef.frustum_x, r_refdef.frustum_y, 1.0f);
+		GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_refdef.frustum_x, r_refdef.frustum_y, nearclip);
 	else
-		GL_SetupView_Mode_Perspective(r_refdef.frustum_x, r_refdef.frustum_y, 1.0f, r_farclip);
+		GL_SetupView_Mode_Perspective(r_refdef.frustum_x, r_refdef.frustum_y, nearclip, r_farclip);
 
 	GL_SetupView_Orientation_FromEntity(&r_view_matrix);
 

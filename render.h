@@ -143,6 +143,8 @@ extern qboolean r_rtworldshadows;
 extern qboolean r_rtdlight;
 extern qboolean r_rtdlightshadows;
 
+extern cvar_t r_nearclip;
+
 // forces all rendering to draw triangle outlines
 extern cvar_t r_showtris;
 extern cvar_t r_showtris_polygonoffset;
