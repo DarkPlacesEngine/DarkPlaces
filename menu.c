@@ -692,8 +692,11 @@ void M_Main_Key (int key, char ascii)
 			switch (m_main_cursor)
 			{
 			case 0:
-				m_state = m_none;
-				key_dest = key_game;
+				if (cls.state == ca_connected)
+				{
+					m_state = m_none;
+					key_dest = key_game;
+				}
 				Con_ToggleConsole_f ();
 				break;
 			case 1:
