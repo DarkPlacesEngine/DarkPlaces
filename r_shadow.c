@@ -3306,7 +3306,7 @@ void R_Shadow_DrawLightSprites(void)
 	dlight_t *light;
 
 	for (i = 0, light = r_shadow_worldlightchain;light;i++, light = light->next)
-		R_MeshQueue_AddTransparent(light->origin, R_Shadow_DrawLightSprite_TransparentCallback, (entity_render_t *)light, i % NUMCROSSHAIRS, &light->rtlight);
+		R_MeshQueue_AddTransparent(light->origin, R_Shadow_DrawLightSprite_TransparentCallback, (entity_render_t *)light, 1+(i % 5), &light->rtlight);
 	R_MeshQueue_AddTransparent(r_editlights_cursorlocation, R_Shadow_DrawCursor_TransparentCallback, NULL, 0, NULL);
 }
 

@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 
 static rtexture_t *char_texture;
-cachepic_t *r_crosshairs[NUMCROSSHAIRS];
+cachepic_t *r_crosshairs[NUMCROSSHAIRS+1];
 
 //=============================================================================
 /* Support Routines */
@@ -468,7 +468,7 @@ static void gl_draw_start(void)
 	memset(cachepichash, 0, sizeof(cachepichash));
 
 	char_texture = Draw_CachePic("gfx/conchars", true)->tex;
-	for (i = 0;i < NUMCROSSHAIRS;i++)
+	for (i = 1;i <= NUMCROSSHAIRS;i++)
 		r_crosshairs[i] = Draw_CachePic(va("gfx/crosshair%i", i), false);
 }
 
