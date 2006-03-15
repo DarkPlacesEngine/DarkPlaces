@@ -748,6 +748,8 @@ void SV_ApplyClientMove (void)
 	host_client->edict->fields.server->button2 = (move->buttons & 2)>>1;
 	if (move->impulse)
 		host_client->edict->fields.server->impulse = move->impulse;
+	// only send the impulse to qc once
+	move->impulse = 0;
 	VectorCopy(move->viewangles, host_client->edict->fields.server->v_angle);
 	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button3))) val->_float = ((move->buttons >> 2) & 1);
 	if ((val = PRVM_GETEDICTFIELDVALUE(host_client->edict, eval_button4))) val->_float = ((move->buttons >> 3) & 1);
