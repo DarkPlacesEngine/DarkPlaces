@@ -3247,8 +3247,8 @@ void M_Quit_Draw (void)
 /* LAN CONFIG MENU */
 
 int		lanConfig_cursor = -1;
-int		lanConfig_cursor_table [] = {56, 76, 112};
-#define NUM_LANCONFIG_CMDS	3
+int		lanConfig_cursor_table [] = {56, 76, 84, 120};
+#define NUM_LANCONFIG_CMDS	4
 
 int 	lanConfig_port;
 char	lanConfig_portname[6];
@@ -3301,10 +3301,11 @@ void M_LanConfig_Draw (void)
 
 	if (JoiningGame)
 	{
-		M_Print(basex, lanConfig_cursor_table[1], "Search for games...");
-		M_Print(basex, lanConfig_cursor_table[2]-16, "Join game at:");
-		M_DrawTextBox (basex+8, lanConfig_cursor_table[2]-8, 22, 1);
-		M_Print(basex+16, lanConfig_cursor_table[2], lanConfig_joinname);
+		M_Print(basex, lanConfig_cursor_table[1], "Search for DarkPlaces games...");
+		M_Print(basex, lanConfig_cursor_table[2], "Search for QuakeWorld games...");
+		M_Print(basex, lanConfig_cursor_table[3]-16, "Join game at:");
+		M_DrawTextBox (basex+8, lanConfig_cursor_table[3]-8, 22, 1);
+		M_Print(basex+16, lanConfig_cursor_table[3], lanConfig_joinname);
 	}
 	else
 	{
@@ -3315,10 +3316,10 @@ void M_LanConfig_Draw (void)
 	M_DrawCharacter (basex-8, lanConfig_cursor_table [lanConfig_cursor], 12+((int)(realtime*4)&1));
 
 	if (lanConfig_cursor == 0)
-		M_DrawCharacter (basex+9*8 + 8*strlen(lanConfig_portname), lanConfig_cursor_table [0], 10+((int)(realtime*4)&1));
+		M_DrawCharacter (basex+9*8 + 8*strlen(lanConfig_portname), lanConfig_cursor_table [lanConfig_cursor], 10+((int)(realtime*4)&1));
 
-	if (lanConfig_cursor == 2)
-		M_DrawCharacter (basex+16 + 8*strlen(lanConfig_joinname), lanConfig_cursor_table [2], 10+((int)(realtime*4)&1));
+	if (lanConfig_cursor == 3)
+		M_DrawCharacter (basex+16 + 8*strlen(lanConfig_joinname), lanConfig_cursor_table [lanConfig_cursor], 10+((int)(realtime*4)&1));
 
 	if (*m_return_reason)
 		M_Print(basex, 168, m_return_reason);
@@ -3340,6 +3341,9 @@ void M_LanConfig_Key (int key, char ascii)
 		lanConfig_cursor--;
 		if (lanConfig_cursor < 0)
 			lanConfig_cursor = NUM_LANCONFIG_CMDS-1;
+		// when in start game menu, skip the unused search qw servers item
+		if (StartingGame && lanConfig_cursor == 2)
+			lanConfig_cursor = 1;
 		break;
 
 	case K_DOWNARROW:
@@ -3347,6 +3351,9 @@ void M_LanConfig_Key (int key, char ascii)
 		lanConfig_cursor++;
 		if (lanConfig_cursor >= NUM_LANCONFIG_CMDS)
 			lanConfig_cursor = 0;
+		// when in start game menu, skip the unused search qw servers item
+		if (StartingGame && lanConfig_cursor == 1)
+			lanConfig_cursor = 2;
 		break;
 
 	case K_ENTER:
@@ -3359,7 +3366,7 @@ void M_LanConfig_Key (int key, char ascii)
 
 		Cvar_SetValue("port", lanConfig_port);
 
-		if (lanConfig_cursor == 1)
+		if (lanConfig_cursor == 1 || lanConfig_cursor == 2)
 		{
 			if (StartingGame)
 			{
@@ -3370,7 +3377,7 @@ void M_LanConfig_Key (int key, char ascii)
 			break;
 		}
 
-		if (lanConfig_cursor == 2)
+		if (lanConfig_cursor == 3)
 			Cbuf_AddText ( va ("connect \"%s\"\n", lanConfig_joinname) );
 		break;
 
@@ -3381,7 +3388,7 @@ void M_LanConfig_Key (int key, char ascii)
 				lanConfig_portname[strlen(lanConfig_portname)-1] = 0;
 		}
 
-		if (lanConfig_cursor == 2)
+		if (lanConfig_cursor == 3)
 		{
 			if (strlen(lanConfig_joinname))
 				lanConfig_joinname[strlen(lanConfig_joinname)-1] = 0;
@@ -3392,7 +3399,7 @@ void M_LanConfig_Key (int key, char ascii)
 		if (ascii < 32)
 			break;
 
-		if (lanConfig_cursor == 2)
+		if (lanConfig_cursor == 3)
 		{
 			l = (int)strlen(lanConfig_joinname);
 			if (l < 21)
@@ -3415,7 +3422,7 @@ void M_LanConfig_Key (int key, char ascii)
 		}
 	}
 
-	if (StartingGame && lanConfig_cursor == 2)
+	if (StartingGame && lanConfig_cursor == 3)
 	{
 		if (key == K_UPARROW)
 			lanConfig_cursor = 1;
@@ -4305,7 +4312,10 @@ void M_Menu_ServerList_f (void)
 	m_entersound = true;
 	slist_cursor = 0;
 	M_Update_Return_Reason("");
-	Net_Slist_f();
+	if (lanConfig_cursor == 2)
+		Net_SlistQW_f();
+	else
+		Net_Slist_f();
 }
 
 
@@ -4341,12 +4351,19 @@ void M_ServerList_Draw (void)
 			M_PrintColored(0, y, serverlist_viewlist[n]->line2);y += 8;
 		}
 	}
-	else if (realtime - masterquerytime < 3)
+	else if (realtime - masterquerytime > 10)
 	{
 		if (masterquerycount)
 			M_Print(0, y, "No servers found");
 		else
 			M_Print(0, y, "No master servers found (network problem?)");
+	}
+	else
+	{
+		if (serverquerycount)
+			M_Print(0, y, "Querying servers");
+		else
+			M_Print(0, y, "Querying master servers");
 	}
 }
 
@@ -4360,7 +4377,10 @@ void M_ServerList_Key(int k, char ascii)
 		break;
 
 	case K_SPACE:
-		Net_Slist_f();
+		if (lanConfig_cursor == 2)
+			Net_SlistQW_f();
+		else
+			Net_Slist_f();
 		break;
 
 	case K_UPARROW:

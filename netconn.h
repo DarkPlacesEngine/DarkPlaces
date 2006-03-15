@@ -358,17 +358,18 @@ int NetConn_WriteString(lhnetsocket_t *mysocket, const char *string, const lhnet
 int NetConn_IsLocalGame(void);
 void NetConn_ClientFrame(void);
 void NetConn_ServerFrame(void);
-void NetConn_QueryMasters(void);
+void NetConn_QueryMasters(qboolean querydp, qboolean queryqw);
 void NetConn_Heartbeat(int priority);
 void NetConn_QueryQueueFrame(void);
 void Net_Stats_f(void);
 void Net_Slist_f(void);
+void Net_SlistQW_f(void);
 
 // ServerList interface (public)
 // manually refresh the view set, do this after having changed the mask or any other flag
 void ServerList_RebuildViewList(void);
 void ServerList_ResetMasks(void);
-void ServerList_QueryList(void);
+void ServerList_QueryList(qboolean querydp, qboolean queryqw);
 
 #endif
 

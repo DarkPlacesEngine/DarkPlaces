@@ -107,11 +107,11 @@ int serverquerycount = 0;
 int serverreplycount = 0;
 
 // this is only false if there are still servers left to query
-int serverlist_querysleep = true;
+static qboolean serverlist_querysleep = true;
 // this is pushed a second or two ahead of realtime whenever a master server
 // reply is received, to avoid issuing queries while master replies are still
 // flooding in (which would make a mess of the ping times)
-double serverlist_querywaittime = 0;
+static double serverlist_querywaittime = 0;
 
 static unsigned char sendbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
 static unsigned char readbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
@@ -397,7 +397,7 @@ static void _ServerList_Test(void)
 }
 #endif
 
-void ServerList_QueryList(void)
+void ServerList_QueryList(qboolean querydp, qboolean queryqw)
 {
 	//masterquerytime = realtime;
 	masterquerytime = Sys_DoubleTime();
@@ -411,7 +411,7 @@ void ServerList_QueryList(void)
 
 	//_ServerList_Test();
 
-	NetConn_QueryMasters();
+	NetConn_QueryMasters(querydp, queryqw);
 }
 
 // rest
@@ -2227,7 +2227,7 @@ void NetConn_ServerFrame(void)
 	}
 }
 
-void NetConn_QueryMasters(void)
+void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 {
 	int i;
 	int masternum;
@@ -2243,43 +2243,48 @@ void NetConn_QueryMasters(void)
 	// note this is IPv4-only, I doubt there are IPv6-only LANs out there
 	LHNETADDRESS_FromString(&broadcastaddress, "255.255.255.255", 26000);
 
-	for (i = 0;i < cl_numsockets;i++)
+	if (querydp)
 	{
-		if (cl_sockets[i])
+		for (i = 0;i < cl_numsockets;i++)
 		{
-			// search LAN for Quake servers
-			SZ_Clear(&net_message);
-			// save space for the header, filled in later
-			MSG_WriteLong(&net_message, 0);
-			MSG_WriteByte(&net_message, CCREQ_SERVER_INFO);
-			MSG_WriteString(&net_message, "QUAKE");
-			MSG_WriteByte(&net_message, NET_PROTOCOL_VERSION);
-			*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
-			NetConn_Write(cl_sockets[i], net_message.data, net_message.cursize, &broadcastaddress);
-			SZ_Clear(&net_message);
-
-			// search LAN for DarkPlaces servers
-			NetConn_WriteString(cl_sockets[i], "\377\377\377\377getinfo", &broadcastaddress);
-
-			// build the getservers message to send to the dpmaster master servers
-			dpsnprintf(request, sizeof(request), "\377\377\377\377getservers %s %u empty full\x0A", gamename, NET_PROTOCOL_VERSION);
-
-			// search internet
-			for (masternum = 0;sv_masters[masternum].name;masternum++)
+			if (cl_sockets[i])
 			{
-				if (sv_masters[masternum].string && LHNETADDRESS_FromString(&masteraddress, sv_masters[masternum].string, DPMASTER_PORT) && LHNETADDRESS_GetAddressType(&masteraddress) == LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i])))
+				// search LAN for Quake servers
+				SZ_Clear(&net_message);
+				// save space for the header, filled in later
+				MSG_WriteLong(&net_message, 0);
+				MSG_WriteByte(&net_message, CCREQ_SERVER_INFO);
+				MSG_WriteString(&net_message, "QUAKE");
+				MSG_WriteByte(&net_message, NET_PROTOCOL_VERSION);
+				*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
+				NetConn_Write(cl_sockets[i], net_message.data, net_message.cursize, &broadcastaddress);
+				SZ_Clear(&net_message);
+
+				// search LAN for DarkPlaces servers
+				NetConn_WriteString(cl_sockets[i], "\377\377\377\377getinfo", &broadcastaddress);
+
+				// build the getservers message to send to the dpmaster master servers
+				dpsnprintf(request, sizeof(request), "\377\377\377\377getservers %s %u empty full\x0A", gamename, NET_PROTOCOL_VERSION);
+
+				// search internet
+				for (masternum = 0;sv_masters[masternum].name;masternum++)
 				{
-					masterquerycount++;
-					NetConn_WriteString(cl_sockets[i], request, &masteraddress);
+					if (sv_masters[masternum].string && LHNETADDRESS_FromString(&masteraddress, sv_masters[masternum].string, DPMASTER_PORT) && LHNETADDRESS_GetAddressType(&masteraddress) == LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i])))
+					{
+						masterquerycount++;
+						NetConn_WriteString(cl_sockets[i], request, &masteraddress);
+					}
 				}
 			}
+		}
+	}
 
-			// only query QuakeWorld servers when in GAME_NORMAL mode as that
-			// is all QuakeWorld is designed for, we don't want QuakeWorld
-			// servers showing up when running another game (not even the
-			// mission packs, as if a QuakeWorld server was using their data
-			// you could still play with -game hipnotic rather than -hipnotic)
-			if (gamemode == GAME_NORMAL)
+	// only query QuakeWorld servers when the user wants to
+	if (queryqw)
+	{
+		for (i = 0;i < cl_numsockets;i++)
+		{
+			if (cl_sockets[i])
 			{
 				// build the getservers message to send to the qwmaster master servers
 				// note this has no -1 prefix, and the trailing nul byte is sent
@@ -2375,11 +2380,25 @@ void Net_Slist_f(void)
 	serverlist_sortdescending = false;
     if (m_state != m_slist) {
 		Con_Print("Sending requests to master servers\n");
-		ServerList_QueryList();
+		ServerList_QueryList(true, false);
 		serverlist_consoleoutput = true;
 		Con_Print("Listening for replies...\n");
 	} else
-		ServerList_QueryList();
+		ServerList_QueryList(true, false);
+}
+
+void Net_SlistQW_f(void)
+{
+	ServerList_ResetMasks();
+	serverlist_sortbyfield = SLIF_PING;
+	serverlist_sortdescending = false;
+    if (m_state != m_slist) {
+		Con_Print("Sending requests to master servers\n");
+		ServerList_QueryList(false, true);
+		serverlist_consoleoutput = true;
+		Con_Print("Listening for replies...\n");
+	} else
+		ServerList_QueryList(false, true);
 }
 
 void NetConn_Init(void)
@@ -2388,7 +2407,8 @@ void NetConn_Init(void)
 	lhnetaddress_t tempaddress;
 	netconn_mempool = Mem_AllocPool("network connections", 0, NULL);
 	Cmd_AddCommand("net_stats", Net_Stats_f, "print network statistics");
-	Cmd_AddCommand("net_slist", Net_Slist_f, "query master series and print all server information");
+	Cmd_AddCommand("net_slist", Net_Slist_f, "query dp master servers and print all server information");
+	Cmd_AddCommand("net_slistqw", Net_SlistQW_f, "query qw master servers and print all server information");
 	Cmd_AddCommand("heartbeat", Net_Heartbeat_f, "send a heartbeat to the master server (updates your server information)");
 	Cvar_RegisterVariable(&net_slist_queriespersecond);
 	Cvar_RegisterVariable(&net_slist_queriesperframe);
