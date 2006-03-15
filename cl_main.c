@@ -245,7 +245,6 @@ void CL_ClearState(void)
 
 	CL_Screen_NewMap();
 	CL_Particles_Clear();
-	CL_CGVM_Clear();
 }
 
 void CL_ExpandEntities(int num)
@@ -1659,9 +1658,6 @@ int CL_ReadFromServer(void)
 		else
 			csqc_frame = true;
 
-		// run cgame code (which can add more entities)
-		CL_CGVM_Frame();
-
 		CL_UpdateLights();
 
 		// update view blend
@@ -1734,7 +1730,6 @@ CL_Shutdown
 */
 void CL_Shutdown (void)
 {
-	CL_CGVM_Shutdown();
 	CL_Particles_Shutdown();
 	CL_Parse_Shutdown();
 
@@ -1828,7 +1823,6 @@ void CL_Init (void)
 	CL_Parse_Init();
 	CL_Particles_Init();
 	CL_Screen_Init();
-	CL_CGVM_Init();
 
 	CL_Video_Init();
 }

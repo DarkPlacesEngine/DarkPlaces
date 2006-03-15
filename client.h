@@ -1072,7 +1072,5 @@ refdef_t;
 
 extern refdef_t r_refdef;
 
-#include "cgamevm.h"
-
 #endif
 

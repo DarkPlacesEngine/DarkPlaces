@@ -225,7 +225,7 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define	svc_skybox			37		// [string] skyname
 
 // LordHavoc: my svc_ range, 50-59
-#define svc_cgame			50		// [short] length [bytes] data
+#define svc_unusedlh1		50		//
 #define svc_updatestatubyte	51		// [byte] stat [byte] value
 #define svc_effect			52		// [vector] org [byte] modelindex [byte] startframe [byte] framecount [byte] framerate
 #define svc_effect2			53		// [vector] org [short] modelindex [short] startframe [byte] framecount [byte] framerate

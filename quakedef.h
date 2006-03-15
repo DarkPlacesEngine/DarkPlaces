@@ -221,7 +221,6 @@ extern char engineversion[128];
 
 #include "glquake.h"
 
-#include "ui.h"
 #include "palette.h"
 
 extern qboolean noclip_anglehack;

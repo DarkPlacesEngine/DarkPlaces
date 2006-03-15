@@ -920,10 +920,7 @@ Key_Event (int key, char ascii, qboolean down)
 				MR_ToggleMenu_f ();
 				break;
 			default:
-				if(UI_Callback_IsSlotUsed(key_dest - 3))
-					UI_Callback_KeyDown (key, ascii);
-				else
-					Con_Printf ("Key_Event: Bad key_dest\n");
+				Con_Printf ("Key_Event: Bad key_dest\n");
 		}
 		return;
 	}
@@ -985,10 +982,7 @@ Key_Event (int key, char ascii, qboolean down)
 			}
 			break;
 		default:
-			if(UI_Callback_IsSlotUsed(key_dest - 3))
-				UI_Callback_KeyDown (key, ascii);
-			else
-				Con_Printf ("Key_Event: Bad key_dest\n");
+			Con_Printf ("Key_Event: Bad key_dest\n");
 	}
 }
 
