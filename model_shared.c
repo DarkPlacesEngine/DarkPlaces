@@ -30,16 +30,25 @@ cvar_t r_mipskins = {CVAR_SAVE, "r_mipskins", "0", "mipmaps skins (so they becom
 
 model_t *loadmodel;
 
+#if 0
+// LordHavoc: was 512
+static int mod_numknown = 0;
+static int mod_maxknown = 0;
+static model_t *mod_known = NULL;
+#else
 // LordHavoc: was 512
 #define MAX_MOD_KNOWN (MAX_MODELS + 256)
+static int mod_numknown = 0;
+static int mod_maxknown = MAX_MOD_KNOWN;
 static model_t mod_known[MAX_MOD_KNOWN];
+#endif
 
 static void mod_start(void)
 {
 	int i;
 	model_t *mod;
 
-	for (i = 0, mod = mod_known;i < MAX_MOD_KNOWN;i++, mod++)
+	for (i = 0, mod = mod_known;i < mod_numknown;i++, mod++)
 		if (mod->name[0])
 			if (mod->used)
 				Mod_LoadModel(mod, true, false, mod->isworldmodel);
@@ -50,7 +59,7 @@ static void mod_shutdown(void)
 	int i;
 	model_t *mod;
 
-	for (i = 0, mod = mod_known;i < MAX_MOD_KNOWN;i++, mod++)
+	for (i = 0, mod = mod_known;i < mod_numknown;i++, mod++)
 		if (mod->loaded)
 			Mod_UnloadModel(mod);
 }
@@ -63,7 +72,7 @@ static void mod_newmap(void)
 	if (!cl_stainmaps_clearonload.integer)
 		return;
 
-	for (i = 0;i < MAX_MOD_KNOWN;i++)
+	for (i = 0;i < mod_numknown;i++)
 	{
 		if (mod_known[i].mempool && mod_known[i].data_surfaces)
 		{
@@ -236,7 +245,7 @@ void Mod_ClearUsed(void)
 	int i;
 	model_t *mod;
 
-	for (i = 0, mod = mod_known;i < MAX_MOD_KNOWN;i++, mod++)
+	for (i = 0, mod = mod_known;i < mod_numknown;i++, mod++)
 		if (mod->name[0])
 			mod->used = false;
 #endif
@@ -247,7 +256,7 @@ void Mod_PurgeUnused(void)
 	int i;
 	model_t *mod;
 
-	for (i = 0, mod = mod_known;i < MAX_MOD_KNOWN;i++, mod++)
+	for (i = 0, mod = mod_known;i < mod_numknown;i++, mod++)
 		if (mod->name[0])
 			if (!mod->used)
 				Mod_UnloadModel(mod);
@@ -259,7 +268,7 @@ void Mod_RemoveStaleWorldModels(model_t *skip)
 	int i;
 	model_t *mod;
 
-	for (i = 0, mod = mod_known;i < MAX_MOD_KNOWN;i++, mod++)
+	for (i = 0, mod = mod_known;i < mod_numknown;i++, mod++)
 	{
 		if (mod->isworldmodel && mod->loaded && skip != mod)
 		{
@@ -279,38 +288,49 @@ Mod_FindName
 model_t *Mod_FindName(const char *name)
 {
 	int i;
-	model_t *mod, *freemod;
+	model_t *mod;
 
 	if (!name[0])
 		Host_Error ("Mod_ForName: NULL name");
 
 // search the currently loaded models
-	freemod = NULL;
-	for (i = 0, mod = mod_known;i < MAX_MOD_KNOWN;i++, mod++)
+	for (i = 0, mod = mod_known;i < mod_numknown;i++, mod++)
 	{
-		if (mod->name[0])
+		if (mod->name[0] && !strcmp(mod->name, name))
 		{
-			if (!strcmp (mod->name, name))
-			{
-				mod->used = true;
-				return mod;
-			}
+			mod->used = true;
+			return mod;
 		}
-		else if (freemod == NULL)
-			freemod = mod;
 	}
 
-	if (freemod)
+	// no match found, find room for a new one
+	for (i = 0;i < mod_numknown;i++)
+		if (!mod_known[i].name[0])
+			break;
+
+	if (mod_maxknown == i)
 	{
-		mod = freemod;
-		strcpy (mod->name, name);
-		mod->loaded = false;
-		mod->used = true;
-		return mod;
+#if 0
+		model_t *old;
+		mod_maxknown += 256;
+		old = mod_known;
+		mod_known = Mem_Alloc(mod_mempool, mod_maxknown * sizeof(model_t));
+		if (old)
+		{
+			memcpy(mod_known, old, mod_numknown * sizeof(model_t));
+			Mem_Free(old);
+		}
+#else
+		Host_Error ("Mod_FindName: ran out of models");
+#endif
 	}
-
-	Host_Error ("Mod_FindName: ran out of models");
-	return NULL;
+	if (mod_numknown == i)
+		mod_numknown++;
+	mod = mod_known + i;
+	strcpy (mod->name, name);
+	mod->loaded = false;
+	mod->used = true;
+	return mod;
 }
 
 /*
@@ -345,7 +365,7 @@ static void Mod_Print(void)
 	model_t	*mod;
 
 	Con_Print("Loaded models:\n");
-	for (i = 0, mod = mod_known;i < MAX_MOD_KNOWN;i++, mod++)
+	for (i = 0, mod = mod_known;i < mod_numknown;i++, mod++)
 		if (mod->name[0])
 			Con_Printf("%4iK %s\n", mod->mempool ? (mod->mempool->totalsize + 1023) / 1024 : 0, mod->name);
 }
