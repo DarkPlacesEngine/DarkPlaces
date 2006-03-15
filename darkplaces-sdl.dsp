@@ -106,14 +106,6 @@ SOURCE=.\cd_shared.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\cgame.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\cgamevm.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\cl_collision.c
 # End Source File
 # Begin Source File
@@ -410,10 +402,6 @@ SOURCE=.\sys_shared.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\ui.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\vid_sdl.c
 # End Source File
 # Begin Source File
@@ -451,18 +439,6 @@ SOURCE=.\bspfile.h
 # Begin Source File
 
 SOURCE=.\cdaudio.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\cg_math.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\cgame_api.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\cgamevm.h
 # End Source File
 # Begin Source File
 
@@ -731,10 +707,6 @@ SOURCE=.\spritegn.h
 # Begin Source File
 
 SOURCE=.\sys.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\ui.h
 # End Source File
 # Begin Source File
 
