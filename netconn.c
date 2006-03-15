@@ -2286,6 +2286,9 @@ void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 		{
 			if (cl_sockets[i])
 			{
+				// search LAN for QuakeWorld servers
+				NetConn_WriteString(cl_sockets[i], "\377\377\377\377status\n", &broadcastaddress);
+
 				// build the getservers message to send to the qwmaster master servers
 				// note this has no -1 prefix, and the trailing nul byte is sent
 				dpsnprintf(request, sizeof(request), "c\n");
