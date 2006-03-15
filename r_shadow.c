@@ -199,8 +199,8 @@ cvar_t r_shadow_debuglight = {0, "r_shadow_debuglight", "-1", "renders only one 
 cvar_t r_shadow_gloss = {CVAR_SAVE, "r_shadow_gloss", "1", "0 disables gloss (specularity) rendering, 1 uses gloss if textures are found, 2 forces a flat metallic specular effect on everything without textures (similar to tenebrae)"};
 cvar_t r_shadow_gloss2intensity = {0, "r_shadow_gloss2intensity", "0.25", "how bright the forced flat gloss should look if r_shadow_gloss is 2"};
 cvar_t r_shadow_glossintensity = {0, "r_shadow_glossintensity", "1", "how bright textured glossmaps should look if r_shadow_gloss is 1 or 2"};
-cvar_t r_shadow_lightattenuationpower = {0, "r_shadow_lightattenuationpower", "0.5", "changes attenuation texture generation (does not affect r_shadow_glsl lighting)"};
-cvar_t r_shadow_lightattenuationscale = {0, "r_shadow_lightattenuationscale", "1", "changes attenuation texture generation (does not affect r_shadow_glsl lighting)"};
+cvar_t r_shadow_lightattenuationpower = {0, "r_shadow_lightattenuationpower", "0.5", "changes attenuation texture generation (does not affect r_glsl lighting)"};
+cvar_t r_shadow_lightattenuationscale = {0, "r_shadow_lightattenuationscale", "1", "changes attenuation texture generation (does not affect r_glsl lighting)"};
 cvar_t r_shadow_lightintensityscale = {0, "r_shadow_lightintensityscale", "1", "renders all world lights brighter or darker"};
 cvar_t r_shadow_portallight = {0, "r_shadow_portallight", "1", "use portal culling to exactly determine lit triangles when compiling world lights"};
 cvar_t r_shadow_projectdistance = {0, "r_shadow_projectdistance", "1000000", "how far to cast shadows"};
@@ -216,13 +216,7 @@ cvar_t r_shadow_realtime_world_compileshadow = {0, "r_shadow_realtime_world_comp
 cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1", "use scissor optimization of light rendering (restricts rendering to the portion of the screen affected by the light)"};
 cvar_t r_shadow_shadow_polygonfactor = {0, "r_shadow_shadow_polygonfactor", "0", "how much to enlarge shadow volume polygons when rendering (should be 0!)"};
 cvar_t r_shadow_shadow_polygonoffset = {0, "r_shadow_shadow_polygonoffset", "1", "how much to push shadow volumes into the distance when rendering, to reduce chances of zfighting artifacts (should not be less than 0)"};
-cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1", "use 3D voxel textures for spherical attenuation rather than cylindrical (does not affect r_shadow_glsl lighting)"};
-cvar_t r_shadow_glsl = {0, "r_shadow_glsl", "1", "enables use of OpenGL 2.0 pixel shaders for lighting"};
-cvar_t r_shadow_glsl_offsetmapping = {0, "r_shadow_glsl_offsetmapping", "0", "enables offset mapping effect (also known as parallax mapping or sometimes as virtual displacement mapping, not as good as relief mapping or silohuette mapping but much faster), can cause strange artifacts on many textures, requires bumpmaps for depth information (normalmaps can have depth information as alpha channel, but most do not)"};
-cvar_t r_shadow_glsl_offsetmapping_scale = {0, "r_shadow_glsl_offsetmapping_scale", "-0.04", "how deep the offset mapping effect is, and whether it is inward or outward"};
-cvar_t r_shadow_glsl_offsetmapping_bias = {0, "r_shadow_glsl_offsetmapping_bias", "0.04", "pushes the effect closer/further"};
-cvar_t r_shadow_glsl_usehalffloat = {0, "r_shadow_glsl_usehalffloat", "0", "use half and hvec variables in GLSL shader for a speed gain (NVIDIA only)"};
-cvar_t r_shadow_glsl_surfacenormalize = {0, "r_shadow_glsl_surfacenormalize", "1", "normalize bumpmap texels in GLSL shader, produces a more rounded look on small bumps and dents"};
+cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1", "use 3D voxel textures for spherical attenuation rather than cylindrical (does not affect r_glsl lighting)"};
 cvar_t gl_ext_stenciltwoside = {0, "gl_ext_stenciltwoside", "1", "make use of GL_EXT_stenciltwoside extension (NVIDIA only)"};
 cvar_t r_editlights = {0, "r_editlights", "0", "enables .rtlights file editing mode"};
 cvar_t r_editlights_cursordistance = {0, "r_editlights_cursordistance", "1024", "maximum distance of cursor from eye"};
@@ -252,20 +246,6 @@ cubemapinfo_t;
 static int numcubemaps;
 static cubemapinfo_t cubemaps[MAX_CUBEMAPS];
 
-#define SHADERPERMUTATION_COLORMAPPING (1<<0)
-#define SHADERPERMUTATION_SPECULAR (1<<1)
-#define SHADERPERMUTATION_FOG (1<<2)
-#define SHADERPERMUTATION_CUBEFILTER (1<<3)
-#define SHADERPERMUTATION_OFFSETMAPPING (1<<4)
-#define SHADERPERMUTATION_SURFACENORMALIZE (1<<5)
-#define SHADERPERMUTATION_GEFORCEFX (1<<6)
-#define SHADERPERMUTATION_COUNT (1<<7)
-
-// indicates if we have tried compiling this shader permutation yet
-qboolean r_shadow_program_compiledlight[SHADERPERMUTATION_COUNT];
-// GLSL program object number, or 0 if compile failed
-GLhandleARB r_shadow_program_light[SHADERPERMUTATION_COUNT];
-
 void R_Shadow_UncompileWorldLights(void);
 void R_Shadow_ClearWorldLights(void);
 void R_Shadow_SaveWorldLights(void);
@@ -277,281 +257,8 @@ void R_Shadow_ValidateCvars(void);
 static void R_Shadow_MakeTextures(void);
 void R_Shadow_DrawWorldLightShadowVolume(matrix4x4_t *matrix, dlight_t *light);
 
-const char *builtinshader_light_vert =
-"// ambient+diffuse+specular+normalmap+attenuation+cubemap+fog shader\n"
-"// written by Forest 'LordHavoc' Hale\n"
-"\n"
-"// use half floats if available for math performance\n"
-"#ifdef GEFORCEFX\n"
-"#define myhalf half\n"
-"#define myhvec2 hvec2\n"
-"#define myhvec3 hvec3\n"
-"#define myhvec4 hvec4\n"
-"#else\n"
-"#define myhalf float\n"
-"#define myhvec2 vec2\n"
-"#define myhvec3 vec3\n"
-"#define myhvec4 vec4\n"
-"#endif\n"
-"\n"
-"uniform vec3 LightPosition;\n"
-"\n"
-"varying vec2 TexCoord;\n"
-"varying myhvec3 CubeVector;\n"
-"varying vec3 LightVector;\n"
-"\n"
-"#if defined(USESPECULAR) || defined(USEFOG) || defined(USEOFFSETMAPPING)\n"
-"uniform vec3 EyePosition;\n"
-"varying vec3 EyeVector;\n"
-"#endif\n"
-"\n"
-"// TODO: get rid of tangentt (texcoord2) and use a crossproduct to regenerate it from tangents (texcoord1) and normal (texcoord3)\n"
-"\n"
-"void main(void)\n"
-"{\n"
-"	// copy the surface texcoord\n"
-"	TexCoord = vec2(gl_TextureMatrix[0] * gl_MultiTexCoord0);\n"
-"\n"
-"	// transform vertex position into light attenuation/cubemap space\n"
-"	// (-1 to +1 across the light box)\n"
-"	CubeVector = vec3(gl_TextureMatrix[3] * gl_Vertex);\n"
-"\n"
-"	// transform unnormalized light direction into tangent space\n"
-"	// (we use unnormalized to ensure that it interpolates correctly and then\n"
-"	//  normalize it per pixel)\n"
-"	vec3 lightminusvertex = LightPosition - gl_Vertex.xyz;\n"
-"	LightVector.x = dot(lightminusvertex, gl_MultiTexCoord1.xyz);\n"
-"	LightVector.y = dot(lightminusvertex, gl_MultiTexCoord2.xyz);\n"
-"	LightVector.z = dot(lightminusvertex, gl_MultiTexCoord3.xyz);\n"
-"\n"
-"#if defined(USESPECULAR) || defined(USEFOG) || defined(USEOFFSETMAPPING)\n"
-"	// transform unnormalized eye direction into tangent space\n"
-"	vec3 eyeminusvertex = EyePosition - gl_Vertex.xyz;\n"
-"	EyeVector.x = dot(eyeminusvertex, gl_MultiTexCoord1.xyz);\n"
-"	EyeVector.y = dot(eyeminusvertex, gl_MultiTexCoord2.xyz);\n"
-"	EyeVector.z = dot(eyeminusvertex, gl_MultiTexCoord3.xyz);\n"
-"#endif\n"
-"\n"
-"	// transform vertex to camera space, using ftransform to match non-VS\n"
-"	// rendering\n"
-"	gl_Position = ftransform();\n"
-"}\n"
-;
-
-const char *builtinshader_light_frag =
-"// ambient+diffuse+specular+normalmap+attenuation+cubemap+fog shader\n"
-"// written by Forest 'LordHavoc' Hale\n"
-"\n"
-"// use half floats if available for math performance\n"
-"#ifdef GEFORCEFX\n"
-"#define myhalf half\n"
-"#define myhvec2 hvec2\n"
-"#define myhvec3 hvec3\n"
-"#define myhvec4 hvec4\n"
-"#else\n"
-"#define myhalf float\n"
-"#define myhvec2 vec2\n"
-"#define myhvec3 vec3\n"
-"#define myhvec4 vec4\n"
-"#endif\n"
-"\n"
-"uniform myhvec3 LightColor;\n"
-"#ifdef USEOFFSETMAPPING\n"
-"uniform myhalf OffsetMapping_Scale;\n"
-"uniform myhalf OffsetMapping_Bias;\n"
-"#endif\n"
-"#ifdef USESPECULAR\n"
-"uniform myhalf SpecularPower;\n"
-"#endif\n"
-"#ifdef USEFOG\n"
-"uniform myhalf FogRangeRecip;\n"
-"#endif\n"
-"uniform myhalf AmbientScale;\n"
-"uniform myhalf DiffuseScale;\n"
-"#ifdef USESPECULAR\n"
-"uniform myhalf SpecularScale;\n"
-"#endif\n"
-"\n"
-"#ifdef USECOLORMAPPING\n"
-"uniform myhvec3 Color_Pants;\n"
-"uniform myhvec3 Color_Shirt;\n"
-"#endif\n"
-"\n"
-"uniform sampler2D Texture_Normal;\n"
-"uniform sampler2D Texture_Color;\n"
-"uniform sampler2D Texture_Pants;\n"
-"uniform sampler2D Texture_Shirt;\n"
-"#ifdef USESPECULAR\n"
-"uniform sampler2D Texture_Gloss;\n"
-"#endif\n"
-"#ifdef USECUBEFILTER\n"
-"uniform samplerCube Texture_Cube;\n"
-"#endif\n"
-"#ifdef USEFOG\n"
-"uniform sampler2D Texture_FogMask;\n"
-"#endif\n"
-"\n"
-"varying vec2 TexCoord;\n"
-"varying myhvec3 CubeVector;\n"
-"varying vec3 LightVector;\n"
-"#if defined(USESPECULAR) || defined(USEFOG) || defined(USEOFFSETMAPPING)\n"
-"varying vec3 EyeVector;\n"
-"#endif\n"
-"\n"
-"void main(void)\n"
-"{\n"
-"	// attenuation\n"
-"	//\n"
-"	// the attenuation is (1-(x*x+y*y+z*z)) which gives a large bright\n"
-"	// center and sharp falloff at the edge, this is about the most efficient\n"
-"	// we can get away with as far as providing illumination.\n"
-"	//\n"
-"	// pow(1-(x*x+y*y+z*z), 4) is far more realistic but needs large lights to\n"
-"	// provide significant illumination, large = slow = pain.\n"
-"	myhalf colorscale = max(1.0 - dot(CubeVector, CubeVector), 0.0);\n"
-"\n"
-"#ifdef USEFOG\n"
-"	// apply fog\n"
-"	colorscale *= texture2D(Texture_FogMask, myhvec2(length(EyeVector)*FogRangeRecip, 0)).x;\n"
-"#endif\n"
-"\n"
-"#ifdef USEOFFSETMAPPING\n"
-"	// this is 3 sample because of ATI Radeon 9500-9800/X300 limits\n"
-"	myhvec2 OffsetVector = normalize(EyeVector).xy * vec2(-0.333, 0.333);\n"
-"	myhvec2 TexCoordOffset = TexCoord + OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoord).w);\n"
-"	TexCoordOffset += OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoordOffset).w);\n"
-"	TexCoordOffset += OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoordOffset).w);\n"
-"#define TexCoord TexCoordOffset\n"
-"#endif\n"
-"\n"
-"	// get the surface normal\n"
-"#ifdef SURFACENORMALIZE\n"
-"	myhvec3 surfacenormal = normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - 0.5);\n"
-"#else\n"
-"	myhvec3 surfacenormal = -1.0 + 2.0 * myhvec3(texture2D(Texture_Normal, TexCoord));\n"
-"#endif\n"
-"\n"
-"	// calculate shading\n"
-"	myhvec3 diffusenormal = myhvec3(normalize(LightVector));\n"
-"	myhvec4 texturecolor = myhvec4(texture2D(Texture_Color, TexCoord));\n"
-"	colorscale *= texturecolor.a;\n"
-"	myhvec3 color = myhvec3(texturecolor);\n"
-"#ifdef USECOLORMAPPING\n"
-"	color += myhvec3(texture2D(Texture_Pants, TexCoord)) * Color_Pants + myhvec3(texture2D(Texture_Shirt, TexCoord)) * Color_Shirt;\n"
-"#endif\n"
-"	color *= (AmbientScale + DiffuseScale * max(dot(surfacenormal, diffusenormal), 0.0));\n"
-"#ifdef USESPECULAR\n"
-"	myhvec3 specularnormal = myhvec3(normalize(diffusenormal + myhvec3(normalize(EyeVector))));\n"
-"	color += myhvec3(texture2D(Texture_Gloss, TexCoord)) * SpecularScale * pow(max(dot(surfacenormal, specularnormal), 0.0), SpecularPower);\n"
-"#endif\n"
-"\n"
-"#ifdef USECUBEFILTER\n"
-"	// apply light cubemap filter\n"
-"	color *= myhvec3(textureCube(Texture_Cube, CubeVector));\n"
-"#endif\n"
-"\n"
-"	// calculate fragment color (apply light color and attenuation/fog scaling)\n"
-"	gl_FragColor = myhvec4(color * LightColor * colorscale, 1);\n"
-"}\n"
-;
-
-int R_Shadow_CompileShaderPermutation(int permutation)
-{
-	char *vertstring, *fragstring;
-	int vertstrings_count;
-	int fragstrings_count;
-	const char *vertstrings_list[SHADERPERMUTATION_COUNT+1];
-	const char *fragstrings_list[SHADERPERMUTATION_COUNT+1];
-	char permutationname[256];
-	if (r_shadow_program_compiledlight[permutation])
-		return r_shadow_program_light[permutation];
-	r_shadow_program_compiledlight[permutation] = true;
-	vertstring = (char *)FS_LoadFile("glsl/light.vert", tempmempool, false, NULL);
-	fragstring = (char *)FS_LoadFile("glsl/light.frag", tempmempool, false, NULL);
-	vertstrings_count = 0;
-	fragstrings_count = 0;
-	permutationname[0] = 0;
-	if (permutation & SHADERPERMUTATION_COLORMAPPING)
-	{
-		vertstrings_list[vertstrings_count++] = "#define USECOLORMAPPING\n";
-		fragstrings_list[fragstrings_count++] = "#define USECOLORMAPPING\n";
-		strlcat(permutationname, " colormapping", sizeof(permutationname));
-	}
-	if (permutation & SHADERPERMUTATION_SPECULAR)
-	{
-		vertstrings_list[vertstrings_count++] = "#define USESPECULAR\n";
-		fragstrings_list[fragstrings_count++] = "#define USESPECULAR\n";
-		strlcat(permutationname, " specular", sizeof(permutationname));
-	}
-	if (permutation & SHADERPERMUTATION_FOG)
-	{
-		vertstrings_list[vertstrings_count++] = "#define USEFOG\n";
-		fragstrings_list[fragstrings_count++] = "#define USEFOG\n";
-		strlcat(permutationname, " fog", sizeof(permutationname));
-	}
-	if (permutation & SHADERPERMUTATION_CUBEFILTER)
-	{
-		vertstrings_list[vertstrings_count++] = "#define USECUBEFILTER\n";
-		fragstrings_list[fragstrings_count++] = "#define USECUBEFILTER\n";
-		strlcat(permutationname, " cubefilter", sizeof(permutationname));
-	}
-	if (permutation & SHADERPERMUTATION_OFFSETMAPPING)
-	{
-		vertstrings_list[vertstrings_count++] = "#define USEOFFSETMAPPING\n";
-		fragstrings_list[fragstrings_count++] = "#define USEOFFSETMAPPING\n";
-		strlcat(permutationname, " offsetmapping", sizeof(permutationname));
-	}
-	if (permutation & SHADERPERMUTATION_SURFACENORMALIZE)
-	{
-		vertstrings_list[vertstrings_count++] = "#define SURFACENORMALIZE\n";
-		fragstrings_list[fragstrings_count++] = "#define SURFACENORMALIZE\n";
-		strlcat(permutationname, " surfacenormalize", sizeof(permutationname));
-	}
-	if (permutation & SHADERPERMUTATION_GEFORCEFX)
-	{
-		vertstrings_list[vertstrings_count++] = "#define GEFORCEFX\n";
-		fragstrings_list[fragstrings_count++] = "#define GEFORCEFX\n";
-		strlcat(permutationname, " halffloat", sizeof(permutationname));
-	}
-	vertstrings_list[vertstrings_count++] = vertstring ? vertstring : builtinshader_light_vert;
-	fragstrings_list[fragstrings_count++] = fragstring ? fragstring : builtinshader_light_frag;
-	r_shadow_program_light[permutation] = GL_Backend_CompileProgram(vertstrings_count, vertstrings_list, fragstrings_count, fragstrings_list);
-	if (r_shadow_program_light[permutation])
-	{
-		qglUseProgramObjectARB(r_shadow_program_light[permutation]);
-		qglUniform1iARB(qglGetUniformLocationARB(r_shadow_program_light[permutation], "Texture_Normal"), 0);CHECKGLERROR
-		qglUniform1iARB(qglGetUniformLocationARB(r_shadow_program_light[permutation], "Texture_Color"), 1);CHECKGLERROR
-		if (permutation & SHADERPERMUTATION_SPECULAR)
-		{
-			qglUniform1iARB(qglGetUniformLocationARB(r_shadow_program_light[permutation], "Texture_Gloss"), 2);CHECKGLERROR
-		}
-		if (permutation & SHADERPERMUTATION_CUBEFILTER)
-		{
-			qglUniform1iARB(qglGetUniformLocationARB(r_shadow_program_light[permutation], "Texture_Cube"), 3);CHECKGLERROR
-		}
-		if (permutation & SHADERPERMUTATION_FOG)
-		{
-			qglUniform1iARB(qglGetUniformLocationARB(r_shadow_program_light[permutation], "Texture_FogMask"), 4);CHECKGLERROR
-		}
-		qglUniform1iARB(qglGetUniformLocationARB(r_shadow_program_light[permutation], "Texture_Pants"), 5);CHECKGLERROR
-		qglUniform1iARB(qglGetUniformLocationARB(r_shadow_program_light[permutation], "Texture_Shirt"), 6);CHECKGLERROR
-		qglUseProgramObjectARB(0);
-	}
-	else
-		Con_Printf("permutation%s failed for shader %s, some features may not work properly!\n", permutationname, "glsl/light");
-	if (fragstring)
-		Mem_Free(fragstring);
-	if (vertstring)
-		Mem_Free(vertstring);
-	return r_shadow_program_light[permutation];
-}
-
 void r_shadow_start(void)
 {
-	int i;
-	// use half float math where available (speed gain on NVIDIA GFFX and GF6)
-	if (gl_support_half_float)
-		Cvar_SetValue("r_shadow_glsl_usehalffloat", 1);
 	// allocate vertex processing arrays
 	numcubemaps = 0;
 	r_shadow_attenuation2dtexture = NULL;
@@ -577,25 +284,11 @@ void r_shadow_start(void)
 	r_shadow_buffer_numsurfacepvsbytes = 0;
 	r_shadow_buffer_surfacepvs = NULL;
 	r_shadow_buffer_surfacelist = NULL;
-	for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
-	{
-		r_shadow_program_compiledlight[i] = false;
-		r_shadow_program_light[i] = 0;
-	}
 }
 
 void r_shadow_shutdown(void)
 {
-	int i;
 	R_Shadow_UncompileWorldLights();
-	for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
-	{
-		if (r_shadow_program_light[i])
-		{
-			GL_Backend_FreeProgram(r_shadow_program_light[i]);
-			r_shadow_program_light[i] = 0;
-		}
-	}
 	numcubemaps = 0;
 	r_shadow_attenuation2dtexture = NULL;
 	r_shadow_attenuation3dtexture = NULL;
@@ -667,12 +360,6 @@ void R_Shadow_Help_f(void)
 "r_shadow_realtime_world_shadows : cast shadows from world lights\n"
 "r_shadow_realtime_world_compile : compile surface/visibility information\n"
 "r_shadow_realtime_world_compileshadow : compile shadow geometry\n"
-"r_shadow_glsl : use OpenGL Shading Language for lighting\n"
-"r_shadow_glsl_offsetmapping : enables Offset Mapping bumpmap enhancement\n"
-"r_shadow_glsl_offsetmapping_scale : controls depth of Offset Mapping\n"
-"r_shadow_glsl_offsetmapping_bias : should be negative half of scale\n"
-"r_shadow_glsl_usehalffloat : use lower quality lighting\n"
-"r_shadow_glsl_surfacenormalize : makes bumpmapping slightly higher quality\n"
 "r_shadow_scissor : use scissor optimization\n"
 "r_shadow_shadow_polygonfactor : nudge shadow volumes closer/further\n"
 "r_shadow_shadow_polygonoffset : nudge shadow volumes closer/further\n"
@@ -710,12 +397,6 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_shadow_polygonfactor);
 	Cvar_RegisterVariable(&r_shadow_shadow_polygonoffset);
 	Cvar_RegisterVariable(&r_shadow_texture3d);
-	Cvar_RegisterVariable(&r_shadow_glsl);
-	Cvar_RegisterVariable(&r_shadow_glsl_offsetmapping);
-	Cvar_RegisterVariable(&r_shadow_glsl_offsetmapping_scale);
-	Cvar_RegisterVariable(&r_shadow_glsl_offsetmapping_bias);
-	Cvar_RegisterVariable(&r_shadow_glsl_usehalffloat);
-	Cvar_RegisterVariable(&r_shadow_glsl_surfacenormalize);
 	Cvar_RegisterVariable(&gl_ext_stenciltwoside);
 	if (gamemode == GAME_TENEBRAE)
 	{
@@ -1114,9 +795,6 @@ matrix4x4_t r_shadow_entitytoattenuationxyz;
 // this transforms only the Z to S, and T is always 0.5
 matrix4x4_t r_shadow_entitytoattenuationz;
 
-static int r_shadow_lightpermutation;
-static int r_shadow_lightprog;
-
 void R_Shadow_RenderMode_Begin(void)
 {
 	rmeshstate_t m;
@@ -1146,7 +824,7 @@ void R_Shadow_RenderMode_Begin(void)
 	else
 		r_shadow_shadowingrendermode = R_SHADOW_RENDERMODE_STENCIL;
 
-	if (r_shadow_glsl.integer && gl_support_fragment_shader)
+	if (r_glsl.integer && gl_support_fragment_shader)
 		r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_GLSL;
 	else if (gl_dot3arb && gl_texturecubemap && r_textureunits.integer >= 2 && gl_combine.integer && gl_stencil)
 		r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_DOT3;
@@ -1615,85 +1293,7 @@ static void R_Shadow_RenderSurfacesLighting_Light_GLSL(const entity_render_t *en
 {
 	// ARB2 GLSL shader path (GFFX5200, Radeon 9500)
 	int surfacelistindex;
-	// select a permutation of the lighting shader appropriate to this
-	// combination of texture, entity, light source, and fogging, only use the
-	// minimum features necessary to avoid wasting rendering time in the
-	// fragment shader on features that are not being used
-	r_shadow_lightpermutation = 0;
-	if (fogenabled)
-		r_shadow_lightpermutation |= SHADERPERMUTATION_FOG;
-	if ((dopants || doshirt))
-		r_shadow_lightpermutation |= SHADERPERMUTATION_COLORMAPPING;
-	if (specularscale > 0)
-		r_shadow_lightpermutation |= SHADERPERMUTATION_SPECULAR;
-	if (r_shadow_rtlight->currentcubemap != r_texture_whitecube)
-		r_shadow_lightpermutation |= SHADERPERMUTATION_CUBEFILTER;
-	if (r_shadow_glsl_offsetmapping.integer)
-		r_shadow_lightpermutation |= SHADERPERMUTATION_OFFSETMAPPING;
-	if (r_shadow_glsl_surfacenormalize.integer)
-		r_shadow_lightpermutation |= SHADERPERMUTATION_SURFACENORMALIZE;
-	if (r_shadow_glsl_usehalffloat.integer)
-		r_shadow_lightpermutation |= SHADERPERMUTATION_GEFORCEFX;
-	r_shadow_lightprog = r_shadow_program_light[r_shadow_lightpermutation];
-	if (!r_shadow_lightprog)
-	{
-		if (!r_shadow_program_compiledlight[r_shadow_lightpermutation])
-			r_shadow_lightprog = R_Shadow_CompileShaderPermutation(r_shadow_lightpermutation);
-		if (!r_shadow_lightprog)
-		{
-			// remove features until we find a valid permutation
-			int i;
-			for (i = SHADERPERMUTATION_COUNT-1;;i>>=1)
-			{
-				// reduce i more quickly whenever it would not remove any bits
-				if (r_shadow_lightpermutation < i)
-					continue;
-				r_shadow_lightpermutation &= i;
-				if (!r_shadow_program_compiledlight[r_shadow_lightpermutation])
-					R_Shadow_CompileShaderPermutation(r_shadow_lightpermutation);
-				r_shadow_lightprog = r_shadow_program_light[r_shadow_lightpermutation];
-				if (r_shadow_lightprog)
-					break;
-				if (!i)
-					return; // utterly failed
-			}
-		}
-	}
-	qglUseProgramObjectARB(r_shadow_lightprog);CHECKGLERROR
-	R_Mesh_TexMatrix(0, &texture->currenttexmatrix);
-	R_Mesh_TexMatrix(3, &r_shadow_entitytolight);
-	R_Mesh_TexBind(0, R_GetTexture(normalmaptexture));
-	R_Mesh_TexBind(1, R_GetTexture(basetexture));
-	qglUniform3fARB(qglGetUniformLocationARB(r_shadow_lightprog, "LightPosition"), r_shadow_entitylightorigin[0], r_shadow_entitylightorigin[1], r_shadow_entitylightorigin[2]);CHECKGLERROR
-	if (r_shadow_lightpermutation & (SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_FOG | SHADERPERMUTATION_OFFSETMAPPING))
-	{
-		qglUniform3fARB(qglGetUniformLocationARB(r_shadow_lightprog, "EyePosition"), r_shadow_entityeyeorigin[0], r_shadow_entityeyeorigin[1], r_shadow_entityeyeorigin[2]);CHECKGLERROR
-	}
-	qglUniform3fARB(qglGetUniformLocationARB(r_shadow_lightprog, "LightColor"), lightcolorbase[0], lightcolorbase[1], lightcolorbase[2]);CHECKGLERROR
-	if (r_shadow_lightpermutation & SHADERPERMUTATION_COLORMAPPING)
-	{
-		R_Mesh_TexBind(5, R_GetTexture(pantstexture));
-		R_Mesh_TexBind(6, R_GetTexture(shirttexture));
-		qglUniform3fARB(qglGetUniformLocationARB(r_shadow_lightprog, "Color_Pants"), ent->colormap_pantscolor[0], ent->colormap_pantscolor[1], ent->colormap_pantscolor[2]);CHECKGLERROR
-		qglUniform3fARB(qglGetUniformLocationARB(r_shadow_lightprog, "Color_Shirt"), ent->colormap_shirtcolor[0], ent->colormap_shirtcolor[1], ent->colormap_shirtcolor[2]);CHECKGLERROR
-	}
-	if (r_shadow_lightpermutation & SHADERPERMUTATION_FOG)
-	{
-		qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "FogRangeRecip"), fograngerecip);CHECKGLERROR
-	}
-	qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "AmbientScale"), r_shadow_rtlight->ambientscale);CHECKGLERROR
-	qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "DiffuseScale"), r_shadow_rtlight->diffusescale);CHECKGLERROR
-	if (r_shadow_lightpermutation & SHADERPERMUTATION_SPECULAR)
-	{
-		R_Mesh_TexBind(2, R_GetTexture(glosstexture));
-		qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "SpecularPower"), 8);CHECKGLERROR
-		qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "SpecularScale"), specularscale);CHECKGLERROR
-	}
-	if (r_shadow_lightpermutation & SHADERPERMUTATION_OFFSETMAPPING)
-	{
-		qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "OffsetMapping_Scale"), r_shadow_glsl_offsetmapping_scale.value);CHECKGLERROR
-		qglUniform1fARB(qglGetUniformLocationARB(r_shadow_lightprog, "OffsetMapping_Bias"), r_shadow_glsl_offsetmapping_bias.value);CHECKGLERROR
-	}
+	R_SetupSurfaceShader(ent, texture, lightcolorbase, lightcolorpants, lightcolorshirt, basetexture, pantstexture, shirttexture, normalmaptexture, glosstexture, specularscale, dopants, doshirt);
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
 		const msurface_t *surface = surfacelist[surfacelistindex];
