@@ -55,8 +55,6 @@ OBJ_NOCD=cd_null.o
 # Common objects
 OBJ_COMMON= \
 	cd_shared.o \
-	cgame.o \
-	cgamevm.o \
 	cl_collision.o \
 	cl_demo.o \
 	cl_input.o \
@@ -123,7 +121,6 @@ OBJ_COMMON= \
 	sv_user.o \
 	svvm_cmds.o \
 	sys_shared.o \
-	ui.o \
 	vid_shared.o \
 	view.o \
 	wad.o \

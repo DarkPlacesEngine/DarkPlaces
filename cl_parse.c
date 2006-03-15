@@ -83,7 +83,7 @@ char *svc_strings[128] =
 	"", // 47
 	"", // 48
 	"", // 49
-	"svc_cgame", //				50		// [short] length [bytes] data
+	"svc_unusedlh1", //				50		//
 	"svc_updatestatubyte", //			51		// [byte] stat [byte] value
 	"svc_effect", //			52		// [vector] org [byte] modelindex [byte] startframe [byte] framecount [byte] framerate
 	"svc_effect2", //			53		// [vector] org [short] modelindex [short] startframe [byte] framecount [byte] framerate
@@ -494,7 +494,6 @@ static void QW_CL_RequestNextDownload(void)
 		CL_BoundingBoxForEntity(&cl_entities[0].render);
 
 		R_Modules_NewMap();
-		CL_CGVM_Start();
 
 		// done checking sounds and models, send a prespawn command now
 		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
@@ -1154,7 +1153,6 @@ void CL_ParseServerInfo (void)
 		cl_entities[0].render.model = cl.worldmodel = cl.model_precache[1];
 		CL_BoundingBoxForEntity(&cl_entities[0].render);
 		R_Modules_NewMap();
-		CL_CGVM_Start();
 	}
 
 	// check memory integrity
@@ -2149,8 +2147,6 @@ void CL_VM_Parse_StuffCmd (const char *msg);
 void CL_VM_Parse_CenterPrint (const char *msg);
 void CSQC_AddPrintText (const char *msg);
 void CSQC_ReadEntities (void);
-//
-static unsigned char cgamenetbuffer[65536];
 
 /*
 =====================
@@ -2886,16 +2882,6 @@ void CL_ParseServerMessage(void)
 				break;
 			case svc_skybox:
 				R_SetSkyBox(MSG_ReadString());
-				break;
-			case svc_cgame:
-				{
-					int length;
-					length = (int) ((unsigned short) MSG_ReadShort());
-					for (i = 0;i < length;i++)
-						cgamenetbuffer[i] = MSG_ReadByte();
-					if (!msg_badread)
-						CL_CGVM_ParseNetwork(cgamenetbuffer, length);
-				}
 				break;
 			case svc_entities:
 				if (cls.signon == SIGNONS - 1)
