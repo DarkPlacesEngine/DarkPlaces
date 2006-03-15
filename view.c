@@ -255,9 +255,9 @@ void V_ParseDamage (void)
 	}
 
 	// calculate view angle kicks
-	if (cl_entities[cl.viewentity].state_current.active)
+	if (cl.entities[cl.viewentity].state_current.active)
 	{
-		ent = &cl_entities[cl.viewentity];
+		ent = &cl.entities[cl.viewentity];
 		Matrix4x4_Transform(&ent->render.inversematrix, from, localfrom);
 		VectorNormalize(localfrom);
 		v_dmg_pitch = count * localfrom[0] * v_kickpitch.value;
@@ -330,7 +330,7 @@ void V_CalcRefdef (void)
 	if (cls.state == ca_connected && cls.signon == SIGNONS)
 	{
 		// ent is the view entity (visible when out of body)
-		ent = &cl_entities[cl.viewentity];
+		ent = &cl.entities[cl.viewentity];
 		if (cl.intermission)
 		{
 			// entity is a fixed camera, just copy the matrix

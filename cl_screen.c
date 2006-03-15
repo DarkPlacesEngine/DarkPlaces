@@ -951,51 +951,29 @@ void SCR_ScreenShot_f (void)
 	shotnumber++;
 }
 
-typedef enum capturevideoformat_e
-{
-	CAPTUREVIDEOFORMAT_TARGA,
-	CAPTUREVIDEOFORMAT_JPEG,
-	CAPTUREVIDEOFORMAT_RAWRGB,
-	CAPTUREVIDEOFORMAT_RAWYV12
-}
-capturevideoformat_t;
-
-qboolean cl_capturevideo_active = false;
-capturevideoformat_t cl_capturevideo_format;
-static double cl_capturevideo_starttime = 0;
-double cl_capturevideo_framerate = 0;
-static int cl_capturevideo_soundrate = 0;
-static int cl_capturevideo_frame = 0;
-static unsigned char *cl_capturevideo_buffer = NULL;
-static qfile_t *cl_capturevideo_videofile = NULL;
-qfile_t *cl_capturevideo_soundfile = NULL;
-static short cl_capturevideo_rgbtoyuvscaletable[3][3][256];
-static unsigned char cl_capturevideo_yuvnormalizetable[3][256];
-//static unsigned char cl_capturevideo_rgbgammatable[3][256];
-
 void SCR_CaptureVideo_BeginVideo(void)
 {
 	double gamma, g;
 	unsigned int i;
 	unsigned char out[44];
-	if (cl_capturevideo_active)
+	if (cls.capturevideo_active)
 		return;
 	// soundrate is figured out on the first SoundFrame
-	cl_capturevideo_active = true;
-	cl_capturevideo_starttime = Sys_DoubleTime();
-	cl_capturevideo_framerate = bound(1, cl_capturevideo_fps.value, 1000);
-	cl_capturevideo_soundrate = 0;
-	cl_capturevideo_frame = 0;
-	cl_capturevideo_buffer = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * (3+3+3) + 18);
+	cls.capturevideo_active = true;
+	cls.capturevideo_starttime = Sys_DoubleTime();
+	cls.capturevideo_framerate = bound(1, cl_capturevideo_fps.value, 1000);
+	cls.capturevideo_soundrate = 0;
+	cls.capturevideo_frame = 0;
+	cls.capturevideo_buffer = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * (3+3+3) + 18);
 	gamma = 1.0/scr_screenshot_gamma.value;
 
 	/*
 	for (i = 0;i < 256;i++)
 	{
 		unsigned char j = (unsigned char)bound(0, 255*pow(i/255.0, gamma), 255);
-		cl_capturevideo_rgbgammatable[0][i] = j;
-		cl_capturevideo_rgbgammatable[1][i] = j;
-		cl_capturevideo_rgbgammatable[2][i] = j;
+		cls.capturevideo_rgbgammatable[0][i] = j;
+		cls.capturevideo_rgbgammatable[1][i] = j;
+		cls.capturevideo_rgbgammatable[2][i] = j;
 	}
 	*/
 /*
@@ -1010,73 +988,73 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 	{
 		g = 255*pow(i/255.0, gamma);
 		// Y weights from RGB
-		cl_capturevideo_rgbtoyuvscaletable[0][0][i] = (short)(g *  0.299);
-		cl_capturevideo_rgbtoyuvscaletable[0][1][i] = (short)(g *  0.587);
-		cl_capturevideo_rgbtoyuvscaletable[0][2][i] = (short)(g *  0.114);
+		cls.capturevideo_rgbtoyuvscaletable[0][0][i] = (short)(g *  0.299);
+		cls.capturevideo_rgbtoyuvscaletable[0][1][i] = (short)(g *  0.587);
+		cls.capturevideo_rgbtoyuvscaletable[0][2][i] = (short)(g *  0.114);
 		// Cb weights from RGB
-		cl_capturevideo_rgbtoyuvscaletable[1][0][i] = (short)(g * -0.169);
-		cl_capturevideo_rgbtoyuvscaletable[1][1][i] = (short)(g * -0.332);
-		cl_capturevideo_rgbtoyuvscaletable[1][2][i] = (short)(g *  0.500);
+		cls.capturevideo_rgbtoyuvscaletable[1][0][i] = (short)(g * -0.169);
+		cls.capturevideo_rgbtoyuvscaletable[1][1][i] = (short)(g * -0.332);
+		cls.capturevideo_rgbtoyuvscaletable[1][2][i] = (short)(g *  0.500);
 		// Cr weights from RGB
-		cl_capturevideo_rgbtoyuvscaletable[2][0][i] = (short)(g *  0.500);
-		cl_capturevideo_rgbtoyuvscaletable[2][1][i] = (short)(g * -0.419);
-		cl_capturevideo_rgbtoyuvscaletable[2][2][i] = (short)(g * -0.0813);
+		cls.capturevideo_rgbtoyuvscaletable[2][0][i] = (short)(g *  0.500);
+		cls.capturevideo_rgbtoyuvscaletable[2][1][i] = (short)(g * -0.419);
+		cls.capturevideo_rgbtoyuvscaletable[2][2][i] = (short)(g * -0.0813);
 		// range reduction of YCbCr to valid signal range
-		cl_capturevideo_yuvnormalizetable[0][i] = 16 + i * (236-16) / 256;
-		cl_capturevideo_yuvnormalizetable[1][i] = 16 + i * (240-16) / 256;
-		cl_capturevideo_yuvnormalizetable[2][i] = 16 + i * (240-16) / 256;
+		cls.capturevideo_yuvnormalizetable[0][i] = 16 + i * (236-16) / 256;
+		cls.capturevideo_yuvnormalizetable[1][i] = 16 + i * (240-16) / 256;
+		cls.capturevideo_yuvnormalizetable[2][i] = 16 + i * (240-16) / 256;
 	}
 
 	if (cl_capturevideo_rawrgb.integer)
 	{
-		cl_capturevideo_format = CAPTUREVIDEOFORMAT_RAWRGB;
-		cl_capturevideo_videofile = FS_Open ("video/dpvideo.rgb", "wb", false, true);
+		cls.capturevideo_format = CAPTUREVIDEOFORMAT_RAWRGB;
+		cls.capturevideo_videofile = FS_Open ("video/dpvideo.rgb", "wb", false, true);
 	}
 	else if (cl_capturevideo_rawyv12.integer)
 	{
-		cl_capturevideo_format = CAPTUREVIDEOFORMAT_RAWYV12;
-		cl_capturevideo_videofile = FS_Open ("video/dpvideo.yv12", "wb", false, true);
+		cls.capturevideo_format = CAPTUREVIDEOFORMAT_RAWYV12;
+		cls.capturevideo_videofile = FS_Open ("video/dpvideo.yv12", "wb", false, true);
 	}
 	else if (scr_screenshot_jpeg.integer)
 	{
-		cl_capturevideo_format = CAPTUREVIDEOFORMAT_JPEG;
-		cl_capturevideo_videofile = NULL;
+		cls.capturevideo_format = CAPTUREVIDEOFORMAT_JPEG;
+		cls.capturevideo_videofile = NULL;
 	}
 	else
 	{
-		cl_capturevideo_format = CAPTUREVIDEOFORMAT_TARGA;
-		cl_capturevideo_videofile = NULL;
+		cls.capturevideo_format = CAPTUREVIDEOFORMAT_TARGA;
+		cls.capturevideo_videofile = NULL;
 	}
 
 	if (cl_capturevideo_sound.integer)
 	{
-		cl_capturevideo_soundfile = FS_Open ("video/dpvideo.wav", "wb", false, true);
+		cls.capturevideo_soundfile = FS_Open ("video/dpvideo.wav", "wb", false, true);
 		// wave header will be filled out when video ends
 		memset(out, 0, 44);
-		FS_Write (cl_capturevideo_soundfile, out, 44);
+		FS_Write (cls.capturevideo_soundfile, out, 44);
 	}
 	else
-		cl_capturevideo_soundfile = NULL;
+		cls.capturevideo_soundfile = NULL;
 }
 
 void SCR_CaptureVideo_EndVideo(void)
 {
 	int i, n;
 	unsigned char out[44];
-	if (!cl_capturevideo_active)
+	if (!cls.capturevideo_active)
 		return;
-	cl_capturevideo_active = false;
+	cls.capturevideo_active = false;
 
-	if (cl_capturevideo_videofile)
+	if (cls.capturevideo_videofile)
 	{
-		FS_Close(cl_capturevideo_videofile);
-		cl_capturevideo_videofile = NULL;
+		FS_Close(cls.capturevideo_videofile);
+		cls.capturevideo_videofile = NULL;
 	}
 
 	// finish the wave file
-	if (cl_capturevideo_soundfile)
+	if (cls.capturevideo_soundfile)
 	{
-		i = (int)FS_Tell (cl_capturevideo_soundfile);
+		i = (int)FS_Tell (cls.capturevideo_soundfile);
 		//"RIFF", (int) unknown (chunk size), "WAVE",
 		//"fmt ", (int) 16 (chunk size), (short) format 1 (uncompressed PCM), (short) 2 channels, (int) unknown rate, (int) unknown bytes per second, (short) 4 bytes per sample (channels * bytes per channel), (short) 16 bits per channel
 		//"data", (int) unknown (chunk size)
@@ -1088,13 +1066,13 @@ void SCR_CaptureVideo_EndVideo(void)
 		out[6] = (n >> 16) & 0xFF;
 		out[7] = (n >> 24) & 0xFF;
 		// rate
-		n = cl_capturevideo_soundrate;
+		n = cls.capturevideo_soundrate;
 		out[24] = (n) & 0xFF;
 		out[25] = (n >> 8) & 0xFF;
 		out[26] = (n >> 16) & 0xFF;
 		out[27] = (n >> 24) & 0xFF;
 		// bytes per second (rate * channels * bytes per channel)
-		n = cl_capturevideo_soundrate * 2 * 2;
+		n = cls.capturevideo_soundrate * 2 * 2;
 		out[28] = (n) & 0xFF;
 		out[29] = (n >> 8) & 0xFF;
 		out[30] = (n >> 16) & 0xFF;
@@ -1105,21 +1083,21 @@ void SCR_CaptureVideo_EndVideo(void)
 		out[41] = (n >> 8) & 0xFF;
 		out[42] = (n >> 16) & 0xFF;
 		out[43] = (n >> 24) & 0xFF;
-		FS_Seek (cl_capturevideo_soundfile, 0, SEEK_SET);
-		FS_Write (cl_capturevideo_soundfile, out, 44);
-		FS_Close (cl_capturevideo_soundfile);
-		cl_capturevideo_soundfile = NULL;
+		FS_Seek (cls.capturevideo_soundfile, 0, SEEK_SET);
+		FS_Write (cls.capturevideo_soundfile, out, 44);
+		FS_Close (cls.capturevideo_soundfile);
+		cls.capturevideo_soundfile = NULL;
 	}
 
-	if (cl_capturevideo_buffer)
+	if (cls.capturevideo_buffer)
 	{
-		Mem_Free (cl_capturevideo_buffer);
-		cl_capturevideo_buffer = NULL;
+		Mem_Free (cls.capturevideo_buffer);
+		cls.capturevideo_buffer = NULL;
 	}
 
-	cl_capturevideo_starttime = 0;
-	cl_capturevideo_framerate = 0;
-	cl_capturevideo_frame = 0;
+	cls.capturevideo_starttime = 0;
+	cls.capturevideo_framerate = 0;
+	cls.capturevideo_frame = 0;
 }
 
 qboolean SCR_CaptureVideo_VideoFrame(int newframenum)
@@ -1128,85 +1106,85 @@ qboolean SCR_CaptureVideo_VideoFrame(int newframenum)
 	unsigned char *b, *out;
 	char filename[32];
 	int outoffset = (width/2)*(height/2);
-	//return SCR_ScreenShot(filename, cl_capturevideo_buffer, cl_capturevideo_buffer + vid.width * vid.height * 3, cl_capturevideo_buffer + vid.width * vid.height * 6, 0, 0, vid.width, vid.height, false, false, false, jpeg, true);
+	//return SCR_ScreenShot(filename, cls.capturevideo_buffer, cls.capturevideo_buffer + vid.width * vid.height * 3, cls.capturevideo_buffer + vid.width * vid.height * 6, 0, 0, vid.width, vid.height, false, false, false, jpeg, true);
 	// speed is critical here, so do saving as directly as possible
-	switch (cl_capturevideo_format)
+	switch (cls.capturevideo_format)
 	{
 	case CAPTUREVIDEOFORMAT_RAWYV12:
 		// FIXME: width/height must be multiple of 2, enforce this?
-		qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, cl_capturevideo_buffer);
+		qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, cls.capturevideo_buffer);
 		CHECKGLERROR
 		// process one line at a time, and CbCr every other line at 2 pixel intervals
 		for (y = 0;y < height;y++)
 		{
 			// 1x1 Y
-			for (b = cl_capturevideo_buffer + (height-1-y)*width*3, out = cl_capturevideo_buffer + width*height*3 + y*width, x = 0;x < width;x++, b += 3, out++)
-				*out = cl_capturevideo_yuvnormalizetable[0][cl_capturevideo_rgbtoyuvscaletable[0][0][b[0]] + cl_capturevideo_rgbtoyuvscaletable[0][1][b[1]] + cl_capturevideo_rgbtoyuvscaletable[0][2][b[2]]];
+			for (b = cls.capturevideo_buffer + (height-1-y)*width*3, out = cls.capturevideo_buffer + width*height*3 + y*width, x = 0;x < width;x++, b += 3, out++)
+				*out = cls.capturevideo_yuvnormalizetable[0][cls.capturevideo_rgbtoyuvscaletable[0][0][b[0]] + cls.capturevideo_rgbtoyuvscaletable[0][1][b[1]] + cls.capturevideo_rgbtoyuvscaletable[0][2][b[2]]];
 			if ((y & 1) == 0)
 			{
 				// 2x2 Cb and Cr planes
 #if 1
 				// low quality, no averaging
-				for (b = cl_capturevideo_buffer + (height-2-y)*width*3, out = cl_capturevideo_buffer + width*height*3 + width*height + (y/2)*(width/2), x = 0;x < width/2;x++, b += 6, out++)
+				for (b = cls.capturevideo_buffer + (height-2-y)*width*3, out = cls.capturevideo_buffer + width*height*3 + width*height + (y/2)*(width/2), x = 0;x < width/2;x++, b += 6, out++)
 				{
 					// Cr
-					out[0        ] = cl_capturevideo_yuvnormalizetable[2][cl_capturevideo_rgbtoyuvscaletable[2][0][b[0]] + cl_capturevideo_rgbtoyuvscaletable[2][1][b[1]] + cl_capturevideo_rgbtoyuvscaletable[2][2][b[2]] + 128];
+					out[0        ] = cls.capturevideo_yuvnormalizetable[2][cls.capturevideo_rgbtoyuvscaletable[2][0][b[0]] + cls.capturevideo_rgbtoyuvscaletable[2][1][b[1]] + cls.capturevideo_rgbtoyuvscaletable[2][2][b[2]] + 128];
 					// Cb
-					out[outoffset] = cl_capturevideo_yuvnormalizetable[1][cl_capturevideo_rgbtoyuvscaletable[1][0][b[0]] + cl_capturevideo_rgbtoyuvscaletable[1][1][b[1]] + cl_capturevideo_rgbtoyuvscaletable[1][2][b[2]] + 128];
+					out[outoffset] = cls.capturevideo_yuvnormalizetable[1][cls.capturevideo_rgbtoyuvscaletable[1][0][b[0]] + cls.capturevideo_rgbtoyuvscaletable[1][1][b[1]] + cls.capturevideo_rgbtoyuvscaletable[1][2][b[2]] + 128];
 				}
 #else
 				// high quality, averaging
 				int inpitch = width*3;
-				for (b = cl_capturevideo_buffer + (height-2-y)*width*3, out = cl_capturevideo_buffer + width*height*3 + width*height + (y/2)*(width/2), x = 0;x < width/2;x++, b += 6, out++)
+				for (b = cls.capturevideo_buffer + (height-2-y)*width*3, out = cls.capturevideo_buffer + width*height*3 + width*height + (y/2)*(width/2), x = 0;x < width/2;x++, b += 6, out++)
 				{
 					int blockr, blockg, blockb;
 					blockr = (b[0] + b[3] + b[inpitch+0] + b[inpitch+3]) >> 2;
 					blockg = (b[1] + b[4] + b[inpitch+1] + b[inpitch+4]) >> 2;
 					blockb = (b[2] + b[5] + b[inpitch+2] + b[inpitch+5]) >> 2;
 					// Cr
-					out[0        ] = cl_capturevideo_yuvnormalizetable[2][cl_capturevideo_rgbtoyuvscaletable[2][0][blockr] + cl_capturevideo_rgbtoyuvscaletable[2][1][blockg] + cl_capturevideo_rgbtoyuvscaletable[2][2][blockb] + 128];
+					out[0        ] = cls.capturevideo_yuvnormalizetable[2][cls.capturevideo_rgbtoyuvscaletable[2][0][blockr] + cls.capturevideo_rgbtoyuvscaletable[2][1][blockg] + cls.capturevideo_rgbtoyuvscaletable[2][2][blockb] + 128];
 					// Cb
-					out[outoffset] = cl_capturevideo_yuvnormalizetable[1][cl_capturevideo_rgbtoyuvscaletable[1][0][blockr] + cl_capturevideo_rgbtoyuvscaletable[1][1][blockg] + cl_capturevideo_rgbtoyuvscaletable[1][2][blockb] + 128];
+					out[outoffset] = cls.capturevideo_yuvnormalizetable[1][cls.capturevideo_rgbtoyuvscaletable[1][0][blockr] + cls.capturevideo_rgbtoyuvscaletable[1][1][blockg] + cls.capturevideo_rgbtoyuvscaletable[1][2][blockb] + 128];
 				}
 #endif
 			}
 		}
-		for (;cl_capturevideo_frame < newframenum;cl_capturevideo_frame++)
-			if (!FS_Write (cl_capturevideo_videofile, cl_capturevideo_buffer + width*height*3, width*height+(width/2)*(height/2)*2))
+		for (;cls.capturevideo_frame < newframenum;cls.capturevideo_frame++)
+			if (!FS_Write (cls.capturevideo_videofile, cls.capturevideo_buffer + width*height*3, width*height+(width/2)*(height/2)*2))
 				return false;
 		return true;
 	case CAPTUREVIDEOFORMAT_RAWRGB:
-		qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, cl_capturevideo_buffer);
+		qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, cls.capturevideo_buffer);
 		CHECKGLERROR
-		for (;cl_capturevideo_frame < newframenum;cl_capturevideo_frame++)
-			if (!FS_Write (cl_capturevideo_videofile, cl_capturevideo_buffer, width*height*3))
+		for (;cls.capturevideo_frame < newframenum;cls.capturevideo_frame++)
+			if (!FS_Write (cls.capturevideo_videofile, cls.capturevideo_buffer, width*height*3))
 				return false;
 		return true;
 	case CAPTUREVIDEOFORMAT_JPEG:
-		qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, cl_capturevideo_buffer);
+		qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, cls.capturevideo_buffer);
 		CHECKGLERROR
-		for (;cl_capturevideo_frame < newframenum;cl_capturevideo_frame++)
+		for (;cls.capturevideo_frame < newframenum;cls.capturevideo_frame++)
 		{
-			sprintf(filename, "video/dp%06d.jpg", cl_capturevideo_frame);
-			if (!JPEG_SaveImage_preflipped (filename, width, height, cl_capturevideo_buffer))
+			sprintf(filename, "video/dp%06d.jpg", cls.capturevideo_frame);
+			if (!JPEG_SaveImage_preflipped (filename, width, height, cls.capturevideo_buffer))
 				return false;
 		}
 		return true;
 	case CAPTUREVIDEOFORMAT_TARGA:
-		//return Image_WriteTGARGB_preflipped (filename, width, height, cl_capturevideo_buffer, cl_capturevideo_buffer + vid.width * vid.height * 3, );
-		memset (cl_capturevideo_buffer, 0, 18);
-		cl_capturevideo_buffer[2] = 2;		// uncompressed type
-		cl_capturevideo_buffer[12] = (width >> 0) & 0xFF;
-		cl_capturevideo_buffer[13] = (width >> 8) & 0xFF;
-		cl_capturevideo_buffer[14] = (height >> 0) & 0xFF;
-		cl_capturevideo_buffer[15] = (height >> 8) & 0xFF;
-		cl_capturevideo_buffer[16] = 24;	// pixel size
-		qglReadPixels (x, y, width, height, GL_BGR, GL_UNSIGNED_BYTE, cl_capturevideo_buffer + 18);
+		//return Image_WriteTGARGB_preflipped (filename, width, height, cls.capturevideo_buffer, cls.capturevideo_buffer + vid.width * vid.height * 3, );
+		memset (cls.capturevideo_buffer, 0, 18);
+		cls.capturevideo_buffer[2] = 2;		// uncompressed type
+		cls.capturevideo_buffer[12] = (width >> 0) & 0xFF;
+		cls.capturevideo_buffer[13] = (width >> 8) & 0xFF;
+		cls.capturevideo_buffer[14] = (height >> 0) & 0xFF;
+		cls.capturevideo_buffer[15] = (height >> 8) & 0xFF;
+		cls.capturevideo_buffer[16] = 24;	// pixel size
+		qglReadPixels (x, y, width, height, GL_BGR, GL_UNSIGNED_BYTE, cls.capturevideo_buffer + 18);
 		CHECKGLERROR
-		for (;cl_capturevideo_frame < newframenum;cl_capturevideo_frame++)
+		for (;cls.capturevideo_frame < newframenum;cls.capturevideo_frame++)
 		{
-			sprintf(filename, "video/dp%06d.tga", cl_capturevideo_frame);
-			if (!FS_WriteFile (filename, cl_capturevideo_buffer, width*height*3 + 18))
+			sprintf(filename, "video/dp%06d.tga", cls.capturevideo_frame);
+			if (!FS_WriteFile (filename, cls.capturevideo_buffer, width*height*3 + 18))
 				return false;
 		}
 		return true;
@@ -1217,13 +1195,13 @@ qboolean SCR_CaptureVideo_VideoFrame(int newframenum)
 
 void SCR_CaptureVideo_SoundFrame(unsigned char *bufstereo16le, size_t length, int rate)
 {
-	if (!cl_capturevideo_soundfile)
+	if (!cls.capturevideo_soundfile)
 		return;
-	cl_capturevideo_soundrate = rate;
-	if (FS_Write (cl_capturevideo_soundfile, bufstereo16le, 4 * length) < (fs_offset_t)(4 * length))
+	cls.capturevideo_soundrate = rate;
+	if (FS_Write (cls.capturevideo_soundfile, bufstereo16le, 4 * length) < (fs_offset_t)(4 * length))
 	{
 		Cvar_SetValueQuick(&cl_capturevideo, 0);
-		Con_Printf("video sound saving failed on frame %i, out of disk space? stopping video capture.\n", cl_capturevideo_frame);
+		Con_Printf("video sound saving failed on frame %i, out of disk space? stopping video capture.\n", cls.capturevideo_frame);
 		SCR_CaptureVideo_EndVideo();
 	}
 }
@@ -1233,25 +1211,25 @@ void SCR_CaptureVideo(void)
 	int newframenum;
 	if (cl_capturevideo.integer && r_render.integer)
 	{
-		if (!cl_capturevideo_active)
+		if (!cls.capturevideo_active)
 			SCR_CaptureVideo_BeginVideo();
-		if (cl_capturevideo_framerate != cl_capturevideo_fps.value)
+		if (cls.capturevideo_framerate != cl_capturevideo_fps.value)
 		{
 			Con_Printf("You can not change the video framerate while recording a video.\n");
-			Cvar_SetValueQuick(&cl_capturevideo_fps, cl_capturevideo_framerate);
+			Cvar_SetValueQuick(&cl_capturevideo_fps, cls.capturevideo_framerate);
 		}
-		if (cl_capturevideo_soundfile)
+		if (cls.capturevideo_soundfile)
 		{
 			// preserve sound sync by duplicating frames when running slow
-			newframenum = (Sys_DoubleTime() - cl_capturevideo_starttime) * cl_capturevideo_framerate;
+			newframenum = (Sys_DoubleTime() - cls.capturevideo_starttime) * cls.capturevideo_framerate;
 		}
 		else
-			newframenum = cl_capturevideo_frame + 1;
+			newframenum = cls.capturevideo_frame + 1;
 		// if falling behind more than one second, stop
-		if (newframenum - cl_capturevideo_frame > (int)ceil(cl_capturevideo_framerate))
+		if (newframenum - cls.capturevideo_frame > (int)ceil(cls.capturevideo_framerate))
 		{
 			Cvar_SetValueQuick(&cl_capturevideo, 0);
-			Con_Printf("video saving failed on frame %i, your machine is too slow for this capture speed.\n", cl_capturevideo_frame);
+			Con_Printf("video saving failed on frame %i, your machine is too slow for this capture speed.\n", cls.capturevideo_frame);
 			SCR_CaptureVideo_EndVideo();
 			return;
 		}
@@ -1259,11 +1237,11 @@ void SCR_CaptureVideo(void)
 		if (!SCR_CaptureVideo_VideoFrame(newframenum))
 		{
 			Cvar_SetValueQuick(&cl_capturevideo, 0);
-			Con_Printf("video saving failed on frame %i, out of disk space? stopping video capture.\n", cl_capturevideo_frame);
+			Con_Printf("video saving failed on frame %i, out of disk space? stopping video capture.\n", cls.capturevideo_frame);
 			SCR_CaptureVideo_EndVideo();
 		}
 	}
-	else if (cl_capturevideo_active)
+	else if (cls.capturevideo_active)
 		SCR_CaptureVideo_EndVideo();
 }
 

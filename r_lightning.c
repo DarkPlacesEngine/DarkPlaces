@@ -231,7 +231,7 @@ float beamrepeatscale;
 
 void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
 {
-	const beam_t *b = cl_beams + surfacenumber;
+	const beam_t *b = cl.beams + surfacenumber;
 	rmeshstate_t m;
 	vec3_t beamdir, right, up, offset;
 	float length, t1, t2;
@@ -337,7 +337,7 @@ void R_DrawLightningBeams(void)
 		return;
 
 	beamrepeatscale = 1.0f / r_lightningbeam_repeatdistance.value;
-	for (i = 0, b = cl_beams;i < cl_activebeams;i++, b++)
+	for (i = 0, b = cl.beams;i < cl.num_beams;i++, b++)
 	{
 		if (b->model && b->endtime >= r_refdef.time && b->lightning)
 		{

@@ -72,50 +72,11 @@ cvar_t cl_prydoncursor = {0, "cl_prydoncursor", "0", "enables a mouse pointer wh
 
 cvar_t cl_deathnoviewmodel = {0, "cl_deathnoviewmodel", "1", "hides gun model when dead"};
 
-vec3_t cl_playerstandmins;
-vec3_t cl_playerstandmaxs;
-vec3_t cl_playercrouchmins;
-vec3_t cl_playercrouchmaxs;
-
-mempool_t *cl_mempool;
-
 client_static_t	cls;
 client_state_t	cl;
 
-int cl_max_entities;
-int cl_max_csqcentities;
-int cl_max_static_entities;
-int cl_max_temp_entities;
-int cl_max_effects;
-int cl_max_beams;
-int cl_max_dlights;
-int cl_max_lightstyle;
-int cl_max_brushmodel_entities;
-int cl_activedlights;
-int cl_activeeffects;
-int cl_activebeams;
-
-entity_t *cl_entities;
-entity_t *cl_csqcentities;	//[515]: csqc
-unsigned char *cl_entities_active;
-unsigned char *cl_csqcentities_active;	//[515]: csqc
-entity_t *cl_static_entities;
-entity_t *cl_temp_entities;
-cl_effect_t *cl_effects;
-beam_t *cl_beams;
-dlight_t *cl_dlights;
-lightstyle_t *cl_lightstyle;
-int *cl_brushmodel_entities;
-
-int cl_num_entities;
-int cl_num_csqcentities;	//[515]: csqc
-int cl_num_static_entities;
-int cl_num_temp_entities;
-int cl_num_brushmodel_entities;
-
-// keep track of quake entities because they need to be killed if they get stale
-extern int cl_lastquakeentity;
-extern unsigned char cl_isquakeentity[MAX_EDICTS];
+#define MAX_PARTICLES			32768	// default max # of particles at one time
+#define ABSOLUTE_MIN_PARTICLES	512		// no fewer than this no matter what's on the command line
 
 /*
 =====================
@@ -128,21 +89,22 @@ void CL_ClearState(void)
 	int i;
 	entity_t *ent;
 
-	if (cl_entities) Mem_Free(cl_entities);cl_entities = NULL;
-	if (cl_csqcentities) Mem_Free(cl_csqcentities);cl_csqcentities = NULL;	//[515]: csqc
-	if (cl_entities_active) Mem_Free(cl_entities_active);cl_entities_active = NULL;
-	if (cl_csqcentities_active) Mem_Free(cl_csqcentities_active);cl_csqcentities_active = NULL;	//[515]: csqc
-	if (cl_static_entities) Mem_Free(cl_static_entities);cl_static_entities = NULL;
-	if (cl_temp_entities) Mem_Free(cl_temp_entities);cl_temp_entities = NULL;
-	if (cl_effects) Mem_Free(cl_effects);cl_effects = NULL;
-	if (cl_beams) Mem_Free(cl_beams);cl_beams = NULL;
-	if (cl_dlights) Mem_Free(cl_dlights);cl_dlights = NULL;
-	if (cl_lightstyle) Mem_Free(cl_lightstyle);cl_lightstyle = NULL;
-	if (cl_brushmodel_entities) Mem_Free(cl_brushmodel_entities);cl_brushmodel_entities = NULL;
+	if (cl.entities) Mem_Free(cl.entities);cl.entities = NULL;
+	if (cl.csqcentities) Mem_Free(cl.csqcentities);cl.csqcentities = NULL;	//[515]: csqc
+	if (cl.entities_active) Mem_Free(cl.entities_active);cl.entities_active = NULL;
+	if (cl.csqcentities_active) Mem_Free(cl.csqcentities_active);cl.csqcentities_active = NULL;	//[515]: csqc
+	if (cl.static_entities) Mem_Free(cl.static_entities);cl.static_entities = NULL;
+	if (cl.temp_entities) Mem_Free(cl.temp_entities);cl.temp_entities = NULL;
+	if (cl.effects) Mem_Free(cl.effects);cl.effects = NULL;
+	if (cl.beams) Mem_Free(cl.beams);cl.beams = NULL;
+	if (cl.dlights) Mem_Free(cl.dlights);cl.dlights = NULL;
+	if (cl.lightstyle) Mem_Free(cl.lightstyle);cl.lightstyle = NULL;
+	if (cl.brushmodel_entities) Mem_Free(cl.brushmodel_entities);cl.brushmodel_entities = NULL;
 	if (cl.entitydatabase) EntityFrame_FreeDatabase(cl.entitydatabase);cl.entitydatabase = NULL;
 	if (cl.entitydatabase4) EntityFrame4_FreeDatabase(cl.entitydatabase4);cl.entitydatabase4 = NULL;
 	if (cl.entitydatabaseqw) EntityFrameQW_FreeDatabase(cl.entitydatabaseqw);cl.entitydatabaseqw = NULL;
 	if (cl.scores) Mem_Free(cl.scores);cl.scores = NULL;
+	if (cl.particles) Mem_Free(cl.particles);cl.particles = NULL;
 
 	if (!sv.active)
 		Host_ClearMemory ();
@@ -155,77 +117,86 @@ void CL_ClearState(void)
 	// reset the view zoom interpolation
 	cl.mviewzoom[0] = cl.mviewzoom[1] = 1;
 
-	cl_num_entities = 0;
-	cl_num_csqcentities = 0;	//[515]: csqc
-	cl_num_static_entities = 0;
-	cl_num_temp_entities = 0;
-	cl_num_brushmodel_entities = 0;
+	cl.num_entities = 0;
+	cl.num_csqcentities = 0;	//[515]: csqc
+	cl.num_static_entities = 0;
+	cl.num_temp_entities = 0;
+	cl.num_brushmodel_entities = 0;
 
 	// tweak these if the game runs out
-	cl_max_entities = 256;
-	cl_max_csqcentities = 256;	//[515]: csqc
-	cl_max_static_entities = 256;
-	cl_max_temp_entities = 512;
-	cl_max_effects = 256;
-	cl_max_beams = 256;
-	cl_max_dlights = MAX_DLIGHTS;
-	cl_max_lightstyle = MAX_LIGHTSTYLES;
-	cl_max_brushmodel_entities = MAX_EDICTS;
-	cl_activedlights = 0;
-	cl_activeeffects = 0;
-	cl_activebeams = 0;
+	cl.max_entities = 256;
+	cl.max_csqcentities = 256;	//[515]: csqc
+	cl.max_static_entities = 256;
+	cl.max_temp_entities = 512;
+	cl.max_effects = 256;
+	cl.max_beams = 256;
+	cl.max_dlights = MAX_DLIGHTS;
+	cl.max_lightstyle = MAX_LIGHTSTYLES;
+	cl.max_brushmodel_entities = MAX_EDICTS;
+	cl.max_particles = MAX_PARTICLES;
 
-	cl_entities = (entity_t *)Mem_Alloc(cl_mempool, cl_max_entities * sizeof(entity_t));
-	cl_csqcentities = (entity_t *)Mem_Alloc(cl_mempool, cl_max_csqcentities * sizeof(entity_t));	//[515]: csqc
-	cl_entities_active = (unsigned char *)Mem_Alloc(cl_mempool, cl_max_brushmodel_entities * sizeof(unsigned char));
-	cl_csqcentities_active = (unsigned char *)Mem_Alloc(cl_mempool, cl_max_brushmodel_entities * sizeof(unsigned char));	//[515]: csqc
-	cl_static_entities = (entity_t *)Mem_Alloc(cl_mempool, cl_max_static_entities * sizeof(entity_t));
-	cl_temp_entities = (entity_t *)Mem_Alloc(cl_mempool, cl_max_temp_entities * sizeof(entity_t));
-	cl_effects = (cl_effect_t *)Mem_Alloc(cl_mempool, cl_max_effects * sizeof(cl_effect_t));
-	cl_beams = (beam_t *)Mem_Alloc(cl_mempool, cl_max_beams * sizeof(beam_t));
-	cl_dlights = (dlight_t *)Mem_Alloc(cl_mempool, cl_max_dlights * sizeof(dlight_t));
-	cl_lightstyle = (lightstyle_t *)Mem_Alloc(cl_mempool, cl_max_lightstyle * sizeof(lightstyle_t));
-	cl_brushmodel_entities = (int *)Mem_Alloc(cl_mempool, cl_max_brushmodel_entities * sizeof(int));
-
-	cl_lastquakeentity = 0;
-	memset(cl_isquakeentity, 0, sizeof(cl_isquakeentity));
-
-	// LordHavoc: have to set up the baseline info for alpha and other stuff
-	for (i = 0;i < cl_max_entities;i++)
+// COMMANDLINEOPTION: Client: -particles <number> changes maximum number of particles at once, default 32768
+	i = COM_CheckParm ("-particles");
+	if (i && i < com_argc - 1)
 	{
-		cl_entities[i].state_baseline = defaultstate;
-		cl_entities[i].state_previous = defaultstate;
-		cl_entities[i].state_current = defaultstate;
+		cl.max_particles = (int)(atoi(com_argv[i+1]));
+		if (cl.max_particles < ABSOLUTE_MIN_PARTICLES)
+			cl.max_particles = ABSOLUTE_MIN_PARTICLES;
 	}
 
-	for (i = 0;i < cl_max_csqcentities;i++)
+	cl.num_dlights = 0;
+	cl.num_effects = 0;
+	cl.num_beams = 0;
+
+	cl.entities = (entity_t *)Mem_Alloc(cls.mempool, cl.max_entities * sizeof(entity_t));
+	cl.csqcentities = (entity_t *)Mem_Alloc(cls.mempool, cl.max_csqcentities * sizeof(entity_t));	//[515]: csqc
+	cl.entities_active = (unsigned char *)Mem_Alloc(cls.mempool, cl.max_brushmodel_entities * sizeof(unsigned char));
+	cl.csqcentities_active = (unsigned char *)Mem_Alloc(cls.mempool, cl.max_brushmodel_entities * sizeof(unsigned char));	//[515]: csqc
+	cl.static_entities = (entity_t *)Mem_Alloc(cls.mempool, cl.max_static_entities * sizeof(entity_t));
+	cl.temp_entities = (entity_t *)Mem_Alloc(cls.mempool, cl.max_temp_entities * sizeof(entity_t));
+	cl.effects = (cl_effect_t *)Mem_Alloc(cls.mempool, cl.max_effects * sizeof(cl_effect_t));
+	cl.beams = (beam_t *)Mem_Alloc(cls.mempool, cl.max_beams * sizeof(beam_t));
+	cl.dlights = (dlight_t *)Mem_Alloc(cls.mempool, cl.max_dlights * sizeof(dlight_t));
+	cl.lightstyle = (lightstyle_t *)Mem_Alloc(cls.mempool, cl.max_lightstyle * sizeof(lightstyle_t));
+	cl.brushmodel_entities = (int *)Mem_Alloc(cls.mempool, cl.max_brushmodel_entities * sizeof(int));
+	cl.particles = (particle_t *) Mem_Alloc(cls.mempool, cl.max_particles * sizeof(particle_t));
+
+	// LordHavoc: have to set up the baseline info for alpha and other stuff
+	for (i = 0;i < cl.max_entities;i++)
 	{
-		cl_csqcentities[i].state_baseline = defaultstate;	//[515]: csqc
-		cl_csqcentities[i].state_previous = defaultstate;	//[515]: csqc
-		cl_csqcentities[i].state_current = defaultstate;	//[515]: csqc
-		cl_csqcentities[i].csqc = true;
-		cl_csqcentities[i].state_current.number = -i;
+		cl.entities[i].state_baseline = defaultstate;
+		cl.entities[i].state_previous = defaultstate;
+		cl.entities[i].state_current = defaultstate;
+	}
+
+	for (i = 0;i < cl.max_csqcentities;i++)
+	{
+		cl.csqcentities[i].state_baseline = defaultstate;	//[515]: csqc
+		cl.csqcentities[i].state_previous = defaultstate;	//[515]: csqc
+		cl.csqcentities[i].state_current = defaultstate;	//[515]: csqc
+		cl.csqcentities[i].csqc = true;
+		cl.csqcentities[i].state_current.number = -i;
 	}
 
 	if (gamemode == GAME_NEXUIZ)
 	{
-		VectorSet(cl_playerstandmins, -16, -16, -24);
-		VectorSet(cl_playerstandmaxs, 16, 16, 45);
-		VectorSet(cl_playercrouchmins, -16, -16, -24);
-		VectorSet(cl_playercrouchmaxs, 16, 16, 25);
+		VectorSet(cl.playerstandmins, -16, -16, -24);
+		VectorSet(cl.playerstandmaxs, 16, 16, 45);
+		VectorSet(cl.playercrouchmins, -16, -16, -24);
+		VectorSet(cl.playercrouchmaxs, 16, 16, 25);
 	}
 	else
 	{
-		VectorSet(cl_playerstandmins, -16, -16, -24);
-		VectorSet(cl_playerstandmaxs, 16, 16, 24);
-		VectorSet(cl_playercrouchmins, -16, -16, -24);
-		VectorSet(cl_playercrouchmaxs, 16, 16, 24);
+		VectorSet(cl.playerstandmins, -16, -16, -24);
+		VectorSet(cl.playerstandmaxs, 16, 16, 24);
+		VectorSet(cl.playercrouchmins, -16, -16, -24);
+		VectorSet(cl.playercrouchmaxs, 16, 16, 24);
 	}
 
 	// disable until we get textures for it
 	R_ResetSkyBox();
 
-	ent = &cl_entities[0];
+	ent = &cl.entities[0];
 	// entire entity array was cleared, so just fill in a few fields
 	ent->state_current.active = true;
 	ent->render.model = cl.worldmodel = NULL; // no world model yet
@@ -244,30 +215,29 @@ void CL_ClearState(void)
 	memset(cl.qw_deltasequence, -1, sizeof(cl.qw_deltasequence));
 
 	CL_Screen_NewMap();
-	CL_Particles_Clear();
 }
 
 void CL_ExpandEntities(int num)
 {
 	int i, oldmaxentities;
 	entity_t *oldentities;
-	if (num >= cl_max_entities)
+	if (num >= cl.max_entities)
 	{
-		if (!cl_entities)
-			Sys_Error("CL_ExpandEntities: cl_entities not initialized");
+		if (!cl.entities)
+			Sys_Error("CL_ExpandEntities: cl.entities not initialized");
 		if (num >= MAX_EDICTS)
 			Host_Error("CL_ExpandEntities: num %i >= %i", num, MAX_EDICTS);
-		oldmaxentities = cl_max_entities;
-		oldentities = cl_entities;
-		cl_max_entities = (num & ~255) + 256;
-		cl_entities = (entity_t *)Mem_Alloc(cl_mempool, cl_max_entities * sizeof(entity_t));
-		memcpy(cl_entities, oldentities, oldmaxentities * sizeof(entity_t));
+		oldmaxentities = cl.max_entities;
+		oldentities = cl.entities;
+		cl.max_entities = (num & ~255) + 256;
+		cl.entities = (entity_t *)Mem_Alloc(cls.mempool, cl.max_entities * sizeof(entity_t));
+		memcpy(cl.entities, oldentities, oldmaxentities * sizeof(entity_t));
 		Mem_Free(oldentities);
-		for (i = oldmaxentities;i < cl_max_entities;i++)
+		for (i = oldmaxentities;i < cl.max_entities;i++)
 		{
-			cl_entities[i].state_baseline = defaultstate;
-			cl_entities[i].state_previous = defaultstate;
-			cl_entities[i].state_current = defaultstate;
+			cl.entities[i].state_baseline = defaultstate;
+			cl.entities[i].state_previous = defaultstate;
+			cl.entities[i].state_current = defaultstate;
 		}
 	}
 }
@@ -276,25 +246,25 @@ void CL_ExpandCSQCEntities(int num)
 {
 	int i, oldmaxentities;
 	entity_t *oldentities;
-	if (num >= cl_max_csqcentities)
+	if (num >= cl.max_csqcentities)
 	{
-		if (!cl_csqcentities)
-			Sys_Error("CL_ExpandCSQCEntities: cl_csqcentities not initialized\n");
+		if (!cl.csqcentities)
+			Sys_Error("CL_ExpandCSQCEntities: cl.csqcentities not initialized\n");
 		if (num >= MAX_EDICTS)
 			Host_Error("CL_ExpandCSQCEntities: num %i >= %i\n", num, MAX_EDICTS);
-		oldmaxentities = cl_max_csqcentities;
-		oldentities = cl_csqcentities;
-		cl_max_csqcentities = (num & ~255) + 256;
-		cl_csqcentities = Mem_Alloc(cl_mempool, cl_max_csqcentities * sizeof(entity_t));
-		memcpy(cl_csqcentities, oldentities, oldmaxentities * sizeof(entity_t));
+		oldmaxentities = cl.max_csqcentities;
+		oldentities = cl.csqcentities;
+		cl.max_csqcentities = (num & ~255) + 256;
+		cl.csqcentities = Mem_Alloc(cls.mempool, cl.max_csqcentities * sizeof(entity_t));
+		memcpy(cl.csqcentities, oldentities, oldmaxentities * sizeof(entity_t));
 		Mem_Free(oldentities);
-		for (i = oldmaxentities;i < cl_max_csqcentities;i++)
+		for (i = oldmaxentities;i < cl.max_csqcentities;i++)
 		{
-			cl_csqcentities[i].state_baseline = defaultstate;
-			cl_csqcentities[i].state_previous = defaultstate;
-			cl_csqcentities[i].state_current = defaultstate;
-			cl_csqcentities[i].csqc = true;
-			cl_csqcentities[i].state_current.number = -i;
+			cl.csqcentities[i].state_baseline = defaultstate;
+			cl.csqcentities[i].state_previous = defaultstate;
+			cl.csqcentities[i].state_current = defaultstate;
+			cl.csqcentities[i].csqc = true;
+			cl.csqcentities[i].state_current.number = -i;
 		}
 	}
 }
@@ -432,7 +402,7 @@ static void CL_PrintEntities_f(void)
 	int i, j;
 	char name[32];
 
-	for (i = 0, ent = cl_entities;i < cl_num_entities;i++, ent++)
+	for (i = 0, ent = cl.entities;i < cl.num_entities;i++, ent++)
 	{
 		if (!ent->state_current.active)
 			continue;
@@ -536,7 +506,7 @@ static float CL_LerpPoint(void)
 
 void CL_ClearTempEntities (void)
 {
-	cl_num_temp_entities = 0;
+	cl.num_temp_entities = 0;
 }
 
 entity_t *CL_NewTempEntity(void)
@@ -545,9 +515,9 @@ entity_t *CL_NewTempEntity(void)
 
 	if (r_refdef.numentities >= r_refdef.maxentities)
 		return NULL;
-	if (cl_num_temp_entities >= cl_max_temp_entities)
+	if (cl.num_temp_entities >= cl.max_temp_entities)
 		return NULL;
-	ent = &cl_temp_entities[cl_num_temp_entities++];
+	ent = &cl.temp_entities[cl.num_temp_entities++];
 	memset (ent, 0, sizeof(*ent));
 	r_refdef.entities[r_refdef.numentities++] = &ent->render;
 
@@ -564,7 +534,7 @@ void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float
 	cl_effect_t *e;
 	if (!modelindex) // sanity check
 		return;
-	for (i = 0, e = cl_effects;i < cl_max_effects;i++, e++)
+	for (i = 0, e = cl.effects;i < cl.max_effects;i++, e++)
 	{
 		if (e->active)
 			continue;
@@ -579,7 +549,7 @@ void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float
 		e->frame = 0;
 		e->frame1time = cl.time;
 		e->frame2time = cl.time;
-		cl_activeeffects = max(cl_activeeffects, i + 1);
+		cl.num_effects = max(cl.num_effects, i + 1);
 		break;
 	}
 }
@@ -593,22 +563,22 @@ void CL_AllocDlight(entity_render_t *ent, matrix4x4_t *matrix, float radius, flo
 // first look for an exact key match
 	if (ent)
 	{
-		dl = cl_dlights;
-		for (i = 0;i < cl_activedlights;i++, dl++)
+		dl = cl.dlights;
+		for (i = 0;i < cl.num_dlights;i++, dl++)
 			if (dl->ent == ent)
 				goto dlightsetup;
 	}
 	*/
 
 // then look for anything else
-	dl = cl_dlights;
-	for (i = 0;i < cl_activedlights;i++, dl++)
+	dl = cl.dlights;
+	for (i = 0;i < cl.num_dlights;i++, dl++)
 		if (!dl->radius)
 			goto dlightsetup;
 	// if we hit the end of the active dlights and found no gaps, add a new one
 	if (i < MAX_DLIGHTS)
 	{
-		cl_activedlights = i + 1;
+		cl.num_dlights = i + 1;
 		goto dlightsetup;
 	}
 
@@ -655,9 +625,9 @@ void CL_DecayLights(void)
 	float time, f;
 
 	time = cl.time - cl.oldtime;
-	oldmax = cl_activedlights;
-	cl_activedlights = 0;
-	for (i = 0, dl = cl_dlights;i < oldmax;i++, dl++)
+	oldmax = cl.num_dlights;
+	cl.num_dlights = 0;
+	for (i = 0, dl = cl.dlights;i < oldmax;i++, dl++)
 	{
 		if (dl->radius)
 		{
@@ -665,7 +635,7 @@ void CL_DecayLights(void)
 			if (cl.time < dl->die && f > 0)
 			{
 				dl->radius = dl->radius - time * dl->decay;
-				cl_activedlights = i + 1;
+				cl.num_dlights = i + 1;
 			}
 			else
 				dl->radius = 0;
@@ -683,7 +653,7 @@ void CL_UpdateLights(void)
 	r_refdef.numlights = 0;
 	if (r_dynamic.integer)
 	{
-		for (i = 0, dl = cl_dlights;i < cl_activedlights;i++, dl++)
+		for (i = 0, dl = cl.dlights;i < cl.num_dlights;i++, dl++)
 		{
 			if (dl->radius)
 			{
@@ -698,17 +668,17 @@ void CL_UpdateLights(void)
 	f = cl.time * 10;
 	i = (int)floor(f);
 	frac = f - i;
-	for (j = 0;j < cl_max_lightstyle;j++)
+	for (j = 0;j < cl.max_lightstyle;j++)
 	{
-		if (!cl_lightstyle || !cl_lightstyle[j].length)
+		if (!cl.lightstyle || !cl.lightstyle[j].length)
 		{
 			r_refdef.lightstylevalue[j] = 256;
 			continue;
 		}
-		k = i % cl_lightstyle[j].length;
-		l = (i-1) % cl_lightstyle[j].length;
-		k = cl_lightstyle[j].map[k] - 'a';
-		l = cl_lightstyle[j].map[l] - 'a';
+		k = i % cl.lightstyle[j].length;
+		l = (i-1) % cl.lightstyle[j].length;
+		k = cl.lightstyle[j].map[k] - 'a';
+		l = cl.lightstyle[j].map[l] - 'a';
 		r_refdef.lightstylevalue[j] = ((k*frac)+(l*(1-frac)))*22;
 	}
 }
@@ -799,7 +769,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 	{
 		e->persistent.linkframe = entitylinkframenumber;
 		// skip inactive entities and world
-		if (!e->state_current.active || e == cl_entities || e == cl_csqcentities)
+		if (!e->state_current.active || e == cl.entities || e == cl.csqcentities)
 			return;
 		e->render.alpha = e->state_current.alpha * (1.0f / 255.0f); // FIXME: interpolate?
 		e->render.scale = e->state_current.scale * (1.0f / 16.0f); // FIXME: interpolate?
@@ -852,11 +822,11 @@ void CL_LinkNetworkEntity(entity_t *e)
 			if (!e->csqc)
 			{
 				if (cl.viewentity)
-					CL_LinkNetworkEntity(cl_entities + cl.viewentity);
-				if (e == &cl.viewent && cl_entities[cl.viewentity].state_current.active)
+					CL_LinkNetworkEntity(cl.entities + cl.viewentity);
+				if (e == &cl.viewent && cl.entities[cl.viewentity].state_current.active)
 				{
-					e->state_current.alpha = cl_entities[cl.viewentity].state_current.alpha;
-					e->state_current.effects = EF_NOSHADOW | (cl_entities[cl.viewentity].state_current.effects & (EF_ADDITIVE | EF_REFLECTIVE | EF_FULLBRIGHT | EF_NODEPTHTEST));
+					e->state_current.alpha = cl.entities[cl.viewentity].state_current.alpha;
+					e->state_current.effects = EF_NOSHADOW | (cl.entities[cl.viewentity].state_current.effects & (EF_ADDITIVE | EF_REFLECTIVE | EF_FULLBRIGHT | EF_NODEPTHTEST));
 				}
 			}
 			matrix = &viewmodelmatrix;
@@ -866,15 +836,15 @@ void CL_LinkNetworkEntity(entity_t *e)
 			// if the tag entity is currently impossible, skip it
 			if (!e->csqc)
 			{
-				if (e->state_current.tagentity >= cl_num_entities)
+				if (e->state_current.tagentity >= cl.num_entities)
 					return;
-				t = cl_entities + e->state_current.tagentity;
+				t = cl.entities + e->state_current.tagentity;
 			}
 			else
 			{
-				if (e->state_current.tagentity >= cl_num_csqcentities)
+				if (e->state_current.tagentity >= cl.num_csqcentities)
 					return;
-				t = cl_csqcentities + e->state_current.tagentity;
+				t = cl.csqcentities + e->state_current.tagentity;
 			}
 			// if the tag entity is inactive, skip it
 			if (!t->state_current.active)
@@ -909,7 +879,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 
 		// movement lerp
 		// if it's the player entity, update according to client movement
-		if (e == cl_entities + cl.playerentity && cl.movement)// && !e->csqc)
+		if (e == cl.entities + cl.playerentity && cl.movement)// && !e->csqc)
 		{
 			lerp = (cl.time - cl.mtime[1]) / (cl.mtime[0] - cl.mtime[1]);
 			lerp = bound(0, lerp, 1);
@@ -1224,7 +1194,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 		if (e->state_current.number == cl.viewentity)
 			V_CalcRefdef();
 		if (e->render.model && e->render.model->name[0] == '*' && e->render.model->TraceBox)
-			cl_brushmodel_entities[cl_num_brushmodel_entities++] = e->state_current.number;
+			cl.brushmodel_entities[cl.num_brushmodel_entities++] = e->state_current.number;
 		// don't show entities with no modelindex (note: this still shows
 		// entities which have a modelindex that resolved to a NULL model)
 		if (e->render.model && !(e->render.effects & EF_NODRAW) && r_refdef.numentities < r_refdef.maxentities)
@@ -1236,8 +1206,8 @@ void CL_LinkNetworkEntity(entity_t *e)
 
 void CL_RelinkWorld(void)
 {
-	entity_t *ent = &cl_entities[0];
-	cl_brushmodel_entities[cl_num_brushmodel_entities++] = 0;
+	entity_t *ent = &cl.entities[0];
+	cl.brushmodel_entities[cl.num_brushmodel_entities++] = 0;
 	// FIXME: this should be done at load
 	ent->render.matrix = identitymatrix;
 	ent->render.inversematrix = identitymatrix;
@@ -1253,10 +1223,10 @@ void CL_RelinkWorld(void)
 
 void CL_RelinkCSQCWorld(void)	//[515]: csqc
 {
-	entity_t *ent = &cl_csqcentities[0];
+	entity_t *ent = &cl.csqcentities[0];
 	if(!csqc_loaded)
 		return;
-//	cl_brushmodel_entities[cl_num_brushmodel_entities++] = 0;
+//	cl.brushmodel_entities[cl.num_brushmodel_entities++] = 0;
 	// FIXME: this should be done at load
 	ent->render.matrix = identitymatrix;
 	ent->render.inversematrix = identitymatrix;
@@ -1274,7 +1244,7 @@ static void CL_RelinkStaticEntities(void)
 {
 	int i;
 	entity_t *e;
-	for (i = 0, e = cl_static_entities;i < cl_num_static_entities && r_refdef.numentities < r_refdef.maxentities;i++, e++)
+	for (i = 0, e = cl.static_entities;i < cl.num_static_entities && r_refdef.numentities < r_refdef.maxentities;i++, e++)
 	{
 		e->render.flags = 0;
 		// transparent stuff can't be lit during the opaque stage
@@ -1336,21 +1306,21 @@ static void CL_RelinkNetworkEntities(int drawmask)
 	entitylinkframenumber++;
 	if(drawmask & ENTMASK_ENGINE || !csqc_loaded)
 	{
-		for (i = 1;i < cl_num_entities;i++)
+		for (i = 1;i < cl.num_entities;i++)
 		{
-			if (cl_entities_active[i])
+			if (cl.entities_active[i])
 			{
-				ent = cl_entities + i;
+				ent = cl.entities + i;
 				if (!(drawmask & ENTMASK_ENGINEVIEWMODELS))
 				if (ent->state_current.flags & RENDER_VIEWMODEL)	//[515]: csqc drawmask
 				{
-					cl_entities_active[i] = false;
+					cl.entities_active[i] = false;
 					continue;
 				}
 				if (ent->state_current.active)
 					CL_LinkNetworkEntity(ent);
 				else
-					cl_entities_active[i] = false;
+					cl.entities_active[i] = false;
 			}
 		}
 	}
@@ -1358,16 +1328,16 @@ static void CL_RelinkNetworkEntities(int drawmask)
 	//[515]: csqc
 	if(csqc_loaded)
 	{
-		for (i=1,k=cl_num_csqcentities;k;i++)
+		for (i=1,k=cl.num_csqcentities;k;i++)
 		{
-			if (cl_csqcentities_active[i])
+			if (cl.csqcentities_active[i])
 			{
 				--k;
-				ent = cl_csqcentities + i;
+				ent = cl.csqcentities + i;
 				if (ent->state_current.active)
 					CL_LinkNetworkEntity(ent);
 				else
-					cl_csqcentities_active[i] = false;
+					cl.csqcentities_active[i] = false;
 			}
 		}
 	}
@@ -1382,7 +1352,7 @@ static void CL_RelinkEffects(void)
 	entity_t *ent;
 	float frame;
 
-	for (i = 0, e = cl_effects;i < cl_activeeffects;i++, e++)
+	for (i = 0, e = cl.effects;i < cl.num_effects;i++, e++)
 	{
 		if (e->active)
 		{
@@ -1391,8 +1361,8 @@ static void CL_RelinkEffects(void)
 			if (intframe < 0 || intframe >= e->endframe)
 			{
 				memset(e, 0, sizeof(*e));
-				while (cl_activeeffects > 0 && !cl_effects[cl_activeeffects - 1].active)
-					cl_activeeffects--;
+				while (cl.num_effects > 0 && !cl.effects[cl.num_effects - 1].active)
+					cl.num_effects--;
 				continue;
 			}
 
@@ -1446,7 +1416,7 @@ void CL_RelinkBeams(void)
 	float forward;
 	matrix4x4_t tempmatrix;
 
-	for (i = 0, b = cl_beams;i < cl_activebeams;i++, b++)
+	for (i = 0, b = cl.beams;i < cl.num_beams;i++, b++)
 	{
 		if (!b->model)
 			continue;
@@ -1458,10 +1428,10 @@ void CL_RelinkBeams(void)
 
 		// if coming from the player, update the start position
 		//if (b->entity == cl.viewentity)
-		//	Matrix4x4_OriginFromMatrix(&cl_entities[cl.viewentity].render.matrix, b->start);
-		if (cl_beams_relative.integer && b->entity && cl_entities[b->entity].state_current.active && b->relativestartvalid)
+		//	Matrix4x4_OriginFromMatrix(&cl.entities[cl.viewentity].render.matrix, b->start);
+		if (cl_beams_relative.integer && b->entity && cl.entities[b->entity].state_current.active && b->relativestartvalid)
 		{
-			entity_render_t *r = &cl_entities[b->entity].render;
+			entity_render_t *r = &cl.entities[b->entity].render;
 			//Matrix4x4_OriginFromMatrix(&r->matrix, origin);
 			//Matrix4x4_CreateFromQuakeEntity(&matrix, r->origin[0], r->origin[1], r->origin[2] + 16, r->angles[0], r->angles[1], r->angles[2], 1);
 			Matrix4x4_Transform(&r->matrix, b->relativestart, b->start);
@@ -1526,8 +1496,8 @@ void CL_RelinkBeams(void)
 		}
 	}
 
-	while (cl_activebeams > 0 && !cl_beams[cl_activebeams - 1].model)
-		cl_activebeams--;
+	while (cl.num_beams > 0 && !cl.beams[cl.num_beams - 1].model)
+		cl.num_beams--;
 }
 
 static void CL_RelinkQWNails(void)
@@ -1626,7 +1596,7 @@ int CL_ReadFromServer(void)
 	r_refdef.extraupdate = !r_speeds.integer;
 	r_refdef.numentities = 0;
 	r_refdef.viewentitymatrix = identitymatrix;
-	cl_num_brushmodel_entities = 0;
+	cl.num_brushmodel_entities = 0;
 
 	if (cls.state == ca_connected && cls.signon == SIGNONS)
 	{
@@ -1733,7 +1703,7 @@ void CL_Shutdown (void)
 	CL_Particles_Shutdown();
 	CL_Parse_Shutdown();
 
-	Mem_FreePool (&cl_mempool);
+	Mem_FreePool (&cls.mempool);
 }
 
 /*
@@ -1743,16 +1713,16 @@ CL_Init
 */
 void CL_Init (void)
 {
-	cl_mempool = Mem_AllocPool("client", 0, NULL);
+	cls.mempool = Mem_AllocPool("client", 0, NULL);
 
 	memset(&r_refdef, 0, sizeof(r_refdef));
 	// max entities sent to renderer per frame
 	r_refdef.maxentities = MAX_EDICTS + 256 + 512;
-	r_refdef.entities = (entity_render_t **)Mem_Alloc(cl_mempool, sizeof(entity_render_t *) * r_refdef.maxentities);
+	r_refdef.entities = (entity_render_t **)Mem_Alloc(cls.mempool, sizeof(entity_render_t *) * r_refdef.maxentities);
 	// 256k drawqueue buffer
 	// TODO: make dynamic
 	r_refdef.maxdrawqueuesize = 256 * 1024;
-	r_refdef.drawqueue = (unsigned char *)Mem_Alloc(cl_mempool, r_refdef.maxdrawqueuesize);
+	r_refdef.drawqueue = (unsigned char *)Mem_Alloc(cls.mempool, r_refdef.maxdrawqueuesize);
 
 	CL_InitInput ();
 

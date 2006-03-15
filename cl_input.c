@@ -510,7 +510,7 @@ void CL_UpdatePrydonCursor(void)
 	VectorSet(temp, cl.cmd.cursor_screen[2] * scale[2], cl.cmd.cursor_screen[0] * scale[0], cl.cmd.cursor_screen[1] * scale[1]);
 	Matrix4x4_Transform(&r_refdef.viewentitymatrix, temp, cl.cmd.cursor_end);
 	// trace from view origin to the cursor
-	cl.cmd.cursor_fraction = CL_SelectTraceLine(cl.cmd.cursor_start, cl.cmd.cursor_end, cl.cmd.cursor_impact, cl.cmd.cursor_normal, &cl.cmd.cursor_entitynumber, (chase_active.integer || cl.intermission) ? &cl_entities[cl.playerentity].render : NULL, false);
+	cl.cmd.cursor_fraction = CL_SelectTraceLine(cl.cmd.cursor_start, cl.cmd.cursor_end, cl.cmd.cursor_impact, cl.cmd.cursor_normal, &cl.cmd.cursor_entitynumber, (chase_active.integer || cl.intermission) ? &cl.entities[cl.playerentity].render : NULL, false);
 	// makes sparks where cursor is
 	//CL_SparkShower(cl.cmd.cursor_impact, cl.cmd.cursor_normal, 5, 0);
 }
@@ -667,7 +667,7 @@ void CL_ClientMovement_Replay(void)
 	}
 
 	// fetch current starting values
-	VectorCopy(cl_entities[cl.playerentity].state_current.origin, currentorigin);
+	VectorCopy(cl.entities[cl.playerentity].state_current.origin, currentorigin);
 	VectorCopy(cl.mvelocity[0], currentvelocity);
 	// FIXME: try minor nudges in various directions if startsolid to find a
 	// safe place to start the walk (due to network compression in some
@@ -678,7 +678,7 @@ void CL_ClientMovement_Replay(void)
 	// check if onground
 	VectorSet(currentorigin2, currentorigin[0], currentorigin[1], currentorigin[2] + 1);
 	VectorSet(neworigin2, currentorigin[0], currentorigin[1], currentorigin[2] - 1);
-	trace = CL_TraceBox(currentorigin2, cl_playercrouchmins, cl_playercrouchmaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
+	trace = CL_TraceBox(currentorigin2, cl.playercrouchmins, cl.playercrouchmaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
 	onground = trace.fraction < 1 && trace.plane.normal[2] > 0.7;
 	//Con_Printf("%f: ", cl.mtime[0]);
 
@@ -704,20 +704,20 @@ void CL_ClientMovement_Replay(void)
 				// low ceiling first
 				if (crouch)
 				{
-					trace = CL_TraceBox(currentorigin, cl_playerstandmins, cl_playerstandmaxs, currentorigin, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
+					trace = CL_TraceBox(currentorigin, cl.playerstandmins, cl.playerstandmaxs, currentorigin, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
 					if (!trace.startsolid)
 						crouch = false;
 				}
 			}
 			if (crouch)
 			{
-				playermins = cl_playercrouchmins;
-				playermaxs = cl_playercrouchmaxs;
+				playermins = cl.playercrouchmins;
+				playermaxs = cl.playercrouchmaxs;
 			}
 			else
 			{
-				playermins = cl_playerstandmins;
-				playermaxs = cl_playerstandmaxs;
+				playermins = cl.playerstandmins;
+				playermaxs = cl.playerstandmaxs;
 			}
 			// change velocity according to q->viewangles and q->move
 			contents = CL_PointSuperContents(currentorigin);
@@ -816,13 +816,13 @@ void CL_ClientMovement_Replay(void)
 		{
 			if (crouch)
 			{
-				playermins = cl_playercrouchmins;
-				playermaxs = cl_playercrouchmaxs;
+				playermins = cl.playercrouchmins;
+				playermaxs = cl.playercrouchmaxs;
 			}
 			else
 			{
-				playermins = cl_playerstandmins;
-				playermaxs = cl_playerstandmaxs;
+				playermins = cl.playerstandmins;
+				playermaxs = cl.playerstandmaxs;
 			}
 			onground = false;
 			for (bump = 0, t = frametime;bump < 8 && VectorLength2(currentvelocity) > 0;bump++)
@@ -867,8 +867,8 @@ void CL_ClientMovement_Replay(void)
 	VectorCopy(cl.movement_origin, cl.movement_oldorigin);
 	VectorCopy(currentorigin, cl.movement_origin);
 	VectorCopy(currentvelocity, cl.movement_velocity);
-	//VectorCopy(currentorigin, cl_entities[cl.playerentity].state_current.origin);
-	//VectorSet(cl_entities[cl.playerentity].state_current.angles, 0, cl.viewangles[1], 0);
+	//VectorCopy(currentorigin, cl.entities[cl.playerentity].state_current.origin);
+	//VectorSet(cl.entities[cl.playerentity].state_current.angles, 0, cl.viewangles[1], 0);
 }
 
 void QW_MSG_WriteDeltaUsercmd(sizebuf_t *buf, qw_usercmd_t *from, qw_usercmd_t *to)

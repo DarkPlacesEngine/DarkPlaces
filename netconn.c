@@ -116,10 +116,10 @@ static double serverlist_querywaittime = 0;
 static unsigned char sendbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
 static unsigned char readbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
 
-int cl_numsockets;
-lhnetsocket_t *cl_sockets[16];
-int sv_numsockets;
-lhnetsocket_t *sv_sockets[16];
+static int cl_numsockets;
+static lhnetsocket_t *cl_sockets[16];
+static int sv_numsockets;
+static lhnetsocket_t *sv_sockets[16];
 
 netconn_t *netconn_list = NULL;
 mempool_t *netconn_mempool = NULL;

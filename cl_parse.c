@@ -490,8 +490,8 @@ static void QW_CL_RequestNextDownload(void)
 
 		// now that we have a world model, set up the world entity, renderer
 		// modules and csqc
-		cl_entities[0].render.model = cl.worldmodel = cl.model_precache[1];
-		CL_BoundingBoxForEntity(&cl_entities[0].render);
+		cl.entities[0].render.model = cl.worldmodel = cl.model_precache[1];
+		CL_BoundingBoxForEntity(&cl.entities[0].render);
 
 		R_Modules_NewMap();
 
@@ -586,7 +586,7 @@ static void QW_CL_ParseDownload(void)
 		while (cls.qw_downloadmemorymaxsize < cls.qw_downloadmemorycursize + size)
 			cls.qw_downloadmemorymaxsize *= 2;
 		old = cls.qw_downloadmemory;
-		cls.qw_downloadmemory = Mem_Alloc(cl_mempool, cls.qw_downloadmemorymaxsize);
+		cls.qw_downloadmemory = Mem_Alloc(cls.mempool, cls.qw_downloadmemorymaxsize);
 		if (old)
 		{
 			memcpy(cls.qw_downloadmemory, old, cls.qw_downloadmemorycursize);
@@ -748,7 +748,7 @@ void QW_CL_StartUpload(unsigned char *data, int size)
 
 	Con_DPrintf("Starting upload of %d bytes...\n", size);
 
-	cls.qw_uploaddata = Mem_Alloc(cl_mempool, size);
+	cls.qw_uploaddata = Mem_Alloc(cls.mempool, size);
 	memcpy(cls.qw_uploaddata, data, size);
 	cls.qw_uploadsize = size;
 	cls.qw_uploadpos = 0;
@@ -985,7 +985,7 @@ void CL_ParseServerInfo (void)
 	cls.protocol = protocol;
 	Con_DPrintf("Server protocol is %s\n", Protocol_NameForEnum(cls.protocol));
 
-	cl_num_entities = 1;
+	cl.num_entities = 1;
 
 	if (protocol == PROTOCOL_QUAKEWORLD)
 	{
@@ -1016,7 +1016,7 @@ void CL_ParseServerInfo (void)
 		i = MSG_ReadByte();
 		cl.qw_spectator = (i & 128) != 0;
 		cl.playerentity = cl.viewentity = (i & 127) + 1;
-		cl.scores = (scoreboard_t *)Mem_Alloc(cl_mempool, cl.maxclients*sizeof(*cl.scores));
+		cl.scores = (scoreboard_t *)Mem_Alloc(cls.mempool, cl.maxclients*sizeof(*cl.scores));
 
 		// get the full level name
 		str = MSG_ReadString ();
@@ -1059,7 +1059,7 @@ void CL_ParseServerInfo (void)
 			Host_Error("Bad maxclients (%u) from server", cl.maxclients);
 			return;
 		}
-		cl.scores = (scoreboard_t *)Mem_Alloc(cl_mempool, cl.maxclients*sizeof(*cl.scores));
+		cl.scores = (scoreboard_t *)Mem_Alloc(cls.mempool, cl.maxclients*sizeof(*cl.scores));
 
 	// parse gametype
 		cl.gametype = MSG_ReadByte ();
@@ -1150,8 +1150,8 @@ void CL_ParseServerInfo (void)
 		}
 
 		// we now have the worldmodel so we can set up the game world
-		cl_entities[0].render.model = cl.worldmodel = cl.model_precache[1];
-		CL_BoundingBoxForEntity(&cl_entities[0].render);
+		cl.entities[0].render.model = cl.worldmodel = cl.model_precache[1];
+		CL_BoundingBoxForEntity(&cl.entities[0].render);
 		R_Modules_NewMap();
 	}
 
@@ -1415,9 +1415,9 @@ void CL_ParseStatic (int large)
 {
 	entity_t *ent;
 
-	if (cl_num_static_entities >= cl_max_static_entities)
+	if (cl.num_static_entities >= cl.max_static_entities)
 		Host_Error ("Too many static entities");
-	ent = &cl_static_entities[cl_num_static_entities++];
+	ent = &cl.static_entities[cl.num_static_entities++];
 	CL_ParseBaseline (ent, large);
 
 // copy it to the current state
@@ -1441,7 +1441,7 @@ void CL_ParseStatic (int large)
 
 	// This is definitely cheating...
 	if (ent->render.model == NULL)
-		cl_num_static_entities--;
+		cl.num_static_entities--;
 }
 
 /*
@@ -1509,23 +1509,23 @@ void CL_ParseBeam (model_t *m, int lightning)
 		ent = 0;
 	}
 
-	if (ent >= cl_max_entities)
+	if (ent >= cl.max_entities)
 		CL_ExpandEntities(ent);
 
 	// override any beam with the same entity
-	i = cl_max_beams;
+	i = cl.max_beams;
 	if (ent)
-		for (i = 0, b = cl_beams;i < cl_max_beams;i++, b++)
+		for (i = 0, b = cl.beams;i < cl.max_beams;i++, b++)
 			if (b->entity == ent)
 				break;
 	// if the entity was not found then just replace an unused beam
-	if (i == cl_max_beams)
-		for (i = 0, b = cl_beams;i < cl_max_beams;i++, b++)
+	if (i == cl.max_beams)
+		for (i = 0, b = cl.beams;i < cl.max_beams;i++, b++)
 			if (!b->model || b->endtime < cl.time)
 				break;
-	if (i < cl_max_beams)
+	if (i < cl.max_beams)
 	{
-		cl_activebeams = max(cl_activebeams, i + 1);
+		cl.num_beams = max(cl.num_beams, i + 1);
 		b->entity = ent;
 		b->lightning = lightning;
 		b->model = m;
@@ -1533,14 +1533,14 @@ void CL_ParseBeam (model_t *m, int lightning)
 		VectorCopy (start, b->start);
 		VectorCopy (end, b->end);
 		b->relativestartvalid = 0;
-		if (ent && cl_entities[ent].state_current.active)
+		if (ent && cl.entities[ent].state_current.active)
 		{
 			entity_state_t *p;
 			matrix4x4_t matrix, imatrix;
 			if (ent == cl.viewentity && cl.movement)
-				p = &cl_entities[b->entity].state_previous;
+				p = &cl.entities[b->entity].state_previous;
 			else
-				p = &cl_entities[b->entity].state_current;
+				p = &cl.entities[b->entity].state_current;
 			// not really valid yet, we need to get the orientation now
 			// (ParseBeam flagged this because it is received before
 			//  entities are received, by now they have been received)
@@ -2192,7 +2192,7 @@ void CL_ParseServerMessage(void)
 
 		// slightly kill qw player entities each frame
 		for (i = 1;i < cl.maxclients;i++)
-			cl_entities_active[i] = false;
+			cl.entities_active[i] = false;
 
 		// kill all qw nails
 		cl.qw_num_nails = 0;
@@ -2299,14 +2299,14 @@ void CL_ParseServerMessage(void)
 
 			case qw_svc_lightstyle:
 				i = MSG_ReadByte ();
-				if (i >= cl_max_lightstyle)
+				if (i >= cl.max_lightstyle)
 				{
 					Con_Printf ("svc_lightstyle >= MAX_LIGHTSTYLES");
 					break;
 				}
-				strlcpy (cl_lightstyle[i].map,  MSG_ReadString(), sizeof (cl_lightstyle[i].map));
-				cl_lightstyle[i].map[MAX_STYLESTRING - 1] = 0;
-				cl_lightstyle[i].length = (int)strlen(cl_lightstyle[i].map);
+				strlcpy (cl.lightstyle[i].map,  MSG_ReadString(), sizeof (cl.lightstyle[i].map));
+				cl.lightstyle[i].map[MAX_STYLESTRING - 1] = 0;
+				cl.lightstyle[i].length = (int)strlen(cl.lightstyle[i].map);
 				break;
 
 			case qw_svc_sound:
@@ -2351,9 +2351,9 @@ void CL_ParseServerMessage(void)
 				i = (unsigned short) MSG_ReadShort();
 				if (i < 0 || i >= MAX_EDICTS)
 					Host_Error ("CL_ParseServerMessage: svc_spawnbaseline: invalid entity number %i", i);
-				if (i >= cl_max_entities)
+				if (i >= cl.max_entities)
 					CL_ExpandEntities(i);
-				CL_ParseBaseline(cl_entities + i, false);
+				CL_ParseBaseline(cl.entities + i, false);
 				break;
 			case qw_svc_spawnstatic:
 				CL_ParseStatic(false);
@@ -2427,9 +2427,9 @@ void CL_ParseServerMessage(void)
 				// NOTE: in QW this only worked on clients
 				if (i < 0 || i >= MAX_EDICTS)
 					Host_Error("CL_ParseServerMessage: svc_spawnbaseline: invalid entity number %i", i);
-				if (i >= cl_max_entities)
+				if (i >= cl.max_entities)
 					CL_ExpandEntities(i);
-				cl_entities[i].persistent.muzzleflash = 1.0f;
+				cl.entities[i].persistent.muzzleflash = 1.0f;
 				break;
 
 			case qw_svc_updateuserinfo:
@@ -2506,8 +2506,8 @@ void CL_ParseServerMessage(void)
 
 		// fully kill the still slightly dead qw player entities each frame
 		for (i = 1;i < cl.maxclients;i++)
-			if (!cl_entities_active[i])
-				cl_entities[i].state_current.active = false;
+			if (!cl.entities_active[i])
+				cl.entities[i].state_current.active = false;
 	}
 	else
 	{
@@ -2645,7 +2645,7 @@ void CL_ParseServerMessage(void)
 				cl.viewentity = (unsigned short)MSG_ReadShort ();
 				if (cl.viewentity >= MAX_EDICTS)
 					Host_Error("svc_setview >= MAX_EDICTS");
-				if (cl.viewentity >= cl_max_entities)
+				if (cl.viewentity >= cl.max_entities)
 					CL_ExpandEntities(cl.viewentity);
 				// LordHavoc: assume first setview recieved is the real player entity
 				if (!cl.playerentity)
@@ -2654,14 +2654,14 @@ void CL_ParseServerMessage(void)
 
 			case svc_lightstyle:
 				i = MSG_ReadByte ();
-				if (i >= cl_max_lightstyle)
+				if (i >= cl.max_lightstyle)
 				{
 					Con_Printf ("svc_lightstyle >= MAX_LIGHTSTYLES");
 					break;
 				}
-				strlcpy (cl_lightstyle[i].map,  MSG_ReadString(), sizeof (cl_lightstyle[i].map));
-				cl_lightstyle[i].map[MAX_STYLESTRING - 1] = 0;
-				cl_lightstyle[i].length = (int)strlen(cl_lightstyle[i].map);
+				strlcpy (cl.lightstyle[i].map,  MSG_ReadString(), sizeof (cl.lightstyle[i].map));
+				cl.lightstyle[i].map[MAX_STYLESTRING - 1] = 0;
+				cl.lightstyle[i].length = (int)strlen(cl.lightstyle[i].map);
 				break;
 
 			case svc_sound:
@@ -2748,17 +2748,17 @@ void CL_ParseServerMessage(void)
 				i = (unsigned short) MSG_ReadShort ();
 				if (i < 0 || i >= MAX_EDICTS)
 					Host_Error ("CL_ParseServerMessage: svc_spawnbaseline: invalid entity number %i", i);
-				if (i >= cl_max_entities)
+				if (i >= cl.max_entities)
 					CL_ExpandEntities(i);
-				CL_ParseBaseline (cl_entities + i, false);
+				CL_ParseBaseline (cl.entities + i, false);
 				break;
 			case svc_spawnbaseline2:
 				i = (unsigned short) MSG_ReadShort ();
 				if (i < 0 || i >= MAX_EDICTS)
 					Host_Error ("CL_ParseServerMessage: svc_spawnbaseline2: invalid entity number %i", i);
-				if (i >= cl_max_entities)
+				if (i >= cl.max_entities)
 					CL_ExpandEntities(i);
-				CL_ParseBaseline (cl_entities + i, true);
+				CL_ParseBaseline (cl.entities + i, true);
 				break;
 			case svc_spawnstatic:
 				CL_ParseStatic (false);

@@ -67,7 +67,7 @@ void R_DrawWorldCrosshair(void)
 	num = crosshair.integer;
 	if (num < 1 || num > NUMCROSSHAIRS || cl.intermission)
 		return;
-	if (!cl.viewentity || !cl_entities[cl.viewentity].state_current.active)
+	if (!cl.viewentity || !cl.entities[cl.viewentity].state_current.active)
 		return;
 	pic = r_crosshairs[num];
 	if (!pic)
@@ -75,7 +75,7 @@ void R_DrawWorldCrosshair(void)
 	R_GetCrosshairColor(color);
 
 	// trace the shot path up to a certain distance
-	Matrix4x4_OriginFromMatrix(&cl_entities[cl.viewentity].render.matrix, v1);
+	Matrix4x4_OriginFromMatrix(&cl.entities[cl.viewentity].render.matrix, v1);
 	v1[2] += 16; // HACK: this depends on the QC
 
 	// get the forward vector for the gun (not the view)
@@ -102,7 +102,7 @@ void R_Draw2DCrosshair(void)
 	num = crosshair.integer;
 	if (num < 1 || num > NUMCROSSHAIRS || cl.intermission)
 		return;
-	if (!cl.viewentity || !cl_entities[cl.viewentity].state_current.active)
+	if (!cl.viewentity || !cl.entities[cl.viewentity].state_current.active)
 		return;
 	pic = r_crosshairs[num];
 	if (pic)

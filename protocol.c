@@ -1,6 +1,8 @@
 
 #include "quakedef.h"
 
+#define E5_PROTOCOL_PRIORITYLEVELS 32
+
 // this is 88 bytes (must match entity_state_t in protocol.h)
 entity_state_t defaultstate =
 {
@@ -60,6 +62,17 @@ protocolversioninfo[] =
 	{0, NULL}
 };
 
+static mempool_t *sv2csqc = NULL;
+int csqc_clent = 0;
+sizebuf_t *sv2csqcbuf = NULL;
+static unsigned char *sv2csqcents_version[MAX_SCOREBOARD];
+
+static entity_frame_t deltaframe; // FIXME?
+static entity_frame_t framedata; // FIXME?
+
+int entityframe5_prioritychaincounts[E5_PROTOCOL_PRIORITYLEVELS];
+unsigned short entityframe5_prioritychains[E5_PROTOCOL_PRIORITYLEVELS][ENTITYFRAME5_MAXSTATES];
+
 protocolversion_t Protocol_EnumForName(const char *s)
 {
 	int i;
@@ -102,10 +115,6 @@ void Protocol_Names(char *buffer, size_t buffersize)
 	}
 }
 
-// keep track of quake entities because they need to be killed if they get stale
-int cl_lastquakeentity = 0;
-unsigned char cl_isquakeentity[MAX_EDICTS];
-
 void EntityFrameQuake_ReadEntity(int bits)
 {
 	int num;
@@ -131,14 +140,14 @@ void EntityFrameQuake_ReadEntity(int bits)
 	if (num < 1)
 		Host_Error("EntityFrameQuake_ReadEntity: invalid entity number (%i)", num);
 
-	if (cl_num_entities <= num)
+	if (cl.num_entities <= num)
 	{
-		cl_num_entities = num + 1;
-		if (num >= cl_max_entities)
+		cl.num_entities = num + 1;
+		if (num >= cl.max_entities)
 			CL_ExpandEntities(num);
 	}
 
-	ent = cl_entities + num;
+	ent = cl.entities + num;
 
 	// note: this inherits the 'active' state of the baseline chosen
 	// (state_baseline is always active, state_current may not be active if
@@ -151,9 +160,9 @@ void EntityFrameQuake_ReadEntity(int bits)
 		s.active = true;
 	}
 
-	cl_isquakeentity[num] = true;
-	if (cl_lastquakeentity < num)
-		cl_lastquakeentity = num;
+	cl.isquakeentity[num] = true;
+	if (cl.lastquakeentity < num)
+		cl.lastquakeentity = num;
 	s.number = num;
 	s.time = cl.mtime[0];
 	s.flags = 0;
@@ -206,7 +215,7 @@ void EntityFrameQuake_ReadEntity(int bits)
 	if (ent->state_current.active)
 	{
 		CL_MoveLerpEntityStates(ent);
-		cl_entities_active[ent->state_current.number] = true;
+		cl.entities_active[ent->state_current.number] = true;
 	}
 
 	if (msg_badread)
@@ -216,34 +225,29 @@ void EntityFrameQuake_ReadEntity(int bits)
 void EntityFrameQuake_ISeeDeadEntities(void)
 {
 	int num, lastentity;
-	if (cl_lastquakeentity == 0)
+	if (cl.lastquakeentity == 0)
 		return;
-	lastentity = cl_lastquakeentity;
-	cl_lastquakeentity = 0;
+	lastentity = cl.lastquakeentity;
+	cl.lastquakeentity = 0;
 	for (num = 0;num <= lastentity;num++)
 	{
-		if (cl_isquakeentity[num])
+		if (cl.isquakeentity[num])
 		{
-			if (cl_entities_active[num] && cl_entities[num].state_current.time == cl.mtime[0])
+			if (cl.entities_active[num] && cl.entities[num].state_current.time == cl.mtime[0])
 			{
-				cl_isquakeentity[num] = true;
-				cl_lastquakeentity = num;
+				cl.isquakeentity[num] = true;
+				cl.lastquakeentity = num;
 			}
 			else
 			{
-				cl_isquakeentity[num] = false;
-				cl_entities_active[num] = false;
-				cl_entities[num].state_current = defaultstate;
-				cl_entities[num].state_current.number = num;
+				cl.isquakeentity[num] = false;
+				cl.entities_active[num] = false;
+				cl.entities[num].state_current = defaultstate;
+				cl.entities[num].state_current.number = num;
 			}
 		}
 	}
 }
-
-static mempool_t *sv2csqc = NULL;
-int csqc_clent = 0;
-sizebuf_t *sv2csqcbuf = NULL;
-static unsigned char *sv2csqcents_version[MAX_SCOREBOARD];
 
 void EntityFrameCSQC_ClearVersions (void)
 {
@@ -1007,7 +1011,6 @@ void EntityFrame_AddFrame(entityframe_database_t *d, vec3_t eye, int framenum, i
 }
 
 // (server) writes a frame to network stream
-static entity_frame_t deltaframe; // FIXME?
 void EntityFrame_WriteFrame(sizebuf_t *msg, entityframe_database_t *d, int numstates, const entity_state_t *states, int viewentnum)
 {
 	int i, onum, number;
@@ -1076,7 +1079,6 @@ void EntityFrame_WriteFrame(sizebuf_t *msg, entityframe_database_t *d, int numst
 }
 
 // (client) reads a frame from network stream
-static entity_frame_t framedata; // FIXME?
 void EntityFrame_CL_ReadFrame(void)
 {
 	int i, number, removed;
@@ -1085,7 +1087,7 @@ void EntityFrame_CL_ReadFrame(void)
 	entity_t *ent;
 	entityframe_database_t *d;
 	if (!cl.entitydatabase)
-		cl.entitydatabase = EntityFrame_AllocDatabase(cl_mempool);
+		cl.entitydatabase = EntityFrame_AllocDatabase(cls.mempool);
 	d = cl.entitydatabase;
 
 	EntityFrame_Clear(f, NULL, -1);
@@ -1147,13 +1149,13 @@ void EntityFrame_CL_ReadFrame(void)
 				*e = defaultstate;
 			}
 
-			if (cl_num_entities <= number)
+			if (cl.num_entities <= number)
 			{
-				cl_num_entities = number + 1;
-				if (number >= cl_max_entities)
+				cl.num_entities = number + 1;
+				if (number >= cl.max_entities)
 					CL_ExpandEntities(number);
 			}
-			cl_entities_active[number] = true;
+			cl.entities_active[number] = true;
 			e->active = true;
 			e->time = cl.mtime[0];
 			e->number = number;
@@ -1169,35 +1171,35 @@ void EntityFrame_CL_ReadFrame(void)
 	}
 	EntityFrame_AddFrame(d, f->eye, f->framenum, f->numentities, f->entitydata);
 
-	memset(cl_entities_active, 0, cl_num_entities * sizeof(unsigned char));
+	memset(cl.entities_active, 0, cl.num_entities * sizeof(unsigned char));
 	number = 1;
 	for (i = 0;i < f->numentities;i++)
 	{
-		for (;number < f->entitydata[i].number && number < cl_num_entities;number++)
+		for (;number < f->entitydata[i].number && number < cl.num_entities;number++)
 		{
-			if (cl_entities_active[number])
+			if (cl.entities_active[number])
 			{
-				cl_entities_active[number] = false;
-				cl_entities[number].state_current.active = false;
+				cl.entities_active[number] = false;
+				cl.entities[number].state_current.active = false;
 			}
 		}
-		if (number >= cl_num_entities)
+		if (number >= cl.num_entities)
 			break;
 		// update the entity
-		ent = &cl_entities[number];
+		ent = &cl.entities[number];
 		ent->state_previous = ent->state_current;
 		ent->state_current = f->entitydata[i];
 		CL_MoveLerpEntityStates(ent);
 		// the entity lives again...
-		cl_entities_active[number] = true;
+		cl.entities_active[number] = true;
 		number++;
 	}
-	for (;number < cl_num_entities;number++)
+	for (;number < cl.num_entities;number++)
 	{
-		if (cl_entities_active[number])
+		if (cl.entities_active[number])
 		{
-			cl_entities_active[number] = false;
-			cl_entities[number].state_current.active = false;
+			cl.entities_active[number] = false;
+			cl.entities[number].state_current.active = false;
 		}
 	}
 }
@@ -1355,7 +1357,7 @@ void EntityFrame4_CL_ReadFrame(void)
 	entity_state_t *s;
 	entityframe4_database_t *d;
 	if (!cl.entitydatabase4)
-		cl.entitydatabase4 = EntityFrame4_AllocDatabase(cl_mempool);
+		cl.entitydatabase4 = EntityFrame4_AllocDatabase(cls.mempool);
 	d = cl.entitydatabase4;
 	// read the number of the frame this refers to
 	referenceframenum = MSG_ReadLong();
@@ -1410,10 +1412,10 @@ void EntityFrame4_CL_ReadFrame(void)
 		// high bit means it's a remove message
 		cnumber = n & 0x7FFF;
 		// if this is a live entity we may need to expand the array
-		if (cl_num_entities <= cnumber && !(n & 0x8000))
+		if (cl.num_entities <= cnumber && !(n & 0x8000))
 		{
-			cl_num_entities = cnumber + 1;
-			if (cnumber >= cl_max_entities)
+			cl.num_entities = cnumber + 1;
+			if (cnumber >= cl.max_entities)
 				CL_ExpandEntities(cnumber);
 		}
 		// add one (the changed one) if not done
@@ -1421,7 +1423,7 @@ void EntityFrame4_CL_ReadFrame(void)
 		// process entities in range from the last one to the changed one
 		for (;enumber < stopnumber;enumber++)
 		{
-			if (skip || enumber >= cl_num_entities)
+			if (skip || enumber >= cl.num_entities)
 			{
 				if (enumber == cnumber && (n & 0x8000) == 0)
 				{
@@ -1431,10 +1433,10 @@ void EntityFrame4_CL_ReadFrame(void)
 				continue;
 			}
 			// slide the current into the previous slot
-			cl_entities[enumber].state_previous = cl_entities[enumber].state_current;
+			cl.entities[enumber].state_previous = cl.entities[enumber].state_current;
 			// copy a new current from reference database
-			cl_entities[enumber].state_current = *EntityFrame4_GetReferenceEntity(d, enumber);
-			s = &cl_entities[enumber].state_current;
+			cl.entities[enumber].state_current = *EntityFrame4_GetReferenceEntity(d, enumber);
+			s = &cl.entities[enumber].state_current;
 			// if this is the one to modify, read more data...
 			if (enumber == cnumber)
 			{
@@ -1456,24 +1458,24 @@ void EntityFrame4_CL_ReadFrame(void)
 			}
 			else if (developer_networkentities.integer >= 4)
 				Con_Printf("entity %i: copy\n", enumber);
-			// set the cl_entities_active flag
-			cl_entities_active[enumber] = s->active;
+			// set the cl.entities_active flag
+			cl.entities_active[enumber] = s->active;
 			// set the update time
 			s->time = cl.mtime[0];
 			// fix the number (it gets wiped occasionally by copying from defaultstate)
 			s->number = enumber;
 			// check if we need to update the lerp stuff
 			if (s->active)
-				CL_MoveLerpEntityStates(&cl_entities[enumber]);
+				CL_MoveLerpEntityStates(&cl.entities[enumber]);
 			// add this to the commit entry whether it is modified or not
 			if (d->currentcommit)
-				EntityFrame4_AddCommitEntity(d, &cl_entities[enumber].state_current);
+				EntityFrame4_AddCommitEntity(d, &cl.entities[enumber].state_current);
 			// print extra messages if desired
-			if (developer_networkentities.integer >= 2 && cl_entities[enumber].state_current.active != cl_entities[enumber].state_previous.active)
+			if (developer_networkentities.integer >= 2 && cl.entities[enumber].state_current.active != cl.entities[enumber].state_previous.active)
 			{
-				if (cl_entities[enumber].state_current.active)
+				if (cl.entities[enumber].state_current.active)
 					Con_Printf("entity #%i has become active\n", enumber);
-				else if (cl_entities[enumber].state_previous.active)
+				else if (cl.entities[enumber].state_previous.active)
 					Con_Printf("entity #%i has become inactive\n", enumber);
 			}
 		}
@@ -1589,8 +1591,6 @@ void EntityFrame4_WriteFrame(sizebuf_t *msg, entityframe4_database_t *d, int num
 
 
 
-
-#define E5_PROTOCOL_PRIORITYLEVELS 32
 
 entityframe5_database_t *EntityFrame5_AllocDatabase(mempool_t *pool)
 {
@@ -2055,14 +2055,14 @@ void EntityFrame5_CL_ReadFrame(void)
 		// get the entity number
 		enumber = n & 0x7FFF;
 		// we may need to expand the array
-		if (cl_num_entities <= enumber)
+		if (cl.num_entities <= enumber)
 		{
-			cl_num_entities = enumber + 1;
-			if (enumber >= cl_max_entities)
+			cl.num_entities = enumber + 1;
+			if (enumber >= cl.max_entities)
 				CL_ExpandEntities(enumber);
 		}
 		// look up the entity
-		ent = cl_entities + enumber;
+		ent = cl.entities + enumber;
 		// slide the current into the previous slot
 		ent->state_previous = ent->state_current;
 		// read the update
@@ -2077,21 +2077,21 @@ void EntityFrame5_CL_ReadFrame(void)
 			// update entity
 			EntityState5_ReadUpdate(s);
 		}
-		// set the cl_entities_active flag
-		cl_entities_active[enumber] = s->active;
+		// set the cl.entities_active flag
+		cl.entities_active[enumber] = s->active;
 		// set the update time
 		s->time = cl.mtime[0];
 		// fix the number (it gets wiped occasionally by copying from defaultstate)
 		s->number = enumber;
 		// check if we need to update the lerp stuff
 		if (s->active)
-			CL_MoveLerpEntityStates(&cl_entities[enumber]);
+			CL_MoveLerpEntityStates(&cl.entities[enumber]);
 		// print extra messages if desired
-		if (developer_networkentities.integer >= 2 && cl_entities[enumber].state_current.active != cl_entities[enumber].state_previous.active)
+		if (developer_networkentities.integer >= 2 && cl.entities[enumber].state_current.active != cl.entities[enumber].state_previous.active)
 		{
-			if (cl_entities[enumber].state_current.active)
+			if (cl.entities[enumber].state_current.active)
 				Con_Printf("entity #%i has become active\n", enumber);
-			else if (cl_entities[enumber].state_previous.active)
+			else if (cl.entities[enumber].state_previous.active)
 				Con_Printf("entity #%i has become inactive\n", enumber);
 		}
 	}
@@ -2165,9 +2165,6 @@ void EntityFrame5_AckFrame(entityframe5_database_t *d, int framenum)
 		if (d->packetlog[i].packetnumber <= framenum)
 			d->packetlog[i].packetnumber = 0;
 }
-
-int entityframe5_prioritychaincounts[E5_PROTOCOL_PRIORITYLEVELS];
-unsigned short entityframe5_prioritychains[E5_PROTOCOL_PRIORITYLEVELS][ENTITYFRAME5_MAXSTATES];
 
 void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum, int *stats, int movesequence)
 {
@@ -2389,7 +2386,7 @@ void EntityStateQW_ReadPlayerUpdate(void)
 	int bits;
 	entity_state_t *s;
 	// look up the entity
-	entity_t *ent = cl_entities + enumber;
+	entity_t *ent = cl.entities + enumber;
 	vec3_t viewangles;
 	vec3_t velocity;
 
@@ -2500,15 +2497,15 @@ void EntityStateQW_ReadPlayerUpdate(void)
 			cl.stats[STAT_VIEWHEIGHT] = 22;
 	}
 
-	// set the cl_entities_active flag
-	cl_entities_active[enumber] = s->active;
+	// set the cl.entities_active flag
+	cl.entities_active[enumber] = s->active;
 	// set the update time
 	s->time = cl.mtime[0] - msec * 0.001; // qw has no clock
 	// fix the number (it gets wiped occasionally by copying from defaultstate)
 	s->number = enumber;
 	// check if we need to update the lerp stuff
 	if (s->active)
-		CL_MoveLerpEntityStates(&cl_entities[enumber]);
+		CL_MoveLerpEntityStates(&cl.entities[enumber]);
 }
 
 static void EntityStateQW_ReadEntityUpdate(entity_state_t *s, int bits)
@@ -2597,7 +2594,7 @@ void EntityFrameQW_CL_ReadFrame(qboolean delta)
 	entityframeqw_snapshot_t *oldsnap, *newsnap;
 
 	if (!cl.entitydatabaseqw)
-		cl.entitydatabaseqw = EntityFrameQW_AllocDatabase(cl_mempool);
+		cl.entitydatabaseqw = EntityFrameQW_AllocDatabase(cls.mempool);
 	d = cl.entitydatabaseqw;
 
 	newsnapindex = cls.netcon->qw.incoming_sequence & QW_UPDATE_MASK;
@@ -2680,7 +2677,7 @@ void EntityFrameQW_CL_ReadFrame(qboolean delta)
 		{
 			if (newsnap->num_entities >= QW_MAX_PACKET_ENTITIES)
 				Host_Error("EntityFrameQW_CL_ReadFrame: newsnap->num_entities == MAX_PACKETENTITIES");
-			newsnap->entities[newsnap->num_entities] = (newnum == oldnum) ? oldsnap->entities[oldindex] : cl_entities[newnum].state_baseline;
+			newsnap->entities[newsnap->num_entities] = (newnum == oldnum) ? oldsnap->entities[oldindex] : cl.entities[newnum].state_baseline;
 			EntityStateQW_ReadEntityUpdate(newsnap->entities + newsnap->num_entities, word);
 			newsnap->num_entities++;
 		}
@@ -2689,12 +2686,12 @@ void EntityFrameQW_CL_ReadFrame(qboolean delta)
 			oldindex++;
 	}
 
-	// expand cl_num_entities to include every entity we've seen this game
+	// expand cl.num_entities to include every entity we've seen this game
 	newnum = newsnap->num_entities ? newsnap->entities[newsnap->num_entities - 1].number : 1;
-	if (cl_num_entities <= newnum)
+	if (cl.num_entities <= newnum)
 	{
-		cl_num_entities = newnum + 1;
-		if (cl_max_entities < newnum + 1)
+		cl.num_entities = newnum + 1;
+		if (cl.max_entities < newnum + 1)
 			CL_ExpandEntities(newnum);
 	}
 
@@ -2702,26 +2699,26 @@ void EntityFrameQW_CL_ReadFrame(qboolean delta)
 	number = cl.maxclients + 1;
 	for (newindex = 0;;newindex++)
 	{
-		newnum = newindex >= newsnap->num_entities ? cl_num_entities : newsnap->entities[newindex].number;
+		newnum = newindex >= newsnap->num_entities ? cl.num_entities : newsnap->entities[newindex].number;
 		// kill any missing entities
 		for (;number < newnum;number++)
 		{
-			if (cl_entities_active[number])
+			if (cl.entities_active[number])
 			{
-				cl_entities_active[number] = false;
-				cl_entities[number].state_current.active = false;
+				cl.entities_active[number] = false;
+				cl.entities[number].state_current.active = false;
 			}
 		}
-		if (number >= cl_num_entities)
+		if (number >= cl.num_entities)
 			break;
 		// update the entity
-		ent = &cl_entities[number];
+		ent = &cl.entities[number];
 		ent->state_previous = ent->state_current;
 		ent->state_current = newsnap->entities[newindex];
 		ent->state_current.time = cl.mtime[0];
 		CL_MoveLerpEntityStates(ent);
 		// the entity lives again...
-		cl_entities_active[number] = true;
+		cl.entities_active[number] = true;
 		number++;
 	}
 }

@@ -549,12 +549,12 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 	vec3_t source_vec;
 
 	// update sound origin if we know about the entity
-	if (ch->entnum > 0 && cls.state == ca_connected && cl_entities[ch->entnum].state_current.active)
+	if (ch->entnum > 0 && cls.state == ca_connected && cl.entities[ch->entnum].state_current.active)
 	{
-		//Con_Printf("-- entnum %i origin %f %f %f neworigin %f %f %f\n", ch->entnum, ch->origin[0], ch->origin[1], ch->origin[2], cl_entities[ch->entnum].state_current.origin[0], cl_entities[ch->entnum].state_current.origin[1], cl_entities[ch->entnum].state_current.origin[2]);
-		VectorCopy(cl_entities[ch->entnum].state_current.origin, ch->origin);
-		if (cl_entities[ch->entnum].state_current.modelindex && cl.model_precache[cl_entities[ch->entnum].state_current.modelindex] && cl.model_precache[cl_entities[ch->entnum].state_current.modelindex]->soundfromcenter)
-			VectorMAMAM(1.0f, ch->origin, 0.5f, cl.model_precache[cl_entities[ch->entnum].state_current.modelindex]->normalmins, 0.5f, cl.model_precache[cl_entities[ch->entnum].state_current.modelindex]->normalmaxs, ch->origin);
+		//Con_Printf("-- entnum %i origin %f %f %f neworigin %f %f %f\n", ch->entnum, ch->origin[0], ch->origin[1], ch->origin[2], cl.entities[ch->entnum].state_current.origin[0], cl.entities[ch->entnum].state_current.origin[1], cl.entities[ch->entnum].state_current.origin[2]);
+		VectorCopy(cl.entities[ch->entnum].state_current.origin, ch->origin);
+		if (cl.entities[ch->entnum].state_current.modelindex && cl.model_precache[cl.entities[ch->entnum].state_current.modelindex] && cl.model_precache[cl.entities[ch->entnum].state_current.modelindex]->soundfromcenter)
+			VectorMAMAM(1.0f, ch->origin, 0.5f, cl.model_precache[cl.entities[ch->entnum].state_current.modelindex]->normalmins, 0.5f, cl.model_precache[cl.entities[ch->entnum].state_current.modelindex]->normalmaxs, ch->origin);
 	}
 
 	mastervol = ch->master_vol;
@@ -639,7 +639,7 @@ int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 		return -1;
 	}
 
-	if (entnum && entnum >= cl_max_entities)
+	if (entnum && entnum >= cl.max_entities)
 		CL_ExpandEntities(entnum);
 
 	// Pick a channel to play on

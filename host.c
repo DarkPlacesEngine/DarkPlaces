@@ -547,9 +547,6 @@ Host_FilterTime
 Returns false if the time is too short to run a frame
 ===================
 */
-extern qboolean cl_capturevideo_active;
-extern double cl_capturevideo_framerate;
-extern qfile_t *cl_capturevideo_soundfile;
 qboolean Host_FilterTime (double time)
 {
 	double timecap, timeleft;
@@ -580,8 +577,8 @@ qboolean Host_FilterTime (double time)
 		timecap = sys_ticrate.value;
 	if (cls.state != ca_dedicated)
 	{
-		if (cl_capturevideo_active)
-			timecap = 1.0 / cl_capturevideo_framerate;
+		if (cls.capturevideo_active)
+			timecap = 1.0 / cls.capturevideo_framerate;
 		else if (vid_activewindow)
 			timecap = 1.0 / cl_maxfps.value;
 	}
@@ -607,7 +604,7 @@ qboolean Host_FilterTime (double time)
 	host_realframetime = host_frametime = realtime - oldrealtime;
 	oldrealtime = realtime;
 
-	if (cl_capturevideo_active && !cl_capturevideo_soundfile)
+	if (cls.capturevideo_active && !cls.capturevideo_soundfile)
 		host_frametime = timecap;
 
 	// apply slowmo scaling

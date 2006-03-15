@@ -441,11 +441,11 @@ void VM_CL_lightstyle (void)
 
 	i = PRVM_G_FLOAT(OFS_PARM0);
 	c = PRVM_G_STRING(OFS_PARM1);
-	if (i >= cl_max_lightstyle)
+	if (i >= cl.max_lightstyle)
 		PF_WARNING("VM_CL_lightstyle >= MAX_LIGHTSTYLES\n");
-	strlcpy (cl_lightstyle[i].map,  MSG_ReadString(), sizeof (cl_lightstyle[i].map));
-	cl_lightstyle[i].map[MAX_STYLESTRING - 1] = 0;
-	cl_lightstyle[i].length = (int)strlen(cl_lightstyle[i].map);
+	strlcpy (cl.lightstyle[i].map,  MSG_ReadString(), sizeof (cl.lightstyle[i].map));
+	cl.lightstyle[i].map[MAX_STYLESTRING - 1] = 0;
+	cl.lightstyle[i].length = (int)strlen(cl.lightstyle[i].map);
 }
 
 // #40 float(entity e) checkbottom
@@ -1110,13 +1110,13 @@ void CSQC_ParseBeam (int ent, vec3_t start, vec3_t end, model_t *m, int lightnin
 	beam_t	*b;
 
 	// override any beam with the same entity
-	for (i = 0, b = cl_beams;i < cl_max_beams;i++, b++)
+	for (i = 0, b = cl.beams;i < cl.max_beams;i++, b++)
 	{
 		if (b->entity == ent && ent)
 		{
 			//b->entity = ent;
 			b->lightning = lightning;
-			b->relativestartvalid = (ent && cl_csqcentities[ent].state_current.active) ? 2 : 0;
+			b->relativestartvalid = (ent && cl.csqcentities[ent].state_current.active) ? 2 : 0;
 			b->model = m;
 			b->endtime = cl.time + 0.2;
 			VectorCopy (start, b->start);
@@ -1126,13 +1126,13 @@ void CSQC_ParseBeam (int ent, vec3_t start, vec3_t end, model_t *m, int lightnin
 	}
 
 	// find a free beam
-	for (i = 0, b = cl_beams;i < cl_max_beams;i++, b++)
+	for (i = 0, b = cl.beams;i < cl.max_beams;i++, b++)
 	{
 		if (!b->model || b->endtime < cl.time)
 		{
 			b->entity = ent;
 			b->lightning = lightning;
-			b->relativestartvalid = (ent && cl_csqcentities[ent].state_current.active) ? 2 : 0;
+			b->relativestartvalid = (ent && cl.csqcentities[ent].state_current.active) ? 2 : 0;
 			b->model = m;
 			b->endtime = cl.time + 0.2;
 			VectorCopy (start, b->start);
@@ -1163,10 +1163,10 @@ void VM_CL_trailparticles (void)
 		Con_Printf("CSQC_ParseBeam: invalid entity number %i\n", entnum);
 		return;
 	}
-	if (entnum >= cl_max_csqcentities)
+	if (entnum >= cl.max_csqcentities)
 		CL_ExpandCSQCEntities(entnum);
 
-	ent = &cl_csqcentities[entnum];
+	ent = &cl.csqcentities[entnum];
 
 	if(prog->argc > 4)
 		col = PRVM_G_FLOAT(OFS_PARM4);
@@ -1327,13 +1327,13 @@ void VM_CL_getinputstate (void)
 			prog->globals.client->input_timelength = cl.movement_queue[i].frametime;
 			if(cl.movement_queue[i].crouch)
 			{
-				VectorCopy(cl_playercrouchmins, prog->globals.client->pmove_mins);
-				VectorCopy(cl_playercrouchmaxs, prog->globals.client->pmove_maxs);
+				VectorCopy(cl.playercrouchmins, prog->globals.client->pmove_mins);
+				VectorCopy(cl.playercrouchmaxs, prog->globals.client->pmove_maxs);
 			}
 			else
 			{
-				VectorCopy(cl_playerstandmins, prog->globals.client->pmove_mins);
-				VectorCopy(cl_playerstandmaxs, prog->globals.client->pmove_maxs);
+				VectorCopy(cl.playerstandmins, prog->globals.client->pmove_mins);
+				VectorCopy(cl.playerstandmaxs, prog->globals.client->pmove_maxs);
 			}
 		}
 }
@@ -1890,20 +1890,18 @@ static void VM_CL_NewBeam (int ent, float *start, float *end, model_t *m, qboole
 {
 	beam_t	*b;
 	int		i;
-	extern entity_t *cl_csqcentities;
-	extern int cl_max_csqcentities;
 
-	if (ent >= cl_max_csqcentities)
+	if (ent >= cl.max_csqcentities)
 		CL_ExpandCSQCEntities(ent);
 
 	// override any beam with the same entity
-	for (i = 0, b = cl_beams;i < cl_max_beams;i++, b++)
+	for (i = 0, b = cl.beams;i < cl.max_beams;i++, b++)
 	{
 		if (b->entity == ent && ent)
 		{
 			//b->entity = ent;
 			b->lightning = lightning;
-			b->relativestartvalid = (ent && cl_csqcentities[ent].state_current.active) ? 2 : 0;
+			b->relativestartvalid = (ent && cl.csqcentities[ent].state_current.active) ? 2 : 0;
 			b->model = m;
 			b->endtime = cl.time + 0.2;
 			VectorCopy (start, b->start);
@@ -1913,13 +1911,13 @@ static void VM_CL_NewBeam (int ent, float *start, float *end, model_t *m, qboole
 	}
 
 	// find a free beam
-	for (i = 0, b = cl_beams;i < cl_max_beams;i++, b++)
+	for (i = 0, b = cl.beams;i < cl.max_beams;i++, b++)
 	{
 		if (!b->model || b->endtime < cl.time)
 		{
 			b->entity = ent;
 			b->lightning = lightning;
-			b->relativestartvalid = (ent && cl_csqcentities[ent].state_current.active) ? 2 : 0;
+			b->relativestartvalid = (ent && cl.csqcentities[ent].state_current.active) ? 2 : 0;
 			b->model = m;
 			b->endtime = cl.time + 0.2;
 			VectorCopy (start, b->start);
@@ -2601,16 +2599,16 @@ void VM_CL_selecttraceline (void)
 	csqcents = PRVM_G_FLOAT(OFS_PARM3);
 	ent = 0;
 
-	if((csqcents && ignore > cl_num_csqcentities) || (!csqcents && ignore > cl_num_entities))
+	if((csqcents && ignore > cl.num_csqcentities) || (!csqcents && ignore > cl.num_entities))
 	{
 		Con_Printf("VM_CL_selecttraceline: out of entities\n");
 		return;
 	}
 	else
 		if(csqcents)
-			prog->globals.client->trace_fraction = CL_SelectTraceLine(v1, v2, prog->globals.client->trace_endpos, prog->globals.client->trace_plane_normal, &prog->globals.client->trace_ent, &cl_csqcentities[ignore].render, csqcents);
+			prog->globals.client->trace_fraction = CL_SelectTraceLine(v1, v2, prog->globals.client->trace_endpos, prog->globals.client->trace_plane_normal, &prog->globals.client->trace_ent, &cl.csqcentities[ignore].render, csqcents);
 		else
-			prog->globals.client->trace_fraction = CL_SelectTraceLine(v1, v2, prog->globals.client->trace_endpos, prog->globals.client->trace_plane_normal, &ent, &cl_entities[ignore].render, csqcents);
+			prog->globals.client->trace_fraction = CL_SelectTraceLine(v1, v2, prog->globals.client->trace_endpos, prog->globals.client->trace_plane_normal, &ent, &cl.entities[ignore].render, csqcents);
 	PRVM_G_FLOAT(OFS_RETURN) = ent;
 }
 

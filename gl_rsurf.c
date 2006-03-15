@@ -268,9 +268,9 @@ void R_Stain (const vec3_t origin, float radius, int cr1, int cg1, int cb1, int 
 	R_StainNode(r_refdef.worldmodel->brush.data_nodes + r_refdef.worldmodel->brushq1.hulls[0].firstclipnode, r_refdef.worldmodel, origin, radius, fcolor);
 
 	// look for embedded bmodels
-	for (n = 0;n < cl_num_brushmodel_entities;n++)
+	for (n = 0;n < cl.num_brushmodel_entities;n++)
 	{
-		ent = &cl_entities[cl_brushmodel_entities[n]].render;
+		ent = &cl.entities[cl.brushmodel_entities[n]].render;
 		model = ent->model;
 		if (model && model->name[0] == '*')
 		{
