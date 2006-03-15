@@ -377,7 +377,7 @@ typedef struct model_brush_s
 	void (*AmbientSoundLevelsForPoint)(struct model_s *model, const vec3_t p, unsigned char *out, int outsize);
 	void (*RoundUpToHullSize)(struct model_s *cmodel, const vec3_t inmins, const vec3_t inmaxs, vec3_t outmins, vec3_t outmaxs);
 
-	char skybox[64];
+	char skybox[MAX_QPATH];
 
 	rtexture_t *solidskytexture;
 	rtexture_t *alphaskytexture;
