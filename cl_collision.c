@@ -50,7 +50,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	if (hitent)
 		*hitent = 0;
 
-	if (hitbmodels && cl_num_brushmodel_entities)
+	if (hitbmodels && cl.num_brushmodel_entities)
 	{
 		tracemins[0] = min(start[0], end[0]) + mins[0];
 		tracemaxs[0] = max(start[0], end[0]) + maxs[0];
@@ -60,9 +60,9 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 		tracemaxs[2] = max(start[2], end[2]) + maxs[2];
 
 		// look for embedded bmodels
-		for (n = 0;n < cl_num_brushmodel_entities;n++)
+		for (n = 0;n < cl.num_brushmodel_entities;n++)
 		{
-			ent = &cl_entities[cl_brushmodel_entities[n]].render;
+			ent = &cl.entities[cl.brushmodel_entities[n]].render;
 			if (!BoxesOverlap(tracemins, tracemaxs, ent->mins, ent->maxs))
 				continue;
 
@@ -84,7 +84,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 				cliptrace.startsolid = true;
 				if (cliptrace.realfraction == 1)
 					if (hitent)
-						*hitent = cl_brushmodel_entities[n];
+						*hitent = cl.brushmodel_entities[n];
 			}
 			// don't set this except on the world, because it can easily confuse
 			// monsters underwater if there's a bmodel involved in the trace
@@ -99,7 +99,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 				cliptrace.realfraction = trace.realfraction;
 				cliptrace.plane = trace.plane;
 				if (hitent)
-					*hitent = cl_brushmodel_entities[n];
+					*hitent = cl.brushmodel_entities[n];
 				Matrix4x4_Transform3x3(&ent->matrix, trace.plane.normal, cliptrace.plane.normal);
 			}
 			cliptrace.startsupercontents |= trace.startsupercontents;
@@ -118,10 +118,10 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 		{
 			if (n != cl.playerentity)
 			{
-				ent = &cl_entities[n].render;
+				ent = &cl.entities[n].render;
 				// FIXME: crouch
-				playermins = cl_playerstandmins;
-				playermaxs = cl_playerstandmaxs;
+				playermins = cl.playerstandmins;
+				playermaxs = cl.playerstandmaxs;
 				Matrix4x4_OriginFromMatrix(&ent->matrix, origin);
 				VectorAdd(origin, playermins, entmins);
 				VectorAdd(origin, playermaxs, entmaxs);
@@ -195,7 +195,6 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 
 	if (normal)
 		VectorCopy(trace.plane.normal, normal);
-	//cl_traceline_startsupercontents = trace.startsupercontents;
 	maxfrac = trace.fraction;
 	maxrealfrac = trace.realfraction;
 
@@ -208,15 +207,15 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 
 	if(csqcents)
 	{
-		entlist = cl_csqcentities;
-		entactivelist = cl_csqcentities_active;
-		entsnum = cl_num_csqcentities;
+		entlist = cl.csqcentities;
+		entactivelist = cl.csqcentities_active;
+		entsnum = cl.num_csqcentities;
 	}
 	else
 	{
-		entlist = cl_entities;
-		entactivelist = cl_entities_active;
-		entsnum = cl_num_entities;
+		entlist = cl.entities;
+		entactivelist = cl.entities_active;
+		entsnum = cl.num_entities;
 	}
 
 	// look for embedded bmodels
@@ -242,7 +241,6 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 		if (ent->model && ent->model->TraceBox)
 			ent->model->TraceBox(ent->model, ent->frameblend[0].frame, &trace, starttransformed, starttransformed, endtransformed, endtransformed, SUPERCONTENTS_SOLID);
 
-		//cl_traceline_startsupercontents |= trace.startsupercontents;
 		if (maxrealfrac > trace.realfraction)
 		{
 			if (hitent)

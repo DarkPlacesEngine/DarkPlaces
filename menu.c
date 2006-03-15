@@ -28,9 +28,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define TYPE_GAME 2
 #define TYPE_BOTH 3
 
-int NehGameType;
+static int NehGameType;
 
 enum m_state_e m_state;
+char m_return_reason[32];
 
 void M_Menu_Main_f (void);
 	void M_Menu_SinglePlayer_f (void);
@@ -54,54 +55,51 @@ void M_Menu_LanConfig_f (void);
 void M_Menu_GameOptions_f (void);
 void M_Menu_ServerList_f (void);
 
-void M_Main_Draw (void);
-	void M_SinglePlayer_Draw (void);
-		void M_Transfusion_Episode_Draw (void);
-			void M_Transfusion_Skill_Draw (void);
-		void M_Load_Draw (void);
-		void M_Save_Draw (void);
-	void M_MultiPlayer_Draw (void);
-		void M_Setup_Draw (void);
-	void M_Options_Draw (void);
-	void M_Options_Effects_Draw (void);
-	void M_Options_Graphics_Draw (void);
-	void M_Options_ColorControl_Draw (void);
-		void M_Keys_Draw (void);
-		void M_Reset_Draw (void);
-		void M_Video_Draw (void);
-	void M_Help_Draw (void);
-	void M_Credits_Draw (void);
-	void M_Quit_Draw (void);
-void M_LanConfig_Draw (void);
-void M_GameOptions_Draw (void);
-void M_ServerList_Draw (void);
+static void M_Main_Draw (void);
+	static void M_SinglePlayer_Draw (void);
+		static void M_Transfusion_Episode_Draw (void);
+			static void M_Transfusion_Skill_Draw (void);
+		static void M_Load_Draw (void);
+		static void M_Save_Draw (void);
+	static void M_MultiPlayer_Draw (void);
+		static void M_Setup_Draw (void);
+	static void M_Options_Draw (void);
+	static void M_Options_Effects_Draw (void);
+	static void M_Options_Graphics_Draw (void);
+	static void M_Options_ColorControl_Draw (void);
+		static void M_Keys_Draw (void);
+		static void M_Reset_Draw (void);
+		static void M_Video_Draw (void);
+	static void M_Help_Draw (void);
+	static void M_Credits_Draw (void);
+	static void M_Quit_Draw (void);
+static void M_LanConfig_Draw (void);
+static void M_GameOptions_Draw (void);
+static void M_ServerList_Draw (void);
 
-void M_Main_Key (int key, char ascii);
-	void M_SinglePlayer_Key (int key, char ascii);
-		void M_Transfusion_Episode_Key (int key, char ascii);
-			void M_Transfusion_Skill_Key (int key, char ascii);
-		void M_Load_Key (int key, char ascii);
-		void M_Save_Key (int key, char ascii);
-	void M_MultiPlayer_Key (int key, char ascii);
-		void M_Setup_Key (int key, char ascii);
-	void M_Options_Key (int key, char ascii);
-	void M_Options_Effects_Key (int key, char ascii);
-	void M_Options_Graphics_Key (int key, char ascii);
-	void M_Options_ColorControl_Key (int key, char ascii);
-		void M_Keys_Key (int key, char ascii);
-		void M_Reset_Key (int key, char ascii);
-		void M_Video_Key (int key, char ascii);
-	void M_Help_Key (int key, char ascii);
-	void M_Credits_Key (int key, char ascii);
-	void M_Quit_Key (int key, char ascii);
-void M_LanConfig_Key (int key, char ascii);
-void M_GameOptions_Key (int key, char ascii);
-void M_ServerList_Key (int key, char ascii);
+static void M_Main_Key (int key, char ascii);
+	static void M_SinglePlayer_Key (int key, char ascii);
+		static void M_Transfusion_Episode_Key (int key, char ascii);
+			static void M_Transfusion_Skill_Key (int key, char ascii);
+		static void M_Load_Key (int key, char ascii);
+		static void M_Save_Key (int key, char ascii);
+	static void M_MultiPlayer_Key (int key, char ascii);
+		static void M_Setup_Key (int key, char ascii);
+	static void M_Options_Key (int key, char ascii);
+	static void M_Options_Effects_Key (int key, char ascii);
+	static void M_Options_Graphics_Key (int key, char ascii);
+	static void M_Options_ColorControl_Key (int key, char ascii);
+		static void M_Keys_Key (int key, char ascii);
+		static void M_Reset_Key (int key, char ascii);
+		static void M_Video_Key (int key, char ascii);
+	static void M_Help_Key (int key, char ascii);
+	static void M_Credits_Key (int key, char ascii);
+	static void M_Quit_Key (int key, char ascii);
+static void M_LanConfig_Key (int key, char ascii);
+static void M_GameOptions_Key (int key, char ascii);
+static void M_ServerList_Key (int key, char ascii);
 
-qboolean	m_entersound;		// play after drawing a frame, so caching
-								// won't disrupt the sound
-
-char		m_return_reason [32];
+static qboolean	m_entersound;		// play after drawing a frame, so caching won't disrupt the sound
 
 void M_Update_Return_Reason(char *s)
 {
@@ -121,7 +119,7 @@ typedef struct nehahrademonames_s
 	char *desc;
 } nehahrademonames_t;
 
-nehahrademonames_t NehahraDemos[NumberOfNehahraDemos] =
+static nehahrademonames_t NehahraDemos[NumberOfNehahraDemos] =
 {
 	{"intro", "Prologue"},
 	{"genf", "The Beginning"},
@@ -159,9 +157,9 @@ nehahrademonames_t NehahraDemos[NumberOfNehahraDemos] =
 	{"seal", "The Seal is Broken"}
 };
 
-float menu_x, menu_y, menu_width, menu_height;
+static float menu_x, menu_y, menu_width, menu_height;
 
-void M_Background(int width, int height)
+static void M_Background(int width, int height)
 {
 	menu_width = bound(1, width, vid_conwidth.integer);
 	menu_height = bound(1, height, vid_conheight.integer);
@@ -178,7 +176,7 @@ M_DrawCharacter
 Draws one solid graphics character
 ================
 */
-void M_DrawCharacter (float cx, float cy, int num)
+static void M_DrawCharacter (float cx, float cy, int num)
 {
 	char temp[2];
 	temp[0] = num;
@@ -186,22 +184,22 @@ void M_DrawCharacter (float cx, float cy, int num)
 	DrawQ_String(menu_x + cx, menu_y + cy, temp, 1, 8, 8, 1, 1, 1, 1, 0);
 }
 
-void M_PrintColored(float cx, float cy, const char *str)
+static void M_PrintColored(float cx, float cy, const char *str)
 {
 	DrawQ_ColoredString(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 1, 1, 1, 0, NULL);
 }
 
-void M_Print(float cx, float cy, const char *str)
+static void M_Print(float cx, float cy, const char *str)
 {
 	DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 1, 1, 1, 0);
 }
 
-void M_PrintRed (float cx, float cy, const char *str)
+static void M_PrintRed(float cx, float cy, const char *str)
 {
 	DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 0, 0, 1, 0);
 }
 
-void M_ItemPrint(float cx, float cy, const char *str, int unghosted)
+static void M_ItemPrint(float cx, float cy, const char *str, int unghosted)
 {
 	if (unghosted)
 		DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 1, 1, 1, 0);
@@ -209,15 +207,15 @@ void M_ItemPrint(float cx, float cy, const char *str, int unghosted)
 		DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 0.4, 0.4, 0.4, 1, 0);
 }
 
-void M_DrawPic (float cx, float cy, const char *picname)
+static void M_DrawPic(float cx, float cy, const char *picname)
 {
-	DrawQ_Pic (menu_x + cx, menu_y + cy, Draw_CachePic(picname, false), 0, 0, 1, 1, 1, 1, 0);
+	DrawQ_Pic(menu_x + cx, menu_y + cy, Draw_CachePic(picname, false), 0, 0, 1, 1, 1, 1, 0);
 }
 
-unsigned char identityTable[256];
-unsigned char translationTable[256];
+static unsigned char identityTable[256];
+static unsigned char translationTable[256];
 
-void M_BuildTranslationTable(int top, int bottom)
+static void M_BuildTranslationTable(int top, int bottom)
 {
 	int j;
 	unsigned char *dest, *source;
@@ -243,8 +241,7 @@ void M_BuildTranslationTable(int top, int bottom)
 			dest[BOTTOM_RANGE+j] = source[bottom+15-j];
 }
 
-
-void M_DrawTextBox (float x, float y, float width, float height)
+static void M_DrawTextBox(float x, float y, float width, float height)
 {
 	int n;
 	float cx, cy;
@@ -313,8 +310,8 @@ void M_ToggleMenu_f (void)
 }
 
 
-int demo_cursor;
-void M_Demo_Draw (void)
+static int demo_cursor;
+static void M_Demo_Draw (void)
 {
 	int i;
 
@@ -335,7 +332,8 @@ void M_Menu_Demos_f (void)
 	m_entersound = true;
 }
 
-void M_Demo_Key (int k, char ascii)
+
+static void M_Demo_Key (int k, char ascii)
 {
 	switch (k)
 	{
@@ -371,9 +369,10 @@ void M_Demo_Key (int k, char ascii)
 //=============================================================================
 /* MAIN MENU */
 
-int	m_main_cursor;
+static int	m_main_cursor;
 
-int MAIN_ITEMS = 4; // Nehahra: Menu Disable
+static int MAIN_ITEMS = 4; // Nehahra: Menu Disable
+
 
 void M_Menu_Main_f (void)
 {
@@ -413,7 +412,7 @@ void M_Menu_Main_f (void)
 }
 
 
-void M_Main_Draw (void)
+static void M_Main_Draw (void)
 {
 	int		f;
 	cachepic_t	*p;
@@ -474,7 +473,7 @@ void M_Main_Draw (void)
 }
 
 
-void M_Main_Key (int key, char ascii)
+static void M_Main_Key (int key, char ascii)
 {
 	switch (key)
 	{
@@ -735,7 +734,7 @@ void M_Main_Key (int key, char ascii)
 //=============================================================================
 /* SINGLE PLAYER MENU */
 
-int	m_singleplayer_cursor;
+static int	m_singleplayer_cursor;
 #define	SINGLEPLAYER_ITEMS	3
 
 
@@ -747,7 +746,7 @@ void M_Menu_SinglePlayer_f (void)
 }
 
 
-void M_SinglePlayer_Draw (void)
+static void M_SinglePlayer_Draw (void)
 {
 	cachepic_t	*p;
 
@@ -782,7 +781,7 @@ void M_SinglePlayer_Draw (void)
 }
 
 
-void M_SinglePlayer_Key (int key, char ascii)
+static void M_SinglePlayer_Key (int key, char ascii)
 {
 	if (gamemode == GAME_GOODVSBAD2 || gamemode == GAME_BATTLEMECH)
 	{
@@ -844,13 +843,13 @@ void M_SinglePlayer_Key (int key, char ascii)
 //=============================================================================
 /* LOAD/SAVE MENU */
 
-int		load_cursor;		// 0 < load_cursor < MAX_SAVEGAMES
+static int		load_cursor;		// 0 < load_cursor < MAX_SAVEGAMES
 
 #define	MAX_SAVEGAMES		12
-char	m_filenames[MAX_SAVEGAMES][SAVEGAME_COMMENT_LENGTH+1];
-int		loadable[MAX_SAVEGAMES];
+static char	m_filenames[MAX_SAVEGAMES][SAVEGAME_COMMENT_LENGTH+1];
+static int		loadable[MAX_SAVEGAMES];
 
-void M_ScanSaves (void)
+static void M_ScanSaves (void)
 {
 	int		i, j, len;
 	char	name[MAX_OSPATH];
@@ -911,7 +910,7 @@ void M_Menu_Save_f (void)
 }
 
 
-void M_Load_Draw (void)
+static void M_Load_Draw (void)
 {
 	int		i;
 	cachepic_t	*p;
@@ -929,7 +928,7 @@ void M_Load_Draw (void)
 }
 
 
-void M_Save_Draw (void)
+static void M_Save_Draw (void)
 {
 	int		i;
 	cachepic_t	*p;
@@ -947,7 +946,7 @@ void M_Save_Draw (void)
 }
 
 
-void M_Load_Key (int k, char ascii)
+static void M_Load_Key (int k, char ascii)
 {
 	switch (k)
 	{
@@ -988,7 +987,7 @@ void M_Load_Key (int k, char ascii)
 }
 
 
-void M_Save_Key (int k, char ascii)
+static void M_Save_Key (int k, char ascii)
 {
 	switch (k)
 	{
@@ -1026,7 +1025,7 @@ void M_Save_Key (int k, char ascii)
 //=============================================================================
 /* Transfusion Single Player Episode Menu */
 
-int	m_episode_cursor;
+static int	m_episode_cursor;
 #define	EPISODE_ITEMS	6
 
 void M_Menu_Transfusion_Episode_f (void)
@@ -1036,7 +1035,7 @@ void M_Menu_Transfusion_Episode_f (void)
 	key_dest = key_menu;
 }
 
-void M_Transfusion_Episode_Draw (void)
+static void M_Transfusion_Episode_Draw (void)
 {
 	int y;
 	cachepic_t *p;
@@ -1051,7 +1050,7 @@ void M_Transfusion_Episode_Draw (void)
 	M_DrawPic (0, 120 + (m_episode_cursor + 1) * 40, va("gfx/menu/episode%iselected", m_episode_cursor + 1));
 }
 
-void M_Transfusion_Episode_Key (int key, char ascii)
+static void M_Transfusion_Episode_Key (int key, char ascii)
 {
 	switch (key)
 	{
@@ -1083,7 +1082,7 @@ void M_Transfusion_Episode_Key (int key, char ascii)
 //=============================================================================
 /* Transfusion Single Player Skill Menu */
 
-int	m_skill_cursor = 2;
+static int	m_skill_cursor = 2;
 #define	SKILL_ITEMS	5
 
 void M_Menu_Transfusion_Skill_f (void)
@@ -1093,7 +1092,7 @@ void M_Menu_Transfusion_Skill_f (void)
 	key_dest = key_menu;
 }
 
-void M_Transfusion_Skill_Draw (void)
+static void M_Transfusion_Skill_Draw (void)
 {
 	int y;
 	cachepic_t	*p;
@@ -1109,7 +1108,7 @@ void M_Transfusion_Skill_Draw (void)
 	M_DrawPic (0, 140 + (m_skill_cursor + 1) *40, va("gfx/menu/difficulty%iselected", m_skill_cursor + 1));
 }
 
-void M_Transfusion_Skill_Key (int key, char ascii)
+static void M_Transfusion_Skill_Key (int key, char ascii)
 {
 	switch (key)
 	{
@@ -1183,7 +1182,7 @@ void M_Transfusion_Skill_Key (int key, char ascii)
 //=============================================================================
 /* MULTIPLAYER MENU */
 
-int	m_multiplayer_cursor;
+static int	m_multiplayer_cursor;
 #define	MULTIPLAYER_ITEMS	3
 
 
@@ -1195,7 +1194,7 @@ void M_Menu_MultiPlayer_f (void)
 }
 
 
-void M_MultiPlayer_Draw (void)
+static void M_MultiPlayer_Draw (void)
 {
 	int		f;
 	cachepic_t	*p;
@@ -1223,7 +1222,7 @@ void M_MultiPlayer_Draw (void)
 }
 
 
-void M_MultiPlayer_Key (int key, char ascii)
+static void M_MultiPlayer_Key (int key, char ascii)
 {
 	switch (key)
 	{
@@ -1262,16 +1261,16 @@ void M_MultiPlayer_Key (int key, char ascii)
 //=============================================================================
 /* SETUP MENU */
 
-int		setup_cursor = 4;
-int		setup_cursor_table[] = {40, 64, 88, 124, 140};
+static int		setup_cursor = 4;
+static int		setup_cursor_table[] = {40, 64, 88, 124, 140};
 
-char	setup_myname[32];
-int		setup_oldtop;
-int		setup_oldbottom;
-int		setup_top;
-int		setup_bottom;
-int		setup_rate;
-int		setup_oldrate;
+static char	setup_myname[32];
+static int		setup_oldtop;
+static int		setup_oldbottom;
+static int		setup_top;
+static int		setup_bottom;
+static int		setup_rate;
+static int		setup_oldrate;
 
 #define	NUM_SETUP_CMDS	5
 
@@ -1323,7 +1322,7 @@ static int setup_rateindex(int rate)
 	return bound(1, i, RATES) - 1;
 }
 
-void M_Setup_Draw (void)
+static void M_Setup_Draw (void)
 {
 	int i;
 	cachepic_t	*p;
@@ -1364,8 +1363,8 @@ void M_Setup_Draw (void)
 			menuplyr_width = image_width;
 			menuplyr_height = image_height;
 			Mem_Free(f);
-			menuplyr_pixels = (unsigned char *)Mem_Alloc(cl_mempool, menuplyr_width * menuplyr_height);
-			menuplyr_translated = (unsigned int *)Mem_Alloc(cl_mempool, menuplyr_width * menuplyr_height * 4);
+			menuplyr_pixels = (unsigned char *)Mem_Alloc(cls.mempool, menuplyr_width * menuplyr_height);
+			menuplyr_translated = (unsigned int *)Mem_Alloc(cls.mempool, menuplyr_width * menuplyr_height * 4);
 			memcpy(menuplyr_pixels, data, menuplyr_width * menuplyr_height);
 			Mem_Free(data);
 		}
@@ -1393,7 +1392,7 @@ void M_Setup_Draw (void)
 }
 
 
-void M_Setup_Key (int k, char ascii)
+static void M_Setup_Key (int k, char ascii)
 {
 	int			l;
 
@@ -1507,7 +1506,7 @@ forward:
 
 #define	SLIDER_RANGE	10
 
-void M_DrawSlider (int x, int y, float num, float rangemin, float rangemax)
+static void M_DrawSlider (int x, int y, float num, float rangemin, float rangemax)
 {
 	char text[16];
 	int i;
@@ -1525,7 +1524,7 @@ void M_DrawSlider (int x, int y, float num, float rangemin, float rangemax)
 	M_Print(x + (SLIDER_RANGE+2) * 8, y, text);
 }
 
-void M_DrawCheckbox (int x, int y, int on)
+static void M_DrawCheckbox (int x, int y, int on)
 {
 	if (on)
 		M_Print(x, y, "on");
@@ -1536,7 +1535,7 @@ void M_DrawCheckbox (int x, int y, int on)
 
 #define OPTIONS_ITEMS 40
 
-int options_cursor;
+static int options_cursor;
 
 void M_Menu_Options_f (void)
 {
@@ -1550,7 +1549,7 @@ extern dllhandle_t jpeg_dll;
 extern cvar_t gl_texture_anisotropy;
 extern cvar_t r_textshadow;
 
-void M_Menu_Options_AdjustSliders (int dir)
+static void M_Menu_Options_AdjustSliders (int dir)
 {
 	int optnum;
 	S_LocalSound ("sound/misc/menu3.wav");
@@ -1635,11 +1634,11 @@ void M_Menu_Options_AdjustSliders (int dir)
 		Cvar_SetValueQuick (&vid_mouse, !vid_mouse.integer);
 }
 
-int optnum;
-int opty;
-int optcursor;
+static int optnum;
+static int opty;
+static int optcursor;
 
-void M_Options_PrintCommand(const char *s, int enabled)
+static void M_Options_PrintCommand(const char *s, int enabled)
 {
 	if (opty >= 32)
 	{
@@ -1650,7 +1649,7 @@ void M_Options_PrintCommand(const char *s, int enabled)
 	optnum++;
 }
 
-void M_Options_PrintCheckbox(const char *s, int enabled, int yes)
+static void M_Options_PrintCheckbox(const char *s, int enabled, int yes)
 {
 	if (opty >= 32)
 	{
@@ -1662,7 +1661,7 @@ void M_Options_PrintCheckbox(const char *s, int enabled, int yes)
 	optnum++;
 }
 
-void M_Options_PrintSlider(const char *s, int enabled, float value, float minvalue, float maxvalue)
+static void M_Options_PrintSlider(const char *s, int enabled, float value, float minvalue, float maxvalue)
 {
 	if (opty >= 32)
 	{
@@ -1674,7 +1673,7 @@ void M_Options_PrintSlider(const char *s, int enabled, float value, float minval
 	optnum++;
 }
 
-void M_Options_Draw (void)
+static void M_Options_Draw (void)
 {
 	int visible;
 	cachepic_t	*p;
@@ -1733,7 +1732,7 @@ void M_Options_Draw (void)
 }
 
 
-void M_Options_Key (int k, char ascii)
+static void M_Options_Key (int k, char ascii)
 {
 	switch (k)
 	{
@@ -1800,7 +1799,7 @@ void M_Options_Key (int k, char ascii)
 
 #define	OPTIONS_EFFECTS_ITEMS	35
 
-int options_effects_cursor;
+static int options_effects_cursor;
 
 void M_Menu_Options_Effects_f (void)
 {
@@ -1826,7 +1825,7 @@ extern cvar_t r_lightningbeam_color_green;
 extern cvar_t r_lightningbeam_color_blue;
 extern cvar_t r_lightningbeam_qmbtexture;
 
-void M_Menu_Options_Effects_AdjustSliders (int dir)
+static void M_Menu_Options_Effects_AdjustSliders (int dir)
 {
 	int optnum;
 	S_LocalSound ("sound/misc/menu3.wav");
@@ -1869,7 +1868,7 @@ void M_Menu_Options_Effects_AdjustSliders (int dir)
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&r_waterscroll, bound(0, r_waterscroll.value + dir * 0.5, 10));
 }
 
-void M_Options_Effects_Draw (void)
+static void M_Options_Effects_Draw (void)
 {
 	int visible;
 	cachepic_t	*p;
@@ -1923,7 +1922,7 @@ void M_Options_Effects_Draw (void)
 }
 
 
-void M_Options_Effects_Key (int k, char ascii)
+static void M_Options_Effects_Key (int k, char ascii)
 {
 	switch (k)
 	{
@@ -1962,7 +1961,7 @@ void M_Options_Effects_Key (int k, char ascii)
 
 #define	OPTIONS_GRAPHICS_ITEMS	14
 
-int options_graphics_cursor;
+static int options_graphics_cursor;
 
 void M_Menu_Options_Graphics_f (void)
 {
@@ -1985,7 +1984,7 @@ extern cvar_t r_bloom_blur;
 extern cvar_t r_bloom_resolution;
 extern cvar_t gl_picmip;
 
-void M_Menu_Options_Graphics_AdjustSliders (int dir)
+static void M_Menu_Options_Graphics_AdjustSliders (int dir)
 {
 	int optnum;
 	S_LocalSound ("sound/misc/menu3.wav");
@@ -2009,7 +2008,7 @@ void M_Menu_Options_Graphics_AdjustSliders (int dir)
 }
 
 
-void M_Options_Graphics_Draw (void)
+static void M_Options_Graphics_Draw (void)
 {
 	int visible;
 	cachepic_t	*p;
@@ -2042,7 +2041,7 @@ void M_Options_Graphics_Draw (void)
 }
 
 
-void M_Options_Graphics_Key (int k, char ascii)
+static void M_Options_Graphics_Key (int k, char ascii)
 {
 	switch (k)
 	{
@@ -2081,10 +2080,10 @@ void M_Options_Graphics_Key (int k, char ascii)
 
 #define	OPTIONS_COLORCONTROL_ITEMS	18
 
-int		options_colorcontrol_cursor;
+static int		options_colorcontrol_cursor;
 
 // intensity value to match up to 50% dither to 'correct' quake
-cvar_t menu_options_colorcontrol_correctionvalue = {0, "menu_options_colorcontrol_correctionvalue", "0.25", "intensity value that matches up to white/black dither pattern, due to Quake's grey level being quite dark this is 0.25, other games may use other values"};
+static cvar_t menu_options_colorcontrol_correctionvalue = {0, "menu_options_colorcontrol_correctionvalue", "0.25", "intensity value that matches up to white/black dither pattern, due to Quake's grey level being quite dark this is 0.25, other games may use other values"};
 
 void M_Menu_Options_ColorControl_f (void)
 {
@@ -2094,7 +2093,7 @@ void M_Menu_Options_ColorControl_f (void)
 }
 
 
-void M_Menu_Options_ColorControl_AdjustSliders (int dir)
+static void M_Menu_Options_ColorControl_AdjustSliders (int dir)
 {
 	int optnum;
 	float f;
@@ -2193,7 +2192,7 @@ void M_Menu_Options_ColorControl_AdjustSliders (int dir)
 	}
 }
 
-void M_Options_ColorControl_Draw (void)
+static void M_Options_ColorControl_Draw (void)
 {
 	int visible;
 	float x, c, s, t, u, v;
@@ -2269,7 +2268,7 @@ void M_Options_ColorControl_Draw (void)
 }
 
 
-void M_Options_ColorControl_Key (int k, char ascii)
+static void M_Options_ColorControl_Key (int k, char ascii)
 {
 	switch (k)
 	{
@@ -2331,7 +2330,7 @@ void M_Options_ColorControl_Key (int k, char ascii)
 //=============================================================================
 /* KEYS MENU */
 
-char *quakebindnames[][2] =
+static char *quakebindnames[][2] =
 {
 {"+attack", 		"attack"},
 {"impulse 10", 		"next weapon"},
@@ -2354,7 +2353,7 @@ char *quakebindnames[][2] =
 {"+movedown",		"swim down"}
 };
 
-char *transfusionbindnames[][2] =
+static char *transfusionbindnames[][2] =
 {
 {"",				"Movement"},		// Movement commands
 {"+forward", 		"walk forward"},
@@ -2412,7 +2411,7 @@ char *transfusionbindnames[][2] =
 {"impulse 79",		"taunt 9"}
 };
 
-char *goodvsbad2bindnames[][2] =
+static char *goodvsbad2bindnames[][2] =
 {
 {"impulse 69",		"Power 1"},
 {"impulse 70",		"Power 2"},
@@ -2435,8 +2434,8 @@ char *goodvsbad2bindnames[][2] =
 {"+movedown",		"swim down"}
 };
 
-int numcommands;
-char *(*bindnames)[2];
+static int numcommands;
+static char *(*bindnames)[2];
 
 /*
 typedef struct binditem_s
@@ -2454,9 +2453,9 @@ typedef struct bindcategory_s
 }
 bindcategory_t;
 
-bindcategory_t *bindcategories = NULL;
+static bindcategory_t *bindcategories = NULL;
 
-void M_ClearBinds (void)
+static void M_ClearBinds (void)
 {
 	for (c = bindcategories;c;c = cnext)
 	{
@@ -2471,7 +2470,7 @@ void M_ClearBinds (void)
 	bindcategories = NULL;
 }
 
-void M_AddBindToCategory(bindcategory_t *c, char *command, char *description)
+static void M_AddBindToCategory(bindcategory_t *c, char *command, char *description)
 {
 	for (b = &c->binds;*b;*b = &(*b)->next);
 	*b = Z_Alloc(sizeof(binditem_t) + strlen(command) + 1 + strlen(description) + 1);
@@ -2481,7 +2480,7 @@ void M_AddBindToCategory(bindcategory_t *c, char *command, char *description)
 	strcpy(*b->description, description);
 }
 
-void M_AddBind (char *category, char *command, char *description)
+static void M_AddBind (char *category, char *command, char *description)
 {
 	for (c = &bindcategories;*c;c = &(*c)->next)
 	{
@@ -2495,7 +2494,7 @@ void M_AddBind (char *category, char *command, char *description)
 	M_AddBindToCategory(*c, command, description);
 }
 
-void M_DefaultBinds (void)
+static void M_DefaultBinds (void)
 {
 	M_ClearBinds();
 	M_AddBind("movement", "+jump", "jump / swim up");
@@ -2529,8 +2528,8 @@ void M_DefaultBinds (void)
 */
 
 
-int		keys_cursor;
-int		bind_grab;
+static int		keys_cursor;
+static int		bind_grab;
 
 void M_Menu_Keys_f (void)
 {
@@ -2566,7 +2565,7 @@ void M_FindKeysForCommand (const char *command, int *keys)
 	}
 }
 
-void M_UnbindCommand (char *command)
+static void M_UnbindCommand (char *command)
 {
 	int		j;
 	char	*b;
@@ -2582,7 +2581,7 @@ void M_UnbindCommand (char *command)
 }
 
 
-void M_Keys_Draw (void)
+static void M_Keys_Draw (void)
 {
 	int		i, j;
 	int		keys[NUMKEYS];
@@ -2643,7 +2642,7 @@ void M_Keys_Draw (void)
 }
 
 
-void M_Keys_Key (int k, char ascii)
+static void M_Keys_Key (int k, char ascii)
 {
 	char	cmd[80];
 	int		keys[NUMKEYS];
@@ -2719,7 +2718,7 @@ void M_Menu_Reset_f (void)
 }
 
 
-void M_Reset_Key (int key, char ascii)
+static void M_Reset_Key (int key, char ascii)
 {
 	switch (key)
 	{
@@ -2740,7 +2739,7 @@ void M_Reset_Key (int key, char ascii)
 	}
 }
 
-void M_Reset_Draw (void)
+static void M_Reset_Draw (void)
 {
 	int lines = 2, linelength = 20;
 	M_Background(linelength * 8 + 16, lines * 8 + 16);
@@ -2825,9 +2824,9 @@ video_resolution_t video_resolutions[] =
 #define VID_RES_COUNT ((int)(sizeof(video_resolutions) / sizeof(video_resolutions[0])) - 1)
 
 #define VIDEO_ITEMS 7
-int video_cursor = 0;
-int video_cursor_table[] = {56, 68, 88, 100, 112, 132, 162};
-int video_resolution;
+static int video_cursor = 0;
+static int video_cursor_table[] = {56, 68, 88, 100, 112, 132, 162};
+static int video_resolution;
 
 void M_Menu_Video_f (void)
 {
@@ -2871,7 +2870,7 @@ void M_Menu_Video_f (void)
 }
 
 
-void M_Video_Draw (void)
+static void M_Video_Draw (void)
 {
 	cachepic_t	*p;
 
@@ -2917,7 +2916,7 @@ void M_Video_Draw (void)
 }
 
 
-void M_Menu_Video_AdjustSliders (int dir)
+static void M_Menu_Video_AdjustSliders (int dir)
 {
 	S_LocalSound ("sound/misc/menu3.wav");
 
@@ -2959,7 +2958,7 @@ void M_Menu_Video_AdjustSliders (int dir)
 }
 
 
-void M_Video_Key (int key, char ascii)
+static void M_Video_Key (int key, char ascii)
 {
 	switch (key)
 	{
@@ -3019,7 +3018,7 @@ void M_Video_Key (int key, char ascii)
 //=============================================================================
 /* HELP MENU */
 
-int		help_page;
+static int		help_page;
 #define	NUM_HELP_PAGES	6
 
 
@@ -3033,14 +3032,14 @@ void M_Menu_Help_f (void)
 
 
 
-void M_Help_Draw (void)
+static void M_Help_Draw (void)
 {
 	M_Background(320, 200);
 	M_DrawPic (0, 0, va("gfx/help%i", help_page));
 }
 
 
-void M_Help_Key (int key, char ascii)
+static void M_Help_Key (int key, char ascii)
 {
 	switch (key)
 	{
@@ -3077,7 +3076,7 @@ void M_Menu_Credits_f (void)
 
 
 
-void M_Credits_Draw (void)
+static void M_Credits_Draw (void)
 {
 	M_Background(640, 480);
 	M_DrawPic (0, 0, "gfx/creditsmiddle");
@@ -3087,7 +3086,7 @@ void M_Credits_Draw (void)
 }
 
 
-void M_Credits_Key (int key, char ascii)
+static void M_Credits_Key (int key, char ascii)
 {
 		M_Menu_Main_f ();
 }
@@ -3095,12 +3094,12 @@ void M_Credits_Key (int key, char ascii)
 //=============================================================================
 /* QUIT MENU */
 
-char *m_quit_message[9];
-int		m_quit_prevstate;
-qboolean	wasInMenus;
+static char *m_quit_message[9];
+static int		m_quit_prevstate;
+static qboolean	wasInMenus;
 
 
-int M_QuitMessage(char *line1, char *line2, char *line3, char *line4, char *line5, char *line6, char *line7, char *line8)
+static int M_QuitMessage(char *line1, char *line2, char *line3, char *line4, char *line5, char *line6, char *line7, char *line8)
 {
 	m_quit_message[0] = line1;
 	m_quit_message[1] = line2;
@@ -3114,7 +3113,7 @@ int M_QuitMessage(char *line1, char *line2, char *line3, char *line4, char *line
 	return 1;
 }
 
-int M_ChooseQuitMessage(int request)
+static int M_ChooseQuitMessage(int request)
 {
 	switch (gamemode)
 	{
@@ -3191,7 +3190,7 @@ void M_Menu_Quit_f (void)
 }
 
 
-void M_Quit_Key (int key, char ascii)
+static void M_Quit_Key (int key, char ascii)
 {
 	switch (key)
 	{
@@ -3220,7 +3219,7 @@ void M_Quit_Key (int key, char ascii)
 	}
 }
 
-void M_Quit_Draw (void)
+static void M_Quit_Draw (void)
 {
 	int i, l, linelength, firstline, lastline, lines;
 	for (i = 0, linelength = 0, firstline = 9999, lastline = -1;m_quit_message[i];i++)
@@ -3246,13 +3245,13 @@ void M_Quit_Draw (void)
 //=============================================================================
 /* LAN CONFIG MENU */
 
-int		lanConfig_cursor = -1;
-int		lanConfig_cursor_table [] = {56, 76, 84, 120};
+static int		lanConfig_cursor = -1;
+static int		lanConfig_cursor_table [] = {56, 76, 84, 120};
 #define NUM_LANCONFIG_CMDS	4
 
-int 	lanConfig_port;
-char	lanConfig_portname[6];
-char	lanConfig_joinname[22];
+static int 	lanConfig_port;
+static char	lanConfig_portname[6];
+static char	lanConfig_joinname[22];
 
 void M_Menu_LanConfig_f (void)
 {
@@ -3273,7 +3272,7 @@ void M_Menu_LanConfig_f (void)
 }
 
 
-void M_LanConfig_Draw (void)
+static void M_LanConfig_Draw (void)
 {
 	cachepic_t	*p;
 	int		basex;
@@ -3326,7 +3325,7 @@ void M_LanConfig_Draw (void)
 }
 
 
-void M_LanConfig_Key (int key, char ascii)
+static void M_LanConfig_Key (int key, char ascii)
 {
 	int		l;
 
@@ -3461,7 +3460,7 @@ typedef struct gamelevels_s
 }
 gamelevels_t;
 
-level_t quakelevels[] =
+static level_t quakelevels[] =
 {
 	{"start", "Entrance"},	// 0
 
@@ -3509,7 +3508,7 @@ level_t quakelevels[] =
 	{"dm6", "The Dark Zone"}
 };
 
-episode_t quakeepisodes[] =
+static episode_t quakeepisodes[] =
 {
 	{"Welcome to Quake", 0, 1},
 	{"Doomed Dimension", 1, 8},
@@ -3521,7 +3520,7 @@ episode_t quakeepisodes[] =
 };
 
  //MED 01/06/97 added hipnotic levels
-level_t     hipnoticlevels[] =
+static level_t     hipnoticlevels[] =
 {
    {"start", "Command HQ"},  // 0
 
@@ -3549,7 +3548,7 @@ level_t     hipnoticlevels[] =
 };
 
 //MED 01/06/97  added hipnotic episodes
-episode_t   hipnoticepisodes[] =
+static episode_t   hipnoticepisodes[] =
 {
    {"Scourge of Armagon", 0, 1},
    {"Fortress of the Dead", 1, 5},
@@ -3561,7 +3560,7 @@ episode_t   hipnoticepisodes[] =
 
 //PGM 01/07/97 added rogue levels
 //PGM 03/02/97 added dmatch level
-level_t		roguelevels[] =
+static level_t		roguelevels[] =
 {
 	{"start",	"Split Decision"},
 	{"r1m1",	"Deviant's Domain"},
@@ -3584,7 +3583,7 @@ level_t		roguelevels[] =
 
 //PGM 01/07/97 added rogue episodes
 //PGM 03/02/97 added dmatch episode
-episode_t	rogueepisodes[] =
+static episode_t	rogueepisodes[] =
 {
 	{"Introduction", 0, 1},
 	{"Hell's Fortress", 1, 7},
@@ -3592,7 +3591,7 @@ episode_t	rogueepisodes[] =
 	{"Deathmatch Arena", 16, 1}
 };
 
-level_t		nehahralevels[] =
+static level_t		nehahralevels[] =
 {
 	{"nehstart",	"Welcome to Nehahra"},
 	{"neh1m1",	"Forge City1: Slipgates"},
@@ -3615,7 +3614,7 @@ level_t		nehahralevels[] =
 	{"nehend",	"Quintessence"}
 };
 
-episode_t	nehahraepisodes[] =
+static episode_t	nehahraepisodes[] =
 {
 	{"Welcome to Nehahra", 0, 1},
 	{"The Fall of Forge", 1, 9},
@@ -3624,7 +3623,7 @@ episode_t	nehahraepisodes[] =
 };
 
 // Map list for Transfusion
-level_t		transfusionlevels[] =
+static level_t		transfusionlevels[] =
 {
 	{"e1m1",		"Cradle to Grave"},
 	{"e1m2",		"Wrong Side of the Tracks"},
@@ -3732,7 +3731,7 @@ level_t		transfusionlevels[] =
 	{"simple",		"Dead Simple"}
 };
 
-episode_t	transfusionepisodes[] =
+static episode_t	transfusionepisodes[] =
 {
 	{"The Way of All Flesh", 0, 8},
 	{"Even Death May Die", 8, 9},
@@ -3747,7 +3746,7 @@ episode_t	transfusionepisodes[] =
 	{"Conversions", 85, 9}
 };
 
-level_t goodvsbad2levels[] =
+static level_t goodvsbad2levels[] =
 {
 	{"rts", "Many Paths"},  // 0
 	{"chess", "Chess, Scott Hess"},                         // 1
@@ -3760,12 +3759,12 @@ level_t goodvsbad2levels[] =
 	{"island", "Adventure Islands"},
 };
 
-episode_t goodvsbad2episodes[] =
+static episode_t goodvsbad2episodes[] =
 {
 	{"Levels? Bevels!", 0, 8},
 };
 
-level_t battlemechlevels[] =
+static level_t battlemechlevels[] =
 {
 	{"start", "Parking Level"},
 	{"dm1", "Hot Dump"},                        // 1
@@ -3776,12 +3775,12 @@ level_t battlemechlevels[] =
 	{"dm6", "Army go Underground"},
 };
 
-episode_t battlemechepisodes[] =
+static episode_t battlemechepisodes[] =
 {
 	{"Time for Battle", 0, 7},
 };
 
-level_t openquartzlevels[] =
+static level_t openquartzlevels[] =
 {
 	{"start", "Welcome to Openquartz"},
 
@@ -3800,35 +3799,35 @@ level_t openquartzlevels[] =
 	{"am1", "The nameless chambers"},
 };
 
-episode_t openquartzepisodes[] =
+static episode_t openquartzepisodes[] =
 {
 	{"Single Player", 0, 1},
 	{"Void Deathmatch", 1, 6},
 	{"Contrib", 7, 6},
 };
 
-level_t defeatindetail2levels[] =
+static level_t defeatindetail2levels[] =
 {
 	{"atac3",	"River Crossing"},
 	{"atac4",	"Canyon Chaos"},
 	{"atac7",	"Desert Stormer"},
 };
 
-episode_t defeatindetail2episodes[] =
+static episode_t defeatindetail2episodes[] =
 {
 	{"ATAC Campaign", 0, 3},
 };
 
-gamelevels_t sharewarequakegame = {"Shareware Quake", quakelevels, quakeepisodes, 2};
-gamelevels_t registeredquakegame = {"Quake", quakelevels, quakeepisodes, 7};
-gamelevels_t hipnoticgame = {"Scourge of Armagon", hipnoticlevels, hipnoticepisodes, 6};
-gamelevels_t roguegame = {"Dissolution of Eternity", roguelevels, rogueepisodes, 4};
-gamelevels_t nehahragame = {"Nehahra", nehahralevels, nehahraepisodes, 4};
-gamelevels_t transfusiongame = {"Transfusion", transfusionlevels, transfusionepisodes, 11};
-gamelevels_t goodvsbad2game = {"Good Vs. Bad 2", goodvsbad2levels, goodvsbad2episodes, 1};
-gamelevels_t battlemechgame = {"Battlemech", battlemechlevels, battlemechepisodes, 1};
-gamelevels_t openquartzgame = {"OpenQuartz", openquartzlevels, openquartzepisodes, 3};
-gamelevels_t defeatindetail2game = {"Defeat In Detail 2", defeatindetail2levels, defeatindetail2episodes, 1};
+static gamelevels_t sharewarequakegame = {"Shareware Quake", quakelevels, quakeepisodes, 2};
+static gamelevels_t registeredquakegame = {"Quake", quakelevels, quakeepisodes, 7};
+static gamelevels_t hipnoticgame = {"Scourge of Armagon", hipnoticlevels, hipnoticepisodes, 6};
+static gamelevels_t roguegame = {"Dissolution of Eternity", roguelevels, rogueepisodes, 4};
+static gamelevels_t nehahragame = {"Nehahra", nehahralevels, nehahraepisodes, 4};
+static gamelevels_t transfusiongame = {"Transfusion", transfusionlevels, transfusionepisodes, 11};
+static gamelevels_t goodvsbad2game = {"Good Vs. Bad 2", goodvsbad2levels, goodvsbad2episodes, 1};
+static gamelevels_t battlemechgame = {"Battlemech", battlemechlevels, battlemechepisodes, 1};
+static gamelevels_t openquartzgame = {"OpenQuartz", openquartzlevels, openquartzepisodes, 3};
+static gamelevels_t defeatindetail2game = {"Defeat In Detail 2", defeatindetail2levels, defeatindetail2episodes, 1};
 
 typedef struct gameinfo_s
 {
@@ -3838,7 +3837,7 @@ typedef struct gameinfo_s
 }
 gameinfo_t;
 
-gameinfo_t gamelist[] =
+static gameinfo_t gamelist[] =
 {
 	{GAME_NORMAL, &sharewarequakegame, &registeredquakegame},
 	{GAME_HIPNOTIC, &hipnoticgame, &hipnoticgame},
@@ -3852,7 +3851,7 @@ gameinfo_t gamelist[] =
 	{(gamemode_t)-1, &sharewarequakegame, &registeredquakegame} // final fallback
 };
 
-gamelevels_t *lookupgameinfo(void)
+static gamelevels_t *lookupgameinfo(void)
 {
 	int i;
 	for (i = 0;gamelist[i].gameid >= 0 && gamelist[i].gameid != gamemode;i++);
@@ -3862,11 +3861,11 @@ gamelevels_t *lookupgameinfo(void)
 		return gamelist[i].notregistered;
 }
 
-int	startepisode;
-int	startlevel;
-int maxplayers;
-qboolean m_serverInfoMessage = false;
-double m_serverInfoMessageTime;
+static int	startepisode;
+static int	startlevel;
+static int maxplayers;
+static qboolean m_serverInfoMessage = false;
+static double m_serverInfoMessageTime;
 
 void M_Menu_GameOptions_f (void)
 {
@@ -3880,9 +3879,9 @@ void M_Menu_GameOptions_f (void)
 }
 
 
-int gameoptions_cursor_table[] = {40, 56, 64, 72, 80, 88, 96, 104, 112, 140, 160, 168};
+static int gameoptions_cursor_table[] = {40, 56, 64, 72, 80, 88, 96, 104, 112, 140, 160, 168};
 #define	NUM_GAMEOPTIONS	12
-int		gameoptions_cursor;
+static int		gameoptions_cursor;
 
 void M_GameOptions_Draw (void)
 {
@@ -4048,7 +4047,7 @@ void M_GameOptions_Draw (void)
 }
 
 
-void M_NetStart_Change (int dir)
+static void M_NetStart_Change (int dir)
 {
 	gamelevels_t *g;
 	int count;
@@ -4213,7 +4212,7 @@ void M_NetStart_Change (int dir)
 	}
 }
 
-void M_GameOptions_Key (int key, char ascii)
+static void M_GameOptions_Key (int key, char ascii)
 {
 	gamelevels_t *g;
 	int l;
@@ -4303,7 +4302,7 @@ void M_GameOptions_Key (int key, char ascii)
 //=============================================================================
 /* SLIST MENU */
 
-int slist_cursor;
+static int slist_cursor;
 
 void M_Menu_ServerList_f (void)
 {
@@ -4319,7 +4318,7 @@ void M_Menu_ServerList_f (void)
 }
 
 
-void M_ServerList_Draw (void)
+static void M_ServerList_Draw (void)
 {
 	int n, y, visible, start, end;
 	cachepic_t *p;
@@ -4368,7 +4367,7 @@ void M_ServerList_Draw (void)
 }
 
 
-void M_ServerList_Key(int k, char ascii)
+static void M_ServerList_Key(int k, char ascii)
 {
 	switch (k)
 	{
@@ -4414,10 +4413,10 @@ void M_ServerList_Key(int k, char ascii)
 //=============================================================================
 /* Menu Subsystem */
 
-void M_Keydown(int key, char ascii);
-void M_Draw(void);
+static void M_Keydown(int key, char ascii);
+static void M_Draw(void);
 void M_ToggleMenu_f(void);
-void M_Shutdown(void);
+static void M_Shutdown(void);
 
 void M_Init (void)
 {
@@ -4774,7 +4773,7 @@ M_F_SHUTDOWN,
 };
 
 #ifdef NG_MENU
-qboolean m_displayed;
+static qboolean m_displayed;
 #endif
 
 static int m_numrequiredfunc = sizeof(m_required_func) / sizeof(char*);

@@ -193,8 +193,6 @@ extern mempool_t *netconn_mempool;
 
 extern cvar_t hostname;
 extern cvar_t developer_networking;
-extern char playername[];
-extern int playercolor;
 
 #define SERVERLIST_TOTALSIZE		2048
 #define SERVERLIST_VIEWLISTSIZE		SERVERLIST_TOTALSIZE

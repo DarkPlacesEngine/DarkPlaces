@@ -76,7 +76,7 @@ void *W_GetLumpName(const char *name)
 	if (!wad_loaded)
 	{
 		wad_loaded = true;
-		if ((wad_base = FS_LoadFile ("gfx.wad", cl_mempool, false, &filesize)))
+		if ((wad_base = FS_LoadFile ("gfx.wad", cls.mempool, false, &filesize)))
 		{
 			if (memcmp(wad_base, "WAD2", 4))
 			{

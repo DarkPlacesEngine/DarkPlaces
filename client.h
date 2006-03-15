@@ -423,6 +423,15 @@ typedef enum qw_downloadtype_e
 }
 qw_downloadtype_t;
 
+typedef enum capturevideoformat_e
+{
+	CAPTUREVIDEOFORMAT_TARGA,
+	CAPTUREVIDEOFORMAT_JPEG,
+	CAPTUREVIDEOFORMAT_RAWRGB,
+	CAPTUREVIDEOFORMAT_RAWYV12
+}
+capturevideoformat_t;
+
 //
 // the client_static_t structure is persistent through an arbitrary number
 // of server connections
@@ -430,6 +439,9 @@ qw_downloadtype_t;
 typedef struct client_static_s
 {
 	cactive_t state;
+
+	// all client memory allocations go in this pool
+	mempool_t *mempool;
 
 // demo loop control
 	// -1 = don't play demos
@@ -498,6 +510,19 @@ typedef struct client_static_s
 	// this normally contains the following keys in quakeworld:
 	// password spectator name team skin topcolor bottomcolor rate noaim msg *ver *ip
 	char userinfo[MAX_USERINFO_STRING];
+
+	// video capture stuff
+	qboolean capturevideo_active;
+	capturevideoformat_t capturevideo_format;
+	double capturevideo_starttime;
+	double capturevideo_framerate;
+	int capturevideo_soundrate;
+	int capturevideo_frame;
+	unsigned char *capturevideo_buffer;
+	qfile_t *capturevideo_videofile;
+	qfile_t *capturevideo_soundfile;
+	short capturevideo_rgbtoyuvscaletable[3][3][256];
+	unsigned char capturevideo_yuvnormalizetable[3][256];
 }
 client_static_t;
 
@@ -534,6 +559,58 @@ typedef struct qw_usercmd_s
 	unsigned char padding2;
 }
 qw_usercmd_t;
+
+typedef enum
+{
+	PARTICLE_BILLBOARD = 0,
+	PARTICLE_SPARK = 1,
+	PARTICLE_ORIENTED_DOUBLESIDED = 2,
+	PARTICLE_BEAM = 3
+}
+porientation_t;
+
+typedef enum
+{
+	PBLEND_ALPHA = 0,
+	PBLEND_ADD = 1,
+	PBLEND_MOD = 2
+}
+pblend_t;
+
+typedef struct particletype_s
+{
+	pblend_t blendmode;
+	porientation_t orientation;
+	qboolean lighting;
+}
+particletype_t;
+
+typedef enum
+{
+	pt_alphastatic, pt_static, pt_spark, pt_beam, pt_rain, pt_raindecal, pt_snow, pt_bubble, pt_blood, pt_smoke, pt_decal, pt_entityparticle, pt_total
+}
+ptype_t;
+
+typedef struct particle_s
+{
+	particletype_t *type;
+	int			texnum;
+	vec3_t		org;
+	vec3_t		vel; // velocity of particle, or orientation of decal, or end point of beam
+	float		size;
+	float		alpha; // 0-255
+	float		alphafade; // how much alpha reduces per second
+	float		time2; // used for snow fluttering and decal fade
+	float		bounce; // how much bounce-back from a surface the particle hits (0 = no physics, 1 = stop and slide, 2 = keep bouncing forever, 1.5 is typical)
+	float		gravity; // how much gravity affects this particle (1.0 = normal gravity, 0.0 = none)
+	float		friction; // how much air friction affects this object (objects with a low mass/size ratio tend to get more air friction)
+	unsigned char		color[4];
+	unsigned short owner; // decal stuck to this entity
+	model_t		*ownermodel; // model the decal is stuck to (used to make sure the entity is still alive)
+	vec3_t		relativeorigin; // decal at this location in entity's coordinate space
+	vec3_t		relativedirection; // decal oriented this way relative to entity's coordinate space
+}
+particle_t;
 
 //
 // the client_state_t structure is wiped completely at every
@@ -707,6 +784,52 @@ typedef struct client_state_s
 	entityframe4_database_t *entitydatabase4;
 	entityframeqw_database_t *entitydatabaseqw;
 
+	// keep track of quake entities because they need to be killed if they get stale
+	int lastquakeentity;
+	unsigned char isquakeentity[MAX_EDICTS];
+
+	// bounding boxes for clientside movement
+	vec3_t playerstandmins;
+	vec3_t playerstandmaxs;
+	vec3_t playercrouchmins;
+	vec3_t playercrouchmaxs;
+
+	int max_entities;
+	int max_csqcentities;
+	int max_static_entities;
+	int max_temp_entities;
+	int max_effects;
+	int max_beams;
+	int max_dlights;
+	int max_lightstyle;
+	int max_brushmodel_entities;
+	int max_particles;
+
+	entity_t *entities;
+	entity_t *csqcentities;	//[515]: csqc
+	unsigned char *entities_active;
+	unsigned char *csqcentities_active;	//[515]: csqc
+	entity_t *static_entities;
+	entity_t *temp_entities;
+	cl_effect_t *effects;
+	beam_t *beams;
+	dlight_t *dlights;
+	lightstyle_t *lightstyle;
+	int *brushmodel_entities;
+	particle_t *particles;
+
+	int num_entities;
+	int num_csqcentities;	//[515]: csqc
+	int num_static_entities;
+	int num_temp_entities;
+	int num_brushmodel_entities;
+	int num_effects;
+	int num_beams;
+	int num_dlights;
+	int num_particles;
+
+	int free_particle;
+
 	// quakeworld stuff
 
 	// local copy of the server infostring
@@ -815,45 +938,6 @@ extern cvar_t cl_stainmaps;
 extern cvar_t cl_stainmaps_clearonload;
 
 extern cvar_t cl_prydoncursor;
-
-extern vec3_t cl_playerstandmins;
-extern vec3_t cl_playerstandmaxs;
-extern vec3_t cl_playercrouchmins;
-extern vec3_t cl_playercrouchmaxs;
-
-extern mempool_t *cl_mempool;
-
-extern int cl_max_entities;
-extern int cl_max_csqcentities;
-extern int cl_max_static_entities;
-extern int cl_max_temp_entities;
-extern int cl_max_effects;
-extern int cl_max_beams;
-extern int cl_max_dlights;
-extern int cl_max_lightstyle;
-extern int cl_max_brushmodel_entities;
-extern int cl_activedlights;
-extern int cl_activeeffects;
-extern int cl_activebeams;
-
-extern entity_t *cl_entities;
-extern entity_t *cl_csqcentities;	//[515]: csqc
-extern unsigned char *cl_entities_active;
-extern unsigned char *cl_csqcentities_active;	//[515]: csqc
-extern entity_t *cl_static_entities;
-extern entity_t *cl_temp_entities;
-extern cl_effect_t *cl_effects;
-extern beam_t *cl_beams;
-extern dlight_t *cl_dlights;
-extern lightstyle_t *cl_lightstyle;
-extern int *cl_brushmodel_entities;
-
-// these are updated by CL_ClearState
-extern int cl_num_entities;
-extern int cl_num_csqcentities;	//[515]: csqc
-extern int cl_num_static_entities;
-extern int cl_num_temp_entities;
-extern int cl_num_brushmodel_entities;
 
 extern client_state_t cl;
 

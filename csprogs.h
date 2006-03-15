@@ -46,7 +46,6 @@
 //#define RF_DOUBLESIDED		32
 
 extern unsigned int csqc_drawmask;
-extern int cl_max_csqcentities;
 extern qboolean csqc_frame;
 extern int csqc_buttons;
 extern qboolean csqc_loaded;

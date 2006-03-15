@@ -65,10 +65,6 @@ int csqc_fieldoff_tag_index;
 
 qboolean csqc_loaded = false;
 
-extern entity_t	*cl_csqcentities;
-extern unsigned char	*cl_csqcentities_active;
-extern int		cl_num_csqcentities;
-
 vec3_t csqc_origin, csqc_angles;
 static double csqc_frametime = 0;
 int csqc_buttons;
@@ -136,7 +132,7 @@ static void CSQC_SetGlobals (void)
 		prog->globals.client->input_buttons = csqc_buttons;
 		VectorSet(prog->globals.client->input_movevalues, cl.cmd.forwardmove, cl.cmd.sidemove, cl.cmd.upmove);
 		//VectorCopy(cl.movement_origin, csqc_origin);
-		VectorCopy(cl_entities[cl.viewentity].render.origin, csqc_origin);
+		VectorCopy(cl.entities[cl.viewentity].render.origin, csqc_origin);
 		VectorCopy(csqc_origin, prog->globals.client->pmove_org);
 		prog->globals.client->maxclients = cl.maxclients;
 		//VectorCopy(cl.movement_velocity, prog->globals.client->pmove_vel);
@@ -227,8 +223,8 @@ static qboolean CSQC_EdictToEntity (prvm_edict_t *ed, entity_t *e)
 
 void CSQC_ClearCSQCEntities (void)
 {
-	memset(cl_csqcentities_active, 0, sizeof(cl_csqcentities_active));
-	cl_num_csqcentities = 0;
+	memset(cl.csqcentities_active, 0, sizeof(cl.csqcentities_active));
+	cl.num_csqcentities = 0;
 	csqc_drawmask = 0;
 }
 
@@ -243,15 +239,15 @@ void CSQC_RelinkCSQCEntities (void)
 	*prog->time = cl.time;
 	for(i=1;i<prog->num_edicts;i++)
 	{
-		if(i >= cl_max_csqcentities)
+		if(i >= cl.max_csqcentities)
 			CL_ExpandCSQCEntities(i);
 
-		e = &cl_csqcentities[i];
+		e = &cl.csqcentities[i];
 		ed = &prog->edicts[i];
 		if(ed->priv.required->free)
 		{
 			e->state_current.active = false;
-			cl_csqcentities_active[i] = false;
+			cl.csqcentities_active[i] = false;
 			continue;
 		}
 		VectorAdd(ed->fields.client->origin, ed->fields.client->mins, ed->fields.client->absmin);
@@ -260,23 +256,23 @@ void CSQC_RelinkCSQCEntities (void)
 		if(ed->priv.required->free)
 		{
 			e->state_current.active = false;
-			cl_csqcentities_active[i] = false;
+			cl.csqcentities_active[i] = false;
 			continue;
 		}
 		CSQC_Predraw(ed);
 		if(ed->priv.required->free)
 		{
 			e->state_current.active = false;
-			cl_csqcentities_active[i] = false;
+			cl.csqcentities_active[i] = false;
 			continue;
 		}
-		if(!cl_csqcentities_active[i])
+		if(!cl.csqcentities_active[i])
 		if(!((int)ed->fields.client->drawmask & csqc_drawmask))
 			continue;
 
 		e->state_previous	= e->state_current;
 		e->state_current	= defaultstate;
-		if((cl_csqcentities_active[i] = CSQC_EdictToEntity(ed, e)))
+		if((cl.csqcentities_active[i] = CSQC_EdictToEntity(ed, e)))
 		{
 			if(!e->state_current.active)
 			{
@@ -286,7 +282,7 @@ void CSQC_RelinkCSQCEntities (void)
 				e->state_current.active = true;
 			}
 			e->persistent.lerpdeltatime = 0;//prog->globals.client->frametime;
-			cl_num_csqcentities++;
+			cl.num_csqcentities++;
 		}
 	}
 }
@@ -294,7 +290,7 @@ void CSQC_RelinkCSQCEntities (void)
 //[515]: omfg... it's all weird =/
 void CSQC_AddEntity (int n)
 {
-	cl_csqcentities_active[n] = true;
+	cl.csqcentities_active[n] = true;
 }
 
 qboolean CL_VM_InputEvent (qboolean pressed, int key)
@@ -322,7 +318,7 @@ qboolean CL_VM_UpdateView (void)
 		*prog->time = cl.time;
 		CSQC_SetGlobals();
 		csqc_drawmask = 0;
-		cl_num_csqcentities = 0;
+		cl.num_csqcentities = 0;
 		PRVM_ExecuteProgram (prog->globals.client->CSQC_UpdateView, CL_F_UPDATEVIEW);
 		//VectorCopy(oldangles, cl.viewangles);
 	CSQC_END
@@ -585,7 +581,7 @@ void CL_VM_Init (void)
 	cl.csqc_vidvars.drawenginesbar = false;
 
 	// local state
-	ent = &cl_csqcentities[0];
+	ent = &cl.csqcentities[0];
 	// entire entity array was cleared, so just fill in a few fields
 	ent->state_current.active = true;
 	ent->render.model = cl.worldmodel = cl.model_precache[1];
