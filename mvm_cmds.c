@@ -629,7 +629,7 @@ refreshserverlist()
 void VM_M_refreshserverlist( void )
 {
 	VM_SAFEPARMCOUNT( 0, VM_M_refreshserverlist );
-	ServerList_QueryList();
+	ServerList_QueryList(true, false);
 }
 
 /*
