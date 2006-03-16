@@ -70,6 +70,7 @@ cvar_t chase_active = {CVAR_SAVE, "chase_active", "0", "enables chase cam"};
 cvar_t chase_stevie = {0, "chase_stevie", "0", "chase cam view from above (used only by GoodVsBad2)"};
 
 cvar_t v_deathtilt = {0, "v_deathtilt", "1", "whether to use sideways view when dead"};
+cvar_t v_deathtiltangle = {0, "v_deathtilt", "80", "what roll angle to use when tilting the view while dead"};
 
 float	v_dmg_time, v_dmg_roll, v_dmg_pitch;
 
@@ -413,7 +414,7 @@ void V_CalcRefdef (void)
 				// first person view from entity
 				// angles
 				if (cl.stats[STAT_HEALTH] <= 0 && v_deathtilt.integer)
-					viewangles[ROLL] = 80;	// dead view angle
+					viewangles[ROLL] = v_deathtiltangle.value;
 				VectorAdd(viewangles, cl.punchangle, viewangles);
 				viewangles[ROLL] += V_CalcRoll(cl.viewangles, cl.movement_velocity);
 				if (v_dmg_time > 0)
@@ -680,5 +681,6 @@ void V_Init (void)
 		Cvar_RegisterVariable (&chase_stevie);
 
 	Cvar_RegisterVariable (&v_deathtilt);
+	Cvar_RegisterVariable (&v_deathtiltangle);
 }
 
