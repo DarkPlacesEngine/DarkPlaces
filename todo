@@ -10,7 +10,7 @@
 -d (HellToupee) feature darkplaces client: add a dot crosshair texture (HellToupee)
 -d (Joel Murdoch) change darkplaces client: add a swinging weapon motion to replace the removed forward/back movement of the weapon, should be controllable with cl_bob_* cvars (Joel Murdoch)
 -d (Kedhrin) bug dpmod: air control doesn't seem to be working (Kedhrin)
--d (Kinn, romi) bug darkplaces WGL client: default WGL input back to GDI, the DirectInput driver is malfunctioning, losing key release messages, stuttering mouse input, and lacks mouse wheel support (Wazat, Kinn)
+-d (Kinn) bug darkplaces WGL client: default WGL input back to GDI, the DirectInput driver is malfunctioning, losing key release messages, stuttering mouse input, and lacks mouse wheel support (Wazat, Kinn)
 -d (Mabus) bug darkplaces loading: test zlib support with entirely pk3'd id1 data (should crash because of zlib not being setup early enough - fix this) (Mabus)
 -d (Mitchell) bug darkplaces renderer: fix fogging in realtime lighting mode, need to split the shaders into two stages, this will also fix decal bugs with fog (Mitchell)
 -d (Morphed) bug darkplaces renderer: Morphed's colormapping experiments in nexuiz show a difference in gloss color with GLSL vs dot3 path, http://img494.imageshack.us/img494/8745/nexuiz0000258lf.jpg http://www.nexuiz.com/forums/index.php?showtopic=1531 - and apparently it looks right or wrong depending on view point, suddenly switching (Morphed)
@@ -34,13 +34,13 @@
 -d (lcatlnx) bug darkplaces sound: sound is sometimes coming from the wrong side apparently (lcatlnx)
 -d (mashakos) bug darkplaces input: fix the mouse move when console is raised in glx, probably by ignoring the first move after console raise (mashakos)
 -d (mrinsane) bug darkplaces renderer: r_wateralpha 1 water that has lightmapping is black in r_shadow_realtime_world 1 mode, but only if the map was loaded in r_shadow_realtime_world 1 mode, if started in 0 and then going to 1 it does not have black water, this is probably lightmap updates not occurring in rtworld mode (mrinsane)
--d (romi) bug darkplaces renderer: make rtlights properly affect transparent models (romi)
--d (romi) feature darkplaces editlights: add coronasize setting to rtlights (romi)
 -d (yummyluv) feature darkplaces protocol: add EF_DOUBLESIDED for double sided entity rendering (disable cull face for this entity) (yummyluv)
 -d (yummyluv) feature darkplaces protocol: add buttons 9-16 (yummyluv)
 -f (James D) bug darkplaces server: losing runes on episode completion, completing episode 1 then 2 then 3 causes it to forget 1, then 4 causes it to forget 2 and 3, making it impossible to open the boss gate (James D)
 -f (Wazat) bug darkplaces: client's slowmo detection (measuring packet times and comparing to game time changes) may be making the game unpleasant (Wazat)
 0 bug darkplaces client: GAME_NEHAHRA: make sure cutscenes and movies work, got a report of seeing a black screen (NightFright)
+0 bug darkplaces client: cl.sfx sounds aren't playing (romi)
+0 bug darkplaces client: cl_movement 0 shouldn't be doing an input replay (SavageX)
 0 bug darkplaces client: fix cl_bobmodel bug which momentarily jolts the gun when you pass through a trigger, pick up an item, etc, Sajt thinks this is related to console prints as well as centerprint (Sajt)
 0 bug darkplaces client: prydon cursor highlighting of EF_SELECTABLE entities flickers with lower server framerate than client framerate (carni)
 0 bug darkplaces csqc: engine-based rocket entities have a trail but they don't glow if csqc is used
@@ -74,6 +74,7 @@
 0 bug hmap2 -vis: test that bitlongs code works properly on big endian systems such as Mac (LordHavoc)
 0 bug hmap2: figure out why there is a subtle difference between bmodel lighting and wall lighting, something to do with nudges causing different attenuation? (Urre)
 0 bug hmap: strip .map extension from filename if present
+0 change darkplaces client: disable all possible 'cheat' things unless -developer is given on commandline, this includes r_show*, r_test, gl_lightmaps, r_fullbright
 0 change darkplaces client: restrict wateralpha and such cvars according to what is permitted in qw serverinfo?
 0 change darkplaces extensions: edit FRIK_FILE documentation to mention that fgets uses its own separate buffer, so only one fgets can be done at a time without uzing strzone, but that darkplaces uses standard tempstrings for fgets (it doesn't - change it!) and mention DP_QC_MULTIPLETEMPSTRINGS (FrikaC)
 0 change darkplaces extensions: edit FRIK_FILE documentation to mention that strcat uses its own separate buffer, and that a = strcat(a, b);a = strcat(a, c); works correctly despite this, also mention that in DP strcat uses standard tempstrings, and mention DP_QC_MULTIPLETEMPSTRINGS (FrikaC)
@@ -516,6 +517,7 @@ d bug darkplaces renderer: fix rtlighting of viewmodel, it should not be perform
 d bug darkplaces renderer: fix the delayed lightmap updates on bmodels, they're lagging behind one frame, very noticable on flickering light
 d bug darkplaces renderer: fix vis problems when outside the level in q1bsp
 d bug darkplaces renderer: gl_max_size is affecting bloom (causing a black screen when gl_max_size is less than the screen dimensions) (Willis)
+d bug darkplaces renderer: make rtlights properly affect transparent models (romi)
 d bug darkplaces renderer: opaque water (r_wateralpha 1) is not being lit by rtlights (Sajt)
 d bug darkplaces renderer: q3bsp alpha shaders are not being lit?  (Cheapy)
 d bug darkplaces renderer: q3bsp ignoring EF_ADDITIVE on opaque surfaces such as Nexuiz teleporters?  (Vermeulen)
@@ -1085,6 +1087,7 @@ d feature darkplaces console: change commandline history to clear the commandlin
 d feature darkplaces console: expand parameters such as $cvar to use the value of the cvar, DP_CON_EXPANDCVAR (up2nogood)
 d feature darkplaces console: make aliases given parameters insert the parameters in place of $1, $2, $* macros in the alias string, add this as DP_CON_ALIASPARAMETERS (up2nogood)
 d feature darkplaces cvars: sort cvars and commands by name so that when saved to config they are sorted (might also be able to remove sorting from cvar/command listing)
+d feature darkplaces editlights: add coronasize setting to rtlights (romi)
 d feature darkplaces init: add -demo option like -benchmark except playdemo instead of timedemo
 d feature darkplaces loader: support dpm models (Vermeulen)
 d feature darkplaces mac osx: add mac osx builds to build script (inertia, mwh)
