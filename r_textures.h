@@ -80,7 +80,7 @@ void R_FragmentLocation3D(rtexture_t *rt, int *x, int *y, int *z, float *fx1, fl
 
 // returns the renderer dependent texture slot number (call this before each
 // use, as a texture might not have been precached)
-#define R_GetTexture(rt) ((rt) ? ((rt)->texnum >= 0 ? (rt)->texnum : R_RealGetTexture(rt)) : 0)
+#define R_GetTexture(rt) ((rt) ? ((rt)->texnum >= 0 ? (rt)->texnum : R_RealGetTexture(rt)) : r_texture_white->texnum)
 int R_RealGetTexture (rtexture_t *rt);
 
 // returns true if the texture is transparent (useful for rendering code)
