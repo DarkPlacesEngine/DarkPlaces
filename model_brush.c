@@ -4291,6 +4291,15 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l)
 
 	for (i = 0;i < count;i++, in++, out++)
 		*out = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", i), 128, 128, in->rgb, TEXTYPE_RGB, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+	// deluxemapped bsp files have an even number of lightmaps, and surfaces
+	// always index even numbered ones (0, 2, 4, ...), the odd numbered
+	// lightmaps are the deluxemaps (light direction textures), so if we
+	// encounter any odd numbered lightmaps it is not a deluxemapped bsp, it
+	// is also not a deluxemapped bsp if it has an odd number of lightmaps or
+	// less than 2
+	loadmodel->brushq3.deluxemapping = true;
+	if ((count & 1) || count < 2)
+		loadmodel->brushq3.deluxemapping = false;
 }
 
 static void Mod_Q3BSP_LoadFaces(lump_t *l)
@@ -4369,7 +4378,14 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			if (n == -1)
 				out->lightmaptexture = NULL;
 			else
+			{
+				// deluxemapped q3bsp files have lightmaps and deluxemaps in
+				// pairs, no odd numbers ever appear, so if we encounter an
+				// odd lightmap index, it's not deluxemapped.
+				if (n & 1)
+					loadmodel->brushq3.deluxemapping = false;
 				out->lightmaptexture = loadmodel->brushq3.data_lightmaps[n];
+			}
 
 			firstvertex = LittleLong(in->firstvertex);
 			numvertices = LittleLong(in->numvertices);

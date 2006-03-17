@@ -38,6 +38,7 @@
 -d (yummyluv) feature darkplaces protocol: add buttons 9-16 (yummyluv)
 -f (James D) bug darkplaces server: losing runes on episode completion, completing episode 1 then 2 then 3 causes it to forget 1, then 4 causes it to forget 2 and 3, making it impossible to open the boss gate (James D)
 -f (Wazat) bug darkplaces: client's slowmo detection (measuring packet times and comparing to game time changes) may be making the game unpleasant (Wazat)
+0 bug darkplaces renderer: r_glsl 1 mode has black grapple beam in nexuiz (SavageX)
 0 bug darkplaces client: GAME_NEHAHRA: make sure cutscenes and movies work, got a report of seeing a black screen (NightFright)
 0 bug darkplaces client: cl.sfx sounds aren't playing (romi)
 0 bug darkplaces client: cl_movement 0 shouldn't be doing an input replay (SavageX)

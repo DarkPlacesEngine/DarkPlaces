@@ -477,6 +477,11 @@ typedef struct model_brushq3_s
 	int num_lightgrid_dimensions[3];
 	// transform modelspace coordinates to lightgrid index
 	matrix4x4_t num_lightgrid_indexfromworld;
+
+	// true if this q3bsp file has been detected as using deluxemapping
+	// (lightmap texture pairs, every odd one is never directly refernced,
+	//  and contains lighting normals, not colors)
+	qboolean deluxemapping;
 }
 model_brushq3_t;
 
