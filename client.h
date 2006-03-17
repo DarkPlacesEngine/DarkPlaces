@@ -26,10 +26,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // LordHavoc: 256 dynamic lights
 #define MAX_DLIGHTS 256
-// LordHavoc: this affects the lighting scale of the whole game
-#define LIGHTOFFSET 1024.0f
-// max lights shining on one entity
-#define MAXENTLIGHTS 128
 
 // flags for rtlight rendering
 #define LIGHTFLAG_NORMALMODE 1
@@ -116,16 +112,6 @@ typedef struct rtlight_s
 	vec3_t currentcolor;
 	// this is R_Shadow_Cubemap(rtlight->cubemapname)
 	rtexture_t *currentcubemap;
-
-	// lightmap renderer stuff (remove someday!)
-	// the size of the light
-	vec_t lightmap_cullradius;
-	// the size of the light, squared
-	vec_t lightmap_cullradius2;
-	// the brightness of the light
-	vec3_t lightmap_light;
-	// to avoid sudden brightness change at cullradius, subtract this
-	vec_t lightmap_subtract;
 
 	// static light info
 	// true if this light should be compiled as a static light
@@ -280,12 +266,10 @@ typedef struct entity_render_s
 	// 4 frame numbers (-1 if not used) and their blending scalers (0-1), if interpolation is not desired, use frame instead
 	frameblend_t frameblend[4];
 
-	// caching results of static light traces (this is semi-persistent)
-	double entlightstime;
-	vec3_t entlightsorigin;
-	int entlightsframe;
-	int numentlights;
-	unsigned short entlights[MAXENTLIGHTS];
+	// current lighting from map
+	vec3_t modellight_ambient;
+	vec3_t modellight_diffuse; // q3bsp
+	vec3_t modellight_lightdir; // q3bsp
 }
 entity_render_t;
 

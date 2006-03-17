@@ -174,43 +174,6 @@ typedef struct svbspmesh_s
 }
 svbspmesh_t;
 
-typedef struct mlight_s
-{
-	// location of light
-	vec3_t origin;
-	// distance attenuation scale (smaller is a larger light)
-	float falloff;
-	// color and brightness combined
-	vec3_t light;
-	// brightness bias, used for limiting radius without a hard edge
-	float subtract;
-	// spotlight direction
-	vec3_t spotdir;
-	// cosine of spotlight cone angle (or 0 if not a spotlight)
-	float spotcone;
-	// distance bias (larger value is softer and darker)
-	float distbias;
-	// light style controlling this light
-	int style;
-	// maximum extent of the light for shading purposes
-	float lightradius;
-	// maximum extent of the light for culling purposes
-	float cullradius;
-	float cullradius2;
-	/*
-	// surfaces this shines on
-	int numsurfaces;
-	msurface_t **surfaces;
-	// lit area
-	vec3_t mins, maxs;
-	// precomputed shadow volume meshs
-	//svbspmesh_t *shadowvolume;
-	//vec3_t shadowvolumemins, shadowvolumemaxs;
-	shadowmesh_t *shadowvolume;
-	*/
-}
-mlight_t;
-
 // Q2 bsp stuff
 
 #define Q2BSPVERSION	38

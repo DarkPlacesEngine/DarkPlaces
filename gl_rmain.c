@@ -656,17 +656,29 @@ void R_GLSL_CompilePermutation(int permutation)
 	vertstrings_count = 1;
 	fragstrings_count = 1;
 	permutationname[0] = 0;
-	if (permutation & SHADERPERMUTATION_DELUXEMAPPING)
+	if (permutation & SHADERPERMUTATION_MODE_LIGHTSOURCE)
 	{
-		vertstrings_list[vertstrings_count++] = "#define USEDELUXEMAP\n";
-		fragstrings_list[fragstrings_count++] = "#define USEDELUXEMAP\n";
-		strlcat(permutationname, " deluxemap", sizeof(permutationname));
-	}
-	if (permutation & SHADERPERMUTATION_LIGHTSOURCE)
-	{
-		vertstrings_list[vertstrings_count++] = "#define USELIGHTSOURCE\n";
-		fragstrings_list[fragstrings_count++] = "#define USELIGHTSOURCE\n";
+		vertstrings_list[vertstrings_count++] = "#define MODE_LIGHTSOURCE\n";
+		fragstrings_list[fragstrings_count++] = "#define MODE_LIGHTSOURCE\n";
 		strlcat(permutationname, " lightsource", sizeof(permutationname));
+	}
+	if (permutation & SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP)
+	{
+		vertstrings_list[vertstrings_count++] = "#define MODE_LIGHTDIRECTIONMAP\n";
+		fragstrings_list[fragstrings_count++] = "#define MODE_LIGHTDIRECTIONMAP\n";
+		strlcat(permutationname, " lightdirectionmap", sizeof(permutationname));
+	}
+	if (permutation & SHADERPERMUTATION_MODE_LIGHTDIRECTION)
+	{
+		vertstrings_list[vertstrings_count++] = "#define MODE_LIGHTDIRECTION\n";
+		fragstrings_list[fragstrings_count++] = "#define MODE_LIGHTDIRECTION\n";
+		strlcat(permutationname, " lightdirection", sizeof(permutationname));
+	}
+	if (permutation & SHADERPERMUTATION_GLOW)
+	{
+		vertstrings_list[vertstrings_count++] = "#define USEGLOW\n";
+		fragstrings_list[fragstrings_count++] = "#define USEGLOW\n";
+		strlcat(permutationname, " glow", sizeof(permutationname));
 	}
 	if (permutation & SHADERPERMUTATION_COLORMAPPING)
 	{
@@ -732,6 +744,9 @@ void R_GLSL_CompilePermutation(int permutation)
 		p->loc_Texture_FogMask     = qglGetUniformLocationARB(p->program, "Texture_FogMask");
 		p->loc_Texture_Pants       = qglGetUniformLocationARB(p->program, "Texture_Pants");
 		p->loc_Texture_Shirt       = qglGetUniformLocationARB(p->program, "Texture_Shirt");
+		p->loc_Texture_Lightmap    = qglGetUniformLocationARB(p->program, "Texture_Lightmap");
+		p->loc_Texture_Deluxemap   = qglGetUniformLocationARB(p->program, "Texture_Deluxemap");
+		p->loc_Texture_Glow        = qglGetUniformLocationARB(p->program, "Texture_Glow");
 		p->loc_FogColor            = qglGetUniformLocationARB(p->program, "FogColor");
 		p->loc_LightPosition       = qglGetUniformLocationARB(p->program, "LightPosition");
 		p->loc_EyePosition         = qglGetUniformLocationARB(p->program, "EyePosition");
@@ -745,15 +760,20 @@ void R_GLSL_CompilePermutation(int permutation)
 		p->loc_SpecularScale       = qglGetUniformLocationARB(p->program, "SpecularScale");
 		p->loc_OffsetMapping_Scale = qglGetUniformLocationARB(p->program, "OffsetMapping_Scale");
 		p->loc_OffsetMapping_Bias  = qglGetUniformLocationARB(p->program, "OffsetMapping_Bias");
-		if (p->loc_Texture_Normal)   qglUniform1iARB(p->loc_Texture_Normal, 0);
-		if (p->loc_Texture_Color)    qglUniform1iARB(p->loc_Texture_Color, 1);
-		if (p->loc_Texture_Gloss)    qglUniform1iARB(p->loc_Texture_Gloss, 2);
-		if (p->loc_Texture_Cube)     qglUniform1iARB(p->loc_Texture_Cube, 3);
-		if (p->loc_Texture_FogMask)  qglUniform1iARB(p->loc_Texture_FogMask, 4);
-		if (p->loc_Texture_Pants)    qglUniform1iARB(p->loc_Texture_Pants, 5);
-		if (p->loc_Texture_Shirt)    qglUniform1iARB(p->loc_Texture_Shirt, 6);
-		if (p->loc_Texture_Lightmap) qglUniform1iARB(p->loc_Texture_Lightmap, 7);
-		if (p->loc_Texture_Deluxemap) qglUniform1iARB(p->loc_Texture_Deluxemap, 8);
+		p->loc_AmbientColor        = qglGetUniformLocationARB(p->program, "AmbientColor");
+		p->loc_DiffuseColor        = qglGetUniformLocationARB(p->program, "DiffuseColor");
+		p->loc_SpecularColor       = qglGetUniformLocationARB(p->program, "SpecularColor");
+		p->loc_LightDir            = qglGetUniformLocationARB(p->program, "LightDir");
+		if (p->loc_Texture_Normal >= 0)    qglUniform1iARB(p->loc_Texture_Normal, 0);
+		if (p->loc_Texture_Color >= 0)     qglUniform1iARB(p->loc_Texture_Color, 1);
+		if (p->loc_Texture_Gloss >= 0)     qglUniform1iARB(p->loc_Texture_Gloss, 2);
+		if (p->loc_Texture_Cube >= 0)      qglUniform1iARB(p->loc_Texture_Cube, 3);
+		if (p->loc_Texture_FogMask >= 0)   qglUniform1iARB(p->loc_Texture_FogMask, 4);
+		if (p->loc_Texture_Pants >= 0)     qglUniform1iARB(p->loc_Texture_Pants, 5);
+		if (p->loc_Texture_Shirt >= 0)     qglUniform1iARB(p->loc_Texture_Shirt, 6);
+		if (p->loc_Texture_Lightmap >= 0)  qglUniform1iARB(p->loc_Texture_Lightmap, 7);
+		if (p->loc_Texture_Deluxemap >= 0) qglUniform1iARB(p->loc_Texture_Deluxemap, 8);
+		if (p->loc_Texture_Glow >= 0)      qglUniform1iARB(p->loc_Texture_Glow, 9);
 		qglUseProgramObjectARB(0);
 		CHECKGLERROR
 	}
@@ -761,26 +781,45 @@ void R_GLSL_CompilePermutation(int permutation)
 		Con_Printf("permutation%s failed for shader %s, some features may not work properly!\n", permutationname, "glsl/default.glsl");
 }
 
-void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, const vec3_t lightcolorbase, const vec3_t lightcolorpants, const vec3_t lightcolorshirt, rtexture_t *basetexture, rtexture_t *pantstexture, rtexture_t *shirttexture, rtexture_t *normalmaptexture, rtexture_t *glosstexture, float specularscale, qboolean dopants, qboolean doshirt)
+void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, const vec3_t modelorg, const vec3_t lightcolorbase, qboolean modellighting)
 {
 	// select a permutation of the lighting shader appropriate to this
 	// combination of texture, entity, light source, and fogging, only use the
 	// minimum features necessary to avoid wasting rendering time in the
 	// fragment shader on features that are not being used
 	int permutation = 0;
+	float specularscale = texture->specularscale;
 	r_glsl_permutation = NULL;
 	if (r_shadow_rtlight)
-		permutation |= SHADERPERMUTATION_LIGHTSOURCE;
+	{
+		permutation |= SHADERPERMUTATION_MODE_LIGHTSOURCE;
+		specularscale *= r_shadow_rtlight->specularscale;
+		if (r_shadow_rtlight->currentcubemap != r_texture_whitecube)
+			permutation |= SHADERPERMUTATION_CUBEFILTER;
+	}
+	else if (modellighting)
+	{
+		permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTION;
+		if (texture->skin.glow)
+			permutation |= SHADERPERMUTATION_GLOW;
+	}
 	else if (false)
-		permutation |= SHADERPERMUTATION_DELUXEMAPPING;
-	if (fogenabled)
-		permutation |= SHADERPERMUTATION_FOG;
-	if ((dopants || doshirt))
-		permutation |= SHADERPERMUTATION_COLORMAPPING;
+	{
+		permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP;
+		if (texture->skin.glow)
+			permutation |= SHADERPERMUTATION_GLOW;
+	}
+	else
+	{
+		if (texture->skin.glow)
+			permutation |= SHADERPERMUTATION_GLOW;
+	}
 	if (specularscale > 0)
 		permutation |= SHADERPERMUTATION_SPECULAR;
-	if (r_shadow_rtlight->currentcubemap != r_texture_whitecube)
-		permutation |= SHADERPERMUTATION_CUBEFILTER;
+	if (fogenabled)
+		permutation |= SHADERPERMUTATION_FOG;
+	if (texture->colormapping)
+		permutation |= SHADERPERMUTATION_COLORMAPPING;
 	if (r_glsl_offsetmapping.integer)
 		permutation |= SHADERPERMUTATION_OFFSETMAPPING;
 	if (r_glsl_surfacenormalize.integer)
@@ -814,11 +853,41 @@ void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, 
 	CHECKGLERROR
 	qglUseProgramObjectARB(r_glsl_permutation->program);CHECKGLERROR
 	R_Mesh_TexMatrix(0, &texture->currenttexmatrix);
-	if (r_shadow_rtlight)
+	if (permutation & SHADERPERMUTATION_MODE_LIGHTSOURCE)
+	{
 		R_Mesh_TexMatrix(3, &r_shadow_entitytolight);
-	if (r_glsl_permutation->loc_Texture_Normal) R_Mesh_TexBind(0, R_GetTexture(normalmaptexture));
-	if (r_glsl_permutation->loc_Texture_Color) R_Mesh_TexBind(1, R_GetTexture(basetexture));
-	if (r_glsl_permutation->loc_FogColor)
+		if (r_glsl_permutation->loc_Texture_Cube >= 0) R_Mesh_TexBind(3, R_GetTexture(r_shadow_rtlight->currentcubemap));
+		if (r_glsl_permutation->loc_LightPosition >= 0) qglUniform3fARB(r_glsl_permutation->loc_LightPosition, r_shadow_entitylightorigin[0], r_shadow_entitylightorigin[1], r_shadow_entitylightorigin[2]);
+		if (r_glsl_permutation->loc_LightColor >= 0) qglUniform3fARB(r_glsl_permutation->loc_LightColor, lightcolorbase[0], lightcolorbase[1], lightcolorbase[2]);
+		if (r_glsl_permutation->loc_AmbientScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_AmbientScale, r_shadow_rtlight->ambientscale);
+		if (r_glsl_permutation->loc_DiffuseScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_DiffuseScale, r_shadow_rtlight->diffusescale);
+		if (r_glsl_permutation->loc_SpecularScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularScale, specularscale);
+	}
+	else if (permutation & SHADERPERMUTATION_MODE_LIGHTDIRECTION)
+	{
+		if (r_glsl_permutation->loc_AmbientColor >= 0)
+			qglUniform3fARB(r_glsl_permutation->loc_AmbientColor, ent->modellight_ambient[0], ent->modellight_ambient[1], ent->modellight_ambient[2]);
+		if (r_glsl_permutation->loc_DiffuseColor >= 0)
+			qglUniform3fARB(r_glsl_permutation->loc_DiffuseColor, ent->modellight_diffuse[0], ent->modellight_diffuse[1], ent->modellight_diffuse[2]);
+		if (r_glsl_permutation->loc_SpecularColor >= 0)
+			qglUniform3fARB(r_glsl_permutation->loc_SpecularColor, ent->modellight_diffuse[0] * texture->specularscale, ent->modellight_diffuse[1] * texture->specularscale, ent->modellight_diffuse[2] * texture->specularscale);
+		if (r_glsl_permutation->loc_LightDir >= 0)
+			qglUniform3fARB(r_glsl_permutation->loc_LightDir, ent->modellight_lightdir[0], ent->modellight_lightdir[1], ent->modellight_lightdir[2]);
+	}
+	else
+	{
+		if (r_glsl_permutation->loc_AmbientScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_AmbientScale, r_ambient.value * 2.0f / 128.0f);
+		if (r_glsl_permutation->loc_DiffuseScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_DiffuseScale, r_lightmapintensity * 2.0f);
+		if (r_glsl_permutation->loc_SpecularScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularScale, specularscale * 2.0f);
+	}
+	if (r_glsl_permutation->loc_Texture_Normal >= 0) R_Mesh_TexBind(0, R_GetTexture(texture->skin.nmap));
+	if (r_glsl_permutation->loc_Texture_Color >= 0) R_Mesh_TexBind(1, R_GetTexture(texture->basetexture));
+	if (r_glsl_permutation->loc_Texture_Gloss >= 0) R_Mesh_TexBind(2, R_GetTexture(texture->glosstexture));
+	if (r_glsl_permutation->loc_Texture_FogMask >= 0) R_Mesh_TexBind(4, R_GetTexture(r_texture_fogattenuation));
+	if (r_glsl_permutation->loc_Texture_Pants >= 0) R_Mesh_TexBind(5, R_GetTexture(texture->skin.pants));
+	if (r_glsl_permutation->loc_Texture_Shirt >= 0) R_Mesh_TexBind(6, R_GetTexture(texture->skin.shirt));
+	if (r_glsl_permutation->loc_Texture_Glow >= 0) R_Mesh_TexBind(9, R_GetTexture(texture->skin.glow));
+	if (r_glsl_permutation->loc_FogColor >= 0)
 	{
 		// additive passes are only darkened by fog, not tinted
 		if (r_shadow_rtlight || (texture->currentmaterialflags & MATERIALFLAG_ADD))
@@ -826,21 +895,13 @@ void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, 
 		else
 			qglUniform3fARB(r_glsl_permutation->loc_FogColor, fogcolor[0], fogcolor[1], fogcolor[2]);
 	}
-	if (r_glsl_permutation->loc_LightPosition) qglUniform3fARB(r_glsl_permutation->loc_LightPosition, r_shadow_entitylightorigin[0], r_shadow_entitylightorigin[1], r_shadow_entitylightorigin[2]);
-	if (r_glsl_permutation->loc_EyePosition) qglUniform3fARB(r_glsl_permutation->loc_EyePosition, r_shadow_entityeyeorigin[0], r_shadow_entityeyeorigin[1], r_shadow_entityeyeorigin[2]);
-	if (r_glsl_permutation->loc_LightColor) qglUniform3fARB(r_glsl_permutation->loc_LightColor, lightcolorbase[0], lightcolorbase[1], lightcolorbase[2]);
-	if (r_glsl_permutation->loc_Texture_Pants) R_Mesh_TexBind(5, R_GetTexture(pantstexture));
-	if (r_glsl_permutation->loc_Texture_Shirt) R_Mesh_TexBind(6, R_GetTexture(shirttexture));
-	if (r_glsl_permutation->loc_Color_Pants) qglUniform3fARB(r_glsl_permutation->loc_Color_Pants, ent->colormap_pantscolor[0], ent->colormap_pantscolor[1], ent->colormap_pantscolor[2]);
-	if (r_glsl_permutation->loc_Color_Shirt) qglUniform3fARB(r_glsl_permutation->loc_Color_Shirt, ent->colormap_shirtcolor[0], ent->colormap_shirtcolor[1], ent->colormap_shirtcolor[2]);
-	if (r_glsl_permutation->loc_FogRangeRecip) qglUniform1fARB(r_glsl_permutation->loc_FogRangeRecip, fograngerecip);
-	if (r_glsl_permutation->loc_AmbientScale) qglUniform1fARB(r_glsl_permutation->loc_AmbientScale, r_shadow_rtlight->ambientscale);
-	if (r_glsl_permutation->loc_DiffuseScale) qglUniform1fARB(r_glsl_permutation->loc_DiffuseScale, r_shadow_rtlight->diffusescale);
-	if (r_glsl_permutation->loc_Texture_Gloss) R_Mesh_TexBind(2, R_GetTexture(glosstexture));
-	if (r_glsl_permutation->loc_SpecularPower) qglUniform1fARB(r_glsl_permutation->loc_SpecularPower, 8);
-	if (r_glsl_permutation->loc_SpecularScale) qglUniform1fARB(r_glsl_permutation->loc_SpecularScale, specularscale);
-	if (r_glsl_permutation->loc_OffsetMapping_Scale) qglUniform1fARB(r_glsl_permutation->loc_OffsetMapping_Scale, r_glsl_offsetmapping_scale.value);
-	if (r_glsl_permutation->loc_OffsetMapping_Bias) qglUniform1fARB(r_glsl_permutation->loc_OffsetMapping_Bias, r_glsl_offsetmapping_bias.value);
+	if (r_glsl_permutation->loc_EyePosition >= 0) qglUniform3fARB(r_glsl_permutation->loc_EyePosition, modelorg[0], modelorg[1], modelorg[2]);
+	if (r_glsl_permutation->loc_Color_Pants >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Pants, ent->colormap_pantscolor[0], ent->colormap_pantscolor[1], ent->colormap_pantscolor[2]);
+	if (r_glsl_permutation->loc_Color_Shirt >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Shirt, ent->colormap_shirtcolor[0], ent->colormap_shirtcolor[1], ent->colormap_shirtcolor[2]);
+	if (r_glsl_permutation->loc_FogRangeRecip >= 0) qglUniform1fARB(r_glsl_permutation->loc_FogRangeRecip, fograngerecip);
+	if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularPower, texture->specularpower);
+	if (r_glsl_permutation->loc_OffsetMapping_Scale >= 0) qglUniform1fARB(r_glsl_permutation->loc_OffsetMapping_Scale, r_glsl_offsetmapping_scale.value);
+	if (r_glsl_permutation->loc_OffsetMapping_Bias >= 0) qglUniform1fARB(r_glsl_permutation->loc_OffsetMapping_Bias, r_glsl_offsetmapping_bias.value);
 	CHECKGLERROR
 }
 
@@ -1113,6 +1174,26 @@ int R_CullBox(const vec3_t mins, const vec3_t maxs)
 
 //==================================================================================
 
+static void R_UpdateEntityLighting(entity_render_t *ent)
+{
+	vec3_t tempdiffusenormal;
+	VectorSet(ent->modellight_ambient, r_ambient.value * (2.0f / 128.0f), r_ambient.value * (2.0f / 128.0f), r_ambient.value * (2.0f / 128.0f));
+	VectorClear(ent->modellight_diffuse);
+	VectorClear(ent->modellight_lightdir);
+	if ((ent->flags & RENDER_LIGHT) && r_refdef.worldmodel && r_refdef.worldmodel->brush.LightPoint)
+		r_refdef.worldmodel->brush.LightPoint(r_refdef.worldmodel, ent->origin, ent->modellight_ambient, ent->modellight_diffuse, tempdiffusenormal);
+	else // highly rare
+		VectorSet(ent->modellight_ambient, 1, 1, 1);
+	Matrix4x4_Transform3x3(&ent->inversematrix, tempdiffusenormal, ent->modellight_lightdir);
+	VectorNormalize(ent->modellight_lightdir);
+	ent->modellight_ambient[0] *= ent->colormod[0] * r_lightmapintensity;
+	ent->modellight_ambient[1] *= ent->colormod[1] * r_lightmapintensity;
+	ent->modellight_ambient[2] *= ent->colormod[2] * r_lightmapintensity;
+	ent->modellight_diffuse[0] *= ent->colormod[0] * r_lightmapintensity;
+	ent->modellight_diffuse[1] *= ent->colormod[1] * r_lightmapintensity;
+	ent->modellight_diffuse[2] *= ent->colormod[2] * r_lightmapintensity;
+}
+
 static void R_MarkEntities (void)
 {
 	int i, renderimask;
@@ -1135,8 +1216,8 @@ static void R_MarkEntities (void)
 			ent->scale = Matrix4x4_ScaleFromMatrix(&ent->matrix);
 			if (!(ent->flags & renderimask) && !R_CullBox(ent->mins, ent->maxs) && ((ent->effects & EF_NODEPTHTEST) || r_refdef.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.worldmodel, r_worldleafvisible, ent->mins, ent->maxs)))
 			{
-				R_UpdateEntLights(ent);
 				ent->visframe = r_framecount;
+				R_UpdateEntityLighting(ent);
 			}
 		}
 	}
@@ -1152,8 +1233,8 @@ static void R_MarkEntities (void)
 			ent->scale = Matrix4x4_ScaleFromMatrix(&ent->matrix);
 			if (!(ent->flags & renderimask) && !R_CullBox(ent->mins, ent->maxs) && (ent->effects & EF_NODEPTHTEST))
 			{
-				R_UpdateEntLights(ent);
 				ent->visframe = r_framecount;
+				R_UpdateEntityLighting(ent);
 			}
 		}
 	}
@@ -1659,6 +1740,9 @@ void R_RenderScene(void)
 
 	r_framecount++;
 
+	if (gl_support_fragment_shader)
+		qglUseProgramObjectARB(0);
+
 	R_MeshQueue_BeginScene();
 
 	R_SetFrustum();
@@ -1810,6 +1894,9 @@ void R_RenderScene(void)
 	// don't let sound skip if going slow
 	if (r_refdef.extraupdate)
 		S_ExtraUpdate ();
+
+	if (gl_support_fragment_shader)
+		qglUseProgramObjectARB(0);
 }
 
 /*
@@ -2145,18 +2232,32 @@ void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 		t->currenttexmatrix = r_waterscrollmatrix;
 	else
 		t->currenttexmatrix = identitymatrix;
+
+	t->colormapping = VectorLength2(ent->colormap_pantscolor) + VectorLength2(ent->colormap_shirtcolor) >= (1.0f / 1048576.0f);
+	t->basetexture = (!t->colormapping && t->skin.merged) ? t->skin.merged : t->skin.base;
+	t->glosstexture = r_texture_white;
+	t->specularpower = 8;
+	t->specularscale = 0;
+	if (r_shadow_gloss.integer > 0)
+	{
+		if (t->skin.gloss)
+		{
+			if (r_shadow_glossintensity.value > 0)
+			{
+				t->glosstexture = t->skin.gloss;
+				t->specularscale = r_shadow_glossintensity.value;
+			}
+		}
+		else if (r_shadow_gloss.integer >= 2 && r_shadow_gloss2intensity.value > 0)
+			t->specularscale = r_shadow_gloss2intensity.value;
+	}
+
 	t->currentnumlayers = 0;
 	if (!(t->currentmaterialflags & MATERIALFLAG_NODRAW))
 	{
 		if (gl_lightmaps.integer)
 			R_Texture_AddLayer(t, true, GL_ONE, GL_ZERO, TEXTURELAYERTYPE_LITTEXTURE_MULTIPASS, r_texture_white, &identitymatrix, 1, 1, 1, 1);
-		else if (t->currentmaterialflags & MATERIALFLAG_SKY)
-		{
-			// transparent sky would be ridiculous
-			if (!(t->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
-				R_Texture_AddLayer(t, true, GL_ONE, GL_ZERO, TEXTURELAYERTYPE_SKY, r_texture_white, &identitymatrix, fogcolor[0], fogcolor[1], fogcolor[2], 1);
-		}
-		else
+		else if (!(t->currentmaterialflags & MATERIALFLAG_SKY))
 		{
 			int blendfunc1, blendfunc2, depthmask;
 			if (t->currentmaterialflags & MATERIALFLAG_ADD)
@@ -2336,34 +2437,61 @@ void RSurf_SetVertexPointer(const entity_render_t *ent, const texture_t *texture
 	R_Mesh_VertexPointer(rsurface_vertex3f);
 }
 
+static void RSurf_Draw(const msurface_t *surface)
+{
+	GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
+	R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
+	GL_LockArrays(0, 0);
+}
+
 static void RSurf_DrawLightmap(const entity_render_t *ent, const texture_t *texture, const msurface_t *surface, const vec3_t modelorg, float r, float g, float b, float a, int lightmode, qboolean applycolor, qboolean applyfog)
 {
 	int i;
 	float f;
 	float *v, *c, *c2;
-	RSurf_SetVertexPointer(ent, texture, surface, modelorg, lightmode == 2, false);
+	RSurf_SetVertexPointer(ent, texture, surface, modelorg, lightmode >= 2, false);
 	if (lightmode >= 2)
 	{
 		// model lighting
-		vec4_t ambientcolor4f;
+		vec4_t ambientcolor;
 		vec3_t diffusecolor;
-		vec3_t diffusenormal;
-		if (R_LightModel(ambientcolor4f, diffusecolor, diffusenormal, ent, r*0.5f, g*0.5f, b*0.5f, a, false))
+		vec3_t lightdir;
+		VectorCopy(ent->modellight_lightdir, lightdir);
+		ambientcolor[0] = ent->modellight_ambient[0] * r * 0.5f;
+		ambientcolor[1] = ent->modellight_ambient[1] * g * 0.5f;
+		ambientcolor[2] = ent->modellight_ambient[2] * b * 0.5f;
+		diffusecolor[0] = ent->modellight_diffuse[0] * r * 0.5f;
+		diffusecolor[1] = ent->modellight_diffuse[1] * g * 0.5f;
+		diffusecolor[2] = ent->modellight_diffuse[2] * b * 0.5f;
+		if (VectorLength2(diffusecolor) > 0)
 		{
-			rsurface_lightmapcolor4f = varray_color4f;
-			R_LightModel_CalcVertexColors(ambientcolor4f, diffusecolor, diffusenormal, surface->groupmesh->num_vertices, rsurface_vertex3f + 3 * surface->num_firstvertex, rsurface_normal3f + 3 * surface->num_firstvertex, rsurface_lightmapcolor4f + 4 * surface->num_firstvertex);
+			int numverts = surface->num_vertices;
+			v = rsurface_vertex3f + 3 * surface->num_firstvertex;
+			c2 = rsurface_normal3f + 3 * surface->num_firstvertex;
+			c = varray_color4f + 4 * surface->num_firstvertex;
+			// q3-style directional shading
+			for (i = 0;i < numverts;i++, v += 3, c2 += 3, c += 4)
+			{
+				if ((f = DotProduct(c2, lightdir)) > 0)
+				{
+					VectorMA(ambientcolor, f, diffusecolor, c);
+					c[3] = a;
+				}
+				else
+					VectorCopy4(ambientcolor, c);
+			}
 			r = 1;
 			g = 1;
 			b = 1;
 			a = 1;
 			applycolor = false;
+			rsurface_lightmapcolor4f = varray_color4f;
 		}
 		else
 		{
-			r = ambientcolor4f[0];
-			g = ambientcolor4f[1];
-			b = ambientcolor4f[2];
-			a = ambientcolor4f[3];
+			r = ambientcolor[0];
+			g = ambientcolor[1];
+			b = ambientcolor[2];
 			rsurface_lightmapcolor4f = NULL;
 		}
 	}
@@ -2447,16 +2575,7 @@ static void RSurf_DrawLightmap(const entity_render_t *ent, const texture_t *text
 	}
 	R_Mesh_ColorPointer(rsurface_lightmapcolor4f);
 	GL_Color(r, g, b, a);
-	GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
-	R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
-	GL_LockArrays(0, 0);
-}
-
-static void RSurf_Draw(const msurface_t *surface)
-{
-	GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
-	R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
-	GL_LockArrays(0, 0);
+	RSurf_Draw(surface);
 }
 
 static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *texture, int texturenumsurfaces, const msurface_t **texturesurfacelist, const vec3_t modelorg)
@@ -2469,13 +2588,129 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 	rmeshstate_t m;
 	if (texture->currentmaterialflags & MATERIALFLAG_NODRAW)
 		return;
+	r_shadow_rtlight = NULL;
 	renderstats.entities_surfaces += texturenumsurfaces;
 	// FIXME: identify models using a better check than ent->model->brush.shadowmesh
 	lightmode = ((ent->effects & EF_FULLBRIGHT) || ent->model->brush.shadowmesh) ? 0 : 2;
 	GL_DepthTest(!(texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
 	if ((texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (ent->flags & RENDER_NOCULLFACE))
 		qglDisable(GL_CULL_FACE);
-	if (texture->currentnumlayers)
+	if (texture->currentmaterialflags & MATERIALFLAG_SKY)
+	{
+		// transparent sky would be ridiculous
+		if (!(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+		{
+			GL_DepthMask(true);
+			if (skyrendernow)
+			{
+				skyrendernow = false;
+				if (skyrendermasked)
+				{
+					R_Sky();
+					// restore entity matrix and GL_Color
+					R_Mesh_Matrix(&ent->matrix);
+					GL_Color(1,1,1,1);
+				}
+			}
+			// LordHavoc: HalfLife maps have freaky skypolys...
+			//if (!ent->model->brush.ishlbsp)
+			{
+				if (skyrendermasked)
+				{
+					// depth-only (masking)
+					GL_ColorMask(0,0,0,0);
+					// just to make sure that braindead drivers don't draw anything
+					// despite that colormask...
+					GL_BlendFunc(GL_ZERO, GL_ONE);
+				}
+				else
+				{
+					// fog sky
+					GL_BlendFunc(GL_ONE, GL_ZERO);
+				}
+				GL_Color(fogcolor[0], fogcolor[1], fogcolor[2], 1);
+				memset(&m, 0, sizeof(m));
+				R_Mesh_State(&m);
+				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+				{
+					surface = texturesurfacelist[texturesurfaceindex];
+					RSurf_SetVertexPointer(ent, texture, surface, modelorg, false, false);
+					RSurf_Draw(surface);
+				}
+				if (skyrendermasked)
+					GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
+			}
+		}
+	}
+	else if (r_glsl.integer && gl_support_fragment_shader)
+	{
+		if (texture->currentmaterialflags & MATERIALFLAG_ADD)
+		{
+			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+			GL_DepthMask(false);
+		}
+		else if (texture->currentmaterialflags & MATERIALFLAG_ALPHA)
+		{
+			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			GL_DepthMask(false);
+		}
+		else
+		{
+			GL_BlendFunc(GL_ONE, GL_ZERO);
+			GL_DepthMask(true);
+		}
+
+		memset(&m, 0, sizeof(m));
+		R_Mesh_State(&m);
+		GL_Color(ent->colormod[0], ent->colormod[1], ent->colormod[2], texture->currentalpha);
+		R_SetupSurfaceShader(ent, texture, modelorg, vec3_origin, lightmode == 2);
+		if (!r_glsl_permutation)
+			return;
+		if (lightmode == 2)
+		{
+			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+			{
+				surface = texturesurfacelist[texturesurfaceindex];
+				RSurf_SetVertexPointer(ent, texture, surface, modelorg, false, true);
+				R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
+				R_Mesh_TexCoordPointer(1, 3, rsurface_svector3f);
+				R_Mesh_TexCoordPointer(2, 3, rsurface_tvector3f);
+				R_Mesh_TexCoordPointer(3, 3, rsurface_normal3f);
+				RSurf_Draw(surface);
+			}
+		}
+		else
+		{
+			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+			{
+				surface = texturesurfacelist[texturesurfaceindex];
+				RSurf_SetVertexPointer(ent, texture, surface, modelorg, false, true);
+				R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
+				R_Mesh_TexCoordPointer(1, 3, rsurface_svector3f);
+				R_Mesh_TexCoordPointer(2, 3, rsurface_tvector3f);
+				R_Mesh_TexCoordPointer(3, 3, rsurface_normal3f);
+				R_Mesh_TexCoordPointer(4, 2, surface->groupmesh->data_texcoordlightmap2f);
+				if (surface->lightmaptexture)
+				{
+					R_Mesh_TexBind(7, R_GetTexture(surface->lightmaptexture));
+					if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
+						R_Mesh_TexBind(8, R_GetTexture(r_texture_blanknormalmap));
+						//R_Mesh_TexBind(8, R_GetTexture(surface->deluxemaptexture));
+					R_Mesh_ColorPointer(NULL);
+				}
+				else
+				{
+					R_Mesh_TexBind(7, R_GetTexture(r_texture_white));
+					if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
+						R_Mesh_TexBind(8, R_GetTexture(r_texture_blanknormalmap));
+					R_Mesh_ColorPointer(surface->groupmesh->data_lightmapcolor4f);
+				}
+				RSurf_Draw(surface);
+			}
+		}
+		qglUseProgramObjectARB(0);
+	}
+	else if (texture->currentnumlayers)
 	{
 		int layerindex;
 		texturelayer_t *layer;
@@ -2506,46 +2741,6 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			applyfog = (layer->flags & TEXTURELAYERFLAG_FOGDARKEN) != 0;
 			switch (layer->type)
 			{
-			case TEXTURELAYERTYPE_SKY:
-				if (skyrendernow)
-				{
-					skyrendernow = false;
-					if (skyrendermasked)
-					{
-						R_Sky();
-						// restore entity matrix and GL_Color
-						R_Mesh_Matrix(&ent->matrix);
-						GL_Color(layercolor[0], layercolor[1], layercolor[2], layercolor[3]);
-					}
-				}
-				// LordHavoc: HalfLife maps have freaky skypolys...
-				//if (!ent->model->brush.ishlbsp)
-				{
-					if (skyrendermasked)
-					{
-						// depth-only (masking)
-						GL_ColorMask(0,0,0,0);
-						// just to make sure that braindead drivers don't draw anything
-						// despite that colormask...
-						GL_BlendFunc(GL_ZERO, GL_ONE);
-					}
-					else
-					{
-						// fog sky
-						GL_BlendFunc(GL_ONE, GL_ZERO);
-					}
-					memset(&m, 0, sizeof(m));
-					R_Mesh_State(&m);
-					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-					{
-						surface = texturesurfacelist[texturesurfaceindex];
-						RSurf_SetVertexPointer(ent, texture, surface, modelorg, false, false);
-						RSurf_Draw(surface);
-					}
-					if (skyrendermasked)
-						GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
-				}
-				break;
 			case TEXTURELAYERTYPE_LITTEXTURE_COMBINE:
 				memset(&m, 0, sizeof(m));
 				m.tex[1] = R_GetTexture(layer->texture);
@@ -2915,5 +3110,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 		R_QueueTextureSurfaceList(ent, texture, numsurfacelist, surfacelist, modelorg);
 	if (!r_showtrispass)
 		renderstats.entities_triangles += counttriangles;
+	if (gl_support_fragment_shader)
+		qglUseProgramObjectARB(0);
 }
 

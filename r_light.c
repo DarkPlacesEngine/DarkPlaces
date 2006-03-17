@@ -23,7 +23,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cl_collision.h"
 #include "r_shadow.h"
 
-cvar_t r_modellights = {CVAR_SAVE, "r_modellights", "4", "how many lights from a .lights file (produced by hlight) are worthy of directional shading on a model (others are applied to the whole model as ambient lighting)"};
 cvar_t r_coronas = {CVAR_SAVE, "r_coronas", "1", "brightness of corona flare effects around certain lights, 0 disables corona effects"};
 cvar_t gl_flashblend = {CVAR_SAVE, "gl_flashblend", "0", "render bright coronas for dynamic lights instead of actual lighting, fast but ugly"};
 
@@ -68,7 +67,6 @@ void r_light_newmap(void)
 
 void R_Light_Init(void)
 {
-	Cvar_RegisterVariable(&r_modellights);
 	Cvar_RegisterVariable(&r_coronas);
 	Cvar_RegisterVariable(&gl_flashblend);
 	R_RegisterModule("R_Light", r_light_start, r_light_shutdown, r_light_newmap);
@@ -131,239 +129,18 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 	else
 		VectorSet(ambientcolor, 1, 1, 1);
 
-	// FIXME: this .lights related stuff needs to be ported into the Mod_Q1BSP code
-	if (r_refdef.worldmodel->brushq1.numlights)
-	{
-		int i;
-		vec3_t v;
-		float f;
-		mlight_t *sl;
-		for (i = 0;i < r_refdef.worldmodel->brushq1.numlights;i++)
-		{
-			sl = r_refdef.worldmodel->brushq1.lights + i;
-			if (r_refdef.lightstylevalue[sl->style] > 0)
-			{
-				VectorSubtract (p, sl->origin, v);
-				f = ((1.0f / (DotProduct(v, v) * sl->falloff + sl->distbias)) - sl->subtract);
-				if (f > 0 && CL_TraceBox(p, vec3_origin, vec3_origin, sl->origin, false, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
-				{
-					f *= r_refdef.lightstylevalue[sl->style] * (1.0f / 65536.0f);
-					if (f > 0)
-						VectorMA(ambientcolor, f, sl->light, ambientcolor);
-				}
-			}
-		}
-	}
-
 	if (dynamic)
 	{
 		int i;
 		float f, v[3];
 		dlight_t *light;
-		// FIXME: this really should handle dlights as diffusecolor/diffusenormal somehow
-		// FIXME: this should be updated to match rtlight falloff!
 		for (i = 0;i < r_refdef.numlights;i++)
 		{
 			light = r_refdef.lights[i];
-			VectorSubtract(p, light->origin, v);
-			f = DotProduct(v, v);
-			if (f < light->rtlight.lightmap_cullradius2 && CL_TraceBox(p, vec3_origin, vec3_origin, light->origin, false, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
-			{
-				f = (1.0f / (f + LIGHTOFFSET)) - light->rtlight.lightmap_subtract;
-				if (f > 0)
-					VectorMA(ambientcolor, f, light->rtlight.lightmap_light, ambientcolor);
-			}
+			Matrix4x4_Transform(&light->rtlight.matrix_worldtolight, p, v);
+			f = 1 - VectorLength2(v);
+			if (f > 0 && CL_TraceBox(p, vec3_origin, vec3_origin, light->origin, false, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
+				VectorMA(ambientcolor, f, light->rtlight.currentcolor, ambientcolor);
 		}
 	}
 }
-
-typedef struct nearlight_s
-{
-	vec3_t origin;
-	//vec_t cullradius2;
-	vec3_t light;
-	// how much this light would contribute to ambient if replaced
-	vec3_t ambientlight;
-	vec_t subtract;
-	vec_t falloff;
-	vec_t offset;
-	// used for choosing only the brightest lights
-	vec_t intensity;
-}
-nearlight_t;
-
-static int nearlights;
-static nearlight_t nearlight[MAX_DLIGHTS];
-
-int R_LightModel(float *ambient4f, float *diffusecolor, float *diffusenormal, const entity_render_t *ent, float colorr, float colorg, float colorb, float colora, int worldcoords)
-{
-	int i, j, maxnearlights;
-	float v[3], f, mscale, stylescale, intensity, ambientcolor[3], tempdiffusenormal[3];
-	nearlight_t *nl;
-	mlight_t *sl;
-
-	nearlights = 0;
-	maxnearlights = r_modellights.integer;
-	ambient4f[0] = ambient4f[1] = ambient4f[2] = r_ambient.value * (2.0f / 128.0f);
-	VectorClear(diffusecolor);
-	VectorClear(diffusenormal);
-	if (!(ent->flags & RENDER_LIGHT))
-	{
-		// highly rare
-		VectorSet(ambient4f, 1, 1, 1);
-		maxnearlights = 0;
-	}
-	else if (r_lightmapintensity <= 0)
-		maxnearlights = 0;
-	else
-	{
-		if (r_refdef.worldmodel && r_refdef.worldmodel->brush.LightPoint)
-		{
-			r_refdef.worldmodel->brush.LightPoint(r_refdef.worldmodel, ent->origin, ambient4f, diffusecolor, tempdiffusenormal);
-			Matrix4x4_Transform3x3(&ent->inversematrix, tempdiffusenormal, diffusenormal);
-			VectorNormalize(diffusenormal);
-		}
-		else
-			VectorSet(ambient4f, 1, 1, 1);
-	}
-
-	// scale of the model's coordinate space, to alter light attenuation to match
-	// make the mscale squared so it can scale the squared distance results
-	mscale = ent->scale * ent->scale;
-	// FIXME: no support for .lights on non-Q1BSP?
-	nl = &nearlight[0];
-	for (i = 0;i < ent->numentlights;i++)
-	{
-		sl = r_refdef.worldmodel->brushq1.lights + ent->entlights[i];
-		stylescale = r_refdef.lightstylevalue[sl->style] * (1.0f / 65536.0f);
-		VectorSubtract (ent->origin, sl->origin, v);
-		f = ((1.0f / (DotProduct(v, v) * sl->falloff + sl->distbias)) - sl->subtract) * stylescale;
-		VectorScale(sl->light, f, ambientcolor);
-		intensity = DotProduct(ambientcolor, ambientcolor);
-		if (f < 0)
-			intensity *= -1.0f;
-		if (nearlights < maxnearlights)
-			j = nearlights++;
-		else
-		{
-			for (j = 0;j < maxnearlights;j++)
-			{
-				if (nearlight[j].intensity < intensity)
-				{
-					if (nearlight[j].intensity > 0)
-						VectorAdd(ambient4f, nearlight[j].ambientlight, ambient4f);
-					break;
-				}
-			}
-		}
-		if (j >= maxnearlights)
-		{
-			// this light is less significant than all others,
-			// add it to ambient
-			if (intensity > 0)
-				VectorAdd(ambient4f, ambientcolor, ambient4f);
-		}
-		else
-		{
-			nl = nearlight + j;
-			nl->intensity = intensity;
-			// transform the light into the model's coordinate system
-			if (worldcoords)
-				VectorCopy(sl->origin, nl->origin);
-			else
-				Matrix4x4_Transform(&ent->inversematrix, sl->origin, nl->origin);
-			// integrate mscale into falloff, for maximum speed
-			nl->falloff = sl->falloff * mscale;
-			VectorCopy(ambientcolor, nl->ambientlight);
-			nl->light[0] = sl->light[0] * stylescale * colorr * 4.0f;
-			nl->light[1] = sl->light[1] * stylescale * colorg * 4.0f;
-			nl->light[2] = sl->light[2] * stylescale * colorb * 4.0f;
-			nl->subtract = sl->subtract;
-			nl->offset = sl->distbias;
-		}
-	}
-	ambient4f[0] *= colorr;
-	ambient4f[1] *= colorg;
-	ambient4f[2] *= colorb;
-	ambient4f[3] = colora;
-	diffusecolor[0] *= colorr;
-	diffusecolor[1] *= colorg;
-	diffusecolor[2] *= colorb;
-	return nearlights != 0 || DotProduct(diffusecolor, diffusecolor) > 0;
-}
-
-void R_LightModel_CalcVertexColors(const float *ambientcolor4f, const float *diffusecolor, const float *diffusenormal, int numverts, const float *vertex3f, const float *normal3f, float *color4f)
-{
-	int i, j, usediffuse;
-	float color[4], v[3], dot, dist2, f, dnormal[3];
-	nearlight_t *nl;
-	usediffuse = DotProduct(diffusecolor, diffusecolor) > 0;
-	// negate the diffuse normal to avoid the need to negate the
-	// dotproduct on each vertex
-	VectorNegate(diffusenormal, dnormal);
-	if (usediffuse)
-		VectorNormalize(dnormal);
-	// directional shading code here
-	for (i = 0;i < numverts;i++, vertex3f += 3, normal3f += 3, color4f += 4)
-	{
-		VectorCopy4(ambientcolor4f, color);
-
-		// silly directional diffuse shading
-		if (usediffuse)
-		{
-			// we have to negate this result because it is the incoming light
-			// direction, not simply the normal to dotproduct with.
-			dot = DotProduct(normal3f, dnormal);
-			if (dot < 0)
-				VectorMA(color, -dot, diffusecolor, color);
-		}
-
-		// pretty good lighting
-		for (j = 0, nl = &nearlight[0];j < nearlights;j++, nl++)
-		{
-			VectorSubtract(nl->origin, vertex3f, v);
-			// first eliminate negative lighting (back side)
-			dot = DotProduct(normal3f, v);
-			if (dot > 0)
-			{
-				// we'll need this again later to normalize the dotproduct
-				dist2 = DotProduct(v,v);
-				// do the distance attenuation math
-				f = (1.0f / (dist2 * nl->falloff + nl->offset)) - nl->subtract;
-				if (f > 0)
-				{
-					// we must divide dot by sqrt(dist2) to compensate for
-					// the fact we did not normalize v before doing the
-					// dotproduct, the result is in the range 0 to 1 (we
-					// eliminated negative numbers already)
-					f *= dot / sqrt(dist2);
-					// blend in the lighting
-					VectorMA(color, f, nl->light, color);
-				}
-			}
-		}
-		VectorCopy4(color, color4f);
-	}
-}
-
-void R_UpdateEntLights(entity_render_t *ent)
-{
-	int i;
-	const mlight_t *sl;
-	vec3_t v;
-	if (r_lightmapintensity <= 0)
-		return;
-	VectorSubtract(ent->origin, ent->entlightsorigin, v);
-	if (ent->entlightsframe != (r_framecount - 1) || (realtime > ent->entlightstime && DotProduct(v,v) >= 1.0f))
-	{
-		ent->entlightstime = realtime + 0.1;
-		VectorCopy(ent->origin, ent->entlightsorigin);
-		ent->numentlights = 0;
-		if (r_refdef.worldmodel)
-			for (i = 0, sl = r_refdef.worldmodel->brushq1.lights;i < r_refdef.worldmodel->brushq1.numlights && ent->numentlights < MAXENTLIGHTS;i++, sl++)
-				if (CL_TraceBox(ent->origin, vec3_origin, vec3_origin, sl->origin, false, NULL, SUPERCONTENTS_SOLID, false).fraction == 1)
-					ent->entlights[ent->numentlights++] = i;
-	}
-	ent->entlightsframe = r_framecount;
-}
-

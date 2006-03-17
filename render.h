@@ -265,16 +265,18 @@ void R_UpdateAllTextureInfo(entity_render_t *ent);
 void R_QueueTextureSurfaceList(entity_render_t *ent, struct texture_s *texture, int texturenumsurfaces, const struct msurface_s **texturesurfacelist, const vec3_t modelorg);
 void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces);
 
-#define SHADERPERMUTATION_DELUXEMAPPING (1<<0) // (lightmap) use directional pixel shading
-#define SHADERPERMUTATION_LIGHTSOURCE (1<<1) // (lightsource) indicates this is lightsource rendering mode
-#define SHADERPERMUTATION_FOG (1<<2) // tint the color by fog color or black if using additive blend mode
-#define SHADERPERMUTATION_COLORMAPPING (1<<3) // indicates this is a colormapped skin
-#define SHADERPERMUTATION_SPECULAR (1<<4) // (lightsource or deluxemapping) render specular effects
-#define SHADERPERMUTATION_CUBEFILTER (1<<5) // (lightsource) use cubemap light filter
-#define SHADERPERMUTATION_OFFSETMAPPING (1<<6) // adjust texcoords to roughly simulate a displacement mapped surface
-#define SHADERPERMUTATION_SURFACENORMALIZE (1<<7) // (lightsource or deluxemapping) improved bumpmapping
-#define SHADERPERMUTATION_GEFORCEFX (1<<8) // use half vector types if available (NVIDIA specific)
-#define SHADERPERMUTATION_COUNT (1<<9) // how many permutations are possible
+#define SHADERPERMUTATION_MODE_LIGHTSOURCE (1<<0) // (lightsource) use directional pixel shading from light source (rtlight)
+#define SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP (1<<1) // (lightmap) use directional pixel shading from texture containing light directions (deluxemap)
+#define SHADERPERMUTATION_MODE_LIGHTDIRECTION (1<<2) // (lightmap) use directional pixel shading from fixed light direction (q3bsp)
+#define SHADERPERMUTATION_GLOW (1<<3) // (lightmap) blend in an additive glow texture
+#define SHADERPERMUTATION_FOG (1<<4) // tint the color by fog color or black if using additive blend mode
+#define SHADERPERMUTATION_COLORMAPPING (1<<5) // indicates this is a colormapped skin
+#define SHADERPERMUTATION_SPECULAR (1<<6) // (lightsource or deluxemapping) render specular effects
+#define SHADERPERMUTATION_CUBEFILTER (1<<7) // (lightsource) use cubemap light filter
+#define SHADERPERMUTATION_OFFSETMAPPING (1<<8) // adjust texcoords to roughly simulate a displacement mapped surface
+#define SHADERPERMUTATION_SURFACENORMALIZE (1<<9) // (lightsource or deluxemapping) improved bumpmapping
+#define SHADERPERMUTATION_GEFORCEFX (1<<10) // use half vector types if available (NVIDIA specific)
+#define SHADERPERMUTATION_COUNT (1<<11) // how many permutations are possible
 
 typedef struct r_glsl_permutation_s
 {
@@ -291,6 +293,7 @@ typedef struct r_glsl_permutation_s
 	int loc_Texture_Shirt;
 	int loc_Texture_Lightmap;
 	int loc_Texture_Deluxemap;
+	int loc_Texture_Glow;
 	int loc_FogColor;
 	int loc_LightPosition;
 	int loc_EyePosition;
@@ -304,6 +307,10 @@ typedef struct r_glsl_permutation_s
 	int loc_SpecularPower;
 	int loc_OffsetMapping_Scale;
 	int loc_OffsetMapping_Bias;
+	int loc_AmbientColor;
+	int loc_DiffuseColor;
+	int loc_SpecularColor;
+	int loc_LightDir;
 }
 r_glsl_permutation_t;
 
@@ -313,7 +320,7 @@ extern r_glsl_permutation_t r_glsl_permutations[SHADERPERMUTATION_COUNT];
 r_glsl_permutation_t *r_glsl_permutation;
 
 void R_GLSL_CompilePermutation(int permutation);
-void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, const vec3_t lightcolorbase, const vec3_t lightcolorpants, const vec3_t lightcolorshirt, rtexture_t *basetexture, rtexture_t *pantstexture, rtexture_t *shirttexture, rtexture_t *normalmaptexture, rtexture_t *glosstexture, float specularscale, qboolean dopants, qboolean doshirt);
+void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, const vec3_t modelorg, const vec3_t lightcolorbase, qboolean modellighting);
 
 #endif
 
