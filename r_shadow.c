@@ -1293,7 +1293,7 @@ static void R_Shadow_RenderSurfacesLighting_Light_GLSL(const entity_render_t *en
 {
 	// ARB2 GLSL shader path (GFFX5200, Radeon 9500)
 	int surfacelistindex;
-	R_SetupSurfaceShader(ent, texture, lightcolorbase, lightcolorpants, lightcolorshirt, basetexture, pantstexture, shirttexture, normalmaptexture, glosstexture, specularscale, dopants, doshirt);
+	R_SetupSurfaceShader(ent, texture, r_shadow_entityeyeorigin, lightcolorbase, false);
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
 		const msurface_t *surface = surfacelist[surfacelistindex];
@@ -2172,47 +2172,20 @@ void R_Shadow_RenderSurfacesLighting(const entity_render_t *ent, const texture_t
 {
 	// FIXME: support MATERIALFLAG_NODEPTHTEST
 	vec3_t lightcolorbase, lightcolorpants, lightcolorshirt;
-	rtexture_t *basetexture;
-	rtexture_t *pantstexture;
-	rtexture_t *shirttexture;
-	rtexture_t *glosstexture;
-	float specularscale;
-	qboolean dopants, doshirt;
-	glosstexture = r_texture_black;
-	specularscale = 0;
-	if (r_shadow_gloss.integer > 0)
-	{
-		if (texture->skin.gloss)
-		{
-			if (r_shadow_glossintensity.value > 0 && r_shadow_rtlight->specularscale > 0)
-			{
-				glosstexture = texture->skin.gloss;
-				specularscale = r_shadow_rtlight->specularscale * r_shadow_glossintensity.value;
-			}
-		}
-		else
-		{
-			if (r_shadow_gloss.integer >= 2 && r_shadow_gloss2intensity.value > 0 && r_shadow_glossintensity.value > 0 && r_shadow_rtlight->specularscale > 0)
-			{
-				glosstexture = r_texture_white;
-				specularscale = r_shadow_rtlight->specularscale * r_shadow_gloss2intensity.value;
-			}
-		}
-	}
 	// calculate colors to render this texture with
 	lightcolorbase[0] = r_shadow_rtlight->currentcolor[0] * ent->colormod[0] * texture->currentalpha;
 	lightcolorbase[1] = r_shadow_rtlight->currentcolor[1] * ent->colormod[1] * texture->currentalpha;
 	lightcolorbase[2] = r_shadow_rtlight->currentcolor[2] * ent->colormod[2] * texture->currentalpha;
-	if ((r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorbase) + specularscale * VectorLength2(lightcolorbase) < (1.0f / 1048576.0f))
+	if ((r_shadow_rtlight->ambientscale + r_shadow_rtlight->diffusescale) * VectorLength2(lightcolorbase) + (r_shadow_rtlight->specularscale * texture->specularscale) * VectorLength2(lightcolorbase) < (1.0f / 1048576.0f))
 		return;
 	if ((texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (ent->flags & RENDER_NOCULLFACE))
 		qglDisable(GL_CULL_FACE);
 	else
 		qglEnable(GL_CULL_FACE);
-	dopants = texture->skin.pants != NULL && VectorLength2(ent->colormap_pantscolor) >= (1.0f / 1048576.0f);
-	doshirt = texture->skin.shirt != NULL && VectorLength2(ent->colormap_shirtcolor) >= (1.0f / 1048576.0f);
-	if (dopants + doshirt)
+	if (texture->colormapping)
 	{
+		qboolean dopants = texture->skin.pants != NULL && VectorLength2(ent->colormap_pantscolor) >= (1.0f / 1048576.0f);
+		qboolean doshirt = texture->skin.shirt != NULL && VectorLength2(ent->colormap_shirtcolor) >= (1.0f / 1048576.0f);
 		if (dopants)
 		{
 			lightcolorpants[0] = lightcolorbase[0] * ent->colormap_pantscolor[0];
@@ -2220,35 +2193,28 @@ void R_Shadow_RenderSurfacesLighting(const entity_render_t *ent, const texture_t
 			lightcolorpants[2] = lightcolorbase[2] * ent->colormap_pantscolor[2];
 		}
 		else
-		{
-			pantstexture = r_texture_black;
 			VectorClear(lightcolorpants);
-		}
 		if (doshirt)
 		{
-			shirttexture = texture->skin.shirt;
 			lightcolorshirt[0] = lightcolorbase[0] * ent->colormap_shirtcolor[0];
 			lightcolorshirt[1] = lightcolorbase[1] * ent->colormap_shirtcolor[1];
 			lightcolorshirt[2] = lightcolorbase[2] * ent->colormap_shirtcolor[2];
 		}
 		else
-		{
-			shirttexture = r_texture_black;
 			VectorClear(lightcolorshirt);
-		}
 		switch (r_shadow_rendermode)
 		{
 		case R_SHADOW_RENDERMODE_VISIBLELIGHTING:
-			R_Shadow_RenderSurfacesLighting_VisibleLighting(ent, texture, numsurfaces, surfacelist, lightcolorbase, lightcolorpants, lightcolorshirt, texture->skin.base, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, glosstexture, specularscale, dopants, doshirt);
+			R_Shadow_RenderSurfacesLighting_VisibleLighting(ent, texture, numsurfaces, surfacelist, lightcolorbase, lightcolorpants, lightcolorshirt, texture->basetexture, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, texture->glosstexture, r_shadow_rtlight->specularscale * texture->specularscale, dopants, doshirt);
 			break;
 		case R_SHADOW_RENDERMODE_LIGHT_GLSL:
-			R_Shadow_RenderSurfacesLighting_Light_GLSL(ent, texture, numsurfaces, surfacelist, lightcolorbase, lightcolorpants, lightcolorshirt, texture->skin.base, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, glosstexture, specularscale, dopants, doshirt);
+			R_Shadow_RenderSurfacesLighting_Light_GLSL(ent, texture, numsurfaces, surfacelist, lightcolorbase, lightcolorpants, lightcolorshirt, texture->basetexture, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, texture->glosstexture, r_shadow_rtlight->specularscale * texture->specularscale, dopants, doshirt);
 			break;
 		case R_SHADOW_RENDERMODE_LIGHT_DOT3:
-			R_Shadow_RenderSurfacesLighting_Light_Dot3(ent, texture, numsurfaces, surfacelist, lightcolorbase, lightcolorpants, lightcolorshirt, texture->skin.base, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, glosstexture, specularscale, dopants, doshirt);
+			R_Shadow_RenderSurfacesLighting_Light_Dot3(ent, texture, numsurfaces, surfacelist, lightcolorbase, lightcolorpants, lightcolorshirt, texture->basetexture, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, texture->glosstexture, r_shadow_rtlight->specularscale * texture->specularscale, dopants, doshirt);
 			break;
 		case R_SHADOW_RENDERMODE_LIGHT_VERTEX:
-			R_Shadow_RenderSurfacesLighting_Light_Vertex(ent, texture, numsurfaces, surfacelist, lightcolorbase, lightcolorpants, lightcolorshirt, texture->skin.base, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, glosstexture, specularscale, dopants, doshirt);
+			R_Shadow_RenderSurfacesLighting_Light_Vertex(ent, texture, numsurfaces, surfacelist, lightcolorbase, lightcolorpants, lightcolorshirt, texture->basetexture, texture->skin.pants, texture->skin.shirt, texture->skin.nmap, texture->glosstexture, r_shadow_rtlight->specularscale * texture->specularscale, dopants, doshirt);
 			break;
 		default:
 			Con_Printf("R_Shadow_RenderSurfacesLighting: unknown r_shadow_rendermode %i\n", r_shadow_rendermode);
@@ -2257,20 +2223,19 @@ void R_Shadow_RenderSurfacesLighting(const entity_render_t *ent, const texture_t
 	}
 	else
 	{
-		basetexture = texture->skin.merged ? texture->skin.merged : texture->skin.base;
 		switch (r_shadow_rendermode)
 		{
 		case R_SHADOW_RENDERMODE_VISIBLELIGHTING:
-			R_Shadow_RenderSurfacesLighting_VisibleLighting(ent, texture, numsurfaces, surfacelist, lightcolorbase, vec3_origin, vec3_origin, basetexture, r_texture_black, r_texture_black, texture->skin.nmap, glosstexture, specularscale, false, false);
+			R_Shadow_RenderSurfacesLighting_VisibleLighting(ent, texture, numsurfaces, surfacelist, lightcolorbase, vec3_origin, vec3_origin, texture->basetexture, r_texture_black, r_texture_black, texture->skin.nmap, texture->glosstexture, r_shadow_rtlight->specularscale * texture->specularscale, false, false);
 			break;
 		case R_SHADOW_RENDERMODE_LIGHT_GLSL:
-			R_Shadow_RenderSurfacesLighting_Light_GLSL(ent, texture, numsurfaces, surfacelist, lightcolorbase, vec3_origin, vec3_origin, basetexture, r_texture_black, r_texture_black, texture->skin.nmap, glosstexture, specularscale, false, false);
+			R_Shadow_RenderSurfacesLighting_Light_GLSL(ent, texture, numsurfaces, surfacelist, lightcolorbase, vec3_origin, vec3_origin, texture->basetexture, r_texture_black, r_texture_black, texture->skin.nmap, texture->glosstexture, r_shadow_rtlight->specularscale * texture->specularscale, false, false);
 			break;
 		case R_SHADOW_RENDERMODE_LIGHT_DOT3:
-			R_Shadow_RenderSurfacesLighting_Light_Dot3(ent, texture, numsurfaces, surfacelist, lightcolorbase, vec3_origin, vec3_origin, basetexture, r_texture_black, r_texture_black, texture->skin.nmap, glosstexture, specularscale, false, false);
+			R_Shadow_RenderSurfacesLighting_Light_Dot3(ent, texture, numsurfaces, surfacelist, lightcolorbase, vec3_origin, vec3_origin, texture->basetexture, r_texture_black, r_texture_black, texture->skin.nmap, texture->glosstexture, r_shadow_rtlight->specularscale * texture->specularscale, false, false);
 			break;
 		case R_SHADOW_RENDERMODE_LIGHT_VERTEX:
-			R_Shadow_RenderSurfacesLighting_Light_Vertex(ent, texture, numsurfaces, surfacelist, lightcolorbase, vec3_origin, vec3_origin, basetexture, r_texture_black, r_texture_black, texture->skin.nmap, glosstexture, specularscale, false, false);
+			R_Shadow_RenderSurfacesLighting_Light_Vertex(ent, texture, numsurfaces, surfacelist, lightcolorbase, vec3_origin, vec3_origin, texture->basetexture, r_texture_black, r_texture_black, texture->skin.nmap, texture->glosstexture, r_shadow_rtlight->specularscale * texture->specularscale, false, false);
 			break;
 		default:
 			Con_Printf("R_Shadow_RenderSurfacesLighting: unknown r_shadow_rendermode %i\n", r_shadow_rendermode);
@@ -2319,11 +2284,6 @@ void R_RTLight_Update(dlight_t *light, int isstatic)
 	for (k = 0;k < 3;k++)
 		for (j = 0;j < 4;j++)
 			rtlight->matrix_worldtolight.m[k][j] *= scale;
-
-	rtlight->lightmap_cullradius = bound(0, rtlight->radius, 2048.0f);
-	rtlight->lightmap_cullradius2 = rtlight->lightmap_cullradius * rtlight->lightmap_cullradius;
-	VectorScale(rtlight->color, rtlight->radius * (rtlight->style >= 0 ? r_refdef.lightstylevalue[rtlight->style] : 128) * 0.125f, rtlight->lightmap_light);
-	rtlight->lightmap_subtract = 1.0f / rtlight->lightmap_cullradius2;
 }
 
 // compiles rtlight geometry

@@ -1052,6 +1052,7 @@ middle sample (the one which was requested)
 void Mod_Q1BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal)
 {
 	Mod_Q1BSP_LightPoint_RecursiveBSPNode(model, ambientcolor, diffusecolor, diffusenormal, model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode, p[0], p[1], p[2], p[2] - 65536);
+	VectorSet(diffusenormal, 0, 0, -1);
 }
 
 static void Mod_Q1BSP_DecompressVis(const unsigned char *in, const unsigned char *inend, unsigned char *out, unsigned char *outend)
@@ -1514,68 +1515,6 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 			*out++ = d;
 			*out++ = d;
 		}
-	}
-}
-
-static void Mod_Q1BSP_LoadLightList(void)
-{
-	int a, n, numlights;
-	char tempchar, *s, *t, *lightsstring, lightsfilename[1024];
-	mlight_t *e;
-
-	strlcpy (lightsfilename, loadmodel->name, sizeof (lightsfilename));
-	FS_StripExtension (lightsfilename, lightsfilename, sizeof(lightsfilename));
-	strlcat (lightsfilename, ".lights", sizeof (lightsfilename));
-	s = lightsstring = (char *) FS_LoadFile(lightsfilename, tempmempool, false, NULL);
-	if (s)
-	{
-		numlights = 0;
-		while (*s)
-		{
-			while (*s && *s != '\n' && *s != '\r')
-				s++;
-			if (!*s)
-			{
-				Mem_Free(lightsstring);
-				Con_Printf("lights file must end with a newline\n");
-				return;
-			}
-			s++;
-			numlights++;
-		}
-		loadmodel->brushq1.lights = (mlight_t *)Mem_Alloc(loadmodel->mempool, numlights * sizeof(mlight_t));
-		s = lightsstring;
-		n = 0;
-		while (*s && n < numlights)
-		{
-			t = s;
-			while (*s && *s != '\n' && *s != '\r')
-				s++;
-			if (!*s)
-			{
-				Con_Printf("misparsed lights file!\n");
-				break;
-			}
-			e = loadmodel->brushq1.lights + n;
-			tempchar = *s;
-			*s = 0;
-			a = sscanf(t, "%f %f %f %f %f %f %f %f %f %f %f %f %f %d", &e->origin[0], &e->origin[1], &e->origin[2], &e->falloff, &e->light[0], &e->light[1], &e->light[2], &e->subtract, &e->spotdir[0], &e->spotdir[1], &e->spotdir[2], &e->spotcone, &e->distbias, &e->style);
-			*s = tempchar;
-			if (a != 14)
-			{
-				Con_Printf("invalid lights file, found %d parameters on line %i, should be 14 parameters (origin[0] origin[1] origin[2] falloff light[0] light[1] light[2] subtract spotdir[0] spotdir[1] spotdir[2] spotcone distancebias style)\n", a, n + 1);
-				break;
-			}
-			if (*s == '\r')
-				s++;
-			if (*s == '\n')
-				s++;
-			n++;
-		}
-		if (*s)
-			Con_Printf("misparsed lights file!\n");
-		loadmodel->brushq1.numlights = numlights;
-		Mem_Free(lightsstring);
 	}
 }
 
@@ -3199,8 +3138,6 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	mod->numskins = 1;
 
 	mainmempool = mod->mempool;
-
-	Mod_Q1BSP_LoadLightList();
 
 	// make a single combined shadow mesh to allow optimized shadow volume creation
 	numshadowmeshtriangles = 0;

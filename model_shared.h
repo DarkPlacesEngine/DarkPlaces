@@ -144,7 +144,6 @@ shadowmesh_t;
 typedef enum texturelayertype_e
 {
 	TEXTURELAYERTYPE_INVALID,
-	TEXTURELAYERTYPE_SKY,
 	TEXTURELAYERTYPE_LITTEXTURE_COMBINE,
 	TEXTURELAYERTYPE_LITTEXTURE_MULTIPASS,
 	TEXTURELAYERTYPE_LITTEXTURE_VERTEX,
@@ -209,6 +208,12 @@ typedef struct texture_s
 	struct texture_s *currentframe;
 	// current texture transform matrix (used for water scrolling)
 	matrix4x4_t currenttexmatrix;
+
+	qboolean colormapping;
+	rtexture_t *basetexture;
+	rtexture_t *glosstexture;
+	float specularscale;
+	float specularpower;
 
 	int currentnumlayers;
 	texturelayer_t currentlayers[16];
@@ -417,9 +422,6 @@ typedef struct model_brushq1_s
 
 	int				num_lightdata;
 	unsigned char			*lightdata;
-
-	int				numlights;
-	mlight_t		*lights;
 
 	// lightmap update chains for light styles
 	int				light_styles;
