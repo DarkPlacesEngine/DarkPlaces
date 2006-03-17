@@ -887,7 +887,7 @@ void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, 
 		if (texture->skin.glow)
 			permutation |= SHADERPERMUTATION_GLOW;
 	}
-	else if (false)
+	else if (r_refdef.worldmodel && r_refdef.worldmodel->brushq3.deluxemapping)
 	{
 		permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP;
 		if (texture->skin.glow)
@@ -949,14 +949,28 @@ void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, 
 	}
 	else if (permutation & SHADERPERMUTATION_MODE_LIGHTDIRECTION)
 	{
-		if (r_glsl_permutation->loc_AmbientColor >= 0)
-			qglUniform3fARB(r_glsl_permutation->loc_AmbientColor, ent->modellight_ambient[0], ent->modellight_ambient[1], ent->modellight_ambient[2]);
-		if (r_glsl_permutation->loc_DiffuseColor >= 0)
-			qglUniform3fARB(r_glsl_permutation->loc_DiffuseColor, ent->modellight_diffuse[0], ent->modellight_diffuse[1], ent->modellight_diffuse[2]);
-		if (r_glsl_permutation->loc_SpecularColor >= 0)
-			qglUniform3fARB(r_glsl_permutation->loc_SpecularColor, ent->modellight_diffuse[0] * texture->specularscale, ent->modellight_diffuse[1] * texture->specularscale, ent->modellight_diffuse[2] * texture->specularscale);
-		if (r_glsl_permutation->loc_LightDir >= 0)
-			qglUniform3fARB(r_glsl_permutation->loc_LightDir, ent->modellight_lightdir[0], ent->modellight_lightdir[1], ent->modellight_lightdir[2]);
+		if (texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
+		{
+			if (r_glsl_permutation->loc_AmbientColor >= 0)
+				qglUniform3fARB(r_glsl_permutation->loc_AmbientColor, 1, 1, 1);
+			if (r_glsl_permutation->loc_DiffuseColor >= 0)
+				qglUniform3fARB(r_glsl_permutation->loc_DiffuseColor, 0, 0, 0);
+			if (r_glsl_permutation->loc_SpecularColor >= 0)
+				qglUniform3fARB(r_glsl_permutation->loc_SpecularColor, 0, 0, 0);
+			if (r_glsl_permutation->loc_LightDir >= 0)
+				qglUniform3fARB(r_glsl_permutation->loc_LightDir, 0, 0, -1);
+		}
+		else
+		{
+			if (r_glsl_permutation->loc_AmbientColor >= 0)
+				qglUniform3fARB(r_glsl_permutation->loc_AmbientColor, ent->modellight_ambient[0], ent->modellight_ambient[1], ent->modellight_ambient[2]);
+			if (r_glsl_permutation->loc_DiffuseColor >= 0)
+				qglUniform3fARB(r_glsl_permutation->loc_DiffuseColor, ent->modellight_diffuse[0], ent->modellight_diffuse[1], ent->modellight_diffuse[2]);
+			if (r_glsl_permutation->loc_SpecularColor >= 0)
+				qglUniform3fARB(r_glsl_permutation->loc_SpecularColor, ent->modellight_diffuse[0] * texture->specularscale, ent->modellight_diffuse[1] * texture->specularscale, ent->modellight_diffuse[2] * texture->specularscale);
+			if (r_glsl_permutation->loc_LightDir >= 0)
+				qglUniform3fARB(r_glsl_permutation->loc_LightDir, ent->modellight_lightdir[0], ent->modellight_lightdir[1], ent->modellight_lightdir[2]);
+		}
 	}
 	else
 	{
@@ -980,8 +994,20 @@ void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, 
 			qglUniform3fARB(r_glsl_permutation->loc_FogColor, fogcolor[0], fogcolor[1], fogcolor[2]);
 	}
 	if (r_glsl_permutation->loc_EyePosition >= 0) qglUniform3fARB(r_glsl_permutation->loc_EyePosition, modelorg[0], modelorg[1], modelorg[2]);
-	if (r_glsl_permutation->loc_Color_Pants >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Pants, ent->colormap_pantscolor[0], ent->colormap_pantscolor[1], ent->colormap_pantscolor[2]);
-	if (r_glsl_permutation->loc_Color_Shirt >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Shirt, ent->colormap_shirtcolor[0], ent->colormap_shirtcolor[1], ent->colormap_shirtcolor[2]);
+	if (r_glsl_permutation->loc_Color_Pants >= 0)
+	{
+		if (texture->skin.pants)
+			qglUniform3fARB(r_glsl_permutation->loc_Color_Pants, ent->colormap_pantscolor[0], ent->colormap_pantscolor[1], ent->colormap_pantscolor[2]);
+		else
+			qglUniform3fARB(r_glsl_permutation->loc_Color_Pants, 0, 0, 0);
+	}
+	if (r_glsl_permutation->loc_Color_Shirt >= 0)
+	{
+		if (texture->skin.shirt)
+			qglUniform3fARB(r_glsl_permutation->loc_Color_Shirt, ent->colormap_shirtcolor[0], ent->colormap_shirtcolor[1], ent->colormap_shirtcolor[2]);
+		else
+			qglUniform3fARB(r_glsl_permutation->loc_Color_Shirt, 0, 0, 0);
+	}
 	if (r_glsl_permutation->loc_FogRangeRecip >= 0) qglUniform1fARB(r_glsl_permutation->loc_FogRangeRecip, fograngerecip);
 	if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularPower, texture->specularpower);
 	if (r_glsl_permutation->loc_OffsetMapping_Scale >= 0) qglUniform1fARB(r_glsl_permutation->loc_OffsetMapping_Scale, r_glsl_offsetmapping_scale.value);
