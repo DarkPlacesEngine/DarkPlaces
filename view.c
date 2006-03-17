@@ -70,7 +70,7 @@ cvar_t chase_active = {CVAR_SAVE, "chase_active", "0", "enables chase cam"};
 cvar_t chase_stevie = {0, "chase_stevie", "0", "chase cam view from above (used only by GoodVsBad2)"};
 
 cvar_t v_deathtilt = {0, "v_deathtilt", "1", "whether to use sideways view when dead"};
-cvar_t v_deathtiltangle = {0, "v_deathtilt", "80", "what roll angle to use when tilting the view while dead"};
+cvar_t v_deathtiltangle = {0, "v_deathtiltangle", "80", "what roll angle to use when tilting the view while dead"};
 
 float	v_dmg_time, v_dmg_roll, v_dmg_pitch;
 
