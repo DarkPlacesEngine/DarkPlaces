@@ -1316,12 +1316,10 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		{
 			// turb does not block movement
 			tx->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES;
-			// LordHavoc: some turbulent textures should be fullbright and solid
-			if (!strncmp(tx->name,"*lava",5)
-			 || !strncmp(tx->name,"*teleport",9)
-			 || !strncmp(tx->name,"*rift",5)) // Scourge of Armagon texture
-				tx->basematerialflags |= MATERIALFLAG_FULLBRIGHT;
-			else
+			// LordHavoc: some turbulent textures should not be affected by wateralpha
+			if (strncmp(tx->name,"*lava",5)
+			 && strncmp(tx->name,"*teleport",9)
+			 && strncmp(tx->name,"*rift",5)) // Scourge of Armagon texture
 				tx->basematerialflags |= MATERIALFLAG_WATERALPHA;
 			if (!strncmp(tx->name, "*lava", 5))
 				tx->supercontents = SUPERCONTENTS_LAVA;
