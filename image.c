@@ -653,21 +653,45 @@ void Image_StripImageExtension (const char *in, char *out)
 		strcpy(out, in);
 }
 
-struct imageformat_s
+typedef struct imageformat_s
 {
 	const char *formatstring;
 	unsigned char *(*loadfunc)(const unsigned char *f, int filesize, int matchwidth, int matchheight);
 }
-imageformats[] =
+imageformat_t;
+
+// GAME_TENEBRAE only
+imageformat_t imageformats_tenebrae[] =
 {
 	{"override/%s.tga", LoadTGA},
 	{"override/%s.png", PNG_LoadImage},
 	{"override/%s.jpg", JPEG_LoadImage},
+	{NULL, NULL}
+};
+
+imageformat_t imageformats_nopath[] =
+{
 	{"textures/%s.tga", LoadTGA},
 	{"textures/%s.png", PNG_LoadImage},
 	{"textures/%s.jpg", JPEG_LoadImage},
-	{"textures/%s.pcx", LoadPCX},
-	{"textures/%s.wal", LoadWAL},
+	{"%s.tga", LoadTGA},
+	{"%s.png", PNG_LoadImage},
+	{"%s.jpg", JPEG_LoadImage},
+	{NULL, NULL}
+};
+
+imageformat_t imageformats_textures[] =
+{
+	{"%s.tga", LoadTGA},
+	{"%s.png", PNG_LoadImage},
+	{"%s.jpg", JPEG_LoadImage},
+	{"%s.pcx", LoadPCX},
+	{"%s.wal", LoadWAL},
+	{NULL, NULL}
+};
+
+imageformat_t imageformats_gfx[] =
+{
 	{"%s.tga", LoadTGA},
 	{"%s.png", PNG_LoadImage},
 	{"%s.jpg", JPEG_LoadImage},
@@ -676,10 +700,20 @@ imageformats[] =
 	{NULL, NULL}
 };
 
+imageformat_t imageformats_other[] =
+{
+	{"%s.tga", LoadTGA},
+	{"%s.png", PNG_LoadImage},
+	{"%s.jpg", JPEG_LoadImage},
+	{"%s.pcx", LoadPCX},
+	{NULL, NULL}
+};
+
 unsigned char *loadimagepixels (const char *filename, qboolean complain, int matchwidth, int matchheight)
 {
 	int i;
 	fs_offset_t filesize;
+	imageformat_t *firstformat, *format;
 	unsigned char *f, *data = NULL;
 	char basename[MAX_QPATH], name[MAX_QPATH], *c;
 	if (developer_memorydebug.integer)
@@ -692,13 +726,31 @@ unsigned char *loadimagepixels (const char *filename, qboolean complain, int mat
 	for (c = basename;*c;c++)
 		if (*c == '*')
 			*c = '#';
-	for (i = 0;imageformats[i].formatstring;i++)
+	name[0] = 0;
+	if (strchr(basename, '/'))
 	{
-		sprintf (name, imageformats[i].formatstring, basename);
+		for (i = 0;i < (int)sizeof(name)-1 && basename[i] != '/';i++)
+			name[i] = basename[i];
+		name[i] = 0;
+	}
+	if (gamemode == GAME_TENEBRAE)
+		firstformat = imageformats_tenebrae;
+	else if (!strcasecmp(name, "textures"))
+		firstformat = imageformats_textures;
+	else if (!strcasecmp(name, "gfx"))
+		firstformat = imageformats_gfx;
+	else if (!strchr(name, '/'))
+		firstformat = imageformats_nopath;
+	else
+		firstformat = imageformats_other;
+	// now try all the formats in the selected list
+	for (format = firstformat;format->formatstring;format++)
+	{
+		sprintf (name, format->formatstring, basename);
 		f = FS_LoadFile(name, tempmempool, true, &filesize);
 		if (f)
 		{
-			data = imageformats[i].loadfunc(f, filesize, matchwidth, matchheight);
+			data = format->loadfunc(f, filesize, matchwidth, matchheight);
 			Mem_Free(f);
 			if (data)
 			{
@@ -712,46 +764,15 @@ unsigned char *loadimagepixels (const char *filename, qboolean complain, int mat
 	if (complain)
 	{
 		Con_Printf("Couldn't load %s using ", filename);
-		for (i = 0;imageformats[i].formatstring;i++)
+		for (format = firstformat;format->formatstring;format++)
 		{
-			sprintf (name, imageformats[i].formatstring, basename);
-			Con_Printf(i == 0 ? "\"%s\"" : (imageformats[i+1].formatstring ? ", \"%s\"" : " or \"%s\".\n"), imageformats[i].formatstring);
+			sprintf (name, format->formatstring, basename);
+			Con_Printf(i == 0 ? "\"%s\"" : (format[1].formatstring ? ", \"%s\"" : " or \"%s\".\n"), format->formatstring);
 		}
 	}
 	if (developer_memorydebug.integer)
 		Mem_CheckSentinelsGlobal();
 	return NULL;
-}
-
-int image_makemask (const unsigned char *in, unsigned char *out, int size)
-{
-	int i, count;
-	count = 0;
-	for (i = 0;i < size;i++)
-	{
-		out[0] = out[1] = out[2] = 255;
-		out[3] = in[3];
-		if (in[3] != 255)
-			count++;
-		in += 4;
-		out += 4;
-	}
-	return count;
-}
-
-unsigned char* loadimagepixelsmask (const char *filename, qboolean complain, int matchwidth, int matchheight)
-{
-	unsigned char *in, *data;
-	in = data = loadimagepixels(filename, complain, matchwidth, matchheight);
-	if (!data)
-		return NULL;
-	if (image_makemask(data, data, image_width * image_height))
-		return data; // some transparency
-	else
-	{
-		Mem_Free(data);
-		return NULL; // all opaque
-	}
 }
 
 rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags)
@@ -761,78 +782,6 @@ rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, int ma
 	if (!(data = loadimagepixels (filename, complain, matchwidth, matchheight)))
 		return 0;
 	rt = R_LoadTexture2D(pool, filename, image_width, image_height, data, TEXTYPE_RGBA, flags, NULL);
-	Mem_Free(data);
-	return rt;
-}
-
-rtexture_t *loadtextureimagemask (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags)
-{
-	unsigned char *data;
-	rtexture_t *rt;
-	if (!(data = loadimagepixelsmask (filename, complain, matchwidth, matchheight)))
-		return 0;
-	rt = R_LoadTexture2D(pool, filename, image_width, image_height, data, TEXTYPE_RGBA, flags, NULL);
-	Mem_Free(data);
-	return rt;
-}
-
-rtexture_t *image_masktex;
-rtexture_t *image_nmaptex;
-rtexture_t *loadtextureimagewithmask (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags)
-{
-	unsigned char *data;
-	rtexture_t *rt;
-	image_masktex = NULL;
-	image_nmaptex = NULL;
-	if (!(data = loadimagepixels (filename, complain, matchwidth, matchheight)))
-		return 0;
-
-	rt = R_LoadTexture2D(pool, filename, image_width, image_height, data, TEXTYPE_RGBA, flags, NULL);
-
-	if (flags & TEXF_ALPHA && image_makemask(data, data, image_width * image_height))
-		image_masktex = R_LoadTexture2D(pool, va("%s_mask", filename), image_width, image_height, data, TEXTYPE_RGBA, flags, NULL);
-
-	Mem_Free(data);
-	return rt;
-}
-
-rtexture_t *loadtextureimagewithmaskandnmap (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags, float bumpscale)
-{
-	unsigned char *data, *data2;
-	rtexture_t *rt;
-	image_masktex = NULL;
-	image_nmaptex = NULL;
-	if (!(data = loadimagepixels (filename, complain, matchwidth, matchheight)))
-		return 0;
-
-	data2 = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
-
-	rt = R_LoadTexture2D(pool, filename, image_width, image_height, data, TEXTYPE_RGBA, flags, NULL);
-
-	Image_HeightmapToNormalmap(data, data2, image_width, image_height, (flags & TEXF_CLAMP) != 0, bumpscale);
-	image_nmaptex = R_LoadTexture2D(pool, va("%s_nmap", filename), image_width, image_height, data2, TEXTYPE_RGBA, flags, NULL);
-
-	if (flags & TEXF_ALPHA && image_makemask(data, data2, image_width * image_height))
-		image_masktex = R_LoadTexture2D(pool, va("%s_mask", filename), image_width, image_height, data2, TEXTYPE_RGBA, flags, NULL);
-
-	Mem_Free(data2);
-
-	Mem_Free(data);
-	return rt;
-}
-
-rtexture_t *loadtextureimagebumpasnmap (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags, float bumpscale)
-{
-	unsigned char *data, *data2;
-	rtexture_t *rt;
-	if (!(data = loadimagepixels (filename, complain, matchwidth, matchheight)))
-		return 0;
-	data2 = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
-
-	Image_HeightmapToNormalmap(data, data2, image_width, image_height, (flags & TEXF_CLAMP) != 0, bumpscale);
-	rt = R_LoadTexture2D(pool, filename, image_width, image_height, data2, TEXTYPE_RGBA, flags, NULL);
-
-	Mem_Free(data2);
 	Mem_Free(data);
 	return rt;
 }
@@ -866,40 +815,6 @@ qboolean Image_WriteTGARGB_preflipped (const char *filename, int width, int heig
 	return ret;
 }
 
-void Image_WriteTGARGB (const char *filename, int width, int height, const unsigned char *data)
-{
-	int y;
-	unsigned char *buffer, *out;
-	const unsigned char *in, *end;
-
-	buffer = (unsigned char *)Mem_Alloc(tempmempool, width*height*3 + 18);
-
-	memset (buffer, 0, 18);
-	buffer[2] = 2;		// uncompressed type
-	buffer[12] = (width >> 0) & 0xFF;
-	buffer[13] = (width >> 8) & 0xFF;
-	buffer[14] = (height >> 0) & 0xFF;
-	buffer[15] = (height >> 8) & 0xFF;
-	buffer[16] = 24;	// pixel size
-
-	// swap rgb to bgr and flip upside down
-	out = buffer + 18;
-	for (y = height - 1;y >= 0;y--)
-	{
-		in = data + y * width * 3;
-		end = in + width * 3;
-		for (;in < end;in += 3)
-		{
-			*out++ = in[2];
-			*out++ = in[1];
-			*out++ = in[0];
-		}
-	}
-	FS_WriteFile (filename, buffer, width*height*3 + 18 );
-
-	Mem_Free(buffer);
-}
-
 void Image_WriteTGARGBA (const char *filename, int width, int height, const unsigned char *data)
 {
 	int y;
@@ -915,7 +830,7 @@ void Image_WriteTGARGBA (const char *filename, int width, int height, const unsi
 	buffer[14] = (height >> 0) & 0xFF;
 	buffer[15] = (height >> 8) & 0xFF;
 	buffer[16] = 32;	// pixel size
-	buffer[17] = 8; // transparent flag? (seems to be needed by gimp)
+	buffer[17] = 8; // 8 bits of alpha
 
 	// swap rgba to bgra and flip upside down
 	out = buffer + 18;
@@ -934,26 +849,6 @@ void Image_WriteTGARGBA (const char *filename, int width, int height, const unsi
 	FS_WriteFile (filename, buffer, width*height*4 + 18 );
 
 	Mem_Free(buffer);
-}
-
-qboolean Image_CheckAlpha(const unsigned char *data, int size, qboolean rgba)
-{
-	const unsigned char *end;
-	if (rgba)
-	{
-		// check alpha bytes
-		for (end = data + size * 4, data += 3;data < end;data += 4)
-			if (*data < 255)
-				return 1;
-	}
-	else
-	{
-		// color 255 is transparent
-		for (end = data + size;data < end;data++)
-			if (*data == 255)
-				return 1;
-	}
-	return 0;
 }
 
 static void Image_Resample32LerpLine (const unsigned char *in, unsigned char *out, int inwidth, int outwidth)
@@ -1532,8 +1427,12 @@ int image_loadskin(imageskin_t *s, const char *shadername)
 	s->basepixels_height = image_height;
 
 	bumppixels = NULL;bumppixels_width = 0;bumppixels_height = 0;
-	if (Image_CheckAlpha(s->basepixels, s->basepixels_width * s->basepixels_height, true))
+	for (j = 3;j < s->basepixels_width * s->basepixels_height * 4;j += 4)
+		if (s->basepixels[j] < 255)
+			break;
+	if (j < s->basepixels_width * s->basepixels_height * 4)
 	{
+		// has transparent pixels
 		s->maskpixels = (unsigned char *)Mem_Alloc(loadmodel->mempool, s->basepixels_width * s->basepixels_height * 4);
 		s->maskpixels_width = s->basepixels_width;
 		s->maskpixels_height = s->basepixels_height;

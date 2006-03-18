@@ -18,9 +18,6 @@ void Image_GammaRemapRGB(const unsigned char *in, unsigned char *out, int pixels
 // converts 8bit image data to RGBA, in can not be the same as out
 void Image_Copy8bitRGBA(const unsigned char *in, unsigned char *out, int pixels, const unsigned int *pal);
 
-// makes a RGBA mask from RGBA input, in can be the same as out
-int image_makemask (const unsigned char *in, unsigned char *out, int size);
-
 unsigned char *LoadTGA (const unsigned char *f, int filesize, int matchwidth, int matchheight);
 
 // loads a texture, as pixel data
@@ -29,30 +26,11 @@ unsigned char *loadimagepixels (const char *filename, qboolean complain, int mat
 // loads a texture, as a texture
 rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags);
 
-// loads a texture's alpha mask, as pixel data
-unsigned char *loadimagepixelsmask (const char *filename, qboolean complain, int matchwidth, int matchheight);
-
-// loads a texture's alpha mask, as a texture
-rtexture_t *loadtextureimagemask (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags);
-
-// loads a texture and it's alpha mask at once (NULL if it has no translucent pixels)
-extern rtexture_t *image_masktex;
-extern rtexture_t *image_nmaptex;
-rtexture_t *loadtextureimagewithmask (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags);
-rtexture_t *loadtextureimagewithmaskandnmap (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags, float bumpscale);
-rtexture_t *loadtextureimagebumpasnmap (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags, float bumpscale);
-
 // writes a RGB TGA that is already upside down (which TGA wants)
 qboolean Image_WriteTGARGB_preflipped (const char *filename, int width, int height, const unsigned char *data, unsigned char *buffer);
 
-// writes a RGB TGA
-void Image_WriteTGARGB (const char *filename, int width, int height, const unsigned char *data);
-
 // writes a RGBA TGA
 void Image_WriteTGARGBA (const char *filename, int width, int height, const unsigned char *data);
-
-// returns true if the image has some translucent pixels
-qboolean Image_CheckAlpha(const unsigned char *data, int size, qboolean rgba);
 
 // resizes the image (in can not be the same as out)
 void Image_Resample (const void *indata, int inwidth, int inheight, int indepth, void *outdata, int outwidth, int outheight, int outdepth, int bytesperpixel, int quality);
