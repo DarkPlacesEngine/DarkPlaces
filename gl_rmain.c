@@ -2562,7 +2562,7 @@ static void RSurf_DrawLightmap(const entity_render_t *ent, const texture_t *text
 	if (lightmode >= 2)
 	{
 		// model lighting
-		vec4_t ambientcolor;
+		vec3_t ambientcolor;
 		vec3_t diffusecolor;
 		vec3_t lightdir;
 		VectorCopy(ent->modellight_lightdir, lightdir);
