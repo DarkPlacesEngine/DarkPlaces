@@ -579,7 +579,7 @@ void Con_Print(const char *msg)
 			// FIXME: 1. perhaps we should use a terminal system 2. use a constant instead of 7!
 			line[index++] = STRING_COLOR_TAG;
 			// assert( STRING_COLOR_DEFAULT < 10 )
-			line[index++] = STRING_COLOR_DEFAULT_STR;
+			line[index++] = STRING_COLOR_DEFAULT + '0';
 			// special color codes for chat messages must always come first
 			// for Con_PrintToHistory to work properly
 			if (*msg <= 2)
