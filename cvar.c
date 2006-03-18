@@ -203,7 +203,7 @@ void Cvar_CompleteCvarPrint (const char *partial)
 	// Loop through the command list and print all matches
 	for (cvar = cvar_vars; cvar; cvar = cvar->next)
 		if (!strncasecmp(partial, cvar->name, len))
-			Con_Printf("%s : \"%s\" (\"%s\") : %s\n", cvar->name, cvar->string, cvar->defstring, cvar->description);
+			Con_Printf ("%c3%s%s : \"%s\" (\"%s\") : %s\n", STRING_COLOR_TAG, cvar->name, STRING_COLOR_DEFAULT_STR, cvar->string, cvar->defstring, cvar->description);
 }
 
 
