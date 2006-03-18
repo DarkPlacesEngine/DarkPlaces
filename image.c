@@ -711,7 +711,6 @@ imageformat_t imageformats_other[] =
 
 unsigned char *loadimagepixels (const char *filename, qboolean complain, int matchwidth, int matchheight)
 {
-	int i;
 	fs_offset_t filesize;
 	imageformat_t *firstformat, *format;
 	unsigned char *f, *data = NULL;
@@ -729,6 +728,7 @@ unsigned char *loadimagepixels (const char *filename, qboolean complain, int mat
 	name[0] = 0;
 	if (strchr(basename, '/'))
 	{
+		int i;
 		for (i = 0;i < (int)sizeof(name)-1 && basename[i] != '/';i++)
 			name[i] = basename[i];
 		name[i] = 0;
@@ -767,7 +767,7 @@ unsigned char *loadimagepixels (const char *filename, qboolean complain, int mat
 		for (format = firstformat;format->formatstring;format++)
 		{
 			sprintf (name, format->formatstring, basename);
-			Con_Printf(i == 0 ? "\"%s\"" : (format[1].formatstring ? ", \"%s\"" : " or \"%s\".\n"), format->formatstring);
+			Con_Printf(format == firstformat ? "\"%s\"" : (format[1].formatstring ? ", \"%s\"" : " or \"%s\".\n"), format->formatstring);
 		}
 	}
 	if (developer_memorydebug.integer)
