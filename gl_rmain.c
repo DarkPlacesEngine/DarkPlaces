@@ -720,14 +720,12 @@ static const char *builtinshaderstring =
 "#endif\n"
 ;
 
-// the loaded GLSL shader file for compiling shader permutations as needed
-static char *shaderstring = NULL;
-
 void R_GLSL_CompilePermutation(int permutation)
 {
 	r_glsl_permutation_t *p = r_glsl_permutations + permutation;
 	int vertstrings_count;
 	int fragstrings_count;
+	char *shaderstring;
 	const char *vertstrings_list[SHADERPERMUTATION_COUNT+1];
 	const char *fragstrings_list[SHADERPERMUTATION_COUNT+1];
 	char permutationname[256];
@@ -805,8 +803,10 @@ void R_GLSL_CompilePermutation(int permutation)
 		fragstrings_list[fragstrings_count++] = "#define GEFORCEFX\n";
 		strlcat(permutationname, " halffloat", sizeof(permutationname));
 	}
+	shaderstring = (char *)FS_LoadFile("glsl/default.glsl", r_main_mempool, false, NULL);
 	if (shaderstring)
 	{
+		Con_DPrintf("GLSL shader text loaded from disk\n");
 		vertstrings_list[vertstrings_count++] = shaderstring;
 		fragstrings_list[fragstrings_count++] = shaderstring;
 	}
@@ -862,6 +862,17 @@ void R_GLSL_CompilePermutation(int permutation)
 	}
 	else
 		Con_Printf("permutation%s failed for shader %s, some features may not work properly!\n", permutationname, "glsl/default.glsl");
+	if (shaderstring)
+		Mem_Free(shaderstring);
+}
+
+void R_GLSL_Restart_f(void)
+{
+	int i;
+	for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
+		if (r_glsl_permutations[i].program)
+			GL_Backend_FreeProgram(r_glsl_permutations[i].program);
+	memset(r_glsl_permutations, 0, sizeof(r_glsl_permutations));
 }
 
 void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, const vec3_t modelorg, const vec3_t lightcolorbase, qboolean modellighting)
@@ -1030,29 +1041,11 @@ void gl_main_start(void)
 		R_BuildNormalizationCube();
 	}
 	R_BuildFogTexture();
-	shaderstring = NULL;
-	if (gl_support_fragment_shader)
-	{
-		shaderstring = (char *)FS_LoadFile("glsl/default.glsl", r_main_mempool, false, NULL);
-		if (shaderstring)
-			Con_Printf("GLSL shader text loaded from disk\n");
-		// if we couldn't load the shader file, fall back to builtin shader
-		if (!shaderstring)
-		{
-			if (shaderstring)
-				Con_Printf("GLSL shader text loaded from fallback\n");
-			shaderstring = Mem_Alloc(r_main_mempool, strlen(builtinshaderstring) + 1);
-			strcpy(shaderstring, builtinshaderstring);
-		}
-	}
-	if (shaderstring)
-		Con_Printf("GLSL shader text loaded\n");
 	memset(r_glsl_permutations, 0, sizeof(r_glsl_permutations));
 }
 
 void gl_main_shutdown(void)
 {
-	int i;
 	R_FreeTexturePool(&r_main_texturepool);
 	r_bloom_texture_screen = NULL;
 	r_bloom_texture_bloom = NULL;
@@ -1061,13 +1054,7 @@ void gl_main_shutdown(void)
 	r_texture_black = NULL;
 	r_texture_whitecube = NULL;
 	r_texture_normalizationcube = NULL;
-	if (shaderstring)
-		Mem_Free(shaderstring);
-	shaderstring = NULL;
-	for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
-		if (r_glsl_permutations[i].program)
-			GL_Backend_FreeProgram(r_glsl_permutations[i].program);
-	memset(r_glsl_permutations, 0, sizeof(r_glsl_permutations));
+	R_GLSL_Restart_f();
 }
 
 extern void CL_ParseEntityLump(char *entitystring);
@@ -1100,6 +1087,7 @@ void GL_Main_Init(void)
 {
 	r_main_mempool = Mem_AllocPool("Renderer", 0, NULL);
 
+	Cmd_AddCommand("r_glsl_restart", R_GLSL_Restart_f, "unloads GLSL shaders, they will then be reloaded as needed\n");
 	FOG_registercvars(); // FIXME: move this fog stuff to client?
 	Cvar_RegisterVariable(&r_nearclip);
 	Cvar_RegisterVariable(&r_showtris);
