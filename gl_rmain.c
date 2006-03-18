@@ -2582,12 +2582,10 @@ static void RSurf_DrawLightmap(const entity_render_t *ent, const texture_t *text
 			for (i = 0;i < numverts;i++, v += 3, c2 += 3, c += 4)
 			{
 				if ((f = DotProduct(c2, lightdir)) > 0)
-				{
 					VectorMA(ambientcolor, f, diffusecolor, c);
-					c[3] = a;
-				}
 				else
-					VectorCopy4(ambientcolor, c);
+					VectorCopy(ambientcolor, c);
+				c[3] = a;
 			}
 			r = 1;
 			g = 1;
