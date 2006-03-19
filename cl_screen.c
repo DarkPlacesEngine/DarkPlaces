@@ -1522,6 +1522,9 @@ void CL_UpdateScreen(void)
 
 	SCR_DrawDownload();
 
+	if (r_timereport_active)
+		R_TimeReport("start");
+
 	SCR_UpdateScreen();
 }
 
