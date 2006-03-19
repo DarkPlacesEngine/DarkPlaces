@@ -265,6 +265,8 @@ typedef struct msurface_s
 	texture_t *texture;
 	// the lightmap texture fragment to use on the rendering mesh
 	rtexture_t *lightmaptexture;
+	// the lighting direction texture fragment to use on the rendering mesh
+	rtexture_t *deluxemaptexture;
 
 	// this surface is part of this mesh
 	surfmesh_t *groupmesh;
@@ -482,6 +484,9 @@ typedef struct model_brushq3_s
 	// (lightmap texture pairs, every odd one is never directly refernced,
 	//  and contains lighting normals, not colors)
 	qboolean deluxemapping;
+	// true if the detected deluxemaps are the modelspace kind, rather than
+	// the faster tangentspace kind
+	qboolean deluxemapping_modelspace;
 }
 model_brushq3_t;
 

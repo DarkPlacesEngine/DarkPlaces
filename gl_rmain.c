@@ -104,6 +104,7 @@ cvar_t r_glsl_offsetmapping_scale = {0, "r_glsl_offsetmapping_scale", "-0.04", "
 cvar_t r_glsl_offsetmapping_bias = {0, "r_glsl_offsetmapping_bias", "0.04", "pushes the effect closer/further"};
 cvar_t r_glsl_usehalffloat = {0, "r_glsl_usehalffloat", "0", "use half and hvec variables in GLSL shader for a speed gain (NVIDIA only)"};
 cvar_t r_glsl_surfacenormalize = {0, "r_glsl_surfacenormalize", "1", "normalize bumpmap texels in GLSL shader, produces a more rounded look on small bumps and dents"};
+cvar_t r_glsl_deluxemapping = {0, "r_glsl_deluxemapping", "1", "use per pixel lighting on deluxemap-compiled q3bsp maps (or a value of 2 forces deluxemap shading even without deluxemaps)"};
 
 cvar_t r_lerpsprites = {CVAR_SAVE, "r_lerpsprites", "1", "enables animation smoothing on sprites (requires r_lerpmodels 1)"};
 cvar_t r_lerpmodels = {CVAR_SAVE, "r_lerpmodels", "1", "enables animation smoothing on models"};
@@ -444,6 +445,12 @@ static const char *builtinshaderstring =
 "varying vec3 EyeVector;\n"
 "#endif\n"
 "\n"
+"#ifdef MODE_LIGHTDIRECTIONMAP_MODELSPACE\n"
+"varying myhvec3 VectorS; // direction of S texcoord (sometimes crudely called tangent)\n"
+"varying myhvec3 VectorT; // direction of T texcoord (sometimes crudely called binormal)\n"
+"varying myhvec3 VectorR; // direction of R texcoord (surface normal)\n"
+"#endif\n"
+"\n"
 "\n"
 "\n"
 "\n"
@@ -501,6 +508,12 @@ static const char *builtinshaderstring =
 "	EyeVector.z = dot(eyeminusvertex, gl_MultiTexCoord3.xyz);\n"
 "#endif\n"
 "\n"
+"#ifdef MODE_LIGHTDIRECTIONMAP_MODELSPACE\n"
+"	VectorS = gl_MultiTexCoord1.xyz;\n"
+"	VectorT = gl_MultiTexCoord2.xyz;\n"
+"	VectorR = gl_MultiTexCoord3.xyz;\n"
+"#endif\n"
+"\n"
 "	// transform vertex to camera space, using ftransform to match non-VS\n"
 "	// rendering\n"
 "	gl_Position = ftransform();\n"
@@ -520,7 +533,7 @@ static const char *builtinshaderstring =
 "uniform myhalf OffsetMapping_Bias;\n"
 "#endif\n"
 "\n"
-"#if defined(MODE_LIGHTSOURCE) || defined(MODE_LIGHTDIRECTIONMAP) || defined(MODE_LIGHTDIRECTION) || defined(USEOFFSETMAPPING)\n"
+"#if defined(MODE_LIGHTSOURCE) || defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(MODE_LIGHTDIRECTIONMAP_TANGENTSPACE) || defined(MODE_LIGHTDIRECTION) || defined(USEOFFSETMAPPING)\n"
 "uniform sampler2D Texture_Normal;\n"
 "#endif\n"
 "\n"
@@ -535,7 +548,7 @@ static const char *builtinshaderstring =
 "#if !defined(MODE_LIGHTSOURCE) && !defined(MODE_LIGHTDIRECTION)\n"
 "uniform sampler2D Texture_Lightmap;\n"
 "#endif\n"
-"#ifdef MODE_LIGHTDIRECTIONMAP\n"
+"#if defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(MODE_LIGHTDIRECTIONMAP_TANGENTSPACE)\n"
 "uniform sampler2D Texture_Deluxemap;\n"
 "#endif\n"
 "\n"
@@ -595,8 +608,11 @@ static const char *builtinshaderstring =
 "{\n"
 "	// apply offsetmapping\n"
 "#ifdef USEOFFSETMAPPING\n"
+"	myhvec3 eyedir = myhvec3(normalize(EyeVector));\n"
+"	myhalf depthbias = 1.0 - eyedir.z; // should this be a -?\n"
+"	depthbias = 1.0 - depthbias * depthbias;\n"
 "	// this is 3 sample because of ATI Radeon 9500-9800/X300 limits\n"
-"	myhvec2 OffsetVector = normalize(EyeVector).xy * vec2(-0.333, 0.333);\n"
+"	myhvec2 OffsetVector = (EyeVector.xy * (1.0 / EyeVector.z) * depthbias) * vec2(-0.333, 0.333);\n"
 "	myhvec2 TexCoordOffset = TexCoord + OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoord).w);\n"
 "	TexCoordOffset += OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoordOffset).w);\n"
 "	TexCoordOffset += OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoordOffset).w);\n"
@@ -673,8 +689,33 @@ static const char *builtinshaderstring =
 "\n"
 "\n"
 "\n"
-"#elif defined(MODE_LIGHTDIRECTIONMAP)\n"
-"	// deluxemap lightmapping\n"
+"#elif defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE)\n"
+"	// deluxemap lightmapping using light vectors in modelspace (evil q3map2)\n"
+"\n"
+"	// get the surface normal and light normal\n"
+"#ifdef SURFACENORMALIZE\n"
+"	myhvec3 surfacenormal = normalize(myhvec3(texture2D(Texture_Normal, TexCoord)) - 0.5);\n"
+"#else\n"
+"	myhvec3 surfacenormal = -1.0 + 2.0 * myhvec3(texture2D(Texture_Normal, TexCoord));\n"
+"#endif\n"
+"	myhvec3 diffusenormal_modelspace = myhvec3(texture2D(Texture_Deluxemap, TexCoordLightmap)) - 0.5;\n"
+"	myhvec3 diffusenormal = normalize(myhvec3(dot(diffusenormal_modelspace, VectorS), dot(diffusenormal_modelspace, VectorT), dot(diffusenormal_modelspace, VectorR)));\n"
+"\n"
+"	// calculate directional shading\n"
+"	myhvec3 tempcolor = color.rgb * (DiffuseScale * max(dot(surfacenormal, diffusenormal), 0.0));\n"
+"#ifdef USESPECULAR\n"
+"	myhvec3 specularnormal = myhvec3(normalize(diffusenormal + myhvec3(normalize(EyeVector))));\n"
+"	tempcolor += myhvec3(texture2D(Texture_Gloss, TexCoord)) * SpecularScale * pow(max(dot(surfacenormal, specularnormal), 0.0), SpecularPower);\n"
+"#endif\n"
+"\n"
+"	// apply lightmap color\n"
+"	color.rgb = tempcolor * myhvec3(texture2D(Texture_Lightmap, TexCoordLightmap)) + color.rgb * myhvec3(AmbientScale);\n"
+"\n"
+"\n"
+"\n"
+"\n"
+"#elif defined(MODE_LIGHTDIRECTIONMAP_TANGENTSPACE)\n"
+"	// deluxemap lightmapping using light vectors in tangentspace\n"
 "\n"
 "	// get the surface normal and light normal\n"
 "#ifdef SURFACENORMALIZE\n"
@@ -743,11 +784,17 @@ void R_GLSL_CompilePermutation(int permutation)
 		fragstrings_list[fragstrings_count++] = "#define MODE_LIGHTSOURCE\n";
 		strlcat(permutationname, " lightsource", sizeof(permutationname));
 	}
-	if (permutation & SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP)
+	if (permutation & SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_MODELSPACE)
 	{
-		vertstrings_list[vertstrings_count++] = "#define MODE_LIGHTDIRECTIONMAP\n";
-		fragstrings_list[fragstrings_count++] = "#define MODE_LIGHTDIRECTIONMAP\n";
-		strlcat(permutationname, " lightdirectionmap", sizeof(permutationname));
+		vertstrings_list[vertstrings_count++] = "#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n";
+		fragstrings_list[fragstrings_count++] = "#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n";
+		strlcat(permutationname, " lightdirectionmap_modelspace", sizeof(permutationname));
+	}
+	if (permutation & SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_TANGENTSPACE)
+	{
+		vertstrings_list[vertstrings_count++] = "#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n";
+		fragstrings_list[fragstrings_count++] = "#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n";
+		strlcat(permutationname, " lightdirectionmap_tangentspace", sizeof(permutationname));
 	}
 	if (permutation & SHADERPERMUTATION_MODE_LIGHTDIRECTION)
 	{
@@ -891,20 +938,19 @@ void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, 
 		if (r_shadow_rtlight->currentcubemap != r_texture_whitecube)
 			permutation |= SHADERPERMUTATION_CUBEFILTER;
 	}
-	else if (modellighting)
-	{
-		permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTION;
-		if (texture->skin.glow)
-			permutation |= SHADERPERMUTATION_GLOW;
-	}
-	else if (r_refdef.worldmodel && r_refdef.worldmodel->brushq3.deluxemapping)
-	{
-		permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP;
-		if (texture->skin.glow)
-			permutation |= SHADERPERMUTATION_GLOW;
-	}
 	else
 	{
+		if (modellighting)
+			permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTION;
+		else if (r_glsl_deluxemapping.integer >= 1 && r_refdef.worldmodel && r_refdef.worldmodel->brushq3.deluxemapping)
+		{
+			if (r_refdef.worldmodel->brushq3.deluxemapping_modelspace)
+				permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_MODELSPACE;
+			else
+				permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_TANGENTSPACE;
+		}
+		else if (r_glsl_deluxemapping.integer >= 2) // fake mode
+			permutation |= SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_TANGENTSPACE;
 		if (texture->skin.glow)
 			permutation |= SHADERPERMUTATION_GLOW;
 	}
@@ -1113,6 +1159,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_glsl_offsetmapping_bias);
 	Cvar_RegisterVariable(&r_glsl_usehalffloat);
 	Cvar_RegisterVariable(&r_glsl_surfacenormalize);
+	Cvar_RegisterVariable(&r_glsl_deluxemapping);
 	Cvar_RegisterVariable(&r_lerpsprites);
 	Cvar_RegisterVariable(&r_lerpmodels);
 	Cvar_RegisterVariable(&r_waterscroll);
@@ -2789,8 +2836,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				{
 					R_Mesh_TexBind(7, R_GetTexture(surface->lightmaptexture));
 					if (r_glsl_permutation->loc_Texture_Deluxemap >= 0)
-						R_Mesh_TexBind(8, R_GetTexture(r_texture_blanknormalmap));
-						//R_Mesh_TexBind(8, R_GetTexture(surface->deluxemaptexture));
+						R_Mesh_TexBind(8, R_GetTexture(surface->deluxemaptexture));
 					R_Mesh_ColorPointer(NULL);
 				}
 				else

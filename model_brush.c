@@ -2034,6 +2034,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 			surface->lightmapinfo->styles[i] = in->styles[i];
 		surface->lightmapinfo->lightmaptexturestride = 0;
 		surface->lightmaptexture = NULL;
+		surface->deluxemaptexture = r_texture_blanknormalmap;
 		i = LittleLong(in->lightofs);
 		if (i == -1)
 		{
@@ -2070,11 +2071,13 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 			{
 				surface->lightmapinfo->lightmaptexturestride = ssize;
 				surface->lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, NULL, surface->lightmapinfo->lightmaptexturestride, tsize, NULL, loadmodel->brushq1.lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_MIPMAP | TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+				surface->deluxemaptexture = r_texture_blanknormalmap;
 			}
 			else
 			{
 				surface->lightmapinfo->lightmaptexturestride = R_CompatibleFragmentWidth(ssize, loadmodel->brushq1.lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, 0);
 				surface->lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, NULL, surface->lightmapinfo->lightmaptexturestride, tsize, NULL, loadmodel->brushq1.lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_FRAGMENT | TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+				surface->deluxemaptexture = r_texture_blanknormalmap;
 			}
 			R_FragmentLocation(surface->lightmaptexture, NULL, NULL, &ubase, &vbase, &uscale, &vscale);
 			uscale = (uscale - ubase) / ssize;
@@ -4289,17 +4292,28 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l)
 	loadmodel->brushq3.data_lightmaps = out;
 	loadmodel->brushq3.num_lightmaps = count;
 
+	loadmodel->brushq3.deluxemapping_modelspace = false;
 	for (i = 0;i < count;i++, in++, out++)
+	{
+		// if this may be a deluxemap, check if it's in modelspace or not
+		if ((i & 1) && !loadmodel->brushq3.deluxemapping_modelspace)
+		{
+			int j;
+			unsigned char *b = in->rgb;
+			for (j = 2;j < 128*128*3;j += 3)
+			{
+				// if this is definitely negative Z, it is not facing outward,
+				// and thus must be in modelspace, as negative Z would never
+				// occur in tangentspace
+				if (b[j] < 120)
+				{
+					loadmodel->brushq3.deluxemapping_modelspace = true;
+					break;
+				}
+			}
+		}
 		*out = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", i), 128, 128, in->rgb, TEXTYPE_RGB, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
-	// deluxemapped bsp files have an even number of lightmaps, and surfaces
-	// always index even numbered ones (0, 2, 4, ...), the odd numbered
-	// lightmaps are the deluxemaps (light direction textures), so if we
-	// encounter any odd numbered lightmaps it is not a deluxemapped bsp, it
-	// is also not a deluxemapped bsp if it has an odd number of lightmaps or
-	// less than 2
-	loadmodel->brushq3.deluxemapping = true;
-	if ((count & 1) || count < 2)
-		loadmodel->brushq3.deluxemapping = false;
+	}
 }
 
 static void Mod_Q3BSP_LoadFaces(lump_t *l)
@@ -4327,6 +4341,29 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 
 	loadmodel->data_surfaces = out;
 	loadmodel->num_surfaces = count;
+
+	// deluxemapped q3bsp files have an even number of lightmaps, and surfaces
+	// always index even numbered ones (0, 2, 4, ...), the odd numbered
+	// lightmaps are the deluxemaps (light direction textures), so if we
+	// encounter any odd numbered lightmaps it is not a deluxemapped bsp, it
+	// is also not a deluxemapped bsp if it has an odd number of lightmaps or
+	// less than 2
+	loadmodel->brushq3.deluxemapping = true;
+	if (count >= 2 && !(count & 1))
+	{
+		for (i = 0;i < count;i++)
+		{
+			n = LittleLong(in[i].lightmapindex);
+			if (n >= 0 && ((n & 1) || n + 1 >= loadmodel->brushq3.num_lightmaps))
+			{
+				loadmodel->brushq3.deluxemapping = false;
+				break;
+			}
+		}
+	}
+	else
+		loadmodel->brushq3.deluxemapping = false;
+	Con_DPrintf("%s is %sdeluxemapped\n", loadmodel->name, loadmodel->brushq3.deluxemapping ? "" : "not ");
 
 	i = 0;
 	for (meshnum = 0;i < count;meshnum++)
@@ -4376,15 +4413,17 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			else if (n < 0)
 				n = -1;
 			if (n == -1)
+			{
 				out->lightmaptexture = NULL;
+				out->deluxemaptexture = r_texture_blanknormalmap;
+			}
 			else
 			{
-				// deluxemapped q3bsp files have lightmaps and deluxemaps in
-				// pairs, no odd numbers ever appear, so if we encounter an
-				// odd lightmap index, it's not deluxemapped.
-				if (n & 1)
-					loadmodel->brushq3.deluxemapping = false;
 				out->lightmaptexture = loadmodel->brushq3.data_lightmaps[n];
+				if (loadmodel->brushq3.deluxemapping)
+					out->deluxemaptexture = loadmodel->brushq3.data_lightmaps[n+1];
+				else
+					out->deluxemaptexture = r_texture_blanknormalmap;
 			}
 
 			firstvertex = LittleLong(in->firstvertex);
