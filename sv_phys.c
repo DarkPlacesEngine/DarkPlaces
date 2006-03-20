@@ -1289,7 +1289,7 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 	trace = SV_PushEntity (ent, move);
 	if (ent->priv.server->free)
 		return;
-	if (trace.startsolid)
+	if (trace.bmodelstartsolid)
 	{
 		// try to unstick the entity
 		SV_UnstickEntity(ent);

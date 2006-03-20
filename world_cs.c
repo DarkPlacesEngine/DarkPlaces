@@ -572,6 +572,7 @@ trace_t CSSV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, cons
 
 	// clip to world
 	cliptrace = CSSV_ClipMoveToEntity(prog->edicts, clipstart, clipmins, clipmaxs, clipend, type, hitsupercontentsmask);
+	cliptrace.bmodelstartsolid = cliptrace.startsolid;
 	if (cliptrace.startsolid || cliptrace.fraction < 1)
 		cliptrace.ent = prog->edicts;
 	if (type == MOVE_WORLDONLY)
@@ -669,6 +670,8 @@ trace_t CSSV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, cons
 			cliptrace.allsolid = true;
 		if (trace.startsolid)
 		{
+			if (touch->fields.client->solid == SOLID_BSP)
+				cliptrace.bmodelstartsolid = true;
 			cliptrace.startsolid = true;
 			if (cliptrace.realfraction == 1)
 				cliptrace.ent = touch;
