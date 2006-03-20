@@ -564,6 +564,7 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 
 	// clip to world
 	cliptrace = SV_ClipMoveToWorld(clipstart, clipmins, clipmaxs, clipend, type, hitsupercontentsmask);
+	cliptrace.startsolid = cliptrace.bmodelstartsolid;
 	if (cliptrace.startsolid || cliptrace.fraction < 1)
 		cliptrace.ent = prog->edicts;
 	if (type == MOVE_WORLDONLY)
@@ -661,6 +662,8 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 			cliptrace.allsolid = true;
 		if (trace.startsolid)
 		{
+			if (touch->fields.server->solid == SOLID_BSP)
+				cliptrace.bmodelstartsolid = true;
 			cliptrace.startsolid = true;
 			if (cliptrace.realfraction == 1)
 				cliptrace.ent = touch;

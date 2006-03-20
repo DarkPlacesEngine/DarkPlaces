@@ -15,6 +15,8 @@ typedef struct trace_s
 	int allsolid;
 	// if true, the initial point was in solid (see hitsupercontentsmask)
 	int startsolid;
+	// this is set to true in world.c if startsolid was set in a trace against a SOLID_BSP entity, in other words this is true if the entity is stuck in a door or wall, but not if stuck in another normal entity
+	int bmodelstartsolid;
 	// if true, the trace passed through empty somewhere
 	// (set only by Q1BSP tracing)
 	int inopen;
