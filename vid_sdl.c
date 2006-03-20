@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
+#undef WIN32_LEAN_AND_MEAN  //hush a warning, SDL.h redefines this
 #include <SDL.h>
 #include <stdio.h>
 
@@ -346,11 +347,10 @@ static void VID_SetCaption()
 		return;
 
 	icon = LoadIcon( GetModuleHandle( NULL ), MAKEINTRESOURCE( IDI_ICON1 ) );
-#ifndef SetClassLongPtr
+#ifndef _W64 //If Windows 64bit data types don't exist
 #define SetClassLongPtr SetClassLong
-#endif
-#ifndef GCLP_HICON
 #define GCLP_HICON GCL_HICON
+#define LONG_PTR LONG
 #endif
 	SetClassLongPtr( info.window, GCLP_HICON, (LONG_PTR)icon );
 }
