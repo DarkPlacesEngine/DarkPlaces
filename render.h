@@ -223,8 +223,8 @@ extern cvar_t r_waterwarp;
 extern cvar_t r_textureunits;
 extern cvar_t r_glsl;
 extern cvar_t r_glsl_offsetmapping;
+extern cvar_t r_glsl_offsetmapping_reliefmapping;
 extern cvar_t r_glsl_offsetmapping_scale;
-extern cvar_t r_glsl_offsetmapping_bias;
 extern cvar_t r_glsl_usehalffloat;
 extern cvar_t r_glsl_surfacenormalize;
 extern cvar_t r_glsl_deluxemapping;
@@ -276,9 +276,10 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces);
 #define SHADERPERMUTATION_SPECULAR (1<<7) // (lightsource or deluxemapping) render specular effects
 #define SHADERPERMUTATION_CUBEFILTER (1<<8) // (lightsource) use cubemap light filter
 #define SHADERPERMUTATION_OFFSETMAPPING (1<<9) // adjust texcoords to roughly simulate a displacement mapped surface
-#define SHADERPERMUTATION_SURFACENORMALIZE (1<<10) // (lightsource or deluxemapping) improved bumpmapping
-#define SHADERPERMUTATION_GEFORCEFX (1<<11) // use half vector types if available (NVIDIA specific)
-#define SHADERPERMUTATION_COUNT (1<<12) // how many permutations are possible
+#define SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING (1<<10) // adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
+#define SHADERPERMUTATION_SURFACENORMALIZE (1<<11) // (lightsource or deluxemapping) improved bumpmapping
+#define SHADERPERMUTATION_GEFORCEFX (1<<12) // use half vector types if available (NVIDIA specific)
+#define SHADERPERMUTATION_COUNT (1<<13) // how many permutations are possible
 
 typedef struct r_glsl_permutation_s
 {
@@ -308,7 +309,6 @@ typedef struct r_glsl_permutation_s
 	int loc_SpecularScale;
 	int loc_SpecularPower;
 	int loc_OffsetMapping_Scale;
-	int loc_OffsetMapping_Bias;
 	int loc_AmbientColor;
 	int loc_DiffuseColor;
 	int loc_SpecularColor;

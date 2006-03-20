@@ -99,9 +99,9 @@ cvar_t gl_fogend = {0, "gl_fogend","0", "nehahra fog end distance (for Nehahra c
 cvar_t r_textureunits = {0, "r_textureunits", "32", "number of hardware texture units reported by driver (note: setting this to 1 turns off gl_combine)"};
 
 cvar_t r_glsl = {0, "r_glsl", "1", "enables use of OpenGL 2.0 pixel shaders for lighting"};
-cvar_t r_glsl_offsetmapping = {0, "r_glsl_offsetmapping", "0", "enables offset mapping effect (also known as parallax mapping or sometimes as virtual displacement mapping, not as good as relief mapping or silohuette mapping but much faster), can cause strange artifacts on many textures, requires bumpmaps for depth information (normalmaps can have depth information as alpha channel, but most do not)"};
-cvar_t r_glsl_offsetmapping_scale = {0, "r_glsl_offsetmapping_scale", "-0.04", "how deep the offset mapping effect is, and whether it is inward or outward"};
-cvar_t r_glsl_offsetmapping_bias = {0, "r_glsl_offsetmapping_bias", "0.04", "pushes the effect closer/further"};
+cvar_t r_glsl_offsetmapping = {0, "r_glsl_offsetmapping", "0", "offset mapping effect (also known as parallax mapping or virtual displacement mapping)"};
+cvar_t r_glsl_offsetmapping_reliefmapping = {0, "r_glsl_offsetmapping_reliefmapping", "0", "relief mapping effect (higher quality)"};
+cvar_t r_glsl_offsetmapping_scale = {0, "r_glsl_offsetmapping_scale", "0.04", "how deep the offset mapping effect is"};
 cvar_t r_glsl_usehalffloat = {0, "r_glsl_usehalffloat", "0", "use half and hvec variables in GLSL shader for a speed gain (NVIDIA only)"};
 cvar_t r_glsl_surfacenormalize = {0, "r_glsl_surfacenormalize", "1", "normalize bumpmap texels in GLSL shader, produces a more rounded look on small bumps and dents"};
 cvar_t r_glsl_deluxemapping = {0, "r_glsl_deluxemapping", "1", "use per pixel lighting on deluxemap-compiled q3bsp maps (or a value of 2 forces deluxemap shading even without deluxemaps)"};
@@ -608,15 +608,39 @@ static const char *builtinshaderstring =
 "{\n"
 "	// apply offsetmapping\n"
 "#ifdef USEOFFSETMAPPING\n"
+"	myhvec2 TexCoordOffset = TexCoord;\n"
+"#define TexCoord TexCoordOffset\n"
+"\n"
 "	myhvec3 eyedir = myhvec3(normalize(EyeVector));\n"
 "	myhalf depthbias = 1.0 - eyedir.z; // should this be a -?\n"
 "	depthbias = 1.0 - depthbias * depthbias;\n"
-"	// this is 3 sample because of ATI Radeon 9500-9800/X300 limits\n"
-"	myhvec2 OffsetVector = (EyeVector.xy * (1.0 / EyeVector.z) * depthbias) * vec2(-0.333, 0.333);\n"
-"	myhvec2 TexCoordOffset = TexCoord + OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoord).w);\n"
-"	TexCoordOffset += OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoordOffset).w);\n"
-"	TexCoordOffset += OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoordOffset).w);\n"
-"#define TexCoord TexCoordOffset\n"
+"\n"
+"#ifdef USEOFFSETMAPPING_RELIEFMAPPING\n"
+"	// 14 sample relief mapping: linear search and then binary search\n"
+"	myhvec3 OffsetVector = myhvec3(EyeVector.xy * (1.0 / EyeVector.z) * depthbias * OffsetMapping_Scale * myhvec2(-0.1, 0.1), -0.1);\n"
+"	vec3 RT = vec3(TexCoord - OffsetVector.xy * 10.0, 1.0) + OffsetVector;\n"
+"	if (RT.z > texture2D(Texture_Normal, RT.xy).a) RT += OffsetVector;\n"
+"	if (RT.z > texture2D(Texture_Normal, RT.xy).a) RT += OffsetVector;\n"
+"	if (RT.z > texture2D(Texture_Normal, RT.xy).a) RT += OffsetVector;\n"
+"	if (RT.z > texture2D(Texture_Normal, RT.xy).a) RT += OffsetVector;\n"
+"	if (RT.z > texture2D(Texture_Normal, RT.xy).a) RT += OffsetVector;\n"
+"	if (RT.z > texture2D(Texture_Normal, RT.xy).a) RT += OffsetVector;\n"
+"	if (RT.z > texture2D(Texture_Normal, RT.xy).a) RT += OffsetVector;\n"
+"	if (RT.z > texture2D(Texture_Normal, RT.xy).a) RT += OffsetVector;\n"
+"	if (RT.z > texture2D(Texture_Normal, RT.xy).a) RT += OffsetVector;OffsetVector *= 0.5;RT -= OffsetVector;\n"
+"	if (RT.z > texture2D(Texture_Normal, RT.xy).a) RT += OffsetVector;OffsetVector *= 0.5;RT -= OffsetVector;\n"
+"	if (RT.z > texture2D(Texture_Normal, RT.xy).a) RT += OffsetVector;OffsetVector *= 0.5;RT -= OffsetVector;\n"
+"	if (RT.z > texture2D(Texture_Normal, RT.xy).a) RT += OffsetVector;OffsetVector *= 0.5;RT -= OffsetVector;\n"
+"	if (RT.z > texture2D(Texture_Normal, RT.xy).a) RT += OffsetVector;OffsetVector *= 0.5;RT -= OffsetVector;\n"
+"	if (RT.z > texture2D(Texture_Normal, RT.xy).a) RT += OffsetVector;OffsetVector *= 0.5;RT -= OffsetVector;\n"
+"	TexCoord = RT.xy;\n"
+"#else\n"
+"	// 3 sample offset mapping (only 3 samples because of ATI Radeon 9500-9800/X300 limits)\n"
+"	myhvec2 OffsetVector = myhvec2((EyeVector.xy * (1.0 / EyeVector.z) * depthbias) * OffsetMapping_Scale * myhvec2(-0.333, 0.333));\n"
+"	TexCoord -= OffsetVector * texture2D(Texture_Normal, TexCoord).a;\n"
+"	TexCoord -= OffsetVector * texture2D(Texture_Normal, TexCoord).a;\n"
+"	TexCoord -= OffsetVector * texture2D(Texture_Normal, TexCoord).a;\n"
+"#endif\n"
 "#endif\n"
 "\n"
 "	// combine the diffuse textures (base, pants, shirt)\n"
@@ -838,6 +862,12 @@ void R_GLSL_CompilePermutation(int permutation)
 		fragstrings_list[fragstrings_count++] = "#define USEOFFSETMAPPING\n";
 		strlcat(permutationname, " offsetmapping", sizeof(permutationname));
 	}
+	if (permutation & SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING)
+	{
+		vertstrings_list[vertstrings_count++] = "#define USEOFFSETMAPPING_RELIEFMAPPING\n";
+		fragstrings_list[fragstrings_count++] = "#define USEOFFSETMAPPING_RELIEFMAPPING\n";
+		strlcat(permutationname, " OFFSETMAPPING_RELIEFMAPPING", sizeof(permutationname));
+	}
 	if (permutation & SHADERPERMUTATION_SURFACENORMALIZE)
 	{
 		vertstrings_list[vertstrings_count++] = "#define SURFACENORMALIZE\n";
@@ -889,7 +919,6 @@ void R_GLSL_CompilePermutation(int permutation)
 		p->loc_SpecularPower       = qglGetUniformLocationARB(p->program, "SpecularPower");
 		p->loc_SpecularScale       = qglGetUniformLocationARB(p->program, "SpecularScale");
 		p->loc_OffsetMapping_Scale = qglGetUniformLocationARB(p->program, "OffsetMapping_Scale");
-		p->loc_OffsetMapping_Bias  = qglGetUniformLocationARB(p->program, "OffsetMapping_Bias");
 		p->loc_AmbientColor        = qglGetUniformLocationARB(p->program, "AmbientColor");
 		p->loc_DiffuseColor        = qglGetUniformLocationARB(p->program, "DiffuseColor");
 		p->loc_SpecularColor       = qglGetUniformLocationARB(p->program, "SpecularColor");
@@ -961,7 +990,11 @@ void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, 
 	if (texture->colormapping)
 		permutation |= SHADERPERMUTATION_COLORMAPPING;
 	if (r_glsl_offsetmapping.integer)
+	{
 		permutation |= SHADERPERMUTATION_OFFSETMAPPING;
+		if (r_glsl_offsetmapping_reliefmapping.integer)
+			permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
+	}
 	if (r_glsl_surfacenormalize.integer)
 		permutation |= SHADERPERMUTATION_SURFACENORMALIZE;
 	if (r_glsl_usehalffloat.integer)
@@ -1067,7 +1100,6 @@ void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, 
 	if (r_glsl_permutation->loc_FogRangeRecip >= 0) qglUniform1fARB(r_glsl_permutation->loc_FogRangeRecip, fograngerecip);
 	if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularPower, texture->specularpower);
 	if (r_glsl_permutation->loc_OffsetMapping_Scale >= 0) qglUniform1fARB(r_glsl_permutation->loc_OffsetMapping_Scale, r_glsl_offsetmapping_scale.value);
-	if (r_glsl_permutation->loc_OffsetMapping_Bias >= 0) qglUniform1fARB(r_glsl_permutation->loc_OffsetMapping_Bias, r_glsl_offsetmapping_bias.value);
 	CHECKGLERROR
 }
 
@@ -1155,8 +1187,8 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_textureunits);
 	Cvar_RegisterVariable(&r_glsl);
 	Cvar_RegisterVariable(&r_glsl_offsetmapping);
+	Cvar_RegisterVariable(&r_glsl_offsetmapping_reliefmapping);
 	Cvar_RegisterVariable(&r_glsl_offsetmapping_scale);
-	Cvar_RegisterVariable(&r_glsl_offsetmapping_bias);
 	Cvar_RegisterVariable(&r_glsl_usehalffloat);
 	Cvar_RegisterVariable(&r_glsl_surfacenormalize);
 	Cvar_RegisterVariable(&r_glsl_deluxemapping);
