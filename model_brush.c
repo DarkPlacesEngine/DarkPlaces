@@ -1300,7 +1300,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 							Mem_Free(freepixels);
 					}
 					else if (mtdata) // texture included
-						Mod_LoadSkinFrame_Internal(&tx->skin, tx->name, TEXF_MIPMAP | TEXF_PRECACHE | TEXF_PICMIP, false, tx->name[0] != '*' && r_fullbrights.integer, mtdata, tx->width, tx->height, 8, NULL, NULL);
+						Mod_LoadSkinFrame_Internal(&tx->skin, tx->name, TEXF_MIPMAP | TEXF_PRECACHE | TEXF_PICMIP, false, r_fullbrights.integer, mtdata, tx->width, tx->height, 8, NULL, NULL);
 				}
 			}
 			if (tx->skin.base == NULL)
