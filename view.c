@@ -430,7 +430,7 @@ void V_CalcRefdef (void)
 				{
 					double xyspeed, bob;
 
-					xyspeed = sqrt(cl.velocity[0]*cl.velocity[0] + cl.velocity[1]*cl.velocity[1]);
+					xyspeed = sqrt(cl.movement_velocity[0]*cl.movement_velocity[0] + cl.movement_velocity[1]*cl.movement_velocity[1]);
 					if (cl_bob.value && cl_bobcycle.value)
 					{
 						float cycle;

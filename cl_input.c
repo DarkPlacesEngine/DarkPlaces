@@ -522,23 +522,26 @@ void CL_ClientMovement_InputQW(qw_usercmd_t *cmd)
 	// remove stale queue items
 	n = cl.movement_numqueue;
 	cl.movement_numqueue = 0;
-	for (i = 0;i < n;i++)
-		if (cl.movement_queue[i].sequence > cls.netcon->qw.incoming_sequence)
-			cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
-	// add to input queue if there is room
-	if (cl.movement_numqueue < (int)(sizeof(cl.movement_queue)/sizeof(cl.movement_queue[0])) && cl.mtime[0] > cl.mtime[1])
+	if (cl.movement)
 	{
-		// add to input queue
-		cl.movement_queue[cl.movement_numqueue].sequence = cls.netcon->qw.outgoing_sequence;
-		cl.movement_queue[cl.movement_numqueue].time = cl.mtime[0] + cl_movement_latency.value / 1000.0;
-		cl.movement_queue[cl.movement_numqueue].frametime = cmd->msec * 0.001;
-		VectorCopy(cmd->angles, cl.movement_queue[cl.movement_numqueue].viewangles);
-		cl.movement_queue[cl.movement_numqueue].move[0] = cmd->forwardmove;
-		cl.movement_queue[cl.movement_numqueue].move[1] = cmd->sidemove;
-		cl.movement_queue[cl.movement_numqueue].move[2] = cmd->upmove;
-		cl.movement_queue[cl.movement_numqueue].jump = (cmd->buttons & 2) != 0;
-		cl.movement_queue[cl.movement_numqueue].crouch = false;
-		cl.movement_numqueue++;
+		for (i = 0;i < n;i++)
+			if (cl.movement_queue[i].sequence > cls.netcon->qw.incoming_sequence)
+				cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
+		// add to input queue if there is room
+		if (cl.movement_numqueue < (int)(sizeof(cl.movement_queue)/sizeof(cl.movement_queue[0])) && cl.mtime[0] > cl.mtime[1])
+		{
+			// add to input queue
+			cl.movement_queue[cl.movement_numqueue].sequence = cls.netcon->qw.outgoing_sequence;
+			cl.movement_queue[cl.movement_numqueue].time = cl.mtime[0] + cl_movement_latency.value / 1000.0;
+			cl.movement_queue[cl.movement_numqueue].frametime = cmd->msec * 0.001;
+			VectorCopy(cmd->angles, cl.movement_queue[cl.movement_numqueue].viewangles);
+			cl.movement_queue[cl.movement_numqueue].move[0] = cmd->forwardmove;
+			cl.movement_queue[cl.movement_numqueue].move[1] = cmd->sidemove;
+			cl.movement_queue[cl.movement_numqueue].move[2] = cmd->upmove;
+			cl.movement_queue[cl.movement_numqueue].jump = (cmd->buttons & 2) != 0;
+			cl.movement_queue[cl.movement_numqueue].crouch = false;
+			cl.movement_numqueue++;
+		}
 	}
 	cl.movement_replay = true;
 }
@@ -550,33 +553,36 @@ void CL_ClientMovement_Input(qboolean buttonjump, qboolean buttoncrouch)
 	// remove stale queue items
 	n = cl.movement_numqueue;
 	cl.movement_numqueue = 0;
-	if (cl.servermovesequence)
+	if (cl.movement)
 	{
-		for (i = 0;i < n;i++)
-			if (cl.movement_queue[i].sequence > cl.servermovesequence)
-				cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
-	}
-	else
-	{
-		double simulatedtime = cl.mtime[0] + cl_movement_latency.value / 1000.0;
-		for (i = 0;i < n;i++)
-			if (cl.movement_queue[i].time >= cl.mtime[0] && cl.movement_queue[i].time <= simulatedtime)
-				cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
-	}
-	// add to input queue if there is room
-	if (cl.movement_numqueue < (int)(sizeof(cl.movement_queue)/sizeof(cl.movement_queue[0])) && cl.mtime[0] > cl.mtime[1])
-	{
-		// add to input queue
-		cl.movement_queue[cl.movement_numqueue].sequence = cl.movesequence;
-		cl.movement_queue[cl.movement_numqueue].time = cl.mtime[0] + cl_movement_latency.value / 1000.0;
-		cl.movement_queue[cl.movement_numqueue].frametime = cl.mtime[0] - cl.mtime[1];
-		VectorCopy(cl.viewangles, cl.movement_queue[cl.movement_numqueue].viewangles);
-		cl.movement_queue[cl.movement_numqueue].move[0] = cl.cmd.forwardmove;
-		cl.movement_queue[cl.movement_numqueue].move[1] = cl.cmd.sidemove;
-		cl.movement_queue[cl.movement_numqueue].move[2] = cl.cmd.upmove;
-		cl.movement_queue[cl.movement_numqueue].jump = buttonjump;
-		cl.movement_queue[cl.movement_numqueue].crouch = buttoncrouch;
-		cl.movement_numqueue++;
+		if (cl.servermovesequence)
+		{
+			for (i = 0;i < n;i++)
+				if (cl.movement_queue[i].sequence > cl.servermovesequence)
+					cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
+		}
+		else
+		{
+			double simulatedtime = cl.mtime[0] + cl_movement_latency.value / 1000.0;
+			for (i = 0;i < n;i++)
+				if (cl.movement_queue[i].time >= cl.mtime[0] && cl.movement_queue[i].time <= simulatedtime)
+					cl.movement_queue[cl.movement_numqueue++] = cl.movement_queue[i];
+		}
+		// add to input queue if there is room
+		if (cl.movement_numqueue < (int)(sizeof(cl.movement_queue)/sizeof(cl.movement_queue[0])) && cl.mtime[0] > cl.mtime[1])
+		{
+			// add to input queue
+			cl.movement_queue[cl.movement_numqueue].sequence = cl.movesequence;
+			cl.movement_queue[cl.movement_numqueue].time = cl.mtime[0] + cl_movement_latency.value / 1000.0;
+			cl.movement_queue[cl.movement_numqueue].frametime = cl.mtime[0] - cl.mtime[1];
+			VectorCopy(cl.viewangles, cl.movement_queue[cl.movement_numqueue].viewangles);
+			cl.movement_queue[cl.movement_numqueue].move[0] = cl.cmd.forwardmove;
+			cl.movement_queue[cl.movement_numqueue].move[1] = cl.cmd.sidemove;
+			cl.movement_queue[cl.movement_numqueue].move[2] = cl.cmd.upmove;
+			cl.movement_queue[cl.movement_numqueue].jump = buttonjump;
+			cl.movement_queue[cl.movement_numqueue].crouch = buttoncrouch;
+			cl.movement_numqueue++;
+		}
 	}
 	cl.movement_replay = true;
 }
@@ -588,6 +594,7 @@ void CL_ClientMovement_Replay(void)
 	int contents;
 	int crouch;
 	int onground;
+	int canjump;
 	float movevars_gravity;
 	float movevars_stopspeed;
 	float movevars_maxspeed;
@@ -673,197 +680,205 @@ void CL_ClientMovement_Replay(void)
 	// safe place to start the walk (due to network compression in some
 	// protocols this starts in solid)
 	//currentorigin[2] += (1.0 / 32.0); // slight nudge to get out of the floor
-	crouch = false; // this will be updated on first move
 
 	// check if onground
 	VectorSet(currentorigin2, currentorigin[0], currentorigin[1], currentorigin[2] + 1);
 	VectorSet(neworigin2, currentorigin[0], currentorigin[1], currentorigin[2] - 1);
-	trace = CL_TraceBox(currentorigin2, cl.playercrouchmins, cl.playercrouchmaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
-	onground = trace.fraction < 1 && trace.plane.normal[2] > 0.7;
-	//Con_Printf("%f: ", cl.mtime[0]);
-
-	// replay the input queue to predict current location
-	// note: this relies on the fact there's always one queue item at the end
-
-	for (i = 0;cl.movement && i < cl.movement_numqueue;i++)
+	if (cl.movement)
 	{
-		client_movementqueue_t *q = cl.movement_queue + bound(0, i, cl.movement_numqueue - 1);
-		frametime = q->frametime;
-		//Con_Printf(" %f", frametime);
-		//if (frametime > 0)
+		trace = CL_TraceBox(currentorigin2, cl.playercrouchmins, cl.playercrouchmaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
+		onground = trace.fraction < 1 && trace.plane.normal[2] > 0.7;
+		crouch = false; // this will be updated on first move
+		canjump = true;
+		//Con_Printf("%f: ", cl.mtime[0]);
+
+		// replay the input queue to predict current location
+		// note: this relies on the fact there's always one queue item at the end
+
+		for (i = 0;i < cl.movement_numqueue;i++)
 		{
-			if (q->crouch)
+			client_movementqueue_t *q = cl.movement_queue + bound(0, i, cl.movement_numqueue - 1);
+			frametime = q->frametime;
+			//Con_Printf(" %f", frametime);
+			//if (frametime > 0)
 			{
-				// wants to crouch, this always works...
-				if (!crouch)
-					crouch = true;
-			}
-			else
-			{
-				// wants to stand, if currently crouching we need to check for a
-				// low ceiling first
-				if (crouch)
+				if (q->crouch)
 				{
-					trace = CL_TraceBox(currentorigin, cl.playerstandmins, cl.playerstandmaxs, currentorigin, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
-					if (!trace.startsolid)
-						crouch = false;
+					// wants to crouch, this always works...
+					if (!crouch)
+						crouch = true;
 				}
-			}
-			if (crouch)
-			{
-				playermins = cl.playercrouchmins;
-				playermaxs = cl.playercrouchmaxs;
-			}
-			else
-			{
-				playermins = cl.playerstandmins;
-				playermaxs = cl.playerstandmaxs;
-			}
-			// change velocity according to q->viewangles and q->move
-			contents = CL_PointSuperContents(currentorigin);
-			if (contents & SUPERCONTENTS_LIQUIDSMASK)
-			{
-				// swim
-				AngleVectors(q->viewangles, forward, right, up);
-				VectorSet(up, 0, 0, 1);
-				VectorMAMAM(q->move[0], forward, q->move[1], right, q->move[2], up, wishvel);
-				wishspeed = VectorLength(wishvel);
-				if (wishspeed)
-					VectorScale(wishvel, 1 / wishspeed, wishdir);
 				else
-					VectorSet( wishdir, 0.0, 0.0, 0.0 );
-				wishspeed = min(wishspeed, movevars_maxspeed) * 0.6;
-				if (crouch)
-					wishspeed *= 0.5;
-				VectorScale(currentvelocity, (1 - frametime * movevars_waterfriction), currentvelocity);
-				f = wishspeed - DotProduct(currentvelocity, wishdir);
-				if (f > 0)
 				{
-					f = min(f, movevars_wateraccelerate * frametime * wishspeed);
-					VectorMA(currentvelocity, f, wishdir, currentvelocity);
-				}
-				if (q->jump)
-				{
-					if (contents & SUPERCONTENTS_LAVA)
-						currentvelocity[2] =  50;
-					else if (contents & SUPERCONTENTS_SLIME)
-						currentvelocity[2] =  80;
-					else
+					// wants to stand, if currently crouching we need to check for a
+					// low ceiling first
+					if (crouch)
 					{
-						if (gamemode == GAME_NEXUIZ)
-							currentvelocity[2] = 200;
-						else
-							currentvelocity[2] = 100;
+						trace = CL_TraceBox(currentorigin, cl.playerstandmins, cl.playerstandmaxs, currentorigin, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
+						if (!trace.startsolid)
+							crouch = false;
 					}
 				}
-			}
-			else
-			{
-				// walk
-				if (onground && q->jump)
-				{
-					currentvelocity[2] += movevars_jumpvelocity;
-					onground = false;
-				}
-				VectorSet(yawangles, 0, q->viewangles[1], 0);
-				AngleVectors(yawangles, forward, right, up);
-				VectorMAM(q->move[0], forward, q->move[1], right, wishvel);
-				wishspeed = VectorLength(wishvel);
-				if (wishspeed)
-					VectorScale(wishvel, 1 / wishspeed, wishdir);
-				else
-					VectorSet( wishdir, 0.0, 0.0, 0.0 );
-				wishspeed = min(wishspeed, movevars_maxspeed);
 				if (crouch)
-					wishspeed *= 0.5;
-				// check if onground
-				if (onground)
 				{
-					// apply ground friction
-					f = sqrt(currentvelocity[0] * currentvelocity[0] + currentvelocity[1] * currentvelocity[1]);
-					edgefriction = 1;
+					playermins = cl.playercrouchmins;
+					playermaxs = cl.playercrouchmaxs;
+				}
+				else
+				{
+					playermins = cl.playerstandmins;
+					playermaxs = cl.playerstandmaxs;
+				}
+				// change velocity according to q->viewangles and q->move
+				contents = CL_PointSuperContents(currentorigin);
+				if (contents & SUPERCONTENTS_LIQUIDSMASK)
+				{
+					// swim
+					AngleVectors(q->viewangles, forward, right, up);
+					VectorSet(up, 0, 0, 1);
+					VectorMAMAM(q->move[0], forward, q->move[1], right, q->move[2], up, wishvel);
+					wishspeed = VectorLength(wishvel);
+					if (wishspeed)
+						VectorScale(wishvel, 1 / wishspeed, wishdir);
+					else
+						VectorSet( wishdir, 0.0, 0.0, 0.0 );
+					wishspeed = min(wishspeed, movevars_maxspeed) * 0.6;
+					if (crouch)
+						wishspeed *= 0.5;
+					VectorScale(currentvelocity, (1 - frametime * movevars_waterfriction), currentvelocity);
+					f = wishspeed - DotProduct(currentvelocity, wishdir);
 					if (f > 0)
 					{
-						VectorSet(currentorigin2, currentorigin[0] + currentvelocity[0]*(16/f), currentorigin[1] + currentvelocity[1]*(16/f), currentorigin[2] + playermins[2]);
-						VectorSet(neworigin2, currentorigin2[0], currentorigin2[1], currentorigin2[2] - 34);
-						trace = CL_TraceBox(currentorigin2, vec3_origin, vec3_origin, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
-						if (trace.fraction == 1)
-							edgefriction = movevars_edgefriction;
+						f = min(f, movevars_wateraccelerate * frametime * wishspeed);
+						VectorMA(currentvelocity, f, wishdir, currentvelocity);
 					}
-					// apply friction
-					f = 1 - frametime * edgefriction * ((f < movevars_stopspeed) ? (movevars_stopspeed / f) : 1) * movevars_friction;
-					f = max(f, 0);
-					VectorScale(currentvelocity, f, currentvelocity);
-				}
-				else
-				{
-					// apply air speed limit
-					wishspeed = min(wishspeed, movevars_maxairspeed);
-				}
-				if (gamemode == GAME_NEXUIZ)
-					addspeed = wishspeed;
-				else
-					addspeed = wishspeed - DotProduct(currentvelocity, wishdir);
-				if (addspeed > 0)
-				{
-					accelspeed = min(movevars_accelerate * frametime * wishspeed, addspeed);
-					VectorMA(currentvelocity, accelspeed, wishdir, currentvelocity);
-				}
-				currentvelocity[2] -= cl_gravity.value * frametime;
-			}
-		}
-		//if (i < cl.movement_numqueue - 1 || (cl_movement.integer & 4))
-		{
-			if (crouch)
-			{
-				playermins = cl.playercrouchmins;
-				playermaxs = cl.playercrouchmaxs;
-			}
-			else
-			{
-				playermins = cl.playerstandmins;
-				playermaxs = cl.playerstandmaxs;
-			}
-			onground = false;
-			for (bump = 0, t = frametime;bump < 8 && VectorLength2(currentvelocity) > 0;bump++)
-			{
-				VectorMA(currentorigin, t, currentvelocity, neworigin);
-				trace = CL_TraceBox(currentorigin, playermins, playermaxs, neworigin, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
-				if (trace.fraction < 1 && trace.plane.normal[2] == 0)
-				{
-					// may be a step or wall, try stepping up
-					// first move forward at a higher level
-					VectorSet(currentorigin2, currentorigin[0], currentorigin[1], currentorigin[2] + movevars_stepheight);
-					VectorSet(neworigin2, neworigin[0], neworigin[1], currentorigin[2] + movevars_stepheight);
-					trace2 = CL_TraceBox(currentorigin2, playermins, playermaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
-					// then move down from there
-					VectorCopy(trace2.endpos, currentorigin2);
-					VectorSet(neworigin2, trace2.endpos[0], trace2.endpos[1], currentorigin[2]);
-					trace3 = CL_TraceBox(currentorigin2, playermins, playermaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
-					//Con_Printf("%f %f %f %f : %f %f %f %f : %f %f %f %f\n", trace.fraction, trace.endpos[0], trace.endpos[1], trace.endpos[2], trace2.fraction, trace2.endpos[0], trace2.endpos[1], trace2.endpos[2], trace3.fraction, trace3.endpos[0], trace3.endpos[1], trace3.endpos[2]);
-					// accept the new trace if it made some progress
-					if (fabs(trace3.endpos[0] - trace.endpos[0]) >= 0.03125 || fabs(trace3.endpos[1] - trace.endpos[1]) >= 0.03125)
+					if (q->jump)
 					{
-						trace = trace2;
-						VectorCopy(trace3.endpos, trace.endpos);
+						if (contents & SUPERCONTENTS_LAVA)
+							currentvelocity[2] =  50;
+						else if (contents & SUPERCONTENTS_SLIME)
+							currentvelocity[2] =  80;
+						else
+						{
+							if (gamemode == GAME_NEXUIZ)
+								currentvelocity[2] = 200;
+							else
+								currentvelocity[2] = 100;
+						}
 					}
 				}
-				if (trace.fraction == 1)
+				else
 				{
-					VectorCopy(trace.endpos, currentorigin);
-					break;
+					// walk
+					if (onground && q->jump && canjump)
+					{
+						currentvelocity[2] += movevars_jumpvelocity;
+						onground = false;
+						canjump = false;
+					}
+					if (!q->jump)
+						canjump = true;
+					VectorSet(yawangles, 0, q->viewangles[1], 0);
+					AngleVectors(yawangles, forward, right, up);
+					VectorMAM(q->move[0], forward, q->move[1], right, wishvel);
+					wishspeed = VectorLength(wishvel);
+					if (wishspeed)
+						VectorScale(wishvel, 1 / wishspeed, wishdir);
+					else
+						VectorSet( wishdir, 0.0, 0.0, 0.0 );
+					wishspeed = min(wishspeed, movevars_maxspeed);
+					if (crouch)
+						wishspeed *= 0.5;
+					// check if onground
+					if (onground)
+					{
+						// apply ground friction
+						f = sqrt(currentvelocity[0] * currentvelocity[0] + currentvelocity[1] * currentvelocity[1]);
+						edgefriction = 1;
+						if (f > 0)
+						{
+							VectorSet(currentorigin2, currentorigin[0] + currentvelocity[0]*(16/f), currentorigin[1] + currentvelocity[1]*(16/f), currentorigin[2] + playermins[2]);
+							VectorSet(neworigin2, currentorigin2[0], currentorigin2[1], currentorigin2[2] - 34);
+							trace = CL_TraceBox(currentorigin2, vec3_origin, vec3_origin, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
+							if (trace.fraction == 1)
+								edgefriction = movevars_edgefriction;
+						}
+						// apply friction
+						f = 1 - frametime * edgefriction * ((f < movevars_stopspeed) ? (movevars_stopspeed / f) : 1) * movevars_friction;
+						f = max(f, 0);
+						VectorScale(currentvelocity, f, currentvelocity);
+					}
+					else
+					{
+						// apply air speed limit
+						wishspeed = min(wishspeed, movevars_maxairspeed);
+					}
+					if (gamemode == GAME_NEXUIZ)
+						addspeed = wishspeed;
+					else
+						addspeed = wishspeed - DotProduct(currentvelocity, wishdir);
+					if (addspeed > 0)
+					{
+						accelspeed = min(movevars_accelerate * frametime * wishspeed, addspeed);
+						VectorMA(currentvelocity, accelspeed, wishdir, currentvelocity);
+					}
+					currentvelocity[2] -= cl_gravity.value * frametime;
 				}
-				if (trace.plane.normal[2] > 0.7)
-					onground = true;
-				t *= 1 - trace.fraction;
-				if (trace.fraction >= 0.001)
-					VectorCopy(trace.endpos, currentorigin);
-				f = DotProduct(currentvelocity, trace.plane.normal);
-				VectorMA(currentvelocity, -f, trace.plane.normal, currentvelocity);
+			}
+			//if (i < cl.movement_numqueue - 1 || (cl_movement.integer & 4))
+			{
+				if (crouch)
+				{
+					playermins = cl.playercrouchmins;
+					playermaxs = cl.playercrouchmaxs;
+				}
+				else
+				{
+					playermins = cl.playerstandmins;
+					playermaxs = cl.playerstandmaxs;
+				}
+				onground = false;
+				for (bump = 0, t = frametime;bump < 8 && VectorLength2(currentvelocity) > 0;bump++)
+				{
+					VectorMA(currentorigin, t, currentvelocity, neworigin);
+					trace = CL_TraceBox(currentorigin, playermins, playermaxs, neworigin, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
+					if (trace.fraction < 1 && trace.plane.normal[2] == 0)
+					{
+						// may be a step or wall, try stepping up
+						// first move forward at a higher level
+						VectorSet(currentorigin2, currentorigin[0], currentorigin[1], currentorigin[2] + movevars_stepheight);
+						VectorSet(neworigin2, neworigin[0], neworigin[1], currentorigin[2] + movevars_stepheight);
+						trace2 = CL_TraceBox(currentorigin2, playermins, playermaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
+						// then move down from there
+						VectorCopy(trace2.endpos, currentorigin2);
+						VectorSet(neworigin2, trace2.endpos[0], trace2.endpos[1], currentorigin[2]);
+						trace3 = CL_TraceBox(currentorigin2, playermins, playermaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
+						//Con_Printf("%f %f %f %f : %f %f %f %f : %f %f %f %f\n", trace.fraction, trace.endpos[0], trace.endpos[1], trace.endpos[2], trace2.fraction, trace2.endpos[0], trace2.endpos[1], trace2.endpos[2], trace3.fraction, trace3.endpos[0], trace3.endpos[1], trace3.endpos[2]);
+						// accept the new trace if it made some progress
+						if (fabs(trace3.endpos[0] - trace.endpos[0]) >= 0.03125 || fabs(trace3.endpos[1] - trace.endpos[1]) >= 0.03125)
+						{
+							trace = trace2;
+							VectorCopy(trace3.endpos, trace.endpos);
+						}
+					}
+					if (trace.fraction == 1)
+					{
+						VectorCopy(trace.endpos, currentorigin);
+						break;
+					}
+					if (trace.plane.normal[2] > 0.7)
+						onground = true;
+					t *= 1 - trace.fraction;
+					if (trace.fraction >= 0.001)
+						VectorCopy(trace.endpos, currentorigin);
+					f = DotProduct(currentvelocity, trace.plane.normal);
+					VectorMA(currentvelocity, -f, trace.plane.normal, currentvelocity);
+				}
 			}
 		}
+		// store replay location
+		cl.onground = onground;
 	}
-	// store replay location
 	VectorCopy(cl.movement_origin, cl.movement_oldorigin);
 	VectorCopy(currentorigin, cl.movement_origin);
 	VectorCopy(currentvelocity, cl.movement_velocity);
