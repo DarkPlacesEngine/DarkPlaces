@@ -2845,7 +2845,7 @@ void R_Shadow_SelectLight(dlight_t *light)
 void R_Shadow_DrawCursor_TransparentCallback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
 {
 	float scale = r_editlights_cursorgrid.value * 0.5f;
-	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_crosshairs[0]->tex, NULL, false, r_editlights_cursorlocation, r_viewright, r_viewup, scale, -scale, -scale, scale, 1, 1, 1, 0.5f);
+	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, r_crosshairs[1]->tex, NULL, false, r_editlights_cursorlocation, r_viewright, r_viewup, scale, -scale, -scale, scale, 1, 1, 1, 0.5f);
 }
 
 void R_Shadow_DrawLightSprite_TransparentCallback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
