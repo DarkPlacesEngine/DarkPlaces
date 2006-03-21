@@ -205,7 +205,7 @@ static void VideoFrame( clvideo_t *video )
 				return;
 			}
 		} while( video->framenum < destframe );
-		R_UpdateTexture( video->cpif.tex, (unsigned char *)video->imagedata );
+		R_UpdateTexture( video->cpif.tex, (unsigned char *)video->imagedata, 0, 0, video->cpif.width, video->cpif.height );
 	}
 }
 

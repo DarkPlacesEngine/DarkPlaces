@@ -50,7 +50,7 @@ Combine and scale multiple lightmaps into the 8.8 format in blocklights
 */
 void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 {
-	int smax, tmax, i, j, size, size3, maps, stride, l;
+	int smax, tmax, i, j, size, size3, maps, l;
 	unsigned int *bl, scale;
 	unsigned char *lightmap, *out, *stain;
 	static unsigned int intblocklights[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*3]; // LordHavoc: *3 for colored lighting
@@ -96,8 +96,7 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 	// (0 = 0.0, 128 = 1.0, 256 = 2.0)
 	if (ent->model->brushq1.lightmaprgba)
 	{
-		stride = (surface->lightmapinfo->lightmaptexturestride - smax) * 4;
-		for (i = 0;i < tmax;i++, out += stride)
+		for (i = 0;i < tmax;i++)
 		{
 			for (j = 0;j < smax;j++)
 			{
@@ -110,8 +109,7 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 	}
 	else
 	{
-		stride = (surface->lightmapinfo->lightmaptexturestride - smax) * 3;
-		for (i = 0;i < tmax;i++, out += stride)
+		for (i = 0;i < tmax;i++)
 		{
 			for (j = 0;j < smax;j++)
 			{
@@ -122,7 +120,7 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 		}
 	}
 
-	R_UpdateTexture(surface->lightmaptexture, templight);
+	R_UpdateTexture(surface->lightmaptexture, templight, surface->lightmapinfo->lightmaporigin[0], surface->lightmapinfo->lightmaporigin[1], smax, tmax);
 }
 
 void R_StainNode (mnode_t *node, model_t *model, const vec3_t origin, float radius, const float fcolor[8])

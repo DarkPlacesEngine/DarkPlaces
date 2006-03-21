@@ -683,7 +683,7 @@ static void GL_SetupTextureParameters(int flags, int texturetype)
 	CHECKGLERROR
 }
 
-static void R_Upload(gltexture_t *glt, unsigned char *data)
+static void R_Upload(gltexture_t *glt, unsigned char *data, int fragx, int fragy, int fragz, int fragwidth, int fragheight, int fragdepth)
 {
 	int i, mip, width, height, depth;
 	GLint oldbindtexnum;
@@ -699,7 +699,7 @@ static void R_Upload(gltexture_t *glt, unsigned char *data)
 	CHECKGLERROR
 	glt->flags &= ~GLTEXF_UPLOAD;
 
-	if (glt->flags & TEXF_FRAGMENT)
+	if ((glt->flags & TEXF_FRAGMENT) || (glt->image->flags & (TEXF_MIPMAP | TEXF_PICMIP | GLTEXF_UPLOAD)) == 0)
 	{
 		if (glt->image->flags & GLTEXF_UPLOAD)
 		{
@@ -730,31 +730,31 @@ static void R_Upload(gltexture_t *glt, unsigned char *data)
 
 		if (prevbuffer == NULL)
 		{
-			R_MakeResizeBufferBigger(glt->image->width * glt->image->height * glt->image->depth * glt->image->bytesperpixel);
-			memset(resizebuffer, 0, glt->width * glt->height * glt->image->depth * glt->image->bytesperpixel);
+			R_MakeResizeBufferBigger(fragwidth * fragheight * fragdepth * glt->image->bytesperpixel);
+			memset(resizebuffer, 0, fragwidth * fragheight * fragdepth * glt->image->bytesperpixel);
 			prevbuffer = resizebuffer;
 		}
 		else if (glt->textype->textype == TEXTYPE_PALETTE)
 		{
 			// promote paletted to RGBA, so we only have to worry about RGB and
 			// RGBA in the rest of this code
-			R_MakeResizeBufferBigger(glt->image->width * glt->image->height * glt->image->depth * glt->image->sides * glt->image->bytesperpixel);
-			Image_Copy8bitRGBA(prevbuffer, colorconvertbuffer, glt->width * glt->height * glt->depth, glt->palette);
+			R_MakeResizeBufferBigger(fragwidth * fragheight * fragdepth * glt->image->sides * glt->image->bytesperpixel);
+			Image_Copy8bitRGBA(prevbuffer, colorconvertbuffer, fragwidth * fragheight * fragdepth, glt->palette);
 			prevbuffer = colorconvertbuffer;
 		}
 
 		switch(glt->image->texturetype)
 		{
 		case GLTEXTURETYPE_1D:
-			qglTexSubImage1D(GL_TEXTURE_1D, 0, glt->x, glt->width, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+			qglTexSubImage1D(GL_TEXTURE_1D, 0, glt->x + fragx, fragwidth, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 			CHECKGLERROR
 			break;
 		case GLTEXTURETYPE_2D:
-			qglTexSubImage2D(GL_TEXTURE_2D, 0, glt->x, glt->y, glt->width, glt->height, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+			qglTexSubImage2D(GL_TEXTURE_2D, 0, glt->x + fragx, glt->y + fragy, fragwidth, fragheight, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 			CHECKGLERROR
 			break;
 		case GLTEXTURETYPE_3D:
-			qglTexSubImage3D(GL_TEXTURE_3D, 0, glt->x, glt->y, glt->z, glt->width, glt->height, glt->depth, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+			qglTexSubImage3D(GL_TEXTURE_3D, 0, glt->x + fragx, glt->y + fragy, glt->z + fragz, fragwidth, fragheight, fragdepth, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 			CHECKGLERROR
 			break;
 		default:
@@ -1020,7 +1020,7 @@ static void R_UploadTexture (gltexture_t *glt)
 	if (!(glt->flags & GLTEXF_UPLOAD))
 		return;
 
-	R_Upload(glt, glt->inputtexels);
+	R_Upload(glt, glt->inputtexels, 0, 0, 0, glt->width, glt->height, glt->depth);
 	if (glt->inputtexels)
 	{
 		Mem_Free(glt->inputtexels);
@@ -1267,12 +1267,7 @@ void R_FragmentLocation(rtexture_t *rt, int *x, int *y, float *fx1, float *fy1, 
 	R_FragmentLocation3D(rt, x, y, NULL, fx1, fy1, NULL, fx2, fy2, NULL);
 }
 
-int R_CompatibleFragmentWidth(int width, int textype, int flags)
-{
-	return width;
-}
-
-void R_UpdateTexture(rtexture_t *rt, unsigned char *data)
+void R_UpdateTexture(rtexture_t *rt, unsigned char *data, int x, int y, int width, int height)
 {
 	gltexture_t *glt;
 	if (rt == NULL)
@@ -1281,10 +1276,11 @@ void R_UpdateTexture(rtexture_t *rt, unsigned char *data)
 		Host_Error("R_UpdateTexture: no data supplied");
 	glt = (gltexture_t *)rt;
 
-	// if it has not been uploaded yet, update the data that will be used when it is
-	if (glt->inputtexels)
-		memcpy(glt->inputtexels, data, glt->inputdatasize);
-	else
-		R_Upload(glt, data);
+	// we need it to be uploaded before we can update a part of it
+	if (glt->flags & GLTEXF_UPLOAD)
+		R_UploadTexture(glt);
+
+	// update part of the texture
+	R_Upload(glt, data, x, y, 0, width, height, 1);
 }
 

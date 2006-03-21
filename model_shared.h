@@ -248,10 +248,9 @@ typedef struct msurface_lightmapinfo_s
 	unsigned char *samples; // q1bsp
 	// stain to apply on lightmap (soot/dirt/blood/whatever)
 	unsigned char *stainsamples; // q1bsp
-	// the stride when building lightmaps to comply with fragment update
-	int lightmaptexturestride; // q1bsp
 	int texturemins[2]; // q1bsp
 	int extents[2]; // q1bsp
+	int lightmaporigin[2]; // q1bsp
 }
 msurface_lightmapinfo_t;
 

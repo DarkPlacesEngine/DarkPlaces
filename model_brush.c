@@ -30,7 +30,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 cvar_t halflifebsp = {0, "halflifebsp", "0", "indicates the current map is hlbsp format (useful to know because of different bounding box sizes)"};
 cvar_t mcbsp = {0, "mcbsp", "0", "indicates the current map is mcbsp format (useful to know because of different bounding box sizes)"};
 cvar_t r_novis = {0, "r_novis", "0", "draws whole level, see also sv_cullentities_pvs 0"};
-cvar_t r_miplightmaps = {CVAR_SAVE, "r_miplightmaps", "0", "mipmaps lightmaps on upload, also expanding them to power of 2 sizes, this runs slower"};
 cvar_t r_lightmaprgba = {0, "r_lightmaprgba", "1", "whether to use RGBA (32bit) or RGB (24bit) lightmaps"};
 cvar_t r_nosurftextures = {0, "r_nosurftextures", "0", "pretends there was no texture lump found in the q1bsp/hlbsp loading (useful for debugging this rare case)"};
 cvar_t r_subdivisions_tolerance = {0, "r_subdivisions_tolerance", "4", "maximum error tolerance on curve subdivision for rendering purposes (in other words, the curves will be given as many polygons as necessary to represent curves at this quality)"};
@@ -51,7 +50,6 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&halflifebsp);
 	Cvar_RegisterVariable(&mcbsp);
 	Cvar_RegisterVariable(&r_novis);
-	Cvar_RegisterVariable(&r_miplightmaps);
 	Cvar_RegisterVariable(&r_lightmaprgba);
 	Cvar_RegisterVariable(&r_nosurftextures);
 	Cvar_RegisterVariable(&r_subdivisions_tolerance);
@@ -1912,12 +1910,46 @@ static void Mod_Q1BSP_GenerateWarpMesh(msurface_t *surface)
 }
 #endif
 
+static qboolean Mod_Q1BSP_AllocLightmapBlock(int *lineused, int totalwidth, int totalheight, int blockwidth, int blockheight, int *outx, int *outy)
+{
+	int y, x2, y2;
+	int bestx = totalwidth, besty = 0;
+	// find the left-most space we can find
+	for (y = 0;y <= totalheight - blockheight;y++)
+	{
+		x2 = 0;
+		for (y2 = 0;y2 < blockheight;y2++)
+			x2 = max(x2, lineused[y+y2]);
+		if (bestx > x2)
+		{
+			bestx = x2;
+			besty = y;
+		}
+	}
+	// if the best was not good enough, return failure
+	if (bestx > totalwidth - blockwidth)
+		return false;
+	// we found a good spot
+	if (outx)
+		*outx = bestx;
+	if (outy)
+		*outy = besty;
+	// now mark the space used
+	for (y2 = 0;y2 < blockheight;y2++)
+		lineused[besty+y2] = bestx + blockwidth;
+	// return success
+	return true;
+}
+
 static void Mod_Q1BSP_LoadFaces(lump_t *l)
 {
 	dface_t *in;
 	msurface_t *surface;
-	int i, j, count, surfacenum, planenum, smax, tmax, ssize, tsize, firstedge, numedges, totalverts, totaltris;
-	float texmins[2], texmaxs[2], val;
+	int i, j, count, surfacenum, planenum, smax, tmax, ssize, tsize, firstedge, numedges, totalverts, totaltris, lightmapnumber;
+	float texmins[2], texmaxs[2], val, lightmaptexcoordscale;
+#define LIGHTMAPSIZE 256
+	rtexture_t *lightmaptexture;
+	int lightmap_lineused[LIGHTMAPSIZE];
 
 	in = (dface_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -1942,6 +1974,10 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 	loadmodel->nummeshes = 1;
 	loadmodel->meshlist = (surfmesh_t **)Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t *));
 	loadmodel->meshlist[0] = Mod_AllocSurfMesh(loadmodel->mempool, totalverts, totaltris, true, false, false);
+
+	lightmaptexture = NULL;
+	lightmapnumber = 1;
+	lightmaptexcoordscale = 1.0f / (float)LIGHTMAPSIZE;
 
 	totalverts = 0;
 	totaltris = 0;
@@ -2032,7 +2068,6 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		// lighting info
 		for (i = 0;i < MAXLIGHTMAPS;i++)
 			surface->lightmapinfo->styles[i] = in->styles[i];
-		surface->lightmapinfo->lightmaptexturestride = 0;
 		surface->lightmaptexture = NULL;
 		surface->deluxemaptexture = r_texture_blanknormalmap;
 		i = LittleLong(in->lightofs);
@@ -2055,7 +2090,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		// check if we should apply a lightmap to this
 		if (!(surface->lightmapinfo->texinfo->flags & TEX_SPECIAL) || surface->lightmapinfo->samples)
 		{
-			int i, iu, iv;
+			int i, iu, iv, lightmapx, lightmapy;
 			float u, v, ubase, vbase, uscale, vscale;
 
 			if (ssize > 256 || tsize > 256)
@@ -2067,21 +2102,24 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 			// clear to white
 			memset(surface->lightmapinfo->stainsamples, 255, ssize * tsize * 3);
 
-			if (r_miplightmaps.integer)
+			// find a place for this lightmap
+			if (!lightmaptexture || !Mod_Q1BSP_AllocLightmapBlock(lightmap_lineused, LIGHTMAPSIZE, LIGHTMAPSIZE, ssize, tsize, &lightmapx, &lightmapy))
 			{
-				surface->lightmapinfo->lightmaptexturestride = ssize;
-				surface->lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, NULL, surface->lightmapinfo->lightmaptexturestride, tsize, NULL, loadmodel->brushq1.lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_MIPMAP | TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
-				surface->deluxemaptexture = r_texture_blanknormalmap;
+				// could not find room, make a new lightmap
+				lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%i", lightmapnumber++), LIGHTMAPSIZE, LIGHTMAPSIZE, NULL, loadmodel->brushq1.lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+				memset(lightmap_lineused, 0, sizeof(lightmap_lineused));
+				Mod_Q1BSP_AllocLightmapBlock(lightmap_lineused, LIGHTMAPSIZE, LIGHTMAPSIZE, ssize, tsize, &lightmapx, &lightmapy);
 			}
-			else
-			{
-				surface->lightmapinfo->lightmaptexturestride = R_CompatibleFragmentWidth(ssize, loadmodel->brushq1.lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, 0);
-				surface->lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, NULL, surface->lightmapinfo->lightmaptexturestride, tsize, NULL, loadmodel->brushq1.lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_FRAGMENT | TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
-				surface->deluxemaptexture = r_texture_blanknormalmap;
-			}
-			R_FragmentLocation(surface->lightmaptexture, NULL, NULL, &ubase, &vbase, &uscale, &vscale);
-			uscale = (uscale - ubase) / ssize;
-			vscale = (vscale - vbase) / tsize;
+
+			surface->lightmaptexture = lightmaptexture;
+			surface->deluxemaptexture = r_texture_blanknormalmap;
+			surface->lightmapinfo->lightmaporigin[0] = lightmapx;
+			surface->lightmapinfo->lightmaporigin[1] = lightmapy;
+
+			ubase = lightmapx * lightmaptexcoordscale;
+			vbase = lightmapy * lightmaptexcoordscale;
+			uscale = lightmaptexcoordscale;
+			vscale = lightmaptexcoordscale;
 
 			for (i = 0;i < surface->num_vertices;i++)
 			{
