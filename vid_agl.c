@@ -3,7 +3,7 @@
 
 	Mac OS X OpenGL and input module, using Carbon and AGL
 
-	Copyright (C) 2005  Mathieu Olivier
+	Copyright (C) 2005-2006  Mathieu Olivier
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -54,7 +54,7 @@ static qboolean vid_usingvsync = false;
 static int scr_width, scr_height;
 
 static AGLContext context;
-static 	WindowRef window;
+static WindowRef window;
 
 
 void VID_GetWindowSize (int *x, int *y, int *width, int *height)
@@ -74,7 +74,7 @@ static void IN_Activate( qboolean grab )
 			CGPoint winCenter;
 
 			SelectWindow(window);
-			HideCursor();
+			CGDisplayHideCursor(CGMainDisplayID());
 
 			// Put the mouse cursor at the center of the window
 			GetWindowBounds (window, kWindowContentRgn, &winBounds);
@@ -94,7 +94,7 @@ static void IN_Activate( qboolean grab )
 		if (vid_usingmouse)
 		{
 			CGAssociateMouseAndMouseCursorPosition(true);
-			ShowCursor();
+			CGDisplayShowCursor(CGMainDisplayID());
 
 			vid_usingmouse = false;
 		}
@@ -363,7 +363,6 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	};
 	OSStatus carbonError;
 	Rect windowBounds;
-	GDHandle screen;
 	AGLPixelFormat pixelFormat;
 	GLint attributes [32];
 
@@ -393,9 +392,11 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	AsyncEvent_Quitting = false;
 	AsyncEvent_Collapsed = false;
 
-	// Create the window
-	SetRect(&windowBounds, 0, 0, width, height);
-	OffsetRect(&windowBounds, 100, 100);  // move it a bit towards the center of the screen
+	// Create the window, a bit towards the center of the screen
+	windowBounds.left = 100;
+	windowBounds.top = 100;
+	windowBounds.right = width + 100;
+	windowBounds.bottom = height + 100;
 	carbonError = CreateNewWindow(kDocumentWindowClass, kWindowStandardFloatingAttributes | kWindowStandardHandlerAttribute, &windowBounds, &window);
 	if (carbonError != noErr || window == NULL)
 	{
@@ -413,17 +414,9 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	InstallWindowEventHandler (window, NewEventHandlerUPP (MainWindowEventHandler),
 							   GetEventTypeCount(winEvents), winEvents, window, NULL);
 
-	screen = GetGWorldDevice(GetWindowPort(window));
-	if (screen == NULL)
-	{
-		Con_Printf("Unable to get GDevice for window\n");
-		ReleaseWindow(window);
-		return false;
-	}
-
 	// Create and set pixel format
 	VID_BuildAGLAttrib(attributes, bpp == 32, fullscreen);
-	pixelFormat = qaglChoosePixelFormat(&screen, 1, attributes);
+	pixelFormat = qaglChoosePixelFormat(NULL, 1, attributes);
 	if (pixelFormat == NULL)
 	{
 		Con_Printf("Unable to create pixel format\n");
