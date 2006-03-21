@@ -169,7 +169,12 @@ model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolea
 		}
 	}
 	if (mod->loaded)
-		return mod; // already loaded
+	{
+		// already loaded
+		if (buf)
+			Mem_Free(buf);
+		return mod;
+	}
 
 	Con_DPrintf("loading model %s\n", mod->name);
 	// LordHavoc: unload the existing model in this slot (if there is one)
@@ -228,15 +233,6 @@ model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, qboolea
 	// no errors occurred
 	mod->loaded = true;
 	return mod;
-}
-
-/*
-===================
-Mod_ClearAll
-===================
-*/
-void Mod_ClearAll(void)
-{
 }
 
 void Mod_ClearUsed(void)

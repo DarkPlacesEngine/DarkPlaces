@@ -258,6 +258,18 @@ void R_Draw2DCrosshair(void);
 void R_CalcBeam_Vertex3f(float *vert, const vec3_t org1, const vec3_t org2, float width);
 void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_t *fogtexture, int depthdisable, const vec3_t origin, const vec3_t left, const vec3_t up, float scalex1, float scalex2, float scaley1, float scaley2, float cr, float cg, float cb, float ca);
 
+extern mempool_t *r_main_mempool;
+
+extern int rsurface_array_size;
+extern float *rsurface_array_vertex3f;
+extern float *rsurface_array_svector3f;
+extern float *rsurface_array_tvector3f;
+extern float *rsurface_array_normal3f;
+extern float *rsurface_array_color4f;
+extern float *rsurface_array_texcoord3f;
+
+void R_Mesh_ResizeArrays(int newvertices);
+
 struct entity_render_s;
 struct texture_s;
 struct msurface_s;

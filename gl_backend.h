@@ -108,13 +108,5 @@ void SCR_UpdateScreen(void);
 // invoke refresh of loading plaque (nothing else seen)
 void SCR_UpdateLoadingScreen(void);
 
-extern float varray_vertex3f[65536*3];
-extern float varray_svector3f[65536*3];
-extern float varray_tvector3f[65536*3];
-extern float varray_normal3f[65536*3];
-extern float varray_color4f[65536*4];
-extern float varray_texcoord3f[65536*3];
-extern float varray_vertex3f2[65536*3];
-
 #endif
 

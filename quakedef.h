@@ -236,7 +236,6 @@ extern int host_framecount;
 // not bounded in any way, changed at start of every frame, never reset
 extern double realtime;
 
-void Host_ClearMemory(void);
 void Host_InitCommands(void);
 void Host_Init(void);
 void Host_Shutdown(void);

@@ -424,8 +424,9 @@ typedef struct client_static_s
 {
 	cactive_t state;
 
-	// all client memory allocations go in this pool
-	mempool_t *mempool;
+	// all client memory allocations go in these pools
+	mempool_t *levelmempool;
+	mempool_t *permanentmempool;
 
 // demo loop control
 	// -1 = don't play demos

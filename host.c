@@ -519,25 +519,6 @@ void Host_ShutdownServer(void)
 }
 
 
-/*
-================
-Host_ClearMemory
-
-This clears all the memory used by both the client and server, but does
-not reinitialize anything.
-================
-*/
-void Host_ClearMemory (void)
-{
-	Con_DPrint("Clearing memory\n");
-	Mod_ClearAll ();
-
-	cls.signon = 0;
-	memset (&sv, 0, sizeof(sv));
-	memset (&cl, 0, sizeof(cl));
-}
-
-
 //============================================================================
 
 /*

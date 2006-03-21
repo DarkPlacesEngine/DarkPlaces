@@ -1259,7 +1259,8 @@ void PRVM_LoadLNO( const char *progname ) {
 <Spike>    SafeWrite (h, statement_linenums, numstatements*sizeof(int));
 */
 	if( (unsigned) filesize < (6 + prog->progs->numstatements) * sizeof( int ) ) {
-        return;
+		Mem_Free(lno);
+		return;
 	}
 
 	header = (unsigned int *) lno;

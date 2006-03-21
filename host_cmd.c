@@ -729,6 +729,7 @@ void Host_Loadgame_f (void)
 
 		entnum++;
 	}
+	Mem_Free(text);
 
 	prog->num_edicts = entnum;
 	sv.time = time;

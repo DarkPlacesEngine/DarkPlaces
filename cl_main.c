@@ -89,27 +89,8 @@ void CL_ClearState(void)
 	int i;
 	entity_t *ent;
 
-	if (cl.entities) Mem_Free(cl.entities);cl.entities = NULL;
-	if (cl.csqcentities) Mem_Free(cl.csqcentities);cl.csqcentities = NULL;	//[515]: csqc
-	if (cl.entities_active) Mem_Free(cl.entities_active);cl.entities_active = NULL;
-	if (cl.csqcentities_active) Mem_Free(cl.csqcentities_active);cl.csqcentities_active = NULL;	//[515]: csqc
-	if (cl.static_entities) Mem_Free(cl.static_entities);cl.static_entities = NULL;
-	if (cl.temp_entities) Mem_Free(cl.temp_entities);cl.temp_entities = NULL;
-	if (cl.effects) Mem_Free(cl.effects);cl.effects = NULL;
-	if (cl.beams) Mem_Free(cl.beams);cl.beams = NULL;
-	if (cl.dlights) Mem_Free(cl.dlights);cl.dlights = NULL;
-	if (cl.lightstyle) Mem_Free(cl.lightstyle);cl.lightstyle = NULL;
-	if (cl.brushmodel_entities) Mem_Free(cl.brushmodel_entities);cl.brushmodel_entities = NULL;
-	if (cl.entitydatabase) EntityFrame_FreeDatabase(cl.entitydatabase);cl.entitydatabase = NULL;
-	if (cl.entitydatabase4) EntityFrame4_FreeDatabase(cl.entitydatabase4);cl.entitydatabase4 = NULL;
-	if (cl.entitydatabaseqw) EntityFrameQW_FreeDatabase(cl.entitydatabaseqw);cl.entitydatabaseqw = NULL;
-	if (cl.scores) Mem_Free(cl.scores);cl.scores = NULL;
-	if (cl.particles) Mem_Free(cl.particles);cl.particles = NULL;
-
-	if (!sv.active)
-		Host_ClearMemory ();
-
 // wipe the entire cl structure
+	Mem_EmptyPool(cls.levelmempool);
 	memset (&cl, 0, sizeof(cl));
 
 	S_StopAllSounds();
@@ -148,18 +129,18 @@ void CL_ClearState(void)
 	cl.num_effects = 0;
 	cl.num_beams = 0;
 
-	cl.entities = (entity_t *)Mem_Alloc(cls.mempool, cl.max_entities * sizeof(entity_t));
-	cl.csqcentities = (entity_t *)Mem_Alloc(cls.mempool, cl.max_csqcentities * sizeof(entity_t));	//[515]: csqc
-	cl.entities_active = (unsigned char *)Mem_Alloc(cls.mempool, cl.max_brushmodel_entities * sizeof(unsigned char));
-	cl.csqcentities_active = (unsigned char *)Mem_Alloc(cls.mempool, cl.max_brushmodel_entities * sizeof(unsigned char));	//[515]: csqc
-	cl.static_entities = (entity_t *)Mem_Alloc(cls.mempool, cl.max_static_entities * sizeof(entity_t));
-	cl.temp_entities = (entity_t *)Mem_Alloc(cls.mempool, cl.max_temp_entities * sizeof(entity_t));
-	cl.effects = (cl_effect_t *)Mem_Alloc(cls.mempool, cl.max_effects * sizeof(cl_effect_t));
-	cl.beams = (beam_t *)Mem_Alloc(cls.mempool, cl.max_beams * sizeof(beam_t));
-	cl.dlights = (dlight_t *)Mem_Alloc(cls.mempool, cl.max_dlights * sizeof(dlight_t));
-	cl.lightstyle = (lightstyle_t *)Mem_Alloc(cls.mempool, cl.max_lightstyle * sizeof(lightstyle_t));
-	cl.brushmodel_entities = (int *)Mem_Alloc(cls.mempool, cl.max_brushmodel_entities * sizeof(int));
-	cl.particles = (particle_t *) Mem_Alloc(cls.mempool, cl.max_particles * sizeof(particle_t));
+	cl.entities = (entity_t *)Mem_Alloc(cls.levelmempool, cl.max_entities * sizeof(entity_t));
+	cl.csqcentities = (entity_t *)Mem_Alloc(cls.levelmempool, cl.max_csqcentities * sizeof(entity_t));	//[515]: csqc
+	cl.entities_active = (unsigned char *)Mem_Alloc(cls.levelmempool, cl.max_brushmodel_entities * sizeof(unsigned char));
+	cl.csqcentities_active = (unsigned char *)Mem_Alloc(cls.levelmempool, cl.max_brushmodel_entities * sizeof(unsigned char));	//[515]: csqc
+	cl.static_entities = (entity_t *)Mem_Alloc(cls.levelmempool, cl.max_static_entities * sizeof(entity_t));
+	cl.temp_entities = (entity_t *)Mem_Alloc(cls.levelmempool, cl.max_temp_entities * sizeof(entity_t));
+	cl.effects = (cl_effect_t *)Mem_Alloc(cls.levelmempool, cl.max_effects * sizeof(cl_effect_t));
+	cl.beams = (beam_t *)Mem_Alloc(cls.levelmempool, cl.max_beams * sizeof(beam_t));
+	cl.dlights = (dlight_t *)Mem_Alloc(cls.levelmempool, cl.max_dlights * sizeof(dlight_t));
+	cl.lightstyle = (lightstyle_t *)Mem_Alloc(cls.levelmempool, cl.max_lightstyle * sizeof(lightstyle_t));
+	cl.brushmodel_entities = (int *)Mem_Alloc(cls.levelmempool, cl.max_brushmodel_entities * sizeof(int));
+	cl.particles = (particle_t *) Mem_Alloc(cls.levelmempool, cl.max_particles * sizeof(particle_t));
 
 	// LordHavoc: have to set up the baseline info for alpha and other stuff
 	for (i = 0;i < cl.max_entities;i++)
@@ -230,7 +211,7 @@ void CL_ExpandEntities(int num)
 		oldmaxentities = cl.max_entities;
 		oldentities = cl.entities;
 		cl.max_entities = (num & ~255) + 256;
-		cl.entities = (entity_t *)Mem_Alloc(cls.mempool, cl.max_entities * sizeof(entity_t));
+		cl.entities = (entity_t *)Mem_Alloc(cls.levelmempool, cl.max_entities * sizeof(entity_t));
 		memcpy(cl.entities, oldentities, oldmaxentities * sizeof(entity_t));
 		Mem_Free(oldentities);
 		for (i = oldmaxentities;i < cl.max_entities;i++)
@@ -255,7 +236,7 @@ void CL_ExpandCSQCEntities(int num)
 		oldmaxentities = cl.max_csqcentities;
 		oldentities = cl.csqcentities;
 		cl.max_csqcentities = (num & ~255) + 256;
-		cl.csqcentities = Mem_Alloc(cls.mempool, cl.max_csqcentities * sizeof(entity_t));
+		cl.csqcentities = Mem_Alloc(cls.levelmempool, cl.max_csqcentities * sizeof(entity_t));
 		memcpy(cl.csqcentities, oldentities, oldmaxentities * sizeof(entity_t));
 		Mem_Free(oldentities);
 		for (i = oldmaxentities;i < cl.max_csqcentities;i++)
@@ -1703,7 +1684,8 @@ void CL_Shutdown (void)
 	CL_Particles_Shutdown();
 	CL_Parse_Shutdown();
 
-	Mem_FreePool (&cls.mempool);
+	Mem_FreePool (&cls.permanentmempool);
+	Mem_FreePool (&cls.levelmempool);
 }
 
 /*
@@ -1713,12 +1695,13 @@ CL_Init
 */
 void CL_Init (void)
 {
-	cls.mempool = Mem_AllocPool("client", 0, NULL);
+	cls.levelmempool = Mem_AllocPool("client (per-level memory)", 0, NULL);
+	cls.permanentmempool = Mem_AllocPool("client (long term memory)", 0, NULL);
 
 	memset(&r_refdef, 0, sizeof(r_refdef));
 	// max entities sent to renderer per frame
 	r_refdef.maxentities = MAX_EDICTS + 256 + 512;
-	r_refdef.entities = (entity_render_t **)Mem_Alloc(cls.mempool, sizeof(entity_render_t *) * r_refdef.maxentities);
+	r_refdef.entities = (entity_render_t **)Mem_Alloc(cls.permanentmempool, sizeof(entity_render_t *) * r_refdef.maxentities);
 
 	CL_InitInput ();
 

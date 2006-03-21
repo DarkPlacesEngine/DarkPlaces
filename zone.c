@@ -413,7 +413,7 @@ void Mem_PrintStats(void)
 	}
 }
 
-void Mem_PrintList(int listallocations)
+void Mem_PrintList(size_t minallocationsize)
 {
 	mempool_t *pool;
 	memheader_t *mem;
@@ -424,8 +424,8 @@ void Mem_PrintList(int listallocations)
 	{
 		Con_Printf("%10luk (%10luk actual) %s (%+li byte change) %s\n", (unsigned long) ((pool->totalsize + 1023) / 1024), (unsigned long)((pool->realsize + 1023) / 1024), pool->name, (long)pool->totalsize - pool->lastchecksize, (pool->flags & POOLFLAG_TEMP) ? "TEMP" : "");
 		pool->lastchecksize = pool->totalsize;
-		if (listallocations)
-			for (mem = pool->chain;mem;mem = mem->next)
+		for (mem = pool->chain;mem;mem = mem->next)
+			if (mem->size >= minallocationsize)
 				Con_Printf("%10lu bytes allocated at %s:%i\n", (unsigned long)mem->size, mem->filename, mem->fileline);
 	}
 }
@@ -435,17 +435,13 @@ void MemList_f(void)
 	switch(Cmd_Argc())
 	{
 	case 1:
-		Mem_PrintList(false);
+		Mem_PrintList(1<<30);
 		Mem_PrintStats();
 		break;
 	case 2:
-		if (!strcmp(Cmd_Argv(1), "all"))
-		{
-			Mem_PrintList(true);
-			Mem_PrintStats();
-			break;
-		}
-		// drop through
+		Mem_PrintList(atoi(Cmd_Argv(1)) * 1024);
+		Mem_PrintStats();
+		break;
 	default:
 		Con_Print("MemList_f: unrecognized options\nusage: memlist [all]\n");
 		break;
@@ -482,7 +478,7 @@ void Memory_Shutdown (void)
 void Memory_Init_Commands (void)
 {
 	Cmd_AddCommand ("memstats", MemStats_f, "prints memory system statistics");
-	Cmd_AddCommand ("memlist", MemList_f, "prints memory pool information (and individual allocations if used as memlist all)");
+	Cmd_AddCommand ("memlist", MemList_f, "prints memory pool information (or if used as memlist 5 lists individual allocations of 5K or larger, 0 lists all allocations)");
 	Cvar_RegisterVariable (&developer_memory);
 	Cvar_RegisterVariable (&developer_memorydebug);
 }

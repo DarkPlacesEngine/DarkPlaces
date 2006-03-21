@@ -295,17 +295,20 @@ void R_Stain (const vec3_t origin, float radius, int cr1, int cg1, int cb1, int 
 static void R_DrawPortal_Callback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
 {
 	const mportal_t *portal = (mportal_t *)ent;
-	int i;
+	int i, numpoints;
 	float *v;
 	rmeshstate_t m;
+	float vertex3f[POLYGONELEMENTS_MAXPOINTS*3];
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
 	qglDisable(GL_CULL_FACE);
 	R_Mesh_Matrix(&identitymatrix);
 
+	numpoints = min(portal->numpoints, POLYGONELEMENTS_MAXPOINTS);
+
 	memset(&m, 0, sizeof(m));
-	m.pointer_vertex = varray_vertex3f;
+	m.pointer_vertex = vertex3f;
 	R_Mesh_State(&m);
 
 	i = surfacenumber;
@@ -313,11 +316,9 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, int surfacenumber,
 			 ((i & 0x0038) >> 3) * (1.0f / 7.0f),
 			 ((i & 0x01C0) >> 6) * (1.0f / 7.0f),
 			 0.125f);
-	for (i = 0, v = varray_vertex3f;i < portal->numpoints;i++, v += 3)
+	for (i = 0, v = vertex3f;i < numpoints;i++, v += 3)
 		VectorCopy(portal->points[i].position, v);
-	GL_LockArrays(0, portal->numpoints);
-	R_Mesh_Draw(0, portal->numpoints, portal->numpoints - 2, polygonelements);
-	GL_LockArrays(0, 0);
+	R_Mesh_Draw(0, numpoints, numpoints - 2, polygonelements);
 	qglEnable(GL_CULL_FACE);
 }
 
@@ -689,7 +690,7 @@ void R_Q1BSP_CompileShadowVolume(entity_render_t *ent, vec3_t relativelightorigi
 	int surfacelistindex;
 	float projectdistance = lightradius + model->radius*2 + r_shadow_projectdistance.value;
 	texture_t *texture;
-	r_shadow_compilingrtlight->static_meshchain_shadow = Mod_ShadowMesh_Begin(r_shadow_mempool, 32768, 32768, NULL, NULL, NULL, false, false, true);
+	r_shadow_compilingrtlight->static_meshchain_shadow = Mod_ShadowMesh_Begin(r_main_mempool, 32768, 32768, NULL, NULL, NULL, false, false, true);
 	R_Shadow_PrepareShadowMark(model->brush.shadowmesh->numtriangles);
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
@@ -702,7 +703,7 @@ void R_Q1BSP_CompileShadowVolume(entity_render_t *ent, vec3_t relativelightorigi
 		R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, r_shadow_compilingrtlight->cullmins, r_shadow_compilingrtlight->cullmaxs, surface->mins, surface->maxs);
 	}
 	R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, lightradius + model->radius + projectdistance, numshadowmark, shadowmarklist);
-	r_shadow_compilingrtlight->static_meshchain_shadow = Mod_ShadowMesh_Finish(r_shadow_mempool, r_shadow_compilingrtlight->static_meshchain_shadow, false, false);
+	r_shadow_compilingrtlight->static_meshchain_shadow = Mod_ShadowMesh_Finish(r_main_mempool, r_shadow_compilingrtlight->static_meshchain_shadow, false, false);
 }
 
 extern float *rsurface_vertex3f;

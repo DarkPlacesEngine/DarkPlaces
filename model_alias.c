@@ -205,6 +205,8 @@ static void Mod_MDLMD2MD3_TraceBox(model_t *model, int frame, trace_t *trace, co
 	frameblend_t frameblend[4];
 	msurface_t *surface;
 	surfmesh_t *mesh;
+	static int maxvertices = 0;
+	static float *vertex3f = NULL;
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
 	trace->realfraction = 1;
@@ -224,8 +226,15 @@ static void Mod_MDLMD2MD3_TraceBox(model_t *model, int frame, trace_t *trace, co
 		for (i = 0, surface = model->data_surfaces;i < model->num_surfaces;i++, surface++)
 		{
 			mesh = surface->groupmesh;
-			Mod_Alias_GetMesh_Vertex3f(model, frameblend, mesh, varray_vertex3f);
-			Collision_TraceLineTriangleMeshFloat(trace, start, end, mesh->num_triangles, mesh->data_element3i, varray_vertex3f, SUPERCONTENTS_SOLID, segmentmins, segmentmaxs);
+			if (maxvertices < mesh->num_vertices)
+			{
+				if (vertex3f)
+					Z_Free(vertex3f);
+				maxvertices = (mesh->num_vertices + 255) & ~255;
+				vertex3f = Z_Malloc(maxvertices * sizeof(float[3]));
+			}
+			Mod_Alias_GetMesh_Vertex3f(model, frameblend, mesh, vertex3f);
+			Collision_TraceLineTriangleMeshFloat(trace, start, end, mesh->num_triangles, mesh->data_element3i, vertex3f, SUPERCONTENTS_SOLID, segmentmins, segmentmaxs);
 		}
 	}
 	else
@@ -248,8 +257,15 @@ static void Mod_MDLMD2MD3_TraceBox(model_t *model, int frame, trace_t *trace, co
 		for (i = 0, surface = model->data_surfaces;i < model->num_surfaces;i++, surface++)
 		{
 			mesh = surface->groupmesh;
-			Mod_Alias_GetMesh_Vertex3f(model, frameblend, mesh, varray_vertex3f);
-			Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, mesh->num_triangles, mesh->data_element3i, varray_vertex3f, SUPERCONTENTS_SOLID, segmentmins, segmentmaxs);
+			if (maxvertices < mesh->num_vertices)
+			{
+				if (vertex3f)
+					Z_Free(vertex3f);
+				maxvertices = (mesh->num_vertices + 255) & ~255;
+				vertex3f = Z_Malloc(maxvertices * sizeof(float[3]));
+			}
+			Mod_Alias_GetMesh_Vertex3f(model, frameblend, mesh, vertex3f);
+			Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, mesh->num_triangles, mesh->data_element3i, vertex3f, SUPERCONTENTS_SOLID, segmentmins, segmentmaxs);
 		}
 	}
 }
