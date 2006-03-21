@@ -5,7 +5,6 @@
 #include "image_png.h"
 
 cvar_t gl_max_size = {CVAR_SAVE, "gl_max_size", "2048", "maximum allowed texture size, can be used to reduce video memory usage, note: this is automatically reduced to match video card capabilities (such as 256 on 3Dfx cards before Voodoo4/5)"};
-cvar_t gl_max_scrapsize = {CVAR_SAVE, "gl_max_scrapsize", "256", "size of scrap textures used to combine lightmaps"};
 cvar_t gl_picmip = {CVAR_SAVE, "gl_picmip", "0", "reduces resolution of textures by powers of 2, for example 1 will halve width/height, reducing texture memory usage by 75%"};
 cvar_t r_lerpimages = {CVAR_SAVE, "r_lerpimages", "1", "bilinear filters images when scaling them up to power of 2 size (mode 1), looks better than glquake (mode 0)"};
 cvar_t r_precachetextures = {CVAR_SAVE, "r_precachetextures", "1", "0 = never upload textures until used, 1 = upload most textures before use (exceptions: rarely used skin colormap layers), 2 = upload all textures before use (can increase texture memory usage significantly)"};
@@ -25,9 +24,6 @@ static mempool_t *texturemempool;
 // set when image is uploaded and freed
 #define GLTEXF_DESTROYED 0x00040000
 
-// size of images which hold fragment textures, ignores picmip and max_size
-static int block_size;
-
 typedef struct textypeinfo_s
 {
 	int textype;
@@ -44,11 +40,6 @@ static textypeinfo_t textype_rgba          = {TEXTYPE_RGBA   , 4, 4, GL_RGBA   ,
 static textypeinfo_t textype_palette_alpha = {TEXTYPE_PALETTE, 1, 4, GL_RGBA   , 4};
 static textypeinfo_t textype_rgba_alpha    = {TEXTYPE_RGBA   , 4, 4, GL_RGBA   , 4};
 static textypeinfo_t textype_dsdt          = {TEXTYPE_DSDT   , 2, 2, GL_DSDT_NV, GL_DSDT8_NV};
-
-// a tiling texture (most common type)
-#define GLIMAGETYPE_TILE 0
-// a fragments texture (contains one or more fragment textures)
-#define GLIMAGETYPE_FRAGMENTS 1
 
 #define GLTEXTURETYPE_1D 0
 #define GLTEXTURETYPE_2D 1
@@ -68,24 +59,6 @@ static int cubemapside[6] =
 	GL_TEXTURE_CUBE_MAP_NEGATIVE_Z_ARB
 };
 
-// a gltextureimage can have one (or more if fragments) gltextures inside
-typedef struct gltextureimage_s
-{
-	struct gltextureimage_s *imagechain;
-	int texturecount;
-	int type; // one of the GLIMAGETYPE_ values
-	int texturetype; // one of the GLTEXTURETYPE_ values
-	int sides; // 1 or 6 depending on texturetype
-	int texnum; // GL texture slot number
-	int width, height, depth; // 3D texture support
-	int bytesperpixel; // bytes per pixel
-	int glformat; // GL_RGB or GL_RGBA
-	int glinternalformat; // 3 or 4
-	int flags;
-	short *blockallocation; // fragment allocation (2D only)
-}
-gltextureimage_t;
-
 typedef struct gltexture_s
 {
 	// this field is exposed to the R_GetTexture macro, for speed reasons
@@ -96,12 +69,10 @@ typedef struct gltexture_s
 	struct gltexturepool_s *pool;
 	// pointer to next texture in texturepool chain
 	struct gltexture_s *chain;
-	// pointer into gltextureimage array
-	gltextureimage_t *image;
 	// name of the texture (this might be removed someday), no duplicates
 	char identifier[32];
-	// location in the image, and size
-	int x, y, z, width, height, depth;
+	// original data size in *inputtexels
+	int inputwidth, inputheight, inputdepth;
 	// copy of the original texture(s) supplied to the upload function, for
 	// delayed uploads (non-precached)
 	unsigned char *inputtexels;
@@ -116,6 +87,16 @@ typedef struct gltexture_s
 	int texturetype;
 	// palette if the texture is TEXTYPE_PALETTE
 	const unsigned int *palette;
+	// power of 2 size, after gl_picmip and gl_max_size are applied
+	int tilewidth, tileheight, tiledepth;
+	// 1 or 6 depending on texturetype
+	int sides;
+	// bytes per pixel
+	int bytesperpixel;
+	// GL_RGB or GL_RGBA
+	int glformat;
+	// 3 or 4
+	int glinternalformat;
 }
 gltexture_t;
 
@@ -124,7 +105,6 @@ gltexture_t;
 typedef struct gltexturepool_s
 {
 	unsigned int sentinel;
-	struct gltextureimage_s *imagechain;
 	struct gltexture_s *gltchain;
 	struct gltexturepool_s *next;
 }
@@ -139,11 +119,6 @@ static int texturebuffersize = 0;
 
 static textypeinfo_t *R_GetTexTypeInfo(int textype, int flags)
 {
-	if ((flags & (TEXF_PICMIP | TEXF_FRAGMENT)) == (TEXF_PICMIP | TEXF_FRAGMENT))
-	{
-		Host_Error("R_GetTexTypeInfo: TEXF_PICMIP can not be used with TEXF_FRAGMENT");
-		return NULL;
-	}
 	if (flags & TEXF_ALPHA)
 	{
 		switch(textype)
@@ -205,8 +180,7 @@ int R_RealGetTexture(rtexture_t *rt)
 		glt = (gltexture_t *)rt;
 		if (glt->flags & GLTEXF_UPLOAD)
 			R_UploadTexture(glt);
-		glt->texnum = glt->image->texnum;
-		return glt->image->texnum;
+		return glt->texnum;
 	}
 	else
 		return 0;
@@ -215,7 +189,6 @@ int R_RealGetTexture(rtexture_t *rt)
 void R_FreeTexture(rtexture_t *rt)
 {
 	gltexture_t *glt, **gltpointer;
-	gltextureimage_t *image, **gltimagepointer;
 
 	glt = (gltexture_t *)rt;
 	if (glt == NULL)
@@ -227,27 +200,8 @@ void R_FreeTexture(rtexture_t *rt)
 	else
 		Host_Error("R_FreeTexture: texture \"%s\" not linked in pool", glt->identifier);
 
-	// note: if freeing a fragment texture, this will not make the claimed
-	// space available for new textures unless all other fragments in the
-	// image are also freed
-	if (glt->image)
-	{
-		image = glt->image;
-		image->texturecount--;
-		if (image->texturecount < 1)
-		{
-			for (gltimagepointer = &glt->pool->imagechain;*gltimagepointer && *gltimagepointer != image;gltimagepointer = &(*gltimagepointer)->imagechain);
-			if (*gltimagepointer == image)
-				*gltimagepointer = image->imagechain;
-			else
-				Host_Error("R_FreeTexture: image not linked in pool");
-			if (image->texnum)
-				qglDeleteTextures(1, (GLuint *)&image->texnum);
-			if (image->blockallocation)
-				Mem_Free(image->blockallocation);
-			Mem_Free(image);
-		}
-	}
+	if (glt->texnum)
+		qglDeleteTextures(1, (GLuint *)&glt->texnum);
 
 	if (glt->inputtexels)
 		Mem_Free(glt->inputtexels);
@@ -286,8 +240,6 @@ void R_FreeTexturePool(rtexturepool_t **rtexturepool)
 		Host_Error("R_FreeTexturePool: pool not linked");
 	while (pool->gltchain)
 		R_FreeTexture((rtexture_t *)pool->gltchain);
-	if (pool->imagechain)
-		Con_Printf("R_FreeTexturePool: not all images freed\n");
 	Mem_Free(pool);
 }
 
@@ -299,7 +251,7 @@ typedef struct glmode_s
 }
 glmode_t;
 
-static glmode_t modes[] =
+static glmode_t modes[6] =
 {
 	{"GL_NEAREST", GL_NEAREST, GL_NEAREST},
 	{"GL_LINEAR", GL_LINEAR, GL_LINEAR},
@@ -313,7 +265,7 @@ static void GL_TextureMode_f (void)
 {
 	int i;
 	GLint oldbindtexnum;
-	gltextureimage_t *image;
+	gltexture_t *glt;
 	gltexturepool_t *pool;
 
 	if (Cmd_Argc() == 1)
@@ -346,19 +298,19 @@ static void GL_TextureMode_f (void)
 	// FIXME: force renderer(/client/something?) restart instead?
 	for (pool = gltexturepoolchain;pool;pool = pool->next)
 	{
-		for (image = pool->imagechain;image;image = image->imagechain)
+		for (glt = pool->gltchain;glt;glt = glt->chain)
 		{
 			// only update already uploaded images
-			if (!(image->flags & GLTEXF_UPLOAD) && !(image->flags & (TEXF_FORCENEAREST | TEXF_FORCELINEAR)))
+			if (!(glt->flags & (GLTEXF_UPLOAD | TEXF_FORCENEAREST | TEXF_FORCELINEAR)))
 			{
-				qglGetIntegerv(gltexturetypebindingenums[image->texturetype], &oldbindtexnum);
-				qglBindTexture(gltexturetypeenums[image->texturetype], image->texnum);
-				if (image->flags & TEXF_MIPMAP)
-					qglTexParameteri(gltexturetypeenums[image->texturetype], GL_TEXTURE_MIN_FILTER, gl_filter_min);
+				qglGetIntegerv(gltexturetypebindingenums[glt->texturetype], &oldbindtexnum);
+				qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);
+				if (glt->flags & TEXF_MIPMAP)
+					qglTexParameteri(gltexturetypeenums[glt->texturetype], GL_TEXTURE_MIN_FILTER, gl_filter_min);
 				else
-					qglTexParameteri(gltexturetypeenums[image->texturetype], GL_TEXTURE_MIN_FILTER, gl_filter_mag);
-				qglTexParameteri(gltexturetypeenums[image->texturetype], GL_TEXTURE_MAG_FILTER, gl_filter_mag);
-				qglBindTexture(gltexturetypeenums[image->texturetype], oldbindtexnum);
+					qglTexParameteri(gltexturetypeenums[glt->texturetype], GL_TEXTURE_MIN_FILTER, gl_filter_mag);
+				qglTexParameteri(gltexturetypeenums[glt->texturetype], GL_TEXTURE_MAG_FILTER, gl_filter_mag);
+				qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);
 			}
 		}
 	}
@@ -417,10 +369,7 @@ static int R_CalcTexelDataSize (gltexture_t *glt)
 {
 	int width2, height2, depth2, size;
 
-	if (glt->flags & TEXF_FRAGMENT)
-		return glt->width * glt->height * glt->depth * glt->textype->internalbytesperpixel * glt->image->sides;
-
-	GL_Texture_CalcImageSize(glt->texturetype, glt->flags, glt->width, glt->height, glt->depth, &width2, &height2, &depth2);
+	GL_Texture_CalcImageSize(glt->texturetype, glt->flags, glt->inputwidth, glt->inputheight, glt->inputdepth, &width2, &height2, &depth2);
 
 	size = width2 * height2 * depth2;
 
@@ -438,7 +387,7 @@ static int R_CalcTexelDataSize (gltexture_t *glt)
 		}
 	}
 
-	return size * glt->textype->internalbytesperpixel * glt->image->sides;
+	return size * glt->textype->internalbytesperpixel * glt->sides;
 }
 
 void R_TextureStats_Print(qboolean printeach, qboolean printpool, qboolean printtotal)
@@ -499,9 +448,6 @@ static void r_textures_start(void)
 	qglPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	CHECKGLERROR
 
-	// use the largest scrap texture size we can (not sure if this is really a good idea)
-	for (block_size = 1;block_size * 2 <= gl_max_texture_size && block_size * 2 <= gl_max_scrapsize.integer;block_size *= 2);
-
 	texturemempool = Mem_AllocPool("texture management", 0, NULL);
 
 	// Disable JPEG screenshots if the DLL isn't loaded
@@ -539,7 +485,6 @@ void R_Textures_Init (void)
 {
 	Cmd_AddCommand("gl_texturemode", &GL_TextureMode_f, "set texture filtering mode (GL_NEAREST, GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR, etc)");
 	Cmd_AddCommand("r_texturestats", R_TextureStats_f, "print information about all loaded textures and some statistics");
-	Cvar_RegisterVariable (&gl_max_scrapsize);
 	Cvar_RegisterVariable (&gl_max_size);
 	Cvar_RegisterVariable (&gl_picmip);
 	Cvar_RegisterVariable (&r_lerpimages);
@@ -571,7 +516,7 @@ void R_Textures_Frame (void)
 
 	if (old_aniso != gl_texture_anisotropy.integer)
 	{
-		gltextureimage_t *image;
+		gltexture_t *glt;
 		gltexturepool_t *pool;
 		GLint oldbindtexnum;
 
@@ -581,17 +526,17 @@ void R_Textures_Frame (void)
 
 		for (pool = gltexturepoolchain;pool;pool = pool->next)
 		{
-			for (image = pool->imagechain;image;image = image->imagechain)
+			for (glt = pool->gltchain;glt;glt = glt->chain)
 			{
 				// only update already uploaded images
-				if (!(image->flags & GLTEXF_UPLOAD) && (image->flags & TEXF_MIPMAP))
+				if ((glt->flags & (GLTEXF_UPLOAD | TEXF_MIPMAP)) == TEXF_MIPMAP)
 				{
-					qglGetIntegerv(gltexturetypebindingenums[image->texturetype], &oldbindtexnum);
+					qglGetIntegerv(gltexturetypebindingenums[glt->texturetype], &oldbindtexnum);
 
-					qglBindTexture(gltexturetypeenums[image->texturetype], image->texnum);
-					qglTexParameteri(gltexturetypeenums[image->texturetype], GL_TEXTURE_MAX_ANISOTROPY_EXT, old_aniso);CHECKGLERROR
+					qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);
+					qglTexParameteri(gltexturetypeenums[glt->texturetype], GL_TEXTURE_MAX_ANISOTROPY_EXT, old_aniso);CHECKGLERROR
 
-					qglBindTexture(gltexturetypeenums[image->texturetype], oldbindtexnum);
+					qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);
 				}
 			}
 		}
@@ -692,162 +637,119 @@ static void R_Upload(gltexture_t *glt, unsigned char *data, int fragx, int fragy
 
 	CHECKGLERROR
 
-	glt->texnum = glt->image->texnum;
 	// we need to restore the texture binding after finishing the upload
-	qglGetIntegerv(gltexturetypebindingenums[glt->image->texturetype], &oldbindtexnum);
-	qglBindTexture(gltexturetypeenums[glt->image->texturetype], glt->image->texnum);
+	qglGetIntegerv(gltexturetypebindingenums[glt->texturetype], &oldbindtexnum);
+	qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);
 	CHECKGLERROR
-	glt->flags &= ~GLTEXF_UPLOAD;
 
-	if ((glt->flags & TEXF_FRAGMENT) || (glt->image->flags & (TEXF_MIPMAP | TEXF_PICMIP | GLTEXF_UPLOAD)) == 0)
+	R_MakeResizeBufferBigger(fragwidth * fragheight * fragdepth * glt->sides * glt->bytesperpixel);
+
+	if (prevbuffer == NULL)
 	{
-		if (glt->image->flags & GLTEXF_UPLOAD)
-		{
-			glt->image->flags &= ~GLTEXF_UPLOAD;
-			Con_DPrint("uploaded new fragments image\n");
-			R_MakeResizeBufferBigger(glt->image->width * glt->image->height * glt->image->depth * glt->image->bytesperpixel);
-			memset(resizebuffer, 255, glt->image->width * glt->image->height * glt->image->depth * glt->image->bytesperpixel);
-			switch(glt->image->texturetype)
-			{
-			case GLTEXTURETYPE_1D:
-				qglTexImage1D(GL_TEXTURE_1D, 0, glt->image->glinternalformat, glt->image->width, 0, glt->image->glformat, GL_UNSIGNED_BYTE, resizebuffer);
-				CHECKGLERROR
-				break;
-			case GLTEXTURETYPE_2D:
-				qglTexImage2D(GL_TEXTURE_2D, 0, glt->image->glinternalformat, glt->image->width, glt->image->height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, resizebuffer);
-				CHECKGLERROR
-				break;
-			case GLTEXTURETYPE_3D:
-				qglTexImage3D(GL_TEXTURE_3D, 0, glt->image->glinternalformat, glt->image->width, glt->image->height, glt->image->depth, 0, glt->image->glformat, GL_UNSIGNED_BYTE, resizebuffer);
-				CHECKGLERROR
-				break;
-			default:
-				Host_Error("R_Upload: fragment texture of type other than 1D, 2D, or 3D");
-				break;
-			}
-			GL_SetupTextureParameters(glt->image->flags, glt->image->texturetype);
-		}
+		memset(resizebuffer, 0, fragwidth * fragheight * fragdepth * glt->bytesperpixel);
+		prevbuffer = resizebuffer;
+	}
+	else if (glt->textype->textype == TEXTYPE_PALETTE)
+	{
+		// promote paletted to RGBA, so we only have to worry about RGB and
+		// RGBA in the rest of this code
+		Image_Copy8bitRGBA(prevbuffer, colorconvertbuffer, fragwidth * fragheight * fragdepth * glt->sides, glt->palette);
+		prevbuffer = colorconvertbuffer;
+	}
 
-		if (prevbuffer == NULL)
-		{
-			R_MakeResizeBufferBigger(fragwidth * fragheight * fragdepth * glt->image->bytesperpixel);
-			memset(resizebuffer, 0, fragwidth * fragheight * fragdepth * glt->image->bytesperpixel);
-			prevbuffer = resizebuffer;
-		}
-		else if (glt->textype->textype == TEXTYPE_PALETTE)
-		{
-			// promote paletted to RGBA, so we only have to worry about RGB and
-			// RGBA in the rest of this code
-			R_MakeResizeBufferBigger(fragwidth * fragheight * fragdepth * glt->image->sides * glt->image->bytesperpixel);
-			Image_Copy8bitRGBA(prevbuffer, colorconvertbuffer, fragwidth * fragheight * fragdepth, glt->palette);
-			prevbuffer = colorconvertbuffer;
-		}
+	// these are rounded up versions of the size to do better resampling
+	for (width  = 1;width  < glt->inputwidth ;width  <<= 1);
+	for (height = 1;height < glt->inputheight;height <<= 1);
+	for (depth  = 1;depth  < glt->inputdepth ;depth  <<= 1);
 
-		switch(glt->image->texturetype)
+	R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
+
+	if ((glt->flags & (TEXF_MIPMAP | TEXF_PICMIP | GLTEXF_UPLOAD)) == 0)
+	{
+		// update a portion of the image
+		switch(glt->texturetype)
 		{
 		case GLTEXTURETYPE_1D:
-			qglTexSubImage1D(GL_TEXTURE_1D, 0, glt->x + fragx, fragwidth, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+			qglTexSubImage1D(GL_TEXTURE_1D, 0, fragx, fragwidth, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 			CHECKGLERROR
 			break;
 		case GLTEXTURETYPE_2D:
-			qglTexSubImage2D(GL_TEXTURE_2D, 0, glt->x + fragx, glt->y + fragy, fragwidth, fragheight, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+			qglTexSubImage2D(GL_TEXTURE_2D, 0, fragx, fragy, fragwidth, fragheight, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 			CHECKGLERROR
 			break;
 		case GLTEXTURETYPE_3D:
-			qglTexSubImage3D(GL_TEXTURE_3D, 0, glt->x + fragx, glt->y + fragy, glt->z + fragz, fragwidth, fragheight, fragdepth, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+			qglTexSubImage3D(GL_TEXTURE_3D, 0, fragx, fragy, fragz, fragwidth, fragheight, fragdepth, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 			CHECKGLERROR
 			break;
 		default:
-			Host_Error("R_Upload: fragment texture of type other than 1D, 2D, or 3D");
+			Host_Error("R_Upload: partial update of type other than 1D, 2D, or 3D");
 			break;
 		}
 	}
 	else
 	{
-		glt->image->flags &= ~GLTEXF_UPLOAD;
+		if (fragx || fragy || fragz || glt->inputwidth != fragwidth || glt->inputheight != fragheight || glt->inputdepth != fragdepth)
+			Host_Error("R_Upload: partial update not allowed on initial upload or in combination with PICMIP or MIPMAP\n");
 
-		// these are rounded up versions of the size to do better resampling
-		for (width  = 1;width  < glt->width ;width  <<= 1);
-		for (height = 1;height < glt->height;height <<= 1);
-		for (depth  = 1;depth  < glt->depth ;depth  <<= 1);
-
-		R_MakeResizeBufferBigger(width * height * depth * glt->image->sides * glt->image->bytesperpixel);
-
-		if (prevbuffer == NULL)
-		{
-			width = glt->image->width;
-			height = glt->image->height;
-			depth = glt->image->depth;
-			memset(resizebuffer, 0, width * height * depth * glt->image->bytesperpixel);
-			prevbuffer = resizebuffer;
-		}
-		else
-		{
-			if (glt->textype->textype == TEXTYPE_PALETTE)
-			{
-				// promote paletted to RGBA, so we only have to worry about RGB and
-				// RGBA in the rest of this code
-				Image_Copy8bitRGBA(prevbuffer, colorconvertbuffer, glt->width * glt->height * glt->depth * glt->image->sides, glt->palette);
-				prevbuffer = colorconvertbuffer;
-			}
-		}
+		// upload the image for the first time
+		glt->flags &= ~GLTEXF_UPLOAD;
 
 		// cubemaps contain multiple images and thus get processed a bit differently
-		if (glt->image->texturetype != GLTEXTURETYPE_CUBEMAP)
+		if (glt->texturetype != GLTEXTURETYPE_CUBEMAP)
 		{
-			if (glt->width != width || glt->height != height || glt->depth != depth)
+			if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
 			{
-				Image_Resample(prevbuffer, glt->width, glt->height, glt->depth, resizebuffer, width, height, depth, glt->image->bytesperpixel, r_lerpimages.integer);
+				Image_Resample(prevbuffer, glt->inputwidth, glt->inputheight, glt->inputdepth, resizebuffer, width, height, depth, glt->bytesperpixel, r_lerpimages.integer);
 				prevbuffer = resizebuffer;
 			}
 			// picmip/max_size
-			while (width > glt->image->width || height > glt->image->height || depth > glt->image->depth)
+			while (width > glt->tilewidth || height > glt->tileheight || depth > glt->tiledepth)
 			{
-				Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, glt->image->width, glt->image->height, glt->image->depth, glt->image->bytesperpixel);
+				Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, glt->tilewidth, glt->tileheight, glt->tiledepth, glt->bytesperpixel);
 				prevbuffer = resizebuffer;
 			}
 		}
 		mip = 0;
-		switch(glt->image->texturetype)
+		switch(glt->texturetype)
 		{
 		case GLTEXTURETYPE_1D:
-			qglTexImage1D(GL_TEXTURE_1D, mip++, glt->image->glinternalformat, width, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+			qglTexImage1D(GL_TEXTURE_1D, mip++, glt->glinternalformat, width, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 			CHECKGLERROR
 			if (glt->flags & TEXF_MIPMAP)
 			{
 				while (width > 1 || height > 1 || depth > 1)
 				{
-					Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1, glt->image->bytesperpixel);
+					Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1, glt->bytesperpixel);
 					prevbuffer = resizebuffer;
-					qglTexImage1D(GL_TEXTURE_1D, mip++, glt->image->glinternalformat, width, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+					qglTexImage1D(GL_TEXTURE_1D, mip++, glt->glinternalformat, width, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 					CHECKGLERROR
 				}
 			}
 			break;
 		case GLTEXTURETYPE_2D:
-			qglTexImage2D(GL_TEXTURE_2D, mip++, glt->image->glinternalformat, width, height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+			qglTexImage2D(GL_TEXTURE_2D, mip++, glt->glinternalformat, width, height, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 			CHECKGLERROR
 			if (glt->flags & TEXF_MIPMAP)
 			{
 				while (width > 1 || height > 1 || depth > 1)
 				{
-					Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1, glt->image->bytesperpixel);
+					Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1, glt->bytesperpixel);
 					prevbuffer = resizebuffer;
-					qglTexImage2D(GL_TEXTURE_2D, mip++, glt->image->glinternalformat, width, height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+					qglTexImage2D(GL_TEXTURE_2D, mip++, glt->glinternalformat, width, height, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 					CHECKGLERROR
 				}
 			}
 			break;
 		case GLTEXTURETYPE_3D:
-			qglTexImage3D(GL_TEXTURE_3D, mip++, glt->image->glinternalformat, width, height, depth, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+			qglTexImage3D(GL_TEXTURE_3D, mip++, glt->glinternalformat, width, height, depth, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 			CHECKGLERROR
 			if (glt->flags & TEXF_MIPMAP)
 			{
 				while (width > 1 || height > 1 || depth > 1)
 				{
-					Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1, glt->image->bytesperpixel);
+					Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1, glt->bytesperpixel);
 					prevbuffer = resizebuffer;
-					qglTexImage3D(GL_TEXTURE_3D, mip++, glt->image->glinternalformat, width, height, depth, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+					qglTexImage3D(GL_TEXTURE_3D, mip++, glt->glinternalformat, width, height, depth, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 					CHECKGLERROR
 				}
 			}
@@ -859,168 +761,46 @@ static void R_Upload(gltexture_t *glt, unsigned char *data, int fragx, int fragy
 			for (i = 0;i < 6;i++)
 			{
 				prevbuffer = texturebuffer;
-				texturebuffer += glt->width * glt->height * glt->depth * glt->textype->inputbytesperpixel;
-				if (glt->width != width || glt->height != height || glt->depth != depth)
+				texturebuffer += glt->inputwidth * glt->inputheight * glt->inputdepth * glt->textype->inputbytesperpixel;
+				if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
 				{
-					Image_Resample(prevbuffer, glt->width, glt->height, glt->depth, resizebuffer, width, height, depth, glt->image->bytesperpixel, r_lerpimages.integer);
+					Image_Resample(prevbuffer, glt->inputwidth, glt->inputheight, glt->inputdepth, resizebuffer, width, height, depth, glt->bytesperpixel, r_lerpimages.integer);
 					prevbuffer = resizebuffer;
 				}
 				// picmip/max_size
-				while (width > glt->image->width || height > glt->image->height || depth > glt->image->depth)
+				while (width > glt->tilewidth || height > glt->tileheight || depth > glt->tiledepth)
 				{
-					Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, glt->image->width, glt->image->height, glt->image->depth, glt->image->bytesperpixel);
+					Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, glt->tilewidth, glt->tileheight, glt->tiledepth, glt->bytesperpixel);
 					prevbuffer = resizebuffer;
 				}
 				mip = 0;
-				qglTexImage2D(cubemapside[i], mip++, glt->image->glinternalformat, width, height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+				qglTexImage2D(cubemapside[i], mip++, glt->glinternalformat, width, height, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 				CHECKGLERROR
 				if (glt->flags & TEXF_MIPMAP)
 				{
 					while (width > 1 || height > 1 || depth > 1)
 					{
-						Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1, glt->image->bytesperpixel);
+						Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1, glt->bytesperpixel);
 						prevbuffer = resizebuffer;
-						qglTexImage2D(cubemapside[i], mip++, glt->image->glinternalformat, width, height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+						qglTexImage2D(cubemapside[i], mip++, glt->glinternalformat, width, height, 0, glt->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 						CHECKGLERROR
 					}
 				}
 			}
 			break;
 		}
-		GL_SetupTextureParameters(glt->image->flags, glt->image->texturetype);
+		GL_SetupTextureParameters(glt->flags, glt->texturetype);
 	}
-	qglBindTexture(gltexturetypeenums[glt->image->texturetype], oldbindtexnum);
+	qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);
 }
 
-static void R_FindImageForTexture(gltexture_t *glt)
-{
-	int i, j, best, best2, x, y, z, w, h, d;
-	textypeinfo_t *texinfo;
-	gltexturepool_t *pool;
-	gltextureimage_t *image, **imagechainpointer;
-	texinfo = glt->textype;
-	pool = glt->pool;
-
-	// remains -1 until uploaded
-	glt->texnum = -1;
-
-	x = 0;
-	y = 0;
-	z = 0;
-	w = glt->width;
-	h = glt->height;
-	d = glt->depth;
-	if (glt->flags & TEXF_FRAGMENT)
-	{
-		for (imagechainpointer = &pool->imagechain;*imagechainpointer;imagechainpointer = &(*imagechainpointer)->imagechain)
-		{
-			image = *imagechainpointer;
-			if (image->type != GLIMAGETYPE_FRAGMENTS)
-				continue;
-			if (image->texturetype != glt->texturetype)
-				continue;
-			if ((image->flags ^ glt->flags) & (TEXF_MIPMAP | TEXF_ALPHA | TEXF_CLAMP | TEXF_FORCENEAREST | TEXF_FORCELINEAR))
-				continue;
-			if (image->glformat != texinfo->glformat || image->glinternalformat != texinfo->glinternalformat)
-				continue;
-			if (glt->width > image->width || glt->height > image->height || glt->depth > image->depth)
-				continue;
-
-			// got a fragments texture, find a place in it if we can
-			for (best = image->width, i = 0;i < image->width - w;i++)
-			{
-				for (best2 = 0, j = 0;j < w;j++)
-				{
-					if (image->blockallocation[i+j] >= best)
-						break;
-					if (best2 < image->blockallocation[i+j])
-						best2 = image->blockallocation[i+j];
-				}
-				if (j == w)
-				{
-					// this is a valid spot
-					x = i;
-					y = best = best2;
-				}
-			}
-
-			if (best + h > image->height)
-				continue;
-
-			for (i = 0;i < w;i++)
-				image->blockallocation[x + i] = best + h;
-
-			glt->x = x;
-			glt->y = y;
-			glt->z = 0;
-			glt->image = image;
-			image->texturecount++;
-			return;
-		}
-
-		image = (gltextureimage_t *)Mem_Alloc(texturemempool, sizeof(gltextureimage_t));
-		if (image == NULL)
-		{
-			Con_Printf ("R_FindImageForTexture: ran out of memory\n");
-			return;
-		}
-		image->type = GLIMAGETYPE_FRAGMENTS;
-		// make sure the created image is big enough for the fragment
-		for (image->width = block_size;image->width < glt->width;image->width <<= 1);
-		image->height = 1;
-		if (gltexturetypedimensions[glt->texturetype] >= 2)
-			for (image->height = block_size;image->height < glt->height;image->height <<= 1);
-		image->depth = 1;
-		if (gltexturetypedimensions[glt->texturetype] >= 3)
-			for (image->depth = block_size;image->depth < glt->depth;image->depth <<= 1);
-		image->blockallocation = (short int *)Mem_Alloc(texturemempool, image->width * sizeof(short));
-		memset(image->blockallocation, 0, image->width * sizeof(short));
-
-		x = 0;
-		y = 0;
-		z = 0;
-		for (i = 0;i < w;i++)
-			image->blockallocation[x + i] = y + h;
-	}
-	else
-	{
-		for (imagechainpointer = &pool->imagechain;*imagechainpointer;imagechainpointer = &(*imagechainpointer)->imagechain);
-
-		image = (gltextureimage_t *)Mem_Alloc(texturemempool, sizeof(gltextureimage_t));
-		if (image == NULL)
-		{
-			Con_Printf ("R_FindImageForTexture: ran out of memory\n");
-			return;
-		}
-		image->type = GLIMAGETYPE_TILE;
-		image->blockallocation = NULL;
-
-		GL_Texture_CalcImageSize(glt->texturetype, glt->flags, glt->width, glt->height, glt->depth, &image->width, &image->height, &image->depth);
-	}
-	image->texturetype = glt->texturetype;
-	image->glinternalformat = texinfo->glinternalformat;
-	image->glformat = texinfo->glformat;
-	image->flags = (glt->flags & (TEXF_MIPMAP | TEXF_ALPHA | TEXF_CLAMP | TEXF_PICMIP | TEXF_FORCENEAREST | TEXF_FORCELINEAR)) | GLTEXF_UPLOAD;
-	image->bytesperpixel = texinfo->internalbytesperpixel;
-	image->sides = image->texturetype == GLTEXTURETYPE_CUBEMAP ? 6 : 1;
-	// get a texture number to use
-	qglGenTextures(1, (GLuint *)&image->texnum);
-	*imagechainpointer = image;
-	image->texturecount++;
-
-	glt->x = x;
-	glt->y = y;
-	glt->z = z;
-	glt->image = image;
-}
-
-// note: R_FindImageForTexture must be called before this
 static void R_UploadTexture (gltexture_t *glt)
 {
 	if (!(glt->flags & GLTEXF_UPLOAD))
 		return;
 
-	R_Upload(glt, glt->inputtexels, 0, 0, 0, glt->width, glt->height, glt->depth);
+	qglGenTextures(1, (GLuint *)&glt->texnum);
+	R_Upload(glt, glt->inputtexels, 0, 0, 0, glt->inputwidth, glt->inputheight, glt->inputdepth);
 	if (glt->inputtexels)
 	{
 		Mem_Free(glt->inputtexels);
@@ -1041,11 +821,6 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	if (cls.state == ca_dedicated)
 		return NULL;
 
-	if (flags & TEXF_FRAGMENT && texturetype != GLTEXTURETYPE_2D)
-	{
-		Con_Printf ("R_LoadTexture: only 2D fragment textures implemented\n");
-		return NULL;
-	}
 	if (texturetype == GLTEXTURETYPE_CUBEMAP && !gl_texturecubemap)
 	{
 		Con_Printf ("R_LoadTexture: cubemap texture not supported by driver\n");
@@ -1118,27 +893,29 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	glt->pool = pool;
 	glt->chain = pool->gltchain;
 	pool->gltchain = glt;
-	glt->width = width;
-	glt->height = height;
-	glt->depth = depth;
+	glt->inputwidth = width;
+	glt->inputheight = height;
+	glt->inputdepth = depth;
 	glt->flags = flags | GLTEXF_UPLOAD;
 	glt->textype = texinfo;
 	glt->texturetype = texturetype;
 	glt->inputdatasize = size;
 	glt->palette = palette;
+	glt->glinternalformat = texinfo->glinternalformat;
+	glt->glformat = texinfo->glformat;
+	glt->bytesperpixel = texinfo->internalbytesperpixel;
+	glt->sides = glt->texturetype == GLTEXTURETYPE_CUBEMAP ? 6 : 1;
+	glt->texnum = -1;
 
 	if (data)
 	{
 		glt->inputtexels = (unsigned char *)Mem_Alloc(texturemempool, size);
-		if (glt->inputtexels == NULL)
-			Con_Printf ("R_LoadTexture: out of memory\n");
-		else
-			memcpy(glt->inputtexels, data, size);
+		memcpy(glt->inputtexels, data, size);
 	}
 	else
 		glt->inputtexels = NULL;
 
-	R_FindImageForTexture(glt);
+	GL_Texture_CalcImageSize(glt->texturetype, glt->flags, glt->inputwidth, glt->inputheight, glt->inputdepth, &glt->tilewidth, &glt->tileheight, &glt->tiledepth);
 	R_PrecacheTexture(glt);
 
 	return (rtexture_t *)glt;
@@ -1171,100 +948,12 @@ int R_TextureHasAlpha(rtexture_t *rt)
 
 int R_TextureWidth(rtexture_t *rt)
 {
-	return rt ? ((gltexture_t *)rt)->width : 0;
+	return rt ? ((gltexture_t *)rt)->inputwidth : 0;
 }
 
 int R_TextureHeight(rtexture_t *rt)
 {
-	return rt ? ((gltexture_t *)rt)->height : 0;
-}
-
-void R_FragmentLocation3D(rtexture_t *rt, int *x, int *y, int *z, float *fx1, float *fy1, float *fz1, float *fx2, float *fy2, float *fz2)
-{
-	gltexture_t *glt;
-	float iwidth, iheight, idepth;
-	if (cls.state == ca_dedicated)
-	{
-		if (x)
-			*x = 0;
-		if (y)
-			*y = 0;
-		if (z)
-			*z = 0;
-		if (fx1 || fy1 || fx2 || fy2)
-		{
-			if (fx1)
-				*fx1 = 0;
-			if (fy1)
-				*fy1 = 0;
-			if (fz1)
-				*fz1 = 0;
-			if (fx2)
-				*fx2 = 1;
-			if (fy2)
-				*fy2 = 1;
-			if (fz2)
-				*fz2 = 1;
-		}
-		return;
-	}
-	if (!rt)
-		Host_Error("R_FragmentLocation: no texture supplied");
-	glt = (gltexture_t *)rt;
-	if (glt->flags & TEXF_FRAGMENT)
-	{
-		if (x)
-			*x = glt->x;
-		if (y)
-			*y = glt->y;
-		if (fx1 || fy1 || fx2 || fy2)
-		{
-			iwidth = 1.0f / glt->image->width;
-			iheight = 1.0f / glt->image->height;
-			idepth = 1.0f / glt->image->depth;
-			if (fx1)
-				*fx1 = glt->x * iwidth;
-			if (fy1)
-				*fy1 = glt->y * iheight;
-			if (fz1)
-				*fz1 = glt->z * idepth;
-			if (fx2)
-				*fx2 = (glt->x + glt->width) * iwidth;
-			if (fy2)
-				*fy2 = (glt->y + glt->height) * iheight;
-			if (fz2)
-				*fz2 = (glt->z + glt->depth) * idepth;
-		}
-	}
-	else
-	{
-		if (x)
-			*x = 0;
-		if (y)
-			*y = 0;
-		if (z)
-			*z = 0;
-		if (fx1 || fy1 || fx2 || fy2)
-		{
-			if (fx1)
-				*fx1 = 0;
-			if (fy1)
-				*fy1 = 0;
-			if (fz1)
-				*fz1 = 0;
-			if (fx2)
-				*fx2 = 1;
-			if (fy2)
-				*fy2 = 1;
-			if (fz2)
-				*fz2 = 1;
-		}
-	}
-}
-
-void R_FragmentLocation(rtexture_t *rt, int *x, int *y, float *fx1, float *fy1, float *fx2, float *fy2)
-{
-	R_FragmentLocation3D(rt, x, y, NULL, fx1, fy1, NULL, fx2, fy2, NULL);
+	return rt ? ((gltexture_t *)rt)->inputheight : 0;
 }
 
 void R_UpdateTexture(rtexture_t *rt, unsigned char *data, int x, int y, int width, int height)

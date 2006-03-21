@@ -10,9 +10,6 @@
 #define TEXF_PRECACHE 0x00000004
 // upload immediately, never defer (ignore r_textureprecache)
 #define TEXF_ALWAYSPRECACHE 0x00000008
-// allocated as a fragment in a larger texture, mipmap is not allowed with
-// this, mostly used for lightmaps
-#define TEXF_FRAGMENT 0x00000010
 // indicates texture coordinates should be clamped rather than wrapping
 #define TEXF_CLAMP 0x00000020
 // indicates texture should be uploaded using GL_NEAREST or GL_NEAREST_MIPMAP_NEAREST mode
@@ -22,7 +19,7 @@
 // indicates texture should be affected by gl_picmip and gl_max_size cvar
 #define TEXF_PICMIP 0x00000100
 // used for checking if textures mismatch
-#define TEXF_IMPORTANTBITS (TEXF_ALPHA | TEXF_MIPMAP | TEXF_FRAGMENT | TEXF_CLAMP | TEXF_FORCENEAREST | TEXF_FORCELINEAR | TEXF_PICMIP)
+#define TEXF_IMPORTANTBITS (TEXF_ALPHA | TEXF_MIPMAP | TEXF_CLAMP | TEXF_FORCENEAREST | TEXF_FORCELINEAR | TEXF_PICMIP)
 
 // 8bit paletted
 #define TEXTYPE_PALETTE 1
@@ -67,11 +64,6 @@ void R_FreeTexture(rtexture_t *rt);
 // update a portion of the image data of a texture, used by lightmap updates
 // and procedural textures such as video playback.
 void R_UpdateTexture(rtexture_t *rt, unsigned char *data, int x, int y, int width, int height);
-
-// location of the fragment in the texture (note: any parameter except rt can
-// be NULL)
-void R_FragmentLocation(rtexture_t *rt, int *x, int *y, float *fx1, float *fy1, float *fx2, float *fy2);
-void R_FragmentLocation3D(rtexture_t *rt, int *x, int *y, int *z, float *fx1, float *fy1, float *fz1, float *fx2, float *fy2, float *fz2);
 
 // returns the renderer dependent texture slot number (call this before each
 // use, as a texture might not have been precached)
