@@ -24,6 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "cl_video.h"
 
+cvar_t r_textshadow = {0, "r_textshadow", "0" "draws a shadow on all text to improve readability"};
 
 static rtexture_t *char_texture;
 cachepic_t *r_crosshairs[NUMCROSSHAIRS+1];
@@ -486,44 +487,12 @@ static void gl_draw_newmap(void)
 
 void GL_Draw_Init (void)
 {
-	numcachepics = 0;
-	memset(cachepichash, 0, sizeof(cachepichash));
-
+	Cvar_RegisterVariable(&r_textshadow);
 	R_RegisterModule("GL_Draw", gl_draw_start, gl_draw_shutdown, gl_draw_newmap);
 }
 
-float blendvertex3f[9] = {-5000, -5000, 10, 10000, -5000, 10, -5000, 10000, 10};
-
-int quadelements[768];
-void R_DrawQueue(void)
+void DrawQ_Begin(void)
 {
-	int pos, num, chartexnum, texnum, batch;
-	float x, y, w, h, s, t, u, v, *av, *at, c[4];
-	cachepic_t *pic;
-	drawqueue_t *dq;
-	char *str;
-	int batchcount;
-	unsigned int color;
-	drawqueuemesh_t *mesh;
-	rmeshstate_t m;
-
-	if (!r_render.integer)
-		return;
-
-	if (!quadelements[1])
-	{
-		// elements for rendering a series of quads as triangles
-		for (batch = 0, pos = 0, num = 0;batch < 128;batch++, num += 4)
-		{
-			quadelements[pos++] = num;
-			quadelements[pos++] = num + 1;
-			quadelements[pos++] = num + 2;
-			quadelements[pos++] = num;
-			quadelements[pos++] = num + 2;
-			quadelements[pos++] = num + 3;
-		}
-	}
-
 	r_view_width = bound(0, r_refdef.width, vid.width);
 	r_view_height = bound(0, r_refdef.height, vid.height);
 	r_view_depth = 1;
@@ -538,139 +507,436 @@ void R_DrawQueue(void)
 	qglDepthFunc(GL_LEQUAL);
 	R_Mesh_Matrix(&identitymatrix);
 
-	chartexnum = R_GetTexture(char_texture);
-
-	memset(&m, 0, sizeof(m));
-
-	pic = NULL;
-	texnum = 0;
-	color = 0;
+	GL_DepthMask(true);
+	GL_DepthTest(false);
 	GL_Color(1,1,1,1);
 
-	batch = false;
-	batchcount = 0;
-	for (pos = 0;pos < r_refdef.drawqueuesize;pos += ((drawqueue_t *)(r_refdef.drawqueue + pos))->size)
+	r_refdef.draw2dstage = true;
+}
+
+void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, float red, float green, float blue, float alpha, int flags)
+{
+	if (!r_refdef.draw2dstage)
 	{
-		dq = (drawqueue_t *)(r_refdef.drawqueue + pos);
-		color = dq->color;
+		Con_Printf("DrawQ_Pic: not in 2d rendering stage!\n");
+		return;
+	}
+	DrawQ_SuperPic(x,y,pic,width,height,0,0,red,green,blue,alpha,1,0,red,green,blue,alpha,0,1,red,green,blue,alpha,1,1,red,green,blue,alpha,flags);
+}
 
-		if(dq->flags == DRAWFLAG_ADDITIVE)
-			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-		else if(dq->flags == DRAWFLAG_MODULATE)
-			GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
-		else if(dq->flags == DRAWFLAG_2XMODULATE)
-			GL_BlendFunc(GL_DST_COLOR,GL_SRC_COLOR);
-		else
-			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+void DrawQ_String_Real(float x, float y, const char *string, int maxlen, float w, float h, float red, float green, float blue, float alpha, int flags)
+{
+	int i, num;
+	float *av, *at;
+	int batchcount;
+	rmeshstate_t m;
 
-		GL_DepthMask(true);
-		GL_DepthTest(false);
+	if (!r_refdef.draw2dstage)
+	{
+		Con_Printf("DrawQ_String: not in 2d rendering stage!\n");
+		return;
+	}
 
-		c[0] = (float) ((color >> 24) & 0xFF) * (1.0f / 255.0f);
-		c[1] = (float) ((color >> 16) & 0xFF) * (1.0f / 255.0f);
-		c[2] = (float) ((color >>  8) & 0xFF) * (1.0f / 255.0f);
-		c[3] = (float) ( color        & 0xFF) * (1.0f / 255.0f);
-		x = dq->x;
-		y = dq->y;
-		w = dq->scalex;
-		h = dq->scaley;
+	if (!r_render.integer)
+		return;
 
-		switch(dq->command)
+	if (alpha < (1.0f / 255.0f))
+		return;
+
+	if(flags == DRAWFLAG_ADDITIVE)
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+	else if(flags == DRAWFLAG_MODULATE)
+		GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
+	else if(flags == DRAWFLAG_2XMODULATE)
+		GL_BlendFunc(GL_DST_COLOR,GL_SRC_COLOR);
+	else
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	GL_Color(red, green, blue, alpha);
+
+	memset(&m, 0, sizeof(m));
+	m.pointer_vertex = varray_vertex3f;
+	m.pointer_color = NULL;
+	m.pointer_texcoord[0] = varray_texcoord2f[0];
+	m.tex[0] = R_GetTexture(char_texture);
+	R_Mesh_State(&m);
+
+	at = varray_texcoord2f[0];
+	av = varray_vertex3f;
+	batchcount = 0;
+
+	if (maxlen < 1)
+		maxlen = 9999;
+	for (i = 0;i < maxlen && x < vid_conwidth.integer && (num = string[i]);i++, x += w)
+	{
+		float s, t, u, v;
+		if (num == ' ')
+			continue;
+		s = (num & 15)*0.0625f + (0.5f / 256.0f);
+		t = (num >> 4)*0.0625f + (0.5f / 256.0f);
+		u = 0.0625f - (1.0f / 256.0f);
+		v = 0.0625f - (1.0f / 256.0f);
+		at[ 0] = s  ;at[ 1] = t  ;
+		at[ 2] = s+u;at[ 3] = t  ;
+		at[ 4] = s+u;at[ 5] = t+v;
+		at[ 6] = s  ;at[ 7] = t+v;
+		av[ 0] = x  ;av[ 1] = y  ;av[ 2] = 10;
+		av[ 3] = x+w;av[ 4] = y  ;av[ 5] = 10;
+		av[ 6] = x+w;av[ 7] = y+h;av[ 8] = 10;
+		av[ 9] = x  ;av[10] = y+h;av[11] = 10;
+		at += 8;
+		av += 12;
+		batchcount++;
+		if (batchcount >= QUADELEMENTS_MAXQUADS)
 		{
-		case DRAWQUEUE_STRING:
-			GL_Color(c[0], c[1], c[2], c[3]);
-			str = (char *)(dq + 1);
+			GL_LockArrays(0, batchcount * 4);
+			R_Mesh_Draw(0, batchcount * 4, batchcount * 2, quadelements);
+			GL_LockArrays(0, 0);
 			batchcount = 0;
-			m.pointer_vertex = varray_vertex3f;
-			m.pointer_color = NULL;
-			m.pointer_texcoord[0] = varray_texcoord2f[0];
-			m.tex[0] = chartexnum;
-			R_Mesh_State(&m);
 			at = varray_texcoord2f[0];
 			av = varray_vertex3f;
-			while ((num = *str++) && x < vid_conwidth.integer)
-			{
-				if (num != ' ')
-				{
-					s = (num & 15)*0.0625f + (0.5f / 256.0f);
-					t = (num >> 4)*0.0625f + (0.5f / 256.0f);
-					u = 0.0625f - (1.0f / 256.0f);
-					v = 0.0625f - (1.0f / 256.0f);
-					at[ 0] = s  ;at[ 1] = t  ;
-					at[ 2] = s+u;at[ 3] = t  ;
-					at[ 4] = s+u;at[ 5] = t+v;
-					at[ 6] = s  ;at[ 7] = t+v;
-					av[ 0] = x  ;av[ 1] = y  ;av[ 2] = 10;
-					av[ 3] = x+w;av[ 4] = y  ;av[ 5] = 10;
-					av[ 6] = x+w;av[ 7] = y+h;av[ 8] = 10;
-					av[ 9] = x  ;av[10] = y+h;av[11] = 10;
-					at += 8;
-					av += 12;
-					batchcount++;
-					if (batchcount >= 128)
-					{
-						GL_LockArrays(0, batchcount * 4);
-						R_Mesh_Draw(0, batchcount * 4, batchcount * 2, quadelements);
-						GL_LockArrays(0, 0);
-						batchcount = 0;
-						at = varray_texcoord2f[0];
-						av = varray_vertex3f;
+		}
+	}
+	if (batchcount > 0)
+	{
+		GL_LockArrays(0, batchcount * 4);
+		R_Mesh_Draw(0, batchcount * 4, batchcount * 2, quadelements);
+		GL_LockArrays(0, 0);
+	}
+}
+
+void DrawQ_String(float x, float y, const char *string, int maxlen, float scalex, float scaley, float red, float green, float blue, float alpha, int flags)
+{
+	if (!r_refdef.draw2dstage)
+	{
+		Con_Printf("DrawQ_String: not in 2d rendering stage!\n");
+		return;
+	}
+
+	if (r_textshadow.integer)
+		DrawQ_String_Real(x+scalex*0.25,y+scaley*0.25,string,maxlen,scalex,scaley,0,0,0,alpha*0.8,flags);
+
+	DrawQ_String_Real(x,y,string,maxlen,scalex,scaley,red,green,blue,alpha,flags);
+}
+
+// color tag printing
+static vec4_t string_colors[] =
+{
+	// Quake3 colors
+	// LordHavoc: why on earth is cyan before magenta in Quake3?
+	// LordHavoc: note: Doom3 uses white for [0] and [7]
+	{0.0, 0.0, 0.0, 1.0}, // black
+	{1.0, 0.0, 0.0, 1.0}, // red
+	{0.0, 1.0, 0.0, 1.0}, // green
+	{1.0, 1.0, 0.0, 1.0}, // yellow
+	{0.0, 0.0, 1.0, 1.0}, // blue
+	{0.0, 1.0, 1.0, 1.0}, // cyan
+	{1.0, 0.0, 1.0, 1.0}, // magenta
+	{1.0, 1.0, 1.0, 1.0}, // white
+	// [515]'s BX_COLOREDTEXT extension
+	{1.0, 1.0, 1.0, 0.5}, // half transparent
+	{0.5, 0.5, 0.5, 1.0}  // half brightness
+	// Black's color table
+	//{1.0, 1.0, 1.0, 1.0},
+	//{1.0, 0.0, 0.0, 1.0},
+	//{0.0, 1.0, 0.0, 1.0},
+	//{0.0, 0.0, 1.0, 1.0},
+	//{1.0, 1.0, 0.0, 1.0},
+	//{0.0, 1.0, 1.0, 1.0},
+	//{1.0, 0.0, 1.0, 1.0},
+	//{0.1, 0.1, 0.1, 1.0}
+};
+
+#define STRING_COLORS_COUNT	(sizeof(string_colors) / sizeof(vec4_t))
+
+// color is read and changed in the end
+void DrawQ_ColoredString( float x, float y, const char *text, int maxlen, float scalex, float scaley, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor )
+{
+	vec_t *color;
+	int len;
+	int colorindex;
+	const char *start, *current;
+
+	if (!r_refdef.draw2dstage)
+	{
+		Con_Printf("DrawQ_ColoredString: not in 2d rendering stage!\n");
+		return;
+	}
+	if( !outcolor || *outcolor == -1 ) {
+		colorindex = STRING_COLOR_DEFAULT;
+	} else {
+		colorindex = *outcolor;
+	}
+	color = string_colors[colorindex];
+
+	if( maxlen < 1)
+		len = (int)strlen( text );
+	else
+		len = min( maxlen, (int) strlen( text ) );
+
+	start = current = text;
+	while( len > 0 ) {
+		// check for color control char
+		if( *current == STRING_COLOR_TAG ) {
+			// get next char
+			current++;
+			len--;
+			if( len == 0 ) {
+				break;
+			}
+			// display the tag char?
+			if( *current == STRING_COLOR_TAG ) {
+				// only display one of the two
+				start = current;
+				// get the next char
+				current++;
+				len--;
+			} else if( '0' <= *current && *current <= '9' ) {
+				colorindex = 0;
+				do {
+					colorindex = colorindex * 10 + (*current - '0');
+					// only read as long as it makes a valid index
+					if( colorindex >= (int)STRING_COLORS_COUNT ) {
+						// undo the last operation
+						colorindex /= 10;
+						break;
 					}
-				}
-				x += w;
+					current++;
+					len--;
+				} while( len > 0 && '0' <= *current && *current <= '9' );
+				// set the color
+				color = string_colors[colorindex];
+				// we jump over the color tag
+				start = current;
 			}
-			if (batchcount > 0)
-			{
-				GL_LockArrays(0, batchcount * 4);
-				R_Mesh_Draw(0, batchcount * 4, batchcount * 2, quadelements);
-				GL_LockArrays(0, 0);
-			}
-			break;
-		case DRAWQUEUE_MESH:
-			mesh = (drawqueuemesh_t *)(dq + 1);
-			m.pointer_vertex = mesh->data_vertex3f;
-			m.pointer_color = mesh->data_color4f;
-			m.pointer_texcoord[0] = mesh->data_texcoord2f;
-			m.tex[0] = R_GetTexture(mesh->texture);
-			if (!m.tex[0])
-				m.pointer_texcoord[0] = NULL;
-			R_Mesh_State(&m);
-			GL_LockArrays(0, mesh->num_vertices);
-			R_Mesh_Draw(0, mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
-			GL_LockArrays(0, 0);
-			break;
-		case DRAWQUEUE_SETCLIP:
-			{
-				// We have to convert the con coords into real coords
-				int x , y, width, height;
-				x = dq->x * ((float)vid.width / vid_conwidth.integer);
-				// OGL uses top to bottom
-				y = dq->y * ((float) vid.height / vid_conheight.integer);
-				width = dq->scalex * ((float)vid.width / vid_conwidth.integer);
-				height = dq->scaley * ((float)vid.height / vid_conheight.integer);
-
-				GL_Scissor(x, y, width, height);
-
-				GL_ScissorTest(true);
-			}
-			break;
-		case DRAWQUEUE_RESETCLIP:
-			GL_ScissorTest(false);
-			break;
-		case DRAWQUEUE_LINEWIDTH:
-			qglLineWidth(x);
-			break;
-		case DRAWQUEUE_LINES:
-			mesh = (drawqueuemesh_t *)(dq + 1);
-			GL_Color(c[0], c[1], c[2], c[3]);
-			qglBegin(GL_LINE_LOOP);
-			for (num = 0;num < mesh->num_vertices;num++)
-				qglVertex2f(mesh->data_vertex3f[num*3+0], mesh->data_vertex3f[num*3+1]);
-			qglEnd();
-			break;
+		}
+		// go on and read normal text in until the next control char
+		while( len > 0 && *current != STRING_COLOR_TAG ) {
+			current++;
+			len--;
+		}
+		// display the text
+		if( start != current ) {
+			// draw the string
+			DrawQ_String( x, y, start, current - start, scalex, scaley, basered * color[0], basegreen * color[1], baseblue * color[2], basealpha * color[3], flags );
+			// update x to be at the new start position
+			x += (current - start) * scalex;
+			// set start accordingly
+			start = current;
 		}
 	}
 
+	// return the last colorindex
+	if( outcolor ) {
+		*outcolor = colorindex;
+	}
+}
+
+void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height, float s1, float t1, float r1, float g1, float b1, float a1, float s2, float t2, float r2, float g2, float b2, float a2, float s3, float t3, float r3, float g3, float b3, float a3, float s4, float t4, float r4, float g4, float b4, float a4, int flags)
+{
+	rmeshstate_t m;
+	float floats[36];
+
+	if (!r_refdef.draw2dstage)
+	{
+		Con_Printf("DrawQ_SuperPic: not in 2d rendering stage!\n");
+		return;
+	}
+
+	if (!r_render.integer)
+		return;
+
+	if(flags == DRAWFLAG_ADDITIVE)
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+	else if(flags == DRAWFLAG_MODULATE)
+		GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
+	else if(flags == DRAWFLAG_2XMODULATE)
+		GL_BlendFunc(GL_DST_COLOR,GL_SRC_COLOR);
+	else
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	memset(&m, 0, sizeof(m));
+	m.pointer_vertex = floats;
+	m.pointer_color = floats + 20;
+	if (pic)
+	{
+		if (width == 0)
+			width = pic->width;
+		if (height == 0)
+			height = pic->height;
+		m.tex[0] = R_GetTexture(pic->tex);
+		m.pointer_texcoord[0] = floats + 12;
+		floats[12] = s1;floats[13] = t1;
+		floats[14] = s2;floats[15] = t2;
+		floats[16] = s4;floats[17] = t4;
+		floats[18] = s3;floats[19] = t3;
+	}
+	R_Mesh_State(&m);
+
+	floats[2] = floats[5] = floats[8] = floats[11] = 0;
+	floats[0] = floats[9] = x;
+	floats[1] = floats[4] = y;
+	floats[3] = floats[6] = x + width;
+	floats[7] = floats[10] = y + height;
+	floats[20] = r1;floats[21] = g1;floats[22] = b1;floats[23] = a1;
+	floats[24] = r2;floats[25] = g2;floats[26] = b2;floats[27] = a2;
+	floats[28] = r4;floats[29] = g4;floats[30] = b4;floats[31] = a4;
+	floats[32] = r3;floats[33] = g3;floats[34] = b3;floats[35] = a3;
+
+	R_Mesh_Draw(0, 4, 2, polygonelements);
+}
+
+void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
+{
+	rmeshstate_t m;
+
+	if (!r_refdef.draw2dstage)
+	{
+		Con_Printf("DrawQ_Mesh: not in 2d rendering stage!\n");
+		return;
+	}
+
+	if (!r_render.integer)
+		return;
+
+	if(flags == DRAWFLAG_ADDITIVE)
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+	else if(flags == DRAWFLAG_MODULATE)
+		GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
+	else if(flags == DRAWFLAG_2XMODULATE)
+		GL_BlendFunc(GL_DST_COLOR,GL_SRC_COLOR);
+	else
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	memset(&m, 0, sizeof(m));
+	m.pointer_vertex = mesh->data_vertex3f;
+	m.pointer_color = mesh->data_color4f;
+	m.tex[0] = R_GetTexture(mesh->texture);
+	if (m.tex[0])
+		m.pointer_texcoord[0] = mesh->data_texcoord2f;
+	R_Mesh_State(&m);
+
+	GL_LockArrays(0, mesh->num_vertices);
+	R_Mesh_Draw(0, mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
+	GL_LockArrays(0, 0);
+}
+
+void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
+{
+	int num;
+
+	if (!r_refdef.draw2dstage)
+	{
+		Con_Printf("DrawQ_LineLoop: not in 2d rendering stage!\n");
+		return;
+	}
+
+	if (!r_render.integer)
+		return;
+
+	if(flags == DRAWFLAG_ADDITIVE)
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+	else if(flags == DRAWFLAG_MODULATE)
+		GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
+	else if(flags == DRAWFLAG_2XMODULATE)
+		GL_BlendFunc(GL_DST_COLOR,GL_SRC_COLOR);
+	else
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	GL_Color(1,1,1,1);
+	qglBegin(GL_LINE_LOOP);
+	for (num = 0;num < mesh->num_vertices;num++)
+	{
+		if (mesh->data_color4f)
+			GL_Color(mesh->data_color4f[num*4+0], mesh->data_color4f[num*4+1], mesh->data_color4f[num*4+2], mesh->data_color4f[num*4+3]);
+		qglVertex2f(mesh->data_vertex3f[num*3+0], mesh->data_vertex3f[num*3+1]);
+	}
+	qglEnd();
+}
+
+//LordHavoc: FIXME: this is nasty!
+void DrawQ_LineWidth (float width)
+{
+	if (!r_refdef.draw2dstage)
+	{
+		Con_Printf("DrawQ_LineWidth: not in 2d rendering stage!\n");
+		return;
+	}
+	qglLineWidth(width);
+}
+
+//[515]: this is old, delete
+void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, float g, float b, float alpha, int flags)
+{
+	if (!r_refdef.draw2dstage)
+	{
+		Con_Printf("DrawQ_Line: not in 2d rendering stage!\n");
+		return;
+	}
+
+	if (!r_render.integer)
+		return;
+
+	if(width > 0)
+		DrawQ_LineWidth(width);
+
+	if(flags == DRAWFLAG_ADDITIVE)
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+	else if(flags == DRAWFLAG_MODULATE)
+		GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
+	else if(flags == DRAWFLAG_2XMODULATE)
+		GL_BlendFunc(GL_DST_COLOR,GL_SRC_COLOR);
+	else
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	GL_Color(r,g,b,alpha);
+	qglBegin(GL_LINES);
+	qglVertex2f(x1, y1);
+	qglVertex2f(x2, y2);
+	qglEnd();
+}
+
+void DrawQ_SetClipArea(float x, float y, float width, float height)
+{
+	if (!r_refdef.draw2dstage)
+	{
+		Con_Printf("DrawQ_SetClipArea: not in 2d rendering stage!\n");
+		return;
+	}
+
+	// We have to convert the con coords into real coords
+	// OGL uses top to bottom
+	GL_Scissor(x * ((float)vid.width / vid_conwidth.integer), y * ((float) vid.height / vid_conheight.integer), width * ((float)vid.width / vid_conwidth.integer), height * ((float)vid.height / vid_conheight.integer));
+
+	GL_ScissorTest(true);
+}
+
+void DrawQ_ResetClipArea(void)
+{
+	if (!r_refdef.draw2dstage)
+	{
+		Con_Printf("DrawQ_ResetClipArea: not in 2d rendering stage!\n");
+		return;
+	}
+	GL_ScissorTest(false);
+}
+
+void DrawQ_Finish(void)
+{
+	if (!r_refdef.draw2dstage)
+	{
+		Con_Printf("R_DrawQueue: not in 2d rendering stage!\n");
+		return;
+	}
+
+	r_refdef.draw2dstage = false;
+}
+
+static float blendvertex3f[9] = {-5000, -5000, 10, 10000, -5000, 10, -5000, 10000, 10};
+void R_DrawGamma(void)
+{
+	rmeshstate_t m;
+	float c[4];
 	if (!vid_usinghwgamma)
 	{
 		// all the blends ignore depth

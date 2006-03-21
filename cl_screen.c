@@ -1,6 +1,7 @@
 
 #include "quakedef.h"
 #include "cl_video.h"
+#include "image.h"
 #include "jpeg.h"
 #include "cl_collision.h"
 #include "csprogs.h"
@@ -10,7 +11,8 @@ cvar_t scr_fov = {CVAR_SAVE, "fov","90", "field of vision, 1-170 degrees, defaul
 cvar_t scr_conspeed = {CVAR_SAVE, "scr_conspeed","900", "speed of console open/close"}; // LordHavoc: quake used 300
 cvar_t scr_conalpha = {CVAR_SAVE, "scr_conalpha", "1", "opacity of console background"};
 cvar_t scr_conbrightness = {CVAR_SAVE, "scr_conbrightness", "0.2", "brightness of console background (0 = black, 1 = image)"};
-cvar_t scr_conforcewhiledisconnected = {CVAR_SAVE, "scr_conforcewhiledisconnected", "1", "forces fullscreen console while disconnected"};
+cvar_t scr_conforcewhiledisconnected = {0, "scr_conforcewhiledisconnected", "1", "forces fullscreen console while disconnected"};
+cvar_t scr_menuforcewhiledisconnected = {0, "scr_menuforcewhiledisconnected", "1", "forces menu while disconnected"};
 cvar_t scr_centertime = {0, "scr_centertime","2", "how long centerprint messages show"};
 cvar_t scr_showram = {CVAR_SAVE, "showram","1", "show ram icon if low on surface cache memory (not used)"};
 cvar_t scr_showturtle = {CVAR_SAVE, "showturtle","0", "show turtle icon when framerate is too low (not used)"};
@@ -29,8 +31,17 @@ cvar_t cl_capturevideo_sound = {0, "cl_capturevideo_sound", "0", "enables saving
 cvar_t cl_capturevideo_fps = {0, "cl_capturevideo_fps", "30", "how many frames per second to save (29.97 for NTSC, 30 for typical PC video, 15 can be useful)"};
 cvar_t cl_capturevideo_rawrgb = {0, "cl_capturevideo_rawrgb", "0", "saves a single .rgb video file containing raw RGB images (you'll need special processing tools to encode this to something more useful)"};
 cvar_t cl_capturevideo_rawyv12 = {0, "cl_capturevideo_rawyv12", "0", "saves a single .yv12 video file containing raw YV12 (luma plane, then half resolution chroma planes, first chroma blue then chroma red, this is the format used internally by many encoders, some tools can read it directly)"};
-cvar_t r_textshadow = {0, "r_textshadow", "0", "draws a shadow on all text to improve readability"};
 cvar_t r_letterbox = {0, "r_letterbox", "0", "reduces vertical height of view to simulate a letterboxed movie effect (can be used by mods for cutscenes)"};
+cvar_t r_stereo_separation = {0, "r_stereo_separation", "4", "separation of eyes in the world (try negative values too)"};
+cvar_t r_stereo_sidebyside = {0, "r_stereo_sidebyside", "0", "side by side views (for those who can't afford glasses but can afford eye strain)"};
+cvar_t r_stereo_redblue = {0, "r_stereo_redblue", "0", "red/blue anaglyph stereo glasses (note: most of these glasses are actually red/cyan, try that one too)"};
+cvar_t r_stereo_redcyan = {0, "r_stereo_redcyan", "0", "red/cyan anaglyph stereo glasses, the kind given away at drive-in movies like Creature From The Black Lagoon In 3D"};
+cvar_t r_stereo_redgreen = {0, "r_stereo_redgreen", "0", "red/green anaglyph stereo glasses (for those who don't mind yellow)"};
+cvar_t scr_zoomwindow = {CVAR_SAVE, "scr_zoomwindow", "0", "displays a zoomed in overlay window"};
+cvar_t scr_zoomwindow_viewsizex = {CVAR_SAVE, "scr_zoomwindow_viewsizex", "20", "horizontal viewsize of zoom window"};
+cvar_t scr_zoomwindow_viewsizey = {CVAR_SAVE, "scr_zoomwindow_viewsizey", "20", "vertical viewsize of zoom window"};
+cvar_t scr_zoomwindow_fov = {CVAR_SAVE, "scr_zoomwindow_fov", "20", "fov of zoom window"};
+
 
 int jpeg_supported = false;
 
@@ -46,114 +57,6 @@ static void R_Envmap_f (void);
 
 // backend
 void R_ClearScreen(void);
-
-// color tag printing
-static vec4_t string_colors[] =
-{
-	// Quake3 colors
-	// LordHavoc: why on earth is cyan before magenta in Quake3?
-	// LordHavoc: note: Doom3 uses white for [0] and [7]
-	{0.0, 0.0, 0.0, 1.0}, // black
-	{1.0, 0.0, 0.0, 1.0}, // red
-	{0.0, 1.0, 0.0, 1.0}, // green
-	{1.0, 1.0, 0.0, 1.0}, // yellow
-	{0.0, 0.0, 1.0, 1.0}, // blue
-	{0.0, 1.0, 1.0, 1.0}, // cyan
-	{1.0, 0.0, 1.0, 1.0}, // magenta
-	{1.0, 1.0, 1.0, 1.0}, // white
-	// [515]'s BX_COLOREDTEXT extension
-	{1.0, 1.0, 1.0, 0.5}, // half transparent
-	{0.5, 0.5, 0.5, 1.0}  // half brightness
-	// Black's color table
-	//{1.0, 1.0, 1.0, 1.0},
-	//{1.0, 0.0, 0.0, 1.0},
-	//{0.0, 1.0, 0.0, 1.0},
-	//{0.0, 0.0, 1.0, 1.0},
-	//{1.0, 1.0, 0.0, 1.0},
-	//{0.0, 1.0, 1.0, 1.0},
-	//{1.0, 0.0, 1.0, 1.0},
-	//{0.1, 0.1, 0.1, 1.0}
-};
-
-#define STRING_COLORS_COUNT	(sizeof(string_colors) / sizeof(vec4_t))
-
-// color is read and changed in the end
-void DrawQ_ColoredString( float x, float y, const char *text, int maxlen, float scalex, float scaley, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor )
-{
-	vec_t *color;
-	int len;
-	int colorindex;
-	const char *start, *current;
-
-	if( !outcolor || *outcolor == -1 ) {
-		colorindex = STRING_COLOR_DEFAULT;
-	} else {
-		colorindex = *outcolor;
-	}
-	color = string_colors[colorindex];
-
-	if( maxlen < 1)
-		len = (int)strlen( text );
-	else
-		len = min( maxlen, (int) strlen( text ) );
-
-	start = current = text;
-	while( len > 0 ) {
-		// check for color control char
-		if( *current == STRING_COLOR_TAG ) {
-			// get next char
-			current++;
-			len--;
-			if( len == 0 ) {
-				break;
-			}
-			// display the tag char?
-			if( *current == STRING_COLOR_TAG ) {
-				// only display one of the two
-				start = current;
-				// get the next char
-				current++;
-				len--;
-			} else if( '0' <= *current && *current <= '9' ) {
-				colorindex = 0;
-				do {
-					colorindex = colorindex * 10 + (*current - '0');
-					// only read as long as it makes a valid index
-					if( colorindex >= (int)STRING_COLORS_COUNT ) {
-						// undo the last operation
-						colorindex /= 10;
-						break;
-					}
-					current++;
-					len--;
-				} while( len > 0 && '0' <= *current && *current <= '9' );
-				// set the color
-				color = string_colors[colorindex];
-				// we jump over the color tag
-				start = current;
-			}
-		}
-		// go on and read normal text in until the next control char
-		while( len > 0 && *current != STRING_COLOR_TAG ) {
-			current++;
-			len--;
-		}
-		// display the text
-		if( start != current ) {
-			// draw the string
-			DrawQ_String( x, y, start, current - start, scalex, scaley, basered * color[0], basegreen * color[1], baseblue * color[2], basealpha * color[3], flags );
-			// update x to be at the new start position
-			x += (current - start) * scalex;
-			// set start accordingly
-			start = current;
-		}
-	}
-
-	// return the last colorindex
-	if( outcolor ) {
-		*outcolor = colorindex;
-	}
-}
 
 /*
 ===============================================================================
@@ -424,10 +327,21 @@ void SCR_SetUpToDrawConsole (void)
 {
 	// lines of console to display
 	float conlines;
+	static int framecounter = 0;
 
 	Con_CheckResize ();
 
-	if (key_dest == key_game && cls.signon != SIGNONS && scr_conforcewhiledisconnected.integer)
+	if (scr_menuforcewhiledisconnected.integer && key_dest == key_game && cls.state == ca_disconnected)
+	{
+		if (framecounter >= 2)
+			MR_ToggleMenu_f();
+		else
+			framecounter++;
+	}
+	else
+		framecounter = 0;
+
+	if (scr_conforcewhiledisconnected.integer && key_dest == key_game && cls.signon != SIGNONS)
 		key_consoleactive |= KEY_CONSOLEACTIVE_FORCED;
 	else
 		key_consoleactive &= ~KEY_CONSOLEACTIVE_FORCED;
@@ -514,7 +428,7 @@ void R_TimeReport(char *desc)
 	qglFinish();
 	r_timereport_temp = r_timereport_current;
 	r_timereport_current = Sys_DoubleTime();
-	t = (int) ((r_timereport_current - r_timereport_temp) * 1000000.0);
+	t = (int) ((r_timereport_current - r_timereport_temp) * 1000000.0 + 0.5);
 
 	dpsnprintf(tempbuf, sizeof(tempbuf), "%8i %-11s", t, desc);
 	length = (int)strlen(tempbuf);
@@ -523,17 +437,8 @@ void R_TimeReport(char *desc)
 		strlcat(r_speeds_string, "\n", sizeof(r_speeds_string));
 		speedstringcount = 0;
 	}
-	// skip the space at the beginning if it's the first on the line
-	if (speedstringcount == 0)
-	{
-		strlcat(r_speeds_string, tempbuf + 1, sizeof(r_speeds_string));
-		speedstringcount = length - 1;
-	}
-	else
-	{
-		strlcat(r_speeds_string, tempbuf, sizeof(r_speeds_string));
-		speedstringcount += length;
-	}
+	strlcat(r_speeds_string, tempbuf, sizeof(r_speeds_string));
+	speedstringcount += length;
 }
 
 void R_TimeReport_Frame(void)
@@ -543,9 +448,11 @@ void R_TimeReport_Frame(void)
 	if (r_speeds_string[0])
 	{
 		if (r_timereport_active)
+		{
+			r_timereport_current = r_timereport_start;
 			R_TimeReport("total");
+		}
 
-		r_timereport_current = r_timereport_start;
 		if (r_speeds_string[strlen(r_speeds_string)-1] == '\n')
 			r_speeds_string[strlen(r_speeds_string)-1] = 0;
 		lines = 1;
@@ -587,7 +494,7 @@ void R_TimeReport_Frame(void)
 		if (r_speeds.integer >= 2)
 		{
 			r_timereport_active = true;
-			r_timereport_start = Sys_DoubleTime();
+			r_timereport_start = r_timereport_current = Sys_DoubleTime();
 		}
 	}
 }
@@ -625,6 +532,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_conalpha);
 	Cvar_RegisterVariable (&scr_conbrightness);
 	Cvar_RegisterVariable (&scr_conforcewhiledisconnected);
+	Cvar_RegisterVariable (&scr_menuforcewhiledisconnected);
 	Cvar_RegisterVariable (&scr_showram);
 	Cvar_RegisterVariable (&scr_showturtle);
 	Cvar_RegisterVariable (&scr_showpause);
@@ -642,8 +550,16 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&cl_capturevideo_fps);
 	Cvar_RegisterVariable (&cl_capturevideo_rawrgb);
 	Cvar_RegisterVariable (&cl_capturevideo_rawyv12);
-	Cvar_RegisterVariable (&r_textshadow);
 	Cvar_RegisterVariable (&r_letterbox);
+	Cvar_RegisterVariable(&r_stereo_separation);
+	Cvar_RegisterVariable(&r_stereo_sidebyside);
+	Cvar_RegisterVariable(&r_stereo_redblue);
+	Cvar_RegisterVariable(&r_stereo_redcyan);
+	Cvar_RegisterVariable(&r_stereo_redgreen);
+	Cvar_RegisterVariable(&scr_zoomwindow);
+	Cvar_RegisterVariable(&scr_zoomwindow_viewsizex);
+	Cvar_RegisterVariable(&scr_zoomwindow_viewsizey);
+	Cvar_RegisterVariable(&scr_zoomwindow_fov);
 
 	Cmd_AddCommand ("sizeup",SCR_SizeUp_f, "increase view size (increases viewsize cvar)");
 	Cmd_AddCommand ("sizedown",SCR_SizeDown_f, "decrease view size (decreases viewsize cvar)");
@@ -651,252 +567,6 @@ void CL_Screen_Init(void)
 	Cmd_AddCommand ("envmap", R_Envmap_f, "render a cubemap (skybox) of the current scene");
 
 	scr_initialized = true;
-}
-
-void DrawQ_Clear(void)
-{
-	r_refdef.drawqueuesize = 0;
-}
-
-static int picelements[6] = {0, 1, 2, 0, 2, 3};
-void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, float red, float green, float blue, float alpha, int flags)
-{
-	DrawQ_SuperPic(x,y,pic,width,height,0,0,red,green,blue,alpha,1,0,red,green,blue,alpha,0,1,red,green,blue,alpha,1,1,red,green,blue,alpha,flags);
-}
-
-void DrawQ_String_Real(float x, float y, const char *string, int maxlen, float scalex, float scaley, float red, float green, float blue, float alpha, int flags)
-{
-	int size, len;
-	drawqueue_t *dq;
-	char *out;
-	if (alpha < (1.0f / 255.0f))
-		return;
-	if (maxlen < 1)
-		len = (int)strlen(string);
-	else
-		for (len = 0;len < maxlen && string[len];len++);
-	for (;len > 0 && string[0] == ' ';string++, x += scalex, len--);
-	for (;len > 0 && string[len - 1] == ' ';len--);
-	if (len < 1)
-		return;
-	if (x >= vid_conwidth.integer || y >= vid_conheight.integer || x < (-scalex * len) || y < (-scaley))
-		return;
-	size = sizeof(*dq) + ((len + 1 + 3) & ~3);
-	if (r_refdef.drawqueuesize + size > r_refdef.maxdrawqueuesize)
-		return;
-	red = bound(0, red, 1);
-	green = bound(0, green, 1);
-	blue = bound(0, blue, 1);
-	alpha = bound(0, alpha, 1);
-	dq = (drawqueue_t *)(r_refdef.drawqueue + r_refdef.drawqueuesize);
-	dq->size = size;
-	dq->command = DRAWQUEUE_STRING;
-	dq->flags = flags;
-	dq->color = ((unsigned int) (red * 255.0f) << 24) | ((unsigned int) (green * 255.0f) << 16) | ((unsigned int) (blue * 255.0f) << 8) | ((unsigned int) (alpha * 255.0f));
-	dq->x = x;
-	dq->y = y;
-	dq->scalex = scalex;
-	dq->scaley = scaley;
-	out = (char *)(dq + 1);
-	memcpy(out, string, len);
-	out[len] = 0;
-	r_refdef.drawqueuesize += dq->size;
-}
-
-void DrawQ_String(float x, float y, const char *string, int maxlen, float scalex, float scaley, float red, float green, float blue, float alpha, int flags)
-{
-	if (r_textshadow.integer)
-		DrawQ_String_Real(x+scalex*0.25,y+scaley*0.25,string,maxlen,scalex,scaley,0,0,0,alpha*0.8,flags);
-
-	DrawQ_String_Real(x,y,string,maxlen,scalex,scaley,red,green,blue,alpha,flags);
-}
-
-void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height, float s1, float t1, float r1, float g1, float b1, float a1, float s2, float t2, float r2, float g2, float b2, float a2, float s3, float t3, float r3, float g3, float b3, float a3, float s4, float t4, float r4, float g4, float b4, float a4, int flags)
-{
-	float floats[36];
-	drawqueuemesh_t mesh;
-	memset(&mesh, 0, sizeof(mesh));
-	if (pic)
-	{
-		if (width == 0)
-			width = pic->width;
-		if (height == 0)
-			height = pic->height;
-		mesh.texture = pic->tex;
-	}
-	mesh.num_triangles = 2;
-	mesh.num_vertices = 4;
-	mesh.data_element3i = picelements;
-	mesh.data_vertex3f = floats;
-	mesh.data_texcoord2f = floats + 12;
-	mesh.data_color4f = floats + 20;
-	memset(floats, 0, sizeof(floats));
-	mesh.data_vertex3f[0] = mesh.data_vertex3f[9] = x;
-	mesh.data_vertex3f[1] = mesh.data_vertex3f[4] = y;
-	mesh.data_vertex3f[3] = mesh.data_vertex3f[6] = x + width;
-	mesh.data_vertex3f[7] = mesh.data_vertex3f[10] = y + height;
-	mesh.data_texcoord2f[0] = s1;mesh.data_texcoord2f[1] = t1;mesh.data_color4f[ 0] = r1;mesh.data_color4f[ 1] = g1;mesh.data_color4f[ 2] = b1;mesh.data_color4f[ 3] = a1;
-	mesh.data_texcoord2f[2] = s2;mesh.data_texcoord2f[3] = t2;mesh.data_color4f[ 4] = r2;mesh.data_color4f[ 5] = g2;mesh.data_color4f[ 6] = b2;mesh.data_color4f[ 7] = a2;
-	mesh.data_texcoord2f[4] = s4;mesh.data_texcoord2f[5] = t4;mesh.data_color4f[ 8] = r4;mesh.data_color4f[ 9] = g4;mesh.data_color4f[10] = b4;mesh.data_color4f[11] = a4;
-	mesh.data_texcoord2f[6] = s3;mesh.data_texcoord2f[7] = t3;mesh.data_color4f[12] = r3;mesh.data_color4f[13] = g3;mesh.data_color4f[14] = b3;mesh.data_color4f[15] = a3;
-	DrawQ_Mesh (&mesh, flags);
-}
-
-void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
-{
-	int size;
-	void *p;
-	drawqueue_t *dq;
-	drawqueuemesh_t *m;
-	size = sizeof(*dq);
-	size += sizeof(drawqueuemesh_t);
-	size += sizeof(int[3]) * mesh->num_triangles;
-	size += sizeof(float[3]) * mesh->num_vertices;
-	size += sizeof(float[2]) * mesh->num_vertices;
-	size += sizeof(float[4]) * mesh->num_vertices;
-	if (r_refdef.drawqueuesize + size > r_refdef.maxdrawqueuesize)
-		return;
-	dq = (drawqueue_t *)(r_refdef.drawqueue + r_refdef.drawqueuesize);
-	dq->size = size;
-	dq->command = DRAWQUEUE_MESH;
-	dq->flags = flags;
-	dq->color = 0;
-	dq->x = 0;
-	dq->y = 0;
-	dq->scalex = 0;
-	dq->scaley = 0;
-	p = (void *)(dq + 1);
-	m = (drawqueuemesh_t *)p;p = (unsigned char*)p + sizeof(drawqueuemesh_t);
-	m->num_triangles = mesh->num_triangles;
-	m->num_vertices = mesh->num_vertices;
-	m->texture = mesh->texture;
-	m->data_element3i  = (int *)p;memcpy(m->data_element3i , mesh->data_element3i , m->num_triangles * sizeof(int[3]));p = (unsigned char*)p + m->num_triangles * sizeof(int[3]);
-	m->data_vertex3f   = (float *)p;memcpy(m->data_vertex3f  , mesh->data_vertex3f  , m->num_vertices * sizeof(float[3]));p = (unsigned char*)p + m->num_vertices * sizeof(float[3]);
-	m->data_texcoord2f = (float *)p;memcpy(m->data_texcoord2f, mesh->data_texcoord2f, m->num_vertices * sizeof(float[2]));p = (unsigned char*)p + m->num_vertices * sizeof(float[2]);
-	m->data_color4f    = (float *)p;memcpy(m->data_color4f   , mesh->data_color4f   , m->num_vertices * sizeof(float[4]));p = (unsigned char*)p + m->num_vertices * sizeof(float[4]);
-	r_refdef.drawqueuesize += dq->size;
-}
-
-void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
-{
-	int size;
-	void *p;
-	drawqueue_t *dq;
-	drawqueuemesh_t *m;
-	size = sizeof(*dq);
-	size += sizeof(drawqueuemesh_t);
-	size += sizeof(int[3]) * mesh->num_triangles;
-	size += sizeof(float[3]) * mesh->num_vertices;
-	size += sizeof(float[2]) * mesh->num_vertices;
-	size += sizeof(float[4]) * mesh->num_vertices;
-	if (r_refdef.drawqueuesize + size > r_refdef.maxdrawqueuesize)
-		return;
-	dq = (void *)(r_refdef.drawqueue + r_refdef.drawqueuesize);
-	dq->size = size;
-	dq->command = DRAWQUEUE_LINES;
-	dq->flags = flags;
-	dq->color = 0;
-	dq->x = 0;
-	dq->y = 0;
-	dq->scalex = 0;
-	dq->scaley = 0;
-	p = (void *)(dq + 1);
-	m = p;p = (unsigned char*)p + sizeof(drawqueuemesh_t);
-	m->num_triangles = mesh->num_triangles;
-	m->num_vertices = mesh->num_vertices;
-	m->texture = mesh->texture;
-	m->data_element3i  = p;memcpy(m->data_element3i , mesh->data_element3i , m->num_triangles * sizeof(int[3]));p = (unsigned char*)p + m->num_triangles * sizeof(int[3]);
-	m->data_vertex3f   = p;memcpy(m->data_vertex3f  , mesh->data_vertex3f  , m->num_vertices * sizeof(float[3]));p = (unsigned char*)p + m->num_vertices * sizeof(float[3]);
-	m->data_texcoord2f = p;memcpy(m->data_texcoord2f, mesh->data_texcoord2f, m->num_vertices * sizeof(float[2]));p = (unsigned char*)p + m->num_vertices * sizeof(float[2]);
-	m->data_color4f    = p;memcpy(m->data_color4f   , mesh->data_color4f   , m->num_vertices * sizeof(float[4]));p = (unsigned char*)p + m->num_vertices * sizeof(float[4]);
-	r_refdef.drawqueuesize += dq->size;
-}
-
-//LordHavoc: FIXME: this is nasty!
-void DrawQ_LineWidth (float width)
-{
-	drawqueue_t *dq;
-	static int linewidth = 1;
-	if(width == linewidth)
-		return;
-	linewidth = width;
-	if(r_refdef.drawqueuesize + (int)sizeof(*dq) > r_refdef.maxdrawqueuesize)
-	{
-		Con_DPrint("DrawQueue full !\n");
-		return;
-	}
-	dq = (void*) (r_refdef.drawqueue + r_refdef.drawqueuesize);
-	dq->size = sizeof(*dq);
-	dq->command = DRAWQUEUE_LINEWIDTH;
-	dq->x = width;
-
-	r_refdef.drawqueuesize += dq->size;
-}
-
-//[515]: this is old, delete
-void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, float g, float b, float alpha, int flags)
-{
-	drawqueue_t *dq;
-	if(width > 0)
-		DrawQ_LineWidth(width);
-	if(r_refdef.drawqueuesize + (int)sizeof(*dq) > r_refdef.maxdrawqueuesize)
-	{
-		Con_DPrint("DrawQueue full !\n");
-		return;
-	}
-	dq = (void*) (r_refdef.drawqueue + r_refdef.drawqueuesize);
-	dq->size = sizeof(*dq);
-	dq->command = DRAWQUEUE_LINES;
-	dq->x = x1;
-	dq->y = y1;
-	dq->scalex = x2;
-	dq->scaley = y2;
-	dq->flags = flags;
-	dq->color =  ((unsigned int) (r * 255.0f) << 24) | ((unsigned int) (g * 255.0f) << 16) | ((unsigned int) (b * 255.0f) << 8) | ((unsigned int) (alpha * 255.0f));
-
-	r_refdef.drawqueuesize += dq->size;
-}
-
-void DrawQ_SetClipArea(float x, float y, float width, float height)
-{
-	drawqueue_t * dq;
-	if(r_refdef.drawqueuesize + (int)sizeof(*dq) > r_refdef.maxdrawqueuesize)
-	{
-		Con_DPrint("DrawQueue full !\n");
-		return;
-	}
-	dq = (drawqueue_t *) (r_refdef.drawqueue + r_refdef.drawqueuesize);
-	dq->size = sizeof(*dq);
-	dq->command = DRAWQUEUE_SETCLIP;
-	dq->x = x;
-	dq->y = y;
-	dq->scalex = width;
-	dq->scaley = height;
-	dq->flags = 0;
-	dq->color = 0;
-
-	r_refdef.drawqueuesize += dq->size;
-}
-
-void DrawQ_ResetClipArea(void)
-{
-	drawqueue_t *dq;
-	if(r_refdef.drawqueuesize + (int)sizeof(*dq) > r_refdef.maxdrawqueuesize)
-	{
-		Con_DPrint("DrawQueue full !\n");
-		return;
-	}
-	dq = (drawqueue_t *) (r_refdef.drawqueue + r_refdef.drawqueuesize);
-	dq->size = sizeof(*dq);
-	dq->command = DRAWQUEUE_RESETCLIP;
-	dq->x = 0;
-	dq->y = 0;
-	dq->scalex = 0;
-	dq->scaley = 0;
-	dq->flags = 0;
-	dq->color = 0;
-
-	r_refdef.drawqueuesize += dq->size;
 }
 
 /*
@@ -1417,28 +1087,261 @@ void SHOWLMP_clear(void)
 		showlmp[i].isactive = false;
 }
 
-void CL_SetupScreenSize(void)
+/*
+==============================================================================
+
+						SCREEN SHOTS
+
+==============================================================================
+*/
+
+qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *buffer2, unsigned char *buffer3, int x, int y, int width, int height, qboolean flipx, qboolean flipy, qboolean flipdiagonal, qboolean jpeg, qboolean gammacorrect)
+{
+	int	indices[3] = {0,1,2};
+	qboolean ret;
+
+	if (!r_render.integer)
+		return false;
+
+	qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer1);
+	CHECKGLERROR
+
+	if (scr_screenshot_gamma.value != 1 && gammacorrect)
+	{
+		int i;
+		double igamma = 1.0 / scr_screenshot_gamma.value;
+		unsigned char ramp[256];
+		for (i = 0;i < 256;i++)
+			ramp[i] = (unsigned char) (pow(i * (1.0 / 255.0), igamma) * 255.0);
+		for (i = 0;i < width*height*3;i++)
+			buffer1[i] = ramp[buffer1[i]];
+	}
+
+	Image_CopyMux (buffer2, buffer1, width, height, flipx, flipy, flipdiagonal, 3, 3, indices);
+
+	if (jpeg)
+		ret = JPEG_SaveImage_preflipped (filename, width, height, buffer2);
+	else
+		ret = Image_WriteTGARGB_preflipped (filename, width, height, buffer2, buffer3);
+
+	return ret;
+}
+
+//=============================================================================
+
+void R_ClearScreen(void)
+{
+	if (r_render.integer)
+	{
+		// clear to black
+		if (fogenabled)
+			qglClearColor(fogcolor[0],fogcolor[1],fogcolor[2],0);
+		else
+			qglClearColor(0,0,0,0);
+		CHECKGLERROR
+		qglClearDepth(1);CHECKGLERROR
+		if (gl_stencil)
+		{
+			// LordHavoc: we use a stencil centered around 128 instead of 0,
+			// to avoid clamping interfering with strange shadow volume
+			// drawing orders
+			qglClearStencil(128);CHECKGLERROR
+		}
+		// clear the screen
+		GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | (gl_stencil ? GL_STENCIL_BUFFER_BIT : 0));
+		// set dithering mode
+		if (gl_dither.integer)
+		{
+			qglEnable(GL_DITHER);CHECKGLERROR
+		}
+		else
+		{
+			qglDisable(GL_DITHER);CHECKGLERROR
+		}
+	}
+}
+
+qboolean CL_VM_UpdateView (void);
+void SCR_DrawConsole (void);
+void R_Shadow_EditLights_DrawSelectedLightProperties(void);
+
+int r_stereo_side;
+
+void SCR_DrawScreen (void)
+{
+	R_Mesh_Start();
+
+	if (r_timereport_active)
+		R_TimeReport("setup");
+
+	if (cls.signon == SIGNONS)
+	{
+		float size;
+
+		size = scr_viewsize.value * (1.0 / 100.0);
+		size = min(size, 1);
+
+		if (r_stereo_sidebyside.integer)
+		{
+			r_refdef.width = vid.width * size / 2.5;
+			r_refdef.height = vid.height * size / 2.5 * (1 - bound(0, r_letterbox.value, 100) / 100);
+			r_refdef.x = (vid.width - r_refdef.width * 2.5) * 0.5;
+			r_refdef.y = (vid.height - r_refdef.height)/2;
+			if (r_stereo_side)
+				r_refdef.x += r_refdef.width * 1.5;
+		}
+		else
+		{
+			r_refdef.width = vid.width * size;
+			r_refdef.height = vid.height * size * (1 - bound(0, r_letterbox.value, 100) / 100);
+			r_refdef.x = (vid.width - r_refdef.width)/2;
+			r_refdef.y = (vid.height - r_refdef.height)/2;
+		}
+
+		// LordHavoc: viewzoom (zoom in for sniper rifles, etc)
+		// LordHavoc: this is designed to produce widescreen fov values
+		// when the screen is wider than 4/3 width/height aspect, to do
+		// this it simply assumes the requested fov is the vertical fov
+		// for a 4x3 display, if the ratio is not 4x3 this makes the fov
+		// higher/lower according to the ratio
+		r_refdef.frustum_y = tan(scr_fov.value * cl.viewzoom * M_PI / 360.0) * (3.0/4.0);
+		r_refdef.frustum_x = r_refdef.frustum_y * (float)r_refdef.width / (float)r_refdef.height / vid_pixelheight.value;
+
+		r_refdef.frustum_x *= r_refdef.frustumscale_x;
+		r_refdef.frustum_y *= r_refdef.frustumscale_y;
+
+		if(!CL_VM_UpdateView())
+			R_RenderView();
+		else
+			SCR_DrawConsole();
+
+		if (scr_zoomwindow.integer)
+		{
+			float sizex = bound(10, scr_zoomwindow_viewsizex.value, 100) / 100.0;
+			float sizey = bound(10, scr_zoomwindow_viewsizey.value, 100) / 100.0;
+			r_refdef.width = vid.width * sizex;
+			r_refdef.height = vid.height * sizey;
+			r_refdef.x = (vid.width - r_refdef.width)/2;
+			r_refdef.y = 0;
+
+			r_refdef.frustum_y = tan(scr_zoomwindow_fov.value * cl.viewzoom * M_PI / 360.0) * (3.0/4.0);
+			r_refdef.frustum_x = r_refdef.frustum_y * vid_pixelheight.value * (float)r_refdef.width / (float)r_refdef.height;
+
+			r_refdef.frustum_x *= r_refdef.frustumscale_x;
+			r_refdef.frustum_y *= r_refdef.frustumscale_y;
+
+			if(!CL_VM_UpdateView())
+				R_RenderView();
+		}
+	}
+
+	if (!r_stereo_sidebyside.integer)
+	{
+		r_refdef.width = vid.width;
+		r_refdef.height = vid.height;
+		r_refdef.x = 0;
+		r_refdef.y = 0;
+	}
+
+	// draw 2D stuff
+	DrawQ_Begin();
+
+	//FIXME: force menu if nothing else to look at?
+	//if (key_dest == key_game && cls.signon != SIGNONS && cls.state == ca_disconnected)
+
+	if (cls.signon == SIGNONS)
+	{
+		SCR_DrawNet ();
+		SCR_DrawTurtle ();
+		SCR_DrawPause ();
+		if (!r_letterbox.value)
+			Sbar_Draw();
+		SHOWLMP_drawall();
+		SCR_CheckDrawCenterString();
+	}
+	MR_Draw();
+	CL_DrawVideo();
+	R_Shadow_EditLights_DrawSelectedLightProperties();
+
+	if(!csqc_loaded)
+		SCR_DrawConsole();
+
+	SCR_DrawBrand();
+
+	SCR_DrawDownload();
+
+	if (r_timereport_active)
+		R_TimeReport("2d");
+
+	if (cls.signon == SIGNONS)
+		R_TimeReport_Frame();
+
+	DrawQ_Finish();
+
+	R_DrawGamma();
+
+	R_Mesh_Finish();
+
+	if (r_timereport_active)
+		R_TimeReport("meshfinish");
+}
+
+void SCR_UpdateLoadingScreen (void)
+{
+	float x, y;
+	cachepic_t *pic;
+	rmeshstate_t m;
+	// don't do anything if not initialized yet
+	if (vid_hidden)
+		return;
+	r_showtrispass = 0;
+	VID_UpdateGamma(false);
+	qglViewport(0, 0, vid.width, vid.height);
+	//qglDisable(GL_SCISSOR_TEST);
+	//qglDepthMask(1);
+	qglColorMask(1,1,1,1);
+	//qglClearColor(0,0,0,0);
+	//qglClear(GL_COLOR_BUFFER_BIT);
+	//qglCullFace(GL_FRONT);
+	//qglDisable(GL_CULL_FACE);
+	//R_ClearScreen();
+	R_Textures_Frame();
+	GL_SetupView_Mode_Ortho(0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100);
+	R_Mesh_Start();
+	R_Mesh_Matrix(&identitymatrix);
+	// draw the loading plaque
+	pic = Draw_CachePic("gfx/loading", false);
+	x = (vid_conwidth.integer - pic->width)/2;
+	y = (vid_conheight.integer - pic->height)/2;
+	GL_Color(1,1,1,1);
+	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	GL_DepthTest(false);
+	memset(&m, 0, sizeof(m));
+	m.pointer_vertex = varray_vertex3f;
+	m.pointer_texcoord[0] = varray_texcoord2f[0];
+	m.tex[0] = R_GetTexture(pic->tex);
+	R_Mesh_State(&m);
+	varray_vertex3f[0] = varray_vertex3f[9] = x;
+	varray_vertex3f[1] = varray_vertex3f[4] = y;
+	varray_vertex3f[3] = varray_vertex3f[6] = x + pic->width;
+	varray_vertex3f[7] = varray_vertex3f[10] = y + pic->height;
+	varray_texcoord2f[0][0] = 0;varray_texcoord2f[0][1] = 0;
+	varray_texcoord2f[0][2] = 1;varray_texcoord2f[0][3] = 0;
+	varray_texcoord2f[0][4] = 1;varray_texcoord2f[0][5] = 1;
+	varray_texcoord2f[0][6] = 0;varray_texcoord2f[0][7] = 1;
+	R_Mesh_Draw(0, 4, 2, polygonelements);
+	R_Mesh_Finish();
+	// refresh
+	VID_Finish(false);
+}
+
+void CL_UpdateScreen(void)
 {
 	float conwidth, conheight;
 
-	VID_UpdateGamma(false);
+	if (vid_hidden)
+		return;
 
-	conwidth = bound(320, vid_conwidth.value, 2048);
-	conheight = bound(200, vid_conheight.value, 1536);
-	if (vid_conwidth.value != conwidth)
-		Cvar_SetValue("vid_conwidth", conwidth);
-	if (vid_conheight.value != conheight)
-		Cvar_SetValue("vid_conheight", conheight);
-
-	vid_conwidth.integer = vid_conwidth.integer;
-	vid_conheight.integer = vid_conheight.integer;
-
-	SCR_SetUpToDrawConsole();
-}
-
-extern void R_Shadow_EditLights_DrawSelectedLightProperties(void);
-void CL_UpdateScreen(void)
-{
 	if (!scr_initialized || !con_initialized || vid_hidden)
 		return;				// not initialized yet
 
@@ -1451,6 +1354,13 @@ void CL_UpdateScreen(void)
 			Cvar_Set ("r_ambient", "0");
 	}
 
+	conwidth = bound(320, vid_conwidth.value, 2048);
+	conheight = bound(200, vid_conheight.value, 1536);
+	if (vid_conwidth.value != conwidth)
+		Cvar_SetValue("vid_conwidth", conwidth);
+	if (vid_conheight.value != conheight)
+		Cvar_SetValue("vid_conheight", conheight);
+
 	// bound viewsize
 	if (scr_viewsize.value < 30)
 		Cvar_Set ("viewsize","30");
@@ -1462,6 +1372,16 @@ void CL_UpdateScreen(void)
 		Cvar_Set ("fov","1");
 	if (scr_fov.value > 170)
 		Cvar_Set ("fov","170");
+
+	// validate r_textureunits cvar
+	if (r_textureunits.integer > gl_textureunits)
+		Cvar_SetValueQuick(&r_textureunits, gl_textureunits);
+	if (r_textureunits.integer < 1)
+		Cvar_SetValueQuick(&r_textureunits, 1);
+
+	// validate gl_combine cvar
+	if (gl_combine.integer && !gl_combine_extension)
+		Cvar_SetValueQuick(&gl_combine, 0);
 
 	// intermission is always full screen
 	if (cl.intermission)
@@ -1480,52 +1400,75 @@ void CL_UpdateScreen(void)
 	r_refdef.colormask[1] = 1;
 	r_refdef.colormask[2] = 1;
 
-	SCR_CaptureVideo();
-
 	if (r_timereport_active)
 		R_TimeReport("other");
 
-	CL_SetupScreenSize();
+	VID_UpdateGamma(false);
 
-	DrawQ_Clear();
-
-	if (r_timereport_active)
-		R_TimeReport("setup");
-
-	//FIXME: force menu if nothing else to look at?
-	//if (key_dest == key_game && cls.signon != SIGNONS && cls.state == ca_disconnected)
-
-	if (cls.signon == SIGNONS)
-	{
-		SCR_DrawNet ();
-		SCR_DrawTurtle ();
-		SCR_DrawPause ();
-		if (!r_letterbox.value)
-			Sbar_Draw();
-		SHOWLMP_drawall();
-		SCR_CheckDrawCenterString();
-	}
-	MR_Draw();
-	CL_DrawVideo();
-	if (cls.signon == SIGNONS)
-	{
-		if (r_timereport_active)
-			R_TimeReport("2d");
-		R_TimeReport_Frame();
-	}
-	R_Shadow_EditLights_DrawSelectedLightProperties();
-
-	if(!csqc_loaded)
-		SCR_DrawConsole();
-
-	SCR_DrawBrand();
-
-	SCR_DrawDownload();
+	SCR_SetUpToDrawConsole();
 
 	if (r_timereport_active)
 		R_TimeReport("start");
 
-	SCR_UpdateScreen();
+	r_showtrispass = 0;
+
+	CHECKGLERROR
+	qglViewport(0, 0, vid.width, vid.height);
+	qglDisable(GL_SCISSOR_TEST);
+	qglDepthMask(1);
+	qglColorMask(1,1,1,1);
+	qglClearColor(0,0,0,0);
+	qglClear(GL_COLOR_BUFFER_BIT);
+	CHECKGLERROR
+
+	if (r_timereport_active)
+		R_TimeReport("clear");
+
+	if (r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer || r_stereo_sidebyside.integer)
+	{
+		matrix4x4_t originalmatrix = r_refdef.viewentitymatrix;
+		r_refdef.viewentitymatrix.m[0][3] = originalmatrix.m[0][3] + r_stereo_separation.value * -0.5f * r_refdef.viewentitymatrix.m[0][1];
+		r_refdef.viewentitymatrix.m[1][3] = originalmatrix.m[1][3] + r_stereo_separation.value * -0.5f * r_refdef.viewentitymatrix.m[1][1];
+		r_refdef.viewentitymatrix.m[2][3] = originalmatrix.m[2][3] + r_stereo_separation.value * -0.5f * r_refdef.viewentitymatrix.m[2][1];
+
+		if (r_stereo_sidebyside.integer)
+			r_stereo_side = 0;
+
+		if (r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer)
+		{
+			r_refdef.colormask[0] = 1;
+			r_refdef.colormask[1] = 0;
+			r_refdef.colormask[2] = 0;
+		}
+
+		SCR_DrawScreen();
+
+		r_refdef.viewentitymatrix.m[0][3] = originalmatrix.m[0][3] + r_stereo_separation.value * 0.5f * r_refdef.viewentitymatrix.m[0][1];
+		r_refdef.viewentitymatrix.m[1][3] = originalmatrix.m[1][3] + r_stereo_separation.value * 0.5f * r_refdef.viewentitymatrix.m[1][1];
+		r_refdef.viewentitymatrix.m[2][3] = originalmatrix.m[2][3] + r_stereo_separation.value * 0.5f * r_refdef.viewentitymatrix.m[2][1];
+
+		if (r_stereo_sidebyside.integer)
+			r_stereo_side = 1;
+
+		if (r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer)
+		{
+			r_refdef.colormask[0] = 0;
+			r_refdef.colormask[1] = r_stereo_redcyan.integer || r_stereo_redgreen.integer;
+			r_refdef.colormask[2] = r_stereo_redcyan.integer || r_stereo_redblue.integer;
+		}
+
+		SCR_DrawScreen();
+
+		r_refdef.viewentitymatrix = originalmatrix;
+	}
+	else
+		SCR_DrawScreen();
+
+	SCR_CaptureVideo();
+
+	VID_Finish(true);
+	if (r_timereport_active)
+		R_TimeReport("finish");
 }
 
 void CL_Screen_NewMap(void)

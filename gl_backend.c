@@ -1,7 +1,5 @@
 
 #include "quakedef.h"
-#include "image.h"
-#include "jpeg.h"
 #include "cl_collision.h"
 
 cvar_t gl_mesh_drawrangeelements = {0, "gl_mesh_drawrangeelements", "1", "use glDrawRangeElements function if available instead of glDrawElements (for performance comparisons or bug testing)"};
@@ -9,11 +7,6 @@ cvar_t gl_mesh_testarrayelement = {0, "gl_mesh_testarrayelement", "0", "use glBe
 cvar_t gl_mesh_testmanualfeeding = {0, "gl_mesh_testmanualfeeding", "0", "use glBegin(GL_TRIANGLES);glTexCoord2f();glVertex3f();glEnd(); primitives instead of glDrawElements (useful to test for driver bugs with glDrawElements)"};
 cvar_t gl_paranoid = {0, "gl_paranoid", "0", "enables OpenGL error checking and other tests"};
 cvar_t gl_printcheckerror = {0, "gl_printcheckerror", "0", "prints all OpenGL error checks, useful to identify location of driver crashes"};
-cvar_t r_stereo_separation = {0, "r_stereo_separation", "4", "separation of eyes in the world (try negative values too)"};
-cvar_t r_stereo_sidebyside = {0, "r_stereo_sidebyside", "0", "side by side views (for those who can't afford glasses but can afford eye strain)"};
-cvar_t r_stereo_redblue = {0, "r_stereo_redblue", "0", "red/blue anaglyph stereo glasses (note: most of these glasses are actually red/cyan, try that one too)"};
-cvar_t r_stereo_redcyan = {0, "r_stereo_redcyan", "0", "red/cyan anaglyph stereo glasses, the kind given away at drive-in movies like Creature From The Black Lagoon In 3D"};
-cvar_t r_stereo_redgreen = {0, "r_stereo_redgreen", "0", "red/green anaglyph stereo glasses (for those who don't mind yellow)"};
 
 cvar_t r_render = {0, "r_render", "1", "enables rendering calls (you want this on!)"};
 cvar_t r_waterwarp = {CVAR_SAVE, "r_waterwarp", "1", "warp view while underwater"};
@@ -139,18 +132,25 @@ for (y = 0;y < rows - 1;y++)
 }
 */
 
-int polygonelements[768];
+int polygonelements[(POLYGONELEMENTS_MAXPOINTS-2)*3];
+int quadelements[QUADELEMENTS_MAXQUADS*6];
 
+#if 0
 static void R_Mesh_CacheArray_Startup(void);
 static void R_Mesh_CacheArray_Shutdown(void);
+#endif
 void GL_Backend_AllocArrays(void)
 {
+#if 0
 	R_Mesh_CacheArray_Startup();
+#endif
 }
 
 void GL_Backend_FreeArrays(void)
 {
+#if 0
 	R_Mesh_CacheArray_Shutdown();
+#endif
 }
 
 static void gl_backend_start(void)
@@ -210,11 +210,6 @@ static void gl_backend_newmap(void)
 {
 }
 
-cvar_t scr_zoomwindow = {CVAR_SAVE, "scr_zoomwindow", "0", "displays a zoomed in overlay window"};
-cvar_t scr_zoomwindow_viewsizex = {CVAR_SAVE, "scr_zoomwindow_viewsizex", "20", "horizontal viewsize of zoom window"};
-cvar_t scr_zoomwindow_viewsizey = {CVAR_SAVE, "scr_zoomwindow_viewsizey", "20", "vertical viewsize of zoom window"};
-cvar_t scr_zoomwindow_fov = {CVAR_SAVE, "scr_zoomwindow_fov", "20", "fov of zoom window"};
-
 void gl_backend_init(void)
 {
 	int i;
@@ -225,14 +220,19 @@ void gl_backend_init(void)
 		polygonelements[i * 3 + 1] = i + 1;
 		polygonelements[i * 3 + 2] = i + 2;
 	}
+	// elements for rendering a series of quads as triangles
+	for (i = 0;i < QUADELEMENTS_MAXQUADS;i++)
+	{
+		quadelements[i * 6 + 0] = i * 4;
+		quadelements[i * 6 + 1] = i * 4 + 1;
+		quadelements[i * 6 + 2] = i * 4 + 2;
+		quadelements[i * 6 + 3] = i * 4;
+		quadelements[i * 6 + 4] = i * 4 + 2;
+		quadelements[i * 6 + 5] = i * 4 + 3;
+	}
 
 	Cvar_RegisterVariable(&r_render);
 	Cvar_RegisterVariable(&r_waterwarp);
-	Cvar_RegisterVariable(&r_stereo_separation);
-	Cvar_RegisterVariable(&r_stereo_sidebyside);
-	Cvar_RegisterVariable(&r_stereo_redblue);
-	Cvar_RegisterVariable(&r_stereo_redcyan);
-	Cvar_RegisterVariable(&r_stereo_redgreen);
 	Cvar_RegisterVariable(&gl_polyblend);
 	Cvar_RegisterVariable(&gl_dither);
 	Cvar_RegisterVariable(&gl_lockarrays);
@@ -245,11 +245,6 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&gl_mesh_drawrangeelements);
 	Cvar_RegisterVariable(&gl_mesh_testarrayelement);
 	Cvar_RegisterVariable(&gl_mesh_testmanualfeeding);
-
-	Cvar_RegisterVariable(&scr_zoomwindow);
-	Cvar_RegisterVariable(&scr_zoomwindow_viewsizex);
-	Cvar_RegisterVariable(&scr_zoomwindow_viewsizey);
-	Cvar_RegisterVariable(&scr_zoomwindow_fov);
 
 	R_RegisterModule("GL_Backend", gl_backend_start, gl_backend_shutdown, gl_backend_newmap);
 }
@@ -1659,302 +1654,6 @@ void R_Mesh_Draw_ShowTris(int firstvertex, int numvertices, int numtriangles, co
 	CHECKGLERROR
 }
 
-/*
-==============================================================================
-
-						SCREEN SHOTS
-
-==============================================================================
-*/
-
-qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *buffer2, unsigned char *buffer3, int x, int y, int width, int height, qboolean flipx, qboolean flipy, qboolean flipdiagonal, qboolean jpeg, qboolean gammacorrect)
-{
-	int	indices[3] = {0,1,2};
-	qboolean ret;
-
-	if (!r_render.integer)
-		return false;
-
-	qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer1);
-	CHECKGLERROR
-
-	if (scr_screenshot_gamma.value != 1 && gammacorrect)
-	{
-		int i;
-		double igamma = 1.0 / scr_screenshot_gamma.value;
-		unsigned char ramp[256];
-		for (i = 0;i < 256;i++)
-			ramp[i] = (unsigned char) (pow(i * (1.0 / 255.0), igamma) * 255.0);
-		for (i = 0;i < width*height*3;i++)
-			buffer1[i] = ramp[buffer1[i]];
-	}
-
-	Image_CopyMux (buffer2, buffer1, width, height, flipx, flipy, flipdiagonal, 3, 3, indices);
-
-	if (jpeg)
-		ret = JPEG_SaveImage_preflipped (filename, width, height, buffer2);
-	else
-		ret = Image_WriteTGARGB_preflipped (filename, width, height, buffer2, buffer3);
-
-	return ret;
-}
-
-//=============================================================================
-
-void R_ClearScreen(void)
-{
-	if (r_render.integer)
-	{
-		// clear to black
-		if (fogenabled)
-			qglClearColor(fogcolor[0],fogcolor[1],fogcolor[2],0);
-		else
-			qglClearColor(0,0,0,0);
-		CHECKGLERROR
-		qglClearDepth(1);CHECKGLERROR
-		if (gl_stencil)
-		{
-			// LordHavoc: we use a stencil centered around 128 instead of 0,
-			// to avoid clamping interfering with strange shadow volume
-			// drawing orders
-			qglClearStencil(128);CHECKGLERROR
-		}
-		// clear the screen
-		GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | (gl_stencil ? GL_STENCIL_BUFFER_BIT : 0));
-		// set dithering mode
-		if (gl_dither.integer)
-		{
-			qglEnable(GL_DITHER);CHECKGLERROR
-		}
-		else
-		{
-			qglDisable(GL_DITHER);CHECKGLERROR
-		}
-	}
-}
-
-qboolean CL_VM_UpdateView (void);
-void SCR_DrawConsole (void);
-
-int r_stereo_side;
-
-void SCR_DrawScreen (void)
-{
-	R_Mesh_Start();
-
-	if (r_timereport_active)
-		R_TimeReport("setup");
-
-	if (cls.signon == SIGNONS)
-	{
-		float size;
-
-		size = scr_viewsize.value * (1.0 / 100.0);
-		size = min(size, 1);
-
-		if (r_stereo_sidebyside.integer)
-		{
-			r_refdef.width = vid.width * size / 2.5;
-			r_refdef.height = vid.height * size / 2.5 * (1 - bound(0, r_letterbox.value, 100) / 100);
-			r_refdef.x = (vid.width - r_refdef.width * 2.5) * 0.5;
-			r_refdef.y = (vid.height - r_refdef.height)/2;
-			if (r_stereo_side)
-				r_refdef.x += r_refdef.width * 1.5;
-		}
-		else
-		{
-			r_refdef.width = vid.width * size;
-			r_refdef.height = vid.height * size * (1 - bound(0, r_letterbox.value, 100) / 100);
-			r_refdef.x = (vid.width - r_refdef.width)/2;
-			r_refdef.y = (vid.height - r_refdef.height)/2;
-		}
-
-		// LordHavoc: viewzoom (zoom in for sniper rifles, etc)
-		// LordHavoc: this is designed to produce widescreen fov values
-		// when the screen is wider than 4/3 width/height aspect, to do
-		// this it simply assumes the requested fov is the vertical fov
-		// for a 4x3 display, if the ratio is not 4x3 this makes the fov
-		// higher/lower according to the ratio
-		r_refdef.frustum_y = tan(scr_fov.value * cl.viewzoom * M_PI / 360.0) * (3.0/4.0);
-		r_refdef.frustum_x = r_refdef.frustum_y * (float)r_refdef.width / (float)r_refdef.height / vid_pixelheight.value;
-
-		r_refdef.frustum_x *= r_refdef.frustumscale_x;
-		r_refdef.frustum_y *= r_refdef.frustumscale_y;
-
-		if(!CL_VM_UpdateView())
-			R_RenderView();
-		else
-			SCR_DrawConsole();
-
-		if (scr_zoomwindow.integer)
-		{
-			float sizex = bound(10, scr_zoomwindow_viewsizex.value, 100) / 100.0;
-			float sizey = bound(10, scr_zoomwindow_viewsizey.value, 100) / 100.0;
-			r_refdef.width = vid.width * sizex;
-			r_refdef.height = vid.height * sizey;
-			r_refdef.x = (vid.width - r_refdef.width)/2;
-			r_refdef.y = 0;
-
-			r_refdef.frustum_y = tan(scr_zoomwindow_fov.value * cl.viewzoom * M_PI / 360.0) * (3.0/4.0);
-			r_refdef.frustum_x = r_refdef.frustum_y * vid_pixelheight.value * (float)r_refdef.width / (float)r_refdef.height;
-
-			r_refdef.frustum_x *= r_refdef.frustumscale_x;
-			r_refdef.frustum_y *= r_refdef.frustumscale_y;
-
-			if(!CL_VM_UpdateView())
-				R_RenderView();
-		}
-	}
-
-	if (!r_stereo_sidebyside.integer)
-	{
-		r_refdef.width = vid.width;
-		r_refdef.height = vid.height;
-		r_refdef.x = 0;
-		r_refdef.y = 0;
-	}
-
-	// draw 2D stuff
-	R_DrawQueue();
-
-	R_Mesh_Finish();
-
-	if (r_timereport_active)
-		R_TimeReport("meshfinish");
-}
-
-void SCR_UpdateLoadingScreen (void)
-{
-	float x, y;
-	cachepic_t *pic;
-	rmeshstate_t m;
-	// don't do anything if not initialized yet
-	if (vid_hidden)
-		return;
-	r_showtrispass = 0;
-	VID_UpdateGamma(false);
-	qglViewport(0, 0, vid.width, vid.height);
-	//qglDisable(GL_SCISSOR_TEST);
-	//qglDepthMask(1);
-	qglColorMask(1,1,1,1);
-	//qglClearColor(0,0,0,0);
-	//qglClear(GL_COLOR_BUFFER_BIT);
-	//qglCullFace(GL_FRONT);
-	//qglDisable(GL_CULL_FACE);
-	//R_ClearScreen();
-	R_Textures_Frame();
-	GL_SetupView_Mode_Ortho(0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100);
-	R_Mesh_Start();
-	R_Mesh_Matrix(&identitymatrix);
-	// draw the loading plaque
-	pic = Draw_CachePic("gfx/loading", false);
-	x = (vid_conwidth.integer - pic->width)/2;
-	y = (vid_conheight.integer - pic->height)/2;
-	GL_Color(1,1,1,1);
-	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	GL_DepthTest(false);
-	memset(&m, 0, sizeof(m));
-	m.pointer_vertex = varray_vertex3f;
-	m.pointer_texcoord[0] = varray_texcoord2f[0];
-	m.tex[0] = R_GetTexture(pic->tex);
-	R_Mesh_State(&m);
-	varray_vertex3f[0] = varray_vertex3f[9] = x;
-	varray_vertex3f[1] = varray_vertex3f[4] = y;
-	varray_vertex3f[3] = varray_vertex3f[6] = x + pic->width;
-	varray_vertex3f[7] = varray_vertex3f[10] = y + pic->height;
-	varray_texcoord2f[0][0] = 0;varray_texcoord2f[0][1] = 0;
-	varray_texcoord2f[0][2] = 1;varray_texcoord2f[0][3] = 0;
-	varray_texcoord2f[0][4] = 1;varray_texcoord2f[0][5] = 1;
-	varray_texcoord2f[0][6] = 0;varray_texcoord2f[0][7] = 1;
-	GL_LockArrays(0, 4);
-	R_Mesh_Draw(0, 4, 2, polygonelements);
-	GL_LockArrays(0, 0);
-	R_Mesh_Finish();
-	// refresh
-	VID_Finish(false);
-}
-
-/*
-==================
-SCR_UpdateScreen
-
-This is called every frame, and can also be called explicitly to flush
-text to the screen.
-==================
-*/
-void SCR_UpdateScreen (void)
-{
-	if (vid_hidden)
-		return;
-
-	if (r_textureunits.integer > gl_textureunits)
-		Cvar_SetValueQuick(&r_textureunits, gl_textureunits);
-	if (r_textureunits.integer < 1)
-		Cvar_SetValueQuick(&r_textureunits, 1);
-
-	if (gl_combine.integer && !gl_combine_extension)
-		Cvar_SetValueQuick(&gl_combine, 0);
-
-	r_showtrispass = 0;
-
-	CHECKGLERROR
-	qglViewport(0, 0, vid.width, vid.height);
-	qglDisable(GL_SCISSOR_TEST);
-	qglDepthMask(1);
-	qglColorMask(1,1,1,1);
-	qglClearColor(0,0,0,0);
-	qglClear(GL_COLOR_BUFFER_BIT);
-	CHECKGLERROR
-
-	if (r_timereport_active)
-		R_TimeReport("clear");
-
-	if (r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer || r_stereo_sidebyside.integer)
-	{
-		matrix4x4_t originalmatrix = r_refdef.viewentitymatrix;
-		r_refdef.viewentitymatrix.m[0][3] = originalmatrix.m[0][3] + r_stereo_separation.value * -0.5f * r_refdef.viewentitymatrix.m[0][1];
-		r_refdef.viewentitymatrix.m[1][3] = originalmatrix.m[1][3] + r_stereo_separation.value * -0.5f * r_refdef.viewentitymatrix.m[1][1];
-		r_refdef.viewentitymatrix.m[2][3] = originalmatrix.m[2][3] + r_stereo_separation.value * -0.5f * r_refdef.viewentitymatrix.m[2][1];
-
-		if (r_stereo_sidebyside.integer)
-			r_stereo_side = 0;
-
-		if (r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer)
-		{
-			r_refdef.colormask[0] = 1;
-			r_refdef.colormask[1] = 0;
-			r_refdef.colormask[2] = 0;
-		}
-
-		SCR_DrawScreen();
-
-		r_refdef.viewentitymatrix.m[0][3] = originalmatrix.m[0][3] + r_stereo_separation.value * 0.5f * r_refdef.viewentitymatrix.m[0][1];
-		r_refdef.viewentitymatrix.m[1][3] = originalmatrix.m[1][3] + r_stereo_separation.value * 0.5f * r_refdef.viewentitymatrix.m[1][1];
-		r_refdef.viewentitymatrix.m[2][3] = originalmatrix.m[2][3] + r_stereo_separation.value * 0.5f * r_refdef.viewentitymatrix.m[2][1];
-
-		if (r_stereo_sidebyside.integer)
-			r_stereo_side = 1;
-
-		if (r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer)
-		{
-			r_refdef.colormask[0] = 0;
-			r_refdef.colormask[1] = r_stereo_redcyan.integer || r_stereo_redgreen.integer;
-			r_refdef.colormask[2] = r_stereo_redcyan.integer || r_stereo_redblue.integer;
-		}
-
-		SCR_DrawScreen();
-
-		r_refdef.viewentitymatrix = originalmatrix;
-	}
-	else
-		SCR_DrawScreen();
-
-	VID_Finish(true);
-	if (r_timereport_active)
-		R_TimeReport("finish");
-}
-
-
 //===========================================================================
 // dynamic vertex array buffer subsystem
 //===========================================================================
@@ -1970,6 +1669,7 @@ float varray_texcoord3f[4][65536*3];
 int earray_element3i[65536];
 float varray_vertex3f2[65536*3];
 
+#if 0
 //===========================================================================
 // vertex array caching subsystem
 //===========================================================================
@@ -2217,4 +1917,4 @@ int R_Mesh_CacheArray(rcachearrayrequest_t *r)
 	// and tell the caller to fill the array
 	return true;
 }
-
+#endif

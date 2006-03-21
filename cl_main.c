@@ -1719,10 +1719,6 @@ void CL_Init (void)
 	// max entities sent to renderer per frame
 	r_refdef.maxentities = MAX_EDICTS + 256 + 512;
 	r_refdef.entities = (entity_render_t **)Mem_Alloc(cls.mempool, sizeof(entity_render_t *) * r_refdef.maxentities);
-	// 256k drawqueue buffer
-	// TODO: make dynamic
-	r_refdef.maxdrawqueuesize = 256 * 1024;
-	r_refdef.drawqueue = (unsigned char *)Mem_Alloc(cls.mempool, r_refdef.maxdrawqueuesize);
 
 	CL_InitInput ();
 
