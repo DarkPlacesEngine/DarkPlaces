@@ -47,8 +47,8 @@
 0 bug darkplaces csqc: engine-based rocket entities have a trail but they don't glow if csqc is used
 0 bug darkplaces loader: make rtlight entity loader support q3map/q3map2 lights properly, they use a spawnflag for LINEAR mode, by default they use 1/(x*x) falloff (Carni, motorsep)
 0 bug darkplaces loader: occasional crash due to memory corruption when doing "deathmatch 1;map start" during demo loop (Willis)
-0 bug darkplaces renderer: glsl lighting path is not using GL_SRC_ALPHA, GL_ONE
-0 bug darkplaces renderer: in full rtlighting mode, deluxemapping gloss still shows up (the diffuse and ambient does not)
+d bug darkplaces renderer: glsl lighting path is not using GL_SRC_ALPHA, GL_ONE
+d bug darkplaces renderer: in full rtlighting mode, deluxemapping gloss still shows up (the diffuse and ambient does not)
 0 bug darkplaces renderer: modify r_showtris_polygonoffset to push back all filled geometry, not lines, because polygonoffset will not affect GL_LINES at all
 0 bug darkplaces renderer: monsters teleporting in really slow down rendering, perhaps the teleport light is casting huge shadows?  new information suggests it is the particles. (romi, lcatlnx)
 0 bug darkplaces renderer: r_glsl 1 mode has black grapple beam in nexuiz (SavageX)
