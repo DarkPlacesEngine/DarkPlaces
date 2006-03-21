@@ -90,6 +90,7 @@
 0 change darkplaces networking: make darkplaces detect its *public* client port from master server and send that in nq connect messages (wallace)
 0 change darkplaces protocol: PRYDON_CLIENTCURSOR should use a stat and .prydoncursor field instead of the cl_prydoncursor cvar, because stuffcmd is a bit icky (FrikaC)
 0 change darkplaces protocol: use q3 print "print message" command packet instead of qw print 'nmessage' command packet? (div0, KadaverJack)
+0 change darkplaces renderer: get rid of DSDT texture support in texture manager, it was only used for the geforce3 water shader which has been removed
 0 change darkplaces renderer: remove GL_NV_texture_shader detection
 0 change darkplaces renderer: rename r_drawportals to r_showportals, and move its declaration to gl_rmain.c
 0 change darkplaces server: make viewmodel code precache a new model and set it, rather than changing the meaning of the player model
