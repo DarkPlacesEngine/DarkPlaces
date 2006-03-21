@@ -1130,11 +1130,7 @@ typedef struct refdef_s
 	// controls intensity of dynamic lights and lightmap layers
 	unsigned short	lightstylevalue[256];	// 8.8 fraction of base light value
 
-	// 2D art drawing queue
-	// TODO: get rid of this
-	unsigned char *drawqueue;
-	int drawqueuesize;
-	int maxdrawqueuesize;
+	qboolean draw2dstage;
 }
 refdef_t;
 

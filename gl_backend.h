@@ -5,7 +5,9 @@
 #define MAX_TEXTUREUNITS 16
 
 #define POLYGONELEMENTS_MAXPOINTS 258
-extern int polygonelements[768];
+extern int polygonelements[(POLYGONELEMENTS_MAXPOINTS-2)*3];
+#define QUADELEMENTS_MAXQUADS 128
+extern int quadelements[QUADELEMENTS_MAXQUADS*6];
 
 void GL_SetupView_Orientation_Identity(void);
 void GL_SetupView_Orientation_FromEntity(matrix4x4_t *matrix);
@@ -22,8 +24,8 @@ void GL_TransformToScreen(const vec4_t in, vec4_t out);
 void GL_LockArrays(int first, int count);
 void GL_ActiveTexture(unsigned int num);
 void GL_ClientActiveTexture(unsigned int num);
-void GL_Scissor(int x, int y, int width, int height); // AK for DRAWQUEUE_SETCLIP
-void GL_ScissorTest(int state);	// AK for DRAWQUEUE_(RE)SETCLIP
+void GL_Scissor(int x, int y, int width, int height);
+void GL_ScissorTest(int state);
 void GL_Clear(int mask);
 
 unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **vertexstrings_list, int fragmentstrings_count, const char **fragmentstrings_list);
@@ -106,6 +108,7 @@ void SCR_UpdateScreen(void);
 // invoke refresh of loading plaque (nothing else seen)
 void SCR_UpdateLoadingScreen(void);
 
+#if 0
 // public structure
 typedef struct rcachearrayrequest_s
 {
@@ -126,6 +129,7 @@ typedef struct rcachearrayrequest_s
 rcachearrayrequest_t;
 
 int R_Mesh_CacheArray(rcachearrayrequest_t *r);
+#endif
 
 extern float varray_vertex3f[65536*3];
 extern float varray_svector3f[65536*3];
