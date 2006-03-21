@@ -34,24 +34,20 @@
 -d (lcatlnx) bug darkplaces sound: sound is sometimes coming from the wrong side apparently (lcatlnx)
 -d (mashakos) bug darkplaces input: fix the mouse move when console is raised in glx, probably by ignoring the first move after console raise (mashakos)
 -d (mrinsane) bug darkplaces renderer: r_wateralpha 1 water that has lightmapping is black in r_shadow_realtime_world 1 mode, but only if the map was loaded in r_shadow_realtime_world 1 mode, if started in 0 and then going to 1 it does not have black water, this is probably lightmap updates not occurring in rtworld mode (mrinsane)
+-d (romi) bug darkplaces client: cl.sfx sounds aren't playing (romi)
 -d (yummyluv) feature darkplaces protocol: add EF_DOUBLESIDED for double sided entity rendering (disable cull face for this entity) (yummyluv)
 -d (yummyluv) feature darkplaces protocol: add buttons 9-16 (yummyluv)
 -f (James D) bug darkplaces server: losing runes on episode completion, completing episode 1 then 2 then 3 causes it to forget 1, then 4 causes it to forget 2 and 3, making it impossible to open the boss gate (James D)
 -f (Wazat) bug darkplaces: client's slowmo detection (measuring packet times and comparing to game time changes) may be making the game unpleasant (Wazat)
 0 bug darkplaces client: GAME_NEHAHRA: make sure cutscenes and movies work, got a report of seeing a black screen (NightFright)
-0 bug darkplaces client: cl.sfx sounds aren't playing (romi)
-0 bug darkplaces client: cl_movement 0 shouldn't be doing an input replay (SavageX)
 0 bug darkplaces client: fix cl_bobmodel bug which momentarily jolts the gun when you pass through a trigger, pick up an item, etc, Sajt thinks this is related to console prints as well as centerprint (Sajt)
 0 bug darkplaces client: prydon cursor highlighting of EF_SELECTABLE entities flickers with lower server framerate than client framerate (carni)
 0 bug darkplaces csqc: after the drawqueue was eliminated, the CSQC probably can't draw 2D polygons the same way, so it may need fixing ([515])
 0 bug darkplaces csqc: engine-based rocket entities have a trail but they don't glow if csqc is used
 0 bug darkplaces loader: make rtlight entity loader support q3map/q3map2 lights properly, they use a spawnflag for LINEAR mode, by default they use 1/(x*x) falloff (Carni, motorsep)
 0 bug darkplaces loader: occasional crash due to memory corruption when doing "deathmatch 1;map start" during demo loop (Willis)
-d bug darkplaces renderer: glsl lighting path is not using GL_SRC_ALPHA, GL_ONE
-d bug darkplaces renderer: in full rtlighting mode, deluxemapping gloss still shows up (the diffuse and ambient does not)
 0 bug darkplaces renderer: modify r_showtris_polygonoffset to push back all filled geometry, not lines, because polygonoffset will not affect GL_LINES at all
 0 bug darkplaces renderer: monsters teleporting in really slow down rendering, perhaps the teleport light is casting huge shadows?  new information suggests it is the particles. (romi, lcatlnx)
-0 bug darkplaces renderer: r_glsl 1 mode has black grapple beam in nexuiz (SavageX)
 0 bug darkplaces renderer: r_wateralpha on maps that are not watervised shows sky, this is a known glquake bug but it is fixable in darkplaces at load time by marking opposite-content (water-empty, empty-water) leafs as visible in their pvs sets, this involves checking the portal flow...  (knghtbrd)
 0 bug darkplaces server: Blood Mage monsters are stuck in place apparently (steven a)
 0 bug darkplaces server: SV_PushMove is ignoring model type in its angles_x handling, where as the renderer checks only model type to determine angles_x handling (Urre)
@@ -459,6 +455,7 @@ d bug darkplaces client/server: unable to control player in TAoV multiplayer (Re
 d bug darkplaces client: GAME_NEXUIZ spews a number of warnings about gfx/ images not being found (Vermeulen)
 d bug darkplaces client: cl_beams_relative is behaving really badly with cl_movement prediction
 d bug darkplaces client: cl_beams_relative is sometimes drawing beams from '0 0 0' (VorteX)
+d bug darkplaces client: cl_movement 0 shouldn't be doing an input replay (SavageX)
 d bug darkplaces client: color codes are not supported in centerprint messages (Wazat)
 d bug darkplaces client: crosshair_static 0 breaks if self is EF_NODRAW (NecroPhil)
 d bug darkplaces client: disable vsync when doing a timedemo (Randy)
@@ -523,11 +520,14 @@ d bug darkplaces renderer: fix rtlighting of viewmodel, it should not be perform
 d bug darkplaces renderer: fix the delayed lightmap updates on bmodels, they're lagging behind one frame, very noticable on flickering light
 d bug darkplaces renderer: fix vis problems when outside the level in q1bsp
 d bug darkplaces renderer: gl_max_size is affecting bloom (causing a black screen when gl_max_size is less than the screen dimensions) (Willis)
+d bug darkplaces renderer: glsl lighting path is not using GL_SRC_ALPHA, GL_ONE
+d bug darkplaces renderer: in full rtlighting mode, deluxemapping gloss still shows up (the diffuse and ambient does not)
 d bug darkplaces renderer: make rtlights properly affect transparent models (romi)
 d bug darkplaces renderer: opaque water (r_wateralpha 1) is not being lit by rtlights (Sajt)
 d bug darkplaces renderer: q3bsp alpha shaders are not being lit?  (Cheapy)
 d bug darkplaces renderer: q3bsp ignoring EF_ADDITIVE on opaque surfaces such as Nexuiz teleporters?  (Vermeulen)
 d bug darkplaces renderer: r_drawcollisionbrushes 2 is broken (LordHavoc)
+d bug darkplaces renderer: r_glsl 1 mode has black grapple beam in nexuiz (SavageX)
 d bug darkplaces renderer: reverse corona traceline direction so that a player in solid can see coronas (Urre)
 d bug darkplaces renderer: shadow volumes from q3bsp brush models are broken, maybe inverted or something (Vermeulen)
 d bug darkplaces renderer: text coloring is only affecting the first line of messagemode text (LordHavoc)
