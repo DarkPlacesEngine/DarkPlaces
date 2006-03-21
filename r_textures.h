@@ -27,8 +27,6 @@
 #define TEXTYPE_RGB 2
 // 32bit RGBA
 #define TEXTYPE_RGBA 3
-// 16bit DSDT
-#define TEXTYPE_DSDT 4
 
 // contents of this structure are mostly private to gl_textures.c
 typedef struct rtexture_s

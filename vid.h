@@ -101,11 +101,6 @@ extern int gl_videosyncavailable;
 void *GL_GetProcAddress(const char *name);
 int GL_CheckExtension(const char *name, const dllfunction_t *funcs, const char *disableparm, int silent);
 
-// this attempts to use vendor extensions to allocate faster vertex memory if
-// the fast parameter is true, if unsuccessful it uses Mem_Alloc instead
-void *VID_AllocVertexArrays(mempool_t *pool, int size, int fast, float readfrequency, float writefrequency, float priority);
-void VID_FreeVertexArrays(void *pointer);
-
 void VID_Shared_Init(void);
 
 void GL_Init (void);
