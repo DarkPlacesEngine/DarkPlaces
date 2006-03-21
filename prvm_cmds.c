@@ -2522,7 +2522,7 @@ void VM_drawpic(void)
 	if(pos[2] || size[2])
 		Con_Printf("VM_drawstring: z value%c from %s discarded\n",(pos[2] && size[2]) ? 's' : 0,((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size")));
 
-	DrawQ_Pic(pos[0], pos[1], Draw_CachePic(picname, false), size[0], size[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag);
+	DrawQ_Pic(pos[0], pos[1], Draw_CachePic(picname, true), size[0], size[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag);
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 
@@ -2972,7 +2972,7 @@ void VM_R_PolygonBegin (void)
 	p = &vm_polygons[vm_drawpolygons_num];
 	picname = PRVM_G_STRING(OFS_PARM0);
 	if(picname[0])
-		p->tex = Draw_CachePic(picname, false)->tex;
+		p->tex = Draw_CachePic(picname, true)->tex;
 	else
 		p->tex = r_texture_notexture;
 	p->flags = (unsigned char)PRVM_G_FLOAT(OFS_PARM1);
