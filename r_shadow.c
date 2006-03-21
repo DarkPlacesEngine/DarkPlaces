@@ -915,7 +915,7 @@ void R_Shadow_RenderMode_StencilShadowVolumes(void)
 void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent)
 {
 	R_Shadow_RenderMode_Reset();
-	GL_BlendFunc(GL_ONE, GL_ONE);
+	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
 	if (!r_showtrispass)
@@ -950,7 +950,7 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent)
 		R_Mesh_TexBind(5, R_GetTexture(r_texture_white)); // pants
 		R_Mesh_TexBind(6, R_GetTexture(r_texture_white)); // shirt
 		//R_Mesh_TexMatrix(3, r_shadow_entitytolight); // light filter matrix
-		GL_BlendFunc(GL_ONE, GL_ONE);
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 		GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 0);
 		CHECKGLERROR
 	}
