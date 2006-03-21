@@ -40,8 +40,6 @@ int gl_support_clamptoedge = false;
 // GL_EXT_texture_filter_anisotropic
 int gl_support_anisotropy = false;
 int gl_max_anisotropy = 1;
-// GL_NV_texture_shader
-int gl_textureshader = false;
 // GL_EXT_stencil_two_side
 int gl_support_stenciltwoside = false;
 // GL_ARB_shader_objects
@@ -125,12 +123,6 @@ void (GLAPIENTRY *qglClientActiveTexture) (GLenum);
 // GL_EXT_compiled_vertex_array
 void (GLAPIENTRY *qglLockArraysEXT) (GLint first, GLint count);
 void (GLAPIENTRY *qglUnlockArraysEXT) (void);
-
-//GL_NV_vertex_array_range
-GLvoid *(GLAPIENTRY *qglAllocateMemoryNV)(GLsizei size, GLfloat readFrequency, GLfloat writeFrequency, GLfloat priority);
-GLvoid (GLAPIENTRY *qglFreeMemoryNV)(GLvoid *pointer);
-GLvoid (GLAPIENTRY *qglVertexArrayRangeNV)(GLsizei length, GLvoid *pointer);
-GLvoid (GLAPIENTRY *qglFlushVertexArrayRangeNV)(GLvoid);
 
 // general GL functions
 
@@ -635,7 +627,6 @@ void VID_CheckExtensions(void)
 	gl_support_clamptoedge = false;
 	gl_support_anisotropy = false;
 	gl_max_anisotropy = 1;
-	gl_textureshader = false;
 	gl_support_stenciltwoside = false;
 	gl_support_shader_objects = false;
 	gl_support_shading_language_100 = false;
@@ -685,9 +676,6 @@ void VID_CheckExtensions(void)
 	if ((gl_support_anisotropy = GL_CheckExtension("GL_EXT_texture_filter_anisotropic", NULL, "-noanisotropy", false)))
 		qglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gl_max_anisotropy);
 
-// COMMANDLINEOPTION: GL: -notextureshader disables GL_NV_texture_shader (required for the Geforce3 water shader, NVIDIA only)
-	gl_textureshader = GL_CheckExtension("GL_NV_texture_shader", NULL, "-notextureshader", false);
-
 // COMMANDLINEOPTION: GL: -nostenciltwoside disables GL_EXT_stencil_two_side (accelerates shadow rendering)
 	gl_support_stenciltwoside = GL_CheckExtension("GL_EXT_stencil_two_side", stenciltwosidefuncs, "-nostenciltwoside", false);
 
@@ -706,38 +694,6 @@ void VID_CheckExtensions(void)
 
 // COMMANDLINEOPTION: GL: -nohalffloat disables GL_NV_half_float extension
 	gl_support_half_float = GL_CheckExtension("GL_NV_half_float", NULL, "-nohalffloat", false);
-}
-
-qboolean vid_vertexarrays_are_var = false;
-void *VID_AllocVertexArrays(mempool_t *pool, int size, int fast, float readfrequency, float writefrequency, float priority)
-{
-	void *m;
-	vid_vertexarrays_are_var = false;
-	if (fast && qglAllocateMemoryNV)
-	{
-		CHECKGLERROR
-		m = qglAllocateMemoryNV(size, readfrequency, writefrequency, priority);
-		CHECKGLERROR
-		if (m)
-		{
-			vid_vertexarrays_are_var = true;
-			return m;
-		}
-	}
-	return Mem_Alloc(pool, size);
-}
-
-void VID_FreeVertexArrays(void *pointer)
-{
-	if (vid_vertexarrays_are_var)
-	{
-		CHECKGLERROR
-		qglFreeMemoryNV(pointer);
-		CHECKGLERROR
-	}
-	else
-		Mem_Free(pointer);
-	vid_vertexarrays_are_var = false;
 }
 
 void Force_CenterView_f (void)

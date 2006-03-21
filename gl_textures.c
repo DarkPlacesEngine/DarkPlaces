@@ -39,7 +39,6 @@ static textypeinfo_t textype_rgb           = {TEXTYPE_RGB    , 3, 3, GL_RGB    ,
 static textypeinfo_t textype_rgba          = {TEXTYPE_RGBA   , 4, 4, GL_RGBA   , 3};
 static textypeinfo_t textype_palette_alpha = {TEXTYPE_PALETTE, 1, 4, GL_RGBA   , 4};
 static textypeinfo_t textype_rgba_alpha    = {TEXTYPE_RGBA   , 4, 4, GL_RGBA   , 4};
-static textypeinfo_t textype_dsdt          = {TEXTYPE_DSDT   , 2, 2, GL_DSDT_NV, GL_DSDT8_NV};
 
 #define GLTEXTURETYPE_1D 0
 #define GLTEXTURETYPE_2D 1
@@ -145,8 +144,6 @@ static textypeinfo_t *R_GetTexTypeInfo(int textype, int flags)
 			return &textype_rgb;
 		case TEXTYPE_RGBA:
 			return &textype_rgba;
-		case TEXTYPE_DSDT:
-			return &textype_dsdt;
 		default:
 			Host_Error("R_GetTexTypeInfo: unknown texture format");
 			return NULL;
@@ -880,8 +877,6 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 				}
 			}
 		}
-		break;
-	case TEXTYPE_DSDT:
 		break;
 	default:
 		Host_Error("R_LoadTexture: unknown texture type");

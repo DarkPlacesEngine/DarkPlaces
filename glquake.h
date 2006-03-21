@@ -312,17 +312,6 @@ extern int gl_combine_extension;
 #endif
 
 
-extern int gl_textureshader;
-#ifndef GL_TEXTURE_SHADER_NV
-#define GL_TEXTURE_SHADER_NV			0x86DE
-#define GL_SHADER_OPERATION_NV			0x86DF
-#define GL_OFFSET_TEXTURE_MATRIX_NV		0x86E1
-#define GL_PREVIOUS_TEXTURE_INPUT_NV	0x86E4
-#define GL_OFFSET_TEXTURE_2D_NV			0x86E8
-#define GL_DSDT_NV						0x86F5
-#define GL_DSDT8_NV						0x8709
-#endif
-
 extern int gl_texture3d;
 extern int gl_max_3d_texture_size;
 #ifndef GL_TEXTURE_3D
