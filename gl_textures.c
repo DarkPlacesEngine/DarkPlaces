@@ -639,6 +639,12 @@ static void R_Upload(gltexture_t *glt, unsigned char *data, int fragx, int fragy
 	qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);
 	CHECKGLERROR
 
+	// these are rounded up versions of the size to do better resampling
+	for (width  = 1;width  < glt->inputwidth ;width  <<= 1);
+	for (height = 1;height < glt->inputheight;height <<= 1);
+	for (depth  = 1;depth  < glt->inputdepth ;depth  <<= 1);
+
+	R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
 	R_MakeResizeBufferBigger(fragwidth * fragheight * fragdepth * glt->sides * glt->bytesperpixel);
 
 	if (prevbuffer == NULL)
@@ -654,14 +660,7 @@ static void R_Upload(gltexture_t *glt, unsigned char *data, int fragx, int fragy
 		prevbuffer = colorconvertbuffer;
 	}
 
-	// these are rounded up versions of the size to do better resampling
-	for (width  = 1;width  < glt->inputwidth ;width  <<= 1);
-	for (height = 1;height < glt->inputheight;height <<= 1);
-	for (depth  = 1;depth  < glt->inputdepth ;depth  <<= 1);
-
-	R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
-
-	if ((glt->flags & (TEXF_MIPMAP | TEXF_PICMIP | GLTEXF_UPLOAD)) == 0)
+	if ((glt->flags & (TEXF_MIPMAP | TEXF_PICMIP | GLTEXF_UPLOAD)) == 0 && glt->inputwidth == glt->tilewidth && glt->inputheight == glt->tileheight && glt->inputdepth == glt->tiledepth)
 	{
 		// update a portion of the image
 		switch(glt->texturetype)
