@@ -53,11 +53,6 @@ rtexturepool_t *R_AllocTexturePool(void);
 // free a texture pool (textures can not be freed individually)
 void R_FreeTexturePool(rtexturepool_t **rtexturepool);
 
-// important technical note:
-// fragment textures must have a width that is compatible with the fragment
-// update system, to get a compliant size, use R_CompatibleFragmentWidth
-int R_CompatibleFragmentWidth(int width, int textype, int flags);
-
 // add a texture to a pool and optionally precache (upload) it
 // (note: data == NULL is perfectly acceptable)
 // (note: palette must not be NULL if using TEXTYPE_PALETTE)
@@ -69,9 +64,9 @@ rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *ident
 // free a texture
 void R_FreeTexture(rtexture_t *rt);
 
-// update the image data of a texture, used by lightmap updates and
-// procedural textures.
-void R_UpdateTexture(rtexture_t *rt, unsigned char *data);
+// update a portion of the image data of a texture, used by lightmap updates
+// and procedural textures such as video playback.
+void R_UpdateTexture(rtexture_t *rt, unsigned char *data, int x, int y, int width, int height);
 
 // location of the fragment in the texture (note: any parameter except rt can
 // be NULL)
