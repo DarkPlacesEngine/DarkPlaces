@@ -108,29 +108,6 @@ void SCR_UpdateScreen(void);
 // invoke refresh of loading plaque (nothing else seen)
 void SCR_UpdateLoadingScreen(void);
 
-#if 0
-// public structure
-typedef struct rcachearrayrequest_s
-{
-	// for use by the code that is requesting the array, these are not
-	// directly used but merely compared to determine if cache items are
-	// identical
-	const void *id_pointer1;
-	const void *id_pointer2;
-	const void *id_pointer3;
-	int id_number1;
-	int id_number2;
-	int id_number3;
-	// size of array data
-	int data_size;
-	// array data pointer
-	void *data;
-}
-rcachearrayrequest_t;
-
-int R_Mesh_CacheArray(rcachearrayrequest_t *r);
-#endif
-
 extern float varray_vertex3f[65536*3];
 extern float varray_svector3f[65536*3];
 extern float varray_tvector3f[65536*3];
