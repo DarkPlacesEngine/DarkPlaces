@@ -1291,6 +1291,8 @@ void SCR_UpdateLoadingScreen (void)
 	float x, y;
 	cachepic_t *pic;
 	rmeshstate_t m;
+	float vertex3f[12];
+	float texcoord2f[8];
 	// don't do anything if not initialized yet
 	if (vid_hidden)
 		return;
@@ -1317,18 +1319,19 @@ void SCR_UpdateLoadingScreen (void)
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthTest(false);
 	memset(&m, 0, sizeof(m));
-	m.pointer_vertex = varray_vertex3f;
-	m.pointer_texcoord[0] = varray_texcoord2f[0];
+	m.pointer_vertex = vertex3f;
+	m.pointer_texcoord[0] = texcoord2f;
 	m.tex[0] = R_GetTexture(pic->tex);
 	R_Mesh_State(&m);
-	varray_vertex3f[0] = varray_vertex3f[9] = x;
-	varray_vertex3f[1] = varray_vertex3f[4] = y;
-	varray_vertex3f[3] = varray_vertex3f[6] = x + pic->width;
-	varray_vertex3f[7] = varray_vertex3f[10] = y + pic->height;
-	varray_texcoord2f[0][0] = 0;varray_texcoord2f[0][1] = 0;
-	varray_texcoord2f[0][2] = 1;varray_texcoord2f[0][3] = 0;
-	varray_texcoord2f[0][4] = 1;varray_texcoord2f[0][5] = 1;
-	varray_texcoord2f[0][6] = 0;varray_texcoord2f[0][7] = 1;
+	vertex3f[2] = vertex3f[5] = vertex3f[8] = vertex3f[11] = 0;
+	vertex3f[0] = vertex3f[9] = x;
+	vertex3f[1] = vertex3f[4] = y;
+	vertex3f[3] = vertex3f[6] = x + pic->width;
+	vertex3f[7] = vertex3f[10] = y + pic->height;
+	texcoord2f[0] = 0;texcoord2f[1] = 0;
+	texcoord2f[2] = 1;texcoord2f[3] = 0;
+	texcoord2f[4] = 1;texcoord2f[5] = 1;
+	texcoord2f[6] = 0;texcoord2f[7] = 1;
 	R_Mesh_Draw(0, 4, 2, polygonelements);
 	R_Mesh_Finish();
 	// refresh

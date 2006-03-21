@@ -301,6 +301,7 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, int surfacenumber,
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
+	qglDisable(GL_CULL_FACE);
 	R_Mesh_Matrix(&identitymatrix);
 
 	memset(&m, 0, sizeof(m));
@@ -312,17 +313,12 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, int surfacenumber,
 			 ((i & 0x0038) >> 3) * (1.0f / 7.0f),
 			 ((i & 0x01C0) >> 6) * (1.0f / 7.0f),
 			 0.125f);
-	if (PlaneDiff(r_vieworigin, (&portal->plane)) < 0)
-	{
-		for (i = portal->numpoints - 1, v = varray_vertex3f;i >= 0;i--, v += 3)
-			VectorCopy(portal->points[i].position, v);
-	}
-	else
-		for (i = 0, v = varray_vertex3f;i < portal->numpoints;i++, v += 3)
-			VectorCopy(portal->points[i].position, v);
+	for (i = 0, v = varray_vertex3f;i < portal->numpoints;i++, v += 3)
+		VectorCopy(portal->points[i].position, v);
 	GL_LockArrays(0, portal->numpoints);
 	R_Mesh_Draw(0, portal->numpoints, portal->numpoints - 2, polygonelements);
 	GL_LockArrays(0, 0);
+	qglEnable(GL_CULL_FACE);
 }
 
 // LordHavoc: this is just a nice debugging tool, very slow

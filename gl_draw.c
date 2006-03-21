@@ -530,6 +530,8 @@ void DrawQ_String_Real(float x, float y, const char *string, int maxlen, float w
 	float *av, *at;
 	int batchcount;
 	rmeshstate_t m;
+	float vertex3f[QUADELEMENTS_MAXQUADS*4*3];
+	float texcoord2f[QUADELEMENTS_MAXQUADS*4*2];
 
 	if (!r_refdef.draw2dstage)
 	{
@@ -555,14 +557,14 @@ void DrawQ_String_Real(float x, float y, const char *string, int maxlen, float w
 	GL_Color(red, green, blue, alpha);
 
 	memset(&m, 0, sizeof(m));
-	m.pointer_vertex = varray_vertex3f;
+	m.pointer_vertex = vertex3f;
 	m.pointer_color = NULL;
-	m.pointer_texcoord[0] = varray_texcoord2f[0];
+	m.pointer_texcoord[0] = texcoord2f;
 	m.tex[0] = R_GetTexture(char_texture);
 	R_Mesh_State(&m);
 
-	at = varray_texcoord2f[0];
-	av = varray_vertex3f;
+	at = texcoord2f;
+	av = vertex3f;
 	batchcount = 0;
 
 	if (maxlen < 1)
@@ -593,8 +595,8 @@ void DrawQ_String_Real(float x, float y, const char *string, int maxlen, float w
 			R_Mesh_Draw(0, batchcount * 4, batchcount * 2, quadelements);
 			GL_LockArrays(0, 0);
 			batchcount = 0;
-			at = varray_texcoord2f[0];
-			av = varray_vertex3f;
+			at = texcoord2f;
+			av = vertex3f;
 		}
 	}
 	if (batchcount > 0)

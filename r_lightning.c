@@ -235,6 +235,9 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, int sur
 	rmeshstate_t m;
 	vec3_t beamdir, right, up, offset;
 	float length, t1, t2;
+	float vertex3f[12*3];
+	float texcoord2f[12*2];
+	float color4f[12*4];
 
 	R_Mesh_Matrix(&identitymatrix);
 
@@ -282,8 +285,8 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, int sur
 		m.tex[0] = R_GetTexture(r_lightningbeamqmbtexture);
 	else
 		m.tex[0] = R_GetTexture(r_lightningbeamtexture);
-	m.pointer_texcoord[0] = varray_texcoord2f[0];
-	m.pointer_vertex = varray_vertex3f;
+	m.pointer_texcoord[0] = texcoord2f;
+	m.pointer_vertex = vertex3f;
 
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	GL_DepthMask(false);
@@ -295,24 +298,24 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, int sur
 
 	// polygon 1, verts 0-3
 	VectorScale(right, r_lightningbeam_thickness.value, offset);
-	R_CalcLightningBeamPolygonVertex3f(varray_vertex3f + 0, b->start, b->end, offset);
+	R_CalcLightningBeamPolygonVertex3f(vertex3f + 0, b->start, b->end, offset);
 	// polygon 2, verts 4-7
 	VectorAdd(right, up, offset);
 	VectorScale(offset, r_lightningbeam_thickness.value * 0.70710681f, offset);
-	R_CalcLightningBeamPolygonVertex3f(varray_vertex3f + 12, b->start, b->end, offset);
+	R_CalcLightningBeamPolygonVertex3f(vertex3f + 12, b->start, b->end, offset);
 	// polygon 3, verts 8-11
 	VectorSubtract(right, up, offset);
 	VectorScale(offset, r_lightningbeam_thickness.value * 0.70710681f, offset);
-	R_CalcLightningBeamPolygonVertex3f(varray_vertex3f + 24, b->start, b->end, offset);
-	R_CalcLightningBeamPolygonTexCoord2f(varray_texcoord2f[0] + 0, t1, t2);
-	R_CalcLightningBeamPolygonTexCoord2f(varray_texcoord2f[0] + 8, t1 + 0.33, t2 + 0.33);
-	R_CalcLightningBeamPolygonTexCoord2f(varray_texcoord2f[0] + 16, t1 + 0.66, t2 + 0.66);
+	R_CalcLightningBeamPolygonVertex3f(vertex3f + 24, b->start, b->end, offset);
+	R_CalcLightningBeamPolygonTexCoord2f(texcoord2f + 0, t1, t2);
+	R_CalcLightningBeamPolygonTexCoord2f(texcoord2f + 8, t1 + 0.33, t2 + 0.33);
+	R_CalcLightningBeamPolygonTexCoord2f(texcoord2f + 16, t1 + 0.66, t2 + 0.66);
 
 	if (fogenabled)
 	{
 		// per vertex colors if fog is used
-		m.pointer_color = varray_color4f;
-		R_FogLightningBeam_Vertex3f_Color4f(varray_vertex3f, varray_color4f, 12, r_lightningbeam_color_red.value, r_lightningbeam_color_green.value, r_lightningbeam_color_blue.value, 1);
+		m.pointer_color = color4f;
+		R_FogLightningBeam_Vertex3f_Color4f(vertex3f, color4f, 12, r_lightningbeam_color_red.value, r_lightningbeam_color_green.value, r_lightningbeam_color_blue.value, 1);
 	}
 	else
 	{

@@ -1587,6 +1587,8 @@ static void R_BlendView(void)
 	qboolean dobloom;
 	qboolean doblend;
 	rmeshstate_t m;
+	float vertex3f[12];
+	float texcoord2f[3][8];
 
 	// set the (poorly named) screenwidth and screenheight variables to
 	// a power of 2 at least as large as the screen, these will define the
@@ -1605,10 +1607,10 @@ static void R_BlendView(void)
 	GL_DepthTest(false);
 	R_Mesh_Matrix(&identitymatrix);
 	// vertex coordinates for a quad that covers the screen exactly
-	varray_vertex3f[0] = 0;varray_vertex3f[1] = 0;varray_vertex3f[2] = 0;
-	varray_vertex3f[3] = 1;varray_vertex3f[4] = 0;varray_vertex3f[5] = 0;
-	varray_vertex3f[6] = 1;varray_vertex3f[7] = 1;varray_vertex3f[8] = 0;
-	varray_vertex3f[9] = 0;varray_vertex3f[10] = 1;varray_vertex3f[11] = 0;
+	vertex3f[0] = 0;vertex3f[1] = 0;vertex3f[2] = 0;
+	vertex3f[3] = 1;vertex3f[4] = 0;vertex3f[5] = 0;
+	vertex3f[6] = 1;vertex3f[7] = 1;vertex3f[8] = 0;
+	vertex3f[9] = 0;vertex3f[10] = 1;vertex3f[11] = 0;
 	if (dobloom)
 	{
 		int bloomwidth, bloomheight, x, dobloomblend, range;
@@ -1625,27 +1627,27 @@ static void R_BlendView(void)
 		bloomheight = min(r_view_height, bloomwidth * r_view_height / r_view_width);
 		// set up a texcoord array for the full resolution screen image
 		// (we have to keep this around to copy back during final render)
-		varray_texcoord2f[0][0] = 0;
-		varray_texcoord2f[0][1] = (float)r_view_height / (float)screenheight;
-		varray_texcoord2f[0][2] = (float)r_view_width / (float)screenwidth;
-		varray_texcoord2f[0][3] = (float)r_view_height / (float)screenheight;
-		varray_texcoord2f[0][4] = (float)r_view_width / (float)screenwidth;
-		varray_texcoord2f[0][5] = 0;
-		varray_texcoord2f[0][6] = 0;
-		varray_texcoord2f[0][7] = 0;
+		texcoord2f[0][0] = 0;
+		texcoord2f[0][1] = (float)r_view_height / (float)screenheight;
+		texcoord2f[0][2] = (float)r_view_width / (float)screenwidth;
+		texcoord2f[0][3] = (float)r_view_height / (float)screenheight;
+		texcoord2f[0][4] = (float)r_view_width / (float)screenwidth;
+		texcoord2f[0][5] = 0;
+		texcoord2f[0][6] = 0;
+		texcoord2f[0][7] = 0;
 		// set up a texcoord array for the reduced resolution bloom image
 		// (which will be additive blended over the screen image)
-		varray_texcoord2f[1][0] = 0;
-		varray_texcoord2f[1][1] = (float)bloomheight / (float)screenheight;
-		varray_texcoord2f[1][2] = (float)bloomwidth / (float)screenwidth;
-		varray_texcoord2f[1][3] = (float)bloomheight / (float)screenheight;
-		varray_texcoord2f[1][4] = (float)bloomwidth / (float)screenwidth;
-		varray_texcoord2f[1][5] = 0;
-		varray_texcoord2f[1][6] = 0;
-		varray_texcoord2f[1][7] = 0;
+		texcoord2f[1][0] = 0;
+		texcoord2f[1][1] = (float)bloomheight / (float)screenheight;
+		texcoord2f[1][2] = (float)bloomwidth / (float)screenwidth;
+		texcoord2f[1][3] = (float)bloomheight / (float)screenheight;
+		texcoord2f[1][4] = (float)bloomwidth / (float)screenwidth;
+		texcoord2f[1][5] = 0;
+		texcoord2f[1][6] = 0;
+		texcoord2f[1][7] = 0;
 		memset(&m, 0, sizeof(m));
-		m.pointer_vertex = varray_vertex3f;
-		m.pointer_texcoord[0] = varray_texcoord2f[0];
+		m.pointer_vertex = vertex3f;
+		m.pointer_texcoord[0] = texcoord2f[0];
 		m.tex[0] = R_GetTexture(r_bloom_texture_screen);
 		R_Mesh_State(&m);
 		// copy view into the full resolution screen image texture
@@ -1671,9 +1673,9 @@ static void R_BlendView(void)
 		// we now have a darkened bloom image in the framebuffer, copy it into
 		// the bloom image texture for more processing
 		memset(&m, 0, sizeof(m));
-		m.pointer_vertex = varray_vertex3f;
+		m.pointer_vertex = vertex3f;
 		m.tex[0] = R_GetTexture(r_bloom_texture_bloom);
-		m.pointer_texcoord[0] = varray_texcoord2f[2];
+		m.pointer_texcoord[0] = texcoord2f[2];
 		R_Mesh_State(&m);
 		GL_ActiveTexture(0);
 		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_view_x, vid.height - (r_view_y + bloomheight), bloomwidth, bloomheight);
@@ -1687,14 +1689,14 @@ static void R_BlendView(void)
 			xoffset = 0 / (float)bloomwidth * (float)bloomwidth / (float)screenwidth;
 			yoffset = x / (float)bloomheight * (float)bloomheight / (float)screenheight;
 			// compute a texcoord array with the specified x and y offset
-			varray_texcoord2f[2][0] = xoffset+0;
-			varray_texcoord2f[2][1] = yoffset+(float)bloomheight / (float)screenheight;
-			varray_texcoord2f[2][2] = xoffset+(float)bloomwidth / (float)screenwidth;
-			varray_texcoord2f[2][3] = yoffset+(float)bloomheight / (float)screenheight;
-			varray_texcoord2f[2][4] = xoffset+(float)bloomwidth / (float)screenwidth;
-			varray_texcoord2f[2][5] = yoffset+0;
-			varray_texcoord2f[2][6] = xoffset+0;
-			varray_texcoord2f[2][7] = yoffset+0;
+			texcoord2f[2][0] = xoffset+0;
+			texcoord2f[2][1] = yoffset+(float)bloomheight / (float)screenheight;
+			texcoord2f[2][2] = xoffset+(float)bloomwidth / (float)screenwidth;
+			texcoord2f[2][3] = yoffset+(float)bloomheight / (float)screenheight;
+			texcoord2f[2][4] = xoffset+(float)bloomwidth / (float)screenwidth;
+			texcoord2f[2][5] = yoffset+0;
+			texcoord2f[2][6] = xoffset+0;
+			texcoord2f[2][7] = yoffset+0;
 			// this r value looks like a 'dot' particle, fading sharply to
 			// black at the edges
 			// (probably not realistic but looks good enough)
@@ -1720,14 +1722,14 @@ static void R_BlendView(void)
 			xoffset = x / (float)bloomwidth * (float)bloomwidth / (float)screenwidth;
 			yoffset = 0 / (float)bloomheight * (float)bloomheight / (float)screenheight;
 			// compute a texcoord array with the specified x and y offset
-			varray_texcoord2f[2][0] = xoffset+0;
-			varray_texcoord2f[2][1] = yoffset+(float)bloomheight / (float)screenheight;
-			varray_texcoord2f[2][2] = xoffset+(float)bloomwidth / (float)screenwidth;
-			varray_texcoord2f[2][3] = yoffset+(float)bloomheight / (float)screenheight;
-			varray_texcoord2f[2][4] = xoffset+(float)bloomwidth / (float)screenwidth;
-			varray_texcoord2f[2][5] = yoffset+0;
-			varray_texcoord2f[2][6] = xoffset+0;
-			varray_texcoord2f[2][7] = yoffset+0;
+			texcoord2f[2][0] = xoffset+0;
+			texcoord2f[2][1] = yoffset+(float)bloomheight / (float)screenheight;
+			texcoord2f[2][2] = xoffset+(float)bloomwidth / (float)screenwidth;
+			texcoord2f[2][3] = yoffset+(float)bloomheight / (float)screenheight;
+			texcoord2f[2][4] = xoffset+(float)bloomwidth / (float)screenwidth;
+			texcoord2f[2][5] = yoffset+0;
+			texcoord2f[2][6] = xoffset+0;
+			texcoord2f[2][7] = yoffset+0;
 			// this r value looks like a 'dot' particle, fading sharply to
 			// black at the edges
 			// (probably not realistic but looks good enough)
@@ -1748,9 +1750,9 @@ static void R_BlendView(void)
 		// put the original screen image back in place and blend the bloom
 		// texture on it
 		memset(&m, 0, sizeof(m));
-		m.pointer_vertex = varray_vertex3f;
+		m.pointer_vertex = vertex3f;
 		m.tex[0] = R_GetTexture(r_bloom_texture_screen);
-		m.pointer_texcoord[0] = varray_texcoord2f[0];
+		m.pointer_texcoord[0] = texcoord2f[0];
 #if 0
 		dobloomblend = false;
 #else
@@ -1760,7 +1762,7 @@ static void R_BlendView(void)
 			dobloomblend = false;
 			m.texcombinergb[1] = GL_ADD;
 			m.tex[1] = R_GetTexture(r_bloom_texture_bloom);
-			m.pointer_texcoord[1] = varray_texcoord2f[1];
+			m.pointer_texcoord[1] = texcoord2f[1];
 		}
 		else
 			dobloomblend = true;
@@ -1774,9 +1776,9 @@ static void R_BlendView(void)
 		if (dobloomblend)
 		{
 			memset(&m, 0, sizeof(m));
-			m.pointer_vertex = varray_vertex3f;
+			m.pointer_vertex = vertex3f;
 			m.tex[0] = R_GetTexture(r_bloom_texture_bloom);
-			m.pointer_texcoord[0] = varray_texcoord2f[1];
+			m.pointer_texcoord[0] = texcoord2f[1];
 			R_Mesh_State(&m);
 			GL_BlendFunc(GL_ONE, GL_ONE);
 			GL_Color(1,1,1,1);
@@ -1788,7 +1790,7 @@ static void R_BlendView(void)
 	{
 		// apply a color tint to the whole view
 		memset(&m, 0, sizeof(m));
-		m.pointer_vertex = varray_vertex3f;
+		m.pointer_vertex = vertex3f;
 		R_Mesh_State(&m);
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		GL_Color(r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
@@ -2244,6 +2246,7 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_
 {
 	float fog = 0.0f, ifog;
 	rmeshstate_t m;
+	float vertex3f[12];
 
 	if (fogenabled)
 		fog = VERTEXFOGTABLE(VectorDistance(origin, r_vieworigin));
@@ -2254,23 +2257,23 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_
 	GL_DepthMask(false);
 	GL_DepthTest(!depthdisable);
 
-	varray_vertex3f[ 0] = origin[0] + left[0] * scalex2 + up[0] * scaley1;
-	varray_vertex3f[ 1] = origin[1] + left[1] * scalex2 + up[1] * scaley1;
-	varray_vertex3f[ 2] = origin[2] + left[2] * scalex2 + up[2] * scaley1;
-	varray_vertex3f[ 3] = origin[0] + left[0] * scalex2 + up[0] * scaley2;
-	varray_vertex3f[ 4] = origin[1] + left[1] * scalex2 + up[1] * scaley2;
-	varray_vertex3f[ 5] = origin[2] + left[2] * scalex2 + up[2] * scaley2;
-	varray_vertex3f[ 6] = origin[0] + left[0] * scalex1 + up[0] * scaley2;
-	varray_vertex3f[ 7] = origin[1] + left[1] * scalex1 + up[1] * scaley2;
-	varray_vertex3f[ 8] = origin[2] + left[2] * scalex1 + up[2] * scaley2;
-	varray_vertex3f[ 9] = origin[0] + left[0] * scalex1 + up[0] * scaley1;
-	varray_vertex3f[10] = origin[1] + left[1] * scalex1 + up[1] * scaley1;
-	varray_vertex3f[11] = origin[2] + left[2] * scalex1 + up[2] * scaley1;
+	vertex3f[ 0] = origin[0] + left[0] * scalex2 + up[0] * scaley1;
+	vertex3f[ 1] = origin[1] + left[1] * scalex2 + up[1] * scaley1;
+	vertex3f[ 2] = origin[2] + left[2] * scalex2 + up[2] * scaley1;
+	vertex3f[ 3] = origin[0] + left[0] * scalex2 + up[0] * scaley2;
+	vertex3f[ 4] = origin[1] + left[1] * scalex2 + up[1] * scaley2;
+	vertex3f[ 5] = origin[2] + left[2] * scalex2 + up[2] * scaley2;
+	vertex3f[ 6] = origin[0] + left[0] * scalex1 + up[0] * scaley2;
+	vertex3f[ 7] = origin[1] + left[1] * scalex1 + up[1] * scaley2;
+	vertex3f[ 8] = origin[2] + left[2] * scalex1 + up[2] * scaley2;
+	vertex3f[ 9] = origin[0] + left[0] * scalex1 + up[0] * scaley1;
+	vertex3f[10] = origin[1] + left[1] * scalex1 + up[1] * scaley1;
+	vertex3f[11] = origin[2] + left[2] * scalex1 + up[2] * scaley1;
 
 	memset(&m, 0, sizeof(m));
 	m.tex[0] = R_GetTexture(texture);
 	m.pointer_texcoord[0] = spritetexcoord2f;
-	m.pointer_vertex = varray_vertex3f;
+	m.pointer_vertex = vertex3f;
 	R_Mesh_State(&m);
 	GL_Color(cr * ifog, cg * ifog, cb * ifog, ca);
 	R_Mesh_Draw(0, 4, 2, polygonelements);
