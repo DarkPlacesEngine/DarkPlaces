@@ -29,7 +29,7 @@ cvar_t cl_capturevideo_sound = {0, "cl_capturevideo_sound", "0", "enables saving
 cvar_t cl_capturevideo_fps = {0, "cl_capturevideo_fps", "30", "how many frames per second to save (29.97 for NTSC, 30 for typical PC video, 15 can be useful)"};
 cvar_t cl_capturevideo_rawrgb = {0, "cl_capturevideo_rawrgb", "0", "saves a single .rgb video file containing raw RGB images (you'll need special processing tools to encode this to something more useful)"};
 cvar_t cl_capturevideo_rawyv12 = {0, "cl_capturevideo_rawyv12", "0", "saves a single .yv12 video file containing raw YV12 (luma plane, then half resolution chroma planes, first chroma blue then chroma red, this is the format used internally by many encoders, some tools can read it directly)"};
-cvar_t r_textshadow = {0, "r_textshadow", "0" "draws a shadow on all text to improve readability"};
+cvar_t r_textshadow = {0, "r_textshadow", "0", "draws a shadow on all text to improve readability"};
 cvar_t r_letterbox = {0, "r_letterbox", "0", "reduces vertical height of view to simulate a letterboxed movie effect (can be used by mods for cutscenes)"};
 
 int jpeg_supported = false;
