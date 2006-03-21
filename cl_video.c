@@ -62,7 +62,7 @@ static qboolean WakeVideo( clvideo_t * video )
 
 	video->imagedata = Mem_Alloc( cls.permanentmempool, video->cpif.width * video->cpif.height * cl_videobytesperpixel );
 	video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name,
-		video->cpif.width, video->cpif.height, NULL, TEXTYPE_RGBA, 0, NULL );
+		video->cpif.width, video->cpif.height, NULL, TEXTYPE_RGBA, TEXF_ALWAYSPRECACHE, NULL );
 
 	// update starttime
 	video->starttime += realtime - video->lasttime;
@@ -89,7 +89,7 @@ static clvideo_t* OpenVideo( clvideo_t *video, const char *filename, const char 
 	video->cpif.width = dpvsimpledecode_getwidth( video->stream );
 	video->cpif.height = dpvsimpledecode_getheight( video->stream );
 	video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name,
-		video->cpif.width, video->cpif.height, NULL, TEXTYPE_RGBA, 0, NULL );
+		video->cpif.width, video->cpif.height, NULL, TEXTYPE_RGBA, TEXF_ALWAYSPRECACHE, NULL );
 
     video->imagedata = Mem_Alloc( cls.permanentmempool, video->cpif.width * video->cpif.height * cl_videobytesperpixel );
 
@@ -314,7 +314,7 @@ static void cl_video_start( void )
 	for( video = cl_videos, i = 0 ; i < cl_num_videos ; i++, video++ )
 		if( video->state != CLVIDEO_UNUSED && !video->suspended )
 			video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name,
-				video->cpif.width, video->cpif.height, NULL, TEXTYPE_RGBA, 0, NULL );
+				video->cpif.width, video->cpif.height, NULL, TEXTYPE_RGBA, TEXF_ALWAYSPRECACHE, NULL );
 }
 
 static void cl_video_shutdown( void )

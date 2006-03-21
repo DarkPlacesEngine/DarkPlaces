@@ -196,7 +196,7 @@ void SCR_DrawTurtle (void)
 	if (count < 3)
 		return;
 
-	DrawQ_Pic (0, 0, Draw_CachePic("gfx/turtle", false), 0, 0, 1, 1, 1, 1, 0);
+	DrawQ_Pic (0, 0, Draw_CachePic("gfx/turtle", true), 0, 0, 1, 1, 1, 1, 0);
 }
 
 /*
@@ -213,7 +213,7 @@ void SCR_DrawNet (void)
 	if (cls.demoplayback)
 		return;
 
-	DrawQ_Pic (64, 0, Draw_CachePic("gfx/net", false), 0, 0, 1, 1, 1, 1, 0);
+	DrawQ_Pic (64, 0, Draw_CachePic("gfx/net", true), 0, 0, 1, 1, 1, 1, 0);
 }
 
 /*
@@ -1077,7 +1077,7 @@ void SHOWLMP_drawall(void)
 	int i;
 	for (i = 0;i < SHOWLMP_MAXLABELS;i++)
 		if (showlmp[i].isactive)
-			DrawQ_Pic(showlmp[i].x, showlmp[i].y, Draw_CachePic(showlmp[i].pic, false), 0, 0, 1, 1, 1, 1, 0);
+			DrawQ_Pic(showlmp[i].x, showlmp[i].y, Draw_CachePic(showlmp[i].pic, true), 0, 0, 1, 1, 1, 1, 0);
 }
 
 void SHOWLMP_clear(void)
@@ -1312,7 +1312,7 @@ void SCR_UpdateLoadingScreen (void)
 	R_Mesh_Start();
 	R_Mesh_Matrix(&identitymatrix);
 	// draw the loading plaque
-	pic = Draw_CachePic("gfx/loading", false);
+	pic = Draw_CachePic("gfx/loading", true);
 	x = (vid_conwidth.integer - pic->width)/2;
 	y = (vid_conheight.integer - pic->height)/2;
 	GL_Color(1,1,1,1);
