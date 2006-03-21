@@ -2534,6 +2534,29 @@ void R_UpdateAllTextureInfo(entity_render_t *ent)
 			R_UpdateTextureInfo(ent, ent->model->data_textures + i);
 }
 
+int rsurface_array_size = 0;
+float *rsurface_array_vertex3f = NULL;
+float *rsurface_array_svector3f = NULL;
+float *rsurface_array_tvector3f = NULL;
+float *rsurface_array_normal3f = NULL;
+float *rsurface_array_color4f = NULL;
+float *rsurface_array_texcoord3f = NULL;
+
+void R_Mesh_ResizeArrays(int newvertices)
+{
+	if (rsurface_array_size >= newvertices)
+		return;
+	if (rsurface_array_vertex3f)
+		Mem_Free(rsurface_array_vertex3f);
+	rsurface_array_size = (newvertices + 1023) & ~1023;
+	rsurface_array_vertex3f = Mem_Alloc(r_main_mempool, rsurface_array_size * sizeof(float[19]));
+	rsurface_array_svector3f = rsurface_array_vertex3f + rsurface_array_size * 3;
+	rsurface_array_tvector3f = rsurface_array_vertex3f + rsurface_array_size * 6;
+	rsurface_array_normal3f = rsurface_array_vertex3f + rsurface_array_size * 9;
+	rsurface_array_color4f = rsurface_array_vertex3f + rsurface_array_size * 12;
+	rsurface_array_texcoord3f = rsurface_array_vertex3f + rsurface_array_size * 16;
+}
+
 float *rsurface_vertex3f;
 float *rsurface_svector3f;
 float *rsurface_tvector3f;
@@ -2542,15 +2565,17 @@ float *rsurface_lightmapcolor4f;
 
 void RSurf_SetVertexPointer(const entity_render_t *ent, const texture_t *texture, const msurface_t *surface, const vec3_t modelorg, qboolean generatenormals, qboolean generatetangents)
 {
+	if (rsurface_array_size < surface->groupmesh->num_vertices)
+		R_Mesh_ResizeArrays(surface->groupmesh->num_vertices);
 	if ((ent->frameblend[0].lerp != 1 || ent->frameblend[0].frame != 0) && (surface->groupmesh->data_morphvertex3f || surface->groupmesh->data_vertexboneweights))
 	{
-		rsurface_vertex3f = varray_vertex3f;
+		rsurface_vertex3f = rsurface_array_vertex3f;
 		Mod_Alias_GetMesh_Vertex3f(ent->model, ent->frameblend, surface->groupmesh, rsurface_vertex3f);
 		if (generatetangents || (texture->textureflags & (Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2)))
 		{
-			rsurface_svector3f = varray_svector3f;
-			rsurface_tvector3f = varray_tvector3f;
-			rsurface_normal3f = varray_normal3f;
+			rsurface_svector3f = rsurface_array_svector3f;
+			rsurface_tvector3f = rsurface_array_tvector3f;
+			rsurface_normal3f = rsurface_array_normal3f;
 			Mod_BuildTextureVectorsAndNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_vertex3f, surface->groupmesh->data_texcoordtexture2f, surface->groupmesh->data_element3i + surface->num_firsttriangle * 3, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f, r_smoothnormals_areaweighting.integer);
 		}
 		else
@@ -2559,7 +2584,7 @@ void RSurf_SetVertexPointer(const entity_render_t *ent, const texture_t *texture
 			rsurface_tvector3f = NULL;
 			if (generatenormals)
 			{
-				rsurface_normal3f = varray_normal3f;
+				rsurface_normal3f = rsurface_array_normal3f;
 				Mod_BuildNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_vertex3f, surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle, rsurface_normal3f, r_smoothnormals_areaweighting.integer);
 			}
 			else
@@ -2605,12 +2630,12 @@ void RSurf_SetVertexPointer(const entity_render_t *ent, const texture_t *texture
 				VectorSet(up, 0, 0, 1);
 			}
 			for (i = 0;i < 4;i++)
-				VectorMAMAMAM(1, center, v[i][0], forward, v[i][1], right, v[i][2], up, varray_vertex3f + (surface->num_firstvertex+i+j) * 3);
+				VectorMAMAMAM(1, center, v[i][0], forward, v[i][1], right, v[i][2], up, rsurface_array_vertex3f + (surface->num_firstvertex+i+j) * 3);
 		}
-		rsurface_vertex3f = varray_vertex3f;
-		rsurface_svector3f = varray_svector3f;
-		rsurface_tvector3f = varray_tvector3f;
-		rsurface_normal3f = varray_normal3f;
+		rsurface_vertex3f = rsurface_array_vertex3f;
+		rsurface_svector3f = rsurface_array_svector3f;
+		rsurface_tvector3f = rsurface_array_tvector3f;
+		rsurface_normal3f = rsurface_array_normal3f;
 		Mod_BuildTextureVectorsAndNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, rsurface_vertex3f, surface->groupmesh->data_texcoordtexture2f, surface->groupmesh->data_element3i + surface->num_firsttriangle * 3, rsurface_svector3f, rsurface_tvector3f, rsurface_normal3f, r_smoothnormals_areaweighting.integer);
 	}
 	R_Mesh_VertexPointer(rsurface_vertex3f);
@@ -2647,7 +2672,7 @@ static void RSurf_DrawLightmap(const entity_render_t *ent, const texture_t *text
 			int numverts = surface->num_vertices;
 			v = rsurface_vertex3f + 3 * surface->num_firstvertex;
 			c2 = rsurface_normal3f + 3 * surface->num_firstvertex;
-			c = varray_color4f + 4 * surface->num_firstvertex;
+			c = rsurface_array_color4f + 4 * surface->num_firstvertex;
 			// q3-style directional shading
 			for (i = 0;i < numverts;i++, v += 3, c2 += 3, c += 4)
 			{
@@ -2662,7 +2687,7 @@ static void RSurf_DrawLightmap(const entity_render_t *ent, const texture_t *text
 			b = 1;
 			a = 1;
 			applycolor = false;
-			rsurface_lightmapcolor4f = varray_color4f;
+			rsurface_lightmapcolor4f = rsurface_array_color4f;
 		}
 		else
 		{
@@ -2676,7 +2701,7 @@ static void RSurf_DrawLightmap(const entity_render_t *ent, const texture_t *text
 	{
 		if (surface->lightmapinfo && surface->lightmapinfo->stainsamples)
 		{
-			for (i = 0, c = varray_color4f + 4 * surface->num_firstvertex;i < surface->num_vertices;i++, c += 4)
+			for (i = 0, c = rsurface_array_color4f + 4 * surface->num_firstvertex;i < surface->num_vertices;i++, c += 4)
 			{
 				if (surface->lightmapinfo->samples)
 				{
@@ -2706,7 +2731,7 @@ static void RSurf_DrawLightmap(const entity_render_t *ent, const texture_t *text
 				else
 					VectorClear(c);
 			}
-			rsurface_lightmapcolor4f = varray_color4f;
+			rsurface_lightmapcolor4f = rsurface_array_color4f;
 		}
 		else
 			rsurface_lightmapcolor4f = surface->groupmesh->data_lightmapcolor4f;
@@ -2717,7 +2742,7 @@ static void RSurf_DrawLightmap(const entity_render_t *ent, const texture_t *text
 	{
 		if (rsurface_lightmapcolor4f)
 		{
-			for (i = 0, v = (rsurface_vertex3f + 3 * surface->num_firstvertex), c = (rsurface_lightmapcolor4f + 4 * surface->num_firstvertex), c2 = (varray_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c += 4, c2 += 4)
+			for (i = 0, v = (rsurface_vertex3f + 3 * surface->num_firstvertex), c = (rsurface_lightmapcolor4f + 4 * surface->num_firstvertex), c2 = (rsurface_array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c += 4, c2 += 4)
 			{
 				f = 1 - VERTEXFOGTABLE(VectorDistance(v, modelorg));
 				c2[0] = c[0] * f;
@@ -2728,7 +2753,7 @@ static void RSurf_DrawLightmap(const entity_render_t *ent, const texture_t *text
 		}
 		else
 		{
-			for (i = 0, v = (rsurface_vertex3f + 3 * surface->num_firstvertex), c2 = (varray_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c2 += 4)
+			for (i = 0, v = (rsurface_vertex3f + 3 * surface->num_firstvertex), c2 = (rsurface_array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c2 += 4)
 			{
 				f = 1 - VERTEXFOGTABLE(VectorDistance(v, modelorg));
 				c2[0] = f;
@@ -2737,18 +2762,18 @@ static void RSurf_DrawLightmap(const entity_render_t *ent, const texture_t *text
 				c2[3] = 1;
 			}
 		}
-		rsurface_lightmapcolor4f = varray_color4f;
+		rsurface_lightmapcolor4f = rsurface_array_color4f;
 	}
 	if (applycolor && rsurface_lightmapcolor4f)
 	{
-		for (i = 0, c = (rsurface_lightmapcolor4f + 4 * surface->num_firstvertex), c2 = (varray_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, c += 4, c2 += 4)
+		for (i = 0, c = (rsurface_lightmapcolor4f + 4 * surface->num_firstvertex), c2 = (rsurface_array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, c += 4, c2 += 4)
 		{
 			c2[0] = c[0] * r;
 			c2[1] = c[1] * g;
 			c2[2] = c[2] * b;
 			c2[3] = c[3] * a;
 		}
-		rsurface_lightmapcolor4f = varray_color4f;
+		rsurface_lightmapcolor4f = rsurface_array_color4f;
 	}
 	R_Mesh_ColorPointer(rsurface_lightmapcolor4f);
 	GL_Color(r, g, b, a);
@@ -2922,7 +2947,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				m.tex[1] = R_GetTexture(layer->texture);
 				m.texmatrix[1] = layer->texmatrix;
 				m.texrgbscale[1] = layertexrgbscale;
-				m.pointer_color = varray_color4f;
+				m.pointer_color = rsurface_array_color4f;
 				R_Mesh_State(&m);
 				if (lightmode == 2)
 				{
@@ -2959,7 +2984,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				memset(&m, 0, sizeof(m));
 				m.tex[0] = R_GetTexture(layer->texture);
 				m.texmatrix[0] = layer->texmatrix;
-				m.pointer_color = varray_color4f;
+				m.pointer_color = rsurface_array_color4f;
 				m.texrgbscale[0] = layertexrgbscale;
 				R_Mesh_State(&m);
 				if (lightmode == 2)
@@ -2994,7 +3019,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				memset(&m, 0, sizeof(m));
 				m.tex[0] = R_GetTexture(layer->texture);
 				m.texmatrix[0] = layer->texmatrix;
-				m.pointer_color = varray_color4f;
+				m.pointer_color = rsurface_array_color4f;
 				m.texrgbscale[0] = layertexrgbscale;
 				R_Mesh_State(&m);
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
@@ -3009,7 +3034,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				m.tex[0] = R_GetTexture(layer->texture);
 				m.texmatrix[0] = layer->texmatrix;
 				m.texrgbscale[0] = layertexrgbscale;
-				m.pointer_color = varray_color4f;
+				m.pointer_color = rsurface_array_color4f;
 				R_Mesh_State(&m);
 				if (lightmode == 2)
 				{
@@ -3034,7 +3059,7 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				memset(&m, 0, sizeof(m));
 				m.tex[0] = R_GetTexture(layer->texture);
 				m.texmatrix[0] = layer->texmatrix;
-				m.pointer_color = varray_color4f;
+				m.pointer_color = rsurface_array_color4f;
 				m.texrgbscale[0] = layertexrgbscale;
 				R_Mesh_State(&m);
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
@@ -3060,8 +3085,8 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 					RSurf_SetVertexPointer(ent, texture, surface, modelorg, false, false);
 					if (layer->texture)
 						R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
-					R_Mesh_ColorPointer(varray_color4f);
-					for (i = 0, v = (rsurface_vertex3f + 3 * surface->num_firstvertex), c = (varray_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c += 4)
+					R_Mesh_ColorPointer(rsurface_array_color4f);
+					for (i = 0, v = (rsurface_vertex3f + 3 * surface->num_firstvertex), c = (rsurface_array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c += 4)
 					{
 						f = VERTEXFOGTABLE(VectorDistance(v, modelorg));
 						c[0] = layercolor[0];

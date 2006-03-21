@@ -29,8 +29,6 @@ extern cvar_t r_shadow_singlepassvolumegeneration;
 extern cvar_t r_shadow_texture3d;
 extern cvar_t gl_ext_stenciltwoside;
 
-extern mempool_t *r_shadow_mempool;
-
 void R_Shadow_Init(void);
 void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, float projectdistance, int nummarktris, const int *marktris);
 void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *invertex3f, const int *elements, const vec3_t projectorigin, const vec3_t lightmins, const vec3_t lightmaxs, const vec3_t surfacemins, const vec3_t surfacemaxs);

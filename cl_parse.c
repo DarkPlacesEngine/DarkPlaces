@@ -586,7 +586,7 @@ static void QW_CL_ParseDownload(void)
 		while (cls.qw_downloadmemorymaxsize < cls.qw_downloadmemorycursize + size)
 			cls.qw_downloadmemorymaxsize *= 2;
 		old = cls.qw_downloadmemory;
-		cls.qw_downloadmemory = Mem_Alloc(cls.mempool, cls.qw_downloadmemorymaxsize);
+		cls.qw_downloadmemory = Mem_Alloc(cls.permanentmempool, cls.qw_downloadmemorymaxsize);
 		if (old)
 		{
 			memcpy(cls.qw_downloadmemory, old, cls.qw_downloadmemorycursize);
@@ -748,7 +748,7 @@ void QW_CL_StartUpload(unsigned char *data, int size)
 
 	Con_DPrintf("Starting upload of %d bytes...\n", size);
 
-	cls.qw_uploaddata = Mem_Alloc(cls.mempool, size);
+	cls.qw_uploaddata = Mem_Alloc(cls.permanentmempool, size);
 	memcpy(cls.qw_uploaddata, data, size);
 	cls.qw_uploadsize = size;
 	cls.qw_uploadpos = 0;
@@ -1016,7 +1016,7 @@ void CL_ParseServerInfo (void)
 		i = MSG_ReadByte();
 		cl.qw_spectator = (i & 128) != 0;
 		cl.playerentity = cl.viewentity = (i & 127) + 1;
-		cl.scores = (scoreboard_t *)Mem_Alloc(cls.mempool, cl.maxclients*sizeof(*cl.scores));
+		cl.scores = (scoreboard_t *)Mem_Alloc(cls.levelmempool, cl.maxclients*sizeof(*cl.scores));
 
 		// get the full level name
 		str = MSG_ReadString ();
@@ -1059,7 +1059,7 @@ void CL_ParseServerInfo (void)
 			Host_Error("Bad maxclients (%u) from server", cl.maxclients);
 			return;
 		}
-		cl.scores = (scoreboard_t *)Mem_Alloc(cls.mempool, cl.maxclients*sizeof(*cl.scores));
+		cl.scores = (scoreboard_t *)Mem_Alloc(cls.levelmempool, cl.maxclients*sizeof(*cl.scores));
 
 	// parse gametype
 		cl.gametype = MSG_ReadByte ();

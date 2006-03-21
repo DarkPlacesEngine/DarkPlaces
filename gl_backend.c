@@ -1643,12 +1643,3 @@ void R_Mesh_Draw_ShowTris(int firstvertex, int numvertices, int numtriangles, co
 	qglEnd();
 	CHECKGLERROR
 }
-
-// FIXME: someday this should be dynamically allocated and resized?
-float varray_vertex3f[65536*3];
-float varray_svector3f[65536*3];
-float varray_tvector3f[65536*3];
-float varray_normal3f[65536*3];
-float varray_color4f[65536*4];
-float varray_texcoord3f[65536*3];
-float varray_vertex3f2[65536*3];

@@ -1363,8 +1363,8 @@ static void M_Setup_Draw (void)
 			menuplyr_width = image_width;
 			menuplyr_height = image_height;
 			Mem_Free(f);
-			menuplyr_pixels = (unsigned char *)Mem_Alloc(cls.mempool, menuplyr_width * menuplyr_height);
-			menuplyr_translated = (unsigned int *)Mem_Alloc(cls.mempool, menuplyr_width * menuplyr_height * 4);
+			menuplyr_pixels = (unsigned char *)Mem_Alloc(cls.permanentmempool, menuplyr_width * menuplyr_height);
+			menuplyr_translated = (unsigned int *)Mem_Alloc(cls.permanentmempool, menuplyr_width * menuplyr_height * 4);
 			memcpy(menuplyr_pixels, data, menuplyr_width * menuplyr_height);
 			Mem_Free(data);
 		}

@@ -49,7 +49,7 @@ void R_MeshQueue_Render(void)
 static void R_MeshQueue_EnlargeTransparentArray(int newtotal)
 {
 	meshqueue_t *newarray;
-	newarray = (meshqueue_t *)Mem_Alloc(cls.mempool, newtotal * sizeof(meshqueue_t));
+	newarray = (meshqueue_t *)Mem_Alloc(cls.permanentmempool, newtotal * sizeof(meshqueue_t));
 	if (mqt_array)
 	{
 		memcpy(newarray, mqt_array, mqt_total * sizeof(meshqueue_t));
@@ -167,11 +167,11 @@ void R_MeshQueue_BeginScene(void)
 		mq_total = r_meshqueue_entries.integer;
 		if (mq_array)
 			Mem_Free(mq_array);
-		mq_array = (meshqueue_t *)Mem_Alloc(cls.mempool, mq_total * sizeof(meshqueue_t));
+		mq_array = (meshqueue_t *)Mem_Alloc(cls.permanentmempool, mq_total * sizeof(meshqueue_t));
 	}
 
 	if (mqt_array == NULL)
-		mqt_array = (meshqueue_t *)Mem_Alloc(cls.mempool, mqt_total * sizeof(meshqueue_t));
+		mqt_array = (meshqueue_t *)Mem_Alloc(cls.permanentmempool, mqt_total * sizeof(meshqueue_t));
 
 	mq_count = 0;
 	mqt_count = 0;

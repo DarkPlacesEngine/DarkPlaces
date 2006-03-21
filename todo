@@ -43,10 +43,12 @@
 0 bug darkplaces client: cl_movement 0 shouldn't be doing an input replay (SavageX)
 0 bug darkplaces client: fix cl_bobmodel bug which momentarily jolts the gun when you pass through a trigger, pick up an item, etc, Sajt thinks this is related to console prints as well as centerprint (Sajt)
 0 bug darkplaces client: prydon cursor highlighting of EF_SELECTABLE entities flickers with lower server framerate than client framerate (carni)
+0 bug darkplaces csqc: after the drawqueue was eliminated, the CSQC probably can't draw 2D polygons the same way, so it may need fixing ([515])
 0 bug darkplaces csqc: engine-based rocket entities have a trail but they don't glow if csqc is used
 0 bug darkplaces loader: make rtlight entity loader support q3map/q3map2 lights properly, they use a spawnflag for LINEAR mode, by default they use 1/(x*x) falloff (Carni, motorsep)
 0 bug darkplaces loader: occasional crash due to memory corruption when doing "deathmatch 1;map start" during demo loop (Willis)
 0 bug darkplaces renderer: glsl lighting path is not using GL_SRC_ALPHA, GL_ONE
+0 bug darkplaces renderer: in full rtlighting mode, deluxemapping gloss still shows up (the diffuse and ambient does not)
 0 bug darkplaces renderer: modify r_showtris_polygonoffset to push back all filled geometry, not lines, because polygonoffset will not affect GL_LINES at all
 0 bug darkplaces renderer: monsters teleporting in really slow down rendering, perhaps the teleport light is casting huge shadows?  new information suggests it is the particles. (romi, lcatlnx)
 0 bug darkplaces renderer: r_glsl 1 mode has black grapple beam in nexuiz (SavageX)
@@ -92,6 +94,7 @@
 0 change darkplaces renderer: rename r_drawportals to r_showportals, and move its declaration to gl_rmain.c
 0 change darkplaces server: make viewmodel code precache a new model and set it, rather than changing the meaning of the player model
 0 change darkplaces server: support sys_ticrate 0 as variable framerate mode
+0 change dpmod: stop using playernogun/playergun models, go back to ordinary player.mdl, this saves a bit of memory
 0 change zmodel: include the example script in the build zips, not just in the files directory
 0 cleanup darkplaces cleanup: remove cgame* files and any references
 0 cleanup darkplaces cleanup: remove ui.* files and any references

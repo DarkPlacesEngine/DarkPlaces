@@ -1087,7 +1087,7 @@ void EntityFrame_CL_ReadFrame(void)
 	entity_t *ent;
 	entityframe_database_t *d;
 	if (!cl.entitydatabase)
-		cl.entitydatabase = EntityFrame_AllocDatabase(cls.mempool);
+		cl.entitydatabase = EntityFrame_AllocDatabase(cls.levelmempool);
 	d = cl.entitydatabase;
 
 	EntityFrame_Clear(f, NULL, -1);
@@ -1357,7 +1357,7 @@ void EntityFrame4_CL_ReadFrame(void)
 	entity_state_t *s;
 	entityframe4_database_t *d;
 	if (!cl.entitydatabase4)
-		cl.entitydatabase4 = EntityFrame4_AllocDatabase(cls.mempool);
+		cl.entitydatabase4 = EntityFrame4_AllocDatabase(cls.levelmempool);
 	d = cl.entitydatabase4;
 	// read the number of the frame this refers to
 	referenceframenum = MSG_ReadLong();
@@ -2594,7 +2594,7 @@ void EntityFrameQW_CL_ReadFrame(qboolean delta)
 	entityframeqw_snapshot_t *oldsnap, *newsnap;
 
 	if (!cl.entitydatabaseqw)
-		cl.entitydatabaseqw = EntityFrameQW_AllocDatabase(cls.mempool);
+		cl.entitydatabaseqw = EntityFrameQW_AllocDatabase(cls.levelmempool);
 	d = cl.entitydatabaseqw;
 
 	newsnapindex = cls.netcon->qw.incoming_sequence & QW_UPDATE_MASK;

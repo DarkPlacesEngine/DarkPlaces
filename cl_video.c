@@ -60,7 +60,7 @@ static qboolean WakeVideo( clvideo_t * video )
 			return false;
 		}
 
-	video->imagedata = Mem_Alloc( cls.mempool, video->cpif.width * video->cpif.height * cl_videobytesperpixel );
+	video->imagedata = Mem_Alloc( cls.permanentmempool, video->cpif.width * video->cpif.height * cl_videobytesperpixel );
 	video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name,
 		video->cpif.width, video->cpif.height, NULL, TEXTYPE_RGBA, 0, NULL );
 
@@ -91,7 +91,7 @@ static clvideo_t* OpenVideo( clvideo_t *video, const char *filename, const char 
 	video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name,
 		video->cpif.width, video->cpif.height, NULL, TEXTYPE_RGBA, 0, NULL );
 
-    video->imagedata = Mem_Alloc( cls.mempool, video->cpif.width * video->cpif.height * cl_videobytesperpixel );
+    video->imagedata = Mem_Alloc( cls.permanentmempool, video->cpif.width * video->cpif.height * cl_videobytesperpixel );
 
 	return video;
 }
