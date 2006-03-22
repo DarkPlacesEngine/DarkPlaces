@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // rights reserved.
 
 #include <windows.h>
+#include <mmsystem.h>
 
 #include "quakedef.h"
 #include "cdaudio.h"
