@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include <windows.h>
+#include <mmsystem.h>
 #include <dsound.h>
 #include "errno.h"
 #include "resource.h"
@@ -316,7 +317,7 @@ void Sys_InitConsole (void)
 		hinput = GetStdHandle (STD_INPUT_HANDLE);
 		houtput = GetStdHandle (STD_OUTPUT_HANDLE);
 
-#ifdef WIN64
+#ifdef _WIN64
 #define atoi _atoi64
 #endif
 	// give QHOST a chance to hook into the console

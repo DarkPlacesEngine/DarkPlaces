@@ -76,6 +76,7 @@ double Sys_DoubleTime (void)
 	static double oldtime = 0.0, curtime = 0.0;
 	double newtime;
 #ifdef WIN32
+#include <mmsystem.h>
 	// LordHavoc: note to people modifying this code, DWORD is specifically defined as an unsigned 32bit number, therefore the 65536.0 * 65536.0 is fine.
 	if (sys_usetimegettime.integer)
 	{

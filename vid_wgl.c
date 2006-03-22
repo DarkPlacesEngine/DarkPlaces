@@ -24,9 +24,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include <windows.h>
+#include <mmsystem.h>
 #include <dsound.h>
 #include "resource.h"
 #include <commctrl.h>
+#include <dinput.h>
 
 extern void S_BlockSound (void);
 extern void S_UnblockSound (void);
@@ -114,8 +116,6 @@ static qboolean mouseinitialized;
 static qboolean dinput;
 
 // input code
-
-#include <dinput.h>
 
 #define DINPUT_BUFFERSIZE           16
 #define iDirectInputCreate(a,b,c,d)	pDirectInputCreate(a,b,c,d)
