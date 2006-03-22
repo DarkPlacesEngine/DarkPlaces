@@ -44,6 +44,12 @@ cvar_t mod_q3bsp_curves_collisions = {0, "mod_q3bsp_curves_collisions", "1", "en
 cvar_t mod_q3bsp_optimizedtraceline = {0, "mod_q3bsp_optimizedtraceline", "1", "whether to use optimized traceline code for line traces (as opposed to tracebox code)"};
 cvar_t mod_q3bsp_debugtracebrush = {0, "mod_q3bsp_debugtracebrush", "0", "selects different tracebrush bsp recursion algorithms (for debugging purposes only)"};
 
+static texture_t mod_q1bsp_texture_solid;
+static texture_t mod_q1bsp_texture_sky;
+static texture_t mod_q1bsp_texture_lava;
+static texture_t mod_q1bsp_texture_slime;
+static texture_t mod_q1bsp_texture_water;
+
 void Mod_BrushInit(void)
 {
 //	Cvar_RegisterVariable(&r_subdivide_size);
@@ -63,6 +69,31 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&mod_q3bsp_curves_collisions);
 	Cvar_RegisterVariable(&mod_q3bsp_optimizedtraceline);
 	Cvar_RegisterVariable(&mod_q3bsp_debugtracebrush);
+
+	memset(&mod_q1bsp_texture_solid, 0, sizeof(mod_q1bsp_texture_solid));
+	strlcpy(mod_q1bsp_texture_solid.name, "solid" , sizeof(mod_q1bsp_texture_solid.name));
+	mod_q1bsp_texture_solid.surfaceflags = 0;
+	mod_q1bsp_texture_solid.supercontents = SUPERCONTENTS_SOLID;
+
+	mod_q1bsp_texture_sky = mod_q1bsp_texture_solid;
+	strlcpy(mod_q1bsp_texture_sky.name, "sky", sizeof(mod_q1bsp_texture_sky.name));
+	mod_q1bsp_texture_sky.surfaceflags = Q3SURFACEFLAG_SKY | Q3SURFACEFLAG_NOIMPACT | Q3SURFACEFLAG_NOMARKS | Q3SURFACEFLAG_NODLIGHT | Q3SURFACEFLAG_NOLIGHTMAP;
+	mod_q1bsp_texture_sky.supercontents = SUPERCONTENTS_SKY | SUPERCONTENTS_NODROP;
+
+	mod_q1bsp_texture_lava = mod_q1bsp_texture_solid;
+	strlcpy(mod_q1bsp_texture_lava.name, "*lava", sizeof(mod_q1bsp_texture_lava.name));
+	mod_q1bsp_texture_lava.surfaceflags = Q3SURFACEFLAG_NOMARKS;
+	mod_q1bsp_texture_lava.supercontents = SUPERCONTENTS_LAVA | SUPERCONTENTS_NODROP;
+
+	mod_q1bsp_texture_slime = mod_q1bsp_texture_solid;
+	strlcpy(mod_q1bsp_texture_slime.name, "*slime", sizeof(mod_q1bsp_texture_slime.name));
+	mod_q1bsp_texture_slime.surfaceflags = Q3SURFACEFLAG_NOMARKS;
+	mod_q1bsp_texture_slime.supercontents = SUPERCONTENTS_SLIME;
+
+	mod_q1bsp_texture_water = mod_q1bsp_texture_solid;
+	strlcpy(mod_q1bsp_texture_water.name, "*water", sizeof(mod_q1bsp_texture_water.name));
+	mod_q1bsp_texture_water.surfaceflags = Q3SURFACEFLAG_NOMARKS;
+	mod_q1bsp_texture_water.supercontents = SUPERCONTENTS_WATER;
 }
 
 static mleaf_t *Mod_Q1BSP_PointInLeaf(model_t *model, const vec3_t p)
@@ -539,9 +570,9 @@ int Mod_Q1BSP_SuperContentsFromNativeContents(model_t *model, int nativecontents
 		case CONTENTS_SLIME:
 			return SUPERCONTENTS_SLIME;
 		case CONTENTS_LAVA:
-			return SUPERCONTENTS_LAVA;
+			return SUPERCONTENTS_LAVA | SUPERCONTENTS_NODROP;
 		case CONTENTS_SKY:
-			return SUPERCONTENTS_SKY;
+			return SUPERCONTENTS_SKY | SUPERCONTENTS_NODROP;
 	}
 	return 0;
 }
@@ -612,6 +643,18 @@ loc0:
 			t->trace->inwater = true;
 		if (num == 0)
 			t->trace->inopen = true;
+		if (num & SUPERCONTENTS_SOLID)
+			t->trace->hittexture = &mod_q1bsp_texture_solid;
+		else if (num & SUPERCONTENTS_SKY)
+			t->trace->hittexture = &mod_q1bsp_texture_sky;
+		else if (num & SUPERCONTENTS_LAVA)
+			t->trace->hittexture = &mod_q1bsp_texture_lava;
+		else if (num & SUPERCONTENTS_SLIME)
+			t->trace->hittexture = &mod_q1bsp_texture_slime;
+		else
+			t->trace->hittexture = &mod_q1bsp_texture_water;
+		t->trace->hitq3surfaceflags = t->trace->hittexture->surfaceflags;
+		t->trace->hitsupercontents = num;
 		if (num & t->trace->hitsupercontentsmask)
 		{
 			// if the first leaf is solid, set startsolid
@@ -814,6 +857,12 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace,
 	else
 		Mod_Q1BSP_RecursiveHullCheckPoint(&rhc, rhc.hull->firstclipnode);
 #endif
+	if (trace->fraction == 1)
+	{
+		trace->hitsupercontents = 0;
+		trace->hitq3surfaceflags = 0;
+		trace->hittexture = NULL;
+	}
 }
 
 void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cmaxs, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask, int boxsupercontents)
@@ -1195,12 +1244,14 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		if (i == loadmodel->num_textures - 1)
 		{
 			tx->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES;
-			tx->supercontents = SUPERCONTENTS_WATER;
+			tx->supercontents = mod_q1bsp_texture_water.supercontents;
+			tx->surfaceflags = mod_q1bsp_texture_water.surfaceflags;
 		}
 		else
 		{
 			tx->basematerialflags |= MATERIALFLAG_WALL;
-			tx->supercontents = SUPERCONTENTS_SOLID;
+			tx->supercontents = mod_q1bsp_texture_solid.supercontents;
+			tx->surfaceflags = mod_q1bsp_texture_solid.surfaceflags;
 		}
 		tx->currentframe = tx;
 	}
@@ -1313,28 +1364,38 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		tx->basematerialflags = 0;
 		if (tx->name[0] == '*')
 		{
-			// turb does not block movement
-			tx->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES;
 			// LordHavoc: some turbulent textures should not be affected by wateralpha
 			if (strncmp(tx->name,"*lava",5)
 			 && strncmp(tx->name,"*teleport",9)
 			 && strncmp(tx->name,"*rift",5)) // Scourge of Armagon texture
 				tx->basematerialflags |= MATERIALFLAG_WATERALPHA;
 			if (!strncmp(tx->name, "*lava", 5))
-				tx->supercontents = SUPERCONTENTS_LAVA;
+			{
+				tx->supercontents = mod_q1bsp_texture_lava.supercontents;
+				tx->surfaceflags = mod_q1bsp_texture_lava.surfaceflags;
+			}
 			else if (!strncmp(tx->name, "*slime", 6))
-				tx->supercontents = SUPERCONTENTS_SLIME;
+			{
+				tx->supercontents = mod_q1bsp_texture_slime.supercontents;
+				tx->surfaceflags = mod_q1bsp_texture_slime.surfaceflags;
+			}
 			else
-				tx->supercontents = SUPERCONTENTS_WATER;
+			{
+				tx->supercontents = mod_q1bsp_texture_water.supercontents;
+				tx->surfaceflags = mod_q1bsp_texture_water.surfaceflags;
+			}
+			tx->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES;
 		}
 		else if (tx->name[0] == 's' && tx->name[1] == 'k' && tx->name[2] == 'y')
 		{
-			tx->supercontents = SUPERCONTENTS_SKY;
+			tx->supercontents = mod_q1bsp_texture_sky.supercontents;
+			tx->surfaceflags = mod_q1bsp_texture_sky.surfaceflags;
 			tx->basematerialflags |= MATERIALFLAG_SKY;
 		}
 		else
 		{
-			tx->supercontents = SUPERCONTENTS_SOLID;
+			tx->supercontents = mod_q1bsp_texture_solid.supercontents;
+			tx->surfaceflags = mod_q1bsp_texture_solid.surfaceflags;
 			tx->basematerialflags |= MATERIALFLAG_WALL;
 		}
 		if (tx->skin.fog)
@@ -4180,7 +4241,7 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 	q3dbrush_t *in;
 	q3mbrush_t *out;
 	int i, j, n, c, count, maxplanes;
-	mplane_t *planes;
+	colplanef_t *planes;
 
 	in = (q3dbrush_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -4213,15 +4274,18 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 			maxplanes = out->numbrushsides;
 			if (planes)
 				Mem_Free(planes);
-			planes = (mplane_t *)Mem_Alloc(tempmempool, sizeof(mplane_t) * maxplanes);
+			planes = (colplanef_t *)Mem_Alloc(tempmempool, sizeof(colplanef_t) * maxplanes);
 		}
 		for (j = 0;j < out->numbrushsides;j++)
 		{
 			VectorCopy(out->firstbrushside[j].plane->normal, planes[j].normal);
 			planes[j].dist = out->firstbrushside[j].plane->dist;
+			planes[j].supercontents = out->firstbrushside[j].texture->supercontents;
+			planes[j].q3surfaceflags = out->firstbrushside[j].texture->surfaceflags;
+			planes[j].texture = out->firstbrushside[j].texture;
 		}
 		// make the colbrush from the planes
-		out->colbrushf = Collision_NewBrushFromPlanes(loadmodel->mempool, out->numbrushsides, planes, out->texture->supercontents);
+		out->colbrushf = Collision_NewBrushFromPlanes(loadmodel->mempool, out->numbrushsides, planes);
 	}
 	if (planes)
 		Mem_Free(planes);
@@ -5139,7 +5203,7 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, model_t *model,
 			if (surface->num_collisiontriangles && surface->collisionmarkframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, surface->mins, surface->maxs))
 			{
 				surface->collisionmarkframe = markframe;
-				Collision_TraceLineTriangleMeshFloat(trace, linestart, lineend, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->texture->supercontents, segmentmins, segmentmaxs);
+				Collision_TraceLineTriangleMeshFloat(trace, linestart, lineend, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
 			}
 		}
 	}
@@ -5214,7 +5278,7 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, model_t *model
 			if (surface->num_collisiontriangles && surface->collisionmarkframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, surface->mins, surface->maxs))
 			{
 				surface->collisionmarkframe = markframe;
-				Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->texture->supercontents, segmentmins, segmentmaxs);
+				Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
 			}
 		}
 	}
@@ -5262,7 +5326,7 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 				if (mod_q3bsp_curves_collisions.integer)
 					for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
 						if (surface->num_collisiontriangles)
-							Collision_TraceLineTriangleMeshFloat(trace, start, end, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->texture->supercontents, segmentmins, segmentmaxs);
+							Collision_TraceLineTriangleMeshFloat(trace, start, end, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
 			}
 			else
 				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, model->brush.data_nodes, start, end, 0, 1, start, end, ++markframe, segmentmins, segmentmaxs);
@@ -5283,8 +5347,8 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 		VectorAdd(start, boxmaxs, boxstartmaxs);
 		VectorAdd(end, boxmins, boxendmins);
 		VectorAdd(end, boxmaxs, boxendmaxs);
-		thisbrush_start = Collision_BrushForBox(&identitymatrix, boxstartmins, boxstartmaxs);
-		thisbrush_end = Collision_BrushForBox(&identitymatrix, boxendmins, boxendmaxs);
+		thisbrush_start = Collision_BrushForBox(&identitymatrix, boxstartmins, boxstartmaxs, 0, 0, NULL);
+		thisbrush_end = Collision_BrushForBox(&identitymatrix, boxendmins, boxendmaxs, 0, 0, NULL);
 		if (model->brush.submodel)
 		{
 			for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
@@ -5293,7 +5357,7 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 			if (mod_q3bsp_curves_collisions.integer)
 				for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
 					if (surface->num_collisiontriangles)
-						Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->texture->supercontents, segmentmins, segmentmaxs);
+						Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
 		}
 		else
 			Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model, model->brush.data_nodes, thisbrush_start, thisbrush_end, ++markframe, segmentmins, segmentmaxs);

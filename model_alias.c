@@ -234,7 +234,7 @@ static void Mod_MDLMD2MD3_TraceBox(model_t *model, int frame, trace_t *trace, co
 				vertex3f = Z_Malloc(maxvertices * sizeof(float[3]));
 			}
 			Mod_Alias_GetMesh_Vertex3f(model, frameblend, mesh, vertex3f);
-			Collision_TraceLineTriangleMeshFloat(trace, start, end, mesh->num_triangles, mesh->data_element3i, vertex3f, SUPERCONTENTS_SOLID, segmentmins, segmentmaxs);
+			Collision_TraceLineTriangleMeshFloat(trace, start, end, mesh->num_triangles, mesh->data_element3i, vertex3f, SUPERCONTENTS_SOLID, 0, surface->texture, segmentmins, segmentmaxs);
 		}
 	}
 	else
@@ -252,8 +252,8 @@ static void Mod_MDLMD2MD3_TraceBox(model_t *model, int frame, trace_t *trace, co
 		VectorAdd(start, boxmaxs, boxstartmaxs);
 		VectorAdd(end, boxmins, boxendmins);
 		VectorAdd(end, boxmaxs, boxendmaxs);
-		thisbrush_start = Collision_BrushForBox(&identitymatrix, boxstartmins, boxstartmaxs);
-		thisbrush_end = Collision_BrushForBox(&identitymatrix, boxendmins, boxendmaxs);
+		thisbrush_start = Collision_BrushForBox(&identitymatrix, boxstartmins, boxstartmaxs, 0, 0, NULL);
+		thisbrush_end = Collision_BrushForBox(&identitymatrix, boxendmins, boxendmaxs, 0, 0, NULL);
 		for (i = 0, surface = model->data_surfaces;i < model->num_surfaces;i++, surface++)
 		{
 			mesh = surface->groupmesh;
@@ -265,7 +265,7 @@ static void Mod_MDLMD2MD3_TraceBox(model_t *model, int frame, trace_t *trace, co
 				vertex3f = Z_Malloc(maxvertices * sizeof(float[3]));
 			}
 			Mod_Alias_GetMesh_Vertex3f(model, frameblend, mesh, vertex3f);
-			Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, mesh->num_triangles, mesh->data_element3i, vertex3f, SUPERCONTENTS_SOLID, segmentmins, segmentmaxs);
+			Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, mesh->num_triangles, mesh->data_element3i, vertex3f, SUPERCONTENTS_SOLID, 0, surface->texture, segmentmins, segmentmaxs);
 		}
 	}
 }

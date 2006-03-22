@@ -231,8 +231,10 @@ void CL_SpawnDecalParticleForPoint(const vec3_t org, float maxdist, float size, 
 	{
 		VectorRandom(org2);
 		VectorMA(org, maxdist, org2, org2);
-		trace = CL_TraceBox(org, vec3_origin, vec3_origin, org2, true, &hitent, SUPERCONTENTS_SOLID, false);
-		if (bestfrac > trace.fraction)
+		trace = CL_TraceBox(org, vec3_origin, vec3_origin, org2, true, &hitent, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY, false);
+		// take the closest trace result that doesn't end up hitting a NOMARKS
+		// surface (sky for example)
+		if (bestfrac > trace.fraction && !(trace.hitq3surfaceflags & Q3SURFACEFLAG_NOMARKS))
 		{
 			bestfrac = trace.fraction;
 			besthitent = hitent;
@@ -1199,15 +1201,24 @@ void CL_MoveParticles (void)
 			VectorCopy(p->org, org);
 			if (p->bounce)
 			{
-				if (p->type == particletype + pt_rain)
+				trace = CL_TraceBox(oldorg, vec3_origin, vec3_origin, p->org, true, &hitent, SUPERCONTENTS_SOLID | (p->type == particletype + pt_rain ? SUPERCONTENTS_LIQUIDSMASK : 0), false);
+				// if the trace started in or hit something of SUPERCONTENTS_NODROP
+				// or if the trace hit something flagged as NOIMPACT
+				// then remove the particle
+				if (trace.hitq3surfaceflags & Q3SURFACEFLAG_NOIMPACT || ((trace.startsupercontents | trace.hitsupercontents) & SUPERCONTENTS_NODROP))
 				{
-					// raindrop - splash on solid/water/slime/lava
-					trace = CL_TraceBox(oldorg, vec3_origin, vec3_origin, p->org, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_LIQUIDSMASK, false);
-					if (trace.fraction < 1)
+					p->type = NULL;
+					continue;
+				}
+				// react if the particle hit something
+				if (trace.fraction < 1)
+				{
+					VectorCopy(trace.endpos, p->org);
+					if (p->type == particletype + pt_rain)
 					{
+						// raindrop - splash on solid/water/slime/lava
 						int count;
 						// convert from a raindrop particle to a rainsplash decal
-						VectorCopy(trace.endpos, p->org);
 						VectorCopy(trace.plane.normal, p->vel);
 						VectorAdd(p->org, p->vel, p->org);
 						p->type = particletype + pt_raindecal;
@@ -1222,24 +1233,24 @@ void CL_MoveParticles (void)
 						while(count--)
 							particle(particletype + pt_spark, 0x000000, 0x707070, tex_particle, 0.25f, lhrandom(64, 255), 512, 1, 0, p->org[0], p->org[1], p->org[2], p->vel[0]*16, p->vel[1]*16, 32 + p->vel[2]*16, 0, 0, 32);
 					}
-				}
-				else if (p->type == particletype + pt_blood)
-				{
-					// blood - splash on solid
-					trace = CL_TraceBox(oldorg, vec3_origin, vec3_origin, p->org, true, &hitent, SUPERCONTENTS_SOLID, false);
-					if (trace.fraction < 1)
+					else if (p->type == particletype + pt_blood)
 					{
-						// convert from a blood particle to a blood decal
-						VectorCopy(trace.endpos, p->org);
-						VectorCopy(trace.plane.normal, p->vel);
-						VectorAdd(p->org, p->vel, p->org);
-						if (cl_stainmaps.integer)
-							R_Stain(p->org, 32, 32, 16, 16, p->alpha * p->size * (1.0f / 40.0f), 192, 48, 48, p->alpha * p->size * (1.0f / 40.0f));
+						// blood - splash on solid
+						if (trace.hitq3surfaceflags & Q3SURFACEFLAG_NOMARKS)
+						{
+							p->type = NULL;
+							continue;
+						}
 						if (!cl_decals.integer)
 						{
 							p->type = NULL;
 							continue;
 						}
+						// convert from a blood particle to a blood decal
+						VectorCopy(trace.plane.normal, p->vel);
+						VectorAdd(p->org, p->vel, p->org);
+						if (cl_stainmaps.integer)
+							R_Stain(p->org, 32, 32, 16, 16, p->alpha * p->size * (1.0f / 40.0f), 192, 48, 48, p->alpha * p->size * (1.0f / 40.0f));
 
 						p->type = particletype + pt_decal;
 						p->texnum = tex_blooddecal[rand()&7];
@@ -1254,25 +1265,19 @@ void CL_MoveParticles (void)
 						p->gravity = 0;
 						p->size *= 2.0f;
 					}
-				}
-				else
-				{
-					trace = CL_TraceBox(oldorg, vec3_origin, vec3_origin, p->org, true, NULL, SUPERCONTENTS_SOLID, false);
-					if (trace.fraction < 1)
+					else if (p->bounce < 0)
 					{
-						VectorCopy(trace.endpos, p->org);
-						if (p->bounce < 0)
-						{
-							p->type = NULL;
-							continue;
-						}
-						else
-						{
-							dist = DotProduct(p->vel, trace.plane.normal) * -p->bounce;
-							VectorMA(p->vel, dist, trace.plane.normal, p->vel);
-							if (DotProduct(p->vel, p->vel) < 0.03)
-								VectorClear(p->vel);
-						}
+						// bounce -1 means remove on impact
+						p->type = NULL;
+						continue;
+					}
+					else
+					{
+						// anything else - bounce off solid
+						dist = DotProduct(p->vel, trace.plane.normal) * -p->bounce;
+						VectorMA(p->vel, dist, trace.plane.normal, p->vel);
+						if (DotProduct(p->vel, p->vel) < 0.03)
+							VectorClear(p->vel);
 					}
 				}
 			}
