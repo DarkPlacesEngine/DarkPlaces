@@ -2267,6 +2267,8 @@ void R_Shadow_SetupEntityLight(const entity_render_t *ent)
 
 void R_Shadow_DrawEntityLight(entity_render_t *ent, int numsurfaces, int *surfacelist)
 {
+	if (!ent->model->DrawLight)
+		return;
 	R_Shadow_SetupEntityLight(ent);
 	if (ent == r_refdef.worldentity)
 		ent->model->DrawLight(ent, numsurfaces, surfacelist);

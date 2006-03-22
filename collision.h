@@ -9,6 +9,7 @@ typedef struct plane_s
 }
 plane_t;
 
+struct texture_s;
 typedef struct trace_s
 {
 	// if true, the entire trace was in solid (see hitsupercontentsmask)
@@ -42,6 +43,12 @@ typedef struct trace_s
 	int hitsupercontentsmask;
 	// the supercontents mask at the start point
 	int startsupercontents;
+	// the supercontents of the impacted surface
+	int hitsupercontents;
+	// the q3 surfaceflags of the impacted surface
+	int hitq3surfaceflags;
+	// the texture of the impacted surface
+	struct texture_s *hittexture;
 	// initially false, set when the start leaf is found
 	// (set only by Q1BSP tracing and entity box tracing)
 	int startfound;
@@ -61,6 +68,9 @@ typedef struct colplanef_s
 {
 	float normal[3];
 	float dist;
+	int supercontents;
+	int q3surfaceflags;
+	struct texture_s *texture;
 }
 colplanef_t;
 
@@ -88,26 +98,25 @@ typedef struct colbrushf_s
 }
 colbrushf_t;
 
-colbrushf_t *Collision_AllocBrushFloat(mempool_t *mempool, int numpoints, int numplanes, int numtriangles, int supercontents);
 void Collision_CalcPlanesForPolygonBrushFloat(colbrushf_t *brush);
 colbrushf_t *Collision_AllocBrushFromPermanentPolygonFloat(mempool_t *mempool, int numpoints, float *points, int supercontents);
-colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalplanes, const mplane_t *originalplanes, int supercontents);
+colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalplanes, const colplanef_t *originalplanes);
 void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, const colbrushf_t *thatbrush_start, const colbrushf_t *thatbrush_end);
 void Collision_TraceBrushPolygonFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int numpoints, const float *points, int supercontents);
-void Collision_TraceBrushTriangleMeshFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int numtriangles, const int *element3i, const float *vertex3f, int supercontents, const vec3_t segmentmins, const vec3_t segmentmaxs);
+void Collision_TraceBrushTriangleMeshFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int numtriangles, const int *element3i, const float *vertex3f, int supercontents, int q3surfaceflags, texture_t *texture, const vec3_t segmentmins, const vec3_t segmentmaxs);
 void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const vec3_t lineend, const colbrushf_t *thatbrush_start, const colbrushf_t *thatbrush_end);
 void Collision_TraceLinePolygonFloat(trace_t *trace, const vec3_t linestart, const vec3_t lineend, int numpoints, const float *points, int supercontents);
-void Collision_TraceLineTriangleMeshFloat(trace_t *trace, const vec3_t linestart, const vec3_t lineend, int numtriangles, const int *element3i, const float *vertex3f, int supercontents, const vec3_t segmentmins, const vec3_t segmentmaxs);
+void Collision_TraceLineTriangleMeshFloat(trace_t *trace, const vec3_t linestart, const vec3_t lineend, int numtriangles, const int *element3i, const float *vertex3f, int supercontents, int q3surfaceflags, texture_t *texture, const vec3_t segmentmins, const vec3_t segmentmaxs);
 void Collision_TracePointBrushFloat(trace_t *trace, const vec3_t point, const colbrushf_t *thatbrush);
 
-void Collision_TraceBrushPolygonTransformFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int numpoints, const float *points, const matrix4x4_t *polygonmatrixstart, const matrix4x4_t *polygonmatrixend, int supercontents);
+void Collision_TraceBrushPolygonTransformFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int numpoints, const float *points, const matrix4x4_t *polygonmatrixstart, const matrix4x4_t *polygonmatrixend, int supercontents, int q3surfaceflags, texture_t *texture);
 
-colbrushf_t *Collision_BrushForBox(const matrix4x4_t *matrix, const vec3_t mins, const vec3_t maxs);
+colbrushf_t *Collision_BrushForBox(const matrix4x4_t *matrix, const vec3_t mins, const vec3_t maxs, int supercontents, int q3surfaceflags, texture_t *texture);
 
 void Collision_BoundingBoxOfBrushTraceSegment(const colbrushf_t *start, const colbrushf_t *end, vec3_t mins, vec3_t maxs, float startfrac, float endfrac);
 
 float Collision_ClipTrace_Line_Sphere(double *linestart, double *lineend, double *sphereorigin, double sphereradius, double *impactpoint, double *impactnormal);
-void Collision_TraceLineTriangleFloat(trace_t *trace, const vec3_t linestart, const vec3_t lineend, const float *point0, const float *point1, const float *point2);
+void Collision_TraceLineTriangleFloat(trace_t *trace, const vec3_t linestart, const vec3_t lineend, const float *point0, const float *point1, const float *point2, int supercontents, int q3surfaceflags, texture_t *texture);
 
 // this enables rather large debugging spew!
 // settings:

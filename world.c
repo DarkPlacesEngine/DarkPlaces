@@ -682,6 +682,9 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 			VectorCopy(trace.endpos, cliptrace.endpos);
 			cliptrace.plane = trace.plane;
 			cliptrace.ent = touch;
+			cliptrace.hitsupercontents = trace.hitsupercontents;
+			cliptrace.hitq3surfaceflags = trace.hitq3surfaceflags;
+			cliptrace.hittexture = trace.hittexture;
 		}
 		cliptrace.startsupercontents |= trace.startsupercontents;
 	}

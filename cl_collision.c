@@ -101,6 +101,9 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 				if (hitent)
 					*hitent = cl.brushmodel_entities[n];
 				Matrix4x4_Transform3x3(&ent->matrix, trace.plane.normal, cliptrace.plane.normal);
+				cliptrace.hitsupercontents = trace.hitsupercontents;
+				cliptrace.hitq3surfaceflags = trace.hitq3surfaceflags;
+				cliptrace.hittexture = trace.hittexture;
 			}
 			cliptrace.startsupercontents |= trace.startsupercontents;
 		}
@@ -161,6 +164,9 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 					if (hitent)
 						*hitent = n;
 					Matrix4x4_Transform3x3(&ent->matrix, trace.plane.normal, cliptrace.plane.normal);
+					cliptrace.hitsupercontents = trace.hitsupercontents;
+					cliptrace.hitq3surfaceflags = trace.hitq3surfaceflags;
+					cliptrace.hittexture = trace.hittexture;
 				}
 				cliptrace.startsupercontents |= trace.startsupercontents;
 			}
