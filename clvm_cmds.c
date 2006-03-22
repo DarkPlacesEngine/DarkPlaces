@@ -474,7 +474,7 @@ void VM_CL_checkbottom (void)
 		{
 			start[0] = x ? maxs[0] : mins[0];
 			start[1] = y ? maxs[1] : mins[1];
-			if (!(CL_PointSuperContents(start) & SUPERCONTENTS_SOLID))
+			if (!(CL_PointSuperContents(start) & (SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY)))
 				goto realcheck;
 		}
 

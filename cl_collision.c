@@ -137,7 +137,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 
 				Matrix4x4_Transform(&ent->inversematrix, start, starttransformed);
 				Matrix4x4_Transform(&ent->inversematrix, end, endtransformed);
-				Collision_ClipTrace_Box(&trace, playermins, playermaxs, starttransformed, mins, maxs, endtransformed, hitsupercontentsmask, SUPERCONTENTS_SOLID);
+				Collision_ClipTrace_Box(&trace, playermins, playermaxs, starttransformed, mins, maxs, endtransformed, hitsupercontentsmask, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY);
 
 				// LordHavoc: take the 'best' answers from the new trace and combine with existing data
 				if (trace.allsolid)
@@ -197,7 +197,7 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 	if (hitent)
 		*hitent = 0;
 	if (cl.worldmodel && cl.worldmodel->TraceBox)
-		cl.worldmodel->TraceBox(cl.worldmodel, 0, &trace, start, start, end, end, SUPERCONTENTS_SOLID);
+		cl.worldmodel->TraceBox(cl.worldmodel, 0, &trace, start, start, end, end, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY);
 
 	if (normal)
 		VectorCopy(trace.plane.normal, normal);
@@ -245,7 +245,7 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 		Matrix4x4_Transform(&ent->inversematrix, end, endtransformed);
 
 		if (ent->model && ent->model->TraceBox)
-			ent->model->TraceBox(ent->model, ent->frameblend[0].frame, &trace, starttransformed, starttransformed, endtransformed, endtransformed, SUPERCONTENTS_SOLID);
+			ent->model->TraceBox(ent->model, ent->frameblend[0].frame, &trace, starttransformed, starttransformed, endtransformed, endtransformed, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY);
 
 		if (maxrealfrac > trace.realfraction)
 		{

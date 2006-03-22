@@ -210,6 +210,7 @@ typedef struct prvm_edict_s
 } prvm_edict_t;
 
 #define PRVM_GETEDICTFIELDVALUE(ed, fieldoffset) (fieldoffset ? (prvm_eval_t *)((unsigned char *)ed->fields.vp + fieldoffset) : NULL)
+#define PRVM_GETGLOBALFIELDVALUE(fieldoffset) (fieldoffset ? (prvm_eval_t *)((unsigned char *)prog->globals.generic + fieldoffset) : NULL)
 
 /*// this struct is the basic requirement for a qc prog
 typedef struct prvm_pr_globalvars_s
@@ -433,6 +434,7 @@ void PRVM_CrashAll (void);
 void PRVM_Crash (void);
 
 int PRVM_ED_FindFieldOffset(const char *field);
+int PRVM_ED_FindGlobalOffset(const char *global);
 ddef_t *PRVM_ED_FindField (const char *name);
 mfunction_t *PRVM_ED_FindFunction (const char *name);
 

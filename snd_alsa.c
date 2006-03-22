@@ -83,6 +83,10 @@ qboolean SNDDMA_Init (void)
 		if ((i=COM_CheckParm("-sndstereo")) != 0)
 			if (channels != 2)
 				continue;
+// COMMANDLINEOPTION: Linux ALSA Sound: -sndquad sets sound output to 4 channel surround
+		if ((i=COM_CheckParm("-sndquad")) != 0)
+			if (channels != 4)
+				continue;
 
 // COMMANDLINEOPTION: Linux ALSA Sound: -sndpcm <devicename> selects which pcm device to us, default is "default"
 		if (channels == 8)

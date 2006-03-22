@@ -56,6 +56,7 @@ extern int csqc_fieldoff_scale;
 extern int csqc_fieldoff_renderflags;
 extern int csqc_fieldoff_tag_entity;
 extern int csqc_fieldoff_tag_index;
+extern int csqc_fieldoff_dphitcontentsmask;
 extern cvar_t csqc_progcrc;
 extern qboolean csqc_usecsqclistener;
 extern matrix4x4_t csqc_listenermatrix;

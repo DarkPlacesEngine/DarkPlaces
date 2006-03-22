@@ -476,7 +476,7 @@ trace_t SV_ClipMoveToEntity(prvm_edict_t *ent, const vec3_t start, const vec3_t 
 		model->TraceBox(model, frame, &trace, starttransformed, mins, maxs, endtransformed, hitsupercontents);
 	}
 	else
-		Collision_ClipTrace_Box(&trace, ent->fields.server->mins, ent->fields.server->maxs, starttransformed, mins, maxs, endtransformed, hitsupercontents, SUPERCONTENTS_SOLID);
+		Collision_ClipTrace_Box(&trace, ent->fields.server->mins, ent->fields.server->maxs, starttransformed, mins, maxs, endtransformed, hitsupercontents, ent->fields.server->solid == SOLID_CORPSE ? SUPERCONTENTS_CORPSE : SUPERCONTENTS_BODY);
 	trace.fraction = bound(0, trace.fraction, 1);
 	trace.realfraction = bound(0, trace.realfraction, 1);
 
@@ -529,6 +529,7 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	int passedictprog;
 	qboolean pointtrace;
 	prvm_edict_t *traceowner, *touch;
+	prvm_eval_t *val;
 	trace_t trace;
 	// bounding box of entire move area
 	vec3_t clipboxmins, clipboxmaxs;
@@ -553,14 +554,25 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	Con_Printf("move(%f %f %f,%f %f %f)", clipstart[0], clipstart[1], clipstart[2], clipend[0], clipend[1], clipend[2]);
 #endif
 
-	hitsupercontentsmask = SUPERCONTENTS_SOLID;
 	if (passedict)
 	{
-		if (passedict->fields.server->solid == SOLID_SLIDEBOX)
-			hitsupercontentsmask |= SUPERCONTENTS_PLAYERCLIP;
-		if ((int)passedict->fields.server->flags & FL_MONSTER)
-			hitsupercontentsmask |= SUPERCONTENTS_MONSTERCLIP;
+		val = PRVM_GETEDICTFIELDVALUE(passedict, eval_dphitcontentsmask);
+		if (val && val->_float)
+			hitsupercontentsmask = (int)val->_float;
+		else if (passedict->fields.server->solid == SOLID_SLIDEBOX)
+		{
+			if ((int)passedict->fields.server->flags & FL_MONSTER)
+				hitsupercontentsmask = SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_MONSTERCLIP;
+			else
+				hitsupercontentsmask = SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP;
+		}
+		else if (passedict->fields.server->solid == SOLID_CORPSE)
+			hitsupercontentsmask = SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY;
+		else
+			hitsupercontentsmask = SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_CORPSE;
 	}
+	else
+		hitsupercontentsmask = SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_CORPSE;
 
 	// clip to world
 	cliptrace = SV_ClipMoveToWorld(clipstart, clipmins, clipmaxs, clipend, type, hitsupercontentsmask);
@@ -643,12 +655,6 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 				continue;
 			// don't clip points against points (they can't collide)
 			if (pointtrace && VectorCompare(touch->fields.server->mins, touch->fields.server->maxs) && (type != MOVE_MISSILE || !((int)touch->fields.server->flags & FL_MONSTER)))
-				continue;
-			// don't clip corpse against character
-			if (passedict->fields.server->solid == SOLID_CORPSE && (touch->fields.server->solid == SOLID_SLIDEBOX || touch->fields.server->solid == SOLID_CORPSE))
-				continue;
-			// don't clip character against corpse
-			if (passedict->fields.server->solid == SOLID_SLIDEBOX && touch->fields.server->solid == SOLID_CORPSE)
 				continue;
 		}
 

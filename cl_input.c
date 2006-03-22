@@ -686,7 +686,7 @@ void CL_ClientMovement_Replay(void)
 	VectorSet(neworigin2, currentorigin[0], currentorigin[1], currentorigin[2] - 1);
 	if (cl.movement)
 	{
-		trace = CL_TraceBox(currentorigin2, cl.playercrouchmins, cl.playercrouchmaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
+		trace = CL_TraceBox(currentorigin2, cl.playercrouchmins, cl.playercrouchmaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true);
 		onground = trace.fraction < 1 && trace.plane.normal[2] > 0.7;
 		crouch = false; // this will be updated on first move
 		canjump = true;
@@ -714,7 +714,7 @@ void CL_ClientMovement_Replay(void)
 					// low ceiling first
 					if (crouch)
 					{
-						trace = CL_TraceBox(currentorigin, cl.playerstandmins, cl.playerstandmaxs, currentorigin, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
+						trace = CL_TraceBox(currentorigin, cl.playerstandmins, cl.playerstandmaxs, currentorigin, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true);
 						if (!trace.startsolid)
 							crouch = false;
 					}
@@ -799,7 +799,7 @@ void CL_ClientMovement_Replay(void)
 						{
 							VectorSet(currentorigin2, currentorigin[0] + currentvelocity[0]*(16/f), currentorigin[1] + currentvelocity[1]*(16/f), currentorigin[2] + playermins[2]);
 							VectorSet(neworigin2, currentorigin2[0], currentorigin2[1], currentorigin2[2] - 34);
-							trace = CL_TraceBox(currentorigin2, vec3_origin, vec3_origin, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
+							trace = CL_TraceBox(currentorigin2, vec3_origin, vec3_origin, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true);
 							if (trace.fraction == 1)
 								edgefriction = movevars_edgefriction;
 						}
@@ -841,18 +841,18 @@ void CL_ClientMovement_Replay(void)
 				for (bump = 0, t = frametime;bump < 8 && VectorLength2(currentvelocity) > 0;bump++)
 				{
 					VectorMA(currentorigin, t, currentvelocity, neworigin);
-					trace = CL_TraceBox(currentorigin, playermins, playermaxs, neworigin, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
+					trace = CL_TraceBox(currentorigin, playermins, playermaxs, neworigin, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true);
 					if (trace.fraction < 1 && trace.plane.normal[2] == 0)
 					{
 						// may be a step or wall, try stepping up
 						// first move forward at a higher level
 						VectorSet(currentorigin2, currentorigin[0], currentorigin[1], currentorigin[2] + movevars_stepheight);
 						VectorSet(neworigin2, neworigin[0], neworigin[1], currentorigin[2] + movevars_stepheight);
-						trace2 = CL_TraceBox(currentorigin2, playermins, playermaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
+						trace2 = CL_TraceBox(currentorigin2, playermins, playermaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true);
 						// then move down from there
 						VectorCopy(trace2.endpos, currentorigin2);
 						VectorSet(neworigin2, trace2.endpos[0], trace2.endpos[1], currentorigin[2]);
-						trace3 = CL_TraceBox(currentorigin2, playermins, playermaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true);
+						trace3 = CL_TraceBox(currentorigin2, playermins, playermaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true);
 						//Con_Printf("%f %f %f %f : %f %f %f %f : %f %f %f %f\n", trace.fraction, trace.endpos[0], trace.endpos[1], trace.endpos[2], trace2.fraction, trace2.endpos[0], trace2.endpos[1], trace2.endpos[2], trace3.fraction, trace3.endpos[0], trace3.endpos[1], trace3.endpos[2]);
 						// accept the new trace if it made some progress
 						if (fabs(trace3.endpos[0] - trace.endpos[0]) >= 0.03125 || fabs(trace3.endpos[1] - trace.endpos[1]) >= 0.03125)

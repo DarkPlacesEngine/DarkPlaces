@@ -20,6 +20,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // sv_phys.c
 
 #include "quakedef.h"
+// used only for VM_GetTempString
+#include "prvm_cmds.h"
 
 /*
 
@@ -187,25 +189,73 @@ SV_Impact
 Two entities have touched, so run their touch functions
 ==================
 */
-void SV_Impact (prvm_edict_t *e1, prvm_edict_t *e2)
+void SV_Impact (prvm_edict_t *e1, trace_t *trace)
 {
 	int old_self, old_other;
+	prvm_edict_t *e2 = (prvm_edict_t *)trace->ent;
+	prvm_eval_t *val;
 
 	old_self = prog->globals.server->self;
 	old_other = prog->globals.server->other;
 
 	prog->globals.server->time = sv.time;
-	if (e1->fields.server->touch && e1->fields.server->solid != SOLID_NOT)
+	if (!e1->priv.server->free && !e2->priv.server->free && e1->fields.server->touch && e1->fields.server->solid != SOLID_NOT)
 	{
 		prog->globals.server->self = PRVM_EDICT_TO_PROG(e1);
 		prog->globals.server->other = PRVM_EDICT_TO_PROG(e2);
+		prog->globals.server->trace_allsolid = trace->allsolid;
+		prog->globals.server->trace_startsolid = trace->startsolid;
+		prog->globals.server->trace_fraction = trace->fraction;
+		prog->globals.server->trace_inwater = trace->inwater;
+		prog->globals.server->trace_inopen = trace->inopen;
+		VectorCopy (trace->endpos, prog->globals.server->trace_endpos);
+		VectorCopy (trace->plane.normal, prog->globals.server->trace_plane_normal);
+		prog->globals.server->trace_plane_dist =  trace->plane.dist;
+		if (trace->ent)
+			prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(trace->ent);
+		else
+			prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(prog->edicts);
+		if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dpstartcontents)))
+			val->_float = trace->startsupercontents;
+		if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphitcontents)))
+			val->_float = trace->hitsupercontents;
+		if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphitq3surfaceflags)))
+			val->_float = trace->hitq3surfaceflags;
+		if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphittexturename)))
+		{
+			if (trace->hittexture)
+			{
+				char *s = VM_GetTempString();
+				strlcpy(s, trace->hittexture->name, VM_STRINGTEMP_LENGTH);
+				val->string = PRVM_SetEngineString(s);
+			}
+			else
+				val->string = 0;
+		}
 		PRVM_ExecuteProgram (e1->fields.server->touch, "QC function self.touch is missing");
 	}
 
-	if (e2->fields.server->touch && e2->fields.server->solid != SOLID_NOT)
+	if (!e1->priv.server->free && !e2->priv.server->free && e2->fields.server->touch && e2->fields.server->solid != SOLID_NOT)
 	{
 		prog->globals.server->self = PRVM_EDICT_TO_PROG(e2);
 		prog->globals.server->other = PRVM_EDICT_TO_PROG(e1);
+		prog->globals.server->trace_allsolid = false;
+		prog->globals.server->trace_startsolid = false;
+		prog->globals.server->trace_fraction = 1;
+		prog->globals.server->trace_inwater = false;
+		prog->globals.server->trace_inopen = true;
+		VectorCopy (e2->fields.server->origin, prog->globals.server->trace_endpos);
+		VectorSet (prog->globals.server->trace_plane_normal, 0, 0, 1);
+		prog->globals.server->trace_plane_dist = 0;
+		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(e1);
+		if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dpstartcontents)))
+			val->_float = 0;
+		if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphitcontents)))
+			val->_float = 0;
+		if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphitq3surfaceflags)))
+			val->_float = 0;
+		if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphittexturename)))
+			val->string = 0;
 		PRVM_ExecuteProgram (e2->fields.server->touch, "QC function self.touch is missing");
 	}
 
@@ -377,7 +427,7 @@ int SV_FlyMove (prvm_edict_t *ent, float time, float *stepnormal)
 		// run the impact function
 		if (impact)
 		{
-			SV_Impact(ent, (prvm_edict_t *)trace.ent);
+			SV_Impact(ent, &trace);
 
 			// break if removed by the impact function
 			if (ent->priv.server->free)
@@ -530,7 +580,7 @@ trace_t SV_PushEntity (prvm_edict_t *ent, vec3_t push)
 	SV_LinkEdict (ent, true);
 
 	if (trace.ent && (!((int)ent->fields.server->flags & FL_ONGROUND) || ent->fields.server->groundentity != PRVM_EDICT_TO_PROG(trace.ent)))
-		SV_Impact (ent, (prvm_edict_t *)trace.ent);
+		SV_Impact (ent, &trace);
 	return trace;
 }
 
@@ -675,7 +725,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		if (!(((int)check->fields.server->flags & FL_ONGROUND) && PRVM_PROG_TO_EDICT(check->fields.server->groundentity) == pusher))
 		{
 			// if the entity is not inside the pusher's final position, leave it alone
-			if (!SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID).startsolid)
+			if (!SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY).startsolid)
 				continue;
 			// remove the onground flag for non-players
 			if (check->fields.server->movetype != MOVETYPE_WALK)

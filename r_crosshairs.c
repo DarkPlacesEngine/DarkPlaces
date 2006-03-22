@@ -82,7 +82,7 @@ void R_DrawWorldCrosshair(void)
 	AngleVectors(cl.viewangles, v2, NULL, NULL);
 	//VectorCopy(r_vieworigin, v1);
 	VectorMA(v1, 8192, v2, v2);
-	trace = CL_TraceBox(v1, vec3_origin, vec3_origin, v2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY, false);
+	trace = CL_TraceBox(v1, vec3_origin, vec3_origin, v2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, false);
 	spritescale = trace.fraction * (8192.0f / 40.0f) * crosshair_size.value;
 	VectorCopy(trace.endpos, spriteorigin);
 
