@@ -129,6 +129,14 @@ extern int eval_playerskin;
 extern int eval_SendEntity;
 extern int eval_Version;
 extern int eval_customizeentityforclient;
+extern int eval_dphitcontentsmask;
+
+extern int gval_trace_dpstartcontents;
+extern int gval_trace_dphitcontents;
+extern int gval_trace_dphitq3surfaceflags;
+extern int gval_trace_dphittexturename;
+
+
 
 extern mfunction_t *SV_PlayerPhysicsQC;
 extern mfunction_t *EndFrameQC;
@@ -264,7 +272,6 @@ extern int eval_playermodel;
 extern int eval_playerskin;
 
 #define PRVM_GETEDICTFIELDVALUE(ed, fieldoffset) (fieldoffset ? (prvm_eval_t *)((unsigned char *)ed->v + fieldoffset) : NULL)
-
 
 extern mfunction_t *SV_PlayerPhysicsQC;
 extern mfunction_t *EndFrameQC;

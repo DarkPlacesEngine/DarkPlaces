@@ -1201,7 +1201,7 @@ void CL_MoveParticles (void)
 			VectorCopy(p->org, org);
 			if (p->bounce)
 			{
-				trace = CL_TraceBox(oldorg, vec3_origin, vec3_origin, p->org, true, &hitent, SUPERCONTENTS_SOLID | (p->type == particletype + pt_rain ? SUPERCONTENTS_LIQUIDSMASK : 0), false);
+				trace = CL_TraceBox(oldorg, vec3_origin, vec3_origin, p->org, true, &hitent, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | (p->type == particletype + pt_rain ? SUPERCONTENTS_LIQUIDSMASK : 0), false);
 				// if the trace started in or hit something of SUPERCONTENTS_NODROP
 				// or if the trace hit something flagged as NOIMPACT
 				// then remove the particle
@@ -1326,7 +1326,7 @@ void CL_MoveParticles (void)
 				break;
 			case pt_rain:
 				a = CL_PointSuperContents(p->org);
-				if (a & (SUPERCONTENTS_SOLID | SUPERCONTENTS_LIQUIDSMASK))
+				if (a & (SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_LIQUIDSMASK))
 					p->type = NULL;
 				break;
 			case pt_snow:
@@ -1339,7 +1339,7 @@ void CL_MoveParticles (void)
 					//p->vel[2] = p->relativedirection[2] + lhrandom(-32, 32);
 				}
 				a = CL_PointSuperContents(p->org);
-				if (a & (SUPERCONTENTS_SOLID | SUPERCONTENTS_LIQUIDSMASK))
+				if (a & (SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_LIQUIDSMASK))
 					p->type = NULL;
 				break;
 			case pt_smoke:

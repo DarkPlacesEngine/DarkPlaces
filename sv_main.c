@@ -2154,6 +2154,12 @@ int eval_playerskin;
 int eval_SendEntity;
 int eval_Version;
 int eval_customizeentityforclient;
+int eval_dphitcontentsmask;
+
+int gval_trace_dpstartcontents;
+int gval_trace_dphitcontents;
+int gval_trace_dphitq3surfaceflags;
+int gval_trace_dphittexturename;
 
 mfunction_t *SV_PlayerPhysicsQC;
 mfunction_t *EndFrameQC;
@@ -2226,6 +2232,7 @@ void SV_VM_FindEdictFieldOffsets(void)
 	eval_SendEntity = PRVM_ED_FindFieldOffset("SendEntity");
 	eval_Version = PRVM_ED_FindFieldOffset("Version");
 	eval_customizeentityforclient = PRVM_ED_FindFieldOffset("customizeentityforclient");
+	eval_dphitcontentsmask = PRVM_ED_FindFieldOffset("dphitcontentsmask");
 
 	// LordHavoc: allowing QuakeC to override the player movement code
 	SV_PlayerPhysicsQC = PRVM_ED_FindFunction ("SV_PlayerPhysics");
@@ -2239,6 +2246,11 @@ void SV_VM_FindEdictFieldOffsets(void)
 		SV_InitCmd = PRVM_G_STRING(PRVM_ED_FindGlobal("SV_InitCmd")->ofs);
 	else
 		SV_InitCmd = NULL;
+
+	gval_trace_dpstartcontents = PRVM_ED_FindGlobalOffset("trace_dpstartcontents");
+	gval_trace_dphitcontents = PRVM_ED_FindGlobalOffset("trace_dphitcontents");
+	gval_trace_dphitq3surfaceflags = PRVM_ED_FindGlobalOffset("trace_dphitq3surfaceflags");
+	gval_trace_dphittexturename = PRVM_ED_FindGlobalOffset("trace_dphittexturename");
 }
 
 #define REQFIELDS (sizeof(reqfields) / sizeof(prvm_required_field_t))

@@ -62,6 +62,7 @@ int csqc_fieldoff_scale;
 int csqc_fieldoff_renderflags;
 int csqc_fieldoff_tag_entity;
 int csqc_fieldoff_tag_index;
+int csqc_fieldoff_dphitcontentsmask;
 
 qboolean csqc_loaded = false;
 

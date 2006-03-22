@@ -124,6 +124,16 @@ int PRVM_ED_FindFieldOffset(const char *field)
 	return d->ofs*4;
 }
 
+ddef_t*	PRVM_ED_FindGlobal(const char *name);
+int PRVM_ED_FindGlobalOffset(const char *global)
+{
+	ddef_t *d;
+	d = PRVM_ED_FindGlobal(global);
+	if (!d)
+		return 0;
+	return d->ofs*4;
+}
+
 qboolean PRVM_ProgLoaded(int prognr)
 {
 	if(prognr < 0 || prognr >= PRVM_MAXPROGS)

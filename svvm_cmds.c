@@ -111,6 +111,7 @@ char *vm_sv_extensions =
 "DP_TE_SMALLFLASH "
 "DP_TE_SPARK "
 "DP_TE_STANDARDEFFECTBUILTINS "
+"DP_TRACE_HITCONTENTSMASK_SURFACEINFO "
 "DP_VIEWZOOM "
 "EXT_BITSHIFT "
 //"EXT_CSQC " // not ready yet
@@ -431,6 +432,7 @@ void PF_traceline (void)
 	trace_t	trace;
 	int		move;
 	prvm_edict_t	*ent;
+	prvm_eval_t *val;
 
 	prog->xfunction->builtinsprofile += 30;
 
@@ -456,7 +458,23 @@ void PF_traceline (void)
 		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(trace.ent);
 	else
 		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(prog->edicts);
-	// FIXME: add trace_endcontents
+	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dpstartcontents)))
+		val->_float = trace.startsupercontents;
+	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphitcontents)))
+		val->_float = trace.hitsupercontents;
+	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphitq3surfaceflags)))
+		val->_float = trace.hitq3surfaceflags;
+	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphittexturename)))
+	{
+		if (trace.hittexture)
+		{
+			char *s = VM_GetTempString();
+			strlcpy(s, trace.hittexture->name, VM_STRINGTEMP_LENGTH);
+			val->string = PRVM_SetEngineString(s);
+		}
+		else
+			val->string = 0;
+	}
 }
 
 
@@ -478,6 +496,7 @@ void PF_tracebox (void)
 	trace_t	trace;
 	int		move;
 	prvm_edict_t	*ent;
+	prvm_eval_t *val;
 
 	prog->xfunction->builtinsprofile += 30;
 
@@ -505,6 +524,23 @@ void PF_tracebox (void)
 		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(trace.ent);
 	else
 		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(prog->edicts);
+	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dpstartcontents)))
+		val->_float = trace.startsupercontents;
+	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphitcontents)))
+		val->_float = trace.hitsupercontents;
+	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphitq3surfaceflags)))
+		val->_float = trace.hitq3surfaceflags;
+	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphittexturename)))
+	{
+		if (trace.hittexture)
+		{
+			char *s = VM_GetTempString();
+			strlcpy(s, trace.hittexture->name, VM_STRINGTEMP_LENGTH);
+			val->string = PRVM_SetEngineString(s);
+		}
+		else
+			val->string = 0;
+	}
 }
 
 extern trace_t SV_Trace_Toss (prvm_edict_t *ent, prvm_edict_t *ignore);
@@ -513,6 +549,7 @@ void PF_tracetoss (void)
 	trace_t	trace;
 	prvm_edict_t	*ent;
 	prvm_edict_t	*ignore;
+	prvm_eval_t *val;
 
 	prog->xfunction->builtinsprofile += 600;
 
@@ -535,6 +572,23 @@ void PF_tracetoss (void)
 		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(trace.ent);
 	else
 		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(prog->edicts);
+	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dpstartcontents)))
+		val->_float = trace.startsupercontents;
+	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphitcontents)))
+		val->_float = trace.hitsupercontents;
+	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphitq3surfaceflags)))
+		val->_float = trace.hitq3surfaceflags;
+	if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphittexturename)))
+	{
+		if (trace.hittexture)
+		{
+			char *s = VM_GetTempString();
+			strlcpy(s, trace.hittexture->name, VM_STRINGTEMP_LENGTH);
+			val->string = PRVM_SetEngineString(s);
+		}
+		else
+			val->string = 0;
+	}
 }
 
 

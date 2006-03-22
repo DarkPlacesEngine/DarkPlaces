@@ -101,6 +101,10 @@ qboolean SNDDMA_Init(void)
 		if ((i=COM_CheckParm("-sndstereo")) != 0)
 			if (channels != 2)
 				continue;
+// COMMANDLINEOPTION: SDL Sound: -sndquad sets sound output to 4 channel surround
+		if ((i=COM_CheckParm("-sndquad")) != 0)
+			if (channels != 4)
+				continue;
 		// Init the SDL Audio subsystem
 		wantspec.callback = Buffer_Callback;
 		wantspec.userdata = NULL;
