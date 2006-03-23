@@ -892,7 +892,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 		if (e->render.model)
 		{
 			// if model is alias or this is a tenebrae-like dlight, reverse pitch direction
-			if (e->render.model->type == mod_alias || (e->state_current.lightpflags & PFLAGS_FULLDYNAMIC))
+			if (e->render.model->type == mod_alias)
 				angles[0] = -angles[0];
 			if ((e->render.model->flags & EF_ROTATE) && (!e->state_current.tagentity && !(e->render.flags & RENDER_VIEWMODEL)))
 			{
@@ -905,6 +905,9 @@ void CL_LinkNetworkEntity(entity_t *e)
 			if (cl_prydoncursor.integer && (e->render.effects & EF_SELECTABLE) && cl.cmd.cursor_entitynumber == e->state_current.number)
 				VectorScale(e->render.colormod, 2, e->render.colormod);
 		}
+		// if model is alias or this is a tenebrae-like dlight, reverse pitch direction
+		else if (e->state_current.lightpflags & PFLAGS_FULLDYNAMIC)
+			angles[0] = -angles[0];
 
 		// animation lerp
 		if (e->render.frame2 == e->state_current.frame)
