@@ -502,7 +502,7 @@ trace_t CSSV_ClipMoveToEntity(prvm_edict_t *ent, const vec3_t start, const vec3_
 		model->TraceBox(model, frame, &trace, starttransformed, mins, maxs, endtransformed, hitsupercontents);
 	}
 	else
-		Collision_ClipTrace_Box(&trace, ent->fields.client->mins, ent->fields.client->maxs, starttransformed, mins, maxs, endtransformed, hitsupercontents, ent->fields.client->solid == SOLID_CORPSE ? SUPERCONTENTS_CORPSE : SUPERCONTENTS_BODY);
+		Collision_ClipTrace_Box(&trace, ent->fields.client->mins, ent->fields.client->maxs, starttransformed, mins, maxs, endtransformed, hitsupercontents, ent->fields.client->solid == SOLID_CORPSE ? SUPERCONTENTS_CORPSE : SUPERCONTENTS_BODY, 0, NULL);
 	trace.fraction = bound(0, trace.fraction, 1);
 	trace.realfraction = bound(0, trace.realfraction, 1);
 

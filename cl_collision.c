@@ -137,7 +137,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 
 				Matrix4x4_Transform(&ent->inversematrix, start, starttransformed);
 				Matrix4x4_Transform(&ent->inversematrix, end, endtransformed);
-				Collision_ClipTrace_Box(&trace, playermins, playermaxs, starttransformed, mins, maxs, endtransformed, hitsupercontentsmask, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY);
+				Collision_ClipTrace_Box(&trace, playermins, playermaxs, starttransformed, mins, maxs, endtransformed, hitsupercontentsmask, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY, 0, NULL);
 
 				// LordHavoc: take the 'best' answers from the new trace and combine with existing data
 				if (trace.allsolid)
