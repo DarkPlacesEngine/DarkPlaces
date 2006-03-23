@@ -1703,6 +1703,9 @@ void SV_SpawnServer (const char *server)
 // set up the new server
 //
 	memset (&sv, 0, sizeof(sv));
+	// if running a local client, make sure it doesn't try to access the last
+	// level's data which is no longer valiud
+	cls.signon = 0;
 
 	SV_VM_Setup();
 
