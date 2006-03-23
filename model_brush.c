@@ -2349,6 +2349,8 @@ static void Mod_Q1BSP_LoadClipnodes(lump_t *l, hullinfo_t *hullinfo)
 		out->planenum = LittleLong(in->planenum);
 		out->children[0] = LittleShort(in->children[0]);
 		out->children[1] = LittleShort(in->children[1]);
+		if (out->planenum < 0 || out->planenum >= loadmodel->brush.num_planes)
+			Host_Error("Corrupt clipping hull(out of range planenum)");
 		if (out->children[0] >= count || out->children[1] >= count)
 			Host_Error("Corrupt clipping hull(out of range child)");
 	}
