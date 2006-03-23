@@ -433,6 +433,7 @@ void R_Sky(void)
 		}
 		*/
 		GL_DepthTest(true);
+		GL_DepthMask(true);
 	}
 }
 
