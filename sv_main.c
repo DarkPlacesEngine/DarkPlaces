@@ -829,7 +829,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 				testorigin[0] = (ed->priv.server->cullmins[0] + ed->priv.server->cullmaxs[0]) * 0.5f;
 				testorigin[1] = (ed->priv.server->cullmins[1] + ed->priv.server->cullmaxs[1]) * 0.5f;
 				testorigin[2] = (ed->priv.server->cullmins[2] + ed->priv.server->cullmaxs[2]) * 0.5f;
-				sv.worldmodel->TraceBox(sv.worldmodel, 0, &trace, sv_writeentitiestoclient_testeye, sv_writeentitiestoclient_testeye, testorigin, testorigin, SUPERCONTENTS_SOLID);
+				sv.worldmodel->TraceBox(sv.worldmodel, 0, &trace, sv_writeentitiestoclient_testeye, vec3_origin, vec3_origin, testorigin, SUPERCONTENTS_SOLID);
 				if (trace.fraction == 1 || BoxesOverlap(trace.endpos, trace.endpos, ed->priv.server->cullmins, ed->priv.server->cullmaxs))
 					sv_writeentitiestoclient_client->visibletime[s->number] = realtime + 1;
 				else
@@ -838,7 +838,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 					testorigin[0] = lhrandom(ed->priv.server->cullmins[0], ed->priv.server->cullmaxs[0]);
 					testorigin[1] = lhrandom(ed->priv.server->cullmins[1], ed->priv.server->cullmaxs[1]);
 					testorigin[2] = lhrandom(ed->priv.server->cullmins[2], ed->priv.server->cullmaxs[2]);
-					sv.worldmodel->TraceBox(sv.worldmodel, 0, &trace, sv_writeentitiestoclient_testeye, sv_writeentitiestoclient_testeye, testorigin, testorigin, SUPERCONTENTS_SOLID);
+					sv.worldmodel->TraceBox(sv.worldmodel, 0, &trace, sv_writeentitiestoclient_testeye, vec3_origin, vec3_origin, testorigin, SUPERCONTENTS_SOLID);
 					if (trace.fraction == 1 || BoxesOverlap(trace.endpos, trace.endpos, ed->priv.server->cullmins, ed->priv.server->cullmaxs))
 						sv_writeentitiestoclient_client->visibletime[s->number] = realtime + 1;
 					else
@@ -849,7 +849,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 							testorigin[0] = lhrandom(ed->priv.server->cullmins[0], ed->priv.server->cullmaxs[0]);
 							testorigin[1] = lhrandom(ed->priv.server->cullmins[1], ed->priv.server->cullmaxs[1]);
 							testorigin[2] = lhrandom(ed->priv.server->cullmins[2], ed->priv.server->cullmaxs[2]);
-							sv.worldmodel->TraceBox(sv.worldmodel, 0, &trace, sv_writeentitiestoclient_testeye, sv_writeentitiestoclient_testeye, testorigin, testorigin, SUPERCONTENTS_SOLID);
+							sv.worldmodel->TraceBox(sv.worldmodel, 0, &trace, sv_writeentitiestoclient_testeye, vec3_origin, vec3_origin, testorigin, SUPERCONTENTS_SOLID);
 							if (trace.fraction == 1 || BoxesOverlap(trace.endpos, trace.endpos, ed->priv.server->cullmins, ed->priv.server->cullmaxs))
 								sv_writeentitiestoclient_client->visibletime[s->number] = realtime + 1;
 						}

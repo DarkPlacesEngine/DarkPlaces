@@ -902,7 +902,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			}
 			// transfer certain model flags to effects
 			e->render.effects |= e->render.model->flags2 & (EF_FULLBRIGHT | EF_ADDITIVE);
-			if (cl_prydoncursor.integer && (e->render.effects & EF_SELECTABLE) && cl.cmd.cursor_entitynumber == e->state_current.number)
+			if ((e->render.effects & EF_SELECTABLE) && cl.cmd.cursor_entitynumber == e->state_current.number)
 				VectorScale(e->render.colormod, 2, e->render.colormod);
 		}
 		// if model is alias or this is a tenebrae-like dlight, reverse pitch direction

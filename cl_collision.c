@@ -197,7 +197,7 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 	if (hitent)
 		*hitent = 0;
 	if (cl.worldmodel && cl.worldmodel->TraceBox)
-		cl.worldmodel->TraceBox(cl.worldmodel, 0, &trace, start, start, end, end, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY);
+		cl.worldmodel->TraceBox(cl.worldmodel, 0, &trace, start, vec3_origin, vec3_origin, end, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY);
 
 	if (normal)
 		VectorCopy(trace.plane.normal, normal);
@@ -245,7 +245,7 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 		Matrix4x4_Transform(&ent->inversematrix, end, endtransformed);
 
 		if (ent->model && ent->model->TraceBox)
-			ent->model->TraceBox(ent->model, ent->frameblend[0].frame, &trace, starttransformed, starttransformed, endtransformed, endtransformed, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY);
+			ent->model->TraceBox(ent->model, ent->frameblend[0].frame, &trace, starttransformed, vec3_origin, vec3_origin, endtransformed, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY);
 
 		if (maxrealfrac > trace.realfraction)
 		{
