@@ -754,7 +754,8 @@ unsigned char *loadimagepixels (const char *filename, qboolean complain, int mat
 			Mem_Free(f);
 			if (data)
 			{
-				Con_DPrintf("loaded image %s (%dx%d)\n", name, image_width, image_height);
+				if (developer.integer >= 10)
+					Con_Printf("loaded image %s (%dx%d)\n", name, image_width, image_height);
 				if (developer_memorydebug.integer)
 					Mem_CheckSentinelsGlobal();
 				return data;

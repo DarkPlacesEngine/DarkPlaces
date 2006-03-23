@@ -193,7 +193,7 @@ static void _Mem_FreeBlock(memheader_t *mem, const char *filename, int fileline)
 	{
 #endif
 		pool->realsize -= sizeof(memheader_t) + mem->size + sizeof(int);
-		if (developer.integer)
+		if (developer_memorydebug.integer)
 			memset(mem, 0xBF, sizeof(memheader_t) + mem->size + sizeof(int));
 		free(mem);
 #if MEMCLUMPING

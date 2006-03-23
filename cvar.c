@@ -262,7 +262,7 @@ void Cvar_SetQuick (cvar_t *var, const char *value)
 		return;
 	}
 
-	if (developer.integer)
+	if (developer.integer >= 100)
 		Con_Printf("Cvar_SetQuick({\"%s\", \"%s\", %i, \"%s\"}, \"%s\");\n", var->name, var->string, var->flags, var->defstring, value);
 
 	Cvar_SetQuick_Internal(var, value);
@@ -320,7 +320,7 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	cvar_t *current, *next, *cvar;
 	char *oldstr;
 
-	if (developer.integer)
+	if (developer.integer >= 100)
 		Con_Printf("Cvar_RegisterVariable({\"%s\", \"%s\", %i});\n", variable->name, variable->string, variable->flags);
 
 // first check to see if it has already been defined
@@ -329,7 +329,7 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	{
 		if (cvar->flags & CVAR_ALLOCATED)
 		{
-			if (developer.integer)
+			if (developer.integer >= 100)
 				Con_Printf("...  replacing existing allocated cvar {\"%s\", \"%s\", %i}\n", cvar->name, cvar->string, cvar->flags);
 			// fixed variables replace allocated ones
 			// (because the engine directly accesses fixed variables)
@@ -411,7 +411,7 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags)
 	int hashindex;
 	cvar_t *current, *next, *cvar;
 
-	if (developer.integer)
+	if (developer.integer >= 100)
 		Con_Printf("Cvar_Get(\"%s\", \"%s\", %i);\n", name, value, flags);
 
 // first check to see if it has already been defined

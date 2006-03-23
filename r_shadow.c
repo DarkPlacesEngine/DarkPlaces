@@ -2174,7 +2174,8 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 		}
 	}
 
-	Con_DPrintf("static light built: %f %f %f : %f %f %f box, %i shadow volume triangles (in %i meshes)\n", rtlight->cullmins[0], rtlight->cullmins[1], rtlight->cullmins[2], rtlight->cullmaxs[0], rtlight->cullmaxs[1], rtlight->cullmaxs[2], shadowtris, shadowmeshes);
+	if (developer.integer >= 10)
+		Con_Printf("static light built: %f %f %f : %f %f %f box, %i shadow volume triangles (in %i meshes)\n", rtlight->cullmins[0], rtlight->cullmins[1], rtlight->cullmins[2], rtlight->cullmaxs[0], rtlight->cullmaxs[1], rtlight->cullmaxs[2], shadowtris, shadowmeshes);
 }
 
 void R_RTLight_Uncompile(rtlight_t *rtlight)

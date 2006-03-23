@@ -1563,13 +1563,13 @@ void VM_fopen(void)
 
 	if (VM_FILES[filenum] == NULL)
 	{
-		if (developer.integer)
+		if (developer.integer >= 10)
 			Con_Printf("VM_fopen: %s: %s mode %s failed\n", PRVM_NAME, filename, modestring);
 		PRVM_G_FLOAT(OFS_RETURN) = -1;
 	}
 	else
 	{
-		if (developer.integer)
+		if (developer.integer >= 10)
 			Con_Printf("VM_fopen: %s: %s mode %s opened as #%i\n", PRVM_NAME, filename, modestring, filenum);
 		PRVM_G_FLOAT(OFS_RETURN) = filenum;
 	}
@@ -1600,7 +1600,7 @@ void VM_fclose(void)
 		Con_Printf("VM_fclose: no such file handle %i (or file has been closed) in %s\n", filenum, PRVM_NAME);
 		return;
 	}
-	if (developer.integer)
+	if (developer.integer >= 10)
 		Con_Printf("VM_fclose: %s: #%i closed\n", PRVM_NAME, filenum);
 	FS_Close(VM_FILES[filenum]);
 	VM_FILES[filenum] = NULL;
@@ -1650,7 +1650,7 @@ void VM_fgets(void)
 		if (c != '\n')
 			FS_UnGetc(VM_FILES[filenum], (unsigned char)c);
 	}
-	if (developer.integer >= 3)
+	if (developer.integer >= 100)
 		Con_Printf("fgets: %s: %s\n", PRVM_NAME, string);
 	if (c >= 0 || end)
 		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(string);
@@ -1688,7 +1688,7 @@ void VM_fputs(void)
 	VM_VarString(1, string, sizeof(string));
 	if ((stringlength = (int)strlen(string)))
 		FS_Write(VM_FILES[filenum], string, stringlength);
-	if (developer.integer)
+	if (developer.integer >= 100)
 		Con_Printf("fputs: %s: %s\n", PRVM_NAME, string);
 }
 

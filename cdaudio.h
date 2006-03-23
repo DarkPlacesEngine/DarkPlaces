@@ -18,6 +18,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
+typedef struct cl_cdstate_s
+{
+	qboolean Valid;
+	qboolean Playing;
+	qboolean PlayLooping;
+	unsigned char PlayTrack;
+}
+cl_cdstate_t;
+
+//extern cl_cdstate_t cd;
+
 extern qboolean cdValid;
 extern qboolean cdPlaying;
 extern qboolean cdPlayLooping;
