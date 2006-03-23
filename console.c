@@ -981,7 +981,7 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 					keyname[l] = 0;
 					if (!COM_ParseToken(&data, false))
 						break;
-					if (developer.integer >= 2)
+					if (developer.integer >= 100)
 						Con_Printf("key: %s %s\n", keyname, com_token);
 					if (!strcmp(keyname, "message"))
 					{

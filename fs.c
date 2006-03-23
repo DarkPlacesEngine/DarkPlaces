@@ -1331,8 +1331,8 @@ static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet)
 				// Found it
 				if (!diff)
 				{
-					if (!quiet)
-						Con_DPrintf("FS_FindFile: %s in %s\n",
+					if (!quiet && developer.integer >= 10)
+						Con_Printf("FS_FindFile: %s in %s\n",
 									pak->files[middle].name, pak->filename);
 
 					if (index != NULL)
@@ -1353,8 +1353,8 @@ static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet)
 			dpsnprintf(netpath, sizeof(netpath), "%s%s", search->filename, name);
 			if (FS_SysFileExists (netpath))
 			{
-				if (!quiet)
-					Con_DPrintf("FS_FindFile: %s\n", netpath);
+				if (!quiet && developer.integer >= 10)
+					Con_Printf("FS_FindFile: %s\n", netpath);
 
 				if (index != NULL)
 					*index = -1;
@@ -1363,8 +1363,8 @@ static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet)
 		}
 	}
 
-	if (!quiet)
-		Con_DPrintf("FS_FindFile: can't find %s\n", name);
+	if (!quiet && developer.integer >= 10)
+		Con_Printf("FS_FindFile: can't find %s\n", name);
 
 	if (index != NULL)
 		*index = -1;

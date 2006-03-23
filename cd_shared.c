@@ -60,6 +60,7 @@ qboolean cdPlaying = false;
 qboolean cdPlayLooping = false;
 unsigned char cdPlayTrack;
 
+cl_cdstate_t cd;
 
 static void CDAudio_Eject (void)
 {

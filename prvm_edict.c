@@ -1893,7 +1893,7 @@ int PRVM_SetEngineString(const char *s)
 		if (prog->knownstrings[i] == s)
 			return -1 - i;
 	// new unknown engine string
-	if (developer.integer >= 3)
+	if (developer.integer >= 100)
 		Con_Printf("new engine string %p\n", s);
 	for (i = prog->firstfreeknownstring;i < prog->numknownstrings;i++)
 		if (!prog->knownstrings[i])
