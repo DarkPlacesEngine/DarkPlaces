@@ -354,19 +354,18 @@ Send the intended movement message to the server
 */
 void CL_Move (void)
 {
-	vec3_t temp;
 	float mx, my;
 	static float old_mouse_x = 0, old_mouse_y = 0;
 
 	// clamp before the move to prevent starting with bad angles
 	CL_AdjustAngles ();
 
-	// get basic movement from keyboard
-	// PRYDON_CLIENTCURSOR needs to survive basemove resets
-	VectorCopy (cl.cmd.cursor_screen, temp);
-	memset (&cl.cmd, 0, sizeof(cl.cmd));
-	VectorCopy (temp, cl.cmd.cursor_screen);
+	// reset some of the command fields
+	cl.cmd.forwardmove = 0;
+	cl.cmd.sidemove = 0;
+	cl.cmd.upmove = 0;
 
+	// get basic movement from keyboard
 	if (in_strafe.state & 1)
 	{
 		cl.cmd.sidemove += cl_sidespeed.value * CL_KeyState (&in_right);
