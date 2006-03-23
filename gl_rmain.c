@@ -1029,7 +1029,7 @@ void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, 
 	if (permutation & SHADERPERMUTATION_MODE_LIGHTSOURCE)
 	{
 		R_Mesh_TexMatrix(3, &r_shadow_entitytolight);
-		if (r_glsl_permutation->loc_Texture_Cube >= 0) R_Mesh_TexBind(3, R_GetTexture(r_shadow_rtlight->currentcubemap));
+		//if (r_glsl_permutation->loc_Texture_Cube >= 0) R_Mesh_TexBindCubeMap(3, R_GetTexture(r_shadow_rtlight->currentcubemap));
 		if (r_glsl_permutation->loc_LightPosition >= 0) qglUniform3fARB(r_glsl_permutation->loc_LightPosition, r_shadow_entitylightorigin[0], r_shadow_entitylightorigin[1], r_shadow_entitylightorigin[2]);
 		if (r_glsl_permutation->loc_LightColor >= 0) qglUniform3fARB(r_glsl_permutation->loc_LightColor, lightcolorbase[0], lightcolorbase[1], lightcolorbase[2]);
 		if (r_glsl_permutation->loc_AmbientScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_AmbientScale, r_shadow_rtlight->ambientscale);
@@ -2802,27 +2802,26 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 		// transparent sky would be ridiculous
 		if (!(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
 		{
-			GL_DepthMask(true);
 			if (skyrendernow)
 			{
 				skyrendernow = false;
-				if (skyrendermasked)
-				{
-					R_Sky();
-					// restore entity matrix and GL_Color
-					R_Mesh_Matrix(&ent->matrix);
-					GL_Color(1,1,1,1);
-				}
+				R_Sky();
+				// restore entity matrix
+				R_Mesh_Matrix(&ent->matrix);
 			}
+			GL_DepthMask(true);
 			// LordHavoc: HalfLife maps have freaky skypolys...
 			//if (!ent->model->brush.ishlbsp)
 			{
+				GL_Color(fogcolor[0], fogcolor[1], fogcolor[2], 1);
+				memset(&m, 0, sizeof(m));
+				R_Mesh_State(&m);
 				if (skyrendermasked)
 				{
 					// depth-only (masking)
 					GL_ColorMask(0,0,0,0);
-					// just to make sure that braindead drivers don't draw anything
-					// despite that colormask...
+					// just to make sure that braindead drivers don't draw
+					// anything despite that colormask...
 					GL_BlendFunc(GL_ZERO, GL_ONE);
 				}
 				else
@@ -2830,9 +2829,6 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 					// fog sky
 					GL_BlendFunc(GL_ONE, GL_ZERO);
 				}
-				GL_Color(fogcolor[0], fogcolor[1], fogcolor[2], 1);
-				memset(&m, 0, sizeof(m));
-				R_Mesh_State(&m);
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
 					surface = texturesurfacelist[texturesurfaceindex];
