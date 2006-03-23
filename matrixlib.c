@@ -164,15 +164,15 @@ void Matrix4x4_Normalize (matrix4x4_t *out, matrix4x4_t *in1)
 	// note: this is only designed to undo uniform scaling
 	double scale = 1.0 / sqrt(in1->m[0][0] * in1->m[0][0] + in1->m[0][1] * in1->m[0][1] + in1->m[0][2] * in1->m[0][2]);
 	out->m[0][0] = (float)(in1->m[0][0] * scale);
-	out->m[0][1] = (float)(in1->m[1][0] * scale);
-	out->m[0][2] = (float)(in1->m[2][0] * scale);
+	out->m[0][1] = (float)(in1->m[0][1] * scale);
+	out->m[0][2] = (float)(in1->m[0][2] * scale);
 	out->m[0][3] = (float)(in1->m[0][3]);
-	out->m[1][0] = (float)(in1->m[0][1] * scale);
+	out->m[1][0] = (float)(in1->m[1][0] * scale);
 	out->m[1][1] = (float)(in1->m[1][1] * scale);
-	out->m[1][2] = (float)(in1->m[2][1] * scale);
+	out->m[1][2] = (float)(in1->m[1][2] * scale);
 	out->m[1][3] = (float)(in1->m[1][3]);
-	out->m[2][0] = (float)(in1->m[0][2] * scale);
-	out->m[2][1] = (float)(in1->m[1][2] * scale);
+	out->m[2][0] = (float)(in1->m[2][0] * scale);
+	out->m[2][1] = (float)(in1->m[2][1] * scale);
 	out->m[2][2] = (float)(in1->m[2][2] * scale);
 	out->m[2][3] = (float)(in1->m[2][3]);
 	out->m[3][0] = 0;
