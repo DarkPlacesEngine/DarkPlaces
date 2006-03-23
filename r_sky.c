@@ -432,6 +432,7 @@ void R_Sky(void)
 			//GL_Clear(GL_DEPTH_BUFFER_BIT);
 		}
 		*/
+		GL_DepthTest(true);
 	}
 }
 
