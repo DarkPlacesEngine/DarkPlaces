@@ -865,7 +865,7 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace,
 	}
 }
 
-void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cmaxs, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask, int boxsupercontents)
+void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cmaxs, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask, int boxsupercontents, int boxq3surfaceflags, texture_t *boxtexture)
 {
 #if 1
 	colbrushf_t cbox;
@@ -890,6 +890,12 @@ void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cm
 	cbox_planes[3].normal[0] =  0;cbox_planes[3].normal[1] = -1;cbox_planes[3].normal[2] =  0;cbox_planes[3].dist = maxs[1] - cmins[1];
 	cbox_planes[4].normal[0] =  0;cbox_planes[4].normal[1] =  0;cbox_planes[4].normal[2] =  1;cbox_planes[4].dist = cmaxs[2] - mins[2];
 	cbox_planes[5].normal[0] =  0;cbox_planes[5].normal[1] =  0;cbox_planes[5].normal[2] = -1;cbox_planes[5].dist = maxs[2] - cmins[2];
+	cbox_planes[0].supercontents = boxsupercontents;cbox_planes[0].q3surfaceflags = boxq3surfaceflags;cbox_planes[0].texture = boxtexture;
+	cbox_planes[1].supercontents = boxsupercontents;cbox_planes[1].q3surfaceflags = boxq3surfaceflags;cbox_planes[1].texture = boxtexture;
+	cbox_planes[2].supercontents = boxsupercontents;cbox_planes[2].q3surfaceflags = boxq3surfaceflags;cbox_planes[2].texture = boxtexture;
+	cbox_planes[3].supercontents = boxsupercontents;cbox_planes[3].q3surfaceflags = boxq3surfaceflags;cbox_planes[3].texture = boxtexture;
+	cbox_planes[4].supercontents = boxsupercontents;cbox_planes[4].q3surfaceflags = boxq3surfaceflags;cbox_planes[4].texture = boxtexture;
+	cbox_planes[5].supercontents = boxsupercontents;cbox_planes[5].q3surfaceflags = boxq3surfaceflags;cbox_planes[5].texture = boxtexture;
 	memset(trace, 0, sizeof(trace_t));
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 	trace->fraction = 1;
@@ -3398,7 +3404,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 
 	//Mod_Q1BSP_ProcessLightList();
 
-	if (developer.integer)
+	if (developer.integer >= 10)
 		Con_Printf("Some stats for q1bsp model \"%s\": %i faces, %i nodes, %i leafs, %i visleafs, %i visleafportals\n", loadmodel->name, loadmodel->num_surfaces, loadmodel->brush.num_nodes, loadmodel->brush.num_leafs, mod->brush.num_pvsclusters, loadmodel->brush.num_portals);
 }
 
@@ -3960,7 +3966,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 										if (!COM_ParseToken(&text, true))
 											break;
 									}
-									if (developer.integer >= 2)
+									if (developer.integer >= 100)
 									{
 										Con_Printf("%s %i: ", shadername, passnumber);
 										for (j = 0;j < numparameters;j++)
@@ -4005,7 +4011,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 							}
 							if (i == 0 && !strcasecmp(com_token, "}"))
 								break;
-							if (developer.integer >= 2)
+							if (developer.integer >= 100)
 							{
 								Con_Printf("%s: ", shadername);
 								for (j = 0;j < numparameters;j++)
@@ -4500,7 +4506,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			n = LittleLong(in->effectindex);
 			if (n < -1 || n >= loadmodel->brushq3.num_effects)
 			{
-				if (developer.integer >= 2)
+				if (developer.integer >= 100)
 					Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid effectindex %i (%i effects)\n", i, out->texture->name, n, loadmodel->brushq3.num_effects);
 				n = -1;
 			}
@@ -4587,7 +4593,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				numtriangles = (finalwidth - 1) * (finalheight - 1) * 2;
 				break;
 			case Q3FACETYPE_FLARE:
-				if (developer.integer >= 2)
+				if (developer.integer >= 100)
 					Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): Q3FACETYPE_FLARE not supported (yet)\n", i, out->texture->name);
 				// don't render it
 				continue;
@@ -4676,7 +4682,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				Q3PatchTesselateFloat(4, sizeof(float[4]), (out->groupmesh->data_lightmapcolor4f + 4 * out->num_firstvertex), patchsize[0], patchsize[1], sizeof(float[4]), originalcolor4f, xtess, ytess);
 				Q3PatchTriangleElements((out->groupmesh->data_element3i + 3 * out->num_firsttriangle), finalwidth, finalheight, out->num_firstvertex);
 				out->num_triangles = Mod_RemoveDegenerateTriangles(out->num_triangles, (out->groupmesh->data_element3i + 3 * out->num_firsttriangle), (out->groupmesh->data_element3i + 3 * out->num_firsttriangle), out->groupmesh->data_vertex3f);
-				if (developer.integer >= 2)
+				if (developer.integer >= 100)
 				{
 					if (out->num_triangles < finaltriangles)
 						Con_Printf("Mod_Q3BSP_LoadFaces: %ix%i curve subdivided to %i vertices / %i triangles, %i degenerate triangles removed (leaving %i)\n", patchsize[0], patchsize[1], out->num_vertices, finaltriangles, finaltriangles - out->num_triangles, out->num_triangles);
@@ -4719,7 +4725,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				oldnumtriangles = out->num_triangles;
 				oldnumtriangles2 = out->num_collisiontriangles;
 				out->num_collisiontriangles = Mod_RemoveDegenerateTriangles(out->num_collisiontriangles, out->data_collisionelement3i, out->data_collisionelement3i, out->data_collisionvertex3f);
-				if (developer.integer)
+				if (developer.integer >= 100)
 					Con_Printf("Mod_Q3BSP_LoadFaces: %ix%i curve became %i:%i vertices / %i:%i triangles (%i:%i degenerate)\n", patchsize[0], patchsize[1], out->num_vertices, out->num_collisionvertices, oldnumtriangles, oldnumtriangles2, oldnumtriangles - out->num_triangles, oldnumtriangles2 - out->num_collisiontriangles);
 				break;
 			default:

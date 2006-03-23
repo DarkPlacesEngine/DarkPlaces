@@ -403,7 +403,7 @@ void Collision_CalcPlanesForPolygonBrushFloat(colbrushf_t *brush)
 			brush->planes[3].dist = DotProduct(brush->points[0].v, brush->planes[3].normal);
 			brush->planes[4].dist = DotProduct(brush->points[1].v, brush->planes[4].normal);
 
-			if (developer.integer)
+			if (developer.integer >= 100)
 			{
 				// validation code
 #if 0
@@ -488,7 +488,7 @@ void Collision_CalcPlanesForPolygonBrushFloat(colbrushf_t *brush)
 		}
 	}
 
-	if (developer.integer)
+	if (developer.integer >= 100)
 	{
 		// validity check - will be disabled later
 		Collision_ValidateBrush(brush);
@@ -533,7 +533,7 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 			nplane2 -= thatbrush_start->numplanes;
 			startplane = thisbrush_start->planes + nplane2;
 			endplane = thisbrush_end->planes + nplane2;
-			if (developer.integer)
+			if (developer.integer >= 100)
 			{
 				// any brush with degenerate planes is not worth handling
 				if (DotProduct(startplane->normal, startplane->normal) < 0.9f || DotProduct(endplane->normal, endplane->normal) < 0.9f)
@@ -552,7 +552,7 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 		{
 			startplane = thatbrush_start->planes + nplane2;
 			endplane = thatbrush_end->planes + nplane2;
-			if (developer.integer)
+			if (developer.integer >= 100)
 			{
 				// any brush with degenerate planes is not worth handling
 				if (DotProduct(startplane->normal, startplane->normal) < 0.9f || DotProduct(endplane->normal, endplane->normal) < 0.9f)
@@ -677,7 +677,7 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 		endplane = thatbrush_end->planes + nplane;
 		d1 = DotProduct(startplane->normal, linestart) - startplane->dist - collision_startnudge.value;
 		d2 = DotProduct(endplane->normal, lineend) - endplane->dist - collision_endnudge.value;
-		if (developer.integer)
+		if (developer.integer >= 100)
 		{
 			// any brush with degenerate planes is not worth handling
 			if (DotProduct(startplane->normal, startplane->normal) < 0.9f || DotProduct(endplane->normal, endplane->normal) < 0.9f)
