@@ -1002,9 +1002,6 @@ static const gamemode_info_t gamemode_info [] =
 // GAME_ZYMOTIC
 // COMMANDLINEOPTION: Game: -zymotic runs the singleplayer game Zymotic
 { "zymotic",		"-zymotic",		"Zymotic",				"basezym",		NULL,			"zymotic",		"zymotic" },
-// GAME_FNIGGIUM
-// COMMANDLINEOPTION: Game: -fniggium runs the post apocalyptic melee RPG Fniggium
-{ "fniggium",		"-fniggium",	"Fniggium",				"data",		NULL,			"fniggium",		"fniggium" },
 // GAME_SETHERAL
 // COMMANDLINEOPTION: Game: -setheral runs the multiplayer game Setheral
 { "setheral",		"-setheral",	"Setheral",				"data",		NULL,			"setheral",		"setheral" },

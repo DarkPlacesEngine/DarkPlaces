@@ -246,7 +246,6 @@ typedef enum gamemode_e
 	GAME_TEU,
 	GAME_BATTLEMECH,
 	GAME_ZYMOTIC,
-	GAME_FNIGGIUM,
 	GAME_SETHERAL,
 	GAME_SOM,
 	GAME_TENEBRAE, // full of evil hackery
