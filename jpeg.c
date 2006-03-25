@@ -534,8 +534,10 @@ unsigned char* JPEG_LoadImage (const unsigned char *f, int filesize, int matchwi
 	scanline = (unsigned char *)Mem_Alloc(tempmempool, image_width * cinfo.output_components);
 	if (!image_rgba || !scanline)
 	{
-		if (!image_rgba)
+		if (image_rgba)
 			Mem_Free (image_rgba);
+		if (scanline)
+			Mem_Free (scanline);
 
 		Con_Printf("JPEG_LoadImage: not enough memory for %i by %i image\n", image_width, image_height);
 		qjpeg_finish_decompress (&cinfo);
