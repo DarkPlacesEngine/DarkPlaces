@@ -1,6 +1,7 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
 -d (Baalz) bug darkplaces input: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
 -d (Black) bug darkplaces console: $* expansion should not include $0 (Black)
+-d (Carni) bug darkplaces client: prydon cursor highlighting of EF_SELECTABLE entities flickers with lower server framerate than client framerate (carni)
 -d (Edward Holness) feature darkplaces console: add condump command to output recent console history (note: wordwrap will remain, trailing spaces will be stripped though), and add it to the readme (Edward Holness)
 -d (FrikaC) bug darkplaces console: alias test "echo 1";test;echo 2 should print 1 then 2, not 2 then 1 or an error (div0, FrikaC)
 -d (FrikaC) bug darkplaces server: call checkvelocity (to clear NaNs) every time velocity is set in physics, to fix frikbot (tell FrikaC)
@@ -16,14 +17,10 @@
 -d (Morphed) bug darkplaces renderer: Morphed's colormapping experiments in nexuiz show a difference in gloss color with GLSL vs dot3 path, http://img494.imageshack.us/img494/8745/nexuiz0000258lf.jpg http://www.nexuiz.com/forums/index.php?showtopic=1531 - and apparently it looks right or wrong depending on view point, suddenly switching (Morphed)
 -d (Mr Fribbles) feature darkplaces particles: reimplement quake effects for a cl_particles_quake mode (Mr Fribbles, metlslime)
 -d (QuakeMatt) change darkplaces menu: remove gl_combine from menu as it's not saved to config and really shouldn't be changed except when debugging drivers (QuakeMatt)
--d (Sajt) bug dpmod: shouldn't get double kill for killing something and its corpse (Sajt)
 -d (Speedy) feature darkplaces init: add -demolooponly option which makes escape key quit, and disables all other keys (Speedy)
 -d (Spike) change darkplaces prvm: disable the unknown opcode error in progs loading so that fteqcc fastarrays progs will load (Spike)
+-d (Supa, Wazat, SavageX, Vermeulen, Spike) feature darkplaces server: make a DP_SV_CUSTOMIZEENTITYFORCLIENT extension which calls a .float customizeentityforclient() function for each client that may see the entity, the function returns TRUE if it should send, FALSE if it should not, and is fully capable of editing the entity's fields, this allows cloaked players to appear less transparent to their teammates, navigation markers to only show to their team, etc (Urre, Supa, Wazat, SavageX, Vermeulen, Spike)
 -d (Toddd) bug darkplaces client: fix gl_flashblend, it's still drawing rtdlights even when gl_flashblend is on (Toddd)
--d (Urre) bug darkplaces client: figure out why multimap demos are skipping the later portions, it's probably related to the time seeking, probably not being reset (Urre)
--d (Urre) bug darkplaces server: dropclient() is not calling ClientDisconnect on bots during the first level they exist in, it is called on later levels (Urre)
--d (Urre) feature darkplaces protocol: add "sendcvar <cvarname>" command which executes on clients and forwards a "sentcvar <cvarname> <cvarvalue>" to the server, which the qc can catch (Urre)
--d (Urre, Supa, Wazat, SavageX, Vermeulen, Spike) feature darkplaces server: make a DP_SV_CUSTOMIZEENTITYFORCLIENT extension which calls a .float customizeentityforclient() function for each client that may see the entity, the function returns TRUE if it should send, FALSE if it should not, and is fully capable of editing the entity's fields, this allows cloaked players to appear less transparent to their teammates, navigation markers to only show to their team, etc (Urre, Supa, Wazat, SavageX, Vermeulen, Spike)
 -d (Vermeulen) bug darkplaces physics: q3bsp collisions are still glitchy, particularly gunshots hitting thin air near brushes, even with mod_q3bsp_optimizedtraceline 0, test in dpdm2r by shooting down through gaps in the architecture around the top platform (Vermeulen)
 -d (Vermeulen) bug darkplaces protocol: sometimes players are invisible in nexuiz, showing only their gun model, this may be related to svc_precache messages not being sent during signon (Vermeulen)
 -d (Wazat) bug darkplaces renderer: make sure that unlit maps show up fullbright (Wazat)
@@ -43,8 +40,7 @@
 -f (Wazat) bug darkplaces: client's slowmo detection (measuring packet times and comparing to game time changes) may be making the game unpleasant (Wazat)
 0 bug darkplaces client: GAME_NEHAHRA: make sure cutscenes and movies work, got a report of seeing a black screen (NightFright)
 0 bug darkplaces client: fix cl_bobmodel bug which momentarily jolts the gun when you pass through a trigger, pick up an item, etc, Sajt thinks this is related to console prints as well as centerprint (Sajt)
-0 bug darkplaces client: prydon cursor highlighting of EF_SELECTABLE entities flickers with lower server framerate than client framerate (carni)
-0 buf darkplaces collision: frikbots are falling through the map (Sajt)
+0 bug darkplaces collision: frikbots are falling through the map (Sajt)
 0 bug darkplaces csqc: after the drawqueue was eliminated, the CSQC probably can't draw 2D polygons the same way, so it may need fixing ([515])
 0 bug darkplaces csqc: engine-based rocket entities have a trail but they don't glow if csqc is used
 0 bug darkplaces loader: make rtlight entity loader support q3map/q3map2 lights properly, they use a spawnflag for LINEAR mode, by default they use 1/(x*x) falloff (Carni, motorsep)
@@ -464,6 +460,7 @@ d bug darkplaces client: color codes are not supported in centerprint messages (
 d bug darkplaces client: crosshair_static 0 breaks if self is EF_NODRAW (NecroPhil)
 d bug darkplaces client: disable vsync when doing a timedemo (Randy)
 d bug darkplaces client: do replay cl_movement queue each time a move is added, as this is called from the server packet parser, which can overwhelm the client with several packets in one frame, leading to a complete lockup until the level changes (Black)
+d bug darkplaces client: figure out why multimap demos are skipping the later portions, it's probably related to the time seeking, probably not being reset (Urre)
 d bug darkplaces client: finale text during episode-end intermissions shows briefly in its entirety and all as one line (going off the screen), then disappears and begins typing slowly as it should (Sajt)
 d bug darkplaces client: make envmap command work with the corrected layout
 d bug darkplaces client: make server queries use a queue to avoid flooding out queries too fast (Willis)
@@ -546,6 +543,7 @@ d bug darkplaces server: add TE_FLAMEJET builtin and add extension (Supajoe)
 d bug darkplaces server: add color code to start of chat message to prevent nick colors from messing up the text color
 d bug darkplaces server: cl_movement 0 clients can pogostick jump and do quake2 style double jumps... why?  answer: id1 qc move was clearing self.button2 each time it jumped, which causes it to pogostick when client input rate is lower than server framerate, fixed. (div)
 d bug darkplaces server: don't clear player entity when loading a savegame
+d bug darkplaces server: dropclient() is not calling ClientDisconnect on bots during the first level they exist in, it is called on later levels (Urre)
 d bug darkplaces server: inconsistent packet timing produces jerky movement (constantly pausing every other frame or so), this is probably the dedicated server's sleep pattern, fixable by using the client's sleep pattern which wastes more cpu time but is more accurate (green`marine)
 d bug darkplaces server: local server is not being killed when you join another server (Vermeulen, suminigashi, Willis)
 d bug darkplaces server: losing clientcolors somehow during connect in dpmod
@@ -558,6 +556,7 @@ d bug darkplaces server: when trying to load a map that is missing the model is 
 d bug darkplaces sound: spatialization bug occurs in The Ascension of Vigil, making all player and monster sounds far to the right (RenegadeC)
 d bug dpmod: fix the 'shell casing spawning at wrong player' bug somehow
 d bug dpmod: items aren't respawning in coop, they should
+d bug dpmod: shouldn't get double kill for killing something and its corpse (Sajt)
 d bug dpmodel: scale parameter isn't affecting animations (Ghostface)
 d bug hmap2: strip .map extension from filename if present
 d bug zmodel: makefile should support mingw
@@ -1106,6 +1105,7 @@ d feature darkplaces menu: add lan searching to the server browser and related c
 d feature darkplaces networking: add "packet serverip:port command" command to send out of band packets, and hexdump the replies (Spike)
 d feature darkplaces physics: add a sv_ cvar to disable demonland.wav when monsters fall, this would allow getting rid of the GAME_NEXUIZ check in that code
 d feature darkplaces playerphysics: add sv_maxairspeed cvar and use it in sv_user.c, default 30 to match quake player physics (Vermeulen)
+d feature darkplaces protocol: add "sendcvar <cvarname>" command which executes on clients and forwards a "sentcvar <cvarname> <cvarvalue>" to the server, which the qc can catch (Urre)
 d feature darkplaces protocol: add PRYDON_CLIENTCURSOR extension - clientside mouse with highlighting of selected entities with the EF_SELECTABLE flag, and qc fields on the client entity on the server would indicate which entity the cursor is highlighting as well as where it is (Urre, Harb, FrikaC)
 d feature darkplaces protocol: allow sending of additional precaches during game, this needs to send a reliable message to all connected clients stating the new filename to load, and also to be sent to new connections (VorteX, Vermeulen)
 d feature darkplaces renderer: add a nearclip cvar (Tomaz)
