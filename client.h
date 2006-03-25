@@ -912,6 +912,9 @@ extern cvar_t m_yaw;
 extern cvar_t m_forward;
 extern cvar_t m_side;
 
+extern cvar_t cl_autodemo;
+extern cvar_t cl_autodemo_nameformat;
+
 extern cvar_t r_draweffects;
 
 extern cvar_t cl_explosions_alpha_start;

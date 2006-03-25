@@ -281,6 +281,27 @@ void Host_Map_f (void)
 	SV_SpawnServer(level);
 	if (sv.active && cls.state == ca_disconnected)
 		CL_EstablishConnection("local:1");
+
+// if cl_autodemo is set, automatically start recording a demo if one isn't being recorded already
+	if (cl_autodemo.integer && !cls.demorecording)
+	{
+		char demofile[MAX_OSPATH];
+
+		dpsnprintf (demofile, sizeof(demofile), "%s_%s.dem", Sys_TimeString (cl_autodemo_nameformat.string), level);
+
+		Con_Printf ("Recording to %s.\n", demofile);
+
+		cls.demofile = FS_Open (demofile, "wb", false, false);
+		if (cls.demofile)
+		{
+			cls.forcetrack = -1;
+			FS_Printf (cls.demofile, "%i\n", cls.forcetrack);
+		}
+		else
+			Con_Print ("ERROR: couldn't open.\n");
+
+		cls.demorecording = true;
+	}
 }
 
 /*
