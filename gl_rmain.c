@@ -2811,7 +2811,10 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 			}
 			GL_DepthMask(true);
 			// LordHavoc: HalfLife maps have freaky skypolys...
-			//if (!ent->model->brush.ishlbsp)
+			// LordHavoc: Quake3 never did sky masking (unlike software Quake
+			// and Quake2), so disable the sky masking in Quake3 maps as it
+			// causes problems with q3map2 sky tricks
+			if (!ent->model->brush.ishlbsp && ent->model->type != mod_brushq3)
 			{
 				GL_Color(fogcolor[0], fogcolor[1], fogcolor[2], 1);
 				memset(&m, 0, sizeof(m));
