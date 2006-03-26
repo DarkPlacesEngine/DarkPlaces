@@ -147,7 +147,6 @@ extern cvar_t r_nearclip;
 
 // forces all rendering to draw triangle outlines
 extern cvar_t r_showtris;
-extern cvar_t r_showtris_polygonoffset;
 extern cvar_t r_shownormals;
 extern cvar_t r_showlighting;
 extern cvar_t r_showshadowvolumes;
@@ -155,7 +154,6 @@ extern cvar_t r_showcollisionbrushes;
 extern cvar_t r_showcollisionbrushes_polygonfactor;
 extern cvar_t r_showcollisionbrushes_polygonoffset;
 extern cvar_t r_showdisabledepthtest;
-extern int r_showtrispass;
 
 //
 // view origin
@@ -172,6 +170,10 @@ extern int r_view_width;
 extern int r_view_height;
 extern int r_view_depth;
 extern matrix4x4_t r_view_matrix;
+extern float r_polygonfactor;
+extern float r_polygonoffset;
+extern float r_shadowpolygonfactor;
+extern float r_shadowpolygonoffset;
 
 extern	mleaf_t		*r_viewleaf, *r_oldviewleaf;
 

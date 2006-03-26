@@ -503,7 +503,7 @@ void R_Q1BSP_Draw(entity_render_t *ent)
 	if (model == NULL)
 		return;
 	R_DrawSurfaces(ent, false);
-	if (r_showcollisionbrushes.integer && model->brush.num_brushes && !r_showtrispass)
+	if (r_showcollisionbrushes.integer && model->brush.num_brushes)
 	{
 		int i;
 		msurface_t *surface;
@@ -512,14 +512,14 @@ void R_Q1BSP_Draw(entity_render_t *ent)
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 		GL_DepthMask(false);
 		GL_DepthTest(!r_showdisabledepthtest.integer);
-		qglPolygonOffset(r_showcollisionbrushes_polygonfactor.value, r_showcollisionbrushes_polygonoffset.value);
+		qglPolygonOffset(r_polygonfactor + r_showcollisionbrushes_polygonfactor.value, r_polygonoffset + r_showcollisionbrushes_polygonoffset.value);
 		for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
 			if (brush->colbrushf && brush->colbrushf->numtriangles)
 				R_DrawCollisionBrush(brush->colbrushf);
 		for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
 			if (surface->num_collisiontriangles)
 				R_DrawCollisionSurface(ent, surface);
-		qglPolygonOffset(0, 0);
+		qglPolygonOffset(r_polygonfactor, r_polygonoffset);
 	}
 }
 

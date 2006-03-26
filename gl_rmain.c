@@ -48,9 +48,6 @@ qboolean r_rtdlight;
 qboolean r_rtdlightshadows;
 
 
-// forces all rendering to draw triangle outlines
-int r_showtrispass;
-
 // view origin
 vec3_t r_vieworigin;
 vec3_t r_viewforward;
@@ -64,7 +61,10 @@ int r_view_width;
 int r_view_height;
 int r_view_depth;
 matrix4x4_t r_view_matrix;
-
+float r_polygonfactor;
+float r_polygonoffset;
+float r_shadowpolygonfactor;
+float r_shadowpolygonoffset;
 //
 // screen size info
 //
@@ -72,7 +72,6 @@ refdef_t r_refdef;
 
 cvar_t r_nearclip = {0, "r_nearclip", "1", "distance from camera of nearclip plane" };
 cvar_t r_showtris = {0, "r_showtris", "0", "shows triangle outlines, value controls brightness (can be above 1)"};
-cvar_t r_showtris_polygonoffset = {0, "r_showtris_polygonoffset", "-10", "nudges triangle outlines in hardware depth units, used to make outlines appear infront of walls"};
 cvar_t r_shownormals = {0, "r_shownormals", "0", "shows per-vertex surface normals and tangent vectors for bumpmapped lighting"};
 cvar_t r_showlighting = {0, "r_showlighting", "0", "shows areas lit by lights, useful for finding out why some areas of a map render slowly (bright orange = lots of passes = slow), a value of 2 disables depth testing which can be interesting but not very useful"};
 cvar_t r_showshadowvolumes = {0, "r_showshadowvolumes", "0", "shows areas shadowed by lights, useful for finding out why some areas of a map render slowly (bright blue = lots of passes = slow), a value of 2 disables depth testing which can be interesting but not very useful"};
@@ -1169,7 +1168,6 @@ void GL_Main_Init(void)
 	FOG_registercvars(); // FIXME: move this fog stuff to client?
 	Cvar_RegisterVariable(&r_nearclip);
 	Cvar_RegisterVariable(&r_showtris);
-	Cvar_RegisterVariable(&r_showtris_polygonoffset);
 	Cvar_RegisterVariable(&r_shownormals);
 	Cvar_RegisterVariable(&r_showlighting);
 	Cvar_RegisterVariable(&r_showshadowvolumes);
@@ -1825,6 +1823,10 @@ void R_RenderView(void)
 	r_rtdlight = (r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer) && !gl_flashblend.integer;
 	r_rtdlightshadows = r_rtdlight && (r_rtworld ? r_shadow_realtime_world_dlightshadows.integer : r_shadow_realtime_dlight_shadows.integer) && gl_stencil;
 	r_lightmapintensity = r_rtworld ? r_shadow_realtime_world_lightmaps.value : 1;
+	r_polygonfactor = 0;
+	r_polygonoffset = 0;
+	r_shadowpolygonfactor = r_polygonfactor + r_shadow_shadow_polygonfactor.value;
+	r_shadowpolygonoffset = r_polygonoffset + r_shadow_shadow_polygonoffset.value;
 
 	// GL is weird because it's bottom to top, r_view_y is top to bottom
 	qglViewport(r_view_x, vid.height - (r_view_y + r_view_height), r_view_width, r_view_height);
@@ -1838,12 +1840,12 @@ void R_RenderView(void)
 		R_TimeReport("setup");
 
 	qglDepthFunc(GL_LEQUAL);
-	qglPolygonOffset(0, 0);
+	qglPolygonOffset(r_polygonfactor, r_polygonoffset);
 	qglEnable(GL_POLYGON_OFFSET_FILL);
 
 	R_RenderScene();
 
-	qglPolygonOffset(0, 0);
+	qglPolygonOffset(r_polygonfactor, r_polygonoffset);
 	qglDisable(GL_POLYGON_OFFSET_FILL);
 
 	R_BlendView();
@@ -1890,12 +1892,12 @@ void CSQC_R_ClearScreen (void)
 void CSQC_R_RenderScene (void)
 {
 	qglDepthFunc(GL_LEQUAL);
-	qglPolygonOffset(0, 0);
+	qglPolygonOffset(r_polygonfactor, r_polygonoffset);
 	qglEnable(GL_POLYGON_OFFSET_FILL);
 
 	R_RenderScene();
 
-	qglPolygonOffset(0, 0);
+	qglPolygonOffset(r_polygonfactor, r_polygonoffset);
 	qglDisable(GL_POLYGON_OFFSET_FILL);
 
 	R_BlendView();
@@ -1949,123 +1951,85 @@ void R_RenderScene(void)
 
 	R_Shadow_UpdateWorldLightSelection();
 
-	for (r_showtrispass = 0;r_showtrispass <= (r_showtris.value > 0);r_showtrispass++)
+	if (cl.csqc_vidvars.drawworld)
 	{
-		if (r_showtrispass)
-		{
-			rmeshstate_t m;
-			r_showtrispass = 0;
-			GL_BlendFunc(GL_ONE, GL_ONE);
-			GL_DepthTest(!r_showdisabledepthtest.integer);
-			GL_DepthMask(GL_FALSE);
-			memset(&m, 0, sizeof(m));
-			R_Mesh_State(&m);
-			//qglEnable(GL_LINE_SMOOTH);
-			qglEnable(GL_POLYGON_OFFSET_LINE);
-			qglPolygonOffset(0, r_showtris_polygonoffset.value);
-			r_showtrispass = 1;
-		}
-
-		if (cl.csqc_vidvars.drawworld)
-		{
-			// don't let sound skip if going slow
-			if (r_refdef.extraupdate)
-				S_ExtraUpdate ();
-
-			if (r_showtrispass)
-				GL_ShowTrisColor(0.025, 0.025, 0, 1);
-			if (r_refdef.worldmodel && r_refdef.worldmodel->DrawSky)
-			{
-				r_refdef.worldmodel->DrawSky(r_refdef.worldentity);
-				if (r_timereport_active)
-					R_TimeReport("worldsky");
-			}
-
-			if (R_DrawBrushModelsSky() && r_timereport_active)
-				R_TimeReport("bmodelsky");
-
-			if (r_showtrispass)
-				GL_ShowTrisColor(0.05, 0.05, 0.05, 1);
-			if (r_refdef.worldmodel && r_refdef.worldmodel->Draw)
-			{
-				r_refdef.worldmodel->Draw(r_refdef.worldentity);
-				if (r_timereport_active)
-					R_TimeReport("world");
-			}
-		}
-
 		// don't let sound skip if going slow
 		if (r_refdef.extraupdate)
 			S_ExtraUpdate ();
 
-		if (r_showtrispass)
-			GL_ShowTrisColor(0, 0.015, 0, 1);
-
-		R_DrawModels();
-		if (r_timereport_active)
-			R_TimeReport("models");
-
-		// don't let sound skip if going slow
-		if (r_refdef.extraupdate)
-			S_ExtraUpdate ();
-
-		if (r_showtrispass)
-			GL_ShowTrisColor(0, 0, 0.033, 1);
-		R_ShadowVolumeLighting(false);
-		if (r_timereport_active)
-			R_TimeReport("rtlights");
-
-		// don't let sound skip if going slow
-		if (r_refdef.extraupdate)
-			S_ExtraUpdate ();
-
-		if (r_showtrispass)
-			GL_ShowTrisColor(0.1, 0, 0, 1);
-
-		if (cl.csqc_vidvars.drawworld)
+		if (r_refdef.worldmodel && r_refdef.worldmodel->DrawSky)
 		{
-			R_DrawLightningBeams();
+			r_refdef.worldmodel->DrawSky(r_refdef.worldentity);
 			if (r_timereport_active)
-				R_TimeReport("lightning");
-
-			R_DrawParticles();
-			if (r_timereport_active)
-				R_TimeReport("particles");
-
-			R_DrawExplosions();
-			if (r_timereport_active)
-				R_TimeReport("explosions");
+				R_TimeReport("worldsky");
 		}
 
-		R_MeshQueue_RenderTransparent();
-		if (r_timereport_active)
-			R_TimeReport("drawtrans");
+		if (R_DrawBrushModelsSky() && r_timereport_active)
+			R_TimeReport("bmodelsky");
 
-		if (cl.csqc_vidvars.drawworld)
+		if (r_refdef.worldmodel && r_refdef.worldmodel->Draw)
 		{
-			R_DrawCoronas();
+			r_refdef.worldmodel->Draw(r_refdef.worldentity);
 			if (r_timereport_active)
-				R_TimeReport("coronas");
-		}
-		if(cl.csqc_vidvars.drawcrosshair)
-		{
-			R_DrawWorldCrosshair();
-			if (r_timereport_active)
-				R_TimeReport("crosshair");
-		}
-
-		VM_AddPolygonsToMeshQueue();
-
-		R_MeshQueue_Render();
-
-		if (r_showtrispass)
-		{
-			//qglDisable(GL_LINE_SMOOTH);
-			qglDisable(GL_POLYGON_OFFSET_LINE);
+				R_TimeReport("world");
 		}
 	}
 
-	r_showtrispass = 0;
+	// don't let sound skip if going slow
+	if (r_refdef.extraupdate)
+		S_ExtraUpdate ();
+
+	R_DrawModels();
+	if (r_timereport_active)
+		R_TimeReport("models");
+
+	// don't let sound skip if going slow
+	if (r_refdef.extraupdate)
+		S_ExtraUpdate ();
+
+	R_ShadowVolumeLighting(false);
+	if (r_timereport_active)
+		R_TimeReport("rtlights");
+
+	// don't let sound skip if going slow
+	if (r_refdef.extraupdate)
+		S_ExtraUpdate ();
+
+	if (cl.csqc_vidvars.drawworld)
+	{
+		R_DrawLightningBeams();
+		if (r_timereport_active)
+			R_TimeReport("lightning");
+
+		R_DrawParticles();
+		if (r_timereport_active)
+			R_TimeReport("particles");
+
+		R_DrawExplosions();
+		if (r_timereport_active)
+			R_TimeReport("explosions");
+	}
+
+	R_MeshQueue_RenderTransparent();
+	if (r_timereport_active)
+		R_TimeReport("drawtrans");
+
+	if (cl.csqc_vidvars.drawworld)
+	{
+		R_DrawCoronas();
+		if (r_timereport_active)
+			R_TimeReport("coronas");
+	}
+	if(cl.csqc_vidvars.drawcrosshair)
+	{
+		R_DrawWorldCrosshair();
+		if (r_timereport_active)
+			R_TimeReport("crosshair");
+	}
+
+	VM_AddPolygonsToMeshQueue();
+
+	R_MeshQueue_Render();
 
 	R_MeshQueue_EndScene();
 
@@ -3117,47 +3081,6 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				}
 			}
 		}
-		if (r_shownormals.integer && !r_showtrispass)
-		{
-			int j, k;
-			float v[3];
-			GL_DepthTest(!r_showdisabledepthtest.integer);
-			GL_DepthMask(texture->currentlayers->depthmask);
-			GL_BlendFunc(texture->currentlayers->blendfunc1, texture->currentlayers->blendfunc2);
-			memset(&m, 0, sizeof(m));
-			R_Mesh_State(&m);
-			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-			{
-				surface = texturesurfacelist[texturesurfaceindex];
-				RSurf_SetVertexPointer(ent, texture, surface, modelorg, false, true);
-				GL_Color(1, 0, 0, 1);
-				qglBegin(GL_LINES);
-				for (j = 0, k = surface->num_firstvertex;j < surface->num_vertices;j++, k++)
-				{
-					VectorCopy(rsurface_vertex3f + k * 3, v);
-					qglVertex3f(v[0], v[1], v[2]);
-					VectorMA(v, 8, rsurface_svector3f + k * 3, v);
-					qglVertex3f(v[0], v[1], v[2]);
-				}
-				GL_Color(0, 0, 1, 1);
-				for (j = 0, k = surface->num_firstvertex;j < surface->num_vertices;j++, k++)
-				{
-					VectorCopy(rsurface_vertex3f + k * 3, v);
-					qglVertex3f(v[0], v[1], v[2]);
-					VectorMA(v, 8, rsurface_tvector3f + k * 3, v);
-					qglVertex3f(v[0], v[1], v[2]);
-				}
-				GL_Color(0, 1, 0, 1);
-				for (j = 0, k = surface->num_firstvertex;j < surface->num_vertices;j++, k++)
-				{
-					VectorCopy(rsurface_vertex3f + k * 3, v);
-					qglVertex3f(v[0], v[1], v[2]);
-					VectorMA(v, 8, rsurface_normal3f + k * 3, v);
-					qglVertex3f(v[0], v[1], v[2]);
-				}
-				qglEnd();
-			}
-		}
 	}
 	if ((texture->textureflags & Q3TEXTUREFLAG_TWOSIDED) || (ent->flags & RENDER_NOCULLFACE))
 		qglEnable(GL_CULL_FACE);
@@ -3308,9 +3231,86 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	}
 	if (numsurfacelist)
 		R_QueueTextureSurfaceList(ent, texture, numsurfacelist, surfacelist, modelorg);
-	if (!r_showtrispass)
-		renderstats.entities_triangles += counttriangles;
+	renderstats.entities_triangles += counttriangles;
 	if (gl_support_fragment_shader)
 		qglUseProgramObjectARB(0);
+
+	if (r_showtris.integer || r_shownormals.integer)
+	{
+		int k, l;
+		const int *elements;
+		rmeshstate_t m;
+		vec3_t v;
+		GL_DepthTest(true);
+		GL_DepthMask(true);
+		if (r_showdisabledepthtest.integer)
+			qglDepthFunc(GL_ALWAYS);
+		GL_BlendFunc(GL_ONE, GL_ZERO);
+		memset(&m, 0, sizeof(m));
+		R_Mesh_State(&m);
+		for (i = 0, j = model->firstmodelsurface, surface = model->data_surfaces + j;i < model->nummodelsurfaces;i++, j++, surface++)
+		{
+			if (ent == r_refdef.worldentity && !r_worldsurfacevisible[j])
+				continue;
+			texture = surface->texture->currentframe;
+			if ((texture->currentmaterialflags & flagsmask) && surface->num_triangles)
+			{
+				RSurf_SetVertexPointer(ent, texture, surface, modelorg, false, r_shownormals.integer != 0);
+				if (r_showtris.integer)
+				{
+					if (!texture->currentlayers->depthmask)
+						GL_Color(r_showtris.value, 0, 0, 1);
+					else if (ent == r_refdef.worldentity)
+						GL_Color(r_showtris.value, r_showtris.value, r_showtris.value, 1);
+					else
+						GL_Color(0, r_showtris.value, 0, 1);
+					elements = (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle);
+					qglBegin(GL_LINES);
+					for (k = 0;k < surface->num_triangles;k++, elements += 3)
+					{
+						qglArrayElement(elements[0]);qglArrayElement(elements[1]);
+						qglArrayElement(elements[1]);qglArrayElement(elements[2]);
+						qglArrayElement(elements[2]);qglArrayElement(elements[0]);
+					}
+					qglEnd();
+				}
+				if (r_shownormals.integer)
+				{
+					GL_Color(r_shownormals.value, 0, 0, 1);
+					qglBegin(GL_LINES);
+					for (k = 0, l = surface->num_firstvertex;k < surface->num_vertices;k++, l++)
+					{
+						VectorCopy(rsurface_vertex3f + l * 3, v);
+						qglVertex3f(v[0], v[1], v[2]);
+						VectorMA(v, 8, rsurface_svector3f + l * 3, v);
+						qglVertex3f(v[0], v[1], v[2]);
+					}
+					qglEnd();
+					GL_Color(0, 0, r_shownormals.value, 1);
+					qglBegin(GL_LINES);
+					for (k = 0, l = surface->num_firstvertex;k < surface->num_vertices;k++, l++)
+					{
+						VectorCopy(rsurface_vertex3f + l * 3, v);
+						qglVertex3f(v[0], v[1], v[2]);
+						VectorMA(v, 8, rsurface_tvector3f + l * 3, v);
+						qglVertex3f(v[0], v[1], v[2]);
+					}
+					qglEnd();
+					GL_Color(0, r_shownormals.value, 0, 1);
+					qglBegin(GL_LINES);
+					for (k = 0, l = surface->num_firstvertex;k < surface->num_vertices;k++, l++)
+					{
+						VectorCopy(rsurface_vertex3f + l * 3, v);
+						qglVertex3f(v[0], v[1], v[2]);
+						VectorMA(v, 8, rsurface_normal3f + l * 3, v);
+						qglVertex3f(v[0], v[1], v[2]);
+					}
+					qglEnd();
+				}
+			}
+		}
+		if (r_showdisabledepthtest.integer)
+			qglDepthFunc(GL_LEQUAL);
+	}
 }
 

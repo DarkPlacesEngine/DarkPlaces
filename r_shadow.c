@@ -876,15 +876,7 @@ void R_Shadow_RenderMode_StencilShadowVolumes(void)
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
-	if (!r_showtrispass)
-		qglPolygonOffset(r_shadow_shadow_polygonfactor.value, r_shadow_shadow_polygonoffset.value);
-	//if (r_shadow_shadow_polygonoffset.value != 0)
-	//{
-	//	qglPolygonOffset(r_shadow_shadow_polygonfactor.value, r_shadow_shadow_polygonoffset.value);
-	//	qglEnable(GL_POLYGON_OFFSET_FILL);
-	//}
-	//else
-	//	qglDisable(GL_POLYGON_OFFSET_FILL);
+	qglPolygonOffset(r_shadowpolygonfactor, r_shadowpolygonoffset);
 	qglDepthFunc(GL_LESS);
 	qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 	qglEnable(GL_STENCIL_TEST);
@@ -918,8 +910,7 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent)
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
-	if (!r_showtrispass)
-		qglPolygonOffset(0, 0);
+	qglPolygonOffset(r_polygonfactor, r_polygonoffset);
 	//qglDisable(GL_POLYGON_OFFSET_FILL);
 	GL_Color(1, 1, 1, 1);
 	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
@@ -962,8 +953,7 @@ void R_Shadow_RenderMode_VisibleShadowVolumes(void)
 	GL_BlendFunc(GL_ONE, GL_ONE);
 	GL_DepthMask(false);
 	GL_DepthTest(!r_showdisabledepthtest.integer);
-	if (!r_showtrispass)
-		qglPolygonOffset(0, 0);
+	qglPolygonOffset(r_polygonfactor, r_polygonoffset);
 	GL_Color(0.0, 0.0125, 0.1, 1);
 	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
 	qglDepthFunc(GL_GEQUAL);
@@ -979,8 +969,7 @@ void R_Shadow_RenderMode_VisibleLighting(qboolean stenciltest, qboolean transpar
 	GL_BlendFunc(GL_ONE, GL_ONE);
 	GL_DepthMask(false);
 	GL_DepthTest(!r_showdisabledepthtest.integer);
-	if (!r_showtrispass)
-		qglPolygonOffset(0, 0);
+	qglPolygonOffset(r_polygonfactor, r_polygonoffset);
 	GL_Color(0.1, 0.0125, 0, 1);
 	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
 	if (transparent)
@@ -1003,8 +992,7 @@ void R_Shadow_RenderMode_End(void)
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
 	GL_DepthTest(true);
-	if (!r_showtrispass)
-		qglPolygonOffset(0, 0);
+	qglPolygonOffset(r_polygonfactor, r_polygonoffset);
 	//qglDisable(GL_POLYGON_OFFSET_FILL);
 	GL_Color(1, 1, 1, 1);
 	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
