@@ -422,7 +422,7 @@ void R_TimeReport(char *desc)
 	int length;
 	int t;
 
-	if (r_speeds.integer < 2 || !r_timereport_active || r_showtrispass)
+	if (r_speeds.integer < 2 || !r_timereport_active)
 		return;
 
 	qglFinish();
@@ -1296,7 +1296,6 @@ void SCR_UpdateLoadingScreen (void)
 	// don't do anything if not initialized yet
 	if (vid_hidden)
 		return;
-	r_showtrispass = 0;
 	VID_UpdateGamma(false);
 	qglViewport(0, 0, vid.width, vid.height);
 	//qglDisable(GL_SCISSOR_TEST);
@@ -1412,8 +1411,6 @@ void CL_UpdateScreen(void)
 
 	if (r_timereport_active)
 		R_TimeReport("start");
-
-	r_showtrispass = 0;
 
 	CHECKGLERROR
 	qglViewport(0, 0, vid.width, vid.height);

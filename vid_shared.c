@@ -239,6 +239,7 @@ void (GLAPIENTRY *qglCopyTexSubImage3D)(GLenum target, GLint level, GLint xoffse
 void (GLAPIENTRY *qglScissor)(GLint x, GLint y, GLsizei width, GLsizei height);
 
 void (GLAPIENTRY *qglPolygonOffset)(GLfloat factor, GLfloat units);
+void (GLAPIENTRY *qglPolygonMode)(GLenum face, GLenum mode);
 
 //[515]: added on 29.07.2005
 void (GLAPIENTRY *qglLineWidth)(GLfloat width);
@@ -466,6 +467,7 @@ static dllfunction_t opengl110funcs[] =
 	{"glCopyTexSubImage2D", (void **) &qglCopyTexSubImage2D},
 	{"glScissor", (void **) &qglScissor},
 	{"glPolygonOffset", (void **) &qglPolygonOffset},
+	{"glPolygonMode", (void **) &qglPolygonMode},
 	{NULL, NULL}
 };
 

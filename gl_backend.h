@@ -19,7 +19,6 @@ void GL_DepthMask(int state);
 void GL_DepthTest(int state);
 void GL_ColorMask(int r, int g, int b, int a);
 void GL_Color(float cr, float cg, float cb, float ca);
-void GL_ShowTrisColor(float cr, float cg, float cb, float ca);
 void GL_TransformToScreen(const vec4_t in, vec4_t out);
 void GL_LockArrays(int first, int count);
 void GL_ActiveTexture(unsigned int num);

@@ -3,9 +3,6 @@
 -d (Black) bug darkplaces console: $* expansion should not include $0 (Black)
 -d (Carni) bug darkplaces client: prydon cursor highlighting of EF_SELECTABLE entities flickers with lower server framerate than client framerate (carni)
 -d (Edward Holness) feature darkplaces console: add condump command to output recent console history (note: wordwrap will remain, trailing spaces will be stripped though), and add it to the readme (Edward Holness)
--d (FrikaC) bug darkplaces console: alias test "echo 1";test;echo 2 should print 1 then 2, not 2 then 1 or an error (div0, FrikaC)
--d (FrikaC) bug darkplaces server: call checkvelocity (to clear NaNs) every time velocity is set in physics, to fix frikbot (tell FrikaC)
--d (FrikaC) bug hmap2: make sure seconds reports in all tools don't print secondssss when they're printing shorter and shorter updates (FrikaC)
 -d (Gilgamesh) feature darkplaces protocol: add back colormod extension (FrikaC, Uffe, Gilgamesh, Wazat)
 -d (Gleeb) feature darkplaces server: add sv_playerphysicsqc cvar to allow engine to ignore SV_PlayerPhysics function, this would also have to change the reported extensions (Gleeb)
 -d (HellToupee) feature darkplaces client: add a dot crosshair texture (HellToupee)
@@ -151,6 +148,7 @@
 0 feature darkplaces website: add q1source.zip to downloads page and suggest that mingw/Dev-C++ users may need the dx headers from it (cpuforbrain)
 0 feature darkplaces: .vis files - like .lit but replacement vis data, note this also requires .leaf files (knghtbrd)
 0 feature dpmaster: don't filter by protocol version if query is for protocol version 0, this way server browsers can see multiple versions of a single game, should probably also add a 'any' gamename that disables gamename filtering (Angst, Elric)
+0 feature dpmod: add a g_spawnprotectiontime cvar which would default to 1 (invulnerable for 1 second after spawn) to prevent mining the spawn points
 0 feature dpmod: add a summon command using KRIMZON_SV_PARSECLIENTCOMMAND which would summon the specified monster infront of you (Kedhrin)
 0 feature dpmod: add knight/hell knight swords as player weapons (TimeServ)
 0 feature dpmod: add mode with respawning monsters
@@ -469,6 +467,7 @@ d bug darkplaces client: te_customflash isn't working? (Wazat)
 d bug darkplaces collision: check Urre's sltest.bsp and slopestuck.dem and fix the sticking bug, which only happens with sv_newflymove 1 (Urre)
 d bug darkplaces commands: say command is not posting to server console (Vermeulen)
 d bug darkplaces console: $variable expansion is not working on forwarded commands like "say I'm $_cl_name", it does work on local commands like set (esteel, Black)
+d bug darkplaces console: alias test "echo 1";test;echo 2 should print 1 then 2, not 2 then 1 or an error (div0, FrikaC)
 d bug darkplaces console: chat messages are showing up in brown quake characters and having ^7 and such printed literally
 d bug darkplaces console: console script lines that are too long (1024+ characters) crash (NecroPhil, Black)
 d bug darkplaces console: inserting characters in the commandline is not adding a nul terminator to the commandline, resulting in lots of trash from older commandlines suddenly showing up (Spike)
@@ -541,6 +540,7 @@ d bug darkplaces server: .colormap is not being set on DP_SV_BOTCLIENT entities 
 d bug darkplaces server: SV_SpawnServer should send reconnect command using per-client reliable messages, because sv.reliable_datagram is being cleared
 d bug darkplaces server: add TE_FLAMEJET builtin and add extension (Supajoe)
 d bug darkplaces server: add color code to start of chat message to prevent nick colors from messing up the text color
+d bug darkplaces server: call checkvelocity (to clear NaNs) every time velocity is set in physics, to fix frikbot (tell FrikaC)
 d bug darkplaces server: cl_movement 0 clients can pogostick jump and do quake2 style double jumps... why?  answer: id1 qc move was clearing self.button2 each time it jumped, which causes it to pogostick when client input rate is lower than server framerate, fixed. (div)
 d bug darkplaces server: don't clear player entity when loading a savegame
 d bug darkplaces server: dropclient() is not calling ClientDisconnect on bots during the first level they exist in, it is called on later levels (Urre)
@@ -558,6 +558,7 @@ d bug dpmod: fix the 'shell casing spawning at wrong player' bug somehow
 d bug dpmod: items aren't respawning in coop, they should
 d bug dpmod: shouldn't get double kill for killing something and its corpse (Sajt)
 d bug dpmodel: scale parameter isn't affecting animations (Ghostface)
+d bug hmap2: make sure seconds reports in all tools don't print secondssss when they're printing shorter and shorter updates (FrikaC)
 d bug hmap2: strip .map extension from filename if present
 d bug zmodel: makefile should support mingw
 d change darkplaces client: add some particles to teleportsplash (Uffe)

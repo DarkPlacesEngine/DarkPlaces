@@ -120,6 +120,9 @@ typedef double GLclampd;
 #define GL_LINEAR_MIPMAP_NEAREST		0x2701
 #define GL_LINEAR_MIPMAP_LINEAR			0x2703
 
+#define GL_LINE					0x1B01
+#define GL_FILL					0x1B02
+
 extern int gl_support_anisotropy;
 extern int gl_max_anisotropy;
 #define GL_TEXTURE_MAX_ANISOTROPY_EXT		0x84FE
@@ -483,6 +486,7 @@ extern void (GLAPIENTRY *qglCopyTexSubImage1D)(GLenum target, GLint level, GLint
 extern void (GLAPIENTRY *qglCopyTexSubImage2D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint x, GLint y, GLsizei width, GLsizei height);
 
 extern void (GLAPIENTRY *qglPolygonOffset)(GLfloat factor, GLfloat units);
+extern void (GLAPIENTRY *qglPolygonMode)(GLenum face, GLenum mode);
 
 //[515]: added on 29.07.2005
 extern void (GLAPIENTRY *qglLineWidth)(GLfloat width);
