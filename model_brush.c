@@ -4459,7 +4459,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 	// is also not a deluxemapped bsp if it has an odd number of lightmaps or
 	// less than 2
 	loadmodel->brushq3.deluxemapping = true;
-	if (count >= 2 && !(count & 1))
+	if (loadmodel->brushq3.num_lightmaps >= 2 && !(loadmodel->brushq3.num_lightmaps & 1))
 	{
 		for (i = 0;i < count;i++)
 		{
