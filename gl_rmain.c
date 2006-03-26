@@ -3236,7 +3236,9 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 				GL_Color((k & 15) * (1.0f / 16.0f), ((k >> 4) & 15) * (1.0f / 16.0f), ((k >> 8) & 15) * (1.0f / 16.0f), 0.2f);
 				RSurf_SetVertexPointer(ent, texture, surface, modelorg, false, false);
 				RSurf_Draw(surface);
+				renderstats.entities_triangles += surface->num_triangles;
 			}
+			renderstats.entities_surfaces++;
 		}
 	}
 	else if (ent == r_refdef.worldentity)
