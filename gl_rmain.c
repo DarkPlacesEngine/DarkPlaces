@@ -71,6 +71,7 @@ float r_shadowpolygonoffset;
 refdef_t r_refdef;
 
 cvar_t r_nearclip = {0, "r_nearclip", "1", "distance from camera of nearclip plane" };
+cvar_t r_showsurfaces = {0, "r_showsurfaces", "0", "shows surfaces as different colors"};
 cvar_t r_showtris = {0, "r_showtris", "0", "shows triangle outlines, value controls brightness (can be above 1)"};
 cvar_t r_shownormals = {0, "r_shownormals", "0", "shows per-vertex surface normals and tangent vectors for bumpmapped lighting"};
 cvar_t r_showlighting = {0, "r_showlighting", "0", "shows areas lit by lights, useful for finding out why some areas of a map render slowly (bright orange = lots of passes = slow), a value of 2 disables depth testing which can be interesting but not very useful"};
@@ -1167,6 +1168,7 @@ void GL_Main_Init(void)
 	Cmd_AddCommand("r_glsl_restart", R_GLSL_Restart_f, "unloads GLSL shaders, they will then be reloaded as needed\n");
 	FOG_registercvars(); // FIXME: move this fog stuff to client?
 	Cvar_RegisterVariable(&r_nearclip);
+	Cvar_RegisterVariable(&r_showsurfaces);
 	Cvar_RegisterVariable(&r_showtris);
 	Cvar_RegisterVariable(&r_shownormals);
 	Cvar_RegisterVariable(&r_showlighting);
@@ -1827,6 +1829,14 @@ void R_RenderView(void)
 	r_polygonoffset = 0;
 	r_shadowpolygonfactor = r_polygonfactor + r_shadow_shadow_polygonfactor.value;
 	r_shadowpolygonoffset = r_polygonoffset + r_shadow_shadow_polygonoffset.value;
+	if (r_showsurfaces.integer)
+	{
+		r_rtworld = false;
+		r_rtworldshadows = false;
+		r_rtdlight = false;
+		r_rtdlightshadows = false;
+		r_lightmapintensity = 0;
+	}
 
 	// GL is weird because it's bottom to top, r_view_y is top to bottom
 	qglViewport(r_view_x, vid.height - (r_view_y + r_view_height), r_view_width, r_view_height);
@@ -1875,6 +1885,18 @@ void CSQC_R_ClearScreen (void)
 	r_rtdlight = (r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer) && !gl_flashblend.integer;
 	r_rtdlightshadows = r_rtdlight && (r_rtworld ? r_shadow_realtime_world_dlightshadows.integer : r_shadow_realtime_dlight_shadows.integer) && gl_stencil;
 	r_lightmapintensity = r_rtworld ? r_shadow_realtime_world_lightmaps.value : 1;
+	r_polygonfactor = 0;
+	r_polygonoffset = 0;
+	r_shadowpolygonfactor = r_polygonfactor + r_shadow_shadow_polygonfactor.value;
+	r_shadowpolygonoffset = r_polygonoffset + r_shadow_shadow_polygonoffset.value;
+	if (r_showsurfaces.integer)
+	{
+		r_rtworld = false;
+		r_rtworldshadows = false;
+		r_rtdlight = false;
+		r_rtdlightshadows = false;
+		r_lightmapintensity = 0;
+	}
 
 	// GL is weird because it's bottom to top, r_view_y is top to bottom
 	qglViewport(r_view_x, vid.height - (r_view_y + r_view_height), r_view_width, r_view_height);
@@ -2316,6 +2338,36 @@ void R_Mesh_AddBrushMeshFromPlanes(rmesh_t *mesh, int numplanes, mplane_t *plane
 		// generate elements forming a triangle fan for this polygon
 		R_Mesh_AddPolygon3f(mesh, tempnumpoints, temppoints[w]);
 	}
+}
+
+static void R_DrawCollisionBrush(colbrushf_t *brush)
+{
+	int i;
+	rmeshstate_t m;
+	memset(&m, 0, sizeof(m));
+	m.pointer_vertex = brush->points->v;
+	R_Mesh_State(&m);
+	i = (int)(((size_t)brush) / sizeof(colbrushf_t));
+	GL_Color((i & 31) * (1.0f / 32.0f), ((i >> 5) & 31) * (1.0f / 32.0f), ((i >> 10) & 31) * (1.0f / 32.0f), 0.2f);
+	GL_LockArrays(0, brush->numpoints);
+	R_Mesh_Draw(0, brush->numpoints, brush->numtriangles, brush->elements);
+	GL_LockArrays(0, 0);
+}
+
+static void R_DrawCollisionSurface(entity_render_t *ent, msurface_t *surface)
+{
+	int i;
+	rmeshstate_t m;
+	if (!surface->num_collisiontriangles)
+		return;
+	memset(&m, 0, sizeof(m));
+	m.pointer_vertex = surface->data_collisionvertex3f;
+	R_Mesh_State(&m);
+	i = (int)(((size_t)surface) / sizeof(msurface_t));
+	GL_Color((i & 31) * (1.0f / 32.0f), ((i >> 5) & 31) * (1.0f / 32.0f), ((i >> 10) & 31) * (1.0f / 32.0f), 0.2f);
+	GL_LockArrays(0, surface->num_collisionvertices);
+	R_Mesh_Draw(0, surface->num_collisionvertices, surface->num_collisiontriangles, surface->data_collisionelement3i);
+	GL_LockArrays(0, 0);
 }
 
 static void R_Texture_AddLayer(texture_t *t, qboolean depthmask, int blendfunc1, int blendfunc2, texturelayertype_t type, rtexture_t *texture, const matrix4x4_t *matrix, float r, float g, float b, float a)
@@ -3165,7 +3217,29 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	t = NULL;
 	texture = NULL;
 	numsurfacelist = 0;
-	if (ent == r_refdef.worldentity)
+	if (r_showsurfaces.integer)
+	{
+		rmeshstate_t m;
+		GL_DepthTest(true);
+		GL_DepthMask(true);
+		GL_BlendFunc(GL_ONE, GL_ZERO);
+		memset(&m, 0, sizeof(m));
+		R_Mesh_State(&m);
+		for (i = 0, j = model->firstmodelsurface, surface = model->data_surfaces + j;i < model->nummodelsurfaces;i++, j++, surface++)
+		{
+			if (ent == r_refdef.worldentity && !r_worldsurfacevisible[j])
+				continue;
+			texture = surface->texture->currentframe;
+			if ((texture->currentmaterialflags & flagsmask) && surface->num_triangles)
+			{
+				int k = (int)(((size_t)surface) / sizeof(msurface_t));
+				GL_Color((k & 15) * (1.0f / 16.0f), ((k >> 4) & 15) * (1.0f / 16.0f), ((k >> 8) & 15) * (1.0f / 16.0f), 0.2f);
+				RSurf_SetVertexPointer(ent, texture, surface, modelorg, false, false);
+				RSurf_Draw(surface);
+			}
+		}
+	}
+	else if (ent == r_refdef.worldentity)
 	{
 		for (i = 0, j = model->firstmodelsurface, surface = model->data_surfaces + j;i < model->nummodelsurfaces;i++, j++, surface++)
 		{
@@ -3234,6 +3308,25 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	renderstats.entities_triangles += counttriangles;
 	if (gl_support_fragment_shader)
 		qglUseProgramObjectARB(0);
+
+	if (r_showcollisionbrushes.integer && model->brush.num_brushes && !skysurfaces)
+	{
+		int i;
+		msurface_t *surface;
+		q3mbrush_t *brush;
+		R_Mesh_Matrix(&ent->matrix);
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+		GL_DepthMask(false);
+		GL_DepthTest(!r_showdisabledepthtest.integer);
+		qglPolygonOffset(r_polygonfactor + r_showcollisionbrushes_polygonfactor.value, r_polygonoffset + r_showcollisionbrushes_polygonoffset.value);
+		for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
+			if (brush->colbrushf && brush->colbrushf->numtriangles)
+				R_DrawCollisionBrush(brush->colbrushf);
+		for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
+			if (surface->num_collisiontriangles)
+				R_DrawCollisionSurface(ent, surface);
+		qglPolygonOffset(r_polygonfactor, r_polygonoffset);
+	}
 
 	if (r_showtris.integer || r_shownormals.integer)
 	{

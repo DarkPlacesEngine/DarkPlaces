@@ -351,36 +351,6 @@ static void R_DrawPortals(void)
 	}
 }
 
-static void R_DrawCollisionBrush(colbrushf_t *brush)
-{
-	int i;
-	rmeshstate_t m;
-	memset(&m, 0, sizeof(m));
-	m.pointer_vertex = brush->points->v;
-	R_Mesh_State(&m);
-	i = (int)(((size_t)brush) / sizeof(colbrushf_t));
-	GL_Color((i & 31) * (1.0f / 32.0f), ((i >> 5) & 31) * (1.0f / 32.0f), ((i >> 10) & 31) * (1.0f / 32.0f), 0.2f);
-	GL_LockArrays(0, brush->numpoints);
-	R_Mesh_Draw(0, brush->numpoints, brush->numtriangles, brush->elements);
-	GL_LockArrays(0, 0);
-}
-
-static void R_DrawCollisionSurface(entity_render_t *ent, msurface_t *surface)
-{
-	int i;
-	rmeshstate_t m;
-	if (!surface->num_collisiontriangles)
-		return;
-	memset(&m, 0, sizeof(m));
-	m.pointer_vertex = surface->data_collisionvertex3f;
-	R_Mesh_State(&m);
-	i = (int)(((size_t)surface) / sizeof(msurface_t));
-	GL_Color((i & 31) * (1.0f / 32.0f), ((i >> 5) & 31) * (1.0f / 32.0f), ((i >> 10) & 31) * (1.0f / 32.0f), 0.2f);
-	GL_LockArrays(0, surface->num_collisionvertices);
-	R_Mesh_Draw(0, surface->num_collisionvertices, surface->num_collisiontriangles, surface->data_collisionelement3i);
-	GL_LockArrays(0, 0);
-}
-
 void R_WorldVisibility(void)
 {
 	int i, j, *mark;
@@ -503,24 +473,6 @@ void R_Q1BSP_Draw(entity_render_t *ent)
 	if (model == NULL)
 		return;
 	R_DrawSurfaces(ent, false);
-	if (r_showcollisionbrushes.integer && model->brush.num_brushes)
-	{
-		int i;
-		msurface_t *surface;
-		q3mbrush_t *brush;
-		R_Mesh_Matrix(&ent->matrix);
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-		GL_DepthMask(false);
-		GL_DepthTest(!r_showdisabledepthtest.integer);
-		qglPolygonOffset(r_polygonfactor + r_showcollisionbrushes_polygonfactor.value, r_polygonoffset + r_showcollisionbrushes_polygonoffset.value);
-		for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
-			if (brush->colbrushf && brush->colbrushf->numtriangles)
-				R_DrawCollisionBrush(brush->colbrushf);
-		for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
-			if (surface->num_collisiontriangles)
-				R_DrawCollisionSurface(ent, surface);
-		qglPolygonOffset(r_polygonfactor, r_polygonoffset);
-	}
 }
 
 typedef struct r_q1bsp_getlightinfo_s
