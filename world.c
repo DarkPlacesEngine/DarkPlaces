@@ -254,9 +254,27 @@ void SV_TouchAreaGrid(prvm_edict_t *ent)
 		touch = touchedicts[i];
 		if (touch != ent && (int)touch->fields.server->solid == SOLID_TRIGGER && touch->fields.server->touch)
 		{
+			prvm_eval_t *val;
 			prog->globals.server->self = PRVM_EDICT_TO_PROG(touch);
 			prog->globals.server->other = PRVM_EDICT_TO_PROG(ent);
 			prog->globals.server->time = sv.time;
+			prog->globals.server->trace_allsolid = false;
+			prog->globals.server->trace_startsolid = false;
+			prog->globals.server->trace_fraction = 1;
+			prog->globals.server->trace_inwater = false;
+			prog->globals.server->trace_inopen = true;
+			VectorCopy (touch->fields.server->origin, prog->globals.server->trace_endpos);
+			VectorSet (prog->globals.server->trace_plane_normal, 0, 0, 1);
+			prog->globals.server->trace_plane_dist = 0;
+			prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(ent);
+			if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dpstartcontents)))
+				val->_float = 0;
+			if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphitcontents)))
+				val->_float = 0;
+			if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphitq3surfaceflags)))
+				val->_float = 0;
+			if ((val = PRVM_GETGLOBALFIELDVALUE(gval_trace_dphittexturename)))
+				val->string = 0;
 			PRVM_ExecuteProgram (touch->fields.server->touch, "QC function self.touch is missing");
 		}
 	}
