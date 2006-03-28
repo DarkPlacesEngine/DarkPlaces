@@ -1517,9 +1517,9 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 {
 	int i;
 	unsigned char *in, *out, *data, d;
-	char litfilename[1024];
+	char litfilename[MAX_QPATH];
+	char dlitfilename[MAX_QPATH];
 	fs_offset_t filesize;
-	loadmodel->brushq1.lightdata = NULL;
 	if (loadmodel->brush.ishlbsp) // LordHavoc: load the colored lighting data straight
 	{
 		loadmodel->brushq1.lightdata = (unsigned char *)Mem_Alloc(loadmodel->mempool, l->filelen);
@@ -1536,7 +1536,9 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 		// LordHavoc: hope is not lost yet, check for a .lit file to load
 		strlcpy (litfilename, loadmodel->name, sizeof (litfilename));
 		FS_StripExtension (litfilename, litfilename, sizeof (litfilename));
+		strlcpy (dlitfilename, litfilename, sizeof (dlitfilename));
 		strlcat (litfilename, ".lit", sizeof (litfilename));
+		strlcat (dlitfilename, ".dlit", sizeof (dlitfilename));
 		data = (unsigned char*) FS_LoadFile(litfilename, tempmempool, false, &filesize);
 		if (data)
 		{
@@ -1549,30 +1551,45 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 					loadmodel->brushq1.lightdata = (unsigned char *)Mem_Alloc(loadmodel->mempool, filesize - 8);
 					memcpy(loadmodel->brushq1.lightdata, data + 8, filesize - 8);
 					Mem_Free(data);
+					data = (unsigned char*) FS_LoadFile(dlitfilename, tempmempool, false, &filesize);
+					if (data)
+					{
+						if (filesize == (fs_offset_t)(8 + l->filelen * 3) && data[0] == 'Q' && data[1] == 'L' && data[2] == 'I' && data[3] == 'T')
+						{
+							i = LittleLong(((int *)data)[1]);
+							if (i == 1)
+							{
+								Con_DPrintf("loaded %s\n", dlitfilename);
+								loadmodel->brushq1.nmaplightdata = (unsigned char *)Mem_Alloc(loadmodel->mempool, filesize - 8);
+								memcpy(loadmodel->brushq1.nmaplightdata, data + 8, filesize - 8);
+								loadmodel->brushq3.deluxemapping_modelspace = false;
+								loadmodel->brushq3.deluxemapping = true;
+							}
+						}
+						Mem_Free(data);
+						data = NULL;
+					}
 					return;
 				}
 				else
-				{
 					Con_Printf("Unknown .lit file version (%d)\n", i);
-					Mem_Free(data);
-				}
 			}
+			else if (filesize == 8)
+				Con_Print("Empty .lit file, ignoring\n");
 			else
+				Con_Printf("Corrupt .lit file (file size %i bytes, should be %i bytes), ignoring\n", filesize, 8 + l->filelen * 3);
+			if (data)
 			{
-				if (filesize == 8)
-					Con_Print("Empty .lit file, ignoring\n");
-				else
-					Con_Printf("Corrupt .lit file (file size %i bytes, should be %i bytes), ignoring\n", filesize, 8 + l->filelen * 3);
 				Mem_Free(data);
+				data = NULL;
 			}
 		}
 		// LordHavoc: oh well, expand the white lighting data
 		if (!l->filelen)
 			return;
 		loadmodel->brushq1.lightdata = (unsigned char *)Mem_Alloc(loadmodel->mempool, l->filelen*3);
-		in = loadmodel->brushq1.lightdata + l->filelen*2; // place the file at the end, so it will not be overwritten until the very last write
+		in = mod_base + l->fileofs;
 		out = loadmodel->brushq1.lightdata;
-		memcpy(in, mod_base + l->fileofs, l->filelen);
 		for (i = 0;i < l->filelen;i++)
 		{
 			d = *in++;
@@ -2015,7 +2032,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 	int i, j, count, surfacenum, planenum, smax, tmax, ssize, tsize, firstedge, numedges, totalverts, totaltris, lightmapnumber;
 	float texmins[2], texmaxs[2], val, lightmaptexcoordscale;
 #define LIGHTMAPSIZE 256
-	rtexture_t *lightmaptexture;
+	rtexture_t *lightmaptexture, *deluxemaptexture;
 	int lightmap_lineused[LIGHTMAPSIZE];
 
 	in = (dface_t *)(mod_base + l->fileofs);
@@ -2043,6 +2060,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 	loadmodel->meshlist[0] = Mod_AllocSurfMesh(loadmodel->mempool, totalverts, totaltris, true, false, false);
 
 	lightmaptexture = NULL;
+	deluxemaptexture = r_texture_blanknormalmap;
 	lightmapnumber = 1;
 	lightmaptexcoordscale = 1.0f / (float)LIGHTMAPSIZE;
 
@@ -2152,7 +2170,11 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		else if (loadmodel->brush.ishlbsp) // LordHavoc: HalfLife map (bsp version 30)
 			surface->lightmapinfo->samples = loadmodel->brushq1.lightdata + i;
 		else // LordHavoc: white lighting (bsp version 29)
+		{
 			surface->lightmapinfo->samples = loadmodel->brushq1.lightdata + (i * 3);
+			if (loadmodel->brushq1.nmaplightdata)
+				surface->lightmapinfo->nmapsamples = loadmodel->brushq1.nmaplightdata + (i * 3);
+		}
 
 		// check if we should apply a lightmap to this
 		if (!(surface->lightmapinfo->texinfo->flags & TEX_SPECIAL) || surface->lightmapinfo->samples)
@@ -2173,13 +2195,16 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 			if (!lightmaptexture || !Mod_Q1BSP_AllocLightmapBlock(lightmap_lineused, LIGHTMAPSIZE, LIGHTMAPSIZE, ssize, tsize, &lightmapx, &lightmapy))
 			{
 				// could not find room, make a new lightmap
-				lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%i", lightmapnumber++), LIGHTMAPSIZE, LIGHTMAPSIZE, NULL, loadmodel->brushq1.lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+				lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%i", lightmapnumber), LIGHTMAPSIZE, LIGHTMAPSIZE, NULL, loadmodel->brushq1.lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+				if (loadmodel->brushq1.nmaplightdata)
+					deluxemaptexture = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%i", lightmapnumber), LIGHTMAPSIZE, LIGHTMAPSIZE, NULL, loadmodel->brushq1.lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+				lightmapnumber++;
 				memset(lightmap_lineused, 0, sizeof(lightmap_lineused));
 				Mod_Q1BSP_AllocLightmapBlock(lightmap_lineused, LIGHTMAPSIZE, LIGHTMAPSIZE, ssize, tsize, &lightmapx, &lightmapy);
 			}
 
 			surface->lightmaptexture = lightmaptexture;
-			surface->deluxemaptexture = r_texture_blanknormalmap;
+			surface->deluxemaptexture = deluxemaptexture;
 			surface->lightmapinfo->lightmaporigin[0] = lightmapx;
 			surface->lightmapinfo->lightmaporigin[1] = lightmapy;
 
