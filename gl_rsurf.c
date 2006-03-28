@@ -50,10 +50,10 @@ Combine and scale multiple lightmaps into the 8.8 format in blocklights
 */
 void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 {
-	int smax, tmax, i, j, size, size3, maps, l;
-	unsigned int *bl, scale;
+	int smax, tmax, i, size, size3, maps, l;
+	int *bl, scale;
 	unsigned char *lightmap, *out, *stain;
-	static unsigned int intblocklights[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*3]; // LordHavoc: *3 for colored lighting
+	static int intblocklights[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*3]; // LordHavoc: *3 for colored lighting
 	static unsigned char templight[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*4];
 
 	// update cached lighting info
@@ -75,16 +75,13 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 	else
 	{
 // clear to no light
-		memset(bl, 0, size*3*sizeof(unsigned int));
+		memset(bl, 0, size3*sizeof(*bl));
 
 // add all the lightmaps
 		if (lightmap)
-		{
-			bl = intblocklights;
 			for (maps = 0;maps < MAXLIGHTMAPS && surface->lightmapinfo->styles[maps] != 255;maps++, lightmap += size3)
 				for (scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[maps]], i = 0;i < size3;i++)
 					bl[i] += lightmap[i] * scale;
-		}
 	}
 
 	stain = surface->lightmapinfo->stainsamples;
@@ -96,31 +93,78 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 	// (0 = 0.0, 128 = 1.0, 256 = 2.0)
 	if (ent->model->brushq1.lightmaprgba)
 	{
-		for (i = 0;i < tmax;i++)
+		for (i = 0;i < size;i++)
 		{
-			for (j = 0;j < smax;j++)
-			{
-				l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
-				l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
-				l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
-				*out++ = 255;
-			}
+			l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
+			l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
+			l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
+			*out++ = 255;
 		}
 	}
 	else
 	{
-		for (i = 0;i < tmax;i++)
+		for (i = 0;i < size;i++)
 		{
-			for (j = 0;j < smax;j++)
-			{
-				l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
-				l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
-				l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
-			}
+			l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
+			l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
+			l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
 		}
 	}
 
 	R_UpdateTexture(surface->lightmaptexture, templight, surface->lightmapinfo->lightmaporigin[0], surface->lightmapinfo->lightmaporigin[1], smax, tmax);
+
+	// update the surface's deluxemap if it has one
+	if (surface->deluxemaptexture != r_texture_blanknormalmap)
+	{
+		vec3_t n;
+		unsigned char *normalmap = surface->lightmapinfo->nmapsamples;
+		lightmap = surface->lightmapinfo->samples;
+		// clear to no normalmap
+		bl = intblocklights;
+		memset(bl, 0, size3*sizeof(*bl));
+		// add all the normalmaps
+		if (lightmap && normalmap)
+		{
+			for (maps = 0;maps < MAXLIGHTMAPS && surface->lightmapinfo->styles[maps] != 255;maps++, lightmap += size3, normalmap += size3)
+			{
+				for (scale = r_refdef.lightstylevalue[surface->lightmapinfo->styles[maps]], i = 0;i < size;i++)
+				{
+					// add the normalmap with weighting proportional to the style's lightmap intensity
+					l = (int)(VectorLength(lightmap + i*3) * scale);
+					bl[i*3+0] += ((int)normalmap[i*3+0] - 128) * l;
+					bl[i*3+1] += ((int)normalmap[i*3+1] - 128) * l;
+					bl[i*3+2] += ((int)normalmap[i*3+2] - 128) * l;
+				}
+			}
+		}
+		bl = intblocklights;
+		out = templight;
+		// we simply renormalize the weighted normals to get a valid deluxemap
+		if (ent->model->brushq1.lightmaprgba)
+		{
+			for (i = 0;i < size;i++, bl += 3)
+			{
+				VectorCopy(bl, n);
+				VectorNormalize(n);
+				l = (int)(n[0] * 128 + 128);*out++ = bound(0, l, 255);
+				l = (int)(n[1] * 128 + 128);*out++ = bound(0, l, 255);
+				l = (int)(n[2] * 128 + 128);*out++ = bound(0, l, 255);
+				*out++ = 255;
+			}
+		}
+		else
+		{
+			for (i = 0;i < size;i++, bl += 3)
+			{
+				VectorCopy(bl, n);
+				VectorNormalize(n);
+				l = (int)(n[0] * 128 + 128);*out++ = bound(0, l, 255);
+				l = (int)(n[1] * 128 + 128);*out++ = bound(0, l, 255);
+				l = (int)(n[2] * 128 + 128);*out++ = bound(0, l, 255);
+			}
+		}
+		R_UpdateTexture(surface->deluxemaptexture, templight, surface->lightmapinfo->lightmaporigin[0], surface->lightmapinfo->lightmaporigin[1], smax, tmax);
+	}
 }
 
 void R_StainNode (mnode_t *node, model_t *model, const vec3_t origin, float radius, const float fcolor[8])

@@ -246,6 +246,8 @@ typedef struct msurface_lightmapinfo_s
 	unsigned char styles[MAXLIGHTMAPS]; // q1bsp
 	// RGB lighting data [numstyles][height][width][3]
 	unsigned char *samples; // q1bsp
+	// RGB normalmap data [numstyles][height][width][3]
+	unsigned char *nmapsamples; // q1bsp
 	// stain to apply on lightmap (soot/dirt/blood/whatever)
 	unsigned char *stainsamples; // q1bsp
 	int texturemins[2]; // q1bsp
@@ -423,6 +425,7 @@ typedef struct model_brushq1_s
 
 	int				num_lightdata;
 	unsigned char			*lightdata;
+	unsigned char			*nmaplightdata; // deluxemap file
 
 	// lightmap update chains for light styles
 	int				light_styles;
