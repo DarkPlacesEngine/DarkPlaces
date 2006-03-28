@@ -93,6 +93,8 @@ static qboolean mouse_avail = true;
 static qboolean vid_usingmouse = false;
 static qboolean vid_usingvsync = false;
 static qboolean vid_usevsync = false;
+static qboolean vid_x11_hardwaregammasupported = false;
+static int vid_x11_gammarampsize = 0;
 static float	mouse_x, mouse_y;
 static int p_mouse_x, p_mouse_y;
 
@@ -561,7 +563,6 @@ void InitSig(void)
 
 void VID_Finish (qboolean allowmousegrab)
 {
-	int rampsize;
 	qboolean vid_usemouse;
 
 	vid_usevsync = vid_vsync.integer && !cls.timedemo && gl_videosyncavailable;
@@ -589,8 +590,8 @@ void VID_Finish (qboolean allowmousegrab)
 		qglXSwapBuffers(vidx11_display, win);
 	}
 
-	if(XF86VidModeGetGammaRampSize(vidx11_display, vidx11_screen, &rampsize))
-		VID_UpdateGamma(false, rampsize);
+	if (vid_x11_hardwaregammasupported)
+		VID_UpdateGamma(false, vid_x11_gammarampsize);
 }
 
 int VID_SetGamma(unsigned short *ramps, int rampsize)
@@ -837,6 +838,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	vid_usingvsync = false;
 	vid_hidden = false;
 	vid_activewindow = true;
+	vid_x11_hardwaregammasupported = XF86VidModeGetGammaRampSize(vidx11_display, vidx11_screen, &vid_x11_gammarampsize) != 0;
 	GL_Init();
 	return true;
 }
