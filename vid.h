@@ -123,12 +123,17 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 
 // sets hardware gamma correction, returns false if the device does not
 // support gamma control
-int VID_SetGamma (unsigned short *ramps);
+// (ONLY called by VID_UpdateGamma and VID_RestoreSystemGamma)
+int VID_SetGamma(unsigned short *ramps, int rampsize);
 // gets hardware gamma correction, returns false if the device does not
 // support gamma control
-int VID_GetGamma (unsigned short *ramps);
-
-void VID_UpdateGamma(qboolean force);
+// (ONLY called by VID_UpdateGamma and VID_RestoreSystemGamma)
+int VID_GetGamma(unsigned short *ramps, int rampsize);
+// makes sure ramp arrays are big enough and calls VID_GetGamma/VID_SetGamma
+// (ONLY to be called from VID_Finish!)
+void VID_UpdateGamma(qboolean force, int rampsize);
+// turns off hardware gamma ramps immediately
+// (called from various shutdown/deactivation functions)
 void VID_RestoreSystemGamma(void);
 
 void VID_Finish (qboolean allowmousegrab);

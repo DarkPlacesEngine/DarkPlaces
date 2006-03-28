@@ -1296,7 +1296,6 @@ void SCR_UpdateLoadingScreen (void)
 	// don't do anything if not initialized yet
 	if (vid_hidden)
 		return;
-	VID_UpdateGamma(false);
 	qglViewport(0, 0, vid.width, vid.height);
 	//qglDisable(GL_SCISSOR_TEST);
 	//qglDepthMask(1);
@@ -1404,8 +1403,6 @@ void CL_UpdateScreen(void)
 
 	if (r_timereport_active)
 		R_TimeReport("other");
-
-	VID_UpdateGamma(false);
 
 	SCR_SetUpToDrawConsole();
 

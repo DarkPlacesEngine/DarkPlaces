@@ -561,6 +561,7 @@ void InitSig(void)
 
 void VID_Finish (qboolean allowmousegrab)
 {
+	int rampsize;
 	qboolean vid_usemouse;
 
 	vid_usevsync = vid_vsync.integer && !cls.timedemo && gl_videosyncavailable;
@@ -587,28 +588,19 @@ void VID_Finish (qboolean allowmousegrab)
 			qglFinish();
 		qglXSwapBuffers(vidx11_display, win);
 	}
+
+	if(XF86VidModeGetGammaRampSize(vidx11_display, vidx11_screen, &rampsize))
+		VID_UpdateGamma(false, rampsize);
 }
 
-int VID_SetGamma(unsigned short *ramps)
+int VID_SetGamma(unsigned short *ramps, int rampsize)
 {
-	int rampsize;
-	// FIXME: it would be good to generate ramps of the size reported by X,
-	// for instance Quadro cards seem to use 1024 color ramps not 256
-	if(!XF86VidModeGetGammaRampSize(vidx11_display, vidx11_screen, &rampsize))
-		return 0;
-	if(rampsize != 256)
-		return 0;
-	return XF86VidModeSetGammaRamp(vidx11_display, vidx11_screen, 256, ramps, ramps + 256, ramps + 512);
+	return XF86VidModeSetGammaRamp(vidx11_display, vidx11_screen, rampsize, ramps, ramps + rampsize, ramps + rampsize*2);
 }
 
-int VID_GetGamma(unsigned short *ramps)
+int VID_GetGamma(unsigned short *ramps, int rampsize)
 {
-	int rampsize;
-	if(!XF86VidModeGetGammaRampSize(vidx11_display, vidx11_screen, &rampsize))
-		return 0;
-	if(rampsize != 256)
-		return 0;
-	return XF86VidModeGetGammaRamp(vidx11_display, vidx11_screen, 256, ramps, ramps + 256, ramps + 512);
+	return XF86VidModeGetGammaRamp(vidx11_display, vidx11_screen, rampsize, ramps, ramps + rampsize, ramps + rampsize*2);
 }
 
 void VID_Init(void)

@@ -64,8 +64,9 @@ cvar_t vid_hardwaregammasupported = {CVAR_READONLY,"vid_hardwaregammasupported",
 // whether hardware gamma ramps are currently in effect
 qboolean vid_usinghwgamma = false;
 
-unsigned short vid_gammaramps[768];
-unsigned short vid_systemgammaramps[768];
+int vid_gammarampsize = 0;
+unsigned short *vid_gammaramps = NULL;
+unsigned short *vid_systemgammaramps = NULL;
 
 cvar_t vid_fullscreen = {CVAR_SAVE, "vid_fullscreen", "1", "use fullscreen (1) or windowed (0)"};
 cvar_t vid_width = {CVAR_SAVE, "vid_width", "640", "resolution"};
@@ -706,7 +707,7 @@ void Force_CenterView_f (void)
 static float cachegamma, cachebrightness, cachecontrast, cacheblack[3], cachegrey[3], cachewhite[3];
 static int cachecolorenable, cachehwgamma;
 #define BOUNDCVAR(cvar, m1, m2) c = &(cvar);f = bound(m1, c->value, m2);if (c->value != f) Cvar_SetValueQuick(c, f);
-void VID_UpdateGamma(qboolean force)
+void VID_UpdateGamma(qboolean force, int rampsize)
 {
 	cvar_t *c;
 	float f;
@@ -742,7 +743,17 @@ void VID_UpdateGamma(qboolean force)
 		if (!vid_usinghwgamma)
 		{
 			vid_usinghwgamma = true;
-			Cvar_SetValueQuick(&vid_hardwaregammasupported, VID_GetGamma(vid_systemgammaramps));
+			if (vid_gammarampsize != rampsize || !vid_gammaramps)
+			{
+				vid_gammarampsize = rampsize;
+				if (vid_gammaramps)
+					Z_Free(vid_gammaramps);
+				vid_gammaramps = Z_Malloc(6 * vid_gammarampsize * sizeof(unsigned short));
+				vid_systemgammaramps = vid_gammaramps + 3 * vid_gammarampsize;
+			}
+			Cvar_SetValueQuick(&vid_hardwaregammasupported, VID_GetGamma(vid_systemgammaramps, vid_gammarampsize));
+			if (!vid_hardwaregammasupported.integer)
+				return;
 		}
 
 		BOUNDCVAR(v_gamma, 0.1, 5);cachegamma = v_gamma.value;
@@ -763,14 +774,14 @@ void VID_UpdateGamma(qboolean force)
 		if (cachecolorenable)
 		{
 			BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[0]), cachewhite[0], cacheblack[0], vid_gammaramps);
-			BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[1]), cachewhite[1], cacheblack[1], vid_gammaramps + 256);
-			BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[2]), cachewhite[2], cacheblack[2], vid_gammaramps + 512);
+			BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[1]), cachewhite[1], cacheblack[1], vid_gammaramps + vid_gammarampsize);
+			BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[2]), cachewhite[2], cacheblack[2], vid_gammaramps + vid_gammarampsize*2);
 		}
 		else
 		{
 			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, vid_gammaramps);
-			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, vid_gammaramps + 256);
-			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, vid_gammaramps + 512);
+			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, vid_gammaramps + vid_gammarampsize);
+			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, vid_gammaramps + vid_gammarampsize*2);
 		}
 
 		// LordHavoc: this code came from Ben Winslow and Zinx Verituse, I have
@@ -808,23 +819,20 @@ void VID_UpdateGamma(qboolean force)
 			}
 
 			for (x = 0, ramp = vid_gammaramps;x < 3;x++)
-				for (y = 0, t = n[x] - 0.75f;y < 256;y++, t += 0.75f * (2.0f / 256.0f))
+				for (y = 0, t = n[x] - 0.75f;y < vid_gammarampsize;y++, t += 0.75f * (2.0f / vid_gammarampsize))
 					*ramp++ = cos(t*(M_PI*2.0)) * 32767.0f + 32767.0f;
 		}
 
-		Cvar_SetValueQuick(&vid_hardwaregammasupported, VID_SetGamma(vid_gammaramps));
+		Cvar_SetValueQuick(&vid_hardwaregammasupported, VID_SetGamma(vid_gammaramps, vid_gammarampsize));
 		// if custom gamma ramps failed (Windows stupidity), restore to system gamma
 		if(!vid_hardwaregammasupported.integer)
-			VID_SetGamma(vid_systemgammaramps);
-	}
-	else
-	{
-		if (vid_usinghwgamma)
 		{
-			vid_usinghwgamma = false;
-			Cvar_SetValueQuick(&vid_hardwaregammasupported, VID_SetGamma(vid_systemgammaramps));
+			VID_RestoreSystemGamma();
+			Cvar_SetValueQuick(&vid_hardwaregammasupported, false);
 		}
 	}
+	else
+		VID_RestoreSystemGamma();
 }
 
 void VID_RestoreSystemGamma(void)
@@ -832,7 +840,7 @@ void VID_RestoreSystemGamma(void)
 	if (vid_usinghwgamma)
 	{
 		vid_usinghwgamma = false;
-		VID_SetGamma(vid_systemgammaramps);
+		Cvar_SetValueQuick(&vid_hardwaregammasupported, VID_SetGamma(vid_systemgammaramps, vid_gammarampsize));
 	}
 }
 

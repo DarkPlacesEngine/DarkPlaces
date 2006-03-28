@@ -101,6 +101,7 @@ static void IN_Activate( qboolean grab )
 	}
 }
 
+#define GAMMA_TABLE_SIZE 256
 void VID_Finish (qboolean allowmousegrab)
 {
 	qboolean vid_usemouse;
@@ -137,10 +138,10 @@ void VID_Finish (qboolean allowmousegrab)
 			qglFinish();
 		qaglSwapBuffers(context);
 	}
+	VID_UpdateGamma(false, GAMMA_TABLE_SIZE);
 }
 
-#define GAMMA_TABLE_SIZE 256
-int VID_SetGamma(unsigned short *ramps)
+int VID_SetGamma(unsigned short *ramps, int rampsize)
 {
 	CGGammaValue table_red [GAMMA_TABLE_SIZE];
 	CGGammaValue table_green [GAMMA_TABLE_SIZE];
@@ -148,14 +149,14 @@ int VID_SetGamma(unsigned short *ramps)
 	unsigned int i;
 
 	// Convert the unsigned short table into 3 float tables
-	for (i = 0; i < GAMMA_TABLE_SIZE; i++)
+	for (i = 0; i < rampsize; i++)
 		table_red[i] = (float)ramps[i] / 65535.0f;
-	for (i = 0; i < GAMMA_TABLE_SIZE; i++)
-		table_green[i] = (float)ramps[i + GAMMA_TABLE_SIZE] / 65535.0f;
-	for (i = 0; i < GAMMA_TABLE_SIZE; i++)
-		table_blue[i] = (float)ramps[i + 2 * GAMMA_TABLE_SIZE] / 65535.0f;
+	for (i = 0; i < rampsize; i++)
+		table_green[i] = (float)ramps[i + rampsize] / 65535.0f;
+	for (i = 0; i < rampsize; i++)
+		table_blue[i] = (float)ramps[i + 2 * rampsize] / 65535.0f;
 
-	if (CGSetDisplayTransferByTable(CGMainDisplayID(), GAMMA_TABLE_SIZE, table_red, table_green, table_blue) != CGDisplayNoErr)
+	if (CGSetDisplayTransferByTable(CGMainDisplayID(), rampsize, table_red, table_green, table_blue) != CGDisplayNoErr)
 	{
 		Con_Print("VID_SetGamma: ERROR: CGSetDisplayTransferByTable failed!\n");
 		return false;
@@ -164,7 +165,7 @@ int VID_SetGamma(unsigned short *ramps)
 	return true;
 }
 
-int VID_GetGamma(unsigned short *ramps)
+int VID_GetGamma(unsigned short *ramps, int rampsize)
 {
 	CGGammaValue table_red [GAMMA_TABLE_SIZE];
 	CGGammaValue table_green [GAMMA_TABLE_SIZE];
@@ -173,24 +174,24 @@ int VID_GetGamma(unsigned short *ramps)
 	unsigned int i;
 
 	// Get the gamma ramps from the system
-	if (CGGetDisplayTransferByTable(CGMainDisplayID(), GAMMA_TABLE_SIZE, table_red, table_green, table_blue, &actualsize) != CGDisplayNoErr)
+	if (CGGetDisplayTransferByTable(CGMainDisplayID(), rampsize, table_red, table_green, table_blue, &actualsize) != CGDisplayNoErr)
 	{
 		Con_Print("VID_GetGamma: ERROR: CGGetDisplayTransferByTable failed!\n");
 		return false;
 	}
-	if (actualsize != GAMMA_TABLE_SIZE)
+	if (actualsize != rampsize)
 	{
-		Con_Printf("VID_GetGamma: ERROR: invalid gamma table size (%u != %u)\n", actualsize, GAMMA_TABLE_SIZE);
+		Con_Printf("VID_GetGamma: ERROR: invalid gamma table size (%u != %u)\n", actualsize, rampsize);
 		return false;
 	}
 
 	// Convert the 3 float tables into 1 unsigned short table
-	for (i = 0; i < GAMMA_TABLE_SIZE; i++)
+	for (i = 0; i < rampsize; i++)
 		ramps[i] = table_red[i] * 65535.0f;
-	for (i = 0; i < GAMMA_TABLE_SIZE; i++)
-		ramps[i + GAMMA_TABLE_SIZE] = table_green[i] * 65535.0f;
-	for (i = 0; i < GAMMA_TABLE_SIZE; i++)
-		ramps[i + 2 * GAMMA_TABLE_SIZE] = table_blue[i] * 65535.0f;
+	for (i = 0; i < rampsize; i++)
+		ramps[i + rampsize] = table_green[i] * 65535.0f;
+	for (i = 0; i < rampsize; i++)
+		ramps[i + 2 * rampsize] = table_blue[i] * 65535.0f;
 
 	return true;
 }

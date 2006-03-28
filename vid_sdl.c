@@ -473,14 +473,14 @@ void VID_Shutdown (void)
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
 }
 
-int VID_SetGamma (unsigned short *ramps)
+int VID_SetGamma (unsigned short *ramps, int rampsize)
 {
-	return !SDL_SetGammaRamp (ramps, ramps + 256, ramps + 512);
+	return !SDL_SetGammaRamp (ramps, ramps + rampsize, ramps + rampsize*2);
 }
 
-int VID_GetGamma (unsigned short *ramps)
+int VID_GetGamma (unsigned short *ramps, int rampsize)
 {
-	return !SDL_GetGammaRamp( ramps, ramps + 256, ramps + 512);
+	return !SDL_GetGammaRamp (ramps, ramps + rampsize, ramps + rampsize*2);
 }
 
 void VID_Finish (qboolean allowmousegrab)
@@ -511,4 +511,6 @@ void VID_Finish (qboolean allowmousegrab)
 		vid_usemouse = false;
 
 	IN_Activate(vid_usemouse);
+
+	VID_UpdateGamma(false, 256);
 }

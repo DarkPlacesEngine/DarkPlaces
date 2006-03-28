@@ -289,6 +289,8 @@ void VID_Finish (qboolean allowmousegrab)
 			qglFinish();
 		SwapBuffers(baseDC);
 	}
+
+	VID_UpdateGamma(false, 256);
 }
 
 //==========================================================================
@@ -647,7 +649,7 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 	return lRet;
 }
 
-int VID_SetGamma(unsigned short *ramps)
+int VID_SetGamma(unsigned short *ramps, int rampsize)
 {
 	HDC hdc = GetDC (NULL);
 	int i = SetDeviceGammaRamp(hdc, ramps);
@@ -655,7 +657,7 @@ int VID_SetGamma(unsigned short *ramps)
 	return i; // return success or failure
 }
 
-int VID_GetGamma(unsigned short *ramps)
+int VID_GetGamma(unsigned short *ramps, int rampsize)
 {
 	HDC hdc = GetDC (NULL);
 	int i = GetDeviceGammaRamp(hdc, ramps);
