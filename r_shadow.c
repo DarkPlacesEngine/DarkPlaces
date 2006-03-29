@@ -1099,12 +1099,6 @@ qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	return false;
 }
 
-extern float *rsurface_vertex3f;
-extern float *rsurface_svector3f;
-extern float *rsurface_tvector3f;
-extern float *rsurface_normal3f;
-extern void RSurf_SetVertexPointer(const entity_render_t *ent, const texture_t *texture, const msurface_t *surface, const vec3_t modelorg, qboolean generatenormals, qboolean generatetangents);
-
 static void R_Shadow_RenderSurfacesLighting_Light_Vertex_Shading(const msurface_t *surface, const float *diffusecolor, const float *ambientcolor)
 {
 	int numverts = surface->num_vertices;
@@ -1247,10 +1241,12 @@ static void R_Shadow_RenderSurfacesLighting_VisibleLighting(const entity_render_
 	GL_Color(0.1, 0.025, 0, 1);
 	memset(&m, 0, sizeof(m));
 	R_Mesh_State(&m);
+	RSurf_SetPointersForPass(false, false);
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
 		const msurface_t *surface = surfacelist[surfacelistindex];
-		RSurf_SetVertexPointer(ent, texture, surface, r_shadow_entityeyeorigin, false, false);
+		if (rsurface_dynamicvertex)
+			RSurf_PrepareDynamicSurfaceVertices(surface);
 		GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 		R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, model->surfmesh.data_element3i + 3 * surface->num_firsttriangle);
 		GL_LockArrays(0, 0);
@@ -1263,11 +1259,13 @@ static void R_Shadow_RenderSurfacesLighting_Light_GLSL(const entity_render_t *en
 	int surfacelistindex;
 	model_t *model = ent->model;
 	R_SetupSurfaceShader(ent, texture, r_shadow_entityeyeorigin, lightcolorbase, false);
+	RSurf_SetPointersForPass(false, true);
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
 		const msurface_t *surface = surfacelist[surfacelistindex];
 		const int *elements = model->surfmesh.data_element3i + surface->num_firsttriangle * 3;
-		RSurf_SetVertexPointer(ent, texture, surface, r_shadow_entityeyeorigin, false, true);
+		if (rsurface_dynamicvertex)
+			RSurf_PrepareDynamicSurfaceVertices(surface);
 		R_Mesh_TexCoordPointer(0, 2, model->surfmesh.data_texcoordtexture2f);
 		R_Mesh_TexCoordPointer(1, 3, rsurface_svector3f);
 		R_Mesh_TexCoordPointer(2, 3, rsurface_tvector3f);
@@ -1823,10 +1821,12 @@ static void R_Shadow_RenderSurfacesLighting_Light_Dot3(const entity_render_t *en
 	qboolean dospecular = specularscale > 0;
 	if (!doambient && !dodiffuse && !dospecular)
 		return;
+	RSurf_SetPointersForPass(false, true);
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
 		const msurface_t *surface = surfacelist[surfacelistindex];
-		RSurf_SetVertexPointer(ent, texture, surface, r_shadow_entityeyeorigin, false, true);
+		if (rsurface_dynamicvertex)
+			RSurf_PrepareDynamicSurfaceVertices(surface);
 		if (doambient)
 			R_Shadow_RenderSurfacesLighting_Light_Dot3_AmbientPass(ent, texture, surface, lightcolorbase, basetexture, r_shadow_rtlight->ambientscale);
 		if (dodiffuse)
@@ -1951,10 +1951,12 @@ static void R_Shadow_RenderSurfacesLighting_Light_Vertex(const entity_render_t *
 	}
 	m.pointer_color = rsurface_array_color4f;
 	R_Mesh_State(&m);
+	RSurf_SetPointersForPass(true, false);
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
 		const msurface_t *surface = surfacelist[surfacelistindex];
-		RSurf_SetVertexPointer(ent, texture, surface, r_shadow_entityeyeorigin, true, false);
+		if (rsurface_dynamicvertex)
+			RSurf_PrepareDynamicSurfaceVertices(surface);
 		// OpenGL 1.1 path (anything)
 		R_Mesh_TexCoordPointer(0, 2, model->surfmesh.data_texcoordtexture2f);
 		R_Mesh_TexMatrix(0, &texture->currenttexmatrix);
@@ -1997,6 +1999,7 @@ void R_Shadow_RenderSurfacesLighting(const entity_render_t *ent, const texture_t
 		qglDisable(GL_CULL_FACE);
 	else
 		qglEnable(GL_CULL_FACE);
+	RSurf_PrepareForBatch(ent, texture, r_shadow_entityeyeorigin);
 	if (texture->colormapping)
 	{
 		qboolean dopants = texture->skin.pants != NULL && VectorLength2(ent->colormap_pantscolor) >= (1.0f / 1048576.0f);

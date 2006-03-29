@@ -701,12 +701,6 @@ void R_Q1BSP_CompileShadowVolume(entity_render_t *ent, vec3_t relativelightorigi
 	r_shadow_compilingrtlight->static_meshchain_shadow = Mod_ShadowMesh_Finish(r_main_mempool, r_shadow_compilingrtlight->static_meshchain_shadow, false, false);
 }
 
-extern float *rsurface_vertex3f;
-extern float *rsurface_svector3f;
-extern float *rsurface_tvector3f;
-extern float *rsurface_normal3f;
-extern void RSurf_SetVertexPointer(const entity_render_t *ent, const texture_t *texture, const msurface_t *surface, const vec3_t modelorg, qboolean generatenormals, qboolean generatetangents);
-
 void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs)
 {
 	model_t *model = ent->model;
@@ -714,7 +708,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 	int surfacelistindex;
 	float projectdistance = lightradius + model->radius*2 + r_shadow_projectdistance.value;
 	vec3_t modelorg;
-	texture_t *texture;
+	texture_t *texture, *currentexture = NULL;
 	// check the box in modelspace, it was already checked in worldspace
 	if (!BoxesOverlap(model->normalmins, model->normalmaxs, lightmins, lightmaxs))
 		return;
@@ -744,7 +738,14 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 			texture = surface->texture->currentframe;
 			if (texture->currentmaterialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT) || !surface->num_triangles)
 				continue;
-			RSurf_SetVertexPointer(ent, texture, surface, modelorg, false, false);
+			if (currentexture != texture)
+			{
+				currentexture = texture;
+				RSurf_PrepareForBatch(ent, texture, modelorg);
+				RSurf_SetPointersForPass(false, false);
+			}
+			if (rsurface_dynamicvertex)
+				RSurf_PrepareDynamicSurfaceVertices(surface);
 			// identify lit faces within the bounding box
 			R_Shadow_PrepareShadowMark(model->surfmesh.num_triangles);
 			R_Shadow_MarkVolumeFromBox(surface->num_firsttriangle, surface->num_triangles, rsurface_vertex3f, model->surfmesh.data_element3i, relativelightorigin, lightmins, lightmaxs, surface->mins, surface->maxs);
