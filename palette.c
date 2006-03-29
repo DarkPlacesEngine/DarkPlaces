@@ -109,28 +109,28 @@ void Palette_SetupSpecialPalettes(void)
 	palette_font[0] = 0;
 }
 
-void BuildGammaTable8(float prescale, float gamma, float scale, float base, unsigned char *out)
+void BuildGammaTable8(float prescale, float gamma, float scale, float base, unsigned char *out, int rampsize)
 {
 	int i, adjusted;
 	double invgamma;
 
 	invgamma = 1.0 / gamma;
-	prescale /= 255.0f;
-	for (i = 0;i < 256;i++)
+	prescale /= (double) (rampsize - 1);
+	for (i = 0;i < rampsize;i++)
 	{
 		adjusted = (int) (255.0 * (pow((double) i * prescale, invgamma) * scale + base) + 0.5);
 		out[i] = bound(0, adjusted, 255);
 	}
 }
 
-void BuildGammaTable16(float prescale, float gamma, float scale, float base, unsigned short *out)
+void BuildGammaTable16(float prescale, float gamma, float scale, float base, unsigned short *out, int rampsize)
 {
 	int i, adjusted;
 	double invgamma;
 
 	invgamma = 1.0 / gamma;
-	prescale /= 255.0f;
-	for (i = 0;i < 256;i++)
+	prescale /= (double) (rampsize - 1);
+	for (i = 0;i < rampsize;i++)
 	{
 		adjusted = (int) (65535.0 * (pow((double) i * prescale, invgamma) * scale + base) + 0.5);
 		out[i] = bound(0, adjusted, 65535);
@@ -164,7 +164,7 @@ void Palette_Init(void)
 	scale = bound(0.01, scale, 10.0);
 	base = bound(0, base, 0.95);
 
-	BuildGammaTable8(1.0f, gamma, scale, base, texturegammaramp);
+	BuildGammaTable8(1.0f, gamma, scale, base, texturegammaramp, 256);
 
 	palfile = (unsigned char *)FS_LoadFile ("gfx/palette.lmp", tempmempool, false, &filesize);
 	if (palfile && filesize >= 768)
