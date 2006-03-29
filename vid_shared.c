@@ -773,15 +773,15 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 
 		if (cachecolorenable)
 		{
-			BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[0]), cachewhite[0], cacheblack[0], vid_gammaramps);
-			BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[1]), cachewhite[1], cacheblack[1], vid_gammaramps + vid_gammarampsize);
-			BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[2]), cachewhite[2], cacheblack[2], vid_gammaramps + vid_gammarampsize*2);
+			BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[0]), cachewhite[0], cacheblack[0], vid_gammaramps, rampsize);
+			BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[1]), cachewhite[1], cacheblack[1], vid_gammaramps + vid_gammarampsize, rampsize);
+			BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[2]), cachewhite[2], cacheblack[2], vid_gammaramps + vid_gammarampsize*2, rampsize);
 		}
 		else
 		{
-			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, vid_gammaramps);
-			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, vid_gammaramps + vid_gammarampsize);
-			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, vid_gammaramps + vid_gammarampsize*2);
+			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, vid_gammaramps, rampsize);
+			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, vid_gammaramps + vid_gammarampsize, rampsize);
+			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, vid_gammaramps + vid_gammarampsize*2, rampsize);
 		}
 
 		// LordHavoc: this code came from Ben Winslow and Zinx Verituse, I have

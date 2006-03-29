@@ -14,8 +14,8 @@ extern unsigned int palette_shirtaswhite[256];
 extern unsigned int palette_transparent[256];
 
 // used by hardware gamma functions in vid_* files
-void BuildGammaTable8(float prescale, float gamma, float scale, float base, unsigned char *out);
-void BuildGammaTable16(float prescale, float gamma, float scale, float base, unsigned short *out);
+void BuildGammaTable8(float prescale, float gamma, float scale, float base, unsigned char *out, int rampsize);
+void BuildGammaTable16(float prescale, float gamma, float scale, float base, unsigned short *out, int rampsize);
 
 void Palette_Init(void);
 
