@@ -652,7 +652,7 @@ void Host_ServerFrame (void)
 	// setup the VM frame
 	SV_VM_Begin();
 	// stop running server frames if the wall time reaches this value
-	aborttime = Sys_DoubleTime() + 0.05;
+	aborttime = Sys_DoubleTime() + 0.1;
 	for (framecount = 0;framecount < framelimit && sv.timer > 0;framecount++)
 	{
 		if (sys_ticrate.value <= 0)
