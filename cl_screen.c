@@ -12,7 +12,7 @@ cvar_t scr_conspeed = {CVAR_SAVE, "scr_conspeed","900", "speed of console open/c
 cvar_t scr_conalpha = {CVAR_SAVE, "scr_conalpha", "1", "opacity of console background"};
 cvar_t scr_conbrightness = {CVAR_SAVE, "scr_conbrightness", "0.2", "brightness of console background (0 = black, 1 = image)"};
 cvar_t scr_conforcewhiledisconnected = {0, "scr_conforcewhiledisconnected", "1", "forces fullscreen console while disconnected"};
-cvar_t scr_menuforcewhiledisconnected = {0, "scr_menuforcewhiledisconnected", "1", "forces menu while disconnected"};
+cvar_t scr_menuforcewhiledisconnected = {0, "scr_menuforcewhiledisconnected", "0", "forces menu while disconnected"};
 cvar_t scr_centertime = {0, "scr_centertime","2", "how long centerprint messages show"};
 cvar_t scr_showram = {CVAR_SAVE, "showram","1", "show ram icon if low on surface cache memory (not used)"};
 cvar_t scr_showturtle = {CVAR_SAVE, "showturtle","0", "show turtle icon when framerate is too low (not used)"};
