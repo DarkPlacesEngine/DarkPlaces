@@ -244,7 +244,7 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 		Matrix4x4_Transform(&ent->inversematrix, start, starttransformed);
 		Matrix4x4_Transform(&ent->inversematrix, end, endtransformed);
 
-		if (ent->model && ent->model->TraceBox)
+		//if (ent->model && ent->model->TraceBox)
 			ent->model->TraceBox(ent->model, ent->frameblend[0].frame, &trace, starttransformed, vec3_origin, vec3_origin, endtransformed, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY);
 
 		if (maxrealfrac > trace.realfraction)
