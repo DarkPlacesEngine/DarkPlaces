@@ -45,6 +45,7 @@
 0 bug darkplaces renderer: deluxemaps are not detected in some maps that do have them?  (SavageX)
 0 bug darkplaces renderer: modify r_showtris_polygonoffset to push back all filled geometry, not lines, because polygonoffset will not affect GL_LINES at all
 0 bug darkplaces renderer: monsters teleporting in really slow down rendering, perhaps the teleport light is casting huge shadows?  new information suggests it is the particles. (romi, lcatlnx)
+0 bug darkplaces renderer: r_wateralpha 0.9 is invisible on r_glsl 0;gl_combine 0 path (Lardarse]
 0 bug darkplaces renderer: r_wateralpha on maps that are not watervised shows sky, this is a known glquake bug but it is fixable in darkplaces at load time by marking opposite-content (water-empty, empty-water) leafs as visible in their pvs sets, this involves checking the portal flow...  (knghtbrd)
 0 bug darkplaces renderer: showfps values 2 and 3 are printing bogus numbers like -2 billion (Willis)
 0 bug darkplaces server: Blood Mage monsters are stuck in place apparently (steven a)
