@@ -3315,12 +3315,18 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		memset(&m, 0, sizeof(m));
 		R_Mesh_State(&m);
-		RSurf_SetPointersForPass(false, false);
+		t = NULL;
 		for (i = 0, j = model->firstmodelsurface, surface = model->data_surfaces + j;i < model->nummodelsurfaces;i++, j++, surface++)
 		{
 			if (ent == r_refdef.worldentity && !r_worldsurfacevisible[j])
 				continue;
-			texture = surface->texture->currentframe;
+			if (t != surface->texture)
+			{
+				t = surface->texture;
+				texture = t->currentframe;
+				RSurf_PrepareForBatch(ent, texture, modelorg);
+				RSurf_SetPointersForPass(false, false);
+			}
 			if ((texture->currentmaterialflags & flagsmask) && surface->num_triangles)
 			{
 				int k = (int)(((size_t)surface) / sizeof(msurface_t));
