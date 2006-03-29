@@ -11,7 +11,7 @@ DP_ARCH != uname
 # Command used to delete files
 CMD_RM=$(CMD_UNIXRM)
 
-UNIX_X11LIBPATH=-L/usr/X11R6/lib
+UNIX_X11LIBPATH=/usr/X11R6/lib
 
 # BSD configuration
 .if $(DP_MAKE_TARGET) == "bsd"
