@@ -5,6 +5,7 @@
 void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
 {
 	int i;
+	model_t *model = ent->model;
 	vec3_t left, up, org, color, diffusecolor, diffusenormal;
 	mspriteframe_t *frame;
 	float scale;
@@ -13,7 +14,7 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, int sur
 	org[0] = ent->matrix.m[0][3] - r_viewforward[0];
 	org[1] = ent->matrix.m[1][3] - r_viewforward[1];
 	org[2] = ent->matrix.m[2][3] - r_viewforward[2];
-	switch(ent->model->sprite.sprnum_type)
+	switch(model->sprite.sprnum_type)
 	{
 	case SPR_VP_PARALLEL_UPRIGHT:
 		// flames and such
@@ -38,7 +39,7 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, int sur
 		up[2] = ent->scale;
 		break;
 	default:
-		Con_Printf("R_SpriteSetup: unknown sprite type %i\n", ent->model->sprite.sprnum_type);
+		Con_Printf("R_SpriteSetup: unknown sprite type %i\n", model->sprite.sprnum_type);
 		// fall through to normal sprite
 	case SPR_VP_PARALLEL:
 		// normal sprite
@@ -91,7 +92,7 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, int sur
 	{
 		if (ent->frameblend[i].lerp >= 0.01f)
 		{
-			frame = ent->model->sprite.sprdata_frames + ent->frameblend[i].frame;
+			frame = model->sprite.sprdata_frames + ent->frameblend[i].frame;
 			// FIXME: negate left and right in loader
 			R_DrawSprite(GL_SRC_ALPHA, (ent->effects & EF_ADDITIVE) ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA, frame->skin.base, frame->skin.fog, (ent->effects & EF_NODEPTHTEST), org, left, up, frame->left, frame->right, frame->down, frame->up, color[0], color[1], color[2], ent->alpha * ent->frameblend[i].lerp);
 		}

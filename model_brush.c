@@ -430,10 +430,10 @@ static void Mod_Q1BSP_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *in
 		{
 			for (k = 0;k < surface->num_triangles;k++)
 			{
-				tri = (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle) + k * 3;
-				VectorCopy((surface->groupmesh->data_vertex3f + tri[0] * 3), vert[0]);
-				VectorCopy((surface->groupmesh->data_vertex3f + tri[1] * 3), vert[1]);
-				VectorCopy((surface->groupmesh->data_vertex3f + tri[2] * 3), vert[2]);
+				tri = (info->model->surfmesh.data_element3i + 3 * surface->num_firsttriangle) + k * 3;
+				VectorCopy((info->model->surfmesh.data_vertex3f + tri[0] * 3), vert[0]);
+				VectorCopy((info->model->surfmesh.data_vertex3f + tri[1] * 3), vert[1]);
+				VectorCopy((info->model->surfmesh.data_vertex3f + tri[2] * 3), vert[2]);
 				VectorSubtract(vert[1], vert[0], edge[0]);
 				VectorSubtract(vert[2], vert[1], edge[1]);
 				CrossProduct(edge[1], edge[0], facenormal);
@@ -1970,7 +1970,7 @@ static void Mod_Q1BSP_GenerateWarpMesh(msurface_t *surface)
 
 	subdivpolytriangles = 0;
 	subdivpolyverts = 0;
-	SubdividePolygon(surface->num_vertices, (surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex));
+	SubdividePolygon(surface->num_vertices, (surface->mesh->data_vertex3f + 3 * surface->num_firstvertex));
 	if (subdivpolytriangles < 1)
 		Host_Error("Mod_Q1BSP_GenerateWarpMesh: no triangles?");
 
@@ -2053,9 +2053,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		totaltris += numedges - 2;
 	}
 
-	loadmodel->nummeshes = 1;
-	loadmodel->meshlist = (surfmesh_t **)Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t *));
-	loadmodel->meshlist[0] = Mod_AllocSurfMesh(loadmodel->mempool, totalverts, totaltris, true, false, false);
+	Mod_AllocSurfMesh(loadmodel->mempool, totalverts, totaltris, true, false, false);
 
 	lightmaptexture = NULL;
 	deluxemaptexture = r_texture_blanknormalmap;
@@ -2088,7 +2086,6 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		//	surface->flags |= SURF_PLANEBACK;
 		//surface->plane = loadmodel->brush.data_planes + planenum;
 
-		surface->groupmesh = loadmodel->meshlist[0];
 		surface->num_firstvertex = totalverts;
 		surface->num_vertices = numedges;
 		surface->num_firsttriangle = totaltris;
@@ -2102,37 +2099,37 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 			int lindex = loadmodel->brushq1.surfedges[firstedge + i];
 			float s, t;
 			if (lindex > 0)
-				VectorCopy(loadmodel->brushq1.vertexes[loadmodel->brushq1.edges[lindex].v[0]].position, (surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex) + i * 3);
+				VectorCopy(loadmodel->brushq1.vertexes[loadmodel->brushq1.edges[lindex].v[0]].position, (loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3);
 			else
-				VectorCopy(loadmodel->brushq1.vertexes[loadmodel->brushq1.edges[-lindex].v[1]].position, (surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex) + i * 3);
-			s = DotProduct(((surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex) + i * 3), surface->lightmapinfo->texinfo->vecs[0]) + surface->lightmapinfo->texinfo->vecs[0][3];
-			t = DotProduct(((surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex) + i * 3), surface->lightmapinfo->texinfo->vecs[1]) + surface->lightmapinfo->texinfo->vecs[1][3];
-			(surface->groupmesh->data_texcoordtexture2f + 2 * surface->num_firstvertex)[i * 2 + 0] = s / surface->texture->width;
-			(surface->groupmesh->data_texcoordtexture2f + 2 * surface->num_firstvertex)[i * 2 + 1] = t / surface->texture->height;
-			(surface->groupmesh->data_texcoordlightmap2f + 2 * surface->num_firstvertex)[i * 2 + 0] = 0;
-			(surface->groupmesh->data_texcoordlightmap2f + 2 * surface->num_firstvertex)[i * 2 + 1] = 0;
-			(surface->groupmesh->data_lightmapoffsets + surface->num_firstvertex)[i] = 0;
+				VectorCopy(loadmodel->brushq1.vertexes[loadmodel->brushq1.edges[-lindex].v[1]].position, (loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3);
+			s = DotProduct(((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3), surface->lightmapinfo->texinfo->vecs[0]) + surface->lightmapinfo->texinfo->vecs[0][3];
+			t = DotProduct(((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3), surface->lightmapinfo->texinfo->vecs[1]) + surface->lightmapinfo->texinfo->vecs[1][3];
+			(loadmodel->surfmesh.data_texcoordtexture2f + 2 * surface->num_firstvertex)[i * 2 + 0] = s / surface->texture->width;
+			(loadmodel->surfmesh.data_texcoordtexture2f + 2 * surface->num_firstvertex)[i * 2 + 1] = t / surface->texture->height;
+			(loadmodel->surfmesh.data_texcoordlightmap2f + 2 * surface->num_firstvertex)[i * 2 + 0] = 0;
+			(loadmodel->surfmesh.data_texcoordlightmap2f + 2 * surface->num_firstvertex)[i * 2 + 1] = 0;
+			(loadmodel->surfmesh.data_lightmapoffsets + surface->num_firstvertex)[i] = 0;
 		}
 
 		for (i = 0;i < surface->num_triangles;i++)
 		{
-			(surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle)[i * 3 + 0] = 0 + surface->num_firstvertex;
-			(surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle)[i * 3 + 1] = i + 1 + surface->num_firstvertex;
-			(surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle)[i * 3 + 2] = i + 2 + surface->num_firstvertex;
+			(loadmodel->surfmesh.data_element3i + 3 * surface->num_firsttriangle)[i * 3 + 0] = 0 + surface->num_firstvertex;
+			(loadmodel->surfmesh.data_element3i + 3 * surface->num_firsttriangle)[i * 3 + 1] = i + 1 + surface->num_firstvertex;
+			(loadmodel->surfmesh.data_element3i + 3 * surface->num_firsttriangle)[i * 3 + 2] = i + 2 + surface->num_firstvertex;
 		}
 
 		// compile additional data about the surface geometry
-		Mod_BuildTextureVectorsAndNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, surface->groupmesh->data_vertex3f, surface->groupmesh->data_texcoordtexture2f, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle), surface->groupmesh->data_svector3f, surface->groupmesh->data_tvector3f, surface->groupmesh->data_normal3f, true);
-		BoxFromPoints(surface->mins, surface->maxs, surface->num_vertices, (surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex));
+		Mod_BuildTextureVectorsAndNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, (loadmodel->surfmesh.data_element3i + 3 * surface->num_firsttriangle), loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, loadmodel->surfmesh.data_normal3f, true);
+		BoxFromPoints(surface->mins, surface->maxs, surface->num_vertices, (loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex));
 
 		// generate surface extents information
-		texmins[0] = texmaxs[0] = DotProduct((surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex), surface->lightmapinfo->texinfo->vecs[0]) + surface->lightmapinfo->texinfo->vecs[0][3];
-		texmins[1] = texmaxs[1] = DotProduct((surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex), surface->lightmapinfo->texinfo->vecs[1]) + surface->lightmapinfo->texinfo->vecs[1][3];
+		texmins[0] = texmaxs[0] = DotProduct((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex), surface->lightmapinfo->texinfo->vecs[0]) + surface->lightmapinfo->texinfo->vecs[0][3];
+		texmins[1] = texmaxs[1] = DotProduct((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex), surface->lightmapinfo->texinfo->vecs[1]) + surface->lightmapinfo->texinfo->vecs[1][3];
 		for (i = 1;i < surface->num_vertices;i++)
 		{
 			for (j = 0;j < 2;j++)
 			{
-				val = DotProduct((surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex) + i * 3, surface->lightmapinfo->texinfo->vecs[j]) + surface->lightmapinfo->texinfo->vecs[j][3];
+				val = DotProduct((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3, surface->lightmapinfo->texinfo->vecs[j]) + surface->lightmapinfo->texinfo->vecs[j][3];
 				texmins[j] = min(texmins[j], val);
 				texmaxs[j] = max(texmaxs[j], val);
 			}
@@ -2213,14 +2210,14 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 
 			for (i = 0;i < surface->num_vertices;i++)
 			{
-				u = ((DotProduct(((surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex) + i * 3), surface->lightmapinfo->texinfo->vecs[0]) + surface->lightmapinfo->texinfo->vecs[0][3]) + 8 - surface->lightmapinfo->texturemins[0]) * (1.0 / 16.0);
-				v = ((DotProduct(((surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex) + i * 3), surface->lightmapinfo->texinfo->vecs[1]) + surface->lightmapinfo->texinfo->vecs[1][3]) + 8 - surface->lightmapinfo->texturemins[1]) * (1.0 / 16.0);
-				(surface->groupmesh->data_texcoordlightmap2f + 2 * surface->num_firstvertex)[i * 2 + 0] = u * uscale + ubase;
-				(surface->groupmesh->data_texcoordlightmap2f + 2 * surface->num_firstvertex)[i * 2 + 1] = v * vscale + vbase;
+				u = ((DotProduct(((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3), surface->lightmapinfo->texinfo->vecs[0]) + surface->lightmapinfo->texinfo->vecs[0][3]) + 8 - surface->lightmapinfo->texturemins[0]) * (1.0 / 16.0);
+				v = ((DotProduct(((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3), surface->lightmapinfo->texinfo->vecs[1]) + surface->lightmapinfo->texinfo->vecs[1][3]) + 8 - surface->lightmapinfo->texturemins[1]) * (1.0 / 16.0);
+				(loadmodel->surfmesh.data_texcoordlightmap2f + 2 * surface->num_firstvertex)[i * 2 + 0] = u * uscale + ubase;
+				(loadmodel->surfmesh.data_texcoordlightmap2f + 2 * surface->num_firstvertex)[i * 2 + 1] = v * vscale + vbase;
 				// LordHavoc: calc lightmap data offset for vertex lighting to use
 				iu = (int) u;
 				iv = (int) v;
-				(surface->groupmesh->data_lightmapoffsets + surface->num_firstvertex)[i] = (bound(0, iv, tmax) * ssize + bound(0, iu, smax)) * 3;
+				(loadmodel->surfmesh.data_lightmapoffsets + surface->num_firstvertex)[i] = (bound(0, iv, tmax) * ssize + bound(0, iu, smax)) * 3;
 			}
 		}
 	}
@@ -3281,7 +3278,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	}
 	loadmodel->brush.shadowmesh = Mod_ShadowMesh_Begin(loadmodel->mempool, numshadowmeshtriangles * 3, numshadowmeshtriangles, NULL, NULL, NULL, false, false, true);
 	for (j = 0, surface = loadmodel->data_surfaces;j < loadmodel->num_surfaces;j++, surface++)
-		Mod_ShadowMesh_AddMesh(loadmodel->mempool, loadmodel->brush.shadowmesh, NULL, NULL, NULL, surface->groupmesh->data_vertex3f, NULL, NULL, NULL, NULL, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
+		Mod_ShadowMesh_AddMesh(loadmodel->mempool, loadmodel->brush.shadowmesh, NULL, NULL, NULL, loadmodel->surfmesh.data_vertex3f, NULL, NULL, NULL, NULL, surface->num_triangles, (loadmodel->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
 	loadmodel->brush.shadowmesh = Mod_ShadowMesh_Finish(loadmodel->mempool, loadmodel->brush.shadowmesh, false, true);
 	Mod_BuildTriangleNeighbors(loadmodel->brush.shadowmesh->neighbor3i, loadmodel->brush.shadowmesh->element3i, loadmodel->brush.shadowmesh->numtriangles);
 
@@ -3389,7 +3386,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 				if (surface->texture->basematerialflags & MATERIALFLAG_SKY)
 					mod->DrawSky = R_Q1BSP_DrawSky;
 				// calculate bounding shapes
-				for (k = 0, vec = (surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex);k < surface->num_vertices;k++, vec += 3)
+				for (k = 0, vec = (loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex);k < surface->num_vertices;k++, vec += 3)
 				{
 					if (mod->normalmins[0] > vec[0]) mod->normalmins[0] = vec[0];
 					if (mod->normalmins[1] > vec[1]) mod->normalmins[1] = vec[1];
@@ -4627,12 +4624,10 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 	i = oldi;
 	in = oldin;
 	out = oldout;
-	loadmodel->nummeshes = 1;
-	loadmodel->meshlist = (surfmesh_t **)Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t *));
-	loadmodel->meshlist[0] = Mod_AllocSurfMesh(loadmodel->mempool, meshvertices, meshtriangles, false, true, false);
+	Mod_AllocSurfMesh(loadmodel->mempool, meshvertices, meshtriangles, false, true, false);
 	meshvertices = 0;
 	meshtriangles = 0;
-	for (;i < count && meshvertices + out->num_vertices <= loadmodel->meshlist[0]->num_vertices;i++, in++, out++)
+	for (;i < count && meshvertices + out->num_vertices <= loadmodel->surfmesh.num_vertices;i++, in++, out++)
 	{
 		if (out->num_vertices < 3 || out->num_triangles < 1)
 			continue;
@@ -4640,7 +4635,6 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		type = LittleLong(in->type);
 		firstvertex = LittleLong(in->firstvertex);
 		firstelement = LittleLong(in->firstelement);
-		out->groupmesh = loadmodel->meshlist[0];
 		out->num_firstvertex = meshvertices;
 		out->num_firsttriangle = meshtriangles;
 		switch(type)
@@ -4650,20 +4644,20 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			// no processing necessary
 			for (j = 0;j < out->num_vertices;j++)
 			{
-				(out->groupmesh->data_vertex3f + 3 * out->num_firstvertex)[j * 3 + 0] = loadmodel->brushq3.data_vertex3f[(firstvertex + j) * 3 + 0];
-				(out->groupmesh->data_vertex3f + 3 * out->num_firstvertex)[j * 3 + 1] = loadmodel->brushq3.data_vertex3f[(firstvertex + j) * 3 + 1];
-				(out->groupmesh->data_vertex3f + 3 * out->num_firstvertex)[j * 3 + 2] = loadmodel->brushq3.data_vertex3f[(firstvertex + j) * 3 + 2];
-				(out->groupmesh->data_texcoordtexture2f + 2 * out->num_firstvertex)[j * 2 + 0] = loadmodel->brushq3.data_texcoordtexture2f[(firstvertex + j) * 2 + 0];
-				(out->groupmesh->data_texcoordtexture2f + 2 * out->num_firstvertex)[j * 2 + 1] = loadmodel->brushq3.data_texcoordtexture2f[(firstvertex + j) * 2 + 1];
-				(out->groupmesh->data_texcoordlightmap2f + 2 * out->num_firstvertex)[j * 2 + 0] = loadmodel->brushq3.data_texcoordlightmap2f[(firstvertex + j) * 2 + 0];
-				(out->groupmesh->data_texcoordlightmap2f + 2 * out->num_firstvertex)[j * 2 + 1] = loadmodel->brushq3.data_texcoordlightmap2f[(firstvertex + j) * 2 + 1];
-				(out->groupmesh->data_lightmapcolor4f + 4 * out->num_firstvertex)[j * 4 + 0] = loadmodel->brushq3.data_color4f[(firstvertex + j) * 4 + 0];
-				(out->groupmesh->data_lightmapcolor4f + 4 * out->num_firstvertex)[j * 4 + 1] = loadmodel->brushq3.data_color4f[(firstvertex + j) * 4 + 1];
-				(out->groupmesh->data_lightmapcolor4f + 4 * out->num_firstvertex)[j * 4 + 2] = loadmodel->brushq3.data_color4f[(firstvertex + j) * 4 + 2];
-				(out->groupmesh->data_lightmapcolor4f + 4 * out->num_firstvertex)[j * 4 + 3] = loadmodel->brushq3.data_color4f[(firstvertex + j) * 4 + 3];
+				(loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex)[j * 3 + 0] = loadmodel->brushq3.data_vertex3f[(firstvertex + j) * 3 + 0];
+				(loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex)[j * 3 + 1] = loadmodel->brushq3.data_vertex3f[(firstvertex + j) * 3 + 1];
+				(loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex)[j * 3 + 2] = loadmodel->brushq3.data_vertex3f[(firstvertex + j) * 3 + 2];
+				(loadmodel->surfmesh.data_texcoordtexture2f + 2 * out->num_firstvertex)[j * 2 + 0] = loadmodel->brushq3.data_texcoordtexture2f[(firstvertex + j) * 2 + 0];
+				(loadmodel->surfmesh.data_texcoordtexture2f + 2 * out->num_firstvertex)[j * 2 + 1] = loadmodel->brushq3.data_texcoordtexture2f[(firstvertex + j) * 2 + 1];
+				(loadmodel->surfmesh.data_texcoordlightmap2f + 2 * out->num_firstvertex)[j * 2 + 0] = loadmodel->brushq3.data_texcoordlightmap2f[(firstvertex + j) * 2 + 0];
+				(loadmodel->surfmesh.data_texcoordlightmap2f + 2 * out->num_firstvertex)[j * 2 + 1] = loadmodel->brushq3.data_texcoordlightmap2f[(firstvertex + j) * 2 + 1];
+				(loadmodel->surfmesh.data_lightmapcolor4f + 4 * out->num_firstvertex)[j * 4 + 0] = loadmodel->brushq3.data_color4f[(firstvertex + j) * 4 + 0];
+				(loadmodel->surfmesh.data_lightmapcolor4f + 4 * out->num_firstvertex)[j * 4 + 1] = loadmodel->brushq3.data_color4f[(firstvertex + j) * 4 + 1];
+				(loadmodel->surfmesh.data_lightmapcolor4f + 4 * out->num_firstvertex)[j * 4 + 2] = loadmodel->brushq3.data_color4f[(firstvertex + j) * 4 + 2];
+				(loadmodel->surfmesh.data_lightmapcolor4f + 4 * out->num_firstvertex)[j * 4 + 3] = loadmodel->brushq3.data_color4f[(firstvertex + j) * 4 + 3];
 			}
 			for (j = 0;j < out->num_triangles*3;j++)
-				(out->groupmesh->data_element3i + 3 * out->num_firsttriangle)[j] = loadmodel->brushq3.data_element3i[firstelement + j] + out->num_firstvertex;
+				(loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle)[j] = loadmodel->brushq3.data_element3i[firstelement + j] + out->num_firstvertex;
 			break;
 		case Q3FACETYPE_PATCH:
 			patchsize[0] = LittleLong(in->specific.patch.patchsize[0]);
@@ -4696,12 +4690,12 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			type = Q3FACETYPE_MESH;
 			// generate geometry
 			// (note: normals are skipped because they get recalculated)
-			Q3PatchTesselateFloat(3, sizeof(float[3]), (out->groupmesh->data_vertex3f + 3 * out->num_firstvertex), patchsize[0], patchsize[1], sizeof(float[3]), originalvertex3f, xtess, ytess);
-			Q3PatchTesselateFloat(2, sizeof(float[2]), (out->groupmesh->data_texcoordtexture2f + 2 * out->num_firstvertex), patchsize[0], patchsize[1], sizeof(float[2]), originaltexcoordtexture2f, xtess, ytess);
-			Q3PatchTesselateFloat(2, sizeof(float[2]), (out->groupmesh->data_texcoordlightmap2f + 2 * out->num_firstvertex), patchsize[0], patchsize[1], sizeof(float[2]), originaltexcoordlightmap2f, xtess, ytess);
-			Q3PatchTesselateFloat(4, sizeof(float[4]), (out->groupmesh->data_lightmapcolor4f + 4 * out->num_firstvertex), patchsize[0], patchsize[1], sizeof(float[4]), originalcolor4f, xtess, ytess);
-			Q3PatchTriangleElements((out->groupmesh->data_element3i + 3 * out->num_firsttriangle), finalwidth, finalheight, out->num_firstvertex);
-			out->num_triangles = Mod_RemoveDegenerateTriangles(out->num_triangles, (out->groupmesh->data_element3i + 3 * out->num_firsttriangle), (out->groupmesh->data_element3i + 3 * out->num_firsttriangle), out->groupmesh->data_vertex3f);
+			Q3PatchTesselateFloat(3, sizeof(float[3]), (loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex), patchsize[0], patchsize[1], sizeof(float[3]), originalvertex3f, xtess, ytess);
+			Q3PatchTesselateFloat(2, sizeof(float[2]), (loadmodel->surfmesh.data_texcoordtexture2f + 2 * out->num_firstvertex), patchsize[0], patchsize[1], sizeof(float[2]), originaltexcoordtexture2f, xtess, ytess);
+			Q3PatchTesselateFloat(2, sizeof(float[2]), (loadmodel->surfmesh.data_texcoordlightmap2f + 2 * out->num_firstvertex), patchsize[0], patchsize[1], sizeof(float[2]), originaltexcoordlightmap2f, xtess, ytess);
+			Q3PatchTesselateFloat(4, sizeof(float[4]), (loadmodel->surfmesh.data_lightmapcolor4f + 4 * out->num_firstvertex), patchsize[0], patchsize[1], sizeof(float[4]), originalcolor4f, xtess, ytess);
+			Q3PatchTriangleElements((loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle), finalwidth, finalheight, out->num_firstvertex);
+			out->num_triangles = Mod_RemoveDegenerateTriangles(out->num_triangles, (loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle), (loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle), loadmodel->surfmesh.data_vertex3f);
 			if (developer.integer >= 100)
 			{
 				if (out->num_triangles < finaltriangles)
@@ -4739,7 +4733,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			Q3PatchTesselateFloat(3, sizeof(float[3]), out->data_collisionvertex3f, patchsize[0], patchsize[1], sizeof(float[3]), originalvertex3f, xtess, ytess);
 			Q3PatchTriangleElements(out->data_collisionelement3i, finalwidth, finalheight, 0);
 
-			//Mod_SnapVertices(3, out->num_vertices, (out->groupmesh->data_vertex3f + 3 * out->num_firstvertex), 0.25);
+			//Mod_SnapVertices(3, out->num_vertices, (loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex), 0.25);
 			Mod_SnapVertices(3, out->num_collisionvertices, out->data_collisionvertex3f, 1);
 
 			oldnumtriangles = out->num_triangles;
@@ -4754,29 +4748,29 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		meshvertices += out->num_vertices;
 		meshtriangles += out->num_triangles;
 		for (j = 0, invalidelements = 0;j < out->num_triangles * 3;j++)
-			if ((out->groupmesh->data_element3i + 3 * out->num_firsttriangle)[j] < out->num_firstvertex || (out->groupmesh->data_element3i + 3 * out->num_firsttriangle)[j] >= out->num_firstvertex + out->num_vertices)
+			if ((loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle)[j] < out->num_firstvertex || (loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle)[j] >= out->num_firstvertex + out->num_vertices)
 				invalidelements++;
 		if (invalidelements)
 		{
 			Con_Printf("Mod_Q3BSP_LoadFaces: Warning: face #%i has %i invalid elements, type = %i, texture->name = \"%s\", texture->surfaceflags = %i, firstvertex = %i, numvertices = %i, firstelement = %i, numelements = %i, elements list:\n", i, invalidelements, type, out->texture->name, out->texture->surfaceflags, firstvertex, out->num_vertices, firstelement, out->num_triangles * 3);
 			for (j = 0;j < out->num_triangles * 3;j++)
 			{
-				Con_Printf(" %i", (out->groupmesh->data_element3i + 3 * out->num_firsttriangle)[j] - out->num_firstvertex);
-				if ((out->groupmesh->data_element3i + 3 * out->num_firsttriangle)[j] < out->num_firstvertex || (out->groupmesh->data_element3i + 3 * out->num_firsttriangle)[j] >= out->num_firstvertex + out->num_vertices)
-					(out->groupmesh->data_element3i + 3 * out->num_firsttriangle)[j] = out->num_firstvertex;
+				Con_Printf(" %i", (loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle)[j] - out->num_firstvertex);
+				if ((loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle)[j] < out->num_firstvertex || (loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle)[j] >= out->num_firstvertex + out->num_vertices)
+					(loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle)[j] = out->num_firstvertex;
 			}
 			Con_Print("\n");
 		}
 		// for per pixel lighting
-		Mod_BuildTextureVectorsAndNormals(out->num_firstvertex, out->num_vertices, out->num_triangles, out->groupmesh->data_vertex3f, out->groupmesh->data_texcoordtexture2f, (out->groupmesh->data_element3i + 3 * out->num_firsttriangle), out->groupmesh->data_svector3f, out->groupmesh->data_tvector3f, out->groupmesh->data_normal3f, true);
+		Mod_BuildTextureVectorsAndNormals(out->num_firstvertex, out->num_vertices, out->num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, (loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle), loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, loadmodel->surfmesh.data_normal3f, true);
 		// calculate a bounding box
 		VectorClear(out->mins);
 		VectorClear(out->maxs);
 		if (out->num_vertices)
 		{
-			VectorCopy((out->groupmesh->data_vertex3f + 3 * out->num_firstvertex), out->mins);
-			VectorCopy((out->groupmesh->data_vertex3f + 3 * out->num_firstvertex), out->maxs);
-			for (j = 1, v = (out->groupmesh->data_vertex3f + 3 * out->num_firstvertex) + 3;j < out->num_vertices;j++, v += 3)
+			VectorCopy((loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex), out->mins);
+			VectorCopy((loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex), out->maxs);
+			for (j = 1, v = (loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex) + 3;j < out->num_vertices;j++, v += 3)
 			{
 				out->mins[0] = min(out->mins[0], v[0]);
 				out->maxs[0] = max(out->maxs[0], v[0]);
@@ -5545,8 +5539,8 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	}
 	loadmodel->brush.shadowmesh = Mod_ShadowMesh_Begin(loadmodel->mempool, numshadowmeshtriangles * 3, numshadowmeshtriangles, NULL, NULL, NULL, false, false, true);
 	for (j = 0, surface = loadmodel->data_surfaces;j < loadmodel->num_surfaces;j++, surface++)
-		if (surface->groupmesh)
-			Mod_ShadowMesh_AddMesh(loadmodel->mempool, loadmodel->brush.shadowmesh, NULL, NULL, NULL, surface->groupmesh->data_vertex3f, NULL, NULL, NULL, NULL, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
+		if (surface->num_triangles > 0)
+			Mod_ShadowMesh_AddMesh(loadmodel->mempool, loadmodel->brush.shadowmesh, NULL, NULL, NULL, loadmodel->surfmesh.data_vertex3f, NULL, NULL, NULL, NULL, surface->num_triangles, (loadmodel->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
 	loadmodel->brush.shadowmesh = Mod_ShadowMesh_Finish(loadmodel->mempool, loadmodel->brush.shadowmesh, false, true);
 	Mod_BuildTriangleNeighbors(loadmodel->brush.shadowmesh->neighbor3i, loadmodel->brush.shadowmesh->element3i, loadmodel->brush.shadowmesh->numtriangles);
 

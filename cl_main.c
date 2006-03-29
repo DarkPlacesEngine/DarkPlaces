@@ -405,44 +405,45 @@ static void CL_PrintEntities_f(void)
 //static const vec3_t nomodelmaxs = {16, 16, 16};
 void CL_BoundingBoxForEntity(entity_render_t *ent)
 {
-	if (ent->model)
+	model_t *model = ent->model;
+	if (model)
 	{
 		//if (ent->angles[0] || ent->angles[2])
 		if (ent->matrix.m[2][0] != 0 || ent->matrix.m[2][1] != 0)
 		{
 			// pitch or roll
-			ent->mins[0] = ent->matrix.m[0][3] + ent->model->rotatedmins[0];
-			ent->mins[1] = ent->matrix.m[1][3] + ent->model->rotatedmins[1];
-			ent->mins[2] = ent->matrix.m[2][3] + ent->model->rotatedmins[2];
-			ent->maxs[0] = ent->matrix.m[0][3] + ent->model->rotatedmaxs[0];
-			ent->maxs[1] = ent->matrix.m[1][3] + ent->model->rotatedmaxs[1];
-			ent->maxs[2] = ent->matrix.m[2][3] + ent->model->rotatedmaxs[2];
-			//VectorAdd(ent->origin, ent->model->rotatedmins, ent->mins);
-			//VectorAdd(ent->origin, ent->model->rotatedmaxs, ent->maxs);
+			ent->mins[0] = ent->matrix.m[0][3] + model->rotatedmins[0];
+			ent->mins[1] = ent->matrix.m[1][3] + model->rotatedmins[1];
+			ent->mins[2] = ent->matrix.m[2][3] + model->rotatedmins[2];
+			ent->maxs[0] = ent->matrix.m[0][3] + model->rotatedmaxs[0];
+			ent->maxs[1] = ent->matrix.m[1][3] + model->rotatedmaxs[1];
+			ent->maxs[2] = ent->matrix.m[2][3] + model->rotatedmaxs[2];
+			//VectorAdd(ent->origin, model->rotatedmins, ent->mins);
+			//VectorAdd(ent->origin, model->rotatedmaxs, ent->maxs);
 		}
 		//else if (ent->angles[1])
 		else if (ent->matrix.m[0][1] != 0 || ent->matrix.m[1][0] != 0)
 		{
 			// yaw
-			ent->mins[0] = ent->matrix.m[0][3] + ent->model->yawmins[0];
-			ent->mins[1] = ent->matrix.m[1][3] + ent->model->yawmins[1];
-			ent->mins[2] = ent->matrix.m[2][3] + ent->model->yawmins[2];
-			ent->maxs[0] = ent->matrix.m[0][3] + ent->model->yawmaxs[0];
-			ent->maxs[1] = ent->matrix.m[1][3] + ent->model->yawmaxs[1];
-			ent->maxs[2] = ent->matrix.m[2][3] + ent->model->yawmaxs[2];
-			//VectorAdd(ent->origin, ent->model->yawmins, ent->mins);
-			//VectorAdd(ent->origin, ent->model->yawmaxs, ent->maxs);
+			ent->mins[0] = ent->matrix.m[0][3] + model->yawmins[0];
+			ent->mins[1] = ent->matrix.m[1][3] + model->yawmins[1];
+			ent->mins[2] = ent->matrix.m[2][3] + model->yawmins[2];
+			ent->maxs[0] = ent->matrix.m[0][3] + model->yawmaxs[0];
+			ent->maxs[1] = ent->matrix.m[1][3] + model->yawmaxs[1];
+			ent->maxs[2] = ent->matrix.m[2][3] + model->yawmaxs[2];
+			//VectorAdd(ent->origin, model->yawmins, ent->mins);
+			//VectorAdd(ent->origin, model->yawmaxs, ent->maxs);
 		}
 		else
 		{
-			ent->mins[0] = ent->matrix.m[0][3] + ent->model->normalmins[0];
-			ent->mins[1] = ent->matrix.m[1][3] + ent->model->normalmins[1];
-			ent->mins[2] = ent->matrix.m[2][3] + ent->model->normalmins[2];
-			ent->maxs[0] = ent->matrix.m[0][3] + ent->model->normalmaxs[0];
-			ent->maxs[1] = ent->matrix.m[1][3] + ent->model->normalmaxs[1];
-			ent->maxs[2] = ent->matrix.m[2][3] + ent->model->normalmaxs[2];
-			//VectorAdd(ent->origin, ent->model->normalmins, ent->mins);
-			//VectorAdd(ent->origin, ent->model->normalmaxs, ent->maxs);
+			ent->mins[0] = ent->matrix.m[0][3] + model->normalmins[0];
+			ent->mins[1] = ent->matrix.m[1][3] + model->normalmins[1];
+			ent->mins[2] = ent->matrix.m[2][3] + model->normalmins[2];
+			ent->maxs[0] = ent->matrix.m[0][3] + model->normalmaxs[0];
+			ent->maxs[1] = ent->matrix.m[1][3] + model->normalmaxs[1];
+			ent->maxs[2] = ent->matrix.m[2][3] + model->normalmaxs[2];
+			//VectorAdd(ent->origin, model->normalmins, ent->mins);
+			//VectorAdd(ent->origin, model->normalmaxs, ent->maxs);
 		}
 	}
 	else

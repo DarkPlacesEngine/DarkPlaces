@@ -53,6 +53,7 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 	int smax, tmax, i, size, size3, maps, l;
 	int *bl, scale;
 	unsigned char *lightmap, *out, *stain;
+	model_t *model = ent->model;
 	static int intblocklights[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*3]; // LordHavoc: *3 for colored lighting
 	static unsigned char templight[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*4];
 
@@ -67,7 +68,7 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 
 // set to full bright if no light data
 	bl = intblocklights;
-	if (!ent->model->brushq1.lightdata)
+	if (!model->brushq1.lightdata)
 	{
 		for (i = 0;i < size3;i++)
 			bl[i] = 255*256;
@@ -91,7 +92,7 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 	// scaling, and remaps the 0-65536 (2x overbright) to 0-256, it will
 	// be doubled during rendering to achieve 2x overbright
 	// (0 = 0.0, 128 = 1.0, 256 = 2.0)
-	if (ent->model->brushq1.lightmaprgba)
+	if (model->brushq1.lightmaprgba)
 	{
 		for (i = 0;i < size;i++)
 		{
@@ -140,7 +141,7 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 		bl = intblocklights;
 		out = templight;
 		// we simply renormalize the weighted normals to get a valid deluxemap
-		if (ent->model->brushq1.lightmaprgba)
+		if (model->brushq1.lightmaprgba)
 		{
 			for (i = 0;i < size;i++, bl += 3)
 			{
@@ -715,7 +716,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 	vec3_t modelorg;
 	texture_t *texture;
 	// check the box in modelspace, it was already checked in worldspace
-	if (!BoxesOverlap(ent->model->normalmins, ent->model->normalmaxs, lightmins, lightmaxs))
+	if (!BoxesOverlap(model->normalmins, model->normalmaxs, lightmins, lightmaxs))
 		return;
 	R_UpdateAllTextureInfo(ent);
 	if (model->brush.shadowmesh)
@@ -735,20 +736,19 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 	}
 	else
 	{
-		projectdistance = lightradius + ent->model->radius*2;
+		projectdistance = lightradius + model->radius*2;
 		Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 		{
 			surface = model->data_surfaces + surfacelist[surfacelistindex];
-			// FIXME: get current skin
-			texture = surface->texture;//R_FetchAliasSkin(ent, surface->groupmesh);
+			texture = surface->texture->currentframe;
 			if (texture->currentmaterialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT) || !surface->num_triangles)
 				continue;
 			RSurf_SetVertexPointer(ent, texture, surface, modelorg, false, false);
 			// identify lit faces within the bounding box
-			R_Shadow_PrepareShadowMark(surface->groupmesh->num_triangles);
-			R_Shadow_MarkVolumeFromBox(surface->num_firsttriangle, surface->num_triangles, rsurface_vertex3f, surface->groupmesh->data_element3i, relativelightorigin, lightmins, lightmaxs, surface->mins, surface->maxs);
-			R_Shadow_VolumeFromList(surface->groupmesh->num_vertices, surface->groupmesh->num_triangles, rsurface_vertex3f, surface->groupmesh->data_element3i, surface->groupmesh->data_neighbor3i, relativelightorigin, projectdistance, numshadowmark, shadowmarklist);
+			R_Shadow_PrepareShadowMark(model->surfmesh.num_triangles);
+			R_Shadow_MarkVolumeFromBox(surface->num_firsttriangle, surface->num_triangles, rsurface_vertex3f, model->surfmesh.data_element3i, relativelightorigin, lightmins, lightmaxs, surface->mins, surface->maxs);
+			R_Shadow_VolumeFromList(model->surfmesh.num_vertices, model->surfmesh.num_triangles, rsurface_vertex3f, model->surfmesh.data_element3i, model->surfmesh.data_neighbor3i, relativelightorigin, projectdistance, numshadowmark, shadowmarklist);
 		}
 	}
 }
@@ -770,6 +770,7 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, in
 static void R_Q1BSP_DrawLight_TransparentBatch(const entity_render_t *ent, texture_t *texture, int batchnumsurfaces, msurface_t **batchsurfacelist)
 {
 	int batchsurfaceindex;
+	model_t *model = ent->model;
 	msurface_t *batchsurface;
 	vec3_t tempcenter, center;
 	for (batchsurfaceindex = 0;batchsurfaceindex < batchnumsurfaces;batchsurfaceindex++)
@@ -779,7 +780,7 @@ static void R_Q1BSP_DrawLight_TransparentBatch(const entity_render_t *ent, textu
 		tempcenter[1] = (batchsurface->mins[1] + batchsurface->maxs[1]) * 0.5f;
 		tempcenter[2] = (batchsurface->mins[2] + batchsurface->maxs[2]) * 0.5f;
 		Matrix4x4_Transform(&ent->matrix, tempcenter, center);
-		R_MeshQueue_AddTransparent(texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_vieworigin : center, R_Q1BSP_DrawLight_TransparentCallback, ent, batchsurface - ent->model->data_surfaces, r_shadow_rtlight);
+		R_MeshQueue_AddTransparent(texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_vieworigin : center, R_Q1BSP_DrawLight_TransparentCallback, ent, batchsurface - model->data_surfaces, r_shadow_rtlight);
 	}
 }
 

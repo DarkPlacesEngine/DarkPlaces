@@ -325,8 +325,8 @@ static void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, in
 						const int *elements;
 						const float *vertex3f;
 						float v[9], trimins[3], trimaxs[3];
-						vertex3f = surface->groupmesh->data_vertex3f;
-						elements = (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle);
+						vertex3f = info->model->surfmesh.data_vertex3f;
+						elements = (info->model->surfmesh.data_element3i + 3 * surface->num_firsttriangle);
 						for (j = 0;j < surface->num_triangles;j++, elements += 3)
 						{
 							VectorCopy(vertex3f + elements[0] * 3, v + 0);
