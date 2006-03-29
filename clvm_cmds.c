@@ -1976,7 +1976,7 @@ void VM_CL_te_plasmaburn (void)
 //DP_QC_GETSURFACE
 
 void clippointtosurface(msurface_t *surface, vec3_t p, vec3_t out);
-static msurface_t *cl_getsurface(prvm_edict_t *ed, int surfacenum)
+static model_t *cl_getmodel(prvm_edict_t *ed)
 {
 	int modelindex;
 	model_t *model = NULL;
@@ -1996,8 +1996,11 @@ static msurface_t *cl_getsurface(prvm_edict_t *ed, int surfacenum)
 		if(modelindex < MAX_MODELS)
 			model = cl.model_precache[modelindex];
 	}
-	if(!model)
-		return NULL;
+	return model;
+}
+
+static msurface_t *cl_getsurface(model_t *model, int surfacenum)
+{
 	if (surfacenum < 0 || surfacenum >= model->nummodelsurfaces)
 		return NULL;
 	return model->data_surfaces + surfacenum + model->firstmodelsurface;
@@ -2006,9 +2009,10 @@ static msurface_t *cl_getsurface(prvm_edict_t *ed, int surfacenum)
 // #434 float(entity e, float s) getsurfacenumpoints
 void VM_CL_getsurfacenumpoints(void)
 {
+	model_t *model = cl_getmodel(PRVM_G_EDICT(OFS_PARM0));
 	msurface_t *surface;
 	// return 0 if no such surface
-	if (!(surface = cl_getsurface(PRVM_G_EDICT(OFS_PARM0), PRVM_G_FLOAT(OFS_PARM1))))
+	if (!model || !(surface = cl_getsurface(model, PRVM_G_FLOAT(OFS_PARM1))))
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = 0;
 		return;
@@ -2022,35 +2026,35 @@ void VM_CL_getsurfacenumpoints(void)
 void VM_CL_getsurfacepoint(void)
 {
 	prvm_edict_t *ed;
+	model_t *model;
 	msurface_t *surface;
 	int pointnum;
 	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
 	ed = PRVM_G_EDICT(OFS_PARM0);
-	if (!ed || ed->priv.server->free)
-		return;
-	if (!(surface = cl_getsurface(ed, PRVM_G_FLOAT(OFS_PARM1))))
+	if (!(model = cl_getmodel(ed)) || !(surface = cl_getsurface(model, PRVM_G_FLOAT(OFS_PARM1))))
 		return;
 	// note: this (incorrectly) assumes it is a simple polygon
 	pointnum = PRVM_G_FLOAT(OFS_PARM2);
 	if (pointnum < 0 || pointnum >= surface->num_vertices)
 		return;
 	// FIXME: implement rotation/scaling
-	VectorAdd(&(surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex)[pointnum * 3], ed->fields.client->origin, PRVM_G_VECTOR(OFS_RETURN));
+	VectorAdd(&(model->surfmesh.data_vertex3f + 3 * surface->num_firstvertex)[pointnum * 3], ed->fields.client->origin, PRVM_G_VECTOR(OFS_RETURN));
 }
 
 // #436 vector(entity e, float s) getsurfacenormal
 void VM_CL_getsurfacenormal(void)
 {
+	model_t *model;
 	msurface_t *surface;
 	vec3_t normal;
 	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
-	if (!(surface = cl_getsurface(PRVM_G_EDICT(OFS_PARM0), PRVM_G_FLOAT(OFS_PARM1))))
+	if (!(model = cl_getmodel(PRVM_G_EDICT(OFS_PARM0))) || !(surface = cl_getsurface(model, PRVM_G_FLOAT(OFS_PARM1))))
 		return;
 	// FIXME: implement rotation/scaling
 	// note: this (incorrectly) assumes it is a simple polygon
 	// note: this only returns the first triangle, so it doesn't work very
 	// well for curved surfaces or arbitrary meshes
-	TriangleNormal((surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex), (surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex) + 3, (surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex) + 6, normal);
+	TriangleNormal((model->surfmesh.data_vertex3f + 3 * surface->num_firstvertex), (model->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + 3, (model->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + 6, normal);
 	VectorNormalize(normal);
 	VectorCopy(normal, PRVM_G_VECTOR(OFS_RETURN));
 }
@@ -2058,9 +2062,10 @@ void VM_CL_getsurfacenormal(void)
 // #437 string(entity e, float s) getsurfacetexture
 void VM_CL_getsurfacetexture(void)
 {
+	model_t *model;
 	msurface_t *surface;
 	PRVM_G_INT(OFS_RETURN) = 0;
-	if (!(surface = cl_getsurface(PRVM_G_EDICT(OFS_PARM0), PRVM_G_FLOAT(OFS_PARM1))))
+	if (!(model = cl_getmodel(PRVM_G_EDICT(OFS_PARM0))) || !(surface = cl_getsurface(model, PRVM_G_FLOAT(OFS_PARM1))))
 		return;
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(surface->texture->name);
 }
@@ -2068,7 +2073,7 @@ void VM_CL_getsurfacetexture(void)
 // #438 float(entity e, vector p) getsurfacenearpoint
 void VM_CL_getsurfacenearpoint(void)
 {
-	int surfacenum, best, modelindex;
+	int surfacenum, best;
 	vec3_t clipped, p;
 	vec_t dist, bestdist;
 	prvm_edict_t *ed;
@@ -2077,28 +2082,11 @@ void VM_CL_getsurfacenearpoint(void)
 	vec_t *point;
 	PRVM_G_FLOAT(OFS_RETURN) = -1;
 	ed = PRVM_G_EDICT(OFS_PARM0);
-	point = PRVM_G_VECTOR(OFS_PARM1);
-
-	if (!ed || ed->priv.server->free)
-		return;
-	modelindex = ed->fields.client->modelindex;
-	if(!modelindex)
-		return;
-	if(modelindex<0)
-	{
-		modelindex = -(modelindex+1);
-		if(modelindex < MAX_MODELS)
-			model = cl.csqc_model_precache[modelindex];
-	}
-	else
-		if(modelindex < MAX_MODELS)
-			model = cl.model_precache[modelindex];
-	if(!model)
-		return;
-	if (!model->num_surfaces)
+	if(!(model = cl_getmodel(ed)) || !model->num_surfaces)
 		return;
 
 	// FIXME: implement rotation/scaling
+	point = PRVM_G_VECTOR(OFS_PARM1);
 	VectorSubtract(point, ed->fields.client->origin, p);
 	best = -1;
 	bestdist = 1000000000;
@@ -2131,13 +2119,12 @@ void VM_CL_getsurfacenearpoint(void)
 void VM_CL_getsurfaceclippedpoint(void)
 {
 	prvm_edict_t *ed;
+	model_t *model;
 	msurface_t *surface;
 	vec3_t p, out;
 	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
 	ed = PRVM_G_EDICT(OFS_PARM0);
-	if (!ed || ed->priv.server->free)
-		return;
-	if (!(surface = cl_getsurface(ed, PRVM_G_FLOAT(OFS_PARM1))))
+	if (!(model = cl_getmodel(ed)) || !(surface = cl_getsurface(model, PRVM_G_FLOAT(OFS_PARM1))))
 		return;
 	// FIXME: implement rotation/scaling
 	VectorSubtract(PRVM_G_VECTOR(OFS_PARM2), ed->fields.client->origin, p);

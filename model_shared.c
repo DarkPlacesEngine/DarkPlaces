@@ -707,34 +707,31 @@ void Mod_BuildTextureVectorsAndNormals(int firstvertex, int numvertices, int num
 			VectorNormalize(v);
 }
 
-surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qboolean lightmapoffsets, qboolean vertexcolors, qboolean neighbors)
+void Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qboolean lightmapoffsets, qboolean vertexcolors, qboolean neighbors)
 {
-	surfmesh_t *mesh;
 	unsigned char *data;
-	mesh = (surfmesh_t *)Mem_Alloc(mempool, sizeof(surfmesh_t) + numvertices * (3 + 3 + 3 + 3 + 2 + 2 + (vertexcolors ? 4 : 0)) * sizeof(float) + numvertices * (lightmapoffsets ? 1 : 0) * sizeof(int) + numtriangles * (3 + (neighbors ? 3 : 0)) * sizeof(int));
-	mesh->num_vertices = numvertices;
-	mesh->num_triangles = numtriangles;
-	data = (unsigned char *)(mesh + 1);
-	if (mesh->num_vertices)
+	data = (unsigned char *)Mem_Alloc(mempool, numvertices * (3 + 3 + 3 + 3 + 2 + 2 + (vertexcolors ? 4 : 0)) * sizeof(float) + numvertices * (lightmapoffsets ? 1 : 0) * sizeof(int) + numtriangles * (3 + (neighbors ? 3 : 0)) * sizeof(int));
+	loadmodel->surfmesh.num_vertices = numvertices;
+	loadmodel->surfmesh.num_triangles = numtriangles;
+	if (loadmodel->surfmesh.num_vertices)
 	{
-		mesh->data_vertex3f = (float *)data, data += sizeof(float[3]) * mesh->num_vertices;
-		mesh->data_svector3f = (float *)data, data += sizeof(float[3]) * mesh->num_vertices;
-		mesh->data_tvector3f = (float *)data, data += sizeof(float[3]) * mesh->num_vertices;
-		mesh->data_normal3f = (float *)data, data += sizeof(float[3]) * mesh->num_vertices;
-		mesh->data_texcoordtexture2f = (float *)data, data += sizeof(float[2]) * mesh->num_vertices;
-		mesh->data_texcoordlightmap2f = (float *)data, data += sizeof(float[2]) * mesh->num_vertices;
+		loadmodel->surfmesh.data_vertex3f = (float *)data, data += sizeof(float[3]) * loadmodel->surfmesh.num_vertices;
+		loadmodel->surfmesh.data_svector3f = (float *)data, data += sizeof(float[3]) * loadmodel->surfmesh.num_vertices;
+		loadmodel->surfmesh.data_tvector3f = (float *)data, data += sizeof(float[3]) * loadmodel->surfmesh.num_vertices;
+		loadmodel->surfmesh.data_normal3f = (float *)data, data += sizeof(float[3]) * loadmodel->surfmesh.num_vertices;
+		loadmodel->surfmesh.data_texcoordtexture2f = (float *)data, data += sizeof(float[2]) * loadmodel->surfmesh.num_vertices;
+		loadmodel->surfmesh.data_texcoordlightmap2f = (float *)data, data += sizeof(float[2]) * loadmodel->surfmesh.num_vertices;
 		if (vertexcolors)
-			mesh->data_lightmapcolor4f = (float *)data, data += sizeof(float[4]) * mesh->num_vertices;
+			loadmodel->surfmesh.data_lightmapcolor4f = (float *)data, data += sizeof(float[4]) * loadmodel->surfmesh.num_vertices;
 		if (lightmapoffsets)
-			mesh->data_lightmapoffsets = (int *)data, data += sizeof(int) * mesh->num_vertices;
+			loadmodel->surfmesh.data_lightmapoffsets = (int *)data, data += sizeof(int) * loadmodel->surfmesh.num_vertices;
 	}
-	if (mesh->num_triangles)
+	if (loadmodel->surfmesh.num_triangles)
 	{
-		mesh->data_element3i = (int *)data, data += sizeof(int[3]) * mesh->num_triangles;
+		loadmodel->surfmesh.data_element3i = (int *)data, data += sizeof(int[3]) * loadmodel->surfmesh.num_triangles;
 		if (neighbors)
-			mesh->data_neighbor3i = (int *)data, data += sizeof(int[3]) * mesh->num_triangles;
+			loadmodel->surfmesh.data_neighbor3i = (int *)data, data += sizeof(int[3]) * loadmodel->surfmesh.num_triangles;
 	}
-	return mesh;
 }
 
 shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtriangles, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, int light, int neighbors, int expandable)

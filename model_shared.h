@@ -269,12 +269,11 @@ typedef struct msurface_s
 	// the lighting direction texture fragment to use on the rendering mesh
 	rtexture_t *deluxemaptexture;
 
-	// this surface is part of this mesh
-	surfmesh_t *groupmesh;
-	int num_triangles; // number of triangles in the mesh
-	int num_firsttriangle; // first triangle in the mesh (index into groupmesh)
-	int num_vertices; // number of vertices in the mesh
-	int num_firstvertex; // first vertex in the mesh (index into groupmesh)
+	// surfaces own ranges of vertices and triangles in the model->surfmesh
+	int num_triangles; // number of triangles
+	int num_firsttriangle; // first triangle
+	int num_vertices; // number of vertices
+	int num_firstvertex; // first vertex
 
 	// shadow volume building information
 	int num_firstshadowmeshtriangle; // index into model->brush.shadowmesh
@@ -559,11 +558,8 @@ typedef struct model_s
 	msurface_t		*data_surfaces;
 	// optional lightmapinfo data for surface lightmap updates
 	msurface_lightmapinfo_t *data_surfaces_lightmapinfo;
-	// surface meshes are merged to a smaller set of meshes to allow reduced
-	// vertex array switching, the meshes are limited to 65536 vertices each
-	// to play nice with Geforce1 hardware
-	int				nummeshes;
-	surfmesh_t		**meshlist;
+	// all surfaces belong to this mesh
+	surfmesh_t		surfmesh;
 	// draw the model's sky polygons (only used by brush models)
 	void(*DrawSky)(struct entity_render_s *ent);
 	// draw the model using lightmap/dlight shading
@@ -622,7 +618,7 @@ void Mod_ValidateElements(int *elements, int numtriangles, int firstvertex, int 
 void Mod_BuildNormals(int firstvertex, int numvertices, int numtriangles, const float *vertex3f, const int *elements, float *normal3f, qboolean areaweighting);
 void Mod_BuildTextureVectorsAndNormals(int firstvertex, int numvertices, int numtriangles, const float *vertex, const float *texcoord, const int *elements, float *svectors, float *tvectors, float *normals, qboolean areaweighting);
 
-surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qboolean lightmapoffsets, qboolean vertexcolors, qboolean neighbors);
+void Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qboolean lightmapoffsets, qboolean vertexcolors, qboolean neighbors);
 
 shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtriangles, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, int light, int neighbors, int expandable);
 shadowmesh_t *Mod_ShadowMesh_ReAlloc(mempool_t *mempool, shadowmesh_t *oldmesh, int light, int neighbors);
@@ -679,7 +675,7 @@ void R_Q1BSP_DrawLight(struct entity_render_s *ent, int numsurfaces, const int *
 // alias models
 struct frameblend_s;
 void Mod_AliasInit(void);
-void Mod_Alias_GetMesh_Vertex3f(const model_t *model, const struct frameblend_s *frameblend, const struct surfmesh_s *mesh, float *out3f);
+void Mod_Alias_GetMesh_Vertex3f(const model_t *model, const struct frameblend_s *frameblend, float *out3f);
 int Mod_Alias_GetTagMatrix(const model_t *model, int poseframe, int tagindex, matrix4x4_t *outmatrix);
 int Mod_Alias_GetTagIndexForName(const model_t *model, unsigned int skin, const char *tagname);
 
