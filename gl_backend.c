@@ -724,6 +724,26 @@ unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **ver
 	if (!programobject)
 		return 0;
 
+	if (developer.integer >= 100)
+	{
+		int i;
+		Con_Printf("Compiling shader:\n");
+		if (vertexstrings_count)
+		{
+			Con_Printf("------ VERTEX SHADER ------\n");
+			for (i = 0;i < vertexstrings_count;i++)
+				Con_Print(vertexstrings_list[i]);
+			Con_Print("\n");
+		}
+		if (fragmentstrings_count)
+		{
+			Con_Printf("------ FRAGMENT SHADER ------\n");
+			for (i = 0;i < fragmentstrings_count;i++)
+				Con_Print(fragmentstrings_list[i]);
+			Con_Print("\n");
+		}
+	}
+
 	if (vertexstrings_count)
 	{
 		CHECKGLERROR
