@@ -1693,23 +1693,20 @@ void SV_Physics (void)
 trace_t SV_Trace_Toss (prvm_edict_t *tossent, prvm_edict_t *ignore)
 {
 	int i;
-	float gravity, savesolid;
+	float gravity;
 	vec3_t move, end;
-	prvm_edict_t tempent, *tent;
-	entvars_t vars;
+	vec3_t original_origin;
+	vec3_t original_velocity;
+	vec3_t original_angles;
+	vec3_t original_avelocity;
 	prvm_eval_t *val;
 	trace_t trace;
 
-	// copy the vars over
-	memcpy(&vars, tossent->fields.server, sizeof(entvars_t));
-	// set up the temp entity to point to the copied vars
-	tent = &tempent;
-	tent->fields.server = &vars;
+	VectorCopy(tossent->fields.server->origin   , original_origin   );
+	VectorCopy(tossent->fields.server->velocity , original_velocity );
+	VectorCopy(tossent->fields.server->angles   , original_angles   );
+	VectorCopy(tossent->fields.server->avelocity, original_avelocity);
 
-	savesolid = tossent->fields.server->solid;
-	tossent->fields.server->solid = SOLID_NOT;
-
-	// this has to fetch the field from the original edict, since our copy is truncated
 	val = PRVM_GETEDICTFIELDVALUE(tossent, eval_gravity);
 	if (val != NULL && val->_float != 0)
 		gravity = val->_float;
@@ -1719,19 +1716,23 @@ trace_t SV_Trace_Toss (prvm_edict_t *tossent, prvm_edict_t *ignore)
 
 	for (i = 0;i < 200;i++) // LordHavoc: sanity check; never trace more than 10 seconds
 	{
-		SV_CheckVelocity (tent);
-		tent->fields.server->velocity[2] -= gravity;
-		VectorMA (tent->fields.server->angles, 0.05, tent->fields.server->avelocity, tent->fields.server->angles);
-		VectorScale (tent->fields.server->velocity, 0.05, move);
-		VectorAdd (tent->fields.server->origin, move, end);
-		trace = SV_Move (tent->fields.server->origin, tent->fields.server->mins, tent->fields.server->maxs, end, MOVE_NORMAL, tent);
-		VectorCopy (trace.endpos, tent->fields.server->origin);
+		SV_CheckVelocity (tossent);
+		tossent->fields.server->velocity[2] -= gravity;
+		VectorMA (tossent->fields.server->angles, 0.05, tossent->fields.server->avelocity, tossent->fields.server->angles);
+		VectorScale (tossent->fields.server->velocity, 0.05, move);
+		VectorAdd (tossent->fields.server->origin, move, end);
+		trace = SV_Move (tossent->fields.server->origin, tossent->fields.server->mins, tossent->fields.server->maxs, end, MOVE_NORMAL, tossent);
+		VectorCopy (trace.endpos, tossent->fields.server->origin);
 
-		if (trace.fraction < 1 && trace.ent && trace.ent != ignore)
+		if (trace.fraction < 1)
 			break;
 	}
-	tossent->fields.server->solid = savesolid;
-	trace.fraction = 0; // not relevant
+
+	VectorCopy(original_origin   , tossent->fields.server->origin   );
+	VectorCopy(original_velocity , tossent->fields.server->velocity );
+	VectorCopy(original_angles   , tossent->fields.server->angles   );
+	VectorCopy(original_avelocity, tossent->fields.server->avelocity);
+
 	return trace;
 }
 
