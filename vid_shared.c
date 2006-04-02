@@ -50,8 +50,6 @@ int gl_support_shading_language_100 = false;
 int gl_support_vertex_shader = false;
 // GL_ARB_fragment_shader
 int gl_support_fragment_shader = false;
-// GL_NV_half_float
-int gl_support_half_float = false;
 
 // LordHavoc: if window is hidden, don't update screen
 qboolean vid_hidden = true;
@@ -694,9 +692,6 @@ void VID_CheckExtensions(void)
 		if ((gl_support_shading_language_100 = GL_CheckExtension("GL_ARB_shading_language_100", NULL, "-noshadinglanguage100", false)))
 			if ((gl_support_vertex_shader = GL_CheckExtension("GL_ARB_vertex_shader", vertexshaderfuncs, "-novertexshader", false)))
 				gl_support_fragment_shader = GL_CheckExtension("GL_ARB_fragment_shader", NULL, "-nofragmentshader", false);
-
-// COMMANDLINEOPTION: GL: -nohalffloat disables GL_NV_half_float extension
-	gl_support_half_float = GL_CheckExtension("GL_NV_half_float", NULL, "-nohalffloat", false);
 }
 
 void Force_CenterView_f (void)
