@@ -227,8 +227,6 @@ extern cvar_t r_glsl;
 extern cvar_t r_glsl_offsetmapping;
 extern cvar_t r_glsl_offsetmapping_reliefmapping;
 extern cvar_t r_glsl_offsetmapping_scale;
-extern cvar_t r_glsl_usehalffloat;
-extern cvar_t r_glsl_surfacenormalize;
 extern cvar_t r_glsl_deluxemapping;
 
 extern cvar_t gl_polyblend;
@@ -310,9 +308,7 @@ void RSurf_PrepareDynamicSurfaceVertices(const msurface_t *surface);
 #define SHADERPERMUTATION_CUBEFILTER (1<<8) // (lightsource) use cubemap light filter
 #define SHADERPERMUTATION_OFFSETMAPPING (1<<9) // adjust texcoords to roughly simulate a displacement mapped surface
 #define SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING (1<<10) // adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
-#define SHADERPERMUTATION_SURFACENORMALIZE (1<<11) // (lightsource or deluxemapping) improved bumpmapping
-#define SHADERPERMUTATION_GEFORCEFX (1<<12) // use half vector types if available (NVIDIA specific)
-#define SHADERPERMUTATION_COUNT (1<<13) // how many permutations are possible
+#define SHADERPERMUTATION_COUNT (1<<11) // how many permutations are possible
 
 typedef struct r_glsl_permutation_s
 {
