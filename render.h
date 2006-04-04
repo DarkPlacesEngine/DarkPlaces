@@ -29,6 +29,8 @@ extern unsigned char r_pvsbits[(32768+7)>>3];
 extern unsigned char r_worldleafvisible[32768];
 // TODO: dynamic resize according to r_refdef.worldmodel->num_surfaces
 extern unsigned char r_worldsurfacevisible[262144];
+// if true, the view is currently in a leaf without pvs data
+extern qboolean r_worldnovis;
 
 // 1.0f / N table
 extern float ixtable[4096];

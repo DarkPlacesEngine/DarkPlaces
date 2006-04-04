@@ -87,6 +87,7 @@ cvar_t r_fullbright = {0, "r_fullbright","0", "make everything bright cheat (not
 cvar_t r_wateralpha = {CVAR_SAVE, "r_wateralpha","1", "opacity of water polygons"};
 cvar_t r_dynamic = {CVAR_SAVE, "r_dynamic","1", "enables dynamic lights (rocket glow and such)"};
 cvar_t r_fullbrights = {CVAR_SAVE, "r_fullbrights", "1", "enables glowing pixels in quake textures (changes need r_restart to take effect)"};
+cvar_t r_q1bsp_skymasking = {0, "r_qb1sp_skymasking", "1", "allows sky polygons in quake1 maps to obscure other geometry"};
 
 cvar_t gl_fogenable = {0, "gl_fogenable", "0", "nehahra fog enable (for Nehahra compatibility only)"};
 cvar_t gl_fogdensity = {0, "gl_fogdensity", "0.25", "nehahra fog density (recommend values below 0.1) (for Nehahra compatibility only)"};
@@ -1062,6 +1063,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_wateralpha);
 	Cvar_RegisterVariable(&r_dynamic);
 	Cvar_RegisterVariable(&r_fullbright);
+	Cvar_RegisterVariable(&r_q1bsp_skymasking);
 	Cvar_RegisterVariable(&r_textureunits);
 	Cvar_RegisterVariable(&r_glsl);
 	Cvar_RegisterVariable(&r_glsl_offsetmapping);
@@ -2762,11 +2764,13 @@ static void R_DrawTextureSurfaceList(const entity_render_t *ent, texture_t *text
 				R_Mesh_Matrix(&ent->matrix);
 			}
 			GL_DepthMask(true);
-			// LordHavoc: HalfLife maps have freaky skypolys...
-			// LordHavoc: Quake3 never did sky masking (unlike software Quake
-			// and Quake2), so disable the sky masking in Quake3 maps as it
-			// causes problems with q3map2 sky tricks
-			if (!model->brush.ishlbsp && model->type != mod_brushq3)
+			// LordHavoc: HalfLife maps have freaky skypolys so don't use
+			// skymasking on them, and Quake3 never did sky masking (unlike
+			// software Quake and software Quake2), so disable the sky masking
+			// in Quake3 maps as it causes problems with q3map2 sky tricks,
+			// and skymasking also looks very bad when noclipping outside the
+			// level, so don't use it then either.
+			if (model->type == mod_brushq1 && r_q1bsp_skymasking.integer && !r_worldnovis)
 			{
 				GL_Color(fogcolor[0], fogcolor[1], fogcolor[2], 1);
 				memset(&m, 0, sizeof(m));
