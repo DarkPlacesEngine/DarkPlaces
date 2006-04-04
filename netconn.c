@@ -49,22 +49,19 @@ static cvar_t sv_qwmasters [] =
 	{CVAR_SAVE, "sv_qwmaster2", "", "user-chosen qwmaster server 2"},
 	{CVAR_SAVE, "sv_qwmaster3", "", "user-chosen qwmaster server 3"},
 	{CVAR_SAVE, "sv_qwmaster4", "", "user-chosen qwmaster server 4"},
-	{0, "sv_qwmasterextra1", "satan.idsoftware.com", "default qwmaster server 1 (admin: idSoftware)"},
-	{0, "sv_qwmasterextra2", "192.246.40.37:27000", "id Limbo (admin: id Software)"},
-	{0, "sv_qwmasterextra3", "192.246.40.37:27002", "id CTF (admin: id Software)"},
-	{0, "sv_qwmasterextra4", "192.246.40.37:27003", "id TeamFortress (admin: id Software)"},
-	{0, "sv_qwmasterextra5", "192.246.40.37:27004", "id Miscilaneous (admin: id Software)"},
-	{0, "sv_qwmasterextra6", "192.246.40.37:27006", "id Deathmatch Only (admin: id Software)"},
-	{0, "sv_qwmasterextra7", "150.254.66.120:27000", "Poland's master server. (admin: unknown)"},
-	{0, "sv_qwmasterextra8", "62.112.145.129:27000", "Ocrana master server. (admin: unknown)"},
-	{0, "sv_qwmasterextra9", "master.edome.net", "edome master server. (admin: unknown)"},
-	{0, "sv_qwmasterextra10", "qwmaster.barrysworld.com", "barrysworld master server. (admin: unknown)"},
-	{0, "sv_qwmasterextra11", "qwmaster.ocrana.de:27000", "Ocrana2 master server. (admin: unknown)"},
-	{0, "sv_qwmasterextra12", "213.221.174.165:27000", "unknown1 master server. (admin: unknown)"},
-	{0, "sv_qwmasterextra13", "195.74.0.8", "unknown2 master server. (admin: unknown)"},
-	{0, "sv_qwmasterextra14", "192.246.40.37", "unknown3 master server. (admin: unknown)"},
-	{0, "sv_qwmasterextra15", "192.246.40.37:27006", "unknown4 master server. (admin: unknown)"},
-	{0, "sv_qwmasterextra16", "204.182.161.2", "unknown5 master server. (admin: unknown)"},
+	{0, "sv_qwmasterextra1", "192.246.40.37:27000", "id Limbo (admin: id Software)"},
+	{0, "sv_qwmasterextra2", "192.246.40.37:27002", "id CTF (admin: id Software)"},
+	{0, "sv_qwmasterextra3", "192.246.40.37:27003", "id TeamFortress (admin: id Software)"},
+	{0, "sv_qwmasterextra4", "192.246.40.37:27004", "id Miscilaneous (admin: id Software)"},
+	{0, "sv_qwmasterextra5", "192.246.40.37:27006", "id Deathmatch Only (admin: id Software)"},
+	{0, "sv_qwmasterextra6", "150.254.66.120:27000", "Poland's master server. (admin: unknown)"},
+	{0, "sv_qwmasterextra7", "62.112.145.129:27000", "Ocrana master server. (admin: unknown)"},
+	{0, "sv_qwmasterextra8", "master.edome.net", "edome master server. (admin: unknown)"},
+	{0, "sv_qwmasterextra9", "qwmaster.barrysworld.com", "barrysworld master server. (admin: unknown)"},
+	{0, "sv_qwmasterextra10", "qwmaster.ocrana.de:27000", "Ocrana2 master server. (admin: unknown)"},
+	{0, "sv_qwmasterextra11", "213.221.174.165:27000", "unknown1 master server. (admin: unknown)"},
+	{0, "sv_qwmasterextra12", "195.74.0.8", "unknown2 master server. (admin: unknown)"},
+	{0, "sv_qwmasterextra13", "204.182.161.2", "unknown3 master server. (admin: unknown)"},
 	{0, NULL, NULL, NULL}
 };
 
@@ -1268,7 +1265,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			length -= 2;
 			masterreplycount++;
 			if (serverlist_consoleoutput)
-				Con_Print("received QuakeWorld server list...\n");
+				Con_Printf("received QuakeWorld server list from %s...\n", addressstring2);
 			while (length >= 6 && (data[0] != 0xFF || data[1] != 0xFF || data[2] != 0xFF || data[3] != 0xFF) && data[4] * 256 + data[5] != 0)
 			{
 				int n;
@@ -2298,6 +2295,12 @@ void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 				{
 					if (sv_qwmasters[masternum].string && LHNETADDRESS_FromString(&masteraddress, sv_qwmasters[masternum].string, QWMASTER_PORT) && LHNETADDRESS_GetAddressType(&masteraddress) == LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i])))
 					{
+						if (m_state != m_slist)
+						{
+							char lookupstring[128];
+							LHNETADDRESS_ToString(&masteraddress, lookupstring, sizeof(lookupstring), true);
+							Con_Printf("Querying master %s (resolved from %s)\n", lookupstring, sv_qwmasters[masternum].string);
+						}
 						masterquerycount++;
 						NetConn_Write(cl_sockets[i], request, 7, &masteraddress);
 					}
