@@ -1562,9 +1562,9 @@ void CL_ParseBeam (model_t *m, int lightning)
 void CL_ParseTempEntity(void)
 {
 	int type;
-	vec3_t pos;
+	vec3_t pos, pos2;
+	vec3_t vel1, vel2;
 	vec3_t dir;
-	vec3_t pos2;
 	vec3_t color;
 	int rnd;
 	int colorStart, colorLength, count;
@@ -1581,9 +1581,7 @@ void CL_ParseTempEntity(void)
 			// spike hitting wall
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
-			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-			//CL_AllocDlight(NULL, &tempmatrix, 100, 0.12f, 0.50f, 0.12f, 500, 0.2, 0, -1, false, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-			CL_RunParticleEffect(pos, vec3_origin, 20, 30);
+			CL_ParticleEffect(EFFECT_TE_WIZSPIKE, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			S_StartSound(-1, 0, cl.sfx_wizhit, pos, 1, 1);
 			break;
 
@@ -1591,9 +1589,7 @@ void CL_ParseTempEntity(void)
 			// spike hitting wall
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
-			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-			//CL_AllocDlight(NULL, &tempmatrix, 100, 0.50f, 0.30f, 0.10f, 500, 0.2, 0, -1, false, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-			CL_RunParticleEffect(pos, vec3_origin, 226, 20);
+			CL_ParticleEffect(EFFECT_TE_KNIGHTSPIKE, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			S_StartSound(-1, 0, cl.sfx_knighthit, pos, 1, 1);
 			break;
 
@@ -1601,14 +1597,7 @@ void CL_ParseTempEntity(void)
 			// spike hitting wall
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
-			if (cl_particles_quake.integer)
-				CL_RunParticleEffect(pos, vec3_origin, 0, 10);
-			else if (cl_particles_bulletimpacts.integer)
-			{
-				CL_SparkShower(pos, vec3_origin, 15, 1, 0);
-				CL_Smoke(pos, vec3_origin, 15, 0);
-			}
-			CL_BulletMark(pos);
+			CL_ParticleEffect(EFFECT_TE_SPIKE, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			if (rand() % 5)
 				S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
 			else
@@ -1626,14 +1615,7 @@ void CL_ParseTempEntity(void)
 			// super spike hitting wall
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
-			if (cl_particles_quake.integer)
-				CL_RunParticleEffect(pos, vec3_origin, 0, 20);
-			else if (cl_particles_bulletimpacts.integer)
-			{
-				CL_SparkShower(pos, vec3_origin, 30, 1, 0);
-				CL_Smoke(pos, vec3_origin, 30, 0);
-			}
-			CL_BulletMark(pos);
+			CL_ParticleEffect(EFFECT_TE_SUPERSPIKE, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			if (rand() % 5)
 				S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
 			else
@@ -1652,10 +1634,7 @@ void CL_ParseTempEntity(void)
 			// rocket explosion
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 10);
-			CL_ParticleExplosion(pos);
-			// LordHavoc: boosted color from 1.0, 0.8, 0.4 to 1.25, 1.0, 0.5
-			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-			CL_AllocDlight(NULL, &tempmatrix, 350, 4.0f, 2.0f, 0.50f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			CL_ParticleEffect(EFFECT_TE_EXPLOSION, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
 			CL_Effect(pos, cl.qw_modelindex_s_explod, 0, 6, 10);
 			break;
@@ -1664,11 +1643,8 @@ void CL_ParseTempEntity(void)
 			// tarbaby explosion
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 10);
-			CL_BlobExplosion(pos);
-
+			CL_ParticleEffect(EFFECT_TE_TAREXPLOSION, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
-			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-			CL_AllocDlight(NULL, &tempmatrix, 600, 1.6f, 0.8f, 2.0f, 1200, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 			break;
 
 		case QW_TE_LIGHTNING1:
@@ -1688,14 +1664,12 @@ void CL_ParseTempEntity(void)
 
 		case QW_TE_LAVASPLASH:
 			MSG_ReadVector(pos, cls.protocol);
-			CL_LavaSplash(pos);
+			CL_ParticleEffect(EFFECT_TE_LAVASPLASH, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			break;
 
 		case QW_TE_TELEPORT:
 			MSG_ReadVector(pos, cls.protocol);
-			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-			CL_AllocDlight(NULL, &tempmatrix, 200, 1.0f, 1.0f, 1.0f, 600, 99.0f, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-			CL_TeleportSplash(pos);
+			CL_ParticleEffect(EFFECT_TE_TELEPORT, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			break;
 
 		case QW_TE_GUNSHOT:
@@ -1703,28 +1677,22 @@ void CL_ParseTempEntity(void)
 			radius = MSG_ReadByte();
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
-			if (cl_particles_quake.integer)
-				CL_RunParticleEffect(pos, vec3_origin, 0, 20*radius);
-			else
-			{
-				CL_SparkShower(pos, vec3_origin, 15*radius, 1, radius);
-				CL_Smoke(pos, vec3_origin, 15*radius, radius);
-			}
-			// TODO: scatter bullet marks throughout the sphere?
-			CL_BulletMark(pos);
+			VectorSet(pos2, pos[0] + radius, pos[1] + radius, pos[2] + radius);
+			VectorSet(pos, pos[0] - radius, pos[1] - radius, pos[2] - radius);
+			CL_ParticleEffect(EFFECT_TE_GUNSHOT, radius, pos, pos2, vec3_origin, vec3_origin, NULL, 0);
 			break;
 
 		case QW_TE_BLOOD:
 			count = MSG_ReadByte();
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
-			CL_BloodPuff(pos, vec3_origin, 20*count);
+			CL_ParticleEffect(EFFECT_TE_BLOOD, count, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			break;
 
 		case QW_TE_LIGHTNINGBLOOD:
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
-			CL_BloodPuff(pos, vec3_origin, 50);
+			CL_ParticleEffect(EFFECT_TE_BLOOD, 2.5, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			break;
 
 		default:
@@ -1740,9 +1708,7 @@ void CL_ParseTempEntity(void)
 			// spike hitting wall
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
-			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-			//CL_AllocDlight(NULL, &tempmatrix, 100, 0.12f, 0.50f, 0.12f, 500, 0.2, 0, -1, false, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-			CL_RunParticleEffect(pos, vec3_origin, 20, 30);
+			CL_ParticleEffect(EFFECT_TE_WIZSPIKE, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			S_StartSound(-1, 0, cl.sfx_wizhit, pos, 1, 1);
 			break;
 
@@ -1750,9 +1716,7 @@ void CL_ParseTempEntity(void)
 			// spike hitting wall
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
-			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-			//CL_AllocDlight(NULL, &tempmatrix, 100, 0.50f, 0.30f, 0.10f, 500, 0.2, 0, -1, false, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-			CL_RunParticleEffect(pos, vec3_origin, 226, 20);
+			CL_ParticleEffect(EFFECT_TE_KNIGHTSPIKE, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			S_StartSound(-1, 0, cl.sfx_knighthit, pos, 1, 1);
 			break;
 
@@ -1760,14 +1724,7 @@ void CL_ParseTempEntity(void)
 			// spike hitting wall
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
-			if (cl_particles_quake.integer)
-				CL_RunParticleEffect(pos, vec3_origin, 0, 10);
-			else if (cl_particles_bulletimpacts.integer)
-			{
-				CL_SparkShower(pos, vec3_origin, 15, 1, 0);
-				CL_Smoke(pos, vec3_origin, 15, 0);
-			}
-			CL_BulletMark(pos);
+			CL_ParticleEffect(EFFECT_TE_SPIKE, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			if (rand() % 5)
 				S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
 			else
@@ -1785,16 +1742,7 @@ void CL_ParseTempEntity(void)
 			// quad spike hitting wall
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
-			if (cl_particles_quake.integer)
-				CL_RunParticleEffect(pos, vec3_origin, 0, 10);
-			else if (cl_particles_bulletimpacts.integer)
-			{
-				CL_SparkShower(pos, vec3_origin, 15, 1, 0);
-				CL_Smoke(pos, vec3_origin, 15, 0);
-			}
-			CL_BulletMark(pos);
-			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-			CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			CL_ParticleEffect(EFFECT_TE_SPIKEQUAD, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			if (rand() % 5)
 				S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
 			else
@@ -1812,14 +1760,7 @@ void CL_ParseTempEntity(void)
 			// super spike hitting wall
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
-			if (cl_particles_quake.integer)
-				CL_RunParticleEffect(pos, vec3_origin, 0, 20);
-			else if (cl_particles_bulletimpacts.integer)
-			{
-				CL_SparkShower(pos, vec3_origin, 30, 1, 0);
-				CL_Smoke(pos, vec3_origin, 30, 0);
-			}
-			CL_BulletMark(pos);
+			CL_ParticleEffect(EFFECT_TE_SUPERSPIKE, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			if (rand() % 5)
 				S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
 			else
@@ -1837,16 +1778,7 @@ void CL_ParseTempEntity(void)
 			// quad super spike hitting wall
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
-			if (cl_particles_quake.integer)
-				CL_RunParticleEffect(pos, vec3_origin, 0, 20);
-			else if (cl_particles_bulletimpacts.integer)
-			{
-				CL_SparkShower(pos, vec3_origin, 30, 1, 0);
-				CL_Smoke(pos, vec3_origin, 30, 0);
-			}
-			CL_BulletMark(pos);
-			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-			CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			CL_ParticleEffect(EFFECT_TE_SUPERSPIKEQUAD, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			if (rand() % 5)
 				S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
 			else
@@ -1869,7 +1801,7 @@ void CL_ParseTempEntity(void)
 			dir[1] = MSG_ReadChar();
 			dir[2] = MSG_ReadChar();
 			count = MSG_ReadByte();
-			CL_BloodPuff(pos, dir, count);
+			CL_ParticleEffect(EFFECT_TE_BLOOD, count, pos, pos, dir, dir, NULL, 0);
 			break;
 		case TE_SPARK:
 			// spark shower
@@ -1879,14 +1811,12 @@ void CL_ParseTempEntity(void)
 			dir[1] = MSG_ReadChar();
 			dir[2] = MSG_ReadChar();
 			count = MSG_ReadByte();
-			CL_SparkShower(pos, dir, count, 1, 0);
+			CL_ParticleEffect(EFFECT_TE_SPARK, count, pos, pos, dir, dir, NULL, 0);
 			break;
 		case TE_PLASMABURN:
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
-			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-			CL_AllocDlight(NULL, &tempmatrix, 200, 1, 1, 1, 1000, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-			CL_PlasmaBurn(pos);
+			CL_ParticleEffect(EFFECT_TE_PLASMABURN, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			break;
 			// LordHavoc: added for improved gore
 		case TE_BLOODSHOWER:
@@ -1895,8 +1825,15 @@ void CL_ParseTempEntity(void)
 			MSG_ReadVector(pos2, cls.protocol); // maxs
 			velspeed = MSG_ReadCoord(cls.protocol); // speed
 			count = (unsigned short) MSG_ReadShort(); // number of particles
-			CL_BloodShower(pos, pos2, velspeed, count);
+			vel1[0] = -velspeed;
+			vel1[1] = -velspeed;
+			vel1[2] = -velspeed;
+			vel2[0] = velspeed;
+			vel2[1] = velspeed;
+			vel2[2] = velspeed;
+			CL_ParticleEffect(EFFECT_TE_BLOOD, count, pos, pos2, vel1, vel2, NULL, 0);
 			break;
+
 		case TE_PARTICLECUBE:
 			// general purpose particle effect
 			MSG_ReadVector(pos, cls.protocol); // mins
@@ -1933,40 +1870,21 @@ void CL_ParseTempEntity(void)
 			// bullet hitting wall
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
-			if (cl_particles_quake.integer)
-				CL_RunParticleEffect(pos, vec3_origin, 0, 20);
-			else
-			{
-				CL_SparkShower(pos, vec3_origin, 15, 1, 0);
-				CL_Smoke(pos, vec3_origin, 15, 0);
-			}
-			CL_BulletMark(pos);
+			CL_ParticleEffect(EFFECT_TE_GUNSHOT, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			break;
 
 		case TE_GUNSHOTQUAD:
 			// quad bullet hitting wall
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
-			if (cl_particles_quake.integer)
-				CL_RunParticleEffect(pos, vec3_origin, 0, 20);
-			else
-			{
-				CL_SparkShower(pos, vec3_origin, 15, 1, 0);
-				CL_Smoke(pos, vec3_origin, 15, 0);
-			}
-			CL_BulletMark(pos);
-			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-			CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			CL_ParticleEffect(EFFECT_TE_GUNSHOTQUAD, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			break;
 
 		case TE_EXPLOSION:
 			// rocket explosion
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 10);
-			CL_ParticleExplosion(pos);
-			// LordHavoc: boosted color from 1.0, 0.8, 0.4 to 1.25, 1.0, 0.5
-			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-			CL_AllocDlight(NULL, &tempmatrix, 350, 4.0f, 2.0f, 0.50f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			CL_ParticleEffect(EFFECT_TE_EXPLOSION, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
 			break;
 
@@ -1974,9 +1892,7 @@ void CL_ParseTempEntity(void)
 			// quad rocket explosion
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 10);
-			CL_ParticleExplosion(pos);
-			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-			CL_AllocDlight(NULL, &tempmatrix, 350, 2.5f, 2.0f, 4.0f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			CL_ParticleEffect(EFFECT_TE_EXPLOSIONQUAD, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
 			break;
 
@@ -1984,11 +1900,11 @@ void CL_ParseTempEntity(void)
 			// Nehahra movie colored lighting explosion
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 10);
-			CL_ParticleExplosion(pos);
-			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 			color[0] = MSG_ReadCoord(cls.protocol) * (2.0f / 1.0f);
 			color[1] = MSG_ReadCoord(cls.protocol) * (2.0f / 1.0f);
 			color[2] = MSG_ReadCoord(cls.protocol) * (2.0f / 1.0f);
+			CL_ParticleExplosion(pos);
+			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 			CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
 			break;
@@ -2010,18 +1926,14 @@ void CL_ParseTempEntity(void)
 			// tarbaby explosion
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 10);
-			CL_BlobExplosion(pos);
-
+			CL_ParticleEffect(EFFECT_TE_TAREXPLOSION, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
-			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-			CL_AllocDlight(NULL, &tempmatrix, 600, 1.6f, 0.8f, 2.0f, 1200, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 			break;
 
 		case TE_SMALLFLASH:
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 10);
-			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-			CL_AllocDlight(NULL, &tempmatrix, 200, 2, 2, 2, 1000, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			CL_ParticleEffect(EFFECT_TE_SMALLFLASH, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			break;
 
 		case TE_CUSTOMFLASH:
@@ -2040,7 +1952,7 @@ void CL_ParseTempEntity(void)
 			MSG_ReadVector(pos, cls.protocol);
 			MSG_ReadVector(dir, cls.protocol);
 			count = MSG_ReadByte();
-			CL_Flames(pos, dir, count);
+			CL_ParticleEffect(EFFECT_TE_FLAMEJET, count, pos, pos, dir, dir, NULL, 0);
 			break;
 
 		case TE_LIGHTNING1:
@@ -2072,14 +1984,12 @@ void CL_ParseTempEntity(void)
 
 		case TE_LAVASPLASH:
 			MSG_ReadVector(pos, cls.protocol);
-			CL_LavaSplash(pos);
+			CL_ParticleEffect(EFFECT_TE_LAVASPLASH, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			break;
 
 		case TE_TELEPORT:
 			MSG_ReadVector(pos, cls.protocol);
-			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-			CL_AllocDlight(NULL, &tempmatrix, 200, 1.0f, 1.0f, 1.0f, 600, 99.0f, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-			CL_TeleportSplash(pos);
+			CL_ParticleEffect(EFFECT_TE_TELEPORT, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			break;
 
 		case TE_EXPLOSION2:
@@ -2102,7 +2012,7 @@ void CL_ParseTempEntity(void)
 			MSG_ReadVector(pos, cls.protocol);
 			MSG_ReadVector(pos2, cls.protocol);
 			MSG_ReadVector(dir, cls.protocol);
-			CL_BeamParticle(pos, pos2, 8, 1, 1, 1, 1, 1);
+			CL_ParticleEffect(EFFECT_TE_TEI_G3, 1, pos, pos2, dir, dir, NULL, 0);
 			break;
 
 		case TE_TEI_SMOKE:
@@ -2110,15 +2020,13 @@ void CL_ParseTempEntity(void)
 			MSG_ReadVector(dir, cls.protocol);
 			count = MSG_ReadByte();
 			CL_FindNonSolidLocation(pos, pos, 4);
-			CL_Tei_Smoke(pos, dir, count);
+			CL_ParticleEffect(EFFECT_TE_TEI_SMOKE, count, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			break;
 
 		case TE_TEI_BIGEXPLOSION:
 			MSG_ReadVector(pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 10);
-			CL_ParticleExplosion(pos);
-			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-			CL_AllocDlight(NULL, &tempmatrix, 500, 2.5f, 2.0f, 1.0f, 500, 9999, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			CL_ParticleEffect(EFFECT_TE_TEI_BIGEXPLOSION, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
 			break;
 
@@ -2127,9 +2035,7 @@ void CL_ParseTempEntity(void)
 			MSG_ReadVector(dir, cls.protocol);
 			count = MSG_ReadByte();
 			CL_FindNonSolidLocation(pos, pos, 5);
-			CL_Tei_PlasmaHit(pos, dir, count);
-			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-			CL_AllocDlight(NULL, &tempmatrix, 500, 0.6, 1.2, 2.0f, 2000, 9999, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			CL_ParticleEffect(EFFECT_TE_TEI_PLASMAHIT, count, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			break;
 
 		default:

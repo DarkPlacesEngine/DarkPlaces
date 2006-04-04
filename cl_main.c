@@ -743,8 +743,9 @@ void CL_LinkNetworkEntity(entity_t *e)
 {
 	matrix4x4_t *matrix, blendmatrix, tempmatrix, matrix2;
 	//matrix4x4_t dlightmatrix;
-	int j, k, l, trailtype, temp;
-	float origin[3], angles[3], delta[3], lerp, dlightcolor[3], dlightradius, mins[3], maxs[3], v2[3], d;
+	int j, k, l;
+	effectnameindex_t trailtype;
+	float origin[3], angles[3], delta[3], lerp, dlightcolor[3], dlightradius, v2[3], d;
 	entity_t *t;
 	model_t *model;
 	trace_t trace;
@@ -961,7 +962,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			origin[1] = e->render.matrix.m[1][3];
 			origin[2] = e->render.matrix.m[2][3];
 		}
-		trailtype = -1;
+		trailtype = EFFECT_NONE;
 		dlightradius = 0;
 		dlightcolor[0] = 0;
 		dlightcolor[1] = 0;
@@ -972,13 +973,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			if (e->render.effects & EF_BRIGHTFIELD)
 			{
 				if (gamemode == GAME_NEXUIZ)
-				{
-					dlightradius = max(dlightradius, 200);
-					dlightcolor[0] += 0.75f;
-					dlightcolor[1] += 1.50f;
-					dlightcolor[2] += 3.00f;
-					trailtype = 8;
-				}
+					trailtype = EFFECT_TR_NEXUIZPLASMA;
 				else
 					CL_EntityParticles(e);
 			}
@@ -1014,38 +1009,9 @@ void CL_LinkNetworkEntity(entity_t *e)
 				dlightcolor[2] += 1.50f;
 			}
 			if (e->render.effects & EF_FLAME)
-			{
-				mins[0] = origin[0] - 16.0f;
-				mins[1] = origin[1] - 16.0f;
-				mins[2] = origin[2] - 16.0f;
-				maxs[0] = origin[0] + 16.0f;
-				maxs[1] = origin[1] + 16.0f;
-				maxs[2] = origin[2] + 16.0f;
-				// how many flames to make
-				temp = (int) (cl.time * 300) - (int) (cl.oldtime * 300);
-				CL_FlameCube(mins, maxs, temp);
-				d = lhrandom(0.75f, 1);
-				dlightradius = max(dlightradius, 200);
-				dlightcolor[0] += d * 2.0f;
-				dlightcolor[1] += d * 1.5f;
-				dlightcolor[2] += d * 0.5f;
-			}
+				CL_ParticleEffect(EFFECT_EF_FLAME, cl.time - cl.oldtime, origin, origin, vec3_origin, vec3_origin, NULL, 0);
 			if (e->render.effects & EF_STARDUST)
-			{
-				mins[0] = origin[0] - 16.0f;
-				mins[1] = origin[1] - 16.0f;
-				mins[2] = origin[2] - 16.0f;
-				maxs[0] = origin[0] + 16.0f;
-				maxs[1] = origin[1] + 16.0f;
-				maxs[2] = origin[2] + 16.0f;
-				// how many particles to make
-				temp = (int) (cl.time * 200) - (int) (cl.oldtime * 200);
-				CL_Stardust(mins, maxs, temp);
-				dlightradius = max(dlightradius, 200);
-				dlightcolor[0] += 1.0f;
-				dlightcolor[1] += 0.7f;
-				dlightcolor[2] += 0.3f;
-			}
+				CL_ParticleEffect(EFFECT_EF_STARDUST, cl.time - cl.oldtime, origin, origin, vec3_origin, vec3_origin, NULL, 0);
 			if (e->render.effects & (EF_FLAG1QW | EF_FLAG2QW))
 			{
 				// these are only set on player entities
@@ -1068,56 +1034,22 @@ void CL_LinkNetworkEntity(entity_t *e)
 		if (e->render.model && e->render.model->flags && (!e->state_current.tagentity && !(e->render.flags & RENDER_VIEWMODEL)))
 		{
 			if (e->render.model->flags & EF_GIB)
-				trailtype = 2;
+				trailtype = EFFECT_TR_BLOOD;
 			else if (e->render.model->flags & EF_ZOMGIB)
-				trailtype = 4;
+				trailtype = EFFECT_TR_SLIGHTBLOOD;
 			else if (e->render.model->flags & EF_TRACER)
-			{
-				trailtype = 3;
-				//dlightradius = max(dlightradius, 100);
-				//dlightcolor[0] += 0.25f;
-				//dlightcolor[1] += 1.00f;
-				//dlightcolor[2] += 0.25f;
-			}
+				trailtype = EFFECT_TR_WIZSPIKE;
 			else if (e->render.model->flags & EF_TRACER2)
-			{
-				trailtype = 5;
-				//dlightradius = max(dlightradius, 100);
-				//dlightcolor[0] += 1.00f;
-				//dlightcolor[1] += 0.60f;
-				//dlightcolor[2] += 0.20f;
-			}
+				trailtype = EFFECT_TR_KNIGHTSPIKE;
 			else if (e->render.model->flags & EF_ROCKET)
-			{
-				trailtype = 0;
-				dlightradius = max(dlightradius, 200);
-				dlightcolor[0] += 3.00f;
-				dlightcolor[1] += 1.50f;
-				dlightcolor[2] += 0.50f;
-			}
+				trailtype = EFFECT_TR_ROCKET;
 			else if (e->render.model->flags & EF_GRENADE)
 			{
 				// LordHavoc: e->render.alpha == -1 is for Nehahra dem compatibility (cigar smoke)
-				trailtype = e->render.alpha == -1 ? 7 : 1;
+				trailtype = e->render.alpha == -1 ? EFFECT_TR_NEHAHRASMOKE : EFFECT_TR_GRENADE;
 			}
 			else if (e->render.model->flags & EF_TRACER3)
-			{
-				trailtype = 6;
-				if (gamemode == GAME_PRYDON)
-				{
-					dlightradius = max(dlightradius, 100);
-					dlightcolor[0] += 0.30f;
-					dlightcolor[1] += 0.60f;
-					dlightcolor[2] += 1.20f;
-				}
-				else
-				{
-					dlightradius = max(dlightradius, 200);
-					dlightcolor[0] += 1.20f;
-					dlightcolor[1] += 0.50f;
-					dlightcolor[2] += 1.00f;
-				}
-			}
+				trailtype = EFFECT_TR_VORESPIKE;
 		}
 		// LordHavoc: customizable glow
 		if (e->state_current.glowsize)
@@ -1151,9 +1083,19 @@ void CL_LinkNetworkEntity(entity_t *e)
 		}
 		// do trails
 		if (e->render.flags & RENDER_GLOWTRAIL)
-			trailtype = 9;
-		if (trailtype >= 0)
-			CL_RocketTrail(e->persistent.trail_origin, origin, trailtype, e->state_current.glowcolor, e);
+			trailtype = EFFECT_TR_GLOWTRAIL;
+		if (trailtype)
+		{
+			float len;
+			vec3_t vel;
+			VectorSubtract(e->state_current.origin, e->state_previous.origin, vel);
+			len = e->state_current.time - e->state_previous.time;
+			if (len > 0)
+				len = 1.0f / len;
+			VectorScale(vel, len, vel);
+			len = VectorDistance(origin, e->persistent.trail_origin);
+			CL_ParticleEffect(trailtype, len, e->persistent.trail_origin, origin, vel, vel, e, e->state_current.glowcolor);
+		}
 		VectorCopy(origin, e->persistent.trail_origin);
 		// tenebrae's sprites are all additive mode (weird)
 		if (gamemode == GAME_TENEBRAE && e->render.model && e->render.model->type == mod_sprite)

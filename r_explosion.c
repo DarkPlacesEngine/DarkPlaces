@@ -141,7 +141,7 @@ void R_Explosion_Init(void)
 	R_RegisterModule("R_Explosions", r_explosion_start, r_explosion_shutdown, r_explosion_newmap);
 }
 
-void R_NewExplosion(vec3_t org)
+void R_NewExplosion(const vec3_t org)
 {
 	int i, j;
 	float dist, n;

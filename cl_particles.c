@@ -40,6 +40,80 @@ particletype_t particletype[pt_total] =
 	{PBLEND_ALPHA, PARTICLE_BILLBOARD, false}, //pt_entityparticle
 };
 
+#define PARTICLEEFFECT_UNDERWATER 1
+#define PARTICLEEFFECT_NOTUNDERWATER 2
+
+typedef struct particleeffectinfo_s
+{
+	int effectnameindex; // which effect this belongs to
+	// PARTICLEEFFECT_* bits
+	int flags;
+	// blood effects may spawn very few particles, so proper fraction-overflow
+	// handling is very important, this variable keeps track of the fraction
+	double particleaccumulator;
+	// the math is: countabsolute + requestedcount * countmultiplier * quality
+	// absolute number of particles to spawn, often used for decals
+	// (unaffected by quality and requestedcount)
+	float countabsolute;
+	// multiplier for the number of particles CL_ParticleEffect was told to
+	// spawn, most effects do not really have a count and hence use 1, so
+	// this is often the actual count to spawn, not merely a multiplier
+	float countmultiplier;
+	// if > 0 this causes the particle to spawn in an evenly spaced line from
+	// originmins to originmaxs (causing them to describe a trail, not a box)
+	float trailspacing;
+	// type of particle to spawn (defines some aspects of behavior)
+	ptype_t particletype;
+	// range of colors to choose from in hex RRGGBB (like HTML color tags),
+	// randomly interpolated at spawn
+	unsigned int color[2];
+	// a random texture is chosen in this range (note the second value is one
+	// past the last choosable, so for example 8,16 chooses any from 8 up and
+	// including 15)
+	// if start and end of the range are the same, no randomization is done
+	int tex[2];
+	// range of size values randomly chosen when spawning
+	float size[2];
+	// range of alpha values randomly chosen when spawning, plus alpha fade
+	float alpha[3];
+	// how long the particle should live (note it is also removed if alpha drops to 0)
+	float time[2];
+	// how much gravity affects this particle (negative makes it fly up!)
+	float gravity;
+	// how much bounce the particle has when it hits a surface
+	// if negative the particle is removed on impact
+	float bounce;
+	// if in air this friction is applied
+	// if negative the particle accelerates
+	float airfriction;
+	// if in liquid (water/slime/lava) this friction is applied
+	// if negative the particle accelerates
+	float liquidfriction;
+	// these offsets are added to the values given to particleeffect(), and
+	// then an ellipsoid-shaped jitter is added as defined by these
+	// (they are the 3 radii)
+	float originoffset[3];
+	float velocityoffset[3];
+	float originjitter[3];
+	float velocityjitter[3];
+	float velocitymultiplier;
+	// an effect can also spawn a dlight
+	float lightradiusstart;
+	float lightradiusfade;
+	float lighttime;
+	float lightcolor[3];
+	float lightshadow;
+	float lightcubemapnum;
+}
+particleeffectinfo_t;
+
+#define MAX_PARTICLEEFFECTNAME 256
+char particleeffectname[MAX_PARTICLEEFFECTNAME][64];
+
+#define MAX_PARTICLEEFFECTINFO 4096
+
+particleeffectinfo_t particleeffectinfo[MAX_PARTICLEEFFECTINFO];
+
 static int particlepalette[256] =
 {
 	0x000000,0x0f0f0f,0x1f1f1f,0x2f2f2f,0x3f3f3f,0x4b4b4b,0x5b5b5b,0x6b6b6b, // 0-7
@@ -97,12 +171,10 @@ cvar_t cl_particles = {CVAR_SAVE, "cl_particles", "1", "enables particle effects
 cvar_t cl_particles_quality = {CVAR_SAVE, "cl_particles_quality", "1", "multiplies number of particles and reduces their alpha"};
 cvar_t cl_particles_size = {CVAR_SAVE, "cl_particles_size", "1", "multiplies particle size"};
 cvar_t cl_particles_quake = {CVAR_SAVE, "cl_particles_quake", "0", "makes particle effects look mostly like the ones in Quake"};
-cvar_t cl_particles_bloodshowers = {CVAR_SAVE, "cl_particles_bloodshowers", "1", "enables blood shower effects"};
 cvar_t cl_particles_blood = {CVAR_SAVE, "cl_particles_blood", "1", "enables blood effects"};
 cvar_t cl_particles_blood_alpha = {CVAR_SAVE, "cl_particles_blood_alpha", "0.5", "opacity of blood"};
 cvar_t cl_particles_blood_bloodhack = {CVAR_SAVE, "cl_particles_blood_bloodhack", "1", "make certain quake particle() calls create blood effects instead"};
 cvar_t cl_particles_bulletimpacts = {CVAR_SAVE, "cl_particles_bulletimpacts", "1", "enables bulletimpact effects"};
-cvar_t cl_particles_explosions_bubbles = {CVAR_SAVE, "cl_particles_explosions_bubbles", "1", "enables bubbles from underwater explosions"};
 cvar_t cl_particles_explosions_smoke = {CVAR_SAVE, "cl_particles_explosions_smokes", "0", "enables smoke from explosions"};
 cvar_t cl_particles_explosions_sparks = {CVAR_SAVE, "cl_particles_explosions_sparks", "1", "enables sparks from explosions"};
 cvar_t cl_particles_explosions_shell = {CVAR_SAVE, "cl_particles_explosions_shell", "0", "enables polygonal shell from explosions"};
@@ -115,6 +187,220 @@ cvar_t cl_decals = {CVAR_SAVE, "cl_decals", "0", "enables decals (bullet holes, 
 cvar_t cl_decals_time = {CVAR_SAVE, "cl_decals_time", "0", "how long before decals start to fade away"};
 cvar_t cl_decals_fadetime = {CVAR_SAVE, "cl_decals_fadetime", "20", "how long decals take to fade away"};
 
+
+void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend)
+{
+	int arrayindex;
+	int argc;
+	int effectinfoindex;
+	int linenumber;
+	particleeffectinfo_t *info = NULL;
+	const char *text = textstart;
+	char argv[16][1024];
+	effectinfoindex = -1;
+	for (linenumber = 1;;linenumber++)
+	{
+		argc = 0;
+		for (arrayindex = 0;arrayindex < 16;arrayindex++)
+			argv[arrayindex][0] = 0;
+		for (;;)
+		{
+			if (!COM_ParseToken(&text, true))
+				return;
+			if (!strcmp(com_token, "\n"))
+				break;
+			if (argc < 16)
+			{
+				strlcpy(argv[argc], com_token, sizeof(argv[argc]));
+				argc++;
+			}
+		}
+		if (argc < 1)
+			continue;
+#define checkparms(n) if (argc != (n)) {Con_Printf("effectinfo.txt:%i: error while parsing: %s given %i parameters, should be %i parameters\n", linenumber, argv[0], argc, (n));break;}
+#define readints(array, n) checkparms(n+1);for (arrayindex = 0;arrayindex < argc - 1;arrayindex++) array[arrayindex] = (int)atof(argv[1+arrayindex])
+#define readfloats(array, n) checkparms(n+1);for (arrayindex = 0;arrayindex < argc - 1;arrayindex++) array[arrayindex] = atof(argv[1+arrayindex])
+#define readint(var) checkparms(2);var = (int)atof(argv[1])
+#define readfloat(var) checkparms(2);var = atof(argv[1])
+		if (!strcmp(argv[0], "effect"))
+		{
+			int effectnameindex;
+			checkparms(2);
+			effectinfoindex++;
+			if (effectinfoindex >= MAX_PARTICLEEFFECTINFO)
+			{
+				Con_Printf("effectinfo.txt:%i: too many effects!\n", linenumber);
+				break;
+			}
+			for (effectnameindex = 1;effectnameindex < MAX_PARTICLEEFFECTNAME;effectnameindex++)
+			{
+				if (particleeffectname[effectnameindex][0])
+				{
+					if (!strcmp(particleeffectname[effectnameindex], argv[1]))
+						break;
+				}
+				else
+				{
+					strlcpy(particleeffectname[effectnameindex], argv[1], sizeof(particleeffectname[effectnameindex]));
+					break;
+				}
+			}
+			// if we run out of names, abort
+			if (effectnameindex == MAX_PARTICLEEFFECTNAME)
+			{
+				Con_Printf("effectinfo.txt:%i: too many effects!\n", linenumber);
+				break;
+			}
+			info = particleeffectinfo + effectinfoindex;
+			info->effectnameindex = effectnameindex;
+			info->particletype = pt_alphastatic;
+			info->tex[0] = tex_particle;
+			info->tex[1] = tex_particle;
+			info->color[0] = 0xFFFFFF;
+			info->color[1] = 0xFFFFFF;
+			info->size[0] = 1;
+			info->size[1] = 1;
+			info->alpha[0] = 0;
+			info->alpha[1] = 256;
+			info->alpha[2] = 256;
+			info->time[0] = 9999;
+			info->time[1] = 9999;
+			VectorSet(info->lightcolor, 1, 1, 1);
+			info->lightshadow = true;
+			info->lighttime = 9999;
+		}
+		else if (info == NULL)
+		{
+			Con_Printf("effectinfo.txt:%i: command %s encountered before effect\n", linenumber, argv[0]);
+			break;
+		}
+		else if (!strcmp(argv[0], "countabsolute")) {readfloat(info->countabsolute);}
+		else if (!strcmp(argv[0], "count")) {readfloat(info->countmultiplier);}
+		else if (!strcmp(argv[0], "type"))
+		{
+			checkparms(2);
+			if (!strcmp(argv[1], "alphastatic")) info->particletype = pt_alphastatic;
+			else if (!strcmp(argv[1], "static")) info->particletype = pt_static;
+			else if (!strcmp(argv[1], "spark")) info->particletype = pt_spark;
+			else if (!strcmp(argv[1], "beam")) info->particletype = pt_beam;
+			else if (!strcmp(argv[1], "rain")) info->particletype = pt_rain;
+			else if (!strcmp(argv[1], "raindecal")) info->particletype = pt_raindecal;
+			else if (!strcmp(argv[1], "snow")) info->particletype = pt_snow;
+			else if (!strcmp(argv[1], "bubble")) info->particletype = pt_bubble;
+			else if (!strcmp(argv[1], "blood")) info->particletype = pt_blood;
+			else if (!strcmp(argv[1], "smoke")) info->particletype = pt_smoke;
+			else if (!strcmp(argv[1], "decal")) info->particletype = pt_decal;
+			else if (!strcmp(argv[1], "entityparticle")) info->particletype = pt_entityparticle;
+			else Con_Printf("effectinfo.txt:%i: unrecognized particle type %s\n", linenumber, argv[1]);
+		}
+		else if (!strcmp(argv[0], "color")) {readints(info->color, 2);}
+		else if (!strcmp(argv[0], "tex")) {readints(info->tex, 2);}
+		else if (!strcmp(argv[0], "size")) {readfloats(info->size, 2);}
+		else if (!strcmp(argv[0], "alpha")) {readfloats(info->alpha, 3);}
+		else if (!strcmp(argv[0], "time")) {readints(info->time, 2);}
+		else if (!strcmp(argv[0], "gravity")) {readfloat(info->gravity);}
+		else if (!strcmp(argv[0], "bounce")) {readfloat(info->bounce);}
+		else if (!strcmp(argv[0], "airfriction")) {readfloat(info->airfriction);}
+		else if (!strcmp(argv[0], "liquidfriction")) {readfloat(info->liquidfriction);}
+		else if (!strcmp(argv[0], "originoffset")) {readfloats(info->originoffset, 3);}
+		else if (!strcmp(argv[0], "velocityoffset")) {readfloats(info->velocityoffset, 3);}
+		else if (!strcmp(argv[0], "originjitter")) {readfloats(info->originjitter, 3);}
+		else if (!strcmp(argv[0], "velocityjitter")) {readfloats(info->velocityjitter, 3);}
+		else if (!strcmp(argv[0], "velocitymultiplier")) {readfloat(info->velocitymultiplier);}
+		else if (!strcmp(argv[0], "lightradius")) {readfloat(info->lightradiusstart);}
+		else if (!strcmp(argv[0], "lightradiusfade")) {readfloat(info->lightradiusfade);}
+		else if (!strcmp(argv[0], "lighttime")) {readfloat(info->lighttime);}
+		else if (!strcmp(argv[0], "lightcolor")) {readfloats(info->lightcolor, 3);}
+		else if (!strcmp(argv[0], "lightshadow")) {readint(info->lightshadow);}
+		else if (!strcmp(argv[0], "lightcubemapnum")) {readint(info->lightcubemapnum);}
+		else if (!strcmp(argv[0], "underwater")) {checkparms(1);info->flags |= PARTICLEEFFECT_UNDERWATER;}
+		else if (!strcmp(argv[0], "notunderwater")) {checkparms(1);info->flags |= PARTICLEEFFECT_NOTUNDERWATER;}
+		else if (!strcmp(argv[0], "trailspacing")) {readfloat(info->trailspacing);if (info->trailspacing > 0) info->countmultiplier = 1.0f / info->trailspacing;}
+		else
+			Con_Printf("effectinfo.txt:%i: skipping unknown command %s\n", linenumber, argv[0]);
+#undef checkparms
+#undef readints
+#undef readfloats
+#undef readint
+#undef readfloat
+	}
+}
+
+int CL_ParticleEffectIndexForName(const char *name)
+{
+	int i;
+	for (i = 1;i < MAX_PARTICLEEFFECTNAME && particleeffectname[i][0];i++)
+		if (!strcmp(particleeffectname[i], name))
+			return i;
+	return 0;
+}
+
+const char *CL_ParticleEffectNameForIndex(int i)
+{
+	if (i < 1 || i >= MAX_PARTICLEEFFECTNAME)
+		return NULL;
+	return particleeffectname[i];
+}
+
+// MUST match effectnameindex_t in client.h
+static const char *standardeffectnames[EFFECT_TOTAL] =
+{
+	"",
+	"TE_GUNSHOT",
+	"TE_GUNSHOTQUAD",
+	"TE_SPIKE",
+	"TE_SPIKEQUAD",
+	"TE_SUPERSPIKE",
+	"TE_SUPERSPIKEQUAD",
+	"TE_WIZSPIKE",
+	"TE_KNIGHTSPIKE",
+	"TE_VORESPIKE",
+	"TE_EXPLOSION",
+	"TE_EXPLOSIONQUAD",
+	"TE_TAREXPLOSION",
+	"TE_TELEPORT",
+	"TE_LAVASPLASH",
+	"TE_SMALLFLASH",
+	"TE_FLAMEJET",
+	"EF_FLAME",
+	"TE_BLOOD",
+	"TE_SPARK",
+	"TE_PLASMABURN",
+	"TE_TEI_G3",
+	"TE_TEI_SMOKE",
+	"TE_TEI_BIGEXPLOSION",
+	"TE_TEI_PLASMAHIT",
+	"EF_STARDUST",
+	"TR_ROCKET",
+	"TR_GRENADE",
+	"TR_BLOOD",
+	"TR_WIZSPIKE",
+	"TR_SLIGHTBLOOD",
+	"TR_KNIGHTSPIKE",
+	"TR_VORESPIKE",
+	"TR_NEHAHRASMOKE",
+	"TR_NEXUIZPLASMA",
+	"TR_GLOWTRAIL",
+	"SVC_PARTICLE"
+};
+
+void CL_Particles_LoadEffectInfo(void)
+{
+	int i;
+	unsigned char *filedata;
+	fs_offset_t filesize;
+	memset(particleeffectinfo, 0, sizeof(particleeffectinfo));
+	memset(particleeffectname, 0, sizeof(particleeffectname));
+	for (i = 0;i < EFFECT_TOTAL;i++)
+		strlcpy(particleeffectname[i], standardeffectnames[i], sizeof(particleeffectname[i]));
+	filedata = FS_LoadFile("effectinfo.txt", tempmempool, true, &filesize);
+	if (filedata)
+	{
+		CL_Particles_ParseEffectInfo((const char *)filedata, (const char *)filedata + filesize);
+		Mem_Free(filedata);
+	}
+};
+
 /*
 ===============
 CL_InitParticles
@@ -124,16 +410,15 @@ void CL_ReadPointFile_f (void);
 void CL_Particles_Init (void)
 {
 	Cmd_AddCommand ("pointfile", CL_ReadPointFile_f, "display point file produced by qbsp when a leak was detected in the map (a line leading through the leak hole, to an entity inside the level)");
+	Cmd_AddCommand ("cl_particles_reloadeffects", CL_Particles_LoadEffectInfo, "reloads effectinfo.txt");
 
 	Cvar_RegisterVariable (&cl_particles);
 	Cvar_RegisterVariable (&cl_particles_quality);
 	Cvar_RegisterVariable (&cl_particles_size);
 	Cvar_RegisterVariable (&cl_particles_quake);
-	Cvar_RegisterVariable (&cl_particles_bloodshowers);
 	Cvar_RegisterVariable (&cl_particles_blood);
 	Cvar_RegisterVariable (&cl_particles_blood_alpha);
 	Cvar_RegisterVariable (&cl_particles_blood_bloodhack);
-	Cvar_RegisterVariable (&cl_particles_explosions_bubbles);
 	Cvar_RegisterVariable (&cl_particles_explosions_smoke);
 	Cvar_RegisterVariable (&cl_particles_explosions_sparks);
 	Cvar_RegisterVariable (&cl_particles_explosions_shell);
@@ -165,7 +450,7 @@ void CL_Particles_Shutdown (void)
 // px,py,pz - starting origin of particle
 // pvx,pvy,pvz - starting velocity of particle
 // pfriction - how much the particle slows down per second (0-1 typically, can slowdown faster than 1)
-particle_t *particle(particletype_t *ptype, int pcolor1, int pcolor2, int ptex, float psize, float palpha, float palphafade, float pgravity, float pbounce, float px, float py, float pz, float pvx, float pvy, float pvz, float pfriction, float originjitter, float velocityjitter)
+static particle_t *particle(particletype_t *ptype, int pcolor1, int pcolor2, int ptex, float psize, float palpha, float palphafade, float pgravity, float pbounce, float px, float py, float pz, float pvx, float pvy, float pvz, float pfriction, float originjitter, float velocityjitter)
 {
 	int l1, l2;
 	particle_t *part;
@@ -246,12 +531,572 @@ void CL_SpawnDecalParticleForPoint(const vec3_t org, float maxdist, float size, 
 		CL_SpawnDecalParticleForSurface(besthitent, bestorg, bestnormal, color1, color2, texnum, size, alpha);
 }
 
+static void CL_Sparks(const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, float sparkcount, float smokecount);
+void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor)
+{
+	vec3_t center;
+	matrix4x4_t tempmatrix;
+	VectorLerp(originmins, 0.5, originmaxs, center);
+	Matrix4x4_CreateTranslate(&tempmatrix, center[0], center[1], center[2]);
+	if (effectnameindex == EFFECT_TE_WIZSPIKE)
+		CL_ParticleEffect(EFFECT_SVC_PARTICLE, 30*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 20);
+	else if (effectnameindex == EFFECT_TE_KNIGHTSPIKE)
+		CL_ParticleEffect(EFFECT_SVC_PARTICLE, 20*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 226);
+	else if (effectnameindex == EFFECT_TE_SPIKE)
+	{
+		if (cl_particles_bulletimpacts.integer)
+		{
+			if (cl_particles_quake.integer)
+			{
+				if (cl_particles_smoke.integer)
+					CL_ParticleEffect(EFFECT_SVC_PARTICLE, 10*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0);
+			}
+			else
+				CL_Sparks(originmins, originmaxs, velocitymins, velocitymaxs, 15*count, 4*count);
+		}
+		// bullet hole
+		if (cl_stainmaps.integer) R_Stain(center, 32, 96, 96, 96, 24, 128, 128, 128, 24);
+		CL_SpawnDecalParticleForPoint(center, 6, 3, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
+	}
+	else if (effectnameindex == EFFECT_TE_SPIKEQUAD)
+	{
+		if (cl_particles_bulletimpacts.integer)
+		{
+			if (cl_particles_quake.integer)
+			{
+				if (cl_particles_smoke.integer)
+					CL_ParticleEffect(EFFECT_SVC_PARTICLE, 10*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0);
+			}
+			else
+				CL_Sparks(originmins, originmaxs, velocitymins, velocitymaxs, 15*count, 4*count);
+		}
+		// bullet hole
+		if (cl_stainmaps.integer) R_Stain(center, 32, 96, 96, 96, 24, 128, 128, 128, 24);
+		CL_SpawnDecalParticleForPoint(center, 6, 3, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
+		CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	}
+	else if (effectnameindex == EFFECT_TE_SUPERSPIKE)
+	{
+		if (cl_particles_bulletimpacts.integer)
+		{
+			if (cl_particles_quake.integer)
+			{
+				if (cl_particles_smoke.integer)
+					CL_ParticleEffect(EFFECT_SVC_PARTICLE, 20*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0);
+			}
+			else
+				CL_Sparks(originmins, originmaxs, velocitymins, velocitymaxs, 30*count, 8*count);
+		}
+		// bullet hole
+		if (cl_stainmaps.integer) R_Stain(center, 32, 96, 96, 96, 24, 128, 128, 128, 24);
+		CL_SpawnDecalParticleForPoint(center, 6, 3, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
+	}
+	else if (effectnameindex == EFFECT_TE_SUPERSPIKEQUAD)
+	{
+		if (cl_particles_bulletimpacts.integer)
+		{
+			if (cl_particles_quake.integer)
+			{
+				if (cl_particles_smoke.integer)
+					CL_ParticleEffect(EFFECT_SVC_PARTICLE, 20*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0);
+			}
+			else
+				CL_Sparks(originmins, originmaxs, velocitymins, velocitymaxs, 30*count, 8*count);
+		}
+		// bullet hole
+		if (cl_stainmaps.integer) R_Stain(center, 32, 96, 96, 96, 24, 128, 128, 128, 24);
+		CL_SpawnDecalParticleForPoint(center, 6, 3, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
+		CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	}
+	else if (effectnameindex == EFFECT_TE_BLOOD)
+	{
+		if (!cl_particles_blood.integer)
+			return;
+		if (cl_particles_quake.integer)
+			CL_ParticleEffect(EFFECT_SVC_PARTICLE, 20*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 73);
+		else
+		{
+			static double bloodaccumulator = 0;
+			bloodaccumulator += count * 0.333 * cl_particles_quality.value;
+			for (;bloodaccumulator > 0;bloodaccumulator--)
+				particle(particletype + pt_blood, 0xFFFFFF, 0xFFFFFF, tex_bloodparticle[rand()&7], 8, cl_particles_blood_alpha.value * 768, cl_particles_blood_alpha.value * 384, 0, -1, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 1, 0, 64);
+		}
+	}
+	else if (effectnameindex == EFFECT_TE_SPARK)
+		CL_Sparks(originmins, originmaxs, velocitymins, velocitymaxs, count, 0);
+	else if (effectnameindex == EFFECT_TE_PLASMABURN)
+	{
+		// plasma scorch mark
+		if (cl_stainmaps.integer) R_Stain(center, 48, 96, 96, 96, 32, 128, 128, 128, 32);
+		CL_SpawnDecalParticleForPoint(center, 6, 6, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
+		CL_AllocDlight(NULL, &tempmatrix, 200, 1, 1, 1, 1000, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	}
+	else if (effectnameindex == EFFECT_TE_GUNSHOT)
+	{
+		if (cl_particles_bulletimpacts.integer)
+		{
+			if (cl_particles_quake.integer)
+				CL_ParticleEffect(EFFECT_SVC_PARTICLE, 20*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0);
+			else
+				CL_Sparks(originmins, originmaxs, velocitymins, velocitymaxs, 15*count, 4*count);
+		}
+		// bullet hole
+		if (cl_stainmaps.integer) R_Stain(center, 32, 96, 96, 96, 24, 128, 128, 128, 24);
+		CL_SpawnDecalParticleForPoint(center, 6, 3, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
+	}
+	else if (effectnameindex == EFFECT_TE_GUNSHOTQUAD)
+	{
+		if (cl_particles_bulletimpacts.integer)
+		{
+			if (cl_particles_quake.integer)
+				CL_ParticleEffect(EFFECT_SVC_PARTICLE, 20*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0);
+			else
+				CL_Sparks(originmins, originmaxs, velocitymins, velocitymaxs, 15*count, 4*count);
+		}
+		// bullet hole
+		if (cl_stainmaps.integer) R_Stain(center, 32, 96, 96, 96, 24, 128, 128, 128, 24);
+		CL_SpawnDecalParticleForPoint(center, 6, 3, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
+		CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	}
+	else if (effectnameindex == EFFECT_TE_EXPLOSION)
+	{
+		CL_ParticleExplosion(center);
+		CL_AllocDlight(NULL, &tempmatrix, 350, 4.0f, 2.0f, 0.50f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	}
+	else if (effectnameindex == EFFECT_TE_EXPLOSIONQUAD)
+	{
+		CL_ParticleExplosion(center);
+		CL_AllocDlight(NULL, &tempmatrix, 350, 2.5f, 2.0f, 4.0f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	}
+	else if (effectnameindex == EFFECT_TE_TAREXPLOSION)
+	{
+		if (cl_particles_quake.integer)
+		{
+			int i;
+			for (i = 0;i < 1024 * cl_particles_quality.value;i++)
+			{
+				if (i & 1)
+					particle(particletype + pt_static, particlepalette[66], particlepalette[71], tex_particle, 1, lhrandom(182, 255), 182, 0, 0, center[0], center[1], center[2], 0, 0, 0, -4, 16, 256);
+				else
+					particle(particletype + pt_static, particlepalette[150], particlepalette[155], tex_particle, 1, lhrandom(182, 255), 182, 0, 0, center[0], center[1], center[2], 0, 0, lhrandom(-256, 256), 0, 16, 0);
+			}
+		}
+		else
+			CL_ParticleExplosion(center);
+		CL_AllocDlight(NULL, &tempmatrix, 600, 1.6f, 0.8f, 2.0f, 1200, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	}
+	else if (effectnameindex == EFFECT_TE_SMALLFLASH)
+		CL_AllocDlight(NULL, &tempmatrix, 200, 2, 2, 2, 1000, 0.2, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	else if (effectnameindex == EFFECT_TE_FLAMEJET)
+	{
+		count *= cl_particles_quality.value;
+		while (count-- > 0)
+			particle(particletype + pt_smoke, 0x6f0f00, 0xe3974f, tex_particle, 4, lhrandom(64, 128), 384, -1, 1.1, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 1, 0, 128);
+	}
+	else if (effectnameindex == EFFECT_TE_LAVASPLASH)
+	{
+		float i, j, inc, vel;
+		vec3_t dir, org;
+
+		inc = 8 / cl_particles_quality.value;
+		for (i = -128;i < 128;i += inc)
+		{
+			for (j = -128;j < 128;j += inc)
+			{
+				dir[0] = j + lhrandom(0, inc);
+				dir[1] = i + lhrandom(0, inc);
+				dir[2] = 256;
+				org[0] = center[0] + dir[0];
+				org[1] = center[1] + dir[1];
+				org[2] = center[2] + lhrandom(0, 64);
+				vel = lhrandom(50, 120) / VectorLength(dir); // normalize and scale
+				particle(particletype + pt_alphastatic, particlepalette[224], particlepalette[231], tex_particle, 1, inc * lhrandom(24, 32), inc * 12, 0.05, 0, org[0], org[1], org[2], dir[0] * vel, dir[1] * vel, dir[2] * vel, 0, 0, 0);
+			}
+		}
+	}
+	else if (effectnameindex == EFFECT_TE_TELEPORT)
+	{
+		float i, j, k, inc, vel;
+		vec3_t dir;
+
+		inc = 4 / cl_particles_quality.value;
+		for (i = -16;i < 16;i += inc)
+		{
+			for (j = -16;j < 16;j += inc)
+			{
+				for (k = -24;k < 32;k += inc)
+				{
+					VectorSet(dir, i*8, j*8, k*8);
+					VectorNormalize(dir);
+					vel = lhrandom(50, 113);
+					particle(particletype + pt_alphastatic, particlepalette[7], particlepalette[14], tex_particle, 1, inc * lhrandom(37, 63), inc * 187, 0, 0, center[0] + i + lhrandom(0, inc), center[1] + j + lhrandom(0, inc), center[2] + k + lhrandom(0, inc), dir[0] * vel, dir[1] * vel, dir[2] * vel, 0, 0, 0);
+				}
+			}
+		}
+		CL_AllocDlight(NULL, &tempmatrix, 200, 1.0f, 1.0f, 1.0f, 600, 99.0f, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	}
+	else if (effectnameindex == EFFECT_TE_TEI_G3)
+		particle(particletype + pt_beam, 0xFFFFFF, 0xFFFFFF, tex_beam, 8, 256, 256, 0, 0, originmins[0], originmins[1], originmins[2], originmaxs[0], originmaxs[1], originmaxs[2], 0, 0, 0);
+	else if (effectnameindex == EFFECT_TE_TEI_SMOKE)
+	{
+		if (cl_particles_smoke.integer)
+		{
+			count *= 0.25f * cl_particles_quality.value;
+			while (count-- > 0)
+				particle(particletype + pt_smoke, 0x202020, 0x404040, tex_smoke[rand()&7], 5, 255, 512, 0, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 0, 1.5f, 6.0f);
+		}
+	}
+	else if (effectnameindex == EFFECT_TE_TEI_BIGEXPLOSION)
+	{
+		CL_ParticleExplosion(center);
+		CL_AllocDlight(NULL, &tempmatrix, 500, 2.5f, 2.0f, 1.0f, 500, 9999, 0, -1, true, 1, 0.25, 0.5, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	}
+	else if (effectnameindex == EFFECT_TE_TEI_PLASMAHIT)
+	{
+		float f;
+		if (cl_stainmaps.integer)
+			R_Stain(center, 40, 96, 96, 96, 40, 128, 128, 128, 40);
+		CL_SpawnDecalParticleForPoint(center, 6, 8, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
+		if (cl_particles_smoke.integer)
+			for (f = 0;f < count;f += 4.0f / cl_particles_quality.value)
+				particle(particletype + pt_smoke, 0x202020, 0x404040, tex_smoke[rand()&7], 5, 255, 512, 0, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 0, 20, 155);
+		if (cl_particles_sparks.integer)
+			for (f = 0;f < count;f += 1.0f / cl_particles_quality.value)
+				particle(particletype + pt_spark, 0x2030FF, 0x80C0FF, tex_particle, 2.0f, lhrandom(64, 255), 512, 0, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 0, 0, 465);
+		CL_AllocDlight(NULL, &tempmatrix, 500, 0.6f, 1.2f, 2.0f, 2000, 9999, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	}
+	else if (effectnameindex == EFFECT_EF_FLAME)
+	{
+		count *= 300 * cl_particles_quality.value;
+		while (count-- > 0)
+			particle(particletype + pt_smoke, 0x6f0f00, 0xe3974f, tex_particle, 4, lhrandom(64, 128), 384, -1, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 1, 16, 128);
+		CL_AllocDlight(NULL, &tempmatrix, 200, 2.0f, 1.5f, 0.5f, 0, 0, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	}
+	else if (effectnameindex == EFFECT_EF_STARDUST)
+	{
+		count *= 200 * cl_particles_quality.value;
+		while (count-- > 0)
+			particle(particletype + pt_static, 0x903010, 0xFFD030, tex_particle, 4, lhrandom(64, 128), 128, 1, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 0.2, 16, 128);
+		CL_AllocDlight(NULL, &tempmatrix, 200, 1.0f, 0.7f, 0.3f, 0, 0, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	}
+	else if (!strncmp(particleeffectname[effectnameindex], "TR_", 3))
+	{
+		vec3_t dir, pos;
+		float len, dec, qd;
+		int smoke, blood, bubbles, r, color;
+
+		if (effectnameindex == EFFECT_TR_ROCKET)
+			CL_AllocDlight(&ent->render, &ent->render.matrix, 200, 3.0f, 1.5f, 0.5f, 0, 0, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		else if (effectnameindex == EFFECT_TR_VORESPIKE)
+		{
+			if (gamemode == GAME_PRYDON && !cl_particles_quake.integer)
+				CL_AllocDlight(&ent->render, &ent->render.matrix, 100, 0.3f, 0.6f, 1.2f, 0, 0, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			else
+				CL_AllocDlight(&ent->render, &ent->render.matrix, 200, 1.2f, 0.5f, 1.0f, 0, 0, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		}
+		else if (effectnameindex == EFFECT_TR_NEXUIZPLASMA)
+			CL_AllocDlight(&ent->render, &ent->render.matrix, 200, 0.75f, 1.5f, 3.0f, 0, 0, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+
+		if (originmaxs[0] == originmins[0] && originmaxs[1] == originmins[1] && originmaxs[2] == originmins[2])
+			return;
+
+		VectorSubtract(originmaxs, originmins, dir);
+		len = VectorNormalizeLength(dir);
+		dec = -ent->persistent.trail_time;
+		ent->persistent.trail_time += len;
+		if (ent->persistent.trail_time < 0.01f)
+			return;
+
+		// if we skip out, leave it reset
+		ent->persistent.trail_time = 0.0f;
+
+		// advance into this frame to reach the first puff location
+		VectorMA(originmins, dec, dir, pos);
+		len -= dec;
+
+		smoke = cl_particles.integer && cl_particles_smoke.integer;
+		blood = cl_particles.integer && cl_particles_blood.integer;
+		bubbles = cl_particles.integer && cl_particles_bubbles.integer && !cl_particles_quake.integer && (CL_PointSuperContents(pos) & (SUPERCONTENTS_WATER | SUPERCONTENTS_SLIME));
+		qd = 1.0f / cl_particles_quality.value;
+
+		while (len >= 0)
+		{
+			dec = 3;
+			if (blood)
+			{
+				if (effectnameindex == EFFECT_TR_BLOOD)
+				{
+					if (cl_particles_quake.integer)
+					{
+						color = particlepalette[67 + (rand()&3)];
+						particle(particletype + pt_alphastatic, color, color, tex_particle, 1, 255, 128, 0, -0.05, pos[0], pos[1], pos[2], 0, 0, 0, 0, 3, 0);
+					}
+					else
+					{
+						dec = 16;
+						particle(particletype + pt_blood, 0xFFFFFF, 0xFFFFFF, tex_bloodparticle[rand()&7], 8, qd * cl_particles_blood_alpha.value * 768.0f, qd * cl_particles_blood_alpha.value * 384.0f, 0, -1, pos[0], pos[1], pos[2], lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 1, 0, 64);
+					}
+				}
+				else if (effectnameindex == EFFECT_TR_SLIGHTBLOOD)
+				{
+					if (cl_particles_quake.integer)
+					{
+						dec = 6;
+						color = particlepalette[67 + (rand()&3)];
+						particle(particletype + pt_alphastatic, color, color, tex_particle, 1, 255, 128, 0, -0.05, pos[0], pos[1], pos[2], 0, 0, 0, 0, 3, 0);
+					}
+					else
+					{
+						dec = 32;
+						particle(particletype + pt_blood, 0xFFFFFF, 0xFFFFFF, tex_bloodparticle[rand()&7], 8, qd * cl_particles_blood_alpha.value * 768.0f, qd * cl_particles_blood_alpha.value * 384.0f, 0, -1, pos[0], pos[1], pos[2], lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 1, 0, 64);
+					}
+				}
+			}
+			if (smoke)
+			{
+				if (effectnameindex == EFFECT_TR_ROCKET)
+				{
+					if (cl_particles_quake.integer)
+					{
+						r = rand()&3;
+						color = particlepalette[ramp3[r]];
+						particle(particletype + pt_alphastatic, color, color, tex_particle, 1, 42*(6-r), 306, 0, -0.05, pos[0], pos[1], pos[2], 0, 0, 0, 0, 3, 0);
+					}
+					else
+					{
+						particle(particletype + pt_smoke, 0x303030, 0x606060, tex_smoke[rand()&7], 3, cl_particles_smoke_alpha.value*62, cl_particles_smoke_alphafade.value*62, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
+						particle(particletype + pt_static, 0x801010, 0xFFA020, tex_smoke[rand()&7], 3, cl_particles_smoke_alpha.value*288, cl_particles_smoke_alphafade.value*1400, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 20);
+					}
+				}
+				else if (effectnameindex == EFFECT_TR_GRENADE)
+				{
+					if (cl_particles_quake.integer)
+					{
+						r = 2 + (rand()%5);
+						color = particlepalette[ramp3[r]];
+						particle(particletype + pt_alphastatic, color, color, tex_particle, 1, 42*(6-r), 306, 0, -0.05, pos[0], pos[1], pos[2], 0, 0, 0, 0, 3, 0);
+					}
+					else
+					{
+						particle(particletype + pt_smoke, 0x303030, 0x606060, tex_smoke[rand()&7], 3, cl_particles_smoke_alpha.value*50, cl_particles_smoke_alphafade.value*50, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
+					}
+				}
+				else if (effectnameindex == EFFECT_TR_WIZSPIKE)
+				{
+					if (cl_particles_quake.integer)
+					{
+						dec = 6;
+						color = particlepalette[52 + (rand()&7)];
+						particle(particletype + pt_alphastatic, color, color, tex_particle, 1, 255, 512, 0, 0, pos[0], pos[1], pos[2], 30*dir[1], 30*-dir[0], 0, 0, 0, 0);
+						particle(particletype + pt_alphastatic, color, color, tex_particle, 1, 255, 512, 0, 0, pos[0], pos[1], pos[2], 30*-dir[1], 30*dir[0], 0, 0, 0, 0);
+					}
+					else if (gamemode == GAME_GOODVSBAD2)
+					{
+						dec = 6;
+						particle(particletype + pt_static, 0x00002E, 0x000030, tex_particle, 6, 128, 384, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
+					}
+					else
+					{
+						color = particlepalette[20 + (rand()&7)];
+						particle(particletype + pt_static, color, color, tex_particle, 2, 64, 192, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
+					}
+				}
+				else if (effectnameindex == EFFECT_TR_KNIGHTSPIKE)
+				{
+					if (cl_particles_quake.integer)
+					{
+						dec = 6;
+						color = particlepalette[230 + (rand()&7)];
+						particle(particletype + pt_alphastatic, color, color, tex_particle, 1, 255, 512, 0, 0, pos[0], pos[1], pos[2], 30*dir[1], 30*-dir[0], 0, 0, 0, 0);
+						particle(particletype + pt_alphastatic, color, color, tex_particle, 1, 255, 512, 0, 0, pos[0], pos[1], pos[2], 30*-dir[1], 30*dir[0], 0, 0, 0, 0);
+					}
+					else
+					{
+						color = particlepalette[226 + (rand()&7)];
+						particle(particletype + pt_static, color, color, tex_particle, 2, 64, 192, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
+					}
+				}
+				else if (effectnameindex == EFFECT_TR_VORESPIKE)
+				{
+					if (cl_particles_quake.integer)
+					{
+						color = particlepalette[152 + (rand()&3)];
+						particle(particletype + pt_alphastatic, color, color, tex_particle, 1, 255, 850, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 8, 0);
+					}
+					else if (gamemode == GAME_GOODVSBAD2)
+					{
+						dec = 6;
+						particle(particletype + pt_alphastatic, particlepalette[0 + (rand()&255)], particlepalette[0 + (rand()&255)], tex_particle, 6, 255, 384, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
+					}
+					else if (gamemode == GAME_PRYDON)
+					{
+						dec = 6;
+						particle(particletype + pt_static, 0x103040, 0x204050, tex_particle, 6, 64, 192, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
+					}
+					else
+						particle(particletype + pt_static, 0x502030, 0x502030, tex_particle, 3, 64, 192, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
+				}
+				else if (effectnameindex == EFFECT_TR_NEHAHRASMOKE)
+				{
+					dec = 7;
+					particle(particletype + pt_alphastatic, 0x303030, 0x606060, tex_smoke[rand()&7], 7, 64, 320, 0, 0, pos[0], pos[1], pos[2], 0, 0, lhrandom(4, 12), 0, 0, 4);
+				}
+				else if (effectnameindex == EFFECT_TR_NEXUIZPLASMA)
+				{
+					dec = 4;
+					particle(particletype + pt_static, 0x283880, 0x283880, tex_particle, 4, 255, 1024, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 16);
+				}
+				else if (effectnameindex == EFFECT_TR_GLOWTRAIL)
+					particle(particletype + pt_alphastatic, particlepalette[palettecolor], particlepalette[palettecolor], tex_particle, 5, 128, 320, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
+			}
+			if (bubbles)
+			{
+				if (effectnameindex == EFFECT_TR_ROCKET)
+					particle(particletype + pt_bubble, 0x404040, 0x808080, tex_bubble, 2, lhrandom(64, 255), 256, -0.25, 1.5, pos[0], pos[1], pos[2], 0, 0, 0, (1.0 / 16.0), 0, 16);
+				else if (effectnameindex == EFFECT_TR_GRENADE)
+					particle(particletype + pt_bubble, 0x404040, 0x808080, tex_bubble, 2, lhrandom(64, 255), 256, -0.25, 1.5, pos[0], pos[1], pos[2], 0, 0, 0, (1.0 / 16.0), 0, 16);
+			}
+			// advance to next time and position
+			dec *= qd;
+			len -= dec;
+			VectorMA (pos, dec, dir, pos);
+		}
+		ent->persistent.trail_time = len;
+	}
+	else if (developer.integer >= 1)
+		Con_Printf("CL_ParticleEffect_Fallback: no fallback found for effect %s\n", particleeffectname[effectnameindex]);
+}
+
+void CL_ParticleEffect(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor)
+{
+	vec3_t center;
+	qboolean found = false;
+	if (effectnameindex < 1 || effectnameindex >= MAX_PARTICLEEFFECTNAME)
+		return; // invalid effect index
+	if (!particleeffectname[effectnameindex][0])
+		return; // no such effect
+	VectorLerp(originmins, 0.5, originmaxs, center);
+	if (effectnameindex == EFFECT_SVC_PARTICLE)
+	{
+		if (!cl_particles.integer)
+			return;
+		// bloodhack checks if this effect's color matches regular or lightning blood and if so spawns a blood effect instead
+		if (pcount == 1024)
+			CL_ParticleExplosion(center);
+		else if (cl_particles_blood_bloodhack.integer && !cl_particles_quake.integer && (palettecolor == 73 || palettecolor == 225))
+			CL_ParticleEffect(EFFECT_TE_BLOOD, pcount / 6.0f, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0);
+		else
+		{
+			float count = pcount * cl_particles_quality.value;
+			for (;count > 0;count--)
+			{
+				int k = particlepalette[palettecolor + (rand()&7)];
+				if (cl_particles_quake.integer)
+					particle(particletype + pt_alphastatic, k, k, tex_particle, 1, lhrandom(51, 255), 512, 0.05, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 0, 8, 0);
+				else if (gamemode == GAME_GOODVSBAD2)
+					particle(particletype + pt_alphastatic, k, k, tex_particle, 5, 255, 300, 0, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 0, 8, 10);
+				else
+					particle(particletype + pt_alphastatic, k, k, tex_particle, 1, 255, 512, 0, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 0, 8, 15);
+			}
+		}
+	}
+	else if (!cl_particles_quake.integer && particleeffectinfo[0].effectnameindex)
+	{
+		int effectinfoindex;
+		int supercontents;
+		int tex;
+		particleeffectinfo_t *info;
+		vec3_t center;
+		vec3_t centervelocity;
+		vec3_t traildir;
+		vec3_t trailpos;
+		vec3_t rvec;
+		qboolean underwater;
+		// note this runs multiple effects with the same name, each one spawns only one kind of particle, so some effects need more than one
+		VectorLerp(originmins, 0.5, originmaxs, center);
+		VectorLerp(velocitymins, 0.5, velocitymaxs, centervelocity);
+		supercontents = CL_PointSuperContents(center);
+		underwater = (supercontents & (SUPERCONTENTS_WATER | SUPERCONTENTS_SLIME)) != 0;
+		VectorSubtract(originmaxs, originmins, traildir);
+		VectorNormalize(traildir);
+		for (effectinfoindex = 0, info = particleeffectinfo;effectinfoindex < MAX_PARTICLEEFFECTINFO && info->effectnameindex;effectinfoindex++, info++)
+		{
+			if (info->effectnameindex == effectnameindex)
+			{
+				found = true;
+				if ((info->flags & PARTICLEEFFECT_UNDERWATER) && !underwater)
+					continue;
+				if ((info->flags & PARTICLEEFFECT_NOTUNDERWATER) && underwater)
+					continue;
+
+				// spawn a dlight if requested
+				if (info->lightradiusstart > 0)
+				{
+					matrix4x4_t tempmatrix;
+					if (info->trailspacing > 0)
+						Matrix4x4_CreateTranslate(&tempmatrix, originmaxs[0], originmaxs[1], originmaxs[2]);
+					else
+						Matrix4x4_CreateTranslate(&tempmatrix, center[0], center[1], center[2]);
+					CL_AllocDlight(NULL, &tempmatrix, info->lightradiusstart, info->lightcolor[0], info->lightcolor[1], info->lightcolor[2], info->lightradiusfade, info->lighttime, info->lightcubemapnum, -1, info->lightshadow, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+				}
+
+				// spawn particles
+				tex = info->tex[0];
+				if (info->tex[1] > info->tex[0])
+				{
+					tex = (int)lhrandom(info->tex[0], info->tex[1]);
+					tex = min(tex, info->tex[1] - 1);
+				}
+				if (info->particletype == pt_decal)
+					CL_SpawnDecalParticleForPoint(center, info->originjitter[0], lhrandom(info->size[0], info->size[1]), lhrandom(info->alpha[0], info->alpha[1]), tex, info->color[0], info->color[1]);
+				else if (info->particletype == pt_beam)
+					particle(particletype + info->particletype, info->color[0], info->color[1], tex, lhrandom(info->size[0], info->size[1]), lhrandom(info->alpha[0], info->alpha[1]), info->alpha[2], 0, 0, originmins[0], originmins[1], originmins[2], originmaxs[0], originmaxs[1], originmaxs[2], 0, 0, 0);
+				else
+				{
+					if (!cl_particles.integer)
+						continue;
+					switch (info->particletype)
+					{
+					case pt_smoke: if (!cl_particles_smoke.integer) continue;break;
+					case pt_spark: if (!cl_particles_sparks.integer) continue;break;
+					case pt_bubble: if (!cl_particles_bubbles.integer) continue;break;
+					case pt_blood: if (!cl_particles_blood.integer) continue;break;
+					default: break;
+					}
+					info->particleaccumulator += info->countabsolute + pcount * info->countmultiplier * cl_particles_quality.value;
+					VectorCopy(originmins, trailpos);
+					for (;info->particleaccumulator > 0;info->particleaccumulator--)
+					{
+						if (info->tex[1] > info->tex[0])
+						{
+							tex = (int)lhrandom(info->tex[0], info->tex[1]);
+							tex = min(tex, info->tex[1] - 1);
+						}
+						if (info->trailspacing <= 0)
+						{
+							trailpos[0] = lhrandom(originmins[0], originmaxs[0]);
+							trailpos[1] = lhrandom(originmins[1], originmaxs[1]);
+							trailpos[2] = lhrandom(originmins[2], originmaxs[2]);
+						}
+						VectorRandom(rvec);
+						particle(particletype + info->particletype, info->color[0], info->color[1], tex, lhrandom(info->size[0], info->size[1]), lhrandom(info->alpha[0], info->alpha[1]), info->alpha[2], info->gravity, info->bounce, trailpos[0] + info->originoffset[0] + info->originjitter[0] * rvec[0], trailpos[1] + info->originoffset[1] + info->originjitter[1] * rvec[1], trailpos[2] + info->originoffset[2] + info->originjitter[2] * rvec[2], lhrandom(velocitymins[0], velocitymaxs[0]) * info->velocitymultiplier + info->velocityoffset[0] + info->velocityjitter[0] * rvec[0], lhrandom(velocitymins[1], velocitymaxs[1]) * info->velocitymultiplier + info->velocityoffset[1] + info->velocityjitter[1] * rvec[1], lhrandom(velocitymins[2], velocitymaxs[2]) * info->velocitymultiplier + info->velocityoffset[2] + info->velocityjitter[2] * rvec[2], info->airfriction, 0, 0);
+						if (info->trailspacing > 0)
+							VectorMA(trailpos, info->trailspacing, traildir, trailpos);
+					}
+				}
+			}
+		}
+	}
+	if (!found)
+		CL_ParticleEffect_Fallback(effectnameindex, pcount, originmins, originmaxs, velocitymins, velocitymaxs, ent, palettecolor);
+}
+
 /*
 ===============
 CL_EntityParticles
 ===============
 */
-void CL_EntityParticles (entity_t *ent)
+void CL_EntityParticles (const entity_t *ent)
 {
 	int i;
 	float pitch, yaw, dist = 64, beamlength = 16, org[3], v[3];
@@ -358,22 +1203,7 @@ void CL_ParseParticleEffect (void)
 	else
 		count = msgcount;
 
-	if (cl_particles_blood_bloodhack.integer && !cl_particles_quake.integer)
-	{
-		if (color == 73)
-		{
-			// regular blood
-			CL_BloodPuff(org, dir, count / 2);
-			return;
-		}
-		if (color == 225)
-		{
-			// lightning blood
-			CL_BloodPuff(org, dir, count / 2);
-			return;
-		}
-	}
-	CL_RunParticleEffect (org, dir, color, count);
+	CL_ParticleEffect(EFFECT_SVC_PARTICLE, count, org, org, dir, dir, NULL, color);
 }
 
 /*
@@ -382,7 +1212,7 @@ CL_ParticleExplosion
 
 ===============
 */
-void CL_ParticleExplosion (vec3_t org)
+void CL_ParticleExplosion (const vec3_t org)
 {
 	int i;
 	trace_t trace;
@@ -415,7 +1245,7 @@ void CL_ParticleExplosion (vec3_t org)
 		i = CL_PointSuperContents(org);
 		if (i & (SUPERCONTENTS_SLIME | SUPERCONTENTS_WATER))
 		{
-			if (cl_particles.integer && cl_particles_bubbles.integer && cl_particles_explosions_bubbles.integer)
+			if (cl_particles.integer && cl_particles_bubbles.integer)
 				for (i = 0;i < 128 * cl_particles_quality.value;i++)
 					particle(particletype + pt_bubble, 0x404040, 0x808080, tex_bubble, 2, lhrandom(128, 255), 128, -0.125, 1.5, org[0], org[1], org[2], 0, 0, 0, (1.0 / 16.0), 16, 96);
 		}
@@ -460,7 +1290,7 @@ CL_ParticleExplosion2
 
 ===============
 */
-void CL_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength)
+void CL_ParticleExplosion2 (const vec3_t org, int colorStart, int colorLength)
 {
 	int i, k;
 	if (!cl_particles.integer) return;
@@ -475,206 +1305,26 @@ void CL_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength)
 	}
 }
 
-/*
-===============
-CL_BlobExplosion
-
-===============
-*/
-void CL_BlobExplosion (vec3_t org)
+static void CL_Sparks(const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, float sparkcount, float smokecount)
 {
-	int i, k;
-	if (!cl_particles.integer) return;
-
-	if (!cl_particles_quake.integer)
-	{
-		CL_ParticleExplosion(org);
-		return;
-	}
-
-	for (i = 0;i < 1024 * cl_particles_quality.value;i++)
-	{
-		if (i & 1)
-		{
-			k = particlepalette[66 + rand()%6];
-			particle(particletype + pt_static, k, k, tex_particle, 1, lhrandom(182, 255), 182, 0, 0, org[0], org[1], org[2], 0, 0, 0, -4, 16, 256);
-		}
-		else
-		{
-			k = particlepalette[150 + rand()%6];
-			particle(particletype + pt_static, k, k, tex_particle, 1, lhrandom(182, 255), 182, 0, 0, org[0], org[1], org[2], 0, 0, lhrandom(-256, 256), 0, 16, 0);
-		}
-	}
-}
-
-/*
-===============
-CL_RunParticleEffect
-
-===============
-*/
-void CL_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count)
-{
-	int k;
-
-	if (count == 1024)
-	{
-		CL_ParticleExplosion(org);
-		return;
-	}
-	if (!cl_particles.integer) return;
-	if (cl_particles_quake.integer)
-	{
-		count *= cl_particles_quality.value;
-		while (count--)
-		{
-			k = particlepalette[color + (rand()&7)];
-			particle(particletype + pt_alphastatic, k, k, tex_particle, 1, lhrandom(51, 255), 512, 0, 0.05, org[0], org[1], org[2], dir[0], dir[1], dir[2], 0, 8, 0);
-		}
-	}
-	else
-	{
-		count *= cl_particles_quality.value;
-		while (count--)
-		{
-			k = particlepalette[color + (rand()&7)];
-			if (gamemode == GAME_GOODVSBAD2)
-				particle(particletype + pt_alphastatic, k, k, tex_particle, 5, 255, 300, 0, 0, org[0], org[1], org[2], 0, 0, 0, 0, 8, 10);
-			else
-				particle(particletype + pt_alphastatic, k, k, tex_particle, 1, 255, 512, 0, 0, org[0], org[1], org[2], dir[0], dir[1], dir[2], 0, 8, 15);
-		}
-	}
-}
-
-// LordHavoc: added this for spawning sparks/dust (which have strong gravity)
-/*
-===============
-CL_SparkShower
-===============
-*/
-void CL_SparkShower (vec3_t org, vec3_t dir, int count, vec_t gravityscale, vec_t radius)
-{
-	int k;
-
-	if (!cl_particles.integer) return;
-
 	if (cl_particles_sparks.integer)
 	{
-		// sparks
-		count *= cl_particles_quality.value;
-		while(count--)
-		{
-			k = particlepalette[0x68 + (rand() & 7)];
-			particle(particletype + pt_spark, k, k, tex_particle, 0.4f, lhrandom(64, 255), 512, gravityscale, 0, org[0], org[1], org[2], dir[0], dir[1], dir[2] + sv_gravity.value * 0.1, 0, radius, 64);
-		}
+		sparkcount *= cl_particles_quality.value;
+		while(sparkcount-- > 0)
+			particle(particletype + pt_spark, particlepalette[0x68], particlepalette[0x6f], tex_particle, 0.4f, lhrandom(64, 255), 512, 1, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]) + sv_gravity.value * 0.1, 0, 0, 64);
 	}
-}
-
-void CL_Smoke (vec3_t org, vec3_t dir, int count, vec_t radius)
-{
-	vec3_t org2;
-	int k;
-	trace_t trace;
-
-	if (!cl_particles.integer) return;
-
-	// smoke puff
 	if (cl_particles_smoke.integer)
 	{
-		k = count * 0.25 * cl_particles_quality.value;
-		while(k--)
-		{
-			org2[0] = org[0] + 0.125f * lhrandom(-count, count);
-			org2[1] = org[1] + 0.125f * lhrandom(-count, count);
-			org2[2] = org[2] + 0.125f * lhrandom(-count, count);
-			trace = CL_TraceBox(org, vec3_origin, vec3_origin, org2, true, NULL, SUPERCONTENTS_SOLID, false);
-			particle(particletype + pt_smoke, 0x101010, 0x202020, tex_smoke[rand()&7], 3, 255, 1024, 0, 0, trace.endpos[0], trace.endpos[1], trace.endpos[2], 0, 0, 0, 0, radius, 8);
-		}
+		smokecount *= cl_particles_quality.value;
+		while(smokecount-- > 0)
+			particle(particletype + pt_smoke, 0x101010, 0x202020, tex_smoke[rand()&7], 3, 255, 1024, 0, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 0, 0, 8);
 	}
 }
 
-void CL_BulletMark (vec3_t org)
-{
-	if (cl_stainmaps.integer)
-		R_Stain(org, 32, 96, 96, 96, 24, 128, 128, 128, 24);
-	CL_SpawnDecalParticleForPoint(org, 6, 3, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
-}
-
-void CL_PlasmaBurn (vec3_t org)
-{
-	if (cl_stainmaps.integer)
-		R_Stain(org, 48, 96, 96, 96, 32, 128, 128, 128, 32);
-	CL_SpawnDecalParticleForPoint(org, 6, 6, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
-}
-
-static float bloodcount = 0;
-void CL_BloodPuff (vec3_t org, vec3_t vel, int count)
-{
-	float s;
-	vec3_t org2;
-	trace_t trace;
-	// bloodcount is used to accumulate counts too small to cause a blood particle
-	if (!cl_particles.integer) return;
-	if (cl_particles_quake.integer)
-	{
-		CL_RunParticleEffect(org, vel, 73, count * 2);
-		return;
-	}
-	if (!cl_particles_blood.integer) return;
-
-	s = count + 64.0f;
-	count *= 5.0f;
-	if (count > 1000)
-		count = 1000;
-	bloodcount += count * cl_particles_quality.value;
-	while(bloodcount > 0)
-	{
-		org2[0] = org[0] + 0.125f * lhrandom(-bloodcount, bloodcount);
-		org2[1] = org[1] + 0.125f * lhrandom(-bloodcount, bloodcount);
-		org2[2] = org[2] + 0.125f * lhrandom(-bloodcount, bloodcount);
-		trace = CL_TraceBox(org, vec3_origin, vec3_origin, org2, true, NULL, SUPERCONTENTS_SOLID, false);
-		particle(particletype + pt_blood, 0xFFFFFF, 0xFFFFFF, tex_bloodparticle[rand()&7], 8, cl_particles_blood_alpha.value * 768, cl_particles_blood_alpha.value * 384, 0, -1, trace.endpos[0], trace.endpos[1], trace.endpos[2], vel[0], vel[1], vel[2], 1, 0, s);
-		bloodcount -= 16;
-	}
-}
-
-void CL_BloodShower (vec3_t mins, vec3_t maxs, float velspeed, int count)
-{
-	vec3_t org, vel, diff, center, velscale;
-	if (!cl_particles.integer) return;
-	if (!cl_particles_bloodshowers.integer) return;
-	if (!cl_particles_blood.integer) return;
-
-	VectorSubtract(maxs, mins, diff);
-	center[0] = (mins[0] + maxs[0]) * 0.5;
-	center[1] = (mins[1] + maxs[1]) * 0.5;
-	center[2] = (mins[2] + maxs[2]) * 0.5;
-	velscale[0] = velspeed * 2.0 / diff[0];
-	velscale[1] = velspeed * 2.0 / diff[1];
-	velscale[2] = velspeed * 2.0 / diff[2];
-
-	bloodcount += count * 5.0f * cl_particles_quality.value;
-	while (bloodcount > 0)
-	{
-		org[0] = lhrandom(mins[0], maxs[0]);
-		org[1] = lhrandom(mins[1], maxs[1]);
-		org[2] = lhrandom(mins[2], maxs[2]);
-		vel[0] = (org[0] - center[0]) * velscale[0];
-		vel[1] = (org[1] - center[1]) * velscale[1];
-		vel[2] = (org[2] - center[2]) * velscale[2];
-		bloodcount -= 16;
-		particle(particletype + pt_blood, 0xFFFFFF, 0xFFFFFF, tex_bloodparticle[rand()&7], 8, cl_particles_blood_alpha.value * 768, cl_particles_blood_alpha.value * 384, 0, -1, org[0], org[1], org[2], vel[0], vel[1], vel[2], 1, 0, 0);
-	}
-}
-
-void CL_ParticleCube (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorbase, int gravity, int randomvel)
+void CL_ParticleCube (const vec3_t mins, const vec3_t maxs, const vec3_t dir, int count, int colorbase, int gravity, int randomvel)
 {
 	int k;
-	float t;
 	if (!cl_particles.integer) return;
-	if (maxs[0] <= mins[0]) {t = mins[0];mins[0] = maxs[0];maxs[0] = t;}
-	if (maxs[1] <= mins[1]) {t = mins[1];mins[1] = maxs[1];maxs[1] = t;}
-	if (maxs[2] <= mins[2]) {t = mins[2];mins[2] = maxs[2];maxs[2] = t;}
 
 	count *= cl_particles_quality.value;
 	while (count--)
@@ -684,15 +1334,12 @@ void CL_ParticleCube (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int color
 	}
 }
 
-void CL_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorbase, int type)
+void CL_ParticleRain (const vec3_t mins, const vec3_t maxs, const vec3_t dir, int count, int colorbase, int type)
 {
 	int k;
-	float t, z, minz, maxz;
+	float z, minz, maxz;
 	particle_t *p;
 	if (!cl_particles.integer) return;
-	if (maxs[0] <= mins[0]) {t = mins[0];mins[0] = maxs[0];maxs[0] = t;}
-	if (maxs[1] <= mins[1]) {t = mins[1];mins[1] = maxs[1];maxs[1] = t;}
-	if (maxs[2] <= mins[2]) {t = mins[2];mins[2] = maxs[2];maxs[2] = t;}
 	if (dir[2] < 0) // falling
 		z = maxs[2];
 	else // rising??
@@ -734,422 +1381,6 @@ void CL_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int color
 	default:
 		Con_Printf ("CL_ParticleRain: unknown type %i (0 = rain, 1 = snow)\n", type);
 	}
-}
-
-void CL_Stardust (vec3_t mins, vec3_t maxs, int count)
-{
-	int k;
-	float t;
-	vec3_t o, v, center;
-	if (!cl_particles.integer) return;
-
-	if (maxs[0] <= mins[0]) {t = mins[0];mins[0] = maxs[0];maxs[0] = t;}
-	if (maxs[1] <= mins[1]) {t = mins[1];mins[1] = maxs[1];maxs[1] = t;}
-	if (maxs[2] <= mins[2]) {t = mins[2];mins[2] = maxs[2];maxs[2] = t;}
-
-	center[0] = (mins[0] + maxs[0]) * 0.5f;
-	center[1] = (mins[1] + maxs[1]) * 0.5f;
-	center[2] = (mins[2] + maxs[2]) * 0.5f;
-
-	count *= cl_particles_quality.value;
-	while (count--)
-	{
-		k = particlepalette[224 + (rand()&15)];
-		o[0] = lhrandom(mins[0], maxs[0]);
-		o[1] = lhrandom(mins[1], maxs[1]);
-		o[2] = lhrandom(mins[2], maxs[2]);
-		VectorSubtract(o, center, v);
-		VectorNormalize(v);
-		VectorScale(v, 100, v);
-		v[2] += sv_gravity.value * 0.15f;
-		particle(particletype + pt_static, 0x903010, 0xFFD030, tex_particle, 1.5, lhrandom(64, 128), 128, 1, 0, o[0], o[1], o[2], v[0], v[1], v[2], 0.2, 0, 0);
-	}
-}
-
-void CL_FlameCube (vec3_t mins, vec3_t maxs, int count)
-{
-	int k;
-	float t;
-	if (!cl_particles.integer) return;
-	if (maxs[0] <= mins[0]) {t = mins[0];mins[0] = maxs[0];maxs[0] = t;}
-	if (maxs[1] <= mins[1]) {t = mins[1];mins[1] = maxs[1];maxs[1] = t;}
-	if (maxs[2] <= mins[2]) {t = mins[2];mins[2] = maxs[2];maxs[2] = t;}
-
-	count *= cl_particles_quality.value;
-	while (count--)
-	{
-		k = particlepalette[224 + (rand()&15)];
-		particle(particletype + pt_static, k, k, tex_particle, 4, lhrandom(64, 128), 384, -1, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(mins[2], maxs[2]), 0, 0, 32, 1, 0, 32);
-		if (count & 1)
-			particle(particletype + pt_static, 0x303030, 0x606060, tex_smoke[rand()&7], 6, lhrandom(48, 96), 64, 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(mins[2], maxs[2]), 0, 0, 24, 0, 0, 8);
-	}
-}
-
-void CL_Flames (vec3_t org, vec3_t vel, int count)
-{
-	int k;
-	if (!cl_particles.integer) return;
-
-	count *= cl_particles_quality.value;
-	while (count--)
-	{
-		k = particlepalette[224 + (rand()&15)];
-		particle(particletype + pt_static, k, k, tex_particle, 4, lhrandom(64, 128), 384, -1, 1.1, org[0], org[1], org[2], vel[0], vel[1], vel[2], 1, 0, 128);
-	}
-}
-
-
-
-/*
-===============
-CL_LavaSplash
-
-===============
-*/
-void CL_LavaSplash (vec3_t origin)
-{
-	float i, j, inc, vel;
-	int k, l;
-	vec3_t		dir, org;
-	if (!cl_particles.integer) return;
-
-	if (cl_particles_quake.integer)
-	{
-		inc = 8 / cl_particles_quality.value;
-		for (i = -128;i < 128;i += inc)
-		{
-			for (j = -128;j < 128;j += inc)
-			{
-				dir[0] = j + lhrandom(0, inc);
-				dir[1] = i + lhrandom(0, inc);
-				dir[2] = 256;
-				org[0] = origin[0] + dir[0];
-				org[1] = origin[1] + dir[1];
-				org[2] = origin[2] + lhrandom(0, 64);
-				vel = lhrandom(50, 120) / VectorLength(dir); // normalize and scale
-				k = l = particlepalette[224 + (rand()&7)];
-				particle(particletype + pt_alphastatic, k, l, tex_particle, 1, inc * lhrandom(24, 32), inc * 12, 0.05, 0, org[0], org[1], org[2], dir[0] * vel, dir[1] * vel, dir[2] * vel, 0, 0, 0);
-			}
-		}
-	}
-	else
-	{
-		inc = 32 / cl_particles_quality.value;
-		for (i = -128;i < 128;i += inc)
-		{
-			for (j = -128;j < 128;j += inc)
-			{
-				dir[0] = j + lhrandom(0, inc);
-				dir[1] = i + lhrandom(0, inc);
-				dir[2] = 256;
-				org[0] = origin[0] + dir[0];
-				org[1] = origin[1] + dir[1];
-				org[2] = origin[2] + lhrandom(0, 64);
-				vel = lhrandom(50, 120) / VectorLength(dir); // normalize and scale
-				if (gamemode == GAME_GOODVSBAD2)
-				{
-					k = particlepalette[0 + (rand()&255)];
-					l = particlepalette[0 + (rand()&255)];
-					particle(particletype + pt_static, k, l, tex_particle, 12, inc * 8, inc * 8, 0.05, 1, org[0], org[1], org[2], dir[0] * vel, dir[1] * vel, dir[2] * vel, 0, 0, 0);
-				}
-				else
-				{
-					k = l = particlepalette[224 + (rand()&7)];
-					particle(particletype + pt_static, k, l, tex_particle, 12, inc * 8, inc * 8, 0.05, 0, org[0], org[1], org[2], dir[0] * vel, dir[1] * vel, dir[2] * vel, 0, 0, 0);
-				}
-			}
-		}
-	}
-}
-
-/*
-===============
-CL_TeleportSplash
-
-===============
-*/
-void CL_TeleportSplash (vec3_t org)
-{
-	float i, j, k, inc;
-	if (!cl_particles.integer) return;
-
-	if (cl_particles_quake.integer)
-	{
-		inc = 4 / cl_particles_quality.value;
-		for (i = -16;i < 16;i += inc)
-		{
-			for (j = -16;j < 16;j += inc)
-			{
-				for (k = -24;k < 32;k += inc)
-				{
-					vec3_t dir;
-					float vel;
-					VectorSet(dir, i*8, j*8, k*8);
-					VectorNormalize(dir);
-					vel = lhrandom(50, 113);
-					particle(particletype + pt_alphastatic, particlepalette[7], particlepalette[14], tex_particle, 1, inc * lhrandom(37, 63), inc * 187, 0, 0, org[0] + i + lhrandom(0, inc), org[1] + j + lhrandom(0, inc), org[2] + k + lhrandom(0, inc), dir[0] * vel, dir[1] * vel, dir[2] * vel, 0, 0, 0);
-				}
-			}
-		}
-	}
-	else
-	{
-		inc = 8 / cl_particles_quality.value;
-		for (i = -16;i < 16;i += inc)
-			for (j = -16;j < 16;j += inc)
-				for (k = -24;k < 32;k += inc)
-					particle(particletype + pt_static, 0xA0A0A0, 0xFFFFFF, tex_particle, 10, inc * lhrandom(8, 16), inc * 32, 0, 0, org[0] + i + lhrandom(0, inc), org[1] + j + lhrandom(0, inc), org[2] + k + lhrandom(0, inc), 0, 0, lhrandom(-256, 256), 1, 0, 0);
-	}
-}
-
-void CL_RocketTrail (vec3_t start, vec3_t end, int type, int color, entity_t *ent)
-{
-	vec3_t vec, dir, vel, pos;
-	float len, dec, speed, qd;
-	int smoke, blood, bubbles, r;
-
-	if (end[0] == start[0] && end[1] == start[1] && end[2] == start[2])
-		return;
-
-	VectorSubtract(end, start, dir);
-	VectorNormalize(dir);
-
-	VectorSubtract (end, start, vec);
-	len = VectorNormalizeLength (vec);
-	dec = -ent->persistent.trail_time;
-	ent->persistent.trail_time += len;
-	if (ent->persistent.trail_time < 0.01f)
-		return;
-
-	// if we skip out, leave it reset
-	ent->persistent.trail_time = 0.0f;
-
-	speed = ent->state_current.time - ent->state_previous.time;
-	if (speed)
-		speed = 1.0f / speed;
-	VectorSubtract(ent->state_current.origin, ent->state_previous.origin, vel);
-	color = particlepalette[color];
-	VectorScale(vel, speed, vel);
-
-	// advance into this frame to reach the first puff location
-	VectorMA(start, dec, vec, pos);
-	len -= dec;
-
-	smoke = cl_particles.integer && cl_particles_smoke.integer;
-	blood = cl_particles.integer && cl_particles_blood.integer;
-	bubbles = cl_particles.integer && cl_particles_bubbles.integer && (CL_PointSuperContents(pos) & (SUPERCONTENTS_WATER | SUPERCONTENTS_SLIME));
-	qd = 1.0f / cl_particles_quality.value;
-
-	while (len >= 0)
-	{
-		switch (type)
-		{
-			case 0:	// rocket trail
-				if (cl_particles_quake.integer)
-				{
-					dec = 3;
-					r = rand()&3;
-					color = particlepalette[ramp3[r]];
-					particle(particletype + pt_alphastatic, color, color, tex_particle, 1, 42*(6-r), 306, 0, -0.05, pos[0], pos[1], pos[2], 0, 0, 0, 0, 3, 0);
-				}
-				else
-				{
-					dec = 3;
-					if (smoke)
-					{
-						particle(particletype + pt_smoke, 0x303030, 0x606060, tex_smoke[rand()&7], 3, cl_particles_smoke_alpha.value*62, cl_particles_smoke_alphafade.value*62, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
-						particle(particletype + pt_static, 0x801010, 0xFFA020, tex_smoke[rand()&7], 3, cl_particles_smoke_alpha.value*288, cl_particles_smoke_alphafade.value*1400, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 20);
-					}
-					if (bubbles)
-						particle(particletype + pt_bubble, 0x404040, 0x808080, tex_bubble, 2, lhrandom(64, 255), 256, -0.25, 1.5, pos[0], pos[1], pos[2], 0, 0, 0, (1.0 / 16.0), 0, 16);
-				}
-				break;
-
-			case 1: // grenade trail
-				if (cl_particles_quake.integer)
-				{
-					dec = 3;
-					r = 2 + (rand()%5);
-					color = particlepalette[ramp3[r]];
-					particle(particletype + pt_alphastatic, color, color, tex_particle, 1, 42*(6-r), 306, 0, -0.05, pos[0], pos[1], pos[2], 0, 0, 0, 0, 3, 0);
-				}
-				else
-				{
-					dec = 3;
-					if (smoke)
-						particle(particletype + pt_smoke, 0x303030, 0x606060, tex_smoke[rand()&7], 3, cl_particles_smoke_alpha.value*50, cl_particles_smoke_alphafade.value*50, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
-				}
-				break;
-
-
-			case 2:	// blood
-			case 4:	// slight blood
-				if (cl_particles_quake.integer)
-				{
-					if (type == 2)
-					{
-						dec = 3;
-						color = particlepalette[67 + (rand()&3)];
-						particle(particletype + pt_alphastatic, color, color, tex_particle, 1, 255, 128, 0, -0.05, pos[0], pos[1], pos[2], 0, 0, 0, 0, 3, 0);
-					}
-					else
-					{
-						dec = 6;
-						color = particlepalette[67 + (rand()&3)];
-						particle(particletype + pt_alphastatic, color, color, tex_particle, 1, 255, 128, 0, -0.05, pos[0], pos[1], pos[2], 0, 0, 0, 0, 3, 0);
-					}
-				}
-				else
-				{
-					dec = 16;
-					if (blood)
-						particle(particletype + pt_blood, 0xFFFFFF, 0xFFFFFF, tex_bloodparticle[rand()&7], 8, qd * cl_particles_blood_alpha.value * 768.0f, qd * cl_particles_blood_alpha.value * 384.0f, 0, -1, pos[0], pos[1], pos[2], vel[0] * 0.5f, vel[1] * 0.5f, vel[2] * 0.5f, 1, 0, 64);
-				}
-				break;
-
-			case 3:	// green tracer
-				if (cl_particles_quake.integer)
-				{
-					dec = 6;
-					color = particlepalette[52 + (rand()&7)];
-					particle(particletype + pt_alphastatic, color, color, tex_particle, 1, 255, 512, 0, 0, pos[0], pos[1], pos[2], 30*vec[1], 30*-vec[0], 0, 0, 0, 0);
-					particle(particletype + pt_alphastatic, color, color, tex_particle, 1, 255, 512, 0, 0, pos[0], pos[1], pos[2], 30*-vec[1], 30*vec[0], 0, 0, 0, 0);
-				}
-				else
-				{
-					dec = 16;
-					if (smoke)
-					{
-						if (gamemode == GAME_GOODVSBAD2)
-						{
-							dec = 6;
-							particle(particletype + pt_static, 0x00002E, 0x000030, tex_particle, 6, 128, 384, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
-						}
-						else
-						{
-							dec = 3;
-							color = particlepalette[20 + (rand()&7)];
-							particle(particletype + pt_static, color, color, tex_particle, 2, 64, 192, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
-						}
-					}
-				}
-				break;
-
-			case 5:	// flame tracer
-				if (cl_particles_quake.integer)
-				{
-					dec = 6;
-					color = particlepalette[230 + (rand()&7)];
-					particle(particletype + pt_alphastatic, color, color, tex_particle, 1, 255, 512, 0, 0, pos[0], pos[1], pos[2], 30*vec[1], 30*-vec[0], 0, 0, 0, 0);
-					particle(particletype + pt_alphastatic, color, color, tex_particle, 1, 255, 512, 0, 0, pos[0], pos[1], pos[2], 30*-vec[1], 30*vec[0], 0, 0, 0, 0);
-				}
-				else
-				{
-					dec = 3;
-					if (smoke)
-					{
-						color = particlepalette[226 + (rand()&7)];
-						particle(particletype + pt_static, color, color, tex_particle, 2, 64, 192, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
-					}
-				}
-				break;
-
-			case 6:	// voor trail
-				if (cl_particles_quake.integer)
-				{
-					dec = 3;
-					color = particlepalette[152 + (rand()&3)];
-					particle(particletype + pt_alphastatic, color, color, tex_particle, 1, 255, 850, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 8, 0);
-				}
-				else
-				{
-					dec = 16;
-					if (smoke)
-					{
-						if (gamemode == GAME_GOODVSBAD2)
-						{
-							dec = 6;
-							particle(particletype + pt_alphastatic, particlepalette[0 + (rand()&255)], particlepalette[0 + (rand()&255)], tex_particle, 6, 255, 384, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
-						}
-						else if (gamemode == GAME_PRYDON)
-						{
-							dec = 6;
-							particle(particletype + pt_static, 0x103040, 0x204050, tex_particle, 6, 64, 192, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
-						}
-						else
-						{
-							dec = 3;
-							particle(particletype + pt_static, 0x502030, 0x502030, tex_particle, 3, 64, 192, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
-						}
-					}
-				}
-				break;
-			case 7:	// Nehahra smoke tracer
-				dec = 7;
-				if (smoke)
-					particle(particletype + pt_alphastatic, 0x303030, 0x606060, tex_smoke[rand()&7], 7, 64, 320, 0, 0, pos[0], pos[1], pos[2], 0, 0, lhrandom(4, 12), 0, 0, 4);
-				break;
-			case 8: // Nexuiz plasma trail
-				dec = 4;
-				if (smoke)
-					particle(particletype + pt_static, 0x283880, 0x283880, tex_particle, 4, 255, 1024, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 16);
-				break;
-			case 9: // glow trail
-				dec = 3;
-				if (smoke)
-					particle(particletype + pt_alphastatic, color, color, tex_particle, 5, 128, 320, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0);
-				break;
-			default:
-				Sys_Error("CL_RocketTrail: unknown trail type %i", type);
-		}
-
-		// advance to next time and position
-		dec *= qd;
-		len -= dec;
-		VectorMA (pos, dec, vec, pos);
-	}
-	ent->persistent.trail_time = len;
-}
-
-void CL_BeamParticle (const vec3_t start, const vec3_t end, vec_t radius, float red, float green, float blue, float alpha, float lifetime)
-{
-	int tempcolor2, cr, cg, cb;
-	cr = red * 255;
-	cg = green * 255;
-	cb = blue * 255;
-	tempcolor2 = (bound(0, cr, 255) << 16) | (bound(0, cg, 255) << 8) | bound(0, cb, 255);
-	particle(particletype + pt_beam, tempcolor2, tempcolor2, tex_beam, radius, alpha * 255, alpha * 255 / lifetime, 0, 0, start[0], start[1], start[2], end[0], end[1], end[2], 0, 0, 0);
-}
-
-void CL_Tei_Smoke(const vec3_t org, const vec3_t dir, int count)
-{
-	float f;
-	if (!cl_particles.integer) return;
-
-	// smoke puff
-	if (cl_particles_smoke.integer)
-		for (f = 0;f < count;f += 4.0f / cl_particles_quality.value)
-			particle(particletype + pt_smoke, 0x202020, 0x404040, tex_smoke[rand()&7], 5, 255, 512, 0, 0, org[0], org[1], org[2], dir[0], dir[1], dir[2], 0, count * 0.125f, count * 0.5f);
-}
-
-void CL_Tei_PlasmaHit(const vec3_t org, const vec3_t dir, int count)
-{
-	float f;
-	if (!cl_particles.integer) return;
-
-	if (cl_stainmaps.integer)
-		R_Stain(org, 40, 96, 96, 96, 40, 128, 128, 128, 40);
-	CL_SpawnDecalParticleForPoint(org, 6, 8, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
-
-	// smoke puff
-	if (cl_particles_smoke.integer)
-		for (f = 0;f < count;f += 4.0f / cl_particles_quality.value)
-			particle(particletype + pt_smoke, 0x202020, 0x404040, tex_smoke[rand()&7], 5, 255, 512, 0, 0, org[0], org[1], org[2], dir[0], dir[1], dir[2], 0, count * 0.125f, count);
-
-	// sparks
-	if (cl_particles_sparks.integer)
-		for (f = 0;f < count;f += 1.0f / cl_particles_quality.value)
-			particle(particletype + pt_spark, 0x2030FF, 0x80C0FF, tex_particle, 2.0f, lhrandom(64, 255), 512, 0, 0, org[0], org[1], org[2], dir[0], dir[1], dir[2], 0, 0, count * 3.0f);
 }
 
 /*
@@ -1700,6 +1931,7 @@ static void r_part_start(void)
 {
 	particletexturepool = R_AllocTexturePool();
 	R_InitParticleTexture ();
+	CL_Particles_LoadEffectInfo();
 }
 
 static void r_part_shutdown(void)
