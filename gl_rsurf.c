@@ -40,6 +40,8 @@ unsigned char r_pvsbits[(32768+7)>>3];
 unsigned char r_worldleafvisible[32768];
 // TODO: dynamic resize according to r_refdef.worldmodel->num_surfaces
 unsigned char r_worldsurfacevisible[262144];
+// if true, the view is currently in a leaf without pvs data
+qboolean r_worldnovis;
 
 /*
 ===============
@@ -418,6 +420,8 @@ void R_WorldVisibility(void)
 		memset(r_worldsurfacevisible, 0, model->num_surfaces);
 		memset(r_worldleafvisible, 0, model->brush.num_leafs);
 
+		r_worldnovis = false;
+
 		// if floating around in the void (no pvs data available, and no
 		// portals available), simply use all on-screen leafs.
 		if (!viewleaf || viewleaf->clusterindex < 0)
@@ -425,6 +429,7 @@ void R_WorldVisibility(void)
 			// no visibility method: (used when floating around in the void)
 			// simply cull each leaf to the frustum (view pyramid)
 			// similar to quake's RecursiveWorldNode but without cache misses
+			r_worldnovis = true;
 			for (j = 0, leaf = model->brush.data_leafs;j < model->brush.num_leafs;j++, leaf++)
 			{
 				// if leaf is in current pvs and on the screen, mark its surfaces
