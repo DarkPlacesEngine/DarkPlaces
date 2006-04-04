@@ -538,22 +538,7 @@ void VM_CL_particle (void)
 	dir = PRVM_G_VECTOR(OFS_PARM1);
 	color = PRVM_G_FLOAT(OFS_PARM2);
 	count = PRVM_G_FLOAT(OFS_PARM3);
-	if (cl_particles_blood_bloodhack.integer)
-	{
-		if (color == 73)
-		{
-			// regular blood
-			CL_BloodPuff(org, dir, count / 2);
-			return;
-		}
-		if (color == 225)
-		{
-			// lightning blood
-			CL_BloodPuff(org, dir, count / 2);
-			return;
-		}
-	}
-	CL_RunParticleEffect (org, dir, color, count);
+	CL_ParticleEffect(EFFECT_SVC_PARTICLE, count, org, org, dir, dir, NULL, color);
 }
 
 // #49 void(entity ent, float ideal_yaw, float speed_yaw) ChangeYaw
@@ -740,62 +725,6 @@ void CSQC_ClearCSQCEntities (void);
 matrix4x4_t csqc_listenermatrix;
 qboolean csqc_usecsqclistener = false, csqc_frame = false;//[515]: per-frame
 qboolean csqc_onground;
-
-static char *particleeffect_names[] =
-{
-	"TE_SPIKE",
-	"TE_SUPERSPIKE",
-	"TE_GUNSHOT",
-	"TE_EXPLOSION",
-	"TE_TAREXPLOSION",
-	"TE_LIGHTNING1",//trail
-	"TE_LIGHTNING2",//trail
-	"TE_WIZSPIKE",
-	"TE_KNIGHTSPIKE",
-	"TE_LIGHTNING3",//trail
-	"TE_LAVASPLASH",
-	"TE_TELEPORT",
-	"TE_EXPLOSION2",
-	"TE_BEAM",//trail
-	"TE_EXPLOSION3",
-	"",//TE_LIGHTNING4NEH
-	"TE_BLOOD",
-	"TE_SPARK",
-	"",//TE_BLOODSHOWER
-	"TE_EXPLOSIONRGB",
-	"",//unused
-	"",
-	"",
-	"TE_GUNSHOTQUAD",
-	"TE_SPIKEQUAD",
-	"TE_SUPERSPIKEQUAD",
-	"TE_EXPLOSIONQUAD",
-	"",
-	"",
-	"",
-	"TE_FLAMEJET",
-	"TE_PLASMABURN",
-	"TE_TEI_G3",
-	"TE_TEI_SMOKE",
-	"TE_TEI_BIGEXPLOSION",
-	"TE_TEI_PLASMAHIT",
-
-
-	//trail effects (as modelflags)
-	"EF_ROCKET",
-	"EF_GRENADE",
-	"EF_GIB",
-	"EF_TRACER",
-	"EF_ZOMGIB",
-	"EF_TRACER2",
-	"EF_TRACER3",
-	"EF_NEH_CIGAR",
-	"EF_NEXUIZ_PLASMA",
-	"EF_GLOWTRAIL",
-};
-
-#define CSQC_TRAILSTART 36
-static const int particleeffects_num = sizeof(particleeffect_names)/sizeof(char*);
 
 static void CSQC_R_RecalcView (void)
 {
@@ -1095,13 +1024,10 @@ void VM_CL_particleeffectnum (void)
 	int			i;
 	VM_SAFEPARMCOUNT(1, VM_CL_particleeffectnum);
 	n = PRVM_G_STRING(OFS_PARM0);
-	for(i=0;i<particleeffects_num;i++)
-		if(!strcasecmp(particleeffect_names[i], n))
-		{
-			PRVM_G_FLOAT(OFS_RETURN) = i;
-			return;
-		}
-	PRVM_G_FLOAT(OFS_RETURN) = -1;
+	i = CL_ParticleEffectIndexForName(n);
+	if (i == 0)
+		i = -1;
+	PRVM_G_FLOAT(OFS_RETURN) = i;
 }
 
 void CSQC_ParseBeam (int ent, vec3_t start, vec3_t end, model_t *m, int lightning)
@@ -1146,18 +1072,17 @@ void CSQC_ParseBeam (int ent, vec3_t start, vec3_t end, model_t *m, int lightnin
 // #336 void(entity ent, float effectnum, vector start, vector end[, float color]) trailparticles (EXT_CSQC)
 void VM_CL_trailparticles (void)
 {
-	int				i, entnum, col;
+	int				i, entnum;
 	float			*start, *end;
-	entity_t		*ent;
+	prvm_edict_t	*t;
 	VM_SAFEPARMCOUNT(4, VM_CL_trailparticles);
 
-	entnum	= PRVM_NUM_FOR_EDICT(PRVM_G_EDICT(OFS_PARM0));
+	t = PRVM_G_EDICT(OFS_PARM0);
+	entnum	= PRVM_NUM_FOR_EDICT(t);
 	i		= PRVM_G_FLOAT(OFS_PARM1);
 	start	= PRVM_G_VECTOR(OFS_PARM2);
 	end		= PRVM_G_VECTOR(OFS_PARM3);
 
-	if(i >= particleeffects_num)
-		return;
 	if (entnum >= MAX_EDICTS)
 	{
 		Con_Printf("CSQC_ParseBeam: invalid entity number %i\n", entnum);
@@ -1166,122 +1091,20 @@ void VM_CL_trailparticles (void)
 	if (entnum >= cl.max_csqcentities)
 		CL_ExpandCSQCEntities(entnum);
 
-	ent = &cl.csqcentities[entnum];
-
-	if(prog->argc > 4)
-		col = PRVM_G_FLOAT(OFS_PARM4);
-	else
-		col = ent->state_current.glowcolor;
-
-	switch(i)
-	{
-	case TE_LIGHTNING1:
-		CSQC_ParseBeam(entnum, start, end, cl.model_bolt, true);
-		break;
-	case TE_LIGHTNING2:
-		CSQC_ParseBeam(entnum, start, end, cl.model_bolt2, true);
-		break;
-	case TE_LIGHTNING3:
-		CSQC_ParseBeam(entnum, start, end, cl.model_bolt3, false);
-		break;
-	case TE_BEAM:
-		CSQC_ParseBeam(entnum, start, end, cl.model_beam, false);
-		break;
-	default:
-		CL_RocketTrail(start, end, i-CSQC_TRAILSTART, col, ent);
-		break;
-	}
+	CL_ParticleEffect(i, VectorDistance(start, end), start, end, t->fields.client->velocity, t->fields.client->velocity, &cl.csqcentities[entnum], PRVM_G_FLOAT(OFS_PARM4));
 }
 
-//#337 void(float effectnum, vector origin [, vector dir, float count]) pointparticles (EXT_CSQC)
+//#337 void(float effectnum, vector origin, vector dir, float count) pointparticles (EXT_CSQC)
 void VM_CL_pointparticles (void)
 {
 	int			i, n;
 	float		*f, *v;
-	if(prog->argc < 2)
-		VM_SAFEPARMCOUNT(2, VM_CL_pointparticles);
+	VM_SAFEPARMCOUNT(4, VM_CL_pointparticles);
 	i = PRVM_G_FLOAT(OFS_PARM0);
 	f = PRVM_G_VECTOR(OFS_PARM1);
-	if(prog->argc >= 4)
-	{
-		v = PRVM_G_VECTOR(OFS_PARM2);
-		n = PRVM_G_FLOAT(OFS_PARM3);
-	}
-	else
-	{
-		v = vec3_origin;
-		n = 15;
-	}
-
-	if(i >= particleeffects_num)
-		return;
-
-	switch(i)
-	{
-	case TE_SPIKE:
-	case TE_SPIKEQUAD:
-	case TE_GUNSHOT:
-	case TE_GUNSHOTQUAD:
-		CL_SparkShower(f, v, 15, 1, 0);
-		CL_Smoke(f, v, 15, 0);
-		if (cl_particles_bulletimpacts.integer)
-			CL_BulletMark(f);
-		break;
-	case TE_SUPERSPIKE:
-	case TE_SUPERSPIKEQUAD:
-		CL_SparkShower(f, v, 30, 1, 0);
-		CL_Smoke(f, v, 30, 0);
-		if (cl_particles_bulletimpacts.integer)
-			CL_BulletMark(f);
-		break;
-	case TE_EXPLOSION:
-	case TE_EXPLOSIONQUAD:
-	case TE_TEI_BIGEXPLOSION:
-		CL_ParticleExplosion(f);
-		break;
-	case TE_TAREXPLOSION:
-		CL_BlobExplosion(f);
-		break;
-	case TE_WIZSPIKE:
-		CL_RunParticleEffect(f, v, 20, 30);
-		break;
-	case TE_KNIGHTSPIKE:
-		CL_RunParticleEffect(f, v, 226, 20);
-		break;
-	case TE_LAVASPLASH:
-		CL_LavaSplash(f);
-		break;
-	case TE_TELEPORT:
-		CL_TeleportSplash(f);
-		break;
-	case TE_EXPLOSION2:
-	case TE_EXPLOSION3:
-	case TE_EXPLOSIONRGB:
-		CL_ParticleExplosion2(f, v[0], v[1]);
-		break;
-	case TE_BLOOD:
-		CL_BloodPuff(f, v, n);
-		break;
-	case TE_SPARK:
-		CL_SparkShower(f, v, n, 1, 0);
-		break;
-	case TE_FLAMEJET:
-		CL_Flames(f, v, n);
-		break;
-	case TE_PLASMABURN:
-		CL_PlasmaBurn(f);
-		break;
-	case TE_TEI_G3:
-		CL_BeamParticle(f, v, 8, 1, 1, 1, 1, 1);
-		break;
-	case TE_TEI_SMOKE:
-		CL_Tei_Smoke(f, v, n);
-		break;
-	case TE_TEI_PLASMAHIT:
-		CL_Tei_PlasmaHit(f, v, n);
-		break;
-	default:break;
-	}
+	v = PRVM_G_VECTOR(OFS_PARM2);
+	n = PRVM_G_FLOAT(OFS_PARM3);
+	CL_ParticleEffect(i, n, f, f, v, v, NULL, 0);
 }
 
 //#338 void(string s) cprint (EXT_CSQC)
@@ -1525,16 +1348,25 @@ void VM_CL_te_blood (void)
 		return;
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	CL_FindNonSolidLocation(pos, pos2, 4);
-	CL_BloodPuff(pos2, PRVM_G_VECTOR(OFS_PARM1), PRVM_G_FLOAT(OFS_PARM2));
+	CL_ParticleEffect(EFFECT_TE_BLOOD, PRVM_G_FLOAT(OFS_PARM2), pos2, pos2, PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM1), NULL, 0);
 }
 
 // #406 void(vector mincorner, vector maxcorner, float explosionspeed, float howmany) te_bloodshower (DP_TE_BLOODSHOWER)
 void VM_CL_te_bloodshower (void)
 {
+	vec_t speed;
+	vec3_t vel1, vel2;
 	VM_SAFEPARMCOUNT(4, VM_CL_te_bloodshower);
 	if (PRVM_G_FLOAT(OFS_PARM3) < 1)
 		return;
-	CL_BloodShower(PRVM_G_VECTOR(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_FLOAT(OFS_PARM2), PRVM_G_FLOAT(OFS_PARM3));
+	speed = PRVM_G_FLOAT(OFS_PARM2);
+	vel1[0] = -speed;
+	vel1[1] = -speed;
+	vel1[2] = -speed;
+	vel2[0] = speed;
+	vel2[1] = speed;
+	vel2[2] = speed;
+	CL_ParticleEffect(EFFECT_TE_BLOOD, PRVM_G_FLOAT(OFS_PARM3), PRVM_G_VECTOR(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), vel1, vel2, NULL, 0);
 }
 
 // #407 void(vector org, vector color) te_explosionrgb (DP_TE_EXPLOSIONRGB)
@@ -1555,8 +1387,6 @@ void VM_CL_te_explosionrgb (void)
 void VM_CL_te_particlecube (void)
 {
 	VM_SAFEPARMCOUNT(7, VM_CL_te_particlecube);
-	if (PRVM_G_FLOAT(OFS_PARM3) < 1)
-		return;
 	CL_ParticleCube(PRVM_G_VECTOR(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), PRVM_G_FLOAT(OFS_PARM3), PRVM_G_FLOAT(OFS_PARM4), PRVM_G_FLOAT(OFS_PARM5), PRVM_G_FLOAT(OFS_PARM6));
 }
 
@@ -1564,8 +1394,6 @@ void VM_CL_te_particlecube (void)
 void VM_CL_te_particlerain (void)
 {
 	VM_SAFEPARMCOUNT(5, VM_CL_te_particlerain);
-	if (PRVM_G_FLOAT(OFS_PARM3) < 1)
-		return;
 	CL_ParticleRain(PRVM_G_VECTOR(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), PRVM_G_FLOAT(OFS_PARM3), PRVM_G_FLOAT(OFS_PARM4), 0);
 }
 
@@ -1573,8 +1401,6 @@ void VM_CL_te_particlerain (void)
 void VM_CL_te_particlesnow (void)
 {
 	VM_SAFEPARMCOUNT(5, VM_CL_te_particlesnow);
-	if (PRVM_G_FLOAT(OFS_PARM3) < 1)
-		return;
 	CL_ParticleRain(PRVM_G_VECTOR(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), PRVM_G_FLOAT(OFS_PARM3), PRVM_G_FLOAT(OFS_PARM4), 1);
 }
 
@@ -1585,11 +1411,9 @@ void VM_CL_te_spark (void)
 	vec3_t		pos2;
 	VM_SAFEPARMCOUNT(3, VM_CL_te_spark);
 
-	if (PRVM_G_FLOAT(OFS_PARM2) < 1)
-		return;
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	CL_FindNonSolidLocation(pos, pos2, 4);
-	CL_SparkShower(pos2, PRVM_G_VECTOR(OFS_PARM1), PRVM_G_FLOAT(OFS_PARM2), 1, 0);
+	CL_ParticleEffect(EFFECT_TE_SPARK, PRVM_G_FLOAT(OFS_PARM2), pos2, pos2, PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM1), NULL, 0);
 }
 
 // #412 void(vector org) te_gunshotquad (DP_QUADEFFECTS1)
@@ -1597,16 +1421,11 @@ void VM_CL_te_gunshotquad (void)
 {
 	float		*pos;
 	vec3_t		pos2;
-	matrix4x4_t	tempmatrix;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_gunshotquad);
 
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	CL_FindNonSolidLocation(pos, pos2, 4);
-	CL_SparkShower(pos2, vec3_origin, 15, 1, 0);
-	CL_Smoke(pos2, vec3_origin, 15, 0);
-	CL_BulletMark(pos2);
-	Matrix4x4_CreateTranslate(&tempmatrix, pos2[0], pos2[1], pos2[2]);
-	CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	CL_ParticleEffect(EFFECT_TE_GUNSHOTQUAD, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 }
 
 // #413 void(vector org) te_spikequad (DP_QUADEFFECTS1)
@@ -1614,20 +1433,12 @@ void VM_CL_te_spikequad (void)
 {
 	float		*pos;
 	vec3_t		pos2;
-	matrix4x4_t	tempmatrix;
 	int			rnd;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_spikequad);
 
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	CL_FindNonSolidLocation(pos, pos2, 4);
-	if (cl_particles_bulletimpacts.integer)
-	{
-		CL_SparkShower(pos2, vec3_origin, 15, 1, 0);
-		CL_Smoke(pos2, vec3_origin, 15, 0);
-		CL_BulletMark(pos2);
-	}
-	Matrix4x4_CreateTranslate(&tempmatrix, pos2[0], pos2[1], pos2[2]);
-	CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	CL_ParticleEffect(EFFECT_TE_SPIKEQUAD, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 	if (rand() % 5)			S_StartSound(-1, 0, cl.sfx_tink1, pos2, 1, 1);
 	else
 	{
@@ -1643,20 +1454,12 @@ void VM_CL_te_superspikequad (void)
 {
 	float		*pos;
 	vec3_t		pos2;
-	matrix4x4_t	tempmatrix;
 	int			rnd;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_superspikequad);
 
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	CL_FindNonSolidLocation(pos, pos2, 4);
-	if (cl_particles_bulletimpacts.integer)
-	{
-		CL_SparkShower(pos2, vec3_origin, 30, 1, 0);
-		CL_Smoke(pos2, vec3_origin, 30, 0);
-		CL_BulletMark(pos2);
-	}
-	Matrix4x4_CreateTranslate(&tempmatrix, pos2[0], pos2[1], pos2[2]);
-	CL_AllocDlight(NULL, &tempmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	CL_ParticleEffect(EFFECT_TE_SUPERSPIKEQUAD, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 	if (rand() % 5)			S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
 	else
 	{
@@ -1672,14 +1475,11 @@ void VM_CL_te_explosionquad (void)
 {
 	float		*pos;
 	vec3_t		pos2;
-	matrix4x4_t	tempmatrix;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_explosionquad);
 
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	CL_FindNonSolidLocation(pos, pos2, 10);
-	CL_ParticleExplosion(pos2);
-	Matrix4x4_CreateTranslate(&tempmatrix, pos2[0], pos2[1], pos2[2]);
-	CL_AllocDlight(NULL, &tempmatrix, 350, 2.5f, 2.0f, 4.0f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	CL_ParticleEffect(EFFECT_TE_EXPLOSIONQUAD, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 	S_StartSound(-1, 0, cl.sfx_r_exp3, pos2, 1, 1);
 }
 
@@ -1688,13 +1488,11 @@ void VM_CL_te_smallflash (void)
 {
 	float		*pos;
 	vec3_t		pos2;
-	matrix4x4_t	tempmatrix;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_smallflash);
 
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	CL_FindNonSolidLocation(pos, pos2, 10);
-	Matrix4x4_CreateTranslate(&tempmatrix, pos2[0], pos2[1], pos2[2]);
-	CL_AllocDlight(NULL, &tempmatrix, 200, 2, 2, 2, 1000, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	CL_ParticleEffect(EFFECT_TE_SMALLFLASH, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 }
 
 // #417 void(vector org, float radius, float lifetime, vector color) te_customflash (DP_TE_CUSTOMFLASH)
@@ -1720,9 +1518,7 @@ void VM_CL_te_gunshot (void)
 
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	CL_FindNonSolidLocation(pos, pos2, 4);
-	CL_SparkShower(pos2, vec3_origin, 15, 1, 0);
-	CL_Smoke(pos2, vec3_origin, 15, 0);
-	CL_BulletMark(pos2);
+	CL_ParticleEffect(EFFECT_TE_GUNSHOT, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 }
 
 // #419 void(vector org) te_spike (DP_TE_STANDARDEFFECTBUILTINS)
@@ -1735,12 +1531,7 @@ void VM_CL_te_spike (void)
 
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	CL_FindNonSolidLocation(pos, pos2, 4);
-	if (cl_particles_bulletimpacts.integer)
-	{
-		CL_SparkShower(pos2, vec3_origin, 15, 1, 0);
-		CL_Smoke(pos2, vec3_origin, 15, 0);
-		CL_BulletMark(pos2);
-	}
+	CL_ParticleEffect(EFFECT_TE_SPIKE, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 	if (rand() % 5)			S_StartSound(-1, 0, cl.sfx_tink1, pos2, 1, 1);
 	else
 	{
@@ -1761,12 +1552,7 @@ void VM_CL_te_superspike (void)
 
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	CL_FindNonSolidLocation(pos, pos2, 4);
-	if (cl_particles_bulletimpacts.integer)
-	{
-		CL_SparkShower(pos2, vec3_origin, 30, 1, 0);
-		CL_Smoke(pos2, vec3_origin, 30, 0);
-		CL_BulletMark(pos2);
-	}
+	CL_ParticleEffect(EFFECT_TE_SUPERSPIKE, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 	if (rand() % 5)			S_StartSound(-1, 0, cl.sfx_tink1, pos2, 1, 1);
 	else
 	{
@@ -1782,14 +1568,11 @@ void VM_CL_te_explosion (void)
 {
 	float		*pos;
 	vec3_t		pos2;
-	matrix4x4_t	tempmatrix;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_explosion);
 
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	CL_FindNonSolidLocation(pos, pos2, 10);
-	CL_ParticleExplosion(pos2);
-	Matrix4x4_CreateTranslate(&tempmatrix, pos2[0], pos2[1], pos2[2]);
-	CL_AllocDlight(NULL, &tempmatrix, 350, 4.0f, 2.0f, 0.50f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	CL_ParticleEffect(EFFECT_TE_EXPLOSION, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 	S_StartSound(-1, 0, cl.sfx_r_exp3, pos2, 1, 1);
 }
 
@@ -1798,14 +1581,11 @@ void VM_CL_te_tarexplosion (void)
 {
 	float		*pos;
 	vec3_t		pos2;
-	matrix4x4_t	tempmatrix;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_tarexplosion);
 
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	CL_FindNonSolidLocation(pos, pos2, 10);
-	CL_BlobExplosion(pos2);
-	Matrix4x4_CreateTranslate(&tempmatrix, pos2[0], pos2[1], pos2[2]);
-	CL_AllocDlight(NULL, &tempmatrix, 600, 1.6f, 0.8f, 2.0f, 1200, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+	CL_ParticleEffect(EFFECT_TE_TAREXPLOSION, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 	S_StartSound(-1, 0, cl.sfx_r_exp3, pos2, 1, 1);
 }
 
@@ -1814,14 +1594,11 @@ void VM_CL_te_wizspike (void)
 {
 	float		*pos;
 	vec3_t		pos2;
-	matrix4x4_t	tempmatrix;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_wizspike);
 
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	CL_FindNonSolidLocation(pos, pos2, 4);
-	Matrix4x4_CreateTranslate(&tempmatrix, pos2[0], pos2[1], pos2[2]);
-	CL_AllocDlight(NULL, &tempmatrix, 100, 0.12f, 0.50f, 0.12f, 500, 0.2, 0, -1, false, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-	CL_RunParticleEffect(pos2, vec3_origin, 20, 30);
+	CL_ParticleEffect(EFFECT_TE_WIZSPIKE, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 	S_StartSound(-1, 0, cl.sfx_wizhit, pos2, 1, 1);
 }
 
@@ -1830,14 +1607,11 @@ void VM_CL_te_knightspike (void)
 {
 	float		*pos;
 	vec3_t		pos2;
-	matrix4x4_t	tempmatrix;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_knightspike);
 
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	CL_FindNonSolidLocation(pos, pos2, 4);
-	Matrix4x4_CreateTranslate(&tempmatrix, pos2[0], pos2[1], pos2[2]);
-	CL_AllocDlight(NULL, &tempmatrix, 100, 0.50f, 0.30f, 0.10f, 500, 0.2, 0, -1, false, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-	CL_RunParticleEffect(pos2, vec3_origin, 226, 20);
+	CL_ParticleEffect(EFFECT_TE_KNIGHTSPIKE, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 	S_StartSound(-1, 0, cl.sfx_knighthit, pos2, 1, 1);
 }
 
@@ -1845,20 +1619,14 @@ void VM_CL_te_knightspike (void)
 void VM_CL_te_lavasplash (void)
 {
 	VM_SAFEPARMCOUNT(1, VM_CL_te_lavasplash);
-	CL_LavaSplash(PRVM_G_VECTOR(OFS_PARM0));
+	CL_ParticleEffect(EFFECT_TE_LAVASPLASH, 1, PRVM_G_VECTOR(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM0), vec3_origin, vec3_origin, NULL, 0);
 }
 
 // #426 void(vector org) te_teleport (DP_TE_STANDARDEFFECTBUILTINS)
 void VM_CL_te_teleport (void)
 {
-	float		*pos;
-	matrix4x4_t	tempmatrix;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_teleport);
-
-	pos = PRVM_G_VECTOR(OFS_PARM0);
-	Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-	CL_AllocDlight(NULL, &tempmatrix, 200, 1.0f, 1.0f, 1.0f, 600, 99.0f, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-	CL_TeleportSplash(pos);
+	CL_ParticleEffect(EFFECT_TE_TELEPORT, 1, PRVM_G_VECTOR(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM0), vec3_origin, vec3_origin, NULL, 0);
 }
 
 // #427 void(vector org, float colorstart, float colorlength) te_explosion2 (DP_TE_STANDARDEFFECTBUILTINS)
@@ -1961,14 +1729,11 @@ void VM_CL_te_plasmaburn (void)
 {
 	float		*pos;
 	vec3_t		pos2;
-	matrix4x4_t	tempmatrix;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_plasmaburn);
 
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	CL_FindNonSolidLocation(pos, pos2, 4);
-	Matrix4x4_CreateTranslate(&tempmatrix, pos2[0], pos2[1], pos2[2]);
-	CL_AllocDlight(NULL, &tempmatrix, 200, 1, 1, 1, 1000, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-	CL_PlasmaBurn(pos2);
+	CL_ParticleEffect(EFFECT_TE_PLASMABURN, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 }
 
 

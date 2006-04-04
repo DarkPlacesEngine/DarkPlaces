@@ -1036,7 +1036,6 @@ extern cvar_t cl_particles;
 extern cvar_t cl_particles_quality;
 extern cvar_t cl_particles_size;
 extern cvar_t cl_particles_quake;
-extern cvar_t cl_particles_bloodshowers;
 extern cvar_t cl_particles_blood;
 extern cvar_t cl_particles_blood_alpha;
 extern cvar_t cl_particles_blood_bloodhack;
@@ -1058,32 +1057,61 @@ void CL_Particles_Clear(void);
 void CL_Particles_Init(void);
 void CL_Particles_Shutdown(void);
 
+typedef enum effectnameindex_s
+{
+	EFFECT_NONE,
+	EFFECT_TE_GUNSHOT,
+	EFFECT_TE_GUNSHOTQUAD,
+	EFFECT_TE_SPIKE,
+	EFFECT_TE_SPIKEQUAD,
+	EFFECT_TE_SUPERSPIKE,
+	EFFECT_TE_SUPERSPIKEQUAD,
+	EFFECT_TE_WIZSPIKE,
+	EFFECT_TE_KNIGHTSPIKE,
+	EFFECT_TE_VORESPIKE,
+	EFFECT_TE_EXPLOSION,
+	EFFECT_TE_EXPLOSIONQUAD,
+	EFFECT_TE_TAREXPLOSION,
+	EFFECT_TE_TELEPORT,
+	EFFECT_TE_LAVASPLASH,
+	EFFECT_TE_SMALLFLASH,
+	EFFECT_TE_FLAMEJET,
+	EFFECT_EF_FLAME,
+	EFFECT_TE_BLOOD,
+	EFFECT_TE_SPARK,
+	EFFECT_TE_PLASMABURN,
+	EFFECT_TE_TEI_G3,
+	EFFECT_TE_TEI_SMOKE,
+	EFFECT_TE_TEI_BIGEXPLOSION,
+	EFFECT_TE_TEI_PLASMAHIT,
+	EFFECT_EF_STARDUST,
+	EFFECT_TR_ROCKET,
+	EFFECT_TR_GRENADE,
+	EFFECT_TR_BLOOD,
+	EFFECT_TR_WIZSPIKE,
+	EFFECT_TR_SLIGHTBLOOD,
+	EFFECT_TR_KNIGHTSPIKE,
+	EFFECT_TR_VORESPIKE,
+	EFFECT_TR_NEHAHRASMOKE,
+	EFFECT_TR_NEXUIZPLASMA,
+	EFFECT_TR_GLOWTRAIL,
+	EFFECT_SVC_PARTICLE,
+	EFFECT_TOTAL
+}
+effectnameindex_t;
+
+int CL_ParticleEffectIndexForName(const char *name);
+const char *CL_ParticleEffectNameForIndex(int i);
+void CL_ParticleEffect(int effectindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor);
 void CL_ParseParticleEffect (void);
-void CL_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count);
-void CL_RocketTrail (vec3_t start, vec3_t end, int type, int color, entity_t *ent);
-void CL_SparkShower (vec3_t org, vec3_t dir, int count, vec_t gravityscale, vec_t radius);
-void CL_Smoke (vec3_t org, vec3_t dir, int count, vec_t radius);
-void CL_BulletMark (vec3_t org);
-void CL_PlasmaBurn (vec3_t org);
-void CL_BloodPuff (vec3_t org, vec3_t vel, int count);
-void CL_Stardust (vec3_t mins, vec3_t maxs, int count);
-void CL_FlameCube (vec3_t mins, vec3_t maxs, int count);
-void CL_Flames (vec3_t org, vec3_t vel, int count);
-void CL_BloodShower (vec3_t mins, vec3_t maxs, float velspeed, int count);
-void CL_ParticleCube (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorbase, int gravity, int randomvel);
-void CL_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorbase, int type);
-void CL_EntityParticles (entity_t *ent);
-void CL_BlobExplosion (vec3_t org);
-void CL_ParticleExplosion (vec3_t org);
-void CL_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength);
-void CL_LavaSplash (vec3_t org);
-void CL_TeleportSplash (vec3_t org);
-void CL_BeamParticle (const vec3_t start, const vec3_t end, vec_t radius, float red, float green, float blue, float alpha, float lifetime);
-void CL_Tei_Smoke(const vec3_t pos, const vec3_t dir, int count);
-void CL_Tei_PlasmaHit(const vec3_t pos, const vec3_t dir, int count);
+void CL_ParticleCube (const vec3_t mins, const vec3_t maxs, const vec3_t dir, int count, int colorbase, int gravity, int randomvel);
+void CL_ParticleRain (const vec3_t mins, const vec3_t maxs, const vec3_t dir, int count, int colorbase, int type);
+void CL_EntityParticles (const entity_t *ent);
+void CL_ParticleExplosion (const vec3_t org);
+void CL_ParticleExplosion2 (const vec3_t org, int colorStart, int colorLength);
 void CL_MoveParticles(void);
 void R_MoveExplosions(void);
-void R_NewExplosion(vec3_t org);
+void R_NewExplosion(const vec3_t org);
 
 #include "cl_screen.h"
 

@@ -21,7 +21,7 @@
 -d (Vermeulen) bug darkplaces physics: q3bsp collisions are still glitchy, particularly gunshots hitting thin air near brushes, even with mod_q3bsp_optimizedtraceline 0, test in dpdm2r by shooting down through gaps in the architecture around the top platform (Vermeulen)
 -d (Vermeulen) bug darkplaces protocol: sometimes players are invisible in nexuiz, showing only their gun model, this may be related to svc_precache messages not being sent during signon (Vermeulen)
 -d (Wazat) bug darkplaces renderer: make sure that unlit maps show up fullbright (Wazat)
--d (div0, SavageX, Kazashi) bug darkplaces server: sv_jumpstep should be defaulted to off because it makes it possible to reach places one should not be able to reach in quake, it can be turned on by particular games if desired (div0, SavageX, Kazashi)
+-d (div0, SavageX) bug darkplaces server: sv_jumpstep should be defaulted to off because it makes it possible to reach places one should not be able to reach in quake, it can be turned on by particular games if desired (div0, SavageX, Kazashi)
 -d (evilfrog) bug darkplaces server: error() qc builtin does not print error message, just Host_Error: Program error or something similar (evilfrog)
 -d (flum) bug darkplaces client: corona on your own muzzleflash is annoying when looking down because it can be seen, disable corona on all muzzleflashes (flum)
 -d (hyenur) change dpmod: make cells only 30 damage, they're too powerful now (hyenur)
@@ -35,6 +35,14 @@
 -d (yummyluv) feature darkplaces protocol: add buttons 9-16 (yummyluv)
 -f (James D) bug darkplaces server: losing runes on episode completion, completing episode 1 then 2 then 3 causes it to forget 1, then 4 causes it to forget 2 and 3, making it impossible to open the boss gate (James D)
 -f (Wazat) bug darkplaces: client's slowmo detection (measuring packet times and comparing to game time changes) may be making the game unpleasant (Wazat)
+0 feature darkplaces website: add download link for deluxemaps_id1.pk3
+0 change darkplaces server: remove upper limit on sv_maxrate, there's no reason to limit it
+0 bug darkplaces prvm: engine calls to qc functions are not counting as function calls in the prvm_profile results, so for example SV_PlayerPhysics is being shown with a 0 call count
+0 bug darkplaces prvm: unknown opcode warnings are missing a \n
+0 feature hmap2: produce .vis files which contain a numvisleafs, an array of visofs values for all the leafs of the bsp, and the new data for the visibility lump, this would avoid the need for vispatch
+0 feature darkplaces loader: load .vis files produced by hmap2
+0 feature dpmod: include .vis files for all id1 maps
+0 feature dpmod: include .lit and .dlit files for all id1 maps
 0 bug darkplaces client: GAME_NEHAHRA: make sure cutscenes and movies work, got a report of seeing a black screen (NightFright)
 0 bug darkplaces client: fix cl_bobmodel bug which momentarily jolts the gun when you pass through a trigger, pick up an item, etc, Sajt thinks this is related to console prints as well as centerprint (Sajt)
 0 bug darkplaces collision: frikbots are falling through the map (Sajt)
@@ -42,6 +50,7 @@
 0 bug darkplaces csqc: engine-based rocket entities have a trail but they don't glow if csqc is used
 0 bug darkplaces loader: make rtlight entity loader support q3map/q3map2 lights properly, they use a spawnflag for LINEAR mode, by default they use 1/(x*x) falloff (Carni, motorsep)
 0 bug darkplaces loader: occasional crash due to memory corruption when doing "deathmatch 1;map start" during demo loop (Willis)
+0 bug darkplaces loader: zym models are not loading some of their meshes?  this is causing the striped part of the nexuiz RL to disappear (div0, SavageX)
 0 bug darkplaces renderer: deluxemaps are not detected in some maps that do have them?  (SavageX)
 0 bug darkplaces renderer: modify r_showtris_polygonoffset to push back all filled geometry, not lines, because polygonoffset will not affect GL_LINES at all
 0 bug darkplaces renderer: monsters teleporting in really slow down rendering, perhaps the teleport light is casting huge shadows?  new information suggests it is the particles. (romi, lcatlnx)
@@ -71,6 +80,7 @@
 0 bug hmap2 -vis: test that bitlongs code works properly on big endian systems such as Mac (LordHavoc)
 0 bug hmap2: figure out why there is a subtle difference between bmodel lighting and wall lighting, something to do with nudges causing different attenuation? (Urre)
 0 bug hmap: strip .map extension from filename if present
+0 change darkplaces client: change timedemo minfps/maxfps to be the lowest and highest fps in one second segments, similar to the showfps display, this should solve the precision problems resulting in stupidly high/low fps reports (m0rfar)
 0 change darkplaces client: disable all possible 'cheat' things unless -developer is given on commandline, this includes r_show*, r_test, gl_lightmaps, r_fullbright
 0 change darkplaces client: particles shouldn't be using contents checks to decide whether to die, they should use movement traces
 0 change darkplaces client: restrict wateralpha and such cvars according to what is permitted in qw serverinfo?
@@ -93,6 +103,13 @@
 0 change zmodel: include the example script in the build zips, not just in the files directory
 0 cleanup darkplaces cleanup: remove cgame* files and any references
 0 cleanup darkplaces cleanup: remove ui.* files and any references
+0 feature darkplaces client: add .qwd demo support
+0 feature darkplaces client: add .mvd demo support
+0 feature darkplaces client: add .loc file support and say macros
+0 feature darkplaces client: add ezQuake-style hud layout as an option - http://quake.tek.pl/_sshots/candy/redfog.png
+0 change darkplaces client: get image sizes from .lmp files if present
+0 change darkplaces client: hardcode sbar image sizes so they can be replaced with higher quality images
+0 feature dpmod: add higher quality replacement sbar images
 0 feature darkplaces client: add a cl_showspeed cvar to display a hud overlay of your current velocity, speed as length of velocity, and speed along forward vector (Spike)
 0 feature darkplaces client: add a cvar to make the renderer use a different entity for pvs than for viewing, this might be useful for a third person camera that should only see what the player sees (Urre)
 0 feature darkplaces client: add an alias to control whether the nexuiz logo.dpv splash video plays at startup and whether the menu opens, this way the config can change it before it happens, for instance to disable it, or to set up a similar thing in other games (green)
