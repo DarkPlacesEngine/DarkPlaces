@@ -1508,9 +1508,9 @@ void Sbar_IntermissionOverlay (void)
 	DrawQ_Pic (sbar_x + 0, sbar_y + 56, Draw_CachePic("gfx/inter", true), 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
 
 // time
-	dig = (int)(cl.completed_time/60);
+	dig = (int)cl.completed_time / 60;
 	Sbar_DrawNum (160, 64, dig, 3, 0);
-	num = (int)(cl.completed_time - dig*60);
+	num = (int)cl.completed_time - dig*60;
 	if (gamemode != GAME_NEXUIZ)
 		Sbar_DrawPic (234,64,sb_colon);
 	Sbar_DrawPic (246,64,sb_nums[0][num/10]);
