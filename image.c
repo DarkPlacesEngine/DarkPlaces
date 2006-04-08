@@ -1403,9 +1403,9 @@ void Image_HeightmapToNormalmap(const unsigned char *inpixels, unsigned char *ou
 			n[2] = ibumpscale;
 			VectorNormalize(n);
 			*/
-			out[0] = 128.0f + n[0] * 127.0f;
-			out[1] = 128.0f + n[1] * 127.0f;
-			out[2] = 128.0f + n[2] * 127.0f;
+			out[0] = (int)(128.0f + n[0] * 127.0f);
+			out[1] = (int)(128.0f + n[1] * 127.0f);
+			out[2] = (int)(128.0f + n[2] * 127.0f);
 			out[3] = (p0[0] + p0[1] + p0[2]) / 3;
 			out += 4;
 		}

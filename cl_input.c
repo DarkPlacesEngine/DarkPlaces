@@ -1192,8 +1192,8 @@ void CL_SendMove(void)
 				MSG_WriteByte (&buf, impulse);
 				// PRYDON_CLIENTCURSOR
 				// 30 bytes
-				MSG_WriteShort (&buf, cl.cmd.cursor_screen[0] * 32767.0f);
-				MSG_WriteShort (&buf, cl.cmd.cursor_screen[1] * 32767.0f);
+				MSG_WriteShort (&buf, (short)(cl.cmd.cursor_screen[0] * 32767.0f));
+				MSG_WriteShort (&buf, (short)(cl.cmd.cursor_screen[1] * 32767.0f));
 				MSG_WriteFloat (&buf, cl.cmd.cursor_start[0]);
 				MSG_WriteFloat (&buf, cl.cmd.cursor_start[1]);
 				MSG_WriteFloat (&buf, cl.cmd.cursor_start[2]);

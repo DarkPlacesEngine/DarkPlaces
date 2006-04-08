@@ -219,9 +219,9 @@ void VM_CL_sound (void)
 	VM_SAFEPARMCOUNT(5, VM_CL_sound);
 
 	entity = PRVM_G_EDICT(OFS_PARM0);
-	channel = PRVM_G_FLOAT(OFS_PARM1);
+	channel = (int)PRVM_G_FLOAT(OFS_PARM1);
 	sample = PRVM_G_STRING(OFS_PARM2);
-	volume = PRVM_G_FLOAT(OFS_PARM3)*255;
+	volume = (int)(PRVM_G_FLOAT(OFS_PARM3)*255.0f);
 	attenuation = PRVM_G_FLOAT(OFS_PARM4);
 
 	if (volume < 0 || volume > 255)
@@ -439,7 +439,7 @@ void VM_CL_lightstyle (void)
 
 	VM_SAFEPARMCOUNT(2, VM_CL_lightstyle);
 
-	i = PRVM_G_FLOAT(OFS_PARM0);
+	i = (int)PRVM_G_FLOAT(OFS_PARM0);
 	c = PRVM_G_STRING(OFS_PARM1);
 	if (i >= cl.max_lightstyle)
 		PF_WARNING("VM_CL_lightstyle >= MAX_LIGHTSTYLES\n");
@@ -536,8 +536,8 @@ void VM_CL_particle (void)
 
 	org = PRVM_G_VECTOR(OFS_PARM0);
 	dir = PRVM_G_VECTOR(OFS_PARM1);
-	color = PRVM_G_FLOAT(OFS_PARM2);
-	count = PRVM_G_FLOAT(OFS_PARM3);
+	color = (int)PRVM_G_FLOAT(OFS_PARM2);
+	count = (int)PRVM_G_FLOAT(OFS_PARM3);
 	CL_ParticleEffect(EFFECT_SVC_PARTICLE, count, org, org, dir, dir, NULL, color);
 }
 
@@ -749,7 +749,7 @@ void VM_R_ClearScene (void)
 void VM_R_AddEntities (void)
 {
 	VM_SAFEPARMCOUNT(1, VM_R_AddEntities);
-	csqc_drawmask = PRVM_G_FLOAT(OFS_PARM0);
+	csqc_drawmask = (int)PRVM_G_FLOAT(OFS_PARM0);
 }
 
 //#302 void(entity ent) addentity (EXT_CSQC)
@@ -769,31 +769,31 @@ void VM_R_SetView (void)
 	if(prog->argc < 2)
 		VM_SAFEPARMCOUNT(2, VM_R_SetView);
 
-	c = PRVM_G_FLOAT(OFS_PARM0);
+	c = (int)PRVM_G_FLOAT(OFS_PARM0);
 	f = PRVM_G_VECTOR(OFS_PARM1);
 	k = PRVM_G_FLOAT(OFS_PARM1);
 
 	switch(c)
 	{
-	case VF_MIN:			r_refdef.x = f[0];
-							r_refdef.y = f[1];
+	case VF_MIN:			r_refdef.x = (int)f[0];
+							r_refdef.y = (int)f[1];
 							break;
-	case VF_MIN_X:			r_refdef.x = k;
+	case VF_MIN_X:			r_refdef.x = (int)k;
 							break;
-	case VF_MIN_Y:			r_refdef.y = k;
+	case VF_MIN_Y:			r_refdef.y = (int)k;
 							break;
-	case VF_SIZE:			r_refdef.width = f[0];
-							r_refdef.height = f[1];
+	case VF_SIZE:			r_refdef.width = (int)f[0];
+							r_refdef.height = (int)f[1];
 							break;
-	case VF_SIZE_Y:			r_refdef.width = k;
+	case VF_SIZE_Y:			r_refdef.width = (int)k;
 							break;
-	case VF_SIZE_X:			r_refdef.height = k;
+	case VF_SIZE_X:			r_refdef.height = (int)k;
 							break;
-	case VF_VIEWPORT:		r_refdef.x = f[0];
-							r_refdef.y = f[1];
+	case VF_VIEWPORT:		r_refdef.x = (int)f[0];
+							r_refdef.y = (int)f[1];
 							f = PRVM_G_VECTOR(OFS_PARM2);
-							r_refdef.width = f[0];
-							r_refdef.height = f[1];
+							r_refdef.width = (int)f[0];
+							r_refdef.height = (int)f[1];
 							break;
 	case VF_FOV:			//r_refdef.fov_x = f[0]; // FIXME!
 							//r_refdef.fov_y = f[1]; // FIXME!
@@ -915,7 +915,7 @@ void VM_CL_getstatf (void)
 		int l;
 	}dat;
 	VM_SAFEPARMCOUNT(1, VM_CL_getstatf);
-	i = PRVM_G_FLOAT(OFS_PARM0);
+	i = (int)PRVM_G_FLOAT(OFS_PARM0);
 	if(i < 0 || i >= MAX_CL_STATS)
 	{
 		Con_Printf("VM_CL_getstatf: index>=MAX_CL_STATS or index<0\n");
@@ -930,7 +930,7 @@ void VM_CL_getstati (void)
 {
 	int i, index;
 	VM_SAFEPARMCOUNT(1, VM_CL_getstati);
-	index = PRVM_G_FLOAT(OFS_PARM0);
+	index = (int)PRVM_G_FLOAT(OFS_PARM0);
 
 	if(index < 0 || index >= MAX_CL_STATS)
 	{
@@ -947,7 +947,7 @@ void VM_CL_getstats (void)
 	int i;
 	char *t;
 	VM_SAFEPARMCOUNT(1, VM_CL_getstats);
-	i = PRVM_G_FLOAT(OFS_PARM0);
+	i = (int)PRVM_G_FLOAT(OFS_PARM0);
 	if(i < 0 || i > MAX_CL_STATS-4)
 	{
 		Con_Printf("VM_CL_getstats: index>MAX_CL_STATS-4 or index<0\n");
@@ -1001,7 +1001,7 @@ void VM_CL_modelnameforindex (void)
 	VM_SAFEPARMCOUNT(1, VM_CL_modelnameforindex);
 
 	PRVM_G_INT(OFS_RETURN) = 0;
-	i = PRVM_G_FLOAT(OFS_PARM0);
+	i = (int)PRVM_G_FLOAT(OFS_PARM0);
 	if(i<0)
 	{
 		i = -(i+1);
@@ -1079,7 +1079,7 @@ void VM_CL_trailparticles (void)
 
 	t = PRVM_G_EDICT(OFS_PARM0);
 	entnum	= PRVM_NUM_FOR_EDICT(t);
-	i		= PRVM_G_FLOAT(OFS_PARM1);
+	i		= (int)PRVM_G_FLOAT(OFS_PARM1);
 	start	= PRVM_G_VECTOR(OFS_PARM2);
 	end		= PRVM_G_VECTOR(OFS_PARM3);
 
@@ -1091,7 +1091,7 @@ void VM_CL_trailparticles (void)
 	if (entnum >= cl.max_csqcentities)
 		CL_ExpandCSQCEntities(entnum);
 
-	CL_ParticleEffect(i, VectorDistance(start, end), start, end, t->fields.client->velocity, t->fields.client->velocity, &cl.csqcentities[entnum], PRVM_G_FLOAT(OFS_PARM4));
+	CL_ParticleEffect(i, VectorDistance(start, end), start, end, t->fields.client->velocity, t->fields.client->velocity, &cl.csqcentities[entnum], (int)PRVM_G_FLOAT(OFS_PARM4));
 }
 
 //#337 void(float effectnum, vector origin, vector dir, float count) pointparticles (EXT_CSQC)
@@ -1100,10 +1100,10 @@ void VM_CL_pointparticles (void)
 	int			i, n;
 	float		*f, *v;
 	VM_SAFEPARMCOUNT(4, VM_CL_pointparticles);
-	i = PRVM_G_FLOAT(OFS_PARM0);
+	i = (int)PRVM_G_FLOAT(OFS_PARM0);
 	f = PRVM_G_VECTOR(OFS_PARM1);
 	v = PRVM_G_VECTOR(OFS_PARM2);
-	n = PRVM_G_FLOAT(OFS_PARM3);
+	n = (int)PRVM_G_FLOAT(OFS_PARM3);
 	CL_ParticleEffect(i, n, f, f, v, v, NULL, 0);
 }
 
@@ -1123,7 +1123,7 @@ void VM_CL_getkeybind (void)
 	int i;
 
 	VM_SAFEPARMCOUNT(1, VM_CL_getkeybind);
-	i = PRVM_G_FLOAT(OFS_PARM0);
+	i = (int)PRVM_G_FLOAT(OFS_PARM0);
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(Key_GetBind(i));
 }
 
@@ -1140,7 +1140,7 @@ void VM_CL_getinputstate (void)
 {
 	int i, frame;
 	VM_SAFEPARMCOUNT(1, VM_CL_getinputstate);
-	frame = PRVM_G_FLOAT(OFS_PARM0);
+	frame = (int)PRVM_G_FLOAT(OFS_PARM0);
 	for (i = 0;i < cl.movement_numqueue;i++)
 		if (cl.movement_queue[i].sequence == frame)
 		{
@@ -1183,7 +1183,7 @@ void VM_CL_getplayerkey (void)
 
 	VM_SAFEPARMCOUNT(2, VM_CL_getplayerkey);
 
-	i = PRVM_G_FLOAT(OFS_PARM0);
+	i = (int)PRVM_G_FLOAT(OFS_PARM0);
 	c = PRVM_G_STRING(OFS_PARM1);
 	PRVM_G_INT(OFS_RETURN) = OFS_NULL;
 	Sbar_SortFrags();
@@ -1245,7 +1245,7 @@ void VM_CL_registercmd (void)
 	VM_SAFEPARMCOUNT(1, VM_CL_registercmd);
 	if(!Cmd_Exists(PRVM_G_STRING(OFS_PARM0)))
 	{
-		t = Z_Malloc(strlen(PRVM_G_STRING(OFS_PARM0))+1);
+		t = (char *)Z_Malloc(strlen(PRVM_G_STRING(OFS_PARM0))+1);
 		strcpy(t, PRVM_G_STRING(OFS_PARM0));
 		Cmd_AddCommand(t, NULL, "console command created by QuakeC");
 	}
@@ -1335,7 +1335,7 @@ void VM_CL_ReadFloat (void)
 void VM_CL_effect (void)
 {
 	VM_SAFEPARMCOUNT(5, VM_CL_effect);
-	CL_Effect(PRVM_G_VECTOR(OFS_PARM0), PRVM_G_FLOAT(OFS_PARM1), PRVM_G_FLOAT(OFS_PARM2), PRVM_G_FLOAT(OFS_PARM3), PRVM_G_FLOAT(OFS_PARM4));
+	CL_Effect(PRVM_G_VECTOR(OFS_PARM0), (int)PRVM_G_FLOAT(OFS_PARM1), (int)PRVM_G_FLOAT(OFS_PARM2), (int)PRVM_G_FLOAT(OFS_PARM3), PRVM_G_FLOAT(OFS_PARM4));
 }
 
 // #405 void(vector org, vector velocity, float howmany) te_blood (DP_TE_BLOOD)
@@ -1387,21 +1387,21 @@ void VM_CL_te_explosionrgb (void)
 void VM_CL_te_particlecube (void)
 {
 	VM_SAFEPARMCOUNT(7, VM_CL_te_particlecube);
-	CL_ParticleCube(PRVM_G_VECTOR(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), PRVM_G_FLOAT(OFS_PARM3), PRVM_G_FLOAT(OFS_PARM4), PRVM_G_FLOAT(OFS_PARM5), PRVM_G_FLOAT(OFS_PARM6));
+	CL_ParticleCube(PRVM_G_VECTOR(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), (int)PRVM_G_FLOAT(OFS_PARM3), (int)PRVM_G_FLOAT(OFS_PARM4), PRVM_G_FLOAT(OFS_PARM5), PRVM_G_FLOAT(OFS_PARM6));
 }
 
 // #409 void(vector mincorner, vector maxcorner, vector vel, float howmany, float color) te_particlerain (DP_TE_PARTICLERAIN)
 void VM_CL_te_particlerain (void)
 {
 	VM_SAFEPARMCOUNT(5, VM_CL_te_particlerain);
-	CL_ParticleRain(PRVM_G_VECTOR(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), PRVM_G_FLOAT(OFS_PARM3), PRVM_G_FLOAT(OFS_PARM4), 0);
+	CL_ParticleRain(PRVM_G_VECTOR(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), (int)PRVM_G_FLOAT(OFS_PARM3), (int)PRVM_G_FLOAT(OFS_PARM4), 0);
 }
 
 // #410 void(vector mincorner, vector maxcorner, vector vel, float howmany, float color) te_particlesnow (DP_TE_PARTICLESNOW)
 void VM_CL_te_particlesnow (void)
 {
 	VM_SAFEPARMCOUNT(5, VM_CL_te_particlesnow);
-	CL_ParticleRain(PRVM_G_VECTOR(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), PRVM_G_FLOAT(OFS_PARM3), PRVM_G_FLOAT(OFS_PARM4), 1);
+	CL_ParticleRain(PRVM_G_VECTOR(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), (int)PRVM_G_FLOAT(OFS_PARM3), (int)PRVM_G_FLOAT(OFS_PARM4), 1);
 }
 
 // #411 void(vector org, vector vel, float howmany) te_spark
@@ -1640,8 +1640,8 @@ void VM_CL_te_explosion2 (void)
 	VM_SAFEPARMCOUNT(3, VM_CL_te_explosion2);
 
 	pos = PRVM_G_VECTOR(OFS_PARM0);
-	colorStart = PRVM_G_FLOAT(OFS_PARM1);
-	colorLength = PRVM_G_FLOAT(OFS_PARM2);
+	colorStart = (int)PRVM_G_FLOAT(OFS_PARM1);
+	colorLength = (int)PRVM_G_FLOAT(OFS_PARM2);
 	CL_FindNonSolidLocation(pos, pos2, 10);
 	CL_ParticleExplosion2(pos2, colorStart, colorLength);
 	tempcolor = (unsigned char *)&palette_complete[(rand()%colorLength) + colorStart];
@@ -1740,14 +1740,14 @@ void VM_CL_te_plasmaburn (void)
 //====================================================================
 //DP_QC_GETSURFACE
 
-void clippointtosurface(msurface_t *surface, vec3_t p, vec3_t out);
+extern void clippointtosurface(model_t *model, msurface_t *surface, vec3_t p, vec3_t out);
 static model_t *cl_getmodel(prvm_edict_t *ed)
 {
 	int modelindex;
 	model_t *model = NULL;
 	if (!ed || ed->priv.server->free)
 		return NULL;
-	modelindex = ed->fields.client->modelindex;
+	modelindex = (int)ed->fields.client->modelindex;
 	if(!modelindex)
 		return NULL;
 	if(modelindex<0)
@@ -1777,7 +1777,7 @@ void VM_CL_getsurfacenumpoints(void)
 	model_t *model = cl_getmodel(PRVM_G_EDICT(OFS_PARM0));
 	msurface_t *surface;
 	// return 0 if no such surface
-	if (!model || !(surface = cl_getsurface(model, PRVM_G_FLOAT(OFS_PARM1))))
+	if (!model || !(surface = cl_getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = 0;
 		return;
@@ -1796,10 +1796,10 @@ void VM_CL_getsurfacepoint(void)
 	int pointnum;
 	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
 	ed = PRVM_G_EDICT(OFS_PARM0);
-	if (!(model = cl_getmodel(ed)) || !(surface = cl_getsurface(model, PRVM_G_FLOAT(OFS_PARM1))))
+	if (!(model = cl_getmodel(ed)) || !(surface = cl_getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
 		return;
 	// note: this (incorrectly) assumes it is a simple polygon
-	pointnum = PRVM_G_FLOAT(OFS_PARM2);
+	pointnum = (int)PRVM_G_FLOAT(OFS_PARM2);
 	if (pointnum < 0 || pointnum >= surface->num_vertices)
 		return;
 	// FIXME: implement rotation/scaling
@@ -1813,7 +1813,7 @@ void VM_CL_getsurfacenormal(void)
 	msurface_t *surface;
 	vec3_t normal;
 	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
-	if (!(model = cl_getmodel(PRVM_G_EDICT(OFS_PARM0))) || !(surface = cl_getsurface(model, PRVM_G_FLOAT(OFS_PARM1))))
+	if (!(model = cl_getmodel(PRVM_G_EDICT(OFS_PARM0))) || !(surface = cl_getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
 		return;
 	// FIXME: implement rotation/scaling
 	// note: this (incorrectly) assumes it is a simple polygon
@@ -1830,7 +1830,7 @@ void VM_CL_getsurfacetexture(void)
 	model_t *model;
 	msurface_t *surface;
 	PRVM_G_INT(OFS_RETURN) = 0;
-	if (!(model = cl_getmodel(PRVM_G_EDICT(OFS_PARM0))) || !(surface = cl_getsurface(model, PRVM_G_FLOAT(OFS_PARM1))))
+	if (!(model = cl_getmodel(PRVM_G_EDICT(OFS_PARM0))) || !(surface = cl_getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
 		return;
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(surface->texture->name);
 }
@@ -1866,7 +1866,7 @@ void VM_CL_getsurfacenearpoint(void)
 		if (dist < bestdist)
 		{
 			// it is, check the nearest point on the actual geometry
-			clippointtosurface(surface, p, clipped);
+			clippointtosurface(model, surface, p, clipped);
 			VectorSubtract(clipped, p, clipped);
 			dist += VectorLength2(clipped);
 			if (dist < bestdist)
@@ -1889,11 +1889,11 @@ void VM_CL_getsurfaceclippedpoint(void)
 	vec3_t p, out;
 	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
 	ed = PRVM_G_EDICT(OFS_PARM0);
-	if (!(model = cl_getmodel(ed)) || !(surface = cl_getsurface(model, PRVM_G_FLOAT(OFS_PARM1))))
+	if (!(model = cl_getmodel(ed)) || !(surface = cl_getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
 		return;
 	// FIXME: implement rotation/scaling
 	VectorSubtract(PRVM_G_VECTOR(OFS_PARM2), ed->fields.client->origin, p);
-	clippointtosurface(surface, p, out);
+	clippointtosurface(model, surface, p, out);
 	// FIXME: implement rotation/scaling
 	VectorAdd(out, ed->fields.client->origin, PRVM_G_VECTOR(OFS_RETURN));
 }
@@ -1943,7 +1943,7 @@ void VM_CL_setattachment (void)
 
 		if (model)
 		{
-			v->_float = Mod_Alias_GetTagIndexForName(model, tagentity->fields.client->skin, tagname);
+			v->_float = Mod_Alias_GetTagIndexForName(model, (int)tagentity->fields.client->skin, tagname);
 			if (v->_float == 0)
 				Con_DPrintf("setattachment(edict %i, edict %i, string \"%s\"): tried to find tag named \"%s\" on entity %i (model \"%s\") but could not find it\n", PRVM_NUM_FOR_EDICT(e), PRVM_NUM_FOR_EDICT(tagentity), tagname, tagname, PRVM_NUM_FOR_EDICT(tagentity), model->name);
 		}
@@ -1960,7 +1960,7 @@ int CL_GetTagIndex (prvm_edict_t *e, const char *tagname)
 	int i;
 	model_t *m;
 
-	i = e->fields.client->modelindex;
+	i = (int)e->fields.client->modelindex;
 
 	if(!i)
 		return -1;
@@ -1977,7 +1977,7 @@ int CL_GetTagIndex (prvm_edict_t *e, const char *tagname)
 		else
 			m = cl.model_precache[i];
 
-	return Mod_Alias_GetTagIndexForName(m, e->fields.client->skin, tagname);
+	return Mod_Alias_GetTagIndexForName(m, (int)e->fields.client->skin, tagname);
 };
 
 // Warnings/errors code:
@@ -2046,7 +2046,7 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 			val = PRVM_GETEDICTFIELDVALUE(ent, csqc_fieldoff_tag_index);
 
 			model = NULL;
-			i = attachent->fields.client->modelindex;
+			i = (int)attachent->fields.client->modelindex;
 			if(i<0)
 			{
 				i = -(i+1);
@@ -2058,7 +2058,7 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 					model = cl.model_precache[i];
 
 			if (model && val->_float >= 1 && model->animscenes && attachent->fields.client->frame >= 0 && attachent->fields.client->frame < model->numframes)
-				Mod_Alias_GetTagMatrix(model, model->animscenes[(int)attachent->fields.client->frame].firstframe, val->_float - 1, &attachmatrix);
+				Mod_Alias_GetTagMatrix(model, model->animscenes[(int)attachent->fields.client->frame].firstframe, (int)val->_float - 1, &attachmatrix);
 			else
 				attachmatrix = identitymatrix;
 
@@ -2347,8 +2347,8 @@ void VM_CL_selecttraceline (void)
 
 	v1 = PRVM_G_VECTOR(OFS_PARM0);
 	v2 = PRVM_G_VECTOR(OFS_PARM1);
-	ignore = PRVM_G_FLOAT(OFS_PARM2);
-	csqcents = PRVM_G_FLOAT(OFS_PARM3);
+	ignore = (int)PRVM_G_FLOAT(OFS_PARM2);
+	csqcents = (int)PRVM_G_FLOAT(OFS_PARM3);
 	ent = 0;
 
 	if((csqcents && ignore > cl.num_csqcentities) || (!csqcents && ignore > cl.num_entities))

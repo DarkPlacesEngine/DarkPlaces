@@ -313,7 +313,7 @@ qboolean S_LoadWavFile (const char *filename, sfx_t *s)
 	if (info.loopstart < 0)
 		s->loopstart = -1;
 	else
-		s->loopstart = (double)info.loopstart * (double)shm->format.speed / (double)s->format.speed;
+		s->loopstart = (int)((double)info.loopstart * (double)shm->format.speed / (double)s->format.speed);
 	s->flags &= ~SFXFLAG_STREAMED;
 
 #if BYTE_ORDER != LITTLE_ENDIAN

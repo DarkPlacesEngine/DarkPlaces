@@ -239,7 +239,7 @@ void CL_ExpandCSQCEntities(int num)
 		oldmaxentities = cl.max_csqcentities;
 		oldentities = cl.csqcentities;
 		cl.max_csqcentities = (num & ~255) + 256;
-		cl.csqcentities = Mem_Alloc(cls.levelmempool, cl.max_csqcentities * sizeof(entity_t));
+		cl.csqcentities = (entity_t *)Mem_Alloc(cls.levelmempool, cl.max_csqcentities * sizeof(entity_t));
 		memcpy(cl.csqcentities, oldentities, oldmaxentities * sizeof(entity_t));
 		Mem_Free(oldentities);
 		for (i = oldmaxentities;i < cl.max_csqcentities;i++)
@@ -664,7 +664,7 @@ void CL_UpdateLights(void)
 		l = (i-1) % cl.lightstyle[j].length;
 		k = cl.lightstyle[j].map[k] - 'a';
 		l = cl.lightstyle[j].map[l] - 'a';
-		r_refdef.lightstylevalue[j] = ((k*frac)+(l*(1-frac)))*22;
+		r_refdef.lightstylevalue[j] = (unsigned short)(((k*frac)+(l*(1-frac)))*22);
 	}
 }
 
@@ -1287,7 +1287,7 @@ static void CL_RelinkEffects(void)
 		if (e->active)
 		{
 			frame = (cl.time - e->starttime) * e->framerate + e->startframe;
-			intframe = frame;
+			intframe = (int)frame;
 			if (intframe < 0 || intframe >= e->endframe)
 			{
 				memset(e, 0, sizeof(*e));

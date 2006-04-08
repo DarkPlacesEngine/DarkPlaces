@@ -136,7 +136,7 @@ Make sure the event gets sent to all clients
 */
 void SV_StartParticle (vec3_t org, vec3_t dir, int color, int count)
 {
-	int		i, v;
+	int i;
 
 	if (sv.datagram.cursize > MAX_PACKETFRAGMENT-18)
 		return;
@@ -145,14 +145,7 @@ void SV_StartParticle (vec3_t org, vec3_t dir, int color, int count)
 	MSG_WriteCoord (&sv.datagram, org[1], sv.protocol);
 	MSG_WriteCoord (&sv.datagram, org[2], sv.protocol);
 	for (i=0 ; i<3 ; i++)
-	{
-		v = dir[i]*16;
-		if (v > 127)
-			v = 127;
-		else if (v < -128)
-			v = -128;
-		MSG_WriteChar (&sv.datagram, v);
-	}
+		MSG_WriteChar (&sv.datagram, (int)bound(-128, dir[i]*16, 127));
 	MSG_WriteByte (&sv.datagram, count);
 	MSG_WriteByte (&sv.datagram, color);
 }
@@ -257,7 +250,7 @@ void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int v
 	if (field_mask & SND_VOLUME)
 		MSG_WriteByte (&sv.datagram, volume);
 	if (field_mask & SND_ATTENUATION)
-		MSG_WriteByte (&sv.datagram, attenuation*64);
+		MSG_WriteByte (&sv.datagram, (int)(attenuation*64));
 	if (field_mask & SND_LARGEENTITY)
 	{
 		MSG_WriteShort (&sv.datagram, ent);
@@ -362,8 +355,8 @@ void SV_SendServerinfo (client_t *client)
 
 // send music
 	MSG_WriteByte (&client->netconnection->message, svc_cdtrack);
-	MSG_WriteByte (&client->netconnection->message, prog->edicts->fields.server->sounds);
-	MSG_WriteByte (&client->netconnection->message, prog->edicts->fields.server->sounds);
+	MSG_WriteByte (&client->netconnection->message, (int)prog->edicts->fields.server->sounds);
+	MSG_WriteByte (&client->netconnection->message, (int)prog->edicts->fields.server->sounds);
 
 // set view
 	MSG_WriteByte (&client->netconnection->message, svc_setview);
@@ -526,9 +519,9 @@ qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int 
 		if (effects & 32)
 		{
 			effects &= ~32;
-			light[0] = 0.2;
-			light[1] = 1;
-			light[2] = 0.2;
+			light[0] = (int)(0.2*256);
+			light[1] = (int)(1.0*256);
+			light[2] = (int)(0.2*256);
 			light[3] = 200;
 			lightpflags |= PFLAGS_FULLDYNAMIC;
 		}
@@ -600,9 +593,9 @@ qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int 
 	val = PRVM_GETEDICTFIELDVALUE(ent, eval_colormod);
 	if (val->vector[0] || val->vector[1] || val->vector[2])
 	{
-		i = val->vector[0] * 32.0f;cs->colormod[0] = bound(0, i, 255);
-		i = val->vector[1] * 32.0f;cs->colormod[1] = bound(0, i, 255);
-		i = val->vector[2] * 32.0f;cs->colormod[2] = bound(0, i, 255);
+		i = (int)(val->vector[0] * 32.0f);cs->colormod[0] = bound(0, i, 255);
+		i = (int)(val->vector[1] * 32.0f);cs->colormod[1] = bound(0, i, 255);
+		i = (int)(val->vector[2] * 32.0f);cs->colormod[2] = bound(0, i, 255);
 	}
 
 	cs->modelindex = modelindex;
@@ -961,7 +954,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	int		items;
 	prvm_eval_t	*val;
 	vec3_t	punchvector;
-	unsigned char	viewzoom;
+	int		viewzoom;
 	const char *s;
 
 //
@@ -971,8 +964,8 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	{
 		other = PRVM_PROG_TO_EDICT(ent->fields.server->dmg_inflictor);
 		MSG_WriteByte (msg, svc_damage);
-		MSG_WriteByte (msg, ent->fields.server->dmg_save);
-		MSG_WriteByte (msg, ent->fields.server->dmg_take);
+		MSG_WriteByte (msg, (int)ent->fields.server->dmg_save);
+		MSG_WriteByte (msg, (int)ent->fields.server->dmg_take);
 		for (i=0 ; i<3 ; i++)
 			MSG_WriteCoord (msg, other->fields.server->origin[i] + 0.5*(other->fields.server->mins[i] + other->fields.server->maxs[i]), sv.protocol);
 
@@ -1017,7 +1010,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 
 	viewzoom = 255;
 	if ((val = PRVM_GETEDICTFIELDVALUE(ent, eval_viewzoom)))
-		viewzoom = val->_float * 255.0f;
+		viewzoom = (int)(val->_float * 255.0f);
 	if (viewzoom == 0)
 		viewzoom = 255;
 
@@ -1042,18 +1035,18 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	}
 
 	memset(stats, 0, sizeof(int[MAX_CL_STATS]));
-	stats[STAT_VIEWHEIGHT] = ent->fields.server->view_ofs[2];
+	stats[STAT_VIEWHEIGHT] = (int)ent->fields.server->view_ofs[2];
 	stats[STAT_ITEMS] = items;
-	stats[STAT_WEAPONFRAME] = ent->fields.server->weaponframe;
-	stats[STAT_ARMOR] = ent->fields.server->armorvalue;
+	stats[STAT_WEAPONFRAME] = (int)ent->fields.server->weaponframe;
+	stats[STAT_ARMOR] = (int)ent->fields.server->armorvalue;
 	stats[STAT_WEAPON] = client->weaponmodelindex;
-	stats[STAT_HEALTH] = ent->fields.server->health;
-	stats[STAT_AMMO] = ent->fields.server->currentammo;
-	stats[STAT_SHELLS] = ent->fields.server->ammo_shells;
-	stats[STAT_NAILS] = ent->fields.server->ammo_nails;
-	stats[STAT_ROCKETS] = ent->fields.server->ammo_rockets;
-	stats[STAT_CELLS] = ent->fields.server->ammo_cells;
-	stats[STAT_ACTIVEWEAPON] = ent->fields.server->weapon;
+	stats[STAT_HEALTH] = (int)ent->fields.server->health;
+	stats[STAT_AMMO] = (int)ent->fields.server->currentammo;
+	stats[STAT_SHELLS] = (int)ent->fields.server->ammo_shells;
+	stats[STAT_NAILS] = (int)ent->fields.server->ammo_nails;
+	stats[STAT_ROCKETS] = (int)ent->fields.server->ammo_rockets;
+	stats[STAT_CELLS] = (int)ent->fields.server->ammo_cells;
+	stats[STAT_ACTIVEWEAPON] = (int)ent->fields.server->weapon;
 	stats[STAT_VIEWZOOM] = viewzoom;
 	// the QC bumps these itself by sending svc_'s, so we have to keep them
 	// zero or they'll be corrected by the engine
@@ -1092,14 +1085,14 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 		MSG_WriteChar (msg, stats[STAT_VIEWHEIGHT]);
 
 	if (bits & SU_IDEALPITCH)
-		MSG_WriteChar (msg, ent->fields.server->idealpitch);
+		MSG_WriteChar (msg, (int)ent->fields.server->idealpitch);
 
 	for (i=0 ; i<3 ; i++)
 	{
 		if (bits & (SU_PUNCH1<<i))
 		{
 			if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE)
-				MSG_WriteChar(msg, ent->fields.server->punchangle[i]);
+				MSG_WriteChar(msg, (int)ent->fields.server->punchangle[i]);
 			else
 				MSG_WriteAngle16i(msg, ent->fields.server->punchangle[i]);
 		}
@@ -1113,7 +1106,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 		if (bits & (SU_VELOCITY1<<i))
 		{
 			if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4)
-				MSG_WriteChar(msg, ent->fields.server->velocity[i] * (1.0f / 16.0f));
+				MSG_WriteChar(msg, (int)(ent->fields.server->velocity[i] * (1.0f / 16.0f)));
 			else
 				MSG_WriteCoord32f(msg, ent->fields.server->velocity[i]);
 		}
@@ -1138,7 +1131,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 		MSG_WriteShort (msg, stats[STAT_CELLS]);
 		MSG_WriteShort (msg, stats[STAT_ACTIVEWEAPON]);
 		if (bits & SU_VIEWZOOM)
-			MSG_WriteShort (msg, min(stats[STAT_VIEWZOOM], 65535));
+			MSG_WriteShort (msg, bound(0, stats[STAT_VIEWZOOM], 65535));
 	}
 	else if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4)
 	{
@@ -1166,9 +1159,9 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 		if (bits & SU_VIEWZOOM)
 		{
 			if (sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4)
-				MSG_WriteByte (msg, min(stats[STAT_VIEWZOOM], 255));
+				MSG_WriteByte (msg, bound(0, stats[STAT_VIEWZOOM], 255));
 			else
-				MSG_WriteShort (msg, min(stats[STAT_VIEWZOOM], 65535));
+				MSG_WriteShort (msg, bound(0, stats[STAT_VIEWZOOM], 65535));
 		}
 	}
 }
@@ -1516,8 +1509,8 @@ void SV_CreateBaseline (void)
 		// create entity baseline
 		VectorCopy (svent->fields.server->origin, svent->priv.server->baseline.origin);
 		VectorCopy (svent->fields.server->angles, svent->priv.server->baseline.angles);
-		svent->priv.server->baseline.frame = svent->fields.server->frame;
-		svent->priv.server->baseline.skin = svent->fields.server->skin;
+		svent->priv.server->baseline.frame = (int)svent->fields.server->frame;
+		svent->priv.server->baseline.skin = (int)svent->fields.server->skin;
 		if (entnum > 0 && entnum <= svs.maxclients)
 		{
 			svent->priv.server->baseline.colormap = entnum;
@@ -1526,7 +1519,7 @@ void SV_CreateBaseline (void)
 		else
 		{
 			svent->priv.server->baseline.colormap = 0;
-			svent->priv.server->baseline.modelindex = svent->fields.server->modelindex;
+			svent->priv.server->baseline.modelindex = (int)svent->fields.server->modelindex;
 		}
 
 		large = false;
@@ -1573,7 +1566,7 @@ void SV_SaveSpawnparms (void)
 {
 	int		i, j;
 
-	svs.serverflags = prog->globals.server->serverflags;
+	svs.serverflags = (int)prog->globals.server->serverflags;
 
 	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 	{

@@ -189,7 +189,7 @@ static void VideoFrame( clvideo_t *video )
 	if( video->state == CLVIDEO_FIRSTFRAME )
 		destframe = 0;
 	else
-		destframe = (realtime - video->starttime) * video->framerate;
+		destframe = (int)((realtime - video->starttime) * video->framerate);
 	if( destframe < 0 )
 		destframe = 0;
 	if( video->framenum < destframe ) {

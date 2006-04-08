@@ -1424,19 +1424,19 @@ void Host_Spawn_f (void)
 	// send some stats
 	MSG_WriteByte (&host_client->netconnection->message, svc_updatestat);
 	MSG_WriteByte (&host_client->netconnection->message, STAT_TOTALSECRETS);
-	MSG_WriteLong (&host_client->netconnection->message, prog->globals.server->total_secrets);
+	MSG_WriteLong (&host_client->netconnection->message, (int)prog->globals.server->total_secrets);
 
 	MSG_WriteByte (&host_client->netconnection->message, svc_updatestat);
 	MSG_WriteByte (&host_client->netconnection->message, STAT_TOTALMONSTERS);
-	MSG_WriteLong (&host_client->netconnection->message, prog->globals.server->total_monsters);
+	MSG_WriteLong (&host_client->netconnection->message, (int)prog->globals.server->total_monsters);
 
 	MSG_WriteByte (&host_client->netconnection->message, svc_updatestat);
 	MSG_WriteByte (&host_client->netconnection->message, STAT_SECRETS);
-	MSG_WriteLong (&host_client->netconnection->message, prog->globals.server->found_secrets);
+	MSG_WriteLong (&host_client->netconnection->message, (int)prog->globals.server->found_secrets);
 
 	MSG_WriteByte (&host_client->netconnection->message, svc_updatestat);
 	MSG_WriteByte (&host_client->netconnection->message, STAT_MONSTERS);
-	MSG_WriteLong (&host_client->netconnection->message, prog->globals.server->killed_monsters);
+	MSG_WriteLong (&host_client->netconnection->message, (int)prog->globals.server->killed_monsters);
 
 	// send a fixangle
 	// Never send a roll angle, because savegames can catch the server
@@ -1507,7 +1507,7 @@ void Host_Kick_f (void)
 
 	if (Cmd_Argc() > 2 && strcmp(Cmd_Argv(1), "#") == 0)
 	{
-		i = atof(Cmd_Argv(2)) - 1;
+		i = (int)(atof(Cmd_Argv(2)) - 1);
 		if (i < 0 || i >= svs.maxclients || !(host_client = svs.clients + i)->active)
 			return;
 		byNumber = true;
@@ -1835,7 +1835,7 @@ void Host_Viewnext_f (void)
 	if (e->fields.server->frame >= m->numframes)
 		e->fields.server->frame = m->numframes - 1;
 
-	PrintFrameName (m, e->fields.server->frame);
+	PrintFrameName (m, (int)e->fields.server->frame);
 }
 
 /*
@@ -1863,7 +1863,7 @@ void Host_Viewprev_f (void)
 	if (e->fields.server->frame < 0)
 		e->fields.server->frame = 0;
 
-	PrintFrameName (m, e->fields.server->frame);
+	PrintFrameName (m, (int)e->fields.server->frame);
 }
 
 /*

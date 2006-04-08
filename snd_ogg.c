@@ -372,7 +372,7 @@ void OGG_CloseLibrary (void)
 */
 
 #define STREAM_BUFFER_DURATION 1.5f	// 1.5 sec
-#define STREAM_BUFFER_SIZE(format_ptr) (ceil (STREAM_BUFFER_DURATION * ((format_ptr)->speed * (format_ptr)->width * (format_ptr)->channels)))
+#define STREAM_BUFFER_SIZE(format_ptr) ((int)(ceil (STREAM_BUFFER_DURATION * ((format_ptr)->speed * (format_ptr)->width * (format_ptr)->channels))))
 
 // We work with 1 sec sequences, so this buffer must be able to contain
 // 1 sec of sound of the highest quality (48 KHz, 16 bit samples, stereo)
@@ -618,7 +618,7 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 	len = qov_pcm_total (&vf, -1) * vi->channels * 2;  // 16 bits => "* 2"
 
 	// Decide if we go for a stream or a simple PCM cache
-	buff_len = ceil (STREAM_BUFFER_DURATION * (shm->format.speed * 2 * vi->channels));
+	buff_len = (int)ceil (STREAM_BUFFER_DURATION * (shm->format.speed * 2 * vi->channels));
 	if (snd_streaming.integer && len > (ogg_int64_t)filesize + 3 * buff_len)
 	{
 		ogg_stream_persfx_t* per_sfx;
@@ -641,7 +641,7 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 		s->fetcher = &ogg_fetcher;
 		s->loopstart = -1;
 		s->flags |= SFXFLAG_STREAMED;
-		s->total_length = (size_t)len / per_sfx->format.channels / 2 * ((float)s->format.speed / per_sfx->format.speed);
+		s->total_length = (int)((size_t)len / per_sfx->format.channels / 2 * ((float)s->format.speed / per_sfx->format.speed));
 	}
 	else
 	{
@@ -667,7 +667,8 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 			done += ret;
 
 		// Calculate resampled length
-		len = (double)done * (double)shm->format.speed / (double)vi->rate;
+		// FIXME: is this using the correct rounding direction?  ceil may be better
+		len = (int)((double)done * (double)shm->format.speed / (double)vi->rate);
 
 		// Resample it
 		memsize = (size_t)len + sizeof (*sb) - sizeof (sb->data);

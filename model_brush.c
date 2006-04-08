@@ -971,9 +971,9 @@ void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cm
 
 static int Mod_Q1BSP_LightPoint_RecursiveBSPNode(model_t *model, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const mnode_t *node, float x, float y, float startz, float endz)
 {
-	int side, distz = endz - startz;
+	int side;
 	float front, back;
-	float mid;
+	float mid, distz = endz - startz;
 
 loc0:
 	if (!node->plane)
@@ -4996,12 +4996,12 @@ static void Mod_Q3BSP_LoadLightGrid(lump_t *l)
 	loadmodel->brushq3.num_lightgrid_scale[0] = 1.0f / loadmodel->brushq3.num_lightgrid_cellsize[0];
 	loadmodel->brushq3.num_lightgrid_scale[1] = 1.0f / loadmodel->brushq3.num_lightgrid_cellsize[1];
 	loadmodel->brushq3.num_lightgrid_scale[2] = 1.0f / loadmodel->brushq3.num_lightgrid_cellsize[2];
-	loadmodel->brushq3.num_lightgrid_imins[0] = ceil(loadmodel->brushq3.data_models->mins[0] * loadmodel->brushq3.num_lightgrid_scale[0]);
-	loadmodel->brushq3.num_lightgrid_imins[1] = ceil(loadmodel->brushq3.data_models->mins[1] * loadmodel->brushq3.num_lightgrid_scale[1]);
-	loadmodel->brushq3.num_lightgrid_imins[2] = ceil(loadmodel->brushq3.data_models->mins[2] * loadmodel->brushq3.num_lightgrid_scale[2]);
-	loadmodel->brushq3.num_lightgrid_imaxs[0] = floor(loadmodel->brushq3.data_models->maxs[0] * loadmodel->brushq3.num_lightgrid_scale[0]);
-	loadmodel->brushq3.num_lightgrid_imaxs[1] = floor(loadmodel->brushq3.data_models->maxs[1] * loadmodel->brushq3.num_lightgrid_scale[1]);
-	loadmodel->brushq3.num_lightgrid_imaxs[2] = floor(loadmodel->brushq3.data_models->maxs[2] * loadmodel->brushq3.num_lightgrid_scale[2]);
+	loadmodel->brushq3.num_lightgrid_imins[0] = (int)ceil(loadmodel->brushq3.data_models->mins[0] * loadmodel->brushq3.num_lightgrid_scale[0]);
+	loadmodel->brushq3.num_lightgrid_imins[1] = (int)ceil(loadmodel->brushq3.data_models->mins[1] * loadmodel->brushq3.num_lightgrid_scale[1]);
+	loadmodel->brushq3.num_lightgrid_imins[2] = (int)ceil(loadmodel->brushq3.data_models->mins[2] * loadmodel->brushq3.num_lightgrid_scale[2]);
+	loadmodel->brushq3.num_lightgrid_imaxs[0] = (int)floor(loadmodel->brushq3.data_models->maxs[0] * loadmodel->brushq3.num_lightgrid_scale[0]);
+	loadmodel->brushq3.num_lightgrid_imaxs[1] = (int)floor(loadmodel->brushq3.data_models->maxs[1] * loadmodel->brushq3.num_lightgrid_scale[1]);
+	loadmodel->brushq3.num_lightgrid_imaxs[2] = (int)floor(loadmodel->brushq3.data_models->maxs[2] * loadmodel->brushq3.num_lightgrid_scale[2]);
 	loadmodel->brushq3.num_lightgrid_isize[0] = loadmodel->brushq3.num_lightgrid_imaxs[0] - loadmodel->brushq3.num_lightgrid_imins[0] + 1;
 	loadmodel->brushq3.num_lightgrid_isize[1] = loadmodel->brushq3.num_lightgrid_imaxs[1] - loadmodel->brushq3.num_lightgrid_imins[1] + 1;
 	loadmodel->brushq3.num_lightgrid_isize[2] = loadmodel->brushq3.num_lightgrid_imaxs[2] - loadmodel->brushq3.num_lightgrid_imins[2] + 1;

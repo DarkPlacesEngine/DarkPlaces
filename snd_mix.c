@@ -457,7 +457,7 @@ qboolean SND_PaintChannel (channel_t *ch, int count)
 	if (ch->flags & CHANNELFLAG_FULLVOLUME)
 		snd_vol = 256;
 	else
-		snd_vol = volume.value * 256;
+		snd_vol = (int)(volume.value * 256);
 
 	for (i = 0;i < SND_LISTENERS;i++)
 		vol[i] = ch->listener_volume[i] * snd_vol;

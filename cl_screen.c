@@ -108,7 +108,7 @@ void SCR_DrawCenterString (void)
 
 // the finale prints the characters one at a time
 	if (cl.intermission)
-		remaining = scr_printspeed.value * (cl.time - scr_centertime_start);
+		remaining = (int)(scr_printspeed.value * (cl.time - scr_centertime_start));
 	else
 		remaining = 9999;
 
@@ -119,7 +119,7 @@ void SCR_DrawCenterString (void)
 		return;
 
 	if (scr_center_lines <= 4)
-		y = vid_conheight.integer*0.35;
+		y = (int)(vid_conheight.integer*0.35);
 	else
 		y = 48;
 
@@ -385,7 +385,7 @@ void SCR_DrawConsole (void)
 		Con_DrawConsole (vid_conheight.integer);
 	}
 	else if (scr_con_current)
-		Con_DrawConsole (scr_con_current);
+		Con_DrawConsole ((int)scr_con_current);
 	else
 	{
 		con_vislines = 0;
@@ -891,7 +891,7 @@ void SCR_CaptureVideo(void)
 		if (cls.capturevideo_soundfile)
 		{
 			// preserve sound sync by duplicating frames when running slow
-			newframenum = (Sys_DoubleTime() - cls.capturevideo_starttime) * cls.capturevideo_framerate;
+			newframenum = (int)((Sys_DoubleTime() - cls.capturevideo_starttime) * cls.capturevideo_framerate);
 		}
 		else
 			newframenum = cls.capturevideo_frame + 1;
@@ -1183,19 +1183,19 @@ void SCR_DrawScreen (void)
 
 		if (r_stereo_sidebyside.integer)
 		{
-			r_refdef.width = vid.width * size / 2.5;
-			r_refdef.height = vid.height * size / 2.5 * (1 - bound(0, r_letterbox.value, 100) / 100);
-			r_refdef.x = (vid.width - r_refdef.width * 2.5) * 0.5;
-			r_refdef.y = (vid.height - r_refdef.height)/2;
+			r_refdef.width = (int)(vid.width * size / 2.5);
+			r_refdef.height = (int)(vid.height * size / 2.5 * (1 - bound(0, r_letterbox.value, 100) / 100));
+			r_refdef.x = (int)((vid.width - r_refdef.width * 2.5) * 0.5);
+			r_refdef.y = (int)((vid.height - r_refdef.height)/2);
 			if (r_stereo_side)
-				r_refdef.x += r_refdef.width * 1.5;
+				r_refdef.x += (int)(r_refdef.width * 1.5);
 		}
 		else
 		{
-			r_refdef.width = vid.width * size;
-			r_refdef.height = vid.height * size * (1 - bound(0, r_letterbox.value, 100) / 100);
-			r_refdef.x = (vid.width - r_refdef.width)/2;
-			r_refdef.y = (vid.height - r_refdef.height)/2;
+			r_refdef.width = (int)(vid.width * size);
+			r_refdef.height = (int)(vid.height * size * (1 - bound(0, r_letterbox.value, 100) / 100));
+			r_refdef.x = (int)((vid.width - r_refdef.width)/2);
+			r_refdef.y = (int)((vid.height - r_refdef.height)/2);
 		}
 
 		// LordHavoc: viewzoom (zoom in for sniper rifles, etc)
@@ -1219,9 +1219,9 @@ void SCR_DrawScreen (void)
 		{
 			float sizex = bound(10, scr_zoomwindow_viewsizex.value, 100) / 100.0;
 			float sizey = bound(10, scr_zoomwindow_viewsizey.value, 100) / 100.0;
-			r_refdef.width = vid.width * sizex;
-			r_refdef.height = vid.height * sizey;
-			r_refdef.x = (vid.width - r_refdef.width)/2;
+			r_refdef.width = (int)(vid.width * sizex);
+			r_refdef.height = (int)(vid.height * sizey);
+			r_refdef.x = (int)((vid.width - r_refdef.width)/2);
 			r_refdef.y = 0;
 
 			r_refdef.frustum_y = tan(scr_zoomwindow_fov.value * cl.viewzoom * M_PI / 360.0) * (3.0/4.0);

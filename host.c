@@ -802,10 +802,10 @@ void _Host_Frame (float time)
 
 	if (host_speeds.integer)
 	{
-		pass1 = (time1 - time3)*1000000;
+		pass1 = (int)((time1 - time3)*1000000);
 		time3 = Sys_DoubleTime();
-		pass2 = (time2 - time1)*1000000;
-		pass3 = (time3 - time2)*1000000;
+		pass2 = (int)((time2 - time1)*1000000);
+		pass3 = (int)((time3 - time2)*1000000);
 		Con_Printf("%6ius total %6ius server %6ius gfx %6ius snd\n",
 					pass1+pass2+pass3, pass1, pass2, pass3);
 	}
@@ -836,7 +836,7 @@ void Host_Frame (float time)
 	if (timecount < 1000)
 		return;
 
-	m = timetotal*1000/timecount;
+	m = (int)(timetotal*1000/timecount);
 	timecount = 0;
 	timetotal = 0;
 	c = 0;

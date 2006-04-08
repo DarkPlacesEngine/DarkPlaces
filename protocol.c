@@ -194,11 +194,11 @@ void EntityFrameQuake_ReadEntity(int bits)
 	if (cls.protocol == PROTOCOL_NEHAHRAMOVIE && (bits & U_EXTEND1))
 	{
 		// LordHavoc: evil format
-		int i = MSG_ReadFloat();
-		int j = MSG_ReadFloat() * 255.0f;
+		int i = (int)MSG_ReadFloat();
+		int j = (int)(MSG_ReadFloat() * 255.0f);
 		if (i == 2)
 		{
-			i = MSG_ReadFloat();
+			i = (int)MSG_ReadFloat();
 			if (i)
 				s.effects |= EF_FULLBRIGHT;
 		}
@@ -268,7 +268,7 @@ void EntityFrameCSQC_InitClientVersions (int client, qboolean clear)
 		Mem_Free(sv2csqcents_version[client]);
 		sv2csqcents_version[client] = NULL;
 	}
-	sv2csqcents_version[client] = Mem_Alloc(sv2csqc, MAX_EDICTS);
+	sv2csqcents_version[client] = (unsigned char *)Mem_Alloc(sv2csqc, MAX_EDICTS);
 	memset(sv2csqcents_version[client], 0, MAX_EDICTS);
 }
 

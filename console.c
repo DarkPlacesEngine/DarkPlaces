@@ -888,7 +888,7 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 		return false;
 	if (t->numfilenames > 1)
 		Con_Printf("^1 %i maps found :\n", t->numfilenames);
-	len = Z_Malloc(t->numfilenames);
+	len = (unsigned char *)Z_Malloc(t->numfilenames);
 	min = 666;
 	for(max=i=0;i<t->numfilenames;i++)
 	{
@@ -956,7 +956,7 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 			if (!entities && lumplen >= 10)
 			{
 				FS_Seek(f, lumpofs, SEEK_SET);
-				entities = Z_Malloc(lumplen + 1);
+				entities = (char *)Z_Malloc(lumplen + 1);
 				FS_Read(f, entities, lumplen);
 			}
 			if (entities)

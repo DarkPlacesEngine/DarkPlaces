@@ -595,8 +595,8 @@ void Sbar_SoloScoreboard (void)
 	}
 
 // time
-	minutes = cl.time / 60;
-	seconds = cl.time - 60*minutes;
+	minutes = (int)(cl.time / 60);
+	seconds = (int)(cl.time - 60*minutes);
 	tens = seconds / 10;
 	units = seconds - 10*tens;
 	sprintf (str,"Time :%3i:%i%i", minutes, tens, units);
@@ -1181,8 +1181,8 @@ void Sbar_Draw (void)
 				kickoffset[0] = (v_dmg_time/v_kicktime.value*v_dmg_roll) * 10 * scale;
 				kickoffset[1] = (v_dmg_time/v_kicktime.value*v_dmg_pitch) * 10 * scale;
 			}
-			sbar_x = (vid_conwidth.integer - 256 * scale)/2 + kickoffset[0];
-			sbar_y = (vid_conheight.integer - 256 * scale)/2 + kickoffset[1];
+			sbar_x = (int)((vid_conwidth.integer - 256 * scale)/2 + kickoffset[0]);
+			sbar_y = (int)((vid_conheight.integer - 256 * scale)/2 + kickoffset[1]);
 			// left1 16, 48 : 126 -66
 			// left2 16, 128 : 196 -66
 			// right 176, 48 : 196 -136
@@ -1431,12 +1431,12 @@ void Sbar_DeathmatchOverlay (void)
 	{
 		// show team scores first
 		for (i = 0;i < teamlines && y < vid_conheight.integer;i++)
-			y += Sbar_PrintScoreboardItem((teams + teamsort[i]), x, y);
+			y += (int)Sbar_PrintScoreboardItem((teams + teamsort[i]), x, y);
 		y += 5;
 	}
 
 	for (i = 0;i < scoreboardlines && y < vid_conheight.integer;i++)
-		y += Sbar_PrintScoreboardItem(cl.scores + fragsort[i], x, y);
+		y += (int)Sbar_PrintScoreboardItem(cl.scores + fragsort[i], x, y);
 }
 
 /*
@@ -1475,12 +1475,12 @@ void Sbar_MiniDeathmatchOverlay (int x, int y)
 	if (gamemode == GAME_TRANSFUSION)
 	{
 		for (;i < scoreboardlines && x < vid_conwidth.integer;i++)
-			x += 128 + Sbar_PrintScoreboardItem(cl.scores + fragsort[i], x, y);
+			x += 128 + (int)Sbar_PrintScoreboardItem(cl.scores + fragsort[i], x, y);
 	}
 	else
 	{
 		for (;i < scoreboardlines && y < vid_conheight.integer;i++)
-			y += Sbar_PrintScoreboardItem(cl.scores + fragsort[i], x, y);
+			y += (int)Sbar_PrintScoreboardItem(cl.scores + fragsort[i], x, y);
 	}
 }
 
@@ -1508,9 +1508,9 @@ void Sbar_IntermissionOverlay (void)
 	DrawQ_Pic (sbar_x + 0, sbar_y + 56, Draw_CachePic("gfx/inter", true), 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
 
 // time
-	dig = cl.completed_time/60;
+	dig = (int)(cl.completed_time/60);
 	Sbar_DrawNum (160, 64, dig, 3, 0);
-	num = cl.completed_time - dig*60;
+	num = (int)(cl.completed_time - dig*60);
 	if (gamemode != GAME_NEXUIZ)
 		Sbar_DrawPic (234,64,sb_colon);
 	Sbar_DrawPic (246,64,sb_nums[0][num/10]);

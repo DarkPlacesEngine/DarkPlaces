@@ -1044,7 +1044,7 @@ int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, const char *basename, int
 					break;
 			if (i < width * height * 4)
 			{
-				unsigned char *fogpixels = Mem_Alloc(loadmodel->mempool, width * height * 4);
+				unsigned char *fogpixels = (unsigned char *)Mem_Alloc(loadmodel->mempool, width * height * 4);
 				memcpy(fogpixels, skindata, width * height * 4);
 				for (i = 0;i < width * height * 4;i += 4)
 					fogpixels[i] = fogpixels[i+1] = fogpixels[i+2] = 255;

@@ -105,7 +105,7 @@ void CDAudio_SysSetVolume (float volume)
 	if (cdfile == -1)
 		return;
 
-	vol.channel0 = vol.channel1 = volume * 255;
+	vol.channel0 = vol.channel1 = (__u8)(volume * 255);
 	vol.channel2 = vol.channel3 = 0;
 
 	if (ioctl (cdfile, CDROMVOLCTRL, &vol) == -1)

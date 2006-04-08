@@ -218,7 +218,7 @@ static void Mod_MDLMD2MD3_TraceBox(model_t *model, int frame, trace_t *trace, co
 		if (vertex3f)
 			Z_Free(vertex3f);
 		maxvertices = (model->surfmesh.num_vertices + 255) & ~255;
-		vertex3f = Z_Malloc(maxvertices * sizeof(float[3]));
+		vertex3f = (float *)Z_Malloc(maxvertices * sizeof(float[3]));
 	}
 	if (VectorLength2(boxmins) + VectorLength2(boxmaxs) == 0)
 	{
@@ -259,7 +259,7 @@ static void Mod_MDLMD2MD3_TraceBox(model_t *model, int frame, trace_t *trace, co
 				if (vertex3f)
 					Z_Free(vertex3f);
 				maxvertices = (model->surfmesh.num_vertices + 255) & ~255;
-				vertex3f = Z_Malloc(maxvertices * sizeof(float[3]));
+				vertex3f = (float *)Z_Malloc(maxvertices * sizeof(float[3]));
 			}
 			Mod_Alias_GetMesh_Vertex3f(model, frameblend, vertex3f);
 			Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, model->surfmesh.num_triangles, model->surfmesh.data_element3i, vertex3f, SUPERCONTENTS_SOLID, 0, surface->texture, segmentmins, segmentmaxs);

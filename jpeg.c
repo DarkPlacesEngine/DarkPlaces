@@ -692,7 +692,7 @@ qboolean JPEG_SaveImage_preflipped (const char *filename, int width, int height,
 	cinfo.in_color_space = JCS_RGB;
 	cinfo.input_components = 3;
 	qjpeg_set_defaults (&cinfo);
-	qjpeg_set_quality (&cinfo, scr_screenshot_jpeg_quality.value * 100, TRUE);
+	qjpeg_set_quality (&cinfo, (int)(scr_screenshot_jpeg_quality.value * 100), TRUE);
 	qjpeg_start_compress (&cinfo, true);
 
 	// Compress each scanline

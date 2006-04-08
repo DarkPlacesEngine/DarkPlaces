@@ -170,7 +170,7 @@ void PNG_CloseLibrary (void)
 #define PNG_INFO_tRNS 0x0010
 
 // this struct is only used for status information during loading
-struct
+static struct
 {
 	const unsigned char	*tmpBuf;
 	int		tmpBuflength;
@@ -243,13 +243,17 @@ unsigned char *PNG_LoadImage (const unsigned char *raw, int filesize, int matchw
 
 	if(qpng_sig_cmp(raw, 0, filesize))
 		return NULL;
-	png = qpng_create_read_struct(PNG_LIBPNG_VER_STRING, 0, PNG_error_fn, PNG_warning_fn);
+	png = (void *)qpng_create_read_struct(PNG_LIBPNG_VER_STRING, 0, (void *)PNG_error_fn, (void *)PNG_warning_fn);
 	if(!png)
 		return NULL;
 
 	// NOTE: this relies on jmp_buf being the first thing in the png structure
 	// created by libpng! (this is correct for libpng 1.2.x)
+#ifdef __cplusplus
+	if (setjmp((__jmp_buf_tag *)png))
+#else
 	if (setjmp(png))
+#endif
 	{
 		qpng_destroy_read_struct(&png, &pnginfo, 0);
 		return NULL;
@@ -276,7 +280,7 @@ unsigned char *PNG_LoadImage (const unsigned char *raw, int filesize, int matchw
 	//my_png.Interlace	= 0;
 	//my_png.Compression	= 0;
 	//my_png.Filter		= 0;
-	qpng_set_read_fn(png, ioBuffer, PNG_fReadData);
+	qpng_set_read_fn(png, ioBuffer, (void *)PNG_fReadData);
 	qpng_read_info(png, pnginfo);
 	qpng_get_IHDR(png, pnginfo, &my_png.Width, &my_png.Height,&my_png.BitDepth, &my_png.ColorType, &my_png.Interlace, &my_png.Compression, &my_png.Filter);
 	if ((matchwidth && my_png.Width != (unsigned int)matchwidth) || (matchheight && my_png.Height != (unsigned int)matchheight))
@@ -307,10 +311,10 @@ unsigned char *PNG_LoadImage (const unsigned char *raw, int filesize, int matchw
 	my_png.FRowBytes = qpng_get_rowbytes(png, pnginfo);
 	my_png.BytesPerPixel = qpng_get_channels(png, pnginfo);
 
-	my_png.FRowPtrs = Mem_Alloc(tempmempool, my_png.Height * sizeof(*my_png.FRowPtrs));
+	my_png.FRowPtrs = (unsigned char **)Mem_Alloc(tempmempool, my_png.Height * sizeof(*my_png.FRowPtrs));
 	if (my_png.FRowPtrs)
 	{
-		my_png.Data = Mem_Alloc(tempmempool, my_png.Height * my_png.FRowBytes);
+		my_png.Data = (unsigned char *)Mem_Alloc(tempmempool, my_png.Height * my_png.FRowBytes);
 		if(my_png.Data)
 		{
 			for(y = 0;y < my_png.Height;y++)

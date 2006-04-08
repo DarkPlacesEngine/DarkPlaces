@@ -324,7 +324,7 @@ void PF_particle (void)
 	dir = PRVM_G_VECTOR(OFS_PARM1);
 	color = PRVM_G_FLOAT(OFS_PARM2);
 	count = PRVM_G_FLOAT(OFS_PARM3);
-	SV_StartParticle (org, dir, color, count);
+	SV_StartParticle (org, dir, (int)color, (int)count);
 }
 
 
@@ -369,8 +369,8 @@ void PF_ambientsound (void)
 	else
 		MSG_WriteByte (&sv.signon, soundnum);
 
-	MSG_WriteByte (&sv.signon, vol*255);
-	MSG_WriteByte (&sv.signon, attenuation*64);
+	MSG_WriteByte (&sv.signon, (int)(vol*255));
+	MSG_WriteByte (&sv.signon, (int)(attenuation*64));
 
 }
 
@@ -398,9 +398,9 @@ void PF_sound (void)
 	float attenuation;
 
 	entity = PRVM_G_EDICT(OFS_PARM0);
-	channel = PRVM_G_FLOAT(OFS_PARM1);
+	channel = (int)PRVM_G_FLOAT(OFS_PARM1);
 	sample = PRVM_G_STRING(OFS_PARM2);
-	volume = PRVM_G_FLOAT(OFS_PARM3) * 255;
+	volume = (int)(PRVM_G_FLOAT(OFS_PARM3) * 255);
 	attenuation = PRVM_G_FLOAT(OFS_PARM4);
 
 	if (volume < 0 || volume > 255)
@@ -438,7 +438,7 @@ void PF_traceline (void)
 
 	v1 = PRVM_G_VECTOR(OFS_PARM0);
 	v2 = PRVM_G_VECTOR(OFS_PARM1);
-	move = PRVM_G_FLOAT(OFS_PARM2);
+	move = (int)PRVM_G_FLOAT(OFS_PARM2);
 	ent = PRVM_G_EDICT(OFS_PARM3);
 
 	if (IS_NAN(v1[0]) || IS_NAN(v1[1]) || IS_NAN(v1[2]) || IS_NAN(v2[0]) || IS_NAN(v1[2]) || IS_NAN(v2[2]))
@@ -504,7 +504,7 @@ void PF_tracebox (void)
 	m1 = PRVM_G_VECTOR(OFS_PARM1);
 	m2 = PRVM_G_VECTOR(OFS_PARM2);
 	v2 = PRVM_G_VECTOR(OFS_PARM3);
-	move = PRVM_G_FLOAT(OFS_PARM4);
+	move = (int)PRVM_G_FLOAT(OFS_PARM4);
 	ent = PRVM_G_EDICT(OFS_PARM5);
 
 	if (IS_NAN(v1[0]) || IS_NAN(v1[1]) || IS_NAN(v1[2]) || IS_NAN(v2[0]) || IS_NAN(v1[2]) || IS_NAN(v2[2]))
@@ -919,7 +919,7 @@ void PF_lightstyle (void)
 	client_t	*client;
 	int			j;
 
-	style = PRVM_G_FLOAT(OFS_PARM0);
+	style = (int)PRVM_G_FLOAT(OFS_PARM0);
 	val = PRVM_G_STRING(OFS_PARM1);
 
 	if( (unsigned) style >= MAX_LIGHTSTYLES ) {
@@ -1183,7 +1183,7 @@ sizebuf_t *WriteDest (void)
 	prvm_edict_t	*ent;
 	extern sizebuf_t *sv2csqcbuf;
 
-	dest = PRVM_G_FLOAT(OFS_PARM0);
+	dest = (int)PRVM_G_FLOAT(OFS_PARM0);
 	switch (dest)
 	{
 	case MSG_BROADCAST:
@@ -1217,22 +1217,22 @@ sizebuf_t *WriteDest (void)
 
 void PF_WriteByte (void)
 {
-	MSG_WriteByte (WriteDest(), PRVM_G_FLOAT(OFS_PARM1));
+	MSG_WriteByte (WriteDest(), (int)PRVM_G_FLOAT(OFS_PARM1));
 }
 
 void PF_WriteChar (void)
 {
-	MSG_WriteChar (WriteDest(), PRVM_G_FLOAT(OFS_PARM1));
+	MSG_WriteChar (WriteDest(), (int)PRVM_G_FLOAT(OFS_PARM1));
 }
 
 void PF_WriteShort (void)
 {
-	MSG_WriteShort (WriteDest(), PRVM_G_FLOAT(OFS_PARM1));
+	MSG_WriteShort (WriteDest(), (int)PRVM_G_FLOAT(OFS_PARM1));
 }
 
 void PF_WriteLong (void)
 {
-	MSG_WriteLong (WriteDest(), PRVM_G_FLOAT(OFS_PARM1));
+	MSG_WriteLong (WriteDest(), (int)PRVM_G_FLOAT(OFS_PARM1));
 }
 
 void PF_WriteAngle (void)
@@ -1281,18 +1281,18 @@ void PF_makestatic (void)
 	if (large)
 	{
 		MSG_WriteByte (&sv.signon,svc_spawnstatic2);
-		MSG_WriteShort (&sv.signon, ent->fields.server->modelindex);
-		MSG_WriteShort (&sv.signon, ent->fields.server->frame);
+		MSG_WriteShort (&sv.signon, (int)ent->fields.server->modelindex);
+		MSG_WriteShort (&sv.signon, (int)ent->fields.server->frame);
 	}
 	else
 	{
 		MSG_WriteByte (&sv.signon,svc_spawnstatic);
-		MSG_WriteByte (&sv.signon, ent->fields.server->modelindex);
-		MSG_WriteByte (&sv.signon, ent->fields.server->frame);
+		MSG_WriteByte (&sv.signon, (int)ent->fields.server->modelindex);
+		MSG_WriteByte (&sv.signon, (int)ent->fields.server->frame);
 	}
 
-	MSG_WriteByte (&sv.signon, ent->fields.server->colormap);
-	MSG_WriteByte (&sv.signon, ent->fields.server->skin);
+	MSG_WriteByte (&sv.signon, (int)ent->fields.server->colormap);
+	MSG_WriteByte (&sv.signon, (int)ent->fields.server->skin);
 	for (i=0 ; i<3 ; i++)
 	{
 		MSG_WriteCoord(&sv.signon, ent->fields.server->origin[i], sv.protocol);
@@ -1391,7 +1391,7 @@ void VM_AutoSentStats_Clear (void)
 {
 	if(vm_autosentstats)
 	{
-		free(vm_autosentstats);
+		Z_Free(vm_autosentstats);
 		vm_autosentstats = NULL;
 		vm_autosentstats_last = -1;
 	}
@@ -1473,7 +1473,7 @@ void VM_SV_WriteAutoSentStats (client_t *client, prvm_edict_t *ent, sizebuf_t *m
 			break;
 		//integer
 		case 8:
-			v = PRVM_E_FLOAT(ent, vm_autosentstats[i].fieldoffset);	//[515]: use PRVM_E_INT ?
+			v = (int)PRVM_E_FLOAT(ent, vm_autosentstats[i].fieldoffset);	//[515]: use PRVM_E_INT ?
 			if (!send)
 				stats[i+32] = v;
 			else
@@ -1499,15 +1499,15 @@ void PF_SV_AddStat (void)
 
 	if(!vm_autosentstats)
 	{
-		vm_autosentstats = malloc((MAX_CL_STATS-32) * sizeof(autosentstat_t));
+		vm_autosentstats = (autosentstat_t *)Z_Malloc((MAX_CL_STATS-32) * sizeof(autosentstat_t));
 		if(!vm_autosentstats)
 		{
 			Con_Printf("PF_SV_AddStat: not enough memory\n");
 			return;
 		}
 	}
-	i		= PRVM_G_FLOAT(OFS_PARM0);
-	type	= PRVM_G_FLOAT(OFS_PARM1);
+	i		= (int)PRVM_G_FLOAT(OFS_PARM0);
+	type	= (int)PRVM_G_FLOAT(OFS_PARM1);
 	off		= PRVM_G_INT  (OFS_PARM2);
 	i -= 32;
 
@@ -1574,7 +1574,7 @@ void PF_setcolor (void)
 	prvm_eval_t *val;
 
 	entnum = PRVM_G_EDICTNUM(OFS_PARM0);
-	i = PRVM_G_FLOAT(OFS_PARM1);
+	i = (int)PRVM_G_FLOAT(OFS_PARM1);
 
 	if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
 	{
@@ -1618,7 +1618,7 @@ void PF_effect (void)
 	i = SV_ModelIndex(s, 1);
 	if (!i)
 		PF_WARNING("effect: model not precached\n");
-	SV_StartEffect(PRVM_G_VECTOR(OFS_PARM0), i, PRVM_G_FLOAT(OFS_PARM2), PRVM_G_FLOAT(OFS_PARM3), PRVM_G_FLOAT(OFS_PARM4));
+	SV_StartEffect(PRVM_G_VECTOR(OFS_PARM0), i, (int)PRVM_G_FLOAT(OFS_PARM2), (int)PRVM_G_FLOAT(OFS_PARM3), (int)PRVM_G_FLOAT(OFS_PARM4));
 }
 
 void PF_te_blood (void)
@@ -1656,7 +1656,7 @@ void PF_te_bloodshower (void)
 	// speed
 	MSG_WriteCoord(&sv.datagram, PRVM_G_FLOAT(OFS_PARM2), sv.protocol);
 	// count
-	MSG_WriteShort(&sv.datagram, bound(0, PRVM_G_FLOAT(OFS_PARM3), 65535));
+	MSG_WriteShort(&sv.datagram, (int)bound(0, PRVM_G_FLOAT(OFS_PARM3), 65535));
 }
 
 void PF_te_explosionrgb (void)
@@ -1692,9 +1692,9 @@ void PF_te_particlecube (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2)[2], sv.protocol);
 	// count
-	MSG_WriteShort(&sv.datagram, bound(0, PRVM_G_FLOAT(OFS_PARM3), 65535));
+	MSG_WriteShort(&sv.datagram, (int)bound(0, PRVM_G_FLOAT(OFS_PARM3), 65535));
 	// color
-	MSG_WriteByte(&sv.datagram, PRVM_G_FLOAT(OFS_PARM4));
+	MSG_WriteByte(&sv.datagram, (int)PRVM_G_FLOAT(OFS_PARM4));
 	// gravity true/false
 	MSG_WriteByte(&sv.datagram, ((int) PRVM_G_FLOAT(OFS_PARM5)) != 0);
 	// randomvel
@@ -1720,9 +1720,9 @@ void PF_te_particlerain (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2)[2], sv.protocol);
 	// count
-	MSG_WriteShort(&sv.datagram, bound(0, PRVM_G_FLOAT(OFS_PARM3), 65535));
+	MSG_WriteShort(&sv.datagram, (int)bound(0, PRVM_G_FLOAT(OFS_PARM3), 65535));
 	// color
-	MSG_WriteByte(&sv.datagram, PRVM_G_FLOAT(OFS_PARM4));
+	MSG_WriteByte(&sv.datagram, (int)PRVM_G_FLOAT(OFS_PARM4));
 }
 
 void PF_te_particlesnow (void)
@@ -1744,9 +1744,9 @@ void PF_te_particlesnow (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM2)[2], sv.protocol);
 	// count
-	MSG_WriteShort(&sv.datagram, bound(0, PRVM_G_FLOAT(OFS_PARM3), 65535));
+	MSG_WriteShort(&sv.datagram, (int)bound(0, PRVM_G_FLOAT(OFS_PARM3), 65535));
 	// color
-	MSG_WriteByte(&sv.datagram, PRVM_G_FLOAT(OFS_PARM4));
+	MSG_WriteByte(&sv.datagram, (int)PRVM_G_FLOAT(OFS_PARM4));
 }
 
 void PF_te_spark (void)
@@ -1828,13 +1828,13 @@ void PF_te_customflash (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
 	// radius
-	MSG_WriteByte(&sv.datagram, bound(0, PRVM_G_FLOAT(OFS_PARM1) / 8 - 1, 255));
+	MSG_WriteByte(&sv.datagram, (int)bound(0, PRVM_G_FLOAT(OFS_PARM1) / 8 - 1, 255));
 	// lifetime
-	MSG_WriteByte(&sv.datagram, bound(0, PRVM_G_FLOAT(OFS_PARM2) * 256 - 1, 255));
+	MSG_WriteByte(&sv.datagram, (int)bound(0, PRVM_G_FLOAT(OFS_PARM2) * 256 - 1, 255));
 	// color
-	MSG_WriteByte(&sv.datagram, bound(0, PRVM_G_VECTOR(OFS_PARM3)[0] * 255, 255));
-	MSG_WriteByte(&sv.datagram, bound(0, PRVM_G_VECTOR(OFS_PARM3)[1] * 255, 255));
-	MSG_WriteByte(&sv.datagram, bound(0, PRVM_G_VECTOR(OFS_PARM3)[2] * 255, 255));
+	MSG_WriteByte(&sv.datagram, (int)bound(0, PRVM_G_VECTOR(OFS_PARM3)[0] * 255, 255));
+	MSG_WriteByte(&sv.datagram, (int)bound(0, PRVM_G_VECTOR(OFS_PARM3)[1] * 255, 255));
+	MSG_WriteByte(&sv.datagram, (int)bound(0, PRVM_G_VECTOR(OFS_PARM3)[2] * 255, 255));
 }
 
 void PF_te_gunshot (void)
@@ -1936,8 +1936,8 @@ void PF_te_explosion2 (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM0)[2], sv.protocol);
 	// color
-	MSG_WriteByte(&sv.datagram, PRVM_G_FLOAT(OFS_PARM1));
-	MSG_WriteByte(&sv.datagram, PRVM_G_FLOAT(OFS_PARM2));
+	MSG_WriteByte(&sv.datagram, (int)PRVM_G_FLOAT(OFS_PARM1));
+	MSG_WriteByte(&sv.datagram, (int)PRVM_G_FLOAT(OFS_PARM2));
 }
 
 void PF_te_lightning1 (void)
@@ -2026,7 +2026,7 @@ void PF_te_flamejet (void)
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM1)[1], sv.protocol);
 	MSG_WriteCoord(&sv.datagram, PRVM_G_VECTOR(OFS_PARM1)[2], sv.protocol);
 	// count
-	MSG_WriteByte(&sv.datagram, PRVM_G_FLOAT(OFS_PARM2));
+	MSG_WriteByte(&sv.datagram, (int)PRVM_G_FLOAT(OFS_PARM2));
 }
 
 void clippointtosurface(model_t *model, msurface_t *surface, vec3_t p, vec3_t out)
@@ -2070,7 +2070,7 @@ static model_t *getmodel(prvm_edict_t *ed)
 	int modelindex;
 	if (!ed || ed->priv.server->free)
 		return NULL;
-	modelindex = ed->fields.server->modelindex;
+	modelindex = (int)ed->fields.server->modelindex;
 	if (modelindex < 1 || modelindex >= MAX_MODELS)
 		return NULL;
 	return sv.models[modelindex];
@@ -2090,7 +2090,7 @@ void PF_getsurfacenumpoints(void)
 	model_t *model;
 	msurface_t *surface;
 	// return 0 if no such surface
-	if (!(model = getmodel(PRVM_G_EDICT(OFS_PARM0))) || !(surface = getsurface(model, PRVM_G_FLOAT(OFS_PARM1))))
+	if (!(model = getmodel(PRVM_G_EDICT(OFS_PARM0))) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = 0;
 		return;
@@ -2108,10 +2108,10 @@ void PF_getsurfacepoint(void)
 	int pointnum;
 	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
 	ed = PRVM_G_EDICT(OFS_PARM0);
-	if (!(model = getmodel(ed)) || !(surface = getsurface(model, PRVM_G_FLOAT(OFS_PARM1))))
+	if (!(model = getmodel(ed)) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
 		return;
 	// note: this (incorrectly) assumes it is a simple polygon
-	pointnum = PRVM_G_FLOAT(OFS_PARM2);
+	pointnum = (int)PRVM_G_FLOAT(OFS_PARM2);
 	if (pointnum < 0 || pointnum >= surface->num_vertices)
 		return;
 	// FIXME: implement rotation/scaling
@@ -2124,7 +2124,7 @@ void PF_getsurfacenormal(void)
 	msurface_t *surface;
 	vec3_t normal;
 	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
-	if (!(model = getmodel(PRVM_G_EDICT(OFS_PARM0))) || !(surface = getsurface(model, PRVM_G_FLOAT(OFS_PARM1))))
+	if (!(model = getmodel(PRVM_G_EDICT(OFS_PARM0))) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
 		return;
 	// FIXME: implement rotation/scaling
 	// note: this (incorrectly) assumes it is a simple polygon
@@ -2140,7 +2140,7 @@ void PF_getsurfacetexture(void)
 	model_t *model;
 	msurface_t *surface;
 	PRVM_G_INT(OFS_RETURN) = 0;
-	if (!(model = getmodel(PRVM_G_EDICT(OFS_PARM0))) || !(surface = getsurface(model, PRVM_G_FLOAT(OFS_PARM1))))
+	if (!(model = getmodel(PRVM_G_EDICT(OFS_PARM0))) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
 		return;
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(surface->texture->name);
 }
@@ -2201,7 +2201,7 @@ void PF_getsurfaceclippedpoint(void)
 	vec3_t p, out;
 	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
 	ed = PRVM_G_EDICT(OFS_PARM0);
-	if (!(model = getmodel(ed)) || !(surface = getsurface(model, PRVM_G_FLOAT(OFS_PARM1))))
+	if (!(model = getmodel(ed)) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
 		return;
 	// FIXME: implement rotation/scaling
 	VectorSubtract(PRVM_G_VECTOR(OFS_PARM2), ed->fields.server->origin, p);
@@ -2261,7 +2261,7 @@ void PF_setattachment (void)
 		modelindex = (int)tagentity->fields.server->modelindex;
 		if (modelindex >= 0 && modelindex < MAX_MODELS && (model = sv.models[modelindex]))
 		{
-			v->_float = Mod_Alias_GetTagIndexForName(model, tagentity->fields.server->skin, tagname);
+			v->_float = Mod_Alias_GetTagIndexForName(model, (int)tagentity->fields.server->skin, tagname);
 			if (v->_float == 0)
 				Con_DPrintf("setattachment(edict %i, edict %i, string \"%s\"): tried to find tag named \"%s\" on entity %i (model \"%s\") but could not find it\n", PRVM_NUM_FOR_EDICT(e), PRVM_NUM_FOR_EDICT(tagentity), tagname, tagname, PRVM_NUM_FOR_EDICT(tagentity), model->name);
 		}
@@ -2278,12 +2278,12 @@ int SV_GetTagIndex (prvm_edict_t *e, const char *tagname)
 	int i;
 	model_t *model;
 
-	i = e->fields.server->modelindex;
+	i = (int)e->fields.server->modelindex;
 	if (i < 1 || i >= MAX_MODELS)
 		return -1;
 	model = sv.models[i];
 
-	return Mod_Alias_GetTagIndexForName(model, e->fields.server->skin, tagname);
+	return Mod_Alias_GetTagIndexForName(model, (int)e->fields.server->skin, tagname);
 };
 
 void SV_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatrix)
@@ -2303,7 +2303,7 @@ int SV_GetEntityLocalTagMatrix(prvm_edict_t *ent, int tagindex, matrix4x4_t *out
 	int frame;
 	model_t *model;
 	if (tagindex >= 0
-	 && (modelindex = ent->fields.server->modelindex) >= 1 && modelindex < MAX_MODELS
+	 && (modelindex = (int)ent->fields.server->modelindex) >= 1 && modelindex < MAX_MODELS
 	 && (model = sv.models[(int)ent->fields.server->modelindex])
 	 && model->animscenes)
 	{
@@ -2366,7 +2366,7 @@ int SV_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 		// next iteration we process the parent entity
 		if ((val = PRVM_GETEDICTFIELDVALUE(ent, eval_tag_entity)) && val->edict)
 		{
-			tagindex = PRVM_GETEDICTFIELDVALUE(ent, eval_tag_index)->_float;
+			tagindex = (int)PRVM_GETEDICTFIELDVALUE(ent, eval_tag_index)->_float;
 			ent = PRVM_EDICT_NUM(val->edict);
 		}
 		else

@@ -36,7 +36,7 @@ size_t ResampleSfx (const unsigned char *in_data, size_t in_length, const snd_fo
 	size_t srclength, outcount;
 
 	srclength = in_length * in_format->channels;
-	outcount = (double)in_length * shm->format.speed / in_format->speed;
+	outcount = (int)((double)in_length * shm->format.speed / in_format->speed);
 
 	//Con_DPrintf("ResampleSfx(%s): %d samples @ %dHz -> %d samples @ %dHz\n",
 	//			sfxname, in_length, in_format->speed, outcount, shm->format.speed);
@@ -63,7 +63,7 @@ size_t ResampleSfx (const unsigned char *in_data, size_t in_length, const snd_fo
 #	define INTEGER_BITS (sizeof(samplefrac)*8 - FRACTIONAL_BITS)
 	else
 	{
-		const unsigned int fracstep = (double)in_format->speed / shm->format.speed * (1 << FRACTIONAL_BITS);
+		const unsigned int fracstep = (unsigned int)((double)in_format->speed / shm->format.speed * (1 << FRACTIONAL_BITS));
 		size_t remain_in = srclength, total_out = 0;
 		unsigned int samplefrac;
 		const unsigned char *in_ptr = in_data;
@@ -96,7 +96,7 @@ size_t ResampleSfx (const unsigned char *in_data, size_t in_length, const snd_fo
 			else
 			{
 				tmpcount = outcount - total_out;
-				interpolation_limit = ceil((double)(((remain_in / in_format->channels) - 1) << FRACTIONAL_BITS) / fracstep);
+				interpolation_limit = (int)ceil((double)(((remain_in / in_format->channels) - 1) << FRACTIONAL_BITS) / fracstep);
 				if (interpolation_limit > tmpcount)
 					interpolation_limit = tmpcount;
 			}
