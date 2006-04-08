@@ -350,7 +350,7 @@ r_glsl_permutation_t;
 // information about each possible shader permutation
 extern r_glsl_permutation_t r_glsl_permutations[SHADERPERMUTATION_COUNT];
 // currently selected permutation
-r_glsl_permutation_t *r_glsl_permutation;
+extern r_glsl_permutation_t *r_glsl_permutation;
 
 void R_GLSL_CompilePermutation(int permutation);
 void R_SetupSurfaceShader(const entity_render_t *ent, const texture_t *texture, const vec3_t modelorg, const vec3_t lightcolorbase, qboolean modellighting);

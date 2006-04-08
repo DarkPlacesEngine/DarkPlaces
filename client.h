@@ -699,7 +699,7 @@ typedef struct client_state_s
 	// don't change view angle, full screen, etc
 	int intermission;
 	// latched at intermission start
-	int completed_time;
+	double completed_time;
 
 	// the timestamp of the last two messages
 	double mtime[2];
@@ -1104,7 +1104,7 @@ int CL_ParticleEffectIndexForName(const char *name);
 const char *CL_ParticleEffectNameForIndex(int i);
 void CL_ParticleEffect(int effectindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor);
 void CL_ParseParticleEffect (void);
-void CL_ParticleCube (const vec3_t mins, const vec3_t maxs, const vec3_t dir, int count, int colorbase, int gravity, int randomvel);
+void CL_ParticleCube (const vec3_t mins, const vec3_t maxs, const vec3_t dir, int count, int colorbase, vec_t gravity, vec_t randomvel);
 void CL_ParticleRain (const vec3_t mins, const vec3_t maxs, const vec3_t dir, int count, int colorbase, int type);
 void CL_EntityParticles (const entity_t *ent);
 void CL_ParticleExplosion (const vec3_t org);

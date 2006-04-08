@@ -38,12 +38,12 @@ SV_SetIdealPitch
 #define	MAX_FORWARD	6
 void SV_SetIdealPitch (void)
 {
-	float	angleval, sinval, cosval;
+	float	angleval, sinval, cosval, step, dir;
 	trace_t	tr;
 	vec3_t	top, bottom;
 	float	z[MAX_FORWARD];
 	int		i, j;
-	int		step, dir, steps;
+	int		steps;
 
 	if (!((int)host_client->edict->fields.server->flags & FL_ONGROUND))
 		return;

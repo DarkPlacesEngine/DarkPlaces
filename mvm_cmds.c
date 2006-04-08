@@ -246,7 +246,7 @@ void VM_M_writetofile(void)
 
 	VM_SAFEPARMCOUNT(2, VM_M_writetofile);
 
-	file = VM_GetFileHandle( PRVM_G_FLOAT(OFS_PARM0) );
+	file = VM_GetFileHandle( (int)PRVM_G_FLOAT(OFS_PARM0) );
 	if( !file ) {
 		return;
 	}
@@ -274,7 +274,7 @@ void VM_M_getresolution(void)
 	int nr;
 	VM_SAFEPARMCOUNT(1, VM_getresolution);
 
-	nr = PRVM_G_FLOAT(OFS_PARM0);
+	nr = (int)PRVM_G_FLOAT(OFS_PARM0);
 
 
 	PRVM_G_VECTOR(OFS_RETURN)[0] = video_resolutions[nr][0];
@@ -342,7 +342,7 @@ void VM_M_getserverliststat( void )
 
 	PRVM_G_FLOAT( OFS_RETURN ) = 0;
 
-	type = PRVM_G_FLOAT( OFS_PARM0 );
+	type = (int)PRVM_G_FLOAT( OFS_PARM0 );
 	switch(type)
 	{
 	case 0:
@@ -407,7 +407,7 @@ void VM_M_setserverlistmaskstring( void )
 	if( !str )
 		PRVM_ERROR( "VM_M_setserverlistmaskstring: null string passed!" );
 
-	masknr = PRVM_G_FLOAT( OFS_PARM0 );
+	masknr = (int)PRVM_G_FLOAT( OFS_PARM0 );
 	if( masknr >= 0 && masknr <= SERVERLIST_ANDMASKCOUNT )
 		mask = &serverlist_andmasks[masknr];
 	else if( masknr >= 512 && masknr - 512 <= SERVERLIST_ORMASKCOUNT )
@@ -462,7 +462,7 @@ void VM_M_setserverlistmasknumber( void )
 	int field;
 	VM_SAFEPARMCOUNT( 4, VM_M_setserverlistmasknumber );
 
-	masknr = PRVM_G_FLOAT( OFS_PARM0 );
+	masknr = (int)PRVM_G_FLOAT( OFS_PARM0 );
 	if( masknr >= 0 && masknr <= SERVERLIST_ANDMASKCOUNT )
 		mask = &serverlist_andmasks[masknr];
 	else if( masknr >= 512 && masknr - 512 <= SERVERLIST_ORMASKCOUNT )
@@ -472,7 +472,7 @@ void VM_M_setserverlistmasknumber( void )
 		return;
 	}
 
-	number = PRVM_G_FLOAT( OFS_PARM2 );
+	number = (int)PRVM_G_FLOAT( OFS_PARM2 );
 	field = (int) PRVM_G_FLOAT( OFS_PARM1 );
 
 	switch( field ) {
@@ -526,7 +526,7 @@ void VM_M_getserverliststring(void)
 
 	PRVM_G_INT(OFS_RETURN) = 0;
 
-	hostnr = PRVM_G_FLOAT(OFS_PARM1);
+	hostnr = (int)PRVM_G_FLOAT(OFS_PARM1);
 
 	if(hostnr < 0 || hostnr >= serverlist_viewcount)
 	{
@@ -578,7 +578,7 @@ void VM_M_getserverlistnumber(void)
 
 	PRVM_G_INT(OFS_RETURN) = 0;
 
-	hostnr = PRVM_G_FLOAT(OFS_PARM1);
+	hostnr = (int)PRVM_G_FLOAT(OFS_PARM1);
 
 	if(hostnr < 0 || hostnr >= serverlist_viewcount)
 	{
@@ -706,7 +706,7 @@ sizebuf_t *VM_WriteDest (void)
 	if(!sv.active)
 		PRVM_ERROR("VM_WriteDest: game is not server (%s)", PRVM_NAME);
 
-	dest = PRVM_G_FLOAT(OFS_PARM1);
+	dest = (int)PRVM_G_FLOAT(OFS_PARM1);
 	switch (dest)
 	{
 	case MSG_BROADCAST:
@@ -735,22 +735,22 @@ sizebuf_t *VM_WriteDest (void)
 
 void VM_M_WriteByte (void)
 {
-	MSG_WriteByte (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0));
+	MSG_WriteByte (VM_WriteDest(), (int)PRVM_G_FLOAT(OFS_PARM0));
 }
 
 void VM_M_WriteChar (void)
 {
-	MSG_WriteChar (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0));
+	MSG_WriteChar (VM_WriteDest(), (int)PRVM_G_FLOAT(OFS_PARM0));
 }
 
 void VM_M_WriteShort (void)
 {
-	MSG_WriteShort (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0));
+	MSG_WriteShort (VM_WriteDest(), (int)PRVM_G_FLOAT(OFS_PARM0));
 }
 
 void VM_M_WriteLong (void)
 {
-	MSG_WriteLong (VM_WriteDest(), PRVM_G_FLOAT(OFS_PARM0));
+	MSG_WriteLong (VM_WriteDest(), (int)PRVM_G_FLOAT(OFS_PARM0));
 }
 
 void VM_M_WriteAngle (void)

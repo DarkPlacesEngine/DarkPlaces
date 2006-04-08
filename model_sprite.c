@@ -146,8 +146,8 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 			loadmodel->sprite.sprdata_frames[realframes].up = origin[1];
 			loadmodel->sprite.sprdata_frames[realframes].down = origin[1] - height;
 
-			x = max(loadmodel->sprite.sprdata_frames[realframes].left * loadmodel->sprite.sprdata_frames[realframes].left, loadmodel->sprite.sprdata_frames[realframes].right * loadmodel->sprite.sprdata_frames[realframes].right);
-			y = max(loadmodel->sprite.sprdata_frames[realframes].up * loadmodel->sprite.sprdata_frames[realframes].up, loadmodel->sprite.sprdata_frames[realframes].down * loadmodel->sprite.sprdata_frames[realframes].down);
+			x = (int)max(loadmodel->sprite.sprdata_frames[realframes].left * loadmodel->sprite.sprdata_frames[realframes].left, loadmodel->sprite.sprdata_frames[realframes].right * loadmodel->sprite.sprdata_frames[realframes].right);
+			y = (int)max(loadmodel->sprite.sprdata_frames[realframes].up * loadmodel->sprite.sprdata_frames[realframes].up, loadmodel->sprite.sprdata_frames[realframes].down * loadmodel->sprite.sprdata_frames[realframes].down);
 			if (modelradius < x + y)
 				modelradius = x + y;
 
@@ -374,8 +374,8 @@ void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 		sprframe->up = origin[1];
 		sprframe->down = origin[1] - height;
 
-		x = max(sprframe->left * sprframe->left, sprframe->right * sprframe->right);
-		y = max(sprframe->up * sprframe->up, sprframe->down * sprframe->down);
+		x = (int)max(sprframe->left * sprframe->left, sprframe->right * sprframe->right);
+		y = (int)max(sprframe->up * sprframe->up, sprframe->down * sprframe->down);
 		if (modelradius < x + y)
 			modelradius = x + y;
 

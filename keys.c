@@ -283,7 +283,7 @@ Key_Console (int key, char ascii)
 				strcat(key_lines[edit_line], cbd);
 				key_linepos += i;
 			}
-			free(cbd);
+			Z_Free(cbd);
 		}
 		return;
 	}

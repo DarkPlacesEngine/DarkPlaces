@@ -1686,7 +1686,7 @@ static void M_Options_Draw (void)
 
 	optnum = 0;
 	optcursor = options_cursor;
-	visible = (menu_height - 32) / 8;
+	visible = (int)((menu_height - 32) / 8);
 	opty = 32 - bound(0, optcursor - (visible >> 1), max(0, OPTIONS_ITEMS - visible)) * 8;
 
 	M_Options_PrintCommand( "Customize controls", true);
@@ -1881,7 +1881,7 @@ static void M_Options_Effects_Draw (void)
 
 	optcursor = options_effects_cursor;
 	optnum = 0;
-	visible = (menu_height - 32) / 8;
+	visible = (int)((menu_height - 32) / 8);
 	opty = 32 - bound(0, optcursor - (visible >> 1), max(0, OPTIONS_EFFECTS_ITEMS - visible)) * 8;
 
 	M_Options_PrintSlider(  "      Corona Intensity", true, r_coronas.value, 0, 4);
@@ -2021,7 +2021,7 @@ static void M_Options_Graphics_Draw (void)
 
 	optcursor = options_graphics_cursor;
 	optnum = 0;
-	visible = (menu_height - 32) / 8;
+	visible = (int)((menu_height - 32) / 8);
 	opty = 32 - bound(0, optcursor - (visible >> 1), max(0, OPTIONS_GRAPHICS_ITEMS - visible)) * 8;
 
 	M_Options_PrintSlider(  "             Gloss Mode", true, r_shadow_gloss.integer, 0, 2);
@@ -2208,7 +2208,7 @@ static void M_Options_ColorControl_Draw (void)
 
 	optcursor = options_colorcontrol_cursor;
 	optnum = 0;
-	visible = (menu_height - 32) / 8;
+	visible = (int)((menu_height - 32) / 8);
 	opty = 32 - bound(0, optcursor - (visible >> 1), max(0, OPTIONS_COLORCONTROL_ITEMS - visible)) * 8;
 
 	M_Options_PrintCommand( "     Reset to defaults", true);
@@ -4335,7 +4335,7 @@ static void M_ServerList_Draw (void)
 	if (*m_return_reason)
 		M_Print(16, menu_height - 8, m_return_reason);
 	y = 48;
-	visible = (menu_height - 16 - y) / 8 / 2;
+	visible = (int)((menu_height - 16 - y) / 8 / 2);
 	start = bound(0, slist_cursor - (visible >> 1), serverlist_viewcount - visible);
 	end = min(start + visible, serverlist_viewcount);
 

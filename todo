@@ -35,6 +35,8 @@
 -d (yummyluv) feature darkplaces protocol: add buttons 9-16 (yummyluv)
 -f (James D) bug darkplaces server: losing runes on episode completion, completing episode 1 then 2 then 3 causes it to forget 1, then 4 causes it to forget 2 and 3, making it impossible to open the boss gate (James D)
 -f (Wazat) bug darkplaces: client's slowmo detection (measuring packet times and comparing to game time changes) may be making the game unpleasant (Wazat)
+0 bug dpmod: go through http://www.inside3d.com/qip/q1/bugsmap.htm and fix map bugs by using replacement .ent files (Lardarse)
+0 bug dpmod: the id1 map e2m4 has a bug where 4 scrags don't spawn in normal/hard skills because of a mislinked trigger, the Quake Done Quick team figured this out and a trigger_relay with target "t58" should be changed to target "t66" (Lardarse)
 0 bug darkplaces client/server: viewzoom values above 1 are not working properly
 0 bug darkplaces client: GAME_NEHAHRA: make sure cutscenes and movies work, got a report of seeing a black screen (NightFright)
 0 bug darkplaces client: fix cl_bobmodel bug which momentarily jolts the gun when you pass through a trigger, pick up an item, etc, Sajt thinks this is related to console prints as well as centerprint (Sajt)

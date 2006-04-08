@@ -569,7 +569,7 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 		for (i = 0;i < SND_LISTENERS;i++)
 		{
 			vol = mastervol * snd_speakerlayout.listeners[i].ambientvolume;
-			ch->listener_volume[i] = bound(0, vol, 255);
+			ch->listener_volume[i] = (int)bound(0, vol, 255);
 		}
 	}
 	else
@@ -585,7 +585,7 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 				Matrix4x4_Transform(&listener_matrix[i], ch->origin, source_vec);
 				VectorNormalize(source_vec);
 				vol = intensity * max(0, source_vec[0] * snd_speakerlayout.listeners[i].dotscale + snd_speakerlayout.listeners[i].dotbias);
-				ch->listener_volume[i] = bound(0, vol, 255);
+				ch->listener_volume[i] = (int)bound(0, vol, 255);
 			}
 		}
 		else
@@ -604,7 +604,7 @@ void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags,
 	// Initialize the channel
 	memset (target_chan, 0, sizeof (*target_chan));
 	VectorCopy (origin, target_chan->origin);
-	target_chan->master_vol = fvol * 255;
+	target_chan->master_vol = (int)(fvol * 255);
 	target_chan->sfx = sfx;
 	target_chan->end = paintedtime + sfx->total_length;
 	target_chan->lastptime = paintedtime;
@@ -662,7 +662,7 @@ int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 			continue;
 		if (check->sfx == sfx && !check->pos)
 		{
-			skip = 0.1 * sfx->format.speed;
+			skip = (int)(0.1 * sfx->format.speed);
 			if (skip > (int)sfx->total_length)
 				skip = (int)sfx->total_length;
 			if (skip > 0)
@@ -783,7 +783,7 @@ void S_PauseGameSounds (qboolean toggle)
 
 void S_SetChannelVolume (unsigned int ch_ind, float fvol)
 {
-	channels[ch_ind].master_vol = fvol * 255;
+	channels[ch_ind].master_vol = (int)(fvol * 255);
 }
 
 
@@ -828,7 +828,7 @@ S_UpdateAmbientSounds
 void S_UpdateAmbientSounds (void)
 {
 	int			i;
-	float		vol;
+	int			vol;
 	int			ambient_channel;
 	channel_t	*chan;
 	unsigned char		ambientlevels[NUM_AMBIENTS];
@@ -844,20 +844,21 @@ void S_UpdateAmbientSounds (void)
 		if (chan->sfx == NULL || chan->sfx->fetcher == NULL)
 			continue;
 
-		vol = ambientlevels[ambient_channel];
+		vol = (int)ambientlevels[ambient_channel];
 		if (vol < 8)
 			vol = 0;
 
 		// Don't adjust volume too fast
+		// FIXME: this rounds off to an int each frame, meaning there is little to no fade at extremely high framerates!
 		if (chan->master_vol < vol)
 		{
-			chan->master_vol += host_realframetime * ambient_fade.value;
+			chan->master_vol += (int)(host_realframetime * ambient_fade.value);
 			if (chan->master_vol > vol)
 				chan->master_vol = vol;
 		}
 		else if (chan->master_vol > vol)
 		{
-			chan->master_vol -= host_realframetime * ambient_fade.value;
+			chan->master_vol -= (int)(host_realframetime * ambient_fade.value);
 			if (chan->master_vol < vol)
 				chan->master_vol = vol;
 		}
@@ -1110,7 +1111,7 @@ void S_Update_(void)
 		paintedtime = soundtime;
 
 	// mix ahead of current position
-	endtime = soundtime + _snd_mixahead.value * shm->format.speed;
+	endtime = (int)(soundtime + _snd_mixahead.value * shm->format.speed);
 	endtime = min(endtime, (unsigned int)(soundtime + shm->sampleframes));
 
 	S_PaintChannels (endtime);

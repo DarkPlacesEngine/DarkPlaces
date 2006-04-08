@@ -102,8 +102,8 @@ typedef struct particleeffectinfo_s
 	float lightradiusfade;
 	float lighttime;
 	float lightcolor[3];
-	float lightshadow;
-	float lightcubemapnum;
+	qboolean lightshadow;
+	int lightcubemapnum;
 }
 particleeffectinfo_t;
 
@@ -1321,16 +1321,16 @@ static void CL_Sparks(const vec3_t originmins, const vec3_t originmaxs, const ve
 	}
 }
 
-void CL_ParticleCube (const vec3_t mins, const vec3_t maxs, const vec3_t dir, int count, int colorbase, int gravity, int randomvel)
+void CL_ParticleCube (const vec3_t mins, const vec3_t maxs, const vec3_t dir, int count, int colorbase, vec_t gravity, vec_t randomvel)
 {
 	int k;
 	if (!cl_particles.integer) return;
 
-	count *= cl_particles_quality.value;
+	count = (int)(count * cl_particles_quality.value);
 	while (count--)
 	{
 		k = particlepalette[colorbase + (rand()&3)];
-		particle(particletype + pt_alphastatic, k, k, tex_particle, 2, 255, 128, gravity ? 1 : 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(mins[2], maxs[2]), dir[0], dir[1], dir[2], 0, 0, randomvel);
+		particle(particletype + pt_alphastatic, k, k, tex_particle, 2, 255, 128, gravity, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(mins[2], maxs[2]), dir[0], dir[1], dir[2], 0, 0, randomvel);
 	}
 }
 
@@ -1350,7 +1350,7 @@ void CL_ParticleRain (const vec3_t mins, const vec3_t maxs, const vec3_t dir, in
 	minz = bound(mins[2], minz, maxs[2]);
 	maxz = bound(mins[2], maxz, maxs[2]);
 
-	count *= cl_particles_quality.value;
+	count = (int)(count * cl_particles_quality.value);
 
 	switch(type)
 	{
@@ -1481,7 +1481,7 @@ void CL_MoveParticles (void)
 						VectorCopy(trace.plane.normal, p->vel);
 						VectorAdd(p->org, p->vel, p->org);
 						if (cl_stainmaps.integer)
-							R_Stain(p->org, 32, 32, 16, 16, p->alpha * p->size * (1.0f / 40.0f), 192, 48, 48, p->alpha * p->size * (1.0f / 40.0f));
+							R_Stain(p->org, 32, 32, 16, 16, (int)(p->alpha * p->size * (1.0f / 40.0f)), 192, 48, 48, (int)(p->alpha * p->size * (1.0f / 40.0f)));
 
 						p->type = particletype + pt_decal;
 						p->texnum = tex_blooddecal[rand()&7];
@@ -1588,7 +1588,7 @@ void CL_MoveParticles (void)
 					p->type = NULL;
 				break;
 			case pt_raindecal:
-				a = max(0, (cl.time - p->time2) * 40);
+				a = (int)max(0, (cl.time - p->time2) * 40);
 				if (a < 16)
 					p->texnum = tex_rainsplash[a];
 				else
@@ -1686,9 +1686,9 @@ void particletextureblotch(unsigned char *data, float radius, float red, float g
 			if (f > 0)
 			{
 				d = data + (y * PARTICLETEXTURESIZE + x) * 4;
-				d[0] += f * (red   - d[0]);
-				d[1] += f * (green - d[1]);
-				d[2] += f * (blue  - d[2]);
+				d[0] += (int)(f * (red   - d[0]));
+				d[1] += (int)(f * (green - d[1]));
+				d[2] += (int)(f * (blue  - d[2]));
 			}
 		}
 	}
@@ -1787,7 +1787,7 @@ static void R_InitParticleTexture (void)
 					dx = (x - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
 					d = (noise2[y][x] - 128) * 3 + 192;
 					if (d > 0)
-						d = d * (1-(dx*dx+dy*dy));
+						d = (int)(d * (1-(dx*dx+dy*dy)));
 					d = (d * noise1[y][x]) >> 7;
 					d = bound(0, d, 255);
 					data[y][x][3] = (unsigned char) d;
@@ -1827,7 +1827,7 @@ static void R_InitParticleTexture (void)
 		for (x = 0;x < PARTICLETEXTURESIZE;x++)
 		{
 			dx = (x - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
-			d = 256 * (1 - (dx*dx+dy*dy));
+			d = (int)(256 * (1 - (dx*dx+dy*dy)));
 			d = bound(0, d, 255);
 			data[y][x][3] = (unsigned char) d;
 		}
@@ -1907,7 +1907,7 @@ static void R_InitParticleTexture (void)
 		for (x = 0;x < 16;x++)
 		{
 			dx = (x - 0.5f*16) / (16*0.5f-2);
-			d = (1 - sqrt(fabs(dx))) * noise3[y][x];
+			d = (int)((1 - sqrt(fabs(dx))) * noise3[y][x]);
 			data2[y][x][0] = data2[y][x][1] = data2[y][x][2] = (unsigned char) bound(0, d, 255);
 			data2[y][x][3] = 255;
 		}

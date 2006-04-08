@@ -218,12 +218,12 @@ loc0:
 			smax = (surface->lightmapinfo->extents[0] >> 4) + 1;
 			tmax = (surface->lightmapinfo->extents[1] >> 4) + 1;
 
-			impacts = DotProduct (impact, surface->lightmapinfo->texinfo->vecs[0]) + surface->lightmapinfo->texinfo->vecs[0][3] - surface->lightmapinfo->texturemins[0];
-			impactt = DotProduct (impact, surface->lightmapinfo->texinfo->vecs[1]) + surface->lightmapinfo->texinfo->vecs[1][3] - surface->lightmapinfo->texturemins[1];
+			impacts = (int)(DotProduct (impact, surface->lightmapinfo->texinfo->vecs[0]) + surface->lightmapinfo->texinfo->vecs[0][3] - surface->lightmapinfo->texturemins[0]);
+			impactt = (int)(DotProduct (impact, surface->lightmapinfo->texinfo->vecs[1]) + surface->lightmapinfo->texinfo->vecs[1][3] - surface->lightmapinfo->texturemins[1]);
 
 			s = bound(0, impacts, smax * 16) - impacts;
 			t = bound(0, impactt, tmax * 16) - impactt;
-			i = s * s + t * t + dist2;
+			i = (int)(s * s + t * t + dist2);
 			if (i > maxdist)
 				continue;
 

@@ -230,7 +230,7 @@ void V_ParseDamage (void)
 
 	cl.faceanimtime = cl.time + 0.2;		// put sbar face into pain frame
 
-	cl.cshifts[CSHIFT_DAMAGE].percent += 3*count;
+	cl.cshifts[CSHIFT_DAMAGE].percent += (int)(3*count);
 	if (cl.cshifts[CSHIFT_DAMAGE].percent < 0)
 		cl.cshifts[CSHIFT_DAMAGE].percent = 0;
 	if (cl.cshifts[CSHIFT_DAMAGE].percent > 150)
@@ -511,11 +511,11 @@ void V_CalcRefdef (void)
 void V_FadeViewFlashs(void)
 {
 	// drop the damage value
-	cl.cshifts[CSHIFT_DAMAGE].percent -= (cl.time - cl.oldtime)*150;
+	cl.cshifts[CSHIFT_DAMAGE].percent -= (int)((cl.time - cl.oldtime)*150);
 	if (cl.cshifts[CSHIFT_DAMAGE].percent <= 0)
 		cl.cshifts[CSHIFT_DAMAGE].percent = 0;
 	// drop the bonus value
-	cl.cshifts[CSHIFT_BONUS].percent -= (cl.time - cl.oldtime)*100;
+	cl.cshifts[CSHIFT_BONUS].percent -= (int)((cl.time - cl.oldtime)*100);
 	if (cl.cshifts[CSHIFT_BONUS].percent <= 0)
 		cl.cshifts[CSHIFT_BONUS].percent = 0;
 }

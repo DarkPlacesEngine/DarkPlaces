@@ -212,7 +212,7 @@ void VM_sprint (void)
 	char string[VM_STRINGTEMP_LENGTH];
 
 	//find client for this entity
-	clientnum = PRVM_G_FLOAT(OFS_PARM0);
+	clientnum = (int)PRVM_G_FLOAT(OFS_PARM0);
 	if (!sv.active  || clientnum < 0 || clientnum >= svs.maxclients || !svs.clients[clientnum].active)
 	{
 		Con_Printf("VM_sprint: %s: invalid client or server is not active !\n", PRVM_NAME);
@@ -710,7 +710,7 @@ void VM_ftoi(void)
 	int ent;
 	VM_SAFEPARMCOUNT(1, VM_ftoi);
 
-	ent = PRVM_G_FLOAT(OFS_PARM0);
+	ent = (int)PRVM_G_FLOAT(OFS_PARM0);
 	if(PRVM_PROG_TO_EDICT(ent)->priv.required->free)
 		PRVM_ERROR ("VM_ftoe: %s tried to access a freed entity (entity %i)!", PRVM_NAME, ent);
 
@@ -1320,7 +1320,7 @@ void VM_registercvar (void)
 
 	name = PRVM_G_STRING(OFS_PARM0);
 	value = PRVM_G_STRING(OFS_PARM1);
-	flags = PRVM_G_FLOAT(OFS_PARM2);
+	flags = (int)PRVM_G_FLOAT(OFS_PARM2);
 	PRVM_G_FLOAT(OFS_RETURN) = 0;
 
 	if(flags > CVAR_MAXFLAGSVAL)
@@ -1538,7 +1538,7 @@ void VM_fopen(void)
 		PRVM_G_FLOAT(OFS_RETURN) = -2;
 		return;
 	}
-	mode = PRVM_G_FLOAT(OFS_PARM1);
+	mode = (int)PRVM_G_FLOAT(OFS_PARM1);
 	switch(mode)
 	{
 	case 0: // FILE_READ
@@ -1589,7 +1589,7 @@ void VM_fclose(void)
 
 	VM_SAFEPARMCOUNT(1,VM_fclose);
 
-	filenum = PRVM_G_FLOAT(OFS_PARM0);
+	filenum = (int)PRVM_G_FLOAT(OFS_PARM0);
 	if (filenum < 0 || filenum >= MAX_VMFILES)
 	{
 		Con_Printf("VM_fclose: invalid file handle %i used in %s\n", filenum, PRVM_NAME);
@@ -1622,7 +1622,7 @@ void VM_fgets(void)
 
 	VM_SAFEPARMCOUNT(1,VM_fgets);
 
-	filenum = PRVM_G_FLOAT(OFS_PARM0);
+	filenum = (int)PRVM_G_FLOAT(OFS_PARM0);
 	if (filenum < 0 || filenum >= MAX_VMFILES)
 	{
 		Con_Printf("VM_fgets: invalid file handle %i used in %s\n", filenum, PRVM_NAME);
@@ -1674,7 +1674,7 @@ void VM_fputs(void)
 
 	VM_SAFEPARMCOUNT(2,VM_fputs);
 
-	filenum = PRVM_G_FLOAT(OFS_PARM0);
+	filenum = (int)PRVM_G_FLOAT(OFS_PARM0);
 	if (filenum < 0 || filenum >= MAX_VMFILES)
 	{
 		Con_Printf("VM_fputs: invalid file handle %i used in %s\n", filenum, PRVM_NAME);
@@ -1754,8 +1754,8 @@ void VM_substring(void)
 
 	string = VM_GetTempString();
 	s = PRVM_G_STRING(OFS_PARM0);
-	start = PRVM_G_FLOAT(OFS_PARM1);
-	length = PRVM_G_FLOAT(OFS_PARM2);
+	start = (int)PRVM_G_FLOAT(OFS_PARM1);
+	length = (int)PRVM_G_FLOAT(OFS_PARM2);
 	if (!s)
 		s = "";
 	for (i = 0;i < start && *s;i++, s++);
@@ -1833,7 +1833,7 @@ void VM_clcommand (void)
 
 	VM_SAFEPARMCOUNT(2,VM_clcommand);
 
-	i = PRVM_G_FLOAT(OFS_PARM0);
+	i = (int)PRVM_G_FLOAT(OFS_PARM0);
 	if (!sv.active  || i < 0 || i >= svs.maxclients || !svs.clients[i].active)
 	{
 		Con_Printf("VM_clientcommand: %s: invalid client/server is not active !\n", PRVM_NAME);
@@ -1892,7 +1892,7 @@ void VM_argv (void)
 
 	VM_SAFEPARMCOUNT(1,VM_argv);
 
-	token_num = PRVM_G_FLOAT(OFS_PARM0);
+	token_num = (int)PRVM_G_FLOAT(OFS_PARM0);
 
 	if (token_num >= 0 && token_num < num_tokens)
 		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(tokens[token_num]);
@@ -2175,8 +2175,8 @@ void VM_search_begin(void)
 
 	VM_CheckEmptyString(pattern);
 
-	caseinsens = PRVM_G_FLOAT(OFS_PARM1);
-	quiet = PRVM_G_FLOAT(OFS_PARM2);
+	caseinsens = (int)PRVM_G_FLOAT(OFS_PARM1);
+	quiet = (int)PRVM_G_FLOAT(OFS_PARM2);
 
 	for(handle = 0; handle < MAX_VMSEARCHES; handle++)
 		if(!VM_SEARCHLIST[handle])
@@ -2207,7 +2207,7 @@ void VM_search_end(void)
 	int handle;
 	VM_SAFEPARMCOUNT(1, VM_search_end);
 
-	handle = PRVM_G_FLOAT(OFS_PARM0);
+	handle = (int)PRVM_G_FLOAT(OFS_PARM0);
 
 	if(handle < 0 || handle >= MAX_VMSEARCHES)
 	{
@@ -2236,7 +2236,7 @@ void VM_search_getsize(void)
 	int handle;
 	VM_SAFEPARMCOUNT(1, VM_M_search_getsize);
 
-	handle = PRVM_G_FLOAT(OFS_PARM0);
+	handle = (int)PRVM_G_FLOAT(OFS_PARM0);
 
 	if(handle < 0 || handle >= MAX_VMSEARCHES)
 	{
@@ -2265,8 +2265,8 @@ void VM_search_getfilename(void)
 	char *tmp;
 	VM_SAFEPARMCOUNT(2, VM_search_getfilename);
 
-	handle = PRVM_G_FLOAT(OFS_PARM0);
-	filenum = PRVM_G_FLOAT(OFS_PARM1);
+	handle = (int)PRVM_G_FLOAT(OFS_PARM0);
+	filenum = (int)PRVM_G_FLOAT(OFS_PARM1);
 
 	if(handle < 0 || handle >= MAX_VMSEARCHES)
 	{
@@ -2635,7 +2635,7 @@ void VM_keynumtostring (void)
 	char *tmp;
 	VM_SAFEPARMCOUNT(1, VM_keynumtostring);
 
-	keynum = PRVM_G_FLOAT(OFS_PARM0);
+	keynum = (int)PRVM_G_FLOAT(OFS_PARM0);
 
 	tmp = VM_GetTempString();
 
@@ -2811,7 +2811,7 @@ void VM_drawline (void)
 	c2		= PRVM_G_VECTOR(OFS_PARM2);
 	rgb		= PRVM_G_VECTOR(OFS_PARM3);
 	alpha	= PRVM_G_FLOAT(OFS_PARM4);
-	flags	= PRVM_G_FLOAT(OFS_PARM5);
+	flags	= (int)PRVM_G_FLOAT(OFS_PARM5);
 	DrawQ_Line(width, c1[0], c1[1], c2[0], c2[1], rgb[0], rgb[1], rgb[2], alpha, flags);
 }
 
@@ -2843,10 +2843,11 @@ static qboolean			vm_polygonbegin = false;	//[515]: for "no-crap-on-the-screen" 
 void VM_InitPolygons (void)
 {
 	vm_polygons_pool = Mem_AllocPool("VMPOLY", 0, NULL);
-	vm_polygons = Mem_Alloc(vm_polygons_pool, VM_DEFPOLYNUM*sizeof(vm_polygon_t));
+	vm_polygons = (vm_polygon_t *)Mem_Alloc(vm_polygons_pool, VM_DEFPOLYNUM*sizeof(vm_polygon_t));
 	memset(vm_polygons, 0, VM_DEFPOLYNUM*sizeof(vm_polygon_t));
 	vm_polygons_num = VM_DEFPOLYNUM;
-	vm_polygonbegin = vm_drawpolygons_num = 0;
+	vm_drawpolygons_num = 0;
+	vm_polygonbegin = false;
 	vm_polygons_initialized = true;
 }
 
@@ -2962,7 +2963,7 @@ void VM_R_PolygonBegin (void)
 	}
 	if(vm_drawpolygons_num >= vm_polygons_num)
 	{
-		p = Mem_Alloc(vm_polygons_pool, 2 * vm_polygons_num * sizeof(vm_polygon_t));
+		p = (vm_polygon_t *)Mem_Alloc(vm_polygons_pool, 2 * vm_polygons_num * sizeof(vm_polygon_t));
 		memset(p, 0, 2 * vm_polygons_num * sizeof(vm_polygon_t));
 		memcpy(p, vm_polygons, vm_polygons_num * sizeof(vm_polygon_t));
 		Mem_Free(vm_polygons);
@@ -3169,7 +3170,7 @@ void VM_altstr_get( void )
 	altstr = PRVM_G_STRING( OFS_PARM0 );
 	//VM_CheckEmptyString( altstr );
 
-	count = PRVM_G_FLOAT( OFS_PARM1 );
+	count = (int)PRVM_G_FLOAT( OFS_PARM1 );
 	count = count * 2 + 1;
 
 	for( pos = altstr ; *pos && count ; pos++ )
@@ -3219,7 +3220,7 @@ void VM_altstr_set( void )
 	altstr = PRVM_G_STRING( OFS_PARM0 );
 	//VM_CheckEmptyString( altstr );
 
-	num = PRVM_G_FLOAT( OFS_PARM1 );
+	num = (int)PRVM_G_FLOAT( OFS_PARM1 );
 
 	str = PRVM_G_STRING( OFS_PARM2 );
 	//VM_CheckEmptyString( str );
@@ -3272,7 +3273,7 @@ void VM_altstr_ins(void)
 	char *out;
 
 	in = instr = PRVM_G_STRING( OFS_PARM0 );
-	num = PRVM_G_FLOAT( OFS_PARM1 );
+	num = (int)PRVM_G_FLOAT( OFS_PARM1 );
 	set = setstr = PRVM_G_STRING( OFS_PARM2 );
 
 	out = outstr = VM_GetTempString();
@@ -3322,7 +3323,7 @@ static int BufStr_FindFreeBuffer (void)
 	for(i=0;i<MAX_QCSTR_BUFFERS;i++)
 		if(!qcstringbuffers[i])
 		{
-			qcstringbuffers[i] = malloc(sizeof(qcstrbuffer_t));
+			qcstringbuffers[i] = (qcstrbuffer_t *)Z_Malloc(sizeof(qcstrbuffer_t));
 			memset(qcstringbuffers[i], 0, sizeof(qcstrbuffer_t));
 			return i;
 		}
@@ -3340,10 +3341,10 @@ static void BufStr_ClearBuffer (int index)
 		{
 			for(i=0;i<b->num_strings;i++)
 				if(b->strings[i])
-					free(b->strings[i]);
+					Z_Free(b->strings[i]);
 			num_qcstringbuffers--;
 		}
-		free(qcstringbuffers[index]);
+		Z_Free(qcstringbuffers[index]);
 		qcstringbuffers[index] = NULL;
 	}
 }
@@ -3473,7 +3474,7 @@ void VM_buf_copy (void)
 		Con_Printf("VM_buf_copy: invalid source buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
 		return;
 	}
-	i = PRVM_G_FLOAT(OFS_PARM1);
+	i = (int)PRVM_G_FLOAT(OFS_PARM1);
 	if(i == (int)PRVM_G_FLOAT(OFS_PARM0))
 	{
 		Con_Printf("VM_buf_copy: source == destination (%i) in %s\n", i, PRVM_NAME);
@@ -3487,14 +3488,14 @@ void VM_buf_copy (void)
 	}
 
 	BufStr_ClearBuffer(i);
-	qcstringbuffers[i] = malloc(sizeof(qcstrbuffer_t));
+	qcstringbuffers[i] = (qcstrbuffer_t *)Z_Malloc(sizeof(qcstrbuffer_t));
 	memset(qcstringbuffers[i], 0, sizeof(qcstrbuffer_t));
 	b2->num_strings = b1->num_strings;
 
 	for(i=0;i<b1->num_strings;i++)
 		if(b1->strings[i] && b1->strings[i][0])
 		{
-			b2->strings[i] = malloc(strlen(b1->strings[i])+1);
+			b2->strings[i] = (char *)Z_Malloc(strlen(b1->strings[i])+1);
 			if(!b2->strings[i])
 			{
 				Con_Printf("VM_buf_copy: not enough memory for buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM1), PRVM_NAME);
@@ -3529,7 +3530,7 @@ void VM_buf_sort (void)
 		Con_Printf("VM_buf_sort: tried to sort empty buffer %i in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
 		return;
 	}
-	buf_sortpower = PRVM_G_FLOAT(OFS_PARM1);
+	buf_sortpower = (int)PRVM_G_FLOAT(OFS_PARM1);
 	if(buf_sortpower <= 0)
 		buf_sortpower = 99999999;
 
@@ -3545,7 +3546,7 @@ void VM_buf_sort (void)
 				break;
 			else
 			{
-				free(b->strings[i]);
+				Z_Free(b->strings[i]);
 				--b->num_strings;
 				b->strings[i] = NULL;
 			}
@@ -3651,14 +3652,14 @@ void VM_bufstr_set (void)
 
 	VM_SAFEPARMCOUNT(3, VM_bufstr_set);
 
-	bufindex = PRVM_G_FLOAT(OFS_PARM0);
+	bufindex = (int)PRVM_G_FLOAT(OFS_PARM0);
 	b = BUFSTR_BUFFER(bufindex);
 	if(!b)
 	{
 		Con_Printf("VM_bufstr_set: invalid buffer %i used in %s\n", bufindex, PRVM_NAME);
 		return;
 	}
-	strindex = PRVM_G_FLOAT(OFS_PARM1);
+	strindex = (int)PRVM_G_FLOAT(OFS_PARM1);
 	if(strindex < 0 || strindex > MAX_QCSTR_STRINGS)
 	{
 		Con_Printf("VM_bufstr_set: invalid string index %i used in %s\n", strindex, PRVM_NAME);
@@ -3671,8 +3672,8 @@ void VM_bufstr_set (void)
 		return;
 	}
 	if(b->strings[strindex])
-		free(b->strings[strindex]);
-	b->strings[strindex] = malloc(strlen(news)+1);
+		Z_Free(b->strings[strindex]);
+	b->strings[strindex] = (char *)Z_Malloc(strlen(news)+1);
 	strcpy(b->strings[strindex], news);
 }
 
@@ -3692,7 +3693,7 @@ void VM_bufstr_add (void)
 
 	VM_SAFEPARMCOUNT(3, VM_bufstr_add);
 
-	bufindex = PRVM_G_FLOAT(OFS_PARM0);
+	bufindex = (int)PRVM_G_FLOAT(OFS_PARM0);
 	b = BUFSTR_BUFFER(bufindex);
 	PRVM_G_FLOAT(OFS_RETURN) = -1;
 	if(!b)
@@ -3707,7 +3708,7 @@ void VM_bufstr_add (void)
 		return;
 	}
 
-	order = PRVM_G_FLOAT(OFS_PARM2);
+	order = (int)PRVM_G_FLOAT(OFS_PARM2);
 	if(order)
 		strindex = b->num_strings;
 	else
@@ -3731,8 +3732,8 @@ void VM_bufstr_add (void)
 		b->num_strings++;
 	}
 	if(b->strings[strindex])
-		free(b->strings[strindex]);
-	b->strings[strindex] = malloc(strlen(string)+1);
+		Z_Free(b->strings[strindex]);
+	b->strings[strindex] = (char *)Z_Malloc(strlen(string)+1);
 	strcpy(b->strings[strindex], string);
 	PRVM_G_FLOAT(OFS_RETURN) = strindex;
 }
@@ -3756,14 +3757,14 @@ void VM_bufstr_free (void)
 		Con_Printf("VM_bufstr_free: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
 		return;
 	}
-	i = PRVM_G_FLOAT(OFS_PARM1);
+	i = (int)PRVM_G_FLOAT(OFS_PARM1);
 	if(i < 0 || i > MAX_QCSTR_STRINGS)
 	{
 		Con_Printf("VM_bufstr_free: invalid string index %i used in %s\n", i, PRVM_NAME);
 		return;
 	}
 	if(b->strings[i])
-		free(b->strings[i]);
+		Z_Free(b->strings[i]);
 	b->strings[i] = NULL;
 	if(i+1 == b->num_strings)
 		--b->num_strings;

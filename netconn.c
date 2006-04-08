@@ -1194,7 +1194,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			pingtime = (int)((Sys_DoubleTime() - serverlist_cache[n].querytime) * 1000.0 + 0.5);
 			pingtime = bound(0, pingtime, 9999);
 			// update the ping
-			info->ping = pingtime;
+			info->ping = (int)pingtime;
 
 			// legacy/old stuff move it to the menu ASAP
 
@@ -1411,7 +1411,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			pingtime = (int)((Sys_DoubleTime() - serverlist_cache[n].querytime) * 1000.0 + 0.5);
 			pingtime = bound(0, pingtime, 9999);
 			// update the ping
-			info->ping = pingtime;
+			info->ping = (int)pingtime;
 
 			// legacy/old stuff move it to the menu ASAP
 

@@ -92,7 +92,7 @@ static void CL_VM_FindEdictFieldOffsets (void)
 
 	if(CSQC_Parse_Print)
 	{
-		csqc_printtextbuf = Mem_Alloc(csqc_mempool, CSQC_PRINTBUFFERLEN);
+		csqc_printtextbuf = (char *)Mem_Alloc(csqc_mempool, CSQC_PRINTBUFFERLEN);
 		csqc_printtextbuf[0] = 0;
 	}
 }
@@ -172,7 +172,7 @@ static qboolean CSQC_EdictToEntity (prvm_edict_t *ed, entity_t *e)
 	int i;
 	prvm_eval_t *val;
 
-	i = ed->fields.client->modelindex;
+	i = (int)ed->fields.client->modelindex;
 	e->state_current.modelindex = 0;
 	if(i >= MAX_MODELS || i <= -MAX_MODELS)	//[515]: make work as error ?
 	{
@@ -189,7 +189,7 @@ static qboolean CSQC_EdictToEntity (prvm_edict_t *ed, entity_t *e)
 	i = 0;
 	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_renderflags)) && val->_float)
 	{
-		i = val->_float;
+		i = (int)val->_float;
 		if(i & RF_VIEWMODEL)	e->state_current.flags |= RENDER_VIEWMODEL;
 		if(i & RF_EXTERNALMODEL)e->state_current.flags |= RENDER_EXTERIORMODEL;
 		if(i & RF_DEPTHHACK)	e->state_current.effects |= EF_NODEPTHTEST;
@@ -203,20 +203,20 @@ static qboolean CSQC_EdictToEntity (prvm_edict_t *ed, entity_t *e)
 
 	VectorCopy(ed->fields.client->origin, e->persistent.neworigin);
 	VectorCopy(ed->fields.client->origin, e->state_current.origin);
-	e->state_current.colormap = ed->fields.client->colormap;
-	e->state_current.effects = ed->fields.client->effects;
-	e->state_current.frame = ed->fields.client->frame;
-	e->state_current.skin = ed->fields.client->skin;
+	e->state_current.colormap = (int)ed->fields.client->colormap;
+	e->state_current.effects = (int)ed->fields.client->effects;
+	e->state_current.frame = (int)ed->fields.client->frame;
+	e->state_current.skin = (int)ed->fields.client->skin;
 
-	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_alpha)) && val->_float)		e->state_current.alpha = val->_float*255;
-	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_scale)) && val->_float)		e->state_current.scale = val->_float*16;
-	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_colormod)) && VectorLength2(val->vector))	VectorScale(val->vector, 32, e->state_current.colormod);
-	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_effects)) && val->_float)	e->state_current.effects = val->_float;
+	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_alpha)) && val->_float)		e->state_current.alpha = (int)(val->_float*255);
+	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_scale)) && val->_float)		e->state_current.scale = (int)(val->_float*16);
+	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_colormod)) && VectorLength2(val->vector))	{int j;for (j = 0;j < 3;j++) e->state_current.colormod[j] = (unsigned char)bound(0, val->vector[j] * 32.0f, 255);}
+	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_effects)) && val->_float)	e->state_current.effects = (int)val->_float;
 	if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_tag_entity)) && val->edict)
 	{
 		e->state_current.tagentity = val->edict;
 		if((val = PRVM_GETEDICTFIELDVALUE(ed, csqc_fieldoff_tag_index)) && val->_float)
-			e->state_current.tagindex = val->_float;
+			e->state_current.tagindex = (int)val->_float;
 	}
 
 	return true;
@@ -575,7 +575,7 @@ void CL_VM_Init (void)
 	PRVM_End;
 	csqc_loaded = true;
 
-	csqc_sv2csqcents = Mem_Alloc(csqc_mempool, MAX_EDICTS*sizeof(unsigned short));
+	csqc_sv2csqcents = (unsigned short *)Mem_Alloc(csqc_mempool, MAX_EDICTS*sizeof(unsigned short));
 	memset(csqc_sv2csqcents, 0, MAX_EDICTS*sizeof(unsigned short));
 
 	cl.csqc_vidvars.drawcrosshair = false;

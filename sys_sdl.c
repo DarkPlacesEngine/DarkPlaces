@@ -176,7 +176,7 @@ char *Sys_GetClipboardData (void)
 		{
 			if ((cliptext = GlobalLock (hClipboardData)) != 0)
 			{
-				data = malloc (GlobalSize(hClipboardData)+1);
+				data = Z_Malloc (GlobalSize(hClipboardData)+1);
 				strcpy (data, cliptext);
 				GlobalUnlock (hClipboardData);
 			}

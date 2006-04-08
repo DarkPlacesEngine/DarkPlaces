@@ -379,7 +379,7 @@ typedef struct gltextureunit_s
 	int arrayenabled;
 	unsigned int arraycomponents;
 	const void *pointer_texcoord;
-	float rgbscale, alphascale;
+	int rgbscale, alphascale;
 	int combinergb, combinealpha;
 	// FIXME: add more combine stuff
 	// texmatrixenabled exists only to avoid unnecessary texmatrix compares

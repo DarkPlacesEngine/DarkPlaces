@@ -750,7 +750,7 @@ static void R_Shadow_MakeTextures(void)
 			intensity = 1.0f - sqrt(DotProduct(v, v));
 			if (intensity > 0)
 				intensity = pow(intensity, r_shadow_attenpower) * r_shadow_attenscale * 256.0f;
-			d = bound(0, intensity, 255);
+			d = (int)bound(0, intensity, 255);
 			data[(y*ATTEN2DSIZE+x)*4+0] = d;
 			data[(y*ATTEN2DSIZE+x)*4+1] = d;
 			data[(y*ATTEN2DSIZE+x)*4+2] = d;
@@ -772,7 +772,7 @@ static void R_Shadow_MakeTextures(void)
 					intensity = 1.0f - sqrt(DotProduct(v, v));
 					if (intensity > 0)
 						intensity = pow(intensity, r_shadow_attenpower) * r_shadow_attenscale * 256.0f;
-					d = bound(0, intensity, 255);
+					d = (int)bound(0, intensity, 255);
 					data[((z*ATTEN3DSIZE+y)*ATTEN3DSIZE+x)*4+0] = d;
 					data[((z*ATTEN3DSIZE+y)*ATTEN3DSIZE+x)*4+1] = d;
 					data[((z*ATTEN3DSIZE+y)*ATTEN3DSIZE+x)*4+2] = d;
@@ -1075,10 +1075,10 @@ qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	}
 
 	// now convert the scissor rectangle to integer screen coordinates
-	ix1 = x1 - 1.0f;
-	iy1 = y1 - 1.0f;
-	ix2 = x2 + 1.0f;
-	iy2 = y2 + 1.0f;
+	ix1 = (int)(x1 - 1.0f);
+	iy1 = (int)(y1 - 1.0f);
+	ix2 = (int)(x2 + 1.0f);
+	iy2 = (int)(y2 + 1.0f);
 	//Con_Printf("%f %f %f %f\n", x1, y1, x2, y2);
 
 	// clamp it to the screen

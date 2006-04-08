@@ -743,7 +743,7 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 				vid_gammarampsize = rampsize;
 				if (vid_gammaramps)
 					Z_Free(vid_gammaramps);
-				vid_gammaramps = Z_Malloc(6 * vid_gammarampsize * sizeof(unsigned short));
+				vid_gammaramps = (unsigned short *)Z_Malloc(6 * vid_gammarampsize * sizeof(unsigned short));
 				vid_systemgammaramps = vid_gammaramps + 3 * vid_gammarampsize;
 			}
 			Cvar_SetValueQuick(&vid_hardwaregammasupported, VID_GetGamma(vid_systemgammaramps, vid_gammarampsize));
@@ -815,7 +815,7 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 
 			for (x = 0, ramp = vid_gammaramps;x < 3;x++)
 				for (y = 0, t = n[x] - 0.75f;y < vid_gammarampsize;y++, t += 0.75f * (2.0f / vid_gammarampsize))
-					*ramp++ = cos(t*(M_PI*2.0)) * 32767.0f + 32767.0f;
+					*ramp++ = (unsigned short)(cos(t*(M_PI*2.0)) * 32767.0f + 32767.0f);
 		}
 
 		Cvar_SetValueQuick(&vid_hardwaregammasupported, VID_SetGamma(vid_gammaramps, vid_gammarampsize));

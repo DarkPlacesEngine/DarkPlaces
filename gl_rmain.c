@@ -370,9 +370,9 @@ static void R_BuildNormalizationCube(void)
 					break;
 				}
 				intensity = 127.0f / sqrt(DotProduct(v, v));
-				data[side][y][x][0] = 128.0f + intensity * v[0];
-				data[side][y][x][1] = 128.0f + intensity * v[1];
-				data[side][y][x][2] = 128.0f + intensity * v[2];
+				data[side][y][x][0] = (unsigned char)(128.0f + intensity * v[0]);
+				data[side][y][x][1] = (unsigned char)(128.0f + intensity * v[1]);
+				data[side][y][x][2] = (unsigned char)(128.0f + intensity * v[2]);
 				data[side][y][x][3] = 255;
 			}
 		}
@@ -2443,7 +2443,7 @@ void R_Mesh_ResizeArrays(int newvertices)
 	if (rsurface_array_vertex3f)
 		Mem_Free(rsurface_array_vertex3f);
 	rsurface_array_size = (newvertices + 1023) & ~1023;
-	rsurface_array_vertex3f = Mem_Alloc(r_main_mempool, rsurface_array_size * sizeof(float[19]));
+	rsurface_array_vertex3f = (float *)Mem_Alloc(r_main_mempool, rsurface_array_size * sizeof(float[19]));
 	rsurface_array_svector3f = rsurface_array_vertex3f + rsurface_array_size * 3;
 	rsurface_array_tvector3f = rsurface_array_vertex3f + rsurface_array_size * 6;
 	rsurface_array_normal3f = rsurface_array_vertex3f + rsurface_array_size * 9;
