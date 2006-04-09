@@ -1111,7 +1111,7 @@ void S_Update_(void)
 		paintedtime = soundtime;
 
 	// mix ahead of current position
-	endtime = (int)(soundtime + _snd_mixahead.value * shm->format.speed);
+	endtime = soundtime + (unsigned int)(_snd_mixahead.value * shm->format.speed);
 	endtime = min(endtime, (unsigned int)(soundtime + shm->sampleframes));
 
 	S_PaintChannels (endtime);
