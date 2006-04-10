@@ -293,7 +293,15 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend)
 			else if (!strcmp(argv[1], "entityparticle")) info->particletype = pt_entityparticle;
 			else Con_Printf("effectinfo.txt:%i: unrecognized particle type %s\n", linenumber, argv[1]);
 		}
-		else if (!strcmp(argv[0], "color")) {readints(info->color, 2);}
+		else if (!strcmp(argv[0], "color")) 
+		{
+			unsigned color[6] = {0};
+			checkparms(3);
+			sscanf( argv[1], "%i %i %i", &color[0], &color[1], &color[2] );
+			sscanf( argv[2], "%i %i %i", &color[3], &color[4], &color[5] );
+			info->color[0] = color[0] + (color[1] << 8) + (color[2] << 16);
+			info->color[1] = color[3] + (color[4] << 8) + (color[5] << 16);
+		}
 		else if (!strcmp(argv[0], "tex")) {readints(info->tex, 2);}
 		else if (!strcmp(argv[0], "size")) {readfloats(info->size, 2);}
 		else if (!strcmp(argv[0], "alpha")) {readfloats(info->alpha, 3);}
