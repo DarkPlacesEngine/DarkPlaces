@@ -218,9 +218,9 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend)
 		if (argc < 1)
 			continue;
 #define checkparms(n) if (argc != (n)) {Con_Printf("effectinfo.txt:%i: error while parsing: %s given %i parameters, should be %i parameters\n", linenumber, argv[0], argc, (n));break;}
-#define readints(array, n) checkparms(n+1);for (arrayindex = 0;arrayindex < argc - 1;arrayindex++) array[arrayindex] = (int)atof(argv[1+arrayindex])
+#define readints(array, n) checkparms(n+1);for (arrayindex = 0;arrayindex < argc - 1;arrayindex++) array[arrayindex] = strtol(argv[1+arrayindex], NULL, 0)
 #define readfloats(array, n) checkparms(n+1);for (arrayindex = 0;arrayindex < argc - 1;arrayindex++) array[arrayindex] = atof(argv[1+arrayindex])
-#define readint(var) checkparms(2);var = (int)atof(argv[1])
+#define readint(var) checkparms(2);var = strtol(argv[1], NULL, 0)
 #define readfloat(var) checkparms(2);var = atof(argv[1])
 		if (!strcmp(argv[0], "effect"))
 		{
@@ -293,20 +293,7 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend)
 			else if (!strcmp(argv[1], "entityparticle")) info->particletype = pt_entityparticle;
 			else Con_Printf("effectinfo.txt:%i: unrecognized particle type %s\n", linenumber, argv[1]);
 		}
-#if 1
 		else if (!strcmp(argv[0], "color")) {readints(info->color, 2);}
-#else
-		// LordHavoc: Black committed this without consulting with me, it breaks parsing of effectinfo.txt and thus I can't accept it
-		else if (!strcmp(argv[0], "color")) 
-		{
-			unsigned color[6] = {0};
-			checkparms(3);
-			sscanf( argv[1], "%i %i %i", &color[0], &color[1], &color[2] );
-			sscanf( argv[2], "%i %i %i", &color[3], &color[4], &color[5] );
-			info->color[0] = color[0] + (color[1] << 8) + (color[2] << 16);
-			info->color[1] = color[3] + (color[4] << 8) + (color[5] << 16);
-		}
-#endif
 		else if (!strcmp(argv[0], "tex")) {readints(info->tex, 2);}
 		else if (!strcmp(argv[0], "size")) {readfloats(info->size, 2);}
 		else if (!strcmp(argv[0], "alpha")) {readfloats(info->alpha, 3);}
