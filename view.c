@@ -230,7 +230,7 @@ void V_ParseDamage (void)
 
 	cl.faceanimtime = cl.time + 0.2;		// put sbar face into pain frame
 
-	cl.cshifts[CSHIFT_DAMAGE].percent += (int)(3*count);
+	cl.cshifts[CSHIFT_DAMAGE].percent += 3*count;
 	if (cl.cshifts[CSHIFT_DAMAGE].percent < 0)
 		cl.cshifts[CSHIFT_DAMAGE].percent = 0;
 	if (cl.cshifts[CSHIFT_DAMAGE].percent > 150)
@@ -276,10 +276,10 @@ V_cshift_f
 */
 static void V_cshift_f (void)
 {
-	v_cshift.destcolor[0] = atoi(Cmd_Argv(1));
-	v_cshift.destcolor[1] = atoi(Cmd_Argv(2));
-	v_cshift.destcolor[2] = atoi(Cmd_Argv(3));
-	v_cshift.percent = atoi(Cmd_Argv(4));
+	v_cshift.destcolor[0] = atof(Cmd_Argv(1));
+	v_cshift.destcolor[1] = atof(Cmd_Argv(2));
+	v_cshift.destcolor[2] = atof(Cmd_Argv(3));
+	v_cshift.percent = atof(Cmd_Argv(4));
 }
 
 
@@ -511,11 +511,11 @@ void V_CalcRefdef (void)
 void V_FadeViewFlashs(void)
 {
 	// drop the damage value
-	cl.cshifts[CSHIFT_DAMAGE].percent -= (int)((cl.time - cl.oldtime)*150);
+	cl.cshifts[CSHIFT_DAMAGE].percent -= (cl.time - cl.oldtime)*150;
 	if (cl.cshifts[CSHIFT_DAMAGE].percent <= 0)
 		cl.cshifts[CSHIFT_DAMAGE].percent = 0;
 	// drop the bonus value
-	cl.cshifts[CSHIFT_BONUS].percent -= (int)((cl.time - cl.oldtime)*100);
+	cl.cshifts[CSHIFT_BONUS].percent -= (cl.time - cl.oldtime)*100;
 	if (cl.cshifts[CSHIFT_BONUS].percent <= 0)
 		cl.cshifts[CSHIFT_BONUS].percent = 0;
 }
@@ -559,7 +559,7 @@ void V_CalcViewBlend(void)
 				cl.cshifts[CSHIFT_CONTENTS].destcolor[1] = 80;
 				cl.cshifts[CSHIFT_CONTENTS].destcolor[2] = 50;
 			}
-			cl.cshifts[CSHIFT_CONTENTS].percent = 150 >> 1;
+			cl.cshifts[CSHIFT_CONTENTS].percent = 150 * 0.5;
 		}
 		else
 		{
