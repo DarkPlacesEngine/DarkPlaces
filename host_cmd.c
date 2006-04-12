@@ -271,9 +271,8 @@ void Host_Map_f (void)
 	CL_Disconnect ();
 	Host_ShutdownServer();
 
-	// remove console or menu
+	// remove menu
 	key_dest = key_game;
-	key_consoleactive = 0;
 
 	svs.serverflags = 0;			// haven't completed an episode yet
 	allowcheats = sv_cheats.integer != 0;
@@ -333,9 +332,8 @@ void Host_Changelevel_f (void)
 	if (cmd_source != src_command)
 		return;
 
-	// remove console or menu
+	// remove menu
 	key_dest = key_game;
-	key_consoleactive = 0;
 
 	SV_VM_Begin();
 	SV_SaveSpawnparms ();
@@ -371,9 +369,8 @@ void Host_Restart_f (void)
 	if (cmd_source != src_command)
 		return;
 
-	// remove console or menu
+	// remove menu
 	key_dest = key_game;
-	key_consoleactive = 0;
 
 	allowcheats = sv_cheats.integer != 0;
 	strcpy(mapname, sv.name);
