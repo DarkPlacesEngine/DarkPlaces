@@ -567,7 +567,7 @@ qboolean Host_FilterTime (double time)
 	timeleft = timecap - (realtime - oldrealtime);
 	if (timeleft > 0)
 	{
-#if 1
+#if 0
 		if (timeleft * 1000 >= 10)
 			Sys_Sleep(1);
 #else
@@ -576,7 +576,7 @@ qboolean Host_FilterTime (double time)
 		// try to hit exactly a steady framerate by not sleeping the full amount
 		msleft = (int)floor(timeleft * 1000);
 		if (msleft >= 10)
-			Sys_Sleep(msleft);
+			Sys_Sleep(msleft - 9);
 #endif
 		return false;
 	}
