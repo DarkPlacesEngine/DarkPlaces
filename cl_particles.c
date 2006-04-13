@@ -538,7 +538,32 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 	matrix4x4_t tempmatrix;
 	VectorLerp(originmins, 0.5, originmaxs, center);
 	Matrix4x4_CreateTranslate(&tempmatrix, center[0], center[1], center[2]);
-	if (effectnameindex == EFFECT_TE_WIZSPIKE)
+	if (effectnameindex == EFFECT_SVC_PARTICLE)
+	{
+		if (cl_particles.integer)
+		{
+			// bloodhack checks if this effect's color matches regular or lightning blood and if so spawns a blood effect instead
+			if (count == 1024)
+				CL_ParticleExplosion(center);
+			else if (cl_particles_blood_bloodhack.integer && !cl_particles_quake.integer && (palettecolor == 73 || palettecolor == 225))
+				CL_ParticleEffect(EFFECT_TE_BLOOD, count / 6.0f, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0);
+			else
+			{
+				count *= cl_particles_quality.value;
+				for (;count > 0;count--)
+				{
+					int k = particlepalette[palettecolor + (rand()&7)];
+					if (cl_particles_quake.integer)
+						particle(particletype + pt_alphastatic, k, k, tex_particle, 1, lhrandom(51, 255), 512, 0.05, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 0, 8, 0);
+					else if (gamemode == GAME_GOODVSBAD2)
+						particle(particletype + pt_alphastatic, k, k, tex_particle, 5, 255, 300, 0, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 0, 8, 10);
+					else
+						particle(particletype + pt_alphastatic, k, k, tex_particle, 1, 255, 512, 0, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 0, 8, 15);
+				}
+			}
+		}
+	}
+	else if (effectnameindex == EFFECT_TE_WIZSPIKE)
 		CL_ParticleEffect(EFFECT_SVC_PARTICLE, 30*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 20);
 	else if (effectnameindex == EFFECT_TE_KNIGHTSPIKE)
 		CL_ParticleEffect(EFFECT_SVC_PARTICLE, 20*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 226);
@@ -976,32 +1001,7 @@ void CL_ParticleEffect(int effectnameindex, float pcount, const vec3_t originmin
 	if (!particleeffectname[effectnameindex][0])
 		return; // no such effect
 	VectorLerp(originmins, 0.5, originmaxs, center);
-	if (effectnameindex == EFFECT_SVC_PARTICLE)
-	{
-		if (!cl_particles.integer)
-			return;
-		// bloodhack checks if this effect's color matches regular or lightning blood and if so spawns a blood effect instead
-		if (pcount == 1024)
-			CL_ParticleExplosion(center);
-		else if (cl_particles_blood_bloodhack.integer && !cl_particles_quake.integer && (palettecolor == 73 || palettecolor == 225))
-			CL_ParticleEffect(EFFECT_TE_BLOOD, pcount / 6.0f, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0);
-		else
-		{
-			float count = pcount * cl_particles_quality.value;
-			for (;count > 0;count--)
-			{
-				int k = particlepalette[palettecolor + (rand()&7)];
-				if (cl_particles_quake.integer)
-					particle(particletype + pt_alphastatic, k, k, tex_particle, 1, lhrandom(51, 255), 512, 0.05, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 0, 8, 0);
-				else if (gamemode == GAME_GOODVSBAD2)
-					particle(particletype + pt_alphastatic, k, k, tex_particle, 5, 255, 300, 0, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 0, 8, 10);
-				else
-					particle(particletype + pt_alphastatic, k, k, tex_particle, 1, 255, 512, 0, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 0, 8, 15);
-			}
-		}
-		return;
-	}
-	else if (!cl_particles_quake.integer && particleeffectinfo[0].effectnameindex)
+	if (!cl_particles_quake.integer && particleeffectinfo[0].effectnameindex)
 	{
 		int effectinfoindex;
 		int supercontents;
