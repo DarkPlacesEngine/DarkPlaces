@@ -999,6 +999,7 @@ void CL_ParticleEffect(int effectnameindex, float pcount, const vec3_t originmin
 					particle(particletype + pt_alphastatic, k, k, tex_particle, 1, 255, 512, 0, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 0, 8, 15);
 			}
 		}
+		return;
 	}
 	else if (!cl_particles_quake.integer && particleeffectinfo[0].effectnameindex)
 	{
