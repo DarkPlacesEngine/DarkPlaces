@@ -334,7 +334,7 @@ static void VID_ProcessPendingAsyncEvents (void)
 	}
 }
 
-static void VID_BuildAGLAttrib(GLint *attrib, int stencil, qboolean fullscreen)
+static void VID_BuildAGLAttrib(GLint *attrib, GLint stencil, qboolean fullscreen)
 {
 	*attrib++ = AGL_RGBA;
 	*attrib++ = AGL_RED_SIZE;*attrib++ = 1;
@@ -366,6 +366,11 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	Rect windowBounds;
 	AGLPixelFormat pixelFormat;
 	GLint attributes [32];
+	GLenum error;
+
+	// FullScreen Display stuff
+	GDHandle gdhDisplay; // = GetMainDevice(); /*deprecated*/
+	CGDirectDisplayID mainDisplay = CGMainDisplayID();
 
 	if (!GL_OpenLibrary())
 	{
@@ -415,34 +420,105 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	InstallWindowEventHandler (window, NewEventHandlerUPP (MainWindowEventHandler),
 							   GetEventTypeCount(winEvents), winEvents, window, NULL);
 
-	// Create and set pixel format
+	// Create the desired attribute list
 	VID_BuildAGLAttrib(attributes, bpp == 32, fullscreen);
-	pixelFormat = qaglChoosePixelFormat(NULL, 1, attributes);
-	if (pixelFormat == NULL)
+
+	if (!fullscreen)
 	{
-		Con_Printf("Unable to create pixel format\n");
-		ReleaseWindow(window);
-		return false;
+		//  Output to Window
+		//  Set pixel format with built attribs
+		//  Note: use NULL then must use 0
+		pixelFormat = qaglChoosePixelFormat(NULL, 0, attributes);
+		error = aglGetError();
+		if (error != AGL_NO_ERROR)
+		{
+			Con_Printf("qaglChoosePixelFormat FAILED: %s\n",
+					(char *)aglErrorString(error));
+			ReleaseWindow(window);
+			return false;
+		}
 	}
 
-	// Set context and show the window
-	context = qaglCreateContext(pixelFormat, NULL);
-	if (context == NULL)
-		Sys_Error ("aglCreateContext failed");
 	if (fullscreen)
 	{
-		if (!qaglSetFullScreen (context, width, height, refreshrate, 0))
-			Sys_Error("aglSetFullScreen failed");
-		vid_isfullscreen = true;
+		//  Output is FullScreen
+		//  Get the mainDisplay and set resolution to current
+		CGDisplayCapture (mainDisplay);
+		CFDictionaryRef refDisplayMode = CGDisplayBestModeForParameters (mainDisplay, bpp, width, height, NULL);
+		CGDisplaySwitchToMode (mainDisplay, refDisplayMode);
+		DMGetGDeviceByDisplayID ((DisplayIDType)mainDisplay, &gdhDisplay, false);
+
+		//  Set pixel format with built attribs
+		//  Note: specifying a device is *required* for AGL_FullScreen
+		pixelFormat = qaglChoosePixelFormat(&gdhDisplay, 1, attributes);
+		error = aglGetError();
+		if (error != AGL_NO_ERROR)
+		{
+			Con_Printf("qaglChoosePixelFormat FAILED: %s\n",
+						(char *)aglErrorString(error));
+			ReleaseWindow(window);
+			return false;
+		}
 	}
-	else
+
+	// Create a context using the pform
+	context = qaglCreateContext(pixelFormat, NULL);
+	error = aglGetError();
+	if (error != AGL_NO_ERROR)
 	{
-		if (!qaglSetDrawable(context, GetWindowPort(window)))
-			Sys_Error ("aglSetDrawable failed");
+		Con_Printf("qaglCreateContext FAILED: %s\n",
+					(char *)aglErrorString(error));
 	}
-	if (!qaglSetCurrentContext(context))
-		Sys_Error ("aglSetCurrentContext failed");
+
+	// Make the context the current one ('enable' it)
+	qaglSetCurrentContext(context);   
+	error = aglGetError();
+		if (error != AGL_NO_ERROR)
+		{
+			Con_Printf("qaglSetCurrentContext FAILED: %s\n",
+						(char *)aglErrorString(error));
+			ReleaseWindow(window);
+			return false;
+		}
+
+	// Discard pform
 	qaglDestroyPixelFormat(pixelFormat);
+
+	// Attempt fullscreen if requested
+	if (fullscreen)
+	{
+		qaglSetFullScreen (context, width, height, refreshrate, 0);
+		error = aglGetError();
+		if (error != AGL_NO_ERROR)
+		{
+			Con_Printf("qaglSetFullScreen FAILED: %s\n",
+						(char *)aglErrorString(error));
+			return false;
+			// FullScreen Failed
+			vid_isfullscreen = false;
+		}
+		else
+		{
+			// FullScreen Success
+			vid_isfullscreen = true;
+		}
+	}
+	
+	if (!fullscreen)
+	{
+	// Note: this _is_ a Window != FullScreen
+	// Set Window as Drawable
+	qaglSetDrawable(context, GetWindowPort(window));
+	error = aglGetError();
+		if (error != AGL_NO_ERROR)
+		{
+			Con_Printf("qaglSetDrawable FAILED: %s\n",
+						(char *)aglErrorString(error));
+			ReleaseWindow(window);
+			return false;
+		}
+
+	}
 
 	scr_width = width;
 	scr_height = height;
@@ -619,7 +695,10 @@ void Sys_SendKeyEvents(void)
 						Key_Event(key, '\0', eventKind == kEventMouseDown);
 						break;
 
+					// Note: These two events are mutual exclusives
+					// Treat MouseDragged in the same statement, so we don't block MouseMoved while a mousebutton is held
 					case kEventMouseMoved:
+					case kEventMouseDragged:
 					{
 						HIPoint deltaPos;
 
@@ -642,9 +721,6 @@ void Sys_SendKeyEvents(void)
 						Key_Event(wheelEvent, 0, false);
 						break;
 					}
-
-					case kEventMouseDragged:
-						break;
 
 					default:
 						Con_Printf (">> kEventClassMouse (UNKNOWN eventKind: %d) <<\n", eventKind);
