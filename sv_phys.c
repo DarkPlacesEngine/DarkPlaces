@@ -81,9 +81,13 @@ SV_TestEntityPosition
 returns true if the entity is in solid currently
 ============
 */
-static int SV_TestEntityPosition (prvm_edict_t *ent, int movemode)
+static int SV_TestEntityPosition (prvm_edict_t *ent)
 {
-	return SV_Move (ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, ent->fields.server->origin, movemode, ent).startsolid;
+	trace_t trace = SV_Move (ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, ent->fields.server->origin, MOVE_NOMONSTERS, ent);
+	if (trace.startsupercontents & SUPERCONTENTS_SOLID)
+		return true;
+	else
+		return false;
 }
 
 /*
@@ -108,7 +112,7 @@ void SV_CheckAllEnts (void)
 		 || check->fields.server->movetype == MOVETYPE_NOCLIP)
 			continue;
 
-		if (SV_TestEntityPosition (check, MOVE_NORMAL))
+		if (SV_TestEntityPosition (check))
 			Con_Print("entity in invalid position\n");
 	}
 }
@@ -758,7 +762,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		pusher->fields.server->solid = savesolid; // was SOLID_BSP
 
 		// if it is still inside the pusher, block
-		if (SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID).startsolid)
+		if (SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY).startsolid)
 		{
 			// try moving the contacted entity a tiny bit further to account for precision errors
 			vec3_t move2;
@@ -768,7 +772,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 			VectorCopy (check->priv.server->moved_fromangles, check->fields.server->angles);
 			SV_PushEntity (check, move2);
 			pusher->fields.server->solid = savesolid;
-			if (SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID).startsolid)
+			if (SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY).startsolid)
 			{
 				// try moving the contacted entity a tiny bit less to account for precision errors
 				pusher->fields.server->solid = SOLID_NOT;
@@ -777,7 +781,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 				VectorCopy (check->priv.server->moved_fromangles, check->fields.server->angles);
 				SV_PushEntity (check, move2);
 				pusher->fields.server->solid = savesolid;
-				if (SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID).startsolid)
+				if (SV_ClipMoveToEntity(pusher, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, 0, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY).startsolid)
 				{
 					// still inside pusher, so it's really blocked
 
@@ -881,7 +885,7 @@ void SV_CheckStuck (prvm_edict_t *ent)
 	int i, j, z;
 	vec3_t org;
 
-	if (!SV_TestEntityPosition(ent, MOVE_NORMAL))
+	if (!SV_TestEntityPosition(ent))
 	{
 		VectorCopy (ent->fields.server->origin, ent->fields.server->oldorigin);
 		return;
@@ -889,30 +893,30 @@ void SV_CheckStuck (prvm_edict_t *ent)
 
 	VectorCopy (ent->fields.server->origin, org);
 	VectorCopy (ent->fields.server->oldorigin, ent->fields.server->origin);
-	if (!SV_TestEntityPosition(ent, MOVE_NORMAL))
+	if (!SV_TestEntityPosition(ent))
 	{
-		Con_DPrintf("Unstuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
+		Con_DPrintf("Unstuck player entity %i (classname \"%s\") by restoring oldorigin.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
 		SV_LinkEdict (ent, true);
 		return;
 	}
 
-	for (z=0 ; z< 18 ; z++)
+	for (z=-1 ; z< 18 ; z++)
 		for (i=-1 ; i <= 1 ; i++)
 			for (j=-1 ; j <= 1 ; j++)
 			{
 				ent->fields.server->origin[0] = org[0] + i;
 				ent->fields.server->origin[1] = org[1] + j;
 				ent->fields.server->origin[2] = org[2] + z;
-				if (!SV_TestEntityPosition(ent, MOVE_NORMAL))
+				if (!SV_TestEntityPosition(ent))
 				{
-					Con_DPrintf("Unstuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
+					Con_DPrintf("Unstuck player entity %i (classname \"%s\") with offset %f %f %f.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname), (float)i, (float)j, (float)z);
 					SV_LinkEdict (ent, true);
 					return;
 				}
 			}
 
 	VectorCopy (org, ent->fields.server->origin);
-	Con_DPrintf("Stuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
+	Con_DPrintf("Stuck player entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
 }
 
 static void SV_UnstickEntity (prvm_edict_t *ent)
@@ -921,21 +925,21 @@ static void SV_UnstickEntity (prvm_edict_t *ent)
 	vec3_t org;
 
 	// if not stuck in a bmodel, just return
-	if (!SV_TestEntityPosition(ent, MOVE_NOMONSTERS))
+	if (!SV_TestEntityPosition(ent))
 		return;
 
 	VectorCopy (ent->fields.server->origin, org);
 
-	for (z=0 ; z< 18 ; z += 6)
+	for (z=-1 ; z< 18 ; z += 6)
 		for (i=-1 ; i <= 1 ; i++)
 			for (j=-1 ; j <= 1 ; j++)
 			{
 				ent->fields.server->origin[0] = org[0] + i;
 				ent->fields.server->origin[1] = org[1] + j;
 				ent->fields.server->origin[2] = org[2] + z;
-				if (!SV_TestEntityPosition(ent, MOVE_NOMONSTERS))
+				if (!SV_TestEntityPosition(ent))
 				{
-					Con_DPrintf("Unstuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
+					Con_DPrintf("Unstuck entity %i (classname \"%s\") with offset %f %f %f.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname), (float)i, (float)j, (float)z);
 					SV_LinkEdict (ent, true);
 					return;
 				}
