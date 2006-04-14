@@ -990,12 +990,10 @@ void Collision_InitBrushForBox(void)
 	int i;
 	for (i = 0;i < MAX_BRUSHFORBOX;i++)
 	{
-		brushforbox_brush[i].supercontents = SUPERCONTENTS_SOLID;
 		brushforbox_brush[i].numpoints = 8;
 		brushforbox_brush[i].numplanes = 6;
 		brushforbox_brush[i].points = brushforbox_point + i * 8;
 		brushforbox_brush[i].planes = brushforbox_plane + i * 6;
-		brushforpoint_brush[i].supercontents = SUPERCONTENTS_SOLID;
 		brushforpoint_brush[i].numpoints = 1;
 		brushforpoint_brush[i].numplanes = 0;
 		brushforpoint_brush[i].points = brushforbox_point + i * 8;

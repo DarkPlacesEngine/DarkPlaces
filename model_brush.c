@@ -857,12 +857,6 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace,
 	else
 		Mod_Q1BSP_RecursiveHullCheckPoint(&rhc, rhc.hull->firstclipnode);
 #endif
-	if (trace->fraction == 1)
-	{
-		trace->hitsupercontents = 0;
-		trace->hitq3surfaceflags = 0;
-		trace->hittexture = NULL;
-	}
 }
 
 void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cmaxs, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask, int boxsupercontents, int boxq3surfaceflags, texture_t *boxtexture)

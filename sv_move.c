@@ -51,7 +51,7 @@ qboolean SV_CheckBottom (prvm_edict_t *ent)
 		{
 			start[0] = x ? maxs[0] : mins[0];
 			start[1] = y ? maxs[1] : mins[1];
-			if (!(SV_PointSuperContents(start) & SUPERCONTENTS_SOLID))
+			if (!(SV_PointSuperContents(start) & (SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY)))
 				goto realcheck;
 		}
 
