@@ -1488,6 +1488,7 @@ void CL_LerpPlayer(float frac)
 
 void CSQC_RelinkAllEntities (int drawmask)
 {
+	cl.num_brushmodel_entities = 0;
 	CL_RelinkNetworkEntities(drawmask);
 	if(drawmask & ENTMASK_ENGINE)
 	{
@@ -1526,7 +1527,6 @@ int CL_ReadFromServer(void)
 	r_refdef.extraupdate = !r_speeds.integer;
 	r_refdef.numentities = 0;
 	r_refdef.viewentitymatrix = identitymatrix;
-	cl.num_brushmodel_entities = 0;
 
 	if (cls.state == ca_connected && cls.signon == SIGNONS)
 	{
@@ -1541,6 +1541,7 @@ int CL_ReadFromServer(void)
 		CL_ClientMovement_Replay();
 		if(!csqc_loaded)	//[515]: csqc
 		{
+			cl.num_brushmodel_entities = 0;
 			CL_RelinkNetworkEntities(65535);
 
 			// move particles
