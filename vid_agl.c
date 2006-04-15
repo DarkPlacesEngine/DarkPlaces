@@ -171,7 +171,7 @@ int VID_GetGamma(unsigned short *ramps, int rampsize)
 	CGGammaValue table_green [GAMMA_TABLE_SIZE];
 	CGGammaValue table_blue [GAMMA_TABLE_SIZE];
 	CGTableCount actualsize = 0;
-	unsigned int i;
+	int i;
 
 	// Get the gamma ramps from the system
 	if (CGGetDisplayTransferByTable(CGMainDisplayID(), rampsize, table_red, table_green, table_blue, &actualsize) != CGDisplayNoErr)
@@ -179,7 +179,7 @@ int VID_GetGamma(unsigned short *ramps, int rampsize)
 		Con_Print("VID_GetGamma: ERROR: CGGetDisplayTransferByTable failed!\n");
 		return false;
 	}
-	if (actualsize != rampsize)
+	if (actualsize != (unsigned int)rampsize)
 	{
 		Con_Printf("VID_GetGamma: ERROR: invalid gamma table size (%u != %u)\n", actualsize, rampsize);
 		return false;
