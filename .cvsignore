@@ -3,6 +3,7 @@
 *.i
 *.s
 ChangeLog
+darkplaces-agl
 darkplaces-glx
 darkplaces-sdl
 darkplaces-dedicated
