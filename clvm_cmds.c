@@ -116,7 +116,6 @@ char *vm_cl_extensions =
 ;
 
 sfx_t *S_FindName(const char *name);
-int CL_PointQ1Contents(const vec3_t p);
 void PF_registercvar (void);
 int Sbar_GetPlayer (int index);
 void Sbar_SortFrags (void);
@@ -523,7 +522,7 @@ realcheck:
 void VM_CL_pointcontents (void)
 {
 	VM_SAFEPARMCOUNT(1, VM_CL_pointcontents);
-	PRVM_G_FLOAT(OFS_RETURN) = CL_PointQ1Contents(PRVM_G_VECTOR(OFS_PARM0));
+	PRVM_G_FLOAT(OFS_RETURN) = Mod_Q1BSP_NativeContentsFromSuperContents(NULL, CL_PointSuperContents(PRVM_G_VECTOR(OFS_PARM0)));
 }
 
 // #48 void(vector o, vector d, float color, float count) particle
