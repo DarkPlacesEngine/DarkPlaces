@@ -594,7 +594,7 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 
 	// clip to world
 	cliptrace = SV_ClipMoveToWorld(clipstart, clipmins, clipmaxs, clipend, type, hitsupercontentsmask);
-	cliptrace.startsolid = cliptrace.bmodelstartsolid;
+	cliptrace.bmodelstartsolid = cliptrace.startsolid;
 	if (cliptrace.startsolid || cliptrace.fraction < 1)
 		cliptrace.ent = prog->edicts;
 	if (type == MOVE_WORLDONLY)
