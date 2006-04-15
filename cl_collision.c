@@ -74,7 +74,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 			trace.realfraction = 1;
 
 			if (ent->model && ent->model->TraceBox)
-				ent->model->TraceBox(ent->model, 0, &trace, start, mins, maxs, endtransformed, hitsupercontentsmask);
+				ent->model->TraceBox(ent->model, 0, &trace, starttransformed, mins, maxs, endtransformed, hitsupercontentsmask);
 
 			// LordHavoc: take the 'best' answers from the new trace and combine with existing data
 			if (trace.allsolid)
@@ -275,25 +275,8 @@ void CL_FindNonSolidLocation(const vec3_t in, vec3_t out, vec_t radius)
 		cl.worldmodel->brush.FindNonSolidLocation(cl.worldmodel, in, out, radius);
 }
 
-int CL_PointQ1Contents(const vec3_t p)
-{
-	return Mod_Q1BSP_NativeContentsFromSuperContents(NULL, CL_TraceBox(p, vec3_origin, vec3_origin, p, true, NULL, 0, false).startsupercontents);
-	/*
-	// FIXME: check multiple brush models
-	if (cl.worldmodel && cl.worldmodel->brush.PointContentsQ1)
-		return cl.worldmodel->brush.PointContentsQ1(cl.worldmodel, p);
-	return 0;
-	*/
-}
-
 int CL_PointSuperContents(const vec3_t p)
 {
 	return CL_TraceBox(p, vec3_origin, vec3_origin, p, true, NULL, 0, false).startsupercontents;
-	/*
-	// FIXME: check multiple brush models
-	if (cl.worldmodel && cl.worldmodel->brush.PointContentsQ1)
-		return cl.worldmodel->brush.PointContentsQ1(cl.worldmodel, p);
-	return 0;
-	*/
 }
 

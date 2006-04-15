@@ -732,9 +732,4 @@ int CSSV_PointSuperContents(const vec3_t point)
 	return CSSV_Move(point, vec3_origin, vec3_origin, point, sv_gameplayfix_swiminbmodels.integer ? MOVE_NOMONSTERS : MOVE_WORLDONLY, NULL).startsupercontents;
 }
 
-int CSSV_PointQ1Contents(const vec3_t point)
-{
-	return Mod_Q1BSP_NativeContentsFromSuperContents(NULL, CSSV_PointSuperContents(point));
-}
-
 
