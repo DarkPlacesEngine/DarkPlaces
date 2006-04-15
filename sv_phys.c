@@ -632,13 +632,13 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		SV_LinkEdict (pusher, false);
 		return;
 	default:
-		Con_Printf("SV_PushMove: unrecognized solid type %f\n", pusher->fields.server->solid);
+		Con_Printf("SV_PushMove: entity #%i, unrecognized solid type %f\n", PRVM_NUM_FOR_EDICT(pusher), pusher->fields.server->solid);
 		return;
 	}
 	index = (int) pusher->fields.server->modelindex;
 	if (index < 1 || index >= MAX_MODELS)
 	{
-		Con_Printf("SV_PushMove: invalid modelindex %f\n", pusher->fields.server->modelindex);
+		Con_Printf("SV_PushMove: entity #%i has an invalid modelindex %f\n", PRVM_NUM_FOR_EDICT(pusher), pusher->fields.server->modelindex);
 		return;
 	}
 	pushermodel = sv.models[index];
