@@ -38,6 +38,8 @@ AGLPixelFormat (*qaglChoosePixelFormat) (const AGLDevice *gdevs, GLint ndev, con
 AGLContext (*qaglCreateContext) (AGLPixelFormat pix, AGLContext share);
 GLboolean (*qaglDestroyContext) (AGLContext ctx);
 void (*qaglDestroyPixelFormat) (AGLPixelFormat pix);
+const GLubyte* (*qaglErrorString) (GLenum code);
+GLenum (*qaglGetError) (void);
 GLboolean (*qaglSetCurrentContext) (AGLContext ctx);
 GLboolean (*qaglSetDrawable) (AGLContext ctx, AGLDrawable draw);
 GLboolean (*qaglSetFullScreen) (AGLContext ctx, GLsizei width, GLsizei height, GLsizei freq, GLint device);
@@ -334,7 +336,7 @@ static void VID_ProcessPendingAsyncEvents (void)
 	}
 }
 
-static void VID_BuildAGLAttrib(GLint *attrib, GLint stencil, qboolean fullscreen)
+static void VID_BuildAGLAttrib(GLint *attrib, qboolean stencil, qboolean fullscreen)
 {
 	*attrib++ = AGL_RGBA;
 	*attrib++ = AGL_RED_SIZE;*attrib++ = 1;
@@ -368,10 +370,6 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	GLint attributes [32];
 	GLenum error;
 
-	// FullScreen Display stuff
-	GDHandle gdhDisplay; // = GetMainDevice(); /*deprecated*/
-	CGDirectDisplayID mainDisplay = CGMainDisplayID();
-
 	if (!GL_OpenLibrary())
 	{
 		Con_Printf("Unable to load GL driver\n");
@@ -382,6 +380,8 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	 || (qaglCreateContext = (AGLContext (*) (AGLPixelFormat pix, AGLContext share))GL_GetProcAddress("aglCreateContext")) == NULL
 	 || (qaglDestroyContext = (GLboolean (*) (AGLContext ctx))GL_GetProcAddress("aglDestroyContext")) == NULL
 	 || (qaglDestroyPixelFormat = (void (*) (AGLPixelFormat pix))GL_GetProcAddress("aglDestroyPixelFormat")) == NULL
+	 || (qaglErrorString = (const GLubyte* (*) (GLenum code))GL_GetProcAddress("aglErrorString")) == NULL
+	 || (qaglGetError = (GLenum (*) (void))GL_GetProcAddress("aglGetError")) == NULL
 	 || (qaglSetCurrentContext = (GLboolean (*) (AGLContext ctx))GL_GetProcAddress("aglSetCurrentContext")) == NULL
 	 || (qaglSetDrawable = (GLboolean (*) (AGLContext ctx, AGLDrawable draw))GL_GetProcAddress("aglSetDrawable")) == NULL
 	 || (qaglSetFullScreen = (GLboolean (*) (AGLContext ctx, GLsizei width, GLsizei height, GLsizei freq, GLint device))GL_GetProcAddress("aglSetFullScreen")) == NULL
@@ -425,37 +425,38 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 
 	if (!fullscreen)
 	{
-		//  Output to Window
-		//  Set pixel format with built attribs
-		//  Note: use NULL then must use 0
+		// Output to Window
 		pixelFormat = qaglChoosePixelFormat(NULL, 0, attributes);
-		error = aglGetError();
+		error = qaglGetError();
 		if (error != AGL_NO_ERROR)
 		{
 			Con_Printf("qaglChoosePixelFormat FAILED: %s\n",
-					(char *)aglErrorString(error));
+					(char *)qaglErrorString(error));
 			ReleaseWindow(window);
 			return false;
 		}
 	}
-
-	if (fullscreen)
+	else  // Output is fullScreen
 	{
-		//  Output is FullScreen
-		//  Get the mainDisplay and set resolution to current
+		CGDirectDisplayID mainDisplay;
+		CFDictionaryRef refDisplayMode;
+		GDHandle gdhDisplay;
+		
+		// Get the mainDisplay and set resolution to current
+		mainDisplay = CGMainDisplayID ();
 		CGDisplayCapture (mainDisplay);
-		CFDictionaryRef refDisplayMode = CGDisplayBestModeForParameters (mainDisplay, bpp, width, height, NULL);
+		refDisplayMode = CGDisplayBestModeForParameters (mainDisplay, bpp, width, height, NULL);
 		CGDisplaySwitchToMode (mainDisplay, refDisplayMode);
 		DMGetGDeviceByDisplayID ((DisplayIDType)mainDisplay, &gdhDisplay, false);
 
-		//  Set pixel format with built attribs
-		//  Note: specifying a device is *required* for AGL_FullScreen
+		// Set pixel format with built attribs
+		// Note: specifying a device is *required* for AGL_FullScreen
 		pixelFormat = qaglChoosePixelFormat(&gdhDisplay, 1, attributes);
-		error = aglGetError();
+		error = qaglGetError();
 		if (error != AGL_NO_ERROR)
 		{
 			Con_Printf("qaglChoosePixelFormat FAILED: %s\n",
-						(char *)aglErrorString(error));
+						(char *)qaglErrorString(error));
 			ReleaseWindow(window);
 			return false;
 		}
@@ -463,23 +464,23 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 
 	// Create a context using the pform
 	context = qaglCreateContext(pixelFormat, NULL);
-	error = aglGetError();
+	error = qaglGetError();
 	if (error != AGL_NO_ERROR)
 	{
 		Con_Printf("qaglCreateContext FAILED: %s\n",
-					(char *)aglErrorString(error));
+					(char *)qaglErrorString(error));
 	}
 
 	// Make the context the current one ('enable' it)
 	qaglSetCurrentContext(context);   
-	error = aglGetError();
-		if (error != AGL_NO_ERROR)
-		{
-			Con_Printf("qaglSetCurrentContext FAILED: %s\n",
-						(char *)aglErrorString(error));
-			ReleaseWindow(window);
-			return false;
-		}
+	error = qaglGetError();
+	if (error != AGL_NO_ERROR)
+	{
+		Con_Printf("qaglSetCurrentContext FAILED: %s\n",
+					(char *)qaglErrorString(error));
+		ReleaseWindow(window);
+		return false;
+	}
 
 	// Discard pform
 	qaglDestroyPixelFormat(pixelFormat);
@@ -488,36 +489,26 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	if (fullscreen)
 	{
 		qaglSetFullScreen (context, width, height, refreshrate, 0);
-		error = aglGetError();
+		error = qaglGetError();
 		if (error != AGL_NO_ERROR)
 		{
 			Con_Printf("qaglSetFullScreen FAILED: %s\n",
-						(char *)aglErrorString(error));
+						(char *)qaglErrorString(error));
 			return false;
-			// FullScreen Failed
-			vid_isfullscreen = false;
-		}
-		else
-		{
-			// FullScreen Success
-			vid_isfullscreen = true;
 		}
 	}
-	
-	if (!fullscreen)
+	else
 	{
-	// Note: this _is_ a Window != FullScreen
-	// Set Window as Drawable
-	qaglSetDrawable(context, GetWindowPort(window));
-	error = aglGetError();
+		// Set Window as Drawable
+		qaglSetDrawable(context, GetWindowPort(window));
+		error = qaglGetError();
 		if (error != AGL_NO_ERROR)
 		{
 			Con_Printf("qaglSetDrawable FAILED: %s\n",
-						(char *)aglErrorString(error));
+						(char *)qaglErrorString(error));
 			ReleaseWindow(window);
 			return false;
 		}
-
 	}
 
 	scr_width = width;
@@ -533,6 +524,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	gl_platform = "AGL";
 	gl_videosyncavailable = true;
 
+	vid_isfullscreen = fullscreen;
 	vid_usingmouse = false;
 	vid_hidden = false;
 	vid_activewindow = true;
