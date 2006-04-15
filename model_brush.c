@@ -579,7 +579,7 @@ int Mod_Q1BSP_SuperContentsFromNativeContents(model_t *model, int nativecontents
 
 int Mod_Q1BSP_NativeContentsFromSuperContents(model_t *model, int supercontents)
 {
-	if (supercontents & SUPERCONTENTS_SOLID)
+	if (supercontents & (SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY))
 		return CONTENTS_SOLID;
 	if (supercontents & SUPERCONTENTS_SKY)
 		return CONTENTS_SKY;
@@ -774,7 +774,7 @@ loc0:
 	return HULLCHECKSTATE_DONE;
 }
 
-#if COLLISIONPARANOID < 2
+//#if COLLISIONPARANOID < 2
 static int Mod_Q1BSP_RecursiveHullCheckPoint(RecursiveHullCheckTraceInfo_t *t, int num)
 {
 	while (num >= 0)
@@ -796,7 +796,7 @@ static int Mod_Q1BSP_RecursiveHullCheckPoint(RecursiveHullCheckTraceInfo_t *t, i
 		return HULLCHECKSTATE_EMPTY;
 	}
 }
-#endif
+//#endif
 
 static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask)
 {
@@ -850,6 +850,25 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace,
 #if COLLISIONPARANOID >= 2
 	Con_Printf("t(%f %f %f,%f %f %f,%i %f %f %f)", rhc.start[0], rhc.start[1], rhc.start[2], rhc.end[0], rhc.end[1], rhc.end[2], rhc.hull - model->brushq1.hulls, rhc.hull->clip_mins[0], rhc.hull->clip_mins[1], rhc.hull->clip_mins[2]);
 	Mod_Q1BSP_RecursiveHullCheck(&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
+	{
+		
+		double test[3];
+		trace_t testtrace;
+		VectorLerp(rhc.start, rhc.trace->fraction, rhc.end, test);
+		memset(&testtrace, 0, sizeof(trace_t));
+		rhc.trace = &testtrace;
+		rhc.trace->hitsupercontentsmask = hitsupercontentsmask;
+		rhc.trace->fraction = 1;
+		rhc.trace->realfraction = 1;
+		rhc.trace->allsolid = true;
+		VectorCopy(test, rhc.start);
+		VectorCopy(test, rhc.end);
+		VectorClear(rhc.dist);
+		Mod_Q1BSP_RecursiveHullCheckPoint(&rhc, rhc.hull->firstclipnode);
+		//Mod_Q1BSP_RecursiveHullCheck(&rhc, rhc.hull->firstclipnode, 0, 1, test, test);
+		if (!trace->startsolid && testtrace.startsolid)
+			Con_Printf(" - ended in solid!\n");
+	}
 	Con_Print("\n");
 #else
 	if (VectorLength2(rhc.dist))
