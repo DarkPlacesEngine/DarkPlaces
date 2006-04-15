@@ -146,7 +146,7 @@ int VID_SetGamma(unsigned short *ramps, int rampsize)
 	CGGammaValue table_red [GAMMA_TABLE_SIZE];
 	CGGammaValue table_green [GAMMA_TABLE_SIZE];
 	CGGammaValue table_blue [GAMMA_TABLE_SIZE];
-	unsigned int i;
+	int i;
 
 	// Convert the unsigned short table into 3 float tables
 	for (i = 0; i < rampsize; i++)
