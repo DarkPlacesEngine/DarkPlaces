@@ -846,16 +846,19 @@ void CL_ClientMovement_Replay(void)
 						VectorSet(currentorigin2, currentorigin[0], currentorigin[1], currentorigin[2] + movevars_stepheight);
 						VectorSet(neworigin2, neworigin[0], neworigin[1], currentorigin[2] + movevars_stepheight);
 						trace2 = CL_TraceBox(currentorigin2, playermins, playermaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true);
-						// then move down from there
-						VectorCopy(trace2.endpos, currentorigin2);
-						VectorSet(neworigin2, trace2.endpos[0], trace2.endpos[1], currentorigin[2]);
-						trace3 = CL_TraceBox(currentorigin2, playermins, playermaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true);
-						//Con_Printf("%f %f %f %f : %f %f %f %f : %f %f %f %f\n", trace.fraction, trace.endpos[0], trace.endpos[1], trace.endpos[2], trace2.fraction, trace2.endpos[0], trace2.endpos[1], trace2.endpos[2], trace3.fraction, trace3.endpos[0], trace3.endpos[1], trace3.endpos[2]);
-						// accept the new trace if it made some progress
-						if (fabs(trace3.endpos[0] - trace.endpos[0]) >= 0.03125 || fabs(trace3.endpos[1] - trace.endpos[1]) >= 0.03125)
+						if (!trace2.startsolid)
 						{
-							trace = trace2;
-							VectorCopy(trace3.endpos, trace.endpos);
+							// then move down from there
+							VectorCopy(trace2.endpos, currentorigin2);
+							VectorSet(neworigin2, trace2.endpos[0], trace2.endpos[1], currentorigin[2]);
+							trace3 = CL_TraceBox(currentorigin2, playermins, playermaxs, neworigin2, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true);
+							//Con_Printf("%f %f %f %f : %f %f %f %f : %f %f %f %f\n", trace.fraction, trace.endpos[0], trace.endpos[1], trace.endpos[2], trace2.fraction, trace2.endpos[0], trace2.endpos[1], trace2.endpos[2], trace3.fraction, trace3.endpos[0], trace3.endpos[1], trace3.endpos[2]);
+							// accept the new trace if it made some progress
+							if (fabs(trace3.endpos[0] - trace.endpos[0]) >= 0.03125 || fabs(trace3.endpos[1] - trace.endpos[1]) >= 0.03125)
+							{
+								trace = trace2;
+								VectorCopy(trace3.endpos, trace.endpos);
+							}
 						}
 					}
 					if (trace.fraction == 1)
