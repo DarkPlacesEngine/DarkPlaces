@@ -263,7 +263,7 @@ void *GL_GetProcAddress(const char *name)
 
 void VID_Shutdown(void)
 {
-	if (context == NULL || window == NULL)
+	if (context == NULL && window == NULL)
 		return;
 
 	IN_Activate(false);
@@ -274,6 +274,9 @@ void VID_Shutdown(void)
 		qaglDestroyContext(context);
 		context = NULL;
 	}
+	
+	if (vid_isfullscreen)
+		CGReleaseAllDisplays();
 
 	if (window != NULL)
 	{
@@ -366,6 +369,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	};
 	OSStatus carbonError;
 	Rect windowBounds;
+	CFStringRef windowTitle;
 	AGLPixelFormat pixelFormat;
 	GLint attributes [32];
 	GLenum error;
@@ -411,9 +415,8 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 	}
 
 	// Set the window title
-	CFStringRef windowTitle = CFSTR("DarkPlaces AGL");
+	windowTitle = CFSTR("DarkPlaces AGL");
 	SetWindowTitleWithCFString(window, windowTitle);
-	CFRelease(windowTitle);
 
 	// Install the callback function for the window events we can't get
 	// through ReceiveNextEvent (i.e. close, collapse, and expand)
@@ -443,11 +446,14 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 		GDHandle gdhDisplay;
 		
 		// Get the mainDisplay and set resolution to current
-		mainDisplay = CGMainDisplayID ();
-		CGDisplayCapture (mainDisplay);
-		refDisplayMode = CGDisplayBestModeForParameters (mainDisplay, bpp, width, height, NULL);
-		CGDisplaySwitchToMode (mainDisplay, refDisplayMode);
-		DMGetGDeviceByDisplayID ((DisplayIDType)mainDisplay, &gdhDisplay, false);
+		mainDisplay = CGMainDisplayID();
+		CGDisplayCapture(mainDisplay);
+		
+		// TOCHECK: not sure whether or not it's necessary to change the resolution
+		// "by hand", or if aglSetFullscreen does the job anyway
+		refDisplayMode = CGDisplayBestModeForParametersAndRefreshRate(mainDisplay, bpp, width, height, refreshrate, NULL);
+		CGDisplaySwitchToMode(mainDisplay, refDisplayMode);
+		DMGetGDeviceByDisplayID((DisplayIDType)mainDisplay, &gdhDisplay, false);
 
 		// Set pixel format with built attribs
 		// Note: specifying a device is *required* for AGL_FullScreen
@@ -538,36 +544,28 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int refreshrate
 
 static void Handle_KeyMod(UInt32 keymod)
 {
+	const struct keymod_to_event_s { int keybit; keynum_t event; } keymod_events [] =
+	{
+		{cmdKey,						K_AUX1},
+		{shiftKey,						K_SHIFT},
+		{alphaLock,						K_CAPSLOCK},
+		{optionKey,						K_ALT},
+		{controlKey,					K_CTRL},
+		{kEventKeyModifierNumLockMask,	K_NUMLOCK},
+		{kEventKeyModifierFnMask,		K_AUX2}
+	};
 	static UInt32 prev_keymod = 0;
-	UInt32 modChanges = prev_keymod ^ keymod;
+	unsigned int i;
+	UInt32 modChanges;
 
-	if ((modChanges & cmdKey) != 0)
+	modChanges = prev_keymod ^ keymod;
+
+	for (i = 0; i < sizeof(keymod_events) / sizeof(keymod_events[0]); i++)
 	{
-		Key_Event(K_AUX1, '\0', (keymod & cmdKey) != 0);
-	}
-	if ((modChanges & shiftKey) != 0 || (modChanges & rightShiftKey) != 0)
-	{
-		Key_Event(K_SHIFT, '\0', (keymod & shiftKey) != 0);
-	}
-	if ((modChanges & alphaLock) != 0)
-	{
-		Key_Event(K_CAPSLOCK, '\0', (keymod & alphaLock) != 0);
-	}
-	if ((modChanges & optionKey) != 0 || (modChanges & rightOptionKey) != 0)
-	{
-		Key_Event(K_ALT, '\0', (keymod & optionKey) != 0);
-	}
-	if ((modChanges & controlKey) != 0 || (modChanges & rightControlKey) != 0)
-	{
-		Key_Event(K_CTRL, '\0', (keymod & controlKey) != 0);
-	}
-	if ((modChanges & kEventKeyModifierNumLockMask) != 0)
-	{
-		Key_Event(K_NUMLOCK, '\0', (keymod & kEventKeyModifierNumLockMask) != 0);
-	}
-	if ((modChanges & kEventKeyModifierFnMask) != 0)
-	{
-		Key_Event(K_AUX2, '\0', (keymod & kEventKeyModifierFnMask) != 0);
+		int keybit = keymod_events[i].keybit;
+
+		if ((modChanges & keybit) != 0)
+			Key_Event(keymod_events[i].event, '\0', (keymod & keybit) != 0);
 	}
 
 	prev_keymod = keymod;
