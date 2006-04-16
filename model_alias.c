@@ -1390,7 +1390,7 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	meshtriangles = 0;
 	for (i = 0;i < loadmodel->num_surfaces;i++)
 	{
-		int lastvertex;
+		int firstvertex, lastvertex;
 		if (renderlist >= renderlistend)
 			Host_Error("%s corrupt renderlist (wrong size)", loadmodel->name);
 		count = BigLong(*renderlist);renderlist++;
@@ -1402,33 +1402,28 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		surface->texture = loadmodel->data_textures + i;
 		surface->num_firsttriangle = meshtriangles;
 		surface->num_triangles = count;
-		surface->num_firstvertex = meshvertices;
-		surface->num_vertices = meshvertices;
+		meshtriangles += surface->num_triangles;
 
-		// load the elements and find the used vertex range
-		lastvertex = 0;
+		// load the elements
 		outelements = loadmodel->surfmesh.data_element3i + surface->num_firsttriangle * 3;
-		for (j = 0;j < surface->num_triangles;j++)
+		for (j = 0;j < surface->num_triangles;j++, renderlist += 3)
 		{
-			outelements[2] = BigLong(renderlist[0]);
-			outelements[1] = BigLong(renderlist[1]);
-			outelements[0] = BigLong(renderlist[2]);
-			if ((unsigned int)outelements[0] >= (unsigned int)pheader->numverts
-			 || (unsigned int)outelements[1] >= (unsigned int)pheader->numverts
-			 || (unsigned int)outelements[2] >= (unsigned int)pheader->numverts)
-				Host_Error("%s corrupt renderlist (out of bounds index)", loadmodel->name);
-			if (vertbonecounts[outelements[0]] == 0 || vertbonecounts[outelements[1]] == 0 || vertbonecounts[outelements[2]] == 0)
-				Host_Error("%s corrupt renderlist (references vertex with no bone weights", loadmodel->name);
-			surface->num_firstvertex = min(surface->num_firstvertex, outelements[0]);
-			surface->num_firstvertex = min(surface->num_firstvertex, outelements[1]);
-			surface->num_firstvertex = min(surface->num_firstvertex, outelements[2]);
-			lastvertex = max(lastvertex, outelements[0]);
-			lastvertex = max(lastvertex, outelements[1]);
-			lastvertex = max(lastvertex, outelements[2]);
-			renderlist += 3;
-			outelements += 3;
+			outelements[j*3+2] = BigLong(renderlist[0]);
+			outelements[j*3+1] = BigLong(renderlist[1]);
+			outelements[j*3+0] = BigLong(renderlist[2]);
 		}
-		surface->num_vertices = lastvertex + 1 - surface->num_firstvertex;
+		// validate the elements and find the used vertex range
+		firstvertex = meshvertices;
+		lastvertex = 0;
+		for (j = 0;j < surface->num_triangles * 3;j++)
+		{
+			if ((unsigned int)outelements[j] >= (unsigned int)meshvertices)
+				Host_Error("%s corrupt renderlist (out of bounds index)", loadmodel->name);
+			firstvertex = min(firstvertex, outelements[j]);
+			lastvertex = max(lastvertex, outelements[j]);
+		}
+		surface->num_firstvertex = firstvertex;
+		surface->num_vertices = lastvertex + 1 - firstvertex;
 
 		// since zym models do not have named sections, reuse their shader
 		// name as the section name
