@@ -706,14 +706,29 @@ void R_Q1BSP_CompileShadowVolume(entity_render_t *ent, vec3_t relativelightorigi
 	r_shadow_compilingrtlight->static_meshchain_shadow = Mod_ShadowMesh_Finish(r_main_mempool, r_shadow_compilingrtlight->static_meshchain_shadow, false, false);
 }
 
-void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs)
+void R_Q1BSP_DrawShadowVolume_Batch(entity_render_t *ent, texture_t *texture, const vec3_t modelorg, const vec3_t relativelightorigin, const vec3_t lightmins, const vec3_t lightmaxs, int texturenumsurfaces, msurface_t **texturesurfacelist)
+{
+	int texturesurfaceindex;
+	RSurf_PrepareVerticesForBatch(ent, texture, modelorg, false, false, texturenumsurfaces, texturesurfacelist);
+	for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+	{
+		msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+		R_Shadow_MarkVolumeFromBox(surface->num_firsttriangle, surface->num_triangles, rsurface_vertex3f, rsurface_model->surfmesh.data_element3i, relativelightorigin, lightmins, lightmaxs, surface->mins, surface->maxs);
+	}
+}
+
+void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int modelnumsurfaces, const int *modelsurfacelist, const vec3_t lightmins, const vec3_t lightmaxs)
 {
 	model_t *model = ent->model;
 	msurface_t *surface;
-	int surfacelistindex;
+	int modelsurfacelistindex;
+	int f = 0;
 	float projectdistance = lightradius + model->radius*2 + r_shadow_projectdistance.value;
 	vec3_t modelorg;
-	texture_t *texture, *currentexture = NULL;
+	texture_t *t = NULL, *texture;
+	const int maxsurfacelist = 1024;
+	int numsurfacelist = 0;
+	msurface_t *surfacelist[1024];
 	// check the box in modelspace, it was already checked in worldspace
 	if (!BoxesOverlap(model->normalmins, model->normalmaxs, lightmins, lightmaxs))
 		return;
@@ -721,9 +736,9 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 	if (model->brush.shadowmesh)
 	{
 		R_Shadow_PrepareShadowMark(model->brush.shadowmesh->numtriangles);
-		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
+		for (modelsurfacelistindex = 0;modelsurfacelistindex < modelnumsurfaces;modelsurfacelistindex++)
 		{
-			surface = model->data_surfaces + surfacelist[surfacelistindex];
+			surface = model->data_surfaces + modelsurfacelist[modelsurfacelistindex];
 			texture = surface->texture->currentframe;
 			if ((texture->currentmaterialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_WALL)) != MATERIALFLAG_WALL)
 				continue;
@@ -737,25 +752,28 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 	{
 		projectdistance = lightradius + model->radius*2;
 		Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
-		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
+		R_Shadow_PrepareShadowMark(model->surfmesh.num_triangles);
+		// identify lit faces within the bounding box
+		for (modelsurfacelistindex = 0;modelsurfacelistindex < modelnumsurfaces;modelsurfacelistindex++)
 		{
-			surface = model->data_surfaces + surfacelist[surfacelistindex];
-			texture = surface->texture->currentframe;
-			if (texture->currentmaterialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT) || !surface->num_triangles)
-				continue;
-			if (currentexture != texture)
+			surface = model->data_surfaces + modelsurfacelist[modelsurfacelistindex];
+			if (t != surface->texture || numsurfacelist >= maxsurfacelist)
 			{
-				currentexture = texture;
-				RSurf_PrepareForBatch(ent, texture, modelorg);
-				RSurf_SetPointersForPass(false, false);
+				if (numsurfacelist)
+				{
+					R_Q1BSP_DrawShadowVolume_Batch(ent, texture, modelorg, relativelightorigin, lightmins, lightmaxs, numsurfacelist, surfacelist);
+					numsurfacelist = 0;
+				}
+				t = surface->texture;
+				texture = t->currentframe;
+				f = (texture->currentmaterialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_WALL)) == MATERIALFLAG_WALL;
 			}
-			if (rsurface_dynamicvertex)
-				RSurf_PrepareDynamicSurfaceVertices(surface);
-			// identify lit faces within the bounding box
-			R_Shadow_PrepareShadowMark(model->surfmesh.num_triangles);
-			R_Shadow_MarkVolumeFromBox(surface->num_firsttriangle, surface->num_triangles, rsurface_vertex3f, model->surfmesh.data_element3i, relativelightorigin, lightmins, lightmaxs, surface->mins, surface->maxs);
-			R_Shadow_VolumeFromList(model->surfmesh.num_vertices, model->surfmesh.num_triangles, rsurface_vertex3f, model->surfmesh.data_element3i, model->surfmesh.data_neighbor3i, relativelightorigin, projectdistance, numshadowmark, shadowmarklist);
+			if (!f && surface->num_triangles)
+				surfacelist[numsurfacelist++] = surface;
 		}
+		if (numsurfacelist)
+			R_Q1BSP_DrawShadowVolume_Batch(ent, texture, modelorg, relativelightorigin, lightmins, lightmaxs, numsurfacelist, surfacelist);
+		R_Shadow_VolumeFromList(model->surfmesh.num_vertices, model->surfmesh.num_triangles, rsurface_vertex3f, model->surfmesh.data_element3i, model->surfmesh.data_neighbor3i, relativelightorigin, projectdistance, numshadowmark, shadowmarklist);
 	}
 }
 

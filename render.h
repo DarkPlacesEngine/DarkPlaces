@@ -275,11 +275,6 @@ extern float *rsurface_svector3f;
 extern float *rsurface_tvector3f;
 extern float *rsurface_normal3f;
 extern float *rsurface_lightmapcolor4f;
-extern qboolean rsurface_generatevertex;
-extern qboolean rsurface_generatetangents;
-extern qboolean rsurface_generatenormals;
-extern qboolean rsurface_deformvertex;
-extern qboolean rsurface_dynamicvertex;
 extern vec3_t rsurface_modelorg;
 extern const entity_render_t *rsurface_entity;
 extern const model_t *rsurface_model;
@@ -292,12 +287,10 @@ struct texture_s;
 struct msurface_s;
 void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t);
 void R_UpdateAllTextureInfo(entity_render_t *ent);
-void R_QueueTextureSurfaceList(entity_render_t *ent, struct texture_s *texture, int texturenumsurfaces, const struct msurface_s **texturesurfacelist, const vec3_t modelorg);
+void R_QueueTextureSurfaceList(entity_render_t *ent, struct texture_s *texture, int texturenumsurfaces, msurface_t **texturesurfacelist, const vec3_t modelorg);
 void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces);
 
-void RSurf_PrepareForBatch(const entity_render_t *ent, const texture_t *texture, const vec3_t modelorg);
-void RSurf_SetPointersForPass(qboolean generatenormals, qboolean generatetangents);
-void RSurf_PrepareDynamicSurfaceVertices(const msurface_t *surface);
+void RSurf_PrepareVerticesForBatch(const entity_render_t *ent, const texture_t *texture, const vec3_t modelorg, qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, msurface_t **texturesurfacelist);
 
 #define SHADERPERMUTATION_MODE_LIGHTSOURCE (1<<0) // (lightsource) use directional pixel shading from light source (rtlight)
 #define SHADERPERMUTATION_MODE_LIGHTDIRECTIONMAP_MODELSPACE (1<<1) // (lightmap) use directional pixel shading from texture containing modelspace light directions (deluxemap)
