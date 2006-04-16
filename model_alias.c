@@ -1524,15 +1524,14 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	meshtriangles = 0;
 	numvertexboneweights = 0;
 
-	// load the meshes now
+	// gather combined statistics from the meshes
 	dpmmesh = (dpmmesh_t *) (pbase + pheader->ofs_meshs);
-	for (i = 0;i < loadmodel->num_surfaces;i++)
+	for (i = 0;i < (int)pheader->num_meshs;i++)
 	{
 		int numverts = BigLong(dpmmesh->num_verts);
 		meshvertices += numverts;;
 		meshtriangles += BigLong(dpmmesh->num_tris);
 
-		// to find out how many weights exist we two a two-stage load...
 		data = (unsigned char *) (pbase + BigLong(dpmmesh->ofs_verts));
 		for (j = 0;j < numverts;j++)
 		{
