@@ -35,7 +35,7 @@ extern cvar_t gl_mesh_copyarrays;
 extern cvar_t gl_paranoid;
 extern cvar_t gl_printcheckerror;
 
-//input to R_Mesh_State
+//input to R_Mesh_TextureState
 typedef struct rmeshstate_s
 {
 	// textures
@@ -53,10 +53,6 @@ typedef struct rmeshstate_s
 	// pointers
 	const float *pointer_texcoord[MAX_TEXTUREUNITS]; // 2D
 	const float *pointer_texcoord3f[MAX_TEXTUREUNITS]; // 3D
-
-	// other state set by this
-	const float *pointer_vertex;
-	const float *pointer_color;
 }
 rmeshstate_t;
 
@@ -90,8 +86,10 @@ void R_Mesh_TexBindCubeMap(unsigned int unitnum, int texnum);
 void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix);
 // sets the combine state for a texenv unit
 void R_Mesh_TexCombine(unsigned int unitnum, int combinergb, int combinealpha, int rgbscale, int alphascale);
-// set up the requested entire rendering state
-void R_Mesh_State(const rmeshstate_t *m);
+// set up the requested texture state
+void R_Mesh_TextureState(const rmeshstate_t *m);
+// set up a blank texture state (faster/easier specialized version of R_Mesh_TextureState)
+void R_Mesh_ResetTextureState(void);
 
 // renders a mesh
 void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *elements);

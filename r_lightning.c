@@ -280,14 +280,6 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, int sur
 	// (and realize that the whole polygon assembly orients itself to face
 	//  the viewer)
 
-	memset(&m, 0, sizeof(m));
-	if (r_lightningbeam_qmbtexture.integer)
-		m.tex[0] = R_GetTexture(r_lightningbeamqmbtexture);
-	else
-		m.tex[0] = R_GetTexture(r_lightningbeamtexture);
-	m.pointer_texcoord[0] = texcoord2f;
-	m.pointer_vertex = vertex3f;
-
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
@@ -311,18 +303,26 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, int sur
 	R_CalcLightningBeamPolygonTexCoord2f(texcoord2f + 8, t1 + 0.33, t2 + 0.33);
 	R_CalcLightningBeamPolygonTexCoord2f(texcoord2f + 16, t1 + 0.66, t2 + 0.66);
 
+	R_Mesh_VertexPointer(vertex3f);
 	if (fogenabled)
 	{
 		// per vertex colors if fog is used
-		m.pointer_color = color4f;
+		R_Mesh_ColorPointer(color4f);
 		R_FogLightningBeam_Vertex3f_Color4f(vertex3f, color4f, 12, r_lightningbeam_color_red.value, r_lightningbeam_color_green.value, r_lightningbeam_color_blue.value, 1);
 	}
 	else
 	{
 		// solid color if fog is not used
+		R_Mesh_ColorPointer(NULL);
 		GL_Color(r_lightningbeam_color_red.value, r_lightningbeam_color_green.value, r_lightningbeam_color_blue.value, 1);
 	}
-	R_Mesh_State(&m);
+	memset(&m, 0, sizeof(m));
+	if (r_lightningbeam_qmbtexture.integer)
+		m.tex[0] = R_GetTexture(r_lightningbeamqmbtexture);
+	else
+		m.tex[0] = R_GetTexture(r_lightningbeamtexture);
+	m.pointer_texcoord[0] = texcoord2f;
+	R_Mesh_TextureState(&m);
 
 	// draw the 3 polygons as one batch of 6 triangles using the 12 vertices
 	GL_LockArrays(0, 12);

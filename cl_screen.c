@@ -1290,7 +1290,6 @@ void SCR_UpdateLoadingScreen (void)
 {
 	float x, y;
 	cachepic_t *pic;
-	rmeshstate_t m;
 	float vertex3f[12];
 	float texcoord2f[8];
 	// don't do anything if not initialized yet
@@ -1316,11 +1315,11 @@ void SCR_UpdateLoadingScreen (void)
 	GL_Color(1,1,1,1);
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthTest(false);
-	memset(&m, 0, sizeof(m));
-	m.pointer_vertex = vertex3f;
-	m.pointer_texcoord[0] = texcoord2f;
-	m.tex[0] = R_GetTexture(pic->tex);
-	R_Mesh_State(&m);
+	R_Mesh_VertexPointer(vertex3f);
+	R_Mesh_ColorPointer(NULL);
+	R_Mesh_ResetTextureState();
+	R_Mesh_TexBind(0, R_GetTexture(pic->tex));
+	R_Mesh_TexCoordPointer(0, 2, texcoord2f);
 	vertex3f[2] = vertex3f[5] = vertex3f[8] = vertex3f[11] = 0;
 	vertex3f[0] = vertex3f[9] = x;
 	vertex3f[1] = vertex3f[4] = y;
